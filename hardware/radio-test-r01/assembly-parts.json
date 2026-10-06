@@ -1,0 +1,275 @@
+{
+  "U1": {
+    "manufacturer": "STMicroelectronics",
+    "mpn": "STM32F103CBT6",
+    "datasheet": "https://www.st.com/resource/en/datasheet/stm32f103c8.pdf",
+    "specification": "LQFP48, 128 KiB flash",
+    "assembly": "SMT"
+  },
+  "J1": {
+    "manufacturer": "Wurth Elektronik",
+    "mpn": "61400416121",
+    "datasheet": "https://www.we-online.com/components/products/datasheet/61400416121.pdf",
+    "specification": "USB-B THT; physical fit pending",
+    "assembly": "THT"
+  },
+  "U2": {
+    "manufacturer": "Diodes Incorporated",
+    "mpn": "AP2112K-3.3TRG1",
+    "datasheet": "https://www.diodes.com/datasheet/download/AP2112.pdf",
+    "specification": "3.3 V LDO; pin 4 NC",
+    "assembly": "SMT"
+  },
+  "U3": {
+    "manufacturer": "STMicroelectronics",
+    "mpn": "USBLC6-2SC6",
+    "datasheet": "https://www.st.com/resource/en/datasheet/usblc6-2.pdf",
+    "specification": "USB ESD; SOT23-6",
+    "assembly": "SMT"
+  },
+  "Y1": {
+    "manufacturer": "Abracon",
+    "mpn": "ASE-8.000MHZ-L-C-T",
+    "datasheet": "https://abracon.com/Oscillators/ASEseries.pdf",
+    "specification": "8 MHz CMOS, HSE bypass",
+    "assembly": "SMT"
+  },
+  "U4": {
+    "manufacturer": "STMicroelectronics",
+    "mpn": "M24C64-RMN6TP",
+    "datasheet": "https://www.st.com/resource/en/datasheet/m24c64-f.pdf",
+    "specification": "64 kbit EEPROM, SO8",
+    "assembly": "SMT"
+  },
+  "Q1": {
+    "manufacturer": "Nexperia",
+    "mpn": "BSS84,215",
+    "datasheet": "https://assets.nexperia.com/documents/data-sheet/BSS84.pdf",
+    "specification": "PMOS, SOT23; physical source pin 2",
+    "assembly": "SMT"
+  },
+  "J2": {
+    "manufacturer": "Wurth Elektronik",
+    "mpn": "61201021621",
+    "datasheet": "https://www.we-online.com/components/products/datasheet/61201021621.pdf",
+    "specification": "2x5 keyed vertical IDC; 2.54 mm; finished hole 1.1 mm; fit pending",
+    "assembly": "THT"
+  },
+  "J3": {
+    "manufacturer": "Samtec",
+    "mpn": "TSW-105-07-L-S",
+    "datasheet": "https://www.samtec.com/products/tsw-105-07-l-s",
+    "specification": "1x5 vertical 2.54 mm, 0.635 mm square posts",
+    "assembly": "THT"
+  },
+  "J4": {
+    "manufacturer": "Samtec",
+    "mpn": "TSW-103-07-L-S",
+    "datasheet": "https://www.samtec.com/products/tsw-103-07-l-s",
+    "specification": "1x3 vertical 2.54 mm, 0.635 mm square posts",
+    "assembly": "THT"
+  },
+  "SW1": {
+    "manufacturer": "Omron",
+    "mpn": "B3F-1000",
+    "datasheet": "https://omronfs.omron.com/en_US/ecb/products/pdf/en-b3f.pdf",
+    "specification": "6x6 mm, height 4.3 mm; pins 6.5x4.5 mm; fit pending",
+    "assembly": "THT"
+  },
+  "D1": {
+    "manufacturer": "Kingbright",
+    "mpn": "APT2012LSECK/J3-PRV",
+    "datasheet": "https://www.kingbrightusa.com/images/catalog/spec/apt2012lseck-j3-prv.pdf",
+    "specification": "Low current red 0805; pad 1 cathode/GND, pad 2 anode",
+    "assembly": "SMT"
+  },
+  "R1": {
+    "manufacturer": "Vishay",
+    "mpn": "CRCW08050000Z0EA",
+    "datasheet": "https://www.vishay.com/docs/20035/dcrcwe3.pdf",
+    "specification": "0805; nonzero 1%, 0.125 W; 0R jumper",
+    "assembly": "SMT"
+  },
+  "R2": {
+    "manufacturer": "Vishay",
+    "mpn": "CRCW08050000Z0EA",
+    "datasheet": "https://www.vishay.com/docs/20035/dcrcwe3.pdf",
+    "specification": "0805; nonzero 1%, 0.125 W; 0R jumper",
+    "assembly": "SMT"
+  },
+  "R3": {
+    "manufacturer": "Vishay",
+    "mpn": "CRCW08051K50FKEA",
+    "datasheet": "https://www.vishay.com/docs/20035/dcrcwe3.pdf",
+    "specification": "0805; nonzero 1%, 0.125 W; 0R jumper",
+    "assembly": "SMT"
+  },
+  "R4": {
+    "manufacturer": "Vishay",
+    "mpn": "CRCW080510K0FKEA",
+    "datasheet": "https://www.vishay.com/docs/20035/dcrcwe3.pdf",
+    "specification": "0805; nonzero 1%, 0.125 W; 0R jumper",
+    "assembly": "SMT"
+  },
+  "R5": {
+    "manufacturer": "Vishay",
+    "mpn": "CRCW080510K0FKEA",
+    "datasheet": "https://www.vishay.com/docs/20035/dcrcwe3.pdf",
+    "specification": "0805; nonzero 1%, 0.125 W; 0R jumper",
+    "assembly": "SMT"
+  },
+  "R6": {
+    "manufacturer": "Vishay",
+    "mpn": "CRCW080510K0FKEA",
+    "datasheet": "https://www.vishay.com/docs/20035/dcrcwe3.pdf",
+    "specification": "0805; nonzero 1%, 0.125 W; 0R jumper",
+    "assembly": "SMT"
+  },
+  "R7": {
+    "manufacturer": "Vishay",
+    "mpn": "CRCW080510K0FKEA",
+    "datasheet": "https://www.vishay.com/docs/20035/dcrcwe3.pdf",
+    "specification": "0805; nonzero 1%, 0.125 W; 0R jumper",
+    "assembly": "SMT"
+  },
+  "R8": {
+    "manufacturer": "Vishay",
+    "mpn": "CRCW080510K0FKEA",
+    "datasheet": "https://www.vishay.com/docs/20035/dcrcwe3.pdf",
+    "specification": "0805; nonzero 1%, 0.125 W; 0R jumper",
+    "assembly": "SMT"
+  },
+  "R9": {
+    "manufacturer": "Vishay",
+    "mpn": "CRCW080510K0FKEA",
+    "datasheet": "https://www.vishay.com/docs/20035/dcrcwe3.pdf",
+    "specification": "0805; nonzero 1%, 0.125 W; 0R jumper",
+    "assembly": "SMT"
+  },
+  "R10": {
+    "manufacturer": "Vishay",
+    "mpn": "CRCW08054K70FKEA",
+    "datasheet": "https://www.vishay.com/docs/20035/dcrcwe3.pdf",
+    "specification": "0805; nonzero 1%, 0.125 W; 0R jumper",
+    "assembly": "SMT"
+  },
+  "R11": {
+    "manufacturer": "Vishay",
+    "mpn": "CRCW08054K70FKEA",
+    "datasheet": "https://www.vishay.com/docs/20035/dcrcwe3.pdf",
+    "specification": "0805; nonzero 1%, 0.125 W; 0R jumper",
+    "assembly": "SMT"
+  },
+  "R12": {
+    "manufacturer": "Vishay",
+    "mpn": "CRCW08052K20FKEA",
+    "datasheet": "https://www.vishay.com/docs/20035/dcrcwe3.pdf",
+    "specification": "0805; nonzero 1%, 0.125 W; 0R jumper",
+    "assembly": "SMT"
+  },
+  "C1": {
+    "manufacturer": "Murata",
+    "mpn": "GRM21BR71C105KA01L",
+    "datasheet": "https://www.murata.com/en-us/products/productdetail?partno=GRM21BR71C105KA01%23",
+    "specification": "16 V, X7R, 10%, 0805; C2/C9 effective capacitance qualification pending",
+    "assembly": "SMT"
+  },
+  "C2": {
+    "manufacturer": "Murata",
+    "mpn": "GRM21BR71C475KA73L",
+    "datasheet": "https://www.murata.com/en-us/products/productdetail?partno=GRM21BR71C475KA73%23",
+    "specification": "16 V, X7R, 10%, 0805; C2/C9 effective capacitance qualification pending",
+    "assembly": "SMT"
+  },
+  "C3": {
+    "manufacturer": "Murata",
+    "mpn": "GRM21BR71C104KA01L",
+    "datasheet": "https://www.murata.com/en-us/products/productdetail?partno=GRM21BR71C104KA01%23",
+    "specification": "16 V, X7R, 10%, 0805; C2/C9 effective capacitance qualification pending",
+    "assembly": "SMT"
+  },
+  "C4": {
+    "manufacturer": "Murata",
+    "mpn": "GRM21BR71C104KA01L",
+    "datasheet": "https://www.murata.com/en-us/products/productdetail?partno=GRM21BR71C104KA01%23",
+    "specification": "16 V, X7R, 10%, 0805; C2/C9 effective capacitance qualification pending",
+    "assembly": "SMT"
+  },
+  "C5": {
+    "manufacturer": "Murata",
+    "mpn": "GRM21BR71C104KA01L",
+    "datasheet": "https://www.murata.com/en-us/products/productdetail?partno=GRM21BR71C104KA01%23",
+    "specification": "16 V, X7R, 10%, 0805; C2/C9 effective capacitance qualification pending",
+    "assembly": "SMT"
+  },
+  "C6": {
+    "manufacturer": "Murata",
+    "mpn": "GRM21BR71C104KA01L",
+    "datasheet": "https://www.murata.com/en-us/products/productdetail?partno=GRM21BR71C104KA01%23",
+    "specification": "16 V, X7R, 10%, 0805; C2/C9 effective capacitance qualification pending",
+    "assembly": "SMT"
+  },
+  "C7": {
+    "manufacturer": "Murata",
+    "mpn": "GRM21BR71C104KA01L",
+    "datasheet": "https://www.murata.com/en-us/products/productdetail?partno=GRM21BR71C104KA01%23",
+    "specification": "16 V, X7R, 10%, 0805; C2/C9 effective capacitance qualification pending",
+    "assembly": "SMT"
+  },
+  "C8": {
+    "manufacturer": "Murata",
+    "mpn": "GRM21BR71C105KA01L",
+    "datasheet": "https://www.murata.com/en-us/products/productdetail?partno=GRM21BR71C105KA01%23",
+    "specification": "16 V, X7R, 10%, 0805; C2/C9 effective capacitance qualification pending",
+    "assembly": "SMT"
+  },
+  "C9": {
+    "manufacturer": "Murata",
+    "mpn": "GRM21BR71C475KA73L",
+    "datasheet": "https://www.murata.com/en-us/products/productdetail?partno=GRM21BR71C475KA73%23",
+    "specification": "16 V, X7R, 10%, 0805; C2/C9 effective capacitance qualification pending",
+    "assembly": "SMT"
+  },
+  "C10": {
+    "manufacturer": "KEMET",
+    "mpn": "C0805C103K5RACTU",
+    "datasheet": "https://search.kemet.com/component-documentation/download/specsheet/C0805C103K5RACTU",
+    "specification": "10 nF, 50 V, X7R, 10%, 0805; exceeds 16 V minimum",
+    "assembly": "SMT"
+  },
+  "C11": {
+    "manufacturer": "Murata",
+    "mpn": "GRM21BR71C104KA01L",
+    "datasheet": "https://www.murata.com/en-us/products/productdetail?partno=GRM21BR71C104KA01%23",
+    "specification": "16 V, X7R, 10%, 0805; C2/C9 effective capacitance qualification pending",
+    "assembly": "SMT"
+  },
+  "C12": {
+    "manufacturer": "Murata",
+    "mpn": "GRM21BR71C104KA01L",
+    "datasheet": "https://www.murata.com/en-us/products/productdetail?partno=GRM21BR71C104KA01%23",
+    "specification": "16 V, X7R, 10%, 0805; C2/C9 effective capacitance qualification pending",
+    "assembly": "SMT"
+  },
+  "C13": {
+    "manufacturer": "Murata",
+    "mpn": "GRM21BR71C105KA01L",
+    "datasheet": "https://www.murata.com/en-us/products/productdetail?partno=GRM21BR71C105KA01%23",
+    "specification": "16 V, X7R, 10%, 0805; C2/C9 effective capacitance qualification pending",
+    "assembly": "SMT"
+  },
+  "C14": {
+    "manufacturer": "Murata",
+    "mpn": "GRM21BR71C104KA01L",
+    "datasheet": "https://www.murata.com/en-us/products/productdetail?partno=GRM21BR71C104KA01%23",
+    "specification": "16 V, X7R, 10%, 0805; C2/C9 effective capacitance qualification pending",
+    "assembly": "SMT"
+  },
+  "F1": {
+    "manufacturer": "Bourns",
+    "mpn": "MF-NSMF050-2",
+    "datasheet": "https://www.bourns.com/docs/product-datasheets/mf-nsmf.pdf",
+    "specification": "PPTC 0.5 A hold, 1 A trip; derating/voltage-drop verification pending",
+    "assembly": "SMT"
+  }
+}

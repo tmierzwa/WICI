@@ -1,0 +1,1542 @@
+2026-10-06 21:01:29.817 INFO   Freerouting v2.5.0 (build-date: 2026-10-05)
+2026-10-06 21:01:29.819 DEBUG  [startup] user-data path : LOCAL-STAGING/freerouting-config  (source: CLI argument --user_data_path)
+2026-10-06 21:01:29.819 DEBUG  [startup] log file       : LOCAL-STAGING/freerouting-04.log
+2026-10-06 21:01:29.844 DEBUG  Settings loaded from 'LOCAL-STAGING/freerouting-config/freerouting.json'.
+2026-10-06 21:01:29.844 WARN   [startup] freerouting.json contains a stale 'logging.file.location' value: 'LOCAL-STAGING/freerouting.log'. The actual log file is being written to 'LOCAL-STAGING/freerouting-04.log' (as resolved at startup). The stale value will be corrected in freerouting.json on next save. If you see this in Docker, the old JSON was written by an earlier version that stored the host path; the fix is to delete freerouting.json so it is regenerated with the correct path.
+2026-10-06 21:01:30.066 INFO   Hardware: 18 CPU cores, 567 CPU score, 16384 MB RAM
+2026-10-06 21:01:30.066 DEBUG  UTC Time: 2026-10-06T19:01:29.844998Z
+2026-10-06 21:01:30.067 WARN   GUI is disabled and you don't have a console available, so the only feedback from Freerouting is in the log.
+2026-10-06 21:01:30.067 DEBUG  GUI Language: en_US
+2026-10-06 21:01:30.067 DEBUG  Host: N/A
+2026-10-06 21:01:30.069 DEBUG  Analytics are disabled
+2026-10-06 21:01:31.156 DEBUG  Loaded router settings from: LOCAL-STAGING/freerouting-config/freerouting.json
+2026-10-06 21:01:31.156 DEBUG  Applied CLI router setting: router.autorouter.max_passes = 30
+2026-10-06 21:01:31.156 DEBUG  Applied CLI router setting: router.optimizer.max_threads = 2
+2026-10-06 21:01:31.156 DEBUG  Applied CLI router setting: router.strict_drc = true
+2026-10-06 21:01:31.156 DEBUG  Applied CLI router setting: router.automatic_neckdown = false
+2026-10-06 21:01:31.156 DEBUG  Applied CLI router setting: router.autorouter.enabled = true (implicit from -de/-do batch mode)
+2026-10-06 21:01:31.157 DEBUG  No router settings found in environment variables
+2026-10-06 21:01:31.172 DEBUG  Version check skipped or timed out: java.net.ConnectException
+2026-10-06 21:01:31.177 DEBUG  Set DEFAULT clearance (all layers): 2000 (0.05 mm) from DSN value 200.0
+2026-10-06 21:01:31.178 DEBUG  Set default trace width (all layers): DSN=200.0 → board=2000 (0.05 mm)
+2026-10-06 21:01:31.195 DEBUG  Loaded router settings from DSN file: controller-power.dsn (4 layers)
+2026-10-06 21:01:31.195 DEBUG  Merging settings from 5 sources:
+2026-10-06 21:01:31.195 DEBUG    - Default Settings (priority 0): base settings
+2026-10-06 21:01:31.196 DEBUG    - freerouting.json (priority 10): 0 fields changed
+2026-10-06 21:01:31.196 DEBUG    - DSN file: controller-power.dsn (priority 20): 7 fields changed
+2026-10-06 21:01:31.196 DEBUG    - Environment Variables (priority 55): 0 fields changed
+2026-10-06 21:01:31.196 DEBUG    - CLI Arguments (priority 60): 4 fields changed
+2026-10-06 21:01:31.196 DEBUG  Settings merged successfully from 5 source(s)
+2026-10-06 21:01:31.420 INFO   [94032D\720DAE] Loading board file 'controller-power.dsn'...
+2026-10-06 21:01:31.428 DEBUG  Set DEFAULT clearance (all layers): 2000 (0.05 mm) from DSN value 200.0
+2026-10-06 21:01:31.428 DEBUG  Set default trace width (all layers): DSN=200.0 → board=2000 (0.05 mm)
+2026-10-06 21:01:31.463 DEBUG  Wiring: degenerate wire trace skipped (all 1 corners are identical — zero-length trace) on layer 'F.Cu'. This is likely a DSN export issue in your EDA tool.
+2026-10-06 21:01:31.466 DEBUG  Wiring: degenerate wire trace skipped (all 1 corners are identical — zero-length trace) on layer 'F.Cu'. This is likely a DSN export issue in your EDA tool.
+2026-10-06 21:01:31.476 WARN   DSN file 'controller-power.dsn' was loaded with 2 warning(s).
+2026-10-06 21:01:31.476 DEBUG  applyBoardSpecificOptimizations changed parameters:
+  Layer 0: bendCost: null -> 0.0; preferredDirectionTraceCost: 1.0 -> 1.8; undesiredDirectionTraceCost: 1.0 -> 3.0999999999999996;
+  Layer 1: bendCost: null -> 0.0; preferredDirectionHorizontal: null -> false; undesiredDirectionTraceCost: 1.0 -> 1.8;
+  Layer 2: bendCost: null -> 0.0; preferredDirectionHorizontal: null -> true; undesiredDirectionTraceCost: 1.0 -> 2.3;
+  Layer 3: bendCost: null -> 0.0; preferredDirectionTraceCost: 1.0 -> 1.8; undesiredDirectionTraceCost: 1.0 -> 2.6;
+2026-10-06 21:01:31.479 DEBUG  Applied copper-to-edge clearance override: 250.0 um (2500 board units).
+2026-10-06 21:01:31.479 DEBUG  Applied plane_as_obstacle override: false
+2026-10-06 21:01:31.479 DEBUG  Applied clearance tolerance: 1.0 um.
+2026-10-06 21:01:31.484 DEBUG  Set DEFAULT clearance (all layers): 2000 (0.05 mm) from DSN value 200.0
+2026-10-06 21:01:31.485 DEBUG  Set default trace width (all layers): DSN=200.0 → board=2000 (0.05 mm)
+2026-10-06 21:01:31.490 DEBUG  Loaded router settings from DSN file: controller-power.dsn (4 layers)
+2026-10-06 21:01:31.490 DEBUG  Merging settings from 6 sources:
+2026-10-06 21:01:31.490 DEBUG    - Default Settings (priority 0): base settings
+2026-10-06 21:01:31.490 DEBUG    - freerouting.json (priority 10): 0 fields changed
+2026-10-06 21:01:31.490 DEBUG    - DSN file: controller-power.dsn (priority 20): 7 fields changed
+2026-10-06 21:01:31.490 DEBUG    - Environment Variables (priority 55): 0 fields changed
+2026-10-06 21:01:31.490 DEBUG    - CLI Arguments (priority 60): 4 fields changed
+2026-10-06 21:01:31.491 DEBUG    - API Settings (priority 70): 47 fields changed
+2026-10-06 21:01:31.491 DEBUG  Settings merged successfully from 6 source(s)
+2026-10-06 21:01:31.491 INFO   [94032D\720DAE] Job '94032D\720DAE' started at 2026-10-06T19:01:31.491643Z.
+2026-10-06 21:01:31.554 WARN   Design Warning: Board has 32 pre-existing clearance violation(s) in the loaded design (before routing):
+  - 32 unfixable violation(s) (cannot be resolved by Freerouting):
+      * 32 fixed trace/via clearance violations (first 5 shown):
+          - F1.1 [net /VBUS_USB] <-> FixedVia#599 [net /VBUS_USB]
+          - Q1.2 [net /V3] <-> FixedVia#567 [net /V3]
+          - U3.5 [net /VBUS_USB] <-> FixedVia#601 [net /VBUS_USB]
+          - U3.2 [net /GND] <-> FixedVia#575 [net /GND]
+          - U4.8 [net /V3] <-> FixedVia#564 [net /V3]
+          ... and 27 more
+  - 0 potentially fixable violations
+Notice: Freerouting does not modify component placement, board outlines, or fixed items.
+Resolving these 32 unfixable violation(s) is the responsibility of the board author in their EDA tool (e.g. KiCad).
+2026-10-06 21:01:31.574 INFO   [94032D\720DAE] Pipeline thread limits: autorouter pass is single-threaded, optimizer.max_threads=2.
+2026-10-06 21:01:31.585 DEBUG  [94032D\720DAE] Checking fanout pre-pass. settings.fanout.enabled=true, smdPins=137
+2026-10-06 21:01:31.635 INFO   [94032D\720DAE] Fanout stage started on board '83a9cb08408ae3c4662fbac20a62ddc1' with 118 of 137 SMD pins needing fanout (19 already connected, 0 netless).
+2026-10-06 21:01:32.017 INFO   [94032D\720DAE] Fanout pass #1 on board '2e30373e928f2d66567a37de0ce12eea' completed in 0.36 seconds with 38 SMD pins fanouted, 31 not routed, 0 insert errors, +0 extra vias (0 SMD pins still to check in pass, ripup costs=100).
+2026-10-06 21:01:32.248 INFO   [94032D\720DAE] Fanout pass #2 on board '5b8dafb5605ba762b53b934c36a1c326' completed in 0.23 seconds with 22 SMD pins fanouted, 28 not routed, 0 insert errors, +0 extra vias (0 SMD pins still to check in pass, ripup costs=200).
+2026-10-06 21:01:32.431 INFO   [94032D\720DAE] Fanout pass #3 on board 'aa850f6f9d983f7cff901a414d8c428e' completed in 0.18 seconds with 22 SMD pins fanouted, 22 not routed, 0 insert errors, +0 extra vias (0 SMD pins still to check in pass, ripup costs=300).
+2026-10-06 21:01:32.592 INFO   [94032D\720DAE] Fanout pass #4 on board '5b8dafb5605ba762b53b934c36a1c326' completed in 0.16 seconds with 22 SMD pins fanouted, 22 not routed, 0 insert errors, +0 extra vias (0 SMD pins still to check in pass, ripup costs=400).
+2026-10-06 21:01:32.746 INFO   [94032D\720DAE] Fanout pass #5 on board 'd5e691e182da1904d3c22045c6ff0887' completed in 0.15 seconds with 22 SMD pins fanouted, 22 not routed, 0 insert errors, +0 extra vias (0 SMD pins still to check in pass, ripup costs=500).
+2026-10-06 21:01:32.747 INFO   Fanout stopped after 5 passes: no progress for 3 consecutive passes.
+2026-10-06 21:01:32.764 INFO   [94032D\720DAE] Fanout stage completed: started with 137 total SMD pins, completed in 1.11 seconds, escaped pins: 71/137 (51.8%), using 1.13 total CPU seconds, 1.24 GB total allocated, and 270.8 MB peak heap usage.
+2026-10-06 21:01:32.834 INFO   [94032D\720DAE] Auto-routing stage started on board 'd5e691e182da1904d3c22045c6ff0887' with baseline score 469.70 for 47 unrouted items.
+2026-10-06 21:01:32.866 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 8/13, plane: false)
+2026-10-06 21:01:32.866 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 4/13, plane: false)
+2026-10-06 21:01:32.867 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:32.867 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM_MCU' (connected: 3/5, plane: false)
+2026-10-06 21:01:32.867 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 8/15, plane: false)
+2026-10-06 21:01:32.867 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 3/15, plane: false)
+2026-10-06 21:01:32.867 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM' (connected: 6/9, plane: false)
+2026-10-06 21:01:32.868 DEBUG  Queuing item for routing: Pin on net '/USB_ATTACH_N' (connected: 3/4, plane: false)
+2026-10-06 21:01:32.868 DEBUG  Queuing item for routing: Pin on net '/NRST' (connected: 1/11, plane: false)
+2026-10-06 21:01:32.868 DEBUG  Queuing item for routing: Pin on net '/SWCLK' (connected: 1/2, plane: false)
+2026-10-06 21:01:32.868 DEBUG  Queuing item for routing: Pin on net '/SWDIO' (connected: 1/2, plane: false)
+2026-10-06 21:01:32.868 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:32.868 DEBUG  Queuing item for routing: Pin on net '/VBUS_USB' (connected: 1/13, plane: false)
+2026-10-06 21:01:32.868 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/9, plane: false)
+2026-10-06 21:01:32.868 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/9, plane: false)
+2026-10-06 21:01:32.868 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:32.868 DEBUG  Queuing item for routing: Pin on net '/LED_A' (connected: 1/2, plane: false)
+2026-10-06 21:01:32.868 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/104, plane: true)
+2026-10-06 21:01:32.868 DEBUG  Queuing item for routing: Pin on net '/SCL' (connected: 3/4, plane: false)
+2026-10-06 21:01:32.868 DEBUG  Queuing item for routing: Pin on net '/SDA' (connected: 1/3, plane: false)
+2026-10-06 21:01:32.868 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:32.868 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:32.868 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:32.868 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/9, plane: false)
+2026-10-06 21:01:32.868 DEBUG  Queuing item for routing: Pin on net '/BOOT0' (connected: 1/2, plane: false)
+2026-10-06 21:01:32.868 DEBUG  Queuing item for routing: Pin on net '/SDA' (connected: 1/3, plane: false)
+2026-10-06 21:01:32.868 DEBUG  Queuing item for routing: Pin on net '/SCL' (connected: 1/4, plane: false)
+2026-10-06 21:01:32.868 DEBUG  Queuing item for routing: Pin on net '/SWCLK' (connected: 1/2, plane: false)
+2026-10-06 21:01:32.868 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:32.868 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/104, plane: true)
+2026-10-06 21:01:32.868 DEBUG  Queuing item for routing: Pin on net '/SWDIO' (connected: 1/2, plane: false)
+2026-10-06 21:01:32.869 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:32.869 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:32.869 DEBUG  Queuing item for routing: Pin on net '/UART_RX' (connected: 1/2, plane: false)
+2026-10-06 21:01:32.869 DEBUG  Queuing item for routing: Pin on net '/UART_TX' (connected: 1/2, plane: false)
+2026-10-06 21:01:32.869 DEBUG  Queuing item for routing: Pin on net '/STATUS_LED' (connected: 1/2, plane: false)
+2026-10-06 21:01:32.869 DEBUG  Queuing item for routing: Pin on net '/USB_ATTACH_N' (connected: 1/4, plane: false)
+2026-10-06 21:01:32.869 DEBUG  Queuing item for routing: Pin on net '/RF_RESET_N' (connected: 1/5, plane: false)
+2026-10-06 21:01:32.869 DEBUG  Queuing item for routing: Pin on net '/BOOT1' (connected: 1/2, plane: false)
+2026-10-06 21:01:32.869 DEBUG  Queuing item for routing: Pin on net '/IRQ2' (connected: 1/2, plane: false)
+2026-10-06 21:01:32.869 DEBUG  Queuing item for routing: Pin on net '/IRQ0' (connected: 1/2, plane: false)
+2026-10-06 21:01:32.869 DEBUG  Queuing item for routing: Pin on net '/MOSI' (connected: 1/2, plane: false)
+2026-10-06 21:01:32.869 DEBUG  Queuing item for routing: Pin on net '/MISO' (connected: 1/2, plane: false)
+2026-10-06 21:01:32.869 DEBUG  Queuing item for routing: Pin on net '/SCK' (connected: 1/2, plane: false)
+2026-10-06 21:01:32.869 DEBUG  Queuing item for routing: Pin on net '/CS_N' (connected: 3/5, plane: false)
+2026-10-06 21:01:32.869 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:32.869 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/104, plane: true)
+2026-10-06 21:01:32.869 DEBUG  Queuing item for routing: Pin on net '/NRST' (connected: 1/11, plane: false)
+2026-10-06 21:01:32.869 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:32.870 DEBUG  Queuing item for routing: Pin on net '/NRST' (connected: 1/11, plane: false)
+2026-10-06 21:01:32.870 DEBUG  Queuing item for routing: Pin on net '/NRST' (connected: 1/11, plane: false)
+2026-10-06 21:01:32.870 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/104, plane: true)
+2026-10-06 21:01:32.870 DEBUG  Queuing item for routing: Pin on net '/UART_RX' (connected: 1/2, plane: false)
+2026-10-06 21:01:32.870 DEBUG  Queuing item for routing: Pin on net '/UART_TX' (connected: 1/2, plane: false)
+2026-10-06 21:01:32.870 DEBUG  Queuing item for routing: Pin on net '/IRQ2' (connected: 1/2, plane: false)
+2026-10-06 21:01:32.870 DEBUG  Queuing item for routing: Pin on net '/IRQ0' (connected: 1/2, plane: false)
+2026-10-06 21:01:32.870 DEBUG  Queuing item for routing: Pin on net '/RF_RESET_N' (connected: 1/5, plane: false)
+2026-10-06 21:01:32.870 DEBUG  Queuing item for routing: Pin on net '/CS_N' (connected: 1/5, plane: false)
+2026-10-06 21:01:32.870 DEBUG  Queuing item for routing: Pin on net '/MISO' (connected: 1/2, plane: false)
+2026-10-06 21:01:32.870 DEBUG  Queuing item for routing: Pin on net '/MOSI' (connected: 1/2, plane: false)
+2026-10-06 21:01:32.870 DEBUG  Queuing item for routing: Pin on net '/SCK' (connected: 1/2, plane: false)
+2026-10-06 21:01:32.870 DEBUG  Queuing item for routing: Pin on net '/NRST' (connected: 7/11, plane: false)
+2026-10-06 21:01:32.870 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:32.870 DEBUG  Queuing item for routing: Pin on net '/CS_N' (connected: 1/5, plane: false)
+2026-10-06 21:01:32.870 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:32.870 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:32.870 DEBUG  Queuing item for routing: Pin on net '/RF_RESET_N' (connected: 3/5, plane: false)
+2026-10-06 21:01:32.870 DEBUG  Queuing item for routing: Pin on net '/BOOT0' (connected: 1/2, plane: false)
+2026-10-06 21:01:32.870 DEBUG  Queuing item for routing: Pin on net '/LED_A' (connected: 1/2, plane: false)
+2026-10-06 21:01:32.870 DEBUG  Queuing item for routing: Pin on net '/STATUS_LED' (connected: 1/2, plane: false)
+2026-10-06 21:01:32.870 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/104, plane: true)
+2026-10-06 21:01:32.870 DEBUG  Queuing item for routing: Pin on net '/BOOT1' (connected: 1/2, plane: false)
+2026-10-06 21:01:32.870 DEBUG  Queuing item for routing: Pin on net '/SDA' (connected: 1/3, plane: false)
+2026-10-06 21:01:32.891 DEBUG  [94032D\720DAE] Pass #1: 47 incompletes across 73 items to route
+2026-10-06 21:01:32.891 DEBUG  [94032D\720DAE]   Net '/GND' has 5 incomplete(s)
+2026-10-06 21:01:32.891 DEBUG  [94032D\720DAE]   Net '/V3' has 6 incomplete(s)
+2026-10-06 21:01:32.891 DEBUG  [94032D\720DAE]   Net '/SCL' has 1 incomplete(s)
+2026-10-06 21:01:32.891 DEBUG  [94032D\720DAE]   Net '/STATUS_LED' has 1 incomplete(s)
+2026-10-06 21:01:32.891 DEBUG  [94032D\720DAE]   Net '/LED_A' has 1 incomplete(s)
+2026-10-06 21:01:32.891 DEBUG  [94032D\720DAE]   Net '/SCK' has 1 incomplete(s)
+2026-10-06 21:01:32.891 DEBUG  [94032D\720DAE]   Net '/MOSI' has 1 incomplete(s)
+2026-10-06 21:01:32.891 DEBUG  [94032D\720DAE]   Net '/MISO' has 1 incomplete(s)
+2026-10-06 21:01:32.891 DEBUG  [94032D\720DAE]   Net '/CS_N' has 2 incomplete(s)
+2026-10-06 21:01:32.891 DEBUG  [94032D\720DAE]   Net '/RF_RESET_N' has 2 incomplete(s)
+2026-10-06 21:01:32.891 DEBUG  [94032D\720DAE]   Net '/IRQ0' has 1 incomplete(s)
+2026-10-06 21:01:32.891 DEBUG  [94032D\720DAE]   Net '/IRQ2' has 1 incomplete(s)
+2026-10-06 21:01:32.891 DEBUG  [94032D\720DAE]   Net '/SDA' has 2 incomplete(s)
+2026-10-06 21:01:32.891 DEBUG  [94032D\720DAE]   Net '/VBUS_USB' has 2 incomplete(s)
+2026-10-06 21:01:32.891 DEBUG  [94032D\720DAE]   Net '/USB_DM' has 3 incomplete(s)
+2026-10-06 21:01:32.891 DEBUG  [94032D\720DAE]   Net '/USB_DP' has 4 incomplete(s)
+2026-10-06 21:01:32.891 DEBUG  [94032D\720DAE]   Net '/BOOT1' has 1 incomplete(s)
+2026-10-06 21:01:32.891 DEBUG  [94032D\720DAE]   Net '/BOOT0' has 1 incomplete(s)
+2026-10-06 21:01:32.891 DEBUG  [94032D\720DAE]   Net '/NRST' has 4 incomplete(s)
+2026-10-06 21:01:32.891 DEBUG  [94032D\720DAE]   Net '/UART_TX' has 1 incomplete(s)
+2026-10-06 21:01:32.891 DEBUG  [94032D\720DAE]   Net '/UART_RX' has 1 incomplete(s)
+2026-10-06 21:01:32.891 DEBUG  [94032D\720DAE]   Net '/USB_ATTACH_N' has 1 incomplete(s)
+2026-10-06 21:01:32.891 DEBUG  [94032D\720DAE]   Net '/USB_DM_MCU' has 1 incomplete(s)
+2026-10-06 21:01:32.891 DEBUG  [94032D\720DAE]   Net '/USB_DP_MCU' has 1 incomplete(s)
+2026-10-06 21:01:32.891 DEBUG  [94032D\720DAE]   Net '/SWDIO' has 1 incomplete(s)
+2026-10-06 21:01:32.891 DEBUG  [94032D\720DAE]   Net '/SWCLK' has 1 incomplete(s)
+2026-10-06 21:01:32.976 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:32.976 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:32.980 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #1119 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:32.983 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #1153 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:32.985 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:32.988 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:32.991 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:32.994 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:32.995 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:32.995 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:32.995 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:33.012 DEBUG  FoundConnectionInserter: insert trace failed for net #34 at corner 22/22 on layer 0, trace width: 1000, from corner: 11, okPoint: (1200000,-833988), target: (1161625,-897500)
+2026-10-06 21:01:33.016 DEBUG  [94032D\720DAE] Autorouter Failed to route connection between pin #24 of component #41 and polylinetrace, pin of component #49, pin #1 of component #25, because the new connection could not be inserted.
+2026-10-06 21:01:33.099 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:33.100 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:33.100 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:33.103 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:33.104 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:33.104 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:33.107 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:33.110 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:33.113 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:33.113 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:33.113 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:33.170 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:33.170 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:33.170 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:33.175 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:33.201 DEBUG  FoundConnectionInserter: insert trace failed for net #14 at corner 19/19 on layer 0, trace width: 1000, from corner: 14, okPoint: (1133046,-716529), target: (1170000,-700875)
+2026-10-06 21:01:33.203 DEBUG  [94032D\720DAE] Autorouter Failed to route connection between polylinetrace, polylinetrace, polylinetrace, via, via, pin #4 of component #44, pin #1 of component #20 and pin #42 of component #41, because the new connection could not be inserted.
+2026-10-06 21:01:33.618 DEBUG  FoundConnectionInserter: insert trace failed for net #23 at corner 6/6 on layer 0, trace width: 1000, from corner: 1, okPoint: (1172020,-896689), target: (1161625,-867500)
+2026-10-06 21:01:33.621 DEBUG  [94032D\720DAE] Autorouter Failed to route connection between pin #30 of component #41 and pin #2 of component #37, because the new connection could not be inserted.
+2026-10-06 21:01:33.884 INFO   [94032D\720DAE] Auto-routing pass #1 on board 'd5e691e182da1904d3c22045c6ff0887' was completed in 1.02 seconds with score 693.79 (27 unrouted and 32 violations), using 1.93 CPU seconds and the job allocated 2.14 GB of memory so far.
+2026-10-06 21:01:33.913 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 8/13, plane: false)
+2026-10-06 21:01:33.913 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 4/13, plane: false)
+2026-10-06 21:01:33.915 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:33.915 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM_MCU' (connected: 3/5, plane: false)
+2026-10-06 21:01:33.915 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 10/15, plane: false)
+2026-10-06 21:01:33.915 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 3/15, plane: false)
+2026-10-06 21:01:33.915 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM' (connected: 8/10, plane: false)
+2026-10-06 21:01:33.915 DEBUG  Queuing item for routing: Pin on net '/NRST' (connected: 3/11, plane: false)
+2026-10-06 21:01:33.915 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:33.915 DEBUG  Queuing item for routing: Pin on net '/VBUS_USB' (connected: 1/13, plane: false)
+2026-10-06 21:01:33.915 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:33.915 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/104, plane: true)
+2026-10-06 21:01:33.915 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:33.915 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:33.915 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:33.915 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:33.915 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:33.915 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/104, plane: true)
+2026-10-06 21:01:33.915 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:33.915 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:33.915 DEBUG  Queuing item for routing: Pin on net '/UART_RX' (connected: 1/2, plane: false)
+2026-10-06 21:01:33.915 DEBUG  Queuing item for routing: Pin on net '/IRQ0' (connected: 3/4, plane: false)
+2026-10-06 21:01:33.915 DEBUG  Queuing item for routing: Pin on net '/MISO' (connected: 1/2, plane: false)
+2026-10-06 21:01:33.915 DEBUG  Queuing item for routing: Pin on net '/SCK' (connected: 1/2, plane: false)
+2026-10-06 21:01:33.915 DEBUG  Queuing item for routing: Pin on net '/CS_N' (connected: 3/6, plane: false)
+2026-10-06 21:01:33.915 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:33.915 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/104, plane: true)
+2026-10-06 21:01:33.916 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:33.916 DEBUG  Queuing item for routing: Pin on net '/NRST' (connected: 3/11, plane: false)
+2026-10-06 21:01:33.916 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/104, plane: true)
+2026-10-06 21:01:33.916 DEBUG  Queuing item for routing: Pin on net '/UART_RX' (connected: 1/2, plane: false)
+2026-10-06 21:01:33.916 DEBUG  Queuing item for routing: Pin on net '/IRQ0' (connected: 1/4, plane: false)
+2026-10-06 21:01:33.916 DEBUG  Queuing item for routing: Pin on net '/CS_N' (connected: 3/6, plane: false)
+2026-10-06 21:01:33.916 DEBUG  Queuing item for routing: Pin on net '/MISO' (connected: 1/2, plane: false)
+2026-10-06 21:01:33.916 DEBUG  Queuing item for routing: Pin on net '/SCK' (connected: 1/2, plane: false)
+2026-10-06 21:01:33.916 DEBUG  Queuing item for routing: Pin on net '/NRST' (connected: 5/11, plane: false)
+2026-10-06 21:01:33.916 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:33.916 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:33.916 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:33.916 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/104, plane: true)
+2026-10-06 21:01:33.938 DEBUG  [94032D\720DAE] Pass #2: 27 incompletes across 40 items to route
+2026-10-06 21:01:33.938 DEBUG  [94032D\720DAE]   Net '/GND' has 5 incomplete(s)
+2026-10-06 21:01:33.938 DEBUG  [94032D\720DAE]   Net '/V3' has 6 incomplete(s)
+2026-10-06 21:01:33.939 DEBUG  [94032D\720DAE]   Net '/SCK' has 1 incomplete(s)
+2026-10-06 21:01:33.939 DEBUG  [94032D\720DAE]   Net '/MISO' has 1 incomplete(s)
+2026-10-06 21:01:33.939 DEBUG  [94032D\720DAE]   Net '/CS_N' has 1 incomplete(s)
+2026-10-06 21:01:33.939 DEBUG  [94032D\720DAE]   Net '/IRQ0' has 1 incomplete(s)
+2026-10-06 21:01:33.939 DEBUG  [94032D\720DAE]   Net '/VBUS_USB' has 2 incomplete(s)
+2026-10-06 21:01:33.939 DEBUG  [94032D\720DAE]   Net '/USB_DM' has 2 incomplete(s)
+2026-10-06 21:01:33.939 DEBUG  [94032D\720DAE]   Net '/USB_DP' has 3 incomplete(s)
+2026-10-06 21:01:33.939 DEBUG  [94032D\720DAE]   Net '/NRST' has 2 incomplete(s)
+2026-10-06 21:01:33.939 DEBUG  [94032D\720DAE]   Net '/UART_RX' has 1 incomplete(s)
+2026-10-06 21:01:33.939 DEBUG  [94032D\720DAE]   Net '/USB_DM_MCU' has 1 incomplete(s)
+2026-10-06 21:01:33.939 DEBUG  [94032D\720DAE]   Net '/USB_DP_MCU' has 1 incomplete(s)
+2026-10-06 21:01:34.115 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.115 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.140 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.140 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.143 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #4418 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:34.144 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #4452 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:34.147 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.150 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.153 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.159 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.159 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.159 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.162 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.162 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.162 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.165 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.165 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.165 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.168 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #4524 on net 17 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:34.171 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.217 DEBUG  FoundConnectionInserter: insert trace failed for net #20 at corner 10/13 on layer 0, trace width: 1000, from corner: 5, okPoint: (1064583,-970544), target: (1059514,-971500)
+2026-10-06 21:01:34.220 DEBUG  [94032D\720DAE] Autorouter Failed to route connection between polylinetrace, polylinetrace, polylinetrace, polylinetrace, polylinetrace, polylinetrace, pin #4 of component #48, pin #6 of component #41, pin #1 of component #27, pin of component #10, pin of component #5 and polylinetrace, pin #1 of component #40, pin of component #40, because the new connection could not be inserted.
+2026-10-06 21:01:34.231 DEBUG  FoundConnectionInserter: insert trace failed for net #20 at corner 3/8 on layer 0, trace width: 1000, from corner: 2, okPoint: (1070000,-957187), target: (1070000,-965466)
+2026-10-06 21:01:34.233 DEBUG  [94032D\720DAE] Autorouter Failed to route connection between polylinetrace, polylinetrace, via, polylinetrace, polylinetrace, pin #1 of component #40, pin of component #40 and polylinetrace, polylinetrace, polylinetrace, polylinetrace, polylinetrace, polylinetrace, pin #4 of component #48, pin #6 of component #41, pin #1 of component #27, pin of component #10, pin of component #5, because the new connection could not be inserted.
+2026-10-06 21:01:34.241 DEBUG  FoundConnectionInserter: insert trace failed for net #23 at corner 8/8 on layer 0, trace width: 1000, from corner: 3, okPoint: (1172020,-896689), target: (1161625,-867500)
+2026-10-06 21:01:34.243 DEBUG  [94032D\720DAE] Autorouter Failed to route connection between pin #30 of component #41 and pin #2 of component #37, because the new connection could not be inserted.
+2026-10-06 21:01:34.277 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:34.285 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:34.361 INFO   [94032D\720DAE] Auto-routing pass #2 on board '3a6eaa17ed700b147a0ea047b3fa8897' was completed in 0.45 seconds with score 727.40 (24 unrouted and 32 violations), using 1.93 CPU seconds and the job allocated 2.14 GB of memory so far.
+2026-10-06 21:01:34.390 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 8/13, plane: false)
+2026-10-06 21:01:34.390 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 4/13, plane: false)
+2026-10-06 21:01:34.391 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:34.391 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM_MCU' (connected: 3/5, plane: false)
+2026-10-06 21:01:34.391 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 10/15, plane: false)
+2026-10-06 21:01:34.391 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 3/15, plane: false)
+2026-10-06 21:01:34.391 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM' (connected: 8/10, plane: false)
+2026-10-06 21:01:34.391 DEBUG  Queuing item for routing: Pin on net '/NRST' (connected: 11/14, plane: false)
+2026-10-06 21:01:34.391 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:34.391 DEBUG  Queuing item for routing: Pin on net '/VBUS_USB' (connected: 1/13, plane: false)
+2026-10-06 21:01:34.391 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:34.391 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/104, plane: true)
+2026-10-06 21:01:34.391 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:34.391 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:34.391 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:34.391 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:34.391 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:34.391 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/104, plane: true)
+2026-10-06 21:01:34.391 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:34.391 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:34.391 DEBUG  Queuing item for routing: Pin on net '/RF_RESET_N' (connected: 1/7, plane: false)
+2026-10-06 21:01:34.391 DEBUG  Queuing item for routing: Pin on net '/BOOT1' (connected: 3/6, plane: false)
+2026-10-06 21:01:34.391 DEBUG  Queuing item for routing: Pin on net '/CS_N' (connected: 3/6, plane: false)
+2026-10-06 21:01:34.391 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:34.391 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/104, plane: true)
+2026-10-06 21:01:34.392 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:34.392 DEBUG  Queuing item for routing: Pin on net '/NRST' (connected: 3/14, plane: false)
+2026-10-06 21:01:34.392 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/104, plane: true)
+2026-10-06 21:01:34.392 DEBUG  Queuing item for routing: Pin on net '/RF_RESET_N' (connected: 6/7, plane: false)
+2026-10-06 21:01:34.392 DEBUG  Queuing item for routing: Pin on net '/CS_N' (connected: 3/6, plane: false)
+2026-10-06 21:01:34.392 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:34.392 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:34.392 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:34.392 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/104, plane: true)
+2026-10-06 21:01:34.392 DEBUG  Queuing item for routing: Pin on net '/BOOT1' (connected: 3/6, plane: false)
+2026-10-06 21:01:34.413 DEBUG  [94032D\720DAE] Pass #3: 24 incompletes across 35 items to route
+2026-10-06 21:01:34.413 DEBUG  [94032D\720DAE]   Net '/GND' has 5 incomplete(s)
+2026-10-06 21:01:34.413 DEBUG  [94032D\720DAE]   Net '/V3' has 6 incomplete(s)
+2026-10-06 21:01:34.413 DEBUG  [94032D\720DAE]   Net '/CS_N' has 1 incomplete(s)
+2026-10-06 21:01:34.413 DEBUG  [94032D\720DAE]   Net '/RF_RESET_N' has 1 incomplete(s)
+2026-10-06 21:01:34.413 DEBUG  [94032D\720DAE]   Net '/VBUS_USB' has 2 incomplete(s)
+2026-10-06 21:01:34.413 DEBUG  [94032D\720DAE]   Net '/USB_DM' has 2 incomplete(s)
+2026-10-06 21:01:34.413 DEBUG  [94032D\720DAE]   Net '/USB_DP' has 3 incomplete(s)
+2026-10-06 21:01:34.413 DEBUG  [94032D\720DAE]   Net '/BOOT1' has 1 incomplete(s)
+2026-10-06 21:01:34.413 DEBUG  [94032D\720DAE]   Net '/NRST' has 1 incomplete(s)
+2026-10-06 21:01:34.413 DEBUG  [94032D\720DAE]   Net '/USB_DM_MCU' has 1 incomplete(s)
+2026-10-06 21:01:34.413 DEBUG  [94032D\720DAE]   Net '/USB_DP_MCU' has 1 incomplete(s)
+2026-10-06 21:01:34.523 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.523 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.526 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.526 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.528 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #5334 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:34.529 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #5368 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:34.532 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.535 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.537 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.563 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.563 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.563 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.566 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.566 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.566 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.568 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.568 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.568 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.571 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #5440 on net 17 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:34.574 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.671 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:34.680 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:34.734 INFO   [94032D\720DAE] Auto-routing pass #3 on board 'a277abd22d0fb9af4508b41050eb77c7' was completed in 0.34 seconds with score 749.81 (22 unrouted and 32 violations), using 2.93 CPU seconds and the job allocated 3.45 GB of memory so far.
+2026-10-06 21:01:34.762 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 8/13, plane: false)
+2026-10-06 21:01:34.762 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 4/13, plane: false)
+2026-10-06 21:01:34.762 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:34.762 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM_MCU' (connected: 3/5, plane: false)
+2026-10-06 21:01:34.762 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 10/15, plane: false)
+2026-10-06 21:01:34.763 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 3/15, plane: false)
+2026-10-06 21:01:34.763 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM' (connected: 8/10, plane: false)
+2026-10-06 21:01:34.763 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:34.763 DEBUG  Queuing item for routing: Pin on net '/VBUS_USB' (connected: 1/13, plane: false)
+2026-10-06 21:01:34.763 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:34.763 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:34.763 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:34.763 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:34.763 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:34.763 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:34.763 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:34.763 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:34.763 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:34.763 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:34.763 DEBUG  Queuing item for routing: Pin on net '/RF_RESET_N' (connected: 1/7, plane: false)
+2026-10-06 21:01:34.763 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:34.764 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:34.764 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:34.764 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:34.764 DEBUG  Queuing item for routing: Pin on net '/RF_RESET_N' (connected: 6/7, plane: false)
+2026-10-06 21:01:34.764 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:34.764 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:34.764 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:34.764 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:34.764 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:34.784 DEBUG  [94032D\720DAE] Pass #4: 22 incompletes across 30 items to route
+2026-10-06 21:01:34.784 DEBUG  [94032D\720DAE]   Net '/GND' has 6 incomplete(s)
+2026-10-06 21:01:34.784 DEBUG  [94032D\720DAE]   Net '/V3' has 6 incomplete(s)
+2026-10-06 21:01:34.784 DEBUG  [94032D\720DAE]   Net '/RF_RESET_N' has 1 incomplete(s)
+2026-10-06 21:01:34.784 DEBUG  [94032D\720DAE]   Net '/VBUS_USB' has 2 incomplete(s)
+2026-10-06 21:01:34.784 DEBUG  [94032D\720DAE]   Net '/USB_DM' has 2 incomplete(s)
+2026-10-06 21:01:34.784 DEBUG  [94032D\720DAE]   Net '/USB_DP' has 3 incomplete(s)
+2026-10-06 21:01:34.784 DEBUG  [94032D\720DAE]   Net '/USB_DM_MCU' has 1 incomplete(s)
+2026-10-06 21:01:34.784 DEBUG  [94032D\720DAE]   Net '/USB_DP_MCU' has 1 incomplete(s)
+2026-10-06 21:01:34.913 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.914 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.916 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.917 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.918 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #6658 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:34.920 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #6692 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:34.923 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.926 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.929 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.955 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.955 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.955 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.958 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.958 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.958 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.961 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.961 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.961 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.963 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #6764 on net 17 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:34.966 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:34.974 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:34.983 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:35.056 INFO   [94032D\720DAE] Auto-routing pass #4 on board '3336a229862eb2dc5fcc17eb206c48ef' was completed in 0.29 seconds with score 749.81 (22 unrouted and 32 violations), using 2.93 CPU seconds and the job allocated 3.45 GB of memory so far.
+2026-10-06 21:01:35.085 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 8/13, plane: false)
+2026-10-06 21:01:35.085 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 4/13, plane: false)
+2026-10-06 21:01:35.085 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:35.085 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM_MCU' (connected: 3/5, plane: false)
+2026-10-06 21:01:35.085 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 10/15, plane: false)
+2026-10-06 21:01:35.085 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 3/15, plane: false)
+2026-10-06 21:01:35.086 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM' (connected: 8/10, plane: false)
+2026-10-06 21:01:35.086 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:35.086 DEBUG  Queuing item for routing: Pin on net '/VBUS_USB' (connected: 1/13, plane: false)
+2026-10-06 21:01:35.086 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:35.086 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:35.086 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:35.086 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:35.086 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:35.086 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:35.086 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:35.086 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:35.086 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:35.086 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:35.086 DEBUG  Queuing item for routing: Pin on net '/BOOT1' (connected: 1/4, plane: false)
+2026-10-06 21:01:35.086 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:35.086 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:35.086 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:35.086 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:35.086 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:35.086 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:35.086 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:35.086 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:35.086 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:35.086 DEBUG  Queuing item for routing: Pin on net '/BOOT1' (connected: 3/4, plane: false)
+2026-10-06 21:01:35.107 DEBUG  [94032D\720DAE] Pass #5: 22 incompletes across 30 items to route
+2026-10-06 21:01:35.107 DEBUG  [94032D\720DAE]   Net '/GND' has 6 incomplete(s)
+2026-10-06 21:01:35.107 DEBUG  [94032D\720DAE]   Net '/V3' has 6 incomplete(s)
+2026-10-06 21:01:35.107 DEBUG  [94032D\720DAE]   Net '/VBUS_USB' has 2 incomplete(s)
+2026-10-06 21:01:35.107 DEBUG  [94032D\720DAE]   Net '/USB_DM' has 2 incomplete(s)
+2026-10-06 21:01:35.107 DEBUG  [94032D\720DAE]   Net '/USB_DP' has 3 incomplete(s)
+2026-10-06 21:01:35.107 DEBUG  [94032D\720DAE]   Net '/BOOT1' has 1 incomplete(s)
+2026-10-06 21:01:35.107 DEBUG  [94032D\720DAE]   Net '/USB_DM_MCU' has 1 incomplete(s)
+2026-10-06 21:01:35.107 DEBUG  [94032D\720DAE]   Net '/USB_DP_MCU' has 1 incomplete(s)
+2026-10-06 21:01:35.200 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.201 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.204 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.204 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.206 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #7092 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:35.207 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #7126 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:35.210 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.213 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.216 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.221 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.221 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.221 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.224 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.224 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.224 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.247 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.247 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.247 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.250 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #7198 on net 17 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:35.253 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.303 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:35.311 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:35.385 INFO   [94032D\720DAE] Auto-routing pass #5 on board 'abc4c62fdd57c2c063b541df3dfc02aa' was completed in 0.30 seconds with score 749.81 (22 unrouted and 32 violations), using 2.93 CPU seconds and the job allocated 3.45 GB of memory so far.
+2026-10-06 21:01:35.412 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 8/13, plane: false)
+2026-10-06 21:01:35.412 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 4/13, plane: false)
+2026-10-06 21:01:35.413 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:35.413 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM_MCU' (connected: 3/5, plane: false)
+2026-10-06 21:01:35.413 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 10/15, plane: false)
+2026-10-06 21:01:35.413 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 3/15, plane: false)
+2026-10-06 21:01:35.413 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM' (connected: 8/10, plane: false)
+2026-10-06 21:01:35.413 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:35.413 DEBUG  Queuing item for routing: Pin on net '/VBUS_USB' (connected: 1/13, plane: false)
+2026-10-06 21:01:35.413 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:35.413 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:35.413 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:35.413 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:35.413 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:35.413 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:35.413 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:35.413 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:35.413 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:35.413 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:35.413 DEBUG  Queuing item for routing: Pin on net '/RF_RESET_N' (connected: 1/7, plane: false)
+2026-10-06 21:01:35.413 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:35.413 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:35.414 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:35.414 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:35.414 DEBUG  Queuing item for routing: Pin on net '/RF_RESET_N' (connected: 6/7, plane: false)
+2026-10-06 21:01:35.414 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:35.414 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:35.414 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:35.414 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:35.414 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:35.414 DEBUG  [94032D\720DAE] Pass #6: applied deterministic permutation to 18 signal items (stagnation count: 2).
+2026-10-06 21:01:35.434 DEBUG  [94032D\720DAE] Pass #6: 22 incompletes across 30 items to route
+2026-10-06 21:01:35.434 DEBUG  [94032D\720DAE]   Net '/GND' has 6 incomplete(s)
+2026-10-06 21:01:35.434 DEBUG  [94032D\720DAE]   Net '/V3' has 6 incomplete(s)
+2026-10-06 21:01:35.434 DEBUG  [94032D\720DAE]   Net '/RF_RESET_N' has 1 incomplete(s)
+2026-10-06 21:01:35.434 DEBUG  [94032D\720DAE]   Net '/VBUS_USB' has 2 incomplete(s)
+2026-10-06 21:01:35.434 DEBUG  [94032D\720DAE]   Net '/USB_DM' has 2 incomplete(s)
+2026-10-06 21:01:35.434 DEBUG  [94032D\720DAE]   Net '/USB_DP' has 3 incomplete(s)
+2026-10-06 21:01:35.434 DEBUG  [94032D\720DAE]   Net '/USB_DM_MCU' has 1 incomplete(s)
+2026-10-06 21:01:35.434 DEBUG  [94032D\720DAE]   Net '/USB_DP_MCU' has 1 incomplete(s)
+2026-10-06 21:01:35.511 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.511 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.513 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #7751 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:35.514 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #7785 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:35.517 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.520 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.520 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.520 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.522 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #7856 on net 17 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:35.525 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:35.528 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.528 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.528 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.528 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.651 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.682 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.682 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.682 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.685 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.694 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:35.700 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.703 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.703 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.703 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.703 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.774 INFO   [94032D\720DAE] Auto-routing pass #6 on board 'db7389eb1e274228ad051ef0a0f911ad' was completed in 0.36 seconds with score 749.81 (22 unrouted and 32 violations), using 3.93 CPU seconds and the job allocated 4.72 GB of memory so far.
+2026-10-06 21:01:35.802 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 8/13, plane: false)
+2026-10-06 21:01:35.802 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 4/13, plane: false)
+2026-10-06 21:01:35.803 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:35.803 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM_MCU' (connected: 3/5, plane: false)
+2026-10-06 21:01:35.803 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 10/15, plane: false)
+2026-10-06 21:01:35.803 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 3/15, plane: false)
+2026-10-06 21:01:35.803 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM' (connected: 8/10, plane: false)
+2026-10-06 21:01:35.803 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:35.803 DEBUG  Queuing item for routing: Pin on net '/VBUS_USB' (connected: 1/13, plane: false)
+2026-10-06 21:01:35.803 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:35.803 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:35.803 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:35.803 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:35.803 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:35.803 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:35.803 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:35.803 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:35.803 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:35.803 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:35.804 DEBUG  Queuing item for routing: Pin on net '/SCK' (connected: 1/2, plane: false)
+2026-10-06 21:01:35.804 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:35.804 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:35.804 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:35.804 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:35.804 DEBUG  Queuing item for routing: Pin on net '/SCK' (connected: 1/2, plane: false)
+2026-10-06 21:01:35.804 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:35.804 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:35.804 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:35.804 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:35.804 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:35.804 DEBUG  [94032D\720DAE] Pass #7: applied deterministic permutation to 18 signal items (stagnation count: 3).
+2026-10-06 21:01:35.823 DEBUG  [94032D\720DAE] Pass #7: 22 incompletes across 30 items to route
+2026-10-06 21:01:35.823 DEBUG  [94032D\720DAE]   Net '/GND' has 6 incomplete(s)
+2026-10-06 21:01:35.823 DEBUG  [94032D\720DAE]   Net '/V3' has 6 incomplete(s)
+2026-10-06 21:01:35.823 DEBUG  [94032D\720DAE]   Net '/SCK' has 1 incomplete(s)
+2026-10-06 21:01:35.823 DEBUG  [94032D\720DAE]   Net '/VBUS_USB' has 2 incomplete(s)
+2026-10-06 21:01:35.823 DEBUG  [94032D\720DAE]   Net '/USB_DM' has 2 incomplete(s)
+2026-10-06 21:01:35.823 DEBUG  [94032D\720DAE]   Net '/USB_DP' has 3 incomplete(s)
+2026-10-06 21:01:35.823 DEBUG  [94032D\720DAE]   Net '/USB_DM_MCU' has 1 incomplete(s)
+2026-10-06 21:01:35.823 DEBUG  [94032D\720DAE]   Net '/USB_DP_MCU' has 1 incomplete(s)
+2026-10-06 21:01:35.897 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.898 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.898 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.903 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:35.906 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.914 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.914 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.914 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.917 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.917 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.919 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #9207 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:35.920 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #9241 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:35.945 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:35.947 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:36.221 DEBUG  [94032D\720DAE] Autorouter Failed to route connection between pin #2 of component #28 and pin #14 of component #41, because no connection was found between their nets.
+2026-10-06 21:01:36.224 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:36.225 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:36.225 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:36.228 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:36.228 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:36.228 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:36.230 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #11763 on net 17 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:36.233 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:36.356 INFO   [94032D\720DAE] Auto-routing pass #7 on board '7406956b71b161a38e1594fd615be337' was completed in 0.55 seconds with score 749.81 (22 unrouted and 32 violations), using 3.93 CPU seconds and the job allocated 4.72 GB of memory so far.
+2026-10-06 21:01:36.383 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 8/13, plane: false)
+2026-10-06 21:01:36.383 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 4/13, plane: false)
+2026-10-06 21:01:36.384 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:36.384 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM_MCU' (connected: 3/5, plane: false)
+2026-10-06 21:01:36.384 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 10/15, plane: false)
+2026-10-06 21:01:36.384 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 3/15, plane: false)
+2026-10-06 21:01:36.384 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM' (connected: 8/10, plane: false)
+2026-10-06 21:01:36.384 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:36.384 DEBUG  Queuing item for routing: Pin on net '/VBUS_USB' (connected: 1/13, plane: false)
+2026-10-06 21:01:36.384 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:36.384 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:36.384 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:36.384 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:36.384 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:36.384 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:36.384 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:36.384 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:36.384 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:36.384 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:36.384 DEBUG  Queuing item for routing: Pin on net '/MOSI' (connected: 1/2, plane: false)
+2026-10-06 21:01:36.384 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:36.384 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:36.384 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:36.384 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:36.384 DEBUG  Queuing item for routing: Pin on net '/MOSI' (connected: 1/2, plane: false)
+2026-10-06 21:01:36.384 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:36.384 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:36.384 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:36.384 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:36.384 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:36.384 DEBUG  [94032D\720DAE] Pass #8: applied deterministic permutation to 18 signal items (stagnation count: 4).
+2026-10-06 21:01:36.404 DEBUG  [94032D\720DAE] Pass #8: 22 incompletes across 30 items to route
+2026-10-06 21:01:36.404 DEBUG  [94032D\720DAE]   Net '/GND' has 6 incomplete(s)
+2026-10-06 21:01:36.404 DEBUG  [94032D\720DAE]   Net '/V3' has 6 incomplete(s)
+2026-10-06 21:01:36.404 DEBUG  [94032D\720DAE]   Net '/MOSI' has 1 incomplete(s)
+2026-10-06 21:01:36.404 DEBUG  [94032D\720DAE]   Net '/VBUS_USB' has 2 incomplete(s)
+2026-10-06 21:01:36.404 DEBUG  [94032D\720DAE]   Net '/USB_DM' has 2 incomplete(s)
+2026-10-06 21:01:36.404 DEBUG  [94032D\720DAE]   Net '/USB_DP' has 3 incomplete(s)
+2026-10-06 21:01:36.404 DEBUG  [94032D\720DAE]   Net '/USB_DM_MCU' has 1 incomplete(s)
+2026-10-06 21:01:36.404 DEBUG  [94032D\720DAE]   Net '/USB_DP_MCU' has 1 incomplete(s)
+2026-10-06 21:01:36.551 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:36.557 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:36.567 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:36.567 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:36.589 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:36.597 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:36.597 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:36.597 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:36.602 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:36.602 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:36.602 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:36.604 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:36.604 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:36.604 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:36.607 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #13368 on net 17 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:36.612 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:36.612 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:36.614 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #13411 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:36.615 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #13445 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:36.617 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:36.687 INFO   [94032D\720DAE] Auto-routing pass #8 on board '9af51917713ac09d5b69227b6761bcc0' was completed in 0.30 seconds with score 749.81 (22 unrouted and 32 violations), using 4.92 CPU seconds and the job allocated 6.39 GB of memory so far.
+2026-10-06 21:01:36.713 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 8/13, plane: false)
+2026-10-06 21:01:36.713 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 4/13, plane: false)
+2026-10-06 21:01:36.714 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:36.714 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM_MCU' (connected: 3/5, plane: false)
+2026-10-06 21:01:36.714 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 10/15, plane: false)
+2026-10-06 21:01:36.714 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 3/15, plane: false)
+2026-10-06 21:01:36.714 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM' (connected: 8/10, plane: false)
+2026-10-06 21:01:36.714 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:36.714 DEBUG  Queuing item for routing: Pin on net '/VBUS_USB' (connected: 1/13, plane: false)
+2026-10-06 21:01:36.714 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:36.714 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:36.714 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:36.714 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:36.714 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:36.714 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:36.714 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:36.714 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:36.714 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:36.714 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:36.715 DEBUG  Queuing item for routing: Pin on net '/SCK' (connected: 1/2, plane: false)
+2026-10-06 21:01:36.715 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:36.715 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:36.715 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:36.715 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:36.715 DEBUG  Queuing item for routing: Pin on net '/SCK' (connected: 1/2, plane: false)
+2026-10-06 21:01:36.715 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:36.715 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:36.715 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:36.715 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:36.715 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:36.715 DEBUG  [94032D\720DAE] Pass #9: applied deterministic permutation to 18 signal items (stagnation count: 5).
+2026-10-06 21:01:36.734 DEBUG  [94032D\720DAE] Pass #9: 22 incompletes across 30 items to route
+2026-10-06 21:01:36.734 DEBUG  [94032D\720DAE]   Net '/GND' has 6 incomplete(s)
+2026-10-06 21:01:36.734 DEBUG  [94032D\720DAE]   Net '/V3' has 6 incomplete(s)
+2026-10-06 21:01:36.734 DEBUG  [94032D\720DAE]   Net '/SCK' has 1 incomplete(s)
+2026-10-06 21:01:36.734 DEBUG  [94032D\720DAE]   Net '/VBUS_USB' has 2 incomplete(s)
+2026-10-06 21:01:36.734 DEBUG  [94032D\720DAE]   Net '/USB_DM' has 2 incomplete(s)
+2026-10-06 21:01:36.734 DEBUG  [94032D\720DAE]   Net '/USB_DP' has 3 incomplete(s)
+2026-10-06 21:01:36.734 DEBUG  [94032D\720DAE]   Net '/USB_DM_MCU' has 1 incomplete(s)
+2026-10-06 21:01:36.734 DEBUG  [94032D\720DAE]   Net '/USB_DP_MCU' has 1 incomplete(s)
+2026-10-06 21:01:36.812 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:36.812 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:36.812 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:36.814 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #13642 on net 17 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:36.824 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:37.086 DEBUG  [94032D\720DAE] Autorouter Failed to route connection between pin #2 of component #28 and pin #14 of component #41, because no connection was found between their nets.
+2026-10-06 21:01:37.092 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.093 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.093 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.093 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.114 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.117 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.120 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.120 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.120 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.120 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.123 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.123 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.128 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.128 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.130 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #16079 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:37.131 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #16113 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:37.169 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:37.172 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.264 INFO   [94032D\720DAE] Auto-routing pass #9 on board '12ddb310ef99dbca0ffd51d172dfa400' was completed in 0.55 seconds with score 749.81 (22 unrouted and 32 violations), using 4.92 CPU seconds and the job allocated 6.39 GB of memory so far.
+2026-10-06 21:01:37.300 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 8/13, plane: false)
+2026-10-06 21:01:37.300 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 4/13, plane: false)
+2026-10-06 21:01:37.300 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:37.300 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM_MCU' (connected: 3/5, plane: false)
+2026-10-06 21:01:37.300 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 10/15, plane: false)
+2026-10-06 21:01:37.301 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 3/15, plane: false)
+2026-10-06 21:01:37.301 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM' (connected: 8/10, plane: false)
+2026-10-06 21:01:37.301 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:37.301 DEBUG  Queuing item for routing: Pin on net '/VBUS_USB' (connected: 1/13, plane: false)
+2026-10-06 21:01:37.301 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:37.301 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:37.301 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:37.301 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:37.301 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:37.301 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:37.301 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:37.301 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:37.301 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:37.301 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:37.301 DEBUG  Queuing item for routing: Pin on net '/MISO' (connected: 1/2, plane: false)
+2026-10-06 21:01:37.301 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:37.301 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:37.301 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:37.301 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:37.301 DEBUG  Queuing item for routing: Pin on net '/MISO' (connected: 1/2, plane: false)
+2026-10-06 21:01:37.301 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:37.301 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:37.301 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:37.301 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:37.301 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:37.301 DEBUG  [94032D\720DAE] Pass #10: applied deterministic permutation to 18 signal items (stagnation count: 6).
+2026-10-06 21:01:37.322 DEBUG  [94032D\720DAE] Pass #10: 22 incompletes across 30 items to route
+2026-10-06 21:01:37.322 DEBUG  [94032D\720DAE]   Net '/GND' has 6 incomplete(s)
+2026-10-06 21:01:37.322 DEBUG  [94032D\720DAE]   Net '/V3' has 6 incomplete(s)
+2026-10-06 21:01:37.322 DEBUG  [94032D\720DAE]   Net '/MISO' has 1 incomplete(s)
+2026-10-06 21:01:37.322 DEBUG  [94032D\720DAE]   Net '/VBUS_USB' has 2 incomplete(s)
+2026-10-06 21:01:37.322 DEBUG  [94032D\720DAE]   Net '/USB_DM' has 2 incomplete(s)
+2026-10-06 21:01:37.322 DEBUG  [94032D\720DAE]   Net '/USB_DP' has 3 incomplete(s)
+2026-10-06 21:01:37.322 DEBUG  [94032D\720DAE]   Net '/USB_DM_MCU' has 1 incomplete(s)
+2026-10-06 21:01:37.322 DEBUG  [94032D\720DAE]   Net '/USB_DP_MCU' has 1 incomplete(s)
+2026-10-06 21:01:37.408 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.411 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.411 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.412 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #16712 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:37.413 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #16746 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:37.436 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.436 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.436 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.439 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.439 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.439 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.461 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.469 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.471 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:37.474 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.474 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.474 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.476 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:37.481 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.481 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.482 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.484 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #17000 on net 17 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:37.555 INFO   [94032D\720DAE] Auto-routing pass #10 on board '4372dcd78533351461c005b3db1f2a64' was completed in 0.26 seconds with score 749.81 (22 unrouted and 32 violations), using 5.93 CPU seconds and the job allocated 7.97 GB of memory so far.
+2026-10-06 21:01:37.581 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 8/13, plane: false)
+2026-10-06 21:01:37.581 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 4/13, plane: false)
+2026-10-06 21:01:37.582 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:37.582 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM_MCU' (connected: 3/5, plane: false)
+2026-10-06 21:01:37.582 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 10/15, plane: false)
+2026-10-06 21:01:37.582 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 3/15, plane: false)
+2026-10-06 21:01:37.582 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM' (connected: 8/10, plane: false)
+2026-10-06 21:01:37.582 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:37.582 DEBUG  Queuing item for routing: Pin on net '/VBUS_USB' (connected: 1/13, plane: false)
+2026-10-06 21:01:37.582 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:37.582 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:37.582 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:37.582 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:37.582 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:37.582 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:37.582 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:37.582 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:37.582 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:37.582 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:37.582 DEBUG  Queuing item for routing: Pin on net '/MOSI' (connected: 1/2, plane: false)
+2026-10-06 21:01:37.582 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:37.582 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:37.582 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:37.582 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:37.582 DEBUG  Queuing item for routing: Pin on net '/MOSI' (connected: 1/2, plane: false)
+2026-10-06 21:01:37.582 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:37.582 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:37.582 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:37.582 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:37.582 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:37.582 DEBUG  [94032D\720DAE] Pass #11: applied deterministic permutation to 18 signal items (stagnation count: 7).
+2026-10-06 21:01:37.601 DEBUG  [94032D\720DAE] Pass #11: 22 incompletes across 30 items to route
+2026-10-06 21:01:37.602 DEBUG  [94032D\720DAE]   Net '/GND' has 6 incomplete(s)
+2026-10-06 21:01:37.602 DEBUG  [94032D\720DAE]   Net '/V3' has 6 incomplete(s)
+2026-10-06 21:01:37.602 DEBUG  [94032D\720DAE]   Net '/MOSI' has 1 incomplete(s)
+2026-10-06 21:01:37.602 DEBUG  [94032D\720DAE]   Net '/VBUS_USB' has 2 incomplete(s)
+2026-10-06 21:01:37.602 DEBUG  [94032D\720DAE]   Net '/USB_DM' has 2 incomplete(s)
+2026-10-06 21:01:37.602 DEBUG  [94032D\720DAE]   Net '/USB_DP' has 3 incomplete(s)
+2026-10-06 21:01:37.602 DEBUG  [94032D\720DAE]   Net '/USB_DM_MCU' has 1 incomplete(s)
+2026-10-06 21:01:37.602 DEBUG  [94032D\720DAE]   Net '/USB_DP_MCU' has 1 incomplete(s)
+2026-10-06 21:01:37.712 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.712 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.712 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.714 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #17488 on net 17 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:37.717 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.724 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.724 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.724 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.724 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.727 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:37.761 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.764 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.764 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.764 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.764 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.769 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.772 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.772 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.774 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:37.778 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.778 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.780 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #17535 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:37.781 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #17569 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:37.852 INFO   [94032D\720DAE] Auto-routing pass #11 on board 'b458d1f3a9b2b904d20aa2c87c53779e' was completed in 0.27 seconds with score 761.01 (21 unrouted and 32 violations), using 5.93 CPU seconds and the job allocated 7.97 GB of memory so far.
+2026-10-06 21:01:37.879 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 8/13, plane: false)
+2026-10-06 21:01:37.879 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 4/13, plane: false)
+2026-10-06 21:01:37.880 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:37.880 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM_MCU' (connected: 3/5, plane: false)
+2026-10-06 21:01:37.880 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 10/15, plane: false)
+2026-10-06 21:01:37.880 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 3/15, plane: false)
+2026-10-06 21:01:37.880 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM' (connected: 8/10, plane: false)
+2026-10-06 21:01:37.880 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:37.880 DEBUG  Queuing item for routing: Pin on net '/VBUS_USB' (connected: 1/13, plane: false)
+2026-10-06 21:01:37.880 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:37.880 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:37.880 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:37.880 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:37.880 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:37.880 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:37.880 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:37.880 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:37.880 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:37.880 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:37.880 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:37.880 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:37.880 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:37.880 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:37.880 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:37.880 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:37.880 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:37.880 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:37.880 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:37.900 DEBUG  [94032D\720DAE] Pass #12: 21 incompletes across 28 items to route
+2026-10-06 21:01:37.901 DEBUG  [94032D\720DAE]   Net '/GND' has 6 incomplete(s)
+2026-10-06 21:01:37.901 DEBUG  [94032D\720DAE]   Net '/V3' has 6 incomplete(s)
+2026-10-06 21:01:37.901 DEBUG  [94032D\720DAE]   Net '/VBUS_USB' has 2 incomplete(s)
+2026-10-06 21:01:37.901 DEBUG  [94032D\720DAE]   Net '/USB_DM' has 2 incomplete(s)
+2026-10-06 21:01:37.901 DEBUG  [94032D\720DAE]   Net '/USB_DP' has 3 incomplete(s)
+2026-10-06 21:01:37.901 DEBUG  [94032D\720DAE]   Net '/USB_DM_MCU' has 1 incomplete(s)
+2026-10-06 21:01:37.901 DEBUG  [94032D\720DAE]   Net '/USB_DP_MCU' has 1 incomplete(s)
+2026-10-06 21:01:37.980 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.980 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.983 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.983 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.984 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #17740 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:37.986 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #17774 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:37.988 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.991 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.993 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.999 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.999 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:37.999 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.001 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.001 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.001 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.023 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.023 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.023 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.025 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #17846 on net 17 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:38.028 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.036 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:38.043 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:38.095 INFO   [94032D\720DAE] Auto-routing pass #12 on board '20b7b1b3589d0afd33aa97a8e5a58c80' was completed in 0.22 seconds with score 761.01 (21 unrouted and 32 violations), using 5.93 CPU seconds and the job allocated 7.97 GB of memory so far.
+2026-10-06 21:01:38.098 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 8/13, plane: false)
+2026-10-06 21:01:38.098 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 4/13, plane: false)
+2026-10-06 21:01:38.099 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:38.099 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM_MCU' (connected: 3/5, plane: false)
+2026-10-06 21:01:38.099 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 10/15, plane: false)
+2026-10-06 21:01:38.099 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 3/15, plane: false)
+2026-10-06 21:01:38.099 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM' (connected: 8/10, plane: false)
+2026-10-06 21:01:38.099 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:38.099 DEBUG  Queuing item for routing: Pin on net '/VBUS_USB' (connected: 1/13, plane: false)
+2026-10-06 21:01:38.099 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:38.099 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:38.099 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:38.099 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:38.099 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:38.099 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:38.099 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:38.099 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:38.099 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:38.099 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:38.100 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:38.100 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:38.100 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:38.100 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:38.100 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:38.100 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:38.100 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:38.100 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:38.100 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:38.120 DEBUG  [94032D\720DAE] Pass #13: 21 incompletes across 28 items to route
+2026-10-06 21:01:38.120 DEBUG  [94032D\720DAE]   Net '/GND' has 6 incomplete(s)
+2026-10-06 21:01:38.120 DEBUG  [94032D\720DAE]   Net '/V3' has 6 incomplete(s)
+2026-10-06 21:01:38.120 DEBUG  [94032D\720DAE]   Net '/VBUS_USB' has 2 incomplete(s)
+2026-10-06 21:01:38.120 DEBUG  [94032D\720DAE]   Net '/USB_DM' has 2 incomplete(s)
+2026-10-06 21:01:38.120 DEBUG  [94032D\720DAE]   Net '/USB_DP' has 3 incomplete(s)
+2026-10-06 21:01:38.120 DEBUG  [94032D\720DAE]   Net '/USB_DM_MCU' has 1 incomplete(s)
+2026-10-06 21:01:38.120 DEBUG  [94032D\720DAE]   Net '/USB_DP_MCU' has 1 incomplete(s)
+2026-10-06 21:01:38.198 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.198 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.201 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.201 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.202 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #18022 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:38.204 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #18056 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:38.206 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.209 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.211 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.216 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.216 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.216 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.219 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.219 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.219 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.240 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.240 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.240 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.244 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #18128 on net 17 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:38.246 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.254 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:38.261 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:38.314 INFO   [94032D\720DAE] Auto-routing pass #13 on board '20b7b1b3589d0afd33aa97a8e5a58c80' was completed in 0.22 seconds with score 761.01 (21 unrouted and 32 violations), using 5.93 CPU seconds and the job allocated 7.97 GB of memory so far.
+2026-10-06 21:01:38.317 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 8/13, plane: false)
+2026-10-06 21:01:38.317 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 4/13, plane: false)
+2026-10-06 21:01:38.318 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:38.318 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM_MCU' (connected: 3/5, plane: false)
+2026-10-06 21:01:38.318 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 10/15, plane: false)
+2026-10-06 21:01:38.318 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 3/15, plane: false)
+2026-10-06 21:01:38.318 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM' (connected: 8/10, plane: false)
+2026-10-06 21:01:38.318 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:38.318 DEBUG  Queuing item for routing: Pin on net '/VBUS_USB' (connected: 1/13, plane: false)
+2026-10-06 21:01:38.318 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:38.318 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:38.318 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:38.318 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:38.318 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:38.318 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:38.318 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:38.318 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:38.318 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:38.318 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:38.318 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:38.318 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:38.318 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:38.318 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:38.318 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:38.318 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:38.318 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:38.318 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:38.318 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:38.318 DEBUG  [94032D\720DAE] Pass #14: applied deterministic permutation to 16 signal items (stagnation count: 2).
+2026-10-06 21:01:38.338 DEBUG  [94032D\720DAE] Pass #14: 21 incompletes across 28 items to route
+2026-10-06 21:01:38.338 DEBUG  [94032D\720DAE]   Net '/GND' has 6 incomplete(s)
+2026-10-06 21:01:38.338 DEBUG  [94032D\720DAE]   Net '/V3' has 6 incomplete(s)
+2026-10-06 21:01:38.338 DEBUG  [94032D\720DAE]   Net '/VBUS_USB' has 2 incomplete(s)
+2026-10-06 21:01:38.338 DEBUG  [94032D\720DAE]   Net '/USB_DM' has 2 incomplete(s)
+2026-10-06 21:01:38.338 DEBUG  [94032D\720DAE]   Net '/USB_DP' has 3 incomplete(s)
+2026-10-06 21:01:38.338 DEBUG  [94032D\720DAE]   Net '/USB_DM_MCU' has 1 incomplete(s)
+2026-10-06 21:01:38.338 DEBUG  [94032D\720DAE]   Net '/USB_DP_MCU' has 1 incomplete(s)
+2026-10-06 21:01:38.418 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.421 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.421 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.421 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.428 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.428 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.428 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.433 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:38.455 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.455 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.457 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #18307 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:38.458 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #18341 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:38.460 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:38.463 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.463 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.463 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.466 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #18412 on net 17 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:38.471 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.471 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.471 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.474 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.534 INFO   [94032D\720DAE] Auto-routing pass #14 on board '20b7b1b3589d0afd33aa97a8e5a58c80' was completed in 0.22 seconds with score 761.01 (21 unrouted and 32 violations), using 6.93 CPU seconds and the job allocated 9.23 GB of memory so far.
+2026-10-06 21:01:38.563 DEBUG  [94032D\720DAE] Applied one-time fanout recovery cleanup (removed fanout tails/vias). Incompletes: 21 -> 21.
+2026-10-06 21:01:38.564 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 8/13, plane: false)
+2026-10-06 21:01:38.564 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 4/13, plane: false)
+2026-10-06 21:01:38.565 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:38.565 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM_MCU' (connected: 3/5, plane: false)
+2026-10-06 21:01:38.565 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 10/15, plane: false)
+2026-10-06 21:01:38.565 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 3/15, plane: false)
+2026-10-06 21:01:38.565 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM' (connected: 8/10, plane: false)
+2026-10-06 21:01:38.565 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:38.565 DEBUG  Queuing item for routing: Pin on net '/VBUS_USB' (connected: 1/13, plane: false)
+2026-10-06 21:01:38.565 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:38.565 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:38.565 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:38.565 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:38.565 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:38.565 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:38.565 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:38.565 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:38.565 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:38.565 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:38.565 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:38.565 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:38.565 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:38.565 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:38.565 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:38.565 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:38.565 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:38.565 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:38.565 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:38.565 DEBUG  [94032D\720DAE] Pass #15: applied deterministic permutation to 16 signal items (stagnation count: 3).
+2026-10-06 21:01:38.587 DEBUG  [94032D\720DAE] Pass #15: 21 incompletes across 28 items to route
+2026-10-06 21:01:38.587 DEBUG  [94032D\720DAE]   Net '/GND' has 6 incomplete(s)
+2026-10-06 21:01:38.587 DEBUG  [94032D\720DAE]   Net '/V3' has 6 incomplete(s)
+2026-10-06 21:01:38.587 DEBUG  [94032D\720DAE]   Net '/VBUS_USB' has 2 incomplete(s)
+2026-10-06 21:01:38.587 DEBUG  [94032D\720DAE]   Net '/USB_DM' has 2 incomplete(s)
+2026-10-06 21:01:38.587 DEBUG  [94032D\720DAE]   Net '/USB_DP' has 3 incomplete(s)
+2026-10-06 21:01:38.587 DEBUG  [94032D\720DAE]   Net '/USB_DM_MCU' has 1 incomplete(s)
+2026-10-06 21:01:38.587 DEBUG  [94032D\720DAE]   Net '/USB_DP_MCU' has 1 incomplete(s)
+2026-10-06 21:01:38.666 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:38.669 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.675 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.675 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.675 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.677 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #18618 on net 17 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:38.680 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.680 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.680 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.680 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.688 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.688 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.688 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.689 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.691 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.712 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:38.720 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.725 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.725 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.726 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #18662 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:38.728 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #18696 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:38.733 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.733 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.733 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.786 INFO   [94032D\720DAE] Auto-routing pass #15 on board '20b7b1b3589d0afd33aa97a8e5a58c80' was completed in 0.22 seconds with score 761.01 (21 unrouted and 32 violations), using 6.93 CPU seconds and the job allocated 9.23 GB of memory so far.
+2026-10-06 21:01:38.789 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 8/13, plane: false)
+2026-10-06 21:01:38.789 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 4/13, plane: false)
+2026-10-06 21:01:38.790 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:38.790 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM_MCU' (connected: 3/5, plane: false)
+2026-10-06 21:01:38.790 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 10/15, plane: false)
+2026-10-06 21:01:38.790 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 3/15, plane: false)
+2026-10-06 21:01:38.790 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM' (connected: 8/10, plane: false)
+2026-10-06 21:01:38.790 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:38.790 DEBUG  Queuing item for routing: Pin on net '/VBUS_USB' (connected: 1/13, plane: false)
+2026-10-06 21:01:38.790 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:38.790 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:38.790 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:38.790 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:38.790 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:38.790 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:38.790 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:38.790 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:38.790 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:38.790 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:38.790 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:38.790 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:38.790 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:38.790 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:38.790 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:38.790 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:38.790 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:38.790 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:38.790 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:38.790 DEBUG  [94032D\720DAE] Pass #16: applied deterministic permutation to 16 signal items (stagnation count: 4).
+2026-10-06 21:01:38.810 DEBUG  [94032D\720DAE] Pass #16: 21 incompletes across 28 items to route
+2026-10-06 21:01:38.810 DEBUG  [94032D\720DAE]   Net '/GND' has 6 incomplete(s)
+2026-10-06 21:01:38.810 DEBUG  [94032D\720DAE]   Net '/V3' has 6 incomplete(s)
+2026-10-06 21:01:38.810 DEBUG  [94032D\720DAE]   Net '/VBUS_USB' has 2 incomplete(s)
+2026-10-06 21:01:38.810 DEBUG  [94032D\720DAE]   Net '/USB_DM' has 2 incomplete(s)
+2026-10-06 21:01:38.810 DEBUG  [94032D\720DAE]   Net '/USB_DP' has 3 incomplete(s)
+2026-10-06 21:01:38.810 DEBUG  [94032D\720DAE]   Net '/USB_DM_MCU' has 1 incomplete(s)
+2026-10-06 21:01:38.810 DEBUG  [94032D\720DAE]   Net '/USB_DP_MCU' has 1 incomplete(s)
+2026-10-06 21:01:38.896 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.896 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.896 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.899 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #18901 on net 17 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:38.901 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:38.904 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.904 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.904 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.904 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.929 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.936 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.936 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.936 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.936 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.938 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:38.942 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.942 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.947 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.947 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:38.949 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #18945 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:38.950 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #18979 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:38.952 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.004 INFO   [94032D\720DAE] Auto-routing pass #16 on board '20b7b1b3589d0afd33aa97a8e5a58c80' was completed in 0.22 seconds with score 761.01 (21 unrouted and 32 violations), using 6.93 CPU seconds and the job allocated 9.23 GB of memory so far.
+2026-10-06 21:01:39.007 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 8/13, plane: false)
+2026-10-06 21:01:39.007 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 4/13, plane: false)
+2026-10-06 21:01:39.008 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:39.008 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM_MCU' (connected: 3/5, plane: false)
+2026-10-06 21:01:39.008 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 10/15, plane: false)
+2026-10-06 21:01:39.008 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 3/15, plane: false)
+2026-10-06 21:01:39.008 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM' (connected: 8/10, plane: false)
+2026-10-06 21:01:39.008 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:39.008 DEBUG  Queuing item for routing: Pin on net '/VBUS_USB' (connected: 1/13, plane: false)
+2026-10-06 21:01:39.008 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:39.008 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:39.008 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:39.008 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:39.008 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:39.008 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:39.008 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:39.008 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:39.008 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:39.008 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:39.009 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:39.009 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:39.009 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:39.009 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:39.009 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:39.009 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:39.009 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:39.009 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:39.009 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:39.009 DEBUG  [94032D\720DAE] Pass #17: applied deterministic permutation to 16 signal items (stagnation count: 5).
+2026-10-06 21:01:39.028 DEBUG  [94032D\720DAE] Pass #17: 21 incompletes across 28 items to route
+2026-10-06 21:01:39.028 DEBUG  [94032D\720DAE]   Net '/GND' has 6 incomplete(s)
+2026-10-06 21:01:39.028 DEBUG  [94032D\720DAE]   Net '/V3' has 6 incomplete(s)
+2026-10-06 21:01:39.028 DEBUG  [94032D\720DAE]   Net '/VBUS_USB' has 2 incomplete(s)
+2026-10-06 21:01:39.028 DEBUG  [94032D\720DAE]   Net '/USB_DM' has 2 incomplete(s)
+2026-10-06 21:01:39.028 DEBUG  [94032D\720DAE]   Net '/USB_DP' has 3 incomplete(s)
+2026-10-06 21:01:39.028 DEBUG  [94032D\720DAE]   Net '/USB_DM_MCU' has 1 incomplete(s)
+2026-10-06 21:01:39.028 DEBUG  [94032D\720DAE]   Net '/USB_DP_MCU' has 1 incomplete(s)
+2026-10-06 21:01:39.113 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.113 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.113 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.116 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #19181 on net 17 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:39.121 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.121 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.123 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #19224 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:39.124 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #19258 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:39.127 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.127 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.127 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.151 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:39.155 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.157 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.162 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.162 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.162 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.162 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.168 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.168 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.168 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.168 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.170 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:39.224 INFO   [94032D\720DAE] Auto-routing pass #17 on board '20b7b1b3589d0afd33aa97a8e5a58c80' was completed in 0.22 seconds with score 761.01 (21 unrouted and 32 violations), using 6.93 CPU seconds and the job allocated 9.23 GB of memory so far.
+2026-10-06 21:01:39.228 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 8/13, plane: false)
+2026-10-06 21:01:39.228 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 4/13, plane: false)
+2026-10-06 21:01:39.229 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:39.229 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM_MCU' (connected: 3/5, plane: false)
+2026-10-06 21:01:39.229 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 10/15, plane: false)
+2026-10-06 21:01:39.229 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 3/15, plane: false)
+2026-10-06 21:01:39.229 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM' (connected: 8/10, plane: false)
+2026-10-06 21:01:39.229 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:39.229 DEBUG  Queuing item for routing: Pin on net '/VBUS_USB' (connected: 1/13, plane: false)
+2026-10-06 21:01:39.229 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:39.229 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:39.229 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:39.229 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:39.229 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:39.229 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:39.229 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:39.229 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:39.229 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:39.229 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:39.229 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:39.229 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:39.229 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:39.229 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:39.229 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:39.229 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:39.229 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:39.229 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:39.229 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:39.229 DEBUG  [94032D\720DAE] Pass #18: applied deterministic permutation to 16 signal items (stagnation count: 6).
+2026-10-06 21:01:39.251 DEBUG  [94032D\720DAE] Pass #18: 21 incompletes across 28 items to route
+2026-10-06 21:01:39.251 DEBUG  [94032D\720DAE]   Net '/GND' has 6 incomplete(s)
+2026-10-06 21:01:39.251 DEBUG  [94032D\720DAE]   Net '/V3' has 6 incomplete(s)
+2026-10-06 21:01:39.251 DEBUG  [94032D\720DAE]   Net '/VBUS_USB' has 2 incomplete(s)
+2026-10-06 21:01:39.251 DEBUG  [94032D\720DAE]   Net '/USB_DM' has 2 incomplete(s)
+2026-10-06 21:01:39.251 DEBUG  [94032D\720DAE]   Net '/USB_DP' has 3 incomplete(s)
+2026-10-06 21:01:39.251 DEBUG  [94032D\720DAE]   Net '/USB_DM_MCU' has 1 incomplete(s)
+2026-10-06 21:01:39.251 DEBUG  [94032D\720DAE]   Net '/USB_DP_MCU' has 1 incomplete(s)
+2026-10-06 21:01:39.335 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:39.340 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.340 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.340 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.348 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.348 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.348 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.350 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:39.376 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.376 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.378 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #19435 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:39.379 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #19469 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:39.382 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.382 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.382 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.388 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.394 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.394 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.394 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.396 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #19541 on net 17 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:39.399 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.457 INFO   [94032D\720DAE] Auto-routing pass #18 on board '20b7b1b3589d0afd33aa97a8e5a58c80' was completed in 0.23 seconds with score 761.01 (21 unrouted and 32 violations), using 6.93 CPU seconds and the job allocated 9.23 GB of memory so far.
+2026-10-06 21:01:39.460 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 8/13, plane: false)
+2026-10-06 21:01:39.460 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 4/13, plane: false)
+2026-10-06 21:01:39.461 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:39.461 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM_MCU' (connected: 3/5, plane: false)
+2026-10-06 21:01:39.461 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 10/15, plane: false)
+2026-10-06 21:01:39.461 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 3/15, plane: false)
+2026-10-06 21:01:39.461 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM' (connected: 8/10, plane: false)
+2026-10-06 21:01:39.461 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:39.461 DEBUG  Queuing item for routing: Pin on net '/VBUS_USB' (connected: 1/13, plane: false)
+2026-10-06 21:01:39.461 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:39.461 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:39.461 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:39.461 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:39.461 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:39.461 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:39.461 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:39.461 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:39.461 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:39.461 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:39.461 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:39.461 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:39.461 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:39.461 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:39.461 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:39.461 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:39.461 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:39.461 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:39.461 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:39.461 DEBUG  [94032D\720DAE] Pass #19: applied deterministic permutation to 16 signal items (stagnation count: 7).
+2026-10-06 21:01:39.483 DEBUG  [94032D\720DAE] Pass #19: 21 incompletes across 28 items to route
+2026-10-06 21:01:39.483 DEBUG  [94032D\720DAE]   Net '/GND' has 6 incomplete(s)
+2026-10-06 21:01:39.483 DEBUG  [94032D\720DAE]   Net '/V3' has 6 incomplete(s)
+2026-10-06 21:01:39.483 DEBUG  [94032D\720DAE]   Net '/VBUS_USB' has 2 incomplete(s)
+2026-10-06 21:01:39.483 DEBUG  [94032D\720DAE]   Net '/USB_DM' has 2 incomplete(s)
+2026-10-06 21:01:39.483 DEBUG  [94032D\720DAE]   Net '/USB_DP' has 3 incomplete(s)
+2026-10-06 21:01:39.483 DEBUG  [94032D\720DAE]   Net '/USB_DM_MCU' has 1 incomplete(s)
+2026-10-06 21:01:39.483 DEBUG  [94032D\720DAE]   Net '/USB_DP_MCU' has 1 incomplete(s)
+2026-10-06 21:01:39.565 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.566 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.573 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.573 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.574 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.576 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #19745 on net 17 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:39.578 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:39.581 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.584 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.587 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.587 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.587 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.587 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.612 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.612 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.614 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #19789 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:39.615 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #19823 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:39.618 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.618 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.618 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.618 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.623 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.625 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:39.629 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.684 INFO   [94032D\720DAE] Auto-routing pass #19 on board '20b7b1b3589d0afd33aa97a8e5a58c80' was completed in 0.22 seconds with score 761.01 (21 unrouted and 32 violations), using 7.93 CPU seconds and the job allocated 10.45 GB of memory so far.
+2026-10-06 21:01:39.687 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 8/13, plane: false)
+2026-10-06 21:01:39.687 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 4/13, plane: false)
+2026-10-06 21:01:39.687 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:39.687 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM_MCU' (connected: 3/5, plane: false)
+2026-10-06 21:01:39.687 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 10/15, plane: false)
+2026-10-06 21:01:39.687 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 3/15, plane: false)
+2026-10-06 21:01:39.687 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM' (connected: 8/10, plane: false)
+2026-10-06 21:01:39.688 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:39.688 DEBUG  Queuing item for routing: Pin on net '/VBUS_USB' (connected: 1/13, plane: false)
+2026-10-06 21:01:39.688 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:39.688 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:39.688 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:39.688 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:39.688 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:39.688 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:39.688 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:39.688 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:39.688 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:39.688 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:39.688 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:39.688 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:39.688 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:39.688 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:39.688 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:39.688 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:39.688 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:39.688 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:39.688 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:39.688 DEBUG  [94032D\720DAE] Pass #20: applied deterministic permutation to 16 signal items (stagnation count: 8).
+2026-10-06 21:01:39.707 DEBUG  [94032D\720DAE] Pass #20: 21 incompletes across 28 items to route
+2026-10-06 21:01:39.707 DEBUG  [94032D\720DAE]   Net '/GND' has 6 incomplete(s)
+2026-10-06 21:01:39.707 DEBUG  [94032D\720DAE]   Net '/V3' has 6 incomplete(s)
+2026-10-06 21:01:39.707 DEBUG  [94032D\720DAE]   Net '/VBUS_USB' has 2 incomplete(s)
+2026-10-06 21:01:39.707 DEBUG  [94032D\720DAE]   Net '/USB_DM' has 2 incomplete(s)
+2026-10-06 21:01:39.707 DEBUG  [94032D\720DAE]   Net '/USB_DP' has 3 incomplete(s)
+2026-10-06 21:01:39.707 DEBUG  [94032D\720DAE]   Net '/USB_DM_MCU' has 1 incomplete(s)
+2026-10-06 21:01:39.707 DEBUG  [94032D\720DAE]   Net '/USB_DP_MCU' has 1 incomplete(s)
+2026-10-06 21:01:39.787 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.787 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.787 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.793 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.793 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.796 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.798 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.798 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.798 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.801 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #20027 on net 17 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:39.806 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.807 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.808 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #20069 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:39.809 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #20103 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:39.840 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.840 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.840 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.840 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.845 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.848 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:39.851 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:39.853 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:39.906 INFO   [94032D\720DAE] Auto-routing pass #20 on board '20b7b1b3589d0afd33aa97a8e5a58c80' was completed in 0.22 seconds with score 761.01 (21 unrouted and 32 violations), using 7.93 CPU seconds and the job allocated 10.45 GB of memory so far.
+2026-10-06 21:01:39.909 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 8/13, plane: false)
+2026-10-06 21:01:39.909 DEBUG  Queuing item for routing: Via on net '/VBUS_USB' (connected: 4/13, plane: false)
+2026-10-06 21:01:39.910 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:39.910 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM_MCU' (connected: 3/5, plane: false)
+2026-10-06 21:01:39.910 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 10/15, plane: false)
+2026-10-06 21:01:39.910 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DP' (connected: 3/15, plane: false)
+2026-10-06 21:01:39.910 DEBUG  Queuing item for routing: PolylineTrace on net '/USB_DM' (connected: 8/10, plane: false)
+2026-10-06 21:01:39.910 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:39.910 DEBUG  Queuing item for routing: Pin on net '/VBUS_USB' (connected: 1/13, plane: false)
+2026-10-06 21:01:39.910 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:39.910 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:39.910 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:39.910 DEBUG  Queuing item for routing: Pin on net '/USB_DP' (connected: 1/15, plane: false)
+2026-10-06 21:01:39.910 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:39.910 DEBUG  Queuing item for routing: Pin on net '/USB_DM' (connected: 1/10, plane: false)
+2026-10-06 21:01:39.910 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:39.910 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:39.910 DEBUG  Queuing item for routing: Pin on net '/USB_DP_MCU' (connected: 1/3, plane: false)
+2026-10-06 21:01:39.910 DEBUG  Queuing item for routing: Pin on net '/USB_DM_MCU' (connected: 1/5, plane: false)
+2026-10-06 21:01:39.910 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:39.910 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:39.910 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:39.910 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:39.910 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:39.910 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:39.910 DEBUG  Queuing item for routing: Pin on net '/V3' (connected: 1/90, plane: true)
+2026-10-06 21:01:39.910 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:39.910 DEBUG  Queuing item for routing: Pin on net '/GND' (connected: 1/103, plane: true)
+2026-10-06 21:01:39.911 DEBUG  [94032D\720DAE] Pass #21: applied deterministic permutation to 16 signal items (stagnation count: 9).
+2026-10-06 21:01:39.930 DEBUG  [94032D\720DAE] Pass #21: 21 incompletes across 28 items to route
+2026-10-06 21:01:39.930 DEBUG  [94032D\720DAE]   Net '/GND' has 6 incomplete(s)
+2026-10-06 21:01:39.930 DEBUG  [94032D\720DAE]   Net '/V3' has 6 incomplete(s)
+2026-10-06 21:01:39.930 DEBUG  [94032D\720DAE]   Net '/VBUS_USB' has 2 incomplete(s)
+2026-10-06 21:01:39.930 DEBUG  [94032D\720DAE]   Net '/USB_DM' has 2 incomplete(s)
+2026-10-06 21:01:39.930 DEBUG  [94032D\720DAE]   Net '/USB_DP' has 3 incomplete(s)
+2026-10-06 21:01:39.930 DEBUG  [94032D\720DAE]   Net '/USB_DM_MCU' has 1 incomplete(s)
+2026-10-06 21:01:39.930 DEBUG  [94032D\720DAE]   Net '/USB_DP_MCU' has 1 incomplete(s)
+2026-10-06 21:01:40.005 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:40.005 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:40.020 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:40.022 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:40.022 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:40.022 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:40.025 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:40.045 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:40.045 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:40.045 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:40.047 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #20309 on net 17 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:40.050 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:40.050 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:40.050 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:40.050 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:40.052 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:40.063 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:40.063 DEBUG  ShapeSearchTree45Degree.completeShape: non-IntOctagon contained shape, using bounding octagon approximation
+2026-10-06 21:01:40.065 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #20354 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:40.066 DEBUG  PolylineTrace.normalize: max normalization depth (16) reached for trace #20388 on net 15 — stopping recursion, trace kept as-is.
+2026-10-06 21:01:40.068 DEBUG  FloatLine: one or both endpoints are null (degenerate line segment)
+2026-10-06 21:01:40.119 INFO   [94032D\720DAE] Auto-routing pass #21 on board '20b7b1b3589d0afd33aa97a8e5a58c80' was completed in 0.21 seconds with score 761.01 (21 unrouted and 32 violations), using 7.93 CPU seconds and the job allocated 10.45 GB of memory so far.
+2026-10-06 21:01:40.124 INFO   [94032D\720DAE] The router's best score (761.01) has not improved by more than 0.5 points since pass #11. Stopping the auto-router after 21 passes (21 items still unconnected).
+The following connections could not be routed -- please review your design (e.g. check pad clearances, trace width rules, and available routing space):
+  Net '/GND' (6 unrouted connections):
+    - R7-2  ->  via
+    - U2-2  ->  via
+    - U1-8  ->  via
+    - via  ->  U1-35
+    - R9-2  ->  via
+    - J1-5@1  ->  D1-1
+  Net '/V3' (6 unrouted connections):
+    - R5-1  ->  via
+    - via  ->  R8-1
+    - U1-1  ->  U1-48
+    - U1-9  ->  C7-1
+    - C4-1  ->  U1-36
+    - R4-1  ->  via
+  Net '/VBUS_USB' (2 unrouted connections):
+    - via  ->  U3-5
+    - via  ->  J1-1
+  Net '/USB_DM' (2 unrouted connections):
+    - U3-3  ->  U3-4
+    - U3-3  ->  R2-1
+  Net '/USB_DP' (3 unrouted connections):
+    - U3-1  ->  R3-2
+    - U3-6  ->  U3-1
+    - R1-1  ->  R3-2
+  Net '/USB_DM_MCU' (1 unrouted connection):
+    - U1-32  ->  R2-2
+  Net '/USB_DP_MCU' (1 unrouted connection):
+    - U1-33  ->  R1-2
+2026-10-06 21:01:40.172 DEBUG  === Performance Profile ===
+2026-10-06 21:01:40.172 DEBUG  === Routing Parameters ===
+2026-10-06 21:01:40.172 DEBUG    Via Costs: 50, Plane Via Costs: 5
+2026-10-06 21:01:40.172 DEBUG    Layer Costs (Preferred / Against):
+2026-10-06 21:01:40.172 DEBUG      Layer 1: 1.8 / 3.1
+2026-10-06 21:01:40.172 DEBUG      Layer 2: 1.0 / 1.8
+2026-10-06 21:01:40.172 DEBUG      Layer 3: 1.0 / 2.3
+2026-10-06 21:01:40.172 DEBUG      Layer 4: 1.8 / 2.6
+2026-10-06 21:01:40.172 DEBUG  
+2026-10-06 21:01:40.172 DEBUG    autoroute_item                          :     2827 ms total,      668 calls,      4 ms avg
+2026-10-06 21:01:40.172 DEBUG  
+2026-10-06 21:01:40.172 DEBUG  === Pass History ===
+2026-10-06 21:01:40.172 DEBUG    Pass 1  :   27 unrouted items,     0.99 s,   100 ripup cost
+2026-10-06 21:01:40.172 DEBUG    Pass 2  :   24 unrouted items,     0.42 s,   200 ripup cost
+2026-10-06 21:01:40.172 DEBUG    Pass 3  :   22 unrouted items,     0.32 s,   300 ripup cost
+2026-10-06 21:01:40.172 DEBUG    Pass 4  :   22 unrouted items,     0.27 s,   400 ripup cost
+2026-10-06 21:01:40.172 DEBUG    Pass 5  :   22 unrouted items,     0.28 s,   500 ripup cost
+2026-10-06 21:01:40.172 DEBUG    Pass 6  :   22 unrouted items,     0.34 s,   600 ripup cost
+2026-10-06 21:01:40.173 DEBUG    Pass 7  :   22 unrouted items,     0.53 s,   700 ripup cost
+2026-10-06 21:01:40.173 DEBUG    Pass 8  :   22 unrouted items,     0.28 s,   800 ripup cost
+2026-10-06 21:01:40.173 DEBUG    Pass 9  :   22 unrouted items,     0.51 s,   900 ripup cost
+2026-10-06 21:01:40.173 DEBUG    Pass 10 :   22 unrouted items,     0.23 s,  1000 ripup cost
+2026-10-06 21:01:40.173 DEBUG    Pass 11 :   21 unrouted items,     0.25 s,  1100 ripup cost
+2026-10-06 21:01:40.173 DEBUG    Pass 12 :   21 unrouted items,     0.19 s,  1200 ripup cost
+2026-10-06 21:01:40.173 DEBUG    Pass 13 :   21 unrouted items,     0.19 s,  1300 ripup cost
+2026-10-06 21:01:40.173 DEBUG    Pass 14 :   21 unrouted items,     0.19 s,  1400 ripup cost
+2026-10-06 21:01:40.173 DEBUG    Pass 15 :   21 unrouted items,     0.20 s,  1500 ripup cost
+2026-10-06 21:01:40.173 DEBUG    Pass 16 :   21 unrouted items,     0.19 s,  1600 ripup cost
+2026-10-06 21:01:40.173 DEBUG    Pass 17 :   21 unrouted items,     0.19 s,  1700 ripup cost
+2026-10-06 21:01:40.173 DEBUG    Pass 18 :   21 unrouted items,     0.20 s,  1800 ripup cost
+2026-10-06 21:01:40.173 DEBUG    Pass 19 :   21 unrouted items,     0.20 s,  1900 ripup cost
+2026-10-06 21:01:40.173 DEBUG    Pass 20 :   21 unrouted items,     0.20 s,  2000 ripup cost
+2026-10-06 21:01:40.173 DEBUG    Pass 21 :   21 unrouted items,     0.19 s,  2100 ripup cost
+2026-10-06 21:01:40.173 DEBUG  ===========================
+2026-10-06 21:01:40.198 INFO   [94032D\720DAE] Auto-routing stage completed: started with 63 unrouted nets, completed in 8.60 seconds, final score: 761.01 (21 unrouted and 32 violations), using 7.93 total CPU seconds, 10.45 GB total allocated, and 281.7 MB peak heap usage.
+2026-10-06 21:01:40.199 DEBUG  [94032D\720DAE] Before optimization: Via count: 67, trace length: 6795477
+2026-10-06 21:01:40.229 INFO   [94032D\720DAE] Skipping optimization stage: the board has 21 unrouted connection(s) (optimizer only runs on completely routed boards).
+2026-10-06 21:01:40.233 INFO   [94032D\720DAE] Job '94032D\720DAE' finished with state: COMPLETED (elapsed: 8.74 seconds, finished at UTC: 2026-10-06T19:01:40.233019Z).
+2026-10-06 21:01:40.277 INFO   Saving output file 'LOCAL-STAGING/design/checks/controller-power.ses' (SES)...
+2026-10-06 21:01:40.278 INFO   Successfully saved output file 'LOCAL-STAGING/design/checks/controller-power.ses' (16330 bytes).

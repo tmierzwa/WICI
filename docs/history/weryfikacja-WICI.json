@@ -1,0 +1,47 @@
+{
+  "project": "WICI",
+  "date": "2026-10-06T19:49:23.835522+00:00",
+  "scope": "Renaming, documentation/source integrity, model tests and CAD/export checks. No physical or RF qualification.",
+  "upstream_references_preserved": 33,
+  "own_hardware_legacy_brand_occurrences": 0,
+  "local_document_links_checked": 38,
+  "JSON_files_parsed": 38,
+  "Python_files_parsed": 20,
+  "reference_tests": {
+    "command": "python3 -m unittest -v test_reference.py",
+    "cases": 15,
+    "result": "PASS"
+  },
+  "calculation_results_unchanged": true,
+  "reference_contract_source_hashes_unchanged": true,
+  "custom_footprint_regeneration_identical": true,
+  "controller": {
+    "ERC": 0,
+    "DRC": 0,
+    "unconnected_items": 0,
+    "schematic_parity": 0,
+    "replay_geometry_identical": true,
+    "exported_gerber_layers": 9,
+    "PTH_drills": 97,
+    "NPTH_drills": 4,
+    "BOM_components": 39,
+    "SMT_placements": 34,
+    "original_electrical_geometry_unchanged": true,
+    "manufacturing_release": "HOLD"
+  },
+  "documents": "Headings and current controller status updated; local links checked. Upstream technical references preserved.",
+  "source_hashes": {
+    "reference.py": "4df7ebf5a66080c8d853caa7b6621a121fb5f599a090ebbf194564ce4f87d50b",
+    "test_reference.py": "ffb112b0e605054f00b663153eaac4cd50234311426cd35eeaa34fe74451c350",
+    "schema.sql": "870167bcdc9121d8128bed09a83c81054227bef22bb36db18169ed7f7ff79e7e",
+    "obliczenia.py": "16228b32c1572f2fe2b16c691c3e3d1ec5a0570ddb10594fbbc47c6a3f063757"
+  },
+  "controller_status_sha256": "98f8f7bcdecf133a3998ce796fabecddefad720126bd19347081d51385e09d9a",
+  "not_verified": [
+    "Real connector/switch fit",
+    "USB electrical operation and impedance",
+    "RF design and range",
+    "Firmware",
+    "Power modules physical qualification"
+  ]
+}

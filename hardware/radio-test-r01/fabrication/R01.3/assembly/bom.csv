@@ -1,0 +1,23 @@
+Designators,Quantity,Manufacturer,MPN,Value,Footprint,Assembly,Specification,Datasheet
+U1,1,STMicroelectronics,STM32F103CBT6,STM32F103CBT6,Package_QFP:LQFP-48_7x7mm_P0.5mm,SMT,"LQFP48, 128 KiB flash",https://www.st.com/resource/en/datasheet/stm32f103c8.pdf
+J1,1,Wurth Elektronik,61400416121,Wuerth 61400416121,WICI:USB_B_61400416121,THT,USB-B THT; physical fit pending,https://www.we-online.com/components/products/datasheet/61400416121.pdf
+U2,1,Diodes Incorporated,AP2112K-3.3TRG1,AP2112K-3.3TRG1,Package_TO_SOT_SMD:SOT-23-5,SMT,3.3 V LDO; pin 4 NC,https://www.diodes.com/datasheet/download/AP2112.pdf
+U3,1,STMicroelectronics,USBLC6-2SC6,USBLC6-2SC6,Package_TO_SOT_SMD:SOT-23-6,SMT,USB ESD; SOT23-6,https://www.st.com/resource/en/datasheet/usblc6-2.pdf
+Y1,1,Abracon,ASE-8.000MHZ-L-C-T,ASE-8.000MHZ-L-C-T,Oscillator:Oscillator_SMD_Abracon_ASE-4Pin_3.2x2.5mm,SMT,"8 MHz CMOS, HSE bypass",https://abracon.com/Oscillators/ASEseries.pdf
+U4,1,STMicroelectronics,M24C64-RMN6TP,M24C64-RMN6TP,Package_SO:SOIC-8_3.9x4.9mm_P1.27mm,SMT,"64 kbit EEPROM, SO8",https://www.st.com/resource/en/datasheet/m24c64-f.pdf
+Q1,1,Nexperia,"BSS84,215","BSS84,215",Package_TO_SOT_SMD:SOT-23,SMT,"PMOS, SOT23; physical source pin 2",https://assets.nexperia.com/documents/data-sheet/BSS84.pdf
+J2,1,Wurth Elektronik,61201021621,RADIO 3V3 SPI,WICI:IDC_61201021621,THT,2x5 keyed vertical IDC; 2.54 mm; finished hole 1.1 mm; fit pending,https://www.we-online.com/components/products/datasheet/61201021621.pdf
+J3,1,Samtec,TSW-105-07-L-S,SWD: VTref DIO GND CLK RESET,Connector_PinHeader_2.54mm:PinHeader_1x05_P2.54mm_Vertical,THT,"1x5 vertical 2.54 mm, 0.635 mm square posts",https://www.samtec.com/products/tsw-105-07-l-s
+J4,1,Samtec,TSW-103-07-L-S,UART: GND TX RX,Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical,THT,"1x3 vertical 2.54 mm, 0.635 mm square posts",https://www.samtec.com/products/tsw-103-07-l-s
+SW1,1,Omron,B3F-1000,RESET,Button_Switch_THT:SW_PUSH_6mm,THT,"6x6 mm, height 4.3 mm; pins 6.5x4.5 mm; fit pending",https://omronfs.omron.com/en_US/ecb/products/pdf/en-b3f.pdf
+D1,1,Kingbright,APT2012LSECK/J3-PRV,STATUS,LED_SMD:LED_0805_2012Metric,SMT,"Low current red 0805; pad 1 cathode/GND, pad 2 anode",https://www.kingbrightusa.com/images/catalog/spec/apt2012lseck-j3-prv.pdf
+"R1,R2",2,Vishay,CRCW08050000Z0EA,0R,Resistor_SMD:R_0805_2012Metric,SMT,"0805; nonzero 1%, 0.125 W; 0R jumper",https://www.vishay.com/docs/20035/dcrcwe3.pdf
+R3,1,Vishay,CRCW08051K50FKEA,1k5 1%,Resistor_SMD:R_0805_2012Metric,SMT,"0805; nonzero 1%, 0.125 W; 0R jumper",https://www.vishay.com/docs/20035/dcrcwe3.pdf
+"R4,R5,R6,R7,R8,R9",6,Vishay,CRCW080510K0FKEA,10k,Resistor_SMD:R_0805_2012Metric,SMT,"0805; nonzero 1%, 0.125 W; 0R jumper",https://www.vishay.com/docs/20035/dcrcwe3.pdf
+"R10,R11",2,Vishay,CRCW08054K70FKEA,4k7,Resistor_SMD:R_0805_2012Metric,SMT,"0805; nonzero 1%, 0.125 W; 0R jumper",https://www.vishay.com/docs/20035/dcrcwe3.pdf
+R12,1,Vishay,CRCW08052K20FKEA,2k2,Resistor_SMD:R_0805_2012Metric,SMT,"0805; nonzero 1%, 0.125 W; 0R jumper",https://www.vishay.com/docs/20035/dcrcwe3.pdf
+"C1,C8,C13",3,Murata,GRM21BR71C105KA01L,1u 16V X7R,Capacitor_SMD:C_0805_2012Metric,SMT,"16 V, X7R, 10%, 0805; C2/C9 effective capacitance qualification pending",https://www.murata.com/en-us/products/productdetail?partno=GRM21BR71C105KA01%23
+"C2,C9",2,Murata,GRM21BR71C475KA73L,4u7 16V X7R,Capacitor_SMD:C_0805_2012Metric,SMT,"16 V, X7R, 10%, 0805; C2/C9 effective capacitance qualification pending",https://www.murata.com/en-us/products/productdetail?partno=GRM21BR71C475KA73%23
+"C3,C4,C5,C6,C7,C11,C12,C14",8,Murata,GRM21BR71C104KA01L,100n 16V X7R,Capacitor_SMD:C_0805_2012Metric,SMT,"16 V, X7R, 10%, 0805; C2/C9 effective capacitance qualification pending",https://www.murata.com/en-us/products/productdetail?partno=GRM21BR71C104KA01%23
+C10,1,KEMET,C0805C103K5RACTU,10n 16V X7R,Capacitor_SMD:C_0805_2012Metric,SMT,"10 nF, 50 V, X7R, 10%, 0805; exceeds 16 V minimum",https://search.kemet.com/component-documentation/download/specsheet/C0805C103K5RACTU
+F1,1,Bourns,MF-NSMF050-2,MF-NSMF050-2,WICI:PPTC_1206_1.8x1.8_Gap1.0,SMT,"PPTC 0.5 A hold, 1 A trip; derating/voltage-drop verification pending",https://www.bourns.com/docs/product-datasheets/mf-nsmf.pdf

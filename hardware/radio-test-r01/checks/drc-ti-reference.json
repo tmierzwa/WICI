@@ -1,0 +1,3202 @@
+{
+    "$schema": "https://schemas.kicad.org/drc.v1.json",
+    "coordinate_units": "mm",
+    "date": "2026-10-06T18:09:55",
+    "ignored_checks": [
+        {
+            "description": "Footprint has no courtyard defined",
+            "key": "missing_courtyard"
+        },
+        {
+            "description": "Track endpoint not centered on via",
+            "key": "track_not_centered_on_via"
+        },
+        {
+            "description": "Tuning profile track geometries",
+            "key": "tuning_profile_track_geometries"
+        },
+        {
+            "description": "Footprint doesn't match symbol's footprint filters",
+            "key": "footprint_filters_mismatch"
+        },
+        {
+            "description": "Footprint component type doesn't match footprint pads",
+            "key": "footprint_type_mismatch"
+        }
+    ],
+    "included_severities": [
+        "error",
+        "warning",
+        "exclusion"
+    ],
+    "kicad_version": "10.0.6",
+    "schematic_parity": [],
+    "source": "ti-import-NOT-FOR-FAB.kicad_pcb",
+    "unconnected_items": [],
+    "violations": [
+        {
+            "description": "Hole clearance violation (board setup constraints hole clearance 0.2500 mm; actual 0.2048 mm)",
+            "items": [
+                {
+                    "description": "PTH pad 21 [<no net>] of P2",
+                    "pos": {
+                        "x": -414.148,
+                        "y": 437.389
+                    },
+                    "uuid": "4dc46109-afa7-4183-8d8b-7faf28726445"
+                },
+                {
+                    "description": "Zone 'L1_GND2' [AGND] on 1, priority 5",
+                    "pos": {
+                        "x": -409.8681,
+                        "y": 428.78856
+                    },
+                    "uuid": "b2f60ef8-ff5a-4417-80df-e374250ab43e"
+                }
+            ],
+            "severity": "error",
+            "type": "hole_clearance"
+        },
+        {
+            "description": "Hole clearance violation (board setup constraints hole clearance 0.2500 mm; actual 0.2048 mm)",
+            "items": [
+                {
+                    "description": "PTH pad 22 [<no net>] of P2",
+                    "pos": {
+                        "x": -414.149,
+                        "y": 452.121
+                    },
+                    "uuid": "38ae6903-3ddd-48c9-bb84-5b69b4d1f66e"
+                },
+                {
+                    "description": "Zone 'L1_GND2' [AGND] on 1, priority 5",
+                    "pos": {
+                        "x": -409.8681,
+                        "y": 428.78856
+                    },
+                    "uuid": "b2f60ef8-ff5a-4417-80df-e374250ab43e"
+                }
+            ],
+            "severity": "error",
+            "type": "hole_clearance"
+        },
+        {
+            "description": "Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.4826 mm)",
+            "items": [
+                {
+                    "description": "Segment on Edge.Cuts",
+                    "pos": {
+                        "x": -449.2,
+                        "y": 418.8216
+                    },
+                    "uuid": "b1154020-ac2f-4716-a778-14bb883e5167"
+                },
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -448.4634,
+                        "y": 436.3476
+                    },
+                    "uuid": "c6136b7a-8c99-4077-b8d5-ab38f6a0effe"
+                }
+            ],
+            "severity": "error",
+            "type": "copper_edge_clearance"
+        },
+        {
+            "description": "Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.3069 mm)",
+            "items": [
+                {
+                    "description": "Segment on Edge.Cuts",
+                    "pos": {
+                        "x": -449.2,
+                        "y": 418.8216
+                    },
+                    "uuid": "b1154020-ac2f-4716-a778-14bb883e5167"
+                },
+                {
+                    "description": "Zone 'L1_GND1' [AGND] on 1, priority 4",
+                    "pos": {
+                        "x": -413.57904,
+                        "y": 425.57546
+                    },
+                    "uuid": "766d1eb2-2770-4afe-b5f6-b864ea1974dd"
+                }
+            ],
+            "severity": "error",
+            "type": "copper_edge_clearance"
+        },
+        {
+            "description": "Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.3069 mm)",
+            "items": [
+                {
+                    "description": "Segment on Edge.Cuts",
+                    "pos": {
+                        "x": -449.2,
+                        "y": 418.8216
+                    },
+                    "uuid": "b1154020-ac2f-4716-a778-14bb883e5167"
+                },
+                {
+                    "description": "Zone 'L1_GND5' [AGND] on 1, priority 7",
+                    "pos": {
+                        "x": -449.20635,
+                        "y": 437.72555
+                    },
+                    "uuid": "93951597-de14-4dd2-8d55-5a1a663c99bf"
+                }
+            ],
+            "severity": "error",
+            "type": "copper_edge_clearance"
+        },
+        {
+            "description": "Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.3069 mm)",
+            "items": [
+                {
+                    "description": "Segment on Edge.Cuts",
+                    "pos": {
+                        "x": -449.2,
+                        "y": 454.4197
+                    },
+                    "uuid": "14032f55-6dca-4d10-b47d-22771c77b055"
+                },
+                {
+                    "description": "Zone 'L1_GND2' [AGND] on 1, priority 5",
+                    "pos": {
+                        "x": -409.8681,
+                        "y": 428.78856
+                    },
+                    "uuid": "b2f60ef8-ff5a-4417-80df-e374250ab43e"
+                }
+            ],
+            "severity": "error",
+            "type": "copper_edge_clearance"
+        },
+        {
+            "description": "Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.3069 mm)",
+            "items": [
+                {
+                    "description": "Segment on Edge.Cuts",
+                    "pos": {
+                        "x": -449.2,
+                        "y": 418.8216
+                    },
+                    "uuid": "b1154020-ac2f-4716-a778-14bb883e5167"
+                },
+                {
+                    "description": "Zone 'L4_GND' [AGND] on 4, priority 1",
+                    "pos": {
+                        "x": -449.2,
+                        "y": 454.4197
+                    },
+                    "uuid": "873baf7f-d6f8-465f-a320-39be1435248b"
+                }
+            ],
+            "severity": "error",
+            "type": "copper_edge_clearance"
+        },
+        {
+            "description": "Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.3069 mm)",
+            "items": [
+                {
+                    "description": "Segment on Edge.Cuts",
+                    "pos": {
+                        "x": -449.2,
+                        "y": 418.8216
+                    },
+                    "uuid": "b1154020-ac2f-4716-a778-14bb883e5167"
+                },
+                {
+                    "description": "Zone 'L2_GND' [AGND] on 2, priority 1",
+                    "pos": {
+                        "x": -449.1238,
+                        "y": 418.9359
+                    },
+                    "uuid": "f8798bd4-fb90-4c41-a5ac-b2ebac6d0d43"
+                }
+            ],
+            "severity": "error",
+            "type": "copper_edge_clearance"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [VDD_REG] on 1 - 4",
+                    "pos": {
+                        "x": -423.4952,
+                        "y": 440.6656
+                    },
+                    "uuid": "00d37136-5c29-4570-b72b-e01505eaffb5"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [VDD_REG] on 1 - 4",
+                    "pos": {
+                        "x": -427.229,
+                        "y": 440.6148
+                    },
+                    "uuid": "022b4110-eb2c-40d4-9282-6288b5e7458c"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [VDD_REG] on 1 - 4",
+                    "pos": {
+                        "x": -424.4858,
+                        "y": 436.4238
+                    },
+                    "uuid": "0775140c-eb4f-4ce0-a610-940f720e1a8b"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [VDD_REG] on 1 - 4",
+                    "pos": {
+                        "x": -423.8254,
+                        "y": 439.675
+                    },
+                    "uuid": "128014e6-94b9-41da-adb2-c3730f075ec6"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [VDD_REG] on 1 - 4",
+                    "pos": {
+                        "x": -427.8132,
+                        "y": 439.5988
+                    },
+                    "uuid": "2fdc5c55-d344-4d31-82b4-f3f237a9d7da"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [VDD_REG] on 1 - 4",
+                    "pos": {
+                        "x": -426.9242,
+                        "y": 442.0118
+                    },
+                    "uuid": "365b8754-1bb7-4c0a-bb11-bc6dba66654b"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [VDD_REG] on 1 - 4",
+                    "pos": {
+                        "x": -432.63285,
+                        "y": 431.92165
+                    },
+                    "uuid": "375acb58-aaff-4379-a326-7816ac802d95"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [VDD_REG] on 1 - 4",
+                    "pos": {
+                        "x": -432.69,
+                        "y": 437.389
+                    },
+                    "uuid": "39943511-c005-4520-b185-e9219613b147"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [VDD_REG] on 1 - 4",
+                    "pos": {
+                        "x": -428.4482,
+                        "y": 442.1134
+                    },
+                    "uuid": "5eef3258-193f-445e-bbb1-ffe6add4aa06"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [VDD_REG] on 1 - 4",
+                    "pos": {
+                        "x": -426.5686,
+                        "y": 432.1312
+                    },
+                    "uuid": "8c48c927-722a-40b6-9690-945b356e9dbd"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [VDD_REG] on 1 - 4",
+                    "pos": {
+                        "x": -427.7624,
+                        "y": 441.4022
+                    },
+                    "uuid": "8c90cc8e-440f-410b-9098-1e85fec26cd7"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [VDD_REG] on 1 - 4",
+                    "pos": {
+                        "x": -425.07004,
+                        "y": 439.67496
+                    },
+                    "uuid": "a99fb813-7eb3-45ec-912a-c757735e2e97"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [VDD_REG] on 1 - 4",
+                    "pos": {
+                        "x": -436.0936,
+                        "y": 434.1124
+                    },
+                    "uuid": "a9e84bfc-a8e2-4d61-b443-5b3ec8cd351a"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [VDD_REG] on 1 - 4",
+                    "pos": {
+                        "x": -424.5112,
+                        "y": 440.6402
+                    },
+                    "uuid": "b1b34096-cdf0-412e-b5b9-8f94439887ee"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [VDD_REG] on 1 - 4",
+                    "pos": {
+                        "x": -432.6646,
+                        "y": 429.0324
+                    },
+                    "uuid": "b3a2e7ff-25cb-448e-b37a-3376b209922a"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [VDD_REG] on 1 - 4",
+                    "pos": {
+                        "x": -428.2704,
+                        "y": 440.5132
+                    },
+                    "uuid": "be93b387-eb02-4684-bbe2-24142f01e278"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [VDD_REG] on 1 - 4",
+                    "pos": {
+                        "x": -423.4698,
+                        "y": 434.6966
+                    },
+                    "uuid": "c9efa68d-a0e1-4e13-a52d-3665f5682209"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [VDD_REG] on 1 - 4",
+                    "pos": {
+                        "x": -426.4162,
+                        "y": 439.6496
+                    },
+                    "uuid": "de64ec0b-6cb3-45b6-8440-14e0fffb9b90"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [VDD_REG] on 1 - 4",
+                    "pos": {
+                        "x": -421.9204,
+                        "y": 431.9534
+                    },
+                    "uuid": "e311d5b4-1844-4022-8fa3-6970fadece00"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [VDD_REG] on 1 - 4",
+                    "pos": {
+                        "x": -425.8066,
+                        "y": 440.6402
+                    },
+                    "uuid": "f27d12cc-20f5-4232-9776-8cd1c4ede6dd"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [VDD_REG] on 1 - 4",
+                    "pos": {
+                        "x": -438.3542,
+                        "y": 441.0974
+                    },
+                    "uuid": "f7a073ee-ef33-4aa6-9b30-ac15b30ba2ee"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -412.4208,
+                        "y": 427.229
+                    },
+                    "uuid": "0001c450-a64a-4061-b549-4bf0dd09c466"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -415.291,
+                        "y": 424.435
+                    },
+                    "uuid": "0035807b-bd8e-4d17-852f-ff0414e34ade"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -432.817,
+                        "y": 446.7362
+                    },
+                    "uuid": "0038d6e0-94f7-4d32-8ad5-a3e4bdfe92b8"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -440.691,
+                        "y": 431.0898
+                    },
+                    "uuid": "01942a2c-638a-4d3d-9585-da81d2e4a145"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -446.4314,
+                        "y": 434.9506
+                    },
+                    "uuid": "03d758d5-8a2f-43c8-a783-92e0c6ea0672"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -421.7426,
+                        "y": 422.9618
+                    },
+                    "uuid": "047510b7-814c-45f8-9731-2c22d0945e57"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -417.5262,
+                        "y": 434.9252
+                    },
+                    "uuid": "0a57e262-cc9d-425c-b654-fb2394c72759"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -430.658,
+                        "y": 452.8576
+                    },
+                    "uuid": "0b1d2a21-134b-4663-bc7c-a25bae26934c"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -439.5226,
+                        "y": 434.214
+                    },
+                    "uuid": "0c1de820-8b5f-4b63-b0c2-3a90f3a97255"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -447.5744,
+                        "y": 452.7306
+                    },
+                    "uuid": "0e645982-b902-4c21-8ea0-e341d6874b74"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -423.673,
+                        "y": 452.8068
+                    },
+                    "uuid": "0e84d60a-b947-414b-b84b-fd97f9998152"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -422.7332,
+                        "y": 447.2696
+                    },
+                    "uuid": "1411a24c-0d7f-46dc-8930-e4b695b83914"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -436.7794,
+                        "y": 445.009
+                    },
+                    "uuid": "16667be2-dd89-4e1e-ab6e-ce5bd7b6f697"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -429.8706,
+                        "y": 420.9298
+                    },
+                    "uuid": "16ac8fbb-d931-47f3-8ba3-b5c11d0ebceb"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -426.3654,
+                        "y": 443.993
+                    },
+                    "uuid": "16e83de8-3f2a-4ebe-a2b4-3ba27aecf0b8"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -423.5714,
+                        "y": 420.3456
+                    },
+                    "uuid": "1962221e-ffed-4dd5-a920-49e954fb50b4"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -429.3626,
+                        "y": 443.739
+                    },
+                    "uuid": "1a57296f-a1ce-45d6-b05e-68f150853fac"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -416.3324,
+                        "y": 420.3456
+                    },
+                    "uuid": "1f3cb561-8972-479e-bca5-4144a1ee3ea8"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -422.1744,
+                        "y": 425.0192
+                    },
+                    "uuid": "25c4d20a-f663-409f-b66f-765c9936aa24"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -433.1218,
+                        "y": 440.183
+                    },
+                    "uuid": "2a16c707-2086-46e9-8e42-9d21e775e52d"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -438.1764,
+                        "y": 439.802
+                    },
+                    "uuid": "2b3e3eaf-22a3-43ce-9026-4b9d91af450c"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -434.3156,
+                        "y": 444.9328
+                    },
+                    "uuid": "2b4da1ac-99ee-438c-8cda-ce769c471109"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -419.8122,
+                        "y": 421.1838
+                    },
+                    "uuid": "2bcc30c9-f83c-409f-ab1c-8464eb2d20f5"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -432.1312,
+                        "y": 425.324
+                    },
+                    "uuid": "2dc6f856-3fbe-4b06-a2b8-3bc523bb1718"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -427.3814,
+                        "y": 452.883
+                    },
+                    "uuid": "321f4a8d-2f83-455b-83c2-545427f219db"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -415.2656,
+                        "y": 422.3522
+                    },
+                    "uuid": "32fe7e91-d323-4906-9645-13813c8bcae0"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -441.5038,
+                        "y": 434.1886
+                    },
+                    "uuid": "362488ef-61dc-4ef0-9dae-e2abaae36880"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -423.8,
+                        "y": 433.0202
+                    },
+                    "uuid": "3b3793b6-9208-47b1-a52a-7935f1e5d354"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -436.5508,
+                        "y": 434.976
+                    },
+                    "uuid": "3d1ca222-d33a-4d28-89df-7f34fbd9e5e4"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -429.3118,
+                        "y": 447.0918
+                    },
+                    "uuid": "3e30fc0a-aacb-4bf6-b24e-4be5e2b7fe46"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -441.1482,
+                        "y": 437.9986
+                    },
+                    "uuid": "4230ef92-8d43-46e5-af13-fd085a223183"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -430.8612,
+                        "y": 423.6476
+                    },
+                    "uuid": "42ee58de-02c1-49c5-bef0-436b11c24353"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -427.5338,
+                        "y": 445.5678
+                    },
+                    "uuid": "461f483c-03e0-4687-b2bb-c774a473ca68"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -444.11458,
+                        "y": 428.87458
+                    },
+                    "uuid": "46fc9f93-bfe5-49a4-b4c0-a447cd0479cb"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -437.2366,
+                        "y": 439.802
+                    },
+                    "uuid": "4997ff4a-a99c-402a-b11e-264bc91d84f6"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -418.1739,
+                        "y": 442.2404
+                    },
+                    "uuid": "4c8b9abe-c4c9-4122-8e37-0d80b7afb554"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -417.8564,
+                        "y": 437.77
+                    },
+                    "uuid": "55d45290-1ed1-4ba8-96d6-00550fc62827"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -417.8056,
+                        "y": 450.851
+                    },
+                    "uuid": "566f02ac-0d4c-408d-9092-929a193a42e8"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -419.6344,
+                        "y": 431.4962
+                    },
+                    "uuid": "598704af-8d3c-4883-9d3d-6760cf77047f"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -429.4388,
+                        "y": 445.517
+                    },
+                    "uuid": "5a69e039-33b4-4ee1-97fe-43ecda5f7c11"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -425.4764,
+                        "y": 423.3428
+                    },
+                    "uuid": "5d6e75ee-ec14-4146-a483-b1ff0136bbd6"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -420.8536,
+                        "y": 433.8584
+                    },
+                    "uuid": "5d7514f5-376b-4d0c-a49b-30d1a681cc17"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -426.3908,
+                        "y": 428.2704
+                    },
+                    "uuid": "60ff9088-d487-4ce9-83e1-6ac6827db74b"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -410.7952,
+                        "y": 429.7182
+                    },
+                    "uuid": "61247c8f-5047-4da6-aa05-ea7e66cdb59f"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -434.3664,
+                        "y": 424.0794
+                    },
+                    "uuid": "62530207-d464-45a5-b6cc-b36324d9f190"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -425.6796,
+                        "y": 421.8442
+                    },
+                    "uuid": "639651ed-df55-4096-ac98-d6cf39ae48e7"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -434.7474,
+                        "y": 452.7306
+                    },
+                    "uuid": "6843325c-36ba-4d30-8a22-33fe03a17096"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -441.3514,
+                        "y": 443.6374
+                    },
+                    "uuid": "6daeb3c6-833a-42fb-8feb-3798b193bd09"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -432.2582,
+                        "y": 440.1576
+                    },
+                    "uuid": "6e33a53d-0ff9-4f2d-b7f7-0a032f851037"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -431.8264,
+                        "y": 427.6608
+                    },
+                    "uuid": "7069c578-77f3-455a-992f-a2dcf93aa803"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -447.5998,
+                        "y": 450.47
+                    },
+                    "uuid": "7075f8cd-f43b-4ee4-8a09-7c13af87b776"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -432.6392,
+                        "y": 441.961
+                    },
+                    "uuid": "758da276-f119-44ae-94ae-3b192b4272e4"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -429.9722,
+                        "y": 424.9684
+                    },
+                    "uuid": "76b1c7ae-1dd0-46b4-b8d8-e713b600fd10"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -421.2854,
+                        "y": 426.1368
+                    },
+                    "uuid": "7c1fd6f5-e39a-44e1-8008-da5d5704678d"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -448.2348,
+                        "y": 440.945
+                    },
+                    "uuid": "7e62b3bd-12a5-4c41-a322-919bb27d807e"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -413.5892,
+                        "y": 434.8744
+                    },
+                    "uuid": "8028d330-38f9-40e2-9e2a-246f293391bf"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -419.609,
+                        "y": 424.6382
+                    },
+                    "uuid": "819d929a-f38e-48ed-b6a4-c7094be895e8"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -448.2602,
+                        "y": 447.295
+                    },
+                    "uuid": "83b933ac-76af-4880-b5c2-ce42cf9ebad4"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -447.5998,
+                        "y": 439.04
+                    },
+                    "uuid": "861ddf2b-a9cc-4f72-bd34-6237bde546fc"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -416.16648,
+                        "y": 436.5
+                    },
+                    "uuid": "867952d0-4e42-473d-9c33-0a852071843f"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -428.3974,
+                        "y": 422.6062
+                    },
+                    "uuid": "8b245b4f-125d-4589-96c2-5e3d2b69998f"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -435.9158,
+                        "y": 432.436
+                    },
+                    "uuid": "8cf2d80b-54f0-4a65-859b-601de93915d0"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -440.6148,
+                        "y": 425.3748
+                    },
+                    "uuid": "8dd40981-3f2e-4801-b331-67c1090313b0"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -417.8818,
+                        "y": 423.165
+                    },
+                    "uuid": "8e8a5d81-bc47-4e2f-ab4b-e9e68543e851"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -431.166,
+                        "y": 426.6448
+                    },
+                    "uuid": "8ec4155d-52d0-472a-a888-bf12cc7a299a"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -444.0946,
+                        "y": 425.2732
+                    },
+                    "uuid": "90e9ad27-0c72-46f9-9575-70ecc9a81412"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -412.497,
+                        "y": 431.3438
+                    },
+                    "uuid": "91782cdf-8d51-4c49-8d71-a48cc59d753f"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -410.9476,
+                        "y": 421.6918
+                    },
+                    "uuid": "92b3ef20-2fb1-4b91-8cac-01c1ef150a49"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -434.3918,
+                        "y": 427.0258
+                    },
+                    "uuid": "92be2d82-9be0-41b9-a87b-ac5c5fa9ae73"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -429.515,
+                        "y": 440.4878
+                    },
+                    "uuid": "92edd857-11c7-422a-acab-9234cd5ecd42"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -435.3062,
+                        "y": 446.3298
+                    },
+                    "uuid": "9427186e-dc17-45dd-8d20-5adaff4cd9c7"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -441.7832,
+                        "y": 423.8
+                    },
+                    "uuid": "965736be-8ee7-458f-a753-9020c56bc129"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -430.8866,
+                        "y": 427.9148
+                    },
+                    "uuid": "966cbfed-25c6-468c-949d-9f569adc130e"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -418.5676,
+                        "y": 433.071
+                    },
+                    "uuid": "966f5e51-3f57-47e4-8851-d340b04aa2c4"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -434.8236,
+                        "y": 422.0474
+                    },
+                    "uuid": "978de57a-16fe-4c1a-8970-eaf30c1578f3"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -438.3542,
+                        "y": 427.1782
+                    },
+                    "uuid": "9c1bac28-b688-402b-b760-d71b1bd6b48d"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -443.8914,
+                        "y": 421.5648
+                    },
+                    "uuid": "9d8582d6-e19c-45f9-a1d1-7717a460275b"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -435.9158,
+                        "y": 433.325
+                    },
+                    "uuid": "9f737b26-f796-4345-8ea2-07dec71bf91b"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -433.1472,
+                        "y": 443.5866
+                    },
+                    "uuid": "a43f49ff-878c-437c-ae87-e87bc6ba0e1d"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -410.7444,
+                        "y": 424.6382
+                    },
+                    "uuid": "a6ae376a-a5b1-44b6-942c-dce17eb9a2dc"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -415.1132,
+                        "y": 431.5724
+                    },
+                    "uuid": "a6f432a5-2369-4045-9988-f9be73582f59"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -416.1038,
+                        "y": 452.9084
+                    },
+                    "uuid": "a792ef73-9696-443a-b15d-3eb3e7a0dfe7"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -424.3842,
+                        "y": 447.3712
+                    },
+                    "uuid": "a8310af4-de07-438c-8915-462027ccda2c"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -427.0512,
+                        "y": 443.4596
+                    },
+                    "uuid": "aa99228d-aec8-445f-9368-63afccf6dcf1"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -423.8,
+                        "y": 433.9346
+                    },
+                    "uuid": "ab4bb61f-03fd-412b-88e4-be379d8868b3"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -427.8894,
+                        "y": 447.422
+                    },
+                    "uuid": "aca0c1c7-a2c9-4957-9737-bff7022e5e09"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -448.1332,
+                        "y": 444.2724
+                    },
+                    "uuid": "af48d4e0-9fdd-4cc5-86a8-21bcebc0690e"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -412.497,
+                        "y": 423.0634
+                    },
+                    "uuid": "b2959587-445d-4311-9090-d783ac86deaa"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -437.6176,
+                        "y": 443.4596
+                    },
+                    "uuid": "b559ac04-06cc-408f-9de1-49177d625d3c"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -439.167,
+                        "y": 435.8142
+                    },
+                    "uuid": "b635a437-5908-479c-92ef-758a5dcef532"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -434.722,
+                        "y": 431.0136
+                    },
+                    "uuid": "b74069e6-5fd0-42b0-af3b-196ee9b8c6c6"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -438.405,
+                        "y": 452.756
+                    },
+                    "uuid": "bca20ead-6481-4b3d-996e-5910ada5b865"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -429.8452,
+                        "y": 427.1274
+                    },
+                    "uuid": "bd08704c-c838-435e-8468-688742b36ed0"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -442.0626,
+                        "y": 452.7306
+                    },
+                    "uuid": "bec1d597-5ee4-4e09-95ff-c5ff7deabb08"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -420.879,
+                        "y": 429.3118
+                    },
+                    "uuid": "c0899883-6935-4d0b-872f-d2f1ac8368cc"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -448.4634,
+                        "y": 436.3476
+                    },
+                    "uuid": "c6136b7a-8c99-4077-b8d5-ab38f6a0effe"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -441.2498,
+                        "y": 440.5894
+                    },
+                    "uuid": "c68d7e2e-6dda-40a1-85b7-0f9cf698595e"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -415.3164,
+                        "y": 429.8198
+                    },
+                    "uuid": "c72ab80d-d19c-4670-bdc7-bf2eef2b4143"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -420.5742,
+                        "y": 435.2808
+                    },
+                    "uuid": "c97dfaa6-7284-45cf-925b-a0565fcaa874"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -447.9808,
+                        "y": 428.2958
+                    },
+                    "uuid": "ca57641a-45f8-4d27-a5f1-f51209f10575"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -436.3984,
+                        "y": 425.4256
+                    },
+                    "uuid": "cbc6d673-f210-4050-b270-d5a98483fa39"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -411.17192,
+                        "y": 436.5
+                    },
+                    "uuid": "cd0514b1-6a67-4740-a47e-60c397cebfcf"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -426.5178,
+                        "y": 438.6082
+                    },
+                    "uuid": "cff0f548-2b74-4e70-af93-ee54085e2aca"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -419.5582,
+                        "y": 429.7182
+                    },
+                    "uuid": "d52e4d78-6b8e-48fd-aacb-870d5562b89b"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -440.5894,
+                        "y": 428.4228
+                    },
+                    "uuid": "d8dc7dfa-73c2-465a-a3b8-1a683bdf56fc"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -427.3306,
+                        "y": 424.7652
+                    },
+                    "uuid": "da07d91b-88ff-4e5b-a072-2993b97509c2"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -419.8376,
+                        "y": 452.9084
+                    },
+                    "uuid": "dbfcd3a4-ff6a-4c6b-9ed5-62c10e50587e"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -440.564,
+                        "y": 442.1388
+                    },
+                    "uuid": "dd16a867-bbc5-4afe-8e76-e9332bb1c96f"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -447.5744,
+                        "y": 423.927
+                    },
+                    "uuid": "ddcaee66-9055-450b-ab90-e49d112c35a9"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -442.4182,
+                        "y": 436.8048
+                    },
+                    "uuid": "e0855f8e-a406-46db-9ff6-89d28c0ab8f8"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -439.4718,
+                        "y": 421.9458
+                    },
+                    "uuid": "e1d0b677-3aa6-4e98-95d4-1a7744224b95"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -437.2366,
+                        "y": 446.8124
+                    },
+                    "uuid": "e3ccdcd1-1d0e-47cf-8f5e-509a730a5001"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -434.3156,
+                        "y": 436.7794
+                    },
+                    "uuid": "e472a155-5c46-422c-af26-88529917085b"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -420.879,
+                        "y": 431.9534
+                    },
+                    "uuid": "e47cbb8e-c68d-48cd-9ece-6d5045696744"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -425.9082,
+                        "y": 447.4728
+                    },
+                    "uuid": "e554cc2c-330f-4c14-afb3-4ac04a50be78"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -423.038,
+                        "y": 426.1368
+                    },
+                    "uuid": "e670b25f-3103-4ae9-bdd3-592f80bf2e8b"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -411.1508,
+                        "y": 439.04
+                    },
+                    "uuid": "e79ff83e-c5cd-4db8-9467-dcb1365d5cda"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -439.1162,
+                        "y": 443.231
+                    },
+                    "uuid": "e9f3145c-94ad-40a2-b9b4-8e7aed5bd364"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -447.9808,
+                        "y": 432.3598
+                    },
+                    "uuid": "eca9d319-abbb-4101-9773-4fd6fe26bebb"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -415.9006,
+                        "y": 433.5282
+                    },
+                    "uuid": "edcce88f-5371-4438-a7ab-17b7295d503b"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -422.022,
+                        "y": 440.4116
+                    },
+                    "uuid": "edef5b38-6d25-4256-ab07-b3c9da723ff4"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -439.4972,
+                        "y": 445.6694
+                    },
+                    "uuid": "f2ccf524-d9e4-4bfb-81d0-e79765658778"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -423.8762,
+                        "y": 424.7144
+                    },
+                    "uuid": "f3420529-dbea-4a63-b114-a47eeb56b502"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -417.8818,
+                        "y": 431.3438
+                    },
+                    "uuid": "f3a96239-c7aa-4c61-9312-2ca6986eef36"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -423.5206,
+                        "y": 435.5602
+                    },
+                    "uuid": "f51cdfbd-6cc5-4906-928a-6b29c62c4a8c"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -444.12205,
+                        "y": 433.95795
+                    },
+                    "uuid": "f63404fd-c68b-4304-9628-80aef132898e"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -417.9072,
+                        "y": 446.66
+                    },
+                    "uuid": "f7b6005b-6679-4d05-8b3d-5667226339ed"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -444.11944,
+                        "y": 431.42
+                    },
+                    "uuid": "f7cd8db9-7d59-4897-af94-6d41748e7a53"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -412.2176,
+                        "y": 432.9948
+                    },
+                    "uuid": "f8a7a315-0ecd-43eb-b917-0e24c868bbaa"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -423.7492,
+                        "y": 432.1058
+                    },
+                    "uuid": "fbca0be0-2043-4c9b-b14c-6d3b253bc978"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -438.0748,
+                        "y": 423.4698
+                    },
+                    "uuid": "fd3c1528-030a-48cd-af52-2de124e68211"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [AGND] on 1 - 4",
+                    "pos": {
+                        "x": -418.1612,
+                        "y": 440.0306
+                    },
+                    "uuid": "fd8e3531-2d0b-4103-bac9-adb1e111051d"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [GPIO3] on 1 - 4",
+                    "pos": {
+                        "x": -430.7596,
+                        "y": 452.0194
+                    },
+                    "uuid": "b321220e-8399-4a91-b772-9549eb431f7e"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [GPIO3] on 1 - 4",
+                    "pos": {
+                        "x": -411.1762,
+                        "y": 449.2
+                    },
+                    "uuid": "faf076aa-b24e-434b-b102-92195325bf1b"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [GPIO3] on 1 - 4",
+                    "pos": {
+                        "x": -417.1198,
+                        "y": 449.2
+                    },
+                    "uuid": "ff84f21a-38c7-4d27-bc4b-7e8e19e0dfec"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [CSN] on 1 - 4",
+                    "pos": {
+                        "x": -419.4312,
+                        "y": 436.3984
+                    },
+                    "uuid": "ed63eda3-53b2-4e68-8007-e17df2337f65"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [GPIO0] on 1 - 4",
+                    "pos": {
+                        "x": -419.9392,
+                        "y": 437.0588
+                    },
+                    "uuid": "d71456d7-2d70-4420-9169-3e27bd051272"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [GPIO2] on 1 - 4",
+                    "pos": {
+                        "x": -441.1736,
+                        "y": 446.1012
+                    },
+                    "uuid": "447001ca-07dc-4607-9b97-5e0ac0783ee0"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [GPIO2] on 1 - 4",
+                    "pos": {
+                        "x": -430.3278,
+                        "y": 447.9808
+                    },
+                    "uuid": "96e4db59-7d20-4701-a168-b9e71f938a57"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [GPIO2] on 1 - 4",
+                    "pos": {
+                        "x": -439.8274,
+                        "y": 447.0664
+                    },
+                    "uuid": "c3af8df1-5259-47c0-af34-c4cd6beb789b"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [MOSI] on 1 - 4",
+                    "pos": {
+                        "x": -421.4378,
+                        "y": 438.9384
+                    },
+                    "uuid": "2d10162b-7055-4936-9e97-548a68b6af1f"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [MOSI] on 1 - 4",
+                    "pos": {
+                        "x": -441.6308,
+                        "y": 449.2
+                    },
+                    "uuid": "8ede9ab2-58cb-4329-bbb7-819fddd9dde9"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [MOSI] on 1 - 4",
+                    "pos": {
+                        "x": -438.4558,
+                        "y": 447.93
+                    },
+                    "uuid": "d271ceae-2b83-4b7b-98be-9b72d368d8de"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [SCLK] on 1 - 4",
+                    "pos": {
+                        "x": -439.7258,
+                        "y": 447.93
+                    },
+                    "uuid": "1c16525b-820b-4c10-951c-0d84dad0bd9e"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [SCLK] on 1 - 4",
+                    "pos": {
+                        "x": -420.7774,
+                        "y": 438.405
+                    },
+                    "uuid": "77552554-4c2b-4fe1-9448-aeca52766f3d"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [SCLK] on 1 - 4",
+                    "pos": {
+                        "x": -441.6562,
+                        "y": 447.93
+                    },
+                    "uuid": "8b2bc4df-4453-4acb-b319-87b363e98058"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [MISO] on 1 - 4",
+                    "pos": {
+                        "x": -420.371,
+                        "y": 437.7192
+                    },
+                    "uuid": "2b5dd694-7329-4849-b912-6335af58b1cb"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [MISO] on 1 - 4",
+                    "pos": {
+                        "x": -441.6308,
+                        "y": 450.47
+                    },
+                    "uuid": "7c2d935a-17dc-4d0b-97b3-5bca83988c31"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [MISO] on 1 - 4",
+                    "pos": {
+                        "x": -438.8114,
+                        "y": 449.3016
+                    },
+                    "uuid": "7e7eaa17-8517-4f80-be2c-7b8864618d48"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [3V3A] on 1 - 4",
+                    "pos": {
+                        "x": -417.89958,
+                        "y": 444.12
+                    },
+                    "uuid": "e78cd0ec-7822-4adb-8e07-b371e69df266"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Hole size out of range (board setup constraints min hole 0.3000 mm; actual 0.2540 mm)",
+            "items": [
+                {
+                    "description": "Via [RESET] on 1 - 4",
+                    "pos": {
+                        "x": -431.4708,
+                        "y": 451.4098
+                    },
+                    "uuid": "99365628-c78e-48dc-bcff-d834f26b06b2"
+                }
+            ],
+            "severity": "error",
+            "type": "drill_out_of_range"
+        },
+        {
+            "description": "Padstack is questionable (PTH pad hole leaves no copper)",
+            "items": [
+                {
+                    "description": "PTH pad 21 [<no net>] of P2",
+                    "pos": {
+                        "x": -414.148,
+                        "y": 437.389
+                    },
+                    "uuid": "4dc46109-afa7-4183-8d8b-7faf28726445"
+                }
+            ],
+            "severity": "warning",
+            "type": "padstack"
+        },
+        {
+            "description": "Padstack is questionable (PTH pad hole leaves no copper)",
+            "items": [
+                {
+                    "description": "PTH pad 22 [<no net>] of P2",
+                    "pos": {
+                        "x": -414.149,
+                        "y": 452.121
+                    },
+                    "uuid": "38ae6903-3ddd-48c9-bb84-5b69b4d1f66e"
+                }
+            ],
+            "severity": "warning",
+            "type": "padstack"
+        },
+        {
+            "description": "Padstack is questionable (PTH pad hole leaves no copper)",
+            "items": [
+                {
+                    "description": "PTH pad 21 [<no net>] of P1",
+                    "pos": {
+                        "x": -444.628,
+                        "y": 437.389
+                    },
+                    "uuid": "053f9408-0ac8-4143-83b5-d7a38539122c"
+                }
+            ],
+            "severity": "warning",
+            "type": "padstack"
+        },
+        {
+            "description": "Padstack is questionable (PTH pad hole leaves no copper)",
+            "items": [
+                {
+                    "description": "PTH pad 22 [<no net>] of P1",
+                    "pos": {
+                        "x": -444.629,
+                        "y": 452.121
+                    },
+                    "uuid": "79576f0a-8455-4136-ada4-dcee5086acd2"
+                }
+            ],
+            "severity": "warning",
+            "type": "padstack"
+        },
+        {
+            "description": "Text thickness out of range (TrueType font characters with insufficient stroke weight)",
+            "items": [
+                {
+                    "description": "PCB text 'Rev 1.1' on F.Silkscreen",
+                    "pos": {
+                        "x": -440.93738,
+                        "y": 433.11672
+                    },
+                    "uuid": "e623ca11-265d-4148-9127-f9878ed68af5"
+                }
+            ],
+            "severity": "warning",
+            "type": "text_thickness"
+        },
+        {
+            "description": "Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7038 mm)",
+            "items": [
+                {
+                    "description": "PCB text 'Rev 1.1' on F.Silkscreen",
+                    "pos": {
+                        "x": -440.93738,
+                        "y": 433.11672
+                    },
+                    "uuid": "e623ca11-265d-4148-9127-f9878ed68af5"
+                }
+            ],
+            "severity": "warning",
+            "type": "text_height"
+        },
+        {
+            "description": "Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7038 mm)",
+            "items": [
+                {
+                    "description": "PCB text '\n' on B.Silkscreen",
+                    "pos": {
+                        "x": -439.2432,
+                        "y": 451.867
+                    },
+                    "uuid": "03922671-b2fa-4e06-a57e-4907bcc81dd1"
+                }
+            ],
+            "severity": "warning",
+            "type": "text_height"
+        },
+        {
+            "description": "Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7038 mm)",
+            "items": [
+                {
+                    "description": "PCB text '\n' on B.Silkscreen",
+                    "pos": {
+                        "x": -436.627,
+                        "y": 451.867
+                    },
+                    "uuid": "969c9670-752f-452f-a5d3-0a96b4d098d8"
+                }
+            ],
+            "severity": "warning",
+            "type": "text_height"
+        },
+        {
+            "description": "Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.7038 mm)",
+            "items": [
+                {
+                    "description": "PCB text '\n' on B.Silkscreen",
+                    "pos": {
+                        "x": -427.737,
+                        "y": 451.74
+                    },
+                    "uuid": "6387bd69-f3b9-47f4-80f0-9608ab2f9860"
+                }
+            ],
+            "severity": "warning",
+            "type": "text_height"
+        },
+        {
+            "description": "Text thickness out of range (TrueType font characters with insufficient stroke weight)",
+            "items": [
+                {
+                    "description": "Reference field of P3",
+                    "pos": {
+                        "x": -420.61992,
+                        "y": 424.19116
+                    },
+                    "uuid": "f076d8b1-c77c-4667-b7f7-4c266243eda7"
+                }
+            ],
+            "severity": "warning",
+            "type": "text_thickness"
+        },
+        {
+            "description": "Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.4022 mm)",
+            "items": [
+                {
+                    "description": "Reference field of P3",
+                    "pos": {
+                        "x": -420.61992,
+                        "y": 424.19116
+                    },
+                    "uuid": "f076d8b1-c77c-4667-b7f7-4c266243eda7"
+                }
+            ],
+            "severity": "warning",
+            "type": "text_height"
+        },
+        {
+            "description": "Text thickness out of range (TrueType font characters with insufficient stroke weight)",
+            "items": [
+                {
+                    "description": "Reference field of U1",
+                    "pos": {
+                        "x": -427.18328,
+                        "y": 437.008
+                    },
+                    "uuid": "0ce0e69d-4132-4086-ab16-3df332ef5e72"
+                }
+            ],
+            "severity": "warning",
+            "type": "text_thickness"
+        },
+        {
+            "description": "Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.4022 mm)",
+            "items": [
+                {
+                    "description": "Reference field of U1",
+                    "pos": {
+                        "x": -427.18328,
+                        "y": 437.008
+                    },
+                    "uuid": "0ce0e69d-4132-4086-ab16-3df332ef5e72"
+                }
+            ],
+            "severity": "warning",
+            "type": "text_height"
+        },
+        {
+            "description": "Text thickness out of range (TrueType font characters with insufficient stroke weight)",
+            "items": [
+                {
+                    "description": "Reference field of X1",
+                    "pos": {
+                        "x": -433.90285,
+                        "y": 438.20815
+                    },
+                    "uuid": "fd49c3a9-bb4b-4fc3-bacd-cce197dbe7da"
+                }
+            ],
+            "severity": "warning",
+            "type": "text_thickness"
+        },
+        {
+            "description": "Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.4022 mm)",
+            "items": [
+                {
+                    "description": "Reference field of X1",
+                    "pos": {
+                        "x": -433.90285,
+                        "y": 438.20815
+                    },
+                    "uuid": "fd49c3a9-bb4b-4fc3-bacd-cce197dbe7da"
+                }
+            ],
+            "severity": "warning",
+            "type": "text_height"
+        },
+        {
+            "description": "Text thickness out of range (TrueType font characters with insufficient stroke weight)",
+            "items": [
+                {
+                    "description": "Reference field of U2",
+                    "pos": {
+                        "x": -419.95952,
+                        "y": 445.44334
+                    },
+                    "uuid": "280fddd7-b9eb-4868-aaf4-3700487c51e4"
+                }
+            ],
+            "severity": "warning",
+            "type": "text_thickness"
+        },
+        {
+            "description": "Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.4022 mm)",
+            "items": [
+                {
+                    "description": "Reference field of U2",
+                    "pos": {
+                        "x": -419.95952,
+                        "y": 445.44334
+                    },
+                    "uuid": "280fddd7-b9eb-4868-aaf4-3700487c51e4"
+                }
+            ],
+            "severity": "warning",
+            "type": "text_height"
+        },
+        {
+            "description": "Text thickness out of range (TrueType font characters with insufficient stroke weight)",
+            "items": [
+                {
+                    "description": "Reference field of X2",
+                    "pos": {
+                        "x": -432.58078,
+                        "y": 444.1962
+                    },
+                    "uuid": "c150bddb-d1ab-4689-9554-218986862102"
+                }
+            ],
+            "severity": "warning",
+            "type": "text_thickness"
+        },
+        {
+            "description": "Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.4022 mm)",
+            "items": [
+                {
+                    "description": "Reference field of X2",
+                    "pos": {
+                        "x": -432.58078,
+                        "y": 444.1962
+                    },
+                    "uuid": "c150bddb-d1ab-4689-9554-218986862102"
+                }
+            ],
+            "severity": "warning",
+            "type": "text_height"
+        },
+        {
+            "description": "Silkscreen clipped by solder mask",
+            "items": [
+                {
+                    "description": "Reference field of U1",
+                    "pos": {
+                        "x": -427.18328,
+                        "y": 437.008
+                    },
+                    "uuid": "0ce0e69d-4132-4086-ab16-3df332ef5e72"
+                },
+                {
+                    "description": "Pad 9 [MISO] of U1 on 1",
+                    "pos": {
+                        "x": -427.40856,
+                        "y": 436.2108
+                    },
+                    "uuid": "07e5abc8-d615-4743-8f45-d4a93635a638"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_over_copper"
+        },
+        {
+            "description": "Silkscreen clipped by solder mask",
+            "items": [
+                {
+                    "description": "Segment of U1 on F.Silkscreen",
+                    "pos": {
+                        "x": -432.96556,
+                        "y": 431.3644
+                    },
+                    "uuid": "57a90c91-01cf-4983-986d-927fde27b537"
+                },
+                {
+                    "description": "Pad 2 [Net-(U1-Pad24)] of C231 on 1",
+                    "pos": {
+                        "x": -432.7662,
+                        "y": 431.0136
+                    },
+                    "uuid": "6ae9e6f2-0295-4bb5-a593-2098b001229d"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_over_copper"
+        },
+        {
+            "description": "Silkscreen clipped by solder mask",
+            "items": [
+                {
+                    "description": "Segment of U1 on F.Silkscreen",
+                    "pos": {
+                        "x": -426.81876,
+                        "y": 431.3644
+                    },
+                    "uuid": "3e93d747-0f15-4ea8-8f07-6bf59cadab2c"
+                },
+                {
+                    "description": "Pad 1 [Net-(U1-Pad17)] of L171 on 1",
+                    "pos": {
+                        "x": -426.467,
+                        "y": 431.1406
+                    },
+                    "uuid": "62eb90e7-e6a1-47eb-95f7-d82f629c430c"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_over_copper"
+        },
+        {
+            "description": "Silkscreen clipped by solder mask",
+            "items": [
+                {
+                    "description": "Segment of U1 on F.Silkscreen",
+                    "pos": {
+                        "x": -426.81876,
+                        "y": 431.3644
+                    },
+                    "uuid": "3e93d747-0f15-4ea8-8f07-6bf59cadab2c"
+                },
+                {
+                    "description": "Pad 2 [Net-(U1-Pad24)] of C231 on 1",
+                    "pos": {
+                        "x": -432.7662,
+                        "y": 431.0136
+                    },
+                    "uuid": "6ae9e6f2-0295-4bb5-a593-2098b001229d"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_over_copper"
+        },
+        {
+            "description": "Silkscreen clipped by solder mask",
+            "items": [
+                {
+                    "description": "Segment of U1 on F.Silkscreen",
+                    "pos": {
+                        "x": -426.81876,
+                        "y": 437.5366
+                    },
+                    "uuid": "56af846d-41a3-4674-a1e4-8e88bb18fcf0"
+                },
+                {
+                    "description": "Pad 1 [Net-(U1-Pad17)] of L171 on 1",
+                    "pos": {
+                        "x": -426.467,
+                        "y": 431.1406
+                    },
+                    "uuid": "62eb90e7-e6a1-47eb-95f7-d82f629c430c"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_over_copper"
+        }
+    ]
+}

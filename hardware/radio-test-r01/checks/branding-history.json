@@ -1,0 +1,50 @@
+{
+  "operation": "Project labels and local library nickname renamed to WICI; historical CAD geometry retained. Historical JSON labels are annotated, not presented as fresh KiCad outputs.",
+  "files": [
+    {
+      "file": "checks/history/controller-power-input.kicad_pcb",
+      "original_sha256": "8f857ab6793b16d86cc8ca98a7e1784d8c72d287c97c17a7e6981840e4205a7f",
+      "renamed_sha256": "ab61785ec134ed12d2455b5d9a8c9bdf0bf9853e97b78459bdb43a8758581acc"
+    },
+    {
+      "file": "checks/history/controller-power-native.dsn",
+      "original_sha256": "35febbf0b869179e485b342b0eab935f45238cd99b9f3281da5cc2e65e181ee4",
+      "renamed_sha256": "58ed3355cc72e3fc699c01a18d9ed37cfb2bcc9ac2c8136f328a6859dec8dc2a"
+    },
+    {
+      "file": "checks/history/drc-widened.json",
+      "original_sha256": "1c3d8cd595bb1947781a8a2320e42192eaec3f2e74adc847d6e2c6ecc56acfdb",
+      "renamed_sha256": "fb5a2ac21b59356561be2a1ba7c21b387c21e7bfeca7803acb43fabc1c8c4f5a"
+    },
+    {
+      "file": "checks/history/controller-power-placed.kicad_pcb",
+      "original_sha256": "dbe09bacd52ce5096de781464441c989b8f3977f21bdd1fd56e0cda7d870fbd7",
+      "renamed_sha256": "d80048a86d4f5ff8687f8723aa56609cc92ae0460d1cabdeefe5cb4b13737baa"
+    },
+    {
+      "file": "checks/history/controller-3.ses",
+      "original_sha256": "e3f2d678235c341266aaab27765e0aa2ab2c1bcbaec0b28a3b01934fd5fbfd67",
+      "renamed_sha256": "e331aac800d40f868c511e5b0b5efb95cc9a58f97967ee8425ffa633a1fd61ab"
+    },
+    {
+      "file": "checks/history/controller-2.ses",
+      "original_sha256": "07286001b71382ba1c6d0a5bb2269cd45db37776cf378b7db5a5ba1abc64f35e",
+      "renamed_sha256": "0e0cef23f2baf9c95fb7e4f213ddd76d2ad72aadf5ae09efaf65751e949321bd"
+    },
+    {
+      "file": "checks/history/controller.ses",
+      "original_sha256": "0cbb53f143f906cb0769b13281ddbbc7285b2af51de0f37a1e00e5568b5f12c1",
+      "renamed_sha256": "c3ece9f9a6a48a305d511f0c88a638afd89b70501465c49adf31dfd4a2033023"
+    },
+    {
+      "file": "checks/history/controller-power-native.ses",
+      "original_sha256": "6f9e6c86a06ea2fbb0b9687ac4acdd5739fc0bf7eaf3a269ab6a57faadc753aa",
+      "renamed_sha256": "e6f2c44489e8c14fe5aba82675da1c5d9a60388dcf4d17d4a8ae45525d65130b"
+    },
+    {
+      "file": "checks/history/controller-power-empty.dsn",
+      "original_sha256": "c7926068fd1630df6ea4423f34b5a59d602bc87095448ccf8bc0d90854088486",
+      "renamed_sha256": "570649e2071b676895a12492c0e1dc71adb48803dd85cfdbf3d2b76925c54510"
+    }
+  ]
+}
