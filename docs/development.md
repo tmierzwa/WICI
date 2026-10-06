@@ -27,7 +27,7 @@ Na Windows użyj `py -3.12 -m venv .venv` i `.venv\Scripts\python.exe`. Główne
 
 Pełny przebieg CAD i eksportu sprawdzono na macOS z KiCad 10.0.6 i Pythonem 3.12. Otwieranie źródeł jest niezależne od systemu; procedura dla innych instalacji wymaga wskazania właściwego interpretera KiCad. [Polecenia i kolejność](../hardware/radio-test-r01/odtworzenie.md).
 
-Freerouting 2.5.0 jest potrzebny tylko do nowego trasowania. Odtworzenie R01.3 używa zapisanej sesji SES, bez Java i bez sieci. Podglądy PNG/SVG w `checks/preview/` to pomoc przeglądu wcześniejszej rewizji, nie wejście do produkcji. Bieżące PDF montażu i schematu tworzy KiCad, a PDF mechaniki ReportLab; nie potrzeba Inkscape ani konwertera SVG.
+Freerouting 2.5.0 jest potrzebny tylko do nowego trasowania. Odtworzenie R01.3 używa zapisanej sesji SES, bez Java i bez sieci. Podglądy PNG/SVG w `checks/preview/` służą do przeglądu. Do produkcji używa się zweryfikowanych eksportów. Bieżące PDF montażu i schematu tworzy KiCad, a PDF mechaniki ReportLab; nie potrzeba Inkscape ani konwertera SVG.
 
 ## Paczka źródłowa
 
