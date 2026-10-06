@@ -1,0 +1,130 @@
+{
+    "$schema": "https://schemas.kicad.org/drc.v1.json",
+    "coordinate_units": "mm",
+    "date": "2026-10-06T21:02:14",
+    "ignored_checks": [
+        {
+            "description": "Footprint has no courtyard defined",
+            "key": "missing_courtyard"
+        },
+        {
+            "description": "Track endpoint not centered on via",
+            "key": "track_not_centered_on_via"
+        },
+        {
+            "description": "Tuning profile track geometries",
+            "key": "tuning_profile_track_geometries"
+        },
+        {
+            "description": "Footprint doesn't match symbol's footprint filters",
+            "key": "footprint_filters_mismatch"
+        },
+        {
+            "description": "Footprint component type doesn't match footprint pads",
+            "key": "footprint_type_mismatch"
+        }
+    ],
+    "included_severities": [
+        "error",
+        "warning",
+        "exclusion"
+    ],
+    "kicad_version": "10.0.6",
+    "schematic_parity": [],
+    "source": "radio-usb-controller.kicad_pcb",
+    "unconnected_items": [
+        {
+            "description": "Missing connection between items",
+            "items": [
+                {
+                    "description": "Pad 2 [/GND] of R9 on F.Cu",
+                    "pos": {
+                        "x": 101.9125,
+                        "y": 103.0
+                    },
+                    "uuid": "635b2920-16f1-4898-bfc0-eb3e3085a159"
+                },
+                {
+                    "description": "Via [/GND] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 104.95,
+                        "y": 99.1
+                    },
+                    "uuid": "774475a2-ebd6-4598-8f97-10437d5c5e3d"
+                }
+            ],
+            "severity": "error",
+            "type": "unconnected_items"
+        },
+        {
+            "description": "Missing connection between items",
+            "items": [
+                {
+                    "description": "Pad 1 [/GND] of D1 on F.Cu",
+                    "pos": {
+                        "x": 136.0625,
+                        "y": 103.0
+                    },
+                    "uuid": "63af320c-91d6-4bb2-bf25-59903639ff0a"
+                },
+                {
+                    "description": "PTH pad 5 [/GND] of J1",
+                    "pos": {
+                        "x": 137.71,
+                        "y": 92.27
+                    },
+                    "uuid": "97c860e6-bfef-4d1a-8cfa-4cac5d57f464"
+                }
+            ],
+            "severity": "error",
+            "type": "unconnected_items"
+        }
+    ],
+    "violations": [
+        {
+            "description": "Track width (rule 'R01 track width' min width 0.1800 mm; actual 0.1500 mm)",
+            "items": [
+                {
+                    "description": "Track [/HSE8] on F.Cu, length 0.1417 mm",
+                    "pos": {
+                        "x": 106.6486,
+                        "y": 86.1498
+                    },
+                    "uuid": "9d5eea8b-0f43-46e3-8ec1-27df751b99c2"
+                }
+            ],
+            "severity": "error",
+            "type": "track_width"
+        },
+        {
+            "description": "Track width (rule 'R01 track width' min width 0.1800 mm; actual 0.1500 mm)",
+            "items": [
+                {
+                    "description": "Track [/HSE8] on F.Cu, length 1.0887 mm",
+                    "pos": {
+                        "x": 106.7488,
+                        "y": 86.25
+                    },
+                    "uuid": "ca64ee62-a54d-42e0-94aa-2305b637662f"
+                }
+            ],
+            "severity": "error",
+            "type": "track_width"
+        },
+        {
+            "description": "Track width (rule 'R01 track width' min width 0.1800 mm; actual 0.1500 mm)",
+            "items": [
+                {
+                    "description": "Track [/HSE8] on F.Cu, length 2.6486 mm",
+                    "pos": {
+                        "x": 104.0,
+                        "y": 86.1498
+                    },
+                    "uuid": "e32975d8-8e9b-406f-a915-ad34ba233702"
+                }
+            ],
+            "severity": "error",
+            "type": "track_width"
+        }
+    ]
+}

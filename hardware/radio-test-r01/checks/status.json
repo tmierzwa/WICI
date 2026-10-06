@@ -1,0 +1,164 @@
+{
+  "project": "WICI",
+  "revision": "R01.3-controller-fabrication-2026-10-06",
+  "manufacturing_release": "HOLD",
+  "scope": "USB controller candidate plus private TI RF reference audit; not a complete working radio modem.",
+  "controller": {
+    "tool": "KiCad 10.0.6",
+    "erc_date": "2026-10-06T22:06:12",
+    "drc_date": "2026-10-06T22:06:13",
+    "erc_violations": 0,
+    "drc_violations": 0,
+    "unconnected_items": 0,
+    "schematic_parity_issues": 0,
+    "zone_refill": true,
+    "explicit_excluded_violations": 0,
+    "erc_default_ignored_checks": [
+      {
+        "description": "Global label only appears once in the schematic",
+        "key": "single_global_label"
+      },
+      {
+        "description": "Four connection points are joined together",
+        "key": "four_way_junction"
+      },
+      {
+        "description": "SPICE model issue",
+        "key": "simulation_model_issue"
+      },
+      {
+        "description": "Assigned footprint doesn't match footprint filters",
+        "key": "footprint_filter"
+      }
+    ],
+    "drc_default_ignored_checks": [
+      {
+        "description": "Footprint has no courtyard defined",
+        "key": "missing_courtyard"
+      },
+      {
+        "description": "Track endpoint not centered on via",
+        "key": "track_not_centered_on_via"
+      },
+      {
+        "description": "Tuning profile track geometries",
+        "key": "tuning_profile_track_geometries"
+      },
+      {
+        "description": "Footprint doesn't match symbol's footprint filters",
+        "key": "footprint_filters_mismatch"
+      },
+      {
+        "description": "Footprint component type doesn't match footprint pads",
+        "key": "footprint_type_mismatch"
+      }
+    ],
+    "review": "Schematic, copper, assembly, actual exported Gerber copper/silkscreen/planes and 1:1 PDF rendered and inspected; no independent reviewer or physical specimen.",
+    "requested_changes_report": "checks/controller-revision.json",
+    "replay_verification": "checks/replay-verification.json",
+    "fabrication_outputs": "fabrication/wici-controller-R01.3.zip",
+    "fabrication_verification": "checks/fabrication-verification.json",
+    "reference_stackup": "JLC04161H-7628, nominal 1.6 mm",
+    "power_bus_width_mm": 0.5,
+    "inner_layer_track_count": 0,
+    "mounting_holes": 4,
+    "mechanical_fit": "NOT TESTED",
+    "mechanical_print": "mechanika-1-do-1.pdf"
+  },
+  "rf_reference": {
+    "source_connection_audit": {
+      "source": "original TI CSA and CPA connection-group comparison",
+      "common_connected_pins": 156,
+      "common_connection_mismatches": 0,
+      "expected_pcb_only_ground_lands": [
+        [
+          "U1",
+          "34"
+        ],
+        [
+          "U1",
+          "35"
+        ],
+        [
+          "U1",
+          "36"
+        ],
+        [
+          "U1",
+          "37"
+        ],
+        [
+          "U1",
+          "38"
+        ],
+        [
+          "U1",
+          "39"
+        ],
+        [
+          "U1",
+          "40"
+        ],
+        [
+          "U1",
+          "41"
+        ],
+        [
+          "U1",
+          "42"
+        ],
+        [
+          "U1",
+          "43"
+        ],
+        [
+          "U1",
+          "44"
+        ],
+        [
+          "U1",
+          "45"
+        ],
+        [
+          "U1",
+          "46"
+        ]
+      ],
+      "scope": "Logical connection groups only; does not verify physical RF geometry or performance."
+    },
+    "imported_kicad_drc_violations": 204,
+    "imported_kicad_unconnected_items": 0,
+    "manufacturing_release": "HOLD"
+  },
+  "not_verified": [
+    "USB differential impedance and physical operation",
+    "connector/switch mechanical fit",
+    "RF layout conversion",
+    "RF clock selection and full error budget",
+    "firmware",
+    "thermal behavior",
+    "transmitter spectrum",
+    "receiver sensitivity",
+    "range",
+    "qualified second-vendor implementation",
+    "PPTC voltage drop and thermal derating"
+  ],
+  "sha256": {
+    "cad/radio-usb-controller.kicad_sch": "ebcc14847d9ff01fdd76ec34bea373a34fcc75ad833b3e4aeb9aaf672c99575b",
+    "cad/radio-usb-controller.kicad_pcb": "863a0fc3b4c6960b7e3bb656adc0f2c85d9e047d9c0bf36c84c8bb2f559b13ef",
+    "cad/radio-usb-controller.kicad_pro": "103074f0ec9e640366d78fd4908827acc2e41556be518d50654e6167cf46a4bb",
+    "cad/radio-usb-controller.kicad_dru": "e61fc2b74732babc6d6aafdb3ca0bad97e95dc4257d34e6ecc2a0c3c09cad77b",
+    "checks/erc-controller.json": "251be6e4d7234950a2464402bafec30f082640389b39159753233e3270267db2",
+    "checks/drc-controller.json": "889ff57f3be35d3b4259dc8e99b2d8f30fdfc5e807fcaa7d3d6115164211a173",
+    "checks/controller-revision.json": "db940857929ba5a401f57cb4c6480c2c9e55abdca5feab7a0f0ff3d433a213f9",
+    "checks/mechanical-geometry.json": "feecbe238df52961f7f80b0f6ba237ab4a55c9d9f2c64ce4166d1a36b0978c19",
+    "checks/replay-verification.json": "e6e29a2a2b5750cb36aad9229ab2b80749d5b24212e57a87e8eecfd68c977e95",
+    "checks/fabrication-verification.json": "86e58f1088d546a64f3b7adad72c05bd1d3a290269218b9615ee0e4dcd891b4e",
+    "checks/stackup.json": "217796f1a6facc79298d77343f3f825cf3e84d6a701caa39c3bff79224972831",
+    "assembly-parts.json": "f8c9b3db4722064188be1bc163476173c13a2af579101336d7c2dd76c589aaae",
+    "fabrication/wici-controller-R01.3.zip": "bb129268d5b33ce9571b1b135363dba19e767997b3332584865f32db5adeb9d5",
+    "mechanika-1-do-1.pdf": "ddd61360f8502f77b0cbaab6959616d79319e59e7b178a37c9fa98bb23c6461e",
+    "connections.json": "0ee305444a1f416d812a2260c4a50a4a4419c81f49c1482c9f4a5acfd70edb1a",
+    "bom.csv": "d2bc971e9152d37ca34c06bf31fd0251951c03058e668ab75409347f674575bb"
+  }
+}

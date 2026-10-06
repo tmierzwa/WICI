@@ -1,0 +1,63 @@
+{
+  "revision": "R01.3",
+  "reference_fab": "JLCPCB",
+  "reference_stack": "JLC04161H-7628",
+  "source": "https://jlcpcb.com/impedance",
+  "nominal_finished_thickness_mm": 1.6,
+  "laminate_without_mask_mm": 1.5862,
+  "mask_model_thickness_mm": 0.01524,
+  "mask_model_epsilon_r": 3.8,
+  "loss_tangent": "KiCad serializes default 0.02; not a qualified material loss tangent",
+  "layers": [
+    {
+      "layer": "F.Cu",
+      "type": "copper",
+      "thickness_mm": 0.035,
+      "material": "Copper",
+      "epsilon_r": null
+    },
+    {
+      "layer": "dielectric 1",
+      "type": "prepreg",
+      "thickness_mm": 0.2104,
+      "material": "FR4 7628",
+      "epsilon_r": 4.4
+    },
+    {
+      "layer": "In1.Cu",
+      "type": "copper",
+      "thickness_mm": 0.0152,
+      "material": "Copper",
+      "epsilon_r": null
+    },
+    {
+      "layer": "dielectric 2",
+      "type": "core",
+      "thickness_mm": 1.065,
+      "material": "FR4",
+      "epsilon_r": 4.6
+    },
+    {
+      "layer": "In2.Cu",
+      "type": "copper",
+      "thickness_mm": 0.0152,
+      "material": "Copper",
+      "epsilon_r": null
+    },
+    {
+      "layer": "dielectric 3",
+      "type": "prepreg",
+      "thickness_mm": 0.2104,
+      "material": "FR4 7628",
+      "epsilon_r": 4.4
+    },
+    {
+      "layer": "B.Cu",
+      "type": "copper",
+      "thickness_mm": 0.035,
+      "material": "Copper",
+      "epsilon_r": null
+    }
+  ],
+  "note": "Manufacturer nominal 1.6mm stack; coating model is nonuniform in the real board. No controlled-impedance qualification. Another fab must confirm equivalent construction, not substitute an unspecified stack."
+}

@@ -1,0 +1,226 @@
+{
+  "$schema": "https://schemas.kicad.org/drc.v1.json",
+  "coordinate_units": "mm",
+  "date": "2026-10-06T18:12:03",
+  "ignored_checks": [
+    {
+      "description": "Footprint has no courtyard defined",
+      "key": "missing_courtyard"
+    },
+    {
+      "description": "Track endpoint not centered on via",
+      "key": "track_not_centered_on_via"
+    },
+    {
+      "description": "Tuning profile track geometries",
+      "key": "tuning_profile_track_geometries"
+    },
+    {
+      "description": "Footprint doesn't match symbol's footprint filters",
+      "key": "footprint_filters_mismatch"
+    },
+    {
+      "description": "Footprint component type doesn't match footprint pads",
+      "key": "footprint_type_mismatch"
+    }
+  ],
+  "included_severities": [
+    "error",
+    "warning",
+    "exclusion"
+  ],
+  "kicad_version": "10.0.6",
+  "schematic_parity": [],
+  "source": "radio-usb-controller.kicad_pcb",
+  "unconnected_items": [],
+  "violations": [
+    {
+      "description": "Clearance violation ( clearance 0.2000 mm; actual 0.1805 mm)",
+      "items": [
+        {
+          "description": "Track [/V3] on F.Cu, length 0.1684 mm",
+          "pos": {
+            "x": 114.3975,
+            "y": 90.0814
+          },
+          "uuid": "43084d01-bb6f-45f3-ac38-014da77c37b8"
+        },
+        {
+          "description": "Pad 23 [/GND] of U1 on F.Cu",
+          "pos": {
+            "x": 114.25,
+            "y": 91.1625
+          },
+          "uuid": "7224de0d-fceb-4ec2-a952-d0da0ad2458b"
+        }
+      ],
+      "severity": "error",
+      "type": "clearance"
+    },
+    {
+      "description": "Clearance violation ( clearance 0.2000 mm; actual 0.1805 mm)",
+      "items": [
+        {
+          "description": "Track [/V3] on F.Cu, length 0.0398 mm",
+          "pos": {
+            "x": 114.5166,
+            "y": 90.2005
+          },
+          "uuid": "58318c3f-0537-4f8d-94d4-b259b57c3528"
+        },
+        {
+          "description": "Pad 23 [/GND] of U1 on F.Cu",
+          "pos": {
+            "x": 114.25,
+            "y": 91.1625
+          },
+          "uuid": "7224de0d-fceb-4ec2-a952-d0da0ad2458b"
+        }
+      ],
+      "severity": "error",
+      "type": "clearance"
+    },
+    {
+      "description": "Clearance violation ( clearance 0.2000 mm; actual 0.1647 mm)",
+      "items": [
+        {
+          "description": "Track [/USB_DM_MCU] on F.Cu, length 1.0607 mm",
+          "pos": {
+            "x": 117.2,
+            "y": 86.25
+          },
+          "uuid": "01c15626-79d4-4563-b55c-bb442ab86157"
+        },
+        {
+          "description": "Track [/UART_TX] on F.Cu, length 0.0583 mm",
+          "pos": {
+            "x": 117.7419,
+            "y": 87.2995
+          },
+          "uuid": "c1fc5a55-5708-414c-8654-028ba2b4f5d9"
+        }
+      ],
+      "severity": "error",
+      "type": "clearance"
+    },
+    {
+      "description": "Clearance violation ( clearance 0.2000 mm; actual 0.1647 mm)",
+      "items": [
+        {
+          "description": "Track [/USB_DM_MCU] on F.Cu, length 1.0607 mm",
+          "pos": {
+            "x": 117.2,
+            "y": 86.25
+          },
+          "uuid": "01c15626-79d4-4563-b55c-bb442ab86157"
+        },
+        {
+          "description": "Track [/UART_TX] on F.Cu, length 0.1772 mm",
+          "pos": {
+            "x": 117.8672,
+            "y": 87.4248
+          },
+          "uuid": "e88da760-b44d-4f5c-b693-86402e900ad7"
+        }
+      ],
+      "severity": "error",
+      "type": "clearance"
+    },
+    {
+      "description": "Courtyards overlap",
+      "items": [
+        {
+          "description": "Footprint J4",
+          "pos": {
+            "x": 119.0,
+            "y": 100.0
+          },
+          "uuid": "0f7c8547-bfa2-45cc-95e9-6872560b43a3"
+        },
+        {
+          "description": "Footprint SW1",
+          "pos": {
+            "x": 110.0,
+            "y": 105.0
+          },
+          "uuid": "2033829f-8011-46a7-8d73-55de6feade7a"
+        }
+      ],
+      "severity": "error",
+      "type": "courtyards_overlap"
+    },
+    {
+      "description": "Silkscreen clearance",
+      "items": [
+        {
+          "description": "Segment of SW1 on F.Silkscreen",
+          "pos": {
+            "x": 111.0,
+            "y": 110.5
+          },
+          "uuid": "08649234-6e81-4243-b9e9-17c2a3001100"
+        },
+        {
+          "description": "PCB text 'WICI R01 / REVIEW ONLY' on F.Silkscreen",
+          "pos": {
+            "x": 115.0,
+            "y": 111.0
+          },
+          "uuid": "5f1705a1-b6cc-4800-937e-44c770c8d469"
+        }
+      ],
+      "severity": "warning",
+      "type": "silk_overlap"
+    },
+    {
+      "description": "Silkscreen clipped by solder mask",
+      "items": [
+        {
+          "description": "PCB text 'WICI R01 / REVIEW ONLY' on F.Silkscreen",
+          "pos": {
+            "x": 115.0,
+            "y": 111.0
+          },
+          "uuid": "5f1705a1-b6cc-4800-937e-44c770c8d469"
+        },
+        {
+          "description": "PTH pad 2 [/GND] of SW1",
+          "pos": {
+            "x": 110.0,
+            "y": 109.5
+          },
+          "uuid": "7614d190-aaa6-462f-b6cd-0f838843c655"
+        }
+      ],
+      "severity": "warning",
+      "type": "silk_over_copper"
+    },
+    {
+      "description": "Silkscreen clipped by solder mask",
+      "items": [
+        {
+          "description": "PCB text 'WICI R01 / REVIEW ONLY' on F.Silkscreen",
+          "pos": {
+            "x": 115.0,
+            "y": 111.0
+          },
+          "uuid": "5f1705a1-b6cc-4800-937e-44c770c8d469"
+        },
+        {
+          "description": "PTH pad 2 [/GND] of SW1",
+          "pos": {
+            "x": 116.5,
+            "y": 109.5
+          },
+          "uuid": "f92532b3-628a-4d1b-86ae-512f476cc204"
+        }
+      ],
+      "severity": "warning",
+      "type": "silk_over_copper"
+    }
+  ],
+  "post_processing": {
+    "operation": "WICI project branding only; original test counts and geometry retained",
+    "original_sha256": "1c3d8cd595bb1947781a8a2320e42192eaec3f2e74adc847d6e2c6ecc56acfdb"
+  }
+}

@@ -1,0 +1,35 @@
+module,quantity,item,minimum_requirement,candidate_a,candidate_b,status
+radio,1,transceiver,2GFSK 869.525 MHz P1,TI CC1120,ST S2-LP,alternative designs not qualified
+radio,1,USB MCU,native CDC two interfaces,ST STM32F103C8,Microchip SAMD21G18,alternative designs not qualified
+radio,1,nonvolatile airtime log,I2C EEPROM wear levelled,ST M24C64,Microchip AT24C64,firmware required
+radio,1,TCXO,total frequency error <=2.5 ppm,compatible manufacturer A,compatible manufacturer B,reference frequencies differ by radio
+radio,1,antenna,50 ohm dipole SWR <=2,open dipole drawing,independent equivalent manufacture,tune outside actual building
+radio,1,RF cable,50 ohm <=2 m,manufacturer A,manufacturer B,qualify loss and connectors
+radio,1,USB cable,data cable <=2 m,manufacturer A,manufacturer B,qualify
+AB,2,dual Schottky,>=45 V each source supports 20 A,ST STPS3045CT,Vishay VS-MBR3045CT-M3,thermal and surge test
+AB,2,TVS,SMCJ18CA bidirectional,Littelfuse,Vishay,not an automotive pulse qualification
+AB,2,diode heatsink,initial <=3 K/W each,local fabrication,independent fabrication,test case and junction temperature
+AB,8,bus capacitor,2200 uF 35 V each >=3 A ripple,Panasonic,Nichicon,check ripple frequency and inrush
+AB,2,battery cable,<=2 m 2x6 mm2 fused 25 A,local fabrication,independent fabrication,20 A profile
+AB,2,cigar cable,<=2 m 2x2.5 mm2 fused 10 A,local fabrication,independent fabrication,8 A profile and socket limit
+charger,8,buck,LM2596 adjustable,TI,onsemi,calibrate and heat test
+charger,8,inductor,68 uH Isat >=6 A Irms >=3 A,TDK,Wurth Elektronik,qualify dimensions and losses
+charger,16,Schottky,>=3 A 40 V,ST,onsemi,flyback and polarity protection
+charger,8,port limiter,1.5 A load and qualified short current,TI TPS2553,Microchip MIC2007,different PCB and resistor selection
+charger,8,OVP reference,TL431B grade 0.5 percent,TI,ST,crowbar not qualified
+charger,8,OVP SCR,adequate gate drive and I2t,ST TYN612,WeEn BT151,variant needs gate and surge calculation
+charger,8,PNP,BC327,Nexperia,onsemi,verify package pinout
+charger,8,input fuse,1.5 A and suitable DC rating,Littelfuse,Eaton,verify time current
+charger,8,output fuse,fast 3.15 A suitable DC rating,Littelfuse,Eaton,verify clearing I2t with SCR
+charger,8,USB-A receptacle,1.5 A continuous,manufacturer A,manufacturer B,thermal and cable drop test
+inverter,4,MOSFET,>=60 V Rds <=3.1 milliohm at 10 V,ST STP220N6F7,Infineon IPP030N06NF2S,thermal test
+inverter,2,half bridge driver,3.3 V logic about 10 V drive,TI UCC27211,ADI LTC4444,different bootstrap and supply circuits
+inverter,1,control MCU,complement PWM deadtime hardware fault,ST STM32F103,Microchip dsPIC33CK,firmware not written
+inverter,1,fast comparator,hardware current cut,TI TLV3201,Microchip MCP6561,offset and delay analysis
+inverter,1,transformer,20 and 840 turns core and isolation per design,independent winding shop A,independent winding shop B,prototype thermal dielectric qualification
+inverter,1,output inductor,initial 10 mH >=1 A with pulse margin,independent winding shop A,independent winding shop B,PSU inrush qualification
+inverter,2,RCBO,type A 30 mA 2 pole rating to be selected,ABB,Schneider Electric,PE arrangement not qualified
+USB,1,flash drive,64 GB verified offline package,manufacturer A,manufacturer B,no images produced yet
+cables,1,Ethernet,CAT5e LAN cable,manufacturer A,manufacturer B,commodity
+cables,1,USB Ethernet,offline drivers for supported OS,Realtek RTL8153,ASIX AX88179,qualified alternatives required
+documents,1,instruction,one page and offline HTML,open design,independent printing,after module acceptance

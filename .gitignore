@@ -1,0 +1,15 @@
+# Local OS and Python state
+.DS_Store
+__pycache__/
+*.py[cod]
+.venv/
+
+# KiCad local preferences, locks and automatic backups
+*.kicad_prl
+*.lck
+*-backups/
+
+# Vendor reference material is local, not part of the open project
+/hardware/radio-test-r01/reference-private/
+
+/dist/

@@ -1,0 +1,158 @@
+{
+  "local_materials": [
+    {
+      "file": "reference-private/source/ti-rf-reference.zip",
+      "url": "https://www.ti.com/lit/zip/swrr091",
+      "sha256": "3ea3e14840243610e6a5ca4d91642527b8e070414645da3150aa2cd6951e7ef2",
+      "downloaded": "2026-10-06"
+    },
+    {
+      "file": "reference-private/source/ti-schematic.pdf",
+      "url": "https://www.ti.com/lit/pdf/tidr240",
+      "sha256": "7ff4b1b62a2c995f8dd6fbc40351fc67152dc5a0d0c89d614f94b3e98f653f60",
+      "downloaded": "2026-10-06"
+    },
+    {
+      "file": "reference-private/source/ti-bom.pdf",
+      "url": "https://www.ti.com/lit/pdf/tidr241",
+      "sha256": "cc1b15de5de7fc13b0a671ff6750afa70ec445071367c66bf55638e17b8056e1",
+      "downloaded": "2026-10-06"
+    },
+    {
+      "file": "reference-private/source/cc1120.pdf",
+      "url": "https://www.ti.com/lit/ds/symlink/cc1120.pdf",
+      "sha256": "ce08aa4a3ba28ce23098ef7dcd1dc2574e44b8818504f233f5c18d600eb03a4f",
+      "downloaded": "2026-10-06"
+    },
+    {
+      "file": "reference-private/source/ap2112.pdf",
+      "url": "https://www.diodes.com/datasheet/download/AP2112.pdf",
+      "sha256": "ef8d376f2ec356e29172eb9e053819a0ebdcc576dba7fc9ab0505c568427920f",
+      "downloaded": "2026-10-06"
+    },
+    {
+      "file": "reference-private/source/tlv755p.pdf",
+      "url": "https://www.ti.com/lit/ds/symlink/tlv755p.pdf",
+      "sha256": "6f06c5e444c21d7d691e37fbbe23c6bc9373ba11aa5471d885f2a9c3d9acb140",
+      "downloaded": "2026-10-06"
+    },
+    {
+      "file": "reference-private/source/ase.pdf",
+      "url": "https://abracon.com/Oscillators/ASEseries.pdf",
+      "sha256": "5f5a3070e85cac34ace32dc6dfbec8066f5b09e63e19ca7084fb208296e261f1",
+      "downloaded": "2026-10-06"
+    },
+    {
+      "file": "reference-private/source/usb-b-alternative.pdf",
+      "url": "https://www.we-online.com/components/products/datasheet/61400416121.pdf",
+      "sha256": "96ec7cb7f88493f80db50ccdad9b3ad3d5b354830e2a129fdf554903106e6898",
+      "downloaded": "2026-10-06"
+    },
+    {
+      "file": "reference-private/source/CC112xEM.cpa",
+      "from_archive": "ti-rf-reference.zip",
+      "sha256": "03ad59a8777d41e047f69b33bdb569a3896866a3654bc34d348849f9c279a470"
+    },
+    {
+      "file": "reference-private/source/CC112xEM_868_915.csa",
+      "from_archive": "ti-rf-reference.zip",
+      "sha256": "000db526802784bca8a36cc19df3c985122f7ddcafb3a8016ee96f2d34bc32e1"
+    },
+    {
+      "file": "reference-private/source/CC112xEM_868_915_schematic.pdf",
+      "from_archive": "ti-rf-reference.zip",
+      "sha256": "a0ee5922c712f69f76f566b5f832b60e6183b81a0363b50fe312b0798a661893"
+    },
+    {
+      "file": "reference-private/source/CC112xEM_Layout.pdf",
+      "from_archive": "ti-rf-reference.zip",
+      "sha256": "49234e8c39395adc4afa15adfbbaaec6c6a65458cf5929dad691c5920ec28d2e"
+    },
+    {
+      "file": "reference-private/source/bourns-mf-nsmf.pdf",
+      "url": "https://www.bourns.com/docs/product-datasheets/mf-nsmf.pdf?sfvrsn=39c76af6_28",
+      "sha256": "1e98bb9b863b43db0264681e6fd7683c0ecd033b63683fd8e3d7cab3e9c69bcb",
+      "downloaded": "2026-10-06"
+    },
+    {
+      "file": "reference-private/source/omron-b3f.pdf",
+      "url": "https://omronfs.omron.com/en_US/ecb/products/pdf/en-b3f.pdf",
+      "sha256": "be9cf69e5f43fb7689448a2097c19858e5643c0e2e49cd77d018881543e27a1f",
+      "downloaded": "2026-10-06"
+    },
+    {
+      "file": "reference-private/source/wurth-idc-61201021621.pdf",
+      "url": "https://www.we-online.com/components/products/datasheet/61201021621.pdf",
+      "sha256": "dbaa4765e57457ac68cc667d33da6128b63651ee25a5938b713a91b21c58a929",
+      "downloaded": "2026-10-06"
+    },
+    {
+      "file": "reference-private/source/kingbright-apt2012lseck-j3-prv.pdf",
+      "url": "https://www.kingbrightusa.com/images/catalog/spec/apt2012lseck-j3-prv.pdf",
+      "sha256": "b9998cbf2a52889a7b0311d152b125c6d110aa4fa7254e2fe101035a77a547a4",
+      "downloaded": "2026-10-06"
+    },
+    {
+      "file": "reference-private/source/jlc-stackup.html",
+      "url": "https://jlcpcb.com/de/impedance",
+      "sha256": "030031540d8ea438bf2ed0cfbf93c91848a8cc13e496ebdb4365c232a2139d10",
+      "downloaded": "2026-10-06"
+    },
+    {
+      "file": "reference-private/source/vishay-crcw-e3.pdf",
+      "url": "https://www.vishay.com/docs/20035/dcrcwe3.pdf",
+      "sha256": "59f13d58254ffac7c17b54cf0328b961d83a0636e47276e4b7c99224903caec3",
+      "downloaded": "2026-10-06"
+    },
+    {
+      "file": "reference-private/source/kemet-10nf.pdf",
+      "url": "https://search.kemet.com/component-documentation/download/specsheet/C0805C103K5RACTU",
+      "sha256": "f2a879dcbe149fdf76f22a99204bdf4e14d9e1beabc78d0829c55da54c58a920",
+      "downloaded": "2026-10-06"
+    }
+  ],
+  "additional_primary_sources": [
+    "https://www.st.com/resource/en/datasheet/stm32f103c8.pdf",
+    "https://www.st.com/resource/en/datasheet/usblc6-2.pdf",
+    "https://www.st.com/resource/en/datasheet/m24c64-f.pdf",
+    "https://assets.nexperia.com/documents/data-sheet/BSS84.pdf",
+    "https://www.st.com/resource/en/application_note/an4879-introduction-to-usb-hardware-and-pcb-guidelines-using-stm32-mcus-stmicroelectronics.pdf",
+    "https://abracon.com/datasheets/ATX-14.pdf",
+    "https://gitlab.com/kicad/libraries/kicad-symbols/-/tree/9.0.0",
+    "https://www.ti.com/legal/important-notice-and-disclaimer.html",
+    "https://abracon.com/Oscillators/ASEseries.pdf",
+    "https://assets.nexperia.com/documents/data-sheet/BSS84.pdf",
+    "https://omronfs.omron.com/en_US/ecb/products/pdf/en-b3f.pdf",
+    "https://search.kemet.com/component-documentation/download/specsheet/C0805C103K5RACTU",
+    "https://www.bourns.com/docs/product-datasheets/mf-nsmf.pdf",
+    "https://www.diodes.com/datasheet/download/AP2112.pdf",
+    "https://www.kingbrightusa.com/images/catalog/spec/apt2012lseck-j3-prv.pdf",
+    "https://www.murata.com/en-us/products/productdetail?partno=GRM21BR71C104KA01%23",
+    "https://www.murata.com/en-us/products/productdetail?partno=GRM21BR71C105KA01%23",
+    "https://www.murata.com/en-us/products/productdetail?partno=GRM21BR71C475KA73%23",
+    "https://www.samtec.com/products/tsw-103-07-l-s",
+    "https://www.samtec.com/products/tsw-105-07-l-s",
+    "https://www.st.com/resource/en/datasheet/m24c64-f.pdf",
+    "https://www.st.com/resource/en/datasheet/stm32f103c8.pdf",
+    "https://www.st.com/resource/en/datasheet/usblc6-2.pdf",
+    "https://www.vishay.com/docs/20035/dcrcwe3.pdf",
+    "https://www.we-online.com/components/products/datasheet/61201021621.pdf",
+    "https://www.we-online.com/components/products/datasheet/61400416121.pdf"
+  ],
+  "tools": {
+    "KiCad": "10.0.6",
+    "Freerouting": "2.5.0",
+    "Freerouting_jar_sha256": "f6f51bb02245e8e717f9359bd260cc9c5c0b1bc0acc8b7cb2cd5b8ffeb5de3c7"
+  },
+  "note": "Additional primary sources were read online; local copies are included only when listed under local_materials.",
+  "online_only": [
+    {
+      "url": "https://www.littelfuse.com/assetdocs/littelfuse-ptc-1206l-datasheet?assetguid=2b6a1515-d4ee-4c83-8bd4-152b4901b8f5",
+      "scope": "1206L050/15YR hold/trip/voltage, resistance, derating, dimensions and pad layout read online; local download returned 403"
+    },
+    {
+      "url": "https://suddendocs.samtec.com/catalog_english/tsw.pdf",
+      "error": "HTTP Error 403: Forbidden"
+    }
+  ]
+}
