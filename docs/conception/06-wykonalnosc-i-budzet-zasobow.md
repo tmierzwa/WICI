@@ -5,7 +5,7 @@
 | Część | Obecny dowód | Co blokuje uznanie za działającą |
 |---|---|---|
 | Format P1, SA1, transakcja OSP | wykonywalny model i przypadki graniczne | firmware, integracja bibliotek, odcięcia fizycznego nośnika |
-| Kontroler USB R01.3 | źródła CAD, raporty ERC/DRC, eksporty | dopasowanie rzeczywistych części, montaż i pomiary; HOLD |
+| Kontroler USB R01.3 | źródła CAD, raporty ERC/DRC, eksporty | poprawka toru zegara/zasilania dla suspend USB, dopasowanie części i pomiary całego modemu; HOLD |
 | Modemy TI i ST | wspólny kontrakt, kandydaci układów | dwa layouty RF, rejestry, firmware, emisje i próba mieszana |
 | Strona i pakiety START | kontrakt API i układ pakietu | implementacja, budowa offline, macierz urządzeń i test użytkowy |
 | Zasilanie A/B, przetwornica i ładowarka | opisy konstrukcji i obliczenia | pełne projekty wykonawcze, zabezpieczenia, udary, termika i bezpieczeństwo |
@@ -29,6 +29,8 @@ To przepustowość idealnego nadajnika na poziomie datagramów modemu, nie liczb
 Przykład obciążenia: 100 datagramów po 600 B zajmuje jednemu nadajnikowi około 1740 s cykli, czyli 29 min. To ilustracja małego zapasu czasu, jeśli 50 zgłoszeń i ich potwierdzenia wymagałyby takiego ruchu przez jeden przekaźnik. Rzeczywiste potwierdzenia mają inną długość, a transmisja obejmuje dodatkowe pakiety. Wynik dla 50 zgłoszeń trzeba zmierzyć, nie wywnioskować z tabeli.
 
 LXMF może przejść od pojedynczego pakietu do przesyłania zasobu dla większej wiadomości. Limit treści SA1 480 B nie daje limitu jednego pakietu radiowego. Dodatkowo istnieją zestawienie łącza, ogłoszenia tras, potwierdzenia i ponowienia. Zwykły interfejs KISS ma w obecnym kodzie timeout kontroli przepływu 5 s; P1 może wymagać ponad 16 s samej ciszy. Wymagany adapter nie jest zatem kosmetyczną konfiguracją. [LXMessage](https://github.com/markqvist/LXMF/blob/master/LXMF/LXMessage.py), [KISSInterface](https://github.com/markqvist/Reticulum/blob/master/RNS/Interfaces/KISSInterface.py), [kontrakt adaptera](../spec/radio.md).
+
+Adapter 900 s nie zmienia timeoutów linku i zasobu. Pakiet może czekać w kolejce dłużej niż pozwala stos, jeszcze przed pierwszym TX. [Kontrprzykład z przypiętego kodu](../review.md).
 
 Próba musi policzyć wszystkie bajty i czas TX każdego węzła, zarówno podczas zimnego zestawienia trasy, jak i ruchu ustalonego. Mierzyć opóźnienie do RECEIVED, wiek kolejki, odrzuty, retransmisje i poprawność po restarcie. Kolizja ukrytych nadajników jest możliwa mimo CCA. Fragmentacja zwiększa ryzyko utraty całego datagramu.
 

@@ -32,6 +32,8 @@ Parametry wykonawcze, ramki, API i warunki odbioru należą do `docs/spec/`. Ta 
 
 Koncepcja nadaje się do budowy prototypów i sprawdzania hipotez. Nie ma jeszcze dowodu łączności 1 km, działania całego stosu radiowego, pracy dobowej ani bezpieczeństwa własnej przetwornicy. Kontroler USB R01.3 pozostaje HOLD; moduły RF, firmware, aplikacja i pakiety START nie są ukończone. Wyniki modelu i CAD nie zastępują prób sprzętu.
 
+[Aktualne ustalenia przeglądu](../review.md) obejmują konkretny problem suspend USB, budżet ogranicznika ładowarki oraz kontrprzykład czasowy stosu sieciowego.
+
 Pierwsze rozstrzygnięcia: trwałe przyjęcie zgłoszenia przez OSP, rzeczywisty koszt radiowy LXMF, zgodność dwóch modemów, zasilanie bez resetu i dostępność dyżurnego z możliwością działania. Bez odbiorcy zdolnego pomóc sprawna sieć jedynie przenosi dane.
 
 Rygor oznacza jawne założenia, próby odtwarzalne, rozpoznawalne awarie i warunki przerwania pracy. Projekt nie deklaruje kwalifikacji wojskowej, odporności na celowe zagłuszanie ani certyfikacji środowiskowej.

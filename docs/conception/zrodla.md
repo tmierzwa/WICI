@@ -28,7 +28,7 @@ Obliczenia rozdziału 06 są oszacowaniami projektowymi z podanymi wzorami. Rozd
 | [ST S2-LP — datasheet](https://www.st.com/resource/en/datasheet/s2-lp.pdf) | drugie wykonanie RF; osobne dopasowanie i konfiguracja |
 | [SQLite — atomic commit](https://sqlite.org/atomiccommit.html) i [backup API](https://sqlite.org/backup.html) | warunki trwałości i kontrolowanej kopii bazy |
 
-Licencja WICI nie zastępuje licencji zależności. Bieżący [LICENSE Reticulum](https://github.com/markqvist/Reticulum/blob/master/LICENSE) zawiera dodatkowe ograniczenia dotyczące celowego krzywdzenia ludzi i tworzenia zbiorów do treningu AI. Przed połączeniem i dystrybucją pakietu z własnym kodem GPL trzeba sprawdzić zgodność warunków konkretnych wersji. Obecne repozytorium nie dołącza kodu Reticulum/LXMF; analiza nie oznacza zatwierdzenia przyszłej paczki zależności.
+Licencja WICI nie zastępuje licencji zależności. [LICENSE Reticulum](https://github.com/markqvist/Reticulum/blob/e40191b3d193b46b7f2d8a44424a594cd758839b/LICENSE) oraz [LICENSE LXMF](https://github.com/markqvist/LXMF/blob/c3ff2d6dc2f256daab896dadc044dd5a913ecbb7/LICENSE) zawierają dodatkowe ograniczenia dotyczące celowego krzywdzenia ludzi i tworzenia zbiorów do treningu AI. Przed połączeniem i dystrybucją pakietu z własnym kodem GPL trzeba rozstrzygnąć zgodność tych dodatkowych warunków z GPL; samo dołączenie pliku licencji nie zamyka problemu. Obecne repozytorium nie dołącza kodu Reticulum/LXMF; analiza nie oznacza zatwierdzenia przyszłej paczki zależności.
 
 ## Radio — warunki prawne do potwierdzenia
 

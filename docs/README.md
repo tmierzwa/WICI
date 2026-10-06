@@ -16,4 +16,6 @@ Wykonany kontroler ma osobne [źródła i dokumentację sprzętową](../hardware
 
 [Narzędzia i tworzenie paczek](development.md). Bieżąca kontrola repozytorium: `tools/verify_repository.py` i CI dla aktualnego commita.
 
+[Aktualne ustalenia przeglądu technicznego](review.md): poprawione rozbieżności, konkretne przeszkody i warunki ich zamknięcia.
+
 Status: prototyp; sprzęt HOLD. Instrukcje użycia stacji opisują docelowy odebrany zestaw. Nie są instrukcją uruchomienia gotowego produktu.

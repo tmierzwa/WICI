@@ -8,9 +8,9 @@
 | Modemy mieszane | TI→ST, ST→TI, 10 000 pakietów każdego rozmiaru granicznego; brak różnic formatu | niewykonana |
 | Radio 1 km | rzeczywiste dwie lokalizacje, anteny na zewnątrz; ≥99 ze 100 zgłoszeń z RECEIVED w 5 min przy pojedynczym ruchu | niewykonana |
 | Przekaźnik | 3 stacje, wymuszone odcięcie bezpośrednie A–OSP; przejście przez B i powrót ACK | niewykonana |
-| Obciążenie sieci | 50 zgłoszeń rozłożonych w 5 min; ≥99% potwierdzonych w 30 min; zapis utrzymany podczas braku trasy | niewykonana |
+| Obciążenie sieci | referencyjne A–B–OSP: 50 zgłoszeń łącznie z A w pierwszych 5 min; ≥99% z RECEIVED na A do 30 min od pierwszego lokalnego COMMIT; droga powrotna przez B; zapis utrzymany podczas braku trasy | niewykonana |
 | Limit TX | cały ruch i restarty w dowolnym godzinowym oknie ≤10%; przerwanie zapisu EEPROM nigdy nie umożliwia nadania bez budżetu | niewykonana |
-| USB | zimny start bez internetu na macOS Intel/ARM, Windows x64 i wspieranym Linux PC; brak pobierania zależności | niewykonana |
+| USB | zimny start offline na macOS Intel/ARM, Windows x64 i wspieranym Linux PC, bez pobierania zależności; cały modem ≤100 mA przed konfiguracją, po konfiguracji w przyznanym budżecie do 500 mA, suspend ≤2,5 mA; udar i 100 cykli suspend/resume bez utraty trwałej kolejki ani obejścia długu TX | niewykonana |
 | Przeniesienie | kompletna kopia, zatrzymanie starej instancji, zachowana tożsamość i kolejka na nowym laptopie | niewykonana |
 | Strona | 50 podłączonych telefonów, 15 aktywnych; dostęp tylko do własnego zgłoszenia; modem odłączony nie blokuje formularza | niewykonana |
 | A/B | oba kierunki, napięcia 11,5 i 16 V, każdy tryb mocy, 100 zmian; zero resetów routera/modemu/inwertera | niewykonana |
@@ -22,6 +22,8 @@
 | Ochrona AC | izolacja, PE, prąd dotykowy, uziemienie i reakcja RCBO sprawdzone dla przyjętej normy i konfiguracji | niewykonana |
 | Zakłócenia | pomiar odbioru radia przy pracującej przetwornicy i pełnej ładowarce; brak pogorszenia uniemożliwiającego próbę terenową | niewykonana |
 | Praca dobowa | 24 h pełnej funkcji z wymianami źródeł; zapisany pobór Wh stacji i ładowarki osobno | niewykonana |
+
+Próba obciążenia obejmuje zimny start trasy oraz osobno ruch ustalony. Odcięcie A–OSP musi być fizycznie skuteczne. Liczyć odbiór RECEIVED przez A, nie sam zapis lub LXMF DELIVERED. Z 50 zgłoszeń wymagane jest 50/50; 49/50 to 98%. Większa liczba schronień, przekaźników i jednoczesnych nadawców wymaga nowego planu obciążenia; ta próba nie kwalifikuje sieci 1000 stacji.
 
 Próba modelu transakcji nie jest próbą odcinania fizycznego zasilania dysku. Po zbudowaniu aplikacji powtarza się ją na docelowych nośnikach, odcinając zasilanie przed, podczas i po zapisie. Nie zwalnia się wersji do schronień na podstawie samych testów Python.
 
@@ -35,4 +37,4 @@ Próbę OVP wykonuje się bez telefonu, na obciążeniu i oscyloskopie o odpowie
 4. Aplikacja strony i LXMF, kompletne pakiety offline oraz manifest przypiętych zależności.
 5. Próby powyżej i ceny rzeczywistych BOM od niezależnych wykonawców.
 
-W tym pakiecie są zamknięte kontrakty oraz obliczalne punkty wyjścia. Braki sprzętowe nie są oznaczone jako zrealizowane.
+W tym pakiecie są kontrakty do weryfikacji oraz obliczalne punkty wyjścia. Zgodność czasowa stosu i niezależność wszystkich wariantów nie są zamknięte. Braki sprzętowe nie są oznaczone jako zrealizowane.

@@ -12,9 +12,12 @@ Status pozostaje **HOLD**, dopóki wszystkie pozycje nie mają potwierdzonego wy
 | Referencja RF | Wspólne połączenia CSA/CPA zgodne | Poprawny, przejrzany projekt/wykonanie RF; nie zamawiać z importu KiCad |
 | Import RF | DRC: 204 naruszenia, połączeń brakujących 0 | Wyjaśnić reguły wierceń, stosy padów i utracone dane importu. Brak brakujących połączeń nie oznacza poprawnego toru RF |
 | Zegar RF | Zwykły kwarc referencji nie spełnia P1 | Wybrać dostępny TCXO 32 MHz i zgodny footprint, zasilanie, sprzężenie wejścia oraz pełny budżet błędu ≤ ±2,5 ppm; przygotować kalibrację |
+| USB suspend i udar | Y1.1 połączone stale z V3; brak sterowanego zatrzymania zegara | ASE przy 8 MHz: do 7 mA, a cały modem w suspend ma budżet 2,5 mA. Potrzebna zmiana toru zegara/zasilania i firmware oraz pomiar całego modemu. Sprawdzić udar z pojemnościami za LDO i modułem RF; C1=1 µF sam nie zamyka bilansu USB |
 | Firmware | Brak | Działający obraz, mapowanie pinów, USB CDC, SPI CC1120, profil P1 i trwały limit czasu nadawania |
 | Różni dostawcy | Interfejs radia wydzielony; alternatywa LDO | Zweryfikować drugie wykonanie radia/kontrolera. S2-LP nie jest zamiennikiem CC1120 na tej samej płytce |
 | Próby fizyczne | Nie wykonano | Zasilanie, USB, temperatura, widmo TX, czułość RX, odporność na restart, dwie sztuki i pomiar w terenie |
+
+Wniosek USB wynika z połączenia Y1.1→V3 w `connections.csv` i parametrów [ASE](https://abracon.com/Oscillators/ASEseries.pdf). Odłączenie pull-up D+ nie wyłącza Y1. Zmiana projektu wymaga nowej rewizji CAD i ponownych eksportów; obecne R01.3 nie otrzymało takiej poprawki. [Pełne ustalenia przeglądu](../../docs/review.md).
 
 ## RF: sprawdzone fakty
 

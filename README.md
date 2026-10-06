@@ -14,6 +14,8 @@ WICI używa [Reticulum](https://github.com/markqvist/Reticulum) i [LXMF](https:/
 | [software/reference](software/reference/README.md) | Model ramek, wiadomości i transakcji OSP; obliczenia |
 | [tools](docs/development.md) | Kontrola repozytorium i tworzenie paczki źródłowej |
 
+[Przegląd techniczny](docs/review.md) wskazuje m.in. konieczną poprawkę suspend USB kontrolera oraz niezamkniętą zgodność czasów Reticulum/LXMF z P1.
+
 Cel 1 km w zabudowie, 24 godziny z wymianą źródeł 12 V i zgodność dwóch dostawców radia wymagają prób. Przetwornica 230 V i ładowarka są opisami konstrukcyjnymi; nie mają odebranych PCB. [Lista prób i braków](docs/spec/odbior.md).
 
 ## Sprawdzenie repozytorium

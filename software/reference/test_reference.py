@@ -89,6 +89,28 @@ class Messages(unittest.TestCase):
         with self.assertRaises(ValueError):
             decode_message(b" " * 481)
 
+    def test_unicode_controls_and_formatting_rejected(self):
+        for char in ("\u0085", "\u009b", "\u202e", "\u200b", "\u00ad"):
+            for value in (REQUEST[:6] + [char] + REQUEST[7:],
+                          REQUEST[:7] + [char] + REQUEST[8:],
+                          [1, 3, MID, 0, 1, char], [1, 4, MID, 1, char]):
+                with self.subTest(codepoint=ord(char), kind=value[1]):
+                    with self.assertRaises(ValueError):
+                        encode_message(value)
+                    external_wire = json.dumps(value, ensure_ascii=True).encode("ascii")
+                    with self.assertRaises(ValueError):
+                        decode_message(external_wire)
+        polish = REQUEST.copy()
+        polish[7] = "Zażółć gęślą jaźń — 2 osoby"
+        self.assertEqual(decode_message(encode_message(polish)), polish)
+
+    def test_status_cannot_reuse_received_event_or_state(self):
+        for event, state in ((1, 2), (1, 3), (2, 1)):
+            external_wire = json.dumps([1, 2, MID, 0, event, state]).encode("ascii")
+            with self.subTest(event=event, state=state):
+                with self.assertRaises(ValueError):
+                    decode_message(external_wire)
+
     def test_status_order_and_contradiction(self):
         self.assertEqual(status_after(3, 3, 1, 1), (3, 3))
         self.assertEqual(status_after(1, 1, 2, 2), (2, 2))

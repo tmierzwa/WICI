@@ -19,3 +19,5 @@ Reguły szczegółowe w tabeli mają pierwszeństwo przed regułą „pozostałe
 Pochodzenie podzbiorów KiCad i modyfikacji IDC: [hardware/radio-test-r01/LICENSES.md](hardware/radio-test-r01/LICENSES.md). Wyjątek KiCad pozwala używać danych biblioteki w projekcie pod licencją projektu; same rozpowszechniane biblioteki i ich pochodne pozostają przy CC-BY-SA-4.0 z wyjątkiem.
 
 Reticulum, LXMF i NomadNet są odrębnymi projektami. Ich kod nie jest częścią tego repozytorium. Ich nazwy i licencje upstream pozostają bez zmian. Materiały producentów w lokalnym `reference-private/` nie są częścią repozytorium ani archiwów WICI i nie otrzymują licencji WICI.
+
+Przed dystrybucją pakietu START z zależnościami trzeba rozstrzygnąć zgodność ich konkretnych licencji z własnym kodem GPL. Reticulum i LXMF w wersjach objętych [przeglądem](docs/review.md) zawierają dodatkowe ograniczenia; samo dołączenie tekstów licencji nie zamyka tej oceny.

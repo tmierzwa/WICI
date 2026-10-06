@@ -2,6 +2,8 @@
 
 **Status: HOLD — nie zamawiać PCB ani montażu całego modemu.**
 
+Przegląd elektryczny wskazał problem USB suspend: Y1 ma stale włączony zegar, bez możliwości dotrzymania pełnego budżetu prądu z parametrów katalogowych. Przed wykonaniem potrzebna jest poprawiona rewizja i odbiór całego modemu. [Warunki przed zamówieniem](przed-produkcja.md).
+
 Są rzeczywiste, edytowalne pliki kontrolera USB w KiCad. Tor radiowy CC1120 jest osobnym modułem opartym na referencji TI. Do testu między dwiema stacjami potrzeba dwóch kontrolerów i dwóch modułów RF.
 
 | Plik | Zawartość |
