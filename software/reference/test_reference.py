@@ -12,6 +12,7 @@ from reference import (OSPStore, PREFIX, assemble, crc16, decode_message,
 
 MID = "00112233445566778899aabbccddeeff"
 REQUEST = [1, 0, MID, 0, 0, 2, "Testowa 10, wejście od podwórza", "Brak wody", 0]
+TEST = [1, 5] + REQUEST[2:]
 
 
 class AirContract(unittest.TestCase):
@@ -67,7 +68,7 @@ class Messages(unittest.TestCase):
 
     def test_every_shape(self):
         values = [REQUEST, [1, 1, MID, 0, 1, 1], [1, 2, MID, 0, 2, 2],
-                  [1, 3, MID, 0, 1, "Jedziemy"], [1, 4, MID, 1, "Woda o 18:00"]]
+                  [1, 3, MID, 0, 1, "Jedziemy"], [1, 4, MID, 1, "Woda o 18:00"], TEST]
         for value in values:
             self.assertEqual(decode_message(encode_message(value)), value)
 
@@ -88,6 +89,9 @@ class Messages(unittest.TestCase):
             encode_message(REQUEST + [0])
         with self.assertRaises(ValueError):
             decode_message(b" " * 481)
+        for invalid in (TEST[:-1], [1, 6] + REQUEST[2:], TEST[:4] + [5] + TEST[5:]):
+            with self.assertRaises(ValueError):
+                encode_message(invalid)
 
     def test_unicode_controls_and_formatting_rejected(self):
         for char in ("\u0085", "\u009b", "\u202e", "\u200b", "\u00ad"):
@@ -167,6 +171,20 @@ class DurableReception(unittest.TestCase):
             self.store.receive(self.source, encode_message(changed), True)
         self.store.receive(b"T" * 16, self.wire, True)
         self.assertEqual(self.store.db.execute("SELECT count(*) FROM received").fetchone()[0], 2)
+
+    def test_test_message_follows_request_path(self):
+        ack = self.store.receive(self.source, encode_message(TEST), True)
+        self.assertEqual(decode_message(ack), [1, 1, MID, 0, 1, 1])
+        self.assertEqual(self.store.receive(self.source, encode_message(TEST), True), ack)
+        status = encode_message([1, 2, MID, 0, 2, 2])
+        with self.assertRaises(ValueError):
+            self.store.receive(self.source, status, True)
+
+    def test_request_and_test_with_same_key_conflict(self):
+        self.store.receive(self.source, self.wire, True)
+        with self.assertRaises(ValueError):
+            self.store.receive(self.source, encode_message(TEST), True)
+        self.assertEqual(self.store.db.execute("SELECT count(*) FROM received").fetchone()[0], 1)
 
     def test_unsigned_message_never_creates_request(self):
         with self.assertRaises(ValueError):

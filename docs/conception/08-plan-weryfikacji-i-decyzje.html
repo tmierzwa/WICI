@@ -1,0 +1,145 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: CC-BY-4.0 -->
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>08. Plan weryfikacji i decyzje · koncepcja WICI</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#tresc">Przejdź do treści</a>
+<header class="site-header">
+  <div class="inner">
+    <a class="brand" href="index.html">WICI <span>· koncepcja systemu</span></a>
+    <a class="jump" href="#rozdzialy">Rozdziały ↓</a>
+    <span class="status">Prototyp 0.4 · sprzęt <b>HOLD</b></span>
+  </div>
+</header>
+<div class="layout">
+  <nav class="chapters" id="rozdzialy" aria-label="Rozdziały koncepcji">
+    <p class="nav-title">Rozdziały</p>
+    <ol>
+      <li><a href="index.html">Przegląd koncepcji</a></li>
+      <li><a href="01-potrzeby-i-wymagania.html">01. Potrzeby i wymagania</a></li>
+      <li><a href="02-scenariusze-i-organizacja.html">02. Scenariusze i organizacja</a></li>
+      <li><a href="03-dostepne-rozwiazania.html">03. Dostępne rozwiązania</a></li>
+      <li><a href="04-analiza-opcji.html">04. Analiza opcji</a></li>
+      <li><a href="05-projekt-koncepcyjny-komunikacji.html">05. Projekt koncepcyjny komunikacji</a></li>
+      <li><a href="06-wykonalnosc-i-budzet-zasobow.html">06. Wykonalność i budżet zasobów</a></li>
+      <li><a href="07-zagrozenia-i-odpornosc.html">07. Zagrożenia i odporność</a></li>
+      <li><a href="08-plan-weryfikacji-i-decyzje.html" aria-current="page">08. Plan weryfikacji i decyzje</a></li>
+      <li><a href="zrodla.html">Źródła</a></li>
+    </ol>
+  </nav>
+  <main id="tresc">
+<article>
+<h1>08. Plan weryfikacji i decyzje</h1>
+
+<nav class="on-page" aria-label="Na tej stronie">
+<p>Na tej stronie</p>
+<ol>
+  <li><a href="#kolejnosc-prac">Kolejność prac</a></li>
+  <li><a href="#proby-i-pokrycie-wymagan">Próby i pokrycie wymagań</a></li>
+  <li><a href="#minimalny-raport">Minimalny raport</a></li>
+  <li><a href="#otwarte-decyzje-i-warunki-zamkniecia">Otwarte decyzje i warunki zamknięcia</a></li>
+</ol>
+</nav>
+
+<h2 id="kolejnosc-prac">Kolejność prac</h2>
+
+<p>Celem pierwszych prób jest odrzucić błędne założenia przed zamówieniem całego sprzętu. Każdy etap kończy się dowodem albo decyzją o zmianie. Wynik wcześniejszy pozostaje ważny tylko dla niezmienionej konfiguracji i warunków.</p>
+
+<ol>
+  <li><strong>Lokalna stacja:</strong> aplikacja, kolejka, strona i pakowanie offline na dostępnym laptopie/routerze. Sprawdzić uruchomienie bez internetu oraz trwałość danych. Zasilanie laboratoryjne służy jako narzędzie; nie dowodzi własnej przetwornicy.</li>
+  <li><strong>Wiadomości i czas radia:</strong> dwa końce Reticulum/LXMF, emulator ograniczeń P1 i adapter. Sprawdzić rozmiar każdej wiadomości SA1 po kodowaniu względem jednego pakietu okazjonalnego. Zmierzyć wszystkie pakiety dla rzeczywistych treści, długie READY i ponowienia; porównać z budżetem przekaźnika z <a href="06-wykonalnosc-i-budzet-zasobow.html">rozdziału 06</a>. Odrzucić koncepcję terminowości, jeśli stos nie mieści się w budżecie.</li>
+  <li><strong>RF:</strong> zmontować i pomierzyć dwa wykonania. Przed zamówieniem wykonać kontrolę 1:1 z rzeczywistymi złączami oraz przegląd layoutu. Sprawdzić zgodność w obu kierunkach i warunki emisji.</li>
+  <li><strong>Sieć terenowa:</strong> A–B–OSP w rzeczywistych miejscach, z wykluczonym bezpośrednim A–OSP. Sprawdzić pojedyncze zgłoszenia, obciążenie, zanik węzła i powrót trasy. Użyć dopuszczonego zasilania; kwalifikacja własnego toru pozostaje odrębnym etapem.</li>
+  <li><strong>Własne zasilanie:</strong> pełny projekt, pomiary i kwalifikacja obu wariantów części. Dopiero po spełnieniu ochrony i warunków AC dołączyć rzeczywiste zasilacze laptopa/routera oraz ładowanie telefonów.</li>
+  <li><strong>Kompletny pilotaż 24 h:</strong> odebrany zestaw, docelowi opiekunowie, dyżurny i zapas energii. Oddzielnie mierzyć stację i ładowarkę. Dopiero wynik całości pozwala ocenić gotowość danej konfiguracji.</li>
+</ol>
+
+<p>T1, T2 i T8 nie wymagają modemu P1, a T3 wykonuje się na emulatorze; mogą ruszyć przed ukończeniem prac RF. Gotowy RNode pozwala wcześniej sprawdzić stos w eterze, ale jego wynik nie przenosi się na P1.</p>
+
+<p>Emulator nie dowodzi fizycznego zasięgu, kolizji ani prawidłowego działania EEPROM. Gotowy modem porównawczy nie zwalnia kwalifikacji dwóch docelowych wykonań. Raport CAD nie zwalnia montażu i kontroli wymiarów.</p>
+
+<h2 id="proby-i-pokrycie-wymagan">Próby i pokrycie wymagań</h2>
+
+<p>T1–T8 są grupami prac tej koncepcji. Warunki liczbowe pochodzą z <a href="../spec/odbior.md">odbioru 0.4</a>; pozostałe przypadki uzupełniają sposób weryfikacji. Nowe progi użytkowe trzeba zatwierdzić przed pilotażem, bez zmniejszania istniejących warunków odbioru.</p>
+
+<div class="table-wrap"><table class="cols-3">
+<thead><tr>
+<th scope="col">Próba</th>
+<th scope="col">Wymagania</th>
+<th scope="col">Zakres i dowód</th>
+</tr></thead><tbody>
+<tr><td>T1 — lokalnie i offline</td><td>W01–W04, W13, W18</td><td>odłączony internet; zimny start Windows x64, macOS Intel/ARM i wspieranego Linux PC; utrzymanie hosta w pracy oraz pełny cykl USB według odbioru; 50 połączonych / 15 aktywnych; modem odłączony nie blokuje formularza; lista sprawdzonych hostów/routerów</td></tr>
+<tr><td>T2 — zapis, statusy, zaufanie</td><td>W01, W04–W07, W16</td><td>granice UTF-8 i sześć typów; TEST oddzielony od kolejki potrzeb; duplikaty/konflikty; awaria przed i po COMMIT; fizyczne odcięcia nośnika; błąd dysku; obcy klucz i dostęp do cudzego zgłoszenia; eksport/import i tylko jedna aktywna tożsamość</td></tr>
+<tr><td>T3 — integracja stosu i adapter</td><td>W14 oraz podstawa W07/W09/W10</td><td>wiadomości, czasy, ponowienia i awarie stosu z modemem; zakres pod tabelą</td></tr>
+<tr><td>T4 — fizyczne radio i warunki TX</td><td>W14, W17</td><td>TI→ST i ST→TI, 10 000 pakietów każdego rozmiaru granicznego; moc/częstotliwość/czułość z P1; cały ruch i restarty ≤10% w dowolnym ciągłym oknie godzinnym; przerwany zapis EEPROM nigdy nie omija budżetu; emisje gotowej konfiguracji</td></tr>
+<tr><td>T5 — teren, przekaźnik, obciążenie</td><td>W08–W10</td><td>1 km w rzeczywistych miejscach: ≥99/100 zgłoszeń z RECEIVED w 5 min przy pojedynczym ruchu; wymuszone A–B–OSP i odpowiedź; 50 zgłoszeń łącznie z A w pierwszych 5 min, ≥99% z RECEIVED na A do 30 min od pierwszego COMMIT; zimna i ustalona trasa; zanik i powrót trasy bez utraty zapisu</td></tr>
+<tr><td>T6 — energia i bezpieczeństwo</td><td>W11, W12, W14, W17</td><td>A/B: 100 zmian w obu kierunkach i skrajach napięcia, zero resetów; udar/I²t; pełne porty w 40°C przez 2 h; zwarcie i OVP bez telefonu; wszystkie próby przetwornicy/AC ze specyfikacji; zakłócenia RF i praca dobowa z pomiarem Wh obu pul</td></tr>
+<tr><td>T7 — odtworzenie i dostawcy</td><td>W14, W15</td><td>ktoś spoza zespołu odtwarza paczkę źródeł i wskazaną konstrukcję; hashe/BOM/licencje/wersje; dwóch niezależnych wykonawców; raport różnic i każda zakwalifikowana alternatywa</td></tr>
+<tr><td>T8 — obsługa i realna pomoc</td><td>W03, W06, W18</td><td>opiekun i zastępca używają krótkiej instrukcji; osoba bez telefonu zgłasza potrzebę; dyżurny odczytuje i odsyła decyzję; awaria OSP i kanał zastępczy; zapisane błędy obsługi i czasy czynności</td></tr>
+</tbody></table></div>
+
+<p>Zakres T3:</p>
+
+<ul>
+  <li><strong>Wiadomości:</strong> rozmiar SA1 po kodowaniu i wybrany sposób dostarczenia LXMF; liczba pakietów dla rzeczywistych wiadomości; zestawianie linku i przesyłanie zasobu.</li>
+  <li><strong>Czasy:</strong> timeouty całego stosu przy oczekiwaniu za ruchem przekaźnika; cisza i READY.</li>
+  <li><strong>Ponowienia:</strong> ponowienia LXMF wysłane, zanim poprzednia próba opuściła kolejkę B; mierzalny brak lawiny równoległych ponowień.</li>
+  <li><strong>Awarie:</strong> pełna kolejka modemu; odłączenie USB; powrót po restarcie.</li>
+</ul>
+
+<p><strong>≥99% z jednej próby 50 zgłoszeń oznacza 50/50.</strong> Wynik 49/50 to 98%. Nie zaokrąglać go do zaliczenia. W próbie 1 km każda kolejna wiadomość jest wysyłana według wcześniej ustalonej metody pojedynczego ruchu. Zgłoszenia próbne wysyła się jako TEST, więc format oddziela je od potrzeb; ich liczbę i czas uzgadnia się z odbiorcą.</p>
+
+<p>Wynik 99/100 opisuje daną próbę; nie jest statystyczną gwarancją skuteczności 99% we wszystkich warunkach. Powtórzenia i warunki pilotażu ustalić przed wykonaniem, aby nie dobierać wygodnych wyników po fakcie.</p>
+
+<h2 id="minimalny-raport">Minimalny raport</h2>
+
+<p>Rewizja źródeł i sprzętu, BOM wariantu, wersje bibliotek/firmware/systemu, modele hosta/routera, topologia i anteny, źródła i obciążenia, warunki, metoda, liczba prób i surowe wyniki. Dla komunikacji: id/revision, czas lokalnego zapisu, COMMIT OSP i powrotu RECEIVED, liczba datagramów, czas TX, odrzuty i restarty. Nie publikować kluczy, tokenów ani rzeczywistych danych mieszkańców.</p>
+
+<p>Porównanie znaczników z różnych węzłów wymaga wspólnego wzorca czasu podczas próby, np. zegarów zsynchronizowanych przed odłączeniem internetu albo odbiornika GNSS. Zapisać metodę i odchyłkę zegarów na końcu próby. Spełnienie W10 i warunku 1 km mierzy się zegarem A, od COMMIT do RECEIVED na A, więc nie zależy od synchronizacji. Wspólny czas próby nie zmienia zasady z <a href="05-projekt-koncepcyjny-komunikacji.html">rozdziału 05</a>: w eksploatacji zegar znalezionego laptopa nie jest podstawą koordynacji.</p>
+
+<p>Testy modelu opisują zachowanie modelu. Próby sprzętu, bezpieczeństwa i pracy dyżurnego mają odrębne raporty. Status HOLD można zdjąć wyłącznie dla wskazanej odebranej konfiguracji; CI sprawdza repozytorium, nie jego gotowość do użycia.</p>
+
+<h2 id="otwarte-decyzje-i-warunki-zamkniecia">Otwarte decyzje i warunki zamknięcia</h2>
+
+<div class="table-wrap"><table class="wide">
+<thead><tr>
+<th scope="col">ID</th>
+<th scope="col">Decyzja</th>
+<th scope="col">Dowód potrzebny przed zamknięciem</th>
+<th scope="col">Odpowiedzialność do wyznaczenia</th>
+</tr></thead><tbody>
+<tr><td>D01</td><td>czy P1 mieści ruch zgłoszeń i LXMF w limitach</td><td>limit SA1 jako jeden pakiet okazjonalny wpisany do specyfikacji; T3 i T5; pełny koszt pakietów i timeoutów wobec budżetu B (obliczenie: 20,4–21,8 min z 30 min, bez strat); wskazana liczba źródeł/przekaźników</td><td>integrator oprogramowania i radia</td></tr>
+<tr><td>D02</td><td>czy TI i ST tworzą niezależne zgodne modemy</td><td>dwa layouty, nastawy i T4 w obu kierunkach</td><td>projektant RF</td></tr>
+<tr><td>D03</td><td>czy miejsca i anteny zapewniają sieć do odbiorcy</td><td>T5 oraz wskazanie punktów odcięcia i dostępnego zastępstwa</td><td>koordynator miejsc</td></tr>
+<tr><td>D04</td><td>jaki host/router i pakiet można powierzyć opiekunowi</td><td>T1/T8, spisana macierz; uprawnienia, firewall, sterowniki, start USB i brak automatycznego usypiania; osobno kwalifikacja suspend/resume modemu</td><td>integrator pakietów</td></tr>
+<tr><td>D05</td><td>czy zasilanie 230 V jest uzasadnione i bezpieczne</td><td>pełna konstrukcja, T6, realne zasilacze; porównanie kosztu/energii wariantu DC</td><td>projektant zasilania i osoba oceniająca bezpieczeństwo</td></tr>
+<tr><td>D06</td><td>ile energii rzeczywiście potrzebuje miejsce</td><td>pomiar 24 h, pojemność dostępnych źródeł i osobny plan obu pul; osobny plan dla każdego przekaźnika bez schronienia</td><td>opiekun pilotażu i koordynator miejsc</td></tr>
+<tr><td>D07</td><td>kto przyjmuje, pomaga i zastępuje OSP</td><td>uzgodniony dyżur, kompetencje, klucze, kanał awaryjny i T8</td><td>organizacja pomocy</td></tr>
+<tr><td>D08</td><td>jak chronić dane, kopie i utracone klucze</td><td>procedura retencji/eksportu/unieważnienia; T2/T8</td><td>odpowiedzialny za dane i utrzymanie</td></tr>
+<tr><td>D09</td><td>jakie części, licencje i koszty zamykają wydanie</td><td>wersje i licencje zależności oraz wybrana droga licencyjna START (<a href="zrodla.html">źródła</a>); dwie wyceny tego samego zakresu; kwalifikowane warianty</td><td>utrzymanie wydania i konstruktorzy</td></tr>
+<tr><td>D10</td><td>czy W14 dla RF uzasadnia własny modem P1 zamiast LoRa/RNode</td><td>progi kosztu, terminu i wyniku D01/T4 ustalone przed zamówieniem RF; porównanie z wariantem LoRa przy jawnie ograniczonym W14</td><td>koordynator projektu i projektant RF</td></tr>
+</tbody></table></div>
+
+<p>Nie ma jeszcze przypisanych osób ani zatwierdzonego harmonogramu. Najpierw zamknąć zakres i dane wejściowe, potem wycenić pracę. Nie rozpoczynać serii produkcyjnej na podstawie samego wspólnego kontraktu modemów lub poprawnych Gerberów kontrolera.</p>
+
+<p>Warunek przerwania: fałszywy status sukcesu, utrata danych po potwierdzeniu, nieograniczona kolejka/ponowienia, obejście budżetu TX, przekroczenie ochrony portu lub niespełniona ochrona AC. Naprawić przyczynę i powtórzyć zależne próby; nie zwiększać limitu, aby uzyskać zaliczenie.</p>
+</article>
+<nav class="pager" aria-label="Kolejność czytania">
+  <a class="prev" href="07-zagrozenia-i-odpornosc.html" rel="prev"><span>← Poprzedni</span>07. Zagrożenia i odporność</a>
+  <a class="next" href="zrodla.html" rel="next"><span>Następny →</span>Źródła</a>
+</nav>
+  </main>
+</div>
+<footer class="site-footer">
+  <div class="inner">
+    <p>Analiza: <a href="../../LICENSES/CC-BY-4.0.txt">CC-BY-4.0</a>. <a href="../../LICENSE.md">Mapa licencji projektu</a>.</p>
+    <p>Parametry i warunki odbioru: <a href="../README.md">specyfikacja 0.4</a>. Kod: <a href="https://github.com/tmierzwa/WICI">tmierzwa/WICI</a>.</p>
+  </div>
+</footer>
+</body>
+</html>

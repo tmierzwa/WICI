@@ -10,7 +10,7 @@ python3 -m unittest discover -s tests -v
 python3 tools/verify_repository.py
 ```
 
-Kontrola porównuje manifest z indeksem Git, wszystkie sumy plików, lokalne odnośniki Markdown, składnię JSON/Python, wyniki obliczeń i paczkę kontrolera. Nie aktualizuje dowodów podczas sprawdzania. CI działa na Linuxie z Pythonem 3.12 i nie uruchamia KiCad.
+Kontrola porównuje manifest z indeksem Git, wszystkie sumy plików, lokalne odnośniki Markdown i HTML, składnię JSON/Python, wyniki obliczeń i paczkę kontrolera. Nie aktualizuje dowodów podczas sprawdzania. CI działa na Linuxie z Pythonem 3.12 i nie uruchamia KiCad.
 
 ## Narzędzia CAD
 

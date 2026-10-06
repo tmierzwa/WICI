@@ -3,7 +3,7 @@
 | Próba | Warunek zaliczenia | Stan |
 |---|---|---|
 | Kodowanie ramek | niezależny wektor CRC; długości 1–600 B; odwrócona kolejność; błędy CRC i konflikt duplikatu | model wykonywalny |
-| Komunikaty | wszystkie 5 typów; UTF-8; graniczne rozmiary; odrzucenie niepoprawnych typów i dodatkowych pól | model wykonywalny |
+| Komunikaty | wszystkie 6 typów; UTF-8; graniczne rozmiary; odrzucenie niepoprawnych typów i dodatkowych pól | model wykonywalny |
 | OSP | duplikat po restarcie; konflikt treści; przerwanie przed COMMIT bez ACK; odrębni nadawcy | model wykonywalny |
 | Modemy mieszane | TI→ST, ST→TI, 10 000 pakietów każdego rozmiaru granicznego; brak różnic formatu | niewykonana |
 | Radio 1 km | rzeczywiste dwie lokalizacje, anteny na zewnątrz; ≥99 ze 100 zgłoszeń z RECEIVED w 5 min przy pojedynczym ruchu | niewykonana |

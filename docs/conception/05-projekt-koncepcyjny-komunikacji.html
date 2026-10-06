@@ -1,0 +1,200 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: CERN-OHL-P-2.0 -->
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>05. Projekt koncepcyjny komunikacji · koncepcja WICI</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#tresc">Przejdź do treści</a>
+<header class="site-header">
+  <div class="inner">
+    <a class="brand" href="index.html">WICI <span>· koncepcja systemu</span></a>
+    <a class="jump" href="#rozdzialy">Rozdziały ↓</a>
+    <span class="status">Prototyp 0.4 · sprzęt <b>HOLD</b></span>
+  </div>
+</header>
+<div class="layout">
+  <nav class="chapters" id="rozdzialy" aria-label="Rozdziały koncepcji">
+    <p class="nav-title">Rozdziały</p>
+    <ol>
+      <li><a href="index.html">Przegląd koncepcji</a></li>
+      <li><a href="01-potrzeby-i-wymagania.html">01. Potrzeby i wymagania</a></li>
+      <li><a href="02-scenariusze-i-organizacja.html">02. Scenariusze i organizacja</a></li>
+      <li><a href="03-dostepne-rozwiazania.html">03. Dostępne rozwiązania</a></li>
+      <li><a href="04-analiza-opcji.html">04. Analiza opcji</a></li>
+      <li><a href="05-projekt-koncepcyjny-komunikacji.html" aria-current="page">05. Projekt koncepcyjny komunikacji</a></li>
+      <li><a href="06-wykonalnosc-i-budzet-zasobow.html">06. Wykonalność i budżet zasobów</a></li>
+      <li><a href="07-zagrozenia-i-odpornosc.html">07. Zagrożenia i odporność</a></li>
+      <li><a href="08-plan-weryfikacji-i-decyzje.html">08. Plan weryfikacji i decyzje</a></li>
+      <li><a href="zrodla.html">Źródła</a></li>
+    </ol>
+  </nav>
+  <main id="tresc">
+<article>
+<h1>05. Projekt koncepcyjny komunikacji</h1>
+
+<nav class="on-page" aria-label="Na tej stronie">
+<p>Na tej stronie</p>
+<ol>
+  <li><a href="#podzial-funkcji">Podział funkcji</a></li>
+  <li><a href="#droga-zgloszenia">Droga zgłoszenia</a></li>
+  <li><a href="#rozmiar-wiadomosci-a-sposob-dostarczenia">Rozmiar wiadomości a sposób dostarczenia</a></li>
+  <li><a href="#interfejsy-i-granice-odpowiedzialnosci">Interfejsy i granice odpowiedzialności</a></li>
+  <li><a href="#kolejki-opoznienia-i-praca-bez-trasy">Kolejki, opóźnienia i praca bez trasy</a></li>
+  <li><a href="#zaufanie-i-informacja-lokalna">Zaufanie i informacja lokalna</a></li>
+</ol>
+</nav>
+
+<h2 id="podzial-funkcji">Podział funkcji</h2>
+
+<figure>
+<div class="figure-scroll">
+<svg viewBox="0 0 760 494" role="img" aria-labelledby="dg-title dg-desc" xmlns="http://www.w3.org/2000/svg">
+  <title id="dg-title">Podział funkcji stacji WICI</title>
+  <desc id="dg-desc">W schronieniu A telefon łączy się przez Wi-Fi z routerem, router przez Ethernet z aplikacją station-web, która zapisuje dane w SQLite i przekazuje wiadomości do LXMF. LXMF używa procesu rnsd, a ten adaptera ShelterKISSInterface połączonego przez USB z modemem P1. Modem łączy się radiem z przekaźnikiem B, który ma modem, laptop i rnsd. Przekaźnik łączy się radiem z OSP, gdzie modem, rnsd i LXMF przekazują dane do station-web OSP z bazą SQLite, a dyżurny podejmuje decyzję.</desc>
+  <defs>
+    <marker id="dg-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path class="dg-arrow" d="M0,0 L10,5 L0,10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="dg-frame" x="12" y="24" width="258" height="458" rx="8"/>
+  <text class="dg-frame-title" x="24" y="44">Schronienie A</text>
+  <rect class="dg-frame" x="290" y="392" width="190" height="90" rx="8"/>
+  <text class="dg-frame-title" x="302" y="412">Przekaźnik B</text>
+  <rect class="dg-frame" x="512" y="270" width="236" height="212" rx="8"/>
+  <text class="dg-frame-title" x="524" y="290">OSP</text>
+
+  <g class="dg-edges">
+    <line class="dg-edge" x1="104" y1="91" x2="104" y2="117" marker-start="url(#dg-arr)" marker-end="url(#dg-arr)"/>
+    <line class="dg-edge" x1="104" y1="153" x2="104" y2="179" marker-start="url(#dg-arr)" marker-end="url(#dg-arr)"/>
+    <line class="dg-edge" x1="185" y1="197" x2="207" y2="197" marker-start="url(#dg-arr)" marker-end="url(#dg-arr)"/>
+    <line class="dg-edge" x1="104" y1="215" x2="104" y2="241" marker-start="url(#dg-arr)" marker-end="url(#dg-arr)"/>
+    <line class="dg-edge" x1="104" y1="277" x2="104" y2="303" marker-start="url(#dg-arr)" marker-end="url(#dg-arr)"/>
+    <line class="dg-edge" x1="104" y1="339" x2="104" y2="365" marker-start="url(#dg-arr)" marker-end="url(#dg-arr)"/>
+    <line class="dg-edge" x1="104" y1="401" x2="104" y2="427" marker-start="url(#dg-arr)" marker-end="url(#dg-arr)"/>
+    <line class="dg-edge" x1="185" y1="445" x2="301" y2="445" marker-start="url(#dg-arr)" marker-end="url(#dg-arr)"/>
+    <line class="dg-edge" x1="469" y1="445" x2="529" y2="445" marker-start="url(#dg-arr)" marker-end="url(#dg-arr)"/>
+    <line class="dg-edge" x1="630" y1="401" x2="630" y2="427" marker-start="url(#dg-arr)" marker-end="url(#dg-arr)"/>
+    <line class="dg-edge" x1="630" y1="339" x2="630" y2="365" marker-start="url(#dg-arr)" marker-end="url(#dg-arr)"/>
+  </g>
+
+  <g text-anchor="middle" dominant-baseline="central">
+    <rect class="dg-box" x="24" y="56" width="160" height="34" rx="5"/>
+    <text class="dg-text" x="104" y="73">Telefon / przeglądarka</text>
+    <rect class="dg-box" x="24" y="118" width="160" height="34" rx="5"/>
+    <text class="dg-text" x="104" y="135">Zwykły router / DHCP</text>
+    <rect class="dg-box key" x="24" y="180" width="160" height="34" rx="5"/>
+    <text class="dg-text" x="104" y="197">station-web</text>
+    <rect class="dg-box" x="208" y="180" width="52" height="34" rx="5"/>
+    <text class="dg-text" x="234" y="197">SQLite</text>
+    <rect class="dg-box" x="24" y="242" width="160" height="34" rx="5"/>
+    <text class="dg-text" x="104" y="259">LXMF</text>
+    <rect class="dg-box" x="24" y="304" width="160" height="34" rx="5"/>
+    <text class="dg-text" x="104" y="321">rnsd · Reticulum</text>
+    <rect class="dg-box key" x="24" y="366" width="160" height="34" rx="5"/>
+    <text class="dg-text" x="104" y="383">ShelterKISSInterface</text>
+    <rect class="dg-box key" x="24" y="428" width="160" height="34" rx="5"/>
+    <text class="dg-text" x="104" y="445">Modem P1 + antena</text>
+
+    <rect class="dg-box" x="302" y="428" width="166" height="34" rx="5"/>
+    <text class="dg-text" x="385" y="445">modem + laptop + rnsd</text>
+
+    <rect class="dg-box" x="530" y="304" width="200" height="34" rx="5"/>
+    <text class="dg-text" x="630" y="321">Dyżurny · decyzja o pomocy</text>
+    <rect class="dg-box key" x="530" y="366" width="200" height="34" rx="5"/>
+    <text class="dg-text" x="630" y="383">station-web OSP + SQLite</text>
+    <rect class="dg-box" x="530" y="428" width="200" height="34" rx="5"/>
+    <text class="dg-text" x="630" y="445">modem + rnsd + LXMF</text>
+  </g>
+
+  <g class="dg-label">
+    <text x="112" y="104" dominant-baseline="central">Wi-Fi / HTTP</text>
+    <text x="112" y="166" dominant-baseline="central">Ethernet LAN</text>
+    <text x="112" y="414" dominant-baseline="central">USB CDC / KISS</text>
+    <text x="230" y="434" text-anchor="middle">radio</text>
+    <text x="499" y="434" text-anchor="middle">radio</text>
+  </g>
+</svg>
+</div>
+<figcaption>Droga zgłoszenia przez przekaźnik. Wyróżnione ramki to części wykonywane w projekcie WICI; przekaźnik i OSP używają tych samych modemów P1. Router Wi-Fi nie uczestniczy w łączności radiowej.</figcaption>
+</figure>
+
+<p>Bezpośrednie połączenie do OSP jest możliwe, gdy pozwalają na nie warunki radiowe. Schemat pokazuje drogę z przekaźnikiem. Przekaźnik musi mieć zasilany laptop i działający transport; sam modem nie trasuje pakietów. Router Wi-Fi nie bierze udziału w łączeniu stacji radiem.</p>
+
+<p><code>rnsd</code> działa niezależnie od lokalnej strony. Restart strony nie powinien przerywać przekazywania pakietów innych stacji. Aplikacja ma jedną bazę i jedną instancję routera LXMF dla tożsamości stacji. W OSP działa ten sam podział z rolą dyżurnego. <a href="https://reticulum.network/manual/understanding.html">Implementacja transportu</a>, <a href="../spec/oprogramowanie.md">kontrakty WICI</a>.</p>
+
+<h2 id="droga-zgloszenia">Droga zgłoszenia</h2>
+
+<ol>
+  <li>Telefon wysyła formularz przez lokalny HTTP. WICI sprawdza pola i atomowo zapisuje zgłoszenie, dostęp mieszkańca oraz intencję wysyłki.</li>
+  <li>Po COMMIT pokazuje <strong>zapisane lokalnie</strong>. Brak radia nie zmienia tego znaczenia. Błąd dysku nie może dać pozornego sukcesu.</li>
+  <li>Proces kolejki przekazuje treść SA1 do LXMF. Reticulum realizuje ochronę komunikacji i transport. Adapter przekazuje datagramy USB; modem dzieli je na ramki P1 i przestrzega budżetu TX.</li>
+  <li>Aktywne węzły pośrednie przekazują pakiety. OSP weryfikuje nadawcę, format i duplikat, następnie zapisuje zgłoszenie wraz z intencją RECEIVED.</li>
+  <li><strong>Dopiero po COMMIT w OSP</strong> wysyłane jest RECEIVED. Źródło pokazuje <strong>zapisane w OSP</strong> po przyjęciu potwierdzenia od zaufanej tożsamości.</li>
+  <li>Dyżurny osobno zapisuje odczyt albo skierowanie pomocy. STATUS wraca tą samą siecią. Decyzja o wysłaniu ludzi nie wynika automatycznie z numeru pilności.</li>
+</ol>
+
+<p>Potwierdzenie LXMF DELIVERED dotyczy transportu. Awaria między odbiorem transportowym a zapisem bazy nadal wymaga ponowienia zgłoszenia. WICI zachowuje jego id; OSP deduplikuje po uwierzytelnionym nadawcy, id i revision. Konflikt treści dla tego samego klucza nie nadpisuje danych. Kolejne zmiany mają nową revision. <a href="https://github.com/markqvist/LXMF">LXMF</a>, <a href="../spec/oprogramowanie.md">transakcje i ponowienia</a>.</p>
+
+<h2 id="rozmiar-wiadomosci-a-sposob-dostarczenia">Rozmiar wiadomości a sposób dostarczenia</h2>
+
+<p>LXMF wybiera sposób dostarczenia według rozmiaru. W analizowanych wersjach (Reticulum <code>e40191b</code>, LXMF <code>c3ff2d6</code>) pojedynczy pakiet okazjonalny (ang. <em>opportunistic</em>) mieści około 284 B treści SA1 przy tytule <code>SA1</code> i pustych <code>fields</code>. Większa wiadomość przechodzi na dostarczenie przez link, a powyżej około 316 B na przesłanie zasobu (<em>Resource</em>). Zestawianie linku i zasób mają własne timeouty; dotyczy ich <a href="../review.md">kontrprzykład F02</a>. Wartości wynikają ze stałych <code>ENCRYPTED_MDU</code>, <code>Link.MDU</code> i 112 B narzutu LXMF; trzeba je potwierdzić dla wersji wydania. <a href="https://github.com/markqvist/LXMF/blob/c3ff2d6dc2f256daab896dadc044dd5a913ecbb7/LXMF/LXMessage.py">LXMessage</a>.</p>
+
+<p>Wiadomości zakodowane modelem: typowe zgłoszenie po polsku 174 B, REQUEST lub TEST z maksymalnymi polami 222 B, BULLETIN 246 B, RECEIVED 50 B. Limity pól liczone przed kodowaniem nie ograniczają jednak wyniku: cudzysłów i ukośnik zajmują w JSON po 2 B. REQUEST z polami złożonymi z <code>"</code> ma 382 B, BULLETIN z <code>\</code> 438 B. Obie mieszczą się w obecnym limicie 480 B, ale nie w jednym pakiecie. Treść wpisana przez mieszkańca może więc zmienić drogę dostarczenia bez wiedzy opiekuna.</p>
+
+<p>Propozycja: każda wiadomość SA1 powinna się mieścić w jednym pakiecie okazjonalnym LXMF. Limit sprawdzać po kodowaniu JSON, nie tylko dla pól. Dokładną wartość obliczyć dla przypiętych wersji i wpisać do <a href="../spec/oprogramowanie.md">specyfikacji</a> zamiast 480 B, razem z przypadkiem granicznym w modelu. Ruch aplikacji nie wymaga wtedy zestawiania linku ani zasobu; pozostają zapytania o trasę, ogłoszenia i potwierdzenia pakietów. Do czasu zmiany specyfikacji jest to otwarta część D01.</p>
+
+<h2 id="interfejsy-i-granice-odpowiedzialnosci">Interfejsy i granice odpowiedzialności</h2>
+
+<div class="table-wrap"><table class="cols-3">
+<thead><tr>
+<th scope="col">Granica</th>
+<th scope="col">Kontrakt</th>
+<th scope="col">Co sprawdzić</th>
+</tr></thead><tbody>
+<tr><td>Telefon–laptop</td><td>lokalny HTTP, token własnego zgłoszenia, panel opiekuna</td><td>50 połączonych / 15 aktywnych; izolacja dostępu i brak zasobów internetowych</td></tr>
+<tr><td>Aplikacja–nośnik</td><td>jedna baza SQLite; dane + intencja w jednej transakcji</td><td>fizyczne przerwanie zasilania i błąd zapisu; poprawna kopia i import</td></tr>
+<tr><td>Aplikacja–LXMF</td><td>sześć wiadomości SA1, treść ≤480 B UTF-8, bez załączników; proponowany jeden pakiet okazjonalny</td><td>rozmiar po kodowaniu JSON i wybrany sposób dostarczenia; rzeczywiste pakiety i kontrola ponowień</td></tr>
+<tr><td>Reticulum–modem</td><td>adapter ShelterKISSInterface, DATA/READY, osobna diagnostyka CDC</td><td>oczekiwanie na ciszę, odrzuty, restart, ograniczone bufory i powrót do odbioru</td></tr>
+<tr><td>Modem–eter</td><td>profil P1, datagram 1–600 B, fragmenty do 86 B</td><td>zgodność TI–ST, emisje, CRC i składanie; całkowity czas TX</td></tr>
+<tr><td>Stanowisko–dyżurny</td><td>kolejka przyjętych potrzeb i jawne statusy</td><td>dostępny człowiek, odczyt, decyzja i odpowiedź</td></tr>
+</tbody></table></div>
+
+<p>Szczegóły należą do <a href="../spec/radio.md">radia</a> i <a href="../spec/oprogramowanie.md">oprogramowania</a>. Modem nie implementuje szyfrowania, ACK ani routingu. CRC wykrywa błędy ramki; nie uwierzytelnia nadawcy.</p>
+
+<h2 id="kolejki-opoznienia-i-praca-bez-trasy">Kolejki, opóźnienia i praca bez trasy</h2>
+
+<p>Własne zgłoszenia pozostają w SQLite do obsłużenia według kontraktu. LXMF prowadzi aktywną transmisję, a WICI nie rozpoczyna równoległego ponowienia tej samej intencji. ACK i statusy mają pierwszeństwo w kolejce aplikacji; inne stacje, transport i obcy ruch radiowy nie podlegają tej kolejce. WICI nie gwarantuje pilnemu zgłoszeniu czasu dostarczenia podczas przeciążenia.</p>
+
+<p>Modem ma cztery miejsca na datagramy i osiem kontekstów składania. Przepełnienie musi być widoczne w licznikach. W prototypie trzeba określić również limit trwałej kolejki, wolnego miejsca i logów oraz zachowanie formularza po jego osiągnięciu; nie wolno pozornie potwierdzić odrzuconych danych.</p>
+
+<p>Węzeł transportowy jest aktywnym przekaźnikiem, nie magazynem wszystkich cudzych zgłoszeń. Opcjonalny węzeł przechowywania LXMF w OSP jest inną funkcją i wymaga osobnych prób, zwłaszcza przy długim braku odbiorcy. <a href="https://github.com/markqvist/LXMF">Role LXMF</a>.</p>
+
+<h2 id="zaufanie-i-informacja-lokalna">Zaufanie i informacja lokalna</h2>
+
+<p>Kartę zaufanej OSP importuje się przed pracą, niezależnym uzgodnionym sposobem. Nazwa widoczna w radiu lub na stronie nie nadaje uprawnień. Nieznany nadawca zgłoszenia wymaga kwarantanny i decyzji dyżurnego. Statusy i komunikaty przyjmowane są wyłącznie od przypiętej OSP. Procedura wymiany i unieważniania kluczy pozostaje do opracowania przed pilotażem.</p>
+
+<p>Szyfrowanie radiowe nie zabezpiecza lokalnego HTTP ani bazy na dysku. Nie wysyła się przez radio identyfikatorów osób lub dokumentów. Do wskazania potrzeby wystarczą lokalizacja, kategoria, liczba osób i krótki opis. Strona mieszkańca pokazuje jego zgłoszenie; kolejkę zbiorczą widzi opiekun. <a href="07-zagrozenia-i-odpornosc.html">Ograniczenia ochrony</a>.</p>
+
+<p>Propozycja interfejsu: przy stanie łączności pokazywać czas ostatniej odpowiedzi OSP i wiek najstarszego oczekującego zgłoszenia, zamiast jednego zielonego wskaźnika. Komunikat OSP oznaczać odbiorcą, tożsamością źródła i momentem lokalnego odbioru. Poprawny podpis potwierdza źródło, nie aktualność ani prawdziwość treści. Zegara znalezionego laptopa nie traktować jako zaufanej podstawy koordynacji.</p>
+
+<p>Dodatkowy kanał internetowy może przenosić ten sam stos po osobnej próbie. Podstawowe działanie nie zależy od jego obecności. Kopiowanie wiadomości na pendrive, automatyczna replikacja OSP i wspólna tablica mieszkańców nie należą do bazowego kontraktu komunikacji.</p>
+</article>
+<nav class="pager" aria-label="Kolejność czytania">
+  <a class="prev" href="04-analiza-opcji.html" rel="prev"><span>← Poprzedni</span>04. Analiza opcji</a>
+  <a class="next" href="06-wykonalnosc-i-budzet-zasobow.html" rel="next"><span>Następny →</span>06. Wykonalność i budżet zasobów</a>
+</nav>
+  </main>
+</div>
+<footer class="site-footer">
+  <div class="inner">
+    <p>Opis konstrukcji komunikacji: <a href="../../LICENSES/CERN-OHL-P-2.0.txt">CERN-OHL-P-2.0</a>. <a href="../../LICENSE.md">Mapa licencji projektu</a>.</p>
+    <p>Parametry i warunki odbioru: <a href="../README.md">specyfikacja 0.4</a>. Kod: <a href="https://github.com/tmierzwa/WICI">tmierzwa/WICI</a>.</p>
+  </div>
+</footer>
+</body>
+</html>

@@ -1,0 +1,139 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: CC-BY-4.0 -->
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WICI — koncepcja systemu</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#tresc">Przejdź do treści</a>
+<header class="site-header">
+  <div class="inner">
+    <a class="brand" href="index.html">WICI <span>· koncepcja systemu</span></a>
+    <a class="jump" href="#rozdzialy">Rozdziały ↓</a>
+    <span class="status">Prototyp 0.4 · sprzęt <b>HOLD</b></span>
+  </div>
+</header>
+<div class="layout">
+  <nav class="chapters" id="rozdzialy" aria-label="Rozdziały koncepcji">
+    <p class="nav-title">Rozdziały</p>
+    <ol>
+      <li><a href="index.html" aria-current="page">Przegląd koncepcji</a></li>
+      <li><a href="01-potrzeby-i-wymagania.html">01. Potrzeby i wymagania</a></li>
+      <li><a href="02-scenariusze-i-organizacja.html">02. Scenariusze i organizacja</a></li>
+      <li><a href="03-dostepne-rozwiazania.html">03. Dostępne rozwiązania</a></li>
+      <li><a href="04-analiza-opcji.html">04. Analiza opcji</a></li>
+      <li><a href="05-projekt-koncepcyjny-komunikacji.html">05. Projekt koncepcyjny komunikacji</a></li>
+      <li><a href="06-wykonalnosc-i-budzet-zasobow.html">06. Wykonalność i budżet zasobów</a></li>
+      <li><a href="07-zagrozenia-i-odpornosc.html">07. Zagrożenia i odporność</a></li>
+      <li><a href="08-plan-weryfikacji-i-decyzje.html">08. Plan weryfikacji i decyzje</a></li>
+      <li><a href="zrodla.html">Źródła</a></li>
+    </ol>
+  </nav>
+  <main id="tresc">
+<article>
+<h1>WICI — koncepcja systemu</h1>
+
+<nav class="on-page" aria-label="Na tej stronie">
+<p>Na tej stronie</p>
+<ol>
+  <li><a href="#dokumenty">Dokumenty</a></li>
+  <li><a href="#jak-czytac-ustalenia">Jak czytać ustalenia</a></li>
+  <li><a href="#skroty-i-pojecia">Skróty i pojęcia</a></li>
+  <li><a href="#ocena-obecnego-stanu">Ocena obecnego stanu</a></li>
+</ol>
+</nav>
+
+<p>Cel: przekazać krótkie zgłoszenie ze schronienia do miejsca zdolnego udzielić pomocy, gdy nie działa internet ani sieć komórkowa. Mieszkaniec używa przeglądarki telefonu. Opiekun może przyjąć zgłoszenie osoby bez telefonu. Stacja zachowuje dane lokalnie i przekazuje je radiem, także przez inne stacje.</p>
+
+<p>Zakres bazowy: jeden budynek, około 50 osób, praca przez 24 godziny z wymianą źródeł energii, sąsiednie stacje około 1 km od siebie w zabudowie. Laptop, router, ich zasilacze i akumulatory pochodzą z lokalnego zasobu. Zestaw WICI dostarcza radio, oprogramowanie offline, połączenia, zasilanie i osobną ładowarkę telefonów.</p>
+
+<h2 id="dokumenty">Dokumenty</h2>
+
+<div class="table-wrap"><table>
+<thead><tr>
+<th scope="col">Dokument</th>
+<th scope="col">Pytanie, na które odpowiada</th>
+</tr></thead><tbody>
+<tr><td><a href="01-potrzeby-i-wymagania.html">01. Potrzeby i wymagania</a></td><td>Co musi działać i jak to rozpoznać?</td></tr>
+<tr><td><a href="02-scenariusze-i-organizacja.html">02. Scenariusze i organizacja</a></td><td>Kto obsługuje stację i kto faktycznie pomaga?</td></tr>
+<tr><td><a href="03-dostepne-rozwiazania.html">03. Dostępne rozwiązania</a></td><td>Co można wykorzystać zamiast budować od początku?</td></tr>
+<tr><td><a href="04-analiza-opcji.html">04. Analiza opcji</a></td><td>Dlaczego taki podział systemu i kiedy zmienić wybór?</td></tr>
+<tr><td><a href="05-projekt-koncepcyjny-komunikacji.html">05. Projekt koncepcyjny komunikacji</a></td><td>Jak przechodzą dane, potwierdzenia i decyzje?</td></tr>
+<tr><td><a href="06-wykonalnosc-i-budzet-zasobow.html">06. Wykonalność i budżet zasobów</a></td><td>Czy wystarczy zasięgu, czasu antenowego, energii i części?</td></tr>
+<tr><td><a href="07-zagrozenia-i-odpornosc.html">07. Zagrożenia i odporność</a></td><td>Co się psuje, jak to wykryć i co działa dalej?</td></tr>
+<tr><td><a href="08-plan-weryfikacji-i-decyzje.html">08. Plan weryfikacji i decyzje</a></td><td>Jakie próby rozstrzygają, czy koncepcję można wdrażać?</td></tr>
+<tr><td><a href="zrodla.html">Źródła</a></td><td>Na jakich materiałach oparto analizę?</td></tr>
+</tbody></table></div>
+
+<h2 id="jak-czytac-ustalenia">Jak czytać ustalenia</h2>
+
+<ul>
+  <li><strong>Wymaganie</strong>: cel użytkowy projektu. Nie oznacza osiągniętej właściwości.</li>
+  <li><strong>Wybór bazowy</strong>: rozwiązanie przyjęte w <a href="../README.md">specyfikacji 0.4</a>, oczekujące na wykonanie i odbiór.</li>
+  <li><strong>Założenie obliczeniowe</strong>: liczba do oszacowania zasobów. Wymaga zastąpienia pomiarem.</li>
+  <li><strong>Propozycja próby lub organizacji</strong>: uzupełnienie koncepcji do zatwierdzenia przed pilotażem.</li>
+  <li><strong>Dowód</strong>: wynik wskazanej próby na określonej konfiguracji. Nie przenosi się automatycznie na inne części lub warunki.</li>
+</ul>
+
+<p>W <a href="01-potrzeby-i-wymagania.html">tabeli wymagań</a> pochodzenie oznaczają skróty: U — ustalenie użytkowe, S — warunek specyfikacji, czyli wybór bazowy, P — propozycja próby lub organizacji. Niezależnie od pochodzenia każde wymaganie pozostaje celem do wykazania dowodem.</p>
+
+<p>Parametry wykonawcze, ramki, API i warunki odbioru należą do <code>docs/spec/</code>. Ta część wyjaśnia potrzeby, wybory i ich granice; nie tworzy drugiej specyfikacji. Jeśli próba wymusi zmianę parametru, aktualizuje się specyfikację oraz powiązaną analizę.</p>
+
+<h2 id="skroty-i-pojecia">Skróty i pojęcia</h2>
+
+<div class="table-wrap"><table>
+<thead><tr>
+<th scope="col">Pojęcie</th>
+<th scope="col">Znaczenie w WICI</th>
+</tr></thead><tbody>
+<tr><td>W01–W18, T1–T8, D01–D10</td><td>wymagania (<a href="01-potrzeby-i-wymagania.html">01</a>), grupy prób i otwarte decyzje (<a href="08-plan-weryfikacji-i-decyzje.html">08</a>)</td></tr>
+<tr><td>OSP</td><td>Ochotnicza Straż Pożarna; tu przykład odbiorcy zdolnego udzielić pomocy, nie jedyny możliwy odbiorca</td></tr>
+<tr><td>opiekun, zastępca, dyżurny</td><td>osoby obsługujące stację w schronieniu oraz stanowisko odbiorcy (<a href="02-scenariusze-i-organizacja.html">02</a>)</td></tr>
+<tr><td>przekaźnik</td><td>stacja z laptopem, modemem i <code>rnsd</code>, która przekazuje ruch innych stacji; sam modem nie przekazuje pakietów</td></tr>
+<tr><td>A, B, C</td><td>wejścia zasilania: A i B — wymieniane źródła 12 V stacji, C — osobne źródło ładowarki telefonów</td></tr>
+<tr><td>HOLD</td><td>status sprzętu: projekt nie jest dopuszczony do zamówienia ani użycia do czasu odbioru wskazanej konfiguracji</td></tr>
+<tr><td>START</td><td>pakiety uruchomieniowe offline: dla działającego Windows/macOS oraz obraz Linux dla wspieranych PC</td></tr>
+<tr><td>PRZENIEŚ STACJĘ</td><td>kontrolowane przeniesienie bazy i tożsamości na inny laptop; stara instancja przestaje pracować</td></tr>
+<tr><td>TEST</td><td>typ SA1 o budowie REQUEST: sprawdza drogę do OSP, zapis i obecność dyżurnego; nie trafia do kolejki potrzeb</td></tr>
+<tr><td>COMMIT</td><td>zatwierdzenie transakcji SQLite; dopiero po nim zapis uznaje się za trwały</td></tr>
+<tr><td>Reticulum, <code>rnsd</code></td><td>stos sieciowy z tożsamościami, szyfrowaniem i trasami; <code>rnsd</code> to jego proces transportowy na laptopie</td></tr>
+<tr><td>LXMF</td><td>protokół wiadomości nad Reticulum; potwierdza dostarczenie transportowe, nie zapis w bazie odbiorcy</td></tr>
+<tr><td>pakiet okazjonalny, link, zasób</td><td>sposoby dostarczenia LXMF: jeden pakiet bez zestawiania połączenia, połączenie Reticulum, przesłanie większych danych w częściach (<a href="05-projekt-koncepcyjny-komunikacji.html">05</a>)</td></tr>
+<tr><td>SA1</td><td>format treści wiadomości WICI w LXMF: sześć typów — REQUEST, RECEIVED, STATUS, REPLY, BULLETIN, TEST</td></tr>
+<tr><td>RECEIVED, STATUS</td><td>potwierdzenie trwałego zapisu zgłoszenia w OSP oraz późniejsza decyzja dyżurnego: odczyt lub skierowanie pomocy</td></tr>
+<tr><td>P1</td><td>wspólny profil radiowy obu modemów: 869,525 MHz, 2-GFSK 4800 bit/s, fragmenty do 86 B, dług ciszy</td></tr>
+<tr><td>dług ciszy</td><td>czas zakazu nadawania po każdym burście, 12 × czas TX, zapisany w EEPROM; restart go nie zeruje</td></tr>
+<tr><td>KISS, READY</td><td>ramkowanie danych między laptopem a modemem przez USB; READY to zgoda modemu na kolejny datagram</td></tr>
+<tr><td>CCA</td><td>sprawdzenie, czy kanał jest wolny, przed nadawaniem; nie zastępuje limitu czasu TX</td></tr>
+<tr><td>ERP</td><td>moc promieniowana odniesiona do dipola półfalowego; w paśmie WICI limit 500 mW</td></tr>
+<tr><td>RNode</td><td>gotowy modem LoRa dla Reticulum; tu narzędzie porównawcze, nie docelowe radio</td></tr>
+</tbody></table></div>
+
+<h2 id="ocena-obecnego-stanu">Ocena obecnego stanu</h2>
+
+<p>Koncepcja nadaje się do budowy prototypów i sprawdzania hipotez. Nie ma jeszcze dowodu łączności 1 km, działania całego stosu radiowego, pracy dobowej ani bezpieczeństwa własnej przetwornicy. Kontroler USB R01.3 pozostaje HOLD; moduły RF, firmware, aplikacja i pakiety START nie są ukończone. Wyniki modelu i CAD nie zastępują prób sprzętu.</p>
+
+<p><a href="../review.md">Aktualne ustalenia przeglądu</a> obejmują konkretny problem suspend USB, budżet ogranicznika ładowarki oraz kontrprzykład czasowy stosu sieciowego.</p>
+
+<p>Pierwsze rozstrzygnięcia: trwałe przyjęcie zgłoszenia przez OSP; rzeczywisty koszt radiowy LXMF, w tym zmieszczenie SA1 w jednym pakiecie; zgodność dwóch modemów; zasilanie bez resetu; dostępność dyżurnego zdolnego do działania. Bez odbiorcy zdolnego pomóc sprawna sieć jedynie przenosi dane.</p>
+
+<p>Rygor oznacza jawne założenia, próby odtwarzalne, rozpoznawalne awarie i warunki przerwania pracy. Projekt nie deklaruje kwalifikacji wojskowej, odporności na celowe zagłuszanie ani certyfikacji środowiskowej.</p>
+
+<p>Licencje: <a href="../../LICENSE.md">mapa projektu</a>. Analizy są udostępnione na licencji CC-BY-4.0; rozdział 05, jako opis konstrukcji komunikacji, na licencji CERN-OHL-P-2.0.</p>
+</article>
+<nav class="pager" aria-label="Kolejność czytania">
+  <a class="next" href="01-potrzeby-i-wymagania.html" rel="next"><span>Następny →</span>01. Potrzeby i wymagania</a>
+</nav>
+  </main>
+</div>
+<footer class="site-footer">
+  <div class="inner">
+    <p>Analiza: <a href="../../LICENSES/CC-BY-4.0.txt">CC-BY-4.0</a>. <a href="../../LICENSE.md">Mapa licencji projektu</a>.</p>
+    <p>Parametry i warunki odbioru: <a href="../README.md">specyfikacja 0.4</a>. Kod: <a href="https://github.com/tmierzwa/WICI">tmierzwa/WICI</a>.</p>
+  </div>
+</footer>
+</body>
+</html>

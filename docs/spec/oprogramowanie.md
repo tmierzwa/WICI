@@ -19,10 +19,13 @@ LXMF `title` = `SA1`, `content` = UTF-8 JSON, `fields` = pusty słownik. Treść
 | STATUS = 2 | `[1,2,id,revision,event,state]` |
 | REPLY = 3 | `[1,3,id,revision,event,text]` |
 | BULLETIN = 4 | `[1,4,id,event,text]` |
+| TEST = 5 | `[1,5,id,revision,category,people,location,text,urgency]` |
 
 `id`: 32 małe znaki hex, czyli 16 losowych bajtów. `revision`: 0–65535. `category`: 0–4 = medyczne, ewakuacja, woda/żywność, wyposażenie, inne. `people`: 1–65535. `location`: 1–64 B, dokładny adres i miejsce wejścia. `text` zgłoszenia/odpowiedzi: do 96 B; komunikatu do 192 B. `urgency`: 0–2, podwyższenie zatwierdza opiekun. `event`: 1–2147483647, bez zawijania; nowy komunikat po wyczerpaniu licznika dostaje nowe id. `state`: 1 zapisane OSP, 2 przeczytane, 3 pomoc skierowana.
 
 RECEIVED zawsze oznacza pierwsze przyjęcie, event=1 i state=1. STATUS dopuszcza wyłącznie event ≥2 oraz state 2 lub 3; nie zastępuje RECEIVED ani nie powtarza jego event=1. Powtórzony REQUEST może ponownie dostać ten sam RECEIVED. Jeśli OSP ma już nowszy status, wysyła też najnowszy STATUS. Źródło ignoruje starsze event dla tej samej pary id/revision. REPLY ma osobny strumień event; nie konkuruje z numeracją STATUS. BULLETIN jest numerowany w obrębie swojego id.
+
+TEST ma tablicę, limity i walidację REQUEST. Sprawdza całą drogę zgłoszenia: transport, zapis w OSP i obecność dyżurnego. Stacja wysyła go po uruchomieniu, restarcie, zmianie routera, anteny lub odbiorcy oraz na polecenie opiekuna; nigdy cyklicznie. Zgłoszenia próbne w próbach i ćwiczeniach również mają typ TEST. TEST startowy zawiera rzeczywisty adres i wejście schronienia, aby dyżurny potwierdził ich zrozumiałość. OSP przyjmuje TEST jak REQUEST: weryfikacja nadawcy, kwarantanna nieznanej stacji, deduplikacja, jedna transakcja i RECEIVED po COMMIT. Klucz odbioru nie zależy od typu; REQUEST i TEST o tym samym id i revision to konflikt treści. Stanowisko OSP pokazuje TEST osobno od kolejki potrzeb i nie wlicza go do potrzeb. Dyżurny odpowiada STATUS ze state=2. State=3 dla TEST jest dopuszczalny tylko w uzgodnionym ćwiczeniu i oznacza decyzję ćwiczebną, nie wysłanie pomocy. Stacja pokazuje TEST w panelu opiekuna, nie jako zgłoszenie mieszkańca.
 
 Zmiana danych zgłoszenia tworzy nową revision. Każda revision zawiera całą lokalizację i treść; nie zależy od wcześniejszego profilu. Wersje są pokazywane jako jedno zgłoszenie, ale potwierdzane osobno. Nie wysyłamy imion, PESEL, dokumentów ani tokenów strony przez radio.
 
@@ -38,7 +41,7 @@ SQLite: `journal_mode=DELETE`, `synchronous=FULL`, klucze obce włączone. Jedna
 
 Callback odbiorczy sprawdza `signature_validated`, zaufanie do nadawcy i limit wielkości przed zapisem. STATUS/REPLY/BULLETIN przyjmowane są wyłącznie z przypiętej tożsamości OSP. Nazwa wyświetlana i pole JSON nie nadają uprawnień. REQUEST nowej nieznanej stacji może trafić do kwarantanny operatora; nie udaje zweryfikowanego adresu schronienia.
 
-Po COMMIT pracownik kolejki może wysłać RECEIVED. Przed COMMIT nie wysyła potwierdzenia aplikacyjnego. Brak miejsca, uszkodzenie bazy lub błąd fsync blokują komunikat „zapisane”. Nie tworzymy automatycznie pustej bazy zamiast uszkodzonej. SQLite opiera trwałość na poprawnej pracy systemu plików i nośnika. [Trwałość SQLite](https://sqlite.org/atomiccommit.html).
+Po COMMIT proces kolejki może wysłać RECEIVED. Przed COMMIT nie wysyła potwierdzenia aplikacyjnego. Brak miejsca, uszkodzenie bazy lub błąd fsync blokują komunikat „zapisane”. Nie tworzymy automatycznie pustej bazy zamiast uszkodzonej. SQLite opiera trwałość na poprawnej pracy systemu plików i nośnika. [Trwałość SQLite](https://sqlite.org/atomiccommit.html).
 
 Wysyłanie: najwyżej jedna aktywna wiadomość aplikacji do danego odbiorcy. LXMF ponawia aktywną próbę. Po jego błędzie lub braku RECEIVED aplikacja ponawia intencję po 1, 2, 5, następnie co 15 minut z losowym przesunięciem ±20%; nigdy równolegle z nadal aktywnym wysłaniem. Nowa wiadomość LXMF może mieć inny hash; id zgłoszenia zostaje ten sam. Ponowna transmisja jest bezpieczna dzięki deduplikacji OSP. Potwierdzenia i statusy mają pierwszeństwo przed zwykłymi REQUEST w naszej kolejce; to nie daje gwarancji priorytetu całej sieci.
 
@@ -80,7 +83,7 @@ USB/
 
 W Linuxie stan znajduje się na osobnej partycji ext4 USB. W Windows/macOS na dysku laptopa w katalogu aplikacji. Nie zapisujemy aktywnej bazy na exFAT i nie obiecujemy automatycznej wspólnej bazy między systemami.
 
-PRZENIEŚ STACJĘ zatrzymuje nowe zgłoszenia i pracownika wysyłki, wykonuje kopię API SQLite, sprawdza jej integralność, eksportuje tożsamość oraz konfigurację i zatrzymuje starą instancję. Nowy laptop importuje pakiet. Nie używa się jednocześnie obu kopii. Utrata laptopa przed eksportem może utracić ostatnie lokalne dane. [API kopii](https://www.sqlite.org/backup.html).
+PRZENIEŚ STACJĘ zatrzymuje nowe zgłoszenia i proces wysyłki, wykonuje kopię API SQLite, sprawdza jej integralność, eksportuje tożsamość oraz konfigurację i zatrzymuje starą instancję. Nowy laptop importuje pakiet. Nie używa się jednocześnie obu kopii. Utrata laptopa przed eksportem może utracić ostatnie lokalne dane. [API kopii](https://www.sqlite.org/backup.html).
 
 Pakiet START utrzymuje komputer w stanie pracy podczas działania stacji, również przy restarcie samej strony. Uśpiony laptop nie jest przekaźnikiem. Ręczne wymuszenie uśpienia lub utrata USB wymagają obsługi suspend/resume modemu, zachowania kolejki i ponownego sprawdzenia trasy. Wyłączenie automatycznego usypiania nie zastępuje zgodności elektrycznej USB.
 

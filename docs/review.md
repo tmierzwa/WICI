@@ -47,7 +47,7 @@ trzy cykle = 43,81 s > 34,67 s
 
 To dolne oszacowanie czasu bez kolizji, zajętego kanału i rampowania. Kolejka z takim ruchem może wygasić link przed nadaniem jego żądania. Kontrprzykład nie jest pomiarem istniejącego adaptera: adapter i firmware nie zostały wykonane. Pokazuje, że sama deklaracja bitrate i timeoutu READY nie wystarcza do zapewnienia zgodności. Jedna zgoda READY ogranicza modem; nie usuwa oczekiwania po stronie hosta za ruchem przekazywanym.
 
-Przed projektowaniem kolejnych PCB wykonać T3: przypięty Reticulum/LXMF, emulator TX/ciszy/CCA, ograniczone kolejki, zimna i ustalona trasa, link, zasób, potwierdzenia, restarty i ruch przekaźnika. Rejestrować wiek pakietu oraz wszystkie ponowienia. Rozstrzygnąć planowanie i timeouty całego stosu; nie uznawać zwiększenia samego READY za rozwiązanie. [Kontrakt radia](spec/radio.md), [plan prób](conception/08-plan-weryfikacji-i-decyzje.md).
+Przed projektowaniem kolejnych PCB wykonać T3: przypięty Reticulum/LXMF, emulator TX/ciszy/CCA, ograniczone kolejki, zimna i ustalona trasa, link, zasób, potwierdzenia, restarty i ruch przekaźnika. Rejestrować wiek pakietu oraz wszystkie ponowienia. Rozstrzygnąć planowanie i timeouty całego stosu; nie uznawać zwiększenia samego READY za rozwiązanie. [Kontrakt radia](spec/radio.md), [plan prób](conception/08-plan-weryfikacji-i-decyzje.html).
 
 ## F03 — ładowarka i tolerancje
 
@@ -64,7 +64,7 @@ TPS2553: tabela doboru dla 15 kΩ /1% podaje minimum 1594,5 mA, poniżej wymagan
 
 ## F04–F07 — poprawione kontrakty i dane
 
-- **Części:** BOM stacji jest zgodny z MCU kontrolera: STM32F103CBT6. C8 wymaga odrębnego obrazu mieszczącego się w 64 KiB. Wariant ST radia to S2-LPQTR; S2-LPCBQTR nie obejmuje 869,525 MHz w górnym paśmie. Żaden wariant RF nie jest jeszcze odebrany. [BOM](../bom.csv), [warianty S2-LP, rev. 13](https://www.st.com/resource/en/datasheet/s2-lp.pdf).
+- **Części:** BOM stacji jest zgodny z MCU kontrolera: STM32F103CBT6. C8 wymaga odrębnego obrazu mieszczącego się w 64 KiB. Wariant ST radia to S2-LPQTR; S2-LPCBQTR nie obejmuje 869,525 MHz w górnym paśmie. Żaden wariant RF nie jest jeszcze odebrany. [BOM](spec/bom-stacji.csv), [warianty S2-LP, rev. 13](https://www.st.com/resource/en/datasheet/s2-lp.pdf).
 - **Tekst:** model odrzuca kategorie Unicode Cc i Cf, również przy odbiorze JSON z sekwencjami `\u`. Polskie litery pozostają dozwolone. Nie jest to implementacja ochrony HTML przyszłej strony.
 - **Statusy:** RECEIVED rezerwuje event=1/state=1; STATUS wymaga event ≥2 i state 2/3. Starsze statusy i konflikty nadal podlegają regułom modelu.
 - **Próba obciążenia:** 50 zgłoszeń łącznie z A w pierwszych pięciu minutach, droga A–B–OSP i powrót przez B. RECEIVED ma wrócić na A do 30 min od pierwszego COMMIT. ≥99% z 50 oznacza 50/50. Próba nie kwalifikuje sieci tysiąca stacji.
@@ -78,7 +78,7 @@ Repozytorium zawiera własny model i dokumentację; nie dołącza kodu tych zale
 
 ## Dowody i granice przeglądu
 
-Model obejmuje 17 testów, w tym nową walidację Unicode i zastrzeżone numery STATUS. [Zapis weryfikacji](../software/reference/weryfikacja.json) wiąże wynik z hashami czterech źródeł. Sześć regresji publikacji sprawdza m.in. pustą, niepełną i nieaktualną paczkę oraz odrzucanie błędu bez przepisywania dowodów. Kontrola repozytorium sprawdza linki, sumy źródeł, aktualność obliczeń, powiązanie raportów CAD i zgodność archiwum z eksportami.
+Model obejmuje 19 testów, w tym walidację Unicode, zastrzeżone numery STATUS i typ TEST z konfliktem względem REQUEST. [Zapis weryfikacji](../software/reference/weryfikacja.json) wiąże wynik z hashami czterech źródeł. Siedem regresji publikacji sprawdza m.in. pustą, niepełną i nieaktualną paczkę, odrzucanie błędu bez przepisywania dowodów oraz linki i kotwice stron HTML. Kontrola repozytorium sprawdza linki, sumy źródeł, aktualność obliczeń, powiązanie raportów CAD i zgodność archiwum z eksportami.
 
 Przejrzano połączenia i widoki kontrolera oraz raporty i ich wyłączenia. CAD i pliki produkcyjne R01.3 nie zostały zmienione. Kontrola ich sum nie jest nowym uruchomieniem ERC/DRC, niezależnym przeglądem elektrycznym ani próbą płytki. Nie ma fizycznego dopasowania złączy, pomiaru USB/RF, działającego firmware, strony, pendrive'a ani odbioru zasilania.
 

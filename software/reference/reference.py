@@ -103,11 +103,11 @@ def validate_message(value: object) -> None:
     if type(value) is not list or len(value) < 4:
         raise ValueError("Expected message array")
     _integer(value[0], 1, 1)
-    _integer(value[1], 0, 4)
+    _integer(value[1], 0, 5)
     if type(value[2]) is not str or re.fullmatch(r"[0-9a-f]{32}", value[2]) is None:
         raise ValueError("Invalid message id")
     kind = value[1]
-    lengths = (9, 6, 6, 6, 5)
+    lengths = (9, 6, 6, 6, 5, 9)
     if len(value) != lengths[kind]:
         raise ValueError("Invalid message arity")
     if kind == 4:
@@ -115,7 +115,7 @@ def validate_message(value: object) -> None:
         _text(value[4], 192)
         return
     _integer(value[3], 0, 65535)
-    if kind == 0:
+    if kind in (0, 5):
         _integer(value[4], 0, 4)
         _integer(value[5], 1, 65535)
         _text(value[6], 64, 1)
@@ -177,12 +177,12 @@ class OSPStore:
         self.db.executescript(Path(__file__).with_name("schema.sql").read_text())
 
     def receive(self, source: bytes, wire: bytes, signature_valid: bool, before_commit=None) -> bytes:
-        """Commit a verified request and its ACK together; reject conflicting reuse."""
+        """Commit a verified REQUEST or TEST and its ACK together; reject conflicting reuse."""
         if signature_valid is not True or len(source) != 16:
             raise ValueError("Unverified sender")
         value = decode_message(wire)
-        if value[1] != 0:
-            raise ValueError("Expected REQUEST")
+        if value[1] not in (0, 5):
+            raise ValueError("Expected REQUEST or TEST")
         canonical = encode_message(value)
         _, _, mid, revision, *_ = value
         ack = encode_message([1, 1, mid, revision, 1, 1])

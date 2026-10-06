@@ -1,0 +1,118 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: CC-BY-4.0 -->
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>04. Analiza opcji · koncepcja WICI</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#tresc">Przejdź do treści</a>
+<header class="site-header">
+  <div class="inner">
+    <a class="brand" href="index.html">WICI <span>· koncepcja systemu</span></a>
+    <a class="jump" href="#rozdzialy">Rozdziały ↓</a>
+    <span class="status">Prototyp 0.4 · sprzęt <b>HOLD</b></span>
+  </div>
+</header>
+<div class="layout">
+  <nav class="chapters" id="rozdzialy" aria-label="Rozdziały koncepcji">
+    <p class="nav-title">Rozdziały</p>
+    <ol>
+      <li><a href="index.html">Przegląd koncepcji</a></li>
+      <li><a href="01-potrzeby-i-wymagania.html">01. Potrzeby i wymagania</a></li>
+      <li><a href="02-scenariusze-i-organizacja.html">02. Scenariusze i organizacja</a></li>
+      <li><a href="03-dostepne-rozwiazania.html">03. Dostępne rozwiązania</a></li>
+      <li><a href="04-analiza-opcji.html" aria-current="page">04. Analiza opcji</a></li>
+      <li><a href="05-projekt-koncepcyjny-komunikacji.html">05. Projekt koncepcyjny komunikacji</a></li>
+      <li><a href="06-wykonalnosc-i-budzet-zasobow.html">06. Wykonalność i budżet zasobów</a></li>
+      <li><a href="07-zagrozenia-i-odpornosc.html">07. Zagrożenia i odporność</a></li>
+      <li><a href="08-plan-weryfikacji-i-decyzje.html">08. Plan weryfikacji i decyzje</a></li>
+      <li><a href="zrodla.html">Źródła</a></li>
+    </ol>
+  </nav>
+  <main id="tresc">
+<article>
+<h1>04. Analiza opcji</h1>
+
+<nav class="on-page" aria-label="Na tej stronie">
+<p>Na tej stronie</p>
+<ol>
+  <li><a href="#kryteria-wyboru">Kryteria wyboru</a></li>
+  <li><a href="#uproszczenia-przyjete-w-wariancie-bazowym">Uproszczenia przyjęte w wariancie bazowym</a></li>
+  <li><a href="#decyzje-wymagajace-porownania">Decyzje wymagające porównania</a></li>
+  <li><a href="#niezaleznosc-dostawcow">Niezależność dostawców</a></li>
+</ol>
+</nav>
+
+<h2 id="kryteria-wyboru">Kryteria wyboru</h2>
+
+<p>Warunki konieczne: praca offline, krótka wiadomość ze zwrotnym potwierdzeniem aplikacyjnym, lokalny dostęp bez instalacji, trwałość po restarcie, aktywny przekaźnik i jawne interfejsy. Następnie porównać energię, trudność uruchomienia, koszt wytworzenia, naprawę i dostępność niezależnych części. Brakuje danych pomiarowych do uczciwego rankingu liczbowego.</p>
+
+<div class="table-wrap"><table class="wide">
+<thead><tr>
+<th scope="col">Opcja całego systemu</th>
+<th scope="col">Mocna strona</th>
+<th scope="col">Główna cena / ryzyko</th>
+<th scope="col">Decyzja</th>
+</tr></thead><tbody>
+<tr><td>Laptop + router + internet</td><td>najmniej nowego sprzętu i szybki kanał</td><td>utrata sieci publicznej odcina odbiorcę</td><td>opcjonalny kanał, nie jedyna droga</td></tr>
+<tr><td>Radio głosowe + papierowy rejestr</td><td>prosta procedura i mało oprogramowania</td><td>ciągła praca operatora, błędy przepisywania, trudne statusy dla mieszkańców</td><td>uzgodniony kanał zastępczy</td></tr>
+<tr><td>Laptop + router + Reticulum/LXMF + LoRa</td><td>istniejący interfejs radiowy, możliwość szybkiej próby stosu</td><td>czas antenowy zależy od profilu; niezależność RF wymaga analizy konkretnego BOM</td><td>wariant porównawczy; może wrócić jako wybór bazowy według D10</td></tr>
+<tr><td>Laptop + router + Reticulum/LXMF + własny FSK P1</td><td>jawny profil i dwóch kandydatów RF od niezależnych producentów</td><td>własne RF, firmware i adapter czasu; duży zakres kwalifikacji</td><td>wybór bazowy 0.4, warunkowy (D10)</td></tr>
+<tr><td>Laptop + router + Meshtastic lub MeshCore</td><td>istniejące oprogramowanie radiowe</td><td>osobna integracja kontraktów WICI i trwałego potwierdzenia; ocena alternatyw części</td><td>alternatywa, gdy zmniejszy całość prac po próbie</td></tr>
+<tr><td>Dedykowany komputer + Wi-Fi + radio</td><td>powtarzalna konfiguracja, możliwość mniejszego poboru</td><td>zakup i magazyn urządzeń; kolejny sprzęt do utrzymania</td><td>alternatywa przy braku zgodności lub energii znalezionych laptopów</td></tr>
+</tbody></table></div>
+
+<p>Wybór FSK nie dowodzi przewagi zasięgu ani kosztu nad LoRa. Daje możliwość porównania dwóch rodzin transceiverów i otwarty kontrakt P1. Jeśli koszt kwalifikacji, opóźnienia albo próba terenowa nie pozwolą spełnić wymagań, wybór należy ponownie otworzyć. <a href="03-dostepne-rozwiazania.html">Właściwości rozwiązań</a>, <a href="08-plan-weryfikacji-i-decyzje.html">próby rozstrzygające</a>.</p>
+
+<h2 id="uproszczenia-przyjete-w-wariancie-bazowym">Uproszczenia przyjęte w wariancie bazowym</h2>
+
+<div class="table-wrap"><table class="cols-3">
+<thead><tr>
+<th scope="col">Wybór</th>
+<th scope="col">Co upraszcza</th>
+<th scope="col">Pozostający koszt</th>
+</tr></thead><tbody>
+<tr><td>Osobny akumulator telefonów</td><td>awaria lub wymiana ładowarki nie przerywa łączności; brak układu priorytetów mocy</td><td>osobne przewody i osobny zapas energii</td></tr>
+<tr><td>Zwykły router z DHCP</td><td>brak własnego DNS, DHCP, captive portal i obsługi wielu paneli producentów</td><td>sprawdzić dostęp do konfiguracji i brak izolacji Wi-Fi–LAN; używać QR/adresu</td></tr>
+<tr><td>Oryginalne zasilacze + 230 V</td><td>unika zestawu własnych wtyczek i napięć laptopów/routerów</td><td>przetwornica, straty, masa i kwalifikacja bezpieczeństwa AC</td></tr>
+<tr><td>Pasywne zasilanie A/B przez diody</td><td>brak programu przełączającego i bezpośredniego łączenia plusów źródeł</td><td>chłodzenie, spadek napięcia i udar przy dołączaniu</td></tr>
+<tr><td>Tekst i sześć typów wiadomości</td><td>ograniczony ruch i mała powierzchnia integracji</td><td>potrzeby wymagające rozmowy obsługuje operator innym kanałem</td></tr>
+<tr><td>Własna trwała kolejka + LXMF</td><td>aplikacja pilnuje zapisu; biblioteka transportu pilnuje dostarczania</td><td>integracja cyklu ponowień i potwierdzeń wymaga prób</td></tr>
+<tr><td>Antena przy oknie/drzwiach</td><td>prostszy montaż, brak wymogu dachu</td><td>zasięg zależy od przeszkód; może być potrzebny dodatkowy przekaźnik</td></tr>
+</tbody></table></div>
+
+<p>Osobne ładowanie telefonów zapewnia tę samą funkcję co wspólna szyna z priorytetami mocy, ale przy mniejszej liczbie zależności. Podobnych uproszczeń szukać przed dodawaniem sterowników, wspólnych szyn mocy i automatyki. Uproszczenie musi zachować sprawdzalne wymagania, a nie jedynie zmniejszyć liczbę części.</p>
+
+<h2 id="decyzje-wymagajace-porownania">Decyzje wymagające porównania</h2>
+
+<p><strong>Zasilanie laptopa:</strong> wariant 230 V obejmuje najwięcej typów oryginalnych zasilaczy, ale jest najtrudniejszy do bezpiecznego samodzielnego wykonania. W pilotażu laboratoryjnym można użyć sprawdzonego zasilania jako narzędzia testowego. Dla hostów USB-C PD warto osobno pomierzyć wariant DC, jeśli obniża zużycie i koszt. Nie zastępuje on uniwersalnego wymagania bez jawnego ograniczenia listy hostów.</p>
+
+<p><strong>Uruchomienie:</strong> pakiety START dla działającego Windows/macOS i obraz Linux dla wspieranych PC dzielą kod aplikacji. Jeden uniwersalny obraz startowy dla PC oraz wszystkich Maców nie jest realistycznym założeniem tego wydania. Przypadki zablokowanego startu i niesprawnego systemu trzeba rozpoznać przed awarią.</p>
+
+<p><strong>Radio a W14:</strong> wymaganie dwóch niezależnych dostawców wyklucza gotowe RNode/LoRa jako docelowe radio. Pociąga za sobą dwa layouty RF, firmware dla obu układów, adapter czasu i mieszaną kwalifikację TI–ST. To największa część pracy sprzętowej. Warunki powrotu do LoRa trzeba ustalić przed pracami RF, a nie dopiero po przekroczeniu budżetu lub terminu: <a href="08-plan-weryfikacji-i-decyzje.html">D10</a>. Ewentualne ograniczenie W14 dla części RF musi być jawną zmianą wymagania, z oceną nowej zależności.</p>
+
+<p><strong>Stanowisko odbiorcze:</strong> jedna OSP upraszcza odpowiedzialność, lecz jest pojedynczym punktem utraty usługi. Drugi dyżurny i uzgodnione zastępstwo mogą poprawić wynik wcześniej niż automatyczna replikacja bazy. Automatyczne przejęcie wymaga nowego kontraktu odpowiedzialności za zgłoszenie.</p>
+
+<h2 id="niezaleznosc-dostawcow">Niezależność dostawców</h2>
+
+<p>Wymaganie dotyczy możliwego do zbudowania wariantu całej funkcji. Modem A i B mają wspólną ramkę oraz USB, lecz różne układy RF/MCU, nastawy i płytki. Adapter Ethernet, elementy ochrony, przetwornica i port ładowania też wymagają kwalifikowanych alternatyw. Zmiana transformatora lub regulatora może wymagać zmiany konstrukcji, nie tylko numeru w BOM.</p>
+
+<p>Lista zamienników podaje wariant, producenta, parametry krytyczne i dowód próby. Otwarta licencja oraz kilka sklepów nie stanowią dowodu niezależności produkcji. Wspólne złącza, przewody, formaty i możliwość zlecenia PCB wielu wykonawcom zmniejszają zależność, ale jej nie znoszą.</p>
+</article>
+<nav class="pager" aria-label="Kolejność czytania">
+  <a class="prev" href="03-dostepne-rozwiazania.html" rel="prev"><span>← Poprzedni</span>03. Dostępne rozwiązania</a>
+  <a class="next" href="05-projekt-koncepcyjny-komunikacji.html" rel="next"><span>Następny →</span>05. Projekt koncepcyjny komunikacji</a>
+</nav>
+  </main>
+</div>
+<footer class="site-footer">
+  <div class="inner">
+    <p>Analiza: <a href="../../LICENSES/CC-BY-4.0.txt">CC-BY-4.0</a>. <a href="../../LICENSE.md">Mapa licencji projektu</a>.</p>
+    <p>Parametry i warunki odbioru: <a href="../README.md">specyfikacja 0.4</a>. Kod: <a href="https://github.com/tmierzwa/WICI">tmierzwa/WICI</a>.</p>
+  </div>
+</footer>
+</body>
+</html>

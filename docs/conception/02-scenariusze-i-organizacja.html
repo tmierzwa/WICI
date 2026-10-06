@@ -1,0 +1,127 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: CC-BY-4.0 -->
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>02. Scenariusze i organizacja · koncepcja WICI</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#tresc">Przejdź do treści</a>
+<header class="site-header">
+  <div class="inner">
+    <a class="brand" href="index.html">WICI <span>· koncepcja systemu</span></a>
+    <a class="jump" href="#rozdzialy">Rozdziały ↓</a>
+    <span class="status">Prototyp 0.4 · sprzęt <b>HOLD</b></span>
+  </div>
+</header>
+<div class="layout">
+  <nav class="chapters" id="rozdzialy" aria-label="Rozdziały koncepcji">
+    <p class="nav-title">Rozdziały</p>
+    <ol>
+      <li><a href="index.html">Przegląd koncepcji</a></li>
+      <li><a href="01-potrzeby-i-wymagania.html">01. Potrzeby i wymagania</a></li>
+      <li><a href="02-scenariusze-i-organizacja.html" aria-current="page">02. Scenariusze i organizacja</a></li>
+      <li><a href="03-dostepne-rozwiazania.html">03. Dostępne rozwiązania</a></li>
+      <li><a href="04-analiza-opcji.html">04. Analiza opcji</a></li>
+      <li><a href="05-projekt-koncepcyjny-komunikacji.html">05. Projekt koncepcyjny komunikacji</a></li>
+      <li><a href="06-wykonalnosc-i-budzet-zasobow.html">06. Wykonalność i budżet zasobów</a></li>
+      <li><a href="07-zagrozenia-i-odpornosc.html">07. Zagrożenia i odporność</a></li>
+      <li><a href="08-plan-weryfikacji-i-decyzje.html">08. Plan weryfikacji i decyzje</a></li>
+      <li><a href="zrodla.html">Źródła</a></li>
+    </ol>
+  </nav>
+  <main id="tresc">
+<article>
+<h1>02. Scenariusze i organizacja</h1>
+
+<nav class="on-page" aria-label="Na tej stronie">
+<p>Na tej stronie</p>
+<ol>
+  <li><a href="#role">Role</a></li>
+  <li><a href="#przebieg-dzialania">Przebieg działania</a></li>
+  <li><a href="#zachowanie-w-scenariuszach-awarii">Zachowanie w scenariuszach awarii</a></li>
+  <li><a href="#siec-i-odbiorca-zastepczy">Sieć i odbiorca zastępczy</a></li>
+  <li><a href="#instrukcja-i-cwiczenie">Instrukcja i ćwiczenie</a></li>
+</ol>
+</nav>
+
+<h2 id="role">Role</h2>
+
+<div class="table-wrap"><table>
+<thead><tr>
+<th scope="col">Rola</th>
+<th scope="col">Odpowiedzialność</th>
+</tr></thead><tbody>
+<tr><td>Mieszkaniec</td><td>podaje miejsce i potrzebę; zachowuje dostęp do własnego zgłoszenia; zgłasza zmianę sytuacji</td></tr>
+<tr><td>Opiekun schronienia</td><td>uruchamia stację, sprawdza TEST, pomaga osobom bez telefonu, zatwierdza pilność, kontroluje energię</td></tr>
+<tr><td>Zastępca</td><td>zna instrukcję i może przejąć pracę; nie wymaga dostępu do prywatnego konta opiekuna</td></tr>
+<tr><td>Dyżurny odbiorcy, np. OSP</td><td>odczytuje zgłoszenia, ocenia możliwości, zleca działanie i aktualizuje status</td></tr>
+<tr><td>Osoba utrzymująca system</td><td>przygotowuje i sprawdza wydanie, urządzenia, klucze i kopie; naprawia poza dyżurem</td></tr>
+</tbody></table></div>
+
+<p>OSP jest przykładem miejsca pomocy. Obecność budynku OSP nie dowodzi całodobowego dyżuru ani możliwości udzielenia każdego rodzaju pomocy. Przed uruchomieniem trzeba uzgodnić odbiorcę, zakres działań i zastępstwo.</p>
+
+<p>„Pomoc skierowana” oznacza decyzję dyżurnego. Nie oznacza dotarcia pomocy. Przy działającym telefonie i bezpośrednim zagrożeniu korzysta się z normalnych służb, niezależnie od statusu WICI.</p>
+
+<h2 id="przebieg-dzialania">Przebieg działania</h2>
+
+<ol>
+  <li><strong>Przygotowanie:</strong> sprawdzić znaleziony sprzęt, antenę, lokalizację, źródła i klucz odbiorcy. Wyznaczyć opiekuna i zastępcę. Zapisać adres strony i procedurę awaryjną na papierze.</li>
+  <li><strong>Uruchomienie:</strong> zestawić lokalne Wi-Fi i stronę; niezależnie sprawdzić modem. Wysłać TEST z adresem schronienia: RECEIVED potwierdza zapis w OSP, a STATUS „przeczytane” obecność dyżurnego. Dyżurny potwierdza, że adres i wejście są zrozumiałe.</li>
+  <li><strong>Przyjęcie potrzeby:</strong> mieszkaniec wysyła formularz albo dyktuje go opiekunowi. Stacja pokazuje zapis lokalny dopiero po trwałym zapisie. Brak trasy pozostawia zgłoszenie w kolejce.</li>
+  <li><strong>Przyjęcie u odbiorcy:</strong> OSP zapisuje zgłoszenie i odsyła RECEIVED. Dyżurny oddzielnie potwierdza odczyt oraz decyzję. Opiekun przekazuje informację również osobom bez telefonu.</li>
+  <li><strong>Utrzymanie:</strong> obserwować wiek kolejki, kontakt z OSP, energię i odrzuty modemu. Wymieniać źródła A/B na zakładkę: nowe podłączyć przed odłączeniem starego. Źródło ładowarki (C) wymieniać niezależnie.</li>
+  <li><strong>Przekazanie dyżuru:</strong> przekazać otwarte potrzeby, ostatnie odpowiedzi, dostępne źródła, awarie i uzgodniony kanał zastępczy. Nie kasować niepotwierdzonych zgłoszeń.</li>
+</ol>
+
+<h2 id="zachowanie-w-scenariuszach-awarii">Zachowanie w scenariuszach awarii</h2>
+
+<div class="table-wrap"><table class="cols-3">
+<thead><tr>
+<th scope="col">Zdarzenie</th>
+<th scope="col">Funkcja dostępna</th>
+<th scope="col">Działanie opiekuna</th>
+</tr></thead><tbody>
+<tr><td>Internet i telefonia nie działają</td><td>lokalna strona, zapis, radio przy działających sąsiadach</td><td>sprawdzić odpowiedź odbiorcy i utrzymać dyżur</td></tr>
+<tr><td>Telefon mieszkańca rozładowany</td><td>formularz na laptopie opiekuna, kolejka, ładowanie z osobnego źródła C</td><td>przyjąć zgłoszenie ustnie; udostępnić ładowanie na zmianę</td></tr>
+<tr><td>Modem lub trasa niedostępne</td><td>lokalna informacja i zapis; wysyłka oczekuje</td><td>sprawdzić kabel/antenę/sąsiada; dla pilnej potrzeby uruchomić uzgodniony kanał zastępczy</td></tr>
+<tr><td>Stacja pośrednia wyłączona</td><td>lokalna praca; inna trasa tylko jeśli fizycznie istnieje</td><td>przywrócić sąsiada lub uzgodnić inne położenie; nie oczekiwać, że mesh wytworzy łącze</td></tr>
+<tr><td>OSP wyłączona lub bez dyżurnego</td><td>lokalna praca i możliwy transport między innymi stacjami</td><td>ustalić kontakt z uzgodnionym zastępstwem; brak RECEIVED nie potwierdza pomocy</td></tr>
+<tr><td>Radio przeciążone</td><td>lokalne zgłoszenia, trwała kolejka</td><td>ograniczyć zbędne komunikaty, zebrać powtarzalne potrzeby; obserwować najstarszą intencję</td></tr>
+<tr><td>Restart laptopa</td><td>po uruchomieniu: odtworzona kolejka i tożsamość, jeśli nośnik jest sprawny</td><td>wykonać kontrolę zapisu i TEST; nie uruchamiać drugiej kopii tej samej stacji</td></tr>
+<tr><td>Uszkodzony laptop/nośnik</td><td>przeniesienie z poprawnej kopii; ostatnie dane mogą być utracone</td><td>zastosować PRZENIEŚ STACJĘ, gdy stary laptop działa; po utracie sprawdzić statusy u OSP i odtworzyć brakujące potrzeby</td></tr>
+<tr><td>Ładowarka uszkodzona</td><td>komunikacja i telefony z zapasem energii</td><td>odłączyć uszkodzoną sekcję lub całą ładowarkę; nie pobierać energii z obwodu stacji bez nowego bilansu</td></tr>
+</tbody></table></div>
+
+<h2 id="siec-i-odbiorca-zastepczy">Sieć i odbiorca zastępczy</h2>
+
+<p>Pierwsza próba obejmuje schronienie A, przekaźnik B i odbiorcę OSP. Przebieg A–B–OSP musi zostać wymuszony odcięciem bezpośredniego A–OSP. Zasięg między sąsiadami nie dowodzi zasięgu do OSP. Stacje będące jedynym przekaźnikiem są punktami odcięcia sieci i mają pierwszeństwo w zapewnieniu zasilania.</p>
+
+<p>OSP nie steruje trasowaniem całej sieci; jest punktem świadczenia usługi. Jej utrata nie musi wyłączyć transportu, ale może pozbawić zgłoszenia odbiorcy zdolnego pomóc. Drugi odbiorca wymaga uzgodnionej odpowiedzialności i kluczy. Automatyczne przejęcie tej samej bazy lub tożsamości przez drugi komputer nie jest częścią wariantu bazowego.</p>
+
+<p>Propozycja na pilotaż: ręczny wybór odbiorcy zastępczego przez opiekuna, po potwierdzeniu dyżuru. Format SA1 nie definiuje przekazania odpowiedzialności między dwiema OSP. Przed dodaniem funkcji trzeba rozstrzygnąć, kto prowadzi zgłoszenie, jak zachować identyfikator i uniknąć podwójnego wysłania pomocy. Do tego czasu stosuje się uzgodnioną procedurę głosową lub pisemną z odczytaniem numeru zgłoszenia.</p>
+
+<h2 id="instrukcja-i-cwiczenie">Instrukcja i ćwiczenie</h2>
+
+<p>Na karcie przy stacji: adres i wejście, Wi-Fi/QR, odbiorca i zastępstwo, znaczenie czterech stanów zgłoszenia, kolejność podłączenia i wymiany źródeł, sposób zgłoszenia bez telefonu. Klucze prywatne i dane mieszkańców nie należą na publiczną kartę.</p>
+
+<p>Przed pilotażem opiekun i zastępca osobno uruchamiają stację z przygotowanego zestawu, wysyłają TEST, odłączają radio, wymieniają źródło i wyjaśniają status oczekującego zgłoszenia. Powtórzyć po zmianie wydania, routera, miejsca anteny lub odbiorcy. Częstotliwość ćwiczeń w eksploatacji ustala lokalna organizacja; nie ma jeszcze danych do jej optymalnego doboru.</p>
+
+<p>Kurier z papierowym zgłoszeniem lub zwykła łączność głosowa są możliwymi procedurami zastępczymi po uzgodnieniu warunków i bezpieczeństwa drogi. Automatyczny transport plików przez pendrive nie jest zaimplementowaną funkcją WICI.</p>
+</article>
+<nav class="pager" aria-label="Kolejność czytania">
+  <a class="prev" href="01-potrzeby-i-wymagania.html" rel="prev"><span>← Poprzedni</span>01. Potrzeby i wymagania</a>
+  <a class="next" href="03-dostepne-rozwiazania.html" rel="next"><span>Następny →</span>03. Dostępne rozwiązania</a>
+</nav>
+  </main>
+</div>
+<footer class="site-footer">
+  <div class="inner">
+    <p>Analiza: <a href="../../LICENSES/CC-BY-4.0.txt">CC-BY-4.0</a>. <a href="../../LICENSE.md">Mapa licencji projektu</a>.</p>
+    <p>Parametry i warunki odbioru: <a href="../README.md">specyfikacja 0.4</a>. Kod: <a href="https://github.com/tmierzwa/WICI">tmierzwa/WICI</a>.</p>
+  </div>
+</footer>
+</body>
+</html>

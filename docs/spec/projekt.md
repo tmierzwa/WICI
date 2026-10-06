@@ -55,7 +55,7 @@ Laptop, router, ich oryginalne zasilacze i akumulatory pochodzą z miejsca uruch
 5. Uruchom START w działającym systemie albo Linux z USB na obsługiwanym PC.
 6. Wpisz dokładny adres schronienia, ustaw hasło opiekuna i importuj kartę zaufanej OSP.
 7. Połącz telefon z głównym Wi-Fi routera i otwórz adres z QR na ekranie laptopa.
-8. Wyślij TEST i sprawdź odpowiedź OSP. Zielony status USB nie oznacza dostępnej pomocy.
+8. Wyślij TEST z adresem schronienia. Poczekaj na RECEIVED, czyli zapis w OSP, a potem na STATUS „przeczytane” od dyżurnego. Zielony status USB nie oznacza dostępnej pomocy.
 
 Jeżeli router ma nieznane hasło, wyłączony DHCP lub izolację Wi-Fi od LAN, potrzebna jest konfiguracja jego panelu. Przypadkowy zablokowany router nie staje się automatycznie dostępny. Nie resetuj znalezionego urządzenia bez zgody właściciela. Mac z Apple Silicon nie uruchamia naszego ogólnego Linuxa; pakiet START wymaga sprawnego macOS. Komputer z niedostępnym startem USB i niesprawnym systemem jest poza zakresem.
 
