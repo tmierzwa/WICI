@@ -1,6 +1,8 @@
 # Dokumentacja WICI
 
-Specyfikacja stacji 0.4 obejmuje pięć rozdziałów. Parametry i kontrakty zmienia się w tych plikach.
+Zacznij od [koncepcji systemu](conception/README.md): potrzeby i wymagania, scenariusze pracy, dostępne rozwiązania, analiza opcji, architektura komunikacji, wykonalność, zagrożenia i plan prób. Dokumenty są po polsku. Oddzielają wymagania od dowodów i wskazują decyzje pozostające do zamknięcia.
+
+Specyfikacja stacji 0.4 obejmuje pięć rozdziałów poniżej. Parametry, kontrakty i warunki odbioru zmienia się w tych plikach. Uzasadnienia i powiązane analizy utrzymuje się w `docs/conception/`.
 
 | Rozdział | Zakres |
 |---|---|
