@@ -5,7 +5,7 @@ Własne materiały: współtwórcy WICI. Licencja zależy od ścieżki i rodzaju
 | Ścieżki | Licencja |
 |---|---|
 | `**/*.py`, `software/reference/schema.sql`, `.github/workflows/*` | [GPL-3.0-or-later](LICENSES/GPL-3.0-or-later.txt) |
-| `docs/spec/*`, `bom.csv` | [CERN-OHL-P-2.0](LICENSES/CERN-OHL-P-2.0.txt): opisy konstrukcji stacji i jej BOM |
+| `docs/spec/*`, `docs/conception/05-projekt-koncepcyjny-komunikacji.md`, `bom.csv` | [CERN-OHL-P-2.0](LICENSES/CERN-OHL-P-2.0.txt): opisy konstrukcji stacji i jej BOM |
 | `hardware/radio-test-r01/cad/radio-usb-controller.*`, tablice bibliotek `cad/*-lib-table`, `cad/footprints/WICI.pretty/USB_B_61400416121.kicad_mod`, `cad/footprints/WICI.pretty/PPTC_1206_1.8x1.8_Gap1.0.kicad_mod` | CERN-OHL-P-2.0: własny projekt i dwa własne footprinty |
 | `hardware/radio-test-r01/{bom.csv,assembly-parts.json,connections.*,polaczenia.md,uruchomienie.md,przed-produkcja.md,zmiany-R01-*.md,schemat.pdf,mechanika-1-do-1.pdf}` | CERN-OHL-P-2.0: konstrukcja i pliki do wykonania |
 | `hardware/radio-test-r01/fabrication/R01.3/`, poza `README.md`, `NOTICE.md` i `LICENSES/` | CERN-OHL-P-2.0: dane i rysunki wykonawcze |
