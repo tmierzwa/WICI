@@ -50,17 +50,21 @@ Odbiornik składa najwyżej 8 datagramów, maksymalnie 600 B każdy, przez 120 s
 4. Po restarcie czekamy cały ostatni zapisany dług. Czyścimy go dopiero po odczekaniu; restart nie zeruje budżetu.
 5. Przed burstem kanał musi pozostawać wolny przez 50 ms; próg początkowy CCA −100 dBm. Kanał zajęty: losowe odroczenie 100–1000 ms. CCA nie zastępuje limitu czasu TX.
 
-Rezerwacja obejmuje preambuły, synchronizację, długości, CRC oraz zmierzony czas rampowania nadajnika. Pamięć to pierścieniowy dziennik EEPROM z numerem, długiem, CRC i znacznikiem zatwierdzenia; co najmniej dwa poprawne rekordy. Kandydaci ST M24C64 i Microchip AT24C64, z odrębnymi parametrami sterownika. Brak poprawnego dziennika blokuje nadawanie do diagnostyki. Odbiór pozostaje czynny.
+Rezerwacja obejmuje preambuły, synchronizację, długości, CRC oraz zmierzony czas rampowania nadajnika. Pamięć to pierścieniowy dziennik EEPROM z numerem, długiem, CRC i znacznikiem zatwierdzenia; co najmniej dwa poprawne rekordy. Kandydaci ST M24C64 i Microchip AT24C64, z odrębnymi parametrami sterownika. Brak poprawnego dziennika blokuje nadawanie do diagnostyki. Odbiór pozostaje czynny także podczas długu ciszy i oczekiwania CCA; wyłączony jest na czas własnego TX oraz suspend USB. Dług ciszy zabrania nadawania, nie odbioru.
 
 Warunki UE w tym paśmie obejmują do 500 mW ERP i profil z aktywnością do 10%; do użytkowania w Polsce trzeba jeszcze potwierdzić warunki krajowe oraz emisje gotowego urządzenia. Sama częstotliwość nie stanowi dopuszczenia nadajnika. [Decyzja UE 2025/105](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025D0105).
 
 ## USB i Reticulum
 
-USB CDC ACM, zasilanie 5 V, pobór ≤500 mA, przewód do 2 m. USB-C ma osobny rezystor 5,1 kΩ na każdym CC do masy. VID/PID musi zostać legalnie przydzielony projektowi przed wydaniem. Nie kopiujemy identyfikatorów cudzego urządzenia.
+USB CDC ACM, zasilanie 5 V, przewód do 2 m. Cały modem: przed konfiguracją ≤100 mA, po przyznaniu mocy ≤500 mA i nie więcej niż deklaruje deskryptor; w suspend ≤2,5 mA, z uwzględnieniem zegarów, radia i pull-up. Nadawanie przed konfiguracją lub w suspend jest zabronione. RX podczas suspend może zostać wyłączony; po resume odtworzyć pracę bez zerowania długu ciszy. Wymagane pomiary udaru przy podłączeniu i całego cyklu zasilania, także z modułem RF. [USB 2.0](https://www.usb.org/document-library/usb-20-specification), [ECN Suspend Current Limit Changes — kopia dokumentu USB-IF](https://git.nefarius.at/nefarius/USB-Bluetooth-Specs/media/branch/master/usb_20_0702115/Suspend%20Current%20ECN.pdf). USB-C ma osobny rezystor 5,1 kΩ na każdym CC do masy. VID/PID musi zostać legalnie przydzielony projektowi przed wydaniem. Nie kopiujemy identyfikatorów cudzego urządzenia.
 
 KISS DATA = 0x00, READY = 0x0F, FEND = C0, FESC = DB. C0 zamienia się na DB DC, DB na DB DD. Pozostałe komendy nie zmieniają profilu P1. Modem ma kolejkę 4 datagramów; przy pełnej odrzuca nowy datagram i zgłasza licznik odrzutów przez kanał diagnostyczny. Brak potwierdzenia Reticulum powoduje ponowienie; odrzut nie może potwierdzić zgłoszenia mieszkańcowi.
 
+READY daje zgodę na jeden następny DATA; nie jest potwierdzeniem nadania ani zapisu OSP. Początkowe READY wymaga konfiguracji USB, ważnego dziennika, spłaconego długu ciszy i możliwości przyjęcia datagramu. DATA zużywa zgodę. Następne READY dopiero po zakończeniu burstu i jego ciszy. Powtórzone READY nie mnoży zgód. Kolejka 4 datagramów jest zabezpieczeniem przed nadmiarem danych, nie pozwoleniem na pomijanie READY. Po restarcie adapter usuwa starą zgodę i czeka na nową. Przekroczenie timeoutu zgłasza błąd; nie odblokowuje nadawania bez READY.
+
 Warstwa `ShelterKISSInterface` jest wymaganym adapterem do przygotowania, ładowanym jako interfejs użytkownika Reticulum. Rozpoznaje modem po kontrakcie diagnostycznym, raportuje efektywną szybkość 240 bit/s, używa READY i czasu oczekiwania 900 s oraz ma ograniczone bufory. Zwykły KISSInterface ma inne założenia czasowe i nie jest automatycznie zgodny z długimi przerwami TX. [Interfejsy użytkownika](https://reticulum.network/manual/interfaces.html), [KISSInterface](https://github.com/markqvist/Reticulum/blob/master/RNS/Interfaces/KISSInterface.py).
+
+900 s dotyczy adaptera, nie timeoutów całego stosu. Wymagane osobne sprawdzenie wyszukiwania trasy, zestawiania linku, przesyłania zasobu i potwierdzeń, także gdy pakiet czeka za ruchem przekazywanym. Samo podanie bitrate 240 bit/s nie zamyka tej zgodności; [kontrprzykład czasowy i stan przeglądu](../review.md).
 
 Polecenie diagnostyczne na osobnym interfejsie CDC: `INFO\n`; odpowiedź jedna linia JSON do 256 B: `{"contract":1,"profile":"P1","radio":"CC1120","fw":"...","tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0}`. Drugie CDC usuwa ryzyko pomylenia diagnostyki z ramkami danych. Wariant ST podaje `S2LP`. Aktualizacja firmware nie odbywa się przy uruchamianiu w schronieniu.
 
@@ -68,13 +72,15 @@ Polecenie diagnostyczne na osobnym interfejsie CDC: `INFO\n`; odpowiedź jedna l
 
 | Funkcja | Modem A | Modem B |
 |---|---|---|
-| Radio | TI CC1120 | ST S2-LP |
-| MCU USB | STM32F103C8 | Microchip SAMD21G18 |
+| Radio | TI CC1120 | ST S2-LPQTR; wariant dla 826–958 MHz |
+| MCU USB | ST STM32F103CBT6, jak w kontrolerze R01.3; C8 wymaga odrębnego obrazu 64 KiB | Microchip SAMD21G18 |
 | Połączenie MCU–radio | SPI: SCK, MOSI, MISO, CS; IRQ; reset/shutdown | ten sam podział funkcji, inne piny |
 | Referencja RF | zgodna z dokumentacją CC1120 | zgodna z dokumentacją S2-LP |
 | Zasilanie RF | filtrowane 3,3 V, 100 nF przy każdym zasilaniu, 10 µF przy radiu | takie samo wymaganie |
 | Wyjście RF | układ dopasowania producenta dla 868/915 MHz, potem złącze 50 Ω | osobne dopasowanie S2-LP |
 
 Dopasowanie RF i wartości oscylatora są właściwe dla konkretnego układu. Nie wolno skopiować wartości TI na ST. Obie płytki wymagają osobnego layoutu RF i nastaw rejestrów; nie zostały jeszcze narysowane. Wspólna ramka w tym pakiecie zamyka format, lecz nie dowodzi zgodności obu fizycznych modemów.
+
+S2-LPCBQTR obsługuje w górnym paśmie 904–1055 MHz i nie jest kandydatem dla 869,525 MHz. Sama nazwa rodziny S2-LP nie wystarcza przy zamawianiu. [Warianty w datasheet](https://www.st.com/resource/en/datasheet/s2-lp.pdf).
 
 Dipol pionowy: ramiona początkowo po 82 mm, zasilanie symetryzowane dławikiem prądu wspólnego, kabel 50 Ω. Długość końcowa po strojeniu: SWR ≤2 w zamontowanej pozycji. Budżet swobodnej przestrzeni na 1 km wynosi około 91 dB; straty budynków mogą zużyć cały zapas. Nie wyprowadzamy obietnicy zasięgu z samej czułości katalogowej.

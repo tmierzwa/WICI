@@ -10,7 +10,7 @@ NomadNet udostępnia własny interfejs tekstowy i strony Micron. Można dodać g
 
 ## Wiadomości SA1
 
-LXMF `title` = `SA1`, `content` = UTF-8 JSON, `fields` = pusty słownik. Treść do 480 B, bez załączników. JSON zawiera jedną tablicę; nie przyjmujemy swobodnych obiektów. Własny format nie zastępuje LXMF. Kodowanie: bez zbędnych spacji, znaki Unicode bez zamiany na `\u`; teksty bez znaków sterujących. Limity tekstu są liczone w bajtach UTF-8. Narzut LXMF i Reticulum jest dodatkowy.
+LXMF `title` = `SA1`, `content` = UTF-8 JSON, `fields` = pusty słownik. Treść do 480 B, bez załączników. JSON zawiera jedną tablicę; nie przyjmujemy swobodnych obiektów. Własny format nie zastępuje LXMF. Kodowanie: bez zbędnych spacji, znaki Unicode bez zamiany na `\u`; teksty bez znaków sterujących i formatujących Unicode (kategorie Cc i Cf), w tym C1, znaki zmiany kierunku pisma i niewidoczne znaki formatujące. Zwykłe polskie litery są dozwolone. Limity tekstu są liczone w bajtach UTF-8. Narzut LXMF i Reticulum jest dodatkowy.
 
 | Typ | Tablica |
 |---|---|
@@ -22,7 +22,7 @@ LXMF `title` = `SA1`, `content` = UTF-8 JSON, `fields` = pusty słownik. Treść
 
 `id`: 32 małe znaki hex, czyli 16 losowych bajtów. `revision`: 0–65535. `category`: 0–4 = medyczne, ewakuacja, woda/żywność, wyposażenie, inne. `people`: 1–65535. `location`: 1–64 B, dokładny adres i miejsce wejścia. `text` zgłoszenia/odpowiedzi: do 96 B; komunikatu do 192 B. `urgency`: 0–2, podwyższenie zatwierdza opiekun. `event`: 1–2147483647, bez zawijania; nowy komunikat po wyczerpaniu licznika dostaje nowe id. `state`: 1 zapisane OSP, 2 przeczytane, 3 pomoc skierowana.
 
-RECEIVED zawsze oznacza pierwsze przyjęcie, event=1. Powtórzony REQUEST może ponownie dostać ten sam RECEIVED. Jeśli OSP ma już nowszy status, wysyła też najnowszy STATUS. Źródło ignoruje starsze event dla tej samej pary id/revision. REPLY ma osobny strumień event; nie konkuruje z numeracją STATUS. BULLETIN jest numerowany w obrębie swojego id.
+RECEIVED zawsze oznacza pierwsze przyjęcie, event=1 i state=1. STATUS dopuszcza wyłącznie event ≥2 oraz state 2 lub 3; nie zastępuje RECEIVED ani nie powtarza jego event=1. Powtórzony REQUEST może ponownie dostać ten sam RECEIVED. Jeśli OSP ma już nowszy status, wysyła też najnowszy STATUS. Źródło ignoruje starsze event dla tej samej pary id/revision. REPLY ma osobny strumień event; nie konkuruje z numeracją STATUS. BULLETIN jest numerowany w obrębie swojego id.
 
 Zmiana danych zgłoszenia tworzy nową revision. Każda revision zawiera całą lokalizację i treść; nie zależy od wcześniejszego profilu. Wersje są pokazywane jako jedno zgłoszenie, ale potwierdzane osobno. Nie wysyłamy imion, PESEL, dokumentów ani tokenów strony przez radio.
 
@@ -81,5 +81,7 @@ USB/
 W Linuxie stan znajduje się na osobnej partycji ext4 USB. W Windows/macOS na dysku laptopa w katalogu aplikacji. Nie zapisujemy aktywnej bazy na exFAT i nie obiecujemy automatycznej wspólnej bazy między systemami.
 
 PRZENIEŚ STACJĘ zatrzymuje nowe zgłoszenia i pracownika wysyłki, wykonuje kopię API SQLite, sprawdza jej integralność, eksportuje tożsamość oraz konfigurację i zatrzymuje starą instancję. Nowy laptop importuje pakiet. Nie używa się jednocześnie obu kopii. Utrata laptopa przed eksportem może utracić ostatnie lokalne dane. [API kopii](https://www.sqlite.org/backup.html).
+
+Pakiet START utrzymuje komputer w stanie pracy podczas działania stacji, również przy restarcie samej strony. Uśpiony laptop nie jest przekaźnikiem. Ręczne wymuszenie uśpienia lub utrata USB wymagają obsługi suspend/resume modemu, zachowania kolejki i ponownego sprawdzenia trasy. Wyłączenie automatycznego usypiania nie zastępuje zgodności elektrycznej USB.
 
 Pakiety muszą zostać zbudowane i przetestowane na każdej architekturze przed dystrybucją. To nie jest instrukcja instalowania pip w schronieniu. Wydanie przypina dokładne archiwa/commity i hashe po próbie zgodności. Nie pobiera `latest` przy uruchomieniu.

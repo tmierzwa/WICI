@@ -63,21 +63,23 @@ VSAFE ─ niezależny układ nadnapięciowy ─ GND_C
 | Cin | 470 µF /35 V oraz 100 nF |
 | Cout | 470 µF /16 V; elektrolit o ESR zgodnym z kartą regulatora |
 | FB | Rbottom 1,00 kΩ, Rtop początkowo 3,16 kΩ; kontrola napięcia po montażu |
-| Ogranicznik portu A | TPS2553, limit początkowo RILIM 15 kΩ; temperatura złącza ≤105°C |
-| Ogranicznik portu B | MIC2007; osobny wariant PCB i dobór RILIM na podstawie tolerancji |
+| Ogranicznik portu A | TPS2553, limit początkowo RILIM 15 kΩ, 0,1%; pełny budżet tolerancji nadal do odbioru; temperatura złącza ≤105°C |
+| Ogranicznik portu B | nie wybrany; niezależny wariant musi zamknąć gwarantowany budżet prądu i temperatury |
 | Prąd roboczy | 1,5 A na złączu, także po nagrzaniu |
-| Ograniczenie zwarcia | zakwalifikowany przedział 1,6–2,1 A, bez wyłączenia innych sekcji |
+| Próg ograniczania prądu | zakwalifikowany przedział 1,6–2,1 A przed foldback/wyłączeniem termicznym; zwarcie nie wyłącza innych sekcji |
 | DCP | D+ i D− zwarte bez dodatkowego układu identyfikacji |
 
 Nominalne 5,12 V nie gwarantuje poprawnego napięcia z tolerancji LM2596. W montażu dobiera się stały rezystor FB; nie pozostawiamy dostępnego potencjometru. Odbiór na złączu: 4,75–5,25 V przy 0–1,5 A, 11,5–16 V wejścia, 0–40°C otoczenia. Nie zamieniamy wymaganych kondensatorów elektrolitycznych na same ceramiczne bez sprawdzenia stabilności. [TI LM2596](https://www.ti.com/lit/ds/symlink/lm2596.pdf), [onsemi LM2596](https://www.onsemi.com/download/data-sheet/pdf/lm2596-d.pdf).
 
-TPS2553 dopuszcza 1,5 A ciągłych przy temperaturze złącza do 105°C. MIC2007 nie jest zgodny pinowo, a tolerancja ograniczenia wymaga sprawdzenia; sam napis „2 A” nie gwarantuje 1,5 A w każdym egzemplarzu. Jeśli nie daje wymaganego przedziału, wariant Microchip nie zostaje zakwalifikowany. [TPS2553](https://www.ti.com/lit/ds/symlink/tps2553.pdf), [MIC2007](https://www.microchip.com/content/dam/mchp/documents/APID/ProductDocuments/DataSheets/MIC20XX-Fixed-and-Adjustable-Current-Limiting-Power-Distribution-Switches-DS20006486B.pdf).
+TPS2553 dopuszcza 1,5 A ciągłych przy temperaturze złącza do 105°C. Dla dokładnego 15 kΩ karta podaje próg 1,610–1,800 A, ale bez tolerancji rezystora; 1% nie daje wystarczającego zapasu ponad 1,6 A. Dlatego punktem wyjścia jest 0,1%, z obowiązkową weryfikacją całego budżetu.
+
+MIC2007 nie zamyka doboru stałego rezystora według gwarantowanych granic karty: przy warunku IOUT=2 A, CLF=210–286 V wymagania 1,6–2,1 A dają jednocześnie RSET ≤131,25 Ω oraz ≥136,19 Ω. Przedział jest pusty jeszcze bez tolerancji rezystora. Nie traktujemy go jako gotowego drugiego wariantu. Inny element albo indywidualna kwalifikacja całego wariantu wymaga odrębnego projektu i dowodu. Nie zwiększać limitu prądu w celu zaakceptowania części. [TPS2553](https://www.ti.com/lit/ds/symlink/tps2553.pdf), [MIC2007](https://www.microchip.com/content/dam/mchp/documents/APID/ProductDocuments/DataSheets/MIC20XX-Fixed-and-Adjustable-Current-Limiting-Power-Distribution-Switches-DS20006486B.pdf).
 
 ### Ochrona przed podaniem 12 V na telefon
 
 Kandydat do próby: crowbar TL431B + BC327 + SCR, przed ogranicznikiem USB. TL431 anoda do GND_C, REF przez dzielnik VSAFE–9,31 kΩ–REF–8,20 kΩ–GND_C. Katoda przez 1 kΩ do bazy PNP; emiter PNP do VSAFE, rezystor baza–emiter 2,2 kΩ. Kolektor przez 47 Ω do bramki SCR; bramka przez 1 kΩ do GND_C. Anoda SCR do VSAFE, katoda do GND_C. SCR: TYN612 albo BT151 z dopasowanym prądem bramki i I²t. Różne wykonania wymagają przeliczenia sterowania.
 
-Próg nominalny 5,328 V. Wymagany zakres po tolerancjach i temperaturze 5,30–5,45 V. TL431B i oporniki 0,1% ograniczają rozrzut, lecz nie zastępują próby dynamicznej. F2 ma rozłączyć twarde uszkodzenie bucka. Przy ograniczeniu prądu przez sprawny regulator bezpiecznik może nie przepalić się; SCR i chłodzenie muszą wtedy wytrzymać ten stan. Przed podłączeniem telefonów należy wymusić uszkodzenie wejście–wyjście bucka i zmierzyć szczyt VUSB oraz energię impulsu. Sam TVS opisany jako „5 V” nie zapewnia ochrony telefonu.
+Próg nominalny 5,328 V. Wymagany zakres po tolerancjach i temperaturze 5,30–5,45 V. TL431B i oporniki 0,1% ograniczają rozrzut, lecz nie zastępują próby dynamicznej. F1/F2 mają odłączyć uszkodzoną gałąź z zachowaniem dopuszczalnego I²t SCR, przewodów i regulatora. Nie zakładamy, że F2 zadziała przed F1: prądy znamionowe i charakterystyki są różne; koordynację obu oraz głównego F10 A trzeba pomierzyć. Przy ograniczeniu prądu przez sprawny regulator bezpiecznik może nie przepalić się; SCR i chłodzenie muszą wtedy wytrzymać ten stan. Przed podłączeniem telefonów należy wymusić uszkodzenie wejście–wyjście bucka i zmierzyć szczyt VUSB oraz energię impulsu. Sam TVS opisany jako „5 V” nie zapewnia ochrony telefonu.
 
 ## Przetwornica
 

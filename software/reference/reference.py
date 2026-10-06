@@ -5,6 +5,7 @@ import math
 import re
 import sqlite3
 import struct
+import unicodedata
 from pathlib import Path
 
 MAX_DATAGRAM = 600
@@ -93,8 +94,8 @@ def _integer(value: object, low: int, high: int) -> None:
 def _text(value: object, maximum: int, minimum: int = 0) -> None:
     if type(value) is not str or not minimum <= len(value.encode("utf-8")) <= maximum:
         raise ValueError("Invalid UTF-8 text size")
-    if any(ord(c) < 32 or ord(c) == 127 for c in value):
-        raise ValueError("Control character")
+    if any(unicodedata.category(c) in ("Cc", "Cf") for c in value):
+        raise ValueError("Control or format character")
 
 
 def validate_message(value: object) -> None:

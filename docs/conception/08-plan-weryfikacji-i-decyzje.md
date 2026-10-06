@@ -19,11 +19,11 @@ T1–T8 są grupami prac tej koncepcji. Warunki liczbowe pochodzą z [odbioru 0.
 
 | Próba | Wymagania | Zakres i dowód |
 |---|---|---|
-| T1 — lokalnie i offline | W01–W04, W13, W18 | odłączony internet; zimny start Windows x64, macOS Intel/ARM i wspieranego Linux PC; 50 połączonych / 15 aktywnych; modem odłączony nie blokuje formularza; lista sprawdzonych hostów/routerów |
+| T1 — lokalnie i offline | W01–W04, W13, W18 | odłączony internet; zimny start Windows x64, macOS Intel/ARM i wspieranego Linux PC; utrzymanie hosta w pracy oraz pełny cykl USB według odbioru; 50 połączonych / 15 aktywnych; modem odłączony nie blokuje formularza; lista sprawdzonych hostów/routerów |
 | T2 — zapis, statusy, zaufanie | W01, W04–W07, W16 | granice UTF-8 i pięć typów; duplikaty/konflikty; awaria przed i po COMMIT; fizyczne odcięcia nośnika; błąd dysku; obcy klucz i dostęp do cudzego zgłoszenia; eksport/import i tylko jedna aktywna tożsamość |
-| T3 — integracja stosu i adapter | W14 oraz podstawa W07/W09/W10 | liczba pakietów dla rzeczywistych wiadomości; zestawianie łącza/zasób LXMF; cisza i READY; pełna kolejka modemu; odłączenie USB; powrót po restarcie; mierzalny brak lawiny równoległych ponowień |
+| T3 — integracja stosu i adapter | W14 oraz podstawa W07/W09/W10 | timeouty całego stosu przy oczekiwaniu za ruchem przekaźnika; liczba pakietów dla rzeczywistych wiadomości; zestawianie łącza/zasób LXMF; cisza i READY; pełna kolejka modemu; odłączenie USB; powrót po restarcie; mierzalny brak lawiny równoległych ponowień |
 | T4 — fizyczne radio i warunki TX | W14, W17 | TI→ST i ST→TI, 10 000 pakietów każdego rozmiaru granicznego; moc/częstotliwość/czułość z P1; cały ruch i restarty ≤10% w dowolnym ciągłym oknie godzinnym; przerwany zapis EEPROM nigdy nie omija budżetu; emisje gotowej konfiguracji |
-| T5 — teren, przekaźnik, obciążenie | W08–W10 | 1 km w rzeczywistych miejscach: ≥99/100 zgłoszeń z RECEIVED w 5 min przy pojedynczym ruchu; wymuszone A–B–OSP i odpowiedź; 50 zgłoszeń w 5 min, ≥99% w 30 min; zanik i powrót trasy bez utraty zapisu |
+| T5 — teren, przekaźnik, obciążenie | W08–W10 | 1 km w rzeczywistych miejscach: ≥99/100 zgłoszeń z RECEIVED w 5 min przy pojedynczym ruchu; wymuszone A–B–OSP i odpowiedź; 50 zgłoszeń łącznie z A w pierwszych 5 min, ≥99% z RECEIVED na A do 30 min od pierwszego COMMIT; zimna i ustalona trasa; zanik i powrót trasy bez utraty zapisu |
 | T6 — energia i bezpieczeństwo | W11, W12, W14, W17 | A/B: 100 zmian w obu kierunkach i skrajach napięcia, zero resetów; udar/I²t; pełne porty w 40°C przez 2 h; zwarcie i OVP bez telefonu; wszystkie próby przetwornicy/AC ze specyfikacji; zakłócenia RF i praca dobowa z pomiarem Wh obu pul |
 | T7 — odtworzenie i dostawcy | W14, W15 | ktoś spoza zespołu odtwarza paczkę źródeł i wskazaną konstrukcję; hashe/BOM/licencje/wersje; dwóch niezależnych wykonawców; raport różnic i każda zakwalifikowana alternatywa |
 | T8 — obsługa i realna pomoc | W03, W06, W18 | opiekun i zastępca używają krótkiej instrukcji; osoba bez telefonu zgłasza potrzebę; dyżurny odczytuje i odsyła decyzję; awaria OSP i kanał zastępczy; zapisane błędy obsługi i czasy czynności |
@@ -42,10 +42,10 @@ Testy modelu opisują zachowanie modelu. Próby sprzętu, bezpieczeństwa i prac
 
 | ID | Decyzja | Dowód potrzebny przed zamknięciem | Odpowiedzialność do wyznaczenia |
 |---|---|---|---|
-| D01 | czy P1 mieści ruch zgłoszeń i LXMF w limitach | T3 i T5; pełny koszt pakietów, nie tylko długość SA1 | integrator oprogramowania i radia |
+| D01 | czy P1 mieści ruch zgłoszeń i LXMF w limitach | T3 i T5; pełny koszt pakietów i timeoutów; wskazana liczba źródeł/przekaźników; nie tylko długość SA1 | integrator oprogramowania i radia |
 | D02 | czy TI i ST tworzą niezależne zgodne modemy | dwa layouty, nastawy i T4 w obu kierunkach | projektant RF |
 | D03 | czy miejsca i anteny zapewniają sieć do odbiorcy | T5 oraz wskazanie punktów odcięcia i dostępnego zastępstwa | koordynator miejsc |
-| D04 | jaki host/router i pakiet można powierzyć opiekunowi | T1/T8, spisana macierz; uprawnienia, firewall, sterowniki i start USB | integrator pakietów |
+| D04 | jaki host/router i pakiet można powierzyć opiekunowi | T1/T8, spisana macierz; uprawnienia, firewall, sterowniki, start USB i brak automatycznego usypiania; osobno kwalifikacja suspend/resume modemu | integrator pakietów |
 | D05 | czy zasilanie 230 V jest uzasadnione i bezpieczne | pełna konstrukcja, T6, realne zasilacze; porównanie kosztu/energii wariantu DC | projektant zasilania i osoba oceniająca bezpieczeństwo |
 | D06 | ile energii rzeczywiście potrzebuje miejsce | pomiar 24 h, pojemność dostępnych źródeł i osobny plan obu pul | opiekun pilotażu |
 | D07 | kto przyjmuje, pomaga i zastępuje OSP | uzgodniony dyżur, kompetencje, klucze, kanał awaryjny i T8 | organizacja pomocy |

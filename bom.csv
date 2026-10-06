@@ -1,6 +1,6 @@
 module,quantity,item,minimum_requirement,candidate_a,candidate_b,status
-radio,1,transceiver,2GFSK 869.525 MHz P1,TI CC1120,ST S2-LP,alternative designs not qualified
-radio,1,USB MCU,native CDC two interfaces,ST STM32F103C8,Microchip SAMD21G18,alternative designs not qualified
+radio,1,transceiver,2GFSK 869.525 MHz P1,TI CC1120,ST S2-LPQTR,alternative designs not qualified; S2-LPCBQTR upper band excludes 869.525 MHz
+radio,1,USB MCU,native CDC two interfaces,ST STM32F103CBT6,Microchip SAMD21G18,alternative designs not qualified
 radio,1,nonvolatile airtime log,I2C EEPROM wear levelled,ST M24C64,Microchip AT24C64,firmware required
 radio,1,TCXO,total frequency error <=2.5 ppm,compatible manufacturer A,compatible manufacturer B,reference frequencies differ by radio
 radio,1,antenna,50 ohm dipole SWR <=2,open dipole drawing,independent equivalent manufacture,tune outside actual building
@@ -15,7 +15,7 @@ AB,2,cigar cable,<=2 m 2x2.5 mm2 fused 10 A,local fabrication,independent fabric
 charger,8,buck,LM2596 adjustable,TI,onsemi,calibrate and heat test
 charger,8,inductor,68 uH Isat >=6 A Irms >=3 A,TDK,Wurth Elektronik,qualify dimensions and losses
 charger,16,Schottky,>=3 A 40 V,ST,onsemi,flyback and polarity protection
-charger,8,port limiter,1.5 A load and qualified short current,TI TPS2553,Microchip MIC2007,different PCB and resistor selection
+charger,8,port limiter,1.5 A load; threshold 1.6-2.1 A before thermal shutdown or foldback,TI TPS2553,not selected,second independent variant required; MIC2007 guaranteed tolerance budget does not close
 charger,8,OVP reference,TL431B grade 0.5 percent,TI,ST,crowbar not qualified
 charger,8,OVP SCR,adequate gate drive and I2t,ST TYN612,WeEn BT151,variant needs gate and surge calculation
 charger,8,PNP,BC327,Nexperia,onsemi,verify package pinout

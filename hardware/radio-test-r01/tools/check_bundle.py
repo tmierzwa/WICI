@@ -99,6 +99,9 @@ def main():
             'power_bus_width_mm': 0.5,
             'inner_layer_track_count': 0,
             'mounting_holes': 4,
+            'known_design_blockers': [
+                'Y1 standby pin is tied to V3; oscillator alone can exceed the complete USB suspend budget. New electrical revision and full-modem qualification required.',
+            ],
             'mechanical_fit': 'NOT TESTED',
             'mechanical_print': 'mechanika-1-do-1.pdf',
         },
@@ -108,7 +111,7 @@ def main():
             'imported_kicad_unconnected_items': len(rf['unconnected_items']),
             'manufacturing_release': 'HOLD',
         },
-        'not_verified': ['USB differential impedance and physical operation', 'connector/switch mechanical fit',
+        'not_verified': ['USB differential impedance and physical operation', 'complete modem USB power lifecycle and inrush', 'connector/switch mechanical fit',
                          'RF layout conversion', 'RF clock selection and full error budget',
                          'firmware', 'thermal behavior', 'transmitter spectrum', 'receiver sensitivity',
                          'range', 'qualified second-vendor implementation', 'PPTC voltage drop and thermal derating'],

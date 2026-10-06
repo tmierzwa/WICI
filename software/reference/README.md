@@ -9,7 +9,7 @@ python3 -m unittest discover -s software/reference -v
 python3 software/reference/obliczenia.py
 ```
 
-Druga komenda zapisuje `wyniki.json` obok skryptu. Są to obliczenia z założeń, nie pomiary. Testy obejmują wszystkie długości datagramu 1–600 B, znany wektor CRC, błędy i duplikaty, pięć typów wiadomości oraz przerwanie transakcji bez ACK. [Zapis weryfikacji](weryfikacja.json) wiąże wynik 15 testów z sumami źródeł.
+Druga komenda zapisuje `wyniki.json` obok skryptu. Są to obliczenia z założeń, nie pomiary. Testy obejmują wszystkie długości datagramu 1–600 B, znany wektor CRC, błędy i duplikaty, pięć typów wiadomości oraz przerwanie transakcji bez ACK. [Zapis weryfikacji](weryfikacja.json) wiąże wynik 17 testów z sumami źródeł.
 
 | Plik | Rola |
 |---|---|

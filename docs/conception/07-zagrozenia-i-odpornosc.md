@@ -12,6 +12,7 @@ Poniższa analiza opisuje mechanizmy ochrony i granice. Brak danych terenowych n
 | Brak miejsca lub uszkodzenie bazy | utrata zgłoszeń albo fałszywy zapis | błąd zapisu widoczny; brak automatycznej pustej bazy; kontrola integralności i zasobów | granice logów/kolejki do ustalenia; T2 |
 | Duplikaty lub powtórzone stare statusy | kilka działań dla jednej potrzeby lub cofnięcie informacji | nadawca + id + revision; monotoniczny event; konflikt nie nadpisuje | przejęcie zgłoszenia przez drugą OSP nie ma kontraktu; T2 |
 | Zawieszenie strony | brak formularza | oddzielny rnsd; diagnostyka procesów i kontrolowane wznowienie | laptop pozostaje wspólnym punktem awarii; T1/T2 |
+| Uśpienie laptopa / suspend USB | przekaźnik i strona przestają działać | START zapobiega automatycznemu usypianiu; trwała kolejka i obsługa resume | Y1 w R01.3 nie zamyka budżetu suspend, wymaga nowej rewizji; T1/T3 |
 | Odłączenie USB / modem odrzuca dane | brak transmisji | oddzielny stan radia, liczniki odrzutów, trwała kolejka aplikacji | niesprawdzone zachowanie timeoutów LXMF; T3 |
 | Zanik przekaźnika | podział sieci | pomiar kontaktu, alternatywne połączenie tylko jeśli istnieje, priorytet energii przekaźnika | jedna droga może odciąć całe schronienie; T5 |
 | OSP działa, ale brak dyżurnego | trwałe przyjęcie bez działania | jawny odczyt/decyzja, uzgodnione zastępstwo i kontrola dyżuru | sama sieć nie zapewnia ludzi ani środków; T8 |
