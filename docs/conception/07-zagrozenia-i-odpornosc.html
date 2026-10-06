@@ -1,0 +1,112 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: CC-BY-4.0 -->
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>07. Zagrożenia i odporność · koncepcja WICI</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#tresc">Przejdź do treści</a>
+<header class="site-header">
+  <div class="inner">
+    <a class="brand" href="index.html">WICI <span>· koncepcja systemu</span></a>
+    <a class="jump" href="#rozdzialy">Rozdziały ↓</a>
+    <span class="status">Prototyp 0.4 · sprzęt <b>HOLD</b></span>
+  </div>
+</header>
+<div class="layout">
+  <nav class="chapters" id="rozdzialy" aria-label="Rozdziały koncepcji">
+    <p class="nav-title">Rozdziały</p>
+    <ol>
+      <li><a href="index.html">Przegląd koncepcji</a></li>
+      <li><a href="01-potrzeby-i-wymagania.html">01. Potrzeby i wymagania</a></li>
+      <li><a href="02-scenariusze-i-organizacja.html">02. Scenariusze i organizacja</a></li>
+      <li><a href="03-dostepne-rozwiazania.html">03. Dostępne rozwiązania</a></li>
+      <li><a href="04-analiza-opcji.html">04. Analiza opcji</a></li>
+      <li><a href="05-projekt-koncepcyjny-komunikacji.html">05. Projekt koncepcyjny komunikacji</a></li>
+      <li><a href="06-wykonalnosc-i-budzet-zasobow.html">06. Wykonalność i budżet zasobów</a></li>
+      <li><a href="07-zagrozenia-i-odpornosc.html" aria-current="page">07. Zagrożenia i odporność</a></li>
+      <li><a href="08-plan-weryfikacji-i-decyzje.html">08. Plan weryfikacji i decyzje</a></li>
+      <li><a href="zrodla.html">Źródła</a></li>
+    </ol>
+  </nav>
+  <main id="tresc">
+<article>
+<h1>07. Zagrożenia i odporność</h1>
+
+<nav class="on-page" aria-label="Na tej stronie">
+<p>Na tej stronie</p>
+<ol>
+  <li><a href="#priorytet-awarii">Priorytet awarii</a></li>
+  <li><a href="#ochrona-danych-i-zaufania">Ochrona danych i zaufania</a></li>
+  <li><a href="#warunki-uzycia-i-odbudowa">Warunki użycia i odbudowa</a></li>
+</ol>
+</nav>
+
+<h2 id="priorytet-awarii">Priorytet awarii</h2>
+
+<p>Najgroźniejsze są pozorne potwierdzenie, błędna informacja o skierowaniu pomocy oraz uszkodzenie zasilania z ryzykiem dla ludzi. Następnie: utrata trwałych danych, odcięcie jedynego przekaźnika/odbiorcy i długotrwałe przeciążenie. Awaria pojedynczego portu ładowania jest mniej krytyczna dla łączności, ponieważ ma osobne zasilanie.</p>
+
+<p>Poniższa analiza opisuje mechanizmy ochrony i granice. Brak danych terenowych nie pozwala przypisać wiarygodnych częstości awarii ani liczbowego wskaźnika ryzyka.</p>
+
+<div class="table-wrap"><table class="wide">
+<thead><tr>
+<th scope="col">Awaria / zagrożenie</th>
+<th scope="col">Skutek</th>
+<th scope="col">Wykrycie i ograniczenie</th>
+<th scope="col">Ryzyko pozostałe / próba</th>
+</tr></thead><tbody>
+<tr><td>OSP zapisuje ACK przed danymi</td><td>źródło wierzy w zgłoszenie, którego nie ma</td><td>RECEIVED dopiero po COMMIT; intencja ACK w tej samej transakcji</td><td>fizyczny nośnik może łamać gwarancje; odcięcia zasilania T2</td></tr>
+<tr><td>Brak miejsca lub uszkodzenie bazy</td><td>utrata zgłoszeń albo fałszywy zapis</td><td>błąd zapisu widoczny; brak automatycznej pustej bazy; kontrola integralności i zasobów</td><td>granice logów/kolejki do ustalenia; T2</td></tr>
+<tr><td>Duplikaty lub powtórzone stare statusy</td><td>kilka działań dla jednej potrzeby lub cofnięcie informacji</td><td>nadawca + id + revision; monotoniczny event; konflikt nie nadpisuje</td><td>przejęcie zgłoszenia przez drugą OSP nie ma kontraktu; T2</td></tr>
+<tr><td>Zawieszenie strony</td><td>brak formularza</td><td>oddzielny rnsd; diagnostyka procesów i kontrolowane wznowienie</td><td>laptop pozostaje wspólnym punktem awarii; T1/T2</td></tr>
+<tr><td>Uśpienie laptopa / suspend USB</td><td>przekaźnik i strona przestają działać</td><td>START zapobiega automatycznemu usypianiu; trwała kolejka i obsługa resume</td><td>Y1 w R01.3 nie zamyka budżetu suspend, wymaga nowej rewizji; T1/T3</td></tr>
+<tr><td>Odłączenie USB / modem odrzuca dane</td><td>brak transmisji</td><td>oddzielny stan radia, liczniki odrzutów, trwała kolejka aplikacji</td><td>niesprawdzone zachowanie timeoutów LXMF; T3</td></tr>
+<tr><td>Zanik przekaźnika</td><td>podział sieci</td><td>pomiar kontaktu, alternatywne połączenie tylko jeśli istnieje, priorytet energii przekaźnika</td><td>jedna droga może odciąć całe schronienie; T5</td></tr>
+<tr><td>OSP działa, ale brak dyżurnego</td><td>trwałe przyjęcie bez działania</td><td>jawny odczyt/decyzja, uzgodnione zastępstwo i kontrola dyżuru</td><td>sama sieć nie zapewnia ludzi ani środków; T8</td></tr>
+<tr><td>Przeciążenie / ponowienia wielu stacji</td><td>rosnące opóźnienie pilnych potrzeb</td><td>ograniczone bufory, rozłożone ponowienia, małe wiadomości, monitorowanie wieku kolejki</td><td>brak gwarantowanego priorytetu eteru; odstęp ponowień LXMF (≥10 s) bywa krótszy niż cykl przekaźnika; T3/T5</td></tr>
+<tr><td>Ukryte nadajniki / zakłócenia</td><td>kolizje i utrata fragmentów</td><td>CCA i losowe odroczenie; właściwa antena; pomiar przy pracującym zasilaniu</td><td>brak odporności na celowe zagłuszanie; T4/T5/T6</td></tr>
+<tr><td>Restart zeruje budżet TX</td><td>przekroczenie warunków pracy nadajnika</td><td>trwały dług ciszy przed TX; niepoprawny dziennik blokuje TX, RX trwa</td><td>zużycie i przerwany zapis EEPROM wymagają próby; T4</td></tr>
+<tr><td>Rozładowanie obu A/B / udar nowego źródła</td><td>reset sieci i możliwa awaria elementów</td><td>kolejność podłączenia, każdy tor na pełne obciążenie, bezpieczniki i kwalifikacja udaru</td><td>diody nie są regulatorem i nie eliminują udaru; T6</td></tr>
+<tr><td>Awaria regulatora portu telefonu</td><td>przepięcie telefonu</td><td>niezależne porty, OVP i próba wymuszonej awarii bez telefonu</td><td>obecny crowbar nie jest odebraną ochroną; T6</td></tr>
+<tr><td>Przebicie / błędne PE własnej przetwornicy</td><td>porażenie lub pożar</td><td>ukończona ochrona AC, izolacja i badanie konfiguracji przez kompetentnego wykonawcę</td><td>zgodność nie wynika ze schematu ani modelu; HOLD, T6</td></tr>
+<tr><td>Utrata klucza / skopiowana tożsamość</td><td>brak zaufania albo podszycie</td><td>kontrolowana kopia, jedna aktywna instancja, procedura zmiany klucza</td><td>unieważnianie offline i odtworzenie po utracie do opracowania; T2/T8</td></tr>
+<tr><td>Obcy użytkownik w LAN</td><td>odczyt HTTP, nadużycie formularza lub panelu</td><td>minimalne dane, tokeny, logowanie opiekuna, walidacja i ograniczenia ruchu</td><td>HTTP nie chroni lokalnej poufności; T2</td></tr>
+</tbody></table></div>
+
+<h2 id="ochrona-danych-i-zaufania">Ochrona danych i zaufania</h2>
+
+<p>Zagrożenia obejmują przypadkowego użytkownika, osobę w tej samej sieci, podszycie pod OSP, kradzież laptopa i celowe zakłócanie radia. Bazowe szyfrowanie Reticulum nie rozwiązuje zagrożeń po obu końcach transmisji. Nie ma podstaw do deklaracji bezpiecznej pracy na przejętym komputerze.</p>
+
+<p>Token ogranicza dostęp aplikacyjny do zgłoszenia, lecz przesyłany przez HTTP może zostać przechwycony. Hasło Wi-Fi nie zastępuje HTTPS. Na dysku przechowywane są dane i klucz stacji; bazowy projekt nie definiuje ich szyfrowania w spoczynku. Dlatego zbierać minimum, nie publikować zbiorczej listy potrzeb mieszkańców i ograniczać fizyczny dostęp do laptopa oraz kopii.</p>
+
+<p>Przed pilotażem uzgodnić: osobę odpowiedzialną za dane, cel i czas przechowywania, zakres kopii, uprawnienia dyżurnych, usuwanie danych po zakończeniu pracy i postępowanie po kradzieży. Nie dodawać samowolnie sztywnego okresu retencji jako rzekomego wymogu prawnego. Eksport obejmuje sekret tożsamości i wymaga takiej samej ochrony jak stacja.</p>
+
+<p>Karta OSP musi pochodzić z niezależnego potwierdzenia, a nie automatycznie z pierwszego napotkanego nadajnika. Nieznana stacja nie może sama nadać sobie adresu lub roli służby. Podpisany komunikat wymaga oznaczenia źródła i czasu odbioru; dyżurny nadal odpowiada za jego treść.</p>
+
+<h2 id="warunki-uzycia-i-odbudowa">Warunki użycia i odbudowa</h2>
+
+<p>Propozycja pilotażu: laptop i zasilanie w suchym, osłoniętym miejscu, antena na zewnątrz z ochroną przewodu i odciążeniem złącza. Droga przewodu nie może uniemożliwiać zamknięcia wymaganych drzwi ani tworzyć przeszkody ewakuacyjnej. Uzgodnić miejsce i sposób mocowania. Praca w wilgoci, mrozie, po upadku, podczas rozruchu silnika oraz w atmosferze wymagającej specjalnych zabezpieczeń nie jest zakwalifikowana.</p>
+
+<p>Aktualny odbiór ładowarki przewiduje 40°C otoczenia. Nie daje to zakresu temperatur całej stacji. Przed wdrożeniem trzeba określić i zweryfikować zakres dla kompletu, wraz z obudową, kablami, wentylacją i ogniwami. Nie zakładać, że element o katalogowym zakresie temperatur nadaje ten zakres gotowej konstrukcji.</p>
+
+<p>Minimalny zasób naprawczy na pilotaż: sprawdzony drugi host lub dostępny zamiennik, Ethernet/USB, bezpieczniki o właściwej wartości, antena/przewód i odczytywalna kopia wydania. Najpierw ustalić, czy błąd dotyczy strony, zapisu, modemu, trasy, odbiorcy czy zasilania. Ponowny start nie jest odpowiedzią na nieznany błąd bazy albo ochrony elektrycznej.</p>
+
+<p>PRZENIEŚ STACJĘ zachowuje tożsamość i bazę przez kontrolowany eksport; stara instancja przestaje pracować. Po nagłej utracie bez kopii nie da się obiecać odzyskania ostatnich lokalnych zgłoszeń. Odbiorca może mieć dane przyjęte wcześniej, ale to nie jest kopia całej bazy schronienia. <a href="../spec/oprogramowanie.md">Procedura w specyfikacji</a>.</p>
+</article>
+<nav class="pager" aria-label="Kolejność czytania">
+  <a class="prev" href="06-wykonalnosc-i-budzet-zasobow.html" rel="prev"><span>← Poprzedni</span>06. Wykonalność i budżet zasobów</a>
+  <a class="next" href="08-plan-weryfikacji-i-decyzje.html" rel="next"><span>Następny →</span>08. Plan weryfikacji i decyzje</a>
+</nav>
+  </main>
+</div>
+<footer class="site-footer">
+  <div class="inner">
+    <p>Analiza: <a href="../../LICENSES/CC-BY-4.0.txt">CC-BY-4.0</a>. <a href="../../LICENSE.md">Mapa licencji projektu</a>.</p>
+    <p>Parametry i warunki odbioru: <a href="../README.md">specyfikacja 0.4</a>. Kod: <a href="https://github.com/tmierzwa/WICI">tmierzwa/WICI</a>.</p>
+  </div>
+</footer>
+</body>
+</html>

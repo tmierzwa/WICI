@@ -4,7 +4,7 @@ Projekt jest prototypem. Zmiany mają upraszczać wykonanie, usuwać zależnoś�
 
 1. Dla większej zmiany otwórz [Issue](https://github.com/tmierzwa/WICI/issues): problem, proponowany zakres i warunek sprawdzenia. Małe poprawki można wysłać bezpośrednio jako pull request.
 2. Pracuj w swojej gałęzi. Opisz, co zmienia PR i czym zostało sprawdzone.
-3. Parametry i kontrakty stacji zmieniaj w `docs/spec/`. Potrzeby, uzasadnienia, opcje i analizę wykonalności utrzymuj w [docs/conception](docs/conception/README.md). Aktualizuj powiązane wymagania i próby; odróżniaj założenie od pomiaru. Nie twórz drugiej pełnej kopii specyfikacji.
+3. Parametry i kontrakty stacji zmieniaj w `docs/spec/`. Potrzeby, uzasadnienia, opcje i analizę wykonalności utrzymuj w [docs/conception](docs/conception/index.html). Aktualizuj powiązane wymagania i próby; odróżniaj założenie od pomiaru. Nie twórz drugiej pełnej kopii specyfikacji.
 4. Zmiana kodu kontraktów wymaga przypadku, który pokazuje problem, i wyniku odpowiednich testów. Raport zaktualizuj dopiero po ich wykonaniu.
 5. Zmiana CAD wymaga aktualnych ERC/DRC, eksportów i kontroli paczki według [procedury odtworzenia](hardware/radio-test-r01/odtworzenie.md). Zmiana elektryczna wymaga nowej rewizji. Nie zmieniaj historycznych raportów na wyniki nowych prób.
 6. Raport z prób fizycznych podaje rewizję, elementy, warunki, metodę i wynik. Nie oznaczaj niewykonanych prób jako zaliczonych. Sam CI nie zwalnia statusu HOLD.

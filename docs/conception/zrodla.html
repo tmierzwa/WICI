@@ -1,0 +1,112 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: CC-BY-4.0 -->
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Źródła koncepcji · koncepcja WICI</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#tresc">Przejdź do treści</a>
+<header class="site-header">
+  <div class="inner">
+    <a class="brand" href="index.html">WICI <span>· koncepcja systemu</span></a>
+    <a class="jump" href="#rozdzialy">Rozdziały ↓</a>
+    <span class="status">Prototyp 0.4 · sprzęt <b>HOLD</b></span>
+  </div>
+</header>
+<div class="layout">
+  <nav class="chapters" id="rozdzialy" aria-label="Rozdziały koncepcji">
+    <p class="nav-title">Rozdziały</p>
+    <ol>
+      <li><a href="index.html">Przegląd koncepcji</a></li>
+      <li><a href="01-potrzeby-i-wymagania.html">01. Potrzeby i wymagania</a></li>
+      <li><a href="02-scenariusze-i-organizacja.html">02. Scenariusze i organizacja</a></li>
+      <li><a href="03-dostepne-rozwiazania.html">03. Dostępne rozwiązania</a></li>
+      <li><a href="04-analiza-opcji.html">04. Analiza opcji</a></li>
+      <li><a href="05-projekt-koncepcyjny-komunikacji.html">05. Projekt koncepcyjny komunikacji</a></li>
+      <li><a href="06-wykonalnosc-i-budzet-zasobow.html">06. Wykonalność i budżet zasobów</a></li>
+      <li><a href="07-zagrozenia-i-odpornosc.html">07. Zagrożenia i odporność</a></li>
+      <li><a href="08-plan-weryfikacji-i-decyzje.html">08. Plan weryfikacji i decyzje</a></li>
+      <li><a href="zrodla.html" aria-current="page">Źródła</a></li>
+    </ol>
+  </nav>
+  <main id="tresc">
+<article>
+<h1>Źródła koncepcji</h1>
+
+<nav class="on-page" aria-label="Na tej stronie">
+<p>Na tej stronie</p>
+<ol>
+  <li><a href="#projekt-wici-dane-wejsciowe">Projekt WICI — dane wejściowe</a></li>
+  <li><a href="#implementacje-i-dokumentacja-pierwotna">Implementacje i dokumentacja pierwotna</a></li>
+  <li><a href="#radio-warunki-prawne-do-potwierdzenia">Radio — warunki prawne do potwierdzenia</a></li>
+</ol>
+</nav>
+
+<p>Przegląd materiałów: 2026-10-06. Link do bieżącej gałęzi lub strony nie przypina wersji wydania. Przed budową pakietu START wybrać konkretne wydania/commity i zachować ich hashe oraz oryginalne licencje.</p>
+
+<h2 id="projekt-wici-dane-wejsciowe">Projekt WICI — dane wejściowe</h2>
+
+<ul>
+  <li><a href="../README.md">Specyfikacja 0.4</a>: parametry, kontrakty i <a href="../spec/odbior.md">odbiór</a>.</li>
+  <li><a href="../../software/reference/README.md">Model i dowody</a>: ramki, komunikaty i transakcje; <a href="../../software/reference/wyniki.json">wyniki obliczeń</a>.</li>
+  <li><a href="../../hardware/radio-test-r01/README.md">Kontroler USB R01.3</a>: CAD, eksporty, raporty i status HOLD.</li>
+  <li><a href="../spec/bom-stacji.csv">BOM całej stacji</a>: kandydaci elementów, nie zakwalifikowana oferta produkcji.</li>
+</ul>
+
+<p>Obliczenia rozdziału 06 są oszacowaniami projektowymi z podanymi wzorami. Rozdział 08 oddziela istniejące warunki odbioru od nowych propozycji organizacji prób. Rozdział 02 opisuje proponowany sposób pracy; nie stanowi uzgodnienia z konkretną OSP.</p>
+
+<h2 id="implementacje-i-dokumentacja-pierwotna">Implementacje i dokumentacja pierwotna</h2>
+
+<div class="table-wrap"><table>
+<thead><tr>
+<th scope="col">Źródło</th>
+<th scope="col">Zastosowanie w analizie</th>
+</tr></thead><tbody>
+<tr><td><a href="https://reticulum.network/manual/understanding.html">Reticulum — działanie</a></td><td>role tożsamości, transportu i fizycznych interfejsów</td></tr>
+<tr><td><a href="https://reticulum.network/manual/interfaces.html">Reticulum — interfejsy</a></td><td>RNode, KISS i możliwość własnego adaptera</td></tr>
+<tr><td><a href="https://github.com/markqvist/Reticulum/blob/master/RNS/Interfaces/KISSInterface.py">KISSInterface — kod</a></td><td>rzeczywisty timeout kontroli przepływu; do ponownego sprawdzenia dla przypiętej wersji</td></tr>
+<tr><td><a href="https://github.com/markqvist/LXMF">LXMF — projekt</a></td><td>wiadomości i opcjonalne węzły przechowywania</td></tr>
+<tr><td><a href="https://github.com/markqvist/LXMF/blob/master/LXMF/LXMessage.py">LXMessage — kod</a></td><td>wybór pakietu lub zasobu; narzut trzeba pomierzyć dla wydania</td></tr>
+<tr><td><a href="https://github.com/markqvist/NomadNet">NomadNet</a></td><td>klient tekstowy i strony Micron</td></tr>
+<tr><td><a href="https://meshtastic.org/docs/overview/mesh-algo/">Meshtastic — algorytm sieci</a></td><td>sposób przekazywania i znaczenie ACK</td></tr>
+<tr><td><a href="https://github.com/meshcore-dev/MeshCore">MeshCore</a></td><td>istniejące role klienta, przekaźnika i modemu</td></tr>
+<tr><td><a href="https://github.com/sudomesh/disaster-radio">disaster.radio</a></td><td>zbliżona koncepcja Wi-Fi + LoRa; informacja o wstrzymaniu prac</td></tr>
+<tr><td><a href="https://www.ti.com/lit/ds/symlink/cc1120.pdf">TI CC1120 — datasheet</a></td><td>funkcje układu RF; nie dowód zasięgu P1</td></tr>
+<tr><td><a href="https://www.st.com/resource/en/datasheet/s2-lp.pdf">ST S2-LP — datasheet</a></td><td>drugie wykonanie RF; osobne dopasowanie i konfiguracja</td></tr>
+<tr><td><a href="https://sqlite.org/atomiccommit.html">SQLite — atomic commit</a> i <a href="https://sqlite.org/backup.html">backup API</a></td><td>warunki trwałości i kontrolowanej kopii bazy</td></tr>
+</tbody></table></div>
+
+<p>Licencja WICI nie zastępuje licencji zależności. <a href="https://github.com/markqvist/Reticulum/blob/e40191b3d193b46b7f2d8a44424a594cd758839b/LICENSE">LICENSE Reticulum</a> oraz <a href="https://github.com/markqvist/LXMF/blob/c3ff2d6dc2f256daab896dadc044dd5a913ecbb7/LICENSE">LICENSE LXMF</a> zawierają dodatkowe ograniczenia dotyczące celowego krzywdzenia ludzi i tworzenia zbiorów do treningu AI. Przed połączeniem i dystrybucją pakietu z własnym kodem GPL trzeba rozstrzygnąć zgodność tych dodatkowych warunków z GPL; samo dołączenie pliku licencji nie zamyka problemu. Obecne repozytorium nie dołącza kodu Reticulum/LXMF; analiza nie oznacza zatwierdzenia przyszłej paczki zależności.</p>
+
+<p>Możliwe drogi rozstrzygnięcia, do oceny prawnej przed wyborem:</p>
+
+<ul>
+  <li><strong>Dodatkowe uprawnienie GPL:</strong> autorzy kodu WICI dodają na podstawie sekcji 7 GPLv3 zgodę na łączenie i dystrybucję z Reticulum/LXMF na ich licencjach. Pozostały kod zostaje na GPL.</li>
+  <li><strong>Licencja permisywna dla kodu aplikacji:</strong> np. MIT lub Apache-2.0 dla <code>software/</code> i przyszłej strony. Ograniczenia zależności dotyczą wtedy tylko ich części pakietu.</li>
+  <li><strong>Zależności poza pakietem:</strong> zgodne z licencjami, ale START nie działa wtedy bez pobierania bibliotek, co narusza W01.</li>
+</ul>
+
+<p>Dopóki cały kod ma jednego autora, dwie pierwsze zmiany wymagają tylko decyzji tego autora. Po przyjęciu cudzego wkładu potrzebna jest zgoda każdego autora, dlatego drogę warto wybrać przed przyjęciem pierwszego cudzego wkładu. Pakiet z tymi zależnościami nie jest w całości na licencjach zatwierdzonych przez OSI; trzeba to podać w opisie wydania. Decyzja: D09 w <a href="08-plan-weryfikacji-i-decyzje.html">planie weryfikacji</a>.</p>
+
+<h2 id="radio-warunki-prawne-do-potwierdzenia">Radio — warunki prawne do potwierdzenia</h2>
+
+<p><a href="https://eur-lex.europa.eu/eli/dec_impl/2025/105/oj/eng">Decyzja wykonawcza UE 2025/105</a> podaje dla 869,4–869,65 MHz warunki obejmujące do 500 mW ERP i wariant aktywności do 10%. Moc na złączu, ERP i EIRP są różnymi wielkościami. WICI przyjmuje ograniczenie czasu TX; obecność CCA nie uprawnia do pominięcia go.</p>
+
+<p>Punktem sprawdzenia warunków krajowych jest <a href="https://eli.gov.pl/eli/DU/2022/567/ogl">rozporządzenie o urządzeniach bez pozwolenia radiowego, Dz.U. 2022 poz. 567</a>. Przed próbą nadawania sprawdzić aktualny stan przepisów, właściwy załącznik i zastosowanie do konkretnego urządzenia. Ta analiza nie zamyka kwalifikacji prawnej. Emisje poza pasmem, antena, cały tor i bezpieczeństwo gotowego urządzenia wymagają własnego potwierdzenia; dopuszczalna częstotliwość nie jest dopuszczeniem konstrukcji.</p>
+</article>
+<nav class="pager" aria-label="Kolejność czytania">
+  <a class="prev" href="08-plan-weryfikacji-i-decyzje.html" rel="prev"><span>← Poprzedni</span>08. Plan weryfikacji i decyzje</a>
+</nav>
+  </main>
+</div>
+<footer class="site-footer">
+  <div class="inner">
+    <p>Analiza: <a href="../../LICENSES/CC-BY-4.0.txt">CC-BY-4.0</a>. <a href="../../LICENSE.md">Mapa licencji projektu</a>.</p>
+    <p>Parametry i warunki odbioru: <a href="../README.md">specyfikacja 0.4</a>. Kod: <a href="https://github.com/tmierzwa/WICI">tmierzwa/WICI</a>.</p>
+  </div>
+</footer>
+</body>
+</html>

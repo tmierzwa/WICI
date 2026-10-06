@@ -14,6 +14,9 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from tools.archives import verify_archive, write_archive
 
+sys.path.insert(0, str(ROOT / "tools"))
+from verify_repository import check_links
+
 
 class ArchiveTests(unittest.TestCase):
     """Exercise incomplete, stale and ambiguous distributions."""
@@ -83,6 +86,24 @@ class ArchiveTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0, result.stdout)
             self.assertIn("Archive must contain", result.stderr)
             self.assertEqual(before, (status.read_bytes(), manifest.read_bytes()))
+
+
+class DocumentLinkTests(unittest.TestCase):
+    """Reject broken local links and anchors in HTML documents."""
+
+    def test_html_links_and_anchors(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            target = root / "b.html"
+            target.write_text('<h2 id="x">X</h2>', encoding="utf-8")
+            page = root / "a.html"
+            page.write_text('<a href="b.html#x">b</a> <a href="https://example.org/">e</a> '
+                            '<a href="mailto:a@example.org">m</a> <link href="b.html">', encoding="utf-8")
+            self.assertEqual(check_links(page, "a.html"), 2)
+            for broken in ('<a href="b.html#y">b</a>', '<a href="c.html">c</a>', '<a href="#y">self</a>'):
+                page.write_text(broken, encoding="utf-8")
+                with self.assertRaises(ValueError):
+                    check_links(page, "a.html")
 
 
 if __name__ == "__main__":

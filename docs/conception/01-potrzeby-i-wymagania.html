@@ -1,0 +1,125 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: CC-BY-4.0 -->
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>01. Potrzeby i wymagania · koncepcja WICI</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#tresc">Przejdź do treści</a>
+<header class="site-header">
+  <div class="inner">
+    <a class="brand" href="index.html">WICI <span>· koncepcja systemu</span></a>
+    <a class="jump" href="#rozdzialy">Rozdziały ↓</a>
+    <span class="status">Prototyp 0.4 · sprzęt <b>HOLD</b></span>
+  </div>
+</header>
+<div class="layout">
+  <nav class="chapters" id="rozdzialy" aria-label="Rozdziały koncepcji">
+    <p class="nav-title">Rozdziały</p>
+    <ol>
+      <li><a href="index.html">Przegląd koncepcji</a></li>
+      <li><a href="01-potrzeby-i-wymagania.html" aria-current="page">01. Potrzeby i wymagania</a></li>
+      <li><a href="02-scenariusze-i-organizacja.html">02. Scenariusze i organizacja</a></li>
+      <li><a href="03-dostepne-rozwiazania.html">03. Dostępne rozwiązania</a></li>
+      <li><a href="04-analiza-opcji.html">04. Analiza opcji</a></li>
+      <li><a href="05-projekt-koncepcyjny-komunikacji.html">05. Projekt koncepcyjny komunikacji</a></li>
+      <li><a href="06-wykonalnosc-i-budzet-zasobow.html">06. Wykonalność i budżet zasobów</a></li>
+      <li><a href="07-zagrozenia-i-odpornosc.html">07. Zagrożenia i odporność</a></li>
+      <li><a href="08-plan-weryfikacji-i-decyzje.html">08. Plan weryfikacji i decyzje</a></li>
+      <li><a href="zrodla.html">Źródła</a></li>
+    </ol>
+  </nav>
+  <main id="tresc">
+<article>
+<h1>01. Potrzeby i wymagania</h1>
+
+<nav class="on-page" aria-label="Na tej stronie">
+<p>Na tej stronie</p>
+<ol>
+  <li><a href="#problem-i-granica-systemu">Problem i granica systemu</a></li>
+  <li><a href="#wymagania-i-ich-pochodzenie">Wymagania i ich pochodzenie</a></li>
+  <li><a href="#minimalna-informacja">Minimalna informacja</a></li>
+  <li><a href="#dane-do-zebrania-przed-pilotazem">Dane do zebrania przed pilotażem</a></li>
+</ol>
+</nav>
+
+<h2 id="problem-i-granica-systemu">Problem i granica systemu</h2>
+
+<p>Po utracie zasilania i publicznych sieci mieszkańcy potrzebują lokalnej informacji oraz sposobu zgłoszenia: gdzie są, czego brakuje i ilu osób dotyczy potrzeba. Odbiorca potrzebuje krótkiego, jednoznacznego zgłoszenia i możliwości odesłania decyzji. Samo wysłanie nie dowodzi, że ktoś je odczytał lub skierował pomoc.</p>
+
+<p>WICI obejmuje lokalną stronę, kolejkę zgłoszeń, radio, przekaźniki i stanowisko odbiorcze. Organizacja pomocy, dostępność ludzi, transport, medycyna oraz wyposażenie schronienia pozostają poza technicznym systemem. Przed pilotażem muszą jednak zostać uzgodnione z odbiorcą.</p>
+
+<p>Nie ma danych pozwalających obiecać, że w dowolnej społeczności znajdzie się sprawny komplet urządzeń. Przyjmujemy ponowne użycie sprzętu po sprawdzeniu na miejscu. Brak laptopa, jego zasilacza lub dostępu do konfiguracji routera jest rzeczywistą przeszkodą uruchomienia.</p>
+
+<h2 id="wymagania-i-ich-pochodzenie">Wymagania i ich pochodzenie</h2>
+
+<p>U = ustalenie użytkowe; S = warunek przyjęty w specyfikacji (wybór bazowy); P = propozycja próby lub organizacji tej koncepcji. Kategorie ustaleń objaśnia <a href="index.html">przegląd koncepcji</a>. Numery prób T1–T8 zdefiniowano w <a href="08-plan-weryfikacji-i-decyzje.html">planie weryfikacji</a>. Wszystkie właściwości sprzętowe i operacyjne w tabeli nadal wymagają wykazania.</p>
+
+<div class="table-wrap"><table class="wide">
+<thead><tr>
+<th scope="col">ID</th>
+<th scope="col">Wymaganie</th>
+<th scope="col">Pochodzenie</th>
+<th scope="col">Sprawdzenie</th>
+</tr></thead><tbody>
+<tr><td>W01</td><td>Działać bez internetu i usług zewnętrznych; start bez pobierania bibliotek</td><td>U/S</td><td>T1, T2</td></tr>
+<tr><td>W02</td><td>Obsłużyć około 50 mieszkańców: 50 telefonów połączonych z Wi-Fi, 15 aktywnych klientów strony</td><td>U/S</td><td>T1</td></tr>
+<tr><td>W03</td><td>Pozwalać wysłać zgłoszenie z przeglądarki bez konta i instalacji; opiekun obsługuje osoby bez telefonu</td><td>U/S/P</td><td>T1, T8</td></tr>
+<tr><td>W04</td><td>Zapewnić lokalną informację oraz krótkie zgłoszenia, odpowiedzi, statusy i komunikaty; bez głosu i obrazów przez radio</td><td>U/S</td><td>T1, T2</td></tr>
+<tr><td>W05</td><td>Trwale zapisać zgłoszenie i intencję wysyłki przed pokazaniem „zapisane lokalnie”</td><td>S</td><td>T2</td></tr>
+<tr><td>W06</td><td>Odróżnić zapis lokalny, trwały zapis OSP, odczyt i skierowanie pomocy; decyzję podejmuje człowiek</td><td>S</td><td>T2, T8</td></tr>
+<tr><td>W07</td><td>Po restarcie odtworzyć kolejkę; ponowienia nie tworzą drugiego zgłoszenia u odbiorcy</td><td>S</td><td>T2</td></tr>
+<tr><td>W08</td><td>Łączyć sąsiednie stacje w rzeczywistej zabudowie na około 1 km z anteną na zewnątrz, bez wymogu dachu</td><td>U/S</td><td>T5</td></tr>
+<tr><td>W09</td><td>Przekazać zgłoszenie i odpowiedź przez działającą stację pośrednią</td><td>U/S</td><td>T5</td></tr>
+<tr><td>W10</td><td>Przyjąć 50 zgłoszeń rozłożonych w ciągu 5 min i potwierdzić ≥99% w 30 min</td><td>S</td><td>T5</td></tr>
+<tr><td>W11</td><td>Pracować 24 h z zasobem wymienianych źródeł 12 V; wymiana A/B nie resetuje stacji</td><td>U/S</td><td>T6</td></tr>
+<tr><td>W12</td><td>Ładować telefony z osobnego źródła: 8 niezależnych portów USB-A 5 V / 1,5 A</td><td>U/S</td><td>T6</td></tr>
+<tr><td>W13</td><td>Uruchamiać się na zakwalifikowanych komputerach PC i Mac; router zapewnia Wi-Fi, DHCP i dostęp do LAN</td><td>U/S</td><td>T1</td></tr>
+<tr><td>W14</td><td>Nie zależeć od jednego dostawcy wykonania; zakwalifikować dwa niezależne warianty części krytycznych</td><td>U/S</td><td>T3, T4, T6</td></tr>
+<tr><td>W15</td><td>Udostępniać źródła, kontrakty, BOM, pliki wykonawcze i instrukcję umożliwiające odtworzenie</td><td>U/S</td><td>T7</td></tr>
+<tr><td>W16</td><td>Przyjmować status i komunikat wyłącznie od zaufanej tożsamości OSP; ograniczyć dane mieszkańców i dostęp do zgłoszeń</td><td>S</td><td>T2</td></tr>
+<tr><td>W17</td><td>Spełnić warunki radiowe i wymagania bezpieczeństwa elektrycznego gotowej konfiguracji</td><td>S</td><td>T4, T6</td></tr>
+<tr><td>W18</td><td>Pokazywać stan awarii oraz umożliwiać obsługę przez opiekuna i zastępcę według krótkiej instrukcji</td><td>U/P</td><td>T8</td></tr>
+</tbody></table></div>
+
+<p>W08–W10 są celami do odbioru, nie gwarancją zasięgu i terminowości w dowolnej sieci. W13 oznacza macierz sprawdzonych konfiguracji, nie obsługę każdego znalezionego urządzenia. W14 wymaga w pełni wykonanych alternatyw; zakup tego samego układu u dwóch sprzedawców nie wystarcza.</p>
+
+<h2 id="minimalna-informacja">Minimalna informacja</h2>
+
+<p>Zgłoszenie zawiera kategorię, liczbę osób, dokładną lokalizację i wejście, krótki opis, pilność oraz identyfikator i wersję. Adres musi umożliwiać dojazd bez wcześniejszego profilu budynku. W OSP musi dać się odróżnić nowe zgłoszenie od zmiany poprzedniego. Limity bajtów i format są w <a href="../spec/oprogramowanie.md">specyfikacji oprogramowania</a>.</p>
+
+<p>Lokalnie potrzebne są: informacje opiekuna, komunikaty OSP, stan łączności i własnego zgłoszenia. Tablica ofert pomocy, zdjęcia, mapy oraz automatyczna ocena medyczna zwiększają zakres; nie są warunkiem pierwszego prototypu.</p>
+
+<h2 id="dane-do-zebrania-przed-pilotazem">Dane do zebrania przed pilotażem</h2>
+
+<div class="table-wrap"><table>
+<thead><tr>
+<th scope="col">Obszar</th>
+<th scope="col">Informacja konieczna do decyzji</th>
+</tr></thead><tbody>
+<tr><td>Miejsce</td><td>adres i wejście, możliwość wyprowadzenia anteny, metalowe przeszkody, odległość do sąsiada i odbiorcy</td></tr>
+<tr><td>Urządzenia</td><td>model/architektura laptopa, stan systemu i startu USB, oryginalny zasilacz, model routera i dostęp do panelu</td></tr>
+<tr><td>Energia</td><td>rzeczywisty pobór kompletnej stacji, napięcie/stan/pojemność źródeł, dozwolony prąd gniazda i przewodów</td></tr>
+<tr><td>Pomoc</td><td>kto pełni dyżur, jakie działania może zlecić, zastępstwo, drugi odbiorca i kanał awaryjny</td></tr>
+<tr><td>Obsługa</td><td>opiekun i zastępca, dostępność poza godzinami pracy, miejsce urządzeń, papierowa instrukcja</td></tr>
+</tbody></table></div>
+
+<p>Brak limitu kosztu i danych zakupowych nie pozwala zamknąć ceny zestawu. Koszt należy oceniać razem z energią, wykonaniem i próbami; <a href="06-wykonalnosc-i-budzet-zasobow.html">metoda</a> rozdziela te składniki.</p>
+</article>
+<nav class="pager" aria-label="Kolejność czytania">
+  <a class="prev" href="index.html" rel="prev"><span>← Poprzedni</span>Przegląd koncepcji</a>
+  <a class="next" href="02-scenariusze-i-organizacja.html" rel="next"><span>Następny →</span>02. Scenariusze i organizacja</a>
+</nav>
+  </main>
+</div>
+<footer class="site-footer">
+  <div class="inner">
+    <p>Analiza: <a href="../../LICENSES/CC-BY-4.0.txt">CC-BY-4.0</a>. <a href="../../LICENSE.md">Mapa licencji projektu</a>.</p>
+    <p>Parametry i warunki odbioru: <a href="../README.md">specyfikacja 0.4</a>. Kod: <a href="https://github.com/tmierzwa/WICI">tmierzwa/WICI</a>.</p>
+  </div>
+</footer>
+</body>
+</html>

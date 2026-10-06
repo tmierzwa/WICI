@@ -1,0 +1,104 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: CC-BY-4.0 -->
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>03. Dostępne rozwiązania · koncepcja WICI</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#tresc">Przejdź do treści</a>
+<header class="site-header">
+  <div class="inner">
+    <a class="brand" href="index.html">WICI <span>· koncepcja systemu</span></a>
+    <a class="jump" href="#rozdzialy">Rozdziały ↓</a>
+    <span class="status">Prototyp 0.4 · sprzęt <b>HOLD</b></span>
+  </div>
+</header>
+<div class="layout">
+  <nav class="chapters" id="rozdzialy" aria-label="Rozdziały koncepcji">
+    <p class="nav-title">Rozdziały</p>
+    <ol>
+      <li><a href="index.html">Przegląd koncepcji</a></li>
+      <li><a href="01-potrzeby-i-wymagania.html">01. Potrzeby i wymagania</a></li>
+      <li><a href="02-scenariusze-i-organizacja.html">02. Scenariusze i organizacja</a></li>
+      <li><a href="03-dostepne-rozwiazania.html" aria-current="page">03. Dostępne rozwiązania</a></li>
+      <li><a href="04-analiza-opcji.html">04. Analiza opcji</a></li>
+      <li><a href="05-projekt-koncepcyjny-komunikacji.html">05. Projekt koncepcyjny komunikacji</a></li>
+      <li><a href="06-wykonalnosc-i-budzet-zasobow.html">06. Wykonalność i budżet zasobów</a></li>
+      <li><a href="07-zagrozenia-i-odpornosc.html">07. Zagrożenia i odporność</a></li>
+      <li><a href="08-plan-weryfikacji-i-decyzje.html">08. Plan weryfikacji i decyzje</a></li>
+      <li><a href="zrodla.html">Źródła</a></li>
+    </ol>
+  </nav>
+  <main id="tresc">
+<article>
+<h1>03. Dostępne rozwiązania</h1>
+
+<nav class="on-page" aria-label="Na tej stronie">
+<p>Na tej stronie</p>
+<ol>
+  <li><a href="#rozdzielenie-warstw">Rozdzielenie warstw</a></li>
+  <li><a href="#reticulum-i-lxmf-w-tym-projekcie">Reticulum i LXMF w tym projekcie</a></li>
+  <li><a href="#uklady-radiowe">Układy radiowe</a></li>
+  <li><a href="#czego-nie-budowac-drugi-raz">Czego nie budować drugi raz</a></li>
+</ol>
+</nav>
+
+<h2 id="rozdzielenie-warstw">Rozdzielenie warstw</h2>
+
+<p>Wi-Fi daje mieszkańcowi dostęp do lokalnej strony. Modulacja radiowa przenosi bity między stacjami. Reticulum jest działającą implementacją stosu sieciowego i protokołu, a LXMF implementacją wiadomości. Aplikacja WICI odpowiada za formularz, bazę, statusy i pracę dyżurnego. Żaden pojedynczy wybór w tej tabeli nie dostarcza całego systemu.</p>
+
+<div class="table-wrap"><table class="cols-3">
+<thead><tr>
+<th scope="col">Rozwiązanie</th>
+<th scope="col">Przydatność</th>
+<th scope="col">Granica zastosowania</th>
+</tr></thead><tbody>
+<tr><td>Internet / telefonia</td><td>szybki kontakt i zwykłe kanały pomocy, kiedy dostępne</td><td>zależność od publicznej infrastruktury; nie spełnia W01 jako jedyna droga</td></tr>
+<tr><td>Zwykłe radio głosowe</td><td>rozmowa operatorów i ręczne przekazanie zgłoszenia</td><td>operator musi przepisać dane i status; brak automatycznej trwałej kolejki</td></tr>
+<tr><td>Lokalny router + strona na laptopie</td><td>dostęp telefonów bez instalacji i bez internetu</td><td>lokalny LAN nie łączy odległych schronień; stan i uprawnienia tworzy aplikacja</td></tr>
+<tr><td>Reticulum</td><td>tożsamości, ochrona komunikacji, trasy i transport przez aktywne węzły</td><td>wymaga sprawnych interfejsów i fizycznych połączeń; sam nie prowadzi zgłoszeń OSP</td></tr>
+<tr><td>LXMF</td><td>wiadomości, obsługa wysyłania i opcjonalnego przechowywania pośredniego</td><td>potwierdzenie transportowe nie dowodzi zapisu w bazie WICI ani decyzji człowieka</td></tr>
+<tr><td>NomadNet</td><td>gotowy klient tekstowy operatora, wiadomości i strony Micron</td><td>odrębny interfejs; nie zastępuje lokalnej strony HTTP w przeglądarce telefonu</td></tr>
+<tr><td>RNode / LoRa z Reticulum</td><td>istniejąca droga radiowa do prób tego samego stosu aplikacji</td><td>inny profil radiowy; nie komunikuje się z modemem P1 tylko dlatego, że oba używają Reticulum</td></tr>
+<tr><td>Meshtastic</td><td>istniejąca sieć wiadomości LoRa; zarządzane przekazywanie pakietów</td><td>odrębny protokół i semantyka ACK; interfejs i zapis OSP wymagają integracji</td></tr>
+<tr><td>MeshCore</td><td>istniejące role urządzeń: klient, przekaźnik, serwer pokoju, modem KISS</td><td>odrębny stos; trwałe przyjęcie zgłoszenia i interfejs WICI pozostają do zaprojektowania</td></tr>
+<tr><td>disaster.radio</td><td>przykład połączenia lokalnego Wi-Fi, interfejsu WWW i radia LoRa</td><td>autorzy oznaczają prace jako wstrzymane i projekt jako niedokończony</td></tr>
+</tbody></table></div>
+
+<p>Właściwości wymienionych projektów: <a href="https://reticulum.network/manual/understanding.html">Reticulum</a>, <a href="https://reticulum.network/manual/interfaces.html">interfejsy i RNode</a>, <a href="https://github.com/markqvist/LXMF">LXMF</a>, <a href="https://github.com/markqvist/NomadNet">NomadNet</a>, <a href="https://meshtastic.org/docs/overview/mesh-algo/">Meshtastic</a>, <a href="https://github.com/meshcore-dev/MeshCore">MeshCore</a>, <a href="https://github.com/sudomesh/disaster-radio">disaster.radio</a>. Stan źródeł sprawdzono 2026-10-06. Wydanie WICI musi przypiąć konkretne wersje po próbach zgodności.</p>
+
+<h2 id="reticulum-i-lxmf-w-tym-projekcie">Reticulum i LXMF w tym projekcie</h2>
+
+<p>Reticulum działa na laptopie jako biblioteka i proces transportowy. Włączony transport przekazuje pakiety innych stacji. Interfejs szeregowy łączy je z modemem; modem wykonuje transmisję radiową. Reticulum nie jest urządzeniem radiowym ani samą deklaracją standardu. <a href="https://reticulum.network/manual/understanding.html">Dokumentacja implementacji</a>.</p>
+
+<p>LXMF układa nad tym wiadomości. Węzeł transportowy Reticulum przekazuje bieżący ruch. Węzeł przechowywania LXMF może zachować wiadomość dla nieobecnego odbiorcy; są to różne role. Bazowy przekaźnik WICI nie dostaje automatycznie trwałej skrzynki dla całej sieci. Trwała kolejka własnych zgłoszeń jest w bazie WICI. <a href="https://github.com/markqvist/LXMF">Opis LXMF</a>.</p>
+
+<h2 id="uklady-radiowe">Układy radiowe</h2>
+
+<p>CC1120 firmy TI i S2-LP firmy ST są transceiverami sterowanymi przez SPI. Obsługują FSK/GFSK i mają osobne bufory RX/TX po 128 B. Potrzebują mikrokontrolera, zegara, zasilania, dopasowania RF, anteny i firmware. Płytka rozwojowa pomaga pomierzyć układ, ale nie jest gotową stacją WICI. <a href="https://www.ti.com/lit/ds/symlink/cc1120.pdf">CC1120</a>, <a href="https://www.st.com/resource/en/datasheet/s2-lp.pdf">S2-LP</a>.</p>
+
+<p>Dwa układy nie są zamiennikami pinowymi. Wspólne ustawienia modulacji i format P1 są hipotezą zgodności do sprawdzenia na fizycznych modemach. Katalogowa czułość przy innej szybkości nie jest wynikiem dla P1. Projekt wymaga dwóch layoutów i nastaw, a następnie prób mieszanych TI–ST.</p>
+
+<h2 id="czego-nie-budowac-drugi-raz">Czego nie budować drugi raz</h2>
+
+<p>Użyć stosu sieciowego, kryptografii i biblioteki wiadomości zamiast własnych odpowiedników. Własny kod ograniczyć do lokalnej obsługi potrzeb, transakcji, diagnostyki, pakowania offline i adaptera czasu radia. Znaleziony router powinien realizować zwykły LAN, bez specjalnego firmware i producentowego API.</p>
+
+<p>Gotowe modemy można wykorzystać jako narzędzia porównawcze w laboratorium. Nie uzależnia to docelowej konstrukcji od ich dostępności. Własny sprzęt powinien wynikać z pomiaru i wymagania niezależności dostawców, a nie z założenia, że każda funkcja musi powstać od początku.</p>
+</article>
+<nav class="pager" aria-label="Kolejność czytania">
+  <a class="prev" href="02-scenariusze-i-organizacja.html" rel="prev"><span>← Poprzedni</span>02. Scenariusze i organizacja</a>
+  <a class="next" href="04-analiza-opcji.html" rel="next"><span>Następny →</span>04. Analiza opcji</a>
+</nav>
+  </main>
+</div>
+<footer class="site-footer">
+  <div class="inner">
+    <p>Analiza: <a href="../../LICENSES/CC-BY-4.0.txt">CC-BY-4.0</a>. <a href="../../LICENSE.md">Mapa licencji projektu</a>.</p>
+    <p>Parametry i warunki odbioru: <a href="../README.md">specyfikacja 0.4</a>. Kod: <a href="https://github.com/tmierzwa/WICI">tmierzwa/WICI</a>.</p>
+  </div>
+</footer>
+</body>
+</html>
