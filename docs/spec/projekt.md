@@ -75,6 +75,6 @@ Wymiana C może przerwać ładowanie telefonów, lecz nie łączność. Nie łą
 | Pasywne diody A/B | Bez kodu i sterowania; strata energii oraz konieczne chłodzenie |
 | Mostek niskiego napięcia i transformator 50 Hz | Mniej stopni mocy; większa masa i możliwy większy koszt |
 | Krótkie ramki radiowe | Mieszczą się w FIFO obu układów; dodatkowy narzut fragmentacji |
-| Standardowy JSON w LXMF | Bez własnego kodera binarnego; większy narzut niż wcześniejsze 192 B CBOR |
+| Standardowy JSON w LXMF | Kodowanie z biblioteki standardowej; treść do 480 B |
 
 NomadNet jest opcjonalnym klientem operatora, na osobnej tożsamości. Nie uruchamiamy dwóch routerów LXMF obsługujących tę samą tożsamość stacji. Węzeł przechowywania LXMF jest opcjonalny w OSP; sieć podstawowa przekazuje przez aktywne przekaźniki. [NomadNet](https://github.com/markqvist/NomadNet), [LXMF](https://github.com/markqvist/LXMF).

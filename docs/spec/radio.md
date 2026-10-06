@@ -20,7 +20,7 @@ To wspólny kontrakt dwóch modemów, a nie ustawienia istniejącego RNode. Zmia
 | CRC | programowe CRC-16/CCITT-FALSE; sprzętowe CRC wyłączone |
 | Rozmiar datagramu z USB | 1–600 B |
 
-4800 bit/s zastępuje wcześniejszy kandydat 1200 bit/s. Daje czterokrotnie większą szybkość surową kosztem czułości. Jeśli próba 1 km nie przejdzie, najpierw zmienia się położenie anten i dodaje przekaźnik. Obniżenie szybkości jest nową wersją profilu, a nie ukrytą lokalną opcją.
+Profil P1 używa 4800 bit/s. Jeśli próba 1 km nie przejdzie, najpierw zmienia się położenie anten i dodaje przekaźnik. Obniżenie szybkości jest nową wersją profilu, a nie ukrytą lokalną opcją.
 
 ## Ramka w eterze
 

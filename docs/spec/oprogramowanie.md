@@ -82,4 +82,4 @@ W Linuxie stan znajduje się na osobnej partycji ext4 USB. W Windows/macOS na dy
 
 PRZENIEŚ STACJĘ zatrzymuje nowe zgłoszenia i pracownika wysyłki, wykonuje kopię API SQLite, sprawdza jej integralność, eksportuje tożsamość oraz konfigurację i zatrzymuje starą instancję. Nowy laptop importuje pakiet. Nie używa się jednocześnie obu kopii. Utrata laptopa przed eksportem może utracić ostatnie lokalne dane. [API kopii](https://www.sqlite.org/backup.html).
 
-Pakiety muszą zostać zbudowane i przetestowane na każdej architekturze przed dystrybucją. To nie jest instrukcja instalowania pip w schronieniu. Kod upstream przeglądany przy tym projekcie deklarował RNS 1.5.4, LXMF 1.1.0, NomadNet 1.4.3; są to obserwacje gałęzi, nie zatwierdzony zestaw wydania. Wydanie przypina dokładne archiwa/commity i hashe po próbie zgodności. Nie pobiera `latest` przy uruchomieniu.
+Pakiety muszą zostać zbudowane i przetestowane na każdej architekturze przed dystrybucją. To nie jest instrukcja instalowania pip w schronieniu. Wydanie przypina dokładne archiwa/commity i hashe po próbie zgodności. Nie pobiera `latest` przy uruchomieniu.
