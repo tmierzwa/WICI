@@ -39,12 +39,12 @@ Wystarczy proste radio na bateriach.
 Celujemy w około kilometr zasięgu.
 
 11
-00:00:27,377 --> 00:00:30,303
-Dlatego każda stacja podaje wiadomość dalej, od
+00:00:27,377 --> 00:00:30,116
+Dlatego każda stacja podaje wiadomość dalej,
 
 12
-00:00:30,303 --> 00:00:33,132
-sąsiada do sąsiada, aż dotrze do służb.
+00:00:30,116 --> 00:00:33,132
+od sąsiada do sąsiada, aż dotrze do służb.
 
 13
 00:00:33,132 --> 00:00:34,307
@@ -59,38 +59,38 @@ Stacja to małe pudełko z ekranem,
 przyciskami i bateriami.
 
 16
-00:00:38,786 --> 00:00:41,320
-Włączam stację, wystawiam na zewnątrz
+00:00:38,786 --> 00:00:40,541
+Włączasz stację, wystawiasz
 
 17
-00:00:41,320 --> 00:00:43,363
-antenę i jestem w sieci.
+00:00:40,541 --> 00:00:43,280
+na zewnątrz antenę i jesteś w sieci.
 
 18
-00:00:43,363 --> 00:00:45,789
+00:00:43,280 --> 00:00:45,460
 Laptop i router to kolejne poziomy.
 
 19
-00:00:46,283 --> 00:00:48,225
+00:00:45,950 --> 00:00:47,892
 Projekt jest otwarty, ale jeszcze
 
 20
-00:00:48,225 --> 00:00:50,037
+00:00:47,892 --> 00:00:49,704
 niesprawdzony w terenie.
 
 21
-00:00:50,037 --> 00:00:52,583
+00:00:49,704 --> 00:00:52,250
 Szukamy krótkofalowców, elektroników,
 
 22
-00:00:52,583 --> 00:00:54,717
+00:00:52,250 --> 00:00:54,384
 programistów i ludzi ze służb.
 
 23
-00:00:55,217 --> 00:00:57,089
+00:00:54,883 --> 00:00:56,755
 Szczegóły na GitHubie.
 
 24
-00:00:57,089 --> 00:00:58,366
+00:00:56,755 --> 00:00:58,032
 Rozsyłamy wici!
 

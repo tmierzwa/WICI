@@ -99,12 +99,12 @@ Wystarczy proste, powolne radio.
 Takie zgłoszenie przeleci przez eter w mniej więcej sekundę.
 
 26
-00:01:36,617 --> 00:01:39,928
-To radio nadaje z mocą podobną do pilota do bramy, na
+00:01:36,617 --> 00:01:39,741
+To radio nadaje z mocą podobną do pilota do bramy,
 
 27
-00:01:39,928 --> 00:01:44,015
-częstotliwości, z której korzystają też inne sieci radiowe.
+00:01:39,741 --> 00:01:44,015
+na częstotliwości, z której korzystają też inne sieci radiowe.
 
 28
 00:01:44,015 --> 00:01:46,487
@@ -163,138 +163,142 @@ Zestaw ma trzy poziomy. Pierwszy, podstawowy, to małe
 pudełko z ekranem, kilkoma przyciskami i bateriami.
 
 42
-00:02:36,883 --> 00:02:41,171
-Włączam stację, wystawiam na zewnątrz antenę i jestem w sieci.
+00:02:36,883 --> 00:02:41,321
+Włączasz stację, wystawiasz na zewnątrz antenę i jesteś w sieci.
 
 43
-00:02:41,350 --> 00:02:47,076
+00:02:41,517 --> 00:02:47,242
 Ty lub opiekun zestawu wysyłacie przyciskami, czego brakuje i ilu osób to dotyczy.
 
 44
-00:02:47,076 --> 00:02:51,096
+00:02:47,242 --> 00:02:51,454
 A każda włączona stacja podaje dalej wiadomości sąsiadów.
 
 45
-00:02:51,283 --> 00:02:56,921
+00:02:51,650 --> 00:02:57,288
 Poziom drugi to stary laptop podłączony do stacji: wygodny panel dla opiekuna.
 
 46
-00:02:56,921 --> 00:03:00,065
+00:02:57,288 --> 00:03:00,432
 Poziom trzeci dodaje domowy router. Wtedy mieszkańcy
 
 47
-00:03:00,065 --> 00:03:03,185
+00:03:00,432 --> 00:03:03,552
 zgłaszają potrzeby zwykłą stroną w telefonie.
 
 48
-00:03:03,185 --> 00:03:06,599
+00:03:03,552 --> 00:03:06,966
 Bez aplikacji, bez konta, bez internetu.
 
 49
-00:03:06,783 --> 00:03:12,130
+00:03:07,150 --> 00:03:12,497
 Stacja, laptop i router dostają prąd z akumulatora przez przetwornicę z zestawu.
 
 50
-00:03:12,130 --> 00:03:16,830
+00:03:12,497 --> 00:03:17,197
 A telefony ładuje osobna ładowarka z zestawu, z drugiego akumulatora.
 
 51
-00:03:17,817 --> 00:03:22,097
+00:03:18,183 --> 00:03:22,463
 Jedna rzecz jest dla nas szczególnie ważna: uczciwe komunikaty.
 
 52
-00:03:22,097 --> 00:03:25,061
+00:03:22,463 --> 00:03:25,427
 „Wysłane” to nie to samo, co „pomoc jedzie”.
 
 53
-00:03:25,250 --> 00:03:28,457
+00:03:25,617 --> 00:03:28,824
 Dlatego zgłoszenie przechodzi przez osobne stany.
 
 54
-00:03:28,457 --> 00:03:30,087
+00:03:28,824 --> 00:03:30,454
 Zapisane lokalnie.
 
 55
-00:03:30,087 --> 00:03:31,838
+00:03:30,454 --> 00:03:32,205
 Zapisane u odbiorcy.
 
 56
-00:03:31,838 --> 00:03:33,844
+00:03:32,205 --> 00:03:34,211
 Przeczytane przez dyżurnego.
 
 57
-00:03:33,844 --> 00:03:35,359
+00:03:34,211 --> 00:03:35,726
 Pomoc skierowana.
 
 58
-00:03:35,550 --> 00:03:38,132
+00:03:35,917 --> 00:03:38,499
 Każdy z nich oznacza coś innego.
 
 59
-00:03:38,132 --> 00:03:41,261
+00:03:38,499 --> 00:03:41,628
 A decyzję o pomocy zawsze podejmuje człowiek.
 
 60
-00:03:42,250 --> 00:03:43,835
+00:03:42,617 --> 00:03:44,202
 Gdzie dziś jesteśmy?
 
 61
-00:03:43,835 --> 00:03:50,434
-Jest koncepcja, specyfikacja i płytka do pomiarów radia. Płytka stacji dopiero powstanie.
+00:03:44,202 --> 00:03:48,318
+Jest koncepcja, specyfikacja, protokół komunikacyjny i płytka
 
 62
-00:03:50,434 --> 00:03:54,457
-Wszystko jest otwarte: schematy, kod i dokumentacja.
+00:03:48,318 --> 00:03:52,159
+do pomiarów radia. Płytka stacji dopiero powstanie.
 
 63
-00:03:54,650 --> 00:03:57,666
-Ale nic jeszcze nie zostało sprawdzone w terenie.
+00:03:52,159 --> 00:03:56,182
+Wszystko jest otwarte: schematy, kod i dokumentacja.
 
 64
-00:03:57,666 --> 00:04:00,810
-Nie wiemy, czy kilometr wśród budynków się uda.
+00:03:56,350 --> 00:03:59,366
+Ale nic jeszcze nie zostało sprawdzone w terenie.
 
 65
-00:04:00,810 --> 00:04:03,677
-Czy stacja wytrzyma dwie doby na bateriach.
+00:03:59,366 --> 00:04:02,510
+Nie wiemy, czy kilometr wśród budynków się uda.
 
 66
-00:04:03,677 --> 00:04:07,408
-Czy oprogramowanie sieci zmieści się w małym układzie.
+00:04:02,510 --> 00:04:05,377
+Czy stacja wytrzyma dwie doby na bateriach.
 
 67
-00:04:07,583 --> 00:04:09,986
-To trzeba zmierzyć, a nie założyć.
+00:04:05,377 --> 00:04:09,108
+Czy oprogramowanie sieci zmieści się w małym układzie.
 
 68
-00:04:09,986 --> 00:04:12,221
-I tu potrzebujemy innych ludzi.
+00:04:09,283 --> 00:04:11,686
+To trzeba zmierzyć, a nie założyć.
 
 69
-00:04:13,217 --> 00:04:17,854
-Szukamy krótkofalowców i elektroników, którzy znają radio i anteny.
+00:04:11,686 --> 00:04:13,921
+I tu potrzebujemy innych ludzi.
 
 70
-00:04:17,854 --> 00:04:19,215
-Programistów.
+00:04:14,917 --> 00:04:19,554
+Szukamy krótkofalowców i elektroników, którzy znają radio i anteny.
 
 71
-00:04:19,215 --> 00:04:22,994
-Ludzi ze służb, którzy wiedzą, jak naprawdę wygląda kryzys.
+00:04:19,554 --> 00:04:20,915
+Programistów.
 
 72
-00:04:23,183 --> 00:04:29,803
-I każdego, kto ma okno, dach albo piwnicę, i chce pomóc sprawdzić, jak to działa naprawdę.
+00:04:20,915 --> 00:04:24,694
+Ludzi ze służb, którzy wiedzą, jak naprawdę wygląda kryzys.
 
 73
-00:04:29,983 --> 00:04:33,028
-Cały projekt jest otwarty, na GitHubie.
+00:04:24,883 --> 00:04:31,503
+I każdego, kto ma okno, dach albo piwnicę, i chce pomóc sprawdzić, jak to działa naprawdę.
 
 74
-00:04:33,028 --> 00:04:35,958
-Zajrzyj, zadaj pytanie, zgłoś błąd.
+00:04:31,683 --> 00:04:34,728
+Cały projekt jest otwarty, na GitHubie.
 
 75
-00:04:35,958 --> 00:04:37,565
+00:04:34,728 --> 00:04:37,658
+Zajrzyj, zadaj pytanie, zgłoś błąd.
+
+76
+00:04:37,658 --> 00:04:39,265
 Rozsyłamy wici!
 

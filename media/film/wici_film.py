@@ -290,8 +290,9 @@ class WICI(MovingCameraScene):
             chunks, cur = [], []
             for w in words:
                 if cur and len(chunks) < n - 1 and len(" ".join(cur + [w])) > target + 6:
+                    carry = [cur.pop()] if len(cur) > 1 and len(cur[-1]) <= 2 else []  # „na”, „i”, „w” do następnej
                     chunks.append(" ".join(cur))
-                    cur = []
+                    cur = carry
                 cur.append(w)
             chunks.append(" ".join(cur))
             total = sum(len(c) for c in chunks)
@@ -448,11 +449,14 @@ class WICI(MovingCameraScene):
 
         bl = Battery(label="zasilanie masztu").next_to(ml, DOWN, buff=0.3)
         br = Battery(label="zasilanie masztu").next_to(mr, DOWN, buff=0.3)
+        dead = VGroup(Line(bl.box.get_corner(DL), bl.box.get_corner(UR)),
+                      Line(bl.box.get_corner(UL), bl.box.get_corner(DR))).set_stroke(ALERT, 4).scale(1.15)
         hours = T("godziny…", 24, GREY_B).next_to(VGroup(bl, br), DOWN, buff=0.3).set_x(0)
         self.narr("s2c",
                   ([FadeIn(bl), FadeIn(br)], 0.8),
                   ("at", 1),
-                  ([bl.level.animate.set_value(0.0), br.level.animate.set_value(0.12), FadeIn(hours)], 3.0))
+                  ([bl.level.animate.set_value(0.0), br.level.animate.set_value(0.12), FadeIn(hours)], 3.0),
+                  (Create(dead), 0.5))
 
         broken = lines[1]
         flash_pt = broken.get_center()
@@ -802,11 +806,11 @@ class WICI(MovingCameraScene):
         w_c = Line(bat_c.box.get_left(), chg[0].get_right(), **PW)
         w_ph = Line([big.get_x(), chg[0].get_top()[1], 0], big.get_bottom(), **PW)
         key = VGroup(
-            VGroup(RoundedRectangle(width=0.36, height=0.26, corner_radius=0.05, stroke_color=ACCENT, stroke_width=3),
-                   T("zestaw WICI", 22, ACCENT)).arrange(RIGHT, buff=0.2),
-            VGroup(RoundedRectangle(width=0.36, height=0.26, corner_radius=0.05, stroke_color=GREY_A, stroke_width=3),
-                   T("z lokalnego zasobu", 22, GREY_A)).arrange(RIGHT, buff=0.2),
-        ).arrange(DOWN, aligned_edge=LEFT, buff=0.25).move_to([5.0, -1.35, 0])
+            VGroup(RoundedRectangle(width=0.32, height=0.23, corner_radius=0.05, stroke_color=ACCENT, stroke_width=3),
+                   T("zestaw WICI", 19, ACCENT)).arrange(RIGHT, buff=0.2),
+            VGroup(RoundedRectangle(width=0.32, height=0.23, corner_radius=0.05, stroke_color=GREY_A, stroke_width=3),
+                   T("z lokalnego zasobu", 19, GREY_A)).arrange(RIGHT, buff=0.2),
+        ).arrange(DOWN, aligned_edge=LEFT, buff=0.22).move_to([5.0, VGroup(inv, inv_l, bat_a, bat_a_l).get_y(), 0])
         self.narr("s6e",
                   ([FadeIn(bat_a), FadeIn(bat_a_l), FadeIn(inv), FadeIn(inv_l), FadeIn(key[0])], 0.8),
                   ([Create(w_a), Create(w_st), Create(w_rt), Create(w_lp)], 1.0),
@@ -865,26 +869,26 @@ class WICI(MovingCameraScene):
 
     def part_status(self):
         head = T("Gdzie jesteśmy?", 48, WHITE, font=SERIF).to_edge(UP, buff=0.6)
-        done = ["koncepcja", "specyfikacja", "płytka do pomiarów radia", "wszystko otwarte:\nschematy, kod, dokumentacja"]
+        done = ["koncepcja", "specyfikacja", "protokół komunikacyjny", "płytka do pomiarów radia", "wszystko otwarte:\nschematy, kod, dokumentacja"]
         left = VGroup()
         for s in done:
             left.add(VGroup(check(0.28), T(s, 28, WHITE, line_spacing=0.8)).arrange(RIGHT, buff=0.25, aligned_edge=UP))
-        left.arrange(DOWN, aligned_edge=LEFT, buff=0.32).move_to(LEFT * 3.3 + UP * 0.1)
-        lh = T("zrobione", 26, OK).next_to(left, UP, buff=0.45).align_to(left, LEFT)
+        left.arrange(DOWN, aligned_edge=LEFT, buff=0.22).move_to(LEFT * 3.3 + UP * 0.05)
+        lh = T("zrobione", 26, OK).next_to(left, UP, buff=0.35).align_to(left, LEFT)
         self.narr("s8a", (FadeIn(head), 0.9), ("at", 1),
-                  ([FadeIn(lh), LaggedStart(*[FadeIn(r, shift=RIGHT * 0.2) for r in left[:3]], lag_ratio=0.5)], 2.0),
-                  ("at", 2), (FadeIn(left[3], shift=RIGHT * 0.2), 0.7))
+                  ([FadeIn(lh), LaggedStart(*[FadeIn(r, shift=RIGHT * 0.2) for r in left[:4]], lag_ratio=0.5)], 2.4),
+                  ("at", 2), (FadeIn(left[4], shift=RIGHT * 0.2), 0.7))
 
         todo = ["1 km wśród budynków?", "dwie doby na bateriach?", "sieć w małym układzie?"]
         right = VGroup(*[VGroup(T("?", 30, ACCENT, weight=HEAVY), T(s, 28, WHITE))
                          .arrange(RIGHT, buff=0.3) for s in todo])
-        right.arrange(DOWN, aligned_edge=LEFT, buff=0.32).move_to(RIGHT * 3.4).align_to(left, UP)
+        right.arrange(DOWN, aligned_edge=LEFT, buff=0.22).move_to(RIGHT * 3.4).align_to(left, UP)
         rh = T("niesprawdzone w terenie", 26, ACCENT).align_to(right, LEFT).align_to(lh, UP)
         self.narr("s8b", (FadeIn(rh), 0.7), ("at", 1), (FadeIn(right[0], shift=LEFT * 0.2), 0.6),
                   ("at", 2), (FadeIn(right[1], shift=LEFT * 0.2), 0.6),
                   ("at", 3), (FadeIn(right[2], shift=LEFT * 0.2), 0.6))
 
-        motto = T("zmierzyć, a nie założyć", 40, ACCENT, font=SERIF).move_to(DOWN * 2.1)
+        motto = T("zmierzyć, a nie założyć", 40, ACCENT, font=SERIF).move_to(DOWN * 2.5)
         self.narr("s8c", (FadeIn(motto), 1.2))
         self.clear_all()
 

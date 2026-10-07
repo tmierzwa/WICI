@@ -24,7 +24,7 @@ SEGMENTS = [
     ]),
     ("v5", [
         "Stacja to małe pudełko z ekranem, przyciskami i bateriami.",
-        "Włączam stację, wystawiam na zewnątrz antenę i jestem w sieci.",
+        "Włączasz stację, wystawiasz na zewnątrz antenę i jesteś w sieci.",
         "Laptop i router to kolejne poziomy.",
     ]),
     ("v6", [
