@@ -75,7 +75,8 @@ bool storeOk = false;
 bool dataWas = false;
 ui::Model screenModel;
 ui::Lines shown;                 // wiersze wysłane na ekran
-bool buttonWas[4] = {};          // stan przycisków po ostatnim odpytaniu (zbocze = naciśnięcie)
+bool buttonWas[4] = {};          // stan przycisków po eliminacji drgań (zbocze = naciśnięcie)
+bool buttonSample[4] = {};       // ostatnia próbka przycisków
 uint32_t buttonPollMs = 0;
 constexpr uint32_t BUTTON_POLL_MS = 10;   // odpytywanie przycisków (drgania styków)
 constexpr uint32_t SCREEN_POLL_MS = 200;  // odświeżanie ekranu po zmianie treści
@@ -126,6 +127,7 @@ struct BenchHost : usbproto::Host {
     bool prep() override { return bench.prep; }
     bool silence() override { return bench.silence; }
     void setSilence(bool on) override;
+    bool silenceSwitch() override;
     bool confirm() override { return bench.confirm(); }
     void randomBytes(uint8_t* out, size_t count) override { measure::randomBytes(out, count); }
     void log(const char* text) override { bench.log(text); }
@@ -272,6 +274,9 @@ void setSilenceFromSwitch(bool on) {
     radioEvent();
 }
 
+// Przełącznik na stacji ma pierwszeństwo: w położeniu „cisza” polecenie z USB nie wyłącza ciszy.
+bool silenceLocked() { return silenceSwitchState; }
+
 void setPrepFromButton(bool on) {
     if (!on) bench.stop();
     bench.prep = on;
@@ -332,7 +337,11 @@ void pollPanel(uint32_t now) {
     }
 }
 
+#else
+bool silenceLocked() { return false; }  // przewody: bez przełącznika CISZA
 #endif
+
+bool BenchHost::silenceSwitch() { return silenceLocked(); }
 
 const char* langName(ui::Lang lang) { return lang == ui::Lang::PL ? "PL" : lang == ui::Lang::UK ? "UK" : "EN"; }
 
@@ -458,16 +467,27 @@ void beginScreen() {
 void pollButtons(uint32_t now) {
     if (now - buttonPollMs < BUTTON_POLL_MS) return;
     buttonPollMs = now;
+    // Zmiana stanu dopiero po dwóch jednakowych próbkach (eliminacja drgań styków, około 20 ms).
     for (size_t i = 0; i < 4; ++i) {
         const bool is = pressed(buttons[i]);
-        if (is && !buttonWas[i]) screenModel.down(static_cast<ui::Button>(i), now);
-        else if (!is && buttonWas[i]) screenModel.up(static_cast<ui::Button>(i), now);
-        buttonWas[i] = is;
+        if (is == buttonSample[i] && is != buttonWas[i]) {
+            if (is) screenModel.down(static_cast<ui::Button>(i), now);
+            else screenModel.up(static_cast<ui::Button>(i), now);
+            buttonWas[i] = is;
+        }
+        buttonSample[i] = is;
     }
 }
 
 void syncButtons() {
-    for (size_t i = 0; i < 4; ++i) buttonWas[i] = pressed(buttons[i]);  // po poleceniu blokującym (CONDUCTED, PREP)
+    for (size_t i = 0; i < 4; ++i) buttonWas[i] = buttonSample[i] = pressed(buttons[i]);  // po poleceniu blokującym (CONDUCTED, PREP)
+}
+
+// Liczba z polecenia nasycona do `cap`, żeby rzutowanie ani mnożenie nie zawinęło wartości
+// (np. TXPKT 1 260 dałoby długość 4); wartości ponad limit odrzuca potem kontrola zakresu.
+uint32_t parseArg(const char* text, uint32_t cap) {
+    const unsigned long value = strtoul(text, nullptr, 10);
+    return value > cap ? cap : static_cast<uint32_t>(value);
 }
 
 void printError(const char* text) { Serial.printf("{\"error\":\"%s\"}\n", text); }
@@ -679,7 +699,8 @@ void handle(char* cmd) {
         }
     } else if (!strcmp(cmd, "SILENCE") && n == 1) {
         const bool on = atoi(words[0]) != 0;  // na stacji: przełącznik CISZA
-        if (on != bench.silence) {
+        if (!on && silenceLocked()) printError("silence switch on");
+        else if (on != bench.silence) {
             bench.silence = on;
             bench.log(bench.silence ? "silence on" : "silence off");
             radioEvent();
@@ -689,20 +710,20 @@ void handle(char* cmd) {
         const bool conducted = lastIsConducted(words, n);
         if (n != 1) printError("TXCW <s> [CONDUCTED]");
         else {
-            const char* error = bench.txcw(strtoul(words[0], nullptr, 10), conducted);
+            const char* error = bench.txcw(parseArg(words[0], 1000), conducted);
             if (error) printError(error);
         }
     } else if (!strcmp(cmd, "TXPKT")) {
         const bool conducted = lastIsConducted(words, n);
         if (n < 2 || n > 3) printError("TXPKT <n> <len> [<ms>] [CONDUCTED]");
         else {
-            const char* error = bench.txpkt(static_cast<uint16_t>(strtoul(words[0], nullptr, 10)),
-                                            static_cast<uint8_t>(strtoul(words[1], nullptr, 10)),
-                                            n == 3 ? strtoul(words[2], nullptr, 10) : 0, conducted);
+            const char* error = bench.txpkt(static_cast<uint16_t>(parseArg(words[0], 0xFFFF)),
+                                            static_cast<uint8_t>(parseArg(words[1], 0xFF)),
+                                            n == 3 ? parseArg(words[2], 3600000) : 0, conducted);
             if (error) printError(error);
         }
     } else if (!strcmp(cmd, "RX")) {
-        const uint8_t length = n ? static_cast<uint8_t>(strtoul(words[0], nullptr, 10)) : p1::MAX_PACKET_BYTES;
+        const uint8_t length = n ? static_cast<uint8_t>(parseArg(words[0], 0xFF)) : p1::MAX_PACKET_BYTES;
         const char* error = bench.rxStart(length);
         if (error) printError(error);
         else Serial.printf("{\"rx\":true,\"len\":%u}\n", length);
@@ -944,6 +965,7 @@ void stationLoop() {
             ledWrite(board::LED_FRAM, false);
         }
     }
+    bench.p1Ready = radiocon::ok() && radiocon::p1Ok();
     if (radiocon::ok()) bench.poll();
     if (rnsOk) {
         rnsnode::loop(now);

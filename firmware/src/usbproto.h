@@ -27,6 +27,7 @@ struct Host {
     virtual bool prep() = 0;
     virtual bool silence() = 0;
     virtual void setSilence(bool on) = 0;
+    virtual bool silenceSwitch() { return false; }  // przełącznik CISZA w położeniu „cisza”
     virtual bool confirm() = 0;  // przycisk OK na stacji w ciągu 30 s
     virtual void randomBytes(uint8_t* out, size_t count) = 0;
     virtual void log(const char* text) = 0;

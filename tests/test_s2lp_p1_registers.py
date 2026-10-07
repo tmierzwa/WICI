@@ -121,10 +121,6 @@ class BoardFileTests(unittest.TestCase):
                 self.assertEqual(constants[constant], found[net])
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 # Atrapa Arduino i SPI: zapisuje bajty z MOSI i stan CS, odpowiada na MISO jak S2-LP (dwa bajty
 # statusu, potem rejestry od adresu z drugiego bajtu, z autoinkrementacją).
 STUBS = {
@@ -236,3 +232,7 @@ class DriverTests(unittest.TestCase):
         self.assertIn("W 06 2C", out)
         self.assertIn("CONFIG 2 0", out)
         self.assertIn("VERIFY 1 SYNT2 2C 00", out)
+
+
+if __name__ == "__main__":
+    unittest.main()

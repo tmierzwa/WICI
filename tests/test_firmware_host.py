@@ -307,13 +307,14 @@ int uiScript() {
 }
 
 struct TestHost : usbproto::Host {
-    bool prep_ = true, silence_ = false, confirm_ = true;
+    bool prep_ = true, silence_ = false, confirm_ = true, switch_ = false;
     uint32_t uptime_ = 100;
     uint8_t counter_ = 0;
     uint32_t uptimeS() override { return uptime_; }
     bool prep() override { return prep_; }
     bool silence() override { return silence_; }
     void setSilence(bool on) override { silence_ = on; }
+    bool silenceSwitch() override { return switch_; }
     bool confirm() override { return confirm_; }
     void randomBytes(uint8_t* out, size_t n) override { for (size_t i = 0; i < n; ++i) out[i] = static_cast<uint8_t>(++counter_); }
     void log(const char* text) override { printf("log %s\n", text); }
@@ -325,7 +326,7 @@ struct TestHost : usbproto::Host {
 
 // Protokół USB sterowany z wejścia: "> <json>" wiersz od laptopa, "E <kind> <pola>" zdarzenie stacji,
 // "T <ms>" poll, "C <ms>" połączenie, "D" rozłączenie, "P <0|1>" tryb przygotowania, "K <0|1>" potwierdzenie,
-// "U <s>" czas pracy, "R" restart stacji (ta sama pamięć), "Z <adres> <bajt>" uszkodzenie bajtu FRAM,
+// "W <0|1>" przełącznik CISZA, "U <s>" czas pracy, "R" restart stacji (ta sama pamięć), "Z <adres> <bajt>" uszkodzenie bajtu FRAM,
 // "S" stan magazynu, "Q <seq>" rekord kolejki.
 int usbScript() {
     RamStorage ram;
@@ -346,6 +347,7 @@ int usbScript() {
         else if (line[0] == 'D') proto->disconnected();
         else if (sscanf(line, "P %u", &a) == 1) host.prep_ = a;
         else if (sscanf(line, "K %u", &a) == 1) host.confirm_ = a;
+        else if (sscanf(line, "W %u", &a) == 1) host.switch_ = a;
         else if (sscanf(line, "U %u", &a) == 1) host.uptime_ = a;
         else if (line[0] == 'R') {
             delete proto; delete store;
@@ -1152,6 +1154,15 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual(r[10]["silence"], True)
         self.assertIn("log usb silence not confirmed", out)
         self.assertIn("store live 0 inbox 0 pending 0 latest 0 configured 0 address ", out)
+
+    def test_usb_silence_switch_has_priority(self):
+        # Przełącznik CISZA ma pierwszeństwo przed panelem: laptop nie wyłącza ciszy ustawionej przełącznikiem.
+        out = self.usb(["C 0", "W 1", '> {"usb":1,"seq":1,"type":"silence","on":true}', '> {"usb":1,"seq":2,"type":"silence","on":false}',
+                        "W 0", '> {"usb":1,"seq":3,"type":"silence","on":false}'])
+        r = [x for x in self.replies(out) if x["type"] != "sync"]
+        self.assertEqual([x["type"] for x in r], ["ok", "rejected", "ok"])
+        self.assertEqual(r[1]["reason"], "silence switch")
+        self.assertEqual((r[0]["silence"], r[2]["silence"]), (True, False))
 
     def test_usb_line_too_long_is_rejected(self):
         out = self.usb(["C 0", "> " + "x" * 1500, '> {"usb":1,"seq":1,"type":"sync","boot":"b","cursor":0}'])

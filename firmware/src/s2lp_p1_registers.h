@@ -62,7 +62,7 @@ constexpr RegisterValue REGISTERS[] = {
     {0x51, 0x00, 0xFF, "IRQ_MASK2"},  // P1: no interrupts in bits 23-16
     {0x52, 0x20, 0xFF, "IRQ_MASK1"},  // P1: sync word detected (bit 13): channel busy for CCA
     {0x53, 0x67, 0xFF, "IRQ_MASK0"},  // P1: RX data ready, RX discarded, TX sent, TX and RX FIFO errors (bits 0, 1, 2, 5, 6; table 59)
-    {0x61, 0x03, 0xFF, "PA_POWER1"},  // ST: PA level for slot 1 (index 7): 29 - 2 x 13 dBm (ST library formula; measure in T4)
+    {0x5A, 0x03, 0xFF, "PA_POWER8"},  // ST: PA level for index 7 (S2LPRadioSetPALeveldBm writes PA_POWER8 + 7 - index): 29 - 2 x 13 dBm (ST library formula; measure in T4)
     {0x62, 0x07, 0xFF, "PA_POWER0"},  // ST: PA_MAXDBM off, no ramp, DIG_SMOOTH off (FSK), PA_LEVEL_MAX_IDX = 7
     {0x63, 0x01, 0xFF, "PA_CONFIG1"},  // ST: FIR off for FSK (reset 0x03 with FIR_EN cleared)
     {0x64, 0x88, 0xFF, "PA_CONFIG0"},  // ST: PA Bessel filter 12.5 kHz for data rate < 16 kbps (reset 0x8A, PA_FC = 0)

@@ -23,7 +23,7 @@ Nie obowiązuje kontrola impedancji ani kwalifikacja stosu warstw, bo płytka ni
 | Parametry wykonawcy: dwie warstwy, FR-4 1,6 mm, miedź 35 µm, ścieżka/odstęp ≥0,2 mm, otwór ≥0,4 mm (reguły DRC tak samo), wycięcie z narożnikami frezowanymi (promień frezu), otwory nieplaterowane 2,7 i 3,2 mm | do potwierdzenia przy zamówieniu |
 | Części z [BOM](bom.csv) dostępne u dystrybutora; zamienniki zapisane w zapisie sztuki | do potwierdzenia przy zakupie |
 
-Zamówienie zwalniają zamknięte warunki z tabeli, w tym przymiarka 1:1. Płytka jest sprawdzona dopiero po uruchomieniu pierwszej sztuki według [uruchomienia](uruchomienie.md); do tego potrzebny jest obraz oprogramowania z plikiem opisu płytki N1 i poleceniami diagnostycznymi oraz program testowy ESP32-S3 (stan: [zgodność z oprogramowaniem](checks/zgodnosc-firmware.md)). Zielone CI tego nie zastępuje. Zamówienie: 2–5 sztuk (cztery stanowiska do sieci A–B–OSP plus zapas).
+Zamówienie zwalniają zamknięte warunki z tabeli, w tym przymiarka 1:1. Płytka jest sprawdzona dopiero po uruchomieniu pierwszej sztuki według [uruchomienia](uruchomienie.md); do tego służą obrazy `bench-n1` (stanowisko A) i `bench-b` (stanowisko B) z poleceniami diagnostycznymi (stan: [zgodność z oprogramowaniem](checks/zgodnosc-firmware.md)). Zielone CI tego nie zastępuje. Zamówienie: 2–5 sztuk (cztery stanowiska do sieci A–B–OSP plus zapas).
 
 ## Odtworzenie
 

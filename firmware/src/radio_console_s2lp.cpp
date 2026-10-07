@@ -148,11 +148,24 @@ bool handle(const char* cmd, char* words[], size_t n) {
         const s2lp::Status st = chip.lastStatus();
         Serial.printf("{\"reg\":\"0x%02X\",\"value\":\"0x%02X\",\"mc_state1\":\"0x%02X\",\"mc_state0\":\"0x%02X\"}\n", address, value,
                       st.mcState1, st.mcState0);
+    } else if (!strcmp(cmd, "REGW") && n == 2) {
+        // Zapis rejestru do prób (np. kolejność bajtów słowa synchronizacji SYNC0..3 w eterze),
+        // tylko w trybie przygotowania; VERIFY pokaże różnicę wobec tablicy P1, CONFIG ją cofa.
+        if (!bench->prep) {
+            Serial.println("{\"error\":\"preparation mode off: PREP 1\"}");
+            return true;
+        }
+        const uint8_t address = static_cast<uint8_t>(strtoul(words[0], nullptr, 16));
+        const uint8_t value = static_cast<uint8_t>(strtoul(words[1], nullptr, 16));
+        bench->stop();  // zapis w READY; odbiór P1 wraca poleceniem P1RX albo po PREP 0
+        chip.writeReg(address, value);
+        Serial.printf("{\"reg\":\"0x%02X\",\"written\":\"0x%02X\",\"value\":\"0x%02X\"}\n", address, value,
+                      chip.readReg(address));
     } else return false;
     return true;
 }
 
-const char* helpCommands() { return ",\"RADIO\",\"RESET\",\"SDN <0|1>\",\"CONFIG\",\"VERIFY\",\"FREQ\",\"IDLE\",\"RSSI\",\"STATE\",\"REG <hex>\""; }
+const char* helpCommands() { return ",\"RADIO\",\"RESET\",\"SDN <0|1>\",\"CONFIG\",\"VERIFY\",\"FREQ\",\"IDLE\",\"RSSI\",\"STATE\",\"REG <hex>\",\"REGW <hex> <hex>\""; }
 
 }  // namespace radiocon
 

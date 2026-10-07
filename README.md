@@ -18,7 +18,8 @@ Projekt jest na etapie **projektu prototypu (wersja 0.5)**. Mamy:
 - [koncepcję](https://tmierzwa.github.io/WICI/);
 - specyfikację stacji;
 - model obliczeniowy z testami;
-- projekt płytki nośnej stanowiska deweloperskiego (N1) i rozpoczęty projekt płytki stacji R02.
+- projekt płytki nośnej stanowiska deweloperskiego (N1) i rozpoczęty projekt płytki stacji R02;
+- oprogramowanie stacji dla stanowisk A i B, jeszcze bez stosu Reticulum i bez prób na sprzęcie.
 
 Nie zbudowaliśmy jeszcze stacji ani nie przeprowadziliśmy prób w terenie, więc to jeszcze nie jest urządzenie do użycia.
 
@@ -46,7 +47,7 @@ Dobrym początkiem jest lista zadań w [CONTRIBUTING.md](CONTRIBUTING.md#od-czeg
 |---|---|
 | [docs/concept](docs/concept/index.html) | Koncepcja: potrzeby, scenariusze, dostępne rozwiązania, architektura, wykonalność, zagrożenia, plan prób i otwarte decyzje; [strona online](https://tmierzwa.github.io/WICI/) |
 | [docs/spec](docs/README.md) | Specyfikacja stacji, warunki odbioru i lista części |
-| [firmware](firmware/README.md) | Oprogramowanie stacji: pierwsze kroki na stanowisku A (nRF52840-DK, CC1120EM, FRAM, polecenia USB) |
+| [firmware](firmware/README.md) | Oprogramowanie stacji na stanowiskach A (nRF52840-DK + CC1120EM, na przewodach i na N1) i B (ESP32-S3-DevKitC-1 + X-NUCLEO-S2868A2 na N1); zbudowane, jeszcze nie uruchomione na sprzęcie |
 | [software/reference](software/reference/README.md) | Model wiadomości i potwierdzeń z testami; obliczenia zasięgu, energii i czasu nadawania |
 | [hardware](hardware/r02/README.md) | Projekt płytki stacji R02 (rozpoczęty, z lekcjami z poprzedniego kontrolera) i [stanowisko deweloperskie](hardware/dev-bench/README.md) z płytek rozwojowych i płytką nośną N1 |
 | [media/film](media/film/README.md) | Dwa filmy o projekcie: około 4,5 min i 60 s |

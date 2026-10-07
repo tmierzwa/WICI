@@ -23,7 +23,7 @@ Przyciski 12 × 12 mm dostają nasadki Omron B32. Pad masy J6.22 ma pełne poł�
 |---:|---|---|
 | 1 | Oględziny: mostki, orientacja D1, D2, Q1, BZ1, SW5; brak opiłków między pinami 1,27 mm | brak usterek |
 | 2 | Miernik bez modułów: rezystancja +3V3–GND, +5V–GND, +3V3_DEVKIT–GND, +5V_DEVKIT–GND (piny J1.4, J1.5, J5.1, J5.21 wobec J1.6) | żadnego zwarcia; bez modułów szyny są praktycznie rozwarte (kondensatory się ładują) |
-| 3 | Ciągłość: J1.4 – JP3.1 i JP3.2 – J10.7, J10.9 (+3V3, +3V3_RF; między JP3.1 a JP3.2 bez zworki brak połączenia), J1.6 – J9.1, J9.19, J10.2 (GND); J3.4 – J9.16 (SCK); J2.2 – J9.14 (RF_CS); J3.8 – J10.15 (RF_RESET) | 0 Ω; pozostałe piny J9/J10 nie mają połączenia z GND |
+| 3 | Ciągłość: J1.4 – JP3.1 i JP3.2 – J10.7, J10.9 (+3V3, +3V3_RF; między JP3.1 a JP3.2 bez zworki brak połączenia), J1.6 – J9.1, J9.19, J10.2 (GND); J3.4 – J9.16 (SCK przez R17); J2.2 – J9.14 (RF_CS); J3.8 – J10.15 (RF_RESET) | 0 Ω, a J3.4 – J9.16 około 33 Ω (R17); pozostałe piny J9/J10 nie mają połączenia z GND |
 | 4 | Orientacja modułu CC1120EM, przed włożeniem: miernikiem na module, między obudową SMA (masa) a stykiem złącza P2 w rzędzie parzystym przy końcu od strony SMA | 0 Ω, bo to P2.2 (masa); ten koniec trafia na pin 2 J10, oznaczony przy złączu |
 | 5 | Zworki: stanowisko A z JP3, bez JP1 i JP2; stanowisko B z JP1 i JP2 (bez JP1 ESP32 zasilałby moduły przez podciągnięcia i diody zabezpieczające wejść) | zgodnie ze stanowiskiem |
 
@@ -48,7 +48,7 @@ Kroki A3–A5 i B3–B4 wymagają obrazu z plikiem opisu płytki N1 (na przykła
 | Krok | Czynność | Warunek przejścia |
 |---:|---|---|
 | B1 | Płytka nośna na ośmiu dystansach M3. JP1 i JP2 założone, bez modułów | płytka stoi stabilnie; długie piny J1–J4 nie dotykają podłoża; śruby w otworach Arduino nie dotykają listew |
-| B2 | ESP32-S3-DevKitC-1 (moduł N8R2, N8R8 albo N16R16V), USB w stronę napisu USB na płytce, do komputera, amperomierz w miejscu JP1; pomiar J1.4 i J1.5 | około 3,3 V i około 4,7 V; prąd przez JP1 bez modułów < 5 mA (podciągnięcia) |
+| B2 | ESP32-S3-DevKitC-1 (moduł N8, N8R2 albo N8R8), USB w stronę napisu USB na płytce, do komputera, amperomierz w miejscu JP1; pomiar J1.4 i J1.5 | około 3,3 V i około 4,7 V; prąd przez JP1 bez modułów < 5 mA (podciągnięcia) |
 | B3 | Jak A3 i A4 | jak w A |
 | B4 | X-NUCLEO-S2868A2 z fabrycznymi rezystorami, zworka JP1 na X-NUCLEO założona, wpięta w J1–J4 | `RADIO` obrazu `bench-b` daje `partnumber: 0x03`, `partversion` (rejestr wersji S2-LP) i stan `RX` (odbiór P1 od startu); `VERIFY` bez niezgodności |
 

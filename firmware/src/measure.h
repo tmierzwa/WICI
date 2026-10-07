@@ -69,6 +69,9 @@ public:
 
     bool prep = false;     // tryb przygotowania (na stacji: przycisk pod plombowaną pokrywą)
     bool silence = false;  // cisza radiowa (na stacji: przełącznik CISZA)
+    // Układ skonfigurowany profilem P1: poza trybem przygotowania odbiór P1 wraca sam po każdym
+    // przerwaniu (radio.md: odbiór wyłącza się tylko na czas własnego nadawania).
+    bool p1Ready = false;
 
     // Dziennik FRAM i zegar czasu pracy; bez dziennika nadawanie radiowe jest zablokowane.
     void attach(journal::Journal* journal, uint32_t (*uptimeS)());
@@ -108,6 +111,7 @@ private:
     void stopCw();
     bool sendOne();
     void finishPkt();
+    void endSeriesDebt();
     void receive();
     void receiveP1();
     bool enterRx(RxMode mode, uint8_t length);
@@ -146,6 +150,8 @@ private:
     RxMode rxMode_ = RxMode::NONE;
     uint8_t rxLen_ = 0;
     uint32_t rxPollMs_ = 0;
+    uint32_t autoRxMs_ = 0;
+    uint32_t seriesDebtMs_ = 0;  // dług serii TXCW/TXPKT do odliczenia od jej końca  // ostatnia próba samoczynnego powrotu do odbioru P1
     Counters counters_;
 
     p1frame::Assembler assembler_;

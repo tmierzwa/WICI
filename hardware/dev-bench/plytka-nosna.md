@@ -52,14 +52,14 @@ Numery GPIO nRF52840 według złączy Arduino nRF52840-DK (instrukcja Nordic, �
 | VTEST | A4 | P0.30 (AIN6) | GPIO5 (ADC1_CH4) | | | dzielnik 100 kΩ / 20 kΩ z zacisku VTEST, diody BAT54S do masy i 3,3 V |
 | (nie podłączony) | D5 | P1.06 | — | | CS EEPROM, 100 kΩ do 3,3 V | |
 
-Wybór pinów ESP32-S3 omija piny konfiguracyjne GPIO0, GPIO3, GPIO45 i GPIO46, USB GPIO19/20, UART0 GPIO43/44, diodę RGB DevKitC (GPIO38 w v1.1, GPIO48 w v1.0) oraz GPIO35–37, które zajmuje pamięć PSRAM w modułach z PSRAM ośmiobitową (N8R8). Dzięki temu płytka przyjmie DevKitC z modułem N8R2 i N8R8. GPIO47 i GPIO48 też nie są używane, bo w module N16R16V mają poziom 1,8 V; płytka przyjmie więc również ten moduł.
+Wybór pinów ESP32-S3 omija piny konfiguracyjne GPIO0, GPIO3, GPIO45 i GPIO46, USB GPIO19/20, UART0 GPIO43/44, diodę RGB DevKitC (GPIO38 w v1.1, GPIO48 w v1.0) oraz GPIO35–37, które zajmuje pamięć PSRAM w modułach z PSRAM ośmiobitową (N8R8). Dzięki temu płytka przyjmie DevKitC z modułem N8R2 i N8R8. GPIO47 i GPIO48 też nie są używane, bo w modułach WROOM-2 z 1,8 V (np. N16R8V) mają poziom 1,8 V; płytka przyjęłaby więc i takie moduły, ale obraz `bench-b` zakłada pamięć flash quad SPI (moduły N8, N8R2, N8R8).
 
 Na nRF52840-DK żadna z tych pozycji nie jest współdzielona z funkcjami płytki w ustawieniu fabrycznym. Wyjątkiem jest przełącznik TRACE (SW7) w pozycji „Alt.”, który przenosi przyciski na D6/D7. Rezystory podciągające SDA/SCL płytki DK włącza tylko sygnał SHIELD_DETECT ze złącza P5, którego płytka nie dotyka. RESET złącza Arduino nie jest połączony z nRF52840 (zwora SB44 otwarta); płytka nośna go nie używa.
 
 Zmiana wobec okablowania przewodami: SPI przechodzi z D13 na D3, a radio na pozycje X-NUCLEO, więc oprogramowanie dla płytki nośnej używa własnego pliku opisu płytki. Obraz okablowania przewodami na N1 zwiera wyjście SCK (D13) przez przełącznik CISZA do masy; R16 ogranicza ten prąd do 3 mA, ale obrazu nie należy tak uruchamiać ([uruchomienie](uruchomienie.md#oprogramowanie)).
 
 Wymagania dla pliku opisu płytki N1 wynikające z układu:
-- SPI na D3/D11/D12 (nRF52840: P1.04, P1.13, P1.14; to piny „standard drive, low frequency”, więc zegar do 1–2 MHz, napęd H0H1 dla SCK i MOSI); ESP32-S3 SCK/MOSI z najniższym napędem, który daje czyste zbocza;
+- SPI na D3/D11/D12 (nRF52840: P1.04, P1.13, P1.14; Nordic zaleca P1.04 i P1.13 tylko do sygnałów wolnozmiennych ze względu na zakłócenia własnego radia 2,4 GHz, którego stanowisko nie używa; zegar 1 MHz, do 2 MHz po próbie, napęd H0H1 dla SCK i MOSI); ESP32-S3 SCK/MOSI z najniższym napędem, który daje czyste zbocza;
 - ekran Sharp: zegar ≤1 MHz (najwyżej 2 MHz), LSB first, CS aktywny stanem wysokim z czasami 3 µs przed i 1 µs po transmisji; DISP w stanie niskim do wyczyszczenia pamięci ekranu;
 - CC1120: IOCFG1 zostaje w stanie wysokiej impedancji, bo SO/GPIO1 dzieli linię MISO z FRAM;
 - wejścia przycisków, CISZA i przygotowania mają podciągnięcie na płytce, wewnętrzne nie jest potrzebne.

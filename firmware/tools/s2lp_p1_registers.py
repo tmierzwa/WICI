@@ -256,8 +256,9 @@ def build() -> list[Register]:
         Register(0x52, "IRQ_MASK1", (IRQ_VALID_SYNC >> 8) & 0xFF, "P1", "sync word detected (bit 13): channel busy for CCA"),
         Register(0x53, "IRQ_MASK0", IRQ_LINK & 0xFF, "P1",
                  "RX data ready, RX discarded, TX sent, TX and RX FIFO errors (bits 0, 1, 2, 5, 6; table 59)"),
-        Register(0x61, "PA_POWER1", pa_level(P1["tx_power_dbm"]), "ST",
-                 f"PA level for slot 1 (index 7): 29 - 2 x {P1['tx_power_dbm']} dBm (ST library formula; measure in T4)"),
+        Register(0x5A, "PA_POWER8", pa_level(P1["tx_power_dbm"]), "ST",
+                 f"PA level for index 7 (S2LPRadioSetPALeveldBm writes PA_POWER8 + 7 - index): "
+                 f"29 - 2 x {P1['tx_power_dbm']} dBm (ST library formula; measure in T4)"),
         Register(0x62, "PA_POWER0", 0x07, "ST", "PA_MAXDBM off, no ramp, DIG_SMOOTH off (FSK), PA_LEVEL_MAX_IDX = 7"),
         Register(0x63, "PA_CONFIG1", 0x01, "ST", "FIR off for FSK (reset 0x03 with FIR_EN cleared)"),
         Register(0x64, "PA_CONFIG0", 0x88, "ST", "PA Bessel filter 12.5 kHz for data rate < 16 kbps (reset 0x8A, PA_FC = 0)"),

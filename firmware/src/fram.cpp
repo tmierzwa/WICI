@@ -36,6 +36,7 @@ Id Memory::identify() {
         b = spi_.transfer(0x00);
     }
     digitalWrite(cs_, HIGH);
+    delayMicroseconds(1);  // CS w stanie wysokim między poleceniami (tCSH MB85RS4MT)
     digitalWrite(cs_, LOW);
     spi_.transfer(OP_RDSR);
     id.status = spi_.transfer(0x00);
@@ -61,6 +62,7 @@ bool Memory::write(uint32_t address, const uint8_t* data, size_t count) {
     select();
     spi_.transfer(OP_WREN);  // WEL kasuje się po każdym zapisie
     digitalWrite(cs_, HIGH);
+    delayMicroseconds(1);  // CS w stanie wysokim między poleceniami (tCSH MB85RS4MT)
     digitalWrite(cs_, LOW);
     sendAddress(OP_WRITE, address);
     for (size_t i = 0; i < count; ++i) {

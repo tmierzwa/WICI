@@ -34,6 +34,7 @@ constexpr uint8_t MOD2 = 0x10;           // [7:4] MOD_TYPE, [3:0] DATARATE_E
 constexpr uint8_t MOD_TYPE_CW = 0x7;     // nośna bez modulacji
 constexpr uint8_t PCKTCTRL2 = 0x2F;      // [0] FIX_VAR_LEN
 constexpr uint8_t PCKTCTRL1 = 0x30;      // [3:2] TXSOURCE
+constexpr uint8_t PM_CONF3 = 0x76;       // SMPS: 0x9C przy nadawaniu, 0x90 przy odbiorze (biblioteka ST, S2LP::send/read)
 constexpr uint8_t TXSOURCE_PN9 = 0x0C;
 constexpr uint8_t PCKTLEN1 = 0x31;
 constexpr uint8_t PCKTLEN0 = 0x32;

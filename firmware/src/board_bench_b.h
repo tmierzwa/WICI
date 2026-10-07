@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Stanowisko deweloperskie B na płytce nośnej N1 (hardware/dev-bench/plytka-nosna.md):
-// ESP32-S3-DevKitC-1 (moduł N8R2, N8R8 albo N16R16V) w J5/J6 z X-NUCLEO-S2868A2 (ST S2-LP,
+// ESP32-S3-DevKitC-1 (moduł N8, N8R2 albo N8R8, flash quad SPI) w J5/J6 z X-NUCLEO-S2868A2 (ST S2-LP,
 // kwarc 50 MHz) w J1-J4, FRAM MB85RS4MT, ekranem Sharp (Adafruit 4694) i panelem płytki
 // (przyciski, CISZA, przycisk przygotowania, dioda alarmu, brzęczyk, VTEST).
 // Przypisanie według kolumny ESP32-S3 tabeli "Przypisanie sygnałów" i

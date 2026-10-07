@@ -13,9 +13,9 @@ Projekt jest prototypem. Zmiany mają upraszczać wykonanie, usuwać zależnoś�
 
 ## Od czego zacząć
 
-Oprogramowanie stacji ma dopiero szkielet uruchomieniowy stanowiska A w [firmware/](firmware/README.md), a płytki R02 jeszcze nie ma. Zadania, które można wykonać teraz:
+Oprogramowanie stacji w [firmware/](firmware/README.md) działa na stanowiskach A i B (bez microReticulum, jeszcze nie uruchomione na sprzęcie), a płytki R02 jeszcze nie ma. Zadania, które można wykonać teraz:
 
-1. Przenieść ramkę P1 (CRC, fragmentacja, składanie) do C/C++ i sprawdzić ją na wektorach z [modelu](software/reference/reference.py). Kod oprogramowania układowego trafia do `firmware/` (licencja MIT).
+1. Zmontować płytkę nośną N1, uruchomić obraz `bench-n1` albo `bench-b` według [uruchomienia](hardware/dev-bench/uruchomienie.md) i zgłosić raport z kroków A1–A5 albo B1–B4. Kod oprogramowania układowego trafia do `firmware/` (licencja MIT); ramka P1 jest już w `firmware/src/p1frame.cpp`.
 2. Uruchomić microReticulum na płytkach rozwojowych nRF52840 i ESP32-S3 i wymienić pakiety z implementacją Reticulum w Pythonie. To pierwsza część T3; w raporcie podaj przypięte commity i zapas RAM.
 3. Opisać i zbudować emulator ograniczeń P1: czas TX, dług ciszy 12×, CCA i kolejka do 4 datagramów ([radio.md](docs/spec/radio.md)).
 4. Dodać do modelu protokół USB laptop–stacja (D17) i dziennik FRAM z długiem ciszy.

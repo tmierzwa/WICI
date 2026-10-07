@@ -11,6 +11,10 @@ void Display::beginExtcomin() {
     const uint32_t pin = g_ADigitalPinMap[pinExtcomin_];
     pinMode(pinExtcomin_, OUTPUT);
     digitalWrite(pinExtcomin_, LOW);
+    // pinMode(OUTPUT) rdzenia odłącza bufor wejściowy, a extcominLevel() czyta stan z rejestru IN.
+    NRF_GPIO_Type* port = pin >= 32 ? NRF_P1 : NRF_P0;
+    port->PIN_CNF[pin & 0x1F] = (port->PIN_CNF[pin & 0x1F] & ~GPIO_PIN_CNF_INPUT_Msk) |
+                                (GPIO_PIN_CNF_INPUT_Connect << GPIO_PIN_CNF_INPUT_Pos);
     NRF_GPIOTE->CONFIG[GPIOTE_CHANNEL] = (GPIOTE_CONFIG_MODE_Task << GPIOTE_CONFIG_MODE_Pos) |
                                          ((pin & 0x1F) << GPIOTE_CONFIG_PSEL_Pos) |
                                          ((pin >> 5) << GPIOTE_CONFIG_PORT_Pos) |

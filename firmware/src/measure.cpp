@@ -109,6 +109,7 @@ const char* Bench::gate(uint32_t txMs, bool conducted) {
             return "conducted not confirmed by OK";
         }
         log("conducted confirmed by OK");
+        seriesDebtMs_ = 0;  // seria przewodowa do tłumika nie zapisuje długu
         return nullptr;
     }
     if (debtRemainingMs()) return "silence debt pending: see INFO tx_wait_ms";
@@ -117,9 +118,16 @@ const char* Bench::gate(uint32_t txMs, bool conducted) {
     if (!journal_ || !journal_->ok()) return "debt journal unavailable: no FRAM";
     const uint32_t debtMs = txMs * p1::DEBT_FACTOR;
     if (!journal_->writeDebt(debtMs, uptimeS())) return "debt journal write failed";
-    debtUntilMs_ = millis() + debtMs;
+    debtUntilMs_ = millis() + txMs + debtMs;  // dług liczy się od końca serii (endSeriesDebt)
+    seriesDebtMs_ = debtMs;
     debtPending_ = true;
     return nullptr;
+}
+
+void Bench::endSeriesDebt() {
+    // radio.md: po nadaniu odczekuje się zapisany dług, więc liczy się go od końca serii.
+    if (seriesDebtMs_) debtUntilMs_ = millis() + seriesDebtMs_;
+    seriesDebtMs_ = 0;
 }
 
 const char* Bench::txcw(uint32_t seconds, bool conducted) {
@@ -144,6 +152,7 @@ const char* Bench::txcw(uint32_t seconds, bool conducted) {
 void Bench::stopCw() {
     radio_.stopCw();
     cwActive_ = false;
+    endSeriesDebt();
     const uint32_t txMs = millis() - cwStartMs_;
     Serial.printf("{\"txcw\":\"done\",\"tx_ms\":%lu,\"tx_wait_ms\":%lu}\n", static_cast<unsigned long>(txMs),
                   static_cast<unsigned long>(debtRemainingMs()));
@@ -193,6 +202,7 @@ bool Bench::sendOne() {
 
 void Bench::finishPkt() {
     pktActive_ = false;
+    endSeriesDebt();
     const uint32_t seriesMs = millis() - pktStartMs_;
     const uint32_t txMs = (pktTxUs_ + 999) / 1000;
     Serial.printf("{\"txpkt\":\"done\",\"sent\":%u,\"failed\":%u,\"len\":%u,\"series_ms\":%lu,\"tx_ms\":%lu,"
@@ -327,6 +337,10 @@ void Bench::poll() {
         return;
     }
     if (txState_ != TxState::IDLE) pollP1Tx();
+    if (!prep && p1Ready && rxMode_ == RxMode::NONE && !busy() && now - autoRxMs_ >= 1000) {
+        autoRxMs_ = now;  // najwyżej raz na sekundę, gdy układ nie wchodzi w odbiór
+        if (enterRx(RxMode::P1, 0)) log("P1 RX resumed");
+    }
     if (rxMode_ != RxMode::NONE && now - rxPollMs_ >= 5) {
         rxPollMs_ = now;
         if (rxMode_ == RxMode::TEST) receive();
@@ -457,9 +471,9 @@ void Bench::pollP1Tx() {
             const uint8_t count = p1frame::fragmentCount(txLength_);
             const uint32_t txMs = count * frameAirMs(p1frame::MAX_LEN + 1);  // rezerwacja: najdłuższe ramki
             if (!journal_->writeDebt(txMs * p1::DEBT_FACTOR, uptimeS())) { ++link_.txDrop; finishP1Tx("debt journal write failed"); return; }
-            debtUntilMs_ = millis() + txMs * p1::DEBT_FACTOR;
             debtPending_ = true;
             const bool ok = sendFragments();
+            debtUntilMs_ = millis() + txMs * p1::DEBT_FACTOR;  // dług od końca nadawania
             finishP1Tx(ok ? "sent" : "tx error");
             return;
         }

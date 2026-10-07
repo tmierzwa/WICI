@@ -15,6 +15,8 @@ constexpr uint32_t STATE_TIMEOUT_US = 2000;   // READY <-> LOCK <-> RX/TX: do ok
 constexpr uint32_t FRAME_MAX_MS = 300;        // najdłuższa ramka P1 w powietrzu (około 200 ms) z zapasem
 constexpr int32_t OFFSET_MAX_HZ = 1000000;    // jak FOFF na CC1120
 constexpr size_t FIFO_BYTES = 128;
+constexpr uint8_t PM_CONF3_TX = 0x9C;  // SMPS przy nadawaniu jak w S2LP::send biblioteki ST
+constexpr uint8_t PM_CONF3_RX = 0x90;  // wartość tablicy P1 (S2LP::begin, S2LP::read)
 
 uint8_t tableValue(const char* name) {
     for (size_t i = 0; i < p1s2::REGISTER_COUNT; ++i) {
@@ -61,6 +63,7 @@ bool LinkDriver::startCw() {
     idle();
     radio_.writeReg(MOD2, static_cast<uint8_t>((MOD_TYPE_CW << 4) | (tableValue("MOD2") & 0x0F)));
     radio_.writeReg(PCKTCTRL1, static_cast<uint8_t>((tableValue("PCKTCTRL1") & ~0x0C) | TXSOURCE_PN9));
+    radio_.writeReg(PM_CONF3, PM_CONF3_TX);
     return radio_.commandAndWait(CMD_TX, STATE_TX, STATE_TIMEOUT_US);
 }
 
@@ -68,6 +71,7 @@ void LinkDriver::stopCw() {
     toReady();
     radio_.writeReg(MOD2, tableValue("MOD2"));
     radio_.writeReg(PCKTCTRL1, tableValue("PCKTCTRL1"));
+    radio_.writeReg(PM_CONF3, PM_CONF3_RX);
     radio_.command(CMD_FLUSHTXFIFO);
 }
 
@@ -88,6 +92,7 @@ bool LinkDriver::transmit(const uint8_t* frame, size_t length, bool variable, ra
     radio_.writeFifo(payload, payloadLength);
     collectIrq();
     irqPending_ &= ~(IRQ_TX_DATA_SENT | IRQ_TX_FIFO_ERROR);
+    radio_.writeReg(PM_CONF3, PM_CONF3_TX);
     const uint32_t frameMs = static_cast<uint32_t>(12 + length) * 8 * 1000 / p1s2::SYMBOL_RATE;
     const uint32_t t0 = micros();
     radio_.command(CMD_TX);
@@ -109,6 +114,7 @@ bool LinkDriver::transmit(const uint8_t* frame, size_t length, bool variable, ra
         toReady();
         radio_.command(CMD_FLUSHTXFIFO);
     }
+    radio_.writeReg(PM_CONF3, PM_CONF3_RX);
     if (timing) {
         timing->valid = false;  // bez wyjścia „pakiet w powietrzu” dla TX: tylko czas całkowity
         timing->totalUs = micros() - t0;

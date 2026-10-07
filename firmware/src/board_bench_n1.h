@@ -18,7 +18,9 @@ constexpr const char* NAME = "N1";
 
 // SPI na D3/D11/D12, nie na D13 domyślnego SPI wariantu (D13 to na N1 przełącznik CISZA).
 // Własna instancja SPIClass na SPIM2 (main.cpp); SPIClass::begin() rdzenia ustawia napęd H0H1
-// na SCK i MOSI. P1.04 i P1.13 to piny "standard drive, low frequency" (do 1-2 MHz).
+// na SCK i MOSI. P1.04 i P1.13 Nordic zaleca tylko do sygnałów
+// wolnozmiennych ("low frequency I/O only"), żeby nie zakłócać radia 2,4 GHz; stanowisko go nie
+// używa, więc ograniczenie nie dotyczy działania, a zegar zostaje przy 1 MHz.
 constexpr uint8_t SPI_SCK = 32 + 4;    // P1.04, D3  -> 33 Ω (R17) -> EM P1.16, FRAM, ekran
 constexpr uint8_t SPI_MOSI = 32 + 13;  // P1.13, D11 -> EM P1.18
 constexpr uint8_t SPI_MISO = 32 + 14;  // P1.14, D12 -> EM P1.20 (IOCFG1 w P1: wysoka impedancja)

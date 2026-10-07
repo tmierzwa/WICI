@@ -48,9 +48,9 @@ Opis płytki i przypisanie sygnałów: [płytka nośna](../hardware/dev-bench/pl
 
 Diody LED1–4 płytki DK zachowują swoje role. Ustalenia dla N1:
 
-- **SPI:** SPIM2 z pinami MISO P1.14, SCK P1.04, MOSI P1.13; `SPIClass::begin()` rdzenia ustawia napęd H0H1 na SCK i MOSI. Domyślne `SPI` (SCK na D13) nie jest uruchamiane. Radio i FRAM 1 MHz jak na przewodach. Ekran pracuje z **1 MHz**, nie 2 MHz: sieć SCK ma około 240 mm z odgałęzieniami i 33 Ω szeregowo, P1.04 to pin „standard drive, low frequency”, a 2 MHz to granica LS027B7DH01. `DISPLAY 2000000` przełącza ekran na 2 MHz do restartu i przerysowuje cały obraz, do próby z analizatorem na J11 (pełny obraz 240 × 52 B trwa 100 ms przy 1 MHz, zwykle zmienia się kilka wierszy).
+- **SPI:** SPIM2 z pinami MISO P1.14, SCK P1.04, MOSI P1.13; `SPIClass::begin()` rdzenia ustawia napęd H0H1 na SCK i MOSI. Domyślne `SPI` (SCK na D13) nie jest uruchamiane. Radio i FRAM 1 MHz jak na przewodach. Ekran pracuje z **1 MHz**, nie 2 MHz: sieć SCK ma około 240 mm z odgałęzieniami i 33 Ω szeregowo, P1.04 to pin, który Nordic zaleca tylko do sygnałów wolnozmiennych (ochrona radia 2,4 GHz, tu nieużywanego), a 2 MHz to granica LS027B7DH01. `DISPLAY 2000000` przełącza ekran na 2 MHz do restartu i przerysowuje cały obraz, do próby z analizatorem na J11 (pełny obraz 240 × 52 B trwa 100 ms przy 1 MHz, zwykle zmienia się kilka wierszy).
 - **Ekran:** DISP w stanie niskim od startu (2,2 kΩ do masy na płytce), stan wysoki dopiero po poleceniu CLEAR w `display.begin()`.
-- **CISZA:** przełącznik działa na zmianę położenia po 50 ms stałego stanu; położenie przy starcie ustawia ciszę od razu. Zmiana trafia do dziennika (`silence on (switch)`) i jako zdarzenie `radio` do laptopa. `SILENCE` z portu USB obowiązuje do następnego przełączenia.
+- **CISZA:** przełącznik działa na zmianę położenia po 50 ms stałego stanu; położenie przy starcie ustawia ciszę od razu. Zmiana trafia do dziennika (`silence on (switch)`) i jako zdarzenie `radio` do laptopa. Przełącznik ma pierwszeństwo ([specyfikacja](../docs/spec/oprogramowanie.md), „Cisza radiowa”): w położeniu „cisza” ani `SILENCE 0`, ani `silence` z laptopa nie wyłącza ciszy (`silence switch on`, `rejected` z `silence switch`). Włączenie ciszy z portu USB przy przełączniku w położeniu „praca” obowiązuje do następnego przełączenia.
 - **Tryb przygotowania:** przytrzymanie przycisku przygotowania przez 3 s przełącza tryb (włącza albo wyłącza; wyłączenie przerywa pomiary jak `PREP 0`), z krótkim sygnałem. Przycisk wciśnięty przy starcie nie przełącza trybu. `PREP` z potwierdzeniem OK zostaje jako zapasowe.
 - **Dioda alarmu** (według [zasad alarmów](../docs/spec/oprogramowanie.md)): świeci, dopóki trwa przyczyna alarmu, także po potwierdzeniu OK, i w ciszy radiowej. Przyczynę (zgłoszenie po progu bez potwierdzenia od odbiorcy albo pilność 2 bez odczytu, niezależnie od potwierdzenia OK) sprawdza `Station::alarmCause` co sekundę; dioda gaśnie, gdy przyjdzie potwierdzenie albo odczyt, albo zgłoszenie zostanie anulowane lub zastąpione. **Brzęczyk** (2048 Hz z `tone()`, PWM2; stały stan wysoki pobierałby około 75 mA z 5 V): na ekranie alarmu 200 ms co 2 s do potwierdzenia OK. Cisza radiowa nie daje sygnału, także przy włączeniu; zostają tekst ekranu i dioda.
 
@@ -78,7 +78,7 @@ cd firmware && ../.venv-pio/bin/pio run -e bench-n1 -t upload
 
 ## Stanowisko B na płytce N1 (bench-b)
 
-Opis płytki: [płytka nośna](../hardware/dev-bench/plytka-nosna.md#przypisanie-sygnałów) (kolumna ESP32-S3) i [połączenia](../hardware/dev-bench/polaczenia.md) (J5/J6 to złącza J1/J3 DevKitC). Numery pinów są w `src/board_bench_b.h`. Program to ten sam `src/main.cpp` co na stanowisku A; środowisko `bench-b` pomija sterowniki CC1120 (`cc1120.cpp`, `cc1120_link.cpp`, `radio_console_cc1120.cpp`). Moduł ESP32-S3: N8R2, N8R8 albo N16R16V; obraz zakłada 8 MB flash (wystarcza też na 16 MB) i nie używa PSRAM, więc piny PSRAM ośmiobitowej i piny 1,8 V modułu N16R16V zostają wolne.
+Opis płytki: [płytka nośna](../hardware/dev-bench/plytka-nosna.md#przypisanie-sygnałów) (kolumna ESP32-S3) i [połączenia](../hardware/dev-bench/polaczenia.md) (J5/J6 to złącza J1/J3 DevKitC). Numery pinów są w `src/board_bench_b.h`. Program to ten sam `src/main.cpp` co na stanowisku A; środowisko `bench-b` pomija sterowniki CC1120 (`cc1120.cpp`, `cc1120_link.cpp`, `radio_console_cc1120.cpp`). Moduł ESP32-S3: N8, N8R2 albo N8R8 (ESP32-S3-WROOM-1, pamięć flash quad SPI); obraz zakłada 8 MB flash w trybie QIO i nie używa PSRAM, więc piny PSRAM ośmiobitowej zostają wolne. Moduły WROOM-2 z pamięcią flash ośmiobitową i 1,8 V (np. N16R8V, N32R8V) wymagają innego trybu pamięci w `platformio.ini` (`opi_opi`) i nie zostały sprawdzone.
 
 | Sygnał | GPIO ESP32-S3 | Uwagi |
 |---|---|---|
@@ -114,6 +114,7 @@ Polecenia są jak na [stanowisku A](#polecenia) i [N1](#płytka-nośna-n1-bench-
 | `STATE`, `IDLE` | stan głównego sterownika i liczba bajtów w kolejkach TX i RX; `IDLE` przechodzi do READY |
 | `RSSI` | `rssi_dbm` z RSSI_LEVEL_RUN − 146 (tylko w RX) |
 | `REG <hex>` | odczyt rejestru (adres 8-bitowy) z bajtami statusu, np. `REG F0` (PARTNUM), `REG 8E` (MC_STATE0) |
+| `REGW <hex> <hex>` | zapis rejestru w READY, tylko w trybie przygotowania (np. kolejność bajtów SYNC0..3 do próby w eterze); `VERIFY` pokazuje różnicę wobec tablicy P1, `CONFIG` ją cofa |
 | `TXCW` | MOD_TYPE = CW i dane PN9; pole `marc` podaje stan S2-LP (`TX`) |
 | `TXPKT` | ramki wzorcowe o stałej długości; S2-LP nie wyprowadza „pakiet w powietrzu” dla nadawania, więc `sync_gpio: false`, a czas serii liczy się do przerwania TX_DATA_SENT i powrotu do READY |
 | `FOFF [<hz>]` | korekta słowem SYNT (krok 23,84 Hz, ±1 MHz); `freqoff` to liczba kroków |
@@ -137,7 +138,7 @@ cd firmware && ../.venv-pio/bin/pio run -e bench-b -t upload
 
 `measure::Bench` (polecenia pomiarowe i łącze P1) korzysta z interfejsu `radiolink::Driver` (`src/radio_link.h`); CC1120 ma go w `src/cc1120_link.cpp` (kod przeniesiony z `measure.cpp` bez zmian zachowania), S2-LP w `src/s2lp_link.cpp`:
 
-- **Nadawanie** z kolejki TX (128 B) w pakiecie BASIC. Ramka P1 ma zmienną długość: pole LEN wysyła układ z PCKTLEN (LEN liczy BODY i CRC), więc do kolejki idą BODY i CRC bez bajtu LEN. Ramki wzorcowe mają stałą długość z PCKTLEN. Polecenie TX tylko ze stanu READY (odbiór przerywany `SABORT` na czas własnej serii), koniec po przerwaniu TX_DATA_SENT i powrocie do READY; bez przerwania po czasie ramki + 120 ms `SABORT` i opróżnienie kolejki.
+- **Nadawanie** z kolejki TX (128 B) w pakiecie BASIC. Ramka P1 ma zmienną długość: pole LEN wysyła układ z PCKTLEN (LEN liczy BODY i CRC), więc do kolejki idą BODY i CRC bez bajtu LEN. Ramki wzorcowe mają stałą długość z PCKTLEN. Polecenie TX tylko ze stanu READY (odbiór przerywany `SABORT` na czas własnej serii), z przetwornicą SMPS przełączaną na czas nadawania na PM_CONF3 = 0x9C i z powrotem na 0x90 jak w bibliotece ST (`S2LP::send`, `S2LP::read`; także `TXCW`), koniec po przerwaniu TX_DATA_SENT i powrocie do READY; bez przerwania po czasie ramki + 120 ms `SABORT` i opróżnienie kolejki.
 - **Odbiór** w trybie stałym (PERS_RX, TIMERS5 = 0: bez limitu czasu RX): po przerwaniu RX_DATA_READY długość z RX_PCKT_LEN, dane z kolejki RX, RSSI z RSSI_LEVEL (zapamiętane przy słowie synchronizacji) − 146 dBm, jakość = SQI. RX_DATA_DISC, długość spoza 17–102 B albo liczba bajtów w kolejce inna niż długość ramki dają `rx_bad` (z PERS_RX następny pakiet pisze do tej samej kolejki, a RX_PCKT_LEN opisuje tylko ostatni, więc nadmiar po dłuższym postoju pętli przesunąłby kolejne odczyty), RX_FIFO_ERROR przepełnienie; po każdym z nich `SABORT`, opróżnienie kolejki i ponowne RX.
 - **Przerwania** czytane z IRQ_STATUS3..0 (odczyt kasuje) przez SPI przy każdym odpytaniu i zbierane w programie, bez linii nIRQ; maska: RX_DATA_READY, RX_DATA_DISC, TX_DATA_SENT, TX_FIFO_ERROR, RX_FIFO_ERROR, VALID_SYNC.
 - **CCA:** kanał zajęty, gdy przyszło VALID_SYNC bez końca ramki (najwyżej 300 ms) albo RSSI_LEVEL_RUN − 146 przekracza próg −100 dBm.
@@ -165,7 +166,7 @@ Tablica jest w `src/s2lp_p1_registers.h`, generowanym przez `tools/s2lp_p1_regis
 | próg CCA −100 dBm | RSSI_TH | `0x2E` | RSSI_TH − 146; przesunięcie RSSI modułu wyznacza T4 |
 | 8 × 0xAA, D3 91 D3 91 | PCKTCTRL6, PCKTCTRL5, PCKTCTRL3, SYNC3..0 | `0x80`, `0x20`, `0x01`, `D3 91 D3 91` | 32 pary bitów wzoru 1010, słowo 32-bitowe |
 | LEN = BODY + CRC, CRC programowe | PCKTCTRL4, PCKTCTRL2, PCKTCTRL1 | `0x00`, `0x01`, `0x00` | pakiet BASIC, zmienna długość z 1-bajtowym LEN, bez adresu, bez CRC układu, bez wybielania, MSB pierwszy |
-| 13 dBm | PA_POWER1, PA_POWER0 | `0x03`, `0x07` | poziom 3 w gnieździe 7, bez PA_MAXDBM i bez narastania; wzór biblioteki ST, moc do pomiaru |
+| 13 dBm | PA_POWER8, PA_POWER0 | `0x03`, `0x07` | poziom 3 w gnieździe o indeksie 7 (PA_POWER8 = 0x5A; biblioteka ST pisze indeks i do PA_POWER8 + 7 − i), bez PA_MAXDBM i bez narastania; wzór biblioteki ST, moc do pomiaru |
 
 Decyzje i otwarte punkty:
 
@@ -218,7 +219,7 @@ Port USB nRF (J3, nie port J-Link J2) zgłasza się jako urządzenie z dwoma int
 | `FREQ` | słowo FREQ, FREQOFF, częstotliwość nośna w Hz ze wzoru z instrukcji, błąd wobec 869 525 000 Hz, krok FREQOFF oraz FREQOFF_EST z ostatniego odbioru |
 | `RX [<len>]` / `IDLE` | odbiór ramek wzorcowych o długości `len` (domyślnie 103) z licznikami dla `RXPER`, albo przerwanie wszystkiego i IDLE; potem `STATE` |
 | `PREP <0\|1>` | tryb przygotowania; włączenie wymaga przycisku OK w ciągu 30 s (na N1 zapasowo obok przycisku przygotowania) |
-| `SILENCE <0\|1>` | cisza radiowa (na przewodach zamiast przełącznika CISZA; na N1 zapasowo do następnego przełączenia) |
+| `SILENCE <0\|1>` | cisza radiowa (na przewodach zamiast przełącznika CISZA; na N1 zapasowo do następnego przełączenia; nie wyłącza ciszy przy przełączniku w położeniu „cisza”) |
 | `TXCW <s> [CONDUCTED]` | nośna bez modulacji przez 1–10 s; po zakończeniu `tx_ms` i dług ciszy |
 | `TXPKT <n> <len> [<ms>] [CONDUCTED]` | `n` ramek wzorcowych po `len` B (4–103) co `ms`; seria idzie w tle, na końcu `sent`, `failed`, `tx_ms`, czasy pierwszej ramki z GPIO2 |
 | `RXPER` | zwraca i zeruje liczniki odbioru: `rx_ok`, `rx_bad`, `missing`, `reordered`, `overflow`, `per_percent`, średnie RSSI i LQI |
@@ -313,7 +314,7 @@ Kod w `src/journal.cpp` (bez zależności od Arduino, sprawdzany na komputerze z
 Zasady:
 
 - **Zapis dwufazowy.** Rekord długu i zegara trafia do najstarszego slotu (numer modulo 32) najpierw z zerowym znacznikiem, potem zapisywany jest sam znacznik zatwierdzenia, a na końcu rekord jest odczytywany i porównywany. Zanik zasilania w trakcie zostawia poprzedni rekord; dziennik ma zawsze co najmniej dwa poprawne rekordy, jeśli były zapisane. Numer 0 i 0xFFFFFFFF są nieważne, więc nowa pamięć (same 0x00 albo 0xFF) nie daje fałszywych rekordów.
-- **Dług przed serią.** `TXCW` i `TXPKT` zapisują 12 × zaplanowany czas nadawania przed pierwszą ramką; po odczekaniu obraz zapisuje rekord z długiem 0 i zdarzenie „silence debt cleared”. Po restarcie odczekiwany jest cały ostatni zapisany dług (`INFO` → `tx_wait_ms`).
+- **Dług przed serią.** `TXCW` i `TXPKT` zapisują 12 × zaplanowany czas nadawania przed pierwszą ramką, a odliczanie długu zaczyna się po końcu serii (radio.md: po nadaniu odczekuje się zapisany dług); po odczekaniu obraz zapisuje rekord z długiem 0 i zdarzenie „silence debt cleared”. Po restarcie odczekiwany jest cały ostatni zapisany dług (`INFO` → `tx_wait_ms`).
 - **Brak poprawnego rekordu** (nowa FRAM, uszkodzenie): obraz odczekuje największy możliwy dług `MAX_DEBT_MS` = 16 228 ms (12 × czas nadawania datagramu 600 B z założonym narastaniem 2 ms na fragment, liczony jak w modelu i sprawdzany testem), zakłada nowy dziennik i podaje `journal_resets: 1` w `INFO`.
 - **Zegar.** Rekord zegara przy starcie (restarty +1) i co 60 s; `uptime_s` w `INFO` liczy się od wartości z dziennika, więc jest monotoniczny między restartami. Nieudany zapis zegara gasi LED3 i `journal_ok`.
 - **Zdarzenia.** Każdy wpis `LOG` (start, tryb przygotowania, cisza, serie, potwierdzenia `CONDUCTED`, `FOFF`, kasowanie długu) jest rekordem w FRAM; bufor nadpisuje najstarsze po 512 wpisach. Przy starcie obraz czyta wszystkie 36 KiB obszaru (około 0,3 s przy 1 MHz), żeby znaleźć najnowsze rekordy.
@@ -383,7 +384,7 @@ Kontrakt: [specyfikacja oprogramowania](../docs/spec/oprogramowanie.md#protokó�
 | `event` / `incoming` (stacja → laptop) | `record`, `at` i pola zdarzenia (`"kind":"radio"` z `silence` i `prep`; wiadomości dojdą z łączem); zapisane w FRAM i ponawiane co 5 s do `ack` |
 | `ack` z `cursor` albo `record` | potwierdzenie zdarzeń do numeru albo jednego |
 | `test` | TEST z konfiguracji (kategoria 9, 1 osoba, pilność 0, adres stacji, „test”), id z generatora sprzętowego; `stored` |
-| `silence` z `on` | potwierdzenie przyciskiem OK w ciągu 30 s, potem `ok`; brak potwierdzenia: `rejected` i wpis w dzienniku |
+| `silence` z `on` | potwierdzenie przyciskiem OK w ciągu 30 s, potem `ok`; brak potwierdzenia: `rejected` i wpis w dzienniku; `on: false` przy przełączniku CISZA w położeniu „cisza” (N1): `rejected` z `silence switch` bez czekania na OK |
 | `configure` z `address`, `role`, `osp`, `osp_backup`, `stations`, `phrases` (tablica `[PL, UK, EN]`), `ifac` | tylko w trybie przygotowania; kontrola najgorszego zgłoszenia z przycisków jak `check_button_configuration` (`worst_request` w odpowiedzi); zapis do FRAM |
 | `close` | ZAMKNIJ ZDARZENIE: usuwa kolejkę, skrzynkę i zdarzenia, zachowuje najwyższy event na id |
 | `destroy` | potwierdzenie przyciskiem OK, potem usunięcie konfiguracji i wszystkich rekordów, rekordu tożsamości i tablic stosu w FRAM; stos stoi do restartu, po nim nowa tożsamość |
@@ -394,7 +395,7 @@ Każde polecenie trafia do dziennika zdarzeń (`LOG`). Wiersz dłuższy niż 102
 
 ## Warstwa aplikacji nad stosem
 
-Kod w `src/station.cpp` (bez zależności od Arduino i od stosu; `tests/test_firmware_host.py` łączy dwie stacje w symulowanym eterze ze stratami, z modelem potwierdzenia transportowego, i sprawdza przebieg REQUEST → RECEIVED → STATUS, regresję stanu, powtórzony REQUEST, źródło spoza zaufania i odmowę stosu). Po starcie łącze P1 jest w odbiorze, a kolejka nadaje sama, chyba że `LINK 0`.
+Kod w `src/station.cpp` (bez zależności od Arduino i od stosu; `tests/test_firmware_host.py` łączy dwie stacje w symulowanym eterze ze stratami, z modelem potwierdzenia transportowego, i sprawdza przebieg REQUEST → RECEIVED → STATUS, regresję stanu, powtórzony REQUEST, źródło spoza zaufania i odmowę stosu). Po starcie łącze P1 jest w odbiorze (`P1RX`), a kolejka nadaje sama, chyba że `LINK 0`. Poza trybem przygotowania odbiór P1 wraca sam w ciągu sekundy po każdym przerwaniu (pomiary, `STOP`, `IDLE`, `CONFIG`, wyjście z trybu przygotowania), bo specyfikacja radia wyłącza odbiór tylko na czas własnego nadawania; w trybie przygotowania o odbiorze decydują polecenia.
 
 - **Pakiety Reticulum.** Intencja idzie pakietem okazjonalnym do celu SINGLE `wici.sa1` odbiorcy (adres z `to` = skrót celu), szyfrowanym do jego tożsamości, z potwierdzeniem transportowym (`PacketReceipt`). Cel musi być znany z ogłoszenia (tablice w FRAM przetrwają restart); gdy nie jest, stos wysyła zapytanie o trasę, a próba wraca po 1, 2, 5 i 15 min ±20% kolejnych odmów bez liczenia prób (`refused`).
 - **Koperta zastępcza.** Do czasu LXMF treść pakietu to `["WICI",1,"<od>","<do>",<SA1>]` (do 383 B, `Packet.ENCRYPTED_MDU` przy MTU 500): pakiet okazjonalny nie niesie adresu nadawcy, a warstwa aplikacji potrzebuje go do zaufania (przypięta OSP), skrzynki i odpowiedzi. Adres nadawcy nie jest podpisany; podpis i adres nadawcy da LXMF. Dawny datagram potwierdzenia `["WICI",1,od,do,"ack",…]` zniknął: zastępuje go dowód transportowy.
@@ -589,7 +590,9 @@ Czasy, które nie wymagają zmian: alarmy sprawdzane co 1 s w indeksie 128 wpis�
 3. Próby stosu na sprzęcie z [listy](#próba-zgodności-z-reticulum): dwie płytki A przez CC1120 i płytka A z Reticulum w Pythonie, czasy kryptografii przy `-Os`, RAM w czasie pracy, restart w trakcie zapisu tablic; na `bench-b` start stosu i pula TLSF na ESP32-S3.
 4. Stanowisko B (`bench-b`), w tej kolejności:
    - kroki B3–B4 na sprzęcie (w tym wyliczenie dwóch portów CDC, wgrywanie przez dotknięcie 1200 b/s i to, czy restart przez watchdog zadań daje `esp_reset_reason()` = TASK_WDT, a nie PANIC, od czego zależy wpis „restart by watchdog”), wybór napędu SCK i MOSI (`DRIVE`) i zegara ekranu analizatorem na J11;
-   - łącze między A i B: `TXPKT`/`RX`/`RXPER` w obie strony i `P1TX`/`P1RX` (potwierdzenie kolejności bajtów słowa synchronizacji w eterze), `TXCW` z miernikiem częstotliwości i `FOFF`;
+   - łącze między A i B: `TXPKT`/`RX`/`RXPER` w obie strony i `P1TX`/`P1RX` (potwierdzenie kolejności bajtów słowa synchronizacji w eterze; przy braku odbioru zamiana kolejności `REGW 33..36` w trybie przygotowania, `CONFIG` przywraca tablicę), `TXCW` z miernikiem częstotliwości i `FOFF`;
+   - odbiór serii ramek bez przerw na B (`TXPKT 50 103 0` z A, `RXPER` na B przy odświeżanym ekranie STAN): sterownik odrzuca ramkę, gdy w kolejce RX jest już początek następnej (pętla stała dłużej niż około 20 ms); przy stratach odczyt tylko długości ramki z pozostawieniem reszty kolejki;
    - przesunięcie RSSI modułu (wpływa na próg CCA −100 dBm i `rssi_avg_dbm`), ustawienia AFC, AGC i odtwarzania zegara symboli przy pomiarze czułości (T4);
    - przegląd tablicy S2-LP w ST STSW-S2LP-DK (S2-LP DK GUI) dla P1, gdy narzędzie będzie dostępne; pomiar mocy i dobór PA_POWER oraz SMPS;
    - własne nazwy interfejsów CDC („WICI diagnostyka”, „WICI dane”) wymagają zmiany w rdzeniu Arduino-ESP32 (nazwy są stałe w `USBCDC.cpp`) albo własnych deskryptorów TinyUSB.
+4. Dioda alarmu: na stanowisku świeci stale (1 mA); specyfikacja wymaga krótkich błysków (około 1% czasu) i sygnalizacji nowej wiadomości do odczytu, co wchodzi razem ze skrzynką odczytów i stosem.

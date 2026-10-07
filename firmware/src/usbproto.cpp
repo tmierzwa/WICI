@@ -300,6 +300,8 @@ void Protocol::doSilence(const json::Value& msg, int64_t seq, uint32_t nowMs) {
     (void)nowMs;
     bool on = false;
     if (!fieldBool(msg, "on", on)) { rejected(seq, "invalid", "on"); return; }
+    // Przełącznik na stacji ma pierwszeństwo przed panelem (oprogramowanie.md, „Cisza radiowa”).
+    if (!on && host_.silenceSwitch()) { rejected(seq, "silence switch"); return; }
     if (!host_.confirm()) { host_.log("usb silence not confirmed"); rejected(seq, "not confirmed"); return; }
     host_.setSilence(on);
     send("ok", seq, on ? "\"silence\":true" : "\"silence\":false");
