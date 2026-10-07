@@ -2,7 +2,7 @@
 
 **Status: projekt rozpoczęty 2026-10-07. Nie ma jeszcze schematu ani PCB. HOLD: nie zamawiać.**
 
-R02 jest pierwszą drukowaną płytką projektu i jedyną, którą WICI projektuje: samodzielna stacja z mikrokontrolerem, torem radiowym P1, pamięcią FRAM, ekranem, przyciskami i własnym zasilaniem z ogniw i z wejścia 12 V. Powstaje w dwóch wykonaniach o wspólnym zachowaniu: A (nRF52840 + CC1120) i B (ESP32-S3 + S2-LP). Do czasu R02 oprogramowanie i próby T1–T4 prowadzi się na [stanowisku deweloperskim](../dev-bench/README.md) z płytek rozwojowych i modułów producentów. Wcześniejszy kontroler R01.3 (STM32F103, modem USB) nie jest częścią R02; jego ustalenia i lekcje są w [lekcje.md](lekcje.md), a pliki CAD w historii Git.
+R02 jest płytką stacji: samodzielna stacja z mikrokontrolerem, torem radiowym P1, pamięcią FRAM, ekranem, przyciskami i własnym zasilaniem z ogniw i z wejścia 12 V. Powstaje w dwóch wykonaniach o wspólnym zachowaniu: A (nRF52840 + CC1120) i B (ESP32-S3 + S2-LP). Do czasu R02 oprogramowanie i próby T1–T4 prowadzi się na [stanowisku deweloperskim](../dev-bench/README.md) z płytek rozwojowych i modułów producentów, połączonych [płytką nośną N1](../dev-bench/plytka-nosna.md) bez własnego toru RF. Wcześniejszy kontroler R01.3 (STM32F103, modem USB) nie jest częścią R02; jego ustalenia i lekcje są w [lekcje.md](lekcje.md), a pliki CAD w historii Git.
 
 ## Źródła wymagań
 
