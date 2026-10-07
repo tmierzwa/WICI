@@ -18,6 +18,7 @@ AUDIO = HERE / "build" / "audio"
 SERIF = "HEAD"  # nagłówki: Avenir Next Demi Bold
 SANS = "Avenir Next"
 SFX_TITLE = HERE / "sfx" / "title.mp3"  # ElevenLabs sound-generation, zob. README
+LOGO = HERE.parent / "logo" / "WICI-na-ciemnym.svg"  # znak z media/logo
 SEG_GAP = 0.45
 FW = config.frame_width
 
@@ -202,6 +203,67 @@ def crossed(text, size=30):
                           stroke_color=ALERT, stroke_width=4))
 
 
+def logo(width=4.0):
+    # Manim nie skaluje grubości linii z SVG: sygnał ma 52 z 2407 jednostek szerokości znaku
+    m = SVGMobject(str(LOGO)).scale_to_fit_width(width)
+    m[0].set_stroke(width=52 / 2407 * width * 100)
+    return m
+
+
+def aa_cells(n=4, w=0.34, color=GREY_A):
+    cells = VGroup()
+    for _ in range(n):
+        body = RoundedRectangle(width=w, height=w * 0.36, corner_radius=w * 0.08, stroke_color=color,
+                                stroke_width=2, fill_color=OK, fill_opacity=0.55)
+        tip = Rectangle(width=w * 0.07, height=w * 0.14, stroke_width=0, fill_color=color,
+                        fill_opacity=1).next_to(body, RIGHT, buff=0)
+        cells.add(VGroup(body, tip))
+    return cells.arrange(RIGHT, buff=w * 0.12)
+
+
+def station(w=3.0):
+    """Stacja WICI: ekran, przyciski, ogniwa AA i gniazdo anteny. Obrys w kolorze zestawu."""
+    h = w * 0.62
+    body = RoundedRectangle(width=w, height=h, corner_radius=w * 0.06, stroke_color=ACCENT,
+                            stroke_width=4, fill_color="#1b2027", fill_opacity=1)
+    screen = Rectangle(width=w * 0.56, height=h * 0.5, stroke_color=GREY_B, stroke_width=2,
+                       fill_color="#aab3a6", fill_opacity=1)
+    screen.move_to(body.get_corner(UL) + RIGHT * (w * 0.08 + screen.width / 2) + DOWN * (h * 0.12 + screen.height / 2))
+    buttons = VGroup(*[Circle(radius=w * 0.055, stroke_color=GREY_A, stroke_width=2, fill_color="#2b323c",
+                              fill_opacity=1) for _ in range(4)]).arrange_in_grid(2, 2, buff=w * 0.06)
+    buttons.move_to([(screen.get_right()[0] + body.get_right()[0]) / 2, screen.get_y(), 0])
+    cells = aa_cells(4, w * 0.15).move_to([screen.get_x(), (screen.get_bottom()[1] + body.get_bottom()[1]) / 2, 0])
+    jack = Rectangle(width=w * 0.06, height=w * 0.08, stroke_width=0, fill_color=GOLD,
+                     fill_opacity=1).move_to(body.get_corner(UR) + LEFT * w * 0.15 + UP * w * 0.04)
+    g = VGroup(body, screen, buttons, cells, jack)
+    g.body, g.screen, g.buttons, g.cells, g.jack = body, screen, buttons, cells, jack
+    return g
+
+
+def inverter(w=1.3):
+    """Przetwornica 12 V → 230 V z zestawu WICI."""
+    box = RoundedRectangle(width=w, height=w * 0.62, corner_radius=0.08, stroke_color=ACCENT, stroke_width=3,
+                           fill_color="#1b2027", fill_opacity=1)
+    sine = FunctionGraph(lambda x: 0.12 * w * np.sin(x * 2 * PI / (w * 0.5)), x_range=[-w * 0.3, w * 0.3],
+                         stroke_color=ACCENT, stroke_width=3).move_to(box).shift(UP * w * 0.08)
+    volts = T("230 V", 18, GREY_A).next_to(sine, DOWN, buff=w * 0.06)
+    return VGroup(box, sine, volts)
+
+
+def charger(w=1.3):
+    """Ładowarka telefonów z zestawu WICI: osobne porty USB 5 V."""
+    box = RoundedRectangle(width=w, height=w * 0.62, corner_radius=0.08, stroke_color=ACCENT, stroke_width=3,
+                           fill_color="#1b2027", fill_opacity=1)
+    ports = VGroup(*[Rectangle(width=w * 0.13, height=w * 0.07, stroke_color=GREY_A, stroke_width=2)
+                     for _ in range(4)]).arrange(RIGHT, buff=w * 0.07).move_to(box).shift(UP * w * 0.08)
+    volts = T("USB 5 V", 18, GREY_A).next_to(ports, DOWN, buff=w * 0.08)
+    return VGroup(box, ports, volts)
+
+
+def label2(lines, size=22, color=GREY_A):
+    return VGroup(*[T(l, size, color) for l in lines]).arrange(DOWN, buff=0.06)
+
+
 def window_frame(w=1.0, h=1.4):
     f = Rectangle(width=w, height=h, stroke_color=GREY_B, stroke_width=4)
     return VGroup(f, Line(f.get_top(), f.get_bottom(), stroke_color=GREY_B, stroke_width=2),
@@ -329,7 +391,7 @@ class WICI(MovingCameraScene):
                   ([FadeIn(dw, shift=DOWN * 0.3)], 0.7),
                   ([FadeIn(pk, shift=DOWN * 0.3)], 0.7))
 
-        osp = building(1.8, 1.4, ALERT, "straż", door=True).move_to(RIGHT * 4.6)
+        osp = building(1.8, 1.4, ALERT, "gmina", door=True).move_to(RIGHT * 4.6)
         osp.shift(UP * (school.body.get_bottom()[1] - osp.body.get_bottom()[1]))
         ly = osp.body.get_center()[1]
         link = DashedLine([school.body.get_right()[0] + 0.25, ly, 0], [osp.body.get_left()[0] - 0.25, ly, 0],
@@ -346,10 +408,10 @@ class WICI(MovingCameraScene):
 
     def title_card(self):
         self.add_sound(str(SFX_TITLE), gain=-11)
-        title = T("WICI", 120, WHITE, weight=HEAVY)
-        sub = T("sieć łączności na czas, gdy nic nie działa", 34, GREY_B).next_to(title, DOWN, buff=0.4)
+        title = logo(4.6).shift(UP * 0.5)
+        sub = T("sieć łączności na czas, gdy nic nie działa", 34, GREY_B).next_to(title, DOWN, buff=0.5)
         line = Line(LEFT * 3, RIGHT * 3, stroke_color=ACCENT).next_to(sub, DOWN, buff=0.35)
-        self.play(Write(title), run_time=1.2)
+        self.play(FadeIn(title, scale=0.92), run_time=1.2)
         self.play(FadeIn(sub, shift=UP * 0.2), Create(line), run_time=1.0)
         self.wait(1.6)
         self.play(FadeOut(VGroup(title, sub, line)), run_time=0.7)
@@ -472,7 +534,7 @@ class WICI(MovingCameraScene):
         bar_bg = Rectangle(width=6, height=0.22, stroke_color=GREY_B, stroke_width=2).move_to(DOWN * 1.5)
         bar = Rectangle(width=0.01, height=0.22, stroke_width=0, fill_color=ACCENT, fill_opacity=1)
         bar.align_to(bar_bg, LEFT).set_y(bar_bg.get_y())
-        bar_l = T("czas nadawania: mniej niż 1 sekunda", 26, GREY_A).next_to(bar_bg, UP, buff=0.25)
+        bar_l = T("czas nadawania: około 1 sekundy", 26, GREY_A).next_to(bar_bg, UP, buff=0.25)
         waves = VGroup(*[Arc(radius=0.3 * i, start_angle=-PI / 4, angle=PI / 2, stroke_color=RADIO,
                              stroke_width=3).move_arc_center_to(aa.get_end()) for i in (1, 2, 3)])
         self.narr("s4d",
@@ -490,9 +552,9 @@ class WICI(MovingCameraScene):
                                          stroke_width=3),
                         *[Circle(radius=0.06, stroke_color=GREY_A, stroke_width=2).shift(UP * y)
                           for y in (0.12, -0.08)]).next_to(power, RIGHT, buff=0.3)
-        bat = Battery(1.2, 0.55, label="zwykły akumulator").move_to([1.6, ra.get_y(), 0])
-        bat.shift(UP * (ra.get_y() - bat.box.get_y()))
-        wire = Line(ra.get_right(), bat.box.get_left(), stroke_color=GREY_B, stroke_width=3)
+        cells = aa_cells(4, 0.5).move_to([1.9, ra.get_y(), 0])
+        bat = VGroup(cells, T("zwykłe baterie", 22, GREY_A).next_to(cells, DOWN, buff=0.2))
+        wire = Line(ra.get_right(), cells.get_left(), stroke_color=GREY_B, stroke_width=3)
         self.narr("s4e",
                   ([FadeOut(VGroup(bar_bg, bar, bar_l, small, rb, ab))], 0.6),
                   ([FadeIn(power, shift=UP * 0.2), FadeIn(remote)], 0.8),
@@ -520,7 +582,7 @@ class WICI(MovingCameraScene):
             return g
 
         A = node("A", ACCENT, "schronienie")
-        OSP = node("OSP", ALERT, "straż")
+        OSP = node("OSP", ALERT, "gmina")
         rng = Circle(radius=R, stroke_color=RADIO, stroke_width=2, fill_color=RADIO,
                      fill_opacity=0.07).move_to(pos["A"])
         rng_l = T("około 1 km?", 26, RADIO).move_to(pos["A"] + np.array([1.2, 1.6, 0]))
@@ -591,76 +653,147 @@ class WICI(MovingCameraScene):
         self.clear_all()
 
     def part_station(self):
-        title = T("jedna stacja", 44, WHITE, font=SERIF).to_edge(UP, buff=0.5)
-        sub = T("z rzeczy, które zwykle już gdzieś leżą", 28, GREY_B).next_to(title, DOWN, buff=0.2)
-        self.narr("s6a", (Write(title), 1.0), ("at", 1), (FadeIn(sub, shift=UP * 0.2), 0.8))
+        title = T("jedna stacja", 44, WHITE, font=SERIF).to_corner(UL, buff=0.5).shift(RIGHT * 0.3)
+        st = station(3.0).move_to([-3.3, -0.6, 0])
+        st_l = T("stacja WICI", 22, GREY_A).next_to(st, DOWN, buff=0.2)
+        levels = VGroup()
+        for n, name in enumerate(["stacja", "+ laptop", "+ router"], 1):
+            t = VGroup(T(str(n), 22, DIM, weight=HEAVY), T(name, 22, DIM)).arrange(RIGHT, buff=0.15)
+            box = RoundedRectangle(width=t.width + 0.4, height=0.5, corner_radius=0.15, stroke_color=GREY_D,
+                                   stroke_width=2)
+            levels.add(VGroup(box, t.move_to(box)))
+        levels.arrange(RIGHT, buff=0.18).to_edge(RIGHT, buff=0.6).set_y(title.get_y())
 
-        y = 0.2
-        lp = laptop().move_to([0, y + 0.1, 0])
+        def level(i):
+            box, t = levels[i]
+            return [box.animate.set_stroke(WHITE), t.animate.set_color(WHITE)]
+
+        self.narr("s6a", (Write(title), 1.0),
+                  ([FadeIn(st, shift=UP * 0.2), FadeIn(st_l)], 0.8),
+                  ("at", 1),
+                  ([FadeIn(levels)], 0.6),
+                  (level(0), 0.5),
+                  ("t", self.timing["s6a"]["sentences"][1]["start"] + 3.6),
+                  (Indicate(st.screen, color=None, scale_factor=1.08), 0.7),
+                  (Indicate(st.buttons, color=None, scale_factor=1.15), 0.7),
+                  (Indicate(st.cells, color=None, scale_factor=1.15), 0.7))
+
+        wall = VMobject(stroke_color=GREY_D, stroke_width=3).set_points_as_corners(
+            [[-6.3, -2.5, 0], [-6.3, 1.0, 0], [-0.5, 1.0, 0], [-0.5, -2.5, 0]])
+        mx = -1.3
+        mst = Line([mx, 1.0, 0], [mx, 2.1, 0], stroke_color=WHITE, stroke_width=5)
+        jack = st.jack.get_center()
+        cable = VMobject(stroke_color=GREY_B, stroke_width=3).set_points_as_corners(
+            [jack, [jack[0], 0.7, 0], [mx, 0.7, 0], [mx, 1.0, 0]])
+        ant_l = T("antena na zewnątrz, możliwie wysoko", 22, GREY_A).next_to(mst.get_end(), RIGHT, buff=0.9)
+        waves = wifi(mst.get_end(), 0.22, 3, RADIO, angle=0)
+        bars = VGroup(*[Rectangle(width=0.07, height=0.06 * (k + 1), stroke_width=0, fill_color="#1b2027",
+                                  fill_opacity=1) for k in range(4)]).arrange(RIGHT, buff=0.04, aligned_edge=DOWN)
+        online = VGroup(T("w sieci", 22, "#1b2027"), bars).arrange(RIGHT, buff=0.15).move_to(st.screen)
+        self.narr("s6b",
+                  ([st.screen.animate.set_fill("#c8d0c2"), FadeIn(online)], 0.8),
+                  ("at", 1),
+                  ([Create(wall), Create(cable), Create(mst), FadeIn(ant_l)], 1.2),
+                  ([LaggedStart(*[Create(w) for w in waves], lag_ratio=0.3)], 0.6))
+
+        op = person(0.8).move_to([-5.5, -0.5, 0])
+        op_l = T("opiekun", 20, GREY_A).next_to(op, DOWN, buff=0.15)
+        need = VGroup(T("woda, leki", 22, "#1b2027"), T("50 osób", 22, "#1b2027")).arrange(DOWN, buff=0.1)
+        need.move_to(st.screen)
+        top = mst.get_end()
+        n1, n2 = np.array([2.6, 0.5, 0]), np.array([5.4, -1.2, 0])
+        nbs = VGroup(*[VGroup(Circle(radius=0.26, stroke_color=RADIO, stroke_width=3).move_to(c),
+                              Dot(c, radius=0.13, color=RADIO)) for c in (n1, n2)])
+        nb_l = VGroup(T("sąsiednia stacja", 20, RADIO).next_to(nbs[0], UP, buff=0.2),
+                      T("w stronę gminy", 20, RADIO).next_to(nbs[1], DOWN, buff=0.2))
+        own = Square(0.18, stroke_width=0, fill_color=ACCENT, fill_opacity=1).move_to(top)
+        other = Square(0.18, stroke_width=0, fill_color=RADIO, fill_opacity=1).move_to(n1)
+        self.narr("s6c",
+                  ([FadeIn(op, shift=RIGHT * 0.2), FadeIn(op_l)], 0.6),
+                  ([Indicate(st.buttons, color=ACCENT, scale_factor=1.15), FadeOut(online), FadeIn(need)], 1.0),
+                  ([FadeIn(nbs), FadeIn(nb_l)], 0.6),
+                  (FadeIn(own), 0.2),
+                  ([MoveAlongPath(own, ArcBetweenPoints(top, n2, angle=-PI / 4))], 0.9),
+                  (FadeOut(own), 0.2),
+                  ("at", 1),
+                  (FadeIn(other), 0.2),
+                  ([MoveAlongPath(other, ArcBetweenPoints(n1, top, angle=PI / 5)),
+                    Flash(top, color=RADIO, line_length=0.18, flash_radius=0.35)], 0.8),
+                  ([MoveAlongPath(other, ArcBetweenPoints(top, n2, angle=-PI / 4))], 0.9),
+                  (FadeOut(other), 0.2))
+
+        # rozszerzenia: laptop i router, zasilane przez przetwornice z zestawu
+        sx, sy, sw = 3.6, 0.9, 1.9
+        lp = laptop().move_to([-0.5, 1.1, 0])
         base_y = lp[2].get_y()
         rt = router()
-        rt.shift([-3.0 - rt[0].get_x(), base_y - rt[0].get_y(), 0])
-        lab = lambda m, s: T(s, 22, GREY_A).next_to(m, DOWN, buff=0.25)
-        rt_l, lp_l = lab(rt, "domowy router"), lab(lp, "stary laptop")
-        bus_y = y - 1.3
-        bat = Battery(1.0, 0.48, label="akumulator 12 V").move_to([1.5, bus_y - 0.7, 0])
+        rt.shift([-3.3 - rt[0].get_x(), base_y - rt[0].get_y(), 0])
+        rt_l = T("router", 22, GREY_A).next_to(rt[0], DOWN, buff=0.25)
+        lp_l = T("stary laptop", 22, GREY_A).next_to(lp, DOWN, buff=0.25)
+        st_small = st.copy()
+        st_small.scale_to_fit_width(sw).move_to([sx, sy, 0])
+        st_small[1].set_fill("#c8d0c2")
+        need_small = need.copy().scale(sw / 3.0).move_to(st_small[1])
+        st_l2 = T("stacja WICI", 22, GREY_A).next_to(st_small, DOWN, buff=0.2)
+        jx, jy = st_small[4].get_center()[:2]
+        stub = Line([jx, jy, 0], [jx, jy + 0.9, 0], stroke_color=WHITE, stroke_width=4)
+        usb = Line([lp[2].get_right()[0], base_y, 0], [st_small[0].get_left()[0], base_y, 0],
+                   stroke_color=GREY_B, stroke_width=3)
         eth = Line(rt[0].get_right(), lp[2].get_left(), stroke_color=GREY_B, stroke_width=3)
-        self.narr("s6b",
-                  ([FadeOut(sub), FadeIn(lp, shift=UP * 0.2), FadeIn(lp_l)], 0.8),
-                  ("at", 1),
-                  ([FadeIn(rt, shift=UP * 0.2), FadeIn(rt_l), Create(eth)], 0.8),
-                  ("at", 2),
-                  ([FadeIn(bat, shift=UP * 0.2)], 0.8))
-
-        rm = radio_module(0.95).move_to([2.9, base_y, 0])
-        rm_l = T("moduł radiowy", 22, RADIO).next_to(rm, UP, buff=0.25)
-        win = window_frame().move_to([5.2, y + 0.75, 0])
-        ax = win.get_right()[0] + 0.35
-        usb = Line(lp[2].get_right(), rm.get_left(), stroke_color=GREY_B, stroke_width=3)
-        cable = VMobject(stroke_color=GREY_B, stroke_width=3).set_points_as_corners(
-            [rm.get_right(), [ax, rm.get_y(), 0], [ax, y + 1.6, 0]])
-        ant = Line([ax, y + 1.6, 0], [ax, y + 2.5, 0], stroke_color=WHITE, stroke_width=5)
-        tap = lp.get_x() + 0.95
-        power = VMobject(stroke_color=ACCENT, stroke_width=2).set_points_as_corners(
-            [[tap, lp[2].get_bottom()[1], 0], [tap, bus_y, 0], [rm.get_x(), bus_y, 0], [rm.get_x(), rm.get_bottom()[1], 0]])
-        power2 = Line(bat.box.get_top(), [bat.box.get_x(), bus_y, 0], stroke_color=ACCENT, stroke_width=2)
-        rb, xr = rt[0], max(rt_l.get_right()[0], rt[0].get_right()[0]) + 0.25
-        power3 = VMobject(stroke_color=ACCENT, stroke_width=2).set_points_as_corners(
-            [[rb.get_right()[0], rb.get_y() - 0.1, 0], [xr, rb.get_y() - 0.1, 0], [xr, bus_y, 0], [tap, bus_y, 0]])
-        waves = wifi(ant.get_end(), 0.25, 3, RADIO, angle=0)
-        self.narr("s6c",
-                  ([FadeIn(rm, shift=UP * 0.2), FadeIn(rm_l), Create(usb)], 0.8),
-                  ([FadeIn(win), Create(cable), Create(ant), Create(power), Create(power2), Create(power3)], 1.2),
-                  ([LaggedStart(*[Create(w) for w in waves], lag_ratio=0.3)], 0.8))
-
-        phones = VGroup(*[phone(0.9) for _ in range(3)]).arrange(DOWN, buff=0.3).move_to([-6.1, y, 0])
+        old = VGroup(wall, cable, mst, ant_l, waves, op, op_l, nbs, nb_l)
+        big = phone(2.0).move_to([-6.0, 1.0, 0])
         wf = wifi(rt[1][0].get_end() + UP * 0.05, 0.16, 3, WHITE, angle=PI * 0.8)
-        big = phone(2.3).move_to([-5.9, y + 0.3, 0])
-        form = VGroup(T("WICI", 15, ACCENT, weight=HEAVY),
-                      *[Rectangle(width=0.8, height=0.14, stroke_color=GREY_B, stroke_width=1) for _ in range(3)],
-                      RoundedRectangle(width=0.55, height=0.18, corner_radius=0.05, stroke_width=0,
-                                       fill_color=ACCENT, fill_opacity=1)).arrange(DOWN, buff=0.13)
+        form = VGroup(logo(0.62),
+                      *[Rectangle(width=0.7, height=0.12, stroke_color=GREY_B, stroke_width=1) for _ in range(3)],
+                      RoundedRectangle(width=0.48, height=0.16, corner_radius=0.05, stroke_width=0,
+                                       fill_color=ACCENT, fill_opacity=1)).arrange(DOWN, buff=0.12)
         form.next_to(big.bars, DOWN, buff=0.15).set_x(big.screen.get_x())
         nos = VGroup(crossed("aplikacja", 26), crossed("konto", 26), crossed("internet", 26)).arrange(RIGHT, buff=0.6)
-        nos.next_to(title, DOWN, buff=0.35)
+        nos.move_to(UP * 2.75)
         self.narr("s6d",
-                  ([FadeIn(phones, lag_ratio=0.2), Create(wf)], 1.0),
-                  ([ReplacementTransform(phones[0], big), FadeOut(phones[1:])], 0.8),
-                  (FadeIn(form, lag_ratio=0.2), 0.8),
+                  ([FadeOut(old), FadeOut(st_l), Transform(st, st_small), Transform(need, need_small)], 1.0),
+                  ([FadeIn(st_l2), Create(stub), FadeIn(lp, shift=UP * 0.2), FadeIn(lp_l), *level(1)], 0.8),
+                  (Create(usb), 0.6),
                   ("at", 1),
+                  ([FadeIn(rt, shift=UP * 0.2), FadeIn(rt_l), Create(eth), *level(2)], 0.8),
+                  ([FadeIn(big, shift=RIGHT * 0.2), Create(wf)], 0.8),
+                  (FadeIn(form, lag_ratio=0.2), 0.7),
+                  ("at", 2),
                   ([LaggedStart(*[AnimationGroup(FadeIn(n[0]), Create(n[1])) for n in nos], lag_ratio=0.5)], 1.4))
 
-        op = person(0.8).next_to(lp, UP, buff=0.35).shift(LEFT * 0.9)
-        op_l = T("opiekun", 20, GREY_A).next_to(op, LEFT, buff=0.15)
-        bat2 = Battery(1.0, 0.48, label="osobny akumulator do telefonów").move_to([-3.0, bus_y - 0.7, 0])
-        usbs = VGroup(*[VMobject(stroke_color=ACCENT, stroke_width=2).set_points_smoothly(
-            [bat2.box.get_left(), bat2.box.get_left() + LEFT * 0.8 + UP * 0.2 * k, big.get_bottom() + RIGHT * 0.15 * k])
-            for k in (-1, 1)])
+        ry = -1.3
+        inv = inverter(1.3).move_to([-1.9, ry, 0])
+        inv_l = T("przetwornica", 22, GREY_A).next_to(inv, DOWN, buff=0.15)
+        bat_a = Battery(1.0, 0.48).move_to([0.4, ry, 0])
+        bat_a_l = T("akumulator 12 V", 22, GREY_A).next_to(bat_a.box, DOWN, buff=0.15)
+        chg = charger(1.3).move_to([-6.0, ry, 0])
+        chg_l = label2(["ładowarka", "telefonów"]).next_to(chg, DOWN, buff=0.15)
+        bat_c = Battery(1.0, 0.48).move_to([-4.0, ry, 0])
+        bat_c_l = label2(["drugi", "akumulator 12 V"]).next_to(bat_c.box, DOWN, buff=0.15)
+        PW = dict(stroke_color=ORANGE, stroke_width=3)
+        it = inv[0].get_top()[1]
+        w_a = Line(bat_a.box.get_left(), inv[0].get_right(), **PW)
+        rx, lx = rt[0].get_x() + 0.5, lp.get_x() + 1.03
+        w_rt = VMobject(**PW).set_points_as_corners(
+            [[-2.15, it, 0], [-2.15, -0.5, 0], [rx, -0.5, 0], [rx, rt[0].get_bottom()[1], 0]])
+        w_lp = VMobject(**PW).set_points_as_corners(
+            [[-1.65, it, 0], [-1.65, -0.35, 0], [lx, -0.35, 0], [lx, lp[2].get_bottom()[1], 0]])
+        w_c = Line(bat_c.box.get_left(), chg[0].get_right(), **PW)
+        w_ph = VGroup(*[Line([chg.get_x() + dx, chg[0].get_top()[1], 0], [big.get_x() + dx, big.get_bottom()[1], 0], **PW)
+                        for dx in (-0.12, 0.12)])
+        key = VGroup(
+            VGroup(RoundedRectangle(width=0.36, height=0.26, corner_radius=0.05, stroke_color=ACCENT, stroke_width=3),
+                   T("zestaw WICI", 22, ACCENT)).arrange(RIGHT, buff=0.2),
+            VGroup(RoundedRectangle(width=0.36, height=0.26, corner_radius=0.05, stroke_color=GREY_A, stroke_width=3),
+                   T("z lokalnego zasobu", 22, GREY_A)).arrange(RIGHT, buff=0.2),
+        ).arrange(DOWN, aligned_edge=LEFT, buff=0.25).move_to([4.6, -1.35, 0])
         self.narr("s6e",
-                  ([FadeIn(op, shift=DOWN * 0.2), FadeIn(op_l)], 0.8),
+                  ([FadeIn(bat_a), FadeIn(bat_a_l), FadeIn(inv), FadeIn(inv_l), FadeIn(key[0])], 0.8),
+                  ([Create(w_a), Create(w_rt), Create(w_lp)], 1.0),
+                  (FadeIn(key[1]), 0.5),
                   ("at", 1),
-                  ([FadeIn(bat2, shift=UP * 0.2)], 0.7),
-                  ([Create(usbs)], 0.9))
+                  ([FadeIn(bat_c), FadeIn(bat_c_l), FadeIn(chg), FadeIn(chg_l)], 0.8),
+                  ([Create(w_c), Create(w_ph)], 0.9))
         self.clear_all()
 
     def part_statuses(self):
@@ -673,9 +806,9 @@ class WICI(MovingCameraScene):
                   (FadeIn(a, shift=RIGHT * 0.2), 0.6), (GrowFromCenter(neq), 0.4),
                   (FadeIn(b, shift=LEFT * 0.2), 0.6))
 
-        labels = [("zapisane", "tutaj"), ("zapisane", "w straży"), ("przeczytane", "przez dyżurnego"),
+        labels = [("zapisane", "lokalnie"), ("zapisane", "u odbiorcy"), ("przeczytane", "przez dyżurnego"),
                   ("pomoc", "skierowana")]
-        who = ["schronienie", "system straży", "dyżurny", "decyzja"]
+        who = ["stacja w schronieniu", "odbiorca w gminie", "dyżurny", "decyzja"]
         colors = [ACCENT, RADIO, BLUE_C, OK]
         chips = VGroup()
         for (l1, l2), c in zip(labels, colors):
@@ -712,7 +845,7 @@ class WICI(MovingCameraScene):
 
     def part_status(self):
         head = T("Gdzie jesteśmy?", 48, WHITE, font=SERIF).to_edge(UP, buff=0.6)
-        done = ["koncepcja", "specyfikacja", "projekt pierwszej płytki", "wszystko otwarte:\nschematy, kod, dokumentacja"]
+        done = ["koncepcja", "specyfikacja", "płytka do pomiarów radia", "wszystko otwarte:\nschematy, kod, dokumentacja"]
         left = VGroup()
         for s in done:
             left.add(VGroup(check(0.28), T(s, 28, WHITE, line_spacing=0.8)).arrange(RIGHT, buff=0.25, aligned_edge=UP))
@@ -722,7 +855,7 @@ class WICI(MovingCameraScene):
                   ([FadeIn(lh), LaggedStart(*[FadeIn(r, shift=RIGHT * 0.2) for r in left[:3]], lag_ratio=0.5)], 2.0),
                   ("at", 2), (FadeIn(left[3], shift=RIGHT * 0.2), 0.7))
 
-        todo = ["1 km wśród budynków?", "doba na akumulatorach?", "laptop z szuflady?"]
+        todo = ["1 km wśród budynków?", "dwie doby na bateriach?", "sieć w małym układzie?"]
         right = VGroup(*[VGroup(T("?", 30, ACCENT, weight=HEAVY), T(s, 28, WHITE))
                          .arrange(RIGHT, buff=0.3) for s in todo])
         right.arrange(DOWN, aligned_edge=LEFT, buff=0.32).move_to(RIGHT * 3.4).align_to(left, UP)
@@ -738,7 +871,7 @@ class WICI(MovingCameraScene):
     def part_call(self):
         center = VGroup(Circle(radius=0.8, stroke_width=0, fill_color=config.background_color, fill_opacity=1),
                         Circle(radius=0.8, stroke_color=ACCENT, stroke_width=4, fill_color=ACCENT, fill_opacity=0.1),
-                        T("WICI", 34, ACCENT, weight=HEAVY))
+                        logo(1.15))
         roles = [("krótkofalowcy", UP * 2.3 + LEFT * 4.2), ("elektronicy", UP * 2.3 + RIGHT * 4.2),
                  ("programiści", LEFT * 5.0 + DOWN * 0.4), ("straż i gminy", RIGHT * 5.0 + DOWN * 0.4)]
         nodes = VGroup()
@@ -773,14 +906,13 @@ class WICI(MovingCameraScene):
 
         allm = VGroup(center, nodes, edges, small, e2, tests)
         url = T("github.com/tmierzwa/WICI", 54, WHITE, weight=SEMIBOLD)
-        url2 = T("tmierzwa.github.io/WICI", 32, GREY_B).next_to(url, DOWN, buff=0.35)
         motto = T("Rozsyłamy wici.", 56, ACCENT, font=SERIF).next_to(url, UP, buff=1.0)
-        hint = T("zajrzyj · zadaj pytanie · zgłoś błąd", 28, GREY_A).next_to(url2, DOWN, buff=0.6)
+        hint = T("zajrzyj · zadaj pytanie · zgłoś błąd", 28, GREY_A).next_to(url, DOWN, buff=0.6)
         self.narr("s9c",
                   ([allm.animate.scale(0.3).set_opacity(0).move_to(UP * 2)], 1.0),
-                  ([Write(url), FadeIn(url2)], 1.2),
+                  ([Write(url)], 1.2),
                   ("at", 1), (FadeIn(hint, shift=UP * 0.2), 0.7),
                   ("at", 2), (Write(motto), 1.0))
         self.wait(4.0)
-        self.play(FadeOut(VGroup(url, url2, motto, hint)), run_time=1.0)
+        self.play(FadeOut(VGroup(url, motto, hint)), run_time=1.0)
         self.wait(0.5)
