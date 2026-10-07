@@ -204,7 +204,6 @@ void setSilenceFromSwitch(bool on) {
     if (bench.silence == on) return;
     bench.silence = on;
     bench.log(on ? "silence on (switch)" : "silence off (switch)");
-    if (on) beep(300);  // jeden sygnał przy włączeniu ciszy, potem tylko tekst i dioda
     radioEvent();
 }
 
