@@ -38,7 +38,7 @@ Freerouting 2.5.0 jest potrzebny tylko do nowego trasowania. Odtworzenie R01.3 u
 Po sprawdzeniu repozytorium:
 
 ```sh
-python3 tools/release.py --source-zip dist/WICI-0.4-source.zip
+python3 tools/release.py --source-zip dist/WICI-0.5-source.zip
 ```
 
 Paczka zawiera źródła, dokumentację i eksporty; nie jest systemem startowym ani aplikacją stacji. Katalog `dist/` nie jest śledzony w Git. Archiwum zawiera wszystkie pliki manifestu i sam manifest, ze stałymi datami i kolejnością wpisów. Kontrola porównuje także bajty każdego wpisu. Zgodność identycznych wejść sprawdzają testy; inne wersje narzędzi lub kompresji mogą dać inny hash ZIP.

@@ -156,7 +156,7 @@ class ManifestModeTests(unittest.TestCase):
             subprocess.run(["git", "init", "-q"], cwd=root, check=True)
             (root / "a.md").write_text("new", encoding="utf-8")
             (root / "manifest.json").write_text(
-                '{"format": 2, "project": "WICI", "version": "0.4-prototype-design", "controller": "R01.3",'
+                '{"format": 2, "project": "WICI", "version": "0.5-prototype-design", "controller": "R01.3",'
                 ' "files": {"a.md": "0"}}', encoding="utf-8")
             subprocess.run(["git", "add", "a.md", "manifest.json"], cwd=root, check=True)
             old = release.ROOT

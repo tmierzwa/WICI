@@ -38,7 +38,7 @@ Jeżeli korzystasz z narzędzi AI, napisz o tym w opisie PR i sprawdź wynik tak
 
 ## Decyzje i przeglądy
 
-Projekt ma obecnie jednego opiekuna ([@tmierzwa](https://github.com/tmierzwa)). Opiekun scala PR, zamyka decyzje D01–D13 z [planu weryfikacji](docs/conception/08-plan-weryfikacji-i-decyzje.html) i wydaje wersje. Decyzja zapada w Issue lub PR, z uzasadnieniem i dowodem wymaganym w tabeli decyzji; zmiana decyzji wymaga nowego dowodu, nie samej dyskusji.
+Projekt ma obecnie jednego opiekuna ([@tmierzwa](https://github.com/tmierzwa)). Opiekun scala PR, zamyka decyzje D01–D17 z [planu weryfikacji](docs/conception/08-plan-weryfikacji-i-decyzje.html) i wydaje wersje. Decyzja zapada w Issue lub PR, z uzasadnieniem i dowodem wymaganym w tabeli decyzji; zmiana decyzji wymaga nowego dowodu, nie samej dyskusji.
 
 Zmiany krytyczne dla bezpieczeństwa ludzi (przetwornica 230 V i ochrona PE, ochrona portów telefonów przed przepięciem, zabezpieczenia akumulatorów, budżet czasu nadawania) wymagają, oprócz opiekuna, przeglądu przez osobę z odpowiednimi kwalifikacjami. Dopóki taka osoba nie dołączy do projektu, te części pozostają opisem do prób i mają status HOLD.
 

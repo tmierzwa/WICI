@@ -1,5 +1,7 @@
 # Film „WICI: sieć łączności na czas, gdy nic nie działa”
 
+> Film opisuje wariant 0.4: stację z laptopem i routerem oraz odbiorcę „straż”. Zmiany po koncepcji 0.5 (samodzielna stacja, odbiorca w gminie) są zebrane w [ZMIANY-0.5.md](ZMIANY-0.5.md) i czekają na nowy render.
+
 | Plik | Format |
 |---|---|
 | [WICI-film.mp4](WICI-film.mp4), [WICI-film.srt](WICI-film.srt) | 4:19, 1920×1080, 30 kl./s, napisy wypalone w obrazie i osobno |

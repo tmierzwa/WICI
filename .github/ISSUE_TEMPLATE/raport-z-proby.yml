@@ -13,21 +13,21 @@ body:
     id: config
     attributes:
       label: Konfiguracja
-      description: Rewizja sprzętu i źródeł, BOM wariantu, wersje oprogramowania, host, router, anteny i ich wysokości
+      description: Rewizja sprzętu i źródeł, BOM wariantu, rodzina MCU, wersje bibliotek, oprogramowania stacji i systemu, rodzaj i napięcie ogniw, host i router, topologia, anteny (typ, zysk, wysokość) i przewody
     validations:
       required: true
   - type: textarea
     id: method
     attributes:
       label: Warunki i metoda
-      description: Miejsce, temperatura, zasilanie, przyrządy, liczba powtórzeń
+      description: Miejsce, temperatura, źródła i obciążenia, przyrządy, liczba powtórzeń; metoda synchronizacji zegarów i odchyłka na końcu próby
     validations:
       required: true
   - type: textarea
     id: result
     attributes:
       label: Wynik i surowe dane
-      description: Wynik względem warunku zaliczenia; załącz surowe dane. Nie publikuj kluczy ani danych mieszkańców.
+      description: Wynik względem warunku zaliczenia; załącz surowe dane. Dla komunikacji podaj id/revision, czas lokalnego zapisu, COMMIT w OSP i powrotu RECEIVED, liczbę datagramów, czas TX, odrzuty i restarty. Nie publikuj kluczy, tokenów ani danych mieszkańców.
     validations:
       required: true
   - type: dropdown

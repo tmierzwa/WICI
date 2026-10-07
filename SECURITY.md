@@ -17,7 +17,7 @@ Błędy obliczeń i dokumentacji bez takich skutków zgłaszaj zwykłym Issue.
 
 ## Zakres
 
-Projekt jest w fazie prototypu 0.4 i nie ma wydania przeznaczonego do pracy w schronieniu. Podatności w Reticulum, LXMF i innych zależnościach zgłaszaj ich autorom; jeśli dotyczą sposobu użycia ich w WICI, zgłoś je także tutaj.
+Projekt jest w fazie prototypu 0.5 i nie ma wydania przeznaczonego do pracy w schronieniu. Podatności w Reticulum, LXMF i innych zależnościach zgłaszaj ich autorom; jeśli dotyczą sposobu użycia ich w WICI, zgłoś je także tutaj.
 
 ## In English
 
