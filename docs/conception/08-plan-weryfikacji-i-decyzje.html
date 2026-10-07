@@ -46,8 +46,7 @@
   <li><a href="#proby-i-pokrycie-wymagan">Próby i pokrycie wymagań</a></li>
   <li><a href="#minimalny-raport">Minimalny raport</a></li>
   <li><a href="#otwarte-decyzje-i-warunki-zamkniecia">Otwarte decyzje i warunki zamknięcia</a></li>
-  <li><a href="#koszty-i-naklad-pracy">Koszty i nakład pracy</a></li>
-  <li><a href="#pilotaz-i-zakup">Pilotaż i zakup</a></li>
+  <li><a href="#pilotaz">Pilotaż</a></li>
 </ol>
 </nav>
 
@@ -144,67 +143,16 @@
 <tr><td>D18</td><td>czy SA1 dostaje typ MELDUNEK (stan obiektu: liczba osób obecnych, w tym wymagających szczególnej opieki, zapas wody i żywności w dobach, stan energii stacji); wysyłany na polecenie opiekuna lub na prośbę OSP, nigdy cyklicznie</td><td>koszt czasu nadawania w T5 i ocena organizatora sieci w T8; do decyzji SA1 pozostaje przy sześciu typach</td><td>organizator sieci i projekt</td></tr>
 </tbody></table></div>
 
-<p>Organizator sieci może używać stacji wyłącznie jako wyrobów z deklaracją zgodności UE wystawioną przez producenta. Samodzielny montaż przez organizatora sieci lub wolontariuszy czyni ich producentem, ze wszystkimi obowiązkami (RED z wymaganiami cyberbezpieczeństwa EN 18031, EMC, bezpieczeństwo elektryczne, RoHS, WEEE, rozporządzenie bateryjne; dla zasilania poziomu 3 także LVD 2014/35/UE i EMC 2014/30/UE z normami do ustalenia przez jednostkę badawczą). Finansowanie i zakup opisuje sekcja <a href="#pilotaz-i-zakup">Pilotaż i zakup</a>.</p>
+<p>Organizator sieci może używać stacji wyłącznie jako wyrobów z deklaracją zgodności UE wystawioną przez producenta. Samodzielny montaż przez organizatora sieci lub wolontariuszy czyni ich producentem, ze wszystkimi obowiązkami (RED z wymaganiami cyberbezpieczeństwa EN 18031, EMC, bezpieczeństwo elektryczne, RoHS, WEEE, rozporządzenie bateryjne; dla zasilania poziomu 3 także LVD 2014/35/UE i EMC 2014/30/UE z normami do ustalenia przez jednostkę badawczą). Źródłem finansowania może być Program Ochrony Ludności i Obrony Cywilnej na lata 2025–2026 (uchwała nr 72 Rady Ministrów z 27 maja 2025 r., M.P. 2025 poz. 541 ze zm.; obszary m.in. „systemy łączności” i „podmioty ochrony ludności”); finansowanie po 2026 r. wymaga nowego programu.</p>
 
-<p>Nie ma jeszcze przypisanych osób ani zatwierdzonego harmonogramu. Najpierw zamknąć zakres i dane wejściowe, potem wycenić pracę. Od G0 do G3 (<a href="#bramy-decyzyjne">bramy decyzyjne</a>) szacuje się nie mniej niż 18–30 miesięcy przy obecnym składzie zespołu. Nie rozpoczynać serii produkcyjnej na podstawie samego wspólnego kontraktu stacji lub poprawnych Gerberów kontrolera.</p>
+<p>Nie ma jeszcze przypisanych osób ani zatwierdzonego harmonogramu. Najpierw zamknąć zakres i dane wejściowe, potem wycenić pracę. Nie rozpoczynać serii produkcyjnej na podstawie samego wspólnego kontraktu stacji lub poprawnych Gerberów kontrolera.</p>
 
 <p>Warunek przerwania: fałszywy status sukcesu, utrata danych po potwierdzeniu, także przy wymianie ogniw, nieograniczona kolejka/ponowienia, obejście budżetu TX, przekroczenie ochrony portu lub niespełniona ochrona AC. Naprawić przyczynę i powtórzyć zależne próby; nie zwiększać limitu, aby uzyskać zaliczenie.</p>
-<h2 id="koszty-i-naklad-pracy">Koszty i nakład pracy</h2>
-
-<p>Pozycje z ilościami zestawia <a href="../spec/koszty.csv">koszty.csv</a>. Ceny w tabeli to szacunek recenzenta, do potwierdzenia ofertami (stan 2026-10); pozycji bez szacunku nie wycenia się na oko. Koszt docelowy stacji ustala się przed D10 i D14 (W24).</p>
-
-<div class="table-wrap"><table>
-<thead><tr>
-<th scope="col">Grupa</th>
-<th scope="col">Pozycje</th>
-</tr></thead><tbody>
-<tr><td>na stację, jednorazowo</td><td>stacja z deklaracją zgodności UE (wycena w D09); dwa komplety 4 × L91 (kryzysowy i ćwiczebny); antena kolinearna z uchwytem; przewód; odgromnik; przepust; montaż na wysokości z uziemieniem; zamykana skrzynka; karta obsługi i formularze; odbiornik FM/DW; para PMR446</td></tr>
-<tr><td>na sieć</td><td>stanowisko OSP (zestaw w <a href="02-scenariusze-i-organizacja.html#role">rozdziale 02</a>); przekaźniki; zapas stacji ≥10% i nie mniej niż 2</td></tr>
-<tr><td>organizacyjnie</td><td>szkolenia; kurs pierwszej pomocy; ocena skutków dla ochrony danych; wpis do gminnego planu zarządzania kryzysowego</td></tr>
-<tr><td>co roku</td><td>ogniwa ćwiczebne; przegląd techniczny z kontrolą TCXO; ćwiczenie; serwis i aktualizacje</td></tr>
-</tbody></table></div>
-
-<div class="table-wrap"><table>
-<thead><tr>
-<th scope="col">Pozycja</th>
-<th scope="col">Szacunek (zł)</th>
-</tr></thead><tbody>
-<tr><td>komplet 4 × L91</td><td>ok. 35–50</td></tr>
-<tr><td>antena kolinearna 868 MHz</td><td>150–400</td></tr>
-<tr><td>przewód LMR-240 2 m ze złączami N</td><td>80–150</td></tr>
-<tr><td>odgromnik</td><td>100–250</td></tr>
-<tr><td>montaż na wysokości</td><td>300–1000</td></tr>
-<tr><td>stacja</td><td>do wyceny (D09)</td></tr>
-</tbody></table></div>
-
-<p>Nakład pracy (propozycja do weryfikacji w T8): na stację rocznie ok. 15–20 osobogodzin (12 TEST × 0,5 h, 4 przeglądy × 0,5 h, przegląd techniczny 1–2 h z dojazdem, odświeżenie szkolenia 2 h × 3 osoby); OSP ok. 1–2 h miesięcznie przy miesięcznym TEST oraz ćwiczenie roczne 4–8 h × 4 osoby; dla 30 schronień ok. 500–600 osobogodzin rocznie. Szkolenia: opiekun i zastępca 3 h oraz kurs pierwszej pomocy ok. 8 h; dyżurny OSP 4 h i ćwiczenie T8; osoba utrzymująca system 8 h; odświeżenie co roku 2 h.</p>
-
-<h2 id="pilotaz-i-zakup">Pilotaż i zakup</h2>
-
-<h3 id="bramy-decyzyjne">Bramy decyzyjne</h3>
-
-<div class="table-wrap"><table>
-<thead><tr>
-<th scope="col">Brama</th>
-<th scope="col">Warunek</th>
-</tr></thead><tbody>
-<tr><td>G0: list intencyjny</td><td>bez kosztów: wskazanie OSP, 2–3 miejsc pilotażu i osoby kontaktowej; start prac nad D07, D12 i D13</td></tr>
-<tr><td>G1: pilotaż techniczny</td><td>zamknięte D01, D10 i D14; zaliczone T3 i T4</td></tr>
-<tr><td>G2: pilotaż z organizatorem sieci</td><td>zaliczone T5 i T8; podpisane D07, D12 i D13</td></tr>
-<tr><td>G3: zakup</td><td>deklaracja zgodności UE producenta; dwie wyceny (D09); zaliczone T6 i T7; umowa serwisowa</td></tr>
-</tbody></table></div>
-
-<h3 id="pilotaz">Pilotaż</h3>
+<h2 id="pilotaz">Pilotaż</h2>
 
 <p>Prototypy w pilotażu pozostają własnością i na odpowiedzialności zespołu projektu jako urządzenia badane przed oceną zgodności; organizator sieci ich nie nabywa. Udział określa porozumienie o współpracy: miejsca, osoby, zakres prób, ubezpieczenie, dane i zakończenie. Pilotaż techniczny finansuje projekt.</p>
 
-<p>Etap 0: pomiar tłumienia tras gotowymi urządzeniami 868 MHz z deklaracją UE (<a href="02-scenariusze-i-organizacja.html#planowanie-sieci">planowanie sieci</a>). Pilotaż obejmuje 3 miejsca (A, B, OSP) i zapas, po co najmniej jednej stacji każdego wykonania w terenie, łącznie 6–8 stacji; trwa ≥3 miesiące, w tym okres zimowy. Pomiar kanału (D11) trwa ≥2 tygodnie w różnych porach doby. Przed G3: próba skali z ≥8–10 stacjami albo emulacja ruchu startowego wszystkich planowanych stacji.</p>
-
-<h3 id="zakup-i-finansowanie">Zakup i finansowanie</h3>
-
-<p>Zakup do schronień jest możliwy dopiero od producenta, który wystawi deklarację zgodności UE, udzieli gwarancji i zobowiąże się do serwisu i aktualizacji. Opis przedmiotu zamówienia odwołuje się do jawnej specyfikacji (P1, SA1, odbiór), więc ofertę może złożyć każdy producent. Wymagać: deklaracji zgodności UE i raportów badań; gwarancji ≥36 mies. z serwisem; wsparcia oprogramowania ≥5 lat i kanału zgłaszania podatności; części zamiennych ≥7 lat; szkolenia; zgodności z kartami OSP i stacjami innych wykonawców. Tryb zamówienia (w tym próg stosowania ustawy Pzp) i współfinansowanie rozwoju – do oceny z prawnikiem. Otwarta licencja nie zwalnia sprzedawcy z rękojmi.</p>
-
-<p>Program Ochrony Ludności i Obrony Cywilnej na lata 2025–2026 (uchwała nr 72 Rady Ministrów z 27 maja 2025 r., M.P. 2025 poz. 541 ze zm.; obszary m.in. „systemy łączności” i „podmioty ochrony ludności”) kończy się przed możliwym terminem zakupu. Finansowanie trzeba sprawdzić w programie na kolejne lata, w budżecie samorządu lub w rezerwie celowej na zarządzanie kryzysowe (do potwierdzenia ze skarbnikiem).</p>
+<p>Etap 0: pomiar tłumienia tras gotowymi urządzeniami 868 MHz z deklaracją UE (<a href="02-scenariusze-i-organizacja.html#planowanie-sieci">planowanie sieci</a>). Pilotaż obejmuje 3 miejsca (A, B, OSP) i zapas, po co najmniej jednej stacji każdego wykonania w terenie, łącznie 6–8 stacji; trwa ≥3 miesiące, w tym okres zimowy. Pomiar kanału (D11) trwa ≥2 tygodnie w różnych porach doby. Przed zakupem: próba skali z ≥8–10 stacjami albo emulacja ruchu startowego wszystkich planowanych stacji.</p>
 
 <h3 id="aktualizacje-i-ogniwa">Aktualizacje i ogniwa</h3>
 

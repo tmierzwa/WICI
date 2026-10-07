@@ -2,7 +2,7 @@
 
 Zacznij od [koncepcji systemu](conception/index.html): potrzeby i wymagania, scenariusze pracy, dostępne rozwiązania, analiza opcji, architektura komunikacji, wykonalność, zagrożenia i plan prób. Dokumenty są po polsku, oddzielają wymagania od dowodów i wskazują otwarte decyzje.
 
-Specyfikacja stacji 0.5 składa się z pięciu rozdziałów, karty obsługi, BOM stacji i zestawienia kosztów. Parametry, kontrakty, warunki odbioru i kandydatów części zmienia się w tych plikach, a uzasadnienia i analizy w `docs/conception/`.
+Specyfikacja stacji 0.5 składa się z pięciu rozdziałów, karty obsługi i BOM stacji. Parametry, kontrakty, warunki odbioru i kandydatów części zmienia się w tych plikach, a uzasadnienia i analizy w `docs/conception/`.
 
 | Rozdział | Zakres |
 |---|---|
@@ -13,7 +13,6 @@ Specyfikacja stacji 0.5 składa się z pięciu rozdziałów, karty obsługi, BOM
 | [Odbiór](spec/odbior.md) | Próby z grupami T1–T8, warunki zaliczenia i niezrealizowane części |
 | [Karta obsługi](spec/karta.md) | Tekst dwustronnej karty obsługi stacji i pola formularza papierowego |
 | [BOM stacji](spec/bom-stacji.csv) | Wymagania minimalne części i kandydaci od dwóch producentów, ze stanem kwalifikacji |
-| [Koszty](spec/koszty.csv) | Pozycje kosztów na stację, OSP, przekaźnik i sieć, z orientacyjnymi cenami i ich źródłem |
 
 Kontroler R01.3, w 0.5 stanowisko laboratoryjne P1, ma osobne [źródła i dokumentację sprzętową](../hardware/radio-test-r01/README.md). Jego BOM nie zastępuje [BOM całej stacji](spec/bom-stacji.csv). Wyniki obliczeń są w [modelu](../software/reference/README.md).
 
