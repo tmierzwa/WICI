@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>05. Projekt koncepcyjny komunikacji · koncepcja WICI</title>
+<title>05. Projekt koncepcyjny komunikacji · WICI</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -123,7 +123,7 @@
 <figcaption>Droga zgłoszenia przez przekaźnik. Wyróżnione ramki to części wykonywane w projekcie WICI; przekaźnik i OSP używają tych samych modemów P1. Router Wi-Fi nie uczestniczy w łączności radiowej.</figcaption>
 </figure>
 
-<p>Bezpośrednie połączenie do OSP jest możliwe, gdy pozwalają na nie warunki radiowe. Schemat pokazuje drogę z przekaźnikiem. Przekaźnik musi mieć zasilany laptop i działający transport; sam modem nie trasuje pakietów. Router Wi-Fi nie bierze udziału w łączeniu stacji radiem.</p>
+<p>Bezpośrednie połączenie z OSP jest możliwe, gdy pozwalają na to warunki radiowe. Przekaźnik musi mieć zasilany laptop i działający transport, bo sam modem nie trasuje pakietów.</p>
 
 <p><code>rnsd</code> działa niezależnie od lokalnej strony. Restart strony nie powinien przerywać przekazywania pakietów innych stacji. Aplikacja ma jedną bazę i jedną instancję routera LXMF dla tożsamości stacji. W OSP działa ten sam podział z rolą dyżurnego. <a href="https://reticulum.network/manual/understanding.html">Implementacja transportu</a>, <a href="../spec/oprogramowanie.md">kontrakty WICI</a>.</p>
 
@@ -134,7 +134,7 @@
   <li>Po COMMIT pokazuje <strong>zapisane lokalnie</strong>. Brak radia nie zmienia tego znaczenia. Błąd dysku nie może dać pozornego sukcesu.</li>
   <li>Proces kolejki przekazuje treść SA1 do LXMF. Reticulum realizuje ochronę komunikacji i transport. Adapter przekazuje datagramy USB; modem dzieli je na ramki P1 i przestrzega budżetu TX.</li>
   <li>Aktywne węzły pośrednie przekazują pakiety. OSP weryfikuje nadawcę, format i duplikat, następnie zapisuje zgłoszenie wraz z intencją RECEIVED.</li>
-  <li><strong>Dopiero po COMMIT w OSP</strong> wysyłane jest RECEIVED. Źródło pokazuje <strong>zapisane w OSP</strong> po przyjęciu potwierdzenia od zaufanej tożsamości.</li>
+  <li>OSP wysyła RECEIVED dopiero po COMMIT. Źródło pokazuje <strong>zapisane w OSP</strong> po przyjęciu potwierdzenia od zaufanej tożsamości.</li>
   <li>Dyżurny osobno zapisuje odczyt albo skierowanie pomocy. STATUS wraca tą samą siecią. Decyzja o wysłaniu ludzi nie wynika automatycznie z numeru pilności.</li>
 </ol>
 
@@ -144,7 +144,7 @@
 
 <p>LXMF wybiera sposób dostarczenia według rozmiaru. W analizowanych wersjach (Reticulum <code>e40191b</code>, LXMF <code>c3ff2d6</code>) pojedynczy pakiet okazjonalny (ang. <em>opportunistic</em>) mieści około 284 B treści SA1 przy tytule <code>SA1</code> i pustych <code>fields</code>. Większa wiadomość przechodzi na dostarczenie przez link, a powyżej około 316 B na przesłanie zasobu (<em>Resource</em>). Zestawianie linku i zasób mają własne timeouty; dotyczy ich <a href="../review.md">kontrprzykład F02</a>. Wartości wynikają ze stałych <code>ENCRYPTED_MDU</code>, <code>Link.MDU</code> i 112 B narzutu LXMF; trzeba je potwierdzić dla wersji wydania. <a href="https://github.com/markqvist/LXMF/blob/c3ff2d6dc2f256daab896dadc044dd5a913ecbb7/LXMF/LXMessage.py">LXMessage</a>.</p>
 
-<p>Wiadomości zakodowane modelem: typowe zgłoszenie po polsku 174 B, REQUEST lub TEST z maksymalnymi polami 222 B, BULLETIN 246 B, RECEIVED 50 B. Limity pól liczone przed kodowaniem nie ograniczają jednak wyniku: cudzysłów i ukośnik zajmują w JSON po 2 B. REQUEST z polami złożonymi z <code>"</code> ma 382 B, BULLETIN z <code>\</code> 438 B. Obie mieszczą się w obecnym limicie 480 B, ale nie w jednym pakiecie. Treść wpisana przez mieszkańca może więc zmienić drogę dostarczenia bez wiedzy opiekuna.</p>
+<p>Wiadomości zakodowane modelem: typowe zgłoszenie po polsku 174 B, REQUEST lub TEST z maksymalnymi polami 222 B, BULLETIN 246 B, RECEIVED 50 B. Limity pól liczone przed kodowaniem nie ograniczają jednak rozmiaru po kodowaniu, bo cudzysłów i ukośnik zajmują w JSON po 2 B. REQUEST z polami złożonymi z <code>"</code> ma 382 B, BULLETIN z <code>\</code> 438 B. Obie mieszczą się w obecnym limicie 480 B, ale nie w jednym pakiecie. Treść wpisana przez mieszkańca może więc zmienić drogę dostarczenia bez wiedzy opiekuna.</p>
 
 <p>Propozycja: każda wiadomość SA1 powinna się mieścić w jednym pakiecie okazjonalnym LXMF. Limit sprawdzać po kodowaniu JSON, nie tylko dla pól. Dokładną wartość obliczyć dla przypiętych wersji i wpisać do <a href="../spec/oprogramowanie.md">specyfikacji</a> zamiast 480 B, razem z przypadkiem granicznym w modelu. Ruch aplikacji nie wymaga wtedy zestawiania linku ani zasobu; pozostają zapytania o trasę, ogłoszenia i potwierdzenia pakietów. Do czasu zmiany specyfikacji jest to otwarta część D01.</p>
 
@@ -164,21 +164,21 @@
 <tr><td>Stanowisko–dyżurny</td><td>kolejka przyjętych potrzeb i jawne statusy</td><td>dostępny człowiek, odczyt, decyzja i odpowiedź</td></tr>
 </tbody></table></div>
 
-<p>Szczegóły należą do <a href="../spec/radio.md">radia</a> i <a href="../spec/oprogramowanie.md">oprogramowania</a>. Modem nie implementuje szyfrowania, potwierdzeń ani trasowania. CRC wykrywa błędy ramki; nie uwierzytelnia nadawcy.</p>
+<p>Szczegóły podają specyfikacje <a href="../spec/radio.md">radia</a> i <a href="../spec/oprogramowanie.md">oprogramowania</a>. Modem nie implementuje szyfrowania, potwierdzeń ani trasowania. CRC wykrywa błędy ramki, ale nie uwierzytelnia nadawcy.</p>
 
 <h2 id="kolejki-opoznienia-i-praca-bez-trasy">Kolejki, opóźnienia i praca bez trasy</h2>
 
 <p>Własne zgłoszenia pozostają w SQLite do obsłużenia według kontraktu. LXMF prowadzi aktywną transmisję, a WICI nie rozpoczyna równoległego ponowienia tej samej intencji. Potwierdzenia RECEIVED i statusy mają pierwszeństwo w kolejce aplikacji; inne stacje, transport i obcy ruch radiowy nie podlegają tej kolejce. WICI nie gwarantuje pilnemu zgłoszeniu czasu dostarczenia podczas przeciążenia.</p>
 
-<p>Modem ma cztery miejsca na datagramy i osiem kontekstów składania. Przepełnienie musi być widoczne w licznikach. W prototypie trzeba określić również limit trwałej kolejki, wolnego miejsca i logów oraz zachowanie formularza po jego osiągnięciu; nie wolno pozornie potwierdzić odrzuconych danych.</p>
+<p>Modem ma cztery miejsca na datagramy i osiem kontekstów składania. Przepełnienie musi być widoczne w licznikach. W prototypie trzeba też określić limity trwałej kolejki, wolnego miejsca i logów oraz zachowanie formularza po ich osiągnięciu. Nie wolno pozornie potwierdzić odrzuconych danych.</p>
 
-<p>Tryb ciszy radiowej zatrzymuje nadawanie, a nie przyjmowanie: strona i zapis działają, kolejka rośnie i jest wysyłana po ręcznym wyłączeniu ciszy. Stacja nie nadaje też cyklicznych ogłoszeń. Szczegóły w <a href="../spec/oprogramowanie.md">specyfikacji oprogramowania</a>, uzasadnienie w rozdziale <a href="02-scenariusze-i-organizacja.html#miejsce-w-systemie-ochrony-ludnosci">02</a>.</p>
+<p>Tryb ciszy radiowej zatrzymuje tylko nadawanie, łącznie z cyklicznymi ogłoszeniami. Strona i zapis działają, a kolejka rośnie i zostaje wysłana po ręcznym wyłączeniu ciszy. Szczegóły w <a href="../spec/oprogramowanie.md">specyfikacji oprogramowania</a>, uzasadnienie w rozdziale <a href="02-scenariusze-i-organizacja.html#miejsce-w-systemie-ochrony-ludnosci">02</a>.</p>
 
 <p>Węzeł transportowy jest aktywnym przekaźnikiem, nie magazynem wszystkich cudzych zgłoszeń. Opcjonalny węzeł przechowywania LXMF w OSP jest inną funkcją i wymaga osobnych prób, zwłaszcza przy długim braku odbiorcy. <a href="https://github.com/markqvist/LXMF">Role LXMF</a>.</p>
 
 <h2 id="zaufanie-i-informacja-lokalna">Zaufanie i informacja lokalna</h2>
 
-<p>Kartę zaufanej OSP importuje się przed pracą, niezależnym uzgodnionym sposobem. Nazwa widoczna w radiu lub na stronie nie nadaje uprawnień. Nieznany nadawca zgłoszenia wymaga kwarantanny i decyzji dyżurnego. Statusy i komunikaty przyjmowane są wyłącznie od przypiętej OSP. Procedura wymiany i unieważniania kluczy pozostaje do opracowania przed pilotażem.</p>
+<p>Kartę zaufanej OSP importuje się przed pracą, niezależnym uzgodnionym sposobem. Nazwa widoczna w radiu lub na stronie nie nadaje uprawnień. Nieznany nadawca zgłoszenia wymaga kwarantanny i decyzji dyżurnego. Stacja przyjmuje statusy i komunikaty wyłącznie od przypiętej OSP. Procedura wymiany i unieważniania kluczy pozostaje do opracowania przed pilotażem.</p>
 
 <p>Szyfrowanie radiowe nie zabezpiecza lokalnego HTTP ani bazy na dysku. Nie wysyła się przez radio identyfikatorów osób lub dokumentów. Do wskazania potrzeby wystarczą lokalizacja, kategoria, liczba osób i krótki opis. Strona mieszkańca pokazuje jego zgłoszenie; kolejkę zbiorczą widzi opiekun. <a href="07-zagrozenia-i-odpornosc.html">Ograniczenia ochrony</a>.</p>
 

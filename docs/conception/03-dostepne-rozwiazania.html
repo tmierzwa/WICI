@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>03. Dostępne rozwiązania · koncepcja WICI</title>
+<title>03. Dostępne rozwiązania · WICI</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -72,21 +72,21 @@
 
 <h2 id="reticulum-i-lxmf-w-tym-projekcie">Reticulum i LXMF w tym projekcie</h2>
 
-<p>Reticulum działa na laptopie jako biblioteka i proces transportowy. Włączony transport przekazuje pakiety innych stacji. Interfejs szeregowy łączy je z modemem; modem wykonuje transmisję radiową. Reticulum nie jest urządzeniem radiowym ani samą deklaracją standardu. <a href="https://reticulum.network/manual/understanding.html">Dokumentacja implementacji</a>.</p>
+<p>Reticulum działa na laptopie jako biblioteka i proces transportowy. Włączony transport przekazuje pakiety innych stacji. Interfejs szeregowy łączy Reticulum z modemem, a modem wykonuje transmisję radiową. Reticulum nie jest urządzeniem radiowym ani samą deklaracją standardu. <a href="https://reticulum.network/manual/understanding.html">Dokumentacja implementacji</a>.</p>
 
-<p>LXMF układa nad tym wiadomości. Węzeł transportowy Reticulum przekazuje bieżący ruch. Węzeł przechowywania LXMF może zachować wiadomość dla nieobecnego odbiorcy; są to różne role. Bazowy przekaźnik WICI nie dostaje automatycznie trwałej skrzynki dla całej sieci. Trwała kolejka własnych zgłoszeń jest w bazie WICI. <a href="https://github.com/markqvist/LXMF">Opis LXMF</a>.</p>
+<p>LXMF układa nad tym wiadomości. Węzeł transportowy Reticulum przekazuje bieżący ruch, a węzeł przechowywania LXMF może zachować wiadomość dla nieobecnego odbiorcy. To różne role. Bazowy przekaźnik WICI nie dostaje automatycznie trwałej skrzynki dla całej sieci. Trwała kolejka własnych zgłoszeń jest w bazie WICI. <a href="https://github.com/markqvist/LXMF">Opis LXMF</a>.</p>
 
 <h2 id="uklady-radiowe">Układy radiowe</h2>
 
 <p>CC1120 firmy TI i S2-LP firmy ST są układami nadawczo-odbiorczymi sterowanymi przez SPI. Obsługują FSK/GFSK i mają osobne bufory RX/TX po 128 B. Potrzebują mikrokontrolera, zegara, zasilania, dopasowania RF, anteny i oprogramowania układowego. Płytka rozwojowa pomaga pomierzyć układ, ale nie jest gotową stacją WICI. <a href="https://www.ti.com/lit/ds/symlink/cc1120.pdf">CC1120</a>, <a href="https://www.st.com/resource/en/datasheet/s2-lp.pdf">S2-LP</a>.</p>
 
-<p>Dwa układy nie są zamiennikami pinowymi. Wspólne ustawienia modulacji i format P1 są hipotezą zgodności do sprawdzenia na fizycznych modemach. Katalogowa czułość przy innej szybkości nie jest wynikiem dla P1. Projekt wymaga dwóch projektów płytek i nastaw, a następnie prób mieszanych TI–ST.</p>
+<p>Dwa układy nie są zamiennikami pinowymi. Wspólne ustawienia modulacji i format P1 są hipotezą zgodności do sprawdzenia na fizycznych modemach. Katalogowa czułość przy innej szybkości nie jest wynikiem dla P1. Potrzebne są dwa projekty płytek i dwa zestawy nastaw, a następnie próby mieszane TI–ST.</p>
 
 <h2 id="czego-nie-budowac-drugi-raz">Czego nie budować drugi raz</h2>
 
-<p>Użyć stosu sieciowego, kryptografii i biblioteki wiadomości zamiast własnych odpowiedników. Własny kod ograniczyć do lokalnej obsługi potrzeb, transakcji, diagnostyki, pakowania offline i adaptera czasu radia. Znaleziony router powinien realizować zwykły LAN, bez specjalnego oprogramowania układowego i interfejsu API producenta.</p>
+<p>Użyć stosu sieciowego, kryptografii i biblioteki wiadomości zamiast własnych odpowiedników. Własny kod ograniczyć do lokalnej obsługi potrzeb, transakcji, diagnostyki, pakowania offline i adaptera czasu radia. Znaleziony router powinien zapewniać zwykły LAN bez specjalnego oprogramowania układowego i interfejsu API producenta.</p>
 
-<p>Gotowe modemy można wykorzystać jako narzędzia porównawcze w laboratorium. Nie uzależnia to docelowej konstrukcji od ich dostępności. Własny sprzęt powinien wynikać z pomiaru i wymagania niezależności dostawców, a nie z założenia, że każda funkcja musi powstać od początku.</p>
+<p>Gotowe modemy mogą służyć w laboratorium do porównań, bez uzależniania od nich docelowej konstrukcji. Własny sprzęt powinien wynikać z pomiaru i wymagania niezależności dostawców. Nie każda funkcja musi powstać od początku.</p>
 </article>
 <nav class="pager" aria-label="Kolejność czytania">
   <a class="prev" href="02-scenariusze-i-organizacja.html" rel="prev"><span>← Poprzedni</span>02. Scenariusze i organizacja</a>

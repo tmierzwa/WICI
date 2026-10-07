@@ -1,4 +1,4 @@
-# Film „WICI — sieć łączności na czas, gdy nic nie działa”
+# Film „WICI: sieć łączności na czas, gdy nic nie działa”
 
 | Plik | Format |
 |---|---|
@@ -31,5 +31,5 @@ manim --resolution 1080,1920 --frame_rate 30 --disable_caching --media_dir build
 python3 napisy.py build/media/videos/wici_short/1920p30/Short.mp4 WICI-short.mp4 WICI-short.srt build/short/subs.json
 ```
 
-Na koniec głośność: `ffmpeg -i IN.mp4 -c:v copy -af loudnorm=I=-16:TP=-1.5:LRA=11 OUT.mp4` (dla wersji pionowej `I=-14`).
+Na koniec normalizacja głośności: `ffmpeg -i IN.mp4 -c:v copy -af loudnorm=I=-16:TP=-1.5:LRA=11 OUT.mp4` (dla wersji pionowej `I=-14`).
 `tts.py` buforuje zdania w `build/tts`; po zmianie tekstu generuje tylko zmienione. Inny głos: zmienna `WICI_VOICE`.

@@ -1,10 +1,10 @@
-# Bezpieczeństwo — zgłaszanie podatności
+# Bezpieczeństwo: zgłaszanie podatności
 
-WICI obsługuje tożsamości kryptograficzne stacji, dane o potrzebach ludzi i opisuje urządzenia zasilane z akumulatorów oraz 230 V. Błąd może więc narazić ludzi, a nie tylko dane.
+WICI obsługuje tożsamości kryptograficzne stacji i dane o potrzebach ludzi oraz opisuje urządzenia zasilane z akumulatorów i z sieci 230 V. Błąd może więc zagrozić zarówno danym, jak i ludziom.
 
 ## Jak zgłosić
 
-Podatności **nie zgłaszaj publicznie w Issues**. Użyj [prywatnego zgłoszenia podatności na GitHubie](https://github.com/tmierzwa/WICI/security/advisories/new). Opisz problem, dotknięte pliki lub wersję, sposób odtworzenia i możliwe skutki. Odpowiedź otrzymasz w ciągu 7 dni; ustalimy termin publikacji po przygotowaniu poprawki.
+Podatności **nie zgłaszaj publicznie w Issues**. Użyj [prywatnego zgłoszenia podatności na GitHubie](https://github.com/tmierzwa/WICI/security/advisories/new). Opisz problem, dotknięte pliki lub wersję, sposób odtworzenia i możliwe skutki. Odpowiedź otrzymasz w ciągu 7 dni. Termin publikacji ustalimy po przygotowaniu poprawki.
 
 Zgłaszaj prywatnie zwłaszcza:
 

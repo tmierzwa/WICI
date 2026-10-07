@@ -1,4 +1,4 @@
-# WICI — odtworzenie kontrolera R01.3
+# WICI: odtworzenie kontrolera R01.3
 
 Główne źródła to schemat, PCB, projekt i reguły w `cad/`. Zapisane biblioteki są kompletne. Wystarczy otworzyć `cad/radio-usb-controller.kicad_pro` w KiCad 10.0.6. Fizyczne dopasowanie i próby układu pozostają osobnymi warunkami.
 
@@ -41,7 +41,7 @@ Skopiuj repozytorium do osobnego katalogu. Z katalogu kontrolera w tej kopii uru
 
 Następnie uruchom ERC i DRC z sekcji wyżej. `finalize_power_routing.py` uruchamiaj jeden raz na świeżym imporcie. `improve_controller_power.py` czyta wcześniejszy PCB `checks/history/controller-power-input.kicad_pcb`. Sesja SES jest właściwa tylko dla tego rozmieszczenia; nie używaj `controller-final.ses`.
 
-Z katalogu kontrolera **kandydata**, Pythonem KiCad porównaj osobną kopię:
+Z katalogu kontrolera **kandydata** porównaj osobną kopię, używając Pythona KiCad:
 
 ```sh
 "$KICAD_PY" tools/verify_replay.py /sciezka/do/kopii/hardware/radio-test-r01
@@ -61,7 +61,7 @@ Z katalogu kontrolera, po przejściu kontroli CAD:
 "$TOOLS_PY" tools/verify_fabrication.py
 ```
 
-Eksporter tworzy dziewięć Gerberów, osobne PTH/NPTH z mapami PDF, pozycje wszystkich i SMT, BOM, pastę, PDF montażowy i `schemat.pdf`. Kopiuje PDF mechaniki i stos warstw. Dołącza NOTICE, pełne licencje i tworzy `fabrication/wici-controller-R01.3.zip`. PDF montażu ma skalę 2:1; mechanika osobny wydruk 1:1.
+Eksporter tworzy dziewięć Gerberów, osobne PTH/NPTH z mapami PDF, pozycje wszystkich i SMT, BOM, pastę, PDF montażowy i `schemat.pdf`. Kopiuje PDF mechaniki i stos warstw. Dołącza NOTICE, pełne licencje i tworzy `fabrication/wici-controller-R01.3.zip`. PDF montażu ma skalę 2:1, a mechanika ma osobny wydruk 1:1.
 
 Analiza `verify_fabrication.py` porównuje eksporty z rzeczywistą geometrią PCB i wiąże wszystkie pliki paczki z sumami. Jeśli zawiedzie, nie wysyłaj ZIP do wykonawcy. Sprawdź wizualnie rysunki, Gerbery i PDF mechaniki. Wydrukuj mechanikę w 100%, bez dopasowania i odbicia, sprawdź odcinek 50 mm i przymierz rzeczywiste USB-B, SW1 i IDC.
 
@@ -72,12 +72,12 @@ Po przeglądzie poprawnych raportów:
 "$TOOLS_PY" tools/check_bundle.py --check
 ```
 
-Pierwsza komenda zapisuje status i manifest sprzętu. Druga tylko sprawdza: kompletność, bajty ZIP, sumy i raporty. HOLD pozostaje. Samodzielne przepakowanie istniejących eksportów: `"$TOOLS_PY" tools/pack_fabrication.py`; potem ponów analizę eksportów i kontrolę paczki.
+Pierwsze polecenie zapisuje status i manifest sprzętu. Drugie tylko sprawdza kompletność, bajty ZIP, sumy i raporty. HOLD pozostaje. Samodzielne przepakowanie istniejących eksportów: `"$TOOLS_PY" tools/pack_fabrication.py`; potem ponów analizę eksportów i kontrolę paczki.
 
-Po zmianie publicznych plików wróć do katalogu głównego, przejrzyj i dodaj je do indeksu, odśwież główny manifest i wykonaj [kontrole repozytorium](../../docs/development.md). Wygenerowane PDF/Gerbery zawierają czas eksportu, więc porównanie geometrii i bieżących sum zastępuje obietnicę identycznych bajtów po ponownym eksporcie.
+Po zmianie publicznych plików wróć do katalogu głównego, przejrzyj i dodaj je do indeksu, odśwież główny manifest i wykonaj [kontrole repozytorium](../../docs/development.md). Wygenerowane PDF/Gerbery zawierają czas eksportu, więc porównanie geometrii i bieżących sum zastępuje wymóg identycznych bajtów po ponownym eksporcie.
 
 ## Trasowanie i wcześniejsze narzędzia
 
-Dla nowego trasowania `export_power_routing.py` tworzy DSN z nieaktywnymi In1/In2. Freerouting 2.5.0: lokalnie, analityka wyłączona (`-da`). Sekcja ustawień musi poprzedzać pola miedzi w DSN. Raport autoroutera zawiera nieukończone połączenia zachowanych tras/płaszczyzn; odbiór wynika z końcowego KiCad DRC, nie statusu autoroutera.
+Dla nowego trasowania `export_power_routing.py` tworzy DSN z nieaktywnymi In1/In2. Freerouting 2.5.0 uruchamiaj lokalnie, z wyłączoną analityką (`-da`). Sekcja ustawień musi poprzedzać pola miedzi w DSN. Raport autoroutera zawiera nieukończone połączenia zachowanych tras/płaszczyzn; o odbiorze decyduje końcowy DRC KiCad, a nie status autoroutera.
 
 `make_board.py`, `finalize_routing.py`, `controller.dsn` i `controller-final.ses` opisują R01. Nie służą do odtworzenia R01.3. `prepare_footprints.py` jest potrzebny tylko do ponownego pobrania bibliotek. Symbole pochodzą z podzbiorów KiCad 9.0.0/10.0.6, footprinty z 10.0.6; pochodzenie i licencje są w `sources.json` oraz `cad/KICAD-LIBRARY-LICENSE.md`.

@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>WICI — koncepcja systemu</title>
+<title>Koncepcja systemu · WICI</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -34,7 +34,7 @@
   </nav>
   <main id="tresc">
 <article>
-<h1>WICI — koncepcja systemu</h1>
+<h1>WICI: koncepcja systemu</h1>
 
 <nav class="on-page" aria-label="Na tej stronie">
 <p>Na tej stronie</p>
@@ -55,7 +55,7 @@
 
 <figure class="film">
 <video controls preload="metadata" playsinline poster="../../media/film/plakat.jpg" src="../../media/film/WICI-film.mp4"></video>
-<figcaption>Dlaczego WICI, jak ma działać i czego jeszcze nie sprawdzono — około 4 minut, z napisami. Wersja pionowa 60 s na telefon: <a href="../../media/film/WICI-short.mp4">WICI-short.mp4</a>. Scenariusz i pliki do odtworzenia filmu: <a href="../../media/film/README.md">media/film</a>.</figcaption>
+<figcaption>Dlaczego WICI, jak ma działać i czego jeszcze nie sprawdzono (około 4 minut, z napisami). Wersja pionowa 60 s na telefon: <a href="../../media/film/WICI-short.mp4">WICI-short.mp4</a>. Scenariusz i pliki do odtworzenia filmu: <a href="../../media/film/README.md">media/film</a>.</figcaption>
 </figure>
 
 <h2 id="dokumenty">Dokumenty</h2>
@@ -86,9 +86,9 @@
   <li><strong>Dowód</strong>: wynik wskazanej próby na określonej konfiguracji. Nie przenosi się automatycznie na inne części lub warunki.</li>
 </ul>
 
-<p>W <a href="01-potrzeby-i-wymagania.html">tabeli wymagań</a> pochodzenie oznaczają skróty: U — ustalenie użytkowe, S — warunek specyfikacji, czyli wybór bazowy, P — propozycja próby lub organizacji. Niezależnie od pochodzenia każde wymaganie pozostaje celem do wykazania dowodem.</p>
+<p>W <a href="01-potrzeby-i-wymagania.html">tabeli wymagań</a> pochodzenie oznaczają skróty: U (ustalenie użytkowe), S (warunek specyfikacji, czyli wybór bazowy) i P (propozycja próby lub organizacji). Każde wymaganie, niezależnie od pochodzenia, trzeba wykazać dowodem.</p>
 
-<p>Parametry wykonawcze, ramki, API i warunki odbioru należą do <code>docs/spec/</code>. Ta część wyjaśnia potrzeby, wybory i ich granice; nie tworzy drugiej specyfikacji. Jeśli próba wymusi zmianę parametru, aktualizuje się specyfikację oraz powiązaną analizę.</p>
+<p>Parametry wykonawcze, ramki, API i warunki odbioru należą do <code>docs/spec/</code>. Koncepcja wyjaśnia potrzeby, wybory i ich granice. Nie jest drugą specyfikacją. Jeśli próba wymusi zmianę parametru, trzeba zaktualizować specyfikację i powiązaną analizę.</p>
 
 <h2 id="skroty-i-pojecia">Skróty i pojęcia</h2>
 
@@ -101,7 +101,7 @@
 <tr><td>OSP</td><td>Ochotnicza Straż Pożarna; w dokumentach nazwa roli stanowiska odbiorczego. Rekomendowanym odbiorcą jest centrum zarządzania kryzysowego gminy lub wskazany przez nie punkt, np. OSP (<a href="02-scenariusze-i-organizacja.html#miejsce-w-systemie-ochrony-ludnosci">02</a>)</td></tr>
 <tr><td>opiekun, zastępca, dyżurny</td><td>osoby obsługujące stację w schronieniu oraz stanowisko odbiorcy (<a href="02-scenariusze-i-organizacja.html">02</a>)</td></tr>
 <tr><td>przekaźnik</td><td>stacja z laptopem, modemem i <code>rnsd</code>, która przekazuje ruch innych stacji; sam modem nie przekazuje pakietów</td></tr>
-<tr><td>A, B, C</td><td>wejścia zasilania: A i B — wymieniane źródła 12 V stacji, C — osobne źródło ładowarki telefonów</td></tr>
+<tr><td>A, B, C</td><td>wejścia zasilania: A i B to wymieniane źródła 12 V stacji, C to osobne źródło ładowarki telefonów</td></tr>
 <tr><td>HOLD</td><td>status sprzętu: projekt nie jest dopuszczony do zamówienia ani użycia do czasu odbioru wskazanej konfiguracji</td></tr>
 <tr><td>START</td><td>pakiety uruchomieniowe offline: dla działającego systemu Windows lub macOS oraz obraz Linuksa dla obsługiwanych komputerów PC</td></tr>
 <tr><td>PRZENIEŚ STACJĘ</td><td>kontrolowane przeniesienie bazy i tożsamości na inny laptop; stara instancja przestaje pracować</td></tr>
@@ -110,7 +110,7 @@
 <tr><td>Reticulum, <code>rnsd</code></td><td>stos sieciowy z tożsamościami, szyfrowaniem i trasami; <code>rnsd</code> to jego proces transportowy na laptopie</td></tr>
 <tr><td>LXMF</td><td>protokół wiadomości nad Reticulum; potwierdza dostarczenie transportowe, nie zapis w bazie odbiorcy</td></tr>
 <tr><td>pakiet okazjonalny, link, zasób</td><td>sposoby dostarczenia LXMF: jeden pakiet bez zestawiania połączenia, połączenie Reticulum, przesłanie większych danych w częściach (<a href="05-projekt-koncepcyjny-komunikacji.html">05</a>)</td></tr>
-<tr><td>SA1</td><td>format treści wiadomości WICI w LXMF: sześć typów — REQUEST, RECEIVED, STATUS, REPLY, BULLETIN, TEST</td></tr>
+<tr><td>SA1</td><td>format treści wiadomości WICI w LXMF; sześć typów: REQUEST, RECEIVED, STATUS, REPLY, BULLETIN, TEST</td></tr>
 <tr><td>RECEIVED, STATUS</td><td>potwierdzenie trwałego zapisu zgłoszenia w OSP oraz późniejsza decyzja dyżurnego: odczyt lub skierowanie pomocy</td></tr>
 <tr><td>P1</td><td>wspólny profil radiowy obu modemów: 869,525 MHz, 2-GFSK 4800 bit/s, fragmenty do 86 B, dług ciszy</td></tr>
 <tr><td>dług ciszy</td><td>czas zakazu nadawania po każdym burście, 12 × czas TX, zapisany w EEPROM; restart go nie zeruje</td></tr>
@@ -124,17 +124,17 @@
 
 <p>Koncepcja nadaje się do budowy prototypów i sprawdzania hipotez. Nie ma jeszcze dowodu łączności 1 km, działania całego stosu radiowego, pracy dobowej ani bezpieczeństwa własnej przetwornicy. Kontroler USB R01.3 pozostaje HOLD; moduły RF, oprogramowanie układowe, aplikacja i pakiety START nie są ukończone. Wyniki modelu i CAD nie zastępują prób sprzętu.</p>
 
-<p><a href="../review.md">Aktualne ustalenia przeglądu wewnętrznego</a> obejmują konkretny problem prądu wstrzymania USB (suspend), budżet ogranicznika ładowarki oraz kontrprzykład czasowy stosu sieciowego.</p>
+<p><a href="../review.md">Aktualne ustalenia przeglądu wewnętrznego</a> obejmują problem prądu wstrzymania USB (suspend), budżet ogranicznika ładowarki oraz kontrprzykład czasowy stosu sieciowego.</p>
 
-<p>Pierwsze rozstrzygnięcia: miejsce sieci w gminnym planie ochrony ludności i jej status w stanach nadzwyczajnych; zasięg 1 km przy rzeczywistych wysokościach anten (model propagacji daje ujemny zapas przy antenach na wysokości okien); trwałe przyjęcie zgłoszenia przez OSP; rzeczywisty koszt radiowy LXMF, w tym zmieszczenie SA1 w jednym pakiecie; zgodność dwóch modemów; zasilanie bez resetu; dostępność dyżurnego zdolnego do działania. Bez odbiorcy zdolnego pomóc sprawna sieć jedynie przenosi dane.</p>
+<p>Pierwsze rozstrzygnięcia: miejsce sieci w gminnym planie ochrony ludności i jej status w stanach nadzwyczajnych; zasięg 1 km przy rzeczywistych wysokościach anten (model propagacji daje ujemny zapas przy antenach na wysokości okien); trwałe przyjęcie zgłoszenia przez OSP; rzeczywisty koszt radiowy LXMF, w tym zmieszczenie SA1 w jednym pakiecie; zgodność dwóch modemów; zasilanie bez resetu; dostępność dyżurnego zdolnego do działania. Bez odbiorcy, który może pomóc, sprawna sieć jedynie przenosi dane.</p>
 
-<p>Rygor oznacza jawne założenia, próby odtwarzalne, rozpoznawalne awarie i warunki przerwania pracy. Projekt nie deklaruje kwalifikacji wojskowej, odporności na celowe zagłuszanie ani certyfikacji środowiskowej.</p>
+<p>Rygor projektu to jawne założenia, odtwarzalne próby, rozpoznawalne awarie i warunki przerwania pracy. Projekt nie deklaruje kwalifikacji wojskowej, odporności na celowe zagłuszanie ani certyfikacji środowiskowej.</p>
 
-<p><strong>Status dokumentu.</strong> To koncepcja projektu prototypu 0.4, prowadzonego przez jedną osobę. Duża część analiz i obliczeń powstała z pomocą asystenta AI; autor je przegląda, ale nie sprawdził ich niezależny inżynier, a uwag prawnych — prawnik. Każdą liczbę traktuj jako hipotezę do sprawdzenia; zgłoszenia błędów są mile widziane w <a href="https://github.com/tmierzwa/WICI/issues">Issues</a>.</p>
+<p><strong>Status dokumentu.</strong> To koncepcja prototypu 0.4, projektu prowadzonego przez jedną osobę. Duża część analiz i obliczeń powstała z pomocą asystenta AI. Autor je przegląda, ale nie sprawdził ich niezależny inżynier, a uwag prawnych nie sprawdził prawnik. Każdą liczbę traktuj jako hipotezę do sprawdzenia; zgłoszenia błędów są mile widziane w <a href="https://github.com/tmierzwa/WICI/issues">Issues</a>.</p>
 
 <p lang="en"><em>In English:</em> WICI is an open design of an emergency communication station for shelters in Poland. This is a prototype concept (0.4), written in Polish with AI assistance and not independently reviewed; no hardware has been built or tested yet. <a href="https://github.com/tmierzwa/WICI">Repository</a>.</p>
 
-<p>Licencje: <a href="../../LICENSE.md">mapa projektu</a>. Analizy są udostępnione na licencji CC-BY-4.0; rozdział 05, jako opis konstrukcji komunikacji, na licencji CERN-OHL-P-2.0.</p>
+<p>Licencje: <a href="../../LICENSE.md">mapa projektu</a>. Analizy są dostępne na licencji CC-BY-4.0, a rozdział 05 jako opis konstrukcji komunikacji na licencji CERN-OHL-P-2.0.</p>
 </article>
 <nav class="pager" aria-label="Kolejność czytania">
   <a class="next" href="01-potrzeby-i-wymagania.html" rel="next"><span>Następny →</span>01. Potrzeby i wymagania</a>

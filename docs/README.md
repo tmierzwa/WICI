@@ -1,8 +1,8 @@
 # Dokumentacja WICI
 
-Zacznij od [koncepcji systemu](conception/index.html): potrzeby i wymagania, scenariusze pracy, dostępne rozwiązania, analiza opcji, architektura komunikacji, wykonalność, zagrożenia i plan prób. Dokumenty są po polsku. Oddzielają wymagania od dowodów i wskazują decyzje pozostające do zamknięcia.
+Zacznij od [koncepcji systemu](conception/index.html): potrzeby i wymagania, scenariusze pracy, dostępne rozwiązania, analiza opcji, architektura komunikacji, wykonalność, zagrożenia i plan prób. Dokumenty są po polsku, oddzielają wymagania od dowodów i wskazują otwarte decyzje.
 
-Specyfikacja stacji 0.4 obejmuje pięć rozdziałów i BOM stacji, wymienione poniżej. Parametry, kontrakty, warunki odbioru i kandydatów części zmienia się w tych plikach. Uzasadnienia i powiązane analizy utrzymuje się w `docs/conception/`.
+Specyfikacja stacji 0.4 składa się z pięciu rozdziałów i BOM stacji. Parametry, kontrakty, warunki odbioru i kandydatów części zmienia się w tych plikach, a uzasadnienia i analizy w `docs/conception/`.
 
 | Rozdział | Zakres |
 |---|---|
@@ -21,4 +21,4 @@ Wykonany kontroler ma osobne [źródła i dokumentację sprzętową](../hardware
 
 W specyfikacji skrót OSP oznacza rolę stanowiska odbiorczego; rekomendowanym odbiorcą jest centrum zarządzania kryzysowego gminy lub punkt wskazany przez wójta ([koncepcja, rozdział 02](conception/02-scenariusze-i-organizacja.html#miejsce-w-systemie-ochrony-ludnosci)).
 
-Status: prototyp; sprzęt HOLD. Instrukcje użycia stacji opisują docelowy odebrany zestaw. Nie są instrukcją uruchomienia gotowego produktu.
+Status: prototyp; sprzęt HOLD. Instrukcje użycia opisują docelowy odebrany zestaw, a nie gotowy produkt.

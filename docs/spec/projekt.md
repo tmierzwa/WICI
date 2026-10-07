@@ -1,4 +1,4 @@
-# WICI — projekt stacji
+# WICI: projekt stacji
 
 ## Zakres
 
@@ -35,7 +35,7 @@ flowchart LR
   F -->|Wi-Fi| W
 ```
 
-Router nie uczestniczy w łączności radiowej. Zapewnia Wi-Fi, DHCP i połączenie telefonu z laptopem. Radio nie przekazuje stron WWW ani internetu. Laptop przechowuje zgłoszenia, obsługuje radio i przekazuje ruch innych stacji.
+Router nie uczestniczy w łączności radiowej; zapewnia Wi-Fi, DHCP i połączenie telefonu z laptopem. Radio nie przekazuje stron WWW ani internetu. Laptop przechowuje zgłoszenia, obsługuje radio i przekazuje ruch innych stacji.
 
 ## Zawartość zestawu
 
@@ -47,11 +47,11 @@ Router nie uczestniczy w łączności radiowej. Zapewnia Wi-Fi, DHCP i połącze
 6. Przewody ładowania telefonów oraz jednostronicowa instrukcja.
 7. Bateryjny odbiornik radiowy FM z zapasem baterii do odbioru komunikatów oficjalnych.
 
-Laptop, router, ich oryginalne zasilacze i akumulatory pochodzą z miejsca uruchomienia. Adapter sieciowy nie zapewnia obsługi każdego komputera; jego kontroler również musi mieć dwa zakwalifikowane wykonania, np. Realtek RTL8153 i ASIX AX88179.
+Laptop, router, ich oryginalne zasilacze i akumulatory pochodzą z miejsca uruchomienia. Adapter sieciowy nie obsługuje każdego komputera. Jego kontroler również musi mieć dwa zakwalifikowane wykonania, np. Realtek RTL8153 i ASIX AX88179.
 
 ## Uruchomienie odebranego zestawu
 
-1. Wyprowadź antenę na zewnątrz i ustaw pionowo, w miarę możliwości z dala od pomieszczenia z ludźmi. Nie kładź jej przy metalowej framudze.
+1. Wyprowadź antenę na zewnątrz i ustaw ją pionowo, w miarę możliwości z dala od pomieszczenia z ludźmi. Nie kładź jej przy metalowej framudze.
 2. Przy otwartym wyłączniku DC podłącz oryginalne zasilacze laptopa i routera do wyjść przetwornicy.
 3. Podłącz źródło A do zasilania stacji i źródło C do ładowarki. Sprawdź na woltomierzach, że oba mają co najmniej 12,4 V, i zamknij wyłącznik DC.
 4. Połącz laptop z portem LAN routera i modemem USB. Podłącz pamięć USB stacji.
@@ -60,19 +60,19 @@ Laptop, router, ich oryginalne zasilacze i akumulatory pochodzą z miejsca uruch
 7. Połącz telefon z główną siecią Wi-Fi routera i otwórz adres z kodu QR wyświetlonego na ekranie laptopa.
 8. Wyślij TEST z adresem schronienia. Poczekaj na RECEIVED, czyli zapis w OSP, a potem na STATUS „przeczytane” od dyżurnego. Zielony wskaźnik USB nie oznacza dostępności pomocy.
 
-Zasilaczy nie podłącza się do pracującej przetwornicy: prąd ładowania ich kondensatorów może wyzwolić zabezpieczenie. Jeżeli router ma nieznane hasło, wyłączony DHCP lub izolację Wi-Fi od LAN, potrzebna jest konfiguracja jego panelu. Wiele routerów domowych obsługuje najwyżej około 32 klientów Wi-Fi lub ma mniejszą pulę DHCP; kwalifikacja routera obejmuje 50 klientów i pulę co najmniej 60 adresów. Znaleziony, zablokowany router nie staje się przez to dostępny. Nie resetuj znalezionego urządzenia bez zgody właściciela. Mac z procesorem Apple Silicon nie uruchomi naszego ogólnego obrazu Linuksa; pakiet START wymaga na nim sprawnego systemu macOS. Komputer, którego nie da się uruchomić z pamięci USB i który nie ma sprawnego systemu, jest poza zakresem.
+Nie podłączaj zasilaczy do pracującej przetwornicy: prąd ładowania ich kondensatorów może wyzwolić zabezpieczenie. Jeżeli router ma nieznane hasło, wyłączony DHCP lub izolację Wi-Fi od LAN, trzeba go skonfigurować w panelu. Wiele routerów domowych obsługuje najwyżej około 32 klientów Wi-Fi lub ma mniejszą pulę DHCP. Kwalifikacja routera obejmuje 50 klientów i pulę co najmniej 60 adresów. Zablokowany router znaleziony na miejscu pozostaje niedostępny: nie resetuj go bez zgody właściciela. Mac z procesorem Apple Silicon nie uruchomi ogólnego obrazu Linuksa, więc pakiet START wymaga na nim sprawnego systemu macOS. Komputer, którego nie da się uruchomić z pamięci USB i który nie ma sprawnego systemu, jest poza zakresem.
 
 ## Wymiana źródła
 
-Podłącz nowe źródło do wolnego wejścia. Sprawdź działanie stacji pod pełnym obciążeniem po odłączeniu starego. Nie odłączaj obu naraz. Źródło wymieniaj, zanim jego napięcie spadnie do progu odłączenia 11,5 V; ostrzeżenie świetlne i dźwiękowe włącza się przy 11,8 V. Akumulator rozruchowy pojazdu wymieniaj już przy około 12,2 V. Po odłączeniu podnapięciowym przetwornica nie rusza sama: podłącz naładowane źródło i naciśnij RESTART. Ustawiony limit 8 A lub 20 A musi pasować do każdego źródła, które może przejąć zasilanie. Nie wolno przełączyć na 20 A tylko dlatego, że jedno z dwóch wejść ma mocniejszy przewód.
+Podłącz nowe źródło do wolnego wejścia. Odłącz stare i sprawdź działanie stacji pod pełnym obciążeniem. Nie odłączaj obu naraz. Źródło wymieniaj, zanim jego napięcie spadnie do progu odłączenia 11,5 V; ostrzeżenie świetlne i dźwiękowe włącza się przy 11,8 V. Akumulator rozruchowy pojazdu wymieniaj już przy około 12,2 V. Po odłączeniu podnapięciowym przetwornica nie rusza sama: podłącz naładowane źródło i naciśnij RESTART. Ustawiony limit 8 A lub 20 A musi pasować do każdego źródła, które może przejąć zasilanie. Nie wolno przełączyć na 20 A tylko dlatego, że jedno z dwóch wejść ma mocniejszy przewód.
 
-Wymiana źródła C może przerwać ładowanie telefonów, lecz nie łączność. Nie łącz plusów akumulatorów bezpośrednio. Nie uruchamiaj silnika pojazdu ani agregatu w schronieniu, w garażu, przy wejściu ani przy wlotach powietrza: tlenek węgla zabija bez ostrzeżenia. Akumulator wyjmuje się z pojazdu albo zasila stację z pojazdu stojącego na zewnątrz przy wyłączonym silniku. Akumulatorów nie ładuje się w pomieszczeniu z ludźmi. Nie używaj źródła 24 V. Podstawowy wariant nie jest dopuszczony do pracy podczas rozruchu silnika.
+Wymiana źródła C może przerwać ładowanie telefonów, ale nie łączność. Nie łącz plusów akumulatorów bezpośrednio. Nie uruchamiaj silnika pojazdu ani agregatu w schronieniu, w garażu, przy wejściu ani przy wlotach powietrza: tlenek węgla zabija bez ostrzeżenia. Wyjmij akumulator z pojazdu albo zasilaj stację z pojazdu stojącego na zewnątrz przy wyłączonym silniku. Nie ładuj akumulatorów w pomieszczeniu z ludźmi. Nie używaj źródła 24 V. Podstawowy wariant nie jest dopuszczony do pracy podczas rozruchu silnika.
 
 ## Przechowywanie i przeglądy
 
 Zestaw może czekać na użycie latami. Przechowuje się go w suchym miejscu, w temperaturze pokojowej, bez akumulatorów podłączonych do wejść. Co najmniej raz w roku i po każdym nowym wydaniu oprogramowania:
 
-1. Sprawdź sumy kontrolne obrazu na pamięci USB; pamięć flash bez zasilania traci dane. Wymień ją co kilka lat albo przechowuj drugą, sprawdzoną kopię.
+1. Sprawdź sumy kontrolne obrazu na pamięci USB, bo pamięć flash bez zasilania traci dane. Wymień ją co kilka lat albo przechowuj drugą, sprawdzoną kopię.
 2. Uruchom stację z przygotowanego zestawu na aktualnych komputerach z lokalnej listy; nowe wersje systemów mogą wymagać nowego pakietu START.
 3. Zmierz częstotliwość nadajnika, aby skontrolować starzenie TCXO, i wymień ramki z drugim modemem.
 4. Uruchom przetwornicę i ładowarkę pod obciążeniem; kondensatory elektrolityczne starzeją się także bez pracy.
@@ -92,4 +92,4 @@ Wynik przeglądu zapisuje się z datą i wersją wydania.
 | Krótkie ramki radiowe | Mieszczą się w kolejce FIFO obu układów; dodatkowy narzut fragmentacji |
 | Standardowy JSON w LXMF | Kodowanie z biblioteki standardowej; treść do 480 B |
 
-NomadNet jest opcjonalnym klientem opiekuna lub dyżurnego, z osobną tożsamością. Nie uruchamiamy dwóch routerów LXMF obsługujących tę samą tożsamość stacji. Węzeł przechowywania LXMF w OSP jest opcjonalny; w sieci podstawowej ruch przechodzi przez aktywne przekaźniki. [NomadNet](https://github.com/markqvist/NomadNet), [LXMF](https://github.com/markqvist/LXMF).
+Rolę NomadNet opisuje rozdział [Oprogramowanie](oprogramowanie.md). Nie wolno uruchamiać dwóch routerów LXMF obsługujących tę samą tożsamość stacji. Węzeł przechowywania LXMF w OSP jest opcjonalny; w sieci podstawowej ruch przechodzi przez aktywne przekaźniki. [NomadNet](https://github.com/markqvist/NomadNet), [LXMF](https://github.com/markqvist/LXMF).

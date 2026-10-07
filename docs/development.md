@@ -18,7 +18,7 @@ Koncepcja jest publikowana na [GitHub Pages](https://tmierzwa.github.io/WICI/) p
 
 ## Narzędzia CAD
 
-Zapisany projekt można otworzyć bez generowania. Do odtwarzania kontroli używamy KiCad 10.0.6, jego `kicad-cli` i interpretera z `pcbnew`. To osobne środowisko od Pythona narzędzi. Nie instaluj losowego pakietu `pcbnew` z PyPI.
+Zapisany projekt można otworzyć bez generowania. Do odtwarzania kontroli używamy KiCad 10.0.6, jego `kicad-cli` i interpretera z `pcbnew`. Jest to środowisko odrębne od Pythona narzędzi. Nie instaluj losowego pakietu `pcbnew` z PyPI.
 
 Dodatkowe biblioteki służą wyłącznie do PDF i analizy eksportów. Przygotuj środowisko Python 3.12:
 
@@ -31,7 +31,7 @@ Na Windows użyj `py -3.12 -m venv .venv` i `.venv\Scripts\python.exe`. Główne
 
 Pełny przebieg CAD i eksportu sprawdzono na macOS z KiCad 10.0.6 i Pythonem 3.12. Otwieranie źródeł jest niezależne od systemu; procedura dla innych instalacji wymaga wskazania właściwego interpretera KiCad. [Polecenia i kolejność](../hardware/radio-test-r01/odtworzenie.md).
 
-Freerouting 2.5.0 jest potrzebny tylko do nowego trasowania. Odtworzenie R01.3 używa zapisanej sesji SES, bez Java i bez sieci. Podglądy PNG/SVG w `checks/preview/` służą do przeglądu. Do produkcji używa się zweryfikowanych eksportów. Bieżące PDF montażu i schematu tworzy KiCad, a PDF mechaniki ReportLab; nie potrzeba Inkscape ani konwertera SVG.
+Freerouting 2.5.0 jest potrzebny tylko do nowego trasowania. Odtworzenie R01.3 używa zapisanej sesji SES, bez Java i bez sieci. Podglądy PNG/SVG w `checks/preview/` służą do przeglądu, a do produkcji służą zweryfikowane eksporty. Bieżące PDF montażu i schematu tworzy KiCad, a PDF mechaniki ReportLab; nie potrzeba Inkscape ani konwertera SVG.
 
 ## Paczka źródłowa
 
@@ -41,10 +41,10 @@ Po sprawdzeniu repozytorium:
 python3 tools/release.py --source-zip dist/WICI-0.4-source.zip
 ```
 
-To źródła, dokumentacja i eksporty. Nie jest to system startowy ani aplikacja stacji. Plik `dist/` nie jest śledzony w Git. Archiwum ma wszystkie pliki manifestu oraz sam manifest, z wyjątkiem wyrenderowanych filmów `media/film/*.mp4` (są w Git i na stronie; w paczce zostają ich źródła), stałe daty i kolejność wpisów. Kontrola porównuje także bajty każdego wpisu. Zgodność identycznych wejść sprawdzają testy; inne wersje narzędzi lub kompresji mogą dać inny hash ZIP.
+Paczka zawiera źródła, dokumentację i eksporty; nie jest systemem startowym ani aplikacją stacji. Katalog `dist/` nie jest śledzony w Git. Archiwum zawiera wszystkie pliki manifestu i sam manifest, ze stałymi datami i kolejnością wpisów. Kontrola porównuje także bajty każdego wpisu. Zgodność identycznych wejść sprawdzają testy; inne wersje narzędzi lub kompresji mogą dać inny hash ZIP.
 
 Manifest odświeża opiekun po scaleniu zmian i przed wydaniem: przegląda i dodaje pliki do indeksu Git, wykonuje `python3 tools/release.py --refresh`, a następnie pełną kontrolę. Kontrybutor w PR używa `python3 tools/verify_repository.py --pull-request`, które pomija zgodność `manifest.json`; CI robi to samo dla pull requestów, a pełną kontrolę i paczkę źródłową wykonuje dla gałęzi `main` i tagów. Nie używaj `--refresh` do ukrycia niewyjaśnionej różnicy.
 
 Oznaczenia licencji sprawdza [REUSE](https://reuse.software/): `pipx run reuse==5.0.2 lint`. Nowy plik bez nagłówka SPDX dostaje licencję z [REUSE.toml](../REUSE.toml).
 
-Eksporty KiCad/PDF mogą zawierać czas utworzenia. Pełny ponowny eksport nie obiecuje identycznych bajtów. Sprawdza się geometrię względem CAD, a następnie zapisuje nowe sumy aktualnych plików. Główne pliki edytowalne to `cad/*.kicad_*`; wygenerowany ZIP nie zastępuje źródeł.
+Eksporty KiCad/PDF mogą zawierać czas utworzenia. Ponowny pełny eksport nie gwarantuje identycznych bajtów, dlatego sprawdza się geometrię względem CAD, a dopiero potem zapisuje nowe sumy aktualnych plików. Główne pliki edytowalne to `cad/*.kicad_*`; wygenerowany ZIP nie zastępuje źródeł.

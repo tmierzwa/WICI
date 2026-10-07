@@ -1,4 +1,4 @@
-# WICI — odbiór prototypu
+# WICI: odbiór prototypu
 
 | Próba | Warunek zaliczenia | Stan |
 |---|---|---|
@@ -30,11 +30,11 @@
 | Zakłócenia | pomiar odbioru radiowego przy pracującej przetwornicy i w pełni obciążonej ładowarce oraz przy telefonie nadającym w pasmach LTE 800 i GSM 900 obok stacji; brak pogorszenia uniemożliwiającego próbę terenową | niewykonana |
 | Praca dobowa | 24 h pełnej funkcjonalności z wymianą źródeł; zużycie energii (Wh) stacji i ładowarki zapisane osobno | niewykonana |
 
-Próba obciążenia obejmuje zimny start trasy oraz osobno ruch ustalony. Odcięcie A–OSP musi być fizycznie skuteczne. Liczy się odbiór RECEIVED przez A, a nie sam zapis ani stan LXMF DELIVERED. Z 50 zgłoszeń wymagane jest 50/50; 49/50 to 98%. Większa liczba schronień, przekaźników i jednoczesnych nadawców wymaga nowego planu obciążenia; ta próba nie kwalifikuje sieci 1000 stacji.
+Próba obciążenia obejmuje zimny start trasy oraz osobno ruch ustalony. Odcięcie A–OSP musi być fizycznie skuteczne. Liczy się odbiór RECEIVED przez A; sam zapis ani stan LXMF DELIVERED nie wystarczają. Z 50 zgłoszeń wymagane jest 50/50; 49/50 to 98%. Większa liczba schronień, przekaźników i jednoczesnych nadawców wymaga nowego planu obciążenia; ta próba nie kwalifikuje sieci 1000 stacji.
 
-Próba modelu transakcji nie jest próbą odcinania fizycznego zasilania dysku. Po zbudowaniu aplikacji powtarza się ją na docelowych nośnikach, odcinając zasilanie przed, podczas i po zapisie. Wersji nie zwalnia się do użytku w schronieniach na podstawie samych testów modelu w Pythonie.
+Próba modelu transakcji nie zastępuje próby fizycznego odcięcia zasilania dysku. Po zbudowaniu aplikacji powtarza się ją na docelowych nośnikach, odcinając zasilanie przed, podczas i po zapisie. Wersji nie zwalnia się do użytku w schronieniach na podstawie samych testów modelu w Pythonie.
 
-Próbę OVP wykonuje się bez telefonu, z obciążeniem zastępczym i oscyloskopem o odpowiednim paśmie. Jeżeli zwieracz zabezpieczający nie utrzyma napięcia poniżej 5,5 V podczas impulsu, wymagana jest niezależna szybka ochrona szeregowa; nie zwiększa się dopuszczalnego napięcia, aby zaliczyć próbę. Obecny zwieracz jest kandydatem, a nie odebraną ochroną. Podobnie przed produkcją muszą powstać: schemat PE, projekt płytki, ostateczny dobór izolacji i pełna lista zakwalifikowanych zamienników.
+Próbę OVP wykonuje się bez telefonu, z obciążeniem zastępczym i oscyloskopem o odpowiednim paśmie. Jeżeli zwieracz zabezpieczający nie utrzyma napięcia poniżej 5,5 V podczas impulsu, wymagana jest niezależna szybka ochrona szeregowa. Nie wolno zwiększać dopuszczalnego napięcia, aby zaliczyć próbę. Obecny zwieracz jest tylko kandydatem. Przed produkcją muszą też powstać schemat PE, projekt płytki, ostateczny dobór izolacji i pełna lista zakwalifikowanych zamienników.
 
 ## Braki do wydania
 
@@ -45,4 +45,4 @@ Próbę OVP wykonuje się bez telefonu, z obciążeniem zastępczym i oscyloskop
 5. Uzgodnienia z gminą: odbiorca, status sieci w stanach nadzwyczajnych, administrator danych i ocena skutków dla ochrony danych (D12, D13).
 6. Powyższe próby oraz wyceny rzeczywistych zestawień materiałowych (BOM) od niezależnych wykonawców.
 
-W tym pakiecie są kontrakty do weryfikacji oraz obliczalne punkty wyjścia. Zgodność czasowa stosu i niezależność wszystkich wariantów nie są zamknięte. Braki sprzętowe nie są oznaczone jako zrealizowane.
+Zgodność czasowa stosu i niezależność wszystkich wariantów pozostają otwarte.
