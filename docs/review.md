@@ -1,29 +1,38 @@
 # WICI: stan przeglądu technicznego
 
-Ocena: 2026-10-06. Przegląd jest wewnętrzny: wykonał go autor projektu z pomocą AI. Nie jest niezależnym audytem ani opinią uprawnionego inżyniera. Zakres: koncepcja, pięć rozdziałów specyfikacji, model kontraktów, BOM, kontroler R01.3, raporty CAD, eksporty, procedury odbioru, licencje i narzędzia publikacji.
+Ocena: 2026-10-06, uzupełnienie 2026-10-07 po zmianie architektury na wersję 0.5. Przegląd jest wewnętrzny: wykonał go autor projektu z pomocą AI. Nie jest niezależnym audytem ani opinią uprawnionego inżyniera. Zakres: koncepcja, pięć rozdziałów specyfikacji, zmiana architektury 0.5 (samodzielna stacja), model kontraktów, BOM, kontroler R01.3, raporty CAD, eksporty, procedury odbioru, licencje i narzędzia publikacji.
 
-**Projekt nadaje się do dalszego prototypowania. Nie nadaje się jeszcze do zamówienia kompletnego sprzętu ani pracy w schronieniu. Kontroler R01.3 pozostaje HOLD i wymaga zmiany elektrycznej.**
+**Projekt nadaje się do dalszego prototypowania. Nie nadaje się jeszcze do zamówienia kompletnego sprzętu ani pracy w schronieniu. Kontroler R01.3 pozostaje HOLD i wymaga zmiany elektrycznej; w 0.5 jest stanowiskiem laboratoryjnym P1, a nie kontrolerem stacji.**
 
-Podział na lokalną stronę, osobny transport, trwałą kolejkę aplikacji i osobne zasilanie telefonów jest logiczny. Ogranicza skutki awarii strony i ładowarki. Nie usuwa wspólnych punktów awarii: laptopa, pojedynczej trasy i dyżurnego odbiorcy.
+Podział na lokalną stronę, osobny transport, trwałą kolejkę aplikacji i osobne zasilanie telefonów jest logiczny. Ogranicza skutki awarii strony i ładowarki. W 0.5 samodzielna stacja usuwa laptopa i przetwornicę z drogi krytycznej łączności. Pozostają wspólne punkty awarii: pojedyncza trasa i dyżurny odbiorca. Nowym głównym ryzykiem jest dojrzałość stosu sieciowego na mikrokontrolerze.
 
 ## Ustalenia i ich stan
 
 | ID | Problem | Stan / warunek zamknięcia |
 |---|---|---|
-| F01 | Stale włączony Y1 nie pozwala zagwarantować budżetu suspend USB | otwarte; nowa rewizja kontrolera i pomiary pełnego modemu |
-| F02 | 900 s adaptera nie zapewnia zgodności timeoutów Reticulum/LXMF | otwarte; próba T3 z rzeczywistym stosem i kolejkami |
+| F01 | Stale włączony Y1 nie pozwala zagwarantować budżetu suspend USB | otwarte dla stanowiska R01.3; samozasilanej stacji R02 nie dotyczy |
+| F02 | 900 s adaptera nie zapewnia zgodności timeoutów Reticulum/LXMF | otwarte w nowej postaci: w 0.5 stos zna dług ciszy, ale limity linku i zasobu nadal wymagają T3 na MCU |
 | F03 | Dobór MIC2007 nie zamyka tolerancji; TPS2553 wymaga uwzględnienia rezystora | niekwalifikowany MIC2007 usunięty z listy wariantów; drugi wykonawczy wariant nadal otwarty |
-| F04 | BOM stacji wskazywał inny MCU niż CAD; rodzina S2-LP nie identyfikowała pasma | poprawione: STM32F103CBT6 i S2-LPQTR; brak dowodu gotowego firmware i radia |
+| F04 | BOM stacji wskazywał inny MCU niż CAD; rodzina S2-LP nie identyfikowała pasma | poprawione: S2-LPQTR; w 0.5 MCU stacji to nRF52840 lub ESP32-S3 (D14), a STM32F103CBT6 zostaje na stanowisku; brak dowodu gotowego firmware i radia |
 | F05 | Walidacja przyjmowała C1 i niewidoczne znaki formatujące | poprawione w modelu i SA1; przypadki wejścia oraz niezależnie zakodowanego JSON |
 | F06 | Specyfikacja nie rozdzielała jednoznacznie RECEIVED i STATUS | poprawiona; STATUS ma event ≥2 i state 2/3, zgodnie z modelem |
 | F07 | Nieokreślony zakres próby obciążenia i brak wymogu utrzymania hosta w pracy | doprecyzowane; próby terenowe i pakiet START nadal niewykonane |
 | F08 | Dodatkowe warunki licencji zależności były niezgodne z GPL własnego kodu | rozstrzygnięte 2026-10-07: kod WICI na MIT; pakiet START dołącza licencje Reticulum/LXMF i podlega ich warunkom |
+| F09 | Łączność zależała od znalezionego laptopa; przekaźnik z laptopem zużywał 788–2312 Wh na dobę | zmienione w 0.5: samodzielna stacja z przekaźnikiem 3,3–6,3 Wh na dobę w modelu; laptop i router jako rozszerzenia |
+| F10 | Dojrzałość microReticulum i LXMF na mikrokontrolerze; znane restarty przy zasobach po stratnym łączu | otwarte; T3 na obu rodzinach MCU, D14; jeden pakiet na wiadomość (D01) omija zasoby |
+| F11 | Ujemny zapas łącza 1 km przy antenach na wysokości okien (model: −0,7 do −7,3 dB, bez 10 dB na zaniki) | otwarte; T5 z zapisem wysokości i zysku anten; antena kolinearna, wyższe położenie lub przekaźnik; W08 może wymagać zmiany |
+| F12 | Blokowanie odbiornika przez telefony LTE 800 i GSM 900 | otwarte; T4; filtr SAW 868 MHz do oceny |
+| F13 | Wyładowania atmosferyczne i ESD na złączu anteny | otwarte; warunki montażu w specyfikacji radia; T6 |
+| F14 | Zima: pojemność ogniw i akumulatorów, czytelność ekranu | otwarte; model z obniżeniem pojemności o 20% w 0 °C; T6 w −10 °C |
+| F15 | Tlenek węgla, wodór i pożar akumulatorów | wymagania organizacyjne w specyfikacji i na karcie stacji; T8 |
+| F16 | Cisza radiowa, szyfrowanie bazy, ZNISZCZ DANE i status prawny nadawania | kontrakt w specyfikacji; uzgodnienia z gminą D12/D13 otwarte |
+| F17 | RECEIVED nie był ograniczony do przypiętej OSP; kwarantanna była opcjonalna | poprawione w specyfikacji i modelu: zaufanie stacji i obowiązkowa kwarantanna bez RECEIVED |
 
 ## F01: kontroler USB
 
 W [połączeniach kontrolera](../hardware/radio-test-r01/connections.csv) pin Y1.1 jest połączony z V3. Jest to wejście standby oscylatora ASE-8.000MHZ-L-C-T. Stały stan wysoki utrzymuje oscylacje. Karta ASE dla 8 MHz podaje typowo 2,5 mA i maksymalnie 7 mA; cały modem USB 2.0 ma w suspend budżet 2,5 mA. Nawet po zatrzymaniu MCU i radia nie da się zagwarantować bilansu. Odłączenie D+ przez Q1 nie odłącza Y1. [ASE, wydanie 2022-02-18, s. 1–2](https://abracon.com/Oscillators/ASEseries.pdf), [USB 2.0](https://www.usb.org/document-library/usb-20-specification), [ECN suspend, kopia dokumentu USB-IF](https://git.nefarius.at/nefarius/USB-Bluetooth-Specs/media/branch/master/usb_20_0702115/Suspend%20Current%20ECN.pdf).
 
-Potrzebne są sterowany tor zegara/zasilania i firmware obsługujący suspend/resume. Zmiana wymaga nowej rewizji CAD, ERC/DRC, eksportów i kontroli paczki. W R01.3 jej nie wykonano, więc Gerbery R01.3 nie są wersją poprawioną.
+Potrzebne są sterowany tor zegara/zasilania i firmware obsługujący suspend/resume. Zmiana wymaga nowej rewizji CAD, ERC/DRC, eksportów i kontroli paczki. W R01.3 jej nie wykonano, więc Gerbery R01.3 nie są wersją poprawioną. W 0.5 problem dotyczy wyłącznie stanowiska laboratoryjnego zasilanego z VBUS. Stacja R02 jest urządzeniem samozasilanym i nie pobiera prądu z VBUS.
 
 Odbiór obejmuje prąd przed konfiguracją, deklarowany budżet po konfiguracji, suspend, resume i udar przy podłączeniu. C1=1 µF nie opisuje całej pojemności pobierającej energię z USB: są kondensatory za LDO oraz przyszły moduł RF. Nie stwierdzono przekroczenia udaru pomiarem; trzeba go zmierzyć w kompletnym urządzeniu. [Warunki przed produkcją](../hardware/radio-test-r01/przed-produkcja.md), [odbiór](spec/odbior.md).
 
@@ -47,7 +56,9 @@ trzy cykle = 43,81 s > 34,67 s
 
 To dolne oszacowanie czasu bez kolizji, zajętego kanału i rampowania. Kolejka z takim ruchem może wygasić link przed nadaniem jego żądania. Kontrprzykład nie jest pomiarem, bo adaptera i firmware jeszcze nie wykonano. Pokazuje, że do zgodności nie wystarczy sama deklaracja bitrate i timeoutu READY. Jedna zgoda READY ogranicza modem, ale nie usuwa oczekiwania po stronie hosta za ruchem przekazywanym.
 
-Przed projektowaniem kolejnych PCB wykonać T3: przypięty Reticulum/LXMF, emulator TX/ciszy/CCA, ograniczone kolejki, zimna i ustalona trasa, link, zasób, potwierdzenia, restarty i ruch przekaźnika. Rejestrować wiek pakietu oraz wszystkie ponowienia. Rozstrzygnąć planowanie i timeouty całego stosu; nie uznawać zwiększenia samego READY za rozwiązanie. [Kontrakt radia](spec/radio.md), [plan prób](conception/08-plan-weryfikacji-i-decyzje.html).
+Przed projektowaniem kolejnych PCB wykonać T3: przypięty Reticulum/LXMF, emulator TX/ciszy/CCA, ograniczone kolejki, zimna i ustalona trasa, link, zasób, potwierdzenia, restarty i ruch przekaźnika. Rejestrować wiek pakietu oraz wszystkie ponowienia. Rozstrzygnąć planowanie i timeouty całego stosu; nie uznawać zwiększenia samego READY za rozwiązanie.
+
+W 0.5 interfejs P1 jest częścią stosu w stacji, więc adapter i READY znikają, a stos zna dług ciszy i stan kolejki radiowej. Kontrprzykład pozostaje jednak ważny dla kolejki wewnątrz stacji: pakiet linku za trzema przekazywanymi datagramami po 500 B nadal czeka 43,81 s. Stos musi więc planować wysyłkę z uwzględnieniem kolejki albo wydłużać limity czasu; rozstrzyga to T3 na mikrokontrolerze. Jeden pakiet okazjonalny na wiadomość SA1 (D01) usuwa z ruchu aplikacji zestawianie linku i zasoby. [Kontrakt radia](spec/radio.md), [plan prób](conception/08-plan-weryfikacji-i-decyzje.html).
 
 ## F03: ładowarka i tolerancje
 
@@ -64,11 +75,11 @@ TPS2553: tabela doboru dla 15 kΩ /1% podaje minimum 1594,5 mA, poniżej wymagan
 
 ## F04–F07: poprawione kontrakty i dane
 
-- **Części:** BOM stacji jest zgodny z MCU kontrolera: STM32F103CBT6. C8 wymaga odrębnego obrazu mieszczącego się w 64 KiB. Wariant ST radia to S2-LPQTR; S2-LPCBQTR nie obejmuje 869,525 MHz w górnym paśmie. Żaden wariant RF nie jest jeszcze odebrany. [BOM](spec/bom-stacji.csv), [warianty S2-LP, rev. 13](https://www.st.com/resource/en/datasheet/s2-lp.pdf).
+- **Części:** w 0.4 BOM stacji był zgodny z MCU kontrolera: STM32F103CBT6. W 0.5 ten MCU zostaje na stanowisku laboratoryjnym, a stacja używa nRF52840 lub ESP32-S3. Wariant ST radia to S2-LPQTR; S2-LPCBQTR nie obejmuje 869,525 MHz w górnym paśmie. Żaden wariant RF nie jest jeszcze odebrany. [BOM](spec/bom-stacji.csv), [warianty S2-LP, rev. 13](https://www.st.com/resource/en/datasheet/s2-lp.pdf).
 - **Tekst:** model odrzuca kategorie Unicode Cc i Cf, również przy odbiorze JSON z sekwencjami `\u`. Polskie litery pozostają dozwolone. Nie jest to implementacja ochrony HTML przyszłej strony.
 - **Statusy:** RECEIVED rezerwuje event=1/state=1; STATUS wymaga event ≥2 i state 2/3. Starsze statusy i konflikty nadal podlegają regułom modelu.
 - **Próba obciążenia:** 50 zgłoszeń łącznie z A w pierwszych pięciu minutach, droga A–B–OSP i powrót przez B. RECEIVED ma wrócić na A do 30 min od pierwszego COMMIT. ≥99% z 50 oznacza 50/50. Próba nie kwalifikuje sieci tysiąca stacji.
-- **Host i USB:** START ma zapobiegać automatycznemu uśpieniu hosta, także podczas restartu strony. Doprecyzowano DATA/READY i zakaz automatycznego wznowienia TX bez zgody. Są to wymagania dla przyszłego pakietu i firmware; te funkcje jeszcze nie działają.
+- **Host i USB:** START ma zapobiegać automatycznemu uśpieniu hosta, także podczas restartu strony. W 0.5 uśpienie hosta wyłącza tylko stronę i panel; stacja pracuje dalej. Protokół USB laptop–stacja jest idempotentny (D17). Są to wymagania dla przyszłego pakietu i firmware; te funkcje jeszcze nie działają.
 
 ## F08: licencje pakietu START
 
@@ -78,10 +89,10 @@ Repozytorium zawiera własny model i dokumentację; nie dołącza kodu tych zale
 
 ## Dowody i granice przeglądu
 
-Model obejmuje 19 testów, w tym walidację Unicode, zastrzeżone numery STATUS i typ TEST z konfliktem względem REQUEST. [Zapis weryfikacji](../software/reference/weryfikacja.json) wiąże wynik z hashami czterech źródeł. Siedem regresji publikacji sprawdza m.in. pustą, niepełną i nieaktualną paczkę, odrzucanie błędu bez przepisywania dowodów oraz linki i kotwice stron HTML. Kontrola repozytorium sprawdza linki, sumy źródeł, aktualność obliczeń, powiązanie raportów CAD i zgodność archiwum z eksportami.
+Model obejmuje 24 testy, w tym walidację Unicode, zastrzeżone numery STATUS, typ TEST z konfliktem względem REQUEST, kwarantannę nieznanego nadawcy i przyjmowanie wiadomości przez stację tylko od przypiętej OSP. [Zapis weryfikacji](../software/reference/weryfikacja.json) wiąże wynik z hashami czterech źródeł. Dziesięć regresji publikacji sprawdza m.in. pustą, niepełną i nieaktualną paczkę, odrzucanie błędu bez przepisywania dowodów, linki i kotwice stron HTML, linki strony Pages, zakres archiwum bez filmów i tryb manifestu dla PR. Kontrola repozytorium sprawdza linki, sumy źródeł, aktualność obliczeń, powiązanie raportów CAD i zgodność archiwum z eksportami.
 
 Przejrzano połączenia i widoki kontrolera oraz raporty i ich wyłączenia. CAD i plików produkcyjnych R01.3 nie zmieniano. Kontrola ich sum nie jest nowym uruchomieniem ERC/DRC, niezależnym przeglądem elektrycznym ani próbą płytki. Nie ma fizycznego dopasowania złączy, pomiaru USB/RF, działającego firmware, strony, pendrive'a ani odbioru zasilania.
 
-Nadal aktualne są pozostałe blokady: udar A/B, ochrona telefonu, regulacja i izolacja przetwornicy, PE/RCBO dla przypadkowych zasilaczy klasy I, zgodność dwóch wykonań radia, terenowe 1 km i energia 24 h. Nie ma podstaw do deklaracji „military grade”, określonego MTBF ani kosztu odebranej serii. [Pełna lista odbioru](spec/odbior.md).
+Nadal aktualne są pozostałe blokady: stos na mikrokontrolerze (F10), ujemny zapas 1 km przy niskich antenach (F11), decyzja P1 wobec LoRa (D10), kanał współdzielony z LoRaWAN RX2 i Meshtastic (D11), uzgodnienia z gminą (D12, D13), udar A/B, ochrona telefonu, regulacja i izolacja przetwornicy, PE/RCBO dla przypadkowych zasilaczy klasy I, zgodność dwóch wykonań radia, terenowe 1 km i energia 24 h. Nie ma podstaw do deklaracji „military grade”, określonego MTBF ani kosztu odebranej serii. [Pełna lista odbioru](spec/odbior.md).
 
-Kolejność rozstrzygnięć: T3 na emulatorze i decyzja o zależnościach; poprawka USB i kontrola mechaniki; dwa modemy oraz próby RF; kwalifikacja zasilania; kompletny pilotaż 24 h. Nie zdejmować HOLD przez zaliczenie testów modelu lub CI.
+Kolejność rozstrzygnięć według [planu weryfikacji](conception/08-plan-weryfikacji-i-decyzje.html#kolejnosc-prac): stacja poziomu 1 na płytkach rozwojowych z T3 na obu MCU (D14); wiadomości i czas radia z emulatorem P1 (D01); laptop, protokół USB i strona; RF na stanowisku R01.3, potem na płytce R02; sieć terenowa z przekaźnikiem na ogniwach; zasilanie poziomu 3; kompletny pilotaż 24 h. Uzgodnienia z gminą (D12, D13) prowadzi się równolegle i kończy przed pilotażem. Nie zdejmować HOLD przez zaliczenie testów modelu lub CI.
