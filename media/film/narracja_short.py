@@ -6,7 +6,7 @@ SEGMENTS = [
         "Po kilku godzinach telefon pokazuje: brak sieci.",
     ]),
     ("v2", [
-        "W szkole-schronieniu jest pięćdziesiąt osób. Brakuje wody i leków.",
+        "W szkole czy garażu jest pięćdziesiąt osób. Brakuje wody i leków.",
         "Służby są kilka kilometrów dalej. Jak im o tym powiedzieć?",
     ]),
     ("v3", [
@@ -28,7 +28,7 @@ SEGMENTS = [
         "Szukamy krótkofalowców, elektroników, programistów i ludzi ze służb.",
     ]),
     ("v7", [
-        ("Szczegóły na GitHubie, pod nazwą WICI.", "Szczegóły na git habie, pod nazwą wici."),
+        ("Szczegóły na GitHubie.", "Szczegóły na git habie."),
         "Rozsyłamy wici.",
     ]),
 ]
