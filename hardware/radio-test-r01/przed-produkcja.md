@@ -1,6 +1,6 @@
 # WICI: warunki przed zamówieniem
 
-Status pozostaje **HOLD**, dopóki wszystkie pozycje nie mają potwierdzonego wyniku.
+Status pozostaje **HOLD**, dopóki wszystkie pozycje nie mają potwierdzonego wyniku. W wersji 0.5 lista dotyczy stanowiska laboratoryjnego P1; wymagania płytki stacji R02 są w [specyfikacji elektroniki](../../docs/spec/elektronika.md).
 
 | Obszar | Obecny wynik | Co trzeba zakończyć |
 |---|---|---|
@@ -12,7 +12,10 @@ Status pozostaje **HOLD**, dopóki wszystkie pozycje nie mają potwierdzonego wy
 | Referencja RF | Wspólne połączenia CSA/CPA zgodne | Poprawny, przejrzany projekt/wykonanie RF; nie zamawiać z importu KiCad |
 | Import RF | DRC: 204 naruszenia, połączeń brakujących 0 | Wyjaśnić reguły wierceń, stosy padów i utracone dane importu. Zero brakujących połączeń nie oznacza poprawnego toru RF |
 | Zegar RF | Zwykły kwarc referencji nie spełnia P1 | Wybrać dostępny TCXO 32 MHz i zgodny footprint, zasilanie, sprzężenie wejścia oraz pełny budżet błędu ≤ ±2,5 ppm; przygotować kalibrację |
-| USB suspend i udar | Y1.1 połączone stale z V3; brak sterowanego zatrzymania zegara | ASE przy 8 MHz: do 7 mA, a cały modem w suspend ma budżet 2,5 mA. Potrzebna zmiana toru zegara/zasilania i firmware oraz pomiar całego modemu. Sprawdzić udar z pojemnościami za LDO i modułem RF; C1=1 µF sam nie zamyka bilansu USB |
+| USB suspend i udar | Y1.1 połączone stale z V3; brak sterowanego zatrzymania zegara | Dotyczy stanowiska zasilanego z VBUS; stacja R02 jest samozasilana. ASE przy 8 MHz: do 7 mA, a cały modem w suspend ma budżet 2,5 mA. Potrzebna zmiana toru zegara/zasilania i firmware oraz pomiar całego modemu. Sprawdzić udar z pojemnościami za LDO i modułem RF; C1=1 µF sam nie zamyka bilansu USB |
+| Filtr harmonicznych | Brak w wykonaniu | Filtr dolnoprzepustowy tłumiący 1739 i 2609 MHz do poziomu EN 300 220; pomiar widma z rzeczywistym filtrem |
+| Ochrona wyjścia RF | Brak w wykonaniu | Ochrona ESD o małej pojemności przed złączem 50 Ω; wpływ na dopasowanie i moc zmierzony |
+| Filtr SAW 868 MHz | Do oceny | Pomiar blokowania przez nadajniki LTE 800 i GSM 900 z filtrem i bez niego; strata wtrąceniowa wobec celu czułości |
 | Firmware | Brak | Działający obraz, mapowanie pinów, USB CDC, SPI CC1120, profil P1 i trwały limit czasu nadawania |
 | Różni dostawcy | Interfejs radia wydzielony; alternatywa LDO | Zweryfikować drugie wykonanie radia/kontrolera. S2-LP nie jest zamiennikiem CC1120 na tej samej płytce |
 | Próby fizyczne | Nie wykonano | Zasilanie, USB, temperatura, widmo TX, czułość RX, odporność na restart, dwie sztuki i pomiar w terenie |
