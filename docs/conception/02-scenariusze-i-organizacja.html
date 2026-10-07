@@ -43,7 +43,6 @@
 <p>Na tej stronie</p>
 <ol>
   <li><a href="#role">Role</a></li>
-  <li><a href="#macierz-odpowiedzialnosci">Macierz odpowiedzialności</a></li>
   <li><a href="#przebieg-dzialania">Przebieg działania</a></li>
   <li><a href="#zachowanie-w-scenariuszach-awarii">Zachowanie w scenariuszach awarii</a></li>
   <li><a href="#miejsce-w-systemie-ochrony-ludnosci">Miejsce w systemie ochrony ludności</a></li>
@@ -76,32 +75,10 @@
 
 <p>Stany zgłoszenia na ekranie stacji pochodzą z jednej tabeli „Teksty ekranu” w <a href="../spec/oprogramowanie.md">specyfikacji oprogramowania</a>: „ZAPISANE W STACJI – CZEKA NA WYSŁANIE”, „WYSYŁANIE – PRÓBA [n], NASTĘPNA ZA [m] MIN”, „ODBIORCA ZAPISAŁ”, „ODBIORCA PRZECZYTAŁ”, „POMOC SKIEROWANA (DECYZJA, NIE GODZINA PRZYJAZDU)”, „PRZEKAZANE DALEJ (PSP / POGOTOWIE / POWIAT)”, „ODBIORCA NIE MOŻE TERAZ POMÓC – CZYTAJ ODPOWIEDŹ” i „ZAMKNIĘTE”. „Pomoc skierowana” oznacza decyzję dyżurnego, a nie dotarcie pomocy. WICI nie zastępuje numeru 112: przy działającym telefonie i bezpośrednim zagrożeniu trzeba wezwać zwykłe służby, niezależnie od statusu WICI. Przy pilności 2 opiekun równolegle udziela pierwszej pomocy i – gdy droga jest bezpieczna – wysyła gońca do najbliższej jednostki PSP/OSP lub zespołu ratownictwa medycznego.</p>
 
-<h3 id="macierz-odpowiedzialnosci">Macierz odpowiedzialności</h3>
-
-<p>Propozycja do uzgodnienia przed pilotażem (R – wykonuje, A – odpowiada, C – konsultowany).</p>
-
-<div class="table-wrap"><table>
-<thead><tr>
-<th scope="col">Zadanie</th>
-<th scope="col">Odpowiedzialność</th>
-</tr></thead><tbody>
-<tr><td>wyznaczenie OSP i wpis do gminnego planu zarządzania kryzysowego</td><td>A: wójt; R: komórka zarządzania kryzysowego</td></tr>
-<tr><td>D12 (status w stanach nadzwyczajnych) i D13 (ochrona danych)</td><td>A: wójt; R: komórka zarządzania kryzysowego; C: inspektor ochrony danych, delegatura UKE, komenda powiatowa PSP</td></tr>
-<tr><td>wybór miejsc i zgody zarządców</td><td>R: koordynator miejsc</td></tr>
-<tr><td>montaż anten</td><td>R: wykonawca</td></tr>
-<tr><td>konfiguracja stacji i kart</td><td>R: osoba utrzymująca system</td></tr>
-<tr><td>przegląd kwartalny</td><td>R: opiekun</td></tr>
-<tr><td>przegląd roczny i kontrola TCXO</td><td>R: serwis lub producent</td></tr>
-<tr><td>ogniwa i zapas stacji</td><td>R: magazyn organizatora sieci</td></tr>
-<tr><td>szkolenia</td><td>R: organizator sieci; C: projekt</td></tr>
-<tr><td>ćwiczenie roczne</td><td>A: wójt</td></tr>
-<tr><td>dyżur OSP</td><td>A: kierownik stanowiska; R: dyżurni</td></tr>
-</tbody></table></div>
-
 <h2 id="przebieg-dzialania">Przebieg działania</h2>
 
 <ol>
-  <li><strong>Przygotowanie (przed kryzysem):</strong> zapisać w stacji dokładny adres i wejście schronienia, kartę zaufanej OSP z kluczem zapasowym; wyeksportować kartę stacji i przekazać ją do OSP (<a href="05-projekt-koncepcyjny-komunikacji.html#model-zaufania-i-kluczy">model zaufania</a>). Wykonać TEST z kompletu ogniw ćwiczebnego albo ze źródła 12 V; komplet kryzysowy L91 pozostaje zamknięty przy stacji. Antenę zewnętrzną z przewodem, odgromnikiem i przepustem zamontować na stałe w miejscu wskazanym po próbie zasięgu: montaż wykonuje firma lub osoba z uprawnieniami do prac na wysokości, odgromnik łączy z uziemieniem elektryk z uprawnieniami; potrzebna jest pisemna zgoda zarządcy, przepust w budowli ochronnej uzgadnia się z zarządcą i komendą powiatową PSP, w obiekcie zabytkowym potrzebna jest zgoda konserwatora, a potrzebę zgłoszenia budowlanego sprawdza się we właściwym urzędzie; koszt montażu ujmuje się w budżecie (<a href="08-plan-weryfikacji-i-decyzje.html#koszty-i-naklad-pracy">koszty</a>). Przewodu nie prowadzić przez drzwi hermetyczne, gazoszczelne ani przeciwpożarowe. W piwnicy lub garażu podziemnym umieścić stację na kondygnacji naziemnej albo zastosować dłuższy przewód o małym tłumieniu z nowym bilansem łącza. Wyznaczyć opiekuna i zastępców, przeszkolić ich przed objęciem funkcji. Dla poziomów 2–3 sprawdzić znaleziony laptop i router. Przygotować kartę obsługi, instrukcję, formularze papierowe i plakat strony (poziom 3).</li>
+  <li><strong>Przygotowanie (przed kryzysem):</strong> zapisać w stacji dokładny adres i wejście schronienia, kartę zaufanej OSP z kluczem zapasowym; wyeksportować kartę stacji i przekazać ją do OSP (<a href="05-projekt-koncepcyjny-komunikacji.html#model-zaufania-i-kluczy">model zaufania</a>). Wykonać TEST z kompletu ogniw ćwiczebnego albo ze źródła 12 V; komplet kryzysowy L91 pozostaje zamknięty przy stacji. Antenę zewnętrzną z przewodem, odgromnikiem i przepustem zamontować na stałe w miejscu wskazanym po próbie zasięgu: montaż wykonuje firma lub osoba z uprawnieniami do prac na wysokości, odgromnik łączy z uziemieniem elektryk z uprawnieniami; potrzebna jest pisemna zgoda zarządcy, przepust w budowli ochronnej uzgadnia się z zarządcą i komendą powiatową PSP, w obiekcie zabytkowym potrzebna jest zgoda konserwatora, a potrzebę zgłoszenia budowlanego sprawdza się we właściwym urzędzie. Przewodu nie prowadzić przez drzwi hermetyczne, gazoszczelne ani przeciwpożarowe. W piwnicy lub garażu podziemnym umieścić stację na kondygnacji naziemnej albo zastosować dłuższy przewód o małym tłumieniu z nowym bilansem łącza. Wyznaczyć opiekuna i zastępców, przeszkolić ich przed objęciem funkcji. Dla poziomów 2–3 sprawdzić znaleziony laptop i router. Przygotować kartę obsługi, instrukcję, formularze papierowe i plakat strony (poziom 3).</li>
   <li><strong>Uruchomienie:</strong> włączyć stację podłączoną do zamontowanej anteny; wystawienie anteny przez okno jest procedurą zapasową. Po „RADIO WŁĄCZONE” (do 1 min) potwierdzić adres na ekranie. Od tej chwili stacja przekazuje ruch innych stacji. Stacja planuje TEST z losowym opóźnieniem („TEST ZAPLANOWANY ZA OKOŁO [mm] MIN”), aby wiele stacji włączonych naraz nie zajęło kanału; okno rośnie z liczbą stacji w sieci (≥50 s na stację, 0–15 min tylko dla małej sieci). Kolejność uruchamiania wskazuje plan sieci, a OSP może wstrzymać TEST komunikatem BULLETIN. „ODBIORCA ZAPISAŁ” (RECEIVED) potwierdza zapis w OSP, a „ODBIORCA PRZECZYTAŁ” (STATUS) obecność dyżurnego. Dyżurny potwierdza, że adres i wejście są zrozumiałe. Ekran pokazuje „OSTATNI KONTAKT Z ODBIORCĄ: [czas] TEMU”; brak świeżego kontaktu nie jest awarią. Laptop, router i stronę dołącza się później, bez przerywania pracy stacji.</li>
   <li><strong>Przyjęcie potrzeby:</strong> opiekun wybiera przyciskami kategorię, liczbę osób i pilność; na poziomie 3 mieszkaniec może też wypełnić formularz, który trafia do kolejki opiekuna. Opiekun wysyła go radiem po sprawdzeniu, łącząc powtarzalne potrzeby i ustalając pilność. Stacja pokazuje „ZAPISANE W STACJI – CZEKA NA WYSŁANIE” dopiero po trwałym zapisie. Brak trasy pozostawia zgłoszenie w kolejce. Gdy potwierdzenie nie nadchodzi, stacja alarmuje zależnie od pilności (2 → 15 min, 1 → 1 h, 0 → 6 h): „BRAK POTWIERDZENIA OD [n] MIN – WYŚLIJ GOŃCA Z FORMULARZEM”; dla pilności 2 drugi alarm, gdy po „odbiorca zapisał” brak „odbiorca przeczytał” w 30 min. Alarmów krytycznych (brak potwierdzenia, niski stan ogniw, cisza) nie da się wyciszyć; wyciszenie zwykłego sygnału ekran pokazuje stale („DŹWIĘK WYCISZONY”).</li>
   <li><strong>Przyjęcie u odbiorcy:</strong> OSP zapisuje zgłoszenie i odsyła RECEIVED. Dyżurny oddzielnie potwierdza odczyt oraz decyzję: pomoc skierowana, przekazane dalej, odbiorca nie może teraz pomóc (zawsze z odpowiedzią REPLY) albo zamknięte. Opiekun przekazuje informację także osobom bez telefonu.</li>

@@ -42,7 +42,7 @@ Podział na lokalną stronę, osobny transport, trwałą kolejkę aplikacji i os
 | F30 | Stacja nigdy nie ogłaszała adresu cyklicznie, więc trasy znikały po restarcie przekaźnika; domyślne ponowienie LXMF po 10 s dublowało ruch przy ciszy P1 | polityka ogłoszeń (start, po 2 nieudanych próbach, OSP co 6 h), trasy w FRAM, minimalny odstęp ponowienia LXMF z modelu, jawne zasady ponowień intencji; T3 i T5 |
 | F31 | Pojemność liczona na przekaźnik, a ogranicza ją OSP i węzeł obok niej; limit treści 480 B nie mieścił się w jednym pakiecie | pojemność sieci z modelu, BULLETIN do każdej stacji osobno, okno TEST skalowane liczbą stacji; treść SA1 ≤256 B bez znaków `"` i `\`; D01 i T3 potwierdzają |
 | F32 | Zabezpieczenie nadnapięciowe 12 V powyżej maksimum przetwornicy, sterownik wyłącznika zasilany z VSYS, odwrotna polaryzacja, budżet TCXO i brak wierszy BOM | przetwornica do 40 V lub zawężony zakres wejścia, suma diodowa dla LTC2954, TVS dwukierunkowy, próg zaniku 3,4 V z kondensatorem podtrzymania, coroczna kontrola częstotliwości, nowy wiersz odbioru progów zasilania i próba klimatyczna T6 |
-| F33 | Brak kosztów, nakładu pracy, statusu pilotażu, bram decyzyjnych i zasad zakupu dla organizatora sieci | sekcja kosztów i `koszty.csv`, W24, bramy G0–G3, macierz odpowiedzialności, przekaźnik stały w D06, planowanie sieci z pomiarem tłumienia tras; ceny do potwierdzenia ofertami |
+| F33 | Brak statusu pilotażu i kosztu docelowego stacji | W24 (koszt docelowy przed D10 i D14), status prototypów w pilotażu, przekaźnik stały w D06, planowanie sieci z pomiarem tłumienia tras |
 
 ## F01: kontroler USB
 
