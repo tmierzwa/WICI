@@ -2,7 +2,7 @@
 
 Niekomercyjny projekt otwartej stacji dla schronienia z około 50 osobami. Znaleziony laptop i router udostępniają stronę przez Wi-Fi. Radio przekazuje krótkie zgłoszenia przez inne stacje do OSP. Telefony są ładowane z osobnego akumulatora.
 
-**Stan: projekt prototypu 0.4; kontroler USB R01.3 — HOLD.** Jest schemat, PCB, eksporty i model kontraktów. Nie ma ukończonego modułu RF, firmware, aplikacji ani gotowego pendrive'a. Nie wykonano prób fizycznych. To nie jest wydanie do użycia podczas awarii.
+**Stan: projekt prototypu 0.4; kontroler USB R01.3 — HOLD.** Jest schemat, PCB, eksporty i model kontraktów. Nie ma ukończonego modułu RF, oprogramowania układowego, aplikacji ani gotowej pamięci USB. Nie wykonano prób fizycznych. To nie jest wydanie do użycia podczas awarii.
 
 WICI używa [Reticulum](https://github.com/markqvist/Reticulum) i [LXMF](https://github.com/markqvist/LXMF). Są to odrębne projekty; ich kod nie jest dołączony.
 
@@ -14,9 +14,9 @@ WICI używa [Reticulum](https://github.com/markqvist/Reticulum) i [LXMF](https:/
 | [software/reference](software/reference/README.md) | Model ramek, wiadomości i transakcji OSP; obliczenia |
 | [tools](docs/development.md) | Kontrola repozytorium i tworzenie paczki źródłowej |
 
-[Przegląd techniczny](docs/review.md) wskazuje m.in. konieczną poprawkę suspend USB kontrolera oraz niezamkniętą zgodność czasów Reticulum/LXMF z P1.
+[Przegląd techniczny](docs/review.md) wskazuje m.in. konieczną poprawkę prądu wstrzymania USB (suspend) kontrolera oraz niezamkniętą zgodność czasów Reticulum/LXMF z P1.
 
-Cel 1 km w zabudowie, 24 godziny z wymianą źródeł 12 V i zgodność dwóch dostawców radia wymagają prób. Przetwornica 230 V i ładowarka są opisami konstrukcyjnymi; nie mają odebranych PCB. [Lista prób i braków](docs/spec/odbior.md).
+Cel 1 km w zabudowie, 24 godziny z wymianą źródeł 12 V i zgodność dwóch dostawców radia wymagają prób. Model Okumury-Haty wskazuje, że przy antenach na wysokości okien 1 km w mieście jest na granicy budżetu łącza lub poza nią; sieć planuje się z wysoko umieszczonymi antenami i przekaźnikami. Kanał 869,525 MHz jest współdzielony z LoRaWAN i Meshtastic, więc wybór kanału zależy od pomiaru w miejscach pilotażu. Przed przekazaniem zestawu innym gotowa konfiguracja wymaga oceny zgodności z dyrektywą RED. Przetwornica 230 V i ładowarka są opisami konstrukcyjnymi; nie mają odebranych PCB. [Lista prób i braków](docs/spec/odbior.md).
 
 ## Sprawdzenie repozytorium
 

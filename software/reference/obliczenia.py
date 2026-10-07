@@ -7,6 +7,13 @@ from pathlib import Path
 from reference import fragment, encode_message
 
 
+def hata_urban_loss_db(f_mhz: float, base_m: float, mobile_m: float, km: float) -> float:
+    """Okumura-Hata, small or medium city; indicative outside its 30-200 m base height range."""
+    mobile = (1.1 * math.log10(f_mhz) - 0.7) * mobile_m - (1.56 * math.log10(f_mhz) - 0.8)
+    return (69.55 + 26.16 * math.log10(f_mhz) - 13.82 * math.log10(base_m) - mobile
+            + (44.9 - 6.55 * math.log10(base_m)) * math.log10(km))
+
+
 def calculate() -> dict:
     """Calculate prototype margins with explicit inputs from the design."""
     ac_w, efficiency, idle_w, diode_w = 35.0, 0.85, 8.0, 1.7
@@ -24,6 +31,11 @@ def calculate() -> dict:
     available_low_v = bus_v * modulation_max / math.sqrt(2)
     c_bus, delta_v, loop_r = 0.0176, 5.5, 0.04
     request = [1, 0, "0" * 32, 65535, 4, 65535, "\\" * 64, '"' * 96, 2]
+    f_mhz, tx_dbm, antenna_dbi, cable_db, sensitivity_dbm = 869.525, 13.0, 2.15, 1.0, -110.0
+    link_gain_db = tx_dbm + 2 * antenna_dbi - 2 * cable_db
+    urban = {f"base_{b:g}m_mobile_{m:g}m": hata_urban_loss_db(f_mhz, b, m, 1.0) for b, m in ((30, 1.5), (10, 1.5), (10, 3))}
+    smallest_cycle_s = 13 * len(fragment(b"x", b"12345678")[0]) * 8 / 4800
+    eeprom_pages, eeprom_endurance = 8192 // 32, 1_000_000
     result = {
         "assumptions": {"station_ac_w": ac_w, "conversion_efficiency_excluding_idle": efficiency,
                         "inverter_idle_w": idle_w, "diode_loss_w": diode_w,
@@ -42,9 +54,18 @@ def calculate() -> dict:
                   "cycle_seconds": 13 * tx_s, "steady_tx_fraction": 1 / 13,
                   "ideal_payload_bytes_hour_for_600b_datagrams": 600 * 3600 / (13 * tx_s),
                   "free_space_loss_1km_db": 32.44 + 20 * math.log10(869.525),
+                  "link_gain_excluding_path_db": link_gain_db,
+                  "free_space_margin_1km_db": link_gain_db - (32.44 + 20 * math.log10(f_mhz)) - sensitivity_dbm,
+                  "hata_urban_loss_1km_db": urban,
+                  "hata_urban_margin_1km_db": {k: link_gain_db - v - sensitivity_dbm for k, v in urban.items()},
+                  "fresnel_radius_midpoint_1km_m": 17.32 * math.sqrt(0.5 * 0.5 / (f_mhz / 1000)),
+                  "eeprom_writes_per_day_worst": 86400 / smallest_cycle_s,
+                  "eeprom_years_worst_1m_cycles_256_pages": eeprom_pages * eeprom_endurance / (86400 / smallest_cycle_s) / 365,
                   "worst_request_content_bytes": len(encode_message(request))},
         "charger": {"nominal_feedback_v": 1.23 * (1 + 3.16),
                     "nominal_crowbar_v": 2.495 * (1 + 9.31 / 8.20),
+                    "untrimmed_max_output_v": 1.267 * (1 + 3.16),
+                    "crowbar_min_minus_untrimmed_max_v": 5.30 - 1.267 * (1 + 3.16),
                     "input_current_at_60w_80percent_11_5v_a": 60 / 0.8 / 11.5,
                     "inductor_ripple_at_16v_min_frequency_a": (16 - 5.1168) * (5.1168 / 16) / (68e-6 * 127e3)},
         "inverter": {"secondary_current_150w_resistive_a": high_i,
@@ -60,7 +81,7 @@ def calculate() -> dict:
         "hotplug": {"initial_current_a_model": delta_v / loop_r,
                     "decay_time_constant_s": loop_r * c_bus,
                     "i_squared_t_a2s_model": (delta_v / loop_r)**2 * loop_r * c_bus / 2},
-        "limits": ["No radio range measurement", "No transformer leakage or PSU inrush model",
+        "limits": ["No radio range measurement; Hata is used below its 30 m base height range", "No transformer leakage or PSU inrush model",
                    "No switching, magnetic or reactive current losses in voltage margin",
                    "No battery capacity measurement", "No thermal or electrical safety verification"],
     }

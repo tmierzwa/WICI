@@ -12,6 +12,7 @@ A/B,2,radiator diod,początkowo ≤3 K/W na tor,wykonanie lokalne,niezależne wy
 A/B,8,kondensator magistrali,"2200 µF/35 V, każdy ≥3 A prądu tętnień",Panasonic,Nichicon,sprawdzić częstotliwość tętnień i prąd udarowy
 A/B,2,przewód akumulatorowy,"≤2 m, 2 × 6 mm², bezpiecznik 25 A",wykonanie lokalne,niezależne wykonanie,profil 20 A
 A/B,2,przewód do gniazda zapalniczki,"≤2 m, 2 × 2,5 mm², bezpiecznik 10 A",wykonanie lokalne,niezależne wykonanie,profil 8 A i limit gniazda
+A/B,3,"woltomierz cyfrowy wejść A, B i C","zakres 0–20 V, błąd ≤1%, pobór ≤20 mA",producent A,producent B,do kwalifikacji
 ładowarka,8,przetwornica obniżająca,"LM2596, wersja regulowana",TI,onsemi,kalibracja i próba cieplna
 ładowarka,8,dławik,"68 µH, Isat ≥6 A, Irms ≥3 A",TDK,Würth Elektronik,kwalifikacja wymiarów i strat
 ładowarka,16,dioda Schottky’ego,≥3 A/40 V,ST,onsemi,dioda swobodna i ochrona przed odwrotną polaryzacją
@@ -22,6 +23,7 @@ A/B,2,przewód do gniazda zapalniczki,"≤2 m, 2 × 2,5 mm², bezpiecznik 10 A",
 ładowarka,8,bezpiecznik wejściowy,"1,5 A, parametry dla prądu stałego",Littelfuse,Eaton,sprawdzić charakterystykę czasowo-prądową
 ładowarka,8,bezpiecznik wyjściowy,"szybki 3,15 A, parametry dla prądu stałego",Littelfuse,Eaton,sprawdzić I²t wyłączania przy zadziałaniu tyrystora
 ładowarka,8,gniazdo USB-A,"1,5 A prądu ciągłego",producent A,producent B,próba cieplna i spadku napięcia na przewodzie
+ładowarka,1,odłącznik podnapięciowy wejścia C,"wyłączenie przy 11,5 V, załączenie przy 12,4 V, ≥10 A DC",niewybrany,niewybrany,wymagany projekt i kwalifikacja
 przetwornica,4,tranzystor MOSFET,"≥60 V, RDS(on) ≤3,1 mΩ przy 10 V",ST STP220N6F7,Infineon IPP030N06NF2S,próba cieplna
 przetwornica,2,sterownik półmostka,"logika 3,3 V, sterowanie około 10 V",TI UCC27211,ADI LTC4444,różne układy bootstrapu i zasilania
 przetwornica,1,mikrokontroler sterujący,"komplementarne PWM, czas martwy, sprzętowe wejście awaryjne",ST STM32F103,Microchip dsPIC33CK,oprogramowanie układowe jeszcze nie powstało

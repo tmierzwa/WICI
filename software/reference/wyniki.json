@@ -31,11 +31,28 @@
     "steady_tx_fraction": 0.07692307692307693,
     "ideal_payload_bytes_hour_for_600b_datagrams": 124149.82277995977,
     "free_space_loss_1km_db": 91.22564146124189,
+    "link_gain_excluding_path_db": 15.3,
+    "free_space_margin_1km_db": 34.074358538758105,
+    "hata_urban_loss_1km_db": {
+      "base_30m_mobile_1.5m": 126.01326790450307,
+      "base_10m_mobile_1.5m": 132.6070836447288,
+      "base_10m_mobile_3m": 128.80726822417634
+    },
+    "hata_urban_margin_1km_db": {
+      "base_30m_mobile_1.5m": -0.7132679045030699,
+      "base_10m_mobile_1.5m": -7.307083644728792,
+      "base_10m_mobile_3m": -3.507268224176343
+    },
+    "fresnel_radius_midpoint_1km_m": 9.28703015032076,
+    "eeprom_writes_per_day_worst": 132923.0769230769,
+    "eeprom_years_worst_1m_cycles_256_pages": 5.276509386098428,
     "worst_request_content_bytes": 382
   },
   "charger": {
     "nominal_feedback_v": 5.1168000000000005,
     "nominal_crowbar_v": 5.3277378048780495,
+    "untrimmed_max_output_v": 5.27072,
+    "crowbar_min_minus_untrimmed_max_v": 0.029279999999999973,
     "input_current_at_60w_80percent_11_5v_a": 6.521739130434782,
     "inductor_ripple_at_16v_min_frequency_a": 0.40301613710050954
   },
@@ -57,7 +74,7 @@
     "i_squared_t_a2s_model": 6.655
   },
   "limits": [
-    "No radio range measurement",
+    "No radio range measurement; Hata is used below its 30 m base height range",
     "No transformer leakage or PSU inrush model",
     "No switching, magnetic or reactive current losses in voltage margin",
     "No battery capacity measurement",

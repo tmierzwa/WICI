@@ -8,6 +8,7 @@
 | Sąsiednia stacja | cel: 1 km w zabudowie; wynik wymaga próby terenowej |
 | Informacje radiowe | zgłoszenia, odpowiedzi, statusy, komunikaty; bez zdjęć i głosu |
 | Zasilanie | 12 V; źródła A/B dla stacji, osobne C dla telefonów |
+| Dopuszczalne źródła | akumulator kwasowo-ołowiowy 12 V, akumulator LiFePO4 12,8 V z BMS, wyjście 12 V stacji zasilania; 11,5–16 V na złączu, odłączenie przy 11,5 V |
 | Ciągłość | nowy akumulator podłączony przed odłączeniem starego |
 | Praca przez dobę | kolejne źródła z lokalnych zasobów; nie zakłada się pracy z jednego akumulatora |
 | Przetwornica | cel: 150 W mocy ciągłej, 230 V ±5%, 50 Hz, THD <5% |
@@ -49,21 +50,33 @@ Laptop, router, ich oryginalne zasilacze i akumulatory pochodzą z miejsca uruch
 ## Uruchomienie odebranego zestawu
 
 1. Wyprowadź antenę na zewnątrz i ustaw pionowo. Nie kładź jej przy metalowej framudze.
-2. Podłącz źródło A do zasilania stacji i źródło C do ładowarki.
-3. Podłącz oryginalne zasilacze laptopa i routera do wyjść przetwornicy.
+2. Przy otwartym wyłączniku DC podłącz oryginalne zasilacze laptopa i routera do wyjść przetwornicy.
+3. Podłącz źródło A do zasilania stacji i źródło C do ładowarki. Sprawdź na woltomierzach, że oba mają co najmniej 12,4 V, i zamknij wyłącznik DC.
 4. Połącz laptop z portem LAN routera i modemem USB. Podłącz pendrive.
 5. Uruchom START w działającym systemie albo system Linux z pamięci USB na obsługiwanym komputerze PC.
 6. Wpisz dokładny adres schronienia, ustaw hasło opiekuna i zaimportuj kartę zaufanej OSP.
 7. Połącz telefon z główną siecią Wi-Fi routera i otwórz adres z kodu QR wyświetlonego na ekranie laptopa.
 8. Wyślij TEST z adresem schronienia. Poczekaj na RECEIVED, czyli zapis w OSP, a potem na STATUS „przeczytane” od dyżurnego. Zielony wskaźnik USB nie oznacza dostępności pomocy.
 
-Jeżeli router ma nieznane hasło, wyłączony DHCP lub izolację Wi-Fi od LAN, potrzebna jest konfiguracja jego panelu. Znaleziony, zablokowany router nie staje się przez to dostępny. Nie resetuj znalezionego urządzenia bez zgody właściciela. Mac z procesorem Apple Silicon nie uruchomi naszego ogólnego obrazu Linuksa; pakiet START wymaga na nim sprawnego systemu macOS. Komputer, którego nie da się uruchomić z pamięci USB i który nie ma sprawnego systemu, jest poza zakresem.
+Zasilaczy nie podłącza się do pracującej przetwornicy: prąd ładowania ich kondensatorów może wyzwolić zabezpieczenie. Jeżeli router ma nieznane hasło, wyłączony DHCP lub izolację Wi-Fi od LAN, potrzebna jest konfiguracja jego panelu. Wiele routerów domowych obsługuje najwyżej około 32 klientów Wi-Fi lub ma mniejszą pulę DHCP; kwalifikacja routera obejmuje 50 klientów i pulę co najmniej 60 adresów. Znaleziony, zablokowany router nie staje się przez to dostępny. Nie resetuj znalezionego urządzenia bez zgody właściciela. Mac z procesorem Apple Silicon nie uruchomi naszego ogólnego obrazu Linuksa; pakiet START wymaga na nim sprawnego systemu macOS. Komputer, którego nie da się uruchomić z pamięci USB i który nie ma sprawnego systemu, jest poza zakresem.
 
 ## Wymiana źródła
 
-Podłącz nowe źródło do wolnego wejścia. Sprawdź działanie stacji pod pełnym obciążeniem po odłączeniu starego. Nie odłączaj obu naraz. Ustawiony limit 8 A lub 20 A musi pasować do każdego źródła, które może przejąć zasilanie. Nie wolno przełączyć na 20 A tylko dlatego, że jedno z dwóch wejść ma mocniejszy przewód.
+Podłącz nowe źródło do wolnego wejścia. Sprawdź działanie stacji pod pełnym obciążeniem po odłączeniu starego. Nie odłączaj obu naraz. Źródło wymieniaj, zanim jego napięcie spadnie do progu odłączenia 11,5 V; akumulator rozruchowy pojazdu — już przy około 12,2 V. Ustawiony limit 8 A lub 20 A musi pasować do każdego źródła, które może przejąć zasilanie. Nie wolno przełączyć na 20 A tylko dlatego, że jedno z dwóch wejść ma mocniejszy przewód.
 
 Wymiana źródła C może przerwać ładowanie telefonów, lecz nie łączność. Nie łącz plusów akumulatorów bezpośrednio. Nie używaj źródła 24 V. Podstawowy wariant nie jest dopuszczony do pracy podczas rozruchu silnika.
+
+## Przechowywanie i przeglądy
+
+Zestaw może czekać na użycie latami. Przechowuje się go w suchym miejscu, w temperaturze pokojowej, bez akumulatorów podłączonych do wejść. Co najmniej raz w roku i po każdym nowym wydaniu oprogramowania:
+
+1. Sprawdź sumy kontrolne obrazu na pamięci USB; pamięć flash bez zasilania traci dane. Wymień ją co kilka lat albo przechowuj drugą, sprawdzoną kopię.
+2. Uruchom stację z przygotowanego zestawu na aktualnych komputerach z lokalnej listy; nowe wersje systemów mogą wymagać nowego pakietu START.
+3. Zmierz częstotliwość nadajnika, aby skontrolować starzenie TCXO, i wymień ramki z drugim modemem.
+4. Uruchom przetwornicę i ładowarkę pod obciążeniem; kondensatory elektrolityczne starzeją się także bez pracy.
+5. Wyślij TEST do OSP i sprawdź aktualność karty zaufanej OSP oraz listy odbiorców.
+
+Wynik przeglądu zapisuje się z datą i wersją wydania.
 
 ## Rozstrzygnięcia
 
