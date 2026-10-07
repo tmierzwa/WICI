@@ -4,6 +4,7 @@ radio,1,mikrokontroler USB,"natywne USB CDC, dwa interfejsy",ST STM32F103CBT6,Mi
 radio,1,pamięć nieulotna dziennika czasu nadawania,EEPROM I²C z równomiernym rozkładem zapisów,ST M24C64,Microchip AT24C64,wymaga oprogramowania układowego
 radio,1,TCXO,"całkowity błąd częstotliwości ≤2,5 ppm",zgodny producent A,zgodny producent B,częstotliwość wzorcowa zależy od układu radiowego
 radio,1,antena,"dipol 50 Ω, WFS ≤2",otwarty rysunek dipola,niezależne wykonanie równoważne,strojenie na zewnątrz docelowego budynku
+radio,1,przewód antenowy,"50 Ω, tłumienie ≤1 dB przy 869,5 MHz łącznie ze złączami","LMR-240, 2 m","H-155, 2 m",do kwalifikacji
 radio,1,przewód RF,"50 Ω, ≤2 m",producent A,producent B,kwalifikacja tłumienia i złączy
 radio,1,przewód USB,"przewód do transmisji danych, ≤2 m",producent A,producent B,do kwalifikacji
 A/B,2,podwójna dioda Schottky’ego,≥45 V; każde źródło do 20 A,ST STPS3045CT,Vishay VS-MBR3045CT-M3,próba cieplna i udarowa
@@ -23,7 +24,7 @@ A/B,3,"woltomierz cyfrowy wejść A, B i C","zakres 0–20 V, błąd ≤1%, pob�
 ładowarka,8,bezpiecznik wejściowy,"1,5 A, parametry dla prądu stałego",Littelfuse,Eaton,sprawdzić charakterystykę czasowo-prądową
 ładowarka,8,bezpiecznik wyjściowy,"szybki 3,15 A, parametry dla prądu stałego",Littelfuse,Eaton,sprawdzić I²t wyłączania przy zadziałaniu tyrystora
 ładowarka,8,gniazdo USB-A,"1,5 A prądu ciągłego",producent A,producent B,próba cieplna i spadku napięcia na przewodzie
-ładowarka,1,odłącznik podnapięciowy wejścia C,"wyłączenie przy 11,5 V, załączenie przy 12,4 V, ≥10 A DC",niewybrany,niewybrany,wymagany projekt i kwalifikacja
+ładowarka,1,odłącznik podnapięciowy wejścia C,"wyłączenie przy 11,5 V z zatrzaskiem, ręczne załączenie przy ≥12,4 V, ≥10 A DC",niewybrany,niewybrany,wymagany projekt i kwalifikacja
 przetwornica,4,tranzystor MOSFET,"≥60 V, RDS(on) ≤3,1 mΩ przy 10 V",ST STP220N6F7,Infineon IPP030N06NF2S,próba cieplna
 przetwornica,2,sterownik półmostka,"logika 3,3 V, sterowanie około 10 V",TI UCC27211,ADI LTC4444,różne układy bootstrapu i zasilania
 przetwornica,1,mikrokontroler sterujący,"komplementarne PWM, czas martwy, sprzętowe wejście awaryjne",ST STM32F103,Microchip dsPIC33CK,oprogramowanie układowe jeszcze nie powstało

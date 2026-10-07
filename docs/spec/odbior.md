@@ -6,6 +6,7 @@
 | Komunikaty | wszystkie 6 typów; UTF-8; graniczne rozmiary; odrzucenie niepoprawnych typów i dodatkowych pól | model wykonywalny |
 | OSP | duplikat po restarcie; konflikt treści; przerwanie przed COMMIT bez wysłania RECEIVED; odrębni nadawcy | model wykonywalny |
 | Modemy mieszane | TI→ST, ST→TI, 10 000 pakietów każdego rozmiaru granicznego; brak różnic formatu | niewykonana |
+| Niedopasowanie anteny | każdy modem: 60 s nadawania z rozwartym i ze zwartym złączem antenowym; po próbie moc i widmo bez zmian | niewykonana |
 | Kanał | pomiar zajętości podpasma 869,4–869,65 MHz w miejscach pilotażu w różnych porach doby; liczniki CCA i błędów CRC z pracy próbnej | niewykonana |
 | Radio 1 km | dwie rzeczywiste lokalizacje, anteny na zewnątrz, wysokości anten zapisane w raporcie; ≥99 ze 100 zgłoszeń z RECEIVED w 5 min przy pojedynczym ruchu | niewykonana |
 | Przekaźnik | 3 stacje, wymuszone odcięcie bezpośredniego połączenia A–OSP; przejście przez B i powrót RECEIVED | niewykonana |
@@ -15,7 +16,7 @@
 | Przeniesienie | kompletna kopia, zatrzymanie starej instancji, zachowana tożsamość i kolejka na nowym laptopie | niewykonana |
 | Strona | 50 podłączonych telefonów, 15 aktywnych; dostęp tylko do własnego zgłoszenia; odłączony modem nie blokuje formularza | niewykonana |
 | A/B | oba kierunki, napięcia 11,5 i 16 V, każdy tryb mocy, 100 zmian; brak resetów routera, modemu i przetwornicy | niewykonana |
-| Odłączenie podnapięciowe | wejścia A/B i C: wyłączenie przy 11,5 V ±0,1 V na złączu, ponowne załączenie nie niżej niż 12,4 V; brak cyklicznego załączania pod obciążeniem | niewykonana |
+| Odłączenie podnapięciowe | wejścia A/B i C: ostrzeżenie przy 11,8 V, wyłączenie przy 11,5 V ±0,1 V na złączu niezależnie od prądu i temperatury diody; ponowne załączenie wyłącznie ręczne i nie niżej niż 12,4 V; brak samoczynnego załączenia po odbiciu napięcia akumulatora kwasowo-ołowiowego i LiFePO4 | niewykonana |
 | Udar A/B | prąd i I²t poniżej limitu każdego elementu; brak uszkodzeń oraz zgrzewania styków | niewykonana |
 | Ładowarka | 8 × 1,5 A przez 2 h w temperaturze otoczenia 40 °C; 4,75–5,25 V na każdym porcie; skok obciążenia 1,5 A → 0 A w 0 °C i 40 °C bez zadziałania zwieracza | niewykonana |
 | Zwarcie portu | pozostałe porty oraz stacja pracują; zwarcie trwające godzinę nie uszkadza sekcji | niewykonana |
