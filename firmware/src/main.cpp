@@ -51,6 +51,7 @@ uint32_t buttonPollMs = 0;
 constexpr uint32_t BUTTON_POLL_MS = 10;   // odpytywanie przycisków (drgania styków)
 constexpr uint32_t SCREEN_POLL_MS = 200;  // odświeżanie ekranu po zmianie treści
 constexpr uint32_t APP_POLL_MS = 100;     // przegląd kolejki nadawczej
+constexpr uint32_t WDT_TIMEOUT_S = 60;    // watchdog: dłużej niż potwierdzenie przyciskiem (30 s)
 char stationName[12];            // WICI-xxxxxx z identyfikatora układu (FICR)
 
 // Pamięć niezerowana przy starcie: po restarcie programowym albo przez watchdog zostaje język
@@ -358,7 +359,7 @@ void printInfo() {
                   "\"journal_resets\":%lu,\"carrier_hz\":%lu,\"symbol_rate\":%u,\"deviation_hz\":%u,\"rx_filter_hz\":%u,"
                   "\"tx_power_dbm\":%d,\"uptime_s\":%lu,\"boot_s\":%lu,\"screen\":\"%s\",\"lang\":\"%s\",\"name\":\"%s\","
                   "\"reset_reason\":\"0x%08lX\",\"store_ok\":%s,\"queued\":%u,\"inbox\":%u,\"pending\":%u,\"usb_data\":%s,"
-                  "\"usb_in\":%lu,\"usb_out\":%lu,\"usb_rejected\":%lu,\"usb_boot\":\"%s\"}\n",
+                  "\"usb_in\":%lu,\"usb_out\":%lu,\"usb_rejected\":%lu,\"usb_boot\":\"%s\",\"wdt_s\":%lu}\n",
                   WICI_FW_VERSION, static_cast<unsigned long>(bench.debtRemainingMs()), static_cast<unsigned long>(c.rxOk),
                   static_cast<unsigned long>(c.rxBad), static_cast<unsigned long>(c.txDrop),
                   static_cast<unsigned long>(restarts), boolName(bench.prep),
@@ -370,7 +371,7 @@ void printInfo() {
                   static_cast<unsigned>(storeOk ? stationStore.queueLive() : 0), static_cast<unsigned>(storeOk ? stationStore.inboxCount() : 0),
                   static_cast<unsigned>(storeOk ? stationStore.notesPending() : 0), boolName(protocol.isConnected()),
                   static_cast<unsigned long>(protocol.stats().linesIn), static_cast<unsigned long>(protocol.stats().linesOut),
-                  static_cast<unsigned long>(protocol.stats().rejected), protocol.bootId());
+                  static_cast<unsigned long>(protocol.stats().rejected), protocol.bootId(), static_cast<unsigned long>(WDT_TIMEOUT_S));
 }
 
 void printJournal() {
@@ -654,6 +655,17 @@ void pollSerial() {
 
 }  // namespace
 
+// Watchdog sprzętowy (WDT, LFCLK): odświeżany w każdym obiegu pętli stacji; zatrzymany, gdy
+// debugger zatrzyma rdzeń; raz uruchomionego nie da się wyłączyć bez restartu.
+void beginWatchdog() {
+    NRF_WDT->CONFIG = (WDT_CONFIG_HALT_Pause << WDT_CONFIG_HALT_Pos) | (WDT_CONFIG_SLEEP_Run << WDT_CONFIG_SLEEP_Pos);
+    NRF_WDT->CRV = WDT_TIMEOUT_S * 32768 - 1;
+    NRF_WDT->RREN = WDT_RREN_RR0_Msk;
+    NRF_WDT->TASKS_START = 1;
+}
+
+void feedWatchdog() { NRF_WDT->RR[0] = WDT_RR_RR_Reload; }
+
 // Cała praca stacji biegnie w osobnym zadaniu FreeRTOS z 16 KB stosu: zadanie loop() rdzenia
 // Adafruit ma 4 KB, a rysowanie ekranu z odczytem rekordów FRAM i `configure` przez USB
 // potrzebują więcej.
@@ -699,6 +711,8 @@ void stationSetup() {
     if (storeOk) screenModel.attach(&screenHost);  // bez magazynu: ekran bez kreatora i wiadomości
     beginScreen();
     syncButtons();
+    if (readResetReason() & POWER_RESETREAS_DOG_Msk) bench.log("restart by watchdog");
+    beginWatchdog();
 }
 
 void stationLoop() {
@@ -706,6 +720,7 @@ void stationLoop() {
     static bool beat = false;
     static bool reported = false;
     const uint32_t now = millis();
+    feedWatchdog();
     if (now - lastBeat >= 500) {
         lastBeat = now;
         beat = !beat;
