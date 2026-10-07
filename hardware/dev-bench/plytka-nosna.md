@@ -116,7 +116,7 @@ Geometrię złączy i otworów wzięto z plików producentów pobranych 2026-10-
 | [schemat](schemat.pdf) | schemat w PDF, eksport z `cad/` |
 | `cad/` | projekt KiCad 10.0.6: schemat, PCB, reguły, lokalne biblioteki |
 | `tools/` | generatory schematu i PCB, eksport, kontrole |
-| `checks/` | raporty ERC/DRC, [zapis odtworzenia](checks/odtworzenie.md) i dowody |
+| `checks/` | raporty ERC/DRC, [zapis odtworzenia](checks/odtworzenie.md), [zgodność z oprogramowaniem](checks/zgodnosc-firmware.md) i dowody |
 | [BOM](bom.csv) | części z MPN |
 | [pliki produkcyjne](fabrication/N1/README.md) | Gerber, wiercenia, pozycje, rysunek montażowy, wydruk 1:1 |
 | [uruchomienie](uruchomienie.md) | montaż i pierwsze włączenie |

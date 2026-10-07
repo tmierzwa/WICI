@@ -29,7 +29,7 @@ Przyciski 12 × 12 mm dostają nasadki Omron B32. Pad masy J6.22 ma pełne poł�
 
 ## Oprogramowanie
 
-Kroki A3–A5 i B3–B4 wymagają obrazu z plikiem opisu płytki N1 (na przykład `board_bench_n1.h`) z poleceniami diagnostycznymi: stan wejść (przyciski, CISZA, przygotowanie), dioda, brzęczyk i odczyt VTEST. Dla ESP32-S3 potrzebny jest program testowy, który odczytuje też rejestr wersji S2-LP. Stan tych obrazów zapisuje [lista przed zamówieniem](przed-produkcja.md#warunki).
+Kroki A3–A5 i B3–B4 wymagają obrazu z plikiem opisu płytki N1 (na przykład `board_bench_n1.h`) z poleceniami diagnostycznymi: stan wejść (przyciski, CISZA, przygotowanie), dioda, brzęczyk i odczyt VTEST. Dla ESP32-S3 potrzebny jest program testowy, który odczytuje też rejestr wersji S2-LP. Na 2026-10-07 takich obrazów nie ma; różnice między oprogramowaniem a płytką i lista potrzebnych zmian: [zgodność z oprogramowaniem](checks/zgodnosc-firmware.md).
 
 **Nie wgrywać obrazu okablowania przewodami (`board_bench_a.h`) przy wpiętej płytce N1.** W tym obrazie D13 jest wyjściem SCK, a na N1 jest wejściem przełącznika CISZA, które przełącznik zwiera do masy. Do tego D10 i D8 sterują tam radiem, a na N1 diodą i linią DISP ekranu. Przed wpięciem DK w N1 wgrywa się obraz N1 albo pusty program.
 
