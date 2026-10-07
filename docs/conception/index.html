@@ -58,7 +58,7 @@
 <figcaption>Dlaczego WICI, jak ma działać i czego jeszcze nie sprawdzono (niecałe 5 minut, z napisami). Wersja pionowa 60 s na telefon: <a href="../../media/film/WICI-short.mp4">WICI-short.mp4</a>. Scenariusz i pliki do odtworzenia filmu: <a href="../../media/film/README.md">media/film</a>.</figcaption>
 </figure>
 
-<p>Zakres bazowy obejmuje jeden budynek, około 50 osób i sąsiednie stacje oddalone od siebie o około 1 km w zabudowie. Według modelu stacja pracuje około 1,5–4 dni na litowych ogniwach AA (zależnie od wykonania; cel W23: ≥48 h), a ze źródła 12 V – tygodniami. Laptop, router, ich zasilacze i akumulatory pochodzą z lokalnego zasobu i są rozszerzeniami. Z nimi zestaw ma pracować 24 godziny przy wymianie źródeł energii. Poziom 3 zużywa około 1,8 kWh na dobę w jednym schronieniu (6–7 akumulatorów 60 Ah), dlatego planuje się go tylko tam, gdzie można ładować i dowozić akumulatory. Zestaw WICI dostarcza stację z anteną, oprogramowanie offline, połączenia, zasilanie laptopa i routera oraz osobną ładowarkę telefonów (<a href="01-potrzeby-i-wymagania.html#poziomy-zestawu">poziomy zestawu</a>).</p>
+<p>Zakres bazowy obejmuje jeden budynek, około 50 osób i sąsiednie stacje oddalone od siebie o około 1 km w zabudowie. Według modelu stacja pracuje około 1,5–4 dni na litowych ogniwach AA (zależnie od wykonania; cel W23: ≥48 h, który ESP32-S3 spełnia tylko przy lekkim uśpieniu), a ze źródła 12 V – tygodniami. Laptop, router, ich zasilacze i akumulatory pochodzą z lokalnego zasobu i są rozszerzeniami. Z nimi zestaw ma pracować 24 godziny przy wymianie źródeł energii. Poziom 3 zużywa około 1,8 kWh na dobę w jednym schronieniu (6–7 akumulatorów 60 Ah), dlatego planuje się go tylko tam, gdzie można ładować i dowozić akumulatory. Zestaw WICI dostarcza stację z anteną, oprogramowanie offline, połączenia, zasilanie laptopa i routera oraz osobną ładowarkę telefonów (<a href="01-potrzeby-i-wymagania.html#poziomy-zestawu">poziomy zestawu</a>).</p>
 
 <h2 id="dokumenty">Dokumenty</h2>
 
@@ -107,7 +107,7 @@
 <tr><td>poziom 1, 2, 3</td><td>sama stacja; stacja z laptopem przez USB; stacja z laptopem i routerem dla telefonów (<a href="01-potrzeby-i-wymagania.html#poziomy-zestawu">01</a>)</td></tr>
 <tr><td>przekaźnik</td><td>każda włączona stacja przekazuje ruch innych stacji, także bez laptopa; osobny przekaźnik to stacja poziomu 1 na ogniwach lub źródle 12 V</td></tr>
 <tr><td>MCU</td><td>mikrokontroler prowadzący stację: stos sieciowy, kolejkę, ekran, przyciski i radio</td></tr>
-<tr><td>FRAM</td><td>pamięć nieulotna stacji, która nie zużywa się przy częstych zapisach; przechowuje szyfrowaną kolejkę, trasy i dług ciszy</td></tr>
+<tr><td>FRAM</td><td>pamięć nieulotna stacji, która nie zużywa się przy częstych zapisach; przechowuje szyfrowaną kolejkę i trasy oraz jawny dziennik długu ciszy</td></tr>
 <tr><td>A, B, C</td><td>wejścia zasilania poziomu 3: A i B to wymieniane źródła 12 V laptopa i routera, C to osobne źródło ładowarki telefonów</td></tr>
 <tr><td>HOLD</td><td>status sprzętu „wstrzymany”: projekt nie jest dopuszczony do zamówienia ani użycia do czasu odbioru wskazanej konfiguracji</td></tr>
 <tr><td>START</td><td>pakiety uruchomieniowe offline: dla działającego systemu Windows lub macOS oraz obraz Linuksa dla obsługiwanych komputerów PC</td></tr>
@@ -136,12 +136,12 @@
 
 <p>Najpierw trzeba rozstrzygnąć:</p>
 <ul>
-  <li>miejsce sieci w gminnym planie ochrony ludności i jej status w stanach nadzwyczajnych;</li>
+  <li>miejsce sieci w gminnym planie zarządzania kryzysowego i jej status w stanach nadzwyczajnych;</li>
   <li>zasięg 1 km przy rzeczywistych wysokościach anten (model propagacji daje ujemny zapas przy antenach na wysokości okien);</li>
   <li>trwałe przyjęcie zgłoszenia przez OSP;</li>
   <li>działanie microReticulum i LXMF na wybranych mikrokontrolerach;</li>
   <li>rzeczywisty koszt radiowy LXMF, w tym zmieszczenie SA1 w jednym pakiecie (roboczo ≤256 B);</li>
-  <li>pojemność sieci przy OSP (model: ok. 75 zgłoszeń/h dla całej sieci przez przekaźnik przed OSP, ok. 130/h bez niego; dodanie przekaźników jej nie zwiększa);</li>
+  <li>pojemność sieci przy OSP (model: ok. 76 zgłoszeń/h dla całej sieci przez przekaźnik przed OSP, ok. 129/h bez niego; dodanie przekaźników jej nie zwiększa);</li>
   <li>zgodność dwóch wykonań stacji;</li>
   <li>zasilanie bez resetu;</li>
   <li>dostępność dyżurnego zdolnego do działania.</li>

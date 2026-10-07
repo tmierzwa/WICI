@@ -13,7 +13,7 @@ Specyfikacja 0.5 opisuje docelową stację WICI (płytka R02 w dwóch wykonaniac
 | Informacje radiowe | zgłoszenia, odpowiedzi, statusy, komunikaty; bez zdjęć i głosu |
 | Uruchomienie stacji | gotowość radiowa ≤60 s od włączenia, bez komputera; przekazywanie ruchu innych stacji zawsze, gdy stacja jest włączona |
 | Zasilanie stacji | 4 wymienne ogniwa AA; wejście 12 V (11,5–16 V w pracy): załączenie po podłączeniu źródła ≥12,0 V; odłączenie przy 11,5 V z zatrzaskiem, ponowne załączenie ręczne przy ≥12,4 V; przełączanie między ogniwami i 12 V bez resetu |
-| Czas pracy stacji | ≥48 h jako przekaźnik na ogniwach litowych AA; z akumulatorem 12 V 60 Ah: kilka tygodni, z 7 Ah: 4–10 dni (model: [rozdział 06](../conception/06-wykonalnosc-i-budzet-zasobow.html#energia-stacji-poziomu-1)) |
+| Czas pracy stacji | ≥48 h jako przekaźnik na ogniwach litowych AA; z akumulatorem 12 V 60 Ah: około 1–3 miesięcy, z 7 Ah: 4–10 dni (model: [rozdział 06](../conception/06-wykonalnosc-i-budzet-zasobow.html#energia-stacji-poziomu-1)) |
 | Zasilanie poziomu 3 | 12 V; źródła A/B dla laptopa i routera, osobne C dla telefonów |
 | Dopuszczalne źródła 12 V | akumulator kwasowo-ołowiowy 12 V, akumulator LiFePO4 12,8 V z BMS, wyjście 12 V stacji zasilania; 11,5–16 V na złączu A/B/C, odłączenie przy 11,5 V |
 | Ciągłość | nowy akumulator podłączony przed odłączeniem starego |
@@ -50,7 +50,7 @@ Stacja jest jedynym węzłem sieci w schronieniu: przechowuje tożsamość i kol
 
 Poziom 1, zawsze w zestawie:
 
-1. Stacja WICI w obudowie: radio P1, ekran, przyciski, koszyk na 4 ogniwa AA z wyłącznikiem, wejście 12 V, gniazdo USB do laptopa i złącze antenowe.
+1. Stacja WICI w obudowie: radio P1, ekran, przyciski, koszyk na 4 ogniwa AA, wyłącznik główny (przycisk), wejście 12 V, gniazdo USB do laptopa i złącze antenowe.
 2. Dwa komplety po 4 ogniwa litowe AA: komplet kryzysowy w zamkniętym opakowaniu, otwierany tylko w kryzysie, i komplet ćwiczebny do TEST i przeglądów.
 3. Antena zewnętrzna z uchwytem do stałego montażu, przewód koncentryczny o małym tłumieniu (np. LMR-240; do 2 m ≤1 dB, dłuższy wymaga nowego bilansu łącza), odgromnik gazowy (GDT) i przepust ścienny; zapasowy dipol z uchwytem do wystawienia przez okno.
 4. Przewód zasilania stacji 12 V z bezpiecznikiem 1 A i końcówkami do gniazda zapalniczki oraz zacisków akumulatora.
@@ -119,7 +119,7 @@ Nie podłączaj zasilaczy do pracującej przetwornicy: prąd ładowania ich kond
 
 ## Energia stacji
 
-Stacja załącza wejście 12 V po podłączeniu źródła o napięciu ≥12,0 V i korzysta z niego do spadku do 11,5 V; wtedy odłącza je z zatrzaskiem i pracuje z ogniw AA. Ponowne załączenie 12 V jest ręczne, przy napięciu ≥12,4 V: ekran pokazuje „12 V ODŁĄCZONE – ZA NISKIE NAPIĘCIE. PODŁĄCZ NAŁADOWANE ŹRÓDŁO I PRZYTRZYMAJ OK”. Przełączenie nie resetuje stacji. Ekran pokazuje aktywne źródło, napięcie i szacowany czas pracy („OGNIWA: OKOŁO [x] H PRACY”). Przy niskim napięciu ogniw stacja pokazuje „WYMIEŃ OGNIWA W CIĄGU 1 H”, a przed wyłączeniem zapisuje stan („WYŁĄCZANIE – CZEKAJ, ZAPISUJĘ” → „MOŻNA WYJĄĆ OGNIWA”). Tak samo działa wyłączenie przytrzymaniem wyłącznika głównego przez 2 s. Ogniwa wymienia się przy włączonym źródle 12 V albo po wyłączeniu stacji; kolejka i dług ciszy pozostają w pamięci FRAM. Nie używaj ogniw różnych typów ani różnego stopnia rozładowania w jednym komplecie.
+Stacja załącza wejście 12 V po podłączeniu źródła o napięciu ≥12,0 V i korzysta z niego do spadku do 11,5 V; wtedy odłącza je z zatrzaskiem i pracuje z ogniw AA. Ponowne załączenie 12 V jest ręczne, przy napięciu ≥12,4 V: ekran pokazuje „12 V ODŁĄCZONE – ZA NISKIE NAPIĘCIE. PODŁĄCZ NAŁADOWANE ŹRÓDŁO I PRZYTRZYMAJ OK”. Przełączenie nie resetuje stacji. Ekran pokazuje aktywne źródło, napięcie i szacowany czas pracy („OGNIWA: OKOŁO [x] H PRACY”). Przy niskim napięciu ogniw stacja pokazuje „WYMIEŃ OGNIWA W CIĄGU 1 H”, a przed wyłączeniem zapisuje stan („WYŁĄCZANIE – CZEKAJ, ZAPISUJĘ” → „MOŻNA WYJĄĆ OGNIWA”). Tak samo działa wyłączenie przytrzymaniem wyłącznika głównego przez 2 s. W kryzysie stacja pracuje z kompletu kryzysowego; komplet ćwiczebny jest rezerwą tylko przy napięciu powyżej progu z instrukcji. Ogniwa wymienia się przy włączonym źródle 12 V albo po wyłączeniu stacji; kolejka i dług ciszy pozostają w pamięci FRAM. Nie używaj ogniw różnych typów ani różnego stopnia rozładowania w jednym komplecie.
 
 ## Wymiana źródła A/B (poziom 3)
 

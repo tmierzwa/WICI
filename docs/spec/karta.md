@@ -11,7 +11,7 @@ Wersje UK i EN karty powstają przy wydaniu z tłumaczeń w tabeli tekstów ekra
 Przyciski: GÓRA, DÓŁ, OK, WSTECZ. Pierwsze naciśnięcie przy zgaszonym ekranie tylko zapala światło.
 
 1. Podłącz antenę: przewód przy ścianie przykręć do złącza anteny stacji. Brak przewodu na ścianie: antena zapasowa ze skrzynki – przez okno, pionowo, z dala od ludzi; przewodu nie prowadź przez drzwi schronu.
-2. Włóż ogniwa (+ do znaku +) albo podłącz 12 V przewodem z zestawu.
+2. Otwórz komplet ogniw kryzysowych i włóż ogniwa (+ do znaku +) albo podłącz 12 V przewodem z zestawu.
 3. Naciśnij wyłącznik główny.
 4. Wybierz język. Czekaj na „RADIO WŁĄCZONE” (do 1 min). Sprawdź adres: „ADRES: [x] – CZY TO TO MIEJSCE? OK = TAK / WSTECZ = NIE”. Zły adres albo „STACJA NIE MA TWOJEGO ADRESU – UŻYJ FORMULARZA PAPIEROWEGO”: zgłoszenia tylko formularzem (strona 2).
 5. Stacja proponuje TEST: OK. (Później TEST z menu: TEST → OK.) Ekran: „TEST ZAPLANOWANY ZA OKOŁO [mm] MIN – NIE WYŁĄCZAJ. WSTECZ = ANULUJ”, potem „TEST WYSŁANY – CZEKA NA ODBIORCĘ”.
