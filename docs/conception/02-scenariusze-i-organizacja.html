@@ -42,6 +42,7 @@
   <li><a href="#role">Role</a></li>
   <li><a href="#przebieg-dzialania">Przebieg działania</a></li>
   <li><a href="#zachowanie-w-scenariuszach-awarii">Zachowanie w scenariuszach awarii</a></li>
+  <li><a href="#miejsce-w-systemie-ochrony-ludnosci">Miejsce w systemie ochrony ludności</a></li>
   <li><a href="#siec-i-odbiorca-zastepczy">Sieć i odbiorca zastępczy</a></li>
   <li><a href="#instrukcja-i-cwiczenie">Instrukcja i ćwiczenie</a></li>
 </ol>
@@ -57,7 +58,7 @@
 <tr><td>Mieszkaniec</td><td>podaje miejsce i potrzebę; zachowuje dostęp do własnego zgłoszenia; zgłasza zmianę sytuacji</td></tr>
 <tr><td>Opiekun schronienia</td><td>uruchamia stację, sprawdza TEST, pomaga osobom bez telefonu, zatwierdza pilność, kontroluje energię</td></tr>
 <tr><td>Zastępca</td><td>zna instrukcję i może przejąć pracę; nie wymaga dostępu do prywatnego konta opiekuna</td></tr>
-<tr><td>Dyżurny odbiorcy, np. OSP</td><td>odczytuje zgłoszenia, ocenia możliwości, zleca działanie i aktualizuje status</td></tr>
+<tr><td>Dyżurny odbiorcy, np. centrum zarządzania kryzysowego gminy lub OSP</td><td>odczytuje zgłoszenia, ocenia możliwości, zleca działanie i aktualizuje status</td></tr>
 <tr><td>Osoba utrzymująca system</td><td>przygotowuje i sprawdza wydanie, urządzenia, klucze i kopie; naprawia poza dyżurem</td></tr>
 </tbody></table></div>
 
@@ -95,9 +96,19 @@
 <tr><td>Ładowarka uszkodzona</td><td>komunikacja i telefony z zapasem energii</td><td>odłączyć uszkodzoną sekcję lub całą ładowarkę; nie pobierać energii z obwodu stacji bez nowego bilansu</td></tr>
 </tbody></table></div>
 
+<h2 id="miejsce-w-systemie-ochrony-ludnosci">Miejsce w systemie ochrony ludności</h2>
+
+<p>Według ustawy o ochronie ludności i obronie cywilnej organem ochrony ludności w gminie jest wójt, burmistrz lub prezydent miasta; jego działania koordynuje gminny zespół lub centrum zarządzania kryzysowego. OSP jest podmiotem wykonawczym i zwykle nie pełni całodobowego dyżuru. Rekomendowanym odbiorcą zgłoszeń WICI jest więc centrum zarządzania kryzysowego gminy albo wskazany przez nie punkt; OSP może być takim punktem lub jedną ze stacji. W dokumentach skrót OSP oznacza rolę stanowiska odbiorczego. Sieć, miejsca stacji i odbiorcę wpisuje się do gminnego planu ochrony ludności; WICI nie tworzy równoległego obiegu poleceń. <a href="zrodla.html#ochrona-ludnosci-i-dane">Źródła</a>.</p>
+
+<p>Ostrzeżenia i komunikaty dla ludności przekazują przede wszystkim syreny, Alert RCB i radio publiczne. WICI służy głównie zgłoszeniom ze schronienia. Komunikat BULLETIN nie zastępuje komunikatów oficjalnych; jeśli się z nimi nie zgadza, dyżurny wskazuje źródło i czas. Zestaw zawiera bateryjny odbiornik radiowy FM, aby schronienie słyszało komunikaty także bez sieci komórkowej.</p>
+
+<p>Przepisy o stanie wojennym i wyjątkowym pozwalają ograniczyć używanie urządzeń nadawczych. Status sieci WICI w takim stanie uzgadnia się z organem ochrony ludności przed użyciem (D12). Polecenie ciszy radiowej od uprawnionego organu ma pierwszeństwo, ponieważ emisja może wskazać przeciwnikowi skupisko ludzi. Wyjątkiem jest pojedyncze zgłoszenie przy bezpośrednim zagrożeniu życia; decyduje o nim opiekun i zapisuje je w dzienniku.</p>
+
+<p>Ochrona danych nie może zatrzymać pracy stacji. Administratora danych, podstawę prawną (np. ochrona żywotnych interesów: art. 6 ust. 1 lit. d i art. 9 ust. 2 lit. c RODO, albo zadanie publiczne gminy) i ocenę skutków dla ochrony danych ustala się raz, przed wdrożeniem (D13). Podczas zdarzenia mieszkaniec nie wyraża zgód, nie zakłada konta i nie czyta regulaminu; ograniczony zakres danych jest wbudowany w formularz.</p>
+
 <h2 id="siec-i-odbiorca-zastepczy">Sieć i odbiorca zastępczy</h2>
 
-<p>Pierwsza próba obejmuje schronienie A, przekaźnik B i odbiorcę OSP. Przebieg A–B–OSP musi zostać wymuszony odcięciem bezpośredniego A–OSP. Zasięg między sąsiadami nie dowodzi zasięgu do OSP. Stacje będące jedynym przekaźnikiem są punktami odcięcia sieci i mają pierwszeństwo w zapewnieniu zasilania.</p>
+<p>Pierwsza próba obejmuje schronienie A, przekaźnik B i odbiorcę OSP. Przebieg A–B–OSP musi zostać wymuszony odcięciem bezpośredniego A–OSP. Zasięg między sąsiadami nie dowodzi zasięgu do OSP. Stacje będące jedynym przekaźnikiem są punktami odcięcia sieci i mają pierwszeństwo w zapewnieniu zasilania. Przekaźnik umieszcza się tam, dokąd obsługa dotrze bezpiecznie także podczas alarmu i godziny policyjnej, albo daje mu się dłuższą autonomię energii; wymiana akumulatora nie usprawiedliwia wyjścia pod ostrzał.</p>
 
 <p>OSP nie steruje trasowaniem całej sieci; jest punktem świadczenia usługi. Jej utrata nie musi wyłączyć transportu, ale może pozbawić zgłoszenia odbiorcy zdolnego pomóc. Drugi odbiorca wymaga uzgodnionej odpowiedzialności i kluczy. Automatyczne przejęcie tej samej bazy lub tożsamości przez drugi komputer nie jest częścią wariantu bazowego.</p>
 
@@ -105,11 +116,11 @@
 
 <h2 id="instrukcja-i-cwiczenie">Instrukcja i ćwiczenie</h2>
 
-<p>Na karcie przy stacji: adres i wejście, Wi-Fi/QR, odbiorca i zastępstwo, znaczenie czterech stanów zgłoszenia, kolejność podłączenia i wymiany źródeł, sposób zgłoszenia bez telefonu. Klucze prywatne i dane mieszkańców nie należą na publiczną kartę.</p>
+<p>Na karcie przy stacji: adres i wejście, Wi-Fi/QR, odbiorca i zastępstwo, znaczenie czterech stanów zgłoszenia, kolejność podłączenia i wymiany źródeł, sposób zgłoszenia bez telefonu, procedura ciszy radiowej i polecenia ZNISZCZ DANE, miejsce gaśnicy oraz zakaz uruchamiania silników i agregatów w schronieniu, w garażu i przy wlotach powietrza (tlenek węgla). Klucze prywatne i dane mieszkańców nie należą na publiczną kartę.</p>
 
 <p>Przed pilotażem opiekun i zastępca osobno uruchamiają stację z przygotowanego zestawu, wysyłają TEST, odłączają radio, wymieniają źródło i wyjaśniają status oczekującego zgłoszenia. Powtórzyć po zmianie wydania, routera, miejsca anteny lub odbiorcy. Częstotliwość ćwiczeń w eksploatacji ustala lokalna organizacja; nie ma jeszcze danych do jej optymalnego doboru.</p>
 
-<p>Kurier z papierowym zgłoszeniem lub zwykła łączność głosowa są możliwymi procedurami zastępczymi po uzgodnieniu warunków i bezpieczeństwa drogi. Automatyczny transport plików przez pendrive nie jest zaimplementowaną funkcją WICI.</p>
+<p>Kurier z papierowym zgłoszeniem lub zwykła łączność głosowa są możliwymi procedurami zastępczymi po uzgodnieniu warunków i bezpieczeństwa drogi. Przy zagłuszaniu pasma lub ciszy radiowej goniec i łączność głosowa stają się procedurą podstawową, a nie wyjątkiem; ćwiczy się je razem ze stacją. Automatyczny transport plików przez pamięć USB nie jest zaimplementowaną funkcją WICI.</p>
 </article>
 <nav class="pager" aria-label="Kolejność czytania">
   <a class="prev" href="01-potrzeby-i-wymagania.html" rel="prev"><span>← Poprzedni</span>01. Potrzeby i wymagania</a>

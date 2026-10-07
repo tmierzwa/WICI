@@ -13,8 +13,11 @@
 | Obciążenie sieci | referencyjne A–B–OSP: 50 zgłoszeń łącznie z A w pierwszych 5 min; ≥99% z RECEIVED na A do 30 min od pierwszego lokalnego COMMIT; droga powrotna przez B; zapis utrzymany podczas braku trasy | niewykonana |
 | Limit czasu nadawania | łączny czas nadawania, łącznie z restartami, ≤10% w dowolnym oknie godzinnym; przerwany zapis EEPROM nigdy nie umożliwia nadawania bez budżetu | niewykonana |
 | USB | zimny start offline na komputerach z macOS (Intel i ARM), Windows x64 oraz na obsługiwanym PC z Linuksem, bez pobierania zależności; cały modem ≤100 mA przed konfiguracją, po konfiguracji w przyznanym budżecie do 500 mA, w stanie wstrzymania ≤2,5 mA; prąd udarowy oraz 100 cykli wstrzymania i wznowienia bez utraty trwałej kolejki i bez obejścia długu ciszy | niewykonana |
+| Cisza radiowa | po włączeniu brak jakiejkolwiek emisji modemu przez 1 h przy ruchu przychodzącym i przekazywanym; odbiór, zapis i kolejka działają; po wyłączeniu kolejka wysyła się bez utraty; wyjątek dla pojedynczego zgłoszenia zapisany w dzienniku | niewykonana |
+| Zniszczenie danych | ZNISZCZ DANE w ≤1 min; po operacji baza, tożsamość i eksport nieczytelne także po odzyskaniu usuniętych plików z nośnika | niewykonana |
 | Przeniesienie | kompletna kopia, zatrzymanie starej instancji, zachowana tożsamość i kolejka na nowym laptopie | niewykonana |
 | Strona | 50 podłączonych telefonów, 15 aktywnych; dostęp tylko do własnego zgłoszenia; odłączony modem nie blokuje formularza | niewykonana |
+| Języki i dostępność | zgłoszenie wysłane po polsku, ukraińsku i angielsku przez osoby spoza zespołu; obsługa czytnikiem ekranu i przy powiększeniu 200%; brak okien zgód przed formularzem | niewykonana |
 | A/B | oba kierunki, napięcia 11,5 i 16 V, każdy tryb mocy, 100 zmian; brak resetów routera, modemu i przetwornicy | niewykonana |
 | Odłączenie podnapięciowe | wejścia A/B i C: ostrzeżenie przy 11,8 V, wyłączenie przy 11,5 V ±0,1 V na złączu niezależnie od prądu i temperatury diody; ponowne załączenie wyłącznie ręczne i nie niżej niż 12,4 V; brak samoczynnego załączenia po odbiciu napięcia akumulatora kwasowo-ołowiowego i LiFePO4 | niewykonana |
 | Udar A/B | prąd i I²t poniżej limitu każdego elementu; brak uszkodzeń oraz zgrzewania styków | niewykonana |
