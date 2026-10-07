@@ -12,6 +12,10 @@ python3 tools/verify_repository.py
 
 Kontrola porównuje manifest z indeksem Git, wszystkie sumy plików, lokalne odnośniki Markdown i HTML, składnię JSON/Python, wyniki obliczeń i paczkę kontrolera. Nie aktualizuje dowodów podczas sprawdzania. CI działa na Linuxie z Pythonem 3.12 i nie uruchamia KiCad.
 
+## Strona koncepcji
+
+Koncepcja jest publikowana na [GitHub Pages](https://tmierzwa.github.io/WICI/) przez workflow `pages.yml` po każdej zmianie `docs/conception/` na `main`. `tools/build_pages.py` kopiuje strony i arkusz stylów bez zmiany treści. Linki wychodzące poza koncepcję zamienia na adresy plików w repozytorium dla publikowanego commitu. Lokalnie strony nie wymagają budowania: wystarczy otworzyć `docs/conception/index.html`.
+
 ## Narzędzia CAD
 
 Zapisany projekt można otworzyć bez generowania. Do odtwarzania kontroli używamy KiCad 10.0.6, jego `kicad-cli` i interpretera z `pcbnew`. To osobne środowisko od Pythona narzędzi. Nie instaluj losowego pakietu `pcbnew` z PyPI.

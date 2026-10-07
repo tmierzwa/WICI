@@ -16,6 +16,7 @@ from tools.archives import verify_archive, write_archive
 
 sys.path.insert(0, str(ROOT / "tools"))
 from verify_repository import check_links
+from build_pages import build
 
 
 class ArchiveTests(unittest.TestCase):
@@ -104,6 +105,29 @@ class DocumentLinkTests(unittest.TestCase):
                 page.write_text(broken, encoding="utf-8")
                 with self.assertRaises(ValueError):
                     check_links(page, "a.html")
+
+
+class PagesTests(unittest.TestCase):
+    """Keep links between pages relative and point other links at repository files."""
+
+    def test_links_leaving_pages_use_repository(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "docs/pages"
+            source.mkdir(parents=True)
+            (root / "LICENSE.md").write_text("x", encoding="utf-8")
+            (source / "style.css").write_text("", encoding="utf-8")
+            (source / "a.html").write_text('<a href="b.html#x">b</a><a href="../../LICENSE.md#l">l</a>'
+                                           '<a href="https://example.org/">e</a><a href="#top">t</a>', encoding="utf-8")
+            site = root / "site"
+            self.assertEqual(build(site, "https://repo/blob/abc/", source, root), 1)
+            self.assertEqual((site / "a.html").read_text(encoding="utf-8"),
+                             '<a href="b.html#x">b</a><a href="https://repo/blob/abc/LICENSE.md#l">l</a>'
+                             '<a href="https://example.org/">e</a><a href="#top">t</a>')
+            self.assertTrue((site / "style.css").is_file() and (site / ".nojekyll").is_file())
+            (source / "a.html").write_text('<a href="../missing.md">m</a>', encoding="utf-8")
+            with self.assertRaises(ValueError):
+                build(site, "https://repo/blob/abc", source, root)
 
 
 if __name__ == "__main__":

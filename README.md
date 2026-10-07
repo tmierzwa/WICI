@@ -8,7 +8,7 @@ WICI używa [Reticulum](https://github.com/markqvist/Reticulum) i [LXMF](https:/
 
 | Katalog | Zawartość |
 |---|---|
-| [docs/conception](docs/conception/index.html) | Potrzeby, scenariusze, analiza opcji, architektura, wykonalność i odporność |
+| [docs/conception](docs/conception/index.html) | Potrzeby, scenariusze, analiza opcji, architektura, wykonalność i odporność; [strona online](https://tmierzwa.github.io/WICI/) |
 | [docs/spec](docs/README.md) | Specyfikacja stacji w pięciu rozdziałach, warunki odbioru i BOM stacji |
 | [hardware](hardware/radio-test-r01/README.md) | Edytowalny kontroler KiCad, BOM, raporty i paczka kandydata |
 | [software/reference](software/reference/README.md) | Model ramek, wiadomości i transakcji OSP; obliczenia |
