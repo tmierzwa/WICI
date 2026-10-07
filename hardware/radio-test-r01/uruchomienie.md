@@ -1,6 +1,6 @@
 # WICI: uruchomienie po dopuszczeniu prototypu
 
-**Tych kroków nie zaczynać od zamówienia obecnego kompletu.** Najpierw zakończyć pozycje z `przed-produkcja.md`. Do wykonania potrzebne będą miernik, programator SWD i osoba zdolna sprawdzić montaż SMD. Montaż CC1120 QFN i elementów RF 0402 lepiej zlecić, bo nie nadaje się na pierwszy projekt lutowania.
+**Tych kroków nie zaczynać od zamówienia obecnego kompletu.** Najpierw zakończyć pozycje z `przed-produkcja.md`. Stanowisko pracuje przez cały czas prób z zasilacza laboratoryjnego; prądu wstrzymania USB (≤2,5 mA) nie sprawdza się, bo dotyczy tylko modemu zasilanego z USB. Do wykonania potrzebne będą miernik, programator SWD i osoba zdolna sprawdzić montaż SMD. Montaż CC1120 QFN i elementów RF 0402 lepiej zlecić, bo nie nadaje się na pierwszy projekt lutowania.
 
 | Krok | Czynność | Warunek przejścia |
 |---:|---|---|
@@ -10,7 +10,7 @@
 | 4 | Firmware: HSE bypass 8 MHz; PLL ×9 → 72 MHz; USB /1,5 → 48 MHz; APB1 ≤36 MHz. Q1 pozostaje wyłączony do gotowości USB | Stabilny start i reset. Brak deklarowania gotowości przy awarii zegara |
 | 5 | Próba USB bez radia na Windows, Linux i macOS; 100 odłączeń/podłączeń oraz godzina transmisji danych kontrolnych | Dwie wymagane funkcje CDC, poprawne identyfikatory USB, brak błędów danych i zawieszeń; prąd przed konfiguracją ≤100 mA |
 | 6 | Wyłączyć zasilanie. Sprawdzić każdą żyłę przewodu J2 według tabeli. Podłączyć moduł RF; pierwszy start wyłącznie RX/IDLE | SPI około 1 MHz: właściwy identyfikator/revision, zapis i odczyt rejestrów, reset, poprawna praca obu IRQ. Nie nadawać przy błędzie |
-| 7 | Dwa kompletne modemy. Próba przewodowa w ekranowanym układzie 50 Ω z dobranym tłumikiem; TX dopiero z potwierdzonym profilem. Następnie każdy modem: 60 s nadawania przy rozwartym i 60 s przy zwartym złączu antenowym | Częstotliwość, moc, widmo i stabilność zegara w granicach P1; po próbie niedopasowania moc i widmo bez zmian; nigdy nie łączyć nadajnika bezpośrednio z wejściem odbiornika |
+| 7 | Dwa kompletne modemy. Próba przewodowa w ekranowanym układzie 50 Ω z dobranym tłumikiem; TX dopiero z potwierdzonym profilem. Następnie każdy modem: 60 s nadawania przy rozwartym i 60 s przy zwartym złączu antenowym | Częstotliwość, moc, widmo (w tym 2. i 3. harmoniczna) i stabilność zegara w granicach P1; po próbie niedopasowania moc i widmo bez zmian; nigdy nie łączyć nadajnika bezpośrednio z wejściem odbiornika |
 | 8 | Przesłać w obu kierunkach 1000 datagramów o znanej zawartości, 1/86/87/600 B; próby przerwania zasilania i kolejki | Brak uszkodzonej treści; raport wszystkich utrat i retransmisji; brak TX po restarcie bez ważnego dziennika limitu |
 | 9 | Dopiero potem pomiar zajętości podpasma 869,4–869,65 MHz w miejscu próby, próba antenowa i pomiar w zabudowie, zgodnie z warunkami użycia pasma w Polsce | Zapisać odległość, położenie i wysokość anten, typ i zysk anten, przewody, rewizje sprzętu i firmware, układ miejsc, RSSI, PER, liczniki CCA i błędów CRC, liczbę prób i temperaturę. Nie wyciągać wniosku o 1 km z testu na stole |
 

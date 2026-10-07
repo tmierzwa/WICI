@@ -73,14 +73,14 @@ class Messages(unittest.TestCase):
             self.assertEqual(decode_message(encode_message(value)), value)
 
     def test_worst_json_escape_size(self):
-        value = [1, 0, MID, 65535, 4, 65535, "\\" * 64, '"' * 96, 2]
+        value = [1, 0, MID, 65535, 9, 65535, "\\" * 64, '"' * 96, 2]
         wire = encode_message(value)
         self.assertLessEqual(len(wire), 480)
         self.assertEqual(decode_message(wire), value)
         self.assertLessEqual(len(encode_message([1, 4, MID, 2147483647, "\\" * 192])), 480)
 
     def test_reject_bool_control_oversize_and_extra(self):
-        for index, invalid in ((0, True), (5, 0), (6, "ą" * 33), (7, "\n"), (8, 3)):
+        for index, invalid in ((0, True), (4, 10), (5, 0), (6, "ą" * 33), (7, "\n"), (8, 3)):
             value = REQUEST.copy()
             value[index] = invalid
             with self.assertRaises(ValueError):
@@ -89,7 +89,7 @@ class Messages(unittest.TestCase):
             encode_message(REQUEST + [0])
         with self.assertRaises(ValueError):
             decode_message(b" " * 481)
-        for invalid in (TEST[:-1], [1, 6] + REQUEST[2:], TEST[:4] + [5] + TEST[5:]):
+        for invalid in (TEST[:-1], [1, 6] + REQUEST[2:], TEST[:4] + [10] + TEST[5:]):
             with self.assertRaises(ValueError):
                 encode_message(invalid)
 
@@ -110,7 +110,7 @@ class Messages(unittest.TestCase):
 
     def test_button_request_fits_one_opportunistic_packet(self):
         # About 284 B for the reference Reticulum/LXMF versions (conception, chapter 05; D01 open).
-        worst_button = [1, 0, MID, 65535, 4, 999, '"' * 64, "", 2]
+        worst_button = [1, 0, MID, 65535, 9, 999, '"' * 64, "", 2]
         self.assertLessEqual(len(encode_message(worst_button)), 284)
 
     def test_status_cannot_reuse_received_event_or_state(self):
@@ -127,6 +127,12 @@ class Messages(unittest.TestCase):
             status_after(2, 2, 2, 3)
         with self.assertRaises(ValueError):
             status_after(2, 2, 3, 1)
+        self.assertEqual(status_after(2, 5, 3, 3), (3, 3))
+        self.assertEqual(status_after(3, 3, 4, 6), (4, 6))
+        with self.assertRaises(ValueError):
+            status_after(4, 6, 5, 2)
+        with self.assertRaises(ValueError):
+            status_after(1, 1, 2, 7)
 
 
 class DurableReception(unittest.TestCase):

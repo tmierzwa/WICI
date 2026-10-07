@@ -19,9 +19,16 @@
       "rail_v": 3.3,
       "rail_efficiency": 0.85,
       "rx_ma": 22.0,
+      "tcxo_ma": 2.0,
       "tx_ma_13dbm": 45.0,
       "tx_fraction": 0.07692307692307693,
-      "screen_fram_ma": 1.0,
+      "lcd_5v_rail_ma": 0.5,
+      "fram_buttons_supervisor_ma": 0.5,
+      "front_light_ma": 15.0,
+      "front_light_duty": 0.020833333333333332,
+      "input_side_ma": 0.22000000000000003,
+      "aa_vsys_v": 6.0,
+      "battery_vsys_v": 12.8,
       "reserve_fraction": 0.2,
       "aa_set_usable_wh": 14.4,
       "aa_cell_wh": 4.5,
@@ -30,26 +37,54 @@
     "variants": {
       "nrf52840": {
         "mcu_ma_assumed": 3.0,
-        "input_w": 0.11438009049773755,
-        "wh_24h_with_reserve": 3.294146606334841,
-        "aa_set_hours": 104.9133633990031,
-        "battery_12v_days": 109.28475354062823
+        "rail_ma": 31.77403846153846,
+        "input_w": 0.12467803167420814,
+        "wh_24h_with_reserve": 3.590727312217194,
+        "aa_set_hours": 96.24791022813696,
+        "input_w_12v": 0.12617403167420815,
+        "wh_24h_with_reserve_12v": 3.6338121122171945,
+        "battery_12v_days": 99.06951402073004
       },
-      "esp32_s3": {
+      "esp32_s3_30ma": {
         "mcu_ma_assumed": 30.0,
-        "input_w": 0.21920361990950227,
-        "wh_24h_with_reserve": 6.313064253393666,
-        "aa_set_hours": 54.74362150111468,
-        "battery_12v_days": 57.02460573032779
+        "rail_ma": 58.77403846153846,
+        "input_w": 0.22950156108597283,
+        "wh_24h_with_reserve": 6.609644959276017,
+        "aa_set_hours": 52.28722603548967,
+        "input_w_12v": 0.23099756108597286,
+        "wh_24h_with_reserve_12v": 6.652729759276018,
+        "battery_12v_days": 54.11312544268699
+      },
+      "esp32_s3_45ma": {
+        "mcu_ma_assumed": 45.0,
+        "rail_ma": 73.77403846153847,
+        "input_w": 0.2877368552036199,
+        "wh_24h_with_reserve": 8.286821429864252,
+        "aa_set_hours": 41.704772200655626,
+        "input_w_12v": 0.2892328552036199,
+        "wh_24h_with_reserve_12v": 8.329906229864253,
+        "battery_12v_days": 43.21777341374306
+      },
+      "esp32_s3_60ma": {
+        "mcu_ma_assumed": 60.0,
+        "rail_ma": 88.77403846153847,
+        "input_w": 0.3459721493212669,
+        "wh_24h_with_reserve": 9.963997900452487,
+        "aa_set_hours": 34.68487282442177,
+        "input_w_12v": 0.3474681493212669,
+        "wh_24h_with_reserve_12v": 10.007082700452486,
+        "battery_12v_days": 35.974520324861714
       }
     },
+    "w23_max_rail_ma_on_aa": 64.0539393939394,
+    "w23_max_mcu_ma_on_aa": 35.27990093240094,
     "laptop_relay_wh_24h_with_reserve": [
       787.5952941176471,
       2312.3011764705884
     ],
     "laptop_relay_to_station_ratio": [
-      124.75641978366774,
-      701.9424005063694
+      79.0441047846749,
+      643.9645719136478
     ]
   },
   "level3_pools": {
@@ -139,6 +174,13 @@
       "250b": 7.301666666666667,
       "500b": 14.603333333333333,
       "600b": 17.398333333333333
+    },
+    "ramp_ms_per_fragment_assumed": 2.0,
+    "p1_tx_plus_quiet_s_with_ramp": {
+      "100b": 3.475333333333333,
+      "250b": 7.379666666666666,
+      "500b": 14.759333333333332,
+      "600b": 17.580333333333336
     }
   },
   "energy": {
@@ -169,6 +211,14 @@
       "base_30m_mobile_1.5m": -0.7132679045030699,
       "base_10m_mobile_1.5m": -7.307083644728792,
       "base_10m_mobile_3m": -3.507268224176343
+    },
+    "sensitivity_target_at_connector_dbm": -110.0,
+    "frontend_loss_assumed_db": 3.0,
+    "chip_sensitivity_needed_for_target_dbm": -113.0,
+    "hata_urban_margin_1km_if_chip_meets_target_only_db": {
+      "base_30m_mobile_1.5m": -3.71326790450307,
+      "base_10m_mobile_1.5m": -10.307083644728792,
+      "base_10m_mobile_3m": -6.507268224176343
     },
     "fresnel_radius_midpoint_1km_m": 9.28703015032076,
     "eeprom_writes_per_day_worst": 132923.0769230769,
@@ -214,6 +264,8 @@
   "limits": [
     "No radio range measurement; Hata is used below its 30 m base height range",
     "Station currents are catalogue assumptions, not measurements; AA capacity depends on load and temperature",
+    "AA hours assume Li-FeS2 cells; alkaline and NiMH lose much of their capacity at -10 to -20 C",
+    "Receiver front-end loss and per-fragment ramp time are assumptions until measured in T4",
     "LXMF packet sizes follow the reference Reticulum e40191b and LXMF c3ff2d6 structure, not captured traffic",
     "No transformer leakage or PSU inrush model",
     "No switching, magnetic or reactive current losses in voltage margin",

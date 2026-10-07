@@ -1,4 +1,4 @@
-"""Executable contract model for station prototype 0.4; not a radio driver."""
+"""Executable contract model for station prototype 0.5; not a radio driver."""
 
 import json
 import math
@@ -116,7 +116,7 @@ def validate_message(value: object) -> None:
         return
     _integer(value[3], 0, 65535)
     if kind in (0, 5):
-        _integer(value[4], 0, 4)
+        _integer(value[4], 0, 9)
         _integer(value[5], 1, 65535)
         _text(value[6], 64, 1)
         _text(value[7], 96)
@@ -126,7 +126,7 @@ def validate_message(value: object) -> None:
         _integer(value[5], 1, 1)
     elif kind == 2:
         _integer(value[4], 2, 2147483647)
-        _integer(value[5], 2, 3)
+        _integer(value[5], 2, 6)
     else:
         _integer(value[4], 1, 2147483647)
         _text(value[5], 96)
@@ -156,12 +156,12 @@ def decode_message(wire: bytes) -> list:
 def status_after(current_event: int, current_state: int, event: int, state: int) -> tuple[int, int]:
     """Apply newer status events without accepting a contradictory replay."""
     _integer(event, 1, 2147483647)
-    _integer(state, 1, 3)
+    _integer(state, 1, 6)
     if event < current_event:
         return current_event, current_state
     if event == current_event and state != current_state:
         raise ValueError("Conflicting event")
-    if event > current_event and state < current_state:
+    if event > current_event and (state == 1 or current_state == 6):
         raise ValueError("Status regression")
     return event, state
 

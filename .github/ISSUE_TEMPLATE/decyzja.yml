@@ -1,0 +1,36 @@
+name: Decyzja / Decision
+description: Zamknięcie lub zmiana decyzji D01–D18 z planu weryfikacji
+labels: [decyzja]
+body:
+  - type: input
+    id: decision
+    attributes:
+      label: Decyzja
+      description: Numer i pytanie z tabeli decyzji w rozdziale 08 koncepcji
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proponowane rozstrzygnięcie
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Dowód
+      description: Dowód wymagany w tabeli decyzji; odnośniki do raportów z prób (Issue z etykietą próba), obliczeń lub kart katalogowych
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Wpływ
+      description: Wymagania W, próby T, specyfikacja, BOM i drugi wariant dostawcy (W14), które trzeba zmienić
+    validations:
+      required: true
+  - type: input
+    id: owner
+    attributes:
+      label: Odpowiedzialny
+      description: Rola z tabeli decyzji (np. projektant RF, gmina)

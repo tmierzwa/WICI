@@ -6,12 +6,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Źródła koncepcji · WICI</title>
 <link rel="stylesheet" href="style.css">
+<link rel="icon" type="image/svg+xml" href="../../media/logo/ikona.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="../../media/logo/ikona-32.png">
+<link rel="apple-touch-icon" href="../../media/logo/ikona-180.png">
 </head>
 <body>
 <a class="skip" href="#tresc">Przejdź do treści</a>
 <header class="site-header">
   <div class="inner">
-    <a class="brand" href="index.html">WICI <span>· koncepcja systemu</span></a>
+    <a class="brand" href="index.html"><picture><source media="(prefers-color-scheme: dark)" srcset="../../media/logo/WICI-na-ciemnym.svg"><img src="../../media/logo/WICI-na-jasnym.svg" alt="WICI" width="72" height="32"></picture> <span>· koncepcja systemu</span></a>
     <a class="jump" href="#rozdzialy">Rozdziały ↓</a>
     <span class="status">Prototyp 0.5 · sprzęt <b>HOLD</b></span>
   </div>
@@ -70,12 +73,12 @@
 <tr><td><a href="https://reticulum.network/manual/interfaces.html">Reticulum: interfejsy</a></td><td>RNode, KISS i możliwość własnego adaptera</td></tr>
 <tr><td><a href="https://github.com/markqvist/Reticulum/blob/master/RNS/Interfaces/KISSInterface.py">KISSInterface: kod</a></td><td>rzeczywisty limit czasu kontroli przepływu; do ponownego sprawdzenia dla przypiętej wersji</td></tr>
 <tr><td><a href="https://github.com/markqvist/LXMF">LXMF: projekt</a></td><td>wiadomości i opcjonalne węzły przechowywania</td></tr>
-<tr><td><a href="https://github.com/markqvist/LXMF/blob/master/LXMF/LXMessage.py">LXMessage: kod</a></td><td>wybór pakietu lub zasobu; narzut trzeba pomierzyć dla wydania</td></tr>
+<tr><td><a href="https://github.com/markqvist/LXMF/blob/master/LXMF/LXMessage.py">LXMessage: kod</a></td><td>wybór pakietu lub zasobu; narzut trzeba zmierzyć dla wydania</td></tr>
 <tr><td><a href="https://github.com/markqvist/NomadNet">NomadNet</a></td><td>klient tekstowy i strony Micron</td></tr>
 <tr><td><a href="https://meshtastic.org/docs/overview/mesh-algo/">Meshtastic: algorytm sieci</a></td><td>sposób przekazywania i znaczenie potwierdzeń</td></tr>
 <tr><td><a href="https://github.com/meshcore-dev/MeshCore">MeshCore</a></td><td>istniejące role klienta, przekaźnika i modemu</td></tr>
 <tr><td><a href="https://github.com/sudomesh/disaster-radio">disaster.radio</a></td><td>zbliżona koncepcja Wi-Fi + LoRa; informacja o wstrzymaniu prac</td></tr>
-<tr><td><a href="https://github.com/attermann/microReticulum">microReticulum</a>, <a href="https://reticulum.miraheze.org/wiki/MicroReticulum">opis w wiki Reticulum</a></td><td>port Reticulum do C++ na ESP32 i nRF52, rozwijany od 2023; licencja Apache-2.0 według opisu projektu, do potwierdzenia w repozytorium przed wydaniem (D09)</td></tr>
+<tr><td><a href="https://github.com/attermann/microReticulum">microReticulum</a>, <a href="https://reticulum.miraheze.org/wiki/MicroReticulum">opis w wiki Reticulum</a></td><td>port Reticulum w C++ na ESP32 i nRF52, rozwijany od 2023; licencja Apache-2.0 według opisu projektu, do potwierdzenia w repozytorium przed wydaniem (D09)</td></tr>
 <tr><td><a href="https://github.com/jrl290/RTNode-HeltecV4">RTNode</a>, <a href="https://github.com/dobrevit/RetiMesh_Node">RetiMesh Node</a></td><td>samodzielne węzły transportowe Reticulum na ESP32-S3 z LoRa; wzorzec przekaźnika bez komputera</td></tr>
 <tr><td><a href="https://github.com/torlando-tech/pyxis">pyxis</a>, <a href="https://github.com/thicketgarden/thicket-firmware">thicket</a></td><td>klienty LXMF z ekranem i klawiaturą na ESP32-S3 i nRF52840; wzorzec stacji z własnym interfejsem; projekty społecznościowe, ze znanymi błędami</td></tr>
 <tr><td><a href="https://www.ti.com/lit/ds/symlink/cc1120.pdf">TI CC1120: karta katalogowa</a></td><td>funkcje układu RF; nie dowód zasięgu P1</td></tr>
@@ -102,11 +105,13 @@
 
 <p><a href="https://eur-lex.europa.eu/eli/dec_impl/2025/105/oj/eng">Decyzja wykonawcza UE 2025/105</a> podaje dla 869,4–869,65 MHz warunki obejmujące do 500 mW ERP i wariant aktywności do 10%. Moc na złączu, ERP i EIRP są różnymi wielkościami. WICI przyjmuje ograniczenie czasu TX; obecność CCA nie uprawnia do pominięcia go.</p>
 
-<p>Punktem sprawdzenia warunków krajowych jest <a href="https://eli.gov.pl/eli/DU/2022/567/ogl">rozporządzenie o urządzeniach bez pozwolenia radiowego, Dz.U. 2022 poz. 567</a>. Przed próbą nadawania sprawdzić aktualny stan przepisów, właściwy załącznik i zastosowanie do konkretnego urządzenia. Ta analiza nie zamyka kwalifikacji prawnej. Emisje poza pasmem, antena, cały tor i bezpieczeństwo gotowego urządzenia wymagają własnego potwierdzenia; dopuszczalna częstotliwość nie jest dopuszczeniem konstrukcji.</p>
+<p>Punktem sprawdzenia warunków krajowych jest <a href="https://eli.gov.pl/eli/DU/2022/567/ogl">rozporządzenie o urządzeniach bez pozwolenia radiowego, Dz.U. 2022 poz. 567</a>. Przed próbą nadawania sprawdzić aktualny stan przepisów, właściwy załącznik i zastosowanie do konkretnego urządzenia. Sprawdzić, czy rozporządzenie Dz.U. 2022 poz. 567 nie zostało zastąpione aktem wykonawczym do ustawy z 12 lipca 2024 r. – Prawo komunikacji elektronicznej (do sprawdzenia w ISAP). Praca bez pozwolenia oznacza brak ochrony przed zakłóceniami; dla wdrożenia gminnego porównać z kanałem objętym pozwoleniem radiowym gminy (D11). Ta analiza nie zamyka kwalifikacji prawnej. Emisje poza pasmem, antena, cały tor i bezpieczeństwo gotowego urządzenia wymagają własnego potwierdzenia; dopuszczalna częstotliwość nie jest dopuszczeniem konstrukcji.</p>
+
+<p>Wymagania zasadnicze RED dotyczące cyberbezpieczeństwa (art. 3 ust. 3 lit. d i e dyrektywy 2014/53/UE) uruchamia <a href="https://eur-lex.europa.eu/eli/reg_del/2022/30/oj">rozporządzenie delegowane Komisji (UE) 2022/30</a>; normy zharmonizowane EN 18031-1 i -2. Gmina może używać stacji tylko jako wyrobów z deklaracją zgodności UE producenta; samodzielny montaż czyni montującego producentem (<a href="08-plan-weryfikacji-i-decyzje.html#otwarte-decyzje-i-warunki-zamkniecia">08</a>).</p>
 
 <h2 id="ochrona-ludnosci-i-dane">Ochrona ludności i dane</h2>
 
-<p><a href="https://eli.gov.pl/eli/DU/2024/1907/ogl">Ustawa z dnia 5 grudnia 2024 r. o ochronie ludności i obronie cywilnej, Dz.U. 2024 poz. 1907</a> określa organy i podmioty ochrony ludności; z niej wynika rekomendowane miejsce odbiorcy WICI. Organy ochrony ludności wymienia art. 9, a podmioty, w tym ochotnicze straże pożarne, art. 17. Nakaz wyłączenia urządzeń łączności lub złożenia radiowych urządzeń nadawczych do depozytu przewidują <a href="https://eli.gov.pl/eli/DU/2025/504/ogl">ustawa o stanie wojennym, tekst jednolity Dz.U. 2025 poz. 504</a>, art. 24 ust. 1 pkt 5, oraz <a href="https://eli.gov.pl/eli/DU/2017/1928/ogl">ustawa o stanie wyjątkowym, tekst jednolity Dz.U. 2017 poz. 1928</a>, art. 21 pkt 6; zastosowanie do sieci WICI rozstrzyga D12. <a href="https://eur-lex.europa.eu/eli/reg/2016/679/oj">Rozporządzenie (UE) 2016/679 (RODO)</a>: art. 6 ust. 1 lit. d i e, art. 9 ust. 2 lit. c i g oraz motyw 46 dotyczący nadzwyczajnych sytuacji humanitarnych; art. 9 ust. 2 lit. c wymaga, aby osoba nie mogła wyrazić zgody, więc dla zwykłego zgłoszenia właściwsza jest lit. g. Administratora i podstawę wskazuje D13. Teksty sprawdzono 2026-10-07; ta analiza nie jest opinią prawną.</p>
+<p><a href="https://eli.gov.pl/eli/DU/2024/1907/ogl">Ustawa z dnia 5 grudnia 2024 r. o ochronie ludności i obronie cywilnej, Dz.U. 2024 poz. 1907</a> określa organy i podmioty ochrony ludności; z niej wynika rekomendowane miejsce odbiorcy WICI. Organy ochrony ludności wymienia art. 9, a podmioty, w tym ochotnicze straże pożarne, art. 17 (numeracja jednostek redakcyjnych do sprawdzenia w ISAP dla aktualnego tekstu). <a href="https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU20070890590">Ustawa z dnia 26 kwietnia 2007 r. o zarządzaniu kryzysowym, Dz.U. 2007 nr 89 poz. 590</a> (tekst jednolity do sprawdzenia w ISAP) określa wójta, gminny zespół zarządzania kryzysowego i gminne centrum zarządzania kryzysowego; z niej wynika struktura, w której działa odbiorca (D07). Fałszywe zgłoszenie: art. 66 Kodeksu wykroczeń (do sprawdzenia w ISAP). Nakaz wyłączenia urządzeń łączności lub złożenia radiowych urządzeń nadawczych do depozytu przewidują <a href="https://eli.gov.pl/eli/DU/2025/504/ogl">ustawa o stanie wojennym, tekst jednolity Dz.U. 2025 poz. 504</a>, art. 24 ust. 1 pkt 5, oraz <a href="https://eli.gov.pl/eli/DU/2017/1928/ogl">ustawa o stanie wyjątkowym, tekst jednolity Dz.U. 2017 poz. 1928</a>, art. 21 pkt 6; zastosowanie do sieci WICI rozstrzyga D12. <a href="https://eur-lex.europa.eu/eli/reg/2016/679/oj">Rozporządzenie (UE) 2016/679 (RODO)</a>: podstawą jest art. 6 ust. 1 lit. e w związku z ustawą o ochronie ludności i obronie cywilnej oraz ustawą o zarządzaniu kryzysowym, a dla danych o zdrowiu art. 9 ust. 2 lit. g; art. 6 ust. 1 lit. d i motyw 46 (nadzwyczajne sytuacje humanitarne) są tylko pomocnicze, a art. 9 ust. 2 lit. c wymaga, aby osoba nie mogła wyrazić zgody. Ponadto art. 28 (umowa powierzenia), art. 30 (rejestr czynności) i art. 35 (ocena skutków). Administratora i podstawę wskazuje D13. Teksty sprawdzono 2026-10-07; ta analiza nie jest opinią prawną.</p>
 </article>
 <nav class="pager" aria-label="Kolejność czytania">
   <a class="prev" href="08-plan-weryfikacji-i-decyzje.html" rel="prev"><span>← Poprzedni</span>08. Plan weryfikacji i decyzje</a>

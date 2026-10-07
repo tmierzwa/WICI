@@ -6,12 +6,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>03. Dostępne rozwiązania · WICI</title>
 <link rel="stylesheet" href="style.css">
+<link rel="icon" type="image/svg+xml" href="../../media/logo/ikona.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="../../media/logo/ikona-32.png">
+<link rel="apple-touch-icon" href="../../media/logo/ikona-180.png">
 </head>
 <body>
 <a class="skip" href="#tresc">Przejdź do treści</a>
 <header class="site-header">
   <div class="inner">
-    <a class="brand" href="index.html">WICI <span>· koncepcja systemu</span></a>
+    <a class="brand" href="index.html"><picture><source media="(prefers-color-scheme: dark)" srcset="../../media/logo/WICI-na-ciemnym.svg"><img src="../../media/logo/WICI-na-jasnym.svg" alt="WICI" width="72" height="32"></picture> <span>· koncepcja systemu</span></a>
     <a class="jump" href="#rozdzialy">Rozdziały ↓</a>
     <span class="status">Prototyp 0.5 · sprzęt <b>HOLD</b></span>
   </div>
@@ -58,17 +61,24 @@
 </tr></thead><tbody>
 <tr><td>Internet / telefonia</td><td>szybki kontakt i zwykłe kanały pomocy, kiedy dostępne</td><td>zależność od publicznej infrastruktury; nie spełnia W01 jako jedyna droga</td></tr>
 <tr><td>Zwykłe radio głosowe</td><td>rozmowa operatorów i ręczne przekazanie zgłoszenia</td><td>operator musi przepisać dane i status; brak automatycznej trwałej kolejki</td></tr>
+<tr><td>Gminna lub wojewódzka sieć radiowa zarządzania kryzysowego (VHF, DMR)</td><td>istniejąca łączność głosowa urzędu, centrów zarządzania kryzysowego i służb; droga OSP w górę, do powiatu</td><td>radiotelefony i pozwolenia należą do gminy lub województwa; zwykle brak terminali w schronieniach i obsługi poza służbami</td></tr>
+<tr><td>Radiostacje KSRG w jednostkach OSP</td><td>łączność jednostek z PSP i stanowiskiem kierowania</td><td>sieć dla działań ratowniczych, nie dla zgłoszeń ludności; jednostka bywa w akcji poza remizą</td></tr>
+<tr><td>Krótkofalowcy (PZK, lokalne grupy łączności kryzysowej z porozumieniami z gminami)</td><td>przeszkoleni operatorzy, własny sprzęt, łączność głosowa i cyfrowa na dużą odległość; pomoc w utrzymaniu technicznym stacji</td><td>zależność od dostępności wolontariuszy; ruch amatorski nie służy stałej obsłudze zgłoszeń ludności – zakres uzgadnia się w porozumieniu</td></tr>
+<tr><td>Terminale satelitarne w urzędach</td><td>łączność urzędu z powiatem i województwem bez naziemnej infrastruktury</td><td>jeden punkt w gminie, zależny od zasilania i dostawcy; nie łączy schronień ze sobą ani z urzędem</td></tr>
+<tr><td>PMR446, CB 27 MHz</td><td>tanie radiotelefony bez pozwolenia; głosowy kanał zastępczy schronienia na krótki dystans</td><td>mały zasięg PMR446 w zabudowie, wspólne kanały bez ochrony przed zakłóceniami; brak kolejki, potwierdzeń i uwierzytelnienia</td></tr>
 <tr><td>Lokalny router + strona na laptopie</td><td>dostęp telefonów bez instalacji i bez internetu</td><td>lokalny LAN nie łączy odległych schronień; stan i uprawnienia tworzy aplikacja</td></tr>
 <tr><td>Reticulum</td><td>tożsamości, ochrona komunikacji, trasy i transport przez aktywne węzły</td><td>wymaga sprawnych interfejsów i fizycznych połączeń; sam nie prowadzi zgłoszeń OSP</td></tr>
 <tr><td>LXMF</td><td>wiadomości, obsługa wysyłania i opcjonalnego przechowywania pośredniego</td><td>potwierdzenie transportowe nie dowodzi zapisu w bazie WICI ani decyzji człowieka</td></tr>
 <tr><td>NomadNet</td><td>gotowy klient tekstowy operatora, wiadomości i strony Micron</td><td>odrębny interfejs; nie zastępuje lokalnej strony HTTP w przeglądarce telefonu</td></tr>
-<tr><td>microReticulum</td><td>port Reticulum do C++ na mikrokontrolery ESP32 i nRF52: tożsamości, kryptografia, tablica tras i transport bez komputera</td><td>projekt społecznościowy, młodszy od implementacji w Pythonie; znane błędy przy przesyłaniu zasobów po stratnym łączu; zgodność z referencyjnym Reticulum i z wersją wydania wymaga T3</td></tr>
+<tr><td>microReticulum</td><td>port Reticulum w C++ na mikrokontrolery ESP32 i nRF52: tożsamości, kryptografia, tablica tras i transport bez komputera</td><td>projekt społecznościowy, młodszy od implementacji w Pythonie; znane błędy przy przesyłaniu zasobów po stratnym łączu; zgodność z referencyjnym Reticulum i z wersją wydania wymaga T3</td></tr>
 <tr><td>Samodzielne węzły na MCU (RTNode, RetiMesh Node, pyxis, thicket)</td><td>dowód, że węzeł transportowy Reticulum i klient LXMF z ekranem działają na mikrokontrolerze bez komputera</td><td>radio LoRa i oprogramowanie społecznościowe; wzorzec konstrukcji, nie gotowa stacja WICI</td></tr>
-<tr><td>RNode / LoRa z Reticulum</td><td>istniejąca droga radiowa do prób tego samego stosu aplikacji</td><td>inny profil radiowy; nie komunikuje się z modemem P1 tylko dlatego, że oba używają Reticulum</td></tr>
+<tr><td>RNode / LoRa z Reticulum</td><td>istniejąca droga radiowa do prób tego samego stosu aplikacji</td><td>inny profil radiowy; nie komunikuje się ze stacją P1 tylko dlatego, że oba używają Reticulum</td></tr>
 <tr><td>Meshtastic</td><td>istniejąca sieć wiadomości LoRa; urządzenia z ekranem i przyciskami, które działają bez telefonu i zawsze przekazują pakiety</td><td>odrębny protokół i znaczenie potwierdzeń; interfejs i zapis OSP wymagają integracji</td></tr>
 <tr><td>MeshCore</td><td>istniejące role urządzeń: klient, przekaźnik, serwer pokoju, modem KISS</td><td>odrębny stos; trwałe przyjęcie zgłoszenia i interfejs WICI pozostają do zaprojektowania</td></tr>
 <tr><td>disaster.radio</td><td>przykład połączenia lokalnego Wi-Fi, interfejsu WWW i radia LoRa</td><td>autorzy oznaczają prace jako wstrzymane i projekt jako niedokończony</td></tr>
 </tbody></table></div>
+
+<p>Scenariuszem odniesienia jest powódź we wrześniu 2024 r. w Kotlinie Kłodzkiej, podczas której według doniesień medialnych (do sprawdzenia) w części miejscowości przestały działać sieci komórkowe i zasilanie. WICI nie zastępuje istniejących sieci zarządzania kryzysowego; uzupełnia je na odcinku schronienie–gmina, gdzie zwykle nie ma żadnego terminala.</p>
 
 <p>Właściwości wymienionych projektów: <a href="https://reticulum.network/manual/understanding.html">Reticulum</a>, <a href="https://reticulum.network/manual/interfaces.html">interfejsy i RNode</a>, <a href="https://github.com/markqvist/LXMF">LXMF</a>, <a href="https://github.com/markqvist/NomadNet">NomadNet</a>, <a href="https://meshtastic.org/docs/overview/mesh-algo/">Meshtastic</a>, <a href="https://github.com/meshcore-dev/MeshCore">MeshCore</a>, <a href="https://github.com/sudomesh/disaster-radio">disaster.radio</a>, <a href="https://reticulum.miraheze.org/wiki/MicroReticulum">microReticulum</a>, <a href="https://github.com/jrl290/RTNode-HeltecV4">RTNode</a>, <a href="https://github.com/dobrevit/RetiMesh_Node">RetiMesh Node</a>, <a href="https://github.com/torlando-tech/pyxis">pyxis</a>, <a href="https://github.com/thicketgarden/thicket-firmware">thicket</a>. Stan źródeł sprawdzono 2026-10-06, a projektów na mikrokontrolery 2026-10-07. Wydanie WICI musi przypiąć konkretne wersje po próbach zgodności.</p>
 
@@ -80,7 +90,7 @@
 
 <h2 id="uklady-radiowe">Układy radiowe</h2>
 
-<p>CC1120 firmy TI i S2-LP firmy ST są układami nadawczo-odbiorczymi sterowanymi przez SPI. Obsługują FSK/GFSK i mają osobne bufory RX/TX po 128 B. Potrzebują mikrokontrolera, zegara, zasilania, dopasowania RF, anteny i oprogramowania układowego. W WICI ten sam mikrokontroler prowadzi całą stację: stos sieciowy, kolejkę, ekran i przyciski. Płytka rozwojowa pomaga pomierzyć układ, ale nie jest gotową stacją WICI. <a href="https://www.ti.com/lit/ds/symlink/cc1120.pdf">CC1120</a>, <a href="https://www.st.com/resource/en/datasheet/s2-lp.pdf">S2-LP</a>.</p>
+<p>CC1120 firmy TI i S2-LP firmy ST są układami nadawczo-odbiorczymi sterowanymi przez SPI. Obsługują FSK/GFSK i mają osobne bufory RX/TX po 128 B. Potrzebują mikrokontrolera, zegara, zasilania, dopasowania RF, anteny i oprogramowania układowego. W WICI ten sam mikrokontroler prowadzi całą stację: stos sieciowy, kolejkę, ekran i przyciski. Płytka rozwojowa pomaga zmierzyć układ, ale nie jest gotową stacją WICI. <a href="https://www.ti.com/lit/ds/symlink/cc1120.pdf">CC1120</a>, <a href="https://www.st.com/resource/en/datasheet/s2-lp.pdf">S2-LP</a>.</p>
 
 <p>Dwa układy nie są zamiennikami pinowymi. Wspólne ustawienia modulacji i format P1 są hipotezą zgodności do sprawdzenia na fizycznych torach radiowych. Katalogowa czułość przy innej szybkości nie jest wynikiem dla P1. Potrzebne są dwa projekty płytek i dwa zestawy nastaw, a następnie próby mieszane TI–ST.</p>
 

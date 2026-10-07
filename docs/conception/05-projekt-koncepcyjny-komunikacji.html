@@ -6,12 +6,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>05. Projekt koncepcyjny komunikacji · WICI</title>
 <link rel="stylesheet" href="style.css">
+<link rel="icon" type="image/svg+xml" href="../../media/logo/ikona.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="../../media/logo/ikona-32.png">
+<link rel="apple-touch-icon" href="../../media/logo/ikona-180.png">
 </head>
 <body>
 <a class="skip" href="#tresc">Przejdź do treści</a>
 <header class="site-header">
   <div class="inner">
-    <a class="brand" href="index.html">WICI <span>· koncepcja systemu</span></a>
+    <a class="brand" href="index.html"><picture><source media="(prefers-color-scheme: dark)" srcset="../../media/logo/WICI-na-ciemnym.svg"><img src="../../media/logo/WICI-na-jasnym.svg" alt="WICI" width="72" height="32"></picture> <span>· koncepcja systemu</span></a>
     <a class="jump" href="#rozdzialy">Rozdziały ↓</a>
     <span class="status">Prototyp 0.5 · sprzęt <b>HOLD</b></span>
   </div>
@@ -123,7 +126,7 @@
   </g>
 </svg>
 </div>
-<figcaption>Droga zgłoszenia przez przekaźnik. Wyróżnione ramki to części wykonywane w projekcie WICI; przekaźnik i OSP używają tych samych stacji. Ramki przerywane to rozszerzenia: laptop (poziom 2) oraz router i telefony (poziom 3). Router Wi-Fi nie uczestniczy w łączności radiowej.</figcaption>
+<figcaption>Droga zgłoszenia przez przekaźnik. Wyróżnione bloki to części wykonywane w projekcie WICI; przekaźnik i OSP używają tych samych stacji. Bloki z przerywaną linią to rozszerzenia: laptop (poziom 2) oraz router i telefony (poziom 3). Router Wi-Fi nie uczestniczy w łączności radiowej.</figcaption>
 </figure>
 
 <p>Bezpośrednie połączenie z OSP jest możliwe, gdy pozwalają na to warunki radiowe. Transport Reticulum działa w mikrokontrolerze stacji, więc każda włączona stacja przekazuje pakiety innych stacji. Przekaźnik nie potrzebuje laptopa.</p>
@@ -133,19 +136,19 @@
 <h2 id="droga-zgloszenia">Droga zgłoszenia</h2>
 
 <ol>
-  <li>Opiekun wybiera przyciskami kategorię, liczbę osób i pilność; stacja dodaje zapisany adres i atomowo zapisuje zgłoszenie z intencją wysyłki w pamięci FRAM. Na poziomie 3 telefon wysyła formularz przez lokalny HTTP. Laptop atomowo zapisuje zgłoszenie, dostęp mieszkańca i intencję przekazania do stacji, a stacja przyjmuje zgłoszenie idempotentnie po id i revision i potwierdza je laptopowi po własnym zapisie.</li>
+  <li>Opiekun wybiera przyciskami kategorię, liczbę osób i pilność; stacja dodaje zapisany adres i atomowo zapisuje zgłoszenie z intencją wysyłki w pamięci FRAM. Na poziomie 3 telefon wysyła formularz przez lokalny HTTP do kolejki opiekuna. Laptop atomowo zapisuje zgłoszenie i dostęp mieszkańca; po sprawdzeniu i zatwierdzeniu przez opiekuna zapisuje intencję przekazania do stacji, a stacja przyjmuje zgłoszenie idempotentnie po id i revision i potwierdza je laptopowi po własnym zapisie.</li>
   <li>Po COMMIT ekran lub strona pokazuje <strong>zapisane lokalnie</strong>. Brak radia nie zmienia tego znaczenia. Błąd dysku nie może dać pozornego sukcesu.</li>
   <li>Kolejka stacji przekazuje treść SA1 do LXMF. Reticulum realizuje ochronę komunikacji i transport. Sterownik P1 w tym samym oprogramowaniu dzieli datagramy na ramki i przestrzega budżetu TX.</li>
   <li>Aktywne węzły pośrednie przekazują pakiety. OSP weryfikuje nadawcę, format i duplikat, następnie zapisuje zgłoszenie wraz z intencją RECEIVED.</li>
-  <li>OSP wysyła RECEIVED dopiero po COMMIT. Źródło pokazuje <strong>zapisane w OSP</strong> po przyjęciu potwierdzenia od zaufanej tożsamości.</li>
-  <li>Dyżurny osobno zapisuje odczyt albo skierowanie pomocy. STATUS wraca tą samą siecią. Decyzja o wysłaniu ludzi nie wynika automatycznie z numeru pilności.</li>
+  <li>OSP wysyła RECEIVED dopiero po COMMIT. Źródło pokazuje <strong>zapisane u odbiorcy</strong> po przyjęciu potwierdzenia od zaufanej tożsamości.</li>
+  <li>Dyżurny osobno zapisuje odczyt i decyzję: pomoc skierowana, przekazane innemu podmiotowi, obecnie brak możliwości pomocy albo zamknięte. STATUS wraca tą samą siecią. Decyzja o wysłaniu ludzi nie wynika automatycznie z numeru pilności.</li>
 </ol>
 
 <p>Potwierdzenie LXMF DELIVERED dotyczy transportu. Awaria między odbiorem transportowym a zapisem bazy nadal wymaga ponowienia zgłoszenia. WICI zachowuje jego id; OSP deduplikuje po uwierzytelnionym nadawcy, id i revision. Konflikt treści dla tego samego klucza nie nadpisuje danych. Kolejne zmiany mają nową revision. <a href="https://github.com/markqvist/LXMF">LXMF</a>, <a href="../spec/oprogramowanie.md">transakcje i ponowienia</a>.</p>
 
 <h2 id="rozmiar-wiadomosci-a-sposob-dostarczenia">Rozmiar wiadomości a sposób dostarczenia</h2>
 
-<p>LXMF wybiera sposób dostarczenia według rozmiaru. W analizowanych wersjach (Reticulum <code>e40191b</code>, LXMF <code>c3ff2d6</code>) pojedynczy pakiet okazjonalny (ang. <em>opportunistic</em>) mieści około 284 B treści SA1 przy tytule <code>SA1</code> i pustych <code>fields</code>. Większa wiadomość przechodzi na dostarczenie przez link, a powyżej około 316 B na przesłanie zasobu (<em>Resource</em>). Zestawianie linku i zasób mają własne timeouty; dotyczy ich <a href="../review.md">kontrprzykład F02</a>. Wartości wynikają ze stałych <code>ENCRYPTED_MDU</code>, <code>Link.MDU</code> i 112 B narzutu LXMF; trzeba je potwierdzić dla wersji wydania. <a href="https://github.com/markqvist/LXMF/blob/c3ff2d6dc2f256daab896dadc044dd5a913ecbb7/LXMF/LXMessage.py">LXMessage</a>.</p>
+<p>LXMF wybiera sposób dostarczenia według rozmiaru. W analizowanych wersjach (Reticulum <code>e40191b</code>, LXMF <code>c3ff2d6</code>) pojedynczy pakiet okazjonalny (ang. <em>opportunistic</em>) mieści około 284 B treści SA1 przy tytule <code>SA1</code> i pustych <code>fields</code>. Większa wiadomość przechodzi na dostarczenie przez link, a powyżej około 316 B na przesłanie zasobu (<em>Resource</em>). Zestawianie linku i zasób mają własne limity czasu; dotyczy ich <a href="../review.md">kontrprzykład F02</a>. Wartości wynikają ze stałych <code>ENCRYPTED_MDU</code>, <code>Link.MDU</code> i 112 B narzutu LXMF; trzeba je potwierdzić dla wersji wydania. <a href="https://github.com/markqvist/LXMF/blob/c3ff2d6dc2f256daab896dadc044dd5a913ecbb7/LXMF/LXMessage.py">LXMessage</a>.</p>
 
 <p>Wiadomości zakodowane modelem: typowe zgłoszenie po polsku 174 B, REQUEST lub TEST z maksymalnymi polami 222 B, BULLETIN 246 B, RECEIVED 50 B. Limity pól liczone przed kodowaniem nie ograniczają jednak rozmiaru po kodowaniu, bo cudzysłów i ukośnik zajmują w JSON po 2 B. REQUEST z polami złożonymi z <code>"</code> ma 382 B, BULLETIN z <code>\</code> 438 B. Obie mieszczą się w obecnym limicie 480 B, ale nie w jednym pakiecie. Treść wpisana przez mieszkańca może więc zmienić drogę dostarczenia bez wiedzy opiekuna.</p>
 
@@ -180,9 +183,9 @@
 
 <p>Sterownik P1 ma cztery miejsca na datagramy i osiem kontekstów składania. Przepełnienie musi być widoczne w licznikach. Limity trwałej kolejki stacji, bazy laptopa i dzienników oraz zachowanie przycisków i formularza po ich osiągnięciu określa <a href="../spec/oprogramowanie.md">specyfikacja oprogramowania</a>. Nie wolno pozornie potwierdzić odrzuconych danych.</p>
 
-<p>Tryb ciszy radiowej zatrzymuje całe nadawanie stacji, także przekazywanie cudzych pakietów. Stacja nie nadaje też cyklicznych ogłoszeń. Ekran, strona, odbiór i zapis działają, a kolejka rośnie i zostaje wysłana po ręcznym wyłączeniu ciszy. Wyjątkiem jest pojedyncze zgłoszenie przy bezpośrednim zagrożeniu życia, zapisane w dzienniku. Szczegóły w <a href="../spec/oprogramowanie.md">specyfikacji oprogramowania</a>, uzasadnienie w rozdziale <a href="02-scenariusze-i-organizacja.html#miejsce-w-systemie-ochrony-ludnosci">02</a>.</p>
+<p>Tryb ciszy radiowej zatrzymuje całe nadawanie stacji, także przekazywanie cudzych pakietów. Stacja nie nadaje też cyklicznych ogłoszeń. Ekran, strona, odbiór i zapis działają, a kolejka rośnie i zostaje wysłana po ręcznym wyłączeniu ciszy, gdy organ, który ją polecił, ją odwoła. Polecenie przekazuje OSP komunikatem BULLETIN i gońcem. Wyjątek dla pojedynczego zgłoszenia dotyczy wyłącznie ciszy operacyjnej, gdy polecenie wprost go dopuszcza; nie dotyczy zakazu używania urządzeń nadawczych w stanie wojennym lub wyjątkowym – wtedy podstawową procedurą jest goniec. Wyjątek zapisuje się w dzienniku stacji i na papierze. Szczegóły w <a href="../spec/oprogramowanie.md">specyfikacji oprogramowania</a>, uzasadnienie w rozdziale <a href="02-scenariusze-i-organizacja.html#miejsce-w-systemie-ochrony-ludnosci">02</a>.</p>
 
-<p>Węzeł transportowy jest aktywnym przekaźnikiem, nie magazynem wszystkich cudzych zgłoszeń. Opcjonalny węzeł przechowywania LXMF w OSP jest inną funkcją i wymaga osobnych prób, zwłaszcza przy długim braku odbiorcy. <a href="https://github.com/markqvist/LXMF">Role LXMF</a>.</p>
+<p>Węzeł transportowy jest aktywnym przekaźnikiem, nie magazynem wszystkich cudzych zgłoszeń. Opcjonalny węzeł przechowywania LXMF w OSP jest inną funkcją: działałby jako osobny węzeł laboratoryjny albo przyszła funkcja, poza wydaniem 0.5, i wymaga osobnych prób, zwłaszcza przy długim braku odbiorcy. <a href="https://github.com/markqvist/LXMF">Role LXMF</a>.</p>
 
 <h2 id="zaufanie-i-informacja-lokalna">Zaufanie i informacja lokalna</h2>
 
@@ -190,7 +193,7 @@
 
 <p>Szyfrowanie radiowe nie zabezpiecza lokalnego HTTP, bazy na dysku ani pamięci stacji. Nie wysyła się przez radio identyfikatorów osób lub dokumentów. Do wskazania potrzeby wystarczą lokalizacja, kategoria, liczba osób i krótki opis. Strona mieszkańca pokazuje jego zgłoszenie; kolejkę zbiorczą widzi opiekun. <a href="07-zagrozenia-i-odpornosc.html">Ograniczenia ochrony</a>.</p>
 
-<p>Ekran stacji i panel pokazują przy stanie łączności czas od ostatniej odpowiedzi OSP i wiek najstarszego oczekującego zgłoszenia, zamiast jednego zielonego wskaźnika. Wiek liczy się od lokalnego licznika czasu stacji, nie od zegara kalendarzowego. Komunikat OSP oznacza się źródłem i czasem od lokalnego odbioru. Poprawny podpis potwierdza źródło, nie aktualność ani prawdziwość treści. Zegara znalezionego laptopa ani stacji bez synchronizacji nie traktować jako zaufanej podstawy koordynacji.</p>
+<p>Ekran stacji i panel pokazują stan radia (RADIO GOTOWE, CZEKA NA POŁĄCZENIE, CISZA), osobno „KONTAKT Z ODBIORCĄ” tylko po RECEIVED lub STATUS od OSP w ostatnich 60 min, oraz czas od ostatniej odpowiedzi OSP i wiek najstarszego oczekującego zgłoszenia, zamiast jednego zielonego wskaźnika. Wiek liczy się od lokalnego licznika czasu stacji, nie od zegara kalendarzowego. Komunikat OSP oznacza się źródłem i czasem od lokalnego odbioru. Poprawny podpis potwierdza źródło, nie aktualność ani prawdziwość treści. Zegara znalezionego laptopa ani stacji bez synchronizacji nie traktować jako zaufanej podstawy koordynacji.</p>
 
 <p>Dodatkowy kanał internetowy może przenosić ten sam stos po osobnej próbie. Podstawowe działanie nie zależy od jego obecności. Kopiowanie wiadomości na pamięć USB, nadajniki Wi-Fi i Bluetooth w stacji, automatyczna replikacja OSP i wspólna tablica mieszkańców nie należą do bazowego kontraktu komunikacji.</p>
 </article>

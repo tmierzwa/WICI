@@ -9,7 +9,19 @@ Projekt jest prototypem. Zmiany mają upraszczać wykonanie, usuwać zależnoś�
 3. Parametry i kontrakty stacji zmieniaj w `docs/spec/`. Potrzeby, uzasadnienia, opcje i analizę wykonalności utrzymuj w [docs/conception](docs/conception/index.html). Aktualizuj powiązane wymagania i próby; odróżniaj założenie od pomiaru. Nie twórz drugiej pełnej kopii specyfikacji.
 4. Zmiana kodu kontraktów wymaga przypadku, który pokazuje problem, i wyniku odpowiednich testów. Raport aktualizuj dopiero po ich wykonaniu.
 5. Zmiana CAD wymaga aktualnych ERC/DRC, eksportów i kontroli paczki według [procedury odtworzenia](hardware/radio-test-r01/odtworzenie.md). Zmiana elektryczna wymaga nowej rewizji. Nie zmieniaj historycznych raportów na wyniki nowych prób.
-6. Raport z prób fizycznych podaje rewizję, elementy, warunki, metodę i wynik; użyj szablonu „Raport z próby”. Nie oznaczaj niewykonanych prób jako zaliczonych. Sam CI nie zwalnia statusu HOLD.
+6. Raport z prób fizycznych podaje rewizję, elementy, warunki, metodę i wynik; użyj szablonu „Raport z próby”. Nie oznaczaj niewykonanych prób jako zaliczonych. Sam CI nie zwalnia statusu HOLD. Raporty zostają w Issues z etykietą `próba`; po przyjęciu opiekun repozytorium wpisuje wynik w kolumnie „Stan” [odbioru](docs/spec/odbior.md) z odnośnikiem do Issue. Propozycję rozstrzygnięcia decyzji zgłasza się szablonem „Decyzja”.
+
+## Od czego zacząć
+
+Nie ma jeszcze oprogramowania stacji ani płytki R02. Zadania, które można wykonać teraz:
+
+1. Przenieść ramkę P1 (CRC, fragmentacja, składanie) do C/C++ i sprawdzić ją na wektorach z [modelu](software/reference/reference.py). Kod oprogramowania układowego trafia do `firmware/` (licencja MIT).
+2. Uruchomić microReticulum na płytkach rozwojowych nRF52840 i ESP32-S3 i wymienić pakiety z implementacją Reticulum w Pythonie. To pierwsza część T3; w raporcie podaj przypięte commity i zapas RAM.
+3. Opisać i zbudować emulator ograniczeń P1: czas TX, dług ciszy 12×, CCA i kolejka do 4 datagramów ([radio.md](docs/spec/radio.md)).
+4. Dodać do modelu protokół USB laptop–stacja (D17) i dziennik FRAM z długiem ciszy.
+5. Zbudować stanowisko R01.3 do pomiarów P1 (T4) z zasilacza laboratoryjnego ([sprzęt](hardware/radio-test-r01/README.md)).
+
+Przed pracą otwórz Issue lub skomentuj istniejące, aby nie dublować wysiłku.
 
 ## Kontrole przed PR
 
@@ -21,7 +33,7 @@ python3 -m unittest discover -s tests -v
 python3 tools/verify_repository.py --pull-request
 ```
 
-**Nie odświeżaj `manifest.json`.** Sumy kontrolne całego repozytorium odświeża opiekun po scaleniu i przed wydaniem; w PR prowadziłyby do konfliktów między równoległymi zmianami. Kontrola z `--pull-request` sprawdza wszystko poza zgodnością tego pliku. Dowody związane z treścią zmiany odświeżasz sam:
+**Nie odświeżaj `manifest.json`.** Sumy kontrolne całego repozytorium odświeża opiekun repozytorium po scaleniu i przed wydaniem; w PR prowadziłyby do konfliktów między równoległymi zmianami. Kontrola z `--pull-request` sprawdza wszystko poza zgodnością tego pliku. Dowody związane z treścią zmiany odświeżasz sam:
 
 - zmiana `software/reference/obliczenia.py`: uruchom go, aby zaktualizować `wyniki.json`, a po testach zaktualizuj `weryfikacja.json`;
 - zmiana plików w `hardware/radio-test-r01/`: wykonaj `python3 hardware/radio-test-r01/tools/check_bundle.py`; zmiana eksportów wymaga też `verify_fabrication.py`.
@@ -38,9 +50,9 @@ Jeżeli korzystasz z narzędzi AI, napisz o tym w opisie PR i sprawdź wynik tak
 
 ## Decyzje i przeglądy
 
-Projekt ma obecnie jednego opiekuna ([@tmierzwa](https://github.com/tmierzwa)). Opiekun scala PR, zamyka decyzje D01–D17 z [planu weryfikacji](docs/conception/08-plan-weryfikacji-i-decyzje.html) i wydaje wersje. Decyzja zapada w Issue lub PR, z uzasadnieniem i dowodem wymaganym w tabeli decyzji; zmiana decyzji wymaga nowego dowodu, nie samej dyskusji.
+Na razie projekt ma jednego opiekuna repozytorium ([@tmierzwa](https://github.com/tmierzwa)). Opiekun repozytorium scala PR, zamyka decyzje D01–D18 z [planu weryfikacji](docs/conception/08-plan-weryfikacji-i-decyzje.html) i wydaje wersje. Decyzja zapada w Issue lub PR, z uzasadnieniem i dowodem wymaganym w tabeli decyzji; zmiana decyzji wymaga nowego dowodu, nie samej dyskusji.
 
-Zmiany krytyczne dla bezpieczeństwa ludzi (przetwornica 230 V i ochrona PE, ochrona portów telefonów przed przepięciem, zabezpieczenia akumulatorów, budżet czasu nadawania) wymagają, oprócz opiekuna, przeglądu przez osobę z odpowiednimi kwalifikacjami. Dopóki taka osoba nie dołączy do projektu, te części pozostają opisem do prób i mają status HOLD.
+Zmiany krytyczne dla bezpieczeństwa ludzi (przetwornica 230 V i ochrona PE, ochrona portów telefonów przed przepięciem, zabezpieczenia akumulatorów, budżet czasu nadawania) wymagają, oprócz opiekuna repozytorium, przeglądu przez osobę z odpowiednimi kwalifikacjami. Dopóki taka osoba nie dołączy do projektu, te części pozostają opisem do prób i mają status HOLD.
 
 Główna gałąź jest chroniona: scalenie wymaga przejścia CI. Wydania mają tagi `v*` i paczkę źródłową z pełną kontrolą manifestu.
 
