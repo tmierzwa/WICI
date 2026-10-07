@@ -208,7 +208,7 @@
 
 <p>W23 (≥48 h na ogniwach) dopuszcza w modelu średnio najwyżej około 64 mA z szyny 3,3 V. nRF52840 spełnia je z zapasem. ESP32-S3 spełnia je tylko przy średnim poborze MCU około 30 mA, czyli przy lekkim uśpieniu z odbiornikiem stale włączonym; przy prądzie aktywnym 45–60 mA daje 35–42 h. Celem dla wykonania B jest średnio ≤60 mA z szyny 3,3 V w pracy przekaźnika. Pomiar poboru w RX i TX rozstrzyga D14. Gdyby W23 nie zostało spełnione, możliwa jest przyszła wersja P1 z dłuższą preambułą, pozwalającą na nasłuch z próbkowaniem (odbiornik włączany okresowo) (<a href="../spec/radio.md">specyfikacja radia</a>).</p>
 
-<p>Dla porównania: wariant 0.4, w którym przekaźnik był laptopem z <code>rnsd</code>, potrzebował 788–2312 Wh na dobę. Stacja poziomu 1 zużywa w modelu od około 80 do 650 razy mniej energii. To zmienia planowanie sieci. Przekaźnik można postawić na dachu lub wyższym piętrze na ogniwach albo jednym akumulatorze i odwiedzać co kilka dni, a nie co dobę.</p>
+<p>Dla porównania: wariant 0.4, w którym przekaźnik był laptopem z <code>rnsd</code>, potrzebował 788–2312 Wh na dobę. Stacja poziomu 1 zużywa w modelu od około 74 do 650 razy mniej energii, zależnie od wykonania i źródła zasilania. To zmienia planowanie sieci. Przekaźnik można postawić na dachu lub wyższym piętrze na ogniwach albo jednym akumulatorze i odwiedzać co kilka dni, a nie co dobę.</p>
 
 <h2 id="energia-dwa-niezalezne-zasoby">Energia poziomu 3: dwa niezależne zasoby</h2>
 
