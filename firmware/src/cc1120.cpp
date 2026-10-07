@@ -17,6 +17,16 @@ const char* stateName(uint8_t state) {
     }
 }
 
+const char* marcStateName(uint8_t state) {
+    // SWRU295E, rejestr MARCSTATE, bity 4:0.
+    static const char* const names[] = {
+        "SLEEP", "IDLE", "XOFF", "BIAS_SETTLE_MC", "REG_SETTLE_MC", "MANCAL", "BIAS_SETTLE", "REG_SETTLE",
+        "STARTCAL", "BWBOOST", "FS_LOCK", "IFADCON", "ENDCAL", "RX", "RX_END", "RESERVED",
+        "TXRX_SWITCH", "RX_FIFO_ERR", "FSTXON", "TX", "TX_END", "RXTX_SWITCH", "TX_FIFO_ERR", "IFADCON_TXRX",
+    };
+    return state < sizeof(names) / sizeof(names[0]) ? names[state] : "?";
+}
+
 Radio::Radio(SPIClass& spi, uint8_t cs, uint8_t resetPin, uint32_t hz)
     : spi_(spi), cs_(cs), reset_(resetPin), settings_(hz, MSBFIRST, SPI_MODE0) {}
 
@@ -103,6 +113,127 @@ Identity Radio::identify() {
     id.marcState = readReg(MARCSTATE) & 0x1F;
     id.status = lastStatus_;
     return id;
+}
+
+VerifyResult Radio::verify(const RegisterValue* table, size_t count) {
+    VerifyResult result{};
+    for (size_t i = 0; i < count; ++i) {
+        const uint8_t actual = readReg(table[i].address);
+        ++result.checked;
+        if ((actual & table[i].verifyMask) != (table[i].value & table[i].verifyMask)) {
+            if (result.mismatches == 0) {
+                result.firstName = table[i].name;
+                result.firstAddress = table[i].address;
+                result.expected = table[i].value;
+                result.actual = actual;
+            }
+            ++result.mismatches;
+        }
+    }
+    return result;
+}
+
+VerifyResult Radio::configure(const RegisterValue* table, size_t count) {
+    idle();
+    for (size_t i = 0; i < count; ++i) {
+        writeReg(table[i].address, table[i].value);
+    }
+    return verify(table, count);
+}
+
+bool Radio::waitMarcState(uint8_t state, uint32_t timeoutMs) {
+    const uint32_t start = millis();
+    do {
+        if (readMarcState() == state) {
+            return true;
+        }
+        delayMicroseconds(200);
+    } while (millis() - start < timeoutMs);
+    return false;
+}
+
+bool Radio::idle(uint32_t timeoutMs) {
+    strobe(SIDLE);
+    return waitMarcState(MARC_STATE_IDLE, timeoutMs);
+}
+
+bool Radio::calibrate(uint32_t timeoutMs) {
+    // Kolejność kroków jak w manualCalibration() z TI swrc253e (errata CC112x).
+    constexpr uint8_t VCDAC_START_OFFSET = 2;
+    if (!idle()) {
+        return false;
+    }
+    const uint8_t originalFsCal2 = readReg(FS_CAL2);
+
+    // 1) Pojemności VCO na zero, 2) wyższy VCDAC_START, 3) kalibracja.
+    writeReg(FS_VCO2, 0x00);
+    writeReg(FS_CAL2, static_cast<uint8_t>(originalFsCal2 + VCDAC_START_OFFSET));
+    strobe(SCAL);
+    if (!waitMarcState(MARC_STATE_IDLE, timeoutMs)) {
+        return false;
+    }
+    // 4) Wynik dla wyższego VCDAC_START.
+    const uint8_t highVco2 = readReg(FS_VCO2);
+    const uint8_t highVco4 = readReg(FS_VCO4);
+    const uint8_t highChp = readReg(FS_CHP);
+
+    // 5) Pojemności na zero, 6) pierwotny VCDAC_START, 7) kalibracja.
+    writeReg(FS_VCO2, 0x00);
+    writeReg(FS_CAL2, originalFsCal2);
+    strobe(SCAL);
+    if (!waitMarcState(MARC_STATE_IDLE, timeoutMs)) {
+        return false;
+    }
+    // 8) Wynik dla pierwotnego VCDAC_START.
+    const uint8_t midVco2 = readReg(FS_VCO2);
+    const uint8_t midVco4 = readReg(FS_VCO4);
+    const uint8_t midChp = readReg(FS_CHP);
+
+    // 9) Zostaje wynik z większym FS_VCO2 wraz z jego FS_VCO4 i FS_CHP.
+    if (highVco2 > midVco2) {
+        writeReg(FS_VCO2, highVco2);
+        writeReg(FS_VCO4, highVco4);
+        writeReg(FS_CHP, highChp);
+    } else {
+        writeReg(FS_VCO2, midVco2);
+        writeReg(FS_VCO4, midVco4);
+        writeReg(FS_CHP, midChp);
+    }
+    return true;
+}
+
+uint32_t Radio::frequencyWord() {
+    const uint32_t f2 = readReg(FREQ2);
+    const uint32_t f1 = readReg(FREQ1);
+    const uint32_t f0 = readReg(FREQ0);
+    return (f2 << 16) | (f1 << 8) | f0;
+}
+
+int16_t Radio::frequencyOffset() {
+    const uint16_t raw = (static_cast<uint16_t>(readReg(FREQOFF1)) << 8) | readReg(FREQOFF0);
+    return static_cast<int16_t>(raw);
+}
+
+void Radio::setFrequencyOffset(int16_t offset) {
+    const uint16_t raw = static_cast<uint16_t>(offset);
+    writeReg(FREQOFF1, static_cast<uint8_t>(raw >> 8));
+    writeReg(FREQOFF0, static_cast<uint8_t>(raw & 0xFF));
+}
+
+int16_t Radio::frequencyOffsetEstimate() {
+    const uint16_t raw = (static_cast<uint16_t>(readReg(FREQOFF_EST1)) << 8) | readReg(FREQOFF_EST0);
+    return static_cast<int16_t>(raw);
+}
+
+Rssi Radio::rssi(int8_t offsetDb) {
+    Rssi r{};
+    const int8_t coarse = static_cast<int8_t>(readReg(RSSI1));  // RSSI[11:4], 1 dB
+    const uint8_t fine = readReg(RSSI0);
+    r.valid = (fine & RSSI0_VALID) != 0;
+    r.carrierSense = (fine & RSSI0_CARRIER_SENSE) != 0;
+    r.carrierSenseValid = (fine & RSSI0_CARRIER_SENSE_VALID) != 0;
+    r.dbm = static_cast<int16_t>(coarse) + offsetDb;
+    return r;
 }
 
 }  // namespace cc1120

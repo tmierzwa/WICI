@@ -1,8 +1,8 @@
 # WICI: oprogramowanie stacji
 
-Katalog zawiera oprogramowanie układowe stacji. Obecny stan to pierwsze kroki na [stanowisku deweloperskim A](../hardware/dev-bench/README.md): nRF52840-DK z modułem TI CC1120EM-868-915 i pamięcią FRAM na złączu Arduino płytki. Środowisko `bench-a` w `platformio.ini` buduje obraz, który po podłączeniu USB zgłasza się poleceniem `INFO` w formacie ze [specyfikacji radia](../docs/spec/radio.md#usb-do-laptopa), identyfikuje układ radiowy i FRAM przez SPI oraz obsługuje przyciski i diody płytki. Nie ma jeszcze profilu P1, stosu Reticulum, ekranu ani drugiego interfejsu CDC.
+Katalog zawiera oprogramowanie układowe stacji. Obecny stan to pierwsze kroki na [stanowisku deweloperskim A](../hardware/dev-bench/README.md): nRF52840-DK z modułem TI CC1120EM-868-915 i pamięcią FRAM na złączu Arduino płytki. Środowisko `bench-a` w `platformio.ini` buduje obraz, który po podłączeniu USB zgłasza się poleceniem `INFO` w formacie ze [specyfikacji radia](../docs/spec/radio.md#usb-do-laptopa), identyfikuje układ radiowy i FRAM przez SPI, zapisuje do CC1120 [rejestry profilu P1](#rejestry-profilu-p1) z weryfikacją odczytu i kalibracją syntezera, podaje zaprogramowaną częstotliwość i RSSI oraz obsługuje przyciski i diody płytki. Nie ma jeszcze nadawania ani odbioru ramek, stosu Reticulum, ekranu ani drugiego interfejsu CDC.
 
-Obraz skompilowano (PlatformIO, rdzeń Adafruit nRF52 1.7.0, 8928 B RAM, 60 080 B flash). **Nie uruchomiono go na sprzęcie**: odpowiedzi poleceń, numery pinów i działanie SPI z modułem wymagają sprawdzenia na płytce według kroków niżej.
+Obraz skompilowano (PlatformIO, rdzeń Adafruit nRF52 1.7.0, 8932 B RAM, 66 760 B flash). **Nie uruchomiono go na sprzęcie**: odpowiedzi poleceń, numery pinów, działanie SPI z modułem i przyjęcie rejestrów przez układ wymagają sprawdzenia na płytce według kroków niżej.
 
 ## Okablowanie stanowiska A
 
@@ -57,18 +57,53 @@ Port USB nRF (J3, nie port J-Link J2) zgłasza się jako CDC ACM, 115200 bit/s (
 |---|---|
 | `INFO` | pola jak w specyfikacji radia: `contract`, `profile`, `radio`, `mcu`, `fw`, `src`, `mv`, liczniki ruchu (na razie zera), `restarts`, oraz `bench`, `radio_ok`, `fram_ok`, `uptime_s` |
 | `RADIO` | `partnumber` (CC1120 = `0x48`), `partversion`, `marcstate`, stan z bajtu statusu, `ok` |
-| `RESET` | reset sprzętowy RESET_N i `SRES`, potem `RADIO` |
+| `RESET` | reset sprzętowy RESET_N i `SRES` (kasuje rejestry P1, `p1_ok: false`), potem `RADIO` |
+| `CONFIG` | zapis tablicy P1 w stanie IDLE, odczyt i porównanie 57 rejestrów (`checked`, `mismatches`, pierwszy niezgodny z wartością oczekiwaną i odczytaną), potem kalibracja; `config: true` tylko przy zerze niezgodności i udanej kalibracji |
+| `VERIFY` | ponowne porównanie rejestrów z tablicą bez zapisu |
+| `CAL` | ręczna kalibracja syntezera; podaje FS_VCO2, FS_VCO4, FS_CHP i FS_CAL2 po kalibracji |
+| `FREQ` | słowo FREQ, FREQOFF, częstotliwość nośna w Hz ze wzoru z instrukcji, błąd wobec 869 525 000 Hz, krok FREQOFF oraz FREQOFF_EST z ostatniego odbioru |
+| `RX` / `IDLE` | przejście do odbioru albo do IDLE, potem `STATE` |
+| `RSSI` | RSSI w dBm z przyjętym przesunięciem −99 dB (`rssi_offset_db`), znaczniki ważności i nośnej; sens tylko w stanie RX |
+| `STATE` | stan MARC nazwą i liczbą, bajt stanu, liczba bajtów w kolejkach RX i TX |
 | `REG <hex>` | odczyt rejestru, np. `REG 2F73` (MARCSTATE), `REG 2F0C` (FREQ2) |
 | `FRAM` | cztery bajty RDID (MB85RS4MT: `047F4903`, MB85RS4MTY: `047F490B`), rejestr stanu, `ok` |
 | `BTN` | stan czterech przycisków |
 | `LED <1-4> <0/1>` | sterowanie diodą |
 
-Warunek przejścia kroku 6 z [lekcji R02](../hardware/r02/lekcje.md#uruchomienie): `RADIO` daje `ready: true`, `partnumber: 0x48` i stan `IDLE`; `FRAM` daje `fujitsu: true`. Bez modułu `partnumber` wynosi `0xFF` albo `0x00`, a `ready` jest `false`.
+Warunek przejścia kroku 6 z [lekcji R02](../hardware/r02/lekcje.md#uruchomienie): `RADIO` daje `ready: true`, `partnumber: 0x48` i stan `IDLE`; `FRAM` daje `fujitsu: true`. Bez modułu `partnumber` wynosi `0xFF` albo `0x00`, a `ready` jest `false`. Po starcie obraz sam zapisuje i kalibruje P1; LED2 świeci dopiero, gdy `RADIO` daje `ok: true` i `p1_ok: true`. Po otwarciu portu obraz wysyła też wynik `VERIFY` i `FREQ`.
+
+## Rejestry profilu P1
+
+Tablica rejestrów jest w `src/p1_registers.h`, generowanym przez `tools/p1_registers.py` (test `tests/test_p1_registers.py` sprawdza, że nagłówek jest aktualny, a wartości zgadzają się ze wzorami i z eksportem TI). Wartości pochodzą z dwóch źródeł, oznaczonych w tablicy:
+
+- **P1**: policzone z parametrów [profilu P1](../docs/spec/radio.md#profil-p1-do-prototypu) wzorami instrukcji [CC112x SWRU295E](https://www.ti.com/lit/ug/swru295e/swru295e.pdf): częstotliwość (równania 26–27), szybkość symboli (6–9), dewiacja (1–2), filtr odbiornika (10, tabela 17), moc (21), a także słowo synchronizacji, preambuła i silnik pakietów (rozdział 8 i 11).
+- **TI**: rejestry opisane w instrukcji „use values from SmartRF Studio” (syntezer FS_*, XOSC, mieszacz IF, filtr DC, AGC). SmartRF Studio to program TI tylko na Windows, nieuruchamiany w tym kroku; wartości wzięto z eksportu SmartRF Studio, który TI dołącza do pakietu przykładów [swrc253e](https://www.ti.com/tool/download/SWRC253) (`cc112x_easy_link_reg_config.h`, BSD-3-Clause): 868 MHz, 2-FSK, dewiacja 3,998 kHz, filtr 25 kHz, czyli ten sam tor odbiorczy co w P1. Pozycje zależne od szybkości (PA_CFG0, TOC_CFG) pochodzą z bloku 4,8 kbit/s pliku `cc112x_serial_mode_reg_config.h` tego pakietu.
+
+| Parametr P1 | Rejestry | Wartość | Wynik ze wzoru |
+|---|---|---|---|
+| 869,525 MHz, pasmo 820–960 MHz (dzielnik LO 4) | FREQ2..0, FS_CFG | `6C B0 CD`, `0x12` | 869 525 024 Hz, krok 122 Hz; FREQOFF daje krok 30,5 Hz |
+| 4800 Bd | SYMBOL_RATE2..0 | `63 A9 2A` | 4800,0 Bd (ta sama mantysa co domyślne 1200 Bd, wykładnik 6 zamiast 4) |
+| dewiacja ±4 kHz, 2-GFSK | DEVIATION_M, MODCFG_DEV_E | `0x06`, `0x0B` | 3997,8 Hz, jak w eksporcie TI |
+| filtr 24–32 kHz | CHAN_BW | `0x08` | 25,0 kHz (decymacja 20 × 8); inne nastawy w przedziale: 28,6 kHz (`0x07`), 31,25 kHz (`0x44`) |
+| 13 dBm | PA_CFG2 | `0x7D` | PA_POWER_RAMP 61 → 13,0 dBm na wyjściu układu, przed torem modułu |
+| 8 × 0xAA, D3 91 D3 91 | PREAMBLE_CFG1, SYNC3..0, SYNC_CFG0 | `0x28`, `D3 91 D3 91`, `0x17` | słowo 32-bitowe bez kwalifikatora błędów bitów |
+| próg CCA −100 dBm | AGC_CS_THR | `0xFF` | −100 dBm przy przyjętym przesunięciu RSSI −99 dB; obie wartości wyznacza T4 |
+| ramka do 103 B, CRC w ramce | PKT_CFG0, PKT_CFG1, PKT_LEN | `0x00`, `0x01`, `0x67` | stała długość z PKT_LEN, CRC układu wyłączone, status (RSSI, LQI) dopisany do FIFO |
+
+Decyzje przy tworzeniu tablicy:
+
+- **CRC układu wyłączone.** CC1120 liczy CRC-16 z wielomianem 0x1021 tylko z wartością początkową 0x0000, a P1 wymaga 0xFFFF (CRC-16/CCITT-FALSE), więc CRC liczy oprogramowanie.
+- **Stała długość pakietu zamiast zmiennej.** W trybie zmiennej długości układ czyta pierwszy bajt po słowie synchronizacji jako liczbę następnych bajtów i kończy odbiór po nich. Pole LEN w P1 liczy tylko BODY, a CRC jest za BODY, więc układ uciąłby CRC. Do rozstrzygnięcia w specyfikacji ([przegląd, F79](../docs/review.md)): LEN liczący BODY i CRC albo odbiór w trybie nieskończonej długości z przełączeniem na stałą po odczycie LEN (SWRU295E, 8.1.5). Do tego czasu polecenia pomiarowe używają stałej długości ustawianej na ramkę.
+- **Kalibracja ręczna.** SETTLING_CFG wyłącza kalibrację automatyczną (jak w eksporcie TI); oprogramowanie wykonuje po zapisie rejestrów i po każdym `CAL` procedurę z erraty CC112x (dwa przebiegi `SCAL` z różnym VCDAC_START, zostaje wynik z większym FS_VCO2), przeniesioną z `manualCalibration()` w swrc253e.
+- **Weryfikacja odczytem.** Każdy rejestr tablicy jest odczytywany po zapisie i porównywany z maską (XOSC1 ma bit tylko do odczytu). Pierwsza niezgodność trafia do odpowiedzi `CONFIG`/`VERIFY`.
+- **GPIO modułu.** GPIO2 (D3) = PKT_SYNC_RXTX (pakiet w powietrzu, do pomiaru czasu TX), GPIO0 (D2) = RXFIFO_THR_PKT (koniec odebranego pakietu); niepodłączone GPIO1 i GPIO3 w trybie analogowym jak w eksporcie TI.
+- **Odbiornik z niską IF** 62,5 kHz (wartość domyślna) z kompensacją obrazu, bo warunek IF > 2 × 25 kHz i IF + 12,5 kHz ≤ 100 kHz jest spełniony; zero-IF nasycałoby RSSI przy około −50 dBm.
+
+Czego tablica nie zamyka: błędu częstotliwości kwarcu modułu (mierzy się `FREQ`/`FOFF` na stanowisku), przesunięcia RSSI i progu CCA (T4), dopasowania filtru DC, AGC i progu synchronizacji do 4800 Bd (eksport TI dotyczy 1200 Bd w tym samym paśmie; różnice sprawdza pomiar czułości w T4) oraz wartości z nowszej wersji SmartRF Studio (eksport z pakietu z 2013 r.; przy dostępie do narzędzia porównać tablicę z eksportem dla P1 i wpisać wersję narzędzia do nagłówka).
 
 ## Następne kroki
 
-1. Konfiguracja rejestrów P1 (869,525 MHz, 2-GFSK 4800 bit/s, dewiacja ±4 kHz, filtr 24–32 kHz, preambuła i słowo synchronizacji) z eksportu SmartRF Studio, zapisana jako tablica w kodzie z odnośnikiem do wersji narzędzia.
-2. Polecenia pomiarowe `TXCW`, `TXPKT`, `RXPER`, `FOFF` ze [specyfikacji radia](../docs/spec/radio.md#usb-do-laptopa), z limitem czasu nadawania i potwierdzeniem przyciskiem dla serii przewodowych.
-3. Dziennik długu ciszy i licznik restartów w FRAM; ekran Sharp (Adafruit 4694) z EXTCOMIN z licznika sprzętowego.
-4. Ramka P1 w C++ sprawdzona na wektorach z [modelu](../software/reference/README.md); dwa interfejsy CDC (dane i diagnostyka).
-5. microReticulum i LXMF na tym samym projekcie (T3) z pomiarem zapasu RAM; środowisko `bench-b` dla ESP32-S3-DevKitC-1 z S2-LP.
+1. Polecenia pomiarowe `TXCW`, `TXPKT`, `RXPER`, `FOFF` ze [specyfikacji radia](../docs/spec/radio.md#usb-do-laptopa), z limitem czasu nadawania i potwierdzeniem przyciskiem dla serii przewodowych; pomiar czasu narastania mocy z PKT_SYNC_RXTX.
+2. Dziennik długu ciszy i licznik restartów w FRAM; ekran Sharp (Adafruit 4694) z EXTCOMIN z licznika sprzętowego.
+3. Ramka P1 w C++ sprawdzona na wektorach z [modelu](../software/reference/README.md) po rozstrzygnięciu F79; dwa interfejsy CDC (dane i diagnostyka).
+4. microReticulum i LXMF na tym samym projekcie (T3) z pomiarem zapasu RAM; środowisko `bench-b` dla ESP32-S3-DevKitC-1 z S2-LP.

@@ -14,7 +14,7 @@ Kontrola porównuje manifest z indeksem Git, wszystkie sumy plików, lokalne odn
 
 ## Oprogramowanie układowe
 
-Katalog [firmware/](../firmware/README.md) buduje się PlatformIO w osobnym środowisku Pythona (`python3 -m venv .venv-pio && .venv-pio/bin/pip install platformio`, potem `pio run` w `firmware/`). Wersje platformy i rdzenia są przypięte w `platformio.ini`. CI nie buduje obrazu; wynik kompilacji i próby na płytce podaje się w opisie PR.
+Katalog [firmware/](../firmware/README.md) buduje się PlatformIO w osobnym środowisku Pythona (`python3 -m venv .venv-pio && .venv-pio/bin/pip install platformio`, potem `pio run` w `firmware/`). Wersje platformy i rdzenia są przypięte w `platformio.ini`. CI nie buduje obrazu; wynik kompilacji i próby na płytce podaje się w opisie PR. Tablica rejestrów CC1120 dla profilu P1 (`firmware/src/p1_registers.h`) jest generowana: po zmianie parametrów w `firmware/tools/p1_registers.py` uruchomić go z `--write`; test w `tests/` odrzuca nieaktualny nagłówek.
 
 ## Strona koncepcji
 
