@@ -587,7 +587,7 @@ void Model::act(Button button, uint32_t nowMs) {
 size_t Model::itemMenu(uint8_t out[4]) const {
     // ZMIEŃ LICZBĘ OSÓB, ZMIEŃ PILNOŚĆ, POTRZEBA USTAŁA; ANULUJ WYSYŁKĘ tylko przed "odbiorca zapisał".
     Item item;
-    if (!host_ || !host_->item(itemIndex_, item) || !item.own || item.ref != itemRef_ || item.cancelled) return 0;
+    if (!host_ || !host_->item(itemIndex_, item, true) || !item.own || item.ref != itemRef_ || item.cancelled) return 0;
     size_t n = 0;
     if (item.type == SA1_REQUEST) {
         out[n++] = static_cast<uint8_t>(Label::ZMIEN_LICZBE_OSOB);
@@ -763,7 +763,7 @@ void Model::buildHandover(const Status& status, Text& t) {
     const size_t count = host_ ? host_->itemCount() : 0;
     for (size_t i = 0; i < count && t.count + 4 < TEXT_MAX_LINES; ++i) {
         Item item;
-        if (!host_->item(i, item) || !item.own || item.cancelled || item.state == 6) continue;
+        if (!host_->item(i, item, true) || !item.own || item.cancelled || item.state == 6) continue;
         formatShort(digits, sizeof(digits), item.number);
         snprintf(tmp, sizeof(tmp), "%s %s", digits, item.type == SA1_TEST ? label(Label::TEST, lang_) : ui_texts::CATEGORIES[item.category < 10 ? item.category : 9][L]);
         t.addLine(tmp);
@@ -902,7 +902,7 @@ void Model::render(const Status& s, Lines& out) {
             for (size_t i = 0; i < window; ++i) {
                 const size_t index = top + i;
                 Item item;
-                if (index < count && host_->item(index, item)) {
+                if (index < count && host_->item(index, item, true) && (item.own || host_->item(index, item))) {
                     char digits[8];
                     formatShort(digits, sizeof(digits), item.number);
                     if (item.own) snprintf(tmp, sizeof(tmp), "%s %s", digits, item.type == SA1_TEST ? label(Label::TEST, lang_) : ui_texts::CATEGORIES[item.category < 10 ? item.category : 9][L]);

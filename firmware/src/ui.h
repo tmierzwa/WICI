@@ -126,7 +126,9 @@ struct Host {
     virtual size_t phraseCount() = 0;
     virtual const char* phrase(size_t index, Lang lang) = 0;  // tekst ekranu
     virtual size_t itemCount() = 0;                           // najnowsze najpierw
-    virtual bool item(size_t index, Item& out) = 0;
+    // brief = true: pola z indeksu w RAM bez odczytu rekordu FRAM (własne zgłoszenia bez frazy,
+    // odebrane bez treści); listy i PRZEKAZANIE ZMIANY używają skrótu, otwarta pozycja pełni.
+    virtual bool item(size_t index, Item& out, bool brief = false) = 0;
     virtual void markRead(uint32_t ref) = 0;
     virtual Submit submit(const Draft& draft, uint16_t& number) = 0;
     virtual bool cancel(uint32_t ref) = 0;

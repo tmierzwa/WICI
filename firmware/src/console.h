@@ -22,7 +22,7 @@ public:
     size_t phraseCount() override;
     const char* phrase(size_t index, ui::Lang lang) override;
     size_t itemCount() override;
-    bool item(size_t index, ui::Item& out) override;
+    bool item(size_t index, ui::Item& out, bool brief = false) override;
     void markRead(uint32_t ref) override;
     ui::Submit submit(const ui::Draft& draft, uint16_t& number) override;
     bool cancel(uint32_t ref) override;

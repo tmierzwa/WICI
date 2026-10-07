@@ -50,6 +50,7 @@ bool buttonWas[4] = {};          // stan przycisków po ostatnim odpytaniu (zboc
 uint32_t buttonPollMs = 0;
 constexpr uint32_t BUTTON_POLL_MS = 10;   // odpytywanie przycisków (drgania styków)
 constexpr uint32_t SCREEN_POLL_MS = 200;  // odświeżanie ekranu po zmianie treści
+constexpr uint32_t APP_POLL_MS = 100;     // przegląd kolejki nadawczej
 char stationName[12];            // WICI-xxxxxx z identyfikatora układu (FICR)
 
 // Pamięć niezerowana przy starcie: po restarcie programowym albo przez watchdog zostaje język
@@ -734,7 +735,11 @@ void stationLoop() {
         }
     }
     if (radioOk) bench.poll();
-    if (storeOk && linkAuto && radioOk) app.poll(now);
+    static uint32_t lastApp = 0;
+    if (storeOk && linkAuto && radioOk && now - lastApp >= APP_POLL_MS) {  // przegląd kolejki co 100 ms, nie w każdym obiegu
+        lastApp = now;
+        app.poll(now);
+    }
     pollSerial();
     pollButtons(now);
     screenModel.tick(now);

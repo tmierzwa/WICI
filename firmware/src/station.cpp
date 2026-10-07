@@ -347,6 +347,7 @@ Create Station::putIntent(sa1::Message& m, uint8_t type, const uint8_t id[store:
     record.type = type;
     record.revision = m.revision;
     record.aux = m.urgency;
+    record.category = m.category;
     record.createdS = services_.uptimeS();
     record.updatedS = record.createdS;
     record.nextTryS = delayS ? record.createdS + delayS : 0;

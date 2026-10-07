@@ -62,13 +62,46 @@ size_t Console::itemCount() {
     return count_;
 }
 
-bool Console::item(size_t index, ui::Item& out) {
+bool Console::item(size_t index, ui::Item& out, bool brief) {
     if (dirty_) rebuild();
     if (index >= count_) return false;
     const Ref ref = list_[index];
     const uint32_t nowS = services_.uptimeS();
     out = ui::Item();
     sa1::Message m;
+    if (brief) {
+        // Skrót z indeksu w RAM: listy i PRZEKAZANIE ZMIANY nie czytają rekordów z FRAM przy każdym rysowaniu.
+        if (ref.seq & OWN) {
+            for (size_t i = 0; i < store_.queueSize(); ++i) {
+                const store::QueueEntry* e = store_.queueEntry(i);
+                if (!e || e->seq != (ref.seq & ~OWN)) continue;
+                out.ref = e->seq;
+                out.own = true;
+                out.type = e->type;
+                out.number = store::shortNumber(e->id);
+                out.category = e->category;
+                out.urgency = e->aux;
+                out.state = e->state;
+                out.attempts = e->attempts;
+                out.nextInS = e->nextTryS > nowS ? e->nextTryS - nowS : 0;
+                out.ageS = nowS > e->createdS ? nowS - e->createdS : 0;
+                out.cancelled = e->flags & store::CANCELLED;
+                return true;
+            }
+            return false;
+        }
+        for (size_t i = 0; i < store::INBOX_SLOTS; ++i) {
+            const store::InboxEntry* e = store_.inboxEntry(i);
+            if (!e || e->seq != ref.seq) continue;
+            out.ref = e->seq;
+            out.type = e->type;
+            out.number = store::shortNumber(e->id);
+            out.ageS = nowS > e->receivedS ? nowS - e->receivedS : 0;
+            out.unread = !(e->flags & 1);
+            return true;
+        }
+        return false;
+    }
     if (ref.seq & OWN) {
         store::QueueRecord r;
         if (!store_.queueRead(ref.seq & ~OWN, r) || sa1::decode(r.sa1, r.sa1Length, m)) return false;

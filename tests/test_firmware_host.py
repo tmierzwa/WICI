@@ -41,9 +41,11 @@ HARNESS = r"""
 // FRAM w RAM: 512 KiB skasowane do 0xFF jak nowy układ.
 struct RamStorage : journal::Storage {
     std::vector<uint8_t> bytes = std::vector<uint8_t>(512 * 1024, 0xFF);
+    size_t readBytes = 0;  // licznik odczytów (koszt SPI przy rysowaniu ekranu)
     bool read(uint32_t address, uint8_t* data, size_t count) override {
         if (address + count > bytes.size()) return false;
         memcpy(data, &bytes[address], count);
+        readBytes += count;
         return true;
     }
     bool write(uint32_t address, const uint8_t* data, size_t count) override {
@@ -277,6 +279,9 @@ int uiScript() {
                 printf("item %u %d %u %04u %u %u %u %u %u %d %d |%s\n", item.ref, item.own, item.type, item.number, item.category, item.people,
                        item.urgency, item.state, item.attempts, item.cancelled, item.unread, item.text);
             }
+        } else if (!strcmp(line, "B")) {
+            printf("read %zu\n", ram.readBytes);
+            ram.readBytes = 0;
         } else if (!strcmp(line, "J")) {
             printf("queue live %zu unsent %zu configured %d paused %d\n", store.queueLive(), store.queueUnsent(), store.configured(), app.testPaused());
             for (size_t i = 0; i < store.queueSize(); ++i) {
@@ -929,6 +934,21 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual([x[0] for x in s], ["main", "alarm", "main", "main", "main", "alarm", "main", "main"])
         self.assertShows(s[1], texts["brak_potwierdzenia"][0].replace("[n]", "15") + " " + texts["zapisz_numer"][0].replace("[xxxx]", "2594"))
         self.assertShows(s[5], texts["brak_odczytu"][0] + " " + texts["zapisz_numer"][0].replace("[xxxx]", "2594"))
+
+    def test_lists_render_from_the_ram_index(self):
+        # Lista WIADOMOŚCI i PRZEKAZANIE ZMIANY korzystają ze skrótu z indeksu w RAM: rysowanie nie czyta rekordów
+        # własnych zgłoszeń z FRAM; pełny rekord czyta się dopiero po otwarciu pozycji i dla treści odebranych.
+        create = ["K OK 0", "K OK 0", "K OK 0", "K OK 0", "K DOWN 0", "K OK 0", "K OK 0", "K OK 0", "K OK 0", "K OK 0"]
+        script = create * 3 + ["I [1,4,\"41424344454647484950515253545556\",7,\"Komunikat\"]", "K OK 0", "K DOWN 0", "K OK 0", "R", "B",
+                               "R", "B", "K OK 0", "R", "B", "K BACK 0", "K BACK 0", "K DOWN 0", "K DOWN 0", "K OK 0"] + \
+                 ["K DOWN 0"] * 13 + ["K OK 0", "R", "B", "R", "B"]
+        out = self.hosted(script)
+        s = self.screens(out)
+        self.assertEqual([x[0] for x in s], ["messages", "messages", "item", "handover", "handover"])
+        reads = [int(line.split()[1]) for line in out if line.startswith("read ")]
+        self.assertEqual(reads[1], 452)   # lista: jeden rekord skrzynki (część stała i stan) dla treści komunikatu
+        self.assertGreaterEqual(reads[2], 452)  # otwarty komunikat: pełny rekord
+        self.assertEqual(reads[4], 0)     # PRZEKAZANIE ZMIANY: wyłącznie indeks w RAM
 
     def test_services_backup_and_destroy_sequences(self):
         labels = {name.lower(): strings for name, strings in ui_texts.load()["labels"].items()}

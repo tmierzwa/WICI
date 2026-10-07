@@ -66,6 +66,7 @@ struct QueueRecord {
     char sa1[sa1::MAX_CONTENT + 1] = {};
     uint16_t sa1Length = 0;
     uint8_t aux = 0;            // pilność (REQUEST, TEST) do kolejności nadawania
+    uint8_t category = 0;       // kategoria (REQUEST, TEST) do list na ekranie
     // część zmienna
     uint8_t flags = ACTIVE;
     uint16_t attempts = 0;
@@ -109,6 +110,7 @@ struct QueueEntry {
     uint8_t aux = 0;
     uint8_t flags = 0;
     uint8_t state = 0;
+    uint8_t category = 0;
     uint16_t revision = 0;
     uint16_t attempts = 0;
     uint32_t event = 0;

@@ -2,7 +2,7 @@
 
 Katalog zawiera oprogramowanie układowe stacji. Obecny stan to pierwsze kroki na [stanowisku deweloperskim A](../hardware/dev-bench/README.md): nRF52840-DK z modułem TI CC1120EM-868-915 i pamięcią FRAM na złączu Arduino płytki. Środowisko `bench-a` w `platformio.ini` buduje obraz, który po podłączeniu USB zgłasza się poleceniem `INFO` w formacie ze [specyfikacji radia](../docs/spec/radio.md#usb-do-laptopa), identyfikuje układ radiowy i FRAM przez SPI, zapisuje do CC1120 [rejestry profilu P1](#rejestry-profilu-p1) z weryfikacją odczytu i kalibracją syntezera, wykonuje [polecenia pomiarowe](#polecenia-pomiarowe) `TXCW`, `TXPKT`, `RXPER`, `FOFF` ze specyfikacji, prowadzi [dziennik w FRAM](#dziennik-w-fram) (dług ciszy, zegar czasu pracy z liczbą restartów, zdarzenia), obsługuje [łącze P1](#łącze-p1) (odbiór i składanie datagramów, nadawanie z CCA, odroczeniem i długiem ciszy), podaje zaprogramowaną częstotliwość i RSSI, prowadzi [ekran Sharp i menu stacji](#ekran-i-przyciski) na przyciskach płytki (wybór języka, ekran główny, cisza, STAN; EXTCOMIN z licznika RTC2) obsługuje diody płytki oraz udostępnia drugi interfejs CDC z [protokołem USB laptop–stacja](#protokół-usb-laptopstacja) nad kolejką, skrzynką i konfiguracją w FRAM oraz [warstwę aplikacji](#warstwa-aplikacji-nad-p1) nadającą intencje z kolejki przez P1 i przyjmującą wiadomości do skrzynki. Nie ma jeszcze stosu Reticulum: datagram ma zastępczy format bez podpisu.
 
-Obraz skompilowano (PlatformIO, rdzeń Adafruit nRF52 1.7.0, 53 868 B RAM, 187 844 B flash; z tego bufor ekranu 12 000 B RAM, indeksy magazynu FRAM około 12 KB RAM i bitmapa fontu 21 840 B flash). **Nie uruchomiono go na sprzęcie**: odpowiedzi poleceń, numery pinów, działanie SPI z modułem i przyjęcie rejestrów przez układ wymagają sprawdzenia na płytce według kroków niżej.
+Obraz skompilowano (PlatformIO, rdzeń Adafruit nRF52 1.7.0, 51 004 B RAM, 174 592 B flash; podział w [przeglądzie rozmiaru](#rozmiar-i-wydajność)). **Nie uruchomiono go na sprzęcie**: odpowiedzi poleceń, numery pinów, działanie SPI z modułem i przyjęcie rejestrów przez układ wymagają sprawdzenia na płytce według kroków niżej.
 
 ## Okablowanie stanowiska A
 
@@ -245,6 +245,45 @@ Kod w `src/station.cpp` (bez zależności od Arduino; `tests/test_firmware_host.
 - **Kolejność i ponawianie** ([specyfikacja](../docs/spec/oprogramowanie.md#trwałość-i-potwierdzenia)): RECEIVED i STATUS, potem REPLY i BULLETIN, REQUEST z pilnością 2, pozostałe REQUEST według czasu zapisu, na końcu TEST; jedna intencja w drodze. Brak potwierdzenia łącza w 60 s od końca serii = FAILED: kolejne próby po 1, 2, 5 i 15 min ±20%, po 6 h co 60 min. Potwierdzenie łącza = DELIVERED: REQUEST i TEST czekają 10 min na RECEIVED, potem ponawiają co 30–60 min; RECEIVED, STATUS, REPLY i BULLETIN są po dostarczeniu zakończone. RECEIVED, STATUS (przez `status_after`) albo REPLY od OSP kończy ponawianie pary (id, revision) i zapisuje najwyższy event w pamięci kluczy.
 - **Odbiór.** Rola stacji przyjmuje RECEIVED, STATUS, REPLY i BULLETIN tylko od aktywnej tożsamości OSP z konfiguracji (bez karty: od każdego, bo stanowisko nie ma jeszcze kluczy), STATUS dla nieznanego id ignoruje; rola OSP przyjmuje REQUEST i TEST. Każda nowa wiadomość trafia do skrzynki i jako `event` (stacja) albo `incoming` (OSP) do laptopa; `nowe_krotki` na ekranie liczy nieprzeczytane. Powtórzony REQUEST lub TEST o znanym kluczu: stacja OSP nadaje ponownie zapisany RECEIVED i najnowszy STATUS.
 - **Ekran.** `kolejka_krotki` liczy intencje bez potwierdzenia łącza i wiek najstarszej. Zgłoszenia z kreatora, rewizje, anulowanie, TEST z menu i startowy oraz alarmy są w tej samej warstwie (`createRequest`, `revise`, `cancel`, `scheduleTest`, `alarm`).
+
+## Rozmiar i wydajność
+
+Pomiar obrazu `bench-a` po audycie (`arm-none-eabi-size` i `nm --size-sort`), potem zastosowane i odłożone uproszczenia.
+
+**RAM 51 004 B** (20,5% z 248 832 B; przed przeglądem 53 868 B):
+
+| Obiekt | B | Uwagi |
+|---|---|---|
+| magazyn FRAM (`store::Store`) | 19 220 | konfiguracja z frazami 3 301 B, indeks kolejki 128 × 68 B, indeks skrzynki 128 × 48 B, indeks zdarzeń 128 × 8 B |
+| bufor ekranu (`sharp::Display`) | 12 048 | 240 wierszy × 50 B i mapa zmienionych wierszy |
+| stanowisko radiowe (`measure::Bench`) | 7 280 | składanie datagramów: 8 prób × 600 B (specyfikacja), bufory nadawania i złożonego datagramu po 600 B |
+| konsola ekranu (`console::Console`) | 2 076 | lista WIADOMOŚCI: 256 × 8 B |
+| USB CDC (TinyUSB, 2 interfejsy) | 1 712 | po wyłączeniu klas MSC, HID, MIDI, vendor i video (−3 380 B) |
+| bufor poleceń diagnostyki | 1 400 | `P1TX` do 600 B szesnastkowo, `USB <json>` do 1 024 B |
+| protokół USB (`usbproto::Protocol`) | 1 124 | wiersz do 1 024 B |
+| FreeRTOS (zegar, bezczynność) i stos USB host rdzenia | 2 702 | host MAX3421 włączony przez rdzeń na stałe (`CFG_TUH_ENABLED` bez `#ifndef`) |
+| stos zadania stacji | 16 384 | poza powyższą sumą (przydział w czasie pracy) |
+
+**Flash 174 592 B** (21,4% z 815 104 B; przed przeglądem 187 844 B): bitmapa fontu 22 204 B, teksty ekranu w trzech językach około 20 KB i kod modelu ekranu 17 KB (`ui.cpp.o` 37 237 B), `main.cpp` 15,0 KB, `store.cpp` 13,8 KB, `measure.cpp` 12,5 KB, `usbproto.cpp` 8,0 KB, `station.cpp` 6,1 KB, `cc1120.cpp` 4,8 KB, `console.cpp` 3,5 KB, `jsonlite.cpp` 3,3 KB, `sa1.cpp` 2,9 KB, `journal.cpp` 2,8 KB, `sharp.cpp` 1,9 KB, `p1frame.cpp` 1,7 KB; reszta to rdzeń Adafruit, FreeRTOS, TinyUSB i newlib (`_dtoa_r`, `_printf_float` i arytmetyka `double`: około 8 KB, które zostają niezależnie od naszych `%f`, bo platforma dołącza `_printf_float` na stałe; zamiana własnych `%f` na formatowanie całkowite nie zmniejszyła obrazu, więc jej nie ma).
+
+Zastosowane:
+
+- wyłączenie nieużywanych klas TinyUSB flagami w `platformio.ini`: −3 380 B RAM, −13 668 B flash;
+- listy ekranu z indeksu w RAM: pozycje WIADOMOŚCI i PRZEKAZANIE ZMIANY biorą numer, kategorię, stan i próby z indeksu kolejki (kategoria dopisana do rekordu i indeksu, +512 B RAM) zamiast czytać rekord 512 B z FRAM dla każdej pozycji przy każdym rysowaniu co 200 ms (128 zgłoszeń: 64 KB SPI, około 80 ms przy 8 MHz); treść komunikatu czyta się tylko dla widocznych wierszy (452 B na pozycję), pełny rekord po otwarciu; test `test_lists_render_from_the_ram_index` liczy bajty odczytu;
+- przegląd kolejki nadawczej (`Station::poll`, 128 wpisów) co 100 ms zamiast w każdym obiegu pętli.
+
+Odłożone (z szacunkiem zysku; każde wymaga osobnej zmiany i testów):
+
+| Zmiana | Zysk | Koszt |
+|---|---|---|
+| frazy z konfiguracji czytane z FRAM na żądanie zamiast w `store::Config` | −3,2 KB RAM | `configure` zapisuje frazy bezpośrednio do FRAM, ekran czyta 97 B na wiersz listy |
+| indeks kolejki bez `to` i skrzynki bez `source` (porównanie po odczycie rekordu) | −4,1 KB RAM | dodatkowy odczyt rekordu przy deduplikacji i `queueFind` |
+| bufor ekranu jako pas jednego wiersza tekstu (48 × 50 B) zamiast całej ramki | −9,6 KB RAM | panel pamięta obraz; każdy wiersz trzeba rysować i wysyłać od razu, `DISPLAY`/`VCOM` bez zmian |
+| lista konsoli jako 4 B na pozycję (numer rekordu z bitem kolejki, czas z indeksu) | −1 KB RAM | sortowanie z odczytem czasu z indeksu |
+| CRC-16 z tablicą 512 B | przegląd FRAM przy starcie szybszy o około 25 ms | +512 B flash; `Store::begin()` czyta około 205 KB (0,3 s przy 8 MHz), CRC bitowe 384 rekordów to około 30 ms |
+| mniejszy font (16 × 32 px) | −10 KB flash | wersaliki 2,8 mm zamiast 3,5 mm, przeciwnie do wymagania ≥4 mm (F80) |
+
+Czasy, które nie wymagają zmian: alarmy sprawdzane co 1 s w indeksie 128 wpisów; `seenGet` czyta 8 KB tylko dla STATUS o nieznanym id; odświeżanie ekranu wysyła wyłącznie zmienione wiersze (240 × 52 B pełnego obrazu to 50 ms przy 2 MHz); składanie datagramu, deduplikacja i kolejność nadawania pracują na indeksach w RAM.
 
 ## Następne kroki
 

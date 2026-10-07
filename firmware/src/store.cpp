@@ -17,7 +17,7 @@ bool seqUsable(uint32_t seq) { return seq != 0 && seq != 0xFFFFFFFF; }
 
 // Układ rekordu 512 B kolejki i skrzynki (część stała): numer 4, czas 4, typ 1, revision 2, event 4,
 // adres 16, id 16, długość 2, treść 256 = 305 B; CRC 2 i znacznik 1 -> 308 B.
-constexpr size_t MSG_IMMUTABLE = 4 + 4 + 1 + 2 + 4 + HASH + HASH + 2 + sa1::MAX_CONTENT + 1;  // + bajt aux
+constexpr size_t MSG_IMMUTABLE = 4 + 4 + 1 + 2 + 4 + HASH + HASH + 2 + sa1::MAX_CONTENT + 2;  // + bajty aux i kategorii
 constexpr size_t QUEUE_STATE = 1 + 2 + 4 + 4 + 1 + 4 + 4;  // flagi, próby, następna próba, event, stan, czas, pierwsze nadanie
 constexpr size_t INBOX_STATE = 1;
 constexpr size_t NOTE_IMMUTABLE = 4 + 4 + 1 + 4 + 2 + NOTE_TEXT;
@@ -31,7 +31,8 @@ static_assert(SEEN_IMMUTABLE + 3 <= SEEN_RECORD, "seen layout");
 static_assert(CONFIG_IMMUTABLE + 3 <= CONFIG_SLOT, "config layout");
 
 void encodeMessageHeader(uint8_t* b, uint32_t seq, uint32_t timeS, uint8_t type, uint16_t revision, uint32_t event,
-                         const uint8_t* address, const uint8_t* id, const char* sa1, uint16_t length, uint8_t aux = 0) {
+                         const uint8_t* address, const uint8_t* id, const char* sa1, uint16_t length, uint8_t aux = 0,
+                         uint8_t category = 0) {
     memset(b, 0, MSG_IMMUTABLE);
     putU32(b, seq);
     putU32(b + 4, timeS);
@@ -43,6 +44,7 @@ void encodeMessageHeader(uint8_t* b, uint32_t seq, uint32_t timeS, uint8_t type,
     putU16(b + 47, length);
     memcpy(b + 49, sa1, length);
     b[49 + sa1::MAX_CONTENT] = aux;
+    b[50 + sa1::MAX_CONTENT] = category;
 }
 
 }  // namespace
@@ -175,6 +177,7 @@ bool Store::begin() {
         e.createdS = getU32(buffer + 4);
         e.type = buffer[8];
         e.aux = buffer[49 + sa1::MAX_CONTENT];
+        e.category = buffer[50 + sa1::MAX_CONTENT];
         e.revision = getU16(buffer + 9);
         e.event = getU32(buffer + 11);
         memcpy(e.to, buffer + 15, HASH);
@@ -357,7 +360,7 @@ Put Store::queuePut(QueueRecord& record, bool resend) {
     uint8_t buffer[RECORD];
     memset(buffer, 0, sizeof(buffer));
     encodeMessageHeader(buffer, seq, record.createdS, record.type, record.revision, record.event, record.to, record.id,
-                        record.sa1, record.sa1Length, record.aux);
+                        record.sa1, record.sa1Length, record.aux, record.category);
     const uint32_t address = QUEUE_BASE + static_cast<uint32_t>(slot) * RECORD;
     // Stary rekord traci znacznik, potem stan (nowa intencja aktywna), potem część stała ze znacznikiem:
     // rekord staje się ważny na końcu.
@@ -387,6 +390,7 @@ Put Store::queuePut(QueueRecord& record, bool resend) {
     e.createdS = record.createdS;
     e.type = record.type;
     e.aux = record.aux;
+    e.category = record.category;
     e.flags = ACTIVE;
     e.revision = record.revision;
     e.event = record.event;
@@ -417,6 +421,7 @@ bool Store::queueRead(uint32_t seq, QueueRecord& record) {
         memcpy(record.sa1, buffer + 49, record.sa1Length);
         record.sa1[record.sa1Length] = '\0';
         record.aux = buffer[49 + sa1::MAX_CONTENT];
+        record.category = buffer[50 + sa1::MAX_CONTENT];
         if (stateValid) {
             const uint8_t* s = buffer + STATE_OFFSET;
             record.flags = s[0];

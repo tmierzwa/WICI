@@ -235,6 +235,7 @@ void Protocol::doSubmit(const json::Value& msg, int64_t seq, uint32_t nowMs) {
     record.revision = m.type == sa1::BULLETIN ? 0 : m.revision;
     record.event = (m.type == sa1::STATUS || m.type == sa1::REPLY || m.type == sa1::BULLETIN) ? m.event : 0;
     record.aux = (m.type == sa1::REQUEST || m.type == sa1::TEST) ? m.urgency : 0;
+    record.category = (m.type == sa1::REQUEST || m.type == sa1::TEST) ? m.category : 0;
     record.createdS = host_.uptimeS();
     bool resend = false;
     fieldBool(msg, "resend", resend);
@@ -280,6 +281,7 @@ void Protocol::doTest(int64_t seq, uint32_t nowMs) {
     recipient(record.to);
     memcpy(record.id, id, store::HASH);
     record.type = sa1::TEST;
+    record.category = 9;
     record.createdS = host_.uptimeS();
     const store::Put put = store_.queuePut(record, false);
     if (put != store::Put::STORED) { rejected(seq, store::putName(put)); return; }
