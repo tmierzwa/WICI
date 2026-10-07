@@ -18,7 +18,7 @@ SEGMENTS = [
         "Brakuje wody. Ktoś potrzebuje leków.",
     ]),
     ("s1d", [
-        "Kilka kilometrów dalej jest straż pożarna, która mogłaby pomóc.",
+        "Kilka kilometrów dalej są gmina i straż, które mogłyby pomóc.",
         "Tylko skąd ma o tym wiedzieć?",
     ]),
     ("s2a", [
@@ -53,11 +53,11 @@ SEGMENTS = [
     ("s4d", [
         "Skoro wiadomość jest tak mała, nie potrzebujemy szybkiego łącza.",
         "Wystarczy proste, powolne radio.",
-        "Takie zgłoszenie przeleci przez eter w mniej niż sekundę.",
+        "Takie zgłoszenie przeleci przez eter w mniej więcej sekundę.",
     ]),
     ("s4e", [
-        "To radio nadaje z mocą podobną do pilota do bramy, na częstotliwości, z której korzystają też czujniki i piloty.",
-        "Może pracować na zwykłym akumulatorze.",
+        "To radio nadaje z mocą podobną do pilota do bramy, na częstotliwości, z której korzystają też inne sieci radiowe.",
+        "Może pracować na zwykłych bateriach.",
     ]),
     ("s5a", [
         "Ale małe radio ma mały zasięg.",
@@ -69,7 +69,7 @@ SEGMENTS = [
     ]),
     ("s5c", [
         "Tutaj robi to każda stacja.",
-        "Odbiera wiadomość od sąsiada i podaje ją dalej, aż dotrze do straży.",
+        "Odbiera wiadomość od sąsiada i podaje ją dalej, aż dotrze do gminy.",
     ]),
     ("s5d", [
         "Ale cudów nie ma.",
@@ -78,24 +78,24 @@ SEGMENTS = [
     ]),
     ("s6a", [
         "Jak wygląda jedna stacja?",
-        "Celowo składamy ją z rzeczy, które zwykle już gdzieś leżą.",
+        "Zestaw ma trzy poziomy. Pierwszy, podstawowy, to małe pudełko z ekranem, kilkoma przyciskami i bateriami.",
     ]),
     ("s6b", [
-        "Stary laptop.",
-        "Zwykły domowy router.",
-        ("Akumulator 12 V.", "Akumulator dwanaście wolt."),
+        "Włączam stację i jestem w sieci.",
+        "Bo antenę zamontowano wcześniej, na zewnątrz i możliwie wysoko.",
     ]),
     ("s6c", [
-        "Dokładamy tylko jedno: mały moduł radiowy z anteną wystawioną za okno.",
+        "Opiekun wybiera przyciskami, czego brakuje i ilu osób to dotyczy.",
+        "A każda włączona stacja podaje dalej wiadomości sąsiadów.",
     ]),
     ("s6d", [
-        ("Mieszkańcy łączą się telefonem z lokalnym Wi-Fi i otwierają zwykłą stronę.",
-         "Mieszkańcy łączą się telefonem z lokalnym łaj-faj i otwierają zwykłą stronę."),
+        "Poziom drugi to stary laptop podłączony do stacji: wygodny panel dla opiekuna.",
+        "Poziom trzeci dodaje domowy router. Wtedy mieszkańcy zgłaszają potrzeby zwykłą stroną w telefonie.",
         "Bez aplikacji, bez konta, bez internetu.",
     ]),
     ("s6e", [
-        "Kto nie ma telefonu, dyktuje zgłoszenie opiekunowi.",
-        "A osobny akumulator ładuje telefony, żeby nie zabierać prądu radiu.",
+        "Laptop i router dostają prąd z akumulatora przez przetwornicę z zestawu.",
+        "A telefony ładuje osobna ładowarka z zestawu, z drugiego akumulatora.",
     ]),
     ("s7a", [
         "Jedna rzecz jest dla nas szczególnie ważna: uczciwe komunikaty.",
@@ -103,8 +103,8 @@ SEGMENTS = [
     ]),
     ("s7b", [
         "Dlatego zgłoszenie przechodzi przez osobne stany.",
-        "Zapisane tutaj.",
-        "Zapisane w straży.",
+        "Zapisane lokalnie.",
+        "Zapisane u odbiorcy.",
         "Przeczytane przez dyżurnego.",
         "Pomoc skierowana.",
     ]),
@@ -114,14 +114,14 @@ SEGMENTS = [
     ]),
     ("s8a", [
         "Gdzie dziś jesteśmy?",
-        "Jest koncepcja, specyfikacja i projekt pierwszej płytki elektroniki.",
+        "Jest koncepcja, specyfikacja i płytka do pomiarów radia. Płytka stacji dopiero powstanie.",
         "Wszystko jest otwarte: schematy, kod i dokumentacja.",
     ]),
     ("s8b", [
         "Ale nic jeszcze nie zostało sprawdzone w terenie.",
         "Nie wiemy, czy kilometr wśród budynków się uda.",
-        "Czy stacja wytrzyma dobę na akumulatorach.",
-        "Czy laptop z szuflady zawsze wystartuje.",
+        "Czy stacja wytrzyma dwie doby na bateriach.",
+        "Czy oprogramowanie sieci zmieści się w małym układzie.",
     ]),
     ("s8c", [
         "To trzeba zmierzyć, a nie założyć.",

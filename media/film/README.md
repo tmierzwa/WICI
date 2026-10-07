@@ -1,14 +1,12 @@
 # Film „WICI: sieć łączności na czas, gdy nic nie działa”
 
-> Film opisuje wariant 0.4: stację z laptopem i routerem oraz odbiorcę „straż”. Zmiany po koncepcji 0.5 (samodzielna stacja, odbiorca w gminie) są zebrane w [ZMIANY-0.5.md](ZMIANY-0.5.md) i czekają na nowy render.
-
 | Plik | Format |
 |---|---|
-| [WICI-film.mp4](WICI-film.mp4), [WICI-film.srt](WICI-film.srt) | 4:19, 1920×1080, 30 kl./s, napisy wypalone w obrazie i osobno |
+| [WICI-film.mp4](WICI-film.mp4), [WICI-film.srt](WICI-film.srt) | 4:41, 1920×1080, 30 kl./s, napisy wypalone w obrazie i osobno |
 | [WICI-short.mp4](WICI-short.mp4), [WICI-short.srt](WICI-short.srt) | 60 s, 1080×1920 na Reels i TikTok; napisy nad interfejsem aplikacji |
 | [plakat.jpg](plakat.jpg) | kadr tytułowy, plakat odtwarzacza na stronie koncepcji |
 
-Animacje: [Manim Community](https://www.manim.community/), font Avenir Next. Lektor: ElevenLabs (`eleven_multilingual_v2`, głos „George”). Efekt planszy tytułowej [sfx/title.mp3](sfx/title.mp3): ElevenLabs sound-generation.
+Animacje: [Manim Community](https://www.manim.community/), font Avenir Next, znak z [media/logo](../logo/README.md). Lektor: ElevenLabs (`eleven_multilingual_v2`, głos „George”). Efekt planszy tytułowej [sfx/title.mp3](sfx/title.mp3): ElevenLabs sound-generation.
 
 | Plik | Rola |
 |---|---|
