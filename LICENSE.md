@@ -10,7 +10,7 @@ Własne materiały: współtwórcy WICI. Licencja zależy od ścieżki i rodzaju
 | `hardware/*/{bom.csv,connections.*,polaczenia.md,uruchomienie.md,przed-produkcja.md,*.pdf}` | CERN-OHL-P-2.0: konstrukcja i pliki do wykonania |
 | `hardware/*/fabrication/`, poza `README.md`, `NOTICE.md` i `LICENSES/` danej rewizji | CERN-OHL-P-2.0: dane i rysunki wykonawcze |
 | `hardware/*/checks/**/*.{kicad_pcb,dsn,ses}`, `hardware/*/checks/*.xml`, `hardware/*/checks/preview/` | CERN-OHL-P-2.0: historyczne źródła i widoki projektu |
-| `hardware/*/cad/symbols/`, `hardware/*/cad/footprints/` poza `WICI.pretty` | CC-BY-SA-4.0 z wyjątkiem KiCad; teksty tej licencji i wyjątku wracają do `LICENSES/` razem z pierwszą biblioteką w CAD R02 (REUSE nie dopuszcza nieużywanych tekstów) |
+| `hardware/*/cad/symbols/`, `hardware/*/cad/footprints/` poza `WICI.pretty` | CC-BY-SA-4.0 z wyjątkiem KiCad; teksty tej licencji i wyjątku są w `LICENSES/`, bo biblioteki używa CAD płytki nośnej stanowiska |
 | `media/logo/`: znak i ikony (litery z kroju Nunito Sans zamienione na krzywe; skrypt `znak.py` na licencji MIT) | CC-BY-4.0 |
 | `media/logo/fonts/`: font Nunito Sans, © The Nunito Sans Project Authors | [SIL OFL 1.1](LICENSES/OFL-1.1.txt) |
 | `firmware/fonts/`: font DejaVu Sans Mono Bold 2.37, © 2003 Bitstream, Inc. (zmiany DejaVu w domenie publicznej); `firmware/src/font_glyphs.h`: bitmapa liter wygenerowana z tego fontu (kod MIT, kształty liter na licencji fontu) | [Bitstream Vera](LICENSES/Bitstream-Vera.txt) |

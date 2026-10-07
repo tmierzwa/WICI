@@ -24,7 +24,7 @@ Sygnały radia leżą na tych pozycjach Arduino, których X-NUCLEO-S2868A2 używ
 
 ## Przypisanie sygnałów
 
-Numery GPIO nRF52840 według złączy Arduino nRF52840-DK (instrukcja Nordic, „Arduino signals routing”, i pliki PCA10056 3.0.3); numery GPIO ESP32-S3 według złączy J1/J3 DevKitC-1 (instrukcja Espressif v1.1). Pełna tabela pinów każdego złącza powstanie w `polaczenia.md`, generowanym ze źródła projektu.
+Numery GPIO nRF52840 według złączy Arduino nRF52840-DK (instrukcja Nordic, „Arduino signals routing”, i pliki PCA10056 3.0.3); numery GPIO ESP32-S3 według złączy J1/J3 DevKitC-1 (instrukcja Espressif v1.1). Pełna tabela pinów każdego złącza jest w [połączeniach](polaczenia.md), generowanych ze źródła projektu.
 
 | Sygnał | Arduino | nRF52840 (A) | ESP32-S3 (B) | CC1120EM (A) | X-NUCLEO-S2868A2 (B) | Na płytce |
 |---|---|---|---|---|---|---|
@@ -77,10 +77,10 @@ Płytka nie ma stabilizatora. Szyna 3,3 V zasila moduł CC1120EM, FRAM i X-NUCLE
 
 | Plik | Zawartość |
 |---|---|
-| `polaczenia.md` | piny każdego złącza i elementu |
+| [połączenia](polaczenia.md) | piny każdego złącza i elementu |
 | `cad/` | projekt KiCad 10.0.6: schemat, PCB, reguły, lokalne biblioteki |
 | `tools/` | generatory schematu i PCB, eksport, kontrole |
 | `checks/` | raporty ERC/DRC i dowody |
-| `bom.csv` | części z MPN |
+| [BOM](bom.csv) | części z MPN |
 | `uruchomienie.md` | montaż i pierwsze włączenie |
 | `przed-produkcja.md` | warunki przed zamówieniem |

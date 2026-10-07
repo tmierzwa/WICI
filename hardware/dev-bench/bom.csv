@@ -1,0 +1,24 @@
+oznaczenia,ilość,wartość,producent,MPN,specyfikacja,footprint,stanowisko,uwagi
+J1 J3,1,ARDUINO POWER,Adafruit,Adafruit 85,"gniazdo przelotowe Arduino R3 z długimi pinami (stacking), 2,54 mm",Connector_PinSocket_2.54mm:PinSocket_1x08_P2.54mm_Vertical,A i B,"zestaw 1x10, 2x 1x8, 1x6; piny od spodu wchodzą w gniazda nRF52840-DK"
+J2,1,ARDUINO A0-A5,Adafruit,Adafruit 85,"gniazdo przelotowe Arduino R3 z długimi pinami (stacking), 2,54 mm",Connector_PinSocket_2.54mm:PinSocket_1x06_P2.54mm_Vertical,A i B,"zestaw 1x10, 2x 1x8, 1x6; piny od spodu wchodzą w gniazda nRF52840-DK"
+J4,1,ARDUINO D8-SCL,Adafruit,Adafruit 85,"gniazdo przelotowe Arduino R3 z długimi pinami (stacking), 2,54 mm",Connector_PinSocket_2.54mm:PinSocket_1x10_P2.54mm_Vertical,A i B,"zestaw 1x10, 2x 1x8, 1x6; piny od spodu wchodzą w gniazda nRF52840-DK"
+J9 J10,2,CC1120EM P1,Samtec,FTS-110-01-L-DV,"listwa męska 2x10, 1,27 mm, THT, piny kwadratowe 0,4 mm (wtyk do Samtec SFM modułu)",Connector_PinHeader_1.27mm:PinHeader_2x10_P1.27mm_Vertical,A,moduł CC1120EM-868-915 wpina się od góry; pin 1 od strony SMA modułu
+J5 J6,2,DEVKITC J1,Sullins,PPTC221LFBN-RC,"gniazdo żeńskie 1x22, 2,54 mm, proste, THT",Connector_PinSocket_2.54mm:PinSocket_1x22_P2.54mm_Vertical,B,ESP32-S3-DevKitC-1 wpina się od góry; pin 1 od strony anteny
+J7 J8,2,SHARP 4694,Sullins,PPTC091LFBN-RC,"gniazdo żeńskie 1x9, 2,54 mm, proste, THT",Connector_PinSocket_2.54mm:PinSocket_1x09_P2.54mm_Vertical,A i B,Adafruit 4694: EIN DISP EMD CS DI CLK GND 3V3 VIN; EMD = H (EXTCOMIN z MCU); 3V3 modułu nie podłączone
+J11,1,ANALIZATOR,Würth Elektronik,61300911121,"listwa męska 1x9, 2,54 mm, THT",Connector_PinHeader_2.54mm:PinHeader_1x09_P2.54mm_Vertical,A i B,analizator stanów logicznych (8 kanałów); pin 1 = GND
+JP1 JP2,2,3V3 DEVKITC,Würth Elektronik,61300211121,"listwa męska 1x2, 2,54 mm, ze zworką",Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical,A i B,"założona tylko w stanowisku B; punkt pomiaru prądu 3,3 V"
+J12,1,VTEST 0-15V,Phoenix Contact,1715721,"zacisk śrubowy 2-pin, 5,08 mm","TerminalBlock_Phoenix:TerminalBlock_Phoenix_MKDS-1,5-2-5.08_1x02_P5.08mm_Horizontal",A i B,napięcie z zasilacza laboratoryjnego do prób progów ogniw i 12 V; najwyżej 15 V
+SW1 SW2 SW3 SW4,4,GÓRA,Omron,B3F-4055,"przycisk 12x12 mm z wysuniętym popychaczem, nasadka Omron B32-1310",Button_Switch_THT:SW_SPST_Omron_B3F-40xx,A i B,"pady 1 wspólne (12,5 mm), pady 2 wspólne; zestyk między grupami 1 i 2"
+SW5,1,CISZA,E-Switch,100SP1T1B4M2QE,"przełącznik dźwigienkowy SPDT ON-NONE-ON, wyprowadzenia PCB 4,70 mm",WICI:Toggle_ESwitch_100SP1T1B4M2QE,A i B,zwarte 1-2 = cisza radiowa (SW_CISZA = L); 2-3 = praca
+SW6,1,PRZYGOTOWANIE,Omron,B3F-1000,przycisk 6x6 mm,Button_Switch_THT:SW_TH_Tactile_Omron_B3F-100x,A i B,na stacji pod plombowaną pokrywą
+D1,1,ALARM,Kingbright,WP7113ID,"LED 5 mm czerwona, rozproszona",LED_THT:LED_D5.0mm,A i B,katoda (pad kwadratowy 1) do masy
+R1 R3,2,1k,Yageo,RC0805FR-071KL,1 kΩ 1% 0805,Resistor_SMD:R_0805_2012Metric,A i B,prąd diody około 1 mA
+BZ1,1,CEM-1203(42),Same Sky (CUI Devices),CEM-1203(42),"brzęczyk magnetyczny 12 mm, sterowany z zewnątrz, 2048 Hz, cewka 42 Ω",Buzzer_Beeper:MagneticBuzzer_ProSignal_ABT-410-RC,A i B,"pad 1 = ""+""; sprawdzić znak ""+"" na obudowie przy montażu"
+R2,1,10R,Yageo,RC0805FR-0710RL,10 Ω 1% 0805,Resistor_SMD:R_0805_2012Metric,A i B,ogranicza prąd przy stałym stanie wysokim BUZZER do około 55 mA
+D2,1,1N4148W,Diodes Incorporated,1N4148W-7-F,"dioda 75 V, SOD-123",Diode_SMD:D_SOD-123,A i B,dioda gasząca cewki brzęczyka
+Q1,1,MMBT3904,onsemi,MMBT3904LT1G,"NPN 40 V 200 mA, SOT-23",Package_TO_SOT_SMD:SOT-23,A i B,klucz brzęczyka
+R4 R12 R14,3,100k,Yageo,RC0805FR-07100KL,100 kΩ 1% 0805,Resistor_SMD:R_0805_2012Metric,A i B,"brzęczyk wyłączony, gdy MCU nie steruje linią"
+R5 R6 R7 R8 R9 R10 R11 R13,8,10k,Yageo,RC0805FR-0710KL,10 kΩ 1% 0805,Resistor_SMD:R_0805_2012Metric,A i B,podciągnięcie wejścia
+R15,1,20k,Yageo,RC0805FR-0720KL,20 kΩ 1% 0805,Resistor_SMD:R_0805_2012Metric,A i B,"VTEST = VTEST_IN / 6; 15 V daje 2,5 V"
+C1 C4,2,10u,Samsung Electro-Mechanics,CL21A106KAYNNNC,10 µF 25 V X5R 0805,Capacitor_SMD:C_0805_2012Metric,A i B,przy zasilaniu modułu radiowego
+C2 C3 C5,3,100n,Samsung Electro-Mechanics,CL21B104KBCNNNC,100 nF 50 V X7R 0805,Capacitor_SMD:C_0805_2012Metric,A i B,
