@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: MIT
-"""Host checks of Arduino-free firmware units: the P1 CRC, the test frame, the FRAM journal and the P1 frame codec."""
+"""Host checks of Arduino-free firmware units: the P1 CRC, the test frame, the FRAM journal, the P1 frame codec,
+the screen model with its texts and the bitmap font."""
 
 from pathlib import Path
 import shutil
@@ -13,6 +14,9 @@ SRC = ROOT / "firmware" / "src"
 sys.path.insert(0, str(ROOT / "software" / "reference"))
 from reference import PREFIX, crc16, fragment  # noqa: E402
 
+sys.path.insert(0, str(ROOT / "firmware" / "tools"))
+import ui_texts  # noqa: E402
+
 HARNESS = r"""
 #include <cstdio>
 #include <cstdlib>
@@ -22,6 +26,8 @@ HARNESS = r"""
 #include "journal.h"
 #include "p1frame.h"
 #include "testframe.h"
+#include "font.h"
+#include "ui.h"
 
 // FRAM w RAM: 512 KiB skasowane do 0xFF jak nowy układ.
 struct RamStorage : journal::Storage {
@@ -141,7 +147,67 @@ int assembleScript() {
     return 0;
 }
 
+// Model ekranu sterowany z wejścia: "L <0-2>" język po restarcie, "S <0-2>" start z wyborem języka,
+// "K <UP|DOWN|OK|BACK> <ms>" przycisk, "T <ms>" bezczynność, "P <0|1>" tryb przygotowania,
+// "Q <0|1>" cisza, "O <0|1>" radio, "U <s>" kontakt, "N <n>" nowe, "C <n> <s>" kolejka,
+// "V <mV>" napięcie, "X <rxok> <rxbad> <tx> <drop> <defer> <debt_ms>", "F <hz>" odchyłka,
+// "R" wypisuje ekran, "W <tekst>" łamie tekst, "D <s>" formatuje czas, "G <tekst>" sprawdza glify.
+int uiScript() {
+    ui::Model model;
+    model.start(ui::Lang::PL);
+    ui::Status status;
+    status.version = "bench-a-test";
+    status.name = "WICI-000000";
+    const char* const names[] = {"UP", "DOWN", "OK", "BACK"};
+    char line[512];
+    while (fgets(line, sizeof(line), stdin)) {
+        unsigned a = 0, b = 0, c = 0, d = 0, e = 0, f = 0;
+        char word[16];
+        char* nl = strchr(line, '\n');
+        if (nl) *nl = '\0';
+        if (sscanf(line, "L %u", &a) == 1) model.restore(static_cast<ui::Lang>(a), ui::Screen::MAIN);
+        else if (sscanf(line, "S %u", &a) == 1) model.start(static_cast<ui::Lang>(a));
+        else if (sscanf(line, "K %15s %u", word, &a) == 2) {
+            size_t i = 0;
+            while (i < 4 && strcmp(word, names[i])) ++i;
+            if (i < 4) model.press(static_cast<ui::Button>(i), a);
+        } else if (sscanf(line, "T %u", &a) == 1) model.tick(a);
+        else if (sscanf(line, "P %u", &a) == 1) status.prep = a;
+        else if (sscanf(line, "Q %u", &a) == 1) status.silence = a;
+        else if (sscanf(line, "O %u", &a) == 1) status.radioOk = a;
+        else if (sscanf(line, "U %u", &a) == 1) status.contactS = a;
+        else if (sscanf(line, "N %u", &a) == 1) status.newMessages = a;
+        else if (sscanf(line, "C %u %u", &a, &b) == 2) { status.queued = a; status.queueAgeS = b; }
+        else if (sscanf(line, "V %u", &a) == 1) status.millivolts = static_cast<uint16_t>(a);
+        else if (sscanf(line, "X %u %u %u %u %u %u", &a, &b, &c, &d, &e, &f) == 6) {
+            status.rxOk = a; status.rxBad = b; status.txDatagrams = c; status.txDrop = d; status.deferrals = e; status.debtMs = f;
+        } else if (sscanf(line, "F %u", &a) == 1) { status.foffValid = true; status.foffHz = static_cast<int32_t>(a); }
+        else if (line[0] == 'R') {
+            ui::Lines lines;
+            model.render(status, lines);
+            printf("screen %s %d\n", ui::screenName(model.screen()), static_cast<int>(model.language()));
+            for (size_t i = 0; i < ui::LINES; ++i) printf("%d|%s\n", lines.inverted[i], lines.text[i]);
+        } else if (line[0] == 'W') {
+            char out[8][ui::LINE_BYTES];
+            const size_t n = ui::wrap(line + 2, out, 8);
+            printf("wrap %zu\n", n);
+            for (size_t i = 0; i < n; ++i) printf("|%s\n", out[i]);
+        } else if (sscanf(line, "D %u", &a) == 1) {
+            char out[3][24];
+            for (size_t l = 0; l < 3; ++l) ui::duration(a, static_cast<ui::Lang>(l), out[l], sizeof(out[l]));
+            printf("%s|%s|%s\n", out[0], out[1], out[2]);
+        } else if (line[0] == 'G') {
+            const char* p = line + 2;
+            size_t missing = 0, total = 0;
+            for (uint32_t cp = font::next(p); cp; cp = font::next(p)) { ++total; if (!font::has(cp)) ++missing; }
+            printf("glyphs %zu %zu\n", total, missing);
+        }
+    }
+    return 0;
+}
+
 int main(int argc, char** argv) {
+    if (argc == 2 && !strcmp(argv[1], "ui")) return uiScript();
     if (argc == 3 && !strcmp(argv[1], "crc")) {
         printf("%04X\n", p1::crc16(reinterpret_cast<const uint8_t*>(argv[2]), strlen(argv[2])));
         return 0;
@@ -187,7 +253,8 @@ class HostUnitTests(unittest.TestCase):
         (root / "harness.cpp").write_text(HARNESS, encoding="utf-8")
         cls.binary = root / "harness"
         subprocess.run([compiler(), "-std=c++17", "-Wall", "-Wextra", "-Werror", f"-I{SRC}", str(root / "harness.cpp"),
-                        str(SRC / "testframe.cpp"), str(SRC / "journal.cpp"), str(SRC / "p1frame.cpp"), "-o", str(cls.binary)],
+                        str(SRC / "testframe.cpp"), str(SRC / "journal.cpp"), str(SRC / "p1frame.cpp"), str(SRC / "ui.cpp"),
+                        str(SRC / "font.cpp"), "-o", str(cls.binary)],
                        check=True)
 
     @classmethod
@@ -300,6 +367,108 @@ class HostUnitTests(unittest.TestCase):
             "events 100 3 600 1 e600 1 e89 0",
             "long 53",
         ])
+
+    def ui(self, script):
+        return subprocess.run([str(self.binary), "ui"], input="\n".join(script) + "\n", capture_output=True, text=True,
+                              check=True).stdout.splitlines()
+
+    @staticmethod
+    def screens(out):
+        """Split harness output into (screen name, language, [(inverted, text)]) tuples."""
+        result = []
+        i = 0
+        while i < len(out):
+            if out[i].startswith("screen "):
+                _, name, lang = out[i].split()
+                lines = [(row[0] == "1", row[2:]) for row in out[i + 1:i + 6]]
+                result.append((name, int(lang), lines))
+                i += 6
+            else:
+                i += 1
+        return result
+
+    def test_screen_language_choice_then_main_screen(self):
+        texts = ui_texts.load()["texts"]
+        out = self.ui(["S 0", "O 1", "R", "K DOWN 0", "R", "K OK 1", "R", "K BACK 2", "R"])
+        first, moved, main, still = self.screens(out)
+        self.assertEqual(first[0], "language")
+        self.assertEqual([t for _, t in first[2]], ["POLSKI", "УКРАЇНСЬКА", "ENGLISH", "", ""])
+        self.assertEqual([inv for inv, _ in first[2]], [True, False, False, False, False])
+        self.assertEqual([inv for inv, _ in moved[2]], [False, True, False, False, False])
+        self.assertEqual((main[0], main[1]), ("main", 1))
+        self.assertEqual(main[2][0][1], texts["radio_wlaczone"][1])
+        self.assertEqual(main[2][1][1], texts["kontakt_ponad_krotki"][1].replace("[czas]", "0 ХВ"))
+        self.assertEqual(main[2][2][1], texts["zasilanie_12v"][1].replace("[x]", "0,0"))
+        self.assertEqual(main[2][3][1], "")
+        self.assertEqual(main[2][4][1], texts["nowe_krotki"][1].replace("[n]", "0"))
+        self.assertEqual(still[0], "main")  # WSTECZ na ekranie głównym nic nie zmienia
+
+    def test_short_forms_fit_twenty_columns_with_largest_values(self):
+        # oprogramowanie.md: krótkie formy <= 20 znaków po wstawieniu największych wartości w każdym języku.
+        texts = ui_texts.load()["texts"]
+        for lang in range(3):
+            unit = ui_texts.UNITS[ui_texts.LANGS[lang]][0]
+            out = self.ui([f"L {lang}", "O 1", "U 5940", "N 128", "C 128 5940", "V 13800", "R", "P 1", "R", "Q 1", "R"])
+            plain, prep, silence = self.screens(out)
+            expected = [
+                texts["radio_wlaczone"][lang],
+                texts["kontakt_ponad_krotki"][lang].replace("[czas]", f"99 {unit}"),
+                texts["zasilanie_12v"][lang].replace("[x]", "13" + ui_texts.DECIMAL[ui_texts.LANGS[lang]] + "8"),
+                texts["kolejka_krotki"][lang].replace("[n]", "128").replace("[czas]", f"99 {unit}"),
+                texts["nowe_krotki"][lang].replace("[n]", "128"),
+            ]
+            self.assertEqual([t for _, t in plain[2]], expected, lang)
+            for text in expected:
+                self.assertLessEqual(len(text), 20, text)
+            self.assertEqual([t for _, t in prep[2]], [texts["tryb_przygotowania"][lang]] + expected[:4], lang)
+            # Cisza: pełny tekst `cisza` w wierszach 1-3, potem zasilanie i kolejka.
+            silence_lines = [t for _, t in silence[2]]
+            self.assertEqual(silence_lines[0], texts["tryb_przygotowania"][lang])
+            self.assertEqual(" ".join(silence_lines[1:4]), texts["cisza"][lang])
+            self.assertEqual(silence_lines[4], expected[2])
+
+    def test_menu_status_and_language_navigation(self):
+        data = ui_texts.load()
+        menu = [strings[0] for _, strings in data["menu"]]
+        out = self.ui(["L 0", "O 1", "X 12 3 4 1 7 16228", "F 123", "K OK 0", "R", "K DOWN 0", "K DOWN 0", "K DOWN 0", "R",
+                       "K OK 0", "R"] + ["K DOWN 0"] * 12 + ["R",
+                       "K BACK 0", "R", "K DOWN 0", "K OK 0", "R", "K DOWN 0", "K DOWN 0", "K OK 0", "R", "K BACK 0", "R",
+                       "K OK 0", "K OK 0", "R", "T 179999", "R", "T 180000", "R"])
+        screens = self.screens(out)
+        self.assertEqual([s[0] for s in screens],
+                         ["menu", "menu", "status", "status", "menu", "language_menu", "menu", "main", "item", "item", "main"])
+        self.assertEqual([t for _, t in screens[0][2]], menu)
+        self.assertEqual([inv for inv, _ in screens[0][2]], [True, False, False, False, False])
+        self.assertEqual([inv for inv, _ in screens[1][2]], [False, False, False, True, False])
+        status_top = [t for _, t in screens[2][2]]
+        self.assertEqual(status_top[:5], [data["texts"]["radio_wlaczone"][0], "RX OK 12", "RX BAD 3", "TX 4 DROP 1", "DEFER 7"])
+        status_end = [t for _, t in screens[3][2]]
+        self.assertEqual(status_end[-2:], ["bench-a-test", "WICI-000000"])
+        self.assertIn("FOFF +123 HZ", status_end)
+        self.assertEqual([inv for inv, _ in screens[4][2]], [False, False, False, True, False])  # kursor wraca na STAN
+        self.assertEqual([t for _, t in screens[5][2]][:3], ["POLSKI", "УКРАЇНСЬКА", "ENGLISH"])
+        self.assertEqual(screens[6][1], 2)  # wybrano ENGLISH, powrót do menu
+        self.assertEqual([t for _, t in screens[6][2]], [strings[2] for _, strings in data["menu"]])
+        self.assertEqual([t for _, t in screens[8][2]][0], "REQUEST")
+        self.assertEqual(screens[9][0], "item")   # 179 999 ms bez naciśnięcia: ekran zostaje
+        self.assertEqual(screens[10][0], "main")  # 3 min bezczynności: ekran główny
+
+    def test_wrap_duration_and_glyph_coverage(self):
+        data = ui_texts.load()
+        texts = data["texts"]
+        long_pl = texts["pilnosc_2_potw"][0]
+        out = self.ui([f"W {long_pl}", "D 5940", "D 6000", "D 172799", "D 172800", "D 9000000", "W " + "A" * 45])
+        count = int(out[0].split()[1])
+        lines = [row[1:] for row in out[1:1 + count]]
+        self.assertEqual(" ".join(lines), long_pl)
+        self.assertTrue(all(len(line) <= 20 for line in lines), lines)
+        self.assertEqual(out[1 + count:1 + count + 5], ["99 MIN|99 ХВ|99 MIN", "1 H|1 ГОД|1 H", "47 H|47 ГОД|47 H",
+                                                       "2 D|2 Д|2 D", "99 D|99 Д|99 D"])
+        self.assertEqual(out[1 + count + 5:], ["wrap 3", "|" + "A" * 20, "|" + "A" * 20, "|" + "A" * 5])
+        # Każdy znak każdego tekstu kanonicznego ma glif w foncie.
+        every = "".join(sorted(ui_texts.charset(data)))
+        self.assertEqual(self.ui([f"G {every}"]), [f"glyphs {len(every)} 0"])
+        self.assertEqual(self.ui(["G ĄĆĘŁŃÓŚŹŻąćęłńóśźż ҐґЇїЄєІі 漢"]), ["glyphs 29 1"])
 
     def test_rejects_bad_lengths(self):
         with self.assertRaises(subprocess.CalledProcessError):

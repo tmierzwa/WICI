@@ -5,8 +5,9 @@
 // polecenia pomiarowe TXCW, TXPKT, RXPER, FOFF w trybie przygotowania, dziennik
 // w FRAM (dług ciszy, zegar czasu pracy z liczbą restartów, zdarzenia), odczyt
 // częstotliwości i RSSI, łącze P1 (odbiór i składanie datagramów, nadawanie z CCA,
-// odroczeniem i długiem ciszy), przyciski i diody płytki. Bez stosu Reticulum
-// i ekranu (następne kroki).
+// odroczeniem i długiem ciszy), ekran Sharp z EXTCOMIN z licznika RTC2 i przyciski
+// płytki jako menu stacji (wybór języka, ekran główny, cisza, STAN). Bez stosu Reticulum
+// (następne kroki).
 #include <Arduino.h>
 #include <Adafruit_TinyUSB.h>
 #include <SPI.h>
@@ -18,6 +19,8 @@
 #include "measure.h"
 #include "p1_registers.h"
 #include "p1frame.h"
+#include "sharp.h"
+#include "ui.h"
 
 #ifndef WICI_FW_VERSION
 #define WICI_FW_VERSION "bench-a-dev"
@@ -29,6 +32,25 @@ cc1120::Radio radio(SPI, board::RADIO_CS, board::RADIO_RESET, board::SPI_HZ);
 fram::Memory memory(SPI, board::FRAM_CS, board::SPI_HZ);
 journal::Journal stationJournal(memory);
 measure::Bench bench(radio, board::RADIO_GPIO2, board::BTN_OK, board::LED_HEARTBEAT);
+sharp::Display display(SPI, board::DISPLAY_CS, board::DISPLAY_EXTCOMIN);
+ui::Model station;
+ui::Lines shown;                 // wiersze wysłane na ekran
+bool buttonWas[4] = {};          // stan przycisków po ostatnim odpytaniu (zbocze = naciśnięcie)
+uint32_t buttonPollMs = 0;
+constexpr uint32_t BUTTON_POLL_MS = 10;   // odpytywanie przycisków (drgania styków)
+constexpr uint32_t SCREEN_POLL_MS = 200;  // odświeżanie ekranu po zmianie treści
+char stationName[12];            // WICI-xxxxxx z identyfikatora układu (FICR)
+
+// Pamięć niezerowana przy starcie: po restarcie programowym albo przez watchdog zostaje język
+// i ekran, więc stacja wraca tam, gdzie była; po włączeniu zasilania słowa są przypadkowe.
+struct Retained {
+    uint32_t magic;
+    uint32_t check;
+    uint8_t lang;
+    uint8_t screen;
+};
+constexpr uint32_t RETAINED_MAGIC = 0x57494349;  // "WICI"
+Retained retained __attribute__((section(".noinit")));
 
 bool radioOk = false;
 bool framOk = false;
@@ -52,6 +74,117 @@ bool pressed(uint8_t pin) { return digitalRead(pin) == LOW; }
 const char* boolName(bool value) { return value ? "true" : "false"; }
 
 uint32_t uptimeS() { return uptimeBaseS + millis() / 1000; }
+
+const char* langName(ui::Lang lang) { return lang == ui::Lang::PL ? "PL" : lang == ui::Lang::UK ? "UK" : "EN"; }
+
+void retain() {
+    retained.lang = static_cast<uint8_t>(station.language());
+    retained.screen = static_cast<uint8_t>(station.screen());
+    retained.magic = RETAINED_MAGIC;
+    retained.check = ~RETAINED_MAGIC;
+}
+
+// Stan stacji dla ekranu: wartości ze stanowiska (brak pomiaru napięcia i kontaktu z odbiorcą).
+ui::Status screenStatus() {
+    ui::Status s;
+    const measure::LinkCounters& c = bench.link();
+    s.prep = bench.prep;
+    s.silence = bench.silence;
+    s.radioOk = radioOk && p1Ok;
+    s.contactKnown = false;          // bez odbiorcy: dolne oszacowanie z czasu pracy
+    s.contactS = uptimeS();
+    s.mains12 = true;
+    s.millivolts = 0;                // stanowisko nie mierzy napięcia (INFO: mv = 0)
+    s.queued = 0;
+    s.newMessages = c.rxDatagrams;   // złożone datagramy P1
+    s.rxOk = c.rxOk;
+    s.rxBad = c.rxBad;
+    s.txDatagrams = c.txDatagrams;
+    s.txDrop = c.txDrop;
+    s.deferrals = c.deferrals;
+    s.debtMs = bench.debtRemainingMs();
+    s.foffValid = radioOk && c.rxOk > 0;
+    s.foffHz = static_cast<int32_t>(radio.frequencyOffsetEstimate() * (p1::F_XOSC_HZ / 262144.0 / p1::LO_DIVIDER));
+    s.version = WICI_FW_VERSION;
+    s.name = stationName;
+    return s;
+}
+
+// Rysuje tylko zmienione wiersze i wysyła je na ekran.
+void updateScreen(bool force) {
+    ui::Lines lines;
+    station.render(screenStatus(), lines);
+    for (size_t i = 0; i < ui::LINES; ++i) {
+        if (force || strcmp(lines.text[i], shown.text[i]) || lines.inverted[i] != shown.inverted[i]) {
+            display.drawLine(static_cast<uint8_t>(i), lines.text[i], lines.inverted[i]);
+        }
+    }
+    shown = lines;
+    display.refresh();
+}
+
+void printScreen() {
+    Serial.printf("{\"screen\":\"%s\",\"lang\":\"%s\",\"lines\":[", ui::screenName(station.screen()), langName(station.language()));
+    for (size_t i = 0; i < ui::LINES; ++i) {
+        Serial.print('"');
+        for (const char* p = shown.text[i]; *p; ++p) {
+            if (*p == '"' || *p == '\\') Serial.print('\\');
+            Serial.print(*p);
+        }
+        Serial.printf("\"%s", i + 1 < ui::LINES ? "," : "");
+    }
+    Serial.print("],\"inverted\":[");
+    for (size_t i = 0; i < ui::LINES; ++i) Serial.printf("%s%s", boolName(shown.inverted[i]), i + 1 < ui::LINES ? "," : "");
+    Serial.printf("],\"refreshes\":%lu}\n", static_cast<unsigned long>(display.refreshes()));
+}
+
+void printDisplay() {
+    Serial.printf("{\"extcomin\":\"RTC2\",\"counter\":%lu,\"level\":%s,\"software_vcom\":%s,\"refreshes\":%lu,\"cs\":%u,\"extcomin_pin\":%u}\n",
+                  static_cast<unsigned long>(display.extcominCounter()), boolName(display.extcominLevel()),
+                  boolName(display.softwareVcom()), static_cast<unsigned long>(display.refreshes()), board::DISPLAY_CS,
+                  board::DISPLAY_EXTCOMIN);
+}
+
+// Zapis języka i ekranu w FRAM i w pamięci niezerowanej po każdej zmianie.
+void persistScreen() {
+    if (!station.takeChange()) return;
+    retain();
+    if (journalOk && !stationJournal.writeSettings(static_cast<uint32_t>(station.language()) + 1,
+                                                   static_cast<uint32_t>(station.screen()))) {
+        journalOk = false;
+        ledWrite(board::LED_FRAM, false);
+    }
+}
+
+// Po włączeniu zasilania: wybór języka; po restarcie programowym: język i ekran sprzed restartu.
+void beginScreen() {
+    const uint32_t id = NRF_FICR->DEVICEID[0];
+    snprintf(stationName, sizeof(stationName), "WICI-%06lX", static_cast<unsigned long>(id & 0xFFFFFF));
+    const journal::SmallRecord& saved = stationJournal.settings();
+    const ui::Lang savedLang = journalOk && saved.a >= 1 && saved.a <= ui_texts::LANGS ? static_cast<ui::Lang>(saved.a - 1) : ui::Lang::PL;
+    if (retained.magic == RETAINED_MAGIC && retained.check == ~RETAINED_MAGIC && retained.lang < ui_texts::LANGS) {
+        station.restore(static_cast<ui::Lang>(retained.lang), static_cast<ui::Screen>(retained.screen));
+        bench.log("screen restored after restart");
+    } else {
+        station.start(savedLang);
+    }
+    retain();
+    updateScreen(true);
+}
+
+void pollButtons(uint32_t now) {
+    if (now - buttonPollMs < BUTTON_POLL_MS) return;
+    buttonPollMs = now;
+    for (size_t i = 0; i < 4; ++i) {
+        const bool is = pressed(buttons[i]);
+        if (is && !buttonWas[i]) station.press(static_cast<ui::Button>(i), now);
+        buttonWas[i] = is;
+    }
+}
+
+void syncButtons() {
+    for (size_t i = 0; i < 4; ++i) buttonWas[i] = pressed(buttons[i]);  // po poleceniu blokującym (CONDUCTED, PREP)
+}
 
 void printError(const char* text) { Serial.printf("{\"error\":\"%s\"}\n", text); }
 
@@ -130,14 +263,16 @@ void printInfo() {
                   "\"src\":\"USB\",\"mv\":0,\"tx_wait_ms\":%lu,\"rx_ok\":%lu,\"rx_bad\":%lu,\"tx_drop\":%lu,\"restarts\":%lu,"
                   "\"bench\":\"A\",\"prep\":%s,\"silence\":%s,\"radio_ok\":%s,\"p1_ok\":%s,\"fram_ok\":%s,\"journal_ok\":%s,"
                   "\"journal_resets\":%lu,\"carrier_hz\":%lu,\"symbol_rate\":%u,\"deviation_hz\":%u,\"rx_filter_hz\":%u,"
-                  "\"tx_power_dbm\":%d,\"uptime_s\":%lu,\"boot_s\":%lu}\n",
+                  "\"tx_power_dbm\":%d,\"uptime_s\":%lu,\"boot_s\":%lu,\"screen\":\"%s\",\"lang\":\"%s\",\"name\":\"%s\","
+                  "\"reset_reason\":\"0x%08lX\"}\n",
                   WICI_FW_VERSION, static_cast<unsigned long>(bench.debtRemainingMs()), static_cast<unsigned long>(c.rxOk),
                   static_cast<unsigned long>(c.rxBad), static_cast<unsigned long>(c.txDrop),
                   static_cast<unsigned long>(restarts), boolName(bench.prep),
                   boolName(bench.silence), boolName(radioOk), boolName(p1Ok), boolName(framOk), boolName(journalOk),
                   static_cast<unsigned long>(journalResets), static_cast<unsigned long>(p1::CARRIER_HZ), p1::SYMBOL_RATE,
                   p1::DEVIATION_HZ, p1::RX_FILTER_HZ, p1::TX_POWER_DBM, static_cast<unsigned long>(uptimeS()),
-                  static_cast<unsigned long>(millis() / 1000));
+                  static_cast<unsigned long>(millis() / 1000), ui::screenName(station.screen()), langName(station.language()),
+                  stationName, static_cast<unsigned long>(readResetReason()));
 }
 
 void printJournal() {
@@ -192,7 +327,8 @@ void printHelp() {
     Serial.println("{\"commands\":[\"HELP\",\"INFO\",\"RADIO\",\"RESET\",\"CONFIG\",\"VERIFY\",\"CAL\",\"FREQ\","
                    "\"PREP <0|1>\",\"SILENCE <0|1>\",\"TXCW <s> [CONDUCTED]\",\"TXPKT <n> <len> [<ms>] [CONDUCTED]\","
                    "\"RX [<len>]\",\"RXPER\",\"FOFF [<hz>]\",\"P1RX\",\"P1TX <hex>\",\"P1\",\"STOP\",\"LOG [<n>]\",\"JOURNAL\",\"BENCH\",\"IDLE\",\"RSSI\",\"STATE\","
-                   "\"REG <hex>\",\"FRAM\",\"BTN\",\"LED <1-4> <0|1>\"]}");
+                   "\"REG <hex>\",\"FRAM\",\"BTN\",\"LED <1-4> <0|1>\",\"SCREEN\",\"KEY <UP|DOWN|OK|BACK>\",\"DISPLAY\","
+                   "\"VCOM <0|1>\",\"REBOOT\"]}");
 }
 
 // Argumenty po poleceniu: do czterech słów; zwraca liczbę słów.
@@ -328,6 +464,27 @@ void handle(char* cmd) {
             ledWrite(leds[index - 1], atoi(words[1]) != 0);
             Serial.printf("{\"led\":%d,\"on\":%s}\n", index, boolName(atoi(words[1]) != 0));
         } else printError("LED <1-4> <0|1>");
+    } else if (!strcmp(cmd, "SCREEN")) printScreen();
+    else if (!strcmp(cmd, "KEY") && n == 1) {
+        // Przycisk z portu USB (do prób bez dotykania płytki); odpowiedź jak SCREEN po odświeżeniu.
+        const char* const names[] = {"UP", "DOWN", "OK", "BACK"};
+        size_t index = 0;
+        while (index < 4 && strcmp(words[0], names[index])) ++index;
+        if (index == 4) { printError("KEY <UP|DOWN|OK|BACK>"); return; }
+        station.press(static_cast<ui::Button>(index), millis());
+        persistScreen();
+        updateScreen(false);
+        printScreen();
+    } else if (!strcmp(cmd, "DISPLAY")) printDisplay();
+    else if (!strcmp(cmd, "VCOM") && n == 1) {
+        display.softwareVcom(atoi(words[0]) != 0);  // zapasowo, gdy zworka EXTMODE płytki jest niska
+        printDisplay();
+    } else if (!strcmp(cmd, "REBOOT")) {
+        // Restart programowy: pamięć niezerowana zostaje, więc ekran i język wracają (jak po watchdogu).
+        Serial.println("{\"reboot\":true}");
+        Serial.flush();
+        delay(20);
+        NVIC_SystemReset();
     } else if (!strcmp(cmd, "HELP") || !*cmd) printHelp();
     else Serial.printf("{\"error\":\"unknown\",\"cmd\":\"%s\"}\n", cmd);
 }
@@ -337,7 +494,7 @@ void pollSerial() {
         const char c = static_cast<char>(Serial.read());
         if (c == '\n' || c == '\r') {
             line[lineLength] = '\0';
-            if (lineLength) handle(line);
+            if (lineLength) { handle(line); syncButtons(); }
             lineLength = 0;
         } else if (lineLength < sizeof(line) - 1) {
             line[lineLength++] = c;
@@ -348,6 +505,8 @@ void pollSerial() {
 }  // namespace
 
 void setup() {
+    pinMode(board::DISPLAY_CS, OUTPUT);  // CS ekranu aktywny stanem wysokim: najpierw w stan niski
+    digitalWrite(board::DISPLAY_CS, LOW);
     for (uint8_t pin : leds) { pinMode(pin, OUTPUT); ledWrite(pin, false); }
     for (uint8_t pin : buttons) pinMode(pin, INPUT_PULLUP);
     pinMode(board::RADIO_GPIO0, INPUT);
@@ -367,6 +526,9 @@ void setup() {
     framOk = memory.identify().mb85rs4m;
     beginJournal();
     ledWrite(board::LED_FRAM, framOk && journalOk);  // LED3 świeci dopiero z działającym dziennikiem
+    display.begin();
+    beginScreen();
+    syncButtons();
 }
 
 void loop() {
@@ -404,4 +566,13 @@ void loop() {
     }
     if (radioOk) bench.poll();
     pollSerial();
+    pollButtons(now);
+    station.tick(now);
+    persistScreen();
+    static uint32_t lastScreen = 0;
+    if (now - lastScreen >= SCREEN_POLL_MS) {
+        lastScreen = now;
+        updateScreen(false);
+    }
+    display.maintain(now);
 }

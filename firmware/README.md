@@ -1,27 +1,31 @@
 # WICI: oprogramowanie stacji
 
-Katalog zawiera oprogramowanie układowe stacji. Obecny stan to pierwsze kroki na [stanowisku deweloperskim A](../hardware/dev-bench/README.md): nRF52840-DK z modułem TI CC1120EM-868-915 i pamięcią FRAM na złączu Arduino płytki. Środowisko `bench-a` w `platformio.ini` buduje obraz, który po podłączeniu USB zgłasza się poleceniem `INFO` w formacie ze [specyfikacji radia](../docs/spec/radio.md#usb-do-laptopa), identyfikuje układ radiowy i FRAM przez SPI, zapisuje do CC1120 [rejestry profilu P1](#rejestry-profilu-p1) z weryfikacją odczytu i kalibracją syntezera, wykonuje [polecenia pomiarowe](#polecenia-pomiarowe) `TXCW`, `TXPKT`, `RXPER`, `FOFF` ze specyfikacji, prowadzi [dziennik w FRAM](#dziennik-w-fram) (dług ciszy, zegar czasu pracy z liczbą restartów, zdarzenia), obsługuje [łącze P1](#łącze-p1) (odbiór i składanie datagramów, nadawanie z CCA, odroczeniem i długiem ciszy), podaje zaprogramowaną częstotliwość i RSSI oraz obsługuje przyciski i diody płytki. Nie ma jeszcze stosu Reticulum, ekranu ani drugiego interfejsu CDC.
+Katalog zawiera oprogramowanie układowe stacji. Obecny stan to pierwsze kroki na [stanowisku deweloperskim A](../hardware/dev-bench/README.md): nRF52840-DK z modułem TI CC1120EM-868-915 i pamięcią FRAM na złączu Arduino płytki. Środowisko `bench-a` w `platformio.ini` buduje obraz, który po podłączeniu USB zgłasza się poleceniem `INFO` w formacie ze [specyfikacji radia](../docs/spec/radio.md#usb-do-laptopa), identyfikuje układ radiowy i FRAM przez SPI, zapisuje do CC1120 [rejestry profilu P1](#rejestry-profilu-p1) z weryfikacją odczytu i kalibracją syntezera, wykonuje [polecenia pomiarowe](#polecenia-pomiarowe) `TXCW`, `TXPKT`, `RXPER`, `FOFF` ze specyfikacji, prowadzi [dziennik w FRAM](#dziennik-w-fram) (dług ciszy, zegar czasu pracy z liczbą restartów, zdarzenia), obsługuje [łącze P1](#łącze-p1) (odbiór i składanie datagramów, nadawanie z CCA, odroczeniem i długiem ciszy), podaje zaprogramowaną częstotliwość i RSSI, prowadzi [ekran Sharp i menu stacji](#ekran-i-przyciski) na przyciskach płytki (wybór języka, ekran główny, cisza, STAN; EXTCOMIN z licznika RTC2) oraz obsługuje diody płytki. Nie ma jeszcze stosu Reticulum ani drugiego interfejsu CDC.
 
-Obraz skompilowano (PlatformIO, rdzeń Adafruit nRF52 1.7.0, 18 196 B RAM, 86 328 B flash). **Nie uruchomiono go na sprzęcie**: odpowiedzi poleceń, numery pinów, działanie SPI z modułem i przyjęcie rejestrów przez układ wymagają sprawdzenia na płytce według kroków niżej.
+Obraz skompilowano (PlatformIO, rdzeń Adafruit nRF52 1.7.0, 30 620 B RAM, 130 392 B flash; z tego bufor ekranu 12 000 B RAM i bitmapa fontu 21 840 B flash). **Nie uruchomiono go na sprzęcie**: odpowiedzi poleceń, numery pinów, działanie SPI z modułem i przyjęcie rejestrów przez układ wymagają sprawdzenia na płytce według kroków niżej.
 
 ## Okablowanie stanowiska A
 
 Numery pinów są w `src/board_bench_a.h`. Płytka DK pracuje domyślnie z VDD = 3,0 V, co mieści się w zakresie CC1120 (2,0–3,6 V) i FRAM; moduł zasila się z pinu VDD płytki, nie z 5 V. Złącza EM są na spodzie modułu, a widok od spodu odwraca obraz: przed włączeniem sprawdzić każdą żyłę miernikiem.
 
-| Sygnał | Złącze Arduino DK | GPIO nRF52840 | Moduł CC1120EM | FRAM Adafruit 4719 |
-|---|---|---|---|---|
-| SCK | D13 | P1.15 | P1.16 | SCK |
-| MOSI | D11 | P1.13 | P1.18 | MOSI |
-| MISO | D12 | P1.14 | P1.20 | MISO |
-| CSn radia | D10 | P1.12 | P1.14 | |
-| RESET_N radia | D8 | P1.10 | P2.15 | |
-| GPIO0 radia | D2 | P1.03 | P1.10 | |
-| GPIO2 radia | D3 | P1.04 | P1.12 | |
-| CS FRAM | D9 | P1.11 | | CS |
-| 3,0 V | VDD | | P2.7 (P2.9 to ten sam węzeł) | VIN |
-| GND | GND | | P1.1, P1.19, P2.2 | GND |
+| Sygnał | Złącze Arduino DK | GPIO nRF52840 | Moduł CC1120EM | FRAM Adafruit 4719 | Ekran Adafruit 4694 |
+|---|---|---|---|---|---|
+| SCK | D13 | P1.15 | P1.16 | SCK | CLK |
+| MOSI | D11 | P1.13 | P1.18 | MOSI | DI |
+| MISO | D12 | P1.14 | P1.20 | MISO | |
+| CSn radia | D10 | P1.12 | P1.14 | | |
+| RESET_N radia | D8 | P1.10 | P2.15 | | |
+| GPIO0 radia | D2 | P1.03 | P1.10 | | |
+| GPIO2 radia | D3 | P1.04 | P1.12 | | |
+| CS FRAM | D9 | P1.11 | | CS | |
+| CS ekranu (aktywny stanem wysokim) | D4 | P1.05 | | | CS |
+| EXTCOMIN ekranu (1 Hz z RTC2) | D5 | P1.06 | | | EXTCOMIN |
+| 3,0 V | VDD | | P2.7 (P2.9 to ten sam węzeł) | VIN | VIN |
+| GND | GND | | P1.1, P1.19, P2.2 | GND | GND |
 
-Przyciski płytki: BUTTON1 = GÓRA, BUTTON2 = DÓŁ, BUTTON3 = OK, BUTTON4 = WSTECZ. Diody: LED1 bicie serca (0,5 s), LED2 radio rozpoznane, LED3 FRAM rozpoznana i dziennik uruchomiony, LED4 port USB otwarty przez hosta. Przewody do 5 cm; SPI pracuje z 1 MHz.
+Ekran ma na płytce przetwornicę 5 V i translację poziomów, więc VIN idzie z VDD płytki (3,0 V). Zworka EXTMODE płytki ekranu musi być w położeniu H (VCOM z pinu EXTCOMIN); nazwy pinów złącza 4694 i położenie zworki sprawdzić na płytce przed lutowaniem, bo nie zostały potwierdzone w dokumentacji Adafruit dostępnej w tym kroku. Gdy zworka jest w położeniu L, `VCOM 1` przełącza odwracanie VCOM na bit w poleceniach ekranu.
+
+Przyciski płytki: BUTTON1 = GÓRA, BUTTON2 = DÓŁ, BUTTON3 = OK, BUTTON4 = WSTECZ (menu stacji, patrz [Ekran i przyciski](#ekran-i-przyciski)). Diody: LED1 bicie serca (0,5 s), LED2 radio rozpoznane, LED3 FRAM rozpoznana i dziennik uruchomiony, LED4 port USB otwarty przez hosta. Przewody do 5 cm; SPI pracuje z 1 MHz.
 
 ## Narzędzia
 
@@ -55,7 +59,7 @@ Port USB nRF (J3, nie port J-Link J2) zgłasza się jako CDC ACM, 115200 bit/s (
 
 | Polecenie | Odpowiedź |
 |---|---|
-| `INFO` | pola jak w specyfikacji radia: `contract`, `profile`, `radio`, `mcu`, `fw`, `src`, `mv` (zero, brak pomiaru), `tx_wait_ms` (pozostały dług ciszy), `rx_ok`, `rx_bad`, `tx_drop` z łącza P1, `restarts` i `uptime_s` z dziennika FRAM, oraz `bench`, `prep`, `silence`, `radio_ok`, `p1_ok`, `fram_ok`, `journal_ok`, `journal_resets`, parametry P1, `boot_s` |
+| `INFO` | pola jak w specyfikacji radia: `contract`, `profile`, `radio`, `mcu`, `fw`, `src`, `mv` (zero, brak pomiaru), `tx_wait_ms` (pozostały dług ciszy), `rx_ok`, `rx_bad`, `tx_drop` z łącza P1, `restarts` i `uptime_s` z dziennika FRAM, oraz `bench`, `prep`, `silence`, `radio_ok`, `p1_ok`, `fram_ok`, `journal_ok`, `journal_resets`, parametry P1, `boot_s`, `screen`, `lang`, `name` (`WICI-xxxxxx` z identyfikatora układu), `reset_reason` (RESETREAS) |
 | `RADIO` | `partnumber` (CC1120 = `0x48`), `partversion`, `marcstate`, stan z bajtu statusu, `ok` |
 | `RESET` | reset sprzętowy RESET_N i `SRES` (kasuje rejestry P1, `p1_ok: false`), potem `RADIO` |
 | `CONFIG` | zapis tablicy P1 w stanie IDLE, odczyt i porównanie 57 rejestrów (`checked`, `mismatches`, pierwszy niezgodny z wartością oczekiwaną i odczytaną), potem kalibracja; `config: true` tylko przy zerze niezgodności i udanej kalibracji |
@@ -82,6 +86,11 @@ Port USB nRF (J3, nie port J-Link J2) zgłasza się jako CDC ACM, 115200 bit/s (
 | `FRAM` | cztery bajty RDID (MB85RS4MT: `047F4903`, MB85RS4MTY: `047F490B`), rejestr stanu, `ok` |
 | `BTN` | stan czterech przycisków |
 | `LED <1-4> <0/1>` | sterowanie diodą |
+| `SCREEN` | treść ekranu: nazwa ekranu, język, pięć wierszy i które są odwrócone, liczba odświeżeń |
+| `KEY <UP\|DOWN\|OK\|BACK>` | naciśnięcie przycisku z portu USB (próby bez dotykania płytki); odpowiedź jak `SCREEN` |
+| `DISPLAY` | EXTCOMIN: licznik RTC2 i stan pinu, tryb VCOM, liczba odświeżeń, numery pinów |
+| `VCOM <0\|1>` | zapasowe odwracanie VCOM bitem w poleceniach ekranu (zworka EXTMODE w położeniu L) |
+| `REBOOT` | restart programowy; ekran i język wracają jak po restarcie przez watchdog |
 
 Warunek przejścia kroku 6 z [lekcji R02](../hardware/r02/lekcje.md#uruchomienie): `RADIO` daje `ready: true`, `partnumber: 0x48` i stan `IDLE`; `FRAM` daje `fujitsu: true`. Bez modułu `partnumber` wynosi `0xFF` albo `0x00`, a `ready` jest `false`. Po starcie obraz sam zapisuje i kalibruje P1; LED2 świeci dopiero, gdy `RADIO` daje `ok: true` i `p1_ok: true`. Po otwarciu portu obraz wysyła też wynik `VERIFY` i `FREQ`.
 
@@ -135,6 +144,7 @@ Kod w `src/journal.cpp` (bez zależności od Arduino, sprawdzany na komputerze z
 |---|---|---|---|
 | dług ciszy | 0x0000 | 32 × 16 B | numer, dług [ms], czas pracy przy zapisie, CRC-16, znacznik zatwierdzenia |
 | zegar | 0x0200 | 32 × 16 B | numer, czas pracy [s], liczba restartów, CRC-16, znacznik zatwierdzenia |
+| ustawienia ekranu | 0x0400 | 32 × 16 B | numer, język + 1 (0 = niewybrany), ostatni ekran, CRC-16, znacznik zatwierdzenia |
 | zdarzenia | 0x1000 | 512 × 64 B (32 KiB) | numer, czas pracy, tekst do 53 znaków, CRC-16 |
 
 Zasady:
@@ -159,8 +169,21 @@ Kodek i składanie ramek są w `src/p1frame.cpp` (bez zależności od Arduino): 
 
 Nie ma jeszcze interfejsu do stosu Reticulum (datagramy trafiają tylko na port USB), rezerwacji 50% budżetu dla ruchu do OSP, osobnych limitów ogłoszeń ani drugiego interfejsu CDC.
 
+## Ekran i przyciski
+
+Wymagania: [ekran i przyciski stacji](../docs/spec/oprogramowanie.md#ekran-i-przyciski-stacji) i tabela tekstów ekranu w tym samym rozdziale. Kod w trzech warstwach:
+
+- **Teksty** (`src/ui_texts.h`, generowany przez `tools/ui_texts.py`): wszystkie tabele rozdziału „Teksty ekranu” (teksty z identyfikatorami, pozycje menu, przyciski, kategorie, gotowe frazy) w trzech językach, jednostki `[czas]` i separator dziesiętny z opisu. Test `tests/test_ui_texts.py` odrzuca nieaktualny nagłówek i sprawdza limity 20 znaków pozycji menu i kategorii.
+- **Font** (`src/font_glyphs.h`, generowany przez `tools/font_bitmap.py` z `fonts/DejaVuSansMono-Bold.ttf`): 182 glify po 20 × 40 px (ASCII, alfabet polski i ukraiński, każdy znak tekstów kanonicznych, U+FFFD jako glif zastępczy), 33 px kroju o stałej szerokości, pięć wierszy po 20 znaków z krokiem 48 px na ekranie 400 × 240. Licencja fontu (Bitstream Vera, zmiany DejaVu w domenie publicznej) jest w `fonts/LICENSE.txt` i `LICENSES/`; wygenerowana bitmapa zachowuje tę licencję na kształty liter. Wersaliki mają 24 px, czyli **3,5 mm** na panelu LS027B7DH01 (58,8 mm szerokości): 20 znaków w wierszu i wersaliki ≥4 mm nie dają się pogodzić na tym panelu krojem o stałej szerokości ([przegląd, F80](../docs/review.md)).
+- **Model ekranu** (`src/ui.cpp`, bez zależności od Arduino, sprawdzany na komputerze w `tests/test_firmware_host.py`): daje pięć wierszy UTF-8 obciętych do 20 znaków i znacznik wiersza odwróconego; rysowanie i przyciski są poza nim. Ekrany: wybór języka (POLSKI, УКРАЇНСЬКА, ENGLISH; tych nazw nie ma w kanonicznej liście tekstów, F80), ekran główny (`radio_wlaczone`, `kontakt_ponad_krotki` z czasem pracy jako dolnym oszacowaniem, `zasilanie_12v`, `kolejka_krotki` albo pusty wiersz, `nowe_krotki`), cisza (`cisza` w wierszach 1–3, potem zasilanie i kolejka), menu (ZGŁOSZENIE, WIADOMOŚCI, TEST, STAN, JĘZYK/МОВА/LANGUAGE; wybrana pozycja odwrócona, bo znak kursora nie mieści się obok etykiet 20-znakowych), STAN z przewijaniem GÓRA/DÓŁ (radio, liczniki łącza, dług ciszy, `ostatni_kontakt_ponad`, zasilanie, odchyłka częstotliwości z FREQOFF_EST, wersja, nazwa `WICI-xxxxxx`), JĘZYK. W trybie przygotowania wiersz 1 każdego ekranu to `tryb_przygotowania`, a lista zajmuje cztery wiersze. Test sprawdza krótkie formy z największymi wartościami (99 MIN, 128 zgłoszeń, 128 wiadomości) we wszystkich językach, łamanie `cisza` na trzy wiersze, format `[czas]` (99 MIN → 1 H → 47 H → 2 D → 99 D) i pokrycie glifami każdego znaku tekstów.
+- **Sterownik ekranu** (`src/sharp.cpp`): bufor 240 × 50 B, zapis tylko zmienionych wierszy poleceniem M0 (bity LSB-first, CS aktywny stanem wysokim, 2 MHz, 8 bitów odstępu po wierszu i 16 na końcu). **EXTCOMIN** generuje licznik RTC2 (preskaler 4095, COMPARE0 = 4, czyli 0,5 s) przez PPI do zadania GPIOTE przełączającego pin i do zerowania licznika: przebieg 1 Hz bez udziału programu i bez HFCLK, jak wymaga specyfikacja; `DISPLAY` pokazuje licznik i stan pinu. Zapasowo `VCOM 1` odwraca VCOM bitem w poleceniu co 500 ms (zworka EXTMODE w położeniu L). Przyciski są odpytywane co 10 ms (zbocze = naciśnięcie), ekran rysowany po zmianie treści, nie częściej niż co 200 ms.
+
+Po włączeniu zasilania pierwszym ekranem jest wybór języka; wybór i każda zmiana ekranu trafiają do pierścienia ustawień w FRAM i do pamięci RAM niezerowanej przy starcie (sekcja `.noinit`), więc po restarcie programowym (`REBOOT`; watchdog działa tak samo, ale nie jest jeszcze włączony) stacja wraca do języka i ekranu sprzed restartu bez pytania. Radio startuje niezależnie od ekranu, jak wymaga specyfikacja.
+
+Przyjęte interpretacje i braki: pasek trybu przygotowania zastępuje wiersz 1 („stale pokazuje”); menu, STAN i JĘZYK wracają do ekranu głównego po 3 min bezczynności (specyfikacja podaje ten czas tylko dla kreatora); ZGŁOSZENIE, WIADOMOŚCI i TEST pokazują tylko tytuł do czasu kolejki w FRAM i stosu LXMF; przy niesprawnym radiu wiersz 1 to `RADIO ---`, bo lista tekstów nie ma takiego tekstu (F80); zasilanie to `12 V: 0,0 V`, bo stanowisko nie mierzy napięcia; „nowe wiadomości” to złożone datagramy P1; etykiety liczników w STAN (`RX OK`, `TX`, `DEFER`, `WAIT`, `FOFF`) są jednakowe we wszystkich językach. Nie ma podświetlenia (płytka 4694 go nie ma), alarmów, kreatora zgłoszenia, kontroli adresu ani diody NOWA WIADOMOŚĆ.
+
 ## Następne kroki
 
-1. Ekran Sharp (Adafruit 4694) z EXTCOMIN z licznika sprzętowego; przyciski jako menu stacji.
-2. Dwa interfejsy CDC (dane i diagnostyka) i protokół USB do laptopa ze [specyfikacji oprogramowania](../docs/spec/oprogramowanie.md).
-3. microReticulum i LXMF na tym samym projekcie (T3) z pomiarem zapasu RAM; środowisko `bench-b` dla ESP32-S3-DevKitC-1 z S2-LP.
+1. Dwa interfejsy CDC (dane i diagnostyka) i protokół USB do laptopa ze [specyfikacji oprogramowania](../docs/spec/oprogramowanie.md).
+2. microReticulum i LXMF na tym samym projekcie (T3) z pomiarem zapasu RAM; środowisko `bench-b` dla ESP32-S3-DevKitC-1 z S2-LP.
+3. Kolejka zgłoszeń w FRAM, kreator ZGŁOSZENIE, WIADOMOŚCI i TEST na ekranie; watchdog.

@@ -94,6 +94,7 @@ bool Journal::begin() {
     uint32_t clockValid = 0;
     if (!scanSmall(DEBT_BASE, DEBT_SLOTS, debt_, debtValid_)) return false;
     if (!scanSmall(CLOCK_BASE, CLOCK_SLOTS, clock_, clockValid)) return false;
+    if (!scanSmall(SETTINGS_BASE, SETTINGS_SLOTS, settings_, clockValid)) return false;
     event_ = EventRecord();
     uint8_t buffer[EVENT_RECORD];
     for (uint32_t slot = 0; slot < EVENT_SLOTS; ++slot) {
@@ -136,6 +137,10 @@ bool Journal::writeDebt(uint32_t debtMs, uint32_t uptimeS) {
 
 bool Journal::writeClock(uint32_t uptimeS, uint32_t restarts) {
     return writeSmall(CLOCK_BASE, CLOCK_SLOTS, clock_, uptimeS, restarts);
+}
+
+bool Journal::writeSettings(uint32_t language, uint32_t screen) {
+    return writeSmall(SETTINGS_BASE, SETTINGS_SLOTS, settings_, language, screen);
 }
 
 bool Journal::writeEvent(uint32_t uptimeS, const char* text) {

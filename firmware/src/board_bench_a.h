@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Stanowisko deweloperskie A: nRF52840-DK (wariant pca10056 rdzenia Adafruit)
-// z modułem TI CC1120EM-868-915 i FRAM MB85RS4MT na złączu Arduino płytki.
+// z modułem TI CC1120EM-868-915, FRAM MB85RS4MT i ekranem Sharp (Adafruit 4694) na złączu
+// Arduino płytki.
 // Numery pinów to numery GPIO nRF52840 w rdzeniu Adafruit: P0.xx = xx, P1.xx = 32 + xx.
 #pragma once
 
@@ -8,7 +9,7 @@
 
 namespace board {
 
-// SPI0 płytki (złącze Arduino: D13/D11/D12). Wspólne dla radia i FRAM.
+// SPI0 płytki (złącze Arduino: D13/D11/D12). Wspólne dla radia, FRAM i ekranu.
 constexpr uint8_t SPI_SCK = PIN_SPI_SCK;    // P1.15, D13 -> EM P1.16
 constexpr uint8_t SPI_MOSI = PIN_SPI_MOSI;  // P1.13, D11 -> EM P1.18
 constexpr uint8_t SPI_MISO = PIN_SPI_MISO;  // P1.14, D12 -> EM P1.20
@@ -21,6 +22,10 @@ constexpr uint8_t RADIO_GPIO2 = 32 + 4;   // P1.04, D3  -> EM P1.12 (GPIO2)
 
 // FRAM MB85RS4MT (Adafruit 4719) na tej samej magistrali SPI.
 constexpr uint8_t FRAM_CS = 32 + 11;  // P1.11, D9
+
+// Ekran Sharp LS027B7DH01 (Adafruit 4694): CS aktywny stanem wysokim, EXTCOMIN z licznika RTC2.
+constexpr uint8_t DISPLAY_CS = 32 + 5;        // P1.05, D4
+constexpr uint8_t DISPLAY_EXTCOMIN = 32 + 6;  // P1.06, D5
 
 // Przyciski płytki DK (aktywne stanem niskim) w roli przycisków stacji.
 constexpr uint8_t BTN_UP = PIN_BUTTON1;     // P0.11
