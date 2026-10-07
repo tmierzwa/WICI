@@ -14,7 +14,7 @@ SEGMENTS = [
         "Ale mijają godziny i telefon pokazuje: brak sieci.",
     ]),
     ("s1c", [
-        "W szkole, która stała się schronieniem, jest pięćdziesiąt osób.",
+        "W szkole czy garażu, który stał się schronieniem, jest pięćdziesiąt osób.",
         "Brakuje wody. Ktoś potrzebuje leków.",
     ]),
     ("s1d", [
@@ -84,7 +84,7 @@ SEGMENTS = [
         "Włączam stację, wystawiam na zewnątrz antenę i jestem w sieci.",
     ]),
     ("s6c", [
-        "Opiekun wybiera przyciskami, czego brakuje i ilu osób to dotyczy.",
+        "Ty lub opiekun zestawu wysyłacie przyciskami, czego brakuje i ilu osób to dotyczy.",
         "A każda włączona stacja podaje dalej wiadomości sąsiadów.",
     ]),
     ("s6d", [
@@ -93,7 +93,7 @@ SEGMENTS = [
         "Bez aplikacji, bez konta, bez internetu.",
     ]),
     ("s6e", [
-        "Laptop i router dostają prąd z akumulatora przez przetwornicę z zestawu.",
+        "Stacja, laptop i router dostają prąd z akumulatora przez przetwornicę z zestawu.",
         "A telefony ładuje osobna ładowarka z zestawu, z drugiego akumulatora.",
     ]),
     ("s7a", [
@@ -135,8 +135,7 @@ SEGMENTS = [
         "I każdego, kto ma okno, dach albo piwnicę, i chce pomóc sprawdzić, jak to działa naprawdę.",
     ]),
     ("s9c", [
-        ("Cały projekt jest otwarty, na GitHubie, pod nazwą WICI.",
-         "Cały projekt jest otwarty, na git habie, pod nazwą wici."),
+        ("Cały projekt jest otwarty, na GitHubie.", "Cały projekt jest otwarty, na git habie."),
         "Zajrzyj, zadaj pytanie, zgłoś błąd.",
         "Rozsyłamy wici.",
     ]),

@@ -696,7 +696,7 @@ class WICI(MovingCameraScene):
                   ([LaggedStart(*[Create(w) for w in waves], lag_ratio=0.3), FadeIn(online)], 0.8))
 
         op = person(0.8).move_to([-5.5, -0.5, 0])
-        op_l = T("opiekun", 20, GREY_A).next_to(op, DOWN, buff=0.15)
+        op_l = label2(["ty lub", "opiekun"], 20).next_to(op, DOWN, buff=0.15)
         need = VGroup(T("woda, leki", 22, "#1b2027"), T("50 osób", 22, "#1b2027")).arrange(DOWN, buff=0.1)
         need.move_to(st.screen)
         top = mst.get_end()
@@ -708,16 +708,17 @@ class WICI(MovingCameraScene):
         # sygnał biegnie po linii łączącej stacje, zamiast przelatującego punktu
         l_out = Line(top, n2, buff=0.3, stroke_color=GREY_D, stroke_width=2)
         l_in = Line(n1, top, buff=0.3, stroke_color=GREY_D, stroke_width=2)
+        l_nb = Line(n1, n2, buff=0.3, stroke_color=GREY_D, stroke_width=2)
 
         def pulse(line, color):
             return ShowPassingFlash(line.copy().set_stroke(color, width=6), time_width=0.5)
         self.narr("s6c",
                   ([FadeIn(op, shift=RIGHT * 0.2), FadeIn(op_l)], 0.6),
                   ([Indicate(st.buttons, color=ACCENT, scale_factor=1.15), FadeOut(online), FadeIn(need)], 1.0),
-                  ([FadeIn(nbs), FadeIn(nb_l), Create(l_out), Create(l_in)], 0.6),
+                  ([FadeIn(nbs), FadeIn(nb_l), Create(l_out), Create(l_in), Create(l_nb)], 0.6),
                   (pulse(l_out, ACCENT), 1.0),
                   ("at", 1),
-                  (pulse(l_in, RADIO), 0.9),
+                  ([pulse(l_nb, RADIO), pulse(l_in, RADIO)], 0.9),
                   (Flash(top, color=RADIO, line_length=0.18, flash_radius=0.35), 0.4),
                   (pulse(l_out, RADIO), 0.9))
 
@@ -739,7 +740,7 @@ class WICI(MovingCameraScene):
         usb = Line([lp[2].get_right()[0], base_y, 0], [st_small[0].get_left()[0], base_y, 0],
                    stroke_color=GREY_B, stroke_width=3)
         eth = Line(rt[0].get_right(), lp[2].get_left(), stroke_color=GREY_B, stroke_width=3)
-        old = VGroup(wall, cable, mst, ant_l, waves, op, op_l, nbs, nb_l, l_out, l_in)
+        old = VGroup(wall, cable, mst, ant_l, waves, op, op_l, nbs, nb_l, l_out, l_in, l_nb)
         big = phone(2.0).move_to([-6.0, 1.0, 0])
         wf = wifi(rt[1][0].get_end() + UP * 0.05, 0.16, 3, WHITE, angle=PI * 0.8)
         form = VGroup(logo(0.62),
@@ -777,6 +778,10 @@ class WICI(MovingCameraScene):
             [[inv.get_x() - 0.25, it, 0], [inv.get_x() - 0.25, -0.5, 0], [rx, -0.5, 0], [rx, rt[0].get_bottom()[1], 0]])
         w_lp = VMobject(**PW).set_points_as_corners(
             [[inv.get_x() + 0.25, it, 0], [inv.get_x() + 0.25, -0.5, 0], [lx, -0.5, 0], [lx, lp[2].get_bottom()[1], 0]])
+        stx = st_small[0].get_right()[0] + 0.3
+        w_st = VMobject(**PW).set_points_as_corners(
+            [[inv.get_x() + 0.5, it, 0], [inv.get_x() + 0.5, -0.72, 0], [stx, -0.72, 0], [stx, sy - 0.2, 0],
+             [st_small[0].get_right()[0], sy - 0.2, 0]])
         w_c = Line(bat_c.box.get_left(), chg[0].get_right(), **PW)
         w_ph = Line([big.get_x(), chg[0].get_top()[1], 0], big.get_bottom(), **PW)
         key = VGroup(
@@ -787,7 +792,7 @@ class WICI(MovingCameraScene):
         ).arrange(DOWN, aligned_edge=LEFT, buff=0.25).move_to([4.9, -1.35, 0])
         self.narr("s6e",
                   ([FadeIn(bat_a), FadeIn(bat_a_l), FadeIn(inv), FadeIn(inv_l), FadeIn(key[0])], 0.8),
-                  ([Create(w_a), Create(w_rt), Create(w_lp)], 1.0),
+                  ([Create(w_a), Create(w_st), Create(w_rt), Create(w_lp)], 1.0),
                   (FadeIn(key[1]), 0.5),
                   ("at", 1),
                   ([FadeIn(bat_c), FadeIn(bat_c_l), FadeIn(chg), FadeIn(chg_l)], 0.8),

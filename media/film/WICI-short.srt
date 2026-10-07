@@ -7,90 +7,90 @@ Gaśnie prąd w całej okolicy.
 Po kilku godzinach telefon pokazuje: brak sieci.
 
 3
-00:00:05,883 --> 00:00:08,322
-W szkole-schronieniu jest pięćdziesiąt
+00:00:05,883 --> 00:00:08,463
+W szkole czy garażu jest pięćdziesiąt
 
 4
-00:00:08,322 --> 00:00:10,455
+00:00:08,463 --> 00:00:10,745
 osób. Brakuje wody i leków.
 
 5
-00:00:10,455 --> 00:00:12,575
+00:00:10,745 --> 00:00:12,818
 Służby są kilka kilometrów dalej.
 
 6
-00:00:12,575 --> 00:00:14,186
+00:00:12,818 --> 00:00:14,395
 Jak im o tym powiedzieć?
 
 7
-00:00:16,783 --> 00:00:19,869
+00:00:16,983 --> 00:00:19,953
 Takie zgłoszenie to mniej niż dwieście bajtów.
 
 8
-00:00:19,869 --> 00:00:21,756
+00:00:19,953 --> 00:00:21,840
 Nie potrzeba do niego internetu.
 
 9
-00:00:21,756 --> 00:00:23,948
+00:00:21,840 --> 00:00:24,032
 Wystarczy proste radio na bateriach.
 
 10
-00:00:24,417 --> 00:00:26,946
+00:00:24,517 --> 00:00:27,046
 Celujemy w około kilometr zasięgu.
 
 11
-00:00:26,946 --> 00:00:30,057
+00:00:27,046 --> 00:00:30,157
 Dlatego każda stacja podaje wiadomość dalej, od
 
 12
-00:00:30,057 --> 00:00:33,039
+00:00:30,157 --> 00:00:33,139
 sąsiada do sąsiada, aż dotrze do służb.
 
 13
-00:00:33,039 --> 00:00:34,216
+00:00:33,139 --> 00:00:34,316
 Jak dawne wici.
 
 14
-00:00:34,683 --> 00:00:36,803
+00:00:34,783 --> 00:00:36,903
 Stacja to małe pudełko z ekranem,
 
 15
-00:00:36,803 --> 00:00:38,744
+00:00:36,903 --> 00:00:38,844
 przyciskami i bateriami.
 
 16
-00:00:38,744 --> 00:00:41,134
+00:00:38,844 --> 00:00:41,234
 Włączam stację, wystawiam na zewnątrz
 
 17
-00:00:41,134 --> 00:00:43,084
+00:00:41,234 --> 00:00:43,184
 antenę i jestem w sieci.
 
 18
-00:00:43,084 --> 00:00:45,410
+00:00:43,184 --> 00:00:45,510
 Laptop i router to kolejne poziomy.
 
 19
-00:00:45,883 --> 00:00:47,794
+00:00:45,983 --> 00:00:47,894
 Projekt jest otwarty, ale jeszcze
 
 20
-00:00:47,794 --> 00:00:49,584
+00:00:47,894 --> 00:00:49,684
 niesprawdzony w terenie.
 
 21
-00:00:49,584 --> 00:00:52,241
+00:00:49,684 --> 00:00:52,341
 Szukamy krótkofalowców, elektroników,
 
 22
-00:00:52,241 --> 00:00:54,464
+00:00:52,341 --> 00:00:54,564
 programistów i ludzi ze służb.
 
 23
-00:00:54,950 --> 00:00:57,757
-Szczegóły na GitHubie, pod nazwą WICI.
+00:00:55,050 --> 00:00:56,928
+Szczegóły na GitHubie.
 
 24
-00:00:57,757 --> 00:00:58,957
+00:00:56,928 --> 00:00:58,151
 Rozsyłamy wici.
 
