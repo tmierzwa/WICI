@@ -83,6 +83,7 @@ def main():
         'revision': 'R01.3-controller-fabrication-2026-10-06',
         'manufacturing_release': 'HOLD',
         'scope': 'USB controller candidate plus private TI RF reference audit; not a complete working radio modem.',
+        'role': 'Design 0.5: P1 laboratory bench for test group T4; not the station controller, because the STM32F103 lacks RAM for the Reticulum stack. The station is the R02 board specified in docs/spec/elektronika.md.',
         'controller': {
             'tool': 'KiCad 10.0.6', 'erc_date': erc['date'], 'drc_date': drc['date'],
             'erc_violations': erc_count, 'drc_violations': len(drc['violations']),
@@ -100,7 +101,7 @@ def main():
             'inner_layer_track_count': 0,
             'mounting_holes': 4,
             'known_design_blockers': [
-                'Y1 standby pin is tied to V3; oscillator alone can exceed the complete USB suspend budget. New electrical revision and full-modem qualification required.',
+                'Y1 standby pin is tied to V3; the oscillator alone can draw up to 7 mA against the 2.5 mA USB suspend budget of the bus-powered bench. New electrical revision and full-modem qualification required before ordering the bench; the self-powered R02 station is not affected.',
             ],
             'mechanical_fit': 'NOT TESTED',
             'mechanical_print': 'mechanika-1-do-1.pdf',
