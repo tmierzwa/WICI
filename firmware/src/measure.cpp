@@ -29,7 +29,19 @@ const cc1120::RegisterValue* find(const char* name) {
 Bench::Bench(cc1120::Radio& radio, uint8_t pinSync, uint8_t pinOk, uint8_t pinLed)
     : radio_(radio), pinSync_(pinSync), pinOk_(pinOk), pinLed_(pinLed) {}
 
+void Bench::attach(journal::Journal* journal, uint32_t (*uptimeS)()) {
+    journal_ = journal;
+    uptime_ = uptimeS;
+}
+
+void Bench::restoreDebt(uint32_t debtMs) {
+    debtUntilMs_ = millis() + debtMs;
+    debtPending_ = debtMs > 0;
+}
+
 void Bench::log(const char* text) {
+    if (journal_ && journal_->ok() && journal_->writeEvent(uptimeS(), text)) return;
+    // Dziennik zapasowy w RAM, gdy FRAM nie odpowiada; najstarsze wpisy nadpisywane.
     Event& e = events_[eventCount_ % LOG_ENTRIES];
     e.ms = millis();
     strncpy(e.text, text, sizeof(e.text) - 1);
@@ -37,25 +49,34 @@ void Bench::log(const char* text) {
     ++eventCount_;
 }
 
-void Bench::printLog() {
-    // Dziennik w RAM do czasu dziennika w FRAM (następny krok); najstarsze wpisy nadpisywane.
+void Bench::printLog(uint32_t count) {
+    if (journal_ && journal_->ok()) {
+        // Od najnowszego wstecz; numery rekordów rosną od startu dziennika.
+        Serial.printf("{\"log\":[");
+        journal::EventRecord record;
+        bool first = true;
+        for (uint32_t back = 0; back < count; ++back) {
+            if (!journal_->readEvent(back, record)) break;
+            Serial.printf("%s{\"seq\":%lu,\"uptime_s\":%lu,\"event\":\"%s\"}", first ? "" : ",",
+                          static_cast<unsigned long>(record.seq), static_cast<unsigned long>(record.uptimeS), record.text);
+            first = false;
+        }
+        Serial.printf("],\"total\":%lu,\"fram\":true}\n", static_cast<unsigned long>(journal_->eventSeq()));
+        return;
+    }
     Serial.printf("{\"log\":[");
     const size_t shown = eventCount_ < LOG_ENTRIES ? eventCount_ : LOG_ENTRIES;
-    const size_t first = eventCount_ - shown;
+    const size_t firstIndex = eventCount_ - shown;
     for (size_t i = 0; i < shown; ++i) {
-        const Event& e = events_[(first + i) % LOG_ENTRIES];
+        const Event& e = events_[(firstIndex + i) % LOG_ENTRIES];
         Serial.printf("%s{\"ms\":%lu,\"event\":\"%s\"}", i ? "," : "", static_cast<unsigned long>(e.ms), e.text);
     }
-    Serial.printf("],\"total\":%u}\n", static_cast<unsigned>(eventCount_));
+    Serial.printf("],\"total\":%u,\"fram\":false}\n", static_cast<unsigned>(eventCount_));
 }
 
 uint32_t Bench::debtRemainingMs() const {
     const uint32_t now = millis();
     return static_cast<int32_t>(debtUntilMs_ - now) > 0 ? debtUntilMs_ - now : 0;
-}
-
-void Bench::startDebt(uint32_t txMs) {
-    debtUntilMs_ = millis() + txMs * DEBT_FACTOR;
 }
 
 bool Bench::confirm() {
@@ -92,6 +113,12 @@ const char* Bench::gate(uint32_t txMs, bool conducted) {
     }
     if (debtRemainingMs()) return "silence debt pending: see INFO tx_wait_ms";
     if (txMs > SERIES_MAX_MS) return "series above limit: add conducted";
+    // Dług ciszy zapisany w dzienniku przed pierwszą ramką; błąd zapisu blokuje nadawanie.
+    if (!journal_ || !journal_->ok()) return "debt journal unavailable: no FRAM";
+    const uint32_t debtMs = txMs * p1::DEBT_FACTOR;
+    if (!journal_->writeDebt(debtMs, uptimeS())) return "debt journal write failed";
+    debtUntilMs_ = millis() + debtMs;
+    debtPending_ = true;
     return nullptr;
 }
 
@@ -139,7 +166,6 @@ void Bench::stopCw() {
     restore("PKT_CFG0");
     cwActive_ = false;
     const uint32_t txMs = millis() - cwStartMs_;
-    startDebt(txMs);
     Serial.printf("{\"txcw\":\"done\",\"tx_ms\":%lu,\"tx_wait_ms\":%lu}\n", static_cast<unsigned long>(txMs),
                   static_cast<unsigned long>(debtRemainingMs()));
 }
@@ -216,7 +242,6 @@ void Bench::finishPkt() {
     pktActive_ = false;
     const uint32_t seriesMs = millis() - pktStartMs_;
     const uint32_t txMs = (pktTxUs_ + 999) / 1000;
-    startDebt(txMs);
     Serial.printf("{\"txpkt\":\"done\",\"sent\":%u,\"failed\":%u,\"len\":%u,\"series_ms\":%lu,\"tx_ms\":%lu,"
                   "\"tx_wait_ms\":%lu,\"sync_gpio\":%s,\"lead_ms\":%.2f,\"on_air_ms\":%.2f,\"tail_ms\":%.2f,"
                   "\"expected_on_air_ms\":%.2f}\n",
@@ -324,9 +349,11 @@ void Bench::printFoff() {
 }
 
 void Bench::printStatus() {
-    Serial.printf("{\"prep\":%s,\"silence\":%s,\"txcw\":%s,\"txpkt\":%s,\"rx\":%s,\"tx_wait_ms\":%lu,\"foff_hz\":%ld}\n",
+    Serial.printf("{\"prep\":%s,\"silence\":%s,\"txcw\":%s,\"txpkt\":%s,\"rx\":%s,\"tx_wait_ms\":%lu,"
+                  "\"debt_pending\":%s,\"journal\":%s,\"foff_hz\":%ld}\n",
                   boolName(prep), boolName(silence), boolName(cwActive_), boolName(pktActive_), boolName(rxActive_),
-                  static_cast<unsigned long>(debtRemainingMs()), static_cast<long>(foffHz_));
+                  static_cast<unsigned long>(debtRemainingMs()), boolName(debtPending_),
+                  boolName(journal_ && journal_->ok()), static_cast<long>(foffHz_));
 }
 
 void Bench::stop() {
@@ -338,6 +365,13 @@ void Bench::stop() {
 
 void Bench::poll() {
     const uint32_t now = millis();
+    if (debtPending_ && !busy() && debtRemainingMs() == 0) {
+        // Dług kasuje się dopiero po odczekaniu (radio.md, "Dostęp do kanału", punkt 4).
+        if (journal_ && journal_->ok() && journal_->writeDebt(0, uptimeS())) {
+            debtPending_ = false;
+            log("silence debt cleared");
+        }
+    }
     if (cwActive_) {
         if (static_cast<int32_t>(now - cwEndMs_) >= 0) stopCw();
         else if (silence) { log("silence during TXCW"); stopCw(); }

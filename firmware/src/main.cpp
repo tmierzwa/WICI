@@ -2,7 +2,8 @@
 // WICI, stanowisko deweloperskie A: pierwsze kroki oprogramowania stacji na nRF52840-DK.
 // Zakres: USB CDC z poleceniami tekstowymi, identyfikacja CC1120 i FRAM przez SPI,
 // konfiguracja rejestrów profilu P1 z weryfikacją odczytu i kalibracją syntezera,
-// polecenia pomiarowe TXCW, TXPKT, RXPER, FOFF w trybie przygotowania, odczyt
+// polecenia pomiarowe TXCW, TXPKT, RXPER, FOFF w trybie przygotowania, dziennik
+// w FRAM (dług ciszy, zegar czasu pracy z liczbą restartów, zdarzenia), odczyt
 // częstotliwości i RSSI, przyciski i diody płytki. Bez ramki P1, stosu Reticulum
 // i ekranu (następne kroki).
 #include <Arduino.h>
@@ -12,6 +13,7 @@
 #include "board_bench_a.h"
 #include "cc1120.h"
 #include "fram.h"
+#include "journal.h"
 #include "measure.h"
 #include "p1_registers.h"
 
@@ -23,12 +25,17 @@ namespace {
 
 cc1120::Radio radio(SPI, board::RADIO_CS, board::RADIO_RESET, board::SPI_HZ);
 fram::Memory memory(SPI, board::FRAM_CS, board::SPI_HZ);
+journal::Journal stationJournal(memory);
 measure::Bench bench(radio, board::RADIO_GPIO2, board::BTN_OK, board::LED_HEARTBEAT);
 
 bool radioOk = false;
 bool framOk = false;
+bool journalOk = false;
 bool p1Ok = false;        // tablica P1 zapisana, zweryfikowana i syntezer skalibrowany
-uint32_t restarts = 0;  // licznik restartów trafi do FRAM w następnym kroku
+uint32_t restarts = 0;    // z dziennika zegara w FRAM, +1 przy każdym starcie
+uint32_t uptimeBaseS = 0; // czas pracy z dziennika przy starcie; zegar monotoniczny między restartami
+uint32_t journalResets = 0;  // brak poprawnego rekordu długu przy starcie
+constexpr uint32_t CLOCK_WRITE_MS = 60000;  // zapis zegara co 60 s (oprogramowanie.md, "Czas")
 char line[128];
 size_t lineLength = 0;
 
@@ -41,6 +48,8 @@ void ledWrite(uint8_t pin, bool on) { digitalWrite(pin, on ? LOW : HIGH); }  // 
 bool pressed(uint8_t pin) { return digitalRead(pin) == LOW; }
 
 const char* boolName(bool value) { return value ? "true" : "false"; }
+
+uint32_t uptimeS() { return uptimeBaseS + millis() / 1000; }
 
 void printError(const char* text) { Serial.printf("{\"error\":\"%s\"}\n", text); }
 
@@ -113,16 +122,59 @@ void printFram() {
 
 void printInfo() {
     // Pola jak w INFO ze specyfikacji radia; napięcie jest zerowe, bo stanowisko go nie mierzy.
+    // uptime_s to zegar z dziennika FRAM (ciągły między restartami), boot_s czas od startu.
     const measure::Counters& c = bench.counters();
     Serial.printf("{\"contract\":2,\"profile\":\"P1\",\"radio\":\"CC1120\",\"mcu\":\"nRF52840\",\"fw\":\"%s\","
                   "\"src\":\"USB\",\"mv\":0,\"tx_wait_ms\":%lu,\"rx_ok\":%lu,\"rx_bad\":%lu,\"tx_drop\":0,\"restarts\":%lu,"
-                  "\"bench\":\"A\",\"prep\":%s,\"silence\":%s,\"radio_ok\":%s,\"p1_ok\":%s,\"fram_ok\":%s,\"carrier_hz\":%lu,"
-                  "\"symbol_rate\":%u,\"deviation_hz\":%u,\"rx_filter_hz\":%u,\"tx_power_dbm\":%d,\"uptime_s\":%lu}\n",
+                  "\"bench\":\"A\",\"prep\":%s,\"silence\":%s,\"radio_ok\":%s,\"p1_ok\":%s,\"fram_ok\":%s,\"journal_ok\":%s,"
+                  "\"journal_resets\":%lu,\"carrier_hz\":%lu,\"symbol_rate\":%u,\"deviation_hz\":%u,\"rx_filter_hz\":%u,"
+                  "\"tx_power_dbm\":%d,\"uptime_s\":%lu,\"boot_s\":%lu}\n",
                   WICI_FW_VERSION, static_cast<unsigned long>(bench.debtRemainingMs()), static_cast<unsigned long>(c.rxOk),
                   static_cast<unsigned long>(c.rxBad), static_cast<unsigned long>(restarts), boolName(bench.prep),
-                  boolName(bench.silence), boolName(radioOk), boolName(p1Ok), boolName(framOk),
-                  static_cast<unsigned long>(p1::CARRIER_HZ), p1::SYMBOL_RATE, p1::DEVIATION_HZ, p1::RX_FILTER_HZ,
-                  p1::TX_POWER_DBM, static_cast<unsigned long>(millis() / 1000));
+                  boolName(bench.silence), boolName(radioOk), boolName(p1Ok), boolName(framOk), boolName(journalOk),
+                  static_cast<unsigned long>(journalResets), static_cast<unsigned long>(p1::CARRIER_HZ), p1::SYMBOL_RATE,
+                  p1::DEVIATION_HZ, p1::RX_FILTER_HZ, p1::TX_POWER_DBM, static_cast<unsigned long>(uptimeS()),
+                  static_cast<unsigned long>(millis() / 1000));
+}
+
+void printJournal() {
+    const journal::SmallRecord& d = stationJournal.debt();
+    const journal::SmallRecord& k = stationJournal.clock();
+    Serial.printf("{\"journal_ok\":%s,\"debt_seq\":%lu,\"debt_ms\":%lu,\"debt_written_at_s\":%lu,\"debt_records\":%lu,"
+                  "\"tx_wait_ms\":%lu,\"clock_seq\":%lu,\"uptime_s\":%lu,\"restarts\":%lu,\"event_seq\":%lu,"
+                  "\"max_debt_ms\":%lu,\"journal_resets\":%lu}\n",
+                  boolName(journalOk), static_cast<unsigned long>(d.seq), static_cast<unsigned long>(d.a),
+                  static_cast<unsigned long>(d.b), static_cast<unsigned long>(stationJournal.debtValid()),
+                  static_cast<unsigned long>(bench.debtRemainingMs()), static_cast<unsigned long>(k.seq),
+                  static_cast<unsigned long>(uptimeS()), static_cast<unsigned long>(restarts),
+                  static_cast<unsigned long>(stationJournal.eventSeq()), static_cast<unsigned long>(p1::MAX_DEBT_MS),
+                  static_cast<unsigned long>(journalResets));
+}
+
+// Start dziennika: zegar i restarty, dług do odczekania albo nowy dziennik z największym długiem.
+void beginJournal() {
+    journalOk = framOk && stationJournal.begin();
+    if (!journalOk) {
+        restarts = 0;
+        return;
+    }
+    uptimeBaseS = stationJournal.clock().a;
+    restarts = stationJournal.clock().b + 1;
+    stationJournal.writeClock(uptimeS(), restarts);
+    bench.attach(&stationJournal, uptimeS);
+    uint32_t debtMs = stationJournal.debt().a;
+    if (stationJournal.debtFresh()) {
+        // radio.md, "Dostęp do kanału": bez poprawnego rekordu odczekać największy możliwy dług,
+        // założyć nowy dziennik i zliczyć zdarzenie w diagnostyce.
+        debtMs = p1::MAX_DEBT_MS;
+        journalResets = 1;
+        stationJournal.writeDebt(debtMs, uptimeS());
+        bench.log("debt journal missing: new journal, max debt");
+    }
+    bench.restoreDebt(debtMs);
+    char text[48];
+    snprintf(text, sizeof(text), "start %lu, debt %lu ms", static_cast<unsigned long>(restarts), static_cast<unsigned long>(debtMs));
+    bench.log(text);
 }
 
 void printButtons() {
@@ -136,7 +188,7 @@ void printButtons() {
 void printHelp() {
     Serial.println("{\"commands\":[\"HELP\",\"INFO\",\"RADIO\",\"RESET\",\"CONFIG\",\"VERIFY\",\"CAL\",\"FREQ\","
                    "\"PREP <0|1>\",\"SILENCE <0|1>\",\"TXCW <s> [CONDUCTED]\",\"TXPKT <n> <len> [<ms>] [CONDUCTED]\","
-                   "\"RX [<len>]\",\"RXPER\",\"FOFF [<hz>]\",\"STOP\",\"LOG\",\"BENCH\",\"IDLE\",\"RSSI\",\"STATE\","
+                   "\"RX [<len>]\",\"RXPER\",\"FOFF [<hz>]\",\"STOP\",\"LOG [<n>]\",\"JOURNAL\",\"BENCH\",\"IDLE\",\"RSSI\",\"STATE\","
                    "\"REG <hex>\",\"FRAM\",\"BTN\",\"LED <1-4> <0|1>\"]}");
 }
 
@@ -230,7 +282,10 @@ void handle(char* cmd) {
         bench.stop();
         Serial.println("{\"stop\":true}");
         printState();
-    } else if (!strcmp(cmd, "LOG")) bench.printLog();
+    } else if (!strcmp(cmd, "LOG")) {
+        const uint32_t count = n ? strtoul(words[0], nullptr, 10) : 16;
+        bench.printLog(count > 64 ? 64 : count);
+    } else if (!strcmp(cmd, "JOURNAL")) printJournal();
     else if (!strcmp(cmd, "BENCH")) bench.printStatus();
     else if (!strcmp(cmd, "IDLE")) {
         bench.stop();
@@ -287,8 +342,8 @@ void setup() {
         configureP1(calibrated);  // LED2 świeci dopiero po zapisanym i skalibrowanym P1
     }
     framOk = memory.identify().mb85rs4m;
-    ledWrite(board::LED_FRAM, framOk);
-    bench.log("start");
+    beginJournal();
+    ledWrite(board::LED_FRAM, framOk && journalOk);  // LED3 świeci dopiero z działającym dziennikiem
 }
 
 void loop() {
@@ -313,8 +368,17 @@ void loop() {
             printFrequency();
         }
         printFram();
+        printJournal();
     }
     if (!usb) reported = false;
+    static uint32_t lastClock = 0;
+    if (journalOk && now - lastClock >= CLOCK_WRITE_MS) {
+        lastClock = now;
+        if (!stationJournal.writeClock(uptimeS(), restarts)) {
+            journalOk = false;
+            ledWrite(board::LED_FRAM, false);
+        }
+    }
     if (radioOk) bench.poll();
     pollSerial();
 }

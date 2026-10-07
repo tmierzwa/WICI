@@ -46,7 +46,24 @@ P1 = {
     "sync_word": (0xD3, 0x91, 0xD3, 0x91),
     "max_packet_bytes": 103,  # LEN + BODY + CRC
     "cca_threshold_dbm": -100,  # initial value, set in T4
+    "max_datagram_bytes": 600,
+    "chunk_bytes": 86,  # data per fragment
+    "fragment_overhead_bytes": 29,  # preamble 8, sync 4, LEN 1, header 14, CRC 2
+    "ramp_ms_assumed": 2.0,  # per fragment until measured (software/reference/obliczenia.py)
+    "debt_factor": 12,  # silence debt = 12 x reserved TX time
 }
+
+
+def tx_seconds(datagram_bytes: int) -> float:
+    """Air time of a datagram in P1 with the assumed ramp, as software/reference/obliczenia.py."""
+    fragments = -(-datagram_bytes // P1["chunk_bytes"])
+    return (8 * (datagram_bytes + P1["fragment_overhead_bytes"] * fragments) / P1["symbol_rate"]
+            + fragments * P1["ramp_ms_assumed"] / 1000)
+
+
+def max_debt_ms() -> int:
+    """Largest possible silence debt: 12 x TX time of a 600 B datagram (radio.md, "Dostęp do kanału")."""
+    return int(round(P1["debt_factor"] * tx_seconds(P1["max_datagram_bytes"]) * 1000))
 
 # RSSI offset of the CC1120EM-868-915 as reported by SmartRF Studio for this
 # band. It is an assumption until measured on the bench (T4, generator at a
@@ -276,6 +293,8 @@ def header(table: list[Register]) -> str:
         f"constexpr int8_t RSSI_OFFSET_DB = {RSSI_OFFSET_DB};  // assumed until measured in T4",
         f"constexpr int8_t CCA_THRESHOLD_DBM = {P1['cca_threshold_dbm']};",
         f"constexpr uint8_t MAX_PACKET_BYTES = {P1['max_packet_bytes']};",
+        f"constexpr uint8_t DEBT_FACTOR = {P1['debt_factor']};",
+        f"constexpr uint32_t MAX_DEBT_MS = {max_debt_ms()};  // 12 x TX of a 600 B datagram with {P1['ramp_ms_assumed']} ms ramp per fragment",
         "",
         "constexpr RegisterValue REGISTERS[] = {",
     ]

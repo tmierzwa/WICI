@@ -24,6 +24,8 @@ constexpr int8_t TX_POWER_DBM = 13;
 constexpr int8_t RSSI_OFFSET_DB = -99;  // assumed until measured in T4
 constexpr int8_t CCA_THRESHOLD_DBM = -100;
 constexpr uint8_t MAX_PACKET_BYTES = 103;
+constexpr uint8_t DEBT_FACTOR = 12;
+constexpr uint32_t MAX_DEBT_MS = 16228;  // 12 x TX of a 600 B datagram with 2.0 ms ramp per fragment
 
 constexpr RegisterValue REGISTERS[] = {
     {0x0000, 0xB0, 0xFF, "IOCFG3"},  // TI: GPIO3 not wired: analog pad, high impedance

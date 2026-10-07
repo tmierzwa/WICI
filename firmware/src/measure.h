@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: MIT
 // Polecenia pomiarowe interfejsu diagnostyki (docs/spec/radio.md, "USB do laptopa"):
 // TXCW, TXPKT, RXPER, FOFF. Działają tylko w trybie przygotowania, podlegają ciszy
-// radiowej i limitowi nadawania (dług ciszy 12 x czas TX, seria nie dłuższa niż
-// najdłuższy datagram P1); dłuższą serię dopuszcza argument conducted potwierdzony
-// przyciskiem OK w ciągu 30 s i zapisany w dzienniku zdarzeń.
+// radiowej i limitowi nadawania (dług ciszy 12 x czas TX zapisany w dzienniku FRAM
+// przed serią, seria nie dłuższa niż najdłuższy datagram P1); dłuższą serię dopuszcza
+// argument conducted potwierdzony przyciskiem OK w ciągu 30 s i zapisany w dzienniku.
 #pragma once
 
 #include <Arduino.h>
 
 #include "cc1120.h"
+#include "journal.h"
 
 namespace measure {
 
 constexpr uint32_t CW_MAX_MS = 10000;         // TXCW <= 10 s (specyfikacja)
 constexpr uint32_t SERIES_MAX_MS = 1400;      // najdłuższa seria P1: 7 ramek po 103 B z narastaniem
-constexpr uint8_t DEBT_FACTOR = 12;           // dług ciszy = 12 x czas nadawania
 constexpr uint32_t CONFIRM_MS = 30000;        // potwierdzenie przyciskiem OK
-constexpr size_t LOG_ENTRIES = 16;
+constexpr size_t LOG_ENTRIES = 16;            // dziennik zapasowy w RAM, gdy nie ma FRAM
 
 struct Counters {
     uint32_t rxOk = 0;        // ramki z poprawnym CRC
@@ -43,16 +43,21 @@ public:
     bool prep = false;     // tryb przygotowania (na stacji: przycisk pod plombowaną pokrywą)
     bool silence = false;  // cisza radiowa (na stacji: przełącznik CISZA)
 
+    // Dziennik FRAM i zegar czasu pracy; bez dziennika nadawanie radiowe jest zablokowane.
+    void attach(journal::Journal* journal, uint32_t (*uptimeS)());
+    // Dług odczytany z dziennika przy starcie: odczekiwany w całości, potem kasowany zapisem 0.
+    void restoreDebt(uint32_t debtMs);
+
     // Każda funkcja zwraca nullptr po przyjęciu polecenia albo tekst błędu do odpowiedzi JSON.
     const char* txcw(uint32_t seconds, bool conducted);
     const char* txpkt(uint16_t count, uint8_t length, uint32_t intervalMs, bool conducted);
     const char* rxStart(uint8_t length);
     const char* foff(int32_t hz);
     void stop();         // przerwanie zadania i IDLE
-    void poll();         // z loop(): nadawanie serii, odbiór ramek, koniec nośnej
+    void poll();         // z loop(): nadawanie serii, odbiór ramek, koniec nośnej, kasowanie długu
     void rxper();        // drukuje i zeruje liczniki
     void printFoff();
-    void printLog();
+    void printLog(uint32_t count);
     void printStatus();
     void log(const char* text);
     void applyOffset();  // ponowny zapis FREQOFF po CONFIG
@@ -63,19 +68,21 @@ public:
     const Counters& counters() const { return counters_; }
 
 private:
-    const char* gate(uint32_t txMs, bool conducted);  // tryb, cisza, dług, limit serii, potwierdzenie
-    void startDebt(uint32_t txMs);
+    const char* gate(uint32_t txMs, bool conducted);  // tryb, cisza, dług, limit serii, potwierdzenie, zapis długu
     void stopCw();
     bool sendOne();
     void finishPkt();
     void receive();
     bool waitSync(bool level, uint32_t timeoutUs);
     void restore(const char* name);
+    uint32_t uptimeS() const { return uptime_ ? uptime_() : millis() / 1000; }
 
     cc1120::Radio& radio_;
     uint8_t pinSync_;
     uint8_t pinOk_;
     uint8_t pinLed_;
+    journal::Journal* journal_ = nullptr;
+    uint32_t (*uptime_)() = nullptr;
 
     bool cwActive_ = false;
     uint32_t cwStartMs_ = 0;
@@ -102,6 +109,7 @@ private:
     Counters counters_;
 
     uint32_t debtUntilMs_ = 0;
+    bool debtPending_ = false;   // dług zapisany w dzienniku, jeszcze nieskasowany
     int32_t foffHz_ = 0;
     bool foffSet_ = false;
 

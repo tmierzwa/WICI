@@ -58,6 +58,13 @@ class EquationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             p1.power_ramp(15)
 
+    def test_max_debt_matches_model(self):
+        sys.path.insert(0, str(ROOT / "software" / "reference"))
+        from obliczenia import p1_tx_seconds
+        self.assertEqual(p1.max_debt_ms(), round(12 * p1_tx_seconds(600, ramp_ms=2.0) * 1000))
+        self.assertEqual(p1.max_debt_ms(), 16228)  # radio.md: about 16 s
+        self.assertIn("MAX_DEBT_MS = 16228", p1.HEADER.read_text(encoding="utf-8"))
+
     def test_low_if_allows_image_compensation(self):
         bandwidth = p1.channel_bandwidth_hz(0, 8)
         f_if = 0x40 * p1.F_XOSC / 2**15  # FREQ_IF_CFG reset value, in Hz
