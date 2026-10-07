@@ -10,6 +10,7 @@
 
 #include "cc1120.h"
 #include "journal.h"
+#include "p1frame.h"
 
 namespace measure {
 
@@ -17,6 +18,11 @@ constexpr uint32_t CW_MAX_MS = 10000;         // TXCW <= 10 s (specyfikacja)
 constexpr uint32_t SERIES_MAX_MS = 1400;      // najdłuższa seria P1: 7 ramek po 103 B z narastaniem
 constexpr uint32_t CONFIRM_MS = 30000;        // potwierdzenie przyciskiem OK
 constexpr size_t LOG_ENTRIES = 16;            // dziennik zapasowy w RAM, gdy nie ma FRAM
+constexpr uint32_t CCA_MS = 50;               // kanał wolny przez 50 ms przed serią
+constexpr uint32_t BACKOFF_MIN_MS = 100;      // odroczenie losowe 100..1000 ms
+constexpr uint32_t BACKOFF_MAX_MS = 1000;
+constexpr uint32_t LONG_DEFERRAL_MS = 1000;   // odroczenie łączne powyżej 1 s liczy się jako długie
+constexpr uint8_t MAX_DEFERRALS = 30;         // potem datagram odrzucony (wybór stanowiska, tx_drop)
 
 struct Counters {
     uint32_t rxOk = 0;        // ramki z poprawnym CRC
@@ -36,6 +42,20 @@ struct Event {
     char text[40];
 };
 
+// Liczniki łącza P1 (pola INFO ze specyfikacji: rx_ok, rx_bad, tx_drop).
+struct LinkCounters {
+    uint32_t rxOk = 0;          // ramki P1 z poprawnym CRC i nagłówkiem
+    uint32_t rxBad = 0;         // ramki odrzucone przy rozbiorze albo niekompletne w kolejce
+    uint32_t rxDatagrams = 0;   // złożone datagramy
+    uint32_t txDatagrams = 0;
+    uint32_t txFragments = 0;
+    uint32_t txDrop = 0;        // datagramy odrzucone (cisza, dziennik, zbyt wiele odroczeń)
+    uint32_t deferrals = 0;     // odroczenia CCA
+    uint32_t longDeferrals = 0; // nadania odroczone łącznie o ponad 1 s
+};
+
+enum class RxMode : uint8_t { NONE, TEST, P1 };
+
 class Bench {
 public:
     Bench(cc1120::Radio& radio, uint8_t pinSync, uint8_t pinOk, uint8_t pinLed);
@@ -52,6 +72,12 @@ public:
     const char* txcw(uint32_t seconds, bool conducted);
     const char* txpkt(uint16_t count, uint8_t length, uint32_t intervalMs, bool conducted);
     const char* rxStart(uint8_t length);
+    // Łącze P1: odbiór ramek P1 w tle (tryb zmiennej długości) i nadanie datagramu
+    // z CCA 50 ms, odroczeniem losowym 100..1000 ms i długiem ciszy w dzienniku.
+    const char* p1rxStart();
+    const char* p1send(const uint8_t* data, size_t length);
+    void printLink();
+    const LinkCounters& link() const { return link_; }
     const char* foff(int32_t hz);
     void stop();         // przerwanie zadania i IDLE
     void poll();         // z loop(): nadawanie serii, odbiór ramek, koniec nośnej, kasowanie długu
@@ -63,8 +89,8 @@ public:
     void applyOffset();  // ponowny zapis FREQOFF po CONFIG
     bool confirm();      // czeka na przycisk OK do CONFIRM_MS
     uint32_t debtRemainingMs() const;
-    bool busy() const { return cwActive_ || pktActive_; }
-    bool receiving() const { return rxActive_; }
+    bool busy() const { return cwActive_ || pktActive_ || txState_ != TxState::IDLE; }
+    bool receiving() const { return rxMode_ != RxMode::NONE; }
     const Counters& counters() const { return counters_; }
 
 private:
@@ -73,6 +99,12 @@ private:
     bool sendOne();
     void finishPkt();
     void receive();
+    void receiveP1();
+    bool enterRx(RxMode mode, uint8_t length);
+    bool channelBusy();
+    void pollP1Tx();
+    bool sendFragments();
+    void finishP1Tx(const char* result);
     bool waitSync(bool level, uint32_t timeoutUs);
     void restore(const char* name);
     uint32_t uptimeS() const { return uptime_ ? uptime_() : millis() / 1000; }
@@ -103,10 +135,28 @@ private:
     bool pktConducted_ = false;
     uint16_t pktFailed_ = 0;
 
-    bool rxActive_ = false;
+    RxMode rxMode_ = RxMode::NONE;
     uint8_t rxLen_ = 0;
     uint32_t rxPollMs_ = 0;
     Counters counters_;
+
+    // Odbiór P1: bajt LEN odczytany, reszta ramki w drodze.
+    uint8_t rxPendingLen_ = 0;
+    uint32_t rxDeadlineMs_ = 0;
+    p1frame::Assembler assembler_;
+    LinkCounters link_;
+
+    // Nadawanie P1: oczekiwanie na dług, CCA, odroczenie, seria fragmentów.
+    enum class TxState : uint8_t { IDLE, WAIT_DEBT, CCA, BACKOFF, SEND };
+    TxState txState_ = TxState::IDLE;
+    uint8_t txData_[p1frame::MAX_DATAGRAM] = {};
+    size_t txLength_ = 0;
+    uint8_t txId_[p1frame::ID_BYTES] = {};
+    uint32_t txRequestedMs_ = 0;
+    uint32_t ccaStartMs_ = 0;
+    uint32_t ccaCheckMs_ = 0;
+    uint32_t backoffUntilMs_ = 0;
+    uint8_t txDeferrals_ = 0;
 
     uint32_t debtUntilMs_ = 0;
     bool debtPending_ = false;   // dług zapisany w dzienniku, jeszcze nieskasowany

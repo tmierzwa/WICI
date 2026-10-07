@@ -1,8 +1,8 @@
 # WICI: oprogramowanie stacji
 
-Katalog zawiera oprogramowanie układowe stacji. Obecny stan to pierwsze kroki na [stanowisku deweloperskim A](../hardware/dev-bench/README.md): nRF52840-DK z modułem TI CC1120EM-868-915 i pamięcią FRAM na złączu Arduino płytki. Środowisko `bench-a` w `platformio.ini` buduje obraz, który po podłączeniu USB zgłasza się poleceniem `INFO` w formacie ze [specyfikacji radia](../docs/spec/radio.md#usb-do-laptopa), identyfikuje układ radiowy i FRAM przez SPI, zapisuje do CC1120 [rejestry profilu P1](#rejestry-profilu-p1) z weryfikacją odczytu i kalibracją syntezera, wykonuje [polecenia pomiarowe](#polecenia-pomiarowe) `TXCW`, `TXPKT`, `RXPER`, `FOFF` ze specyfikacji, prowadzi [dziennik w FRAM](#dziennik-w-fram) (dług ciszy, zegar czasu pracy z liczbą restartów, zdarzenia), podaje zaprogramowaną częstotliwość i RSSI oraz obsługuje przyciski i diody płytki. Nie ma jeszcze ramki P1, stosu Reticulum, ekranu ani drugiego interfejsu CDC.
+Katalog zawiera oprogramowanie układowe stacji. Obecny stan to pierwsze kroki na [stanowisku deweloperskim A](../hardware/dev-bench/README.md): nRF52840-DK z modułem TI CC1120EM-868-915 i pamięcią FRAM na złączu Arduino płytki. Środowisko `bench-a` w `platformio.ini` buduje obraz, który po podłączeniu USB zgłasza się poleceniem `INFO` w formacie ze [specyfikacji radia](../docs/spec/radio.md#usb-do-laptopa), identyfikuje układ radiowy i FRAM przez SPI, zapisuje do CC1120 [rejestry profilu P1](#rejestry-profilu-p1) z weryfikacją odczytu i kalibracją syntezera, wykonuje [polecenia pomiarowe](#polecenia-pomiarowe) `TXCW`, `TXPKT`, `RXPER`, `FOFF` ze specyfikacji, prowadzi [dziennik w FRAM](#dziennik-w-fram) (dług ciszy, zegar czasu pracy z liczbą restartów, zdarzenia), obsługuje [łącze P1](#łącze-p1) (odbiór i składanie datagramów, nadawanie z CCA, odroczeniem i długiem ciszy), podaje zaprogramowaną częstotliwość i RSSI oraz obsługuje przyciski i diody płytki. Nie ma jeszcze stosu Reticulum, ekranu ani drugiego interfejsu CDC.
 
-Obraz skompilowano (PlatformIO, rdzeń Adafruit nRF52 1.7.0, 9900 B RAM, 80 792 B flash). **Nie uruchomiono go na sprzęcie**: odpowiedzi poleceń, numery pinów, działanie SPI z modułem i przyjęcie rejestrów przez układ wymagają sprawdzenia na płytce według kroków niżej.
+Obraz skompilowano (PlatformIO, rdzeń Adafruit nRF52 1.7.0, 18 196 B RAM, 86 328 B flash). **Nie uruchomiono go na sprzęcie**: odpowiedzi poleceń, numery pinów, działanie SPI z modułem i przyjęcie rejestrów przez układ wymagają sprawdzenia na płytce według kroków niżej.
 
 ## Okablowanie stanowiska A
 
@@ -55,7 +55,7 @@ Port USB nRF (J3, nie port J-Link J2) zgłasza się jako CDC ACM, 115200 bit/s (
 
 | Polecenie | Odpowiedź |
 |---|---|
-| `INFO` | pola jak w specyfikacji radia: `contract`, `profile`, `radio`, `mcu`, `fw`, `src`, `mv` (zero, brak pomiaru), `tx_wait_ms` (pozostały dług ciszy), `rx_ok`, `rx_bad`, `restarts` i `uptime_s` z dziennika FRAM, oraz `bench`, `prep`, `silence`, `radio_ok`, `p1_ok`, `fram_ok`, `journal_ok`, `journal_resets`, parametry P1, `boot_s` |
+| `INFO` | pola jak w specyfikacji radia: `contract`, `profile`, `radio`, `mcu`, `fw`, `src`, `mv` (zero, brak pomiaru), `tx_wait_ms` (pozostały dług ciszy), `rx_ok`, `rx_bad`, `tx_drop` z łącza P1, `restarts` i `uptime_s` z dziennika FRAM, oraz `bench`, `prep`, `silence`, `radio_ok`, `p1_ok`, `fram_ok`, `journal_ok`, `journal_resets`, parametry P1, `boot_s` |
 | `RADIO` | `partnumber` (CC1120 = `0x48`), `partversion`, `marcstate`, stan z bajtu statusu, `ok` |
 | `RESET` | reset sprzętowy RESET_N i `SRES` (kasuje rejestry P1, `p1_ok: false`), potem `RADIO` |
 | `CONFIG` | zapis tablicy P1 w stanie IDLE, odczyt i porównanie 57 rejestrów (`checked`, `mismatches`, pierwszy niezgodny z wartością oczekiwaną i odczytaną), potem kalibracja; `config: true` tylko przy zerze niezgodności i udanej kalibracji |
@@ -69,7 +69,10 @@ Port USB nRF (J3, nie port J-Link J2) zgłasza się jako CDC ACM, 115200 bit/s (
 | `TXPKT <n> <len> [<ms>] [CONDUCTED]` | `n` ramek wzorcowych po `len` B (4–103) co `ms`; seria idzie w tle, na końcu `sent`, `failed`, `tx_ms`, czasy pierwszej ramki z GPIO2 |
 | `RXPER` | zwraca i zeruje liczniki odbioru: `rx_ok`, `rx_bad`, `missing`, `reordered`, `overflow`, `per_percent`, średnie RSSI i LQI |
 | `FOFF [<hz>]` | korekta częstotliwości w Hz (±1 MHz, krok 30,5 Hz) do restartu; bez argumentu odczyt |
-| `STOP` | przerwanie `TXCW`, `TXPKT` i odbioru |
+| `P1RX` | odbiór ramek P1 w tle (zmienna długość, LEN do 102); każda ramka i złożony datagram jako wiersz JSON |
+| `P1TX <hex>` | nadanie datagramu 1–600 B zapisanego szesnastkowo: fragmentacja, losowy identyfikator, dług ciszy, CCA, odroczenia; wynik w wierszu `p1tx` po zakończeniu |
+| `P1` | liczniki łącza: ramki, datagramy, odrzuty, odroczenia, stan składania |
+| `STOP` | przerwanie `TXCW`, `TXPKT`, `P1TX` i odbioru |
 | `LOG [<n>]` | ostatnie `n` (domyślnie 16, do 64) zdarzeń z dziennika w FRAM, od najnowszego, z numerem i czasem pracy; bez FRAM 16 wpisów z RAM |
 | `JOURNAL` | stan dziennika: rekord długu (numer, dług, czas zapisu, liczba poprawnych rekordów), zegar (numer, czas pracy, restarty), numer ostatniego zdarzenia, największy dług |
 | `BENCH` | stan trybu przygotowania, ciszy, zadań i długu |
@@ -144,8 +147,20 @@ Zasady:
 
 Nie ma jeszcze: kolejki zgłoszeń, skrzynki, tablicy tras ani rekordów szyfrowanych ze specyfikacji; układ obszaru dla stacji (role stacji i OSP) zostanie uzgodniony przy tych strukturach, a dziennik tu opisany ma w nim zostać na tych samych adresach.
 
+## Łącze P1
+
+Kodek i składanie ramek są w `src/p1frame.cpp` (bez zależności od Arduino): fragmentacja datagramu do 600 B na ramki `LEN | BODY | CRC` z LEN liczącym BODY i CRC (F79), rozbiór ramki z pełną kontrolą pól i składanie według [specyfikacji radia](../docs/spec/radio.md#ramka-w-eterze): 8 prób po 120 s, poprawne duplikaty pomijane, sprzeczny duplikat albo zmiana liczby fragmentów lub długości usuwa próbę, przy przepełnieniu odpada próba z najmniejszą liczbą fragmentów, 16 ostatnio złożonych identyfikatorów odrzuca spóźnione duplikaty. Test na komputerze (`tests/test_firmware_host.py`) porównuje ramki z modelem bajt po bajcie dla wszystkich długości 1–600 B i odtwarza przypadki wrogie z testów modelu.
+
+Łącze w `src/measure.cpp`:
+
+- **Odbiór** (`P1RX`): układ w trybie zmiennej długości z PKT_LEN = 102, więc ramki dłuższe odrzuca sam; obraz czyta bajt LEN, czeka na resztę ramki i dwa bajty statusu (RSSI, LQI), rozbiera ramkę i oddaje ją składaniu. Ramki za krótkie, niekompletne w czasie albo z błędem rozbioru liczą się jako `rx_bad`. Każda ramka daje wiersz `p1rx` ze stanem składania, a złożony datagram wiersz z identyfikatorem i danymi szesnastkowo.
+- **Nadawanie** (`P1TX`): datagram czeka na koniec długu ciszy, potem 50 ms wolnego kanału (RSSI poniżej progu −100 dBm przy przyjętym przesunięciu RSSI i brak odbioru po słowie synchronizacji na GPIO2). Zajęty kanał odracza nadanie o losowe 100–1000 ms (`deferrals`; łączne czekanie ponad 1 s liczy się jako `long_deferrals`), po 30 odroczeniach datagram jest odrzucany (`tx_drop`; liczba jest wyborem stanowiska, specyfikacja nie podaje limitu). Przed pierwszą ramką do dziennika trafia dług 12 × zarezerwowany czas serii (liczony dla najdłuższych ramek), potem fragmenty idą jedną serią, a odbiór wraca od razu po serii. Cisza radiowa przerywa i odrzuca nadanie. Identyfikator datagramu pochodzi z generatora sprzętowego nRF52840 (RNG z korekcją obciążenia), który daje też ziarno odroczeń.
+- **Dwie płytki**: na obu `P1RX`; na jednej `P1TX 48656C6C6F` („Hello”); druga wypisuje `p1rx` z `datagram`. Datagram 600 B to 7 ramek i około 1,4 s nadawania, po nim 16 s długu.
+
+Nie ma jeszcze interfejsu do stosu Reticulum (datagramy trafiają tylko na port USB), rezerwacji 50% budżetu dla ruchu do OSP, osobnych limitów ogłoszeń ani drugiego interfejsu CDC.
+
 ## Następne kroki
 
 1. Ekran Sharp (Adafruit 4694) z EXTCOMIN z licznika sprzętowego; przyciski jako menu stacji.
-2. Ramka P1 w C++ sprawdzona na wektorach z [modelu](../software/reference/README.md) (LEN liczy BODY i CRC, F79) w trybie zmiennej długości układu; dwa interfejsy CDC (dane i diagnostyka).
+2. Dwa interfejsy CDC (dane i diagnostyka) i protokół USB do laptopa ze [specyfikacji oprogramowania](../docs/spec/oprogramowanie.md).
 3. microReticulum i LXMF na tym samym projekcie (T3) z pomiarem zapasu RAM; środowisko `bench-b` dla ESP32-S3-DevKitC-1 z S2-LP.

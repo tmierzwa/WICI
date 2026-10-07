@@ -4,7 +4,8 @@
 // konfiguracja rejestrów profilu P1 z weryfikacją odczytu i kalibracją syntezera,
 // polecenia pomiarowe TXCW, TXPKT, RXPER, FOFF w trybie przygotowania, dziennik
 // w FRAM (dług ciszy, zegar czasu pracy z liczbą restartów, zdarzenia), odczyt
-// częstotliwości i RSSI, przyciski i diody płytki. Bez ramki P1, stosu Reticulum
+// częstotliwości i RSSI, łącze P1 (odbiór i składanie datagramów, nadawanie z CCA,
+// odroczeniem i długiem ciszy), przyciski i diody płytki. Bez stosu Reticulum
 // i ekranu (następne kroki).
 #include <Arduino.h>
 #include <Adafruit_TinyUSB.h>
@@ -16,6 +17,7 @@
 #include "journal.h"
 #include "measure.h"
 #include "p1_registers.h"
+#include "p1frame.h"
 
 #ifndef WICI_FW_VERSION
 #define WICI_FW_VERSION "bench-a-dev"
@@ -36,7 +38,7 @@ uint32_t restarts = 0;    // z dziennika zegara w FRAM, +1 przy każdym starcie
 uint32_t uptimeBaseS = 0; // czas pracy z dziennika przy starcie; zegar monotoniczny między restartami
 uint32_t journalResets = 0;  // brak poprawnego rekordu długu przy starcie
 constexpr uint32_t CLOCK_WRITE_MS = 60000;  // zapis zegara co 60 s (oprogramowanie.md, "Czas")
-char line[128];
+char line[1400];  // P1TX przyjmuje do 600 B datagramu zapisanego szesnastkowo
 size_t lineLength = 0;
 
 const uint8_t buttons[] = {board::BTN_UP, board::BTN_DOWN, board::BTN_OK, board::BTN_BACK};
@@ -123,14 +125,15 @@ void printFram() {
 void printInfo() {
     // Pola jak w INFO ze specyfikacji radia; napięcie jest zerowe, bo stanowisko go nie mierzy.
     // uptime_s to zegar z dziennika FRAM (ciągły między restartami), boot_s czas od startu.
-    const measure::Counters& c = bench.counters();
+    const measure::LinkCounters& c = bench.link();
     Serial.printf("{\"contract\":2,\"profile\":\"P1\",\"radio\":\"CC1120\",\"mcu\":\"nRF52840\",\"fw\":\"%s\","
-                  "\"src\":\"USB\",\"mv\":0,\"tx_wait_ms\":%lu,\"rx_ok\":%lu,\"rx_bad\":%lu,\"tx_drop\":0,\"restarts\":%lu,"
+                  "\"src\":\"USB\",\"mv\":0,\"tx_wait_ms\":%lu,\"rx_ok\":%lu,\"rx_bad\":%lu,\"tx_drop\":%lu,\"restarts\":%lu,"
                   "\"bench\":\"A\",\"prep\":%s,\"silence\":%s,\"radio_ok\":%s,\"p1_ok\":%s,\"fram_ok\":%s,\"journal_ok\":%s,"
                   "\"journal_resets\":%lu,\"carrier_hz\":%lu,\"symbol_rate\":%u,\"deviation_hz\":%u,\"rx_filter_hz\":%u,"
                   "\"tx_power_dbm\":%d,\"uptime_s\":%lu,\"boot_s\":%lu}\n",
                   WICI_FW_VERSION, static_cast<unsigned long>(bench.debtRemainingMs()), static_cast<unsigned long>(c.rxOk),
-                  static_cast<unsigned long>(c.rxBad), static_cast<unsigned long>(restarts), boolName(bench.prep),
+                  static_cast<unsigned long>(c.rxBad), static_cast<unsigned long>(c.txDrop),
+                  static_cast<unsigned long>(restarts), boolName(bench.prep),
                   boolName(bench.silence), boolName(radioOk), boolName(p1Ok), boolName(framOk), boolName(journalOk),
                   static_cast<unsigned long>(journalResets), static_cast<unsigned long>(p1::CARRIER_HZ), p1::SYMBOL_RATE,
                   p1::DEVIATION_HZ, p1::RX_FILTER_HZ, p1::TX_POWER_DBM, static_cast<unsigned long>(uptimeS()),
@@ -188,7 +191,7 @@ void printButtons() {
 void printHelp() {
     Serial.println("{\"commands\":[\"HELP\",\"INFO\",\"RADIO\",\"RESET\",\"CONFIG\",\"VERIFY\",\"CAL\",\"FREQ\","
                    "\"PREP <0|1>\",\"SILENCE <0|1>\",\"TXCW <s> [CONDUCTED]\",\"TXPKT <n> <len> [<ms>] [CONDUCTED]\","
-                   "\"RX [<len>]\",\"RXPER\",\"FOFF [<hz>]\",\"STOP\",\"LOG [<n>]\",\"JOURNAL\",\"BENCH\",\"IDLE\",\"RSSI\",\"STATE\","
+                   "\"RX [<len>]\",\"RXPER\",\"FOFF [<hz>]\",\"P1RX\",\"P1TX <hex>\",\"P1\",\"STOP\",\"LOG [<n>]\",\"JOURNAL\",\"BENCH\",\"IDLE\",\"RSSI\",\"STATE\","
                    "\"REG <hex>\",\"FRAM\",\"BTN\",\"LED <1-4> <0|1>\"]}");
 }
 
@@ -272,6 +275,26 @@ void handle(char* cmd) {
         else Serial.printf("{\"rx\":true,\"len\":%u}\n", length);
         printState();
     } else if (!strcmp(cmd, "RXPER")) bench.rxper();
+    else if (!strcmp(cmd, "P1RX")) {
+        const char* error = bench.p1rxStart();
+        if (error) printError(error);
+        else Serial.println("{\"p1rx\":true}");
+    } else if (!strcmp(cmd, "P1TX") && n == 1) {
+        // Datagram szesnastkowo (1..600 B); identyfikator losuje stacja.
+        static uint8_t data[p1frame::MAX_DATAGRAM];
+        const size_t hexLength = strlen(words[0]);
+        if (hexLength % 2 || hexLength < 2 || hexLength > 2 * p1frame::MAX_DATAGRAM) { printError("P1TX <hex of 1..600 B>"); return; }
+        for (size_t i = 0; i < hexLength / 2; ++i) {
+            char pair[3] = {words[0][2 * i], words[0][2 * i + 1], '\0'};
+            char* end = nullptr;
+            data[i] = static_cast<uint8_t>(strtoul(pair, &end, 16));
+            if (*end) { printError("P1TX: not hex"); return; }
+        }
+        const char* error = bench.p1send(data, hexLength / 2);
+        if (error) printError(error);
+        else Serial.printf("{\"p1tx\":\"queued\",\"len\":%u,\"fragments\":%u}\n", static_cast<unsigned>(hexLength / 2),
+                           p1frame::fragmentCount(hexLength / 2));
+    } else if (!strcmp(cmd, "P1")) bench.printLink();
     else if (!strcmp(cmd, "FOFF")) {
         if (n == 1) {
             const char* error = bench.foff(strtol(words[0], nullptr, 10));

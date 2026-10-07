@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Host checks of Arduino-free firmware units: the P1 CRC, the test frame of TXPKT/RXPER and the FRAM journal."""
+"""Host checks of Arduino-free firmware units: the P1 CRC, the test frame, the FRAM journal and the P1 frame codec."""
 
 from pathlib import Path
 import shutil
@@ -11,7 +11,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "firmware" / "src"
 sys.path.insert(0, str(ROOT / "software" / "reference"))
-from reference import crc16  # noqa: E402
+from reference import PREFIX, crc16, fragment  # noqa: E402
 
 HARNESS = r"""
 #include <cstdio>
@@ -20,6 +20,7 @@ HARNESS = r"""
 #include <vector>
 #include "crc16.h"
 #include "journal.h"
+#include "p1frame.h"
 #include "testframe.h"
 
 // FRAM w RAM: 512 KiB skasowane do 0xFF jak nowy układ.
@@ -83,12 +84,71 @@ int journalScenario() {
     return 0;
 }
 
+void printHex(const uint8_t* data, size_t length) {
+    for (size_t i = 0; i < length; ++i) printf("%02X", data[i]);
+}
+
+// Wszystkie długości 1..600 z danymi i % 256 i identyfikatorem "12345678": jedna ramka na wiersz.
+int buildAll() {
+    uint8_t data[p1frame::MAX_DATAGRAM];
+    for (size_t i = 0; i < sizeof(data); ++i) data[i] = static_cast<uint8_t>(i);
+    const uint8_t id[8] = {'1', '2', '3', '4', '5', '6', '7', '8'};
+    for (size_t length = 1; length <= p1frame::MAX_DATAGRAM; ++length) {
+        const uint8_t count = p1frame::fragmentCount(length);
+        for (uint8_t index = 0; index < count; ++index) {
+            uint8_t frame[p1frame::MAX_FRAME];
+            const size_t n = p1frame::buildFrame(data, length, id, index, frame);
+            printf("%zu %u ", length, index);
+            printHex(frame, n);
+            printf("\n");
+        }
+    }
+    return 0;
+}
+
+// Składanie sterowane z wejścia: "P <ms> <hex>" ramka, "X <ms>" wygaszanie, "S" statystyki, "A" liczba prób.
+int assembleScript() {
+    p1frame::Assembler assembler;
+    char line[4096];
+    while (fgets(line, sizeof(line), stdin)) {
+        unsigned long ms = 0;
+        char hex[2048];
+        if (sscanf(line, "P %lu %2047s", &ms, hex) == 2) {
+            uint8_t frame[p1frame::MAX_FRAME + 8];
+            const size_t n = strlen(hex) / 2;
+            if (n > sizeof(frame)) { printf("too long\n"); continue; }
+            for (size_t i = 0; i < n; ++i) { unsigned v; sscanf(hex + 2 * i, "%2x", &v); frame[i] = static_cast<uint8_t>(v); }
+            p1frame::Fragment fragment;
+            const p1frame::Parse parse = p1frame::parseFrame(frame, n, fragment);
+            if (parse != p1frame::Parse::OK) { printf("parse %s\n", p1frame::parseName(parse)); continue; }
+            const p1frame::Outcome outcome = assembler.push(fragment, ms);
+            printf("%s", p1frame::outcomeName(outcome));
+            if (outcome == p1frame::Outcome::COMPLETE) {
+                printf(" %zu ", assembler.completedLength());
+                printHex(assembler.completed(), assembler.completedLength());
+            }
+            printf("\n");
+        } else if (sscanf(line, "X %lu", &ms) == 1) {
+            assembler.expire(ms);
+            printf("expired\n");
+        } else if (line[0] == 'S') {
+            const p1frame::Stats& s = assembler.stats();
+            printf("stats %u %u %u %u %u %u %u\n", s.stored, s.completed, s.duplicates, s.conflicts, s.late, s.evicted, s.expired);
+        } else if (line[0] == 'A') {
+            printf("active %zu\n", assembler.active());
+        }
+    }
+    return 0;
+}
+
 int main(int argc, char** argv) {
     if (argc == 3 && !strcmp(argv[1], "crc")) {
         printf("%04X\n", p1::crc16(reinterpret_cast<const uint8_t*>(argv[2]), strlen(argv[2])));
         return 0;
     }
     if (argc == 2 && !strcmp(argv[1], "journal")) return journalScenario();
+    if (argc == 2 && !strcmp(argv[1], "buildall")) return buildAll();
+    if (argc == 2 && !strcmp(argv[1], "assemble")) return assembleScript();
     if (argc == 4 && !strcmp(argv[1], "frame")) {
         uint8_t frame[testframe::MAX_LENGTH];
         const size_t length = strtoul(argv[2], nullptr, 10);
@@ -127,7 +187,8 @@ class HostUnitTests(unittest.TestCase):
         (root / "harness.cpp").write_text(HARNESS, encoding="utf-8")
         cls.binary = root / "harness"
         subprocess.run([compiler(), "-std=c++17", "-Wall", "-Wextra", "-Werror", f"-I{SRC}", str(root / "harness.cpp"),
-                        str(SRC / "testframe.cpp"), str(SRC / "journal.cpp"), "-o", str(cls.binary)], check=True)
+                        str(SRC / "testframe.cpp"), str(SRC / "journal.cpp"), str(SRC / "p1frame.cpp"), "-o", str(cls.binary)],
+                       check=True)
 
     @classmethod
     def tearDownClass(cls):
@@ -155,6 +216,76 @@ class HostUnitTests(unittest.TestCase):
         b = bytes.fromhex(self.run_harness("frame", "40", "8")[0])
         self.assertNotEqual(a[2:-2], b[2:-2])
         self.assertGreater(len(set(a[2:-2])), 10)
+
+    def test_p1_frames_match_model_for_every_length(self):
+        lines = subprocess.run([str(self.binary), "buildall"], capture_output=True, text=True, check=True).stdout.splitlines()
+        built = {}
+        for line in lines:
+            length, index, frame_hex = line.split()
+            built[(int(length), int(index))] = bytes.fromhex(frame_hex)
+        expected = {}
+        for length in range(1, 601):
+            data = bytes(i % 256 for i in range(length))
+            for index, frame in enumerate(fragment(data, b"12345678")):
+                expected[(length, index)] = frame[len(PREFIX):]
+        self.assertEqual(built, expected)
+
+    def assemble(self, script):
+        out = subprocess.run([str(self.binary), "assemble"], input="\n".join(script) + "\n", capture_output=True,
+                             text=True, check=True).stdout.splitlines()
+        return out
+
+    @staticmethod
+    def air(frame):
+        return frame[len(PREFIX):].hex()
+
+    def test_p1_assembly_matches_spec_rules(self):
+        data = bytes(range(256)) * 2 + b"tail" * 22  # 600 B
+        frames = fragment(data, b"ABCDEFGH")
+        # Odwrócona kolejność, potem duplikat pierwszej ramki po złożeniu: spóźniony duplikat.
+        script = [f"P {i} {self.air(f)}" for i, f in enumerate(reversed(frames))] + [f"P 10 {self.air(frames[0])}", "S"]
+        out = self.assemble(script)
+        self.assertEqual(out[:6], ["stored"] * 6)
+        self.assertEqual(out[6], f"complete 600 {data.hex().upper()}")
+        self.assertEqual(out[7:], ["late", "stats 7 1 0 0 1 0 0"])
+        # Poprawny duplikat w trakcie składania, potem sprzeczny duplikat usuwa próbę.
+        altered = bytearray(frames[0][len(PREFIX):-2])
+        altered[-1] ^= 1
+        altered_hex = (bytes(altered) + crc16(bytes(altered)).to_bytes(2, "big")).hex()
+        out = self.assemble([f"P 0 {self.air(frames[0])}", f"P 1 {self.air(frames[0])}", f"P 2 {altered_hex}", "A",
+                             f"P 3 {self.air(frames[0])}", "A", "S"])
+        self.assertEqual(out, ["stored", "duplicate", "conflict", "active 0", "stored", "active 1", "stats 2 0 1 1 0 0 0"])
+        # Ten sam identyfikator z inną długością datagramu usuwa próbę.
+        other = fragment(b"x" * 100, b"ABCDEFGH")
+        out = self.assemble([f"P 0 {self.air(frames[1])}", f"P 1 {self.air(other[0])}", "A", "S"])
+        self.assertEqual(out, ["stored", "conflict", "active 0", "stats 1 0 0 1 0 0 0"])
+        # Uszkodzone CRC i stare znaczenie LEN są odrzucane przy rozbiorze.
+        corrupt = bytearray(frames[0][len(PREFIX):])
+        corrupt[20] ^= 1
+        old_len = bytearray(frames[0][len(PREFIX):-2])
+        old_len[0] -= 2
+        old_len_hex = (bytes(old_len) + crc16(bytes(old_len)).to_bytes(2, "big")).hex()
+        out = self.assemble([f"P 0 {bytes(corrupt).hex()}", f"P 0 {old_len_hex}"])
+        self.assertEqual(out, ["parse crc", "parse length"])
+
+    def test_p1_assembly_overflow_and_expiry(self):
+        starts = []
+        for n in range(9):
+            frames = fragment(bytes([n]) * 100, bytes([n]) * 8)  # dwa fragmenty, nadany tylko pierwszy
+            starts.append((frames[0], frames[1]))
+        script = [f"P {n * 10} {self.air(first)}" for n, (first, _) in enumerate(starts)] + ["A", "S",
+                  f"P 100 {self.air(starts[0][1])}", "A", f"P 101 {self.air(starts[8][1])}", "S"]
+        out = self.assemble(script)
+        # Dziewiąta próba wypiera najstarszą z ośmiu równych; jej drugi fragment zaczyna nową próbę,
+        # a dziewiąty datagram kończy się poprawnie.
+        self.assertEqual(out[:9], ["stored"] * 9)
+        self.assertEqual(out[9:12], ["active 8", "stats 9 0 0 0 0 1 0", "stored"])
+        self.assertEqual(out[12], "active 8")
+        self.assertTrue(out[13].startswith("complete 100 "))
+        self.assertEqual(out[14], "stats 11 1 0 0 0 2 0")
+        frames = fragment(b"z" * 200, b"EXPIRE01")
+        out = self.assemble([f"P 0 {self.air(frames[0])}", "X 119999", "A", "X 120000", "A", "S"])
+        self.assertEqual(out, ["stored", "expired", "active 1", "expired", "active 0", "stats 1 0 0 0 0 0 1"])
 
     def test_journal_scenario(self):
         lines = subprocess.run([str(self.binary), "journal"], capture_output=True, text=True, check=True).stdout.splitlines()

@@ -131,9 +131,7 @@ const char* Bench::txcw(uint32_t seconds, bool conducted) {
     if (seconds == 0 || seconds * 1000 > CW_MAX_MS) return "TXCW 1..10 s";
     const char* error = gate(seconds * 1000, conducted);
     if (error) return error;
-    if (rxActive_) {
-        rxActive_ = false;
-    }
+    rxMode_ = RxMode::NONE;
     radio_.idle();
     radio_.strobe(cc1120::SFTX);
     // Nośna bez modulacji: 2-FSK z dewiacją 0, dane losowe PN9, pakiet nieskończony.
@@ -176,8 +174,9 @@ const char* Bench::txpkt(uint16_t count, uint8_t length, uint32_t intervalMs, bo
     const uint32_t txMs = static_cast<uint32_t>(count) * frameAirMs(length);
     const char* error = gate(txMs, conducted);
     if (error) return error;
-    rxActive_ = false;
+    rxMode_ = RxMode::NONE;
     radio_.idle();
+    radio_.writeReg(cc1120::PKT_CFG0, 0x00);  // stała długość ramek wzorcowych
     radio_.writeReg(cc1120::PKT_LEN, length);
     pktTotal_ = count;
     pktSent_ = 0;
@@ -250,18 +249,30 @@ void Bench::finishPkt() {
                   pktOnAirUs_ / 1000.0, pktTailUs_ / 1000.0, pktLen_ * 8 * 1000.0 / p1::SYMBOL_RATE);
 }
 
+bool Bench::enterRx(RxMode mode, uint8_t length) {
+    radio_.idle();
+    radio_.strobe(cc1120::SFRX);
+    // Ramki wzorcowe: stała długość; ramki P1: zmienna długość z bajtem LEN do 102 (F79).
+    radio_.writeReg(cc1120::PKT_CFG0, mode == RxMode::P1 ? 0x20 : 0x00);
+    radio_.writeReg(cc1120::PKT_LEN, mode == RxMode::P1 ? p1frame::MAX_LEN : length);
+    rxLen_ = length;
+    rxPendingLen_ = 0;
+    radio_.strobe(cc1120::SRX);
+    rxMode_ = radio_.waitMarcState(cc1120::MARC_STATE_RX, 50) ? mode : RxMode::NONE;
+    return rxMode_ == mode;
+}
+
 const char* Bench::rxStart(uint8_t length) {
     if (length < testframe::MIN_LENGTH || length > testframe::MAX_LENGTH) return "len 4..103";
     if (busy()) return "busy: STOP first";
-    radio_.idle();
-    radio_.strobe(cc1120::SFRX);
-    radio_.writeReg(cc1120::PKT_LEN, length);
-    rxLen_ = length;
     counters_ = Counters();
     counters_.startedMs = millis();
-    radio_.strobe(cc1120::SRX);
-    rxActive_ = radio_.waitMarcState(cc1120::MARC_STATE_RX, 50);
-    return rxActive_ ? nullptr : "radio did not enter RX";
+    return enterRx(RxMode::TEST, length) ? nullptr : "radio did not enter RX";
+}
+
+const char* Bench::p1rxStart() {
+    if (busy()) return "busy: STOP first";
+    return enterRx(RxMode::P1, 0) ? nullptr : "radio did not enter RX";
 }
 
 void Bench::receive() {
@@ -313,7 +324,7 @@ void Bench::rxper() {
                   static_cast<unsigned long>(c.missing), static_cast<unsigned long>(c.reordered),
                   static_cast<unsigned long>(c.overflow), c.haveSeq ? c.lastSeq : -1, per,
                   c.rxOk ? static_cast<double>(c.rssiSum) / c.rxOk : 0.0, c.rxOk ? static_cast<double>(c.lqiSum) / c.rxOk : 0.0,
-                  rxLen_, static_cast<unsigned long>(seconds), boolName(rxActive_));
+                  rxLen_, static_cast<unsigned long>(seconds), boolName(rxMode_ == RxMode::TEST));
     counters_ = Counters();
     counters_.startedMs = millis();
 }
@@ -334,7 +345,7 @@ const char* Bench::foff(int32_t hz) {
 void Bench::applyOffset() {
     if (!foffSet_) return;
     const int16_t reg = static_cast<int16_t>(lround(static_cast<double>(foffHz_) * p1::LO_DIVIDER * 262144.0 / p1::F_XOSC_HZ));
-    const bool wasRx = rxActive_;
+    const bool wasRx = receiving();
     radio_.idle();
     radio_.setFrequencyOffset(reg);
     if (wasRx) radio_.strobe(cc1120::SRX);
@@ -351,7 +362,7 @@ void Bench::printFoff() {
 void Bench::printStatus() {
     Serial.printf("{\"prep\":%s,\"silence\":%s,\"txcw\":%s,\"txpkt\":%s,\"rx\":%s,\"tx_wait_ms\":%lu,"
                   "\"debt_pending\":%s,\"journal\":%s,\"foff_hz\":%ld}\n",
-                  boolName(prep), boolName(silence), boolName(cwActive_), boolName(pktActive_), boolName(rxActive_),
+                  boolName(prep), boolName(silence), boolName(cwActive_), boolName(pktActive_), boolName(receiving()),
                   static_cast<unsigned long>(debtRemainingMs()), boolName(debtPending_),
                   boolName(journal_ && journal_->ok()), static_cast<long>(foffHz_));
 }
@@ -359,7 +370,9 @@ void Bench::printStatus() {
 void Bench::stop() {
     if (cwActive_) stopCw();
     if (pktActive_) finishPkt();
-    rxActive_ = false;
+    if (txState_ != TxState::IDLE) finishP1Tx("stopped");
+    rxMode_ = RxMode::NONE;
+    rxPendingLen_ = 0;
     radio_.idle();
 }
 
@@ -387,10 +400,228 @@ void Bench::poll() {
         }
         return;
     }
-    if (rxActive_ && now - rxPollMs_ >= 5) {
+    if (txState_ != TxState::IDLE) pollP1Tx();
+    if (rxMode_ != RxMode::NONE && now - rxPollMs_ >= 5) {
         rxPollMs_ = now;
-        receive();
+        if (rxMode_ == RxMode::TEST) receive();
+        else receiveP1();
     }
+}
+
+// --- łącze P1 -------------------------------------------------------------------
+
+void Bench::receiveP1() {
+    const uint8_t marc = radio_.readMarcState();
+    if (marc == cc1120::MARC_STATE_RX_FIFO_ERR) {
+        ++link_.rxBad;
+        rxPendingLen_ = 0;
+        radio_.idle();
+        radio_.strobe(cc1120::SFRX);
+        radio_.strobe(cc1120::SRX);
+        return;
+    }
+    if (marc != cc1120::MARC_STATE_RX) {
+        radio_.strobe(cc1120::SRX);
+        return;
+    }
+    assembler_.expire(millis());
+    uint8_t bytes = radio_.rxBytes();
+    for (;;) {
+        if (rxPendingLen_ == 0) {
+            if (bytes < 1) return;
+            radio_.readFifo(&rxPendingLen_, 1);  // bajt LEN; reszta ramki może być jeszcze w powietrzu
+            --bytes;
+            rxDeadlineMs_ = millis() + (static_cast<uint32_t>(rxPendingLen_) + 2) * 8 * 1000 / p1::SYMBOL_RATE + 50;
+            if (rxPendingLen_ < p1frame::MIN_LEN || rxPendingLen_ > p1frame::MAX_LEN) {
+                ++link_.rxBad;  // układ odrzuca LEN > PKT_LEN, krótsze trzeba wyrzucić samemu
+                rxPendingLen_ = 0;
+                radio_.idle();
+                radio_.strobe(cc1120::SFRX);
+                radio_.strobe(cc1120::SRX);
+                return;
+            }
+        }
+        const size_t rest = static_cast<size_t>(rxPendingLen_) + 2;  // BODY + CRC + RSSI + LQI
+        if (bytes < rest) {
+            if (static_cast<int32_t>(millis() - rxDeadlineMs_) > 0) {
+                ++link_.rxBad;
+                rxPendingLen_ = 0;
+                radio_.idle();
+                radio_.strobe(cc1120::SFRX);
+                radio_.strobe(cc1120::SRX);
+            }
+            return;
+        }
+        uint8_t frame[p1frame::MAX_FRAME + 2];
+        frame[0] = rxPendingLen_;
+        radio_.readFifo(frame + 1, rest);
+        bytes -= rest;
+        const size_t length = static_cast<size_t>(rxPendingLen_) + 1;
+        rxPendingLen_ = 0;
+        const int16_t rssiDbm = static_cast<int16_t>(static_cast<int8_t>(frame[length])) + p1::RSSI_OFFSET_DB;
+        p1frame::Fragment fragment;
+        const p1frame::Parse parse = p1frame::parseFrame(frame, length, fragment);
+        if (parse != p1frame::Parse::OK) {
+            ++link_.rxBad;
+            Serial.printf("{\"p1rx\":\"rejected\",\"reason\":\"%s\",\"len\":%u,\"rssi_dbm\":%d}\n", p1frame::parseName(parse),
+                          frame[0], rssiDbm);
+            continue;
+        }
+        ++link_.rxOk;
+        const p1frame::Outcome outcome = assembler_.push(fragment, millis());
+        if (outcome == p1frame::Outcome::COMPLETE) {
+            ++link_.rxDatagrams;
+            Serial.printf("{\"p1rx\":\"datagram\",\"id\":\"");
+            for (size_t i = 0; i < p1frame::ID_BYTES; ++i) Serial.printf("%02X", assembler_.completedId()[i]);
+            Serial.printf("\",\"len\":%u,\"fragments\":%u,\"rssi_dbm\":%d,\"data\":\"",
+                          static_cast<unsigned>(assembler_.completedLength()), fragment.count, rssiDbm);
+            for (size_t i = 0; i < assembler_.completedLength(); ++i) Serial.printf("%02X", assembler_.completed()[i]);
+            Serial.println("\"}");
+        } else {
+            Serial.printf("{\"p1rx\":\"%s\",\"index\":%u,\"count\":%u,\"total\":%u,\"rssi_dbm\":%d}\n",
+                          p1frame::outcomeName(outcome), fragment.index, fragment.count, fragment.total, rssiDbm);
+        }
+    }
+}
+
+namespace {
+
+// Identyfikator datagramu z generatora sprzętowego nRF52840 (RNG z korekcją obciążenia);
+// bez SoftDevice rejestry RNG są dostępne bezpośrednio.
+void randomId(uint8_t out[p1frame::ID_BYTES]) {
+#if defined(NRF52_SERIES) || defined(NRF52840_XXAA)
+    NRF_RNG->CONFIG = RNG_CONFIG_DERCEN_Msk;
+    NRF_RNG->EVENTS_VALRDY = 0;
+    NRF_RNG->TASKS_START = 1;
+    for (size_t i = 0; i < p1frame::ID_BYTES; ++i) {
+        while (!NRF_RNG->EVENTS_VALRDY) {}
+        NRF_RNG->EVENTS_VALRDY = 0;
+        out[i] = static_cast<uint8_t>(NRF_RNG->VALUE);
+    }
+    NRF_RNG->TASKS_STOP = 1;
+    randomSeed((static_cast<uint32_t>(out[0]) << 24) | (static_cast<uint32_t>(out[1]) << 16) |
+               (static_cast<uint32_t>(out[2]) << 8) | out[3]);  // ziarno odroczeń losowych
+#else
+    for (size_t i = 0; i < p1frame::ID_BYTES; ++i) out[i] = static_cast<uint8_t>(random(256));
+#endif
+}
+
+}  // namespace
+
+const char* Bench::p1send(const uint8_t* data, size_t length) {
+    if (length < 1 || length > p1frame::MAX_DATAGRAM) return "datagram 1..600 B";
+    if (busy()) return "busy: STOP first";
+    if (silence) { ++link_.txDrop; return "radio silence"; }
+    if (!journal_ || !journal_->ok()) { ++link_.txDrop; return "debt journal unavailable: no FRAM"; }
+    memcpy(txData_, data, length);
+    txLength_ = length;
+    randomId(txId_);
+    txDeferrals_ = 0;
+    txRequestedMs_ = millis();
+    if (rxMode_ != RxMode::P1 && !enterRx(RxMode::P1, 0)) return "radio did not enter RX";
+    txState_ = debtRemainingMs() ? TxState::WAIT_DEBT : TxState::CCA;
+    ccaStartMs_ = millis();
+    ccaCheckMs_ = 0;
+    return nullptr;
+}
+
+bool Bench::channelBusy() {
+    // Kanał zajęty: RSSI ponad progiem CCA albo trwa odbiór po słowie synchronizacji (GPIO2).
+    if (digitalRead(pinSync_) == HIGH || rxPendingLen_ != 0) return true;
+    const cc1120::Rssi r = radio_.rssi(p1::RSSI_OFFSET_DB);
+    return r.valid && r.dbm > p1::CCA_THRESHOLD_DBM;
+}
+
+void Bench::pollP1Tx() {
+    const uint32_t now = millis();
+    if (silence) { finishP1Tx("silence"); return; }
+    switch (txState_) {
+        case TxState::WAIT_DEBT:
+            if (debtRemainingMs() == 0) { txState_ = TxState::CCA; ccaStartMs_ = now; }
+            return;
+        case TxState::BACKOFF:
+            if (static_cast<int32_t>(now - backoffUntilMs_) >= 0) { txState_ = TxState::CCA; ccaStartMs_ = now; }
+            return;
+        case TxState::CCA:
+            if (now == ccaCheckMs_) return;
+            ccaCheckMs_ = now;
+            if (channelBusy()) {
+                if (++txDeferrals_ > MAX_DEFERRALS) { ++link_.txDrop; finishP1Tx("too many deferrals"); return; }
+                ++link_.deferrals;
+                backoffUntilMs_ = now + BACKOFF_MIN_MS + random(BACKOFF_MAX_MS - BACKOFF_MIN_MS + 1);
+                txState_ = TxState::BACKOFF;
+                return;
+            }
+            if (now - ccaStartMs_ < CCA_MS) return;
+            txState_ = TxState::SEND;
+            return;
+        case TxState::SEND: {
+            if (now - txRequestedMs_ > LONG_DEFERRAL_MS) ++link_.longDeferrals;
+            const uint8_t count = p1frame::fragmentCount(txLength_);
+            const uint32_t txMs = count * frameAirMs(p1frame::MAX_LEN + 1);  // rezerwacja: najdłuższe ramki
+            if (!journal_->writeDebt(txMs * p1::DEBT_FACTOR, uptimeS())) { ++link_.txDrop; finishP1Tx("debt journal write failed"); return; }
+            debtUntilMs_ = millis() + txMs * p1::DEBT_FACTOR;
+            debtPending_ = true;
+            const bool ok = sendFragments();
+            finishP1Tx(ok ? "sent" : "tx error");
+            return;
+        }
+        case TxState::IDLE:
+            return;
+    }
+}
+
+bool Bench::sendFragments() {
+    const uint8_t count = p1frame::fragmentCount(txLength_);
+    bool ok = true;
+    radio_.idle();
+    radio_.writeReg(cc1120::PKT_CFG0, 0x20);  // zmienna długość: układ wysyła LEN bajtów po bajcie LEN
+    radio_.writeReg(cc1120::PKT_LEN, p1frame::MAX_LEN);
+    for (uint8_t index = 0; index < count; ++index) {
+        uint8_t frame[p1frame::MAX_FRAME];
+        const size_t n = p1frame::buildFrame(txData_, txLength_, txId_, index, frame);
+        radio_.strobe(cc1120::SFTX);
+        radio_.writeFifo(frame, n);
+        radio_.strobe(cc1120::STX);
+        const uint32_t onAirMs = static_cast<uint32_t>(12 + n) * 8 * 1000 / p1::SYMBOL_RATE;
+        if (!radio_.waitMarcState(cc1120::MARC_STATE_IDLE, onAirMs + 120)) {
+            ok = false;
+            radio_.idle();
+            radio_.strobe(cc1120::SFTX);
+        }
+        ++link_.txFragments;
+    }
+    ++link_.txDatagrams;
+    enterRx(RxMode::P1, 0);  // odbiór wyłączony tylko na czas własnego nadawania
+    return ok;
+}
+
+void Bench::finishP1Tx(const char* result) {
+    txState_ = TxState::IDLE;
+    Serial.printf("{\"p1tx\":\"%s\",\"id\":\"", result);
+    for (size_t i = 0; i < p1frame::ID_BYTES; ++i) Serial.printf("%02X", txId_[i]);
+    Serial.printf("\",\"len\":%u,\"fragments\":%u,\"deferrals\":%u,\"wait_ms\":%lu,\"tx_wait_ms\":%lu}\n",
+                  static_cast<unsigned>(txLength_), p1frame::fragmentCount(txLength_), txDeferrals_,
+                  static_cast<unsigned long>(millis() - txRequestedMs_), static_cast<unsigned long>(debtRemainingMs()));
+    if (rxMode_ != RxMode::P1) enterRx(RxMode::P1, 0);
+}
+
+void Bench::printLink() {
+    const p1frame::Stats& s = assembler_.stats();
+    Serial.printf("{\"p1\":{\"rx\":%s,\"tx\":\"%s\",\"rx_ok\":%lu,\"rx_bad\":%lu,\"rx_datagrams\":%lu,\"tx_datagrams\":%lu,"
+                  "\"tx_fragments\":%lu,\"tx_drop\":%lu,\"deferrals\":%lu,\"long_deferrals\":%lu,\"attempts\":%u,"
+                  "\"stored\":%lu,\"duplicates\":%lu,\"conflicts\":%lu,\"late\":%lu,\"evicted\":%lu,\"expired\":%lu,"
+                  "\"cca_threshold_dbm\":%d,\"tx_wait_ms\":%lu}}\n",
+                  boolName(rxMode_ == RxMode::P1), txState_ == TxState::IDLE ? "idle" : txState_ == TxState::WAIT_DEBT ? "wait_debt"
+                  : txState_ == TxState::CCA ? "cca" : txState_ == TxState::BACKOFF ? "backoff" : "send",
+                  static_cast<unsigned long>(link_.rxOk), static_cast<unsigned long>(link_.rxBad),
+                  static_cast<unsigned long>(link_.rxDatagrams), static_cast<unsigned long>(link_.txDatagrams),
+                  static_cast<unsigned long>(link_.txFragments), static_cast<unsigned long>(link_.txDrop),
+                  static_cast<unsigned long>(link_.deferrals), static_cast<unsigned long>(link_.longDeferrals),
+                  static_cast<unsigned>(assembler_.active()), static_cast<unsigned long>(s.stored),
+                  static_cast<unsigned long>(s.duplicates), static_cast<unsigned long>(s.conflicts),
+                  static_cast<unsigned long>(s.late), static_cast<unsigned long>(s.evicted),
+                  static_cast<unsigned long>(s.expired), p1::CCA_THRESHOLD_DBM, static_cast<unsigned long>(debtRemainingMs()));
 }
 
 }  // namespace measure
