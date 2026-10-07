@@ -226,7 +226,7 @@ def build() -> list[Register]:
         Register("FS_CFG", 0x0021, 0x12, "P1", "lock detector on, 820-960 MHz band (LO divider 4)"),
         Register("PKT_CFG2", 0x0026, 0x04, "P1", "CCA = RSSI below threshold, FIFO packet mode (reset value, explicit)"),
         Register("PKT_CFG1", 0x0027, 0x01, "P1", "no whitening, no address, chip CRC off (P1 CRC differs), status appended"),
-        Register("PKT_CFG0", 0x0028, 0x00, "P1", "fixed packet length from PKT_LEN (see README: P1 LEN counts BODY only)"),
+        Register("PKT_CFG0", 0x0028, 0x00, "P1", "fixed packet length from PKT_LEN for the test frames; the P1 driver uses variable length (F79)"),
         Register("RFEND_CFG1", 0x0029, 0x3F, "P1", "stay in RX after a packet (receiver always on), no RX timeout"),
         Register("PA_CFG2", 0x002B, 0x40 | ramp, "P1", f"PA_POWER_RAMP = {ramp}: {power_dbm(ramp):.1f} dBm (eq. 21)"),
         Register("PA_CFG1", 0x002C, 0x56, "TI", "ramp 3 symbols (0.625 ms at 4800 Bd)"),

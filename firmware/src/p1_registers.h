@@ -60,7 +60,7 @@ constexpr RegisterValue REGISTERS[] = {
     {0x0021, 0x12, 0xFF, "FS_CFG"},  // P1: lock detector on, 820-960 MHz band (LO divider 4)
     {0x0026, 0x04, 0xFF, "PKT_CFG2"},  // P1: CCA = RSSI below threshold, FIFO packet mode (reset value, explicit)
     {0x0027, 0x01, 0xFF, "PKT_CFG1"},  // P1: no whitening, no address, chip CRC off (P1 CRC differs), status appended
-    {0x0028, 0x00, 0xFF, "PKT_CFG0"},  // P1: fixed packet length from PKT_LEN (see README: P1 LEN counts BODY only)
+    {0x0028, 0x00, 0xFF, "PKT_CFG0"},  // P1: fixed packet length from PKT_LEN for the test frames; the P1 driver uses variable length (F79)
     {0x0029, 0x3F, 0xFF, "RFEND_CFG1"},  // P1: stay in RX after a packet (receiver always on), no RX timeout
     {0x002B, 0x7D, 0xFF, "PA_CFG2"},  // P1: PA_POWER_RAMP = 61: 13.0 dBm (eq. 21)
     {0x002C, 0x56, 0xFF, "PA_CFG1"},  // TI: ramp 3 symbols (0.625 ms at 4800 Bd)

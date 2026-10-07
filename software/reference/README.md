@@ -9,7 +9,7 @@ python3 -m unittest discover -s software/reference -v
 python3 software/reference/obliczenia.py
 ```
 
-Drugie polecenie zapisuje `wyniki.json` obok skryptu. Są to obliczenia z założeń, nie pomiary. [Zapis weryfikacji](weryfikacja.json) wiąże wynik 31 testów z sumami źródeł.
+Drugie polecenie zapisuje `wyniki.json` obok skryptu. Są to obliczenia z założeń, nie pomiary. [Zapis weryfikacji](weryfikacja.json) wiąże wynik 32 testów z sumami źródeł.
 
 Reguły modelu:
 

@@ -39,7 +39,7 @@ def fragment(data: bytes, message_id: bytes) -> list[bytes]:
     for index in range(count):
         body = HEADER.pack(1, 0, message_id, index, count, len(data))
         body += data[index * CHUNK:(index + 1) * CHUNK]
-        checked = bytes([len(body)]) + body
+        checked = bytes([len(body) + 2]) + body  # LEN counts BODY and CRC (radio.md, F79)
         frames.append(PREFIX + checked + struct.pack(">H", crc16(checked)))
     return frames
 
@@ -49,8 +49,8 @@ def parse_frame(frame: bytes) -> tuple[bytes, int, int, int, bytes]:
     if not frame.startswith(PREFIX) or len(frame) < len(PREFIX) + 18:
         raise ValueError("Invalid preamble or truncated frame")
     checked = frame[len(PREFIX):-2]
-    length = checked[0]
-    if not 15 <= length <= 100 or len(checked) != length + 1:
+    length = checked[0]  # bytes after LEN: BODY and the 2-byte CRC
+    if not 17 <= length <= 102 or len(checked) != length - 1:
         raise ValueError("Invalid frame length")
     if crc16(checked) != struct.unpack(">H", frame[-2:])[0]:
         raise ValueError("Invalid CRC")

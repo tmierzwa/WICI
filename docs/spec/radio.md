@@ -35,7 +35,7 @@ Przed pilotażem w każdym miejscu mierzy się zajętość podpasma w różnych 
 
 `AA×8 | D391D391 | LEN u8 | BODY | CRC u16`
 
-LEN to długość BODY, 15–100 B. CRC obejmuje LEN i BODY: wielomian 0x1021, wartość początkowa 0xFFFF, bez odwracania bitów, końcowy XOR 0. Wartość kontrolna dla ciągu ASCII `123456789`: 0x29B1. Pola BODY:
+LEN to liczba bajtów po nim, czyli BODY i CRC łącznie, 17–102 B (zmiana z F79: wcześniej LEN liczył tylko BODY). Silniki pakietów CC1120 i S2-LP w trybie zmiennej długości odbierają po LEN dokładnie tyle bajtów, więc CRC trafia do kolejki układu razem z BODY. CRC liczy oprogramowanie stacji, nie układ radiowy, bo oba układy mają inną wartość początkową CRC. CRC obejmuje LEN i BODY: wielomian 0x1021, wartość początkowa 0xFFFF, bez odwracania bitów, końcowy XOR 0. Wartość kontrolna dla ciągu ASCII `123456789`: 0x29B1. Pola BODY:
 
 | Przesunięcie | Rozmiar | Znaczenie |
 |---:|---:|---|
@@ -103,7 +103,7 @@ Polecenia pomiarowe na interfejsie diagnostyki działają wyłącznie w trybie p
 
 Próby T1–T4 przed płytką R02 wykonuje się na [stanowisku deweloperskim](../../hardware/dev-bench/README.md): płytki rozwojowe obu rodzin MCU (nRF52840-DK, ESP32-S3-DevKitC-1) z modułami radiowymi producentów (TI CC1120EM-868-915; ST X-NUCLEO-S2868A2 albo płytka z zestawu STEVAL-FKI868V2), pamięć FRAM i ekran na płytkach prototypowych, uruchamiające oprogramowanie układowe stacji. Pierwszą drukowaną płytką projektu jest R02. Kontroler R01.3 (STM32F103 z modułem CC1120) miał za mało pamięci na stos Reticulum i nie był stacją; został wycofany, a jego ustalenia są w [lekcjach projektu R02](../../hardware/r02/lekcje.md). Wcześniejszy kontrakt modemu USB/KISS nie obowiązuje: zwykły KISSInterface Reticulum ma limit czasu kontroli przepływu 5 s, krótszy niż cisza P1, a próby stosu wykonuje się bezpośrednio na stanowisku i na stacji ([KISSInterface](https://github.com/markqvist/Reticulum/blob/master/RNS/Interfaces/KISSInterface.py)).
 
-Wyniki czułości i emisji ze stanowiska dotyczą toru RF producenta bez toru wejściowego stacji; wynik na złączu stacji z pełnym torem daje dopiero R02. Wzorzec częstotliwości modułów nie spełnia budżetu P1, więc na stanowisku błąd częstotliwości mierzy się i koryguje poleceniem `FOFF`, a budżet z TCXO sprawdza się na R02. Nastawy rejestrów CC1120 dla P1 (częstotliwość, szybkość, dewiacja, filtr 25 kHz, moc, preambuła i słowo synchronizacji) są w [oprogramowaniu stanowiska](../../firmware/README.md#rejestry-profilu-p1) jako tablica generowana ze wzorów instrukcji układu i z eksportu SmartRF Studio; pole LEN ramki wobec silnika pakietów układu jest do rozstrzygnięcia ([przegląd, F79](../review.md)).
+Wyniki czułości i emisji ze stanowiska dotyczą toru RF producenta bez toru wejściowego stacji; wynik na złączu stacji z pełnym torem daje dopiero R02. Wzorzec częstotliwości modułów nie spełnia budżetu P1, więc na stanowisku błąd częstotliwości mierzy się i koryguje poleceniem `FOFF`, a budżet z TCXO sprawdza się na R02. Nastawy rejestrów CC1120 dla P1 (częstotliwość, szybkość, dewiacja, filtr 25 kHz, moc, preambuła i słowo synchronizacji) są w [oprogramowaniu stanowiska](../../firmware/README.md#rejestry-profilu-p1) jako tablica generowana ze wzorów instrukcji układu i z eksportu SmartRF Studio; pole LEN ramki liczy BODY i CRC, więc pasuje do silnika pakietów obu układów ([przegląd, F79](../review.md)).
 
 ## Dwa wykonania
 

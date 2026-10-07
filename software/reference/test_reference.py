@@ -56,6 +56,20 @@ class AirContract(unittest.TestCase):
         with self.assertRaises(ValueError):
             assemble(frames + [altered])
 
+    def test_len_counts_body_and_crc(self):
+        # F79: LEN is the number of bytes after it (BODY and CRC), so the radio packet engines
+        # in variable length mode deliver the CRC with the body.
+        for length in (1, 86, 87, 600):
+            for frame in fragment(b"x" * length, b"12345678"):
+                self.assertEqual(frame[len(PREFIX)], len(frame) - len(PREFIX) - 1)
+        self.assertEqual(fragment(b"x", b"12345678")[0][len(PREFIX)], 17)
+        self.assertEqual(fragment(b"x" * 86, b"12345678")[0][len(PREFIX)], 102)
+        frame = fragment(b"x" * 10, b"12345678")[0]
+        checked = bytearray(frame[len(PREFIX):-2])
+        checked[0] -= 2  # the former meaning (BODY only) is rejected
+        with self.assertRaises(ValueError):
+            parse_frame(PREFIX + checked + struct.pack(">H", crc16(checked)))
+
     def test_forged_count_rejected_even_with_valid_crc(self):
         frame = fragment(b"x", b"12345678")[0]
         checked = bytearray(frame[len(PREFIX):-2])
