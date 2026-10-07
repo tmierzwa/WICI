@@ -2,8 +2,9 @@
 // WICI, stanowisko deweloperskie A: pierwsze kroki oprogramowania stacji na nRF52840-DK.
 // Zakres: USB CDC z poleceniami tekstowymi, identyfikacja CC1120 i FRAM przez SPI,
 // konfiguracja rejestrów profilu P1 z weryfikacją odczytu i kalibracją syntezera,
-// odczyt częstotliwości i RSSI, przyciski i diody płytki. Bez nadawania, odbioru
-// ramek, stosu Reticulum i ekranu (następne kroki).
+// polecenia pomiarowe TXCW, TXPKT, RXPER, FOFF w trybie przygotowania, odczyt
+// częstotliwości i RSSI, przyciski i diody płytki. Bez ramki P1, stosu Reticulum
+// i ekranu (następne kroki).
 #include <Arduino.h>
 #include <Adafruit_TinyUSB.h>
 #include <SPI.h>
@@ -11,6 +12,7 @@
 #include "board_bench_a.h"
 #include "cc1120.h"
 #include "fram.h"
+#include "measure.h"
 #include "p1_registers.h"
 
 #ifndef WICI_FW_VERSION
@@ -21,6 +23,7 @@ namespace {
 
 cc1120::Radio radio(SPI, board::RADIO_CS, board::RADIO_RESET, board::SPI_HZ);
 fram::Memory memory(SPI, board::FRAM_CS, board::SPI_HZ);
+measure::Bench bench(radio, board::RADIO_GPIO2, board::BTN_OK, board::LED_HEARTBEAT);
 
 bool radioOk = false;
 bool framOk = false;
@@ -38,6 +41,8 @@ void ledWrite(uint8_t pin, bool on) { digitalWrite(pin, on ? LOW : HIGH); }  // 
 bool pressed(uint8_t pin) { return digitalRead(pin) == LOW; }
 
 const char* boolName(bool value) { return value ? "true" : "false"; }
+
+void printError(const char* text) { Serial.printf("{\"error\":\"%s\"}\n", text); }
 
 void printRadio() {
     const cc1120::Identity id = radio.identify();
@@ -60,10 +65,12 @@ void printVerify(const char* step, const cc1120::VerifyResult& result, bool cali
     Serial.printf(",\"calibrated\":%s,\"marcstate\":\"0x%02X\"}\n", boolName(calibrated), radio.readReg(cc1120::MARCSTATE));
 }
 
-// Zapis tablicy P1, weryfikacja odczytem i ręczna kalibracja; ustala p1Ok.
+// Zapis tablicy P1, weryfikacja odczytem, ręczna kalibracja i ponowny zapis FOFF; ustala p1Ok.
 cc1120::VerifyResult configureP1(bool& calibrated) {
+    bench.stop();
     const cc1120::VerifyResult result = radio.configure(p1::REGISTERS, p1::REGISTER_COUNT);
     calibrated = result.mismatches == 0 && radio.calibrate();
+    bench.applyOffset();
     p1Ok = calibrated;
     ledWrite(board::LED_RADIO, radioOk && p1Ok);
     return result;
@@ -93,8 +100,7 @@ void printRssi() {
 void printState() {
     const uint8_t marc = radio.readMarcState();
     Serial.printf("{\"marc\":\"%s\",\"marcstate\":\"0x%02X\",\"status\":\"0x%02X\",\"rxbytes\":%u,\"txbytes\":%u}\n",
-                  cc1120::marcStateName(marc), marc, radio.lastStatus(), radio.readReg(cc1120::NUM_RXBYTES),
-                  radio.readReg(cc1120::NUM_TXBYTES));
+                  cc1120::marcStateName(marc), marc, radio.lastStatus(), radio.rxBytes(), radio.txBytes());
 }
 
 void printFram() {
@@ -106,15 +112,17 @@ void printFram() {
 }
 
 void printInfo() {
-    // Pola jak w INFO ze specyfikacji radia; liczniki ruchu i napięcie są zerowe,
-    // bo stanowisko nie nadaje jeszcze ramek ani nie mierzy zasilania.
+    // Pola jak w INFO ze specyfikacji radia; napięcie jest zerowe, bo stanowisko go nie mierzy.
+    const measure::Counters& c = bench.counters();
     Serial.printf("{\"contract\":2,\"profile\":\"P1\",\"radio\":\"CC1120\",\"mcu\":\"nRF52840\",\"fw\":\"%s\","
-                  "\"src\":\"USB\",\"mv\":0,\"tx_wait_ms\":0,\"rx_ok\":0,\"rx_bad\":0,\"tx_drop\":0,\"restarts\":%lu,"
-                  "\"bench\":\"A\",\"radio_ok\":%s,\"p1_ok\":%s,\"fram_ok\":%s,\"carrier_hz\":%lu,\"symbol_rate\":%u,"
-                  "\"deviation_hz\":%u,\"rx_filter_hz\":%u,\"tx_power_dbm\":%d,\"uptime_s\":%lu}\n",
-                  WICI_FW_VERSION, static_cast<unsigned long>(restarts), boolName(radioOk), boolName(p1Ok),
-                  boolName(framOk), static_cast<unsigned long>(p1::CARRIER_HZ), p1::SYMBOL_RATE, p1::DEVIATION_HZ,
-                  p1::RX_FILTER_HZ, p1::TX_POWER_DBM, static_cast<unsigned long>(millis() / 1000));
+                  "\"src\":\"USB\",\"mv\":0,\"tx_wait_ms\":%lu,\"rx_ok\":%lu,\"rx_bad\":%lu,\"tx_drop\":0,\"restarts\":%lu,"
+                  "\"bench\":\"A\",\"prep\":%s,\"silence\":%s,\"radio_ok\":%s,\"p1_ok\":%s,\"fram_ok\":%s,\"carrier_hz\":%lu,"
+                  "\"symbol_rate\":%u,\"deviation_hz\":%u,\"rx_filter_hz\":%u,\"tx_power_dbm\":%d,\"uptime_s\":%lu}\n",
+                  WICI_FW_VERSION, static_cast<unsigned long>(bench.debtRemainingMs()), static_cast<unsigned long>(c.rxOk),
+                  static_cast<unsigned long>(c.rxBad), static_cast<unsigned long>(restarts), boolName(bench.prep),
+                  boolName(bench.silence), boolName(radioOk), boolName(p1Ok), boolName(framOk),
+                  static_cast<unsigned long>(p1::CARRIER_HZ), p1::SYMBOL_RATE, p1::DEVIATION_HZ, p1::RX_FILTER_HZ,
+                  p1::TX_POWER_DBM, static_cast<unsigned long>(millis() / 1000));
 }
 
 void printButtons() {
@@ -127,16 +135,33 @@ void printButtons() {
 
 void printHelp() {
     Serial.println("{\"commands\":[\"HELP\",\"INFO\",\"RADIO\",\"RESET\",\"CONFIG\",\"VERIFY\",\"CAL\",\"FREQ\","
-                   "\"RX\",\"IDLE\",\"RSSI\",\"STATE\",\"REG <hex>\",\"FRAM\",\"BTN\",\"LED <1-4> <0|1>\"]}");
+                   "\"PREP <0|1>\",\"SILENCE <0|1>\",\"TXCW <s> [CONDUCTED]\",\"TXPKT <n> <len> [<ms>] [CONDUCTED]\","
+                   "\"RX [<len>]\",\"RXPER\",\"FOFF [<hz>]\",\"STOP\",\"LOG\",\"BENCH\",\"IDLE\",\"RSSI\",\"STATE\","
+                   "\"REG <hex>\",\"FRAM\",\"BTN\",\"LED <1-4> <0|1>\"]}");
+}
+
+// Argumenty po poleceniu: do czterech słów; zwraca liczbę słów.
+size_t splitArgs(char* text, char* words[], size_t max) {
+    size_t n = 0;
+    for (char* word = strtok(text, " "); word && n < max; word = strtok(nullptr, " ")) words[n++] = word;
+    return n;
+}
+
+bool lastIsConducted(char* words[], size_t& n) {
+    if (n && !strcmp(words[n - 1], "CONDUCTED")) { --n; return true; }
+    return false;
 }
 
 void handle(char* cmd) {
     for (char* p = cmd; *p; ++p) *p = toupper(*p);
     char* arg = strchr(cmd, ' ');
     if (arg) *arg++ = '\0';
+    char* words[4];
+    size_t n = arg ? splitArgs(arg, words, 4) : 0;
     if (!strcmp(cmd, "INFO")) printInfo();
     else if (!strcmp(cmd, "RADIO")) printRadio();
     else if (!strcmp(cmd, "RESET")) {
+        bench.stop();
         const bool ok = radio.reset();
         p1Ok = false;
         Serial.printf("{\"reset\":%s,\"status\":\"0x%02X\"}\n", boolName(ok), radio.lastStatus());
@@ -149,34 +174,82 @@ void handle(char* cmd) {
         const cc1120::VerifyResult result = radio.verify(p1::REGISTERS, p1::REGISTER_COUNT);
         printVerify("verify", result, p1Ok);
     } else if (!strcmp(cmd, "CAL")) {
+        bench.stop();
         const bool ok = radio.calibrate();
         Serial.printf("{\"cal\":%s,\"fs_vco2\":\"0x%02X\",\"fs_vco4\":\"0x%02X\",\"fs_chp\":\"0x%02X\",\"fs_cal2\":\"0x%02X\"}\n",
                       boolName(ok), radio.readReg(cc1120::FS_VCO2), radio.readReg(cc1120::FS_VCO4),
                       radio.readReg(cc1120::FS_CHP), radio.readReg(cc1120::FS_CAL2));
     } else if (!strcmp(cmd, "FREQ")) printFrequency();
-    else if (!strcmp(cmd, "RX")) {
-        radio.strobe(cc1120::SRX);
-        const bool ok = radio.waitMarcState(cc1120::MARC_STATE_RX, 50);
-        Serial.printf("{\"rx\":%s}\n", boolName(ok));
+    else if (!strcmp(cmd, "PREP") && n == 1) {
+        // Na stacji tryb przygotowania włącza przycisk pod plombowaną pokrywą; na stanowisku
+        // zastępuje go polecenie potwierdzone przyciskiem OK w ciągu 30 s.
+        const bool on = atoi(words[0]) != 0;
+        if (on && !bench.prep && !bench.confirm()) {
+            bench.log("PREP not confirmed");
+            printError("PREP not confirmed by OK");
+        } else {
+            if (!on) bench.stop();
+            bench.prep = on;
+            bench.log(on ? "preparation mode on" : "preparation mode off");
+            Serial.printf("{\"prep\":%s}\n", boolName(bench.prep));
+        }
+    } else if (!strcmp(cmd, "SILENCE") && n == 1) {
+        bench.silence = atoi(words[0]) != 0;  // na stacji: przełącznik CISZA
+        bench.log(bench.silence ? "silence on" : "silence off");
+        Serial.printf("{\"silence\":%s}\n", boolName(bench.silence));
+    } else if (!strcmp(cmd, "TXCW")) {
+        const bool conducted = lastIsConducted(words, n);
+        if (n != 1) printError("TXCW <s> [CONDUCTED]");
+        else {
+            const char* error = bench.txcw(strtoul(words[0], nullptr, 10), conducted);
+            if (error) printError(error);
+        }
+    } else if (!strcmp(cmd, "TXPKT")) {
+        const bool conducted = lastIsConducted(words, n);
+        if (n < 2 || n > 3) printError("TXPKT <n> <len> [<ms>] [CONDUCTED]");
+        else {
+            const char* error = bench.txpkt(static_cast<uint16_t>(strtoul(words[0], nullptr, 10)),
+                                            static_cast<uint8_t>(strtoul(words[1], nullptr, 10)),
+                                            n == 3 ? strtoul(words[2], nullptr, 10) : 0, conducted);
+            if (error) printError(error);
+        }
+    } else if (!strcmp(cmd, "RX")) {
+        const uint8_t length = n ? static_cast<uint8_t>(strtoul(words[0], nullptr, 10)) : p1::MAX_PACKET_BYTES;
+        const char* error = bench.rxStart(length);
+        if (error) printError(error);
+        else Serial.printf("{\"rx\":true,\"len\":%u}\n", length);
         printState();
-    } else if (!strcmp(cmd, "IDLE")) {
+    } else if (!strcmp(cmd, "RXPER")) bench.rxper();
+    else if (!strcmp(cmd, "FOFF")) {
+        if (n == 1) {
+            const char* error = bench.foff(strtol(words[0], nullptr, 10));
+            if (error) { printError(error); return; }
+        }
+        bench.printFoff();
+    } else if (!strcmp(cmd, "STOP")) {
+        bench.stop();
+        Serial.println("{\"stop\":true}");
+        printState();
+    } else if (!strcmp(cmd, "LOG")) bench.printLog();
+    else if (!strcmp(cmd, "BENCH")) bench.printStatus();
+    else if (!strcmp(cmd, "IDLE")) {
+        bench.stop();
         Serial.printf("{\"idle\":%s}\n", boolName(radio.idle()));
         printState();
     } else if (!strcmp(cmd, "RSSI")) printRssi();
     else if (!strcmp(cmd, "STATE")) printState();
-    else if (!strcmp(cmd, "REG") && arg) {
-        const uint16_t address = static_cast<uint16_t>(strtoul(arg, nullptr, 16));
+    else if (!strcmp(cmd, "REG") && n == 1) {
+        const uint16_t address = static_cast<uint16_t>(strtoul(words[0], nullptr, 16));
         const uint8_t value = radio.readReg(address);
         Serial.printf("{\"reg\":\"0x%04X\",\"value\":\"0x%02X\",\"status\":\"0x%02X\"}\n", address, value, radio.lastStatus());
     } else if (!strcmp(cmd, "FRAM")) printFram();
     else if (!strcmp(cmd, "BTN")) printButtons();
-    else if (!strcmp(cmd, "LED") && arg) {
-        const int index = atoi(arg);
-        char* state = strchr(arg, ' ');
-        if (index >= 1 && index <= 4 && state) {
-            ledWrite(leds[index - 1], atoi(state + 1) != 0);
-            Serial.printf("{\"led\":%d,\"on\":%s}\n", index, boolName(atoi(state + 1) != 0));
-        } else Serial.println("{\"error\":\"LED <1-4> <0|1>\"}");
+    else if (!strcmp(cmd, "LED") && n == 2) {
+        const int index = atoi(words[0]);
+        if (index >= 1 && index <= 4) {
+            ledWrite(leds[index - 1], atoi(words[1]) != 0);
+            Serial.printf("{\"led\":%d,\"on\":%s}\n", index, boolName(atoi(words[1]) != 0));
+        } else printError("LED <1-4> <0|1>");
     } else if (!strcmp(cmd, "HELP") || !*cmd) printHelp();
     else Serial.printf("{\"error\":\"unknown\",\"cmd\":\"%s\"}\n", cmd);
 }
@@ -215,6 +288,7 @@ void setup() {
     }
     framOk = memory.identify().mb85rs4m;
     ledWrite(board::LED_FRAM, framOk);
+    bench.log("start");
 }
 
 void loop() {
@@ -241,5 +315,6 @@ void loop() {
         printFram();
     }
     if (!usb) reported = false;
+    if (radioOk) bench.poll();
     pollSerial();
 }

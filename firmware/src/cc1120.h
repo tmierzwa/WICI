@@ -65,7 +65,19 @@ const char* stateName(uint8_t state);
 constexpr uint8_t MARCSTATE_IDLE = 0x41;
 constexpr uint8_t MARC_STATE_IDLE = 0x01;
 constexpr uint8_t MARC_STATE_RX = 0x0D;
+constexpr uint8_t MARC_STATE_RX_FIFO_ERR = 0x11;
 constexpr uint8_t MARC_STATE_TX = 0x13;
+constexpr uint8_t MARC_STATE_TX_FIFO_ERR = 0x16;
+
+// Rejestry zwykłe używane przez pomiary (pełna tablica P1 w p1_registers.h).
+constexpr uint16_t DEVIATION_M = 0x000A;
+constexpr uint16_t MODCFG_DEV_E = 0x000B;
+constexpr uint16_t PKT_CFG2 = 0x0026;
+constexpr uint16_t PKT_CFG0 = 0x0028;
+constexpr uint16_t PKT_LEN = 0x002E;
+constexpr uint8_t PKT_FORMAT_RANDOM = 0x02;        // PKT_CFG2.PKT_FORMAT = 10: dane z generatora PN9
+constexpr uint8_t LENGTH_CONFIG_INFINITE = 0x40;   // PKT_CFG0.LENGTH_CONFIG = 10
+constexpr size_t FIFO_SIZE = 128;
 inline uint8_t marcState(uint8_t marcstate) { return marcstate & 0x1F; }
 const char* marcStateName(uint8_t marcState);
 
@@ -129,6 +141,12 @@ public:
     bool idle(uint32_t timeoutMs = 50);
     bool waitMarcState(uint8_t marcState, uint32_t timeoutMs);
     uint8_t readMarcState() { return marcState(readReg(MARCSTATE)); }
+
+    // Kolejki FIFO: zapis i odczyt seryjny (nagłówek 0x7F / 0xFF), liczba bajtów w kolejkach.
+    void writeFifo(const uint8_t* data, size_t count);
+    void readFifo(uint8_t* data, size_t count);
+    uint8_t rxBytes() { return readReg(NUM_RXBYTES); }
+    uint8_t txBytes() { return readReg(NUM_TXBYTES); }
 
     uint32_t frequencyWord();                  // FREQ[23:0]
     int16_t frequencyOffset();                 // FREQOFF, dopełnienie do dwóch

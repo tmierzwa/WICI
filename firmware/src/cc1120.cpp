@@ -202,6 +202,24 @@ bool Radio::calibrate(uint32_t timeoutMs) {
     return true;
 }
 
+void Radio::writeFifo(const uint8_t* data, size_t count) {
+    select();
+    lastStatus_ = spi_.transfer(BURST | FIFO);
+    for (size_t i = 0; i < count; ++i) {
+        spi_.transfer(data[i]);
+    }
+    release();
+}
+
+void Radio::readFifo(uint8_t* data, size_t count) {
+    select();
+    lastStatus_ = spi_.transfer(READ | BURST | FIFO);
+    for (size_t i = 0; i < count; ++i) {
+        data[i] = spi_.transfer(0x00);
+    }
+    release();
+}
+
 uint32_t Radio::frequencyWord() {
     const uint32_t f2 = readReg(FREQ2);
     const uint32_t f1 = readReg(FREQ1);
