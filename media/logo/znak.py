@@ -96,6 +96,18 @@ def icon_svg():
             f'<circle cx="{a}" cy="{y}" r="{r}" fill="{WHITE}"/><circle cx="{b}" cy="{y}" r="{r}" fill="{WHITE}"/></svg>\n')
 
 
+def favicon_svg():
+    # same kropki i sygnał bez kwadratu; przy 16 px impuls jest jednym wysokim zębem,
+    # a kolory idą za motywem przeglądarki
+    r, line, y, a, b = 11, 7, 40, 11, 53
+    sig = f"M{a} {y}H23L31 15L38 47L42 {y}H{b}"
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'
+            f'<style>.k{{fill:{INK_LIGHT}}}.s{{stroke:{YELLOW_LIGHT}}}'
+            f'@media (prefers-color-scheme:dark){{.k{{fill:{WHITE}}}.s{{stroke:{YELLOW}}}}}</style>'
+            f'<path class="s" fill="none" stroke-width="{line}" stroke-linejoin="round" d="{sig}"/>'
+            f'<circle class="k" cx="{a}" cy="{y}" r="{r}"/><circle class="k" cx="{b}" cy="{y}" r="{r}"/></svg>\n')
+
+
 def main():
     import cairosvg
 
@@ -104,6 +116,7 @@ def main():
         "WICI-na-ciemnym.svg": logo_svg(view, ink, dots, sig, WHITE, YELLOW),
         "WICI-na-jasnym.svg": logo_svg(view, ink, dots, sig, INK_LIGHT, YELLOW_LIGHT),
         "ikona.svg": icon_svg(),
+        "favicon.svg": favicon_svg(),
     }
     for name, svg in files.items():
         (HERE / name).write_text(svg, encoding="utf-8")
