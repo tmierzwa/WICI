@@ -2,7 +2,7 @@
 
 Karta obsługi to jedna kartka A4 zadrukowana dwustronnie, laminowana, przymocowana do skrzynki stacji. Poniżej jest jej pełny tekst. Napisy w cudzysłowach są cytatami z tabeli „Teksty ekranu” w rozdziale [Oprogramowanie](oprogramowanie.md); zmiana tabeli wymaga zmiany karty, a T1 sprawdza ich zgodność. Karta nie zawiera nazw protokołów ani typów wiadomości. Pozostałe tematy obsługi (lista z [koncepcji, rozdział 02](../conception/02-scenariusze-i-organizacja.html#instrukcja-i-cwiczenie)) są w instrukcji opiekuna, nie na karcie.
 
-Wersje UK i EN karty powstają przy wydaniu z tłumaczeń w tabeli tekstów ekranu, a nie z osobnego przekładu karty. Wersja UK zawiera zdanie: odpowiedzi od odbiorcy przychodzą po polsku. Język ekranu wybiera się na pierwszym ekranie po włączeniu; później przytrzymanie WSTECZ przez 3 s.
+Wersje UK i EN karty powstają przy wydaniu z tłumaczeń w tabeli tekstów ekranu, a nie z osobnego przekładu karty. Wersja UK zawiera zdanie: odpowiedzi od odbiorcy przychodzą po polsku. Język ekranu wybiera się na pierwszym ekranie po włączeniu; później, poza kreatorem zgłoszenia, przytrzymanie WSTECZ przez 3 s.
 
 ## Strona 1: uruchomienie
 
@@ -16,7 +16,7 @@ Przyciski: GÓRA, DÓŁ, OK, WSTECZ. Pierwsze naciśnięcie przy zgaszonym ekran
 4. Wybierz język. Czekaj na „RADIO WŁĄCZONE” (do 1 min). Sprawdź adres: „ADRES: [x] – CZY TO TO MIEJSCE? OK = TAK / WSTECZ = NIE”. Zły adres albo „STACJA NIE MA TWOJEGO ADRESU – UŻYJ FORMULARZA PAPIEROWEGO”: zgłoszenia tylko formularzem (strona 2).
 5. OK → TEST → OK. Ekran: „TEST ZAPLANOWANY ZA OKOŁO [mm] MIN – NIE WYŁĄCZAJ. WSTECZ = ANULUJ”, potem „TEST WYSŁANY – CZEKA NA ODBIORCĘ”.
 6. Czekaj na „ODBIORCA ZAPISAŁ”, potem „ODBIORCA PRZECZYTAŁ”. „TEST WSTRZYMANY PRZEZ ODBIORCĘ” też jest poprawnym wynikiem: nie wysyłaj TEST ponownie.
-7. Nic przez 30 min? → strona 2: goniec z formularzem.
+7. Nic przez 30 min od „TEST WYSŁANY – CZEKA NA ODBIORCĘ”? → strona 2: goniec z formularzem.
 
 „RADIO WŁĄCZONE” nie oznacza, że pomoc jest dostępna. „OSTATNI KONTAKT Z ODBIORCĄ: [czas] TEMU” pokazuje, kiedy odbiorca ostatnio odpowiedział; długi czas nie jest awarią. Włączona stacja przekazuje wiadomości innych schronień: nie wyłączaj jej bez potrzeby.
 
