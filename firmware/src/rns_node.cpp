@@ -1,0 +1,426 @@
+// SPDX-License-Identifier: MIT
+#include "rns_node.h"
+
+#include <microReticulum.h>
+#include <microReticulum/Cryptography/HKDF.h>
+
+#include <new>
+#include <stdio.h>
+#include <string.h>
+
+#ifdef ARDUINO
+#include <Arduino.h>
+#else
+#include <chrono>
+#endif
+
+#include "framfs.h"
+#include "p1iface.h"
+#include "rns_framfs.h"
+
+namespace rnsnode {
+
+namespace {
+
+// IFAC_SALT z Reticulum.py (e40191b).
+const uint8_t IFAC_SALT[32] = {0xad, 0xf5, 0x4d, 0x88, 0x2c, 0x9a, 0x9b, 0x80, 0x77, 0x1e, 0xb4, 0x99, 0x5d, 0x70, 0x2d, 0x4a,
+                               0x3e, 0x73, 0x33, 0x91, 0xb2, 0xa0, 0xf5, 0x3f, 0x41, 0x6d, 0x9f, 0x90, 0x7e, 0x55, 0xcf, 0xf8};
+
+uint32_t nowMs() {
+#ifdef ARDUINO
+    return millis();
+#else
+    using namespace std::chrono;
+    return static_cast<uint32_t>(duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count());
+#endif
+}
+
+Hooks hooks;
+Radio* radio = nullptr;
+journal::Storage* fram = nullptr;
+alignas(framfs::Fs) uint8_t fsMemory[sizeof(framfs::Fs)];
+framfs::Fs* fs = nullptr;
+bool started = false;
+bool identityNew = false;
+uint8_t addressBytes[HASH] = {};
+uint8_t identityBytes[HASH] = {};
+uint32_t nextHandle = 0;
+uint32_t pending = 0;
+uint32_t packetsSent = 0;
+uint32_t packetsReceived = 0;
+uint32_t packetsUnproven = 0;   // odrzucone przez warstwę aplikacji, bez dowodu
+uint32_t delivered = 0;
+uint32_t timedOut = 0;
+uint32_t announcesSeen = 0;
+
+void log(const char* text) {
+    if (hooks.log) hooks.log(text, hooks.context);
+}
+
+class P1Interface : public RNS::InterfaceImpl {
+public:
+    P1Interface() : RNS::InterfaceImpl("P1") {
+        _IN = true;
+        _OUT = true;
+        _HW_MTU = p1iface::HW_MTU;
+        _bitrate = p1iface::declaredBitrate();
+        _mode = RNS::Type::Interface::MODE_FULL;
+    }
+
+    // Kod dostępu jak Reticulum._add_interface z passphrase = 32 cyfry szesnastkowe klucza z konfiguracji.
+    void setIfac(const uint8_t key[16]) {
+        bool any = false;
+        for (int i = 0; i < 16; ++i) any |= key[i] != 0;
+        online_ = false;
+        if (!any) { _online = false; return; }
+        char passphrase[33];
+        for (int i = 0; i < 16; ++i) snprintf(passphrase + 2 * i, 3, "%02x", key[i]);
+        const RNS::Bytes origin = RNS::Identity::full_hash(RNS::Bytes(reinterpret_cast<const uint8_t*>(passphrase), 32));
+        const RNS::Bytes originHash = RNS::Identity::full_hash(origin);
+        ifacKey_ = RNS::Cryptography::hkdf(64, originHash, RNS::Bytes(IFAC_SALT, sizeof(IFAC_SALT)));
+        ifacIdentity_ = RNS::Identity(false);
+        if (!ifacIdentity_.load_private_key(ifacKey_)) { _online = false; return; }
+        online_ = true;
+        _online = true;
+    }
+
+    void receive(const uint8_t* wire, size_t length) {
+        p1iface::Counters& c = queue_.counters();
+        if (!online_) { ++c.offline; return; }
+        if (!p1iface::ifacPresent(wire, length, p1iface::IFAC_SIZE)) { ++c.ifacMissing; return; }
+        if (length > p1iface::MAX_WIRE) { ++c.tooLarge; return; }
+        const RNS::Bytes tag(wire + 2, p1iface::IFAC_SIZE);
+        const RNS::Bytes mask = RNS::Cryptography::hkdf(length, tag, ifacKey_);
+        uint8_t raw[p1iface::MAX_WIRE];
+        p1iface::ifacUnmask(wire, length, p1iface::IFAC_SIZE, mask.data(), raw);
+        const RNS::Bytes packet(raw, length - p1iface::IFAC_SIZE);
+        const RNS::Bytes signature = ifacIdentity_.sign(packet);
+        if (signature.size() < p1iface::IFAC_SIZE ||
+            memcmp(signature.data() + signature.size() - p1iface::IFAC_SIZE, wire + 2, p1iface::IFAC_SIZE) != 0) {
+            ++c.ifacInvalid;
+            return;
+        }
+        ++c.received;
+        std::shared_ptr<RNS::InterfaceImpl> self = shared_from_this();
+        RNS::Interface(self).handle_incoming(packet);
+    }
+
+    void loop() override {
+        if (!radio) return;
+        const uint32_t now = nowMs();
+        queue_.poll(now);
+        if (queue_.transmitting() || !radio->ready()) return;
+        const uint8_t* data;
+        size_t length;
+        if (!queue_.start(data, length)) return;
+        if (!radio->transmit(data, length)) queue_.finish(false);
+    }
+
+    void txDone(bool ok) { queue_.finish(ok); }
+
+    p1iface::Queue& queue() { return queue_; }
+    bool ifacOnline() const { return online_; }
+
+protected:
+    bool send_outgoing(const RNS::Bytes& raw) override {
+        p1iface::Counters& c = queue_.counters();
+        if (!online_) { ++c.offline; return false; }
+        if (raw.size() < 2 || raw.size() > p1iface::HW_MTU) { ++c.tooLarge; return false; }
+        const RNS::Bytes signature = ifacIdentity_.sign(raw);
+        const uint8_t* tag = signature.data() + signature.size() - p1iface::IFAC_SIZE;
+        const RNS::Bytes mask = RNS::Cryptography::hkdf(raw.size() + p1iface::IFAC_SIZE, RNS::Bytes(tag, p1iface::IFAC_SIZE), ifacKey_);
+        uint8_t wire[p1iface::MAX_WIRE];
+        p1iface::ifacMask(raw.data(), raw.size(), tag, p1iface::IFAC_SIZE, mask.data(), wire);
+        const p1iface::Admit admit = queue_.offer(p1iface::classify(raw.data(), raw.size()), raw.data()[1],
+                                                  p1iface::destination(raw.data(), raw.size()), wire,
+                                                  raw.size() + p1iface::IFAC_SIZE, nowMs());
+        if (admit != p1iface::Admit::QUEUED && admit != p1iface::Admit::HELD) return false;
+        handle_outgoing(raw);
+        return true;
+    }
+
+private:
+    p1iface::Queue queue_;
+    RNS::Bytes ifacKey_;
+    RNS::Identity ifacIdentity_{RNS::Type::NONE};
+    bool online_ = false;
+};
+
+P1Interface* p1 = nullptr;
+RNS::Interface iface(RNS::Type::NONE);
+RNS::Reticulum reticulum(RNS::Type::NONE);
+RNS::Identity identity(RNS::Type::NONE);
+RNS::Destination destination(RNS::Type::NONE);
+
+// Dowód pakietu (PROVE_APP): Transport wywołuje onProofRequested zaraz po onPacket dla tego
+// samego pakietu, więc wynik warstwy aplikacji przechodzi przez zmienną.
+bool lastAccepted = false;
+
+void onPacket(const RNS::Bytes& data, const RNS::Packet&) {
+    ++packetsReceived;
+    lastAccepted = hooks.packet && hooks.packet(data.data(), data.size(), hooks.context);
+    if (!lastAccepted) ++packetsUnproven;
+}
+
+bool onProofRequested(const RNS::Packet&) {
+    const bool prove = lastAccepted;
+    lastAccepted = false;
+    return prove;
+}
+
+void onLog(const char* msg, RNS::LogLevel) { log(msg); }
+
+class AnnounceHandler final : public RNS::AnnounceHandler {
+public:
+    AnnounceHandler() : RNS::AnnounceHandler("wici.sa1") {}
+    void received_announce(const RNS::Bytes& destinationHash, const RNS::Identity&, const RNS::Bytes& appData) override {
+        if (destinationHash.size() != HASH || !memcmp(destinationHash.data(), addressBytes, HASH)) return;
+        ++announcesSeen;
+        if (hooks.announce) hooks.announce(destinationHash.data(), appData.data(), appData.size(), hooks.context);
+    }
+};
+
+RNS::HAnnounceHandler announceHandler;
+
+}  // namespace
+
+bool begin(journal::Storage& storage, Radio& r, const uint8_t ifac[16], uint64_t clockMs, const Hooks& h) {
+    if (started) return true;
+    hooks = h;
+    radio = &r;
+    fram = &storage;
+    RNS::set_log_callback(onLog);
+    try {
+        fs = new (fsMemory) framfs::Fs(storage);
+        if (!fs->mount()) { log("rns: FRAM file system mount failed"); return false; }
+        microStore::FileSystem filesystem{new rnsfs::FramFileSystem(*fs)};
+        RNS::Utilities::OS::register_filesystem(filesystem);
+
+        uint8_t key[framfs::KEY_BYTES];
+        if (framfs::loadKey(storage, key)) {
+            identity = RNS::Identity(false);
+            if (!identity.load_private_key(RNS::Bytes(key, sizeof(key)))) identity = RNS::Identity(RNS::Type::NONE);
+        }
+        memset(key, 0, sizeof(key));
+        if (!identity) {
+            identity = RNS::Identity();
+            const RNS::Bytes prv = identity.get_private_key();
+            if (prv.size() != framfs::KEY_BYTES || !framfs::saveKey(storage, prv.data())) {
+                log("rns: identity not saved in FRAM");
+                return false;
+            }
+            identityNew = true;
+        }
+        memcpy(identityBytes, identity.hash().data(), HASH);
+
+        p1 = new P1Interface();
+        p1->setIfac(ifac);
+        iface = p1;
+        RNS::Transport::register_interface(iface);
+        iface.start();
+
+        reticulum = RNS::Reticulum();
+        reticulum.transport_enabled(true);
+        RNS::Transport::identity(identity);
+        reticulum.start();
+#ifdef ARDUINO
+        // Zegar stosu = czas pracy z dziennika FRAM (Reticulum::start wczytuje przesunięcie z pliku
+        // time_offset, które port odrzuca powyżej 2^32 ms, czyli po ok. 49 dniach pracy).
+        // Przy pierwszym starcie (dziennik bez czasu pracy) clockMs jest o ułamek sekundy mniejsze
+        // niż millis(): przesunięcie 0 zamiast zawinięcia do 2^64.
+        const uint64_t nowMs = millis();
+        RNS::Utilities::OS::setTimeOffset(clockMs > nowMs ? clockMs - nowMs : 0);
+        microStore::set_time_offset(RNS::Utilities::OS::getTimeOffset() / 1000);
+#else
+        (void)clockMs;   // na komputerze stos używa zegara systemowego
+#endif
+
+        destination = RNS::Destination(identity, RNS::Type::Destination::IN, RNS::Type::Destination::SINGLE, APP_NAME, ASPECT);
+        destination.set_packet_callback(onPacket);
+        destination.set_proof_strategy(RNS::Type::Destination::PROVE_APP);
+        destination.set_proof_requested_callback(onProofRequested);
+        memcpy(addressBytes, destination.hash().data(), HASH);
+
+        announceHandler = RNS::HAnnounceHandler(new AnnounceHandler());
+        RNS::Transport::register_announce_handler(announceHandler);
+        started = true;
+        return true;
+    } catch (const std::exception& e) {
+        char text[96];
+        snprintf(text, sizeof(text), "rns: start failed: %s", e.what());
+        log(text);
+        return false;
+    }
+}
+
+void setIfac(const uint8_t ifac[16]) {
+    if (p1) p1->setIfac(ifac);
+}
+
+void loop(uint32_t) {
+    if (!started) return;
+    reticulum.loop();
+}
+
+void received(const uint8_t* wire, size_t length) {
+    if (!started || !p1) return;
+    try {
+        p1->receive(wire, length);
+    } catch (const std::exception& e) {
+        char text[96];
+        snprintf(text, sizeof(text), "rns: inbound failed: %s", e.what());
+        log(text);
+    }
+}
+
+void txDone(bool ok) {
+    if (p1) p1->txDone(ok);
+}
+
+bool announce(const uint8_t* appData, size_t length) {
+    if (!started) return false;
+    try {
+        destination.announce(RNS::Bytes(appData, length));
+        return true;
+    } catch (const std::exception&) {
+        return false;
+    }
+}
+
+bool knows(const uint8_t dest[HASH]) {
+    if (!started) return false;
+    return (bool)RNS::Identity::recall(RNS::Bytes(dest, HASH));
+}
+
+bool hasPath(const uint8_t dest[HASH]) {
+    return started && RNS::Transport::has_path(RNS::Bytes(dest, HASH));
+}
+
+void requestPath(const uint8_t dest[HASH]) {
+    if (started) RNS::Transport::request_path(RNS::Bytes(dest, HASH));
+}
+
+uint32_t send(const uint8_t dest[HASH], const uint8_t* data, size_t length, uint32_t timeoutS) {
+    if (!started || !p1 || !p1->ifacOnline() || p1->queue().full()) return 0;
+    try {
+        const RNS::Bytes hash(dest, HASH);
+        const RNS::Identity remote = RNS::Identity::recall(hash);
+        if (!remote) {
+            RNS::Transport::request_path(hash);
+            return 0;
+        }
+        RNS::Destination out(remote, RNS::Type::Destination::OUT, RNS::Type::Destination::SINGLE, APP_NAME, ASPECT);
+        if (out.hash() != hash) return 0;
+        RNS::Packet packet(out, RNS::Bytes(data, length));
+        RNS::PacketReceipt receipt = packet.receipt_send();
+        if (!receipt) return 0;
+        const uint32_t handle = ++nextHandle ? nextHandle : ++nextHandle;
+        ++packetsSent;
+        ++pending;
+        // Limit liczy się od przekazania do stosu: doliczony czas oczekiwania w kolejce radiowej
+        // (dług ciszy i datagramy przed tym pakietem), bo dowód nie może wrócić przed nadaniem.
+        uint32_t limit = (timeoutS < RECEIPT_MIN_S ? RECEIPT_MIN_S : timeoutS) + queueWaitMs() / 1000;
+        if (limit > 32767) limit = 32767;
+        receipt.set_timeout(static_cast<int16_t>(limit));
+        receipt.set_delivery_handler([handle](const RNS::PacketReceipt&) {
+            ++delivered;
+            if (pending) --pending;
+            if (hooks.receipt) hooks.receipt(handle, true, hooks.context);
+        });
+        receipt.set_timeout_handler([handle](const RNS::PacketReceipt&) {
+            ++timedOut;
+            if (pending) --pending;
+            if (hooks.receipt) hooks.receipt(handle, false, hooks.context);
+        });
+        return handle;
+    } catch (const std::exception& e) {
+        char text[96];
+        snprintf(text, sizeof(text), "rns: send failed: %s", e.what());
+        log(text);
+        return 0;
+    }
+}
+
+bool queueFull() { return !p1 || p1->queue().full(); }
+
+bool online() { return started && p1 && p1->ifacOnline(); }
+
+uint32_t queueWaitMs() { return p1 && radio ? p1->queue().waitMs(radio->debtMs()) : 0; }
+
+const uint8_t* address() { return addressBytes; }
+const uint8_t* identityHash() { return identityBytes; }
+
+Status status() {
+    Status s;
+    s.started = started;
+    s.identityNew = identityNew;
+    s.bitrate = p1iface::declaredBitrate();
+    if (!started) return s;
+    s.online = p1 && p1->ifacOnline();
+    s.paths = RNS::Transport::new_path_table().size();
+    s.packetHashes = RNS::Transport::packet_hashlist().size();
+    s.announceTable = RNS::Transport::announce_table().size();
+    s.receiptsPending = pending;
+    s.poolSize = RNS::Utilities::Memory::heap_pool_size();
+    s.poolUsed = RNS::Utilities::Memory::heap_pool_used();
+    s.poolPeak = RNS::Utilities::Memory::heap_pool_peak();
+    if (fs) {
+        s.fsFiles = fs->stats().files;
+        s.fsCapacityBytes = fs->capacityBytes();
+        s.fsUsedBytes = fs->capacityBytes() - fs->freeBytes();
+    }
+    s.packetsSent = packetsSent;
+    s.packetsReceived = packetsReceived;
+    s.packetsUnproven = packetsUnproven;
+    s.delivered = delivered;
+    s.timedOut = timedOut;
+    s.announcesSeen = announcesSeen;
+    s.queueWaitMs = queueWaitMs();
+    s.announceWaitMs = p1 ? p1->queue().announceAllowedInMs(nowMs()) : 0;
+    return s;
+}
+
+size_t interfaceJson(char* out, size_t size) {
+    if (!p1) return snprintf(out, size, "\"p1_iface\":false");
+    const p1iface::Counters& c = p1->queue().counters();
+    const int n = snprintf(out, size,
+                           "\"q_len\":%u,\"q_held\":%u,\"q_queued\":%lu,\"q_full\":%lu,\"too_large\":%lu,\"ann_held\":%lu,"
+                           "\"ann_drop\":%lu,\"ann_expired\":%lu,\"tx_sent\":%lu,\"tx_failed\":%lu,\"rx_ok\":%lu,"
+                           "\"ifac_missing\":%lu,\"ifac_invalid\":%lu,\"offline\":%lu",
+                           (unsigned)p1->queue().queued(), (unsigned)p1->queue().held(), (unsigned long)c.queued,
+                           (unsigned long)c.full, (unsigned long)c.tooLarge, (unsigned long)c.announcesHeld,
+                           (unsigned long)c.announcesDropped, (unsigned long)c.announcesExpired, (unsigned long)c.sent,
+                           (unsigned long)c.sendFailed, (unsigned long)c.received, (unsigned long)c.ifacMissing,
+                           (unsigned long)c.ifacInvalid, (unsigned long)c.offline);
+    return n < 0 ? 0 : (size_t)n;
+}
+
+bool wipe() {
+    // Stos staje przed formatowaniem: okresowy zapis tablic nie odtworzy ich w FRAM, a interfejs
+    // przestaje nadawać ze starą tożsamością. Nowa tożsamość powstaje przy następnym starcie.
+    started = false;
+    identityNew = false;
+    memset(addressBytes, 0, sizeof(addressBytes));    // adres i nazwa nie wskazują skasowanej tożsamości
+    memset(identityBytes, 0, sizeof(identityBytes));
+    if (p1) {
+        const uint8_t none[16] = {};
+        p1->setIfac(none);
+    }
+    bool ok = fram && framfs::wipeKey(*fram);
+    if (fs) ok = fs->format() && ok;
+    return ok;
+}
+
+void persist() {
+    if (started) RNS::Transport::persist_data();
+}
+
+#ifndef ARDUINO
+uint32_t debugFillHashes(uint32_t n) {
+    if (!started) return 0;
+    for (uint32_t i = 0; i < n; ++i) RNS::Transport::add_packet_hash(RNS::Identity::get_random_hash());
+    return n;
+}
+#endif
+
+}  // namespace rnsnode

@@ -1,0 +1,34 @@
+Łata WICI do microReticulum 40fa628 (Apache-2.0, jak plik, który zmienia).
+
+Lista skrótów pakietów z 8-bajtowymi kluczami w RAM (docs/spec/oprogramowanie.md, "Pojemności
+stosu"): z -DRNS_SHORT_PACKET_HASHES Transport::PersistedBytesList to pkthash::ShortHashList
+z firmware/src/pkthash.h (4096 x 8 B = 32 KiB zamiast pełnych 32 B w kontenerach). Lista nie jest
+zapisywana w FRAM (-DRNS_PERSIST_HASHLIST=0).
+
+diff --git a/src/microReticulum/Transport.h b/src/microReticulum/Transport.h
+index 4ce06bd..517c0b2 100644
+--- a/src/microReticulum/Transport.h
++++ b/src/microReticulum/Transport.h
+@@ -26,6 +26,10 @@
+ #else
+ #include <microStore/HeapStore.h>
+ #endif
++// WICI: lista skrótów pakietów z pierwszymi 8 B skrótu (pkthash.h z oprogramowania stacji).
++#ifdef RNS_SHORT_PACKET_HASHES
++#include <pkthash.h>
++#endif
+ 
+ #include <map>
+ #include <vector>
+@@ -88,7 +92,11 @@ namespace RNS {
+ #else
+ 		using BytesStore = microStore::BasicHeapStore<Utilities::Memory::ContainerAllocator<uint8_t>>;
+ #endif
++#ifdef RNS_SHORT_PACKET_HASHES
++		using PersistedBytesList = pkthash::ShortHashList<Bytes, BytesStore>;
++#else
+ 		using PersistedBytesList = microStore::TypedKeyStore<Bytes, PathStore>;
++#endif
+ 
+ 		class Callbacks {
+ 		public:

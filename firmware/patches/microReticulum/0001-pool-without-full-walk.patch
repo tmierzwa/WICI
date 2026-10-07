@@ -1,0 +1,76 @@
+Łata WICI do microReticulum 40fa628 (Apache-2.0, jak plik, który zmienia).
+
+Pula TLSF bez przeglądu całej puli przy każdym przydziale. pool_malloc wywoływał tlsf_walk_pool
+i tlsf_check przy każdym new, czyli przegląd wszystkich bloków puli (około 100 KiB) na każdy przydział
+kontenera stosu; przy przetwarzaniu ogłoszenia to tysiące przeglądów. Przegląd zostaje tylko
+z -DRNS_DEBUG_HEAP. W zamian liczniki zajętości i szczytu puli (heap_pool_used, heap_pool_peak): bloki
+z tlsf_block_size z nagłówkiem TLSF i struktura sterująca puli, czyli to, co faktycznie zajmuje
+pulę poza fragmentacją; korzysta z nich polecenie RNS i pomiar RAM (README, "Pamięć RAM").
+
+diff --git a/src/microReticulum/Utilities/Memory.cpp b/src/microReticulum/Utilities/Memory.cpp
+index 2c9b6b3..ffaf3b6 100644
+--- a/src/microReticulum/Utilities/Memory.cpp
++++ b/src/microReticulum/Utilities/Memory.cpp
+@@ -162,6 +162,8 @@ void tlsf_mem_walker(void* ptr, size_t size, int used, void* user)
+ 		else {
+ 			//sprintf(_tlsf_msg, "TLSF: initialization with align=%d, contiguous=%d, size=%d SUCCESSFUL!!!", tlsf_align_size(), pool_info.contiguous_size, pool_info.buffer_size);
+ 			printf("TLSF: initialization with align=%d, contiguous=%d, size=%d SUCCESSFUL!!!\n", tlsf_align_size(), pool_info.contiguous_size, pool_info.buffer_size);
++			// WICI: struktura sterująca TLSF i znaczniki puli zajmują pulę od początku.
++			pool_info.used_bytes = pool_info.peak_bytes = tlsf_size() + tlsf_pool_overhead();
+ 		}
+ #else
+ 		Serial.print("TLSF: raw_buffer: ");
+@@ -189,14 +191,22 @@ void tlsf_mem_walker(void* ptr, size_t size, int used, void* user)
+ 	}
+ 	void* p;
+ 	if (pool_info.tlsf != nullptr) {
++#ifdef RNS_DEBUG_HEAP
++		// WICI: przegląd całej puli i tlsf_check przy każdym przydziale tylko w trybie diagnostyki.
+ 		struct tlsf_stats stats;
+ 		memset(&stats, 0, sizeof(stats));
+ 		tlsf_walk_pool(tlsf_get_pool(pool_info.tlsf), tlsf_mem_walker, &stats);
+ 		if (tlsf_check(pool_info.tlsf) != 0) {
+ 			printf("--- HEAP CORRUPTION DETECTED!!!\n");
+ 		}
++#endif
+ 		//printf("--- allocating memory from tlsf (%u bytes) (%u free)\n", size, stats.free_size);
+ 		p = tlsf_malloc(pool_info.tlsf, size);
++		if (p != nullptr) {
++			// WICI: blok z nagłówkiem TLSF (4 B przy 32 bitach, 8 B przy 64).
++			pool_info.used_bytes += tlsf_block_size(p) + tlsf_alloc_overhead();
++			if (pool_info.used_bytes > pool_info.peak_bytes) pool_info.peak_bytes = pool_info.used_bytes;
++		}
+ 		//printf("--- allocated memory from tlsf (addr=%lx) (%u bytes)\n", p, size);
+ 	}
+ 	else {
+@@ -213,6 +223,7 @@ void tlsf_mem_walker(void* ptr, size_t size, int used, void* user)
+ 	if (pool_info.tlsf != nullptr) {
+ 		//TRACEF("--- freeing memory from tlsf (addr=%lx)", p);
+ 		//printf("--- freeing memory from tlsf (addr=%lx)\n", p);
++		pool_info.used_bytes -= tlsf_block_size(p) + tlsf_alloc_overhead();
+ 		tlsf_free(pool_info.tlsf, p);
+ 	}
+ 	else {
+diff --git a/src/microReticulum/Utilities/Memory.h b/src/microReticulum/Utilities/Memory.h
+index b2f9f13..589ffa1 100644
+--- a/src/microReticulum/Utilities/Memory.h
++++ b/src/microReticulum/Utilities/Memory.h
+@@ -42,6 +42,8 @@ namespace RNS { namespace Utilities {
+ 			uint32_t alloc_fault = 0;
+ 			uint32_t free_fault = 0;
+ 			size_t last_free = 0;
++			size_t used_bytes = 0;   // WICI: zajęte bajty puli: struktura sterująca, bloki z nagłówkami
++			size_t peak_bytes = 0;   // WICI: największa zajętość od startu
+ 		};
+ 
+ 		struct allocator_info {
+@@ -192,6 +194,9 @@ namespace RNS { namespace Utilities {
+ 		};
+ 
+ 		static size_t heap_pool_size();
++		// WICI: zajętość i szczyt puli bez przeglądu całej puli.
++		static inline size_t heap_pool_used() { return heap_pool_info.used_bytes; }
++		static inline size_t heap_pool_peak() { return heap_pool_info.peak_bytes; }
+ 		static size_t heap_pool_free();
+ 		static uint8_t heap_pool_fragmented();
+ 		static size_t psram_pool_size();

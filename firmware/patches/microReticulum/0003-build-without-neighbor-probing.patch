@@ -1,0 +1,21 @@
+Łata WICI do microReticulum 40fa628 (Apache-2.0, jak plik, który zmienia).
+
+Kompilacja z -DRNS_NEIGHBOR_PROBING=0: licznik _probes_received istnieje tylko z włączonymi
+sondami sąsiadów, a probe_request_handler zwiększał go bezwarunkowo. Sondy to funkcja portu bez
+odpowiednika w Reticulum; na P1 byłyby dodatkowym ruchem w długu ciszy, więc stacja ich nie używa.
+
+diff --git a/src/microReticulum/Transport.cpp b/src/microReticulum/Transport.cpp
+index 89b5238..70b1544 100644
+--- a/src/microReticulum/Transport.cpp
++++ b/src/microReticulum/Transport.cpp
+@@ -4304,7 +4304,10 @@ static void remote_path_pack_rate_entry(MsgPack::Packer& p,
+ }
+ 
+ /*static*/ void Transport::probe_request_handler(const Bytes& data, const Packet& packet) {
++#if RNS_NEIGHBOR_PROBING
++	// WICI: licznik istnieje tylko z sondami sąsiadów; bez tego -DRNS_NEIGHBOR_PROBING=0 nie kompiluje się.
+ 	++_probes_received;
++#endif
+ 	TRACE("Transport::probe_request_handler");
+ }
+ 

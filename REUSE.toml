@@ -86,6 +86,13 @@ precedence = "override"
 SPDX-FileCopyrightText = ["2026 Tomek Mierzwa and WICI contributors", "2003 Bitstream, Inc. (Bitstream Vera); DejaVu changes are in public domain"]
 SPDX-License-Identifier = "MIT AND Bitstream-Vera"
 
+# WICI patches to microReticulum keep the license of the files they change.
+[[annotations]]
+path = "firmware/patches/microReticulum/**"
+precedence = "override"
+SPDX-FileCopyrightText = ["2026 Tomek Mierzwa and WICI contributors", "2023 Chad Attermann"]
+SPDX-License-Identifier = "Apache-2.0"
+
 # Verbatim license texts carry the terms they state.
 [[annotations]]
 path = "hardware/*/fabrication/*/LICENSES/CC-BY-4.0.txt"
