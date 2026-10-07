@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Ekran Sharp LS027B7DH01 (Adafruit 4694, 400 x 240) na magistrali SPI: bufor obrazu w RAM,
 // zapis wierszy zmienionych, rysowanie znaków z font_glyphs.h. EXTCOMIN (inwersja VCOM,
-// 1 Hz) generuje licznik RTC2 przez PPI i GPIOTE bez udziału programu (specyfikacja:
-// "EXTCOMIN z wyjścia licznika MCU, nie z programu"); zapasowo bit VCOM w poleceniach,
-// gdy zworka EXTMODE płytki jest w położeniu niskim.
+// 1 Hz) generuje licznik MCU bez udziału programu (specyfikacja: "EXTCOMIN z wyjścia licznika
+// MCU, nie z programu"): na nRF52840 RTC2 przez PPI i GPIOTE (sharp_extcomin_nrf.cpp), na
+// ESP32-S3 MCPWM (sharp_extcomin_esp32.cpp); zapasowo bit VCOM w poleceniach, gdy zworka
+// EXTMODE płytki jest w położeniu niskim. Reszta sterownika nie zależy od MCU.
 #pragma once
 
 #include <Arduino.h>
@@ -24,14 +25,14 @@ constexpr uint8_t CMD_WRITE = 0x01;
 constexpr uint8_t CMD_VCOM = 0x02;
 constexpr uint8_t CMD_CLEAR = 0x04;
 constexpr uint32_t EXTCOMIN_HALF_PERIOD_MS = 500;  // przebieg 1 Hz
-constexpr uint8_t PPI_CHANNEL = 0;      // SoftDevice S140 zajmuje kanały 17-31
-constexpr uint8_t GPIOTE_CHANNEL = 7;   // attachInterrupt rdzenia pomija kanały włączone
+constexpr uint8_t PPI_CHANNEL = 0;      // nRF52840: SoftDevice S140 zajmuje kanały 17-31
+constexpr uint8_t GPIOTE_CHANNEL = 7;   // nRF52840: attachInterrupt rdzenia pomija kanały włączone
 
 class Display {
 public:
     Display(SPIClass& spi, uint8_t pinCs, uint8_t pinExtcomin, uint32_t spiHz = SPI_HZ);
 
-    // CS w stan niski, bufor biały, polecenie CLEAR, EXTCOMIN z RTC2.
+    // CS w stan niski, bufor biały, polecenie CLEAR, EXTCOMIN z licznika MCU.
     void begin();
     void clear();
     // Wiersz tekstu UTF-8 (20 komórek, dopełniany spacjami); inverse = białe litery na czarnym.
@@ -47,7 +48,7 @@ public:
     uint32_t refreshes() const { return refreshes_; }
     void spiHz(uint32_t hz) { spiHz_ = hz; }
     uint32_t spiHz() const { return spiHz_; }
-    uint32_t extcominCounter() const;  // licznik RTC2 (0..4), do diagnostyki
+    uint32_t extcominCounter() const;  // licznik źródła EXTCOMIN (RTC2: 0..4), do diagnostyki
     bool extcominLevel() const;        // stan pinu EXTCOMIN
 
 private:

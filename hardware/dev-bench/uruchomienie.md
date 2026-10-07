@@ -29,7 +29,7 @@ Przyciski 12 × 12 mm dostają nasadki Omron B32. Pad masy J6.22 ma pełne poł�
 
 ## Oprogramowanie
 
-Kroki A3–A5 i B3–B4 wymagają obrazu z plikiem opisu płytki N1 (na przykład `board_bench_n1.h`) z poleceniami diagnostycznymi: stan wejść (przyciski, CISZA, przygotowanie), dioda, brzęczyk i odczyt VTEST. Dla stanowiska A jest to obraz środowiska `bench-n1` z plikiem `board_bench_n1.h`; polecenia diagnostyczne (`BTN`, `LED 5`, `BUZZ`, `VTEST`, `DISPLAY`) i przebieg kroków A3–A4 opisuje [firmware/README.md](../../firmware/README.md#płytka-nośna-n1-bench-n1). Dla ESP32-S3 potrzebny jest program testowy, który odczytuje też rejestr wersji S2-LP; na 2026-10-07 go nie ma. Różnice między oprogramowaniem a płytką i lista potrzebnych zmian: [zgodność z oprogramowaniem](checks/zgodnosc-firmware.md).
+Kroki A3–A5 i B3–B4 wymagają obrazu z plikiem opisu płytki N1 (na przykład `board_bench_n1.h`) z poleceniami diagnostycznymi: stan wejść (przyciski, CISZA, przygotowanie), dioda, brzęczyk i odczyt VTEST. Dla stanowiska A jest to obraz środowiska `bench-n1` z plikiem `board_bench_n1.h`; polecenia diagnostyczne (`BTN`, `LED 5`, `BUZZ`, `VTEST`, `DISPLAY`) i przebieg kroków A3–A4 opisuje [firmware/README.md](../../firmware/README.md#płytka-nośna-n1-bench-n1). Dla stanowiska B jest to obraz środowiska `bench-b` z plikiem `board_bench_b.h`: te same polecenia panelu (`BTN`, `LED 5`, `BUZZ`, `VTEST`, `DISPLAY`) oraz `RADIO` z odczytem PARTNUM i VERSION S2-LP ([firmware/README.md](../../firmware/README.md#stanowisko-b-na-płytce-n1-bench-b)). Różnice między oprogramowaniem a płytką i lista potrzebnych zmian: [zgodność z oprogramowaniem](checks/zgodnosc-firmware.md).
 
 **Nie wgrywać obrazu okablowania przewodami (`board_bench_a.h`) przy wpiętej płytce N1.** W tym obrazie D13 jest wyjściem SCK, a na N1 jest wejściem przełącznika CISZA, które przełącznik zwiera do masy. Do tego D10 i D8 sterują tam radiem, a na N1 diodą i linią DISP ekranu. Przed wpięciem DK w N1 wgrywa się obraz N1 albo pusty program.
 
@@ -50,7 +50,7 @@ Kroki A3–A5 i B3–B4 wymagają obrazu z plikiem opisu płytki N1 (na przykła
 | B1 | Płytka nośna na ośmiu dystansach M3. JP1 i JP2 założone, bez modułów | płytka stoi stabilnie; długie piny J1–J4 nie dotykają podłoża; śruby w otworach Arduino nie dotykają listew |
 | B2 | ESP32-S3-DevKitC-1 (moduł N8R2, N8R8 albo N16R16V), USB w stronę napisu USB na płytce, do komputera, amperomierz w miejscu JP1; pomiar J1.4 i J1.5 | około 3,3 V i około 4,7 V; prąd przez JP1 bez modułów < 5 mA (podciągnięcia) |
 | B3 | Jak A3 i A4 | jak w A |
-| B4 | X-NUCLEO-S2868A2 z fabrycznymi rezystorami, zworka JP1 na X-NUCLEO założona, wpięta w J1–J4 | program testowy ESP32-S3 odczytuje rejestr wersji S2-LP przez SPI |
+| B4 | X-NUCLEO-S2868A2 z fabrycznymi rezystorami, zworka JP1 na X-NUCLEO założona, wpięta w J1–J4 | `RADIO` obrazu `bench-b` daje `partnumber: 0x03`, `partversion` (rejestr wersji S2-LP) i stan `READY` |
 
 ## Czego płytka nie sprawdza
 
