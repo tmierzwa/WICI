@@ -235,6 +235,7 @@ bool Console::destroy() {
     // ZNISZCZ DANE: konfiguracja, kolejka, skrzynka, zdarzenia, klucze odbioru i dziennik zdarzeń; dług ciszy zostaje.
     const bool storeOk = store_.destroy();
     const bool journalOk = !journal_ || journal_->eraseEvents();
+    if (storeOk) services_.destroyed();   // jak polecenie destroy przez USB: także kod IFAC i tożsamość
     services_.log(storeOk && journalOk ? "data destroyed" : "destroy failed");
     dirty_ = true;
     services_.changed();

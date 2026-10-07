@@ -54,90 +54,96 @@ bool Station::buildDatagram(const store::QueueRecord& record, char* out, size_t 
     store::bytesToHex(self, from);
     store::bytesToHex(record.to, to);
     const int n = snprintf(out, size, "[\"WICI\",1,\"%s\",\"%s\",%s]", from, to, record.sa1);
-    if (n <= 0 || static_cast<size_t>(n) >= size || static_cast<size_t>(n) > DATAGRAM_MAX) return false;
+    if (n <= 0 || static_cast<size_t>(n) >= size || static_cast<size_t>(n) > PACKET_MAX) return false;
     length = static_cast<size_t>(n);
     return true;
+}
+
+void Station::attemptFailed(uint32_t seq) {
+    store::QueueRecord r;
+    const uint32_t nowS = services_.uptimeS();
+    if (store_.queueRead(seq, r)) {
+        ++stats_.failed;
+        uint32_t random = 0;
+        services_.randomBytes(reinterpret_cast<uint8_t*>(&random), sizeof(random));
+        r.nextTryS = nowS + retryDelayS(r.attempts, false, nowS - r.createdS, random);
+        r.updatedS = nowS;
+        store_.queueUpdate(r);
+        services_.changed();
+    }
+    if (inFlightSeq_ == seq) { inFlightSeq_ = 0; inFlightHandle_ = 0; }
 }
 
 void Station::poll(uint32_t nowMs) {
     const uint32_t nowS = services_.uptimeS();
     (void)nowMs;
-    // Brak potwierdzenia łącza w czasie: próba nieudana, następna według harmonogramu.
-    if (inFlightSeq_ && !awaitingTx_ && nowS - inFlightSentS_ >= ACK_TIMEOUT_S) {
-        store::QueueRecord r;
-        if (store_.queueRead(inFlightSeq_, r)) {
-            ++stats_.failed;
-            uint32_t random = 0;
-            services_.randomBytes(reinterpret_cast<uint8_t*>(&random), sizeof(random));
-            r.nextTryS = nowS + retryDelayS(r.attempts, false, nowS - r.createdS, random);
-            r.updatedS = nowS;
-            store_.queueUpdate(r);
-            services_.changed();
-        }
-        inFlightSeq_ = 0;
-    }
-    if (services_.silence() || !services_.radioReady() || services_.busy() || awaitingTx_) return;
-    // Zaległe potwierdzenie łącza przed własnym ruchem.
-    if (pendingAck_) {
-        uint8_t self[store::HASH];
-        services_.address(self);
-        char from[2 * store::HASH + 1], to[2 * store::HASH + 1], line[160];
-        store::bytesToHex(self, from);
-        store::bytesToHex(ackTo_, to);
-        const int n = snprintf(line, sizeof(line), "[\"WICI\",1,\"%s\",\"%s\",\"ack\",\"%s\",%u,%u,%lu]", from, to, ackId_, ackRevision_,
-                               ackType_, static_cast<unsigned long>(ackEvent_));
-        pendingAck_ = false;
-        if (n > 0 && services_.send(reinterpret_cast<const uint8_t*>(line), static_cast<size_t>(n))) {
-            ++stats_.acksSent;
-            awaitingTx_ = true;
-            return;
-        }
-    }
-    if (inFlightSeq_) return;
+    // Stos nie podał wyniku potwierdzenia (restart stosu, utracony uchwyt): próba nieudana.
+    if (inFlightSeq_ && nowS - inFlightSentS_ >= RECEIPT_GUARD_S) attemptFailed(inFlightSeq_);
+    if (services_.silence() || !services_.radioReady() || services_.busy() || inFlightSeq_) return;
     const uint32_t seq = nextToSend(nowS);
     if (!seq) return;
     store::QueueRecord r;
     if (!store_.queueRead(seq, r)) return;
-    char datagram[DATAGRAM_MAX + 1];
+    char packet[PACKET_MAX + 1];
     size_t length = 0;
-    if (!buildDatagram(r, datagram, sizeof(datagram), length)) {
+    if (!buildDatagram(r, packet, sizeof(packet), length)) {
         r.flags = static_cast<uint8_t>(r.flags & ~store::ACTIVE);  // nie da się nadać: intencja zatrzymana
         store_.queueUpdate(r);
-        services_.log("intent too large for P1");
+        services_.log("intent too large for a packet");
         return;
     }
-    if (!services_.send(reinterpret_cast<const uint8_t*>(datagram), length)) return;
+    const uint32_t handle = services_.send(r.to, reinterpret_cast<const uint8_t*>(packet), length, ACK_TIMEOUT_S);
+    if (!handle) {
+        // Cel nieznany (stos wysłał zapytanie o trasę) albo interfejs odmówił: bez liczenia próby,
+        // następna po 1, 2, 5, 15 min ±20% kolejnych odmów, żeby zapytania o trasę nie szły co minutę.
+        ++stats_.refused;
+        if (refusals_ < 0xFFFF) ++refusals_;
+        uint32_t random = 0;
+        services_.randomBytes(reinterpret_cast<uint8_t*>(&random), sizeof(random));
+        r.nextTryS = nowS + retryDelayS(refusals_, false, nowS - r.createdS, random);
+        r.updatedS = nowS;
+        store_.queueUpdate(r);
+        return;
+    }
     ++stats_.sent;
+    refusals_ = 0;
     r.attempts = static_cast<uint16_t>(r.attempts + 1);
     if (!r.sentS) r.sentS = nowS;
-    r.nextTryS = nowS + ACK_TIMEOUT_S;  // do czasu wyniku próby nie nadaje się ponownie
+    // Do wyniku potwierdzenia nic nie wychodzi (jedna intencja w drodze); po restarcie w trakcie
+    // próba wraca po 60 s.
+    r.nextTryS = nowS + ACK_TIMEOUT_S;
     r.updatedS = nowS;
     store_.queueUpdate(r);
     inFlightSeq_ = seq;
+    inFlightHandle_ = handle;
     inFlightSentS_ = nowS;
-    awaitingTx_ = true;
     services_.changed();
 }
 
-void Station::txDone(bool ok) {
-    awaitingTx_ = false;
-    if (!inFlightSeq_) return;
-    if (!ok) {
-        // Seria nie wyszła (cisza, odroczenia, dziennik): próba nieudana od razu.
-        store::QueueRecord r;
-        const uint32_t nowS = services_.uptimeS();
-        if (store_.queueRead(inFlightSeq_, r)) {
-            ++stats_.failed;
-            uint32_t random = 0;
-            services_.randomBytes(reinterpret_cast<uint8_t*>(&random), sizeof(random));
-            r.nextTryS = nowS + retryDelayS(r.attempts, false, nowS - r.createdS, random);
-            r.updatedS = nowS;
-            store_.queueUpdate(r);
-        }
-        inFlightSeq_ = 0;
+void Station::receipt(uint32_t handle, bool delivered) {
+    if (!handle || handle != inFlightHandle_ || !inFlightSeq_) return;   // spóźniony wynik zakończonej próby
+    const uint32_t seq = inFlightSeq_;
+    if (!delivered) { attemptFailed(seq); return; }
+    inFlightSeq_ = 0;
+    inFlightHandle_ = 0;
+    store::QueueRecord r;
+    if (!store_.queueRead(seq, r)) return;
+    if (r.flags & (store::DONE | store::CANCELLED | store::REPLACED)) return;
+    ++stats_.delivered;
+    const uint32_t nowS = services_.uptimeS();
+    if (r.type == sa1::REQUEST || r.type == sa1::TEST) {
+        // Dostarczone: czeka na RECEIVED 10 min, potem ponawia co 30–60 min.
+        uint32_t random = 0;
+        services_.randomBytes(reinterpret_cast<uint8_t*>(&random), sizeof(random));
+        r.flags |= store::SENT;
+        r.nextTryS = nowS + RECEIVED_WAIT_S + (r.attempts > 1 ? retryDelayS(r.attempts, true, nowS - r.createdS, random) : 0);
+        r.updatedS = nowS;
+        store_.queueUpdate(r);
     } else {
-        inFlightSentS_ = services_.uptimeS();  // czas na ack liczy się od końca serii
+        // RECEIVED, STATUS, REPLY, BULLETIN: dostarczenie kończy intencję.
+        finishIntent(r, r.statusEvent, r.state);
     }
+    services_.changed();
 }
 
 bool Station::trustedSource(const uint8_t from[store::HASH]) const {
@@ -148,19 +154,9 @@ bool Station::trustedSource(const uint8_t from[store::HASH]) const {
     return !memcmp(from, c.osp[c.activeOsp ? 1 : 0], store::HASH);
 }
 
-void Station::sendAck(const uint8_t to[store::HASH], const char* id, uint16_t revision, uint8_t type, uint32_t event) {
-    memcpy(ackTo_, to, store::HASH);
-    ackEvent_ = event;
-    strncpy(ackId_, id, sa1::ID_HEX);
-    ackId_[sa1::ID_HEX] = '\0';
-    ackRevision_ = revision;
-    ackType_ = type;
-    pendingAck_ = true;
-}
-
-void Station::received(const uint8_t* data, size_t length) {
-    if (length > DATAGRAM_MAX) { ++stats_.rejected; return; }
-    char copy[DATAGRAM_MAX + 1];
+bool Station::received(const uint8_t* data, size_t length) {
+    if (length > PACKET_MAX) { ++stats_.rejected; return false; }
+    char copy[PACKET_MAX + 1];
     memcpy(copy, data, length);
     copy[length] = '\0';
     json::Value array, v;
@@ -173,38 +169,24 @@ void Station::received(const uint8_t* data, size_t length) {
         !json::item(array, 2, v) || !json::string(v, fromHex, sizeof(fromHex)) || !store::hexToBytes(fromHex, from) ||
         !json::item(array, 3, v) || !json::string(v, toHex, sizeof(toHex)) || !store::hexToBytes(toHex, to)) {
         ++stats_.rejected;
-        return;
+        return false;
     }
     services_.address(self);
-    if (memcmp(to, self, store::HASH)) { ++stats_.rejected; return; }  // nie do nas
+    if (memcmp(to, self, store::HASH)) { ++stats_.rejected; return false; }  // nie do nas
     ++stats_.received;
     json::Value payload;
     json::item(array, 4, payload);
-    if (payload.kind == json::Kind::STRING) {
-        char word[8], id[sa1::ID_HEX + 2];
-        int64_t revision = 0, type = 0, event = 0;
-        if (!json::string(payload, word, sizeof(word)) || strcmp(word, "ack") || json::count(array) != 9 ||
-            !json::item(array, 5, v) || !json::string(v, id, sizeof(id)) || !sa1::isHexId(id) ||
-            !json::item(array, 6, v) || !json::integer(v, revision) || revision < 0 || revision > sa1::REVISION_MAX ||
-            !json::item(array, 7, v) || !json::integer(v, type) || type < 0 || type > sa1::TEST ||
-            !json::item(array, 8, v) || !json::integer(v, event) || event < 0 || event > sa1::EVENT_MAX) {
-            ++stats_.rejected;
-            return;
-        }
-        handleAck(from, id, static_cast<uint16_t>(revision), static_cast<uint8_t>(type), static_cast<uint32_t>(event));
-        return;
-    }
-    if (payload.kind != json::Kind::ARRAY || json::count(array) != 5 || payload.length > sa1::MAX_CONTENT) { ++stats_.rejected; return; }
-    if (!trustedSource(from)) { ++stats_.rejected; services_.log("datagram from untrusted source"); return; }
+    if (payload.kind != json::Kind::ARRAY || json::count(array) != 5 || payload.length > sa1::MAX_CONTENT) { ++stats_.rejected; return false; }
+    if (!trustedSource(from)) { ++stats_.rejected; services_.log("datagram from untrusted source"); return false; }
     sa1::Message m;
-    if (sa1::decode(payload.begin, payload.length, m)) { ++stats_.rejected; return; }
+    if (sa1::decode(payload.begin, payload.length, m)) { ++stats_.rejected; return false; }
     const bool osp = store_.config().role == store::OSP;
     const bool allowed = osp ? (m.type == sa1::REQUEST || m.type == sa1::TEST) : (m.type >= sa1::RECEIVED && m.type <= sa1::BULLETIN);
-    if (!allowed) { ++stats_.rejected; return; }
+    if (!allowed) { ++stats_.rejected; return false; }
     char wire[sa1::MAX_CONTENT + 1];
     const size_t wireLength = sa1::encode(m, wire, sizeof(wire));
-    if (!wireLength) { ++stats_.rejected; return; }
-    handleMessage(from, m, wire, wireLength);
+    if (!wireLength) { ++stats_.rejected; return false; }
+    return handleMessage(from, m, wire, wireLength);
 }
 
 void Station::finishIntent(store::QueueRecord& r, uint32_t event, uint8_t state) {
@@ -217,36 +199,7 @@ void Station::finishIntent(store::QueueRecord& r, uint32_t event, uint8_t state)
     ++stats_.confirmed;
 }
 
-void Station::handleAck(const uint8_t from[store::HASH], const char* id, uint16_t revision, uint8_t type, uint32_t event) {
-    uint8_t idBytes[store::HASH];
-    if (!store::hexToBytes(id, idBytes)) { ++stats_.rejected; return; }
-    const uint32_t nowS = services_.uptimeS();
-    // Potwierdzenie łącza dotyczy intencji o pełnym kluczu (odbiorca, typ, id, revision, event).
-    const store::QueueEntry* e = store_.queueFind(from, type, idBytes, revision, event);
-    if (e) {
-        store::QueueRecord r;
-        if (!store_.queueRead(e->seq, r)) return;
-        if (r.flags & (store::DONE | store::CANCELLED | store::REPLACED)) return;  // spóźnione potwierdzenie zakończonej intencji
-        ++stats_.delivered;
-        if (inFlightSeq_ == r.seq) inFlightSeq_ = 0;
-        if (type == sa1::REQUEST || type == sa1::TEST) {
-            // Dostarczone: czeka na RECEIVED 10 min, potem ponawia co 30–60 min.
-            uint32_t random = 0;
-            services_.randomBytes(reinterpret_cast<uint8_t*>(&random), sizeof(random));
-            r.flags |= store::SENT;
-            r.nextTryS = nowS + RECEIVED_WAIT_S + (r.attempts > 1 ? retryDelayS(r.attempts, true, nowS - r.createdS, random) : 0);
-            r.updatedS = nowS;
-            store_.queueUpdate(r);
-        } else {
-            // RECEIVED, STATUS, REPLY, BULLETIN: dostarczenie kończy intencję.
-            finishIntent(r, r.statusEvent, r.state);
-        }
-        services_.changed();
-        return;
-    }
-}
-
-void Station::handleMessage(const uint8_t from[store::HASH], const sa1::Message& m, const char* wire, size_t wireLength) {
+bool Station::handleMessage(const uint8_t from[store::HASH], const sa1::Message& m, const char* wire, size_t wireLength) {
     const uint32_t nowS = services_.uptimeS();
     uint8_t idBytes[store::HASH];
     store::hexToBytes(m.id, idBytes);
@@ -265,7 +218,7 @@ void Station::handleMessage(const uint8_t from[store::HASH], const sa1::Message&
         if (!haveIntent && (m.type == sa1::STATUS || m.type == sa1::RECEIVED)) {
             uint32_t seenEvent = 0;
             uint8_t seenState = 0;
-            if (!store_.seenGet(idBytes, m.revision, seenEvent, seenState)) { ++stats_.rejected; services_.log("status for unknown id"); return; }
+            if (!store_.seenGet(idBytes, m.revision, seenEvent, seenState)) { ++stats_.rejected; services_.log("status for unknown id"); return false; }
         }
     }
     store::InboxRecord record;
@@ -278,10 +231,11 @@ void Station::handleMessage(const uint8_t from[store::HASH], const sa1::Message&
     memcpy(record.sa1, wire, wireLength + 1);
     record.sa1Length = static_cast<uint16_t>(wireLength);
     const store::Put put = store_.inboxPut(record);
-    if (put == store::Put::CONFLICT) { ++stats_.conflicts; services_.log("conflicting duplicate"); return; }
-    if (put == store::Put::ERROR) { services_.log("inbox write failed"); return; }
-    // Potwierdzenie łącza także dla duplikatu: nadawca mógł nie dostać poprzedniego.
-    sendAck(from, m.id, revision, m.type, event);
+    if (put == store::Put::CONFLICT) { ++stats_.conflicts; services_.log("conflicting duplicate"); return false; }
+    if (put == store::Put::ERROR) { services_.log("inbox write failed"); return false; }
+    // Przyjęty, także duplikat: stos wysyła dowód transportowy (PROVE_APP), bo nadawca mógł nie
+    // dostać poprzedniego; ponowienie to nowy pakiet z nowym szyfrogramem, więc stos go nie
+    // odrzuca jako powtórzenia.
     if (put == store::Put::DUPLICATE) {
         ++stats_.duplicates;
         if (osp) {
@@ -304,7 +258,7 @@ void Station::handleMessage(const uint8_t from[store::HASH], const sa1::Message&
                 store_.queueUpdate(r);
             }
         }
-        return;
+        return true;
     }
     // Nowa wiadomość: zdarzenie do laptopa i skutki dla intencji.
     char fields[sa1::MAX_CONTENT + 96];
@@ -330,6 +284,7 @@ void Station::handleMessage(const uint8_t from[store::HASH], const sa1::Message&
         }
     }
     services_.changed();
+    return true;
 }
 
 Create Station::putIntent(sa1::Message& m, uint8_t type, const uint8_t id[store::HASH], uint32_t delayS, uint32_t& seq) {

@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
-// WICI, stanowiska deweloperskie A i B: oprogramowanie stacji bez stosu Reticulum.
+// WICI, stanowiska deweloperskie A i B: oprogramowanie stacji ze stosem Reticulum (bez LXMF).
 // Zakres: USB z dwoma interfejsami CDC (diagnostyka z poleceniami tekstowymi i dane z protokołem
 // laptop–stacja: sync, submit, event/ack, polecenia nad kolejką, skrzynką i konfiguracją w FRAM),
 // identyfikacja radia i FRAM przez SPI, konfiguracja rejestrów profilu P1 z weryfikacją odczytu,
 // polecenia pomiarowe TXCW, TXPKT, RXPER, FOFF w trybie przygotowania, dziennik w FRAM (dług
 // ciszy, zegar czasu pracy z liczbą restartów, zdarzenia), łącze P1 (odbiór i składanie
-// datagramów, nadawanie z CCA, odroczeniem i długiem ciszy), warstwa aplikacji nad P1 (kolejka,
-// ponawianie, potwierdzenia), ekran Sharp z EXTCOMIN z licznika MCU i przyciski jako menu stacji
+// datagramów, nadawanie z CCA, odroczeniem i długiem ciszy), stos Reticulum (port microReticulum,
+// rns_node.h) z interfejsem P1 nad łączem, tożsamością i tablicami w FRAM, warstwa aplikacji nad
+// stosem (kolejka, ponawianie, potwierdzenia transportowe), ekran Sharp z EXTCOMIN z licznika MCU
+// i przyciski jako menu stacji
 // (kreator zgłoszenia, WIADOMOŚCI, TEST, STAN, USŁUGI, alarmy), panel płytki N1 (przełącznik
 // CISZA, przycisk przygotowania, dioda alarmu, brzęczyk, VTEST).
 // Wykonania: bench-a (nRF52840-DK + CC1120EM na przewodach), bench-n1 (to samo na płytce N1),
@@ -29,6 +31,8 @@
 #include "p1frame.h"
 #include "platform.h"
 #include "radio_console.h"
+#include "rns_announce.h"
+#include "rns_node.h"
 #include "sharp.h"
 #include "station.h"
 #include "store.h"
@@ -77,7 +81,7 @@ constexpr uint32_t BUTTON_POLL_MS = 10;   // odpytywanie przycisków (drgania st
 constexpr uint32_t SCREEN_POLL_MS = 200;  // odświeżanie ekranu po zmianie treści
 constexpr uint32_t APP_POLL_MS = 100;     // przegląd kolejki nadawczej
 constexpr uint32_t WDT_TIMEOUT_S = 60;    // watchdog: dłużej niż potwierdzenie przyciskiem (30 s)
-char stationName[12];            // WICI-xxxxxx z identyfikatora układu (platform::chipId)
+char stationName[12];            // WICI-xxxxxx ze skrótu tożsamości (bez stosu: z identyfikatora układu, platform::chipId)
 
 // Pamięć niezerowana przy starcie: po restarcie programowym albo przez watchdog zostaje język
 // i ekran, więc stacja wraca tam, gdzie była; po włączeniu zasilania słowa są przypadkowe.
@@ -114,6 +118,7 @@ const char* boolName(bool value) { return value ? "true" : "false"; }
 
 uint32_t uptimeS() { return uptimeBaseS + millis() / 1000; }
 void updateScreen(bool force);
+void setStationName();
 
 // Usługi stacji dla protokołu USB.
 struct BenchHost : usbproto::Host {
@@ -135,19 +140,35 @@ struct BenchHost : usbproto::Host {
     void configChanged() override;
     void queueChanged() override;
     bool eraseJournal() override { return !journalOk || stationJournal.eraseEvents(); }
+    void destroyed() override;
+    bool announce() override;
 };
 BenchHost host;
 usbproto::Protocol protocol(stationStore, host);
 
-// Usługi warstwy aplikacji: nadawanie przez łącze P1 stanowiska.
+// Łącze P1 stanowiska pod interfejsem P1 stosu: datagram z kolejki interfejsu idzie przez
+// Bench (dług ciszy, CCA, odroczenia, fragmentacja); w ciszy radiowej kolejka czeka.
+struct BenchRadio : rnsnode::Radio {
+    bool ready() override { return radiocon::ok() && radiocon::p1Ok() && bench.receiving() && !bench.busy() && !bench.silence; }
+    bool transmit(const uint8_t* data, size_t length) override { return bench.p1send(data, length) == nullptr; }
+    uint32_t debtMs() override { return bench.debtRemainingMs(); }
+};
+BenchRadio benchRadio;
+bool rnsOk = false;               // stos uruchomiony (FRAM i dziennik działają)
+rnsannounce::Policy announcePolicy;
+
+// Usługi warstwy aplikacji: pakiety przez stos Reticulum i interfejs P1.
 struct BenchServices : station::Services {
     uint32_t uptimeS() override { return ::uptimeS(); }
     bool silence() override { return bench.silence; }
-    bool radioReady() override { return radiocon::ok() && radiocon::p1Ok() && bench.receiving(); }
-    bool busy() override { return bench.busy(); }
-    bool send(const uint8_t* data, size_t length) override { return bench.p1send(data, length) == nullptr; }
+    bool radioReady() override { return rnsOk && radiocon::ok() && radiocon::p1Ok() && bench.receiving() && rnsnode::online(); }
+    bool busy() override { return rnsnode::queueFull(); }
+    uint32_t send(const uint8_t to[store::HASH], const uint8_t* data, size_t length, uint32_t timeoutS) override {
+        return rnsnode::send(to, data, length, timeoutS);
+    }
     void randomBytes(uint8_t* out, size_t count) override { measure::randomBytes(out, count); }
     void log(const char* text) override { bench.log(text); }
+    void destroyed() override;
     bool notify(uint8_t kind, uint32_t ref, const char* fields) override { return protocol.event(kind, ref, fields, millis()); }
     void address(uint8_t out[store::HASH]) override { host.stationAddress(out); }
     void changed() override;
@@ -157,12 +178,49 @@ station::Station app(stationStore, services);
 console::Console screenHost(stationStore, app, services, &stationJournal);
 bool linkAuto = true;  // LINK 0 zatrzymuje nadawanie z kolejki (próby ręczne P1TX)
 
-void BenchHost::configChanged() { screenHost.invalidate(); updateScreen(false); }
+void BenchHost::configChanged() {
+    if (rnsOk) rnsnode::setIfac(stationStore.config().ifac);   // configure może zmienić kod IFAC
+    screenHost.invalidate();
+    updateScreen(false);
+}
 void BenchHost::queueChanged() { screenHost.invalidate(); updateScreen(false); }
 void BenchServices::changed() { screenHost.invalidate(); updateScreen(false); }
 
-void onDatagram(const uint8_t* data, size_t length, void*) { if (storeOk) app.received(data, length); }
-void onTxDone(bool ok, void*) { app.txDone(ok); }
+void onDatagram(const uint8_t* data, size_t length, void*) { if (rnsOk) rnsnode::received(data, length); }
+void onTxDone(bool ok, void*) { rnsnode::txDone(ok); }
+
+bool onPacket(const uint8_t* data, size_t length, void*) { return storeOk && app.received(data, length); }
+void onReceipt(uint32_t handle, bool delivered, void*) { app.receipt(handle, delivered); }
+void onStackLog(const char* text, void*) { bench.log(text); }
+
+// ZNISZCZ DANE (menu albo destroy przez USB): tożsamość i tablice w FRAM skasowane; stos stoi
+// do restartu, potem nowa tożsamość.
+void wipeStack() {
+    if (rnsOk && !rnsnode::wipe()) bench.log("rns wipe failed");
+    rnsOk = false;
+    setStationName();
+}
+void BenchHost::destroyed() { wipeStack(); }
+void BenchServices::destroyed() { wipeStack(); }
+
+bool BenchHost::announce() {
+    if (!rnsOk) return false;
+    announcePolicy.request();
+    return true;
+}
+
+// Ogłoszenie adresu, gdy pozwala na nie polityka (rns_announce.h); bez danych aplikacji.
+void pollAnnounce() {
+    if (!rnsOk || !storeOk) return;
+    const uint32_t nowS = uptimeS();
+    announcePolicy.setRole(stationStore.config().role == store::OSP, nowS);
+    if (!announcePolicy.due(nowS, bench.silence, rnsnode::online(), app.stats().failed)) return;
+    if (!rnsnode::announce(nullptr, 0)) { announcePolicy.failed(nowS); return; }
+    uint32_t random = 0;
+    measure::randomBytes(reinterpret_cast<uint8_t*>(&random), sizeof(random));
+    announcePolicy.counted();
+    announcePolicy.done(nowS, random, app.stats().failed);
+}
 
 // Zdarzenie stanu radia do laptopa (cisza, tryb przygotowania).
 void radioEvent() {
@@ -352,14 +410,8 @@ void printDisplay() {
 }
 
 void BenchHost::stationAddress(uint8_t out[store::HASH]) {
-    // Bez tożsamości Reticulum: 16 B z identyfikatora układu (2 x 8 B) jako adres stanowiska.
-    memset(out, 0, store::HASH);
-    uint32_t id[2];
-    platform::chipId(id);
-    memcpy(out, &id[0], 4);
-    memcpy(out + 4, &id[1], 4);
-    memcpy(out + 8, &id[0], 4);
-    memcpy(out + 12, &id[1], 4);
+    // Skrót celu "wici.sa1" stacji; zera, gdy stos nie wystartował (brak FRAM).
+    memcpy(out, rnsnode::address(), store::HASH);
 }
 
 const char* BenchHost::stationName() { return ::stationName; }
@@ -375,11 +427,22 @@ void persistScreen() {
     }
 }
 
+// Nazwa wyświetlana: 6 cyfr szesnastkowych skrótu tożsamości (oprogramowanie.md, "Tryby kryzysowe");
+// bez stosu (brak FRAM, po ZNISZCZ DANE do restartu) z identyfikatora układu.
+void setStationName() {
+    if (rnsOk) {
+        const uint8_t* h = rnsnode::identityHash();
+        snprintf(stationName, sizeof(stationName), "WICI-%02X%02X%02X", h[0], h[1], h[2]);
+    } else {
+        uint32_t id[2];
+        platform::chipId(id);
+        snprintf(stationName, sizeof(stationName), "WICI-%06lX", static_cast<unsigned long>(id[0] & 0xFFFFFF));
+    }
+}
+
 // Po włączeniu zasilania: wybór języka; po restarcie programowym: język i ekran sprzed restartu.
 void beginScreen() {
-    uint32_t id[2];
-    platform::chipId(id);
-    snprintf(stationName, sizeof(stationName), "WICI-%06lX", static_cast<unsigned long>(id[0] & 0xFFFFFF));
+    setStationName();
     const journal::SmallRecord& saved = stationJournal.settings();
     const ui::Lang savedLang = journalOk && saved.a >= 1 && saved.a <= ui_texts::LANGS ? static_cast<ui::Lang>(saved.a - 1) : ui::Lang::PL;
     if (retained.magic == RETAINED_MAGIC && retained.check == ~RETAINED_MAGIC && retained.lang < ui_texts::LANGS) {
@@ -503,7 +566,7 @@ void printHelp() {
     Serial.print(",\"PREP <0|1>\",\"SILENCE <0|1>\",\"TXCW <s> [CONDUCTED]\",\"TXPKT <n> <len> [<ms>] [CONDUCTED]\","
                  "\"RX [<len>]\",\"RXPER\",\"FOFF [<hz>]\",\"P1RX\",\"P1TX <hex>\",\"P1\",\"STOP\",\"LOG [<n>]\",\"JOURNAL\",\"BENCH\","
                  "\"FRAM\",\"BTN\",\"LED <1-4> <0|1>\",\"SCREEN\",\"KEY <UP|DOWN|OK|BACK> [ms]\",\"DISPLAY\","
-                 "\"VCOM <0|1>\",\"REBOOT\",\"STORE\",\"USB <json>\",\"APP\",\"LINK <0|1>\""
+                 "\"VCOM <0|1>\",\"REBOOT\",\"STORE\",\"USB <json>\",\"APP\",\"LINK <0|1>\",\"RNS\",\"ANNOUNCE\""
 #if defined(WICI_BOARD_N1)
                  ",\"LED 5 <0|1>\",\"BUZZ [<ms>] [<hz>]\",\"VTEST\",\"DISPLAY <hz>\""
 #endif
@@ -527,15 +590,43 @@ bool lastIsConducted(char* words[], size_t& n) {
 void printApp() {
     const station::Stats& s = app.stats();
     Serial.printf("{\"link\":%s,\"in_flight\":%lu,\"sent\":%lu,\"delivered\":%lu,\"failed\":%lu,\"received\":%lu,\"rejected\":%lu,"
-                  "\"duplicates\":%lu,\"conflicts\":%lu,\"acks_sent\":%lu,\"confirmed\":%lu,\"live\":%u,\"unsent\":%u,\"next\":%lu,"
+                  "\"duplicates\":%lu,\"conflicts\":%lu,\"refused\":%lu,\"confirmed\":%lu,\"live\":%u,\"unsent\":%u,\"next\":%lu,"
                   "\"test_paused\":%s,\"items\":%u}\n",
                   boolName(linkAuto), static_cast<unsigned long>(app.inFlightSeq()), static_cast<unsigned long>(s.sent),
                   static_cast<unsigned long>(s.delivered), static_cast<unsigned long>(s.failed), static_cast<unsigned long>(s.received),
                   static_cast<unsigned long>(s.rejected), static_cast<unsigned long>(s.duplicates), static_cast<unsigned long>(s.conflicts),
-                  static_cast<unsigned long>(s.acksSent), static_cast<unsigned long>(s.confirmed),
+                  static_cast<unsigned long>(s.refused), static_cast<unsigned long>(s.confirmed),
                   static_cast<unsigned>(stationStore.queueLive()), static_cast<unsigned>(stationStore.queueUnsent()),
                   static_cast<unsigned long>(app.nextToSend(uptimeS())), boolName(app.testPaused()),
                   static_cast<unsigned>(screenHost.itemCount()));
+}
+
+// Stan stosu Reticulum: tablice, pula pamięci, system plików FRAM, liczniki interfejsu P1.
+void printRns() {
+    const rnsnode::Status s = rnsnode::status();
+    char address[2 * store::HASH + 1], identity[2 * store::HASH + 1], iface[480];
+    store::bytesToHex(rnsnode::address(), address);
+    store::bytesToHex(rnsnode::identityHash(), identity);
+    rnsnode::interfaceJson(iface, sizeof(iface));
+    // Wiersz ma ponad 256 znaków, a Print::printf rdzenia Adafruit nRF52 formatuje do bufora 256 B
+    // (dłuższy wynik wypisuje ze śmieciami): części poniżej 256 znaków i opis interfejsu przez print.
+    Serial.printf("{\"rns\":%s,\"online\":%s,\"address\":\"%s\",\"identity\":\"%s\",\"identity_new\":%s,\"paths\":%u,",
+                  boolName(rnsOk), boolName(s.online), address, identity, boolName(s.identityNew), static_cast<unsigned>(s.paths));
+    Serial.printf("\"hashes\":%u,\"announce_table\":%u,\"receipts\":%u,\"pool\":%u,\"pool_used\":%u,\"pool_peak\":%u,"
+                  "\"fs_files\":%u,\"fs_used\":%u,\"fs_capacity\":%u,",
+                  static_cast<unsigned>(s.packetHashes), static_cast<unsigned>(s.announceTable), static_cast<unsigned>(s.receiptsPending),
+                  static_cast<unsigned>(s.poolSize), static_cast<unsigned>(s.poolUsed), static_cast<unsigned>(s.poolPeak),
+                  static_cast<unsigned>(s.fsFiles), static_cast<unsigned>(s.fsUsedBytes), static_cast<unsigned>(s.fsCapacityBytes));
+    Serial.printf("\"sent\":%lu,\"received\":%lu,\"unproven\":%lu,\"delivered\":%lu,\"timed_out\":%lu,\"announces_seen\":%lu,",
+                  static_cast<unsigned long>(s.packetsSent), static_cast<unsigned long>(s.packetsReceived),
+                  static_cast<unsigned long>(s.packetsUnproven), static_cast<unsigned long>(s.delivered),
+                  static_cast<unsigned long>(s.timedOut), static_cast<unsigned long>(s.announcesSeen));
+    Serial.printf("\"announced\":%lu,\"announce_next_s\":%ld,\"wait_ms\":%lu,\"bitrate\":%lu,",
+                  static_cast<unsigned long>(announcePolicy.count()),
+                  announcePolicy.scheduled() ? static_cast<long>(announcePolicy.nextS() - uptimeS()) : -1L,
+                  static_cast<unsigned long>(s.queueWaitMs), static_cast<unsigned long>(s.bitrate));
+    Serial.print(iface);
+    Serial.print("}\n");
 }
 
 void printStore() {
@@ -705,11 +796,18 @@ void handle(char* cmd) {
     else if (!strcmp(cmd, "STORE")) printStore();
     else if (!strcmp(cmd, "APP")) printApp();
     else if (!strcmp(cmd, "LINK") && n == 1) { linkAuto = atoi(words[0]) != 0; printApp(); }
+    else if (!strcmp(cmd, "RNS")) printRns();
+    else if (!strcmp(cmd, "ANNOUNCE")) {
+        // Ogłoszenie na polecenie: wychodzi przy najbliższym obiegu, poza ciszą radiową i z kodem IFAC.
+        if (!host.announce()) printError("rns not running");
+        else printRns();
+    }
     else if (!strcmp(cmd, "VCOM") && n == 1) {
         display.softwareVcom(atoi(words[0]) != 0);  // zapasowo, gdy zworka EXTMODE płytki jest niska
         printDisplay();
     } else if (!strcmp(cmd, "REBOOT")) {
         // Restart programowy: pamięć niezerowana zostaje, więc ekran i język wracają (jak po watchdogu).
+        if (rnsOk) rnsnode::persist();   // tablice stosu w FRAM przed restartem
         Serial.println("{\"reboot\":true}");
         Serial.flush();
         delay(20);
@@ -729,6 +827,24 @@ void pollSerial() {
             line[lineLength++] = c;
         }
     }
+}
+
+// Stos Reticulum: tożsamość i tablice w FRAM, zegar stosu z czasu pracy w dzienniku; kod IFAC
+// z konfiguracji (bez niego interfejs P1 nie nadaje). Ogłoszenie startowe po 0–120 s.
+void beginStack() {
+    if (!framOk || !journalOk) { bench.log("rns not started: FRAM or journal unavailable"); return; }
+    rnsnode::Hooks hooks;
+    hooks.packet = onPacket;
+    hooks.receipt = onReceipt;
+    hooks.log = onStackLog;
+    uint8_t ifac[store::HASH] = {};
+    if (storeOk) memcpy(ifac, stationStore.config().ifac, sizeof(ifac));
+    rnsOk = rnsnode::begin(memory, benchRadio, ifac, static_cast<uint64_t>(uptimeS()) * 1000, hooks);
+    if (!rnsOk) { bench.log("rns start failed"); return; }
+    uint32_t random = 0;
+    measure::randomBytes(reinterpret_cast<uint8_t*>(&random), sizeof(random));
+    announcePolicy.begin(storeOk && stationStore.config().role == store::OSP, uptimeS(), random);
+    bench.log(rnsnode::status().identityNew ? "rns started, new identity" : "rns started");
 }
 
 }  // namespace
@@ -777,6 +893,7 @@ void stationSetup() {
     ledWrite(board::LED_FRAM, framOk && journalOk);  // LED3 świeci dopiero z działającym dziennikiem
     storeOk = framOk && stationStore.begin();
     protocol.begin();
+    beginStack();
     bench.onDatagram(onDatagram, nullptr);
     bench.onTxDone(onTxDone, nullptr);
     if (radiocon::ok() && radiocon::p1Ok()) bench.p1rxStart();  // łącze P1 w odbiorze od startu (radio niezależne od ekranu)
@@ -828,6 +945,10 @@ void stationLoop() {
         }
     }
     if (radiocon::ok()) bench.poll();
+    if (rnsOk) {
+        rnsnode::loop(now);
+        pollAnnounce();
+    }
     static uint32_t lastApp = 0;
     if (storeOk && linkAuto && radiocon::ok() && now - lastApp >= APP_POLL_MS) {  // przegląd kolejki co 100 ms, nie w każdym obiegu
         lastApp = now;

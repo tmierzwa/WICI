@@ -37,6 +37,8 @@ struct Host {
     virtual void configChanged() {}
     virtual void queueChanged() {}
     virtual bool eraseJournal() { return true; }  // ZNISZCZ DANE: dziennik zdarzeń poza magazynem
+    virtual void destroyed() {}                   // ZNISZCZ DANE: tożsamość i tablice stosu poza magazynem
+    virtual bool announce() { return false; }     // ogłoszenie adresu na polecenie; false = brak stosu
 };
 
 struct Stats {

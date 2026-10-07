@@ -173,13 +173,17 @@ void Protocol::handleLine(const char* line, uint32_t nowMs) {
         if (!host_.confirm()) { host_.log("usb destroy not confirmed"); rejected(seq, "not confirmed"); return; }
         const bool journal = host_.eraseJournal();
         if (!store_.destroy() || !journal) { rejected(seq, "memory"); return; }
+        host_.destroyed();
         host_.configChanged();
         host_.queueChanged();
         send("ok", seq, "\"destroyed\":true");
     } else if (!strcmp(type, "export") || !strcmp(type, "import")) {
         if (!host_.prep()) rejected(seq, "preparation mode required");
         else rejected(seq, "unsupported");
-    } else if (!strcmp(type, "announce") || !strcmp(type, "trust") || !strcmp(type, "revoke")) rejected(seq, "unsupported");
+    } else if (!strcmp(type, "announce")) {
+        if (host_.announce()) send("ok", seq, "\"announce\":true");
+        else rejected(seq, "unsupported");
+    } else if (!strcmp(type, "trust") || !strcmp(type, "revoke")) rejected(seq, "unsupported");
     else rejected(seq, "unknown type");
 }
 

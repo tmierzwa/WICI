@@ -165,24 +165,26 @@ int assembleScript() {
 // "R" wypisuje ekran, "W <tekst>" łamie tekst, "D <s>" formatuje czas, "G <tekst>" sprawdza glify.
 // Ekran sterowany z wejścia. Bez "H" model działa bez stacji (sam ekran); "H" dołącza magazyn w RAM,
 // warstwę aplikacji i konsolę: "A <adres>" konfiguracja (OSP 0xCC.., 2 stacje), "I <sa1>" wiadomość od OSP,
-// "E <ack 0|1>" krok łącza (nadanie z kolejki, potwierdzenie łącza od OSP), "Y <s>" czas pracy,
+// "E <ack 0|1>" krok łącza (nadanie z kolejki, dowód transportowy od OSP), "Y <s>" czas pracy,
 // "KD/KU <przycisk> <ms>" naciśnięcie i zwolnienie, "M" lista WIADOMOŚCI, "J" kolejka.
 struct UiServices : station::Services {
     uint32_t uptime = 100;
     bool silence_ = false;
     std::vector<uint8_t> air;
     uint8_t counter = 0;
+    uint32_t handle = 0;
     uint32_t uptimeS() override { return uptime; }
     bool silence() override { return silence_; }
     bool radioReady() override { return true; }
     bool busy() override { return !air.empty(); }
-    bool send(const uint8_t* data, size_t length) override {
+    uint32_t send(const uint8_t*, const uint8_t* data, size_t length, uint32_t) override {
         printf("-> %.*s\n", static_cast<int>(length), reinterpret_cast<const char*>(data));
         air.assign(data, data + length);
-        return true;
+        return ++handle;
     }
     void randomBytes(uint8_t* out, size_t count) override { for (size_t i = 0; i < count; ++i) out[i] = static_cast<uint8_t>(0x30 + (++counter)); }
     void log(const char* text) override { printf("log %s\n", text); }
+    void destroyed() override { printf("stack wiped\n"); }
     bool notify(uint8_t kind, uint32_t ref, const char* fields) override { printf("event %u %u %s\n", kind, ref, fields); return true; }
     void address(uint8_t* out) override { memset(out, 0xAB, store::HASH); }
 };
@@ -232,22 +234,8 @@ int uiScript() {
         } else if (sscanf(line, "E %u", &a) == 1) {
             app.poll(services.uptime * 1000);
             if (!services.air.empty()) {
-                std::vector<uint8_t> sent = services.air;
                 services.air.clear();
-                app.txDone(true);
-                if (a) {
-                    // Potwierdzenie łącza od OSP dla nadanego datagramu: id, revision, typ z treści SA1.
-                    std::string text(sent.begin(), sent.end());
-                    const size_t payload = text.find(",[", 70);
-                    sa1::Message m;
-                    if (payload != std::string::npos && !sa1::decode(text.c_str() + payload + 1, text.size() - payload - 2, m)) {
-                        char ack[200];
-                        snprintf(ack, sizeof(ack), "[\"WICI\",1,\"%s\",\"%s\",\"ack\",\"%s\",%u,%u,%u]",
-                                 "cccccccccccccccccccccccccccccccc", "abababababababababababababababab", m.id, m.revision, m.type,
-                                 m.type == sa1::STATUS || m.type == sa1::REPLY || m.type == sa1::BULLETIN ? m.event : 0);
-                        app.received(reinterpret_cast<const uint8_t*>(ack), strlen(ack));
-                    }
-                }
+                if (a) app.receipt(services.handle, true);   // dowód transportowy od OSP
             }
             con.invalidate();
         } else if (!strcmp(line, "LED")) printf("alarm_cause %d\n", app.alarmCause(services.uptime));
@@ -380,7 +368,7 @@ struct LinkServices : station::Services {
     bool silence() override;
     bool radioReady() override { return true; }
     bool busy() override;
-    bool send(const uint8_t* data, size_t length) override;
+    uint32_t send(const uint8_t* to, const uint8_t* data, size_t length, uint32_t timeoutS) override;
     void randomBytes(uint8_t* out, size_t count) override;
     void log(const char* text) override;
     bool notify(uint8_t kind, uint32_t ref, const char* fields) override;
@@ -397,8 +385,13 @@ struct Node {
     Node* peer = nullptr;
     uint32_t uptime = 100;
     bool lossy = false;
-    std::vector<uint8_t> air;  // datagram w drodze (dostarczany przy następnym kroku czasu)
+    std::vector<uint8_t> air;  // pakiet w drodze (dostarczany przy następnym kroku czasu)
     bool txBusy = false;
+    // Potwierdzenie transportowe jak w stosie: dowód odbiorcy wraca krok po dostarczeniu,
+    // bez dowodu wynik "nie dostarczono" po limicie z send (bez kolejki radiowej w modelu).
+    uint32_t handles = 0, outstanding = 0, sentS = 0, timeoutS = 0;
+    bool proofDue = false;
+    bool refuse = false;   // stos odmawia (cel nieznany, pełna kolejka): send zwraca 0
     uint8_t addr;
     void start() {
         store = new store::Store(ram); store->begin();
@@ -411,11 +404,16 @@ struct Node {
 uint32_t LinkServices::uptimeS() { return node->uptime; }
 bool LinkServices::silence() { return node->host.silence_; }
 bool LinkServices::busy() { return node->txBusy; }
-bool LinkServices::send(const uint8_t* data, size_t length) {
+uint32_t LinkServices::send(const uint8_t*, const uint8_t* data, size_t length, uint32_t timeoutS) {
+    if (node->refuse) { printf("%c-> refused\n", node->name); return 0; }
     printf("%c-> %.*s\n", node->name, static_cast<int>(length), reinterpret_cast<const char*>(data));
     node->air.assign(data, data + length);
     node->txBusy = true;
-    return true;
+    node->outstanding = ++node->handles;
+    node->sentS = node->uptime;
+    node->timeoutS = timeoutS;
+    node->proofDue = false;
+    return node->outstanding;
 }
 void LinkServices::randomBytes(uint8_t* out, size_t count) { for (size_t i = 0; i < count; ++i) out[i] = static_cast<uint8_t>(0x55 + i + node->name); }
 void LinkServices::log(const char* text) { printf("%c:log %s\n", node->name, text); }
@@ -449,18 +447,27 @@ int linkScript() {
         Node* n = line[0] == 'A' ? &a : line[0] == 'B' ? &b : nullptr;
         if (n && line[1] == ' ') { n->proto->feed(line + 2, strlen(line + 2), n->uptime * 1000); n->proto->feed("\n", 1, n->uptime * 1000); }
         else if (sscanf(line, "T %u", &v) == 1) {
-            // Krok czasu: koniec nadawania, dostarczenie datagramów, poll obu stron.
+            // Krok czasu: wyniki potwierdzeń, koniec nadawania, dostarczenie pakietów, poll obu stron.
             for (Node* x : nodes) {
                 x->uptime = v;
-                if (x->txBusy) { x->txBusy = false; x->app->txDone(true); }
+                if (x->outstanding && (x->proofDue || v - x->sentS >= x->timeoutS)) {
+                    const uint32_t h = x->outstanding;
+                    const bool delivered = x->proofDue;
+                    x->outstanding = 0; x->proofDue = false;
+                    x->app->receipt(h, delivered);
+                }
+                x->txBusy = false;
                 if (!x->air.empty()) {
                     std::vector<uint8_t> d = x->air; x->air.clear();
-                    if (!x->lossy) x->peer->app->received(d.data(), d.size()); else printf("%c-> lost\n", x->name);
+                    // Dowód tylko dla pakietu przyjętego przez warstwę aplikacji odbiorcy (PROVE_APP).
+                    if (!x->lossy) x->proofDue = x->peer->app->received(d.data(), d.size());
+                    else printf("%c-> lost\n", x->name);
                 }
             }
             for (Node* x : nodes) x->app->poll(v * 1000);
         } else if (sscanf(line, "L %u", &v) == 1) a.lossy = b.lossy = v;
         else if (sscanf(line, "Q %u", &v) == 1) { a.host.silence_ = v; }
+        else if (sscanf(line, "N %u", &v) == 1) a.refuse = v;
         else if (line[0] == 'R' && line[1] == 'A') {
             delete a.app; delete a.proto; delete a.store;
             a.store = new store::Store(a.ram); a.store->begin();
@@ -471,8 +478,8 @@ int linkScript() {
         } else if (line[0] == 'S') {
             for (Node* x : nodes) {
                 const station::Stats& s = x->app->stats();
-                printf("%c stats sent %u delivered %u failed %u received %u rejected %u duplicates %u conflicts %u acks %u confirmed %u live %zu unsent %zu inbox %zu unread %zu\n",
-                       x->name, s.sent, s.delivered, s.failed, s.received, s.rejected, s.duplicates, s.conflicts, s.acksSent, s.confirmed,
+                printf("%c stats sent %u delivered %u failed %u received %u rejected %u duplicates %u conflicts %u refused %u confirmed %u live %zu unsent %zu inbox %zu unread %zu\n",
+                       x->name, s.sent, s.delivered, s.failed, s.received, s.rejected, s.duplicates, s.conflicts, s.refused, s.confirmed,
                        x->store->queueLive(), x->store->queueUnsent(), x->store->inboxCount(), x->store->inboxUnread());
             }
         } else if (line[0] == 'X') {
@@ -977,6 +984,7 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual(" ".join(self.lines(s[4])).strip(), texts["zniszcz_ostrzezenie"][0])
         self.assertEqual(s[5][0], "destroy")  # zła sekwencja: nic się nie dzieje
         self.assertIn("log data destroyed", out)
+        self.assertEqual(out.count("stack wiped"), 1)   # tożsamość i kod IFAC stosu też, jak destroy przez USB
         self.assertIn("queue live 0 unsent 0 configured 0 paused 0", out)
 
     def test_wrap_duration_and_glyph_coverage(self):
@@ -1185,7 +1193,8 @@ class HostUnitTests(unittest.TestCase):
                          "T 116", "T 117", "T 118", "T 119", "T 120", "T 121", "T 122", "T 123", "T 124", "S"])
         sent = [line for line in out if line.startswith("A-> ") or line.startswith("B-> ")]
         self.assertTrue(sent[0].startswith('A-> ["WICI",1,"%s","%s",[1,0,' % (self.A, self.B)), sent[0])
-        self.assertEqual(sent[1], 'B-> ["WICI",1,"%s","%s","ack","%s",0,0,0]' % (self.B, self.A, self.MID))
+        # Bez datagramu "ack": dostarczenie potwierdza dowód transportowy, więc B nadaje dopiero RECEIVED.
+        self.assertEqual(sent[1], 'B-> ["WICI",1,"%s","%s",%s]' % (self.B, self.A, json.dumps(received, separators=(",", ":"))))
         incoming = [r for r in self.usb_replies(out, "B") if r["type"] == "incoming"]
         self.assertEqual(len(incoming), 1)
         self.assertEqual((incoming[0]["source"], incoming[0]["sa1"]), (self.A, request))
@@ -1197,12 +1206,13 @@ class HostUnitTests(unittest.TestCase):
         self.assertTrue(queue_a[1].endswith("flags 18 attempts 1 next 703 event 1 state 1"), queue_a[1])  # DONE|SENT po RECEIVED
         self.assertTrue(queue_a[2].endswith("flags 18 attempts 1 next 703 event 3 state 6"), queue_a[2])  # STATUS 3/6; regresja odrzucona
         stats = [line for line in out if line.startswith("A stats") or line.startswith("B stats")]
-        self.assertEqual(stats[0], "A stats sent 1 delivered 1 failed 0 received 1 rejected 0 duplicates 0 conflicts 0 acks 0 confirmed 0 live 1 unsent 0 inbox 0 unread 0")
-        self.assertEqual(stats[1], "B stats sent 0 delivered 0 failed 0 received 1 rejected 0 duplicates 0 conflicts 0 acks 1 confirmed 0 live 0 unsent 0 inbox 1 unread 1")
-        self.assertEqual(stats[2], "A stats sent 1 delivered 1 failed 0 received 5 rejected 0 duplicates 0 conflicts 0 acks 4 confirmed 3 live 0 unsent 0 inbox 4 unread 4")
+        self.assertEqual(stats[0], "A stats sent 1 delivered 1 failed 0 received 0 rejected 0 duplicates 0 conflicts 0 refused 0 confirmed 0 live 1 unsent 0 inbox 0 unread 0")
+        self.assertEqual(stats[1], "B stats sent 0 delivered 0 failed 0 received 1 rejected 0 duplicates 0 conflicts 0 refused 0 confirmed 0 live 0 unsent 0 inbox 1 unread 1")
+        self.assertEqual(stats[2], "A stats sent 1 delivered 1 failed 0 received 4 rejected 0 duplicates 0 conflicts 0 refused 0 confirmed 3 live 0 unsent 0 inbox 4 unread 4")
+        self.assertEqual(stats[3], "B stats sent 4 delivered 4 failed 0 received 1 rejected 0 duplicates 0 conflicts 0 refused 0 confirmed 4 live 0 unsent 0 inbox 1 unread 1")
         # Po ponownym REQUEST: B zalicza duplikat, uaktywnia RECEIVED i najnowszy STATUS i nadaje je ponownie; A liczy duplikaty.
-        self.assertEqual(stats[4], "A stats sent 2 delivered 2 failed 0 received 8 rejected 0 duplicates 2 conflicts 0 acks 6 confirmed 3 live 1 unsent 0 inbox 4 unread 4")
-        self.assertEqual(stats[5], "B stats sent 6 delivered 6 failed 0 received 8 rejected 0 duplicates 1 conflicts 0 acks 2 confirmed 6 live 0 unsent 0 inbox 1 unread 1")
+        self.assertEqual(stats[4], "A stats sent 2 delivered 2 failed 0 received 6 rejected 0 duplicates 2 conflicts 0 refused 0 confirmed 3 live 1 unsent 0 inbox 4 unread 4")
+        self.assertEqual(stats[5], "B stats sent 6 delivered 6 failed 0 received 2 rejected 0 duplicates 1 conflicts 0 refused 0 confirmed 6 live 0 unsent 0 inbox 1 unread 1")
 
     def test_link_loss_retry_schedule_and_untrusted_source(self):
         request = [1, 0, self.MID, 0, 2, 10, "Szkoła", "", 1]
@@ -1215,8 +1225,8 @@ class HostUnitTests(unittest.TestCase):
                          "T 300", "T 301", "T 302", "S"])
         queue = [line for line in out if line.startswith("A queue 1 ")]
         first = int(re.search(r"next (\d+)", queue[0]).group(1))
-        self.assertTrue(queue[0].split(" next ")[0].endswith("flags 1 attempts 1"), queue[0])  # FAILED po 60 s bez ack
-        self.assertTrue(162 + 48 <= first <= 162 + 72, first)                                   # kolejna po 60 s ±20%
+        self.assertTrue(queue[0].split(" next ")[0].endswith("flags 1 attempts 1"), queue[0])  # FAILED po 60 s bez dowodu
+        self.assertTrue(161 + 48 <= first <= 161 + 72, first)                                   # kolejna po 60 s ±20%
         second = int(re.search(r"next (\d+)", queue[1]).group(1))
         self.assertTrue(queue[1].split(" next ")[0].endswith("flags 17 attempts 2"), queue[1])  # dostarczona za drugim razem
         self.assertTrue(242 + 600 + 1800 <= second <= 242 + 600 + 3600, second)                 # 10 min na RECEIVED + 30–60 min
@@ -1224,9 +1234,28 @@ class HostUnitTests(unittest.TestCase):
         self.assertIn("72 72 144 360 1080 1080 | 4320 1840", out)  # 1,2 x ...
         stats = [line for line in out if line.startswith("A stats")]
         self.assertTrue(stats[0].startswith("A stats sent 1 delivered 0 failed 1 received 0"))
-        self.assertTrue(stats[1].startswith("A stats sent 2 delivered 1 failed 1 received 1 rejected 0"), stats[1])  # received liczy też ack
-        self.assertTrue(stats[2].startswith("A stats sent 2 delivered 1 failed 1 received 2 rejected 1"), stats[2])
+        self.assertTrue(stats[1].startswith("A stats sent 2 delivered 1 failed 1 received 0 rejected 0"), stats[1])
+        self.assertTrue(stats[2].startswith("A stats sent 2 delivered 1 failed 1 received 1 rejected 1"), stats[2])
         self.assertIn("A:log datagram from untrusted source", out)
+        # Odrzucony pakiet nie dostaje dowodu: B nie zalicza dostarczenia, próba kończy się po limicie.
+        b_stats = [line for line in out if line.startswith("B stats")]
+        self.assertTrue(b_stats[-1].startswith("B stats sent 1 delivered 0 failed 0 received 1"), b_stats[-1])
+
+    def test_link_refused_by_stack_retries_without_attempt(self):
+        request = [1, 0, self.MID, 0, 2, 10, "Szkoła", "", 1]
+        out = self.link(['B {"usb":1,"seq":1,"type":"configure","role":"osp"}', "N 1", self.usb_submit("A", 1, request, self.B),
+                         "T 101", "X", "S", "T 180", "X", "N 0", "T 400", "T 401", "T 402", "X", "S"])
+        self.assertEqual(out.count("A-> refused"), 2)
+        queue = [line for line in out if line.startswith("A queue 1 ")]
+        # Odmowa stosu (np. cel bez ogłoszenia, stos pyta o trasę): bez liczenia próby, następna za 60 s ±20%,
+        # po drugiej odmowie za 120 s ±20%.
+        self.assertTrue(queue[0].split(" next ")[0].endswith("flags 1 attempts 0"), queue[0])
+        self.assertTrue(101 + 48 <= int(re.search(r"next (\d+)", queue[0]).group(1)) <= 101 + 72, queue[0])
+        self.assertTrue(180 + 96 <= int(re.search(r"next (\d+)", queue[1]).group(1)) <= 180 + 144, queue[1])
+        self.assertTrue(queue[2].split(" next ")[0].endswith("flags 17 attempts 1"), queue[2])
+        stats = [line for line in out if line.startswith("A stats")]
+        self.assertTrue(stats[0].startswith("A stats sent 0 delivered 0 failed 0 received 0 rejected 0 duplicates 0 conflicts 0 refused 1"), stats[0])
+        self.assertTrue(stats[1].startswith("A stats sent 1 delivered 1 failed 0"), stats[1])
 
     def test_rejects_bad_lengths(self):
         with self.assertRaises(subprocess.CalledProcessError):
