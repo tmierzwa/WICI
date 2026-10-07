@@ -61,9 +61,9 @@
 <th scope="col">Co blokuje uznanie za działającą</th>
 </tr></thead><tbody>
 <tr><td>Format P1, SA1, transakcja OSP</td><td>wykonywalny model i przypadki graniczne</td><td>oprogramowanie układowe, integracja bibliotek, odcięcia zasilania fizycznego nośnika</td></tr>
-<tr><td>Kontroler R01.3 (stanowisko laboratoryjne P1)</td><td>źródła CAD, raporty ERC/DRC, eksporty</td><td>za mało pamięci na stos sieciowy; służy jako strona TI pomiarów P1 (T4), zasilana z zasilacza laboratoryjnego, więc problem prądu wstrzymania USB jej nie blokuje; HOLD jako modem zasilany z USB</td></tr>
-<tr><td>Stacja R02: MCU, ekran, przyciski, ogniwa, FRAM</td><td>wymagania w specyfikacji 0.5</td><td>projekt płytki, oprogramowanie układowe z microReticulum, interfejs użytkownika, kwalifikacja dwóch rodzin MCU</td></tr>
-<tr><td>Tory RF TI i ST</td><td>wspólny kontrakt, kandydaci układów</td><td>dwa projekty płytek RF, rejestry, sterowniki P1, emisje, czułość na złączu z pełnym torem wejściowym; stanowisko ST (np. zestaw STEVAL-FKI868V2 z płytką NUCLEO-L053R8) albo płytki R02 do próby mieszanej</td></tr>
+<tr><td>Kontroler R01.3 (stanowisko laboratoryjne P1)</td><td>źródła CAD, raporty kontroli reguł elektrycznych i projektowych (ERC/DRC), eksporty</td><td>za mało pamięci na stos sieciowy; służy jako strona TI (Texas Instruments) pomiarów P1 (T4), zasilana z zasilacza laboratoryjnego, więc nie blokuje jej problem limitu prądu USB w stanie wstrzymania (suspend); HOLD jako modem zasilany z USB</td></tr>
+<tr><td>Stacja R02: mikrokontroler (MCU), ekran, przyciski, ogniwa, pamięć FRAM</td><td>wymagania w specyfikacji 0.5</td><td>projekt płytki, oprogramowanie układowe (firmware) z microReticulum, interfejs użytkownika, kwalifikacja dwóch rodzin MCU</td></tr>
+<tr><td>Tory radiowe (RF) TI i ST (STMicroelectronics)</td><td>wspólny kontrakt, kandydaci układów</td><td>dwa projekty płytek RF, rejestry, sterowniki P1, emisje, czułość na złączu z pełnym torem wejściowym; stanowisko ST (np. zestaw STEVAL-FKI868V2 z płytką NUCLEO-L053R8) albo płytki R02 do próby mieszanej</td></tr>
 <tr><td>Strona, panel i pakiety START (poziomy 2–3)</td><td>kontrakt API i układ pakietu</td><td>implementacja, budowa offline, macierz urządzeń i test użytkowy</td></tr>
 <tr><td>Zasilanie A/B, przetwornica i ładowarka (poziom 3)</td><td>opisy konstrukcji i obliczenia</td><td>pełne projekty wykonawcze, zabezpieczenia, udary, termika i bezpieczeństwo</td></tr>
 <tr><td>Sieć i odbiorca pomocy</td><td>scenariusze i warunki odbioru</td><td>rzeczywiste miejsca, działający przekaźnik, dyżur i próba terenowa</td></tr>
@@ -73,7 +73,7 @@
 
 <h2 id="budzet-czasu-antenowego">Budżet czasu antenowego</h2>
 
-<p>Dla datagramu B bajtów w P1: liczba fragmentów <code>n = ceil(B/86)</code>, liczba bajtów w eterze <code>B + 29n</code>, czas TX <code>t = 8(B + 29n)/4800</code>. Dług ciszy wynosi <code>12t</code>, a cykl jednego nadajnika bez dodatkowych opóźnień <code>13t</code>. Obliczenie nie obejmuje narastania mocy i przełączania nadajnika, CCA, kolizji, ponowień ani ruchu Reticulum/LXMF. Model ma dla narastania parametr na fragment (<code>ramp_ms</code>); przy założonych 2 ms cykl datagramu 600 B rośnie z 17,40 do 17,58 s. Dowód limitu 10% opiera się na wartości zmierzonej w T4.</p>
+<p>Dla datagramu o długości B bajtów w P1 liczba fragmentów wynosi <code>n = ceil(B/86)</code>, liczba bajtów w eterze <code>B + 29n</code>, a czas nadawania (TX) <code>t = 8(B + 29n)/4800</code>. Dług ciszy, czyli obowiązkowa przerwa w nadawaniu po każdym nadaniu, wynosi <code>12t</code>, a cykl jednego nadajnika bez dodatkowych opóźnień <code>13t</code>. Obliczenie nie obejmuje narastania mocy i przełączania nadajnika, nasłuchu kanału przed nadawaniem (CCA), kolizji, ponowień ani ruchu Reticulum/LXMF. Model ma dla narastania parametr na fragment (<code>ramp_ms</code>); przy założonych 2 ms cykl datagramu 600 B rośnie z 17,40 do 17,58 s. Dowód limitu 10% opiera się na wartości zmierzonej w T4.</p>
 
 <div class="table-wrap"><table class="wide">
 <thead><tr>
@@ -92,17 +92,27 @@
 
 <p>Tabela podaje przepustowość idealnego nadajnika liczoną w datagramach interfejsu P1, a nie liczbę zgłoszeń aplikacji. Dla 600 B wynosi około 34,5 B/s użytecznych danych wejściowych interfejsu P1. Każdy przekaźnik zużywa własny czas TX na przekazanie zgłoszeń, odpowiedzi i ruchu sterującego. Sąsiedzi współdzielą kanał, więc ich przepustowości nie można sumować jak niezależnych przewodów.</p>
 
-<p>Przy większej wiadomości LXMF może przejść z pojedynczego pakietu na link albo przesyłanie zasobu. Limit treści SA1 wynosi 256 B; największe wiadomości (REQUEST 222 B, BULLETIN 246 B, REPLY 156 B) mieszczą się w modelu w jednym pakiecie okazjonalnym (szacunek 284 B treści), co trzeba potwierdzić w T3; progi opisuje <a href="05-projekt-koncepcyjny-komunikacji.html">rozdział 05</a>. Do tego dochodzą zestawianie linku, ogłoszenia tras, potwierdzenia i ponowienia. W wariancie 0.4 stos na laptopie łączył się z modemem przez KISS, którego kontrola przepływu ma w obecnym kodzie limit 5 s, a P1 może wymagać ponad 16 s samej ciszy. W 0.5 interfejs P1 jest częścią stosu w stacji, więc stos zna dług ciszy i nie zależy od limitu KISS. <a href="https://github.com/markqvist/LXMF/blob/master/LXMF/LXMessage.py">LXMessage</a>, <a href="https://github.com/markqvist/Reticulum/blob/master/RNS/Interfaces/KISSInterface.py">KISSInterface</a>, <a href="../spec/radio.md">kontrakt interfejsu P1</a>.</p>
+<p>Przy większej wiadomości LXMF może przejść z pojedynczego pakietu na link (zestawione połączenie Reticulum) albo przesyłanie zasobu (transfer wielopakietowy, <em>Resource</em>). Limit treści SA1 wynosi 256 B. Największe wiadomości (REQUEST 222 B, BULLETIN 246 B, REPLY 156 B) mieszczą się w modelu w jednym pakiecie dostarczenia okazjonalnego (<code>OPPORTUNISTIC</code> w LXMF; szacunek 284 B treści), co trzeba potwierdzić w T3. Progi opisuje <a href="05-projekt-koncepcyjny-komunikacji.html">rozdział 05</a>. Do tego dochodzą zestawianie linku, ogłoszenia tras, potwierdzenia i ponowienia. W wariancie 0.4 stos na laptopie łączył się z modemem przez protokół KISS. Jego kontrola przepływu ma w obecnym kodzie limit 5 s, a P1 może wymagać ponad 16 s samej ciszy. W 0.5 interfejs P1 jest częścią stosu w stacji, więc stos zna dług ciszy i nie zależy od limitu KISS. <a href="https://github.com/markqvist/LXMF/blob/master/LXMF/LXMessage.py">LXMessage</a>, <a href="https://github.com/markqvist/Reticulum/blob/master/RNS/Interfaces/KISSInterface.py">KISSInterface</a>, <a href="../spec/radio.md">kontrakt interfejsu P1</a>.</p>
 
-<p>Znajomość długu ciszy nie zmienia limitów czasu linku i zasobu. Pakiet może czekać w kolejce dłużej, niż pozwala stos, jeszcze przed pierwszym TX. <a href="../review.md">Kontrprzykład z przypiętego kodu</a>.</p>
+<p>Znajomość długu ciszy nie zmienia limitów czasu linku i zasobu. Pakiet może czekać w kolejce dłużej, niż pozwala stos, jeszcze przed pierwszym TX. <a href="../review.md">Kontrprzykład z kodu w przypiętej wersji</a>.</p>
 
-<p>Próba musi zliczyć wszystkie bajty i czas TX każdego węzła podczas zimnego zestawienia trasy i w ruchu ustalonym. Musi też zmierzyć opóźnienie do RECEIVED, wiek kolejki, odrzuty, retransmisje i poprawność po restarcie. Kolizja ukrytych nadajników jest możliwa mimo CCA. Fragmentacja zwiększa ryzyko utraty całego datagramu.</p>
+<p>Próba musi zliczyć wszystkie bajty i czas TX każdego węzła podczas zimnego zestawienia trasy (gdy węzły nie znają jeszcze drogi) i w ruchu ustalonym. Musi też zmierzyć opóźnienie do RECEIVED, wiek kolejki, odrzuty, retransmisje i poprawność po restarcie. Kolizja ukrytych nadajników jest możliwa mimo CCA. Fragmentacja zwiększa ryzyko utraty całego datagramu.</p>
 
 <h2 id="budzet-proby-w10-na-przekazniku">Budżet próby W10 na przekaźniku</h2>
 
 <p>Wąskim gardłem próby A–B–OSP jest przekaźnik B. Przekazuje każde zgłoszenie do OSP, RECEIVED do A oraz potwierdzenia obu pakietów. A i OSP nadają tylko po połowie tego ruchu.</p>
 
-<p>Założenia obliczeniowe: dostarczenie okazjonalne LXMF jednym pakietem (<a href="05-projekt-koncepcyjny-komunikacji.html">rozdział 05</a>); treść zakodowana modelem; pakiet = nagłówek 19 B + klucz efemeryczny 32 B + IV 16 B + szyfrogram dopełniony do 16 B + HMAC 32 B; szyfrowana część LXMF to 80 B skrótu nadawcy i podpisu oraz 18–19 B struktury; niejawne potwierdzenie 83 B. Na ostatnim odcinku pakiet nie ma identyfikatora transportu. Wartości wynikają z analizowanych wersji, nie z pomiaru.</p>
+<p>Założenia obliczeniowe:</p>
+
+<ul>
+  <li>dostarczenie okazjonalne LXMF jednym pakietem (<a href="05-projekt-koncepcyjny-komunikacji.html">rozdział 05</a>);</li>
+  <li>treść zakodowana modelem;</li>
+  <li>pakiet = nagłówek 19 B + klucz efemeryczny 32 B + wektor inicjujący (IV) 16 B + szyfrogram dopełniony do wielokrotności 16 B + kod uwierzytelniający (HMAC) 32 B;</li>
+  <li>szyfrowana część LXMF to 80 B skrótu nadawcy i podpisu oraz 18–19 B struktury;</li>
+  <li>niejawne potwierdzenie ma 83 B.</li>
+</ul>
+
+<p>Na ostatnim odcinku pakiet nie ma identyfikatora transportu. Wartości wynikają z analizowanych wersji, nie z pomiaru.</p>
 
 <div class="table-wrap"><table class="wide">
 <thead><tr>
@@ -117,21 +127,28 @@
 <tr><td>potwierdzenie pakietu</td><td class="num">83</td><td class="num">1</td><td class="num">2,427</td></tr>
 </tbody></table></div>
 
-<p>Obsługa jednego zgłoszenia zajmuje przekaźnikowi B 24,5–26,2 s nadawania z ciszą. 50 zgłoszeń wymaga 1225–1309 s, czyli 20,4–21,8 min z 30 min przy zerowych stratach. Obliczenie pomija zimną trasę (ogłoszenia, zapytania o trasę), kolizje, CCA, narastanie mocy nadajnika, ponowienia i ruch innych stacji. Każde utracone i ponowione zgłoszenie zabiera B kolejne 11,5–13,2 s. Dostarczenie przez istniejący link ma podobny koszt na wiadomość, ale wymaga zestawienia linku w limitach czasu stosu. Zasób dodaje dla każdej wiadomości ogłoszenie, części i dowód. W10 jest więc wykonalne na papierze tylko przy jednym pakiecie na wiadomość i małych stratach.</p>
+<p>Obsługa jednego zgłoszenia zajmuje przekaźnikowi B 24,5–26,2 s nadawania z ciszą. Obsługa 50 zgłoszeń wymaga 1225–1309 s, czyli 20,4–21,8 min z 30 min przy zerowych stratach. Obliczenie pomija zimną trasę (ogłoszenia, zapytania o trasę), kolizje, CCA, narastanie mocy nadajnika, ponowienia i ruch innych stacji. Każde utracone i ponowione zgłoszenie zabiera B kolejne 11,5–13,2 s. Dostarczenie przez istniejący link ma podobny koszt na wiadomość, ale wymaga zestawienia linku w limitach czasu stosu. Zasób dodaje dla każdej wiadomości ogłoszenie, części i dowód. W10 jest więc wykonalne na papierze tylko przy jednym pakiecie na wiadomość i małych stratach.</p>
 
-<p>LXMF ponawia niepotwierdzoną wiadomość okazjonalną po <code>max(10 s, RTT)</code>, najwyżej 5 prób (<code>DELIVERY_RETRY_WAIT</code>, <code>MAX_DELIVERY_ATTEMPTS</code>). Jeden cykl B dla zgłoszenia trwa dłużej niż 10 s, a jego kolejka może trzymać minuty ruchu. Jeśli szacunek RTT nie obejmuje oczekiwania za ciszą, A wysyła ponownie wiadomości jeszcze czekające u B i zużywa jego budżet. T3 musi zmierzyć takie duplikaty i ustalić, skąd stos bierze RTT przy szybkości zgłaszanej przez interfejs P1. <a href="https://github.com/markqvist/LXMF/blob/c3ff2d6dc2f256daab896dadc044dd5a913ecbb7/LXMF/LXMRouter.py">LXMRouter</a>.</p>
+<p>LXMF ponawia niepotwierdzoną wiadomość okazjonalną po <code>max(10 s, RTT)</code>, najwyżej 5 prób (<code>DELIVERY_RETRY_WAIT</code>, <code>MAX_DELIVERY_ATTEMPTS</code>). Jeden cykl B dla zgłoszenia trwa dłużej niż 10 s, a jego kolejka może trzymać minuty ruchu. Jeśli szacunek czasu obiegu (RTT) nie obejmuje oczekiwania za ciszą, A wysyła ponownie wiadomości jeszcze czekające u B i zużywa jego budżet. T3 musi zmierzyć takie duplikaty i ustalić, skąd stos bierze RTT przy szybkości zgłaszanej przez interfejs P1. <a href="https://github.com/markqvist/LXMF/blob/c3ff2d6dc2f256daab896dadc044dd5a913ecbb7/LXMF/LXMRouter.py">LXMRouter</a>.</p>
 
-<p>Dlatego stos stacji ponawia wiadomość okazjonalną nie wcześniej niż po max(60 s, 2 × liczba skoków × 13 × czas TX największego datagramu + bieżący dług ciszy + czas opróżnienia kolejki P1), najwyżej 2 próby LXMF na jedno ponowienie intencji (<a href="../spec/radio.md#interfejs-p1-w-stosie-reticulum">kontrakt interfejsu P1</a>). Dla największego własnego datagramu (483 B przy treści 256 B, cykl 14,2 s) daje to 60 s dla 1 i 2 skoków na pustej sieci oraz około 114 s (1 skok) i 143 s (2 skoki) przy największym długu ciszy i pełnej kolejce 4 × 600 B.</p>
+<p>Dlatego stos stacji ponawia wiadomość okazjonalną nie wcześniej niż po max(60 s, 2 × liczba skoków × 13 × czas TX największego datagramu + bieżący dług ciszy + czas opróżnienia kolejki P1). Na jedno ponowienie intencji przypadają najwyżej 2 próby LXMF (<a href="../spec/radio.md#interfejs-p1-w-stosie-reticulum">kontrakt interfejsu P1</a>). Dla największego własnego datagramu (483 B przy treści 256 B, cykl 14,2 s) daje to 60 s dla 1 i 2 skoków na pustej sieci oraz około 114 s (1 skok) i 143 s (2 skoki) przy największym długu ciszy i pełnej kolejce 4 × 600 B.</p>
 
 <h3 id="pojemnosc-sieci">Pojemność sieci</h3>
 
-<p>Pojemność ogranicza najbardziej obciążony węzeł, zwykle stacja OSP i przekaźnik obok niej, dla całej sieci, a nie na przekaźnik. Model bez strat, przy limicie długu ciszy (cykl 13t na datagram), dla zgłoszenia 222 B z RECEIVED i dwoma STATUS: stacja OSP nadaje na jedno zgłoszenie potwierdzenie pakietu, RECEIVED i dwa STATUS (27,8 s z ciszą), czyli obsłuży około 129 zgłoszeń/h; przekaźnik przed OSP przekazuje zgłoszenie, RECEIVED, dwa STATUS i cztery potwierdzenia pakietów (47,3 s), czyli około 76 zgłoszeń/h. Dodanie przekaźników nie zwiększa tego limitu; zwiększa go tylko drugi odbiorca albo podział sieci. BULLETIN wysyła się osobno do każdej stacji: przy 50 stacjach to około 11,6 min pracy nadajnika OSP z obowiązkową ciszą z ciszą (13,9 s na stację), tyle trwa też rozesłanie polecenia ciszy. Okno losowego TEST startowego skaluje się z liczbą stacji: ≥50 s × liczba stacji, czyli 25 min dla 30 i około 42 min dla 50 stacji (przekaźnik obok OSP potrzebuje około 47 s na pełne zgłoszenie); 0–15 min wystarcza tylko małej sieci. Model pomija kolizje, CCA, zimne trasy i ponowienia; liczby są górną granicą.</p>
+<p>Pojemność całej sieci, a nie pojedynczego przekaźnika, ogranicza najbardziej obciążony węzeł: zwykle stacja OSP i przekaźnik obok niej. Model bez strat przyjmuje limit długu ciszy (cykl 13t na datagram) oraz zgłoszenie 222 B z RECEIVED i dwoma STATUS. Wynik:</p>
+
+<ul>
+  <li>stacja OSP nadaje na jedno zgłoszenie potwierdzenie pakietu, RECEIVED i dwa STATUS (27,8 s z ciszą), czyli obsłuży około 129 zgłoszeń/h;</li>
+  <li>przekaźnik przed OSP przekazuje zgłoszenie, RECEIVED, dwa STATUS i cztery potwierdzenia pakietów (47,3 s), czyli obsłuży około 76 zgłoszeń/h.</li>
+</ul>
+
+<p>Dodanie przekaźników nie zwiększa tego limitu. Zwiększa go tylko drugi odbiorca albo podział sieci. BULLETIN wysyła się osobno do każdej stacji. Przy 50 stacjach to około 11,6 min pracy nadajnika OSP z obowiązkową ciszą (13,9 s na stację); tyle samo trwa rozesłanie polecenia ciszy. Okno losowego startowego TEST skaluje się z liczbą stacji: ≥50 s × liczba stacji, czyli 25 min dla 30 i około 42 min dla 50 stacji (przekaźnik obok OSP potrzebuje około 47 s na pełne zgłoszenie). Okno 0–15 min wystarcza tylko małej sieci. Model pomija kolizje, CCA, zimne trasy i ponowienia, więc liczby są górną granicą.</p>
 
 <p>Jeśli pomiar potwierdzi brak zapasu, możliwe zmiany to:</p>
 
 <ul>
   <li><strong>Rezerwa ciszy:</strong> 12t daje 7,7% aktywności wobec dopuszczalnych 10%. Cisza 10t skraca cykl z 13t do 11t, czyli daje około 18% więcej przepustowości, kosztem mniejszej rezerwy względem limitu 10%.</li>
-  <li><strong>Narzut ramki:</strong> 29 B na każdy fragment 86 B to około 25% czasu TX. Dłuższa ramka wymaga uzupełniania FIFO podczas nadawania w obu układach.</li>
+  <li><strong>Narzut ramki:</strong> 29 B na każdy fragment 86 B to około 25% czasu TX. Dłuższa ramka wymaga uzupełniania bufora nadawczego (FIFO) podczas nadawania w obu układach.</li>
   <li><strong>Topologia:</strong> bezpośredni zasięg do OSP albo drugi przekaźnik dzielą ruch, ale nie każde miejsce je ma.</li>
   <li><strong>Ruch:</strong> łączenie powtarzalnych potrzeb przez opiekuna zmniejsza liczbę zgłoszeń, ale nie zmienia warunku W10.</li>
 </ul>
@@ -142,21 +159,35 @@
 
 <p>Strata swobodnej przestrzeni dla 869,525 MHz i 1 km wynosi około 91,23 dB. Przykład: 13 dBm na złączu, dwie anteny po 2,15 dBi i po 1 dB straty przewodów dają około −75,93 dBm u odbiorcy. Względem niezmierzonego celu czułości −110 dBm na złączu antenowym stacji jest to 34,07 dB zapasu w tym modelu.</p>
 
-<p>Cel −110 dBm dotyczy złącza stacji z pełnym torem wejściowym: filtrem SAW lub dolnoprzepustowym, ochroną ESD i ewentualnym przełącznikiem RF. Model przyjmuje około 3 dB strat tego toru, więc układ radiowy musi osiągać około −113 dBm. Jeśli osiągnie tylko −110 dBm na własnym wejściu, zapasy z modelu Haty spadają o kolejne 3 dB. Do pomiaru w T4 cel czułości jest zagrożony i stanowi wejście do decyzji D10.</p>
+<p>Cel −110 dBm dotyczy złącza stacji z pełnym torem wejściowym: filtrem z falą powierzchniową (SAW) lub dolnoprzepustowym, ochroną przed wyładowaniami elektrostatycznymi (ESD) i ewentualnym przełącznikiem RF. Model przyjmuje około 3 dB strat tego toru, więc układ radiowy musi osiągać około −113 dBm. Jeśli osiągnie tylko −110 dBm na własnym wejściu, zapasy z modelu Haty spadają o kolejne 3 dB. Do czasu pomiaru w T4 cel czułości jest zagrożony i stanowi dane wejściowe decyzji D10.</p>
 
 <p>Model wolnej przestrzeni jest zbyt optymistyczny dla zabudowy. Empiryczny model Okumury-Haty dla małego miasta przy tym samym budżecie łącza (15,3 dB zysków i strat poza drogą) daje na 1 km zapas około −0,7 dB przy antenie 30 m nad terenem, −3,5 dB przy antenach 10 m i 3 m oraz −7,3 dB przy antenach 10 m i 1,5 m. Modelu Haty użyto tu poniżej jego zakresu wysokości anteny bazowej, więc wynik jest tylko ostrzeżeniem. Bez wysoko umieszczonych anten lub przekaźników cel 1 km jest zagrożony. Promień pierwszej strefy Fresnela w połowie drogi 1 km wynosi około 9,3 m; anteny przy oknach niskich kondygnacji nie zapewniają jej prześwitu. <a href="../../software/reference/wyniki.json">Obliczenia</a>.</p>
 
-<p>Liczby powyżej dotyczą anteny przy oknie z 1 dB strat przewodu, bez odgromnika. Instalacja stała z anteną wyżej ma przewód zewnętrzny, odgromnik GDT (≤0,2 dB), przepust, przejściówki (≤0,1 dB każda) i przewód wewnętrzny; model przyjmuje dla niej 2,5 dB na każdym końcu (np. około 6 m LMR-240). Zapas spada wtedy o 3 dB: 31,1 dB w wolnej przestrzeni oraz −3,7, −6,5 i −10,3 dB w modelu Haty; z antenami kolinearnymi na obu końcach +3,0, +0,2 i −3,6 dB. Zysk z wysokości anteny zwykle przeważa nad tą stratą, ale budżet przelicza się dla rzeczywistej instalacji.</p>
+<p>Liczby powyżej dotyczą anteny przy oknie z 1 dB strat przewodu, bez odgromnika. Instalacja stała z anteną wyżej ma przewód zewnętrzny, gazowy odgromnik (GDT, ≤0,2 dB), przepust, przejściówki (≤0,1 dB każda) i przewód wewnętrzny. Model przyjmuje dla niej 2,5 dB strat na każdym końcu (np. około 6 m przewodu LMR-240). Zapas spada wtedy o 3 dB: do 31,1 dB w wolnej przestrzeni oraz do −3,7, −6,5 i −10,3 dB w modelu Haty. Z antenami kolinearnymi na obu końcach wynosi +3,0, +0,2 i −3,6 dB. Zysk z wysokości anteny zwykle przeważa nad tą stratą, ale budżet przelicza się dla rzeczywistej instalacji.</p>
 
-<p>Przykład z wolną przestrzenią pomija ściany, metal, teren, zanik wielodrogowy, odstrojenie anteny, zakłócenia i rzeczywistą czułość, więc nie dowodzi zasięgu 1 km w mieście. Anteny przy oknie lub drzwiach muszą przejść próbę w docelowej pozycji. Wynik zapisać razem z układem miejsc, przewodami, rewizjami i warunkami. Przy braku zapasu najpierw podnieść antenę (dach, wyższa kondygnacja) lub dodać przekaźnik. Zmiana profilu P1 wymaga jawnej rewizji całej sieci.</p>
+<p>Przykład z wolną przestrzenią pomija ściany, metal, teren, zanik wielodrogowy, odstrojenie anteny, zakłócenia i rzeczywistą czułość, więc nie dowodzi zasięgu 1 km w mieście. Anteny przy oknie lub drzwiach muszą przejść próbę w docelowej pozycji. Wynik należy zapisać razem z układem miejsc, przewodami, rewizjami i warunkami. Przy braku zapasu najpierw podnosi się antenę (dach, wyższa kondygnacja) lub dodaje przekaźnik. Zmiana profilu P1 wymaga jawnej rewizji całej sieci.</p>
 
-<p>Zapas obliczony z modelu jest medianą. Łącze stacjonarne, które ma przenieść 99 ze 100 zgłoszeń, potrzebuje dodatkowo zapasu na zaniki w czasie, zwykle około 10 dB. Ruch ludzi i pojazdów zmienia tłumienie także na stałej trasie. Rozrzut tłumienia między miejscami (odchylenie standardowe rzędu 6–8 dB w zabudowie) sprawia, że udana próba jednej pary miejsc nie przenosi się na inne. Najtańszym źródłem zapasu jest antena: kolinearna antena dookólna o zysku około 5–6 dBi na obu końcach daje około 7 dB więcej niż dwa dipole, nie zmienia P1 i mieści się w limicie ERP (około 15,5 dBm wobec 27 dBm). Kosztem jest węższa wiązka w płaszczyźnie pionowej i wymóg pionowego montażu.</p>
+<p>Zapas obliczony z modelu jest medianą. Łącze stacjonarne, które ma przenieść 99 ze 100 zgłoszeń, potrzebuje dodatkowo zapasu na zaniki w czasie, zwykle około 10 dB. Ruch ludzi i pojazdów zmienia tłumienie także na stałej trasie. Rozrzut tłumienia między miejscami (odchylenie standardowe rzędu 6–8 dB w zabudowie) sprawia, że udana próba jednej pary miejsc nie przenosi się na inne. Najtańszym źródłem zapasu jest antena. Kolinearna antena dookólna o zysku około 5–6 dBi na obu końcach daje około 7 dB więcej niż dwa dipole, nie zmienia P1 i mieści się w limicie mocy promieniowanej (ERP): około 15,5 dBm wobec 27 dBm. Kosztem jest węższa wiązka w płaszczyźnie pionowej i wymóg pionowego montażu.</p>
 
 <p>Ten sam budżet z dipolami daje około 12 dBm ERP (13 dBm − 1 dB przewodu + 2,15 dBi − 2,15 dB), czyli około 16 mW. Warunki pasma dopuszczają 500 mW ERP (27 dBm), więc przepisy zostawiają około 15 dB zapasu. Oba układy RF nadają do około +16 dBm na złączu, czyli około 3 dB więcej niż obecne 13 dBm. Większa moc wymaga zewnętrznego wzmacniacza, a więc nowej konstrukcji RF, pomiaru emisji i nowego budżetu energii stacji na ogniwach. Moc jest parametrem P1, więc zmiana dotyczy wszystkich stacji. Większa moc zwiększa też zasięg zakłóceń dla sąsiadów i nie usuwa ukrytych nadajników. <a href="https://www.ti.com/lit/ds/symlink/cc1120.pdf">CC1120</a>, <a href="https://www.st.com/resource/en/datasheet/s2-lp.pdf">S2-LP</a>, <a href="zrodla.html">warunki pasma</a>.</p>
 
 <h2 id="energia-stacji-poziomu-1">Energia stacji poziomu 1</h2>
 
-<p>Założenia <a href="../../software/reference/wyniki.json">modelu</a>: szyna 3,3 V zasilana przez przetwornicę o sprawności 0,85 przy 6 V z ogniw i 0,80 przy 12,8 V (sprawność obejmuje prąd spoczynkowy przetwornicy); odbiornik zawsze włączony, 22 mA (wartość dla CC1120; S2-LP pobiera mniej), oraz TCXO radia 2 mA; nadawanie 13 dBm, 45 mA, przez 7,7% czasu, czyli przy ciągłym przekazywaniu ruchu na granicy długu ciszy; szyna 5 V ekranu z pamięcią 0,5 mA; FRAM, przyciski i nadzór 0,5 mA; podświetlenie ekranu 15 mA przez 30 min na dobę; dioda alarmu 5 mA przez 1% i brzęczyk 20 mA przez 0,25% czasu; po stronie wejścia osobno dla źródła: z ogniw LTC4412, TPS3710, LTC2954 i dzielniki ADC (razem około 0,033 mA), z 12 V LM74800, zatrzask UV, TPS3710, LTC2954 i dzielniki (razem około 0,44 mA); mikrokontroler średnio 3 mA (nRF52840) albo 30, 45 lub 60 mA (ESP32-S3 z wyłączonym Wi-Fi; realny prąd aktywny 40–60 mA, 30 mA wymaga lekkiego uśpienia). Rezerwa 20%. To katalogowe założenia, nie pomiar.</p>
+<p>Założenia <a href="../../software/reference/wyniki.json">modelu</a>:</p>
+
+<ul>
+  <li>szyna 3,3 V zasilana przez przetwornicę o sprawności 0,85 przy 6 V z ogniw i 0,80 przy 12,8 V (sprawność obejmuje prąd spoczynkowy przetwornicy);</li>
+  <li>odbiornik zawsze włączony, 22 mA (wartość dla CC1120; S2-LP pobiera mniej), oraz generator kwarcowy z kompensacją temperatury (TCXO) radia, 2 mA;</li>
+  <li>nadawanie z mocą 13 dBm, 45 mA, przez 7,7% czasu, czyli przy ciągłym przekazywaniu ruchu na granicy długu ciszy;</li>
+  <li>szyna 5 V ekranu z pamięcią 0,5 mA; FRAM, przyciski i nadzór 0,5 mA;</li>
+  <li>podświetlenie ekranu 15 mA przez 30 min na dobę;</li>
+  <li>dioda alarmu 5 mA przez 1% czasu i brzęczyk 20 mA przez 0,25% czasu;</li>
+  <li>obwody wejściowe, osobno dla źródła: przy ogniwach LTC4412, TPS3710, LTC2954 i dzielniki ADC (razem około 0,033 mA), przy 12 V LM74800, zatrzask podnapięciowy (UV), TPS3710, LTC2954 i dzielniki (razem około 0,44 mA);</li>
+  <li>mikrokontroler średnio 3 mA (nRF52840) albo 30, 45 lub 60 mA (ESP32-S3 z wyłączonym Wi-Fi; realny prąd aktywny wynosi 40–60 mA, a 30 mA wymaga lekkiego uśpienia);</li>
+  <li>rezerwa 20%.</li>
+</ul>
+
+<p>To założenia katalogowe, nie pomiar.</p>
 
 <div class="table-wrap"><table class="wide">
 <thead><tr>
@@ -173,19 +204,19 @@
 <tr><td>ESP32-S3, 60 mA</td><td class="num">89 mA</td><td class="num">0,345 W</td><td class="num">9,9 / 10,7 Wh</td><td class="num">35 h</td><td class="num">34 dni</td></tr>
 </tbody></table></div>
 
-<p>Komplet czterech ogniw litowych AA przyjęto jako 4 × 4,5 Wh z wykorzystaniem 80%, co uwzględnia napięcie odcięcia i niską temperaturę. Ogniwa litowe Li-FeS2 znoszą lata przechowywania i pracę do −20 °C, więc nadają się do zestawu trzymanego w magazynie organizatora sieci. Ogniwa alkaliczne i NiMH tracą w −10…−20 °C około 50–80% pojemności: W23 i próba w −10 °C dotyczą wyłącznie ogniw Li-FeS2, a pozostałe ogniwa służą tylko awaryjnie. Progi napięcia ocenia się na filtrowanej średniej z okresów samego odbioru, bo impulsy TX chwilowo obniżają napięcie zimnych ogniw.</p>
+<p>Komplet czterech ogniw litowych AA przyjęto jako 4 × 4,5 Wh z wykorzystaniem 80%, co uwzględnia napięcie odcięcia i niską temperaturę. Ogniwa litowe Li-FeS2 znoszą lata przechowywania i pracę do −20 °C, więc nadają się do zestawu trzymanego w magazynie organizatora sieci. Ogniwa alkaliczne i NiMH tracą w temperaturze od −10 do −20 °C około 50–80% pojemności. Dlatego W23 i próba w −10 °C dotyczą wyłącznie ogniw Li-FeS2, a pozostałe ogniwa służą tylko awaryjnie. Progi napięcia ocenia się na filtrowanej średniej z okresów samego odbioru, bo impulsy TX chwilowo obniżają napięcie zimnych ogniw.</p>
 
-<p>W23 (≥48 h na ogniwach) dopuszcza w modelu średnio najwyżej około 64 mA z szyny 3,3 V. nRF52840 spełnia je z zapasem. ESP32-S3 spełnia je tylko przy średnim poborze MCU około 30 mA, czyli przy lekkim uśpieniu z odbiornikiem stale włączonym; przy prądzie aktywnym 45–60 mA daje 35–42 h. Cel dla wykonania B: ≤60 mA średnio z 3,3 V w pracy przekaźnika. Pomiar poboru w RX i TX rozstrzyga D14. Gdyby W23 nie zostało spełnione, możliwa jest przyszła wersja P1 z dłuższą preambułą, pozwalającą na nasłuch z próbkowaniem (<a href="../spec/radio.md">specyfikacja radia</a>).</p>
+<p>W23 (≥48 h na ogniwach) dopuszcza w modelu średnio najwyżej około 64 mA z szyny 3,3 V. nRF52840 spełnia je z zapasem. ESP32-S3 spełnia je tylko przy średnim poborze MCU około 30 mA, czyli przy lekkim uśpieniu z odbiornikiem stale włączonym; przy prądzie aktywnym 45–60 mA daje 35–42 h. Celem dla wykonania B jest średnio ≤60 mA z szyny 3,3 V w pracy przekaźnika. Pomiar poboru w RX i TX rozstrzyga D14. Gdyby W23 nie zostało spełnione, możliwa jest przyszła wersja P1 z dłuższą preambułą, pozwalającą na nasłuch z próbkowaniem (odbiornik włączany okresowo) (<a href="../spec/radio.md">specyfikacja radia</a>).</p>
 
 <p>Dla porównania: wariant 0.4, w którym przekaźnik był laptopem z <code>rnsd</code>, potrzebował 788–2312 Wh na dobę. Stacja poziomu 1 zużywa w modelu od około 80 do 650 razy mniej energii. To zmienia planowanie sieci. Przekaźnik można postawić na dachu lub wyższym piętrze na ogniwach albo jednym akumulatorze i odwiedzać co kilka dni, a nie co dobę.</p>
 
 <h2 id="energia-dwa-niezalezne-zasoby">Energia poziomu 3: dwa niezależne zasoby</h2>
 
-<p>Pula A/B zasila laptopa i router. Pobór samej stacji jest w niej pomijalny. Założenia <a href="../../software/reference/wyniki.json">modelu</a>: 35 W AC dla laptopa i routera, sprawność 0,85, 8 W poboru własnego przetwornicy i 1,7 W strat diod. Moc pobierana wynosi <code>35/0,85 + 8 + 1,7 = 50,88 W</code>. Laptop i router zużywają około 1221 Wh na dobę, a z rezerwą 20% około 1465 Wh.</p>
+<p>Pula A/B zasila laptopa i router. Pobór samej stacji jest w niej pomijalny. Założenia <a href="../../software/reference/wyniki.json">modelu</a>: 35 W AC dla laptopa i routera, sprawność 0,85, 8 W poboru własnego przetwornicy i 1,7 W strat diod. Moc pobierana wynosi <code>35/0,85 + 8 + 1,7 = 50,88 W</code>. Laptop i router zużywają około 1221 Wh na dobę, a z rezerwą 20% – około 1465 Wh.</p>
 
-<p>Poziom 3 zużywa razem z ładowaniem telefonów około 1840 Wh na dobę na schronienie (6–7 akumulatorów 60 Ah przy założonym wykorzystaniu 50%); planuje się go tylko tam, gdzie jest ładowanie i transport akumulatorów. Przy wdrożeniu domyślnym źródłem jest kupiona stacja zasilania z ładowarką USB z deklaracją UE (<a href="04-analiza-opcji.html#decyzje-wymagajace-porownania">rozdział 04</a>).</p>
+<p>Poziom 3 zużywa razem z ładowaniem telefonów około 1840 Wh na dobę na schronienie (6–7 akumulatorów 60 Ah przy założonym wykorzystaniu 50%). Planuje się go tylko tam, gdzie zapewnione są ładowanie i transport akumulatorów. Przy wdrożeniu domyślnym źródłem jest kupiona stacja zasilania z ładowarką USB z deklaracją zgodności UE (<a href="04-analiza-opcji.html#decyzje-wymagajace-porownania">rozdział 04</a>).</p>
 
-<p>Telefony: 50 × 5 Wh przy sprawności 0,8 = 312,5 Wh ze źródeł ładowarki; z rezerwą 375 Wh. 5 Wh na osobę to częściowe doładowanie, a nie pełne ładowanie każdego telefonu. Osiem portów daje maksymalnie 60 W na wyjściu. Pobór własny ładowarki i straty przewodów trzeba zmierzyć.</p>
+<p>Ładowanie telefonów wymaga 50 × 5 Wh przy sprawności 0,8, czyli 312,5 Wh ze źródeł ładowarki, a z rezerwą 375 Wh. 5 Wh na osobę to częściowe doładowanie, a nie pełne ładowanie każdego telefonu. Osiem portów daje maksymalnie 60 W na wyjściu. Pobór własny ładowarki i straty przewodów trzeba zmierzyć.</p>
 
 <p>Przy założeniu 12 V, 60 Ah i 50% wykorzystania jeden akumulator daje 360 Wh. Jest to model, nie ocena sprawności dowolnego akumulatora samochodowego. W nieogrzewanym schronieniu pojemność akumulatora kwasowo-ołowiowego spada: w 0 °C o około 20%, w −10 °C jeszcze bardziej. Zimą liczbę akumulatorów trzeba więc zwiększyć albo trzymać je w cieplejszym pomieszczeniu.</p>
 
@@ -200,7 +231,7 @@
 <tr><td>Łączny ekwiwalent energii, przed podziałem</td><td class="num">1840 Wh</td><td class="num">6</td></tr>
 </tbody></table></div>
 
-<p>Przy sztywnym przydzieleniu osobnych akumulatorów do obu pul zaokrąglenia dają 7 sztuk modelowych, mimo łącznego ekwiwalentu 6. Wspólny zapas można przydzielać kolejno, jeśli istnieje plan i znana jest pozostała energia. Litery A/B/C oznaczają wejścia, nie obietnicę pracy dobowej z trzech akumulatorów. Nie zakładać, że akumulator rozruchowy ma modelową pojemność ani że jego rozładowanie nie wpłynie na użycie pojazdu.</p>
+<p>Przy sztywnym przydzieleniu osobnych akumulatorów do obu pul zaokrąglenia dają 7 sztuk modelowych, mimo łącznego ekwiwalentu 6. Wspólny zapas można przydzielać kolejno, jeśli istnieje plan i znana jest pozostała energia. Litery A/B/C oznaczają wejścia, nie obietnicę pracy dobowej z trzech akumulatorów. Nie należy zakładać, że akumulator rozruchowy ma modelową pojemność ani że jego rozładowanie nie wpłynie na użycie pojazdu.</p>
 
 <p>Wpływ mocy znalezionego komputera na energię puli A/B (te same straty i rezerwa):</p>
 
@@ -216,17 +247,17 @@
 <tr><td class="num">60 W</td><td class="num">80,29 W</td><td class="num">2312 Wh</td><td class="num">7</td></tr>
 </tbody></table></div>
 
-<p>Dobór oszczędnego hosta i pomiar poboru mają większy wpływ na zapas niż sama moc radia. Nie gwarantować 24 h dla dowolnego PC. Gdy energii brakuje, wyłącza się laptop i router; stacja poziomu 1 pracuje dalej z ogniw lub osobnego źródła 12 V. Gniazdo zapalniczki ogranicza prąd i możliwą moc AC. Nominalne 150 W wymaga odpowiednich zacisków oraz przewodów. Każde pojedyncze źródło A lub B musi samodzielnie utrzymać dozwolone obciążenie.</p>
+<p>Dobór oszczędnego hosta i pomiar poboru mają większy wpływ na zapas niż sama moc radia. Nie należy gwarantować 24 h pracy dla dowolnego PC. Gdy energii brakuje, wyłącza się laptop i router, a stacja poziomu 1 pracuje dalej z ogniw lub osobnego źródła 12 V. Gniazdo zapalniczki ogranicza prąd i możliwą moc AC. Nominalne 150 W wymaga odpowiednich zacisków oraz przewodów. Każde pojedyncze źródło A lub B musi samodzielnie utrzymać dozwolone obciążenie.</p>
 
 <p>Przekaźnik bez schronienia to sama stacja poziomu 1: 3,6–10,7 Wh na dobę z rezerwą (z ogniw 3,6–9,9 Wh, z 12 V 4,0–10,7 Wh). Miejsce przekaźnika może nie mieć opiekuna. Jeśli jest jedyną drogą schronienia do OSP, ma pierwszeństwo w energii (<a href="02-scenariusze-i-organizacja.html">rozdział 02</a>). Wymaga osobnego planu wymiany ogniw lub akumulatora i osoby odpowiedzialnej, ale nie wymiany źródeł co dobę. Budżet schronienia go nie obejmuje.</p>
 
-<p id="przekaznik-staly">Przekaźnik stały pracuje stale z zasilacza buforowego 13,8 V z akumulatorem (wyrób z deklaracją UE, jak w systemach alarmowych), zasilanego z sieci budynku, przez wejście 12 V stacji. Po zaniku 230 V działa z akumulatora bufora: przy założonym wykorzystaniu 50% pojemności akumulator 12 V 7 Ah wystarcza w modelu na około 255 h (nRF52840) albo 94 h (ESP32-S3, 60 mA), a 17 Ah na około 620 h albo 228 h. Wynik zależy od własnego poboru zasilacza buforowego, który trzeba doliczyć z jego karty katalogowej, i od temperatury akumulatora.</p>
+<p id="przekaznik-staly">Przekaźnik stały pracuje stale z zasilacza buforowego 13,8 V z akumulatorem (wyrób z deklaracją UE, jak w systemach alarmowych), zasilanego z sieci budynku, przez wejście 12 V stacji. Po zaniku 230 V działa z akumulatora bufora. Przy założonym wykorzystaniu 50% pojemności akumulator 12 V 7 Ah wystarcza w modelu na około 255 h (nRF52840) albo 94 h (ESP32-S3, 60 mA), a 17 Ah na około 620 h albo 228 h. Wynik zależy od własnego poboru zasilacza buforowego, który trzeba doliczyć z jego karty katalogowej, i od temperatury akumulatora.</p>
 
 <h2 id="wykonanie-koszt-i-wielkosc-serii">Wykonanie, koszt i wielkość serii</h2>
 
-<p><a href="../spec/bom-stacji.csv">BOM stacji</a> jest listą kandydatów, nie ofertą produkcyjną. Rozdzielić koszt jednego zestawu, znalezionych zasobów i uruchomienia projektu. Przetwornica z transformatorem, zabezpieczenia, przewody i obudowy mogą kosztować więcej niż sama elektronika radiowa. Ekran, przyciski, koszyk ogniw, FRAM i obudowa stacji dodają w szacunku 30–60 € do kosztu elektroniki; wymaga to wyceny. Większym nakładem jest oprogramowanie układowe stosu, kolejki i interfejsu.</p>
+<p><a href="../spec/bom-stacji.csv">Wykaz części stacji (BOM)</a> jest listą kandydatów, nie ofertą produkcyjną. Należy rozdzielić koszt jednego zestawu, znalezionych zasobów i uruchomienia projektu. Przetwornica z transformatorem, zabezpieczenia, przewody i obudowy mogą kosztować więcej niż sama elektronika radiowa. Ekran, przyciski, koszyk ogniw, FRAM i obudowa stacji dodają w szacunku 30–60 € do kosztu elektroniki; wymaga to wyceny. Większym nakładem jest oprogramowanie układowe stosu, kolejki i interfejsu.</p>
 
-<p>Do wyceny prototypu i 1000 sztuk przygotować ten sam zakres: kompletacja elementów, PCB/montaż stacji, ekran i przyciski, ogniwa, transformator i uzwojenia, obudowa, antena, wiązki i bezpieczniki, pamięć USB, kontrola każdej sztuki oraz straty produkcyjne. Osobno wycenić projekt i kwalifikację dwóch wykonań, oprzyrządowanie, badania oraz poprawki po próbach. Rozdzielić cenę netto/brutto, transport i założenia walutowe. Poprosić co najmniej dwóch niezależnych wykonawców o identyczny zakres.</p>
+<p>Wycena prototypu i serii 1000 sztuk powinna obejmować ten sam zakres: kompletację elementów, płytki drukowane (PCB) i montaż stacji, ekran i przyciski, ogniwa, transformator i uzwojenia, obudowę, antenę, wiązki i bezpieczniki, pamięć USB, kontrolę każdej sztuki oraz straty produkcyjne. Osobno wycenia się projekt i kwalifikację dwóch wykonań, oprzyrządowanie, badania oraz poprawki po próbach. Cenę netto i brutto, transport i założenia walutowe podaje się oddzielnie. O wycenę identycznego zakresu należy poprosić co najmniej dwóch niezależnych wykonawców.</p>
 
 <p>Niekomercyjny cel nie usuwa kosztu części ani badań. Koszt jednostkowy po kwalifikacji nie jest kosztem pierwszego działającego zestawu. Przed ofertami i pełnymi projektami wykonawczymi dokładna kwota byłaby pozorną precyzją.</p>
 </article>

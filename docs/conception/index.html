@@ -49,7 +49,7 @@
 </ol>
 </nav>
 
-<p>Cel: przekazać krótkie zgłoszenie ze schronienia do miejsca zdolnego udzielić pomocy, gdy nie działa internet ani sieć komórkowa. Podstawą jest samodzielna stacja z ekranem i przyciskami: włączam stację, wystawiam antenę i jestem w sieci – jeśli sieć zaplanowano i sprawdzono w terenie przed kryzysem, a antenę zamontowano na stałe podczas przygotowania obiektu. Opiekun wysyła zgłoszenia schronienia przyciskami, a stacja zawsze przekazuje ruch innych stacji. Laptop i router z miejsca uruchomienia dodają później wygodny panel i stronę, przez którą mieszkańcy zgłaszają potrzeby z telefonów. Stacja zachowuje dane lokalnie i przekazuje je radiem, także przez inne stacje.</p>
+<p>Cel: przekazać krótkie zgłoszenie ze schronienia do miejsca zdolnego udzielić pomocy, gdy nie działa internet ani sieć komórkowa. Podstawą jest samodzielna stacja z ekranem i przyciskami. Zasada obsługi brzmi: „włączam stację, wystawiam antenę i jestem w sieci”. Działa ona pod warunkiem, że sieć zaplanowano i sprawdzono w terenie przed kryzysem, a antenę zamontowano na stałe podczas przygotowania obiektu. Opiekun wysyła zgłoszenia schronienia przyciskami, a stacja zawsze przekazuje ruch innych stacji. Laptop i router z miejsca uruchomienia dodają później wygodny panel i stronę, przez którą mieszkańcy zgłaszają potrzeby z telefonów. Stacja zachowuje dane lokalnie i przekazuje je radiem, także przez inne stacje.</p>
 
 <h2 id="film">Film</h2>
 
@@ -58,7 +58,7 @@
 <figcaption>Dlaczego WICI, jak ma działać i czego jeszcze nie sprawdzono (niecałe 5 minut, z napisami). Wersja pionowa 60 s na telefon: <a href="../../media/film/WICI-short.mp4">WICI-short.mp4</a>. Scenariusz i pliki do odtworzenia filmu: <a href="../../media/film/README.md">media/film</a>.</figcaption>
 </figure>
 
-<p>Zakres bazowy: jeden budynek, około 50 osób, sąsiednie stacje około 1 km od siebie w zabudowie. Stacja pracuje w modelu około 1,5–4 dni na litowych ogniwach AA (zależnie od wykonania; cel W23: ≥48 h), a ze źródła 12 V tygodniami. Laptop, router, ich zasilacze i akumulatory pochodzą z lokalnego zasobu i są rozszerzeniami; z nimi zestaw ma pracować 24 godziny z wymianą źródeł energii. Poziom 3 zużywa około 1,8 kWh na dobę na schronienie (6–7 akumulatorów 60 Ah); planuje się go tylko tam, gdzie jest ładowanie i transport akumulatorów. Zestaw WICI dostarcza stację z anteną, oprogramowanie offline, połączenia, zasilanie laptopa i routera oraz osobną ładowarkę telefonów (<a href="01-potrzeby-i-wymagania.html#poziomy-zestawu">poziomy zestawu</a>).</p>
+<p>Zakres bazowy obejmuje jeden budynek, około 50 osób i sąsiednie stacje oddalone od siebie o około 1 km w zabudowie. Według modelu stacja pracuje około 1,5–4 dni na litowych ogniwach AA (zależnie od wykonania; cel W23: ≥48 h), a ze źródła 12 V – tygodniami. Laptop, router, ich zasilacze i akumulatory pochodzą z lokalnego zasobu i są rozszerzeniami. Z nimi zestaw ma pracować 24 godziny przy wymianie źródeł energii. Poziom 3 zużywa około 1,8 kWh na dobę w jednym schronieniu (6–7 akumulatorów 60 Ah), dlatego planuje się go tylko tam, gdzie można ładować i dowozić akumulatory. Zestaw WICI dostarcza stację z anteną, oprogramowanie offline, połączenia, zasilanie laptopa i routera oraz osobną ładowarkę telefonów (<a href="01-potrzeby-i-wymagania.html#poziomy-zestawu">poziomy zestawu</a>).</p>
 
 <h2 id="dokumenty">Dokumenty</h2>
 
@@ -90,7 +90,7 @@
 
 <p>W <a href="01-potrzeby-i-wymagania.html">tabeli wymagań</a> pochodzenie oznaczają skróty: U (ustalenie użytkowe), S (warunek specyfikacji, czyli wybór bazowy) i P (propozycja próby lub organizacji). Każde wymaganie, niezależnie od pochodzenia, trzeba wykazać dowodem.</p>
 
-<p>Parametry wykonawcze, ramki, API i warunki odbioru należą do <code>docs/spec/</code>. Koncepcja wyjaśnia potrzeby, wybory i ich granice. Nie jest drugą specyfikacją. Jeśli próba wymusi zmianę parametru, trzeba zaktualizować specyfikację i powiązaną analizę.</p>
+<p>Parametry wykonawcze, ramki, interfejsy programistyczne (API) i warunki odbioru należą do <code>docs/spec/</code>. Koncepcja wyjaśnia potrzeby, wybory i ich granice. Nie jest drugą specyfikacją. Jeśli próba wymusi zmianę parametru, trzeba zaktualizować specyfikację i powiązaną analizę.</p>
 
 <h2 id="skroty-i-pojecia">Skróty i pojęcia</h2>
 
@@ -107,44 +107,57 @@
 <tr><td>poziom 1, 2, 3</td><td>sama stacja; stacja z laptopem przez USB; stacja z laptopem i routerem dla telefonów (<a href="01-potrzeby-i-wymagania.html#poziomy-zestawu">01</a>)</td></tr>
 <tr><td>przekaźnik</td><td>każda włączona stacja przekazuje ruch innych stacji, także bez laptopa; osobny przekaźnik to stacja poziomu 1 na ogniwach lub źródle 12 V</td></tr>
 <tr><td>MCU</td><td>mikrokontroler prowadzący stację: stos sieciowy, kolejkę, ekran, przyciski i radio</td></tr>
-<tr><td>FRAM</td><td>pamięć nieulotna stacji z trwałym zapisem bez zużycia przy częstych zapisach; przechowuje szyfrowaną kolejkę, trasy i dług ciszy</td></tr>
+<tr><td>FRAM</td><td>pamięć nieulotna stacji, która nie zużywa się przy częstych zapisach; przechowuje szyfrowaną kolejkę, trasy i dług ciszy</td></tr>
 <tr><td>A, B, C</td><td>wejścia zasilania poziomu 3: A i B to wymieniane źródła 12 V laptopa i routera, C to osobne źródło ładowarki telefonów</td></tr>
-<tr><td>HOLD</td><td>status sprzętu: projekt nie jest dopuszczony do zamówienia ani użycia do czasu odbioru wskazanej konfiguracji</td></tr>
+<tr><td>HOLD</td><td>status sprzętu „wstrzymany”: projekt nie jest dopuszczony do zamówienia ani użycia do czasu odbioru wskazanej konfiguracji</td></tr>
 <tr><td>START</td><td>pakiety uruchomieniowe offline: dla działającego systemu Windows lub macOS oraz obraz Linuksa dla obsługiwanych komputerów PC</td></tr>
 <tr><td>karta stacji, karta OSP</td><td>pliki z pełnymi kluczami publicznymi wymieniane przy przygotowaniu; na nich opiera się zaufanie, nie na odbiorze radiowym (<a href="05-projekt-koncepcyjny-komunikacji.html#model-zaufania-i-kluczy">05</a>)</td></tr>
 <tr><td>ZAMKNIJ ZDARZENIE, ZNISZCZ DANE</td><td>usunięcie danych zdarzenia po eksporcie dla administratora danych (tożsamości zostają) oraz nieodwracalne usunięcie danych i tożsamości stacji przy groźbie przejęcia (<a href="07-zagrozenia-i-odpornosc.html#zniszcz-dane">07</a>)</td></tr>
 <tr><td>PRZENIEŚ STACJĘ</td><td>kontrolowane przeniesienie tożsamości i kolejki na stację zapasową; stara stacja przestaje pracować</td></tr>
-<tr><td>TEST</td><td>typ SA1 o budowie REQUEST: sprawdza drogę do OSP, zapis i obecność dyżurnego; nie trafia do kolejki potrzeb</td></tr>
+<tr><td>TEST</td><td>typ SA1 o takiej samej budowie jak REQUEST; sprawdza drogę do OSP, zapis i obecność dyżurnego; nie trafia do kolejki potrzeb</td></tr>
 <tr><td>COMMIT</td><td>zatwierdzenie zapisu w FRAM stacji albo transakcji SQLite laptopa; dopiero po nim zapis uznaje się za trwały</td></tr>
-<tr><td>Reticulum, microReticulum</td><td>stos sieciowy z tożsamościami, szyfrowaniem i trasami; microReticulum to jego port na mikrokontroler stacji</td></tr>
-<tr><td>LXMF</td><td>protokół wiadomości nad Reticulum; potwierdza dostarczenie transportowe, nie zapis w bazie odbiorcy</td></tr>
-<tr><td>pakiet okazjonalny, link, zasób</td><td>sposoby dostarczenia LXMF: jeden pakiet bez zestawiania połączenia, połączenie Reticulum, przesłanie większych danych w częściach (<a href="05-projekt-koncepcyjny-komunikacji.html">05</a>)</td></tr>
+<tr><td>Reticulum, microReticulum</td><td>stos sieciowy z tożsamościami, szyfrowaniem i trasami; microReticulum to jego wersja przeniesiona (port) na mikrokontroler stacji</td></tr>
+<tr><td>LXMF</td><td>protokół wiadomości działający nad Reticulum; potwierdza dostarczenie przez sieć (transportowe), a nie zapis w bazie odbiorcy</td></tr>
+<tr><td>pakiet okazjonalny, link, zasób</td><td>sposoby dostarczenia w LXMF: pojedynczy pakiet bez zestawiania połączenia, zestawione połączenie Reticulum (link), przesłanie większych danych w częściach (zasób) (<a href="05-projekt-koncepcyjny-komunikacji.html">05</a>)</td></tr>
 <tr><td>SA1</td><td>format treści wiadomości WICI w LXMF; sześć typów: REQUEST, RECEIVED, STATUS, REPLY, BULLETIN, TEST</td></tr>
 <tr><td>RECEIVED, STATUS</td><td>potwierdzenie trwałego zapisu zgłoszenia w OSP („ODBIORCA ZAPISAŁ”) oraz późniejsze stany: „ODBIORCA PRZECZYTAŁ”, „POMOC SKIEROWANA (DECYZJA, NIE GODZINA PRZYJAZDU)”, „PRZEKAZANE DALEJ (PSP / POGOTOWIE / POWIAT)”, „ODBIORCA NIE MOŻE TERAZ POMÓC – CZYTAJ ODPOWIEDŹ”, „ZAMKNIĘTE”</td></tr>
 <tr><td>P1</td><td>wspólny profil radiowy obu wykonań stacji: 869,525 MHz, 2-GFSK 4800 bit/s, fragmenty do 86 B, dług ciszy</td></tr>
-<tr><td>dług ciszy</td><td>czas zakazu nadawania po każdej serii nadawania, 12 × czas TX, zapisany w pamięci nieulotnej; restart go nie zeruje</td></tr>
-<tr><td>CCA</td><td>sprawdzenie, czy kanał jest wolny, przed nadawaniem; nie zastępuje limitu czasu TX</td></tr>
-<tr><td>ERP</td><td>moc promieniowana odniesiona do dipola półfalowego; w paśmie WICI limit 500 mW</td></tr>
-<tr><td>RNode</td><td>gotowy modem LoRa dla Reticulum; tu narzędzie porównawcze, nie docelowe radio</td></tr>
+<tr><td>dług ciszy</td><td>czas zakazu nadawania po każdej serii nadawania równy 12 × czas nadawania (TX), zapisany w pamięci nieulotnej; restart go nie zeruje</td></tr>
+<tr><td>CCA</td><td>sprawdzenie przed nadawaniem, czy kanał jest wolny; nie zastępuje limitu czasu nadawania</td></tr>
+<tr><td>ERP</td><td>zastępcza moc promieniowana, odniesiona do dipola półfalowego; w paśmie WICI limit wynosi 500 mW</td></tr>
+<tr><td>RNode</td><td>gotowy modem LoRa (modulacja z rozpraszaniem widma, o dużym zasięgu i małej przepływności) dla Reticulum; w WICI narzędzie porównawcze, a nie docelowe radio</td></tr>
 </tbody></table></div>
 
 <h2 id="ocena-obecnego-stanu">Ocena obecnego stanu</h2>
 
-<p>Koncepcja nadaje się do budowy prototypów i sprawdzania hipotez. Nie ma jeszcze dowodu łączności 1 km, działania całego stosu radiowego, pracy dobowej ani bezpieczeństwa własnej przetwornicy. Kontroler R01.3 pozostaje HOLD i służy jako stanowisko laboratoryjne P1. Płytka stacji R02, moduły RF, oprogramowanie układowe, aplikacja i pakiety START nie są ukończone. Wyniki modelu i CAD nie zastępują prób sprzętu.</p>
+<p>Koncepcja nadaje się do budowy prototypów i sprawdzania hipotez. Nie ma jeszcze dowodu łączności 1 km, działania całego stosu radiowego, pracy dobowej ani bezpieczeństwa własnej przetwornicy. Kontroler R01.3 pozostaje wstrzymany (HOLD) i służy jako stanowisko laboratoryjne P1. Płytka stacji R02, moduły RF, oprogramowanie układowe, aplikacja i pakiety START nie są ukończone. Wyniki modelu i projekt CAD nie zastępują prób sprzętu.</p>
 
-<p><a href="../review.md">Aktualne ustalenia przeglądu wewnętrznego</a> obejmują problem prądu wstrzymania USB (suspend), budżet ogranicznika ładowarki oraz kontrprzykład czasowy stosu sieciowego. Wersja 0.5 przenosi stos do stacji zasilanej z własnych źródeł, więc problem wstrzymania USB i limit czasu KISS nie blokują już wariantu bazowego. Nowym głównym ryzykiem jest dojrzałość stosu na mikrokontrolerze.</p>
+<p><a href="../review.md">Aktualne ustalenia przeglądu wewnętrznego</a> obejmują problem prądu w stanie wstrzymania USB (suspend), budżet ogranicznika ładowarki oraz kontrprzykład czasowy dla stosu sieciowego. Wersja 0.5 przenosi stos do stacji zasilanej z własnych źródeł. Dlatego problem wstrzymania USB i limit czasu protokołu KISS (prostego formatu ramek między komputerem a modemem) nie blokują już wariantu bazowego. Nowym głównym ryzykiem jest dojrzałość stosu na mikrokontrolerze.</p>
 
-<p>Pierwsze rozstrzygnięcia: miejsce sieci w gminnym planie ochrony ludności i jej status w stanach nadzwyczajnych; zasięg 1 km przy rzeczywistych wysokościach anten (model propagacji daje ujemny zapas przy antenach na wysokości okien); trwałe przyjęcie zgłoszenia przez OSP; działanie microReticulum i LXMF na wybranych mikrokontrolerach; rzeczywisty koszt radiowy LXMF, w tym zmieszczenie SA1 w jednym pakiecie (roboczo ≤256 B); pojemność sieci przy OSP (model: ok. 75 zgłoszeń/h dla całej sieci przez przekaźnik przed OSP, ok. 130/h bez niego; dodanie przekaźników jej nie zwiększa); zgodność dwóch wykonań stacji; zasilanie bez resetu; dostępność dyżurnego zdolnego do działania. Bez odbiorcy, który może pomóc, sprawna sieć jedynie przenosi dane.</p>
+<p>Najpierw trzeba rozstrzygnąć:</p>
+<ul>
+  <li>miejsce sieci w gminnym planie ochrony ludności i jej status w stanach nadzwyczajnych;</li>
+  <li>zasięg 1 km przy rzeczywistych wysokościach anten (model propagacji daje ujemny zapas przy antenach na wysokości okien);</li>
+  <li>trwałe przyjęcie zgłoszenia przez OSP;</li>
+  <li>działanie microReticulum i LXMF na wybranych mikrokontrolerach;</li>
+  <li>rzeczywisty koszt radiowy LXMF, w tym zmieszczenie SA1 w jednym pakiecie (roboczo ≤256 B);</li>
+  <li>pojemność sieci przy OSP (model: ok. 75 zgłoszeń/h dla całej sieci przez przekaźnik przed OSP, ok. 130/h bez niego; dodanie przekaźników jej nie zwiększa);</li>
+  <li>zgodność dwóch wykonań stacji;</li>
+  <li>zasilanie bez resetu;</li>
+  <li>dostępność dyżurnego zdolnego do działania.</li>
+</ul>
+
+<p>Bez odbiorcy, który może pomóc, sprawna sieć jedynie przenosi dane.</p>
 
 <p>Ryzyko ciągłości projektu, czyli utraty zespołu lub jego zaangażowania, ograniczają otwarta licencja, kompletna paczka źródeł (T7) i wymóg zakupu od producenta z umową wsparcia, a nie od zespołu projektu.</p>
 
 <p>Rygor projektu to jawne założenia, odtwarzalne próby, rozpoznawalne awarie i warunki przerwania pracy. Projekt nie deklaruje kwalifikacji wojskowej, odporności na celowe zagłuszanie ani certyfikacji środowiskowej.</p>
 
-<p><strong>Status dokumentu.</strong> To koncepcja prototypu 0.5, projektu prowadzonego na razie przez jedną osobę. Duża część analiz i obliczeń powstała z pomocą asystenta AI. Autor je przegląda, ale nie sprawdził ich niezależny inżynier, a uwag prawnych nie sprawdził prawnik. Każdą liczbę traktuj jako hipotezę do sprawdzenia; zgłoszenia błędów są mile widziane w <a href="https://github.com/tmierzwa/WICI/issues">Issues</a>.</p>
+<p><strong>Status dokumentu.</strong> To koncepcja prototypu 0.5, projektu prowadzonego na razie przez jedną osobę. Duża część analiz i obliczeń powstała z pomocą asystenta AI. Autor je przegląda, ale nie sprawdził ich niezależny inżynier, a uwag prawnych nie sprawdził prawnik. Każdą liczbę traktuj jako hipotezę do sprawdzenia; zgłoszenia błędów są mile widziane w zakładce <a href="https://github.com/tmierzwa/WICI/issues">Issues</a> repozytorium.</p>
 
 <p lang="en"><em>In English:</em> WICI is an open design of an emergency communication station for shelters in Poland. The base unit is a self-contained station with a screen and buttons that also relays traffic whenever it is on; a laptop and a Wi-Fi router are optional extensions. This is a prototype concept (0.5), written in Polish with AI assistance and not independently reviewed; no hardware has been built or tested yet. <a href="https://github.com/tmierzwa/WICI">Repository</a>.</p>
 
-<p>Licencje: <a href="../../LICENSE.md">mapa projektu</a>. Analizy są dostępne na licencji CC-BY-4.0, a rozdział 05 jako opis konstrukcji komunikacji na licencji CERN-OHL-P-2.0.</p>
+<p>Licencje: <a href="../../LICENSE.md">mapa projektu</a>. Analizy są dostępne na licencji CC-BY-4.0, a rozdział 05, jako opis konstrukcji komunikacji, na licencji CERN-OHL-P-2.0.</p>
 </article>
 <nav class="pager" aria-label="Kolejność czytania">
   <a class="next" href="01-potrzeby-i-wymagania.html" rel="next"><span>Następny →</span>01. Potrzeby i wymagania</a>
