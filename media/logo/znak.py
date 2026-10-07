@@ -99,15 +99,14 @@ def icon_svg():
 
 
 def favicon_svg():
-    # same kropki i sygnał bez kwadratu; przy 16 px impuls jest jednym wysokim zębem,
-    # a kolory idą za motywem przeglądarki
-    r, line, y, a, b = 11, 7, 40, 11, 53
-    sig = f"M{a} {y}H23L31 15L38 47L42 {y}H{b}"
+    # własny ciemny kafelek: Safari kładzie faviconę SVG na jasnym tle i nie stosuje w niej
+    # ciemnego motywu; przy 16 px impuls jest jednym wysokim zębem
+    r, line, y, a, b = 7.5, 5, 38, 13, 51  # obrys od szczytu zęba (17.5) do dołu kropek (45.5): środek na 32
+    sig = f"M{a} {y}H26L32 {y - 18}L37 {y + 6}L39 {y}H{b}"
     return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'
-            f'<style>.k{{fill:{INK_LIGHT}}}.s{{stroke:{YELLOW_LIGHT}}}'
-            f'@media (prefers-color-scheme:dark){{.k{{fill:{WHITE}}}.s{{stroke:{YELLOW}}}}}</style>'
-            f'<path class="s" fill="none" stroke-width="{line}" stroke-linejoin="round" d="{sig}"/>'
-            f'<circle class="k" cx="{a}" cy="{y}" r="{r}"/><circle class="k" cx="{b}" cy="{y}" r="{r}"/></svg>\n')
+            f'<rect width="64" height="64" rx="14" fill="{BG}"/>'
+            f'<path fill="none" stroke="{YELLOW}" stroke-width="{line}" stroke-linejoin="round" d="{sig}"/>'
+            f'<circle cx="{a}" cy="{y}" r="{r}" fill="{WHITE}"/><circle cx="{b}" cy="{y}" r="{r}" fill="{WHITE}"/></svg>\n')
 
 
 def main():
