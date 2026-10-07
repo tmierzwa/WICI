@@ -452,7 +452,7 @@ class WICI(MovingCameraScene):
         self.narr("s2c",
                   ([FadeIn(bl), FadeIn(br)], 0.8),
                   ("at", 1),
-                  ([bl.level.animate.set_value(0.04), br.level.animate.set_value(0.12), FadeIn(hours)], 3.0))
+                  ([bl.level.animate.set_value(0.0), br.level.animate.set_value(0.12), FadeIn(hours)], 3.0))
 
         broken = lines[1]
         flash_pt = broken.get_center()
@@ -637,6 +637,10 @@ class WICI(MovingCameraScene):
         lBE = Line(pos["B"], pos["E"], stroke_color=GREY_B, stroke_width=2.5, buff=0.3)
         lED = Line(pos["E"], pos["D"], stroke_color=GREY_B, stroke_width=2.5, buff=0.3)
         msg.move_to(pos["A"])
+        walker = person(0.5, ACCENT).move_to(pos["B"] + DOWN * 0.55)
+        u = (pos["D"] - pos["B"]) / np.linalg.norm(pos["D"] - pos["B"])
+        goal = pos["D"] - u * R * 0.8 + DOWN * 0.55
+        steps = DashedLine(walker.get_center(), goal, stroke_color=ACCENT, stroke_width=2, dash_length=0.08)
         self.narr("s5d",
                   ([FadeOut(ok), FadeOut(msg)], 0.4),
                   ("at", 1),
@@ -649,6 +653,15 @@ class WICI(MovingCameraScene):
                   (FadeIn(msg), 0.1),
                   *[([MoveAlongPath(msg, ArcBetweenPoints(pos[a], pos[b], angle=-PI / 5))], 0.45)
                     for a, b in [("A", "B"), ("B", "E"), ("E", "D"), ("D", "OSP")]],
+                  (Create(ok2 := check(0.4).next_to(OSP[1], UR, buff=0.15)), 0.3),
+                  ("at", 3),
+                  ([FadeOut(ok2), FadeOut(msg), E.animate.set_color(GREY_D), FadeOut(ringE),
+                    FadeOut(lBE), FadeOut(lED)], 0.6),
+                  (FadeIn(walker, shift=UP * 0.1), 0.3),
+                  ([MoveAlongPath(walker, Line(walker.get_center(), goal)), Create(steps)], 1.8),
+                  (ShowPassingFlash(Line(goal + UP * 0.55, pos["D"], buff=0.3).set_stroke(ACCENT, width=6),
+                                    time_width=0.6), 0.5),
+                  (ShowPassingFlash(links[("D", "OSP")].copy().set_stroke(ACCENT, width=6), time_width=0.6), 0.5),
                   (Create(check(0.4).next_to(OSP[1], UR, buff=0.15)), 0.3))
         self.clear_all()
 
@@ -710,17 +723,20 @@ class WICI(MovingCameraScene):
         l_in = Line(n1, top, buff=0.3, stroke_color=GREY_D, stroke_width=2)
         l_nb = Line(n1, n2, buff=0.3, stroke_color=GREY_D, stroke_width=2)
 
-        def pulse(line, color):
-            return ShowPassingFlash(line.copy().set_stroke(color, width=6), time_width=0.5)
+        def pulse(line, color, back=False):
+            ln = line.copy().set_stroke(color, width=6)
+            return ShowPassingFlash(ln.reverse_points() if back else ln, time_width=0.5)
         self.narr("s6c",
                   ([FadeIn(op, shift=RIGHT * 0.2), FadeIn(op_l)], 0.6),
                   ([Indicate(st.buttons, color=ACCENT, scale_factor=1.15), FadeOut(online), FadeIn(need)], 1.0),
                   ([FadeIn(nbs), FadeIn(nb_l), Create(l_out), Create(l_in), Create(l_nb)], 0.6),
-                  (pulse(l_out, ACCENT), 1.0),
+                  (pulse(l_out, ACCENT), 0.8),
+                  (pulse(l_out, OK, back=True), 0.8),
                   ("at", 1),
-                  ([pulse(l_nb, RADIO), pulse(l_in, RADIO)], 0.9),
-                  (Flash(top, color=RADIO, line_length=0.18, flash_radius=0.35), 0.4),
-                  (pulse(l_out, RADIO), 0.9))
+                  (pulse(l_in, ACCENT, back=True), 0.55),
+                  (pulse(l_nb, ACCENT), 0.55),
+                  (pulse(l_nb, OK, back=True), 0.55),
+                  (pulse(l_in, OK), 0.55))
 
         # rozszerzenia: laptop i router, zasilane przez przetwornice z zestawu
         sx, sy, sw = 3.6, 0.9, 1.9
