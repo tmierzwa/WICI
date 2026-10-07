@@ -57,7 +57,7 @@
 <ul>
   <li><a href="../README.md">Specyfikacja 0.5</a>: parametry, kontrakty i <a href="../spec/odbior.md">odbiór</a>.</li>
   <li><a href="../../software/reference/README.md">Model i dowody</a>: ramki, komunikaty i transakcje; <a href="../../software/reference/wyniki.json">wyniki obliczeń</a>.</li>
-  <li><a href="../../hardware/radio-test-r01/README.md">Kontroler R01.3</a>: CAD, eksporty, raporty i status HOLD; w 0.5 stanowisko laboratoryjne P1.</li>
+  <li><a href="../../hardware/dev-bench/README.md">Stanowisko deweloperskie</a>: płytki rozwojowe i moduły producentów do prób T1–T4; <a href="../../hardware/radio-test-r01/README.md">kontroler R01.3</a> w archiwum (CAD, eksporty, raporty).</li>
   <li><a href="../spec/bom-stacji.csv">BOM całej stacji</a>: kandydaci elementów, nie zakwalifikowana oferta produkcji.</li>
   <li><a href="../spec/karta.md">Karta obsługi</a>: tekst jednej dwustronnej kartki A4 przy stacji; teksty ekranu pochodzą z <a href="../spec/oprogramowanie.md">specyfikacji oprogramowania</a>.</li>
 </ul>
@@ -73,7 +73,7 @@
 </tr></thead><tbody>
 <tr><td><a href="https://reticulum.network/manual/understanding.html">Reticulum: działanie</a></td><td>role tożsamości, transportu i fizycznych interfejsów</td></tr>
 <tr><td><a href="https://reticulum.network/manual/interfaces.html">Reticulum: interfejsy</a></td><td>RNode, KISS i możliwość własnego adaptera</td></tr>
-<tr><td><a href="https://github.com/markqvist/Reticulum/blob/master/RNS/Interfaces/KISSInterface.py">KISSInterface: kod</a></td><td>limit czasu kontroli przepływu (5 s), istotny dla wariantu 0.4 i prób stosu przez stanowisko R01.3; nie dotyczy stacji 0.5</td></tr>
+<tr><td><a href="https://github.com/markqvist/Reticulum/blob/master/RNS/Interfaces/KISSInterface.py">KISSInterface: kod</a></td><td>limit czasu kontroli przepływu (5 s), istotny dla wariantu 0.4 i dawnego kontraktu modemu R01.3; nie dotyczy stacji 0.5</td></tr>
 <tr><td><a href="https://github.com/markqvist/LXMF">LXMF: projekt</a></td><td>wiadomości i opcjonalne węzły przechowywania</td></tr>
 <tr><td><a href="https://github.com/markqvist/LXMF/blob/master/LXMF/LXMessage.py">LXMessage: kod</a></td><td>wybór pakietu lub zasobu; narzut trzeba zmierzyć dla wydania</td></tr>
 <tr><td><a href="https://github.com/markqvist/NomadNet">NomadNet</a></td><td>klient tekstowy i strony Micron</td></tr>
@@ -85,6 +85,10 @@
 <tr><td><a href="https://github.com/torlando-tech/pyxis">pyxis</a>, <a href="https://github.com/thicketgarden/thicket-firmware">thicket</a></td><td>klienty LXMF z ekranem i klawiaturą na ESP32-S3 i nRF52840; wzorzec stacji z własnym interfejsem; projekty społecznościowe, ze znanymi błędami</td></tr>
 <tr><td><a href="https://www.ti.com/lit/ds/symlink/cc1120.pdf">TI CC1120: karta katalogowa</a></td><td>funkcje układu RF; nie dowód zasięgu P1</td></tr>
 <tr><td><a href="https://www.st.com/resource/en/datasheet/s2-lp.pdf">ST S2-LP: karta katalogowa</a></td><td>drugie wykonanie RF; osobne dopasowanie i konfiguracja</td></tr>
+<tr><td><a href="https://www.ti.com/tool/CC1120EMK-868-915">TI CC1120EMK-868-915</a> i <a href="https://www.ti.com/tool/BOOST-CCEMADAPTER">BOOST-CCEMADAPTER</a></td><td>moduły radiowe toru referencyjnego TI i adapter złączy EM na stanowisku deweloperskim A</td></tr>
+<tr><td><a href="https://www.st.com/en/evaluation-tools/x-nucleo-s2868a2.html">ST X-NUCLEO-S2868A2</a> i <a href="https://www.st.com/en/evaluation-tools/steval-fki868v2.html">STEVAL-FKI868V2</a></td><td>płytki radiowe S2-LP 868 MHz na stanowisku deweloperskim B</td></tr>
+<tr><td><a href="https://www.nordicsemi.com/Products/Development-hardware/nRF52840-DK">Nordic nRF52840-DK</a> i <a href="https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-devkitc-1/index.html">Espressif ESP32-S3-DevKitC-1</a></td><td>płytki rozwojowe obu rodzin MCU stanowiska deweloperskiego</td></tr>
+<tr><td><a href="https://www.adafruit.com/product/4694">Adafruit 4694</a> i <a href="https://www.adafruit.com/product/4719">Adafruit 4719</a></td><td>ekran Sharp LS027B7DH01 i pamięć FRAM MB85RS4MT na płytkach prototypowych stanowiska</td></tr>
 <tr><td><a href="https://www.semtech.com/products/wireless-rf/lora-connect/sx1276">Semtech SX1276: karta katalogowa</a></td><td>katalogowa czułość LoRa w porównaniu z P1 (rozdział 04); nie pomiar</td></tr>
 <tr><td>M. Hata, <em>Empirical formula for propagation loss in land mobile radio services</em>, IEEE Transactions on Vehicular Technology, VT-29(3), 1980</td><td>model Okumury-Haty użyty jako ostrzeżenie w rozdziale 06</td></tr>
 <tr><td><a href="https://www.zetetic.net/sqlcipher/license/">SQLCipher: licencja</a> i <a href="https://pypi.org/project/sqlcipher3/">sqlcipher3</a></td><td>kandydat do szyfrowania bazy w spoczynku (D13)</td></tr>

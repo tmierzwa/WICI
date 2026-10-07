@@ -1,6 +1,6 @@
 # WICI: warunki przed zamówieniem
 
-Status pozostaje **HOLD**, dopóki wszystkie pozycje nie mają potwierdzonego wyniku. W wersji 0.5 lista dotyczy stanowiska laboratoryjnego P1; wymagania płytki stacji R02 są w [specyfikacji elektroniki](../../docs/spec/elektronika.md).
+Kontroler R01.3 jest w **archiwum** i nie jest zamawiany; próby prowadzi się na [stanowisku deweloperskim](../dev-bench/README.md). Lista pozostaje jako zapis stanu kontrolera: pozycje toru RF (zegar TCXO, filtr harmonicznych, ochrona wyjścia RF, filtr SAW) przechodzą do wymagań płytki stacji R02 w [specyfikacji elektroniki](../../docs/spec/elektronika.md), a pozycje samego kontrolera są zamknięte bez wykonania.
 
 | Obszar | Obecny wynik | Co trzeba zakończyć |
 |---|---|---|
@@ -12,7 +12,7 @@ Status pozostaje **HOLD**, dopóki wszystkie pozycje nie mają potwierdzonego wy
 | Referencja RF | Wspólne połączenia CSA/CPA zgodne | Poprawny, przejrzany projekt/wykonanie RF; nie zamawiać z importu KiCad |
 | Import RF | DRC: 204 naruszenia, połączeń brakujących 0 | Wyjaśnić reguły wierceń, stosy padów i utracone dane importu. Zero brakujących połączeń nie oznacza poprawnego toru RF |
 | Zegar RF | Zwykły kwarc referencji nie spełnia P1 | Wybrać dostępny TCXO 32 MHz i zgodny footprint, zasilanie, sprzężenie wejścia oraz pełny budżet błędu ≤ ±2,5 ppm; przygotować kalibrację |
-| USB suspend i udar | Y1.1 połączone stale z V3; brak sterowanego zatrzymania zegara | Nie dotyczy stanowiska zasilanego z zasilacza laboratoryjnego (T4) ani samozasilanej stacji R02; blokuje R01.3 jako modem zasilany z VBUS (HOLD). ASE przy 8 MHz: do 7 mA, a cały modem w suspend ma budżet 2,5 mA. Potrzebna zmiana toru zegara/zasilania i firmware oraz pomiar całego modemu. Sprawdzić udar z pojemnościami za LDO i modułem RF; C1=1 µF sam nie zamyka bilansu USB |
+| USB suspend i udar | Y1.1 połączone stale z V3; brak sterowanego zatrzymania zegara | Nie dotyczy stanowiska deweloperskiego (zasilanie USB płytek rozwojowych jest narzędziem) ani samozasilanej stacji R02; blokowało R01.3 jako modem zasilany z VBUS, a kontroler jest w archiwum. ASE przy 8 MHz: do 7 mA, a cały modem w suspend ma budżet 2,5 mA. Potrzebna zmiana toru zegara/zasilania i firmware oraz pomiar całego modemu. Sprawdzić udar z pojemnościami za LDO i modułem RF; C1=1 µF sam nie zamyka bilansu USB |
 | Filtr harmonicznych | Brak dodatkowego filtru poza siecią dopasowania referencji TI | Zmierzyć 2. i 3. harmoniczną (1739 i 2609 MHz) z referencją TI; dodatkowy filtr dolnoprzepustowy tylko przy przekroczeniu poziomu EN 300 220. Płytka S2-LP ma filtr harmonicznych jako wymaganie |
 | Ochrona wyjścia RF | Brak w wykonaniu | Ochrona ESD o małej pojemności przed złączem 50 Ω; wpływ na dopasowanie i moc zmierzony |
 | Filtr SAW 868 MHz | Do oceny | Pomiar blokowania przez nadajniki LTE 800 i GSM 900 z filtrem i bez niego; strata wtrąceniowa wobec celu czułości na złączu. Referencja TI ma wspólny węzeł TX/RX: filtr tylko w osobnym torze RX za przełącznikiem SPDT albo we wspólnym torze o wytrzymałości ≥+20 dBm |

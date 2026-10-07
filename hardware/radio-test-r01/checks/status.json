@@ -64,7 +64,7 @@
     "inner_layer_track_count": 0,
     "mounting_holes": 4,
     "known_design_blockers": [
-      "Y1 standby pin is tied to V3; the oscillator alone can draw up to 7 mA against the 2.5 mA USB suspend budget of a bus-powered modem. New electrical revision and full-modem qualification required before release as a modem; the lab-supplied T4 bench and the self-powered R02 station are not affected."
+      "Y1 standby pin is tied to V3; the oscillator alone can draw up to 7 mA against the 2.5 mA USB suspend budget of a bus-powered modem. The controller is archived (no bench or modem is built from it); the development bench on vendor boards and the self-powered R02 station are not affected."
     ],
     "mechanical_fit": "NOT TESTED",
     "mechanical_print": "mechanika-1-do-1.pdf"
