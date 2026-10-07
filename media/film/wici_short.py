@@ -151,11 +151,11 @@ class Short(WICI):
         self.clear_all(0.3)
 
     def station(self):
-        st = station(3.4).move_to([-0.6, 2.7, 0])
+        st = station(3.4).move_to([0.0, 2.7, 0])
         st_l = T("stacja WICI", 26, GREY_A).next_to(st, DOWN, buff=0.2)
         wall = VMobject(stroke_color=GREY_D, stroke_width=3).set_points_as_corners(
-            [[-3.5, 0.9, 0], [-3.5, 4.4, 0], [2.4, 4.4, 0], [2.4, 0.9, 0]])
-        mx = 1.6
+            [[-2.9, 0.9, 0], [-2.9, 4.4, 0], [3.0, 4.4, 0], [3.0, 0.9, 0]])
+        mx = 2.2
         mst = Line([mx, 4.4, 0], [mx, 5.2, 0], stroke_color=WHITE, stroke_width=5)
         jack = st.jack.get_center()
         cable = VMobject(stroke_color=GREY_B, stroke_width=3).set_points_as_corners(
@@ -164,9 +164,9 @@ class Short(WICI):
         bars = VGroup(*[Rectangle(width=0.08, height=0.07 * (k + 1), stroke_width=0, fill_color="#1b2027",
                                   fill_opacity=1) for k in range(4)]).arrange(RIGHT, buff=0.05, aligned_edge=DOWN)
         online = VGroup(T("w sieci", 26, "#1b2027"), bars).arrange(RIGHT, buff=0.15).move_to(st.screen)
-        lp = laptop(1.4).move_to([-1.7, -0.3, 0])
+        lp = laptop(1.4).move_to([-1.1, -0.3, 0])
         rt = router(1.2)
-        rt.shift([1.6 - rt[0].get_x(), lp[2].get_y() - rt[0].get_y(), 0])
+        rt.shift([2.2 - rt[0].get_x(), lp[2].get_y() - rt[0].get_y(), 0])
         lp_l = T("laptop", 26, GREY_A).next_to(lp, DOWN, buff=0.2)
         rt_l = T("router", 26, GREY_A).next_to(rt[0], DOWN, buff=0.2).set_y(lp_l.get_y())
         tag = lambda n, m: VGroup(Circle(radius=0.2, stroke_color=WHITE, stroke_width=2),
@@ -191,13 +191,13 @@ class Short(WICI):
     def call(self):
         ok = VGroup(check(0.4), T("otwarte", 40, WHITE)).arrange(RIGHT, buff=0.3)
         todo = VGroup(T("?", 44, ACCENT, weight=HEAVY), T("niesprawdzone w terenie", 40, WHITE)).arrange(RIGHT, buff=0.3)
-        state = VGroup(ok, todo).arrange(DOWN, aligned_edge=LEFT, buff=0.4).move_to(UP * 4.6)
+        state = VGroup(ok, todo).arrange(DOWN, aligned_edge=LEFT, buff=0.4).move_to(UP * 3.9)
         chips = VGroup()
         for name in ["krótkofalowcy", "elektronicy", "programiści", "służby"]:
             t = T(name, 30, WHITE)
             box = RoundedRectangle(width=3.5, height=0.9, corner_radius=0.22, stroke_color=RADIO, stroke_width=3)
             chips.add(VGroup(box, t.move_to(box)))
-        chips.arrange_in_grid(2, 2, buff=(0.35, 0.35)).move_to(UP * 1.3)
+        chips.arrange_in_grid(2, 2, buff=(0.35, 0.35)).move_to(UP * 0.6)
         self.narr("v6",
                   ([FadeIn(ok, shift=RIGHT * 0.2)], 0.6),
                   ([FadeIn(todo, shift=RIGHT * 0.2)], 0.6),
@@ -205,7 +205,7 @@ class Short(WICI):
                   ([LaggedStart(*[GrowFromCenter(c) for c in chips], lag_ratio=0.3)], 1.6))
         self.clear_all(0.3)
 
-        motto = T("Rozsyłamy wici!", 60, ACCENT, font=SERIF).move_to(UP * 3.4)
-        url = T("github.com/tmierzwa/WICI", 40, WHITE, weight=SEMIBOLD).move_to(UP * 1.9)
+        motto = T("Rozsyłamy wici!", 60, ACCENT, font=SERIF).move_to(UP * 3.0)
+        url = T("github.com/tmierzwa/WICI", 40, WHITE, weight=SEMIBOLD).move_to(UP * 1.5)
         self.narr("v7", ([FadeIn(url)], 1.0), ("at", 1), (FadeIn(motto), 0.8))
         self.wait(1.0)

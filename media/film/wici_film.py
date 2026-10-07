@@ -552,7 +552,7 @@ class WICI(MovingCameraScene):
                                          stroke_width=3),
                         *[Circle(radius=0.06, stroke_color=GREY_A, stroke_width=2).shift(UP * y)
                           for y in (0.12, -0.08)]).next_to(power, RIGHT, buff=0.3)
-        cells = aa_cells(4, 0.5).move_to([1.9, ra.get_y(), 0])
+        cells = aa_cells(4, 0.5).move_to([3.1, ra.get_y(), 0])
         bat = VGroup(cells, T("zwykłe baterie", 22, GREY_A).next_to(cells, DOWN, buff=0.2))
         wire = Line(ra.get_right(), cells.get_left(), stroke_color=GREY_B, stroke_width=3)
         self.narr("s4e",
@@ -739,11 +739,12 @@ class WICI(MovingCameraScene):
                   (pulse(l_in, OK), 0.55))
 
         # rozszerzenia: laptop i router, zasilane przez przetwornice z zestawu
-        sx, sy, sw = 3.6, 0.9, 1.9
-        lp = laptop().move_to([-0.5, 1.1, 0])
+        dx = 0.35  # cały schemat poziomu 3 przesunięty dla równych marginesów
+        sx, sy, sw = 3.1 + dx, 0.9, 1.9
+        lp = laptop().move_to([-0.5 + dx, 1.1, 0])
         base_y = lp[2].get_y()
         rt = router()
-        rt.shift([-3.3 - rt[0].get_x(), base_y - rt[0].get_y(), 0])
+        rt.shift([-3.3 + dx - rt[0].get_x(), base_y - rt[0].get_y(), 0])
         rt_l = T("router", 22, GREY_A).next_to(rt[0], DOWN, buff=0.25)
         lp_l = T("stary laptop", 22, GREY_A).next_to(lp, DOWN, buff=0.25)
         st_small = st.copy()
@@ -757,7 +758,7 @@ class WICI(MovingCameraScene):
                    stroke_color=GREY_B, stroke_width=3)
         eth = Line(rt[0].get_right(), lp[2].get_left(), stroke_color=GREY_B, stroke_width=3)
         old = VGroup(wall, cable, mst, ant_l, waves, op, op_l, nbs, nb_l, l_out, l_in, l_nb)
-        big = phone(2.0).move_to([-6.0, 1.0, 0])
+        big = phone(2.0).move_to([-6.0 + dx, 1.0, 0])
         wf = wifi(rt[1][0].get_end() + UP * 0.05, 0.16, 3, WHITE, angle=PI * 0.8)
         form = VGroup(logo(0.62),
                       *[Rectangle(width=0.7, height=0.12, stroke_color=GREY_B, stroke_width=1) for _ in range(3)],
@@ -778,13 +779,13 @@ class WICI(MovingCameraScene):
                   ([LaggedStart(*[AnimationGroup(FadeIn(n[0]), Create(n[1])) for n in nos], lag_ratio=0.5)], 1.4))
 
         ry = -1.3
-        inv = inverter(1.3).move_to([-1.0, ry, 0])
+        inv = inverter(1.3).move_to([-1.0 + dx, ry, 0])
         inv_l = label2(["przetwornica", "12 V → 230 V"]).next_to(inv, DOWN, buff=0.15)
-        bat_a = Battery(1.0, 0.48).move_to([1.6, ry, 0])
+        bat_a = Battery(1.0, 0.48).move_to([1.6 + dx, ry, 0])
         bat_a_l = label2(["akumulator", "samochodowy"]).next_to(bat_a.box, DOWN, buff=0.15)
-        chg = charger(1.3).move_to([-6.0, ry, 0])
+        chg = charger(1.3).move_to([-6.0 + dx, ry, 0])
         chg_l = label2(["ładowarka", "telefonów"]).next_to(chg, DOWN, buff=0.15)
-        bat_c = Battery(1.0, 0.48).move_to([-3.7, ry, 0])
+        bat_c = Battery(1.0, 0.48).move_to([-3.7 + dx, ry, 0])
         bat_c_l = label2(["drugi akumulator", "samochodowy"]).next_to(bat_c.box, DOWN, buff=0.15)
         PW = dict(stroke_color=ORANGE, stroke_width=3)
         it = inv[0].get_top()[1]
@@ -805,7 +806,7 @@ class WICI(MovingCameraScene):
                    T("zestaw WICI", 22, ACCENT)).arrange(RIGHT, buff=0.2),
             VGroup(RoundedRectangle(width=0.36, height=0.26, corner_radius=0.05, stroke_color=GREY_A, stroke_width=3),
                    T("z lokalnego zasobu", 22, GREY_A)).arrange(RIGHT, buff=0.2),
-        ).arrange(DOWN, aligned_edge=LEFT, buff=0.25).move_to([4.9, -1.35, 0])
+        ).arrange(DOWN, aligned_edge=LEFT, buff=0.25).move_to([5.0, -1.35, 0])
         self.narr("s6e",
                   ([FadeIn(bat_a), FadeIn(bat_a_l), FadeIn(inv), FadeIn(inv_l), FadeIn(key[0])], 0.8),
                   ([Create(w_a), Create(w_st), Create(w_rt), Create(w_lp)], 1.0),
