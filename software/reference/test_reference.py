@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from reference import (OSPStore, PREFIX, assemble, crc16, decode_message,
+from reference import (OSPStore, PREFIX, accept_from_osp, assemble, crc16, decode_message,
                        encode_message, fragment, parse_frame, status_after)
 
 MID = "00112233445566778899aabbccddeeff"
@@ -108,6 +108,11 @@ class Messages(unittest.TestCase):
         polish[7] = "Zażółć gęślą jaźń — 2 osoby"
         self.assertEqual(decode_message(encode_message(polish)), polish)
 
+    def test_button_request_fits_one_opportunistic_packet(self):
+        # About 284 B for the reference Reticulum/LXMF versions (conception, chapter 05; D01 open).
+        worst_button = [1, 0, MID, 65535, 4, 999, '"' * 64, "", 2]
+        self.assertLessEqual(len(encode_message(worst_button)), 284)
+
     def test_status_cannot_reuse_received_event_or_state(self):
         for event, state in ((1, 2), (1, 3), (2, 1)):
             external_wire = json.dumps([1, 2, MID, 0, event, state]).encode("ascii")
@@ -130,7 +135,8 @@ class DurableReception(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.path = Path(self.tmp.name) / "osp.db"
-        self.store = OSPStore(self.path)
+        self.trusted = (b"S" * 16, b"T" * 16)
+        self.store = OSPStore(self.path, self.trusted)
         self.source = b"S" * 16
         self.wire = encode_message(REQUEST)
 
@@ -190,6 +196,59 @@ class DurableReception(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.store.receive(self.source, self.wire, False)
         self.assertEqual(self.store.db.execute("SELECT count(*) FROM received").fetchone()[0], 0)
+
+
+class Trust(unittest.TestCase):
+    """Check quarantine of unknown shelters and pinned-OSP acceptance at the station."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.path = Path(self.tmp.name) / "osp.db"
+        self.store = OSPStore(self.path)
+        self.unknown = b"U" * 16
+        self.wire = encode_message(REQUEST)
+
+    def tearDown(self):
+        self.store.close()
+        self.tmp.cleanup()
+
+    def count(self, table):
+        return self.store.db.execute(f"SELECT count(*) FROM {table}").fetchone()[0]
+
+    def test_unknown_sender_quarantined_without_ack(self):
+        self.assertIsNone(self.store.receive(self.unknown, self.wire, True))
+        self.store.close()
+        self.store = OSPStore(self.path)
+        self.assertIsNone(self.store.receive(self.unknown, self.wire, True))
+        self.assertEqual((self.count("quarantine"), self.count("received"), self.count("ack_outbox")), (1, 0, 0))
+
+    def test_approval_creates_request_and_ack_atomically(self):
+        self.store.receive(self.unknown, self.wire, True)
+        self.store.receive(self.unknown, encode_message(TEST[:3] + [1] + TEST[4:]), True)
+        acks = self.store.approve(self.unknown)
+        self.assertEqual([decode_message(a)[3] for a in acks], [0, 1])
+        self.assertEqual((self.count("quarantine"), self.count("received"), self.count("ack_outbox")), (0, 2, 2))
+        self.assertEqual(self.store.receive(self.unknown, self.wire, True), acks[0])
+
+    def test_quarantine_conflict_rejected(self):
+        self.store.receive(self.unknown, self.wire, True)
+        changed = REQUEST.copy()
+        changed[7] = "Inne zgłoszenie"
+        with self.assertRaises(ValueError):
+            self.store.receive(self.unknown, encode_message(changed), True)
+
+    def test_station_accepts_only_pinned_osp(self):
+        osp = b"O" * 16
+        status = encode_message([1, 2, MID, 0, 2, 2])
+        self.assertEqual(accept_from_osp(osp, osp, status, True)[1], 2)
+        for received in (encode_message([1, 1, MID, 0, 1, 1]), encode_message([1, 4, MID, 1, "Komunikat"])):
+            accept_from_osp(osp, osp, received, True)
+        with self.assertRaises(ValueError):
+            accept_from_osp(osp, b"X" * 16, encode_message([1, 1, MID, 0, 1, 1]), True)
+        with self.assertRaises(ValueError):
+            accept_from_osp(osp, osp, status, False)
+        with self.assertRaises(ValueError):
+            accept_from_osp(osp, osp, self.wire, True)
 
 
 if __name__ == "__main__":

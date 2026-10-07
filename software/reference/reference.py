@@ -166,18 +166,40 @@ def status_after(current_event: int, current_state: int, event: int, state: int)
     return event, state
 
 
-class OSPStore:
-    """Model atomic OSP reception and ACK outbox creation from the specification."""
+def accept_from_osp(pinned: bytes, source: bytes, wire: bytes, signature_valid: bool) -> list:
+    """Accept RECEIVED, STATUS, REPLY or BULLETIN at a station only from the signed, pinned OSP."""
+    if signature_valid is not True or len(pinned) != 16 or source != pinned:
+        raise ValueError("Untrusted sender")
+    value = decode_message(wire)
+    if value[1] not in (1, 2, 3, 4):
+        raise ValueError("Unexpected message type for a station")
+    return value
 
-    def __init__(self, path: Path):
-        """Open a test database with the specified SQLite durability settings."""
+
+class OSPStore:
+    """Model atomic OSP reception, quarantine of unknown senders and ACK outbox creation."""
+
+    def __init__(self, path: Path, trusted: tuple[bytes, ...] = ()):
+        """Open a test database with the specified SQLite durability settings and pinned shelters."""
         self.db = sqlite3.connect(path)
         self.db.execute("PRAGMA journal_mode=DELETE")
         self.db.execute("PRAGMA synchronous=FULL")
         self.db.executescript(Path(__file__).with_name("schema.sql").read_text())
+        with self.db:
+            self.db.executemany("INSERT OR IGNORE INTO trusted VALUES(?)", [(s,) for s in trusted])
 
-    def receive(self, source: bytes, wire: bytes, signature_valid: bool, before_commit=None) -> bytes:
-        """Commit a verified REQUEST or TEST and its ACK together; reject conflicting reuse."""
+    def _store(self, table: str, source: bytes, mid: str, revision: int, canonical: bytes) -> None:
+        """Insert one message key into a table; reject the same key with other content."""
+        previous = self.db.execute(
+            f"SELECT payload FROM {table} WHERE source=? AND id=? AND revision=?",
+            (source, mid, revision),
+        ).fetchone()
+        if previous is not None and previous[0] != canonical:
+            raise ValueError("Conflicting request")
+        self.db.execute(f"INSERT OR IGNORE INTO {table} VALUES(?,?,?,?)", (source, mid, revision, canonical))
+
+    def receive(self, source: bytes, wire: bytes, signature_valid: bool, before_commit=None) -> bytes | None:
+        """Commit a verified REQUEST or TEST with its ACK; quarantine an unknown sender without ACK."""
         if signature_valid is not True or len(source) != 16:
             raise ValueError("Unverified sender")
         value = decode_message(wire)
@@ -187,16 +209,12 @@ class OSPStore:
         _, _, mid, revision, *_ = value
         ack = encode_message([1, 1, mid, revision, 1, 1])
         with self.db:
-            previous = self.db.execute(
-                "SELECT payload FROM received WHERE source=? AND id=? AND revision=?",
-                (source, mid, revision),
-            ).fetchone()
-            if previous is not None and previous[0] != canonical:
-                raise ValueError("Conflicting request")
-            self.db.execute(
-                "INSERT OR IGNORE INTO received VALUES(?,?,?,?)",
-                (source, mid, revision, canonical),
-            )
+            if self.db.execute("SELECT 1 FROM trusted WHERE source=?", (source,)).fetchone() is None:
+                self._store("quarantine", source, mid, revision, canonical)
+                if before_commit is not None:
+                    before_commit()
+                return None
+            self._store("received", source, mid, revision, canonical)
             self.db.execute(
                 "INSERT OR IGNORE INTO ack_outbox VALUES(?,?,?,?)",
                 (source, mid, revision, ack),
@@ -204,6 +222,24 @@ class OSPStore:
             if before_commit is not None:
                 before_commit()
         return ack
+
+    def approve(self, source: bytes) -> list[bytes]:
+        """Record the duty officer's approval; move quarantined messages to requests with ACKs atomically."""
+        if len(source) != 16:
+            raise ValueError("Invalid sender")
+        acks = []
+        with self.db:
+            self.db.execute("INSERT OR IGNORE INTO trusted VALUES(?)", (source,))
+            rows = self.db.execute(
+                "SELECT id, revision, payload FROM quarantine WHERE source=? ORDER BY id, revision", (source,)
+            ).fetchall()
+            for mid, revision, canonical in rows:
+                self._store("received", source, mid, revision, canonical)
+                ack = encode_message([1, 1, mid, revision, 1, 1])
+                self.db.execute("INSERT OR IGNORE INTO ack_outbox VALUES(?,?,?,?)", (source, mid, revision, ack))
+                acks.append(ack)
+            self.db.execute("DELETE FROM quarantine WHERE source=?", (source,))
+        return acks
 
     def close(self) -> None:
         """Close the model database after a test."""

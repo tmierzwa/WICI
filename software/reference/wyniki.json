@@ -14,6 +14,133 @@
     "mosfet_hot_resistance_factor": 1.7,
     "hotplug_loop_resistance_assumed_ohm": 0.04
   },
+  "station_level1": {
+    "assumptions": {
+      "rail_v": 3.3,
+      "rail_efficiency": 0.85,
+      "rx_ma": 22.0,
+      "tx_ma_13dbm": 45.0,
+      "tx_fraction": 0.07692307692307693,
+      "screen_fram_ma": 1.0,
+      "reserve_fraction": 0.2,
+      "aa_set_usable_wh": 14.4,
+      "aa_cell_wh": 4.5,
+      "aa_usable_fraction": 0.8
+    },
+    "variants": {
+      "nrf52840": {
+        "mcu_ma_assumed": 3.0,
+        "input_w": 0.11438009049773755,
+        "wh_24h_with_reserve": 3.294146606334841,
+        "aa_set_hours": 104.9133633990031,
+        "battery_12v_days": 109.28475354062823
+      },
+      "esp32_s3": {
+        "mcu_ma_assumed": 30.0,
+        "input_w": 0.21920361990950227,
+        "wh_24h_with_reserve": 6.313064253393666,
+        "aa_set_hours": 54.74362150111468,
+        "battery_12v_days": 57.02460573032779
+      }
+    },
+    "laptop_relay_wh_24h_with_reserve": [
+      787.5952941176471,
+      2312.3011764705884
+    ],
+    "laptop_relay_to_station_ratio": [
+      124.75641978366774,
+      701.9424005063694
+    ]
+  },
+  "level3_pools": {
+    "laptop_router_wh_with_reserve": 1465.2423529411767,
+    "laptop_router_batteries": 5,
+    "phones_wh_with_reserve": 375.0,
+    "phones_batteries": 2,
+    "separate_pool_batteries": 7,
+    "lead_acid_capacity_factor_0c_assumed": 0.8,
+    "batteries_at_0c_combined": 7,
+    "host_sweep": {
+      "15w_ac": {
+        "input_w": 27.347058823529412,
+        "wh_24h_with_reserve": 787.5952941176471,
+        "battery_equivalents": 3
+      },
+      "35w_ac": {
+        "input_w": 50.8764705882353,
+        "wh_24h_with_reserve": 1465.2423529411767,
+        "battery_equivalents": 5
+      },
+      "60w_ac": {
+        "input_w": 80.28823529411765,
+        "wh_24h_with_reserve": 2312.3011764705884,
+        "battery_equivalents": 7
+      }
+    }
+  },
+  "sa1_sizes": {
+    "content_bytes": {
+      "typical_request": 174,
+      "max_fields_request": 222,
+      "button_request": 106,
+      "worst_button_request": 188,
+      "received": 50,
+      "max_bulletin": 246,
+      "worst_reply": 252,
+      "worst_request": 382,
+      "worst_bulletin": 438
+    },
+    "opportunistic_content_estimate": 284,
+    "link_content_estimate": 316,
+    "fits_one_opportunistic_packet": {
+      "typical_request": true,
+      "max_fields_request": true,
+      "button_request": true,
+      "worst_button_request": true,
+      "received": true,
+      "max_bulletin": true,
+      "worst_reply": true,
+      "worst_request": false,
+      "worst_bulletin": false
+    }
+  },
+  "relay_w10": {
+    "packets_bytes": {
+      "typical_request": 387,
+      "max_fields_request": 435,
+      "received": 259,
+      "packet_proof": 83
+    },
+    "tx_plus_quiet_s": {
+      "typical_request": 11.526666666666667,
+      "max_fields_request": 13.194999999999999,
+      "received": 8.125,
+      "packet_proof": 2.4266666666666667
+    },
+    "per_request_s": [
+      24.505000000000003,
+      26.173333333333332
+    ],
+    "fifty_requests_min": [
+      20.420833333333338,
+      21.81111111111111
+    ],
+    "per_retry_s": [
+      11.526666666666667,
+      13.194999999999999
+    ],
+    "fifty_requests_min_at_1200_bit_s": [
+      81.68333333333334,
+      87.24444444444444
+    ],
+    "quiet_10t_throughput_gain": 0.18181818181818188,
+    "p1_tx_plus_quiet_s": {
+      "100b": 3.423333333333333,
+      "250b": 7.301666666666667,
+      "500b": 14.603333333333333,
+      "600b": 17.398333333333333
+    }
+  },
   "energy": {
     "station_24h_wh": 1221.0352941176473,
     "phones_wh": 312.5,
@@ -46,7 +173,18 @@
     "fresnel_radius_midpoint_1km_m": 9.28703015032076,
     "eeprom_writes_per_day_worst": 132923.0769230769,
     "eeprom_years_worst_1m_cycles_256_pages": 5.276509386098428,
-    "worst_request_content_bytes": 382
+    "worst_request_content_bytes": 382,
+    "erp_dipole_dbm": 12.0,
+    "erp_collinear_dbm": 15.35,
+    "erp_limit_dbm": 27.0,
+    "collinear_gain_both_ends_db": 6.7,
+    "hata_urban_margin_1km_collinear_db": {
+      "base_30m_mobile_1.5m": 5.986732095496933,
+      "base_10m_mobile_1.5m": -0.6070836447287888,
+      "base_10m_mobile_3m": 3.1927317758236597
+    },
+    "fade_margin_for_99_of_100_assumed_db": 10.0,
+    "fram_years_worst_1e13_cycles": 206113.64789446985
   },
   "charger": {
     "nominal_feedback_v": 5.1168000000000005,
@@ -75,6 +213,8 @@
   },
   "limits": [
     "No radio range measurement; Hata is used below its 30 m base height range",
+    "Station currents are catalogue assumptions, not measurements; AA capacity depends on load and temperature",
+    "LXMF packet sizes follow the reference Reticulum e40191b and LXMF c3ff2d6 structure, not captured traffic",
     "No transformer leakage or PSU inrush model",
     "No switching, magnetic or reactive current losses in voltage margin",
     "No battery capacity measurement",
