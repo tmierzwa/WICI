@@ -54,7 +54,7 @@ Na razie projekt ma jednego opiekuna repozytorium ([@tmierzwa](https://github.co
 
 Zmiany krytyczne dla bezpieczeństwa ludzi (przetwornica 230 V i ochrona PE, ochrona portów telefonów przed przepięciem, zabezpieczenia akumulatorów, budżet czasu nadawania) wymagają, oprócz opiekuna repozytorium, przeglądu przez osobę z odpowiednimi kwalifikacjami. Dopóki taka osoba nie dołączy do projektu, te części pozostają opisem do prób i mają status HOLD.
 
-Główna gałąź jest chroniona: scalenie wymaga przejścia CI. Wydania mają tagi `v*` i paczkę źródłową z pełną kontrolą manifestu.
+Główna gałąź jest chroniona: scalenie wymaga przejścia CI. Wydania mają tagi `v*` i paczkę źródłową z pełną kontrolą manifestu. Reguła repozytorium nie pozwala przesunąć ani usunąć tagu `v*`, także administratorom; poprawka wydania dostaje nowy numer, np. `v0.5.1`.
 
 ## Licencje
 
