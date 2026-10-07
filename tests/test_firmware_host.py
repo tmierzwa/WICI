@@ -250,7 +250,8 @@ int uiScript() {
                 }
             }
             con.invalidate();
-        } else if (sscanf(line, "Y %u", &a) == 1) services.uptime = a;
+        } else if (!strcmp(line, "LED")) printf("alarm_cause %d\n", app.alarmCause(services.uptime));
+        else if (sscanf(line, "Y %u", &a) == 1) services.uptime = a;
         else if (sscanf(line, "KD %15s %u", word, &a) == 2 || sscanf(line, "KU %15s %u", word, &a) == 2) {
             size_t i = 0;
             while (i < 4 && strcmp(word, names[i])) ++i;
@@ -926,14 +927,17 @@ class HostUnitTests(unittest.TestCase):
     def test_alarms_no_confirmation_then_no_read(self):
         texts = ui_texts.load()["texts"]
         create = ["K OK 0", "K OK 0", "K OK 0", "K OK 0", "K DOWN 0", "K OK 0", "K OK 0", "K OK 0", "K OK 0", "K OK 0"]
-        script = create + ["Y 999", "T 100000", "R", "Y 1000", "T 101000", "R", "K OK 0", "R", "T 102000", "R",
-                           "I [1,1,\"%s\",0,1,1]" % self.REQUEST_ID, "Y 2799", "T 103000", "R", "Y 2800", "T 104000", "R",
-                           "K OK 0", "R", "Y 9000", "T 105000", "R"]
+        script = create + ["Y 999", "LED", "T 100000", "R", "Y 1000", "T 101000", "R", "K OK 0", "R", "LED", "T 102000", "R",
+                           "I [1,1,\"%s\",0,1,1]" % self.REQUEST_ID, "Y 2799", "LED", "T 103000", "R", "Y 2800", "T 104000", "R",
+                           "K OK 0", "R", "Y 9000", "T 105000", "R", "LED"]
         out = self.hosted(script)
         s = self.screens(out)
         self.assertEqual([x[0] for x in s], ["main", "alarm", "main", "main", "main", "alarm", "main", "main"])
         self.assertShows(s[1], texts["brak_potwierdzenia"][0].replace("[n]", "15") + " " + texts["zapisz_numer"][0].replace("[xxxx]", "2594"))
         self.assertShows(s[5], texts["brak_odczytu"][0] + " " + texts["zapisz_numer"][0].replace("[xxxx]", "2594"))
+        # Dioda alarmu: przyczyna trwa po potwierdzeniu OK i znika dopiero z potwierdzeniem od odbiorcy.
+        self.assertEqual([x for x in out if x.startswith("alarm_cause")],
+                         ["alarm_cause 0", "alarm_cause 1", "alarm_cause 0", "alarm_cause 1"])
 
     def test_lists_render_from_the_ram_index(self):
         # Lista WIADOMOŚCI i PRZEKAZANIE ZMIANY korzystają ze skrótu z indeksu w RAM: rysowanie nie czyta rekordów

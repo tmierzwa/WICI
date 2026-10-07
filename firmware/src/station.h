@@ -98,7 +98,10 @@ public:
     bool testPaused() const { return testPaused_; }
     uint32_t pendingTest() const;          // seq TEST czekającego na nadanie; 0 gdy brak
     // Najpilniejszy niepotwierdzony alarm (bez potwierdzonych przez ackAlarm); false gdy brak.
-    bool alarm(uint32_t nowS, Alarm& out) const;
+    // withAcked = true: także potwierdzone, czyli przyczyna alarmu nadal trwa.
+    bool alarm(uint32_t nowS, Alarm& out, bool withAcked = false) const;
+    // Przyczyna alarmu trwa (dioda alarmu): potwierdzenie OK gasi dźwięk, nie diodę.
+    bool alarmCause(uint32_t nowS) const { Alarm a; return alarm(nowS, a, true); }
     void ackAlarm(const Alarm& alarm);
 
 private:

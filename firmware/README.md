@@ -4,7 +4,7 @@ Katalog zawiera oprogramowanie układowe stacji. Obecny stan to pierwsze kroki n
 
 Środowisko `bench-n1` buduje ten sam obraz dla stanowiska A na [płytce nośnej N1](#płytka-nośna-n1-bench-n1) zamiast przewodów: inne piny SPI, radia i ekranu oraz panel płytki (przełącznik CISZA, przycisk przygotowania, dioda alarmu, brzęczyk, VTEST).
 
-Obraz skompilowano (PlatformIO, rdzeń Adafruit nRF52 1.7.0; `bench-a`: 51 008 B RAM, 174 768 B flash; `bench-n1`: 51 208 B RAM, 181 236 B flash; podział w [przeglądzie rozmiaru](#rozmiar-i-wydajność)). **Nie uruchomiono go na sprzęcie**: odpowiedzi poleceń, numery pinów, działanie SPI z modułem i przyjęcie rejestrów przez układ wymagają sprawdzenia na płytce według kroków niżej.
+Obraz skompilowano (PlatformIO, rdzeń Adafruit nRF52 1.7.0; `bench-a`: 51 008 B RAM, 174 800 B flash; `bench-n1`: 51 216 B RAM, 181 332 B flash; podział w [przeglądzie rozmiaru](#rozmiar-i-wydajność)). **Nie uruchomiono go na sprzęcie**: odpowiedzi poleceń, numery pinów, działanie SPI z modułem i przyjęcie rejestrów przez układ wymagają sprawdzenia na płytce według kroków niżej.
 
 ## Okablowanie stanowiska A
 
@@ -50,14 +50,14 @@ Diody LED1–4 płytki DK zachowują swoje role. Ustalenia dla N1:
 - **Ekran:** DISP w stanie niskim od startu (2,2 kΩ do masy na płytce), stan wysoki dopiero po poleceniu CLEAR w `display.begin()`.
 - **CISZA:** przełącznik działa na zmianę położenia po 50 ms stałego stanu; położenie przy starcie ustawia ciszę od razu. Zmiana trafia do dziennika (`silence on (switch)`) i jako zdarzenie `radio` do laptopa. `SILENCE` z portu USB obowiązuje do następnego przełączenia.
 - **Tryb przygotowania:** przytrzymanie przycisku przygotowania przez 2 s przełącza tryb (włącza albo wyłącza; wyłączenie przerywa pomiary jak `PREP 0`), z krótkim sygnałem. Przycisk wciśnięty przy starcie nie przełącza trybu. `PREP` z potwierdzeniem OK zostaje jako zapasowe.
-- **Dioda alarmu:** świeci przy ekranie alarmu i w ciszy radiowej. **Brzęczyk** (2048 Hz z `tone()`, PWM2; stały stan wysoki pobierałby około 75 mA z 5 V): na ekranie alarmu 200 ms co 2 s do potwierdzenia OK, jeden sygnał przy włączeniu ciszy. To uproszczenie [zasad alarmów](../docs/spec/oprogramowanie.md): dioda gaśnie razem z ekranem alarmu, a nie po usunięciu przyczyny.
+- **Dioda alarmu** (według [zasad alarmów](../docs/spec/oprogramowanie.md)): świeci, dopóki trwa przyczyna alarmu, także po potwierdzeniu OK, i w ciszy radiowej. Przyczynę (zgłoszenie po progu bez potwierdzenia od odbiorcy albo pilność 2 bez odczytu, niezależnie od potwierdzenia OK) sprawdza `Station::alarmCause` co sekundę; dioda gaśnie, gdy przyjdzie potwierdzenie albo odczyt, albo zgłoszenie zostanie anulowane lub zastąpione. **Brzęczyk** (2048 Hz z `tone()`, PWM2; stały stan wysoki pobierałby około 75 mA z 5 V): na ekranie alarmu 200 ms co 2 s do potwierdzenia OK, jeden sygnał przy włączeniu ciszy.
 
 Polecenia diagnostyczne do kroków A3–A4 [uruchomienia](../hardware/dev-bench/uruchomienie.md#stanowisko-a) (tylko `bench-n1`):
 
 | Polecenie | Odpowiedź |
 |---|---|
 | `BTN` | cztery przyciski oraz `silence_switch` i `prep_button` (true = linia zwarta do masy), stan `silence` i `prep`, `alarm_led` |
-| `LED 5 <0\|1>` | dioda alarmu; obowiązuje do następnej zmiany ekranu alarmu albo ciszy |
+| `LED 5 <0\|1>` | dioda alarmu; obowiązuje do następnej zmiany przyczyny alarmu albo ciszy |
 | `BUZZ [<ms>] [<hz>]` | brzęczyk przez `ms` (domyślnie 500, do 5000; 0 przerywa) z częstotliwością `hz` (domyślnie 2048) |
 | `VTEST` | `vtest_mv` (napięcie na zacisku J12 = napięcie pinu × 6), `pin_mv`, `raw`: średnia 16 próbek SAADC, 12 bitów, pełna skala 3,6 V |
 | `DISPLAY <hz>` | zegar SPI ekranu 125 000–2 000 000 Hz do restartu, potem odpowiedź jak `DISPLAY` z polem `spi_hz` |
@@ -236,7 +236,7 @@ Wymagania: [ekran i przyciski stacji](../docs/spec/oprogramowanie.md#ekran-i-prz
 
 Po włączeniu zasilania pierwszym ekranem jest wybór języka; wybór i każda zmiana ekranu trafiają do pierścienia ustawień w FRAM i do pamięci RAM niezerowanej przy starcie (sekcja `.noinit`), więc po restarcie programowym (`REBOOT`) albo przez watchdog stacja wraca do języka i ekranu sprzed restartu bez pytania. Watchdog sprzętowy (60 s, dłużej niż potwierdzenie przyciskiem) jest odświeżany w każdym obiegu pętli stacji i zatrzymuje się, gdy debugger zatrzyma rdzeń; restart przez watchdog trafia do dziennika zdarzeń (`RESETREAS`). Radio startuje niezależnie od ekranu, jak wymaga specyfikacja.
 
-Przyjęte interpretacje i braki: pasek trybu przygotowania zastępuje wiersz 1 („stale pokazuje”); każdy ekran poza głównym wraca do ekranu głównego po 3 min bezczynności (specyfikacja podaje ten czas tylko dla kreatora); przy niesprawnym radiu wiersz 1 to `RADIO ---`, bo lista tekstów nie ma takiego tekstu (F80); zasilanie to `12 V: 0,0 V`, bo stanowisko nie mierzy napięcia; etykiety liczników w STAN (`RX OK`, `TX`, `DEFER`, `WAIT`, `FOFF`) są jednakowe we wszystkich językach. Nie ma podświetlenia (płytka 4694 go nie ma); sygnał dźwiękowy i dioda alarmu są tylko na N1 (uproszczone, patrz [N1](#płytka-nośna-n1-bench-n1)), sygnału nowej wiadomości nie ma.
+Przyjęte interpretacje i braki: pasek trybu przygotowania zastępuje wiersz 1 („stale pokazuje”); każdy ekran poza głównym wraca do ekranu głównego po 3 min bezczynności (specyfikacja podaje ten czas tylko dla kreatora); przy niesprawnym radiu wiersz 1 to `RADIO ---`, bo lista tekstów nie ma takiego tekstu (F80); zasilanie to `12 V: 0,0 V`, bo stanowisko nie mierzy napięcia; etykiety liczników w STAN (`RX OK`, `TX`, `DEFER`, `WAIT`, `FOFF`) są jednakowe we wszystkich językach. Nie ma podświetlenia (płytka 4694 go nie ma); sygnał dźwiękowy i dioda alarmu są tylko na N1 (patrz [N1](#płytka-nośna-n1-bench-n1)), sygnału nowej wiadomości nie ma.
 
 ### Ekrany stacji
 

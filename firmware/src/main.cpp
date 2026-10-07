@@ -187,6 +187,8 @@ uint32_t prepPressedSince = 0;
 bool prepWas = false;
 bool prepToggled = false;
 bool alarmLedOn = false;
+bool alarmCause = false;     // przyczyna alarmu trwa (także po potwierdzeniu OK)
+uint32_t alarmCauseMs = 0;
 uint32_t lastAlarmBeep = 0;
 
 bool silenceSwitch() { return digitalRead(board::SW_SILENCE) == LOW; }
@@ -247,9 +249,15 @@ void pollPanel(uint32_t now) {
         setPrepFromButton(!bench.prep);
     }
     prepWas = prep;
-    // Dioda: ekran alarmu albo cisza radiowa; zapis tylko przy zmianie, więc LED 5 działa do następnej.
+    // Dioda świeci do usunięcia przyczyny alarmu (potwierdzenie OK gasi tylko dźwięk) i w ciszy radiowej;
+    // przyczyna sprawdzana co sekundę jak alarmy ekranu. Zapis tylko przy zmianie, więc LED 5 działa do następnej.
     const bool alarm = screenModel.screen() == ui::Screen::ALARM;
-    if ((alarm || bench.silence) != alarmLedOn) alarmLed(alarm || bench.silence);
+    if (now - alarmCauseMs >= 1000) {
+        alarmCauseMs = now;
+        alarmCause = storeOk && app.alarmCause(uptimeS());
+    }
+    const bool led = alarm || alarmCause || bench.silence;
+    if (led != alarmLedOn) alarmLed(led);
     if (alarm && now - lastAlarmBeep >= ALARM_BEEP_EVERY_MS) {
         lastAlarmBeep = now;
         beep(ALARM_BEEP_MS);

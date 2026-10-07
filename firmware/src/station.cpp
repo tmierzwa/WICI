@@ -479,7 +479,7 @@ bool Station::alarmAcked(size_t slot, AlarmKind kind) const {
     return alarmAcked_[slot] & (kind == AlarmKind::NO_READ ? 2 : 1);
 }
 
-bool Station::alarm(uint32_t nowS, Alarm& out) const {
+bool Station::alarm(uint32_t nowS, Alarm& out, bool withAcked) const {
     // Najstarszy przekroczony próg; alarm potwierdzony przyciskiem OK nie wraca.
     bool found = false;
     uint32_t bestAge = 0;
@@ -502,7 +502,7 @@ bool Station::alarm(uint32_t nowS, Alarm& out) const {
             since = e->updatedS;
             kind = AlarmKind::NO_READ;
         } else continue;
-        if (alarmAcked(i, kind)) continue;
+        if (!withAcked && alarmAcked(i, kind)) continue;
         const uint32_t age = nowS - since;
         if (!found || age > bestAge) {
             found = true;
