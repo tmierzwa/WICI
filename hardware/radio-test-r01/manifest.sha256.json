@@ -1,6 +1,6 @@
 {
   "LICENSES.md": "3f725ed215089f4f44148a9141a2c43ebff915db44973fd966332bab8acd0256",
-  "README.md": "552149b2f2a7530f0c860d342ac02e92a797a869e86379b02652362af0a1bcd6",
+  "README.md": "ec663701bfb47da41a837eaaf5eb407522f648df15fc2431f1c652fe6f29b7a0",
   "assembly-parts.json": "f8c9b3db4722064188be1bc163476173c13a2af579101336d7c2dd76c589aaae",
   "bom.csv": "d2bc971e9152d37ca34c06bf31fd0251951c03058e668ab75409347f674575bb",
   "cad/KICAD-LIBRARY-LICENSE.md": "b40c6666a1a717e1fdd39235e0d486c66975b4ccd6900b2dce569cbc730298fb",
@@ -147,7 +147,7 @@
   "mechanika-1-do-1.pdf": "ddd61360f8502f77b0cbaab6959616d79319e59e7b178a37c9fa98bb23c6461e",
   "odtworzenie.md": "b080d9f3fa283663079065ef1fa6f48935c3897aa01952f7be4afe0fcd3bff91",
   "polaczenia.md": "d1fe13ad1d1b9c24b6f19630c635fefea90a996e07fce5f3d24ea9e63a83cb65",
-  "przed-produkcja.md": "f4a542ae90ba506f5bd31a4b46e30463bc3470a5d514bc78496d27b66359e9c4",
+  "przed-produkcja.md": "646ba7eeb77d817ff967d02b3054d17d27a20d6f96d079179b550cc91fba26ea",
   "schemat.pdf": "d9a2e2585d5b7036ef36c5c6d080d60ef5d3c457ec8e70d4d8f3d76360556441",
   "sources.json": "774a288ebfdba30376c36fee6528aee126ca31c2ece94e395137d0bd454d5680",
   "tools/apply_fabrication_revision.py": "0aad6c6a1232bddfbc1727ba8c4a34e22cc2df3665120c7207fd0e7bc1bd0160",

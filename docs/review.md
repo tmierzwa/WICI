@@ -36,6 +36,7 @@ Podział na lokalną stronę, osobny transport, trwałą kolejkę aplikacji i os
 | F24 | Cisza radiowa: brak organu wydającego polecenie; wyjątek opiekuna mógł naruszać zakaz nadawania | polecenie wydaje wójt na podstawie decyzji uprawnionych organów; wyjątek tylko przy ciszy operacyjnej, gdy polecenie go dopuszcza |
 | F25 | Ramy zarządzania kryzysowego, terminologia obiektów, RODO, kategorie potrzeb i stany zgłoszeń były zbyt ogólne | koncepcja i specyfikacja: ustawa o zarządzaniu kryzysowym, 10 kategorii, 6 stanów, D18 dla meldunku o stanie obiektu; uzgodnienia z gminą D07, D12, D13 |
 | F26 | Brak ścieżki dla kontrybutorów oprogramowania układowego i licencji kodu C/C++ | CONTRIBUTING: zadania na start; REUSE i LICENSE.md obejmują `firmware/`; licencja microReticulum do potwierdzenia przed D14 |
+| F27 | Sprawdzenie części i przepisów w źródłach: TPS25947 ma maksimum 28 V, TPS3840 nie mierzy VSYS do 16 V, TPS61222 w wyłączeniu przepuszcza napięcie, MAX16150 wymaga szyny 1,3–5,5 V, LM74502 nie blokuje prądu wstecznego; rozporządzenie Dz.U. 2022 poz. 567 nie obejmuje pasma 869,4–869,65 MHz, a podstawą pracy bez pozwolenia jest art. 145 ust. 2 pkt 5 Pke; logo używało kroju Avenir Next bez prawa do rozpowszechniania kształtów liter | poprawione w specyfikacji, koncepcji i BOM; logo przerysowane krojem Nunito Sans (SIL OFL 1.1) |
 
 ## F01: kontroler USB
 

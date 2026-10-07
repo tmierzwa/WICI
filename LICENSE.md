@@ -11,7 +11,8 @@ Własne materiały: współtwórcy WICI. Licencja zależy od ścieżki i rodzaju
 | `hardware/radio-test-r01/fabrication/R01.3/`, poza `README.md`, `NOTICE.md` i `LICENSES/` | CERN-OHL-P-2.0: dane i rysunki wykonawcze |
 | `hardware/radio-test-r01/checks/history/*.{kicad_pcb,dsn,ses}`, pozostałe `checks/*.{dsn,ses}`, `checks/schematic.net.xml`, `checks/preview/` | CERN-OHL-P-2.0: historyczne źródła i widoki projektu |
 | `hardware/radio-test-r01/cad/symbols/`, footprinty poza dwoma własnymi wskazanymi wyżej; w tym `WICI.pretty/IDC_61201021621.kicad_mod` | [CC-BY-SA-4.0](LICENSES/CC-BY-SA-4.0.txt) z [wyjątkiem KiCad](hardware/radio-test-r01/cad/KICAD-LIBRARY-LICENSE.md) |
-| `media/logo/`: znak i ikony (litery z kroju Avenir Next zamienione na krzywe; skrypt `znak.py` na licencji MIT) | CC-BY-4.0 |
+| `media/logo/`: znak i ikony (litery z kroju Nunito Sans zamienione na krzywe; skrypt `znak.py` na licencji MIT) | CC-BY-4.0 |
+| `media/logo/fonts/`: font Nunito Sans, © The Nunito Sans Project Authors | [SIL OFL 1.1](LICENSES/OFL-1.1.txt) |
 | `media/film/`: filmy, napisy, plakat i efekt dźwiękowy | CC-BY-4.0; głos lektora i efekt dźwiękowy wygenerowano w ElevenLabs |
 | Pozostałe własne Markdown, strony HTML i arkusz CSS koncepcji, raporty JSON/XML/logi, manifesty, konfiguracja repozytorium i lista zależności | [CC-BY-4.0](LICENSES/CC-BY-4.0.txt) |
 | `LICENSES/*.txt` (w tym tekst wyjątku KiCad), kopie tekstów licencji i `cad/KICAD-LIBRARY-LICENSE.md` | Przytoczone teksty licencji i oryginalne warunki ich autorów; nie są ponownie licencjonowane jako własna dokumentacja |

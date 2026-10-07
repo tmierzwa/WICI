@@ -17,7 +17,7 @@ Status pozostaje **HOLD**, dopóki wszystkie pozycje nie mają potwierdzonego wy
 | Ochrona wyjścia RF | Brak w wykonaniu | Ochrona ESD o małej pojemności przed złączem 50 Ω; wpływ na dopasowanie i moc zmierzony |
 | Filtr SAW 868 MHz | Do oceny | Pomiar blokowania przez nadajniki LTE 800 i GSM 900 z filtrem i bez niego; strata wtrąceniowa wobec celu czułości na złączu. Referencja TI ma wspólny węzeł TX/RX: filtr tylko w osobnym torze RX za przełącznikiem SPDT albo we wspólnym torze o wytrzymałości ≥+20 dBm |
 | Firmware | Brak | Działający obraz, mapowanie pinów, USB CDC, SPI CC1120, profil P1 i trwały limit czasu nadawania |
-| Różni dostawcy | Interfejs radia wydzielony; alternatywa LDO | Zweryfikować drugie wykonanie radia/kontrolera. S2-LP nie jest zamiennikiem CC1120 na tej samej płytce; stroną ST prób mieszanych jest osobne stanowisko (np. STEVAL-FKI868V2 z NUCLEO, do sprawdzenia) albo płytka R02 |
+| Różni dostawcy | Interfejs radia wydzielony; alternatywa LDO | Zweryfikować drugie wykonanie radia/kontrolera. S2-LP nie jest zamiennikiem CC1120 na tej samej płytce; stroną ST prób mieszanych jest osobne stanowisko (np. zestaw STEVAL-FKI868V2 z płytką NUCLEO-L053R8) albo płytka R02 |
 | Próby fizyczne | Nie wykonano | Zasilanie, USB, temperatura, widmo TX, czułość RX, odporność na restart, dwie sztuki i pomiar w terenie |
 
 Wniosek USB wynika z połączenia Y1.1→V3 w `connections.csv` i parametrów [ASE](https://abracon.com/Oscillators/ASEseries.pdf). Odłączenie pull-up D+ nie wyłącza Y1. Zmiana projektu wymaga nowej rewizji CAD i ponownych eksportów; R01.3 nie zawiera tej poprawki. [Pełne ustalenia przeglądu](../../docs/review.md).
