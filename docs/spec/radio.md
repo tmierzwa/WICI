@@ -119,7 +119,7 @@ Dwa wykonania stacji mają wspólny P1, wspólny protokół USB do laptopa i to 
 |---|---|---|
 | Radio | TI CC1120 | ST S2-LPQTR; wariant dla 413–479 i 826–958 MHz |
 | MCU stacji | Nordic nRF52840; Bluetooth trwale wyłączony | Espressif ESP32-S3 z pamięcią PSRAM; Wi-Fi i Bluetooth trwale wyłączone |
-| Pamięć RAM | ≥256 KiB na port microReticulum, LXMF, tablicę tras i bufory; nRF52840 ma dokładnie 256 KiB, więc wymagany zmierzony zapas ≥30% w T3, przed projektem płytki R02; wariant zapasowy z większą pamięcią: nRF5340 (rdzeń aplikacyjny 512 KiB), RP2350 lub STM32U5 (D14) | 512 KiB SRAM i PSRAM; zmierzony zapas ≥30% w T3 |
+| Pamięć RAM | ≥256 KiB na port microReticulum, LXMF, tablicę tras i bufory; nRF52840 ma 256 KiB, czyli jest na granicy szacowanego zapotrzebowania, więc wymagany zmierzony zapas ≥30% w T3, przed projektem płytki R02; wariant zapasowy z większą pamięcią: nRF5340 (rdzeń aplikacyjny 512 KiB), RP2350 lub STM32U5 (D14) | 512 KiB SRAM i PSRAM; zmierzony zapas ≥30% w T3 |
 | Pamięć nieulotna | FRAM SPI 2 Mbit: Infineon FM25V20A (10¹⁴ cykli, 2,0–3,6 V; status aktywny w październiku 2026; zamiennik Infineon Excelon LP CY15B102QN); rekordy szyfrowane | FRAM SPI 2 Mbit: RAMXEED (dawniej Fujitsu) MB85RS2MTA; rekordy szyfrowane |
 | Ekran | graficzny monochromatyczny z pamięcią obrazu (memory LCD) lub e-papier, cyrylica i piktogramy | wykonanie innego producenta, ten sam układ treści |
 | Połączenie MCU–radio | SPI: SCK, MOSI, MISO, CS; IRQ; reset/shutdown | ten sam podział funkcji, inne piny |

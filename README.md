@@ -10,7 +10,7 @@ Gdy przez wiele godzin nie ma prądu, zasięgu komórkowego ani internetu, ludzi
 - **Każda włączona stacja przekazuje dalej wiadomości sąsiadów**, więc sieć sięga dalej niż pojedyncze radio.
 - **Później można dołączyć stary laptop**, który daje wygodniejszy panel, oraz **domowy router**: wtedy mieszkańcy zgłaszają potrzeby zwykłą stroną w telefonie, bez instalowania aplikacji.
 
-Stacja nadaje na częstotliwości 869,525 MHz, dostępnej bez pozwolenia radiowego, ma pracować co najmniej dwie doby na bateriach AA i kilka tygodni z akumulatora 12 V. WICI nie zastępuje służb ani numeru 112. Ma uzupełniać lokalny system ochrony ludności i być przygotowana razem ze służbami przed kryzysem, a nie w jego trakcie.
+Stacja nadaje na częstotliwości 869,525 MHz, dostępnej bez pozwolenia radiowego, ma pracować co najmniej dwie doby na bateriach AA i kilka tygodni z akumulatora samochodowego 12 V. WICI nie zastępuje służb ani numeru 112. Ma uzupełniać lokalny system ochrony ludności i być przygotowana razem ze służbami przed kryzysem, a nie w jego trakcie.
 
 ## Gdzie jesteśmy
 
@@ -48,7 +48,7 @@ Dobrym początkiem jest lista zadań w [CONTRIBUTING.md](CONTRIBUTING.md#od-czeg
 | [docs/spec](docs/README.md) | Specyfikacja stacji, warunki odbioru i lista części |
 | [software/reference](software/reference/README.md) | Model wiadomości i potwierdzeń z testami; obliczenia zasięgu, energii i czasu nadawania |
 | [hardware](hardware/radio-test-r01/README.md) | Płytka R01.3 w KiCad, stanowisko do pomiarów radia |
-| [media/film](media/film/README.md) | Krótki film o projekcie (4 min i 60 s) |
+| [media/film](media/film/README.md) | Dwa filmy o projekcie: około 4,5 min i 60 s |
 | [media/logo](media/logo/README.md) | Znak WICI i ikony |
 | [tools](docs/development.md) | Kontrola repozytorium i tworzenie paczki źródłowej |
 
