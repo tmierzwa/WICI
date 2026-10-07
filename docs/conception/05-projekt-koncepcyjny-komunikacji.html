@@ -158,7 +158,7 @@
 <ul>
   <li>teksty SA1 nie mogą zawierać znaków U+0022 i U+005C – formularz i ekran zamieniają je odpowiednio na „ ” i /;</li>
   <li>cała treść po kodowaniu ma ≤256 B zamiast 480 B;</li>
-  <li>wymagana jest normalizacja NFC, a znaki kategorii Zl, Zp, Co i Cn są odrzucane.</li>
+  <li>wymagana jest normalizacja NFC, a znaki kategorii Cc, Cf, Cs, Co, Cn, Zl i Zp są odrzucane.</li>
 </ul>
 
 <p>Polecenie <code>configure</code> odrzuca adres i frazę, jeśli najgorsze zgłoszenie z przycisków przekroczyłoby limit. Najgorsze przypadki to wtedy REQUEST 222 B, BULLETIN 246 B i REPLY 156 B, z zapasem wobec około 284 B pakietu okazjonalnego. Limit sprawdza się po kodowaniu JSON, nie tylko dla pól, a przypadek graniczny jest częścią modelu.</p>
@@ -217,7 +217,7 @@
 <p>Zamiast jednego zielonego wskaźnika ekran stacji i panel pokazują osobno:</p>
 <ul>
   <li>stan radia („RADIO WŁĄCZONE” albo „CISZA RADIOWA – STACJA NIE NADAJE. PILNE: GONIEC”);</li>
-  <li>„OSTATNI KONTAKT Z ODBIORCĄ: [czas] TEMU”, liczony od ostatniego RECEIVED lub STATUS od OSP (brak świeżego kontaktu nie jest awarią);</li>
+  <li>„OSTATNI KONTAKT Z ODBIORCĄ: [czas] TEMU”, liczony od ostatniej uwierzytelnionej wiadomości od OSP: RECEIVED, STATUS, REPLY lub BULLETIN (brak świeżego kontaktu nie jest awarią);</li>
   <li>wiek najstarszego oczekującego zgłoszenia.</li>
 </ul>
 
@@ -229,9 +229,9 @@
 
 <ul>
   <li><strong>Karta stacji:</strong> stacja eksportuje przez USB pełny klucz publiczny tożsamości (64 B), skrót adresu LXMF, nazwę, adres schronienia i odcisk klucza (krótki skrót do porównania wzrokowego) do odczytu z ekranu. OSP importuje kartę (plik lub QR) po porównaniu odcisku z ekranem stacji.</li>
-  <li><strong>Karta OSP:</strong> skrót adresu i pełny klucz publiczny OSP (64 B) oraz klucz zapasowy OSP, wygenerowany offline i przechowywany w zaplombowanej kopercie u organizatora sieci. Stacja rejestruje klucze z kart przy starcie, więc weryfikacja podpisu nie zależy od odebranych ogłoszeń.</li>
+  <li><strong>Karta OSP:</strong> dwie tożsamości OSP, główna i zapasowa, każda ze skrótem adresu i pełnym kluczem publicznym (64 B). Klucz prywatny zapasowy jest wygenerowany offline i przechowywany w zaplombowanej kopercie u organizatora sieci. Stacja rejestruje klucze z kart przy starcie, więc weryfikacja podpisu nie zależy od odebranych ogłoszeń.</li>
   <li><strong>Kwarantanna:</strong> zatwierdzenie w kwarantannie dotyczy pojedynczej wiadomości i nie dodaje nadawcy do zaufanych. Dodanie zaufanej stacji wymaga karty stacji i zgody dwóch osób. Wiadomość z nieznanym kluczem OSP stacja zapisuje jako „do weryfikacji”, wysyła zapytanie o trasę i sprawdza podpis po ogłoszeniu.</li>
-  <li><strong>Unieważnienie:</strong> wiadomości unieważnionej tożsamości są odrzucane (nie trafiają do kwarantanny), liczone i wywołują alarm „możliwe przejęcie stacji”. Po utracie klucza OSP stacja przełącza się tylko na klucz zapasowy z własnej karty; nowego klucza nigdy nie przyjmuje przez radio. Rotacja kluczy OSP przebiega według planu kart (D08).</li>
+  <li><strong>Unieważnienie:</strong> wiadomości unieważnionej tożsamości są odrzucane (nie trafiają do kwarantanny), liczone i wywołują alarm „możliwe przejęcie stacji”. Po utracie lub przejęciu klucza OSP opiekun przełącza stację na tożsamość zapasową z jej karty (menu ODBIORCA ZAPASOWY), tylko na polecenie przekazane słownie lub przez gońca; zapasowa tożsamość ma inny adres, więc stacja wysyła niepotwierdzone zgłoszenia ponownie, z tym samym id i revision. Nowego klucza stacja nigdy nie przyjmuje przez radio. Karty zaufanych stacji przechowuje i sprawdza stacja OSP. Rotacja kluczy OSP przebiega według planu kart (D08).</li>
   <li><strong>Oprogramowanie:</strong> obraz jest podpisany kluczem wydania przechowywanym offline. Program rozruchowy odrzuca obraz bez podpisu oraz starszy od zainstalowanego (ochrona przed starszą wersją, <em>anti-rollback</em>). Aktualizacja jest możliwa tylko przez USB w trybie przygotowania (przycisk dostępny dopiero po otwarciu obudowy). Konsola diagnostyczna jest wyłączona w wydaniu, a plombę sprawdza się w przeglądzie.</li>
   <li><strong>Laptop:</strong> panel opiekuna i dyżurnego nasłuchuje tylko na 127.0.0.1, a w LAN widoczna jest tylko strona mieszkańca. Router używa WPA2/WPA3 i izoluje klientów od siebie. Dziennik aplikacji nie zapisuje treści zgłoszeń, tokenów, IP ani MAC.</li>
   <li><strong>Koniec pracy:</strong> ZAMKNIJ ZDARZENIE eksportuje zaszyfrowane archiwum dla administratora danych i usuwa dane zdarzenia, zostawiając tożsamości i klucze odbioru; ZNISZCZ DANE jest nieodwracalne i usuwa także tożsamość (definicja w <a href="07-zagrozenia-i-odpornosc.html#ochrona-danych-i-zaufania">rozdziale 07</a>).</li>

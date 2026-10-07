@@ -223,6 +223,7 @@
       87.24444444444444
     ],
     "status_packet_bytes": 259,
+    "fifty_requests_with_two_status_min": 39.39722222222222,
     "quiet_10t_throughput_gain": 0.18181818181818188,
     "p1_tx_plus_quiet_s": {
       "100b": 3.423333333333333,
@@ -322,7 +323,8 @@
       "route_identity_entry": 314,
       "receipt_key_entry": 48,
       "event_log": 32768,
-      "uptime_and_silence_debt": 1024
+      "uptime_and_silence_debt": 1024,
+      "station_card_entry": 152
     },
     "counts": {
       "station": {
@@ -330,14 +332,16 @@
         "mailbox": 128,
         "incoming": 0,
         "routes": 256,
-        "receipt_keys": 256
+        "receipt_keys": 256,
+        "station_cards": 0
       },
       "osp": {
         "intents": 512,
         "mailbox": 0,
         "incoming": 128,
         "routes": 256,
-        "receipt_keys": 1024
+        "receipt_keys": 1024,
+        "station_cards": 256
       }
     },
     "roles": {
@@ -348,11 +352,15 @@
           "incoming": 0.0,
           "routes_identities_announces": 78.5,
           "highest_event_and_receipt_keys": 12.0,
+          "station_cards": 0.0,
           "event_log": 32.0,
           "uptime_and_silence_debt": 1.0
         },
         "total_kib": 204.5,
-        "fits_256_kib": true
+        "fits_256_kib": true,
+        "fits_fram": true,
+        "occupancy_of_fram": 0.3994140625,
+        "occupancy_of_256_kib": 0.798828125
       },
       "osp": {
         "parts_kib": {
@@ -361,16 +369,54 @@
           "incoming": 41.0,
           "routes_identities_announces": 78.5,
           "highest_event_and_receipt_keys": 48.0,
+          "station_cards": 38.0,
           "event_log": 32.0,
           "uptime_and_silence_debt": 1.0
         },
-        "total_kib": 364.5,
-        "fits_256_kib": false
+        "total_kib": 402.5,
+        "fits_256_kib": false,
+        "fits_fram": true,
+        "occupancy_of_fram": 0.7861328125,
+        "occupancy_of_256_kib": 1.572265625
       }
     },
     "fram_stacja_kib": 204.5,
-    "fram_osp_kib": 364.5,
-    "fram_size_kib": 256
+    "fram_osp_kib": 402.5,
+    "fram_size_kib": 512
+  },
+  "station_ram_kib": {
+    "nrf52840_total": 256,
+    "hashlist_4096_full_32b": 128.0,
+    "hashlist_4096_truncated_8b": 32.0,
+    "routes_256_full_in_ram": 78.5,
+    "route_index_256x16b": 4.0,
+    "reference_layout_kib": 206.5,
+    "specified_layout_kib": 36.0,
+    "reference_layout_share_of_nrf52840": 0.806640625,
+    "specified_layout_share_of_nrf52840": 0.140625
+  },
+  "cold_start_announces": {
+    "announce_bytes": 205,
+    "announce_tx_s": 0.4866666666666667,
+    "announce_cap_share_of_tx": 0.02,
+    "10_stations": {
+      "network_announce_transmissions": 100,
+      "channel_airtime_min_single_collision_domain": 0.8111111111111112,
+      "per_station_tx_plus_quiet_min": 1.0544444444444445,
+      "per_hop_drain_at_cap_min": 4.055555555555555
+    },
+    "30_stations": {
+      "network_announce_transmissions": 900,
+      "channel_airtime_min_single_collision_domain": 7.3,
+      "per_station_tx_plus_quiet_min": 3.1633333333333336,
+      "per_hop_drain_at_cap_min": 12.166666666666666
+    },
+    "50_stations": {
+      "network_announce_transmissions": 2500,
+      "channel_airtime_min_single_collision_domain": 20.27777777777778,
+      "per_station_tx_plus_quiet_min": 5.272222222222223,
+      "per_hop_drain_at_cap_min": 20.27777777777778
+    }
   },
   "tcxo_budget_ppm": {
     "temperature": 0.5,
@@ -494,6 +540,7 @@
     "No switching, magnetic or reactive current losses in voltage margin",
     "No battery capacity measurement",
     "Network capacity is per node at the debt limit; shared channel, hidden nodes and retries reduce it",
+    "Cold-start announces: one rebroadcast per announce and station, no path requests, losses or announce suppression",
     "Fixed installation loss of 2.5 dB per end is an assumption until the installed cable is measured",
     "No thermal or electrical safety verification"
   ]

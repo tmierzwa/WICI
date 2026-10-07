@@ -166,9 +166,13 @@ def calculate() -> dict:
     fram_b = {"intent_slot": MAX_CONTENT + 40 + fram_record_overhead,  # + destination, id/revision/event, state, timers
               "mailbox_slot": MAX_CONTENT + 32 + fram_record_overhead,  # + sender, receive time, state
               "route_identity_entry": 64 + 16 + 32 + 170 + fram_record_overhead,  # key, hash, path, cached announce
-              "receipt_key_entry": 48, "event_log": 32 * 1024, "uptime_and_silence_debt": 1024}
-    fram_counts = {"station": {"intents": 128, "mailbox": 128, "incoming": 0, "routes": 256, "receipt_keys": 256},
-                   "osp": {"intents": 512, "mailbox": 0, "incoming": 128, "routes": 256, "receipt_keys": 1024}}
+              "receipt_key_entry": 48, "event_log": 32 * 1024, "uptime_and_silence_debt": 1024,
+              "station_card_entry": 64 + 16 + 16 + 24 + fram_record_overhead}  # key, address hash, name, state/time
+    fram_counts = {"station": {"intents": 128, "mailbox": 128, "incoming": 0, "routes": 256, "receipt_keys": 256,
+                               "station_cards": 0},
+                   "osp": {"intents": 512, "mailbox": 0, "incoming": 128, "routes": 256, "receipt_keys": 1024,
+                           "station_cards": 256}}
+    fram_size_kib = 512  # 4 Mbit in every station (oprogramowanie.md)
     fram_kib = {}
     for role, n in fram_counts.items():
         parts = {"outgoing_queue": n["intents"] * fram_b["intent_slot"],
@@ -176,9 +180,36 @@ def calculate() -> dict:
                  "incoming": n["incoming"] * fram_b["intent_slot"],
                  "routes_identities_announces": n["routes"] * fram_b["route_identity_entry"],
                  "highest_event_and_receipt_keys": n["receipt_keys"] * fram_b["receipt_key_entry"],
+                 "station_cards": n["station_cards"] * fram_b["station_card_entry"],
                  "event_log": fram_b["event_log"], "uptime_and_silence_debt": fram_b["uptime_and_silence_debt"]}
-        fram_kib[role] = {"parts_kib": {k: v / 1024 for k, v in parts.items()}, "total_kib": sum(parts.values()) / 1024,
-                          "fits_256_kib": sum(parts.values()) <= 256 * 1024}
+        total = sum(parts.values())
+        fram_kib[role] = {"parts_kib": {k: v / 1024 for k, v in parts.items()}, "total_kib": total / 1024,
+                          "fits_256_kib": total <= 256 * 1024, "fits_fram": total <= fram_size_kib * 1024,
+                          "occupancy_of_fram": total / (fram_size_kib * 1024),
+                          "occupancy_of_256_kib": total / (256 * 1024)}
+    # Station RAM for the stack tables (oprogramowanie.md, "Pojemności stosu"): reference layout keeps full 32 B
+    # packet hashes and whole route entries in RAM; the specified layout keeps 8 B hashes and a route index.
+    ram_kib = {"nrf52840_total": 256,
+               "hashlist_4096_full_32b": 4096 * 32 / 1024, "hashlist_4096_truncated_8b": 4096 * 8 / 1024,
+               "routes_256_full_in_ram": 256 * fram_b["route_identity_entry"] / 1024,
+               "route_index_256x16b": 256 * 16 / 1024}
+    ram_kib["reference_layout_kib"] = ram_kib["hashlist_4096_full_32b"] + ram_kib["routes_256_full_in_ram"]
+    ram_kib["specified_layout_kib"] = ram_kib["hashlist_4096_truncated_8b"] + ram_kib["route_index_256x16b"]
+    ram_kib["reference_layout_share_of_nrf52840"] = ram_kib["reference_layout_kib"] / 256
+    ram_kib["specified_layout_share_of_nrf52840"] = ram_kib["specified_layout_kib"] / 256
+    # Cold network start: every transport station rebroadcasts each announce once (no losses), and the P1
+    # interface limits announces to a share of TX time. Announce = 19 B header + cached announce, +16 B transport id.
+    announce_cap = 0.02
+    announce_bytes = 19 + 170 + transport_id
+    announce_tx_s = p1_tx_seconds(announce_bytes)
+    cold_start = {"announce_bytes": announce_bytes, "announce_tx_s": announce_tx_s,
+                  "announce_cap_share_of_tx": announce_cap}
+    for n in (10, 30, 50):
+        cold_start[f"{n}_stations"] = {
+            "network_announce_transmissions": n * n,
+            "channel_airtime_min_single_collision_domain": n * n * announce_tx_s / 60,
+            "per_station_tx_plus_quiet_min": n * 13 * announce_tx_s / 60,
+            "per_hop_drain_at_cap_min": n * announce_tx_s / announce_cap / 60}
     result = {
         "assumptions": {"station_ac_w": ac_w, "conversion_efficiency_excluding_idle": efficiency,
                         "inverter_idle_w": idle_w, "diode_loss_w": diode_w,
@@ -226,6 +257,7 @@ def calculate() -> dict:
                       "per_retry_s": [relay_cycle["typical_request"], relay_cycle["max_fields_request"]],
                       "fifty_requests_min_at_1200_bit_s": [50 * t / 60 for t in slow_per_request],
                       "status_packet_bytes": status_packet,
+                      "fifty_requests_with_two_status_min": 50 * capacity["max_fields_request"]["relay_s_per_request"] / 60,
                       "quiet_10t_throughput_gain": 13 / 11 - 1,
                       "p1_tx_plus_quiet_s": {f"{b}b": 13 * p1_tx_seconds(b) for b in (100, 250, 500, 600)},
                       "ramp_ms_per_fragment_assumed": ramp_ms_assumed,
@@ -242,7 +274,9 @@ def calculate() -> dict:
         "lxmf_retry": retry,
         "fram_by_role": {"record_bytes_assumed": fram_b, "counts": fram_counts, "roles": fram_kib,
                          "fram_stacja_kib": fram_kib["station"]["total_kib"], "fram_osp_kib": fram_kib["osp"]["total_kib"],
-                         "fram_size_kib": 256},
+                         "fram_size_kib": fram_size_kib},
+        "station_ram_kib": ram_kib,
+        "cold_start_announces": cold_start,
         "tcxo_budget_ppm": {**tcxo_ppm, "linear_sum": sum(tcxo_ppm.values()),
                             "root_sum_square": math.sqrt(sum(v**2 for v in tcxo_ppm.values())),
                             "p1_limit": 2.5, "linear_sum_hz_at_carrier": sum(tcxo_ppm.values()) * f_mhz,
@@ -318,6 +352,7 @@ def calculate() -> dict:
                    "No switching, magnetic or reactive current losses in voltage margin",
                    "No battery capacity measurement",
                    "Network capacity is per node at the debt limit; shared channel, hidden nodes and retries reduce it",
+            "Cold-start announces: one rebroadcast per announce and station, no path requests, losses or announce suppression",
                    "Fixed installation loss of 2.5 dB per end is an assumption until the installed cable is measured", "No thermal or electrical safety verification"],
     }
     if available_low_v <= required_low_v:

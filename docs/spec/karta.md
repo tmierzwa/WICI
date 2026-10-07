@@ -12,11 +12,11 @@ Przyciski: GÓRA, DÓŁ, OK, WSTECZ. Pierwsze naciśnięcie przy zgaszonym ekran
 
 1. Podłącz antenę: przewód przy ścianie przykręć do złącza anteny stacji. Brak przewodu na ścianie: antena zapasowa ze skrzynki – przez okno, pionowo, z dala od ludzi; przewodu nie prowadź przez drzwi schronu.
 2. Włóż ogniwa (+ do znaku +) albo podłącz 12 V przewodem z zestawu.
-3. Włącz wyłącznik główny.
+3. Naciśnij wyłącznik główny.
 4. Wybierz język. Czekaj na „RADIO WŁĄCZONE” (do 1 min). Sprawdź adres: „ADRES: [x] – CZY TO TO MIEJSCE? OK = TAK / WSTECZ = NIE”. Zły adres albo „STACJA NIE MA TWOJEGO ADRESU – UŻYJ FORMULARZA PAPIEROWEGO”: zgłoszenia tylko formularzem (strona 2).
-5. OK → TEST → OK. Ekran: „TEST ZAPLANOWANY ZA OKOŁO [mm] MIN – NIE WYŁĄCZAJ. WSTECZ = ANULUJ”, potem „TEST WYSŁANY – CZEKA NA ODBIORCĘ”.
-6. Czekaj na „ODBIORCA ZAPISAŁ”, potem „ODBIORCA PRZECZYTAŁ”. „TEST WSTRZYMANY PRZEZ ODBIORCĘ” też jest poprawnym wynikiem: nie wysyłaj TEST ponownie.
-7. Nic przez 30 min od „TEST WYSŁANY – CZEKA NA ODBIORCĘ”? → strona 2: goniec z formularzem.
+5. Stacja proponuje TEST: OK. (Później TEST z menu: TEST → OK.) Ekran: „TEST ZAPLANOWANY ZA OKOŁO [mm] MIN – NIE WYŁĄCZAJ. WSTECZ = ANULUJ”, potem „TEST WYSŁANY – CZEKA NA ODBIORCĘ”.
+6. Czekaj na „ODBIORCA ZAPISAŁ”, potem „ODBIORCA PRZECZYTAŁ”. Komunikat od odbiorcy prosi o wstrzymanie TEST? TEST → WSTRZYMAJ; ekran: „TEST WSTRZYMANY PRZEZ ODBIORCĘ”. Nie wysyłaj TEST do odwołania.
+7. Po 30 min bez odpowiedzi stacja podaje „BRAK POTWIERDZENIA OD [n] MIN – WYŚLIJ GOŃCA Z FORMULARZEM” → strona 2: goniec z formularzem.
 
 „RADIO WŁĄCZONE” nie oznacza, że pomoc jest dostępna. „OSTATNI KONTAKT Z ODBIORCĄ: [czas] TEMU” pokazuje, kiedy odbiorca ostatnio odpowiedział; długi czas nie jest awarią. Włączona stacja przekazuje wiadomości innych schronień: nie wyłączaj jej bez potrzeby.
 
@@ -26,13 +26,13 @@ Przyciski: GÓRA, DÓŁ, OK, WSTECZ. Pierwsze naciśnięcie przy zgaszonym ekran
 
 Etapy na ekranie: „ZAPISANE W STACJI – CZEKA NA WYSŁANIE” → „WYSYŁANIE – PRÓBA [n], NASTĘPNA ZA [m] MIN” → „ODBIORCA ZAPISAŁ” → „ODBIORCA PRZECZYTAŁ” → decyzja: „POMOC SKIEROWANA (DECYZJA, NIE GODZINA PRZYJAZDU)”, „PRZEKAZANE DALEJ (PSP / POGOTOWIE / POWIAT)”, „ODBIORCA NIE MOŻE TERAZ POMÓC – CZYTAJ ODPOWIEDŹ” albo „ZAMKNIĘTE”. Zmiana lub koniec potrzeby: WIADOMOŚCI → własne zgłoszenie → „ZMIEŃ LICZBĘ OSÓB / ZMIEŃ PILNOŚĆ / POTRZEBA USTAŁA”.
 
-**„BRAK POTWIERDZENIA OD [n] MIN – WYŚLIJ GOŃCA Z FORMULARZEM”**, „KOLEJKA PEŁNA – ZGŁOSZENIE NIE ZAPISANE. UŻYJ FORMULARZA PAPIEROWEGO”, „BŁĄD PAMIĘCI STACJI – ZGŁOSZENIE NIE ZAPISANE. FORMULARZ + GONIEC”: wypełnij formularz w dwóch kopiach, jedna zostaje, drugą niesie goniec.
+**„BRAK POTWIERDZENIA OD [n] MIN – WYŚLIJ GOŃCA Z FORMULARZEM”**, „KOLEJKA PEŁNA – ZGŁOSZENIE NIE ZAPISANE. UŻYJ FORMULARZA PAPIEROWEGO”, „BŁĄD PAMIĘCI STACJI – ZGŁOSZENIE NIE ZAPISANE. FORMULARZ + GONIEC”: wypełnij formularz w dwóch kopiach, jedna zostaje, drugą niesie goniec. OK wycisza dźwięk alarmu; napis i dioda zostają.
 
 **Zagrożenie życia.** 1) Udziel pierwszej pomocy. 2) Działa telefon? Dzwoń 112. 3) Droga bezpieczna? Wyślij gońca. Radiem wysyłaj równolegle („OK = WYŚLIJ TEŻ RADIEM”).
 
 **Cisza radiowa.** „CISZA RADIOWA – STACJA NIE NADAJE. PILNE: GONIEC”. Zgłoszenie zapisane w ciszy: „ZAPISANE – NIE WYJDZIE DO KOŃCA CISZY”. Przełącznik CISZA włączaj tylko na polecenie; wpisz je do dziennika.
 
-**Wymiana ogniw.** „WYMIEŃ OGNIWA W CIĄGU 1 H”. Najlepiej podłącz najpierw 12 V. Bez 12 V: wyłącz wyłącznik główny, czekaj na „WYŁĄCZANIE – CZEKAJ, ZAPISUJĘ”, potem „MOŻNA WYJĄĆ OGNIWA”. Wymień cały komplet (+ do znaku +), włącz. Zgłoszenia zostają w stacji.
+**Wymiana ogniw.** „WYMIEŃ OGNIWA W CIĄGU 1 H”. Najlepiej podłącz najpierw 12 V. Bez 12 V: przytrzymaj wyłącznik główny 2 s, czekaj na „WYŁĄCZANIE – CZEKAJ, ZAPISUJĘ”, potem „MOŻNA WYJĄĆ OGNIWA”. Wymień cały komplet (+ do znaku +), naciśnij wyłącznik główny. Zgłoszenia zostają w stacji.
 
 **Komunikat o wyjściu lub ewakuacji.** „NAKAZ WYJŚCIA LUB EWAKUACJI? POTWIERDŹ W RADIU PUBLICZNYM LUB U GOŃCA”. Nie wychodź na podstawie samego komunikatu ze stacji: potwierdź drugim kanałem (odbiornik radiowy z zestawu, goniec).
 

@@ -1,5 +1,7 @@
 # WICI: projekt stacji
 
+Specyfikacja 0.5 opisuje docelową stację WICI (płytka R02 w dwóch wykonaniach) i zestaw poziomów 1–3, a nie rozwiązanie tymczasowe. Kontroler R01.3 jest tylko stanowiskiem laboratoryjnym do pomiarów radia P1 ([radio](radio.md#stanowisko-laboratoryjne-r013)) i nie jest stacją. Instrukcje użycia opisują odebrany zestaw, którego jeszcze nie zbudowano.
+
 ## Zakres
 
 | Parametr | Wartość projektowa |
@@ -70,7 +72,7 @@ Laptop, router, ich oryginalne zasilacze i akumulatory pochodzą z miejsca uruch
 
 Zestaw stanowiska OSP:
 
-1. Stacja WICI i stacja zapasowa do przeniesienia tożsamości (PRZENIEŚ STACJĘ).
+1. Stacja WICI i stacja zapasowa: do kontrolowanej wymiany sprawnej stacji (PRZENIEŚ STACJĘ) albo do wczytania tożsamości zapasowej OSP; tożsamości uszkodzonej stacji nie da się odzyskać.
 2. Stały laptop z pakietem START, przypisany do stanowiska (nie znaleziony na miejscu), bez usypiania i samoczynnych aktualizacji, z pełnym szyfrowaniem dysku.
 3. Antena kolinearna w najwyższym dostępnym punkcie budynku, z odgromnikiem.
 4. Zasilanie laptopa i stacji na ≥72 h: agregat lub stacja zasilania z deklaracją zgodności UE.
@@ -81,9 +83,9 @@ Zestaw stanowiska OSP:
 
 ## Przygotowanie przed kryzysem
 
-Osoba utrzymująca system, w porozumieniu z organizatorem sieci (zwykle samorządem gminy), przełącza stację w tryb przygotowania przyciskiem wewnątrz obudowy i przez laptop z pakietem START zapisuje w stacji dokładny adres i wejście schronienia oraz kartę zaufanej OSP. Polecenia konfiguracji, eksportu, importu i aktualizacji oprogramowania stacja przyjmuje tylko w tym trybie. Stacja generuje własną tożsamość i nazwę `WICI-xxxxxx` (6 cyfr szesnastkowych skrótu tożsamości) oraz eksportuje przez USB kartę stacji: klucz publiczny, skrót adresu, nazwę, adres schronienia i odcisk do porównania z ekranem. OSP importuje kartę stacji (plik lub kod QR) po porównaniu odcisku. Kartę OSP (skrót adresu, klucz publiczny OSP i klucz zapasowy OSP) osoba utrzymująca system otrzymuje uzgodnionym kanałem poza radiem; stacja nigdy nie przyjmuje jej przez radio. Szczegóły: model zaufania i kluczy w rozdziale [Oprogramowanie](oprogramowanie.md). Następnie stacja wysyła TEST, a wynik zapisuje się w ewidencji.
+Osoba utrzymująca system, w porozumieniu z organizatorem sieci (zwykle samorządem gminy), przełącza stację w tryb przygotowania przyciskiem wewnątrz obudowy i przez laptop z pakietem START zapisuje w stacji dokładny adres i wejście schronienia (≤64 B w krótkiej postaci), kartę zaufanej OSP z tożsamością główną i zapasową oraz liczbę stacji w sieci, od której zależy okno TEST startowego. Polecenia konfiguracji, eksportu, importu i aktualizacji oprogramowania stacja przyjmuje tylko w tym trybie. Stacja generuje własną tożsamość i nazwę `WICI-xxxxxx` (6 cyfr szesnastkowych skrótu tożsamości) oraz eksportuje przez USB kartę stacji: klucz publiczny, skrót adresu, nazwę, adres schronienia i odcisk do porównania z ekranem. OSP importuje kartę stacji (plik lub kod QR) po porównaniu odcisku. Kartę OSP (skróty adresów i klucze publiczne tożsamości głównej i zapasowej OSP) osoba utrzymująca system otrzymuje uzgodnionym kanałem poza radiem; stacja nigdy nie przyjmuje jej przez radio. Szczegóły: model zaufania i kluczy w rozdziale [Oprogramowanie](oprogramowanie.md). Następnie stacja wysyła TEST, a wynik zapisuje się w ewidencji. Hasła panelu dla opiekuna i zastępców generuje się w tym samym przygotowaniu, offline, na pamięci USB zestawu; wkłada się je do numerowanych, zaklejonych kopert przy stacji.
 
-Na poziomie 3 przygotowuje się wcześniej plakat przy stacji: nazwa sieci Wi-Fi, hasło i adres strony. Router dostaje stały adres IP laptopa przez rezerwację DHCP, więc adres z plakatu się nie zmienia.
+Na poziomie 3 przygotowuje się wcześniej plakat przy stacji: nazwa sieci Wi-Fi, hasło i adres strony, dla routera sprawdzonego na miejscu. Router dostaje rezerwację DHCP dla adresu MAC adaptera USB–Ethernet z zestawu, więc adres z plakatu nie zależy od laptopa. Przy innym routerze obowiązuje kod QR na ekranie laptopa.
 
 Antenę zewnętrzną z przewodem i przepustem montuje się na stałe podczas przygotowania obiektu, za pisemną zgodą zarządcy, w miejscu wskazanym po próbie zasięgu. Montaż wykonuje firma lub osoba z uprawnieniami do prac na wysokości; odgromnik łączy z uziemieniem elektryk z uprawnieniami. Przepust w budowli ochronnej uzgadnia się z zarządcą i komendą powiatową PSP, w obiekcie zabytkowym potrzebna jest zgoda konserwatora, a potrzebę zgłoszenia budowlanego sprawdza się we właściwym urzędzie. Koszt montażu ujmuje się w budżecie wdrożenia. Przewodu nie prowadzi się przez drzwi hermetyczne, gazoszczelne ani przeciwpożarowe. W piwnicy lub garażu podziemnym stację umieszcza się na kondygnacji naziemnej albo stosuje dłuższy przewód o małym tłumieniu z nowym bilansem łącza. Wystawienie anteny przez okno jest procedurą zapasową.
 
@@ -95,11 +97,11 @@ Kolejność odpowiada [karcie obsługi](karta.md).
 
 1. Podłącz do stacji przewód anteny zamontowanej na stałe podczas przygotowania. Tylko gdy jej nie ma (procedura zapasowa): wyprowadź zapasowy dipol przez okno i ustaw go pionowo, w miarę możliwości wysoko i z dala od pomieszczenia z ludźmi; nie kładź go przy metalowej framudze ani nie prowadź przewodu przez drzwi hermetyczne, gazoszczelne lub przeciwpożarowe.
 2. Włóż ogniwa AA kompletu kryzysowego (+ do znaku +) albo podłącz źródło 12 V.
-3. Włącz wyłącznik główny i wybierz język na pierwszym ekranie.
+3. Naciśnij wyłącznik główny i wybierz język na pierwszym ekranie. Radio startuje niezależnie od wyboru języka.
 4. Poczekaj na „RADIO WŁĄCZONE” (≤60 s). Od tej chwili stacja przekazuje ruch innych stacji. Potwierdź adres na ekranie „ADRES: [x] – CZY TO TO MIEJSCE? OK = TAK / WSTECZ = NIE”; przy NIE lub braku adresu stacja pokazuje „STACJA NIE MA TWOJEGO ADRESU – UŻYJ FORMULARZA PAPIEROWEGO”.
-5. Wyślij TEST proponowany przez stację; stacja nadaje go z losowym opóźnieniem („TEST ZAPLANOWANY ZA OKOŁO [mm] MIN – NIE WYŁĄCZAJ. WSTECZ = ANULUJ”), chyba że OSP wstrzymała TEST („TEST WSTRZYMANY PRZEZ ODBIORCĘ”). Poczekaj na „ODBIORCA ZAPISAŁ”, a potem „ODBIORCA PRZECZYTAŁ”. Bez potwierdzenia w 30 min od nadania TEST wyślij gońca z formularzem.
+5. Zatwierdź OK TEST proponowany przez stację; stacja nadaje go z losowym opóźnieniem („TEST ZAPLANOWANY ZA OKOŁO [mm] MIN – NIE WYŁĄCZAJ. WSTECZ = ANULUJ”). Jeżeli komunikat od odbiorcy prosi o wstrzymanie TEST, wybierz TEST → WSTRZYMAJ („TEST WSTRZYMANY PRZEZ ODBIORCĘ”). Poczekaj na „ODBIORCA ZAPISAŁ”, a potem „ODBIORCA PRZECZYTAŁ”. Bez potwierdzenia w 30 min od nadania TEST stacja podaje alarm „BRAK POTWIERDZENIA OD [n] MIN – WYŚLIJ GOŃCA Z FORMULARZEM”.
 
-Napis „RADIO WŁĄCZONE” nie oznacza dostępności pomocy. „OSTATNI KONTAKT Z ODBIORCĄ: [czas] TEMU” pokazuje czas od ostatniej odpowiedzi OSP; brak świeżego kontaktu nie jest awarią.
+Napis „RADIO WŁĄCZONE” nie oznacza dostępności pomocy. „OSTATNI KONTAKT Z ODBIORCĄ: [czas] TEMU” (w STAN; na ekranie głównym w skrócie) pokazuje czas od ostatniej uwierzytelnionej wiadomości od OSP; brak świeżego kontaktu nie jest awarią.
 
 Zgłoszenie schronienia: wybierz kategorię, liczbę osób, pilność i opcjonalnie gotową frazę, potem potwierdź. Ekran pokazuje „ZAPISANE W STACJI – CZEKA NA WYSŁANIE”, „WYSYŁANIE – PRÓBA [n], NASTĘPNA ZA [m] MIN”, potem „ODBIORCA ZAPISAŁ”, „ODBIORCA PRZECZYTAŁ” i decyzję dyżurnego: „POMOC SKIEROWANA (DECYZJA, NIE GODZINA PRZYJAZDU)”, „PRZEKAZANE DALEJ (PSP / POGOTOWIE / POWIAT)”, „ODBIORCA NIE MOŻE TERAZ POMÓC – CZYTAJ ODPOWIEDŹ” albo „ZAMKNIĘTE”, oraz krótki numer zgłoszenia do przekazania telefonicznie lub przez gońca. Przy pilności 2 opiekun równolegle udziela pierwszej pomocy i – gdy droga jest bezpieczna – wysyła gońca do najbliższej jednostki PSP/OSP lub zespołu ratownictwa medycznego. WICI nie zastępuje numeru 112.
 
@@ -110,14 +112,14 @@ Stacja pracuje dalej przez cały czas dołączania rozszerzeń.
 1. Przy wyłączonym wyłączniku DC (pozycja 0) podłącz oryginalne zasilacze laptopa i routera do wyjść przetwornicy.
 2. Podłącz źródło A do zespołu zasilania i źródło C do ładowarki. Sprawdź na woltomierzach, czy oba mają co najmniej 12,4 V, i włącz wyłącznik DC (pozycja 1).
 3. Połącz laptop ze stacją przewodem USB, a na poziomie 3 także z portem LAN routera. Podłącz pamięć USB zestawu.
-4. Uruchom START w działającym systemie albo system Linux z pamięci USB na obsługiwanym komputerze PC. Ustaw hasła opiekuna i zastępcy. Panel pokazuje adres i kartę OSP odczytane ze stacji.
+4. Uruchom START w działającym systemie albo system Linux z pamięci USB na obsługiwanym komputerze PC. Zaloguj się hasłem z koperty; konta są na pamięci USB zestawu. Panel pokazuje adres i kartę OSP odczytane ze stacji.
 5. Połącz telefon z główną siecią Wi-Fi routera i otwórz adres z kodu QR wyświetlonego na ekranie laptopa.
 
 Nie podłączaj zasilaczy do pracującej przetwornicy: prąd ładowania ich kondensatorów może wyzwolić zabezpieczenie. Jeżeli router ma nieznane hasło, wyłączony DHCP lub izolację Wi-Fi od LAN, trzeba go skonfigurować w panelu. Wiele routerów domowych obsługuje najwyżej około 32 klientów Wi-Fi lub ma mniejszą pulę DHCP. Kwalifikacja routera obejmuje 50 klientów i pulę co najmniej 60 adresów. Zablokowany router znaleziony na miejscu pozostaje niedostępny: nie resetuj go bez zgody właściciela. Mac z procesorem Apple Silicon nie uruchomi ogólnego obrazu Linuksa, więc pakiet START wymaga na nim sprawnego systemu macOS. Komputer, którego nie da się uruchomić z pamięci USB i który nie ma sprawnego systemu, jest poza zakresem.
 
 ## Energia stacji
 
-Stacja załącza wejście 12 V po podłączeniu źródła o napięciu ≥12,0 V i korzysta z niego do spadku do 11,5 V; wtedy odłącza je z zatrzaskiem i pracuje z ogniw AA. Ponowne załączenie 12 V jest ręczne, przy napięciu ≥12,4 V. Przełączenie nie resetuje stacji. Ekran pokazuje aktywne źródło, napięcie i szacowany czas pracy („OGNIWA: OKOŁO [x] H PRACY”). Przy niskim napięciu ogniw stacja pokazuje „WYMIEŃ OGNIWA W CIĄGU 1 H”, a przed wyłączeniem zapisuje stan („WYŁĄCZANIE – CZEKAJ, ZAPISUJĘ” → „MOŻNA WYJĄĆ OGNIWA”). Ogniwa wymienia się przy włączonym źródle 12 V albo po wyłączeniu stacji; kolejka i dług ciszy pozostają w pamięci FRAM. Nie używaj ogniw różnych typów ani różnego stopnia rozładowania w jednym komplecie.
+Stacja załącza wejście 12 V po podłączeniu źródła o napięciu ≥12,0 V i korzysta z niego do spadku do 11,5 V; wtedy odłącza je z zatrzaskiem i pracuje z ogniw AA. Ponowne załączenie 12 V jest ręczne, przy napięciu ≥12,4 V: ekran pokazuje „12 V ODŁĄCZONE – ZA NISKIE NAPIĘCIE. PODŁĄCZ NAŁADOWANE ŹRÓDŁO I PRZYTRZYMAJ OK”. Przełączenie nie resetuje stacji. Ekran pokazuje aktywne źródło, napięcie i szacowany czas pracy („OGNIWA: OKOŁO [x] H PRACY”). Przy niskim napięciu ogniw stacja pokazuje „WYMIEŃ OGNIWA W CIĄGU 1 H”, a przed wyłączeniem zapisuje stan („WYŁĄCZANIE – CZEKAJ, ZAPISUJĘ” → „MOŻNA WYJĄĆ OGNIWA”). Tak samo działa wyłączenie przytrzymaniem wyłącznika głównego przez 2 s. Ogniwa wymienia się przy włączonym źródle 12 V albo po wyłączeniu stacji; kolejka i dług ciszy pozostają w pamięci FRAM. Nie używaj ogniw różnych typów ani różnego stopnia rozładowania w jednym komplecie.
 
 ## Wymiana źródła A/B (poziom 3)
 
