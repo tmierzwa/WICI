@@ -81,8 +81,7 @@ SEGMENTS = [
         "Zestaw ma trzy poziomy. Pierwszy, podstawowy, to małe pudełko z ekranem, kilkoma przyciskami i bateriami.",
     ]),
     ("s6b", [
-        "Włączam stację i jestem w sieci.",
-        "Bo antenę zamontowano wcześniej, na zewnątrz i możliwie wysoko.",
+        "Włączam stację, wystawiam na zewnątrz antenę i jestem w sieci.",
     ]),
     ("s6c", [
         "Opiekun wybiera przyciskami, czego brakuje i ilu osób to dotyczy.",

@@ -59,34 +59,38 @@ Stacja to małe pudełko z ekranem,
 przyciskami i bateriami.
 
 16
-00:00:38,744 --> 00:00:42,515
-Antena czeka na zewnątrz: włączam i jestem w sieci.
+00:00:38,744 --> 00:00:41,134
+Włączam stację, wystawiam na zewnątrz
 
 17
-00:00:42,515 --> 00:00:44,748
-Laptop i router to kolejne poziomy.
+00:00:41,134 --> 00:00:43,084
+antenę i jestem w sieci.
 
 18
-00:00:45,217 --> 00:00:47,215
-Projekt jest otwarty, ale jeszcze
+00:00:43,084 --> 00:00:45,410
+Laptop i router to kolejne poziomy.
 
 19
-00:00:47,215 --> 00:00:49,069
-niesprawdzony w terenie.
+00:00:45,883 --> 00:00:47,794
+Projekt jest otwarty, ale jeszcze
 
 20
-00:00:49,069 --> 00:00:51,725
-Szukamy krótkofalowców, elektroników,
+00:00:47,794 --> 00:00:49,584
+niesprawdzony w terenie.
 
 21
-00:00:51,725 --> 00:00:53,949
-programistów i ludzi ze służb.
+00:00:49,584 --> 00:00:52,241
+Szukamy krótkofalowców, elektroników,
 
 22
-00:00:54,417 --> 00:00:57,224
-Szczegóły na GitHubie, pod nazwą WICI.
+00:00:52,241 --> 00:00:54,464
+programistów i ludzi ze służb.
 
 23
-00:00:57,224 --> 00:00:58,424
+00:00:54,950 --> 00:00:57,757
+Szczegóły na GitHubie, pod nazwą WICI.
+
+24
+00:00:57,757 --> 00:00:58,957
 Rozsyłamy wici.
 

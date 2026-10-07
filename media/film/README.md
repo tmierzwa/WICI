@@ -2,7 +2,7 @@
 
 | Plik | Format |
 |---|---|
-| [WICI-film.mp4](WICI-film.mp4), [WICI-film.srt](WICI-film.srt) | 4:40, 1920×1080, 30 kl./s, napisy wypalone w obrazie i osobno |
+| [WICI-film.mp4](WICI-film.mp4), [WICI-film.srt](WICI-film.srt) | 4:37, 1920×1080, 30 kl./s, napisy wypalone w obrazie i osobno |
 | [WICI-short.mp4](WICI-short.mp4), [WICI-short.srt](WICI-short.srt) | 60 s, 1080×1920 na Reels i TikTok; napisy nad interfejsem aplikacji |
 | [plakat.jpg](plakat.jpg) | kadr tytułowy, plakat odtwarzacza na stronie koncepcji |
 
