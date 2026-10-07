@@ -6,6 +6,7 @@
   "files": {
     ".gitattributes": "d3306e69156ebe218bb2d6b732c7e4a320b159bf3d2168818428387cd52e036d",
     ".github/workflows/checks.yml": "92d933317cec5bc95b3d5834c13468b52f61e7d454849ac03b5779362cf6a944",
+    ".github/workflows/pages.yml": "9d12ef78cab562486c8de007cee9f1d5f0de81e19b599e49d2061eb01521a07b",
     ".gitignore": "c84c277f42b83a4fd4cdba1cdb3f5920dd8ea8fb24554dbd5e7deef56bc657e7",
     "CONTRIBUTING.md": "9084d2d6af37f3c7d781036aa30ee1802014565bfa409dc8fe93049915ca1bac",
     "LICENSE.md": "252c72ada81e6c732c6324d97c1b59a6fdd99c4880c5dcadda7cd4cba552db35",
@@ -13,7 +14,7 @@
     "LICENSES/CC-BY-SA-4.0.txt": "cde7883b9050a1104f4ac19a1572aafd6e5d7323b68351aaf51fbf4beba54966",
     "LICENSES/CERN-OHL-P-2.0.txt": "eeecc593866fa1c3b80189c7e3dc0ceb77740557fa92f81771f891cc54c579cb",
     "LICENSES/GPL-3.0-or-later.txt": "fb981668c18a279e285fc4d83fba1e836cc84dd4daa73c9697d3cfd2d8aca6e0",
-    "README.md": "752d4348a1103c2cb2efbdee1e1dce1e5c79c076d67eac05fa782f13ebcfa542",
+    "README.md": "e70ce218d47631113967bafb430dbaba3420d872efd3108262c68301e414ebf3",
     "docs/README.md": "919a4ef2ce1f5843e929d577d6072ae49cade0f648fe927bea3ab10b728a3970",
     "docs/conception/01-potrzeby-i-wymagania.html": "e6b805361f6f2d2d92f98fa8c7fca5891c991c8d9d41e9427d180a294dbd04aa",
     "docs/conception/02-scenariusze-i-organizacja.html": "0a84e646a7e10bbcfcf8d521eef65c59d303a972c78bdb4c7054092b7d3d7c8b",
@@ -26,7 +27,7 @@
     "docs/conception/index.html": "96011ab3c305e7e48ab7681145461f18f86f655986d8abee52dd8f2b745b9e4d",
     "docs/conception/style.css": "3322131021429b427310b1fe372fea5962d62764aa056aada1b084ac75a10388",
     "docs/conception/zrodla.html": "7072124496b371b67faa25066d0246981fd086db9a7e996795260d40f0ede934",
-    "docs/development.md": "d976d1103627e068a7720a891a3754e6b25b7961b68e1433c2549dc1fd113254",
+    "docs/development.md": "21bf1e6f8bb82de6520a20123b2d95e155c9eb8610965ecb4653c237d539c09f",
     "docs/review.md": "51dcf2660cc5fe2ccada58e6016d4538071398171df72f80550d6879693e5499",
     "docs/spec/bom-stacji.csv": "8b9be6e01de61f4c87acde31dc810527afed8894d3e2a078abd4746932bdab25",
     "docs/spec/elektronika.md": "a448089e5c642f6a905471d030dc0ef661d0c745864999f6c70d1cd9ab80da73",
@@ -215,9 +216,10 @@
     "software/reference/test_reference.py": "53077f2ad74e4a4430f7534696a76382c25cee85c55e3167e0daaaedf51dc224",
     "software/reference/weryfikacja.json": "9a275727a4af9a45400ec829fe57fc22b594e2a40f884a2bdf7eb1e830bf164a",
     "software/reference/wyniki.json": "a6fbfdd16b37d83babcd7adc6ce534aa057d973253127f636432742ca28553e2",
-    "tests/test_publication.py": "3326961f2267b8d970e6dc76bcb8325909520b9c49001ec966b26f785d4567ff",
+    "tests/test_publication.py": "d49f31f9b326a462c833d62118e9651098de0921c22d002096d9d8f71398db58",
     "tools/__init__.py": "b73e60fb8d779b6bc62729fa6e0a3604f6ce2cf141aa4f47b7e46ee3819d596f",
     "tools/archives.py": "f322cadb99bdf51ede69f2bfc87212924e0723deba995467020cf2247023ba1c",
+    "tools/build_pages.py": "df8e273e5eb98f0247dd859594598b9ffbc76f1918c2f78fc5e3d8d145f94cb7",
     "tools/release.py": "54a2e5ce68a1a091fcc1b402b120e05b653e5ee2648bad2ed145be726f0b8da1",
     "tools/verify_repository.py": "6127372157c140d27372e92c8ba9bac4be01c7484d054d64eb629ddfe0803c28"
   }
