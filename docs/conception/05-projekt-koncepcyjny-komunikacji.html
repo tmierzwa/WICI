@@ -172,6 +172,8 @@
 
 <p>Modem ma cztery miejsca na datagramy i osiem kontekstów składania. Przepełnienie musi być widoczne w licznikach. W prototypie trzeba określić również limit trwałej kolejki, wolnego miejsca i logów oraz zachowanie formularza po jego osiągnięciu; nie wolno pozornie potwierdzić odrzuconych danych.</p>
 
+<p>Tryb ciszy radiowej zatrzymuje nadawanie, a nie przyjmowanie: strona i zapis działają, kolejka rośnie i jest wysyłana po ręcznym wyłączeniu ciszy. Stacja nie nadaje też cyklicznych ogłoszeń. Szczegóły w <a href="../spec/oprogramowanie.md">specyfikacji oprogramowania</a>, uzasadnienie w rozdziale <a href="02-scenariusze-i-organizacja.html#miejsce-w-systemie-ochrony-ludnosci">02</a>.</p>
+
 <p>Węzeł transportowy jest aktywnym przekaźnikiem, nie magazynem wszystkich cudzych zgłoszeń. Opcjonalny węzeł przechowywania LXMF w OSP jest inną funkcją i wymaga osobnych prób, zwłaszcza przy długim braku odbiorcy. <a href="https://github.com/markqvist/LXMF">Role LXMF</a>.</p>
 
 <h2 id="zaufanie-i-informacja-lokalna">Zaufanie i informacja lokalna</h2>
@@ -182,7 +184,7 @@
 
 <p>Propozycja interfejsu: przy stanie łączności pokazywać czas ostatniej odpowiedzi OSP i wiek najstarszego oczekującego zgłoszenia, zamiast jednego zielonego wskaźnika. Komunikat OSP oznaczać odbiorcą, tożsamością źródła i momentem lokalnego odbioru. Poprawny podpis potwierdza źródło, nie aktualność ani prawdziwość treści. Zegara znalezionego laptopa nie traktować jako zaufanej podstawy koordynacji.</p>
 
-<p>Dodatkowy kanał internetowy może przenosić ten sam stos po osobnej próbie. Podstawowe działanie nie zależy od jego obecności. Kopiowanie wiadomości na pendrive, automatyczna replikacja OSP i wspólna tablica mieszkańców nie należą do bazowego kontraktu komunikacji.</p>
+<p>Dodatkowy kanał internetowy może przenosić ten sam stos po osobnej próbie. Podstawowe działanie nie zależy od jego obecności. Kopiowanie wiadomości na pamięć USB, automatyczna replikacja OSP i wspólna tablica mieszkańców nie należą do bazowego kontraktu komunikacji.</p>
 </article>
 <nav class="pager" aria-label="Kolejność czytania">
   <a class="prev" href="04-analiza-opcji.html" rel="prev"><span>← Poprzedni</span>04. Analiza opcji</a>
