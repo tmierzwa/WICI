@@ -108,8 +108,19 @@ Identity Radio::identify() {
     return id;
 }
 
+uint32_t Radio::readIrqStatus() {
+    uint8_t bytes[4] = {};
+    readRegs(IRQ_STATUS3, bytes, 4);
+    return (static_cast<uint32_t>(bytes[0]) << 24) | (static_cast<uint32_t>(bytes[1]) << 16) |
+           (static_cast<uint32_t>(bytes[2]) << 8) | bytes[3];
+}
+
 bool Radio::commandAndWait(uint8_t code, uint8_t state, uint32_t timeoutUs) {
     command(code);
+    return waitState(state, timeoutUs);
+}
+
+bool Radio::waitState(uint8_t state, uint32_t timeoutUs) {
     const uint32_t start = micros();
     do {
         if (status().state() == state) return true;

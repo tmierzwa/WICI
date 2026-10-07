@@ -4,13 +4,15 @@
 // radiowej i limitowi nadawania (dług ciszy 12 x czas TX zapisany w dzienniku FRAM
 // przed serią, seria nie dłuższa niż najdłuższy datagram P1); dłuższą serię dopuszcza
 // argument conducted potwierdzony przyciskiem OK w ciągu 30 s i zapisany w dzienniku.
+// Operacje układu radiowego idą przez radiolink::Driver (CC1120: cc1120_link.cpp, S2-LP:
+// s2lp_link.cpp); reszta, w tym łącze P1, jest wspólna dla obu wykonań.
 #pragma once
 
 #include <Arduino.h>
 
-#include "cc1120.h"
 #include "journal.h"
 #include "p1frame.h"
+#include "radio_link.h"
 
 namespace measure {
 
@@ -33,7 +35,7 @@ struct Counters {
     bool haveSeq = false;
     uint16_t lastSeq = 0;
     int32_t rssiSum = 0;      // suma RSSI poprawnych ramek (dBm)
-    uint32_t lqiSum = 0;
+    uint32_t lqiSum = 0;      // CC1120: LQI, S2-LP: SQI
     uint32_t startedMs = 0;
 };
 
@@ -56,12 +58,14 @@ struct LinkCounters {
 
 enum class RxMode : uint8_t { NONE, TEST, P1 };
 
-// Bajty losowe z generatora sprzętowego nRF52840 (RNG z korekcją obciążenia).
+// Bajty losowe z generatora sprzętowego MCU (nRF52840: RNG z korekcją obciążenia; ESP32-S3:
+// esp_fill_random).
 void randomBytes(uint8_t* out, size_t count);
 
 class Bench {
 public:
-    Bench(cc1120::Radio& radio, uint8_t pinSync, uint8_t pinOk, uint8_t pinLed);
+    // pinLed: dioda miganiem sygnalizująca czekanie na potwierdzenie OK (aktywna stanem niskim); -1 = brak.
+    Bench(radiolink::Driver& radio, uint8_t pinOk, int16_t pinLed);
 
     bool prep = false;     // tryb przygotowania (na stacji: przycisk pod plombowaną pokrywą)
     bool silence = false;  // cisza radiowa (na stacji: przełącznik CISZA)
@@ -92,7 +96,7 @@ public:
     void printLog(uint32_t count);
     void printStatus();
     void log(const char* text);
-    void applyOffset();  // ponowny zapis FREQOFF po CONFIG
+    void applyOffset();  // ponowny zapis korekty częstotliwości po CONFIG
     bool confirm();      // czeka na przycisk OK do CONFIRM_MS
     uint32_t debtRemainingMs() const;
     bool busy() const { return cwActive_ || pktActive_ || txState_ != TxState::IDLE; }
@@ -111,14 +115,12 @@ private:
     void pollP1Tx();
     bool sendFragments();
     void finishP1Tx(const char* result);
-    bool waitSync(bool level, uint32_t timeoutUs);
-    void restore(const char* name);
+    void led(bool on);
     uint32_t uptimeS() const { return uptime_ ? uptime_() : millis() / 1000; }
 
-    cc1120::Radio& radio_;
-    uint8_t pinSync_;
+    radiolink::Driver& radio_;
     uint8_t pinOk_;
-    uint8_t pinLed_;
+    int16_t pinLed_;
     journal::Journal* journal_ = nullptr;
     uint32_t (*uptime_)() = nullptr;
 
@@ -133,7 +135,7 @@ private:
     uint32_t pktIntervalMs_ = 0;
     uint32_t pktNextMs_ = 0;
     uint32_t pktStartMs_ = 0;
-    uint32_t pktTxUs_ = 0;       // suma czasu od STX do IDLE
+    uint32_t pktTxUs_ = 0;       // suma czasu od polecenia TX do stanu spoczynku
     uint32_t pktLeadUs_ = 0;     // pierwsza ramka: STX -> początek słowa synchronizacji
     uint32_t pktOnAirUs_ = 0;    // pierwsza ramka: słowo synchronizacji -> koniec pakietu
     uint32_t pktTailUs_ = 0;     // pierwsza ramka: koniec pakietu -> IDLE
@@ -146,9 +148,6 @@ private:
     uint32_t rxPollMs_ = 0;
     Counters counters_;
 
-    // Odbiór P1: bajt LEN odczytany, reszta ramki w drodze.
-    uint8_t rxPendingLen_ = 0;
-    uint32_t rxDeadlineMs_ = 0;
     p1frame::Assembler assembler_;
     LinkCounters link_;
 

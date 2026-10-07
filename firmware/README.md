@@ -4,9 +4,9 @@ Katalog zawiera oprogramowanie układowe stacji. Obecny stan to pierwsze kroki n
 
 Środowisko `bench-n1` buduje ten sam obraz dla stanowiska A na [płytce nośnej N1](#płytka-nośna-n1-bench-n1) zamiast przewodów: inne piny SPI, radia i ekranu oraz panel płytki (przełącznik CISZA, przycisk przygotowania, dioda alarmu, brzęczyk, VTEST).
 
-Środowisko `bench-b` buduje osobny, mniejszy obraz dla [stanowiska B na N1](#stanowisko-b-na-płytce-n1-bench-b): ESP32-S3-DevKitC-1 z X-NUCLEO-S2868A2 (ST S2-LP). Obejmuje kroki B3–B4 uruchomienia (panel, FRAM, ekran z menu stacji, odczyt PARTNUM i VERSION S2-LP) oraz zapis [rejestrów P1 dla S2-LP](#rejestry-profilu-p1-dla-s2-lp) z weryfikacją odczytem; nie ma jeszcze łącza P1, dziennika, magazynu ani protokołu USB laptop–stacja.
+Środowisko `bench-b` buduje ten sam program stacji dla [stanowiska B na N1](#stanowisko-b-na-płytce-n1-bench-b): ESP32-S3-DevKitC-1 z X-NUCLEO-S2868A2 (ST S2-LP) zamiast nRF52840 i CC1120. Wspólne są polecenia, polecenia pomiarowe, łącze P1, dziennik, magazyn, protokół USB laptop–stacja z dwoma interfejsami CDC, warstwa aplikacji, ekran i panel N1; różnią się warstwa MCU (`src/platform_*.cpp`), sterownik układu radiowego (`src/radio_console_*.cpp`, `src/*_link.cpp`) i [rejestry P1 dla S2-LP](#rejestry-profilu-p1-dla-s2-lp).
 
-Obrazy skompilowano (PlatformIO; rdzeń Adafruit nRF52 1.7.0: `bench-a` 51 008 B RAM, 174 800 B flash, `bench-n1` 51 216 B RAM, 181 348 B flash, podział w [przeglądzie rozmiaru](#rozmiar-i-wydajność); Arduino-ESP32 2.0.17: `bench-b` 32 268 B RAM, 347 689 B flash). **Żadnego nie uruchomiono na sprzęcie**: odpowiedzi poleceń, numery pinów, działanie SPI z modułem i przyjęcie rejestrów przez układ wymagają sprawdzenia na płytce według kroków niżej. Na hoście sprawdzone są tylko moduły bez Arduino, sterownik S2-LP z atrapą SPI, tablica rejestrów S2-LP i zgodność pinów `bench-b` z [połączeniami](../hardware/dev-bench/polaczenia.md) (`tests/`).
+Obrazy skompilowano (PlatformIO; rdzeń Adafruit nRF52 1.7.0: `bench-a` 51 040 B RAM, 175 940 B flash, `bench-n1` 51 256 B RAM, 182 444 B flash, podział w [przeglądzie rozmiaru](#rozmiar-i-wydajność); Arduino-ESP32 3.3.12: `bench-b` 100 032 B RAM z 327 680 B, 511 473 B flash). **Żadnego nie uruchomiono na sprzęcie**: odpowiedzi poleceń, numery pinów, działanie SPI z modułem, przyjęcie rejestrów przez układ, USB i łącze radiowe wymagają sprawdzenia na płytce według kroków niżej. Na hoście sprawdzone są tylko moduły bez Arduino, sterownik S2-LP i jego sterownik łącza z modelem układu, `measure::Bench` ze sterownikiem zastępczym, tablica rejestrów S2-LP i zgodność pinów `bench-b` z [połączeniami](../hardware/dev-bench/polaczenia.md) (`tests/`).
 
 ## Okablowanie stanowiska A
 
@@ -78,13 +78,13 @@ cd firmware && ../.venv-pio/bin/pio run -e bench-n1 -t upload
 
 ## Stanowisko B na płytce N1 (bench-b)
 
-Opis płytki: [płytka nośna](../hardware/dev-bench/plytka-nosna.md#przypisanie-sygnałów) (kolumna ESP32-S3) i [połączenia](../hardware/dev-bench/polaczenia.md) (J5/J6 to złącza J1/J3 DevKitC). Numery pinów są w `src/board_bench_b.h`, program w `src/main_bench_b.cpp`; środowisko `bench-b` pomija pliki zależne od nRF52840 (`main.cpp`, `cc1120.cpp`, `measure.cpp`), a reszta modułów (ekran, FRAM, model ekranu, czcionka) jest wspólna ze stanowiskiem A. Moduł ESP32-S3: N8R2, N8R8 albo N16R16V; obraz zakłada 8 MB flash (wystarcza też na 16 MB) i nie używa PSRAM, więc piny PSRAM ośmiobitowej i piny 1,8 V modułu N16R16V zostają wolne.
+Opis płytki: [płytka nośna](../hardware/dev-bench/plytka-nosna.md#przypisanie-sygnałów) (kolumna ESP32-S3) i [połączenia](../hardware/dev-bench/polaczenia.md) (J5/J6 to złącza J1/J3 DevKitC). Numery pinów są w `src/board_bench_b.h`. Program to ten sam `src/main.cpp` co na stanowisku A; środowisko `bench-b` pomija sterowniki CC1120 (`cc1120.cpp`, `cc1120_link.cpp`, `radio_console_cc1120.cpp`). Moduł ESP32-S3: N8R2, N8R8 albo N16R16V; obraz zakłada 8 MB flash (wystarcza też na 16 MB) i nie używa PSRAM, więc piny PSRAM ośmiobitowej i piny 1,8 V modułu N16R16V zostają wolne.
 
 | Sygnał | GPIO ESP32-S3 | Uwagi |
 |---|---|---|
 | SPI SCK / MOSI / MISO | 12 / 11 / 13 | piny IO_MUX FSPI, kontroler SPI2 (`SPIClass(FSPI)`); SCK przez 33 Ω (R18); 1 MHz dla radia, FRAM i ekranu |
 | CSn / SDN S2-LP | 10 / 9 | SDN: stan wysoki wyłącza układ (10 kΩ do masy na płytce) |
-| GPIO0 / GPIO1 / GPIO2 / GPIO3 S2-LP | 14 / 21 / 4 / 42 | wejścia; stan w odpowiedzi `RADIO` |
+| GPIO0 / GPIO1 / GPIO2 / GPIO3 S2-LP | 14 / 21 / 4 / 42 | wejścia; GPIO0 = nIRQ, GPIO2 = słowo synchronizacji (oba na J11), stan w odpowiedzi `RADIO` |
 | CS FRAM | 8 | |
 | CS / EXTCOMIN / DISP ekranu | 7 / 17 / 16 | CS aktywny stanem wysokim; EXTCOMIN 1 Hz z MCPWM0; DISP niski do CLEAR, potem wysoki |
 | GÓRA, DÓŁ, OK, WSTECZ | 41, 40, 39, 2 | podciągnięcie na płytce (OK i WSTECZ także 2,2 kΩ na X-NUCLEO) |
@@ -92,41 +92,38 @@ Opis płytki: [płytka nośna](../hardware/dev-bench/plytka-nosna.md#przypisanie
 | Dioda alarmu / brzęczyk | 18 / 15 | brzęczyk 2048 Hz z `tone()` (LEDC) |
 | VTEST | 5 (ADC1_CH4) | VTEST_IN / 6 |
 
-Ustalenia dla B:
+Różnice wobec stanowiska A:
 
+- **USB.** Złącze „USB” DevKitC (USB-OTG ESP32-S3, GPIO19/20), nie „UART”. Arduino-ESP32 3.3.12 z TinyUSB daje dwa interfejsy CDC ACM z IAD jak na A: pierwszy to diagnostyka (polecenia), drugi dane ([protokół laptop–stacja](#protokół-usb-laptopstacja)). Nazwy interfejsów ustala rdzeń („TinyUSB CDC” i „TinyUSB CDC2”), a urządzenie zgłasza się jako „WICI bench-b” z VID/PID Espressif (testowe, do przydziału przed wydaniem). USB-Serial/JTAG jest wyłączony (`ARDUINO_USB_MODE=0`). Wgrywanie przez ten sam port: PlatformIO otwiera port z prędkością 1200 b/s, program restartuje się do bootloadera ROM i esptool wgrywa obraz; gdy program nie działa, BOOT przytrzymany przy wciśnięciu RESET.
+- **Radio.** Sterownik `src/s2lp.cpp` (karta [DS11896](https://www.st.com/resource/en/datasheet/s2-lp.pdf), rozdziały 6 i 9.1): SPI w trybie 0, nagłówek 0x00 zapis, 0x01 odczyt, 0x80 polecenie; w czasie dwóch pierwszych bajtów układ wysyła MC_STATE1 i MC_STATE0 (stan głównego sterownika i XO_ON). Po starcie SDN na 1 ms, `SRES`, odczyt PARTNUM (0xF0) i VERSION (0xF1), zapis tablicy P1 z weryfikacją, potem odbiór P1. Łącze P1 i polecenia pomiarowe idą przez [`src/s2lp_link.cpp`](#sterownik-łącza-s2-lp).
 - **SPI i napęd.** SCK i MOSI startują z najniższym napędem ESP32-S3 (`GPIO_DRIVE_CAP_0`, około 5 mA): sieć SCK ma około 240 mm z odgałęzieniami, a 33 Ω (R18) łagodzi zbocza przy wejściach 74HC4050 bez przerzutnika Schmitta. `DRIVE <0-3>` zmienia napęd do restartu; wybór na stałe po obejrzeniu zboczy analizatorem na J11 (najniższy napęd, przy którym zbocza są czyste przy 1 i 2 MHz).
-- **EXTCOMIN** generuje timer 0 jednostki MCPWM0 (rozdzielczość 10 kHz, okres 10 000 taktów, wypełnienie 50 %) bez udziału programu, jak RTC2 na nRF52840. LEDC z kwarcu 40 MHz nie schodzi poniżej około 2,4 Hz (dzielnik do 1024, licznik do 14 bitów), a z wewnętrznego RC_FAST ledwie do 1 Hz i z niedokładnym zegarem, dlatego MCPWM. Kod EXTCOMIN jest teraz w osobnych plikach `src/sharp_extcomin_nrf.cpp` (RTC2, PPI, GPIOTE) i `src/sharp_extcomin_esp32.cpp`; reszta `src/sharp.cpp` nie zależy od MCU.
-- **USB:** wbudowany USB-Serial/JTAG ESP32-S3 na złączu „USB” DevKitC (GPIO19/20), jeden port CDC z poleceniami jak niżej; wgrywanie przez ten sam port (`esptool`, bez przycisku BOOT). Drugi port (dane, protokół laptop–stacja) wymaga TinyUSB w trybie USB-OTG (następne kroki).
-- **S2-LP:** sterownik `src/s2lp.cpp` (karta [DS11896](https://www.st.com/resource/en/datasheet/s2-lp.pdf), rozdziały 6 i 9.1): SPI w trybie 0, nagłówek 0x00 zapis, 0x01 odczyt, 0x80 polecenie; w czasie dwóch pierwszych bajtów układ wysyła MC_STATE1 i MC_STATE0 (stan głównego sterownika i XO_ON). Po starcie SDN na 1 ms, `SRES`, odczyt PARTNUM (0xF0) i VERSION (0xF1), potem zapis tablicy P1 z weryfikacją.
-- **Panel** działa jak w `bench-n1`: CISZA na zmianę położenia po 50 ms (położenie przy starcie od razu), przytrzymanie przycisku przygotowania przez 3 s przełącza tryb z krótkim sygnałem, dioda alarmu świeci w ciszy i na ekranie alarmu. Bez magazynu w FRAM nie ma przyczyn alarmu ani dziennika zdarzeń; tryb przygotowania nie odblokowuje jeszcze żadnych poleceń pomiarowych.
-- **Ekran** pokazuje menu stacji (`ui::Model` jak na stanowisku A) na przyciskach panelu, bez kreatora i wiadomości, z językiem polskim po każdym starcie.
+- **EXTCOMIN** generuje timer jednostki MCPWM0 (sterownik MCPWM z ESP-IDF 5: licznik 10 kHz, okres 10 000 taktów, stan wysoki do porównania 5000) bez udziału programu, jak RTC2 na nRF52840; gdy sterownik MCPWM zwróci błąd, obraz włącza zapasowe odwracanie VCOM bitem w poleceniach (`software_vcom: true` w `DISPLAY`). LEDC z kwarcu 40 MHz nie schodzi poniżej około 2,4 Hz (dzielnik do 1024, licznik do 14 bitów), a z wewnętrznego RC_FAST ledwie do 1 Hz i z niedokładnym zegarem, dlatego MCPWM. Kod EXTCOMIN jest w `src/sharp_extcomin_nrf.cpp` (RTC2, PPI, GPIOTE) i `src/sharp_extcomin_esp32.cpp`; reszta `src/sharp.cpp` nie zależy od MCU.
+- **Warstwa MCU** (`src/platform_esp32.cpp`): nazwa `WICI-xxxxxx` i adres stanowiska z adresu MAC w eFuse, `reset_reason` z `esp_reset_reason()`, watchdog zadań (TWDT, 60 s) na zadaniu pętli, pamięć niezerowana `RTC_NOINIT_ATTR` (język i ekran po restarcie programowym), pętla stacji w zadaniu `loop()` rdzenia z 16 KB stosu, identyfikator datagramu z `esp_fill_random` (przy wyłączonym Wi-Fi i Bluetooth źródło szumu jest słabsze; karta ESP32-S3 zaleca wtedy dodatkowe źródło), VTEST z `analogReadMilliVolts` (tłumienie 11 dB, kalibracja z eFuse).
+- **Brak diod stanu** LED1–LED4 (DevKitC ma tylko diodę RGB, nieużywaną): `LED 1-4` zwraca błąd, a czekanie na potwierdzenie OK nie miga diodą; dioda alarmu N1 działa jak w `bench-n1`.
 
-Polecenia (port USB DevKitC, 115200 bit/s, odpowiedź to jeden wiersz JSON; po otwarciu portu obraz sam wysyła `INFO`, `RADIO`, wynik `VERIFY` i `FRAM`):
+Polecenia są jak na [stanowisku A](#polecenia) i [N1](#płytka-nośna-n1-bench-n1) (`LED 5`, `BUZZ`, `VTEST`, `DISPLAY <hz>`), z różnicami układu radiowego i MCU:
 
-| Polecenie | Odpowiedź |
+| Polecenie | Odpowiedź na B |
 |---|---|
-| `INFO` | pola z [specyfikacji radia](../docs/spec/radio.md#usb-do-laptopa) z `radio: "S2LP"`, `mcu: "ESP32-S3"`, liczniki łącza zerowe; dalej `bench: "B"`, `board`, `prep`, `silence`, `radio_ok`, `p1_ok`, `fram_ok`, parametry P1, `boot_s`, `screen`, `lang`, `name` (`WICI-xxxxxx` z MAC), `reset_reason` (`esp_reset_reason`), `spi_hz`, `spi_drive`, `flash_mb`, `psram_kb` |
-| `RADIO` | `partnumber` (S2-LP = `0x03`), `partversion` i `cut` (`0x81` = 2.0, `0x91` = 2.1, `0xC1` = 3.0), `mc_state1`, `mc_state0`, `state` (`READY`, `STANDBY`, `SLEEP_A/B`, `LOCK`, `RX`, `TX`, `SYNTH_SETUP` albo `INVALID`), `xo_on`, `sdn`, stany GPIO0–3, `p1_ok`, `ok` (= `partnumber` 0x03) |
+| `INFO` | jak na A, z `radio: "S2LP"`, `mcu: "ESP32-S3"`, `bench: "B"`, `board: "N1"`, `rx_filter_hz` S2-LP (25 481) i `reset_reason` jako kod `esp_reset_reason()` |
+| `RADIO` | `partnumber` (S2-LP = `0x03`), `partversion` i `cut` (`0x81` = 2.0, `0x91` = 2.1, `0xC1` = 3.0), `mc_state1`, `mc_state0`, `state` (`READY`, `STANDBY`, `SLEEP_A/B`, `LOCK`, `RX`, `TX`, `SYNTH_SETUP` albo `INVALID`), `xo_on`, `sdn`, stany GPIO0–3, `irq_seen` (wszystkie przerwania od startu), `p1_ok`, `ok` (= `partnumber` 0x03) |
 | `RESET` | SDN na 1 ms i `SRES` (rejestry wracają do wartości domyślnych, `p1_ok: false`), potem `RADIO` |
 | `SDN <0\|1>` | wyłączenie (1) i włączenie (0) S2-LP pinem SDN; wyłączenie kasuje rejestry |
-| `STATE` | stan głównego sterownika i liczba bajtów w kolejkach TX i RX |
-| `REG <hex>` | odczyt rejestru z bajtami statusu, np. `REG F0` (PARTNUM), `REG 8E` (MC_STATE0) |
-| `CONFIG` / `VERIFY` | zapis tablicy P1 w stanie READY i porównanie odczytem / samo porównanie: `checked`, `mismatches`, pierwszy niezgodny rejestr z wartością oczekiwaną i odczytaną |
-| `FREQ` | słowo SYNT, dzielnik pasma, częstotliwość bazowa z równania 7 karty, błąd wobec 869 525 000 Hz i krok |
-| `FRAM` | jak na stanowisku A |
-| `BTN`, `LED 5 <0\|1>`, `BUZZ [<ms>] [<hz>]` | jak w [`bench-n1`](#płytka-nośna-n1-bench-n1) |
-| `VTEST` | `vtest_mv` (= `pin_mv` × 6), `pin_mv`: średnia 16 odczytów `analogReadMilliVolts` (tłumienie 11 dB, kalibracja z eFuse) |
-| `SCREEN`, `KEY <UP\|DOWN\|OK\|BACK> [ms]` | jak na stanowisku A |
-| `DISPLAY [<hz>]` | EXTCOMIN: licznik MCPWM0 (0–9 999) i stan pinu, tryb VCOM, liczba odświeżeń, piny, `spi_hz`; z argumentem zegar SPI ekranu 125 000–2 000 000 Hz do restartu i pełne przerysowanie |
-| `VCOM <0\|1>` | zapasowe odwracanie VCOM bitem w poleceniach ekranu |
+| `CONFIG` / `VERIFY` | zapis tablicy P1 w stanie READY i porównanie odczytem / samo porównanie; `CONFIG` zapisuje potem `FOFF`; bez `CAL` (S2-LP kalibruje VCO sam przy każdym przejściu do LOCK) |
+| `FREQ` | słowo SYNT, dzielnik pasma, częstotliwość z równania 7 karty (z korektą `FOFF`), błąd wobec 869 525 000 Hz, krok 23,84 Hz i `synt_offset` (kroki `FOFF`) |
+| `STATE`, `IDLE` | stan głównego sterownika i liczba bajtów w kolejkach TX i RX; `IDLE` przechodzi do READY |
+| `RSSI` | `rssi_dbm` z RSSI_LEVEL_RUN − 146 (tylko w RX) |
+| `REG <hex>` | odczyt rejestru (adres 8-bitowy) z bajtami statusu, np. `REG F0` (PARTNUM), `REG 8E` (MC_STATE0) |
+| `TXCW` | MOD_TYPE = CW i dane PN9; pole `marc` podaje stan S2-LP (`TX`) |
+| `TXPKT` | ramki wzorcowe o stałej długości; S2-LP nie wyprowadza „pakiet w powietrzu” dla nadawania, więc `sync_gpio: false`, a czas serii liczy się do przerwania TX_DATA_SENT i powrotu do READY |
+| `FOFF [<hz>]` | korekta słowem SYNT (krok 23,84 Hz, ±1 MHz); `freqoff` to liczba kroków |
+| `DISPLAY [<hz>]` | `extcomin: "MCPWM0"`, licznik 0–9 999 |
 | `DRIVE [<0-3>]` | napęd SCK i MOSI (`gpio_drive_cap_t`, około 5/10/20/40 mA) do restartu |
-| `PREP <0\|1>` | tryb przygotowania; włączenie potwierdza przycisk OK w ciągu 30 s (zapasowo obok przycisku przygotowania) |
-| `SILENCE <0\|1>` | cisza do następnego przełączenia CISZA |
-| `REBOOT` | `ESP.restart()` |
+| `REBOOT` | `esp_restart()`; pamięć RTC niezerowana zostaje |
 
-Przebieg B3 (jak A3–A4): `BTN` bez naciśnięć daje same `false`; każde naciśnięcie zmienia tylko swoje pole; `LED 5 1`, `LED 5 0`; `BUZZ` daje sygnał 2048 Hz; `FRAM` z `fujitsu: true`; ekran pokazuje wybór języka, a kolejne `DISPLAY` pokazują rosnący `counter` i `level` zmieniający się co 0,5 s. Przebieg B4: po wpięciu X-NUCLEO-S2868A2 `RADIO` daje `partnumber: 0x03`, `xo_on: true` i stan `READY`; `CONFIG` daje `mismatches: 0`, `FREQ` około 869 525 003 Hz. Bez modułu (albo z przerwą na MISO) `partnumber` wynosi `0x00` albo `0xFF`, a `ok` jest `false`. Karta DS11896 Rev 5 podaje VERSION `0x91`; biblioteka ST zna też `0x81` i `0xC1`, więc `partversion` nie wpływa na `ok`.
+Przebieg B3 (jak A3–A4): `BTN` bez naciśnięć daje same `false`; każde naciśnięcie zmienia tylko swoje pole; `LED 5 1`, `LED 5 0`; `BUZZ` daje sygnał 2048 Hz; `FRAM` z `fujitsu: true`; ekran pokazuje wybór języka, a kolejne `DISPLAY` pokazują zmieniający się `counter` i `level` zmieniający się co 0,5 s; system operacyjny widzi dwa porty szeregowe. Przebieg B4: po wpięciu X-NUCLEO-S2868A2 `RADIO` daje `partnumber: 0x03`, `xo_on: true` i stan `RX` (odbiór P1 od startu); `VERIFY` daje `mismatches: 0`, `FREQ` około 869 525 003 Hz. Bez modułu (albo z przerwą na MISO) `partnumber` wynosi `0x00` albo `0xFF`, a `ok` jest `false`. Karta DS11896 Rev 5 podaje VERSION `0x91`; biblioteka ST zna też `0x81` i `0xC1`, więc `partversion` nie wpływa na `ok`. Dalej jak na A: `PREP 1`, `TXCW 2` z miernikiem częstotliwości, `FOFF`, `TXPKT`/`RX`/`RXPER` i `P1TX`/`P1RX` między stanowiskami A i B.
 
-Budowa i wgranie (port USB DevKitC, nie UART):
+Budowa i wgranie (port USB-OTG DevKitC, nie UART):
 
 ```bash
 cd firmware && ../.venv-pio/bin/pio run -e bench-b
@@ -135,6 +132,20 @@ cd firmware && ../.venv-pio/bin/pio run -e bench-b
 ```bash
 cd firmware && ../.venv-pio/bin/pio run -e bench-b -t upload
 ```
+
+### Sterownik łącza S2-LP
+
+`measure::Bench` (polecenia pomiarowe i łącze P1) korzysta z interfejsu `radiolink::Driver` (`src/radio_link.h`); CC1120 ma go w `src/cc1120_link.cpp` (kod przeniesiony z `measure.cpp` bez zmian zachowania), S2-LP w `src/s2lp_link.cpp`:
+
+- **Nadawanie** z kolejki TX (128 B) w pakiecie BASIC. Ramka P1 ma zmienną długość: pole LEN wysyła układ z PCKTLEN (LEN liczy BODY i CRC), więc do kolejki idą BODY i CRC bez bajtu LEN. Ramki wzorcowe mają stałą długość z PCKTLEN. Polecenie TX tylko ze stanu READY (odbiór przerywany `SABORT` na czas własnej serii), koniec po przerwaniu TX_DATA_SENT i powrocie do READY; bez przerwania po czasie ramki + 120 ms `SABORT` i opróżnienie kolejki.
+- **Odbiór** w trybie stałym (PERS_RX, TIMERS5 = 0: bez limitu czasu RX): po przerwaniu RX_DATA_READY długość z RX_PCKT_LEN, dane z kolejki RX, RSSI z RSSI_LEVEL (zapamiętane przy słowie synchronizacji) − 146 dBm, jakość = SQI. RX_DATA_DISC, długość spoza 17–102 B albo liczba bajtów w kolejce inna niż długość ramki dają `rx_bad` (z PERS_RX następny pakiet pisze do tej samej kolejki, a RX_PCKT_LEN opisuje tylko ostatni, więc nadmiar po dłuższym postoju pętli przesunąłby kolejne odczyty), RX_FIFO_ERROR przepełnienie; po każdym z nich `SABORT`, opróżnienie kolejki i ponowne RX.
+- **Przerwania** czytane z IRQ_STATUS3..0 (odczyt kasuje) przez SPI przy każdym odpytaniu i zbierane w programie, bez linii nIRQ; maska: RX_DATA_READY, RX_DATA_DISC, TX_DATA_SENT, TX_FIFO_ERROR, RX_FIFO_ERROR, VALID_SYNC.
+- **CCA:** kanał zajęty, gdy przyszło VALID_SYNC bez końca ramki (najwyżej 300 ms) albo RSSI_LEVEL_RUN − 146 przekracza próg −100 dBm.
+- **TXCW:** MOD_TYPE = 7 (CW) i TXSOURCE = PN9; `STOP` przywraca MOD2 i PCKTCTRL1 z tablicy.
+- **FOFF:** słowo SYNT ± liczba kroków f_xo / 2^19 / 4 (23,84 Hz) wobec tablicy, zapis w READY i powrót do RX; po `CONFIG` zapisywany ponownie.
+- **Oszacowanie błędu częstotliwości** z odebranych ramek (pole `foff` ekranu STAN na A z FREQOFF_EST) na B nie jest podawane: karta nie podaje jednostki AFC_CORR.
+
+Test `tests/test_radio_link_host.py` sprawdza sterownik łącza S2-LP z modelem układu (bajty statusu, stany po poleceniach, kolejki FIFO, IRQ_STATUS kasowane odczytem) oraz `measure::Bench` ze sterownikiem zastępczym (seria wzorcowa z długiem, nadanie P1 z CCA i odroczeniem, odbiór i składanie, `FOFF`, `TXCW`).
 
 ### Rejestry profilu P1 dla S2-LP
 
@@ -158,16 +169,17 @@ Tablica jest w `src/s2lp_p1_registers.h`, generowanym przez `tools/s2lp_p1_regis
 
 Decyzje i otwarte punkty:
 
-- **Kolejność bajtów słowa synchronizacji.** Karta opisuje kolejność nadawania niejednoznacznie, a biblioteka ST zapisuje słowo od najmłodszego bajtu do SYNC3 i odczytuje od najstarszego. Tablica przyjmuje SYNC3 = `D3` jako pierwszy bajt w eterze; przy innej kolejności w eterze szłoby `91 D3 91 D3`. Rozstrzyga próba ramki P1 między stanowiskami A i B albo analizator na wyjściu danych RX S2-LP.
-- **Zmienna długość od razu w tablicy** (na CC1120 tablica ma stałą długość dla ramek wzorcowych): na B nie ma jeszcze poleceń pomiarowych, a LEN ramki P1 liczy BODY i CRC, czyli dokładnie to, co silnik pakietów BASIC odbiera po polu długości. PCKTLEN0 = 102 to długość nadawania, którą sterownik P1 ustawi dla każdego pakietu.
-- **GPIO modułu:** GPIO0 (GPIO14 ESP32-S3, J11) = nIRQ (bez odblokowanych przerwań), GPIO2 (GPIO4, J11) = wykryte słowo synchronizacji, jak GPIO2 CC1120 na stanowisku A; GPIO1 i GPIO3 zostają wyjściem masy (wartość domyślna).
+- **Kolejność bajtów słowa synchronizacji.** S2-LP nadaje najpierw SYNC0 (adres 0x36), a SYNC3 (0x33) na końcu; tak zapisuje słowo biblioteka ST (`S2LPSetSyncWords`: najmłodszy bajt do SYNC3) i tak potwierdził pracownik ST na forum ST (wątek „Make S2-LP talk to nRF905”). Słowo P1 `D3 91 D3 91` w kolejności nadawania daje więc SYNC0 = `D3`, SYNC1 = `91`, SYNC2 = `D3`, SYNC3 = `91`. Ostatecznie potwierdza to próba ramki P1 między stanowiskami A i B.
+- **Zmienna długość w tablicy** (na CC1120 tablica ma stałą długość dla ramek wzorcowych): LEN ramki P1 liczy BODY i CRC, czyli dokładnie to, co silnik pakietów BASIC odbiera po polu długości; ramki wzorcowe przełączają bit FIX_VAR_LEN na czas `TXPKT` i `RX`. PCKTLEN = 102 ustawia sterownik łącza dla każdego pakietu.
+- **Odbiór stały i przerwania:** PERS_RX (PROTOCOL0 = `0x0A`, z ustawieniem ST) i TIMERS5 = 0 (bez limitu czasu RX) trzymają odbiornik w RX po każdej ramce; IRQ_MASK odblokowuje zdarzenia [sterownika łącza](#sterownik-łącza-s2-lp).
+- **GPIO modułu:** GPIO0 (GPIO14 ESP32-S3, J11) = nIRQ (sterownik odpytuje IRQ_STATUS, linia tylko do analizatora), GPIO2 (GPIO4, J11) = wykryte słowo synchronizacji, jak GPIO2 CC1120 na stanowisku A; GPIO1 i GPIO3 zostają wyjściem masy (wartość domyślna).
 - **Bez kalibracji ręcznej:** S2-LP kalibruje VCO sam przy każdym przejściu do LOCK (wartość domyślna VCO_CONFIG).
 
-Czego tablica nie zamyka: mocy wyjściowej (wzór ST jest przybliżeniem; poziom PA i napięcie SMPS do ustawienia pomiarem 13 dBm ±1 dB), błędu częstotliwości kwarcu modułu (`FREQ` podaje tylko wartość zaprogramowaną), przesunięcia RSSI, ustawień AFC, AGC i odtwarzania zegara symboli dla 4800 Bd (zostają wartości domyślne; sprawdza je pomiar czułości w T4) i kolejności bajtów słowa synchronizacji.
+Czego tablica nie zamyka: mocy wyjściowej (wzór ST jest przybliżeniem; poziom PA i napięcie SMPS do ustawienia pomiarem 13 dBm ±1 dB), błędu częstotliwości kwarcu modułu (`FREQ` podaje tylko wartość zaprogramowaną), przesunięcia RSSI, ustawień AFC, AGC i odtwarzania zegara symboli dla 4800 Bd (zostają wartości domyślne; sprawdza je pomiar czułości w T4) i potwierdzenia kolejności bajtów słowa synchronizacji w eterze.
 
 ## Narzędzia
 
-PlatformIO Core w osobnym środowisku Pythona; wersje platformy i rdzenia są przypięte w `platformio.ini` (nordicnrf52 11.0.0, framework-arduinoadafruitnrf52 1.10700.0, czyli rdzeń Adafruit nRF52 1.7.0 z TinyUSB; dla `bench-b` espressif32 6.9.0 z Arduino-ESP32 2.0.17 na ESP-IDF 4.4). Rdzeń Adafruit wybrano, bo tego samego używa microReticulum dla nRF52840 (środowisko `wiscore_rak4631`), więc stos sieciowy wejdzie do tego samego projektu.
+PlatformIO Core w osobnym środowisku Pythona; wersje platformy i rdzenia są przypięte w `platformio.ini` (nordicnrf52 11.0.0, framework-arduinoadafruitnrf52 1.10700.0, czyli rdzeń Adafruit nRF52 1.7.0 z TinyUSB; dla `bench-b` platforma pioarduino 55.03.312 z Arduino-ESP32 3.3.12 na ESP-IDF 5.5, bo dopiero ta wersja daje dwa interfejsy CDC przez USB-OTG; wersja 2.0.17 z oficjalnej platformy espressif32 ma jeden). Rdzeń Adafruit wybrano, bo tego samego używa microReticulum dla nRF52840 (środowisko `wiscore_rak4631`), więc stos sieciowy wejdzie do tego samego projektu.
 
 ```bash
 python3 -m venv .venv-pio && .venv-pio/bin/pip install platformio
@@ -308,13 +320,13 @@ Rekordy kolejki, skrzynki, zdarzeń i konfiguracji nie są szyfrowane (AEAD z kl
 
 Kodek i składanie ramek są w `src/p1frame.cpp` (bez zależności od Arduino): fragmentacja datagramu do 600 B na ramki `LEN | BODY | CRC` z LEN liczącym BODY i CRC (F79), rozbiór ramki z pełną kontrolą pól i składanie według [specyfikacji radia](../docs/spec/radio.md#ramka-w-eterze): 8 prób po 120 s, poprawne duplikaty pomijane, sprzeczny duplikat albo zmiana liczby fragmentów lub długości usuwa próbę, przy przepełnieniu odpada próba z najmniejszą liczbą fragmentów, 16 ostatnio złożonych identyfikatorów odrzuca spóźnione duplikaty. Test na komputerze (`tests/test_firmware_host.py`) porównuje ramki z modelem bajt po bajcie dla wszystkich długości 1–600 B i odtwarza przypadki wrogie z testów modelu.
 
-Łącze w `src/measure.cpp`:
+Łącze w `src/measure.cpp`, wspólne dla A i B; opis odbioru i CCA dotyczy CC1120, różnice S2-LP są w [sterowniku łącza](#sterownik-łącza-s2-lp):
 
 - **Odbiór** (`P1RX`): układ w trybie zmiennej długości z PKT_LEN = 102, więc ramki dłuższe odrzuca sam; obraz czyta bajt LEN, czeka na resztę ramki i dwa bajty statusu (RSSI, LQI), rozbiera ramkę i oddaje ją składaniu. Ramki za krótkie, niekompletne w czasie albo z błędem rozbioru liczą się jako `rx_bad`. Każda ramka daje wiersz `p1rx` ze stanem składania, a złożony datagram wiersz z identyfikatorem i danymi szesnastkowo.
-- **Nadawanie** (`P1TX`): datagram czeka na koniec długu ciszy, potem 50 ms wolnego kanału (RSSI poniżej progu −100 dBm przy przyjętym przesunięciu RSSI i brak odbioru po słowie synchronizacji na GPIO2). Zajęty kanał odracza nadanie o losowe 100–1000 ms (`deferrals`; łączne czekanie ponad 1 s liczy się jako `long_deferrals`), po 30 odroczeniach datagram jest odrzucany (`tx_drop`; liczba jest wyborem stanowiska, specyfikacja nie podaje limitu). Przed pierwszą ramką do dziennika trafia dług 12 × zarezerwowany czas serii (liczony dla najdłuższych ramek), potem fragmenty idą jedną serią, a odbiór wraca od razu po serii. Cisza radiowa przerywa i odrzuca nadanie. Identyfikator datagramu pochodzi z generatora sprzętowego nRF52840 (RNG z korekcją obciążenia), który daje też ziarno odroczeń.
+- **Nadawanie** (`P1TX`): datagram czeka na koniec długu ciszy, potem 50 ms wolnego kanału (RSSI poniżej progu −100 dBm przy przyjętym przesunięciu RSSI i brak odbioru po słowie synchronizacji na GPIO2). Zajęty kanał odracza nadanie o losowe 100–1000 ms (`deferrals`; łączne czekanie ponad 1 s liczy się jako `long_deferrals`), po 30 odroczeniach datagram jest odrzucany (`tx_drop`; liczba jest wyborem stanowiska, specyfikacja nie podaje limitu). Przed pierwszą ramką do dziennika trafia dług 12 × zarezerwowany czas serii (liczony dla najdłuższych ramek), potem fragmenty idą jedną serią, a odbiór wraca od razu po serii. Cisza radiowa przerywa i odrzuca nadanie. Identyfikator datagramu pochodzi z generatora sprzętowego MCU (nRF52840: RNG z korekcją obciążenia; ESP32-S3: `esp_fill_random`), który daje też ziarno odroczeń.
 - **Dwie płytki**: na obu `P1RX`; na jednej `P1TX 48656C6C6F` („Hello”); druga wypisuje `p1rx` z `datagram`. Datagram 600 B to 7 ramek i około 1,4 s nadawania, po nim 16 s długu.
 
-Nie ma jeszcze interfejsu do stosu Reticulum (datagramy trafiają tylko na port USB), rezerwacji 50% budżetu dla ruchu do OSP, osobnych limitów ogłoszeń ani drugiego interfejsu CDC.
+Nie ma jeszcze interfejsu do stosu Reticulum (datagramy trafiają tylko na port USB), rezerwacji 50% budżetu dla ruchu do OSP ani osobnych limitów ogłoszeń.
 
 ## Ekran i przyciski
 
@@ -428,7 +440,8 @@ Czasy, które nie wymagają zmian: alarmy sprawdzane co 1 s w indeksie 128 wpis�
 1. Próby na sprzęcie według kroków wyżej (obraz nie był jeszcze uruchomiony na płytce), na N1 także próba ekranu przy 2 MHz z analizatorem na J11.
 2. microReticulum i LXMF na tym samym projekcie (T3) z pomiarem zapasu RAM.
 3. Stanowisko B (`bench-b`), w tej kolejności:
-   - kroki B3–B4 na sprzęcie, wybór napędu SCK i MOSI (`DRIVE`) i zegara ekranu analizatorem na J11; rozstrzygnięcie kolejności bajtów słowa synchronizacji ramką P1 między A i B;
-   - wspólna warstwa stacji: przeniesienie z `main.cpp` do osobnego modułu części niezależnej od MCU i radia (`BenchHost`, `BenchServices`, ekran, polecenia `STORE`, `APP`, `USB`, `KEY`, `SCREEN`, `JOURNAL`, `LOG`) z interfejsem platformy (identyfikator układu, przyczyna restartu, restart, watchdog, pamięć niezerowana, port danych USB) i interfejsem radia (`receiving`, `busy`, `p1send`, liczniki łącza); na nRF52840 zostają RTC2/PPI w `sharp_extcomin_nrf.cpp`, NRF_WDT, FICR, `.noinit` i TinyUSB z dwoma CDC, na ESP32-S3 odpowiednio MCPWM, `esp_task_wdt`, MAC z eFuse, `RTC_NOINIT_ATTR` i TinyUSB w trybie USB-OTG (dwa CDC, wgrywanie po resecie do bootloadera);
-   - łącze P1 na S2-LP: odpowiednik `measure::Bench` (nadawanie z FIFO z PCKTLEN, odbiór ze zmienną długością i odczytem RX_FIFO, CCA z RSSI_TH i stanu odbioru, dług ciszy w dzienniku FRAM), polecenia pomiarowe `TXCW` (MOD_TYPE = CW), `TXPKT`, `RX`, `RXPER`, `FOFF` (rejestry SYNT albo CHNUM/CHSPACE) i `RSSI` (RSSI_LEVEL_RUN − 146);
-   - przegląd tablicy S2-LP w ST STSW-S2LP-DK (S2-LP DK GUI) dla P1, gdy narzędzie będzie dostępne; pomiar mocy i dobór PA_POWER oraz SMPS.
+   - kroki B3–B4 na sprzęcie (w tym wyliczenie dwóch portów CDC, wgrywanie przez dotknięcie 1200 b/s i to, czy restart przez watchdog zadań daje `esp_reset_reason()` = TASK_WDT, a nie PANIC, od czego zależy wpis „restart by watchdog”), wybór napędu SCK i MOSI (`DRIVE`) i zegara ekranu analizatorem na J11;
+   - łącze między A i B: `TXPKT`/`RX`/`RXPER` w obie strony i `P1TX`/`P1RX` (potwierdzenie kolejności bajtów słowa synchronizacji w eterze), `TXCW` z miernikiem częstotliwości i `FOFF`;
+   - przesunięcie RSSI modułu (wpływa na próg CCA −100 dBm i `rssi_avg_dbm`), ustawienia AFC, AGC i odtwarzania zegara symboli przy pomiarze czułości (T4);
+   - przegląd tablicy S2-LP w ST STSW-S2LP-DK (S2-LP DK GUI) dla P1, gdy narzędzie będzie dostępne; pomiar mocy i dobór PA_POWER oraz SMPS;
+   - własne nazwy interfejsów CDC („WICI diagnostyka”, „WICI dane”) wymagają zmiany w rdzeniu Arduino-ESP32 (nazwy są stałe w `USBCDC.cpp`) albo własnych deskryptorów TinyUSB.

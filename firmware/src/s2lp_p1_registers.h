@@ -25,7 +25,7 @@ constexpr int8_t TX_POWER_DBM = 13;
 constexpr uint8_t MAX_PACKET_BYTES = 103;
 
 constexpr RegisterValue REGISTERS[] = {
-    {0x00, 0x02, 0xFF, "GPIO0_CONF"},  // P1: GPIO0 (ESP32-S3 GPIO14, J11) = nIRQ, active low; no interrupt unmasked yet
+    {0x00, 0x02, 0xFF, "GPIO0_CONF"},  // P1: GPIO0 (ESP32-S3 GPIO14, J11) = nIRQ, active low; the driver polls IRQ_STATUS
     {0x01, 0xA2, 0xFF, "GPIO1_CONF"},  // reset: GPIO1 (GPIO21) = digital GND
     {0x02, 0x7A, 0xFF, "GPIO2_CONF"},  // P1: GPIO2 (ESP32-S3 GPIO4, J11) = sync word detected, as IOCFG2 on bench A
     {0x03, 0xA2, 0xFF, "GPIO3_CONF"},  // reset: GPIO3 (GPIO42) = digital GND
@@ -50,12 +50,18 @@ constexpr RegisterValue REGISTERS[] = {
     {0x2F, 0x01, 0xFF, "PCKTCTRL2"},  // P1: variable length: LEN = payload = BODY + CRC (radio.md, F79); no Manchester, no 3-of-6
     {0x30, 0x00, 0xFF, "PCKTCTRL1"},  // P1: chip CRC off (P1 CRC by software), no whitening, TX from FIFO (reset value 0x2C sends PN9), no FEC
     {0x31, 0x00, 0xFF, "PCKTLEN1"},  // P1: TX length MSB
-    {0x32, 0x66, 0xFF, "PCKTLEN0"},  // P1: TX length: longest BODY + CRC; the P1 driver sets it per packet
-    {0x33, 0xD3, 0xFF, "SYNC3"},  // P1: sync word D3 91 D3 91, byte order on air to be checked against bench A
-    {0x34, 0x91, 0xFF, "SYNC2"},  // P1: sync word byte 2
-    {0x35, 0xD3, 0xFF, "SYNC1"},  // P1: sync word byte 1
-    {0x36, 0x91, 0xFF, "SYNC0"},  // P1: sync word byte 0
+    {0x32, 0x66, 0xFF, "PCKTLEN0"},  // P1: TX length: longest BODY + CRC; the link driver sets it per packet
+    {0x33, 0x91, 0xFF, "SYNC3"},  // P1: sync word D3 91 D3 91: last byte on air
+    {0x34, 0xD3, 0xFF, "SYNC2"},  // P1: sync word, third byte on air
+    {0x35, 0x91, 0xFF, "SYNC1"},  // P1: sync word, second byte on air
+    {0x36, 0xD3, 0xFF, "SYNC0"},  // P1: sync word, first byte on air
+    {0x3B, 0x0A, 0xFF, "PROTOCOL0"},  // ST: persistent RX: the receiver stays on after a packet (S2LP::begin)
     {0x40, 0x40, 0xFF, "PCKT_FLT_OPTIONS"},  // reset: no address filters, CRC filter off
+    {0x46, 0x00, 0xFF, "TIMERS5"},  // ST: RX timer counter 0: no RX timeout (S2LP::begin)
+    {0x50, 0x00, 0xFF, "IRQ_MASK3"},  // P1: no interrupts in bits 31-24
+    {0x51, 0x00, 0xFF, "IRQ_MASK2"},  // P1: no interrupts in bits 23-16
+    {0x52, 0x20, 0xFF, "IRQ_MASK1"},  // P1: sync word detected (bit 13): channel busy for CCA
+    {0x53, 0x67, 0xFF, "IRQ_MASK0"},  // P1: RX data ready, RX discarded, TX sent, TX and RX FIFO errors (bits 0, 1, 2, 5, 6; table 59)
     {0x61, 0x03, 0xFF, "PA_POWER1"},  // ST: PA level for slot 1 (index 7): 29 - 2 x 13 dBm (ST library formula; measure in T4)
     {0x62, 0x07, 0xFF, "PA_POWER0"},  // ST: PA_MAXDBM off, no ramp, DIG_SMOOTH off (FSK), PA_LEVEL_MAX_IDX = 7
     {0x63, 0x01, 0xFF, "PA_CONFIG1"},  // ST: FIR off for FSK (reset 0x03 with FIR_EN cleared)

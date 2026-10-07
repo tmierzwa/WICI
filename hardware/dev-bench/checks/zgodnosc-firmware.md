@@ -1,8 +1,8 @@
 # WICI: zgodność płytki nośnej N1 z oprogramowaniem
 
-Stan: 2026-10-07. Płytka N1 według `tools/design.py` (commit 562d689). Oprogramowanie: pierwsze sprawdzenie wobec `firmware/` w commicie a3b821f (tylko środowisko `bench-a`, plik `src/board_bench_a.h`); ponowne po dodaniu środowiska `bench-n1` z plikiem `src/board_bench_n1.h`; trzecie po dodaniu środowiska `bench-b` z plikiem `src/board_bench_b.h`.
+Stan: 2026-10-07. Płytka N1 według `tools/design.py` (commit 562d689). Oprogramowanie: pierwsze sprawdzenie wobec `firmware/` w commicie a3b821f (tylko środowisko `bench-a`, plik `src/board_bench_a.h`); ponowne po dodaniu środowiska `bench-n1` z plikiem `src/board_bench_n1.h`; trzecie po dodaniu środowiska `bench-b` z plikiem `src/board_bench_b.h`; czwarte po przejściu `bench-b` na wspólny program stacji (`src/main.cpp`) z warstwą ESP32-S3 i sterownikiem łącza S2-LP.
 
-**Wynik: stanowisko A na N1 ma obraz `bench-n1`, a stanowisko B obraz `bench-b`; oba są zgodne z płytką w każdym sygnale tabel niżej.** Obrazy się budują, ale nie były uruchomione na sprzęcie; ekran pracuje z 1 MHz do próby 2 MHz z analizatorem ([niżej](#do-sprawdzenia-na-sprzęcie)). Obraz `bench-a` zostaje dla okablowania przewodami i nadal nie nadaje się na N1. Obraz `bench-b` obejmuje kroki B3–B4 (panel, FRAM, ekran, odczyt PARTNUM i VERSION S2-LP) i zapis rejestrów P1 do S2-LP, bez łącza P1. Ustalenia wspólne dla obu wersji (rejestry radia, protokół, ekran) są zgodne.
+**Wynik: stanowisko A na N1 ma obraz `bench-n1`, a stanowisko B obraz `bench-b`; oba są zgodne z płytką w każdym sygnale tabel niżej.** Obrazy się budują, ale nie były uruchomione na sprzęcie; ekran pracuje z 1 MHz do próby 2 MHz z analizatorem ([niżej](#do-sprawdzenia-na-sprzęcie)). Obraz `bench-a` zostaje dla okablowania przewodami i nadal nie nadaje się na N1. Obraz `bench-b` to ten sam program stacji co na A (polecenia, pomiary, łącze P1, dziennik, magazyn, protokół USB z dwoma CDC, ekran, panel) z S2-LP i ESP32-S3. Ustalenia wspólne dla obu wersji (rejestry radia, protokół, ekran) są zgodne.
 
 ## Przypisanie pinów nRF52840
 
@@ -38,7 +38,7 @@ Kolumna N1 według [połączeń](../polaczenia.md) (J5/J6 = J1/J3 DevKitC). Test
 | SPI MISO | GPIO13 (J5.19) | `SPI_MISO = 13` | tak | |
 | CS radia (RF_CS) | GPIO10 (J5.16), 10 kΩ do 3,3 V | `RADIO_CS = 10` | tak | stan wysoki przed `bus.begin()` |
 | SDN radia (RF_RESET) | GPIO9 (J5.15), 10 kΩ do masy | `RADIO_SDN = 9` | tak | stan wysoki = wyłączenie; po starcie 1 ms, potem niski i `SRES` |
-| GPIO0 radia | GPIO14 (J5.20) | `RADIO_GPIO0 = 14` | tak | wejście; P1: nIRQ |
+| GPIO0 radia | GPIO14 (J5.20) | `RADIO_GPIO0 = 14` | tak | wejście; P1: nIRQ (do analizatora; program odpytuje IRQ_STATUS przez SPI) |
 | GPIO1 radia | GPIO21 (J6.18) | `RADIO_GPIO1 = 21` | tak | wejście; S2-LP: wyjście masy |
 | GPIO2 radia | GPIO4 (J5.4) | `RADIO_GPIO2 = 4` | tak | wejście; P1: wykryte słowo synchronizacji |
 | GPIO3 radia | GPIO42 (J6.6) | `RADIO_GPIO3 = 42` | tak | wejście; S2-LP: wyjście masy |
@@ -56,7 +56,7 @@ Kolumna N1 według [połączeń](../polaczenia.md) (J5/J6 = J1/J3 DevKitC). Test
 | Brzęczyk | GPIO15 (J5.8) | `BUZZER = 15` | tak | `tone()` 2048 Hz |
 | VTEST | GPIO5 (J5.5, ADC1_CH4) | `VTEST = 5` | tak | `analogReadMilliVolts` × 6 |
 
-Obraz nie steruje pinami konfiguracyjnymi (GPIO0, 3, 45, 46), USB (19, 20), UART0 (43, 44), diodą RGB ani pinami PSRAM i 1,8 V (35–37, 47, 48); płytka ich nie używa. USB idzie przez wbudowany USB-Serial/JTAG na złączu „USB” DevKitC.
+Obraz nie steruje pinami konfiguracyjnymi (GPIO0, 3, 45, 46), USB (19, 20), UART0 (43, 44), diodą RGB ani pinami PSRAM i 1,8 V (35–37, 47, 48); płytka ich nie używa. USB idzie przez USB-OTG (TinyUSB, dwa interfejsy CDC) na złączu „USB” DevKitC; USB-Serial/JTAG jest wyłączony.
 
 ## Zgodne bez zmian
 
@@ -70,7 +70,7 @@ Obraz nie steruje pinami konfiguracyjnymi (GPIO0, 3, 45, 46), USB (19, 20), UART
 
 - Zegar ekranu. Na N1 SCK idzie przez P1.04, pin „standard drive, low frequency”, przez 33 Ω (R17) i sieć długości około 240 mm, a 2 MHz to górna granica LS027B7DH01. Dlatego `bench-n1` taktuje ekran zegarem 1 MHz (`board::DISPLAY_SPI_HZ`; radio i FRAM też 1 MHz), z napędem H0H1 na SCK i MOSI, który ustawia `SPIClass::begin()` rdzenia. `DISPLAY 2000000` przełącza ekran na 2 MHz do restartu; przejście na 2 MHz na stałe dopiero po obejrzeniu zboczy SCK i MOSI analizatorem na J11 i obrazie bez błędów.
 - Kroki A3–A5 [uruchomienia](../uruchomienie.md#stanowisko-a) z poleceniami `BTN`, `LED 5`, `BUZZ`, `VTEST` i `DISPLAY` ([firmware/README.md](../../../firmware/README.md#płytka-nośna-n1-bench-n1)).
-- Stanowisko B: zbocza SCK i MOSI ESP32-S3 przy najniższym napędzie (`DRIVE 0`) na J11, przy 1 i 2 MHz; wyższy napęd tylko wtedy, gdy zbocza nie są czyste. Kroki B3–B4 [uruchomienia](../uruchomienie.md#stanowisko-b): `RADIO` z `partnumber: 0x03` i stanem `READY`, `CONFIG` bez niezgodności ([firmware/README.md](../../../firmware/README.md#stanowisko-b-na-płytce-n1-bench-b)).
+- Stanowisko B: zbocza SCK i MOSI ESP32-S3 przy najniższym napędzie (`DRIVE 0`) na J11, przy 1 i 2 MHz; wyższy napęd tylko wtedy, gdy zbocza nie są czyste. Kroki B3–B4 [uruchomienia](../uruchomienie.md#stanowisko-b): `RADIO` z `partnumber: 0x03` i stanem `RX`, `VERIFY` bez niezgodności, dwa porty szeregowe w systemie ([firmware/README.md](../../../firmware/README.md#stanowisko-b-na-płytce-n1-bench-b)).
 
 ## Obraz okablowania przewodami na N1
 
@@ -85,4 +85,4 @@ Punkty 1–5 wykonane w środowisku `bench-n1` (opis w [firmware/README.md](../.
 3. DISP: stan niski do wyczyszczenia pamięci ekranu, potem wysoki.
 4. Wejścia: przełącznik CISZA ustawia `bench.silence`, a przycisk przygotowania wybiera tryb przygotowania zamiast polecenia `PREP`. Polecenia USB mogą zostać jako zapasowe.
 5. Dioda alarmu i brzęczyk (2048 Hz z PWM albo z licznika) dla ekranu alarmu oraz polecenia diagnostyczne do kroków A3–A4 uruchomienia (stan wejść, `BUZZ`, `LED`, `VTEST`).
-6. Stanowisko B: program na ESP32-S3-DevKitC-1 (SPI na GPIO12/11/13, CS S2-LP GPIO10, SDN GPIO9) co najmniej do odczytu rejestru wersji S2-LP (krok B4). Wykonane: plik `src/board_bench_b.h`, środowisko `bench-b`, sterownik S2-LP z odczytem PARTNUM i VERSION, polecenia panelu, FRAM, ekran z EXTCOMIN z MCPWM i zapis rejestrów P1.
+6. Stanowisko B: program na ESP32-S3-DevKitC-1 (SPI na GPIO12/11/13, CS S2-LP GPIO10, SDN GPIO9) co najmniej do odczytu rejestru wersji S2-LP (krok B4). Wykonane: plik `src/board_bench_b.h`, środowisko `bench-b`, sterownik S2-LP z odczytem PARTNUM i VERSION, zapis rejestrów P1 i sterownik łącza P1, polecenia panelu, FRAM, ekran z EXTCOMIN z MCPWM; program stacji wspólny z A.

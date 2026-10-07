@@ -3,6 +3,10 @@
 
 #include <string.h>
 
+#if defined(ESP_PLATFORM)
+#include <esp_random.h>
+#endif
+
 #include "p1_registers.h"
 #include "testframe.h"
 
@@ -17,17 +21,13 @@ uint32_t frameAirMs(uint8_t length) {
     return (static_cast<uint32_t>(12 + length) * 8 * 1000 + p1::SYMBOL_RATE - 1) / p1::SYMBOL_RATE + 3;
 }
 
-const cc1120::RegisterValue* find(const char* name) {
-    for (size_t i = 0; i < p1::REGISTER_COUNT; ++i) {
-        if (!strcmp(p1::REGISTERS[i].name, name)) return &p1::REGISTERS[i];
-    }
-    return nullptr;
-}
-
 }  // namespace
 
-Bench::Bench(cc1120::Radio& radio, uint8_t pinSync, uint8_t pinOk, uint8_t pinLed)
-    : radio_(radio), pinSync_(pinSync), pinOk_(pinOk), pinLed_(pinLed) {}
+Bench::Bench(radiolink::Driver& radio, uint8_t pinOk, int16_t pinLed) : radio_(radio), pinOk_(pinOk), pinLed_(pinLed) {}
+
+void Bench::led(bool on) {
+    if (pinLed_ >= 0) digitalWrite(static_cast<uint8_t>(pinLed_), on ? LOW : HIGH);  // diody DK aktywne stanem niskim
+}
 
 void Bench::attach(journal::Journal* journal, uint32_t (*uptimeS)()) {
     journal_ = journal;
@@ -84,18 +84,18 @@ bool Bench::confirm() {
     const uint32_t start = millis();
     while (digitalRead(pinOk_) == LOW) delay(5);  // czekaj na puszczenie, jeśli już wciśnięty
     while (millis() - start < CONFIRM_MS) {
-        digitalWrite(pinLed_, ((millis() / 100) & 1) ? LOW : HIGH);  // szybkie miganie: czekam
+        led((millis() / 100) & 1);  // szybkie miganie: czekam
         if (digitalRead(pinOk_) == LOW) {
             delay(20);
             if (digitalRead(pinOk_) == LOW) {
                 while (digitalRead(pinOk_) == LOW) delay(5);
-                digitalWrite(pinLed_, HIGH);
+                led(false);
                 return true;
             }
         }
         delay(5);
     }
-    digitalWrite(pinLed_, HIGH);
+    led(false);
     return false;
 }
 
@@ -122,46 +122,27 @@ const char* Bench::gate(uint32_t txMs, bool conducted) {
     return nullptr;
 }
 
-void Bench::restore(const char* name) {
-    const cc1120::RegisterValue* reg = find(name);
-    if (reg) radio_.writeReg(reg->address, reg->value);
-}
-
 const char* Bench::txcw(uint32_t seconds, bool conducted) {
     if (seconds == 0 || seconds * 1000 > CW_MAX_MS) return "TXCW 1..10 s";
     const char* error = gate(seconds * 1000, conducted);
     if (error) return error;
     rxMode_ = RxMode::NONE;
-    radio_.idle();
-    radio_.strobe(cc1120::SFTX);
-    // Nośna bez modulacji: 2-FSK z dewiacją 0, dane losowe PN9, pakiet nieskończony.
-    radio_.writeReg(cc1120::DEVIATION_M, 0x00);
-    radio_.writeReg(cc1120::MODCFG_DEV_E, 0x00);
-    radio_.writeReg(cc1120::PKT_CFG2, static_cast<uint8_t>((find("PKT_CFG2")->value & ~0x03) | cc1120::PKT_FORMAT_RANDOM));
-    radio_.writeReg(cc1120::PKT_CFG0, cc1120::LENGTH_CONFIG_INFINITE);
-    const uint8_t seed = 0x00;
-    radio_.writeFifo(&seed, 1);  // TXLAST != TXFIRST wymagane w trybie losowym
     cwStartMs_ = millis();
     cwEndMs_ = cwStartMs_ + seconds * 1000;
     cwActive_ = true;
-    radio_.strobe(cc1120::STX);
-    const bool tx = radio_.waitMarcState(cc1120::MARC_STATE_TX, 50);
+    const bool tx = radio_.startCw();
     char text[40];
     snprintf(text, sizeof(text), "TXCW %lu s%s", static_cast<unsigned long>(seconds), conducted ? " conducted" : "");
     log(text);
+    // "marc": stan układu (CC1120: MARC, S2-LP: stan głównego sterownika).
     Serial.printf("{\"txcw\":%s,\"seconds\":%lu,\"conducted\":%s,\"marc\":\"%s\"}\n", boolName(tx),
-                  static_cast<unsigned long>(seconds), boolName(conducted), cc1120::marcStateName(radio_.readMarcState()));
+                  static_cast<unsigned long>(seconds), boolName(conducted), radio_.stateName());
     if (!tx) stopCw();
     return nullptr;
 }
 
 void Bench::stopCw() {
-    radio_.idle();
-    radio_.strobe(cc1120::SFTX);
-    restore("DEVIATION_M");
-    restore("MODCFG_DEV_E");
-    restore("PKT_CFG2");
-    restore("PKT_CFG0");
+    radio_.stopCw();
     cwActive_ = false;
     const uint32_t txMs = millis() - cwStartMs_;
     Serial.printf("{\"txcw\":\"done\",\"tx_ms\":%lu,\"tx_wait_ms\":%lu}\n", static_cast<unsigned long>(txMs),
@@ -176,8 +157,6 @@ const char* Bench::txpkt(uint16_t count, uint8_t length, uint32_t intervalMs, bo
     if (error) return error;
     rxMode_ = RxMode::NONE;
     radio_.idle();
-    radio_.writeReg(cc1120::PKT_CFG0, 0x00);  // stała długość ramek wzorcowych
-    radio_.writeReg(cc1120::PKT_LEN, length);
     pktTotal_ = count;
     pktSent_ = 0;
     pktFailed_ = 0;
@@ -197,44 +176,19 @@ const char* Bench::txpkt(uint16_t count, uint8_t length, uint32_t intervalMs, bo
     return nullptr;
 }
 
-bool Bench::waitSync(bool level, uint32_t timeoutUs) {
-    const uint32_t start = micros();
-    while (micros() - start < timeoutUs) {
-        if ((digitalRead(pinSync_) == HIGH) == level) return true;
-    }
-    return false;
-}
-
 bool Bench::sendOne() {
     uint8_t frame[testframe::MAX_LENGTH];
     testframe::build(frame, pktLen_, pktSent_);
-    radio_.strobe(cc1120::SFTX);
-    radio_.writeFifo(frame, pktLen_);
-    const uint32_t t0 = micros();
-    radio_.strobe(cc1120::STX);
-    // GPIO2 = PKT_SYNC_RXTX: wysoki od wysłania słowa synchronizacji do końca pakietu.
-    const uint32_t onAirUs = static_cast<uint32_t>(pktLen_) * 8 * 1000000UL / p1::SYMBOL_RATE;
-    const bool rose = waitSync(true, 80000);
-    const uint32_t tSync = micros();
-    bool fell = false;
-    if (rose) {
-        fell = waitSync(false, onAirUs + 50000);
-    }
-    const uint32_t tEnd = micros();
-    const bool idle = radio_.waitMarcState(cc1120::MARC_STATE_IDLE, rose ? 30 : (onAirUs / 1000) + 120);
-    const uint32_t tIdle = micros();
-    if (radio_.readMarcState() == cc1120::MARC_STATE_TX_FIFO_ERR) {
-        radio_.strobe(cc1120::SFTX);
-        radio_.idle();
-    }
-    pktTxUs_ += tIdle - t0;
+    radiolink::TxTiming timing;
+    const bool ok = radio_.transmit(frame, pktLen_, false, &timing);
+    pktTxUs_ += timing.totalUs;
     if (pktSent_ == 0) {
-        pktSyncSeen_ = rose && fell;
-        pktLeadUs_ = rose ? tSync - t0 : 0;
-        pktOnAirUs_ = fell ? tEnd - tSync : 0;
-        pktTailUs_ = fell ? tIdle - tEnd : 0;
+        pktSyncSeen_ = timing.valid;
+        pktLeadUs_ = timing.leadUs;
+        pktOnAirUs_ = timing.onAirUs;
+        pktTailUs_ = timing.tailUs;
     }
-    return idle;
+    return ok;
 }
 
 void Bench::finishPkt() {
@@ -250,15 +204,9 @@ void Bench::finishPkt() {
 }
 
 bool Bench::enterRx(RxMode mode, uint8_t length) {
-    radio_.idle();
-    radio_.strobe(cc1120::SFRX);
     // Ramki wzorcowe: stała długość; ramki P1: zmienna długość z bajtem LEN do 102 (F79).
-    radio_.writeReg(cc1120::PKT_CFG0, mode == RxMode::P1 ? 0x20 : 0x00);
-    radio_.writeReg(cc1120::PKT_LEN, mode == RxMode::P1 ? p1frame::MAX_LEN : length);
     rxLen_ = length;
-    rxPendingLen_ = 0;
-    radio_.strobe(cc1120::SRX);
-    rxMode_ = radio_.waitMarcState(cc1120::MARC_STATE_RX, 50) ? mode : RxMode::NONE;
+    rxMode_ = radio_.startRx(mode == RxMode::P1, length) ? mode : RxMode::NONE;
     return rxMode_ == mode;
 }
 
@@ -276,31 +224,17 @@ const char* Bench::p1rxStart() {
 }
 
 void Bench::receive() {
-    const uint8_t marc = radio_.readMarcState();
-    if (marc == cc1120::MARC_STATE_RX_FIFO_ERR) {
-        ++counters_.overflow;
-        radio_.idle();
-        radio_.strobe(cc1120::SFRX);
-        radio_.strobe(cc1120::SRX);
-        return;
-    }
-    if (marc != cc1120::MARC_STATE_RX) {
-        radio_.strobe(cc1120::SRX);  // np. po IDLE z innego polecenia
-        return;
-    }
-    const size_t packet = static_cast<size_t>(rxLen_) + 2;  // ramka + RSSI + LQI
-    uint8_t bytes = radio_.rxBytes();
-    uint8_t buffer[testframe::MAX_LENGTH + 2];
-    while (bytes >= packet) {
-        radio_.readFifo(buffer, packet);
-        bytes -= packet;
-        const int8_t rssiRaw = static_cast<int8_t>(buffer[rxLen_]);
-        const uint8_t lqi = buffer[rxLen_ + 1] & 0x7F;
+    radiolink::Frame frame;
+    for (;;) {
+        const radiolink::RxPoll result = radio_.pollRx(frame);
+        if (result == radiolink::RxPoll::Overflow) { ++counters_.overflow; return; }
+        if (result == radiolink::RxPoll::Bad) { ++counters_.rxBad; return; }  // odbiór uruchomiony od nowa
+        if (result != radiolink::RxPoll::Frame) return;
         uint16_t seq = 0;
-        if (testframe::check(buffer, rxLen_, &seq)) {
+        if (testframe::check(frame.bytes, rxLen_, &seq)) {
             ++counters_.rxOk;
-            counters_.rssiSum += static_cast<int32_t>(rssiRaw) + p1::RSSI_OFFSET_DB;
-            counters_.lqiSum += lqi;
+            counters_.rssiSum += frame.rssiDbm;
+            counters_.lqiSum += frame.quality;
             if (counters_.haveSeq) {
                 if (seq > counters_.lastSeq + 1) counters_.missing += seq - counters_.lastSeq - 1;
                 else if (seq <= counters_.lastSeq) ++counters_.reordered;
@@ -330,12 +264,10 @@ void Bench::rxper() {
 }
 
 const char* Bench::foff(int32_t hz) {
-    // FREQOFF = hz * LO_DIVIDER * 2^18 / f_xosc (SWRU295E, równanie 27); krok 30,5 Hz.
-    const double raw = static_cast<double>(hz) * p1::LO_DIVIDER * 262144.0 / p1::F_XOSC_HZ;
-    if (raw > 32767.0 || raw < -32768.0) return "FOFF outside +-1000000 Hz";
+    // CC1120: FREQOFF (krok 30,5 Hz); S2-LP: słowo SYNT (krok 23,8 Hz); zakres ±1 MHz.
+    if (!radio_.setFrequencyOffset(hz)) return "FOFF outside +-1000000 Hz";
     foffHz_ = hz;
     foffSet_ = true;
-    applyOffset();
     char text[40];
     snprintf(text, sizeof(text), "FOFF %ld Hz", static_cast<long>(hz));
     log(text);
@@ -343,20 +275,15 @@ const char* Bench::foff(int32_t hz) {
 }
 
 void Bench::applyOffset() {
-    if (!foffSet_) return;
-    const int16_t reg = static_cast<int16_t>(lround(static_cast<double>(foffHz_) * p1::LO_DIVIDER * 262144.0 / p1::F_XOSC_HZ));
-    const bool wasRx = receiving();
-    radio_.idle();
-    radio_.setFrequencyOffset(reg);
-    if (wasRx) radio_.strobe(cc1120::SRX);
+    if (foffSet_) radio_.reapplyFrequencyOffset();
 }
 
 void Bench::printFoff() {
-    const int16_t reg = radio_.frequencyOffset();
-    const double appliedHz = static_cast<double>(reg) * p1::F_XOSC_HZ / 262144.0 / p1::LO_DIVIDER;
-    Serial.printf("{\"foff_hz\":%ld,\"set\":%s,\"freqoff\":%d,\"applied_hz\":%.1f,\"step_hz\":%.2f}\n",
-                  static_cast<long>(foffHz_), boolName(foffSet_), reg, appliedHz,
-                  static_cast<double>(p1::F_XOSC_HZ) / 262144.0 / p1::LO_DIVIDER);
+    // "freqoff": rejestr korekty (CC1120: FREQOFF; S2-LP: zmiana słowa SYNT wobec tablicy P1).
+    const int32_t reg = radio_.frequencyOffsetRaw();
+    const double stepHz = radio_.frequencyStepHz();
+    Serial.printf("{\"foff_hz\":%ld,\"set\":%s,\"freqoff\":%ld,\"applied_hz\":%.1f,\"step_hz\":%.2f}\n",
+                  static_cast<long>(foffHz_), boolName(foffSet_), static_cast<long>(reg), reg * stepHz, stepHz);
 }
 
 void Bench::printStatus() {
@@ -372,7 +299,6 @@ void Bench::stop() {
     if (pktActive_) finishPkt();
     if (txState_ != TxState::IDLE) finishP1Tx("stopped");
     rxMode_ = RxMode::NONE;
-    rxPendingLen_ = 0;
     radio_.idle();
 }
 
@@ -411,54 +337,18 @@ void Bench::poll() {
 // --- łącze P1 -------------------------------------------------------------------
 
 void Bench::receiveP1() {
-    const uint8_t marc = radio_.readMarcState();
-    if (marc == cc1120::MARC_STATE_RX_FIFO_ERR) {
-        ++link_.rxBad;
-        rxPendingLen_ = 0;
-        radio_.idle();
-        radio_.strobe(cc1120::SFRX);
-        radio_.strobe(cc1120::SRX);
-        return;
-    }
-    if (marc != cc1120::MARC_STATE_RX) {
-        radio_.strobe(cc1120::SRX);
-        return;
-    }
     assembler_.expire(millis());
-    uint8_t bytes = radio_.rxBytes();
+    radiolink::Frame received;
     for (;;) {
-        if (rxPendingLen_ == 0) {
-            if (bytes < 1) return;
-            radio_.readFifo(&rxPendingLen_, 1);  // bajt LEN; reszta ramki może być jeszcze w powietrzu
-            --bytes;
-            rxDeadlineMs_ = millis() + (static_cast<uint32_t>(rxPendingLen_) + 2) * 8 * 1000 / p1::SYMBOL_RATE + 50;
-            if (rxPendingLen_ < p1frame::MIN_LEN || rxPendingLen_ > p1frame::MAX_LEN) {
-                ++link_.rxBad;  // układ odrzuca LEN > PKT_LEN, krótsze trzeba wyrzucić samemu
-                rxPendingLen_ = 0;
-                radio_.idle();
-                radio_.strobe(cc1120::SFRX);
-                radio_.strobe(cc1120::SRX);
-                return;
-            }
-        }
-        const size_t rest = static_cast<size_t>(rxPendingLen_) + 2;  // BODY + CRC + RSSI + LQI
-        if (bytes < rest) {
-            if (static_cast<int32_t>(millis() - rxDeadlineMs_) > 0) {
-                ++link_.rxBad;
-                rxPendingLen_ = 0;
-                radio_.idle();
-                radio_.strobe(cc1120::SFRX);
-                radio_.strobe(cc1120::SRX);
-            }
+        const radiolink::RxPoll result = radio_.pollRx(received);
+        if (result == radiolink::RxPoll::Overflow || result == radiolink::RxPoll::Bad) {
+            ++link_.rxBad;  // przepełnienie, zła długość albo ramka niepełna; odbiór uruchomiony od nowa
             return;
         }
-        uint8_t frame[p1frame::MAX_FRAME + 2];
-        frame[0] = rxPendingLen_;
-        radio_.readFifo(frame + 1, rest);
-        bytes -= rest;
-        const size_t length = static_cast<size_t>(rxPendingLen_) + 1;
-        rxPendingLen_ = 0;
-        const int16_t rssiDbm = static_cast<int16_t>(static_cast<int8_t>(frame[length])) + p1::RSSI_OFFSET_DB;
+        if (result != radiolink::RxPoll::Frame) return;
+        const uint8_t* frame = received.bytes;
+        const size_t length = received.length;
+        const int16_t rssiDbm = received.rssiDbm;
         p1frame::Fragment fragment;
         const p1frame::Parse parse = p1frame::parseFrame(frame, length, fragment);
         if (parse != p1frame::Parse::OK) {
@@ -487,8 +377,7 @@ void Bench::receiveP1() {
 
 namespace {
 
-// Identyfikator datagramu z generatora sprzętowego nRF52840 (RNG z korekcją obciążenia);
-// bez SoftDevice rejestry RNG są dostępne bezpośrednio.
+// Identyfikator datagramu z generatora sprzętowego MCU (randomBytes).
 void randomId(uint8_t out[p1frame::ID_BYTES]) {
     randomBytes(out, p1frame::ID_BYTES);
     randomSeed((static_cast<uint32_t>(out[0]) << 24) | (static_cast<uint32_t>(out[1]) << 16) |
@@ -498,7 +387,10 @@ void randomId(uint8_t out[p1frame::ID_BYTES]) {
 }  // namespace
 
 void randomBytes(uint8_t* out, size_t count) {
-#if defined(NRF52_SERIES) || defined(NRF52840_XXAA)
+#if defined(ESP_PLATFORM)
+    esp_fill_random(out, count);  // przy wyłączonym radiu Wi-Fi/BT źródło szumu jest słabsze (karta ESP32-S3)
+#elif defined(NRF52_SERIES) || defined(NRF52840_XXAA)
+    // RNG z korekcją obciążenia; bez SoftDevice rejestry RNG są dostępne bezpośrednio.
     NRF_RNG->CONFIG = RNG_CONFIG_DERCEN_Msk;
     NRF_RNG->EVENTS_VALRDY = 0;
     NRF_RNG->TASKS_START = 1;
@@ -531,9 +423,9 @@ const char* Bench::p1send(const uint8_t* data, size_t length) {
 }
 
 bool Bench::channelBusy() {
-    // Kanał zajęty: RSSI ponad progiem CCA albo trwa odbiór po słowie synchronizacji (GPIO2).
-    if (digitalRead(pinSync_) == HIGH || rxPendingLen_ != 0) return true;
-    const cc1120::Rssi r = radio_.rssi(p1::RSSI_OFFSET_DB);
+    // Kanał zajęty: RSSI ponad progiem CCA albo trwa odbiór po słowie synchronizacji.
+    if (radio_.receivingFrame()) return true;
+    const radiolink::Rssi r = radio_.rssi();
     return r.valid && r.dbm > p1::CCA_THRESHOLD_DBM;
 }
 
@@ -580,20 +472,11 @@ bool Bench::sendFragments() {
     const uint8_t count = p1frame::fragmentCount(txLength_);
     bool ok = true;
     radio_.idle();
-    radio_.writeReg(cc1120::PKT_CFG0, 0x20);  // zmienna długość: układ wysyła LEN bajtów po bajcie LEN
-    radio_.writeReg(cc1120::PKT_LEN, p1frame::MAX_LEN);
     for (uint8_t index = 0; index < count; ++index) {
+        // Zmienna długość: układ wysyła LEN bajtów po bajcie LEN.
         uint8_t frame[p1frame::MAX_FRAME];
         const size_t n = p1frame::buildFrame(txData_, txLength_, txId_, index, frame);
-        radio_.strobe(cc1120::SFTX);
-        radio_.writeFifo(frame, n);
-        radio_.strobe(cc1120::STX);
-        const uint32_t onAirMs = static_cast<uint32_t>(12 + n) * 8 * 1000 / p1::SYMBOL_RATE;
-        if (!radio_.waitMarcState(cc1120::MARC_STATE_IDLE, onAirMs + 120)) {
-            ok = false;
-            radio_.idle();
-            radio_.strobe(cc1120::SFTX);
-        }
+        if (!radio_.transmit(frame, n, true, nullptr)) ok = false;
         ++link_.txFragments;
     }
     ++link_.txDatagrams;

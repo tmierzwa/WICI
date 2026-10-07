@@ -12,6 +12,8 @@
 
 #include <Arduino.h>
 
+#define WICI_BOARD_N1 1  // płytka nośna N1: panel i linia DISP ekranu (board.h)
+
 namespace board {
 
 constexpr const char* NAME = "N1";
@@ -63,6 +65,12 @@ constexpr uint16_t BUZZER_HZ = 2048;
 constexpr uint8_t VTEST = 5;  // J5.5
 constexpr uint8_t VTEST_ADC_CHANNEL = 4;
 constexpr uint8_t VTEST_DIVIDER = 6;
+
+// Diody stanu jak LED1-LED4 płytki DK: brak (DevKitC ma tylko diodę RGB WS2812, nieużywaną).
+constexpr int16_t LED_HEARTBEAT = -1;
+constexpr int16_t LED_RADIO = -1;
+constexpr int16_t LED_FRAM = -1;
+constexpr int16_t LED_USB = -1;
 
 constexpr uint32_t SPI_HZ = 1000000;  // radio i FRAM, jak na stanowisku A
 

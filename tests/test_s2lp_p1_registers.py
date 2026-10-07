@@ -74,8 +74,16 @@ class TableTests(unittest.TestCase):
         self.assertEqual(self.table["PCKTCTRL2"].value, 0x01)  # variable length, no coding
         self.assertEqual(self.table["PCKTCTRL1"].value, 0x00)  # no CRC, no whitening, FIFO source, no FEC
         self.assertEqual(self.table["PCKTCTRL4"].value, 0x00)  # 1-byte LEN, no address
-        sync = tuple(self.table[f"SYNC{i}"].value for i in (3, 2, 1, 0))
+        # First byte on air in SYNC0 (0x36), last in SYNC3 (0x33): ST library and ST answer for 0x55599.
+        sync = tuple(self.table[f"SYNC{i}"].value for i in (0, 1, 2, 3))
         self.assertEqual(sync, SPEC["sync_word"])
+        self.assertEqual(self.table["SYNC3"].address, 0x33)
+
+    def test_receiver_stays_on_and_link_interrupts(self):
+        self.assertEqual(self.table["PROTOCOL0"].value & 0x02, 0x02)  # PERS_RX
+        self.assertEqual(self.table["TIMERS5"].value, 0)  # no RX timeout
+        mask = (self.table["IRQ_MASK1"].value << 8) | self.table["IRQ_MASK0"].value
+        self.assertEqual(mask, 0x2067)  # RX ready, discarded, TX sent, FIFO errors, sync
 
     def test_modulation_is_2gfsk_bt05(self):
         self.assertEqual(self.table["MOD2"].value >> 4, 0xA)

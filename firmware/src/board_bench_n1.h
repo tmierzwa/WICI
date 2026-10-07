@@ -10,6 +10,8 @@
 
 #include <Arduino.h>
 
+#define WICI_BOARD_N1 1  // płytka nośna N1: panel i linia DISP ekranu (board.h)
+
 namespace board {
 
 constexpr const char* NAME = "N1";

@@ -1,35 +1,34 @@
 // SPDX-License-Identifier: MIT
-// WICI, stanowisko deweloperskie A: pierwsze kroki oprogramowania stacji na nRF52840-DK.
-// Zakres: USB CDC z poleceniami tekstowymi, identyfikacja CC1120 i FRAM przez SPI,
-// konfiguracja rejestrów profilu P1 z weryfikacją odczytu i kalibracją syntezera,
-// polecenia pomiarowe TXCW, TXPKT, RXPER, FOFF w trybie przygotowania, dziennik
-// w FRAM (dług ciszy, zegar czasu pracy z liczbą restartów, zdarzenia), odczyt
-// częstotliwości i RSSI, łącze P1 (odbiór i składanie datagramów, nadawanie z CCA,
-// odroczeniem i długiem ciszy), ekran Sharp z EXTCOMIN z licznika RTC2 i przyciski
-// płytki jako menu stacji (wybór języka, ekran główny, cisza, STAN), drugi interfejs CDC
-// z protokołem USB laptop–stacja (sync, submit, event/ack, polecenia) nad kolejką, skrzynką
-// i konfiguracją w FRAM, warstwa aplikacji nad P1 (kolejka, ponawianie, potwierdzenia) oraz
-// ekrany stacji (kreator zgłoszenia, WIADOMOŚCI, TEST, STAN, USŁUGI, alarmy).
-// Bez stosu Reticulum (następne kroki). Środowisko bench-n1 (WICI_BENCH_N1): ta sama stacja na płytce
-// nośnej N1 z panelem (przełącznik CISZA, przycisk przygotowania, dioda alarmu, brzęczyk, VTEST).
+// WICI, stanowiska deweloperskie A i B: oprogramowanie stacji bez stosu Reticulum.
+// Zakres: USB z dwoma interfejsami CDC (diagnostyka z poleceniami tekstowymi i dane z protokołem
+// laptop–stacja: sync, submit, event/ack, polecenia nad kolejką, skrzynką i konfiguracją w FRAM),
+// identyfikacja radia i FRAM przez SPI, konfiguracja rejestrów profilu P1 z weryfikacją odczytu,
+// polecenia pomiarowe TXCW, TXPKT, RXPER, FOFF w trybie przygotowania, dziennik w FRAM (dług
+// ciszy, zegar czasu pracy z liczbą restartów, zdarzenia), łącze P1 (odbiór i składanie
+// datagramów, nadawanie z CCA, odroczeniem i długiem ciszy), warstwa aplikacji nad P1 (kolejka,
+// ponawianie, potwierdzenia), ekran Sharp z EXTCOMIN z licznika MCU i przyciski jako menu stacji
+// (kreator zgłoszenia, WIADOMOŚCI, TEST, STAN, USŁUGI, alarmy), panel płytki N1 (przełącznik
+// CISZA, przycisk przygotowania, dioda alarmu, brzęczyk, VTEST).
+// Wykonania: bench-a (nRF52840-DK + CC1120EM na przewodach), bench-n1 (to samo na płytce N1),
+// bench-b (ESP32-S3-DevKitC-1 + X-NUCLEO-S2868A2 z S2-LP na N1). Zależne od MCU części są
+// w platform_*.cpp, zależne od układu radiowego w radio_console_*.cpp i *_link.cpp.
 #include <Arduino.h>
-#include <Adafruit_TinyUSB.h>
 #include <SPI.h>
-
-#if defined(WICI_BENCH_N1)
-#include "board_bench_n1.h"
-#elif defined(WICI_BENCH_A)
-#include "board_bench_a.h"
-#else
-#error "Brak pliku opisu płytki: WICI_BENCH_A albo WICI_BENCH_N1"
+#if defined(ARDUINO_ARCH_NRF52)
+#include <Adafruit_TinyUSB.h>
+#elif defined(ARDUINO_ARCH_ESP32)
+#include <USB.h>
 #endif
-#include "cc1120.h"
+
+#include "board.h"
 #include "console.h"
 #include "fram.h"
 #include "journal.h"
 #include "measure.h"
 #include "p1_registers.h"
 #include "p1frame.h"
+#include "platform.h"
+#include "radio_console.h"
 #include "sharp.h"
 #include "station.h"
 #include "store.h"
@@ -42,26 +41,32 @@
 
 namespace {
 
-#if defined(WICI_BENCH_N1)
-// N1: SPI na D3/D11/D12 na SPIM2; domyślne SPI (SPIM3, SCK na D13) nie jest uruchamiane.
-SPIClass bus(NRF_SPIM2, board::SPI_MISO, board::SPI_SCK, board::SPI_MOSI);
+#if defined(WICI_BOARD_N1)
 constexpr const char* BOARD_NAME = board::NAME;
 #else
-SPIClass& bus = SPI;
 constexpr const char* BOARD_NAME = "wires";
 #endif
-
-cc1120::Radio radio(bus, board::RADIO_CS, board::RADIO_RESET, board::SPI_HZ);
-fram::Memory memory(bus, board::FRAM_CS, board::SPI_HZ);
-journal::Journal stationJournal(memory);
-measure::Bench bench(radio, board::RADIO_GPIO2, board::BTN_OK, board::LED_HEARTBEAT);
-#if defined(WICI_BENCH_N1)
-sharp::Display display(bus, board::DISPLAY_CS, board::DISPLAY_EXTCOMIN, board::DISPLAY_SPI_HZ);
+#if defined(WICI_BENCH_B)
+constexpr const char* BENCH = "B";
 #else
-sharp::Display display(bus, board::DISPLAY_CS, board::DISPLAY_EXTCOMIN);
+constexpr const char* BENCH = "A";
+#endif
+
+fram::Memory memory(platform::bus(), board::FRAM_CS, board::SPI_HZ);
+journal::Journal stationJournal(memory);
+measure::Bench bench(radiocon::link(), board::BTN_OK, board::LED_HEARTBEAT);
+#if defined(WICI_BOARD_N1)
+sharp::Display display(platform::bus(), board::DISPLAY_CS, board::DISPLAY_EXTCOMIN, board::DISPLAY_SPI_HZ);
+#else
+sharp::Display display(platform::bus(), board::DISPLAY_CS, board::DISPLAY_EXTCOMIN);
 #endif
 store::Store stationStore(memory);
-Adafruit_USBD_CDC SerialData;    // drugi interfejs CDC: dane (protokół laptop–stacja); Serial = diagnostyka
+// Drugi interfejs CDC: dane (protokół laptop–stacja); Serial = diagnostyka.
+#if defined(ARDUINO_ARCH_NRF52)
+Adafruit_USBD_CDC SerialData;
+#else
+USBCDC SerialData(1);  // interfejs dopisany do deskryptora przed USB.begin() rdzenia
+#endif
 bool storeOk = false;
 bool dataWas = false;
 ui::Model screenModel;
@@ -72,7 +77,7 @@ constexpr uint32_t BUTTON_POLL_MS = 10;   // odpytywanie przycisków (drgania st
 constexpr uint32_t SCREEN_POLL_MS = 200;  // odświeżanie ekranu po zmianie treści
 constexpr uint32_t APP_POLL_MS = 100;     // przegląd kolejki nadawczej
 constexpr uint32_t WDT_TIMEOUT_S = 60;    // watchdog: dłużej niż potwierdzenie przyciskiem (30 s)
-char stationName[12];            // WICI-xxxxxx z identyfikatora układu (FICR)
+char stationName[12];            // WICI-xxxxxx z identyfikatora układu (platform::chipId)
 
 // Pamięć niezerowana przy starcie: po restarcie programowym albo przez watchdog zostaje język
 // i ekran, więc stacja wraca tam, gdzie była; po włączeniu zasilania słowa są przypadkowe.
@@ -83,12 +88,10 @@ struct Retained {
     uint8_t screen;
 };
 constexpr uint32_t RETAINED_MAGIC = 0x57494349;  // "WICI"
-Retained retained __attribute__((section(".noinit")));
+PLATFORM_NOINIT Retained retained;
 
-bool radioOk = false;
 bool framOk = false;
 bool journalOk = false;
-bool p1Ok = false;        // tablica P1 zapisana, zweryfikowana i syntezer skalibrowany
 uint32_t restarts = 0;    // z dziennika zegara w FRAM, +1 przy każdym starcie
 uint32_t uptimeBaseS = 0; // czas pracy z dziennika przy starcie; zegar monotoniczny między restartami
 uint32_t journalResets = 0;  // brak poprawnego rekordu długu przy starcie
@@ -98,9 +101,12 @@ size_t lineLength = 0;
 
 const uint8_t buttons[] = {board::BTN_UP, board::BTN_DOWN, board::BTN_OK, board::BTN_BACK};
 const char* const buttonNames[] = {"up", "down", "ok", "back"};
-const uint8_t leds[] = {board::LED_HEARTBEAT, board::LED_RADIO, board::LED_FRAM, board::LED_USB};
+const int16_t leds[] = {board::LED_HEARTBEAT, board::LED_RADIO, board::LED_FRAM, board::LED_USB};
 
-void ledWrite(uint8_t pin, bool on) { digitalWrite(pin, on ? LOW : HIGH); }  // diody DK aktywne stanem niskim
+// Diody DK aktywne stanem niskim; -1: płytka bez diody (stanowisko B).
+void ledWrite(int16_t pin, bool on) {
+    if (pin >= 0) digitalWrite(static_cast<uint8_t>(pin), on ? LOW : HIGH);
+}
 
 bool pressed(uint8_t pin) { return digitalRead(pin) == LOW; }
 
@@ -137,7 +143,7 @@ usbproto::Protocol protocol(stationStore, host);
 struct BenchServices : station::Services {
     uint32_t uptimeS() override { return ::uptimeS(); }
     bool silence() override { return bench.silence; }
-    bool radioReady() override { return radioOk && p1Ok && bench.receiving(); }
+    bool radioReady() override { return radiocon::ok() && radiocon::p1Ok() && bench.receiving(); }
     bool busy() override { return bench.busy(); }
     bool send(const uint8_t* data, size_t length) override { return bench.p1send(data, length) == nullptr; }
     void randomBytes(uint8_t* out, size_t count) override { measure::randomBytes(out, count); }
@@ -172,7 +178,7 @@ void BenchHost::setSilence(bool on) {
     radioEvent();
 }
 
-#if defined(WICI_BENCH_N1)
+#if defined(WICI_BOARD_N1)
 // Panel płytki N1: przełącznik CISZA, przycisk przygotowania, dioda alarmu i brzęczyk.
 // Przełącznik i przycisk działają na zmianę stanu, więc polecenia SILENCE i PREP zostają jako
 // zapasowe i obowiązują do następnego przełączenia.
@@ -223,7 +229,7 @@ void beginPanel() {
     digitalWrite(board::BUZZER, LOW);
     pinMode(board::SW_SILENCE, INPUT);  // podciągnięcia na płytce
     pinMode(board::BTN_PREP, INPUT);
-    analogReadResolution(12);
+    platform::beginVtest();
     silenceSwitchLevel = silenceSwitchState = silenceSwitch();
     silenceSwitchSince = millis();
     bench.silence = silenceSwitchState;  // położenie przełącznika przy starcie
@@ -268,16 +274,6 @@ void pollPanel(uint32_t now) {
     }
 }
 
-// VTEST: średnia z 16 próbek SAADC (12 bitów, odniesienie 0,6 V, wzmocnienie 1/6: 3,6 V pełnej skali).
-void printVtest() {
-    uint32_t sum = 0;
-    for (int i = 0; i < 16; ++i) sum += analogRead(board::VTEST);
-    const uint32_t raw = sum / 16;
-    const uint32_t pinMv = raw * 3600 / 4096;
-    Serial.printf("{\"vtest_mv\":%lu,\"pin_mv\":%lu,\"raw\":%lu,\"ain\":6,\"divider\":%u}\n",
-                  static_cast<unsigned long>(pinMv * board::VTEST_DIVIDER), static_cast<unsigned long>(pinMv),
-                  static_cast<unsigned long>(raw), board::VTEST_DIVIDER);
-}
 #endif
 
 const char* langName(ui::Lang lang) { return lang == ui::Lang::PL ? "PL" : lang == ui::Lang::UK ? "UK" : "EN"; }
@@ -295,7 +291,7 @@ ui::Status screenStatus() {
     const measure::LinkCounters& c = bench.link();
     s.prep = bench.prep;
     s.silence = bench.silence;
-    s.radioOk = radioOk && p1Ok;
+    s.radioOk = radiocon::ok() && radiocon::p1Ok();
     s.contactKnown = false;          // bez odbiorcy: dolne oszacowanie z czasu pracy
     s.contactS = uptimeS();
     s.mains12 = true;
@@ -311,8 +307,9 @@ ui::Status screenStatus() {
     s.txDrop = c.txDrop;
     s.deferrals = c.deferrals;
     s.debtMs = bench.debtRemainingMs();
-    s.foffValid = radioOk && c.rxOk > 0;
-    s.foffHz = static_cast<int32_t>(radio.frequencyOffsetEstimate() * (p1::F_XOSC_HZ / 262144.0 / p1::LO_DIVIDER));
+    int32_t foffHz = 0;
+    s.foffValid = radiocon::ok() && c.rxOk > 0 && radiocon::link().frequencyErrorHz(foffHz);
+    s.foffHz = foffHz;
     s.version = WICI_FW_VERSION;
     s.name = stationName;
     return s;
@@ -347,22 +344,22 @@ void printScreen() {
 }
 
 void printDisplay() {
-    Serial.printf("{\"extcomin\":\"RTC2\",\"counter\":%lu,\"level\":%s,\"software_vcom\":%s,\"refreshes\":%lu,\"cs\":%u,\"extcomin_pin\":%u,"
+    Serial.printf("{\"extcomin\":\"%s\",\"counter\":%lu,\"level\":%s,\"software_vcom\":%s,\"refreshes\":%lu,\"cs\":%u,\"extcomin_pin\":%u,"
                   "\"spi_hz\":%lu}\n",
-                  static_cast<unsigned long>(display.extcominCounter()), boolName(display.extcominLevel()),
+                  platform::EXTCOMIN_SOURCE, static_cast<unsigned long>(display.extcominCounter()), boolName(display.extcominLevel()),
                   boolName(display.softwareVcom()), static_cast<unsigned long>(display.refreshes()), board::DISPLAY_CS,
                   board::DISPLAY_EXTCOMIN, static_cast<unsigned long>(display.spiHz()));
 }
 
 void BenchHost::stationAddress(uint8_t out[store::HASH]) {
-    // Bez tożsamości Reticulum: 16 B z identyfikatora układu (FICR) jako adres stanowiska.
+    // Bez tożsamości Reticulum: 16 B z identyfikatora układu (2 x 8 B) jako adres stanowiska.
     memset(out, 0, store::HASH);
-    const uint32_t id0 = NRF_FICR->DEVICEID[0];
-    const uint32_t id1 = NRF_FICR->DEVICEID[1];
-    memcpy(out, &id0, 4);
-    memcpy(out + 4, &id1, 4);
-    memcpy(out + 8, &id0, 4);
-    memcpy(out + 12, &id1, 4);
+    uint32_t id[2];
+    platform::chipId(id);
+    memcpy(out, &id[0], 4);
+    memcpy(out + 4, &id[1], 4);
+    memcpy(out + 8, &id[0], 4);
+    memcpy(out + 12, &id[1], 4);
 }
 
 const char* BenchHost::stationName() { return ::stationName; }
@@ -380,8 +377,9 @@ void persistScreen() {
 
 // Po włączeniu zasilania: wybór języka; po restarcie programowym: język i ekran sprzed restartu.
 void beginScreen() {
-    const uint32_t id = NRF_FICR->DEVICEID[0];
-    snprintf(stationName, sizeof(stationName), "WICI-%06lX", static_cast<unsigned long>(id & 0xFFFFFF));
+    uint32_t id[2];
+    platform::chipId(id);
+    snprintf(stationName, sizeof(stationName), "WICI-%06lX", static_cast<unsigned long>(id[0] & 0xFFFFFF));
     const journal::SmallRecord& saved = stationJournal.settings();
     const ui::Lang savedLang = journalOk && saved.a >= 1 && saved.a <= ui_texts::LANGS ? static_cast<ui::Lang>(saved.a - 1) : ui::Lang::PL;
     if (retained.magic == RETAINED_MAGIC && retained.check == ~RETAINED_MAGIC && retained.lang < ui_texts::LANGS) {
@@ -411,65 +409,6 @@ void syncButtons() {
 
 void printError(const char* text) { Serial.printf("{\"error\":\"%s\"}\n", text); }
 
-void printRadio() {
-    const cc1120::Identity id = radio.identify();
-    radioOk = id.ready && id.partNumber == cc1120::PARTNUMBER_CC1120;
-    ledWrite(board::LED_RADIO, radioOk && p1Ok);
-    Serial.printf("{\"radio\":\"CC1120\",\"ready\":%s,\"partnumber\":\"0x%02X\",\"partversion\":\"0x%02X\","
-                  "\"marcstate\":\"0x%02X\",\"marc\":\"%s\",\"state\":\"%s\",\"p1_ok\":%s,\"ok\":%s}\n",
-                  boolName(id.ready), id.partNumber, id.partVersion, id.marcState,
-                  cc1120::marcStateName(id.marcState), cc1120::stateName(cc1120::statusState(id.status)),
-                  boolName(p1Ok), boolName(radioOk));
-}
-
-void printVerify(const char* step, const cc1120::VerifyResult& result, bool calibrated) {
-    Serial.printf("{\"%s\":%s,\"checked\":%u,\"mismatches\":%u", step, boolName(result.mismatches == 0 && calibrated),
-                  result.checked, result.mismatches);
-    if (result.mismatches) {
-        Serial.printf(",\"first\":\"%s\",\"reg\":\"0x%04X\",\"expected\":\"0x%02X\",\"actual\":\"0x%02X\"",
-                      result.firstName, result.firstAddress, result.expected, result.actual);
-    }
-    Serial.printf(",\"calibrated\":%s,\"marcstate\":\"0x%02X\"}\n", boolName(calibrated), radio.readReg(cc1120::MARCSTATE));
-}
-
-// Zapis tablicy P1, weryfikacja odczytem, ręczna kalibracja i ponowny zapis FOFF; ustala p1Ok.
-cc1120::VerifyResult configureP1(bool& calibrated) {
-    bench.stop();
-    const cc1120::VerifyResult result = radio.configure(p1::REGISTERS, p1::REGISTER_COUNT);
-    calibrated = result.mismatches == 0 && radio.calibrate();
-    bench.applyOffset();
-    p1Ok = calibrated;
-    ledWrite(board::LED_RADIO, radioOk && p1Ok);
-    return result;
-}
-
-void printFrequency() {
-    const uint32_t word = radio.frequencyWord();
-    const int16_t offset = radio.frequencyOffset();
-    // f_RF = (FREQ * f_xosc / 2^16 + FREQOFF * f_xosc / 2^18) / LO_DIVIDER (SWRU295E, eq. 26, 27).
-    const double hz = (static_cast<double>(word) * p1::F_XOSC_HZ / 65536.0 +
-                       static_cast<double>(offset) * p1::F_XOSC_HZ / 262144.0) / p1::LO_DIVIDER;
-    const double stepHz = static_cast<double>(p1::F_XOSC_HZ) / 262144.0 / p1::LO_DIVIDER;
-    Serial.printf("{\"freq\":\"0x%06lX\",\"freqoff\":%d,\"hz\":%.1f,\"target_hz\":%lu,\"error_hz\":%.1f,"
-                  "\"offset_step_hz\":%.2f,\"freqoff_est\":%d}\n",
-                  static_cast<unsigned long>(word), offset, hz, static_cast<unsigned long>(p1::CARRIER_HZ),
-                  hz - p1::CARRIER_HZ, stepHz, radio.frequencyOffsetEstimate());
-}
-
-void printRssi() {
-    const uint8_t marc = radio.readMarcState();
-    const cc1120::Rssi r = radio.rssi(p1::RSSI_OFFSET_DB);
-    Serial.printf("{\"rssi_valid\":%s,\"rssi_dbm\":%d,\"rssi_offset_db\":%d,\"cs\":%s,\"cs_valid\":%s,\"marc\":\"%s\"}\n",
-                  boolName(r.valid), r.dbm, p1::RSSI_OFFSET_DB, boolName(r.carrierSense), boolName(r.carrierSenseValid),
-                  cc1120::marcStateName(marc));
-}
-
-void printState() {
-    const uint8_t marc = radio.readMarcState();
-    Serial.printf("{\"marc\":\"%s\",\"marcstate\":\"0x%02X\",\"status\":\"0x%02X\",\"rxbytes\":%u,\"txbytes\":%u}\n",
-                  cc1120::marcStateName(marc), marc, radio.lastStatus(), radio.rxBytes(), radio.txBytes());
-}
-
 void printFram() {
     const fram::Id id = memory.identify();
     framOk = id.mb85rs4m;
@@ -482,21 +421,21 @@ void printInfo() {
     // Pola jak w INFO ze specyfikacji radia; napięcie jest zerowe, bo stanowisko go nie mierzy.
     // uptime_s to zegar z dziennika FRAM (ciągły między restartami), boot_s czas od startu.
     const measure::LinkCounters& c = bench.link();
-    Serial.printf("{\"contract\":2,\"profile\":\"P1\",\"radio\":\"CC1120\",\"mcu\":\"nRF52840\",\"fw\":\"%s\","
+    Serial.printf("{\"contract\":2,\"profile\":\"P1\",\"radio\":\"%s\",\"mcu\":\"%s\",\"fw\":\"%s\","
                   "\"src\":\"USB\",\"mv\":0,\"tx_wait_ms\":%lu,\"rx_ok\":%lu,\"rx_bad\":%lu,\"tx_drop\":%lu,\"restarts\":%lu,"
-                  "\"bench\":\"A\",\"prep\":%s,\"silence\":%s,\"radio_ok\":%s,\"p1_ok\":%s,\"fram_ok\":%s,\"journal_ok\":%s,"
+                  "\"bench\":\"%s\",\"prep\":%s,\"silence\":%s,\"radio_ok\":%s,\"p1_ok\":%s,\"fram_ok\":%s,\"journal_ok\":%s,"
                   "\"journal_resets\":%lu,\"carrier_hz\":%lu,\"symbol_rate\":%u,\"deviation_hz\":%u,\"rx_filter_hz\":%u,"
                   "\"tx_power_dbm\":%d,\"uptime_s\":%lu,\"boot_s\":%lu,\"screen\":\"%s\",\"lang\":\"%s\",\"name\":\"%s\","
                   "\"reset_reason\":\"0x%08lX\",\"store_ok\":%s,\"queued\":%u,\"inbox\":%u,\"pending\":%u,\"usb_data\":%s,"
                   "\"usb_in\":%lu,\"usb_out\":%lu,\"usb_rejected\":%lu,\"usb_boot\":\"%s\",\"wdt_s\":%lu,\"board\":\"%s\"}\n",
-                  WICI_FW_VERSION, static_cast<unsigned long>(bench.debtRemainingMs()), static_cast<unsigned long>(c.rxOk),
-                  static_cast<unsigned long>(c.rxBad), static_cast<unsigned long>(c.txDrop),
-                  static_cast<unsigned long>(restarts), boolName(bench.prep),
-                  boolName(bench.silence), boolName(radioOk), boolName(p1Ok), boolName(framOk), boolName(journalOk),
+                  radiocon::NAME, platform::MCU, WICI_FW_VERSION, static_cast<unsigned long>(bench.debtRemainingMs()),
+                  static_cast<unsigned long>(c.rxOk), static_cast<unsigned long>(c.rxBad), static_cast<unsigned long>(c.txDrop),
+                  static_cast<unsigned long>(restarts), BENCH, boolName(bench.prep),
+                  boolName(bench.silence), boolName(radiocon::ok()), boolName(radiocon::p1Ok()), boolName(framOk), boolName(journalOk),
                   static_cast<unsigned long>(journalResets), static_cast<unsigned long>(p1::CARRIER_HZ), p1::SYMBOL_RATE,
-                  p1::DEVIATION_HZ, p1::RX_FILTER_HZ, p1::TX_POWER_DBM, static_cast<unsigned long>(uptimeS()),
+                  p1::DEVIATION_HZ, radiocon::RX_FILTER_HZ, radiocon::TX_POWER_DBM, static_cast<unsigned long>(uptimeS()),
                   static_cast<unsigned long>(millis() / 1000), ui::screenName(screenModel.screen()), langName(screenModel.language()),
-                  stationName, static_cast<unsigned long>(readResetReason()), boolName(storeOk),
+                  stationName, static_cast<unsigned long>(platform::resetReason()), boolName(storeOk),
                   static_cast<unsigned>(storeOk ? stationStore.queueLive() : 0), static_cast<unsigned>(storeOk ? stationStore.inboxCount() : 0),
                   static_cast<unsigned>(storeOk ? stationStore.notesPending() : 0), boolName(protocol.isConnected()),
                   static_cast<unsigned long>(protocol.stats().linesIn), static_cast<unsigned long>(protocol.stats().linesOut),
@@ -548,7 +487,7 @@ void printButtons() {
     for (size_t i = 0; i < 4; ++i) {
         Serial.printf("\"%s\":%s%s", buttonNames[i], boolName(pressed(buttons[i])), i < 3 ? "," : "");
     }
-#if defined(WICI_BENCH_N1)
+#if defined(WICI_BOARD_N1)
     // Stan linii panelu N1 (krok A3 uruchomienia): true = zwarte do masy.
     Serial.printf("},\"silence_switch\":%s,\"prep_button\":%s,\"silence\":%s,\"prep\":%s,\"alarm_led\":%s}\n",
                   boolName(silenceSwitch()), boolName(pressed(board::BTN_PREP)), boolName(bench.silence),
@@ -559,15 +498,18 @@ void printButtons() {
 }
 
 void printHelp() {
-    Serial.println("{\"commands\":[\"HELP\",\"INFO\",\"RADIO\",\"RESET\",\"CONFIG\",\"VERIFY\",\"CAL\",\"FREQ\","
-                   "\"PREP <0|1>\",\"SILENCE <0|1>\",\"TXCW <s> [CONDUCTED]\",\"TXPKT <n> <len> [<ms>] [CONDUCTED]\","
-                   "\"RX [<len>]\",\"RXPER\",\"FOFF [<hz>]\",\"P1RX\",\"P1TX <hex>\",\"P1\",\"STOP\",\"LOG [<n>]\",\"JOURNAL\",\"BENCH\",\"IDLE\",\"RSSI\",\"STATE\","
-                   "\"REG <hex>\",\"FRAM\",\"BTN\",\"LED <1-4> <0|1>\",\"SCREEN\",\"KEY <UP|DOWN|OK|BACK> [ms]\",\"DISPLAY\","
-                   "\"VCOM <0|1>\",\"REBOOT\",\"STORE\",\"USB <json>\",\"APP\",\"LINK <0|1>\""
-#if defined(WICI_BENCH_N1)
-                   ",\"LED 5 <0|1>\",\"BUZZ [<ms>] [<hz>]\",\"VTEST\",\"DISPLAY <hz>\""
+    Serial.print("{\"commands\":[\"HELP\",\"INFO\"");
+    Serial.print(radiocon::helpCommands());
+    Serial.print(",\"PREP <0|1>\",\"SILENCE <0|1>\",\"TXCW <s> [CONDUCTED]\",\"TXPKT <n> <len> [<ms>] [CONDUCTED]\","
+                 "\"RX [<len>]\",\"RXPER\",\"FOFF [<hz>]\",\"P1RX\",\"P1TX <hex>\",\"P1\",\"STOP\",\"LOG [<n>]\",\"JOURNAL\",\"BENCH\","
+                 "\"FRAM\",\"BTN\",\"LED <1-4> <0|1>\",\"SCREEN\",\"KEY <UP|DOWN|OK|BACK> [ms]\",\"DISPLAY\","
+                 "\"VCOM <0|1>\",\"REBOOT\",\"STORE\",\"USB <json>\",\"APP\",\"LINK <0|1>\""
+#if defined(WICI_BOARD_N1)
+                 ",\"LED 5 <0|1>\",\"BUZZ [<ms>] [<hz>]\",\"VTEST\",\"DISPLAY <hz>\""
 #endif
-                   "]}");
+    );
+    Serial.print(platform::helpCommands());
+    Serial.println("]}");
 }
 
 // Argumenty po poleceniu: do czterech słów; zwraca liczbę słów.
@@ -626,27 +568,8 @@ void handle(char* cmd) {
     char* words[4];
     size_t n = arg ? splitArgs(arg, words, 4) : 0;
     if (!strcmp(cmd, "INFO")) printInfo();
-    else if (!strcmp(cmd, "RADIO")) printRadio();
-    else if (!strcmp(cmd, "RESET")) {
-        bench.stop();
-        const bool ok = radio.reset();
-        p1Ok = false;
-        Serial.printf("{\"reset\":%s,\"status\":\"0x%02X\"}\n", boolName(ok), radio.lastStatus());
-        printRadio();
-    } else if (!strcmp(cmd, "CONFIG")) {
-        bool calibrated = false;
-        const cc1120::VerifyResult result = configureP1(calibrated);
-        printVerify("config", result, calibrated);
-    } else if (!strcmp(cmd, "VERIFY")) {
-        const cc1120::VerifyResult result = radio.verify(p1::REGISTERS, p1::REGISTER_COUNT);
-        printVerify("verify", result, p1Ok);
-    } else if (!strcmp(cmd, "CAL")) {
-        bench.stop();
-        const bool ok = radio.calibrate();
-        Serial.printf("{\"cal\":%s,\"fs_vco2\":\"0x%02X\",\"fs_vco4\":\"0x%02X\",\"fs_chp\":\"0x%02X\",\"fs_cal2\":\"0x%02X\"}\n",
-                      boolName(ok), radio.readReg(cc1120::FS_VCO2), radio.readReg(cc1120::FS_VCO4),
-                      radio.readReg(cc1120::FS_CHP), radio.readReg(cc1120::FS_CAL2));
-    } else if (!strcmp(cmd, "FREQ")) printFrequency();
+    else if (radiocon::handle(cmd, words, n)) return;
+    else if (platform::handle(cmd, words, n)) return;
     else if (!strcmp(cmd, "PREP") && n == 1) {
         // Na stacji tryb przygotowania włącza przycisk pod plombowaną pokrywą; na stanowisku
         // zastępuje go polecenie potwierdzone przyciskiem OK w ciągu 30 s.
@@ -692,7 +615,7 @@ void handle(char* cmd) {
         const char* error = bench.rxStart(length);
         if (error) printError(error);
         else Serial.printf("{\"rx\":true,\"len\":%u}\n", length);
-        printState();
+        radiocon::printState();
     } else if (!strcmp(cmd, "RXPER")) bench.rxper();
     else if (!strcmp(cmd, "P1RX")) {
         const char* error = bench.p1rxStart();
@@ -723,37 +646,27 @@ void handle(char* cmd) {
     } else if (!strcmp(cmd, "STOP")) {
         bench.stop();
         Serial.println("{\"stop\":true}");
-        printState();
+        radiocon::printState();
     } else if (!strcmp(cmd, "LOG")) {
         const uint32_t count = n ? strtoul(words[0], nullptr, 10) : 16;
         bench.printLog(count > 64 ? 64 : count);
     } else if (!strcmp(cmd, "JOURNAL")) printJournal();
     else if (!strcmp(cmd, "BENCH")) bench.printStatus();
-    else if (!strcmp(cmd, "IDLE")) {
-        bench.stop();
-        Serial.printf("{\"idle\":%s}\n", boolName(radio.idle()));
-        printState();
-    } else if (!strcmp(cmd, "RSSI")) printRssi();
-    else if (!strcmp(cmd, "STATE")) printState();
-    else if (!strcmp(cmd, "REG") && n == 1) {
-        const uint16_t address = static_cast<uint16_t>(strtoul(words[0], nullptr, 16));
-        const uint8_t value = radio.readReg(address);
-        Serial.printf("{\"reg\":\"0x%04X\",\"value\":\"0x%02X\",\"status\":\"0x%02X\"}\n", address, value, radio.lastStatus());
-    } else if (!strcmp(cmd, "FRAM")) printFram();
+    else if (!strcmp(cmd, "FRAM")) printFram();
     else if (!strcmp(cmd, "BTN")) printButtons();
     else if (!strcmp(cmd, "LED") && n == 2) {
         const int index = atoi(words[0]);
-#if defined(WICI_BENCH_N1)
+#if defined(WICI_BOARD_N1)
         if (index == 5) {  // dioda alarmu N1; obowiązuje do następnej zmiany stanu alarmu albo ciszy
             alarmLed(atoi(words[1]) != 0);
             Serial.printf("{\"led\":5,\"on\":%s}\n", boolName(alarmLedOn));
             return;
         }
 #endif
-        if (index >= 1 && index <= 4) {
+        if (index >= 1 && index <= 4 && leds[index - 1] >= 0) {
             ledWrite(leds[index - 1], atoi(words[1]) != 0);
             Serial.printf("{\"led\":%d,\"on\":%s}\n", index, boolName(atoi(words[1]) != 0));
-        } else printError("LED <1-4> <0|1>");
+        } else printError(leds[0] >= 0 ? "LED <1-4> <0|1>" : "LED 5 <0|1>");
     } else if (!strcmp(cmd, "SCREEN")) printScreen();
     else if (!strcmp(cmd, "KEY") && (n == 1 || n == 2)) {
         // Przycisk z portu USB (do prób bez dotykania płytki); drugi argument to czas przytrzymania [ms];
@@ -771,7 +684,7 @@ void handle(char* cmd) {
         updateScreen(false);
         printScreen();
     }
-#if defined(WICI_BENCH_N1)
+#if defined(WICI_BOARD_N1)
     else if (!strcmp(cmd, "DISPLAY") && n == 1) {
         // Zegar SPI ekranu do prób z analizatorem na J11; do restartu. Odpowiedź po pełnym przerysowaniu.
         const uint32_t hz = strtoul(words[0], nullptr, 10);
@@ -786,7 +699,7 @@ void handle(char* cmd) {
         if (ms) tone(board::BUZZER, hz, ms);
         else noTone(board::BUZZER);
         Serial.printf("{\"buzz_ms\":%lu,\"hz\":%lu}\n", static_cast<unsigned long>(ms), static_cast<unsigned long>(hz));
-    } else if (!strcmp(cmd, "VTEST")) printVtest();
+    } else if (!strcmp(cmd, "VTEST")) platform::printVtest();
 #endif
     else if (!strcmp(cmd, "DISPLAY")) printDisplay();
     else if (!strcmp(cmd, "STORE")) printStore();
@@ -800,7 +713,7 @@ void handle(char* cmd) {
         Serial.println("{\"reboot\":true}");
         Serial.flush();
         delay(20);
-        NVIC_SystemReset();
+        platform::reboot();
     } else if (!strcmp(cmd, "HELP") || !*cmd) printHelp();
     else Serial.printf("{\"error\":\"unknown\",\"cmd\":\"%s\"}\n", cmd);
 }
@@ -820,43 +733,29 @@ void pollSerial() {
 
 }  // namespace
 
-// Watchdog sprzętowy (WDT, LFCLK): odświeżany w każdym obiegu pętli stacji; zatrzymany, gdy
-// debugger zatrzyma rdzeń; raz uruchomionego nie da się wyłączyć bez restartu.
-void beginWatchdog() {
-    NRF_WDT->CONFIG = (WDT_CONFIG_HALT_Pause << WDT_CONFIG_HALT_Pos) | (WDT_CONFIG_SLEEP_Run << WDT_CONFIG_SLEEP_Pos);
-    NRF_WDT->CRV = WDT_TIMEOUT_S * 32768 - 1;
-    NRF_WDT->RREN = WDT_RREN_RR0_Msk;
-    NRF_WDT->TASKS_START = 1;
-}
-
-void feedWatchdog() { NRF_WDT->RR[0] = WDT_RR_RR_Reload; }
-
-// Cała praca stacji biegnie w osobnym zadaniu FreeRTOS z 16 KB stosu: zadanie loop() rdzenia
-// Adafruit ma 4 KB, a rysowanie ekranu z odczytem rekordów FRAM i `configure` przez USB
-// potrzebują więcej.
-constexpr uint32_t STATION_STACK_WORDS = 4096;
-
 void stationSetup() {
     pinMode(board::DISPLAY_CS, OUTPUT);  // CS ekranu aktywny stanem wysokim: najpierw w stan niski
     digitalWrite(board::DISPLAY_CS, LOW);
-#if defined(WICI_BENCH_N1)
+#if defined(WICI_BOARD_N1)
     pinMode(board::DISPLAY_DISP, OUTPUT);  // ekran wyłączony do wyczyszczenia jego pamięci
     digitalWrite(board::DISPLAY_DISP, LOW);
 #endif
-    for (uint8_t pin : leds) { pinMode(pin, OUTPUT); ledWrite(pin, false); }
-#if defined(WICI_BENCH_N1)
+    for (int16_t pin : leds) {
+        if (pin >= 0) pinMode(static_cast<uint8_t>(pin), OUTPUT);
+        ledWrite(pin, false);
+    }
+#if defined(WICI_BOARD_N1)
     for (uint8_t pin : buttons) pinMode(pin, INPUT);  // podciągnięcia na płytce
-    pinMode(board::RADIO_GPIO3, INPUT);
     beginPanel();
 #else
     for (uint8_t pin : buttons) pinMode(pin, INPUT_PULLUP);
 #endif
-    pinMode(board::RADIO_GPIO0, INPUT);
-    pinMode(board::RADIO_GPIO2, INPUT);
-    bus.begin();  // rdzeń ustawia napęd H0H1 na SCK i MOSI
-    radio.begin();
+    radiocon::attach(bench);
+    radiocon::begin();  // CS radia w stan nieaktywny
     memory.begin();
+    platform::beginBus();
     // Dwa interfejsy CDC ACM z deskryptorami IAD (radio.md, "USB do laptopa"): diagnostyka i dane.
+#if defined(ARDUINO_ARCH_NRF52)
     Serial.setStringDescriptor("WICI diagnostyka");
     SerialData.setStringDescriptor("WICI dane");
     Serial.begin(115200);
@@ -866,14 +765,13 @@ void stationSetup() {
         delay(10);
         TinyUSBDevice.attach();
     }
+#else
+    // ESP32-S3: USB-OTG z TinyUSB; rdzeń uruchamia Serial (interfejs 0) i USB przed setup(), a oba
+    // interfejsy są w deskryptorze od startu. Nazwy interfejsów ustala rdzeń ("TinyUSB CDC", "TinyUSB CDC2").
+    SerialData.begin(115200);
+#endif
     delay(50);
-    radio.reset();
-    const cc1120::Identity id = radio.identify();
-    radioOk = id.ready && id.partNumber == cc1120::PARTNUMBER_CC1120;
-    if (radioOk) {
-        bool calibrated = false;
-        configureP1(calibrated);  // LED2 świeci dopiero po zapisanym i skalibrowanym P1
-    }
+    radiocon::start();  // LED2 świeci dopiero po zapisanym i (CC1120) skalibrowanym P1
     framOk = memory.identify().mb85rs4m;
     beginJournal();
     ledWrite(board::LED_FRAM, framOk && journalOk);  // LED3 świeci dopiero z działającym dziennikiem
@@ -881,40 +779,42 @@ void stationSetup() {
     protocol.begin();
     bench.onDatagram(onDatagram, nullptr);
     bench.onTxDone(onTxDone, nullptr);
-    if (radioOk && p1Ok) bench.p1rxStart();  // łącze P1 w odbiorze od startu (radio niezależne od ekranu)
+    if (radiocon::ok() && radiocon::p1Ok()) bench.p1rxStart();  // łącze P1 w odbiorze od startu (radio niezależne od ekranu)
     display.begin();  // CLEAR czyści pamięć ekranu
-#if defined(WICI_BENCH_N1)
+#if defined(WICI_BOARD_N1)
     digitalWrite(board::DISPLAY_DISP, HIGH);
 #endif
     if (storeOk) screenModel.attach(&screenHost);  // bez magazynu: ekran bez kreatora i wiadomości
     beginScreen();
     syncButtons();
-    if (readResetReason() & POWER_RESETREAS_DOG_Msk) bench.log("restart by watchdog");
-    beginWatchdog();
+    if (platform::resetByWatchdog()) bench.log("restart by watchdog");
+    platform::beginWatchdog(WDT_TIMEOUT_S);
 }
 
 void stationLoop() {
     static uint32_t lastBeat = 0;
     static bool beat = false;
     static bool reported = false;
+    static bool radioLed = false;
     const uint32_t now = millis();
-    feedWatchdog();
+    platform::feedWatchdog();
     if (now - lastBeat >= 500) {
         lastBeat = now;
         beat = !beat;
         ledWrite(board::LED_HEARTBEAT, beat);
+    }
+    // LED2: P1 gotowe; zapis przy zmianie, więc LED 2 z portu obowiązuje do następnej zmiany.
+    const bool radioReady = radiocon::ok() && radiocon::p1Ok();
+    if (radioReady != radioLed) {
+        radioLed = radioReady;
+        ledWrite(board::LED_RADIO, radioReady);
     }
     const bool usb = Serial;  // CDC otwarty przez hosta
     ledWrite(board::LED_USB, usb);
     if (usb && !reported) {  // jednorazowy raport po otwarciu portu
         reported = true;
         printInfo();
-        printRadio();
-        if (radioOk) {
-            const cc1120::VerifyResult result = radio.verify(p1::REGISTERS, p1::REGISTER_COUNT);
-            printVerify("verify", result, p1Ok);
-            printFrequency();
-        }
+        radiocon::report();
         printFram();
         printJournal();
     }
@@ -927,15 +827,15 @@ void stationLoop() {
             ledWrite(board::LED_FRAM, false);
         }
     }
-    if (radioOk) bench.poll();
+    if (radiocon::ok()) bench.poll();
     static uint32_t lastApp = 0;
-    if (storeOk && linkAuto && radioOk && now - lastApp >= APP_POLL_MS) {  // przegląd kolejki co 100 ms, nie w każdym obiegu
+    if (storeOk && linkAuto && radiocon::ok() && now - lastApp >= APP_POLL_MS) {  // przegląd kolejki co 100 ms, nie w każdym obiegu
         lastApp = now;
         app.poll(now);
     }
     pollSerial();
     pollButtons(now);
-#if defined(WICI_BENCH_N1)
+#if defined(WICI_BOARD_N1)
     pollPanel(now);
 #endif
     screenModel.tick(now);
@@ -962,6 +862,12 @@ void stationLoop() {
     }
 }
 
+#if defined(ARDUINO_ARCH_NRF52)
+// Cała praca stacji biegnie w osobnym zadaniu FreeRTOS z 16 KB stosu: zadanie loop() rdzenia
+// Adafruit ma 4 KB, a rysowanie ekranu z odczytem rekordów FRAM i `configure` przez USB
+// potrzebują więcej.
+constexpr uint32_t STATION_STACK_WORDS = 4096;
+
 void stationTask() {
     static bool started = false;
     if (!started) {
@@ -978,3 +884,14 @@ void setup() {
 void loop() {
     vTaskSuspend(nullptr);  // zadanie rdzenia nie jest potrzebne
 }
+#else
+// ESP32-S3: pętla stacji w zadaniu loop() rdzenia z 16 KB stosu (domyślnie 8 KB).
+SET_LOOP_TASK_STACK_SIZE(16 * 1024);
+
+void setup() { stationSetup(); }
+
+void loop() {
+    stationLoop();
+    delay(1);  // oddaje rdzeń innym zadaniom (USB, bezczynność); obieg pętli zostaje co około 1 ms
+}
+#endif

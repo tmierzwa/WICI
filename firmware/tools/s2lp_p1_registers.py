@@ -73,6 +73,8 @@ GPIO_OUT_LP = 0b10  # GPIO_MODE: digital output, low power
 GPIO_NIRQ = 0  # table 60
 GPIO_SYNC = 15  # table 60: sync word detected
 GPIO_GND = 20  # table 60 (reset value of GPIO1-3)
+IRQ_VALID_SYNC = 1 << 13  # table 59
+IRQ_LINK = (1 << 0) | (1 << 1) | (1 << 2) | (1 << 5) | (1 << 6)
 
 
 def band_factor(carrier: int) -> int:
@@ -203,7 +205,7 @@ def build() -> list[Register]:
     sync = P1["sync_word"]
     regs = [
         Register(0x00, "GPIO0_CONF", (GPIO_NIRQ << 3) | GPIO_OUT_LP, "P1",
-                 "GPIO0 (ESP32-S3 GPIO14, J11) = nIRQ, active low; no interrupt unmasked yet"),
+                 "GPIO0 (ESP32-S3 GPIO14, J11) = nIRQ, active low; the driver polls IRQ_STATUS"),
         Register(0x01, "GPIO1_CONF", (GPIO_GND << 3) | GPIO_OUT_LP, "reset", "GPIO1 (GPIO21) = digital GND"),
         Register(0x02, "GPIO2_CONF", (GPIO_SYNC << 3) | GPIO_OUT_LP, "P1",
                  "GPIO2 (ESP32-S3 GPIO4, J11) = sync word detected, as IOCFG2 on bench A"),
@@ -239,12 +241,21 @@ def build() -> list[Register]:
         Register(0x30, "PCKTCTRL1", 0x00, "P1",
                  "chip CRC off (P1 CRC by software), no whitening, TX from FIFO (reset value 0x2C sends PN9), no FEC"),
         Register(0x31, "PCKTLEN1", 0x00, "P1", "TX length MSB"),
-        Register(0x32, "PCKTLEN0", P1["max_packet_bytes"] - 1, "P1", "TX length: longest BODY + CRC; the P1 driver sets it per packet"),
-        Register(0x33, "SYNC3", sync[0], "P1", "sync word D3 91 D3 91, byte order on air to be checked against bench A"),
-        Register(0x34, "SYNC2", sync[1], "P1", "sync word byte 2"),
-        Register(0x35, "SYNC1", sync[2], "P1", "sync word byte 1"),
-        Register(0x36, "SYNC0", sync[3], "P1", "sync word byte 0"),
+        Register(0x32, "PCKTLEN0", P1["max_packet_bytes"] - 1, "P1", "TX length: longest BODY + CRC; the link driver sets it per packet"),
+        # Sync word on air MSB first from SYNC0 (0x36) to SYNC3 (0x33): S2LPSetSyncWords writes the least
+        # significant byte to SYNC3, and ST confirmed SYNC0..3 = 00 05 55 99 for the 20-bit word 0x55599.
+        Register(0x33, "SYNC3", sync[3], "P1", "sync word D3 91 D3 91: last byte on air"),
+        Register(0x34, "SYNC2", sync[2], "P1", "sync word, third byte on air"),
+        Register(0x35, "SYNC1", sync[1], "P1", "sync word, second byte on air"),
+        Register(0x36, "SYNC0", sync[0], "P1", "sync word, first byte on air"),
+        Register(0x3B, "PROTOCOL0", 0x0A, "ST", "persistent RX: the receiver stays on after a packet (S2LP::begin)"),
         Register(0x40, "PCKT_FLT_OPTIONS", 0x40, "reset", "no address filters, CRC filter off"),
+        Register(0x46, "TIMERS5", 0x00, "ST", "RX timer counter 0: no RX timeout (S2LP::begin)"),
+        Register(0x50, "IRQ_MASK3", 0x00, "P1", "no interrupts in bits 31-24"),
+        Register(0x51, "IRQ_MASK2", 0x00, "P1", "no interrupts in bits 23-16"),
+        Register(0x52, "IRQ_MASK1", (IRQ_VALID_SYNC >> 8) & 0xFF, "P1", "sync word detected (bit 13): channel busy for CCA"),
+        Register(0x53, "IRQ_MASK0", IRQ_LINK & 0xFF, "P1",
+                 "RX data ready, RX discarded, TX sent, TX and RX FIFO errors (bits 0, 1, 2, 5, 6; table 59)"),
         Register(0x61, "PA_POWER1", pa_level(P1["tx_power_dbm"]), "ST",
                  f"PA level for slot 1 (index 7): 29 - 2 x {P1['tx_power_dbm']} dBm (ST library formula; measure in T4)"),
         Register(0x62, "PA_POWER0", 0x07, "ST", "PA_MAXDBM off, no ramp, DIG_SMOOTH off (FSK), PA_LEVEL_MAX_IDX = 7"),
