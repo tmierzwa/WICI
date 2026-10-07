@@ -41,7 +41,8 @@ Próbę OVP wykonuje się bez telefonu, z obciążeniem zastępczym i oscyloskop
 1. Projekty dwóch płytek RF z nastawami rejestrów, oprogramowanie układowe CDC/KISS oraz adapter czasowy Reticulum.
 2. Schemat elektryczny i płytka drukowana przetwornicy, ostateczna ochrona AC oraz oprogramowanie układowe regulatora.
 3. Płytka drukowana ładowarki z odebraną ochroną OVP dla dwóch wariantów portu.
-4. Aplikacja strony i LXMF, kompletne pakiety offline oraz manifest przypiętych zależności.
-5. Powyższe próby oraz wyceny rzeczywistych zestawień materiałowych (BOM) od niezależnych wykonawców.
+4. Aplikacja strony i LXMF z trybami kryzysowymi (cisza radiowa, szyfrowanie bazy, ZNISZCZ DANE, wersje językowe), kompletne pakiety offline oraz manifest przypiętych zależności.
+5. Uzgodnienia z gminą: odbiorca, status sieci w stanach nadzwyczajnych, administrator danych i ocena skutków dla ochrony danych (D12, D13).
+6. Powyższe próby oraz wyceny rzeczywistych zestawień materiałowych (BOM) od niezależnych wykonawców.
 
 W tym pakiecie są kontrakty do weryfikacji oraz obliczalne punkty wyjścia. Zgodność czasowa stosu i niezależność wszystkich wariantów nie są zamknięte. Braki sprzętowe nie są oznaczone jako zrealizowane.

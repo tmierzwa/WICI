@@ -6,6 +6,7 @@
 |---|---|
 | Mieszkańcy | około 50, 15 aktywnych użytkowników strony jednocześnie |
 | Sąsiednia stacja | cel: 1 km w zabudowie; wynik wymaga próby terenowej |
+| Odbiorca zgłoszeń | centrum zarządzania kryzysowego gminy lub punkt wskazany przez wójta; w specyfikacji jego rolę oznacza skrót OSP |
 | Informacje radiowe | zgłoszenia, odpowiedzi, statusy, komunikaty; bez zdjęć i głosu |
 | Zasilanie | 12 V; źródła A/B dla stacji, osobne C dla telefonów |
 | Dopuszczalne źródła | akumulator kwasowo-ołowiowy 12 V, akumulator LiFePO4 12,8 V z BMS, wyjście 12 V stacji zasilania; 11,5–16 V na złączu, odłączenie przy 11,5 V |
@@ -24,7 +25,7 @@ flowchart LR
   D --> I[Własna przetwornica 230 V]
   I --> P[Oryginalny zasilacz laptopa]
   I --> R[Oryginalny zasilacz routera]
-  P --> L[Laptop i pendrive]
+  P --> L[Laptop i pamięć USB]
   R --> W[Router Wi-Fi]
   W -->|LAN Ethernet| L
   L -->|USB| M[Modem P1]
@@ -38,8 +39,8 @@ Router nie uczestniczy w łączności radiowej. Zapewnia Wi-Fi, DHCP i połącze
 
 ## Zawartość zestawu
 
-1. Modem USB, dipol, przewód koncentryczny do 2 m i uchwyt do wyprowadzenia anteny przez okno lub drzwi.
-2. Pendrive 64 GB z systemem i kompletnymi pakietami START.
+1. Modem USB, dipol, przewód koncentryczny do 2 m o tłumieniu ≤1 dB (np. LMR-240) i uchwyt do wyprowadzenia anteny przez okno lub drzwi.
+2. Pamięć USB 64 GB z systemem, kompletnymi pakietami START i kluczem szyfrowania bazy stacji.
 3. Zespół zasilania stacji: dwa wejścia A/B i przetwornica, przewody do gniazda zapalniczki oraz do zacisków akumulatora, bezpieczniki przy źródłach.
 4. Osobna ładowarka 8 portów i jej przewód akumulatorowy.
 5. Przewód Ethernet, przewód USB do modemu, adapter USB–Ethernet z dołączonymi sterownikami i przejściówka USB-C do laptopa.
@@ -53,7 +54,7 @@ Laptop, router, ich oryginalne zasilacze i akumulatory pochodzą z miejsca uruch
 1. Wyprowadź antenę na zewnątrz i ustaw pionowo, w miarę możliwości z dala od pomieszczenia z ludźmi. Nie kładź jej przy metalowej framudze.
 2. Przy otwartym wyłączniku DC podłącz oryginalne zasilacze laptopa i routera do wyjść przetwornicy.
 3. Podłącz źródło A do zasilania stacji i źródło C do ładowarki. Sprawdź na woltomierzach, że oba mają co najmniej 12,4 V, i zamknij wyłącznik DC.
-4. Połącz laptop z portem LAN routera i modemem USB. Podłącz pendrive.
+4. Połącz laptop z portem LAN routera i modemem USB. Podłącz pamięć USB stacji.
 5. Uruchom START w działającym systemie albo system Linux z pamięci USB na obsługiwanym komputerze PC.
 6. Wpisz dokładny adres schronienia, ustaw hasło opiekuna i zaimportuj kartę zaufanej OSP.
 7. Połącz telefon z główną siecią Wi-Fi routera i otwórz adres z kodu QR wyświetlonego na ekranie laptopa.

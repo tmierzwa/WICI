@@ -19,4 +19,6 @@ Wykonany kontroler ma osobne [źródła i dokumentację sprzętową](../hardware
 
 [Aktualne ustalenia przeglądu technicznego](review.md): poprawione rozbieżności, konkretne przeszkody i warunki ich zamknięcia.
 
+W specyfikacji skrót OSP oznacza rolę stanowiska odbiorczego; rekomendowanym odbiorcą jest centrum zarządzania kryzysowego gminy lub punkt wskazany przez wójta ([koncepcja, rozdział 02](conception/02-scenariusze-i-organizacja.html#miejsce-w-systemie-ochrony-ludnosci)).
+
 Status: prototyp; sprzęt HOLD. Instrukcje użycia stacji opisują docelowy odebrany zestaw. Nie są instrukcją uruchomienia gotowego produktu.
