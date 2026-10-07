@@ -1,42 +1,57 @@
 moduł,liczba,element,wymaganie minimalne,kandydat A,kandydat B,stan
-radio,1,układ nadawczo-odbiorczy,"2-GFSK, 869,525 MHz, profil P1",TI CC1120,ST S2-LPQTR,"warianty niezakwalifikowane; S2-LPCBQTR w górnym paśmie nie obejmuje 869,525 MHz"
-radio,1,mikrokontroler USB,"natywne USB CDC, dwa interfejsy",ST STM32F103CBT6,Microchip SAMD21G18,warianty niezakwalifikowane
-radio,1,pamięć nieulotna dziennika czasu nadawania,EEPROM I²C z równomiernym rozkładem zapisów,ST M24C64,Microchip AT24C64,wymaga oprogramowania układowego
-radio,1,TCXO,"całkowity błąd częstotliwości ≤2,5 ppm w zakresie temperatur pracy, łącznie ze starzeniem do następnego przeglądu",zgodny producent A,zgodny producent B,częstotliwość wzorcowa zależy od układu radiowego
-radio,1,antena,"dipol 50 Ω, WFS ≤2",otwarty rysunek dipola,niezależne wykonanie równoważne,strojenie na zewnątrz docelowego budynku
-radio,1,przewód antenowy,"50 Ω, tłumienie ≤1 dB przy 869,5 MHz łącznie ze złączami","LMR-240, 2 m","H-155, 2 m",do kwalifikacji
-radio,1,przewód USB,"przewód do transmisji danych, ≤2 m",producent A,producent B,do kwalifikacji
-A/B,2,podwójna dioda Schottky’ego,≥45 V; każde źródło do 20 A,ST STPS3045CT,Vishay VS-MBR3045CT-M3,próba cieplna i udarowa
-A/B,2,dioda TVS,"SMCJ18CA, dwukierunkowa",Littelfuse,Vishay,nie stanowi kwalifikacji na impulsy motoryzacyjne
-A/B,2,radiator diod,początkowo ≤3 K/W na tor,wykonanie lokalne,niezależne wykonanie,próba temperatury obudowy i złącza
-A/B,8,kondensator magistrali,"2200 µF/35 V, każdy ≥3 A prądu tętnień",Panasonic,Nichicon,sprawdzić częstotliwość tętnień i prąd udarowy
-A/B,2,przewód akumulatorowy,"≤2 m, 2 × 6 mm², bezpiecznik 25 A",wykonanie lokalne,niezależne wykonanie,profil 20 A
-A/B,2,przewód do gniazda zapalniczki,"≤2 m, 2 × 2,5 mm², bezpiecznik 10 A",wykonanie lokalne,niezależne wykonanie,profil 8 A i limit gniazda
-A/B,3,"woltomierz cyfrowy wejść A, B i C","zakres 0–20 V, błąd ≤1%, pobór ≤20 mA",producent A,producent B,do kwalifikacji
-ładowarka,8,przetwornica obniżająca,"LM2596, wersja regulowana",TI,onsemi,kalibracja i próba cieplna
-ładowarka,8,dławik,"68 µH, Isat ≥6 A, Irms ≥3 A",TDK,Würth Elektronik,kwalifikacja wymiarów i strat
-ładowarka,16,dioda Schottky’ego,≥3 A/40 V,ST,onsemi,dioda swobodna i ochrona przed odwrotną polaryzacją
-ładowarka,8,ogranicznik prądu portu,"obciążenie 1,5 A; próg 1,6–2,1 A przed wyłączeniem termicznym lub ograniczeniem zwrotnym",TI TPS2553,niewybrany,wymagany drugi niezależny wariant; gwarantowany budżet tolerancji MIC2007 się nie domyka
-ładowarka,8,źródło napięcia odniesienia OVP,"TL431B, klasa dokładności 0,5%",TI,ST,zwieracz zabezpieczający niezakwalifikowany
-ładowarka,8,tyrystor OVP,odpowiedni prąd bramki i I²t,ST TYN612,WeEn BT151,wariant wymaga obliczenia sterowania bramki i odporności udarowej
-ładowarka,8,tranzystor PNP,BC327,Nexperia,onsemi,sprawdzić rozkład wyprowadzeń obudowy
-ładowarka,8,bezpiecznik wejściowy,"1,5 A, parametry dla prądu stałego",Littelfuse,Eaton,sprawdzić charakterystykę czasowo-prądową
-ładowarka,8,bezpiecznik wyjściowy,"szybki 3,15 A, parametry dla prądu stałego",Littelfuse,Eaton,sprawdzić I²t wyłączania przy zadziałaniu tyrystora
-ładowarka,8,gniazdo USB-A,"1,5 A prądu ciągłego",producent A,producent B,próba cieplna i spadku napięcia na przewodzie
-ładowarka,1,odłącznik podnapięciowy wejścia C,"wyłączenie przy 11,5 V z zatrzaskiem, ręczne załączenie przy ≥12,4 V, ≥10 A DC",niewybrany,niewybrany,wymagany projekt i kwalifikacja
-ładowarka,1,przycisk RESTART,"chwilowy, zwierny, montaż panelowy, osłona przed przypadkowym naciśnięciem",APEM,Schurter,ręczne załączenie po odłączeniu podnapięciowym
-ładowarka,1,sygnalizator ostrzegawczy,"bursztynowa dioda świecąca i brzęczyk z generatorem 12 V, ≥75 dB w odległości 10 cm, pobór ≤30 mA",CUI Devices,Kingstate,"ostrzeżenie przy 11,8 V; sprawdzić słyszalność w schronieniu"
-przetwornica,4,tranzystor MOSFET,"≥60 V, RDS(on) ≤3,1 mΩ przy 10 V",ST STP220N6F7,Infineon IPP030N06NF2S,próba cieplna
-przetwornica,2,sterownik półmostka,"logika 3,3 V, sterowanie około 10 V",TI UCC27211,ADI LTC4444,różne układy bootstrapu i zasilania
-przetwornica,1,mikrokontroler sterujący,"komplementarne PWM, czas martwy, sprzętowe wejście awaryjne",ST STM32F103,Microchip dsPIC33CK,oprogramowanie układowe jeszcze nie powstało
-przetwornica,1,szybki komparator,sprzętowe odcięcie prądu,TI TLV3201,Microchip MCP6561,analiza napięcia niezrównoważenia i opóźnienia
-przetwornica,1,transformator,20 i 840 zwojów; rdzeń i izolacja według projektu,niezależna nawijalnia A,niezależna nawijalnia B,kwalifikacja cieplna i dielektryczna prototypu
-przetwornica,1,dławik wyjściowy,"początkowo 10 mH, ≥1 A, z zapasem na impulsy",niezależna nawijalnia A,niezależna nawijalnia B,kwalifikacja przy prądzie rozruchowym zasilaczy
-przetwornica,2,wyłącznik RCBO,"typ A, 30 mA, dwubiegunowy; prąd znamionowy do doboru",ABB,Schneider Electric,układ PE niezakwalifikowany
-przetwornica,1,przycisk RESTART,"chwilowy, zwierny, montaż panelowy, osłona przed przypadkowym naciśnięciem",APEM,Schurter,ręczne załączenie po odłączeniu podnapięciowym
-przetwornica,1,sygnalizator ostrzegawczy,"bursztynowa dioda świecąca i brzęczyk z generatorem 12 V, ≥75 dB w odległości 10 cm, pobór ≤30 mA",CUI Devices,Kingstate,"ostrzeżenie przy 11,8 V; sprawdzić słyszalność w schronieniu"
-USB,1,pamięć USB,"64 GB, sprawdzony pakiet offline i klucz szyfrowania bazy",producent A,producent B,obrazy jeszcze nie powstały
-przewody,1,przewód Ethernet,"kategoria 5e, LAN",producent A,producent B,element powszechnie dostępny
-przewody,1,adapter USB–Ethernet,sterowniki offline dla obsługiwanych systemów,Realtek RTL8153,ASIX AX88179,wymagane zakwalifikowane zamienniki
+stacja,1,układ nadawczo-odbiorczy,"2-GFSK, 869,525 MHz, profil P1",TI CC1120,ST S2-LPQTR,"warianty niezakwalifikowane; S2-LPCBQTR w górnym paśmie nie obejmuje 869,525 MHz"
+stacja,1,filtr pasmowy SAW 868 MHz,na wejściu odbiornika; tłumienie pasm LTE 800 i GSM 900; mała strata wtrąceniowa,producent A,producent B,do oceny; strata obniża czułość
+stacja,1,mikrokontroler stacji,≥256 KiB RAM; obsługa microReticulum; natywne USB; Wi-Fi i Bluetooth trwale wyłączone; ochrona odczytu pamięci,Nordic nRF52840,Espressif ESP32-S3 z PSRAM,warianty niezakwalifikowane; D14
+stacja,1,pamięć FRAM,"SPI 2 Mbit; ≥10¹³ cykli zapisu; kolejka, skrzynka i dług ciszy",Infineon FM25V20A,Fujitsu MB85RS2MT,wymaga oprogramowania układowego
+stacja,1,TCXO,"całkowity błąd częstotliwości ≤2,5 ppm w zakresie temperatur pracy, łącznie ze starzeniem do następnego przeglądu",zgodny producent A,zgodny producent B,częstotliwość wzorcowa zależy od układu radiowego
+stacja,1,antena,"dipol 50 Ω, WFS ≤2",otwarty rysunek dipola,niezależne wykonanie równoważne,strojenie na zewnątrz docelowego budynku
+stacja,1,antena kolinearna (wariant),"5–6 dBi, dookólna, montaż pionowy; ERP ≤27 dBm",producent A,producent B,do oceny; zmienia budżet łącza i wymaga wpisu zysku do raportu
+stacja,1,przewód antenowy,"50 Ω, tłumienie ≤1 dB przy 869,5 MHz łącznie ze złączami","LMR-240, 2 m","H-155, 2 m",do kwalifikacji
+stacja,1,ekran,graficzny monochromatyczny z pamięcią obrazu; cyrylica i piktogramy; czytelny w świetle dziennym i na mrozie; ≤1 mA statycznie,Sharp LS027B7DH01,JDI LPM027M128C,D15; e-papier jako alternatywa do oceny w niskiej temperaturze
+stacja,4,przycisk,"duży, wyczuwalny, obsługa w rękawicach, ≥100 000 cykli",APEM,Schurter,do kwalifikacji
+stacja,1,przełącznik CISZA,"dwupozycyjny, z osłoną przed przypadkowym przełączeniem",APEM,E-Switch,do kwalifikacji
+stacja,1,koszyk 4 × AA z wyłącznikiem,kluczowanie przeciw odwrotnemu włożeniu; styki odporne na korozję,Keystone Electronics,Memory Protection Devices,do kwalifikacji
+stacja,2,komplet 4 ogniw AA litowych,"Li-FeS2 1,5 V; przechowywanie ≥10 lat; praca do −20 °C",Energizer L91,Panasonic FR6,drugi producent do potwierdzenia dostępności; próba czasu pracy W23
+stacja,2,sterownik idealnej diody,wejście ogniw i 12 V; prąd wsteczny ≤1 µA; wejście EN dla odłączenia 12 V,TI LM74700-Q1,ADI LTC4359,sprawdzić pracę przy 4 V z ogniw
+stacja,1,"przetwornica 3,3 V","podwyższająco-obniżająca; wejście 2,7–16 V; ≥500 mA; prąd spoczynkowy ≤50 µA",TI TPS63070,ADI LTC3115-1,sprawność przy 30–60 mA do pomiaru
+stacja,1,dioda TVS wejścia 12 V,SMBJ18A,Littelfuse,Vishay,nie stanowi kwalifikacji na impulsy motoryzacyjne
+stacja,1,przewód zasilania 12 V,≤3 m; bezpiecznik 1 A przy wtyku; końcówki do gniazda zapalniczki i zacisków akumulatora,wykonanie lokalne,niezależne wykonanie,do kwalifikacji
+stacja,1,obudowa stacji,bez wentylacji; okno ekranu; odciążenie przewodów; ≤1 kg z ogniwami jako cel,producent A,producent B,projekt jeszcze nie powstał
+poziom 2,1,przewód USB-C do laptopa,"przewód do transmisji danych, ≤2 m",producent A,producent B,do kwalifikacji
+A/B (poziom 3),2,podwójna dioda Schottky’ego,≥45 V; każde źródło do 20 A,ST STPS3045CT,Vishay VS-MBR3045CT-M3,próba cieplna i udarowa
+A/B (poziom 3),2,dioda TVS,"SMCJ18CA, dwukierunkowa",Littelfuse,Vishay,nie stanowi kwalifikacji na impulsy motoryzacyjne
+A/B (poziom 3),2,radiator diod,początkowo ≤3 K/W na tor,wykonanie lokalne,niezależne wykonanie,próba temperatury obudowy i złącza
+A/B (poziom 3),8,kondensator magistrali,"2200 µF/35 V, każdy ≥3 A prądu tętnień",Panasonic,Nichicon,sprawdzić częstotliwość tętnień i prąd udarowy
+A/B (poziom 3),2,przewód akumulatorowy,"≤2 m, 2 × 6 mm², bezpiecznik 25 A",wykonanie lokalne,niezależne wykonanie,profil 20 A
+A/B (poziom 3),2,przewód do gniazda zapalniczki,"≤2 m, 2 × 2,5 mm², bezpiecznik 10 A",wykonanie lokalne,niezależne wykonanie,profil 8 A i limit gniazda
+A/B (poziom 3),3,"woltomierz cyfrowy wejść A, B i C","zakres 0–20 V, błąd ≤1%, pobór ≤20 mA",producent A,producent B,do kwalifikacji
+ładowarka (poziom 3),8,przetwornica obniżająca,"LM2596, wersja regulowana",TI,onsemi,kalibracja i próba cieplna
+ładowarka (poziom 3),8,dławik,"68 µH, Isat ≥6 A, Irms ≥3 A",TDK,Würth Elektronik,kwalifikacja wymiarów i strat
+ładowarka (poziom 3),16,dioda Schottky’ego,≥3 A/40 V,ST,onsemi,dioda swobodna i ochrona przed odwrotną polaryzacją
+ładowarka (poziom 3),8,ogranicznik prądu portu,"obciążenie 1,5 A; próg 1,6–2,1 A przed wyłączeniem termicznym lub ograniczeniem zwrotnym",TI TPS2553,niewybrany,wymagany drugi niezależny wariant; gwarantowany budżet tolerancji MIC2007 się nie domyka
+ładowarka (poziom 3),8,źródło napięcia odniesienia OVP,"TL431B, klasa dokładności 0,5%",TI,ST,zwieracz zabezpieczający niezakwalifikowany
+ładowarka (poziom 3),8,tyrystor OVP,odpowiedni prąd bramki i I²t,ST TYN612,WeEn BT151,wariant wymaga obliczenia sterowania bramki i odporności udarowej
+ładowarka (poziom 3),8,tranzystor PNP,BC327,Nexperia,onsemi,sprawdzić rozkład wyprowadzeń obudowy
+ładowarka (poziom 3),8,bezpiecznik wejściowy,"1,5 A, parametry dla prądu stałego",Littelfuse,Eaton,sprawdzić charakterystykę czasowo-prądową
+ładowarka (poziom 3),8,bezpiecznik wyjściowy,"szybki 3,15 A, parametry dla prądu stałego",Littelfuse,Eaton,sprawdzić I²t wyłączania przy zadziałaniu tyrystora
+ładowarka (poziom 3),8,gniazdo USB-A,"1,5 A prądu ciągłego",producent A,producent B,próba cieplna i spadku napięcia na przewodzie
+ładowarka (poziom 3),1,odłącznik podnapięciowy wejścia C,"wyłączenie przy 11,5 V z zatrzaskiem, ręczne załączenie przy ≥12,4 V, ≥10 A DC",niewybrany,niewybrany,wymagany projekt i kwalifikacja
+ładowarka (poziom 3),1,przycisk RESTART,"chwilowy, zwierny, montaż panelowy, osłona przed przypadkowym naciśnięciem",APEM,Schurter,ręczne załączenie po odłączeniu podnapięciowym
+ładowarka (poziom 3),1,sygnalizator ostrzegawczy,"bursztynowa dioda świecąca i brzęczyk z generatorem 12 V, ≥75 dB w odległości 10 cm, pobór ≤30 mA",CUI Devices,Kingstate,"ostrzeżenie przy 11,8 V; sprawdzić słyszalność w schronieniu"
+przetwornica (poziom 3),4,tranzystor MOSFET,"≥60 V, RDS(on) ≤3,1 mΩ przy 10 V",ST STP220N6F7,Infineon IPP030N06NF2S,próba cieplna
+przetwornica (poziom 3),2,sterownik półmostka,"logika 3,3 V, sterowanie około 10 V",TI UCC27211,ADI LTC4444,różne układy bootstrapu i zasilania
+przetwornica (poziom 3),1,mikrokontroler sterujący,"komplementarne PWM, czas martwy, sprzętowe wejście awaryjne",ST STM32F103,Microchip dsPIC33CK,oprogramowanie układowe jeszcze nie powstało
+przetwornica (poziom 3),1,szybki komparator,sprzętowe odcięcie prądu,TI TLV3201,Microchip MCP6561,analiza napięcia niezrównoważenia i opóźnienia
+przetwornica (poziom 3),1,transformator,20 i 840 zwojów; rdzeń i izolacja według projektu,niezależna nawijalnia A,niezależna nawijalnia B,kwalifikacja cieplna i dielektryczna prototypu
+przetwornica (poziom 3),1,dławik wyjściowy,"początkowo 10 mH, ≥1 A, z zapasem na impulsy",niezależna nawijalnia A,niezależna nawijalnia B,kwalifikacja przy prądzie rozruchowym zasilaczy
+przetwornica (poziom 3),2,wyłącznik RCBO,"typ A, 30 mA, dwubiegunowy; prąd znamionowy do doboru",ABB,Schneider Electric,układ PE niezakwalifikowany
+przetwornica (poziom 3),1,przycisk RESTART,"chwilowy, zwierny, montaż panelowy, osłona przed przypadkowym naciśnięciem",APEM,Schurter,ręczne załączenie po odłączeniu podnapięciowym
+przetwornica (poziom 3),1,sygnalizator ostrzegawczy,"bursztynowa dioda świecąca i brzęczyk z generatorem 12 V, ≥75 dB w odległości 10 cm, pobór ≤30 mA",CUI Devices,Kingstate,"ostrzeżenie przy 11,8 V; sprawdzić słyszalność w schronieniu"
+USB (poziomy 2–3),1,pamięć USB,"64 GB, sprawdzony pakiet offline i klucz szyfrowania bazy",producent A,producent B,obrazy jeszcze nie powstały
+przewody (poziom 3),1,przewód Ethernet,"kategoria 5e, LAN",producent A,producent B,element powszechnie dostępny
+przewody (poziom 3),1,adapter USB–Ethernet,sterowniki offline dla obsługiwanych systemów,Realtek RTL8153,ASIX AX88179,wymagane zakwalifikowane zamienniki
 dokumenty,1,instrukcja,jedna strona i wersja HTML offline,otwarty projekt,niezależny druk,po odbiorze modułów
 wyposażenie,1,odbiornik radiowy FM,"zasilanie bateryjne AA lub korbką, zapas baterii na 72 h pracy",producent A,producent B,do wyboru; odbiór komunikatów oficjalnych
+wyposażenie miejsca,1,gaśnica,"proszkowa lub gaśnica do pożarów urządzeń elektrycznych, przy stacji",zasób miejsca,zasób miejsca,zapewnia miejsce uruchomienia
+wyposażenie miejsca,1,czujnik tlenku węgla,"bateryjny, z sygnałem dźwiękowym",zasób miejsca,zasób miejsca,zalecenie; zapewnia miejsce uruchomienia
+wyposażenie miejsca,1,taca na akumulatory,"odporna na elektrolit, poza drogą ewakuacji",zasób miejsca,zasób miejsca,dotyczy poziomu 3 i źródeł 12 V

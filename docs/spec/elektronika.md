@@ -2,7 +2,49 @@
 
 Podane wartości służą do wykonania i pomiaru prototypu. Warianty różnych producentów wymagają oddzielnego sprawdzenia tolerancji i nie zawsze mają zgodne wyprowadzenia. Schemat połączeń nie zastępuje projektu płytki drukowanej (PCB) ani odbioru części 230 V.
 
-## Wejścia A/B
+## Zasilanie stacji
+
+```text
+4 × AA ─ wyłącznik ─ idealna dioda DAA ────────────────┐
+12 V ─ F 1 A ─ TVS12 ─ idealna dioda D12 z wejściem EN ─┴─ VSYS ─ przetwornica podwyższająco-obniżająca ─ 3V3
+                         │
+                 nadzór napięcia 12 V (11,5 V / 12,4 V, zatrzask) ─ EN
+```
+
+| Element | Wymaganie prototypu |
+|---|---|
+| Ogniwa | 4 × AA: litowe 1,5 V (zalecane do przechowywania), alkaliczne lub NiMH; koszyk z wyłącznikiem i kluczowaniem przeciw odwrotnemu włożeniu |
+| VSYS | 3,6–16 V; źródło o wyższym napięciu zasila stację, przełączenie bez spadku 3V3 poniżej progu resetu |
+| Idealne diody DAA i D12 | sterownik z tranzystorem MOSFET, prąd wsteczny ≤1 µA; kandydaci TI LM74700-Q1 i ADI LTC4359 |
+| Przetwornica 3V3 | podwyższająco-obniżająca, wejście 2,7–16 V, ≥500 mA, sprawność ≥85% przy 30–60 mA, prąd spoczynkowy ≤50 µA; kandydaci TI TPS63070 i ADI LTC3115-1 |
+| Wejście 12 V | 9–16 V; bezpiecznik 1 A przy wtyku; TVS SMBJ18A; ochrona przed odwrotną polaryzacją |
+| Odłączenie 12 V | wyłączenie przy 11,5 V, ponowne załączenie dopiero po odłączeniu i ponownym podłączeniu źródła albo przytrzymaniu OK, przy ≥12,4 V; stacja pracuje wtedy z ogniw |
+| Progi ogniw | ostrzeżenie przy 4,4 V (1,1 V na ogniwo), kontrolowane wyłączenie przy 4,0 V po zakończeniu zapisu FRAM |
+| Pomiar | ADC napięcia ogniw i wejścia 12 V; błąd ≤2%; wynik na ekranie i w `INFO` |
+| Pobór | cel: ≤35 mA z 3V3 w odbiorze dla wykonania A; pomiar w RX, TX i przy włączonym ekranie (W23) |
+| USB | urządzenie samozasilane; VBUS tylko do wykrycia hosta przez dzielnik ≥100 kΩ; brak połączenia VBUS z VSYS |
+
+Powerbank przez USB nie jest dopuszczonym źródłem: wiele powerbanków wyłącza się przy prądzie rzędu kilkudziesięciu miliamperów, czyli przy poborze stacji. Ogniwa wyjmuje się na czas przechowywania albo sprawdza w przeglądzie. Przetwornica ma pracować z obu źródłami w pełnym zakresie temperatur stacji. Liczby poboru są założeniami [modelu](../../software/reference/wyniki.json), nie pomiarem.
+
+## Płytka stacji R02: wymagania
+
+R02 łączy mikrokontroler, tor RF jednego wykonania, FRAM, ekran, przyciski i zasilanie stacji. Projekt jeszcze nie powstał; [R01.3](../../hardware/radio-test-r01/README.md) pozostaje stanowiskiem laboratoryjnym P1.
+
+| Funkcja | Wymaganie |
+|---|---|
+| MCU | dwa wykonania według [specyfikacji radia](radio.md#dwa-wykonania); Wi-Fi i Bluetooth trwale wyłączone; ochrona odczytu pamięci |
+| Zegar | TCXO radia według P1; kwarc 32,768 kHz dla licznika czasu w uśpieniu |
+| Pamięć | FRAM SPI 2 Mbit na wspólnej magistrali z ekranem albo osobnej, z zapisem zakończonym przed wyłączeniem |
+| Ekran | graficzny, czytelny w świetle dziennym i na mrozie, z cyrylicą; złącze dla dwóch wykonań (D15) |
+| Przyciski | góra, dół, OK, WSTECZ; przełącznik CISZA z osłoną; wewnętrzny przycisk konfiguracji |
+| Programowanie | złącze SWD lub UART na płytce, niedostępne bez otwarcia obudowy |
+| Nadzór | sprzętowy watchdog; licznik restartów w FRAM |
+| Temperatura | cel: −20 °C do +45 °C dla gotowej stacji z ogniwami litowymi; do kwalifikacji |
+| Obudowa | bez wentylacji, z odciążeniem przewodu antenowego i 12 V; masa z ogniwami ≤1 kg jako cel |
+
+## Wejścia A/B (poziom 3)
+
+Wejścia A/B zasilają przetwornicę laptopa i routera. Stacja ma własne zasilanie opisane wyżej.
 
 ```text
 A+ ─ FA przy zacisku ─ przewód ─ JA+ ─ [DA: A→K] ─┐
@@ -41,7 +83,9 @@ Lampka wejścia potwierdza wyłącznie obecność napięcia o prawidłowej polar
 
 Ochrona przed głębokim rozładowaniem: regulator przetwornicy mierzy napięcie obu złączy przed diodami (JA+ i JB+) i wyłącza mostek, gdy wyższe z nich spadnie poniżej 11,5 V. Pomiar za diodą obarczałby wynik zmiennym spadkiem napięcia diody, 0,3–0,55 V zależnie od prądu i temperatury. Przy 11,8 V regulator włącza ostrzeżenie (dioda świecąca i brzęczyk), aby opiekun zdążył wymienić źródło. Wyłączenie jest zatrzaskiwane: ponowne załączenie następuje dopiero po zamknięciu wyłącznika DC albo naciśnięciu przycisku RESTART, i tylko przy napięciu co najmniej 12,4 V. Samo odbicie napięcia po zdjęciu obciążenia nie może uruchomić przetwornicy; rozładowany akumulator LiFePO4 bez obciążenia wraca do około 12,5–12,8 V i bez zatrzasku powodowałby cykliczne załączanie. Ten sam próg, ostrzeżenie, zatrzask i osobny przycisk RESTART dotyczą wejścia C ładowarki. Głęboko rozładowany akumulator kwasowo-ołowiowy traci pojemność, a akumulator rozruchowy przestaje uruchamiać pojazd. Dla niego opiekun wymienia źródło wcześniej, przy około 12,2 V. Akumulator LiFePO4 ma własny BMS, który nie zastępuje tego progu.
 
-## Jedna sekcja ładowarki
+Akumulatory stoją na tacy odpornej na elektrolit, z dala od dróg ewakuacji i od wejścia powietrza. Uszkodzony akumulator rozruchowy może wydzielać wodór, dlatego nie ładuje się go w pomieszczeniu z ludźmi, a przy stacji jest gaśnica.
+
+## Jedna sekcja ładowarki (poziom 3)
 
 Sekcję powiela się 8 razy. Każda sekcja ma własny regulator, dławik, diodę, bezpieczniki i ogranicznik portu. Obwód C nie ma wspólnej masy z A/B. Wspólny dla wszystkich sekcji jest odłącznik podnapięciowy wejścia C (11,5 V / 12,4 V); sam LM2596 pracuje do około 7 V wejścia i rozładowałby akumulator do zera.
 
@@ -83,9 +127,9 @@ Kandydat do próby: zwieracz zabezpieczający (crowbar) TL431B + BC327 + tyrysto
 
 Próg nominalny 5,328 V. Wymagany zakres po tolerancjach i temperaturze 5,30–5,45 V. TL431B i rezystory 0,1% ograniczają rozrzut, lecz nie zastępują próby dynamicznej. F1/F2 mają odłączyć uszkodzoną gałąź z zachowaniem dopuszczalnej wartości I²t tyrystora, przewodów i regulatora. Nie wolno zakładać, że F2 zadziała przed F1, bo mają różne prądy znamionowe i charakterystyki. Koordynację F1, F2 i głównego F10 A trzeba zmierzyć. Gdy sprawny regulator ogranicza prąd, bezpiecznik może się nie przepalić; tyrystor i jego chłodzenie muszą wtedy wytrzymać ten stan. Przed podłączeniem telefonów trzeba wymusić zwarcie wejścia z wyjściem przetwornicy obniżającej oraz zmierzyć szczytowe VUSB i energię impulsu. Sama dioda TVS opisana jako „5 V” nie zapewnia ochrony telefonu.
 
-## Przetwornica
+## Przetwornica (poziom 3)
 
-Wybrana topologia prototypu: transformator 50 Hz, mostek H po stronie dolnego napięcia, unipolarna modulacja SPWM 20 kHz, bez magistrali 350 V DC. Zasada jest znana ([TI SLAA602A](https://www.ti.com/lit/an/slaa602a/slaa602a.pdf)); wartości elementów tego stopnia wymagają osobnego projektu.
+Cel sprawności i poboru własnego: pobór bez obciążenia ≤8 W, sprawność ≥0,85 przy 35 W AC; te wartości przyjmuje [model energii](../conception/06-wykonalnosc-i-budzet-zasobow.html#energia-dwa-niezalezne-zasoby) i sprawdza odbiór. Wybrana topologia prototypu: transformator 50 Hz, mostek H po stronie dolnego napięcia, unipolarna modulacja SPWM 20 kHz, bez magistrali 350 V DC. Zasada jest znana ([TI SLAA602A](https://www.ti.com/lit/an/slaa602a/slaa602a.pdf)); wartości elementów tego stopnia wymagają osobnego projektu.
 
 ```text
 BUS+ ─ dreny Q1 i Q3
