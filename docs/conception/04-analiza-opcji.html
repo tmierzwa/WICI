@@ -13,7 +13,7 @@
   <div class="inner">
     <a class="brand" href="index.html">WICI <span>· koncepcja systemu</span></a>
     <a class="jump" href="#rozdzialy">Rozdziały ↓</a>
-    <span class="status">Prototyp 0.4 · sprzęt <b>HOLD</b></span>
+    <span class="status">Prototyp 0.5 · sprzęt <b>HOLD</b></span>
   </div>
 </header>
 <div class="layout">
@@ -48,7 +48,7 @@
 
 <h2 id="kryteria-wyboru">Kryteria wyboru</h2>
 
-<p>Warunki konieczne: praca offline, krótka wiadomość ze zwrotnym potwierdzeniem aplikacyjnym, lokalny dostęp bez instalacji, trwałość po restarcie, aktywny przekaźnik i jawne interfejsy. Następnie porównać energię, trudność uruchomienia, koszt wytworzenia, naprawę i dostępność niezależnych części. Brakuje danych pomiarowych do uczciwego rankingu liczbowego.</p>
+<p>Warunki konieczne: praca offline, krótka wiadomość ze zwrotnym potwierdzeniem aplikacyjnym, obsługa bez instalacji, trwałość po restarcie, aktywny przekaźnik, działanie bez znalezionego sprzętu i jawne interfejsy. Następnie porównać energię, trudność uruchomienia, koszt wytworzenia, naprawę i dostępność niezależnych części. Brakuje danych pomiarowych do uczciwego rankingu liczbowego.</p>
 
 <div class="table-wrap"><table class="wide">
 <thead><tr>
@@ -59,10 +59,11 @@
 </tr></thead><tbody>
 <tr><td>Laptop + router + internet</td><td>najmniej nowego sprzętu i szybki kanał</td><td>utrata sieci publicznej odcina odbiorcę</td><td>opcjonalny kanał, nie jedyna droga</td></tr>
 <tr><td>Radio głosowe + papierowy rejestr</td><td>prosta procedura i mało oprogramowania</td><td>ciągła praca operatora, błędy przepisywania, trudne statusy dla mieszkańców</td><td>uzgodniony kanał zastępczy</td></tr>
-<tr><td>Laptop + router + Reticulum/LXMF + LoRa</td><td>istniejący interfejs radiowy, możliwość szybkiej próby stosu</td><td>czas antenowy zależy od profilu; niezależność RF wymaga analizy konkretnego BOM</td><td>wariant porównawczy; może wrócić jako wybór bazowy według D10</td></tr>
-<tr><td>Laptop + router + Reticulum/LXMF + własny FSK P1</td><td>jawny profil i dwóch kandydatów RF od niezależnych producentów</td><td>własne RF, oprogramowanie układowe i adapter czasu; duży zakres kwalifikacji</td><td>wybór bazowy 0.4, warunkowy (D10)</td></tr>
-<tr><td>Laptop + router + Meshtastic lub MeshCore</td><td>istniejące oprogramowanie radiowe</td><td>osobna integracja kontraktów WICI i trwałego potwierdzenia; ocena alternatyw części</td><td>alternatywa, gdy zmniejszy całość prac po próbie</td></tr>
-<tr><td>Dedykowany komputer + Wi-Fi + radio</td><td>powtarzalna konfiguracja, możliwość mniejszego poboru</td><td>zakup i magazyn urządzeń; kolejny sprzęt do utrzymania</td><td>alternatywa przy braku zgodności lub energii znalezionych laptopów</td></tr>
+<tr><td>Stacja MCU + Reticulum/LXMF + LoRa</td><td>istniejące sterowniki LoRa w microReticulum i RNode; około 16 dB lepsza czułość; szybka próba stosu</td><td>czas antenowy zależy od profilu; układy LoRa pochodzą z jednej rodziny technologii, więc niezależność RF wymaga analizy konkretnego BOM</td><td>wariant porównawczy; może wrócić jako wybór bazowy według D10</td></tr>
+<tr><td>Samodzielna stacja MCU + Reticulum/LXMF + własny FSK P1; komputer i router opcjonalne</td><td>łączność i przekaźnik bez znalezionego sprzętu i bez 230 V; przekaźnik na kilku watogodzinach na dobę; jawny profil i dwóch kandydatów RF od niezależnych producentów</td><td>stos, kolejka, ekran i przyciski w oprogramowaniu układowym; dojrzałość microReticulum; własne RF i dwie rodziny MCU; duży zakres kwalifikacji</td><td>wybór bazowy 0.5, warunkowy (D10, D14)</td></tr>
+<tr><td>Laptop jako węzeł + router + modem P1 (wariant 0.4)</td><td>dojrzały stos w Pythonie na komputerze</td><td>bez laptopa brak łączności; przekaźnik zużywa 788–2312 Wh na dobę; adapter czasu KISS; przetwornica 230 V na ścieżce krytycznej</td><td>zastąpiony w 0.5; komputer zostaje rozszerzeniem stacji</td></tr>
+<tr><td>Urządzenia Meshtastic lub MeshCore</td><td>istniejące oprogramowanie i urządzenia z ekranem, które działają bez telefonu</td><td>osobna integracja kontraktów WICI i trwałego potwierdzenia; ocena alternatyw części</td><td>alternatywa, gdy zmniejszy całość prac po próbie</td></tr>
+<tr><td>Stacja na komputerze jednopłytkowym z Linuksem + radio</td><td>ten sam stos w Pythonie co wzorzec protokołu; Wi-Fi na płytce</td><td>pobór rzędu 1 W, kilka razy więcej niż MCU; karta pamięci wrażliwa na zanik zasilania; start kilkudziesięciu sekund; zwykle jeden producent płytki</td><td>alternatywa, gdy microReticulum nie przejdzie T3</td></tr>
 </tbody></table></div>
 
 <p>Wybór FSK nie dowodzi przewagi zasięgu ani kosztu nad LoRa. Przeciwnie: LoRa SF8 przy 125 kHz przenosi około 3,1 kbit/s, a katalogowa czułość układów tej klasy wynosi około −126 dBm. To około 16 dB więcej niż cel −110 dBm dla P1 i kilka decybeli więcej niż katalogowa czułość FSK przy podobnej szybkości. Obniżenie szybkości P1 do 1200 bit/s dałoby około 6 dB, ale czterokrotnie wydłużyłoby czas nadawania: obsługa 50 zgłoszeń na przekaźniku trwałaby około 82–87 min zamiast 20–22 min, więc W10 nie byłoby spełnione. Przy ujemnym zapasie łącza z rozdziału 06 to najmocniejszy argument za LoRa w decyzji D10. Wybór FSK daje natomiast możliwość porównania dwóch rodzin układów nadawczo-odbiorczych i otwarty kontrakt P1. Jeśli koszt kwalifikacji, opóźnienia albo próba terenowa nie pozwolą spełnić wymagań, wybór trzeba otworzyć ponownie. <a href="03-dostepne-rozwiazania.html">Właściwości rozwiązań</a>, <a href="08-plan-weryfikacji-i-decyzje.html">próby rozstrzygające</a>.</p>
@@ -75,30 +76,36 @@
 <th scope="col">Co upraszcza</th>
 <th scope="col">Pozostający koszt</th>
 </tr></thead><tbody>
+<tr><td>Samodzielna stacja; komputer i router jako rozszerzenia</td><td>łączność bez znalezionego sprzętu, bez 230 V i bez konfiguracji systemu; mały pobór przekaźnika</td><td>oprogramowanie układowe na MCU; na poziomie 1 tylko zgłoszenia schronienia z gotowymi frazami, bez swobodnego opisu</td></tr>
+<tr><td>Wymienne ogniwa AA + wejście 12 V</td><td>start bez ładowania; ogniwa litowe znoszą lata przechowywania i mróz; brak ładowarki ogniw w stacji</td><td>koszt ogniw; kontrola ich stanu podczas przeglądu</td></tr>
 <tr><td>Osobny akumulator telefonów</td><td>awaria lub wymiana ładowarki nie przerywa łączności; brak układu priorytetów mocy</td><td>osobne przewody i osobny zapas energii</td></tr>
-<tr><td>Zwykły router z DHCP</td><td>brak własnego DNS, DHCP, captive portal i obsługi wielu paneli producentów</td><td>sprawdzić dostęp do konfiguracji i brak izolacji Wi-Fi–LAN; używać QR/adresu</td></tr>
-<tr><td>Oryginalne zasilacze + 230 V</td><td>unika zestawu własnych wtyczek i napięć laptopów/routerów</td><td>przetwornica, straty, masa i kwalifikacja bezpieczeństwa AC</td></tr>
-<tr><td>Pasywne zasilanie A/B przez diody</td><td>brak programu przełączającego i bezpośredniego łączenia plusów źródeł</td><td>chłodzenie, spadek napięcia i udar przy dołączaniu</td></tr>
+<tr><td>Zwykły router z DHCP (poziom 3)</td><td>brak własnego DNS, DHCP, captive portal i obsługi wielu paneli producentów</td><td>sprawdzić dostęp do konfiguracji i brak izolacji Wi-Fi–LAN; używać QR/adresu</td></tr>
+<tr><td>Oryginalne zasilacze + 230 V (poziomy 2–3)</td><td>unika zestawu własnych wtyczek i napięć laptopów/routerów</td><td>przetwornica, straty, masa i kwalifikacja bezpieczeństwa AC</td></tr>
+<tr><td>Pasywne zasilanie A/B przez diody (poziom 3)</td><td>brak programu przełączającego i bezpośredniego łączenia plusów źródeł</td><td>chłodzenie, spadek napięcia i udar przy dołączaniu</td></tr>
 <tr><td>Tekst i sześć typów wiadomości</td><td>ograniczony ruch i mała powierzchnia integracji</td><td>potrzeby wymagające rozmowy obsługuje operator innym kanałem</td></tr>
-<tr><td>Własna trwała kolejka + LXMF</td><td>aplikacja pilnuje zapisu; biblioteka transportu pilnuje dostarczania</td><td>integracja cyklu ponowień i potwierdzeń wymaga prób</td></tr>
-<tr><td>Antena przy oknie/drzwiach</td><td>prostszy montaż, brak wymogu dachu</td><td>zasięg zależy od przeszkód; model propagacji daje na 1 km ujemny zapas przy niskich antenach, więc trzeba się liczyć z wyższą kondygnacją, masztem lub przekaźnikiem</td></tr>
+<tr><td>Własna trwała kolejka w stacji + LXMF</td><td>stacja pilnuje zapisu w pamięci FRAM; biblioteka transportu pilnuje dostarczania</td><td>integracja cyklu ponowień i potwierdzeń wymaga prób</td></tr>
+<tr><td>Antena przy oknie/drzwiach</td><td>prostszy montaż, brak wymogu dachu</td><td>zasięg zależy od przeszkód; model propagacji daje na 1 km ujemny zapas przy niskich antenach, więc trzeba się liczyć z wyższą kondygnacją, masztem lub przekaźnikiem; stacja na ogniwach ułatwia umieszczenie przekaźnika wyżej</td></tr>
 </tbody></table></div>
 
 <p>Osobne ładowanie telefonów zapewnia tę samą funkcję co wspólna szyna z priorytetami mocy, ale przy mniejszej liczbie zależności. Podobnych uproszczeń szukać przed dodawaniem sterowników, wspólnych szyn mocy i automatyki. Uproszczenie musi zachować sprawdzalne wymagania; sama mniejsza liczba części go nie uzasadnia.</p>
 
 <h2 id="decyzje-wymagajace-porownania">Decyzje wymagające porównania</h2>
 
-<p><strong>Zasilanie laptopa:</strong> wariant 230 V obejmuje najwięcej typów oryginalnych zasilaczy, ale jest najtrudniejszy do bezpiecznego samodzielnego wykonania. W pilotażu laboratoryjnym można użyć sprawdzonego zasilania jako narzędzia testowego. Dla hostów USB-C PD trzeba osobno zmierzyć wariant DC, który może obniżyć zużycie i koszt. Nie zastępuje on uniwersalnego wymagania bez jawnego ograniczenia listy hostów.</p>
+<p><strong>Zasilanie laptopa (poziomy 2–3):</strong> wariant 230 V obejmuje najwięcej typów oryginalnych zasilaczy, ale jest najtrudniejszy do bezpiecznego samodzielnego wykonania. W pilotażu laboratoryjnym można użyć sprawdzonego zasilania jako narzędzia testowego. Dla hostów USB-C PD trzeba osobno zmierzyć wariant DC, który może obniżyć zużycie i koszt. Nie zastępuje on uniwersalnego wymagania bez jawnego ograniczenia listy hostów.</p>
 
-<p><strong>Uruchomienie:</strong> pakiety START dla działającego systemu Windows lub macOS i obraz Linuksa dla obsługiwanych komputerów PC dzielą kod aplikacji. To wydanie nie zakłada jednego obrazu startowego dla PC i wszystkich Maców. Przypadki zablokowanego startu i niesprawnego systemu trzeba rozpoznać przed awarią.</p>
+<p><strong>Uruchomienie komputera (poziomy 2–3):</strong> pakiety START dla działającego systemu Windows lub macOS i obraz Linuksa dla obsługiwanych komputerów PC dzielą kod aplikacji. To wydanie nie zakłada jednego obrazu startowego dla PC i wszystkich Maców. Przypadki zablokowanego startu i niesprawnego systemu trzeba rozpoznać przed awarią.</p>
 
-<p><strong>Radio a W14:</strong> wymaganie dwóch niezależnych dostawców wyklucza gotowe RNode/LoRa jako docelowe radio. Pociąga za sobą dwa projekty płytek RF, oprogramowanie układowe dla obu układów, adapter czasu i mieszaną kwalifikację TI–ST. To największa część pracy sprzętowej. Warunki powrotu do LoRa trzeba ustalić przed rozpoczęciem prac RF (<a href="08-plan-weryfikacji-i-decyzje.html">D10</a>). Ewentualne ograniczenie W14 dla części RF musi być jawną zmianą wymagania, z oceną nowej zależności.</p>
+<p><strong>Radio a W14:</strong> wymaganie dwóch niezależnych dostawców wyklucza gotowe RNode/LoRa jako docelowe radio. Pociąga za sobą dwa projekty płytek RF, sterowniki P1 w stosie dla obu układów i mieszaną kwalifikację TI–ST. To największa część pracy sprzętowej. Warunki powrotu do LoRa trzeba ustalić przed rozpoczęciem prac RF (<a href="08-plan-weryfikacji-i-decyzje.html">D10</a>). Samodzielna stacja wzmacnia argument za LoRa: istniejące oprogramowanie Reticulum na MCU obsługuje układy LoRa, a P1 wymaga własnego sterownika w tym stosie. Decyzję rozstrzygają T3–T5, nie przewidywania. Ewentualne ograniczenie W14 dla części RF musi być jawną zmianą wymagania, z oceną nowej zależności.</p>
+
+<p><strong>Mikrokontroler stacji (D14):</strong> port Reticulum potrzebuje kilkuset kilobajtów RAM, więc STM32F103 z kontrolera R01.3 nie wystarcza. Kandydaci to rodziny wspierane przez microReticulum, np. nRF52840 (Nordic) i ESP32-S3 (Espressif). Według <a href="06-wykonalnosc-i-budzet-zasobow.html#energia-stacji-poziomu-1">modelu energii</a> nRF52840 pobiera wyraźnie mniej; ESP32-S3 ma więcej pamięci. Wbudowane nadajniki Wi-Fi i Bluetooth muszą pozostać wyłączone (W17). Dwie rodziny MCU to dwa zestawy sterowników i osobna kwalifikacja, zgodnie z W14.</p>
+
+<p><strong>Ekran i przyciski (D15):</strong> ekran graficzny, a nie znakowy, bo potrzebne są cyrylica i piktogramy (W20). Wyświetlacz z pamięcią (memory LCD) pobiera mało prądu i pracuje na mrozie; e-papier zachowuje obraz bez zasilania, ale wolno odświeża się w niskiej temperaturze. Wystarczy kilka dużych przycisków obsługiwanych w rękawicach.</p>
 
 <p><strong>Stanowisko odbiorcze:</strong> jedna OSP upraszcza odpowiedzialność, lecz jest pojedynczym punktem utraty usługi. Drugi dyżurny i uzgodnione zastępstwo mogą poprawić wynik wcześniej niż automatyczna replikacja bazy. Automatyczne przejęcie wymaga nowego kontraktu odpowiedzialności za zgłoszenie.</p>
 
 <h2 id="niezaleznosc-dostawcow">Niezależność dostawców</h2>
 
-<p>Wymaganie dotyczy możliwego do zbudowania wariantu całej funkcji. Modemy A i B mają wspólną ramkę i USB, ale różne układy RF/MCU, nastawy i płytki. Adapter Ethernet, elementy ochrony, przetwornica i port ładowania też wymagają kwalifikowanych alternatyw. Zmiana transformatora lub regulatora może wymagać zmiany konstrukcji, nie tylko numeru w BOM.</p>
+<p>Wymaganie dotyczy możliwego do zbudowania wariantu całej funkcji. Stacje A i B mają wspólną ramkę P1, wspólny protokół USB do komputera i wspólne zachowanie interfejsu użytkownika, ale różne układy RF, rodziny MCU, nastawy i płytki. Adapter Ethernet, elementy ochrony, przetwornica i port ładowania też wymagają kwalifikowanych alternatyw. Zmiana transformatora lub regulatora może wymagać zmiany konstrukcji, nie tylko numeru w BOM.</p>
 
 <p>Lista zamienników podaje wariant, producenta, parametry krytyczne i dowód próby. Otwarta licencja oraz kilka sklepów nie stanowią dowodu niezależności produkcji. Wspólne złącza, przewody, formaty i możliwość zlecenia PCB wielu wykonawcom zmniejszają zależność, ale jej nie znoszą.</p>
 </article>
@@ -111,7 +118,7 @@
 <footer class="site-footer">
   <div class="inner">
     <p>Analiza: <a href="../../LICENSES/CC-BY-4.0.txt">CC-BY-4.0</a>. <a href="../../LICENSE.md">Mapa licencji projektu</a>.</p>
-    <p>Parametry i warunki odbioru: <a href="../README.md">specyfikacja 0.4</a>. Kod: <a href="https://github.com/tmierzwa/WICI">tmierzwa/WICI</a>.</p>
+    <p>Parametry i warunki odbioru: <a href="../README.md">specyfikacja 0.5</a>. Kod: <a href="https://github.com/tmierzwa/WICI">tmierzwa/WICI</a>.</p>
   </div>
 </footer>
 </body>

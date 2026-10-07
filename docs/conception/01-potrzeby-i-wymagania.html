@@ -13,7 +13,7 @@
   <div class="inner">
     <a class="brand" href="index.html">WICI <span>· koncepcja systemu</span></a>
     <a class="jump" href="#rozdzialy">Rozdziały ↓</a>
-    <span class="status">Prototyp 0.4 · sprzęt <b>HOLD</b></span>
+    <span class="status">Prototyp 0.5 · sprzęt <b>HOLD</b></span>
   </div>
 </header>
 <div class="layout">
@@ -40,6 +40,7 @@
 <p>Na tej stronie</p>
 <ol>
   <li><a href="#problem-i-granica-systemu">Problem i granica systemu</a></li>
+  <li><a href="#poziomy-zestawu">Poziomy zestawu</a></li>
   <li><a href="#wymagania-i-ich-pochodzenie">Wymagania i ich pochodzenie</a></li>
   <li><a href="#minimalna-informacja">Minimalna informacja</a></li>
   <li><a href="#dane-do-zebrania-przed-pilotazem">Dane do zebrania przed pilotażem</a></li>
@@ -50,9 +51,24 @@
 
 <p>Po utracie zasilania i publicznych sieci mieszkańcy potrzebują lokalnej informacji oraz sposobu zgłoszenia: gdzie są, czego brakuje i ilu osób dotyczy potrzeba. Odbiorca potrzebuje krótkiego, jednoznacznego zgłoszenia i możliwości odesłania decyzji. Samo wysłanie nie dowodzi, że ktoś je odczytał lub skierował pomoc.</p>
 
-<p>WICI obejmuje lokalną stronę, kolejkę zgłoszeń, radio, przekaźniki i stanowisko odbiorcze. Organizacja pomocy, dostępność ludzi, transport, medycyna i wyposażenie schronienia są poza systemem technicznym, ale przed pilotażem trzeba je uzgodnić z odbiorcą.</p>
+<p>WICI obejmuje stację radiową z własnym ekranem i przyciskami, kolejkę zgłoszeń, przekaźniki, opcjonalną lokalną stronę i stanowisko odbiorcze. Organizacja pomocy, dostępność ludzi, transport, medycyna i wyposażenie schronienia są poza systemem technicznym, ale przed pilotażem trzeba je uzgodnić z odbiorcą.</p>
 
-<p>Nie ma danych pozwalających obiecać, że w dowolnej społeczności znajdzie się sprawny komplet urządzeń. Przyjmujemy ponowne użycie sprzętu po sprawdzeniu na miejscu. Brak laptopa, jego zasilacza lub dostępu do konfiguracji routera uniemożliwia uruchomienie.</p>
+<p>Nie ma danych pozwalających obiecać, że w dowolnej społeczności znajdzie się sprawny komplet urządzeń. Dlatego podstawowa funkcja nie zależy od znalezionego sprzętu. Stacja sama wysyła i odbiera wiadomości, przekazuje ruch innych stacji i pracuje na własnych bateriach. Laptop i router z miejsca uruchomienia rozszerzają funkcje, ale ich brak nie blokuje łączności.</p>
+
+<h3 id="poziomy-zestawu">Poziomy zestawu</h3>
+
+<div class="table-wrap"><table>
+<thead><tr>
+<th scope="col">Poziom</th>
+<th scope="col">Skład</th>
+<th scope="col">Funkcja</th>
+</tr></thead><tbody>
+<tr><td>1: stacja</td><td>stacja z radiem, ekranem, przyciskami i ogniwami AA; antena; opcjonalnie źródło 12 V</td><td>zgłoszenie schronienia wybierane przyciskami, odbiór statusów, odpowiedzi i komunikatów na ekranie, przekaźnik zawsze, gdy stacja jest włączona; start w ciągu minuty</td></tr>
+<tr><td>2: + komputer</td><td>laptop podłączony do stacji przez USB</td><td>wygodny panel opiekuna, zgłoszenia z opisem, historia, eksport; stacja pozostaje jedynym węzłem sieci</td></tr>
+<tr><td>3: + router</td><td>router Wi-Fi, zasilanie laptopa i routera, ładowarka telefonów</td><td>lokalna strona dla telefonów mieszkańców, zgłoszenia bez pośrednictwa opiekuna</td></tr>
+</tbody></table></div>
+
+<p>„Włączam stację, wystawiam antenę i jestem w sieci.” Poziom 1 jest wariantem bazowym i musi przejść próby samodzielnie. Poziomy 2 i 3 dodaje się później, gdy są ludzie, sprzęt i energia.</p>
 
 <h2 id="wymagania-i-ich-pochodzenie">Wymagania i ich pochodzenie</h2>
 
@@ -63,40 +79,43 @@
 <th scope="col">ID</th>
 <th scope="col">Wymaganie</th>
 <th scope="col">Pochodzenie</th>
+<th scope="col">Poziom</th>
 <th scope="col">Sprawdzenie</th>
 </tr></thead><tbody>
-<tr><td>W01</td><td>Działać bez internetu i usług zewnętrznych; start bez pobierania bibliotek</td><td>U/S</td><td>T1, T2</td></tr>
-<tr><td>W02</td><td>Obsłużyć około 50 mieszkańców: 50 telefonów połączonych z Wi-Fi, 15 aktywnych klientów strony</td><td>U/S</td><td>T1</td></tr>
-<tr><td>W03</td><td>Pozwalać wysłać zgłoszenie z przeglądarki bez konta i instalacji; opiekun obsługuje osoby bez telefonu</td><td>U/S/P</td><td>T1, T8</td></tr>
-<tr><td>W04</td><td>Zapewnić lokalną informację oraz krótkie zgłoszenia, odpowiedzi, statusy i komunikaty; bez głosu i obrazów przez radio</td><td>U/S</td><td>T1, T2</td></tr>
-<tr><td>W05</td><td>Trwale zapisać zgłoszenie i intencję wysyłki przed pokazaniem „zapisane lokalnie”</td><td>S</td><td>T2</td></tr>
-<tr><td>W06</td><td>Odróżnić zapis lokalny, trwały zapis OSP, odczyt i skierowanie pomocy; decyzję podejmuje człowiek</td><td>S</td><td>T2, T8</td></tr>
-<tr><td>W07</td><td>Po restarcie odtworzyć kolejkę; ponowienia nie tworzą drugiego zgłoszenia u odbiorcy</td><td>S</td><td>T2</td></tr>
-<tr><td>W08</td><td>Łączyć sąsiednie stacje w rzeczywistej zabudowie na około 1 km z anteną na zewnątrz, bez wymogu dachu</td><td>U/S</td><td>T5</td></tr>
-<tr><td>W09</td><td>Przekazać zgłoszenie i odpowiedź przez działającą stację pośrednią</td><td>U/S</td><td>T5</td></tr>
-<tr><td>W10</td><td>Przyjąć 50 zgłoszeń rozłożonych w ciągu 5 min i potwierdzić ≥99% w 30 min</td><td>S</td><td>T5</td></tr>
-<tr><td>W11</td><td>Pracować 24 h z zasobem wymienianych źródeł 12 V; wymiana A/B nie resetuje stacji</td><td>U/S</td><td>T6</td></tr>
-<tr><td>W12</td><td>Ładować telefony z osobnego źródła: 8 niezależnych portów USB-A 5 V / 1,5 A</td><td>U/S</td><td>T6</td></tr>
-<tr><td>W13</td><td>Uruchamiać się na zakwalifikowanych komputerach PC i Mac; router zapewnia Wi-Fi, DHCP i dostęp do LAN</td><td>U/S</td><td>T1</td></tr>
-<tr><td>W14</td><td>Nie zależeć od jednego dostawcy wykonania; zakwalifikować dwa niezależne warianty części krytycznych</td><td>U/S</td><td>T3, T4, T6</td></tr>
-<tr><td>W15</td><td>Udostępniać źródła, kontrakty, BOM, pliki wykonawcze i instrukcję umożliwiające odtworzenie</td><td>U/S</td><td>T7</td></tr>
-<tr><td>W16</td><td>Przyjmować status i komunikat wyłącznie od zaufanej tożsamości OSP; ograniczyć dane mieszkańców i dostęp do zgłoszeń</td><td>S</td><td>T2</td></tr>
-<tr><td>W17</td><td>Spełnić warunki radiowe i wymagania bezpieczeństwa elektrycznego gotowej konfiguracji</td><td>S</td><td>T4, T6</td></tr>
-<tr><td>W18</td><td>Pokazywać stan awarii oraz umożliwiać obsługę przez opiekuna i zastępcę według krótkiej instrukcji</td><td>U/P</td><td>T8</td></tr>
-<tr><td>W19</td><td>Ograniczać emisje do potrzebnych; na polecenie uprawnionego organu przejść w ciszę radiową bez utraty kolejki</td><td>P</td><td>T4, T8</td></tr>
-<tr><td>W20</td><td>Udostępniać stronę po polsku, ukraińsku i angielsku, z piktogramami kategorii; umożliwiać obsługę czytnikiem ekranu i dużą czcionką</td><td>P</td><td>T1, T8</td></tr>
-<tr><td>W21</td><td>Działać w ramach gminnego planu ochrony ludności; przed użyciem uzgodnić odbiorcę, status prawny w stanach nadzwyczajnych i ochronę danych</td><td>P</td><td>T8</td></tr>
+<tr><td>W01</td><td>Działać bez internetu i usług zewnętrznych; start bez pobierania bibliotek</td><td>U/S</td><td>1</td><td>T1, T2</td></tr>
+<tr><td>W02</td><td>Obsłużyć około 50 mieszkańców: 50 telefonów połączonych z Wi-Fi, 15 aktywnych klientów strony</td><td>U/S</td><td>3</td><td>T1</td></tr>
+<tr><td>W03</td><td>Pozwalać wysłać zgłoszenie bez konta i instalacji: przyciskami stacji (poziom 1) lub z przeglądarki telefonu (poziom 3); opiekun obsługuje osoby bez telefonu</td><td>U/S/P</td><td>1–3</td><td>T1, T8</td></tr>
+<tr><td>W04</td><td>Zapewnić lokalną informację oraz krótkie zgłoszenia, odpowiedzi, statusy i komunikaty; bez głosu i obrazów przez radio</td><td>U/S</td><td>1</td><td>T1, T2</td></tr>
+<tr><td>W05</td><td>Trwale zapisać zgłoszenie i intencję wysyłki przed pokazaniem „zapisane lokalnie”</td><td>S</td><td>1</td><td>T2</td></tr>
+<tr><td>W06</td><td>Odróżnić zapis lokalny, trwały zapis OSP, odczyt i skierowanie pomocy; decyzję podejmuje człowiek</td><td>S</td><td>1</td><td>T2, T8</td></tr>
+<tr><td>W07</td><td>Po restarcie odtworzyć kolejkę; ponowienia nie tworzą drugiego zgłoszenia u odbiorcy</td><td>S</td><td>1</td><td>T2</td></tr>
+<tr><td>W08</td><td>Łączyć sąsiednie stacje w rzeczywistej zabudowie na około 1 km z anteną na zewnątrz, bez wymogu dachu</td><td>U/S</td><td>1</td><td>T5</td></tr>
+<tr><td>W09</td><td>Przekazać zgłoszenie i odpowiedź przez działającą stację pośrednią</td><td>U/S</td><td>1</td><td>T5</td></tr>
+<tr><td>W10</td><td>Przyjąć 50 zgłoszeń rozłożonych w ciągu 5 min i potwierdzić ≥99% w 30 min</td><td>S</td><td>1</td><td>T5</td></tr>
+<tr><td>W11</td><td>Pracować 24 h z zasobem wymienianych źródeł 12 V; wymiana źródła nie resetuje stacji ani laptopa</td><td>U/S</td><td>1–3</td><td>T6</td></tr>
+<tr><td>W12</td><td>Ładować telefony z osobnego źródła: 8 niezależnych portów USB-A 5 V / 1,5 A</td><td>U/S</td><td>3</td><td>T6</td></tr>
+<tr><td>W13</td><td>Rozszerzenia: aplikacja uruchamia się na zakwalifikowanych komputerach PC i Mac; router zapewnia Wi-Fi, DHCP i dostęp do LAN</td><td>U/S</td><td>2–3</td><td>T1</td></tr>
+<tr><td>W14</td><td>Nie zależeć od jednego dostawcy wykonania; zakwalifikować dwa niezależne warianty części krytycznych</td><td>U/S</td><td>1–3</td><td>T3, T4, T6, T7</td></tr>
+<tr><td>W15</td><td>Udostępniać źródła, kontrakty, BOM, pliki wykonawcze i instrukcję umożliwiające odtworzenie</td><td>U/S</td><td>1–3</td><td>T7</td></tr>
+<tr><td>W16</td><td>Przyjmować status i komunikat wyłącznie od zaufanej tożsamości OSP; ograniczyć dane mieszkańców i dostęp do zgłoszeń</td><td>S</td><td>1</td><td>T2</td></tr>
+<tr><td>W17</td><td>Spełnić warunki radiowe i wymagania bezpieczeństwa elektrycznego gotowej konfiguracji; nadajniki Wi-Fi i Bluetooth mikrokontrolera stacji są trwale wyłączone</td><td>S</td><td>1–3</td><td>T4, T6</td></tr>
+<tr><td>W18</td><td>Pokazywać stan łączności, energii i awarii na ekranie stacji oraz umożliwiać obsługę przez opiekuna i zastępcę według krótkiej instrukcji</td><td>U/P</td><td>1</td><td>T1, T8</td></tr>
+<tr><td>W19</td><td>Ograniczać emisje do potrzebnych; na polecenie uprawnionego organu przejść w ciszę radiową bez utraty kolejki</td><td>P</td><td>1</td><td>T4, T8</td></tr>
+<tr><td>W20</td><td>Udostępniać ekran stacji i stronę po polsku, ukraińsku i angielsku, z piktogramami kategorii; stronę także czytnikiem ekranu i dużą czcionką</td><td>P</td><td>1–3</td><td>T1, T8</td></tr>
+<tr><td>W21</td><td>Działać w ramach gminnego planu ochrony ludności; przed użyciem uzgodnić odbiorcę, status prawny w stanach nadzwyczajnych i ochronę danych</td><td>P</td><td>1</td><td>T8</td></tr>
+<tr><td>W22</td><td>Działać bez komputera i routera: wysłać zgłoszenie schronienia i TEST, odebrać RECEIVED, STATUS, REPLY i BULLETIN na ekranie stacji; gotowość radiowa ≤60 s od włączenia</td><td>U</td><td>1</td><td>T1, T2, T8</td></tr>
+<tr><td>W23</td><td>Przekazywać ruch innych stacji zawsze, gdy stacja jest włączona; pracować ≥48 h jako przekaźnik na komplecie ogniw AA i dłużej po podłączeniu źródła 12 V, bez przerwy przy jego podłączeniu</td><td>U</td><td>1</td><td>T5, T6</td></tr>
 </tbody></table></div>
 
-<p>W08–W10 to cele odbioru. Nie gwarantują zasięgu ani terminowości w dowolnej sieci. Według modelu propagacji z rozdziału <a href="06-wykonalnosc-i-budzet-zasobow.html#zasieg">06</a> W08 może być nieosiągalne przy antenach na wysokości okien niskich kondygnacji. Jeśli T5 to potwierdzi, wymaganie trzeba jawnie zmienić (wyżej umieszczona antena, przekaźnik); próby nie wolno wtedy uznać za zaliczoną. W13 oznacza macierz sprawdzonych konfiguracji, nie obsługę każdego znalezionego urządzenia. W14 wymaga w pełni wykonanych alternatyw. Zakup tego samego układu u dwóch sprzedawców nie wystarcza.</p>
+<p>W08–W10 to cele odbioru. Nie gwarantują zasięgu ani terminowości w dowolnej sieci. Według modelu propagacji z rozdziału <a href="06-wykonalnosc-i-budzet-zasobow.html#zasieg">06</a> W08 może być nieosiągalne przy antenach na wysokości okien niskich kondygnacji. Jeśli T5 to potwierdzi, wymaganie trzeba jawnie zmienić (wyżej umieszczona antena, przekaźnik); próby nie wolno wtedy uznać za zaliczoną. W22 i W23 opisują wariant bazowy: każde inne wymaganie poziomu 1 trzeba wykazać bez laptopa i routera. W13 oznacza macierz sprawdzonych konfiguracji, nie obsługę każdego znalezionego urządzenia. W14 wymaga w pełni wykonanych alternatyw. Zakup tego samego układu u dwóch sprzedawców nie wystarcza.</p>
 
 <p><strong>Zasada nadrzędna:</strong> formalności (ochronę danych, uzgodnienia z gminą, status prawny nadawania) załatwia się przed użyciem. Podczas zdarzenia żadna procedura formalna nie blokuje przyjęcia ani wysłania zgłoszenia. Strona nie wymaga zgód, kont ani akceptacji regulaminu, a stacja nie czeka na decyzję administracyjną. W trakcie zdarzenia pracę może ograniczyć wyłącznie bezpieczeństwo ludzi, np. polecenie ciszy radiowej.</p>
 
 <h2 id="minimalna-informacja">Minimalna informacja</h2>
 
-<p>Zgłoszenie zawiera kategorię, liczbę osób, dokładną lokalizację i wejście, krótki opis, pilność oraz identyfikator i wersję. Adres musi umożliwiać dojazd bez wcześniejszego profilu budynku. OSP musi móc odróżnić nowe zgłoszenie od zmiany poprzedniego. Limity bajtów i format są w <a href="../spec/oprogramowanie.md">specyfikacji oprogramowania</a>.</p>
+<p>Zgłoszenie zawiera kategorię, liczbę osób, dokładną lokalizację i wejście, krótki opis, pilność oraz identyfikator i wersję. Na poziomie 1 lokalizacją jest adres schronienia zapisany w stacji podczas przygotowania, a opis jest pusty albo pochodzi z listy gotowych fraz. Adres musi umożliwiać dojazd bez wcześniejszego profilu budynku. OSP musi móc odróżnić nowe zgłoszenie od zmiany poprzedniego. Limity bajtów i format są w <a href="../spec/oprogramowanie.md">specyfikacji oprogramowania</a>.</p>
 
-<p>Lokalnie potrzebne są informacje opiekuna, komunikaty OSP oraz stan łączności i własnego zgłoszenia. Tablica ofert pomocy, zdjęcia, mapy i automatyczna ocena medyczna poszerzają zakres i nie są warunkiem pierwszego prototypu.</p>
+<p>Lokalnie potrzebne są informacje opiekuna, komunikaty OSP oraz stan łączności i własnego zgłoszenia. Na poziomie 1 pokazuje je ekran stacji, a opiekun przekazuje je ustnie lub na tablicy. Tablica ofert pomocy, zdjęcia, mapy i automatyczna ocena medyczna poszerzają zakres i nie są warunkiem pierwszego prototypu.</p>
 
 <h2 id="dane-do-zebrania-przed-pilotazem">Dane do zebrania przed pilotażem</h2>
 
@@ -106,8 +125,8 @@
 <th scope="col">Informacja konieczna do decyzji</th>
 </tr></thead><tbody>
 <tr><td>Miejsce</td><td>adres i wejście, możliwość wyprowadzenia anteny, metalowe przeszkody, odległość do sąsiada i odbiorcy</td></tr>
-<tr><td>Urządzenia</td><td>model/architektura laptopa, stan systemu i startu USB, oryginalny zasilacz, model routera i dostęp do panelu</td></tr>
-<tr><td>Energia</td><td>rzeczywisty pobór kompletnej stacji, napięcie/stan/pojemność źródeł, dozwolony prąd gniazda i przewodów</td></tr>
+<tr><td>Urządzenia</td><td>dla poziomów 2–3: model/architektura laptopa, stan systemu i startu USB, oryginalny zasilacz, model routera i dostęp do panelu</td></tr>
+<tr><td>Energia</td><td>rzeczywisty pobór stacji w odbiorze i nadawaniu, zapas ogniw AA, pobór laptopa i routera, napięcie/stan/pojemność źródeł, dozwolony prąd gniazda i przewodów</td></tr>
 <tr><td>Pomoc</td><td>kto pełni dyżur, jakie działania może zlecić, zastępstwo, drugi odbiorca i kanał awaryjny</td></tr>
 <tr><td>Obsługa</td><td>opiekun i zastępca, dostępność poza godzinami pracy, miejsce urządzeń, papierowa instrukcja</td></tr>
 </tbody></table></div>
@@ -123,7 +142,7 @@
 <footer class="site-footer">
   <div class="inner">
     <p>Analiza: <a href="../../LICENSES/CC-BY-4.0.txt">CC-BY-4.0</a>. <a href="../../LICENSE.md">Mapa licencji projektu</a>.</p>
-    <p>Parametry i warunki odbioru: <a href="../README.md">specyfikacja 0.4</a>. Kod: <a href="https://github.com/tmierzwa/WICI">tmierzwa/WICI</a>.</p>
+    <p>Parametry i warunki odbioru: <a href="../README.md">specyfikacja 0.5</a>. Kod: <a href="https://github.com/tmierzwa/WICI">tmierzwa/WICI</a>.</p>
   </div>
 </footer>
 </body>

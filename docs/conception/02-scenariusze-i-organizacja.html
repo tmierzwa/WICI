@@ -13,7 +13,7 @@
   <div class="inner">
     <a class="brand" href="index.html">WICI <span>· koncepcja systemu</span></a>
     <a class="jump" href="#rozdzialy">Rozdziały ↓</a>
-    <span class="status">Prototyp 0.4 · sprzęt <b>HOLD</b></span>
+    <span class="status">Prototyp 0.5 · sprzęt <b>HOLD</b></span>
   </div>
 </header>
 <div class="layout">
@@ -56,10 +56,10 @@
 <th scope="col">Odpowiedzialność</th>
 </tr></thead><tbody>
 <tr><td>Mieszkaniec</td><td>podaje miejsce i potrzebę; zachowuje dostęp do własnego zgłoszenia; zgłasza zmianę sytuacji</td></tr>
-<tr><td>Opiekun schronienia</td><td>uruchamia stację, sprawdza TEST, pomaga osobom bez telefonu, zatwierdza pilność, kontroluje energię</td></tr>
-<tr><td>Zastępca</td><td>zna instrukcję i może przejąć pracę; nie wymaga dostępu do prywatnego konta opiekuna</td></tr>
+<tr><td>Opiekun schronienia</td><td>włącza stację i wystawia antenę, sprawdza TEST, wysyła zgłoszenia schronienia przyciskami, pomaga osobom bez telefonu, zatwierdza pilność, kontroluje energię; później dołącza laptop i router</td></tr>
+<tr><td>Zastępca</td><td>zna instrukcję i może przejąć pracę; stacja poziomu 1 nie ma kont, a panel laptopa ma osobne dane dostępu zastępcy w zaklejonej kopercie przy stacji</td></tr>
 <tr><td>Dyżurny odbiorcy, np. centrum zarządzania kryzysowego gminy lub OSP</td><td>odczytuje zgłoszenia, ocenia możliwości, zleca działanie i aktualizuje status</td></tr>
-<tr><td>Osoba utrzymująca system</td><td>przygotowuje i sprawdza wydanie, urządzenia, klucze i kopie; naprawia poza dyżurem</td></tr>
+<tr><td>Osoba utrzymująca system</td><td>przed kryzysem zapisuje w stacji adres schronienia i kartę OSP, przygotowuje i sprawdza wydanie, urządzenia, ogniwa, klucze i kopie; naprawia poza dyżurem</td></tr>
 </tbody></table></div>
 
 <p>OSP jest przykładem miejsca pomocy. Obecność budynku OSP nie dowodzi całodobowego dyżuru ani możliwości udzielenia każdego rodzaju pomocy. Przed uruchomieniem trzeba uzgodnić odbiorcę, zakres działań i zastępstwo.</p>
@@ -69,11 +69,11 @@
 <h2 id="przebieg-dzialania">Przebieg działania</h2>
 
 <ol>
-  <li><strong>Przygotowanie:</strong> sprawdzić znaleziony sprzęt, antenę, lokalizację, źródła i klucz odbiorcy. Wyznaczyć opiekuna i zastępcę. Zapisać adres strony i procedurę awaryjną na papierze.</li>
-  <li><strong>Uruchomienie:</strong> zestawić lokalne Wi-Fi i stronę; niezależnie sprawdzić modem. Wysłać TEST z adresem schronienia: RECEIVED potwierdza zapis w OSP, a STATUS „przeczytane” potwierdza obecność dyżurnego. Dyżurny potwierdza, że adres i wejście są zrozumiałe.</li>
-  <li><strong>Przyjęcie potrzeby:</strong> mieszkaniec wysyła formularz albo dyktuje go opiekunowi. Stacja pokazuje zapis lokalny dopiero po trwałym zapisie. Brak trasy pozostawia zgłoszenie w kolejce.</li>
+  <li><strong>Przygotowanie (przed kryzysem):</strong> zapisać w stacji dokładny adres i wejście schronienia oraz kartę zaufanej OSP, włożyć ogniwa AA o długim okresie przechowywania i wykonać TEST. Ustalić miejsce anteny. Wyznaczyć opiekuna i zastępcę. Dla poziomów 2–3 sprawdzić znaleziony laptop i router. Zapisać procedurę awaryjną na papierze.</li>
+  <li><strong>Uruchomienie:</strong> włączyć stację i wystawić antenę. Od tej chwili stacja przekazuje ruch innych stacji. Wysłać TEST z adresem schronienia: RECEIVED potwierdza zapis w OSP, a STATUS „przeczytane” potwierdza obecność dyżurnego. Dyżurny potwierdza, że adres i wejście są zrozumiałe. Laptop, router i stronę dołącza się później, bez przerywania pracy stacji.</li>
+  <li><strong>Przyjęcie potrzeby:</strong> opiekun wybiera przyciskami kategorię, liczbę osób i pilność; na poziomie 3 mieszkaniec może też wysłać formularz. Stacja pokazuje zapis lokalny dopiero po trwałym zapisie. Brak trasy pozostawia zgłoszenie w kolejce.</li>
   <li><strong>Przyjęcie u odbiorcy:</strong> OSP zapisuje zgłoszenie i odsyła RECEIVED. Dyżurny oddzielnie potwierdza odczyt oraz decyzję. Opiekun przekazuje informację także osobom bez telefonu.</li>
-  <li><strong>Utrzymanie:</strong> obserwować wiek kolejki, kontakt z OSP, energię i odrzuty modemu. Wymieniać źródła A/B na zakładkę: nowe podłączyć przed odłączeniem starego. Źródło ładowarki (C) wymieniać niezależnie.</li>
+  <li><strong>Utrzymanie:</strong> obserwować na ekranie wiek kolejki, kontakt z OSP i stan energii. Podłączyć źródło 12 V, gdy jest dostępne; ogniwa AA pozostają rezerwą. Na poziomie 3 wymieniać źródła A/B na zakładkę: nowe podłączyć przed odłączeniem starego. Źródło ładowarki (C) wymieniać niezależnie.</li>
   <li><strong>Przekazanie dyżuru:</strong> przekazać otwarte potrzeby, ostatnie odpowiedzi, dostępne źródła, awarie i uzgodniony kanał zastępczy. Nie kasować niepotwierdzonych zgłoszeń.</li>
 </ol>
 
@@ -86,13 +86,17 @@
 <th scope="col">Działanie opiekuna</th>
 </tr></thead><tbody>
 <tr><td>Internet i telefonia nie działają</td><td>lokalna strona, zapis, radio przy działających sąsiadach</td><td>sprawdzić odpowiedź odbiorcy i utrzymać dyżur</td></tr>
-<tr><td>Telefon mieszkańca rozładowany</td><td>formularz na laptopie opiekuna, kolejka, ładowanie z osobnego źródła C</td><td>przyjąć zgłoszenie ustnie; udostępnić ładowanie na zmianę</td></tr>
-<tr><td>Modem lub trasa niedostępne</td><td>lokalna informacja i zapis; wysyłka oczekuje</td><td>sprawdzić kabel/antenę/sąsiada; dla pilnej potrzeby uruchomić uzgodniony kanał zastępczy</td></tr>
+<tr><td>Brak laptopa, routera lub ich zasilania</td><td>poziom 1: zgłoszenia schronienia, statusy, odpowiedzi i komunikaty na ekranie, przekaźnik</td><td>przyjmować potrzeby ustnie, łączyć powtarzalne w jedno zgłoszenie, informować mieszkańców ustnie lub na tablicy</td></tr>
+<tr><td>Telefon mieszkańca rozładowany</td><td>przyciski stacji lub formularz na laptopie opiekuna, kolejka, ładowanie z osobnego źródła C</td><td>przyjąć zgłoszenie ustnie; udostępnić ładowanie na zmianę</td></tr>
+<tr><td>Radio lub trasa niedostępne</td><td>lokalna informacja i zapis; wysyłka oczekuje</td><td>sprawdzić kabel/antenę/sąsiada; dla pilnej potrzeby uruchomić uzgodniony kanał zastępczy</td></tr>
 <tr><td>Stacja pośrednia wyłączona</td><td>lokalna praca; inna trasa tylko jeśli fizycznie istnieje</td><td>przywrócić sąsiada lub uzgodnić inne położenie; nie oczekiwać, że mesh wytworzy łącze</td></tr>
 <tr><td>OSP wyłączona lub bez dyżurnego</td><td>lokalna praca i możliwy transport między innymi stacjami</td><td>ustalić kontakt z uzgodnionym zastępstwem; brak RECEIVED nie potwierdza pomocy</td></tr>
 <tr><td>Radio przeciążone</td><td>lokalne zgłoszenia, trwała kolejka</td><td>ograniczyć zbędne komunikaty, zebrać powtarzalne potrzeby; obserwować najstarszą intencję</td></tr>
-<tr><td>Restart laptopa</td><td>po uruchomieniu: odtworzona kolejka i tożsamość, jeśli nośnik jest sprawny</td><td>wykonać kontrolę zapisu i TEST; nie uruchamiać drugiej kopii tej samej stacji</td></tr>
-<tr><td>Uszkodzony laptop/nośnik</td><td>przeniesienie z poprawnej kopii; ostatnie dane mogą być utracone</td><td>zastosować PRZENIEŚ STACJĘ, gdy stary laptop działa; po utracie sprawdzić statusy u OSP i odtworzyć brakujące potrzeby</td></tr>
+<tr><td>Restart stacji</td><td>po uruchomieniu: odtworzona kolejka, tożsamość i dług ciszy z pamięci nieulotnej</td><td>sprawdzić ekran i wykonać TEST; nie uruchamiać drugiej stacji z tą samą tożsamością</td></tr>
+<tr><td>Restart lub odłączenie laptopa</td><td>stacja pracuje dalej na poziomie 1; strona niedostępna do powrotu laptopa</td><td>po powrocie sprawdzić zgodność stanu zgłoszeń laptopa i stacji</td></tr>
+<tr><td>Wyczerpane ogniwa AA</td><td>ostrzeżenie na ekranie przed wyłączeniem; zapis i kolejka zachowane</td><td>podłączyć źródło 12 V albo wymienić ogniwa; po wymianie sprawdzić ekran</td></tr>
+<tr><td>Uszkodzony laptop/nośnik</td><td>stacja zachowuje kolejkę i tożsamość; dane mieszkańców z laptopa mogą być utracone</td><td>podłączyć inny laptop; po utracie sprawdzić statusy u OSP i odtworzyć brakujące potrzeby</td></tr>
+<tr><td>Uszkodzona stacja</td><td>brak łączności radiowej ze schronienia</td><td>zastosować PRZENIEŚ STACJĘ na zapasową stację, jeśli jest kopia; inaczej procedura zastępcza i nowa tożsamość uzgodniona z OSP</td></tr>
 <tr><td>Ładowarka uszkodzona</td><td>komunikacja i telefony z zapasem energii</td><td>odłączyć uszkodzoną sekcję lub całą ładowarkę; nie pobierać energii z obwodu stacji bez nowego bilansu</td></tr>
 </tbody></table></div>
 
@@ -108,17 +112,17 @@
 
 <h2 id="siec-i-odbiorca-zastepczy">Sieć i odbiorca zastępczy</h2>
 
-<p>Pierwsza próba obejmuje schronienie A, przekaźnik B i odbiorcę OSP. Przebieg A–B–OSP musi zostać wymuszony odcięciem bezpośredniego A–OSP. Zasięg między sąsiadami nie dowodzi zasięgu do OSP. Stacja będąca jedynym przekaźnikiem jest punktem odcięcia sieci i ma pierwszeństwo w zasilaniu. Przekaźnik umieszcza się tam, dokąd obsługa dotrze bezpiecznie także podczas alarmu i godziny policyjnej, albo zapewnia mu się dłuższą autonomię energii. Wymiana akumulatora nie usprawiedliwia wyjścia pod ostrzał.</p>
+<p>Pierwsza próba obejmuje schronienie A, przekaźnik B i odbiorcę OSP. Przebieg A–B–OSP musi zostać wymuszony odcięciem bezpośredniego A–OSP. Zasięg między sąsiadami nie dowodzi zasięgu do OSP. Każda włączona stacja jest przekaźnikiem. Osobny przekaźnik to ta sama stacja poziomu 1 na ogniwach lub źródle 12 V, bez laptopa i opiekuna przy przyciskach, więc można ją umieścić wysoko: na dachu, wyższym piętrze lub w budynku dominującym nad okolicą. Stacja będąca jedynym przekaźnikiem jest punktem odcięcia sieci i ma pierwszeństwo w zasilaniu. Przekaźnik umieszcza się tam, dokąd obsługa dotrze bezpiecznie także podczas alarmu i godziny policyjnej, albo zapewnia mu się dłuższą autonomię energii. Wymiana akumulatora nie usprawiedliwia wyjścia pod ostrzał.</p>
 
-<p>OSP nie steruje trasowaniem sieci. Jest punktem świadczenia usługi. Jej utrata nie musi wyłączyć transportu, ale może pozbawić zgłoszenia odbiorcy, który może pomóc. Drugi odbiorca wymaga uzgodnionej odpowiedzialności i kluczy. Automatyczne przejęcie tej samej bazy lub tożsamości przez drugi komputer nie jest częścią wariantu bazowego.</p>
+<p>OSP nie steruje trasowaniem sieci. Jest punktem świadczenia usługi. Jej utrata nie musi wyłączyć transportu, ale może pozbawić zgłoszenia odbiorcy, który może pomóc. Drugi odbiorca wymaga uzgodnionej odpowiedzialności i kluczy. Automatyczne przejęcie tej samej bazy lub tożsamości przez drugą stację nie jest częścią wariantu bazowego.</p>
 
-<p>Propozycja na pilotaż: ręczny wybór odbiorcy zastępczego przez opiekuna, po potwierdzeniu dyżuru. Format SA1 nie definiuje przekazania odpowiedzialności między dwiema OSP. Przed dodaniem tej funkcji trzeba rozstrzygnąć, kto prowadzi zgłoszenie, jak zachować identyfikator i jak uniknąć podwójnego wysłania pomocy. Do tego czasu obowiązuje uzgodniona procedura głosową lub pisemną z odczytaniem numeru zgłoszenia.</p>
+<p>Propozycja na pilotaż: ręczny wybór odbiorcy zastępczego przez opiekuna, po potwierdzeniu dyżuru. Format SA1 nie definiuje przekazania odpowiedzialności między dwiema OSP. Przed dodaniem tej funkcji trzeba rozstrzygnąć, kto prowadzi zgłoszenie, jak zachować identyfikator i jak uniknąć podwójnego wysłania pomocy. Do tego czasu obowiązuje uzgodniona procedura głosowa lub pisemna z odczytaniem krótkiego numeru zgłoszenia, który pokazuje ekran stacji.</p>
 
 <h2 id="instrukcja-i-cwiczenie">Instrukcja i ćwiczenie</h2>
 
-<p>Na karcie przy stacji: adres i wejście, Wi-Fi/QR, odbiorca i zastępstwo, znaczenie czterech stanów zgłoszenia, kolejność podłączenia i wymiany źródeł, sposób zgłoszenia bez telefonu, procedura ciszy radiowej i polecenia ZNISZCZ DANE, miejsce gaśnicy oraz zakaz uruchamiania silników i agregatów w schronieniu, w garażu i przy wlotach powietrza (tlenek węgla). Klucze prywatne i dane mieszkańców nie należą na publiczną kartę.</p>
+<p>Na karcie przy stacji: „włącz, wystaw antenę, sprawdź TEST”, adres i wejście, dla poziomu 3 Wi-Fi/QR, odbiorca i zastępstwo, znaczenie czterech stanów zgłoszenia, kolejność podłączenia i wymiany źródeł, sposób zgłoszenia bez telefonu, procedura ciszy radiowej i polecenia ZNISZCZ DANE, miejsce gaśnicy oraz zakaz uruchamiania silników i agregatów w schronieniu, w garażu i przy wlotach powietrza (tlenek węgla). Klucze prywatne i dane mieszkańców nie należą na publiczną kartę.</p>
 
-<p>Przed pilotażem opiekun i zastępca osobno uruchamiają stację z przygotowanego zestawu, wysyłają TEST, odłączają radio, wymieniają źródło i wyjaśniają status oczekującego zgłoszenia. Ćwiczenie powtarza się po zmianie wydania, routera, miejsca anteny lub odbiorcy. Częstotliwość ćwiczeń w eksploatacji ustala lokalna organizacja. Brak jeszcze danych do jej doboru.</p>
+<p>Przed pilotażem opiekun i zastępca osobno uruchamiają stację z przygotowanego zestawu, wysyłają TEST i zgłoszenie przyciskami, odłączają antenę, wymieniają ogniwa, podłączają źródło 12 V i wyjaśniają status oczekującego zgłoszenia. Dołączenie laptopa i routera ćwiczy się osobno. Ćwiczenie powtarza się po zmianie wydania, routera, miejsca anteny lub odbiorcy. Częstotliwość ćwiczeń w eksploatacji ustala lokalna organizacja. Brak jeszcze danych do jej doboru.</p>
 
 <p>Procedurą zastępczą może być goniec z papierowym zgłoszeniem lub zwykła łączność głosowa, po uzgodnieniu warunków i bezpieczeństwa drogi. Przy zagłuszaniu pasma lub ciszy radiowej goniec i łączność głosowa stają się procedurą podstawową. Ćwiczy się je razem ze stacją. Automatyczny transport plików przez pamięć USB nie jest zaimplementowaną funkcją WICI.</p>
 </article>
@@ -131,7 +135,7 @@
 <footer class="site-footer">
   <div class="inner">
     <p>Analiza: <a href="../../LICENSES/CC-BY-4.0.txt">CC-BY-4.0</a>. <a href="../../LICENSE.md">Mapa licencji projektu</a>.</p>
-    <p>Parametry i warunki odbioru: <a href="../README.md">specyfikacja 0.4</a>. Kod: <a href="https://github.com/tmierzwa/WICI">tmierzwa/WICI</a>.</p>
+    <p>Parametry i warunki odbioru: <a href="../README.md">specyfikacja 0.5</a>. Kod: <a href="https://github.com/tmierzwa/WICI">tmierzwa/WICI</a>.</p>
   </div>
 </footer>
 </body>

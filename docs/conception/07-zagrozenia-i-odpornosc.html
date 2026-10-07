@@ -13,7 +13,7 @@
   <div class="inner">
     <a class="brand" href="index.html">WICI <span>· koncepcja systemu</span></a>
     <a class="jump" href="#rozdzialy">Rozdziały ↓</a>
-    <span class="status">Prototyp 0.4 · sprzęt <b>HOLD</b></span>
+    <span class="status">Prototyp 0.5 · sprzęt <b>HOLD</b></span>
   </div>
 </header>
 <div class="layout">
@@ -61,17 +61,20 @@
 <tr><td>OSP potwierdza przed zapisem danych</td><td>źródło wierzy w zgłoszenie, którego nie ma</td><td>RECEIVED dopiero po COMMIT; intencja RECEIVED w tej samej transakcji</td><td>fizyczny nośnik może łamać gwarancje; odcięcia zasilania T2</td></tr>
 <tr><td>Brak miejsca lub uszkodzenie bazy</td><td>utrata zgłoszeń albo fałszywy zapis</td><td>błąd zapisu widoczny; brak automatycznej pustej bazy; kontrola integralności i zasobów</td><td>granice logów/kolejki do ustalenia; T2</td></tr>
 <tr><td>Duplikaty lub powtórzone stare statusy</td><td>kilka działań dla jednej potrzeby lub cofnięcie informacji</td><td>nadawca + id + revision; monotoniczny event; konflikt nie nadpisuje</td><td>przejęcie zgłoszenia przez drugą OSP nie ma kontraktu; T2</td></tr>
-<tr><td>Zawieszenie strony</td><td>brak formularza</td><td>oddzielny rnsd; diagnostyka procesów i kontrolowane wznowienie</td><td>laptop pozostaje wspólnym punktem awarii; T1/T2</td></tr>
-<tr><td>Uśpienie laptopa / wstrzymanie USB</td><td>przekaźnik i strona przestają działać</td><td>START zapobiega automatycznemu usypianiu; trwała kolejka i obsługa wznowienia</td><td>Y1 w R01.3 uniemożliwia dotrzymanie prądu wstrzymania; wymaga nowej rewizji; T1/T3</td></tr>
-<tr><td>Odłączenie USB / modem odrzuca dane</td><td>brak transmisji</td><td>oddzielny stan radia, liczniki odrzutów, trwała kolejka aplikacji</td><td>niesprawdzone zachowanie limitów czasu LXMF; T3</td></tr>
+<tr><td>Zawieszenie strony lub laptopa</td><td>brak formularza i panelu</td><td>stacja pracuje bez laptopa; diagnostyka procesów i kontrolowane wznowienie</td><td>awaria laptopa wyłącza tylko poziomy 2–3; T1/T2</td></tr>
+<tr><td>Błąd oprogramowania stacji</td><td>zawieszenie lub restart; przerwa w łączności i przekazywaniu</td><td>watchdog; odtworzenie kolejki i długu ciszy po restarcie; licznik restartów na ekranie</td><td>dojrzałość microReticulum, znane restarty przy zasobach po stratnym łączu; T3</td></tr>
+<tr><td>Uśpienie laptopa / wstrzymanie USB</td><td>strona i panel przestają działać; stacja i przekaźnik pracują dalej</td><td>START zapobiega automatycznemu usypianiu; stacja zasilana z własnych źródeł nie pobiera prądu z VBUS</td><td>w R01.3 zegar Y1 może przekroczyć budżet wstrzymania (do 7 mA wobec 2,5 mA); dotyczy tylko stanowiska laboratoryjnego; T1</td></tr>
+<tr><td>Odłączenie laptopa / pełna kolejka radiowa</td><td>nowe zgłoszenia z laptopa czekają; opóźnienie wysyłki</td><td>laptop trzyma intencję przekazania; stacja pracuje dalej; liczniki odrzutów i wiek kolejki na ekranie</td><td>niesprawdzone zachowanie limitów czasu LXMF; T3</td></tr>
 <tr><td>Zanik przekaźnika</td><td>podział sieci</td><td>pomiar kontaktu, alternatywne połączenie tylko jeśli istnieje, priorytet energii przekaźnika</td><td>jedna droga może odciąć całe schronienie; T5</td></tr>
 <tr><td>OSP działa, ale brak dyżurnego</td><td>trwałe przyjęcie bez działania</td><td>jawny odczyt/decyzja, uzgodnione zastępstwo i kontrola dyżuru</td><td>sama sieć nie zapewnia ludzi ani środków; T8</td></tr>
 <tr><td>Przeciążenie / ponowienia wielu stacji</td><td>rosnące opóźnienie pilnych potrzeb</td><td>ograniczone bufory, rozłożone ponowienia, małe wiadomości, monitorowanie wieku kolejki</td><td>brak gwarantowanego priorytetu eteru; odstęp ponowień LXMF (≥10 s) bywa krótszy niż cykl przekaźnika; T3/T5</td></tr>
 <tr><td>Ukryte nadajniki / zakłócenia</td><td>kolizje i utrata fragmentów</td><td>CCA i losowe odroczenie; właściwa antena; pomiar przy pracującym zasilaniu</td><td>brak odporności na celowe zagłuszanie; T4/T5/T6</td></tr>
 <tr><td>Blokowanie odbiornika przez pobliskie nadajniki</td><td>utrata czułości; telefony LTE 800 (832–862 MHz) i GSM 900 (880–915 MHz) nadają kilka megaherców od kanału, często z pełną mocą przy słabym zasięgu sieci</td><td>antena na zewnątrz, z dala od telefonów; pomiar blokowania; filtr pasmowy SAW 868 MHz na wejściu odbiornika do oceny</td><td>wpływ zależy od konstrukcji modemu i odległości; T4/T6</td></tr>
-<tr><td>Wyładowanie atmosferyczne / przepięcie z anteny</td><td>uszkodzenie modemu i laptopa przez USB; zagrożenie pożarowe</td><td>brak pracy anteny zewnętrznej podczas burzy; zabezpieczenie ESD wyjścia RF; antena poniżej krawędzi dachu, bez masztu na szczycie budynku bez instalacji odgromowej</td><td>ochrona ESD nie zastępuje ochrony odgromowej; maszt wymaga oceny instalacji budynku; T6</td></tr>
-<tr><td>Restart zeruje budżet TX</td><td>przekroczenie warunków pracy nadajnika</td><td>trwały dług ciszy przed TX; niepoprawny dziennik blokuje TX, RX trwa</td><td>zużycie i przerwany zapis EEPROM wymagają próby; T4</td></tr>
-<tr><td>Rozładowanie obu A/B / udar nowego źródła</td><td>reset sieci i możliwa awaria elementów</td><td>kolejność podłączenia, każdy tor na pełne obciążenie, bezpieczniki i kwalifikacja udaru</td><td>diody nie są regulatorem i nie eliminują udaru; T6</td></tr>
+<tr><td>Wyładowanie atmosferyczne / przepięcie z anteny</td><td>uszkodzenie stacji i podłączonego laptopa; zagrożenie pożarowe</td><td>brak pracy anteny zewnętrznej podczas burzy; zabezpieczenie ESD wyjścia RF; antena poniżej krawędzi dachu, bez masztu na szczycie budynku bez instalacji odgromowej</td><td>ochrona ESD nie zastępuje ochrony odgromowej; maszt wymaga oceny instalacji budynku; T6</td></tr>
+<tr><td>Restart zeruje budżet TX</td><td>przekroczenie warunków pracy nadajnika</td><td>trwały dług ciszy przed TX; niepoprawny dziennik blokuje TX, RX trwa</td><td>zużycie i przerwany zapis dziennika w pamięci nieulotnej wymagają próby; T4</td></tr>
+<tr><td>Wyczerpanie lub wyciek ogniw AA</td><td>utrata zasilania stacji; korozja styków</td><td>ostrzeżenie o niskim napięciu na ekranie; zapis w FRAM przed wyłączeniem; ogniwa litowe; ochrona przed odwrotnym włożeniem; ogniwa wyjmowane na czas magazynowania lub sprawdzane w przeglądzie</td><td>stan ogniw po latach przechowywania; T6/T8</td></tr>
+<tr><td>Mróz w nieogrzewanym schronieniu</td><td>wolny lub nieczytelny ekran, mniejsza pojemność ogniw i akumulatorów</td><td>ekran z pamięcią; ogniwa litowe; stacja w pomieszczeniu, antena na zewnątrz</td><td>zakres temperatur gotowej stacji do zakwalifikowania; T6</td></tr>
+<tr><td>Rozładowanie obu A/B / udar nowego źródła (poziom 3)</td><td>reset sieci i możliwa awaria elementów</td><td>kolejność podłączenia, każdy tor na pełne obciążenie, bezpieczniki i kwalifikacja udaru</td><td>diody nie są regulatorem i nie eliminują udaru; T6</td></tr>
 <tr><td>Awaria regulatora portu telefonu</td><td>przepięcie telefonu</td><td>niezależne porty, OVP i próba wymuszonej awarii bez telefonu</td><td>obecny zwieracz zabezpieczający nie jest odebraną ochroną; T6</td></tr>
 <tr><td>Przebicie / błędne PE własnej przetwornicy</td><td>porażenie lub pożar</td><td>ukończona ochrona AC, izolacja i badanie konfiguracji przez kompetentnego wykonawcę</td><td>zgodność nie wynika ze schematu ani modelu; HOLD, T6</td></tr>
 <tr><td>Utrata klucza / skopiowana tożsamość</td><td>brak zaufania albo podszycie</td><td>kontrolowana kopia, jedna aktywna instancja, procedura zmiany klucza</td><td>unieważnianie offline i odtworzenie po utracie do opracowania; T2/T8</td></tr>
@@ -83,15 +86,15 @@
 <tr><td>Pożar lub wyciek z akumulatora</td><td>poparzenia, dym, gazy w zamkniętym pomieszczeniu</td><td>akumulatory na tacy, z dala od dróg ewakuacji; brak ładowania akumulatorów w pomieszczeniu z ludźmi; gaśnica przy stacji</td><td>uszkodzony akumulator rozruchowy może wydzielać wodór; T6/T8</td></tr>
 <tr><td>Namierzenie emisji schronienia</td><td>wskazanie przeciwnikowi skupiska ludzi</td><td>brak emisji cyklicznych; tryb ciszy radiowej; neutralne nazwy stacji; antena oddalona od pomieszczenia z ludźmi</td><td>szyfrowanie nie ukrywa faktu ani miejsca nadawania; T4/T8</td></tr>
 <tr><td>Zagłuszanie pasma przez systemy antydronowe</td><td>utrata łączności radiowej w rejonie</td><td>rozpoznanie po licznikach CCA i CRC; goniec i łączność głosowa jako procedura podstawowa</td><td>pasmo 868 MHz jest używane przez łącza sterowania dronów, więc może być zagłuszane; brak ochrony technicznej; T8</td></tr>
-<tr><td>Przejęcie stanowiska lub laptopa</td><td>ujawnienie adresów schronień, liczby osób i kluczy</td><td>szyfrowanie bazy kluczem z pamięci USB; ZNISZCZ DANE; fizyczne zniszczenie pamięci; unieważnienie tożsamości</td><td>dane wysłane wcześniej pozostają u odbiorców; T2</td></tr>
+<tr><td>Przejęcie stanowiska, laptopa lub stacji</td><td>ujawnienie adresów schronień, liczby osób i kluczy; podszycie pod stację</td><td>szyfrowanie bazy laptopa kluczem z pamięci USB; ZNISZCZ DANE na laptopie i stacji; fizyczne zniszczenie pamięci; unieważnienie tożsamości w OSP</td><td>dane wysłane wcześniej pozostają u odbiorców; T2</td></tr>
 <tr><td>Zakaz nadawania w stanie nadzwyczajnym</td><td>sieć nie może legalnie działać, gdy jest potrzebna</td><td>uzgodnienie statusu z organem ochrony ludności przed użyciem</td><td>zależy od decyzji organów; D12</td></tr>
 </tbody></table></div>
 
 <h2 id="ochrona-danych-i-zaufania">Ochrona danych i zaufania</h2>
 
-<p>Zagrożenia obejmują przypadkowego użytkownika, osobę w tej samej sieci, podszycie pod OSP, kradzież laptopa i celowe zakłócanie radia. Bazowe szyfrowanie Reticulum nie chroni przed zagrożeniami na obu końcach transmisji. Nie można deklarować bezpiecznej pracy na przejętym komputerze.</p>
+<p>Zagrożenia obejmują przypadkowego użytkownika, osobę w tej samej sieci, podszycie pod OSP, kradzież laptopa lub stacji i celowe zakłócanie radia. Bazowe szyfrowanie Reticulum nie chroni przed zagrożeniami na obu końcach transmisji. Nie można deklarować bezpiecznej pracy na przejętym komputerze.</p>
 
-<p>Token ogranicza dostęp do zgłoszenia w aplikacji, ale przesyłany przez HTTP może zostać przechwycony. Hasło Wi-Fi nie zastępuje HTTPS. Baza i klucz stacji są na dysku zaszyfrowane kluczem z pamięci USB stacji. Start nie wymaga hasła, więc szyfrowanie nie opóźnia uruchomienia. Polecenie ZNISZCZ DANE usuwa klucz, bazę i eksporty. Nadpisanie pamięci flash i dysków SSD nie gwarantuje usunięcia danych, dlatego o skuteczności decydują usunięcie klucza i fizyczne zniszczenie pamięci USB. Zbiorcza baza odbiorcy zawiera adresy schronień i liczbę osób, czyli informację cenną dla przeciwnika. Jej ochrona i procedura zniszczenia są częścią przygotowania stanowiska. Zbierać tylko minimum danych, nie publikować zbiorczej listy potrzeb mieszkańców i ograniczać fizyczny dostęp do laptopa oraz kopii.</p>
+<p>Token ogranicza dostęp do zgłoszenia w aplikacji, ale przesyłany przez HTTP może zostać przechwycony. Hasło Wi-Fi nie zastępuje HTTPS. Baza laptopa jest na dysku zaszyfrowana kluczem z pamięci USB zestawu. Start nie wymaga hasła, więc szyfrowanie nie opóźnia uruchomienia. Klucz tożsamości, karta OSP i kolejka są w pamięci stacji; na poziomie 1 nie ma tam danych osobowych, tylko adres schronienia i zgłoszenia zbiorcze. Polecenie ZNISZCZ DANE usuwa na laptopie klucz, bazę i eksporty, a na stacji klucz tożsamości, kolejkę i kartę OSP. Nadpisanie pamięci flash i dysków SSD nie gwarantuje usunięcia danych, dlatego o skuteczności decydują usunięcie klucza i fizyczne zniszczenie pamięci USB. Zbiorcza baza odbiorcy zawiera adresy schronień i liczbę osób, czyli informację cenną dla przeciwnika. Jej ochrona i procedura zniszczenia są częścią przygotowania stanowiska. Zbierać tylko minimum danych, nie publikować zbiorczej listy potrzeb mieszkańców i ograniczać fizyczny dostęp do laptopa, stacji oraz kopii.</p>
 
 <p>Przed pilotażem uzgodnić: osobę odpowiedzialną za dane, cel i czas przechowywania, zakres kopii, uprawnienia dyżurnych, usuwanie danych po zakończeniu pracy i postępowanie po kradzieży. Nie dodawać samowolnie sztywnego okresu retencji jako rzekomego wymogu prawnego. Uzgodnienia te poprzedzają wdrożenie. Podczas zdarzenia nie wstrzymują przyjmowania zgłoszeń. Eksport obejmuje sekret tożsamości i wymaga takiej samej ochrony jak stacja.</p>
 
@@ -99,13 +102,13 @@
 
 <h2 id="warunki-uzycia-i-odbudowa">Warunki użycia i odbudowa</h2>
 
-<p>Propozycja pilotażu: laptop i zasilanie w suchym, osłoniętym miejscu, antena na zewnątrz z ochroną przewodu i odciążeniem złącza. Droga przewodu nie może uniemożliwiać zamknięcia wymaganych drzwi ani tworzyć przeszkody ewakuacyjnej. Uzgodnić miejsce i sposób mocowania. Praca w wilgoci, mrozie, po upadku, podczas rozruchu silnika oraz w atmosferze wymagającej specjalnych zabezpieczeń nie jest zakwalifikowana.</p>
+<p>Propozycja pilotażu: stacja, laptop i zasilanie w suchym, osłoniętym miejscu, antena na zewnątrz z ochroną przewodu i odciążeniem złącza. Droga przewodu nie może uniemożliwiać zamknięcia wymaganych drzwi ani tworzyć przeszkody ewakuacyjnej. Uzgodnić miejsce i sposób mocowania. Praca w wilgoci, mrozie, po upadku, podczas rozruchu silnika oraz w atmosferze wymagającej specjalnych zabezpieczeń nie jest zakwalifikowana.</p>
 
 <p>Obecne warunki odbioru ładowarki przewidują 40 °C otoczenia, co nie określa zakresu temperatur całej stacji. Przed wdrożeniem trzeba określić i sprawdzić zakres dla kompletu z obudową, kablami, wentylacją i ogniwami. Katalogowy zakres temperatur elementu nie przenosi się na gotową konstrukcję.</p>
 
-<p>Minimalne zaplecze naprawcze na pilotaż: sprawdzony drugi host lub dostępny zamiennik, Ethernet/USB, bezpieczniki o właściwej wartości, antena/przewód i odczytywalna kopia wydania. Najpierw ustalić, czy błąd dotyczy strony, zapisu, modemu, trasy, odbiorcy czy zasilania. Ponowne uruchomienie nie rozwiązuje nieznanego błędu bazy ani ochrony elektrycznej.</p>
+<p>Minimalne zaplecze naprawcze na pilotaż: zapasowe ogniwa AA, zapasowa stacja z możliwością przeniesienia tożsamości, sprawdzony drugi host lub dostępny zamiennik, Ethernet/USB, bezpieczniki o właściwej wartości, antena/przewód i odczytywalna kopia wydania. Najpierw ustalić, czy błąd dotyczy strony, laptopa, stacji, trasy, odbiorcy czy zasilania. Ponowne uruchomienie nie rozwiązuje nieznanego błędu bazy ani ochrony elektrycznej.</p>
 
-<p>PRZENIEŚ STACJĘ zachowuje tożsamość i bazę przez kontrolowany eksport; stara instancja przestaje pracować. Po nagłej utracie bez kopii nie da się obiecać odzyskania ostatnich lokalnych zgłoszeń. Odbiorca może mieć wcześniej przyjęte dane, lecz nie są one kopią całej bazy schronienia. <a href="../spec/oprogramowanie.md">Procedura w specyfikacji</a>.</p>
+<p>PRZENIEŚ STACJĘ zachowuje tożsamość i kolejkę przez kontrolowany eksport na stację zapasową; stara stacja przestaje pracować. Bazę laptopa przenosi się osobno. Po nagłej utracie bez kopii nie da się obiecać odzyskania ostatnich lokalnych zgłoszeń. Odbiorca może mieć wcześniej przyjęte dane, lecz nie są one kopią całej bazy schronienia. <a href="../spec/oprogramowanie.md">Procedura w specyfikacji</a>.</p>
 </article>
 <nav class="pager" aria-label="Kolejność czytania">
   <a class="prev" href="06-wykonalnosc-i-budzet-zasobow.html" rel="prev"><span>← Poprzedni</span>06. Wykonalność i budżet zasobów</a>
@@ -116,7 +119,7 @@
 <footer class="site-footer">
   <div class="inner">
     <p>Analiza: <a href="../../LICENSES/CC-BY-4.0.txt">CC-BY-4.0</a>. <a href="../../LICENSE.md">Mapa licencji projektu</a>.</p>
-    <p>Parametry i warunki odbioru: <a href="../README.md">specyfikacja 0.4</a>. Kod: <a href="https://github.com/tmierzwa/WICI">tmierzwa/WICI</a>.</p>
+    <p>Parametry i warunki odbioru: <a href="../README.md">specyfikacja 0.5</a>. Kod: <a href="https://github.com/tmierzwa/WICI">tmierzwa/WICI</a>.</p>
   </div>
 </footer>
 </body>
