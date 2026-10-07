@@ -153,7 +153,7 @@ class Short(WICI):
         ph = phone(2.0).move_to([-2.2, 4.8, 0])
         wf = wifi(rt[1][0].get_end() + UP * 0.05, 0.17, 3, WHITE, angle=PI * 0.85)
         lp = laptop(1.6).move_to([1.5, 2.6, 0])
-        lp_l = T("stary laptop", 26, GREY_A).next_to(lp, LEFT, buff=0.35)
+        lp_l = T("stary laptop", 26, GREY_A).next_to(lp, LEFT, buff=0.6)
         rm = radio_module(1.1).move_to([1.5, 0.45, 0])
         rm_l = T("moduł radiowy", 26, RADIO).next_to(rm, LEFT, buff=0.35)
         ax = 3.3
@@ -168,6 +168,8 @@ class Short(WICI):
             [bat.box.get_top(), [bat.box.get_x(), 1.6, 0], [0.95, 1.6, 0], [0.95, lp[2].get_bottom()[1], 0]])
         p2 = VMobject(stroke_color=ACCENT, stroke_width=2).set_points_as_corners(
             [bat.box.get_right(), [rm.get_x(), bat.box.get_y(), 0], rm.get_bottom()])
+        p3 = VMobject(stroke_color=ACCENT, stroke_width=2).set_points_as_corners(
+            [[0.15, 1.6, 0], [0.15, rt[0].get_y(), 0], rt[0].get_left()])
         form = VGroup(T("WICI", 15, ACCENT, weight=HEAVY),
                       *[Rectangle(width=0.7, height=0.12, stroke_color=GREY_B, stroke_width=1) for _ in range(3)],
                       RoundedRectangle(width=0.5, height=0.16, corner_radius=0.05, stroke_width=0, fill_color=ACCENT,
@@ -177,7 +179,7 @@ class Short(WICI):
         self.narr("v5",
                   ([FadeIn(lp, shift=UP * 0.2), FadeIn(lp_l)], 0.6),
                   ([FadeIn(rt, shift=UP * 0.2), FadeIn(rt_l), Create(eth)], 0.6),
-                  ([FadeIn(bat), Create(p1)], 0.6),
+                  ([FadeIn(bat), Create(p1), Create(p3)], 0.6),
                   ([FadeIn(rm), FadeIn(rm_l), Create(usb), Create(p2), Create(cable), Create(ant)], 0.8),
                   ([LaggedStart(*[Create(w) for w in waves], lag_ratio=0.3)], 0.5),
                   ("at", 1),

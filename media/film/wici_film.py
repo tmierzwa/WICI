@@ -624,10 +624,13 @@ class WICI(MovingCameraScene):
         power = VMobject(stroke_color=ACCENT, stroke_width=2).set_points_as_corners(
             [[tap, lp[2].get_bottom()[1], 0], [tap, bus_y, 0], [rm.get_x(), bus_y, 0], [rm.get_x(), rm.get_bottom()[1], 0]])
         power2 = Line(bat.box.get_top(), [bat.box.get_x(), bus_y, 0], stroke_color=ACCENT, stroke_width=2)
+        rb, xr = rt[0], max(rt_l.get_right()[0], rt[0].get_right()[0]) + 0.25
+        power3 = VMobject(stroke_color=ACCENT, stroke_width=2).set_points_as_corners(
+            [[rb.get_right()[0], rb.get_y() - 0.1, 0], [xr, rb.get_y() - 0.1, 0], [xr, bus_y, 0], [tap, bus_y, 0]])
         waves = wifi(ant.get_end(), 0.25, 3, RADIO, angle=0)
         self.narr("s6c",
                   ([FadeIn(rm, shift=UP * 0.2), FadeIn(rm_l), Create(usb)], 0.8),
-                  ([FadeIn(win), Create(cable), Create(ant), Create(power), Create(power2)], 1.2),
+                  ([FadeIn(win), Create(cable), Create(ant), Create(power), Create(power2), Create(power3)], 1.2),
                   ([LaggedStart(*[Create(w) for w in waves], lag_ratio=0.3)], 0.8))
 
         phones = VGroup(*[phone(0.9) for _ in range(3)]).arrange(DOWN, buff=0.3).move_to([-6.1, y, 0])
