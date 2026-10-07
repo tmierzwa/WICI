@@ -40,8 +40,12 @@ struct RamStorage : journal::Storage {
 int journalScenario() {
     RamStorage ram;
     journal::Journal j(ram);
-    printf("fresh %d %d %u %u %u\n", j.begin(), j.debtFresh(), j.debtValid(), j.clock().seq, j.eventSeq());
-    printf("write %d %d\n", j.writeDebt(16228, 10), j.writeDebt(5000, 20));
+    // Wywołania ze skutkami poza argumentami printf: kolejność argumentów zależy od kompilatora.
+    const bool begun = j.begin();
+    printf("fresh %d %d %u %u %u\n", begun, j.debtFresh(), j.debtValid(), j.clock().seq, j.eventSeq());
+    const bool first = j.writeDebt(16228, 10);
+    const bool second = j.writeDebt(5000, 20);
+    printf("write %d %d\n", first, second);
     journal::Journal j2(ram);
     j2.begin();
     printf("reread %u %u %u %u\n", j2.debt().seq, j2.debt().a, j2.debt().b, j2.debtValid());
