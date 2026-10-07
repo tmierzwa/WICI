@@ -19,7 +19,7 @@ SEGMENTS = [
     ]),
     ("s1d", [
         "Kilka kilometrów dalej są służby, które mogłyby pomóc.",
-        "Tylko skąd ma o tym wiedzieć?",
+        "Tylko skąd mają o tym wiedzieć?",
     ]),
     ("s2a", [
         "Łatwo myśleć, że telefon łączy się z drugim telefonem.",
@@ -75,6 +75,7 @@ SEGMENTS = [
         "Ale cudów nie ma.",
         "Jeśli jedyny sąsiad zgaśnie, droga się urywa.",
         "Inna istnieje tylko wtedy, gdy ktoś jeszcze jest w zasięgu.",
+        "A jeśli nie ma nikogo, trzeba z wiadomością dojść w zasięg kolejnej stacji.",
     ]),
     ("s6a", [
         "Jak wygląda jedna stacja?",
