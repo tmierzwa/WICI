@@ -11,9 +11,9 @@ To wspólny kontrakt dwóch modemów, a nie ustawienia istniejącego RNode. Zmia
 | Szybkość transmisji | 4800 bit/s |
 | Dewiacja | ±4 kHz |
 | Moc na złączu | 13 dBm, tolerancja po kalibracji ±1 dB |
-| Wzorzec częstotliwości | TCXO; całkowity błąd nadajnika nie większy niż ±2,5 ppm w zakresie pracy |
+| Wzorzec częstotliwości | TCXO; całkowity błąd nadajnika nie większy niż ±2,5 ppm w zakresie temperatur pracy, łącznie ze starzeniem do następnego przeglądu |
 | Filtr odbiornika | najbliższa nastawa 24–32 kHz, sprawdzona przy granicznym błędzie częstotliwości |
-| Czułość odbioru | cel: ≤−110 dBm przy PER ≤1%, mierzona w tym profilu |
+| Czułość odbioru | cel: ≤−110 dBm przy PER ≤1% dla ramek o maksymalnej długości (103 B), mierzona w tym profilu |
 | Kolejność bajtów i bitów | najbardziej znaczący bajt pierwszy (big endian); najbardziej znaczący bit pierwszy (MSB) |
 | Preambuła i słowo synchronizacji | 8 × 0xAA, następnie D3 91 D3 91 |
 | Wybielanie danych, kodowanie Manchester, FEC | wyłączone |
@@ -21,6 +21,14 @@ To wspólny kontrakt dwóch modemów, a nie ustawienia istniejącego RNode. Zmia
 | Rozmiar datagramu z USB | 1–600 B |
 
 Profil P1 używa 4800 bit/s. Jeśli próba na 1 km zakończy się niepowodzeniem, najpierw zmienia się położenie anten i dodaje przekaźnik. Obniżenie szybkości jest nową wersją profilu, a nie ukrytą lokalną opcją.
+
+Indeks modulacji wynosi 2 × 4 kHz / 4,8 kbit/s ≈ 1,67, a pasmo Carsona około 12,8 kHz. Przy błędzie ±2,5 ppm obu stron wzajemne odstrojenie sięga około 4,3 kHz, więc filtr 24–32 kHz zachowuje zapas. Wybielanie danych jest wyłączone, ponieważ większość pakietów Reticulum jest szyfrowana i ma charakter pseudolosowy; odporność na długie ciągi jednakowych bitów sprawdza się mimo to ramkami wzorcowymi z samymi zerami i samymi jedynkami.
+
+## Współdzielenie kanału
+
+Częstotliwość 869,525 MHz jest środkiem kanału RX2 LoRaWAN w Europie (125 kHz, bramki nadają tam odpowiedzi z mocą do 500 mW ERP) oraz domyślną częstotliwością sieci Meshtastic w regionie EU_868, zajmującej całe podpasmo 869,4–869,65 MHz. Sygnały LoRa mogą mieć poziom poniżej progu CCA, a mimo to zakłócać odbiór ramek P1. Kanał nie jest więc „cichy” z założenia.
+
+Przed pilotażem w każdym miejscu wykonuje się pomiar zajętości podpasma w różnych porach doby oraz zapisuje liczniki CCA i błędów CRC w pracy próbnej. Jeżeli zajętość pogarsza wynik prób, rozważa się kanał poza zakresem RX2 LoRaWAN (869,4625–869,5875 MHz), np. 869,425 lub 869,625 MHz, z zachowaniem zapasu do krawędzi podpasma na pasmo zajmowane i błąd częstotliwości. Zmiana kanału jest nową wersją P1 dla całej sieci.
 
 ## Ramka w eterze
 
@@ -40,7 +48,7 @@ LEN to długość BODY, 15–100 B. CRC obejmuje LEN i BODY: wielomian 0x1021, w
 
 Liczba fragmentów = ceil(długość/86). Każdy oprócz ostatniego ma 86 B danych. Ostatni ma dokładną resztę. Nie przyjmujemy dowolnego podziału. LEN, BODY i CRC zajmują łącznie najwyżej 103 B, więc pakiet mieści się w 128-bajtowej kolejce FIFO obu układów. Preambułę i słowo synchronizacji obsługuje układ radiowy. [CC1120](https://www.ti.com/lit/ds/symlink/cc1120.pdf), [S2-LP](https://www.st.com/resource/en/datasheet/s2-lp.pdf).
 
-Odbiornik składa najwyżej 8 datagramów, maksymalnie 600 B każdy, przez 120 s. Poprawne duplikaty są ignorowane. Inna treść tego samego fragmentu usuwa całą próbę składania. Zmiana długości lub liczby fragmentów również ją usuwa. Po przepełnieniu odrzucana jest najstarsza próba. Kompletny datagram trafia przez KISS do laptopa. Oprogramowanie układowe modemu nie wysyła potwierdzeń, nie wyznacza tras i nie szyfruje; robią to wyższe warstwy.
+Odbiornik składa najwyżej 8 datagramów, maksymalnie 600 B każdy, przez 120 s. Poprawne duplikaty są ignorowane. Inna treść tego samego fragmentu usuwa całą próbę składania. Zmiana długości lub liczby fragmentów również ją usuwa. Po przepełnieniu odrzucana jest najstarsza próba. Kompletny datagram trafia przez KISS do laptopa. CRC-16 nie wykrywa wszystkich przekłamań; uszkodzone pakiety szyfrowane i podpisane odrzuca dodatkowo kontrola integralności Reticulum. Oprogramowanie układowe modemu nie wysyła potwierdzeń, nie wyznacza tras i nie szyfruje; robią to wyższe warstwy.
 
 ## Dostęp do kanału
 
@@ -50,9 +58,9 @@ Odbiornik składa najwyżej 8 datagramów, maksymalnie 600 B każdy, przez 120 s
 4. Po ponownym uruchomieniu odczekujemy cały ostatni zapisany dług. Kasujemy go dopiero po odczekaniu; restart nie zeruje budżetu.
 5. Przed serią kanał musi pozostawać wolny przez 50 ms; początkowy próg CCA wynosi −100 dBm. Gdy kanał jest zajęty, nadawanie zostaje odroczone o losowy czas 100–1000 ms. CCA nie zastępuje limitu czasu TX.
 
-Rezerwacja obejmuje preambuły, słowa synchronizacji, pola długości, CRC oraz zmierzony czas narastania mocy nadajnika. Pamięć to pierścieniowy dziennik EEPROM z numerem, długiem, CRC i znacznikiem zatwierdzenia; co najmniej dwa poprawne rekordy. Kandydaci: ST M24C64 i Microchip AT24C64, z odrębnymi parametrami sterownika. Brak poprawnego dziennika blokuje nadawanie do czasu diagnostyki. Odbiór pozostaje czynny także podczas długu ciszy i oczekiwania CCA; wyłączony jest na czas własnego nadawania oraz wstrzymania USB. Dług ciszy zabrania nadawania, nie odbioru.
+Rezerwacja obejmuje preambuły, słowa synchronizacji, pola długości, CRC oraz zmierzony czas narastania mocy nadajnika. Pamięć to pierścieniowy dziennik EEPROM z numerem, długiem, CRC i znacznikiem zatwierdzenia; co najmniej dwa poprawne rekordy. W najgorszym przypadku, przy ciągłym nadawaniu najkrótszych datagramów, zapis następuje co 0,65 s, czyli około 133 000 razy na dobę. Pierścień obejmujący wszystkie 256 stron 32-bajtowych pamięci 8 KiB przy trwałości 1 mln cykli wystarcza na około 5 lat takiej pracy; oprogramowanie układowe musi więc rozkładać zapisy na cały pierścień. Kandydaci: ST M24C64 i Microchip AT24C64, z odrębnymi parametrami sterownika. Brak poprawnego dziennika blokuje nadawanie do czasu diagnostyki. Odbiór pozostaje czynny także podczas długu ciszy i oczekiwania CCA; wyłączony jest na czas własnego nadawania oraz wstrzymania USB. Dług ciszy zabrania nadawania, nie odbioru.
 
-Warunki UE w tym paśmie obejmują do 500 mW ERP i profil z aktywnością do 10%; przed użytkowaniem w Polsce trzeba jeszcze potwierdzić warunki krajowe oraz emisje gotowego urządzenia. Sama częstotliwość nie stanowi dopuszczenia nadajnika. [Decyzja UE 2025/105](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025D0105).
+Warunki UE w tym paśmie obejmują do 500 mW ERP i profil z aktywnością do 10%; przed użytkowaniem w Polsce trzeba jeszcze potwierdzić warunki krajowe oraz emisje gotowego urządzenia. Sama częstotliwość nie stanowi dopuszczenia nadajnika. Zestaw przekazywany innym osobom podlega dyrektywie RED 2014/53/UE: celem kwalifikacji są badania według EN 300 220-2 (widmo radiowe, w tym kategoria odbiornika), EN 301 489-1 i -3 (EMC), EN 62368-1 (bezpieczeństwo) oraz EN 62479 (ekspozycja na pole), a następnie deklaracja zgodności. Tor nadawczy ma filtr dolnoprzepustowy tłumiący harmoniczne (1739 i 2609 MHz) do poziomu emisji niepożądanych wymaganego przez EN 300 220. [Decyzja UE 2025/105](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025D0105).
 
 ## USB i Reticulum
 
@@ -66,7 +74,7 @@ Warstwa `ShelterKISSInterface` jest wymaganym, jeszcze nieprzygotowanym adaptere
 
 Limit 900 s dotyczy adaptera, a nie limitów czasu całego stosu. Wymagane osobne sprawdzenie wyszukiwania trasy, zestawiania linku, przesyłania zasobu i potwierdzeń, także gdy pakiet czeka za ruchem przekazywanym. Samo podanie przepływności 240 bit/s nie przesądza o tej zgodności; [kontrprzykład czasowy i stan przeglądu](../review.md).
 
-Polecenie diagnostyczne na osobnym interfejsie CDC: `INFO\n`; odpowiedź: jeden wiersz JSON do 256 B: `{"contract":1,"profile":"P1","radio":"CC1120","fw":"...","tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0}`. Drugi interfejs CDC usuwa ryzyko pomylenia diagnostyki z ramkami danych. Wariant ST podaje `S2LP`. Oprogramowania układowego nie aktualizuje się podczas uruchamiania stacji w schronieniu.
+Polecenie diagnostyczne na osobnym interfejsie CDC: `INFO\n`; odpowiedź: jeden wiersz JSON do 256 B: `{"contract":1,"profile":"P1","radio":"CC1120","fw":"...","tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0}`. Drugi interfejs CDC usuwa ryzyko pomylenia diagnostyki z ramkami danych. Urządzenie złożone z dwoma interfejsami CDC ACM używa deskryptorów IAD (Interface Association Descriptor), aby system Windows 10 i nowszy przypisał oba interfejsy wbudowanemu sterownikowi bez instalacji dodatkowego. Wariant ST podaje `S2LP`. Oprogramowania układowego nie aktualizuje się podczas uruchamiania stacji w schronieniu.
 
 ## Dwa wykonania
 
@@ -77,10 +85,12 @@ Polecenie diagnostyczne na osobnym interfejsie CDC: `INFO\n`; odpowiedź: jeden 
 | Połączenie MCU–radio | SPI: SCK, MOSI, MISO, CS; IRQ; reset/shutdown | ten sam podział funkcji, inne piny |
 | Wzorzec częstotliwości RF | zgodny z dokumentacją CC1120 | zgodny z dokumentacją S2-LP |
 | Zasilanie RF | filtrowane 3,3 V, 100 nF przy każdym wyprowadzeniu zasilania, 10 µF przy układzie radiowym | takie samo wymaganie |
-| Wyjście RF | układ dopasowania producenta dla 868/915 MHz, potem złącze 50 Ω | osobne dopasowanie S2-LP |
+| Wyjście RF | układ dopasowania producenta dla 868/915 MHz, filtr harmonicznych, ochrona ESD o małej pojemności, potem złącze 50 Ω | osobne dopasowanie S2-LP, te same wymagania filtru i ochrony |
 
 Dopasowanie RF i wartości oscylatora są właściwe dla konkretnego układu. Nie wolno przenosić wartości z projektu TI do projektu ST. Obie płytki wymagają osobnego projektu toru RF i nastaw rejestrów; żadna jeszcze nie powstała. Wspólna ramka w tym pakiecie ustala format, lecz nie dowodzi zgodności obu fizycznych modemów.
 
 S2-LPCBQTR obsługuje w górnym paśmie 904–1055 MHz i nie jest kandydatem dla 869,525 MHz. Sama nazwa rodziny S2-LP nie wystarcza przy zamawianiu. [Warianty w karcie katalogowej](https://www.st.com/resource/en/datasheet/s2-lp.pdf).
 
-Dipol pionowy: ramiona początkowo po 82 mm, symetryzacja dławikiem współbieżnym, przewód 50 Ω. Długość końcowa po strojeniu: WFS (SWR) ≤2 w miejscu montażu. Tłumienie swobodnej przestrzeni na 1 km wynosi około 91 dB; straty budynków mogą zużyć cały zapas. Nie wyprowadzamy obietnicy zasięgu z samej czułości katalogowej.
+Dipol pionowy: ramiona początkowo po 82 mm, symetryzacja dławikiem współbieżnym, przewód 50 Ω o łącznym tłumieniu ≤1 dB przy 869,5 MHz (np. RG-58 do 2 m; cieńszy RG-174 nie spełnia warunku). Długość końcowa po strojeniu: WFS (SWR) ≤2 w miejscu montażu. Antena na zewnątrz nie jest montowana ani obsługiwana podczas burzy.
+
+Tłumienie swobodnej przestrzeni na 1 km wynosi około 91 dB, co przy 13 dBm, dwóch dipolach i 1 dB strat przewodu na każdym końcu daje 34 dB zapasu względem −110 dBm. Model Okumury-Haty dla małego lub średniego miasta daje jednak na 1 km 126–133 dB, czyli zapas od −1 dB (antena na 30 m) do −7 dB (antena na 10 m i odbiorca na 1,5 m). Promień pierwszej strefy Fresnela w połowie drogi wynosi około 9,3 m, więc anteny przy oknach niskich kondygnacji pracują zwykle bez widoczności. Wynika z tego, że cel 1 km w zabudowie wymaga wysoko umieszczonych anten lub przekaźników; zysk z większej mocy (do około +16 dBm w obu układach) jest mały. Obliczenia: [wyniki modelu](../../software/reference/wyniki.json). Nie wyprowadzamy obietnicy zasięgu z samej czułości katalogowej.

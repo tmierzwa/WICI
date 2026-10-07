@@ -6,7 +6,8 @@
 | Komunikaty | wszystkie 6 typów; UTF-8; graniczne rozmiary; odrzucenie niepoprawnych typów i dodatkowych pól | model wykonywalny |
 | OSP | duplikat po restarcie; konflikt treści; przerwanie przed COMMIT bez wysłania RECEIVED; odrębni nadawcy | model wykonywalny |
 | Modemy mieszane | TI→ST, ST→TI, 10 000 pakietów każdego rozmiaru granicznego; brak różnic formatu | niewykonana |
-| Radio 1 km | dwie rzeczywiste lokalizacje, anteny na zewnątrz; ≥99 ze 100 zgłoszeń z RECEIVED w 5 min przy pojedynczym ruchu | niewykonana |
+| Kanał | pomiar zajętości podpasma 869,4–869,65 MHz w miejscach pilotażu w różnych porach doby; liczniki CCA i błędów CRC z pracy próbnej | niewykonana |
+| Radio 1 km | dwie rzeczywiste lokalizacje, anteny na zewnątrz, wysokości anten zapisane w raporcie; ≥99 ze 100 zgłoszeń z RECEIVED w 5 min przy pojedynczym ruchu | niewykonana |
 | Przekaźnik | 3 stacje, wymuszone odcięcie bezpośredniego połączenia A–OSP; przejście przez B i powrót RECEIVED | niewykonana |
 | Obciążenie sieci | referencyjne A–B–OSP: 50 zgłoszeń łącznie z A w pierwszych 5 min; ≥99% z RECEIVED na A do 30 min od pierwszego lokalnego COMMIT; droga powrotna przez B; zapis utrzymany podczas braku trasy | niewykonana |
 | Limit czasu nadawania | łączny czas nadawania, łącznie z restartami, ≤10% w dowolnym oknie godzinnym; przerwany zapis EEPROM nigdy nie umożliwia nadawania bez budżetu | niewykonana |
@@ -14,12 +15,14 @@
 | Przeniesienie | kompletna kopia, zatrzymanie starej instancji, zachowana tożsamość i kolejka na nowym laptopie | niewykonana |
 | Strona | 50 podłączonych telefonów, 15 aktywnych; dostęp tylko do własnego zgłoszenia; odłączony modem nie blokuje formularza | niewykonana |
 | A/B | oba kierunki, napięcia 11,5 i 16 V, każdy tryb mocy, 100 zmian; brak resetów routera, modemu i przetwornicy | niewykonana |
+| Odłączenie podnapięciowe | wejścia A/B i C: wyłączenie przy 11,5 V ±0,1 V na złączu, ponowne załączenie nie niżej niż 12,4 V; brak cyklicznego załączania pod obciążeniem | niewykonana |
 | Udar A/B | prąd i I²t poniżej limitu każdego elementu; brak uszkodzeń oraz zgrzewania styków | niewykonana |
-| Ładowarka | 8 × 1,5 A przez 2 h w temperaturze otoczenia 40 °C; 4,75–5,25 V na każdym porcie | niewykonana |
+| Ładowarka | 8 × 1,5 A przez 2 h w temperaturze otoczenia 40 °C; 4,75–5,25 V na każdym porcie; skok obciążenia 1,5 A → 0 A w 0 °C i 40 °C bez zadziałania zwieracza | niewykonana |
 | Zwarcie portu | pozostałe porty oraz stacja pracują; zwarcie trwające godzinę nie uszkadza sekcji | niewykonana |
 | Ochrona telefonu przed przepięciem (OVP) | wymuszone zwarcie VIN–VREG regulatora; VUSB nigdy nie przekracza 5,5 V; po odłączeniu regulatora uszkodzona sekcja pozostaje wyłączona | niewykonana |
-| Przetwornica | 150 W obciążenia rezystancyjnego na odpowiednim źródle, 230 V ±5%, THD <5%; rzeczywiste zasilacze, rozruch i skoki obciążenia | niewykonana |
+| Przetwornica | 150 W obciążenia rezystancyjnego na odpowiednim źródle, 230 V ±5%, THD <5%; rzeczywiste zasilacze, rozruch i skoki obciążenia; podłączenie zasilacza pod napięciem bez uszkodzenia mostka; brak jednostronnego nasycenia rdzenia | niewykonana |
 | Ochrona AC | izolacja, PE, prąd dotykowy, uziemienie i reakcja RCBO sprawdzone zgodnie z przyjętą normą i konfiguracją | niewykonana |
+| Zgodność RED | badania gotowej konfiguracji według EN 300 220-2, EN 301 489-1 i -3, EN 62368-1 oraz EN 62479; deklaracja zgodności przed przekazaniem zestawu innym | niewykonana |
 | Zakłócenia | pomiar odbioru radiowego przy pracującej przetwornicy i w pełni obciążonej ładowarce; brak pogorszenia uniemożliwiającego próbę terenową | niewykonana |
 | Praca dobowa | 24 h pełnej funkcjonalności z wymianą źródeł; zużycie energii (Wh) stacji i ładowarki zapisane osobno | niewykonana |
 

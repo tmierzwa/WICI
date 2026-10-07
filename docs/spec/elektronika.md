@@ -16,7 +16,7 @@ B+ ─ FB przy zacisku ─ przewód ─ JB+ ─ [DB: A→K] ─┘
                                │
                               GND
 A−, B−, JA−, JB− i minus Cbus połączone z GND.
-BUS+ ─ wyłącznik DC ≥30 A ─ mostek przetwornicy
+BUS+ ─ wyłącznik DC ≥30 A (znamionowany dla prądu stałego) ─ mostek przetwornicy
 ```
 
 DA i DB: osobne podwójne diody Schottky’ego ze wspólną katodą; obie anody danego elementu są połączone. Katody dołączone do BUS+. Nie wykorzystujemy jednego elementu jako dwóch wejść 20 A. Kandydaci: ST STPS3045CT lub Vishay VS-MBR3045CT-M3, dwa elementy w zestawie. [ST](https://www.st.com/en/diodes-and-rectifiers/stps3045c.html), [Vishay](https://www.vishay.com/doc/?96257=).
@@ -37,11 +37,13 @@ Kondensatory Cbus należą do stopnia mocy; rozłącznik DC odłącza mostek, ni
 
 Diody nie zapewniają ograniczenia udaru. Przy 17,6 mF, skoku napięcia 5,5 V i założonej rezystancji pętli 40 mΩ model daje początkowy prąd około 138 A. Jest to założenie do próby, a nie gwarantowana rezystancja znalezionego akumulatora. Trzeba zmierzyć prąd udarowy oraz sprawdzić całkę Joule’a (I²t) bezpieczników i dopuszczalny impuls prądowy diod i styków. Jeśli wynik będzie negatywny, konieczny będzie układ ograniczający prąd udarowy; nie dopuszcza się modułu do pracy wyłącznie przez zwiększenie wartości bezpiecznika.
 
-Lampka wejścia potwierdza wyłącznie obecność napięcia o prawidłowej polaryzacji. Ciągłość zasilania ma zapewniać jednoczesne podłączenie obu źródeł podczas wymiany, a nie energia zgromadzona w Cbus. Ochrona podczas pracy alternatora i rozruchu silnika wymaga osobnych prób motoryzacyjnych; sama dioda TVS nie dowodzi takiej odporności.
+Lampka wejścia potwierdza wyłącznie obecność napięcia o prawidłowej polaryzacji. Każde wejście A, B i C ma ponadto woltomierz cyfrowy o błędzie ≤1%, mierzący napięcie przed diodą; bez niego opiekun nie zaplanuje wymiany źródeł. Ciągłość zasilania ma zapewniać jednoczesne podłączenie obu źródeł podczas wymiany, a nie energia zgromadzona w Cbus. Ochrona podczas pracy alternatora i rozruchu silnika wymaga osobnych prób motoryzacyjnych; sama dioda TVS nie dowodzi takiej odporności.
+
+Ochrona przed głębokim rozładowaniem: przetwornica wyłącza mostek, gdy napięcie na złączach wejściowych spadnie poniżej 11,5 V (z uwzględnieniem spadku na diodzie), i uruchamia się ponownie dopiero powyżej 12,4 V. Ten sam próg i ta sama histereza dotyczą wejścia C ładowarki. Głęboko rozładowany akumulator kwasowo-ołowiowy traci pojemność, a akumulator rozruchowy — zdolność uruchomienia pojazdu; dla niego opiekun wymienia źródło wcześniej, przy około 12,2 V. Akumulator LiFePO4 ma własny BMS, który nie zastępuje tego progu.
 
 ## Jedna sekcja ładowarki
 
-Sekcję powiela się 8 razy. Każda sekcja ma własny regulator, dławik, diodę, bezpieczniki i ogranicznik portu. Obwód C nie ma wspólnej masy z A/B.
+Sekcję powiela się 8 razy. Każda sekcja ma własny regulator, dławik, diodę, bezpieczniki i ogranicznik portu. Obwód C nie ma wspólnej masy z A/B. Wspólny dla wszystkich sekcji jest odłącznik podnapięciowy wejścia C (11,5 V / 12,4 V); sam LM2596 pracuje do około 7 V wejścia i rozładowałby akumulator do zera.
 
 ```text
 C+ ─ główny F10 A ─ magistrala ─ F1 1,5 A ─ dioda polaryzacji ─ VIN regulatora
@@ -69,7 +71,7 @@ VSAFE ─ niezależny układ przepięciowy ─ GND_C
 | Próg ograniczania prądu | zakwalifikowany przedział 1,6–2,1 A przed ograniczeniem zwrotnym (foldback) lub wyłączeniem termicznym; zwarcie nie wyłącza innych sekcji |
 | DCP | D+ i D− zwarte bez dodatkowego układu identyfikacji |
 
-Nominalne 5,12 V nie gwarantuje poprawnego napięcia przy tolerancjach LM2596. W montażu dobiera się stały rezystor FB; nie pozostawiamy dostępnego potencjometru. Odbiór na złączu: 4,75–5,25 V przy 0–1,5 A, 11,5–16 V na wejściu, 0–40 °C w otoczeniu. Nie zamieniamy wymaganych kondensatorów elektrolitycznych na same ceramiczne bez sprawdzenia stabilności. [TI LM2596](https://www.ti.com/lit/ds/symlink/lm2596.pdf), [onsemi LM2596](https://www.onsemi.com/download/data-sheet/pdf/lm2596-d.pdf).
+Nominalne 5,12 V nie gwarantuje poprawnego napięcia przy tolerancjach LM2596. W montażu dobiera się stały rezystor FB; nie pozostawiamy dostępnego potencjometru. Odbiór na złączu: 4,75–5,25 V przy 0–1,5 A, 11,5–16 V na wejściu, 0–40 °C w otoczeniu. Nie zamieniamy wymaganych kondensatorów elektrolitycznych na same ceramiczne bez sprawdzenia stabilności. Bez strojenia rezystorem FB tolerancja źródła odniesienia LM2596 daje do 5,27 V, tylko 30 mV poniżej najniższego progu zwieracza; strojenie każdej sekcji jest więc obowiązkowe. Przeskok napięcia po nagłym odłączeniu obciążenia 1,5 A nie może zbliżyć VREG do progu zwieracza, ponieważ jego zadziałanie trwale wyłącza sekcję. [TI LM2596](https://www.ti.com/lit/ds/symlink/lm2596.pdf), [onsemi LM2596](https://www.onsemi.com/download/data-sheet/pdf/lm2596-d.pdf).
 
 TPS2553 dopuszcza 1,5 A prądu ciągłego przy temperaturze złącza do 105 °C. Dla rezystora o wartości dokładnie 15 kΩ karta katalogowa podaje próg 1,610–1,800 A, bez uwzględnienia tolerancji rezystora; rezystor 1% nie zapewnia wystarczającego zapasu powyżej 1,6 A. Dlatego punktem wyjścia jest rezystor 0,1%, z obowiązkową weryfikacją całego budżetu.
 
@@ -115,11 +117,15 @@ T1 uzwojenie GN ─ filtr LC ─ ochrona AC ─ dwa wyjścia zasilaczy
 
 Masa odniesienia sterownika musi być dołączona przy źródle dolnego tranzystora MOSFET. Podłączenie minusa Cbus do BRIDGE_RETURN, przed bocznikiem, ominęłoby pomiar prądu zwarcia mostka. Jednoczesne wysterowanie obu tranzystorów półmostka ma sprzętowo wyłączyć oba. FAULT zeruje ENABLE i wejście BREAK niezależnie od obsługi przerwania. Podczas startu i resetu MCU bramki pozostają wyłączone.
 
+Uzwojenie DN ma rezystancję około 12 mΩ, więc niesymetria wysterowania mostka rzędu 10 mV daje prąd stały blisko 1 A i podmagnesowanie rdzenia. Regulator mierzy składową stałą prądu uzwojenia DN i ją kompensuje; próba obejmuje prąd magnesowania bez oznak jednostronnego nasycenia, także po skokach obciążenia.
+
 Tranzystory MOSFET firm ST i Infineon mają odpowiednie napięcie i rezystancję katalogową; straty i chłodzenie oblicza się dla nagrzanych tranzystorów, a nie na podstawie prądu z nagłówka karty katalogowej. [ST](https://www.st.com/resource/en/datasheet/stp220n6f7.pdf), [Infineon](https://www.infineon.com/part/IPP030N06NF2S). Sterowniki również nie są zamienne bez zmian w układzie. [TI](https://www.ti.com/lit/ds/symlink/ucc27211.pdf), [ADI](https://www.analog.com/media/en/technical-documentation/data-sheets/4444fb.pdf).
 
 ### Transformator i filtr
 
 Moc 150 W dotyczy obciążenia rezystancyjnego; nie jest obietnicą dla dowolnego zestawu zasilaczy impulsowych. Ich współczynnik mocy, szczyty prądu i rozruch wymagają osobnej kwalifikacji. Przy minimalnym napięciu model daje tylko około 0,27 V zapasu po stronie DN, bez prądu magnesowania i strat przełączania. Jeśli próba zawiedzie, należy zmienić transformator lub obniżyć dopuszczalną moc, a nie podnosić próg zwarcia.
+
+Zasilacz impulsowy bez PFC pobiera prąd szczytowy około trzykrotnie większy od wartości skutecznej. Laptop 60 W daje po stronie DN szczyty rzędu 50 A, a prąd ładowania kondensatora wejściowego zasilacza podłączanego pod napięcie wielokrotnie przekracza próg 75 A. Zasilacze podłącza się więc przed zamknięciem wyłącznika DC, a przetwornica rusza z łagodnym startem napięcia. Podłączenie pod napięciem może wyzwolić zatrzask FAULT; wymaga wtedy ręcznego restartu, ale nie może uszkodzić mostka.
 
 T1 do pierwszej próby: rdzeń stalowy 50 Hz, Ae ≥14 cm², pole okna na uzwojenia ≥1200 mm². Uzwojenie dolnego napięcia (DN): 20 zwojów, cztery równoległe druty 1,8 mm; uzwojenie górnego napięcia (GN): 840 zwojów drutem 0,50 mm. Przekładnia: 42. Izolacja i odstępy zapewniające separację od sieci; konstrukcję karkasu oraz barierę izolacyjną zatwierdza wykonawca transformatora. Nie wystarczy nawinąć obu uzwojeń na przypadkowym rdzeniu.
 
