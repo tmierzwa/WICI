@@ -25,6 +25,8 @@ A/B,3,"woltomierz cyfrowy wejść A, B i C","zakres 0–20 V, błąd ≤1%, pob�
 ładowarka,8,bezpiecznik wyjściowy,"szybki 3,15 A, parametry dla prądu stałego",Littelfuse,Eaton,sprawdzić I²t wyłączania przy zadziałaniu tyrystora
 ładowarka,8,gniazdo USB-A,"1,5 A prądu ciągłego",producent A,producent B,próba cieplna i spadku napięcia na przewodzie
 ładowarka,1,odłącznik podnapięciowy wejścia C,"wyłączenie przy 11,5 V z zatrzaskiem, ręczne załączenie przy ≥12,4 V, ≥10 A DC",niewybrany,niewybrany,wymagany projekt i kwalifikacja
+ładowarka,1,przycisk RESTART,"chwilowy, zwierny, montaż panelowy, osłona przed przypadkowym naciśnięciem",APEM,Schurter,ręczne załączenie po odłączeniu podnapięciowym
+ładowarka,1,sygnalizator ostrzegawczy,"bursztynowa dioda świecąca i brzęczyk z generatorem 12 V, ≥75 dB w odległości 10 cm, pobór ≤30 mA",CUI Devices,Kingstate,"ostrzeżenie przy 11,8 V; sprawdzić słyszalność w schronieniu"
 przetwornica,4,tranzystor MOSFET,"≥60 V, RDS(on) ≤3,1 mΩ przy 10 V",ST STP220N6F7,Infineon IPP030N06NF2S,próba cieplna
 przetwornica,2,sterownik półmostka,"logika 3,3 V, sterowanie około 10 V",TI UCC27211,ADI LTC4444,różne układy bootstrapu i zasilania
 przetwornica,1,mikrokontroler sterujący,"komplementarne PWM, czas martwy, sprzętowe wejście awaryjne",ST STM32F103,Microchip dsPIC33CK,oprogramowanie układowe jeszcze nie powstało
@@ -32,6 +34,8 @@ przetwornica,1,szybki komparator,sprzętowe odcięcie prądu,TI TLV3201,Microchi
 przetwornica,1,transformator,20 i 840 zwojów; rdzeń i izolacja według projektu,niezależna nawijalnia A,niezależna nawijalnia B,kwalifikacja cieplna i dielektryczna prototypu
 przetwornica,1,dławik wyjściowy,"początkowo 10 mH, ≥1 A, z zapasem na impulsy",niezależna nawijalnia A,niezależna nawijalnia B,kwalifikacja przy prądzie rozruchowym zasilaczy
 przetwornica,2,wyłącznik RCBO,"typ A, 30 mA, dwubiegunowy; prąd znamionowy do doboru",ABB,Schneider Electric,układ PE niezakwalifikowany
+przetwornica,1,przycisk RESTART,"chwilowy, zwierny, montaż panelowy, osłona przed przypadkowym naciśnięciem",APEM,Schurter,ręczne załączenie po odłączeniu podnapięciowym
+przetwornica,1,sygnalizator ostrzegawczy,"bursztynowa dioda świecąca i brzęczyk z generatorem 12 V, ≥75 dB w odległości 10 cm, pobór ≤30 mA",CUI Devices,Kingstate,"ostrzeżenie przy 11,8 V; sprawdzić słyszalność w schronieniu"
 USB,1,pamięć USB,"64 GB, sprawdzony pakiet offline",producent A,producent B,obrazy jeszcze nie powstały
 przewody,1,przewód Ethernet,"kategoria 5e, LAN",producent A,producent B,element powszechnie dostępny
 przewody,1,adapter USB–Ethernet,sterowniki offline dla obsługiwanych systemów,Realtek RTL8153,ASIX AX88179,wymagane zakwalifikowane zamienniki
