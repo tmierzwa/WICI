@@ -1,5 +1,9 @@
 """Narracja pionowej wersji ~60 s (Reels, TikTok). Format jak w narracja.py."""
 
+CALL = ("Rozsyłamy wici!", "Rozsyłamy wici!", {  # wezwanie do działania, nie płaskie zakończenie
+    "settings": {"stability": 0.25, "style": 0.8, "speed": 0.95},
+    "next_text": "– zawołał z mocą, wzywając wszystkich do działania."})
+
 SEGMENTS = [
     ("v1", [
         "Gaśnie prąd w całej okolicy.",
@@ -29,6 +33,6 @@ SEGMENTS = [
     ]),
     ("v7", [
         ("Szczegóły na GitHubie.", "Szczegóły na git habie."),
-        "Rozsyłamy wici.",
+        CALL,
     ]),
 ]

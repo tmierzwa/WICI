@@ -4,6 +4,10 @@ Każdy segment to lista zdań. Zdanie jest tekstem napisów; jeśli lektor ma
 przeczytać coś inaczej, podajemy parę (napis, tekst_dla_lektora).
 """
 
+CALL = ("Rozsyłamy wici!", "Rozsyłamy wici!", {  # wezwanie do działania, nie płaskie zakończenie
+    "settings": {"stability": 0.25, "style": 0.8, "speed": 0.95},
+    "next_text": "– zawołał z mocą, wzywając wszystkich do działania."})
+
 SEGMENTS = [
     ("s1a", [
         "Wyobraź sobie, że gaśnie światło.",
@@ -138,6 +142,6 @@ SEGMENTS = [
     ("s9c", [
         ("Cały projekt jest otwarty, na GitHubie.", "Cały projekt jest otwarty, na git habie."),
         "Zajrzyj, zadaj pytanie, zgłoś błąd.",
-        "Rozsyłamy wici.",
+        CALL,
     ]),
 ]

@@ -295,6 +295,6 @@ Cały projekt jest otwarty, na GitHubie.
 Zajrzyj, zadaj pytanie, zgłoś błąd.
 
 75
-00:04:35,020 --> 00:04:36,504
-Rozsyłamy wici.
+00:04:35,020 --> 00:04:36,627
+Rozsyłamy wici!
 

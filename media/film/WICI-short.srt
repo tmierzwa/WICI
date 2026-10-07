@@ -91,6 +91,6 @@ programistów i ludzi ze służb.
 Szczegóły na GitHubie.
 
 24
-00:00:56,928 --> 00:00:58,151
-Rozsyłamy wici.
+00:00:56,928 --> 00:00:58,205
+Rozsyłamy wici!
 

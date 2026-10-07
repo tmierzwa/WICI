@@ -205,7 +205,7 @@ class Short(WICI):
                   ([LaggedStart(*[GrowFromCenter(c) for c in chips], lag_ratio=0.3)], 1.6))
         self.clear_all(0.3)
 
-        motto = T("Rozsyłamy wici.", 60, ACCENT, font=SERIF).move_to(UP * 3.4)
+        motto = T("Rozsyłamy wici!", 60, ACCENT, font=SERIF).move_to(UP * 3.4)
         url = T("github.com/tmierzwa/WICI", 40, WHITE, weight=SEMIBOLD).move_to(UP * 1.9)
         self.narr("v7", ([FadeIn(url)], 1.0), ("at", 1), (FadeIn(motto), 0.8))
         self.wait(1.0)

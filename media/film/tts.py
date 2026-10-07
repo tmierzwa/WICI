@@ -47,10 +47,17 @@ def api_key():
     raise SystemExit("brak ELEVENLABS_API_KEY")
 
 
-def synth(text, prev, key):
-    """Zwraca PCM zdania przycięty do końca ostatniej litery (znaczniki czasu ElevenLabs)."""
+def synth(text, prev, key, opts=None):
+    """Zwraca PCM zdania przycięty do końca ostatniej litery (znaczniki czasu ElevenLabs).
+
+    opts (opcjonalnie): "settings" nadpisuje ustawienia głosu, "next_text" podpowiada modelowi
+    intonację; podpowiedź nie trafia do nagrania, bo cięcie kończy się na ostatniej literze zdania.
+    """
+    opts = opts or {}
     payload = {"text": text, "model_id": MODEL, "language_code": "pl",
-               "voice_settings": SETTINGS, "previous_text": prev}
+               "voice_settings": {**SETTINGS, **opts.get("settings", {})}, "previous_text": prev}
+    if "next_text" in opts:
+        payload["next_text"] = opts["next_text"]
     h = hashlib.sha1(json.dumps([VOICE_ID, payload], ensure_ascii=False).encode()).hexdigest()[:16]
     cached = CACHE / f"{h}.json"
     if not cached.exists():
@@ -88,16 +95,16 @@ def main():
     CACHE.mkdir(parents=True, exist_ok=True)
     AUDIO.mkdir(parents=True, exist_ok=True)
     key = api_key()
-    flat = [(s if isinstance(s, str) else s[1]) for _, ss in SEGMENTS for s in ss]
+    flat = [(s if isinstance(s, str) else s[1]) for _, ss in SEGMENTS for s in ss]  # (napis, lektor[, opcje])
     timing, n = {}, 0
     for seg, sentences in SEGMENTS:
         pcm = bytearray(b"\0\0" * int(LEAD_IN * RATE))
         items = []
         for k, s in enumerate(sentences):
-            shown, spoken = (s, s) if isinstance(s, str) else s
+            shown, spoken, opts = (s, s, None) if isinstance(s, str) else (s + (None,))[:3]
             prev = " ".join(flat[max(0, n - 2):n])
             n += 1
-            data = synth(spoken, prev, key)
+            data = synth(spoken, prev, key, opts)
             start = len(pcm) / 2 / RATE
             pcm += data
             items.append({"text": shown, "start": round(start, 3), "end": round(len(pcm) / 2 / RATE, 3)})

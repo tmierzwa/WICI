@@ -925,7 +925,7 @@ class WICI(MovingCameraScene):
 
         allm = VGroup(center, nodes, edges, small, e2, tests)
         url = T("github.com/tmierzwa/WICI", 54, WHITE, weight=SEMIBOLD)
-        motto = T("Rozsyłamy wici.", 56, ACCENT, font=SERIF).next_to(url, UP, buff=1.0)
+        motto = T("Rozsyłamy wici!", 56, ACCENT, font=SERIF).next_to(url, UP, buff=1.0)
         hint = T("zajrzyj · zadaj pytanie · zgłoś błąd", 28, GREY_A).next_to(url, DOWN, buff=0.6)
         self.narr("s9c",
                   ([allm.animate.scale(0.3).set_opacity(0).move_to(UP * 2)], 1.0),
