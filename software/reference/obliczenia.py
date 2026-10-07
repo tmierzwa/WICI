@@ -14,10 +14,10 @@ def hata_urban_loss_db(f_mhz: float, base_m: float, mobile_m: float, km: float) 
             + (44.9 - 6.55 * math.log10(base_m)) * math.log10(km))
 
 
-def p1_tx_seconds(datagram_bytes: int, bit_rate: float = 4800) -> float:
-    """P1 airtime of one datagram burst, excluding ramp, CCA and retries."""
+def p1_tx_seconds(datagram_bytes: int, bit_rate: float = 4800, ramp_ms: float = 0.0) -> float:
+    """P1 airtime of one datagram burst plus ramp/turnaround per fragment; excludes CCA and retries."""
     fragments = math.ceil(datagram_bytes / 86)
-    return 8 * (datagram_bytes + 29 * fragments) / bit_rate
+    return 8 * (datagram_bytes + 29 * fragments) / bit_rate + fragments * ramp_ms / 1000
 
 
 def lxmf_packet_bytes(content_bytes: int) -> int:
@@ -26,10 +26,23 @@ def lxmf_packet_bytes(content_bytes: int) -> int:
     return 19 + 32 + 16 + 16 * math.ceil((plaintext + 1) / 16) + 32
 
 
-def station_power_w(mcu_ma: float) -> float:
-    """Station input power: always-on RX, TX at the 1/13 debt limit, screen and FRAM."""
-    rx_ma, tx_ma, tx_fraction, peripheral_ma, rail_v, efficiency = 22.0, 45.0, 1 / 13, 1.0, 3.3, 0.85
-    return rail_v * (mcu_ma + rx_ma + tx_fraction * tx_ma + peripheral_ma) / 1000 / efficiency
+STATION = {"rail_v": 3.3, "rail_efficiency": 0.85, "rx_ma": 22.0, "tcxo_ma": 2.0, "tx_ma_13dbm": 45.0,
+           "tx_fraction": 1 / 13, "lcd_5v_rail_ma": 0.5, "fram_buttons_supervisor_ma": 0.5,
+           "front_light_ma": 15.0, "front_light_duty": 0.5 / 24,
+           "input_side_ma": 2 * 0.08 + 0.05 + 0.01, "aa_vsys_v": 6.0, "battery_vsys_v": 12.8}
+
+
+def station_rail_ma(mcu_ma: float) -> float:
+    """Average 3V3 rail current: always-on RX with TCXO, TX at the 1/13 debt limit, LCD, FRAM, front light."""
+    c = STATION
+    return (mcu_ma + c["rx_ma"] + c["tcxo_ma"] + c["tx_fraction"] * c["tx_ma_13dbm"] + c["lcd_5v_rail_ma"]
+            + c["fram_buttons_supervisor_ma"] + c["front_light_ma"] * c["front_light_duty"])
+
+
+def station_power_w(mcu_ma: float, vsys_v: float = STATION["aa_vsys_v"]) -> float:
+    """Station input power: 3V3 rail through the converter plus input-side controllers, converter Iq and dividers."""
+    c = STATION
+    return c["rail_v"] * station_rail_ma(mcu_ma) / 1000 / c["rail_efficiency"] + vsys_v * c["input_side_ma"] / 1000
 
 
 def calculate() -> dict:
@@ -50,17 +63,26 @@ def calculate() -> dict:
     c_bus, delta_v, loop_r = 0.0176, 5.5, 0.04
     request = [1, 0, "0" * 32, 65535, 4, 65535, "\\" * 64, '"' * 96, 2]
     f_mhz, tx_dbm, antenna_dbi, cable_db, sensitivity_dbm = 869.525, 13.0, 2.15, 1.0, -110.0
+    frontend_loss_db, ramp_ms_assumed = 3.0, 2.0
     link_gain_db = tx_dbm + 2 * antenna_dbi - 2 * cable_db
     urban = {f"base_{b:g}m_mobile_{m:g}m": hata_urban_loss_db(f_mhz, b, m, 1.0) for b, m in ((30, 1.5), (10, 1.5), (10, 3))}
     smallest_cycle_s = 13 * len(fragment(b"x", b"12345678")[0]) * 8 / 4800
     eeprom_pages, eeprom_endurance = 8192 // 32, 1_000_000
     reserve, aa_set_wh, battery_wh = 1.2, 4 * 4.5 * 0.8, usable_battery_wh
     level1 = {}
-    for name, mcu_ma in (("nrf52840", 3.0), ("esp32_s3", 30.0)):
+    for name, mcu_ma in (("nrf52840", 3.0), ("esp32_s3_30ma", 30.0), ("esp32_s3_45ma", 45.0), ("esp32_s3_60ma", 60.0)):
         power_w = station_power_w(mcu_ma)
         day_wh = 24 * power_w * reserve
-        level1[name] = {"mcu_ma_assumed": mcu_ma, "input_w": power_w, "wh_24h_with_reserve": day_wh,
-                        "aa_set_hours": aa_set_wh / day_wh * 24, "battery_12v_days": battery_wh / day_wh}
+        power_12v_w = station_power_w(mcu_ma, STATION["battery_vsys_v"])
+        day_12v_wh = 24 * power_12v_w * reserve
+        level1[name] = {"mcu_ma_assumed": mcu_ma, "rail_ma": station_rail_ma(mcu_ma), "input_w": power_w,
+                        "wh_24h_with_reserve": day_wh, "aa_set_hours": aa_set_wh / day_wh * 24,
+                        "input_w_12v": power_12v_w, "wh_24h_with_reserve_12v": day_12v_wh,
+                        "battery_12v_days": battery_wh / day_12v_wh}
+    # Highest average 3V3 current that still meets W23 (48 h on the AA set, with reserve).
+    w23_input_w = aa_set_wh / 48 / reserve
+    w23_rail_ma = ((w23_input_w - STATION["aa_vsys_v"] * STATION["input_side_ma"] / 1000)
+                   * STATION["rail_efficiency"] / STATION["rail_v"] * 1000)
     host = {}
     for host_ac_w in (15.0, 35.0, 60.0):
         input_w = host_ac_w / efficiency + idle_w + diode_w
@@ -99,12 +121,13 @@ def calculate() -> dict:
                         "battery_ah": 60, "usable_fraction_assumed": 0.50,
                         "reserve_fraction": 0.20, "mosfet_hot_resistance_factor": 1.7,
                         "hotplug_loop_resistance_assumed_ohm": loop_r},
-        "station_level1": {"assumptions": {"rail_v": 3.3, "rail_efficiency": 0.85, "rx_ma": 22.0, "tx_ma_13dbm": 45.0,
-                                           "tx_fraction": 1 / 13, "screen_fram_ma": 1.0, "reserve_fraction": 0.20,
+        "station_level1": {"assumptions": {**STATION, "reserve_fraction": 0.20,
                                            "aa_set_usable_wh": aa_set_wh, "aa_cell_wh": 4.5, "aa_usable_fraction": 0.8},
                            "variants": level1,
+                           "w23_max_rail_ma_on_aa": w23_rail_ma,
+                           "w23_max_mcu_ma_on_aa": w23_rail_ma - station_rail_ma(0.0),
                            "laptop_relay_wh_24h_with_reserve": list(laptop_relay_wh),
-                           "laptop_relay_to_station_ratio": [laptop_relay_wh[0] / level1["esp32_s3"]["wh_24h_with_reserve"],
+                           "laptop_relay_to_station_ratio": [laptop_relay_wh[0] / level1["esp32_s3_60ma"]["wh_24h_with_reserve"],
                                                              laptop_relay_wh[1] / level1["nrf52840"]["wh_24h_with_reserve"]]},
         "level3_pools": {"laptop_router_wh_with_reserve": station_wh * reserve,
                          "laptop_router_batteries": math.ceil(station_wh * reserve / battery_wh),
@@ -122,7 +145,10 @@ def calculate() -> dict:
                       "per_retry_s": [relay_cycle["typical_request"], relay_cycle["max_fields_request"]],
                       "fifty_requests_min_at_1200_bit_s": [50 * t / 60 for t in slow_per_request],
                       "quiet_10t_throughput_gain": 13 / 11 - 1,
-                      "p1_tx_plus_quiet_s": {f"{b}b": 13 * p1_tx_seconds(b) for b in (100, 250, 500, 600)}},
+                      "p1_tx_plus_quiet_s": {f"{b}b": 13 * p1_tx_seconds(b) for b in (100, 250, 500, 600)},
+                      "ramp_ms_per_fragment_assumed": ramp_ms_assumed,
+                      "p1_tx_plus_quiet_s_with_ramp": {f"{b}b": 13 * p1_tx_seconds(b, ramp_ms=ramp_ms_assumed)
+                                                       for b in (100, 250, 500, 600)}},
         "energy": {"station_24h_wh": station_wh, "phones_wh": phones_wh,
                    "total_wh": station_wh + phones_wh,
                    "total_with_reserve_wh": (station_wh + phones_wh) * 1.2,
@@ -137,6 +163,11 @@ def calculate() -> dict:
                   "free_space_margin_1km_db": link_gain_db - (32.44 + 20 * math.log10(f_mhz)) - sensitivity_dbm,
                   "hata_urban_loss_1km_db": urban,
                   "hata_urban_margin_1km_db": {k: link_gain_db - v - sensitivity_dbm for k, v in urban.items()},
+                  "sensitivity_target_at_connector_dbm": sensitivity_dbm,
+                  "frontend_loss_assumed_db": frontend_loss_db,
+                  "chip_sensitivity_needed_for_target_dbm": sensitivity_dbm - frontend_loss_db,
+                  "hata_urban_margin_1km_if_chip_meets_target_only_db": {
+                      k: link_gain_db - v - sensitivity_dbm - frontend_loss_db for k, v in urban.items()},
                   "fresnel_radius_midpoint_1km_m": 17.32 * math.sqrt(0.5 * 0.5 / (f_mhz / 1000)),
                   "eeprom_writes_per_day_worst": 86400 / smallest_cycle_s,
                   "eeprom_years_worst_1m_cycles_256_pages": eeprom_pages * eeprom_endurance / (86400 / smallest_cycle_s) / 365,
@@ -170,6 +201,8 @@ def calculate() -> dict:
                     "i_squared_t_a2s_model": (delta_v / loop_r)**2 * loop_r * c_bus / 2},
         "limits": ["No radio range measurement; Hata is used below its 30 m base height range",
                    "Station currents are catalogue assumptions, not measurements; AA capacity depends on load and temperature",
+                   "AA hours assume Li-FeS2 cells; alkaline and NiMH lose much of their capacity at -10 to -20 C",
+                   "Receiver front-end loss and per-fragment ramp time are assumptions until measured in T4",
                    "LXMF packet sizes follow the reference Reticulum e40191b and LXMF c3ff2d6 structure, not captured traffic",
                    "No transformer leakage or PSU inrush model",
                    "No switching, magnetic or reactive current losses in voltage margin",

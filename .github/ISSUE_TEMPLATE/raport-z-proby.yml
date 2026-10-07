@@ -1,12 +1,19 @@
 name: Raport z próby / Test report
-description: Wynik próby fizycznej według docs/spec/odbior.md
+description: Wynik próby fizycznej, na płytkach rozwojowych albo na emulatorze, według docs/spec/odbior.md
 labels: [próba]
 body:
   - type: input
     id: test
     attributes:
       label: Próba
-      description: Nazwa z tabeli odbioru lub grupa T1–T8
+      description: Nazwa z tabeli odbioru lub grupa T1–T8 oraz wymagania W, których dotyczy
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Wersja źródeł
+      description: Commit WICI (w tym docs/spec/odbior.md), przypięte commity microReticulum, LXMF i Reticulum, numer egzemplarza i osoba wykonująca
     validations:
       required: true
   - type: textarea
@@ -30,6 +37,15 @@ body:
       description: Wynik względem warunku zaliczenia; załącz surowe dane. Dla komunikacji podaj id/revision, czas lokalnego zapisu, COMMIT w OSP i powrotu RECEIVED, liczbę datagramów, czas TX, odrzuty i restarty. Nie publikuj kluczy, tokenów ani danych mieszkańców.
     validations:
       required: true
+  - type: checkboxes
+    id: integrity
+    attributes:
+      label: Rzetelność
+      options:
+        - label: Liczbę powtórzeń i warunek zaliczenia ustalono przed wykonaniem próby
+          required: true
+        - label: Raport nie zawiera kluczy, tokenów ani danych mieszkańców
+          required: true
   - type: dropdown
     id: verdict
     attributes:

@@ -9,7 +9,7 @@ SPDX-FileCopyrightText = "2026 Tomek Mierzwa and WICI contributors"
 SPDX-License-Identifier = "CC-BY-4.0"
 
 [[annotations]]
-path = ["**/*.py", "software/reference/schema.sql", ".github/**"]
+path = ["**/*.py", "software/reference/schema.sql", ".github/**", "firmware/**", "**/*.c", "**/*.h", "**/*.cpp", "**/*.hpp", "**/*.ino", "**/*.sh", "**/platformio.ini", "**/CMakeLists.txt"]
 precedence = "closest"
 SPDX-FileCopyrightText = "2026 Tomek Mierzwa and WICI contributors"
 SPDX-License-Identifier = "MIT"

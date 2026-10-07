@@ -5,26 +5,32 @@ Podane wartości służą do wykonania i pomiaru prototypu. Warianty różnych p
 ## Zasilanie stacji
 
 ```text
-4 × AA ─ wyłącznik ─ idealna dioda DAA ────────────────┐
-12 V ─ F 1 A ─ TVS12 ─ idealna dioda D12 z wejściem EN ─┴─ VSYS ─ przetwornica podwyższająco-obniżająca ─ 3V3
-                         │
-                 nadzór napięcia 12 V (11,5 V / 12,4 V, zatrzask) ─ EN
+4 × AA ─ wyłącznik główny, biegun 1 ─ idealna dioda DAA (sterownik PMOS) ─────────────────────┐
+12 V ─ F 1 A ─ TVS ─ C 47–100 µF ─ wyłącznik główny, biegun 2 ─ łącznik dwukierunkowy S12 ───┴─ VSYS ─ C ≥220 µF ─ przetwornica podwyższająco-obniżająca ─ 3V3
+                                                     │ (polaryzacja, OVP ≈17 V, UV 11,5 V z zatrzaskiem)     │
+                                                     └─ nadzór 12 V ─ EN/UV                          komparator VSYS ─ przerwanie MCU
 ```
 
 | Element | Wymaganie prototypu |
 |---|---|
-| Ogniwa | 4 × AA: litowe 1,5 V (zalecane do przechowywania), alkaliczne lub NiMH; koszyk z wyłącznikiem i kluczowaniem przeciw odwrotnemu włożeniu |
-| VSYS | 3,6–16 V; źródło o wyższym napięciu zasila stację, przełączenie bez spadku 3V3 poniżej progu resetu |
-| Idealne diody DAA i D12 | sterownik z tranzystorem MOSFET, prąd wsteczny ≤1 µA; kandydaci TI LM74700-Q1 i ADI LTC4359 |
-| Przetwornica 3V3 | podwyższająco-obniżająca, wejście 2,7–16 V, ≥500 mA, sprawność ≥85% przy 30–60 mA, prąd spoczynkowy ≤50 µA; kandydaci TI TPS63070 i ADI LTC3115-1 |
-| Wejście 12 V | 9–16 V; bezpiecznik 1 A przy wtyku; TVS SMBJ18A; ochrona przed odwrotną polaryzacją |
-| Odłączenie 12 V | wyłączenie przy 11,5 V, ponowne załączenie dopiero po odłączeniu i ponownym podłączeniu źródła albo przytrzymaniu OK, przy ≥12,4 V; stacja pracuje wtedy z ogniw |
-| Progi ogniw | ostrzeżenie przy 4,4 V (1,1 V na ogniwo), kontrolowane wyłączenie przy 4,0 V po zakończeniu zapisu FRAM |
-| Pomiar | ADC napięcia ogniw i wejścia 12 V; błąd ≤2%; wynik na ekranie i w `INFO` |
-| Pobór | cel: ≤35 mA z 3V3 w odbiorze dla wykonania A; pomiar w RX, TX i przy włączonym ekranie (W23) |
-| USB | urządzenie samozasilane; VBUS tylko do wykrycia hosta przez dzielnik ≥100 kΩ; brak połączenia VBUS z VSYS |
+| Ogniwa | 4 × AA: litowe Li-FeS2 1,5 V (wymagane do przechowywania i do W23), alkaliczne lub NiMH tylko awaryjnie; koszyk z kluczowaniem przeciw odwrotnemu włożeniu. W23 i praca w −10 °C dotyczą wyłącznie ogniw Li-FeS2; ogniwa alkaliczne i NiMH tracą w −10…−20 °C około 50–80% pojemności |
+| Wyłącznik główny | działa na oba źródła: łącznik dwubiegunowy przed sumowaniem źródeł albo sterownik z zatrzaskiem przycisku (soft-latch, np. ADI LTC2954 lub MAX16150) za sumowaniem, wyłączający S12 i przetwornicę; wyłączenie po zakończeniu zapisu FRAM |
+| VSYS | 3,4–16 V; źródło o wyższym napięciu zasila stację, przełączenie bez spadku 3V3 poniżej progu resetu |
+| Idealna dioda DAA (ogniwa) | sterownik tranzystora PMOS pracujący od napięcia ogniw, np. ADI LTC4412 (2,5–28 V, około 11 µA); LM74700-Q1 startuje dopiero od 3,9 V, a LTC4359 od 4 V, więc nie nadają się do tego toru. Drugi kandydat: dioda Schottky’ego albo tranzystor z akceptacją spadku na diodzie podłożowej, uwzględnionego w progach ogniw |
+| Łącznik S12 (12 V) | odłączenie 12 V realizuje łącznik dwukierunkowy (dwa tranzystory MOSFET przeciwsobnie); wejście EN pojedynczego sterownika idealnej diody nie odłącza źródła, bo prąd płynie dalej przez diodę podłożową. Kandydaci: sterownik TI LM74800-Q1 lub LM74502 z dwoma tranzystorami MOSFET albo eFuse z blokadą prądu wstecznego, OVP i UVLO, np. TI TPS25947; wytrzymałość ≥40 V |
+| Ochrona przepięciowa | S12 odcina VSYS przy około 17 V. TVS SMBJ18A ogranicza impuls dopiero do około 29 V, więc nie chroni sama przetwornicy. Kondensator elektrolityczny 47–100 µF na wejściu 12 V tłumi oscylacje przy podłączaniu przewodu; bez tłumienia przepięcie sięga około 2 × Vin. Wytrzymałość wejścia przetwornicy 3,3 V ≥ napięcie odcięcia OVP z zapasem |
+| Przetwornica 3V3 | podwyższająco-obniżająca, wejście 2,7–16 V w pracy, ≥500 mA, sprawność ≥85% przy 30–60 mA, prąd spoczynkowy ≤50 µA; kandydaci TI TPS63070 (maksimum wejścia 16 V, wymaga skutecznego OVP i tłumienia) i ADI LTC3115-1 (do 40 V, większy zapas, do oceny) |
+| Wejście 12 V | 11,5–16 V w pracy; pierwsze załączenie przy ≥12,0 V; bezpiecznik 1 A przy wtyku; TVS SMBJ18A; ochrona przed odwrotną polaryzacją w S12. Nie podłączać do instalacji pojazdu z pracującym silnikiem, dopóki próby impulsami według ISO 7637-2 nie wykażą odporności |
+| Odłączenie 12 V | wyłączenie przy 11,5 V z zatrzaskiem (komparator z zatrzaskiem albo wejście UV eFuse); po zatrzaśnięciu ponowne załączenie dopiero po odłączeniu i ponownym podłączeniu źródła albo przytrzymaniu OK, przy ≥12,4 V; stacja pracuje wtedy z ogniw |
+| Wykrycie zaniku zasilania | komparator VSYS z wyjściem na przerwanie MCU (np. TI TPS3840) i kondensator podtrzymania ≥220 µF, dobrany tak, by po sygnale dokończyć jedną transakcję FRAM i przerwać TX; sprawdzane wyjęciem ogniw podczas zapisu i nadawania |
+| Progi ogniw | ostrzeżenie przy 4,4 V (1,1 V na ogniwo), kontrolowane wyłączenie przy 4,0 V po zakończeniu zapisu FRAM; progi ocenia się na filtrowanej średniej z okresów samego odbioru, bo impulsy TX chwilowo obniżają napięcie zimnych ogniw |
+| Pomiar | ADC napięcia ogniw i wejścia 12 V przez dzielniki odłączane między pomiarami; błąd ≤2%; wynik na ekranie i w `INFO` |
+| Pobór | cel średni z 3V3 w pracy przekaźnika: wykonanie A ≤35 mA (model 32 mA), wykonanie B ≤60 mA (W23 dopuszcza w modelu najwyżej około 64 mA). Dla ESP32-S3 W23 zależy od lekkiego uśpienia MCU przy stale włączonym odbiorniku; prąd aktywny 40–60 mA daje w modelu tylko 35–46 h. Pomiar w RX, TX, przy włączonym ekranie i podświetleniu (W23) |
+| Szyna 5 V ekranu | Sharp LS027B7DH01 wymaga zasilania 5 V (zakres pracy −20…+70 °C): włączana przetwornica 5 V o małym prądzie spoczynkowym, np. TI TPS61222 lub TPS61099; zgodność poziomów logicznych 3,3 V z kartą ekranu do sprawdzenia. EXTCOMIN steruje wyjście sprzętowego licznika lub RTC, nie program. Zgodność protokołu i zasilania JDI LPM027M128C do sprawdzenia |
+| Podświetlenie ekranu | diody LED krawędziowe (front light), włączane przyciskiem i wyłączane po czasie, bo schronienia bywają ciemne; w modelu 15 mA przez 30 min na dobę |
+| USB | stacja nie zasila się z VBUS (VSYS niezależne od VBUS); brak połączenia VBUS z VSYS. Wykonanie A: VBUS bezpośrednio do wyprowadzenia VBUS nRF52840 (4,35–5,5 V), które zasila wyłącznie PHY USB; pobór z VBUS około 2,5 mA. Wykonanie B: VBUS tylko do wykrycia hosta przez dzielnik ≥100 kΩ. Ochrona ESD linii USB (np. ST USBLC6-2 lub TI TPD4E05U06) |
 
-Powerbank przez USB nie jest dopuszczonym źródłem: wiele powerbanków wyłącza się przy prądzie rzędu kilkudziesięciu miliamperów, czyli przy poborze stacji. Ogniwa wyjmuje się na czas przechowywania albo sprawdza w przeglądzie. Przetwornica ma pracować z obu źródłami w pełnym zakresie temperatur stacji. Liczby poboru są założeniami [modelu](../../software/reference/wyniki.json), nie pomiarem.
+Powerbank przez USB nie jest dopuszczonym źródłem: wiele powerbanków wyłącza się przy prądzie rzędu kilkudziesięciu miliamperów, czyli przy poborze stacji. Na czas przechowywania ogniwa wyjmuje się ze stacji, a ich stan sprawdza się w przeglądzie. Przetwornica ma pracować z obu źródłami w pełnym zakresie temperatur stacji. Liczby poboru są założeniami [modelu](../../software/reference/wyniki.json), nie pomiarem: model obejmuje TCXO radia (2 mA), szynę 5 V ekranu, podświetlenie, sterowniki S12 i DAA, prąd spoczynkowy przetwornicy i dzielniki ADC.
 
 ## Płytka stacji R02: wymagania
 
@@ -32,15 +38,18 @@ R02 łączy mikrokontroler, tor RF jednego wykonania, FRAM, ekran, przyciski i z
 
 | Funkcja | Wymaganie |
 |---|---|
-| MCU | dwa wykonania według [specyfikacji radia](radio.md#dwa-wykonania); Wi-Fi i Bluetooth trwale wyłączone; ochrona odczytu pamięci |
-| Zegar | TCXO radia według P1; kwarc 32,768 kHz dla licznika czasu w uśpieniu |
-| Pamięć | FRAM SPI 2 Mbit na wspólnej magistrali z ekranem albo osobnej, z zapisem zakończonym przed wyłączeniem |
-| Ekran | graficzny, czytelny w świetle dziennym i na mrozie, z cyrylicą; złącze dla dwóch wykonań (D15) |
-| Przyciski | góra, dół, OK, WSTECZ; przełącznik CISZA z osłoną; wewnętrzny przycisk konfiguracji |
-| Programowanie | złącze SWD lub UART na płytce, niedostępne bez otwarcia obudowy |
-| Nadzór | sprzętowy watchdog; licznik restartów w FRAM |
+| MCU | dwa wykonania według [specyfikacji radia](radio.md#dwa-wykonania); Wi-Fi i Bluetooth wyłączone; sposób wyłączenia i argumentacja RED według [specyfikacji radia](radio.md#warunki-prawne-i-zgodność) (D14); ochrona odczytu pamięci; nRF52840 tylko w rewizji krzemu odpornej na znane obejście APPROTECT |
+| Zegar | TCXO radia według P1; kwarc 32 MHz (HFXO nRF52840) albo 40 MHz (ESP32-S3); kwarc 32,768 kHz dla licznika czasu w uśpieniu |
+| Czas | opcjonalny RTC z podtrzymaniem (np. Micro Crystal RV-3028-C7); bez niego czas stacji po zaniku zasilania jest niezaufany i tak oznaczany |
+| Pamięć | FRAM SPI 2 Mbit na wspólnej magistrali z ekranem albo osobnej, z zapisem zakończonym przed wyłączeniem. Rekordy FRAM szyfrowane kluczem przechowywanym w chronionej pamięci MCU, bo zewnętrzną FRAM da się odczytać po wylutowaniu; ZNISZCZ DANE usuwa klucz (kryptograficzne wymazanie) i nadpisuje FRAM. Wykonanie B bez zewnętrznej pamięci flash QSPI wymaga wersji ESP32-S3 z pamięcią w obudowie, np. ESP32-S3FH4R2 lub R8 (do sprawdzenia) |
+| Ekran | graficzny, czytelny w świetle dziennym i na mrozie, z cyrylicą; złącze dla dwóch wykonań (D15); szyna 5 V i podświetlenie według tabeli zasilania. Przy −20 °C ekran pracuje na granicy zakresu, bez zapasu: czytelność w −20 °C sprawdza T6 |
+| Przyciski | GÓRA, DÓŁ, OK, WSTECZ; przełącznik CISZA z osłoną; wewnętrzny przycisk konfiguracji; przycisk podświetlenia może być jednym z nich |
+| Programowanie | złącze SWD (pola Tag-Connect) lub UART na płytce, niedostępne bez otwarcia obudowy |
+| Nadzór | sprzętowy watchdog; układ nadzoru resetu; komparator zaniku zasilania; licznik restartów w FRAM |
+| USB | gniazdo USB-C (rezystory 5,1 kΩ na CC) z ochroną ESD; ESP32-S3: USB-OTG z TinyUSB (dwa porty CDC), nie USB-Serial-JTAG |
+| Ochrona odgromowa | antena zwarta dla prądu stałego (dipol pętlowy albo dipol ze zwierającym odcinkiem ćwierćfalowym), odgromnik gazowy (GDT) na przewodzie antenowym przy wejściu do budynku, połączony z uziemieniem budynku; dla poziomów 2–3 opcjonalna izolacja USB (np. ADI ADuM4160 lub TI ISOUSB211) |
 | Temperatura | cel: −20 °C do +45 °C dla gotowej stacji z ogniwami litowymi; do kwalifikacji |
-| Obudowa | bez wentylacji, z odciążeniem przewodu antenowego i 12 V; masa z ogniwami ≤1 kg jako cel |
+| Obudowa | do pracy w pomieszczeniu, IP40, bez wentylacji, z odciążeniem przewodu antenowego i 12 V; masa z ogniwami ≤1 kg jako cel; powłoka ochronna płytki (conformal coating) przeciw kondensacji po wyjęciu z zimnego magazynu. Złącza przewodów zewnętrznych IP67 albo uszczelnione taśmą |
 
 ## Wejścia A/B (poziom 3)
 
@@ -75,7 +84,7 @@ DA i DB: osobne podwójne diody Schottky’ego ze wspólną katodą; obie anody 
 | Cbus | punkt wyjścia: 8 × 2200 µF/35 V; łączny dopuszczalny prąd tętnień ≥24 A |
 | Napięcie wejściowe | 11,5–16 V przy złączu, z uwzględnieniem spadku przewodów |
 
-Kondensatory Cbus należą do stopnia mocy; rozłącznik DC odłącza mostek, nie przewody akumulatorów. Wspólna masa oznacza brak izolacji źródeł. Metalowe obudowy diod są połączone z katodą, czyli z BUS+, więc wspólny radiator może mieć ten sam potencjał. Nie zwiera to wejść A/B, ale radiator trzeba odizolować od dostępnej obudowy i GND.
+Kondensatory Cbus należą do stopnia mocy; wyłącznik DC odłącza mostek, nie przewody akumulatorów. Wspólna masa oznacza brak izolacji źródeł. Metalowe obudowy diod są połączone z katodą, czyli z BUS+, więc wspólny radiator może mieć ten sam potencjał. Nie zwiera to wejść A/B, ale radiator trzeba odizolować od dostępnej obudowy i GND.
 
 Diody nie zapewniają ograniczenia udaru. Przy 17,6 mF, skoku napięcia 5,5 V i założonej rezystancji pętli 40 mΩ model daje początkowy prąd około 138 A. Rezystancja 40 mΩ jest założeniem do próby, a nie gwarantowaną wartością znalezionego akumulatora. Trzeba zmierzyć prąd udarowy oraz sprawdzić całkę Joule’a (I²t) bezpieczników i dopuszczalny impuls prądowy diod i styków. Jeśli wynik będzie negatywny, potrzebny jest układ ograniczający prąd udarowy; nie wolno dopuścić modułu do pracy samym zwiększeniem wartości bezpiecznika.
 
@@ -83,7 +92,7 @@ Lampka wejścia potwierdza wyłącznie obecność napięcia o prawidłowej polar
 
 Ochrona przed głębokim rozładowaniem: regulator przetwornicy mierzy napięcie obu złączy przed diodami (JA+ i JB+) i wyłącza mostek, gdy wyższe z nich spadnie poniżej 11,5 V. Pomiar za diodą obarczałby wynik zmiennym spadkiem napięcia diody, 0,3–0,55 V zależnie od prądu i temperatury. Przy 11,8 V regulator włącza ostrzeżenie (dioda świecąca i brzęczyk), aby opiekun zdążył wymienić źródło. Wyłączenie jest zatrzaskiwane: ponowne załączenie następuje dopiero po zamknięciu wyłącznika DC albo naciśnięciu przycisku RESTART, i tylko przy napięciu co najmniej 12,4 V. Samo odbicie napięcia po zdjęciu obciążenia nie może uruchomić przetwornicy; rozładowany akumulator LiFePO4 bez obciążenia wraca do około 12,5–12,8 V i bez zatrzasku powodowałby cykliczne załączanie. Ten sam próg, ostrzeżenie, zatrzask i osobny przycisk RESTART dotyczą wejścia C ładowarki. Głęboko rozładowany akumulator kwasowo-ołowiowy traci pojemność, a akumulator rozruchowy przestaje uruchamiać pojazd. Dla niego opiekun wymienia źródło wcześniej, przy około 12,2 V. Akumulator LiFePO4 ma własny BMS, który nie zastępuje tego progu.
 
-Akumulatory stoją na tacy odpornej na elektrolit, z dala od dróg ewakuacji i od wejścia powietrza. Uszkodzony akumulator rozruchowy może wydzielać wodór, dlatego nie ładuje się go w pomieszczeniu z ludźmi, a przy stacji jest gaśnica.
+Akumulatory stoją na tacy odpornej na elektrolit, z dala od dróg ewakuacyjnych i od wlotów powietrza. Uszkodzony akumulator rozruchowy może wydzielać wodór, dlatego nie ładuje się go w pomieszczeniu z ludźmi, a przy stacji jest gaśnica.
 
 ## Jedna sekcja ładowarki (poziom 3)
 
@@ -115,7 +124,7 @@ VSAFE ─ niezależny układ przepięciowy ─ GND_C
 | Próg ograniczania prądu | zakwalifikowany przedział 1,6–2,1 A przed ograniczeniem zwrotnym (foldback) lub wyłączeniem termicznym; zwarcie nie wyłącza innych sekcji |
 | DCP | D+ i D− zwarte bez dodatkowego układu identyfikacji |
 
-Nominalne 5,12 V nie gwarantuje poprawnego napięcia: bez strojenia rezystorem FB tolerancja źródła odniesienia LM2596 daje do 5,27 V, tylko 30 mV poniżej najniższego progu zwieracza. Strojenie każdej sekcji jest więc obowiązkowe. Przy montażu dobiera się stały rezystor FB; dostępny potencjometr jest niedozwolony. Odbiór na złączu: 4,75–5,25 V przy 0–1,5 A, 11,5–16 V na wejściu, 0–40 °C w otoczeniu. Nie wolno zastąpić wymaganych kondensatorów elektrolitycznych samymi ceramicznymi bez sprawdzenia stabilności. Przeskok napięcia po nagłym odłączeniu obciążenia 1,5 A nie może zbliżyć VREG do progu zwieracza, ponieważ jego zadziałanie trwale wyłącza sekcję. [TI LM2596](https://www.ti.com/lit/ds/symlink/lm2596.pdf), [onsemi LM2596](https://www.onsemi.com/download/data-sheet/pdf/lm2596-d.pdf).
+Nominalne 5,12 V nie gwarantuje poprawnego napięcia: bez strojenia rezystorem FB tolerancja źródła odniesienia LM2596 daje do 5,27 V, tylko 30 mV poniżej najniższego progu zwieracza. Strojenie każdej sekcji jest więc obowiązkowe. Przy montażu dobiera się stały rezystor FB; potencjometr regulacyjny jest niedozwolony. Odbiór na złączu: 4,75–5,25 V przy 0–1,5 A, 11,5–16 V na wejściu, 0–40 °C w otoczeniu. Nie wolno zastąpić wymaganych kondensatorów elektrolitycznych samymi ceramicznymi bez sprawdzenia stabilności. Przeskok napięcia po nagłym odłączeniu obciążenia 1,5 A nie może zbliżyć VREG do progu zwieracza, ponieważ jego zadziałanie trwale wyłącza sekcję. [TI LM2596](https://www.ti.com/lit/ds/symlink/lm2596.pdf), [onsemi LM2596](https://www.onsemi.com/download/data-sheet/pdf/lm2596-d.pdf).
 
 TPS2553 dopuszcza 1,5 A prądu ciągłego przy temperaturze złącza do 105 °C. Dla rezystora o wartości dokładnie 15 kΩ karta katalogowa podaje próg 1,610–1,800 A, bez uwzględnienia tolerancji rezystora; rezystor 1% nie zapewnia wystarczającego zapasu powyżej 1,6 A. Punktem wyjścia jest więc rezystor 0,1%; cały budżet trzeba sprawdzić.
 
@@ -185,4 +194,4 @@ Wariant do odbioru elektrycznego: jeden punkt N–PE po stronie źródła, przed
 
 Wariant wymaga sprawdzonego PE lub zaprojektowanego lokalnego uziemienia. Jest to dodatkowy warunek dla zasilaczy klasy I, którego samo założenie „mamy samochód” nie zapewnia. Ani samo zwarcie N z PE, ani przycisk testowy wyłącznika różnicowoprądowego nie potwierdzają ochrony w schronieniu. Bez takiego uziemienia wariant dla przypadkowych zasilaczy klasy I pozostaje niezamknięty. Próby na stanowisku z zasilaczami klasy II nie dowodzą spełnienia całego wymagania. [Wytyczne HSE (nie jest to polska norma)](https://www.hse.gov.uk/pubns/priced/hsg141.pdf).
 
-Do odbioru potrzebne są pomiary izolacji, ciągłości PE, prądu dotykowego, reakcji na uszkodzenie i działania ochrony przy źródle o ograniczonej wydajności prądowej. Przetwornica nie jest obecnie modułem do samodzielnego złożenia przez niewykwalifikowaną osobę. Po ukończeniu tej części otwarty projekt pozwoli różnym warsztatom ją wytwarzać, ale nie zwalnia z obowiązku bezpiecznego wykonania.
+Do odbioru potrzebne są pomiary izolacji, ciągłości PE, prądu dotykowego, reakcji na uszkodzenie i działania ochrony przy źródle o ograniczonej wydajności prądowej. Przetwornica nie jest obecnie modułem do samodzielnego złożenia przez niewykwalifikowaną osobę. Po ukończeniu tej części otwarty projekt pozwoli różnym warsztatom ją wytwarzać, ale nie zwolni ich z obowiązku bezpiecznego wykonania.

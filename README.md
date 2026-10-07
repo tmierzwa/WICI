@@ -1,29 +1,58 @@
-# WICI: stacja łączności awaryjnej
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="media/logo/WICI-na-ciemnym.svg"><img src="media/logo/WICI-na-jasnym.svg" alt="WICI" width="320"></picture></p>
 
-Niekomercyjny projekt otwartej stacji łączności dla schronienia z około 50 osobami. Podstawą jest samodzielna stacja z ekranem i przyciskami: włączam stację, wystawiam antenę i jestem w sieci. Opiekun wysyła przyciskami krótkie zgłoszenia, które radio przekazuje przez inne stacje do odbiorcy w gminie. Ten odbiorca to centrum zarządzania kryzysowego gminy lub punkt wskazany przez wójta; w dokumentach jego rolę oznacza skrót OSP. Każda włączona stacja przekazuje też ruch innych stacji. W modelu stacja pracuje kilka dni na ogniwach AA, a ze źródła 12 V tygodniami. Znaleziony laptop dodaje wygodny panel, a router stronę, przez którą mieszkańcy zgłaszają potrzeby z telefonów. Telefony są ładowane z osobnego akumulatora. WICI uzupełnia system ochrony ludności. Odbiorcę zgłoszeń, status nadawania w stanach nadzwyczajnych i ochronę danych uzgadnia się z gminą przed użyciem, aby podczas alarmu nic formalnego nie blokowało pracy.
+# WICI: łączność dla schronień, gdy milkną telefony
 
-**Stan: projekt prototypu 0.5; kontroler R01.3 (stanowisko laboratoryjne P1): HOLD.** Są specyfikacja stacji, schemat i PCB stanowiska, eksporty i model kontraktów. Nie ma płytki stacji R02, ukończonego modułu RF, oprogramowania układowego, aplikacji ani gotowej pamięci USB. Nie wykonano prób fizycznych. To nie jest wydanie do użycia podczas awarii.
+Gdy przez wiele godzin nie ma prądu, zasięgu komórkowego ani internetu, ludzie w schronieniu nie mają jak powiedzieć gminie, że potrzebują lekarza, wody albo transportu. WICI to otwarty, społeczny projekt prostej stacji radiowej, która pozwala przekazać takie zgłoszenie i dostać odpowiedź.
 
-> **Bezpieczeństwo.** Przetwornica 230 V wytwarza napięcie zagrażające życiu, a akumulatory mogą spowodować pożar. Silnik pojazdu lub agregat pracujący w schronieniu, garażu albo przy wlocie powietrza zabija tlenkiem węgla. Opis przetwornicy nie jest instrukcją do samodzielnego wykonania; bez kwalifikacji i badań bezpieczeństwa nie wolno jej budować ani podłączać do ludzi i urządzeń. Projekt nie jest certyfikowanym urządzeniem, a licencje wyłączają wszelką gwarancję.
+**Włączam stację, wystawiam antenę i jestem w sieci.** Antenę montuje się wcześniej, a sieć sprawdza w terenie razem z gminą, zanim przyjdzie kryzys.
 
-WICI używa [Reticulum](https://github.com/markqvist/Reticulum) i [LXMF](https://github.com/markqvist/LXMF). Są to odrębne projekty; ich kod nie jest dołączony.
+- **Sama stacja** to małe pudełko z ekranem, kilkoma przyciskami i bateriami AA. Opiekun schronienia wybiera, czego brakuje i ilu osób to dotyczy, a stacja wysyła krótką wiadomość do punktu przyjmującego zgłoszenia w gminie. W dokumentach ten punkt nazywamy OSP. Na ekranie widać, czy zgłoszenie dotarło i czy ktoś je przeczytał.
+- **Każda włączona stacja przekazuje dalej wiadomości sąsiadów**, więc sieć sięga dalej niż pojedyncze radio.
+- **Później można dołączyć stary laptop**, który daje wygodniejszy panel, oraz **domowy router**: wtedy mieszkańcy zgłaszają potrzeby zwykłą stroną w telefonie, bez instalowania aplikacji.
+
+Stacja działa na wolnym paśmie 869,525 MHz, ma pracować co najmniej dwie doby na bateriach AA i kilka tygodni z akumulatora 12 V. WICI nie zastępuje służb ani numeru 112. Ma być uzupełnieniem gminnego systemu ochrony ludności, przygotowanym razem z gminą przed kryzysem, a nie w jego trakcie.
+
+## Gdzie jesteśmy
+
+Projekt jest na etapie **projektu prototypu (wersja 0.5)**. Mamy:
+- [koncepcję](https://tmierzwa.github.io/WICI/);
+- specyfikację stacji;
+- model obliczeniowy z testami;
+- projekt płytki do pomiarów radia.
+
+Nie zbudowaliśmy jeszcze stacji ani nie przeprowadziliśmy prób w terenie, więc to jeszcze nie jest urządzenie do użycia.
+
+Najważniejsze pytania, na które odpowiedzą dopiero próby:
+- Czy sygnał przejdzie 1 km w zabudowie? Obliczenia mówią, że antena musi być wyżej niż okno parteru.
+- Czy oprogramowanie sieci ([Reticulum](https://github.com/markqvist/Reticulum) i [LXMF](https://github.com/markqvist/LXMF)) zmieści się i będzie stabilne w małym mikrokontrolerze?
+- Czy stacja rzeczywiście wytrzyma co najmniej dwie doby na bateriach?
+
+Pełna lista prób jest w [warunkach odbioru](docs/spec/odbior.md), a otwarte sprawy w [przeglądzie technicznym](docs/review.md).
+
+## Jak możesz pomóc
+
+Szukamy osób, które znają się na:
+- **radiu i elektronice:** pomiary, anteny, projekt płytki stacji;
+- **oprogramowaniu układowym:** nRF52840, ESP32-S3, microReticulum;
+- **ochronie ludności i pracy gminy:** czy to rozwiązanie pasuje do rzeczywistych procedur;
+- **testach w terenie:** łączność radiowa, krótkofalarstwo;
+- **prostym językiem i tłumaczeniami:** zwłaszcza na ukraiński.
+
+Dobrym początkiem jest lista zadań w [CONTRIBUTING.md](CONTRIBUTING.md#od-czego-zacząć). Uwagi i pytania można zgłaszać w [Issues](https://github.com/tmierzwa/WICI/issues). Każde wskazanie błędu w obliczeniach lub założeniach jest cenne.
+
+## Co jest w repozytorium
 
 | Katalog | Zawartość |
 |---|---|
-| [docs/conception](docs/conception/index.html) | Potrzeby i poziomy zestawu, scenariusze, dostępne rozwiązania, analiza opcji, architektura, wykonalność, odporność oraz plan prób i otwarte decyzje D01–D17; [strona online](https://tmierzwa.github.io/WICI/) |
-| [docs/spec](docs/README.md) | Specyfikacja stacji w pięciu rozdziałach, warunki odbioru i BOM stacji |
-| [hardware](hardware/radio-test-r01/README.md) | Kontroler R01.3 w KiCad jako stanowisko laboratoryjne P1: BOM, raporty i paczka kandydata |
-| [software/reference](software/reference/README.md) | Model ramek, wiadomości i transakcji OSP; obliczenia |
-| [media/film](media/film/README.md) | Film o projekcie: 4 min oraz 60 s w pionie na Reels i TikTok; animacje i narracja do odtworzenia |
+| [docs/conception](docs/conception/index.html) | Koncepcja: potrzeby, scenariusze, dostępne rozwiązania, architektura, wykonalność, zagrożenia, plan prób i otwarte decyzje; [strona online](https://tmierzwa.github.io/WICI/) |
+| [docs/spec](docs/README.md) | Specyfikacja stacji, warunki odbioru i lista części |
+| [software/reference](software/reference/README.md) | Model wiadomości i potwierdzeń z testami; obliczenia zasięgu, energii i czasu nadawania |
+| [hardware](hardware/radio-test-r01/README.md) | Płytka R01.3 w KiCad, stanowisko do pomiarów radia |
+| [media/film](media/film/README.md) | Krótki film o projekcie (4 min i 60 s) |
+| [media/logo](media/logo/README.md) | Znak WICI i ikony |
 | [tools](docs/development.md) | Kontrola repozytorium i tworzenie paczki źródłowej |
 
-[Przegląd techniczny](docs/review.md) wskazuje m.in. niesprawdzoną dojrzałość stosu Reticulum na mikrokontrolerze, ujemny zapas łącza przy niskich antenach i niezamkniętą zgodność czasów Reticulum/LXMF z P1.
-
-Cel 1 km w zabudowie, ≥48 h przekaźnika na ogniwach AA, 24 godziny pełnego zestawu z wymianą źródeł 12 V i zgodność dwóch dostawców radia wymagają prób. Model Okumury-Haty daje przy antenach na wysokości okien ujemny zapas łącza na 1 km w mieście (od −0,7 do −7,3 dB, jeszcze bez zapasu na zaniki); sieć planuje się z wysoko umieszczonymi antenami i przekaźnikami. Kanał 869,525 MHz jest współdzielony z LoRaWAN i Meshtastic, więc wybór kanału zależy od pomiaru w miejscach pilotażu. Przed przekazaniem zestawu innym gotowa konfiguracja wymaga oceny zgodności z dyrektywą RED. Przetwornica 230 V i ładowarka są opisami konstrukcyjnymi; nie mają odebranych PCB. [Lista prób i braków](docs/spec/odbior.md).
-
-## Sprawdzenie repozytorium
-
-Python 3.12; poniższe kontrole nie wymagają dodatkowych bibliotek. Uruchom z katalogu głównego:
+Sprawdzenie repozytorium wymaga tylko Pythona 3.12 lub nowszego:
 
 ```sh
 python3 -m unittest discover -s software/reference -v
@@ -31,20 +60,16 @@ python3 -m unittest discover -s tests -v
 python3 tools/verify_repository.py
 ```
 
-CI uruchamia te same kontrole oraz sprawdzenie oznaczeń licencji narzędziem [REUSE](https://reuse.software/). Nie wykonuje prób elektrycznych ani nowych ERC/DRC. [Środowisko i odtwarzanie plików](docs/development.md), [pełna procedura CAD i eksportu](hardware/radio-test-r01/odtworzenie.md).
+W pull requeście użyj `python3 tools/verify_repository.py --pull-request` ([szczegóły](CONTRIBUTING.md#kontrole-przed-pr)). Środowisko CAD opisuje [docs/development.md](docs/development.md).
 
-## Współpraca i licencje
+## Kto za tym stoi
 
-Zgłoszenia błędów i propozycje: [Issues](https://github.com/tmierzwa/WICI/issues). Zasady zmian, wymagane dowody i sposób podejmowania decyzji: [CONTRIBUTING.md](CONTRIBUTING.md). Podatności bezpieczeństwa zgłaszaj prywatnie według [SECURITY.md](SECURITY.md). Obowiązuje [kodeks postępowania](CODE_OF_CONDUCT.md).
+Na razie projekt prowadzi jedna osoba ([@tmierzwa](https://github.com/tmierzwa)) i chętnie przyjmie towarzystwo. Duża część analiz, obliczeń i dokumentacji powstała z pomocą asystenta AI (Claude); takie commity mają wiersz `Co-Authored-By`. Autor przegląda każdą zmianę, ale nikt z zewnątrz jeszcze nie sprawdził obliczeń ani założeń prawnych. Traktuj wyniki jak hipotezy do sprawdzenia.
 
-Własny kod: MIT. Konstrukcja i CAD: CERN-OHL-P-2.0. Dokumentacja użytkowa: CC-BY-4.0. Biblioteki KiCad: CC-BY-SA-4.0 z wyjątkiem KiCad. Dokładne ścieżki, pochodzenie i pełne teksty: [LICENSE.md](LICENSE.md). Licencje pozwalają także na użycie komercyjne; niekomercyjny jest cel projektu.
-
-Kod: [tmierzwa/WICI](https://github.com/tmierzwa/WICI). Publikacja repozytorium nie znosi statusu HOLD sprzętu.
-
-## Jak powstała dokumentacja
-
-Projekt prowadzi jedna osoba. Duża część analiz, obliczeń, dokumentacji i kodu modelu powstała z pomocą asystenta AI (Claude); takie commity mają w opisie wiersz `Co-Authored-By`. Autor przegląda i zatwierdza każdą zmianę, ale [przegląd techniczny](docs/review.md) jest wewnętrzny. Obliczeń nie sprawdził niezależny inżynier, a założeń prawnych nie sprawdził prawnik. Każdy wynik traktuj jako hipotezę do sprawdzenia; zgłoszenia błędów są najcenniejszym wkładem.
+Projekt jest niekomercyjny i otwarty. Kod jest na licencji MIT, konstrukcja na CERN-OHL-P-2.0, a dokumentacja na CC-BY-4.0. Szczegóły są w [LICENSE.md](LICENSE.md). Podatności zgłaszaj prywatnie według [SECURITY.md](SECURITY.md). Obowiązuje [kodeks postępowania](CODE_OF_CONDUCT.md).
 
 ## In English
 
-WICI is a non-commercial, open design of an emergency communication station for a shelter of about 50 people in Poland: a self-contained station with a screen, buttons and AA cells that sends short reports over a narrowband 869.525 MHz radio (Reticulum/LXMF on the microcontroller) to a municipal crisis desk and relays other stations' traffic whenever it is on. A laptop adds an operator panel and, with a Wi-Fi router, a local web page for residents' phones. It is a **prototype design (0.5); no hardware has been built or tested, and the R01.3 lab controller is on HOLD**. Documentation is in Polish; issues and pull requests in English are welcome. Code: MIT; hardware: CERN-OHL-P-2.0; documents: CC-BY-4.0. Much of the analysis was written with AI assistance and has not been independently reviewed. See [CONTRIBUTING.md](CONTRIBUTING.md#in-english).
+WICI is a community, open-source design for an emergency radio station for shelters, for when power, mobile networks and the internet are down. The station is a small box with a screen, buttons and AA cells. It sends short requests for help to the municipal crisis desk over a licence-free 869.525 MHz radio and relays its neighbours' traffic whenever it is on. A laptop and a Wi-Fi router can be added later for a fuller panel and a web page for residents' phones.
+
+The project is at the **prototype design stage (0.5)**: nothing has been built or field-tested yet. It is currently run by one person with AI assistance, and help is very welcome, especially with radio, firmware, civil protection and field testing. Documentation is in Polish; issues and pull requests in English are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md#in-english).

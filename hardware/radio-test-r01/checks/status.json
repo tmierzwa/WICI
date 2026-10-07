@@ -3,7 +3,7 @@
   "revision": "R01.3-controller-fabrication-2026-10-06",
   "manufacturing_release": "HOLD",
   "scope": "USB controller candidate plus private TI RF reference audit; not a complete working radio modem.",
-  "role": "Design 0.5: P1 laboratory bench for test group T4; not the station controller, because the STM32F103 lacks RAM for the Reticulum stack. The station is the R02 board specified in docs/spec/elektronika.md.",
+  "role": "Design 0.5: TI side of the P1 laboratory bench for test group T4, powered from a laboratory supply; the USB suspend budget does not apply to bench use. Not the station controller, because the STM32F103 lacks RAM for the Reticulum stack. The station is the R02 board specified in docs/spec/elektronika.md. HOLD retained for production as a bus-powered modem.",
   "controller": {
     "tool": "KiCad 10.0.6",
     "erc_date": "2026-10-06T22:06:12",
@@ -64,7 +64,7 @@
     "inner_layer_track_count": 0,
     "mounting_holes": 4,
     "known_design_blockers": [
-      "Y1 standby pin is tied to V3; the oscillator alone can draw up to 7 mA against the 2.5 mA USB suspend budget of the bus-powered bench. New electrical revision and full-modem qualification required before ordering the bench; the self-powered R02 station is not affected."
+      "Y1 standby pin is tied to V3; the oscillator alone can draw up to 7 mA against the 2.5 mA USB suspend budget of a bus-powered modem. New electrical revision and full-modem qualification required before release as a modem; the lab-supplied T4 bench and the self-powered R02 station are not affected."
     ],
     "mechanical_fit": "NOT TESTED",
     "mechanical_print": "mechanika-1-do-1.pdf"

@@ -11,13 +11,14 @@ Zgłaszaj prywatnie zwłaszcza:
 - obejście weryfikacji nadawcy, podszycie pod odbiorcę (OSP) lub ujawnienie danych mieszkańców;
 - sposób wyłudzenia potwierdzenia RECEIVED bez trwałego zapisu;
 - obejście budżetu czasu nadawania, ciszy radiowej lub polecenia ZNISZCZ DANE;
+- polecenia protokołu USB `configure` lub `destroy` wykonane poza trybem przygotowania, obejście przycisku konfiguracji, odczyt pamięci mikrokontrolera mimo ochrony (SWD, APPROTECT, szyfrowanie flash) albo odczyt FRAM po ZNISZCZ DANE;
 - błąd w opisie zasilania, który może spowodować porażenie, pożar lub uszkodzenie telefonu.
 
 Błędy obliczeń i dokumentacji bez takich skutków zgłaszaj zwykłym Issue.
 
 ## Zakres
 
-Projekt jest w fazie prototypu 0.5 i nie ma wydania przeznaczonego do pracy w schronieniu. Podatności w Reticulum, LXMF i innych zależnościach zgłaszaj ich autorom; jeśli dotyczą sposobu użycia ich w WICI, zgłoś je także tutaj.
+Projekt jest w fazie prototypu 0.5 i nie ma wydania przeznaczonego do pracy w schronieniu. Podatności w Reticulum, microReticulum, LXMF i innych zależnościach zgłaszaj ich autorom; jeśli dotyczą sposobu użycia ich w WICI, zgłoś je także tutaj.
 
 ## In English
 

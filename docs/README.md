@@ -19,6 +19,6 @@ Kontroler R01.3, w 0.5 stanowisko laboratoryjne P1, ma osobne [źródła i dokum
 
 [Aktualne ustalenia przeglądu technicznego](review.md): poprawione rozbieżności, konkretne przeszkody i warunki ich zamknięcia.
 
-W specyfikacji skrót OSP oznacza rolę stanowiska odbiorczego; rekomendowanym odbiorcą jest centrum zarządzania kryzysowego gminy lub punkt wskazany przez wójta ([koncepcja, rozdział 02](conception/02-scenariusze-i-organizacja.html#miejsce-w-systemie-ochrony-ludnosci)).
+W specyfikacji skrót OSP oznacza rolę stanowiska odbiorczego, wyznaczonego przez wójta (burmistrza, prezydenta miasta); rekomendowane jest gminne centrum zarządzania kryzysowego lub stanowisko gminnego zespołu zarządzania kryzysowego w urzędzie, a jednostka Ochotniczej Straży Pożarnej tylko w porozumieniu z gminą ([koncepcja, rozdział 02](conception/02-scenariusze-i-organizacja.html#miejsce-w-systemie-ochrony-ludnosci)).
 
 Status: prototyp; sprzęt HOLD. Instrukcje użycia opisują docelowy odebrany zestaw, a nie gotowy produkt.

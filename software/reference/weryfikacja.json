@@ -606,14 +606,14 @@
     600
   ],
   "source_hashes": {
-    "reference.py": "aaa7888b8921e008917db8b20be64438e415c5f8148cdde40de90e97b0f0439c",
-    "test_reference.py": "cd1acc8f749fba35b68a073818e0c85cf2514917dc9d2fd68a08e51bc980dcc0",
+    "reference.py": "7e0d3defea61b4c53aac10a96becd9db3638806f5762821e933260dd1b9ea449",
+    "test_reference.py": "a2620ca3988a7bc768c4e0c1b25e0e99c07940933c0fc1ce2cb7854c932aaf00",
     "schema.sql": "cff5eeef03087ee8441d9e68ae18e93b0afb426121a5c9edb029e61a7f70609b",
-    "obliczenia.py": "fa814f8a68b3d90dfa41c28ca05600d53151482fad057977524164c05ad88594"
+    "obliczenia.py": "68b7925f4911011d1b6529ac2f4d946bc2ffcac198224659619dd69672333753"
   },
   "runtime": {
-    "python": "3.14.5",
-    "sqlite": "3.53.1",
+    "python": "3.12.13",
+    "sqlite": "3.50.4",
     "system": "Darwin"
   }
 }

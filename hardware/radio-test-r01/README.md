@@ -2,9 +2,9 @@
 
 **Status: HOLD. Nie zamawiać PCB ani montażu całego modemu.**
 
-W wersji 0.5 R01.3 nie jest kontrolerem stacji: STM32F103 ma za mało pamięci na stos Reticulum. Kontroler służy jako stanowisko do pomiarów profilu P1 w próbie T4: ramki, czułość, emisje, dług ciszy i próby mieszane TI–ST. Stacja to płytka R02 z [wymagań w specyfikacji elektroniki](../../docs/spec/elektronika.md). Kontrakt USB/KISS stanowiska opisuje [specyfikacja radia](../../docs/spec/radio.md).
+W wersji 0.5 R01.3 nie jest kontrolerem stacji: STM32F103 ma za mało pamięci na stos Reticulum. Kontroler służy jako stanowisko TI do pomiarów profilu P1 w próbie T4: ramki, czułość, emisje i dług ciszy. W próbach mieszanych TI–ST jest stroną TI; stroną ST jest osobne stanowisko S2-LP (np. ST STEVAL-FKI868V2 z płytką NUCLEO, do sprawdzenia) albo płytka R02 wykonania B. Stacja to płytka R02 z [wymagań w specyfikacji elektroniki](../../docs/spec/elektronika.md). Kontrakt USB/KISS stanowiska opisuje [specyfikacja radia](../../docs/spec/radio.md).
 
-Przegląd elektryczny wskazał problem USB suspend: Y1 ma stale włączony zegar, więc parametry katalogowe nie gwarantują dotrzymania pełnego budżetu prądu. Przed wykonaniem potrzebne są poprawiona rewizja i odbiór całego modemu. [Warunki przed zamówieniem](przed-produkcja.md).
+Stanowisko zasila się z zasilacza laboratoryjnego. Przegląd elektryczny wskazał problem USB suspend: Y1 ma stale włączony zegar, więc parametry katalogowe nie gwarantują dotrzymania budżetu 2,5 mA. Budżet ten nie obowiązuje przy użyciu jako stanowisko, więc problem nie blokuje budowy stanowiska do T4; pozostałe pozycje listy przed zamówieniem nadal obowiązują. HOLD dla R01.3 jako produktu, czyli modemu zasilanego z USB, pozostaje do poprawionej rewizji i odbioru całego modemu. [Warunki przed zamówieniem](przed-produkcja.md).
 
 Repozytorium zawiera edytowalne pliki kontrolera USB w KiCad. Tor radiowy CC1120 jest osobnym modułem opartym na referencji TI. Do próby między dwoma stanowiskami potrzeba dwóch kontrolerów i dwóch modułów RF.
 

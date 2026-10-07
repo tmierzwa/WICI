@@ -2,7 +2,7 @@
 
 ## Model i kontrola źródeł
 
-Python 3.12, Git. Model, testy i kontrola repozytorium używają tylko biblioteki standardowej. Uruchom z katalogu głównego:
+Python 3.12 lub nowszy (CI: 3.12), Git. Model, testy i kontrola repozytorium używają tylko biblioteki standardowej. Uruchom z katalogu głównego:
 
 ```sh
 python3 -m unittest discover -s software/reference -v
@@ -10,7 +10,7 @@ python3 -m unittest discover -s tests -v
 python3 tools/verify_repository.py
 ```
 
-Kontrola porównuje manifest z indeksem Git, wszystkie sumy plików, lokalne odnośniki Markdown i HTML, składnię JSON/Python, wyniki obliczeń i paczkę kontrolera. Nie aktualizuje dowodów podczas sprawdzania. CI działa na Linuxie z Pythonem 3.12 i nie uruchamia KiCad.
+Kontrola porównuje manifest z indeksem Git, wszystkie sumy plików, lokalne odnośniki Markdown i HTML (kotwice tylko w odnośnikach do stron HTML), składnię JSON/Python, wyniki obliczeń i paczkę kontrolera. Nie aktualizuje dowodów podczas sprawdzania. CI działa na Linuxie z Pythonem 3.12 i nie uruchamia KiCad.
 
 ## Strona koncepcji
 
@@ -43,7 +43,7 @@ python3 tools/release.py --source-zip dist/WICI-0.5-source.zip
 
 Paczka zawiera źródła, dokumentację i eksporty; nie jest systemem startowym ani aplikacją stacji. Katalog `dist/` nie jest śledzony w Git. Archiwum zawiera wszystkie pliki manifestu i sam manifest, ze stałymi datami i kolejnością wpisów. Kontrola porównuje także bajty każdego wpisu. Zgodność identycznych wejść sprawdzają testy; inne wersje narzędzi lub kompresji mogą dać inny hash ZIP.
 
-Manifest odświeża opiekun po scaleniu zmian i przed wydaniem: przegląda i dodaje pliki do indeksu Git, wykonuje `python3 tools/release.py --refresh`, a następnie pełną kontrolę. Kontrybutor w PR używa `python3 tools/verify_repository.py --pull-request`, które pomija zgodność `manifest.json`; CI robi to samo dla pull requestów, a pełną kontrolę i paczkę źródłową wykonuje dla gałęzi `main` i tagów. Nie używaj `--refresh` do ukrycia niewyjaśnionej różnicy.
+Manifest odświeża opiekun po scaleniu zmian i przed wydaniem: przegląda i dodaje pliki do indeksu Git, wykonuje `python3 tools/release.py --refresh`, a następnie pełną kontrolę. Kontrybutor w PR używa `python3 tools/verify_repository.py --pull-request`, które pomija zgodność `manifest.json`; CI robi to samo dla pull requestów, a pełną kontrolę i paczkę źródłową wykonuje dla gałęzi `main` i tagów `v*`; gałęzie robocze sprawdza tylko w pull requeście. Po scaleniu PR, który zmienia pliki, kontrola `main` pozostaje czerwona do odświeżenia manifestu przez opiekuna repozytorium. Nie używaj `--refresh` do ukrycia niewyjaśnionej różnicy.
 
 Oznaczenia licencji sprawdza [REUSE](https://reuse.software/): `pipx run reuse==5.0.2 lint`. Nowy plik bez nagłówka SPDX dostaje licencję z [REUSE.toml](../REUSE.toml).
 

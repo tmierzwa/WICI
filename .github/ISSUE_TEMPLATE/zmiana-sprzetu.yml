@@ -6,7 +6,7 @@ body:
     id: module
     attributes:
       label: Moduł
-      description: modem, kontroler, wejścia A/B, przetwornica, ładowarka, antena
+      description: stacja R02 (wykonanie A/B), tor RF, zasilanie stacji AA/12 V, ekran i przyciski, FRAM, stanowisko R01.3, wejścia A/B, przetwornica, ładowarka, antena
     validations:
       required: true
   - type: textarea
