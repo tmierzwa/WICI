@@ -489,24 +489,28 @@ namespace {
 // Identyfikator datagramu z generatora sprzętowego nRF52840 (RNG z korekcją obciążenia);
 // bez SoftDevice rejestry RNG są dostępne bezpośrednio.
 void randomId(uint8_t out[p1frame::ID_BYTES]) {
+    randomBytes(out, p1frame::ID_BYTES);
+    randomSeed((static_cast<uint32_t>(out[0]) << 24) | (static_cast<uint32_t>(out[1]) << 16) |
+               (static_cast<uint32_t>(out[2]) << 8) | out[3]);  // ziarno odroczeń losowych
+}
+
+}  // namespace
+
+void randomBytes(uint8_t* out, size_t count) {
 #if defined(NRF52_SERIES) || defined(NRF52840_XXAA)
     NRF_RNG->CONFIG = RNG_CONFIG_DERCEN_Msk;
     NRF_RNG->EVENTS_VALRDY = 0;
     NRF_RNG->TASKS_START = 1;
-    for (size_t i = 0; i < p1frame::ID_BYTES; ++i) {
+    for (size_t i = 0; i < count; ++i) {
         while (!NRF_RNG->EVENTS_VALRDY) {}
         NRF_RNG->EVENTS_VALRDY = 0;
         out[i] = static_cast<uint8_t>(NRF_RNG->VALUE);
     }
     NRF_RNG->TASKS_STOP = 1;
-    randomSeed((static_cast<uint32_t>(out[0]) << 24) | (static_cast<uint32_t>(out[1]) << 16) |
-               (static_cast<uint32_t>(out[2]) << 8) | out[3]);  // ziarno odroczeń losowych
 #else
-    for (size_t i = 0; i < p1frame::ID_BYTES; ++i) out[i] = static_cast<uint8_t>(random(256));
+    for (size_t i = 0; i < count; ++i) out[i] = static_cast<uint8_t>(random(256));
 #endif
 }
-
-}  // namespace
 
 const char* Bench::p1send(const uint8_t* data, size_t length) {
     if (length < 1 || length > p1frame::MAX_DATAGRAM) return "datagram 1..600 B";

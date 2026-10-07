@@ -6,8 +6,9 @@
 // w FRAM (dług ciszy, zegar czasu pracy z liczbą restartów, zdarzenia), odczyt
 // częstotliwości i RSSI, łącze P1 (odbiór i składanie datagramów, nadawanie z CCA,
 // odroczeniem i długiem ciszy), ekran Sharp z EXTCOMIN z licznika RTC2 i przyciski
-// płytki jako menu stacji (wybór języka, ekran główny, cisza, STAN). Bez stosu Reticulum
-// (następne kroki).
+// płytki jako menu stacji (wybór języka, ekran główny, cisza, STAN), drugi interfejs CDC
+// z protokołem USB laptop–stacja (sync, submit, event/ack, polecenia) nad kolejką, skrzynką
+// i konfiguracją w FRAM. Bez stosu Reticulum (następne kroki).
 #include <Arduino.h>
 #include <Adafruit_TinyUSB.h>
 #include <SPI.h>
@@ -20,7 +21,9 @@
 #include "p1_registers.h"
 #include "p1frame.h"
 #include "sharp.h"
+#include "store.h"
 #include "ui.h"
+#include "usbproto.h"
 
 #ifndef WICI_FW_VERSION
 #define WICI_FW_VERSION "bench-a-dev"
@@ -33,6 +36,10 @@ fram::Memory memory(SPI, board::FRAM_CS, board::SPI_HZ);
 journal::Journal stationJournal(memory);
 measure::Bench bench(radio, board::RADIO_GPIO2, board::BTN_OK, board::LED_HEARTBEAT);
 sharp::Display display(SPI, board::DISPLAY_CS, board::DISPLAY_EXTCOMIN);
+store::Store stationStore(memory);
+Adafruit_USBD_CDC SerialData;    // drugi interfejs CDC: dane (protokół laptop–stacja); Serial = diagnostyka
+bool storeOk = false;
+bool dataWas = false;
 ui::Model station;
 ui::Lines shown;                 // wiersze wysłane na ekran
 bool buttonWas[4] = {};          // stan przycisków po ostatnim odpytaniu (zbocze = naciśnięcie)
@@ -74,6 +81,44 @@ bool pressed(uint8_t pin) { return digitalRead(pin) == LOW; }
 const char* boolName(bool value) { return value ? "true" : "false"; }
 
 uint32_t uptimeS() { return uptimeBaseS + millis() / 1000; }
+void updateScreen(bool force);
+
+// Usługi stacji dla protokołu USB.
+struct BenchHost : usbproto::Host {
+    uint32_t uptimeS() override { return ::uptimeS(); }
+    bool prep() override { return bench.prep; }
+    bool silence() override { return bench.silence; }
+    void setSilence(bool on) override;
+    bool confirm() override { return bench.confirm(); }
+    void randomBytes(uint8_t* out, size_t count) override { measure::randomBytes(out, count); }
+    void log(const char* text) override { bench.log(text); }
+    void emit(const char* line) override {
+        // Odpowiedzi idą na interfejs danych; bez otwartego portu danych na diagnostykę (polecenie USB).
+        if (SerialData) SerialData.println(line);
+        else Serial.println(line);
+    }
+    void stationAddress(uint8_t out[store::HASH]) override;
+    const char* stationName() override;
+    const char* version() override { return WICI_FW_VERSION; }
+    void configChanged() override { updateScreen(false); }
+    void queueChanged() override { updateScreen(false); }
+};
+BenchHost host;
+usbproto::Protocol protocol(stationStore, host);
+
+// Zdarzenie stanu radia do laptopa (cisza, tryb przygotowania).
+void radioEvent() {
+    char fields[96];
+    snprintf(fields, sizeof(fields), "\"kind\":\"radio\",\"silence\":%s,\"prep\":%s", boolName(bench.silence), boolName(bench.prep));
+    if (storeOk) protocol.event(store::NOTE_RADIO, 0, fields, millis());
+}
+
+void BenchHost::setSilence(bool on) {
+    if (bench.silence == on) return;
+    bench.silence = on;
+    bench.log(on ? "silence on (usb)" : "silence off (usb)");
+    radioEvent();
+}
 
 const char* langName(ui::Lang lang) { return lang == ui::Lang::PL ? "PL" : lang == ui::Lang::UK ? "UK" : "EN"; }
 
@@ -95,8 +140,11 @@ ui::Status screenStatus() {
     s.contactS = uptimeS();
     s.mains12 = true;
     s.millivolts = 0;                // stanowisko nie mierzy napięcia (INFO: mv = 0)
-    s.queued = 0;
-    s.newMessages = c.rxDatagrams;   // złożone datagramy P1
+    bool found = false;
+    const uint32_t oldest = storeOk ? stationStore.queueOldestActiveS(found) : 0;
+    s.queued = storeOk ? stationStore.queueLive() : 0;
+    s.queueAgeS = found && uptimeS() > oldest ? uptimeS() - oldest : 0;
+    s.newMessages = storeOk ? stationStore.inboxUnread() : 0;
     s.rxOk = c.rxOk;
     s.rxBad = c.rxBad;
     s.txDatagrams = c.txDatagrams;
@@ -144,6 +192,19 @@ void printDisplay() {
                   boolName(display.softwareVcom()), static_cast<unsigned long>(display.refreshes()), board::DISPLAY_CS,
                   board::DISPLAY_EXTCOMIN);
 }
+
+void BenchHost::stationAddress(uint8_t out[store::HASH]) {
+    // Bez tożsamości Reticulum: 16 B z identyfikatora układu (FICR) jako adres stanowiska.
+    memset(out, 0, store::HASH);
+    const uint32_t id0 = NRF_FICR->DEVICEID[0];
+    const uint32_t id1 = NRF_FICR->DEVICEID[1];
+    memcpy(out, &id0, 4);
+    memcpy(out + 4, &id1, 4);
+    memcpy(out + 8, &id0, 4);
+    memcpy(out + 12, &id1, 4);
+}
+
+const char* BenchHost::stationName() { return ::stationName; }
 
 // Zapis języka i ekranu w FRAM i w pamięci niezerowanej po każdej zmianie.
 void persistScreen() {
@@ -264,7 +325,8 @@ void printInfo() {
                   "\"bench\":\"A\",\"prep\":%s,\"silence\":%s,\"radio_ok\":%s,\"p1_ok\":%s,\"fram_ok\":%s,\"journal_ok\":%s,"
                   "\"journal_resets\":%lu,\"carrier_hz\":%lu,\"symbol_rate\":%u,\"deviation_hz\":%u,\"rx_filter_hz\":%u,"
                   "\"tx_power_dbm\":%d,\"uptime_s\":%lu,\"boot_s\":%lu,\"screen\":\"%s\",\"lang\":\"%s\",\"name\":\"%s\","
-                  "\"reset_reason\":\"0x%08lX\"}\n",
+                  "\"reset_reason\":\"0x%08lX\",\"store_ok\":%s,\"queued\":%u,\"inbox\":%u,\"pending\":%u,\"usb_data\":%s,"
+                  "\"usb_in\":%lu,\"usb_out\":%lu,\"usb_rejected\":%lu,\"usb_boot\":\"%s\"}\n",
                   WICI_FW_VERSION, static_cast<unsigned long>(bench.debtRemainingMs()), static_cast<unsigned long>(c.rxOk),
                   static_cast<unsigned long>(c.rxBad), static_cast<unsigned long>(c.txDrop),
                   static_cast<unsigned long>(restarts), boolName(bench.prep),
@@ -272,7 +334,11 @@ void printInfo() {
                   static_cast<unsigned long>(journalResets), static_cast<unsigned long>(p1::CARRIER_HZ), p1::SYMBOL_RATE,
                   p1::DEVIATION_HZ, p1::RX_FILTER_HZ, p1::TX_POWER_DBM, static_cast<unsigned long>(uptimeS()),
                   static_cast<unsigned long>(millis() / 1000), ui::screenName(station.screen()), langName(station.language()),
-                  stationName, static_cast<unsigned long>(readResetReason()));
+                  stationName, static_cast<unsigned long>(readResetReason()), boolName(storeOk),
+                  static_cast<unsigned>(storeOk ? stationStore.queueLive() : 0), static_cast<unsigned>(storeOk ? stationStore.inboxCount() : 0),
+                  static_cast<unsigned>(storeOk ? stationStore.notesPending() : 0), boolName(protocol.isConnected()),
+                  static_cast<unsigned long>(protocol.stats().linesIn), static_cast<unsigned long>(protocol.stats().linesOut),
+                  static_cast<unsigned long>(protocol.stats().rejected), protocol.bootId());
 }
 
 void printJournal() {
@@ -328,7 +394,7 @@ void printHelp() {
                    "\"PREP <0|1>\",\"SILENCE <0|1>\",\"TXCW <s> [CONDUCTED]\",\"TXPKT <n> <len> [<ms>] [CONDUCTED]\","
                    "\"RX [<len>]\",\"RXPER\",\"FOFF [<hz>]\",\"P1RX\",\"P1TX <hex>\",\"P1\",\"STOP\",\"LOG [<n>]\",\"JOURNAL\",\"BENCH\",\"IDLE\",\"RSSI\",\"STATE\","
                    "\"REG <hex>\",\"FRAM\",\"BTN\",\"LED <1-4> <0|1>\",\"SCREEN\",\"KEY <UP|DOWN|OK|BACK>\",\"DISPLAY\","
-                   "\"VCOM <0|1>\",\"REBOOT\"]}");
+                   "\"VCOM <0|1>\",\"REBOOT\",\"STORE\",\"USB <json>\"]}");
 }
 
 // Argumenty po poleceniu: do czterech słów; zwraca liczbę słów.
@@ -343,7 +409,30 @@ bool lastIsConducted(char* words[], size_t& n) {
     return false;
 }
 
+void printStore() {
+    const store::Config& c = stationStore.config();
+    char osp[2 * store::HASH + 1];
+    store::bytesToHex(c.osp[c.activeOsp ? 1 : 0], osp);
+    Serial.printf("{\"store_ok\":%s,\"configured\":%s,\"config_seq\":%lu,\"role\":\"%s\",\"address\":\"%s\",\"osp\":\"%s\","
+                  "\"phrases\":%u,\"stations\":%u,\"queued\":%u,\"inbox\":%u,\"unread\":%u,\"notes_pending\":%u,\"note_latest\":%lu,"
+                  "\"usb_synced\":%s,\"usb_stored\":%lu,\"usb_overflow\":%lu,\"usb_resends\":%lu}\n",
+                  boolName(storeOk), boolName(stationStore.configured()), static_cast<unsigned long>(c.seq),
+                  c.role == store::OSP ? "osp" : "station", c.address, osp, c.phraseCount, c.stations,
+                  static_cast<unsigned>(stationStore.queueLive()), static_cast<unsigned>(stationStore.inboxCount()),
+                  static_cast<unsigned>(stationStore.inboxUnread()), static_cast<unsigned>(stationStore.notesPending()),
+                  static_cast<unsigned long>(stationStore.noteLatest()), boolName(protocol.synced()),
+                  static_cast<unsigned long>(protocol.stats().stored), static_cast<unsigned long>(protocol.stats().overflow),
+                  static_cast<unsigned long>(protocol.stats().resends));
+}
+
 void handle(char* cmd) {
+    // USB <wiersz JSON>: wiersz protokołu danych podany przez port diagnostyki (próby z jednym portem);
+    // treść zostaje w oryginalnej wielkości liter.
+    if (!strncasecmp(cmd, "USB ", 4)) {
+        if (!storeOk) { printError("store not ready"); return; }
+        protocol.handleLine(cmd + 4, millis());
+        return;
+    }
     for (char* p = cmd; *p; ++p) *p = toupper(*p);
     char* arg = strchr(cmd, ' ');
     if (arg) *arg++ = '\0';
@@ -380,13 +469,20 @@ void handle(char* cmd) {
             printError("PREP not confirmed by OK");
         } else {
             if (!on) bench.stop();
-            bench.prep = on;
-            bench.log(on ? "preparation mode on" : "preparation mode off");
+            if (bench.prep != on) {
+                bench.prep = on;
+                bench.log(on ? "preparation mode on" : "preparation mode off");
+                radioEvent();
+            }
             Serial.printf("{\"prep\":%s}\n", boolName(bench.prep));
         }
     } else if (!strcmp(cmd, "SILENCE") && n == 1) {
-        bench.silence = atoi(words[0]) != 0;  // na stacji: przełącznik CISZA
-        bench.log(bench.silence ? "silence on" : "silence off");
+        const bool on = atoi(words[0]) != 0;  // na stacji: przełącznik CISZA
+        if (on != bench.silence) {
+            bench.silence = on;
+            bench.log(bench.silence ? "silence on" : "silence off");
+            radioEvent();
+        }
         Serial.printf("{\"silence\":%s}\n", boolName(bench.silence));
     } else if (!strcmp(cmd, "TXCW")) {
         const bool conducted = lastIsConducted(words, n);
@@ -476,6 +572,7 @@ void handle(char* cmd) {
         updateScreen(false);
         printScreen();
     } else if (!strcmp(cmd, "DISPLAY")) printDisplay();
+    else if (!strcmp(cmd, "STORE")) printStore();
     else if (!strcmp(cmd, "VCOM") && n == 1) {
         display.softwareVcom(atoi(words[0]) != 0);  // zapasowo, gdy zworka EXTMODE płytki jest niska
         printDisplay();
@@ -514,7 +611,16 @@ void setup() {
     SPI.begin();
     radio.begin();
     memory.begin();
+    // Dwa interfejsy CDC ACM z deskryptorami IAD (radio.md, "USB do laptopa"): diagnostyka i dane.
+    Serial.setStringDescriptor("WICI diagnostyka");
+    SerialData.setStringDescriptor("WICI dane");
     Serial.begin(115200);
+    SerialData.begin(115200);
+    if (TinyUSBDevice.mounted()) {  // host zdążył wyliczyć urządzenie z jednym interfejsem
+        TinyUSBDevice.detach();
+        delay(10);
+        TinyUSBDevice.attach();
+    }
     delay(50);
     radio.reset();
     const cc1120::Identity id = radio.identify();
@@ -526,6 +632,8 @@ void setup() {
     framOk = memory.identify().mb85rs4m;
     beginJournal();
     ledWrite(board::LED_FRAM, framOk && journalOk);  // LED3 świeci dopiero z działającym dziennikiem
+    storeOk = framOk && stationStore.begin();
+    protocol.begin();
     display.begin();
     beginScreen();
     syncButtons();
@@ -575,4 +683,18 @@ void loop() {
         updateScreen(false);
     }
     display.maintain(now);
+    // Interfejs danych: otwarcie portu wysyła sync, zamknięcie odrzuca niepełny wiersz.
+    const bool dataOpen = SerialData;
+    if (dataOpen && !dataWas) protocol.connected(now);
+    else if (!dataOpen && dataWas) protocol.disconnected();
+    dataWas = dataOpen;
+    if (dataOpen && storeOk) {
+        char chunk[64];
+        while (SerialData.available()) {
+            size_t n = 0;
+            while (n < sizeof(chunk) && SerialData.available()) chunk[n++] = static_cast<char>(SerialData.read());
+            protocol.feed(chunk, n, now);
+        }
+        protocol.poll(now);
+    }
 }

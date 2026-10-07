@@ -1,8 +1,8 @@
 # WICI: oprogramowanie stacji
 
-Katalog zawiera oprogramowanie układowe stacji. Obecny stan to pierwsze kroki na [stanowisku deweloperskim A](../hardware/dev-bench/README.md): nRF52840-DK z modułem TI CC1120EM-868-915 i pamięcią FRAM na złączu Arduino płytki. Środowisko `bench-a` w `platformio.ini` buduje obraz, który po podłączeniu USB zgłasza się poleceniem `INFO` w formacie ze [specyfikacji radia](../docs/spec/radio.md#usb-do-laptopa), identyfikuje układ radiowy i FRAM przez SPI, zapisuje do CC1120 [rejestry profilu P1](#rejestry-profilu-p1) z weryfikacją odczytu i kalibracją syntezera, wykonuje [polecenia pomiarowe](#polecenia-pomiarowe) `TXCW`, `TXPKT`, `RXPER`, `FOFF` ze specyfikacji, prowadzi [dziennik w FRAM](#dziennik-w-fram) (dług ciszy, zegar czasu pracy z liczbą restartów, zdarzenia), obsługuje [łącze P1](#łącze-p1) (odbiór i składanie datagramów, nadawanie z CCA, odroczeniem i długiem ciszy), podaje zaprogramowaną częstotliwość i RSSI, prowadzi [ekran Sharp i menu stacji](#ekran-i-przyciski) na przyciskach płytki (wybór języka, ekran główny, cisza, STAN; EXTCOMIN z licznika RTC2) oraz obsługuje diody płytki. Nie ma jeszcze stosu Reticulum ani drugiego interfejsu CDC.
+Katalog zawiera oprogramowanie układowe stacji. Obecny stan to pierwsze kroki na [stanowisku deweloperskim A](../hardware/dev-bench/README.md): nRF52840-DK z modułem TI CC1120EM-868-915 i pamięcią FRAM na złączu Arduino płytki. Środowisko `bench-a` w `platformio.ini` buduje obraz, który po podłączeniu USB zgłasza się poleceniem `INFO` w formacie ze [specyfikacji radia](../docs/spec/radio.md#usb-do-laptopa), identyfikuje układ radiowy i FRAM przez SPI, zapisuje do CC1120 [rejestry profilu P1](#rejestry-profilu-p1) z weryfikacją odczytu i kalibracją syntezera, wykonuje [polecenia pomiarowe](#polecenia-pomiarowe) `TXCW`, `TXPKT`, `RXPER`, `FOFF` ze specyfikacji, prowadzi [dziennik w FRAM](#dziennik-w-fram) (dług ciszy, zegar czasu pracy z liczbą restartów, zdarzenia), obsługuje [łącze P1](#łącze-p1) (odbiór i składanie datagramów, nadawanie z CCA, odroczeniem i długiem ciszy), podaje zaprogramowaną częstotliwość i RSSI, prowadzi [ekran Sharp i menu stacji](#ekran-i-przyciski) na przyciskach płytki (wybór języka, ekran główny, cisza, STAN; EXTCOMIN z licznika RTC2) obsługuje diody płytki oraz udostępnia drugi interfejs CDC z [protokołem USB laptop–stacja](#protokół-usb-laptopstacja) nad kolejką, skrzynką i konfiguracją w FRAM. Nie ma jeszcze stosu Reticulum.
 
-Obraz skompilowano (PlatformIO, rdzeń Adafruit nRF52 1.7.0, 30 620 B RAM, 130 392 B flash; z tego bufor ekranu 12 000 B RAM i bitmapa fontu 21 840 B flash). **Nie uruchomiono go na sprzęcie**: odpowiedzi poleceń, numery pinów, działanie SPI z modułem i przyjęcie rejestrów przez układ wymagają sprawdzenia na płytce według kroków niżej.
+Obraz skompilowano (PlatformIO, rdzeń Adafruit nRF52 1.7.0, 49 296 B RAM, 156 356 B flash; z tego bufor ekranu 12 000 B RAM, indeksy magazynu FRAM około 12 KB RAM i bitmapa fontu 21 840 B flash). **Nie uruchomiono go na sprzęcie**: odpowiedzi poleceń, numery pinów, działanie SPI z modułem i przyjęcie rejestrów przez układ wymagają sprawdzenia na płytce według kroków niżej.
 
 ## Okablowanie stanowiska A
 
@@ -55,11 +55,11 @@ Bluetooth nie jest uruchamiany (brak wywołań Bluefruit); SoftDevice tylko zajm
 
 ## Polecenia
 
-Port USB nRF (J3, nie port J-Link J2) zgłasza się jako CDC ACM, 115200 bit/s (prędkość nie ma znaczenia dla USB). Każda odpowiedź to jeden wiersz JSON. Po otwarciu portu obraz sam wysyła `INFO`, `RADIO` i `FRAM`.
+Port USB nRF (J3, nie port J-Link J2) zgłasza się jako urządzenie z dwoma interfejsami CDC ACM z deskryptorami IAD: „WICI diagnostyka” (pierwszy port, polecenia z tej tabeli) i „WICI dane” (drugi port, [protokół laptop–stacja](#protokół-usb-laptopstacja)); identyfikatory VID/PID są testowe z rdzenia Adafruit, do przydziału przed wydaniem. 115200 bit/s (prędkość nie ma znaczenia dla USB). Każda odpowiedź to jeden wiersz JSON. Po otwarciu portu diagnostyki obraz sam wysyła `INFO`, `RADIO` i `FRAM`.
 
 | Polecenie | Odpowiedź |
 |---|---|
-| `INFO` | pola jak w specyfikacji radia: `contract`, `profile`, `radio`, `mcu`, `fw`, `src`, `mv` (zero, brak pomiaru), `tx_wait_ms` (pozostały dług ciszy), `rx_ok`, `rx_bad`, `tx_drop` z łącza P1, `restarts` i `uptime_s` z dziennika FRAM, oraz `bench`, `prep`, `silence`, `radio_ok`, `p1_ok`, `fram_ok`, `journal_ok`, `journal_resets`, parametry P1, `boot_s`, `screen`, `lang`, `name` (`WICI-xxxxxx` z identyfikatora układu), `reset_reason` (RESETREAS) |
+| `INFO` | pola jak w specyfikacji radia: `contract`, `profile`, `radio`, `mcu`, `fw`, `src`, `mv` (zero, brak pomiaru), `tx_wait_ms` (pozostały dług ciszy), `rx_ok`, `rx_bad`, `tx_drop` z łącza P1, `restarts` i `uptime_s` z dziennika FRAM, oraz `bench`, `prep`, `silence`, `radio_ok`, `p1_ok`, `fram_ok`, `journal_ok`, `journal_resets`, parametry P1, `boot_s`, `screen`, `lang`, `name` (`WICI-xxxxxx` z identyfikatora układu), `reset_reason` (RESETREAS), `store_ok`, `queued`, `inbox`, `pending` (zdarzenia bez `ack`), `usb_data` (port danych otwarty), liczniki wierszy protokołu i `usb_boot` |
 | `RADIO` | `partnumber` (CC1120 = `0x48`), `partversion`, `marcstate`, stan z bajtu statusu, `ok` |
 | `RESET` | reset sprzętowy RESET_N i `SRES` (kasuje rejestry P1, `p1_ok: false`), potem `RADIO` |
 | `CONFIG` | zapis tablicy P1 w stanie IDLE, odczyt i porównanie 57 rejestrów (`checked`, `mismatches`, pierwszy niezgodny z wartością oczekiwaną i odczytaną), potem kalibracja; `config: true` tylko przy zerze niezgodności i udanej kalibracji |
@@ -91,6 +91,8 @@ Port USB nRF (J3, nie port J-Link J2) zgłasza się jako CDC ACM, 115200 bit/s (
 | `DISPLAY` | EXTCOMIN: licznik RTC2 i stan pinu, tryb VCOM, liczba odświeżeń, numery pinów |
 | `VCOM <0\|1>` | zapasowe odwracanie VCOM bitem w poleceniach ekranu (zworka EXTMODE w położeniu L) |
 | `REBOOT` | restart programowy; ekran i język wracają jak po restarcie przez watchdog |
+| `STORE` | magazyn FRAM: konfiguracja (rola, adres, OSP, frazy), kolejka, skrzynka, zdarzenia bez `ack`, liczniki protokołu |
+| `USB <wiersz JSON>` | wiersz protokołu danych podany przez port diagnostyki (próby z jednym terminalem); odpowiedź idzie na port danych, a gdy jest zamknięty, na diagnostykę |
 
 Warunek przejścia kroku 6 z [lekcji R02](../hardware/r02/lekcje.md#uruchomienie): `RADIO` daje `ready: true`, `partnumber: 0x48` i stan `IDLE`; `FRAM` daje `fujitsu: true`. Bez modułu `partnumber` wynosi `0xFF` albo `0x00`, a `ready` jest `false`. Po starcie obraz sam zapisuje i kalibruje P1; LED2 świeci dopiero, gdy `RADIO` daje `ok: true` i `p1_ok: true`. Po otwarciu portu obraz wysyła też wynik `VERIFY` i `FREQ`.
 
@@ -146,6 +148,11 @@ Kod w `src/journal.cpp` (bez zależności od Arduino, sprawdzany na komputerze z
 | zegar | 0x0200 | 32 × 16 B | numer, czas pracy [s], liczba restartów, CRC-16, znacznik zatwierdzenia |
 | ustawienia ekranu | 0x0400 | 32 × 16 B | numer, język + 1 (0 = niewybrany), ostatni ekran, CRC-16, znacznik zatwierdzenia |
 | zdarzenia | 0x1000 | 512 × 64 B (32 KiB) | numer, czas pracy, tekst do 53 znaków, CRC-16 |
+| konfiguracja (`src/store.cpp`) | 0x9000 | 2 × 4 KiB | rola, adres, skróty OSP, liczba stacji, 11 fraz × 3 języki, IFAC; nowszy z dwóch slotów |
+| kolejka wychodząca | 0x10000 | 128 × 512 B | intencja: typ, klucz (odbiorca, id, revision, event), treść SA1 kanoniczna; część zmienna: stan, próby, następna próba, najwyższy event |
+| skrzynka odbiorcza | 0x20000 | 128 × 512 B | wiadomość od OSP albo (rola OSP) `incoming`: źródło, klucz, treść; część zmienna: przeczytana |
+| zdarzenia do laptopa | 0x30000 | 128 × 512 B | pola JSON `event`/`incoming`; część zmienna: `ack` |
+| najwyższy event na id | 0x40000 | 256 × 32 B | id, revision, event, stan; zostaje po ZAMKNIJ ZDARZENIE |
 
 Zasady:
 
@@ -155,7 +162,7 @@ Zasady:
 - **Zegar.** Rekord zegara przy starcie (restarty +1) i co 60 s; `uptime_s` w `INFO` liczy się od wartości z dziennika, więc jest monotoniczny między restartami. Nieudany zapis zegara gasi LED3 i `journal_ok`.
 - **Zdarzenia.** Każdy wpis `LOG` (start, tryb przygotowania, cisza, serie, potwierdzenia `CONDUCTED`, `FOFF`, kasowanie długu) jest rekordem w FRAM; bufor nadpisuje najstarsze po 512 wpisach. Przy starcie obraz czyta wszystkie 36 KiB obszaru (około 0,3 s przy 1 MHz), żeby znaleźć najnowsze rekordy.
 
-Nie ma jeszcze: kolejki zgłoszeń, skrzynki, tablicy tras ani rekordów szyfrowanych ze specyfikacji; układ obszaru dla stacji (role stacji i OSP) zostanie uzgodniony przy tych strukturach, a dziennik tu opisany ma w nim zostać na tych samych adresach.
+Rekordy kolejki, skrzynki, zdarzeń i konfiguracji nie są szyfrowane (AEAD z kluczem w chronionej pamięci MCU przyjdzie razem ze stosem i tożsamością). Część zmienna rekordu ma własne CRC i znacznik; jej uszkodzenie cofa intencję do stanu „aktywna, 0 prób”, a treść zostaje. Nie ma jeszcze tablicy tras ani kart zaufanych stacji (rola OSP).
 
 ## Łącze P1
 
@@ -182,8 +189,27 @@ Po włączeniu zasilania pierwszym ekranem jest wybór języka; wybór i każda 
 
 Przyjęte interpretacje i braki: pasek trybu przygotowania zastępuje wiersz 1 („stale pokazuje”); menu, STAN i JĘZYK wracają do ekranu głównego po 3 min bezczynności (specyfikacja podaje ten czas tylko dla kreatora); ZGŁOSZENIE, WIADOMOŚCI i TEST pokazują tylko tytuł do czasu kolejki w FRAM i stosu LXMF; przy niesprawnym radiu wiersz 1 to `RADIO ---`, bo lista tekstów nie ma takiego tekstu (F80); zasilanie to `12 V: 0,0 V`, bo stanowisko nie mierzy napięcia; „nowe wiadomości” to złożone datagramy P1; etykiety liczników w STAN (`RX OK`, `TX`, `DEFER`, `WAIT`, `FOFF`) są jednakowe we wszystkich językach. Nie ma podświetlenia (płytka 4694 go nie ma), alarmów, kreatora zgłoszenia, kontroli adresu ani diody NOWA WIADOMOŚĆ.
 
+## Protokół USB laptop–stacja
+
+Kontrakt: [specyfikacja oprogramowania](../docs/spec/oprogramowanie.md#protokół-usb-laptopstacja) (`"usb":1`, wiersze JSON do 1024 B z `seq`, `boot` po obu stronach, idempotencja po kluczu wiadomości). Kod w `src/usbproto.cpp` (bez zależności od Arduino; scenariusze w `tests/test_firmware_host.py`), wiadomości SA1 w `src/sa1.cpp` (rozbiór, kontrola i kodowanie kanoniczne jak `reference.py`; stacja nie sprawdza NFC ani znaków nieprzydzielonych poza niecharakterami, bo tablice Unicode nie mieszczą się w zakresie tego kroku, a laptop sprawdza je przed `submit`), skaner JSON w `src/jsonlite.cpp`, magazyn w `src/store.cpp`.
+
+| Wiersz | Działanie |
+|---|---|
+| `sync` (obie strony) | po otwarciu portu stacja wysyła `sync` z `boot`, `cursor` (numer ostatniego zdarzenia), `pending`, `queued`, `inbox`, `role`, `configured`, `prep`, `silence`, `name`, `fw`; `sync` od laptopa z `cursor` potwierdza zdarzenia do tego numeru, a stacja odpowiada własnym `sync` i wysyła zaległe |
+| `submit` z `to`, `id`, `revision`, `sa1` (`"resend":true` uaktywnia zakończoną intencję) | kontrola SA1 jak w modelu, zgodność `id` i `revision` z tablicą, typ według roli (stacja: REQUEST i TEST; OSP: RECEIVED, STATUS, REPLY, BULLETIN), `to` równe aktywnej tożsamości OSP z konfiguracji; `stored` z numerem rekordu dopiero po zapisie w FRAM (ten sam klucz i treść: `stored` z `"duplicate":true`), `rejected` z `reason`: `invalid` (z `detail`), `conflict`, `full` (128 żywych intencji), `memory` |
+| `event` / `incoming` (stacja → laptop) | `record`, `at` i pola zdarzenia (`"kind":"radio"` z `silence` i `prep`; wiadomości dojdą z łączem); zapisane w FRAM i ponawiane co 5 s do `ack` |
+| `ack` z `cursor` albo `record` | potwierdzenie zdarzeń do numeru albo jednego |
+| `test` | TEST z konfiguracji (kategoria 9, 1 osoba, pilność 0, adres stacji, „test”), id z generatora sprzętowego; `stored` |
+| `silence` z `on` | potwierdzenie przyciskiem OK w ciągu 30 s, potem `ok`; brak potwierdzenia: `rejected` i wpis w dzienniku |
+| `configure` z `address`, `role`, `osp`, `osp_backup`, `stations`, `phrases` (tablica `[PL, UK, EN]`), `ifac` | tylko w trybie przygotowania; kontrola najgorszego zgłoszenia z przycisków jak `check_button_configuration` (`worst_request` w odpowiedzi); zapis do FRAM |
+| `close` | ZAMKNIJ ZDARZENIE: usuwa kolejkę, skrzynkę i zdarzenia, zachowuje najwyższy event na id |
+| `destroy` | potwierdzenie przyciskiem OK, potem usunięcie konfiguracji i wszystkich rekordów (bez kluczy nie ma jeszcze nic więcej do usunięcia) |
+| `announce`, `export`, `import`, `trust`, `revoke` | `rejected` z `"reason":"unsupported"` (`export` i `import` najpierw wymagają trybu przygotowania) do czasu stosu i kluczy |
+
+Każde polecenie trafia do dziennika zdarzeń (`LOG`). Wiersz dłuższy niż 1024 B jest odrzucany w całości, niepełny wiersz sprzed zamknięcia portu również. Bez konfiguracji OSP (`configure` z `osp`) stacja przyjmuje `submit` do dowolnego `to`, bo stanowisko nie ma jeszcze kart.
+
 ## Następne kroki
 
-1. Dwa interfejsy CDC (dane i diagnostyka) i protokół USB do laptopa ze [specyfikacji oprogramowania](../docs/spec/oprogramowanie.md).
-2. microReticulum i LXMF na tym samym projekcie (T3) z pomiarem zapasu RAM; środowisko `bench-b` dla ESP32-S3-DevKitC-1 z S2-LP.
-3. Kolejka zgłoszeń w FRAM, kreator ZGŁOSZENIE, WIADOMOŚCI i TEST na ekranie; watchdog.
+1. Łącze aplikacyjne na stanowisku: intencje z kolejki nadawane datagramami P1 do stacji OSP i z powrotem (bez Reticulum: zastępczy format datagramu), odbiór do skrzynki, `event`/`incoming` do laptopa, ponawianie według specyfikacji.
+2. Kreator ZGŁOSZENIE, WIADOMOŚCI i TEST na ekranie; alarmy; watchdog.
+3. microReticulum i LXMF na tym samym projekcie (T3) z pomiarem zapasu RAM; środowisko `bench-b` dla ESP32-S3-DevKitC-1 z S2-LP.

@@ -56,6 +56,9 @@ struct LinkCounters {
 
 enum class RxMode : uint8_t { NONE, TEST, P1 };
 
+// Bajty losowe z generatora sprzętowego nRF52840 (RNG z korekcją obciążenia).
+void randomBytes(uint8_t* out, size_t count);
+
 class Bench {
 public:
     Bench(cc1120::Radio& radio, uint8_t pinSync, uint8_t pinOk, uint8_t pinLed);

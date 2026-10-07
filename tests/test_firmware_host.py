@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: MIT
 """Host checks of Arduino-free firmware units: the P1 CRC, the test frame, the FRAM journal, the P1 frame codec,
-the screen model with its texts and the bitmap font."""
+the screen model with its texts and the bitmap font, the SA1 codec, the FRAM store and the USB protocol."""
 
 from pathlib import Path
+import json
 import shutil
 import subprocess
 import sys
@@ -12,7 +13,8 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "firmware" / "src"
 sys.path.insert(0, str(ROOT / "software" / "reference"))
-from reference import PREFIX, crc16, fragment  # noqa: E402
+from reference import (MAX_CONTENT, PREFIX, check_button_configuration, crc16, encode_message, fragment,  # noqa: E402
+                       status_after)
 
 sys.path.insert(0, str(ROOT / "firmware" / "tools"))
 import ui_texts  # noqa: E402
@@ -28,6 +30,9 @@ HARNESS = r"""
 #include "testframe.h"
 #include "font.h"
 #include "ui.h"
+#include "sa1.h"
+#include "store.h"
+#include "usbproto.h"
 
 // FRAM w RAM: 512 KiB skasowane do 0xFF jak nowy układ.
 struct RamStorage : journal::Storage {
@@ -206,8 +211,84 @@ int uiScript() {
     return 0;
 }
 
+// Usługi stacji dla protokołu w programie testowym.
+struct TestHost : usbproto::Host {
+    bool prep_ = true, silence_ = false, confirm_ = true;
+    uint32_t uptime_ = 100;
+    uint8_t counter_ = 0;
+    uint32_t uptimeS() override { return uptime_; }
+    bool prep() override { return prep_; }
+    bool silence() override { return silence_; }
+    void setSilence(bool on) override { silence_ = on; }
+    bool confirm() override { return confirm_; }
+    void randomBytes(uint8_t* out, size_t n) override { for (size_t i = 0; i < n; ++i) out[i] = static_cast<uint8_t>(++counter_); }
+    void log(const char* text) override { printf("log %s\n", text); }
+    void emit(const char* line) override { printf("<- %s\n", line); }
+    void stationAddress(uint8_t* out) override { memset(out, 0xAB, store::HASH); }
+    const char* stationName() override { return "WICI-TEST00"; }
+    const char* version() override { return "host"; }
+};
+
+// Protokół USB sterowany z wejścia: "> <json>" wiersz od laptopa, "E <kind> <pola>" zdarzenie stacji,
+// "T <ms>" poll, "C <ms>" połączenie, "D" rozłączenie, "P <0|1>" tryb przygotowania, "K <0|1>" potwierdzenie,
+// "U <s>" czas pracy, "R" restart stacji (ta sama pamięć), "Z <adres> <bajt>" uszkodzenie bajtu FRAM,
+// "S" stan magazynu, "Q <seq>" rekord kolejki.
+int usbScript() {
+    RamStorage ram;
+    TestHost host;
+    store::Store* store = new store::Store(ram);
+    store->begin();
+    usbproto::Protocol* proto = new usbproto::Protocol(*store, host);
+    proto->begin();
+    char line[2048];
+    while (fgets(line, sizeof(line), stdin)) {
+        char* nl = strchr(line, '\n');
+        if (nl) *nl = '\0';
+        unsigned a = 0, b = 0;
+        if (line[0] == '>' && line[1] == ' ') { proto->feed(line + 2, strlen(line + 2), 1000); proto->feed("\n", 1, 1000); }
+        else if (line[0] == 'E') { unsigned kind = 0; int offset = 0; sscanf(line, "E %u %n", &kind, &offset); printf("event %d\n", proto->event(static_cast<uint8_t>(kind), 0, line + offset, 1000)); }
+        else if (sscanf(line, "T %u", &a) == 1) proto->poll(a);
+        else if (sscanf(line, "C %u", &a) == 1) proto->connected(a);
+        else if (line[0] == 'D') proto->disconnected();
+        else if (sscanf(line, "P %u", &a) == 1) host.prep_ = a;
+        else if (sscanf(line, "K %u", &a) == 1) host.confirm_ = a;
+        else if (sscanf(line, "U %u", &a) == 1) host.uptime_ = a;
+        else if (line[0] == 'R') {
+            delete proto; delete store;
+            store = new store::Store(ram); printf("begin %d\n", store->begin());
+            proto = new usbproto::Protocol(*store, host); proto->begin();
+        } else if (sscanf(line, "Z %u %u", &a, &b) == 2) ram.bytes[a] = static_cast<uint8_t>(b);
+        else if (line[0] == 'S') printf("store live %zu inbox %zu pending %zu latest %u configured %d address %s\n", store->queueLive(), store->inboxCount(), store->notesPending(), store->noteLatest(), store->configured(), store->config().address);
+        else if (sscanf(line, "Q %u", &a) == 1) { store::QueueRecord r; if (store->queueRead(a, r)) printf("queue %u flags %u attempts %u %s\n", r.seq, r.flags, r.attempts, r.sa1); else printf("queue none\n"); }
+    }
+    delete proto; delete store;
+    return 0;
+}
+
 int main(int argc, char** argv) {
     if (argc == 2 && !strcmp(argv[1], "ui")) return uiScript();
+    if (argc == 2 && !strcmp(argv[1], "usb")) return usbScript();
+    if (argc == 3 && !strcmp(argv[1], "sa1")) {
+        sa1::Message m;
+        const char* why = sa1::decode(argv[2], strlen(argv[2]), m);
+        if (why) { printf("err %s\n", why); return 0; }
+        char out[sa1::MAX_CONTENT + 1];
+        const size_t n = sa1::encode(m, out, sizeof(out));
+        printf("ok %zu %s\n", n, n ? out : "");
+        return 0;
+    }
+    if (argc == 6 && !strcmp(argv[1], "status")) {
+        uint32_t e = 0; uint8_t s = 0;
+        const char* why = sa1::statusAfter(strtoul(argv[2], nullptr, 10), static_cast<uint8_t>(atoi(argv[3])), strtoul(argv[4], nullptr, 10), static_cast<uint8_t>(atoi(argv[5])), e, s);
+        if (why) printf("err %s\n", why); else printf("ok %u %u\n", e, s);
+        return 0;
+    }
+    if (argc >= 3 && !strcmp(argv[1], "config")) {
+        const char* why = nullptr;
+        const size_t n = sa1::buttonConfigurationSize(argv[2], const_cast<const char* const*>(argv + 3), static_cast<size_t>(argc - 3), &why);
+        if (n) printf("ok %zu\n", n); else printf("err %s\n", why);
+        return 0;
+    }
     if (argc == 3 && !strcmp(argv[1], "crc")) {
         printf("%04X\n", p1::crc16(reinterpret_cast<const uint8_t*>(argv[2]), strlen(argv[2])));
         return 0;
@@ -254,7 +335,8 @@ class HostUnitTests(unittest.TestCase):
         cls.binary = root / "harness"
         subprocess.run([compiler(), "-std=c++17", "-Wall", "-Wextra", "-Werror", f"-I{SRC}", str(root / "harness.cpp"),
                         str(SRC / "testframe.cpp"), str(SRC / "journal.cpp"), str(SRC / "p1frame.cpp"), str(SRC / "ui.cpp"),
-                        str(SRC / "font.cpp"), "-o", str(cls.binary)],
+                        str(SRC / "font.cpp"), str(SRC / "jsonlite.cpp"), str(SRC / "sa1.cpp"), str(SRC / "store.cpp"),
+                        str(SRC / "usbproto.cpp"), "-o", str(cls.binary)],
                        check=True)
 
     @classmethod
@@ -469,6 +551,157 @@ class HostUnitTests(unittest.TestCase):
         every = "".join(sorted(ui_texts.charset(data)))
         self.assertEqual(self.ui([f"G {every}"]), [f"glyphs {len(every)} 0"])
         self.assertEqual(self.ui(["G ĄĆĘŁŃÓŚŹŻąćęłńóśźż ҐґЇїЄєІі 漢"]), ["glyphs 29 1"])
+
+    # --- SA1 ---------------------------------------------------------------
+
+    MID = "0123456789abcdef0123456789abcdef"
+    SHAPES = (
+        [1, 0, MID, 65535, 9, 999, "ś" * 32, "ł" * 48, 2],
+        [1, 1, MID, 7, 1, 1],
+        [1, 2, MID, 7, 2147483647, 6],
+        [1, 3, MID, 7, 5, "ż" * 48],
+        [1, 4, MID, 2147483647, "ż" * 96],
+        [1, 5, MID, 0, 9, 1, "Szkoła, wejście B", "test", 0],
+    )
+
+    def sa1(self, value):
+        wire = json.dumps(value, ensure_ascii=False, separators=(",", ":")) if not isinstance(value, str) else value
+        line = subprocess.run([str(self.binary), "sa1", wire], capture_output=True, text=True, check=True).stdout.rstrip("\n")
+        return line.split(" ", 2) if line.startswith("ok") else line.split(" ", 1)
+
+    def test_sa1_every_shape_matches_model_encoding(self):
+        for value in self.SHAPES:
+            out = self.sa1(value)
+            self.assertEqual(out[0], "ok", value)
+            self.assertEqual(out[2].encode(), encode_message(value), value)
+            self.assertLessEqual(int(out[1]), MAX_CONTENT)
+        # Zapis z \u i spacjami daje tę samą postać kanoniczną.
+        loose = json.dumps(self.SHAPES[5], ensure_ascii=True, separators=(", ", ": "))
+        self.assertEqual(self.sa1(loose)[2].encode(), encode_message(self.SHAPES[5]))
+
+    def test_sa1_rejections_match_model(self):
+        cases = [
+            ([1, 0, "x" * 32, 0, 1, 1, "a", "", 0], "Invalid message id"),
+            ([1, 0, self.MID, 0, 1, 1, "a", "", 0, 0], "Invalid message arity"),
+            ([1, 2, self.MID, 0, 1, 2], "Invalid integer"),           # STATUS event 1
+            ([1, 2, self.MID, 0, 2, 7], "Invalid integer"),           # state 7
+            ([1, 1, self.MID, 0, True, 1], "Invalid integer"),        # bool
+            ([1, 0, self.MID, 0, 1, 1, "", "", 0], "Invalid UTF-8 text size"),
+            ([1, 0, self.MID, 0, 1, 1, "a", "ł" * 49, 0], "Invalid UTF-8 text size"),
+            ([1, 3, self.MID, 0, 1, 'a"b'], "Quotation mark or backslash"),
+            ([1, 3, self.MID, 0, 1, "a\\b"], "Quotation mark or backslash"),
+            ([1, 3, self.MID, 0, 1, "a\u200bb"], "Control, format, separator, private or unassigned character"),
+            ([1, 3, self.MID, 0, 1, "a\u2028b"], "Control, format, separator, private or unassigned character"),
+            ([1, 3, self.MID, 0, 1, "a\ue000b"], "Control, format, separator, private or unassigned character"),
+            ([1, 3, self.MID, 0, 1, "a\u0007b"], "Control, format, separator, private or unassigned character"),
+            ([1, 3, self.MID, 0, 1, "a\u00adb"], "Control, format, separator, private or unassigned character"),
+            ({"a": 1}, "Expected message array"),
+            ([1, 0, self.MID, 0.0, 1, 1, "a", "", 0], "Invalid integer"),
+            ([1, 4, self.MID, 1, "ż" * 96 + "x"], "Invalid UTF-8 text size"),
+        ]
+        for value, reason in cases:
+            self.assertEqual(self.sa1(value), ["err", reason], value)
+        self.assertEqual(self.sa1(" " * (MAX_CONTENT + 1)), ["err", "Content too large"])
+
+    def test_status_after_and_button_configuration_match_model(self):
+        for args in ((3, 3, 1, 1), (1, 1, 2, 2), (2, 2, 2, 3), (2, 2, 3, 1), (2, 5, 3, 3), (3, 3, 4, 6), (4, 6, 5, 2), (1, 1, 2, 7)):
+            out = self.run_harness("status", *map(str, args))
+            try:
+                expected = status_after(*args)
+                self.assertEqual(out, ["ok", str(expected[0]), str(expected[1])], args)
+            except ValueError as error:
+                self.assertEqual(out, ["err"] + str(error).split(), args)
+        self.assertEqual(self.run_harness("config", "ś" * 32, "Potrzeba ustała", "ł" * 48),
+                         ["ok", str(check_button_configuration("ś" * 32, ("Potrzeba ustała", "ł" * 48)))])
+        self.assertEqual(self.run_harness("config", "Testowa 10", "ł" * 49)[0], "err")
+        self.assertEqual(self.run_harness("config", 'Testowa "10"')[0], "err")
+
+    # --- protokół USB -------------------------------------------------------
+
+    def usb(self, script):
+        out = subprocess.run([str(self.binary), "usb"], input="\n".join(script) + "\n", capture_output=True, text=True,
+                             check=True).stdout.splitlines()
+        return out
+
+    @staticmethod
+    def replies(out):
+        return [json.loads(line[3:]) for line in out if line.startswith("<- ")]
+
+    def submit(self, seq, value, to="00112233445566778899aabbccddeeff", resend=False):
+        msg = {"usb": 1, "seq": seq, "type": "submit", "to": to, "id": value[2], "revision": value[3] if value[1] != 4 else 0,
+               "sa1": value}
+        if resend:
+            msg["resend"] = True
+        return "> " + json.dumps(msg, ensure_ascii=False)
+
+    def test_usb_sync_submit_duplicate_conflict_and_role(self):
+        request = [1, 0, self.MID, 0, 2, 10, "Szkoła", "osoba na wózku", 2]
+        changed = request[:5] + [11] + request[6:]
+        configure = {"usb": 1, "seq": 2, "type": "configure", "address": "Szkoła, wejście B", "osp": "00112233445566778899aabbccddeeff",
+                     "phrases": [["osoba na wózku", "людина на візку", "wheelchair user"]], "stations": 5}
+        out = self.usb(["C 0", '> {"usb":1,"seq":1,"type":"sync","boot":"deadbeef","cursor":0}', "> " + json.dumps(configure, ensure_ascii=False),
+                        self.submit(3, request), self.submit(4, request), self.submit(5, changed),
+                        self.submit(6, [1, 0, self.MID, 1, 2, 11, "Szkoła", "", 2], to="ff" * 16),
+                        self.submit(7, [1, 2, self.MID, 0, 2, 2]), '> {"usb":1,"seq":8,"type":"test"}', "S"])
+        r = self.replies(out)
+        self.assertEqual([x["type"] for x in r], ["sync", "sync", "ok", "stored", "stored", "rejected", "rejected", "rejected", "stored"])
+        self.assertEqual(len(r[0]["boot"]), 16)
+        self.assertEqual((r[1]["re"], r[1]["configured"]), (1, False))
+        self.assertEqual(r[2]["worst_request"], check_button_configuration("Szkoła, wejście B", ("osoba na wózku",)))
+        self.assertEqual((r[3]["record"], r[3]["duplicate"]), (1, False))
+        self.assertEqual((r[4]["record"], r[4]["duplicate"]), (1, True))
+        self.assertEqual(r[5]["reason"], "conflict")
+        self.assertEqual(r[6]["detail"], "recipient is not the active OSP")
+        self.assertEqual(r[7]["detail"], "type not allowed for this role")
+        self.assertEqual((r[8]["revision"], r[8]["record"]), (0, 2))
+        self.assertIn("store live 2 inbox 0 pending 0 latest 0 configured 1 address Szkoła, wejście B", out)
+        self.assertIn("log usb submit", out)
+
+    def test_usb_queue_full_resend_and_persistence(self):
+        script = ["C 0"]
+        for i in range(129):
+            script.append(self.submit(10 + i, [1, 0, "%032x" % i, 0, 1, 1, "a", "", 0]))
+        script += ["S", "R", "S", "Q 1", self.submit(500, [1, 0, "%032x" % 0, 0, 1, 1, "a", "", 0], resend=True),
+                   "Z %d 0" % (0x10000 + 448 + 1 + 2), "R", "Q 2"]
+        out = self.usb(script)
+        r = self.replies(out)[1:]  # pierwsza odpowiedź to sync po otwarciu portu
+        self.assertEqual([x["type"] for x in r[:129]], ["stored"] * 128 + ["rejected"])
+        self.assertEqual(r[128]["reason"], "full")
+        self.assertEqual(out.count("store live 128 inbox 0 pending 0 latest 0 configured 0 address "), 2)
+        self.assertIn("begin 1", out)
+        self.assertTrue(any(line.startswith("queue 1 flags 1 attempts 0 [1,0,") for line in out))
+        self.assertEqual(r[129]["duplicate"], True)  # ponowne uaktywnienie żywej intencji to duplikat
+        self.assertTrue(any(line.startswith("queue 2 flags 1 attempts 0 ") for line in out))  # uszkodzony stan: aktywna od nowa
+
+    def test_usb_events_ack_resend_and_commands(self):
+        out = self.usb(["C 0", '> {"usb":1,"seq":1,"type":"sync","boot":"b","cursor":0}', 'E 2 "kind":"radio","silence":true',
+                        "T 2000", "T 7000", '> {"usb":1,"seq":2,"type":"ack","cursor":1}', "T 13000", 'E 2 "kind":"radio","silence":false',
+                        "D", "C 20000", '> {"usb":1,"seq":3,"type":"sync","boot":"b","cursor":1}', "T 20001", "T 26000",
+                        '> {"usb":1,"seq":4,"type":"ack","record":2}', "T 32000",
+                        'K 0', '> {"usb":1,"seq":5,"type":"silence","on":true}', 'K 1', '> {"usb":1,"seq":6,"type":"silence","on":true}',
+                        'P 0', '> {"usb":1,"seq":7,"type":"configure","address":"x"}', '> {"usb":1,"seq":8,"type":"export"}',
+                        '> {"usb":1,"seq":9,"type":"trust"}', "> nonsense", '> {"usb":2,"seq":10,"type":"sync"}', '> {"usb":1,"type":"sync"}',
+                        '> {"usb":1,"seq":11,"type":"close"}', "S"])
+        r = self.replies(out)
+        types = [x["type"] for x in r]
+        self.assertEqual(types[:4], ["sync", "sync", "event", "event"])  # zdarzenie od razu i ponownie po 5 s
+        self.assertEqual((r[2]["record"], r[2]["silence"]), (1, True))
+        self.assertEqual(types[4:7], ["event", "sync", "sync"])  # drugie zdarzenie, potem nowa sesja
+        self.assertEqual(r[6]["pending"], 1)
+        self.assertEqual(types[7:9], ["event", "event"])  # zaległe zdarzenie 2 po sync z kursorem 1, ponowione po 5 s
+        self.assertEqual((r[7]["record"], r[8]["record"]), (2, 2))
+        self.assertEqual(types[9:], ["rejected", "ok", "rejected", "rejected", "rejected", "rejected", "rejected", "rejected", "ok"])
+        self.assertEqual([x["reason"] for x in r[9:10] + r[11:17]],
+                         ["not confirmed", "preparation mode required", "preparation mode required", "unsupported", "not json", "contract", "seq"])
+        self.assertEqual(r[10]["silence"], True)
+        self.assertIn("log usb silence not confirmed", out)
+        self.assertIn("store live 0 inbox 0 pending 0 latest 0 configured 0 address ", out)
+
+    def test_usb_line_too_long_is_rejected(self):
+        out = self.usb(["C 0", "> " + "x" * 1500, '> {"usb":1,"seq":1,"type":"sync","boot":"b","cursor":0}'])
+        r = self.replies(out)
+        self.assertEqual([x["type"] for x in r], ["sync", "rejected", "sync"])
+        self.assertEqual(r[1]["reason"], "line too long")
 
     def test_rejects_bad_lengths(self):
         with self.assertRaises(subprocess.CalledProcessError):
