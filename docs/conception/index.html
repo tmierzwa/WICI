@@ -95,7 +95,7 @@
 <tr><td>przekaźnik</td><td>stacja z laptopem, modemem i <code>rnsd</code>, która przekazuje ruch innych stacji; sam modem nie przekazuje pakietów</td></tr>
 <tr><td>A, B, C</td><td>wejścia zasilania: A i B — wymieniane źródła 12 V stacji, C — osobne źródło ładowarki telefonów</td></tr>
 <tr><td>HOLD</td><td>status sprzętu: projekt nie jest dopuszczony do zamówienia ani użycia do czasu odbioru wskazanej konfiguracji</td></tr>
-<tr><td>START</td><td>pakiety uruchomieniowe offline: dla działającego Windows/macOS oraz obraz Linux dla wspieranych PC</td></tr>
+<tr><td>START</td><td>pakiety uruchomieniowe offline: dla działającego systemu Windows lub macOS oraz obraz Linuksa dla obsługiwanych komputerów PC</td></tr>
 <tr><td>PRZENIEŚ STACJĘ</td><td>kontrolowane przeniesienie bazy i tożsamości na inny laptop; stara instancja przestaje pracować</td></tr>
 <tr><td>TEST</td><td>typ SA1 o budowie REQUEST: sprawdza drogę do OSP, zapis i obecność dyżurnego; nie trafia do kolejki potrzeb</td></tr>
 <tr><td>COMMIT</td><td>zatwierdzenie transakcji SQLite; dopiero po nim zapis uznaje się za trwały</td></tr>
@@ -114,9 +114,9 @@
 
 <h2 id="ocena-obecnego-stanu">Ocena obecnego stanu</h2>
 
-<p>Koncepcja nadaje się do budowy prototypów i sprawdzania hipotez. Nie ma jeszcze dowodu łączności 1 km, działania całego stosu radiowego, pracy dobowej ani bezpieczeństwa własnej przetwornicy. Kontroler USB R01.3 pozostaje HOLD; moduły RF, firmware, aplikacja i pakiety START nie są ukończone. Wyniki modelu i CAD nie zastępują prób sprzętu.</p>
+<p>Koncepcja nadaje się do budowy prototypów i sprawdzania hipotez. Nie ma jeszcze dowodu łączności 1 km, działania całego stosu radiowego, pracy dobowej ani bezpieczeństwa własnej przetwornicy. Kontroler USB R01.3 pozostaje HOLD; moduły RF, oprogramowanie układowe, aplikacja i pakiety START nie są ukończone. Wyniki modelu i CAD nie zastępują prób sprzętu.</p>
 
-<p><a href="../review.md">Aktualne ustalenia przeglądu</a> obejmują konkretny problem suspend USB, budżet ogranicznika ładowarki oraz kontrprzykład czasowy stosu sieciowego.</p>
+<p><a href="../review.md">Aktualne ustalenia przeglądu</a> obejmują konkretny problem prądu wstrzymania USB (suspend), budżet ogranicznika ładowarki oraz kontrprzykład czasowy stosu sieciowego.</p>
 
 <p>Pierwsze rozstrzygnięcia: trwałe przyjęcie zgłoszenia przez OSP; rzeczywisty koszt radiowy LXMF, w tym zmieszczenie SA1 w jednym pakiecie; zgodność dwóch modemów; zasilanie bez resetu; dostępność dyżurnego zdolnego do działania. Bez odbiorcy zdolnego pomóc sprawna sieć jedynie przenosi dane.</p>
 
