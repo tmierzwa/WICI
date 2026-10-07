@@ -171,6 +171,7 @@ figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.5rem; }
 .dg-frame-title { fill: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
 .dg-box { fill: var(--surface-2); stroke: var(--border-strong); }
 .dg-box.key { stroke: var(--accent); }
+.dg-box.opt { stroke-dasharray: 4 3; }
 .dg-text { fill: var(--text); font-size: 13px; }
 .dg-edge { stroke: var(--muted); stroke-width: 1.4; fill: none; }
 .dg-arrow { fill: var(--muted); }

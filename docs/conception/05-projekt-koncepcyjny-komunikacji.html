@@ -13,7 +13,7 @@
   <div class="inner">
     <a class="brand" href="index.html">WICI <span>· koncepcja systemu</span></a>
     <a class="jump" href="#rozdzialy">Rozdziały ↓</a>
-    <span class="status">Prototyp 0.4 · sprzęt <b>HOLD</b></span>
+    <span class="status">Prototyp 0.5 · sprzęt <b>HOLD</b></span>
   </div>
 </header>
 <div class="layout">
@@ -54,19 +54,21 @@
 <div class="figure-scroll">
 <svg viewBox="0 0 760 494" role="img" aria-labelledby="dg-title dg-desc" xmlns="http://www.w3.org/2000/svg">
   <title id="dg-title">Podział funkcji stacji WICI</title>
-  <desc id="dg-desc">W schronieniu A telefon łączy się przez Wi-Fi z routerem, router przez Ethernet z aplikacją station-web, która zapisuje dane w SQLite i przekazuje wiadomości do LXMF. LXMF używa procesu rnsd, a ten adaptera ShelterKISSInterface połączonego przez USB z modemem P1. Modem łączy się radiem z przekaźnikiem B, który ma modem, laptop i rnsd. Przekaźnik łączy się radiem z OSP, gdzie modem, rnsd i LXMF przekazują dane do station-web OSP z bazą SQLite, a dyżurny podejmuje decyzję.</desc>
+  <desc id="dg-desc">W schronieniu A stacja WICI zawiera ekran i przyciski, trwałą kolejkę w pamięci FRAM z LXMF, transport Reticulum oraz sterownik P1 z radiem. Opcjonalnie do stacji przez USB podłącza się laptop ze stroną, panelem i bazą SQLite, a do laptopa przez Ethernet router Wi-Fi, z którym łączą się telefony mieszkańców. Stacja łączy się radiem z przekaźnikiem B, który jest taką samą stacją zasilaną z ogniw lub źródła 12 V. Przekaźnik łączy się radiem ze stacją OSP, do której przez USB podłączony jest komputer stanowiska z bazą SQLite, a dyżurny podejmuje decyzję.</desc>
   <defs>
     <marker id="dg-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path class="dg-arrow" d="M0,0 L10,5 L0,10 z"/>
     </marker>
   </defs>
 
-  <rect class="dg-frame" x="12" y="24" width="258" height="458" rx="8"/>
+  <rect class="dg-frame" x="12" y="24" width="270" height="458" rx="8"/>
   <text class="dg-frame-title" x="24" y="44">Schronienie A</text>
-  <rect class="dg-frame" x="290" y="392" width="190" height="90" rx="8"/>
-  <text class="dg-frame-title" x="302" y="412">Przekaźnik B</text>
-  <rect class="dg-frame" x="512" y="270" width="236" height="212" rx="8"/>
-  <text class="dg-frame-title" x="524" y="290">OSP</text>
+  <rect class="dg-frame" x="18" y="232" width="258" height="242" rx="6"/>
+  <text class="dg-frame-title" x="256" y="353" text-anchor="middle" transform="rotate(-90 256 353)">Stacja WICI · MCU</text>
+  <rect class="dg-frame" x="300" y="392" width="190" height="90" rx="8"/>
+  <text class="dg-frame-title" x="312" y="412">Przekaźnik B</text>
+  <rect class="dg-frame" x="512" y="210" width="236" height="272" rx="8"/>
+  <text class="dg-frame-title" x="524" y="230">OSP</text>
 
   <g class="dg-edges">
     <line class="dg-edge" x1="104" y1="91" x2="104" y2="117" marker-start="url(#dg-arr)" marker-end="url(#dg-arr)"/>
@@ -76,63 +78,64 @@
     <line class="dg-edge" x1="104" y1="277" x2="104" y2="303" marker-start="url(#dg-arr)" marker-end="url(#dg-arr)"/>
     <line class="dg-edge" x1="104" y1="339" x2="104" y2="365" marker-start="url(#dg-arr)" marker-end="url(#dg-arr)"/>
     <line class="dg-edge" x1="104" y1="401" x2="104" y2="427" marker-start="url(#dg-arr)" marker-end="url(#dg-arr)"/>
-    <line class="dg-edge" x1="185" y1="445" x2="301" y2="445" marker-start="url(#dg-arr)" marker-end="url(#dg-arr)"/>
-    <line class="dg-edge" x1="469" y1="445" x2="529" y2="445" marker-start="url(#dg-arr)" marker-end="url(#dg-arr)"/>
-    <line class="dg-edge" x1="630" y1="401" x2="630" y2="427" marker-start="url(#dg-arr)" marker-end="url(#dg-arr)"/>
-    <line class="dg-edge" x1="630" y1="339" x2="630" y2="365" marker-start="url(#dg-arr)" marker-end="url(#dg-arr)"/>
+    <line class="dg-edge" x1="221" y1="445" x2="311" y2="445" marker-start="url(#dg-arr)" marker-end="url(#dg-arr)"/>
+    <line class="dg-edge" x1="479" y1="445" x2="529" y2="445" marker-start="url(#dg-arr)" marker-end="url(#dg-arr)"/>
+    <line class="dg-edge" x1="630" y1="277" x2="630" y2="303" marker-start="url(#dg-arr)" marker-end="url(#dg-arr)"/>
+    <line class="dg-edge" x1="630" y1="339" x2="630" y2="427" marker-start="url(#dg-arr)" marker-end="url(#dg-arr)"/>
   </g>
 
   <g text-anchor="middle" dominant-baseline="central">
-    <rect class="dg-box" x="24" y="56" width="160" height="34" rx="5"/>
+    <rect class="dg-box opt" x="24" y="56" width="160" height="34" rx="5"/>
     <text class="dg-text" x="104" y="73">Telefon / przeglądarka</text>
-    <rect class="dg-box" x="24" y="118" width="160" height="34" rx="5"/>
+    <rect class="dg-box opt" x="24" y="118" width="160" height="34" rx="5"/>
     <text class="dg-text" x="104" y="135">Zwykły router / DHCP</text>
-    <rect class="dg-box key" x="24" y="180" width="160" height="34" rx="5"/>
-    <text class="dg-text" x="104" y="197">station-web</text>
-    <rect class="dg-box" x="208" y="180" width="52" height="34" rx="5"/>
-    <text class="dg-text" x="234" y="197">SQLite</text>
-    <rect class="dg-box" x="24" y="242" width="160" height="34" rx="5"/>
-    <text class="dg-text" x="104" y="259">LXMF</text>
-    <rect class="dg-box" x="24" y="304" width="160" height="34" rx="5"/>
-    <text class="dg-text" x="104" y="321">rnsd · Reticulum</text>
-    <rect class="dg-box key" x="24" y="366" width="160" height="34" rx="5"/>
-    <text class="dg-text" x="104" y="383">ShelterKISSInterface</text>
-    <rect class="dg-box key" x="24" y="428" width="160" height="34" rx="5"/>
-    <text class="dg-text" x="104" y="445">Modem P1 + antena</text>
+    <rect class="dg-box key opt" x="24" y="180" width="160" height="34" rx="5"/>
+    <text class="dg-text" x="104" y="197">Laptop: strona, panel</text>
+    <rect class="dg-box opt" x="208" y="180" width="62" height="34" rx="5"/>
+    <text class="dg-text" x="239" y="197">SQLite</text>
+    <rect class="dg-box key" x="24" y="242" width="196" height="34" rx="5"/>
+    <text class="dg-text" x="122" y="259">Ekran i przyciski</text>
+    <rect class="dg-box key" x="24" y="304" width="196" height="34" rx="5"/>
+    <text class="dg-text" x="122" y="321">Kolejka FRAM · LXMF</text>
+    <rect class="dg-box" x="24" y="366" width="196" height="34" rx="5"/>
+    <text class="dg-text" x="122" y="383">Reticulum · transport</text>
+    <rect class="dg-box key" x="24" y="428" width="196" height="34" rx="5"/>
+    <text class="dg-text" x="122" y="445">Sterownik P1 + antena</text>
 
-    <rect class="dg-box" x="302" y="428" width="166" height="34" rx="5"/>
-    <text class="dg-text" x="385" y="445">modem + laptop + rnsd</text>
+    <rect class="dg-box key" x="312" y="428" width="166" height="34" rx="5"/>
+    <text class="dg-text" x="395" y="445">stacja · ogniwa / 12 V</text>
 
-    <rect class="dg-box" x="530" y="304" width="200" height="34" rx="5"/>
-    <text class="dg-text" x="630" y="321">Dyżurny · decyzja o pomocy</text>
-    <rect class="dg-box key" x="530" y="366" width="200" height="34" rx="5"/>
-    <text class="dg-text" x="630" y="383">station-web OSP + SQLite</text>
-    <rect class="dg-box" x="530" y="428" width="200" height="34" rx="5"/>
-    <text class="dg-text" x="630" y="445">modem + rnsd + LXMF</text>
+    <rect class="dg-box" x="530" y="242" width="200" height="34" rx="5"/>
+    <text class="dg-text" x="630" y="259">Dyżurny · decyzja o pomocy</text>
+    <rect class="dg-box key" x="530" y="304" width="200" height="34" rx="5"/>
+    <text class="dg-text" x="630" y="321">komputer OSP + SQLite</text>
+    <rect class="dg-box key" x="530" y="428" width="200" height="34" rx="5"/>
+    <text class="dg-text" x="630" y="445">stacja OSP</text>
   </g>
 
   <g class="dg-label">
-    <text x="112" y="104" dominant-baseline="central">Wi-Fi / HTTP</text>
+    <text x="112" y="104" dominant-baseline="central">Wi-Fi / HTTP · poziom 3</text>
     <text x="112" y="166" dominant-baseline="central">Ethernet LAN</text>
-    <text x="112" y="414" dominant-baseline="central">USB CDC / KISS</text>
-    <text x="230" y="434" text-anchor="middle">radio</text>
-    <text x="499" y="434" text-anchor="middle">radio</text>
+    <text x="112" y="228" dominant-baseline="central">USB · poziom 2</text>
+    <text x="266" y="434" text-anchor="middle">radio</text>
+    <text x="504" y="434" text-anchor="middle">radio</text>
+    <text x="638" y="383" dominant-baseline="central">USB</text>
   </g>
 </svg>
 </div>
-<figcaption>Droga zgłoszenia przez przekaźnik. Wyróżnione ramki to części wykonywane w projekcie WICI; przekaźnik i OSP używają tych samych modemów P1. Router Wi-Fi nie uczestniczy w łączności radiowej.</figcaption>
+<figcaption>Droga zgłoszenia przez przekaźnik. Wyróżnione ramki to części wykonywane w projekcie WICI; przekaźnik i OSP używają tych samych stacji. Ramki przerywane to rozszerzenia: laptop (poziom 2) oraz router i telefony (poziom 3). Router Wi-Fi nie uczestniczy w łączności radiowej.</figcaption>
 </figure>
 
-<p>Bezpośrednie połączenie z OSP jest możliwe, gdy pozwalają na to warunki radiowe. Przekaźnik musi mieć zasilany laptop i działający transport, bo sam modem nie trasuje pakietów.</p>
+<p>Bezpośrednie połączenie z OSP jest możliwe, gdy pozwalają na to warunki radiowe. Transport Reticulum działa w mikrokontrolerze stacji, więc każda włączona stacja przekazuje pakiety innych stacji. Przekaźnik nie potrzebuje laptopa.</p>
 
-<p><code>rnsd</code> działa niezależnie od lokalnej strony. Restart strony nie powinien przerywać przekazywania pakietów innych stacji. Aplikacja ma jedną bazę i jedną instancję routera LXMF dla tożsamości stacji. W OSP działa ten sam podział z rolą dyżurnego. <a href="https://reticulum.network/manual/understanding.html">Implementacja transportu</a>, <a href="../spec/oprogramowanie.md">kontrakty WICI</a>.</p>
+<p>Stacja jest jedynym węzłem sieci w schronieniu: ma tożsamość, jedną instancję routera LXMF i trwałą kolejkę. Komputer nie ma własnej tożsamości Reticulum. Przekazuje stacji intencje wysyłki i odbiera zdarzenia przez lokalny protokół USB (D17). Odłączenie lub restart komputera nie przerywa przekazywania pakietów ani wysyłki kolejki. W OSP działa ten sam podział: stacja i komputer stanowiska z rolą dyżurnego. <a href="https://reticulum.network/manual/understanding.html">Implementacja transportu</a>, <a href="../spec/oprogramowanie.md">kontrakty WICI</a>.</p>
 
 <h2 id="droga-zgloszenia">Droga zgłoszenia</h2>
 
 <ol>
-  <li>Telefon wysyła formularz przez lokalny HTTP. WICI sprawdza pola i atomowo zapisuje zgłoszenie, dostęp mieszkańca oraz intencję wysyłki.</li>
-  <li>Po COMMIT pokazuje <strong>zapisane lokalnie</strong>. Brak radia nie zmienia tego znaczenia. Błąd dysku nie może dać pozornego sukcesu.</li>
-  <li>Proces kolejki przekazuje treść SA1 do LXMF. Reticulum realizuje ochronę komunikacji i transport. Adapter przekazuje datagramy USB; modem dzieli je na ramki P1 i przestrzega budżetu TX.</li>
+  <li>Opiekun wybiera przyciskami kategorię, liczbę osób i pilność; stacja dodaje zapisany adres i atomowo zapisuje zgłoszenie z intencją wysyłki w pamięci FRAM. Na poziomie 3 telefon wysyła formularz przez lokalny HTTP. Laptop atomowo zapisuje zgłoszenie, dostęp mieszkańca i intencję przekazania do stacji, a stacja przyjmuje zgłoszenie idempotentnie po id i revision i potwierdza je laptopowi po własnym zapisie.</li>
+  <li>Po COMMIT ekran lub strona pokazuje <strong>zapisane lokalnie</strong>. Brak radia nie zmienia tego znaczenia. Błąd dysku nie może dać pozornego sukcesu.</li>
+  <li>Kolejka stacji przekazuje treść SA1 do LXMF. Reticulum realizuje ochronę komunikacji i transport. Sterownik P1 w tym samym oprogramowaniu dzieli datagramy na ramki i przestrzega budżetu TX.</li>
   <li>Aktywne węzły pośrednie przekazują pakiety. OSP weryfikuje nadawcę, format i duplikat, następnie zapisuje zgłoszenie wraz z intencją RECEIVED.</li>
   <li>OSP wysyła RECEIVED dopiero po COMMIT. Źródło pokazuje <strong>zapisane w OSP</strong> po przyjęciu potwierdzenia od zaufanej tożsamości.</li>
   <li>Dyżurny osobno zapisuje odczyt albo skierowanie pomocy. STATUS wraca tą samą siecią. Decyzja o wysłaniu ludzi nie wynika automatycznie z numeru pilności.</li>
@@ -146,6 +149,8 @@
 
 <p>Wiadomości zakodowane modelem: typowe zgłoszenie po polsku 174 B, REQUEST lub TEST z maksymalnymi polami 222 B, BULLETIN 246 B, RECEIVED 50 B. Limity pól liczone przed kodowaniem nie ograniczają jednak rozmiaru po kodowaniu, bo cudzysłów i ukośnik zajmują w JSON po 2 B. REQUEST z polami złożonymi z <code>"</code> ma 382 B, BULLETIN z <code>\</code> 438 B. Obie mieszczą się w obecnym limicie 480 B, ale nie w jednym pakiecie. Treść wpisana przez mieszkańca może więc zmienić drogę dostarczenia bez wiedzy opiekuna.</p>
 
+<p>Na mikrokontrolerze jeden pakiet na wiadomość ma dodatkową zaletę. Omija przesyłanie zasobu, w którym microReticulum ma znane błędy przy stratnym łączu, i ogranicza pamięć potrzebną na wiadomość. Zgłoszenie wybrane przyciskami z gotową frazą jest krótsze niż typowe zgłoszenie z formularza.</p>
+
 <p>Propozycja: każda wiadomość SA1 powinna się mieścić w jednym pakiecie okazjonalnym LXMF. Limit sprawdzać po kodowaniu JSON, nie tylko dla pól. Dokładną wartość obliczyć dla przypiętych wersji i wpisać do <a href="../spec/oprogramowanie.md">specyfikacji</a> zamiast 480 B, razem z przypadkiem granicznym w modelu. Ruch aplikacji nie wymaga wtedy zestawiania linku ani zasobu; pozostają zapytania o trasę, ogłoszenia i potwierdzenia pakietów. Do czasu zmiany specyfikacji jest to otwarta część D01.</p>
 
 <h2 id="interfejsy-i-granice-odpowiedzialnosci">Interfejsy i granice odpowiedzialności</h2>
@@ -156,35 +161,38 @@
 <th scope="col">Kontrakt</th>
 <th scope="col">Co sprawdzić</th>
 </tr></thead><tbody>
-<tr><td>Telefon–laptop</td><td>lokalny HTTP, token własnego zgłoszenia, panel opiekuna</td><td>50 połączonych / 15 aktywnych; izolacja dostępu i brak zasobów internetowych</td></tr>
-<tr><td>Aplikacja–nośnik</td><td>jedna baza SQLite; dane + intencja w jednej transakcji</td><td>fizyczne przerwanie zasilania i błąd zapisu; poprawna kopia i import</td></tr>
-<tr><td>Aplikacja–LXMF</td><td>sześć wiadomości SA1, treść ≤480 B UTF-8, bez załączników; proponowany jeden pakiet okazjonalny</td><td>rozmiar po kodowaniu JSON i wybrany sposób dostarczenia; rzeczywiste pakiety i kontrola ponowień</td></tr>
-<tr><td>Reticulum–modem</td><td>adapter ShelterKISSInterface, DATA/READY, osobna diagnostyka CDC</td><td>oczekiwanie na ciszę, odrzuty, restart, ograniczone bufory i powrót do odbioru</td></tr>
-<tr><td>Modem–eter</td><td>profil P1, datagram 1–600 B, fragmenty do 86 B</td><td>zgodność TI–ST, emisje, CRC i składanie; całkowity czas TX</td></tr>
+<tr><td>Opiekun–stacja</td><td>ekran i przyciski: zgłoszenie z listy kategorii i fraz, TEST, cisza radiowa, odczyt statusów i komunikatów, stan energii</td><td>obsługa według karty, w rękawicach, po polsku, ukraińsku i angielsku; czytelność na mrozie</td></tr>
+<tr><td>Telefon–laptop (poziom 3)</td><td>lokalny HTTP, token własnego zgłoszenia, panel opiekuna</td><td>50 połączonych / 15 aktywnych; izolacja dostępu i brak zasobów internetowych</td></tr>
+<tr><td>Laptop–nośnik</td><td>jedna baza SQLite; dane mieszkańca + intencja przekazania w jednej transakcji</td><td>fizyczne przerwanie zasilania i błąd zapisu; poprawna kopia i import</td></tr>
+<tr><td>Laptop–stacja (poziom 2)</td><td>lokalny protokół USB: intencje SA1 z id i revision, potwierdzenie po zapisie w stacji, zdarzenia statusu; laptop bez tożsamości Reticulum</td><td>odłączenie w trakcie przekazania, duplikaty, zgodność stanu po ponownym połączeniu (D17)</td></tr>
+<tr><td>Stacja–pamięć nieulotna</td><td>dziennik FRAM: zgłoszenie + intencja wysyłki, statusy, dług ciszy</td><td>przerwanie zasilania w trakcie zapisu, wymiana ogniw, pełna pamięć</td></tr>
+<tr><td>Kolejka–LXMF</td><td>sześć wiadomości SA1, treść ≤480 B UTF-8, bez załączników; proponowany jeden pakiet okazjonalny</td><td>rozmiar po kodowaniu JSON i wybrany sposób dostarczenia; rzeczywiste pakiety i kontrola ponowień</td></tr>
+<tr><td>Reticulum–P1</td><td>sterownik interfejsu w oprogramowaniu stacji; stos zna dług ciszy i stan kolejki radiowej</td><td>oczekiwanie na ciszę, limity czasu linku i ponowień LXMF, ograniczone bufory, powrót do odbioru</td></tr>
+<tr><td>Radio–eter</td><td>profil P1, datagram 1–600 B, fragmenty do 86 B</td><td>zgodność TI–ST, emisje, CRC i składanie; całkowity czas TX</td></tr>
 <tr><td>Stanowisko–dyżurny</td><td>kolejka przyjętych potrzeb i jawne statusy</td><td>dostępny człowiek, odczyt, decyzja i odpowiedź</td></tr>
 </tbody></table></div>
 
-<p>Szczegóły podają specyfikacje <a href="../spec/radio.md">radia</a> i <a href="../spec/oprogramowanie.md">oprogramowania</a>. Modem nie implementuje szyfrowania, potwierdzeń ani trasowania. CRC wykrywa błędy ramki, ale nie uwierzytelnia nadawcy.</p>
+<p>Szczegóły podają specyfikacje <a href="../spec/radio.md">radia</a> i <a href="../spec/oprogramowanie.md">oprogramowania</a>. Sterownik P1 nie implementuje szyfrowania, potwierdzeń ani trasowania; robi to Reticulum w tym samym oprogramowaniu. CRC wykrywa błędy ramki, ale nie uwierzytelnia nadawcy.</p>
 
 <h2 id="kolejki-opoznienia-i-praca-bez-trasy">Kolejki, opóźnienia i praca bez trasy</h2>
 
-<p>Własne zgłoszenia pozostają w SQLite do obsłużenia według kontraktu. LXMF prowadzi aktywną transmisję, a WICI nie rozpoczyna równoległego ponowienia tej samej intencji. Potwierdzenia RECEIVED i statusy mają pierwszeństwo w kolejce aplikacji; inne stacje, transport i obcy ruch radiowy nie podlegają tej kolejce. WICI nie gwarantuje pilnemu zgłoszeniu czasu dostarczenia podczas przeciążenia.</p>
+<p>Własne zgłoszenia pozostają w pamięci FRAM stacji do obsłużenia według kontraktu. LXMF prowadzi aktywną transmisję, a WICI nie rozpoczyna równoległego ponowienia tej samej intencji. Potwierdzenia RECEIVED i statusy mają pierwszeństwo w kolejce aplikacji; inne stacje, transport i obcy ruch radiowy nie podlegają tej kolejce. WICI nie gwarantuje pilnemu zgłoszeniu czasu dostarczenia podczas przeciążenia.</p>
 
-<p>Modem ma cztery miejsca na datagramy i osiem kontekstów składania. Przepełnienie musi być widoczne w licznikach. W prototypie trzeba też określić limity trwałej kolejki, wolnego miejsca i logów oraz zachowanie formularza po ich osiągnięciu. Nie wolno pozornie potwierdzić odrzuconych danych.</p>
+<p>Sterownik P1 ma cztery miejsca na datagramy i osiem kontekstów składania. Przepełnienie musi być widoczne w licznikach. Limity trwałej kolejki stacji, bazy laptopa i dzienników oraz zachowanie przycisków i formularza po ich osiągnięciu określa <a href="../spec/oprogramowanie.md">specyfikacja oprogramowania</a>. Nie wolno pozornie potwierdzić odrzuconych danych.</p>
 
-<p>Tryb ciszy radiowej zatrzymuje tylko nadawanie, łącznie z cyklicznymi ogłoszeniami. Strona i zapis działają, a kolejka rośnie i zostaje wysłana po ręcznym wyłączeniu ciszy. Szczegóły w <a href="../spec/oprogramowanie.md">specyfikacji oprogramowania</a>, uzasadnienie w rozdziale <a href="02-scenariusze-i-organizacja.html#miejsce-w-systemie-ochrony-ludnosci">02</a>.</p>
+<p>Tryb ciszy radiowej zatrzymuje całe nadawanie stacji, także przekazywanie cudzych pakietów. Stacja nie nadaje też cyklicznych ogłoszeń. Ekran, strona, odbiór i zapis działają, a kolejka rośnie i zostaje wysłana po ręcznym wyłączeniu ciszy. Wyjątkiem jest pojedyncze zgłoszenie przy bezpośrednim zagrożeniu życia, zapisane w dzienniku. Szczegóły w <a href="../spec/oprogramowanie.md">specyfikacji oprogramowania</a>, uzasadnienie w rozdziale <a href="02-scenariusze-i-organizacja.html#miejsce-w-systemie-ochrony-ludnosci">02</a>.</p>
 
 <p>Węzeł transportowy jest aktywnym przekaźnikiem, nie magazynem wszystkich cudzych zgłoszeń. Opcjonalny węzeł przechowywania LXMF w OSP jest inną funkcją i wymaga osobnych prób, zwłaszcza przy długim braku odbiorcy. <a href="https://github.com/markqvist/LXMF">Role LXMF</a>.</p>
 
 <h2 id="zaufanie-i-informacja-lokalna">Zaufanie i informacja lokalna</h2>
 
-<p>Kartę zaufanej OSP importuje się przed pracą, niezależnym uzgodnionym sposobem. Nazwa widoczna w radiu lub na stronie nie nadaje uprawnień. Nieznany nadawca zgłoszenia wymaga kwarantanny i decyzji dyżurnego. Stacja przyjmuje statusy i komunikaty wyłącznie od przypiętej OSP. Procedura wymiany i unieważniania kluczy pozostaje do opracowania przed pilotażem.</p>
+<p>Kartę zaufanej OSP zapisuje się w stacji podczas przygotowania, przed kryzysem, niezależnym uzgodnionym sposobem. Nazwa widoczna w radiu lub na ekranie nie nadaje uprawnień. W OSP zgłoszenie nieznanego nadawcy trafia do kwarantanny i dostaje RECEIVED dopiero po decyzji dyżurnego. Stacja przyjmuje RECEIVED, statusy, odpowiedzi i komunikaty wyłącznie od przypiętej OSP. Procedura wymiany i unieważniania kluczy pozostaje do opracowania przed pilotażem.</p>
 
-<p>Szyfrowanie radiowe nie zabezpiecza lokalnego HTTP ani bazy na dysku. Nie wysyła się przez radio identyfikatorów osób lub dokumentów. Do wskazania potrzeby wystarczą lokalizacja, kategoria, liczba osób i krótki opis. Strona mieszkańca pokazuje jego zgłoszenie; kolejkę zbiorczą widzi opiekun. <a href="07-zagrozenia-i-odpornosc.html">Ograniczenia ochrony</a>.</p>
+<p>Szyfrowanie radiowe nie zabezpiecza lokalnego HTTP, bazy na dysku ani pamięci stacji. Nie wysyła się przez radio identyfikatorów osób lub dokumentów. Do wskazania potrzeby wystarczą lokalizacja, kategoria, liczba osób i krótki opis. Strona mieszkańca pokazuje jego zgłoszenie; kolejkę zbiorczą widzi opiekun. <a href="07-zagrozenia-i-odpornosc.html">Ograniczenia ochrony</a>.</p>
 
-<p>Propozycja interfejsu: przy stanie łączności pokazywać czas ostatniej odpowiedzi OSP i wiek najstarszego oczekującego zgłoszenia, zamiast jednego zielonego wskaźnika. Komunikat OSP oznaczać odbiorcą, tożsamością źródła i momentem lokalnego odbioru. Poprawny podpis potwierdza źródło, nie aktualność ani prawdziwość treści. Zegara znalezionego laptopa nie traktować jako zaufanej podstawy koordynacji.</p>
+<p>Ekran stacji i panel pokazują przy stanie łączności czas od ostatniej odpowiedzi OSP i wiek najstarszego oczekującego zgłoszenia, zamiast jednego zielonego wskaźnika. Wiek liczy się od lokalnego licznika czasu stacji, nie od zegara kalendarzowego. Komunikat OSP oznacza się źródłem i czasem od lokalnego odbioru. Poprawny podpis potwierdza źródło, nie aktualność ani prawdziwość treści. Zegara znalezionego laptopa ani stacji bez synchronizacji nie traktować jako zaufanej podstawy koordynacji.</p>
 
-<p>Dodatkowy kanał internetowy może przenosić ten sam stos po osobnej próbie. Podstawowe działanie nie zależy od jego obecności. Kopiowanie wiadomości na pamięć USB, automatyczna replikacja OSP i wspólna tablica mieszkańców nie należą do bazowego kontraktu komunikacji.</p>
+<p>Dodatkowy kanał internetowy może przenosić ten sam stos po osobnej próbie. Podstawowe działanie nie zależy od jego obecności. Kopiowanie wiadomości na pamięć USB, nadajniki Wi-Fi i Bluetooth w stacji, automatyczna replikacja OSP i wspólna tablica mieszkańców nie należą do bazowego kontraktu komunikacji.</p>
 </article>
 <nav class="pager" aria-label="Kolejność czytania">
   <a class="prev" href="04-analiza-opcji.html" rel="prev"><span>← Poprzedni</span>04. Analiza opcji</a>
@@ -195,7 +203,7 @@
 <footer class="site-footer">
   <div class="inner">
     <p>Opis konstrukcji komunikacji: <a href="../../LICENSES/CERN-OHL-P-2.0.txt">CERN-OHL-P-2.0</a>. <a href="../../LICENSE.md">Mapa licencji projektu</a>.</p>
-    <p>Parametry i warunki odbioru: <a href="../README.md">specyfikacja 0.4</a>. Kod: <a href="https://github.com/tmierzwa/WICI">tmierzwa/WICI</a>.</p>
+    <p>Parametry i warunki odbioru: <a href="../README.md">specyfikacja 0.5</a>. Kod: <a href="https://github.com/tmierzwa/WICI">tmierzwa/WICI</a>.</p>
   </div>
 </footer>
 </body>

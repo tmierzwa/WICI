@@ -13,7 +13,7 @@
   <div class="inner">
     <a class="brand" href="index.html">WICI <span>· koncepcja systemu</span></a>
     <a class="jump" href="#rozdzialy">Rozdziały ↓</a>
-    <span class="status">Prototyp 0.4 · sprzęt <b>HOLD</b></span>
+    <span class="status">Prototyp 0.5 · sprzęt <b>HOLD</b></span>
   </div>
 </header>
 <div class="layout">
@@ -46,14 +46,14 @@
 </ol>
 </nav>
 
-<p>Przegląd materiałów: 2026-10-06. Link do bieżącej gałęzi lub strony nie przypina wersji wydania. Przed budową pakietu START wybrać konkretne wydania/commity i zachować ich skróty oraz oryginalne licencje.</p>
+<p>Przegląd materiałów: 2026-10-06; teksty prawne i projekty na mikrokontrolery sprawdzono 2026-10-07. Link do bieżącej gałęzi lub strony nie przypina wersji wydania. Przed budową pakietu START wybrać konkretne wydania/commity i zachować ich skróty oraz oryginalne licencje.</p>
 
 <h2 id="projekt-wici-dane-wejsciowe">Projekt WICI: dane wejściowe</h2>
 
 <ul>
-  <li><a href="../README.md">Specyfikacja 0.4</a>: parametry, kontrakty i <a href="../spec/odbior.md">odbiór</a>.</li>
+  <li><a href="../README.md">Specyfikacja 0.5</a>: parametry, kontrakty i <a href="../spec/odbior.md">odbiór</a>.</li>
   <li><a href="../../software/reference/README.md">Model i dowody</a>: ramki, komunikaty i transakcje; <a href="../../software/reference/wyniki.json">wyniki obliczeń</a>.</li>
-  <li><a href="../../hardware/radio-test-r01/README.md">Kontroler USB R01.3</a>: CAD, eksporty, raporty i status HOLD.</li>
+  <li><a href="../../hardware/radio-test-r01/README.md">Kontroler R01.3</a>: CAD, eksporty, raporty i status HOLD; w 0.5 stanowisko laboratoryjne P1.</li>
   <li><a href="../spec/bom-stacji.csv">BOM całej stacji</a>: kandydaci elementów, nie zakwalifikowana oferta produkcji.</li>
 </ul>
 
@@ -75,6 +75,9 @@
 <tr><td><a href="https://meshtastic.org/docs/overview/mesh-algo/">Meshtastic: algorytm sieci</a></td><td>sposób przekazywania i znaczenie potwierdzeń</td></tr>
 <tr><td><a href="https://github.com/meshcore-dev/MeshCore">MeshCore</a></td><td>istniejące role klienta, przekaźnika i modemu</td></tr>
 <tr><td><a href="https://github.com/sudomesh/disaster-radio">disaster.radio</a></td><td>zbliżona koncepcja Wi-Fi + LoRa; informacja o wstrzymaniu prac</td></tr>
+<tr><td><a href="https://github.com/attermann/microReticulum">microReticulum</a>, <a href="https://reticulum.miraheze.org/wiki/MicroReticulum">opis w wiki Reticulum</a></td><td>port Reticulum do C++ na ESP32 i nRF52, rozwijany od 2023; licencja Apache-2.0 według opisu projektu, do potwierdzenia w repozytorium przed wydaniem (D09)</td></tr>
+<tr><td><a href="https://github.com/jrl290/RTNode-HeltecV4">RTNode</a>, <a href="https://github.com/dobrevit/RetiMesh_Node">RetiMesh Node</a></td><td>samodzielne węzły transportowe Reticulum na ESP32-S3 z LoRa; wzorzec przekaźnika bez komputera</td></tr>
+<tr><td><a href="https://github.com/torlando-tech/pyxis">pyxis</a>, <a href="https://github.com/thicketgarden/thicket-firmware">thicket</a></td><td>klienty LXMF z ekranem i klawiaturą na ESP32-S3 i nRF52840; wzorzec stacji z własnym interfejsem; projekty społecznościowe, ze znanymi błędami</td></tr>
 <tr><td><a href="https://www.ti.com/lit/ds/symlink/cc1120.pdf">TI CC1120: karta katalogowa</a></td><td>funkcje układu RF; nie dowód zasięgu P1</td></tr>
 <tr><td><a href="https://www.st.com/resource/en/datasheet/s2-lp.pdf">ST S2-LP: karta katalogowa</a></td><td>drugie wykonanie RF; osobne dopasowanie i konfiguracja</td></tr>
 <tr><td><a href="https://www.semtech.com/products/wireless-rf/lora-connect/sx1276">Semtech SX1276: karta katalogowa</a></td><td>katalogowa czułość LoRa w porównaniu z P1 (rozdział 04); nie pomiar</td></tr>
@@ -113,7 +116,7 @@
 <footer class="site-footer">
   <div class="inner">
     <p>Analiza: <a href="../../LICENSES/CC-BY-4.0.txt">CC-BY-4.0</a>. <a href="../../LICENSE.md">Mapa licencji projektu</a>.</p>
-    <p>Parametry i warunki odbioru: <a href="../README.md">specyfikacja 0.4</a>. Kod: <a href="https://github.com/tmierzwa/WICI">tmierzwa/WICI</a>.</p>
+    <p>Parametry i warunki odbioru: <a href="../README.md">specyfikacja 0.5</a>. Kod: <a href="https://github.com/tmierzwa/WICI">tmierzwa/WICI</a>.</p>
   </div>
 </footer>
 </body>
