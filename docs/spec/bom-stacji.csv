@@ -2,10 +2,9 @@ moduł,liczba,element,wymaganie minimalne,kandydat A,kandydat B,stan
 radio,1,układ nadawczo-odbiorczy,"2-GFSK, 869,525 MHz, profil P1",TI CC1120,ST S2-LPQTR,"warianty niezakwalifikowane; S2-LPCBQTR w górnym paśmie nie obejmuje 869,525 MHz"
 radio,1,mikrokontroler USB,"natywne USB CDC, dwa interfejsy",ST STM32F103CBT6,Microchip SAMD21G18,warianty niezakwalifikowane
 radio,1,pamięć nieulotna dziennika czasu nadawania,EEPROM I²C z równomiernym rozkładem zapisów,ST M24C64,Microchip AT24C64,wymaga oprogramowania układowego
-radio,1,TCXO,"całkowity błąd częstotliwości ≤2,5 ppm",zgodny producent A,zgodny producent B,częstotliwość wzorcowa zależy od układu radiowego
+radio,1,TCXO,"całkowity błąd częstotliwości ≤2,5 ppm w zakresie temperatur pracy, łącznie ze starzeniem do następnego przeglądu",zgodny producent A,zgodny producent B,częstotliwość wzorcowa zależy od układu radiowego
 radio,1,antena,"dipol 50 Ω, WFS ≤2",otwarty rysunek dipola,niezależne wykonanie równoważne,strojenie na zewnątrz docelowego budynku
 radio,1,przewód antenowy,"50 Ω, tłumienie ≤1 dB przy 869,5 MHz łącznie ze złączami","LMR-240, 2 m","H-155, 2 m",do kwalifikacji
-radio,1,przewód RF,"50 Ω, ≤2 m",producent A,producent B,kwalifikacja tłumienia i złączy
 radio,1,przewód USB,"przewód do transmisji danych, ≤2 m",producent A,producent B,do kwalifikacji
 A/B,2,podwójna dioda Schottky’ego,≥45 V; każde źródło do 20 A,ST STPS3045CT,Vishay VS-MBR3045CT-M3,próba cieplna i udarowa
 A/B,2,dioda TVS,"SMCJ18CA, dwukierunkowa",Littelfuse,Vishay,nie stanowi kwalifikacji na impulsy motoryzacyjne
@@ -36,7 +35,7 @@ przetwornica,1,dławik wyjściowy,"początkowo 10 mH, ≥1 A, z zapasem na impul
 przetwornica,2,wyłącznik RCBO,"typ A, 30 mA, dwubiegunowy; prąd znamionowy do doboru",ABB,Schneider Electric,układ PE niezakwalifikowany
 przetwornica,1,przycisk RESTART,"chwilowy, zwierny, montaż panelowy, osłona przed przypadkowym naciśnięciem",APEM,Schurter,ręczne załączenie po odłączeniu podnapięciowym
 przetwornica,1,sygnalizator ostrzegawczy,"bursztynowa dioda świecąca i brzęczyk z generatorem 12 V, ≥75 dB w odległości 10 cm, pobór ≤30 mA",CUI Devices,Kingstate,"ostrzeżenie przy 11,8 V; sprawdzić słyszalność w schronieniu"
-USB,1,pamięć USB,"64 GB, sprawdzony pakiet offline",producent A,producent B,obrazy jeszcze nie powstały
+USB,1,pamięć USB,"64 GB, sprawdzony pakiet offline i klucz szyfrowania bazy",producent A,producent B,obrazy jeszcze nie powstały
 przewody,1,przewód Ethernet,"kategoria 5e, LAN",producent A,producent B,element powszechnie dostępny
 przewody,1,adapter USB–Ethernet,sterowniki offline dla obsługiwanych systemów,Realtek RTL8153,ASIX AX88179,wymagane zakwalifikowane zamienniki
 dokumenty,1,instrukcja,jedna strona i wersja HTML offline,otwarty projekt,niezależny druk,po odbiorze modułów

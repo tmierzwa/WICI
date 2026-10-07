@@ -73,7 +73,7 @@ Zasada: formalności i uzgodnienia załatwia się przed użyciem; żadna z poni�
 
 **Cisza radiowa.** Opiekun włącza ją w panelu na polecenie uprawnionego organu. Adapter przestaje przekazywać ramki DATA do modemu, więc modem nie nadaje niczego, łącznie z ruchem przekazywanym; odbiór, zapis i kolejka działają dalej. Wyłączenie ciszy jest wyłącznie ręczne. Opiekun może wyjąć spod ciszy pojedyncze zgłoszenie przy bezpośrednim zagrożeniu życia; stacja zapisuje tę decyzję w dzienniku. Fizyczną pewność ciszy daje odłączenie modemu od USB.
 
-**Szyfrowanie w spoczynku.** Baza, tożsamość i eksporty są szyfrowane kluczem zapisanym na pamięci USB stacji. Start nie wymaga hasła; bez tej pamięci dane są nieczytelne. Kandydatem jest SQLCipher Community Edition (licencja BSD-3-Clause, wymaga dołączenia informacji o prawach autorskich) z biblioteką Pythona [sqlcipher3](https://pypi.org/project/sqlcipher3/) (licencja zlib), która ma gotowe pakiety dla macOS (Intel i ARM), Windows x64 i Linuksa x86_64. To pierwsza zależność bazy spoza biblioteki standardowej: wymaga przypięcia wersji, sprawdzenia, że nie osłabia gwarancji trwałości z tej specyfikacji (tryb dziennika, fsync), oraz powtórzenia prób odcięcia zasilania. Ostateczny wybór, także wobec zaszyfrowanego wolumenu, zapada w D13. [SQLCipher](https://www.zetetic.net/sqlcipher/license/).
+**Szyfrowanie w spoczynku.** Baza, tożsamość i eksporty są szyfrowane kluczem zapisanym na pamięci USB stacji. Start nie wymaga hasła. W systemach Windows i macOS baza leży na dysku laptopa, więc po odłączeniu pamięci USB jest nieczytelna. W Linuksie baza i klucz są na tej samej pamięci, a zabranie laptopa razem z pamięcią USB daje dostęp do danych w każdym systemie: szyfrowanie chroni przed utratą samego laptopa, a przed przejęciem całego stanowiska chroni wyłącznie ZNISZCZ DANE albo zniszczenie pamięci. Kandydatem jest SQLCipher Community Edition (licencja BSD-3-Clause, wymaga dołączenia informacji o prawach autorskich) z biblioteką Pythona [sqlcipher3](https://pypi.org/project/sqlcipher3/) (licencja zlib), która ma gotowe pakiety dla macOS (Intel i ARM), Windows x64 i Linuksa x86_64. To pierwsza zależność bazy spoza biblioteki standardowej: wymaga przypięcia wersji, sprawdzenia, że nie osłabia gwarancji trwałości z tej specyfikacji (tryb dziennika, fsync), oraz powtórzenia prób odcięcia zasilania. Ostateczny wybór, także wobec zaszyfrowanego wolumenu, zapada w D13. [SQLCipher](https://www.zetetic.net/sqlcipher/license/).
 
 **ZNISZCZ DANE.** Po podwójnym potwierdzeniu stacja zatrzymuje wysyłkę, usuwa klucz, a następnie bazę, tożsamość i eksporty. Nadpisanie pamięci flash i SSD nie gwarantuje usunięcia, dlatego decyduje usunięcie klucza; instrukcja nakazuje dodatkowo fizyczne zniszczenie pamięci USB. Operacja jest nieodwracalna i trwa najwyżej 1 minutę.
 
@@ -94,6 +94,7 @@ USB/
   sources/                     # kod własny i źródła wymagane licencjami
   licenses/
   build-manifest.json          # wersje, skróty, polecenie budowy, lista plików
+  keys/                        # klucz szyfrowania bazy tej stacji; nie trafia do kopii publicznych
   export/                      # kopia przeniesionej stacji
 ```
 
