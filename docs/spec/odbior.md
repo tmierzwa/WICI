@@ -1,6 +1,6 @@
 # WICI: odbiór prototypu
 
-Kolumna „Grupa” wskazuje grupę prób T1–T8 z [planu weryfikacji](../conception/08-plan-weryfikacji-i-decyzje.html#proby-i-pokrycie-wymagan); tam też jest pokrycie wymagań W01–W24. Teksty ekranu w warunkach zaliczenia pochodzą z tabeli „Teksty ekranu” w rozdziale [Oprogramowanie](oprogramowanie.md).
+Kolumna „Grupa” wskazuje grupę prób T1–T8 z [planu weryfikacji](../concept/08-plan-weryfikacji-i-decyzje.html#proby-i-pokrycie-wymagan); tam też jest pokrycie wymagań W01–W24. Teksty ekranu w warunkach zaliczenia pochodzą z tabeli „Teksty ekranu” w rozdziale [Oprogramowanie](oprogramowanie.md).
 
 | Próba | Grupa | Warunek zaliczenia | Stan |
 |---|---|---|---|

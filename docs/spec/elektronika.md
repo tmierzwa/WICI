@@ -143,7 +143,7 @@ Próg nominalny 5,328 V. Wymagany zakres po tolerancjach i temperaturze 5,30–5
 
 ## Przetwornica (poziom 3)
 
-Cel sprawności i poboru własnego: pobór bez obciążenia ≤8 W, sprawność ≥0,85 przy 35 W AC; te wartości przyjmuje [model energii](../conception/06-wykonalnosc-i-budzet-zasobow.html#energia-dwa-niezalezne-zasoby) i sprawdza odbiór. Wybrana topologia prototypu: transformator 50 Hz, mostek H po stronie dolnego napięcia, unipolarna modulacja SPWM 20 kHz, bez magistrali 350 V DC. Zasada jest znana ([TI SLAA602A](https://www.ti.com/lit/an/slaa602a/slaa602a.pdf)); wartości elementów tego stopnia wymagają osobnego projektu.
+Cel sprawności i poboru własnego: pobór bez obciążenia ≤8 W, sprawność ≥0,85 przy 35 W AC; te wartości przyjmuje [model energii](../concept/06-wykonalnosc-i-budzet-zasobow.html#energia-dwa-niezalezne-zasoby) i sprawdza odbiór. Wybrana topologia prototypu: transformator 50 Hz, mostek H po stronie dolnego napięcia, unipolarna modulacja SPWM 20 kHz, bez magistrali 350 V DC. Zasada jest znana ([TI SLAA602A](https://www.ti.com/lit/an/slaa602a/slaa602a.pdf)); wartości elementów tego stopnia wymagają osobnego projektu.
 
 ```text
 BUS+ ─ dreny Q1 i Q3

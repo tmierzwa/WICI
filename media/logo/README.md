@@ -14,7 +14,7 @@ Napis w otwartym kroju Nunito Sans Black (SIL Open Font License 1.1). Kropki nad
 | [favicon.svg](favicon.svg) | favicon stron: kropki i sygnał na własnym ciemnym kafelku, ten sam wygląd w każdej przeglądarce i motywie |
 | [fonts/](fonts/OFL.txt) | font Nunito Sans (wersja zmienna z [Google Fonts](https://github.com/google/fonts/tree/main/ofl/nunitosans)) i tekst jego licencji; potrzebny tylko do odtworzenia znaku |
 
-PNG znaku mają 2400 × 1047 px i przezroczyste tło. Znak jest na górze [głównego README](../../README.md), a ikony i favicon na [stronach koncepcji](../../docs/conception/index.html).
+PNG znaku mają 2400 × 1047 px i przezroczyste tło. Znak jest na górze [głównego README](../../README.md), a ikony i favicon na [stronach koncepcji](../../docs/concept/index.html).
 
 ## Użycie
 

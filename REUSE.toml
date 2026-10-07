@@ -15,7 +15,7 @@ SPDX-FileCopyrightText = "2026 Tomek Mierzwa and WICI contributors"
 SPDX-License-Identifier = "MIT"
 
 [[annotations]]
-path = ["docs/spec/**", "docs/conception/05-projekt-koncepcyjny-komunikacji.html"]
+path = ["docs/spec/**", "docs/concept/05-projekt-koncepcyjny-komunikacji.html"]
 precedence = "closest"
 SPDX-FileCopyrightText = "2026 Tomek Mierzwa and WICI contributors"
 SPDX-License-Identifier = "CERN-OHL-P-2.0"

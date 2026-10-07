@@ -1,6 +1,6 @@
 # WICI: instrukcja opiekuna
 
-Instrukcja jest dla opiekuna schronienia i zastępców. Uzupełnia [kartę obsługi](karta.md), która leży przy stacji i prowadzi przez uruchomienie i zgłoszenie. Tu są tematy, które nie mieszczą się na karcie ([koncepcja, rozdział 02](../conception/02-scenariusze-i-organizacja.html#instrukcja-i-cwiczenie)). Napisy w cudzysłowach są cytatami z tabeli [Teksty ekranu](oprogramowanie.md#teksty-ekranu); wersje UK i EN instrukcji używają kolumn UK i EN tej tabeli. Instrukcja opisuje odebrany zestaw, którego jeszcze nie zbudowano. W instrukcji nie zapisuje się kluczy, haseł ani danych mieszkańców.
+Instrukcja jest dla opiekuna schronienia i zastępców. Uzupełnia [kartę obsługi](karta.md), która leży przy stacji i prowadzi przez uruchomienie i zgłoszenie. Tu są tematy, które nie mieszczą się na karcie ([koncepcja, rozdział 02](../concept/02-scenariusze-i-organizacja.html#instrukcja-i-cwiczenie)). Napisy w cudzysłowach są cytatami z tabeli [Teksty ekranu](oprogramowanie.md#teksty-ekranu); wersje UK i EN instrukcji używają kolumn UK i EN tej tabeli. Instrukcja opisuje odebrany zestaw, którego jeszcze nie zbudowano. W instrukcji nie zapisuje się kluczy, haseł ani danych mieszkańców.
 
 ## Twoja rola
 
@@ -130,7 +130,7 @@ Zmiana trwa najwyżej 12 h. Przed zejściem ze zmiany otwórz STAN → PRZEKAZAN
 
 ## Gdy coś nie działa
 
-Najpierw ustal, czego dotyczy błąd: strony, laptopa, stacji, trasy radiowej, odbiorcy czy zasilania. Pełną tabelę podaje [koncepcja, rozdział 02](../conception/02-scenariusze-i-organizacja.html#zachowanie-w-scenariuszach-awarii).
+Najpierw ustal, czego dotyczy błąd: strony, laptopa, stacji, trasy radiowej, odbiorcy czy zasilania. Pełną tabelę podaje [koncepcja, rozdział 02](../concept/02-scenariusze-i-organizacja.html#zachowanie-w-scenariuszach-awarii).
 
 | Objaw | Działanie |
 |---|---|

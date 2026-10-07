@@ -5,7 +5,7 @@ Własne materiały: współtwórcy WICI. Licencja zależy od ścieżki i rodzaju
 | Ścieżki | Licencja |
 |---|---|
 | `**/*.py`, `software/reference/schema.sql`, `.github/**`, `firmware/**` oraz pliki C/C++ (`*.c`, `*.h`, `*.cpp`, `*.hpp`, `*.ino`), skrypty `*.sh`, `platformio.ini` i `CMakeLists.txt` | [MIT](LICENSES/MIT.txt) |
-| `docs/spec/*` (w tym `bom-stacji.csv`), `docs/conception/05-projekt-koncepcyjny-komunikacji.html` | [CERN-OHL-P-2.0](LICENSES/CERN-OHL-P-2.0.txt): opisy konstrukcji stacji i jej BOM |
+| `docs/spec/*` (w tym `bom-stacji.csv`), `docs/concept/05-projekt-koncepcyjny-komunikacji.html` | [CERN-OHL-P-2.0](LICENSES/CERN-OHL-P-2.0.txt): opisy konstrukcji stacji i jej BOM |
 | `hardware/*/cad/*.kicad_*`, tablice bibliotek `hardware/*/cad/*-lib-table`, własne footprinty `hardware/*/cad/footprints/WICI.pretty/` | CERN-OHL-P-2.0: własny projekt płytki (obecnie R02, w przygotowaniu) |
 | `hardware/*/{bom.csv,connections.*,polaczenia.md,uruchomienie.md,przed-produkcja.md,*.pdf}` | CERN-OHL-P-2.0: konstrukcja i pliki do wykonania |
 | `hardware/*/fabrication/`, poza `README.md`, `NOTICE.md` i `LICENSES/` danej rewizji | CERN-OHL-P-2.0: dane i rysunki wykonawcze |
