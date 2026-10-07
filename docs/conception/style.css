@@ -76,7 +76,6 @@ a:focus-visible, summary:focus-visible { outline: 2px solid var(--focus); outlin
 }
 .brand { font-weight: 700; text-decoration: none; color: var(--text); letter-spacing: 0.01em; }
 .brand:visited { color: var(--text); }
-.brand span { color: var(--muted); font-weight: 400; }
 .brand { display: inline-flex; align-items: center; gap: 0.4em; }
 .brand img { display: block; height: 1.6em; width: auto; }
 .status { font-size: 0.82rem; color: var(--muted); white-space: nowrap; }
