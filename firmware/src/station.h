@@ -24,6 +24,11 @@ constexpr uint32_t FAILED_LATE_S = 6 * 3600;    // po 6 h co 60 min
 constexpr uint32_t FAILED_LATE_INTERVAL_S = 3600;
 constexpr size_t DATAGRAM_MAX = 600;
 constexpr uint8_t MAX_INFLIGHT = 1;
+constexpr uint32_t TEST_WINDOW_S = 900;             // TEST startowy bez liczby stacji: okno 15 min
+constexpr uint32_t TEST_WINDOW_PER_STATION_S = 50;  // 50 s x liczba stacji z configure
+constexpr uint32_t TEST_ALARM_S = 1800;             // brak_potwierdzenia dla TEST: 30 min od nadania
+constexpr uint32_t READ_ALARM_S = 1800;             // brak_odczytu: 30 min od stanu 1 (pilność 2)
+constexpr uint32_t CONFIRM_ALARM_S[3] = {6 * 3600, 3600, 900};  // brak_potwierdzenia według pilności 0, 1, 2
 
 // Usługi stacji dla warstwy aplikacji (main.cpp albo program testowy).
 struct Services {
@@ -38,6 +43,18 @@ struct Services {
     virtual bool notify(uint8_t kind, uint32_t ref, const char* fields) = 0;  // zdarzenie do laptopa
     virtual void address(uint8_t out[store::HASH]) = 0;   // własny adres
     virtual void changed() {}                             // odświeżenie ekranu
+};
+
+// Wynik utworzenia zgłoszenia z przycisków (REQUEST, TEST, nowa rewizja).
+enum class Create : uint8_t { STORED, NO_ADDRESS, FULL, ERROR, TOO_LARGE, NOT_FOUND };
+
+// Alarm ekranu (oprogramowanie.md, "Alarmy"): brak potwierdzenia albo brak odczytu zgłoszenia.
+enum class AlarmKind : uint8_t { NONE, NO_CONFIRMATION, NO_READ };
+struct Alarm {
+    AlarmKind kind = AlarmKind::NONE;
+    uint32_t seq = 0;        // intencja
+    uint16_t number = 0;     // krótki numer
+    uint32_t minutes = 0;    // czas bez potwierdzenia
 };
 
 struct Stats {
@@ -66,6 +83,24 @@ public:
     // Intencja do nadania teraz (najwyższy priorytet, gotowa): 0, gdy brak.
     uint32_t nextToSend(uint32_t nowS) const;
 
+    // Zgłoszenia z przycisków (oprogramowanie.md, "Zgłoszenie z przycisków"): location z adresu
+    // konfiguracji, id losowane aż krótki numer będzie wolny, text = fraza PL albo pusty.
+    Create createRequest(uint8_t category, uint16_t people, uint8_t urgency, const char* text, uint32_t& seq);
+    // Nowa rewizja własnego zgłoszenia (ZMIEŃ LICZBĘ OSÓB, ZMIEŃ PILNOŚĆ, POTRZEBA USTAŁA):
+    // ten sam id, revision + 1; nienadana starsza rewizja zostaje oznaczona jako zastąpiona.
+    Create revise(uint32_t seq, uint16_t people, uint8_t urgency, const char* text, uint32_t& newSeq);
+    // ANULUJ WYSYŁKĘ: tylko przed stanem 1; wpis w dzienniku zdarzeń przez log().
+    bool cancel(uint32_t seq);
+    // TEST z menu (od razu) albo startowy (losowe opóźnienie w oknie 50 s x liczba stacji, bez niej 15 min).
+    Create scheduleTest(bool startup, uint32_t& seq);
+    bool cancelTest();                     // anuluje TEST czekający na nadanie
+    void pauseTest(bool paused);           // WSTRZYMAJ anuluje czekający TEST i blokuje nadawanie TEST
+    bool testPaused() const { return testPaused_; }
+    uint32_t pendingTest() const;          // seq TEST czekającego na nadanie; 0 gdy brak
+    // Najpilniejszy niepotwierdzony alarm (bez potwierdzonych przez ackAlarm); false gdy brak.
+    bool alarm(uint32_t nowS, Alarm& out) const;
+    void ackAlarm(const Alarm& alarm);
+
 private:
     bool buildDatagram(const store::QueueRecord& record, char* out, size_t size, size_t& length);
     void sendAck(const uint8_t to[store::HASH], const char* id, uint16_t revision, uint8_t type, uint32_t event);
@@ -74,6 +109,8 @@ private:
     void finishIntent(store::QueueRecord& record, uint32_t event, uint8_t state);
     int priority(const store::QueueEntry& e) const;
     bool trustedSource(const uint8_t from[store::HASH]) const;
+    Create putIntent(sa1::Message& m, uint8_t type, const uint8_t id[store::HASH], uint32_t delayS, uint32_t& seq);
+    bool alarmAcked(size_t slot, AlarmKind kind) const;
 
     store::Store& store_;
     Services& services_;
@@ -87,6 +124,8 @@ private:
     uint16_t ackRevision_ = 0;
     uint8_t ackType_ = 0;
     uint32_t ackEvent_ = 0;
+    bool testPaused_ = false;
+    uint8_t alarmAcked_[store::QUEUE_SLOTS] = {};  // bit 0: brak potwierdzenia, bit 1: brak odczytu
 };
 
 }  // namespace station

@@ -2,7 +2,7 @@
 
 Katalog zawiera oprogramowanie układowe stacji. Obecny stan to pierwsze kroki na [stanowisku deweloperskim A](../hardware/dev-bench/README.md): nRF52840-DK z modułem TI CC1120EM-868-915 i pamięcią FRAM na złączu Arduino płytki. Środowisko `bench-a` w `platformio.ini` buduje obraz, który po podłączeniu USB zgłasza się poleceniem `INFO` w formacie ze [specyfikacji radia](../docs/spec/radio.md#usb-do-laptopa), identyfikuje układ radiowy i FRAM przez SPI, zapisuje do CC1120 [rejestry profilu P1](#rejestry-profilu-p1) z weryfikacją odczytu i kalibracją syntezera, wykonuje [polecenia pomiarowe](#polecenia-pomiarowe) `TXCW`, `TXPKT`, `RXPER`, `FOFF` ze specyfikacji, prowadzi [dziennik w FRAM](#dziennik-w-fram) (dług ciszy, zegar czasu pracy z liczbą restartów, zdarzenia), obsługuje [łącze P1](#łącze-p1) (odbiór i składanie datagramów, nadawanie z CCA, odroczeniem i długiem ciszy), podaje zaprogramowaną częstotliwość i RSSI, prowadzi [ekran Sharp i menu stacji](#ekran-i-przyciski) na przyciskach płytki (wybór języka, ekran główny, cisza, STAN; EXTCOMIN z licznika RTC2) obsługuje diody płytki oraz udostępnia drugi interfejs CDC z [protokołem USB laptop–stacja](#protokół-usb-laptopstacja) nad kolejką, skrzynką i konfiguracją w FRAM oraz [warstwę aplikacji](#warstwa-aplikacji-nad-p1) nadającą intencje z kolejki przez P1 i przyjmującą wiadomości do skrzynki. Nie ma jeszcze stosu Reticulum: datagram ma zastępczy format bez podpisu.
 
-Obraz skompilowano (PlatformIO, rdzeń Adafruit nRF52 1.7.0, 49 940 B RAM, 164 116 B flash; z tego bufor ekranu 12 000 B RAM, indeksy magazynu FRAM około 12 KB RAM i bitmapa fontu 21 840 B flash). **Nie uruchomiono go na sprzęcie**: odpowiedzi poleceń, numery pinów, działanie SPI z modułem i przyjęcie rejestrów przez układ wymagają sprawdzenia na płytce według kroków niżej.
+Obraz skompilowano (PlatformIO, rdzeń Adafruit nRF52 1.7.0, 53 860 B RAM, 187 716 B flash; z tego bufor ekranu 12 000 B RAM, indeksy magazynu FRAM około 12 KB RAM i bitmapa fontu 21 840 B flash). **Nie uruchomiono go na sprzęcie**: odpowiedzi poleceń, numery pinów, działanie SPI z modułem i przyjęcie rejestrów przez układ wymagają sprawdzenia na płytce według kroków niżej.
 
 ## Okablowanie stanowiska A
 
@@ -87,7 +87,7 @@ Port USB nRF (J3, nie port J-Link J2) zgłasza się jako urządzenie z dwoma int
 | `BTN` | stan czterech przycisków |
 | `LED <1-4> <0/1>` | sterowanie diodą |
 | `SCREEN` | treść ekranu: nazwa ekranu, język, pięć wierszy i które są odwrócone, liczba odświeżeń |
-| `KEY <UP\|DOWN\|OK\|BACK>` | naciśnięcie przycisku z portu USB (próby bez dotykania płytki); odpowiedź jak `SCREEN` |
+| `KEY <UP\|DOWN\|OK\|BACK> [ms]` | naciśnięcie przycisku z portu USB (próby bez dotykania płytki), z czasem przytrzymania w ms; odpowiedź jak `SCREEN` |
 | `DISPLAY` | EXTCOMIN: licznik RTC2 i stan pinu, tryb VCOM, liczba odświeżeń, numery pinów |
 | `VCOM <0\|1>` | zapasowe odwracanie VCOM bitem w poleceniach ekranu (zworka EXTMODE w położeniu L) |
 | `REBOOT` | restart programowy; ekran i język wracają jak po restarcie przez watchdog |
@@ -189,7 +189,22 @@ Wymagania: [ekran i przyciski stacji](../docs/spec/oprogramowanie.md#ekran-i-prz
 
 Po włączeniu zasilania pierwszym ekranem jest wybór języka; wybór i każda zmiana ekranu trafiają do pierścienia ustawień w FRAM i do pamięci RAM niezerowanej przy starcie (sekcja `.noinit`), więc po restarcie programowym (`REBOOT`; watchdog działa tak samo, ale nie jest jeszcze włączony) stacja wraca do języka i ekranu sprzed restartu bez pytania. Radio startuje niezależnie od ekranu, jak wymaga specyfikacja.
 
-Przyjęte interpretacje i braki: pasek trybu przygotowania zastępuje wiersz 1 („stale pokazuje”); menu, STAN i JĘZYK wracają do ekranu głównego po 3 min bezczynności (specyfikacja podaje ten czas tylko dla kreatora); ZGŁOSZENIE, WIADOMOŚCI i TEST pokazują tylko tytuł do czasu kolejki w FRAM i stosu LXMF; przy niesprawnym radiu wiersz 1 to `RADIO ---`, bo lista tekstów nie ma takiego tekstu (F80); zasilanie to `12 V: 0,0 V`, bo stanowisko nie mierzy napięcia; „nowe wiadomości” to złożone datagramy P1; etykiety liczników w STAN (`RX OK`, `TX`, `DEFER`, `WAIT`, `FOFF`) są jednakowe we wszystkich językach. Nie ma podświetlenia (płytka 4694 go nie ma), alarmów, kreatora zgłoszenia, kontroli adresu ani diody NOWA WIADOMOŚĆ.
+Przyjęte interpretacje i braki: pasek trybu przygotowania zastępuje wiersz 1 („stale pokazuje”); każdy ekran poza głównym wraca do ekranu głównego po 3 min bezczynności (specyfikacja podaje ten czas tylko dla kreatora); przy niesprawnym radiu wiersz 1 to `RADIO ---`, bo lista tekstów nie ma takiego tekstu (F80); zasilanie to `12 V: 0,0 V`, bo stanowisko nie mierzy napięcia; etykiety liczników w STAN (`RX OK`, `TX`, `DEFER`, `WAIT`, `FOFF`) są jednakowe we wszystkich językach. Nie ma podświetlenia (płytka 4694 go nie ma), sygnału dźwiękowego ani diody NOWA WIADOMOŚĆ / ALARM.
+
+### Ekrany stacji
+
+Przepływy ekranów są w modelu (`src/ui.cpp`), a dane i działania dostarcza mu `src/console.cpp` (interfejs `ui::Host`) nad magazynem FRAM i warstwą aplikacji; `tests/test_firmware_host.py` uruchamia model z magazynem w RAM i sprawdza każdy przepływ na tekstach kanonicznych. Przyciski: GÓRA, DÓŁ i OK działają przy naciśnięciu, WSTECZ przy zwolnieniu, bo przytrzymanie WSTECZ ma inne znaczenie (2 s w kreatorze: `porzucic`; 3 s poza nim: wybór języka).
+
+| Ekran | Działanie |
+|---|---|
+| start | po wyborze języka `adres_kontrola` z adresem z konfiguracji (WSTECZ = NIE albo brak adresu: `adres_brak`), potem propozycja TEST startowego: OK planuje TEST z losowym opóźnieniem w oknie 50 s × liczba stacji z `configure` (bez niej 15 min) i pokazuje `test_zaplanowany`; WSTECZ pomija |
+| ZGŁOSZENIE | kategoria 0–9 → liczba osób z listy 1, 2, 5, 10, 20, 50, 100, INNA (wpis setek, dziesiątek i jednostek; przytrzymanie przycisku powtarza zmianę co 150 ms; domyślnie ostatnio użyta wartość) → pilność bez wartości domyślnej (`pilnosc_2` wymaga `pilnosc_2_potw`) → fraza z konfiguracji albo domyślna lista (kategoria 9 bez pozycji „brak”) → podsumowanie z `podsumowanie_klawisze` → wynik: `zapisane_w_stacji` albo `zapisane_w_ciszy` z `zapisz_numer`, `kolejka_pelna`, `blad_pamieci`, `adres_brak`. WSTECZ cofa o krok; szkic zostaje po powrocie do ekranu głównego. Zgłoszenie dostaje `location` z adresu konfiguracji, id z generatora sprzętowego losowane ponownie, dopóki krótki numer (pierwsze 16 bitów modulo 10 000) jest zajęty w kolejce; `submit` z laptopa o zajętym numerze dostaje `rejected` z `numer_zajety` |
+| WIADOMOŚCI | lista najnowszych najpierw: własne zgłoszenia i TEST w najnowszej rewizji (`NNNN` i kategoria), odpowiedzi i komunikaty (`*` przed nieprzeczytaną treścią). Własne: etap (`zapisane_w_stacji`, `wysylanie` z próbą i czasem do następnej, `zapisane_w_ciszy`, `stan_1`…`stan_6`, ANULUJ WYSYŁKĘ po anulowaniu), kategoria, liczba osób i pilność, fraza w wybranym języku, `zapisz_numer`; OK otwiera ZMIEŃ LICZBĘ OSÓB, ZMIEŃ PILNOŚĆ, POTRZEBA USTAŁA (nowa rewizja tego samego id; nienadana starsza rewizja zostaje oznaczona jako zastąpiona) i ANULUJ WYSYŁKĘ (tylko przed `stan_1`; wpis w dzienniku). Odebrane: `odpowiedzi_po_polsku` (UK, EN), treść, czas od odbioru, dla komunikatu `stopka_komunikatu`; otwarcie oznacza jako przeczytane |
+| TEST | `test_zaplanowany` (WSTECZ anuluje), `test_wyslany`, stan po RECEIVED/STATUS albo `test_wstrzymany`; OK otwiera menu TEST (nadanie od razu) i WSTRZYMAJ (anuluje czekający TEST i blokuje nadawanie TEST) / WZNÓW |
+| STAN | wiersze stanu z kursorem, na końcu PRZEKAZANIE ZMIANY (otwarte zgłoszenia z etapem, nieprzeczytane, cisza, zasilanie) i USŁUGI: ODBIORCA ZAPASOWY (`odbiorca_zapasowy`, przełącza `to` nowych intencji na zapasową tożsamość z konfiguracji) i ZNISZCZ DANE (`zniszcz_ostrzezenie`; usuwa konfigurację, kolejkę, skrzynkę, zdarzenia, klucze odbioru i dziennik zdarzeń, zostawia dług ciszy i zegar); obie wymagają sekwencji GÓRA, DÓŁ, GÓRA, OK, inny przycisk zaczyna od nowa |
+| alarm | `brak_potwierdzenia` po 15 min / 1 h / 6 h od zapisu według pilności (TEST: 30 min od nadania) i `brak_odczytu` 30 min po `stan_1` dla pilności 2; zajmuje cały ekran, OK potwierdza (alarm tego zgłoszenia nie wraca), `zapisz_numer` wskazuje zgłoszenie |
+
+Braki tego kroku: ogłoszenie adresu i wyciszenie dźwięku w USŁUGACH (bez stosu i brzęczyka), lista adresów obiektów, powrót ekranu alarmu po wybudzeniu (bez podświetlenia), watchdog.
 
 ## Protokół USB laptop–stacja
 
@@ -217,9 +232,9 @@ Kod w `src/station.cpp` (bez zależności od Arduino; `tests/test_firmware_host.
 - **Datagram zastępczy.** Bez Reticulum i LXMF wiadomość idzie jako `["WICI",1,"<od>","<do>",<SA1>]`, a potwierdzenie łącza jako `["WICI",1,"<od>","<do>","ack","<id>",revision,typ,event]`; adresy to 32 cyfry szesnastkowe (na stanowisku z identyfikatora układu). Nie ma podpisu, szyfrowania ani IFAC: format służy wyłącznie próbom przepływu i czasu na stanowisku i znika w T3 razem ze stosem. Odbiorca potwierdza także duplikat.
 - **Kolejność i ponawianie** ([specyfikacja](../docs/spec/oprogramowanie.md#trwałość-i-potwierdzenia)): RECEIVED i STATUS, potem REPLY i BULLETIN, REQUEST z pilnością 2, pozostałe REQUEST według czasu zapisu, na końcu TEST; jedna intencja w drodze. Brak potwierdzenia łącza w 60 s od końca serii = FAILED: kolejne próby po 1, 2, 5 i 15 min ±20%, po 6 h co 60 min. Potwierdzenie łącza = DELIVERED: REQUEST i TEST czekają 10 min na RECEIVED, potem ponawiają co 30–60 min; RECEIVED, STATUS, REPLY i BULLETIN są po dostarczeniu zakończone. RECEIVED, STATUS (przez `status_after`) albo REPLY od OSP kończy ponawianie pary (id, revision) i zapisuje najwyższy event w pamięci kluczy.
 - **Odbiór.** Rola stacji przyjmuje RECEIVED, STATUS, REPLY i BULLETIN tylko od aktywnej tożsamości OSP z konfiguracji (bez karty: od każdego, bo stanowisko nie ma jeszcze kluczy), STATUS dla nieznanego id ignoruje; rola OSP przyjmuje REQUEST i TEST. Każda nowa wiadomość trafia do skrzynki i jako `event` (stacja) albo `incoming` (OSP) do laptopa; `nowe_krotki` na ekranie liczy nieprzeczytane. Powtórzony REQUEST lub TEST o znanym kluczu: stacja OSP nadaje ponownie zapisany RECEIVED i najnowszy STATUS.
-- **Ekran.** `kolejka_krotki` liczy intencje bez potwierdzenia łącza i wiek najstarszej.
+- **Ekran.** `kolejka_krotki` liczy intencje bez potwierdzenia łącza i wiek najstarszej. Zgłoszenia z kreatora, rewizje, anulowanie, TEST z menu i startowy oraz alarmy są w tej samej warstwie (`createRequest`, `revise`, `cancel`, `scheduleTest`, `alarm`).
 
 ## Następne kroki
 
-1. Kreator ZGŁOSZENIE, WIADOMOŚCI i TEST na ekranie; alarmy; watchdog.
-3. microReticulum i LXMF na tym samym projekcie (T3) z pomiarem zapasu RAM; środowisko `bench-b` dla ESP32-S3-DevKitC-1 z S2-LP.
+1. Watchdog; audyt kodu i przegląd rozmiaru.
+2. microReticulum i LXMF na tym samym projekcie (T3) z pomiarem zapasu RAM; środowisko `bench-b` dla ESP32-S3-DevKitC-1 z S2-LP.

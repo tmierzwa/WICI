@@ -226,6 +226,10 @@ void Protocol::doSubmit(const json::Value& msg, int64_t seq, uint32_t nowMs) {
         if (memcmp(osp, record.to, store::HASH)) { rejected(seq, "invalid", "recipient is not the active OSP"); return; }
     }
     store::hexToBytes(m.id, record.id);
+    if ((m.type == sa1::REQUEST || m.type == sa1::TEST) && store_.queueNumberTaken(store::shortNumber(record.id), record.id)) {
+        rejected(seq, "numer_zajety");  // krótki numer zajęty przez inne zgłoszenie: laptop losuje nowe id
+        return;
+    }
     record.type = m.type;
     record.revision = m.type == sa1::BULLETIN ? 0 : m.revision;
     record.event = (m.type == sa1::STATUS || m.type == sa1::REPLY || m.type == sa1::BULLETIN) ? m.event : 0;
@@ -258,7 +262,10 @@ void Protocol::doTest(int64_t seq, uint32_t nowMs) {
     sa1::Message m;
     m.type = sa1::TEST;
     uint8_t id[store::HASH];
-    host_.randomBytes(id, sizeof(id));
+    for (int attempt = 0; attempt < 32; ++attempt) {
+        host_.randomBytes(id, sizeof(id));
+        if (!store_.queueNumberTaken(store::shortNumber(id), id)) break;
+    }
     store::bytesToHex(id, m.id);
     m.revision = 0;
     m.category = 9;

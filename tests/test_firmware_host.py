@@ -35,6 +35,8 @@ HARNESS = r"""
 #include "store.h"
 #include "usbproto.h"
 #include "station.h"
+#include "console.h"
+#include <string>
 
 // FRAM w RAM: 512 KiB skasowane do 0xFF jak nowy układ.
 struct RamStorage : journal::Storage {
@@ -159,6 +161,30 @@ int assembleScript() {
 // "Q <0|1>" cisza, "O <0|1>" radio, "U <s>" kontakt, "N <n>" nowe, "C <n> <s>" kolejka,
 // "V <mV>" napięcie, "X <rxok> <rxbad> <tx> <drop> <defer> <debt_ms>", "F <hz>" odchyłka,
 // "R" wypisuje ekran, "W <tekst>" łamie tekst, "D <s>" formatuje czas, "G <tekst>" sprawdza glify.
+// Ekran sterowany z wejścia. Bez "H" model działa bez stacji (sam ekran); "H" dołącza magazyn w RAM,
+// warstwę aplikacji i konsolę: "A <adres>" konfiguracja (OSP 0xCC.., 2 stacje), "I <sa1>" wiadomość od OSP,
+// "E <ack 0|1>" krok łącza (nadanie z kolejki, potwierdzenie łącza od OSP), "Y <s>" czas pracy,
+// "KD/KU <przycisk> <ms>" naciśnięcie i zwolnienie, "M" lista WIADOMOŚCI, "J" kolejka.
+struct UiServices : station::Services {
+    uint32_t uptime = 100;
+    bool silence_ = false;
+    std::vector<uint8_t> air;
+    uint8_t counter = 0;
+    uint32_t uptimeS() override { return uptime; }
+    bool silence() override { return silence_; }
+    bool radioReady() override { return true; }
+    bool busy() override { return !air.empty(); }
+    bool send(const uint8_t* data, size_t length) override {
+        printf("-> %.*s\n", static_cast<int>(length), reinterpret_cast<const char*>(data));
+        air.assign(data, data + length);
+        return true;
+    }
+    void randomBytes(uint8_t* out, size_t count) override { for (size_t i = 0; i < count; ++i) out[i] = static_cast<uint8_t>(0x30 + (++counter)); }
+    void log(const char* text) override { printf("log %s\n", text); }
+    bool notify(uint8_t kind, uint32_t ref, const char* fields) override { printf("event %u %u %s\n", kind, ref, fields); return true; }
+    void address(uint8_t* out) override { memset(out, 0xAB, store::HASH); }
+};
+
 int uiScript() {
     ui::Model model;
     model.start(ui::Lang::PL);
@@ -166,7 +192,14 @@ int uiScript() {
     status.version = "bench-a-test";
     status.name = "WICI-000000";
     const char* const names[] = {"UP", "DOWN", "OK", "BACK"};
-    char line[512];
+    RamStorage ram;
+    journal::Journal journal(ram);
+    store::Store store(ram);
+    UiServices services;
+    station::Station app(store, services);
+    console::Console con(store, app, services, &journal);
+    bool hosted = false;
+    char line[1024];
     while (fgets(line, sizeof(line), stdin)) {
         unsigned a = 0, b = 0, c = 0, d = 0, e = 0, f = 0;
         char word[16];
@@ -174,13 +207,59 @@ int uiScript() {
         if (nl) *nl = '\0';
         if (sscanf(line, "L %u", &a) == 1) model.restore(static_cast<ui::Lang>(a), ui::Screen::MAIN);
         else if (sscanf(line, "S %u", &a) == 1) model.start(static_cast<ui::Lang>(a));
-        else if (sscanf(line, "K %15s %u", word, &a) == 2) {
+        else if (!strcmp(line, "H")) {
+            journal.begin();
+            store.begin();
+            model.attach(&con);
+            hosted = true;
+        } else if (!strncmp(line, "A ", 2)) {
+            store::Config cfg;
+            cfg.role = store::STATION;
+            cfg.stations = 2;
+            strncpy(cfg.address, line + 2, store::ADDRESS_MAX);
+            memset(cfg.osp[0], 0xCC, store::HASH);
+            memset(cfg.osp[1], 0xDD, store::HASH);
+            printf("config %d\n", store.writeConfig(cfg));
+            con.invalidate();
+        } else if (!strncmp(line, "I ", 2)) {
+            char datagram[700];
+            snprintf(datagram, sizeof(datagram), "[\"WICI\",1,\"%s\",\"%s\",%s]",
+                     "cccccccccccccccccccccccccccccccc", "abababababababababababababababab", line + 2);
+            app.received(reinterpret_cast<const uint8_t*>(datagram), strlen(datagram));
+            con.invalidate();
+        } else if (sscanf(line, "E %u", &a) == 1) {
+            app.poll(services.uptime * 1000);
+            if (!services.air.empty()) {
+                std::vector<uint8_t> sent = services.air;
+                services.air.clear();
+                app.txDone(true);
+                if (a) {
+                    // Potwierdzenie łącza od OSP dla nadanego datagramu: id, revision, typ z treści SA1.
+                    std::string text(sent.begin(), sent.end());
+                    const size_t payload = text.find(",[", 70);
+                    sa1::Message m;
+                    if (payload != std::string::npos && !sa1::decode(text.c_str() + payload + 1, text.size() - payload - 2, m)) {
+                        char ack[200];
+                        snprintf(ack, sizeof(ack), "[\"WICI\",1,\"%s\",\"%s\",\"ack\",\"%s\",%u,%u,%u]",
+                                 "cccccccccccccccccccccccccccccccc", "abababababababababababababababab", m.id, m.revision, m.type,
+                                 m.type == sa1::STATUS || m.type == sa1::REPLY || m.type == sa1::BULLETIN ? m.event : 0);
+                        app.received(reinterpret_cast<const uint8_t*>(ack), strlen(ack));
+                    }
+                }
+            }
+            con.invalidate();
+        } else if (sscanf(line, "Y %u", &a) == 1) services.uptime = a;
+        else if (sscanf(line, "KD %15s %u", word, &a) == 2 || sscanf(line, "KU %15s %u", word, &a) == 2) {
+            size_t i = 0;
+            while (i < 4 && strcmp(word, names[i])) ++i;
+            if (i < 4) { if (line[1] == 'D') model.down(static_cast<ui::Button>(i), a); else model.up(static_cast<ui::Button>(i), a); }
+        } else if (sscanf(line, "K %15s %u", word, &a) == 2) {
             size_t i = 0;
             while (i < 4 && strcmp(word, names[i])) ++i;
             if (i < 4) model.press(static_cast<ui::Button>(i), a);
         } else if (sscanf(line, "T %u", &a) == 1) model.tick(a);
         else if (sscanf(line, "P %u", &a) == 1) status.prep = a;
-        else if (sscanf(line, "Q %u", &a) == 1) status.silence = a;
+        else if (sscanf(line, "Q %u", &a) == 1) { status.silence = a; services.silence_ = a; }
         else if (sscanf(line, "O %u", &a) == 1) status.radioOk = a;
         else if (sscanf(line, "U %u", &a) == 1) status.contactS = a;
         else if (sscanf(line, "N %u", &a) == 1) status.newMessages = a;
@@ -189,7 +268,27 @@ int uiScript() {
         else if (sscanf(line, "X %u %u %u %u %u %u", &a, &b, &c, &d, &e, &f) == 6) {
             status.rxOk = a; status.rxBad = b; status.txDatagrams = c; status.txDrop = d; status.deferrals = e; status.debtMs = f;
         } else if (sscanf(line, "F %u", &a) == 1) { status.foffValid = true; status.foffHz = static_cast<int32_t>(a); }
-        else if (line[0] == 'R') {
+        else if (!strcmp(line, "M")) {
+            const size_t count = con.itemCount();
+            printf("items %zu\n", count);
+            for (size_t i = 0; i < count; ++i) {
+                ui::Item item;
+                if (!con.item(i, item)) continue;
+                printf("item %u %d %u %04u %u %u %u %u %u %d %d |%s\n", item.ref, item.own, item.type, item.number, item.category, item.people,
+                       item.urgency, item.state, item.attempts, item.cancelled, item.unread, item.text);
+            }
+        } else if (!strcmp(line, "J")) {
+            printf("queue live %zu unsent %zu configured %d paused %d\n", store.queueLive(), store.queueUnsent(), store.configured(), app.testPaused());
+            for (size_t i = 0; i < store.queueSize(); ++i) {
+                const store::QueueEntry* q = store.queueEntry(i);
+                if (!q) continue;
+                store::QueueRecord r;
+                store.queueRead(q->seq, r);
+                printf("intent %u type %u rev %u flags %u attempts %u next %u state %u number %04u sa1 %s\n", q->seq, q->type, q->revision,
+                       q->flags, q->attempts, q->nextTryS, q->state, store::shortNumber(q->id), r.sa1);
+            }
+        } else if (line[0] == 'R') {
+            if (hosted) status.newMessages = static_cast<uint32_t>(store.inboxUnread());
             ui::Lines lines;
             model.render(status, lines);
             printf("screen %s %d\n", ui::screenName(model.screen()), static_cast<int>(model.language()));
@@ -213,7 +312,6 @@ int uiScript() {
     return 0;
 }
 
-// Usługi stacji dla protokołu w programie testowym.
 struct TestHost : usbproto::Host {
     bool prep_ = true, silence_ = false, confirm_ = true;
     uint32_t uptime_ = 100;
@@ -462,7 +560,7 @@ class HostUnitTests(unittest.TestCase):
         subprocess.run([compiler(), "-std=c++17", "-Wall", "-Wextra", "-Werror", f"-I{SRC}", str(root / "harness.cpp"),
                         str(SRC / "testframe.cpp"), str(SRC / "journal.cpp"), str(SRC / "p1frame.cpp"), str(SRC / "ui.cpp"),
                         str(SRC / "font.cpp"), str(SRC / "jsonlite.cpp"), str(SRC / "sa1.cpp"), str(SRC / "store.cpp"),
-                        str(SRC / "usbproto.cpp"), str(SRC / "station.cpp"), "-o", str(cls.binary)],
+                        str(SRC / "usbproto.cpp"), str(SRC / "station.cpp"), str(SRC / "console.cpp"), "-o", str(cls.binary)],
                        check=True)
 
     @classmethod
@@ -644,7 +742,7 @@ class HostUnitTests(unittest.TestCase):
                        "K OK 0", "K OK 0", "R", "T 179999", "R", "T 180000", "R"])
         screens = self.screens(out)
         self.assertEqual([s[0] for s in screens],
-                         ["menu", "menu", "status", "status", "menu", "language_menu", "menu", "main", "item", "item", "main"])
+                         ["menu", "menu", "status", "status", "menu", "language_menu", "menu", "main", "category", "category", "main"])
         self.assertEqual([t for _, t in screens[0][2]], menu)
         self.assertEqual([inv for inv, _ in screens[0][2]], [True, False, False, False, False])
         self.assertEqual([inv for inv, _ in screens[1][2]], [False, False, False, True, False])
@@ -657,9 +755,205 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual([t for _, t in screens[5][2]][:3], ["POLSKI", "УКРАЇНСЬКА", "ENGLISH"])
         self.assertEqual(screens[6][1], 2)  # wybrano ENGLISH, powrót do menu
         self.assertEqual([t for _, t in screens[6][2]], [strings[2] for _, strings in data["menu"]])
-        self.assertEqual([t for _, t in screens[8][2]][0], "REQUEST")
-        self.assertEqual(screens[9][0], "item")   # 179 999 ms bez naciśnięcia: ekran zostaje
+        self.assertEqual([t for _, t in screens[8][2]][0], "MEDICAL HELP")  # kreator: kategoria 0 w języku EN
+        self.assertEqual(screens[9][0], "category")   # 179 999 ms bez naciśnięcia: ekran zostaje
         self.assertEqual(screens[10][0], "main")  # 3 min bezczynności: ekran główny
+
+    HOSTED = ["H", "A Szkoła, wejście B", "L 0", "O 1"]
+    REQUEST_ID = "3132333435363738393a3b3c3d3e3f40"  # pierwsze 16 bajtów z generatora programu testowego
+
+    @staticmethod
+    def wire(message):
+        return encode_message(message).decode()
+
+    def assertHas(self, text, out):
+        """Jakiś wiersz wyjścia zawiera tekst (rekordy kolejki i listy mają dalsze pola)."""
+        self.assertTrue(any(text in line for line in out), text)
+
+    def assertShows(self, screen, text):
+        """Okno 5 wierszy pokazuje początek tekstu (dłuższy tekst przewija się)."""
+        shown = " ".join(self.lines(screen)).strip()
+        self.assertTrue(text.startswith(shown) and shown, (shown, text))
+
+    def hosted(self, script):
+        return self.ui(self.HOSTED + script)
+
+    @staticmethod
+    def lines(screen):
+        return [t for _, t in screen[2]]
+
+    def test_startup_address_check_and_test_offer(self):
+        texts = ui_texts.load()["texts"]
+        out = self.ui(["H", "A Szkoła, wejście B", "S 0", "O 1", "K OK 0", "R", "K BACK 0", "R", "K OK 0", "R", "K OK 0", "R", "J",
+                       "K BACK 0", "R", "J"])
+        address, missing, offer, test, menu = self.screens(out)
+        self.assertEqual(address[0], "address")
+        self.assertEqual(" ".join(self.lines(address)).strip(), texts["adres_kontrola"][0].replace("[x]", "Szkoła, wejście B"))
+        self.assertEqual(" ".join(self.lines(missing)).strip(), texts["adres_brak"][0])  # WSTECZ = NIE
+        self.assertEqual(offer[0], "test_offer")
+        self.assertEqual(test[0], "test")
+        self.assertIn("log startup test scheduled", out)
+        # TEST startowy: losowe opóźnienie w oknie 50 s x 2 stacje, ekran test_zaplanowany, WSTECZ anuluje.
+        intents = [line for line in out if line.startswith("intent ")]
+        self.assertEqual(len(intents), 2)
+        self.assertHas("type 5 rev 0 flags 1 attempts 0 next 161", intents[:1])
+        self.assertEqual(" ".join(self.lines(test)).strip(), texts["test_zaplanowany"][0].replace("[mm]", "2"))
+        self.assertIn("log test cancelled", out)
+        self.assertHas("type 5 rev 0 flags 8", intents[1:])
+        self.assertEqual(menu[0], "menu")
+
+    def test_wizard_creates_request_with_phrase_and_short_number(self):
+        data = ui_texts.load()
+        texts = data["texts"]
+        script = ["K OK 0", "K OK 0", "K DOWN 0", "K DOWN 0", "K OK 0", "R", "K DOWN 0", "K DOWN 0", "K OK 0", "R", "K OK 0", "R",
+                  "K DOWN 0", "R", "K DOWN 0", "K OK 0", "R", "K DOWN 0", "K OK 0", "R", "K OK 0", "R", "J", "M", "K OK 0", "R",
+                  "E 1", "J", "M"]
+        out = self.hosted(script)
+        people, urgency, still, picked, phrase, summary, result, main = self.screens(out)
+        self.assertEqual(people[0], "people")
+        self.assertEqual(self.lines(people), ["1", "2", "5", "10", "20"])
+        self.assertEqual(urgency[0], "urgency")
+        self.assertEqual(self.lines(urgency)[:3], [texts["pilnosc_2"][0], texts["pilnosc_1"][0], texts["pilnosc_0"][0]])
+        self.assertFalse(any(inv for inv, _ in urgency[2]))  # pilność bez wartości domyślnej
+        self.assertEqual(still[0], "urgency")                 # OK bez wyboru nic nie robi
+        self.assertEqual([inv for inv, _ in picked[2]], [True, False, False, False, False])
+        self.assertEqual(phrase[0], "phrase")
+        self.assertEqual(self.lines(phrase)[:2], ["-", data["phrases"][0][0]])
+        self.assertEqual(summary[0], "summary")
+        self.assertEqual(self.lines(summary)[:3], [data["categories"][2][0], "5 " + texts["pilnosc_1"][0][:18], data["phrases"][0][0]])
+        self.assertEqual(result[0], "result")
+        self.assertEqual(" ".join(self.lines(result)).strip(),
+                         texts["zapisane_w_stacji"][0] + " " + texts["zapisz_numer"][0].replace("[xxxx]", "2594"))
+        self.assertEqual(main[0], "main")
+        self.assertIn("log request 2594 created", out)
+        sa1 = [1, 0, self.REQUEST_ID, 0, 2, 5, "Szkoła, wejście B", "osoba na wózku", 1]
+        self.assertIn("intent 1 type 0 rev 0 flags 1 attempts 0 next 0 state 0 number 2594 sa1 " + self.wire(sa1), out)
+        self.assertIn("item 1 1 0 2594 2 5 1 0 0 0 0 |osoba na wózku", out)
+        self.assertTrue(any(line.startswith('-> ["WICI",1,"abab') and line.endswith(self.wire(sa1) + "]") for line in out))
+        self.assertHas("intent 1 type 0 rev 0 flags 17 attempts 1 next 700", out)  # dostarczone: 10 min na RECEIVED
+
+    def test_digits_hold_repeat_discard_and_language_hold(self):
+        texts = ui_texts.load()["texts"]
+        script = ["K OK 0", "K OK 0", "K OK 0"] + ["K DOWN 0"] * 7 + ["R", "K OK 0", "R", "K UP 0", "K UP 0", "K OK 0", "K OK 0",
+                  "K DOWN 0", "K DOWN 0", "R", "KD UP 1000", "T 1400", "T 1600", "T 1900", "KU UP 1900", "R", "K OK 0", "R",
+                  "KD BACK 2000", "T 3000", "R", "T 4100", "R", "KU BACK 4200", "R", "K BACK 0", "R", "KD BACK 5000", "T 7100",
+                  "R", "KU BACK 7100", "R", "K OK 0", "R", "KD BACK 8000", "T 11100", "KU BACK 11100", "R", "K BACK 0", "R",
+                  "K UP 0", "K UP 0", "K UP 0", "K UP 0", "K OK 0", "K OK 0", "R"]
+        out = self.hosted(script)
+        s = self.screens(out)
+        self.assertEqual([x[0] for x in s], ["people", "digits", "digits", "digits", "urgency", "urgency", "discard", "discard",
+                                             "urgency", "discard", "discard", "main", "language_menu", "menu", "people"])
+        self.assertEqual([inv for inv, _ in s[0][2]], [False, False, False, False, True])  # INNA
+        self.assertEqual(self.lines(s[1])[1:3], ["0 0 1", "^"])
+        self.assertEqual(self.lines(s[2])[1:3], ["2 0 9", "    ^"])
+        self.assertEqual(self.lines(s[3])[1:3], ["2 0 2", "    ^"])  # przytrzymanie: 9 -> 0 od razu, potem co 150 ms
+        self.assertEqual(" ".join(self.lines(s[6])).strip(), texts["porzucic"][0])
+        self.assertEqual(s[8][0], "urgency")  # WSTECZ na ekranie porzucenia wraca do kroku
+        self.assertEqual(s[12][1], 0)
+        self.assertEqual(self.lines(s[12])[:3], ["POLSKI", "УКРАЇНСЬКА", "ENGLISH"])  # 3 s poza kreatorem
+        self.assertEqual([inv for inv, _ in s[14][2]], [True, False, False, False, False])  # po porzuceniu: szkic skasowany
+
+    def test_messages_item_menu_revision_and_cancel(self):
+        data = ui_texts.load()
+        texts = data["texts"]
+        labels = {name.lower(): strings for name, strings in data["labels"].items()}
+        create = ["K OK 0", "K OK 0", "K DOWN 0", "K DOWN 0", "K OK 0", "K DOWN 0", "K DOWN 0", "K OK 0", "K DOWN 0", "K DOWN 0",
+                  "K OK 0", "K DOWN 0", "K OK 0", "K OK 0", "K OK 0", "E 1",
+                  "I [1,1,\"%s\",0,1,1]" % self.REQUEST_ID,
+                  "I [1,3,\"%s\",0,1,\"Zadzwoń pod 112\"]" % self.REQUEST_ID,
+                  "I [1,4,\"41424344454647484950515253545556\",7,\"Komunikat gminy: woda z beczkowozu o 10\"]"]
+        script = create + ["K OK 0", "K DOWN 0", "K OK 0", "R", "M", "K OK 0", "R", "K DOWN 0", "K DOWN 0", "R", "K BACK 0",
+                           "R", "K DOWN 0", "K DOWN 0", "K OK 0", "R", "K OK 0", "R", "K DOWN 0", "K DOWN 0", "K OK 0",
+                           "R", "K OK 0", "R", "J", "M", "K OK 0", "K OK 0", "K DOWN 0", "K OK 0", "K DOWN 0", "K OK 0", "K OK 0", "R",
+                           "K DOWN 0", "K DOWN 0", "K DOWN 0", "R", "K OK 0", "R", "J", "M"]
+        out = self.hosted(script)
+        s = self.screens(out)
+        self.assertEqual([x[0] for x in s], ["messages", "item", "item", "messages", "item", "item_menu", "summary", "result",
+                                             "item_menu", "item_menu", "messages"])
+        self.assertEqual(self.lines(s[0]), ["*Komunikat gminy: wo", "*Zadzwoń pod 112", "2594 " + data["categories"][2][0][:15], "", ""])
+        self.assertIn("items 3", out)
+        # Komunikat: treść, czas od odbioru, stopka; otwarcie oznacza jako przeczytany.
+        bulletin = " ".join(self.lines(s[1]) + self.lines(s[2]))
+        self.assertIn("Komunikat gminy: woda z beczkowozu o 10", bulletin)
+        self.assertIn("0 MIN", bulletin)
+        self.assertEqual(self.lines(s[3])[0], " Komunikat gminy: wo")
+        self.assertIn(texts["stopka_komunikatu"][0][:18], " ".join(self.lines(s[2])))
+        # Własne zgłoszenie po RECEIVED: etap stan_1, kategoria, osoby i pilność, fraza, numer.
+        own = " ".join(self.lines(s[4]))
+        self.assertTrue(own.startswith(texts["stan_1"][0]))
+        self.assertIn(data["categories"][2][0], own)
+        self.assertEqual(self.lines(s[5]), [labels["zmien_liczbe_osob"][0], labels["zmien_pilnosc"][0], labels["potrzeba_ustala"][0], "", ""])
+        self.assertEqual(self.lines(s[6])[2], data["phrases"][10][0])  # POTRZEBA USTAŁA: fraza w podsumowaniu
+        self.assertIn("log request 2594 revision 1", out)
+        revised = [1, 0, self.REQUEST_ID, 1, 2, 5, "Szkoła, wejście B", "potrzeba ustała", 1]
+        self.assertIn("intent 2 type 0 rev 1 flags 1 attempts 0 next 0 state 0 number 2594 sa1 " + self.wire(revised), out)
+        self.assertHas("intent 1 type 0 rev 0 flags 18 attempts 1", out)  # potwierdzona rewizja 0 zostaje zakończona, nie zastąpiona
+        self.assertIn("item 2 1 0 2594 2 5 1 0 0 0 0 |potrzeba ustała", out)  # lista pokazuje najnowszą rewizję
+        # Rewizja bez potwierdzenia: ANULUJ WYSYŁKĘ dostępne; po anulowaniu intencja nieaktywna.
+        self.assertEqual(self.lines(s[8])[3], labels["anuluj_wysylke"][0])
+        self.assertEqual([inv for inv, _ in s[9][2]], [False, False, False, True, False])
+        self.assertIn("log request 2594 cancelled", out)
+        self.assertHas("intent 2 type 0 rev 1 flags 8", out)
+        self.assertIn("item 2 1 0 2594 2 5 1 0 0 1 0 |potrzeba ustała", out)
+
+    def test_test_screen_menu_pause_and_resume(self):
+        texts = ui_texts.load()["texts"]
+        labels = {name.lower(): strings for name, strings in ui_texts.load()["labels"].items()}
+        script = ["K OK 0", "K DOWN 0", "K DOWN 0", "K OK 0", "R", "K OK 0", "R", "K OK 0", "R", "J", "E 1", "R",
+                  "I [1,1,\"%s\",0,1,1]" % self.REQUEST_ID, "R", "K OK 0", "K DOWN 0", "R", "K OK 0", "R", "J", "K OK 0", "K DOWN 0",
+                  "R", "K OK 0", "R", "K OK 0", "K OK 0", "R", "J"]
+        out = self.hosted(script)
+        s = self.screens(out)
+        self.assertEqual([x[0] for x in s], ["test", "test_menu", "test", "test", "test", "test_menu", "test", "test_menu", "test",
+                                             "test"])
+        self.assertEqual(self.lines(s[0])[0], labels["test"][0])  # bez TEST: sama etykieta
+        self.assertEqual(self.lines(s[1])[:2], [labels["test"][0], labels["wstrzymaj"][0]])
+        self.assertEqual(" ".join(self.lines(s[2])).strip(), texts["test_zaplanowany"][0].replace("[mm]", "0"))  # z menu: od razu
+        self.assertHas("intent 1 type 5 rev 0 flags 1 attempts 0 next 0", out)
+        self.assertEqual(" ".join(self.lines(s[3])).strip(), texts["test_wyslany"][0])
+        self.assertEqual(" ".join(self.lines(s[4])).strip(), texts["stan_1"][0])
+        self.assertEqual(" ".join(self.lines(s[6])).strip(), texts["test_wstrzymany"][0])
+        self.assertHas("paused 1", out)
+        self.assertEqual(self.lines(s[7])[1], labels["wznow"][0])
+        self.assertEqual(" ".join(self.lines(s[9])).strip(), texts["test_zaplanowany"][0].replace("[mm]", "0"))  # nowy TEST po WZNÓW
+        self.assertHas("intent 2 type 5 rev 0 flags 1 attempts 0", out)
+
+    def test_alarms_no_confirmation_then_no_read(self):
+        texts = ui_texts.load()["texts"]
+        create = ["K OK 0", "K OK 0", "K OK 0", "K OK 0", "K DOWN 0", "K OK 0", "K OK 0", "K OK 0", "K OK 0", "K OK 0"]
+        script = create + ["Y 999", "T 100000", "R", "Y 1000", "T 101000", "R", "K OK 0", "R", "T 102000", "R",
+                           "I [1,1,\"%s\",0,1,1]" % self.REQUEST_ID, "Y 2799", "T 103000", "R", "Y 2800", "T 104000", "R",
+                           "K OK 0", "R", "Y 9000", "T 105000", "R"]
+        out = self.hosted(script)
+        s = self.screens(out)
+        self.assertEqual([x[0] for x in s], ["main", "alarm", "main", "main", "main", "alarm", "main", "main"])
+        self.assertShows(s[1], texts["brak_potwierdzenia"][0].replace("[n]", "15") + " " + texts["zapisz_numer"][0].replace("[xxxx]", "2594"))
+        self.assertShows(s[5], texts["brak_odczytu"][0] + " " + texts["zapisz_numer"][0].replace("[xxxx]", "2594"))
+
+    def test_services_backup_and_destroy_sequences(self):
+        labels = {name.lower(): strings for name, strings in ui_texts.load()["labels"].items()}
+        texts = ui_texts.load()["texts"]
+        to_services = ["K OK 0", "K DOWN 0", "K DOWN 0", "K DOWN 0", "K OK 0"] + ["K DOWN 0"] * 14 + ["R", "K OK 0", "R"]
+        # Po przełączeniu: zgłoszenie W CIĄGU DOBY bez frazy, nadane do zapasowej tożsamości; potem ZNISZCZ DANE.
+        script = to_services + ["K OK 0", "R", "K UP 0", "K DOWN 0", "K UP 0", "K OK 0", "R", "K BACK 0", "K UP 0", "K UP 0", "K UP 0",
+                                "K OK 0", "K OK 0", "K OK 0", "K UP 0", "K OK 0", "K OK 0", "K OK 0", "K OK 0", "E 1", "J", "K OK 0",
+                                "K DOWN 0", "K DOWN 0", "K DOWN 0", "K OK 0"] + ["K DOWN 0"] * 14 + \
+                 ["K OK 0", "K DOWN 0", "K OK 0", "R", "K UP 0", "K DOWN 0", "K DOWN 0", "K UP 0", "R", "K UP 0", "K DOWN 0", "K UP 0",
+                  "K OK 0", "R", "J"]
+        out = self.hosted(script)
+        s = self.screens(out)
+        self.assertEqual([x[0] for x in s], ["status", "services", "backup", "status", "destroy", "destroy", "main"])
+        self.assertEqual(self.lines(s[0])[-2:], [labels["przekazanie_zmiany"][0], labels["uslugi"][0]])
+        self.assertEqual([inv for inv, _ in s[0][2]], [False, False, False, False, True])
+        self.assertEqual(self.lines(s[1])[:2], [labels["odbiorca_zapasowy"][0], labels["zniszcz_dane"][0]])
+        self.assertEqual(" ".join(self.lines(s[2])).strip(), texts["odbiorca_zapasowy"][0])
+        self.assertIn("log switched to backup recipient", out)
+        # Nowe zgłoszenie idzie do zapasowej tożsamości OSP (0xDD..).
+        self.assertTrue(any(line.startswith('-> ["WICI",1,"abab') and '"dddddddddddddddddddddddddddddddd"' in line for line in out))
+        self.assertEqual(" ".join(self.lines(s[4])).strip(), texts["zniszcz_ostrzezenie"][0])
+        self.assertEqual(s[5][0], "destroy")  # zła sekwencja: nic się nie dzieje
+        self.assertIn("log data destroyed", out)
+        self.assertIn("queue live 0 unsent 0 configured 0 paused 0", out)
 
     def test_wrap_duration_and_glyph_coverage(self):
         data = ui_texts.load()
@@ -768,9 +1062,12 @@ class HostUnitTests(unittest.TestCase):
         out = self.usb(["C 0", '> {"usb":1,"seq":1,"type":"sync","boot":"deadbeef","cursor":0}', "> " + json.dumps(configure, ensure_ascii=False),
                         self.submit(3, request), self.submit(4, request), self.submit(5, changed),
                         self.submit(6, [1, 0, self.MID, 1, 2, 11, "Szkoła", "", 2], to="ff" * 16),
-                        self.submit(7, [1, 2, self.MID, 0, 2, 2]), '> {"usb":1,"seq":8,"type":"test"}', "S"])
+                        self.submit(7, [1, 2, self.MID, 0, 2, 2]), '> {"usb":1,"seq":8,"type":"test"}',
+                        self.submit(9, [1, 0, self.MID[:4] + "f" * 28, 0, 2, 10, "Szkoła", "", 2]), "S"])
         r = self.replies(out)
-        self.assertEqual([x["type"] for x in r], ["sync", "sync", "ok", "stored", "stored", "rejected", "rejected", "rejected", "stored"])
+        self.assertEqual([x["type"] for x in r], ["sync", "sync", "ok", "stored", "stored", "rejected", "rejected", "rejected", "stored",
+                                                  "rejected"])
+        self.assertEqual(r[9]["reason"], "numer_zajety")  # te same pierwsze 16 bitów id: krótki numer zajęty
         self.assertEqual(len(r[0]["boot"]), 16)
         self.assertEqual((r[1]["re"], r[1]["configured"]), (1, False))
         self.assertEqual(r[2]["worst_request"], check_button_configuration("Szkoła, wejście B", ("osoba na wózku",)))
@@ -786,7 +1083,8 @@ class HostUnitTests(unittest.TestCase):
     def test_usb_queue_full_resend_and_persistence(self):
         script = ["C 0"]
         for i in range(129):
-            script.append(self.submit(10 + i, [1, 0, "%032x" % i, 0, 1, 1, "a", "", 0]))
+            # Pierwsze 16 bitów id dają krótki numer, który musi być wolny (numer_zajety).
+            script.append(self.submit(10 + i, [1, 0, "%04x%028x" % (i * 7, i), 0, 1, 1, "a", "", 0]))
         script += ["S", "R", "S", "Q 1", self.submit(500, [1, 0, "%032x" % 0, 0, 1, 1, "a", "", 0], resend=True),
                    "Z %d 0" % (0x10000 + 448 + 1 + 2), "R", "Q 2"]
         out = self.usb(script)

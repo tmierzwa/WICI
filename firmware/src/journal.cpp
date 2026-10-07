@@ -143,6 +143,16 @@ bool Journal::writeSettings(uint32_t language, uint32_t screen) {
     return writeSmall(SETTINGS_BASE, SETTINGS_SLOTS, settings_, language, screen);
 }
 
+bool Journal::eraseEvents() {
+    if (!ok_) return false;
+    uint8_t zero[EVENT_RECORD] = {};
+    for (uint32_t slot = 0; slot < EVENT_SLOTS; ++slot) {
+        if (!storage_.write(EVENT_BASE + slot * EVENT_RECORD, zero, EVENT_RECORD)) return false;
+    }
+    event_ = EventRecord();
+    return true;
+}
+
 bool Journal::writeEvent(uint32_t uptimeS, const char* text) {
     if (!ok_) return false;
     EventRecord next;

@@ -8,13 +8,16 @@
 // odroczeniem i długiem ciszy), ekran Sharp z EXTCOMIN z licznika RTC2 i przyciski
 // płytki jako menu stacji (wybór języka, ekran główny, cisza, STAN), drugi interfejs CDC
 // z protokołem USB laptop–stacja (sync, submit, event/ack, polecenia) nad kolejką, skrzynką
-// i konfiguracją w FRAM. Bez stosu Reticulum (następne kroki).
+// i konfiguracją w FRAM, warstwa aplikacji nad P1 (kolejka, ponawianie, potwierdzenia) oraz
+// ekrany stacji (kreator zgłoszenia, WIADOMOŚCI, TEST, STAN, USŁUGI, alarmy).
+// Bez stosu Reticulum (następne kroki).
 #include <Arduino.h>
 #include <Adafruit_TinyUSB.h>
 #include <SPI.h>
 
 #include "board_bench_a.h"
 #include "cc1120.h"
+#include "console.h"
 #include "fram.h"
 #include "journal.h"
 #include "measure.h"
@@ -101,8 +104,8 @@ struct BenchHost : usbproto::Host {
     void stationAddress(uint8_t out[store::HASH]) override;
     const char* stationName() override;
     const char* version() override { return WICI_FW_VERSION; }
-    void configChanged() override { updateScreen(false); }
-    void queueChanged() override { updateScreen(false); }
+    void configChanged() override;
+    void queueChanged() override;
 };
 BenchHost host;
 usbproto::Protocol protocol(stationStore, host);
@@ -118,11 +121,16 @@ struct BenchServices : station::Services {
     void log(const char* text) override { bench.log(text); }
     bool notify(uint8_t kind, uint32_t ref, const char* fields) override { return protocol.event(kind, ref, fields, millis()); }
     void address(uint8_t out[store::HASH]) override { host.stationAddress(out); }
-    void changed() override { updateScreen(false); }
+    void changed() override;
 };
 BenchServices services;
 station::Station app(stationStore, services);
+console::Console screenHost(stationStore, app, services, &stationJournal);
 bool linkAuto = true;  // LINK 0 zatrzymuje nadawanie z kolejki (próby ręczne P1TX)
+
+void BenchHost::configChanged() { screenHost.invalidate(); updateScreen(false); }
+void BenchHost::queueChanged() { screenHost.invalidate(); updateScreen(false); }
+void BenchServices::changed() { screenHost.invalidate(); updateScreen(false); }
 
 void onDatagram(const uint8_t* data, size_t length, void*) { if (storeOk) app.received(data, length); }
 void onTxDone(bool ok, void*) { app.txDone(ok); }
@@ -262,7 +270,8 @@ void pollButtons(uint32_t now) {
     buttonPollMs = now;
     for (size_t i = 0; i < 4; ++i) {
         const bool is = pressed(buttons[i]);
-        if (is && !buttonWas[i]) screenModel.press(static_cast<ui::Button>(i), now);
+        if (is && !buttonWas[i]) screenModel.down(static_cast<ui::Button>(i), now);
+        else if (!is && buttonWas[i]) screenModel.up(static_cast<ui::Button>(i), now);
         buttonWas[i] = is;
     }
 }
@@ -417,7 +426,7 @@ void printHelp() {
     Serial.println("{\"commands\":[\"HELP\",\"INFO\",\"RADIO\",\"RESET\",\"CONFIG\",\"VERIFY\",\"CAL\",\"FREQ\","
                    "\"PREP <0|1>\",\"SILENCE <0|1>\",\"TXCW <s> [CONDUCTED]\",\"TXPKT <n> <len> [<ms>] [CONDUCTED]\","
                    "\"RX [<len>]\",\"RXPER\",\"FOFF [<hz>]\",\"P1RX\",\"P1TX <hex>\",\"P1\",\"STOP\",\"LOG [<n>]\",\"JOURNAL\",\"BENCH\",\"IDLE\",\"RSSI\",\"STATE\","
-                   "\"REG <hex>\",\"FRAM\",\"BTN\",\"LED <1-4> <0|1>\",\"SCREEN\",\"KEY <UP|DOWN|OK|BACK>\",\"DISPLAY\","
+                   "\"REG <hex>\",\"FRAM\",\"BTN\",\"LED <1-4> <0|1>\",\"SCREEN\",\"KEY <UP|DOWN|OK|BACK> [ms]\",\"DISPLAY\","
                    "\"VCOM <0|1>\",\"REBOOT\",\"STORE\",\"USB <json>\",\"APP\",\"LINK <0|1>\"]}");
 }
 
@@ -436,13 +445,15 @@ bool lastIsConducted(char* words[], size_t& n) {
 void printApp() {
     const station::Stats& s = app.stats();
     Serial.printf("{\"link\":%s,\"in_flight\":%lu,\"sent\":%lu,\"delivered\":%lu,\"failed\":%lu,\"received\":%lu,\"rejected\":%lu,"
-                  "\"duplicates\":%lu,\"conflicts\":%lu,\"acks_sent\":%lu,\"confirmed\":%lu,\"live\":%u,\"unsent\":%u,\"next\":%lu}\n",
+                  "\"duplicates\":%lu,\"conflicts\":%lu,\"acks_sent\":%lu,\"confirmed\":%lu,\"live\":%u,\"unsent\":%u,\"next\":%lu,"
+                  "\"test_paused\":%s,\"items\":%u}\n",
                   boolName(linkAuto), static_cast<unsigned long>(app.inFlightSeq()), static_cast<unsigned long>(s.sent),
                   static_cast<unsigned long>(s.delivered), static_cast<unsigned long>(s.failed), static_cast<unsigned long>(s.received),
                   static_cast<unsigned long>(s.rejected), static_cast<unsigned long>(s.duplicates), static_cast<unsigned long>(s.conflicts),
                   static_cast<unsigned long>(s.acksSent), static_cast<unsigned long>(s.confirmed),
                   static_cast<unsigned>(stationStore.queueLive()), static_cast<unsigned>(stationStore.queueUnsent()),
-                  static_cast<unsigned long>(app.nextToSend(uptimeS())));
+                  static_cast<unsigned long>(app.nextToSend(uptimeS())), boolName(app.testPaused()),
+                  static_cast<unsigned>(screenHost.itemCount()));
 }
 
 void printStore() {
@@ -597,13 +608,18 @@ void handle(char* cmd) {
             Serial.printf("{\"led\":%d,\"on\":%s}\n", index, boolName(atoi(words[1]) != 0));
         } else printError("LED <1-4> <0|1>");
     } else if (!strcmp(cmd, "SCREEN")) printScreen();
-    else if (!strcmp(cmd, "KEY") && n == 1) {
-        // Przycisk z portu USB (do prób bez dotykania płytki); odpowiedź jak SCREEN po odświeżeniu.
+    else if (!strcmp(cmd, "KEY") && (n == 1 || n == 2)) {
+        // Przycisk z portu USB (do prób bez dotykania płytki); drugi argument to czas przytrzymania [ms];
+        // odpowiedź jak SCREEN po odświeżeniu.
         const char* const names[] = {"UP", "DOWN", "OK", "BACK"};
         size_t index = 0;
         while (index < 4 && strcmp(words[0], names[index])) ++index;
-        if (index == 4) { printError("KEY <UP|DOWN|OK|BACK>"); return; }
-        screenModel.press(static_cast<ui::Button>(index), millis());
+        if (index == 4) { printError("KEY <UP|DOWN|OK|BACK> [ms]"); return; }
+        const uint32_t now = millis();
+        const uint32_t held = n == 2 ? static_cast<uint32_t>(atoi(words[1])) : 0;
+        screenModel.down(static_cast<ui::Button>(index), now - held);
+        if (held) screenModel.tick(now);
+        screenModel.up(static_cast<ui::Button>(index), now);
         persistScreen();
         updateScreen(false);
         printScreen();
@@ -676,6 +692,7 @@ void setup() {
     bench.onTxDone(onTxDone, nullptr);
     if (radioOk && p1Ok) bench.p1rxStart();  // łącze P1 w odbiorze od startu (radio niezależne od ekranu)
     display.begin();
+    if (storeOk) screenModel.attach(&screenHost);  // bez magazynu: ekran bez kreatora i wiadomości
     beginScreen();
     syncButtons();
 }

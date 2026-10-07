@@ -74,6 +74,8 @@ public:
     bool writeEvent(uint32_t uptimeS, const char* text);
     // Zdarzenie sprzed `back` wpisów (0 = najnowsze); false, gdy brak albo uszkodzone.
     bool readEvent(uint32_t back, EventRecord& record);
+    // ZNISZCZ DANE: kasuje dziennik zdarzeń (dług ciszy, zegar i ustawienia zostają).
+    bool eraseEvents();
 
 private:
     bool scanSmall(uint32_t base, uint32_t slots, SmallRecord& latest, uint32_t& validCount);

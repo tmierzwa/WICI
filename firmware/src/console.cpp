@@ -1,0 +1,210 @@
+// SPDX-License-Identifier: MIT
+#include "console.h"
+
+#include <string.h>
+
+namespace console {
+
+Console::Console(store::Store& store, station::Station& station, station::Services& services, journal::Journal* journal)
+    : store_(store), station_(station), services_(services), journal_(journal) {}
+
+const char* Console::address() { return store_.config().address; }
+
+size_t Console::phraseCount() {
+    const uint8_t n = store_.config().phraseCount;
+    return n ? n : ui_texts::PHRASES_COUNT;
+}
+
+const char* Console::phrase(size_t index, ui::Lang lang) {
+    const store::Config& c = store_.config();
+    const size_t L = static_cast<size_t>(lang);
+    if (c.phraseCount) {
+        if (index >= c.phraseCount) return "";
+        const char* shown = c.phrases[index][L];
+        return shown[0] ? shown : c.phrases[index][0];  // brak tłumaczenia: wersja polska
+    }
+    return index < ui_texts::PHRASES_COUNT ? ui_texts::PHRASES[index][L] : "";
+}
+
+void Console::rebuild() {
+    // Własne zgłoszenia i TEST w najnowszej rewizji (bez zastąpionych), odpowiedzi i komunikaty; najnowsze najpierw.
+    count_ = 0;
+    for (size_t i = 0; i < store_.queueSize(); ++i) {
+        const store::QueueEntry* e = store_.queueEntry(i);
+        if (!e || (e->type != sa1::REQUEST && e->type != sa1::TEST) || (e->flags & store::REPLACED)) continue;
+        bool newer = false;
+        for (size_t j = 0; j < store_.queueSize() && !newer; ++j) {
+            const store::QueueEntry* o = store_.queueEntry(j);
+            newer = o && j != i && o->type == e->type && !memcmp(o->id, e->id, store::HASH) && o->revision > e->revision;
+        }
+        if (newer) continue;
+        list_[count_++] = Ref{e->createdS, e->seq | OWN};
+    }
+    for (size_t i = 0; i < store::INBOX_SLOTS; ++i) {
+        const store::InboxEntry* e = store_.inboxEntry(i);
+        if (!e || (e->type != sa1::REPLY && e->type != sa1::BULLETIN)) continue;
+        list_[count_++] = Ref{e->receivedS, e->seq};
+    }
+    for (size_t i = 1; i < count_; ++i) {  // sortowanie przez wstawianie: czas malejąco, przy równym numer malejąco
+        const Ref r = list_[i];
+        size_t j = i;
+        while (j > 0 && (list_[j - 1].time < r.time || (list_[j - 1].time == r.time && (list_[j - 1].seq & ~OWN) < (r.seq & ~OWN)))) {
+            list_[j] = list_[j - 1];
+            --j;
+        }
+        list_[j] = r;
+    }
+    dirty_ = false;
+}
+
+size_t Console::itemCount() {
+    if (dirty_) rebuild();
+    return count_;
+}
+
+bool Console::item(size_t index, ui::Item& out) {
+    if (dirty_) rebuild();
+    if (index >= count_) return false;
+    const Ref ref = list_[index];
+    const uint32_t nowS = services_.uptimeS();
+    out = ui::Item();
+    sa1::Message m;
+    if (ref.seq & OWN) {
+        store::QueueRecord r;
+        if (!store_.queueRead(ref.seq & ~OWN, r) || sa1::decode(r.sa1, r.sa1Length, m)) return false;
+        out.ref = r.seq;
+        out.own = true;
+        out.type = r.type;
+        out.number = store::shortNumber(r.id);
+        out.category = m.category;
+        out.people = m.people;
+        out.urgency = m.urgency;
+        out.state = r.state;
+        out.attempts = r.attempts;
+        out.nextInS = r.nextTryS > nowS ? r.nextTryS - nowS : 0;
+        out.ageS = nowS > r.createdS ? nowS - r.createdS : 0;
+        out.cancelled = r.flags & store::CANCELLED;
+        strncpy(out.text, m.text, sizeof(out.text) - 1);
+        return true;
+    }
+    store::InboxRecord r;
+    if (!store_.inboxRead(ref.seq, r) || sa1::decode(r.sa1, r.sa1Length, m)) return false;
+    out.ref = r.seq;
+    out.own = false;
+    out.type = r.type;
+    out.number = store::shortNumber(r.id);
+    out.ageS = nowS > r.receivedS ? nowS - r.receivedS : 0;
+    out.unread = !(r.flags & 1);
+    strncpy(out.text, m.text, sizeof(out.text) - 1);
+    return true;
+}
+
+void Console::markRead(uint32_t ref) {
+    if (store_.inboxMarkRead(ref)) { dirty_ = true; services_.changed(); }
+}
+
+const char* Console::phraseText(const ui::Draft& draft) {
+    // Do SA1 trafia wersja polska frazy; POTRZEBA USTAŁA to ostatnia fraza domyślna.
+    if (draft.phrase == ui::PHRASE_RESOLVED) return ui_texts::PHRASES[ui_texts::PHRASES_COUNT - 1][0];
+    if (draft.phrase < 0) return "";
+    const store::Config& c = store_.config();
+    const size_t index = static_cast<size_t>(draft.phrase);
+    if (c.phraseCount) return index < c.phraseCount ? c.phrases[index][0] : "";
+    return index < ui_texts::PHRASES_COUNT ? ui_texts::PHRASES[index][0] : "";
+}
+
+ui::Submit Console::submit(const ui::Draft& draft, uint16_t& number) {
+    uint32_t seq = 0;
+    station::Create result;
+    if (draft.kind == ui::DraftKind::NEW) {
+        result = station_.createRequest(draft.category, draft.people, draft.urgency, phraseText(draft), seq);
+    } else {
+        const char* text = draft.kind == ui::DraftKind::RESOLVED ? phraseText(draft) : nullptr;  // zmiana liczby/pilności zachowuje frazę
+        result = station_.revise(draft.ref, draft.people, draft.urgency, text, seq);
+    }
+    dirty_ = true;
+    switch (result) {
+        case station::Create::STORED: {
+            store::QueueRecord r;
+            if (store_.queueRead(seq, r)) number = store::shortNumber(r.id);
+            return ui::Submit::STORED;
+        }
+        case station::Create::NO_ADDRESS: return ui::Submit::NO_ADDRESS;
+        case station::Create::FULL: return ui::Submit::FULL;
+        default: return ui::Submit::ERROR;
+    }
+}
+
+bool Console::cancel(uint32_t ref) {
+    dirty_ = true;
+    return station_.cancel(ref);
+}
+
+ui::TestInfo Console::test() {
+    ui::TestInfo info;
+    if (station_.testPaused()) { info.state = ui::TestState::PAUSED; return info; }
+    const store::QueueEntry* newest = nullptr;
+    for (size_t i = 0; i < store_.queueSize(); ++i) {
+        const store::QueueEntry* e = store_.queueEntry(i);
+        if (!e || e->type != sa1::TEST || (e->flags & (store::CANCELLED | store::REPLACED))) continue;
+        if (!newest || e->createdS > newest->createdS || (e->createdS == newest->createdS && e->seq > newest->seq)) newest = e;
+    }
+    if (!newest) return info;
+    const uint32_t nowS = services_.uptimeS();
+    if (newest->state) { info.state = ui::TestState::CONFIRMED; info.confirmed = newest->state; }
+    else if (newest->attempts == 0 && (newest->flags & store::ACTIVE)) {
+        info.state = ui::TestState::SCHEDULED;
+        info.minutes = newest->nextTryS > nowS ? (newest->nextTryS - nowS + 59) / 60 : 0;
+    } else info.state = ui::TestState::SENT;
+    return info;
+}
+
+bool Console::scheduleTest(bool startup) {
+    uint32_t seq = 0;
+    dirty_ = true;
+    return station_.scheduleTest(startup, seq) == station::Create::STORED;
+}
+
+void Console::cancelTest() { dirty_ = true; station_.cancelTest(); }
+void Console::pauseTest(bool paused) { dirty_ = true; station_.pauseTest(paused); }
+
+bool Console::alarm(ui::AlarmInfo& out) {
+    station::Alarm a;
+    if (!station_.alarm(services_.uptimeS(), a)) return false;
+    out.kind = a.kind == station::AlarmKind::NO_READ ? ui::AlarmKind::NO_READ : ui::AlarmKind::NO_CONFIRMATION;
+    out.ref = a.seq;
+    out.number = a.number;
+    out.minutes = a.minutes;
+    return true;
+}
+
+void Console::ackAlarm(const ui::AlarmInfo& alarm) {
+    station::Alarm a;
+    a.kind = alarm.kind == ui::AlarmKind::NO_READ ? station::AlarmKind::NO_READ : station::AlarmKind::NO_CONFIRMATION;
+    a.seq = alarm.ref;
+    station_.ackAlarm(a);
+}
+
+bool Console::switchBackup() {
+    // Tożsamość zapasowa OSP z karty; nieodwracalne (powrót tylko nową konfiguracją).
+    store::Config c = store_.config();
+    if (!store_.configured()) { services_.log("backup recipient: not configured"); return false; }
+    c.activeOsp = 1;
+    if (!store_.writeConfig(c)) { services_.log("backup recipient: write failed"); return false; }
+    services_.log("switched to backup recipient");
+    dirty_ = true;
+    services_.changed();
+    return true;
+}
+
+bool Console::destroy() {
+    // ZNISZCZ DANE: konfiguracja, kolejka, skrzynka, zdarzenia, klucze odbioru i dziennik zdarzeń; dług ciszy zostaje.
+    const bool storeOk = store_.destroy();
+    const bool journalOk = !journal_ || journal_->eraseEvents();
+    services_.log(storeOk && journalOk ? "data destroyed" : "destroy failed");
+    dirty_ = true;
+    services_.changed();
+    return storeOk && journalOk;
+}
+
+}  // namespace console

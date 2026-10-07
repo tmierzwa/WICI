@@ -73,6 +73,7 @@ struct QueueRecord {
     uint32_t statusEvent = 0;   // najwyższy event z RECEIVED/STATUS dla tej intencji
     uint8_t state = 0;          // stan 1-6; 0 = brak potwierdzenia
     uint32_t updatedS = 0;
+    uint32_t sentS = 0;         // czas pierwszej próby nadania (alarm TEST); 0 = nienadana
 };
 
 struct InboxRecord {
@@ -107,15 +108,20 @@ struct QueueEntry {
     uint8_t type = 0;
     uint8_t aux = 0;
     uint8_t flags = 0;
+    uint8_t state = 0;
     uint16_t revision = 0;
+    uint16_t attempts = 0;
     uint32_t event = 0;
     uint32_t nextTryS = 0;
+    uint32_t updatedS = 0;
+    uint32_t sentS = 0;
     uint8_t to[HASH] = {};
     uint8_t id[HASH] = {};
 };
 
 struct InboxEntry {
     uint32_t seq = 0;
+    uint32_t receivedS = 0;
     uint8_t type = 0;
     uint8_t flags = 0;
     uint16_t revision = 0;
@@ -155,6 +161,8 @@ public:
     size_t queueSize() const { return QUEUE_SLOTS; }
     const QueueEntry* queueEntry(size_t slot) const { return queue_[slot].seq ? &queue_[slot] : nullptr; }
     const QueueEntry* queueFind(const uint8_t to[HASH], uint8_t type, const uint8_t id[HASH], uint16_t revision, uint32_t event) const;
+    // Krótki numer zgłoszenia zajęty przez inne id w kolejce (oprogramowanie.md: numer unikalny w stacji).
+    bool queueNumberTaken(uint16_t number, const uint8_t id[HASH]) const;
 
     // Skrzynka: klucz (źródło, typ, id, revision, event); deduplikacja jak w kolejce.
     Put inboxPut(InboxRecord& record);
@@ -200,8 +208,9 @@ private:
     uint32_t seenSeq_ = 0;
 };
 
-// Pomocnicze: skrót szesnastkowy 32 znaków <-> 16 bajtów.
+// Pomocnicze: skrót szesnastkowy 32 znaków <-> 16 bajtów; krótki numer = pierwsze 16 bitów id modulo 10 000.
 bool hexToBytes(const char* hex, uint8_t out[HASH]);
 void bytesToHex(const uint8_t in[HASH], char out[2 * HASH + 1]);
+uint16_t shortNumber(const uint8_t id[HASH]);
 
 }  // namespace store

@@ -18,7 +18,7 @@ bool seqUsable(uint32_t seq) { return seq != 0 && seq != 0xFFFFFFFF; }
 // Układ rekordu 512 B kolejki i skrzynki (część stała): numer 4, czas 4, typ 1, revision 2, event 4,
 // adres 16, id 16, długość 2, treść 256 = 305 B; CRC 2 i znacznik 1 -> 308 B.
 constexpr size_t MSG_IMMUTABLE = 4 + 4 + 1 + 2 + 4 + HASH + HASH + 2 + sa1::MAX_CONTENT + 1;  // + bajt aux
-constexpr size_t QUEUE_STATE = 1 + 2 + 4 + 4 + 1 + 4;  // flagi, próby, następna próba, event, stan, czas
+constexpr size_t QUEUE_STATE = 1 + 2 + 4 + 4 + 1 + 4 + 4;  // flagi, próby, następna próba, event, stan, czas, pierwsze nadanie
 constexpr size_t INBOX_STATE = 1;
 constexpr size_t NOTE_IMMUTABLE = 4 + 4 + 1 + 4 + 2 + NOTE_TEXT;
 constexpr size_t NOTE_STATE = 1;
@@ -175,7 +175,11 @@ bool Store::begin() {
         const uint8_t* s = buffer + STATE_OFFSET;
         if (s[QUEUE_STATE + 2] == COMMITTED && p1::crc16(s, QUEUE_STATE) == getU16(s + QUEUE_STATE)) {
             e.flags = s[0];
+            e.attempts = getU16(s + 1);
             e.nextTryS = getU32(s + 3);
+            e.state = s[11];
+            e.updatedS = getU32(s + 12);
+            e.sentS = getU32(s + 16);
         } else {
             e.flags = ACTIVE;  // stan nieczytelny: intencja aktywna od nowa
             e.nextTryS = 0;
@@ -190,6 +194,7 @@ bool Store::begin() {
         InboxEntry& e = inbox_[slot];
         e.seq = getU32(buffer);
         e.type = buffer[8];
+        e.receivedS = getU32(buffer + 4);
         e.revision = getU16(buffer + 9);
         e.event = getU32(buffer + 11);
         memcpy(e.source, buffer + 15, HASH);
@@ -255,6 +260,13 @@ const QueueEntry* Store::queueFind(const uint8_t to[HASH], uint8_t type, const u
         if (e.seq && e.type == type && e.revision == revision && e.event == event && !memcmp(e.to, to, HASH) && !memcmp(e.id, id, HASH)) return &e;
     }
     return nullptr;
+}
+
+bool Store::queueNumberTaken(uint16_t number, const uint8_t id[HASH]) const {
+    for (const QueueEntry& e : queue_) {
+        if (e.seq && (e.type == sa1::REQUEST || e.type == sa1::TEST) && memcmp(e.id, id, HASH) && shortNumber(e.id) == number) return true;
+    }
+    return false;
 }
 
 size_t Store::queueLive() const {
@@ -327,14 +339,15 @@ Put Store::queuePut(QueueRecord& record, bool resend) {
     record.seq = seq;
     record.flags = ACTIVE;
     record.attempts = 0;
-    record.nextTryS = 0;
     record.statusEvent = 0;
     record.state = 0;
+    record.sentS = 0;
     uint8_t state[QUEUE_STATE + 3];
     memset(state, 0, sizeof(state));
     state[0] = record.flags;
+    putU32(state + 3, record.nextTryS);  // zaplanowane nadanie (TEST startowy)
     putU32(state + 7, record.statusEvent);
-    putU32(state + 10, record.updatedS);
+    putU32(state + 12, record.updatedS);
     if (!writeState(address + STATE_OFFSET, state, QUEUE_STATE)) return Put::ERROR;
     if (!writeImmutable(address, buffer, MSG_IMMUTABLE)) return Put::ERROR;
     QueueRecord back;
@@ -351,7 +364,8 @@ Put Store::queuePut(QueueRecord& record, bool resend) {
     e.flags = ACTIVE;
     e.revision = record.revision;
     e.event = record.event;
-    e.nextTryS = 0;
+    e.nextTryS = record.nextTryS;
+    e.updatedS = record.updatedS;
     memcpy(e.to, record.to, HASH);
     memcpy(e.id, record.id, HASH);
     queueSeq_ = seq;
@@ -385,6 +399,7 @@ bool Store::queueRead(uint32_t seq, QueueRecord& record) {
             record.statusEvent = getU32(s + 7);
             record.state = s[11];
             record.updatedS = getU32(s + 12);
+            record.sentS = getU32(s + 16);
         }
         return true;
     }
@@ -402,9 +417,15 @@ bool Store::queueUpdate(const QueueRecord& record) {
         putU32(state + 7, record.statusEvent);
         state[11] = record.state;
         putU32(state + 12, record.updatedS);
+        putU32(state + 16, record.sentS);
         if (!writeState(QUEUE_BASE + slot * RECORD + STATE_OFFSET, state, QUEUE_STATE)) return false;
-        queue_[slot].flags = record.flags;
-        queue_[slot].nextTryS = record.nextTryS;
+        QueueEntry& e = queue_[slot];
+        e.flags = record.flags;
+        e.attempts = record.attempts;
+        e.nextTryS = record.nextTryS;
+        e.state = record.state;
+        e.updatedS = record.updatedS;
+        e.sentS = record.sentS;
         return true;
     }
     return false;
@@ -466,6 +487,7 @@ Put Store::inboxPut(InboxRecord& record) {
     InboxEntry& e = inbox_[slot];
     e = InboxEntry();
     e.seq = seq;
+    e.receivedS = record.receivedS;
     e.type = record.type;
     e.revision = record.revision;
     e.event = record.event;
@@ -654,6 +676,10 @@ bool Store::destroy() {
     if (!erase(CONFIG_BASE, CONFIG_SLOTS, CONFIG_SLOT) || !erase(QUEUE_BASE, QUEUE_SLOTS, RECORD) || !erase(INBOX_BASE, INBOX_SLOTS, RECORD) ||
         !erase(NOTE_BASE, NOTE_SLOTS, RECORD) || !erase(SEEN_BASE, SEEN_SLOTS, SEEN_RECORD)) return false;
     return begin();
+}
+
+uint16_t shortNumber(const uint8_t id[HASH]) {
+    return static_cast<uint16_t>(((static_cast<uint16_t>(id[0]) << 8) | id[1]) % 10000);
 }
 
 }  // namespace store

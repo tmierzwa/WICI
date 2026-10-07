@@ -40,6 +40,7 @@ uint32_t Station::nextToSend(uint32_t nowS) const {
     for (size_t i = 0; i < store_.queueSize(); ++i) {
         const store::QueueEntry* e = store_.queueEntry(i);
         if (!e || !(e->flags & store::ACTIVE) || e->nextTryS > nowS) continue;
+        if (testPaused_ && e->type == sa1::TEST) continue;
         const int p = priority(*e);
         if (!best || p < bestPriority || (p == bestPriority && e->createdS < best->createdS)) { best = e; bestPriority = p; }
     }
@@ -108,6 +109,7 @@ void Station::poll(uint32_t nowMs) {
     if (!services_.send(reinterpret_cast<const uint8_t*>(datagram), length)) return;
     ++stats_.sent;
     r.attempts = static_cast<uint16_t>(r.attempts + 1);
+    if (!r.sentS) r.sentS = nowS;
     r.nextTryS = nowS + ACK_TIMEOUT_S;  // do czasu wyniku próby nie nadaje się ponownie
     r.updatedS = nowS;
     store_.queueUpdate(r);
@@ -224,7 +226,7 @@ void Station::handleAck(const uint8_t from[store::HASH], const char* id, uint16_
     if (e) {
         store::QueueRecord r;
         if (!store_.queueRead(e->seq, r)) return;
-        if (r.flags & store::DONE) return;  // spóźnione potwierdzenie zakończonej intencji
+        if (r.flags & (store::DONE | store::CANCELLED | store::REPLACED)) return;  // spóźnione potwierdzenie zakończonej intencji
         ++stats_.delivered;
         if (inFlightSeq_ == r.seq) inFlightSeq_ = 0;
         if (type == sa1::REQUEST || type == sa1::TEST) {
@@ -328,6 +330,196 @@ void Station::handleMessage(const uint8_t from[store::HASH], const sa1::Message&
         }
     }
     services_.changed();
+}
+
+Create Station::putIntent(sa1::Message& m, uint8_t type, const uint8_t id[store::HASH], uint32_t delayS, uint32_t& seq) {
+    const store::Config& c = store_.config();
+    if (!c.address[0]) return Create::NO_ADDRESS;
+    m.type = type;
+    store::bytesToHex(id, m.id);
+    strncpy(m.location, c.address, sa1::LOCATION_MAX);
+    m.location[sa1::LOCATION_MAX] = '\0';
+    store::QueueRecord record;
+    record.sa1Length = static_cast<uint16_t>(sa1::encode(m, record.sa1, sizeof(record.sa1)));
+    if (!record.sa1Length) return Create::TOO_LARGE;
+    memcpy(record.to, c.osp[c.activeOsp ? 1 : 0], store::HASH);
+    memcpy(record.id, id, store::HASH);
+    record.type = type;
+    record.revision = m.revision;
+    record.aux = m.urgency;
+    record.createdS = services_.uptimeS();
+    record.updatedS = record.createdS;
+    record.nextTryS = delayS ? record.createdS + delayS : 0;
+    const store::Put put = store_.queuePut(record, false);
+    if (put == store::Put::FULL) return Create::FULL;
+    if (put != store::Put::STORED) return Create::ERROR;
+    seq = record.seq;
+    services_.changed();
+    return Create::STORED;
+}
+
+Create Station::createRequest(uint8_t category, uint16_t people, uint8_t urgency, const char* text, uint32_t& seq) {
+    sa1::Message m;
+    m.revision = 0;
+    m.category = category;
+    m.people = people;
+    m.urgency = urgency;
+    strncpy(m.text, text ? text : "", sa1::TEXT_MAX);
+    m.text[sa1::TEXT_MAX] = '\0';
+    // Krótki numer unikalny w stacji: id losowane ponownie, dopóki numer jest zajęty.
+    uint8_t id[store::HASH];
+    for (int attempt = 0; attempt < 32; ++attempt) {
+        services_.randomBytes(id, sizeof(id));
+        if (!store_.queueNumberTaken(store::shortNumber(id), id)) break;
+    }
+    const Create result = putIntent(m, sa1::REQUEST, id, 0, seq);
+    if (result == Create::STORED) {
+        char line[40];
+        snprintf(line, sizeof(line), "request %04u created", store::shortNumber(id));
+        services_.log(line);
+    }
+    return result;
+}
+
+Create Station::revise(uint32_t seq, uint16_t people, uint8_t urgency, const char* text, uint32_t& newSeq) {
+    store::QueueRecord old;
+    if (!store_.queueRead(seq, old) || (old.type != sa1::REQUEST && old.type != sa1::TEST)) return Create::NOT_FOUND;
+    sa1::Message m;
+    if (sa1::decode(old.sa1, old.sa1Length, m) || m.revision >= sa1::REVISION_MAX) return Create::NOT_FOUND;
+    m.revision = static_cast<uint16_t>(m.revision + 1);
+    m.people = people;
+    m.urgency = urgency;
+    if (text) { strncpy(m.text, text, sa1::TEXT_MAX); m.text[sa1::TEXT_MAX] = '\0'; }
+    const Create result = putIntent(m, old.type, old.id, 0, newSeq);
+    if (result != Create::STORED) return result;
+    if ((old.flags & store::ACTIVE) && !(old.flags & store::SENT) && !old.state) {
+        // Nienadana starsza rewizja: zastąpiona, nie wychodzi.
+        old.flags = static_cast<uint8_t>((old.flags & ~store::ACTIVE) | store::REPLACED);
+        old.updatedS = services_.uptimeS();
+        store_.queueUpdate(old);
+        if (inFlightSeq_ == old.seq) inFlightSeq_ = 0;
+    }
+    char line[48];
+    snprintf(line, sizeof(line), "request %04u revision %u", store::shortNumber(old.id), m.revision);
+    services_.log(line);
+    return Create::STORED;
+}
+
+bool Station::cancel(uint32_t seq) {
+    store::QueueRecord r;
+    if (!store_.queueRead(seq, r) || r.state || !(r.flags & store::ACTIVE)) return false;
+    r.flags = static_cast<uint8_t>((r.flags & ~store::ACTIVE) | store::CANCELLED);
+    r.updatedS = services_.uptimeS();
+    if (!store_.queueUpdate(r)) return false;
+    if (inFlightSeq_ == seq) inFlightSeq_ = 0;
+    char line[40];
+    snprintf(line, sizeof(line), "request %04u cancelled", store::shortNumber(r.id));
+    services_.log(line);
+    services_.changed();
+    return true;
+}
+
+uint32_t Station::pendingTest() const {
+    for (size_t i = 0; i < store_.queueSize(); ++i) {
+        const store::QueueEntry* e = store_.queueEntry(i);
+        if (e && e->type == sa1::TEST && (e->flags & store::ACTIVE) && e->attempts == 0) return e->seq;
+    }
+    return 0;
+}
+
+Create Station::scheduleTest(bool startup, uint32_t& seq) {
+    if (const uint32_t pending = pendingTest()) { seq = pending; return Create::STORED; }
+    sa1::Message m;
+    m.revision = 0;
+    m.category = 9;
+    m.people = 1;
+    m.urgency = 0;
+    strncpy(m.text, "test", sizeof(m.text) - 1);
+    uint8_t id[store::HASH];
+    for (int attempt = 0; attempt < 32; ++attempt) {
+        services_.randomBytes(id, sizeof(id));
+        if (!store_.queueNumberTaken(store::shortNumber(id), id)) break;
+    }
+    uint32_t delayS = 0;
+    if (startup) {
+        const uint16_t stations = store_.config().stations;
+        const uint32_t window = stations ? TEST_WINDOW_PER_STATION_S * stations : TEST_WINDOW_S;
+        uint32_t random = 0;
+        services_.randomBytes(reinterpret_cast<uint8_t*>(&random), sizeof(random));
+        delayS = random % window;
+    }
+    const Create result = putIntent(m, sa1::TEST, id, delayS, seq);
+    if (result == Create::STORED) services_.log(startup ? "startup test scheduled" : "test scheduled");
+    return result;
+}
+
+bool Station::cancelTest() {
+    const uint32_t seq = pendingTest();
+    if (!seq) return false;
+    store::QueueRecord r;
+    if (!store_.queueRead(seq, r)) return false;
+    r.flags = static_cast<uint8_t>((r.flags & ~store::ACTIVE) | store::CANCELLED);
+    r.updatedS = services_.uptimeS();
+    if (!store_.queueUpdate(r)) return false;
+    services_.log("test cancelled");
+    services_.changed();
+    return true;
+}
+
+void Station::pauseTest(bool paused) {
+    if (paused == testPaused_) return;
+    testPaused_ = paused;
+    if (paused) cancelTest();
+    services_.log(paused ? "test paused" : "test resumed");
+    services_.changed();
+}
+
+bool Station::alarmAcked(size_t slot, AlarmKind kind) const {
+    return alarmAcked_[slot] & (kind == AlarmKind::NO_READ ? 2 : 1);
+}
+
+bool Station::alarm(uint32_t nowS, Alarm& out) const {
+    // Najstarszy przekroczony próg; alarm potwierdzony przyciskiem OK nie wraca.
+    bool found = false;
+    uint32_t bestAge = 0;
+    for (size_t i = 0; i < store_.queueSize(); ++i) {
+        const store::QueueEntry* e = store_.queueEntry(i);
+        if (!e || (e->type != sa1::REQUEST && e->type != sa1::TEST) || (e->flags & (store::REPLACED | store::CANCELLED))) continue;
+        AlarmKind kind = AlarmKind::NONE;
+        uint32_t since = 0;
+        if (e->state == 0) {
+            if (e->type == sa1::TEST) {
+                if (!e->sentS || nowS - e->sentS < TEST_ALARM_S) continue;
+                since = e->sentS;
+            } else {
+                if (nowS - e->createdS < CONFIRM_ALARM_S[e->aux < 3 ? e->aux : 0]) continue;
+                since = e->createdS;
+            }
+            kind = AlarmKind::NO_CONFIRMATION;
+        } else if (e->state == 1 && e->type == sa1::REQUEST && e->aux == 2) {
+            if (nowS - e->updatedS < READ_ALARM_S) continue;
+            since = e->updatedS;
+            kind = AlarmKind::NO_READ;
+        } else continue;
+        if (alarmAcked(i, kind)) continue;
+        const uint32_t age = nowS - since;
+        if (!found || age > bestAge) {
+            found = true;
+            bestAge = age;
+            out.kind = kind;
+            out.seq = e->seq;
+            out.number = store::shortNumber(e->id);
+            out.minutes = age / 60;
+        }
+    }
+    return found;
+}
+
+void Station::ackAlarm(const Alarm& alarm) {
+    for (size_t i = 0; i < store_.queueSize(); ++i) {
+        const store::QueueEntry* e = store_.queueEntry(i);
+        if (e && e->seq == alarm.seq) alarmAcked_[i] |= alarm.kind == AlarmKind::NO_READ ? 2 : 1;
+    }
 }
 
 }  // namespace station
