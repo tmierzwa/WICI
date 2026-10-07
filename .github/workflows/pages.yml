@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - 'docs/conception/**'
+      - 'media/film/*.mp4'
+      - 'media/film/*.jpg'
       - 'tools/build_pages.py'
       - '.github/workflows/pages.yml'
   workflow_dispatch:

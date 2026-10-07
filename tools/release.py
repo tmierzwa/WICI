@@ -10,6 +10,7 @@ import subprocess
 from archives import validate_names, verify_archive, write_archive
 
 ROOT = Path(__file__).resolve().parents[1]
+ARCHIVE_SKIP = ("media/film/", ".mp4")  # rendered films stay in Git and on Pages; their sources go in the ZIP
 
 
 def sha(path: Path) -> str:
@@ -54,6 +55,12 @@ def check_manifest(strict: bool = True) -> dict[str, Path]:
     return {**files, "manifest.json": ROOT / "manifest.json"}
 
 
+def archive_files(files: dict[str, Path]) -> dict[str, Path]:
+    """Leave rendered videos out of the source ZIP; everything needed to rebuild them stays in."""
+    folder, suffix = ARCHIVE_SKIP
+    return {name: path for name, path in files.items() if not (name.startswith(folder) and name.endswith(suffix))}
+
+
 def main() -> None:
     """Check by default; only an explicit refresh rewrites the manifest."""
     parser = argparse.ArgumentParser()
@@ -70,8 +77,9 @@ def main() -> None:
         target = args.source_zip.resolve()
         if target in {p.resolve() for p in files.values()}:
             raise ValueError("Archive destination would overwrite published source")
-        write_archive(target, files)
-        verify_archive(target, files)
+        source = archive_files(files)
+        write_archive(target, source)
+        verify_archive(target, source)
     print(f"Public source checked: {len(files)} files")
 
 

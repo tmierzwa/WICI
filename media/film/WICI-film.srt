@@ -1,0 +1,288 @@
+1
+00:00:00,150 --> 00:00:02,470
+Wyobraź sobie, że gaśnie światło.
+
+2
+00:00:02,470 --> 00:00:05,358
+Nie tylko u ciebie, ale w całej okolicy.
+
+3
+00:00:05,550 --> 00:00:07,753
+Na początku to tylko niewygoda.
+
+4
+00:00:07,753 --> 00:00:11,663
+Ale mijają godziny i telefon pokazuje: brak sieci.
+
+5
+00:00:12,450 --> 00:00:16,302
+W szkole, która stała się schronieniem, jest pięćdziesiąt osób.
+
+6
+00:00:16,302 --> 00:00:19,202
+Brakuje wody. Ktoś potrzebuje leków.
+
+7
+00:00:19,383 --> 00:00:23,746
+Kilka kilometrów dalej jest straż pożarna, która mogłaby pomóc.
+
+8
+00:00:23,746 --> 00:00:25,717
+Tylko skąd ma o tym wiedzieć?
+
+9
+00:00:31,617 --> 00:00:35,039
+Łatwo myśleć, że telefon łączy się z drugim telefonem.
+
+10
+00:00:35,039 --> 00:00:36,348
+A tak nie jest.
+
+11
+00:00:36,517 --> 00:00:41,495
+Każda wiadomość idzie najpierw do masztu, a stamtąd dalej, przez całą sieć.
+
+12
+00:00:41,683 --> 00:00:43,643
+Maszt potrzebuje prądu.
+
+13
+00:00:43,643 --> 00:00:47,669
+Przy długiej awarii jego akumulatory w końcu się wyczerpią.
+
+14
+00:00:47,850 --> 00:00:49,624
+I wtedy łańcuch pęka.
+
+15
+00:00:49,624 --> 00:00:53,790
+Nie przy naszym telefonie, tylko gdzieś daleko, poza naszym wpływem.
+
+16
+00:00:54,783 --> 00:00:57,044
+Postawmy więc proste pytanie.
+
+17
+00:00:57,044 --> 00:01:00,431
+Czego potrzeba, żeby przenieść krótką wiadomość na kilka
+
+18
+00:01:00,431 --> 00:01:03,613
+kilometrów, bez prądu z sieci i bez internetu?
+
+19
+00:01:04,883 --> 00:01:08,247
+Zacznijmy od tego, jak mała jest taka wiadomość.
+
+20
+00:01:08,247 --> 00:01:13,643
+Gdzie jesteśmy, ilu nas jest, czego brakuje i jak bardzo jest to pilne.
+
+21
+00:01:13,817 --> 00:01:17,402
+Zapisana w komputerze zajmuje mniej niż dwieście bajtów.
+
+22
+00:01:17,583 --> 00:01:22,863
+Dla porównania: jedno zdjęcie z telefonu jest ponad dziesięć tysięcy razy większe.
+
+23
+00:01:25,650 --> 00:01:29,781
+Skoro wiadomość jest tak mała, nie potrzebujemy szybkiego łącza.
+
+24
+00:01:29,781 --> 00:01:32,310
+Wystarczy proste, powolne radio.
+
+25
+00:01:32,310 --> 00:01:35,918
+Takie zgłoszenie przeleci przez eter w mniej niż sekundę.
+
+26
+00:01:36,117 --> 00:01:39,450
+To radio nadaje z mocą podobną do pilota do bramy, na
+
+27
+00:01:39,450 --> 00:01:43,498
+częstotliwości, z której korzystają też czujniki i piloty.
+
+28
+00:01:43,498 --> 00:01:46,224
+Może pracować na zwykłym akumulatorze.
+
+29
+00:01:47,217 --> 00:01:49,687
+Ale małe radio ma mały zasięg.
+
+30
+00:01:49,687 --> 00:01:55,118
+Wśród budynków celujemy w około kilometr, i dopiero próby pokażą, czy to realne.
+
+31
+00:01:55,317 --> 00:01:57,544
+Rozwiązanie jest bardzo stare.
+
+32
+00:01:57,544 --> 00:02:04,275
+Kiedy trzeba było zwołać ludzi, rozsyłano wici: wieść szła od osady do osady, z rąk do rąk.
+
+33
+00:02:05,350 --> 00:02:07,472
+Tutaj robi to każda stacja.
+
+34
+00:02:07,472 --> 00:02:12,102
+Odbiera wiadomość od sąsiada i podaje ją dalej, aż dotrze do straży.
+
+35
+00:02:12,283 --> 00:02:13,790
+Ale cudów nie ma.
+
+36
+00:02:13,790 --> 00:02:17,015
+Jeśli jedyny sąsiad zgaśnie, droga się urywa.
+
+37
+00:02:17,015 --> 00:02:20,925
+Inna istnieje tylko wtedy, gdy ktoś jeszcze jest w zasięgu.
+
+38
+00:02:21,917 --> 00:02:24,039
+Jak wygląda jedna stacja?
+
+39
+00:02:24,039 --> 00:02:27,508
+Celowo składamy ją z rzeczy, które zwykle już gdzieś leżą.
+
+40
+00:02:27,683 --> 00:02:28,981
+Stary laptop.
+
+41
+00:02:28,981 --> 00:02:30,720
+Zwykły domowy router.
+
+42
+00:02:30,720 --> 00:02:32,947
+Akumulator 12 V.
+
+43
+00:02:33,117 --> 00:02:37,898
+Dokładamy tylko jedno: mały moduł radiowy z anteną wystawioną za okno.
+
+44
+00:02:38,083 --> 00:02:43,421
+Mieszkańcy łączą się telefonem z lokalnym Wi-Fi i otwierają zwykłą stronę.
+
+45
+00:02:43,421 --> 00:02:46,704
+Bez aplikacji, bez konta, bez internetu.
+
+46
+00:02:46,883 --> 00:02:50,236
+Kto nie ma telefonu, dyktuje zgłoszenie opiekunowi.
+
+47
+00:02:50,236 --> 00:02:54,866
+A osobny akumulator ładuje telefony, żeby nie zabierać prądu radiu.
+
+48
+00:02:55,850 --> 00:03:00,259
+Jedna rzecz jest dla nas szczególnie ważna: uczciwe komunikaty.
+
+49
+00:03:00,259 --> 00:03:03,094
+„Wysłane” to nie to samo, co „pomoc jedzie”.
+
+50
+00:03:03,283 --> 00:03:06,462
+Dlatego zgłoszenie przechodzi przez osobne stany.
+
+51
+00:03:06,462 --> 00:03:07,876
+Zapisane tutaj.
+
+52
+00:03:07,876 --> 00:03:09,476
+Zapisane w straży.
+
+53
+00:03:09,476 --> 00:03:11,494
+Przeczytane przez dyżurnego.
+
+54
+00:03:11,494 --> 00:03:13,059
+Pomoc skierowana.
+
+55
+00:03:13,250 --> 00:03:15,662
+Każdy z nich oznacza coś innego.
+
+56
+00:03:15,662 --> 00:03:18,899
+A decyzję o pomocy zawsze podejmuje człowiek.
+
+57
+00:03:19,883 --> 00:03:21,494
+Gdzie dziś jesteśmy?
+
+58
+00:03:21,494 --> 00:03:26,228
+Jest koncepcja, specyfikacja i projekt pierwszej płytki elektroniki.
+
+59
+00:03:26,228 --> 00:03:30,289
+Wszystko jest otwarte: schematy, kod i dokumentacja.
+
+60
+00:03:30,483 --> 00:03:33,464
+Ale nic jeszcze nie zostało sprawdzone w terenie.
+
+61
+00:03:33,464 --> 00:03:36,561
+Nie wiemy, czy kilometr wśród budynków się uda.
+
+62
+00:03:36,561 --> 00:03:39,333
+Czy stacja wytrzyma dobę na akumulatorach.
+
+63
+00:03:39,333 --> 00:03:41,989
+Czy laptop z szuflady zawsze wystartuje.
+
+64
+00:03:42,183 --> 00:03:44,468
+To trzeba zmierzyć, a nie założyć.
+
+65
+00:03:44,468 --> 00:03:46,671
+I tu potrzebujemy innych ludzi.
+
+66
+00:03:47,650 --> 00:03:52,338
+Szukamy krótkofalowców i elektroników, którzy znają radio i anteny.
+
+67
+00:03:52,338 --> 00:03:53,659
+Programistów.
+
+68
+00:03:53,659 --> 00:03:58,161
+Ludzi ze straży i z gmin, którzy wiedzą, jak naprawdę wygląda kryzys.
+
+69
+00:03:58,350 --> 00:04:04,489
+I każdego, kto ma okno, dach albo piwnicę, i chce pomóc sprawdzić, jak to działa naprawdę.
+
+70
+00:04:04,683 --> 00:04:08,814
+Cały projekt jest otwarty, na GitHubie, pod nazwą WICI.
+
+71
+00:04:08,814 --> 00:04:11,795
+Zajrzyj, zadaj pytanie, zgłoś błąd.
+
+72
+00:04:11,795 --> 00:04:13,232
+Rozsyłamy wici.
+

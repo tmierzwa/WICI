@@ -8,11 +8,15 @@ import shutil
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "docs/conception"
-LOCAL_LINK = re.compile(r'(href|src)="([^"#:]+)(#[^"]*)?"')
+LOCAL_LINK = re.compile(r'(href|src|poster)="([^"#:]+)(#[^"]*)?"')
+MEDIA = {".mp4", ".webm", ".vtt", ".jpg", ".png"}  # served with the site so browsers can play them
 
 
 def build(target: Path, blob: str, source: Path = SOURCE, root: Path = ROOT) -> int:
-    """Copy the pages; point links that leave the conception at repository files. Return their count."""
+    """Copy the pages; point links that leave the conception at repository files. Return their count.
+
+    Media files (video, subtitles, images) outside the pages are copied to media/ in the site instead.
+    """
     if target.exists():
         shutil.rmtree(target)
     target.mkdir(parents=True)
@@ -25,6 +29,10 @@ def build(target: Path, blob: str, source: Path = SOURCE, root: Path = ROOT) -> 
             return match.group(0)
         if not linked.is_file():
             raise ValueError(f"Broken document link: {match.group(2)}")
+        if linked.suffix in MEDIA:
+            (target / "media").mkdir(exist_ok=True)
+            shutil.copyfile(linked, target / "media" / linked.name)
+            return f'{match.group(1)}="media/{linked.name}{match.group(3) or ""}"'
         rewritten += 1
         return f'{match.group(1)}="{blob.rstrip("/")}/{linked.relative_to(root.resolve()).as_posix()}{match.group(3) or ""}"'
 
