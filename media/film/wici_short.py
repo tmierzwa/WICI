@@ -133,17 +133,18 @@ class Short(WICI):
         chain = ["A", "B", "C", "OSP"]
         links = VGroup(*[Line(pos[a], pos[b], stroke_color=GREY_B, stroke_width=2.5, buff=0.34)
                          for a, b in zip(chain, chain[1:])])
-        msg = Square(0.22, stroke_width=0, fill_color=ACCENT, fill_opacity=1).move_to(pos["A"])
+
+        def pulse(line, color, back=False):
+            ln = line.copy().set_stroke(color, width=7)
+            return ShowPassingFlash(ln.reverse_points() if back else ln, time_width=0.6)
         word = T("wici", 72, ACCENT, font=SERIF).move_to([-1.8, 4.3, 0])
         self.narr("v4",
                   ([FadeIn(blocks, lag_ratio=0.01), FadeIn(A), FadeIn(OSP), GrowFromCenter(rng), FadeIn(rng_l)], 1.2),
                   ("at", 1),
                   ([FadeOut(rng_l), rng.animate.set_fill(opacity=0).set_stroke(opacity=0.35, width=1.2),
                     FadeIn(mids["B"]), FadeIn(mids["C"]), Create(rings), Create(links)], 0.9),
-                  (FadeIn(msg), 0.15),
-                  *[([MoveAlongPath(msg, ArcBetweenPoints(pos[a], pos[b], angle=-PI / 5)),
-                      Flash(pos[b], color=RADIO, line_length=0.2, flash_radius=0.4)], 0.6)
-                    for a, b in zip(chain, chain[1:])],
+                  *[(pulse(l, ACCENT), 0.45) for l in links],
+                  *[(pulse(l, OK, back=True), 0.35) for l in reversed(links)],
                   (Create(check(0.45).next_to(OSP[1], DR, buff=0.2)), 0.3),
                   ("at", 2),
                   (FadeIn(word), 0.7))
