@@ -232,7 +232,7 @@ def station(w=3.0):
     buttons = VGroup(*[Circle(radius=w * 0.055, stroke_color=GREY_A, stroke_width=2, fill_color="#2b323c",
                               fill_opacity=1) for _ in range(4)]).arrange_in_grid(2, 2, buff=w * 0.06)
     buttons.move_to([(screen.get_right()[0] + body.get_right()[0]) / 2, screen.get_y(), 0])
-    cells = aa_cells(4, w * 0.15).move_to([screen.get_x(), (screen.get_bottom()[1] + body.get_bottom()[1]) / 2, 0])
+    cells = aa_cells(4, w * 0.11).move_to([screen.get_x(), (screen.get_bottom()[1] + body.get_bottom()[1]) / 2, 0])
     jack = Rectangle(width=w * 0.06, height=w * 0.08, stroke_width=0, fill_color=GOLD,
                      fill_opacity=1).move_to(body.get_corner(UR) + LEFT * w * 0.15 + UP * w * 0.04)
     g = VGroup(body, screen, buttons, cells, jack)
@@ -374,7 +374,7 @@ class WICI(MovingCameraScene):
                   ([VGroup(houses, ground).animate.set_opacity(0.2), FadeIn(ph, shift=UP * 0.5)], 1.2),
                   ("at", 1),
                   ([LaggedStart(*[FadeOut(b) for b in reversed(ph.bars)], lag_ratio=0.5)], 1.6),
-                  (Write(nosig), 0.7))
+                  (FadeIn(nosig), 0.7))
         self.clear_all(0.6)
 
         school = building(3.4, 1.9, GREY_A, "schronienie").move_to(LEFT * 3.6 + DOWN * 0.3)
@@ -391,7 +391,7 @@ class WICI(MovingCameraScene):
                   ([FadeIn(dw, shift=DOWN * 0.3)], 0.7),
                   ([FadeIn(pk, shift=DOWN * 0.3)], 0.7))
 
-        osp = building(1.8, 1.4, ALERT, "gmina", door=True).move_to(RIGHT * 4.6)
+        osp = building(1.8, 1.4, ALERT, "służby", door=True).move_to(RIGHT * 4.6)
         osp.shift(UP * (school.body.get_bottom()[1] - osp.body.get_bottom()[1]))
         ly = osp.body.get_center()[1]
         link = DashedLine([school.body.get_right()[0] + 0.25, ly, 0], [osp.body.get_left()[0] - 0.25, ly, 0],
@@ -402,7 +402,7 @@ class WICI(MovingCameraScene):
                   ([FadeIn(osp, shift=LEFT * 0.4)], 1.0),
                   ([Create(link), FadeIn(km)], 1.2),
                   ("at", 1),
-                  (Write(q), 0.8))
+                  (FadeIn(q), 0.8))
         self.wait(0.4)
         self.clear_all(0.8)
 
@@ -474,7 +474,7 @@ class WICI(MovingCameraScene):
         cond = VGroup(c1, c2).arrange(RIGHT, buff=1.2).next_to(q, DOWN, buff=0.8)
         self.narr("s3a",
                   ("at", 1),
-                  ([Write(l1)], 1.1), ([Write(l2)], 1.1), ([Write(l3)], 0.9),
+                  ([FadeIn(l1)], 1.1), ([FadeIn(l2)], 1.1), ([FadeIn(l3)], 0.9),
                   ("t", TIMING["s3a"]["sentences"][1]["start"] + 4.9),
                   ([FadeIn(c1[0]), Create(c1[1])], 0.7),
                   ([FadeIn(c2[0]), Create(c2[1])], 0.7))
@@ -493,7 +493,7 @@ class WICI(MovingCameraScene):
         rows.arrange(DOWN, aligned_edge=LEFT, buff=0.28).next_to(head, DOWN, buff=0.4)
         rows.align_to(card, LEFT).shift(RIGHT * 0.6)
         self.narr("s4a",
-                  ([FadeIn(card, shift=UP * 0.3), Write(head)], 1.0),
+                  ([FadeIn(card, shift=UP * 0.3), FadeIn(head)], 1.0),
                   ("at", 1),
                   ([LaggedStart(*[FadeIn(r, shift=RIGHT * 0.2) for r in rows], lag_ratio=0.6)], 3.2))
 
@@ -582,7 +582,7 @@ class WICI(MovingCameraScene):
             return g
 
         A = node("A", ACCENT, "schronienie")
-        OSP = node("OSP", ALERT, "gmina")
+        OSP = node("OSP", ALERT, "służby")
         rng = Circle(radius=R, stroke_color=RADIO, stroke_width=2, fill_color=RADIO,
                      fill_opacity=0.07).move_to(pos["A"])
         rng_l = T("około 1 km?", 26, RADIO).move_to(pos["A"] + np.array([1.2, 1.6, 0]))
@@ -602,7 +602,7 @@ class WICI(MovingCameraScene):
         hops = [ArcBetweenPoints(huts[i].get_top() + UP * 0.15, huts[i + 1].get_top() + UP * 0.15, angle=-PI / 2.2)
                 for i in range(4)]
         self.narr("s5b",
-                  ([mapg.animate.set_opacity(0), FadeIn(huts, lag_ratio=0.15), Write(word)], 1.4),
+                  ([mapg.animate.set_opacity(0), FadeIn(huts, lag_ratio=0.15), FadeIn(word)], 1.4),
                   ("at", 1),
                   (FadeIn(fire, scale=2), 0.4),
                   *[([MoveAlongPath(fire, hp), huts[i + 1].window.animate.set_fill(ORANGE)], 0.9)
@@ -668,7 +668,7 @@ class WICI(MovingCameraScene):
             box, t = levels[i]
             return [box.animate.set_stroke(WHITE), t.animate.set_color(WHITE)]
 
-        self.narr("s6a", (Write(title), 1.0),
+        self.narr("s6a", (FadeIn(title), 1.0),
                   ([FadeIn(st, shift=UP * 0.2), FadeIn(st_l)], 0.8),
                   ("at", 1),
                   ([FadeIn(levels)], 0.6),
@@ -685,7 +685,7 @@ class WICI(MovingCameraScene):
         jack = st.jack.get_center()
         cable = VMobject(stroke_color=GREY_B, stroke_width=3).set_points_as_corners(
             [jack, [jack[0], 0.7, 0], [mx, 0.7, 0], [mx, 1.0, 0]])
-        ant_l = T("antena na zewnątrz, możliwie wysoko", 22, GREY_A).next_to(mst.get_end(), RIGHT, buff=0.9)
+        ant_l = T("antena na zewnątrz, możliwie wysoko", 22, GREY_A).next_to(mst.get_end(), UR, buff=0.25).shift(RIGHT * 0.5)
         waves = wifi(mst.get_end(), 0.22, 3, RADIO, angle=0)
         bars = VGroup(*[Rectangle(width=0.07, height=0.06 * (k + 1), stroke_width=0, fill_color="#1b2027",
                                   fill_opacity=1) for k in range(4)]).arrange(RIGHT, buff=0.04, aligned_edge=DOWN)
@@ -701,26 +701,26 @@ class WICI(MovingCameraScene):
         need = VGroup(T("woda, leki", 22, "#1b2027"), T("50 osób", 22, "#1b2027")).arrange(DOWN, buff=0.1)
         need.move_to(st.screen)
         top = mst.get_end()
-        n1, n2 = np.array([2.6, 0.5, 0]), np.array([5.4, -1.2, 0])
+        n1, n2 = np.array([4.3, 1.7, 0]), np.array([5.0, -1.2, 0])
         nbs = VGroup(*[VGroup(Circle(radius=0.26, stroke_color=RADIO, stroke_width=3).move_to(c),
                               Dot(c, radius=0.13, color=RADIO)) for c in (n1, n2)])
-        nb_l = VGroup(T("sąsiednia stacja", 20, RADIO).next_to(nbs[0], UP, buff=0.2),
-                      T("w stronę gminy", 20, RADIO).next_to(nbs[1], DOWN, buff=0.2))
-        own = Square(0.18, stroke_width=0, fill_color=ACCENT, fill_opacity=1).move_to(top)
-        other = Square(0.18, stroke_width=0, fill_color=RADIO, fill_opacity=1).move_to(n1)
+        nb_l = VGroup(T("sąsiednia stacja", 20, RADIO).next_to(nbs[0], RIGHT, buff=0.2),
+                      T("w stronę służb", 20, RADIO).next_to(nbs[1], DOWN, buff=0.2))
+        # sygnał biegnie po linii łączącej stacje, zamiast przelatującego punktu
+        l_out = Line(top, n2, buff=0.3, stroke_color=GREY_D, stroke_width=2)
+        l_in = Line(n1, top, buff=0.3, stroke_color=GREY_D, stroke_width=2)
+
+        def pulse(line, color):
+            return ShowPassingFlash(line.copy().set_stroke(color, width=6), time_width=0.5)
         self.narr("s6c",
                   ([FadeIn(op, shift=RIGHT * 0.2), FadeIn(op_l)], 0.6),
                   ([Indicate(st.buttons, color=ACCENT, scale_factor=1.15), FadeOut(online), FadeIn(need)], 1.0),
-                  ([FadeIn(nbs), FadeIn(nb_l)], 0.6),
-                  (FadeIn(own), 0.2),
-                  ([MoveAlongPath(own, ArcBetweenPoints(top, n2, angle=-PI / 4))], 0.9),
-                  (FadeOut(own), 0.2),
+                  ([FadeIn(nbs), FadeIn(nb_l), Create(l_out), Create(l_in)], 0.6),
+                  (pulse(l_out, ACCENT), 1.0),
                   ("at", 1),
-                  (FadeIn(other), 0.2),
-                  ([MoveAlongPath(other, ArcBetweenPoints(n1, top, angle=PI / 5)),
-                    Flash(top, color=RADIO, line_length=0.18, flash_radius=0.35)], 0.8),
-                  ([MoveAlongPath(other, ArcBetweenPoints(top, n2, angle=-PI / 4))], 0.9),
-                  (FadeOut(other), 0.2))
+                  (pulse(l_in, RADIO), 0.9),
+                  (Flash(top, color=RADIO, line_length=0.18, flash_radius=0.35), 0.4),
+                  (pulse(l_out, RADIO), 0.9))
 
         # rozszerzenia: laptop i router, zasilane przez przetwornice z zestawu
         sx, sy, sw = 3.6, 0.9, 1.9
@@ -740,7 +740,7 @@ class WICI(MovingCameraScene):
         usb = Line([lp[2].get_right()[0], base_y, 0], [st_small[0].get_left()[0], base_y, 0],
                    stroke_color=GREY_B, stroke_width=3)
         eth = Line(rt[0].get_right(), lp[2].get_left(), stroke_color=GREY_B, stroke_width=3)
-        old = VGroup(wall, cable, mst, ant_l, waves, op, op_l, nbs, nb_l)
+        old = VGroup(wall, cable, mst, ant_l, waves, op, op_l, nbs, nb_l, l_out, l_in)
         big = phone(2.0).move_to([-6.0, 1.0, 0])
         wf = wifi(rt[1][0].get_end() + UP * 0.05, 0.16, 3, WHITE, angle=PI * 0.8)
         form = VGroup(logo(0.62),
@@ -749,7 +749,7 @@ class WICI(MovingCameraScene):
                                        fill_color=ACCENT, fill_opacity=1)).arrange(DOWN, buff=0.12)
         form.next_to(big.bars, DOWN, buff=0.15).set_x(big.screen.get_x())
         nos = VGroup(crossed("aplikacja", 26), crossed("konto", 26), crossed("internet", 26)).arrange(RIGHT, buff=0.6)
-        nos.move_to(UP * 2.75)
+        nos.move_to([lp.get_x(), (lp.get_top()[1] + title.get_bottom()[1]) / 2, 0])
         self.narr("s6d",
                   ([FadeOut(old), FadeOut(st_l), Transform(st, st_small), Transform(need, need_small)], 1.0),
                   ([FadeIn(st_l2), Create(stub), FadeIn(lp, shift=UP * 0.2), FadeIn(lp_l), *level(1)], 0.8),
@@ -762,31 +762,30 @@ class WICI(MovingCameraScene):
                   ([LaggedStart(*[AnimationGroup(FadeIn(n[0]), Create(n[1])) for n in nos], lag_ratio=0.5)], 1.4))
 
         ry = -1.3
-        inv = inverter(1.3).move_to([-1.9, ry, 0])
-        inv_l = T("przetwornica", 22, GREY_A).next_to(inv, DOWN, buff=0.15)
-        bat_a = Battery(1.0, 0.48).move_to([0.4, ry, 0])
-        bat_a_l = T("akumulator 12 V", 22, GREY_A).next_to(bat_a.box, DOWN, buff=0.15)
+        inv = inverter(1.3).move_to([-1.0, ry, 0])
+        inv_l = label2(["przetwornica", "12 V → 230 V"]).next_to(inv, DOWN, buff=0.15)
+        bat_a = Battery(1.0, 0.48).move_to([1.6, ry, 0])
+        bat_a_l = label2(["akumulator", "samochodowy"]).next_to(bat_a.box, DOWN, buff=0.15)
         chg = charger(1.3).move_to([-6.0, ry, 0])
         chg_l = label2(["ładowarka", "telefonów"]).next_to(chg, DOWN, buff=0.15)
-        bat_c = Battery(1.0, 0.48).move_to([-4.0, ry, 0])
-        bat_c_l = label2(["drugi", "akumulator 12 V"]).next_to(bat_c.box, DOWN, buff=0.15)
+        bat_c = Battery(1.0, 0.48).move_to([-3.7, ry, 0])
+        bat_c_l = label2(["drugi akumulator", "samochodowy"]).next_to(bat_c.box, DOWN, buff=0.15)
         PW = dict(stroke_color=ORANGE, stroke_width=3)
         it = inv[0].get_top()[1]
         w_a = Line(bat_a.box.get_left(), inv[0].get_right(), **PW)
         rx, lx = rt[0].get_x() + 0.5, lp.get_x() + 1.03
         w_rt = VMobject(**PW).set_points_as_corners(
-            [[-2.15, it, 0], [-2.15, -0.5, 0], [rx, -0.5, 0], [rx, rt[0].get_bottom()[1], 0]])
+            [[inv.get_x() - 0.25, it, 0], [inv.get_x() - 0.25, -0.5, 0], [rx, -0.5, 0], [rx, rt[0].get_bottom()[1], 0]])
         w_lp = VMobject(**PW).set_points_as_corners(
-            [[-1.65, it, 0], [-1.65, -0.35, 0], [lx, -0.35, 0], [lx, lp[2].get_bottom()[1], 0]])
+            [[inv.get_x() + 0.25, it, 0], [inv.get_x() + 0.25, -0.5, 0], [lx, -0.5, 0], [lx, lp[2].get_bottom()[1], 0]])
         w_c = Line(bat_c.box.get_left(), chg[0].get_right(), **PW)
-        w_ph = VGroup(*[Line([chg.get_x() + dx, chg[0].get_top()[1], 0], [big.get_x() + dx, big.get_bottom()[1], 0], **PW)
-                        for dx in (-0.12, 0.12)])
+        w_ph = Line([big.get_x(), chg[0].get_top()[1], 0], big.get_bottom(), **PW)
         key = VGroup(
             VGroup(RoundedRectangle(width=0.36, height=0.26, corner_radius=0.05, stroke_color=ACCENT, stroke_width=3),
                    T("zestaw WICI", 22, ACCENT)).arrange(RIGHT, buff=0.2),
             VGroup(RoundedRectangle(width=0.36, height=0.26, corner_radius=0.05, stroke_color=GREY_A, stroke_width=3),
                    T("z lokalnego zasobu", 22, GREY_A)).arrange(RIGHT, buff=0.2),
-        ).arrange(DOWN, aligned_edge=LEFT, buff=0.25).move_to([4.6, -1.35, 0])
+        ).arrange(DOWN, aligned_edge=LEFT, buff=0.25).move_to([4.9, -1.35, 0])
         self.narr("s6e",
                   ([FadeIn(bat_a), FadeIn(bat_a_l), FadeIn(inv), FadeIn(inv_l), FadeIn(key[0])], 0.8),
                   ([Create(w_a), Create(w_rt), Create(w_lp)], 1.0),
@@ -802,13 +801,13 @@ class WICI(MovingCameraScene):
         neq = T("≠", 72, ALERT)
         b = T("„pomoc jedzie”", 52, WHITE, font=SERIF)
         ineq = VGroup(a, neq, b).arrange(RIGHT, buff=0.5).shift(UP * 0.2)
-        self.narr("s7a", (Write(head), 1.0), ("at", 1),
+        self.narr("s7a", (FadeIn(head), 1.0), ("at", 1),
                   (FadeIn(a, shift=RIGHT * 0.2), 0.6), (GrowFromCenter(neq), 0.4),
                   (FadeIn(b, shift=LEFT * 0.2), 0.6))
 
         labels = [("zapisane", "lokalnie"), ("zapisane", "u odbiorcy"), ("przeczytane", "przez dyżurnego"),
                   ("pomoc", "skierowana")]
-        who = ["stacja w schronieniu", "odbiorca w gminie", "dyżurny", "decyzja"]
+        who = ["stacja w schronieniu", "odbiorca w służbach", "dyżurny", "decyzja"]
         colors = [ACCENT, RADIO, BLUE_C, OK]
         chips = VGroup()
         for (l1, l2), c in zip(labels, colors):
@@ -851,7 +850,7 @@ class WICI(MovingCameraScene):
             left.add(VGroup(check(0.28), T(s, 28, WHITE, line_spacing=0.8)).arrange(RIGHT, buff=0.25, aligned_edge=UP))
         left.arrange(DOWN, aligned_edge=LEFT, buff=0.32).move_to(LEFT * 3.3 + UP * 0.1)
         lh = T("zrobione", 26, OK).next_to(left, UP, buff=0.45).align_to(left, LEFT)
-        self.narr("s8a", (Write(head), 0.9), ("at", 1),
+        self.narr("s8a", (FadeIn(head), 0.9), ("at", 1),
                   ([FadeIn(lh), LaggedStart(*[FadeIn(r, shift=RIGHT * 0.2) for r in left[:3]], lag_ratio=0.5)], 2.0),
                   ("at", 2), (FadeIn(left[3], shift=RIGHT * 0.2), 0.7))
 
@@ -865,7 +864,7 @@ class WICI(MovingCameraScene):
                   ("at", 3), (FadeIn(right[2], shift=LEFT * 0.2), 0.6))
 
         motto = T("zmierzyć, a nie założyć", 40, ACCENT, font=SERIF).move_to(DOWN * 2.1)
-        self.narr("s8c", (Write(motto), 1.2))
+        self.narr("s8c", (FadeIn(motto), 1.2))
         self.clear_all()
 
     def part_call(self):
@@ -873,7 +872,7 @@ class WICI(MovingCameraScene):
                         Circle(radius=0.8, stroke_color=ACCENT, stroke_width=4, fill_color=ACCENT, fill_opacity=0.1),
                         logo(1.15))
         roles = [("krótkofalowcy", UP * 2.3 + LEFT * 4.2), ("elektronicy", UP * 2.3 + RIGHT * 4.2),
-                 ("programiści", LEFT * 5.0 + DOWN * 0.4), ("straż i gminy", RIGHT * 5.0 + DOWN * 0.4)]
+                 ("programiści", LEFT * 5.0 + DOWN * 0.4), ("służby", RIGHT * 5.0 + DOWN * 0.4)]
         nodes = VGroup()
         for name, p in roles:
             t = T(name, 28, WHITE)
@@ -910,9 +909,9 @@ class WICI(MovingCameraScene):
         hint = T("zajrzyj · zadaj pytanie · zgłoś błąd", 28, GREY_A).next_to(url, DOWN, buff=0.6)
         self.narr("s9c",
                   ([allm.animate.scale(0.3).set_opacity(0).move_to(UP * 2)], 1.0),
-                  ([Write(url)], 1.2),
+                  ([FadeIn(url)], 1.2),
                   ("at", 1), (FadeIn(hint, shift=UP * 0.2), 0.7),
-                  ("at", 2), (Write(motto), 1.0))
+                  ("at", 2), (FadeIn(motto), 1.0))
         self.wait(4.0)
         self.play(FadeOut(VGroup(url, motto, hint)), run_time=1.0)
         self.wait(0.5)

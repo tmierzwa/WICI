@@ -15,78 +15,78 @@ W szkole-schronieniu jest pięćdziesiąt
 osób. Brakuje wody i leków.
 
 5
-00:00:10,455 --> 00:00:12,793
-Gmina jest kilka kilometrów dalej.
+00:00:10,455 --> 00:00:12,575
+Służby są kilka kilometrów dalej.
 
 6
-00:00:12,793 --> 00:00:14,581
-Jak jej o tym powiedzieć?
+00:00:12,575 --> 00:00:14,186
+Jak im o tym powiedzieć?
 
 7
-00:00:17,150 --> 00:00:20,085
+00:00:16,783 --> 00:00:19,869
 Takie zgłoszenie to mniej niż dwieście bajtów.
 
 8
-00:00:20,085 --> 00:00:21,994
+00:00:19,869 --> 00:00:21,756
 Nie potrzeba do niego internetu.
 
 9
-00:00:21,994 --> 00:00:24,211
+00:00:21,756 --> 00:00:23,948
 Wystarczy proste radio na bateriach.
 
 10
-00:00:24,683 --> 00:00:27,212
+00:00:24,417 --> 00:00:26,946
 Celujemy w około kilometr zasięgu.
 
 11
-00:00:27,212 --> 00:00:30,260
+00:00:26,946 --> 00:00:30,057
 Dlatego każda stacja podaje wiadomość dalej, od
 
 12
-00:00:30,260 --> 00:00:33,189
-sąsiada do sąsiada, aż dotrze do gminy.
+00:00:30,057 --> 00:00:33,039
+sąsiada do sąsiada, aż dotrze do służb.
 
 13
-00:00:33,189 --> 00:00:34,331
+00:00:33,039 --> 00:00:34,216
 Jak dawne wici.
 
 14
-00:00:34,817 --> 00:00:36,956
+00:00:34,683 --> 00:00:36,803
 Stacja to małe pudełko z ekranem,
 
 15
-00:00:36,956 --> 00:00:38,913
+00:00:36,803 --> 00:00:38,744
 przyciskami i bateriami.
 
 16
-00:00:38,913 --> 00:00:42,684
+00:00:38,744 --> 00:00:42,515
 Antena czeka na zewnątrz: włączam i jestem w sieci.
 
 17
-00:00:42,684 --> 00:00:44,917
+00:00:42,515 --> 00:00:44,748
 Laptop i router to kolejne poziomy.
 
 18
-00:00:45,417 --> 00:00:47,415
+00:00:45,217 --> 00:00:47,215
 Projekt jest otwarty, ale jeszcze
 
 19
-00:00:47,415 --> 00:00:49,269
+00:00:47,215 --> 00:00:49,069
 niesprawdzony w terenie.
 
 20
-00:00:49,269 --> 00:00:51,796
+00:00:49,069 --> 00:00:51,725
 Szukamy krótkofalowców, elektroników,
 
 21
-00:00:51,796 --> 00:00:54,393
-programistów i ludzi z gmin i straży.
+00:00:51,725 --> 00:00:53,949
+programistów i ludzi ze służb.
 
 22
-00:00:54,883 --> 00:00:57,737
+00:00:54,417 --> 00:00:57,224
 Szczegóły na GitHubie, pod nazwą WICI.
 
 23
-00:00:57,737 --> 00:00:58,937
+00:00:57,224 --> 00:00:58,424
 Rozsyłamy wici.
 

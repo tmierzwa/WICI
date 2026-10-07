@@ -7,7 +7,7 @@ SEGMENTS = [
     ]),
     ("v2", [
         "W szkole-schronieniu jest pięćdziesiąt osób. Brakuje wody i leków.",
-        "Gmina jest kilka kilometrów dalej. Jak jej o tym powiedzieć?",
+        "Służby są kilka kilometrów dalej. Jak im o tym powiedzieć?",
     ]),
     ("v3", [
         "Takie zgłoszenie to mniej niż dwieście bajtów.",
@@ -15,7 +15,7 @@ SEGMENTS = [
     ]),
     ("v4", [
         "Celujemy w około kilometr zasięgu.",
-        "Dlatego każda stacja podaje wiadomość dalej, od sąsiada do sąsiada, aż dotrze do gminy.",
+        "Dlatego każda stacja podaje wiadomość dalej, od sąsiada do sąsiada, aż dotrze do służb.",
         "Jak dawne wici.",
     ]),
     ("v5", [
@@ -25,7 +25,7 @@ SEGMENTS = [
     ]),
     ("v6", [
         "Projekt jest otwarty, ale jeszcze niesprawdzony w terenie.",
-        "Szukamy krótkofalowców, elektroników, programistów i ludzi z gmin i straży.",
+        "Szukamy krótkofalowców, elektroników, programistów i ludzi ze służb.",
     ]),
     ("v7", [
         ("Szczegóły na GitHubie, pod nazwą WICI.", "Szczegóły na git habie, pod nazwą wici."),
