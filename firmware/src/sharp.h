@@ -16,7 +16,7 @@ namespace sharp {
 constexpr uint16_t WIDTH = 400;
 constexpr uint16_t HEIGHT = 240;
 constexpr size_t LINE_BYTES = WIDTH / 8;
-constexpr uint32_t SPI_HZ = 2000000;  // LS027B7DH01: do 2 MHz
+constexpr uint32_t SPI_HZ = 2000000;  // LS027B7DH01: do 2 MHz; domyślny zegar
 constexpr uint8_t COLUMNS = WIDTH / font::WIDTH;        // 20 znaków
 constexpr uint8_t ROWS = HEIGHT / font::LINE_PITCH;     // 5 wierszy
 // Polecenia w kolejności bitów LSB-first, jak idą na magistralę (M0 pierwszy).
@@ -29,7 +29,7 @@ constexpr uint8_t GPIOTE_CHANNEL = 7;   // attachInterrupt rdzenia pomija kanał
 
 class Display {
 public:
-    Display(SPIClass& spi, uint8_t pinCs, uint8_t pinExtcomin);
+    Display(SPIClass& spi, uint8_t pinCs, uint8_t pinExtcomin, uint32_t spiHz = SPI_HZ);
 
     // CS w stan niski, bufor biały, polecenie CLEAR, EXTCOMIN z RTC2.
     void begin();
@@ -45,6 +45,8 @@ public:
     bool softwareVcom() const { return softwareVcom_; }
     void maintain(uint32_t nowMs);
     uint32_t refreshes() const { return refreshes_; }
+    void spiHz(uint32_t hz) { spiHz_ = hz; }
+    uint32_t spiHz() const { return spiHz_; }
     uint32_t extcominCounter() const;  // licznik RTC2 (0..4), do diagnostyki
     bool extcominLevel() const;        // stan pinu EXTCOMIN
 
@@ -56,6 +58,7 @@ private:
     SPIClass& spi_;
     uint8_t pinCs_;
     uint8_t pinExtcomin_;
+    uint32_t spiHz_;
     uint8_t buffer_[HEIGHT][LINE_BYTES];  // bit 0 bajtu 0 = lewy piksel; 1 = biały
     uint8_t dirty_[HEIGHT / 8];
     bool softwareVcom_ = false;

@@ -29,7 +29,7 @@ Przyciski 12 × 12 mm dostają nasadki Omron B32. Pad masy J6.22 ma pełne poł�
 
 ## Oprogramowanie
 
-Kroki A3–A5 i B3–B4 wymagają obrazu z plikiem opisu płytki N1 (na przykład `board_bench_n1.h`) z poleceniami diagnostycznymi: stan wejść (przyciski, CISZA, przygotowanie), dioda, brzęczyk i odczyt VTEST. Dla ESP32-S3 potrzebny jest program testowy, który odczytuje też rejestr wersji S2-LP. Na 2026-10-07 takich obrazów nie ma; różnice między oprogramowaniem a płytką i lista potrzebnych zmian: [zgodność z oprogramowaniem](checks/zgodnosc-firmware.md).
+Kroki A3–A5 i B3–B4 wymagają obrazu z plikiem opisu płytki N1 (na przykład `board_bench_n1.h`) z poleceniami diagnostycznymi: stan wejść (przyciski, CISZA, przygotowanie), dioda, brzęczyk i odczyt VTEST. Dla stanowiska A jest to obraz środowiska `bench-n1` z plikiem `board_bench_n1.h`; polecenia diagnostyczne (`BTN`, `LED 5`, `BUZZ`, `VTEST`, `DISPLAY`) i przebieg kroków A3–A4 opisuje [firmware/README.md](../../firmware/README.md#płytka-nośna-n1-bench-n1). Dla ESP32-S3 potrzebny jest program testowy, który odczytuje też rejestr wersji S2-LP; na 2026-10-07 go nie ma. Różnice między oprogramowaniem a płytką i lista potrzebnych zmian: [zgodność z oprogramowaniem](checks/zgodnosc-firmware.md).
 
 **Nie wgrywać obrazu okablowania przewodami (`board_bench_a.h`) przy wpiętej płytce N1.** W tym obrazie D13 jest wyjściem SCK, a na N1 jest wejściem przełącznika CISZA, które przełącznik zwiera do masy. Do tego D10 i D8 sterują tam radiem, a na N1 diodą i linią DISP ekranu. Przed wpięciem DK w N1 wgrywa się obraz N1 albo pusty program.
 
@@ -37,7 +37,7 @@ Kroki A3–A5 i B3–B4 wymagają obrazu z plikiem opisu płytki N1 (na przykła
 
 | Krok | Czynność | Warunek przejścia |
 |---:|---|---|
-| A1 | nRF52840-DK z wgranym obrazem N1 (instrukcja w [firmware](../../firmware/README.md)), zasilanie DK w ustawieniu fabrycznym (VDD z przetwornicy płytki, 3,0 V), wyłącznik SW8 włączony, przełącznik TRACE (SW7) w pozycji „Default”; przełączniki DK ustawia się przed nałożeniem płytki, bo potem są pod nią. Płytka nośna bez modułów na DK; lewa część płytki na dystansach M3 (H1, H2, H5) tak, by leżała poziomo | płytka nie naciska na części DK |
+| A1 | nRF52840-DK z wgranym obrazem N1 (instrukcja w [firmware](../../firmware/README.md#płytka-nośna-n1-bench-n1), środowisko `bench-n1`), zasilanie DK w ustawieniu fabrycznym (VDD z przetwornicy płytki, 3,0 V), wyłącznik SW8 włączony, przełącznik TRACE (SW7) w pozycji „Default”; przełączniki DK ustawia się przed nałożeniem płytki, bo potem są pod nią. Płytka nośna bez modułów na DK; lewa część płytki na dystansach M3 (H1, H2, H5) tak, by leżała poziomo | płytka nie naciska na części DK |
 | A2 | Zasilanie z USB DK (J2 albo J3) przez miernik USB; pomiar J1.4 i J1.5 wobec masy | około 3,0 V i około 5 V; prąd bez modułów zgodny z samą płytką DK (wzrost < 20 mA) |
 | A3 | Przyciski, CISZA, przycisk przygotowania, dioda i brzęczyk poleceniem diagnostycznym obrazu | każdy przycisk zmienia stan tylko swojej linii; brzęczyk słychać przy 2048 Hz |
 | A4 | Wpięte FRAM i ekran | `FRAM` rozpoznaje układ; ekran pokazuje obraz, EXTCOMIN z MCU (EMD w stanie wysokim) |

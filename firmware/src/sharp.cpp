@@ -5,7 +5,8 @@
 
 namespace sharp {
 
-Display::Display(SPIClass& spi, uint8_t pinCs, uint8_t pinExtcomin) : spi_(spi), pinCs_(pinCs), pinExtcomin_(pinExtcomin) {
+Display::Display(SPIClass& spi, uint8_t pinCs, uint8_t pinExtcomin, uint32_t spiHz)
+    : spi_(spi), pinCs_(pinCs), pinExtcomin_(pinExtcomin), spiHz_(spiHz) {
     memset(buffer_, 0xFF, sizeof(buffer_));
     memset(dirty_, 0xFF, sizeof(dirty_));
 }
@@ -55,7 +56,7 @@ bool Display::extcominLevel() const {
 void Display::send(uint8_t byte) { spi_.transfer(byte); }
 
 void Display::transaction(uint8_t command, bool lines) {
-    spi_.beginTransaction(SPISettings(SPI_HZ, LSBFIRST, SPI_MODE0));
+    spi_.beginTransaction(SPISettings(spiHz_, LSBFIRST, SPI_MODE0));
     digitalWrite(pinCs_, HIGH);
     delayMicroseconds(3);  // tsSCS >= 3 us
     send(command | vcom_);
