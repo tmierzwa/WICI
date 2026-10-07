@@ -57,12 +57,12 @@ Polecenia diagnostyczne do kroków A3–A4 [uruchomienia](../hardware/dev-bench/
 | Polecenie | Odpowiedź |
 |---|---|
 | `BTN` | cztery przyciski oraz `silence_switch` i `prep_button` (true = linia zwarta do masy), stan `silence` i `prep`, `alarm_led` |
-| `LED 5 <0\|1>` | dioda alarmu; obowiązuje do następnej zmiany przyczyny alarmu albo ciszy |
+| `LED 5 <0\|1>` | dioda alarmu; obowiązuje do następnej zmiany alarmu (ekran, przyczyna) albo ciszy |
 | `BUZZ [<ms>] [<hz>]` | brzęczyk przez `ms` (domyślnie 500, do 5000; 0 przerywa) z częstotliwością `hz` (domyślnie 2048) |
 | `VTEST` | `vtest_mv` (napięcie na zacisku J12 = napięcie pinu × 6), `pin_mv`, `raw`: średnia 16 próbek SAADC, 12 bitów, pełna skala 3,6 V |
 | `DISPLAY <hz>` | zegar SPI ekranu 125 000–2 000 000 Hz do restartu, potem odpowiedź jak `DISPLAY` z polem `spi_hz` |
 
-Przebieg A3: `BTN` bez naciśnięć daje same `false` (przy CISZA w położeniu „cisza” `silence_switch: true`); każde naciśnięcie zmienia tylko swoje pole; `LED 5 1`, `LED 5 0`; `BUZZ` daje słyszalny sygnał 2048 Hz. Przebieg A4: `FRAM` z `fujitsu: true`, ekran pokazuje wybór języka, `DISPLAY` dwa razy w odstępie 1 s daje inny `level` (EXTCOMIN). `VTEST` przy zacisku J12 zwartym daje około 0 mV, a przy 12 V z zasilacza około 12 000 mV (sprawdzić miernikiem; dokładność zależy od rezystorów 1% i wewnętrznego odniesienia SAADC).
+Przebieg A3: `BTN` bez naciśnięć daje same `false` (przy CISZA w położeniu „cisza” `silence_switch: true`); każde naciśnięcie zmienia tylko swoje pole; `LED 5 1`, `LED 5 0`; `BUZZ` daje słyszalny sygnał 2048 Hz. Przebieg A4: `FRAM` z `fujitsu: true`, ekran pokazuje wybór języka, a kolejne `DISPLAY` pokazują `counter` RTC2 rosnący od 0 do 4 i `level` (EXTCOMIN) zmieniający się co 0,5 s. `VTEST` przy zacisku J12 zwartym daje około 0 mV, a przy 12 V z zasilacza około 12 000 mV (sprawdzić miernikiem; dokładność zależy od rezystorów 1% i wewnętrznego odniesienia SAADC).
 
 Budowa i wgranie (bootloader jak niżej):
 

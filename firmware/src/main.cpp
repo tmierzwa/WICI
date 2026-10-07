@@ -187,6 +187,7 @@ uint32_t prepPressedSince = 0;
 bool prepWas = false;
 bool prepToggled = false;
 bool alarmLedOn = false;
+bool alarmLedWanted = false;  // stan wynikający z alarmu i ciszy; LED 5 zmienia tylko alarmLedOn
 bool alarmCause = false;     // przyczyna alarmu trwa (także po potwierdzeniu OK)
 uint32_t alarmCauseMs = 0;
 uint32_t lastAlarmBeep = 0;
@@ -249,14 +250,18 @@ void pollPanel(uint32_t now) {
     }
     prepWas = prep;
     // Dioda świeci do usunięcia przyczyny alarmu (potwierdzenie OK gasi tylko dźwięk) i w ciszy radiowej;
-    // przyczyna sprawdzana co sekundę jak alarmy ekranu. Zapis tylko przy zmianie, więc LED 5 działa do następnej.
+    // przyczyna sprawdzana co sekundę jak alarmy ekranu. Zapis tylko przy zmianie tego stanu, więc LED 5
+    // obowiązuje do następnej zmiany alarmu albo ciszy.
     const bool alarm = screenModel.screen() == ui::Screen::ALARM;
     if (now - alarmCauseMs >= 1000) {
         alarmCauseMs = now;
         alarmCause = storeOk && app.alarmCause(uptimeS());
     }
     const bool led = alarm || alarmCause || bench.silence;
-    if (led != alarmLedOn) alarmLed(led);
+    if (led != alarmLedWanted) {
+        alarmLedWanted = led;
+        alarmLed(led);
+    }
     if (alarm && now - lastAlarmBeep >= ALARM_BEEP_EVERY_MS) {
         lastAlarmBeep = now;
         beep(ALARM_BEEP_MS);
@@ -765,7 +770,7 @@ void handle(char* cmd) {
         persistScreen();
         updateScreen(false);
         printScreen();
-    } else if (!strcmp(cmd, "DISPLAY") && n == 0) printDisplay();
+    }
 #if defined(WICI_BENCH_N1)
     else if (!strcmp(cmd, "DISPLAY") && n == 1) {
         // Zegar SPI ekranu do prób z analizatorem na J11; do restartu. Odpowiedź po pełnym przerysowaniu.
@@ -783,6 +788,7 @@ void handle(char* cmd) {
         Serial.printf("{\"buzz_ms\":%lu,\"hz\":%lu}\n", static_cast<unsigned long>(ms), static_cast<unsigned long>(hz));
     } else if (!strcmp(cmd, "VTEST")) printVtest();
 #endif
+    else if (!strcmp(cmd, "DISPLAY")) printDisplay();
     else if (!strcmp(cmd, "STORE")) printStore();
     else if (!strcmp(cmd, "APP")) printApp();
     else if (!strcmp(cmd, "LINK") && n == 1) { linkAuto = atoi(words[0]) != 0; printApp(); }
