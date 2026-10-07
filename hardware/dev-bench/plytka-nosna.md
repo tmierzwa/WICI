@@ -82,6 +82,20 @@ Obrys 170 × 100 mm. Prawa część płytki ma obrys i otwory Arduino Uno R3. W 
 
 Płytka nie ma stabilizatora. Szyna 3,3 V zasila FRAM i X-NUCLEO, a przez zworkę JP3 moduł CC1120EM (ten moduł nie ma własnego stabilizatora; amperomierz w miejscu JP3 mierzy prąd samego radia). Szyna 5 V zasila moduł ekranu (ma własny stabilizator 3,3 V i pompę ładunku 5 V) i brzęczyk, żeby impulsy 2 kHz brzęczyka nie szły po szynie radia, a cewka dostała napięcie z zakresu karty (3–5 V szczytowo). W stanowisku A szyna 3,3 V to VDD płytki DK, czyli 3,0 V; wszystkie moduły pracują przy tym napięciu (CC1120 2,0–3,6 V, MB85RS4MT 1,8–3,6 V, wejście ekranu 3–5 V). Wydajności prądowej pinów 3V3 i 5V płytek DK i DevKitC producenci nie podają; z szyny 3,3 V stanowisko pobiera najwięcej przy nadawaniu CC1120 (około 45 mA przy +14 dBm według karty układu), z szyny 5 V do około 75 mA przez brzęczyk przy stałym stanie wysokim BUZZER; razem z ekranem i FRAM poniżej 150 mA. Zworki JP1 i JP2 służą też do pomiaru prądu płytki w stanowisku B.
 
+## Rozważone uproszczenia
+
+Przegląd po audycie (2026-10-07; płytka: 65 elementów, 28 pozycji BOM, 4,8 m ścieżek, 51 przelotek, jedna strona montażu).
+
+| Możliwość | Decyzja | Powód |
+|---|---|---|
+| Wewnętrzne rezystory podciągające MCU zamiast R5–R10 | nie | zewnętrzne dają ten sam stan na obu MCU i w czasie resetu; sześć rezystorów 0805 to mały koszt |
+| Bezpośrednie połączenie zamiast JP1 i JP2 | nie | zworki chronią przed walką stabilizatorów DK i DevKitC przy pomyłce i służą do pomiaru prądu w stanowisku B |
+| Złącze analizatora J11 nad J3/J4 zamiast przy dolnej krawędzi | nie | próba trasowania: ścieżki krótsze tylko o 2,5%, trzy przelotki więcej |
+| Dzielnik VTEST 10 kΩ / 2,2 kΩ, R4 10 kΩ (bez wartości 100 kΩ i 20 kΩ w BOM) | nie | dwie pozycje BOM mniej, ale zmienia się skala VTEST (1/5,55 zamiast 1/6) w oprogramowaniu i rośnie prąd przy przepięciu na zacisku |
+| Rezystory 33 Ω na SCK zastąpić zworą | nie | sieć SCK ma około 240 mm z odgałęzieniami; rezystory łagodzą zbocza ESP32 przy wejściach 74HC4050 bez przerzutnika Schmitta |
+| Cztery warstwy albo mniejsza płytka | nie | dwie warstwy mieszczą trasowanie; wymiar wyznaczają ekran, przyciski i obrys Arduino |
+| `route.sh` kończy się błędem przy niepoprowadzonych połączeniach; `drc.sh` z pełnym zestawem opcji | tak | Freerouting zwraca kod 0 także z niepoprowadzonymi sieciami; jedna komenda DRC zamiast długiej linii w dokumentacji |
+
 ## Źródła
 
 Geometrię złączy i otworów wzięto z plików producentów pobranych 2026-10-07. Pliki nie są w repozytorium; sumy pozwalają sprawdzić, czy ponownie pobrany plik jest tym samym wydaniem.

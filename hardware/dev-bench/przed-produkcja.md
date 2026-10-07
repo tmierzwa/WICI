@@ -48,10 +48,10 @@ JAVA=/sciezka/do/java FREEROUTING=/sciezka/do/freerouting-2.5.0.jar tools/route.
 ```
 
 ```bash
-"$KICAD_CLI" pcb drc --format json --all-track-errors --severity-all --schematic-parity --exit-code-violations --refill-zones --save-board --output checks/drc.json cad/plytka-nosna.kicad_pcb
+tools/drc.sh
 ```
 
-`build.sh` regeneruje biblioteki, projekt, schemat, ERC, listę połączeń, BOM, `polaczenia.md`, rozmieszczenie i zadanie trasowania `checks/routing.dsn`. `route.sh` nadpisuje `checks/routing.ses`. Aby odtworzyć zapisaną płytkę, pomija się `route.sh` i importuje zachowaną sesję. Freerouting nie gwarantuje identycznej sesji na innej wersji Javy. Nowa sesja wymaga więc ponownego DRC i przeglądu, a nie samego dopisania wyniku. `finalize_board.py` uruchamia się raz, na płytce świeżo wygenerowanej przez `build.sh`. Dwie tak wygenerowane płytki porównuje się bez UUID (bajty plików zawsze się różnią):
+`build.sh` regeneruje biblioteki, projekt, schemat, ERC, listę połączeń, BOM, `polaczenia.md`, rozmieszczenie i zadanie trasowania `checks/routing.dsn`. `route.sh` nadpisuje `checks/routing.ses` i kończy się błędem, gdy Freerouting zostawi niepoprowadzone połączenia. `drc.sh` uruchamia pełne DRC (`--severity-all`, zgodność ze schematem, wypełnienie stref) do `checks/drc.json`. Aby odtworzyć zapisaną płytkę, pomija się `route.sh` i importuje zachowaną sesję. Freerouting nie gwarantuje identycznej sesji na innej wersji Javy. Nowa sesja wymaga więc ponownego DRC i przeglądu, a nie samego dopisania wyniku. `finalize_board.py` uruchamia się raz, na płytce świeżo wygenerowanej przez `build.sh`. Dwie tak wygenerowane płytki porównuje się bez UUID (bajty plików zawsze się różnią):
 
 ```bash
 (cd tools && "$KICAD_PY" compare_boards.py /sciezka/do/A.kicad_pcb /sciezka/do/B.kicad_pcb)
