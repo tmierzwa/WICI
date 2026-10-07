@@ -1,11 +1,11 @@
-# WICI — Uruchomienie po dopuszczeniu prototypu
+# WICI: uruchomienie po dopuszczeniu prototypu
 
-**Tych kroków nie zaczynać od zamówienia obecnego kompletu.** Najpierw zakończyć pozycje z `przed-produkcja.md`. Do wykonania potrzebne będą miernik, programator SWD i osoba zdolna sprawdzić montaż SMD. Montaż CC1120 QFN i elementów RF 0402 warto zlecić; nie jest to dobry pierwszy projekt lutowania.
+**Tych kroków nie zaczynać od zamówienia obecnego kompletu.** Najpierw zakończyć pozycje z `przed-produkcja.md`. Do wykonania potrzebne będą miernik, programator SWD i osoba zdolna sprawdzić montaż SMD. Montaż CC1120 QFN i elementów RF 0402 lepiej zlecić, bo nie nadaje się na pierwszy projekt lutowania.
 
 | Krok | Czynność | Warunek przejścia |
 |---:|---|---|
 | 1 | Kontroler bez modułu RF. Oględziny pinów U1/U2/U3/Q1 i pomiar VBUS–GND oraz 3,3 V–GND bez napięcia | Brak mostków, zgodna orientacja układów; brak utrzymującego się zwarcia. Ładowanie kondensatorów może chwilowo zmienić wskazanie |
-| 2 | Podać 5,0 V przez przeznaczony do prób przewód USB z zasilacza laboratoryjnego, limit 100 mA; jeszcze bez laptopa i programatora | TP2: 3,3 V ±5%; brak ograniczenia prądu i szybkiego nagrzewania. Jeśli limit zadziała, odłączyć i znaleźć przyczynę |
+| 2 | Podać 5,0 V przez przewód USB przeznaczony do prób, z zasilacza laboratoryjnego, limit 100 mA; jeszcze bez laptopa i programatora | TP2: 3,3 V ±5%; brak ograniczenia prądu i szybkiego nagrzewania. Jeśli limit zadziała, odłączyć i znaleźć przyczynę |
 | 3 | Dołączyć SWD bez wyjścia zasilającego programatora; wgrać zatwierdzony obraz testowy | Odczyt właściwego MCU, poprawna weryfikacja flash, reset wraca do pracy |
 | 4 | Firmware: HSE bypass 8 MHz; PLL ×9 → 72 MHz; USB /1,5 → 48 MHz; APB1 ≤36 MHz. Q1 pozostaje wyłączony do gotowości USB | Stabilny start i reset. Brak deklarowania gotowości przy awarii zegara |
 | 5 | Próba USB bez radia na Windows, Linux i macOS; 100 odłączeń/podłączeń oraz godzina transmisji danych kontrolnych | Dwie wymagane funkcje CDC, poprawne identyfikatory USB, brak błędów danych i zawieszeń; prąd przed konfiguracją ≤100 mA |
@@ -18,6 +18,6 @@ Przed montażem wydrukować `mechanika-1-do-1.pdf` w skali 100%, bez odbicia i b
 
 Odbiór zasilania: zmierzyć napięcia i temperaturę regulatora przy ciągłym odbiorze i maksymalnym dozwolonym cyklu nadawania. Wynik porównać z warunkami pracy komponentów; sam katalogowy prąd 600 mA regulatora nie określa możliwości cieplnych tej płytki.
 
-Każdy egzemplarz dostaje osobny zapis: numer, wersje PCB i firmware, użyte części, pomiary, wynik i osoba wykonująca próbę. Wyniki dwóch sztuk są minimum do testu łączności; nie są potwierdzeniem produkcji masowej.
+Każdy egzemplarz dostaje osobny zapis: numer, wersje PCB i firmware, użyte części, pomiary, wynik i osoba wykonująca próbę. Dwie sztuki to minimum do testu łączności; ich wyniki nie potwierdzają produkcji masowej.
 
 Pomiary F1: napięcie na J1.1 względem GND, napięcie na TP1 za F1, prąd całego układu i temperatura PPTC przy docelowej pracy. Sprawdzić zachowanie wybranego bezpiecznika w najwyższej wymaganej temperaturze. Nie używać portu laptopa do prób zwarciowych. Limit zasilacza laboratoryjnego i limity USB pozostają potrzebne.

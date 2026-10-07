@@ -1,6 +1,6 @@
-# WICI — licencje i zakres
+# WICI: licencje i zakres
 
-Własne materiały: współtwórcy WICI. Licencja zależy od ścieżki i rodzaju pliku, zgodnie z poniższą mapą. Pliki w paczkach mają te same licencje co ich źródła. Niekomercyjny jest cel projektu; poniższe licencje pozwalają na zastosowania komercyjne.
+Własne materiały: współtwórcy WICI. Licencja zależy od ścieżki i rodzaju pliku, zgodnie z poniższą mapą. Pliki w paczkach mają te same licencje co ich źródła. Cel projektu jest niekomercyjny, ale poniższe licencje pozwalają na zastosowania komercyjne.
 
 | Ścieżki | Licencja |
 |---|---|
@@ -19,7 +19,7 @@ Tę samą mapę w postaci czytelnej dla narzędzi zawiera [REUSE.toml](REUSE.tom
 
 Pochodzenie podzbiorów KiCad i modyfikacji IDC: [hardware/radio-test-r01/LICENSES.md](hardware/radio-test-r01/LICENSES.md). Wyjątek KiCad pozwala używać danych biblioteki w projekcie pod licencją projektu; same rozpowszechniane biblioteki i ich pochodne pozostają przy CC-BY-SA-4.0 z wyjątkiem.
 
-Reticulum, LXMF i NomadNet są odrębnymi projektami. Ich kod nie jest częścią tego repozytorium. Ich nazwy i licencje upstream pozostają bez zmian. Materiały producentów w lokalnym `reference-private/` nie są częścią repozytorium ani archiwów WICI i nie otrzymują licencji WICI.
+Reticulum, LXMF i NomadNet są odrębnymi projektami; ich kod nie jest częścią tego repozytorium, a nazwy i licencje upstream pozostają bez zmian. Materiały producentów w lokalnym `reference-private/` nie są częścią repozytorium ani archiwów WICI i nie otrzymują licencji WICI.
 
 Kod WICI jest na licencji MIT, więc można go łączyć i rozpowszechniać z Reticulum i LXMF. Ich licencje zawierają jednak dodatkowe warunki: zakaz użycia w systemach zdolnych celowo szkodzić ludziom i zakaz tworzenia zbiorów do trenowania AI. Pakiet START dołącza teksty tych licencji, a jego użytkownicy podlegają ich warunkom; z tego powodu pakiet jako całość nie jest oprogramowaniem otwartym w rozumieniu OSI, choć kod WICI jest. [Przegląd, F08](docs/review.md).
 

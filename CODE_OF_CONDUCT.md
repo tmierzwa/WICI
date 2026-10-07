@@ -1,6 +1,6 @@
 # Kodeks postępowania
 
-WICI ma pomagać ludziom w sytuacjach kryzysowych. Tego samego szacunku oczekujemy w pracy nad projektem.
+WICI ma pomagać ludziom w sytuacjach kryzysowych. W pracy nad projektem oczekujemy wzajemnego szacunku.
 
 - Krytykuj rozwiązania, nie ludzi. Rzeczowa krytyka obliczeń i założeń jest mile widziana, także ostra.
 - Podawaj źródła i dowody; odróżniaj pomiar od opinii.

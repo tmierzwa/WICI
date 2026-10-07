@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>07. Zagrożenia i odporność · koncepcja WICI</title>
+<title>07. Zagrożenia i odporność · WICI</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -47,9 +47,9 @@
 
 <h2 id="priorytet-awarii">Priorytet awarii</h2>
 
-<p>Najgroźniejsze są pozorne potwierdzenie, błędna informacja o skierowaniu pomocy oraz uszkodzenie zasilania z ryzykiem dla ludzi. Następnie: utrata trwałych danych, odcięcie jedynego przekaźnika/odbiorcy i długotrwałe przeciążenie. Awaria pojedynczego portu ładowania jest mniej krytyczna dla łączności, ponieważ ma osobne zasilanie.</p>
+<p>Najgroźniejsze są pozorne potwierdzenie, błędna informacja o skierowaniu pomocy oraz uszkodzenie zasilania z ryzykiem dla ludzi. Dalej są utrata trwałych danych, odcięcie jedynego przekaźnika lub odbiorcy i długotrwałe przeciążenie. Awaria pojedynczego portu ładowania jest mniej krytyczna dla łączności, ponieważ ma osobne zasilanie.</p>
 
-<p>Poniższa analiza opisuje mechanizmy ochrony i granice. Brak danych terenowych nie pozwala przypisać wiarygodnych częstości awarii ani liczbowego wskaźnika ryzyka.</p>
+<p>Tabela opisuje mechanizmy ochrony i ich granice. Bez danych terenowych nie można przypisać awariom wiarygodnych częstości ani liczbowego wskaźnika ryzyka.</p>
 
 <div class="table-wrap"><table class="wide">
 <thead><tr>
@@ -82,30 +82,30 @@
 <tr><td>Tlenek węgla z silnika pojazdu lub agregatu</td><td>zatrucie ludzi w schronieniu</td><td>zakaz na karcie stacji; akumulator wyjęty z pojazdu albo zasilanie z pojazdu stojącego na zewnątrz przy wyłączonym silniku; czujnik tlenku węgla w schronieniu jako zalecenie</td><td>zależy od dyscypliny obsługi; T8</td></tr>
 <tr><td>Pożar lub wyciek z akumulatora</td><td>poparzenia, dym, gazy w zamkniętym pomieszczeniu</td><td>akumulatory na tacy, z dala od dróg ewakuacji; brak ładowania akumulatorów w pomieszczeniu z ludźmi; gaśnica przy stacji</td><td>uszkodzony akumulator rozruchowy może wydzielać wodór; T6/T8</td></tr>
 <tr><td>Namierzenie emisji schronienia</td><td>wskazanie przeciwnikowi skupiska ludzi</td><td>brak emisji cyklicznych; tryb ciszy radiowej; neutralne nazwy stacji; antena oddalona od pomieszczenia z ludźmi</td><td>szyfrowanie nie ukrywa faktu ani miejsca nadawania; T4/T8</td></tr>
-<tr><td>Zagłuszanie pasma przez systemy antydronowe</td><td>utrata łączności radiowej w rejonie</td><td>rozpoznanie po licznikach CCA i CRC; goniec i łączność głosowa jako procedura podstawowa</td><td>pasmo 868 MHz jest używane przez łącza sterowania dronów i będzie zagłuszane; brak ochrony technicznej; T8</td></tr>
+<tr><td>Zagłuszanie pasma przez systemy antydronowe</td><td>utrata łączności radiowej w rejonie</td><td>rozpoznanie po licznikach CCA i CRC; goniec i łączność głosowa jako procedura podstawowa</td><td>pasmo 868 MHz jest używane przez łącza sterowania dronów, więc może być zagłuszane; brak ochrony technicznej; T8</td></tr>
 <tr><td>Przejęcie stanowiska lub laptopa</td><td>ujawnienie adresów schronień, liczby osób i kluczy</td><td>szyfrowanie bazy kluczem z pamięci USB; ZNISZCZ DANE; fizyczne zniszczenie pamięci; unieważnienie tożsamości</td><td>dane wysłane wcześniej pozostają u odbiorców; T2</td></tr>
 <tr><td>Zakaz nadawania w stanie nadzwyczajnym</td><td>sieć nie może legalnie działać, gdy jest potrzebna</td><td>uzgodnienie statusu z organem ochrony ludności przed użyciem</td><td>zależy od decyzji organów; D12</td></tr>
 </tbody></table></div>
 
 <h2 id="ochrona-danych-i-zaufania">Ochrona danych i zaufania</h2>
 
-<p>Zagrożenia obejmują przypadkowego użytkownika, osobę w tej samej sieci, podszycie pod OSP, kradzież laptopa i celowe zakłócanie radia. Bazowe szyfrowanie Reticulum nie rozwiązuje zagrożeń po obu końcach transmisji. Nie ma podstaw do deklaracji bezpiecznej pracy na przejętym komputerze.</p>
+<p>Zagrożenia obejmują przypadkowego użytkownika, osobę w tej samej sieci, podszycie pod OSP, kradzież laptopa i celowe zakłócanie radia. Bazowe szyfrowanie Reticulum nie chroni przed zagrożeniami na obu końcach transmisji. Nie można deklarować bezpiecznej pracy na przejętym komputerze.</p>
 
-<p>Token ogranicza dostęp aplikacyjny do zgłoszenia, lecz przesyłany przez HTTP może zostać przechwycony. Hasło Wi-Fi nie zastępuje HTTPS. Baza i klucz stacji są na dysku szyfrowane kluczem przechowywanym na pamięci USB stacji, bez dodatkowego hasła przy starcie, więc zabezpieczenie nie opóźnia uruchomienia. Polecenie ZNISZCZ DANE usuwa klucz, bazę i eksporty; nadpisanie pamięci flash i dysków SSD nie gwarantuje usunięcia danych, dlatego skuteczność zapewnia usunięcie klucza oraz fizyczne zniszczenie pamięci USB. Zbiorcza baza odbiorcy zawiera adresy schronień i liczbę osób, czyli informację cenną dla przeciwnika; jej ochrona i procedura zniszczenia są częścią przygotowania stanowiska. Niezależnie od tego zbierać minimum, nie publikować zbiorczej listy potrzeb mieszkańców i ograniczać fizyczny dostęp do laptopa oraz kopii.</p>
+<p>Token ogranicza dostęp do zgłoszenia w aplikacji, ale przesyłany przez HTTP może zostać przechwycony. Hasło Wi-Fi nie zastępuje HTTPS. Baza i klucz stacji są na dysku zaszyfrowane kluczem z pamięci USB stacji. Start nie wymaga hasła, więc szyfrowanie nie opóźnia uruchomienia. Polecenie ZNISZCZ DANE usuwa klucz, bazę i eksporty. Nadpisanie pamięci flash i dysków SSD nie gwarantuje usunięcia danych, dlatego o skuteczności decydują usunięcie klucza i fizyczne zniszczenie pamięci USB. Zbiorcza baza odbiorcy zawiera adresy schronień i liczbę osób, czyli informację cenną dla przeciwnika. Jej ochrona i procedura zniszczenia są częścią przygotowania stanowiska. Zbierać tylko minimum danych, nie publikować zbiorczej listy potrzeb mieszkańców i ograniczać fizyczny dostęp do laptopa oraz kopii.</p>
 
-<p>Przed pilotażem uzgodnić: osobę odpowiedzialną za dane, cel i czas przechowywania, zakres kopii, uprawnienia dyżurnych, usuwanie danych po zakończeniu pracy i postępowanie po kradzieży. Nie dodawać samowolnie sztywnego okresu retencji jako rzekomego wymogu prawnego. Uzgodnienia te poprzedzają wdrożenie; podczas zdarzenia nie wstrzymują przyjmowania zgłoszeń. Eksport obejmuje sekret tożsamości i wymaga takiej samej ochrony jak stacja.</p>
+<p>Przed pilotażem uzgodnić: osobę odpowiedzialną za dane, cel i czas przechowywania, zakres kopii, uprawnienia dyżurnych, usuwanie danych po zakończeniu pracy i postępowanie po kradzieży. Nie dodawać samowolnie sztywnego okresu retencji jako rzekomego wymogu prawnego. Uzgodnienia te poprzedzają wdrożenie. Podczas zdarzenia nie wstrzymują przyjmowania zgłoszeń. Eksport obejmuje sekret tożsamości i wymaga takiej samej ochrony jak stacja.</p>
 
-<p>Karta OSP musi pochodzić z niezależnego potwierdzenia, a nie automatycznie z pierwszego napotkanego nadajnika. Nieznana stacja nie może sama nadać sobie adresu lub roli służby. Podpisany komunikat wymaga oznaczenia źródła i czasu odbioru; dyżurny nadal odpowiada za jego treść.</p>
+<p>Karta OSP musi pochodzić z niezależnego potwierdzenia. Nie wolno jej przyjmować automatycznie od pierwszego napotkanego nadajnika. Nieznana stacja nie może sama nadać sobie adresu lub roli służby. Podpisany komunikat wymaga oznaczenia źródła i czasu odbioru; dyżurny nadal odpowiada za jego treść.</p>
 
 <h2 id="warunki-uzycia-i-odbudowa">Warunki użycia i odbudowa</h2>
 
 <p>Propozycja pilotażu: laptop i zasilanie w suchym, osłoniętym miejscu, antena na zewnątrz z ochroną przewodu i odciążeniem złącza. Droga przewodu nie może uniemożliwiać zamknięcia wymaganych drzwi ani tworzyć przeszkody ewakuacyjnej. Uzgodnić miejsce i sposób mocowania. Praca w wilgoci, mrozie, po upadku, podczas rozruchu silnika oraz w atmosferze wymagającej specjalnych zabezpieczeń nie jest zakwalifikowana.</p>
 
-<p>Aktualny odbiór ładowarki przewiduje 40 °C otoczenia. Nie daje to zakresu temperatur całej stacji. Przed wdrożeniem trzeba określić i zweryfikować zakres dla kompletu, wraz z obudową, kablami, wentylacją i ogniwami. Nie zakładać, że element o katalogowym zakresie temperatur nadaje ten zakres gotowej konstrukcji.</p>
+<p>Obecne warunki odbioru ładowarki przewidują 40 °C otoczenia, co nie określa zakresu temperatur całej stacji. Przed wdrożeniem trzeba określić i sprawdzić zakres dla kompletu z obudową, kablami, wentylacją i ogniwami. Katalogowy zakres temperatur elementu nie przenosi się na gotową konstrukcję.</p>
 
-<p>Minimalny zasób naprawczy na pilotaż: sprawdzony drugi host lub dostępny zamiennik, Ethernet/USB, bezpieczniki o właściwej wartości, antena/przewód i odczytywalna kopia wydania. Najpierw ustalić, czy błąd dotyczy strony, zapisu, modemu, trasy, odbiorcy czy zasilania. Ponowny start nie jest odpowiedzią na nieznany błąd bazy albo ochrony elektrycznej.</p>
+<p>Minimalne zaplecze naprawcze na pilotaż: sprawdzony drugi host lub dostępny zamiennik, Ethernet/USB, bezpieczniki o właściwej wartości, antena/przewód i odczytywalna kopia wydania. Najpierw ustalić, czy błąd dotyczy strony, zapisu, modemu, trasy, odbiorcy czy zasilania. Ponowne uruchomienie nie rozwiązuje nieznanego błędu bazy ani ochrony elektrycznej.</p>
 
-<p>PRZENIEŚ STACJĘ zachowuje tożsamość i bazę przez kontrolowany eksport; stara instancja przestaje pracować. Po nagłej utracie bez kopii nie da się obiecać odzyskania ostatnich lokalnych zgłoszeń. Odbiorca może mieć dane przyjęte wcześniej, ale to nie jest kopia całej bazy schronienia. <a href="../spec/oprogramowanie.md">Procedura w specyfikacji</a>.</p>
+<p>PRZENIEŚ STACJĘ zachowuje tożsamość i bazę przez kontrolowany eksport; stara instancja przestaje pracować. Po nagłej utracie bez kopii nie da się obiecać odzyskania ostatnich lokalnych zgłoszeń. Odbiorca może mieć wcześniej przyjęte dane, lecz nie są one kopią całej bazy schronienia. <a href="../spec/oprogramowanie.md">Procedura w specyfikacji</a>.</p>
 </article>
 <nav class="pager" aria-label="Kolejność czytania">
   <a class="prev" href="06-wykonalnosc-i-budzet-zasobow.html" rel="prev"><span>← Poprzedni</span>06. Wykonalność i budżet zasobów</a>

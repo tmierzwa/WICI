@@ -1,8 +1,8 @@
-# WICI — stacja łączności awaryjnej
+# WICI: stacja łączności awaryjnej
 
-Niekomercyjny projekt otwartej stacji dla schronienia z około 50 osobami. WICI uzupełnia system ochrony ludności, a nie go zastępuje: odbiorcę zgłoszeń, status nadawania w stanach nadzwyczajnych i ochronę danych uzgadnia się z gminą przed użyciem, tak aby podczas alarmu nic formalnego nie blokowało pracy. Znaleziony laptop i router udostępniają stronę przez Wi-Fi. Radio przekazuje krótkie zgłoszenia przez inne stacje do OSP. Telefony są ładowane z osobnego akumulatora.
+Niekomercyjny projekt otwartej stacji dla schronienia z około 50 osobami. WICI uzupełnia system ochrony ludności. Odbiorcę zgłoszeń, status nadawania w stanach nadzwyczajnych i ochronę danych uzgadnia się z gminą przed użyciem, aby podczas alarmu nic formalnego nie blokowało pracy. Znaleziony laptop i router udostępniają stronę przez Wi-Fi. Radio przekazuje krótkie zgłoszenia przez inne stacje do OSP. Telefony są ładowane z osobnego akumulatora.
 
-**Stan: projekt prototypu 0.4; kontroler USB R01.3 — HOLD.** Jest schemat, PCB, eksporty i model kontraktów. Nie ma ukończonego modułu RF, oprogramowania układowego, aplikacji ani gotowej pamięci USB. Nie wykonano prób fizycznych. To nie jest wydanie do użycia podczas awarii.
+**Stan: projekt prototypu 0.4; kontroler USB R01.3: HOLD.** Są schemat, PCB, eksporty i model kontraktów. Nie ma ukończonego modułu RF, oprogramowania układowego, aplikacji ani gotowej pamięci USB. Nie wykonano prób fizycznych. To nie jest wydanie do użycia podczas awarii.
 
 > **Bezpieczeństwo.** Przetwornica 230 V wytwarza napięcie zagrażające życiu, a akumulatory mogą spowodować pożar. Opis przetwornicy nie jest instrukcją do samodzielnego wykonania; bez kwalifikacji i badań bezpieczeństwa nie wolno jej budować ani podłączać do ludzi i urządzeń. Projekt nie jest certyfikowanym urządzeniem, a licencje wyłączają wszelką gwarancję.
 
@@ -43,7 +43,7 @@ Kod: [tmierzwa/WICI](https://github.com/tmierzwa/WICI). Publikacja repozytorium 
 
 ## Jak powstała dokumentacja
 
-Projekt prowadzi jedna osoba. Duża część analiz, obliczeń, dokumentacji i kodu modelu powstała z pomocą asystenta AI (Claude); takie commity mają w opisie wiersz `Co-Authored-By`. Autor przegląda i zatwierdza każdą zmianę, ale [przegląd techniczny](docs/review.md) jest wewnętrzny. Obliczeń nie sprawdził niezależny inżynier, a założeń prawnych — prawnik. Każdy wynik traktuj jako hipotezę do sprawdzenia; zgłoszenia błędów są najcenniejszym wkładem.
+Projekt prowadzi jedna osoba. Duża część analiz, obliczeń, dokumentacji i kodu modelu powstała z pomocą asystenta AI (Claude); takie commity mają w opisie wiersz `Co-Authored-By`. Autor przegląda i zatwierdza każdą zmianę, ale [przegląd techniczny](docs/review.md) jest wewnętrzny. Obliczeń nie sprawdził niezależny inżynier, a założeń prawnych nie sprawdził prawnik. Każdy wynik traktuj jako hipotezę do sprawdzenia; zgłoszenia błędów są najcenniejszym wkładem.
 
 ## In English
 

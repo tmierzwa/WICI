@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>06. Wykonalność i budżet zasobów · koncepcja WICI</title>
+<title>06. Wykonalność i budżet zasobów · WICI</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -64,11 +64,11 @@
 <tr><td>Sieć i odbiorca pomocy</td><td>scenariusze i warunki odbioru</td><td>rzeczywiste miejsca, działający przekaźnik, dyżur i próba terenowa</td></tr>
 </tbody></table></div>
 
-<p>Koncepcja jest technicznie testowalna. Koszt i czas jej doprowadzenia do wdrożenia pozostają otwarte. Odtworzenie projektu przez początkującą osobę powinno obejmować odebrane płytki i prosty montaż końcowy. RF oraz 230 V wymagają kompetencji i wyposażenia; obecny pakiet nie daje jeszcze bezpiecznej instrukcji samodzielnego wykonania całego zestawu.</p>
+<p>Koncepcję można przetestować technicznie. Koszt i czas doprowadzenia jej do wdrożenia pozostają otwarte. Osoba początkująca powinna odtwarzać projekt z odebranych płytek i wykonywać tylko prosty montaż końcowy. Części RF i 230 V wymagają kompetencji i wyposażenia. Obecny pakiet nie zawiera jeszcze bezpiecznej instrukcji samodzielnego wykonania całego zestawu.</p>
 
 <h2 id="budzet-czasu-antenowego">Budżet czasu antenowego</h2>
 
-<p>Dla datagramu B bajtów w P1: liczba fragmentów <code>n = ceil(B/86)</code>, liczba bajtów w eterze <code>B + 29n</code>, czas TX <code>t = 8(B + 29n)/4800</code>. Dług ciszy wynosi <code>12t</code>; cykl jednego nadajnika bez dodatkowych opóźnień <code>13t</code>. Obliczenie nie obejmuje narastania mocy nadajnika, CCA, kolizji, ponowień ani ruchu Reticulum/LXMF.</p>
+<p>Dla datagramu B bajtów w P1: liczba fragmentów <code>n = ceil(B/86)</code>, liczba bajtów w eterze <code>B + 29n</code>, czas TX <code>t = 8(B + 29n)/4800</code>. Dług ciszy wynosi <code>12t</code>, a cykl jednego nadajnika bez dodatkowych opóźnień <code>13t</code>. Obliczenie nie obejmuje narastania mocy nadajnika, CCA, kolizji, ponowień ani ruchu Reticulum/LXMF.</p>
 
 <div class="table-wrap"><table class="wide">
 <thead><tr>
@@ -85,15 +85,13 @@
 <tr><td class="num">600</td><td class="num">7</td><td class="num">803</td><td class="num">1,338</td><td class="num">17,398</td><td class="num">103</td></tr>
 </tbody></table></div>
 
-<p>To przepustowość idealnego nadajnika na poziomie datagramów modemu, nie liczba zgłoszeń aplikacji. Dla 600 B wynosi około 34,5 B/s użytecznych danych wejściowych modemu. Każdy przekaźnik zużywa własny czas TX na przekazanie zgłoszeń, odpowiedzi i ruchu sterującego. Sąsiedzi współdzielą kanał; nie można sumować ich przepustowości jak niezależnych kabli.</p>
+<p>Tabela podaje przepustowość idealnego nadajnika liczoną w datagramach modemu, a nie liczbę zgłoszeń aplikacji. Dla 600 B wynosi około 34,5 B/s użytecznych danych wejściowych modemu. Każdy przekaźnik zużywa własny czas TX na przekazanie zgłoszeń, odpowiedzi i ruchu sterującego. Sąsiedzi współdzielą kanał, więc ich przepustowości nie można sumować jak niezależnych kabli.</p>
 
-<p>W następnej części tabelę przeliczono na rzeczywiste wiadomości SA1 próby obciążenia W10.</p>
+<p>Przy większej wiadomości LXMF może przejść z pojedynczego pakietu na link albo przesyłanie zasobu. Limit treści SA1 480 B nie oznacza, że wiadomość zmieści się w jednym pakiecie radiowym; progi i propozycję limitu opisuje <a href="05-projekt-koncepcyjny-komunikacji.html">rozdział 05</a>. Do tego dochodzą zestawianie linku, ogłoszenia tras, potwierdzenia i ponowienia. Zwykły interfejs KISS ma w obecnym kodzie limit czasu kontroli przepływu 5 s; P1 może wymagać ponad 16 s samej ciszy, dlatego potrzebny jest adapter, a nie zmiana konfiguracji. <a href="https://github.com/markqvist/LXMF/blob/master/LXMF/LXMessage.py">LXMessage</a>, <a href="https://github.com/markqvist/Reticulum/blob/master/RNS/Interfaces/KISSInterface.py">KISSInterface</a>, <a href="../spec/radio.md">kontrakt adaptera</a>.</p>
 
-<p>LXMF może przejść od pojedynczego pakietu do linku albo przesyłania zasobu dla większej wiadomości. Limit treści SA1 480 B nie daje limitu jednego pakietu radiowego; progi i propozycję limitu opisuje <a href="05-projekt-koncepcyjny-komunikacji.html">rozdział 05</a>. Dodatkowo istnieją zestawianie linku, ogłoszenia tras, potwierdzenia i ponowienia. Zwykły interfejs KISS ma w obecnym kodzie limit czasu kontroli przepływu 5 s; P1 może wymagać ponad 16 s samej ciszy. Wymagany adapter nie jest zatem kosmetyczną konfiguracją. <a href="https://github.com/markqvist/LXMF/blob/master/LXMF/LXMessage.py">LXMessage</a>, <a href="https://github.com/markqvist/Reticulum/blob/master/RNS/Interfaces/KISSInterface.py">KISSInterface</a>, <a href="../spec/radio.md">kontrakt adaptera</a>.</p>
+<p>Limit 900 s w adapterze nie zmienia limitów czasu linku i zasobu. Pakiet może czekać w kolejce dłużej, niż pozwala stos, jeszcze przed pierwszym TX. <a href="../review.md">Kontrprzykład z przypiętego kodu</a>.</p>
 
-<p>Limit 900 s w adapterze nie zmienia limitów czasu linku i zasobu. Pakiet może czekać w kolejce dłużej niż pozwala stos, jeszcze przed pierwszym TX. <a href="../review.md">Kontrprzykład z przypiętego kodu</a>.</p>
-
-<p>Próba musi policzyć wszystkie bajty i czas TX każdego węzła, zarówno podczas zimnego zestawienia trasy, jak i ruchu ustalonego. Mierzyć opóźnienie do RECEIVED, wiek kolejki, odrzuty, retransmisje i poprawność po restarcie. Kolizja ukrytych nadajników jest możliwa mimo CCA. Fragmentacja zwiększa ryzyko utraty całego datagramu.</p>
+<p>Próba musi zliczyć wszystkie bajty i czas TX każdego węzła podczas zimnego zestawienia trasy i w ruchu ustalonym. Musi też zmierzyć opóźnienie do RECEIVED, wiek kolejki, odrzuty, retransmisje i poprawność po restarcie. Kolizja ukrytych nadajników jest możliwa mimo CCA. Fragmentacja zwiększa ryzyko utraty całego datagramu.</p>
 
 <h2 id="budzet-proby-w10-na-przekazniku">Budżet próby W10 na przekaźniku</h2>
 
@@ -114,7 +112,7 @@
 <tr><td>potwierdzenie pakietu</td><td class="num">83</td><td class="num">1</td><td class="num">2,427</td></tr>
 </tbody></table></div>
 
-<p>Obsługa jednego zgłoszenia zajmuje B 24,5–26,2 s nadawania z ciszą. 50 zgłoszeń wymaga 1225–1309 s, czyli <strong>20,4–21,8 min z 30 min, przy zerowych stratach</strong>. Obliczenie pomija zimną trasę (ogłoszenia, zapytania o trasę), kolizje, CCA, narastanie mocy nadajnika, ponowienia i ruch innych stacji. Każde utracone i ponowione zgłoszenie zabiera B kolejne 11,5–13,2 s. Dostarczenie przez istniejący link ma podobny koszt na wiadomość, ale wymaga zestawienia linku w limitach czasu stosu; zasób dodaje dla każdej wiadomości ogłoszenie, części i dowód. W10 jest więc wykonalne na papierze tylko przy jednym pakiecie na wiadomość i małych stratach.</p>
+<p>Obsługa jednego zgłoszenia zajmuje B 24,5–26,2 s nadawania z ciszą. 50 zgłoszeń wymaga 1225–1309 s, czyli 20,4–21,8 min z 30 min przy zerowych stratach. Obliczenie pomija zimną trasę (ogłoszenia, zapytania o trasę), kolizje, CCA, narastanie mocy nadajnika, ponowienia i ruch innych stacji. Każde utracone i ponowione zgłoszenie zabiera B kolejne 11,5–13,2 s. Dostarczenie przez istniejący link ma podobny koszt na wiadomość, ale wymaga zestawienia linku w limitach czasu stosu. Zasób dodaje dla każdej wiadomości ogłoszenie, części i dowód. W10 jest więc wykonalne na papierze tylko przy jednym pakiecie na wiadomość i małych stratach.</p>
 
 <p>LXMF ponawia niepotwierdzoną wiadomość okazjonalną po <code>max(10 s, RTT)</code>, najwyżej 5 prób (<code>DELIVERY_RETRY_WAIT</code>, <code>MAX_DELIVERY_ATTEMPTS</code>). Jeden cykl B dla zgłoszenia trwa dłużej niż 10 s, a jego kolejka może trzymać minuty ruchu. Jeśli szacunek RTT nie obejmuje oczekiwania za ciszą, A wysyła ponownie wiadomości jeszcze czekające u B i zużywa jego budżet. T3 musi zmierzyć takie duplikaty i ustalić, skąd stos bierze RTT przy raportowanych 240 bit/s. <a href="https://github.com/markqvist/LXMF/blob/c3ff2d6dc2f256daab896dadc044dd5a913ecbb7/LXMF/LXMRouter.py">LXMRouter</a>.</p>
 
@@ -123,29 +121,29 @@
 <ul>
   <li><strong>Rezerwa ciszy:</strong> 12t daje 7,7% aktywności wobec dopuszczalnych 10%. Cisza 10t skraca cykl z 13t do 11t, czyli daje około 18% więcej przepustowości, kosztem mniejszej rezerwy względem limitu 10%.</li>
   <li><strong>Narzut ramki:</strong> 29 B na każdy fragment 86 B to około 25% czasu TX. Dłuższa ramka wymaga uzupełniania FIFO podczas nadawania w obu modemach.</li>
-  <li><strong>Topologia:</strong> bezpośredni zasięg do OSP albo drugi przekaźnik dzielą ruch; nie można liczyć na to w każdym miejscu.</li>
+  <li><strong>Topologia:</strong> bezpośredni zasięg do OSP albo drugi przekaźnik dzielą ruch, ale nie każde miejsce je ma.</li>
   <li><strong>Ruch:</strong> łączenie powtarzalnych potrzeb przez opiekuna zmniejsza liczbę zgłoszeń, ale nie zmienia warunku W10.</li>
 </ul>
 
-<p>Dwie pierwsze zmiany oznaczają nową wersję P1 dla całej sieci. Nie zastępują pomiaru T3/T5; wskazują, co zmienić, jeśli rozstrzygnięcie D01 będzie negatywne.</p>
+<p>Dwie pierwsze zmiany oznaczają nową wersję P1 dla całej sieci. Nie zastępują pomiaru T3/T5. Wskazują, co zmienić, jeśli rozstrzygnięcie D01 będzie negatywne.</p>
 
 <h2 id="zasieg">Zasięg</h2>
 
-<p>Strata swobodnej przestrzeni dla 869,525 MHz i 1 km wynosi około 91,23 dB. Przykład: 13 dBm na złączu, dwie anteny po 2,15 dBi i po 1 dB straty przewodów dają około −75,93 dBm u odbiorcy. Względem <strong>niezmierzonego celu</strong> czułości −110 dBm jest to 34,07 dB zapasu w tym modelu.</p>
+<p>Strata swobodnej przestrzeni dla 869,525 MHz i 1 km wynosi około 91,23 dB. Przykład: 13 dBm na złączu, dwie anteny po 2,15 dBi i po 1 dB straty przewodów dają około −75,93 dBm u odbiorcy. Względem niezmierzonego celu czułości −110 dBm jest to 34,07 dB zapasu w tym modelu.</p>
 
-<p>Model wolnej przestrzeni jest jednak zbyt optymistyczny dla zabudowy. Empiryczny model Okumury-Haty dla małego miasta przy tym samym budżecie łącza (15,3 dB zysków i strat poza drogą) daje na 1 km zapas około −0,7 dB przy antenie 30 m nad terenem, −3,5 dB przy antenach 10 m i 3 m oraz −7,3 dB przy antenach 10 m i 1,5 m. Model Haty jest tu użyty poniżej zakresu wysokości anteny bazowej, więc służy tylko jako ostrzeżenie: bez wysoko umieszczonych anten lub przekaźników cel 1 km jest zagrożony. Promień pierwszej strefy Fresnela w połowie drogi 1 km wynosi około 9,3 m; anteny przy oknach niskich kondygnacji nie zapewniają jej prześwitu. <a href="../../software/reference/wyniki.json">Obliczenia</a>.</p>
+<p>Model wolnej przestrzeni jest zbyt optymistyczny dla zabudowy. Empiryczny model Okumury-Haty dla małego miasta przy tym samym budżecie łącza (15,3 dB zysków i strat poza drogą) daje na 1 km zapas około −0,7 dB przy antenie 30 m nad terenem, −3,5 dB przy antenach 10 m i 3 m oraz −7,3 dB przy antenach 10 m i 1,5 m. Model Haty użyto tu poniżej jego zakresu wysokości anteny bazowej, więc wynik jest tylko ostrzeżeniem. Bez wysoko umieszczonych anten lub przekaźników cel 1 km jest zagrożony. Promień pierwszej strefy Fresnela w połowie drogi 1 km wynosi około 9,3 m; anteny przy oknach niskich kondygnacji nie zapewniają jej prześwitu. <a href="../../software/reference/wyniki.json">Obliczenia</a>.</p>
 
-<p>Przykład z wolną przestrzenią nie obejmuje ścian, metalu, terenu, zaniku wielodrogowego, odstrojenia anteny, zakłóceń i rzeczywistej czułości. Nie jest dowodem 1 km w mieście. Anteny przy oknie lub drzwiach muszą przejść próbę w docelowej pozycji. Wynik zapisać z układem miejsc, przewodami, rewizjami i warunkami. Najpierw podnieść antenę (dach, wyższa kondygnacja) lub dodać przekaźnik; zmiana profilu P1 wymaga jawnej rewizji całej sieci.</p>
+<p>Przykład z wolną przestrzenią pomija ściany, metal, teren, zanik wielodrogowy, odstrojenie anteny, zakłócenia i rzeczywistą czułość, więc nie dowodzi zasięgu 1 km w mieście. Anteny przy oknie lub drzwiach muszą przejść próbę w docelowej pozycji. Wynik zapisać razem z układem miejsc, przewodami, rewizjami i warunkami. Przy braku zapasu najpierw podnieść antenę (dach, wyższa kondygnacja) lub dodać przekaźnik. Zmiana profilu P1 wymaga jawnej rewizji całej sieci.</p>
 
-<p>Zapas obliczony z modelu jest wartością medianową. Łącze stacjonarne, które ma przenieść 99 ze 100 zgłoszeń, potrzebuje dodatkowo zapasu na zaniki w czasie, zwykle około 10 dB; ruch ludzi i pojazdów zmienia tłumienie także na stałej trasie. Rozrzut tłumienia między miejscami (odchylenie standardowe rzędu 6–8 dB w zabudowie) sprawia, że udana próba jednej pary miejsc nie przenosi się na inne. Najtańszym źródłem zapasu jest antena: kolinearna antena dookólna o zysku około 5–6 dBi na obu końcach daje około 7 dB więcej niż dwa dipole, nie zmienia P1 i mieści się w limicie ERP (około 15,5 dBm wobec 27 dBm). Kosztem jest węższa wiązka w płaszczyźnie pionowej i wymóg pionowego montażu.</p>
+<p>Zapas obliczony z modelu jest wartością medianową. Łącze stacjonarne, które ma przenieść 99 ze 100 zgłoszeń, potrzebuje dodatkowo zapasu na zaniki w czasie, zwykle około 10 dB. Ruch ludzi i pojazdów zmienia tłumienie także na stałej trasie. Rozrzut tłumienia między miejscami (odchylenie standardowe rzędu 6–8 dB w zabudowie) sprawia, że udana próba jednej pary miejsc nie przenosi się na inne. Najtańszym źródłem zapasu jest antena: kolinearna antena dookólna o zysku około 5–6 dBi na obu końcach daje około 7 dB więcej niż dwa dipole, nie zmienia P1 i mieści się w limicie ERP (około 15,5 dBm wobec 27 dBm). Kosztem jest węższa wiązka w płaszczyźnie pionowej i wymóg pionowego montażu.</p>
 
-<p>Ten sam budżet z dipolami daje około 12 dBm ERP (13 dBm − 1 dB przewodu + 2,15 dBi − 2,15 dB), czyli około 16 mW. Warunki pasma dopuszczają 500 mW ERP (27 dBm), więc przepisy zostawiają około 15 dB zapasu. Oba układy RF nadają do około +16 dBm na złączu, czyli około 3 dB więcej niż obecne 13 dBm. Więcej wymaga zewnętrznego wzmacniacza: nowej konstrukcji RF, pomiaru emisji i sprawdzenia prądu w budżecie USB 500 mA. Moc jest parametrem P1, więc zmiana dotyczy wszystkich stacji. Większa moc zwiększa też zasięg zakłóceń dla sąsiadów i nie usuwa ukrytych nadajników. <a href="https://www.ti.com/lit/ds/symlink/cc1120.pdf">CC1120</a>, <a href="https://www.st.com/resource/en/datasheet/s2-lp.pdf">S2-LP</a>, <a href="zrodla.html">warunki pasma</a>.</p>
+<p>Ten sam budżet z dipolami daje około 12 dBm ERP (13 dBm − 1 dB przewodu + 2,15 dBi − 2,15 dB), czyli około 16 mW. Warunki pasma dopuszczają 500 mW ERP (27 dBm), więc przepisy zostawiają około 15 dB zapasu. Oba układy RF nadają do około +16 dBm na złączu, czyli około 3 dB więcej niż obecne 13 dBm. Większa moc wymaga zewnętrznego wzmacniacza, a więc nowej konstrukcji RF, pomiaru emisji i sprawdzenia prądu w budżecie USB 500 mA. Moc jest parametrem P1, więc zmiana dotyczy wszystkich stacji. Większa moc zwiększa też zasięg zakłóceń dla sąsiadów i nie usuwa ukrytych nadajników. <a href="https://www.ti.com/lit/ds/symlink/cc1120.pdf">CC1120</a>, <a href="https://www.st.com/resource/en/datasheet/s2-lp.pdf">S2-LP</a>, <a href="zrodla.html">warunki pasma</a>.</p>
 
 <h2 id="energia-dwa-niezalezne-zasoby">Energia: dwa niezależne zasoby</h2>
 
-<p>Założenia <a href="../../software/reference/wyniki.json">modelu</a>: 35 W AC dla stacji, sprawność 0,85, 8 W poboru własnego przetwornicy i 1,7 W strat diod. Moc pobierana wynosi <code>35/0,85 + 8 + 1,7 = 50,88 W</code>. Stacja zużywa około 1221 Wh przez dobę; z rezerwą 20% około 1465 Wh.</p>
+<p>Założenia <a href="../../software/reference/wyniki.json">modelu</a>: 35 W AC dla stacji, sprawność 0,85, 8 W poboru własnego przetwornicy i 1,7 W strat diod. Moc pobierana wynosi <code>35/0,85 + 8 + 1,7 = 50,88 W</code>. Stacja zużywa około 1221 Wh na dobę, a z rezerwą 20% około 1465 Wh.</p>
 
-<p>Telefony: 50 × 5 Wh przy sprawności 0,8 = 312,5 Wh ze źródeł ładowarki; z rezerwą 375 Wh. <strong>5 Wh na osobę jest częściowym doładowaniem, nie pełnym ładowaniem każdego telefonu.</strong> Osiem portów daje maksymalnie 60 W na wyjściu. Pobór własny ładowarki i straty przewodów trzeba zmierzyć.</p>
+<p>Telefony: 50 × 5 Wh przy sprawności 0,8 = 312,5 Wh ze źródeł ładowarki; z rezerwą 375 Wh. 5 Wh na osobę to częściowe doładowanie, a nie pełne ładowanie każdego telefonu. Osiem portów daje maksymalnie 60 W na wyjściu. Pobór własny ładowarki i straty przewodów trzeba zmierzyć.</p>
 
 <p>Przy założeniu 12 V, 60 Ah i 50% wykorzystania jeden akumulator daje 360 Wh. Jest to model, nie ocena sprawności dowolnego akumulatora samochodowego. W nieogrzewanym schronieniu pojemność akumulatora kwasowo-ołowiowego spada: w 0 °C o około 20%, w −10 °C jeszcze bardziej. Zimą liczbę akumulatorów trzeba więc zwiększyć albo trzymać je w cieplejszym pomieszczeniu.</p>
 
@@ -160,9 +158,9 @@
 <tr><td>Łączny ekwiwalent energii, przed podziałem</td><td class="num">1840 Wh</td><td class="num">6</td></tr>
 </tbody></table></div>
 
-<p>Przy sztywnym przydzieleniu osobnych akumulatorów do obu pul zaokrąglenia dają <strong>7 sztuk modelowych</strong>, mimo łącznego ekwiwalentu 6. Wspólny zapas może być przydzielany kolejno, ale wymaga planu i znajomości pozostałej energii. Litery A/B/C oznaczają wejścia, nie obietnicę pracy dobowej z trzech akumulatorów. Nie przyjmować, że rozruchowy akumulator zachowuje modelową pojemność lub może zostać rozładowany bez wpływu na użycie pojazdu.</p>
+<p>Przy sztywnym przydzieleniu osobnych akumulatorów do obu pul zaokrąglenia dają 7 sztuk modelowych, mimo łącznego ekwiwalentu 6. Wspólny zapas można przydzielać kolejno, jeśli istnieje plan i znana jest pozostała energia. Litery A/B/C oznaczają wejścia, nie obietnicę pracy dobowej z trzech akumulatorów. Nie zakładać, że akumulator rozruchowy ma modelową pojemność ani że jego rozładowanie nie wpłynie na użycie pojazdu.</p>
 
-<p>Wpływ znalezionego komputera, przy tych samych stratach i rezerwie, dla samej stacji:</p>
+<p>Wpływ mocy znalezionego komputera na energię samej stacji (te same straty i rezerwa):</p>
 
 <div class="table-wrap"><table class="wide">
 <thead><tr>
@@ -176,13 +174,13 @@
 <tr><td class="num">60 W</td><td class="num">80,29 W</td><td class="num">2312 Wh</td><td class="num">7</td></tr>
 </tbody></table></div>
 
-<p>Dobór oszczędnego hosta i pomiar poboru mają większy wpływ na zapas niż sama moc radia. Nie gwarantować 24 h dla dowolnego PC. Gniazdo zapalniczki ogranicza prąd i możliwą moc AC; nominalne 150 W wymaga odpowiednich zacisków oraz przewodów. Każde pojedyncze źródło A lub B musi samodzielnie utrzymać dozwolone obciążenie.</p>
+<p>Dobór oszczędnego hosta i pomiar poboru mają większy wpływ na zapas niż sama moc radia. Nie gwarantować 24 h dla dowolnego PC. Gniazdo zapalniczki ogranicza prąd i możliwą moc AC. Nominalne 150 W wymaga odpowiednich zacisków oraz przewodów. Każde pojedyncze źródło A lub B musi samodzielnie utrzymać dozwolone obciążenie.</p>
 
-<p>Przekaźnik bez schronienia potrzebuje laptopa z <code>rnsd</code> i modemu; strona, router i ładowarka telefonów nie są mu potrzebne. Pobór wyznacza głównie laptop, więc do pomiaru przyjąć tę samą tabelę: 788–2312 Wh na dobę z rezerwą. Miejsce przekaźnika może nie mieć własnych akumulatorów ani opiekuna do wymiany A/B. Jeśli jest jedyną drogą schronienia do OSP, ma pierwszeństwo w energii (<a href="02-scenariusze-i-organizacja.html">rozdział 02</a>). Wymaga więc osobnego planu zasilania, wymiany źródeł i osoby odpowiedzialnej; budżet schronienia go nie obejmuje.</p>
+<p>Przekaźnik bez schronienia potrzebuje laptopa z <code>rnsd</code> i modemu; strona, router i ładowarka telefonów nie są mu potrzebne. Pobór wyznacza głównie laptop, więc do czasu pomiaru obowiązuje ta sama tabela: 788–2312 Wh na dobę z rezerwą. Miejsce przekaźnika może nie mieć własnych akumulatorów ani opiekuna do wymiany A/B. Jeśli jest jedyną drogą schronienia do OSP, ma pierwszeństwo w energii (<a href="02-scenariusze-i-organizacja.html">rozdział 02</a>). Wymaga więc osobnego planu zasilania i wymiany źródeł oraz osoby odpowiedzialnej. Budżet schronienia go nie obejmuje.</p>
 
 <h2 id="wykonanie-koszt-i-wielkosc-serii">Wykonanie, koszt i wielkość serii</h2>
 
-<p><a href="../spec/bom-stacji.csv">BOM stacji</a> jest listą kandydatów, nie ofertą produkcyjną. Oddzielić koszt jednego zestawu, koszt znalezionych zasobów i koszt uruchomienia projektu. Przetwornica z transformatorem, zabezpieczenia, przewody i obudowy mogą kosztować więcej niż sama elektronika radiowa.</p>
+<p><a href="../spec/bom-stacji.csv">BOM stacji</a> jest listą kandydatów, nie ofertą produkcyjną. Rozdzielić koszt jednego zestawu, znalezionych zasobów i uruchomienia projektu. Przetwornica z transformatorem, zabezpieczenia, przewody i obudowy mogą kosztować więcej niż sama elektronika radiowa.</p>
 
 <p>Do wyceny prototypu i 1000 sztuk przygotować ten sam zakres: kompletacja elementów, PCB/montaż, transformator i uzwojenia, obudowa, antena, wiązki i bezpieczniki, pamięć USB, kontrola każdej sztuki oraz straty produkcyjne. Osobno wycenić projekt i kwalifikację dwóch wykonań, oprzyrządowanie, badania oraz poprawki po próbach. Rozdzielić cenę netto/brutto, transport i założenia walutowe. Poprosić co najmniej dwóch niezależnych wykonawców o identyczny zakres.</p>
 

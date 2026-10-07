@@ -1,4 +1,4 @@
-# WICI — licencje i pochodzenie kontrolera
+# WICI: licencje i pochodzenie kontrolera
 
 Dokładna mapa ścieżek i pełne teksty: [główny LICENSE.md](../../LICENSE.md). Własny kontroler, dane wykonawcze, footprint USB i footprint PPTC: CERN-OHL-P-2.0. Skrypty: MIT. README, instrukcja odtwarzania i raporty: CC-BY-4.0.
 
