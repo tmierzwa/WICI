@@ -4,6 +4,7 @@ the screen model with its texts and the bitmap font, the SA1 codec, the FRAM sto
 
 from pathlib import Path
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -33,6 +34,7 @@ HARNESS = r"""
 #include "sa1.h"
 #include "store.h"
 #include "usbproto.h"
+#include "station.h"
 
 // FRAM w RAM: 512 KiB skasowane do 0xFF jak nowy układ.
 struct RamStorage : journal::Storage {
@@ -265,8 +267,132 @@ int usbScript() {
     return 0;
 }
 
+// Dwie stacje (A: rola stacji, B: rola OSP) połączone "eterem" bez strat albo ze stratami;
+// każda ma własną FRAM w RAM, magazyn, protokół USB i warstwę aplikacji.
+struct Node;
+struct LinkServices : station::Services {
+    Node* node = nullptr;
+    uint32_t uptimeS() override;
+    bool silence() override;
+    bool radioReady() override { return true; }
+    bool busy() override;
+    bool send(const uint8_t* data, size_t length) override;
+    void randomBytes(uint8_t* out, size_t count) override;
+    void log(const char* text) override;
+    bool notify(uint8_t kind, uint32_t ref, const char* fields) override;
+    void address(uint8_t* out) override;
+};
+struct Node {
+    char name;
+    RamStorage ram;
+    TestHost host;
+    store::Store* store = nullptr;
+    usbproto::Protocol* proto = nullptr;
+    LinkServices services;
+    station::Station* app = nullptr;
+    Node* peer = nullptr;
+    uint32_t uptime = 100;
+    bool lossy = false;
+    std::vector<uint8_t> air;  // datagram w drodze (dostarczany przy następnym kroku czasu)
+    bool txBusy = false;
+    uint8_t addr;
+    void start() {
+        store = new store::Store(ram); store->begin();
+        proto = new usbproto::Protocol(*store, host); proto->begin(); proto->connected(0);
+        services.node = this;
+        app = new station::Station(*store, services);
+    }
+    void restart() { delete app; delete proto; delete store; start(); }
+};
+uint32_t LinkServices::uptimeS() { return node->uptime; }
+bool LinkServices::silence() { return node->host.silence_; }
+bool LinkServices::busy() { return node->txBusy; }
+bool LinkServices::send(const uint8_t* data, size_t length) {
+    printf("%c-> %.*s\n", node->name, static_cast<int>(length), reinterpret_cast<const char*>(data));
+    node->air.assign(data, data + length);
+    node->txBusy = true;
+    return true;
+}
+void LinkServices::randomBytes(uint8_t* out, size_t count) { for (size_t i = 0; i < count; ++i) out[i] = static_cast<uint8_t>(0x55 + i + node->name); }
+void LinkServices::log(const char* text) { printf("%c:log %s\n", node->name, text); }
+bool LinkServices::notify(uint8_t kind, uint32_t ref, const char* fields) { return node->proto->event(kind, ref, fields, node->uptime * 1000); }
+void LinkServices::address(uint8_t* out) { memset(out, node->addr, store::HASH); }
+
+int linkScript() {
+    Node a, b;
+    a.name = 'A'; a.addr = 0xAA; a.host = TestHost(); b.name = 'B'; b.addr = 0xBB;
+    a.peer = &b; b.peer = &a;
+    // Emisje USB z nazwą węzła.
+    struct NamedHost : TestHost { char name; void emit(const char* line) override { printf("%c<- %s\n", name, line); } void log(const char* text) override { printf("%c:log %s\n", name, text); } };
+    static NamedHost ha, hb; ha.name = 'A'; hb.name = 'B';
+    // Zastąpienie hosta: protokół bierze referencję, więc tworzymy węzły z nazwanymi hostami.
+    Node* nodes[2] = {&a, &b};
+    NamedHost* hosts[2] = {&ha, &hb};
+    for (int i = 0; i < 2; ++i) {
+        Node& n = *nodes[i];
+        n.store = new store::Store(n.ram); n.store->begin();
+        n.proto = new usbproto::Protocol(*n.store, *hosts[i]); n.proto->begin(); n.proto->connected(0);
+        const char* sync = "{\"usb\":1,\"seq\":0,\"type\":\"sync\",\"boot\":\"laptop\",\"cursor\":0}\n";
+        n.proto->feed(sync, strlen(sync), 0);
+        n.services.node = &n;
+        n.app = new station::Station(*n.store, n.services);
+    }
+    char line[2048];
+    while (fgets(line, sizeof(line), stdin)) {
+        char* nl = strchr(line, '\n');
+        if (nl) *nl = '\0';
+        unsigned v = 0;
+        Node* n = line[0] == 'A' ? &a : line[0] == 'B' ? &b : nullptr;
+        if (n && line[1] == ' ') { n->proto->feed(line + 2, strlen(line + 2), n->uptime * 1000); n->proto->feed("\n", 1, n->uptime * 1000); }
+        else if (sscanf(line, "T %u", &v) == 1) {
+            // Krok czasu: koniec nadawania, dostarczenie datagramów, poll obu stron.
+            for (Node* x : nodes) {
+                x->uptime = v;
+                if (x->txBusy) { x->txBusy = false; x->app->txDone(true); }
+                if (!x->air.empty()) {
+                    std::vector<uint8_t> d = x->air; x->air.clear();
+                    if (!x->lossy) x->peer->app->received(d.data(), d.size()); else printf("%c-> lost\n", x->name);
+                }
+            }
+            for (Node* x : nodes) x->app->poll(v * 1000);
+        } else if (sscanf(line, "L %u", &v) == 1) a.lossy = b.lossy = v;
+        else if (sscanf(line, "Q %u", &v) == 1) { a.host.silence_ = v; }
+        else if (line[0] == 'R' && line[1] == 'A') {
+            delete a.app; delete a.proto; delete a.store;
+            a.store = new store::Store(a.ram); a.store->begin();
+            a.proto = new usbproto::Protocol(*a.store, ha); a.proto->begin(); a.proto->connected(0);
+            const char* sync = "{\"usb\":1,\"seq\":0,\"type\":\"sync\",\"boot\":\"laptop\",\"cursor\":0}\n";
+            a.proto->feed(sync, strlen(sync), 0);
+            a.app = new station::Station(*a.store, a.services);
+        } else if (line[0] == 'S') {
+            for (Node* x : nodes) {
+                const station::Stats& s = x->app->stats();
+                printf("%c stats sent %u delivered %u failed %u received %u rejected %u duplicates %u conflicts %u acks %u confirmed %u live %zu unsent %zu inbox %zu unread %zu\n",
+                       x->name, s.sent, s.delivered, s.failed, s.received, s.rejected, s.duplicates, s.conflicts, s.acksSent, s.confirmed,
+                       x->store->queueLive(), x->store->queueUnsent(), x->store->inboxCount(), x->store->inboxUnread());
+            }
+        } else if (line[0] == 'X') {
+            for (Node* x : nodes) {
+                for (size_t i = 0; i < x->store->queueSize(); ++i) {
+                    const store::QueueEntry* e = x->store->queueEntry(i);
+                    if (!e) continue;
+                    store::QueueRecord r; x->store->queueRead(e->seq, r);
+                    printf("%c queue %u type %u flags %u attempts %u next %u event %u state %u\n", x->name, r.seq, r.type, r.flags, r.attempts, r.nextTryS, r.statusEvent, r.state);
+                }
+            }
+        } else if (sscanf(line, "D %u", &v) == 1) {
+            // Harmonogram ponowień dla kolejnych prób z losową liczbą v.
+            for (unsigned attempts = 0; attempts < 6; ++attempts) printf("%u ", a.app->retryDelayS(static_cast<uint16_t>(attempts), false, 0, v));
+            printf("| %u %u\n", a.app->retryDelayS(1, false, 7 * 3600, v), a.app->retryDelayS(2, true, 0, v));
+        }
+    }
+    for (Node* x : nodes) { delete x->app; delete x->proto; delete x->store; }
+    return 0;
+}
+
 int main(int argc, char** argv) {
     if (argc == 2 && !strcmp(argv[1], "ui")) return uiScript();
+    if (argc == 2 && !strcmp(argv[1], "link")) return linkScript();
     if (argc == 2 && !strcmp(argv[1], "usb")) return usbScript();
     if (argc == 3 && !strcmp(argv[1], "sa1")) {
         sa1::Message m;
@@ -336,7 +462,7 @@ class HostUnitTests(unittest.TestCase):
         subprocess.run([compiler(), "-std=c++17", "-Wall", "-Wextra", "-Werror", f"-I{SRC}", str(root / "harness.cpp"),
                         str(SRC / "testframe.cpp"), str(SRC / "journal.cpp"), str(SRC / "p1frame.cpp"), str(SRC / "ui.cpp"),
                         str(SRC / "font.cpp"), str(SRC / "jsonlite.cpp"), str(SRC / "sa1.cpp"), str(SRC / "store.cpp"),
-                        str(SRC / "usbproto.cpp"), "-o", str(cls.binary)],
+                        str(SRC / "usbproto.cpp"), str(SRC / "station.cpp"), "-o", str(cls.binary)],
                        check=True)
 
     @classmethod
@@ -702,6 +828,83 @@ class HostUnitTests(unittest.TestCase):
         r = self.replies(out)
         self.assertEqual([x["type"] for x in r], ["sync", "rejected", "sync"])
         self.assertEqual(r[1]["reason"], "line too long")
+
+    # --- łącze aplikacyjne --------------------------------------------------
+
+    A = "aa" * 16
+    B = "bb" * 16
+
+    def link(self, script):
+        return subprocess.run([str(self.binary), "link"], input="\n".join(script) + "\n", capture_output=True, text=True,
+                              check=True).stdout.splitlines()
+
+    @staticmethod
+    def usb_replies(out, node):
+        return [json.loads(line[3:]) for line in out if line.startswith(node + "<- ")]
+
+    def usb_submit(self, node, seq, value, to):
+        msg = {"usb": 1, "seq": seq, "type": "submit", "to": to, "id": value[2], "revision": value[3] if value[1] != 4 else 0, "sa1": value}
+        return node + " " + json.dumps(msg, ensure_ascii=False)
+
+    def test_link_request_received_status_and_osp_replay(self):
+        request = [1, 0, self.MID, 0, 2, 10, "Szkoła", "osoba na wózku", 2]
+        received = [1, 1, self.MID, 0, 1, 1]
+        status = [1, 2, self.MID, 0, 2, 2]
+        closed = [1, 2, self.MID, 0, 3, 6]
+        regression = [1, 2, self.MID, 0, 4, 2]
+        out = self.link(['B {"usb":1,"seq":1,"type":"configure","role":"osp"}', self.usb_submit("A", 2, request, self.B),
+                         "T 101", "T 102", "T 103", "S", "X",
+                         self.usb_submit("B", 3, received, self.A), "T 104", "T 105", "T 106", "X",
+                         self.usb_submit("B", 4, status, self.A), "T 107", "T 108", "T 109",
+                         self.usb_submit("B", 5, closed, self.A), "T 110", "T 111", "T 112",
+                         self.usb_submit("B", 7, regression, self.A), "T 113", "T 114", "T 115", "X", "S",
+                         # Powtórzony REQUEST (resend): OSP odpowiada zapisanym RECEIVED i STATUS.
+                         "A " + json.dumps({"usb": 1, "seq": 6, "type": "submit", "to": self.B, "id": self.MID, "revision": 0, "sa1": request, "resend": True}),
+                         "T 116", "T 117", "T 118", "T 119", "T 120", "T 121", "T 122", "T 123", "T 124", "S"])
+        sent = [line for line in out if line.startswith("A-> ") or line.startswith("B-> ")]
+        self.assertTrue(sent[0].startswith('A-> ["WICI",1,"%s","%s",[1,0,' % (self.A, self.B)), sent[0])
+        self.assertEqual(sent[1], 'B-> ["WICI",1,"%s","%s","ack","%s",0,0,0]' % (self.B, self.A, self.MID))
+        incoming = [r for r in self.usb_replies(out, "B") if r["type"] == "incoming"]
+        self.assertEqual(len(incoming), 1)
+        self.assertEqual((incoming[0]["source"], incoming[0]["sa1"]), (self.A, request))
+        events = [r for r in self.usb_replies(out, "A") if r["type"] == "event" and r.get("kind") == "message"]
+        self.assertEqual([e["sa1"] for e in events], [received, status, closed, regression])
+        self.assertIn("A:log Status regression", out)
+        queue_a = [line for line in out if line.startswith("A queue 1 ")]
+        self.assertTrue(queue_a[0].endswith("flags 17 attempts 1 next 703 event 0 state 0"), queue_a[0])  # ACTIVE|SENT, 10 min na RECEIVED
+        self.assertTrue(queue_a[1].endswith("flags 18 attempts 1 next 703 event 1 state 1"), queue_a[1])  # DONE|SENT po RECEIVED
+        self.assertTrue(queue_a[2].endswith("flags 18 attempts 1 next 703 event 3 state 6"), queue_a[2])  # STATUS 3/6; regresja odrzucona
+        stats = [line for line in out if line.startswith("A stats") or line.startswith("B stats")]
+        self.assertEqual(stats[0], "A stats sent 1 delivered 1 failed 0 received 1 rejected 0 duplicates 0 conflicts 0 acks 0 confirmed 0 live 1 unsent 0 inbox 0 unread 0")
+        self.assertEqual(stats[1], "B stats sent 0 delivered 0 failed 0 received 1 rejected 0 duplicates 0 conflicts 0 acks 1 confirmed 0 live 0 unsent 0 inbox 1 unread 1")
+        self.assertEqual(stats[2], "A stats sent 1 delivered 1 failed 0 received 5 rejected 0 duplicates 0 conflicts 0 acks 4 confirmed 3 live 0 unsent 0 inbox 4 unread 4")
+        # Po ponownym REQUEST: B zalicza duplikat, uaktywnia RECEIVED i najnowszy STATUS i nadaje je ponownie; A liczy duplikaty.
+        self.assertEqual(stats[4], "A stats sent 2 delivered 2 failed 0 received 8 rejected 0 duplicates 2 conflicts 0 acks 6 confirmed 3 live 1 unsent 0 inbox 4 unread 4")
+        self.assertEqual(stats[5], "B stats sent 6 delivered 6 failed 0 received 8 rejected 0 duplicates 1 conflicts 0 acks 2 confirmed 6 live 0 unsent 0 inbox 1 unread 1")
+
+    def test_link_loss_retry_schedule_and_untrusted_source(self):
+        request = [1, 0, self.MID, 0, 2, 10, "Szkoła", "", 1]
+        out = self.link(['B {"usb":1,"seq":1,"type":"configure","role":"osp"}', "L 1", self.usb_submit("A", 1, request, self.B),
+                         "T 101", "T 102", "T 160", "T 161", "T 162", "X", "S", "D 0", "D 40",
+                         "L 0", "T 240", "T 241", "T 242", "X", "S",
+                         # Stacja z kartą OSP X odrzuca datagram od B.
+                         'A {"usb":1,"seq":2,"type":"configure","address":"a","osp":"' + "cc" * 16 + '"}',
+                         "B " + json.dumps({"usb": 1, "seq": 3, "type": "submit", "to": self.A, "id": self.MID, "revision": 0, "sa1": [1, 1, self.MID, 0, 1, 1]}),
+                         "T 300", "T 301", "T 302", "S"])
+        queue = [line for line in out if line.startswith("A queue 1 ")]
+        first = int(re.search(r"next (\d+)", queue[0]).group(1))
+        self.assertTrue(queue[0].split(" next ")[0].endswith("flags 1 attempts 1"), queue[0])  # FAILED po 60 s bez ack
+        self.assertTrue(162 + 48 <= first <= 162 + 72, first)                                   # kolejna po 60 s ±20%
+        second = int(re.search(r"next (\d+)", queue[1]).group(1))
+        self.assertTrue(queue[1].split(" next ")[0].endswith("flags 17 attempts 2"), queue[1])  # dostarczona za drugim razem
+        self.assertTrue(242 + 600 + 1800 <= second <= 242 + 600 + 3600, second)                 # 10 min na RECEIVED + 30–60 min
+        self.assertIn("48 48 96 240 720 720 | 2880 1800", out)      # 0,8 x (60, 60, 120, 300, 900, 900); po 6 h 0,8 x 3600; po dostarczeniu 1800
+        self.assertIn("72 72 144 360 1080 1080 | 4320 1840", out)  # 1,2 x ...
+        stats = [line for line in out if line.startswith("A stats")]
+        self.assertTrue(stats[0].startswith("A stats sent 1 delivered 0 failed 1 received 0"))
+        self.assertTrue(stats[1].startswith("A stats sent 2 delivered 1 failed 1 received 1 rejected 0"), stats[1])  # received liczy też ack
+        self.assertTrue(stats[2].startswith("A stats sent 2 delivered 1 failed 1 received 2 rejected 1"), stats[2])
+        self.assertIn("A:log datagram from untrusted source", out)
 
     def test_rejects_bad_lengths(self):
         with self.assertRaises(subprocess.CalledProcessError):

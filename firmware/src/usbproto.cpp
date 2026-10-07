@@ -229,6 +229,7 @@ void Protocol::doSubmit(const json::Value& msg, int64_t seq, uint32_t nowMs) {
     record.type = m.type;
     record.revision = m.type == sa1::BULLETIN ? 0 : m.revision;
     record.event = (m.type == sa1::STATUS || m.type == sa1::REPLY || m.type == sa1::BULLETIN) ? m.event : 0;
+    record.aux = (m.type == sa1::REQUEST || m.type == sa1::TEST) ? m.urgency : 0;
     record.createdS = host_.uptimeS();
     bool resend = false;
     fieldBool(msg, "resend", resend);

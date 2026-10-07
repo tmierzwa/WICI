@@ -81,6 +81,9 @@ public:
     const char* p1send(const uint8_t* data, size_t length);
     void printLink();
     const LinkCounters& link() const { return link_; }
+    // Złożony datagram P1 i koniec nadawania (ok = seria wyszła) dla warstwy aplikacji.
+    void onDatagram(void (*handler)(const uint8_t* data, size_t length, void* context), void* context) { datagramHandler_ = handler; datagramContext_ = context; }
+    void onTxDone(void (*handler)(bool ok, void* context), void* context) { txDoneHandler_ = handler; txDoneContext_ = context; }
     const char* foff(int32_t hz);
     void stop();         // przerwanie zadania i IDLE
     void poll();         // z loop(): nadawanie serii, odbiór ramek, koniec nośnej, kasowanie długu
@@ -168,6 +171,10 @@ private:
 
     Event events_[LOG_ENTRIES];
     size_t eventCount_ = 0;
+    void (*datagramHandler_)(const uint8_t*, size_t, void*) = nullptr;
+    void* datagramContext_ = nullptr;
+    void (*txDoneHandler_)(bool, void*) = nullptr;
+    void* txDoneContext_ = nullptr;
 };
 
 }  // namespace measure

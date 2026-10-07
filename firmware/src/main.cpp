@@ -21,6 +21,7 @@
 #include "p1_registers.h"
 #include "p1frame.h"
 #include "sharp.h"
+#include "station.h"
 #include "store.h"
 #include "ui.h"
 #include "usbproto.h"
@@ -40,7 +41,7 @@ store::Store stationStore(memory);
 Adafruit_USBD_CDC SerialData;    // drugi interfejs CDC: dane (protokół laptop–stacja); Serial = diagnostyka
 bool storeOk = false;
 bool dataWas = false;
-ui::Model station;
+ui::Model screenModel;
 ui::Lines shown;                 // wiersze wysłane na ekran
 bool buttonWas[4] = {};          // stan przycisków po ostatnim odpytaniu (zbocze = naciśnięcie)
 uint32_t buttonPollMs = 0;
@@ -106,6 +107,26 @@ struct BenchHost : usbproto::Host {
 BenchHost host;
 usbproto::Protocol protocol(stationStore, host);
 
+// Usługi warstwy aplikacji: nadawanie przez łącze P1 stanowiska.
+struct BenchServices : station::Services {
+    uint32_t uptimeS() override { return ::uptimeS(); }
+    bool silence() override { return bench.silence; }
+    bool radioReady() override { return radioOk && p1Ok && bench.receiving(); }
+    bool busy() override { return bench.busy(); }
+    bool send(const uint8_t* data, size_t length) override { return bench.p1send(data, length) == nullptr; }
+    void randomBytes(uint8_t* out, size_t count) override { measure::randomBytes(out, count); }
+    void log(const char* text) override { bench.log(text); }
+    bool notify(uint8_t kind, uint32_t ref, const char* fields) override { return protocol.event(kind, ref, fields, millis()); }
+    void address(uint8_t out[store::HASH]) override { host.stationAddress(out); }
+    void changed() override { updateScreen(false); }
+};
+BenchServices services;
+station::Station app(stationStore, services);
+bool linkAuto = true;  // LINK 0 zatrzymuje nadawanie z kolejki (próby ręczne P1TX)
+
+void onDatagram(const uint8_t* data, size_t length, void*) { if (storeOk) app.received(data, length); }
+void onTxDone(bool ok, void*) { app.txDone(ok); }
+
 // Zdarzenie stanu radia do laptopa (cisza, tryb przygotowania).
 void radioEvent() {
     char fields[96];
@@ -123,8 +144,8 @@ void BenchHost::setSilence(bool on) {
 const char* langName(ui::Lang lang) { return lang == ui::Lang::PL ? "PL" : lang == ui::Lang::UK ? "UK" : "EN"; }
 
 void retain() {
-    retained.lang = static_cast<uint8_t>(station.language());
-    retained.screen = static_cast<uint8_t>(station.screen());
+    retained.lang = static_cast<uint8_t>(screenModel.language());
+    retained.screen = static_cast<uint8_t>(screenModel.screen());
     retained.magic = RETAINED_MAGIC;
     retained.check = ~RETAINED_MAGIC;
 }
@@ -145,6 +166,9 @@ ui::Status screenStatus() {
     s.queued = storeOk ? stationStore.queueLive() : 0;
     s.queueAgeS = found && uptimeS() > oldest ? uptimeS() - oldest : 0;
     s.newMessages = storeOk ? stationStore.inboxUnread() : 0;
+    s.queued = storeOk ? stationStore.queueUnsent() : 0;  // najstarsze niewysłane: bez potwierdzenia łącza
+    const uint32_t oldestUnsent = storeOk ? stationStore.queueOldestUnsentS(found) : 0;
+    s.queueAgeS = found && uptimeS() > oldestUnsent ? uptimeS() - oldestUnsent : 0;
     s.rxOk = c.rxOk;
     s.rxBad = c.rxBad;
     s.txDatagrams = c.txDatagrams;
@@ -161,7 +185,7 @@ ui::Status screenStatus() {
 // Rysuje tylko zmienione wiersze i wysyła je na ekran.
 void updateScreen(bool force) {
     ui::Lines lines;
-    station.render(screenStatus(), lines);
+    screenModel.render(screenStatus(), lines);
     for (size_t i = 0; i < ui::LINES; ++i) {
         if (force || strcmp(lines.text[i], shown.text[i]) || lines.inverted[i] != shown.inverted[i]) {
             display.drawLine(static_cast<uint8_t>(i), lines.text[i], lines.inverted[i]);
@@ -172,7 +196,7 @@ void updateScreen(bool force) {
 }
 
 void printScreen() {
-    Serial.printf("{\"screen\":\"%s\",\"lang\":\"%s\",\"lines\":[", ui::screenName(station.screen()), langName(station.language()));
+    Serial.printf("{\"screen\":\"%s\",\"lang\":\"%s\",\"lines\":[", ui::screenName(screenModel.screen()), langName(screenModel.language()));
     for (size_t i = 0; i < ui::LINES; ++i) {
         Serial.print('"');
         for (const char* p = shown.text[i]; *p; ++p) {
@@ -208,10 +232,10 @@ const char* BenchHost::stationName() { return ::stationName; }
 
 // Zapis języka i ekranu w FRAM i w pamięci niezerowanej po każdej zmianie.
 void persistScreen() {
-    if (!station.takeChange()) return;
+    if (!screenModel.takeChange()) return;
     retain();
-    if (journalOk && !stationJournal.writeSettings(static_cast<uint32_t>(station.language()) + 1,
-                                                   static_cast<uint32_t>(station.screen()))) {
+    if (journalOk && !stationJournal.writeSettings(static_cast<uint32_t>(screenModel.language()) + 1,
+                                                   static_cast<uint32_t>(screenModel.screen()))) {
         journalOk = false;
         ledWrite(board::LED_FRAM, false);
     }
@@ -224,10 +248,10 @@ void beginScreen() {
     const journal::SmallRecord& saved = stationJournal.settings();
     const ui::Lang savedLang = journalOk && saved.a >= 1 && saved.a <= ui_texts::LANGS ? static_cast<ui::Lang>(saved.a - 1) : ui::Lang::PL;
     if (retained.magic == RETAINED_MAGIC && retained.check == ~RETAINED_MAGIC && retained.lang < ui_texts::LANGS) {
-        station.restore(static_cast<ui::Lang>(retained.lang), static_cast<ui::Screen>(retained.screen));
+        screenModel.restore(static_cast<ui::Lang>(retained.lang), static_cast<ui::Screen>(retained.screen));
         bench.log("screen restored after restart");
     } else {
-        station.start(savedLang);
+        screenModel.start(savedLang);
     }
     retain();
     updateScreen(true);
@@ -238,7 +262,7 @@ void pollButtons(uint32_t now) {
     buttonPollMs = now;
     for (size_t i = 0; i < 4; ++i) {
         const bool is = pressed(buttons[i]);
-        if (is && !buttonWas[i]) station.press(static_cast<ui::Button>(i), now);
+        if (is && !buttonWas[i]) screenModel.press(static_cast<ui::Button>(i), now);
         buttonWas[i] = is;
     }
 }
@@ -333,7 +357,7 @@ void printInfo() {
                   boolName(bench.silence), boolName(radioOk), boolName(p1Ok), boolName(framOk), boolName(journalOk),
                   static_cast<unsigned long>(journalResets), static_cast<unsigned long>(p1::CARRIER_HZ), p1::SYMBOL_RATE,
                   p1::DEVIATION_HZ, p1::RX_FILTER_HZ, p1::TX_POWER_DBM, static_cast<unsigned long>(uptimeS()),
-                  static_cast<unsigned long>(millis() / 1000), ui::screenName(station.screen()), langName(station.language()),
+                  static_cast<unsigned long>(millis() / 1000), ui::screenName(screenModel.screen()), langName(screenModel.language()),
                   stationName, static_cast<unsigned long>(readResetReason()), boolName(storeOk),
                   static_cast<unsigned>(storeOk ? stationStore.queueLive() : 0), static_cast<unsigned>(storeOk ? stationStore.inboxCount() : 0),
                   static_cast<unsigned>(storeOk ? stationStore.notesPending() : 0), boolName(protocol.isConnected()),
@@ -394,7 +418,7 @@ void printHelp() {
                    "\"PREP <0|1>\",\"SILENCE <0|1>\",\"TXCW <s> [CONDUCTED]\",\"TXPKT <n> <len> [<ms>] [CONDUCTED]\","
                    "\"RX [<len>]\",\"RXPER\",\"FOFF [<hz>]\",\"P1RX\",\"P1TX <hex>\",\"P1\",\"STOP\",\"LOG [<n>]\",\"JOURNAL\",\"BENCH\",\"IDLE\",\"RSSI\",\"STATE\","
                    "\"REG <hex>\",\"FRAM\",\"BTN\",\"LED <1-4> <0|1>\",\"SCREEN\",\"KEY <UP|DOWN|OK|BACK>\",\"DISPLAY\","
-                   "\"VCOM <0|1>\",\"REBOOT\",\"STORE\",\"USB <json>\"]}");
+                   "\"VCOM <0|1>\",\"REBOOT\",\"STORE\",\"USB <json>\",\"APP\",\"LINK <0|1>\"]}");
 }
 
 // Argumenty po poleceniu: do czterech słów; zwraca liczbę słów.
@@ -407,6 +431,18 @@ size_t splitArgs(char* text, char* words[], size_t max) {
 bool lastIsConducted(char* words[], size_t& n) {
     if (n && !strcmp(words[n - 1], "CONDUCTED")) { --n; return true; }
     return false;
+}
+
+void printApp() {
+    const station::Stats& s = app.stats();
+    Serial.printf("{\"link\":%s,\"in_flight\":%lu,\"sent\":%lu,\"delivered\":%lu,\"failed\":%lu,\"received\":%lu,\"rejected\":%lu,"
+                  "\"duplicates\":%lu,\"conflicts\":%lu,\"acks_sent\":%lu,\"confirmed\":%lu,\"live\":%u,\"unsent\":%u,\"next\":%lu}\n",
+                  boolName(linkAuto), static_cast<unsigned long>(app.inFlightSeq()), static_cast<unsigned long>(s.sent),
+                  static_cast<unsigned long>(s.delivered), static_cast<unsigned long>(s.failed), static_cast<unsigned long>(s.received),
+                  static_cast<unsigned long>(s.rejected), static_cast<unsigned long>(s.duplicates), static_cast<unsigned long>(s.conflicts),
+                  static_cast<unsigned long>(s.acksSent), static_cast<unsigned long>(s.confirmed),
+                  static_cast<unsigned>(stationStore.queueLive()), static_cast<unsigned>(stationStore.queueUnsent()),
+                  static_cast<unsigned long>(app.nextToSend(uptimeS())));
 }
 
 void printStore() {
@@ -567,12 +603,14 @@ void handle(char* cmd) {
         size_t index = 0;
         while (index < 4 && strcmp(words[0], names[index])) ++index;
         if (index == 4) { printError("KEY <UP|DOWN|OK|BACK>"); return; }
-        station.press(static_cast<ui::Button>(index), millis());
+        screenModel.press(static_cast<ui::Button>(index), millis());
         persistScreen();
         updateScreen(false);
         printScreen();
     } else if (!strcmp(cmd, "DISPLAY")) printDisplay();
     else if (!strcmp(cmd, "STORE")) printStore();
+    else if (!strcmp(cmd, "APP")) printApp();
+    else if (!strcmp(cmd, "LINK") && n == 1) { linkAuto = atoi(words[0]) != 0; printApp(); }
     else if (!strcmp(cmd, "VCOM") && n == 1) {
         display.softwareVcom(atoi(words[0]) != 0);  // zapasowo, gdy zworka EXTMODE płytki jest niska
         printDisplay();
@@ -634,6 +672,9 @@ void setup() {
     ledWrite(board::LED_FRAM, framOk && journalOk);  // LED3 świeci dopiero z działającym dziennikiem
     storeOk = framOk && stationStore.begin();
     protocol.begin();
+    bench.onDatagram(onDatagram, nullptr);
+    bench.onTxDone(onTxDone, nullptr);
+    if (radioOk && p1Ok) bench.p1rxStart();  // łącze P1 w odbiorze od startu (radio niezależne od ekranu)
     display.begin();
     beginScreen();
     syncButtons();
@@ -673,9 +714,10 @@ void loop() {
         }
     }
     if (radioOk) bench.poll();
+    if (storeOk && linkAuto && radioOk) app.poll(now);
     pollSerial();
     pollButtons(now);
-    station.tick(now);
+    screenModel.tick(now);
     persistScreen();
     static uint32_t lastScreen = 0;
     if (now - lastScreen >= SCREEN_POLL_MS) {

@@ -477,6 +477,7 @@ void Bench::receiveP1() {
                           static_cast<unsigned>(assembler_.completedLength()), fragment.count, rssiDbm);
             for (size_t i = 0; i < assembler_.completedLength(); ++i) Serial.printf("%02X", assembler_.completed()[i]);
             Serial.println("\"}");
+            if (datagramHandler_) datagramHandler_(assembler_.completed(), assembler_.completedLength(), datagramContext_);
         } else {
             Serial.printf("{\"p1rx\":\"%s\",\"index\":%u,\"count\":%u,\"total\":%u,\"rssi_dbm\":%d}\n",
                           p1frame::outcomeName(outcome), fragment.index, fragment.count, fragment.total, rssiDbm);
@@ -608,6 +609,7 @@ void Bench::finishP1Tx(const char* result) {
                   static_cast<unsigned>(txLength_), p1frame::fragmentCount(txLength_), txDeferrals_,
                   static_cast<unsigned long>(millis() - txRequestedMs_), static_cast<unsigned long>(debtRemainingMs()));
     if (rxMode_ != RxMode::P1) enterRx(RxMode::P1, 0);
+    if (txDoneHandler_) txDoneHandler_(!strcmp(result, "sent"), txDoneContext_);
 }
 
 void Bench::printLink() {

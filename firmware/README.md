@@ -1,8 +1,8 @@
 # WICI: oprogramowanie stacji
 
-Katalog zawiera oprogramowanie układowe stacji. Obecny stan to pierwsze kroki na [stanowisku deweloperskim A](../hardware/dev-bench/README.md): nRF52840-DK z modułem TI CC1120EM-868-915 i pamięcią FRAM na złączu Arduino płytki. Środowisko `bench-a` w `platformio.ini` buduje obraz, który po podłączeniu USB zgłasza się poleceniem `INFO` w formacie ze [specyfikacji radia](../docs/spec/radio.md#usb-do-laptopa), identyfikuje układ radiowy i FRAM przez SPI, zapisuje do CC1120 [rejestry profilu P1](#rejestry-profilu-p1) z weryfikacją odczytu i kalibracją syntezera, wykonuje [polecenia pomiarowe](#polecenia-pomiarowe) `TXCW`, `TXPKT`, `RXPER`, `FOFF` ze specyfikacji, prowadzi [dziennik w FRAM](#dziennik-w-fram) (dług ciszy, zegar czasu pracy z liczbą restartów, zdarzenia), obsługuje [łącze P1](#łącze-p1) (odbiór i składanie datagramów, nadawanie z CCA, odroczeniem i długiem ciszy), podaje zaprogramowaną częstotliwość i RSSI, prowadzi [ekran Sharp i menu stacji](#ekran-i-przyciski) na przyciskach płytki (wybór języka, ekran główny, cisza, STAN; EXTCOMIN z licznika RTC2) obsługuje diody płytki oraz udostępnia drugi interfejs CDC z [protokołem USB laptop–stacja](#protokół-usb-laptopstacja) nad kolejką, skrzynką i konfiguracją w FRAM. Nie ma jeszcze stosu Reticulum.
+Katalog zawiera oprogramowanie układowe stacji. Obecny stan to pierwsze kroki na [stanowisku deweloperskim A](../hardware/dev-bench/README.md): nRF52840-DK z modułem TI CC1120EM-868-915 i pamięcią FRAM na złączu Arduino płytki. Środowisko `bench-a` w `platformio.ini` buduje obraz, który po podłączeniu USB zgłasza się poleceniem `INFO` w formacie ze [specyfikacji radia](../docs/spec/radio.md#usb-do-laptopa), identyfikuje układ radiowy i FRAM przez SPI, zapisuje do CC1120 [rejestry profilu P1](#rejestry-profilu-p1) z weryfikacją odczytu i kalibracją syntezera, wykonuje [polecenia pomiarowe](#polecenia-pomiarowe) `TXCW`, `TXPKT`, `RXPER`, `FOFF` ze specyfikacji, prowadzi [dziennik w FRAM](#dziennik-w-fram) (dług ciszy, zegar czasu pracy z liczbą restartów, zdarzenia), obsługuje [łącze P1](#łącze-p1) (odbiór i składanie datagramów, nadawanie z CCA, odroczeniem i długiem ciszy), podaje zaprogramowaną częstotliwość i RSSI, prowadzi [ekran Sharp i menu stacji](#ekran-i-przyciski) na przyciskach płytki (wybór języka, ekran główny, cisza, STAN; EXTCOMIN z licznika RTC2) obsługuje diody płytki oraz udostępnia drugi interfejs CDC z [protokołem USB laptop–stacja](#protokół-usb-laptopstacja) nad kolejką, skrzynką i konfiguracją w FRAM oraz [warstwę aplikacji](#warstwa-aplikacji-nad-p1) nadającą intencje z kolejki przez P1 i przyjmującą wiadomości do skrzynki. Nie ma jeszcze stosu Reticulum: datagram ma zastępczy format bez podpisu.
 
-Obraz skompilowano (PlatformIO, rdzeń Adafruit nRF52 1.7.0, 49 296 B RAM, 156 356 B flash; z tego bufor ekranu 12 000 B RAM, indeksy magazynu FRAM około 12 KB RAM i bitmapa fontu 21 840 B flash). **Nie uruchomiono go na sprzęcie**: odpowiedzi poleceń, numery pinów, działanie SPI z modułem i przyjęcie rejestrów przez układ wymagają sprawdzenia na płytce według kroków niżej.
+Obraz skompilowano (PlatformIO, rdzeń Adafruit nRF52 1.7.0, 49 940 B RAM, 164 116 B flash; z tego bufor ekranu 12 000 B RAM, indeksy magazynu FRAM około 12 KB RAM i bitmapa fontu 21 840 B flash). **Nie uruchomiono go na sprzęcie**: odpowiedzi poleceń, numery pinów, działanie SPI z modułem i przyjęcie rejestrów przez układ wymagają sprawdzenia na płytce według kroków niżej.
 
 ## Okablowanie stanowiska A
 
@@ -93,6 +93,8 @@ Port USB nRF (J3, nie port J-Link J2) zgłasza się jako urządzenie z dwoma int
 | `REBOOT` | restart programowy; ekran i język wracają jak po restarcie przez watchdog |
 | `STORE` | magazyn FRAM: konfiguracja (rola, adres, OSP, frazy), kolejka, skrzynka, zdarzenia bez `ack`, liczniki protokołu |
 | `USB <wiersz JSON>` | wiersz protokołu danych podany przez port diagnostyki (próby z jednym terminalem); odpowiedź idzie na port danych, a gdy jest zamknięty, na diagnostykę |
+| `APP` | warstwa aplikacji: intencja w drodze, liczniki nadanych, dostarczonych, nieudanych, odebranych, odrzuconych, duplikatów, potwierdzeń łącza, następna intencja do nadania |
+| `LINK <0\|1>` | zatrzymanie i wznowienie nadawania z kolejki (próby ręczne `P1TX` przy zatrzymanym) |
 
 Warunek przejścia kroku 6 z [lekcji R02](../hardware/r02/lekcje.md#uruchomienie): `RADIO` daje `ready: true`, `partnumber: 0x48` i stan `IDLE`; `FRAM` daje `fujitsu: true`. Bez modułu `partnumber` wynosi `0xFF` albo `0x00`, a `ready` jest `false`. Po starcie obraz sam zapisuje i kalibruje P1; LED2 świeci dopiero, gdy `RADIO` daje `ok: true` i `p1_ok: true`. Po otwarciu portu obraz wysyła też wynik `VERIFY` i `FREQ`.
 
@@ -208,8 +210,16 @@ Kontrakt: [specyfikacja oprogramowania](../docs/spec/oprogramowanie.md#protokó�
 
 Każde polecenie trafia do dziennika zdarzeń (`LOG`). Wiersz dłuższy niż 1024 B jest odrzucany w całości, niepełny wiersz sprzed zamknięcia portu również. Bez konfiguracji OSP (`configure` z `osp`) stacja przyjmuje `submit` do dowolnego `to`, bo stanowisko nie ma jeszcze kart.
 
+## Warstwa aplikacji nad P1
+
+Kod w `src/station.cpp` (bez zależności od Arduino; `tests/test_firmware_host.py` łączy dwie stacje w symulowanym eterze ze stratami i sprawdza przebieg REQUEST → RECEIVED → STATUS, regresję stanu, powtórzony REQUEST i źródło spoza zaufania). Po starcie łącze P1 jest w odbiorze (`P1RX`), a kolejka nadaje sama, chyba że `LINK 0`.
+
+- **Datagram zastępczy.** Bez Reticulum i LXMF wiadomość idzie jako `["WICI",1,"<od>","<do>",<SA1>]`, a potwierdzenie łącza jako `["WICI",1,"<od>","<do>","ack","<id>",revision,typ,event]`; adresy to 32 cyfry szesnastkowe (na stanowisku z identyfikatora układu). Nie ma podpisu, szyfrowania ani IFAC: format służy wyłącznie próbom przepływu i czasu na stanowisku i znika w T3 razem ze stosem. Odbiorca potwierdza także duplikat.
+- **Kolejność i ponawianie** ([specyfikacja](../docs/spec/oprogramowanie.md#trwałość-i-potwierdzenia)): RECEIVED i STATUS, potem REPLY i BULLETIN, REQUEST z pilnością 2, pozostałe REQUEST według czasu zapisu, na końcu TEST; jedna intencja w drodze. Brak potwierdzenia łącza w 60 s od końca serii = FAILED: kolejne próby po 1, 2, 5 i 15 min ±20%, po 6 h co 60 min. Potwierdzenie łącza = DELIVERED: REQUEST i TEST czekają 10 min na RECEIVED, potem ponawiają co 30–60 min; RECEIVED, STATUS, REPLY i BULLETIN są po dostarczeniu zakończone. RECEIVED, STATUS (przez `status_after`) albo REPLY od OSP kończy ponawianie pary (id, revision) i zapisuje najwyższy event w pamięci kluczy.
+- **Odbiór.** Rola stacji przyjmuje RECEIVED, STATUS, REPLY i BULLETIN tylko od aktywnej tożsamości OSP z konfiguracji (bez karty: od każdego, bo stanowisko nie ma jeszcze kluczy), STATUS dla nieznanego id ignoruje; rola OSP przyjmuje REQUEST i TEST. Każda nowa wiadomość trafia do skrzynki i jako `event` (stacja) albo `incoming` (OSP) do laptopa; `nowe_krotki` na ekranie liczy nieprzeczytane. Powtórzony REQUEST lub TEST o znanym kluczu: stacja OSP nadaje ponownie zapisany RECEIVED i najnowszy STATUS.
+- **Ekran.** `kolejka_krotki` liczy intencje bez potwierdzenia łącza i wiek najstarszej.
+
 ## Następne kroki
 
-1. Łącze aplikacyjne na stanowisku: intencje z kolejki nadawane datagramami P1 do stacji OSP i z powrotem (bez Reticulum: zastępczy format datagramu), odbiór do skrzynki, `event`/`incoming` do laptopa, ponawianie według specyfikacji.
-2. Kreator ZGŁOSZENIE, WIADOMOŚCI i TEST na ekranie; alarmy; watchdog.
+1. Kreator ZGŁOSZENIE, WIADOMOŚCI i TEST na ekranie; alarmy; watchdog.
 3. microReticulum i LXMF na tym samym projekcie (T3) z pomiarem zapasu RAM; środowisko `bench-b` dla ESP32-S3-DevKitC-1 z S2-LP.

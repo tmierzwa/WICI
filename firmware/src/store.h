@@ -65,6 +65,7 @@ struct QueueRecord {
     uint8_t id[HASH] = {};
     char sa1[sa1::MAX_CONTENT + 1] = {};
     uint16_t sa1Length = 0;
+    uint8_t aux = 0;            // pilność (REQUEST, TEST) do kolejności nadawania
     // część zmienna
     uint8_t flags = ACTIVE;
     uint16_t attempts = 0;
@@ -104,6 +105,7 @@ struct QueueEntry {
     uint32_t seq = 0;
     uint32_t createdS = 0;
     uint8_t type = 0;
+    uint8_t aux = 0;
     uint8_t flags = 0;
     uint16_t revision = 0;
     uint32_t event = 0;
@@ -148,6 +150,8 @@ public:
     bool queueUpdate(const QueueRecord& record);  // zapis części zmiennej
     size_t queueLive() const;                      // intencje bez DONE/REPLACED/CANCELLED
     uint32_t queueOldestActiveS(bool& found) const;  // czas utworzenia najstarszej żywej intencji
+    size_t queueUnsent() const;                      // aktywne bez potwierdzenia dostarczenia (SENT)
+    uint32_t queueOldestUnsentS(bool& found) const;
     size_t queueSize() const { return QUEUE_SLOTS; }
     const QueueEntry* queueEntry(size_t slot) const { return queue_[slot].seq ? &queue_[slot] : nullptr; }
     const QueueEntry* queueFind(const uint8_t to[HASH], uint8_t type, const uint8_t id[HASH], uint16_t revision, uint32_t event) const;
