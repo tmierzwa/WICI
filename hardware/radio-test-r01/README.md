@@ -1,10 +1,12 @@
-# WICI R01.3: prototyp interfejsu radiowego
+# WICI R01.3: stanowisko laboratoryjne P1
 
 **Status: HOLD. Nie zamawiać PCB ani montażu całego modemu.**
 
+W wersji 0.5 R01.3 nie jest kontrolerem stacji: STM32F103 ma za mało pamięci na stos Reticulum. Kontroler służy jako stanowisko do pomiarów profilu P1 w próbie T4: ramki, czułość, emisje, dług ciszy i próby mieszane TI–ST. Stacja to płytka R02 z [wymagań w specyfikacji elektroniki](../../docs/spec/elektronika.md). Kontrakt USB/KISS stanowiska opisuje [specyfikacja radia](../../docs/spec/radio.md).
+
 Przegląd elektryczny wskazał problem USB suspend: Y1 ma stale włączony zegar, więc parametry katalogowe nie gwarantują dotrzymania pełnego budżetu prądu. Przed wykonaniem potrzebne są poprawiona rewizja i odbiór całego modemu. [Warunki przed zamówieniem](przed-produkcja.md).
 
-Repozytorium zawiera edytowalne pliki kontrolera USB w KiCad. Tor radiowy CC1120 jest osobnym modułem opartym na referencji TI. Do testu między dwiema stacjami potrzeba dwóch kontrolerów i dwóch modułów RF.
+Repozytorium zawiera edytowalne pliki kontrolera USB w KiCad. Tor radiowy CC1120 jest osobnym modułem opartym na referencji TI. Do próby między dwoma stanowiskami potrzeba dwóch kontrolerów i dwóch modułów RF.
 
 | Plik | Zawartość |
 |---|---|
