@@ -18,7 +18,7 @@ SEGMENTS = [
         "Brakuje wody. Ktoś potrzebuje leków.",
     ]),
     ("s1d", [
-        "Kilka kilometrów dalej są gmina i straż, które mogłyby pomóc.",
+        "Kilka kilometrów dalej są służby, które mogłyby pomóc.",
         "Tylko skąd ma o tym wiedzieć?",
     ]),
     ("s2a", [
@@ -69,7 +69,7 @@ SEGMENTS = [
     ]),
     ("s5c", [
         "Tutaj robi to każda stacja.",
-        "Odbiera wiadomość od sąsiada i podaje ją dalej, aż dotrze do gminy.",
+        "Odbiera wiadomość od sąsiada i podaje ją dalej, aż dotrze do służb.",
     ]),
     ("s5d", [
         "Ale cudów nie ma.",
@@ -130,7 +130,7 @@ SEGMENTS = [
     ("s9a", [
         "Szukamy krótkofalowców i elektroników, którzy znają radio i anteny.",
         "Programistów.",
-        "Ludzi ze straży i z gmin, którzy wiedzą, jak naprawdę wygląda kryzys.",
+        "Ludzi ze służb, którzy wiedzą, jak naprawdę wygląda kryzys.",
     ]),
     ("s9b", [
         "I każdego, kto ma okno, dach albo piwnicę, i chce pomóc sprawdzić, jak to działa naprawdę.",

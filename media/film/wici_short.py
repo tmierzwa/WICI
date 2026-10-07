@@ -46,7 +46,7 @@ class Short(WICI):
                   ("at", 1),
                   ([VGroup(houses, ground).animate.set_opacity(0.25), FadeIn(ph, shift=UP * 0.4)], 0.8),
                   ([LaggedStart(*[FadeOut(b) for b in reversed(ph.bars)], lag_ratio=0.4)], 1.0),
-                  (Write(nosig), 0.5))
+                  (FadeIn(nosig), 0.5))
         self.clear_all(0.3)
 
     def shelter(self):
@@ -57,7 +57,7 @@ class Short(WICI):
         need = VGroup(VGroup(drop(), T("woda", 30, WATER)).arrange(RIGHT, buff=0.2),
                       VGroup(pill(), T("leki", 30, ALERT)).arrange(RIGHT, buff=0.2)).arrange(RIGHT, buff=0.8)
         need.next_to(school[1], UP, buff=0.35)
-        osp = building(2.0, 1.3, ALERT, "gmina", door=True)
+        osp = building(2.0, 1.3, ALERT, "służby", door=True)
         osp.shift(UP * (0.35 - osp[1].get_top()[1]))
         link = DashedLine(school.body.get_bottom() + DOWN * 0.75, osp[1].get_top() + UP * 0.2,
                           stroke_color=GREY_B, dash_length=0.12)
@@ -68,7 +68,7 @@ class Short(WICI):
                   ([FadeIn(need, shift=DOWN * 0.3, lag_ratio=0.4)], 0.8),
                   ("at", 1),
                   ([FadeIn(osp, shift=UP * 0.3), Create(link), FadeIn(km)], 1.0),
-                  (Write(q), 0.5))
+                  (FadeIn(q), 0.5))
         self.clear_all(0.3)
 
     def title(self):
@@ -100,7 +100,7 @@ class Short(WICI):
         waves = VGroup(*[Arc(radius=0.3 * i, start_angle=PI / 4, angle=PI / 2, stroke_color=RADIO, stroke_width=4)
                          .move_arc_center_to(ant.get_end()) for i in (1, 2, 3)])
         self.narr("v3",
-                  ([FadeIn(card), Write(head), LaggedStart(*[FadeIn(r) for r in rows], lag_ratio=0.3)], 1.0),
+                  ([FadeIn(card), FadeIn(head), LaggedStart(*[FadeIn(r) for r in rows], lag_ratio=0.3)], 1.0),
                   ([ReplacementTransform(VGroup(card, head, rows), small)], 0.9),
                   (FadeIn(lbl, shift=UP * 0.2), 0.4),
                   ("at", 1),
@@ -124,7 +124,7 @@ class Short(WICI):
                 g.add(T(label, 28, color).next_to(g[0], side, buff=0.25))
             return g
 
-        A, OSP = node("A", ACCENT, "schronienie"), node("OSP", ALERT, "gmina", LEFT)
+        A, OSP = node("A", ACCENT, "schronienie"), node("OSP", ALERT, "służby", LEFT)
         rng = Circle(radius=R, stroke_color=RADIO, stroke_width=2, fill_color=RADIO, fill_opacity=0.07).move_to(pos["A"])
         rng_l = T("około 1 km?", 30, RADIO).move_to(pos["A"] + np.array([-0.5, 1.05, 0]))
         mids = {n: node(n, RADIO) for n in ("B", "C")}
@@ -146,7 +146,7 @@ class Short(WICI):
                     for a, b in zip(chain, chain[1:])],
                   (Create(check(0.45).next_to(OSP[1], DR, buff=0.2)), 0.3),
                   ("at", 2),
-                  (Write(word), 0.7))
+                  (FadeIn(word), 0.7))
         self.clear_all(0.3)
 
     def station(self):
@@ -192,7 +192,7 @@ class Short(WICI):
         todo = VGroup(T("?", 44, ACCENT, weight=HEAVY), T("niesprawdzone w terenie", 40, WHITE)).arrange(RIGHT, buff=0.3)
         state = VGroup(ok, todo).arrange(DOWN, aligned_edge=LEFT, buff=0.4).move_to(UP * 4.6)
         chips = VGroup()
-        for name in ["krótkofalowcy", "elektronicy", "programiści", "gminy i straż"]:
+        for name in ["krótkofalowcy", "elektronicy", "programiści", "służby"]:
             t = T(name, 30, WHITE)
             box = RoundedRectangle(width=3.5, height=0.9, corner_radius=0.22, stroke_color=RADIO, stroke_width=3)
             chips.add(VGroup(box, t.move_to(box)))
@@ -206,5 +206,5 @@ class Short(WICI):
 
         motto = T("Rozsyłamy wici.", 60, ACCENT, font=SERIF).move_to(UP * 3.4)
         url = T("github.com/tmierzwa/WICI", 40, WHITE, weight=SEMIBOLD).move_to(UP * 1.9)
-        self.narr("v7", ([Write(url)], 1.0), ("at", 1), (Write(motto), 0.8))
+        self.narr("v7", ([FadeIn(url)], 1.0), ("at", 1), (FadeIn(motto), 0.8))
         self.wait(1.0)
