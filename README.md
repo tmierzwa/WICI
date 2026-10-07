@@ -1,6 +1,6 @@
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="media/logo/WICI-na-ciemnym.svg"><img src="media/logo/WICI-na-jasnym.svg" alt="WICI" width="320"></picture></p>
 
-# Łączność awaryjna, gdy milkną telefony
+<h1 align="center">Łączność awaryjna, gdy milkną telefony</h1>
 
 Gdy przez wiele godzin nie ma prądu, zasięgu komórkowego ani internetu, ludzie w schronieniu nie mają jak powiedzieć gminie, że potrzebują lekarza, wody albo transportu. WICI to otwarty, społeczny projekt prostej stacji radiowej, która pozwala przekazać takie zgłoszenie i dostać odpowiedź.
 
