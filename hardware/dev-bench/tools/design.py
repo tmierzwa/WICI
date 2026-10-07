@@ -63,7 +63,7 @@ def part(ref, lib_id, value, footprint, nets, place, *, mpn='', manufacturer='',
 # Rotation 90 turns a vertical 1xN socket so its pins run to +x, 270 to -x.
 STACK = dict(mpn='Adafruit 85', manufacturer='Adafruit',
              spec='gniazdo przelotowe Arduino R3 z długimi pinami (stacking), 2,54 mm',
-             note='zestaw 1x10, 2x 1x8, 1x6; piny od spodu wchodzą w gniazda nRF52840-DK')
+             note='jeden zestaw na J1-J4 (1x10, 2x 1x8, 1x6); piny od spodu wchodzą w gniazda nRF52840-DK')
 part('J1', 'Connector_Generic:Conn_01x08', 'ARDUINO POWER',
      'Connector_PinSocket_2.54mm:PinSocket_1x08_P2.54mm_Vertical',
      {4: '+3V3', 5: '+5V', 6: 'GND', 7: 'GND'}, (*uno(27.94, 2.54), 90),
@@ -74,7 +74,7 @@ part('J2', 'Connector_Generic:Conn_01x06', 'ARDUINO A0-A5',
      (*uno(50.8, 2.54), 90), **STACK)
 part('J3', 'Connector_Generic:Conn_01x08', 'ARDUINO D0-D7',
      'Connector_PinSocket_2.54mm:PinSocket_1x08_P2.54mm_Vertical',
-     {1: 'BTN_UP', 2: 'BTN_DOWN', 3: 'BUZZER', 4: 'SPI_SCK', 5: 'LCD_CS',
+     {1: 'BTN_UP', 2: 'BTN_DOWN', 3: 'BUZZER', 4: 'SPI_SCK_DK', 5: 'LCD_CS',
       7: 'LCD_EXTCOMIN', 8: 'RF_RESET'},
      (*uno(63.5, 50.8), 270), **STACK)
 part('J4', 'Connector_Generic:Conn_01x10', 'ARDUINO D8-SCL',
@@ -92,22 +92,22 @@ part('J9', 'Connector_Generic:Conn_02x10_Odd_Even', 'CC1120EM P1',
       18: 'SPI_MOSI', 19: 'GND', 20: 'SPI_MISO'}, (*EM_P1, 0), **EM)
 part('J10', 'Connector_Generic:Conn_02x10_Odd_Even', 'CC1120EM P2',
      'Connector_PinHeader_1.27mm:PinHeader_2x10_P1.27mm_Vertical',
-     {2: 'GND', 7: '+3V3', 9: '+3V3', 15: 'RF_RESET', 18: 'RF_GPIO3'}, (*EM_P2, 0), **EM)
+     {2: 'GND', 7: '+3V3_RF', 9: '+3V3_RF', 15: 'RF_RESET', 18: 'RF_GPIO3'}, (*EM_P2, 0), **EM)
 
 DEVKIT = dict(mpn='PPTC221LFBN-RC', manufacturer='Sullins',
               spec='gniazdo żeńskie 1x22, 2,54 mm, proste, THT', variant='B',
               note='ESP32-S3-DevKitC-1 wpina się od góry; pin 1 od strony anteny')
 part('J5', 'Connector_Generic:Conn_01x22', 'DEVKITC J1',
      'Connector_PinSocket_2.54mm:PinSocket_1x22_P2.54mm_Vertical',
-     {1: '+3V3_DEVKIT', 2: '+3V3_DEVKIT', 5: 'VTEST', 6: 'BTN_PREP', 7: 'LCD_CS',
+     {1: '+3V3_DEVKIT', 2: '+3V3_DEVKIT', 4: 'RF_GPIO2', 5: 'VTEST', 6: 'BTN_PREP', 7: 'LCD_CS',
       8: 'BUZZER', 9: 'LCD_DISP', 10: 'LCD_EXTCOMIN', 11: 'LED_ALARM', 12: 'FRAM_CS',
-      15: 'RF_RESET', 16: 'RF_CS', 17: 'SPI_MOSI', 18: 'SPI_SCK', 19: 'SPI_MISO',
+      15: 'RF_RESET', 16: 'RF_CS', 17: 'SPI_MOSI', 18: 'SPI_SCK_DEVKIT', 19: 'SPI_MISO',
       20: 'RF_GPIO0', 21: '+5V_DEVKIT', 22: 'GND'},
      (DEVKIT_J1_X, DEVKIT_PIN1_Y, 0), **DEVKIT)
 part('J6', 'Connector_Generic:Conn_01x22', 'DEVKITC J3',
      'Connector_PinSocket_2.54mm:PinSocket_1x22_P2.54mm_Vertical',
      {1: 'GND', 4: 'SW_CISZA', 5: 'BTN_BACK', 6: 'RF_GPIO3', 7: 'BTN_UP', 8: 'BTN_DOWN',
-      9: 'BTN_OK', 17: 'RF_GPIO2', 18: 'RF_GPIO1', 21: 'GND', 22: 'GND'},
+      9: 'BTN_OK', 18: 'RF_GPIO1', 21: 'GND', 22: 'GND'},
      (DEVKIT_J3_X, DEVKIT_PIN1_Y, 0), **DEVKIT)
 
 part('J7', 'Connector_Generic:Conn_01x09', 'SHARP 4694',
@@ -132,12 +132,17 @@ part('JP1', 'Connector_Generic:Conn_01x02', '3V3 DEVKITC',
      'Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical',
      {1: '+3V3', 2: '+3V3_DEVKIT'}, (89.0, 26.5, 90),
      mpn='61300211121', manufacturer='Würth Elektronik', spec='listwa męska 1x2, 2,54 mm, ze zworką',
-     note='założona tylko w stanowisku B; punkt pomiaru prądu 3,3 V')
+     note='założona tylko w stanowisku B; pomiar prądu 3,3 V')
 part('JP2', 'Connector_Generic:Conn_01x02', '5V DEVKITC',
      'Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical',
      {1: '+5V', 2: '+5V_DEVKIT'}, (70.6, 80.0, 0),
      mpn='61300211121', manufacturer='Würth Elektronik', spec='listwa męska 1x2, 2,54 mm, ze zworką',
-     note='założona tylko w stanowisku B; zasila ekran')
+     note='założona tylko w stanowisku B; zasila ekran, pomiar prądu 5 V')
+part('JP3', 'Connector_Generic:Conn_01x02', '3V3 RADIO A',
+     'Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical',
+     {1: '+3V3', 2: '+3V3_RF'}, (147.0, 67.0, 90),
+     mpn='61300211121', manufacturer='Würth Elektronik', spec='listwa męska 1x2, 2,54 mm, ze zworką',
+     note='założona w stanowisku A (zasila CC1120EM); amperomierz zamiast zworki mierzy prąd radia')
 part('J12', 'Connector:Screw_Terminal_01x02', 'VTEST 0-15V',
      'TerminalBlock_Phoenix:TerminalBlock_Phoenix_MKDS-1,5-2-5.08_1x02_P5.08mm_Horizontal',
      {1: 'VTEST_IN', 2: 'GND'}, (150.0, 92.0, 0),
@@ -152,7 +157,7 @@ for ref, label, net, cx in BUTTONS:
          spec='przycisk 12x12 mm z wysuniętym popychaczem, nasadka Omron B32-1310',
          note='pady 1 wspólne (12,5 mm), pady 2 wspólne; zestyk między grupami 1 i 2')
 part('SW5', 'Switch:SW_SPDT', 'CISZA', 'WICI:Toggle_ESwitch_100SP1T1B4M2QE',
-     {1: 'GND', 2: 'SW_CISZA'}, (14.0, 89.0, 0), mpn='100SP1T1B4M2QE', manufacturer='E-Switch',
+     {1: 'GND', 2: 'SW_COM'}, (14.0, 89.0, 0), mpn='100SP1T1B4M2QE', manufacturer='E-Switch',
      spec='przełącznik dźwigienkowy SPDT ON-NONE-ON, wyprowadzenia PCB 4,70 mm',
      note='zwarte 1-2 = cisza radiowa (SW_CISZA = L); 2-3 = praca')
 part('SW6', 'Switch:SW_Push', 'PRZYGOTOWANIE', 'Button_Switch_THT:SW_TH_Tactile_Omron_B3F-100x',
@@ -167,9 +172,9 @@ part('BZ1', 'Device:Buzzer', 'CEM-1203(42)', 'Buzzer_Beeper:MagneticBuzzer_ProSi
      {1: 'BZ_P', 2: 'BZ_N'}, (46.0, 89.0, 0), mpn='CEM-1203(42)', manufacturer='Same Sky (CUI Devices)',
      spec='brzęczyk magnetyczny 12 mm, sterowany z zewnątrz, 2048 Hz, cewka 42 Ω',
      note='pad 1 = "+"; sprawdzić znak "+" na obudowie przy montażu')
-part('R2', 'Device:R', '10R', R0805, {1: '+3V3', 2: 'BZ_P'}, (46.0, 81.0, 0),
-     mpn='RC0805FR-0710RL', manufacturer='Yageo', spec='10 Ω 1% 0805',
-     note='ogranicza prąd przy stałym stanie wysokim BUZZER do około 55 mA')
+part('R2', 'Device:R', '22R', 'Resistor_SMD:R_1206_3216Metric', {1: '+5V', 2: 'BZ_P'}, (46.0, 81.0, 0),
+     mpn='RC1206FR-0722RL', manufacturer='Yageo', spec='22 Ω 1% 1206, 0,25 W',
+     note='brzęczyk z +5V, nie z szyny radia; około 3,3 V szczytowo na cewce, najwyżej około 75 mA przy stałym stanie wysokim BUZZER')
 part('D2', 'Device:D', '1N4148W', 'Diode_SMD:D_SOD-123', {1: 'BZ_P', 2: 'BZ_N'}, (52.0, 81.0, 180),
      mpn='1N4148W-7-F', manufacturer='Diodes Incorporated', spec='dioda 75 V, SOD-123',
      note='dioda gasząca cewki brzęczyka')
@@ -177,10 +182,26 @@ part('Q1', 'Transistor_BJT:MMBT3904', 'MMBT3904', 'Package_TO_SOT_SMD:SOT-23',
      {1: 'Q_B', 2: 'GND', 3: 'BZ_N'}, (58.0, 84.0, 0), mpn='MMBT3904LT1G', manufacturer='onsemi',
      spec='NPN 40 V 200 mA, SOT-23', note='klucz brzęczyka')
 part('R3', 'Device:R', '1k', R0805, {1: 'BUZZER', 2: 'Q_B'}, (58.0, 79.0, 0),
-     mpn='RC0805FR-071KL', manufacturer='Yageo', spec='1 kΩ 1% 0805')
+     mpn='RC0805FR-071KL', manufacturer='Yageo', spec='1 kΩ 1% 0805', note='rezystor bazy Q1')
 part('R4', 'Device:R', '100k', R0805, {1: 'Q_B', 2: 'GND'}, (63.0, 84.0, 90),
      mpn='RC0805FR-07100KL', manufacturer='Yageo', spec='100 kΩ 1% 0805',
-     note='brzęczyk wyłączony, gdy MCU nie steruje linią')
+     note='Q1 wyłączony, gdy MCU nie steruje linią BUZZER')
+
+part('R16', 'Device:R', '1k', R0805, {1: 'SW_COM', 2: 'SW_CISZA'}, (19.5, 81.0, 0),
+     mpn='RC0805FR-071KL', manufacturer='Yageo', spec='1 kΩ 1% 0805',
+     note='SW_CISZA przez 1 kΩ: wyjście MCU na tej linii nie zwiera się do masy (0,3 V przy ciszy)')
+part('R17', 'Device:R', '33R', R0805, {1: 'SPI_SCK_DK', 2: 'SPI_SCK'}, (158.3, 29.5, 90),
+     mpn='RC0805FR-0733RL', manufacturer='Yageo', spec='33 Ω 1% 0805',
+     note='szeregowy SCK przy złączu Arduino D3: łagodzi zbocza na rozgałęzionej sieci')
+part('R18', 'Device:R', '33R', R0805, {1: 'SPI_SCK_DEVKIT', 2: 'SPI_SCK'}, (79.0, 80.88, 0),
+     mpn='RC0805FR-0733RL', manufacturer='Yageo', spec='33 Ω 1% 0805',
+     note='szeregowy SCK przy GPIO12 DevKitC')
+part('R19', 'Device:R', '2k2', R0805, {1: 'LCD_DISP', 2: 'GND'}, (32.5, 12.0, 0),
+     mpn='RC0805FR-072K2L', manufacturer='Yageo', spec='2,2 kΩ 1% 0805',
+     note='z rezystorem 10 kΩ modułu do jego 3,3 V daje DISP = L (około 0,6 V) do startu MCU')
+part('D3', 'Diode:BAT54S', 'BAT54S', 'Package_TO_SOT_SMD:SOT-23', {1: 'GND', 2: '+3V3', 3: 'VTEST'},
+     (163.5, 87.5, 0), mpn='BAT54SLT1G', manufacturer='onsemi', spec='podwójna dioda Schottky 30 V, SOT-23',
+     note='ogranicza VTEST do zakresu -0,3...+3,6 V przy odwrotnej polaryzacji albo za wysokim napięciu J12')
 
 PULLUPS = [('R5', 'BTN_UP', (14.0, 61.0)), ('R6', 'BTN_DOWN', (30.0, 61.0)),
            ('R7', 'BTN_OK', (46.0, 61.0)), ('R8', 'BTN_BACK', (62.0, 61.0)),
@@ -191,30 +212,43 @@ for ref, net, (x, y) in PULLUPS:
 part('R11', 'Device:R', '10k', R0805, {1: '+3V3', 2: 'RF_CS'}, (148.0, 62.0, 90),
      mpn='RC0805FR-0710KL', manufacturer='Yageo', spec='10 kΩ 1% 0805',
      note='radio niewybrane przed startem MCU')
-part('R12', 'Device:R', '100k', R0805, {1: 'RF_RESET', 2: 'GND'}, (151.0, 62.0, 90),
-     mpn='RC0805FR-07100KL', manufacturer='Yageo', spec='100 kΩ 1% 0805',
+part('R12', 'Device:R', '10k', R0805, {1: 'RF_RESET', 2: 'GND'}, (151.0, 62.0, 90),
+     mpn='RC0805FR-0710KL', manufacturer='Yageo', spec='10 kΩ 1% 0805',
      note='A: CC1120 w resecie do startu MCU; B: S2-LP włączony (SDN = L)')
 part('R13', 'Device:R', '10k', R0805, {1: 'LCD_CS', 2: 'GND'}, (25.0, 12.0, 0),
      mpn='RC0805FR-0710KL', manufacturer='Yageo', spec='10 kΩ 1% 0805',
-     note='CS ekranu jest aktywny stanem wysokim')
-part('R14', 'Device:R', '100k', R0805, {1: 'VTEST_IN', 2: 'VTEST'}, (160.0, 82.0, 0),
-     mpn='RC0805FR-07100KL', manufacturer='Yageo', spec='100 kΩ 1% 0805')
-part('R15', 'Device:R', '20k', R0805, {1: 'VTEST', 2: 'GND'}, (165.0, 82.0, 90),
+     note='ściąga LCD_CS do masy; CS ekranu jest aktywny stanem wysokim')
+part('R14', 'Device:R', '100k', R0805, {1: 'VTEST_IN', 2: 'VTEST'}, (158.5, 82.0, 0),
+     mpn='RC0805FR-07100KL', manufacturer='Yageo', spec='100 kΩ 1% 0805', note='górny rezystor dzielnika VTEST')
+part('R15', 'Device:R', '20k', R0805, {1: 'VTEST', 2: 'GND'}, (163.0, 82.0, 90),
      mpn='RC0805FR-0720KL', manufacturer='Yageo', spec='20 kΩ 1% 0805',
      note='VTEST = VTEST_IN / 6; 15 V daje 2,5 V')
-part('C1', 'Device:C', '10u', C0805, {1: '+3V3', 2: 'GND'}, (148.0, 57.0, 90),
+part('C1', 'Device:C', '10u', C0805, {1: '+3V3_RF', 2: 'GND'}, (148.0, 57.0, 90),
      mpn='CL21A106KAYNNNC', manufacturer='Samsung Electro-Mechanics', spec='10 µF 25 V X5R 0805',
-     note='przy zasilaniu modułu radiowego')
-part('C2', 'Device:C', '100n', C0805, {1: '+3V3', 2: 'GND'}, (151.0, 57.0, 90),
-     mpn='CL21B104KBCNNNC', manufacturer='Samsung Electro-Mechanics', spec='100 nF 50 V X7R 0805')
+     note='+3V3_RF przy module CC1120EM')
+part('C2', 'Device:C', '100n', C0805, {1: '+3V3_RF', 2: 'GND'}, (151.0, 57.0, 90),
+     mpn='CL21B104KBCNNNC', manufacturer='Samsung Electro-Mechanics', spec='100 nF 50 V X7R 0805',
+     note='+3V3_RF przy module CC1120EM')
 part('C3', 'Device:C', '100n', C0805, {1: '+3V3', 2: 'GND'}, (78.0, 25.0, 0),
      mpn='CL21B104KBCNNNC', manufacturer='Samsung Electro-Mechanics', spec='100 nF 50 V X7R 0805',
-     note='przy FRAM')
+     note='+3V3 przy FRAM')
 part('C4', 'Device:C', '10u', C0805, {1: '+5V', 2: 'GND'}, (50.0, 12.0, 0),
      mpn='CL21A106KAYNNNC', manufacturer='Samsung Electro-Mechanics', spec='10 µF 25 V X5R 0805',
-     note='przy wejściu VIN ekranu')
-part('C5', 'Device:C', '100n', C0805, {1: 'VTEST', 2: 'GND'}, (167.5, 82.0, 90),
-     mpn='CL21B104KBCNNNC', manufacturer='Samsung Electro-Mechanics', spec='100 nF 50 V X7R 0805')
+     note='+5V przy wejściu VIN ekranu')
+part('C5', 'Device:C', '100n', C0805, {1: 'VTEST', 2: 'GND'}, (165.5, 82.0, 90),
+     mpn='CL21B104KBCNNNC', manufacturer='Samsung Electro-Mechanics', spec='100 nF 50 V X7R 0805',
+     note='filtr wejścia ADC VTEST')
+
+# Loose items without a footprint, listed in the BOM after the board parts.
+EXTRAS = [
+    ('JP1-JP3', 3, 'Würth Elektronik', '60900213421', 'zworka 2,54 mm', 'A i B',
+     'stanowisko A: JP3; stanowisko B: JP1, JP2'),
+    ('SW1-SW4', 4, 'Omron', 'B32-1310', 'nasadka przycisku B3F, czarna', 'A i B', ''),
+    ('H1-H9', 9, '', '', 'dystans M3 × 12 mm z dwiema śrubami (w H6-H9 nylonowe albo M2,5, łeb ≤4,4 mm)', 'A i B',
+     'stanowisko B stoi na H1-H9; w A dystanse H1, H2, H5 podpierają lewą część płytki'),
+    ('H10-H15', 6, '', '', 'dystans M2,5 z dwiema śrubami, wysokość jak gniazdo z listwą (zmierzyć)', 'A i B',
+     'ekran (4) i FRAM (2)'),
+]
 
 HOLES = [  # ref, x, y, footprint, note
     ('H1', 3.5, 3.5, 'M3'), ('H2', 3.5, 96.5, 'M3'), ('H3', 166.5, 3.5, 'M3'),
@@ -233,22 +267,24 @@ for ref, x, y, size in HOLES:
 
 # Over male headers of the nRF52840-DK below the shield: a notch for P5 (2x3,
 # ICSP position) at Arduino (64.897, 27.94) and, over P20 (1x13) at y 40.64,
-# a band without pads or vias (no exposed copper underneath).
-NOTCH_P5 = (uno(61.5, 32.3)[0], uno(61.5, 32.3)[1], BOARD_W, uno(61.5, 23.6)[1])
+# a band without any copper (pin tips may touch the underside).
+NOTCH_P5 = (uno(61.0, 32.3)[0], uno(61.0, 32.3)[1], BOARD_W, uno(61.0, 23.0)[1])
 SLOT_P20 = (uno(17.0, 42.1)[0], uno(17.0, 42.1)[1], uno(51.0, 39.2)[0], uno(51.0, 39.2)[1])
 
 # Ground pads that DRC reported as starved thermals for the kept routing session.
-SOLID_GND_PADS = [('J6', '1')]
+SOLID_GND_PADS = [('J6', '22')]
 
-POWER_NETS = {'+3V3', '+5V', '+3V3_DEVKIT', '+5V_DEVKIT', 'GND'}
-FLAGS = ['+3V3', '+5V', '+3V3_DEVKIT', '+5V_DEVKIT', 'GND', 'VTEST_IN']
+POWER_NETS = {'+3V3', '+3V3_RF', '+5V', '+3V3_DEVKIT', '+5V_DEVKIT', 'GND'}
+FLAGS = ['+3V3', '+3V3_RF', '+5V', '+3V3_DEVKIT', '+5V_DEVKIT', 'GND', 'VTEST_IN']
+# Signal nets reached from an MCU pin through a series resistor.
+SERIES = {'SPI_SCK': ('SPI_SCK_DK', 'SPI_SCK_DEVKIT')}
 
 # Signal table for documentation: net, Arduino, nRF52840 GPIO, ESP32-S3 GPIO.
 SIGNALS = [
     ('SPI_SCK', 'D3', 'P1.04', 'GPIO12'), ('SPI_MOSI', 'D11', 'P1.13', 'GPIO11'),
     ('SPI_MISO', 'D12', 'P1.14', 'GPIO13'), ('RF_CS', 'A1', 'P0.04', 'GPIO10'),
     ('RF_RESET', 'D7', 'P1.08', 'GPIO9'), ('RF_GPIO0', 'A0', 'P0.03', 'GPIO14'),
-    ('RF_GPIO1', 'A2', 'P0.28', 'GPIO21'), ('RF_GPIO2', 'A3', 'P0.29', 'GPIO47'),
+    ('RF_GPIO1', 'A2', 'P0.28', 'GPIO21'), ('RF_GPIO2', 'A3', 'P0.29', 'GPIO4'),
     ('RF_GPIO3', 'A5', 'P0.31', 'GPIO42'), ('FRAM_CS', 'D9', 'P1.11', 'GPIO8'),
     ('LCD_CS', 'D4', 'P1.05', 'GPIO7'), ('LCD_EXTCOMIN', 'D6', 'P1.07', 'GPIO17'),
     ('LCD_DISP', 'D8', 'P1.10', 'GPIO16'), ('LED_ALARM', 'D10', 'P1.12', 'GPIO18'),
@@ -282,9 +318,10 @@ def check():
         for pin, net in p['nets'].items():
             nets.setdefault(net, []).append((p['ref'], int(pin)))
     for net, ard, _nrf, gpio in SIGNALS:
+        members = [m for n in (net, *SERIES.get(net, ())) for m in nets[n]]
         conn = ARDUINO_PIN[ard]
-        assert conn in nets[net], (net, ard)
-        on_devkit = [DEVKIT_GPIO[c] for c in nets[net] if c[0] in ('J5', 'J6')]
+        assert conn in members, (net, ard)
+        on_devkit = [DEVKIT_GPIO[c] for c in members if c[0] in ('J5', 'J6')]
         assert on_devkit == [gpio], (net, on_devkit, gpio)
     for net, members in nets.items():
         assert len(members) >= 2, ('single-pin net', net, members)
@@ -292,7 +329,7 @@ def check():
         for pin in PARTS[[p['ref'] for p in PARTS].index(ref)]['nets']:
             assert DEVKIT_GPIO[(ref, int(pin))] not in {
                 'GPIO0', 'GPIO3', 'GPIO45', 'GPIO46', 'GPIO19', 'GPIO20', 'GPIO43', 'GPIO44',
-                'GPIO38', 'GPIO48', 'GPIO35', 'GPIO36', 'GPIO37'}
+                'GPIO38', 'GPIO48', 'GPIO35', 'GPIO36', 'GPIO37', 'GPIO47'}
     return nets
 
 

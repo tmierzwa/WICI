@@ -24,7 +24,7 @@ TOGGLE = '''(footprint "Toggle_ESwitch_100SP1T1B4M2QE"
  (fp_rect (start -6.35 -3.43) (end 6.35 3.43) (stroke (width 0.1) (type solid)) (fill none) (layer "F.Fab"))
  (fp_rect (start -6.47 -3.55) (end 6.47 3.55) (stroke (width 0.12) (type solid)) (fill none) (layer "F.SilkS"))
  (fp_rect (start -6.85 -3.95) (end 6.85 3.95) (stroke (width 0.05) (type solid)) (fill none) (layer "F.CrtYd"))
- (fp_text user "1" (at -4.7 2.4 0) (layer "F.SilkS") (effects (font (size 0.8 0.8) (thickness 0.12))))
+ (fp_text user "1" (at -4.7 2.4 0) (layer "F.SilkS") (effects (font (size 1.0 1.0) (thickness 0.15))))
  (pad "1" thru_hole rect (at -4.7 0) (size 2.8 2.8) (drill 1.85) (layers "*.Cu" "*.Mask"))
  (pad "2" thru_hole circle (at 0 0) (size 2.8 2.8) (drill 1.85) (layers "*.Cu" "*.Mask"))
  (pad "3" thru_hole circle (at 4.7 0) (size 2.8 2.8) (drill 1.85) (layers "*.Cu" "*.Mask"))

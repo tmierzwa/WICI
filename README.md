@@ -18,7 +18,7 @@ Projekt jest na etapie **projektu prototypu (wersja 0.5)**. Mamy:
 - [koncepcję](https://tmierzwa.github.io/WICI/);
 - specyfikację stacji;
 - model obliczeniowy z testami;
-- projekt płytki do pomiarów radia.
+- projekt płytki nośnej stanowiska deweloperskiego (N1) i rozpoczęty projekt płytki stacji R02.
 
 Nie zbudowaliśmy jeszcze stacji ani nie przeprowadziliśmy prób w terenie, więc to jeszcze nie jest urządzenie do użycia.
 
@@ -48,7 +48,7 @@ Dobrym początkiem jest lista zadań w [CONTRIBUTING.md](CONTRIBUTING.md#od-czeg
 | [docs/spec](docs/README.md) | Specyfikacja stacji, warunki odbioru i lista części |
 | [firmware](firmware/README.md) | Oprogramowanie stacji: pierwsze kroki na stanowisku A (nRF52840-DK, CC1120EM, FRAM, polecenia USB) |
 | [software/reference](software/reference/README.md) | Model wiadomości i potwierdzeń z testami; obliczenia zasięgu, energii i czasu nadawania |
-| [hardware](hardware/r02/README.md) | Projekt płytki stacji R02 (rozpoczęty, z lekcjami z poprzedniego kontrolera) i [stanowisko deweloperskie](hardware/dev-bench/README.md) z płytek rozwojowych |
+| [hardware](hardware/r02/README.md) | Projekt płytki stacji R02 (rozpoczęty, z lekcjami z poprzedniego kontrolera) i [stanowisko deweloperskie](hardware/dev-bench/README.md) z płytek rozwojowych i płytką nośną N1 |
 | [media/film](media/film/README.md) | Dwa filmy o projekcie: około 4,5 min i 60 s |
 | [media/logo](media/logo/README.md) | Znak WICI i ikony |
 | [tools](docs/development.md) | Kontrola repozytorium i tworzenie paczki źródłowej |

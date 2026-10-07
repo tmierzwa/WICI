@@ -12,7 +12,7 @@ from pathlib import Path
 import sys
 import uuid
 
-from design import PARTS, FLAGS, SIGNALS, ARDUINO_PIN, DEVKIT_GPIO, check
+from design import PARTS, FLAGS, SIGNALS, SERIES, ARDUINO_PIN, DEVKIT_GPIO, EXTRAS, check
 from sexpr import Atom as A, parse, dump, children, child, walk
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -62,10 +62,10 @@ def effects(size=1.27, hide=False, justify=None):
 # Schematic grid: groups in columns, top to bottom (mm, multiples of 2.54).
 GROUPS = [
     ['J1', 'J2', 'J3', 'J4'],
-    ['J5', 'J6', 'JP1', 'JP2'],
-    ['J9', 'J10', 'C1', 'C2', 'R11', 'R12', 'J11'],
-    ['J7', 'C4', 'R13', 'J8', 'C3', 'J12', 'R14', 'R15', 'C5'],
-    ['SW1', 'SW2', 'SW3', 'SW4', 'SW5', 'SW6', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10'],
+    ['J5', 'J6', 'JP1', 'JP2', 'R17', 'R18'],
+    ['J9', 'J10', 'JP3', 'C1', 'C2', 'R11', 'R12', 'J11'],
+    ['J7', 'C4', 'R13', 'R19', 'J8', 'C3', 'J12', 'R14', 'R15', 'C5', 'D3'],
+    ['SW1', 'SW2', 'SW3', 'SW4', 'SW5', 'SW6', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10', 'R16'],
     ['D1', 'R1', 'BZ1', 'R2', 'D2', 'Q1', 'R3', 'R4'],
     ['H%d' % i for i in range(1, 16)],
 ]
@@ -185,8 +185,9 @@ def write_bom():
     rows = [p for p in PARTS if p['bom']]
     groups = {}
     for p in rows:
+        kit = p['mpn'] == 'Adafruit 85'  # one kit covers J1-J4
         groups.setdefault((p['manufacturer'], p['mpn'], p['value'] if p['ref'][0] in 'RC' else '',
-                           p['footprint'], p['variant']), []).append(p)
+                           '' if kit else p['footprint'], p['variant']), []).append(p)
     with (ROOT / 'bom.csv').open('w', newline='', encoding='utf-8') as f:
         w = csv.writer(f)
         w.writerow(['oznaczenia', 'ilość', 'wartość', 'producent', 'MPN', 'specyfikacja', 'footprint',
@@ -194,11 +195,19 @@ def write_bom():
         for key, items in groups.items():
             p = items[0]
             refs = [i['ref'] for i in items]
-            qty = len(items)
-            if p['mpn'] == 'Adafruit 85':
-                qty = 1  # one kit covers J1-J4
-            w.writerow([' '.join(refs), qty, p['value'], p['manufacturer'], p['mpn'], p['spec'],
-                        p['footprint'], {'A': 'A', 'B': 'B', 'AB': 'A i B'}[p['variant']], p['note']])
+            kit = p['mpn'] == 'Adafruit 85'
+            notes = [i['note'] for i in items]
+            if len(set(notes)) > 1:  # one row, several roles: name each part
+                note = '; '.join(f"{i['ref']}: {i['note']}" for i in items if i['note'])
+            else:
+                note = notes[0]
+            w.writerow([' '.join(refs), 1 if kit else len(items),
+                        'ARDUINO' if kit else ' / '.join(dict.fromkeys(i['value'] for i in items)),
+                        p['manufacturer'], p['mpn'], p['spec'],
+                        ' '.join(sorted({i['footprint'] for i in items})) if kit else p['footprint'],
+                        {'A': 'A', 'B': 'B', 'AB': 'A i B'}[p['variant']], note])
+        for refs, qty, manufacturer, mpn, spec, variant, note in EXTRAS:
+            w.writerow([refs, qty, '', manufacturer, mpn, spec, 'bez footprintu', variant, note])
 
 
 def write_connections():
@@ -215,7 +224,7 @@ def write_connections():
     for net, ard, nrf, gpio in SIGNALS:
         c = ARDUINO_PIN[ard]
         dk = next(f'{r}.{n}' for (r, n), g in DEVKIT_GPIO.items() if g == gpio)
-        rest = [m for m in by_net[net] if m not in (f'{c[0]}.{c[1]}', dk)]
+        rest = [m for n in (net, *SERIES.get(net, ())) for m in by_net[n] if m not in (f'{c[0]}.{c[1]}', dk)]
         lines.append(f'| {net} | {ard} ({c[0]}.{c[1]}) | {nrf} | {gpio} ({dk}) | {", ".join(rest)} |')
     lines += ['', '## Wszystkie sieci', '', '| Sieć | Piny |', '|---|---|']
     for net in sorted(by_net):

@@ -8,7 +8,7 @@ Projekt jest prototypem. Zmiany mają upraszczać wykonanie, usuwać zależnoś�
 2. Pracuj w swojej gałęzi. Opisz, co zmienia PR i jak to sprawdzono; wymagane punkty podaje szablon PR.
 3. Parametry i kontrakty stacji zmieniaj w `docs/spec/`. Potrzeby, uzasadnienia, opcje i analizę wykonalności utrzymuj w [docs/concept](docs/concept/index.html). Aktualizuj powiązane wymagania i próby; odróżniaj założenie od pomiaru. Nie twórz drugiej pełnej kopii specyfikacji.
 4. Zmiana kodu kontraktów wymaga przypadku, który pokazuje problem, i wyniku odpowiednich testów. Raport aktualizuj dopiero po ich wykonaniu.
-5. Zmiana CAD płytki R02 wymaga aktualnych raportów ERC/DRC i dowodów w `checks/` według [opisu projektu](hardware/r02/README.md) i [lekcji](hardware/r02/lekcje.md). Zmiana elektryczna wymaga nowej rewizji. Nie zmieniaj historycznych raportów na wyniki nowych prób.
+5. Zmiana CAD płytki R02 wymaga aktualnych raportów ERC/DRC i dowodów w `checks/` według [opisu projektu](hardware/r02/README.md) i [lekcji](hardware/r02/lekcje.md). Zmiana elektryczna wymaga nowej rewizji. Nie zmieniaj historycznych raportów na wyniki nowych prób. Zmiana płytki nośnej N1 idzie przez `hardware/dev-bench/tools/design.py` i generatory, z nowymi `checks/erc.json` i `checks/drc.json`; plików w `cad/` nie poprawia się ręcznie.
 6. Raport z prób fizycznych podaje rewizję, elementy, warunki, metodę i wynik; użyj szablonu „Raport z próby”. Nie oznaczaj niewykonanych prób jako zaliczonych. Sam CI nie zwalnia statusu HOLD. Raporty zostają w Issues z etykietą `próba`; po przyjęciu opiekun repozytorium wpisuje wynik w kolumnie „Stan” [odbioru](docs/spec/odbior.md) z odnośnikiem do Issue. Propozycję rozstrzygnięcia decyzji zgłasza się szablonem „Decyzja”.
 
 ## Od czego zacząć

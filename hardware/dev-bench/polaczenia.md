@@ -6,36 +6,37 @@ Plik generuje `tools/make_schematic.py` z `tools/design.py`; nie edytować ręcz
 
 | Sieć | Arduino (złącze.pin) | nRF52840 (A) | ESP32-S3 (B, złącze.pin) | Pozostałe piny sieci |
 |---|---|---|---|---|
-| SPI_SCK | D3 (J3.4) | P1.04 | GPIO12 (J5.18) | J9.16, J7.6, J8.4, J11.2 |
+| SPI_SCK | D3 (J3.4) | P1.04 | GPIO12 (J5.18) | J9.16, J7.6, J8.4, J11.2, R17.2, R18.2, R17.1, R18.1 |
 | SPI_MOSI | D11 (J4.4) | P1.13 | GPIO11 (J5.17) | J9.18, J7.5, J8.6, J11.3 |
 | SPI_MISO | D12 (J4.5) | P1.14 | GPIO13 (J5.19) | J9.20, J8.5, J11.4 |
 | RF_CS | A1 (J2.2) | P0.04 | GPIO10 (J5.16) | J9.14, J11.5, R11.2 |
 | RF_RESET | D7 (J3.8) | P1.08 | GPIO9 (J5.15) | J10.15, R12.1 |
 | RF_GPIO0 | A0 (J2.1) | P0.03 | GPIO14 (J5.20) | J9.10, J11.8 |
 | RF_GPIO1 | A2 (J2.3) | P0.28 | GPIO21 (J6.18) |  |
-| RF_GPIO2 | A3 (J2.4) | P0.29 | GPIO47 (J6.17) | J9.12, J11.9 |
+| RF_GPIO2 | A3 (J2.4) | P0.29 | GPIO4 (J5.4) | J9.12, J11.9 |
 | RF_GPIO3 | A5 (J2.6) | P0.31 | GPIO42 (J6.6) | J10.18 |
 | FRAM_CS | D9 (J4.2) | P1.11 | GPIO8 (J5.12) | J8.7, J11.6 |
 | LCD_CS | D4 (J3.5) | P1.05 | GPIO7 (J5.7) | J7.4, J11.7, R13.1 |
 | LCD_EXTCOMIN | D6 (J3.7) | P1.07 | GPIO17 (J5.10) | J7.1 |
-| LCD_DISP | D8 (J4.1) | P1.10 | GPIO16 (J5.9) | J7.2 |
+| LCD_DISP | D8 (J4.1) | P1.10 | GPIO16 (J5.9) | J7.2, R19.1 |
 | LED_ALARM | D10 (J4.3) | P1.12 | GPIO18 (J5.11) | R1.1 |
 | BUZZER | D2 (J3.3) | P1.03 | GPIO15 (J5.8) | R3.1 |
 | BTN_UP | D0 (J3.1) | P1.01 | GPIO41 (J6.7) | SW1.1, R5.2 |
 | BTN_DOWN | D1 (J3.2) | P1.02 | GPIO40 (J6.8) | SW2.1, R6.2 |
 | BTN_OK | SDA (J4.9) | P0.26 | GPIO39 (J6.9) | SW3.1, R7.2 |
 | BTN_BACK | SCL (J4.10) | P0.27 | GPIO2 (J6.5) | SW4.1, R8.2 |
-| SW_CISZA | D13 (J4.6) | P1.15 | GPIO1 (J6.4) | SW5.2, R9.2 |
+| SW_CISZA | D13 (J4.6) | P1.15 | GPIO1 (J6.4) | R16.2, R9.2 |
 | BTN_PREP | AREF (J4.8) | P0.02 | GPIO6 (J5.6) | SW6.1, R10.2 |
-| VTEST | A4 (J2.5) | P0.30 | GPIO5 (J5.5) | R14.2, R15.1, C5.1 |
+| VTEST | A4 (J2.5) | P0.30 | GPIO5 (J5.5) | D3.3, R14.2, R15.1, C5.1 |
 
 ## Wszystkie sieci
 
 | Sieć | Piny |
 |---|---|
-| +3V3 | J1.4, J10.7, J10.9, J7.3, J8.1, JP1.1, R2.1, R5.1, R6.1, R7.1, R8.1, R9.1, R10.1, R11.1, C1.1, C2.1, C3.1 |
+| +3V3 | J1.4, J7.3, J8.1, JP1.1, JP3.1, D3.2, R5.1, R6.1, R7.1, R8.1, R9.1, R10.1, R11.1, C3.1 |
 | +3V3_DEVKIT | J5.1, J5.2, JP1.2 |
-| +5V | J1.5, J7.9, JP2.1, C4.1 |
+| +3V3_RF | J10.7, J10.9, JP3.2, C1.1, C2.1 |
+| +5V | J1.5, J7.9, JP2.1, R2.1, C4.1 |
 | +5V_DEVKIT | J5.21, JP2.2 |
 | BTN_BACK | J4.10, J6.5, SW4.1, R8.2 |
 | BTN_DOWN | J3.2, J6.8, SW2.1, R6.2 |
@@ -46,9 +47,9 @@ Plik generuje `tools/make_schematic.py` z `tools/design.py`; nie edytować ręcz
 | BZ_N | BZ1.2, D2.2, Q1.3 |
 | BZ_P | BZ1.1, R2.2, D2.1 |
 | FRAM_CS | J4.2, J5.12, J8.7, J11.6 |
-| GND | J1.6, J1.7, J4.7, J9.1, J9.19, J10.2, J5.22, J6.1, J6.21, J6.22, J7.7, J8.3, J11.1, J12.2, SW1.2, SW2.2, SW3.2, SW4.2, SW5.1, SW6.2, D1.1, Q1.2, R4.2, R12.2, R13.2, R15.2, C1.2, C2.2, C3.2, C4.2, C5.2 |
+| GND | J1.6, J1.7, J4.7, J9.1, J9.19, J10.2, J5.22, J6.1, J6.21, J6.22, J7.7, J8.3, J11.1, J12.2, SW1.2, SW2.2, SW3.2, SW4.2, SW5.1, SW6.2, D1.1, Q1.2, R4.2, R19.2, D3.1, R12.2, R13.2, R15.2, C1.2, C2.2, C3.2, C4.2, C5.2 |
 | LCD_CS | J3.5, J5.7, J7.4, J11.7, R13.1 |
-| LCD_DISP | J4.1, J5.9, J7.2 |
+| LCD_DISP | J4.1, J5.9, J7.2, R19.1 |
 | LCD_EXTCOMIN | J3.7, J5.10, J7.1 |
 | LED_A | D1.2, R1.2 |
 | LED_ALARM | J4.3, J5.11, R1.1 |
@@ -56,21 +57,24 @@ Plik generuje `tools/make_schematic.py` z `tools/design.py`; nie edytować ręcz
 | RF_CS | J2.2, J9.14, J5.16, J11.5, R11.2 |
 | RF_GPIO0 | J2.1, J9.10, J5.20, J11.8 |
 | RF_GPIO1 | J2.3, J6.18 |
-| RF_GPIO2 | J2.4, J9.12, J6.17, J11.9 |
+| RF_GPIO2 | J2.4, J9.12, J5.4, J11.9 |
 | RF_GPIO3 | J2.6, J10.18, J6.6 |
 | RF_RESET | J3.8, J10.15, J5.15, R12.1 |
 | SPI_MISO | J4.5, J9.20, J5.19, J8.5, J11.4 |
 | SPI_MOSI | J4.4, J9.18, J5.17, J7.5, J8.6, J11.3 |
-| SPI_SCK | J3.4, J9.16, J5.18, J7.6, J8.4, J11.2 |
-| SW_CISZA | J4.6, J6.4, SW5.2, R9.2 |
-| VTEST | J2.5, J5.5, R14.2, R15.1, C5.1 |
+| SPI_SCK | J9.16, J7.6, J8.4, J11.2, R17.2, R18.2 |
+| SPI_SCK_DEVKIT | J5.18, R18.1 |
+| SPI_SCK_DK | J3.4, R17.1 |
+| SW_CISZA | J4.6, J6.4, R16.2, R9.2 |
+| SW_COM | SW5.2, R16.1 |
+| VTEST | J2.5, J5.5, D3.3, R14.2, R15.1, C5.1 |
 | VTEST_IN | J12.1, R14.1 |
 
 ## Złącza
 
 ### J1: ARDUINO POWER
 
-zestaw 1x10, 2x 1x8, 1x6; piny od spodu wchodzą w gniazda nRF52840-DK
+jeden zestaw na J1-J4 (1x10, 2x 1x8, 1x6); piny od spodu wchodzą w gniazda nRF52840-DK
 
 | Pin | Sieć |
 |---:|---|
@@ -85,7 +89,7 @@ zestaw 1x10, 2x 1x8, 1x6; piny od spodu wchodzą w gniazda nRF52840-DK
 
 ### J2: ARDUINO A0-A5
 
-zestaw 1x10, 2x 1x8, 1x6; piny od spodu wchodzą w gniazda nRF52840-DK
+jeden zestaw na J1-J4 (1x10, 2x 1x8, 1x6); piny od spodu wchodzą w gniazda nRF52840-DK
 
 | Pin | Sieć |
 |---:|---|
@@ -98,14 +102,14 @@ zestaw 1x10, 2x 1x8, 1x6; piny od spodu wchodzą w gniazda nRF52840-DK
 
 ### J3: ARDUINO D0-D7
 
-zestaw 1x10, 2x 1x8, 1x6; piny od spodu wchodzą w gniazda nRF52840-DK
+jeden zestaw na J1-J4 (1x10, 2x 1x8, 1x6); piny od spodu wchodzą w gniazda nRF52840-DK
 
 | Pin | Sieć |
 |---:|---|
 | 1 | BTN_UP |
 | 2 | BTN_DOWN |
 | 3 | BUZZER |
-| 4 | SPI_SCK |
+| 4 | SPI_SCK_DK |
 | 5 | LCD_CS |
 | 6 | — |
 | 7 | LCD_EXTCOMIN |
@@ -113,7 +117,7 @@ zestaw 1x10, 2x 1x8, 1x6; piny od spodu wchodzą w gniazda nRF52840-DK
 
 ### J4: ARDUINO D8-SCL
 
-zestaw 1x10, 2x 1x8, 1x6; piny od spodu wchodzą w gniazda nRF52840-DK
+jeden zestaw na J1-J4 (1x10, 2x 1x8, 1x6); piny od spodu wchodzą w gniazda nRF52840-DK
 
 | Pin | Sieć |
 |---:|---|
@@ -167,9 +171,9 @@ moduł CC1120EM-868-915 wpina się od góry; pin 1 od strony SMA modułu
 | 4 | — |
 | 5 | — |
 | 6 | — |
-| 7 | +3V3 |
+| 7 | +3V3_RF |
 | 8 | — |
-| 9 | +3V3 |
+| 9 | +3V3_RF |
 | 10 | — |
 | 11 | — |
 | 12 | — |
@@ -191,7 +195,7 @@ ESP32-S3-DevKitC-1 wpina się od góry; pin 1 od strony anteny
 | 1 | +3V3_DEVKIT (3V3) |
 | 2 | +3V3_DEVKIT (3V3) |
 | 3 | — (EN) |
-| 4 | — (GPIO4) |
+| 4 | RF_GPIO2 (GPIO4) |
 | 5 | VTEST (GPIO5) |
 | 6 | BTN_PREP (GPIO6) |
 | 7 | LCD_CS (GPIO7) |
@@ -205,7 +209,7 @@ ESP32-S3-DevKitC-1 wpina się od góry; pin 1 od strony anteny
 | 15 | RF_RESET (GPIO9) |
 | 16 | RF_CS (GPIO10) |
 | 17 | SPI_MOSI (GPIO11) |
-| 18 | SPI_SCK (GPIO12) |
+| 18 | SPI_SCK_DEVKIT (GPIO12) |
 | 19 | SPI_MISO (GPIO13) |
 | 20 | RF_GPIO0 (GPIO14) |
 | 21 | +5V_DEVKIT (5V) |
@@ -233,7 +237,7 @@ ESP32-S3-DevKitC-1 wpina się od góry; pin 1 od strony anteny
 | 14 | — (GPIO0) |
 | 15 | — (GPIO45) |
 | 16 | — (GPIO48) |
-| 17 | RF_GPIO2 (GPIO47) |
+| 17 | — (GPIO47) |
 | 18 | RF_GPIO1 (GPIO21) |
 | 19 | — (GPIO20) |
 | 20 | — (GPIO19) |
@@ -290,7 +294,7 @@ analizator stanów logicznych (8 kanałów); pin 1 = GND
 
 ### JP1: 3V3 DEVKITC
 
-założona tylko w stanowisku B; punkt pomiaru prądu 3,3 V
+założona tylko w stanowisku B; pomiar prądu 3,3 V
 
 | Pin | Sieć |
 |---:|---|
@@ -299,12 +303,21 @@ założona tylko w stanowisku B; punkt pomiaru prądu 3,3 V
 
 ### JP2: 5V DEVKITC
 
-założona tylko w stanowisku B; zasila ekran
+założona tylko w stanowisku B; zasila ekran, pomiar prądu 5 V
 
 | Pin | Sieć |
 |---:|---|
 | 1 | +5V |
 | 2 | +5V_DEVKIT |
+
+### JP3: 3V3 RADIO A
+
+założona w stanowisku A (zasila CC1120EM); amperomierz zamiast zworki mierzy prąd radia
+
+| Pin | Sieć |
+|---:|---|
+| 1 | +3V3 |
+| 2 | +3V3_RF |
 
 ### J12: VTEST 0-15V
 

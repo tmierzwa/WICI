@@ -6,6 +6,7 @@ export (checks/netlist.xml). Nets, including unconnected pins, come from the
 schematic netlist, so board and schematic cannot disagree on connectivity.
 """
 from pathlib import Path
+import math
 import uuid
 import xml.etree.ElementTree as ET
 
@@ -13,7 +14,7 @@ import pcbnew as k
 
 from make_project import POWER
 
-from design import (PARTS, BOARD_W, BOARD_H, NOTCH_P5, SLOT_P20, EM_P1, EM_W, EM_H, EM_X_U, EM_Y_U,
+from design import (PARTS, BOARD_W, BOARD_H, NOTCH_P5, SLOT_P20, EM_P1, EM_W, EM_H, EM_X_U, EM_Y_U, EM_SMA,
                     LCD_X, LCD_Y, FRAM_X, FRAM_Y, DEVKIT_X, DEVKIT_USB_Y, uno)
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -78,9 +79,11 @@ def build():
     ds.SetBoardThickness(k.FromMM(1.6))
     ds.m_MinClearance = k.FromMM(.2)
     ds.m_TrackMinWidth = k.FromMM(.2)
-    ds.m_ViasMinSize = k.FromMM(.6)
-    ds.m_MinThroughDrill = k.FromMM(.3)
+    ds.m_ViasMinSize = k.FromMM(.8)
+    ds.m_MinThroughDrill = k.FromMM(.4)
     ds.m_CopperEdgeClearance = k.FromMM(.5)
+    # Fabrication files take the lower-left board corner as origin.
+    ds.SetAuxOrigin(pt(0, BOARD_H))
     nl = netlist()
     nets = {}
     for name in sorted(set(nl.values())):
@@ -136,39 +139,71 @@ def build():
     assert pad('J5', 22)[1] == round(DEVKIT_USB_Y - 7.96, 3)
     assert round(pad('J6', 1)[0] - pad('J5', 1)[0], 3) == 22.86
 
-    # Outline with the P5 notch and the P20 slot.
+    # Outline with the P5 notch.
     nx0, ny0, nx1, ny1 = NOTCH_P5
     outline = [(0, 0), (BOARD_W, 0), (BOARD_W, ny0), (nx0, ny0), (nx0, ny1), (BOARD_W, ny1),
                (BOARD_W, BOARD_H), (0, BOARD_H)]
     poly(b, outline, k.Edge_Cuts, .05)
 
-    # Keep tracks and vias 0.7 mm away from the P5 notch (the router treats
-    # only the outer outline as board edge). Over the P20 pin list no vias and
-    # no pads, so the underside there carries only masked tracks.
-    for (x0, y0, x1, y1), tracks in ((NOTCH_P5, False), (SLOT_P20, True)):
+    def keepout(points, fill, layers=None):
         z = k.ZONE(b)
         z.SetIsRuleArea(True)
-        z.SetDoNotAllowTracks(not tracks)
+        z.SetDoNotAllowTracks(True)
         z.SetDoNotAllowVias(True)
-        z.SetDoNotAllowZoneFills(False)
-        z.SetDoNotAllowPads(tracks)
+        z.SetDoNotAllowZoneFills(not fill)
+        z.SetDoNotAllowPads(False)
         z.SetDoNotAllowFootprints(False)
-        z.SetLayerSet(k.LSET.AllCuMask())
+        z.SetLayerSet(layers or k.LSET.AllCuMask())
         o = z.Outline()
         o.NewOutline()
-        for x, y in [(x0 - .7, y0 - .7), (min(x1 + .7, BOARD_W), y0 - .7), (min(x1 + .7, BOARD_W), y1 + .7), (x0 - .7, y1 + .7)]:
+        for x, y in points:
             o.Append(pt(x, y))
         b.Add(z)
 
-    # Module outlines on the fab and silkscreen layers for assembly orientation.
+    # Keep tracks and vias 0.7 mm away from the P5 notch (the router treats
+    # only the outer outline as board edge). Over the P20 pin row no copper on
+    # B.Cu and no vias, because the DK pin tips may touch the underside; F.Cu
+    # tracks there are 1.6 mm of laminate away from the pins.
+    bottom = k.LSET()
+    bottom.AddLayer(k.B_Cu)
+    for (x0, y0, x1, y1), fill, layers in ((NOTCH_P5, True, None), (SLOT_P20, False, bottom)):
+        keepout([(x0 - .7, y0 - .7), (min(x1 + .7, BOARD_W), y0 - .7), (min(x1 + .7, BOARD_W), y1 + .7),
+                 (x0 - .7, y1 + .7)], fill, layers)
+    # No tracks under standoff faces and screw heads (M3 radius 3.3, M2.5 3.0 mm;
+    # Arduino holes 2.6 mm, they take nylon or M2.5 screws with a head of at most 4.4 mm).
+    for p in PARTS:
+        if p['ref'].startswith('H'):
+            hx, hy, _ = p['place']
+            r = {'M2.5': 3.0, 'UNO': 2.6}.get(p['value'], 3.3)
+            keepout([(hx + r * math.cos(i * math.pi / 12), hy + r * math.sin(i * math.pi / 12)) for i in range(24)], True)
+
+    # Module outlines on the fab and silkscreen layers for assembly orientation;
+    # the CC1120EM and the DevKitC also fit rotated by 180 degrees.
     ex, ey = uno(EM_X_U, EM_Y_U + EM_H)
-    poly(b, [(ex, ey), (ex + EM_W, ey), (ex + EM_W, ey + EM_H), (ex, ey + EM_H)], k.F_Fab, .1)
-    poly(b, [(LCD_X, LCD_Y), (LCD_X + 63.5, LCD_Y), (LCD_X + 63.5, LCD_Y + 55.88), (LCD_X, LCD_Y + 55.88)], k.F_Fab, .1)
-    poly(b, [(FRAM_X, FRAM_Y), (FRAM_X + 25.4, FRAM_Y), (FRAM_X + 25.4, FRAM_Y + 17.78), (FRAM_X, FRAM_Y + 17.78)], k.F_Fab, .1)
     dy0 = DEVKIT_USB_Y - 62.865
-    poly(b, [(DEVKIT_X, dy0), (DEVKIT_X + 25.4, dy0), (DEVKIT_X + 25.4, DEVKIT_USB_Y), (DEVKIT_X, DEVKIT_USB_Y)], k.F_Fab, .1)
     ux0, uy0 = uno(0, 53.34)
+    for layer, width in ((k.F_Fab, .1), (k.F_SilkS, .15)):
+        poly(b, [(ex, ey), (ex + EM_W, ey), (ex + EM_W, ey + EM_H), (ex, ey + EM_H)], layer, width)
+        poly(b, [(LCD_X, LCD_Y), (LCD_X + 63.5, LCD_Y), (LCD_X + 63.5, LCD_Y + 55.88), (LCD_X, LCD_Y + 55.88)], layer, width)
+        poly(b, [(FRAM_X, FRAM_Y), (FRAM_X + 25.4, FRAM_Y), (FRAM_X + 25.4, FRAM_Y + 17.78), (FRAM_X, FRAM_Y + 17.78)], layer, width)
+        g = .6 if layer == k.F_SilkS else 0  # silk clear of the socket outlines
+        poly(b, [(DEVKIT_X - g, dy0), (DEVKIT_X + 25.4 + g, dy0), (DEVKIT_X + 25.4 + g, DEVKIT_USB_Y),
+                 (DEVKIT_X - g, DEVKIT_USB_Y)], layer, width)
     poly(b, [(ux0, uy0), (BOARD_W - .3, uy0), (BOARD_W - .3, uy0 + 53.34), (ux0, uy0 + 53.34)], k.F_Fab, .1)
+    # SMA position of the CC1120EM: a circle on the silkscreen.
+    c = k.PCB_SHAPE(b)
+    c.SetShape(k.SHAPE_T_CIRCLE)
+    c.SetCenter(pt(*EM_SMA))
+    c.SetEnd(pt(EM_SMA[0] + 3.0, EM_SMA[1]))
+    c.SetLayer(k.F_SilkS)
+    c.SetWidth(k.FromMM(.15))
+    b.Add(c)
+    # 50 mm scale bar below the outline for checking the 1:1 print.
+    sy = BOARD_H + 6
+    line(b, (0, sy), (50, sy), k.Dwgs_User, .3)
+    for x in (0, 10, 20, 30, 40, 50):
+        line(b, (x, sy - (1.5 if x in (0, 50) else .8)), (x, sy), k.Dwgs_User, .2)
+    text(b, 'skala: 50 mm przy wydruku 1:1', 25, sy + 2.5, 1.5, layer=k.Dwgs_User)
     b.BuildConnectivity()
     return b, fps
 
@@ -177,24 +212,24 @@ def silkscreen(b, fps):
     """Assembly and variant texts; reference designators in free space."""
     texts = [
         ('WICI płytka nośna N1', 34, 97.4, 1.2, True),
-        ('A: nRF52840-DK pod spodem, CC1120EM w J9/J10, JP1 JP2 zdjęte', 134, 6.0, .9, False),
-        ('B: DevKitC w J5/J6, X-NUCLEO-S2868A2 w J1-J4, JP1 JP2 założone', 134, 8.4, .9, False),
-        ('NIGDY OBA MCU ANI OBA RADIA NARAZ', 134, 12.0, 1.1, True),
+        ('A: nRF52840-DK pod spodem, CC1120EM w J9/J10, JP3; JP1 JP2 zdjęte', 134, 5.5, 1.0, False),
+        ('B: DevKitC w J5/J6, X-NUCLEO-S2868A2 w J1-J4, JP1 JP2; JP3 zdjęta', 134, 8.0, 1.0, False),
+        ('NIGDY OBA MCU ANI OBA RADIA NARAZ', 134, 11.5, 1.1, True),
         ('GÓRA', 14, 77.6, 1.0, False), ('DÓŁ', 30, 77.6, 1.0, False),
         ('OK', 46, 77.6, 1.0, False), ('WSTECZ', 62, 77.6, 1.0, False),
-        ('CISZA: 1-2', 14, 93.5, .9, False), ('PRZYGOT.', 28.25, 93.5, .9, False),
-        ('ALARM', 37.3, 93.5, .9, False), ('BRZĘCZYK', 49.25, 96.0, .9, False),
-        ('VTEST 0-15 V', 152.5, 98.6, .9, False),
-        
-        ('GND SCK MOSI MISO RFCS FRCS LCDCS G0 G2', 115.2, 94.8, .8, False),
-        ('CC1120EM: SMA tutaj, pin 1 od strony SMA', 125.6, 48.0, .8, False),
-        ('ESP32-S3-DevKitC-1, USB w dół', 86.2, 33.5, .8, False),
-        ('Sharp 4694', 39.8, 31.0, 1.0, False), ('FRAM 4719', 86.2, 13.0, .9, False),
+        ('CISZA: 1-2', 14, 93.5, 1.0, False), ('PRZYGOT.', 28.25, 93.5, 1.0, False),
+        ('ALARM', 37.3, 93.5, 1.0, False), ('BRZĘCZYK', 49.25, 96.0, 1.0, False),
+        ('VTEST 0-15 V', 139.5, 98.6, 1.0, False), ('+', 150.0, 98.6, 1.0, True), ('GND', 155.6, 98.6, 1.0, False),
+        ('GND SCK MO MI RF FR LCD G0 G2', 115.2, 94.8, 1.0, False),
+        ('CC1120EM (A): SMA w kółku', 125.6, 48.0, 1.0, False),
+        ('DevKitC (B): USB w dół', 86.2, 33.5, 1.0, False), ('USB', 86.2, 96.6, 1.0, True),
+        ('Sharp 4694', 39.8, 31.0, 1.0, False), ('FRAM 4719', 86.2, 13.0, 1.0, False),
     ]
     for s, x, y, size, bold in texts:
         text(b, s, x, y, size, bold=bold)
-    text(b, 'JP1 3V3 (B)', 92.8, 24.0, .8)
-    text(b, 'JP2 5V (B)', 68.3, 81.3, .8, angle=90)
+    text(b, 'JP1 3V3 (B)', 92.8, 24.0, 1.0)
+    text(b, 'JP2 5V (B)', 68.0, 81.3, 1.0, angle=90)
+    text(b, 'JP3 RADIO (A)', 148.3, 71.2, 1.0)
     boxes = []
 
     def box(item):
@@ -203,7 +238,8 @@ def silkscreen(b, fps):
     for f in fps.values():
         q = f.GetBoundingBox(False)
         boxes.append(tuple(k.ToMM(z) for z in (q.GetLeft(), q.GetTop(), q.GetRight(), q.GetBottom())))
-    boxes.extend(box(d) for d in b.GetDrawings() if isinstance(d, k.PCB_TEXT))
+    boxes.extend(box(d) for d in b.GetDrawings()
+                 if isinstance(d, k.PCB_TEXT) or (isinstance(d, k.PCB_SHAPE) and d.GetLayer() == k.F_SilkS))
     # Cut-outs and module windows count as occupied for designator text.
     for x0, y0, x1, y1 in (NOTCH_P5,):
         boxes.append((OX + x0 - .5, OY + y0 - .5, OX + x1 + .5, OY + y1 + .5))

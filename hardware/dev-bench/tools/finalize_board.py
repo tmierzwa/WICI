@@ -10,54 +10,10 @@ import sys
 
 import pcbnew as k
 
-from design import BOARD_W, BOARD_H, NOTCH_P5, SLOT_P20, SOLID_GND_PADS
+from design import BOARD_W, BOARD_H, SOLID_GND_PADS
 
 ROOT = Path(__file__).resolve().parents[1]
 OX, OY = 30.0, 30.0
-
-
-def stitch(b, gnd, step=4.0, via=.8, drill=.4, gap=.35):
-    """Ground vias on a grid wherever they keep clearance to all copper,
-    holes and edges, so the two pours do not split into islands."""
-    def seg_dist(p, a, z):
-        ax, ay, zx, zy, px, py = a.x, a.y, z.x, z.y, p[0], p[1]
-        dx, dy = zx - ax, zy - ay
-        L = dx * dx + dy * dy
-        t = 0 if L == 0 else max(0, min(1, ((px - ax) * dx + (py - ay) * dy) / L))
-        return ((ax + t * dx - px) ** 2 + (ay + t * dy - py) ** 2) ** .5
-    r = k.FromMM(via / 2 + gap)
-    tracks = [(t.GetStart(), t.GetEnd(), t.GetWidth() / 2) for t in b.GetTracks()]
-    blocks = []
-    for f in b.GetFootprints():
-        for pd in f.Pads():
-            q = pd.GetBoundingBox()
-            blocks.append((q.GetLeft(), q.GetTop(), q.GetRight(), q.GetBottom()))
-        if not f.GetReference().startswith(('J', 'H')):
-            q = f.GetCourtyard(k.F_CrtYd).BBox() if f.GetCourtyard(k.F_CrtYd).OutlineCount() else f.GetBoundingBox(False)
-            blocks.append((q.GetLeft(), q.GetTop(), q.GetRight(), q.GetBottom()))
-    for x0, y0, x1, y1 in (NOTCH_P5, SLOT_P20):
-        blocks.append((k.FromMM(OX + x0 - 1), k.FromMM(OY + y0 - 1), k.FromMM(OX + x1 + 1), k.FromMM(OY + y1 + 1)))
-    n = 0
-    y = 2.0
-    while y < BOARD_H - 1.9:
-        x = 2.0
-        while x < BOARD_W - 1.9:
-            p = (k.FromMM(OX + x), k.FromMM(OY + y))
-            ok = all(seg_dist(p, a, z) > w + r for a, z, w in tracks)
-            ok = ok and not any(l - r < p[0] < rr + r and t - r < p[1] < bb + r for l, t, rr, bb in blocks)
-            if ok:
-                v = k.PCB_VIA(b)
-                v.SetPosition(k.VECTOR2I(*p))
-                v.SetWidth(k.FromMM(via))
-                v.SetDrill(k.FromMM(drill))
-                v.SetViaType(k.VIATYPE_THROUGH)
-                v.SetLayerPair(k.F_Cu, k.B_Cu)
-                v.SetNet(gnd)
-                b.Add(v)
-                n += 1
-            x += step
-        y += step
-    print(n, 'stitching vias')
 
 
 def main(ses):

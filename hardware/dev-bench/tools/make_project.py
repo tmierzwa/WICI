@@ -2,7 +2,7 @@
 """Write the KiCad project file and the explicit design rules of the carrier.
 
 Rules are within common two-layer prototype capability (0.2 mm spacing,
-0.25 mm tracks, 0.8/0.4 mm vias); the fabricator's limits are confirmed in
+0.25 mm tracks, 0.8/0.4 mm vias, 0.4 mm minimum hole); the fabricator's limits are confirmed in
 przed-produkcja.md before an order.
 """
 import json
@@ -10,7 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 NAME = 'plytka-nosna'
-POWER = ['+3V3', '+5V', '+3V3_DEVKIT', '+5V_DEVKIT', 'GND', 'BZ_P', 'BZ_N']
+POWER = ['+3V3', '+3V3_RF', '+5V', '+3V3_DEVKIT', '+5V_DEVKIT', 'GND', 'BZ_P', 'BZ_N']
 
 
 def netclass(name, track, priority):
@@ -28,9 +28,11 @@ def main():
                          'silk_line_width': 0.12, 'silk_text_size_h': 1.0, 'silk_text_size_v': 1.0,
                          'silk_text_thickness': 0.15},
             'rules': {'min_clearance': 0.2, 'min_copper_edge_clearance': 0.5, 'min_hole_clearance': 0.25,
-                      'min_hole_to_hole': 0.25, 'min_through_hole_diameter': 0.3, 'min_track_width': 0.2,
-                      'min_via_annular_width': 0.15, 'min_via_diameter': 0.6, 'min_silk_clearance': 0.0,
+                      'min_hole_to_hole': 0.25, 'min_through_hole_diameter': 0.4, 'min_track_width': 0.2,
+                      'min_via_annular_width': 0.15, 'min_via_diameter': 0.8, 'min_silk_clearance': 0.0,
                       'min_text_height': 0.8, 'min_text_thickness': 0.12},
+            # KiCad ignores a missing courtyard by default; mechanics drives this board.
+            'rule_severities': {'missing_courtyard': 'error'},
             'track_widths': [0.0, 0.25, 0.4, 0.6], 'via_dimensions': [{'diameter': 0.0, 'drill': 0.0},
                                                                     {'diameter': 0.8, 'drill': 0.4}]}},
         'boards': [], 'libraries': {'pinned_footprint_libs': [], 'pinned_symbol_libs': []},
@@ -46,8 +48,8 @@ def main():
     (ROOT / 'cad' / (NAME + '.kicad_dru')).write_text('''(version 1)
 (rule "N1 copper spacing" (constraint clearance (min 0.2mm)))
 (rule "N1 track width" (constraint track_width (min 0.2mm)))
-(rule "N1 via diameter" (constraint via_diameter (min 0.6mm)))
-(rule "N1 finished hole" (constraint hole_size (min 0.3mm)))
+(rule "N1 via diameter" (constraint via_diameter (min 0.8mm)))
+(rule "N1 finished hole" (constraint hole_size (min 0.4mm)))
 (rule "N1 annular ring" (constraint annular_width (min 0.15mm)))
 (rule "N1 copper to edge" (constraint edge_clearance (min 0.5mm)))
 (rule "N1 thermal spokes" (constraint min_resolved_spokes (min 1)))
