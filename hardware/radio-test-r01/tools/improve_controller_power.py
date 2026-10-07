@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 """Apply the bounded controller power/mechanical revision to the preserved R01.
 
 Input is checks/history/controller-power-input.kicad_pcb, not an arbitrary

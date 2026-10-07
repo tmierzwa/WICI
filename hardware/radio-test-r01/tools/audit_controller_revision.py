@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 """Measure the requested controller revision and export geometry for a 1:1 sheet.
 
 These checks cover routing geometry, fixed USB routes and plane taps. They do

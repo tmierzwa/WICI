@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 """Build and compare archives against an explicit, nonempty file set."""
 
 from pathlib import Path, PurePosixPath

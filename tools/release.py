@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 """Refresh or check the public source manifest and build a source-only ZIP."""
 
 from pathlib import Path
@@ -31,11 +31,17 @@ def tracked_files() -> set[str]:
     return names
 
 
-def check_manifest() -> dict[str, Path]:
-    """Check every source hash and, in a checkout, the exact tracked file set."""
+def check_manifest(strict: bool = True) -> dict[str, Path]:
+    """Check every source hash and, in a checkout, the exact tracked file set.
+
+    A non-strict check is for pull requests: contributors do not refresh the
+    manifest, so the tracked files are checked without comparing their hashes.
+    """
     manifest = json.loads((ROOT / "manifest.json").read_text(encoding="utf-8"))
     if (manifest["project"], manifest["version"], manifest["controller"]) != ("WICI", "0.4-prototype-design", "R01.3"):
         raise ValueError("Unexpected release identity")
+    if not strict:
+        return {name: ROOT / name for name in sorted(tracked_files())}
     files = {name: ROOT / name for name in manifest["files"]}
     validate_names(list(files))
     if "manifest.json" in files:

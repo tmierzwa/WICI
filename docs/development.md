@@ -43,6 +43,8 @@ python3 tools/release.py --source-zip dist/WICI-0.4-source.zip
 
 To źródła, dokumentacja i eksporty. Nie jest to system startowy ani aplikacja stacji. Plik `dist/` nie jest śledzony w Git. Archiwum ma wszystkie pliki manifestu oraz sam manifest, stałe daty i kolejność wpisów. Kontrola porównuje także bajty każdego wpisu. Zgodność identycznych wejść sprawdzają testy; inne wersje narzędzi lub kompresji mogą dać inny hash ZIP.
 
-Po świadomej zmianie źródeł: przejrzyj i dodaj pliki do indeksu Git, wykonaj `python3 tools/release.py --refresh`, następnie pełną kontrolę. Nie używaj `--refresh` do ukrycia niewyjaśnionej różnicy.
+Manifest odświeża opiekun po scaleniu zmian i przed wydaniem: przegląda i dodaje pliki do indeksu Git, wykonuje `python3 tools/release.py --refresh`, a następnie pełną kontrolę. Kontrybutor w PR używa `python3 tools/verify_repository.py --pull-request`, które pomija zgodność `manifest.json`; CI robi to samo dla pull requestów, a pełną kontrolę i paczkę źródłową wykonuje dla gałęzi `main` i tagów. Nie używaj `--refresh` do ukrycia niewyjaśnionej różnicy.
+
+Oznaczenia licencji sprawdza [REUSE](https://reuse.software/): `pipx run reuse==5.0.2 lint`. Nowy plik bez nagłówka SPDX dostaje licencję z [REUSE.toml](../REUSE.toml).
 
 Eksporty KiCad/PDF mogą zawierać czas utworzenia. Pełny ponowny eksport nie obiecuje identycznych bajtów. Sprawdza się geometrię względem CAD, a następnie zapisuje nowe sumy aktualnych plików. Główne pliki edytowalne to `cad/*.kicad_*`; wygenerowany ZIP nie zastępuje źródeł.

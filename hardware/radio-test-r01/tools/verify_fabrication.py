@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 """Compare actual Gerber, Excellon, BOM and placement files to exported PCB data.
 
 Requires gerbonara. The check does not certify assembly rotations, impedance,

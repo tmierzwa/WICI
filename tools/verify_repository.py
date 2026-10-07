@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 """Read-only publication checks: hashes, links, syntax and calculation results."""
 
 from pathlib import Path
@@ -7,6 +7,7 @@ import hashlib
 import html
 import json
 import re
+import argparse
 import subprocess
 import sys
 from urllib.parse import unquote
@@ -39,7 +40,11 @@ def check_links(path: Path, name: str) -> int:
 
 def main() -> None:
     """Reject stale evidence or broken local documentation without refreshing it."""
-    files = check_manifest()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--pull-request", action="store_true",
+                        help="Do not require a refreshed manifest; the maintainer refreshes it")
+    args = parser.parse_args()
+    files = check_manifest(strict=not args.pull_request)
     links = 0
     for name, path in files.items():
         if path.suffix == ".json":

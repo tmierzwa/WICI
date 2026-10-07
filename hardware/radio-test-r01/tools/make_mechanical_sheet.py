@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 """Create an unmirrored 1:1 fit-check PDF from exported PCB pad geometry.
 
 The PDF contains physical-size pads, finished drills, bodies and a 50 mm

@@ -1,0 +1,39 @@
+name: Raport z próby / Test report
+description: Wynik próby fizycznej według docs/spec/odbior.md
+labels: [próba]
+body:
+  - type: input
+    id: test
+    attributes:
+      label: Próba
+      description: Nazwa z tabeli odbioru lub grupa T1–T8
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Konfiguracja
+      description: Rewizja sprzętu i źródeł, BOM wariantu, wersje oprogramowania, host, router, anteny i ich wysokości
+    validations:
+      required: true
+  - type: textarea
+    id: method
+    attributes:
+      label: Warunki i metoda
+      description: Miejsce, temperatura, zasilanie, przyrządy, liczba powtórzeń
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Wynik i surowe dane
+      description: Wynik względem warunku zaliczenia; załącz surowe dane. Nie publikuj kluczy ani danych mieszkańców.
+    validations:
+      required: true
+  - type: dropdown
+    id: verdict
+    attributes:
+      label: Ocena
+      options: [zaliczona, niezaliczona, niepełna]
+    validations:
+      required: true

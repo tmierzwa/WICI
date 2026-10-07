@@ -1,0 +1,30 @@
+name: Zmiana sprzętu / Hardware change
+description: Propozycja zmiany konstrukcji, części lub CAD
+labels: [sprzęt]
+body:
+  - type: input
+    id: module
+    attributes:
+      label: Moduł
+      description: modem, kontroler, wejścia A/B, przetwornica, ładowarka, antena
+    validations:
+      required: true
+  - type: textarea
+    id: change
+    attributes:
+      label: Zmiana i powód
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Dowód i wpływ
+      description: Obliczenia, karty katalogowe, wpływ na drugi wariant dostawcy (W14), BOM i próby odbioru
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Bezpieczeństwo
+      options:
+        - label: Zmiana dotyczy 230 V, ochrony przed przepięciem, akumulatorów lub budżetu nadawania i wymaga przeglądu przez osobę z kwalifikacjami

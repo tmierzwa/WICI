@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 """Record actual CAD check results and bind them to file hashes.
 
 This is an artifact audit, not independent electrical review or a bench test.

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 """Read and write the KiCad/CADSTAR s-expression subset used by this project."""
 import json
 import re

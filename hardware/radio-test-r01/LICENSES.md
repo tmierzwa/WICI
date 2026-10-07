@@ -1,6 +1,6 @@
 # WICI — licencje i pochodzenie kontrolera
 
-Dokładna mapa ścieżek i pełne teksty: [główny LICENSE.md](../../LICENSE.md). Własny kontroler, dane wykonawcze, footprint USB i footprint PPTC: CERN-OHL-P-2.0. Skrypty: GPL-3.0-or-later. README, instrukcja odtwarzania i raporty: CC-BY-4.0.
+Dokładna mapa ścieżek i pełne teksty: [główny LICENSE.md](../../LICENSE.md). Własny kontroler, dane wykonawcze, footprint USB i footprint PPTC: CERN-OHL-P-2.0. Skrypty: MIT. README, instrukcja odtwarzania i raporty: CC-BY-4.0.
 
 Symbole i standardowe footprinty są pod CC-BY-SA-4.0 z wyjątkiem KiCad. Symbole pochodzą z podzbioru oficjalnej biblioteki 9.0.0; Polyfuse, MountingHole i PWR_FLAG dodano z 10.0.6. Footprinty standardowe pochodzą z dystrybucji 10.0.6. Zachowano [licencję, wyjątek i autorstwo społeczności KiCad](cad/KICAD-LIBRARY-LICENSE.md).
 

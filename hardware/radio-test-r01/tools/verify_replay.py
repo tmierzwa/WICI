@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 """Compare a separately regenerated WICI controller with its candidate CAD.
 
 UUIDs and zone-fill cache are excluded. No physical performance is certified.

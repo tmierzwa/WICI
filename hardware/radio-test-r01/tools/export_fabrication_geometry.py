@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 """Export PCB geometry for independent parsing checks of fabrication outputs."""
 from pathlib import Path
 import json,hashlib

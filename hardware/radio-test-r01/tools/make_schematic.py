@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 """Generate an editable schematic from explicit prototype connections.
 
 Library pin geometry comes from KiCad 9.0.0 with the R01.2 fuse, mounting
