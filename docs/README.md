@@ -16,7 +16,7 @@ Specyfikacja stacji 0.5 składa się z pięciu rozdziałów, karty obsługi, ins
 | [Instrukcja opiekuna](spec/instrukcja.md) | Tematy obsługi spoza karty: adres, stany zgłoszenia, alarmy, cisza, energia, poziomy 2–3, przekazanie zmiany, koniec zdarzenia, bezpieczeństwo |
 | [BOM stacji](spec/bom-stacji.csv) | Wymagania minimalne części i kandydaci od dwóch producentów, ze stanem kwalifikacji |
 
-Próby przed płytką R02 wykonuje się na [stanowisku deweloperskim](../hardware/dev-bench/README.md) z płytek rozwojowych i modułów producentów. Kontroler R01.3 ma osobne [źródła i dokumentację sprzętową](../hardware/radio-test-r01/README.md) i jest w archiwum; jego BOM nie zastępuje [BOM całej stacji](spec/bom-stacji.csv). Wyniki obliczeń są w [modelu](../software/reference/README.md).
+Próby przed płytką R02 wykonuje się na [stanowisku deweloperskim](../hardware/dev-bench/README.md) z płytek rozwojowych i modułów producentów. Projekt płytki stacji ma [własny folder](../hardware/r02/README.md) z kolejnością prac i [lekcjami z poprzedniego kontrolera R01.3](../hardware/r02/lekcje.md), którego pliki są w historii Git. Wyniki obliczeń są w [modelu](../software/reference/README.md).
 
 [Narzędzia i tworzenie paczek](development.md). Bieżąca kontrola repozytorium: `tools/verify_repository.py` i CI dla aktualnego commita.
 

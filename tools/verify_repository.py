@@ -8,7 +8,6 @@ import html
 import json
 import re
 import argparse
-import subprocess
 import sys
 from urllib.parse import unquote
 
@@ -65,8 +64,7 @@ def main() -> None:
     for name, digest in record["source_hashes"].items():
         if hashlib.sha256((ROOT / "software/reference" / name).read_bytes()).hexdigest() != digest:
             raise ValueError(f"Reference verification evidence is stale: {name}")
-    subprocess.run([sys.executable, str(ROOT / "hardware/radio-test-r01/tools/check_bundle.py"), "--check"], check=True)
-    print(f"Repository checks passed; {links} local links; hardware HOLD retained")
+    print(f"Repository checks passed; {links} local links")
 
 
 if __name__ == "__main__":

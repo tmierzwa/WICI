@@ -1,6 +1,6 @@
 # WICI: stanowisko deweloperskie
 
-Stanowisko deweloperskie to zestaw kupnych płytek rozwojowych i modułów producentów, na którym powstaje oprogramowanie układowe stacji i wykonuje się próby T1–T4 przed płytką stacji. Pierwszą drukowaną płytką projektu jest płytka stacji [R02](../../docs/spec/elektronika.md#płytka-stacji-r02-wymagania). Własny kontroler [R01.3](../radio-test-r01/README.md) jest w archiwum i nie jest budowany.
+Stanowisko deweloperskie to zestaw kupnych płytek rozwojowych i modułów producentów, na którym powstaje oprogramowanie układowe stacji i wykonuje się próby T1–T4 przed płytką stacji. Pierwszą drukowaną płytką projektu jest płytka stacji [R02](../../docs/spec/elektronika.md#płytka-stacji-r02-wymagania). Wcześniejszy kontroler R01.3 nie jest budowany; jego ustalenia są w [lekcjach R02](../r02/lekcje.md), a pliki w historii Git.
 
 Zasada: do prób nie projektuje się ani nie zamawia własnych płytek. Stanowisko składa się z elementów dostępnych u dystrybutorów, połączonych przewodami, i uruchamia to samo oprogramowanie układowe co stacja, z własnym plikiem opisu płytki (przypisanie wyprowadzeń). Nie ma osobnego oprogramowania stanowiska ani osobnego kontraktu modemu.
 
@@ -39,6 +39,24 @@ Wyniki czułości i emisji ze stanowiska dotyczą toru RF producenta, nie stacji
 
 Polecenia pomiarowe interfejsu diagnostyki (`TXCW`, `TXPKT`, `RXPER`, `FOFF`) działają tylko w trybie przygotowania i są opisane w [specyfikacji radia](../../docs/spec/radio.md#usb-do-laptopa). Czułość przy PER ≤1% wymaga ≥2000 ramek 103 B na punkt, czyli więcej nadawania, niż dopuszcza limit 10% w godzinie; takie serie nadaje się wyłącznie przewodowo do tłumika, po potwierdzeniu przyciskiem na stanowisku, z zapisem w dzienniku. Procedura pomiarów T4 i warunki zaliczenia są w [odbiorze](../../docs/spec/odbior.md).
 
+## Złącza modułu CC1120EM
+
+Stanowisko nie ma własnego CAD: połączenia opisuje tabela, a nie schemat. Mapa złączy P1/P2 modułu TI CC112xEM 868/915 pochodzi z projektu R01.3. Numery są elektrycznymi numerami pinów; złącza są na spodzie modułu, a widok od spodu odwraca obraz. Przed zasilaniem sprawdzić każdą żyłę miernikiem. Długość przewodów do 5 cm w pierwszej próbie, SPI około 1 MHz.
+
+| Sygnał | Złącze modułu TI | Pin CC1120 |
+|---|---|---:|
+| GND | P1.1, P1.19, P2.2 | masa modułu |
+| 3,3 V | P2.7 (P2.9 to ten sam węzeł) | zasilanie modułu |
+| SCK | P1.16 | 8 |
+| MOSI | P1.18 | 7 |
+| MISO | P1.20 | 9 |
+| CS_N | P1.14 | 11 |
+| RESET_N | P2.15 | 2 |
+| GPIO0 / IRQ0 | P1.10 | 10 |
+| GPIO2 / IRQ2 | P1.12 | 4 |
+
+Pozostałych pinów nie wolno traktować jako masy. Adapter BOOST-CCEMADAPTER wyprowadza te same sygnały na złącza BoosterPack; bez adaptera przewody lutuje się do pól złączy EM. Linię RESET_N trzyma się w stanie niskim do czasu startu MCU.
+
 ## Co zostaje z R01.3
 
-Z kontrolera R01.3 przechodzą do R02 tylko wnioski toru RF: dopasowanie według referencji TI, wybór TCXO i budżet błędu, pomiar harmonicznych, ochrona ESD i ocena filtru SAW ([warunki przed zamówieniem](../radio-test-r01/przed-produkcja.md)). Kontroler STM32F103, jego PCB, kontrakt KISS i dziennik w EEPROM nie są używane.
+Z kontrolera R01.3 przechodzą do R02 tylko wnioski toru RF i procesu: dopasowanie i stos według referencji TI, wybór TCXO i budżet błędu, pomiar harmonicznych, ochrona ESD, ocena filtru SAW, zasady layoutu i kontroli ([lekcje R02](../r02/lekcje.md)). Kontroler STM32F103, jego PCB, kontrakt KISS i dziennik w EEPROM nie są używane.

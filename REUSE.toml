@@ -20,27 +20,24 @@ precedence = "closest"
 SPDX-FileCopyrightText = "2026 Tomek Mierzwa and WICI contributors"
 SPDX-License-Identifier = "CERN-OHL-P-2.0"
 
+# Board projects under hardware/<board>/: own design files are CERN-OHL-P-2.0,
+# KiCad library subsets keep their own license, own footprints live in WICI.pretty.
 [[annotations]]
 path = [
-  "hardware/radio-test-r01/cad/radio-usb-controller.*",
-  "hardware/radio-test-r01/cad/*-lib-table",
-  "hardware/radio-test-r01/cad/footprints/WICI.pretty/USB_B_61400416121.kicad_mod",
-  "hardware/radio-test-r01/cad/footprints/WICI.pretty/PPTC_1206_1.8x1.8_Gap1.0.kicad_mod",
-  "hardware/radio-test-r01/bom.csv",
-  "hardware/radio-test-r01/assembly-parts.json",
-  "hardware/radio-test-r01/connections.*",
-  "hardware/radio-test-r01/polaczenia.md",
-  "hardware/radio-test-r01/uruchomienie.md",
-  "hardware/radio-test-r01/przed-produkcja.md",
-  "hardware/radio-test-r01/zmiany-R01-*.md",
-  "hardware/radio-test-r01/schemat.pdf",
-  "hardware/radio-test-r01/mechanika-1-do-1.pdf",
-  "hardware/radio-test-r01/fabrication/**",
-  "hardware/radio-test-r01/checks/history/**",
-  "hardware/radio-test-r01/checks/*.dsn",
-  "hardware/radio-test-r01/checks/*.ses",
-  "hardware/radio-test-r01/checks/schematic.net.xml",
-  "hardware/radio-test-r01/checks/preview/**",
+  "hardware/*/cad/*.kicad_*",
+  "hardware/*/cad/*-lib-table",
+  "hardware/*/bom.csv",
+  "hardware/*/connections.*",
+  "hardware/*/polaczenia.md",
+  "hardware/*/uruchomienie.md",
+  "hardware/*/przed-produkcja.md",
+  "hardware/*/*.pdf",
+  "hardware/*/fabrication/**",
+  "hardware/*/checks/**/*.kicad_pcb",
+  "hardware/*/checks/**/*.dsn",
+  "hardware/*/checks/**/*.ses",
+  "hardware/*/checks/*.xml",
+  "hardware/*/checks/preview/**",
 ]
 precedence = "closest"
 SPDX-FileCopyrightText = "2026 Tomek Mierzwa and WICI contributors"
@@ -48,8 +45,8 @@ SPDX-License-Identifier = "CERN-OHL-P-2.0"
 
 [[annotations]]
 path = [
-  "hardware/radio-test-r01/fabrication/R01.3/README.md",
-  "hardware/radio-test-r01/fabrication/R01.3/NOTICE.md",
+  "hardware/*/fabrication/*/README.md",
+  "hardware/*/fabrication/*/NOTICE.md",
 ]
 precedence = "closest"
 SPDX-FileCopyrightText = "2026 Tomek Mierzwa and WICI contributors"
@@ -57,18 +54,15 @@ SPDX-License-Identifier = "CC-BY-4.0"
 
 [[annotations]]
 path = [
-  "hardware/radio-test-r01/cad/symbols/**",
-  "hardware/radio-test-r01/cad/footprints/**",
+  "hardware/*/cad/symbols/**",
+  "hardware/*/cad/footprints/**",
 ]
 precedence = "closest"
 SPDX-FileCopyrightText = "KiCad Libraries Team and contributors"
 SPDX-License-Identifier = "CC-BY-SA-4.0 WITH KiCad-libraries-exception"
 
 [[annotations]]
-path = [
-  "hardware/radio-test-r01/cad/footprints/WICI.pretty/USB_B_61400416121.kicad_mod",
-  "hardware/radio-test-r01/cad/footprints/WICI.pretty/PPTC_1206_1.8x1.8_Gap1.0.kicad_mod",
-]
+path = "hardware/*/cad/footprints/WICI.pretty/**"
 precedence = "closest"
 SPDX-FileCopyrightText = "2026 Tomek Mierzwa and WICI contributors"
 SPDX-License-Identifier = "CERN-OHL-P-2.0"
@@ -81,19 +75,19 @@ SPDX-License-Identifier = "OFL-1.1"
 
 # Verbatim license texts carry the terms they state.
 [[annotations]]
-path = "hardware/radio-test-r01/fabrication/R01.3/LICENSES/CC-BY-4.0.txt"
+path = "hardware/*/fabrication/*/LICENSES/CC-BY-4.0.txt"
 precedence = "override"
 SPDX-FileCopyrightText = "Creative Commons Corporation"
 SPDX-License-Identifier = "CC-BY-4.0"
 
 [[annotations]]
-path = "hardware/radio-test-r01/fabrication/R01.3/LICENSES/CERN-OHL-P-2.0.txt"
+path = "hardware/*/fabrication/*/LICENSES/CERN-OHL-P-2.0.txt"
 precedence = "override"
 SPDX-FileCopyrightText = "CERN"
 SPDX-License-Identifier = "CERN-OHL-P-2.0"
 
 [[annotations]]
-path = "hardware/radio-test-r01/cad/KICAD-LIBRARY-LICENSE.md"
+path = "hardware/*/cad/KICAD-LIBRARY-LICENSE.md"
 precedence = "override"
 SPDX-FileCopyrightText = "KiCad Libraries Team and contributors"
 SPDX-License-Identifier = "CC-BY-SA-4.0 WITH KiCad-libraries-exception"

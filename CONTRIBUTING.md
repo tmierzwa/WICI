@@ -8,7 +8,7 @@ Projekt jest prototypem. Zmiany mają upraszczać wykonanie, usuwać zależnoś�
 2. Pracuj w swojej gałęzi. Opisz, co zmienia PR i jak to sprawdzono; wymagane punkty podaje szablon PR.
 3. Parametry i kontrakty stacji zmieniaj w `docs/spec/`. Potrzeby, uzasadnienia, opcje i analizę wykonalności utrzymuj w [docs/conception](docs/conception/index.html). Aktualizuj powiązane wymagania i próby; odróżniaj założenie od pomiaru. Nie twórz drugiej pełnej kopii specyfikacji.
 4. Zmiana kodu kontraktów wymaga przypadku, który pokazuje problem, i wyniku odpowiednich testów. Raport aktualizuj dopiero po ich wykonaniu.
-5. Zmiana CAD wymaga aktualnych ERC/DRC, eksportów i kontroli paczki według [procedury odtworzenia](hardware/radio-test-r01/odtworzenie.md). Zmiana elektryczna wymaga nowej rewizji. Nie zmieniaj historycznych raportów na wyniki nowych prób.
+5. Zmiana CAD płytki R02 wymaga aktualnych raportów ERC/DRC i dowodów w `checks/` według [opisu projektu](hardware/r02/README.md) i [lekcji](hardware/r02/lekcje.md). Zmiana elektryczna wymaga nowej rewizji. Nie zmieniaj historycznych raportów na wyniki nowych prób.
 6. Raport z prób fizycznych podaje rewizję, elementy, warunki, metodę i wynik; użyj szablonu „Raport z próby”. Nie oznaczaj niewykonanych prób jako zaliczonych. Sam CI nie zwalnia statusu HOLD. Raporty zostają w Issues z etykietą `próba`; po przyjęciu opiekun repozytorium wpisuje wynik w kolumnie „Stan” [odbioru](docs/spec/odbior.md) z odnośnikiem do Issue. Propozycję rozstrzygnięcia decyzji zgłasza się szablonem „Decyzja”.
 
 ## Od czego zacząć
@@ -19,7 +19,7 @@ Nie ma jeszcze oprogramowania stacji ani płytki R02. Zadania, które można wyk
 2. Uruchomić microReticulum na płytkach rozwojowych nRF52840 i ESP32-S3 i wymienić pakiety z implementacją Reticulum w Pythonie. To pierwsza część T3; w raporcie podaj przypięte commity i zapas RAM.
 3. Opisać i zbudować emulator ograniczeń P1: czas TX, dług ciszy 12×, CCA i kolejka do 4 datagramów ([radio.md](docs/spec/radio.md)).
 4. Dodać do modelu protokół USB laptop–stacja (D17) i dziennik FRAM z długiem ciszy.
-5. Przygotować stanowisko R01.3 do pomiarów P1 (T4) z zasilaczem laboratoryjnym: zamknąć pozostałe pozycje [listy przed zamówieniem](hardware/radio-test-r01/przed-produkcja.md) i dopiero potem je zbudować ([sprzęt](hardware/radio-test-r01/README.md)).
+5. Zbudować [stanowisko deweloperskie](hardware/dev-bench/README.md) A lub B z kupnych płytek i wykonać na nim pierwsze pomiary P1 poleceniami pomiarowymi z [radio.md](docs/spec/radio.md); wynik jest wejściem do projektu płytki [R02](hardware/r02/README.md).
 
 Przed pracą otwórz Issue lub skomentuj istniejące, aby nie dublować wysiłku.
 
@@ -36,7 +36,7 @@ python3 tools/verify_repository.py --pull-request
 **Nie odświeżaj `manifest.json`.** Sumy kontrolne całego repozytorium odświeża opiekun repozytorium po scaleniu i przed wydaniem; w PR prowadziłyby do konfliktów między równoległymi zmianami. Kontrola z `--pull-request` sprawdza wszystko poza zgodnością tego pliku. Dowody związane z treścią zmiany odświeżasz sam:
 
 - zmiana `software/reference/obliczenia.py`: uruchom go, aby zaktualizować `wyniki.json`, a po testach zaktualizuj `weryfikacja.json`;
-- zmiana plików w `hardware/radio-test-r01/`: wykonaj `python3 hardware/radio-test-r01/tools/check_bundle.py`; zmiana eksportów wymaga też `verify_fabrication.py`.
+- zmiana plików w `hardware/r02/`: odśwież raporty i dowody w `checks/` tej rewizji według jej README; nie zmieniaj historycznych raportów.
 
 Nie odświeżaj sum w odpowiedzi na nieznany błąd CI; najpierw ustal, co się zmieniło. Nowy plik musi mieć licencję: nagłówek `SPDX-License-Identifier` albo wpis w [REUSE.toml](REUSE.toml); CI sprawdza to poleceniem `reuse lint`.
 
@@ -65,7 +65,7 @@ Wkład pozostaje pod licencją właściwą dla ścieżki w [LICENSE.md](LICENSE.
 Contributions in English are welcome; documentation stays in Polish, and maintainers will help with translation. In short:
 
 - Open an issue for larger changes; small fixes can go straight to a pull request.
-- Run the three checks above with `--pull-request`. **Do not refresh `manifest.json`**; the maintainer does it after merging. Refresh only the evidence your change affects (calculation results, hardware bundle).
+- Run the three checks above with `--pull-request`. **Do not refresh `manifest.json`**; the maintainer does it after merging. Refresh only the evidence your change affects (calculation results, hardware evidence).
 - Sign off every commit (`git commit -s`, [DCO 1.1](https://developercertificate.org/)). No CLA.
 - Keep assumptions separate from measurements; never mark an unperformed test as passed.
 - Safety-critical parts (230 V inverter, phone over-voltage protection, batteries, transmit budget) need review by a qualified person and stay on HOLD until then.

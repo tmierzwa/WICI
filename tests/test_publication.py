@@ -1,8 +1,7 @@
 # SPDX-License-Identifier: MIT
-"""Regression cases for invalid controller archives and read-only checks."""
+"""Regression cases for invalid source archives and read-only checks."""
 
 from pathlib import Path
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -30,7 +29,7 @@ class ArchiveTests(unittest.TestCase):
         self.source = self.root / "design.txt"
         self.source.write_bytes(b"reviewed geometry")
         self.files = {"design.txt": self.source}
-        self.archive = self.root / "controller.zip"
+        self.archive = self.root / "design.zip"
 
     def test_empty_zip_rejected(self):
         with ZipFile(self.archive, "w"):
@@ -70,24 +69,6 @@ class ArchiveTests(unittest.TestCase):
         write_archive(self.archive, self.files)
         self.assertEqual(first, self.archive.read_bytes())
         verify_archive(self.archive, self.files)
-
-    def test_controller_gate_rejects_empty_zip_without_rewriting(self):
-        project = self.root / "project"
-        hardware = project / "hardware/radio-test-r01"
-        shutil.copytree(ROOT / "hardware/radio-test-r01", hardware,
-                        ignore=shutil.ignore_patterns("reference-private", "__pycache__", "*.kicad_prl"))
-        shutil.copytree(ROOT / "tools", project / "tools", ignore=shutil.ignore_patterns("__pycache__"))
-        status = hardware / "checks/status.json"
-        manifest = hardware / "manifest.sha256.json"
-        before = (status.read_bytes(), manifest.read_bytes())
-        with ZipFile(hardware / "fabrication/wici-controller-R01.3.zip", "w"):
-            pass
-        for options in ([], ["-O"]):
-            result = subprocess.run([sys.executable, *options, str(hardware / "tools/check_bundle.py"), "--check"],
-                                    capture_output=True, text=True)
-            self.assertNotEqual(result.returncode, 0, result.stdout)
-            self.assertIn("Archive must contain", result.stderr)
-            self.assertEqual(before, (status.read_bytes(), manifest.read_bytes()))
 
 
 class DocumentLinkTests(unittest.TestCase):
@@ -156,7 +137,7 @@ class ManifestModeTests(unittest.TestCase):
             subprocess.run(["git", "init", "-q"], cwd=root, check=True)
             (root / "a.md").write_text("new", encoding="utf-8")
             (root / "manifest.json").write_text(
-                '{"format": 2, "project": "WICI", "version": "0.5-prototype-design", "controller": "R01.3",'
+                '{"format": 2, "project": "WICI", "version": "0.5-prototype-design", "board": "R02",'
                 ' "files": {"a.md": "0"}}', encoding="utf-8")
             subprocess.run(["git", "add", "a.md", "manifest.json"], cwd=root, check=True)
             old = release.ROOT

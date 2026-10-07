@@ -1,6 +1,6 @@
 # WICI: projekt stacji
 
-Specyfikacja 0.5 opisuje docelową stację WICI (płytka R02 w dwóch wykonaniach) i zestaw poziomów 1–3, a nie rozwiązanie tymczasowe. Próby przed płytką R02 wykonuje się na stanowisku deweloperskim z płytek rozwojowych i modułów producentów ([radio](radio.md#stanowisko-deweloperskie)); pierwszą drukowaną płytką projektu jest R02, a kontroler R01.3 jest w archiwum. Instrukcje użycia opisują odebrany zestaw, którego jeszcze nie zbudowano.
+Specyfikacja 0.5 opisuje docelową stację WICI (płytka R02 w dwóch wykonaniach) i zestaw poziomów 1–3, a nie rozwiązanie tymczasowe. Próby przed płytką R02 wykonuje się na stanowisku deweloperskim z płytek rozwojowych i modułów producentów ([radio](radio.md#stanowisko-deweloperskie)); pierwszą drukowaną płytką projektu jest R02, a kontroler R01.3 wycofano. Instrukcje użycia opisują odebrany zestaw, którego jeszcze nie zbudowano.
 
 ## Zakres
 

@@ -10,6 +10,6 @@ __pycache__/
 *-backups/
 
 # Vendor reference material is local, not part of the open project
-/hardware/radio-test-r01/reference-private/
+/hardware/*/reference-private/
 
 /dist/

@@ -10,7 +10,7 @@ python3 -m unittest discover -s tests -v
 python3 tools/verify_repository.py
 ```
 
-Kontrola porównuje manifest z indeksem Git, wszystkie sumy plików, lokalne odnośniki Markdown i HTML (kotwice tylko w odnośnikach do stron HTML), składnię JSON/Python, wyniki obliczeń i paczkę kontrolera. Nie aktualizuje dowodów podczas sprawdzania. CI działa na Linuksie z Pythonem 3.12 i nie uruchamia KiCad.
+Kontrola porównuje manifest z indeksem Git, wszystkie sumy plików, lokalne odnośniki Markdown i HTML (kotwice tylko w odnośnikach do stron HTML), składnię JSON/Python i wyniki obliczeń. Nie aktualizuje dowodów podczas sprawdzania. CI działa na Linuksie z Pythonem 3.12 i nie uruchamia KiCad.
 
 ## Strona koncepcji
 
@@ -18,20 +18,7 @@ Koncepcja jest publikowana na [GitHub Pages](https://tmierzwa.github.io/WICI/) p
 
 ## Narzędzia CAD
 
-Zapisany projekt można otworzyć bez generowania. Do odtwarzania kontroli używamy KiCad 10.0.6, jego `kicad-cli` i interpretera z `pcbnew`. Jest to środowisko odrębne od Pythona narzędzi. Nie instaluj losowego pakietu `pcbnew` z PyPI.
-
-Dodatkowe biblioteki służą wyłącznie do PDF i analizy eksportów. Przygotuj środowisko Python 3.12:
-
-```sh
-python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements-tools.txt
-```
-
-W systemie Windows użyj `py -3.12 -m venv .venv` i `.venv\Scripts\python.exe`. Główne narzędzia to ReportLab 5.0.1 i gerbonara 1.6.3; plik wymagań przypina także ich zależności z przetestowanego środowiska. Wektory Gerberów analizujemy z plików, bez serwera sieciowego gerbonara.
-
-Pełny przebieg CAD i eksportu sprawdzono na macOS z KiCad 10.0.6 i Pythonem 3.12. Otwieranie źródeł jest niezależne od systemu; procedura dla innych instalacji wymaga wskazania właściwego interpretera KiCad. [Polecenia i kolejność](../hardware/radio-test-r01/odtworzenie.md).
-
-Freerouting 2.5.0 jest potrzebny tylko do nowego trasowania. Odtworzenie R01.3 używa zapisanej sesji SES, bez Javy i bez sieci. Podglądy PNG/SVG w `checks/preview/` służą do przeglądu, a do produkcji służą zweryfikowane eksporty. Bieżące PDF montażu i schematu tworzy KiCad, a PDF mechaniki ReportLab; nie potrzeba Inkscape ani konwertera SVG.
+Płytkę stacji R02 projektuje się w KiCad 10.0.6; kontrole ERC/DRC uruchamia `kicad-cli` tej samej instalacji, a skrypty geometrii interpreter Pythona KiCad z `pcbnew`. Jest to środowisko odrębne od Pythona narzędzi; nie instaluj pakietu `pcbnew` z PyPI. CI nie uruchamia KiCad. Zasady kontroli, eksportów i dowodów opisuje [projekt R02](../hardware/r02/README.md) z [lekcjami z kontrolera R01.3](../hardware/r02/lekcje.md). Skrypty eksportu Gerberów, porównania eksportów z geometrią (gerbonara) i arkusza 1:1 (ReportLab) poprzedniego kontrolera są w historii Git w commicie `ea32e7c` jako wzór; ich środowisko przypina się ponownie razem z narzędziami R02. Stanowisko deweloperskie nie ma CAD.
 
 ## Paczka źródłowa
 

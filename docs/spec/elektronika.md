@@ -38,7 +38,7 @@ Powerbank przez USB nie jest dopuszczonym źródłem: wiele powerbanków wyłąc
 
 ## Płytka stacji R02: wymagania
 
-R02 łączy mikrokontroler, tor RF jednego wykonania, FRAM, ekran, przyciski i zasilanie stacji. Projekt jeszcze nie powstał i jest pierwszą drukowaną płytką projektu; do tego czasu oprogramowanie i próby T1–T4 prowadzi się na [stanowisku deweloperskim](../../hardware/dev-bench/README.md) z płytek rozwojowych i modułów producentów, a kontroler [R01.3](../../hardware/radio-test-r01/README.md) jest w archiwum.
+R02 łączy mikrokontroler, tor RF jednego wykonania, FRAM, ekran, przyciski i zasilanie stacji. Schemat i PCB jeszcze nie powstały; R02 jest pierwszą drukowaną płytką projektu, a [folder projektu](../../hardware/r02/README.md) podaje wejścia i kolejność prac oraz [lekcje z wycofanego kontrolera R01.3](../../hardware/r02/lekcje.md). Do tego czasu oprogramowanie i próby T1–T4 prowadzi się na [stanowisku deweloperskim](../../hardware/dev-bench/README.md) z płytek rozwojowych i modułów producentów.
 
 | Funkcja | Wymaganie |
 |---|---|

@@ -39,7 +39,7 @@ def check_manifest(strict: bool = True) -> dict[str, Path]:
     manifest, so the tracked files are checked without comparing their hashes.
     """
     manifest = json.loads((ROOT / "manifest.json").read_text(encoding="utf-8"))
-    if (manifest["project"], manifest["version"], manifest["controller"]) != ("WICI", "0.5-prototype-design", "R01.3"):
+    if (manifest["project"], manifest["version"], manifest["board"]) != ("WICI", "0.5-prototype-design", "R02"):
         raise ValueError("Unexpected release identity")
     if not strict:
         return {name: ROOT / name for name in sorted(tracked_files())}
@@ -69,7 +69,7 @@ def main() -> None:
     args = parser.parse_args()
     if args.refresh:
         names = tracked_files() - {"manifest.json"}
-        data = {"format": 2, "project": "WICI", "version": "0.5-prototype-design", "controller": "R01.3",
+        data = {"format": 2, "project": "WICI", "version": "0.5-prototype-design", "board": "R02",
                 "files": {name: sha(ROOT / name) for name in sorted(names)}}
         (ROOT / "manifest.json").write_text(json.dumps(data, indent=2) + "\n")
     files = check_manifest()
