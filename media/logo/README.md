@@ -11,7 +11,7 @@ Napis w otwartym kroju Nunito Sans Black (SIL Open Font License 1.1). Kropki nad
 | [ikona.svg](ikona.svg), `ikona-512.png` | ikona: dwie kropki i sygnał na kwadracie w kolorze tła filmu `#0f1216` |
 | `ikona-180.png` | ikona na ekranie głównym iPhone'a (`apple-touch-icon` stron) |
 | `ikona-32.png` | favicon dla przeglądarek bez obsługi SVG |
-| [favicon.svg](favicon.svg) | favicon stron: same kropki i sygnał bez tła; kropki ciemne na jasnej karcie, białe na ciemnej |
+| [favicon.svg](favicon.svg) | favicon stron: kropki i sygnał na własnym ciemnym kafelku, ten sam wygląd w każdej przeglądarce i motywie |
 | [fonts/](fonts/OFL.txt) | font Nunito Sans (wersja zmienna z [Google Fonts](https://github.com/google/fonts/tree/main/ofl/nunitosans)) i tekst jego licencji; potrzebny tylko do odtworzenia znaku |
 
 PNG znaku mają 2400 × 1047 px i przezroczyste tło. Znak jest na górze [głównego README](../../README.md), a ikony i favicon na [stronach koncepcji](../../docs/conception/index.html).
@@ -32,7 +32,7 @@ Skrypt ustawia wersję zmienną fontu na grubość 900 (Black), szerokość 100,
 - **Sygnał:** ma grubość 52 jednostek. Biegnie pod kropkami i wchodzi do ich środków, więc nigdzie nie kończy się płasko na krągłej krawędzi.
 - **Impuls:** stoi w połowie odcinka między kropkami, a jego szczyt kończy się równo z górą kropek. Dzięki temu znak ma u góry jedną równą krawędź. Wysokość i szerokość impulsu wynikają z promienia kropki.
 - **Ikona:** ma te same kropki i impuls. Linia jest w niej grubsza względem kropek, żeby była widoczna przy 32 px.
-- **Favicon:** impuls jest uproszczony do jednego wysokiego zęba, bo przy 16 px pełny impuls zlewa się w plamę.
+- **Favicon:** impuls jest uproszczony do jednego wysokiego zęba, bo przy 16 px pełny impuls zlewa się w plamę. Kropki są mniejsze niż w ikonie, żeby nie zlewały się z zębem. Favicon ma własny ciemny kafelek, bo Safari kładzie faviconę SVG na jasnym tle i nie stosuje w niej ciemnego motywu.
 
 ## Odtworzenie
 
