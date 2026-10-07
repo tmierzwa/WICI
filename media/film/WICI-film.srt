@@ -159,142 +159,138 @@ Zestaw ma trzy poziomy. Pierwszy, podstawowy, to małe
 pudełko z ekranem, kilkoma przyciskami i bateriami.
 
 41
-00:02:30,550 --> 00:02:32,986
-Włączam stację i jestem w sieci.
+00:02:30,550 --> 00:02:34,843
+Włączam stację, wystawiam na zewnątrz antenę i jestem w sieci.
 
 42
-00:02:32,986 --> 00:02:37,488
-Bo antenę zamontowano wcześniej, na zewnątrz i możliwie wysoko.
-
-43
-00:02:37,683 --> 00:02:42,371
+00:02:35,017 --> 00:02:39,589
 Opiekun wybiera przyciskami, czego brakuje i ilu osób to dotyczy.
 
-44
-00:02:42,371 --> 00:02:46,316
+43
+00:02:39,589 --> 00:02:43,580
 A każda włączona stacja podaje dalej wiadomości sąsiadów.
 
-45
-00:02:46,483 --> 00:02:51,972
+44
+00:02:43,750 --> 00:02:49,239
 Poziom drugi to stary laptop podłączony do stacji: wygodny panel dla opiekuna.
 
-46
-00:02:51,972 --> 00:02:55,342
+45
+00:02:49,239 --> 00:02:52,608
 Poziom trzeci dodaje domowy router. Wtedy mieszkańcy
 
-47
-00:02:55,342 --> 00:02:58,657
+46
+00:02:52,608 --> 00:02:55,924
 zgłaszają potrzeby zwykłą stroną w telefonie.
 
-48
-00:02:58,657 --> 00:03:01,766
+47
+00:02:55,924 --> 00:02:59,033
 Bez aplikacji, bez konta, bez internetu.
 
-49
-00:03:01,950 --> 00:03:06,777
+48
+00:02:59,217 --> 00:03:04,044
 Laptop i router dostają prąd z akumulatora przez przetwornicę z zestawu.
 
-50
-00:03:06,777 --> 00:03:11,558
+49
+00:03:04,044 --> 00:03:08,825
 A telefony ładuje osobna ładowarka z zestawu, z drugiego akumulatora.
 
-51
-00:03:12,550 --> 00:03:16,936
+50
+00:03:09,817 --> 00:03:14,203
 Jedna rzecz jest dla nas szczególnie ważna: uczciwe komunikaty.
 
-52
-00:03:16,936 --> 00:03:19,934
+51
+00:03:14,203 --> 00:03:17,201
 „Wysłane” to nie to samo, co „pomoc jedzie”.
 
-53
-00:03:20,117 --> 00:03:23,296
+52
+00:03:17,383 --> 00:03:20,562
 Dlatego zgłoszenie przechodzi przez osobne stany.
 
-54
-00:03:23,296 --> 00:03:24,931
+53
+00:03:20,562 --> 00:03:22,197
 Zapisane lokalnie.
 
-55
-00:03:24,931 --> 00:03:26,693
+54
+00:03:22,197 --> 00:03:23,959
 Zapisane u odbiorcy.
 
-56
-00:03:26,693 --> 00:03:28,804
+55
+00:03:23,959 --> 00:03:26,070
 Przeczytane przez dyżurnego.
 
-57
-00:03:28,804 --> 00:03:30,357
+56
+00:03:26,070 --> 00:03:27,623
 Pomoc skierowana.
 
-58
-00:03:30,550 --> 00:03:32,962
+57
+00:03:27,817 --> 00:03:30,229
 Każdy z nich oznacza coś innego.
 
-59
-00:03:32,962 --> 00:03:36,199
+58
+00:03:30,229 --> 00:03:33,466
 A decyzję o pomocy zawsze podejmuje człowiek.
 
-60
-00:03:37,183 --> 00:03:38,794
+59
+00:03:34,450 --> 00:03:36,061
 Gdzie dziś jesteśmy?
 
-61
-00:03:38,794 --> 00:03:45,781
+60
+00:03:36,061 --> 00:03:43,048
 Jest koncepcja, specyfikacja i płytka do pomiarów radia. Płytka stacji dopiero powstanie.
 
-62
-00:03:45,781 --> 00:03:49,993
+61
+00:03:43,048 --> 00:03:47,260
 Wszystko jest otwarte: schematy, kod i dokumentacja.
 
-63
-00:03:50,183 --> 00:03:53,118
+62
+00:03:47,450 --> 00:03:50,385
 Ale nic jeszcze nie zostało sprawdzone w terenie.
 
-64
-00:03:53,118 --> 00:03:56,215
+63
+00:03:50,385 --> 00:03:53,482
 Nie wiemy, czy kilometr wśród budynków się uda.
 
-65
-00:03:56,215 --> 00:03:58,941
+64
+00:03:53,482 --> 00:03:56,208
 Czy stacja wytrzyma dwie doby na bateriach.
 
-66
-00:03:58,941 --> 00:04:02,596
+65
+00:03:56,208 --> 00:03:59,863
 Czy oprogramowanie sieci zmieści się w małym układzie.
 
-67
-00:04:02,783 --> 00:04:05,451
+66
+00:04:00,050 --> 00:04:02,718
 To trzeba zmierzyć, a nie założyć.
 
-68
-00:04:05,451 --> 00:04:07,654
+67
+00:04:02,718 --> 00:04:04,921
 I tu potrzebujemy innych ludzi.
 
-69
-00:04:08,650 --> 00:04:13,338
+68
+00:04:05,917 --> 00:04:10,605
 Szukamy krótkofalowców i elektroników, którzy znają radio i anteny.
 
-70
-00:04:13,338 --> 00:04:14,659
+69
+00:04:10,605 --> 00:04:11,926
 Programistów.
 
-71
-00:04:14,659 --> 00:04:18,604
+70
+00:04:11,926 --> 00:04:15,871
 Ludzi ze służb, którzy wiedzą, jak naprawdę wygląda kryzys.
 
-72
-00:04:18,783 --> 00:04:25,236
+71
+00:04:16,050 --> 00:04:22,503
 I każdego, kto ma okno, dach albo piwnicę, i chce pomóc sprawdzić, jak to działa naprawdę.
 
-73
-00:04:25,417 --> 00:04:29,745
+72
+00:04:22,683 --> 00:04:27,011
 Cały projekt jest otwarty, na GitHubie, pod nazwą WICI.
 
-74
-00:04:29,745 --> 00:04:32,726
+73
+00:04:27,011 --> 00:04:29,992
 Zajrzyj, zadaj pytanie, zgłoś błąd.
 
-75
-00:04:32,726 --> 00:04:34,163
+74
+00:04:29,992 --> 00:04:31,429
 Rozsyłamy wici.
 

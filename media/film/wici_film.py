@@ -691,10 +691,9 @@ class WICI(MovingCameraScene):
                                   fill_opacity=1) for k in range(4)]).arrange(RIGHT, buff=0.04, aligned_edge=DOWN)
         online = VGroup(T("w sieci", 22, "#1b2027"), bars).arrange(RIGHT, buff=0.15).move_to(st.screen)
         self.narr("s6b",
-                  ([st.screen.animate.set_fill("#c8d0c2"), FadeIn(online)], 0.8),
-                  ("at", 1),
+                  (st.screen.animate.set_fill("#c8d0c2"), 0.6),
                   ([Create(wall), Create(cable), Create(mst), FadeIn(ant_l)], 1.2),
-                  ([LaggedStart(*[Create(w) for w in waves], lag_ratio=0.3)], 0.6))
+                  ([LaggedStart(*[Create(w) for w in waves], lag_ratio=0.3), FadeIn(online)], 0.8))
 
         op = person(0.8).move_to([-5.5, -0.5, 0])
         op_l = T("opiekun", 20, GREY_A).next_to(op, DOWN, buff=0.15)
