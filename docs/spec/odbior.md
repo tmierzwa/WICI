@@ -23,7 +23,7 @@
 | Przetwornica | 150 W obciążenia rezystancyjnego na odpowiednim źródle, 230 V ±5%, THD <5%; rzeczywiste zasilacze, rozruch i skoki obciążenia; podłączenie zasilacza pod napięciem bez uszkodzenia mostka; brak jednostronnego nasycenia rdzenia | niewykonana |
 | Ochrona AC | izolacja, PE, prąd dotykowy, uziemienie i reakcja RCBO sprawdzone zgodnie z przyjętą normą i konfiguracją | niewykonana |
 | Zgodność RED | badania gotowej konfiguracji według EN 300 220-2, EN 301 489-1 i -3, EN 62368-1 oraz EN 62479; deklaracja zgodności przed przekazaniem zestawu innym | niewykonana |
-| Zakłócenia | pomiar odbioru radiowego przy pracującej przetwornicy i w pełni obciążonej ładowarce; brak pogorszenia uniemożliwiającego próbę terenową | niewykonana |
+| Zakłócenia | pomiar odbioru radiowego przy pracującej przetwornicy i w pełni obciążonej ładowarce oraz przy telefonie nadającym w pasmach LTE 800 i GSM 900 obok stacji; brak pogorszenia uniemożliwiającego próbę terenową | niewykonana |
 | Praca dobowa | 24 h pełnej funkcjonalności z wymianą źródeł; zużycie energii (Wh) stacji i ładowarki zapisane osobno | niewykonana |
 
 Próba obciążenia obejmuje zimny start trasy oraz osobno ruch ustalony. Odcięcie A–OSP musi być fizycznie skuteczne. Liczy się odbiór RECEIVED przez A, a nie sam zapis ani stan LXMF DELIVERED. Z 50 zgłoszeń wymagane jest 50/50; 49/50 to 98%. Większa liczba schronień, przekaźników i jednoczesnych nadawców wymaga nowego planu obciążenia; ta próba nie kwalifikuje sieci 1000 stacji.

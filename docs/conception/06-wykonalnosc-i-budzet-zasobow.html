@@ -137,6 +137,8 @@
 
 <p>Przykład nie obejmuje ścian, metalu, terenu, zaniku wielodrogowego, odstrojenia anteny, zakłóceń i rzeczywistej czułości. Nie jest dowodem 1 km w mieście. Anteny przy oknie lub drzwiach muszą przejść próbę w docelowej pozycji. Wynik zapisać z układem miejsc, przewodami, rewizjami i warunkami. Najpierw podnieść antenę (dach, wyższa kondygnacja) lub dodać przekaźnik; zmiana profilu P1 wymaga jawnej rewizji całej sieci.</p>
 
+<p>Zapas obliczony z modelu jest wartością medianową. Łącze stacjonarne, które ma przenieść 99 ze 100 zgłoszeń, potrzebuje dodatkowo zapasu na zaniki w czasie, zwykle około 10 dB; ruch ludzi i pojazdów zmienia tłumienie także na stałej trasie. Rozrzut tłumienia między miejscami (odchylenie standardowe rzędu 6–8 dB w zabudowie) sprawia, że udana próba jednej pary miejsc nie przenosi się na inne. Najtańszym źródłem zapasu jest antena: kolinearna antena dookólna o zysku około 5–6 dBi na obu końcach daje około 7 dB więcej niż dwa dipole, nie zmienia P1 i mieści się w limicie ERP (około 15,5 dBm wobec 27 dBm). Kosztem jest węższa wiązka w płaszczyźnie pionowej i wymóg pionowego montażu.</p>
+
 <p>Ten sam przykład daje około 12 dBm ERP (13 dBm − 1 dB przewodu + 2,15 dBi − 2,15 dB), czyli około 16 mW. Warunki pasma dopuszczają 500 mW ERP (27 dBm), więc przepisy zostawiają około 15 dB zapasu. Oba układy RF nadają do około +16 dBm na złączu, czyli około 3 dB więcej niż obecne 13 dBm. Więcej wymaga zewnętrznego wzmacniacza: nowej konstrukcji RF, pomiaru emisji i sprawdzenia prądu w budżecie USB 500 mA. Moc jest parametrem P1, więc zmiana dotyczy wszystkich stacji. Większa moc zwiększa też zasięg zakłóceń dla sąsiadów i nie usuwa ukrytych nadajników. <a href="https://www.ti.com/lit/ds/symlink/cc1120.pdf">CC1120</a>, <a href="https://www.st.com/resource/en/datasheet/s2-lp.pdf">S2-LP</a>, <a href="zrodla.html">warunki pasma</a>.</p>
 
 <h2 id="energia-dwa-niezalezne-zasoby">Energia: dwa niezależne zasoby</h2>
@@ -145,7 +147,7 @@
 
 <p>Telefony: 50 × 5 Wh przy sprawności 0,8 = 312,5 Wh ze źródeł ładowarki; z rezerwą 375 Wh. <strong>5 Wh na osobę jest częściowym doładowaniem, nie pełnym ładowaniem każdego telefonu.</strong> Osiem portów daje maksymalnie 60 W na wyjściu. Pobór własny ładowarki i straty przewodów trzeba zmierzyć.</p>
 
-<p>Przy założeniu 12 V, 60 Ah i 50% wykorzystania jeden akumulator daje 360 Wh. Jest to model, nie ocena sprawności dowolnego akumulatora samochodowego.</p>
+<p>Przy założeniu 12 V, 60 Ah i 50% wykorzystania jeden akumulator daje 360 Wh. Jest to model, nie ocena sprawności dowolnego akumulatora samochodowego. W nieogrzewanym schronieniu pojemność akumulatora kwasowo-ołowiowego spada: w 0 °C o około 20%, w −10 °C jeszcze bardziej. Zimą liczbę akumulatorów trzeba więc zwiększyć albo trzymać je w cieplejszym pomieszczeniu.</p>
 
 <div class="table-wrap"><table class="cols-3">
 <thead><tr>
