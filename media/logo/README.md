@@ -7,6 +7,7 @@ Napis w kroju Avenir Next Heavy, tym samym co tytuł filmu. Kropki nad literami 
 | [WICI-na-ciemnym.svg](WICI-na-ciemnym.svg), [.png](WICI-na-ciemnym.png) | ciemne tło: napis biały, sygnał żółty `#f4d345` |
 | [WICI-na-jasnym.svg](WICI-na-jasnym.svg), [.png](WICI-na-jasnym.png) | jasne tło: napis `#0f1216`, sygnał przyciemniony do `#c99a00` |
 | [ikona.svg](ikona.svg), `ikona-512.png`, `ikona-180.png`, `ikona-32.png` | dwie kropki i sygnał na kwadracie w kolorze tła filmu `#0f1216` |
+| [favicon.svg](favicon.svg) | favicon stron: same kropki i sygnał bez tła, ciemne na jasnej karcie i białe na ciemnej; impuls uproszczony do jednego zęba, czytelny przy 16 px |
 
 PNG znaku mają przezroczyste tło i szerokość 2400 px.
 
