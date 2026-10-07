@@ -49,16 +49,16 @@
 </ol>
 </nav>
 
-<p>Cel: przekazać krótkie zgłoszenie ze schronienia do miejsca zdolnego udzielić pomocy, gdy nie działa internet ani sieć komórkowa. Podstawą jest samodzielna stacja z ekranem i przyciskami. Zasada obsługi brzmi: „włączam stację, wystawiam antenę i jestem w sieci”. Działa ona pod warunkiem, że sieć zaplanowano i sprawdzono w terenie przed kryzysem, a antenę zamontowano na stałe podczas przygotowania obiektu. Opiekun wysyła zgłoszenia schronienia przyciskami, a stacja zawsze przekazuje ruch innych stacji. Laptop i router z miejsca uruchomienia dodają później wygodny panel i stronę, przez którą mieszkańcy zgłaszają potrzeby z telefonów. Stacja zachowuje dane lokalnie i przekazuje je radiem, także przez inne stacje.</p>
+<p>Cel: przekazać krótkie zgłoszenie ze schronienia do miejsca zdolnego udzielić pomocy, gdy nie działa internet ani sieć komórkowa. Podstawą jest samodzielna stacja z ekranem i przyciskami. Zasada obsługi brzmi: „włączam stację, wystawiam antenę i jestem w sieci”. Użytkownik wysyła zgłoszenia schronienia przyciskami, a stacja zawsze przekazuje ruch innych stacji. Opcjonalny laptop i router dodają wygodny panel i stronę, przez którą mieszkańcy zgłaszają potrzeby z telefonów.</p>
 
 <h2 id="film">Film</h2>
 
 <figure class="film">
 <video controls preload="metadata" playsinline poster="../../media/film/plakat.jpg" src="../../media/film/WICI-film.mp4"></video>
-<figcaption>Dlaczego WICI, jak ma działać i czego jeszcze nie sprawdzono (niecałe 5 minut, z napisami). Wersja pionowa 60 s na telefon: <a href="../../media/film/WICI-short.mp4">WICI-short.mp4</a>. Scenariusz i pliki do odtworzenia filmu: <a href="../../media/film/README.md">media/film</a>.</figcaption>
+<figcaption>Koncepcja WICI (niecałe 5 minut, z napisami). Wersja pionowa 60 s na telefon: <a href="../../media/film/WICI-short.mp4">WICI-short.mp4</a>. Scenariusz i pliki do odtworzenia filmu: <a href="../../media/film/README.md">media/film</a>.</figcaption>
 </figure>
 
-<p>Zakres bazowy obejmuje jeden budynek, około 50 osób i sąsiednie stacje oddalone od siebie o około 1 km w zabudowie. Według modelu stacja pracuje około 1,5–4 dni na litowych ogniwach AA (zależnie od wykonania; cel W23: ≥48 h, który ESP32-S3 spełnia tylko przy lekkim uśpieniu), a ze źródła 12 V – tygodniami. Laptop, router, ich zasilacze i akumulatory pochodzą z lokalnego zasobu i są rozszerzeniami. Z nimi zestaw ma pracować 24 godziny przy wymianie źródeł energii. Poziom 3 zużywa około 1,8 kWh na dobę w jednym schronieniu (6–7 akumulatorów 60 Ah), dlatego planuje się go tylko tam, gdzie można ładować i dowozić akumulatory. Zestaw WICI dostarcza stację z anteną, oprogramowanie offline, połączenia, zasilanie laptopa i routera oraz osobną ładowarkę telefonów (<a href="01-potrzeby-i-wymagania.html#poziomy-zestawu">poziomy zestawu</a>).</p>
+<p>Zakres bazowy obejmuje jeden budynek, około 50 osób i sąsiednie stacje oddalone od siebie o około 1 km w zabudowie. Według modelu stacja pracuje kilka dni na litowych ogniwach AA (zależnie od wykonania; cel W23: ≥48 h, który ESP32-S3 spełnia tylko przy lekkim uśpieniu), a ze źródła 12V nawet przez kilka tygodni. Laptop, router, ich zasilacze i akumulatory pochodzą z lokalnego zasobu i są rozszerzeniami. Z nimi zestaw ma pracować 24 godziny przy wymianie źródeł energii. Poziom 3 zużywa około 1,8 kWh na dobę w jednym schronieniu (6–7 akumulatorów 60 Ah), dlatego planuje się go tylko tam, gdzie można ładować i dowozić akumulatory. Zestaw WICI dostarcza stację z anteną, oprogramowanie offline, połączenia, zasilanie laptopa i routera oraz osobną ładowarkę telefonów (<a href="01-potrzeby-i-wymagania.html#poziomy-zestawu">poziomy zestawu</a>).</p>
 
 <h2 id="dokumenty">Dokumenty</h2>
 
@@ -70,7 +70,7 @@
 <tr><td><a href="01-potrzeby-i-wymagania.html">01. Potrzeby i wymagania</a></td><td>Co musi działać i jak to rozpoznać?</td></tr>
 <tr><td><a href="02-scenariusze-i-organizacja.html">02. Scenariusze i organizacja</a></td><td>Kto obsługuje stację i kto faktycznie pomaga?</td></tr>
 <tr><td><a href="03-dostepne-rozwiazania.html">03. Dostępne rozwiązania</a></td><td>Co można wykorzystać zamiast budować od początku?</td></tr>
-<tr><td><a href="04-analiza-opcji.html">04. Analiza opcji</a></td><td>Dlaczego taki podział systemu i kiedy zmienić wybór?</td></tr>
+<tr><td><a href="04-analiza-opcji.html">04. Analiza opcji</a></td><td>Dlaczego taki kształt systemu i kiedy zmienić wybór?</td></tr>
 <tr><td><a href="05-projekt-koncepcyjny-komunikacji.html">05. Projekt koncepcyjny komunikacji</a></td><td>Jak przechodzą dane, potwierdzenia i decyzje?</td></tr>
 <tr><td><a href="06-wykonalnosc-i-budzet-zasobow.html">06. Wykonalność i budżet zasobów</a></td><td>Czy wystarczy zasięgu, czasu antenowego, energii i części?</td></tr>
 <tr><td><a href="07-zagrozenia-i-odpornosc.html">07. Zagrożenia i odporność</a></td><td>Co się psuje, jak to wykryć i co działa dalej?</td></tr>
@@ -89,15 +89,15 @@
   <li><strong>Dowód</strong>: wynik wskazanej próby na określonej konfiguracji. Nie przenosi się automatycznie na inne części lub warunki.</li>
 </ul>
 
-<p>W <a href="01-potrzeby-i-wymagania.html">tabeli wymagań</a> pochodzenie oznaczają skróty: U (ustalenie użytkowe), S (warunek specyfikacji, czyli wybór bazowy) i P (propozycja próby lub organizacji). Każde wymaganie, niezależnie od pochodzenia, trzeba wykazać dowodem.</p>
+<p>W <a href="01-potrzeby-i-wymagania.html">tabeli wymagań</a> pochodzenie oznaczają skróty: U (ustalenie użytkowe), S (warunek specyfikacji, czyli wybór bazowy) i P (propozycja próby lub organizacji). Realizację każdego wymagania, niezależnie od pochodzenia, trzeba wykazać dowodem.</p>
 
-<p>Parametry wykonawcze, ramki, interfejsy programistyczne (API) i warunki odbioru należą do <code>docs/spec/</code>. Koncepcja wyjaśnia potrzeby, wybory i ich granice. Nie jest drugą specyfikacją. Jeśli próba wymusi zmianę parametru, trzeba zaktualizować specyfikację i powiązaną analizę.</p>
+<p>Parametry wykonawcze, ramki, interfejsy programistyczne (API) i warunki odbioru należą do <code>docs/spec/</code>. Koncepcja wyjaśnia potrzeby, wybory i ich granice. Nie zastępuje specyfikacji. Jeśli próba wymusi zmianę parametru, trzeba zaktualizować specyfikację i powiązaną analizę.</p>
 
 <p>Skróty i pojęcia używane w dokumentach objaśnia <a href="slownik.html">słownik</a>.</p>
 
 <h2 id="ocena-obecnego-stanu">Ocena obecnego stanu</h2>
 
-<p>Koncepcja nadaje się do budowy prototypów i sprawdzania hipotez. Nie ma jeszcze dowodu łączności 1 km, działania całego stosu radiowego, pracy dobowej ani bezpieczeństwa własnej przetwornicy. Kontroler R01.3 wycofano, a jego lekcje zapisano w folderze projektu R02; oprogramowanie i próby przed R02 prowadzi się na stanowisku deweloperskim z płytek rozwojowych i modułów producentów, a R02 jest pierwszą drukowaną płytką projektu. Płytka stacji R02, moduły RF, oprogramowanie układowe, aplikacja i pakiety START nie są ukończone. Wyniki modelu i projekt CAD nie zastępują prób sprzętu.</p>
+<p>Koncepcja nadaje się do budowy prototypów i sprawdzania hipotez. Nie ma jeszcze dowodu łączności 1 km, działania całego stosu radiowego, pracy dobowej ani bezpieczeństwa własnej przetwornicy. Oprogramowanie i próby przed R02 prowadzi się na stanowisku deweloperskim z płytek rozwojowych i modułów producentów, a R02 jest pierwszą drukowaną płytką projektu. Płytka stacji R02, moduły RF, oprogramowanie układowe, aplikacja i pakiety START nie są ukończone. Wyniki modelu i projekt CAD nie zastępują prób sprzętu.</p>
 
 <p><a href="../review.md">Aktualne ustalenia przeglądu wewnętrznego</a> obejmują problem prądu w stanie wstrzymania USB (suspend), budżet ogranicznika ładowarki oraz kontrprzykład czasowy dla stosu sieciowego. Wersja 0.5 przenosi stos do stacji zasilanej z własnych źródeł. Dlatego problem wstrzymania USB i limit czasu protokołu KISS (prostego formatu ramek między komputerem a modemem) nie blokują już wariantu bazowego. Nowym głównym ryzykiem jest dojrzałość stosu na mikrokontrolerze.</p>
 
@@ -105,16 +105,14 @@
 <ul>
   <li>miejsce sieci w gminnym planie zarządzania kryzysowego i jej status w stanach nadzwyczajnych;</li>
   <li>zasięg 1 km przy rzeczywistych wysokościach anten (model propagacji daje ujemny zapas przy antenach na wysokości okien);</li>
-  <li>trwałe przyjęcie zgłoszenia przez OSP;</li>
+  <li>trwałe przyjęcie zgłoszenia przez OSP i inne służby;</li>
   <li>działanie microReticulum i LXMF na wybranych mikrokontrolerach;</li>
-  <li>rzeczywisty koszt radiowy LXMF, w tym zmieszczenie SA1 w jednym pakiecie (roboczo ≤256 B);</li>
+  <li>rzeczywisty koszt radiowy, w tym zmieszczenie SA1 w jednym pakiecie (roboczo ≤256 B);</li>
   <li>pojemność sieci przy OSP (model: ok. 68 zgłoszeń/h dla całej sieci przez przekaźnik przed OSP, ok. 121/h bez niego; dodanie przekaźników jej nie zwiększa);</li>
   <li>zgodność dwóch wykonań stacji;</li>
   <li>zasilanie bez resetu;</li>
   <li>dostępność dyżurnego zdolnego do działania.</li>
 </ul>
-
-<p>Bez odbiorcy, który może pomóc, sprawna sieć jedynie przenosi dane.</p>
 
 <p>Ryzyko ciągłości projektu, czyli utraty zespołu lub jego zaangażowania, ograniczają otwarta licencja, kompletna paczka źródeł (T7) i wymóg zakupu od producenta z umową wsparcia, a nie od zespołu projektu.</p>
 
