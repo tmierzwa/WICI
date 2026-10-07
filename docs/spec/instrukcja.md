@@ -86,7 +86,7 @@ Wyjątek dla pojedynczego zgłoszenia ustawia się tylko w panelu laptopa i tylk
 
 Stacja ma dwa komplety ogniw litowych AA: kryzysowy w zamkniętym opakowaniu i ćwiczebny do TEST i przeglądów.
 
-- W kryzysie stacja pracuje z kompletu kryzysowego. Komplet ćwiczebny jest rezerwą tylko wtedy, gdy po włożeniu i minucie pracy STAN pokazuje dla ogniw co najmniej 5,6 V (próg do potwierdzenia w T6).
+- W kryzysie stacja pracuje z kompletu kryzysowego. Komplet ćwiczebny jest rezerwą tylko wtedy, gdy po włożeniu i minucie pracy STAN pokazuje „OGNIWA: [x] V” z wartością co najmniej 5,6 V (próg do potwierdzenia w T6).
 - Gdy masz źródło 12 V (akumulator 12 V, akumulator LiFePO4 z BMS, wyjście 12 V stacji zasilania), podłącz je przewodem z zestawu; ogniwa zostają rezerwą. Stacja przełącza źródła bez restartu.
 - Po „WYMIEŃ OGNIWA W CIĄGU 1 H” podłącz najpierw 12 V i wtedy wymień ogniwa. Bez 12 V przytrzymaj wyłącznik główny 2 s, poczekaj na „MOŻNA WYJĄĆ OGNIWA” i wymień cały komplet (+ do znaku +). Nie mieszaj ogniw różnych typów ani różnego stopnia rozładowania.
 - Ogniwa alkaliczne i NiMH są tylko awaryjne: na mrozie tracą większość pojemności.
