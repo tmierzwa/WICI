@@ -1,0 +1,92 @@
+1
+00:00:00,150 --> 00:00:02,342
+Gaśnie prąd w całej okolicy.
+
+2
+00:00:02,342 --> 00:00:05,468
+Po kilku godzinach telefon pokazuje: brak sieci.
+
+3
+00:00:05,950 --> 00:00:08,389
+W szkole-schronieniu jest pięćdziesiąt
+
+4
+00:00:08,389 --> 00:00:10,522
+osób. Brakuje wody i leków.
+
+5
+00:00:10,522 --> 00:00:12,771
+Straż jest kilka kilometrów dalej.
+
+6
+00:00:12,771 --> 00:00:14,972
+Tylko jak jej o tym powiedzieć?
+
+7
+00:00:17,750 --> 00:00:20,627
+Takie zgłoszenie to mniej niż dwieście bajtów.
+
+8
+00:00:20,627 --> 00:00:23,164
+Nie potrzeba do niego internetu. Wystarczy
+
+9
+00:00:23,164 --> 00:00:25,065
+proste radio na akumulatorze.
+
+10
+00:00:25,550 --> 00:00:28,044
+Celujemy w około kilometr zasięgu.
+
+11
+00:00:28,044 --> 00:00:31,094
+Dlatego każda stacja podaje wiadomość dalej, od
+
+12
+00:00:31,094 --> 00:00:34,090
+sąsiada do sąsiada, aż dotrze do straży.
+
+13
+00:00:34,090 --> 00:00:35,335
+Jak dawne wici.
+
+14
+00:00:35,817 --> 00:00:38,516
+Stacja to stary laptop, domowy router,
+
+15
+00:00:38,516 --> 00:00:41,190
+akumulator i mały moduł radiowy.
+
+16
+00:00:41,190 --> 00:00:43,497
+Zgłoszenie wysyła się ze zwykłej strony
+
+17
+00:00:43,497 --> 00:00:45,245
+w telefonie, bez aplikacji.
+
+18
+00:00:45,717 --> 00:00:47,628
+Projekt jest otwarty, ale jeszcze
+
+19
+00:00:47,628 --> 00:00:49,418
+niesprawdzony w terenie.
+
+20
+00:00:49,418 --> 00:00:51,820
+Szukamy krótkofalowców, elektroników,
+
+21
+00:00:51,820 --> 00:00:53,984
+programistów i ludzi ze straży.
+
+22
+00:00:54,483 --> 00:00:57,325
+Szczegóły na GitHubie, pod nazwą WICI.
+
+23
+00:00:57,325 --> 00:00:58,628
+Rozsyłamy wici.
+

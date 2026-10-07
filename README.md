@@ -14,6 +14,7 @@ WICI używa [Reticulum](https://github.com/markqvist/Reticulum) i [LXMF](https:/
 | [docs/spec](docs/README.md) | Specyfikacja stacji w pięciu rozdziałach, warunki odbioru i BOM stacji |
 | [hardware](hardware/radio-test-r01/README.md) | Edytowalny kontroler KiCad, BOM, raporty i paczka kandydata |
 | [software/reference](software/reference/README.md) | Model ramek, wiadomości i transakcji OSP; obliczenia |
+| [media/film](media/film/README.md) | Film o projekcie: 4 min oraz 60 s w pionie na Reels i TikTok; animacje i narracja do odtworzenia |
 | [tools](docs/development.md) | Kontrola repozytorium i tworzenie paczki źródłowej |
 
 [Przegląd techniczny](docs/review.md) wskazuje m.in. konieczną poprawkę prądu wstrzymania USB (suspend) kontrolera oraz niezamkniętą zgodność czasów Reticulum/LXMF z P1.

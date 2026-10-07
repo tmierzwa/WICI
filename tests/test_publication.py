@@ -126,9 +126,25 @@ class PagesTests(unittest.TestCase):
                              '<a href="b.html#x">b</a><a href="https://repo/blob/abc/LICENSE.md#l">l</a>'
                              '<a href="https://example.org/">e</a><a href="#top">t</a>')
             self.assertTrue((site / "style.css").is_file() and (site / ".nojekyll").is_file())
+            (root / "film.mp4").write_bytes(b"video")
+            (source / "a.html").write_text('<video src="../../film.mp4" poster="../../film.mp4"></video>', encoding="utf-8")
+            self.assertEqual(build(site, "https://repo/blob/abc", source, root), 0)
+            self.assertEqual((site / "a.html").read_text(encoding="utf-8"),
+                             '<video src="media/film.mp4" poster="media/film.mp4"></video>')
+            self.assertEqual((site / "media/film.mp4").read_bytes(), b"video")
             (source / "a.html").write_text('<a href="../missing.md">m</a>', encoding="utf-8")
             with self.assertRaises(ValueError):
                 build(site, "https://repo/blob/abc", source, root)
+
+
+class SourceArchiveScopeTests(unittest.TestCase):
+    """Rendered films are published in Git and on Pages, not in the source ZIP."""
+
+    def test_rendered_films_skipped(self):
+        files = {name: Path(name) for name in
+                 ("media/film/WICI-film.mp4", "media/film/wici_film.py", "media/film/plakat.jpg", "docs/x.mp4")}
+        self.assertEqual(set(release.archive_files(files)),
+                         {"media/film/wici_film.py", "media/film/plakat.jpg", "docs/x.mp4"})
 
 
 class ManifestModeTests(unittest.TestCase):

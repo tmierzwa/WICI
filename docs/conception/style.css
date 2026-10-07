@@ -204,3 +204,10 @@ figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.5rem; }
   table { min-width: 0 !important; }
   a { color: inherit; }
 }
+
+figure.film { margin: 1.25rem 0 2rem; }
+figure.film video {
+  display: block; width: 100%; height: auto; aspect-ratio: 16 / 9;
+  background: #0f1216; border: 1px solid var(--border); border-radius: var(--radius);
+}
+figure.film figcaption { margin-top: 0.5rem; color: var(--muted); font-size: 0.92rem; }
