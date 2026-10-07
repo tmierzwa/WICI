@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 """Apply R01.3 stackup, legend and assembly metadata to the routed controller.
 
 Copper routing remains unchanged. J2 finished holes become 1.1 mm per its

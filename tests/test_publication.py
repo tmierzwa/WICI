@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 """Regression cases for invalid controller archives and read-only checks."""
 
 from pathlib import Path
@@ -17,6 +17,7 @@ from tools.archives import verify_archive, write_archive
 sys.path.insert(0, str(ROOT / "tools"))
 from verify_repository import check_links
 from build_pages import build
+import release
 
 
 class ArchiveTests(unittest.TestCase):
@@ -128,6 +129,28 @@ class PagesTests(unittest.TestCase):
             (source / "a.html").write_text('<a href="../missing.md">m</a>', encoding="utf-8")
             with self.assertRaises(ValueError):
                 build(site, "https://repo/blob/abc", source, root)
+
+
+class ManifestModeTests(unittest.TestCase):
+    """Pull requests skip manifest hashes; the full check still rejects them."""
+
+    def test_pull_request_mode_tolerates_stale_manifest_only(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            (root / "a.md").write_text("new", encoding="utf-8")
+            (root / "manifest.json").write_text(
+                '{"format": 2, "project": "WICI", "version": "0.4-prototype-design", "controller": "R01.3",'
+                ' "files": {"a.md": "0"}}', encoding="utf-8")
+            subprocess.run(["git", "add", "a.md", "manifest.json"], cwd=root, check=True)
+            old = release.ROOT
+            release.ROOT = root
+            try:
+                with self.assertRaises(ValueError):
+                    release.check_manifest()
+                self.assertEqual(set(release.check_manifest(strict=False)), {"a.md", "manifest.json"})
+            finally:
+                release.ROOT = old
 
 
 if __name__ == "__main__":

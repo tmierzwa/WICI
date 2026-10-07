@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 """Export a routing job with both internal planes inactive.
 
 Autoroute settings must precede plane/keepout scopes in Freerouting 2.5.0.

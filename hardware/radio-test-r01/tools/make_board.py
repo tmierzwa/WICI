@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 """Place the controller candidate and export a local routing job.
 
 This is a review candidate. Routing and ERC/DRC do not establish radio,

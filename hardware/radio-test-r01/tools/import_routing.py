@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 """Import a local Specctra session into the placed controller candidate."""
 from pathlib import Path
 import sys

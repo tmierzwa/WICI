@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 name: Checks
 on:
   push:
@@ -18,6 +18,9 @@ jobs:
       - name: Publication regressions
         run: python -m unittest discover -s tests -v
       - name: Read-only source and controller checks
-        run: python tools/verify_repository.py
+        run: python tools/verify_repository.py ${{ github.event_name == 'pull_request' && '--pull-request' || '' }}
       - name: Source archive
+        if: github.event_name != 'pull_request'
         run: python tools/release.py --source-zip dist/WICI-0.4-source.zip
+      - name: License annotations (REUSE)
+        run: pipx run reuse==5.0.2 lint

@@ -1,6 +1,6 @@
 # WICI — stan przeglądu technicznego
 
-Ocena: 2026-10-06. Zakres: koncepcja, pięć rozdziałów specyfikacji, model kontraktów, BOM, kontroler R01.3, raporty CAD, eksporty, procedury odbioru, licencje i narzędzia publikacji.
+Ocena: 2026-10-06. To przegląd wewnętrzny, wykonany przez autora projektu z pomocą AI; nie jest niezależnym audytem ani opinią uprawnionego inżyniera. Zakres: koncepcja, pięć rozdziałów specyfikacji, model kontraktów, BOM, kontroler R01.3, raporty CAD, eksporty, procedury odbioru, licencje i narzędzia publikacji.
 
 **Projekt nadaje się do dalszego prototypowania. Nie nadaje się jeszcze do zamówienia kompletnego sprzętu ani pracy w schronieniu. Kontroler R01.3 pozostaje HOLD i wymaga zmiany elektrycznej.**
 
@@ -17,7 +17,7 @@ Podział na lokalną stronę, osobny transport, trwałą kolejkę aplikacji i os
 | F05 | Walidacja przyjmowała C1 i niewidoczne znaki formatujące | poprawione w modelu i SA1; przypadki wejścia oraz niezależnie zakodowanego JSON |
 | F06 | Specyfikacja nie rozdzielała jednoznacznie RECEIVED i STATUS | poprawiona; STATUS ma event ≥2 i state 2/3, zgodnie z modelem |
 | F07 | Nieokreślony zakres próby obciążenia i brak wymogu utrzymania hosta w pracy | doprecyzowane; próby terenowe i pakiet START nadal niewykonane |
-| F08 | Dodatkowe warunki licencji zależności wymagają oceny przyszłego pakietu GPL | otwarte przed dystrybucją START; repozytorium nie zawiera kodu zależności |
+| F08 | Dodatkowe warunki licencji zależności były niezgodne z GPL własnego kodu | rozstrzygnięte 2026-10-07: kod WICI na MIT; pakiet START dołącza licencje Reticulum/LXMF i podlega ich warunkom |
 
 ## F01 — kontroler USB
 
@@ -72,7 +72,7 @@ TPS2553: tabela doboru dla 15 kΩ /1% podaje minimum 1594,5 mA, poniżej wymagan
 
 ## F08 — licencje pakietu START
 
-Analizowane LICENSE Reticulum i LXMF zawierają dodatkowe ograniczenia użycia oraz tworzenia zbiorów do treningu AI. Nie należy traktować ich jako niezmodyfikowanej MIT ani zakładać zgodności z własnym kodem GPL. Przed połączeniem i dystrybucją START rozstrzygnąć warunki konkretnych wersji oraz sposób ich połączenia. Samo dołączenie tekstów licencji nie zamyka zgodności. [Reticulum LICENSE](https://github.com/markqvist/Reticulum/blob/e40191b3d193b46b7f2d8a44424a594cd758839b/LICENSE), [LXMF LICENSE](https://github.com/markqvist/LXMF/blob/c3ff2d6dc2f256daab896dadc044dd5a913ecbb7/LICENSE), [mapa licencji WICI](../LICENSE.md).
+Analizowane LICENSE Reticulum i LXMF zawierają dodatkowe ograniczenia użycia oraz tworzenia zbiorów do treningu AI. Nie są niezmodyfikowaną MIT. GPL nie dopuszcza takich dodatkowych ograniczeń w rozpowszechnianym połączonym dziele, dlatego 2026-10-07 kod WICI przeniesiono na MIT. Pakiet START dołącza teksty licencji Reticulum i LXMF przypiętych wersji; jego użytkownicy podlegają ich warunkom, a pakiet jako całość nie jest oprogramowaniem otwartym w rozumieniu OSI. [Reticulum LICENSE](https://github.com/markqvist/Reticulum/blob/e40191b3d193b46b7f2d8a44424a594cd758839b/LICENSE), [LXMF LICENSE](https://github.com/markqvist/LXMF/blob/c3ff2d6dc2f256daab896dadc044dd5a913ecbb7/LICENSE), [mapa licencji WICI](../LICENSE.md).
 
 Repozytorium zawiera własny model i dokumentację; nie dołącza kodu tych zależności. Publikacja obecnych źródeł i kwalifikacja przyszłej paczki START są osobnymi ocenami.
 

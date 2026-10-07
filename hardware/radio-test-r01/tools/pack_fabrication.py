@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 """Package controller exports with their licenses; retain manufacturing HOLD."""
 
 from pathlib import Path

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 """Export controller-only fabrication and assembly files with one common origin.
 
 These are R01.3 candidate outputs. Exporting does not approve connector fit,

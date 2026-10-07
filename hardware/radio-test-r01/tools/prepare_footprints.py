@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 """Vendor the exact KiCad footprints and build a USB footprint from dimensions.
 
 The USB pad coordinates and finished-hole sizes follow the manufacturer's

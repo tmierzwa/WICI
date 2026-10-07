@@ -1,0 +1,29 @@
+name: Błąd / Bug
+description: Błąd w obliczeniach, kontrakcie, dokumentacji, kodzie lub CAD
+labels: [błąd]
+body:
+  - type: input
+    id: where
+    attributes:
+      label: Plik i miejsce
+      description: Ścieżka, sekcja lub numer wiersza
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Co jest nie tak
+      description: Opis błędu i jego skutki
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Dowód
+      description: Obliczenie, źródło, karta katalogowa, przypadek testowy lub pomiar
+    validations:
+      required: true
+  - type: textarea
+    id: fix
+    attributes:
+      label: Proponowana poprawka

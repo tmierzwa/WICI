@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 """Finish the preserved outer-layer routing session, then require fresh DRC.
 
 The router necked three HSE tracks below the fabrication rule and left two

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 """Apply explicit routing corrections, then require a fresh KiCad DRC.
 
 The local autorouter produced narrow necks. This widens them and adjusts two

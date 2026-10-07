@@ -1,32 +1,61 @@
 # Współpraca przy WICI
 
-Projekt jest prototypem. Zmiany mają upraszczać wykonanie, usuwać zależność od jednego dostawcy i zwiększać niezawodność. Wygląd i dodatkowe funkcje nie są priorytetem.
+Projekt jest prototypem. Zmiany mają upraszczać wykonanie, usuwać zależność od jednego dostawcy i zwiększać niezawodność. Wygląd i dodatkowe funkcje nie są priorytetem. Najcenniejszym wkładem są zgłoszone błędy w obliczeniach, założeniach i kontraktach oraz raporty z prób fizycznych.
 
-1. Dla większej zmiany otwórz [Issue](https://github.com/tmierzwa/WICI/issues): problem, proponowany zakres i warunek sprawdzenia. Małe poprawki można wysłać bezpośrednio jako pull request.
-2. Pracuj w swojej gałęzi. Opisz, co zmienia PR i czym zostało sprawdzone.
+## Jak zgłosić zmianę
+
+1. Dla większej zmiany otwórz [Issue](https://github.com/tmierzwa/WICI/issues/new/choose): problem, proponowany zakres i warunek sprawdzenia. Małe poprawki można wysłać bezpośrednio jako pull request.
+2. Pracuj w swojej gałęzi. Opisz, co zmienia PR i czym zostało sprawdzone; szablon PR podaje wymagane punkty.
 3. Parametry i kontrakty stacji zmieniaj w `docs/spec/`. Potrzeby, uzasadnienia, opcje i analizę wykonalności utrzymuj w [docs/conception](docs/conception/index.html). Aktualizuj powiązane wymagania i próby; odróżniaj założenie od pomiaru. Nie twórz drugiej pełnej kopii specyfikacji.
 4. Zmiana kodu kontraktów wymaga przypadku, który pokazuje problem, i wyniku odpowiednich testów. Raport zaktualizuj dopiero po ich wykonaniu.
 5. Zmiana CAD wymaga aktualnych ERC/DRC, eksportów i kontroli paczki według [procedury odtworzenia](hardware/radio-test-r01/odtworzenie.md). Zmiana elektryczna wymaga nowej rewizji. Nie zmieniaj historycznych raportów na wyniki nowych prób.
-6. Raport z prób fizycznych podaje rewizję, elementy, warunki, metodę i wynik. Nie oznaczaj niewykonanych prób jako zaliczonych. Sam CI nie zwalnia statusu HOLD.
+6. Raport z prób fizycznych podaje rewizję, elementy, warunki, metodę i wynik; użyj szablonu „Raport z próby”. Nie oznaczaj niewykonanych prób jako zaliczonych. Sam CI nie zwalnia statusu HOLD.
 
-Przed PR uruchom z katalogu głównego:
+## Kontrole przed PR
+
+Uruchom z katalogu głównego:
 
 ```sh
 python3 -m unittest discover -s software/reference -v
 python3 -m unittest discover -s tests -v
+python3 tools/verify_repository.py --pull-request
 ```
 
-Po zmianie publicznych plików przejrzyj `git diff` i listę plików w indeksie. Następnie:
+**Nie odświeżaj `manifest.json`.** Sumy kontrolne całego repozytorium odświeża opiekun po scaleniu i przed wydaniem; w PR prowadziłyby do konfliktów między równoległymi zmianami. Kontrola z `--pull-request` sprawdza wszystko poza zgodnością tego pliku. Dowody związane z treścią zmiany odświeżasz sam:
 
-```sh
-git add <pliki-zmiany>
-python3 tools/release.py --refresh
-python3 tools/verify_repository.py
-git add manifest.json
-```
+- zmiana `software/reference/obliczenia.py`: uruchom go, aby zaktualizować `wyniki.json`, a po testach zaktualizuj `weryfikacja.json`;
+- zmiana plików w `hardware/radio-test-r01/`: wykonaj `python3 hardware/radio-test-r01/tools/check_bundle.py`; zmiana eksportów wymaga też `verify_fabrication.py`.
 
-Jeżeli zmieniasz narzędzia lub dokumenty wewnątrz `hardware/radio-test-r01/`, przed odświeżeniem głównego manifestu wykonaj `python3 hardware/radio-test-r01/tools/check_bundle.py`. Zmiana eksportów wymaga też `verify_fabrication.py`. Nie odświeżaj sum w odpowiedzi na nieznany błąd CI; najpierw ustal, co się zmieniło.
+Nie odświeżaj sum w odpowiedzi na nieznany błąd CI; najpierw ustal, co się zmieniło. Nowy plik musi mieć licencję: nagłówek `SPDX-License-Identifier` albo wpis w [REUSE.toml](REUSE.toml); CI sprawdza to poleceniem `reuse lint`.
+
+## Pochodzenie wkładu (DCO)
+
+Każdy commit w PR kończy się wierszem `Signed-off-by: Imię Nazwisko <email>` (`git commit -s`). Oznacza on zgodę na [Developer Certificate of Origin 1.1](https://developercertificate.org/): masz prawo przesłać ten materiał na licencji właściwej dla ścieżki. Nie wymagamy CLA ani przeniesienia praw autorskich.
 
 Nie dodawaj kluczy, danych mieszkańców, kopii prywatnych rozmów ani materiałów producenta bez uprawnień do dystrybucji. Lokalny `reference-private/` nie należy do wydania. Dla nowej biblioteki lub footprintu zapisz źródło, wersję, modyfikacje i licencję.
 
-Wkład pozostaje pod licencją właściwą dla ścieżki w [LICENSE.md](LICENSE.md). Przesyłaj materiały, do których masz prawo udzielić tej licencji. Nie wymagamy CLA. Cel projektu jest niekomercyjny; wybrane otwarte licencje nie zabraniają zastosowań komercyjnych.
+Jeżeli korzystasz z narzędzi AI, napisz o tym w opisie PR i sprawdź wynik tak, jakby był Twój: odpowiadasz za każdy wiersz.
+
+## Decyzje i przeglądy
+
+Projekt ma obecnie jednego opiekuna ([@tmierzwa](https://github.com/tmierzwa)). Opiekun scala PR, zamyka decyzje D01–D13 z [planu weryfikacji](docs/conception/08-plan-weryfikacji-i-decyzje.html) i wydaje wersje. Decyzja zapada w Issue lub PR, z uzasadnieniem i dowodem wymaganym w tabeli decyzji; zmiana decyzji wymaga nowego dowodu, nie samej dyskusji.
+
+Zmiany krytyczne dla bezpieczeństwa ludzi — przetwornica 230 V i ochrona PE, ochrona przed przepięciem portów telefonów, zabezpieczenia akumulatorów oraz budżet czasu nadawania — wymagają przeglądu przez osobę z odpowiednimi kwalifikacjami, oprócz opiekuna. Dopóki taka osoba nie dołączy do projektu, te części pozostają opisem do prób i mają status HOLD. Mówimy o tym wprost, zamiast udawać przegląd, którego nie było.
+
+Główna gałąź jest chroniona: scalenie wymaga przejścia CI. Wydania mają tagi `v*` i paczkę źródłową z pełną kontrolą manifestu.
+
+## Licencje
+
+Wkład pozostaje pod licencją właściwą dla ścieżki w [LICENSE.md](LICENSE.md): kod MIT, konstrukcja CERN-OHL-P-2.0, dokumentacja CC-BY-4.0. Cel projektu jest niekomercyjny; wybrane otwarte licencje nie zabraniają zastosowań komercyjnych. Obowiązuje [kodeks postępowania](CODE_OF_CONDUCT.md); podatności zgłaszaj według [SECURITY.md](SECURITY.md).
+
+## In English
+
+Contributions in English are welcome; documentation stays in Polish, and maintainers will help with translation. In short:
+
+- Open an issue for larger changes; small fixes can go straight to a pull request.
+- Run the three checks above with `--pull-request`. **Do not refresh `manifest.json`**; the maintainer does it after merging. Refresh only the evidence your change affects (calculation results, hardware bundle).
+- Sign off every commit (`git commit -s`, [DCO 1.1](https://developercertificate.org/)). No CLA.
+- Keep assumptions separate from measurements; never mark an unperformed test as passed.
+- Safety-critical parts (230 V inverter, phone over-voltage protection, batteries, transmit budget) need review by a qualified person and stay on HOLD until then.
+- Disclose AI assistance in the PR; you are responsible for every line.
+- Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).

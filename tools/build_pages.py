@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 """Build the GitHub Pages site from docs/conception without changing the sources."""
 
 from pathlib import Path

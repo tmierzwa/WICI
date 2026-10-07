@@ -19,4 +19,4 @@ Druga komenda zapisuje `wyniki.json` obok skryptu. Są to obliczenia z założe�
 | [obliczenia.py](obliczenia.py) | Energia i oszacowania układów |
 | [wyniki.json](wyniki.json) | Zapis wyników z założeniami |
 
-Kontrakty: [radio](../../docs/spec/radio.md), [oprogramowanie](../../docs/spec/oprogramowanie.md). Licencja kodu i SQL: [GPL-3.0-or-later](../../LICENSES/GPL-3.0-or-later.txt); opisy i raporty: CC-BY-4.0.
+Kontrakty: [radio](../../docs/spec/radio.md), [oprogramowanie](../../docs/spec/oprogramowanie.md). Licencja kodu i SQL: [MIT](../../LICENSES/MIT.txt); opisy i raporty: CC-BY-4.0.
