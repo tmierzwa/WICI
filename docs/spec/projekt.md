@@ -54,7 +54,7 @@ Poziom 1, zawsze w zestawie:
 2. Dwa komplety po 4 ogniwa litowe AA: komplet kryzysowy w zamkniętym opakowaniu, otwierany tylko w kryzysie, i komplet ćwiczebny do TEST i przeglądów.
 3. Antena zewnętrzna z uchwytem do stałego montażu, przewód koncentryczny o małym tłumieniu (np. LMR-240; do 2 m ≤1 dB, dłuższy wymaga nowego bilansu łącza), odgromnik gazowy (GDT) i przepust ścienny; zapasowy dipol z uchwytem do wystawienia przez okno.
 4. Przewód zasilania stacji 12 V z bezpiecznikiem 1 A i końcówkami do gniazda zapalniczki oraz zacisków akumulatora.
-5. [Karta obsługi stacji](karta.md) w trzech językach (PL/UK/EN; UK i EN z tabeli tekstów ekranu) z piktogramami kategorii.
+5. [Karta obsługi stacji](karta.md) w trzech językach ([UK](karta-uk.md), [EN](karta-en.md)) z piktogramami kategorii oraz drukowana [instrukcja opiekuna](instrukcja.md).
 6. Odbiornik bateryjny lub z korbką: FM i fale długie 225 kHz (Polskie Radio Program 1), w miarę możliwości DAB+, z zapasem baterii. Alert RCB i aplikacja RSO wymagają sieci komórkowej lub internetu, więc podczas awarii sieci schronienie ich nie odbierze.
 7. Para ręcznych radiotelefonów PMR446 jako głosowy kanał zastępczy; kanał i podton zapisane w planie; zasięg w zabudowie zwykle kilkaset metrów, więc służą do łączności z gońcem lub sąsiednim punktem, a z OSP tylko po potwierdzeniu zasięgu.
 8. Formularze papierowe zgłoszeń ([pola](karta.md)) do wypełniania w dwóch egzemplarzach i papierowy dziennik zmian.
@@ -133,7 +133,7 @@ Zestaw może czekać na użycie latami. Przechowuje się go w obiekcie, w zamkni
 
 Co kwartał opiekun wykonuje przegląd podstawowy z kompletu ćwiczebnego albo ze źródła 12 V: uruchomienie, TEST, napięcie ogniw ćwiczebnych, nienaruszone opakowanie kompletu kryzysowego, aktualność karty. Raz w roku osoba kompetentna (serwis, krótkofalowiec, wyznaczony pracownik) wykonuje przegląd techniczny; nowe wydanie oprogramowania instaluje się tylko podczas tego przeglądu:
 
-1. Uruchom stację z kompletu ćwiczebnego albo ze źródła 12 V; sprawdź na ekranie adres, kartę OSP i nazwę `WICI-xxxxxx`. Sprawdź datę ważności kompletu kryzysowego bez otwierania opakowania i napięcie kompletu ćwiczebnego; wymień ogniwa przeterminowane albo o napięciu niższym niż podane w instrukcji.
+1. Uruchom stację z kompletu ćwiczebnego albo ze źródła 12 V; sprawdź na ekranie adres, kartę OSP i nazwę `WICI-xxxxxx`. Sprawdź datę ważności kompletu kryzysowego bez otwierania opakowania i napięcie kompletu ćwiczebnego; wymień ogniwa przeterminowane albo o napięciu niższym niż podane w [instrukcji](instrukcja.md#energia-stacji) (komplet ćwiczebny: 5,6 V po minucie pracy).
 2. Sprawdź sumy kontrolne obrazu na pamięci USB, bo pamięć flash bez zasilania traci dane. Wymień ją co kilka lat albo przechowuj drugą, sprawdzoną kopię.
 3. Uruchom aplikację z przygotowanego zestawu na aktualnych komputerach z lokalnej listy; nowe wersje systemów mogą wymagać nowego pakietu START.
 4. W każdym corocznym przeglądzie zmierz i skoryguj częstotliwość nadajnika, aby skontrolować starzenie TCXO ([radio](radio.md)); pomiar wykonuje producent lub serwis przyrządem o dokładności ≤0,1 ppm, a stacje dowozi się w tym dniu do jednego miejsca (około 20 min na stację). Sprawdź wymianę ramek ze stacją drugiego wykonania. Do oceny: ekran pokazuje odchyłkę częstotliwości oszacowaną z odebranych ramek jako tanią samokontrolę między przeglądami.

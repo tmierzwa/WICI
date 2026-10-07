@@ -109,7 +109,8 @@
   <li>treść zakodowana modelem;</li>
   <li>pakiet = nagłówek 19 B + klucz efemeryczny 32 B + wektor inicjujący (IV) 16 B + szyfrogram dopełniony do wielokrotności 16 B + kod uwierzytelniający (HMAC) 32 B;</li>
   <li>szyfrowana część LXMF to 80 B skrótu nadawcy i podpisu oraz 18–19 B struktury;</li>
-  <li>niejawne potwierdzenie ma 83 B.</li>
+  <li>niejawne potwierdzenie ma 83 B;</li>
+  <li>każdy datagram P1 niesie kod dostępu sieci IFAC 16 B (<a href="../spec/radio.md#interfejs-p1-w-stosie-reticulum">specyfikacja radia</a>).</li>
 </ul>
 
 <p>Na ostatnim odcinku pakiet nie ma identyfikatora transportu. Wartości wynikają z analizowanych wersji, nie z pomiaru.</p>
@@ -121,28 +122,36 @@
 <th scope="col" class="num">Fragmenty</th>
 <th scope="col" class="num">TX + cisza [s]</th>
 </tr></thead><tbody>
-<tr><td>REQUEST typowy, treść 174 B</td><td class="num">387</td><td class="num">5</td><td class="num">11,527</td></tr>
-<tr><td>REQUEST z maksymalnymi polami, 222 B</td><td class="num">435</td><td class="num">6</td><td class="num">13,195</td></tr>
-<tr><td>RECEIVED, 50 B</td><td class="num">259</td><td class="num">4</td><td class="num">8,125</td></tr>
-<tr><td>potwierdzenie pakietu</td><td class="num">83</td><td class="num">1</td><td class="num">2,427</td></tr>
+<tr><td>REQUEST typowy, treść 174 B</td><td class="num">403</td><td class="num">5</td><td class="num">11,873</td></tr>
+<tr><td>REQUEST z maksymalnymi polami, 222 B</td><td class="num">451</td><td class="num">6</td><td class="num">13,542</td></tr>
+<tr><td>RECEIVED, 50 B</td><td class="num">275</td><td class="num">4</td><td class="num">8,472</td></tr>
+<tr><td>potwierdzenie pakietu</td><td class="num">99</td><td class="num">2</td><td class="num">3,402</td></tr>
 </tbody></table></div>
 
-<p>Obsługa jednego zgłoszenia zajmuje przekaźnikowi B 24,5–26,2 s nadawania z ciszą. Obsługa 50 zgłoszeń wymaga 1225–1309 s, czyli 20,4–21,8 min z 30 min przy zerowych stratach. Obliczenie zakłada, że dyżurny nie wysyła w tym czasie STATUS. Z „ODBIORCA PRZECZYTAŁ” i decyzją dla każdego zgłoszenia przekaźnik potrzebuje 47,3 s na zgłoszenie, czyli około 39 min na 50 zgłoszeń; W10 dotyczy więc samego przyjęcia, a próba ze STATUS jest osobnym pomiarem. Obliczenie pomija zimną trasę (ogłoszenia, zapytania o trasę), kolizje, CCA, narastanie mocy nadajnika, ponowienia i ruch innych stacji. Każde utracone i ponowione zgłoszenie zabiera B kolejne 11,5–13,2 s. Dostarczenie przez istniejący link ma podobny koszt na wiadomość, ale wymaga zestawienia linku w limitach czasu stosu. Zasób dodaje dla każdej wiadomości ogłoszenie, części i dowód. W10 jest więc wykonalne na papierze tylko przy jednym pakiecie na wiadomość i małych stratach.</p>
+<p>Obsługa jednego zgłoszenia zajmuje przekaźnikowi B 27,1–28,8 s nadawania z ciszą. Obsługa 50 zgłoszeń wymaga 1357–1441 s, czyli 22,6–24,0 min z 30 min przy zerowych stratach. Kod IFAC wydłuża ten czas o około 10%, bo potwierdzenie pakietu przestaje mieścić się w jednym fragmencie. Obliczenie zakłada, że dyżurny nie wysyła w tym czasie STATUS. Z „ODBIORCA PRZECZYTAŁ” i decyzją dla każdego zgłoszenia przekaźnik potrzebuje 52,6 s na zgłoszenie, czyli około 44 min na 50 zgłoszeń; W10 dotyczy więc samego przyjęcia, a próba ze STATUS jest osobnym pomiarem. Obliczenie pomija zimną trasę (ogłoszenia, zapytania o trasę), kolizje, CCA, narastanie mocy nadajnika, ponowienia i ruch innych stacji. Każde utracone i ponowione zgłoszenie zabiera B kolejne 11,9–13,5 s. Dostarczenie przez istniejący link ma podobny koszt na wiadomość, ale wymaga zestawienia linku w limitach czasu stosu. Zasób dodaje dla każdej wiadomości ogłoszenie, części i dowód. W10 jest więc wykonalne na papierze tylko przy jednym pakiecie na wiadomość i małych stratach.</p>
 
 <p>LXMF ponawia niepotwierdzoną wiadomość okazjonalną po <code>max(10 s, RTT)</code>, najwyżej 5 prób (<code>DELIVERY_RETRY_WAIT</code>, <code>MAX_DELIVERY_ATTEMPTS</code>). Jeden cykl B dla zgłoszenia trwa dłużej niż 10 s, a jego kolejka może trzymać minuty ruchu. Jeśli szacunek czasu obiegu (RTT) nie obejmuje oczekiwania za ciszą, A wysyła ponownie wiadomości jeszcze czekające u B i zużywa jego budżet. T3 musi zmierzyć takie duplikaty i ustalić, skąd stos bierze RTT przy szybkości zgłaszanej przez interfejs P1. <a href="https://github.com/markqvist/LXMF/blob/c3ff2d6dc2f256daab896dadc044dd5a913ecbb7/LXMF/LXMRouter.py">LXMRouter</a>.</p>
 
-<p>Dlatego stos stacji ponawia wiadomość okazjonalną nie wcześniej niż po max(60 s, 2 × liczba skoków × 13 × czas TX największego datagramu + bieżący dług ciszy + czas opróżnienia kolejki P1). Na jedno ponowienie intencji przypadają najwyżej 2 próby LXMF (<a href="../spec/radio.md#interfejs-p1-w-stosie-reticulum">kontrakt interfejsu P1</a>). Dla największego własnego datagramu (483 B przy treści 256 B, cykl 14,2 s) daje to 60 s dla 1 i 2 skoków na pustej sieci oraz około 114 s (1 skok) i 143 s (2 skoki) przy największym długu ciszy i pełnej kolejce 4 × 600 B.</p>
+<p>Dlatego stos stacji ponawia wiadomość okazjonalną nie wcześniej niż po max(60 s, 2 × liczba skoków × 13 × czas TX największego datagramu + bieżący dług ciszy + czas opróżnienia kolejki P1). Na jedno ponowienie intencji przypadają najwyżej 2 próby LXMF (<a href="../spec/radio.md#interfejs-p1-w-stosie-reticulum">kontrakt interfejsu P1</a>). Dla największego własnego datagramu (499 B przy treści 256 B, z IFAC, cykl 14,6 s) daje to 60 s dla 1 i 2 skoków na pustej sieci oraz około 115 s (1 skok) i 144 s (2 skoki) przy największym długu ciszy i pełnej kolejce 4 × 600 B.</p>
 
 <h3 id="pojemnosc-sieci">Pojemność sieci</h3>
 
 <p>Pojemność całej sieci, a nie pojedynczego przekaźnika, ogranicza najbardziej obciążony węzeł: zwykle stacja OSP i przekaźnik obok niej. Model bez strat przyjmuje limit długu ciszy (cykl 13t na datagram) oraz zgłoszenie 222 B z RECEIVED i dwoma STATUS. Wynik:</p>
 
 <ul>
-  <li>stacja OSP nadaje na jedno zgłoszenie potwierdzenie pakietu, RECEIVED i dwa STATUS (27,8 s z ciszą), czyli obsłuży około 129 zgłoszeń/h;</li>
-  <li>przekaźnik przed OSP przekazuje zgłoszenie, RECEIVED, dwa STATUS i cztery potwierdzenia pakietów (47,3 s), czyli obsłuży około 76 zgłoszeń/h.</li>
+  <li>stacja OSP nadaje na jedno zgłoszenie potwierdzenie pakietu, RECEIVED i dwa STATUS (29,9 s z ciszą), czyli obsłuży około 121 zgłoszeń/h;</li>
+  <li>przekaźnik przed OSP przekazuje zgłoszenie, RECEIVED, dwa STATUS i cztery potwierdzenia pakietów (52,6 s), czyli obsłuży około 68 zgłoszeń/h.</li>
 </ul>
 
-<p>Dodanie przekaźników nie zwiększa tego limitu. Zwiększa go tylko drugi odbiorca albo podział sieci. BULLETIN wysyła się osobno do każdej stacji. Przy 50 stacjach to około 11,6 min pracy nadajnika OSP z obowiązkową ciszą (13,9 s na stację); tyle samo trwa rozesłanie polecenia ciszy. Okno losowego startowego TEST skaluje się z liczbą stacji: ≥50 s × liczba stacji, czyli 25 min dla 30 i około 42 min dla 50 stacji (przekaźnik obok OSP potrzebuje około 47 s na pełne zgłoszenie). Okno 0–15 min wystarcza tylko małej sieci. Liczbę stacji stacja zna z przygotowania. Na to samo okno nakłada się ruch ogłoszeń: każda stacja z transportem retransmituje ogłoszenia pozostałych, więc dla 50 stacji model bez strat daje 2500 nadań, około 20 min czasu kanału w jednym obszarze kolizji i około 5 min długu ciszy w każdej stacji; przy limicie ogłoszeń 2% czasu nadawania 50 ogłoszeń przechodzi przez jeden skok w około 20 min. Model pomija kolizje, CCA, zimne trasy i ponowienia, więc liczby są górną granicą.</p>
+<p>Dodanie przekaźników nie zwiększa tego limitu. Zwiększa go tylko drugi odbiorca albo podział sieci. BULLETIN wysyła się osobno do każdej stacji. Przy 50 stacjach to około 11,9 min pracy nadajnika OSP z obowiązkową ciszą (14,2 s na stację); tyle samo trwa rozesłanie polecenia ciszy. Okno losowego startowego TEST skaluje się z liczbą stacji: ≥50 s × liczba stacji, czyli 25 min dla 30 i około 42 min dla 50 stacji (przekaźnik obok OSP potrzebuje około 40 s na TEST z RECEIVED i jednym STATUS). Okno 0–15 min wystarcza tylko małej sieci. Liczbę stacji stacja zna z przygotowania. Na to samo okno nakłada się ruch sterujący zimnego startu. Model bez strat w jednym obszarze kolizji liczy trzy składniki:</p>
+
+<ul>
+  <li>ogłoszenia: każda stacja z transportem retransmituje ogłoszenia pozostałych, więc 50 stacji daje 2500 nadań, około 21 min czasu kanału i około 5,6 min długu ciszy w każdej stacji; przy limicie ogłoszeń 2% czasu nadawania 50 ogłoszeń przechodzi przez jeden skok w około 21 min, czyli mieści się w oknie;</li>
+  <li>zapytania o trasę do OSP, jedno na stację: od 0,6 min, gdy odpowiada najbliższy sąsiad, do 8,6 min, gdy zapytanie zalewa całą sieć;</li>
+  <li>wymiana TEST przez przekaźnik z RECEIVED i potwierdzeniami: około 3,3 min.</li>
+</ul>
+
+<p>Razem to 25–33 min, czyli 61–80% okna 42 min dla 50 stacji; dla 30 stacji 40–52%, a dla 10 stacji 20–24%. Przy wypełnieniu kanału powyżej około połowy CCA i ukryte nadajniki zaczynają gubić ramki, a ponowienia dokładają ruchu. Sieć powyżej około 30 stacji w jednym obszarze kolizji uruchamia się więc etapami według planu sieci (grupy stacji w kolejnych oknach), a T5 i próba skali mierzą rzeczywisty ruch. Model pomija kolizje, CCA i ponowienia, więc jest dolnym oszacowaniem zajętości kanału i górnym oszacowaniem zapasu (<a href="../../software/reference/wyniki.json">wyniki modelu</a>).</p>
 
 <p>Jeśli pomiar potwierdzi brak zapasu, możliwe zmiany to:</p>
 

@@ -27,7 +27,7 @@ Testy obejmują wszystkie długości datagramu 1–600 B, znany wektor CRC, bł�
 | [reference.py](reference.py) | Kodowanie, walidacja, model odbioru OSP (kwarantanna, karty stacji, unieważnienie, zamknięcie zdarzenia) i zaufanie stacji |
 | [schema.sql](schema.sql) | Schemat SQLite używany przez model |
 | [test_reference.py](test_reference.py) | Przypadki akceptacyjne |
-| [obliczenia.py](obliczenia.py) | Energia stacji i poziomu 3, budżet W10 przekaźnika (także z dwoma STATUS), pojemność sieci, rozmiary SA1, zajętość FRAM 4 Mbit według roli, RAM tablic stosu, ogłoszenia przy zimnym starcie sieci, łącze radiowe i oszacowania układów |
+| [obliczenia.py](obliczenia.py) | Energia stacji i poziomu 3, budżet W10 przekaźnika z kodem IFAC (także z dwoma STATUS), pojemność sieci, rozmiary SA1, zajętość FRAM 4 Mbit według roli, RAM tablic stosu, zimny start sieci (ogłoszenia, zapytania o trasę i TEST wobec okna TEST), łącze radiowe i oszacowania układów |
 | [wyniki.json](wyniki.json) | Zapis wyników z założeniami |
 
 Kontrakty: [radio](../../docs/spec/radio.md), [oprogramowanie](../../docs/spec/oprogramowanie.md). Licencja kodu i SQL: [MIT](../../LICENSES/MIT.txt); opisy i raporty: CC-BY-4.0.

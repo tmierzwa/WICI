@@ -33,7 +33,7 @@ TEST ma tablicę, limity i walidację REQUEST. Sprawdza całą drogę zgłoszeni
 
 Pola TEST startowego i TEST z menu: `category` = 9, `people` = 1, `urgency` = 0, `location` = adres stacji, `text` = „test”. Alarm TEST nie zależy od pilności: `brak_potwierdzenia` po 30 min od `test_wyslany` bez RECEIVED. Zgłoszenia wysyłane podczas prób i ćwiczeń również mają typ TEST. TEST startowy zawiera rzeczywisty adres i wejście schronienia, aby dyżurny mógł potwierdzić, że są zrozumiałe. OSP przyjmuje TEST jak REQUEST: weryfikacja nadawcy, kwarantanna nieznanej stacji, deduplikacja, jedna transakcja i RECEIVED po COMMIT. Klucz odbioru nie zależy od typu; REQUEST i TEST o tym samym id i revision to konflikt treści. Stanowisko OSP pokazuje TEST osobno od kolejki potrzeb i nie wlicza go do potrzeb. Dyżurny odpowiada wiadomością STATUS ze state=2. Wartości state 3–6 dla TEST są dopuszczalne tylko w uzgodnionym ćwiczeniu i oznaczają decyzję ćwiczebną bez wysłania pomocy. Stacja pokazuje TEST na ekranie i w panelu opiekuna, nie jako zgłoszenie mieszkańca.
 
-**Pojemność.** Pojemność ogranicza najbardziej obciążony węzeł, zwykle stacja OSP i przekaźnik obok niej, i dotyczy całej sieci, a nie pojedynczego przekaźnika. Model bez strat ([rozdział 06](../conception/06-wykonalnosc-i-budzet-zasobow.html)): OSP przyjmuje około 129 zgłoszeń na godzinę z RECEIVED i dwoma STATUS; przekaźnik przed OSP około 76 na godzinę. Dodanie przekaźników nie zwiększa tego limitu; zwiększa go tylko drugi odbiorca albo podział sieci. BULLETIN wysyła się osobno do każdej stacji: dla 50 stacji to około 12 min pracy nadajnika OSP (nadawanie z obowiązkową ciszą), i tyle samo trwa rozesłanie polecenia ciszy. Pojemność rzeczywistą wyznacza T5.
+**Pojemność.** Pojemność ogranicza najbardziej obciążony węzeł, zwykle stacja OSP i przekaźnik obok niej, i dotyczy całej sieci, a nie pojedynczego przekaźnika. Model bez strat ([rozdział 06](../conception/06-wykonalnosc-i-budzet-zasobow.html)): OSP przyjmuje około 121 zgłoszeń na godzinę z RECEIVED i dwoma STATUS; przekaźnik przed OSP około 68 na godzinę. Dodanie przekaźników nie zwiększa tego limitu; zwiększa go tylko drugi odbiorca albo podział sieci. BULLETIN wysyła się osobno do każdej stacji: dla 50 stacji to około 12 min pracy nadajnika OSP (nadawanie z obowiązkową ciszą), i tyle samo trwa rozesłanie polecenia ciszy. Pojemność rzeczywistą wyznacza T5.
 
 Zmiana danych zgłoszenia tworzy nową rewizję (revision). Każda rewizja zawiera pełną lokalizację i treść, więc odbiorca nie potrzebuje wcześniej przekazanych danych o budynku. Stanowisko pokazuje rewizje jako jedno zgłoszenie, ale każdą potwierdza się osobno. Przez radio nie wysyła się imion, numerów PESEL, danych dokumentów ani tokenów strony. Dyżurny nie wpisuje nazwisk ani informacji o zdrowiu do REPLY i BULLETIN. Typ stanu obiektu (MELDUNEK) nie jest częścią SA1 0.5 – rozstrzyga D18.
 
@@ -206,63 +206,114 @@ Przyciski: GÓRA, DÓŁ, OK, WSTECZ, duże i wyczuwalne, obsługiwane w rękawic
 
 ### Teksty ekranu
 
-Jedyna kanoniczna lista tekstów stacji i strony mieszkańca; inne dokumenty cytują teksty tylko z niej, a T1 sprawdza zgodność. Ekran łamie tekst na wiersze ≤20 znaków; tekst dłuższy niż 5 wierszy dzieli się na kolejne ekrany (do sprawdzenia w T1). [x], [n], [m], [mm], [czas] i [xxxx] to wartości wstawiane przez stację. W tekście ciągłym dokumentów dopuszczalne są małe litery w cudzysłowie. Słowo „OKOŁO” pisze się w całości, bo „OK.” myliłoby się z przyciskiem. UK/EN: tłumaczenie przy wydaniu. Karta obsługi ([karta](karta.md)) cytuje teksty z tej tabeli.
+Jedyna kanoniczna lista tekstów stacji i strony mieszkańca; inne dokumenty cytują teksty tylko z niej, a T1 sprawdza zgodność. Ekran łamie tekst na wiersze ≤20 znaków; tekst dłuższy niż 5 wierszy dzieli się na kolejne ekrany (do sprawdzenia w T1). [x], [n], [m], [mm], [czas] i [xxxx] to wartości wstawiane przez stację. W tekście ciągłym dokumentów dopuszczalne są małe litery w cudzysłowie. Słowo „OKOŁO” pisze się w całości, bo „OK.” myliłoby się z przyciskiem. Kolumny UK i EN są tłumaczeniem roboczym: przed T1 sprawdza je osoba, dla której ukraiński lub angielski jest językiem ojczystym, a T8 z osobą ukraińskojęzyczną; zmiana brzmienia nie może wydłużyć krótkich form ponad 20 znaków. Jednostki `[czas]`: MIN / H / D po polsku i angielsku, ХВ / ГОД / Д po ukraińsku. Napięcie w wersji EN ma kropkę dziesiętną. „ПРИБЛИЗНО” i „ABOUT” pisze się w całości jak „OKOŁO”. Karta obsługi ([karta](karta.md)) cytuje teksty z tej tabeli.
 
-| ID | Ekran PL | Znaczenie |
+| ID | Ekran PL | Ekran UK | Ekran EN | Znaczenie |
+|---|---|---|---|---|
+| `radio_wlaczone` | RADIO WŁĄCZONE | РАДІО УВІМКНЕНО | RADIO ON | stacja odbiera i może nadawać |
+| `cisza` | CISZA RADIOWA – STACJA NIE NADAJE. PILNE: GONIEC | РАДІОТИША – СТАНЦІЯ НЕ ПЕРЕДАЄ. ТЕРМІНОВО: ПОСИЛЬНИЙ | RADIO SILENCE – NOT TRANSMITTING. URGENT: RUNNER | wiersze 1–3 ekranu głównego w ciszy radiowej |
+| `ostatni_kontakt` | OSTATNI KONTAKT Z ODBIORCĄ: [czas] TEMU | ОСТАННІЙ ЗВ'ЯЗОК З ОДЕРЖУВАЧЕМ: [czas] ТОМУ | LAST CONTACT WITH RECIPIENT: [czas] AGO | STAN: czas od ostatniej uwierzytelnionej wiadomości od aktywnej tożsamości OSP (RECEIVED, STATUS, REPLY lub BULLETIN); brak świeżego kontaktu nie jest awarią |
+| `ostatni_kontakt_ponad` | OSTATNI KONTAKT Z ODBIORCĄ: PONAD [czas] TEMU | ОСТАННІЙ ЗВ'ЯЗОК З ОДЕРЖУВАЧЕМ: ПОНАД [czas] ТОМУ | LAST CONTACT WITH RECIPIENT: OVER [czas] AGO | STAN po włączeniu bez RTC: dolne oszacowanie |
+| `kontakt_krotki` | KONTAKT [czas] TEMU | ЗВ'ЯЗОК [czas] ТОМУ | CONTACT [czas] AGO | ekran główny, wiersz 2 |
+| `kontakt_ponad_krotki` | KONTAKT >[czas] TEMU | ЗВ'ЯЗОК >[czas] ТОМУ | CONTACT >[czas] AGO | ekran główny, wiersz 2, po włączeniu bez RTC |
+| `zasilanie_aa` | OGNIWA: OKOŁO [x] H | БАТАРЕЇ: ЩЕ [x] ГОД | CELLS: ABOUT [x] H | ekran główny, wiersz 3, praca z ogniw |
+| `zasilanie_12v` | 12 V: [x] V | 12 В: [x] В | 12 V: [x] V | ekran główny, wiersz 3, praca z 12 V; napięcie z jednym miejscem po przecinku |
+| `kolejka_krotki` | CZEKA [n]: OD [czas] | ЧЕКАЮТЬ [n]: [czas] | WAITING [n]: [czas] | ekran główny, wiersz 4: liczba niewysłanych zgłoszeń i wiek najstarszego |
+| `nowe_krotki` | NOWE WIADOMOŚCI: [n] | НОВИХ ПОВІДОМЛ.: [n] | NEW MESSAGES: [n] | ekran główny, wiersz 5 |
+| `zapisane_w_stacji` | ZAPISANE W STACJI – CZEKA NA WYSŁANIE | ЗБЕРЕЖЕНО В СТАНЦІЇ – ЧЕКАЄ НА ВІДПРАВЛЕННЯ | SAVED IN STATION – WAITING TO SEND | COMMIT w FRAM stacji |
+| `wysylanie` | WYSYŁANIE – PRÓBA [n], NASTĘPNA ZA [m] MIN | ВІДПРАВЛЕННЯ – СПРОБА [n], НАСТУПНА ЧЕРЕЗ [m] ХВ | SENDING – ATTEMPT [n], NEXT IN [m] MIN | intencja w ponawianiu |
+| `zapisane_w_ciszy` | ZAPISANE – NIE WYJDZIE DO KOŃCA CISZY | ЗБЕРЕЖЕНО – НЕ ВІДПРАВИТЬСЯ ДО КІНЦЯ ТИШІ | SAVED – NOT SENT UNTIL SILENCE ENDS | zgłoszenie zapisane w ciszy radiowej |
+| `stan_1` | ODBIORCA ZAPISAŁ | ОДЕРЖУВАЧ ЗБЕРІГ | RECIPIENT SAVED IT | RECEIVED, state 1 |
+| `stan_2` | ODBIORCA PRZECZYTAŁ | ОДЕРЖУВАЧ ПРОЧИТАВ | RECIPIENT READ IT | state 2 |
+| `stan_3` | POMOC SKIEROWANA (DECYZJA, NIE GODZINA PRZYJAZDU) | ДОПОМОГУ НАПРАВЛЕНО (РІШЕННЯ, НЕ ЧАС ПРИБУТТЯ) | HELP DISPATCHED (DECISION, NOT ARRIVAL TIME) | state 3 |
+| `stan_4` | PRZEKAZANE DALEJ (PSP / POGOTOWIE / POWIAT) | ПЕРЕДАНО ДАЛІ (ПОЖЕЖНІ / ШВИДКА / ПОВІТ) | FORWARDED (FIRE SERVICE / AMBULANCE / COUNTY) | state 4 |
+| `stan_5` | ODBIORCA NIE MOŻE TERAZ POMÓC – CZYTAJ ODPOWIEDŹ | ОДЕРЖУВАЧ ЗАРАЗ НЕ МОЖЕ ДОПОМОГТИ – ЧИТАЙТЕ ВІДПОВІДЬ | RECIPIENT CANNOT HELP NOW – READ THE REPLY | state 5, zawsze z REPLY |
+| `stan_6` | ZAMKNIĘTE | ЗАКРИТО | CLOSED | state 6 |
+| `brak_potwierdzenia` | BRAK POTWIERDZENIA OD [n] MIN – WYŚLIJ GOŃCA Z FORMULARZEM | НЕМАЄ ПІДТВЕРДЖЕННЯ [n] ХВ – ВІДПРАВТЕ ПОСИЛЬНОГО З ФОРМОЮ | NO CONFIRMATION FOR [n] MIN – SEND A RUNNER WITH THE FORM | alarm krytyczny; 15 min / 1 h / 6 h według pilności, 30 min dla TEST |
+| `brak_odczytu` | ODBIORCA NIE PRZECZYTAŁ OD 30 MIN – WYŚLIJ GOŃCA Z FORMULARZEM | ОДЕРЖУВАЧ НЕ ПРОЧИТАВ 30 ХВ – ВІДПРАВТЕ ПОСИЛЬНОГО З ФОРМОЮ | NOT READ BY RECIPIENT FOR 30 MIN – SEND A RUNNER WITH THE FORM | alarm krytyczny, tylko pilność 2; brzmienie do potwierdzenia w T1 |
+| `dzwiek_wyciszony` | DŹWIĘK WYCISZONY | ЗВУК ВИМКНЕНО | SOUND MUTED | zwykły sygnał wyciszony |
+| `test_zaplanowany` | TEST ZAPLANOWANY ZA OKOŁO [mm] MIN – NIE WYŁĄCZAJ. WSTECZ = ANULUJ | ТЕСТ ЗАПЛАНОВАНО ПРИБЛИЗНО ЧЕРЕЗ [mm] ХВ – НЕ ВИМИКАЙТЕ. НАЗАД = СКАСУВАТИ | TEST SCHEDULED IN ABOUT [mm] MIN – DO NOT SWITCH OFF. BACK = CANCEL | TEST startowy w losowym oknie |
+| `test_wyslany` | TEST WYSŁANY – CZEKA NA ODBIORCĘ | ТЕСТ ВІДПРАВЛЕНО – ЧЕКАЄ НА ОДЕРЖУВАЧА | TEST SENT – WAITING FOR RECIPIENT | TEST nadany, brak RECEIVED |
+| `test_wstrzymany` | TEST WSTRZYMANY PRZEZ ODBIORCĘ | ТЕСТ ПРИЗУПИНЕНО НА ПРОХАННЯ ОДЕРЖУВАЧА | TEST PAUSED AT RECIPIENT'S REQUEST | opiekun wybrał TEST → WSTRZYMAJ po komunikacie OSP |
+| `adres_kontrola` | ADRES: [x] – CZY TO TO MIEJSCE? OK = TAK / WSTECZ = NIE | АДРЕСА: [x] – ЦЕ ЦЕ МІСЦЕ? OK = ТАК / НАЗАД = НІ | ADDRESS: [x] – IS THIS THE PLACE? OK = YES / BACK = NO | kontrola adresu przy starcie |
+| `adres_brak` | STACJA NIE MA TWOJEGO ADRESU – UŻYJ FORMULARZA PAPIEROWEGO | СТАНЦІЯ НЕ МАЄ ВАШОЇ АДРЕСИ – ВИКОРИСТАЙТЕ ПАПЕРОВУ ФОРМУ | STATION DOES NOT HAVE YOUR ADDRESS – USE THE PAPER FORM | odpowiedź NIE albo brak adresu |
+| `porzucic` | PORZUCIĆ ZGŁOSZENIE? OK = TAK | СКАСУВАТИ ЗАЯВКУ? OK = ТАК | DISCARD REQUEST? OK = YES | przytrzymanie WSTECZ 2 s w kreatorze |
+| `pilnosc_2` | ZAGROŻENIE ŻYCIA | ЗАГРОЗА ЖИТТЮ | DANGER TO LIFE | urgency 2 |
+| `pilnosc_1` | PILNE – KILKA GODZIN | ТЕРМІНОВО – КІЛЬКА ГОДИН | URGENT – A FEW HOURS | urgency 1 |
+| `pilnosc_0` | W CIĄGU DOBY | ПРОТЯГОМ ДОБИ | WITHIN A DAY | urgency 0 |
+| `pilnosc_2_potw` | ZAGROŻENIE ŻYCIA: 1) UDZIEL PIERWSZEJ POMOCY 2) DZIAŁA TELEFON? 112 3) BEZPIECZNA DROGA? GONIEC. OK = WYŚLIJ TEŻ RADIEM | ЗАГРОЗА ЖИТТЮ: 1) НАДАЙТЕ ПЕРШУ ДОПОМОГУ 2) ПРАЦЮЄ ТЕЛЕФОН? 112 3) БЕЗПЕЧНА ДОРОГА? ПОСИЛЬНИЙ. OK = НАДІСЛАТИ ТАКОЖ ПО РАДІО | DANGER TO LIFE: 1) GIVE FIRST AID 2) PHONE WORKS? 112 3) SAFE ROUTE? RUNNER. OK = ALSO SEND BY RADIO | potwierdzenie pilności 2 |
+| `podsumowanie_klawisze` | OK = WYŚLIJ, WSTECZ = POPRAW | OK = НАДІСЛАТИ, НАЗАД = ВИПРАВИТИ | OK = SEND, BACK = EDIT | ostatnie wiersze podsumowania |
+| `kolejka_pelna` | KOLEJKA PEŁNA – ZGŁOSZENIE NIE ZAPISANE. UŻYJ FORMULARZA PAPIEROWEGO | ЧЕРГА ПОВНА – ЗАЯВКУ НЕ ЗБЕРЕЖЕНО. ВИКОРИСТАЙТЕ ПАПЕРОВУ ФОРМУ | QUEUE FULL – REQUEST NOT SAVED. USE THE PAPER FORM | 128 intencji w kolejce |
+| `blad_pamieci` | BŁĄD PAMIĘCI STACJI – ZGŁOSZENIE NIE ZAPISANE. FORMULARZ + GONIEC | ПОМИЛКА ПАМ'ЯТІ СТАНЦІЇ – ЗАЯВКУ НЕ ЗБЕРЕЖЕНО. ФОРМА + ПОСИЛЬНИЙ | STATION MEMORY ERROR – REQUEST NOT SAVED. FORM + RUNNER | błąd zapisu FRAM |
+| `ogniwa_czas` | OGNIWA: OKOŁO [x] H PRACY | БАТАРЕЇ: ПРИБЛИЗНО [x] ГОД РОБОТИ | CELLS: ABOUT [x] H OF OPERATION | szacowany czas pracy |
+| `wymien_ogniwa` | WYMIEŃ OGNIWA W CIĄGU 1 H | ЗАМІНІТЬ БАТАРЕЇ ПРОТЯГОМ 1 ГОД | REPLACE CELLS WITHIN 1 H | alarm krytyczny |
+| `wylaczanie` | WYŁĄCZANIE – CZEKAJ, ZAPISUJĘ | ВИМКНЕННЯ – ЗАЧЕКАЙТЕ, ЗБЕРІГАЮ | SWITCHING OFF – WAIT, SAVING | kończenie zapisu przed wyłączeniem |
+| `mozna_wyjac` | MOŻNA WYJĄĆ OGNIWA | МОЖНА ВИЙНЯТИ БАТАРЕЇ | CELLS CAN BE REMOVED | zapis zakończony |
+| `odlaczone_12v` | 12 V ODŁĄCZONE – ZA NISKIE NAPIĘCIE. PODŁĄCZ NAŁADOWANE ŹRÓDŁO I PRZYTRZYMAJ OK | 12 В ВІДКЛЮЧЕНО – ЗАНИЗЬКА НАПРУГА. ПІДКЛЮЧІТЬ ЗАРЯДЖЕНЕ ДЖЕРЕЛО І УТРИМУЙТЕ OK | 12 V DISCONNECTED – VOLTAGE TOO LOW. CONNECT A CHARGED SOURCE AND HOLD OK | zatrzask podnapięciowy 12 V; praca z ogniw |
+| `tryb_przygotowania` | TRYB PRZYGOTOWANIA | РЕЖИМ ПІДГОТОВКИ | PREPARATION MODE | stały pasek w trybie przygotowania |
+| `odbiorca_zapasowy` | PRZEŁĄCZYĆ NA ODBIORCĘ ZAPASOWEGO? TYLKO NA POLECENIE GOŃCA LUB SŁOWNE. NIEODWRACALNE | ПЕРЕМКНУТИ НА РЕЗЕРВНОГО ОДЕРЖУВАЧА? ЛИШЕ ЗА УСНИМ НАКАЗОМ АБО ЧЕРЕЗ ПОСИЛЬНОГО. НЕЗВОРОТНО | SWITCH TO BACKUP RECIPIENT? ONLY ON A SPOKEN ORDER OR BY RUNNER. IRREVERSIBLE | przed sekwencją GÓRA, DÓŁ, GÓRA, OK |
+| `incoming_osp` | DO ZAPISU W PANELU: [n] | ДО ЗБЕРЕЖЕННЯ В ПАНЕЛІ: [n] | TO SAVE IN PANEL: [n] | stacja OSP: wiadomości `incoming` bez `ack` |
+| `zniszcz_ostrzezenie` | NIEODWRACALNE – STACJA PRZESTANIE DZIAŁAĆ; TYLKO PRZY GROŹBIE PRZEJĘCIA | НЕЗВОРОТНО – СТАНЦІЯ ПЕРЕСТАНЕ ПРАЦЮВАТИ; ЛИШЕ ПРИ ЗАГРОЗІ ЗАХОПЛЕННЯ | IRREVERSIBLE – STATION WILL STOP WORKING; ONLY IF CAPTURE THREATENS | przed sekwencją GÓRA, DÓŁ, GÓRA, OK |
+| `stopka_komunikatu` | NAKAZ WYJŚCIA LUB EWAKUACJI? POTWIERDŹ W RADIU PUBLICZNYM LUB U GOŃCA | НАКАЗ ВИЙТИ АБО ЕВАКУЮВАТИСЯ? ПІДТВЕРДІТЬ ПО СУСПІЛЬНОМУ РАДІО АБО В ПОСИЛЬНОГО | ORDER TO LEAVE OR EVACUATE? CONFIRM ON PUBLIC RADIO OR WITH THE RUNNER | stopka każdego BULLETIN |
+| `czeka_na_opiekuna` | CZEKA NA OPIEKUNA | ЧЕКАЄ НА КООРДИНАТОРА | WAITING FOR THE WARDEN | strona: zgłoszenie zapisane w laptopie |
+| `opiekun_polaczyl` | OPIEKUN POŁĄCZYŁ ZE ZGŁOSZENIEM NR [xxxx] | КООРДИНАТОР ОБ'ЄДНАВ ІЗ ЗАЯВКОЮ № [xxxx] | WARDEN MERGED IT WITH REQUEST NO. [xxxx] | strona: połączone z powtarzalnym |
+| `nie_wyslane` | NIE WYSŁANE – PODEJDŹ DO OPIEKUNA | НЕ ВІДПРАВЛЕНО – ПІДІЙДІТЬ ДО КООРДИНАТОРА | NOT SENT – SEE THE WARDEN | strona: opiekun nie przekazał zgłoszenia |
+| `zapisz_numer` | ZAPISZ NUMER [xxxx] – PODAJ GO OPIEKUNOWI, ABY SPRAWDZIĆ STAN | ЗАПИШІТЬ НОМЕР [xxxx] – НАЗВІТЬ ЙОГО КООРДИНАТОРУ, ЩОБ ПЕРЕВІРИТИ СТАН | NOTE NUMBER [xxxx] – GIVE IT TO THE WARDEN TO CHECK THE STATUS | strona: po wysłaniu, z lokalnym numerem |
+| `zostalo_znakow` | ZOSTAŁO OKOŁO [n] ZNAKÓW | ЗАЛИШИЛОСЯ ПРИБЛИЗНО [n] ЗНАКІВ | ABOUT [n] CHARACTERS LEFT | strona i panel: licznik pod opisem, z limitu bajtów |
+| `nie_wpisuj_nazwisk` | NIE WPISUJ NAZWISK | НЕ ВПИСУЙТЕ ПРІЗВИЩ | DO NOT ENTER SURNAMES | strona i panel: ostrzeżenie przy opisie |
+| `odpowiedzi_po_polsku` | – | ВІДПОВІДІ ВІД ОДЕРЖУВАЧА НАДХОДЯТЬ ПОЛЬСЬКОЮ | REPLIES FROM THE RECIPIENT ARRIVE IN POLISH | WIADOMOŚCI w wersji UK i EN, nad każdą odpowiedzią i komunikatem; zdanie karty UK i EN |
+
+Pozycje menu, nazwy przycisków i etykiety kategorii są częścią tej listy. Krótkie formy ekranu głównego, pozycje menu i etykiety kategorii mają ≤20 znaków po wstawieniu największych wartości w każdym języku; T1 sprawdza to dla PL, UK i EN.
+
+| PL | UK | EN |
 |---|---|---|
-| `radio_wlaczone` | RADIO WŁĄCZONE | stacja odbiera i może nadawać |
-| `cisza` | CISZA RADIOWA – STACJA NIE NADAJE. PILNE: GONIEC | wiersze 1–3 ekranu głównego w ciszy radiowej |
-| `ostatni_kontakt` | OSTATNI KONTAKT Z ODBIORCĄ: [czas] TEMU | STAN: czas od ostatniej uwierzytelnionej wiadomości od aktywnej tożsamości OSP (RECEIVED, STATUS, REPLY lub BULLETIN); brak świeżego kontaktu nie jest awarią |
-| `ostatni_kontakt_ponad` | OSTATNI KONTAKT Z ODBIORCĄ: PONAD [czas] TEMU | STAN po włączeniu bez RTC: dolne oszacowanie |
-| `kontakt_krotki` | KONTAKT [czas] TEMU | ekran główny, wiersz 2 |
-| `kontakt_ponad_krotki` | KONTAKT >[czas] TEMU | ekran główny, wiersz 2, po włączeniu bez RTC |
-| `zasilanie_aa` | OGNIWA: OKOŁO [x] H | ekran główny, wiersz 3, praca z ogniw |
-| `zasilanie_12v` | 12 V: [x] V | ekran główny, wiersz 3, praca z 12 V; napięcie z jednym miejscem po przecinku |
-| `kolejka_krotki` | CZEKA [n]: OD [czas] | ekran główny, wiersz 4: liczba niewysłanych zgłoszeń i wiek najstarszego |
-| `nowe_krotki` | NOWE WIADOMOŚCI: [n] | ekran główny, wiersz 5 |
-| `zapisane_w_stacji` | ZAPISANE W STACJI – CZEKA NA WYSŁANIE | COMMIT w FRAM stacji |
-| `wysylanie` | WYSYŁANIE – PRÓBA [n], NASTĘPNA ZA [m] MIN | intencja w ponawianiu |
-| `zapisane_w_ciszy` | ZAPISANE – NIE WYJDZIE DO KOŃCA CISZY | zgłoszenie zapisane w ciszy radiowej |
-| `stan_1` | ODBIORCA ZAPISAŁ | RECEIVED, state 1 |
-| `stan_2` | ODBIORCA PRZECZYTAŁ | state 2 |
-| `stan_3` | POMOC SKIEROWANA (DECYZJA, NIE GODZINA PRZYJAZDU) | state 3 |
-| `stan_4` | PRZEKAZANE DALEJ (PSP / POGOTOWIE / POWIAT) | state 4 |
-| `stan_5` | ODBIORCA NIE MOŻE TERAZ POMÓC – CZYTAJ ODPOWIEDŹ | state 5, zawsze z REPLY |
-| `stan_6` | ZAMKNIĘTE | state 6 |
-| `brak_potwierdzenia` | BRAK POTWIERDZENIA OD [n] MIN – WYŚLIJ GOŃCA Z FORMULARZEM | alarm krytyczny; 15 min / 1 h / 6 h według pilności, 30 min dla TEST |
-| `brak_odczytu` | ODBIORCA NIE PRZECZYTAŁ OD 30 MIN – WYŚLIJ GOŃCA Z FORMULARZEM | alarm krytyczny, tylko pilność 2; brzmienie do potwierdzenia w T1 |
-| `dzwiek_wyciszony` | DŹWIĘK WYCISZONY | zwykły sygnał wyciszony |
-| `test_zaplanowany` | TEST ZAPLANOWANY ZA OKOŁO [mm] MIN – NIE WYŁĄCZAJ. WSTECZ = ANULUJ | TEST startowy w losowym oknie |
-| `test_wyslany` | TEST WYSŁANY – CZEKA NA ODBIORCĘ | TEST nadany, brak RECEIVED |
-| `test_wstrzymany` | TEST WSTRZYMANY PRZEZ ODBIORCĘ | opiekun wybrał TEST → WSTRZYMAJ po komunikacie OSP |
-| `adres_kontrola` | ADRES: [x] – CZY TO TO MIEJSCE? OK = TAK / WSTECZ = NIE | kontrola adresu przy starcie |
-| `adres_brak` | STACJA NIE MA TWOJEGO ADRESU – UŻYJ FORMULARZA PAPIEROWEGO | odpowiedź NIE albo brak adresu |
-| `porzucic` | PORZUCIĆ ZGŁOSZENIE? OK = TAK | przytrzymanie WSTECZ 2 s w kreatorze |
-| `pilnosc_2` | ZAGROŻENIE ŻYCIA | urgency 2 |
-| `pilnosc_1` | PILNE – KILKA GODZIN | urgency 1 |
-| `pilnosc_0` | W CIĄGU DOBY | urgency 0 |
-| `pilnosc_2_potw` | ZAGROŻENIE ŻYCIA: 1) UDZIEL PIERWSZEJ POMOCY 2) DZIAŁA TELEFON? 112 3) BEZPIECZNA DROGA? GONIEC. OK = WYŚLIJ TEŻ RADIEM | potwierdzenie pilności 2 |
-| `podsumowanie_klawisze` | OK = WYŚLIJ, WSTECZ = POPRAW | ostatni wiersz podsumowania |
-| `kolejka_pelna` | KOLEJKA PEŁNA – ZGŁOSZENIE NIE ZAPISANE. UŻYJ FORMULARZA PAPIEROWEGO | 128 intencji w kolejce |
-| `blad_pamieci` | BŁĄD PAMIĘCI STACJI – ZGŁOSZENIE NIE ZAPISANE. FORMULARZ + GONIEC | błąd zapisu FRAM |
-| `ogniwa_czas` | OGNIWA: OKOŁO [x] H PRACY | szacowany czas pracy |
-| `wymien_ogniwa` | WYMIEŃ OGNIWA W CIĄGU 1 H | alarm krytyczny |
-| `wylaczanie` | WYŁĄCZANIE – CZEKAJ, ZAPISUJĘ | kończenie zapisu przed wyłączeniem |
-| `mozna_wyjac` | MOŻNA WYJĄĆ OGNIWA | zapis zakończony |
-| `odlaczone_12v` | 12 V ODŁĄCZONE – ZA NISKIE NAPIĘCIE. PODŁĄCZ NAŁADOWANE ŹRÓDŁO I PRZYTRZYMAJ OK | zatrzask podnapięciowy 12 V; praca z ogniw |
-| `tryb_przygotowania` | TRYB PRZYGOTOWANIA | stały pasek w trybie przygotowania |
-| `odbiorca_zapasowy` | PRZEŁĄCZYĆ NA ODBIORCĘ ZAPASOWEGO? TYLKO NA POLECENIE GOŃCA LUB SŁOWNE. NIEODWRACALNE | przed sekwencją GÓRA, DÓŁ, GÓRA, OK |
-| `incoming_osp` | DO ZAPISU W PANELU: [n] | stacja OSP: wiadomości `incoming` bez `ack` |
-| `zniszcz_ostrzezenie` | NIEODWRACALNE – STACJA PRZESTANIE DZIAŁAĆ; TYLKO PRZY GROŹBIE PRZEJĘCIA | przed sekwencją GÓRA, DÓŁ, GÓRA, OK |
-| `stopka_komunikatu` | NAKAZ WYJŚCIA LUB EWAKUACJI? POTWIERDŹ W RADIU PUBLICZNYM LUB U GOŃCA | stopka każdego BULLETIN |
-| `czeka_na_opiekuna` | CZEKA NA OPIEKUNA | strona: zgłoszenie zapisane w laptopie |
-| `opiekun_polaczyl` | OPIEKUN POŁĄCZYŁ ZE ZGŁOSZENIEM NR [xxxx] | strona: połączone z powtarzalnym |
-| `nie_wyslane` | NIE WYSŁANE – PODEJDŹ DO OPIEKUNA | strona: opiekun nie przekazał zgłoszenia |
-| `zapisz_numer` | ZAPISZ NUMER [xxxx] – PODAJ GO OPIEKUNOWI, ABY SPRAWDZIĆ STAN | strona: po wysłaniu, z lokalnym numerem |
-| `zostalo_znakow` | ZOSTAŁO OKOŁO [n] ZNAKÓW | strona i panel: licznik pod opisem, z limitu bajtów |
-| `nie_wpisuj_nazwisk` | NIE WPISUJ NAZWISK | strona i panel: ostrzeżenie przy opisie |
+| GÓRA / DÓŁ / OK / WSTECZ (przyciski) | ВГОРУ / ВНИЗ / OK / НАЗАД | UP / DOWN / OK / BACK |
+| ZGŁOSZENIE | ЗАЯВКА | REQUEST |
+| WIADOMOŚCI | ПОВІДОМЛЕННЯ | MESSAGES |
+| TEST | ТЕСТ | TEST |
+| WSTRZYMAJ | ПРИЗУПИНИТИ | PAUSE |
+| WZNÓW | ВІДНОВИТИ | RESUME |
+| STAN | СТАН | STATUS |
+| USŁUGI | СЕРВІС | SERVICES |
+| PRZEKAZANIE ZMIANY | ПЕРЕДАЧА ЗМІНИ | SHIFT HANDOVER |
+| ODBIORCA ZAPASOWY | РЕЗЕРВНИЙ ОДЕРЖУВАЧ | BACKUP RECIPIENT |
+| ZNISZCZ DANE | ЗНИЩИТИ ДАНІ | DESTROY DATA |
+| ZMIEŃ LICZBĘ OSÓB | КІЛЬКІСТЬ ЛЮДЕЙ | CHANGE PEOPLE COUNT |
+| ZMIEŃ PILNOŚĆ | ЗМІНИТИ ТЕРМІНОВІСТЬ | CHANGE URGENCY |
+| POTRZEBA USTAŁA | ПОТРЕБА ЗНИКЛА | NEED RESOLVED |
+| ANULUJ WYSYŁKĘ | СКАСУВАТИ ВІДПРАВКУ | CANCEL SENDING |
+| INNA (liczba osób) | ІНША | OTHER |
 
-Pozycje menu (ZGŁOSZENIE, WIADOMOŚCI, TEST, WSTRZYMAJ, WZNÓW, STAN, USŁUGI, PRZEKAZANIE ZMIANY, ODBIORCA ZAPASOWY, ZNISZCZ DANE, ZMIEŃ LICZBĘ OSÓB, ZMIEŃ PILNOŚĆ, POTRZEBA USTAŁA, ANULUJ WYSYŁKĘ, INNA) są częścią tej listy. Krótkie formy ekranu głównego mają ≤20 znaków po wstawieniu największych wartości; T1 sprawdza to także dla wersji UK i EN.
+Etykiety kategorii na ekranie, obok piktogramu (pełny opis kategorii: [wiadomości SA1](#wiadomości-sa1)):
+
+| Kategoria | PL | UK | EN |
+|---|---|---|---|
+| 0 | POMOC MEDYCZNA | МЕДИЧНА ДОПОМОГА | MEDICAL HELP |
+| 1 | LEKI I SPRZĘT MED. | ЛІКИ, МЕДОБЛАДНАННЯ | MEDICINES, EQUIPMENT |
+| 2 | EWAKUACJA, TRANSPORT | ЕВАКУАЦІЯ, ТРАНСПОРТ | EVACUATION/TRANSPORT |
+| 3 | WODA PITNA | ПИТНА ВОДА | DRINKING WATER |
+| 4 | ŻYWNOŚĆ | ХАРЧУВАННЯ | FOOD |
+| 5 | OGRZEWANIE, ENERGIA | ОПАЛЕННЯ, ЕНЕРГІЯ | HEATING, POWER |
+| 6 | SANITARNE, HIGIENA | САНІТАРІЯ, ГІГІЄНА | SANITATION, HYGIENE |
+| 7 | ZAGROŻENIE BUDYNKU | ЗАГРОЗА БУДІВЛІ | BUILDING HAZARD |
+| 8 | POSZUKIWANIE, INFO | ПОШУК ЛЮДЕЙ, ІНФО | MISSING PEOPLE, INFO |
+| 9 | INNE | ІНШЕ | OTHER |
+
+Domyślne gotowe frazy ([zgłoszenie z przycisków](#wiadomości-sa1)): do SA1 trafia zawsze wersja polska, a ekran pokazuje tłumaczenie w wybranym języku.
+
+| PL (wysyłane) | UK (ekran) | EN (ekran) |
+|---|---|---|
+| osoba na wózku | людина на візку | wheelchair user |
+| osoba leżąca – potrzebne nosze | лежача людина – потрібні ноші | bedridden person – stretcher needed |
+| dializy – termin dziś | діаліз – сьогодні | dialysis due today |
+| insulina na 1 dzień | інсуліну на 1 день | insulin left for 1 day |
+| niemowlę – mleko modyfikowane | немовля – потрібна суміш | infant – formula needed |
+| osoba niewidoma lub niesłysząca | незряча або нечуюча людина | blind or deaf person |
+| tlen na wyczerpaniu | кисень закінчується | oxygen running out |
+| dziecko bez opieki | дитина без опіки | unaccompanied child |
+| czujnik CO alarmuje | датчик CO спрацював | CO alarm sounding |
+| woda w budynku | вода в будівлі | water in the building |
+| potrzeba ustała | потреба зникла | need resolved |
 
 ## Stanowisko dyżurnego OSP
 
@@ -283,7 +334,7 @@ Plan stanowiska nazywa konkretnie drugi kanał: goniec, PMR446 z ustalonym kana�
 
 Formalności i uzgodnienia załatwia się przed użyciem. Żadna z poniższych funkcji nie blokuje przyjęcia zgłoszenia.
 
-**Ogłoszenia adresu.** Stacja ogłasza swój adres LXMF przy starcie (z losowym opóźnieniem 0–120 s), na polecenie opiekuna (STAN → USŁUGI lub panel) i automatycznie, gdy intencja do OSP nie dostała potwierdzenia transportowego po 2 próbach LXMF, najwyżej raz na 30 min. Stacja OSP ogłasza adres co 6 h ±20% i po restarcie. W ciszy radiowej nie ma ogłoszeń. Tablicę tras, znane tożsamości i buforowane ogłoszenia stacja zapisuje w FRAM i odtwarza po restarcie. Próba T3 i T5: zimny start po restarcie przekaźnika i przejście z trasy A–OSP na A–B–OSP bez ręcznego ogłoszenia. Nazwa wyświetlana ma postać `WICI-xxxxxx` (6 cyfr szesnastkowych skrótu tożsamości) i nie zawiera adresu ani nazwy miejsca. Emisje transportu Reticulum, np. zapytania o trasę, pozostają i liczy się je w próbie T3. Każda stacja z włączonym transportem retransmituje ogłoszenia innych stacji, więc przy zimnym starcie sieci N stacji kanał przenosi rzędu N² ogłoszeń, a każda stacja zużywa na nie część własnego długu ciszy. Model bez strat daje dla 50 stacji 2500 nadań ogłoszeń, około 20 min czasu kanału w jednym obszarze kolizji i około 5 min długu ciszy w każdej stacji ([wyniki modelu](../../software/reference/wyniki.json)). Limit ogłoszeń na interfejsie P1 wynosi początkowo 2% czasu nadawania (domyślna wartość Reticulum); przy nim 50 ogłoszeń przechodzi przez jeden skok w około 20 min, co nakłada się na okno TEST startowego. Ruch ogłoszeń i zapytań o trasę przy zimnym starcie wchodzi do modelu przed T5 i do próby skali, a ostateczny limit ustala T5.
+**Ogłoszenia adresu.** Stacja ogłasza swój adres LXMF przy starcie (z losowym opóźnieniem 0–120 s), na polecenie opiekuna (STAN → USŁUGI lub panel) i automatycznie, gdy intencja do OSP nie dostała potwierdzenia transportowego po 2 próbach LXMF, najwyżej raz na 30 min. Stacja OSP ogłasza adres co 6 h ±20% i po restarcie. W ciszy radiowej nie ma ogłoszeń. Tablicę tras, znane tożsamości i buforowane ogłoszenia stacja zapisuje w FRAM i odtwarza po restarcie. Próba T3 i T5: zimny start po restarcie przekaźnika i przejście z trasy A–OSP na A–B–OSP bez ręcznego ogłoszenia. Nazwa wyświetlana ma postać `WICI-xxxxxx` (6 cyfr szesnastkowych skrótu tożsamości) i nie zawiera adresu ani nazwy miejsca. Emisje transportu Reticulum, np. zapytania o trasę, pozostają i liczy się je w próbie T3. Każda stacja z włączonym transportem retransmituje ogłoszenia innych stacji, więc przy zimnym starcie sieci N stacji kanał przenosi rzędu N² ogłoszeń, a każda stacja zużywa na nie część własnego długu ciszy. Model bez strat daje dla 50 stacji 2500 nadań ogłoszeń, około 21 min czasu kanału w jednym obszarze kolizji i około 5,6 min długu ciszy w każdej stacji. Limit ogłoszeń na interfejsie P1 wynosi początkowo 2% czasu nadawania (domyślna wartość Reticulum); przy nim 50 ogłoszeń przechodzi przez jeden skok w około 21 min. Razem z zapytaniami o trasę do OSP (0,6–8,6 min) i wymianą TEST (około 3,3 min) zimny start 50 stacji zajmuje 61–80% okna TEST startowego, 30 stacji 40–52% ([wyniki modelu](../../software/reference/wyniki.json), [koncepcja, rozdział 06](../conception/06-wykonalnosc-i-budzet-zasobow.html#pojemnosc-sieci)). Sieć powyżej około 30 stacji w jednym obszarze kolizji uruchamia się etapami według planu sieci. Ostateczny limit ogłoszeń i podział na etapy ustala T5 z próbą skali.
 
 **Cisza radiowa.** Polecenie ciszy radiowej wydaje wójt (od wprowadzenia stanu wojennego i w czasie wojny jako organ obrony cywilnej) na podstawie decyzji wojewody lub organów wojskowych albo wynika ono z nakazu wydanego w stanie nadzwyczajnym. Do schronień przekazuje je OSP komunikatem BULLETIN i gońcem; ciszę odwołuje ten sam organ. Opiekun włącza ją przełącznikiem CISZA na stacji albo w panelu. Przełącznik na stacji ma pierwszeństwo przed panelem. Sterownik P1 nic nie nadaje, łącznie z ruchem przekazywanym i ogłoszeniami. Odbiór, zapis i kolejka działają dalej; ekran pokazuje stale `cisza`, a nowe zgłoszenie `zapisane_w_ciszy`. Wyłączenie ciszy jest wyłącznie ręczne, po odwołaniu przez organ. Wyjątek dla pojedynczego zgłoszenia ustawia się tylko z panelu (poziom 2) i tylko przy ciszy operacyjnej ustawionej z panelu, gdy polecenie wprost go dopuszcza; przełącznik CISZA na stacji wyklucza wyjątek. Wyjątek obejmuje całą wymianę tej jednej pary (id, revision): zapytanie o trasę, pakiet zgłoszenia, jego ponowienia i potwierdzenia pakietów dla przychodzących RECEIVED i STATUS; ogłoszeń nie obejmuje. Działa tylko wtedy, gdy cała droga do OSP nadaje: przy ciszy w całej sieci przekaźniki też milczą, więc w praktyce tylko przy bezpośrednim połączeniu z OSP, która sama nie jest w ciszy. Panel pokazuje to ograniczenie przed ustawieniem wyjątku. Wyjątek nie dotyczy zakazu używania urządzeń nadawczych w stanie wojennym lub wyjątkowym – wtedy podstawową procedurą jest goniec. Stacja zapisuje wyjątek w dzienniku zdarzeń, a opiekun w dzienniku papierowym. Fizyczną pewność ciszy daje wyłączenie zasilania stacji; wtedy stacja także nie odbiera.
 

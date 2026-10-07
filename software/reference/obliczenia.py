@@ -26,6 +26,16 @@ def lxmf_packet_bytes(content_bytes: int) -> int:
     return 19 + 32 + 16 + 16 * math.ceil((plaintext + 1) / 16) + 32
 
 
+# Reticulum interface access code on every P1 packet (radio.md, "Interfejs P1 w stosie Reticulum").
+IFAC_BYTES = 16
+PROOF_BYTES = 83  # implicit packet proof, Reticulum packet without IFAC
+
+
+def p1_datagram(packet_bytes: int) -> int:
+    """P1 datagram handed to the radio: Reticulum packet plus the IFAC inserted by the interface."""
+    return packet_bytes + IFAC_BYTES
+
+
 STATION = {"rail_v": 3.3, "rx_ma": 22.0, "tcxo_ma": 2.0, "tx_ma_13dbm": 45.0,
            "tx_fraction": 1 / 13, "lcd_5v_rail_ma": 0.5, "fram_buttons_supervisor_ma": 0.5,
            "front_light_ma": 15.0, "front_light_duty": 0.5 / 24,
@@ -122,33 +132,34 @@ def calculate() -> dict:
     }
     opportunistic_content_estimate, link_content_estimate = 284, 316
     sizes = {k: len(encode_message(v)) for k, v in sa1.items()}
-    relay_packets = {"typical_request": lxmf_packet_bytes(sizes["typical_request"]),
-                     "max_fields_request": lxmf_packet_bytes(sizes["max_fields_request"]),
-                     "received": lxmf_packet_bytes(sizes["received"]), "packet_proof": 83}
+    proof = p1_datagram(PROOF_BYTES)
+    relay_packets = {"typical_request": p1_datagram(lxmf_packet_bytes(sizes["typical_request"])),
+                     "max_fields_request": p1_datagram(lxmf_packet_bytes(sizes["max_fields_request"])),
+                     "received": p1_datagram(lxmf_packet_bytes(sizes["received"])), "packet_proof": proof}
     relay_cycle = {k: 13 * p1_tx_seconds(v) for k, v in relay_packets.items()}
     per_request = [relay_cycle[r] + relay_cycle["received"] + 2 * relay_cycle["packet_proof"]
                    for r in ("typical_request", "max_fields_request")]
     slow_per_request = [13 * (p1_tx_seconds(relay_packets[r], 1200) + p1_tx_seconds(relay_packets["received"], 1200)
-                              + 2 * p1_tx_seconds(83, 1200)) for r in ("typical_request", "max_fields_request")]
+                              + 2 * p1_tx_seconds(proof, 1200)) for r in ("typical_request", "max_fields_request")]
     collinear_dbi = 5.5
     # Network capacity without losses at the P1 debt limit (cycle 13t per datagram and node). A station reaches the
     # OSP through the relay next to it; packets sent by the OSP towards the relay carry a 16 B transport id.
     transport_id = 16
-    status_packet = lxmf_packet_bytes(sizes["max_status"])
+    status_packet = p1_datagram(lxmf_packet_bytes(sizes["max_status"]))
     capacity = {}
     for r in ("max_fields_request", "typical_request"):
-        osp_tx = [83, relay_packets["received"] + transport_id] + 2 * [status_packet + transport_id]
-        relay_tx = [relay_packets[r], 83, relay_packets["received"]] + 2 * [status_packet] + 3 * [83]
+        osp_tx = [proof, relay_packets["received"] + transport_id] + 2 * [status_packet + transport_id]
+        relay_tx = [relay_packets[r], proof, relay_packets["received"]] + 2 * [status_packet] + 3 * [proof]
         osp_s = sum(13 * p1_tx_seconds(b) for b in osp_tx)
         relay_s = sum(13 * p1_tx_seconds(b) for b in relay_tx)
         capacity[r] = {"osp_tx_packets_bytes": osp_tx, "osp_s_per_request": osp_s, "osp_requests_per_h": 3600 / osp_s,
                        "relay_tx_packets_bytes": relay_tx, "relay_s_per_request": relay_s,
                        "relay_requests_per_h": 3600 / relay_s}
-    bulletin_packet = lxmf_packet_bytes(sizes["max_bulletin"]) + transport_id
+    bulletin_packet = p1_datagram(lxmf_packet_bytes(sizes["max_bulletin"]) + transport_id)
     bulletin_s = 13 * p1_tx_seconds(bulletin_packet)
     # LXMF retry spacing for opportunistic messages (A2): max(60 s, 2 x hops x 13 x TX of the largest datagram
     # + current silence debt + P1 queue drain). Largest own datagram: SA1 limit 256 B on the first hop.
-    largest_own_datagram = lxmf_packet_bytes(MAX_CONTENT) + transport_id
+    largest_own_datagram = p1_datagram(lxmf_packet_bytes(MAX_CONTENT) + transport_id)
     largest_cycle_s = 13 * p1_tx_seconds(largest_own_datagram)
     worst_debt_s = 12 * p1_tx_seconds(600)
     full_queue_s = 4 * 13 * p1_tx_seconds(600)
@@ -197,19 +208,46 @@ def calculate() -> dict:
     ram_kib["specified_layout_kib"] = ram_kib["hashlist_4096_truncated_8b"] + ram_kib["route_index_256x16b"]
     ram_kib["reference_layout_share_of_nrf52840"] = ram_kib["reference_layout_kib"] / 256
     ram_kib["specified_layout_share_of_nrf52840"] = ram_kib["specified_layout_kib"] / 256
-    # Cold network start: every transport station rebroadcasts each announce once (no losses), and the P1
-    # interface limits announces to a share of TX time. Announce = 19 B header + cached announce, +16 B transport id.
+    # Cold network start of N stations inside the TEST start window (50 s x N): every transport station rebroadcasts
+    # each announce once (no losses), the P1 interface limits announces to a share of TX time, each station asks
+    # once for a path to the OSP and sends one start TEST through the relay next to the OSP.
+    # Announce = 19 B header + cached announce (170 B) + 16 B transport id; path request = 19 B header + target hash,
+    # requesting transport id and tag (3 x 16 B); path response = announce replay. All P1 datagrams carry the IFAC.
     announce_cap = 0.02
-    announce_bytes = 19 + 170 + transport_id
+    announce_bytes = p1_datagram(19 + 170 + transport_id)
     announce_tx_s = p1_tx_seconds(announce_bytes)
+    path_request_bytes = p1_datagram(19 + 3 * 16)
+    path_request_tx_s = p1_tx_seconds(path_request_bytes)
+    test_packet = p1_datagram(lxmf_packet_bytes(len(encode_message([1, 5, mid, 0, 9, 1, "x" * 64, "test", 0]))))
+    # TEST A -> B -> OSP: A sends TEST, B forwards it, OSP proves and sends RECEIVED, B forwards both, A proves.
+    test_chain = [test_packet + transport_id, test_packet, proof, proof,
+                  relay_packets["received"] + transport_id, relay_packets["received"], proof, proof]
+    test_tx_s = sum(p1_tx_seconds(b) for b in test_chain)
     cold_start = {"announce_bytes": announce_bytes, "announce_tx_s": announce_tx_s,
-                  "announce_cap_share_of_tx": announce_cap}
+                  "announce_cap_share_of_tx": announce_cap,
+                  "path_request_bytes": path_request_bytes, "path_request_tx_s": path_request_tx_s,
+                  "test_packet_bytes": test_packet, "test_exchange_tx_s": test_tx_s}
     for n in (10, 30, 50):
+        window_s = 50 * n
+        announce_air_s = n * n * announce_tx_s
+        # Best case: the nearest neighbour answers from its path table (request + response once).
+        # Worst case: nobody knows the OSP, the request floods all N stations and the response returns over 2 hops.
+        path_best_s = n * (path_request_tx_s + announce_tx_s)
+        path_worst_s = n * (n * path_request_tx_s + 2 * announce_tx_s)
+        test_air_s = n * test_tx_s
         cold_start[f"{n}_stations"] = {
             "network_announce_transmissions": n * n,
-            "channel_airtime_min_single_collision_domain": n * n * announce_tx_s / 60,
+            "channel_airtime_min_single_collision_domain": announce_air_s / 60,
             "per_station_tx_plus_quiet_min": n * 13 * announce_tx_s / 60,
-            "per_hop_drain_at_cap_min": n * announce_tx_s / announce_cap / 60}
+            "per_hop_drain_at_cap_min": n * announce_tx_s / announce_cap / 60,
+            "test_window_min": window_s / 60,
+            "path_request_airtime_min": [path_best_s / 60, path_worst_s / 60],
+            "test_airtime_min": test_air_s / 60,
+            "total_airtime_min": [(announce_air_s + path_best_s + test_air_s) / 60,
+                                  (announce_air_s + path_worst_s + test_air_s) / 60],
+            "share_of_test_window": [(announce_air_s + path_best_s + test_air_s) / window_s,
+                                     (announce_air_s + path_worst_s + test_air_s) / window_s],
+            "announce_drain_exceeds_window": n * announce_tx_s / announce_cap > window_s}
     result = {
         "assumptions": {"station_ac_w": ac_w, "conversion_efficiency_excluding_idle": efficiency,
                         "inverter_idle_w": idle_w, "diode_loss_w": diode_w,
@@ -352,7 +390,7 @@ def calculate() -> dict:
                    "No switching, magnetic or reactive current losses in voltage margin",
                    "No battery capacity measurement",
                    "Network capacity is per node at the debt limit; shared channel, hidden nodes and retries reduce it",
-            "Cold-start announces: one rebroadcast per announce and station, no path requests, losses or announce suppression",
+            "Cold start: one rebroadcast per announce and station, one path request per station (best and worst case), single collision domain, no losses, retries or announce suppression",
                    "Fixed installation loss of 2.5 dB per end is an assumption until the installed cable is measured", "No thermal or electrical safety verification"],
     }
     if available_low_v <= required_low_v:

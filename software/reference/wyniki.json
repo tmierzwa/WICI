@@ -195,35 +195,35 @@
   },
   "relay_w10": {
     "packets_bytes": {
-      "typical_request": 387,
-      "max_fields_request": 435,
-      "received": 259,
-      "packet_proof": 83
+      "typical_request": 403,
+      "max_fields_request": 451,
+      "received": 275,
+      "packet_proof": 99
     },
     "tx_plus_quiet_s": {
-      "typical_request": 11.526666666666667,
-      "max_fields_request": 13.194999999999999,
-      "received": 8.125,
-      "packet_proof": 2.4266666666666667
+      "typical_request": 11.873333333333333,
+      "max_fields_request": 13.541666666666668,
+      "received": 8.471666666666666,
+      "packet_proof": 3.4016666666666664
     },
     "per_request_s": [
-      24.505000000000003,
-      26.173333333333332
+      27.148333333333333,
+      28.81666666666667
     ],
     "fifty_requests_min": [
-      20.420833333333338,
-      21.81111111111111
+      22.623611111111114,
+      24.013888888888893
     ],
     "per_retry_s": [
-      11.526666666666667,
-      13.194999999999999
+      11.873333333333333,
+      13.541666666666668
     ],
     "fifty_requests_min_at_1200_bit_s": [
-      81.68333333333334,
-      87.24444444444444
+      90.49444444444445,
+      96.05555555555557
     ],
-    "status_packet_bytes": 259,
-    "fifty_requests_with_two_status_min": 39.39722222222222,
+    "status_packet_bytes": 275,
+    "fifty_requests_with_two_status_min": 43.80277777777778,
     "quiet_10t_throughput_gain": 0.18181818181818188,
     "p1_tx_plus_quiet_s": {
       "100b": 3.423333333333333,
@@ -244,57 +244,57 @@
     "per_request": {
       "max_fields_request": {
         "osp_tx_packets_bytes": [
-          83,
-          275,
-          275,
-          275
+          99,
+          291,
+          291,
+          291
         ],
-        "osp_s_per_request": 27.841666666666665,
-        "osp_requests_per_h": 129.3026040107752,
+        "osp_s_per_request": 29.856666666666666,
+        "osp_requests_per_h": 120.57608574299431,
         "relay_tx_packets_bytes": [
-          435,
-          83,
-          259,
-          259,
-          259,
-          83,
-          83,
-          83
+          451,
+          99,
+          275,
+          275,
+          275,
+          99,
+          99,
+          99
         ],
-        "relay_s_per_request": 47.276666666666664,
-        "relay_requests_per_h": 76.1475005288021
+        "relay_s_per_request": 52.56333333333333,
+        "relay_requests_per_h": 68.48880715327542
       },
       "typical_request": {
         "osp_tx_packets_bytes": [
-          83,
-          275,
-          275,
-          275
+          99,
+          291,
+          291,
+          291
         ],
-        "osp_s_per_request": 27.841666666666665,
-        "osp_requests_per_h": 129.3026040107752,
+        "osp_s_per_request": 29.856666666666666,
+        "osp_requests_per_h": 120.57608574299431,
         "relay_tx_packets_bytes": [
-          387,
-          83,
-          259,
-          259,
-          259,
-          83,
-          83,
-          83
+          403,
+          99,
+          275,
+          275,
+          275,
+          99,
+          99,
+          99
         ],
-        "relay_s_per_request": 45.608333333333334,
-        "relay_requests_per_h": 78.93294354101955
+        "relay_s_per_request": 50.894999999999996,
+        "relay_requests_per_h": 70.73386383731211
       }
     },
-    "osp_requests_per_h": 129.3026040107752,
-    "relay_before_osp_requests_per_h": 76.1475005288021,
-    "bulletin_packet_bytes": 467,
-    "bulletin_s_per_station": 13.888333333333334,
+    "osp_requests_per_h": 120.57608574299431,
+    "relay_before_osp_requests_per_h": 68.48880715327542,
+    "bulletin_packet_bytes": 483,
+    "bulletin_s_per_station": 14.235,
     "bulletin_osp_tx_min": {
-      "10_stations": 2.314722222222222,
-      "30_stations": 6.944166666666667,
-      "50_stations": 11.573611111111111
+      "10_stations": 2.3725,
+      "30_stations": 7.117499999999999,
+      "50_stations": 11.8625
     },
     "test_window_s_per_station": 50,
     "test_window_min": {
@@ -304,17 +304,17 @@
     }
   },
   "lxmf_retry": {
-    "largest_own_datagram_bytes": 483,
-    "largest_datagram_cycle_s": 14.235,
+    "largest_own_datagram_bytes": 499,
+    "largest_datagram_cycle_s": 14.581666666666665,
     "floor_s": 60.0,
     "worst_debt_s": 16.060000000000002,
     "full_p1_queue_4x600b_s": 69.59333333333333,
-    "1_hop_round_trip_s": 28.47,
+    "1_hop_round_trip_s": 29.16333333333333,
     "1_hop_min_interval_empty_network_s": 60.0,
-    "1_hop_min_interval_worst_debt_full_queue_s": 114.12333333333333,
-    "2_hop_round_trip_s": 56.94,
+    "1_hop_min_interval_worst_debt_full_queue_s": 114.81666666666666,
+    "2_hop_round_trip_s": 58.32666666666666,
     "2_hop_min_interval_empty_network_s": 60.0,
-    "2_hop_min_interval_worst_debt_full_queue_s": 142.59333333333333
+    "2_hop_min_interval_worst_debt_full_queue_s": 143.98
   },
   "fram_by_role": {
     "record_bytes_assumed": {
@@ -396,26 +396,75 @@
     "specified_layout_share_of_nrf52840": 0.140625
   },
   "cold_start_announces": {
-    "announce_bytes": 205,
-    "announce_tx_s": 0.4866666666666667,
+    "announce_bytes": 221,
+    "announce_tx_s": 0.5133333333333333,
     "announce_cap_share_of_tx": 0.02,
+    "path_request_bytes": 83,
+    "path_request_tx_s": 0.18666666666666668,
+    "test_packet_bytes": 339,
+    "test_exchange_tx_s": 3.9683333333333333,
     "10_stations": {
       "network_announce_transmissions": 100,
-      "channel_airtime_min_single_collision_domain": 0.8111111111111112,
-      "per_station_tx_plus_quiet_min": 1.0544444444444445,
-      "per_hop_drain_at_cap_min": 4.055555555555555
+      "channel_airtime_min_single_collision_domain": 0.8555555555555555,
+      "per_station_tx_plus_quiet_min": 1.1122222222222222,
+      "per_hop_drain_at_cap_min": 4.277777777777777,
+      "test_window_min": 8.333333333333334,
+      "path_request_airtime_min": [
+        0.11666666666666667,
+        0.4822222222222223
+      ],
+      "test_airtime_min": 0.6613888888888888,
+      "total_airtime_min": [
+        1.633611111111111,
+        1.9991666666666665
+      ],
+      "share_of_test_window": [
+        0.1960333333333333,
+        0.23989999999999997
+      ],
+      "announce_drain_exceeds_window": false
     },
     "30_stations": {
       "network_announce_transmissions": 900,
-      "channel_airtime_min_single_collision_domain": 7.3,
-      "per_station_tx_plus_quiet_min": 3.1633333333333336,
-      "per_hop_drain_at_cap_min": 12.166666666666666
+      "channel_airtime_min_single_collision_domain": 7.7,
+      "per_station_tx_plus_quiet_min": 3.3366666666666664,
+      "per_hop_drain_at_cap_min": 12.833333333333332,
+      "test_window_min": 25.0,
+      "path_request_airtime_min": [
+        0.35,
+        3.3133333333333335
+      ],
+      "test_airtime_min": 1.9841666666666666,
+      "total_airtime_min": [
+        10.034166666666666,
+        12.997499999999999
+      ],
+      "share_of_test_window": [
+        0.40136666666666665,
+        0.5198999999999999
+      ],
+      "announce_drain_exceeds_window": false
     },
     "50_stations": {
       "network_announce_transmissions": 2500,
-      "channel_airtime_min_single_collision_domain": 20.27777777777778,
-      "per_station_tx_plus_quiet_min": 5.272222222222223,
-      "per_hop_drain_at_cap_min": 20.27777777777778
+      "channel_airtime_min_single_collision_domain": 21.38888888888889,
+      "per_station_tx_plus_quiet_min": 5.561111111111111,
+      "per_hop_drain_at_cap_min": 21.38888888888889,
+      "test_window_min": 41.666666666666664,
+      "path_request_airtime_min": [
+        0.5833333333333334,
+        8.633333333333335
+      ],
+      "test_airtime_min": 3.3069444444444445,
+      "total_airtime_min": [
+        25.279166666666665,
+        33.32916666666667
+      ],
+      "share_of_test_window": [
+        0.6067,
+        0.7999
+      ],
+      "announce_drain_exceeds_window": false
     }
   },
   "tcxo_budget_ppm": {
@@ -540,7 +589,7 @@
     "No switching, magnetic or reactive current losses in voltage margin",
     "No battery capacity measurement",
     "Network capacity is per node at the debt limit; shared channel, hidden nodes and retries reduce it",
-    "Cold-start announces: one rebroadcast per announce and station, no path requests, losses or announce suppression",
+    "Cold start: one rebroadcast per announce and station, one path request per station (best and worst case), single collision domain, no losses, retries or announce suppression",
     "Fixed installation loss of 2.5 dB per end is an assumption until the installed cable is measured",
     "No thermal or electrical safety verification"
   ]
