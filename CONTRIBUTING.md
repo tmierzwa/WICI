@@ -13,7 +13,7 @@ Projekt jest prototypem. Zmiany mają upraszczać wykonanie, usuwać zależnoś�
 
 ## Od czego zacząć
 
-Nie ma jeszcze oprogramowania stacji ani płytki R02. Zadania, które można wykonać teraz:
+Oprogramowanie stacji ma dopiero szkielet uruchomieniowy stanowiska A w [firmware/](firmware/README.md), a płytki R02 jeszcze nie ma. Zadania, które można wykonać teraz:
 
 1. Przenieść ramkę P1 (CRC, fragmentacja, składanie) do C/C++ i sprawdzić ją na wektorach z [modelu](software/reference/reference.py). Kod oprogramowania układowego trafia do `firmware/` (licencja MIT).
 2. Uruchomić microReticulum na płytkach rozwojowych nRF52840 i ESP32-S3 i wymienić pakiety z implementacją Reticulum w Pythonie. To pierwsza część T3; w raporcie podaj przypięte commity i zapas RAM.

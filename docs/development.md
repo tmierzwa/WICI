@@ -12,6 +12,10 @@ python3 tools/verify_repository.py
 
 Kontrola porównuje manifest z indeksem Git, wszystkie sumy plików, lokalne odnośniki Markdown i HTML (kotwice tylko w odnośnikach do stron HTML), składnię JSON/Python i wyniki obliczeń. Nie aktualizuje dowodów podczas sprawdzania. CI działa na Linuksie z Pythonem 3.12 i nie uruchamia KiCad.
 
+## Oprogramowanie układowe
+
+Katalog [firmware/](../firmware/README.md) buduje się PlatformIO w osobnym środowisku Pythona (`python3 -m venv .venv-pio && .venv-pio/bin/pip install platformio`, potem `pio run` w `firmware/`). Wersje platformy i rdzenia są przypięte w `platformio.ini`. CI nie buduje obrazu; wynik kompilacji i próby na płytce podaje się w opisie PR.
+
 ## Strona koncepcji
 
 Koncepcja jest publikowana na [GitHub Pages](https://tmierzwa.github.io/WICI/) przez workflow `pages.yml` po każdej zmianie `docs/conception/` na `main`. `tools/build_pages.py` kopiuje strony i arkusz stylów bez zmiany treści. Linki wychodzące poza koncepcję zamienia na adresy plików w repozytorium dla publikowanego commitu. Lokalnie strony nie wymagają budowania: wystarczy otworzyć `docs/conception/index.html`.

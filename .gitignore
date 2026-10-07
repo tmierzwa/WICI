@@ -13,3 +13,7 @@ __pycache__/
 /hardware/*/reference-private/
 
 /dist/
+
+# PlatformIO build output and local Python environment of the firmware
+/firmware/.pio/
+/.venv-pio/

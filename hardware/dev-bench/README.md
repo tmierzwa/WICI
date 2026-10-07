@@ -2,6 +2,8 @@
 
 Stanowisko deweloperskie to zestaw kupnych płytek rozwojowych i modułów producentów, na którym powstaje oprogramowanie układowe stacji i wykonuje się próby T1–T4 przed płytką stacji. Pierwszą drukowaną płytką projektu jest płytka stacji [R02](../../docs/spec/elektronika.md#płytka-stacji-r02-wymagania). Wcześniejszy kontroler R01.3 nie jest budowany; jego ustalenia są w [lekcjach R02](../r02/lekcje.md), a pliki w historii Git.
 
+Pierwszy obraz oprogramowania dla stanowiska A, z okablowaniem i poleceniami, jest w [firmware/](../../firmware/README.md).
+
 Zasada: do prób nie projektuje się ani nie zamawia własnych płytek. Stanowisko składa się z elementów dostępnych u dystrybutorów, połączonych przewodami, i uruchamia to samo oprogramowanie układowe co stacja, z własnym plikiem opisu płytki (przypisanie wyprowadzeń). Nie ma osobnego oprogramowania stanowiska ani osobnego kontraktu modemu.
 
 ## Dwa stanowiska
