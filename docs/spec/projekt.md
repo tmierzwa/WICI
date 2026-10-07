@@ -44,12 +44,13 @@ Router nie uczestniczy w łączności radiowej. Zapewnia Wi-Fi, DHCP i połącze
 4. Osobna ładowarka 8 portów i jej przewód akumulatorowy.
 5. Przewód Ethernet, przewód USB do modemu, adapter USB–Ethernet z dołączonymi sterownikami i przejściówka USB-C do laptopa.
 6. Przewody ładowania telefonów oraz jednostronicowa instrukcja.
+7. Bateryjny odbiornik radiowy FM z zapasem baterii do odbioru komunikatów oficjalnych.
 
 Laptop, router, ich oryginalne zasilacze i akumulatory pochodzą z miejsca uruchomienia. Adapter sieciowy nie zapewnia obsługi każdego komputera; jego kontroler również musi mieć dwa zakwalifikowane wykonania, np. Realtek RTL8153 i ASIX AX88179.
 
 ## Uruchomienie odebranego zestawu
 
-1. Wyprowadź antenę na zewnątrz i ustaw pionowo. Nie kładź jej przy metalowej framudze.
+1. Wyprowadź antenę na zewnątrz i ustaw pionowo, w miarę możliwości z dala od pomieszczenia z ludźmi. Nie kładź jej przy metalowej framudze.
 2. Przy otwartym wyłączniku DC podłącz oryginalne zasilacze laptopa i routera do wyjść przetwornicy.
 3. Podłącz źródło A do zasilania stacji i źródło C do ładowarki. Sprawdź na woltomierzach, że oba mają co najmniej 12,4 V, i zamknij wyłącznik DC.
 4. Połącz laptop z portem LAN routera i modemem USB. Podłącz pendrive.
@@ -64,7 +65,7 @@ Zasilaczy nie podłącza się do pracującej przetwornicy: prąd ładowania ich 
 
 Podłącz nowe źródło do wolnego wejścia. Sprawdź działanie stacji pod pełnym obciążeniem po odłączeniu starego. Nie odłączaj obu naraz. Źródło wymieniaj, zanim jego napięcie spadnie do progu odłączenia 11,5 V; ostrzeżenie świetlne i dźwiękowe włącza się przy 11,8 V. Akumulator rozruchowy pojazdu wymieniaj już przy około 12,2 V. Po odłączeniu podnapięciowym przetwornica nie rusza sama: podłącz naładowane źródło i naciśnij RESTART. Ustawiony limit 8 A lub 20 A musi pasować do każdego źródła, które może przejąć zasilanie. Nie wolno przełączyć na 20 A tylko dlatego, że jedno z dwóch wejść ma mocniejszy przewód.
 
-Wymiana źródła C może przerwać ładowanie telefonów, lecz nie łączność. Nie łącz plusów akumulatorów bezpośrednio. Nie używaj źródła 24 V. Podstawowy wariant nie jest dopuszczony do pracy podczas rozruchu silnika.
+Wymiana źródła C może przerwać ładowanie telefonów, lecz nie łączność. Nie łącz plusów akumulatorów bezpośrednio. Nie uruchamiaj silnika pojazdu ani agregatu w schronieniu, w garażu, przy wejściu ani przy wlotach powietrza: tlenek węgla zabija bez ostrzeżenia. Akumulator wyjmuje się z pojazdu albo zasila stację z pojazdu stojącego na zewnątrz przy wyłączonym silniku. Akumulatorów nie ładuje się w pomieszczeniu z ludźmi. Nie używaj źródła 24 V. Podstawowy wariant nie jest dopuszczony do pracy podczas rozruchu silnika.
 
 ## Przechowywanie i przeglądy
 

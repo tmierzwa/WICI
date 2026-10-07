@@ -1,6 +1,6 @@
 # WICI — stacja łączności awaryjnej
 
-Niekomercyjny projekt otwartej stacji dla schronienia z około 50 osobami. Znaleziony laptop i router udostępniają stronę przez Wi-Fi. Radio przekazuje krótkie zgłoszenia przez inne stacje do OSP. Telefony są ładowane z osobnego akumulatora.
+Niekomercyjny projekt otwartej stacji dla schronienia z około 50 osobami. WICI uzupełnia system ochrony ludności, a nie go zastępuje: odbiorcę zgłoszeń, status nadawania w stanach nadzwyczajnych i ochronę danych uzgadnia się z gminą przed użyciem, tak aby podczas alarmu nic formalnego nie blokowało pracy. Znaleziony laptop i router udostępniają stronę przez Wi-Fi. Radio przekazuje krótkie zgłoszenia przez inne stacje do OSP. Telefony są ładowane z osobnego akumulatora.
 
 **Stan: projekt prototypu 0.4; kontroler USB R01.3 — HOLD.** Jest schemat, PCB, eksporty i model kontraktów. Nie ma ukończonego modułu RF, oprogramowania układowego, aplikacji ani gotowej pamięci USB. Nie wykonano prób fizycznych. To nie jest wydanie do użycia podczas awarii.
 

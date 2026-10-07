@@ -57,11 +57,27 @@ Wysyłanie: najwyżej jedna aktywna wiadomość aplikacji do danego odbiorcy. LX
 | `POST /api/operator/approve` | zatwierdzenie pilności i wysyłki |
 | `POST /api/operator/status` | decyzja OSP; tylko rola OSP |
 | `POST /api/operator/export` | operacja PRZENIEŚ STACJĘ |
+| `POST /api/operator/silence` | włączenie lub wyłączenie ciszy radiowej; pojedyncze zgłoszenie wyjęte spod ciszy |
+| `POST /api/operator/destroy` | operacja ZNISZCZ DANE; podwójne potwierdzenie |
 | `GET /health` | stan strony, zapisu, modemu i ostatniego kontaktu z OSP |
 
-Token mieszkańca: 32 losowe bajty; przechowywany jako skrót, niepublikowany na listach. Hasło opiekuna jest generowane lokalnie i przechowywane jako skrót z solą. Mieszkańcy nie zakładają kont. Żądanie POST wymaga treści JSON, tokenu CSRF sesji i dozwolonego nagłówka Origin; obowiązują limity rozmiaru i częstości. Strona nie wczytuje zasobów z internetu i nie interpretuje treści zgłoszenia jako HTML. HTTP nie zapewnia poufności lokalnego odcinka, więc minimalizujemy dane osobowe; radio szyfruje osobno.
+Token mieszkańca: 32 losowe bajty; przechowywany jako skrót, niepublikowany na listach. Hasło opiekuna jest generowane lokalnie i przechowywane jako skrót z solą. Mieszkańcy nie zakładają kont, nie wyrażają zgód i nie akceptują regulaminu; strona nie wyświetla przed formularzem żadnych okien formalnych. Żądanie POST wymaga treści JSON, tokenu CSRF sesji i dozwolonego nagłówka Origin; obowiązują limity rozmiaru i częstości. Strona nie wczytuje zasobów z internetu i nie interpretuje treści zgłoszenia jako HTML. HTTP nie zapewnia poufności lokalnego odcinka, więc minimalizujemy dane osobowe; radio szyfruje osobno.
 
 Router zapewnia DHCP. Laptop jest klientem sieci LAN i wyświetla adres `http://IP:8080` oraz kod QR, aktualizowany po zmianie adresu IP. Główna sieć Wi-Fi musi przepuszczać ruch do LAN. Stacja nie uruchamia własnego serwera DHCP ani DNS, ani portalu przechwytującego (captive portal). Reguła zapory sieciowej pakietu START musi dopuszczać wyłącznie lokalny port strony na wybranym interfejsie; jej dodanie może wymagać uprawnień administratora.
+
+## Tryby kryzysowe
+
+Zasada: formalności i uzgodnienia załatwia się przed użyciem; żadna z poniższych funkcji nie blokuje przyjęcia zgłoszenia.
+
+**Emisje.** Stacja ogłasza swój adres LXMF przy starcie i na polecenie opiekuna; nie ustawia ogłoszeń cyklicznych. Nazwa wyświetlana ma postać `WICI-xxxx` (4 cyfry szesnastkowe skrótu tożsamości) i nie zawiera adresu ani nazwy miejsca. Emisje transportu Reticulum, np. zapytania o trasę, pozostają; liczy się je w próbie T3.
+
+**Cisza radiowa.** Opiekun włącza ją w panelu na polecenie uprawnionego organu. Adapter przestaje przekazywać ramki DATA do modemu, więc modem nie nadaje niczego, łącznie z ruchem przekazywanym; odbiór, zapis i kolejka działają dalej. Wyłączenie ciszy jest wyłącznie ręczne. Opiekun może wyjąć spod ciszy pojedyncze zgłoszenie przy bezpośrednim zagrożeniu życia; stacja zapisuje tę decyzję w dzienniku. Fizyczną pewność ciszy daje odłączenie modemu od USB.
+
+**Szyfrowanie w spoczynku.** Baza, tożsamość i eksporty są szyfrowane kluczem zapisanym na pamięci USB stacji. Start nie wymaga hasła; bez tej pamięci dane są nieczytelne. Narzędzie (np. SQLCipher lub zaszyfrowany wolumen) wybiera się w D13; nie może osłabić gwarancji trwałości z tej specyfikacji i wymaga przypięcia jak każda zależność pakietu START.
+
+**ZNISZCZ DANE.** Po podwójnym potwierdzeniu stacja zatrzymuje wysyłkę, usuwa klucz, a następnie bazę, tożsamość i eksporty. Nadpisanie pamięci flash i SSD nie gwarantuje usunięcia, dlatego decyduje usunięcie klucza; instrukcja nakazuje dodatkowo fizyczne zniszczenie pamięci USB. Operacja jest nieodwracalna i trwa najwyżej 1 minutę.
+
+**Języki i dostępność.** Strona mieszkańca jest dostępna po polsku, ukraińsku i angielsku; wybór języka nie wymaga przeładowania ani połączenia z internetem. Kategorie mają piktogramy i są przesyłane jako liczby, więc dyżurny widzi kategorię, liczbę osób i lokalizację niezależnie od języka opisu. Litery ukraińskie zajmują w UTF-8 po 2 B, tak jak polskie znaki diakrytyczne, więc opis zgłoszenia mieści około 48 takich znaków; formularz pokazuje pozostały limit w bajtach. Strona używa semantycznego HTML, działa z czytnikiem ekranu i przy powiększeniu tekstu do 200%.
 
 ## Pakiet USB
 
