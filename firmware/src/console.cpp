@@ -188,7 +188,8 @@ void Console::ackAlarm(const ui::AlarmInfo& alarm) {
 bool Console::switchBackup() {
     // Tożsamość zapasowa OSP z karty; nieodwracalne (powrót tylko nową konfiguracją).
     store::Config c = store_.config();
-    if (!store_.configured()) { services_.log("backup recipient: not configured"); return false; }
+    uint8_t zero[store::HASH] = {};
+    if (!store_.configured() || !memcmp(c.osp[1], zero, store::HASH)) { services_.log("backup recipient: none configured"); return false; }
     c.activeOsp = 1;
     if (!store_.writeConfig(c)) { services_.log("backup recipient: write failed"); return false; }
     services_.log("switched to backup recipient");

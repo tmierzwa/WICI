@@ -108,6 +108,13 @@ bool Store::writeImmutable(uint32_t address, uint8_t* buffer, size_t immutable) 
     return storage_.write(address + immutable + 2, &committed, 1);
 }
 
+bool Store::invalidate(uint32_t address, size_t immutable) {
+    // Ponowne użycie slotu: stary rekord traci znacznik, zanim powstanie nowy (zanik zasilania
+    // między zapisem stanu a zapisem części stałej nie ożywi starego rekordu z nowym stanem).
+    const uint8_t zero = 0;
+    return storage_.write(address + immutable + 2, &zero, 1);
+}
+
 bool Store::writeState(uint32_t address, uint8_t* state, size_t stateSize) {
     putU16(state + stateSize, p1::crc16(state, stateSize));
     state[stateSize + 2] = 0;
@@ -224,24 +231,41 @@ bool Store::begin() {
 
 bool Store::writeConfig(const Config& config) {
     if (!ok_) return false;
-    Config c = config;
-    c.seq = config_.seq + 1;
-    if (!seqUsable(c.seq)) c.seq = 1;
-    uint8_t big[CONFIG_IMMUTABLE + 3];
-    memset(big, 0, sizeof(big));
-    uint8_t* p = big;
-    putU32(p, c.seq); p += 4;
-    *p++ = c.role;
-    *p++ = c.activeOsp;
-    putU16(p, c.stations); p += 2;
-    memcpy(p, c.address, ADDRESS_MAX + 1); p += ADDRESS_MAX + 1;
-    memcpy(p, c.osp, 2 * HASH); p += 2 * HASH;
-    *p++ = c.phraseCount;
-    memcpy(p, c.phrases, sizeof(c.phrases)); p += sizeof(c.phrases);
-    memcpy(p, c.ifac, HASH);
-    const uint32_t address = CONFIG_BASE + (c.seq % CONFIG_SLOTS) * CONFIG_SLOT;
-    if (!writeImmutable(address, big, CONFIG_IMMUTABLE)) return false;
-    config_ = c;
+    uint32_t seq = config_.seq + 1;
+    if (!seqUsable(seq)) seq = 1;
+    // Rekord konfiguracji (3,3 KB) idzie do FRAM kawałkami z narastającym CRC, bez kopii na stosie.
+    uint8_t head[8];
+    putU32(head, seq);
+    head[4] = config.role;
+    head[5] = config.activeOsp;
+    putU16(head + 6, config.stations);
+    const uint8_t count = config.phraseCount;
+    struct Piece { const uint8_t* data; size_t length; };
+    const Piece pieces[] = {
+        {head, sizeof(head)},
+        {reinterpret_cast<const uint8_t*>(config.address), ADDRESS_MAX + 1},
+        {&config.osp[0][0], 2 * HASH},
+        {&count, 1},
+        {reinterpret_cast<const uint8_t*>(config.phrases), sizeof(config.phrases)},
+        {config.ifac, HASH},
+    };
+    const uint32_t address = CONFIG_BASE + (seq % CONFIG_SLOTS) * CONFIG_SLOT;
+    if (!invalidate(address, CONFIG_IMMUTABLE)) return false;
+    uint16_t crc = 0xFFFF;
+    uint32_t offset = 0;
+    for (const Piece& piece : pieces) {
+        if (!storage_.write(address + offset, piece.data, piece.length)) return false;
+        crc = p1::crc16(piece.data, piece.length, crc);
+        offset += static_cast<uint32_t>(piece.length);
+    }
+    uint8_t tail[3];
+    putU16(tail, crc);
+    tail[2] = 0;
+    if (!storage_.write(address + offset, tail, sizeof(tail))) return false;
+    const uint8_t committed = COMMITTED;
+    if (!storage_.write(address + offset + 2, &committed, 1)) return false;
+    config_ = config;
+    config_.seq = seq;
     return true;
 }
 
@@ -335,7 +359,9 @@ Put Store::queuePut(QueueRecord& record, bool resend) {
     encodeMessageHeader(buffer, seq, record.createdS, record.type, record.revision, record.event, record.to, record.id,
                         record.sa1, record.sa1Length, record.aux);
     const uint32_t address = QUEUE_BASE + static_cast<uint32_t>(slot) * RECORD;
-    // Najpierw stan (nowa intencja aktywna), potem część stała ze znacznikiem: rekord staje się ważny na końcu.
+    // Stary rekord traci znacznik, potem stan (nowa intencja aktywna), potem część stała ze znacznikiem:
+    // rekord staje się ważny na końcu.
+    if (seqs[slot] && !invalidate(address, MSG_IMMUTABLE)) return Put::ERROR;
     record.seq = seq;
     record.flags = ACTIVE;
     record.attempts = 0;
@@ -481,6 +507,7 @@ Put Store::inboxPut(InboxRecord& record) {
     encodeMessageHeader(buffer, seq, record.receivedS, record.type, record.revision, record.event, record.source, record.id,
                         record.sa1, record.sa1Length);
     const uint32_t address = INBOX_BASE + static_cast<uint32_t>(slot) * RECORD;
+    if (inbox_[slot].seq && !invalidate(address, MSG_IMMUTABLE)) return Put::ERROR;
     uint8_t state[INBOX_STATE + 3] = {};
     if (!writeState(address + STATE_OFFSET, state, INBOX_STATE)) return Put::ERROR;
     if (!writeImmutable(address, buffer, MSG_IMMUTABLE)) return Put::ERROR;
@@ -557,6 +584,7 @@ bool Store::notePut(NoteRecord& record) {
     putU16(buffer + 13, static_cast<uint16_t>(length));
     memcpy(buffer + 15, record.text, length);
     const uint32_t address = NOTE_BASE + static_cast<uint32_t>(slot) * RECORD;
+    if (notes_[slot].seq && !invalidate(address, NOTE_IMMUTABLE)) return false;
     uint8_t state[NOTE_STATE + 3] = {};
     if (!writeState(address + STATE_OFFSET, state, NOTE_STATE)) return false;
     if (!writeImmutable(address, buffer, NOTE_IMMUTABLE)) return false;

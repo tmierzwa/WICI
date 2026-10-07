@@ -193,6 +193,7 @@ private:
     bool erase(uint32_t base, size_t count, size_t size);
     bool readRecord(uint32_t address, uint8_t* buffer, size_t immutable, size_t stateOffset, size_t stateSize, bool& stateValid);
     bool writeImmutable(uint32_t address, uint8_t* buffer, size_t immutable);
+    bool invalidate(uint32_t address, size_t immutable);
     bool writeState(uint32_t address, uint8_t* state, size_t stateSize);
     int freeSlot(const uint32_t* seqs, const uint8_t* live, size_t slots) const;
 

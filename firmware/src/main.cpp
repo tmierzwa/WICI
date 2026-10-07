@@ -106,6 +106,7 @@ struct BenchHost : usbproto::Host {
     const char* version() override { return WICI_FW_VERSION; }
     void configChanged() override;
     void queueChanged() override;
+    bool eraseJournal() override { return !journalOk || stationJournal.eraseEvents(); }
 };
 BenchHost host;
 usbproto::Protocol protocol(stationStore, host);
@@ -170,9 +171,6 @@ ui::Status screenStatus() {
     s.mains12 = true;
     s.millivolts = 0;                // stanowisko nie mierzy napięcia (INFO: mv = 0)
     bool found = false;
-    const uint32_t oldest = storeOk ? stationStore.queueOldestActiveS(found) : 0;
-    s.queued = storeOk ? stationStore.queueLive() : 0;
-    s.queueAgeS = found && uptimeS() > oldest ? uptimeS() - oldest : 0;
     s.newMessages = storeOk ? stationStore.inboxUnread() : 0;
     s.queued = storeOk ? stationStore.queueUnsent() : 0;  // najstarsze niewysłane: bez potwierdzenia łącza
     const uint32_t oldestUnsent = storeOk ? stationStore.queueOldestUnsentS(found) : 0;
@@ -655,7 +653,12 @@ void pollSerial() {
 
 }  // namespace
 
-void setup() {
+// Cała praca stacji biegnie w osobnym zadaniu FreeRTOS z 16 KB stosu: zadanie loop() rdzenia
+// Adafruit ma 4 KB, a rysowanie ekranu z odczytem rekordów FRAM i `configure` przez USB
+// potrzebują więcej.
+constexpr uint32_t STATION_STACK_WORDS = 4096;
+
+void stationSetup() {
     pinMode(board::DISPLAY_CS, OUTPUT);  // CS ekranu aktywny stanem wysokim: najpierw w stan niski
     digitalWrite(board::DISPLAY_CS, LOW);
     for (uint8_t pin : leds) { pinMode(pin, OUTPUT); ledWrite(pin, false); }
@@ -697,7 +700,7 @@ void setup() {
     syncButtons();
 }
 
-void loop() {
+void stationLoop() {
     static uint32_t lastBeat = 0;
     static bool beat = false;
     static bool reported = false;
@@ -756,4 +759,21 @@ void loop() {
         }
         protocol.poll(now);
     }
+}
+
+void stationTask() {
+    static bool started = false;
+    if (!started) {
+        started = true;
+        stationSetup();
+    }
+    stationLoop();
+}
+
+void setup() {
+    Scheduler.startLoop(stationTask, STATION_STACK_WORDS, TASK_PRIO_LOW, "station");
+}
+
+void loop() {
+    vTaskSuspend(nullptr);  // zadanie rdzenia nie jest potrzebne
 }

@@ -171,7 +171,8 @@ void Protocol::handleLine(const char* line, uint32_t nowMs) {
         send("ok", seq, "\"closed\":true");
     } else if (!strcmp(type, "destroy")) {
         if (!host_.confirm()) { host_.log("usb destroy not confirmed"); rejected(seq, "not confirmed"); return; }
-        if (!store_.destroy()) { rejected(seq, "memory"); return; }
+        const bool journal = host_.eraseJournal();
+        if (!store_.destroy() || !journal) { rejected(seq, "memory"); return; }
         host_.configChanged();
         host_.queueChanged();
         send("ok", seq, "\"destroyed\":true");

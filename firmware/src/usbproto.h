@@ -36,6 +36,7 @@ struct Host {
     virtual const char* version() = 0;
     virtual void configChanged() {}
     virtual void queueChanged() {}
+    virtual bool eraseJournal() { return true; }  // ZNISZCZ DANE: dziennik zdarzeń poza magazynem
 };
 
 struct Stats {

@@ -2,7 +2,7 @@
 
 Katalog zawiera oprogramowanie układowe stacji. Obecny stan to pierwsze kroki na [stanowisku deweloperskim A](../hardware/dev-bench/README.md): nRF52840-DK z modułem TI CC1120EM-868-915 i pamięcią FRAM na złączu Arduino płytki. Środowisko `bench-a` w `platformio.ini` buduje obraz, który po podłączeniu USB zgłasza się poleceniem `INFO` w formacie ze [specyfikacji radia](../docs/spec/radio.md#usb-do-laptopa), identyfikuje układ radiowy i FRAM przez SPI, zapisuje do CC1120 [rejestry profilu P1](#rejestry-profilu-p1) z weryfikacją odczytu i kalibracją syntezera, wykonuje [polecenia pomiarowe](#polecenia-pomiarowe) `TXCW`, `TXPKT`, `RXPER`, `FOFF` ze specyfikacji, prowadzi [dziennik w FRAM](#dziennik-w-fram) (dług ciszy, zegar czasu pracy z liczbą restartów, zdarzenia), obsługuje [łącze P1](#łącze-p1) (odbiór i składanie datagramów, nadawanie z CCA, odroczeniem i długiem ciszy), podaje zaprogramowaną częstotliwość i RSSI, prowadzi [ekran Sharp i menu stacji](#ekran-i-przyciski) na przyciskach płytki (wybór języka, ekran główny, cisza, STAN; EXTCOMIN z licznika RTC2) obsługuje diody płytki oraz udostępnia drugi interfejs CDC z [protokołem USB laptop–stacja](#protokół-usb-laptopstacja) nad kolejką, skrzynką i konfiguracją w FRAM oraz [warstwę aplikacji](#warstwa-aplikacji-nad-p1) nadającą intencje z kolejki przez P1 i przyjmującą wiadomości do skrzynki. Nie ma jeszcze stosu Reticulum: datagram ma zastępczy format bez podpisu.
 
-Obraz skompilowano (PlatformIO, rdzeń Adafruit nRF52 1.7.0, 53 860 B RAM, 187 716 B flash; z tego bufor ekranu 12 000 B RAM, indeksy magazynu FRAM około 12 KB RAM i bitmapa fontu 21 840 B flash). **Nie uruchomiono go na sprzęcie**: odpowiedzi poleceń, numery pinów, działanie SPI z modułem i przyjęcie rejestrów przez układ wymagają sprawdzenia na płytce według kroków niżej.
+Obraz skompilowano (PlatformIO, rdzeń Adafruit nRF52 1.7.0, 53 868 B RAM, 187 844 B flash; z tego bufor ekranu 12 000 B RAM, indeksy magazynu FRAM około 12 KB RAM i bitmapa fontu 21 840 B flash). **Nie uruchomiono go na sprzęcie**: odpowiedzi poleceń, numery pinów, działanie SPI z modułem i przyjęcie rejestrów przez układ wymagają sprawdzenia na płytce według kroków niżej.
 
 ## Okablowanie stanowiska A
 
@@ -205,6 +205,18 @@ Przepływy ekranów są w modelu (`src/ui.cpp`), a dane i działania dostarcza m
 | alarm | `brak_potwierdzenia` po 15 min / 1 h / 6 h od zapisu według pilności (TEST: 30 min od nadania) i `brak_odczytu` 30 min po `stan_1` dla pilności 2; zajmuje cały ekran, OK potwierdza (alarm tego zgłoszenia nie wraca), `zapisz_numer` wskazuje zgłoszenie |
 
 Braki tego kroku: ogłoszenie adresu i wyciszenie dźwięku w USŁUGACH (bez stosu i brzęczyka), lista adresów obiektów, powrót ekranu alarmu po wybudzeniu (bez podświetlenia), watchdog.
+
+## Audyt kodu stanowiska
+
+Przegląd całego kodu stacji po kroku ekranów (`store`, `station`, `console`, `usbproto`, `ui`, `sa1`, `jsonlite`, `measure`, `sharp`, `journal`, `main`) dał poprawki:
+
+- **Stos zadania.** Zadanie `loop()` rdzenia Adafruit ma 4 KB stosu, a `configure` przez USB (kopia konfiguracji 3,3 KB) i rysowanie ekranu z odczytem rekordów FRAM potrzebują więcej. Cała praca stacji biegnie teraz w osobnym zadaniu FreeRTOS z 16 KB stosu (`Scheduler.startLoop`), a zadanie rdzenia jest zawieszone; zapis konfiguracji idzie do FRAM kawałkami z narastającym CRC zamiast przez bufor 3,3 KB na stosie.
+- **Ponowne użycie slotu.** Nowy rekord w slocie zakończonego rekordu najpierw kasuje stary znacznik zatwierdzenia, potem zapisuje stan i część stałą: zanik zasilania między zapisem stanu a zapisem części stałej nie ożywi starej intencji z nowym stanem.
+- **ZNISZCZ DANE** przez USB i z ekranu kasuje również dziennik zdarzeń w FRAM (dług ciszy, zegar i ustawienia zostają, jak w specyfikacji).
+- **ODBIORCA ZAPASOWY** odmawia przełączenia, gdy konfiguracja nie ma zapasowej tożsamości OSP.
+- Potwierdzenie łącza dla intencji anulowanej albo zastąpionej jest ignorowane; `kolejka_krotki` liczy tylko intencje bez potwierdzenia łącza.
+
+Ograniczenia, które zostają do stosu i kluczy: krótki numer zgłoszenia jest sprawdzany tylko w kolejce (pamięć kluczy odbioru nie ma indeksu numerów); bez karty OSP stacja przyjmuje wiadomości od każdego nadawcy; rekordy FRAM nie są szyfrowane; `Serial`/`SerialData` blokują zapis, gdy host otworzył port, a nie czyta (TinyUSB CDC), więc program laptopa musi czytać port danych na bieżąco; polecenia z potwierdzeniem przyciskiem (`SILENCE`, `destroy`, `conducted`) blokują pętlę stacji do 30 s.
 
 ## Protokół USB laptop–stacja
 
