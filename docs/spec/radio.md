@@ -70,7 +70,7 @@ Wykaz do kwalifikacji i deklaracji zgodności:
 - EN 300 220-2 w aktualnej wersji: widmo radiowe, w tym kategoria odbiornika;
 - EN 301 489-1 i -3: kompatybilność elektromagnetyczna;
 - EN 62368-1: bezpieczeństwo; EN 62479: ekspozycja na pole;
-- rozporządzenie delegowane (UE) 2022/30 i normy zharmonizowane EN 18031-1 i -2 (art. 3 ust. 3 lit. d i e RED, cyberbezpieczeństwo), stosowane od 1 sierpnia 2025;
+- rozporządzenie delegowane (UE) 2022/30 i normy zharmonizowane EN 18031-1 i -2:2024 (art. 3 ust. 3 lit. d i e RED, cyberbezpieczeństwo), stosowane od 1 sierpnia 2025; normy opublikowano decyzją wykonawczą (UE) 2025/138 z ograniczeniami w załączniku I;
 - RoHS (EN IEC 63000), WEEE oraz rozporządzenie bateryjne (UE) 2023/1542;
 - maksymalny deklarowany zysk anteny 6 dBi, wpisany do deklaracji i karty stacji.
 
@@ -96,7 +96,7 @@ Polecenie diagnostyczne na interfejsie diagnostyki: `INFO\n`; odpowiedź: jeden 
 
 Kontroler [R01.3](../../hardware/radio-test-r01/README.md) (STM32F103 z modułem CC1120) ma za mało pamięci na stos Reticulum i nie jest stacją. Służy jako stanowisko TI do pomiarów P1 w T4: ramki, czułość, emisje i dług ciszy. Stanowisko zasila się z zasilacza laboratoryjnego; budżet prądu wstrzymania USB (≤2,5 mA) nie obowiązuje przy takim użyciu, więc problem zegara Y1 nie blokuje budowy stanowiska do T4. HOLD pozostaje dla R01.3 jako produktu, czyli modemu zasilanego z portu USB.
 
-Stroną ST prób mieszanych jest osobne stanowisko S2-LP, np. płytka ST STEVAL-FKI868V2 (S2-LP 868 MHz) z płytką NUCLEO i tym samym kontraktem USB stanowiska (do sprawdzenia), albo płytki R02 obu wykonań. Zamiennik dla osób bez tych płytek: moduł ewaluacyjny TI CC1120 z dowolnym MCU (numery części do sprawdzenia); daje tylko stronę TI.
+Stroną ST prób mieszanych jest osobne stanowisko S2-LP, np. zestaw ST STEVAL-FKI868V2 (moduł S2-LP 860–940 MHz ze złączem SMA i płytka NUCLEO-L053R8 w zestawie) z własnym oprogramowaniem realizującym kontrakt USB stanowiska, albo płytki R02 obu wykonań. Zamiennik dla osób bez płytki R01.3: zestaw TI CC1120EMK-868-915 (dwa moduły CC1120 868/915 MHz), który wymaga płytek SmartRF TrxEB (CC1120DK) albo własnego MCU; daje tylko stronę TI.
 
 Na stanowisku obowiązuje wcześniejszy kontrakt modemu USB:
 
@@ -112,10 +112,10 @@ Dwa wykonania stacji mają wspólny P1, wspólny protokół USB do laptopa i to 
 
 | Funkcja | Wykonanie A | Wykonanie B |
 |---|---|---|
-| Radio | TI CC1120 | ST S2-LPQTR; wariant dla 826–958 MHz |
+| Radio | TI CC1120 | ST S2-LPQTR; wariant dla 413–479 i 826–958 MHz |
 | MCU stacji | Nordic nRF52840; Bluetooth trwale wyłączony | Espressif ESP32-S3 z pamięcią PSRAM; Wi-Fi i Bluetooth trwale wyłączone |
 | Pamięć RAM | ≥256 KiB na port microReticulum, LXMF, tablicę tras i bufory; nRF52840 ma dokładnie 256 KiB, więc wymagany zmierzony zapas ≥30% w T3, przed projektem płytki R02; wariant zapasowy z większą pamięcią: nRF5340 (rdzeń aplikacyjny 512 KiB), RP2350 lub STM32U5 (D14) | 512 KiB SRAM i PSRAM; zmierzony zapas ≥30% w T3 |
-| Pamięć nieulotna | FRAM SPI 2 Mbit: Infineon FM25V20A (10¹⁴ cykli; sprawdzić status NRND, zamiennik Infineon Excelon CY15B102Q); rekordy szyfrowane | FRAM SPI 2 Mbit: RAMXEED (dawniej Fujitsu) MB85RS2MT; rekordy szyfrowane |
+| Pamięć nieulotna | FRAM SPI 2 Mbit: Infineon FM25V20A (10¹⁴ cykli, 2,0–3,6 V; status aktywny w październiku 2026; zamiennik Infineon Excelon LP CY15B102QN); rekordy szyfrowane | FRAM SPI 2 Mbit: RAMXEED (dawniej Fujitsu) MB85RS2MTA; rekordy szyfrowane |
 | Ekran | graficzny monochromatyczny z pamięcią obrazu (memory LCD) lub e-papier, cyrylica i piktogramy | wykonanie innego producenta, ten sam układ treści |
 | Połączenie MCU–radio | SPI: SCK, MOSI, MISO, CS; IRQ; reset/shutdown | ten sam podział funkcji, inne piny |
 | Wzorzec częstotliwości RF | zgodny z dokumentacją CC1120 | zgodny z dokumentacją S2-LP |

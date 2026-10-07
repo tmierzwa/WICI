@@ -20,6 +20,8 @@ Obraz: scena stacji w `wici_film.py` pokazuje laptop, router i akumulator 12 V. 
 
 Dodatkowo: przy haśle „wystawiam antenę” pokazać antenę zamontowaną wcześniej na zewnątrz budynku, a w scenie stanów użyć napisów z ekranu stacji („zapisane lokalnie”, „zapisane u odbiorcy”, „przeczytane”, „pomoc skierowana”). Kategorie zgłoszeń mają w 0.5 dziesięć pozycji ([oprogramowanie](../../docs/spec/oprogramowanie.md#wiadomości-sa1)).
 
+Font: film używa kroju Avenir Next z macOS, którego licencja obejmuje tylko wyświetlanie i druk. Przy nowym renderze warto przejść na Nunito Sans z `media/logo/fonts/` (SIL OFL 1.1), tak jak znak.
+
 ## Wersja 60 s (`narracja_short.py`, `wici_short.py`)
 
 | Segment | Propozycja |

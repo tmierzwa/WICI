@@ -73,6 +73,12 @@ precedence = "closest"
 SPDX-FileCopyrightText = "2026 Tomek Mierzwa and WICI contributors"
 SPDX-License-Identifier = "CERN-OHL-P-2.0"
 
+[[annotations]]
+path = "media/logo/fonts/**"
+precedence = "override"
+SPDX-FileCopyrightText = "2016 The Nunito Sans Project Authors (https://github.com/Fonthausen/NunitoSans)"
+SPDX-License-Identifier = "OFL-1.1"
+
 # Verbatim license texts carry the terms they state.
 [[annotations]]
 path = "hardware/radio-test-r01/fabrication/R01.3/LICENSES/CC-BY-4.0.txt"

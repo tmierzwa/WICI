@@ -1,7 +1,7 @@
-"""Znak WICI: Avenir Next Heavy, kropki nad I połączone sygnałem z impulsem.
+"""Znak WICI: Nunito Sans Black, kropki nad I połączone sygnałem z impulsem.
 
 Zapisuje znak w krzywych (SVG) na ciemne i jasne tło, ikonę oraz ich PNG.
-Wymaga: macOS z fontem Avenir Next, pip install fonttools cairosvg.
+Wymaga: pip install fonttools cairosvg; font Nunito Sans (SIL OFL 1.1) jest w fonts/.
 """
 
 from pathlib import Path
@@ -10,15 +10,17 @@ from fontTools.pens.boundsPen import BoundsPen
 from fontTools.pens.recordingPen import DecomposingRecordingPen
 from fontTools.pens.svgPathPen import SVGPathPen
 from fontTools.pens.transformPen import TransformPen
-from fontTools.ttLib import TTCollection
+from fontTools.ttLib import TTFont
+from fontTools.varLib import instancer
 
 HERE = Path(__file__).parent
-FONT = TTCollection("/System/Library/Fonts/Avenir Next.ttc").fonts[8]  # Avenir Next Heavy
-CAP = 708
+FONT = instancer.instantiateVariableFont(  # Nunito Sans Black, domyślna optyka i wysokość liter
+    TTFont(HERE / "fonts/NunitoSans[YTLC,opsz,wdth,wght].ttf"), {"wght": 900, "wdth": 100, "opsz": 12, "YTLC": 500})
+CAP = FONT["OS/2"].sCapHeight
 LINE = 52  # grubość sygnału w jednostkach fontu (1000/em); czytelna jeszcze przy 24 px wysokości znaku
 DOT = 1.06  # średnica kropki względem pnia I: koło wygląda na mniejsze od prostokąta tej samej szerokości
 GAP = 70  # światło między górą I a kropką, zbliżone do światła między literami
-KERN = {("I", "C"): -24, ("C", "I"): -14}  # optyczne odstępy: krągłe C bliżej pnia, otwarcie C daje światło
+KERN = {("I", "C"): -34, ("C", "I"): -14}  # optyczne odstępy: krągłe C bliżej pnia, otwarcie C daje światło
 BG, WHITE, YELLOW = "#0f1216", "#ffffff", "#f4d345"  # tło, napis i akcent z filmu
 INK_LIGHT, YELLOW_LIGHT = "#0f1216", "#c99a00"  # żółty przyciemniony, by nie znikał na jasnym tle
 
