@@ -42,6 +42,7 @@
 <nav class="on-page" aria-label="Na tej stronie">
 <p>Na tej stronie</p>
 <ol>
+  <li><a href="#streszczenie-dla-decydenta">Streszczenie dla decydenta</a></li>
   <li><a href="#dokumenty">Dokumenty</a></li>
   <li><a href="#jak-czytac-ustalenia">Jak czytać ustalenia</a></li>
   <li><a href="#skroty-i-pojecia">Skróty i pojęcia</a></li>
@@ -51,7 +52,11 @@
 
 <p>Cel: przekazać krótkie zgłoszenie ze schronienia do miejsca zdolnego udzielić pomocy, gdy nie działa internet ani sieć komórkowa. Podstawą jest samodzielna stacja z ekranem i przyciskami: włączam stację, wystawiam antenę i jestem w sieci – jeśli sieć zaplanowano i sprawdzono w terenie przed kryzysem, a antenę zamontowano na stałe podczas przygotowania obiektu. Opiekun wysyła zgłoszenia schronienia przyciskami, a stacja zawsze przekazuje ruch innych stacji. Laptop i router z miejsca uruchomienia dodają później wygodny panel i stronę, przez którą mieszkańcy zgłaszają potrzeby z telefonów. Stacja zachowuje dane lokalnie i przekazuje je radiem, także przez inne stacje.</p>
 
-<p>Zakres bazowy: jeden budynek, około 50 osób, sąsiednie stacje około 1 km od siebie w zabudowie. Stacja pracuje w modelu około 2–4 dni na litowych ogniwach AA (zależnie od wykonania), a ze źródła 12 V tygodniami. Laptop, router, ich zasilacze i akumulatory pochodzą z lokalnego zasobu i są rozszerzeniami; z nimi zestaw ma pracować 24 godziny z wymianą źródeł energii. Zestaw WICI dostarcza stację z anteną, oprogramowanie offline, połączenia, zasilanie laptopa i routera oraz osobną ładowarkę telefonów (<a href="01-potrzeby-i-wymagania.html#poziomy-zestawu">poziomy zestawu</a>).</p>
+<p>Zakres bazowy: jeden budynek, około 50 osób, sąsiednie stacje około 1 km od siebie w zabudowie. Stacja pracuje w modelu około 2–4 dni na litowych ogniwach AA (zależnie od wykonania), a ze źródła 12 V tygodniami. Laptop, router, ich zasilacze i akumulatory pochodzą z lokalnego zasobu i są rozszerzeniami; z nimi zestaw ma pracować 24 godziny z wymianą źródeł energii. Poziom 3 zużywa około 1,8 kWh na dobę na schronienie (6–7 akumulatorów 60 Ah); planuje się go tylko tam, gdzie jest ładowanie i transport akumulatorów. Zestaw WICI dostarcza stację z anteną, oprogramowanie offline, połączenia, zasilanie laptopa i routera oraz osobną ładowarkę telefonów (<a href="01-potrzeby-i-wymagania.html#poziomy-zestawu">poziomy zestawu</a>).</p>
+
+<h2 id="streszczenie-dla-decydenta">Streszczenie dla decydenta</h2>
+
+<p>WICI to stacja radiowa w schronieniu, która przekazuje krótkie zgłoszenia do dyżurnego OSP, gdy nie działa telefon ani internet. Stan: projekt, bez gotowego urządzenia i bez prób w terenie. Od organizatora sieci potrzeba: OSP z dyżurem, 2–3 miejsc pilotażu, uzgodnień prawnych (status nadawania, ochrona danych) i trzech przeszkolonych osób na schronienie. Urządzenia kupuje się od producenta z deklaracją zgodności UE, nie od zespołu projektu. Koszt na schronienie zestawia <a href="../spec/koszty.csv">koszty.csv</a> (cena stacji do wyceny); utrzymanie to ok. 15–20 h pracy rocznie na stację. Pojemność to dziesiątki zgłoszeń na godzinę dla całej sieci, nie dla każdego przekaźnika. WICI nie zastępuje 112, syren ani Alertu RCB. Najbliższa decyzja: list intencyjny (<a href="08-plan-weryfikacji-i-decyzje.html#bramy-decyzyjne">brama G0</a>).</p>
 
 <h2 id="film">Film</h2>
 
@@ -99,17 +104,20 @@
 <th scope="col">Pojęcie</th>
 <th scope="col">Znaczenie w WICI</th>
 </tr></thead><tbody>
-<tr><td>W01–W23, T1–T8, D01–D18</td><td>wymagania (<a href="01-potrzeby-i-wymagania.html">01</a>), grupy prób i otwarte decyzje (<a href="08-plan-weryfikacji-i-decyzje.html">08</a>)</td></tr>
-<tr><td>OSP</td><td>w dokumentach skrót roli stanowiska odbiorczego (odbiorcy zgłoszeń), które wyznacza wójt (burmistrz, prezydent miasta). Rekomendowane jest gminne centrum zarządzania kryzysowego albo stanowisko gminnego zespołu zarządzania kryzysowego w urzędzie; jednostka Ochotniczej Straży Pożarnej pełni tę rolę tylko w porozumieniu z gminą. Na ekranie stacji rola nazywa się „odbiorca”, np. „zapisane u odbiorcy” (<a href="02-scenariusze-i-organizacja.html#miejsce-w-systemie-ochrony-ludnosci">02</a>)</td></tr>
-<tr><td>schronienie</td><td>obiekt, w którym gromadzi się ludność: budowla ochronna (schron, ukrycie), miejsce doraźnego schronienia albo miejsce wskazane przez gminę (punkt ewakuacyjny, miejsce tymczasowego zakwaterowania, punkt informacyjno-pomocowy, ogrzewalnia); WICI nie wyznacza ani nie klasyfikuje obiektów (<a href="01-potrzeby-i-wymagania.html#problem-i-granica-systemu">01</a>)</td></tr>
+<tr><td>W01–W24, T1–T8, D01–D18, G0–G3</td><td>wymagania (<a href="01-potrzeby-i-wymagania.html">01</a>), grupy prób, otwarte decyzje i bramy decyzyjne (<a href="08-plan-weryfikacji-i-decyzje.html">08</a>)</td></tr>
+<tr><td>OSP</td><td>w dokumentach skrót roli stanowiska odbiorczego (odbiorcy zgłoszeń), które wyznacza wójt (burmistrz, prezydent miasta). Nazwa pochodzi od ochotniczej straży pożarnej, bo prawdopodobnie to ona będzie często pełnić tę rolę: ma strażnicę, łączność i ludzi w każdej gminie. Odbiorcą może być też gminne centrum zarządzania kryzysowego albo stanowisko gminnego zespołu zarządzania kryzysowego. Kto pełni rolę, musi w kryzysie zapewnić całodobowy dyżur. Na ekranie stacji rola nazywa się „odbiorca”, np. „ODBIORCA ZAPISAŁ” (<a href="02-scenariusze-i-organizacja.html#miejsce-w-systemie-ochrony-ludnosci">02</a>)</td></tr>
+<tr><td>schronienie</td><td>obiekt, w którym gromadzi się ludność: budowla ochronna (schron, ukrycie), miejsce doraźnego schronienia albo miejsce wskazane w gminnym planie zarządzania kryzysowego (punkt ewakuacyjny, miejsce tymczasowego zakwaterowania, punkt informacyjno-pomocowy, ogrzewalnia); WICI nie wyznacza ani nie klasyfikuje obiektów (<a href="01-potrzeby-i-wymagania.html#problem-i-granica-systemu">01</a>)</td></tr>
 <tr><td>opiekun, zastępca, dyżurny</td><td>osoby obsługujące stację w schronieniu oraz stanowisko odbiorcy (<a href="02-scenariusze-i-organizacja.html">02</a>)</td></tr>
+<tr><td>organizator sieci</td><td>podmiot, który przygotowuje i utrzymuje sieć, zwykle samorząd gminy (<a href="02-scenariusze-i-organizacja.html#macierz-odpowiedzialnosci">02</a>)</td></tr>
 <tr><td>poziom 1, 2, 3</td><td>sama stacja; stacja z laptopem przez USB; stacja z laptopem i routerem dla telefonów (<a href="01-potrzeby-i-wymagania.html#poziomy-zestawu">01</a>)</td></tr>
 <tr><td>przekaźnik</td><td>każda włączona stacja przekazuje ruch innych stacji, także bez laptopa; osobny przekaźnik to stacja poziomu 1 na ogniwach lub źródle 12 V</td></tr>
 <tr><td>MCU</td><td>mikrokontroler prowadzący stację: stos sieciowy, kolejkę, ekran, przyciski i radio</td></tr>
-<tr><td>FRAM</td><td>pamięć nieulotna stacji z trwałym zapisem bez zużycia przy częstych zapisach; przechowuje kolejkę i dług ciszy</td></tr>
+<tr><td>FRAM</td><td>pamięć nieulotna stacji z trwałym zapisem bez zużycia przy częstych zapisach; przechowuje szyfrowaną kolejkę, trasy i dług ciszy</td></tr>
 <tr><td>A, B, C</td><td>wejścia zasilania poziomu 3: A i B to wymieniane źródła 12 V laptopa i routera, C to osobne źródło ładowarki telefonów</td></tr>
 <tr><td>HOLD</td><td>status sprzętu: projekt nie jest dopuszczony do zamówienia ani użycia do czasu odbioru wskazanej konfiguracji</td></tr>
 <tr><td>START</td><td>pakiety uruchomieniowe offline: dla działającego systemu Windows lub macOS oraz obraz Linuksa dla obsługiwanych komputerów PC</td></tr>
+<tr><td>karta stacji, karta OSP</td><td>pliki z pełnymi kluczami publicznymi wymieniane przy przygotowaniu; na nich opiera się zaufanie, nie na odbiorze radiowym (<a href="05-projekt-koncepcyjny-komunikacji.html#model-zaufania-i-kluczy">05</a>)</td></tr>
+<tr><td>ZAMKNIJ ZDARZENIE, ZNISZCZ DANE</td><td>usunięcie danych zdarzenia po eksporcie dla administratora danych (tożsamości zostają) oraz nieodwracalne usunięcie danych i tożsamości stacji przy groźbie przejęcia (<a href="07-zagrozenia-i-odpornosc.html#zniszcz-dane">07</a>)</td></tr>
 <tr><td>PRZENIEŚ STACJĘ</td><td>kontrolowane przeniesienie tożsamości i kolejki na stację zapasową; stara stacja przestaje pracować</td></tr>
 <tr><td>TEST</td><td>typ SA1 o budowie REQUEST: sprawdza drogę do OSP, zapis i obecność dyżurnego; nie trafia do kolejki potrzeb</td></tr>
 <tr><td>COMMIT</td><td>zatwierdzenie zapisu w FRAM stacji albo transakcji SQLite laptopa; dopiero po nim zapis uznaje się za trwały</td></tr>
@@ -117,7 +125,7 @@
 <tr><td>LXMF</td><td>protokół wiadomości nad Reticulum; potwierdza dostarczenie transportowe, nie zapis w bazie odbiorcy</td></tr>
 <tr><td>pakiet okazjonalny, link, zasób</td><td>sposoby dostarczenia LXMF: jeden pakiet bez zestawiania połączenia, połączenie Reticulum, przesłanie większych danych w częściach (<a href="05-projekt-koncepcyjny-komunikacji.html">05</a>)</td></tr>
 <tr><td>SA1</td><td>format treści wiadomości WICI w LXMF; sześć typów: REQUEST, RECEIVED, STATUS, REPLY, BULLETIN, TEST</td></tr>
-<tr><td>RECEIVED, STATUS</td><td>potwierdzenie trwałego zapisu zgłoszenia w OSP („zapisane u odbiorcy”) oraz późniejsze decyzje dyżurnego: przeczytane, pomoc skierowana, przekazane innemu podmiotowi, obecnie brak możliwości pomocy (użyj kanału zastępczego), zamknięte</td></tr>
+<tr><td>RECEIVED, STATUS</td><td>potwierdzenie trwałego zapisu zgłoszenia w OSP („ODBIORCA ZAPISAŁ”) oraz późniejsze stany: „ODBIORCA PRZECZYTAŁ”, „POMOC SKIEROWANA (DECYZJA, NIE GODZINA PRZYJAZDU)”, „PRZEKAZANE DALEJ (PSP / POGOTOWIE / POWIAT)”, „ODBIORCA NIE MOŻE TERAZ POMÓC – CZYTAJ ODPOWIEDŹ”, „ZAMKNIĘTE”</td></tr>
 <tr><td>P1</td><td>wspólny profil radiowy obu wykonań stacji: 869,525 MHz, 2-GFSK 4800 bit/s, fragmenty do 86 B, dług ciszy</td></tr>
 <tr><td>dług ciszy</td><td>czas zakazu nadawania po każdej serii nadawania, 12 × czas TX, zapisany w pamięci nieulotnej; restart go nie zeruje</td></tr>
 <tr><td>CCA</td><td>sprawdzenie, czy kanał jest wolny, przed nadawaniem; nie zastępuje limitu czasu TX</td></tr>
@@ -131,7 +139,9 @@
 
 <p><a href="../review.md">Aktualne ustalenia przeglądu wewnętrznego</a> obejmują problem prądu wstrzymania USB (suspend), budżet ogranicznika ładowarki oraz kontrprzykład czasowy stosu sieciowego. Wersja 0.5 przenosi stos do stacji zasilanej z własnych źródeł, więc problem wstrzymania USB i limit czasu KISS nie blokują już wariantu bazowego. Nowym głównym ryzykiem jest dojrzałość stosu na mikrokontrolerze.</p>
 
-<p>Pierwsze rozstrzygnięcia: miejsce sieci w gminnym planie ochrony ludności i jej status w stanach nadzwyczajnych; zasięg 1 km przy rzeczywistych wysokościach anten (model propagacji daje ujemny zapas przy antenach na wysokości okien); trwałe przyjęcie zgłoszenia przez OSP; działanie microReticulum i LXMF na wybranych mikrokontrolerach; rzeczywisty koszt radiowy LXMF, w tym zmieszczenie SA1 w jednym pakiecie; zgodność dwóch wykonań stacji; zasilanie bez resetu; dostępność dyżurnego zdolnego do działania. Bez odbiorcy, który może pomóc, sprawna sieć jedynie przenosi dane.</p>
+<p>Pierwsze rozstrzygnięcia: miejsce sieci w gminnym planie ochrony ludności i jej status w stanach nadzwyczajnych; zasięg 1 km przy rzeczywistych wysokościach anten (model propagacji daje ujemny zapas przy antenach na wysokości okien); trwałe przyjęcie zgłoszenia przez OSP; działanie microReticulum i LXMF na wybranych mikrokontrolerach; rzeczywisty koszt radiowy LXMF, w tym zmieszczenie SA1 w jednym pakiecie (roboczo ≤256 B); pojemność sieci przy OSP (model: ok. 75 zgłoszeń/h dla całej sieci przez przekaźnik przed OSP, ok. 130/h bez niego; dodanie przekaźników jej nie zwiększa); zgodność dwóch wykonań stacji; zasilanie bez resetu; dostępność dyżurnego zdolnego do działania. Bez odbiorcy, który może pomóc, sprawna sieć jedynie przenosi dane.</p>
+
+<p>Ryzyko ciągłości projektu, czyli utraty zespołu lub jego zaangażowania, ograniczają otwarta licencja, kompletna paczka źródeł (T7) i wymóg zakupu od producenta z umową wsparcia, a nie od zespołu projektu.</p>
 
 <p>Rygor projektu to jawne założenia, odtwarzalne próby, rozpoznawalne awarie i warunki przerwania pracy. Projekt nie deklaruje kwalifikacji wojskowej, odporności na celowe zagłuszanie ani certyfikacji środowiskowej.</p>
 

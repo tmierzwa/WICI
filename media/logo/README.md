@@ -18,7 +18,7 @@ PNG znaku mają 2400 × 1047 px i przezroczyste tło. Znak jest na górze [głó
 
 ## Użycie
 
-- **Minimalny rozmiar:** znak ma co najmniej 32 px wysokości. Przy 24 px linia sygnału jest jeszcze widoczna, ale impuls zlewa się w kreskę. Poniżej 32 px używaj ikony albo favicony.
+- **Minimalny rozmiar:** znak ma co najmniej 32 px wysokości. Przy 24 px linia sygnału jest jeszcze widoczna, ale impuls zlewa się w kreskę. Poniżej 32 px używaj ikony albo faviconu.
 - **Pole ochronne:** wokół znaku zostaw wolne miejsce co najmniej na średnicę kropki.
 - **Kolory:** używaj tylko dwóch par z tabeli. Sygnał zawsze ma kolor akcentu, a napis i kropki zawsze ten sam kolor.
 - **Kształt:** nie składaj nazwy fontem i nie zmieniaj proporcji. Zmiany wprowadzaj w `znak.py` i generuj pliki od nowa.
@@ -46,4 +46,4 @@ Skrypt zapisuje wszystkie pliki z tabeli obok siebie, niezależnie od katalogu, 
 
 ## Licencja
 
-Znak i ikony: CC-BY-4.0. Skrypt `znak.py`: MIT. Litery pochodzą z kroju Nunito Sans (© The Nunito Sans Project Authors), zamienione na krzywe; licencja SIL OFL 1.1 pozwala używać kroju w znakach i rozpowszechniać litery w krzywych. Sam font w `fonts/` pozostaje na OFL 1.1. Do wersji 0.5 znak używał kroju Avenir Next, którego licencja z macOS nie obejmuje rozpowszechniania kształtów liter. Szczegóły w [LICENSE.md](../../LICENSE.md).
+Znak i ikony: CC-BY-4.0. Skrypt `znak.py`: MIT. Litery pochodzą z kroju Nunito Sans (© The Nunito Sans Project Authors), zamienione na krzywe; licencja SIL OFL 1.1 pozwala używać kroju w znakach i rozpowszechniać litery w krzywych. Sam font w `fonts/` pozostaje na OFL 1.1. Przed przerysowaniem w wersji 0.5 znak używał kroju Avenir Next, którego licencja z macOS nie obejmuje rozpowszechniania kształtów liter. Szczegóły w [LICENSE.md](../../LICENSE.md).

@@ -17,7 +17,6 @@
   "station_level1": {
     "assumptions": {
       "rail_v": 3.3,
-      "rail_efficiency": 0.85,
       "rx_ma": 22.0,
       "tcxo_ma": 2.0,
       "tx_ma_13dbm": 45.0,
@@ -26,65 +25,122 @@
       "fram_buttons_supervisor_ma": 0.5,
       "front_light_ma": 15.0,
       "front_light_duty": 0.020833333333333332,
-      "input_side_ma": 0.22000000000000003,
+      "alarm_led_ma": 5.0,
+      "alarm_led_duty": 0.01,
+      "buzzer_ma": 20.0,
+      "buzzer_duty": 0.0025,
       "aa_vsys_v": 6.0,
+      "aa_rail_efficiency": 0.85,
       "battery_vsys_v": 12.8,
+      "battery_rail_efficiency": 0.8,
+      "input_side_ma": {
+        "aa": {
+          "ltc4412": 0.011,
+          "tps3710": 0.006,
+          "ltc2954": 0.006,
+          "dividers": 0.01
+        },
+        "12v": {
+          "lm74800": 0.4,
+          "uv_latch": 0.02,
+          "tps3710": 0.006,
+          "ltc2954": 0.006,
+          "dividers": 0.01
+        }
+      },
+      "input_side_ma_total": {
+        "aa": 0.033,
+        "12v": 0.442
+      },
       "reserve_fraction": 0.2,
       "aa_set_usable_wh": 14.4,
       "aa_cell_wh": 4.5,
       "aa_usable_fraction": 0.8
     },
+    "wh_24h_with_reserve_range": [
+      3.569594888687783,
+      10.721174649230765
+    ],
+    "holdup": {
+      "comparator_v": 3.4,
+      "converter_stop_v": 2.7,
+      "hold_s": 0.002,
+      "load_rail_ma": 108.0,
+      "load_w": 0.4192941176470588,
+      "required_uf": 392.7813748450202,
+      "selected_uf": 470.0,
+      "selected_to_required_ratio": 1.1965944163860824
+    },
     "variants": {
       "nrf52840": {
         "mcu_ma_assumed": 3.0,
-        "rail_ma": 31.77403846153846,
-        "input_w": 0.12467803167420814,
-        "wh_24h_with_reserve": 3.590727312217194,
-        "aa_set_hours": 96.24791022813696,
-        "input_w_12v": 0.12617403167420815,
-        "wh_24h_with_reserve_12v": 3.6338121122171945,
-        "battery_12v_days": 99.06951402073004
+        "rail_ma": 31.87403846153846,
+        "input_w": 0.1239442669683258,
+        "wh_24h_with_reserve": 3.569594888687783,
+        "aa_set_hours": 96.81770922947669,
+        "input_w_12v": 0.13713800865384618,
+        "wh_24h_with_reserve_12v": 3.9495746492307697,
+        "battery_12v_days": 91.1490557774657,
+        "battery_12v_hours": 2187.577338659177
       },
       "esp32_s3_30ma": {
         "mcu_ma_assumed": 30.0,
-        "rail_ma": 58.77403846153846,
-        "input_w": 0.22950156108597283,
-        "wh_24h_with_reserve": 6.609644959276017,
-        "aa_set_hours": 52.28722603548967,
-        "input_w_12v": 0.23099756108597286,
-        "wh_24h_with_reserve_12v": 6.652729759276018,
-        "battery_12v_days": 54.11312544268699
+        "rail_ma": 58.874038461538454,
+        "input_w": 0.22876779638009048,
+        "wh_24h_with_reserve": 6.588512535746606,
+        "aa_set_hours": 52.45493548428634,
+        "input_w_12v": 0.24851300865384612,
+        "wh_24h_with_reserve_12v": 7.157174649230769,
+        "battery_12v_days": 50.299177768240106,
+        "battery_12v_hours": 1207.1802664377626
       },
       "esp32_s3_45ma": {
         "mcu_ma_assumed": 45.0,
-        "rail_ma": 73.77403846153847,
-        "input_w": 0.2877368552036199,
-        "wh_24h_with_reserve": 8.286821429864252,
-        "aa_set_hours": 41.704772200655626,
-        "input_w_12v": 0.2892328552036199,
-        "wh_24h_with_reserve_12v": 8.329906229864253,
-        "battery_12v_days": 43.21777341374306
+        "rail_ma": 73.87403846153846,
+        "input_w": 0.28700309049773753,
+        "wh_24h_with_reserve": 8.26568900633484,
+        "aa_set_hours": 41.811396452870596,
+        "input_w_12v": 0.31038800865384614,
+        "wh_24h_with_reserve_12v": 8.939174649230768,
+        "battery_12v_days": 40.27217434788329,
+        "battery_12v_hours": 966.532184349199
       },
       "esp32_s3_60ma": {
         "mcu_ma_assumed": 60.0,
-        "rail_ma": 88.77403846153847,
-        "input_w": 0.3459721493212669,
-        "wh_24h_with_reserve": 9.963997900452487,
-        "aa_set_hours": 34.68487282442177,
-        "input_w_12v": 0.3474681493212669,
-        "wh_24h_with_reserve_12v": 10.007082700452486,
-        "battery_12v_days": 35.974520324861714
+        "rail_ma": 88.87403846153846,
+        "input_w": 0.34523838461538453,
+        "wh_24h_with_reserve": 9.942865476923073,
+        "aa_set_hours": 34.758591555132824,
+        "input_w_12v": 0.37226300865384604,
+        "wh_24h_with_reserve_12v": 10.721174649230765,
+        "battery_12v_days": 33.57841018155876,
+        "battery_12v_hours": 805.8818443574103
       }
     },
-    "w23_max_rail_ma_on_aa": 64.0539393939394,
-    "w23_max_mcu_ma_on_aa": 35.27990093240094,
+    "fixed_relay_buffer_psu_13_8v": {
+      "note": "Mains failure: station runs from the buffer battery through the 12 V input",
+      "battery_v": 12,
+      "usable_fraction_assumed": 0.5,
+      "hours": {
+        "7ah": {
+          "nrf52840": 255.217356176904,
+          "esp32_s3_60ma": 94.01954850836452
+        },
+        "17ah": {
+          "nrf52840": 619.8135792867668,
+          "esp32_s3_60ma": 228.3331892345996
+        }
+      }
+    },
+    "w23_max_rail_ma_on_aa": 64.3429393939394,
+    "w23_max_mcu_ma_on_aa": 35.46890093240094,
     "laptop_relay_wh_24h_with_reserve": [
       787.5952941176471,
       2312.3011764705884
     ],
     "laptop_relay_to_station_ratio": [
-      79.0441047846749,
-      643.9645719136478
+      79.21210399010417,
+      647.776918271141
     ]
   },
   "level3_pools": {
@@ -118,12 +174,11 @@
       "typical_request": 174,
       "max_fields_request": 222,
       "button_request": 106,
-      "worst_button_request": 188,
+      "worst_button_request": 220,
       "received": 50,
+      "max_status": 59,
       "max_bulletin": 246,
-      "worst_reply": 252,
-      "worst_request": 382,
-      "worst_bulletin": 438
+      "worst_reply": 156
     },
     "opportunistic_content_estimate": 284,
     "link_content_estimate": 316,
@@ -133,10 +188,9 @@
       "button_request": true,
       "worst_button_request": true,
       "received": true,
+      "max_status": true,
       "max_bulletin": true,
-      "worst_reply": true,
-      "worst_request": false,
-      "worst_bulletin": false
+      "worst_reply": true
     }
   },
   "relay_w10": {
@@ -168,6 +222,7 @@
       81.68333333333334,
       87.24444444444444
     ],
+    "status_packet_bytes": 259,
     "quiet_10t_throughput_gain": 0.18181818181818188,
     "p1_tx_plus_quiet_s": {
       "100b": 3.423333333333333,
@@ -182,6 +237,152 @@
       "500b": 14.759333333333332,
       "600b": 17.580333333333336
     }
+  },
+  "network_capacity": {
+    "note": "No losses, collisions, CCA, cold routes or retries; per node at the P1 debt limit",
+    "per_request": {
+      "max_fields_request": {
+        "osp_tx_packets_bytes": [
+          83,
+          275,
+          275,
+          275
+        ],
+        "osp_s_per_request": 27.841666666666665,
+        "osp_requests_per_h": 129.3026040107752,
+        "relay_tx_packets_bytes": [
+          435,
+          83,
+          259,
+          259,
+          259,
+          83,
+          83,
+          83
+        ],
+        "relay_s_per_request": 47.276666666666664,
+        "relay_requests_per_h": 76.1475005288021
+      },
+      "typical_request": {
+        "osp_tx_packets_bytes": [
+          83,
+          275,
+          275,
+          275
+        ],
+        "osp_s_per_request": 27.841666666666665,
+        "osp_requests_per_h": 129.3026040107752,
+        "relay_tx_packets_bytes": [
+          387,
+          83,
+          259,
+          259,
+          259,
+          83,
+          83,
+          83
+        ],
+        "relay_s_per_request": 45.608333333333334,
+        "relay_requests_per_h": 78.93294354101955
+      }
+    },
+    "osp_requests_per_h": 129.3026040107752,
+    "relay_before_osp_requests_per_h": 76.1475005288021,
+    "bulletin_packet_bytes": 467,
+    "bulletin_s_per_station": 13.888333333333334,
+    "bulletin_osp_tx_min": {
+      "10_stations": 2.314722222222222,
+      "30_stations": 6.944166666666667,
+      "50_stations": 11.573611111111111
+    },
+    "test_window_s_per_station": 50,
+    "test_window_min": {
+      "10_stations": 8.333333333333334,
+      "30_stations": 25.0,
+      "50_stations": 41.666666666666664
+    }
+  },
+  "lxmf_retry": {
+    "largest_own_datagram_bytes": 483,
+    "largest_datagram_cycle_s": 14.235,
+    "floor_s": 60.0,
+    "worst_debt_s": 16.060000000000002,
+    "full_p1_queue_4x600b_s": 69.59333333333333,
+    "1_hop_round_trip_s": 28.47,
+    "1_hop_min_interval_empty_network_s": 60.0,
+    "1_hop_min_interval_worst_debt_full_queue_s": 114.12333333333333,
+    "2_hop_round_trip_s": 56.94,
+    "2_hop_min_interval_empty_network_s": 60.0,
+    "2_hop_min_interval_worst_debt_full_queue_s": 142.59333333333333
+  },
+  "fram_by_role": {
+    "record_bytes_assumed": {
+      "intent_slot": 328,
+      "mailbox_slot": 320,
+      "route_identity_entry": 314,
+      "receipt_key_entry": 48,
+      "event_log": 32768,
+      "uptime_and_silence_debt": 1024
+    },
+    "counts": {
+      "station": {
+        "intents": 128,
+        "mailbox": 128,
+        "incoming": 0,
+        "routes": 256,
+        "receipt_keys": 256
+      },
+      "osp": {
+        "intents": 512,
+        "mailbox": 0,
+        "incoming": 128,
+        "routes": 256,
+        "receipt_keys": 1024
+      }
+    },
+    "roles": {
+      "station": {
+        "parts_kib": {
+          "outgoing_queue": 41.0,
+          "mailbox": 40.0,
+          "incoming": 0.0,
+          "routes_identities_announces": 78.5,
+          "highest_event_and_receipt_keys": 12.0,
+          "event_log": 32.0,
+          "uptime_and_silence_debt": 1.0
+        },
+        "total_kib": 204.5,
+        "fits_256_kib": true
+      },
+      "osp": {
+        "parts_kib": {
+          "outgoing_queue": 164.0,
+          "mailbox": 0.0,
+          "incoming": 41.0,
+          "routes_identities_announces": 78.5,
+          "highest_event_and_receipt_keys": 48.0,
+          "event_log": 32.0,
+          "uptime_and_silence_debt": 1.0
+        },
+        "total_kib": 364.5,
+        "fits_256_kib": false
+      }
+    },
+    "fram_stacja_kib": 204.5,
+    "fram_osp_kib": 364.5,
+    "fram_size_kib": 256
+  },
+  "tcxo_budget_ppm": {
+    "temperature": 0.5,
+    "calibration": 0.3,
+    "supply_and_load": 0.2,
+    "ageing_to_next_check": 1.0,
+    "linear_sum": 2.0,
+    "root_sum_square": 1.174734012447073,
+    "p1_limit": 2.5,
+    "linear_sum_hz_at_carrier": 1739.05,
+    "p1_limit_hz_at_carrier": 2173.8125,
+    "mutual_offset_both_at_limit_hz": 4347.625
   },
   "energy": {
     "station_24h_wh": 1221.0352941176473,
@@ -223,7 +424,7 @@
     "fresnel_radius_midpoint_1km_m": 9.28703015032076,
     "eeprom_writes_per_day_worst": 132923.0769230769,
     "eeprom_years_worst_1m_cycles_256_pages": 5.276509386098428,
-    "worst_request_content_bytes": 382,
+    "worst_request_content_bytes": 222,
     "erp_dipole_dbm": 12.0,
     "erp_collinear_dbm": 15.35,
     "erp_limit_dbm": 27.0,
@@ -234,7 +435,29 @@
       "base_10m_mobile_3m": 3.1927317758236597
     },
     "fade_margin_for_99_of_100_assumed_db": 10.0,
-    "fram_years_worst_1e13_cycles": 206113.64789446985
+    "fram_years_worst_1e13_cycles": 206113.64789446985,
+    "fixed_installation": {
+      "cable_and_fittings_loss_each_end_db": 2.5,
+      "link_gain_excluding_path_db": 12.3,
+      "free_space_margin_1km_db": 31.074358538758105,
+      "hata_urban_margin_1km_db": {
+        "base_30m_mobile_1.5m": -3.71326790450307,
+        "base_10m_mobile_1.5m": -10.307083644728792,
+        "base_10m_mobile_3m": -6.507268224176343
+      },
+      "hata_urban_margin_1km_if_chip_meets_target_only_db": {
+        "base_30m_mobile_1.5m": -6.71326790450307,
+        "base_10m_mobile_1.5m": -13.307083644728792,
+        "base_10m_mobile_3m": -9.507268224176343
+      },
+      "hata_urban_margin_1km_collinear_db": {
+        "base_30m_mobile_1.5m": 2.986732095496933,
+        "base_10m_mobile_1.5m": -3.607083644728789,
+        "base_10m_mobile_3m": 0.19273177582365975
+      },
+      "erp_dipole_dbm": 10.5,
+      "erp_collinear_dbm": 13.85
+    }
   },
   "charger": {
     "nominal_feedback_v": 5.1168000000000005,
@@ -270,6 +493,8 @@
     "No transformer leakage or PSU inrush model",
     "No switching, magnetic or reactive current losses in voltage margin",
     "No battery capacity measurement",
+    "Network capacity is per node at the debt limit; shared channel, hidden nodes and retries reduce it",
+    "Fixed installation loss of 2.5 dB per end is an assumption until the installed cable is measured",
     "No thermal or electrical safety verification"
   ]
 }

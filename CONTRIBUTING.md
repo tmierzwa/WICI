@@ -19,7 +19,7 @@ Nie ma jeszcze oprogramowania stacji ani płytki R02. Zadania, które można wyk
 2. Uruchomić microReticulum na płytkach rozwojowych nRF52840 i ESP32-S3 i wymienić pakiety z implementacją Reticulum w Pythonie. To pierwsza część T3; w raporcie podaj przypięte commity i zapas RAM.
 3. Opisać i zbudować emulator ograniczeń P1: czas TX, dług ciszy 12×, CCA i kolejka do 4 datagramów ([radio.md](docs/spec/radio.md)).
 4. Dodać do modelu protokół USB laptop–stacja (D17) i dziennik FRAM z długiem ciszy.
-5. Zbudować stanowisko R01.3 do pomiarów P1 (T4) z zasilacza laboratoryjnego ([sprzęt](hardware/radio-test-r01/README.md)).
+5. Przygotować stanowisko R01.3 do pomiarów P1 (T4) z zasilaczem laboratoryjnym: zamknąć pozostałe pozycje [listy przed zamówieniem](hardware/radio-test-r01/przed-produkcja.md) i dopiero potem je zbudować ([sprzęt](hardware/radio-test-r01/README.md)).
 
 Przed pracą otwórz Issue lub skomentuj istniejące, aby nie dublować wysiłku.
 

@@ -7,10 +7,10 @@
 | Poziomy zestawu | 1: sama stacja; 2: stacja + laptop przez USB; 3: stacja + laptop + router Wi-Fi dla telefonów |
 | Mieszkańcy | około 50; jedna stacja obsługuje obiekt niezależnie od liczby osób; strona poziomu 3 sprawdzana dla 15 aktywnych użytkowników jednocześnie; większy obiekt wymaga więcej osób obsługi |
 | Sąsiednia stacja | cel: 1 km w zabudowie; wynik wymaga próby terenowej |
-| Odbiorca zgłoszeń | skrót OSP oznacza rolę stanowiska odbiorczego wyznaczonego przez wójta (burmistrza, prezydenta miasta); rekomendowane gminne centrum zarządzania kryzysowego lub stanowisko gminnego zespołu zarządzania kryzysowego w urzędzie; jednostka Ochotniczej Straży Pożarnej tylko w porozumieniu z gminą |
+| Odbiorca zgłoszeń | skrót OSP oznacza rolę stanowiska odbiorczego wyznaczonego przez wójta (burmistrza, prezydenta miasta); typowo jednostka ochotniczej straży pożarnej z grafikiem dyżurów na czas kryzysu, a także gminne centrum zarządzania kryzysowego lub stanowisko gminnego zespołu zarządzania kryzysowego |
 | Informacje radiowe | zgłoszenia, odpowiedzi, statusy, komunikaty; bez zdjęć i głosu |
 | Uruchomienie stacji | gotowość radiowa ≤60 s od włączenia, bez komputera; przekazywanie ruchu innych stacji zawsze, gdy stacja jest włączona |
-| Zasilanie stacji | 4 wymienne ogniwa AA; wejście 12 V (11,5–16 V w pracy; pierwsze załączenie ≥12,0 V); przełączanie między nimi bez resetu |
+| Zasilanie stacji | 4 wymienne ogniwa AA; wejście 12 V (11,5–16 V w pracy): załączenie po podłączeniu źródła ≥12,0 V; odłączenie przy 11,5 V z zatrzaskiem, ponowne załączenie ręczne przy ≥12,4 V; przełączanie między ogniwami i 12 V bez resetu |
 | Czas pracy stacji | ≥48 h jako przekaźnik na ogniwach litowych AA; z akumulatorem 12 V: kilka tygodni (model: [rozdział 06](../conception/06-wykonalnosc-i-budzet-zasobow.html#energia-stacji-poziomu-1)) |
 | Zasilanie poziomu 3 | 12 V; źródła A/B dla laptopa i routera, osobne C dla telefonów |
 | Dopuszczalne źródła 12 V | akumulator kwasowo-ołowiowy 12 V, akumulator LiFePO4 12,8 V z BMS, wyjście 12 V stacji zasilania; 11,5–16 V na złączu A/B/C, odłączenie przy 11,5 V |
@@ -49,12 +49,12 @@ Stacja jest jedynym węzłem sieci w schronieniu: przechowuje tożsamość i kol
 Poziom 1, zawsze w zestawie:
 
 1. Stacja WICI w obudowie: radio P1, ekran, przyciski, koszyk na 4 ogniwa AA z wyłącznikiem, wejście 12 V, gniazdo USB do laptopa i złącze antenowe.
-2. 4 ogniwa litowe AA w zamkniętym opakowaniu i drugi komplet zapasowy.
+2. Dwa komplety po 4 ogniwa litowe AA: komplet kryzysowy w zamkniętym opakowaniu, otwierany tylko w kryzysie, i komplet ćwiczebny do TEST i przeglądów.
 3. Antena zewnętrzna z uchwytem do stałego montażu, przewód koncentryczny o małym tłumieniu (np. LMR-240; do 2 m ≤1 dB, dłuższy wymaga nowego bilansu łącza) i przepust ścienny; zapasowy dipol z uchwytem do wystawienia przez okno.
 4. Przewód zasilania stacji 12 V z bezpiecznikiem 1 A i końcówkami do gniazda zapalniczki oraz zacisków akumulatora.
-5. Karta obsługi stacji w trzech językach (PL/UK/EN) z piktogramami kategorii.
+5. [Karta obsługi stacji](karta.md) w trzech językach (PL/UK/EN; UK i EN z tabeli tekstów ekranu) z piktogramami kategorii.
 6. Odbiornik bateryjny lub z korbką: FM i fale długie 225 kHz (Polskie Radio Program 1), w miarę możliwości DAB+, z zapasem baterii. Alert RCB i aplikacja RSO wymagają sieci komórkowej lub internetu, więc podczas awarii sieci schronienie ich nie odbierze.
-7. Ręczny radiotelefon PMR446 jako głosowy kanał zastępczy, formularze papierowe zgłoszeń (kategoria, liczba osób, pilność, adres, krótki numer) do wypełniania w dwóch egzemplarzach i papierowy dziennik zmian.
+7. Para ręcznych radiotelefonów PMR446 jako głosowy kanał zastępczy; kanał i podton zapisane w planie; zasięg w zabudowie zwykle kilkaset metrów, więc służą do łączności z gońcem lub sąsiednim punktem, a z OSP tylko po potwierdzeniu zasięgu. Formularze papierowe zgłoszeń ([pola](karta.md)) do wypełniania w dwóch egzemplarzach i papierowy dziennik zmian.
 
 Rozszerzenia poziomów 2–3:
 
@@ -65,23 +65,42 @@ Rozszerzenia poziomów 2–3:
 12. Przewody ładowania telefonów oraz jednostronicowa instrukcja strony.
 13. Bateryjny czujnik tlenku węgla (CO) – obowiązkowa część zestawu poziomu 3.
 
-Laptop, router, ich oryginalne zasilacze i akumulatory pochodzą z miejsca uruchomienia. Adapter sieciowy nie obsługuje każdego komputera. Jego kontroler również musi mieć dwa zakwalifikowane wykonania, np. Realtek RTL8153 i ASIX AX88179.
+Laptop, router, ich oryginalne zasilacze i akumulatory pochodzą z miejsca uruchomienia. Adapter USB–Ethernet nie współpracuje z każdym komputerem. Jego kontroler również musi mieć dwa zakwalifikowane wykonania, np. Realtek RTL8153 i ASIX AX88179.
+
+Zestaw stanowiska OSP:
+
+1. Stacja WICI i stacja zapasowa do przeniesienia tożsamości (PRZENIEŚ STACJĘ).
+2. Stały laptop z pakietem START, przypisany do stanowiska (nie znaleziony na miejscu), bez usypiania i samoczynnych aktualizacji, z pełnym szyfrowaniem dysku.
+3. Antena kolinearna w najwyższym dostępnym punkcie budynku, z odgromnikiem.
+4. Zasilanie laptopa i stacji na ≥72 h: agregat lub stacja zasilania z deklaracją zgodności UE.
+5. Papierowy dziennik zgłoszeń i decyzji.
+6. Para radiotelefonów PMR446 z nasłuchem w ustalonych godzinach.
+7. Grafik co najmniej 4 dyżurnych.
+8. Łącze satelitarne do powiatu, jeśli jest dostępne.
 
 ## Przygotowanie przed kryzysem
 
-Osoba utrzymująca system, w porozumieniu z gminą, zapisuje w stacji dokładny adres i wejście schronienia oraz kartę zaufanej OSP. Robi to przez laptop z pakietem START, a kartę OSP otrzymuje uzgodnionym kanałem poza radiem. Stacja nigdy nie przyjmuje karty OSP przez radio od pierwszego napotkanego nadajnika. Następnie wysyła ze stacji TEST i zapisuje wynik.
+Osoba utrzymująca system, w porozumieniu z organizatorem sieci (zwykle samorządem gminy), przełącza stację w tryb przygotowania przyciskiem wewnątrz obudowy i przez laptop z pakietem START zapisuje w stacji dokładny adres i wejście schronienia oraz kartę zaufanej OSP. Polecenia konfiguracji, eksportu, importu i aktualizacji oprogramowania stacja przyjmuje tylko w tym trybie. Stacja generuje własną tożsamość i nazwę `WICI-xxxxxx` (6 cyfr szesnastkowych skrótu tożsamości) oraz eksportuje przez USB kartę stacji: klucz publiczny, skrót adresu, nazwę, adres schronienia i odcisk do porównania z ekranem. OSP importuje kartę stacji (plik lub kod QR) po porównaniu odcisku. Kartę OSP (skrót adresu, klucz publiczny OSP i klucz zapasowy OSP) osoba utrzymująca system otrzymuje uzgodnionym kanałem poza radiem; stacja nigdy nie przyjmuje jej przez radio. Szczegóły: model zaufania i kluczy w rozdziale [Oprogramowanie](oprogramowanie.md). Następnie stacja wysyła TEST, a wynik zapisuje się w ewidencji.
 
-Antenę zewnętrzną z przewodem i przepustem montuje się na stałe podczas przygotowania obiektu, za pisemną zgodą zarządcy, w miejscu wskazanym po próbie zasięgu. Przewodu nie prowadzi się przez drzwi hermetyczne, gazoszczelne ani przeciwpożarowe. W piwnicy lub garażu podziemnym stację umieszcza się na kondygnacji naziemnej albo stosuje dłuższy przewód o małym tłumieniu z nowym bilansem łącza. Wystawienie anteny przez okno jest procedurą zapasową.
+Na poziomie 3 przygotowuje się wcześniej plakat przy stacji: nazwa sieci Wi-Fi, hasło i adres strony. Router dostaje stały adres IP laptopa przez rezerwację DHCP, więc adres z plakatu się nie zmienia.
 
-Stacja jest przechowywana w obiekcie, w zamkniętej skrzynce, z kluczem u zarządcy i opiekuna; ogniwa leżą w zamkniętym opakowaniu. Magazyn gminy przechowuje zapas. Plan gminy wskazuje, kto i w jakim czasie dostarcza stacje do obiektów bez stałego wyposażenia. Opiekun i zastępcy przechodzą szkolenie z obsługi stacji i kurs pierwszej pomocy przed objęciem funkcji.
+Antenę zewnętrzną z przewodem i przepustem montuje się na stałe podczas przygotowania obiektu, za pisemną zgodą zarządcy, w miejscu wskazanym po próbie zasięgu. Montaż wykonuje firma lub osoba z uprawnieniami do prac na wysokości; odgromnik łączy z uziemieniem elektryk z uprawnieniami. Przepust w budowli ochronnej uzgadnia się z zarządcą i komendą powiatową PSP, w obiekcie zabytkowym potrzebna jest zgoda konserwatora, a potrzebę zgłoszenia budowlanego sprawdza się we właściwym urzędzie. Koszt montażu ujmuje się w budżecie wdrożenia. Przewodu nie prowadzi się przez drzwi hermetyczne, gazoszczelne ani przeciwpożarowe. W piwnicy lub garażu podziemnym stację umieszcza się na kondygnacji naziemnej albo stosuje dłuższy przewód o małym tłumieniu z nowym bilansem łącza. Wystawienie anteny przez okno jest procedurą zapasową.
+
+Stacja jest przechowywana w obiekcie, w zamkniętej skrzynce, z kluczem u zarządcy i opiekuna; ogniwa leżą w opakowaniach poza stacją. Komplet kryzysowy pozostaje zamknięty; TEST i przeglądy wykonuje się z kompletu ćwiczebnego albo ze źródła 12 V. Jeśli obiekt nie zapewnia suchego miejsca w 5–30 °C, stacja jest w magazynie organizatora sieci, a plan wskazuje, kto i w jakim czasie ją dostarcza. Magazyn organizatora przechowuje też zapas stacji i ogniw. Opiekun i zastępcy przechodzą szkolenie z obsługi stacji i kurs pierwszej pomocy przed objęciem funkcji.
 
 ## Uruchomienie stacji (poziom 1)
 
-1. Podłącz do stacji przewód anteny zamontowanej na stałe podczas przygotowania. Tylko gdy jej nie ma (procedura zapasowa): wyprowadź zapasowy dipol przez okno i ustaw go pionowo, w miarę możliwości wysoko i z dala od pomieszczenia z ludźmi; nie kładź go przy metalowej framudze ani nie prowadź przewodu przez drzwi hermetyczne, gazoszczelne lub przeciwpożarowe.
-2. Włóż ogniwa AA albo podłącz źródło 12 V i włącz stację. Ekran pokazuje adres schronienia, stan energii i „RADIO GOTOWE”, gdy radio jest gotowe. Od tej chwili stacja przekazuje ruch innych stacji.
-3. Wyślij TEST proponowany przez stację; stacja nadaje go z losowym opóźnieniem 0–15 min, chyba że OSP wstrzymała TEST komunikatem BULLETIN. Poczekaj, aż ekran pokaże „zapisane u odbiorcy” (RECEIVED), a potem „przeczytane” (STATUS od dyżurnego). Napis „RADIO GOTOWE” nie oznacza dostępności pomocy; „KONTAKT Z ODBIORCĄ” pojawia się tylko wtedy, gdy w ostatnich 60 min nadeszło RECEIVED lub STATUS od OSP.
+Kolejność odpowiada [karcie obsługi](karta.md).
 
-Zgłoszenie schronienia: wybierz kategorię, liczbę osób, pilność i opcjonalnie gotową frazę, potem potwierdź. Ekran pokazuje „zapisane lokalnie”, potem „zapisane u odbiorcy”, „przeczytane” i decyzję dyżurnego: „pomoc skierowana”, „przekazane innemu podmiotowi”, „obecnie brak możliwości pomocy – użyj kanału zastępczego” albo „zamknięte”, oraz krótki numer zgłoszenia do przekazania telefonicznie lub przez gońca. Przy pilności 2 opiekun równolegle udziela pierwszej pomocy i – gdy droga jest bezpieczna – wysyła gońca do najbliższej jednostki PSP/OSP lub zespołu ratownictwa medycznego. WICI nie zastępuje numeru 112.
+1. Podłącz do stacji przewód anteny zamontowanej na stałe podczas przygotowania. Tylko gdy jej nie ma (procedura zapasowa): wyprowadź zapasowy dipol przez okno i ustaw go pionowo, w miarę możliwości wysoko i z dala od pomieszczenia z ludźmi; nie kładź go przy metalowej framudze ani nie prowadź przewodu przez drzwi hermetyczne, gazoszczelne lub przeciwpożarowe.
+2. Włóż ogniwa AA kompletu kryzysowego (+ do znaku +) albo podłącz źródło 12 V.
+3. Włącz wyłącznik główny i wybierz język na pierwszym ekranie.
+4. Poczekaj na „RADIO WŁĄCZONE” (≤60 s). Od tej chwili stacja przekazuje ruch innych stacji. Potwierdź adres na ekranie „ADRES: [x] – CZY TO TO MIEJSCE? OK = TAK / WSTECZ = NIE”; przy NIE lub braku adresu stacja pokazuje „STACJA NIE MA TWOJEGO ADRESU – UŻYJ FORMULARZA PAPIEROWEGO”.
+5. Wyślij TEST proponowany przez stację; stacja nadaje go z losowym opóźnieniem („TEST ZAPLANOWANY ZA OKOŁO [mm] MIN – NIE WYŁĄCZAJ. WSTECZ = ANULUJ”), chyba że OSP wstrzymała TEST („TEST WSTRZYMANY PRZEZ ODBIORCĘ”). Poczekaj na „ODBIORCA ZAPISAŁ”, a potem „ODBIORCA PRZECZYTAŁ”. Bez potwierdzenia w 30 min wyślij gońca z formularzem.
+
+Napis „RADIO WŁĄCZONE” nie oznacza dostępności pomocy. „OSTATNI KONTAKT Z ODBIORCĄ: [czas] TEMU” pokazuje czas od ostatniej odpowiedzi OSP; brak świeżego kontaktu nie jest awarią.
+
+Zgłoszenie schronienia: wybierz kategorię, liczbę osób, pilność i opcjonalnie gotową frazę, potem potwierdź. Ekran pokazuje „ZAPISANE W STACJI – CZEKA NA WYSŁANIE”, „WYSYŁANIE – PRÓBA [n], NASTĘPNA ZA [m] MIN”, potem „ODBIORCA ZAPISAŁ”, „ODBIORCA PRZECZYTAŁ” i decyzję dyżurnego: „POMOC SKIEROWANA (DECYZJA, NIE GODZINA PRZYJAZDU)”, „PRZEKAZANE DALEJ (PSP / POGOTOWIE / POWIAT)”, „ODBIORCA NIE MOŻE TERAZ POMÓC – CZYTAJ ODPOWIEDŹ” albo „ZAMKNIĘTE”, oraz krótki numer zgłoszenia do przekazania telefonicznie lub przez gońca. Przy pilności 2 opiekun równolegle udziela pierwszej pomocy i – gdy droga jest bezpieczna – wysyła gońca do najbliższej jednostki PSP/OSP lub zespołu ratownictwa medycznego. WICI nie zastępuje numeru 112.
 
 ## Dołączenie laptopa i routera (poziomy 2–3)
 
@@ -97,7 +116,7 @@ Nie podłączaj zasilaczy do pracującej przetwornicy: prąd ładowania ich kond
 
 ## Energia stacji
 
-Stacja korzysta z wejścia 12 V, gdy jego napięcie jest powyżej 11,5 V, a w przeciwnym razie z ogniw AA. Przełączenie nie resetuje stacji. Ekran pokazuje aktywne źródło, napięcie i szacowany czas pracy. Przy niskim napięciu ogniw stacja ostrzega, zapisuje stan i wyłącza się w kontrolowany sposób. Ogniwa wymienia się przy włączonym źródle 12 V albo po wyłączeniu stacji; kolejka i dług ciszy pozostają w pamięci FRAM. Nie używaj ogniw różnych typów ani różnego stopnia rozładowania w jednym komplecie.
+Stacja załącza wejście 12 V po podłączeniu źródła o napięciu ≥12,0 V i korzysta z niego do spadku do 11,5 V; wtedy odłącza je z zatrzaskiem i pracuje z ogniw AA. Ponowne załączenie 12 V jest ręczne, przy napięciu ≥12,4 V. Przełączenie nie resetuje stacji. Ekran pokazuje aktywne źródło, napięcie i szacowany czas pracy („OGNIWA: OKOŁO [x] H PRACY”). Przy niskim napięciu ogniw stacja pokazuje „WYMIEŃ OGNIWA W CIĄGU 1 H”, a przed wyłączeniem zapisuje stan („WYŁĄCZANIE – CZEKAJ, ZAPISUJĘ” → „MOŻNA WYJĄĆ OGNIWA”). Ogniwa wymienia się przy włączonym źródle 12 V albo po wyłączeniu stacji; kolejka i dług ciszy pozostają w pamięci FRAM. Nie używaj ogniw różnych typów ani różnego stopnia rozładowania w jednym komplecie.
 
 ## Wymiana źródła A/B (poziom 3)
 
@@ -107,25 +126,26 @@ Wymiana źródła C może przerwać ładowanie telefonów, ale nie łączność.
 
 ## Przechowywanie i przeglądy
 
-Zestaw może czekać na użycie latami. Przechowuje się go w obiekcie, w zamkniętej skrzynce, w suchym miejscu, w temperaturze pokojowej, bez akumulatorów podłączonych do wejść i z ogniwami AA w zamkniętym opakowaniu poza stacją.
+Zestaw może czekać na użycie latami. Przechowuje się go w obiekcie, w zamkniętej skrzynce, w suchym miejscu w 5–30 °C, bez akumulatorów podłączonych do wejść i z ogniwami AA poza stacją. Komplet kryzysowy wymienia się w dacie ważności z opakowania, nie rzadziej niż co 10 lat; komplet ćwiczebny, gdy jego napięcie spadnie poniżej progu z instrukcji.
 
-Co kwartał opiekun wykonuje przegląd podstawowy: uruchomienie, TEST, napięcie ogniw, aktualność karty. Raz w roku i po każdym nowym wydaniu oprogramowania osoba kompetentna (serwis, krótkofalowiec, wyznaczony pracownik) wykonuje przegląd techniczny:
+Co kwartał opiekun wykonuje przegląd podstawowy z kompletu ćwiczebnego albo ze źródła 12 V: uruchomienie, TEST, napięcie ogniw ćwiczebnych, nienaruszone opakowanie kompletu kryzysowego, aktualność karty. Raz w roku osoba kompetentna (serwis, krótkofalowiec, wyznaczony pracownik) wykonuje przegląd techniczny; nowe wydanie oprogramowania instaluje się tylko podczas tego przeglądu:
 
-1. Włóż ogniwa, uruchom stację, sprawdź na ekranie adres i kartę OSP oraz napięcie obu kompletów ogniw. Wymień ogniwa przeterminowane albo o napięciu niższym niż podane w instrukcji.
+1. Uruchom stację z kompletu ćwiczebnego albo ze źródła 12 V; sprawdź na ekranie adres, kartę OSP i nazwę `WICI-xxxxxx`. Sprawdź datę ważności kompletu kryzysowego bez otwierania opakowania i napięcie kompletu ćwiczebnego; wymień ogniwa przeterminowane albo o napięciu niższym niż podane w instrukcji.
 2. Sprawdź sumy kontrolne obrazu na pamięci USB, bo pamięć flash bez zasilania traci dane. Wymień ją co kilka lat albo przechowuj drugą, sprawdzoną kopię.
 3. Uruchom aplikację z przygotowanego zestawu na aktualnych komputerach z lokalnej listy; nowe wersje systemów mogą wymagać nowego pakietu START.
-4. Nie rzadziej niż co 24 miesiące zmierz częstotliwość nadajnika, aby skontrolować starzenie TCXO ([radio](radio.md)), i sprawdź wymianę ramek ze stacją drugiego wykonania. Do oceny: ekran pokazuje odchyłkę częstotliwości oszacowaną z odebranych ramek jako tanią samokontrolę między przeglądami.
+4. W każdym corocznym przeglądzie zmierz i skoryguj częstotliwość nadajnika, aby skontrolować starzenie TCXO ([radio](radio.md)); pomiar wykonuje producent lub serwis przyrządem o dokładności ≤0,1 ppm, a stacje dowozi się w tym dniu do jednego miejsca (około 20 min na stację). Sprawdź wymianę ramek ze stacją drugiego wykonania. Do oceny: ekran pokazuje odchyłkę częstotliwości oszacowaną z odebranych ramek jako tanią samokontrolę między przeglądami.
 5. Uruchom przetwornicę i ładowarkę pod obciążeniem; kondensatory elektrolityczne starzeją się także bez pracy.
-6. Wyślij TEST do OSP i sprawdź aktualność karty zaufanej OSP.
+6. Zaktualizuj oprogramowanie stacji, jeśli jest nowe wydanie: podpisany obraz przez USB z laptopa z pakietem START, w trybie przygotowania, bez otwierania obudowy; najpierw na jednej stacji z TEST, potem na pozostałych. Sprawdź plombę obudowy.
+7. Wyślij TEST do OSP i sprawdź aktualność karty zaufanej OSP.
 
-Wynik przeglądu zapisuje się z datą i wersją wydania w ewidencji sprzętu gminy. TEST z każdej stacji wysyła się raz w miesiącu w ustalonym, rozłożonym oknie czasowym; ćwiczenie całej sieci z OSP i gońcem odbywa się raz w roku w ramach gminnych ćwiczeń ([koncepcja, rozdział 02](../conception/02-scenariusze-i-organizacja.html#instrukcja-i-cwiczenie)).
+Wynik przeglądu zapisuje się z datą i wersją wydania w ewidencji sprzętu gminy. TEST z każdej stacji wysyła się raz w miesiącu w ustalonym, rozłożonym oknie czasowym; ćwiczenie całej sieci z OSP i gońcem odbywa się raz w roku w ramach ćwiczeń zarządzania kryzysowego ([koncepcja, rozdział 02](../conception/02-scenariusze-i-organizacja.html#instrukcja-i-cwiczenie)).
 
 ## Rozstrzygnięcia
 
 | Wybór | Uzasadnienie i koszt |
 |---|---|
 | Samodzielna stacja; laptop i router jako rozszerzenia | Łączność i przekaźnik bez znalezionego sprzętu i bez 230 V; oprogramowanie układowe stosu, kolejki i interfejsu na MCU |
-| Stacja jedynym węzłem, laptop bez tożsamości Reticulum | Jedna tożsamość i jedna kolejka; potrzebny protokół USB stacja–laptop (D17) |
+| Stacja jedynym węzłem, laptop bez tożsamości Reticulum | Jedna tożsamość i jedna kolejka; potrzebny protokół USB laptop–stacja (D17) |
 | microReticulum i LXMF na MCU | Gotowy stos zamiast własnego; młodszy projekt, zgodność do sprawdzenia w T3 |
 | Ogniwa AA i wejście 12 V | Start bez ładowania i lata przechowywania; koszt ogniw i kontrola w przeglądzie |
 | LXMF nad Reticulum | Gotowe dostarczanie wiadomości; stacja nadal odpowiada za trwały zapis, a OSP za decyzję |
@@ -134,6 +154,6 @@ Wynik przeglądu zapisuje się z datą i wersją wydania w ewidencji sprzętu gm
 | Pasywne diody A/B (poziom 3) | Bez kodu i sterowania; strata energii oraz konieczne chłodzenie |
 | Mostek niskiego napięcia i transformator 50 Hz | Mniej stopni mocy; większa masa i możliwy większy koszt |
 | Krótkie ramki radiowe | Mieszczą się w kolejce FIFO obu układów; dodatkowy narzut fragmentacji |
-| Standardowy JSON w LXMF | Prosty format w stacji i laptopie; treść do 480 B, docelowo jeden pakiet okazjonalny (D01) |
+| Standardowy JSON w LXMF | Prosty format w stacji i laptopie; treść ≤256 B po kodowaniu, jeden pakiet okazjonalny (roboczo, do potwierdzenia w D01 i T3) |
 
 Rolę NomadNet opisuje rozdział [Oprogramowanie](oprogramowanie.md). Nie wolno uruchamiać dwóch stacji z tą samą tożsamością ani routera LXMF na laptopie z tożsamością stacji. Węzeł przechowywania LXMF w OSP jest opcjonalny i nie należy do wydania 0.5: działałby jako osobny węzeł laboratoryjny z własną tożsamością albo jako przyszła funkcja po osobnych próbach. W sieci podstawowej ruch przechodzi przez aktywne przekaźniki. [NomadNet](https://github.com/markqvist/NomadNet), [LXMF](https://github.com/markqvist/LXMF).
