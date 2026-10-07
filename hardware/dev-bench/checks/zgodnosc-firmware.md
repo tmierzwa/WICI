@@ -22,7 +22,7 @@ Stan: 2026-10-07. Płytka N1 według `tools/design.py` (commit 562d689). Oprogra
 | DISP ekranu | nie sterowany (podciągnięcie modułu) | P1.10 (D8), 2,2 kΩ do masy | nie: na N1 ekran jest wyłączony, dopóki program nie poda stanu wysokiego | P1.10: niski do CLEAR, potem wysoki |
 | Przyciski GÓRA, DÓŁ, OK, WSTECZ | BUTTON1–4 płytki DK (P0.11, P0.12, P0.24, P0.25) | P1.01, P1.02, P0.26, P0.27 | nie (przyciski DK nadal działają, ale nie są panelem) | P1.01, P1.02, P0.26, P0.27, bez podciągnięcia wewnętrznego |
 | CISZA | polecenie `SILENCE` | przełącznik, P1.15 (D13) przez 1 kΩ | brak w oprogramowaniu | P1.15 -> `bench.silence`; `SILENCE` zapasowo |
-| Tryb przygotowania | polecenie `PREP` z potwierdzeniem przyciskiem OK | przycisk, P0.02 (AREF) | brak w oprogramowaniu | P0.02, przytrzymanie 2 s; `PREP` zapasowo |
+| Tryb przygotowania | polecenie `PREP` z potwierdzeniem przyciskiem OK | przycisk, P0.02 (AREF) | brak w oprogramowaniu | P0.02, przytrzymanie 3 s; `PREP` zapasowo |
 | Dioda alarmu | — (diody DK LED1–4) | P1.12 (D10) | brak w oprogramowaniu | P1.12: do usunięcia przyczyny alarmu i w ciszy |
 | Brzęczyk | — (oprogramowanie nie ma brzęczyka) | P1.03 (D2), 2048 Hz | brak w oprogramowaniu | P1.03, `tone()` 2048 Hz |
 | VTEST | — | P0.30 (AIN6), VTEST_IN / 6 | brak w oprogramowaniu | P0.30 (AIN6), `VTEST` × 6 |

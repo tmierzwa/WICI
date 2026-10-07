@@ -177,7 +177,7 @@ void BenchHost::setSilence(bool on) {
 // Przełącznik i przycisk działają na zmianę stanu, więc polecenia SILENCE i PREP zostają jako
 // zapasowe i obowiązują do następnego przełączenia.
 constexpr uint32_t SWITCH_SETTLE_MS = 50;   // przełącznik CISZA: stan stały przez 50 ms
-constexpr uint32_t PREP_HOLD_MS = 2000;     // przytrzymanie przycisku przygotowania
+constexpr uint32_t PREP_HOLD_MS = 3000;     // przytrzymanie przycisku przygotowania
 constexpr uint32_t ALARM_BEEP_MS = 200;     // ekran alarmu: sygnał co 2 s do potwierdzenia OK
 constexpr uint32_t ALARM_BEEP_EVERY_MS = 2000;
 bool silenceSwitchLevel = false;
