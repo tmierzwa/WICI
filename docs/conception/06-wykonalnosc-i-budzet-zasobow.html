@@ -56,9 +56,9 @@
 <th scope="col">Obecny dowód</th>
 <th scope="col">Co blokuje uznanie za działającą</th>
 </tr></thead><tbody>
-<tr><td>Format P1, SA1, transakcja OSP</td><td>wykonywalny model i przypadki graniczne</td><td>firmware, integracja bibliotek, odcięcia fizycznego nośnika</td></tr>
-<tr><td>Kontroler USB R01.3</td><td>źródła CAD, raporty ERC/DRC, eksporty</td><td>poprawka toru zegara/zasilania dla suspend USB, dopasowanie części i pomiary całego modemu; HOLD</td></tr>
-<tr><td>Modemy TI i ST</td><td>wspólny kontrakt, kandydaci układów</td><td>dwa layouty RF, rejestry, firmware, emisje i próba mieszana</td></tr>
+<tr><td>Format P1, SA1, transakcja OSP</td><td>wykonywalny model i przypadki graniczne</td><td>oprogramowanie układowe, integracja bibliotek, odcięcia zasilania fizycznego nośnika</td></tr>
+<tr><td>Kontroler USB R01.3</td><td>źródła CAD, raporty ERC/DRC, eksporty</td><td>poprawka toru zegara i zasilania dla wstrzymania USB (suspend), dopasowanie części i pomiary całego modemu; HOLD</td></tr>
+<tr><td>Modemy TI i ST</td><td>wspólny kontrakt, kandydaci układów</td><td>dwa projekty płytek RF, rejestry, oprogramowanie układowe, emisje i próba mieszana</td></tr>
 <tr><td>Strona i pakiety START</td><td>kontrakt API i układ pakietu</td><td>implementacja, budowa offline, macierz urządzeń i test użytkowy</td></tr>
 <tr><td>Zasilanie A/B, przetwornica i ładowarka</td><td>opisy konstrukcji i obliczenia</td><td>pełne projekty wykonawcze, zabezpieczenia, udary, termika i bezpieczeństwo</td></tr>
 <tr><td>Sieć i odbiorca pomocy</td><td>scenariusze i warunki odbioru</td><td>rzeczywiste miejsca, działający przekaźnik, dyżur i próba terenowa</td></tr>
@@ -68,7 +68,7 @@
 
 <h2 id="budzet-czasu-antenowego">Budżet czasu antenowego</h2>
 
-<p>Dla datagramu B bajtów w P1: liczba fragmentów <code>n = ceil(B/86)</code>, liczba bajtów w eterze <code>B + 29n</code>, czas TX <code>t = 8(B + 29n)/4800</code>. Dług ciszy wynosi <code>12t</code>; cykl jednego nadajnika bez dodatkowych opóźnień <code>13t</code>. Obliczenie nie obejmuje rampowania, CCA, kolizji, ponowień ani ruchu Reticulum/LXMF.</p>
+<p>Dla datagramu B bajtów w P1: liczba fragmentów <code>n = ceil(B/86)</code>, liczba bajtów w eterze <code>B + 29n</code>, czas TX <code>t = 8(B + 29n)/4800</code>. Dług ciszy wynosi <code>12t</code>; cykl jednego nadajnika bez dodatkowych opóźnień <code>13t</code>. Obliczenie nie obejmuje narastania mocy nadajnika, CCA, kolizji, ponowień ani ruchu Reticulum/LXMF.</p>
 
 <div class="table-wrap"><table class="wide">
 <thead><tr>
@@ -89,9 +89,9 @@
 
 <p>W następnej części tabelę przeliczono na rzeczywiste wiadomości SA1 próby obciążenia W10.</p>
 
-<p>LXMF może przejść od pojedynczego pakietu do linku albo przesyłania zasobu dla większej wiadomości. Limit treści SA1 480 B nie daje limitu jednego pakietu radiowego; progi i propozycję limitu opisuje <a href="05-projekt-koncepcyjny-komunikacji.html">rozdział 05</a>. Dodatkowo istnieją zestawianie linku, ogłoszenia tras, potwierdzenia i ponowienia. Zwykły interfejs KISS ma w obecnym kodzie timeout kontroli przepływu 5 s; P1 może wymagać ponad 16 s samej ciszy. Wymagany adapter nie jest zatem kosmetyczną konfiguracją. <a href="https://github.com/markqvist/LXMF/blob/master/LXMF/LXMessage.py">LXMessage</a>, <a href="https://github.com/markqvist/Reticulum/blob/master/RNS/Interfaces/KISSInterface.py">KISSInterface</a>, <a href="../spec/radio.md">kontrakt adaptera</a>.</p>
+<p>LXMF może przejść od pojedynczego pakietu do linku albo przesyłania zasobu dla większej wiadomości. Limit treści SA1 480 B nie daje limitu jednego pakietu radiowego; progi i propozycję limitu opisuje <a href="05-projekt-koncepcyjny-komunikacji.html">rozdział 05</a>. Dodatkowo istnieją zestawianie linku, ogłoszenia tras, potwierdzenia i ponowienia. Zwykły interfejs KISS ma w obecnym kodzie limit czasu kontroli przepływu 5 s; P1 może wymagać ponad 16 s samej ciszy. Wymagany adapter nie jest zatem kosmetyczną konfiguracją. <a href="https://github.com/markqvist/LXMF/blob/master/LXMF/LXMessage.py">LXMessage</a>, <a href="https://github.com/markqvist/Reticulum/blob/master/RNS/Interfaces/KISSInterface.py">KISSInterface</a>, <a href="../spec/radio.md">kontrakt adaptera</a>.</p>
 
-<p>Adapter 900 s nie zmienia timeoutów linku i zasobu. Pakiet może czekać w kolejce dłużej niż pozwala stos, jeszcze przed pierwszym TX. <a href="../review.md">Kontrprzykład z przypiętego kodu</a>.</p>
+<p>Limit 900 s w adapterze nie zmienia limitów czasu linku i zasobu. Pakiet może czekać w kolejce dłużej niż pozwala stos, jeszcze przed pierwszym TX. <a href="../review.md">Kontrprzykład z przypiętego kodu</a>.</p>
 
 <p>Próba musi policzyć wszystkie bajty i czas TX każdego węzła, zarówno podczas zimnego zestawienia trasy, jak i ruchu ustalonego. Mierzyć opóźnienie do RECEIVED, wiek kolejki, odrzuty, retransmisje i poprawność po restarcie. Kolizja ukrytych nadajników jest możliwa mimo CCA. Fragmentacja zwiększa ryzyko utraty całego datagramu.</p>
 
@@ -114,7 +114,7 @@
 <tr><td>potwierdzenie pakietu</td><td class="num">83</td><td class="num">1</td><td class="num">2,427</td></tr>
 </tbody></table></div>
 
-<p>Obsługa jednego zgłoszenia zajmuje B 24,5–26,2 s nadawania z ciszą. 50 zgłoszeń wymaga 1225–1309 s, czyli <strong>20,4–21,8 min z 30 min, przy zerowych stratach</strong>. Obliczenie pomija zimną trasę (ogłoszenia, zapytania o trasę), kolizje, CCA, rampowanie, ponowienia i ruch innych stacji. Każde utracone i ponowione zgłoszenie zabiera B kolejne 11,5–13,2 s. Dostarczenie przez istniejący link ma podobny koszt na wiadomość, ale wymaga zestawienia w timeoutach stosu; zasób dodaje dla każdej wiadomości ogłoszenie, części i dowód. W10 jest więc wykonalne na papierze tylko przy jednym pakiecie na wiadomość i małych stratach.</p>
+<p>Obsługa jednego zgłoszenia zajmuje B 24,5–26,2 s nadawania z ciszą. 50 zgłoszeń wymaga 1225–1309 s, czyli <strong>20,4–21,8 min z 30 min, przy zerowych stratach</strong>. Obliczenie pomija zimną trasę (ogłoszenia, zapytania o trasę), kolizje, CCA, narastanie mocy nadajnika, ponowienia i ruch innych stacji. Każde utracone i ponowione zgłoszenie zabiera B kolejne 11,5–13,2 s. Dostarczenie przez istniejący link ma podobny koszt na wiadomość, ale wymaga zestawienia linku w limitach czasu stosu; zasób dodaje dla każdej wiadomości ogłoszenie, części i dowód. W10 jest więc wykonalne na papierze tylko przy jednym pakiecie na wiadomość i małych stratach.</p>
 
 <p>LXMF ponawia niepotwierdzoną wiadomość okazjonalną po <code>max(10 s, RTT)</code>, najwyżej 5 prób (<code>DELIVERY_RETRY_WAIT</code>, <code>MAX_DELIVERY_ATTEMPTS</code>). Jeden cykl B dla zgłoszenia trwa dłużej niż 10 s, a jego kolejka może trzymać minuty ruchu. Jeśli szacunek RTT nie obejmuje oczekiwania za ciszą, A wysyła ponownie wiadomości jeszcze czekające u B i zużywa jego budżet. T3 musi zmierzyć takie duplikaty i ustalić, skąd stos bierze RTT przy raportowanych 240 bit/s. <a href="https://github.com/markqvist/LXMF/blob/c3ff2d6dc2f256daab896dadc044dd5a913ecbb7/LXMF/LXMRouter.py">LXMRouter</a>.</p>
 

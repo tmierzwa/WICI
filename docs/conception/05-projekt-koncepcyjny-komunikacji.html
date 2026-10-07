@@ -164,11 +164,11 @@
 <tr><td>Stanowisko–dyżurny</td><td>kolejka przyjętych potrzeb i jawne statusy</td><td>dostępny człowiek, odczyt, decyzja i odpowiedź</td></tr>
 </tbody></table></div>
 
-<p>Szczegóły należą do <a href="../spec/radio.md">radia</a> i <a href="../spec/oprogramowanie.md">oprogramowania</a>. Modem nie implementuje szyfrowania, ACK ani routingu. CRC wykrywa błędy ramki; nie uwierzytelnia nadawcy.</p>
+<p>Szczegóły należą do <a href="../spec/radio.md">radia</a> i <a href="../spec/oprogramowanie.md">oprogramowania</a>. Modem nie implementuje szyfrowania, potwierdzeń ani trasowania. CRC wykrywa błędy ramki; nie uwierzytelnia nadawcy.</p>
 
 <h2 id="kolejki-opoznienia-i-praca-bez-trasy">Kolejki, opóźnienia i praca bez trasy</h2>
 
-<p>Własne zgłoszenia pozostają w SQLite do obsłużenia według kontraktu. LXMF prowadzi aktywną transmisję, a WICI nie rozpoczyna równoległego ponowienia tej samej intencji. ACK i statusy mają pierwszeństwo w kolejce aplikacji; inne stacje, transport i obcy ruch radiowy nie podlegają tej kolejce. WICI nie gwarantuje pilnemu zgłoszeniu czasu dostarczenia podczas przeciążenia.</p>
+<p>Własne zgłoszenia pozostają w SQLite do obsłużenia według kontraktu. LXMF prowadzi aktywną transmisję, a WICI nie rozpoczyna równoległego ponowienia tej samej intencji. Potwierdzenia RECEIVED i statusy mają pierwszeństwo w kolejce aplikacji; inne stacje, transport i obcy ruch radiowy nie podlegają tej kolejce. WICI nie gwarantuje pilnemu zgłoszeniu czasu dostarczenia podczas przeciążenia.</p>
 
 <p>Modem ma cztery miejsca na datagramy i osiem kontekstów składania. Przepełnienie musi być widoczne w licznikach. W prototypie trzeba określić również limit trwałej kolejki, wolnego miejsca i logów oraz zachowanie formularza po jego osiągnięciu; nie wolno pozornie potwierdzić odrzuconych danych.</p>
 

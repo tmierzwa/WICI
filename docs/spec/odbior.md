@@ -2,39 +2,39 @@
 
 | Próba | Warunek zaliczenia | Stan |
 |---|---|---|
-| Kodowanie ramek | niezależny wektor CRC; długości 1–600 B; odwrócona kolejność; błędy CRC i konflikt duplikatu | model wykonywalny |
+| Kodowanie ramek | niezależny wektor CRC; długości 1–600 B; odwrócona kolejność fragmentów; błędy CRC i konflikt duplikatu | model wykonywalny |
 | Komunikaty | wszystkie 6 typów; UTF-8; graniczne rozmiary; odrzucenie niepoprawnych typów i dodatkowych pól | model wykonywalny |
-| OSP | duplikat po restarcie; konflikt treści; przerwanie przed COMMIT bez ACK; odrębni nadawcy | model wykonywalny |
+| OSP | duplikat po restarcie; konflikt treści; przerwanie przed COMMIT bez wysłania RECEIVED; odrębni nadawcy | model wykonywalny |
 | Modemy mieszane | TI→ST, ST→TI, 10 000 pakietów każdego rozmiaru granicznego; brak różnic formatu | niewykonana |
-| Radio 1 km | rzeczywiste dwie lokalizacje, anteny na zewnątrz; ≥99 ze 100 zgłoszeń z RECEIVED w 5 min przy pojedynczym ruchu | niewykonana |
-| Przekaźnik | 3 stacje, wymuszone odcięcie bezpośrednie A–OSP; przejście przez B i powrót ACK | niewykonana |
+| Radio 1 km | dwie rzeczywiste lokalizacje, anteny na zewnątrz; ≥99 ze 100 zgłoszeń z RECEIVED w 5 min przy pojedynczym ruchu | niewykonana |
+| Przekaźnik | 3 stacje, wymuszone odcięcie bezpośredniego połączenia A–OSP; przejście przez B i powrót RECEIVED | niewykonana |
 | Obciążenie sieci | referencyjne A–B–OSP: 50 zgłoszeń łącznie z A w pierwszych 5 min; ≥99% z RECEIVED na A do 30 min od pierwszego lokalnego COMMIT; droga powrotna przez B; zapis utrzymany podczas braku trasy | niewykonana |
-| Limit TX | cały ruch i restarty w dowolnym godzinowym oknie ≤10%; przerwanie zapisu EEPROM nigdy nie umożliwia nadania bez budżetu | niewykonana |
-| USB | zimny start offline na macOS Intel/ARM, Windows x64 i wspieranym Linux PC, bez pobierania zależności; cały modem ≤100 mA przed konfiguracją, po konfiguracji w przyznanym budżecie do 500 mA, suspend ≤2,5 mA; udar i 100 cykli suspend/resume bez utraty trwałej kolejki ani obejścia długu TX | niewykonana |
+| Limit czasu nadawania | łączny czas nadawania, łącznie z restartami, ≤10% w dowolnym oknie godzinnym; przerwany zapis EEPROM nigdy nie umożliwia nadawania bez budżetu | niewykonana |
+| USB | zimny start offline na komputerach z macOS (Intel i ARM), Windows x64 oraz na obsługiwanym PC z Linuksem, bez pobierania zależności; cały modem ≤100 mA przed konfiguracją, po konfiguracji w przyznanym budżecie do 500 mA, w stanie wstrzymania ≤2,5 mA; prąd udarowy oraz 100 cykli wstrzymania i wznowienia bez utraty trwałej kolejki i bez obejścia długu ciszy | niewykonana |
 | Przeniesienie | kompletna kopia, zatrzymanie starej instancji, zachowana tożsamość i kolejka na nowym laptopie | niewykonana |
-| Strona | 50 podłączonych telefonów, 15 aktywnych; dostęp tylko do własnego zgłoszenia; modem odłączony nie blokuje formularza | niewykonana |
-| A/B | oba kierunki, napięcia 11,5 i 16 V, każdy tryb mocy, 100 zmian; zero resetów routera/modemu/inwertera | niewykonana |
+| Strona | 50 podłączonych telefonów, 15 aktywnych; dostęp tylko do własnego zgłoszenia; odłączony modem nie blokuje formularza | niewykonana |
+| A/B | oba kierunki, napięcia 11,5 i 16 V, każdy tryb mocy, 100 zmian; brak resetów routera, modemu i przetwornicy | niewykonana |
 | Udar A/B | prąd i I²t poniżej limitu każdego elementu; brak uszkodzeń oraz zgrzewania styków | niewykonana |
-| Ładowarka | 8 ×1,5 A przez 2 h przy 40°C otoczenia; 4,75–5,25 V na każdym porcie | niewykonana |
+| Ładowarka | 8 × 1,5 A przez 2 h w temperaturze otoczenia 40 °C; 4,75–5,25 V na każdym porcie | niewykonana |
 | Zwarcie portu | pozostałe porty oraz stacja pracują; zwarcie trwające godzinę nie uszkadza sekcji | niewykonana |
-| OVP telefonu | wymuszone zwarcie VIN–VREG regulatora; VUSB nigdy nie przekracza 5,5 V; po odłączeniu regulatora uszkodzona sekcja pozostaje wyłączona | niewykonana |
+| Ochrona telefonu przed przepięciem (OVP) | wymuszone zwarcie VIN–VREG regulatora; VUSB nigdy nie przekracza 5,5 V; po odłączeniu regulatora uszkodzona sekcja pozostaje wyłączona | niewykonana |
 | Przetwornica | 150 W obciążenia rezystancyjnego na odpowiednim źródle, 230 V ±5%, THD <5%; rzeczywiste zasilacze, rozruch i skoki obciążenia | niewykonana |
-| Ochrona AC | izolacja, PE, prąd dotykowy, uziemienie i reakcja RCBO sprawdzone dla przyjętej normy i konfiguracji | niewykonana |
-| Zakłócenia | pomiar odbioru radia przy pracującej przetwornicy i pełnej ładowarce; brak pogorszenia uniemożliwiającego próbę terenową | niewykonana |
-| Praca dobowa | 24 h pełnej funkcji z wymianami źródeł; zapisany pobór Wh stacji i ładowarki osobno | niewykonana |
+| Ochrona AC | izolacja, PE, prąd dotykowy, uziemienie i reakcja RCBO sprawdzone zgodnie z przyjętą normą i konfiguracją | niewykonana |
+| Zakłócenia | pomiar odbioru radiowego przy pracującej przetwornicy i w pełni obciążonej ładowarce; brak pogorszenia uniemożliwiającego próbę terenową | niewykonana |
+| Praca dobowa | 24 h pełnej funkcjonalności z wymianą źródeł; zużycie energii (Wh) stacji i ładowarki zapisane osobno | niewykonana |
 
-Próba obciążenia obejmuje zimny start trasy oraz osobno ruch ustalony. Odcięcie A–OSP musi być fizycznie skuteczne. Liczyć odbiór RECEIVED przez A, nie sam zapis lub LXMF DELIVERED. Z 50 zgłoszeń wymagane jest 50/50; 49/50 to 98%. Większa liczba schronień, przekaźników i jednoczesnych nadawców wymaga nowego planu obciążenia; ta próba nie kwalifikuje sieci 1000 stacji.
+Próba obciążenia obejmuje zimny start trasy oraz osobno ruch ustalony. Odcięcie A–OSP musi być fizycznie skuteczne. Liczy się odbiór RECEIVED przez A, a nie sam zapis ani stan LXMF DELIVERED. Z 50 zgłoszeń wymagane jest 50/50; 49/50 to 98%. Większa liczba schronień, przekaźników i jednoczesnych nadawców wymaga nowego planu obciążenia; ta próba nie kwalifikuje sieci 1000 stacji.
 
-Próba modelu transakcji nie jest próbą odcinania fizycznego zasilania dysku. Po zbudowaniu aplikacji powtarza się ją na docelowych nośnikach, odcinając zasilanie przed, podczas i po zapisie. Nie zwalnia się wersji do schronień na podstawie samych testów Python.
+Próba modelu transakcji nie jest próbą odcinania fizycznego zasilania dysku. Po zbudowaniu aplikacji powtarza się ją na docelowych nośnikach, odcinając zasilanie przed, podczas i po zapisie. Wersji nie zwalnia się do użytku w schronieniach na podstawie samych testów modelu w Pythonie.
 
-Próbę OVP wykonuje się bez telefonu, na obciążeniu i oscyloskopie o odpowiednim paśmie. Jeżeli crowbar nie utrzyma 5,5 V podczas impulsu, wymagana jest niezależna szybka ochrona szeregowa; nie zwiększa się dopuszczalnego napięcia, aby zaliczyć próbę. Obecny crowbar jest kandydatem, nie odebraną ochroną. Podobnie przed produkcją musi powstać schemat PE, layout, ostateczny dobór izolacji i pełna lista zakwalifikowanych zamienników.
+Próbę OVP wykonuje się bez telefonu, z obciążeniem zastępczym i oscyloskopem o odpowiednim paśmie. Jeżeli zwieracz zabezpieczający nie utrzyma napięcia poniżej 5,5 V podczas impulsu, wymagana jest niezależna szybka ochrona szeregowa; nie zwiększa się dopuszczalnego napięcia, aby zaliczyć próbę. Obecny zwieracz jest kandydatem, a nie odebraną ochroną. Podobnie przed produkcją muszą powstać: schemat PE, projekt płytki, ostateczny dobór izolacji i pełna lista zakwalifikowanych zamienników.
 
 ## Braki do wydania
 
-1. Dwa layouty RF i ich nastawy rejestrów, firmware CDC/KISS oraz adapter czasowy Reticulum.
-2. Schemat elektryczny i PCB przetwornicy, finalna ochrona AC oraz firmware regulatora.
-3. PCB ładowarki z odebraną ochroną OVP dla dwóch wariantów portu.
+1. Projekty dwóch płytek RF z nastawami rejestrów, oprogramowanie układowe CDC/KISS oraz adapter czasowy Reticulum.
+2. Schemat elektryczny i płytka drukowana przetwornicy, ostateczna ochrona AC oraz oprogramowanie układowe regulatora.
+3. Płytka drukowana ładowarki z odebraną ochroną OVP dla dwóch wariantów portu.
 4. Aplikacja strony i LXMF, kompletne pakiety offline oraz manifest przypiętych zależności.
-5. Próby powyżej i ceny rzeczywistych BOM od niezależnych wykonawców.
+5. Powyższe próby oraz wyceny rzeczywistych zestawień materiałowych (BOM) od niezależnych wykonawców.
 
 W tym pakiecie są kontrakty do weryfikacji oraz obliczalne punkty wyjścia. Zgodność czasowa stosu i niezależność wszystkich wariantów nie są zamknięte. Braki sprzętowe nie są oznaczone jako zrealizowane.

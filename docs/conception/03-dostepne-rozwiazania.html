@@ -63,7 +63,7 @@
 <tr><td>LXMF</td><td>wiadomości, obsługa wysyłania i opcjonalnego przechowywania pośredniego</td><td>potwierdzenie transportowe nie dowodzi zapisu w bazie WICI ani decyzji człowieka</td></tr>
 <tr><td>NomadNet</td><td>gotowy klient tekstowy operatora, wiadomości i strony Micron</td><td>odrębny interfejs; nie zastępuje lokalnej strony HTTP w przeglądarce telefonu</td></tr>
 <tr><td>RNode / LoRa z Reticulum</td><td>istniejąca droga radiowa do prób tego samego stosu aplikacji</td><td>inny profil radiowy; nie komunikuje się z modemem P1 tylko dlatego, że oba używają Reticulum</td></tr>
-<tr><td>Meshtastic</td><td>istniejąca sieć wiadomości LoRa; zarządzane przekazywanie pakietów</td><td>odrębny protokół i semantyka ACK; interfejs i zapis OSP wymagają integracji</td></tr>
+<tr><td>Meshtastic</td><td>istniejąca sieć wiadomości LoRa; zarządzane przekazywanie pakietów</td><td>odrębny protokół i znaczenie potwierdzeń; interfejs i zapis OSP wymagają integracji</td></tr>
 <tr><td>MeshCore</td><td>istniejące role urządzeń: klient, przekaźnik, serwer pokoju, modem KISS</td><td>odrębny stos; trwałe przyjęcie zgłoszenia i interfejs WICI pozostają do zaprojektowania</td></tr>
 <tr><td>disaster.radio</td><td>przykład połączenia lokalnego Wi-Fi, interfejsu WWW i radia LoRa</td><td>autorzy oznaczają prace jako wstrzymane i projekt jako niedokończony</td></tr>
 </tbody></table></div>
@@ -78,13 +78,13 @@
 
 <h2 id="uklady-radiowe">Układy radiowe</h2>
 
-<p>CC1120 firmy TI i S2-LP firmy ST są transceiverami sterowanymi przez SPI. Obsługują FSK/GFSK i mają osobne bufory RX/TX po 128 B. Potrzebują mikrokontrolera, zegara, zasilania, dopasowania RF, anteny i firmware. Płytka rozwojowa pomaga pomierzyć układ, ale nie jest gotową stacją WICI. <a href="https://www.ti.com/lit/ds/symlink/cc1120.pdf">CC1120</a>, <a href="https://www.st.com/resource/en/datasheet/s2-lp.pdf">S2-LP</a>.</p>
+<p>CC1120 firmy TI i S2-LP firmy ST są układami nadawczo-odbiorczymi sterowanymi przez SPI. Obsługują FSK/GFSK i mają osobne bufory RX/TX po 128 B. Potrzebują mikrokontrolera, zegara, zasilania, dopasowania RF, anteny i oprogramowania układowego. Płytka rozwojowa pomaga pomierzyć układ, ale nie jest gotową stacją WICI. <a href="https://www.ti.com/lit/ds/symlink/cc1120.pdf">CC1120</a>, <a href="https://www.st.com/resource/en/datasheet/s2-lp.pdf">S2-LP</a>.</p>
 
-<p>Dwa układy nie są zamiennikami pinowymi. Wspólne ustawienia modulacji i format P1 są hipotezą zgodności do sprawdzenia na fizycznych modemach. Katalogowa czułość przy innej szybkości nie jest wynikiem dla P1. Projekt wymaga dwóch layoutów i nastaw, a następnie prób mieszanych TI–ST.</p>
+<p>Dwa układy nie są zamiennikami pinowymi. Wspólne ustawienia modulacji i format P1 są hipotezą zgodności do sprawdzenia na fizycznych modemach. Katalogowa czułość przy innej szybkości nie jest wynikiem dla P1. Projekt wymaga dwóch projektów płytek i nastaw, a następnie prób mieszanych TI–ST.</p>
 
 <h2 id="czego-nie-budowac-drugi-raz">Czego nie budować drugi raz</h2>
 
-<p>Użyć stosu sieciowego, kryptografii i biblioteki wiadomości zamiast własnych odpowiedników. Własny kod ograniczyć do lokalnej obsługi potrzeb, transakcji, diagnostyki, pakowania offline i adaptera czasu radia. Znaleziony router powinien realizować zwykły LAN, bez specjalnego firmware i producentowego API.</p>
+<p>Użyć stosu sieciowego, kryptografii i biblioteki wiadomości zamiast własnych odpowiedników. Własny kod ograniczyć do lokalnej obsługi potrzeb, transakcji, diagnostyki, pakowania offline i adaptera czasu radia. Znaleziony router powinien realizować zwykły LAN, bez specjalnego oprogramowania układowego i interfejsu API producenta.</p>
 
 <p>Gotowe modemy można wykorzystać jako narzędzia porównawcze w laboratorium. Nie uzależnia to docelowej konstrukcji od ich dostępności. Własny sprzęt powinien wynikać z pomiaru i wymagania niezależności dostawców, a nie z założenia, że każda funkcja musi powstać od początku.</p>
 </article>

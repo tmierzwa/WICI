@@ -1,35 +1,35 @@
-module,quantity,item,minimum_requirement,candidate_a,candidate_b,status
-radio,1,transceiver,2GFSK 869.525 MHz P1,TI CC1120,ST S2-LPQTR,alternative designs not qualified; S2-LPCBQTR upper band excludes 869.525 MHz
-radio,1,USB MCU,native CDC two interfaces,ST STM32F103CBT6,Microchip SAMD21G18,alternative designs not qualified
-radio,1,nonvolatile airtime log,I2C EEPROM wear levelled,ST M24C64,Microchip AT24C64,firmware required
-radio,1,TCXO,total frequency error <=2.5 ppm,compatible manufacturer A,compatible manufacturer B,reference frequencies differ by radio
-radio,1,antenna,50 ohm dipole SWR <=2,open dipole drawing,independent equivalent manufacture,tune outside actual building
-radio,1,RF cable,50 ohm <=2 m,manufacturer A,manufacturer B,qualify loss and connectors
-radio,1,USB cable,data cable <=2 m,manufacturer A,manufacturer B,qualify
-AB,2,dual Schottky,>=45 V each source supports 20 A,ST STPS3045CT,Vishay VS-MBR3045CT-M3,thermal and surge test
-AB,2,TVS,SMCJ18CA bidirectional,Littelfuse,Vishay,not an automotive pulse qualification
-AB,2,diode heatsink,initial <=3 K/W each,local fabrication,independent fabrication,test case and junction temperature
-AB,8,bus capacitor,2200 uF 35 V each >=3 A ripple,Panasonic,Nichicon,check ripple frequency and inrush
-AB,2,battery cable,<=2 m 2x6 mm2 fused 25 A,local fabrication,independent fabrication,20 A profile
-AB,2,cigar cable,<=2 m 2x2.5 mm2 fused 10 A,local fabrication,independent fabrication,8 A profile and socket limit
-charger,8,buck,LM2596 adjustable,TI,onsemi,calibrate and heat test
-charger,8,inductor,68 uH Isat >=6 A Irms >=3 A,TDK,Wurth Elektronik,qualify dimensions and losses
-charger,16,Schottky,>=3 A 40 V,ST,onsemi,flyback and polarity protection
-charger,8,port limiter,1.5 A load; threshold 1.6-2.1 A before thermal shutdown or foldback,TI TPS2553,not selected,second independent variant required; MIC2007 guaranteed tolerance budget does not close
-charger,8,OVP reference,TL431B grade 0.5 percent,TI,ST,crowbar not qualified
-charger,8,OVP SCR,adequate gate drive and I2t,ST TYN612,WeEn BT151,variant needs gate and surge calculation
-charger,8,PNP,BC327,Nexperia,onsemi,verify package pinout
-charger,8,input fuse,1.5 A and suitable DC rating,Littelfuse,Eaton,verify time current
-charger,8,output fuse,fast 3.15 A suitable DC rating,Littelfuse,Eaton,verify clearing I2t with SCR
-charger,8,USB-A receptacle,1.5 A continuous,manufacturer A,manufacturer B,thermal and cable drop test
-inverter,4,MOSFET,>=60 V Rds <=3.1 milliohm at 10 V,ST STP220N6F7,Infineon IPP030N06NF2S,thermal test
-inverter,2,half bridge driver,3.3 V logic about 10 V drive,TI UCC27211,ADI LTC4444,different bootstrap and supply circuits
-inverter,1,control MCU,complement PWM deadtime hardware fault,ST STM32F103,Microchip dsPIC33CK,firmware not written
-inverter,1,fast comparator,hardware current cut,TI TLV3201,Microchip MCP6561,offset and delay analysis
-inverter,1,transformer,20 and 840 turns core and isolation per design,independent winding shop A,independent winding shop B,prototype thermal dielectric qualification
-inverter,1,output inductor,initial 10 mH >=1 A with pulse margin,independent winding shop A,independent winding shop B,PSU inrush qualification
-inverter,2,RCBO,type A 30 mA 2 pole rating to be selected,ABB,Schneider Electric,PE arrangement not qualified
-USB,1,flash drive,64 GB verified offline package,manufacturer A,manufacturer B,no images produced yet
-cables,1,Ethernet,CAT5e LAN cable,manufacturer A,manufacturer B,commodity
-cables,1,USB Ethernet,offline drivers for supported OS,Realtek RTL8153,ASIX AX88179,qualified alternatives required
-documents,1,instruction,one page and offline HTML,open design,independent printing,after module acceptance
+moduł,liczba,element,wymaganie minimalne,kandydat A,kandydat B,stan
+radio,1,układ nadawczo-odbiorczy,"2-GFSK, 869,525 MHz, profil P1",TI CC1120,ST S2-LPQTR,"warianty niezakwalifikowane; S2-LPCBQTR w górnym paśmie nie obejmuje 869,525 MHz"
+radio,1,mikrokontroler USB,"natywne USB CDC, dwa interfejsy",ST STM32F103CBT6,Microchip SAMD21G18,warianty niezakwalifikowane
+radio,1,pamięć nieulotna dziennika czasu nadawania,EEPROM I²C z równomiernym rozkładem zapisów,ST M24C64,Microchip AT24C64,wymaga oprogramowania układowego
+radio,1,TCXO,"całkowity błąd częstotliwości ≤2,5 ppm",zgodny producent A,zgodny producent B,częstotliwość wzorcowa zależy od układu radiowego
+radio,1,antena,"dipol 50 Ω, WFS ≤2",otwarty rysunek dipola,niezależne wykonanie równoważne,strojenie na zewnątrz docelowego budynku
+radio,1,przewód RF,"50 Ω, ≤2 m",producent A,producent B,kwalifikacja tłumienia i złączy
+radio,1,przewód USB,"przewód do transmisji danych, ≤2 m",producent A,producent B,do kwalifikacji
+A/B,2,podwójna dioda Schottky’ego,≥45 V; każde źródło do 20 A,ST STPS3045CT,Vishay VS-MBR3045CT-M3,próba cieplna i udarowa
+A/B,2,dioda TVS,"SMCJ18CA, dwukierunkowa",Littelfuse,Vishay,nie stanowi kwalifikacji na impulsy motoryzacyjne
+A/B,2,radiator diod,początkowo ≤3 K/W na tor,wykonanie lokalne,niezależne wykonanie,próba temperatury obudowy i złącza
+A/B,8,kondensator magistrali,"2200 µF/35 V, każdy ≥3 A prądu tętnień",Panasonic,Nichicon,sprawdzić częstotliwość tętnień i prąd udarowy
+A/B,2,przewód akumulatorowy,"≤2 m, 2 × 6 mm², bezpiecznik 25 A",wykonanie lokalne,niezależne wykonanie,profil 20 A
+A/B,2,przewód do gniazda zapalniczki,"≤2 m, 2 × 2,5 mm², bezpiecznik 10 A",wykonanie lokalne,niezależne wykonanie,profil 8 A i limit gniazda
+ładowarka,8,przetwornica obniżająca,"LM2596, wersja regulowana",TI,onsemi,kalibracja i próba cieplna
+ładowarka,8,dławik,"68 µH, Isat ≥6 A, Irms ≥3 A",TDK,Würth Elektronik,kwalifikacja wymiarów i strat
+ładowarka,16,dioda Schottky’ego,≥3 A/40 V,ST,onsemi,dioda swobodna i ochrona przed odwrotną polaryzacją
+ładowarka,8,ogranicznik prądu portu,"obciążenie 1,5 A; próg 1,6–2,1 A przed wyłączeniem termicznym lub ograniczeniem zwrotnym",TI TPS2553,niewybrany,wymagany drugi niezależny wariant; gwarantowany budżet tolerancji MIC2007 się nie domyka
+ładowarka,8,źródło napięcia odniesienia OVP,"TL431B, klasa dokładności 0,5%",TI,ST,zwieracz zabezpieczający niezakwalifikowany
+ładowarka,8,tyrystor OVP,odpowiedni prąd bramki i I²t,ST TYN612,WeEn BT151,wariant wymaga obliczenia sterowania bramki i odporności udarowej
+ładowarka,8,tranzystor PNP,BC327,Nexperia,onsemi,sprawdzić rozkład wyprowadzeń obudowy
+ładowarka,8,bezpiecznik wejściowy,"1,5 A, parametry dla prądu stałego",Littelfuse,Eaton,sprawdzić charakterystykę czasowo-prądową
+ładowarka,8,bezpiecznik wyjściowy,"szybki 3,15 A, parametry dla prądu stałego",Littelfuse,Eaton,sprawdzić I²t wyłączania przy zadziałaniu tyrystora
+ładowarka,8,gniazdo USB-A,"1,5 A prądu ciągłego",producent A,producent B,próba cieplna i spadku napięcia na przewodzie
+przetwornica,4,tranzystor MOSFET,"≥60 V, RDS(on) ≤3,1 mΩ przy 10 V",ST STP220N6F7,Infineon IPP030N06NF2S,próba cieplna
+przetwornica,2,sterownik półmostka,"logika 3,3 V, sterowanie około 10 V",TI UCC27211,ADI LTC4444,różne układy bootstrapu i zasilania
+przetwornica,1,mikrokontroler sterujący,"komplementarne PWM, czas martwy, sprzętowe wejście awaryjne",ST STM32F103,Microchip dsPIC33CK,oprogramowanie układowe jeszcze nie powstało
+przetwornica,1,szybki komparator,sprzętowe odcięcie prądu,TI TLV3201,Microchip MCP6561,analiza napięcia niezrównoważenia i opóźnienia
+przetwornica,1,transformator,20 i 840 zwojów; rdzeń i izolacja według projektu,niezależna nawijalnia A,niezależna nawijalnia B,kwalifikacja cieplna i dielektryczna prototypu
+przetwornica,1,dławik wyjściowy,"początkowo 10 mH, ≥1 A, z zapasem na impulsy",niezależna nawijalnia A,niezależna nawijalnia B,kwalifikacja przy prądzie rozruchowym zasilaczy
+przetwornica,2,wyłącznik RCBO,"typ A, 30 mA, dwubiegunowy; prąd znamionowy do doboru",ABB,Schneider Electric,układ PE niezakwalifikowany
+USB,1,pamięć USB,"64 GB, sprawdzony pakiet offline",producent A,producent B,obrazy jeszcze nie powstały
+przewody,1,przewód Ethernet,"kategoria 5e, LAN",producent A,producent B,element powszechnie dostępny
+przewody,1,adapter USB–Ethernet,sterowniki offline dla obsługiwanych systemów,Realtek RTL8153,ASIX AX88179,wymagane zakwalifikowane zamienniki
+dokumenty,1,instrukcja,jedna strona i wersja HTML offline,otwarty projekt,niezależny druk,po odbiorze modułów
