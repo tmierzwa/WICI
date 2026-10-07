@@ -1,0 +1,92 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: CC-BY-4.0 -->
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Słownik skrótów i pojęć · WICI</title>
+<link rel="stylesheet" href="style.css">
+<link rel="icon" type="image/svg+xml" href="../../media/logo/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="../../media/logo/ikona-32.png">
+<link rel="apple-touch-icon" href="../../media/logo/ikona-180.png">
+</head>
+<body>
+<a class="skip" href="#tresc">Przejdź do treści</a>
+<header class="site-header">
+  <div class="inner">
+    <a class="brand" href="index.html"><picture><source media="(prefers-color-scheme: dark)" srcset="../../media/logo/WICI-na-ciemnym.svg"><img src="../../media/logo/WICI-na-jasnym.svg" alt="WICI" width="72" height="32"></picture></a>
+    <a class="jump" href="#rozdzialy">Rozdziały ↓</a>
+    <span class="status">Prototyp 0.5 · sprzęt <b>HOLD</b></span>
+  </div>
+</header>
+<div class="layout">
+  <nav class="chapters" id="rozdzialy" aria-label="Rozdziały koncepcji">
+    <p class="nav-title">Rozdziały</p>
+    <ol>
+      <li><a href="index.html">Przegląd koncepcji</a></li>
+      <li><a href="01-potrzeby-i-wymagania.html">01. Potrzeby i wymagania</a></li>
+      <li><a href="02-scenariusze-i-organizacja.html">02. Scenariusze i organizacja</a></li>
+      <li><a href="03-dostepne-rozwiazania.html">03. Dostępne rozwiązania</a></li>
+      <li><a href="04-analiza-opcji.html">04. Analiza opcji</a></li>
+      <li><a href="05-projekt-koncepcyjny-komunikacji.html">05. Projekt koncepcyjny komunikacji</a></li>
+      <li><a href="06-wykonalnosc-i-budzet-zasobow.html">06. Wykonalność i budżet zasobów</a></li>
+      <li><a href="07-zagrozenia-i-odpornosc.html">07. Zagrożenia i odporność</a></li>
+      <li><a href="08-plan-weryfikacji-i-decyzje.html">08. Plan weryfikacji i decyzje</a></li>
+      <li><a href="slownik.html" aria-current="page">Słownik</a></li>
+      <li><a href="zrodla.html">Źródła</a></li>
+    </ol>
+  </nav>
+  <main id="tresc">
+<article>
+<h1>Słownik skrótów i pojęć</h1>
+
+<p>Skróty i pojęcia używane w dokumentach koncepcji, w znaczeniu przyjętym w WICI. Odsyłacze w nawiasach wskazują rozdział, który omawia pojęcie szerzej.</p>
+
+<div class="table-wrap"><table>
+<thead><tr>
+<th scope="col">Pojęcie</th>
+<th scope="col">Znaczenie w WICI</th>
+</tr></thead><tbody>
+<tr><td>W01–W24, T1–T8, D01–D18</td><td>wymagania (<a href="01-potrzeby-i-wymagania.html">01</a>), grupy prób i otwarte decyzje (<a href="08-plan-weryfikacji-i-decyzje.html">08</a>)</td></tr>
+<tr><td>OSP</td><td>w dokumentach skrót roli stanowiska odbiorczego (odbiorcy zgłoszeń), które wyznacza wójt (burmistrz, prezydent miasta). Nazwa pochodzi od ochotniczej straży pożarnej, bo prawdopodobnie to ona będzie często pełnić tę rolę: ma strażnicę, łączność i ludzi w każdej gminie. Odbiorcą może być też gminne centrum zarządzania kryzysowego albo stanowisko gminnego zespołu zarządzania kryzysowego. Kto pełni rolę, musi w kryzysie zapewnić całodobowy dyżur. Na ekranie stacji rola nazywa się „odbiorca”, np. „ODBIORCA ZAPISAŁ” (<a href="02-scenariusze-i-organizacja.html#miejsce-w-systemie-ochrony-ludnosci">02</a>)</td></tr>
+<tr><td>schronienie</td><td>obiekt, w którym gromadzi się ludność: obiekt zbiorowej ochrony (schron, ukrycie albo miejsce doraźnego schronienia) albo miejsce wskazane w gminnym planie zarządzania kryzysowego (punkt ewakuacyjny, miejsce tymczasowego zakwaterowania, punkt informacyjno-pomocowy, ogrzewalnia); WICI nie wyznacza ani nie klasyfikuje obiektów (<a href="01-potrzeby-i-wymagania.html#problem-i-granica-systemu">01</a>)</td></tr>
+<tr><td>opiekun, zastępca, dyżurny</td><td>osoby obsługujące stację w schronieniu oraz stanowisko odbiorcy (<a href="02-scenariusze-i-organizacja.html">02</a>)</td></tr>
+<tr><td>organizator sieci</td><td>podmiot, który przygotowuje i utrzymuje sieć, zwykle samorząd gminy (<a href="02-scenariusze-i-organizacja.html#role">02</a>)</td></tr>
+<tr><td>poziom 1, 2, 3</td><td>sama stacja; stacja z laptopem przez USB; stacja z laptopem i routerem dla telefonów (<a href="01-potrzeby-i-wymagania.html#poziomy-zestawu">01</a>)</td></tr>
+<tr><td>przekaźnik</td><td>każda włączona stacja przekazuje ruch innych stacji, także bez laptopa; osobny przekaźnik to stacja poziomu 1 na ogniwach lub źródle 12 V</td></tr>
+<tr><td>MCU</td><td>mikrokontroler prowadzący stację: stos sieciowy, kolejkę, ekran, przyciski i radio</td></tr>
+<tr><td>FRAM</td><td>pamięć nieulotna stacji, która nie zużywa się przy częstych zapisach; przechowuje szyfrowaną kolejkę i trasy oraz jawny dziennik długu ciszy</td></tr>
+<tr><td>A, B, C</td><td>wejścia zasilania poziomu 3: A i B to wymieniane źródła 12 V laptopa i routera, C to osobne źródło ładowarki telefonów</td></tr>
+<tr><td>HOLD</td><td>status sprzętu „wstrzymany”: projekt nie jest dopuszczony do zamówienia ani użycia do czasu odbioru wskazanej konfiguracji</td></tr>
+<tr><td>START</td><td>pakiety uruchomieniowe offline: dla działającego systemu Windows lub macOS oraz obraz Linuksa dla obsługiwanych komputerów PC</td></tr>
+<tr><td>karta stacji, karta OSP</td><td>pliki z pełnymi kluczami publicznymi wymieniane przy przygotowaniu; na nich opiera się zaufanie, nie na odbiorze radiowym (<a href="05-projekt-koncepcyjny-komunikacji.html#model-zaufania-i-kluczy">05</a>)</td></tr>
+<tr><td>ZAMKNIJ ZDARZENIE, ZNISZCZ DANE</td><td>usunięcie danych zdarzenia po eksporcie dla administratora danych (tożsamości zostają) oraz nieodwracalne usunięcie danych i tożsamości stacji przy groźbie przejęcia (<a href="07-zagrozenia-i-odpornosc.html#zniszcz-dane">07</a>)</td></tr>
+<tr><td>PRZENIEŚ STACJĘ</td><td>kontrolowane przeniesienie tożsamości i kolejki ze sprawnej stacji na stację zapasową; stara stacja przestaje pracować</td></tr>
+<tr><td>TEST</td><td>typ SA1 o takiej samej budowie jak REQUEST; sprawdza drogę do OSP, zapis i obecność dyżurnego; nie trafia do kolejki potrzeb</td></tr>
+<tr><td>COMMIT</td><td>zatwierdzenie zapisu w FRAM stacji albo transakcji SQLite laptopa; dopiero po nim zapis uznaje się za trwały</td></tr>
+<tr><td>Reticulum, microReticulum</td><td>stos sieciowy z tożsamościami, szyfrowaniem i trasami; microReticulum to jego wersja przeniesiona (port) na mikrokontroler stacji</td></tr>
+<tr><td>LXMF</td><td>protokół wiadomości działający nad Reticulum; potwierdza dostarczenie przez sieć (transportowe), a nie zapis w bazie odbiorcy</td></tr>
+<tr><td>pakiet okazjonalny, link, zasób</td><td>sposoby dostarczenia w LXMF: pojedynczy pakiet bez zestawiania połączenia, zestawione połączenie Reticulum (link), przesłanie większych danych w częściach (zasób) (<a href="05-projekt-koncepcyjny-komunikacji.html">05</a>)</td></tr>
+<tr><td>SA1</td><td>format treści wiadomości WICI w LXMF; sześć typów: REQUEST, RECEIVED, STATUS, REPLY, BULLETIN, TEST</td></tr>
+<tr><td>RECEIVED, STATUS</td><td>potwierdzenie trwałego zapisu zgłoszenia w OSP („ODBIORCA ZAPISAŁ”) oraz późniejsze stany: „ODBIORCA PRZECZYTAŁ”, „POMOC SKIEROWANA (DECYZJA, NIE GODZINA PRZYJAZDU)”, „PRZEKAZANE DALEJ (PSP / POGOTOWIE / POWIAT)”, „ODBIORCA NIE MOŻE TERAZ POMÓC – CZYTAJ ODPOWIEDŹ”, „ZAMKNIĘTE”</td></tr>
+<tr><td>P1</td><td>wspólny profil radiowy obu wykonań stacji: 869,525 MHz, 2-GFSK 4800 bit/s, fragmenty do 86 B, dług ciszy</td></tr>
+<tr><td>dług ciszy</td><td>czas zakazu nadawania po każdej serii nadawania równy 12 × czas nadawania (TX), zapisany w pamięci nieulotnej; restart go nie zeruje</td></tr>
+<tr><td>CCA</td><td>sprawdzenie przed nadawaniem, czy kanał jest wolny; nie zastępuje limitu czasu nadawania</td></tr>
+<tr><td>ERP</td><td>zastępcza moc promieniowana, odniesiona do dipola półfalowego; w paśmie WICI limit wynosi 500 mW</td></tr>
+<tr><td>RNode</td><td>gotowy modem LoRa (modulacja z rozpraszaniem widma, o dużym zasięgu i małej przepływności) dla Reticulum; w WICI narzędzie porównawcze, a nie docelowe radio</td></tr>
+</tbody></table></div>
+</article>
+<nav class="pager" aria-label="Kolejność czytania">
+  <a class="prev" href="08-plan-weryfikacji-i-decyzje.html" rel="prev"><span>← Poprzedni</span>08. Plan weryfikacji i decyzje</a>
+  <a class="next" href="zrodla.html" rel="next"><span>Następny →</span>Źródła</a>
+</nav>
+  </main>
+</div>
+<footer class="site-footer">
+  <div class="inner">
+    <p>Analiza: <a href="../../LICENSES/CC-BY-4.0.txt">CC-BY-4.0</a>. <a href="../../LICENSE.md">Mapa licencji projektu</a>.</p>
+    <p>Parametry i warunki odbioru: <a href="../README.md">specyfikacja 0.5</a>. Kod: <a href="https://github.com/tmierzwa/WICI">tmierzwa/WICI</a>.</p>
+  </div>
+</footer>
+</body>
+</html>
