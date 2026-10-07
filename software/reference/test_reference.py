@@ -7,12 +7,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from reference import (OSPStore, PREFIX, accept_from_osp, assemble, crc16, decode_message,
-                       encode_message, fragment, parse_frame, status_after)
+from reference import (MAX_CONTENT, OSPStore, PREFIX, QuarantineFull, RevokedSender, accept_from_osp, assemble,
+                       check_button_configuration, crc16, decode_message, encode_message, fragment, parse_frame,
+                       status_after)
 
 MID = "00112233445566778899aabbccddeeff"
 REQUEST = [1, 0, MID, 0, 0, 2, "Testowa 10, wejście od podwórza", "Brak wody", 0]
 TEST = [1, 5] + REQUEST[2:]
+PUBKEY = bytes(range(64))
 
 
 class AirContract(unittest.TestCase):
@@ -72,12 +74,42 @@ class Messages(unittest.TestCase):
         for value in values:
             self.assertEqual(decode_message(encode_message(value)), value)
 
-    def test_worst_json_escape_size(self):
-        value = [1, 0, MID, 65535, 9, 65535, "\\" * 64, '"' * 96, 2]
-        wire = encode_message(value)
-        self.assertLessEqual(len(wire), 480)
-        self.assertEqual(decode_message(wire), value)
-        self.assertLessEqual(len(encode_message([1, 4, MID, 2147483647, "\\" * 192])), 480)
+    def test_worst_case_sizes_fit_content_limit(self):
+        # No escapes remain once quotes, backslashes and controls are rejected; multibyte text fills each field.
+        worst = {
+            "request": ([1, 0, MID, 65535, 9, 65535, "ą" * 32, "😀" * 24, 2], 222),
+            "test": ([1, 5, MID, 65535, 9, 65535, "ą" * 32, "😀" * 24, 2], 222),
+            "bulletin": ([1, 4, MID, 2147483647, "ż" * 96], 246),
+            "reply": ([1, 3, MID, 65535, 2147483647, "€" * 32], 156),
+            "status": ([1, 2, MID, 65535, 2147483647, 6], 59),
+            "received": ([1, 1, MID, 65535, 1, 1], 50),
+        }
+        for name, (value, size) in worst.items():
+            with self.subTest(kind=name):
+                wire = encode_message(value)
+                self.assertEqual(len(wire), size)
+                self.assertLessEqual(len(wire), MAX_CONTENT)
+                self.assertEqual(decode_message(wire), value)
+        with self.assertRaises(ValueError):
+            encode_message([1, 4, MID, 2147483647, "ż" * 96 + "x"])
+
+    def test_quote_backslash_separators_private_unassigned_rejected(self):
+        for char in ('"', "\\", "\u2028", "\u2029", "\ue000", "\U000f0000", "\u0378"):
+            for value in (REQUEST[:6] + [char] + REQUEST[7:], REQUEST[:7] + [char] + REQUEST[8:],
+                          [1, 3, MID, 0, 1, char], [1, 4, MID, 1, char]):
+                with self.subTest(codepoint=ord(char), kind=value[1]):
+                    with self.assertRaises(ValueError):
+                        encode_message(value)
+                    with self.assertRaises(ValueError):
+                        decode_message(json.dumps(value, ensure_ascii=True).encode("ascii"))
+
+    def test_text_must_be_nfc(self):
+        decomposed = "Za\u0307o\u0301\u0142c\u0301"  # "Zażółć" in NFD
+        for value in (REQUEST[:6] + [decomposed] + REQUEST[7:], [1, 4, MID, 1, decomposed]):
+            with self.assertRaises(ValueError):
+                encode_message(value)
+        nfc = REQUEST[:7] + ["Zażółć"] + REQUEST[8:]
+        self.assertEqual(decode_message(encode_message(nfc)), nfc)
 
     def test_reject_bool_control_oversize_and_extra(self):
         for index, invalid in ((0, True), (4, 10), (5, 0), (6, "ą" * 33), (7, "\n"), (8, 3)):
@@ -88,7 +120,7 @@ class Messages(unittest.TestCase):
         with self.assertRaises(ValueError):
             encode_message(REQUEST + [0])
         with self.assertRaises(ValueError):
-            decode_message(b" " * 481)
+            decode_message(b" " * (MAX_CONTENT + 1))
         for invalid in (TEST[:-1], [1, 6] + REQUEST[2:], TEST[:4] + [10] + TEST[5:]):
             with self.assertRaises(ValueError):
                 encode_message(invalid)
@@ -110,8 +142,13 @@ class Messages(unittest.TestCase):
 
     def test_button_request_fits_one_opportunistic_packet(self):
         # About 284 B for the reference Reticulum/LXMF versions (conception, chapter 05; D01 open).
-        worst_button = [1, 0, MID, 65535, 9, 999, '"' * 64, "", 2]
-        self.assertLessEqual(len(encode_message(worst_button)), 284)
+        size = check_button_configuration("ś" * 32, ("Potrzeba ustała", "ł" * 48))
+        self.assertLessEqual(size, MAX_CONTENT)
+        self.assertLessEqual(size, 284)
+        with self.assertRaises(ValueError):
+            check_button_configuration('Testowa "10"', ())
+        with self.assertRaises(ValueError):
+            check_button_configuration("Testowa 10", ("ł" * 49,))
 
     def test_status_cannot_reuse_received_event_or_state(self):
         for event, state in ((1, 2), (1, 3), (2, 1)):
@@ -141,7 +178,7 @@ class DurableReception(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.path = Path(self.tmp.name) / "osp.db"
-        self.trusted = (b"S" * 16, b"T" * 16)
+        self.trusted = {b"S" * 16: PUBKEY, b"T" * 16: bytes(64)}
         self.store = OSPStore(self.path, self.trusted)
         self.source = b"S" * 16
         self.wire = encode_message(REQUEST)
@@ -198,6 +235,34 @@ class DurableReception(unittest.TestCase):
             self.store.receive(self.source, encode_message(TEST), True)
         self.assertEqual(self.store.db.execute("SELECT count(*) FROM received").fetchone()[0], 1)
 
+    def test_purge_keeps_reception_keys(self):
+        ack = self.store.receive(self.source, self.wire, True)
+        self.store.send_reply(self.source, MID, 0, 2, "Woda o 18:00 przy remizie")
+        self.store.purge_content()
+        self.store.close()
+        self.store = OSPStore(self.path)
+        rows = self.store.db.execute("SELECT payload, length(sha256) FROM received").fetchall()
+        self.assertEqual(rows, [(None, 32)])
+        self.assertEqual(self.store.db.execute("SELECT text FROM replies").fetchall(), [(None,)])
+        self.assertEqual(self.store.receive(self.source, self.wire, True), ack)
+        changed = REQUEST.copy()
+        changed[7] = "Inne zgłoszenie"
+        with self.assertRaises(ValueError):
+            self.store.receive(self.source, encode_message(changed), True)
+        self.assertEqual(self.store.db.execute("SELECT count(*) FROM received").fetchone()[0], 1)
+
+    def test_state_5_requires_reply(self):
+        self.store.receive(self.source, self.wire, True)
+        with self.assertRaises(ValueError):
+            self.store.send_status(self.source, MID, 0, 2, 5)
+        self.assertEqual(decode_message(self.store.send_status(self.source, MID, 0, 2, 2)), [1, 2, MID, 0, 2, 2])
+        self.store.send_reply(self.source, MID, 0, 3, "Przyjdźcie do remizy")
+        self.assertEqual(decode_message(self.store.send_status(self.source, MID, 0, 4, 5))[5], 5)
+        with self.assertRaises(ValueError):
+            self.store.send_status(self.source, MID, 0, 4, 3)
+        with self.assertRaises(ValueError):
+            self.store.send_status(b"T" * 16, MID, 0, 2, 2)
+
     def test_unsigned_message_never_creates_request(self):
         with self.assertRaises(ValueError):
             self.store.receive(self.source, self.wire, False)
@@ -228,13 +293,64 @@ class Trust(unittest.TestCase):
         self.assertIsNone(self.store.receive(self.unknown, self.wire, True))
         self.assertEqual((self.count("quarantine"), self.count("received"), self.count("ack_outbox")), (1, 0, 0))
 
-    def test_approval_creates_request_and_ack_atomically(self):
+    def test_approval_of_one_message_does_not_trust_sender(self):
         self.store.receive(self.unknown, self.wire, True)
-        self.store.receive(self.unknown, encode_message(TEST[:3] + [1] + TEST[4:]), True)
-        acks = self.store.approve(self.unknown)
-        self.assertEqual([decode_message(a)[3] for a in acks], [0, 1])
-        self.assertEqual((self.count("quarantine"), self.count("received"), self.count("ack_outbox")), (0, 2, 2))
-        self.assertEqual(self.store.receive(self.unknown, self.wire, True), acks[0])
+        second = encode_message(TEST[:3] + [1] + TEST[4:])
+        self.store.receive(self.unknown, second, True)
+        ack = self.store.approve_message(self.unknown, MID, 0)
+        self.assertEqual(decode_message(ack), [1, 1, MID, 0, 1, 1])
+        self.assertEqual((self.count("quarantine"), self.count("received"), self.count("ack_outbox"),
+                          self.count("trusted")), (1, 1, 1, 0))
+        self.assertEqual(self.store.receive(self.unknown, self.wire, True), ack)
+        self.assertIsNone(self.store.receive(self.unknown, second, True))
+        third = encode_message(REQUEST[:3] + [2] + REQUEST[4:])
+        self.assertIsNone(self.store.receive(self.unknown, third, True))
+        self.assertEqual(self.count("quarantine"), 2)
+        with self.assertRaises(ValueError):
+            self.store.approve_message(self.unknown, MID, 0)
+
+    def test_add_trusted_requires_card_and_two_people(self):
+        for pubkey, approvers in ((b"k" * 32, ("A", "B")), (PUBKEY, ("A", "A")), (PUBKEY, ("A",)),
+                                  (PUBKEY, ("A", " "))):
+            with self.assertRaises(ValueError):
+                self.store.add_trusted(self.unknown, pubkey, approvers)
+        self.store.add_trusted(self.unknown, PUBKEY, ("Dyżurny A", "Dyżurny B"))
+        self.assertIsNotNone(self.store.receive(self.unknown, self.wire, True))
+        with self.assertRaises(ValueError):
+            self.store.add_trusted(self.unknown, bytes(64), ("Dyżurny A", "Dyżurny B"))
+
+    def test_revoked_sender_rejected_counted_not_quarantined(self):
+        self.store.add_trusted(self.unknown, PUBKEY, ("A", "B"))
+        other = b"V" * 16
+        self.store.receive(other, self.wire, True)
+        self.store.revoke(self.unknown)
+        self.store.revoke(other)
+        for source in (self.unknown, other, other):
+            with self.assertRaises(RevokedSender):
+                self.store.receive(source, self.wire, True)
+        self.store.close()
+        self.store = OSPStore(self.path)
+        self.assertEqual((self.store.rejected_count(self.unknown), self.store.rejected_count(other)), (1, 2))
+        self.assertEqual((self.count("quarantine"), self.count("received"), self.count("trusted")), (0, 0, 0))
+        with self.assertRaises(RevokedSender):
+            self.store.add_trusted(other, PUBKEY, ("A", "B"))
+
+    def test_quarantine_limits(self):
+        def request(revision):
+            return encode_message(REQUEST[:3] + [revision] + REQUEST[4:])
+        for revision in range(4):
+            self.assertIsNone(self.store.receive(self.unknown, request(revision), True))
+        self.assertIsNone(self.store.receive(self.unknown, request(3), True))
+        with self.assertRaises(QuarantineFull):
+            self.store.receive(self.unknown, request(4), True)
+        self.assertEqual(self.count("quarantine"), 4)
+        for sender in range(0x60, 0x60 + 63):
+            for revision in range(4):
+                self.store.receive(bytes([sender]) * 16, request(revision), True)
+        self.assertEqual(self.count("quarantine"), 256)
+        with self.assertRaises(QuarantineFull):
+            self.store.receive(b"\xff" * 16, request(0), True)
+        self.assertEqual(self.count("quarantine"), 256)
 
     def test_quarantine_conflict_rejected(self):
         self.store.receive(self.unknown, self.wire, True)

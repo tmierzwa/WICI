@@ -92,7 +92,7 @@
 
 <p>Tabela podaje przepustowość idealnego nadajnika liczoną w datagramach interfejsu P1, a nie liczbę zgłoszeń aplikacji. Dla 600 B wynosi około 34,5 B/s użytecznych danych wejściowych interfejsu P1. Każdy przekaźnik zużywa własny czas TX na przekazanie zgłoszeń, odpowiedzi i ruchu sterującego. Sąsiedzi współdzielą kanał, więc ich przepustowości nie można sumować jak niezależnych przewodów.</p>
 
-<p>Przy większej wiadomości LXMF może przejść z pojedynczego pakietu na link albo przesyłanie zasobu. Limit treści SA1 480 B nie oznacza, że wiadomość zmieści się w jednym pakiecie radiowym; progi i propozycję limitu opisuje <a href="05-projekt-koncepcyjny-komunikacji.html">rozdział 05</a>. Do tego dochodzą zestawianie linku, ogłoszenia tras, potwierdzenia i ponowienia. W wariancie 0.4 stos na laptopie łączył się z modemem przez KISS, którego kontrola przepływu ma w obecnym kodzie limit 5 s, a P1 może wymagać ponad 16 s samej ciszy. W 0.5 interfejs P1 jest częścią stosu w stacji, więc stos zna dług ciszy i nie zależy od limitu KISS. <a href="https://github.com/markqvist/LXMF/blob/master/LXMF/LXMessage.py">LXMessage</a>, <a href="https://github.com/markqvist/Reticulum/blob/master/RNS/Interfaces/KISSInterface.py">KISSInterface</a>, <a href="../spec/radio.md">kontrakt interfejsu P1</a>.</p>
+<p>Przy większej wiadomości LXMF może przejść z pojedynczego pakietu na link albo przesyłanie zasobu. Limit treści SA1 wynosi 256 B; największe wiadomości (REQUEST 222 B, BULLETIN 246 B, REPLY 156 B) mieszczą się w modelu w jednym pakiecie okazjonalnym (szacunek 284 B treści), co trzeba potwierdzić w T3; progi opisuje <a href="05-projekt-koncepcyjny-komunikacji.html">rozdział 05</a>. Do tego dochodzą zestawianie linku, ogłoszenia tras, potwierdzenia i ponowienia. W wariancie 0.4 stos na laptopie łączył się z modemem przez KISS, którego kontrola przepływu ma w obecnym kodzie limit 5 s, a P1 może wymagać ponad 16 s samej ciszy. W 0.5 interfejs P1 jest częścią stosu w stacji, więc stos zna dług ciszy i nie zależy od limitu KISS. <a href="https://github.com/markqvist/LXMF/blob/master/LXMF/LXMessage.py">LXMessage</a>, <a href="https://github.com/markqvist/Reticulum/blob/master/RNS/Interfaces/KISSInterface.py">KISSInterface</a>, <a href="../spec/radio.md">kontrakt interfejsu P1</a>.</p>
 
 <p>Znajomość długu ciszy nie zmienia limitów czasu linku i zasobu. Pakiet może czekać w kolejce dłużej, niż pozwala stos, jeszcze przed pierwszym TX. <a href="../review.md">Kontrprzykład z przypiętego kodu</a>.</p>
 
@@ -121,6 +121,12 @@
 
 <p>LXMF ponawia niepotwierdzoną wiadomość okazjonalną po <code>max(10 s, RTT)</code>, najwyżej 5 prób (<code>DELIVERY_RETRY_WAIT</code>, <code>MAX_DELIVERY_ATTEMPTS</code>). Jeden cykl B dla zgłoszenia trwa dłużej niż 10 s, a jego kolejka może trzymać minuty ruchu. Jeśli szacunek RTT nie obejmuje oczekiwania za ciszą, A wysyła ponownie wiadomości jeszcze czekające u B i zużywa jego budżet. T3 musi zmierzyć takie duplikaty i ustalić, skąd stos bierze RTT przy szybkości zgłaszanej przez interfejs P1. <a href="https://github.com/markqvist/LXMF/blob/c3ff2d6dc2f256daab896dadc044dd5a913ecbb7/LXMF/LXMRouter.py">LXMRouter</a>.</p>
 
+<p>Dlatego stos stacji ponawia wiadomość okazjonalną nie wcześniej niż po max(60 s, 2 × liczba skoków × 13 × czas TX największego datagramu + bieżący dług ciszy + czas opróżnienia kolejki P1), najwyżej 2 próby LXMF na jedno ponowienie intencji (<a href="../spec/radio.md#interfejs-p1-w-stosie-reticulum">kontrakt interfejsu P1</a>). Dla największego własnego datagramu (483 B przy treści 256 B, cykl 14,2 s) daje to 60 s dla 1 i 2 skoków na pustej sieci oraz około 114 s (1 skok) i 143 s (2 skoki) przy największym długu ciszy i pełnej kolejce 4 × 600 B.</p>
+
+<h3 id="pojemnosc-sieci">Pojemność sieci</h3>
+
+<p>Pojemność ogranicza najbardziej obciążony węzeł, zwykle stacja OSP i przekaźnik obok niej, dla całej sieci, a nie na przekaźnik. Model bez strat, przy limicie długu ciszy (cykl 13t na datagram), dla zgłoszenia 222 B z RECEIVED i dwoma STATUS: stacja OSP nadaje na jedno zgłoszenie potwierdzenie pakietu, RECEIVED i dwa STATUS (27,8 s z ciszą), czyli obsłuży około 129 zgłoszeń/h; przekaźnik przed OSP przekazuje zgłoszenie, RECEIVED, dwa STATUS i cztery potwierdzenia pakietów (47,3 s), czyli około 76 zgłoszeń/h. Dodanie przekaźników nie zwiększa tego limitu; zwiększa go tylko drugi odbiorca albo podział sieci. BULLETIN wysyła się osobno do każdej stacji: przy 50 stacjach to około 11,6 min czasu nadawania OSP z ciszą (13,9 s na stację), tyle trwa też rozesłanie polecenia ciszy. Okno losowego TEST startowego skaluje się z liczbą stacji: ≥50 s × liczba stacji, czyli 25 min dla 30 i około 42 min dla 50 stacji (przekaźnik obok OSP potrzebuje około 47 s na pełne zgłoszenie); 0–15 min wystarcza tylko małej sieci. Model pomija kolizje, CCA, zimne trasy i ponowienia; liczby są górną granicą.</p>
+
 <p>Jeśli pomiar potwierdzi brak zapasu, możliwe zmiany to:</p>
 
 <ul>
@@ -140,6 +146,8 @@
 
 <p>Model wolnej przestrzeni jest zbyt optymistyczny dla zabudowy. Empiryczny model Okumury-Haty dla małego miasta przy tym samym budżecie łącza (15,3 dB zysków i strat poza drogą) daje na 1 km zapas około −0,7 dB przy antenie 30 m nad terenem, −3,5 dB przy antenach 10 m i 3 m oraz −7,3 dB przy antenach 10 m i 1,5 m. Modelu Haty użyto tu poniżej jego zakresu wysokości anteny bazowej, więc wynik jest tylko ostrzeżeniem. Bez wysoko umieszczonych anten lub przekaźników cel 1 km jest zagrożony. Promień pierwszej strefy Fresnela w połowie drogi 1 km wynosi około 9,3 m; anteny przy oknach niskich kondygnacji nie zapewniają jej prześwitu. <a href="../../software/reference/wyniki.json">Obliczenia</a>.</p>
 
+<p>Liczby powyżej dotyczą anteny przy oknie z 1 dB strat przewodu, bez odgromnika. Instalacja stała z anteną wyżej ma przewód zewnętrzny, odgromnik GDT (≤0,2 dB), przepust, przejściówki (≤0,1 dB każda) i przewód wewnętrzny; model przyjmuje dla niej 2,5 dB na każdym końcu (np. około 6 m LMR-240). Zapas spada wtedy o 3 dB: 31,1 dB w wolnej przestrzeni oraz −3,7, −6,5 i −10,3 dB w modelu Haty; z antenami kolinearnymi na obu końcach +3,0, +0,2 i −3,6 dB. Zysk z wysokości anteny zwykle przeważa nad tą stratą, ale budżet przelicza się dla rzeczywistej instalacji.</p>
+
 <p>Przykład z wolną przestrzenią pomija ściany, metal, teren, zanik wielodrogowy, odstrojenie anteny, zakłócenia i rzeczywistą czułość, więc nie dowodzi zasięgu 1 km w mieście. Anteny przy oknie lub drzwiach muszą przejść próbę w docelowej pozycji. Wynik zapisać razem z układem miejsc, przewodami, rewizjami i warunkami. Przy braku zapasu najpierw podnieść antenę (dach, wyższa kondygnacja) lub dodać przekaźnik. Zmiana profilu P1 wymaga jawnej rewizji całej sieci.</p>
 
 <p>Zapas obliczony z modelu jest medianą. Łącze stacjonarne, które ma przenieść 99 ze 100 zgłoszeń, potrzebuje dodatkowo zapasu na zaniki w czasie, zwykle około 10 dB. Ruch ludzi i pojazdów zmienia tłumienie także na stałej trasie. Rozrzut tłumienia między miejscami (odchylenie standardowe rzędu 6–8 dB w zabudowie) sprawia, że udana próba jednej pary miejsc nie przenosi się na inne. Najtańszym źródłem zapasu jest antena: kolinearna antena dookólna o zysku około 5–6 dBi na obu końcach daje około 7 dB więcej niż dwa dipole, nie zmienia P1 i mieści się w limicie ERP (około 15,5 dBm wobec 27 dBm). Kosztem jest węższa wiązka w płaszczyźnie pionowej i wymóg pionowego montażu.</p>
@@ -148,32 +156,34 @@
 
 <h2 id="energia-stacji-poziomu-1">Energia stacji poziomu 1</h2>
 
-<p>Założenia <a href="../../software/reference/wyniki.json">modelu</a>: szyna 3,3 V zasilana przez przetwornicę o sprawności 0,85; odbiornik zawsze włączony, 22 mA (wartość dla CC1120; S2-LP pobiera mniej), oraz TCXO radia 2 mA; nadawanie 13 dBm, 45 mA, przez 7,7% czasu, czyli przy ciągłym przekazywaniu ruchu na granicy długu ciszy; szyna 5 V ekranu z pamięcią 0,5 mA; FRAM, przyciski i nadzór 0,5 mA; podświetlenie ekranu 15 mA przez 30 min na dobę; po stronie wejścia sterowniki łączników zasilania (2 × 80 µA), prąd spoczynkowy przetwornicy (50 µA) i dzielniki ADC; mikrokontroler średnio 3 mA (nRF52840) albo 30, 45 lub 60 mA (ESP32-S3 z wyłączonym Wi-Fi; realny prąd aktywny 40–60 mA, 30 mA wymaga lekkiego uśpienia). Rezerwa 20%. To katalogowe założenia, nie pomiar.</p>
+<p>Założenia <a href="../../software/reference/wyniki.json">modelu</a>: szyna 3,3 V zasilana przez przetwornicę o sprawności 0,85 przy 6 V z ogniw i 0,80 przy 12,8 V (sprawność obejmuje prąd spoczynkowy przetwornicy); odbiornik zawsze włączony, 22 mA (wartość dla CC1120; S2-LP pobiera mniej), oraz TCXO radia 2 mA; nadawanie 13 dBm, 45 mA, przez 7,7% czasu, czyli przy ciągłym przekazywaniu ruchu na granicy długu ciszy; szyna 5 V ekranu z pamięcią 0,5 mA; FRAM, przyciski i nadzór 0,5 mA; podświetlenie ekranu 15 mA przez 30 min na dobę; dioda alarmu 5 mA przez 1% i brzęczyk 20 mA przez 0,25% czasu; po stronie wejścia osobno dla źródła: z ogniw LTC4412, TPS3710, LTC2954 i dzielniki ADC (razem około 0,033 mA), z 12 V LM74800, zatrzask UV, TPS3710, LTC2954 i dzielniki (razem około 0,44 mA); mikrokontroler średnio 3 mA (nRF52840) albo 30, 45 lub 60 mA (ESP32-S3 z wyłączonym Wi-Fi; realny prąd aktywny 40–60 mA, 30 mA wymaga lekkiego uśpienia). Rezerwa 20%. To katalogowe założenia, nie pomiar.</p>
 
 <div class="table-wrap"><table class="wide">
 <thead><tr>
 <th scope="col">Wariant MCU</th>
 <th scope="col" class="num">Prąd 3V3</th>
-<th scope="col" class="num">Moc wejściowa</th>
-<th scope="col" class="num">Energia 24 h z rezerwą</th>
+<th scope="col" class="num">Moc z ogniw</th>
+<th scope="col" class="num">Energia 24 h z rezerwą, ogniwa / 12 V</th>
 <th scope="col" class="num">4 ogniwa AA litowe, 14,4 Wh</th>
 <th scope="col" class="num">Akumulator 12 V, 360 Wh</th>
 </tr></thead><tbody>
-<tr><td>nRF52840, 3 mA</td><td class="num">32 mA</td><td class="num">0,125 W</td><td class="num">3,6 Wh</td><td class="num">96 h</td><td class="num">99 dni</td></tr>
-<tr><td>ESP32-S3, 30 mA</td><td class="num">59 mA</td><td class="num">0,230 W</td><td class="num">6,6 Wh</td><td class="num">52 h</td><td class="num">54 dni</td></tr>
-<tr><td>ESP32-S3, 45 mA</td><td class="num">74 mA</td><td class="num">0,288 W</td><td class="num">8,3 Wh</td><td class="num">42 h</td><td class="num">43 dni</td></tr>
-<tr><td>ESP32-S3, 60 mA</td><td class="num">89 mA</td><td class="num">0,346 W</td><td class="num">10,0 Wh</td><td class="num">35 h</td><td class="num">36 dni</td></tr>
+<tr><td>nRF52840, 3 mA</td><td class="num">32 mA</td><td class="num">0,124 W</td><td class="num">3,6 / 4,0 Wh</td><td class="num">97 h</td><td class="num">91 dni</td></tr>
+<tr><td>ESP32-S3, 30 mA</td><td class="num">59 mA</td><td class="num">0,229 W</td><td class="num">6,6 / 7,2 Wh</td><td class="num">52 h</td><td class="num">50 dni</td></tr>
+<tr><td>ESP32-S3, 45 mA</td><td class="num">74 mA</td><td class="num">0,287 W</td><td class="num">8,3 / 8,9 Wh</td><td class="num">42 h</td><td class="num">40 dni</td></tr>
+<tr><td>ESP32-S3, 60 mA</td><td class="num">89 mA</td><td class="num">0,345 W</td><td class="num">9,9 / 10,7 Wh</td><td class="num">35 h</td><td class="num">34 dni</td></tr>
 </tbody></table></div>
 
-<p>Komplet czterech ogniw litowych AA przyjęto jako 4 × 4,5 Wh z wykorzystaniem 80%, co uwzględnia napięcie odcięcia i niską temperaturę. Ogniwa litowe Li-FeS2 znoszą lata przechowywania i pracę do −20 °C, więc nadają się do zestawu trzymanego w magazynie gminy. Ogniwa alkaliczne i NiMH tracą w −10…−20 °C około 50–80% pojemności: W23 i próba w −10 °C dotyczą wyłącznie ogniw Li-FeS2, a pozostałe ogniwa służą tylko awaryjnie. Progi napięcia ocenia się na filtrowanej średniej z okresów samego odbioru, bo impulsy TX chwilowo obniżają napięcie zimnych ogniw.</p>
+<p>Komplet czterech ogniw litowych AA przyjęto jako 4 × 4,5 Wh z wykorzystaniem 80%, co uwzględnia napięcie odcięcia i niską temperaturę. Ogniwa litowe Li-FeS2 znoszą lata przechowywania i pracę do −20 °C, więc nadają się do zestawu trzymanego w magazynie organizatora sieci. Ogniwa alkaliczne i NiMH tracą w −10…−20 °C około 50–80% pojemności: W23 i próba w −10 °C dotyczą wyłącznie ogniw Li-FeS2, a pozostałe ogniwa służą tylko awaryjnie. Progi napięcia ocenia się na filtrowanej średniej z okresów samego odbioru, bo impulsy TX chwilowo obniżają napięcie zimnych ogniw.</p>
 
 <p>W23 (≥48 h na ogniwach) dopuszcza w modelu średnio najwyżej około 64 mA z szyny 3,3 V. nRF52840 spełnia je z zapasem. ESP32-S3 spełnia je tylko przy średnim poborze MCU około 30 mA, czyli przy lekkim uśpieniu z odbiornikiem stale włączonym; przy prądzie aktywnym 45–60 mA daje 35–42 h. Cel dla wykonania B: ≤60 mA średnio z 3,3 V w pracy przekaźnika. Pomiar poboru w RX i TX rozstrzyga D14. Gdyby W23 nie zostało spełnione, możliwa jest przyszła wersja P1 z dłuższą preambułą, pozwalającą na nasłuch z próbkowaniem (<a href="../spec/radio.md">specyfikacja radia</a>).</p>
 
-<p>Dla porównania: wariant 0.4, w którym przekaźnik był laptopem z <code>rnsd</code>, potrzebował 788–2312 Wh na dobę. Stacja poziomu 1 zużywa w modelu od około 80 do 640 razy mniej energii. To zmienia planowanie sieci. Przekaźnik można postawić na dachu lub wyższym piętrze na ogniwach albo jednym akumulatorze i odwiedzać co kilka dni, a nie co dobę.</p>
+<p>Dla porównania: wariant 0.4, w którym przekaźnik był laptopem z <code>rnsd</code>, potrzebował 788–2312 Wh na dobę. Stacja poziomu 1 zużywa w modelu od około 80 do 650 razy mniej energii. To zmienia planowanie sieci. Przekaźnik można postawić na dachu lub wyższym piętrze na ogniwach albo jednym akumulatorze i odwiedzać co kilka dni, a nie co dobę.</p>
 
 <h2 id="energia-dwa-niezalezne-zasoby">Energia poziomu 3: dwa niezależne zasoby</h2>
 
 <p>Pula A/B zasila laptopa i router. Pobór samej stacji jest w niej pomijalny. Założenia <a href="../../software/reference/wyniki.json">modelu</a>: 35 W AC dla laptopa i routera, sprawność 0,85, 8 W poboru własnego przetwornicy i 1,7 W strat diod. Moc pobierana wynosi <code>35/0,85 + 8 + 1,7 = 50,88 W</code>. Laptop i router zużywają około 1221 Wh na dobę, a z rezerwą 20% około 1465 Wh.</p>
+
+<p>Poziom 3 zużywa razem z ładowaniem telefonów około 1840 Wh na dobę na schronienie (6–7 akumulatorów 60 Ah przy założonym wykorzystaniu 50%); planuje się go tylko tam, gdzie jest ładowanie i transport akumulatorów. Przy wdrożeniu domyślnym źródłem jest kupiona stacja zasilania z ładowarką USB z deklaracją UE (<a href="04-analiza-opcji.html#decyzje-wymagajace-porownania">rozdział 04</a>).</p>
 
 <p>Telefony: 50 × 5 Wh przy sprawności 0,8 = 312,5 Wh ze źródeł ładowarki; z rezerwą 375 Wh. 5 Wh na osobę to częściowe doładowanie, a nie pełne ładowanie każdego telefonu. Osiem portów daje maksymalnie 60 W na wyjściu. Pobór własny ładowarki i straty przewodów trzeba zmierzyć.</p>
 
@@ -208,7 +218,9 @@
 
 <p>Dobór oszczędnego hosta i pomiar poboru mają większy wpływ na zapas niż sama moc radia. Nie gwarantować 24 h dla dowolnego PC. Gdy energii brakuje, wyłącza się laptop i router; stacja poziomu 1 pracuje dalej z ogniw lub osobnego źródła 12 V. Gniazdo zapalniczki ogranicza prąd i możliwą moc AC. Nominalne 150 W wymaga odpowiednich zacisków oraz przewodów. Każde pojedyncze źródło A lub B musi samodzielnie utrzymać dozwolone obciążenie.</p>
 
-<p>Przekaźnik bez schronienia to sama stacja poziomu 1: 3,6–10,0 Wh na dobę z rezerwą. Miejsce przekaźnika może nie mieć opiekuna. Jeśli jest jedyną drogą schronienia do OSP, ma pierwszeństwo w energii (<a href="02-scenariusze-i-organizacja.html">rozdział 02</a>). Wymaga osobnego planu wymiany ogniw lub akumulatora i osoby odpowiedzialnej, ale nie wymiany źródeł co dobę. Budżet schronienia go nie obejmuje.</p>
+<p>Przekaźnik bez schronienia to sama stacja poziomu 1: 3,6–10,7 Wh na dobę z rezerwą (z ogniw 3,6–9,9 Wh, z 12 V 4,0–10,7 Wh). Miejsce przekaźnika może nie mieć opiekuna. Jeśli jest jedyną drogą schronienia do OSP, ma pierwszeństwo w energii (<a href="02-scenariusze-i-organizacja.html">rozdział 02</a>). Wymaga osobnego planu wymiany ogniw lub akumulatora i osoby odpowiedzialnej, ale nie wymiany źródeł co dobę. Budżet schronienia go nie obejmuje.</p>
+
+<p id="przekaznik-staly">Przekaźnik stały pracuje stale z zasilacza buforowego 13,8 V z akumulatorem (wyrób z deklaracją UE, jak w systemach alarmowych), zasilanego z sieci budynku, przez wejście 12 V stacji. Po zaniku 230 V działa z akumulatora bufora: przy założonym wykorzystaniu 50% pojemności akumulator 12 V 7 Ah wystarcza w modelu na około 255 h (nRF52840) albo 94 h (ESP32-S3, 60 mA), a 17 Ah na około 620 h albo 228 h. Wynik zależy od własnego poboru zasilacza buforowego, który trzeba doliczyć z jego karty katalogowej, i od temperatury akumulatora.</p>
 
 <h2 id="wykonanie-koszt-i-wielkosc-serii">Wykonanie, koszt i wielkość serii</h2>
 

@@ -1,5 +1,6 @@
 """Executable contract model for station prototype 0.5; not a radio driver."""
 
+import hashlib
 import json
 import math
 import re
@@ -10,7 +11,11 @@ from pathlib import Path
 
 MAX_DATAGRAM = 600
 CHUNK = 86
-MAX_CONTENT = 480
+MAX_CONTENT = 256
+TEXT_REJECTED_CATEGORIES = ("Cc", "Cf", "Cs", "Co", "Cn", "Zl", "Zp")
+TEXT_REJECTED_CHARS = ('"', "\\")
+QUARANTINE_PER_SENDER = 4
+QUARANTINE_TOTAL = 256
 PREFIX = bytes.fromhex("aa" * 8 + "d391d391")
 HEADER = struct.Struct(">BB8sBBH")
 
@@ -92,10 +97,15 @@ def _integer(value: object, low: int, high: int) -> None:
 
 
 def _text(value: object, maximum: int, minimum: int = 0) -> None:
+    """Accept NFC text within a UTF-8 byte limit, without quotes, backslashes or invisible code points."""
     if type(value) is not str or not minimum <= len(value.encode("utf-8")) <= maximum:
         raise ValueError("Invalid UTF-8 text size")
-    if any(unicodedata.category(c) in ("Cc", "Cf") for c in value):
-        raise ValueError("Control or format character")
+    if any(c in TEXT_REJECTED_CHARS for c in value):
+        raise ValueError("Quotation mark or backslash")
+    if any(unicodedata.category(c) in TEXT_REJECTED_CATEGORIES for c in value):
+        raise ValueError("Control, format, separator, private or unassigned character")
+    if unicodedata.normalize("NFC", value) != value:
+        raise ValueError("Text is not NFC")
 
 
 def validate_message(value: object) -> None:
@@ -176,70 +186,176 @@ def accept_from_osp(pinned: bytes, source: bytes, wire: bytes, signature_valid: 
     return value
 
 
-class OSPStore:
-    """Model atomic OSP reception, quarantine of unknown senders and ACK outbox creation."""
+def check_button_configuration(address: str, phrases: tuple[str, ...]) -> int:
+    """Model `configure`: reject an address or phrase if the worst button-made REQUEST exceeds MAX_CONTENT."""
+    worst = [1, 0, "f" * 32, 65535, 9, 999, address, "", 2]
+    size = len(encode_message(worst))
+    for phrase in phrases:
+        worst[7] = phrase
+        size = max(size, len(encode_message(worst)))
+    return size
 
-    def __init__(self, path: Path, trusted: tuple[bytes, ...] = ()):
-        """Open a test database with the specified SQLite durability settings and pinned shelters."""
+
+class RevokedSender(ValueError):
+    """A message from a revoked identity: rejected, counted, never quarantined."""
+
+
+class QuarantineFull(ValueError):
+    """A quarantine limit (per sender or in total) would be exceeded."""
+
+
+def _ack(mid: str, revision: int) -> bytes:
+    return encode_message([1, 1, mid, revision, 1, 1])
+
+
+class OSPStore:
+    """Model atomic OSP reception, per-message quarantine, revocation, ACK outbox and content purge."""
+
+    def __init__(self, path: Path, trusted: dict[bytes, bytes] | None = None):
+        """Open a test database with the specified SQLite durability settings and station cards (source -> public key)."""
         self.db = sqlite3.connect(path)
         self.db.execute("PRAGMA journal_mode=DELETE")
         self.db.execute("PRAGMA synchronous=FULL")
         self.db.executescript(Path(__file__).with_name("schema.sql").read_text())
         with self.db:
-            self.db.executemany("INSERT OR IGNORE INTO trusted VALUES(?)", [(s,) for s in trusted])
+            for source, pubkey in (trusted or {}).items():
+                self._insert_trusted(source, pubkey)
 
-    def _store(self, table: str, source: bytes, mid: str, revision: int, canonical: bytes) -> None:
-        """Insert one message key into a table; reject the same key with other content."""
+    def _insert_trusted(self, source: bytes, pubkey: bytes) -> None:
+        if len(source) != 16 or len(pubkey) != 64:
+            raise ValueError("Invalid station card")
+        if self.db.execute("SELECT 1 FROM revoked WHERE source=?", (source,)).fetchone() is not None:
+            raise RevokedSender("Revoked identity cannot be trusted again")
+        previous = self.db.execute("SELECT pubkey FROM trusted WHERE source=?", (source,)).fetchone()
+        if previous is not None and previous[0] != pubkey:
+            raise ValueError("Conflicting public key for a trusted station")
+        self.db.execute("INSERT OR IGNORE INTO trusted VALUES(?,?)", (source, pubkey))
+
+    def _check_key(self, table: str, source: bytes, mid: str, revision: int, digest: bytes) -> bool:
+        """Return True if the reception key exists with the same digest; raise on the same key with other content."""
         previous = self.db.execute(
-            f"SELECT payload FROM {table} WHERE source=? AND id=? AND revision=?",
-            (source, mid, revision),
+            f"SELECT sha256 FROM {table} WHERE source=? AND id=? AND revision=?", (source, mid, revision)
         ).fetchone()
-        if previous is not None and previous[0] != canonical:
+        if previous is not None and previous[0] != digest:
             raise ValueError("Conflicting request")
-        self.db.execute(f"INSERT OR IGNORE INTO {table} VALUES(?,?,?,?)", (source, mid, revision, canonical))
+        return previous is not None
+
+    def _accept(self, source: bytes, mid: str, revision: int, canonical: bytes, digest: bytes) -> bytes:
+        """Insert a request and its ACK in the current transaction; idempotent for the same reception key."""
+        if not self._check_key("received", source, mid, revision, digest):
+            self.db.execute("INSERT INTO received VALUES(?,?,?,?,?)", (source, mid, revision, digest, canonical))
+        ack = _ack(mid, revision)
+        self.db.execute("INSERT OR IGNORE INTO ack_outbox VALUES(?,?,?,?)", (source, mid, revision, ack))
+        return ack
 
     def receive(self, source: bytes, wire: bytes, signature_valid: bool, before_commit=None) -> bytes | None:
-        """Commit a verified REQUEST or TEST with its ACK; quarantine an unknown sender without ACK."""
+        """Commit a verified REQUEST or TEST with its ACK; quarantine an unknown sender without ACK.
+
+        Deduplication is by (source, id, revision, SHA-256 of canonical content); the same key with other content
+        is a conflict. A message already accepted (also after purge or single-message approval) returns its ACK.
+        A revoked sender is counted and rejected with RevokedSender; nothing is quarantined.
+        """
         if signature_valid is not True or len(source) != 16:
             raise ValueError("Unverified sender")
+        if self.db.execute("SELECT 1 FROM revoked WHERE source=?", (source,)).fetchone() is not None:
+            with self.db:
+                self.db.execute("UPDATE revoked SET rejected = rejected + 1 WHERE source=?", (source,))
+            raise RevokedSender("Revoked sender")
         value = decode_message(wire)
         if value[1] not in (0, 5):
             raise ValueError("Expected REQUEST or TEST")
         canonical = encode_message(value)
+        digest = hashlib.sha256(canonical).digest()
         _, _, mid, revision, *_ = value
-        ack = encode_message([1, 1, mid, revision, 1, 1])
         with self.db:
-            if self.db.execute("SELECT 1 FROM trusted WHERE source=?", (source,)).fetchone() is None:
-                self._store("quarantine", source, mid, revision, canonical)
-                if before_commit is not None:
-                    before_commit()
-                return None
-            self._store("received", source, mid, revision, canonical)
-            self.db.execute(
-                "INSERT OR IGNORE INTO ack_outbox VALUES(?,?,?,?)",
-                (source, mid, revision, ack),
-            )
+            trusted = self.db.execute("SELECT 1 FROM trusted WHERE source=?", (source,)).fetchone() is not None
+            if trusted or self._check_key("received", source, mid, revision, digest):
+                ack = self._accept(source, mid, revision, canonical, digest)
+            else:
+                ack = None
+                if not self._check_key("quarantine", source, mid, revision, digest):
+                    per_sender, total = self.db.execute(
+                        "SELECT sum(source=?), count(*) FROM quarantine", (source,)).fetchone()
+                    if (per_sender or 0) >= QUARANTINE_PER_SENDER or total >= QUARANTINE_TOTAL:
+                        raise QuarantineFull("Quarantine limit reached")
+                    self.db.execute("INSERT INTO quarantine VALUES(?,?,?,?,?)",
+                                    (source, mid, revision, digest, canonical))
             if before_commit is not None:
                 before_commit()
         return ack
 
-    def approve(self, source: bytes) -> list[bytes]:
-        """Record the duty officer's approval; move quarantined messages to requests with ACKs atomically."""
+    def approve_message(self, source: bytes, mid: str, revision: int) -> bytes:
+        """Duty officer approves one quarantined message: move it to received with its ACK atomically.
+
+        The sender is not added to trusted stations; its next message is quarantined again.
+        """
+        with self.db:
+            row = self.db.execute(
+                "SELECT sha256, payload FROM quarantine WHERE source=? AND id=? AND revision=?",
+                (source, mid, revision),
+            ).fetchone()
+            if row is None:
+                raise ValueError("No such quarantined message")
+            ack = self._accept(source, mid, revision, row[1], row[0])
+            self.db.execute("DELETE FROM quarantine WHERE source=? AND id=? AND revision=?", (source, mid, revision))
+        return ack
+
+    def add_trusted(self, source: bytes, pubkey: bytes, approvers: tuple[str, str]) -> None:
+        """Add a station from its card (64 B public key) with the consent of two different people."""
+        if (len(approvers) != 2 or any(type(a) is not str or not a.strip() for a in approvers)
+                or approvers[0].strip() == approvers[1].strip()):
+            raise ValueError("Two different approvers required")
+        with self.db:
+            self._insert_trusted(source, pubkey)
+
+    def revoke(self, source: bytes) -> None:
+        """Mark an identity as revoked: drop trust and its quarantine; later messages are rejected and counted."""
         if len(source) != 16:
             raise ValueError("Invalid sender")
-        acks = []
         with self.db:
-            self.db.execute("INSERT OR IGNORE INTO trusted VALUES(?)", (source,))
-            rows = self.db.execute(
-                "SELECT id, revision, payload FROM quarantine WHERE source=? ORDER BY id, revision", (source,)
-            ).fetchall()
-            for mid, revision, canonical in rows:
-                self._store("received", source, mid, revision, canonical)
-                ack = encode_message([1, 1, mid, revision, 1, 1])
-                self.db.execute("INSERT OR IGNORE INTO ack_outbox VALUES(?,?,?,?)", (source, mid, revision, ack))
-                acks.append(ack)
+            self.db.execute("INSERT OR IGNORE INTO revoked(source) VALUES(?)", (source,))
+            self.db.execute("DELETE FROM trusted WHERE source=?", (source,))
             self.db.execute("DELETE FROM quarantine WHERE source=?", (source,))
-        return acks
+
+    def rejected_count(self, source: bytes) -> int:
+        """Messages rejected from a revoked identity (diagnostics and possible takeover alarm)."""
+        row = self.db.execute("SELECT rejected FROM revoked WHERE source=?", (source,)).fetchone()
+        return 0 if row is None else row[0]
+
+    def send_reply(self, dest: bytes, mid: str, revision: int, event: int, text: str) -> bytes:
+        """Record a REPLY to an accepted request and return its SA1 content."""
+        wire = encode_message([1, 3, mid, revision, event, text])
+        with self.db:
+            if self.db.execute("SELECT 1 FROM received WHERE source=? AND id=? AND revision=?",
+                               (dest, mid, revision)).fetchone() is None:
+                raise ValueError("No accepted request")
+            self.db.execute("INSERT INTO replies VALUES(?,?,?,?,?)", (dest, mid, revision, event, text))
+        return wire
+
+    def send_status(self, dest: bytes, mid: str, revision: int, event: int, state: int) -> bytes:
+        """Record a STATUS after an accepted request; state 5 requires an existing REPLY for this id (U10)."""
+        wire = encode_message([1, 2, mid, revision, event, state])
+        with self.db:
+            if self.db.execute("SELECT 1 FROM received WHERE source=? AND id=? AND revision=?",
+                               (dest, mid, revision)).fetchone() is None:
+                raise ValueError("No accepted request")
+            if state == 5 and self.db.execute("SELECT 1 FROM replies WHERE dest=? AND id=?",
+                                              (dest, mid)).fetchone() is None:
+                raise ValueError("State 5 requires a REPLY with instructions")
+            row = self.db.execute("SELECT event, state FROM statuses WHERE dest=? AND id=? AND revision=?",
+                                  (dest, mid, revision)).fetchone()
+            current = row if row is not None else (1, 1)
+            new_event, new_state = status_after(current[0], current[1], event, state)
+            self.db.execute("INSERT OR REPLACE INTO statuses VALUES(?,?,?,?,?)",
+                            (dest, mid, revision, new_event, new_state))
+        return wire
+
+    def purge_content(self) -> None:
+        """CLOSE EVENT (S15): delete message content and quarantine; keep identities and reception keys with digests."""
+        with self.db:
+            self.db.execute("UPDATE received SET payload=NULL")
+            self.db.execute("UPDATE replies SET text=NULL")
+            self.db.execute("DELETE FROM quarantine")
 
     def close(self) -> None:
         """Close the model database after a test."""

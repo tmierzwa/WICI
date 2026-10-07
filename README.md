@@ -2,15 +2,15 @@
 
 <h1 align="center">Łączność awaryjna, gdy milkną telefony</h1>
 
-Gdy przez wiele godzin nie ma prądu, zasięgu komórkowego ani internetu, ludzie w schronieniu nie mają jak powiedzieć gminie, że potrzebują lekarza, wody albo transportu. WICI to otwarty, społeczny projekt prostej stacji radiowej, która pozwala przekazać takie zgłoszenie i dostać odpowiedź.
+Gdy przez wiele godzin nie ma prądu, zasięgu komórkowego ani internetu, ludzie w schronieniu nie mają jak powiedzieć służbom, że potrzebują lekarza, wody albo transportu. WICI to otwarty, społeczny projekt prostej stacji radiowej, która pozwala przekazać takie zgłoszenie i dostać odpowiedź.
 
-**Włączam stację, wystawiam antenę i jestem w sieci.** Antenę montuje się wcześniej, a sieć sprawdza w terenie razem z gminą, zanim przyjdzie kryzys.
+**Włączam stację, wystawiam antenę i jestem w sieci.** Antenę montuje się wcześniej, a sieć sprawdza w terenie razem ze służbami, zanim przyjdzie kryzys.
 
-- **Sama stacja** to małe pudełko z ekranem, kilkoma przyciskami i bateriami AA. Opiekun schronienia wybiera, czego brakuje i ilu osób to dotyczy, a stacja wysyła krótką wiadomość do punktu przyjmującego zgłoszenia w gminie. W dokumentach ten punkt nazywamy OSP. Na ekranie widać, czy zgłoszenie dotarło i czy ktoś je przeczytał.
+- **Sama stacja** to małe pudełko z ekranem, kilkoma przyciskami i bateriami AA. Opiekun schronienia wybiera, czego brakuje i ilu osób to dotyczy, a stacja wysyła krótką wiadomość do punktu, który przyjmuje zgłoszenia i przekazuje je służbom. W dokumentach ten punkt nazywamy OSP, bo prawdopodobnie Straż będzie często pełnić tę rolę. Na ekranie widać, czy zgłoszenie dotarło i czy ktoś je przeczytał.
 - **Każda włączona stacja przekazuje dalej wiadomości sąsiadów**, więc sieć sięga dalej niż pojedyncze radio.
 - **Później można dołączyć stary laptop**, który daje wygodniejszy panel, oraz **domowy router**: wtedy mieszkańcy zgłaszają potrzeby zwykłą stroną w telefonie, bez instalowania aplikacji.
 
-Stacja działa na wolnym paśmie 869,525 MHz, ma pracować co najmniej dwie doby na bateriach AA i kilka tygodni z akumulatora 12 V. WICI nie zastępuje służb ani numeru 112. Ma być uzupełnieniem gminnego systemu ochrony ludności, przygotowanym razem z gminą przed kryzysem, a nie w jego trakcie.
+Stacja nadaje na częstotliwości 869,525 MHz, dostępnej bez pozwolenia radiowego, ma pracować co najmniej dwie doby na bateriach AA i kilka tygodni z akumulatora 12 V. WICI nie zastępuje służb ani numeru 112. Ma uzupełniać lokalny system ochrony ludności i być przygotowana razem ze służbami przed kryzysem, a nie w jego trakcie.
 
 ## Gdzie jesteśmy
 
@@ -34,7 +34,7 @@ Pełna lista prób jest w [warunkach odbioru](docs/spec/odbior.md), a otwarte sp
 Szukamy osób, które znają się na:
 - **radiu i elektronice:** pomiary, anteny, projekt płytki stacji;
 - **oprogramowaniu układowym:** nRF52840, ESP32-S3, microReticulum;
-- **ochronie ludności i pracy gminy:** czy to rozwiązanie pasuje do rzeczywistych procedur;
+- **ochronie ludności i pracy służb:** czy to rozwiązanie pasuje do rzeczywistych procedur;
 - **testach w terenie:** łączność radiowa, krótkofalarstwo;
 - **prostym językiem i tłumaczeniami:** zwłaszcza na ukraiński.
 
@@ -70,6 +70,6 @@ Projekt jest niekomercyjny i otwarty. Kod jest na licencji MIT, konstrukcja na C
 
 ## In English
 
-WICI is a community, open-source design for an emergency radio station for shelters, for when power, mobile networks and the internet are down. The station is a small box with a screen, buttons and AA cells. It sends short requests for help to the municipal crisis desk over a licence-free 869.525 MHz radio and relays its neighbours' traffic whenever it is on. A laptop and a Wi-Fi router can be added later for a fuller panel and a web page for residents' phones.
+WICI is a community, open-source design for an emergency radio station for shelters, for when power, mobile networks and the internet are down. The station is a small box with a screen, buttons and AA cells. It sends short requests for help to emergency services over a licence-free 869.525 MHz radio and relays its neighbours' traffic whenever it is on. A laptop and a Wi-Fi router can be added later for a fuller panel and a web page for residents' phones.
 
 The project is at the **prototype design stage (0.5)**: nothing has been built or field-tested yet. It is currently run by one person with AI assistance, and help is very welcome, especially with radio, firmware, civil protection and field testing. Documentation is in Polish; issues and pull requests in English are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md#in-english).
