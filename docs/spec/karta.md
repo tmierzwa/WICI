@@ -60,4 +60,4 @@ Formularz zgłoszenia wypełnia się w dwóch egzemplarzach: jeden zostaje przy 
 
 ## Dostępność karty
 
-Karta: duża czcionka bezszeryfowa, wysoki kontrast, piktogramy kategorii jak na ekranie, kroki strony 1 numerowane. Ekran stacji: wysokość wersalików ≥4 mm, najwyżej 5 wierszy, wysoki kontrast. Osoby niewidome nie obsługują stacji samodzielnie; zgłaszają przez opiekuna (zdanie na stronie 2).
+Karta: duża czcionka bezszeryfowa, wysoki kontrast, piktogramy kategorii jak na ekranie, kroki strony 1 numerowane. Ekran stacji: wysokość wersalików ≥3,5 mm, najwyżej 5 wierszy, wysoki kontrast. Osoby niewidome nie obsługują stacji samodzielnie; zgłaszają przez opiekuna (zdanie na stronie 2).

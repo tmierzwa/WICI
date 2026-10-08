@@ -59,7 +59,7 @@ Stany na ekranie:
 | „ODBIORCA NIE MOŻE TERAZ POMÓC – CZYTAJ ODPOWIEDŹ” | dyżurny nie ma teraz środków | przeczytaj odpowiedź w WIADOMOŚCI i wykonaj instrukcję |
 | „ZAMKNIĘTE” | sprawa zakończona | wpisz do dziennika |
 
-Zmiana potrzeby: WIADOMOŚCI → własne zgłoszenie → „ZMIEŃ LICZBĘ OSÓB”, „ZMIEŃ PILNOŚĆ” albo „POTRZEBA USTAŁA”. Każda zmiana jest nową wersją tego samego zgłoszenia, z tym samym krótkim numerem. „ANULUJ WYSYŁKĘ” działa tylko przed „ODBIORCA ZAPISAŁ”; później użyj „POTRZEBA USTAŁA”, bo odbiorca o anulowaniu by się nie dowiedział.
+Zmiana potrzeby: WIADOMOŚCI → własne zgłoszenie → „ZMIEŃ LICZBĘ OSÓB”, „ZMIEŃ PILNOŚĆ” albo „POTRZEBA USTAŁA”. Każda zmiana jest nową wersją tego samego zgłoszenia, z tym samym krótkim numerem. „ANULUJ WYSYŁKĘ” jest w menu tylko, dopóki stacja zgłoszenia ani razu nie wysłała (od utworzenia ekran pokazuje „ZAPISANE W STACJI” albo w ciszy radiowej „ZAPISANE – NIE WYJDZIE DO KOŃCA CISZY”); potem znika z menu, także po kolejnych zmianach, później użyj „POTRZEBA USTAŁA”, bo zgłoszenie mogło już dotrzeć, a odbiorca o anulowaniu by się nie dowiedział.
 
 Krótki numer i nazwa stacji `WICI-xxxxxx` (STAN) jednoznacznie wskazują zgłoszenie. Podawaj je gońcowi i w rozmowie przez PMR446.
 

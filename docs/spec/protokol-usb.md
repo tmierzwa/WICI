@@ -41,7 +41,7 @@ Każdy wiersz w obu kierunkach:
 | `type` | ciąg | typ wiadomości z tabel niżej |
 | `re` | liczba | tylko w odpowiedzi: `seq` polecenia, na które odpowiada |
 
-**Wersje.** Każda zmiana schematu, nowe pole albo nowy typ oznacza nową wersję. Stacja przyjmuje tylko wersje z listy w `hello`; inna wersja w poleceniu daje `rejected` z `contract`, a stacja nie zmienia stanu. Laptop, który nie zna żadnej wersji z listy, pokazuje „niezgodna wersja stacji” i nie wysyła poleceń.
+**Wersje.** Każda zmiana schematu, nowe pole albo nowy typ oznacza nową wersję. Wyjątek: wersja 2 jest projektem do pierwszej implementacji (stanowisko deweloperskie ma `"usb":1`), więc do tego czasu poprawki tego rozdziału jej numeru nie zmieniają. Stacja przyjmuje tylko wersje z listy w `hello`; inna wersja w poleceniu daje `rejected` z `contract`, a stacja nie zmienia stanu. Laptop, który nie zna żadnej wersji z listy, pokazuje „niezgodna wersja stacji” i nie wysyła poleceń.
 
 ## Polecenia laptopa
 
@@ -51,7 +51,7 @@ Każdy wiersz w obu kierunkach:
 | `ack` | `epoch`, `cursor` | każdy | brak | `cursor` (zbiorczo) |
 | `snapshot` | `epoch` | każdy | `snap_begin`, `snap`…, `snap_end` | sesja |
 | `submit` | `id`, `revision`, `sa1` | zwykły | `stored` albo `rejected` | (`id`, `revision`) |
-| `cancel` | `id` | zwykły | `ok` albo `rejected`; dla zwolnionego `id` `ok` z `"released":true` | `id` |
+| `cancel` | `id` | zwykły | `ok` albo `rejected`; dla zwolnionego `id` `ok` z `"released":true`, gdy wpis zwolniono jako anulowany, inaczej `too_late` | `id` |
 | `test` | `nonce` | zwykły | `stored` albo `rejected` | `nonce` |
 | `announce` | brak | zwykły | `ok` albo `rejected` | łączone w 30 s |
 | `silence` | `on`, opcjonalnie `exception_id` | zwykły | `pending`, potem `ok` albo `rejected` | stan docelowy |
@@ -76,11 +76,11 @@ Każdy wiersz w obu kierunkach:
 - ta sama `revision` i ta sama treść: `stored` z `"duplicate":true`; inna treść: `conflict`;
 - `revision` mniejsza od najnowszej: `stale`;
 - zgłoszenie zamknięte lokalnie (anulowane): `closed`;
-- `id` z wpisem zwolnionym z rejestru (w pamięci zwolnionych wpisów, [pamięć FRAM](oprogramowanie.md#pamięć-fram)): ta sama `revision` daje `stored` z `"duplicate":true` i `"released":true`, większa `closed`, mniejsza `stale`. Stacja nigdy nie tworzy ponownie wpisu dla `id` z tej pamięci.
+- `id` z wpisem zwolnionym z rejestru (w pamięci zwolnionych wpisów, [pamięć FRAM](oprogramowanie.md#pamięć-fram)): ta sama `revision` daje `stored` z `"duplicate":true` i `"released":true`, większa `closed`, mniejsza `stale`. Pamięć zwolnionych wpisów nie przechowuje treści, więc odpowiedź `released` potwierdza tylko, że klucz (`id`, `revision`) był zapisany; zgodności przesłanej treści stacja wtedy nie sprawdza i nie odpowiada `conflict`. Laptop ponawia zawsze treść ze swojej intencji, więc w poprawnym działaniu treść jest ta sama. Stacja nigdy nie tworzy ponownie wpisu dla `id` z tej pamięci.
 
 Odpowiedź `stored`: `{"id":…,"revision":…,"number":"0427","duplicate":false}`; `number` to krótki numer zgłoszenia.
 
-**`cancel`** (ANULUJ WYSYŁKĘ z panelu) działa tylko przed pierwszym RECEIVED dla `id`; później `too_late`, a panel proponuje rewizję „potrzeba ustała”.
+**`cancel`** (ANULUJ WYSYŁKĘ z panelu) działa tylko, dopóki żadna rewizja `id` nie została przekazana do LXMF ([cykl życia](oprogramowanie.md#cykl-życia-zgłoszenia)); później `too_late`, a panel proponuje rewizję „potrzeba ustała”.
 
 **`test`** tworzy TEST jak z menu stacji. `nonce` (16 cyfr szesnastkowych losowanych przez laptop) chroni przed podwójnym TEST przy powtórzeniu polecenia: stacja pamięta ostatnie 8 wartości `nonce` z `id` utworzonego TEST i na powtórzenie odpowiada tym samym `stored`.
 
@@ -92,7 +92,7 @@ Odpowiedź `stored`: `{"id":…,"revision":…,"number":"0427","duplicate":false
 
 | `type` | Pola | Kiedy |
 |---|---|---|
-| `hello` | `boot`, `contracts` (lista obsługiwanych wersji), `name`, `fw`, `role` (`stacja` albo `wezel`), `prep`, `configured`, `epoch`, `head`, `min`, `migration` | pierwszy wiersz po otwarciu portu; także po `rejected` z `contract` |
+| `hello` | `boot`, `contracts` (lista obsługiwanych wersji), `name`, `lxmf` (adres LXMF stacji, 32 cyfry szesnastkowe; pusty w konfiguracji węzła stanowiska i przed pierwszą konfiguracją), `fw`, `role` (`stacja` albo `wezel`), `prep`, `configured`, `epoch`, `head`, `min`, `migration` | pierwszy wiersz po otwarciu portu; także po `rejected` z `contract` |
 | `sync_ok` | `re`, `epoch`, `from`, `head` | kursor laptopa mieści się w pierścieniu; stacja zaczyna wysyłać zdarzenia od `from` |
 | `snap_required` | `re`, `epoch`, `head`, `min`, `reason` (`epoch`, `gap`, `ahead`) | kursor laptopa nie pozwala na przyrostową synchronizację |
 | `snap_begin`, `snap`, `snap_end` | migawka ([synchronizacja](#synchronizacja)) | odpowiedź na `snapshot` |
@@ -111,7 +111,7 @@ Pola `hello`: `epoch` to bieżąca epoka pierścienia zdarzeń, `head` numer ost
 | `role`, `prep`, `configured`, `config_seq`, `fw`, `secure_version`, `fram_format` | rola, tryb przygotowania, konfiguracja i wersje (`fram_format`: [wersja formatu FRAM](oprogramowanie.md#aktualizacja-oprogramowania-stacji)) |
 | `uptime` | licznik czasu pracy w sekundach ([czas](oprogramowanie.md#czas)) |
 | `register`, `intents`, `inbox`, `unread` | zajęte wpisy rejestru (z 256), aktywne intencje, zajęte gniazda skrzynki (z 128), nieprzeczytane wiadomości |
-| `receiver`, `last_contact`, `last_contact_lower` | aktywna tożsamość odbiorcy (`main`, `backup`); sekundy czasu pracy od ostatniej przyjętej wiadomości odbiorcy albo `null`, a `last_contact_lower` = `true`, gdy to dolne oszacowanie po restarcie |
+| `receiver`, `last_contact`, `last_contact_lower` | aktywna tożsamość odbiorcy (`main`, `backup`); sekundy czasu dla obsługi ([czas](oprogramowanie.md#czas)) od ostatniej przyjętej wiadomości odbiorcy albo `null`, a `last_contact_lower` = `true`, gdy to dolne oszacowanie po restarcie |
 | `silence`, `silence_source`, `exception_id` | cisza radiowa jak w zdarzeniu `radio` |
 | `power` | `source`, `mv_aa`, `mv_12v`, `alarm` jak w zdarzeniu `power` |
 | `migration`, `mid` | stan przeniesienia i jego identyfikator (pusty poza przeniesieniem) |
@@ -128,7 +128,7 @@ Pola `hello`: `epoch` to bieżąca epoka pierścienia zdarzeń, `head` numer ost
 | `power` | `source` (`aa`, `12v`), `mv_aa`, `mv_12v`, `alarm` (`none`, `wymien_ogniwa`, `odlaczone_12v`) | zmiana źródła albo alarm energii |
 | `station` | `what` (`restart`, `config`, `receiver_backup`, `prep`), `detail` | restart (z przyczyną), nowa konfiguracja, przełączenie na KLUCZ ZAPASOWY, tryb przygotowania |
 
-`at` to czas pracy stacji w sekundach ([czas](oprogramowanie.md#czas)), nie czas kalendarzowy.
+`at` to czas dla obsługi w sekundach ([czas](oprogramowanie.md#czas)), nie czas kalendarzowy; po restarcie może się cofnąć o ≤60 s względem zdarzeń sprzed restartu.
 
 **Odmowy** (`reason`): `contract`, `too_long`, `seq`, `unknown_type`, `invalid`, `role`, `prep_required`, `not_configured`, `full`, `numer_zajety`, `conflict`, `stale`, `closed`, `too_late`, `memory`, `not_confirmed`, `silence_switch`, `busy`, `size`, `hash`, `signature`, `version`, `format`, `migration`. Znaczenie dla panelu i ekranu:
 
@@ -168,7 +168,7 @@ Laptop zapisuje przy każdym niepotwierdzonym `submit` epokę i swój kursor (`e
 
 Migawka zawiera zwolnione wpisy jako wiersze `{"item":"released","id":…,"revision":…,"ev":…,"number":…}`, a `snap_begin` pole `tomb_floor`. Krótki numer zwolnionego wpisu pozostaje zajęty, dopóki wpis jest w pamięci zwolnionych wpisów.
 
-**`test` i `cancel`.** Wpis TEST w rejestrze przechowuje `nonce`, a zdarzenie `own` i wiersz `snap` TEST mają pole `nonce`; laptop rozpoznaje więc zapis po `nonce` tak jak `submit` po `id`. Po zwolnieniu wpisu TEST pamięć 8 ostatnich `nonce` nie wystarcza do rozstrzygnięcia, więc przy luce laptop nie ponawia TEST automatycznie, tylko pokazuje wynik „nieznany”; podwójny TEST jest nieszkodliwy, a brakujący opiekun widzi na ekranie stacji. `cancel` jest bezpieczny do ponowienia zawsze: dla wpisu anulowanego daje `ok`, dla zwolnionego `id` `ok` z `"released":true`, a po RECEIVED `too_late`.
+**`test` i `cancel`.** Wpis TEST w rejestrze przechowuje `nonce`, a zdarzenie `own` i wiersz `snap` TEST mają pole `nonce`; laptop rozpoznaje więc zapis po `nonce` tak jak `submit` po `id`. Po zwolnieniu wpisu TEST pamięć 8 ostatnich `nonce` nie wystarcza do rozstrzygnięcia, więc przy luce laptop nie ponawia TEST automatycznie, tylko pokazuje wynik „nieznany”; podwójny TEST jest nieszkodliwy, a brakujący opiekun widzi na ekranie stacji. `cancel` jest bezpieczny do ponowienia zawsze: dla wpisu anulowanego daje `ok`, dla `id` zwolnionego jako anulowany `ok` z `"released":true` (pamięć zwolnionych wpisów ma znacznik anulowania), a dla zgłoszenia, które stacja już nadała, także zwolnionego, `too_late`.
 
 ## Synchronizacja
 
@@ -191,7 +191,7 @@ Kursor nie jest numerem rekordu FRAM, więc porządkowanie pamięci stacji go ni
 
 **Migawka.** Na `snapshot` stacja wysyła `snap_begin` (`epoch`, `head`, `count`, `tomb_floor`), potem po jednym wierszu `snap` na każdy wpis rejestru zgłoszeń, każdy zwolniony wpis i każdą wiadomość skrzynki, potem `snap_end` (`epoch`, `head`). Wiersz `snap` zgłoszenia: `{"item":"request","id":…,"revision":…,"sa1":[…],"stage":…,"decision":…,"decision_rev":…,"status_event":…,"reply_event":…,"number":…}`; wiadomości: `{"item":"msg","msg":…,"from":…,"received_at":…,"read":…,"sa1":[…]}`. Migawkę stacja buduje z jednego, spójnego stanu: zmiany w czasie migawki dostają zwykłe zdarzenia z `ev` > `head`. Laptop stosuje migawkę w jednej transakcji SQLite dopiero po `snap_end`: zastępuje kopię stanu stacji, zachowuje własne dane mieszkańców i ustawia kursor (`epoch`, `head`). Przerwana migawka nie zmienia bazy laptopa.
 
-**Powiązanie laptopa ze stacją.** Baza laptopa zapisuje nazwę i adres LXMF stacji z pierwszego `hello` po konfiguracji. Stacja o innym adresie wymaga potwierdzenia w panelu („inna stacja”) i zawsze migawki; dane mieszkańców pozostają przy zgłoszeniach, które już mają `id` SA1 tej drugiej stacji, tylko jako historia.
+**Powiązanie laptopa ze stacją.** Baza laptopa zapisuje nazwę i adres LXMF stacji (pola `name` i `lxmf`) z pierwszego `hello` po konfiguracji. Stacja o innym adresie wymaga potwierdzenia w panelu („inna stacja”) i zawsze migawki; dane mieszkańców pozostają przy zgłoszeniach, które już mają `id` SA1 tej drugiej stacji, tylko jako historia.
 
 ## Transfery dzielone na części
 
@@ -199,15 +199,15 @@ Dane większe niż jeden wiersz przechodzą przez transfer: konfiguracja (`confi
 
 | `op` | Kierunek | Pola `xfer_begin` | Największy rozmiar | Zatwierdzenie |
 |---|---|---|---|---|
-| `configure` | do stacji | `size`, `sha256` | 8 KiB | pełna kontrola i zapis w drugiej kopii konfiguracji, przełączenie kopii zwykłą transakcją wskaźnika ([zapis kopii A/B](oprogramowanie.md#zapisy-większe-niż-transakcja); konfiguracja nigdy nie jest łączona z poprzednią) |
+| `configure` | do stacji | `size`, `sha256` | 7680 B (kopia konfiguracji 8 KiB z narzutem, [pamięć FRAM](oprogramowanie.md#pamięć-fram)) | pełna kontrola i zapis w drugiej kopii konfiguracji, przełączenie kopii zwykłą transakcją wskaźnika ([zapis kopii A/B](oprogramowanie.md#zapisy-większe-niż-transakcja); konfiguracja nigdy nie jest łączona z poprzednią) |
 | `import` | do stacji | `size`, `sha256`, `mid` | 256 KiB | według [przeniesienia](#przeniesienie-stacji) |
 | `firmware` | do stacji | `size`, `sha256`, `version` | rozmiar gniazda obrazu ([aktualizacja](oprogramowanie.md#aktualizacja-oprogramowania-stacji)) | sprawdzenie podpisu, wersji i obsługiwanego formatu FRAM (`format`), oznaczenie gniazda jako oczekującego |
 | `export` | ze stacji | `target_key`, `mid` | 256 KiB | według [przeniesienia](#przeniesienie-stacji) |
-| `config_get` | ze stacji | brak | 8 KiB | – |
+| `config_get` | ze stacji | brak | 7680 B | – |
 
 Zapis: `xfer_begin` → `ok` z `xfer` (8 cyfr szesnastkowych) i `"max_part":512`; potem `xfer_part` z kolejnymi `offset` od 0 (`offset` musi być równy `next` z poprzedniej odpowiedzi; część powtórzona z mniejszym `offset` i tą samą treścią daje `ok`, z inną treścią `invalid`); na końcu `xfer_commit`. Stacja sprawdza łączny rozmiar (`size`) i SHA-256 (`hash`), potem treść; każdy błąd daje `rejected` i zostawia poprzedni stan bez zmian. Odczyt: `xfer_begin` → `ok` z `xfer`, `size` i `sha256`; potem `xfer_read` → `data` z `offset` i `data`.
 
-**Dokument `configure`** to obiekt JSON z kompletną konfiguracją:
+**Dokument `configure`** to obiekt JSON z kompletną konfiguracją, kodowany jak wiersze protokołu (UTF-8, bez sekwencji `\u`), więc limit 7680 B mieści konfigurację największą według tabeli (około 4,5 KB):
 
 | Pole | Typ i limit | Znaczenie |
 |---|---|---|
@@ -243,8 +243,8 @@ PRZENIEŚ STACJĘ przenosi tożsamość, licznik czasu pracy, konfigurację, rej
 | `status` | każda | brak | `ok` z `migration`, `mid`, `eph` (źródłowa w stanie `export`), `package` (skrót paczki albo pusty) |
 | `retire` | źródłowa | `mid`, `confirm` | `ok` z `confirm` |
 | `activate` | docelowa | `mid` i `confirm` albo `"forced":true` | przy `forced` najpierw `pending`; `ok`; stacja pamięta `mid` ostatniego zakończonego przeniesienia, więc powtórzenie daje `ok` z `"duplicate":true` |
-| `abort` | docelowa | `mid`, `eph` (pusty przed krokiem 2) | przy stanie `imported` najpierw `pending`; `ok` z `confirm` = potwierdzenie „aborted”, a przy pustym `eph` `ok` bez `confirm` |
-| `abort` | źródłowa | `mid` i `confirm` albo `"forced":true` | przy `forced` najpierw `pending`; `ok` |
+| `abort` | docelowa | `mid`, `eph` (pusty przed krokiem 2) | przy stanie `imported` najpierw `pending`; `ok` z `confirm` = potwierdzenie „aborted”, a przy pustym `eph` `ok` bez `confirm`. Stacja zapisuje w FRAM wynik (`mid`, `confirm`) w tej samej transakcji, w której usuwa dane importu i klucz prywatny przeniesienia, więc ponowiony `abort` z tym samym `mid` zwraca to samo potwierdzenie |
+| `abort` | źródłowa | `mid` i `confirm` albo `"forced":true` | przy `forced` najpierw `pending`; `ok`; stacja pamięta `mid` ostatniego wycofanego przeniesienia, więc ponowienie po utracie odpowiedzi daje `ok` z `"duplicate":true` |
 
 Nieznany `mid` albo krok niezgodny ze stanem daje `migration`, błędne potwierdzenie `signature`. Paczka: nagłówek (wersja, `mid`, skrót tożsamości, `eph`, skrót paczki), potem części po 512 B, każda szyfrowana AEAD (ChaCha20-Poly1305) kluczem HKDF-SHA-256(X25519(`eph`, `target_key`), „WICI migrate pkg” ‖ `mid`), oddzielonym od `k` innym ciągiem HKDF, z numerem części w nonce. Stacja źródłowa w stanie `export` nie zmienia danych, więc może wydać tę samą paczkę ponownie. Paczka nigdy nie zawiera jawnego klucza prywatnego. Licznik czasu pracy stacji docelowej przyjmuje większą z dwóch wartości ([czas](oprogramowanie.md#czas)).
 

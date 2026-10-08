@@ -18,8 +18,9 @@ Stan zgłoszenia nie jest obietnicą przyjazdu. WICI nie zastępuje numeru 112: 
 1. Sprawdź, czy stacja stanowiska jest włączona i podłączona do anteny, zasilania i komputera. Ekran stacji pokazuje „RADIO WŁĄCZONE” i „KOMPUTER [czas] TEMU”; „BRAK KOMPUTERA” znaczy, że komputer nie przesłał jeszcze żadnego pakietu.
 2. Aplikacja stanowiska pracuje bez przerwy od początku zdarzenia; panel pokazuje to po zalogowaniu. Tylko gdy aplikacja nie działa (początek zdarzenia, po awarii lub restarcie komputera), włącz komputer z podłączonym nośnikiem stanowiska i uruchom aplikację. Aplikacja pyta o hasło stanowiska z numerowanej, zaklejonej koperty przy stanowisku. Numer otwartej koperty wpisz do dziennika; hasło zmienia potem osoba utrzymująca system.
 3. Zaloguj się do panelu własnym kontem. Każde działanie trafia do dziennika działań pod Twoim kontem; nie pracuj na cudzym.
-4. Sprawdź w panelu stan węzła: połączenie ze stacją, czas od ostatniego pakietu z radia, intencje w drodze i w oczekiwaniu. Długi czas bez ruchu nie jest awarią, jeśli schronienia nie wysyłają zgłoszeń.
-5. Przeczytaj przekazanie zmiany: otwarte zgłoszenia, sprawy przekazane bez potwierdzenia skierowania pomocy, niewysłane odpowiedzi, kwarantannę i godzinę ostatniej kopii bazy.
+4. Porównaj zegar komputera z telefonem w sieci komórkowej; przy różnicy ponad 1 min ustaw zegar według instrukcji i wpisz to do dziennika. Od zegara zależy numeracja decyzji wysyłanych do schronień.
+5. Sprawdź w panelu stan węzła: połączenie ze stacją, czas od ostatniego pakietu z radia, intencje w drodze i w oczekiwaniu. Długi czas bez ruchu nie jest awarią, jeśli schronienia nie wysyłają zgłoszeń.
+6. Przeczytaj przekazanie zmiany: otwarte zgłoszenia, sprawy przekazane bez potwierdzenia skierowania pomocy, niewysłane odpowiedzi, kwarantannę i godzinę ostatniej kopii bazy.
 
 ## Zgłoszenie i decyzja
 
@@ -76,7 +77,7 @@ Przed zejściem ze zmiany otwórz w panelu przekazanie zmiany i wykonaj kopię b
 | komputer zawiesił się lub nie startuje | sieć dalej przekazuje ruch, a schronienia ponawiają zgłoszenia. Przełóż nośnik stanowiska do komputera zapasowego, uruchom aplikację z hasłem stanowiska i zaloguj się; cel: ≤15 min. Zaległe zgłoszenia przyjdą same; aplikacja nie przyjmie ich dwa razy |
 | ekran stacji pokazuje „BRAK KOMPUTERA” albo „KOMPUTER [czas] TEMU” z czasem ponad 8 h (komputer ogłasza adres co 6 h ±20%, więc krótsza cisza jest normalna) | sprawdź przewód USB i to, czy aplikacja działa; panel pokazuje wtedy brak połączenia ze stacją |
 | stacja stanowiska uszkodzona | podłącz stację zapasową do tej samej anteny, zasilania i przewodu USB. Tożsamość odbiorcy jest na komputerze, więc schronienia niczego nie zmieniają |
-| nośnik stanowiska uszkodzony | wezwij osobę utrzymującą system; odtworzenie z kopii bazy. Zgłoszenia przyjęte po ostatniej kopii i decyzje wysłane po niej odtwarzasz z dziennika papierowego, bo schronienia, które dostały „ODBIORCA ZAPISAŁ”, ich nie ponowią |
+| nośnik stanowiska uszkodzony | wezwij osobę utrzymującą system; odtworzenie z kopii bazy. Aplikacja poprosi wtedy o potwierdzenie zegara: porównaj go z telefonem w sieci komórkowej i potwierdź dopiero przy różnicy ≤1 min. Zgłoszenia przyjęte po ostatniej kopii i decyzje wysłane po niej odtwarzasz z dziennika papierowego, bo schronienia, które dostały „ODBIORCA ZAPISAŁ”, ich nie ponowią |
 | brak zasilania | laptop pracuje z akumulatora; uruchom agregat albo stację zasilania i przełącz źródło przed wyczerpaniem akumulatora |
 | dużo zgłoszeń w kwarantannie albo wiadomości od stacji usuniętej z listy | możliwa próba podszycia; nie zatwierdzaj bez drugiego kanału; zawiadom organizatora sieci |
 

@@ -15,7 +15,7 @@
  przycisk zasil. ┤ sterownik wyłącznika (soft-latch) ── ON, INT, KILL                    │
                  │ komparator VSYS 3,4 V ── VSYS_FAIL; dzielniki ADC z kluczami          │
                  └───────────────────────────────────────────────────────────────┘
- 3V3 ─┬─ MCU (A: nRF52840, B: ESP32-S3FH4R2) ─── USB-C (ESD; VBUS: A do PHY, B tylko wykrycie)
+ 3V3 ─┬─ MCU (A: nRF52840, B: ESP32-S3FN8) ─── USB-C (ESD; VBUS: A do PHY, B tylko wykrycie)
       ├─ radio (A: CC1120, B: S2-LP) + TCXO ─ dopasowanie, filtr ─ (SAW, przełącznik: D10) ─ ESD ─ SMA
       ├─ FRAM 4 Mbit SPI
       ├─ przetwornica 5 V z odłączeniem wyjścia ─ panel Sharp (FPC) i podświetlenie
@@ -49,8 +49,8 @@ Liczby dotyczą pinów GPIO MCU. USB D+/D−, SWD i piny kwarców mają osobne w
 
 **Wykonanie A (nRF52840, aQFN73):** 48 GPIO. Odpadają P0.00 i P0.01 (kwarc 32,768 kHz) oraz P0.18 (reset). Zostaje 45 pinów, czyli około 10 pinów zapasu. P0.09 i P0.10 są domyślnie pinami NFC i wymagają przełączenia w UICR. Sygnały szybkie (SCK, MOSI) prowadzi się z pinów, których Nordic nie ogranicza do sygnałów wolnozmiennych. Na N1 SCK leży na P1.04, a to pin zalecany tylko do sygnałów wolnozmiennych ([firmware](../../firmware/README.md)); w R02 SCK przenosi się na pin bez tego ograniczenia według specyfikacji produktu nRF52840 (rozdział o pinach blisko radia), a przypisanie sprawdza się przy schemacie.
 
-**Wykonanie B (ESP32-S3FH4R2, QFN56):** 45 GPIO (GPIO0–21 i GPIO26–48). Odpadają:
-- GPIO26–32: flash i PSRAM w obudowie; wersja z PSRAM quad zostawia GPIO33–37 wolne;
+**Wykonanie B (ESP32-S3FN8, QFN56):** 45 GPIO (GPIO0–21 i GPIO26–48). Odpadają:
+- GPIO26–32: flash w obudowie; GPIO33–37 zostają wolne (zajęłaby je dopiero PSRAM octal w ESP32-S3R8/R16V);
 - GPIO19 i GPIO20: USB;
 - GPIO43 i GPIO44: UART0 do programowania i konsoli serwisowej.
 
@@ -90,7 +90,7 @@ Krok 1 kolejności prac wymaga wyboru jednego z dwóch podziałów.
 
 - **FRAM:** CY15B104QN-50SXI albo MB85RS4MTPF-G-BCERE1 w SOIC-8 208 mil, na wspólnym footprincie. Oba są w sprzedaży, oprogramowanie rozpoznaje oba, a N1 je montuje ([F86](../../docs/review.md)). Pin 7 (HOLD albo RESET) i WP podłącza się na stałe do 3V3, CS ma podciągnięcie 10 kΩ.
 - **Złącze ekranu Sharp:** Hirose FH12-10S-0.5SH ze stykami od dołu, na taśmę panelu LS027B7DH01A, jak na N1. Kondensatory przy złączu według karty Sharp. Wybór samego ekranu (D15) czeka na próbę czytelności w −20 °C.
-- **Wykonanie B:** ESP32-S3FH4R2 (flash i PSRAM w obudowie, bez zewnętrznej pamięci QSPI). USB przez USB-OTG z TinyUSB, VBUS tylko do wykrycia hosta.
+- **Wykonanie B:** ESP32-S3FN8 (8 MB flash w obudowie na dwa gniazda obrazu po 3 MiB, bez PSRAM i bez zewnętrznej pamięci QSPI; wcześniej ESP32-S3FH4R2 z 4 MB, za małą na gniazda, F105). Gdyby D14 wymagało PSRAM: ESP32-S3R2 z zewnętrzną flash QSPI 8 MiB. USB przez USB-OTG z TinyUSB, VBUS tylko do wykrycia hosta.
 - **Programowanie:** A przez SWD (pola Tag-Connect TC2030). B przez UART0 (GPIO43/44) z polami testowymi oraz przez USB w trybie pobierania z ROM. Oba złącza są niedostępne bez otwarcia obudowy.
 - **Sygnały i ich stan przy starcie:** według tabel powyżej.
 
