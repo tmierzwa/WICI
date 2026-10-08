@@ -70,7 +70,7 @@ Rozszerzenia poziomów 2–3:
 
 Laptop, router, ich oryginalne zasilacze i akumulatory pochodzą z miejsca uruchomienia. Adapter USB–Ethernet nie współpracuje z każdym komputerem. Jego kontroler również musi mieć dwa zakwalifikowane wykonania, np. Realtek RTL8153 i ASIX AX88179.
 
-Zestaw stanowiska OSP:
+Zestaw stanowiska OSP (wymagania i warianty: [stanowisko odbiorcze](stanowisko-osp.md), do decyzji D19):
 
 1. Stacja WICI i stacja zapasowa: do kontrolowanej wymiany sprawnej stacji (PRZENIEŚ STACJĘ) albo do wczytania tożsamości zapasowej OSP; tożsamości uszkodzonej stacji nie da się odzyskać.
 2. Stały laptop z pakietem START, przypisany do stanowiska (nie znaleziony na miejscu), bez usypiania i samoczynnych aktualizacji, z pełnym szyfrowaniem dysku.

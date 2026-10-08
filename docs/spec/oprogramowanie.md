@@ -318,7 +318,7 @@ Domyślne gotowe frazy ([zgłoszenie z przycisków](#wiadomości-sa1)): do SA1 t
 
 ## Stanowisko dyżurnego OSP
 
-Stanowisko to stała stacja WICI i stały laptop z pakietem START (nie „znaleziony”) z pełnym szyfrowaniem dysku (hasło albo TPM+PIN), osobnymi kontami dyżurnych i blokadą ekranu po 5 min. Każde działanie dyżurnego trafia do dziennika działań przypisanego do konta.
+Wymagania stanowiska i proponowaną zmianę podziału między stację a komputer opisuje [stanowisko odbiorcze](stanowisko-osp.md) (D19). Stanowisko to stała stacja WICI i stały laptop z pakietem START (nie „znaleziony”) z pełnym szyfrowaniem dysku (hasło albo TPM+PIN), osobnymi kontami dyżurnych i blokadą ekranu po 5 min. Każde działanie dyżurnego trafia do dziennika działań przypisanego do konta.
 
 Panel dyżurnego:
 
