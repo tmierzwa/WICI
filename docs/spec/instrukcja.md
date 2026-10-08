@@ -140,6 +140,7 @@ Najpierw ustal, czego dotyczy błąd: strony, laptopa, stacji, trasy radiowej, o
 |---|---|
 | długo „WYSYŁANIE – PRÓBA [n] …” | sprawdź przewód antenowy i złącze; zapytaj sąsiednie schronienie przez PMR446, czy jego stacja działa; pilne zgłoszenie przez gońca |
 | „KOLEJKA PEŁNA – ZGŁOSZENIE NIE ZAPISANE. UŻYJ FORMULARZA PAPIEROWEGO” albo „BŁĄD PAMIĘCI STACJI – ZGŁOSZENIE NIE ZAPISANE. FORMULARZ + GONIEC” | formularz i goniec; zgłoś błąd osobie utrzymującej system |
+| „STACJA NIE MOŻE NADAWAĆ – ADRES NIE OGŁOSZONY. FORMULARZ + GONIEC” po OGŁOŚ ADRES | stacja nie wyśle radiem żadnego zgłoszenia: formularz i goniec; zgłoś błąd osobie utrzymującej system |
 | stacja uruchomiła się ponownie | sprawdź ekran i zatwierdź proponowany TEST; kolejka zostaje w stacji |
 | laptop się zawiesił lub odłączył | stacja pracuje dalej; po powrocie laptopa sprawdź stan zgłoszeń w panelu |
 | stacja uszkodzona | goniec i PMR446; zgłoś organizatorowi sieci potrzebę stacji zapasowej |
