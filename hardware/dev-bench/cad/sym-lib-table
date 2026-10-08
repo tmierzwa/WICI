@@ -13,6 +13,12 @@
     (options "")
     (descr "KiCad 10.0.6 subset, see KICAD-LIBRARY-LICENSE.md"))
   (lib
+    (name "Connector_Generic_MountingPin")
+    (type "KiCad")
+    (uri "${KIPRJMOD}/symbols/Connector_Generic_MountingPin.kicad_sym")
+    (options "")
+    (descr "KiCad 10.0.6 subset, see KICAD-LIBRARY-LICENSE.md"))
+  (lib
     (name "Device")
     (type "KiCad")
     (uri "${KIPRJMOD}/symbols/Device.kicad_sym")
@@ -28,6 +34,12 @@
     (name "Mechanical")
     (type "KiCad")
     (uri "${KIPRJMOD}/symbols/Mechanical.kicad_sym")
+    (options "")
+    (descr "KiCad 10.0.6 subset, see KICAD-LIBRARY-LICENSE.md"))
+  (lib
+    (name "Memory_NVRAM")
+    (type "KiCad")
+    (uri "${KIPRJMOD}/symbols/Memory_NVRAM.kicad_sym")
     (options "")
     (descr "KiCad 10.0.6 subset, see KICAD-LIBRARY-LICENSE.md"))
   (lib

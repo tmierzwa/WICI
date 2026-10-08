@@ -64,10 +64,10 @@ GROUPS = [
     ['J1', 'J2', 'J3', 'J4'],
     ['J5', 'J6', 'JP1', 'JP2', 'R17', 'R18'],
     ['J9', 'J10', 'JP3', 'C1', 'C2', 'R11', 'R12', 'J11'],
-    ['J7', 'C4', 'R13', 'R19', 'J8', 'C3', 'J12', 'R14', 'R15', 'C5', 'D3'],
+    ['J7', 'C4', 'C6', 'C7', 'R13', 'R19', 'U1', 'C3', 'R20', 'J12', 'R14', 'R15', 'C5', 'D3'],
     ['SW1', 'SW2', 'SW3', 'SW4', 'SW5', 'SW6', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10', 'R16'],
     ['D1', 'R1', 'BZ1', 'R2', 'D2', 'Q1', 'R3', 'R4'],
-    ['H%d' % i for i in range(1, 16)],
+    ['H%d' % i for i in range(1, 10)],
 ]
 
 
@@ -185,9 +185,8 @@ def write_bom():
     rows = [p for p in PARTS if p['bom']]
     groups = {}
     for p in rows:
-        kit = p['mpn'] == 'Adafruit 85'  # one kit covers J1-J4
         groups.setdefault((p['manufacturer'], p['mpn'], p['value'] if p['ref'][0] in 'RC' else '',
-                           '' if kit else p['footprint'], p['variant']), []).append(p)
+                           p['footprint'], p['variant']), []).append(p)
     with (ROOT / 'bom.csv').open('w', newline='', encoding='utf-8') as f:
         w = csv.writer(f)
         w.writerow(['oznaczenia', 'ilość', 'wartość', 'producent', 'MPN', 'specyfikacja', 'footprint',
@@ -195,16 +194,13 @@ def write_bom():
         for key, items in groups.items():
             p = items[0]
             refs = [i['ref'] for i in items]
-            kit = p['mpn'] == 'Adafruit 85'
             notes = [i['note'] for i in items]
             if len(set(notes)) > 1:  # one row, several roles: name each part
                 note = '; '.join(f"{i['ref']}: {i['note']}" for i in items if i['note'])
             else:
                 note = notes[0]
-            w.writerow([' '.join(refs), 1 if kit else len(items),
-                        'ARDUINO' if kit else ' / '.join(dict.fromkeys(i['value'] for i in items)),
-                        p['manufacturer'], p['mpn'], p['spec'],
-                        ' '.join(sorted({i['footprint'] for i in items})) if kit else p['footprint'],
+            w.writerow([' '.join(refs), len(items), ' / '.join(dict.fromkeys(i['value'] for i in items)),
+                        p['manufacturer'], p['mpn'], p['spec'], p['footprint'],
                         {'A': 'A', 'B': 'B', 'AB': 'A i B'}[p['variant']], note])
         for refs, qty, manufacturer, mpn, spec, variant, note in EXTRAS:
             w.writerow([refs, qty, '', manufacturer, mpn, spec, 'bez footprintu', variant, note])
@@ -236,11 +232,14 @@ def write_connections():
         lines += [f"### {p['ref']}: {p['value']}", '', f"{p['note']}" if p['note'] else '', '',
                   '| Pin | Sieć |', '|---:|---|']
         count = {'Conn_01x08': 8, 'Conn_01x06': 6, 'Conn_01x10': 10, 'Conn_01x09': 9, 'Conn_01x22': 22,
-                 'Conn_02x10_Odd_Even': 20, 'Conn_01x02': 2, 'Screw_Terminal_01x02': 2}[p['lib_id'].split(':')[1]]
+                 'Conn_02x10_Odd_Even': 20, 'Conn_01x02': 2, 'Screw_Terminal_01x02': 2,
+                 'Conn_01x10_MountingPin': 10}[p['lib_id'].split(':')[1]]
         for n in range(1, count + 1):
             extra = DEVKIT_GPIO.get((p['ref'], n))
             net = p['nets'].get(str(n), '—')
             lines.append(f"| {n} | {net}{f' ({extra})' if extra else ''} |")
+        if 'MP' in p['nets']:
+            lines.append(f"| MP | {p['nets']['MP']} (uchwyty mocujące) |")
         lines.append('')
     (ROOT / 'polaczenia.md').write_text('\n'.join(l for l in lines) + '\n', encoding='utf-8')
 

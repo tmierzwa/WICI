@@ -19,6 +19,12 @@
     (options "")
     (descr "KiCad 10.0.6 subset or own (WICI), see KICAD-LIBRARY-LICENSE.md"))
   (lib
+    (name "Connector_FFC-FPC")
+    (type "KiCad")
+    (uri "${KIPRJMOD}/footprints/Connector_FFC-FPC.pretty")
+    (options "")
+    (descr "KiCad 10.0.6 subset or own (WICI), see KICAD-LIBRARY-LICENSE.md"))
+  (lib
     (name "Connector_PinHeader_1.27mm")
     (type "KiCad")
     (uri "${KIPRJMOD}/footprints/Connector_PinHeader_1.27mm.pretty")
@@ -52,6 +58,12 @@
     (name "MountingHole")
     (type "KiCad")
     (uri "${KIPRJMOD}/footprints/MountingHole.pretty")
+    (options "")
+    (descr "KiCad 10.0.6 subset or own (WICI), see KICAD-LIBRARY-LICENSE.md"))
+  (lib
+    (name "Package_SO")
+    (type "KiCad")
+    (uri "${KIPRJMOD}/footprints/Package_SO.pretty")
     (options "")
     (descr "KiCad 10.0.6 subset or own (WICI), see KICAD-LIBRARY-LICENSE.md"))
   (lib

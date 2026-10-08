@@ -2,7 +2,7 @@
 <export version="E">
   <design>
     <source>cad/plytka-nosna.kicad_sch</source>
-    <date>2026-10-08T02:23:45</date>
+    <date>2026-10-08T10:19:59</date>
     <tool>Eeschema 10.0.6</tool>
     <sheet number="1" name="/" tstamps="/">
       <title_block>
@@ -195,6 +195,66 @@
       <property name="ki_fp_filters" value="C_*"/>
       <sheetpath names="/" tstamps="/"/>
       <tstamps>622e6276-92ff-5532-81ea-9d324313f5a1</tstamps>
+      <units>
+        <unit name="A">
+          <pins>
+            <pin num="1"/>
+            <pin num="2"/>
+          </pins>
+        </unit>
+      </units>
+    </comp>
+    <comp ref="C6">
+      <value>100n</value>
+      <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
+      <fields>
+        <field name="Manufacturer">Samsung Electro-Mechanics</field>
+        <field name="MPN">CL21B104KBCNNNC</field>
+        <field name="Variant">A i B</field>
+        <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
+        <field name="Datasheet"/>
+        <field name="Description"/>
+      </fields>
+      <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
+      <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
+      <property name="MPN" value="CL21B104KBCNNNC"/>
+      <property name="Variant" value="A i B"/>
+      <property name="Sheetname" value="plytka-nosna"/>
+      <property name="Sheetfile" value="plytka-nosna.kicad_sch"/>
+      <property name="ki_keywords" value="cap capacitor"/>
+      <property name="ki_fp_filters" value="C_*"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>b52805c3-557f-5d9a-b451-973369bd87c3</tstamps>
+      <units>
+        <unit name="A">
+          <pins>
+            <pin num="1"/>
+            <pin num="2"/>
+          </pins>
+        </unit>
+      </units>
+    </comp>
+    <comp ref="C7">
+      <value>100n</value>
+      <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
+      <fields>
+        <field name="Manufacturer">Samsung Electro-Mechanics</field>
+        <field name="MPN">CL21B104KBCNNNC</field>
+        <field name="Variant">A i B</field>
+        <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
+        <field name="Datasheet"/>
+        <field name="Description"/>
+      </fields>
+      <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
+      <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
+      <property name="MPN" value="CL21B104KBCNNNC"/>
+      <property name="Variant" value="A i B"/>
+      <property name="Sheetname" value="plytka-nosna"/>
+      <property name="Sheetfile" value="plytka-nosna.kicad_sch"/>
+      <property name="ki_keywords" value="cap capacitor"/>
+      <property name="ki_fp_filters" value="C_*"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>6f3481cc-7899-5b2a-a8b0-5b950253d922</tstamps>
       <units>
         <unit name="A">
           <pins>
@@ -547,188 +607,20 @@
         </unit>
       </units>
     </comp>
-    <comp ref="H10">
-      <value>M2.5</value>
-      <footprint>MountingHole:MountingHole_2.7mm_M2.5</footprint>
-      <fields>
-        <field name="Manufacturer"/>
-        <field name="MPN"/>
-        <field name="Variant">A i B</field>
-        <field name="Footprint">MountingHole:MountingHole_2.7mm_M2.5</field>
-        <field name="Datasheet"/>
-        <field name="Description"/>
-      </fields>
-      <libsource lib="Mechanical" part="MountingHole" description="Mounting Hole without connection"/>
-      <property name="Manufacturer" value=""/>
-      <property name="MPN" value=""/>
-      <property name="Variant" value="A i B"/>
-      <property name="Sheetname" value="plytka-nosna"/>
-      <property name="Sheetfile" value="plytka-nosna.kicad_sch"/>
-      <property name="exclude_from_bom"/>
-      <property name="ki_keywords" value="mounting hole"/>
-      <property name="ki_fp_filters" value="MountingHole*"/>
-      <sheetpath names="/" tstamps="/"/>
-      <tstamps>9acf13c5-e541-549a-afbf-9ad02c1295f4</tstamps>
-      <units>
-        <unit name="A">
-          <pins/>
-        </unit>
-      </units>
-    </comp>
-    <comp ref="H11">
-      <value>M2.5</value>
-      <footprint>MountingHole:MountingHole_2.7mm_M2.5</footprint>
-      <fields>
-        <field name="Manufacturer"/>
-        <field name="MPN"/>
-        <field name="Variant">A i B</field>
-        <field name="Footprint">MountingHole:MountingHole_2.7mm_M2.5</field>
-        <field name="Datasheet"/>
-        <field name="Description"/>
-      </fields>
-      <libsource lib="Mechanical" part="MountingHole" description="Mounting Hole without connection"/>
-      <property name="Manufacturer" value=""/>
-      <property name="MPN" value=""/>
-      <property name="Variant" value="A i B"/>
-      <property name="Sheetname" value="plytka-nosna"/>
-      <property name="Sheetfile" value="plytka-nosna.kicad_sch"/>
-      <property name="exclude_from_bom"/>
-      <property name="ki_keywords" value="mounting hole"/>
-      <property name="ki_fp_filters" value="MountingHole*"/>
-      <sheetpath names="/" tstamps="/"/>
-      <tstamps>d7d3ccd0-558b-5f80-adf4-f2f621908ea6</tstamps>
-      <units>
-        <unit name="A">
-          <pins/>
-        </unit>
-      </units>
-    </comp>
-    <comp ref="H12">
-      <value>M2.5</value>
-      <footprint>MountingHole:MountingHole_2.7mm_M2.5</footprint>
-      <fields>
-        <field name="Manufacturer"/>
-        <field name="MPN"/>
-        <field name="Variant">A i B</field>
-        <field name="Footprint">MountingHole:MountingHole_2.7mm_M2.5</field>
-        <field name="Datasheet"/>
-        <field name="Description"/>
-      </fields>
-      <libsource lib="Mechanical" part="MountingHole" description="Mounting Hole without connection"/>
-      <property name="Manufacturer" value=""/>
-      <property name="MPN" value=""/>
-      <property name="Variant" value="A i B"/>
-      <property name="Sheetname" value="plytka-nosna"/>
-      <property name="Sheetfile" value="plytka-nosna.kicad_sch"/>
-      <property name="exclude_from_bom"/>
-      <property name="ki_keywords" value="mounting hole"/>
-      <property name="ki_fp_filters" value="MountingHole*"/>
-      <sheetpath names="/" tstamps="/"/>
-      <tstamps>af55e86b-d8fb-5e48-99a0-4843a238f9fd</tstamps>
-      <units>
-        <unit name="A">
-          <pins/>
-        </unit>
-      </units>
-    </comp>
-    <comp ref="H13">
-      <value>M2.5</value>
-      <footprint>MountingHole:MountingHole_2.7mm_M2.5</footprint>
-      <fields>
-        <field name="Manufacturer"/>
-        <field name="MPN"/>
-        <field name="Variant">A i B</field>
-        <field name="Footprint">MountingHole:MountingHole_2.7mm_M2.5</field>
-        <field name="Datasheet"/>
-        <field name="Description"/>
-      </fields>
-      <libsource lib="Mechanical" part="MountingHole" description="Mounting Hole without connection"/>
-      <property name="Manufacturer" value=""/>
-      <property name="MPN" value=""/>
-      <property name="Variant" value="A i B"/>
-      <property name="Sheetname" value="plytka-nosna"/>
-      <property name="Sheetfile" value="plytka-nosna.kicad_sch"/>
-      <property name="exclude_from_bom"/>
-      <property name="ki_keywords" value="mounting hole"/>
-      <property name="ki_fp_filters" value="MountingHole*"/>
-      <sheetpath names="/" tstamps="/"/>
-      <tstamps>2839abbf-3364-5429-8ced-642be3a68d3d</tstamps>
-      <units>
-        <unit name="A">
-          <pins/>
-        </unit>
-      </units>
-    </comp>
-    <comp ref="H14">
-      <value>M2.5</value>
-      <footprint>MountingHole:MountingHole_2.7mm_M2.5</footprint>
-      <fields>
-        <field name="Manufacturer"/>
-        <field name="MPN"/>
-        <field name="Variant">A i B</field>
-        <field name="Footprint">MountingHole:MountingHole_2.7mm_M2.5</field>
-        <field name="Datasheet"/>
-        <field name="Description"/>
-      </fields>
-      <libsource lib="Mechanical" part="MountingHole" description="Mounting Hole without connection"/>
-      <property name="Manufacturer" value=""/>
-      <property name="MPN" value=""/>
-      <property name="Variant" value="A i B"/>
-      <property name="Sheetname" value="plytka-nosna"/>
-      <property name="Sheetfile" value="plytka-nosna.kicad_sch"/>
-      <property name="exclude_from_bom"/>
-      <property name="ki_keywords" value="mounting hole"/>
-      <property name="ki_fp_filters" value="MountingHole*"/>
-      <sheetpath names="/" tstamps="/"/>
-      <tstamps>600dc472-5a90-5bb1-8f62-fb16cb368a5c</tstamps>
-      <units>
-        <unit name="A">
-          <pins/>
-        </unit>
-      </units>
-    </comp>
-    <comp ref="H15">
-      <value>M2.5</value>
-      <footprint>MountingHole:MountingHole_2.7mm_M2.5</footprint>
-      <fields>
-        <field name="Manufacturer"/>
-        <field name="MPN"/>
-        <field name="Variant">A i B</field>
-        <field name="Footprint">MountingHole:MountingHole_2.7mm_M2.5</field>
-        <field name="Datasheet"/>
-        <field name="Description"/>
-      </fields>
-      <libsource lib="Mechanical" part="MountingHole" description="Mounting Hole without connection"/>
-      <property name="Manufacturer" value=""/>
-      <property name="MPN" value=""/>
-      <property name="Variant" value="A i B"/>
-      <property name="Sheetname" value="plytka-nosna"/>
-      <property name="Sheetfile" value="plytka-nosna.kicad_sch"/>
-      <property name="exclude_from_bom"/>
-      <property name="ki_keywords" value="mounting hole"/>
-      <property name="ki_fp_filters" value="MountingHole*"/>
-      <sheetpath names="/" tstamps="/"/>
-      <tstamps>8bde24d2-6f34-535d-b96e-c3ee8bec6e0e</tstamps>
-      <units>
-        <unit name="A">
-          <pins/>
-        </unit>
-      </units>
-    </comp>
     <comp ref="J1">
       <value>ARDUINO POWER</value>
       <footprint>Connector_PinSocket_2.54mm:PinSocket_1x08_P2.54mm_Vertical</footprint>
       <fields>
-        <field name="Manufacturer">Adafruit</field>
-        <field name="MPN">Adafruit 85</field>
+        <field name="Manufacturer">Samtec</field>
+        <field name="MPN">SSQ-108-03-T-S</field>
         <field name="Variant">A i B</field>
         <field name="Footprint">Connector_PinSocket_2.54mm:PinSocket_1x08_P2.54mm_Vertical</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Connector_Generic" part="Conn_01x08" description="Generic connector, single row, 01x08, script generated (kicad-library-utils/schlib/autogen/connector/)"/>
-      <property name="Manufacturer" value="Adafruit"/>
-      <property name="MPN" value="Adafruit 85"/>
+      <property name="Manufacturer" value="Samtec"/>
+      <property name="MPN" value="SSQ-108-03-T-S"/>
       <property name="Variant" value="A i B"/>
       <property name="Sheetname" value="plytka-nosna"/>
       <property name="Sheetfile" value="plytka-nosna.kicad_sch"/>
@@ -755,16 +647,16 @@
       <value>ARDUINO A0-A5</value>
       <footprint>Connector_PinSocket_2.54mm:PinSocket_1x06_P2.54mm_Vertical</footprint>
       <fields>
-        <field name="Manufacturer">Adafruit</field>
-        <field name="MPN">Adafruit 85</field>
+        <field name="Manufacturer">Samtec</field>
+        <field name="MPN">SSQ-106-03-T-S</field>
         <field name="Variant">A i B</field>
         <field name="Footprint">Connector_PinSocket_2.54mm:PinSocket_1x06_P2.54mm_Vertical</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Connector_Generic" part="Conn_01x06" description="Generic connector, single row, 01x06, script generated (kicad-library-utils/schlib/autogen/connector/)"/>
-      <property name="Manufacturer" value="Adafruit"/>
-      <property name="MPN" value="Adafruit 85"/>
+      <property name="Manufacturer" value="Samtec"/>
+      <property name="MPN" value="SSQ-106-03-T-S"/>
       <property name="Variant" value="A i B"/>
       <property name="Sheetname" value="plytka-nosna"/>
       <property name="Sheetfile" value="plytka-nosna.kicad_sch"/>
@@ -789,16 +681,16 @@
       <value>ARDUINO D0-D7</value>
       <footprint>Connector_PinSocket_2.54mm:PinSocket_1x08_P2.54mm_Vertical</footprint>
       <fields>
-        <field name="Manufacturer">Adafruit</field>
-        <field name="MPN">Adafruit 85</field>
+        <field name="Manufacturer">Samtec</field>
+        <field name="MPN">SSQ-108-03-T-S</field>
         <field name="Variant">A i B</field>
         <field name="Footprint">Connector_PinSocket_2.54mm:PinSocket_1x08_P2.54mm_Vertical</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Connector_Generic" part="Conn_01x08" description="Generic connector, single row, 01x08, script generated (kicad-library-utils/schlib/autogen/connector/)"/>
-      <property name="Manufacturer" value="Adafruit"/>
-      <property name="MPN" value="Adafruit 85"/>
+      <property name="Manufacturer" value="Samtec"/>
+      <property name="MPN" value="SSQ-108-03-T-S"/>
       <property name="Variant" value="A i B"/>
       <property name="Sheetname" value="plytka-nosna"/>
       <property name="Sheetfile" value="plytka-nosna.kicad_sch"/>
@@ -825,16 +717,16 @@
       <value>ARDUINO D8-SCL</value>
       <footprint>Connector_PinSocket_2.54mm:PinSocket_1x10_P2.54mm_Vertical</footprint>
       <fields>
-        <field name="Manufacturer">Adafruit</field>
-        <field name="MPN">Adafruit 85</field>
+        <field name="Manufacturer">Samtec</field>
+        <field name="MPN">SSQ-110-03-T-S</field>
         <field name="Variant">A i B</field>
         <field name="Footprint">Connector_PinSocket_2.54mm:PinSocket_1x10_P2.54mm_Vertical</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Connector_Generic" part="Conn_01x10" description="Generic connector, single row, 01x10, script generated (kicad-library-utils/schlib/autogen/connector/)"/>
-      <property name="Manufacturer" value="Adafruit"/>
-      <property name="MPN" value="Adafruit 85"/>
+      <property name="Manufacturer" value="Samtec"/>
+      <property name="MPN" value="SSQ-110-03-T-S"/>
       <property name="Variant" value="A i B"/>
       <property name="Sheetname" value="plytka-nosna"/>
       <property name="Sheetfile" value="plytka-nosna.kicad_sch"/>
@@ -960,24 +852,24 @@
       </units>
     </comp>
     <comp ref="J7">
-      <value>SHARP 4694</value>
-      <footprint>Connector_PinSocket_2.54mm:PinSocket_1x09_P2.54mm_Vertical</footprint>
+      <value>SHARP LS027B7DH01A</value>
+      <footprint>Connector_FFC-FPC:Hirose_FH12-10S-0.5SH_1x10-1MP_P0.50mm_Horizontal</footprint>
       <fields>
-        <field name="Manufacturer">Sullins</field>
-        <field name="MPN">PPTC091LFBN-RC</field>
+        <field name="Manufacturer">Hirose</field>
+        <field name="MPN">FH12-10S-0.5SH(55)</field>
         <field name="Variant">A i B</field>
-        <field name="Footprint">Connector_PinSocket_2.54mm:PinSocket_1x09_P2.54mm_Vertical</field>
+        <field name="Footprint">Connector_FFC-FPC:Hirose_FH12-10S-0.5SH_1x10-1MP_P0.50mm_Horizontal</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
-      <libsource lib="Connector_Generic" part="Conn_01x09" description="Generic connector, single row, 01x09, script generated (kicad-library-utils/schlib/autogen/connector/)"/>
-      <property name="Manufacturer" value="Sullins"/>
-      <property name="MPN" value="PPTC091LFBN-RC"/>
+      <libsource lib="Connector_Generic_MountingPin" part="Conn_01x10_MountingPin" description="Generic connectable mounting pin connector, single row, 01x10, script generated (kicad-library-utils/schlib/autogen/connector/)"/>
+      <property name="Manufacturer" value="Hirose"/>
+      <property name="MPN" value="FH12-10S-0.5SH(55)"/>
       <property name="Variant" value="A i B"/>
       <property name="Sheetname" value="plytka-nosna"/>
       <property name="Sheetfile" value="plytka-nosna.kicad_sch"/>
       <property name="ki_keywords" value="connector"/>
-      <property name="ki_fp_filters" value="Connector*:*_1x??_*"/>
+      <property name="ki_fp_filters" value="Connector*:*_1x??-1MP*"/>
       <sheetpath names="/" tstamps="/"/>
       <tstamps>d6328507-6e83-55de-8ab2-2d0509be1677</tstamps>
       <units>
@@ -992,43 +884,8 @@
             <pin num="7"/>
             <pin num="8"/>
             <pin num="9"/>
-          </pins>
-        </unit>
-      </units>
-    </comp>
-    <comp ref="J8">
-      <value>FRAM 4719</value>
-      <footprint>Connector_PinSocket_2.54mm:PinSocket_1x09_P2.54mm_Vertical</footprint>
-      <fields>
-        <field name="Manufacturer">Sullins</field>
-        <field name="MPN">PPTC091LFBN-RC</field>
-        <field name="Variant">A i B</field>
-        <field name="Footprint">Connector_PinSocket_2.54mm:PinSocket_1x09_P2.54mm_Vertical</field>
-        <field name="Datasheet"/>
-        <field name="Description"/>
-      </fields>
-      <libsource lib="Connector_Generic" part="Conn_01x09" description="Generic connector, single row, 01x09, script generated (kicad-library-utils/schlib/autogen/connector/)"/>
-      <property name="Manufacturer" value="Sullins"/>
-      <property name="MPN" value="PPTC091LFBN-RC"/>
-      <property name="Variant" value="A i B"/>
-      <property name="Sheetname" value="plytka-nosna"/>
-      <property name="Sheetfile" value="plytka-nosna.kicad_sch"/>
-      <property name="ki_keywords" value="connector"/>
-      <property name="ki_fp_filters" value="Connector*:*_1x??_*"/>
-      <sheetpath names="/" tstamps="/"/>
-      <tstamps>149ae953-7735-5659-9a96-df5954be4046</tstamps>
-      <units>
-        <unit name="A">
-          <pins>
-            <pin num="1"/>
-            <pin num="2"/>
-            <pin num="3"/>
-            <pin num="4"/>
-            <pin num="5"/>
-            <pin num="6"/>
-            <pin num="7"/>
-            <pin num="8"/>
-            <pin num="9"/>
+            <pin num="10"/>
+            <pin num="MP"/>
           </pins>
         </unit>
       </units>
@@ -1858,11 +1715,11 @@
       </units>
     </comp>
     <comp ref="R19">
-      <value>2k2</value>
+      <value>10k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
         <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-072K2L</field>
+        <field name="MPN">RC0805FR-0710KL</field>
         <field name="Variant">A i B</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
@@ -1870,7 +1727,7 @@
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
       <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-072K2L"/>
+      <property name="MPN" value="RC0805FR-0710KL"/>
       <property name="Variant" value="A i B"/>
       <property name="Sheetname" value="plytka-nosna"/>
       <property name="Sheetfile" value="plytka-nosna.kicad_sch"/>
@@ -1878,6 +1735,36 @@
       <property name="ki_fp_filters" value="R_*"/>
       <sheetpath names="/" tstamps="/"/>
       <tstamps>67cae605-2b72-5b8d-9ae6-308965394f12</tstamps>
+      <units>
+        <unit name="A">
+          <pins>
+            <pin num="1"/>
+            <pin num="2"/>
+          </pins>
+        </unit>
+      </units>
+    </comp>
+    <comp ref="R20">
+      <value>10k</value>
+      <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
+      <fields>
+        <field name="Manufacturer">Yageo</field>
+        <field name="MPN">RC0805FR-0710KL</field>
+        <field name="Variant">A i B</field>
+        <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
+        <field name="Datasheet"/>
+        <field name="Description"/>
+      </fields>
+      <libsource lib="Device" part="R" description="Resistor"/>
+      <property name="Manufacturer" value="Yageo"/>
+      <property name="MPN" value="RC0805FR-0710KL"/>
+      <property name="Variant" value="A i B"/>
+      <property name="Sheetname" value="plytka-nosna"/>
+      <property name="Sheetfile" value="plytka-nosna.kicad_sch"/>
+      <property name="ki_keywords" value="R res resistor"/>
+      <property name="ki_fp_filters" value="R_*"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>b705e681-bf62-5f4b-b100-becca353541d</tstamps>
       <units>
         <unit name="A">
           <pins>
@@ -2058,6 +1945,42 @@
           <pins>
             <pin num="1"/>
             <pin num="2"/>
+          </pins>
+        </unit>
+      </units>
+    </comp>
+    <comp ref="U1">
+      <value>CY15B104QN-50SXI</value>
+      <footprint>Package_SO:SOIC-8_5.3x5.3mm_P1.27mm</footprint>
+      <fields>
+        <field name="Manufacturer">Infineon</field>
+        <field name="MPN">CY15B104QN-50SXI</field>
+        <field name="Variant">A i B</field>
+        <field name="Footprint">Package_SO:SOIC-8_5.3x5.3mm_P1.27mm</field>
+        <field name="Datasheet"/>
+        <field name="Description"/>
+      </fields>
+      <libsource lib="Memory_NVRAM" part="MB85RS2MT" description="FeRAM memory with SPI interface, 2Mbit (256K x 8), 1.8V to 3.6V supply, DIP-8 / SOIC-8 (SOP-8, 208 mil)"/>
+      <property name="Manufacturer" value="Infineon"/>
+      <property name="MPN" value="CY15B104QN-50SXI"/>
+      <property name="Variant" value="A i B"/>
+      <property name="Sheetname" value="plytka-nosna"/>
+      <property name="Sheetfile" value="plytka-nosna.kicad_sch"/>
+      <property name="ki_keywords" value="FRAM Ferroelectric-RAM 3.3V 2-Mbit MB85RS2MTPH MB85RS2MTPF Fujitsu Obsolete"/>
+      <property name="ki_fp_filters" value="*SOIC*5.3x5.3mm*P1.27mm* DIP?8?W7.62mm*"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>7833ea24-dd2e-50ae-84ba-0f2feda2f113</tstamps>
+      <units>
+        <unit name="A">
+          <pins>
+            <pin num="7"/>
+            <pin num="3"/>
+            <pin num="8"/>
+            <pin num="4"/>
+            <pin num="6"/>
+            <pin num="5"/>
+            <pin num="2"/>
+            <pin num="1"/>
           </pins>
         </unit>
       </units>
@@ -2263,6 +2186,32 @@
         <pin num="20" name="Pin_20" type="passive"/>
       </pins>
     </libpart>
+    <libpart lib="Connector_Generic_MountingPin" part="Conn_01x10_MountingPin">
+      <description>Generic connectable mounting pin connector, single row, 01x10, script generated (kicad-library-utils/schlib/autogen/connector/)</description>
+      <footprints>
+        <fp>Connector*:*_1x??-1MP*</fp>
+      </footprints>
+      <fields>
+        <field name="Reference">J</field>
+        <field name="Value">Conn_01x10_MountingPin</field>
+        <field name="Footprint"/>
+        <field name="Datasheet"/>
+        <field name="Description">Generic connectable mounting pin connector, single row, 01x10, script generated (kicad-library-utils/schlib/autogen/connector/)</field>
+      </fields>
+      <pins>
+        <pin num="1" name="Pin_1" type="passive"/>
+        <pin num="2" name="Pin_2" type="passive"/>
+        <pin num="3" name="Pin_3" type="passive"/>
+        <pin num="4" name="Pin_4" type="passive"/>
+        <pin num="5" name="Pin_5" type="passive"/>
+        <pin num="6" name="Pin_6" type="passive"/>
+        <pin num="7" name="Pin_7" type="passive"/>
+        <pin num="8" name="Pin_8" type="passive"/>
+        <pin num="9" name="Pin_9" type="passive"/>
+        <pin num="10" name="Pin_10" type="passive"/>
+        <pin num="MP" name="MountPin" type="passive"/>
+      </pins>
+    </libpart>
     <libpart lib="Device" part="Buzzer">
       <description>Buzzer, polarized</description>
       <footprints>
@@ -2388,6 +2337,31 @@
         <field name="Description">Mounting Hole without connection</field>
       </fields>
     </libpart>
+    <libpart lib="Memory_NVRAM" part="MB85RS2MT">
+      <description>FeRAM memory with SPI interface, 2Mbit (256K x 8), 1.8V to 3.6V supply, DIP-8 / SOIC-8 (SOP-8, 208 mil)</description>
+      <docs>https://www.mouser.com/datasheet/2/1113/MB85RS2MT_DS501_00023_5v0_E-2515390.pdf</docs>
+      <footprints>
+        <fp>*SOIC*5.3x5.3mm*P1.27mm*</fp>
+        <fp>DIP?8?W7.62mm*</fp>
+      </footprints>
+      <fields>
+        <field name="Reference">U</field>
+        <field name="Value">MB85RS2MT</field>
+        <field name="Footprint"/>
+        <field name="Datasheet">https://www.mouser.com/datasheet/2/1113/MB85RS2MT_DS501_00023_5v0_E-2515390.pdf</field>
+        <field name="Description">FeRAM memory with SPI interface, 2Mbit (256K x 8), 1.8V to 3.6V supply, DIP-8 / SOIC-8 (SOP-8, 208 mil)</field>
+      </fields>
+      <pins>
+        <pin num="1" name="~{CS}" type="input"/>
+        <pin num="2" name="SO" type="output"/>
+        <pin num="3" name="~{WP}" type="input"/>
+        <pin num="4" name="GND" type="power_in"/>
+        <pin num="5" name="SI" type="input"/>
+        <pin num="6" name="SCK" type="input"/>
+        <pin num="7" name="~{HOLD}" type="input"/>
+        <pin num="8" name="VDD" type="power_in"/>
+      </pins>
+    </libpart>
     <libpart lib="Switch" part="SW_Push">
       <description>Push button switch, generic, two pins</description>
       <fields>
@@ -2446,6 +2420,9 @@
     <library logical="Connector_Generic">
       <uri>${KIPRJMOD}/symbols/Connector_Generic.kicad_sym</uri>
     </library>
+    <library logical="Connector_Generic_MountingPin">
+      <uri>${KIPRJMOD}/symbols/Connector_Generic_MountingPin.kicad_sym</uri>
+    </library>
     <library logical="Device">
       <uri>${KIPRJMOD}/symbols/Device.kicad_sym</uri>
     </library>
@@ -2454,6 +2431,9 @@
     </library>
     <library logical="Mechanical">
       <uri>${KIPRJMOD}/symbols/Mechanical.kicad_sym</uri>
+    </library>
+    <library logical="Memory_NVRAM">
+      <uri>${KIPRJMOD}/symbols/Memory_NVRAM.kicad_sym</uri>
     </library>
     <library logical="Switch">
       <uri>${KIPRJMOD}/symbols/Switch.kicad_sym</uri>
@@ -2467,17 +2447,19 @@
       <node ref="C3" pin="1" pintype="passive"/>
       <node ref="D3" pin="2" pinfunction="K_2" pintype="passive"/>
       <node ref="J1" pin="4" pinfunction="Pin_4_4" pintype="passive"/>
-      <node ref="J7" pin="7" pinfunction="Pin_7_7" pintype="passive"/>
-      <node ref="J8" pin="1" pinfunction="Pin_1_1" pintype="passive"/>
       <node ref="JP1" pin="1" pinfunction="Pin_1_1" pintype="passive"/>
       <node ref="JP3" pin="1" pinfunction="Pin_1_1" pintype="passive"/>
       <node ref="R10" pin="1" pintype="passive"/>
       <node ref="R11" pin="1" pintype="passive"/>
+      <node ref="R20" pin="1" pintype="passive"/>
       <node ref="R5" pin="1" pintype="passive"/>
       <node ref="R6" pin="1" pintype="passive"/>
       <node ref="R7" pin="1" pintype="passive"/>
       <node ref="R8" pin="1" pintype="passive"/>
       <node ref="R9" pin="1" pintype="passive"/>
+      <node ref="U1" pin="3" pinfunction="~{WP}_3" pintype="input"/>
+      <node ref="U1" pin="7" pinfunction="~{HOLD}_7" pintype="input"/>
+      <node ref="U1" pin="8" pinfunction="VDD_8" pintype="power_in"/>
     </net>
     <net code="2" name="/+3V3_DEVKIT" class="Power">
       <node ref="J5" pin="1" pinfunction="Pin_1_1" pintype="passive"/>
@@ -2493,8 +2475,11 @@
     </net>
     <net code="4" name="/+5V" class="Power">
       <node ref="C4" pin="1" pintype="passive"/>
+      <node ref="C6" pin="1" pintype="passive"/>
       <node ref="J1" pin="5" pinfunction="Pin_5_5" pintype="passive"/>
-      <node ref="J7" pin="1" pinfunction="Pin_1_1" pintype="passive"/>
+      <node ref="J7" pin="6" pinfunction="Pin_6_6" pintype="passive"/>
+      <node ref="J7" pin="7" pinfunction="Pin_7_7" pintype="passive"/>
+      <node ref="J7" pin="8" pinfunction="Pin_8_8" pintype="passive"/>
       <node ref="JP2" pin="1" pinfunction="Pin_1_1" pintype="passive"/>
       <node ref="R2" pin="1" pintype="passive"/>
     </net>
@@ -2551,7 +2536,8 @@
       <node ref="J11" pin="6" pinfunction="Pin_6_6" pintype="passive"/>
       <node ref="J4" pin="2" pinfunction="Pin_2_2" pintype="passive"/>
       <node ref="J5" pin="12" pinfunction="Pin_12_12" pintype="passive"/>
-      <node ref="J8" pin="7" pinfunction="Pin_7_7" pintype="passive"/>
+      <node ref="R20" pin="2" pintype="passive"/>
+      <node ref="U1" pin="1" pinfunction="~{CS}_1" pintype="input"/>
     </net>
     <net code="15" name="/GND" class="Power">
       <node ref="C1" pin="2" pintype="passive"/>
@@ -2559,6 +2545,8 @@
       <node ref="C3" pin="2" pintype="passive"/>
       <node ref="C4" pin="2" pintype="passive"/>
       <node ref="C5" pin="2" pintype="passive"/>
+      <node ref="C6" pin="2" pintype="passive"/>
+      <node ref="C7" pin="2" pintype="passive"/>
       <node ref="D1" pin="1" pinfunction="K_1" pintype="passive"/>
       <node ref="D3" pin="1" pinfunction="A_1" pintype="passive"/>
       <node ref="J1" pin="6" pinfunction="Pin_6_6" pintype="passive"/>
@@ -2571,8 +2559,9 @@
       <node ref="J6" pin="1" pinfunction="Pin_1_1" pintype="passive"/>
       <node ref="J6" pin="21" pinfunction="Pin_21_21" pintype="passive"/>
       <node ref="J6" pin="22" pinfunction="Pin_22_22" pintype="passive"/>
-      <node ref="J7" pin="3" pinfunction="Pin_3_3" pintype="passive"/>
-      <node ref="J8" pin="3" pinfunction="Pin_3_3" pintype="passive"/>
+      <node ref="J7" pin="10" pinfunction="Pin_10_10" pintype="passive"/>
+      <node ref="J7" pin="9" pinfunction="Pin_9_9" pintype="passive"/>
+      <node ref="J7" pin="MP" pinfunction="MountPin_MP" pintype="passive"/>
       <node ref="J9" pin="1" pinfunction="Pin_1_1" pintype="passive"/>
       <node ref="J9" pin="19" pinfunction="Pin_19_19" pintype="passive"/>
       <node ref="Q1" pin="2" pinfunction="E_2" pintype="passive"/>
@@ -2587,24 +2576,26 @@
       <node ref="SW4" pin="2" pinfunction="2_2" pintype="passive"/>
       <node ref="SW5" pin="1" pinfunction="A_1" pintype="passive"/>
       <node ref="SW6" pin="2" pinfunction="2_2" pintype="passive"/>
+      <node ref="U1" pin="4" pinfunction="GND_4" pintype="power_in"/>
     </net>
     <net code="16" name="/LCD_CS" class="Default">
       <node ref="J11" pin="7" pinfunction="Pin_7_7" pintype="passive"/>
       <node ref="J3" pin="5" pinfunction="Pin_5_5" pintype="passive"/>
       <node ref="J5" pin="7" pinfunction="Pin_7_7" pintype="passive"/>
-      <node ref="J7" pin="6" pinfunction="Pin_6_6" pintype="passive"/>
+      <node ref="J7" pin="3" pinfunction="Pin_3_3" pintype="passive"/>
       <node ref="R13" pin="1" pintype="passive"/>
     </net>
     <net code="17" name="/LCD_DISP" class="Default">
+      <node ref="C7" pin="1" pintype="passive"/>
       <node ref="J4" pin="1" pinfunction="Pin_1_1" pintype="passive"/>
       <node ref="J5" pin="9" pinfunction="Pin_9_9" pintype="passive"/>
-      <node ref="J7" pin="8" pinfunction="Pin_8_8" pintype="passive"/>
+      <node ref="J7" pin="5" pinfunction="Pin_5_5" pintype="passive"/>
       <node ref="R19" pin="1" pintype="passive"/>
     </net>
     <net code="18" name="/LCD_EXTCOMIN" class="Default">
       <node ref="J3" pin="7" pinfunction="Pin_7_7" pintype="passive"/>
       <node ref="J5" pin="10" pinfunction="Pin_10_10" pintype="passive"/>
-      <node ref="J7" pin="9" pinfunction="Pin_9_9" pintype="passive"/>
+      <node ref="J7" pin="4" pinfunction="Pin_4_4" pintype="passive"/>
     </net>
     <net code="19" name="/LED_A" class="Default">
       <node ref="D1" pin="2" pinfunction="A_2" pintype="passive"/>
@@ -2658,24 +2649,24 @@
       <node ref="J11" pin="4" pinfunction="Pin_4_4" pintype="passive"/>
       <node ref="J4" pin="5" pinfunction="Pin_5_5" pintype="passive"/>
       <node ref="J5" pin="19" pinfunction="Pin_19_19" pintype="passive"/>
-      <node ref="J8" pin="5" pinfunction="Pin_5_5" pintype="passive"/>
       <node ref="J9" pin="20" pinfunction="Pin_20_20" pintype="passive"/>
+      <node ref="U1" pin="2" pinfunction="SO_2" pintype="output"/>
     </net>
     <net code="29" name="/SPI_MOSI" class="Default">
       <node ref="J11" pin="3" pinfunction="Pin_3_3" pintype="passive"/>
       <node ref="J4" pin="4" pinfunction="Pin_4_4" pintype="passive"/>
       <node ref="J5" pin="17" pinfunction="Pin_17_17" pintype="passive"/>
-      <node ref="J7" pin="5" pinfunction="Pin_5_5" pintype="passive"/>
-      <node ref="J8" pin="6" pinfunction="Pin_6_6" pintype="passive"/>
+      <node ref="J7" pin="2" pinfunction="Pin_2_2" pintype="passive"/>
       <node ref="J9" pin="18" pinfunction="Pin_18_18" pintype="passive"/>
+      <node ref="U1" pin="5" pinfunction="SI_5" pintype="input"/>
     </net>
     <net code="30" name="/SPI_SCK" class="Default">
       <node ref="J11" pin="2" pinfunction="Pin_2_2" pintype="passive"/>
-      <node ref="J7" pin="4" pinfunction="Pin_4_4" pintype="passive"/>
-      <node ref="J8" pin="4" pinfunction="Pin_4_4" pintype="passive"/>
+      <node ref="J7" pin="1" pinfunction="Pin_1_1" pintype="passive"/>
       <node ref="J9" pin="16" pinfunction="Pin_16_16" pintype="passive"/>
       <node ref="R17" pin="2" pintype="passive"/>
       <node ref="R18" pin="2" pintype="passive"/>
+      <node ref="U1" pin="6" pinfunction="SCK_6" pintype="input"/>
     </net>
     <net code="31" name="/SPI_SCK_DEVKIT" class="Default">
       <node ref="J5" pin="18" pinfunction="Pin_18_18" pintype="passive"/>
@@ -2767,100 +2758,88 @@
     <net code="56" name="unconnected-(J6-Pin_20-Pad20)" class="Default">
       <node ref="J6" pin="20" pinfunction="Pin_20_20" pintype="passive+no_connect"/>
     </net>
-    <net code="57" name="unconnected-(J7-Pin_2-Pad2)" class="Default">
-      <node ref="J7" pin="2" pinfunction="Pin_2_2" pintype="passive+no_connect"/>
-    </net>
-    <net code="58" name="unconnected-(J8-Pin_2-Pad2)" class="Default">
-      <node ref="J8" pin="2" pinfunction="Pin_2_2" pintype="passive+no_connect"/>
-    </net>
-    <net code="59" name="unconnected-(J8-Pin_8-Pad8)" class="Default">
-      <node ref="J8" pin="8" pinfunction="Pin_8_8" pintype="passive+no_connect"/>
-    </net>
-    <net code="60" name="unconnected-(J8-Pin_9-Pad9)" class="Default">
-      <node ref="J8" pin="9" pinfunction="Pin_9_9" pintype="passive+no_connect"/>
-    </net>
-    <net code="61" name="unconnected-(J9-Pin_2-Pad2)" class="Default">
+    <net code="57" name="unconnected-(J9-Pin_2-Pad2)" class="Default">
       <node ref="J9" pin="2" pinfunction="Pin_2_2" pintype="passive+no_connect"/>
     </net>
-    <net code="62" name="unconnected-(J9-Pin_3-Pad3)" class="Default">
+    <net code="58" name="unconnected-(J9-Pin_3-Pad3)" class="Default">
       <node ref="J9" pin="3" pinfunction="Pin_3_3" pintype="passive+no_connect"/>
     </net>
-    <net code="63" name="unconnected-(J9-Pin_4-Pad4)" class="Default">
+    <net code="59" name="unconnected-(J9-Pin_4-Pad4)" class="Default">
       <node ref="J9" pin="4" pinfunction="Pin_4_4" pintype="passive+no_connect"/>
     </net>
-    <net code="64" name="unconnected-(J9-Pin_5-Pad5)" class="Default">
+    <net code="60" name="unconnected-(J9-Pin_5-Pad5)" class="Default">
       <node ref="J9" pin="5" pinfunction="Pin_5_5" pintype="passive+no_connect"/>
     </net>
-    <net code="65" name="unconnected-(J9-Pin_6-Pad6)" class="Default">
+    <net code="61" name="unconnected-(J9-Pin_6-Pad6)" class="Default">
       <node ref="J9" pin="6" pinfunction="Pin_6_6" pintype="passive+no_connect"/>
     </net>
-    <net code="66" name="unconnected-(J9-Pin_7-Pad7)" class="Default">
+    <net code="62" name="unconnected-(J9-Pin_7-Pad7)" class="Default">
       <node ref="J9" pin="7" pinfunction="Pin_7_7" pintype="passive+no_connect"/>
     </net>
-    <net code="67" name="unconnected-(J9-Pin_8-Pad8)" class="Default">
+    <net code="63" name="unconnected-(J9-Pin_8-Pad8)" class="Default">
       <node ref="J9" pin="8" pinfunction="Pin_8_8" pintype="passive+no_connect"/>
     </net>
-    <net code="68" name="unconnected-(J9-Pin_9-Pad9)" class="Default">
+    <net code="64" name="unconnected-(J9-Pin_9-Pad9)" class="Default">
       <node ref="J9" pin="9" pinfunction="Pin_9_9" pintype="passive+no_connect"/>
     </net>
-    <net code="69" name="unconnected-(J9-Pin_11-Pad11)" class="Default">
+    <net code="65" name="unconnected-(J9-Pin_11-Pad11)" class="Default">
       <node ref="J9" pin="11" pinfunction="Pin_11_11" pintype="passive+no_connect"/>
     </net>
-    <net code="70" name="unconnected-(J9-Pin_13-Pad13)" class="Default">
+    <net code="66" name="unconnected-(J9-Pin_13-Pad13)" class="Default">
       <node ref="J9" pin="13" pinfunction="Pin_13_13" pintype="passive+no_connect"/>
     </net>
-    <net code="71" name="unconnected-(J9-Pin_15-Pad15)" class="Default">
+    <net code="67" name="unconnected-(J9-Pin_15-Pad15)" class="Default">
       <node ref="J9" pin="15" pinfunction="Pin_15_15" pintype="passive+no_connect"/>
     </net>
-    <net code="72" name="unconnected-(J9-Pin_17-Pad17)" class="Default">
+    <net code="68" name="unconnected-(J9-Pin_17-Pad17)" class="Default">
       <node ref="J9" pin="17" pinfunction="Pin_17_17" pintype="passive+no_connect"/>
     </net>
-    <net code="73" name="unconnected-(J10-Pin_1-Pad1)" class="Default">
+    <net code="69" name="unconnected-(J10-Pin_1-Pad1)" class="Default">
       <node ref="J10" pin="1" pinfunction="Pin_1_1" pintype="passive+no_connect"/>
     </net>
-    <net code="74" name="unconnected-(J10-Pin_3-Pad3)" class="Default">
+    <net code="70" name="unconnected-(J10-Pin_3-Pad3)" class="Default">
       <node ref="J10" pin="3" pinfunction="Pin_3_3" pintype="passive+no_connect"/>
     </net>
-    <net code="75" name="unconnected-(J10-Pin_4-Pad4)" class="Default">
+    <net code="71" name="unconnected-(J10-Pin_4-Pad4)" class="Default">
       <node ref="J10" pin="4" pinfunction="Pin_4_4" pintype="passive+no_connect"/>
     </net>
-    <net code="76" name="unconnected-(J10-Pin_5-Pad5)" class="Default">
+    <net code="72" name="unconnected-(J10-Pin_5-Pad5)" class="Default">
       <node ref="J10" pin="5" pinfunction="Pin_5_5" pintype="passive+no_connect"/>
     </net>
-    <net code="77" name="unconnected-(J10-Pin_6-Pad6)" class="Default">
+    <net code="73" name="unconnected-(J10-Pin_6-Pad6)" class="Default">
       <node ref="J10" pin="6" pinfunction="Pin_6_6" pintype="passive+no_connect"/>
     </net>
-    <net code="78" name="unconnected-(J10-Pin_8-Pad8)" class="Default">
+    <net code="74" name="unconnected-(J10-Pin_8-Pad8)" class="Default">
       <node ref="J10" pin="8" pinfunction="Pin_8_8" pintype="passive+no_connect"/>
     </net>
-    <net code="79" name="unconnected-(J10-Pin_10-Pad10)" class="Default">
+    <net code="75" name="unconnected-(J10-Pin_10-Pad10)" class="Default">
       <node ref="J10" pin="10" pinfunction="Pin_10_10" pintype="passive+no_connect"/>
     </net>
-    <net code="80" name="unconnected-(J10-Pin_11-Pad11)" class="Default">
+    <net code="76" name="unconnected-(J10-Pin_11-Pad11)" class="Default">
       <node ref="J10" pin="11" pinfunction="Pin_11_11" pintype="passive+no_connect"/>
     </net>
-    <net code="81" name="unconnected-(J10-Pin_12-Pad12)" class="Default">
+    <net code="77" name="unconnected-(J10-Pin_12-Pad12)" class="Default">
       <node ref="J10" pin="12" pinfunction="Pin_12_12" pintype="passive+no_connect"/>
     </net>
-    <net code="82" name="unconnected-(J10-Pin_13-Pad13)" class="Default">
+    <net code="78" name="unconnected-(J10-Pin_13-Pad13)" class="Default">
       <node ref="J10" pin="13" pinfunction="Pin_13_13" pintype="passive+no_connect"/>
     </net>
-    <net code="83" name="unconnected-(J10-Pin_14-Pad14)" class="Default">
+    <net code="79" name="unconnected-(J10-Pin_14-Pad14)" class="Default">
       <node ref="J10" pin="14" pinfunction="Pin_14_14" pintype="passive+no_connect"/>
     </net>
-    <net code="84" name="unconnected-(J10-Pin_16-Pad16)" class="Default">
+    <net code="80" name="unconnected-(J10-Pin_16-Pad16)" class="Default">
       <node ref="J10" pin="16" pinfunction="Pin_16_16" pintype="passive+no_connect"/>
     </net>
-    <net code="85" name="unconnected-(J10-Pin_17-Pad17)" class="Default">
+    <net code="81" name="unconnected-(J10-Pin_17-Pad17)" class="Default">
       <node ref="J10" pin="17" pinfunction="Pin_17_17" pintype="passive+no_connect"/>
     </net>
-    <net code="86" name="unconnected-(J10-Pin_19-Pad19)" class="Default">
+    <net code="82" name="unconnected-(J10-Pin_19-Pad19)" class="Default">
       <node ref="J10" pin="19" pinfunction="Pin_19_19" pintype="passive+no_connect"/>
     </net>
-    <net code="87" name="unconnected-(J10-Pin_20-Pad20)" class="Default">
+    <net code="83" name="unconnected-(J10-Pin_20-Pad20)" class="Default">
       <node ref="J10" pin="20" pinfunction="Pin_20_20" pintype="passive+no_connect"/>
     </net>
-    <net code="88" name="unconnected-(SW5-C-Pad3)" class="Default">
+    <net code="84" name="unconnected-(SW5-C-Pad3)" class="Default">
       <node ref="SW5" pin="3" pinfunction="C_3" pintype="passive+no_connect"/>
     </net>
   </nets>

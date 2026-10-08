@@ -1,13 +1,14 @@
 Designator,Qty per board,Value,Manufacturer,MPN,Description,Footprint,Type,Fit,Placed by
 C1 C4,2,10u,Samsung Electro-Mechanics,CL21A106KAYNNNE,MLCC 10 uF 25 V X5R 0805,C_0805_2012Metric,SMD,all,assembler
-C2 C3 C5,3,100n,Samsung Electro-Mechanics,CL21B104KBCNNNC,MLCC 100 nF 50 V X7R 0805,C_0805_2012Metric,SMD,all,assembler
+C2 C3 C6 C7 C5,5,100n,Samsung Electro-Mechanics,CL21B104KBCNNNC,MLCC 100 nF 50 V X7R 0805,C_0805_2012Metric,SMD,all,assembler
 D2,1,,Diodes Incorporated,1N4148W-7-F,"switching diode 75 V, SOD-123",D_SOD-123,SMD,all,assembler
 D3,1,,onsemi,BAT54SLT1G,"dual Schottky diode series, SOT-23",SOT-23,SMD,all,assembler
+J7,1,,Hirose,FH12-10S-0.5SH(55),"FPC connector 10 pos, 0.5 mm, bottom contact, right angle, SMD",Hirose_FH12-10S-0.5SH_1x10-1MP_P0.50mm_Horizontal,SMD,all,assembler
 Q1,1,,onsemi,MMBT3904LT1G,"NPN transistor 40 V 200 mA, SOT-23",SOT-23,SMD,all,assembler
 R1 R3 R16,3,1k,Yageo,RC0805FR-071KL,resistor 1k 1 % 0805,R_0805_2012Metric,SMD,all,assembler
 R15,1,20k,Yageo,RC0805FR-0720KL,resistor 20k 1 % 0805,R_0805_2012Metric,SMD,all,assembler
 R17 R18,2,33R,Yageo,RC0805FR-0733RL,resistor 33 ohm 1 % 0805,R_0805_2012Metric,SMD,all,assembler
-R19,1,2k2,Yageo,RC0805FR-072K2L,resistor 2k2 1 % 0805,R_0805_2012Metric,SMD,all,assembler
+R19 R20 R5 R6 R7 R8 R9 R10 R11 R12 R13,11,10k,Yageo,RC0805FR-0710KL,resistor 10k 1 % 0805,R_0805_2012Metric,SMD,all,assembler
 R2,1,22R,Yageo,RC1206FR-0722RL,resistor 22 ohm 1 % 1206,R_1206_3216Metric,SMD,all,assembler
 R4 R14,2,100k,Yageo,RC0805FR-07100KL,resistor 100k 1 % 0805,R_0805_2012Metric,SMD,all,assembler
-R5 R6 R7 R8 R9 R10 R11 R12 R13,9,10k,Yageo,RC0805FR-0710KL,resistor 10k 1 % 0805,R_0805_2012Metric,SMD,all,assembler
+U1,1,,Infineon,CY15B104QN-50SXI,"F-RAM 4 Mbit SPI, 3 V, SOIC-8 208 mil (alt. RAMXEED MB85RS4MTPF-G-BCERE1)",SOIC-8_5.3x5.3mm_P1.27mm,SMD,all,assembler

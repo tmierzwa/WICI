@@ -1,6 +1,6 @@
 # WICI: zgodność płytki nośnej N1 z oprogramowaniem
 
-Stan: 2026-10-07. Płytka N1 według `tools/design.py` (commit 562d689). Oprogramowanie: pierwsze sprawdzenie wobec `firmware/` w commicie a3b821f (tylko środowisko `bench-a`, plik `src/board_bench_a.h`); ponowne po dodaniu środowiska `bench-n1` z plikiem `src/board_bench_n1.h`; trzecie po dodaniu środowiska `bench-b` z plikiem `src/board_bench_b.h`; czwarte po przejściu `bench-b` na wspólny program stacji (`src/main.cpp`) z warstwą ESP32-S3 i sterownikiem łącza S2-LP; piąte po przeglądzie F83 (2026-10-08): zmiany płytki (kolejność pinów J7, położenie JP3, listwy J9/J10) nie dotyczą sygnałów MCU, a test `tests/test_board_netlist.py` sprawdza każdą stałą `board_bench_n1.h` i `board_bench_b.h` od listy połączeń KiCad przez niezależnie przepisane wyprowadzenia złączy DK i DevKitC.
+Stan: 2026-10-07. Płytka N1 według `tools/design.py` (commit 562d689). Oprogramowanie: pierwsze sprawdzenie wobec `firmware/` w commicie a3b821f (tylko środowisko `bench-a`, plik `src/board_bench_a.h`); ponowne po dodaniu środowiska `bench-n1` z plikiem `src/board_bench_n1.h`; trzecie po dodaniu środowiska `bench-b` z plikiem `src/board_bench_b.h`; czwarte po przejściu `bench-b` na wspólny program stacji (`src/main.cpp`) z warstwą ESP32-S3 i sterownikiem łącza S2-LP; piąte po przeglądzie F83 (2026-10-08): zmiany płytki (kolejność pinów J7, położenie JP3, listwy J9/J10) nie dotyczą sygnałów MCU, a test `tests/test_board_netlist.py` sprawdza każdą stałą `board_bench_n1.h` i `board_bench_b.h` od listy połączeń KiCad przez niezależnie przepisane wyprowadzenia złączy DK i DevKitC. Szóste po F86 (2026-10-08): FRAM U1 i panel Sharp w J7 są na płytce zamiast płytek Adafruit; sygnały MCU i ich przypisanie się nie zmieniły (ten sam test), zmieniły się tylko elementy na liniach DISP (10 kΩ i 100 nF) i FRAM_CS (10 kΩ do 3,3 V) oraz rozpoznawanie FRAM w oprogramowaniu.
 
 **Wynik: stanowisko A na N1 ma obraz `bench-n1`, a stanowisko B obraz `bench-b`; oba są zgodne z płytką w każdym sygnale tabel niżej.** Obrazy się budują, ale nie były uruchomione na sprzęcie; ekran pracuje z 1 MHz do próby 2 MHz z analizatorem ([niżej](#do-sprawdzenia-na-sprzęcie)). Obraz `bench-a` zostaje dla okablowania przewodami i nadal nie nadaje się na N1. Obraz `bench-b` to ten sam program stacji co na A (polecenia, pomiary, łącze P1, dziennik, magazyn, protokół USB z dwoma CDC, ekran, panel) z S2-LP i ESP32-S3. Ustalenia wspólne dla obu wersji (rejestry radia, protokół, ekran) są zgodne.
 
@@ -19,7 +19,7 @@ Stan: 2026-10-07. Płytka N1 według `tools/design.py` (commit 562d689). Oprogra
 | CS FRAM | P1.11 (D9) | P1.11 (D9) | tak | P1.11 |
 | CS ekranu | P1.05 (D4) | P1.05 (D4) | tak | P1.05 |
 | EXTCOMIN | P1.06 (D5) | P1.07 (D6) | nie | P1.07, RTC2 |
-| DISP ekranu | nie sterowany (podciągnięcie modułu) | P1.10 (D8), 2,2 kΩ do masy | nie: na N1 ekran jest wyłączony, dopóki program nie poda stanu wysokiego | P1.10: niski do CLEAR, potem wysoki |
+| DISP ekranu | nie sterowany (podciągnięcie modułu) | P1.10 (D8), 10 kΩ do masy i 100 nF | nie: na N1 ekran jest biały, dopóki program nie poda stanu wysokiego | P1.10: niski do CLEAR, potem wysoki |
 | Przyciski GÓRA, DÓŁ, OK, WSTECZ | BUTTON1–4 płytki DK (P0.11, P0.12, P0.24, P0.25) | P1.01, P1.02, P0.26, P0.27 | nie (przyciski DK nadal działają, ale nie są panelem) | P1.01, P1.02, P0.26, P0.27, bez podciągnięcia wewnętrznego |
 | CISZA | polecenie `SILENCE` | przełącznik, P1.15 (D13) przez 1 kΩ | brak w oprogramowaniu | P1.15 -> `bench.silence`; `SILENCE` zapasowo |
 | Tryb przygotowania | polecenie `PREP` z potwierdzeniem przyciskiem OK | przycisk, P0.02 (AREF) | brak w oprogramowaniu | P0.02, przytrzymanie 3 s; `PREP` zapasowo |
@@ -45,7 +45,7 @@ Kolumna N1 według [połączeń](../polaczenia.md) (J5/J6 = J1/J3 DevKitC). Test
 | CS FRAM | GPIO8 (J5.12) | `FRAM_CS = 8` | tak | |
 | CS ekranu | GPIO7 (J5.7), 10 kΩ do masy | `DISPLAY_CS = 7` | tak | aktywny stanem wysokim, niski od startu |
 | EXTCOMIN | GPIO17 (J5.10) | `DISPLAY_EXTCOMIN = 17` | tak | MCPWM0, 1 Hz |
-| DISP ekranu | GPIO16 (J5.9), 2,2 kΩ do masy | `DISPLAY_DISP = 16` | tak | niski do CLEAR, potem wysoki |
+| DISP ekranu | GPIO16 (J5.9), 10 kΩ do masy i 100 nF | `DISPLAY_DISP = 16` | tak | niski do CLEAR, potem wysoki |
 | GÓRA | GPIO41 (J6.7) | `BTN_UP = 41` | tak | bez podciągnięcia wewnętrznego |
 | DÓŁ | GPIO40 (J6.8) | `BTN_DOWN = 40` | tak | |
 | OK | GPIO39 (J6.9) | `BTN_OK = 39` | tak | |
@@ -63,12 +63,13 @@ Obraz nie steruje pinami konfiguracyjnymi (GPIO0, 3, 45, 46), USB (19, 20), UART
 - Profil P1 ustawia IOCFG1 na wysoką impedancję (`src/p1_registers.h`), więc SO/GPIO1 CC1120 nie walczy z FRAM na wspólnej linii MISO.
 - S2-LP ma osobny pin SDO, który przy CSn w stanie wysokim jest w stanie wysokiej impedancji (DS11896, rozdział 9.1), więc dzieli MISO z FRAM bez ustawień GPIO; jego GPIO0–3 idą na osobne wejścia ESP32-S3.
 - CS ekranu jest aktywny stanem wysokim, a program ustawia go w stan niski przed uruchomieniem SPI. Zgadza się to z R13 na płytce.
-- EXTCOMIN z licznika RTC2 przy EMD w stanie wysokim: N1 wiąże EMD z 3,3 V.
+- EXTCOMIN z licznika RTC2 (A) albo MCPWM0 (B) przy EXTMODE w stanie wysokim: N1 wiąże EXTMODE panelu z 5 V (VDD panelu), jak zaleca karta Sharp.
+- FRAM U1 na płytce: obraz rozpoznaje po RDID CY15B104QN (`7F7F7F7F7F7FC22C00`) i MB85RS4MT (`047F4903`), odrzuca wersje 1,8 V i 2 Mbit (`src/fram_id.h`, test w `tests/test_firmware_host.py`).
 - Pozostałe ustawienia: SPI 1 MHz dla radia i FRAM, napięcia 3,0 V z płytki DK, dziennik w FRAM i polecenia pomiarowe nie zależą od przypisania pinów.
 
 ## Do sprawdzenia na sprzęcie
 
-- Zegar ekranu. Na N1 SCK idzie przez P1.04 (pin, który Nordic zaleca do sygnałów wolnozmiennych ze względu na radio 2,4 GHz, tu nieużywane), przez 33 Ω (R17) i sieć długości około 265 mm, a 2 MHz to górna granica LS027B7DH01. Dlatego `bench-n1` taktuje ekran zegarem 1 MHz (`board::DISPLAY_SPI_HZ`; radio i FRAM też 1 MHz), z napędem H0H1 na SCK i MOSI, który ustawia `SPIClass::begin()` rdzenia. `DISPLAY 2000000` przełącza ekran na 2 MHz do restartu; przejście na 2 MHz na stałe dopiero po obejrzeniu zboczy SCK i MOSI analizatorem na J11 i obrazie bez błędów.
+- Zegar ekranu. Na N1 SCK idzie przez P1.04 (pin, który Nordic zaleca do sygnałów wolnozmiennych ze względu na radio 2,4 GHz, tu nieużywane), przez 33 Ω (R17) i sieć długości około 300 mm, a 2 MHz to górna granica LS027B7DH01. Dlatego `bench-n1` taktuje ekran zegarem 1 MHz (`board::DISPLAY_SPI_HZ`; radio i FRAM też 1 MHz), z napędem H0H1 na SCK i MOSI, który ustawia `SPIClass::begin()` rdzenia. `DISPLAY 2000000` przełącza ekran na 2 MHz do restartu; przejście na 2 MHz na stałe dopiero po obejrzeniu zboczy SCK i MOSI analizatorem na J11 i obrazie bez błędów.
 - Kroki A3–A5 [uruchomienia](../uruchomienie.md#stanowisko-a) z poleceniami `BTN`, `LED 5`, `BUZZ`, `VTEST` i `DISPLAY` ([firmware/README.md](../../../firmware/README.md#płytka-nośna-n1-bench-n1)).
 - Stanowisko B: zbocza SCK i MOSI ESP32-S3 przy najniższym napędzie (`DRIVE 0`) na J11, przy 1 i 2 MHz; wyższy napęd tylko wtedy, gdy zbocza nie są czyste. Kroki B3–B4 [uruchomienia](../uruchomienie.md#stanowisko-b): `RADIO` z `partnumber: 0x03` i stanem `RX`, `VERIFY` bez niezgodności, dwa porty szeregowe w systemie ([firmware/README.md](../../../firmware/README.md#stanowisko-b-na-płytce-n1-bench-b)).
 

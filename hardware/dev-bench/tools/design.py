@@ -36,17 +36,19 @@ DEVKIT_PIN22_Y = round(DEVKIT_USB_Y - 7.96, 4)
 DEVKIT_PIN1_Y = round(DEVKIT_PIN22_Y - 21 * 2.54, 4)
 DEVKIT_J1_X, DEVKIT_J3_X = DEVKIT_X + 1.27, DEVKIT_X + 24.13
 
-# Adafruit 4694 (63.50 x 55.88 mm) top-left corner; header 2.54 mm below the
-# top edge. The glass is on the side opposite the parts, so with the display face
-# up the header reads VIN 3V3 GND CLK DI CS EMD DISP EIN from the left (the
-# Adafruit fab print shows the parts side, mirrored); VIN at x 21.59 mm.
-# Holes 2.54 mm in from each corner.
-LCD_X, LCD_Y = 8.0, 3.0
-LCD_PIN1 = (LCD_X + 21.59, LCD_Y + 2.54)
-# Adafruit 4719 (25.40 x 17.78 mm) top-left corner; header 2.54 mm above the
-# bottom edge, pin VIN at x 2.54 mm; holes 2.54 mm below the top edge.
-FRAM_X, FRAM_Y = 73.5, 4.0
-FRAM_PIN1 = (FRAM_X + 2.54, FRAM_Y + 17.78 - 2.54)
+# Sharp LS027B7DH01A panel (62.8 x 42.82 x 1.64 mm, Sharp LCP-2110015A figure 8-1)
+# display side up on 0.8 mm foam tape; top-left glass corner. Its FPC leaves the
+# bottom edge on the panel centre line, 6.06 mm long, contacts on the back side,
+# so it lies flat in a bottom-contact connector (Sharp recommends CFP-4610 for a
+# flat FPC). Seen from the display side, terminal 1 (SCLK) is the right-hand
+# contact. The connector front face sits FPC_GAP from the glass edge, which leaves
+# about 3.8 mm of the FPC inside the connector (check at the fit print).
+PANEL_X, PANEL_Y = 8.6, 4.0
+PANEL_W, PANEL_H = 62.8, 42.82
+FPC_GAP = 2.3
+# Hirose FH12-10S-0.5SH: pads at y -1.85, front face (FPC entry) at y +4.4 in the
+# footprint; rotated 180 degrees the entry faces the panel and pad 1 is on the right.
+FPC_ORIGIN = (round(PANEL_X + PANEL_W / 2, 4), round(PANEL_Y + PANEL_H + FPC_GAP + 4.4, 4))
 
 R0805 = 'Resistor_SMD:R_0805_2012Metric'
 C0805 = 'Capacitor_SMD:C_0805_2012Metric'
@@ -64,27 +66,31 @@ def part(ref, lib_id, value, footprint, nets, place, *, mpn='', manufacturer='',
 
 
 # Rotation 90 turns a vertical 1xN socket so its pins run to +x, 270 to -x.
-STACK = dict(mpn='Adafruit 85', manufacturer='Adafruit',
-             spec='gniazdo przelotowe Arduino R3 z długimi pinami (stacking), 2,54 mm',
-             note='jeden zestaw na J1-J4 (1x10, 2x 1x8, 1x6); piny od spodu wchodzą w gniazda nRF52840-DK')
+# Samtec SSQ with lead style -03: 8.51 mm body, 10.00 mm tails into the DK sockets.
+def stack(n):
+    return dict(mpn=f'SSQ-1{n:02d}-03-T-S', manufacturer='Samtec',
+                spec=f'gniazdo 1x{n}, 2,54 mm, przelotowe z długimi wyprowadzeniami 10,0 mm (stacking), cyna',
+                note='wyprowadzenia od spodu wchodzą w gniazda Arduino nRF52840-DK')
+
+
 part('J1', 'Connector_Generic:Conn_01x08', 'ARDUINO POWER',
      'Connector_PinSocket_2.54mm:PinSocket_1x08_P2.54mm_Vertical',
      {4: '+3V3', 5: '+5V', 6: 'GND', 7: 'GND'}, (*uno(27.94, 2.54), 90),
-     **STACK)
+     **stack(8))
 part('J2', 'Connector_Generic:Conn_01x06', 'ARDUINO A0-A5',
      'Connector_PinSocket_2.54mm:PinSocket_1x06_P2.54mm_Vertical',
      {1: 'RF_GPIO0', 2: 'RF_CS', 3: 'RF_GPIO1', 4: 'RF_GPIO2', 5: 'VTEST', 6: 'RF_GPIO3'},
-     (*uno(50.8, 2.54), 90), **STACK)
+     (*uno(50.8, 2.54), 90), **stack(6))
 part('J3', 'Connector_Generic:Conn_01x08', 'ARDUINO D0-D7',
      'Connector_PinSocket_2.54mm:PinSocket_1x08_P2.54mm_Vertical',
      {1: 'BTN_UP', 2: 'BTN_DOWN', 3: 'BUZZER', 4: 'SPI_SCK_DK', 5: 'LCD_CS',
       7: 'LCD_EXTCOMIN', 8: 'RF_RESET'},
-     (*uno(63.5, 50.8), 270), **STACK)
+     (*uno(63.5, 50.8), 270), **stack(8))
 part('J4', 'Connector_Generic:Conn_01x10', 'ARDUINO D8-SCL',
      'Connector_PinSocket_2.54mm:PinSocket_1x10_P2.54mm_Vertical',
      {1: 'LCD_DISP', 2: 'FRAM_CS', 3: 'LED_ALARM', 4: 'SPI_MOSI', 5: 'SPI_MISO',
       6: 'SW_CISZA', 7: 'GND', 8: 'BTN_PREP', 9: 'BTN_OK', 10: 'BTN_BACK'},
-     (*uno(41.656, 50.8), 270), **STACK)
+     (*uno(41.656, 50.8), 270), **stack(10))
 
 EM = dict(mpn='TFM-110-01-L-D', manufacturer='Samtec',
           spec='listwa Tiger Eye 2x10, 1,27 mm, przewlekana (styl -01), partner gniazd SFM-110-02-S-D-A '
@@ -114,19 +120,20 @@ part('J6', 'Connector_Generic:Conn_01x22', 'DEVKITC J3',
       9: 'BTN_OK', 18: 'RF_GPIO1', 21: 'GND', 22: 'GND'},
      (DEVKIT_J3_X, DEVKIT_PIN1_Y, 0), **DEVKIT)
 
-part('J7', 'Connector_Generic:Conn_01x09', 'SHARP 4694',
-     'Connector_PinSocket_2.54mm:PinSocket_1x09_P2.54mm_Vertical',
-     {1: '+5V', 3: 'GND', 4: 'SPI_SCK', 5: 'SPI_MOSI', 6: 'LCD_CS', 7: '+3V3', 8: 'LCD_DISP',
-      9: 'LCD_EXTCOMIN'}, (*LCD_PIN1, 90),
-     mpn='PPTC091LFBN-RC', manufacturer='Sullins', spec='gniazdo żeńskie 1x9, 2,54 mm, proste, THT',
-     note='Adafruit 4694 ekranem do góry, piny od lewej: VIN 3V3 GND CLK DI CS EMD DISP EIN (schemat Adafruit: '
-          'JP1.1 VIN ... JP1.9 EXTCOMIN); EMD = H (EXTCOMIN z MCU); wyjście 3V3 modułu nie podłączone')
-part('J8', 'Connector_Generic:Conn_01x09', 'FRAM 4719',
-     'Connector_PinSocket_2.54mm:PinSocket_1x09_P2.54mm_Vertical',
-     {1: '+3V3', 3: 'GND', 4: 'SPI_SCK', 5: 'SPI_MISO', 6: 'SPI_MOSI', 7: 'FRAM_CS'},
-     (*FRAM_PIN1, 90),
-     mpn='PPTC091LFBN-RC', manufacturer='Sullins', spec='gniazdo żeńskie 1x9, 2,54 mm, proste, THT',
-     note='Adafruit 4719: VIN 3V3 GND SCK MISO MOSI CS WP HOLD; WP i HOLD podciągnięte na module')
+# Panel terminals (LCP-2110015A table 4-1): 1 SCLK, 2 SI, 3 SCS, 4 EXTCOMIN, 5 DISP,
+# 6 VDDA, 7 VDD, 8 EXTMODE (to VDD: VCOM from EXTCOMIN), 9 VSS, 10 VSSA.
+part('J7', 'Connector_Generic_MountingPin:Conn_01x10_MountingPin', 'SHARP LS027B7DH01A',
+     'Connector_FFC-FPC:Hirose_FH12-10S-0.5SH_1x10-1MP_P0.50mm_Horizontal',
+     {1: 'SPI_SCK', 2: 'SPI_MOSI', 3: 'LCD_CS', 4: 'LCD_EXTCOMIN', 5: 'LCD_DISP', 6: '+5V', 7: '+5V',
+      8: '+5V', 9: 'GND', 10: 'GND', 'MP': 'GND'}, (*FPC_ORIGIN, 180),
+     mpn='FH12-10S-0.5SH(55)', manufacturer='Hirose',
+     spec='złącze FPC 10-pin, 0,5 mm, styki od dołu, FPC 0,3 mm, SMD',
+     note='panel Sharp LS027B7DH01A ekranem do góry, taśma FPC płasko; styk 1 panelu (SCLK) na padzie 1 po prawej')
+part('U1', 'Memory_NVRAM:MB85RS2MT', 'CY15B104QN-50SXI', 'Package_SO:SOIC-8_5.3x5.3mm_P1.27mm',
+     {1: 'FRAM_CS', 2: 'SPI_MISO', 3: '+3V3', 4: 'GND', 5: 'SPI_MOSI', 6: 'SPI_SCK', 7: '+3V3', 8: '+3V3'},
+     (86.0, 12.0, 0), mpn='CY15B104QN-50SXI', manufacturer='Infineon',
+     spec='FRAM 4 Mbit SPI, 1,8–3,6 V, SOIC-8 208 mil',
+     note='zamiennik na tym samym footprincie: RAMXEED MB85RS4MTPF-G-BCERE1; pin 7 (HOLD albo RESET) i WP na stałe do 3,3 V')
 part('J11', 'Connector_Generic:Conn_01x09', 'ANALIZATOR',
      'Connector_PinHeader_2.54mm:PinHeader_1x09_P2.54mm_Vertical',
      {1: 'GND', 2: 'SPI_SCK', 3: 'SPI_MOSI', 4: 'SPI_MISO', 5: 'RF_CS', 6: 'FRAM_CS',
@@ -202,9 +209,12 @@ part('R17', 'Device:R', '33R', R0805, {1: 'SPI_SCK_DK', 2: 'SPI_SCK'}, (158.3, 2
 part('R18', 'Device:R', '33R', R0805, {1: 'SPI_SCK_DEVKIT', 2: 'SPI_SCK'}, (79.0, 80.88, 0),
      mpn='RC0805FR-0733RL', manufacturer='Yageo', spec='33 Ω 1% 0805',
      note='szeregowy SCK przy GPIO12 DevKitC')
-part('R19', 'Device:R', '2k2', R0805, {1: 'LCD_DISP', 2: 'GND'}, (32.5, 12.0, 0),
-     mpn='RC0805FR-072K2L', manufacturer='Yageo', spec='2,2 kΩ 1% 0805',
-     note='z rezystorem 10 kΩ modułu do jego 3,3 V daje DISP = L (około 0,6 V) do startu MCU')
+part('R19', 'Device:R', '10k', R0805, {1: 'LCD_DISP', 2: 'GND'}, (FPC_ORIGIN[0] + 13.0, FPC_ORIGIN[1] - 2.0, 90),
+     mpn='RC0805FR-0710KL', manufacturer='Yageo', spec='10 kΩ 1% 0805',
+     note='DISP = L do startu MCU: ekran biały, pamięć obrazu zachowana')
+part('R20', 'Device:R', '10k', R0805, {1: '+3V3', 2: 'FRAM_CS'}, (86.0, 18.5, 0),
+     mpn='RC0805FR-0710KL', manufacturer='Yageo', spec='10 kΩ 1% 0805',
+     note='FRAM niewybrana przed startem MCU')
 part('D3', 'Diode:BAT54S', 'BAT54S', 'Package_TO_SOT_SMD:SOT-23', {1: 'GND', 2: '+3V3', 3: 'VTEST'},
      (163.5, 87.5, 0), mpn='BAT54SLT1G', manufacturer='onsemi', spec='podwójna dioda Schottky 30 V, SOT-23',
      note='ogranicza VTEST do zakresu -0,3...+3,6 V przy odwrotnej polaryzacji albo za wysokim napięciu J12')
@@ -221,7 +231,7 @@ part('R11', 'Device:R', '10k', R0805, {1: '+3V3', 2: 'RF_CS'}, (148.0, 62.0, 90)
 part('R12', 'Device:R', '10k', R0805, {1: 'RF_RESET', 2: 'GND'}, (151.0, 62.0, 90),
      mpn='RC0805FR-0710KL', manufacturer='Yageo', spec='10 kΩ 1% 0805',
      note='A: CC1120 w resecie do startu MCU; B: S2-LP włączony (SDN = L)')
-part('R13', 'Device:R', '10k', R0805, {1: 'LCD_CS', 2: 'GND'}, (25.0, 12.0, 0),
+part('R13', 'Device:R', '10k', R0805, {1: 'LCD_CS', 2: 'GND'}, (FPC_ORIGIN[0] - 13.0, FPC_ORIGIN[1] - 2.0, 90),
      mpn='RC0805FR-0710KL', manufacturer='Yageo', spec='10 kΩ 1% 0805',
      note='ściąga LCD_CS do masy; CS ekranu jest aktywny stanem wysokim')
 part('R14', 'Device:R', '100k', R0805, {1: 'VTEST_IN', 2: 'VTEST'}, (158.5, 82.0, 0),
@@ -235,12 +245,18 @@ part('C1', 'Device:C', '10u', C0805, {1: '+3V3_RF', 2: 'GND'}, (148.0, 57.0, 90)
 part('C2', 'Device:C', '100n', C0805, {1: '+3V3_RF', 2: 'GND'}, (151.0, 57.0, 90),
      mpn='CL21B104KBCNNNC', manufacturer='Samsung Electro-Mechanics', spec='100 nF 50 V X7R 0805',
      note='+3V3_RF przy module CC1120EM')
-part('C3', 'Device:C', '100n', C0805, {1: '+3V3', 2: 'GND'}, (78.0, 25.0, 0),
+part('C3', 'Device:C', '100n', C0805, {1: '+3V3', 2: 'GND'}, (92.5, 12.0, 90),
      mpn='CL21B104KBCNNNC', manufacturer='Samsung Electro-Mechanics', spec='100 nF 50 V X7R 0805',
-     note='+3V3 przy FRAM')
-part('C4', 'Device:C', '10u', C0805, {1: '+5V', 2: 'GND'}, (50.0, 12.0, 0),
+     note='+3V3 przy FRAM U1')
+part('C4', 'Device:C', '10u', C0805, {1: '+5V', 2: 'GND'}, (FPC_ORIGIN[0] - 8.0, FPC_ORIGIN[1] - 2.0, 90),
      mpn='CL21A106KAYNNNE', manufacturer='Samsung Electro-Mechanics', spec='10 µF 25 V X5R 0805',
-     note='+5V przy wejściu VIN ekranu')
+     note='VDD panelu (Sharp zaleca ≥1 µF)')
+part('C6', 'Device:C', '100n', C0805, {1: '+5V', 2: 'GND'}, (FPC_ORIGIN[0] + 8.0, FPC_ORIGIN[1] - 2.0, 90),
+     mpn='CL21B104KBCNNNC', manufacturer='Samsung Electro-Mechanics', spec='100 nF 50 V X7R 0805',
+     note='VDDA panelu (Sharp zaleca ≥0,1 µF)')
+part('C7', 'Device:C', '100n', C0805, {1: 'LCD_DISP', 2: 'GND'}, (FPC_ORIGIN[0] + 10.5, FPC_ORIGIN[1] - 2.0, 90),
+     mpn='CL21B104KBCNNNC', manufacturer='Samsung Electro-Mechanics', spec='100 nF 50 V X7R 0805',
+     note='DISP panelu (Sharp zaleca 0,1 µF)')
 part('C5', 'Device:C', '100n', C0805, {1: 'VTEST', 2: 'GND'}, (165.5, 82.0, 90),
      mpn='CL21B104KBCNNNC', manufacturer='Samsung Electro-Mechanics', spec='100 nF 50 V X7R 0805',
      note='filtr wejścia ADC VTEST')
@@ -252,8 +268,10 @@ EXTRAS = [
     ('SW1-SW4', 4, 'Omron', 'B32-1310', 'nasadka przycisku B3F, czarna', 'A i B', ''),
     ('H1-H9', 9, '', '', 'dystans M3 × 12 mm z dwiema śrubami (w H6-H9 nylonowe, łeb śruby ≤4,4 mm)', 'A i B',
      'stanowisko B stoi na H1-H9; w A dystanse H1, H2, H5 podpierają lewą część płytki, wysokość z przymiarki'),
-    ('H10-H15', 6, '', '', 'dystans M2,5 z dwiema śrubami, wysokość jak gniazdo z listwą (zmierzyć)', 'A i B',
-     'ekran (4) i FRAM (2)'),
+    ('ekran w J7', 1, 'Sharp', 'LS027B7DH01A', 'panel pamięciowy LCD 2,7 cala, 400 × 240, FPC 10-pin 0,5 mm', 'A i B',
+     'w J7; ekranem do góry na taśmie piankowej, w obrysie na opisie płytki'),
+    ('pod ekranem', 1, '3M', '4032', 'taśma piankowa dwustronna 0,8 mm, około 60 × 40 mm', 'A i B',
+     'pod panelem; przykleja się po włożeniu FPC do J7'),
 ]
 
 HOLES = [  # ref, x, y, footprint, note
@@ -261,13 +279,9 @@ HOLES = [  # ref, x, y, footprint, note
     ('H4', 166.5, 96.5, 'M3'), ('H5', 68.0, 96.5, 'M3'),
     ('H6', *uno(13.97, 2.54), 'UNO'), ('H7', *uno(15.24, 50.8), 'UNO'),
     ('H8', *uno(66.04, 7.62), 'UNO'), ('H9', *uno(66.04, 35.56), 'UNO'),
-    ('H10', LCD_X + 2.54, LCD_Y + 2.54, 'M2.5'), ('H11', LCD_X + 60.96, LCD_Y + 2.54, 'M2.5'),
-    ('H12', LCD_X + 2.54, LCD_Y + 53.34, 'M2.5'), ('H13', LCD_X + 60.96, LCD_Y + 53.34, 'M2.5'),
-    ('H14', FRAM_X + 2.54, FRAM_Y + 2.54, 'M2.5'), ('H15', FRAM_X + 22.86, FRAM_Y + 2.54, 'M2.5'),
 ]
 for ref, x, y, size in HOLES:
-    fp = {'M3': 'MountingHole:MountingHole_3.2mm_M3', 'M2.5': 'MountingHole:MountingHole_2.7mm_M2.5',
-          'UNO': 'WICI:MountingHole_3.2mm_Arduino'}[size]
+    fp = {'M3': 'MountingHole:MountingHole_3.2mm_M3', 'UNO': 'WICI:MountingHole_3.2mm_Arduino'}[size]
     part(ref, 'Mechanical:MountingHole', size, fp, {}, (round(x, 4), round(y, 4), 0), bom=False,
          note='otwór nieplaterowany; H6-H9 to otwory Arduino Uno R3, zgodne z otworami nRF52840-DK')
 
@@ -278,7 +292,7 @@ NOTCH_P5 = (uno(61.0, 32.3)[0], uno(61.0, 32.3)[1], BOARD_W, uno(61.0, 23.0)[1])
 SLOT_P20 = (uno(17.0, 42.1)[0], uno(17.0, 42.1)[1], uno(51.0, 39.2)[0], uno(51.0, 39.2)[1])
 
 # Ground pads that DRC reported as starved thermals for the kept routing session.
-SOLID_GND_PADS = [('J6', '22'), ('J7', '3')]
+SOLID_GND_PADS = [('J6', '22'), ('J4', '7')]
 
 POWER_NETS = {'+3V3', '+3V3_RF', '+5V', '+3V3_DEVKIT', '+5V_DEVKIT', 'GND'}
 FLAGS = ['+3V3', '+3V3_RF', '+5V', '+3V3_DEVKIT', '+5V_DEVKIT', 'GND', 'VTEST_IN']
@@ -322,7 +336,7 @@ def check():
     nets = {}
     for p in PARTS:
         for pin, net in p['nets'].items():
-            nets.setdefault(net, []).append((p['ref'], int(pin)))
+            nets.setdefault(net, []).append((p['ref'], int(pin) if pin.isdigit() else pin))
     for net, ard, _nrf, gpio in SIGNALS:
         members = [m for n in (net, *SERIES.get(net, ())) for m in nets[n]]
         conn = ARDUINO_PIN[ard]

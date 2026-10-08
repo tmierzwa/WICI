@@ -624,6 +624,9 @@ class HostUnitTests(unittest.TestCase):
         # RDID: MB85RS4MT 4 bajty (Adafruit_FRAM_SPI), CY15B104Q 9 bajtów (karta Infineon 001-94895, „Device ID”).
         cases = {"047F4903": "MB85RS4MT", "047F490B": "MB85RS4MT", "7F7F7F7F7F7FC22608": "CY15B104Q",
                  "7F7F7F7F7F7FC22610": "CY15B104Q",   # inna wersja układu
+                 # CY15B104QN (karta 002-20526, tabela 19): -50SXI, -20LPXI, -20LPXC; 1,8 V CY15V104QN odrzucony
+                 "7F7F7F7F7F7FC22C00": "CY15B104QN", "7F7F7F7F7F7FC22C01": "CY15B104QN",
+                 "7F7F7F7F7F7FC22CA1": "CY15B104QN", "7F7F7F7F7F7FC22C04": "unknown", "7F7F7F7F7F7FC22CA5": "unknown",
                  "7F7F7F7F7F7FC22508": "unknown",     # FM25V20A, 2 Mbit
                  "047F4803": "unknown",               # MB85RS2MT, 2 Mbit
                  "7F7F7F7F7FC22608": "unknown", "FFFFFFFFFFFFFFFFFF": "unknown", "000000000000000000": "unknown"}

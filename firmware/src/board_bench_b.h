@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Stanowisko deweloperskie B na płytce nośnej N1 (hardware/dev-bench/plytka-nosna.md):
-// ESP32-S3-DevKitC-1 (moduł N8, N8R2 albo N8R8, flash quad SPI) w J5/J6 z X-NUCLEO-S2868A2 (ST S2-LP,
-// kwarc 50 MHz) w J1-J4, FRAM MB85RS4MT, ekranem Sharp (Adafruit 4694) i panelem płytki
+// ESP32-S3-DevKitC-1 (moduł N8R8, N8 albo wycofany N8R2, flash quad SPI) w J5/J6 z X-NUCLEO-S2868A2 (ST S2-LP,
+// kwarc 50 MHz) w J1-J4, FRAM U1 i panelem ekranu Sharp w złączu FPC J7 na płytce oraz panelem obsługi
 // (przyciski, CISZA, przycisk przygotowania, dioda alarmu, brzęczyk, VTEST).
 // Przypisanie według kolumny ESP32-S3 tabeli "Przypisanie sygnałów" i
 // hardware/dev-bench/polaczenia.md (złącza J5/J6 = J1/J3 DevKitC); zgodność pin po pinie:
@@ -19,7 +19,7 @@ namespace board {
 constexpr const char* NAME = "N1";
 
 // SPI: piny IO_MUX FSPI (FSPID 11, FSPICLK 12, FSPIQ 13) na kontrolerze SPI2 (FSPI).
-// SCK przez 33 Ω (R18) przy GPIO12; sieć SCK ma około 265 mm z odgałęzieniami, więc SCK i MOSI
+// SCK przez 33 Ω (R18) przy GPIO12; sieć SCK ma około 300 mm z odgałęzieniami, więc SCK i MOSI
 // startują z najniższym napędem (DRIVE_CAP 0, około 5 mA); polecenie DRIVE zmienia go do restartu.
 constexpr uint8_t SPI_SCK = 12;   // J5.18 -> R18 -> S2-LP SCLK, FRAM, ekran, J11
 constexpr uint8_t SPI_MOSI = 11;  // J5.17 -> S2-LP SDI, FRAM, ekran
@@ -35,11 +35,11 @@ constexpr uint8_t RADIO_GPIO2 = 4;   // J5.4  -> GPIO2, J11
 constexpr uint8_t RADIO_GPIO3 = 42;  // J6.6  -> GPIO3
 constexpr uint32_t RADIO_XTAL_HZ = 50000000;
 
-// FRAM MB85RS4MT (Adafruit 4719) albo CY15B104Q na tej samej magistrali SPI.
+// FRAM U1 na płytce N1 (CY15B104QN albo MB85RS4MT, SOIC-8) na tej samej magistrali SPI.
 constexpr uint8_t FRAM_CS = 8;  // J5.12
 
-// Ekran Sharp LS027B7DH01 (Adafruit 4694): CS aktywny stanem wysokim (10 kΩ do masy), EXTCOMIN
-// z MCPWM, EMD na stałe wysoki. DISP: 2,2 kΩ do masy (R19), więc ekran jest wyłączony, dopóki
+// Panel Sharp LS027B7DH01A w J7: SCS aktywny stanem wysokim (10 kΩ do masy), EXTCOMIN
+// z MCPWM, EXTMODE na stałe wysoki (5 V). DISP: 10 kΩ do masy (R19), więc ekran jest biały, dopóki
 // program po wyczyszczeniu pamięci ekranu nie poda stanu wysokiego.
 constexpr uint8_t DISPLAY_CS = 7;         // J5.7
 constexpr uint8_t DISPLAY_EXTCOMIN = 17;  // J5.10

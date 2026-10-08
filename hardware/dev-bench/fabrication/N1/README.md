@@ -11,8 +11,8 @@
 | `assembly/positions.csv` | pozycje części od strony elementów (wszystkie części są na stronie górnej) |
 | `assembly/montaz.pdf` | rysunek montażowy w skali 1,5 z tabliczką (rewizja N1) |
 | `assembly/bom.csv` | kopia [BOM](../../bom.csv) |
-| `assembly/bom-assembly.csv` | BOM dla montażowni po angielsku, tylko 27 elementów SMD: oznaczenia, ilość na płytkę, MPN; resztę lutuje właściciel według [BOM](../../bom.csv) |
-| `assembly/cpl-smd.csv` | pozycje 27 elementów SMD w kolumnach Designator, Mid X, Mid Y, Layer, Rotation |
+| `assembly/bom-assembly.csv` | BOM dla montażowni po angielsku, tylko 32 elementy SMD: oznaczenia, ilość na płytkę, MPN; resztę lutuje właściciel według [BOM](../../bom.csv) |
+| `assembly/cpl-smd.csv` | pozycje 32 elementów SMD w kolumnach Designator, Mid X, Mid Y, Layer, Rotation |
 | `mechanika-1-do-1.pdf` | wydruk do przymiarki w skali 1:1 z kreską kontrolną 50 mm |
 
 Punktem odniesienia Gerberów, wierceń i pozycji jest lewy dolny narożnik płytki.

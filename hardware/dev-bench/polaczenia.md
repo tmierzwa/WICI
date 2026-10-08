@@ -6,19 +6,19 @@ Plik generuje `tools/make_schematic.py` z `tools/design.py`; nie edytować ręcz
 
 | Sieć | Arduino (złącze.pin) | nRF52840 (A) | ESP32-S3 (B, złącze.pin) | Pozostałe piny sieci |
 |---|---|---|---|---|
-| SPI_SCK | D3 (J3.4) | P1.04 | GPIO12 (J5.18) | J9.16, J7.4, J8.4, J11.2, R17.2, R18.2, R17.1, R18.1 |
-| SPI_MOSI | D11 (J4.4) | P1.13 | GPIO11 (J5.17) | J9.18, J7.5, J8.6, J11.3 |
-| SPI_MISO | D12 (J4.5) | P1.14 | GPIO13 (J5.19) | J9.20, J8.5, J11.4 |
+| SPI_SCK | D3 (J3.4) | P1.04 | GPIO12 (J5.18) | J9.16, J7.1, U1.6, J11.2, R17.2, R18.2, R17.1, R18.1 |
+| SPI_MOSI | D11 (J4.4) | P1.13 | GPIO11 (J5.17) | J9.18, J7.2, U1.5, J11.3 |
+| SPI_MISO | D12 (J4.5) | P1.14 | GPIO13 (J5.19) | J9.20, U1.2, J11.4 |
 | RF_CS | A1 (J2.2) | P0.04 | GPIO10 (J5.16) | J9.14, J11.5, R11.2 |
 | RF_RESET | D7 (J3.8) | P1.08 | GPIO9 (J5.15) | J10.15, R12.1 |
 | RF_GPIO0 | A0 (J2.1) | P0.03 | GPIO14 (J5.20) | J9.10, J11.8 |
 | RF_GPIO1 | A2 (J2.3) | P0.28 | GPIO21 (J6.18) |  |
 | RF_GPIO2 | A3 (J2.4) | P0.29 | GPIO4 (J5.4) | J9.12, J11.9 |
 | RF_GPIO3 | A5 (J2.6) | P0.31 | GPIO42 (J6.6) | J10.18 |
-| FRAM_CS | D9 (J4.2) | P1.11 | GPIO8 (J5.12) | J8.7, J11.6 |
-| LCD_CS | D4 (J3.5) | P1.05 | GPIO7 (J5.7) | J7.6, J11.7, R13.1 |
-| LCD_EXTCOMIN | D6 (J3.7) | P1.07 | GPIO17 (J5.10) | J7.9 |
-| LCD_DISP | D8 (J4.1) | P1.10 | GPIO16 (J5.9) | J7.8, R19.1 |
+| FRAM_CS | D9 (J4.2) | P1.11 | GPIO8 (J5.12) | U1.1, J11.6, R20.2 |
+| LCD_CS | D4 (J3.5) | P1.05 | GPIO7 (J5.7) | J7.3, J11.7, R13.1 |
+| LCD_EXTCOMIN | D6 (J3.7) | P1.07 | GPIO17 (J5.10) | J7.4 |
+| LCD_DISP | D8 (J4.1) | P1.10 | GPIO16 (J5.9) | J7.5, R19.1, C7.1 |
 | LED_ALARM | D10 (J4.3) | P1.12 | GPIO18 (J5.11) | R1.1 |
 | BUZZER | D2 (J3.3) | P1.03 | GPIO15 (J5.8) | R3.1 |
 | BTN_UP | D0 (J3.1) | P1.01 | GPIO41 (J6.7) | SW1.1, R5.2 |
@@ -33,10 +33,10 @@ Plik generuje `tools/make_schematic.py` z `tools/design.py`; nie edytować ręcz
 
 | Sieć | Piny |
 |---|---|
-| +3V3 | J1.4, J7.7, J8.1, JP1.1, JP3.1, D3.2, R5.1, R6.1, R7.1, R8.1, R9.1, R10.1, R11.1, C3.1 |
+| +3V3 | J1.4, U1.3, U1.7, U1.8, JP1.1, JP3.1, R20.1, D3.2, R5.1, R6.1, R7.1, R8.1, R9.1, R10.1, R11.1, C3.1 |
 | +3V3_DEVKIT | J5.1, J5.2, JP1.2 |
 | +3V3_RF | J10.7, J10.9, JP3.2, C1.1, C2.1 |
-| +5V | J1.5, J7.1, JP2.1, R2.1, C4.1 |
+| +5V | J1.5, J7.6, J7.7, J7.8, JP2.1, R2.1, C4.1, C6.1 |
 | +5V_DEVKIT | J5.21, JP2.2 |
 | BTN_BACK | J4.10, J6.5, SW4.1, R8.2 |
 | BTN_DOWN | J3.2, J6.8, SW2.1, R6.2 |
@@ -46,11 +46,11 @@ Plik generuje `tools/make_schematic.py` z `tools/design.py`; nie edytować ręcz
 | BUZZER | J3.3, J5.8, R3.1 |
 | BZ_N | BZ1.2, D2.2, Q1.3 |
 | BZ_P | BZ1.1, R2.2, D2.1 |
-| FRAM_CS | J4.2, J5.12, J8.7, J11.6 |
-| GND | J1.6, J1.7, J4.7, J9.1, J9.19, J10.2, J5.22, J6.1, J6.21, J6.22, J7.3, J8.3, J11.1, J12.2, SW1.2, SW2.2, SW3.2, SW4.2, SW5.1, SW6.2, D1.1, Q1.2, R4.2, R19.2, D3.1, R12.2, R13.2, R15.2, C1.2, C2.2, C3.2, C4.2, C5.2 |
-| LCD_CS | J3.5, J5.7, J7.6, J11.7, R13.1 |
-| LCD_DISP | J4.1, J5.9, J7.8, R19.1 |
-| LCD_EXTCOMIN | J3.7, J5.10, J7.9 |
+| FRAM_CS | J4.2, J5.12, U1.1, J11.6, R20.2 |
+| GND | J1.6, J1.7, J4.7, J9.1, J9.19, J10.2, J5.22, J6.1, J6.21, J6.22, J7.9, J7.10, J7.MP, U1.4, J11.1, J12.2, SW1.2, SW2.2, SW3.2, SW4.2, SW5.1, SW6.2, D1.1, Q1.2, R4.2, R19.2, D3.1, R12.2, R13.2, R15.2, C1.2, C2.2, C3.2, C4.2, C6.2, C7.2, C5.2 |
+| LCD_CS | J3.5, J5.7, J7.3, J11.7, R13.1 |
+| LCD_DISP | J4.1, J5.9, J7.5, R19.1, C7.1 |
+| LCD_EXTCOMIN | J3.7, J5.10, J7.4 |
 | LED_A | D1.2, R1.2 |
 | LED_ALARM | J4.3, J5.11, R1.1 |
 | Q_B | Q1.1, R3.2, R4.1 |
@@ -60,9 +60,9 @@ Plik generuje `tools/make_schematic.py` z `tools/design.py`; nie edytować ręcz
 | RF_GPIO2 | J2.4, J9.12, J5.4, J11.9 |
 | RF_GPIO3 | J2.6, J10.18, J6.6 |
 | RF_RESET | J3.8, J10.15, J5.15, R12.1 |
-| SPI_MISO | J4.5, J9.20, J5.19, J8.5, J11.4 |
-| SPI_MOSI | J4.4, J9.18, J5.17, J7.5, J8.6, J11.3 |
-| SPI_SCK | J9.16, J7.4, J8.4, J11.2, R17.2, R18.2 |
+| SPI_MISO | J4.5, J9.20, J5.19, U1.2, J11.4 |
+| SPI_MOSI | J4.4, J9.18, J5.17, J7.2, U1.5, J11.3 |
+| SPI_SCK | J9.16, J7.1, U1.6, J11.2, R17.2, R18.2 |
 | SPI_SCK_DEVKIT | J5.18, R18.1 |
 | SPI_SCK_DK | J3.4, R17.1 |
 | SW_CISZA | J4.6, J6.4, R16.2, R9.2 |
@@ -74,7 +74,7 @@ Plik generuje `tools/make_schematic.py` z `tools/design.py`; nie edytować ręcz
 
 ### J1: ARDUINO POWER
 
-jeden zestaw na J1-J4 (1x10, 2x 1x8, 1x6); piny od spodu wchodzą w gniazda nRF52840-DK
+wyprowadzenia od spodu wchodzą w gniazda Arduino nRF52840-DK
 
 | Pin | Sieć |
 |---:|---|
@@ -89,7 +89,7 @@ jeden zestaw na J1-J4 (1x10, 2x 1x8, 1x6); piny od spodu wchodzą w gniazda nRF5
 
 ### J2: ARDUINO A0-A5
 
-jeden zestaw na J1-J4 (1x10, 2x 1x8, 1x6); piny od spodu wchodzą w gniazda nRF52840-DK
+wyprowadzenia od spodu wchodzą w gniazda Arduino nRF52840-DK
 
 | Pin | Sieć |
 |---:|---|
@@ -102,7 +102,7 @@ jeden zestaw na J1-J4 (1x10, 2x 1x8, 1x6); piny od spodu wchodzą w gniazda nRF5
 
 ### J3: ARDUINO D0-D7
 
-jeden zestaw na J1-J4 (1x10, 2x 1x8, 1x6); piny od spodu wchodzą w gniazda nRF52840-DK
+wyprowadzenia od spodu wchodzą w gniazda Arduino nRF52840-DK
 
 | Pin | Sieć |
 |---:|---|
@@ -117,7 +117,7 @@ jeden zestaw na J1-J4 (1x10, 2x 1x8, 1x6); piny od spodu wchodzą w gniazda nRF5
 
 ### J4: ARDUINO D8-SCL
 
-jeden zestaw na J1-J4 (1x10, 2x 1x8, 1x6); piny od spodu wchodzą w gniazda nRF52840-DK
+wyprowadzenia od spodu wchodzą w gniazda Arduino nRF52840-DK
 
 | Pin | Sieć |
 |---:|---|
@@ -244,37 +244,23 @@ ESP32-S3-DevKitC-1 wpina się od góry; pin 1 od strony anteny
 | 21 | GND (GND) |
 | 22 | GND (GND) |
 
-### J7: SHARP 4694
+### J7: SHARP LS027B7DH01A
 
-Adafruit 4694 ekranem do góry, piny od lewej: VIN 3V3 GND CLK DI CS EMD DISP EIN (schemat Adafruit: JP1.1 VIN ... JP1.9 EXTCOMIN); EMD = H (EXTCOMIN z MCU); wyjście 3V3 modułu nie podłączone
-
-| Pin | Sieć |
-|---:|---|
-| 1 | +5V |
-| 2 | — |
-| 3 | GND |
-| 4 | SPI_SCK |
-| 5 | SPI_MOSI |
-| 6 | LCD_CS |
-| 7 | +3V3 |
-| 8 | LCD_DISP |
-| 9 | LCD_EXTCOMIN |
-
-### J8: FRAM 4719
-
-Adafruit 4719: VIN 3V3 GND SCK MISO MOSI CS WP HOLD; WP i HOLD podciągnięte na module
+panel Sharp LS027B7DH01A ekranem do góry, taśma FPC płasko; styk 1 panelu (SCLK) na padzie 1 po prawej
 
 | Pin | Sieć |
 |---:|---|
-| 1 | +3V3 |
-| 2 | — |
-| 3 | GND |
-| 4 | SPI_SCK |
-| 5 | SPI_MISO |
-| 6 | SPI_MOSI |
-| 7 | FRAM_CS |
-| 8 | — |
-| 9 | — |
+| 1 | SPI_SCK |
+| 2 | SPI_MOSI |
+| 3 | LCD_CS |
+| 4 | LCD_EXTCOMIN |
+| 5 | LCD_DISP |
+| 6 | +5V |
+| 7 | +5V |
+| 8 | +5V |
+| 9 | GND |
+| 10 | GND |
+| MP | GND (uchwyty mocujące) |
 
 ### J11: ANALIZATOR
 

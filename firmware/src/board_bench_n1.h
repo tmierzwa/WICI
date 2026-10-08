@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Stanowisko deweloperskie A na płytce nośnej N1 (hardware/dev-bench/plytka-nosna.md):
 // nRF52840-DK (wariant pca10056 rdzenia Adafruit) pod nakładką N1 z modułem TI CC1120EM-868-915
-// w J9/J10, FRAM MB85RS4MT, ekranem Sharp (Adafruit 4694) i panelem płytki (przyciski, CISZA,
+// w J9/J10, FRAM U1 i panelem ekranu Sharp w złączu FPC J7 na płytce oraz panelem obsługi (przyciski, CISZA,
 // przycisk przygotowania, dioda alarmu, brzęczyk, VTEST).
 // Przypisanie według tabeli "Przypisanie sygnałów" i hardware/dev-bench/polaczenia.md; różnice
 // wobec okablowania przewodami: hardware/dev-bench/checks/zgodnosc-firmware.md.
@@ -32,16 +32,16 @@ constexpr uint8_t RADIO_GPIO0 = 3;       // P0.03, A0 -> EM P1.10 (GPIO0)
 constexpr uint8_t RADIO_GPIO2 = 29;      // P0.29, A3 -> EM P1.12 (GPIO2)
 constexpr uint8_t RADIO_GPIO3 = 31;      // P0.31, A5 -> EM P2.18 (GPIO3), nieużywany
 
-// FRAM MB85RS4MT (Adafruit 4719) albo CY15B104Q na tej samej magistrali SPI.
+// FRAM U1 na płytce N1 (CY15B104QN albo MB85RS4MT, SOIC-8) na tej samej magistrali SPI.
 constexpr uint8_t FRAM_CS = 32 + 11;  // P1.11, D9
 
-// Ekran Sharp LS027B7DH01 (Adafruit 4694): CS aktywny stanem wysokim (10 kΩ do masy), EXTCOMIN
-// z licznika RTC2, EMD na stałe wysoki. DISP: 2,2 kΩ do masy (R19), więc ekran jest wyłączony,
+// Panel Sharp LS027B7DH01A w J7: SCS aktywny stanem wysokim (10 kΩ do masy), EXTCOMIN
+// z licznika RTC2, EXTMODE na stałe wysoki (5 V). DISP: 10 kΩ do masy (R19), więc ekran jest biały,
 // dopóki program po wyczyszczeniu pamięci ekranu nie poda stanu wysokiego.
 constexpr uint8_t DISPLAY_CS = 32 + 5;        // P1.05, D4
 constexpr uint8_t DISPLAY_EXTCOMIN = 32 + 7;  // P1.07, D6
 constexpr uint8_t DISPLAY_DISP = 32 + 10;     // P1.10, D8
-// Sieć SCK ma około 265 mm z odgałęzieniami; 2 MHz (granica LS027B7DH01) dopiero po próbie
+// Sieć SCK ma około 300 mm z odgałęzieniami; 2 MHz (granica LS027B7DH01) dopiero po próbie
 // z analizatorem na J11 (polecenie DISPLAY <hz>).
 constexpr uint32_t DISPLAY_SPI_HZ = 1000000;
 

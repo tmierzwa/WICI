@@ -22,7 +22,7 @@ namespace {
 SPIClass spiBus(FSPI);  // SPI2 na pinach IO_MUX FSPI
 uint8_t spiDrive = board::SPI_DRIVE;
 
-// Napęd SCK i MOSI (gpio_drive_cap_t 0-3, około 5/10/20/40 mA); sieć SCK N1 ma około 265 mm.
+// Napęd SCK i MOSI (gpio_drive_cap_t 0-3, około 5/10/20/40 mA); sieć SCK N1 ma około 300 mm.
 void setSpiDrive(uint8_t level) {
     spiDrive = level;
     const gpio_drive_cap_t cap = static_cast<gpio_drive_cap_t>(level);

@@ -15,7 +15,7 @@ import pcbnew as k
 from make_project import POWER
 
 from design import (PARTS, BOARD_W, BOARD_H, NOTCH_P5, SLOT_P20, EM_P1, EM_W, EM_H, EM_X_U, EM_Y_U, EM_SMA,
-                    LCD_X, LCD_Y, LCD_PIN1, FRAM_X, FRAM_Y, FRAM_PIN1, DEVKIT_X, DEVKIT_USB_Y, uno)
+                    PANEL_X, PANEL_Y, PANEL_W, PANEL_H, FPC_GAP, DEVKIT_X, DEVKIT_USB_Y, uno)
 
 ROOT = Path(__file__).resolve().parents[1]
 NS = uuid.UUID('9b1f0b57-36c4-4f4e-9d0c-2f6a1c8f2a10')
@@ -141,7 +141,16 @@ def build():
     assert pad('J4', 10) == (round(uno(18.796, 50.8)[0], 3), 25.54), pad('J4', 10)
     assert pad('J9', 19)[1] == round(EM_P1[1] + 9 * 1.27, 3) and pad('J9', 2)[0] == round(EM_P1[0] + 1.27, 3)
     assert round(pad('J10', 1)[0] - pad('J9', 1)[0], 3) == 30.48
-    assert pad('J7', 9)[0] == round(LCD_X + 41.91, 3) and pad('J8', 9)[0] == round(FRAM_X + 22.86, 3)
+    # FPC connector: pad 1 (panel SCLK) on the right, pads 0.5 mm apart, entry towards the panel.
+    assert pad('J7', 1)[0] > pad('J7', 10)[0] and round(pad('J7', 1)[0] - pad('J7', 10)[0], 3) == 4.5
+    assert round((pad('J7', 1)[0] + pad('J7', 10)[0]) / 2, 3) == round(PANEL_X + PANEL_W / 2, 3)
+    assert pad('J7', 1)[1] > pad('J7', 'MP')[1] > PANEL_Y + PANEL_H
+    # The panel lies flat on tape: no part under its glass.
+    for ref, f in fps.items():
+        q = f.GetBoundingBox(False)
+        x0, y0, x1, y1 = (mm(v) for v in (q.GetLeft(), q.GetTop(), q.GetRight(), q.GetBottom()))
+        assert not (x0 - OX < PANEL_X + PANEL_W and PANEL_X < x1 - OX and
+                    y0 - OY < PANEL_Y + PANEL_H and PANEL_Y < y1 - OY), ('part under the panel', ref)
     assert pad('J5', 22)[1] == round(DEVKIT_USB_Y - 7.96, 3)
     assert round(pad('J6', 1)[0] - pad('J5', 1)[0], 3) == 22.86
 
@@ -190,11 +199,15 @@ def build():
     ux0, uy0 = uno(0, 53.34)
     for layer, width in ((k.F_Fab, .1), (k.F_SilkS, .15)):
         poly(b, [(ex, ey), (ex + EM_W, ey), (ex + EM_W, ey + EM_H), (ex, ey + EM_H)], layer, width)
-        poly(b, [(LCD_X, LCD_Y), (LCD_X + 63.5, LCD_Y), (LCD_X + 63.5, LCD_Y + 55.88), (LCD_X, LCD_Y + 55.88)], layer, width)
-        poly(b, [(FRAM_X, FRAM_Y), (FRAM_X + 25.4, FRAM_Y), (FRAM_X + 25.4, FRAM_Y + 17.78), (FRAM_X, FRAM_Y + 17.78)], layer, width)
+        poly(b, [(PANEL_X, PANEL_Y), (PANEL_X + PANEL_W, PANEL_Y), (PANEL_X + PANEL_W, PANEL_Y + PANEL_H),
+                 (PANEL_X, PANEL_Y + PANEL_H)], layer, width)
         g = .6 if layer == k.F_SilkS else 0  # silk clear of the socket outlines
         poly(b, [(DEVKIT_X - g, dy0), (DEVKIT_X + 25.4 + g, dy0), (DEVKIT_X + 25.4 + g, DEVKIT_USB_Y),
                  (DEVKIT_X - g, DEVKIT_USB_Y)], layer, width)
+    # FPC tail (5.5 mm wide stiffener) from the glass edge to the connector entry, fab layer only.
+    fx = PANEL_X + PANEL_W / 2
+    poly(b, [(fx - 2.75, PANEL_Y + PANEL_H), (fx + 2.75, PANEL_Y + PANEL_H),
+             (fx + 2.75, PANEL_Y + PANEL_H + FPC_GAP), (fx - 2.75, PANEL_Y + PANEL_H + FPC_GAP)], k.F_Fab, .1)
     poly(b, [(ux0, uy0), (BOARD_W - .3, uy0), (BOARD_W - .3, uy0 + 53.34), (ux0, uy0 + 53.34)], k.F_Fab, .1)
     # SMA position of the CC1120EM: a circle on the silkscreen.
     c = k.PCB_SHAPE(b)
@@ -234,18 +247,14 @@ def silkscreen(b, fps):
         ('GND SCK MO MI RF FR LCD G0 G2', 115.2, 94.8, 1.0, False),
         ('CC1120EM (A): SMA w kółku', 125.6, 48.0, 1.0, False),
         ('DevKitC (B): USB w dół', 86.2, 33.5, 1.0, False), ('USB', 86.2, 96.6, 1.0, True),
-        ('Sharp 4694 ekranem do góry', 39.8, 31.0, 1.0, False), ('FRAM 4719', 86.2, 13.0, 1.0, False),
+        ('Sharp LS027B7DH01A ekranem do góry, na taśmie', 40.0, 24.0, 1.0, False),
+        ('bez części pod panelem', 40.0, 26.5, 1.0, False), ('FRAM', 86.0, 7.0, 1.0, False),
     ]
     for s, x, y, size, bold in texts:
         text(b, s, x, y, size, bold=bold)
     text(b, 'JP1 3V3 (B)', 92.8, 24.0, 1.0)
     text(b, 'JP2 5V (B)', 68.0, 81.3, 1.0, angle=90)
     text(b, 'JP3 RADIO (A)', 132.3, 84.6, 1.0)
-    # Header pin names under the modules, read with the module in place (display face up).
-    for i, name in enumerate(('VIN', '3V3', 'GND', 'CLK', 'DI', 'CS', 'EMD', 'DISP', 'EIN')):
-        text(b, name, LCD_PIN1[0] + 2.54 * i, LCD_PIN1[1] + 3.6, 1.0, angle=90)
-    for i, name in enumerate(('VIN', '3V3', 'GND', 'SCK', 'MISO', 'MOSI', 'CS', 'WP', 'HOLD')):
-        text(b, name, FRAM_PIN1[0] + 2.54 * i, FRAM_PIN1[1] - 3.8, 1.0, angle=90)
     boxes = []
 
     def box(item):

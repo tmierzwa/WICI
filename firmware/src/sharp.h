@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Ekran Sharp LS027B7DH01 (Adafruit 4694, 400 x 240) na magistrali SPI: bufor obrazu w RAM,
+// Ekran Sharp LS027B7DH01 (panel na N1 albo płytka Adafruit 4694 przy przewodach, 400 x 240) na magistrali SPI: bufor obrazu w RAM,
 // zapis wierszy zmienionych, rysowanie znaków z font_glyphs.h. EXTCOMIN (inwersja VCOM,
 // 1 Hz) generuje licznik MCU bez udziału programu (specyfikacja: "EXTCOMIN z wyjścia licznika
 // MCU, nie z programu"): na nRF52840 RTC2 przez PPI i GPIOTE (sharp_extcomin_nrf.cpp), na

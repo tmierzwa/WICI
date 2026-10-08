@@ -22,14 +22,14 @@ from design import BOARD_W, BOARD_H, EXTRAS, NOTCH_P5, PARTS
 
 ROOT = Path(__file__).resolve().parents[1]
 REV = 'N1'
-SMD_PACKAGES = ('R_', 'C_', 'SOT-', 'D_SOD')
+SMD_PACKAGES = ('R_', 'C_', 'SOT-', 'D_SOD', 'SOIC-', 'Hirose_FH12')
 
 # English one-line descriptions for the assembler BOM; bom.csv keeps the Polish detail.
 DESCRIPTION = {
-    'Adafruit 85': 'Arduino R3 stacking header kit (1x10, 2x 1x8, 1x6), long tails',
     'TFM-110-01-L-D': 'Tiger Eye 2x10 terminal strip, 1.27 mm, through-hole, mates Samtec SFM',
     'PPTC221LFBN-RC': '1x22 female header, 2.54 mm, vertical, THT',
-    'PPTC091LFBN-RC': '1x9 female header, 2.54 mm, vertical, THT',
+    'FH12-10S-0.5SH(55)': 'FPC connector 10 pos, 0.5 mm, bottom contact, right angle, SMD',
+    'CY15B104QN-50SXI': 'F-RAM 4 Mbit SPI, 3 V, SOIC-8 208 mil (alt. RAMXEED MB85RS4MTPF-G-BCERE1)',
     '61300911121': '1x9 male pin header, 2.54 mm, THT',
     '61300211121': '1x2 male pin header, 2.54 mm, THT',
     '1715721': '2-pole screw terminal, 5.08 mm, THT',
@@ -72,9 +72,8 @@ def write_assembly_bom(path):
             p = items[0]
             if not smd(p['footprint']):
                 continue  # through-hole parts, modules and loose items: owner, full list in bom.csv
-            kit = mpn == 'Adafruit 85'
             fit = {'A': 'variant A only', 'B': 'variant B only', 'AB': 'all'}[variant]
-            w.writerow([' '.join(i['ref'] for i in items), '1 kit' if kit else len(items),
+            w.writerow([' '.join(i['ref'] for i in items), len(items),
                         p['value'] if p['ref'][0] in 'RC' else '', p['manufacturer'].replace('ü', 'u'), mpn,
                         describe(p), p['footprint'].split(':')[1], 'SMD' if smd(p['footprint']) else 'THT', fit,
                         'assembler' if smd(p['footprint']) else 'owner (hand solder)'])
@@ -119,16 +118,20 @@ PCB
 - Origin of Gerbers, drills and positions: lower-left board corner.
 
 Assembly (optional quote)
-- Top side only. Assembler sources and places the {smd_count} SMD parts (0805, 1206, SOT-23, SOD-123):
+- Top side only. Assembler sources and places the {smd_count} SMD parts (0805, 1206, SOT-23, SOD-123, SOIC-8,
+  0.5 mm pitch FPC connector J7):
   assembly/bom-assembly.csv (SMD only), positions in assembly/cpl-smd.csv, paste layer F_Paste.
   Equivalent passives (same value, tolerance, voltage, dielectric, size) are acceptable.
 - CPL rotations follow the KiCad convention (counter-clockwise, KiCad library zero orientation);
   please send the placement preview for approval, especially Q1 and D3 (SOT-23, pin 1 marked)
-  and D2 (SOD-123, cathode = pad 1, at 180 deg the right-hand end).
-- All through-hole parts, connectors and modules are fitted by the owner; do not supply or fit them.
+  and D2 (SOD-123, cathode = pad 1, at 180 deg the right-hand end), U1 (SOIC-8, pin 1 dot) and J7
+  (FH12 FPC connector, actuator side towards the display outline above it; check for bridges).
+  U1 alternative with the same footprint: RAMXEED MB85RS4MTPF-G-BCERE1.
+- All through-hole parts (including the through-hole connectors) are fitted by the owner; do not
+  supply or fit them.
 - No fiducials: use pads for vision, or add panel rails with fiducials if you need them.
-- Modules (nRF52840-DK, ESP32-S3-DevKitC-1, CC1120EM, X-NUCLEO-S2868A2, Adafruit 4694/4719) are not
-  part of the order.
+- Modules (nRF52840-DK, ESP32-S3-DevKitC-1, CC1120EM, X-NUCLEO-S2868A2) and the Sharp
+  LS027B7DH01A display panel are not part of the order.
 """, encoding='utf-8')
 
 

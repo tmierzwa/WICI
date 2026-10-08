@@ -55,7 +55,9 @@ def netlist():
     values = {c.get("ref"): c.findtext("value") for c in root.iter("comp")}
     nets = {}
     for net in root.iter("net"):
-        nets[net.get("name").lstrip("/")] = {(n.get("ref"), int(n.get("pin"))) for n in net.iter("node")}
+        # Pins are numbers, except the "MP" mounting pads of the FPC connector.
+        nets[net.get("name").lstrip("/")] = {(n.get("ref"), int(n.get("pin")) if n.get("pin").isdigit() else n.get("pin"))
+                                             for n in net.iter("node")}
     for ref, value in values.items():
         if value == "33R":
             a, b = (name for name, nodes in nets.items() if any(r == ref for r, _ in nodes))

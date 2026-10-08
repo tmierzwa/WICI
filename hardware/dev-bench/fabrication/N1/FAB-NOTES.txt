@@ -15,20 +15,24 @@ PCB
 - Outline 170 x 100 mm (Edge_Cuts) with a rectangular notch 7.58 x 9.3 mm on the
   right edge; notch inner corners at router radius (up to 1 mm is fine).
 - Drill sizes in the Excellon files are finished hole sizes. PTH and NPTH in separate files.
-  Hole sizes: PTH 0.4, 0.65, 0.9, 1, 1.2, 1.3, 1.85 mm; NPTH 1.8, 2.7, 3.2 mm.
+  Hole sizes: PTH 0.4, 0.65, 0.9, 1, 1.2, 1.3, 1.85 mm; NPTH 1.8, 3.2 mm.
 - No plated slots, no castellations, no blind/buried vias. Vias 0.8/0.4 mm, may be tented or open.
 - Electrical test 100 %. IPC-A-600 class 2.
 - No fab order number on the board, please; if your process needs one, propose a position on top.
 - Origin of Gerbers, drills and positions: lower-left board corner.
 
 Assembly (optional quote)
-- Top side only. Assembler sources and places the 27 SMD parts (0805, 1206, SOT-23, SOD-123):
+- Top side only. Assembler sources and places the 32 SMD parts (0805, 1206, SOT-23, SOD-123, SOIC-8,
+  0.5 mm pitch FPC connector J7):
   assembly/bom-assembly.csv (SMD only), positions in assembly/cpl-smd.csv, paste layer F_Paste.
   Equivalent passives (same value, tolerance, voltage, dielectric, size) are acceptable.
 - CPL rotations follow the KiCad convention (counter-clockwise, KiCad library zero orientation);
   please send the placement preview for approval, especially Q1 and D3 (SOT-23, pin 1 marked)
-  and D2 (SOD-123, cathode = pad 1, at 180 deg the right-hand end).
-- All through-hole parts, connectors and modules are fitted by the owner; do not supply or fit them.
+  and D2 (SOD-123, cathode = pad 1, at 180 deg the right-hand end), U1 (SOIC-8, pin 1 dot) and J7
+  (FH12 FPC connector, actuator side towards the display outline above it; check for bridges).
+  U1 alternative with the same footprint: RAMXEED MB85RS4MTPF-G-BCERE1.
+- All through-hole parts (including the through-hole connectors) are fitted by the owner; do not
+  supply or fit them.
 - No fiducials: use pads for vision, or add panel rails with fiducials if you need them.
-- Modules (nRF52840-DK, ESP32-S3-DevKitC-1, CC1120EM, X-NUCLEO-S2868A2, Adafruit 4694/4719) are not
-  part of the order.
+- Modules (nRF52840-DK, ESP32-S3-DevKitC-1, CC1120EM, X-NUCLEO-S2868A2) and the Sharp
+  LS027B7DH01A display panel are not part of the order.

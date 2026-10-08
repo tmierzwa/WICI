@@ -6,7 +6,8 @@ Instrukcja dla osoby, która prowadzi próby T1–T4 na zmontowanym stanowisku. 
 
 - **Nigdy oba MCU ani oba moduły radiowe naraz.** Sieci sygnałowe płytki są wspólne dla stanowisk A i B.
 - Moduły wpina się i wyjmuje, a zworki zmienia, tylko bez zasilania: przewody USB odłączone, zacisk VTEST bez napięcia.
-- Przed każdym wpięciem sprawdza się orientację modułu według opisu na płytce: ekran szkłem do góry z pinem VIN nad napisem VIN, złącze SMA modułu CC1120EM nad kółkiem, USB DevKitC w stronę napisu USB. Każdy z tych modułów wchodzi w gniazda także obrócony.
+- Przed każdym wpięciem sprawdza się orientację modułu według opisu na płytce: złącze SMA modułu CC1120EM nad kółkiem, USB DevKitC w stronę napisu USB. Oba moduły wchodzą w gniazda także obrócone.
+- Panel ekranu jest szklany i przyklejony do płytki. Nie naciska się go, nie podnosi za taśmę FPC i nie wyjmuje taśmy ze złącza J7 bez potrzeby (taśmę wolno zginać najwyżej trzy razy).
 - Na DK wpiętą w N1 nie wgrywa się obrazu okablowania przewodami `bench-a` ([uruchomienie](uruchomienie.md#oprogramowanie)). Stanowisko A używa obrazu `bench-n1`, stanowisko B obrazu `bench-b`.
 - Przed każdym poleceniem nadawania złącze SMA modułu musi być obciążone: antena z [BOM stacji](../../docs/spec/bom-stacji.csv) albo tłumik i obciążenie 50 Ω. Odporność na nadawanie przy rozwartym i zwartym złączu sprawdza się dopiero na R02.
 - W eterze nadaje się tylko profilem P1 na 869,525 MHz, w limicie czasu nadawania, który pilnuje oprogramowanie. Serie z argumentem `CONDUCTED` nadaje się wyłącznie przewodowo do tłumika albo obciążenia ([pomiary](README.md#pomiary)).
@@ -19,7 +20,7 @@ Instrukcja dla osoby, która prowadzi próby T1–T4 na zmontowanym stanowisku. 
 |---|---|---|
 | Płytka MCU | nRF52840-DK pod płytką nośną (długie piny J1–J4 w gniazdach Arduino DK) | ESP32-S3-DevKitC-1 w J5/J6 |
 | Moduł radiowy | CC1120EM-868-915 w J9/J10 | X-NUCLEO-S2868A2 w J1–J4, z założoną zworką JP1 na X-NUCLEO |
-| Ekran i FRAM | Adafruit 4694 w J7, Adafruit 4719 w J8 | te same |
+| Ekran i FRAM | panel Sharp LS027B7DH01A w J7 i FRAM U1, na płytce | te same |
 | Zworki N1 | JP3 założona; JP1 i JP2 zdjęte | JP1 i JP2 założone; JP3 bez znaczenia |
 | Puste gniazda | J5, J6 | J9, J10 |
 | Podparcie | lewa część płytki na dystansach H1, H2, H5, tak by leżała poziomo | dziewięć dystansów H1–H9 |
@@ -58,7 +59,7 @@ Amperomierz wpina się w miejsce zworki przy odłączonym zasilaniu, na zakresie
 |---|---|---|
 | JP3 | A | prąd samego modułu CC1120EM (nadawanie +14 dBm około 45 mA według karty układu) |
 | JP1 | B | prąd szyny 3,3 V z DevKitC: X-NUCLEO-S2868A2, FRAM i rezystory podciągające, bez samego ESP32-S3 |
-| JP2 | B | prąd szyny 5 V z DevKitC: ekran i brzęczyk |
+| JP2 | B | prąd szyny 5 V z DevKitC: panel ekranu i brzęczyk |
 
 Te pomiary służą uruchomieniu i porównaniu modułów. Budżetu energii stacji (T6) na stanowisku się nie mierzy.
 
@@ -67,9 +68,9 @@ Te pomiary służą uruchomieniu i porównaniu modułów. Budżetu energii stacj
 | Objaw | Prawdopodobna przyczyna | Co sprawdzić |
 |---|---|---|
 | `RADIO`: `partnumber` 0x00 albo 0xFF | moduł radiowy niewpięty albo obrócony; w A zdjęta JP3; w B zdjęta zworka JP1 na X-NUCLEO | orientacja modułu, zworki, sygnały SCK, MISO i CS radia na J11 |
-| Ekran pusty | ekran obrócony; w B zdjęta JP2; obraz nie uruchomił ekranu | orientacja według napisów przy J7, napięcie na J7.1 (VIN) wobec J7.3 (GND), `DISPLAY` |
-| Obraz ekranu blednie albo zostają cienie | brak przebiegu EXTCOMIN | `DISPLAY`: `counter` rośnie, a `level` zmienia się co 0,5 s; pin EMD ekranu (J7.7) w stanie wysokim (3,3 V wobec J7.3) |
-| `FRAM` nie rozpoznaje układu | moduł FRAM obrócony albo niewpięty | napisy przy J8, CS FRAM na J11 |
+| Ekran pusty | taśma FPC niewsunięta do oporu albo klapka J7 otwarta; w B zdjęta JP2 albo za niskie 5 V; obraz nie uruchomił ekranu | taśma w J7, napięcie na J7.7 (VDD) wobec J7.9 (GND), co najmniej 4,8 V; `DISPLAY` |
+| Obraz ekranu blednie albo zostają cienie | brak przebiegu EXTCOMIN | `DISPLAY`: `counter` rośnie, a `level` zmienia się co 0,5 s; J7.8 (EXTMODE panelu) na 5 V wobec J7.9 |
+| `FRAM` nie rozpoznaje układu (`unknown`) | układ spoza listy (np. wersja 1,8 V albo 2 Mbit) albo usterka lutowania U1 | oznaczenie układu U1 i bajty RDID w odpowiedzi `FRAM`, CS FRAM na J11 |
 | Cisza radiowa nie daje się wyłączyć | przełącznik CISZA w położeniu „cisza” | `BTN`: `silence_switch` |
 | Polecenia pomiarowe odrzucane | brak trybu przygotowania, cisza radiowa albo radio nieskonfigurowane | `INFO` (`prep`, `silence`), `RADIO` (`p1_ok`); w razie potrzeby `CONFIG` |
 | W B system nie widzi dwóch portów | przewód w złączu „UART” DevKitC albo przewód tylko do ładowania | złącze „USB” DevKitC, inny przewód |
