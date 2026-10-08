@@ -11,6 +11,11 @@
 //   (PROVE_APP): pakiet okazjonalny do stacji wraca z potwierdzeniem transportowym, jak dawny
 //   datagram "ack" stacji; pakiet odrzucony (zły format, obcy adresat, nadawca spoza zaufania)
 //   nie dostaje dowodu. LXMF przyjdzie w następnym etapie.
+// - konfiguracja węzła OSP (D19, docs/spec/stanowisko-osp.md, „Stacja przy OSP”): bez celu
+//   "wici.sa1" i bez ogłoszeń własnych, z drugim interfejsem Reticulum przez USB do komputera
+//   stanowiska (ramki KISS z kontrolą przepływu, kiss.h; radio.md, „Interfejs Reticulum przez USB”).
+//   Pakiet z USB przechodzi do stosu, gdy kolejka P1 ma miejsce. Cele ogłoszone przez komputer
+//   są chronione w pełnych tablicach, a pakiety z USB i do tych celów są ruchem OSP w rezerwie P1.
 // Nagłówek nie dołącza microReticulum (jego makra ERROR, INFO, DEBUG kolidują z kodem stacji).
 #pragma once
 
@@ -18,6 +23,7 @@
 #include <stdint.h>
 
 #include "journal.h"
+#include "kiss.h"
 
 namespace rnsnode {
 
@@ -80,6 +86,28 @@ void setIfac(const uint8_t ifac[16]);   // po configure
 // (oprogramowanie.md, „Pojemności stosu”). Wywoływane także przed begin(), żeby porządkowanie
 // tablic przy starcie nie usunęło wpisów OSP.
 void setOsp(const uint8_t osp[2][HASH], uint8_t active);
+// Konfiguracja węzła OSP; wywoływane przed begin() (zmiana działa po restarcie stacji).
+void setOspNode(bool on);
+bool ospNode();
+constexpr size_t USB_PINNED = 8;   // cele ogłoszone przez komputer stanowiska, chronione w tablicach
+
+// Interfejs danych USB w konfiguracji węzła OSP (poza trybem przygotowania): port otwarty przez
+// komputer, bajty od komputera i do niego (zapis tyle, ile przyjmie CDC).
+void usbOpen(bool open);
+void usbFeed(const uint8_t* data, size_t length, uint32_t nowMs);
+size_t usbTake(uint8_t* out, size_t max);
+struct UsbStatus {
+    bool enabled = false;          // węzeł OSP z interfejsem USB w stosie
+    bool open = false;
+    bool flowControl = false;
+    size_t buffered = 0;           // pakiety od komputera czekające na stos
+    size_t pinned = 0;             // chronione cele komputera
+    kiss::Counters counters;
+};
+UsbStatus usbStatus();
+bool usbPinned(const uint8_t destination[HASH]);
+// Liczniki interfejsu USB jako pola JSON bez nawiasów (INFO, RNS).
+size_t usbJson(char* out, size_t size);
 void loop(uint32_t nowMs);
 void received(const uint8_t* wire, size_t length);   // datagram złożony z ramek P1
 void txDone(bool ok);                                // koniec nadawania datagramu z transmit()

@@ -41,11 +41,11 @@ constexpr size_t ADDRESS_MAX = 64;
 constexpr size_t ADDRESSES = 8;      // adres schronienia i lista obiektów (wybór na ekranie)
 constexpr uint8_t COMMITTED = journal::COMMITTED;
 
-enum Role : uint8_t { STATION = 0, OSP = 1 };
-
 struct Config {
     uint32_t seq = 0;
-    uint8_t role = STATION;
+    // Konfiguracja węzła OSP (D19, configure "osp_node"): stacja przy OSP przekazuje ruch i łączy
+    // radio z komputerem stanowiska; bez adresu, karty OSP i fraz (stanowisko-osp.md).
+    uint8_t ospNode = 0;
     uint8_t activeOsp = 0;      // 0 główna, 1 zapasowa
     uint16_t stations = 0;      // liczba stacji w sieci (okno TEST startowego); 0 = nieznana
     char address[ADDRESS_MAX + 1] = {};
@@ -101,7 +101,7 @@ struct InboxRecord {
 // pierścień zdarzeń albo zanik zasilania między zapisem wiadomości a zdarzenia).
 enum InboxFlag : uint8_t { INBOX_READ = 0x01, INBOX_NOTIFY = 0x02 };
 
-enum NoteKind : uint8_t { NOTE_MESSAGE = 1, NOTE_RADIO = 2, NOTE_INCOMING = 3, NOTE_STATION = 4 };
+enum NoteKind : uint8_t { NOTE_MESSAGE = 1, NOTE_RADIO = 2, NOTE_STATION = 4 };   // 3: dawne `incoming` roli OSP
 
 struct NoteRecord {
     uint32_t seq = 0;

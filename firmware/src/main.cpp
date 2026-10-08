@@ -10,7 +10,9 @@
 // stosem (kolejka, ponawianie, potwierdzenia transportowe), ekran Sharp z EXTCOMIN z licznika MCU
 // i przyciski jako menu stacji
 // (kreator zgłoszenia, WIADOMOŚCI, TEST, STAN, USŁUGI, alarmy), panel płytki N1 (przełącznik
-// CISZA, przycisk przygotowania, dioda alarmu, brzęczyk, VTEST).
+// CISZA, przycisk przygotowania, dioda alarmu, brzęczyk, VTEST). Konfiguracja węzła OSP (D19):
+// poza trybem przygotowania interfejs danych przenosi pakiety Reticulum do komputera stanowiska
+// w ramkach KISS (rns_node.h, kiss.h), a ekran pokazuje kontakt z komputerem.
 // Wykonania: bench-a (nRF52840-DK + CC1120EM na przewodach), bench-n1 (to samo na płytce N1),
 // bench-b (ESP32-S3-DevKitC-1 + X-NUCLEO-S2868A2 z S2-LP na N1). Zależne od MCU części są
 // w platform_*.cpp, zależne od układu radiowego w radio_console_*.cpp i *_link.cpp.
@@ -136,11 +138,7 @@ struct BenchHost : usbproto::Host {
     bool confirm() override { return bench.confirm(); }
     void randomBytes(uint8_t* out, size_t count) override { measure::randomBytes(out, count); }
     void log(const char* text) override { bench.log(text); }
-    void emit(const char* line) override {
-        // Odpowiedzi idą na interfejs danych; bez otwartego portu danych na diagnostykę (polecenie USB).
-        if (SerialData) SerialData.println(line);
-        else Serial.println(line);
-    }
+    void emit(const char* line) override;
     void stationAddress(uint8_t out[store::HASH]) override;
     const char* stationName() override;
     const char* version() override { return WICI_FW_VERSION; }
@@ -166,6 +164,21 @@ struct BenchRadio : rnsnode::Radio {
 BenchRadio benchRadio;
 bool rnsOk = false;               // stos uruchomiony (FRAM i dziennik działają)
 rnsannounce::Policy announcePolicy;
+// Węzeł OSP: stos z interfejsem USB (od startu stosu; zmiana konfiguracji działa po restarcie).
+// Poza trybem przygotowania interfejs danych przenosi ramki KISS, nie protokół laptop–stacja.
+bool ospNode() { return rnsOk && rnsnode::ospNode(); }
+bool kissMode() { return ospNode() && !bench.prep; }
+uint32_t rebootAtMs = 0;          // restart po zmianie konfiguracji węzła OSP (0 = brak)
+bool computerHeard = false;       // pakiet od komputera stanowiska od startu
+uint32_t computerAtS = 0;         // czas pracy przy ostatnim pakiecie od komputera
+uint32_t computerPackets = 0;
+
+void BenchHost::emit(const char* line) {
+    // Odpowiedzi idą na interfejs danych; bez otwartego portu danych albo przy ramkach KISS
+    // (węzeł OSP poza trybem przygotowania) na diagnostykę (polecenie USB).
+    if (SerialData && !kissMode()) SerialData.println(line);
+    else Serial.println(line);
+}
 
 // Usługi warstwy aplikacji: pakiety przez stos Reticulum i interfejs P1.
 struct BenchServices : station::Services {
@@ -207,6 +220,13 @@ void pinOsp() {
 void BenchHost::configChanged() {
     if (rnsOk) rnsnode::setIfac(stationStore.config().ifac);   // configure może zmienić kod IFAC
     pinOsp();
+    // Węzeł OSP włączony albo wyłączony: interfejs USB i cel "wici.sa1" zmienia dopiero start stosu,
+    // więc stacja wraca po restarcie (po wysłaniu odpowiedzi na configure).
+    if (rnsOk && storeOk && (stationStore.config().ospNode != 0) != rnsnode::ospNode() && !rebootAtMs) {
+        bench.log("osp node configuration changed: restart");
+        rebootAtMs = millis() + 500;
+        if (!rebootAtMs) rebootAtMs = 1;
+    }
     screenChanged();
 }
 void BenchHost::queueChanged() { screenChanged(); }
@@ -255,26 +275,26 @@ void BenchHost::destroyed() { wipeStack(); }
 void BenchServices::destroyed() { wipeStack(); }
 
 bool BenchHost::announce() {
-    if (!rnsOk) return false;
+    if (!rnsOk || ospNode()) return false;
     announcePolicy.request();
     return true;
 }
 
 // Ogłoszenie adresu, gdy pozwala na nie polityka (rns_announce.h); bez danych aplikacji.
+// Węzeł OSP nie ma adresu i się nie ogłasza (adres OSP ogłasza komputer stanowiska).
 void pollAnnounce() {
-    if (!rnsOk || !storeOk) return;
+    if (!rnsOk || !storeOk || ospNode()) return;
     const uint32_t nowS = uptimeS();
-    announcePolicy.setRole(stationStore.config().role == store::OSP, nowS);
     if (!announcePolicy.due(nowS, bench.silence, rnsnode::online(), app.stats().failed)) return;
     if (!rnsnode::announce(nullptr, 0)) { announcePolicy.failed(nowS); return; }
-    uint32_t random = 0;
-    measure::randomBytes(reinterpret_cast<uint8_t*>(&random), sizeof(random));
     announcePolicy.counted();
-    announcePolicy.done(nowS, random, app.stats().failed);
+    announcePolicy.done(nowS, app.stats().failed);
 }
 
-// Zdarzenie stanu radia do laptopa (cisza, tryb przygotowania).
+// Zdarzenie stanu radia do laptopa (cisza, tryb przygotowania). Węzeł OSP nie ma laptopa ani
+// zdarzeń w FRAM (stanowisko-osp.md): zmiana zostaje tylko w dzienniku.
 void radioEvent() {
+    if (ospNode()) return;
     char fields[96];
     snprintf(fields, sizeof(fields), "\"kind\":\"radio\",\"silence\":%s,\"prep\":%s", boolName(bench.silence), boolName(bench.prep));
     if (storeOk) protocol.event(store::NOTE_RADIO, 0, fields, millis());
@@ -430,6 +450,12 @@ ui::Status screenStatus() {
     s.foffHz = foffHz;
     s.version = WICI_FW_VERSION;
     s.name = stationName;
+    const rnsnode::UsbStatus usb = rnsnode::usbStatus();
+    s.computerHeard = computerHeard;
+    s.computerS = computerHeard && uptimeS() > computerAtS ? uptimeS() - computerAtS : 0;
+    s.usbIn = usb.counters.fromComputer;
+    s.usbOut = usb.counters.toComputer;
+    s.usbDrop = usb.counters.rxDropped + usb.counters.rxTooLarge + usb.counters.txDropped;
     return s;
 }
 
@@ -593,6 +619,10 @@ void printInfo() {
                   stationName, static_cast<unsigned long>(platform::resetReason()), boolName(storeOk),
                   static_cast<unsigned>(storeOk ? stationStore.queueLive() : 0), static_cast<unsigned>(storeOk ? stationStore.inboxCount() : 0),
                   static_cast<unsigned>(storeOk ? stationStore.notesPending() : 0));
+    char usb[400];
+    rnsnode::usbJson(usb, sizeof(usb));
+    Serial.print(usb);   // pola węzła OSP (interfejs Reticulum przez USB)
+    Serial.printf(",\"computer_s\":%ld,", computerHeard ? static_cast<long>(uptimeS() - computerAtS) : -1L);
     Serial.printf("\"usb_data\":%s,\"usb_in\":%lu,\"usb_out\":%lu,\"usb_rejected\":%lu,\"usb_boot\":\"%s\",\"wdt_s\":%lu,"
                   "\"board\":\"%s\"}\n",
                   boolName(protocol.isConnected()), static_cast<unsigned long>(protocol.stats().linesIn),
@@ -733,7 +763,11 @@ void printRns() {
                   announcePolicy.scheduled() ? static_cast<long>(announcePolicy.nextS() - uptimeS()) : -1L,
                   static_cast<unsigned long>(s.queueWaitMs), static_cast<unsigned long>(s.bitrate));
     Serial.print(iface);
-    Serial.print("}\n");
+    char usb[400];
+    rnsnode::usbJson(usb, sizeof(usb));
+    Serial.print(",");
+    Serial.print(usb);
+    Serial.printf(",\"computer_s\":%ld}\n", computerHeard ? static_cast<long>(uptimeS() - computerAtS) : -1L);
 }
 
 void printStore() {
@@ -741,8 +775,8 @@ void printStore() {
     char osp[2 * store::HASH + 1];
     store::bytesToHex(c.osp[c.activeOsp ? 1 : 0], osp);
     // Części poniżej 256 znaków (zob. printRns); adres z laptopa z sekwencjami ucieczki.
-    Serial.printf("{\"store_ok\":%s,\"configured\":%s,\"config_seq\":%lu,\"role\":\"%s\",", boolName(storeOk),
-                  boolName(stationStore.configured()), static_cast<unsigned long>(c.seq), c.role == store::OSP ? "osp" : "station");
+    Serial.printf("{\"store_ok\":%s,\"configured\":%s,\"config_seq\":%lu,\"osp_node\":%s,", boolName(storeOk),
+                  boolName(stationStore.configured()), static_cast<unsigned long>(c.seq), boolName(c.ospNode != 0));
     jsonprint::field(Serial, "address", stationStore.address());   // obiekt wybrany na ekranie
     Serial.printf(",\"addresses\":%u,\"selected\":%u,\"osp\":\"%s\",\"phrases\":%u,\"stations\":%u,",
                   static_cast<unsigned>(stationStore.addressCount()), static_cast<unsigned>(stationStore.selectedAddress()), osp,
@@ -983,13 +1017,14 @@ void beginStack() {
     if (storeOk) memcpy(ifac, stationStore.config().ifac, sizeof(ifac));
     // Cele OSP przypięte przed startem: porządkowanie tablic przy starcie też ich nie usuwa.
     if (storeOk) rnsnode::setOsp(stationStore.config().osp, stationStore.config().activeOsp);
+    rnsnode::setOspNode(storeOk && stationStore.config().ospNode);   // interfejs USB do komputera stanowiska
     rnsOk = rnsnode::begin(memory, benchRadio, ifac, static_cast<uint64_t>(uptimeS()) * 1000, hooks);
     if (!rnsOk) { bench.log("rns start failed"); return; }
     pinOsp();
     uint32_t random = 0;
     measure::randomBytes(reinterpret_cast<uint8_t*>(&random), sizeof(random));
-    announcePolicy.begin(storeOk && stationStore.config().role == store::OSP, uptimeS(), random);
-    bench.log(rnsnode::status().identityNew ? "rns started, new identity" : "rns started");
+    announcePolicy.begin(uptimeS(), random);
+    bench.log(rnsnode::ospNode() ? "rns started as osp node" : rnsnode::status().identityNew ? "rns started, new identity" : "rns started");
 }
 
 }  // namespace
@@ -1118,18 +1153,51 @@ void stationLoop() {
     display.maintain(now);
     // Interfejs danych: otwarcie portu wysyła sync, zamknięcie odrzuca niepełny wiersz. Bez magazynu
     // protokół też odpowiada (zapis kończy się odmową "memory"), żeby laptop nie czekał bez odpowiedzi.
+    // Węzeł OSP poza trybem przygotowania: ramki KISS do komputera stanowiska zamiast protokołu.
+    static bool kissWas = false;
     const bool dataOpen = SerialData;
-    if (dataOpen && !dataWas) protocol.connected(now);
-    else if (!dataOpen && dataWas) protocol.disconnected();
-    dataWas = dataOpen;
+    const bool kiss = kissMode();
+    if (dataOpen != dataWas || kiss != kissWas) {
+        if (kissWas) rnsnode::usbOpen(false);
+        else if (dataWas) protocol.disconnected();
+        if (kiss) rnsnode::usbOpen(dataOpen);
+        else if (dataOpen) protocol.connected(now);
+        dataWas = dataOpen;
+        kissWas = kiss;
+    }
     if (dataOpen) {
         char chunk[64];
         while (SerialData.available()) {
             size_t n = 0;
             while (n < sizeof(chunk) && SerialData.available()) chunk[n++] = static_cast<char>(SerialData.read());
-            protocol.feed(chunk, n, now);
+            if (kiss) rnsnode::usbFeed(reinterpret_cast<const uint8_t*>(chunk), n, now);
+            else protocol.feed(chunk, n, now);
         }
-        protocol.poll(now);
+        if (kiss) {
+            // Do komputera tyle, ile przyjmie bufor CDC (zapis nie blokuje pętli stacji).
+            uint8_t out[64];
+            int room = SerialData.availableForWrite();
+            while (room > 0) {
+                const size_t n = rnsnode::usbTake(out, static_cast<size_t>(room) < sizeof(out) ? static_cast<size_t>(room) : sizeof(out));
+                if (!n) break;
+                SerialData.write(out, n);
+                room -= static_cast<int>(n);
+            }
+        } else protocol.poll(now);
+    }
+    if (ospNode()) {
+        const uint32_t packets = rnsnode::usbStatus().counters.fromComputer;
+        if (packets != computerPackets) {
+            computerPackets = packets;
+            computerHeard = true;
+            computerAtS = uptimeS();
+        }
+    }
+    if (rebootAtMs && static_cast<int32_t>(now - rebootAtMs) >= 0) {
+        rnsnode::persist();   // tablice stosu w FRAM przed restartem
+        Serial.flush();
+        SerialData.flush();
+        platform::reboot();
     }
 }
 

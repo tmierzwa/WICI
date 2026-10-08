@@ -115,10 +115,10 @@ void Protocol::sendSync(int64_t re) {
     const store::Config& c = store_.config();
     char fields[320];
     snprintf(fields, sizeof(fields),
-             "\"boot\":\"%s\",\"cursor\":%lu,\"pending\":%u,\"queued\":%u,\"inbox\":%u,\"role\":\"%s\",\"configured\":%s,\"prep\":%s,"
+             "\"boot\":\"%s\",\"cursor\":%lu,\"pending\":%u,\"queued\":%u,\"inbox\":%u,\"osp_node\":%s,\"configured\":%s,\"prep\":%s,"
              "\"silence\":%s,\"name\":\"%s\",\"fw\":\"%s\"",
              boot_, static_cast<unsigned long>(store_.noteLatest()), static_cast<unsigned>(store_.notesPending()),
-             static_cast<unsigned>(store_.queueLive()), static_cast<unsigned>(store_.inboxCount()), c.role == store::OSP ? "osp" : "station",
+             static_cast<unsigned>(store_.queueLive()), static_cast<unsigned>(store_.inboxCount()), c.ospNode ? "true" : "false",
              store_.configured() ? "true" : "false", host_.prep() ? "true" : "false", host_.silence() ? "true" : "false",
              host_.stationName(), host_.version());
     send("sync", re, fields);
@@ -130,7 +130,7 @@ bool Protocol::sendNote(uint32_t seq) {
     char fields[store::NOTE_TEXT + 64];
     snprintf(fields, sizeof(fields), "\"record\":%lu,\"at\":%lu,%s", static_cast<unsigned long>(note.seq),
              static_cast<unsigned long>(note.createdS), note.text);
-    send(note.kind == store::NOTE_INCOMING ? "incoming" : "event", -1, fields);
+    send("event", -1, fields);
     return true;
 }
 
@@ -182,8 +182,7 @@ void Protocol::handleLine(const char* line, uint32_t nowMs) {
     } else if (!strcmp(type, "announce")) {
         if (host_.announce()) send("ok", seq, "\"announce\":true");
         else rejected(seq, "unsupported");
-    } else if (!strcmp(type, "trust") || !strcmp(type, "revoke")) rejected(seq, "unsupported");
-    else rejected(seq, "unknown type");
+    } else rejected(seq, "unknown type");
 }
 
 void Protocol::doAck(const json::Value& msg, uint32_t nowMs) {
@@ -224,11 +223,11 @@ void Protocol::doSubmit(const json::Value& msg, int64_t seq) {
     if (m.type != sa1::BULLETIN) {
         if (!fieldInt(msg, "revision", revision) || revision != m.revision) { rejected(seq, "invalid", "revision"); return; }
     }
-    const store::Config& c = store_.config();
-    const bool station = c.role == store::STATION;
-    const bool allowed = station ? (m.type == sa1::REQUEST || m.type == sa1::TEST) : (m.type >= sa1::RECEIVED && m.type <= sa1::BULLETIN);
-    if (!allowed) { rejected(seq, "invalid", "type not allowed for this role"); return; }
-    if (station && store_.configured()) {
+    // Stacja wysyła tylko REQUEST i TEST (D19: RECEIVED, STATUS, REPLY i BULLETIN tworzy aplikacja OSP);
+    // węzeł OSP nie ma kolejki.
+    if (store_.config().ospNode) { rejected(seq, "invalid", "osp node"); return; }
+    if (m.type != sa1::REQUEST && m.type != sa1::TEST) { rejected(seq, "invalid", "type not allowed"); return; }
+    if (store_.configured()) {
         uint8_t osp[store::HASH];
         recipient(osp);
         if (memcmp(osp, record.to, store::HASH)) { rejected(seq, "invalid", "recipient is not the active OSP"); return; }
@@ -264,9 +263,8 @@ void Protocol::doSubmit(const json::Value& msg, int64_t seq) {
 }
 
 void Protocol::doTest(int64_t seq) {
-    const store::Config& c = store_.config();
+    if (store_.config().ospNode) { rejected(seq, "invalid", "osp node"); return; }
     if (!store_.configured() || !store_.address()[0]) { rejected(seq, "not configured"); return; }
-    if (c.role != store::STATION) { rejected(seq, "invalid", "type not allowed for this role"); return; }
     sa1::Message m;
     m.type = sa1::TEST;
     uint8_t id[store::HASH];
@@ -312,6 +310,30 @@ void Protocol::doConfigure(const json::Value& msg, int64_t seq) {
     if (!host_.prep()) { rejected(seq, "preparation mode required"); return; }
     store::Config c = store_.config();
     json::Value v;
+    // Konfiguracja węzła OSP (stanowisko-osp.md, „Stacja przy OSP”): bez adresu, karty OSP, fraz
+    // i liczby stacji; z nich wychodzi się tylko jawnym "osp_node":false.
+    if (json::field(msg, "osp_node", v)) {
+        bool node = false;
+        if (!fieldBool(msg, "osp_node", node)) { rejected(seq, "invalid", "osp_node"); return; }
+        if (node && !c.ospNode) {
+            // Adres, lista obiektów, karta OSP, frazy i liczba stacji znikają; kod dostępu sieci zostaje.
+            memset(c.address, 0, sizeof(c.address));
+            memset(c.objects, 0, sizeof(c.objects));
+            c.objectCount = 0;
+            memset(c.osp, 0, sizeof(c.osp));
+            c.activeOsp = 0;
+            memset(c.phrases, 0, sizeof(c.phrases));
+            c.phraseCount = 0;
+            c.stations = 0;
+        }
+        c.ospNode = node ? 1 : 0;
+    }
+    if (c.ospNode) {
+        static const char* const stationOnly[] = {"address", "addresses", "osp", "osp_backup", "phrases", "stations"};
+        for (const char* key : stationOnly) {
+            if (json::field(msg, key, v)) { rejected(seq, "invalid", "osp node"); return; }
+        }
+    }
     if (json::field(msg, "address", v)) {
         if (!json::string(v, c.address, sizeof(c.address))) { rejected(seq, "invalid", "address"); return; }
         c.objectCount = 0;   // pojedynczy adres zastępuje listę obiektów
@@ -329,13 +351,6 @@ void Protocol::doConfigure(const json::Value& msg, int64_t seq) {
             char* out = i ? c.objects[i - 1] : c.address;
             if (!json::item(list, i, s) || !json::string(s, out, store::ADDRESS_MAX + 1) || !out[0]) { rejected(seq, "invalid", "addresses"); return; }
         }
-    }
-    char role[12];
-    if (json::field(msg, "role", v)) {
-        if (!json::string(v, role, sizeof(role))) { rejected(seq, "invalid", "role"); return; }
-        if (!strcmp(role, "station")) c.role = store::STATION;
-        else if (!strcmp(role, "osp")) c.role = store::OSP;
-        else { rejected(seq, "invalid", "role"); return; }
     }
     if (json::field(msg, "osp", v) && !fieldHex(msg, "osp", c.osp[0])) { rejected(seq, "invalid", "osp"); return; }
     if (json::field(msg, "osp_backup", v) && !fieldHex(msg, "osp_backup", c.osp[1])) { rejected(seq, "invalid", "osp_backup"); return; }
@@ -370,9 +385,9 @@ void Protocol::doConfigure(const json::Value& msg, int64_t seq) {
     }
     if (!store_.writeConfig(c)) { rejected(seq, "memory"); return; }
     host_.configChanged();
-    char fields[80];
-    snprintf(fields, sizeof(fields), "\"configured\":true,\"worst_request\":%u,\"config_seq\":%lu", static_cast<unsigned>(size),
-             static_cast<unsigned long>(store_.config().seq));
+    char fields[120];
+    snprintf(fields, sizeof(fields), "\"configured\":true,\"osp_node\":%s,\"worst_request\":%u,\"config_seq\":%lu",
+             store_.config().ospNode ? "true" : "false", static_cast<unsigned>(size), static_cast<unsigned long>(store_.config().seq));
     send("ok", seq, fields);
 }
 

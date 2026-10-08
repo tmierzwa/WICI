@@ -55,6 +55,27 @@ uint32_t announcesSeen = 0;
 // Cele OSP z konfiguracji (główna, zapasowa): ich tras i tożsamości limit tablic nie usuwa
 // (microStore::pinned_key niżej, łata microStore 0001).
 uint8_t pinned[2][HASH] = {};
+// Węzeł OSP: interfejs USB do komputera stanowiska. Bufor KISS (około 5 KB) powstaje w puli
+// stosu tylko w tej konfiguracji, więc stacja w schronieniu nie płaci za niego pamięcią.
+bool nodeMode = false;
+kiss::Port* usbPort = nullptr;
+bool fromUsb = false;              // stos przetwarza pakiet z USB (pakiety wychodzące to ruch OSP)
+uint8_t usbDest[USB_PINNED][HASH] = {};   // cele ogłoszone przez komputer (najnowsze zastępują najstarsze)
+size_t usbDestCount = 0;
+size_t usbDestNext = 0;
+
+bool usbKnown(const uint8_t* dest) {
+    if (!dest) return false;
+    for (size_t i = 0; i < usbDestCount; ++i) if (!memcmp(usbDest[i], dest, HASH)) return true;
+    return false;
+}
+
+void usbRemember(const uint8_t* dest) {
+    if (!dest || usbKnown(dest)) return;
+    memcpy(usbDest[usbDestNext], dest, HASH);
+    usbDestNext = (usbDestNext + 1) % USB_PINNED;
+    if (usbDestCount < USB_PINNED) ++usbDestCount;
+}
 
 void log(const char* text) {
     if (hooks.log) hooks.log(text, hooks.context);
@@ -144,9 +165,11 @@ protected:
         uint8_t wire[p1iface::MAX_WIRE];
         p1iface::ifacMask(raw.data(), raw.size(), tag, p1iface::IFAC_SIZE, mask.data(), wire);
         const uint8_t hops = p1iface::pathResponse(raw.data(), raw.size()) ? 0 : raw.data()[1];
-        const p1iface::Admit admit = queue_.offer(kind, hops,
-                                                  p1iface::destination(raw.data(), raw.size()), wire,
-                                                  raw.size() + p1iface::IFAC_SIZE, nowMs());
+        const uint8_t* dest = p1iface::destination(raw.data(), raw.size());
+        // Węzeł OSP: pakiet od komputera (w trakcie przetwarzania pakietu z USB) albo do celu
+        // ogłoszonego przez komputer to ruch OSP, zwolniony z rezerwy (radio.md, „Limity”).
+        const bool osp = nodeMode && (fromUsb || usbKnown(dest));
+        const p1iface::Admit admit = queue_.offer(kind, hops, dest, wire, raw.size() + p1iface::IFAC_SIZE, nowMs(), osp);
         if (admit != p1iface::Admit::QUEUED && admit != p1iface::Admit::HELD) return false;
         handle_outgoing(raw);
         return true;
@@ -160,7 +183,54 @@ private:
 };
 
 P1Interface* p1 = nullptr;
+
+// Interfejs Reticulum przez USB (węzeł OSP): pakiety od komputera z bufora KISS do stosu, gdy
+// kolejka P1 ma miejsce (inaczej czekają w buforze, a komputer na gotowość); pakiety, które
+// transport kieruje do komputera, w ramkach KISS. Bez IFAC: kod dostępu dotyczy tylko P1.
+class UsbInterface : public RNS::InterfaceImpl {
+public:
+    UsbInterface() : RNS::InterfaceImpl("USB") {
+        _IN = true;
+        _OUT = true;
+        _HW_MTU = kiss::MTU;
+        _bitrate = USB_BITRATE;
+        _mode = RNS::Type::Interface::MODE_FULL;
+    }
+
+    void loop() override {
+        if (!usbPort || !p1 || p1->queue().full()) return;
+        const uint8_t* data;
+        size_t length;
+        if (!usbPort->peek(data, length)) return;
+        const RNS::Bytes packet(data, length);
+        usbPort->pop();
+        // Ogłoszenie od komputera: cel chroniony w pełnych tablicach i ruch OSP w rezerwie P1.
+        if (p1iface::classify(packet.data(), packet.size()) == p1iface::Kind::ANNOUNCE) {
+            usbRemember(p1iface::destination(packet.data(), packet.size()));
+        }
+        struct Flag {
+            Flag() { fromUsb = true; }
+            ~Flag() { fromUsb = false; }
+        } flag;
+        std::shared_ptr<RNS::InterfaceImpl> self = shared_from_this();
+        RNS::Interface(self).handle_incoming(packet);
+    }
+
+protected:
+    bool send_outgoing(const RNS::Bytes& raw) override {
+        if (!usbPort || !usbPort->send(raw.data(), raw.size())) return false;
+        handle_outgoing(raw);
+        return true;
+    }
+
+private:
+    // Przepływność deklarowana stosowi: USB nie ogranicza ruchu, a limit ogłoszeń do komputera
+    // (2% przepływności) nie może wstrzymywać ogłoszeń stacji sieci.
+    static constexpr uint32_t USB_BITRATE = 1000000;
+};
+
 RNS::Interface iface(RNS::Type::NONE);
+RNS::Interface usbIface(RNS::Type::NONE);
 RNS::Reticulum reticulum(RNS::Type::NONE);
 RNS::Identity identity(RNS::Type::NONE);
 RNS::Destination destination(RNS::Type::NONE);
@@ -228,9 +298,16 @@ bool begin(journal::Storage& storage, Radio& r, const uint8_t ifac[16], uint64_t
 
         p1 = new P1Interface();
         p1->setIfac(ifac);
+        p1->queue().setNodeReserve(nodeMode);
         iface = p1;
         RNS::Transport::register_interface(iface);
         iface.start();
+        if (nodeMode) {
+            usbPort = new kiss::Port();
+            usbIface = new UsbInterface();
+            RNS::Transport::register_interface(usbIface);
+            usbIface.start();
+        }
 
         reticulum = RNS::Reticulum();
         reticulum.transport_enabled(true);
@@ -254,11 +331,14 @@ bool begin(journal::Storage& storage, Radio& r, const uint8_t ifac[16], uint64_t
         (void)clockMs;   // na komputerze stos używa zegara systemowego
 #endif
 
-        destination = RNS::Destination(identity, RNS::Type::Destination::IN, RNS::Type::Destination::SINGLE, APP_NAME, ASPECT);
-        destination.set_packet_callback(onPacket);
-        destination.set_proof_strategy(RNS::Type::Destination::PROVE_APP);
-        destination.set_proof_requested_callback(onProofRequested);
-        memcpy(addressBytes, destination.hash().data(), HASH);
+        // Węzeł OSP nie ma adresu: bez celu "wici.sa1" (tożsamość służy tylko transportowi).
+        if (!nodeMode) {
+            destination = RNS::Destination(identity, RNS::Type::Destination::IN, RNS::Type::Destination::SINGLE, APP_NAME, ASPECT);
+            destination.set_packet_callback(onPacket);
+            destination.set_proof_strategy(RNS::Type::Destination::PROVE_APP);
+            destination.set_proof_requested_callback(onProofRequested);
+            memcpy(addressBytes, destination.hash().data(), HASH);
+        }
 
         announceHandler = RNS::HAnnounceHandler(new AnnounceHandler());
         RNS::Transport::register_announce_handler(announceHandler);
@@ -284,6 +364,50 @@ void setOsp(const uint8_t osp[2][HASH], uint8_t active) {
     if (p1) p1->queue().setOsp(osp[active ? 1 : 0]);
 }
 
+void setOspNode(bool on) {
+    if (!started) nodeMode = on;
+}
+
+bool ospNode() { return nodeMode; }
+
+void usbOpen(bool open) {
+    if (usbPort) usbPort->setOpen(open);
+}
+
+void usbFeed(const uint8_t* data, size_t length, uint32_t now) {
+    if (usbPort) usbPort->feed(data, length, now);
+}
+
+size_t usbTake(uint8_t* out, size_t max) { return usbPort ? usbPort->take(out, max) : 0; }
+
+UsbStatus usbStatus() {
+    UsbStatus s;
+    s.enabled = usbPort != nullptr;
+    if (!usbPort) return s;
+    s.open = usbPort->open();
+    s.flowControl = usbPort->flowControl();
+    s.buffered = usbPort->buffered();
+    s.pinned = usbDestCount;
+    s.counters = usbPort->counters();
+    return s;
+}
+
+bool usbPinned(const uint8_t dest[HASH]) { return usbKnown(dest); }
+
+size_t usbJson(char* out, size_t size) {
+    const UsbStatus u = usbStatus();
+    const kiss::Counters& c = u.counters;
+    const int n = snprintf(out, size,
+                           "\"osp_node\":%s,\"usb_open\":%s,\"usb_flow\":%s,\"usb_buffered\":%u,\"usb_pinned\":%u,"
+                           "\"usb_rns_in\":%lu,\"usb_rns_out\":%lu,\"usb_rx_drop\":%lu,\"usb_rx_large\":%lu,\"usb_tx_drop\":%lu,"
+                           "\"usb_ready\":%lu,\"usb_cmds\":%lu",
+                           nodeMode ? "true" : "false", u.open ? "true" : "false", u.flowControl ? "true" : "false",
+                           (unsigned)u.buffered, (unsigned)u.pinned, (unsigned long)c.fromComputer, (unsigned long)c.toComputer,
+                           (unsigned long)c.rxDropped, (unsigned long)c.rxTooLarge, (unsigned long)c.txDropped,
+                           (unsigned long)c.ready, (unsigned long)c.commands);
+    return n < 0 ? 0 : (size_t)n;
+}
+
 void loop(uint32_t) {
     if (!started) return;
     try {
@@ -307,7 +431,7 @@ void txDone(bool ok) {
 }
 
 bool announce(const uint8_t* appData, size_t length) {
-    if (!started) return false;
+    if (!started || nodeMode) return false;
     try {
         // Pakiet bez wysyłki, żeby wynik mówił, czy interfejs P1 przyjął ogłoszenie (announce()
         // z send = true nie zwraca wyniku).
@@ -351,7 +475,7 @@ void requestPath(const uint8_t dest[HASH]) {
 }
 
 uint32_t send(const uint8_t dest[HASH], const uint8_t* data, size_t length, uint32_t timeoutS) {
-    if (!started || !p1 || !p1->ifacOnline() || p1->queue().full()) return 0;
+    if (!started || nodeMode || !p1 || !p1->ifacOnline() || p1->queue().full()) return 0;
     try {
         const RNS::Bytes hash(dest, HASH);
         const RNS::Identity remote = RNS::Identity::recall(hash);
@@ -499,7 +623,7 @@ bool pinned_key(const uint8_t* key, size_t length) {
     for (const auto& dest : rnsnode::pinned) {
         if (memcmp(dest, zero, rnsnode::HASH) && !memcmp(dest, key, rnsnode::HASH)) return true;
     }
-    return false;
+    return rnsnode::usbKnown(key);   // węzeł OSP: cele ogłoszone przez komputer stanowiska
 }
 
 }  // namespace microStore

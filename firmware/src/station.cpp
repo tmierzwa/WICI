@@ -80,8 +80,7 @@ bool Station::notifyInbox(const store::InboxRecord& record) {
     store::bytesToHex(record.source, sourceHex);
     snprintf(fields, sizeof(fields), "\"kind\":\"message\",\"source\":\"%s\",\"inbox\":%lu,\"sa1\":%s", sourceHex,
              static_cast<unsigned long>(record.seq), record.sa1);
-    const bool osp = store_.config().role == store::OSP;
-    return services_.notify(osp ? store::NOTE_INCOMING : store::NOTE_MESSAGE, record.seq, fields);
+    return services_.notify(store::NOTE_MESSAGE, record.seq, fields);
 }
 
 void Station::notifyPending() {
@@ -170,7 +169,6 @@ void Station::receipt(uint32_t handle, bool delivered) {
 
 bool Station::trustedSource(const uint8_t from[store::HASH]) const {
     const store::Config& c = store_.config();
-    if (c.role == store::OSP) return true;  // bez kart zaufanych: każda stacja (kwarantannę prowadzi laptop)
     uint8_t zero[store::HASH] = {};
     if (!store_.configured() || !memcmp(c.osp[c.activeOsp ? 1 : 0], zero, store::HASH)) return true;  // stanowisko bez karty OSP
     return !memcmp(from, c.osp[c.activeOsp ? 1 : 0], store::HASH);
@@ -202,9 +200,8 @@ bool Station::received(const uint8_t* data, size_t length) {
     if (!trustedSource(from)) { ++stats_.rejected; services_.log("datagram from untrusted source"); return false; }
     sa1::Message m;
     if (sa1::decode(payload.begin, payload.length, m)) { ++stats_.rejected; return false; }
-    const bool osp = store_.config().role == store::OSP;
-    const bool allowed = osp ? (m.type == sa1::REQUEST || m.type == sa1::TEST) : (m.type >= sa1::RECEIVED && m.type <= sa1::BULLETIN);
-    if (!allowed) { ++stats_.rejected; return false; }
+    // Stacja ma jedną rolę (D19): od OSP przyjmuje RECEIVED, STATUS, REPLY i BULLETIN.
+    if (m.type < sa1::RECEIVED || m.type > sa1::BULLETIN) { ++stats_.rejected; return false; }
     char wire[sa1::MAX_CONTENT + 1];
     const size_t wireLength = sa1::encode(m, wire, sizeof(wire));
     if (!wireLength) { ++stats_.rejected; return false; }
@@ -225,13 +222,12 @@ bool Station::handleMessage(const uint8_t from[store::HASH], const sa1::Message&
     const uint32_t nowS = services_.uptimeS();
     uint8_t idBytes[store::HASH];
     store::hexToBytes(m.id, idBytes);
-    const bool osp = store_.config().role == store::OSP;
     const uint16_t revision = m.type == sa1::BULLETIN ? 0 : m.revision;
     const uint32_t event = (m.type == sa1::STATUS || m.type == sa1::REPLY || m.type == sa1::BULLETIN) ? m.event : 0;
-    // Rola stacji: STATUS i RECEIVED dotyczą własnej intencji; STATUS dla nieznanego id jest ignorowany.
+    // STATUS i RECEIVED dotyczą własnej intencji; STATUS dla nieznanego id jest ignorowany.
     store::QueueRecord intent;
     bool haveIntent = false;
-    if (!osp && m.type != sa1::BULLETIN) {
+    if (m.type != sa1::BULLETIN) {
         for (size_t i = 0; i < store_.queueSize(); ++i) {
             const store::QueueEntry* e = store_.queueEntry(i);
             if (e && e->revision == m.revision && !memcmp(e->id, idBytes, store::HASH) && (e->type == sa1::REQUEST || e->type == sa1::TEST) &&
@@ -261,26 +257,6 @@ bool Station::handleMessage(const uint8_t from[store::HASH], const sa1::Message&
     // odrzuca jako powtórzenia.
     if (put == store::Put::DUPLICATE) {
         ++stats_.duplicates;
-        if (osp) {
-            // Powtórzony REQUEST lub TEST o znanym kluczu: zapisany RECEIVED i najnowszy STATUS idą ponownie.
-            const store::QueueEntry* receivedEntry = nullptr;
-            const store::QueueEntry* statusEntry = nullptr;
-            for (size_t i = 0; i < store_.queueSize(); ++i) {
-                const store::QueueEntry* e = store_.queueEntry(i);
-                if (!e || e->revision != m.revision || memcmp(e->id, idBytes, store::HASH) || memcmp(e->to, from, store::HASH)) continue;
-                if (e->type == sa1::RECEIVED) receivedEntry = e;
-                else if (e->type == sa1::STATUS && (!statusEntry || e->event > statusEntry->event)) statusEntry = e;
-            }
-            const store::QueueEntry* again[2] = {receivedEntry, statusEntry};
-            for (const store::QueueEntry* e : again) {
-                store::QueueRecord r;
-                if (!e || !store_.queueRead(e->seq, r)) continue;
-                r.flags = static_cast<uint8_t>((r.flags & ~(store::DONE | store::SENT)) | store::ACTIVE);
-                r.nextTryS = 0;
-                r.updatedS = nowS;
-                store_.queueUpdate(r);
-            }
-        }
         return true;
     }
     // Nowa wiadomość: zdarzenie do laptopa (przy pełnym pierścieniu zdarzeń później, z notifyPending)

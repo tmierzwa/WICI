@@ -6,17 +6,24 @@
 // składacz P1, a złożony datagram (bajty z IFAC) idzie datagramem UDP do interfejsu UDP Reticulum
 // w Pythonie. W drugą stronę tak samo. FRAM 512 KiB jest plikiem, więc restart programu odtwarza
 // tożsamość i tablice jak restart stacji. Próba zgodności: firmware/tools/rns_interop.py.
+// --osp-node: konfiguracja węzła OSP (D19) z interfejsem Reticulum przez USB; zamiast portu CDC
+// pseudoterminal, którego nazwę podaje zdarzenie "ready" ("usb"), a KISSInterface Reticulum
+// w Pythonie otwiera go jak port szeregowy (firmware/tools/rns_osp_node.py).
 //
 // Polecenia na stdin (wiersze): announce [hex danych], send <cel hex> <dane hex> [limit s],
 // path <cel hex>, request <cel hex>, accept <0|1> (warstwa aplikacji przyjmuje pakiety i stos
 // wysyła dowód; domyślnie 1), status, hashes <n> (n losowych skrótów na liście skrótów pakietów,
-// pomiar RAM), quit. Zdarzenia na stdout jako wiersze JSON.
+// pomiar RAM), pinned <cel hex> (cel chroniony jako ogłoszony przez komputer), quit. Zdarzenia na
+// stdout jako wiersze JSON.
 #include <arpa/inet.h>
+#include <fcntl.h>
 #include <netinet/in.h>
 #include <poll.h>
 #include <sys/socket.h>
+#include <termios.h>
 #include <unistd.h>
 
+#include <cerrno>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -196,17 +203,18 @@ void onLog(const char* text, void*) {
 
 void printStatus() {
     const rnsnode::Status s = rnsnode::status();
-    char iface[512];
+    char iface[512], usb[400];
     rnsnode::interfaceJson(iface, sizeof(iface));
+    rnsnode::usbJson(usb, sizeof(usb));
     printf("{\"event\":\"status\",\"online\":%s,\"paths\":%u,\"hashes\":%u,\"announce_table\":%u,\"pending\":%u,"
            "\"pool\":%u,\"pool_used\":%u,\"pool_peak\":%u,\"fs_files\":%u,\"fs_used\":%u,\"fs_capacity\":%u,"
            "\"sent\":%u,\"received\":%u,\"unproven\":%u,\"delivered\":%u,\"timed_out\":%u,\"announces\":%u,\"wait_ms\":%u,"
-           "\"bitrate\":%u,\"frames_out\":%u,\"frames_in\":%u,\"datagrams_out\":%u,\"datagrams_in\":%u,%s}\n",
+           "\"bitrate\":%u,\"frames_out\":%u,\"frames_in\":%u,\"datagrams_out\":%u,\"datagrams_in\":%u,%s,%s}\n",
            s.online ? "true" : "false", (unsigned)s.paths, (unsigned)s.packetHashes, (unsigned)s.announceTable,
            (unsigned)s.receiptsPending, (unsigned)s.poolSize, (unsigned)s.poolUsed, (unsigned)s.poolPeak,
            (unsigned)s.fsFiles, (unsigned)s.fsUsedBytes, (unsigned)s.fsCapacityBytes, s.packetsSent, s.packetsReceived,
            s.packetsUnproven, s.delivered, s.timedOut, s.announcesSeen, s.queueWaitMs, s.bitrate, radio.framesOut, radio.framesIn,
-           radio.datagramsOut, radio.datagramsIn, iface);
+           radio.datagramsOut, radio.datagramsIn, iface, usb);
     fflush(stdout);
 }
 
@@ -219,11 +227,13 @@ int main(int argc, char** argv) {
     uint8_t ifac[16] = {};
     uint16_t tableMax = 0;   // --table-max: mniejsze tablice do próby ochrony wpisów OSP
     uint8_t osp[2][16] = {};
+    bool ospNode = false;   // --osp-node: interfejs USB przez pseudoterminal
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--fram") && i + 1 < argc) framPath = argv[++i];
         else if (!strcmp(argv[i], "--listen") && i + 1 < argc) listenPort = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--peer") && i + 1 < argc) peerPort = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--trace")) radio.trace = true;
+        else if (!strcmp(argv[i], "--osp-node")) ospNode = true;
         else if (!strcmp(argv[i], "--capture") && i + 1 < argc) capture = fopen(argv[++i], "w");
         else if (!strcmp(argv[i], "--debt") && i + 1 < argc) radio.debtFactor = static_cast<uint32_t>(atoi(argv[++i]));
         else if (!strcmp(argv[i], "--table-max") && i + 1 < argc) tableMax = static_cast<uint16_t>(atoi(argv[++i]));
@@ -255,21 +265,51 @@ int main(int argc, char** argv) {
     hooks.announce = onAnnounce;
     hooks.log = onLog;
     rnsnode::setOsp(osp, 0);
+    rnsnode::setOspNode(ospNode);
+    // Port USB węzła OSP: strona główna pseudoterminalu w trybie surowym; port uznaje się za
+    // otwarty od startu (komputer włącza kontrolę przepływu po otwarciu strony podrzędnej).
+    int usb = -1;
+    std::string usbName;
+    if (ospNode) {
+        usb = posix_openpt(O_RDWR | O_NOCTTY);
+        if (usb < 0 || grantpt(usb) != 0 || unlockpt(usb) != 0) { perror("pty"); return 2; }
+        usbName = ptsname(usb);
+        termios t{};
+        if (tcgetattr(usb, &t) == 0) { cfmakeraw(&t); tcsetattr(usb, TCSANOW, &t); }
+        fcntl(usb, F_SETFL, fcntl(usb, F_GETFL) | O_NONBLOCK);
+    }
     if (!rnsnode::begin(fram, radio, ifac, 0, hooks)) { printf("{\"event\":\"error\",\"what\":\"begin\"}\n"); return 1; }
+    if (ospNode) rnsnode::usbOpen(true);
     if (tableMax) rnsnode::debugTableMax(tableMax);
     fram.save();
     const rnsnode::Status st = rnsnode::status();
-    printf("{\"event\":\"ready\",\"address\":\"%s\",\"identity\":\"%s\",\"identity_new\":%s,\"paths\":%u,\"bitrate\":%u}\n",
+    printf("{\"event\":\"ready\",\"address\":\"%s\",\"identity\":\"%s\",\"identity_new\":%s,\"paths\":%u,\"bitrate\":%u,"
+           "\"osp_node\":%s,\"usb\":\"%s\"}\n",
            hex(rnsnode::address(), 16).c_str(), hex(rnsnode::identityHash(), 16).c_str(), st.identityNew ? "true" : "false",
-           (unsigned)st.paths, st.bitrate);
+           (unsigned)st.paths, st.bitrate, rnsnode::ospNode() ? "true" : "false", usbName.c_str());
     fflush(stdout);
 
     std::string line;
     bool run = true;
     uint32_t lastSave = nowMs();
     while (run) {
-        pollfd fds[2] = {{0, POLLIN, 0}, {radio.sock, POLLIN, 0}};
-        ::poll(fds, 2, 5);
+        pollfd fds[3] = {{0, POLLIN, 0}, {radio.sock, POLLIN, 0}, {usb, POLLIN, 0}};
+        ::poll(fds, usb >= 0 ? 3 : 2, 5);
+        if (usb >= 0) {
+            uint8_t buffer[512];
+            ssize_t n;
+            while ((n = ::read(usb, buffer, sizeof(buffer))) > 0) rnsnode::usbFeed(buffer, static_cast<size_t>(n), nowMs());
+            size_t m;
+            while ((m = rnsnode::usbTake(buffer, sizeof(buffer))) > 0) {
+                size_t done = 0;
+                while (done < m) {
+                    const ssize_t w = ::write(usb, buffer + done, m - done);
+                    if (w > 0) done += static_cast<size_t>(w);
+                    else if (w < 0 && errno != EAGAIN) break;   // strona podrzędna zamknięta: bajty przepadają
+                    else { struct pollfd o = {usb, POLLOUT, 0}; ::poll(&o, 1, 10); }
+                }
+            }
+        }
         if (fds[1].revents & POLLIN) {
             uint8_t buffer[2048];
             const ssize_t n = recv(radio.sock, buffer, sizeof(buffer), 0);
@@ -307,6 +347,8 @@ int main(int argc, char** argv) {
                     memcpy(osp[0], x.data(), 16);
                     rnsnode::setOsp(osp, 0);
                     printf("{\"event\":\"osp\"}\n");
+                } else if (sscanf(cmd.c_str(), "pinned %1199s", a) == 1 && unhex(a, x) && x.size() == 16) {
+                    printf("{\"event\":\"pinned\",\"pinned\":%s}\n", rnsnode::usbPinned(x.data()) ? "true" : "false");
                 } else if (sscanf(cmd.c_str(), "request %1199s", a) == 1 && unhex(a, x) && x.size() == 16) {
                     rnsnode::requestPath(x.data());
                     printf("{\"event\":\"requested\"}\n");

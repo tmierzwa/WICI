@@ -39,6 +39,7 @@ public:
     bool switchBackup() override;
     bool destroy() override;
     bool announce() override;
+    bool ospNode() override { return store_.config().ospNode != 0; }
 
 private:
     static_assert(ui::ADDRESS_CHOICES == store::ADDRESSES, "lista obiektów ekranu i magazynu");

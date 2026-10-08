@@ -14,6 +14,8 @@
 //   przypięta OSP zajmują najwyżej 50% czasu kanału (TX i dług ciszy) w oknie 1 h i nie biorą
 //   ostatniego wolnego miejsca w kolejce; ponad limit interfejs odmawia (stos odrzuca pakiet
 //   przekazywany, nadawca ponawia). Ruch do OSP, dowody, zapytania o trasę i własne pakiety bez limitu.
+//   W konfiguracji węzła OSP (setNodeReserve) stacja nie ma karty OSP: ruchem OSP są pakiety
+//   z interfejsu USB i do celów osiągalnych przez niego, co wskazuje stos (argument osp w offer).
 // - Deklarowana przepływność uwzględnia ramkowanie P1 i dług ciszy 12 x czas TX.
 // - Kod dostępu IFAC 16 B: maskowanie i zdejmowanie maski jak Transport.handle_outgoing_ifac i
 //   handle_ifac w Reticulum e40191b; podpis i HKDF liczy warstwa ze stosem (rns_node.cpp).
@@ -80,11 +82,15 @@ public:
     // Przyjęcie pakietu od stosu: wire to bajty po IFAC, kind i hops z pakietu przed IFAC
     // (hops = 0 także dla odpowiedzi na zapytanie o trasę: bez limitu ogłoszeń), dest to skrót
     // celu (deduplikacja ogłoszeń oczekujących).
-    Admit offer(Kind kind, uint8_t hops, const uint8_t dest[16], const uint8_t* wire, size_t length, uint32_t nowMs);
+    // osp: pakiet ruchu OSP wskazany przez stos (węzeł OSP), zwolniony z rezerwy.
+    Admit offer(Kind kind, uint8_t hops, const uint8_t dest[16], const uint8_t* wire, size_t length, uint32_t nowMs,
+                bool osp = false);
     // Ogłoszenia oczekujące przechodzą do kolejki, gdy limit pozwala i jest miejsce.
     void poll(uint32_t nowMs);
     // Skrót celu przypiętej (aktywnej) OSP; same zera albo nullptr = brak rezerwy.
     void setOsp(const uint8_t dest[16]);
+    // Węzeł OSP: rezerwa bez przypiętego celu; ruch OSP wskazuje argument osp w offer().
+    void setNodeReserve(bool on) { nodeReserve_ = on; }
     uint32_t otherUsedMs(uint32_t nowMs);   // czas kanału ruchu poza OSP w bieżącym oknie
     // Następny datagram do nadania (najwyższa klasa, najstarszy); false, gdy kolejka pusta albo
     // trwa nadawanie. Wybrany datagram zostaje w kolejce do finish(): pakiet przyjęty w trakcie
@@ -135,6 +141,7 @@ private:
     void advanceWindow(uint32_t nowMs);
     uint8_t osp_[16] = {};
     bool ospSet_ = false;
+    bool nodeReserve_ = false;
     uint32_t window_[RESERVE_WINDOW_MIN] = {};   // czas kanału ruchu poza OSP na minutę
     uint32_t windowMinute_ = 0;
     Counters counters_;

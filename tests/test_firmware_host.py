@@ -168,7 +168,8 @@ int assembleScript() {
 // Ekran sterowany z wejścia. Bez "H" model działa bez stacji (sam ekran); "H" dołącza magazyn w RAM,
 // warstwę aplikacji i konsolę: "A <adres>" konfiguracja (OSP 0xCC.., 2 stacje), "I <sa1>" wiadomość od OSP,
 // "E <ack 0|1>" krok łącza (nadanie z kolejki, dowód transportowy od OSP), "Y <s>" czas pracy,
-// "KD/KU <przycisk> <ms>" naciśnięcie i zwolnienie, "M" lista WIADOMOŚCI, "J" kolejka.
+// "KD/KU <przycisk> <ms>" naciśnięcie i zwolnienie, "M" lista WIADOMOŚCI, "J" kolejka,
+// "ON <0|1>" konfiguracja węzła OSP, "PC <słyszany> <s> <usb in> <usb out> <odrzuty>" komputer stanowiska.
 struct UiServices : station::Services {
     uint32_t uptime = 100;
     bool silence_ = false;
@@ -221,7 +222,6 @@ int uiScript() {
             hosted = true;
         } else if (!strncmp(line, "A ", 2)) {
             store::Config cfg;
-            cfg.role = store::STATION;
             cfg.stations = 2;
             strncpy(cfg.address, line + 2, store::ADDRESS_MAX);
             memset(cfg.osp[0], 0xCC, store::HASH);
@@ -231,7 +231,6 @@ int uiScript() {
         } else if (!strncmp(line, "AL ", 3)) {
             // Lista obiektów "a|b|c" (configure "addresses").
             store::Config cfg = store.config();
-            cfg.role = store::STATION;
             memset(cfg.osp[0], 0xCC, store::HASH);
             memset(cfg.osp[1], 0xDD, store::HASH);
             memset(cfg.address, 0, sizeof(cfg.address));
@@ -247,6 +246,14 @@ int uiScript() {
             cfg.objectCount = static_cast<uint8_t>(n ? n - 1 : 0);
             printf("config %d\n", store.writeConfig(cfg));
             con.invalidate();
+        } else if (sscanf(line, "ON %u", &a) == 1) {
+            store::Config cfg = store.config();
+            cfg.ospNode = static_cast<uint8_t>(a);
+            if (a) { memset(cfg.address, 0, sizeof(cfg.address)); memset(cfg.osp, 0, sizeof(cfg.osp)); }
+            printf("config %d\n", store.writeConfig(cfg));
+            con.invalidate();
+        } else if (sscanf(line, "PC %u %u %u %u %u", &a, &b, &c, &d, &e) == 5) {
+            status.computerHeard = a; status.computerS = b; status.usbIn = c; status.usbOut = d; status.usbDrop = e;
         } else if (!strcmp(line, "AD")) {
             printf("addresses %zu selected %zu", store.addressCount(), store.selectedAddress());
             for (size_t i = 0; i < store.addressCount(); ++i) printf(" |%s", store.addressAt(i));
@@ -368,7 +375,7 @@ struct TestHost : usbproto::Host {
 // Protokół USB sterowany z wejścia: "> <json>" wiersz od laptopa, "E <kind> <pola>" zdarzenie stacji,
 // "T <ms>" poll, "C <ms>" połączenie, "D" rozłączenie, "P <0|1>" tryb przygotowania, "K <0|1>" potwierdzenie,
 // "W <0|1>" przełącznik CISZA, "U <s>" czas pracy, "R" restart stacji (ta sama pamięć), "Z <adres> <bajt>" uszkodzenie bajtu FRAM,
-// "S" stan magazynu, "Q <seq>" rekord kolejki, "X <seq> <flagi>" zapis stanu intencji.
+// "S" stan magazynu, "N" konfiguracja węzła OSP, "Q <seq>" rekord kolejki, "X <seq> <flagi>" zapis stanu intencji.
 int usbScript() {
     RamStorage ram;
     TestHost host;
@@ -395,6 +402,11 @@ int usbScript() {
             store = new store::Store(ram); printf("begin %d\n", store->begin());
             proto = new usbproto::Protocol(*store, host); proto->begin();
         } else if (sscanf(line, "Z %u %u", &a, &b) == 2) ram.bytes[a] = static_cast<uint8_t>(b);
+        else if (line[0] == 'N') {
+            const store::Config& c = store->config();
+            printf("node %u osp %02x phrases %u stations %u objects %u ifac %02x seq %u\n", c.ospNode, c.osp[0][0], c.phraseCount, c.stations,
+                   c.objectCount, c.ifac[0], c.seq);
+        }
         else if (line[0] == 'S') printf("store live %zu inbox %zu pending %zu latest %u configured %d address %s\n", store->queueLive(), store->inboxCount(), store->notesPending(), store->noteLatest(), store->configured(), store->config().address);
         else if (sscanf(line, "X %u %u", &a, &b) == 2) { store::QueueRecord r; printf("update %d\n", store->queueRead(a, r) && (r.flags = static_cast<uint8_t>(b), store->queueUpdate(r))); }
         else if (sscanf(line, "Q %u", &a) == 1) { store::QueueRecord r; if (store->queueRead(a, r)) printf("queue %u flags %u attempts %u %s\n", r.seq, r.flags, r.attempts, r.sa1); else printf("queue none\n"); }
@@ -403,8 +415,11 @@ int usbScript() {
     return 0;
 }
 
-// Dwie stacje (A: rola stacji, B: rola OSP) połączone "eterem" bez strat albo ze stratami;
-// każda ma własną FRAM w RAM, magazyn, protokół USB i warstwę aplikacji.
+// Stacja A i odbiorca B połączone "eterem" bez strat albo ze stratami. OSP działa na komputerze
+// stanowiska (D19), więc B to model odbiorcy w programie testowym: przyjmuje każdy pakiet
+// w kopercie do swojego adresu (dowód transportowy), wypisuje "B got <SA1>" i nadaje wiadomości
+// z polecenia "B> <SA1>" w kopercie do A. A ma własną FRAM w RAM, magazyn, protokół USB
+// i warstwę aplikacji.
 struct Node;
 struct LinkServices : station::Services {
     Node* node = nullptr;
@@ -425,7 +440,7 @@ struct Node {
     store::Store* store = nullptr;
     usbproto::Protocol* proto = nullptr;
     LinkServices services;
-    station::Station* app = nullptr;
+    station::Station* app = nullptr;   // nullptr: model odbiorcy (B)
     Node* peer = nullptr;
     uint32_t uptime = 100;
     bool lossy = false;
@@ -437,13 +452,7 @@ struct Node {
     bool proofDue = false;
     bool refuse = false;   // stos odmawia (cel nieznany, pełna kolejka): send zwraca 0
     uint8_t addr;
-    void start() {
-        store = new store::Store(ram); store->begin();
-        proto = new usbproto::Protocol(*store, host); proto->begin(); proto->connected(0);
-        services.node = this;
-        app = new station::Station(*store, services);
-    }
-    void restart() { delete app; delete proto; delete store; start(); }
+    uint32_t sent = 0, delivered = 0, failed = 0, received = 0;   // liczniki modelu odbiorcy
 };
 uint32_t LinkServices::uptimeS() { return node->uptime; }
 bool LinkServices::silence() { return node->host.silence_; }
@@ -464,89 +473,109 @@ void LinkServices::log(const char* text) { printf("%c:log %s\n", node->name, tex
 bool LinkServices::notify(uint8_t kind, uint32_t ref, const char* fields) { return node->proto->event(kind, ref, fields, node->uptime * 1000); }
 void LinkServices::address(uint8_t* out) { memset(out, node->addr, store::HASH); }
 
+// Model odbiorcy: pakiet w kopercie ["WICI",1,od,do,<SA1>] do adresu B przyjęty z dowodem.
+bool receiverAccepts(Node& b, const uint8_t* data, size_t length) {
+    char prefix[96];
+    snprintf(prefix, sizeof(prefix), "[\"WICI\",1,\"%s\",\"%s\",", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+    const size_t p = strlen(prefix);
+    if (length <= p + 1 || memcmp(data, prefix, p) || data[length - 1] != ']') return false;
+    ++b.received;
+    printf("B got %.*s\n", static_cast<int>(length - p - 1), reinterpret_cast<const char*>(data) + p);
+    return true;
+}
+
 int linkScript() {
     Node a, b;
-    a.name = 'A'; a.addr = 0xAA; a.host = TestHost(); b.name = 'B'; b.addr = 0xBB;
+    a.name = 'A'; a.addr = 0xAA; b.name = 'B'; b.addr = 0xBB;
     a.peer = &b; b.peer = &a;
     // Emisje USB z nazwą węzła.
     struct NamedHost : TestHost { char name; void emit(const char* line) override { printf("%c<- %s\n", name, line); } void log(const char* text) override { printf("%c:log %s\n", name, text); } };
-    static NamedHost ha, hb; ha.name = 'A'; hb.name = 'B';
-    // Zastąpienie hosta: protokół bierze referencję, więc tworzymy węzły z nazwanymi hostami.
+    static NamedHost ha;
+    ha.name = 'A';
     Node* nodes[2] = {&a, &b};
-    NamedHost* hosts[2] = {&ha, &hb};
-    for (int i = 0; i < 2; ++i) {
-        Node& n = *nodes[i];
-        n.store = new store::Store(n.ram); n.store->begin();
-        n.proto = new usbproto::Protocol(*n.store, *hosts[i]); n.proto->begin(); n.proto->connected(0);
+    auto startA = [&]() {
+        a.store = new store::Store(a.ram); a.store->begin();
+        a.proto = new usbproto::Protocol(*a.store, ha); a.proto->begin(); a.proto->connected(0);
         const char* sync = "{\"usb\":1,\"seq\":0,\"type\":\"sync\",\"boot\":\"laptop\",\"cursor\":0}\n";
-        n.proto->feed(sync, strlen(sync), 0);
-        n.services.node = &n;
-        n.app = new station::Station(*n.store, n.services);
-    }
+        a.proto->feed(sync, strlen(sync), 0);
+        a.services.node = &a;
+        a.app = new station::Station(*a.store, a.services);
+    };
+    startA();
     char line[2048];
     while (fgets(line, sizeof(line), stdin)) {
         char* nl = strchr(line, '\n');
         if (nl) *nl = '\0';
         unsigned v = 0;
-        Node* n = line[0] == 'A' ? &a : line[0] == 'B' ? &b : nullptr;
-        if (n && line[1] == ' ') { n->proto->feed(line + 2, strlen(line + 2), n->uptime * 1000); n->proto->feed("\n", 1, n->uptime * 1000); }
+        if (line[0] == 'A' && line[1] == ' ') { a.proto->feed(line + 2, strlen(line + 2), a.uptime * 1000); a.proto->feed("\n", 1, a.uptime * 1000); }
+        else if (line[0] == 'B' && line[1] == '>' && line[2] == ' ') {
+            // Odbiorca nadaje wiadomość SA1 do A (jak aplikacja OSP przez węzeł OSP).
+            char envelope[700];
+            snprintf(envelope, sizeof(envelope), "[\"WICI\",1,\"%s\",\"%s\",%s]", "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", line + 3);
+            printf("B-> %s\n", envelope);
+            b.air.assign(envelope, envelope + strlen(envelope));
+            b.txBusy = true;
+            b.outstanding = ++b.handles;
+            b.sentS = b.uptime;
+            b.timeoutS = station::ACK_TIMEOUT_S;
+            b.proofDue = false;
+            ++b.sent;
+        }
         else if (sscanf(line, "T %u", &v) == 1) {
-            // Krok czasu: wyniki potwierdzeń, koniec nadawania, dostarczenie pakietów, poll obu stron.
+            // Krok czasu: wyniki potwierdzeń, koniec nadawania, dostarczenie pakietów, poll stacji.
             for (Node* x : nodes) {
                 x->uptime = v;
                 if (x->outstanding && (x->proofDue || v - x->sentS >= x->timeoutS)) {
                     const uint32_t h = x->outstanding;
                     const bool delivered = x->proofDue;
                     x->outstanding = 0; x->proofDue = false;
-                    x->app->receipt(h, delivered);
+                    if (x->app) x->app->receipt(h, delivered);
+                    else if (delivered) ++x->delivered;
+                    else ++x->failed;
                 }
                 x->txBusy = false;
                 if (!x->air.empty()) {
                     std::vector<uint8_t> d = x->air; x->air.clear();
                     // Dowód tylko dla pakietu przyjętego przez warstwę aplikacji odbiorcy (PROVE_APP).
-                    if (!x->lossy) x->proofDue = x->peer->app->received(d.data(), d.size());
-                    else printf("%c-> lost\n", x->name);
+                    if (x->lossy) printf("%c-> lost\n", x->name);
+                    else if (x->peer->app) x->proofDue = x->peer->app->received(d.data(), d.size());
+                    else x->proofDue = receiverAccepts(*x->peer, d.data(), d.size());
                 }
             }
-            for (Node* x : nodes) { x->app->notifyPending(); x->app->poll(v * 1000); }
+            a.app->notifyPending();
+            a.app->poll(v * 1000);
         } else if (sscanf(line, "L %u", &v) == 1) a.lossy = b.lossy = v;
         else if (sscanf(line, "F %u", &v) == 1) {
-            // Pierścień zdarzeń B zapełniony niepotwierdzonymi zdarzeniami radia.
+            // Pierścień zdarzeń A zapełniony niepotwierdzonymi zdarzeniami radia.
             unsigned ok = 0;
-            for (unsigned i = 0; i < v; ++i) ok += b.proto->event(store::NOTE_RADIO, 0, "\"kind\":\"radio\"", b.uptime * 1000);
-            printf("filled %u pending %zu\n", ok, b.store->notesPending());
+            for (unsigned i = 0; i < v; ++i) ok += a.proto->event(store::NOTE_RADIO, 0, "\"kind\":\"radio\"", a.uptime * 1000);
+            printf("filled %u pending %zu\n", ok, a.store->notesPending());
         } else if (line[0] == 'P') {
             size_t notify = 0;
             for (size_t i = 0; i < store::INBOX_SLOTS; ++i) {
-                const store::InboxEntry* e = b.store->inboxEntry(i);
+                const store::InboxEntry* e = a.store->inboxEntry(i);
                 notify += e && (e->flags & store::INBOX_NOTIFY);
             }
-            printf("B notes pending %zu inbox %zu notify %zu\n", b.store->notesPending(), b.store->inboxCount(), notify);
+            printf("A notes pending %zu inbox %zu notify %zu\n", a.store->notesPending(), a.store->inboxCount(), notify);
         }
         else if (sscanf(line, "Q %u", &v) == 1) { a.host.silence_ = v; }
         else if (sscanf(line, "N %u", &v) == 1) a.refuse = v;
         else if (line[0] == 'R' && line[1] == 'A') {
             delete a.app; delete a.proto; delete a.store;
-            a.store = new store::Store(a.ram); a.store->begin();
-            a.proto = new usbproto::Protocol(*a.store, ha); a.proto->begin(); a.proto->connected(0);
-            const char* sync = "{\"usb\":1,\"seq\":0,\"type\":\"sync\",\"boot\":\"laptop\",\"cursor\":0}\n";
-            a.proto->feed(sync, strlen(sync), 0);
-            a.app = new station::Station(*a.store, a.services);
+            startA();
         } else if (line[0] == 'S') {
-            for (Node* x : nodes) {
-                const station::Stats& s = x->app->stats();
-                printf("%c stats sent %u delivered %u failed %u received %u rejected %u duplicates %u conflicts %u refused %u confirmed %u live %zu unsent %zu inbox %zu unread %zu\n",
-                       x->name, s.sent, s.delivered, s.failed, s.received, s.rejected, s.duplicates, s.conflicts, s.refused, s.confirmed,
-                       x->store->queueLive(), x->store->queueUnsent(), x->store->inboxCount(), x->store->inboxUnread());
-            }
+            const station::Stats& s = a.app->stats();
+            printf("A stats sent %u delivered %u failed %u received %u rejected %u duplicates %u conflicts %u refused %u confirmed %u live %zu unsent %zu inbox %zu unread %zu\n",
+                   s.sent, s.delivered, s.failed, s.received, s.rejected, s.duplicates, s.conflicts, s.refused, s.confirmed,
+                   a.store->queueLive(), a.store->queueUnsent(), a.store->inboxCount(), a.store->inboxUnread());
+            printf("B stats sent %u delivered %u failed %u received %u\n", b.sent, b.delivered, b.failed, b.received);
         } else if (line[0] == 'X') {
-            for (Node* x : nodes) {
-                for (size_t i = 0; i < x->store->queueSize(); ++i) {
-                    const store::QueueEntry* e = x->store->queueEntry(i);
-                    if (!e) continue;
-                    store::QueueRecord r; x->store->queueRead(e->seq, r);
-                    printf("%c queue %u type %u flags %u attempts %u next %u event %u state %u\n", x->name, r.seq, r.type, r.flags, r.attempts, r.nextTryS, r.statusEvent, r.state);
-                }
+            for (size_t i = 0; i < a.store->queueSize(); ++i) {
+                const store::QueueEntry* e = a.store->queueEntry(i);
+                if (!e) continue;
+                store::QueueRecord r; a.store->queueRead(e->seq, r);
+                printf("A queue %u type %u flags %u attempts %u next %u event %u state %u\n", r.seq, r.type, r.flags, r.attempts, r.nextTryS, r.statusEvent, r.state);
             }
         } else if (sscanf(line, "D %u", &v) == 1) {
             // Harmonogram ponowień dla kolejnych prób z losową liczbą v.
@@ -554,7 +583,7 @@ int linkScript() {
             printf("| %u %u\n", a.app->retryDelayS(1, false, 7 * 3600, v), a.app->retryDelayS(2, true, 0, v));
         }
     }
-    for (Node* x : nodes) { delete x->app; delete x->proto; delete x->store; }
+    delete a.app; delete a.proto; delete a.store;
     return 0;
 }
 
@@ -904,6 +933,39 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual([t for _, t in screens[8][2]][0], "MEDICAL HELP")  # kreator: kategoria 0 w języku EN
         self.assertEqual(screens[9][0], "category")   # 179 999 ms bez naciśnięcia: ekran zostaje
         self.assertEqual(screens[10][0], "main")  # 3 min bezczynności: ekran główny
+
+    def test_osp_node_screens(self):
+        # D19 (oprogramowanie.md, „Węzeł OSP”): po wyborze języka ekran główny bez kontroli adresu
+        # i TEST: radio, komputer stanowiska, zasilanie; menu STAN i JĘZYK; STAN z licznikami USB,
+        # bez PRZEKAZANIA ZMIANY; USŁUGI tylko WYCISZ DŹWIĘK i ZNISZCZ DANE.
+        data = ui_texts.load()
+        texts, labels = data["texts"], data["labels"]
+        menu = [strings[0] for _, strings in data["menu"]]
+        minutes = ui_texts.UNITS["PL"][0]
+        out = self.ui(["H", "ON 1", "S 0", "O 1", "K OK 0", "R", "PC 1 300 12 30 1", "R", "Q 1", "R", "Q 0",
+                       "K OK 0", "R", "K OK 0", "R"] + ["K DOWN 0"] * 8 + ["R"] + ["K DOWN 0"] * 6 +
+                      ["R", "K OK 0", "R", "K OK 0", "R", "K DOWN 0", "K OK 0", "R", "K BACK 0", "K BACK 0", "K BACK 0", "R",
+                       "KD BACK 1000", "T 4100", "KU BACK 4200", "R", "K OK 5000", "R"])
+        (first, heard, silence, menu_screen, status_top, status_usb, status_end, services, muted, destroy, back_menu,
+         language, after_language) = self.screens(out)
+        computer = texts["komputer_osp"][0].replace("[czas]", f"5 {minutes}")
+        power = texts["zasilanie_12v"][0].replace("[x]", "0,0")
+        self.assertEqual(first[0], "main")
+        self.assertEqual(self.lines(first), [texts["radio_wlaczone"][0], texts["komputer_brak"][0], power, "", ""])
+        self.assertEqual(self.lines(heard), [texts["radio_wlaczone"][0], computer, power, "", ""])
+        self.assertEqual(" ".join(self.lines(silence)[:3]).strip(), texts["cisza"][0])
+        self.assertEqual(self.lines(silence)[3:], [power, computer])
+        self.assertEqual(self.lines(menu_screen), [menu[3], menu[4], "", "", ""])
+        self.assertEqual(status_top[0], "status")
+        self.assertEqual(self.lines(status_usb), ["DEFER 0", "WAIT 0 S", "USB IN 12", "USB OUT 30", "USB DROP 1"])
+        # Ostatni wiersz to USŁUGI (bez PRZEKAZANIA ZMIANY), przed nim zasilanie, odchyłka, wersja i nazwa.
+        self.assertEqual(self.lines(status_end), [power, "FOFF ---", "bench-a-test", "WICI-000000", labels["USLUGI"][0]])
+        self.assertEqual(self.lines(services), [labels["WYCISZ_DZWIEK"][0], labels["ZNISZCZ_DANE"][0], "", "", ""])
+        self.assertEqual(self.lines(muted)[0], labels["WLACZ_DZWIEK"][0])
+        self.assertEqual(destroy[0], "destroy")
+        self.assertEqual(back_menu[0], "menu")
+        self.assertEqual(language[0], "language_menu")   # przytrzymanie WSTECZ: wybór języka
+        self.assertEqual((after_language[0], [inv for inv, _ in after_language[2]]), ("menu", [False, True, False, False, False]))
 
     HOSTED = ["H", "A Szkoła, wejście B", "L 0", "O 1"]
     REQUEST_ID = "3132333435363738393a3b3c3d3e3f40"  # pierwsze 16 bajtów z generatora programu testowego
@@ -1304,7 +1366,33 @@ class HostUnitTests(unittest.TestCase):
         self.assertIn("store live 0 inbox 0 pending 0 latest 0 configured 1 address Szkoła A", out)
         self.assertIn("store live 0 inbox 0 pending 0 latest 0 configured 1 address Jeden", out)
 
-    def test_usb_sync_submit_duplicate_conflict_and_role(self):
+    def test_usb_configure_osp_node(self):
+        # D19 (stanowisko-osp.md, „Stacja przy OSP”): węzeł OSP bez adresu, karty OSP, fraz i liczby
+        # stacji, z kodem dostępu sieci; bez zgłoszeń i TEST; wyjście tylko jawnym "osp_node":false.
+        def configure(seq, **fields):
+            return "> " + json.dumps({"usb": 1, "seq": seq, "type": "configure", **fields}, ensure_ascii=False)
+        request = [1, 0, self.MID, 0, 2, 10, "Szkoła", "", 2]
+        out = self.usb(["C 0", configure(1, address="Szkoła", osp="cc" * 16, stations=5, ifac="11" * 16,
+                                         phrases=[["osoba na wózku", "людина на візку", "wheelchair user"]]),
+                        configure(2, osp_node=True), "N",
+                        configure(3, address="x"), configure(4, osp_node=True, osp="cc" * 16), configure(5, phrases=[]),
+                        self.submit(6, request, to="cc" * 16), '> {"usb":1,"seq":7,"type":"test"}',
+                        '> {"usb":1,"seq":8,"type":"sync","boot":"b","cursor":0}',
+                        configure(9, osp_node=False, address="Szkoła B"), "N", configure(10, osp_node="tak"),
+                        "P 0", configure(11, osp_node=True)])
+        r = self.replies(out)[1:]   # po C 0 stacja wysyła sync
+        self.assertEqual([x["type"] for x in r], ["ok", "ok"] + ["rejected"] * 5 + ["sync", "ok", "rejected", "rejected"])
+        self.assertEqual((r[0]["osp_node"], r[1]["osp_node"], r[1]["worst_request"]), (False, True, 0))
+        self.assertEqual({x.get("detail") for x in r[2:7]}, {"osp node"})
+        self.assertEqual(r[7]["osp_node"], True)
+        self.assertEqual(r[8]["osp_node"], False)
+        self.assertEqual(r[9]["detail"], "osp_node")
+        self.assertEqual(r[10]["reason"], "preparation mode required")
+        nodes = [line for line in out if line.startswith("node ")]
+        self.assertEqual(nodes[0], "node 1 osp 00 phrases 0 stations 0 objects 0 ifac 11 seq 2")
+        self.assertEqual(nodes[1], "node 0 osp 00 phrases 0 stations 0 objects 0 ifac 11 seq 3")
+
+    def test_usb_sync_submit_duplicate_conflict_and_single_role(self):
         request = [1, 0, self.MID, 0, 2, 10, "Szkoła", "osoba na wózku", 2]
         changed = request[:5] + [11] + request[6:]
         configure = {"usb": 1, "seq": 2, "type": "configure", "address": "Szkoła, wejście B", "osp": "00112233445566778899aabbccddeeff",
@@ -1325,7 +1413,7 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual((r[4]["record"], r[4]["duplicate"]), (1, True))
         self.assertEqual(r[5]["reason"], "conflict")
         self.assertEqual(r[6]["detail"], "recipient is not the active OSP")
-        self.assertEqual(r[7]["detail"], "type not allowed for this role")
+        self.assertEqual(r[7]["detail"], "type not allowed")   # jedna rola: STATUS tworzy aplikacja OSP (D19)
         self.assertEqual((r[8]["revision"], r[8]["record"]), (0, 2))
         self.assertIn("store live 2 inbox 0 pending 0 latest 0 configured 1 address Szkoła, wejście B", out)
         self.assertIn("log usb submit", out)
@@ -1366,7 +1454,7 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual((r[7]["record"], r[8]["record"]), (2, 2))
         self.assertEqual(types[9:], ["rejected", "ok", "rejected", "rejected", "rejected", "rejected", "rejected", "rejected", "ok"])
         self.assertEqual([x["reason"] for x in r[9:10] + r[11:17]],
-                         ["not confirmed", "preparation mode required", "preparation mode required", "unsupported", "not json", "contract", "seq"])
+                         ["not confirmed", "preparation mode required", "preparation mode required", "unknown type", "not json", "contract", "seq"])
         self.assertEqual(r[10]["silence"], True)
         self.assertIn("log usb silence not confirmed", out)
         self.assertIn("store live 0 inbox 0 pending 0 latest 2 configured 0 address ", out)  # numeracja rośnie dalej
@@ -1423,30 +1511,34 @@ class HostUnitTests(unittest.TestCase):
         msg = {"usb": 1, "seq": seq, "type": "submit", "to": to, "id": value[2], "revision": value[3] if value[1] != 4 else 0, "sa1": value}
         return node + " " + json.dumps(msg, ensure_ascii=False)
 
-    def test_link_request_received_status_and_osp_replay(self):
+    @staticmethod
+    def compact(value):
+        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+
+    def test_link_request_received_status_and_duplicates(self):
         request = [1, 0, self.MID, 0, 2, 10, "Szkoła", "osoba na wózku", 2]
         received = [1, 1, self.MID, 0, 1, 1]
         status = [1, 2, self.MID, 0, 2, 2]
         closed = [1, 2, self.MID, 0, 3, 6]
         regression = [1, 2, self.MID, 0, 4, 2]
-        out = self.link(['B {"usb":1,"seq":1,"type":"configure","role":"osp"}', self.usb_submit("A", 2, request, self.B),
-                         "T 101", "T 102", "T 103", "S", "X",
-                         self.usb_submit("B", 3, received, self.A), "T 104", "T 105", "T 106", "X",
-                         self.usb_submit("B", 4, status, self.A), "T 107", "T 108", "T 109",
-                         self.usb_submit("B", 5, closed, self.A), "T 110", "T 111", "T 112",
-                         self.usb_submit("B", 7, regression, self.A), "T 113", "T 114", "T 115", "X", "S",
-                         # Powtórzony REQUEST (resend): OSP odpowiada zapisanym RECEIVED i STATUS.
+        out = self.link([self.usb_submit("A", 2, request, self.B), "T 101", "T 102", "T 103", "S", "X",
+                         "B> " + self.compact(received), "T 104", "T 105", "T 106", "X",
+                         "B> " + self.compact(status), "T 107", "T 108", "T 109",
+                         "B> " + self.compact(closed), "T 110", "T 111", "T 112",
+                         "B> " + self.compact(regression), "T 113", "T 114", "T 115", "X", "S",
+                         # Powtórzony REQUEST (resend): odbiorca odpowiada ponownie zapisanym RECEIVED
+                         # i najnowszym STATUS (deduplikacja w aplikacji OSP); A liczy je jako duplikaty.
                          "A " + json.dumps({"usb": 1, "seq": 6, "type": "submit", "to": self.B, "id": self.MID, "revision": 0, "sa1": request, "resend": True}),
-                         "T 116", "T 117", "T 118", "T 119", "T 120", "T 121", "T 122", "T 123", "T 124", "S"])
+                         "T 116", "T 117", "T 118", "T 119", "B> " + self.compact(received), "T 120", "T 121", "T 122",
+                         "B> " + self.compact(closed), "T 123", "T 124", "T 125", "S"])
         sent = [line for line in out if line.startswith("A-> ") or line.startswith("B-> ")]
         self.assertTrue(sent[0].startswith('A-> ["WICI",1,"%s","%s",[1,0,' % (self.A, self.B)), sent[0])
-        # Bez datagramu "ack": dostarczenie potwierdza dowód transportowy, więc B nadaje dopiero RECEIVED.
-        self.assertEqual(sent[1], 'B-> ["WICI",1,"%s","%s",%s]' % (self.B, self.A, json.dumps(received, separators=(",", ":"))))
-        incoming = [r for r in self.usb_replies(out, "B") if r["type"] == "incoming"]
-        self.assertEqual(len(incoming), 1)
-        self.assertEqual((incoming[0]["source"], incoming[0]["sa1"]), (self.A, request))
+        self.assertEqual(sent[1], 'B-> ["WICI",1,"%s","%s",%s]' % (self.B, self.A, self.compact(received)))
+        got = [line for line in out if line.startswith("B got ")]
+        self.assertEqual(got, ["B got " + self.compact(request)] * 2)
         events = [r for r in self.usb_replies(out, "A") if r["type"] == "event" and r.get("kind") == "message"]
         self.assertEqual([e["sa1"] for e in events], [received, status, closed, regression])
+        self.assertEqual({e["source"] for e in events}, {self.B})
         self.assertIn("A:log Status regression", out)
         queue_a = [line for line in out if line.startswith("A queue 1 ")]
         self.assertTrue(queue_a[0].endswith("flags 17 attempts 1 next 703 event 0 state 0"), queue_a[0])  # ACTIVE|SENT, 10 min na RECEIVED
@@ -1454,41 +1546,42 @@ class HostUnitTests(unittest.TestCase):
         self.assertTrue(queue_a[2].endswith("flags 18 attempts 1 next 703 event 3 state 6"), queue_a[2])  # STATUS 3/6; regresja odrzucona
         stats = [line for line in out if line.startswith("A stats") or line.startswith("B stats")]
         self.assertEqual(stats[0], "A stats sent 1 delivered 1 failed 0 received 0 rejected 0 duplicates 0 conflicts 0 refused 0 confirmed 0 live 1 unsent 0 inbox 0 unread 0")
-        self.assertEqual(stats[1], "B stats sent 0 delivered 0 failed 0 received 1 rejected 0 duplicates 0 conflicts 0 refused 0 confirmed 0 live 0 unsent 0 inbox 1 unread 1")
+        self.assertEqual(stats[1], "B stats sent 0 delivered 0 failed 0 received 1")
         self.assertEqual(stats[2], "A stats sent 1 delivered 1 failed 0 received 4 rejected 0 duplicates 0 conflicts 0 refused 0 confirmed 3 live 0 unsent 0 inbox 4 unread 4")
-        self.assertEqual(stats[3], "B stats sent 4 delivered 4 failed 0 received 1 rejected 0 duplicates 0 conflicts 0 refused 0 confirmed 4 live 0 unsent 0 inbox 1 unread 1")
-        # Po ponownym REQUEST: B zalicza duplikat, uaktywnia RECEIVED i najnowszy STATUS i nadaje je ponownie; A liczy duplikaty.
+        self.assertEqual(stats[3], "B stats sent 4 delivered 4 failed 0 received 1")
+        # Ponowiony REQUEST i powtórzone RECEIVED i STATUS: A przyjmuje je z dowodem jako duplikaty.
         self.assertEqual(stats[4], "A stats sent 2 delivered 2 failed 0 received 6 rejected 0 duplicates 2 conflicts 0 refused 0 confirmed 3 live 1 unsent 0 inbox 4 unread 4")
-        self.assertEqual(stats[5], "B stats sent 6 delivered 6 failed 0 received 2 rejected 0 duplicates 1 conflicts 0 refused 0 confirmed 6 live 0 unsent 0 inbox 1 unread 1")
+        self.assertEqual(stats[5], "B stats sent 6 delivered 6 failed 0 received 2")
 
     def test_link_full_event_ring_keeps_events_and_notifies_later(self):
-        # 128 zdarzeń bez ack: nowe incoming nie nadpisuje najstarszego, wiadomość czeka w skrzynce
-        # z flagą INBOX_NOTIFY, a zdarzenie powstaje po ack laptopa.
+        # 128 zdarzeń bez ack: nowe zdarzenie nie nadpisuje najstarszego, wiadomość od OSP czeka
+        # w skrzynce z flagą INBOX_NOTIFY, a zdarzenie powstaje po ack laptopa.
         request = [1, 0, self.MID, 0, 2, 10, "Szkoła", "osoba na wózku", 2]
-        out = self.link(['B {"usb":1,"seq":1,"type":"configure","role":"osp"}', "F 129", self.usb_submit("A", 2, request, self.B),
-                         "T 101", "T 102", "P", "T 103", "P",
-                         'B {"usb":1,"seq":2,"type":"ack","cursor":128}', "T 104", "P", "T 105", "P"])
+        received = [1, 1, self.MID, 0, 1, 1]
+        out = self.link(["F 129", self.usb_submit("A", 2, request, self.B), "T 101", "T 102", "T 103",
+                         "B> " + self.compact(received), "T 104", "P", "T 105", "P",
+                         'A {"usb":1,"seq":3,"type":"ack","cursor":128}', "T 106", "P", "T 107", "P"])
         self.assertIn("filled 128 pending 128", out)   # 129. zdarzenie odrzucone, nic nie nadpisane
-        pending = [line for line in out if line.startswith("B notes")]
-        self.assertEqual(pending[0], "B notes pending 128 inbox 1 notify 1")
-        self.assertEqual(pending[1], "B notes pending 128 inbox 1 notify 1")
-        self.assertEqual(pending[3], "B notes pending 1 inbox 1 notify 0")
-        incoming = [r for r in self.usb_replies(out, "B") if r["type"] == "incoming"]
-        self.assertEqual([(r["source"], r["sa1"]) for r in incoming], [(self.A, request)])
-        self.assertEqual(incoming[0]["record"], 129)   # numer po 128 potwierdzonych
+        pending = [line for line in out if line.startswith("A notes")]
+        self.assertEqual(pending[0], "A notes pending 128 inbox 1 notify 1")
+        self.assertEqual(pending[1], "A notes pending 128 inbox 1 notify 1")
+        self.assertEqual(pending[3], "A notes pending 1 inbox 1 notify 0")
+        events = [r for r in self.usb_replies(out, "A") if r["type"] == "event" and r.get("kind") == "message"]
+        self.assertEqual([(r["source"], r["sa1"]) for r in events], [(self.B, received)])
+        self.assertEqual(events[0]["record"], 129)   # numer po 128 potwierdzonych
         # Dowód poszedł mimo pełnego pierścienia: wiadomość jest zapisana w skrzynce.
-        self.assertIn("A stats sent 1 delivered 1", "\n".join(self.link(['B {"usb":1,"seq":1,"type":"configure","role":"osp"}', "F 128",
-                      self.usb_submit("A", 2, request, self.B), "T 101", "T 102", "T 103", "S"])))
+        self.assertIn("B stats sent 1 delivered 1 failed 0 received 1",
+                      self.link(["F 128", self.usb_submit("A", 2, request, self.B), "T 101", "T 102", "T 103",
+                                 "B> " + self.compact(received), "T 104", "T 105", "S"]))
 
     def test_link_loss_retry_schedule_and_untrusted_source(self):
         request = [1, 0, self.MID, 0, 2, 10, "Szkoła", "", 1]
-        out = self.link(['B {"usb":1,"seq":1,"type":"configure","role":"osp"}', "L 1", self.usb_submit("A", 1, request, self.B),
+        out = self.link(["L 1", self.usb_submit("A", 1, request, self.B),
                          "T 101", "T 102", "T 160", "T 161", "T 162", "X", "S", "D 0", "D 40",
                          "L 0", "T 240", "T 241", "T 242", "X", "S",
-                         # Stacja z kartą OSP X odrzuca datagram od B.
+                         # Stacja z kartą OSP X odrzuca wiadomość od B.
                          'A {"usb":1,"seq":2,"type":"configure","address":"a","osp":"' + "cc" * 16 + '"}',
-                         "B " + json.dumps({"usb": 1, "seq": 3, "type": "submit", "to": self.A, "id": self.MID, "revision": 0, "sa1": [1, 1, self.MID, 0, 1, 1]}),
-                         "T 300", "T 301", "T 302", "S"])
+                         "B> " + self.compact([1, 1, self.MID, 0, 1, 1]), "T 300", "T 301", "T 302", "S"])
         queue = [line for line in out if line.startswith("A queue 1 ")]
         first = int(re.search(r"next (\d+)", queue[0]).group(1))
         self.assertTrue(queue[0].split(" next ")[0].endswith("flags 1 attempts 1"), queue[0])  # FAILED po 60 s bez dowodu
@@ -1503,13 +1596,13 @@ class HostUnitTests(unittest.TestCase):
         self.assertTrue(stats[1].startswith("A stats sent 2 delivered 1 failed 1 received 0 rejected 0"), stats[1])
         self.assertTrue(stats[2].startswith("A stats sent 2 delivered 1 failed 1 received 1 rejected 1"), stats[2])
         self.assertIn("A:log datagram from untrusted source", out)
-        # Odrzucony pakiet nie dostaje dowodu: B nie zalicza dostarczenia, próba kończy się po limicie.
+        # Odrzucony pakiet nie dostaje dowodu: B nie zalicza dostarczenia, próba kończy się po limicie 60 s.
         b_stats = [line for line in out if line.startswith("B stats")]
-        self.assertTrue(b_stats[-1].startswith("B stats sent 1 delivered 0 failed 0 received 1"), b_stats[-1])
+        self.assertEqual(b_stats[-1], "B stats sent 1 delivered 0 failed 1 received 1")
 
     def test_link_refused_by_stack_retries_without_attempt(self):
         request = [1, 0, self.MID, 0, 2, 10, "Szkoła", "", 1]
-        out = self.link(['B {"usb":1,"seq":1,"type":"configure","role":"osp"}', "N 1", self.usb_submit("A", 1, request, self.B),
+        out = self.link(["N 1", self.usb_submit("A", 1, request, self.B),
                          "T 101", "X", "S", "T 180", "X", "N 0", "T 400", "T 401", "T 402", "X", "S"])
         self.assertEqual(out.count("A-> refused"), 2)
         queue = [line for line in out if line.startswith("A queue 1 ")]

@@ -7,6 +7,9 @@
 // (nowa rewizja, POTRZEBA USTAŁA, ANULUJ WYSYŁKĘ), TEST z WSTRZYMAJ/WZNÓW, STAN z PRZEKAZANIEM
 // ZMIANY i USŁUGAMI (ODBIORCA ZAPASOWY, ZNISZCZ DANE z sekwencją GÓRA, DÓŁ, GÓRA, OK), alarmy
 // na cały ekran, przytrzymanie WSTECZ (2 s: porzucenie zgłoszenia, 3 s: wybór języka).
+// Stacja w konfiguracji węzła OSP (Host::ospNode, D19) po wyborze języka pokazuje radio, kontakt
+// z komputerem stanowiska (`komputer_osp`, `komputer_brak`) i zasilanie; menu ma tylko STAN
+// i JĘZYK, a USŁUGI tylko WYCISZ DŹWIĘK i ZNISZCZ DANE.
 // Dane i działania stacji dostarcza Host (console.cpp nad magazynem FRAM i warstwą aplikacji).
 // Wynikiem jest 5 wierszy tekstu UTF-8 po najwyżej 20 znaków z zaznaczeniem wiersza
 // odwróconego; rysowanie jest poza modelem. Bez zależności od Arduino; sprawdzany na komputerze.
@@ -68,6 +71,10 @@ struct Status {
     int32_t foffHz = 0;
     const char* version = "";
     const char* name = "";
+    // Węzeł OSP: kontakt z komputerem stanowiska i liczniki pakietów interfejsu USB.
+    bool computerHeard = false;  // pakiet od komputera od startu stacji
+    uint32_t computerS = 0;      // czas od ostatniego pakietu od komputera [s]
+    uint32_t usbIn = 0, usbOut = 0, usbDrop = 0;
 };
 
 struct Lines {
@@ -149,6 +156,7 @@ struct Host {
     virtual bool switchBackup() = 0;
     virtual bool destroy() = 0;
     virtual bool announce() { return false; }   // OGŁOŚ ADRES: zlecenie ogłoszenia; false = stos nie działa
+    virtual bool ospNode() { return false; }    // konfiguracja węzła OSP
 };
 
 class Model {
@@ -178,6 +186,12 @@ public:
 
 private:
     struct Text;  // wiersze tekstu do przewijania
+    enum class Service : uint8_t { ANNOUNCE, MUTE, BACKUP, DESTROY };
+    bool node() const { return host_ && host_->ospNode(); }
+    size_t menu(ui_texts::Menu out[]) const;        // pozycje menu (węzeł OSP: STAN i JĘZYK)
+    uint8_t menuIndex(ui_texts::Menu item) const;
+    size_t services(Service out[]) const;           // pozycje USŁUG
+    void computerLine(const Status& status, char* out, size_t size) const;
     void go(Screen screen);
     void act(Button button, uint32_t nowMs);
     void moveCursor(int delta, size_t count, size_t window);

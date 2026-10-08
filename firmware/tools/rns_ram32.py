@@ -29,7 +29,7 @@ import tarfile
 
 FIRMWARE = Path(__file__).resolve().parents[1]
 IMAGE = "debian:bookworm-slim"
-SOURCES = ["src/framfs.cpp", "src/p1frame.cpp", "src/p1iface.cpp", "src/rns_node.cpp", "src/host/node_host.cpp"]
+SOURCES = ["src/framfs.cpp", "src/kiss.cpp", "src/p1frame.cpp", "src/p1iface.cpp", "src/rns_node.cpp", "src/host/node_host.cpp"]
 STACK_SOURCES = ["Crypto/*.cpp", "microReticulum/src/microReticulum/**/*.cpp", "microReticulum/src/microReticulum/**/*.c"]
 INCLUDES = ["microReticulum/src", "microStore/include", "Crypto", "MsgPack", "ArxContainer", "ArxTypeTraits", "DebugLog",
             "ArduinoJson/src"]

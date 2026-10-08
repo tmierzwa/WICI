@@ -2,8 +2,11 @@
 // Protokół USB laptop–stacja na interfejsie danych (docs/spec/oprogramowanie.md, "Protokół USB
 // laptop–stacja"): wiersze UTF-8 JSON do 1024 B z numerem seq, kontrakt "usb":1, identyfikator
 // sesji boot po obu stronach, sync z kursorem, submit -> stored/rejected po zapisie w FRAM,
-// event/incoming -> ack, polecenia test, silence, configure, close, destroy, announce (export,
-// import, trust i revoke odrzucane jako nieobsługiwane do czasu kluczy i kart). Każde polecenie trafia do dziennika zdarzeń.
+// event -> ack, polecenia test, silence, configure, close, destroy, announce (export i import
+// odrzucane jako nieobsługiwane do czasu kluczy). Każde polecenie trafia do dziennika zdarzeń.
+// Stacja ma jedną rolę (D19): wysyła REQUEST i TEST do OSP. W konfiguracji węzła OSP
+// (configure "osp_node") nie ma adresu ani kolejki, a poza trybem przygotowania interfejs danych
+// przenosi pakiety Reticulum do komputera stanowiska (kiss.h), nie ten protokół.
 // Bez zależności od Arduino; sprawdzany na komputerze.
 #pragma once
 

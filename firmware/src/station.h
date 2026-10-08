@@ -2,9 +2,9 @@
 // Warstwa aplikacji stacji nad łączem P1 (docs/spec/oprogramowanie.md, "Trwałość i potwierdzenia",
 // "Wiadomości SA1"): nadawanie intencji z kolejki w kolejności ze specyfikacji, ponawianie
 // (1, 2, 5, 15 min ±20%, po 6 h co 60 min; po dostarczeniu 10 min na RECEIVED, potem 30–60 min),
-// odbiór do skrzynki tylko od przypiętej OSP (rola stacji) albo od stacji (rola OSP), STATUS
-// według status_after, zdarzenia do laptopa, odpowiedź stacji OSP zapisanym RECEIVED i STATUS
-// na powtórzony REQUEST. Wiadomość idzie pakietem okazjonalnym Reticulum do celu "wici.sa1"
+// odbiór RECEIVED, STATUS, REPLY i BULLETIN do skrzynki tylko od przypiętej OSP, STATUS według
+// status_after, zdarzenia do laptopa. Stacja ma jedną rolę: OSP działa na komputerze stanowiska
+// (D19, docs/spec/stanowisko-osp.md), a stacja przy OSP tylko przekazuje ruch. Wiadomość idzie pakietem okazjonalnym Reticulum do celu "wici.sa1"
 // odbiorcy (rns_node.h), szyfrowanym do jego tożsamości, a dostarczenie potwierdza dowód
 // transportowy (PacketReceipt) zamiast dawnego datagramu "ack". Treść pakietu ma do czasu LXMF
 // zastępczą kopertę ["WICI",1,od,do,<SA1>]: pakiet okazjonalny nie niesie adresu nadawcy, więc

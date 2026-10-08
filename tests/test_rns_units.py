@@ -29,6 +29,7 @@ HARNESS = r"""
 #include <string>
 #include <vector>
 #include "framfs.h"
+#include "kiss.h"
 #include "p1iface.h"
 #include "pkthash.h"
 #include "rns_announce.h"
@@ -319,35 +320,28 @@ int ifacVector(const char* rawHex, const char* tagHex, const char* maskHex, cons
 int announceScenario() {
     using rnsannounce::Policy;
     Policy st;
-    st.begin(false, 1000, 250);   // opóźnienie startowe 250 % 121 = 8 s
+    st.begin(1000, 250);   // opóźnienie startowe 250 % 121 = 8 s
     printf("start %d %d %d\n", st.due(1007, false, true, 0), st.due(1008, false, true, 0), st.due(1008, true, true, 0));
     printf("offline %d\n", st.due(1008, false, false, 0));
-    st.done(1008, 0, 0);
+    st.done(1008, 0);
     printf("once %d\n", st.due(5000, false, true, 0));
     printf("auto %d %d\n", st.due(1100, false, true, 1), st.due(1100, false, true, 2));   // 2 nieudane, ale < 30 min
     printf("auto late %d\n", st.due(1008 + 1800, false, true, 2));
-    st.done(1008 + 1800, 0, 2);
+    st.done(1008 + 1800, 2);
     printf("auto reset %d\n", st.due(1008 + 3600, false, true, 3));
     st.request();
     printf("manual %d %d\n", st.due(3000, true, true, 0), st.due(3000, false, true, 0));
-    st.done(3000, 0, 3);
+    st.done(3000, 3);
     printf("after manual %d\n", st.due(3001, false, true, 3));
-    Policy osp;
-    osp.begin(true, 0, 0);
-    osp.done(0, 0, 0);
-    printf("osp %u %d\n", osp.nextS(), osp.due(osp.nextS(), false, true, 0));
-    osp.done(100, 40, 0);
-    printf("osp max %u\n", osp.nextS());
-    printf("osp no auto %d\n", osp.due(200, false, true, 10));
-    Policy role;
-    role.begin(false, 0, 0);
-    role.done(0, 0, 0);
-    role.setRole(true, 500);
-    printf("to osp %d\n", role.due(500, false, true, 0));
-    role.done(500, 0, 0);
-    role.request();
-    role.failed(600);
-    printf("failed %d %d\n", role.due(600, false, true, 0), role.due(600 + rnsannounce::RETRY_S, false, true, 0));
+    Policy retry;
+    retry.begin(0, 0);
+    retry.done(0, 0);
+    retry.request();
+    retry.failed(600);
+    // Każde due() osobno (kolejność obliczania argumentów printf).
+    const bool now = retry.due(600, false, true, 0);
+    const bool later = retry.due(600 + rnsannounce::RETRY_S, false, true, 0);
+    printf("failed %d %d\n", now, later);
     return 0;
 }
 
@@ -387,9 +381,124 @@ int reserveScenario() {
     return 0;
 }
 
+// Węzeł OSP: rezerwa bez przypiętego celu, ruch OSP wskazuje stos (pakiet z USB albo do celu komputera).
+int nodeReserveScenario() {
+    using namespace p1iface;
+    uint8_t other[16], w[600] = {};
+    memset(other, 0x22, 16);
+    const uint32_t t0 = 3600000;
+    auto drain = [](Queue& q) { const uint8_t* d; size_t n; while (q.start(d, n)) q.finish(true); };
+    Queue q;
+    q.setNodeReserve(true);
+    const char* a1 = admitName(q.offer(Kind::DATA, 1, other, w, 516, t0));
+    const char* a2 = admitName(q.offer(Kind::DATA, 1, other, w, 516, t0));
+    const char* a3 = admitName(q.offer(Kind::DATA, 1, other, w, 516, t0));
+    const char* a4 = admitName(q.offer(Kind::DATA, 1, other, w, 516, t0));
+    const char* a5 = admitName(q.offer(Kind::DATA, 1, other, w, 516, t0, true));
+    printf("node slots %s %s %s %s osp %s\n", a1, a2, a3, a4, a5);
+    drain(q);
+    unsigned admitted = 3;
+    while (q.offer(Kind::DATA, 1, other, w, 516, t0) == Admit::QUEUED) { ++admitted; drain(q); }
+    const char* flagged = admitName(q.offer(Kind::DATA, 1, other, w, 516, t0, true));
+    printf("node budget %u flagged %s\n", admitted, flagged);
+    drain(q);
+    q.setNodeReserve(false);
+    printf("station %s\n", admitName(q.offer(Kind::DATA, 1, other, w, 516, t0)));
+    return 0;
+}
+
+std::string hexOf(const uint8_t* d, size_t n) {
+    std::string s;
+    char b[3];
+    for (size_t i = 0; i < n; ++i) { snprintf(b, sizeof(b), "%02x", d[i]); s += b; }
+    return s;
+}
+
+std::string drainKiss(kiss::Port& p) {
+    uint8_t out[2048];
+    const size_t n = p.take(out, sizeof(out));
+    return hexOf(out, n);
+}
+
+void feedHex(kiss::Port& p, const char* hex, uint32_t nowMs) {
+    std::vector<uint8_t> b;
+    for (size_t i = 0; hex[i] && hex[i + 1]; i += 2) { unsigned v; sscanf(hex + i, "%2x", &v); b.push_back(static_cast<uint8_t>(v)); }
+    p.feed(b.data(), b.size(), nowMs);
+}
+
+// Interfejs Reticulum przez USB: ramki KISS jak KISSInterface Reticulum e40191b, bufor 8 pakietów,
+// gotowość po przyjęciu pakietu, odrzuty liczone.
+int kissScenario() {
+    static kiss::Port p;
+    p.setOpen(true);
+    // Polecenia konfiguracji z configure_device() Reticulum: TXDELAY 35, TXTAIL 2, P 64, SLOTTIME 2, gotowość 1.
+    feedHex(p, "c00123c0c00402c0c00240c0c00302c0c00f01c0", 0);
+    const kiss::Counters& c = p.counters();
+    // Każde wywołanie z efektem (take, send, pop) osobno: kolejność obliczania argumentów printf
+    // nie jest określona (GCC od prawej).
+    std::string out = drainKiss(p);
+    printf("config commands %u flow %d ready %u out %s\n", c.commands, p.flowControl(), c.ready, out.c_str());
+    // Ramka danych z FEND i FESC w treści: dekodowanie, gotowość od razu.
+    feedHex(p, "c00001dbdcdbdd02c0", 10);
+    const uint8_t* d;
+    size_t n;
+    p.peek(d, n);
+    const std::string data = hexOf(d, n);
+    out = drainKiss(p);
+    printf("data %s buffered %zu ready %u out %s\n", data.c_str(), p.buffered(), c.ready, out.c_str());
+    // Bufor 8 pakietów: siódmy dostaje gotowość, ósmy zapełnia bufor (gotowość zaległa), dziewiąty odpada.
+    for (int i = 0; i < 7; ++i) feedHex(p, "c000aac0", 20);
+    out = drainKiss(p);
+    printf("full buffered %zu ready %u owed %s\n", p.buffered(), c.ready, out.c_str());
+    feedHex(p, "c000bbc0", 30);
+    printf("dropped %u buffered %zu\n", c.rxDropped, p.buffered());
+    p.pop();
+    out = drainKiss(p);
+    printf("pop buffered %zu ready %u out %s\n", p.buffered(), c.ready, out.c_str());
+    // Ramka rozdzielona między dwa odczyty z pop() pomiędzy: pakiet na swoim miejscu, kolejność zachowana.
+    feedHex(p, "c000ccdd", 40);
+    p.pop();
+    feedHex(p, "eec0", 41);
+    std::string order;
+    while (p.peek(d, n)) { order += hexOf(d, n) + " "; p.pop(); }
+    printf("split order %s\n", order.c_str());
+    drainKiss(p);
+    // Za długa ramka (501 B), przerwana ramka po 100 ms, wspólny FEND, numer portu w poleceniu.
+    std::string big = "c000";
+    for (int i = 0; i < 501; ++i) big += "11";
+    big += "c0";
+    feedHex(p, big.c_str(), 50);
+    feedHex(p, "c00005", 60);
+    feedHex(p, "06c0", 200);
+    printf("large %u buffered %zu\n", c.rxTooLarge, p.buffered());
+    feedHex(p, "c000aac000bbc0c010ccc0", 300);
+    order.clear();
+    while (p.peek(d, n)) { order += hexOf(d, n) + " "; p.pop(); }
+    printf("shared %s\n", order.c_str());
+    drainKiss(p);
+    // Do komputera: kodowanie, miejsce na dwie ramki 500 B, zamknięty port.
+    const uint8_t payload[4] = {0x01, 0xC0, 0xDB, 0x02};
+    const bool sent = p.send(payload, sizeof(payload));
+    out = drainKiss(p);
+    printf("send %d out %s\n", sent, out.c_str());
+    static uint8_t block[500];
+    memset(block, 0x5A, sizeof(block));
+    const bool s1 = p.send(block, sizeof(block));
+    const bool s2 = p.send(block, sizeof(block));
+    const bool s3 = p.send(block, sizeof(block));
+    printf("tx %d %d %d pending %zu dropped %u\n", s1, s2, s3, p.pendingBytes(), c.txDropped);
+    p.setOpen(false);
+    const bool closed = p.send(payload, sizeof(payload));
+    printf("closed %d flow %d pending %zu dropped %u to %u from %u\n", closed, p.flowControl(), p.pendingBytes(), c.txDropped,
+           c.toComputer, c.fromComputer);
+    return 0;
+}
+
 int main(int argc, char** argv) {
     const std::string mode = argc > 1 ? argv[1] : "";
     if (mode == "reserve") return reserveScenario();
+    if (mode == "node") return nodeReserveScenario();
+    if (mode == "kiss") return kissScenario();
     if (mode == "announce") return announceScenario();
     if (mode == "fs") return fsScenario();
     if (mode == "fsfull") return fsFull();
@@ -418,7 +527,8 @@ class StackUnitTests(unittest.TestCase):
         (root / "harness.cpp").write_text(HARNESS, encoding="utf-8")
         cls.binary = root / "harness"
         subprocess.run([compiler(), "-std=c++17", "-Wall", "-Wextra", "-Werror", f"-I{SRC}", str(root / "harness.cpp"),
-                        str(SRC / "framfs.cpp"), str(SRC / "p1iface.cpp"), str(SRC / "p1frame.cpp"), "-o", str(cls.binary)],
+                        str(SRC / "framfs.cpp"), str(SRC / "kiss.cpp"), str(SRC / "p1iface.cpp"), str(SRC / "p1frame.cpp"),
+                        "-o", str(cls.binary)],
                        check=True)
 
     @classmethod
@@ -539,12 +649,33 @@ class StackUnitTests(unittest.TestCase):
             "auto reset 0",         # licznik od ostatniego ogłoszenia
             "manual 0 1",           # polecenie czeka na koniec ciszy
             "after manual 0",
-            "osp 17280 1",          # OSP: 6 h -20%
-            "osp max 26020",        # 100 s + 6 h +20%
-            "osp no auto 0",
-            "to osp 1",             # zmiana roli na OSP w czasie pracy: ogłoszenie od razu
             "failed 0 1",           # stos nie wysłał: ponowienie po 60 s
         ])
+
+    def test_p1_interface_osp_node_reserve(self):
+        # Węzeł OSP (D19): bez karty OSP rezerwa obejmuje cały ruch przekazywany poza ruchem OSP,
+        # który wskazuje stos (pakiet z USB albo do celu ogłoszonego przez komputer).
+        out = self.run_harness("node")
+        self.assertEqual(out[0], "node slots queued queued queued osp_reserve osp queued")
+        n = 1800000 // (6 * 195 * 13)
+        self.assertEqual(out[1], f"node budget {n} flagged queued")
+        self.assertEqual(out[2], "station queued")   # stacja bez karty OSP: bez rezerwy
+
+    def test_kiss_frames_flow_control_and_buffer(self):
+        out = self.run_harness("kiss")
+        ready = "c00f01c0"
+        self.assertEqual(out[0], "config commands 4 flow 1 ready 0 out ")
+        self.assertEqual(out[1], f"data 01c0db02 buffered 1 ready 1 out {ready}")
+        # 1 + 7 pakietów: gotowość po każdym poza ostatnim, który zapełnił bufor.
+        self.assertEqual(out[2], f"full buffered 8 ready 7 owed {ready * 6}")
+        self.assertEqual(out[3], "dropped 1 buffered 8")
+        self.assertEqual(out[4], f"pop buffered 7 ready 8 out {ready}")
+        self.assertEqual(out[5], "split order " + "aa " * 6 + "ccddee ")
+        self.assertEqual(out[6], "large 1 buffered 0")
+        self.assertEqual(out[7], "shared aa bb cc ")
+        self.assertEqual(out[8], "send 1 out c00001dbdcdbdd02c0")
+        self.assertEqual(out[9], "tx 1 1 0 pending 1006 dropped 1")
+        self.assertEqual(out[10], "closed 0 flow 0 pending 0 dropped 2 to 3 from 12")
 
     def test_ifac_masking_matches_reference_vector(self):
         out = self.run_harness("ifac", IFAC_RAW, IFAC_TAG, IFAC_MASK, IFAC_WIRE)

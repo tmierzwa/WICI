@@ -19,7 +19,6 @@ const char* const LANGUAGE_NAMES[ui_texts::LANGS] = {"POLSKI", "УКРАЇНСЬ
 const uint16_t PEOPLE_VALUES[] = {1, 2, 5, 10, 20, 50, 100};
 constexpr size_t PEOPLE_CHOICES = sizeof(PEOPLE_VALUES) / sizeof(PEOPLE_VALUES[0]) + 1;
 constexpr uint8_t MENU_ITEMS = static_cast<uint8_t>(ui_texts::MENU_ITEMS);
-constexpr size_t STATUS_EXTRA = 2;  // PRZEKAZANIE ZMIANY, USŁUGI
 constexpr size_t SERVICE_ITEMS = 4;  // OGŁOŚ ADRES, WYCISZ/WŁĄCZ DŹWIĘK, ODBIORCA ZAPASOWY, ZNISZCZ DANE
 constexpr Button SEQUENCE[4] = {Button::UP, Button::DOWN, Button::UP, Button::OK};
 constexpr Id STATE_TEXTS[6] = {Id::STAN_1, Id::STAN_2, Id::STAN_3, Id::STAN_4, Id::STAN_5, Id::STAN_6};
@@ -184,6 +183,42 @@ size_t wrap(const char* text, char out[][LINE_BYTES], size_t maxLines) {
     return lines;
 }
 
+size_t Model::menu(ui_texts::Menu out[]) const {
+    if (node()) {
+        out[0] = ui_texts::Menu::STAN;
+        out[1] = ui_texts::Menu::JEZYK;
+        return 2;
+    }
+    for (size_t i = 0; i < MENU_ITEMS; ++i) out[i] = static_cast<ui_texts::Menu>(i);
+    return MENU_ITEMS;
+}
+
+uint8_t Model::menuIndex(ui_texts::Menu item) const {
+    ui_texts::Menu items[MENU_ITEMS];
+    const size_t count = menu(items);
+    for (size_t i = 0; i < count; ++i) if (items[i] == item) return static_cast<uint8_t>(i);
+    return 0;
+}
+
+size_t Model::services(Service out[]) const {
+    // Węzeł OSP nie ma adresu LXMF ani karty OSP: bez OGŁOŚ ADRES i ODBIORCA ZAPASOWY.
+    size_t n = 0;
+    if (!node()) out[n++] = Service::ANNOUNCE;
+    out[n++] = Service::MUTE;
+    if (!node()) out[n++] = Service::BACKUP;
+    out[n++] = Service::DESTROY;
+    return n;
+}
+
+void Model::computerLine(const Status& s, char* out, size_t size) const {
+    char value[24];
+    char tmp[LINE_BYTES * 2];
+    if (!s.computerHeard) { copyLine(out, size, text(Id::KOMPUTER_BRAK, lang_)); return; }
+    duration(s.computerS, lang_, value, sizeof(value));
+    substitute(text(Id::KOMPUTER_OSP, lang_), "[czas]", value, tmp, sizeof(tmp));
+    copyLine(out, size, tmp);
+}
+
 void Model::start(Lang lang) {
     lang_ = lang;
     screen_ = Screen::LANGUAGE;
@@ -320,7 +355,7 @@ void Model::tick(uint32_t nowMs) {
         } else if (!inWizard() && held >= HOLD_LANGUAGE_MS && screen_ != Screen::LANGUAGE && screen_ != Screen::ALARM &&
                    screen_ != Screen::BACKUP && screen_ != Screen::DESTROY && screen_ != Screen::RESULT && screen_ != Screen::DISCARD) {
             holdConsumed_ = true;
-            item_ = static_cast<uint8_t>(ui_texts::Menu::JEZYK);
+            item_ = menuIndex(ui_texts::Menu::JEZYK);
             go(Screen::LANGUAGE_MENU);
         }
     }
@@ -385,7 +420,8 @@ void Model::act(Button button, uint32_t nowMs) {
                             changed_ = true;
                 if (screen_ == Screen::LANGUAGE) {
                     addressMissing_ = false;
-                    go(!host_ ? Screen::MAIN : host_->addressCount() > 1 ? Screen::ADDRESS_LIST : Screen::ADDRESS);
+                    // Węzeł OSP nie ma adresu i nie proponuje TEST: od razu ekran główny.
+                    go(!host_ || node() ? Screen::MAIN : host_->addressCount() > 1 ? Screen::ADDRESS_LIST : Screen::ADDRESS);
                 }
                 else go(Screen::MENU);
             } else if (back && screen_ == Screen::LANGUAGE_MENU) go(Screen::MENU);
@@ -418,13 +454,15 @@ void Model::act(Button button, uint32_t nowMs) {
         case Screen::MAIN:
             if (ok) { item_ = 0; go(Screen::MENU); }
             break;
-        case Screen::MENU:
-            if (up) moveCursor(-1, MENU_ITEMS, LINES);
-            else if (downB) moveCursor(1, MENU_ITEMS, LINES);
+        case Screen::MENU: {
+            ui_texts::Menu items[MENU_ITEMS];
+            const size_t count = menu(items);
+            if (up) moveCursor(-1, count, LINES);
+            else if (downB) moveCursor(1, count, LINES);
             else if (back) go(Screen::MAIN);
-            else if (ok) {
+            else if (ok && cursor_ < count) {
                 item_ = static_cast<uint8_t>(cursor_);
-                switch (static_cast<ui_texts::Menu>(cursor_)) {
+                switch (items[cursor_]) {
                     case ui_texts::Menu::ZGLOSZENIE: beginWizard(DraftKind::NEW, 0, nullptr); go(Screen::CATEGORY); break;
                     case ui_texts::Menu::WIADOMOSCI: messagesCursor_ = 0; go(Screen::MESSAGES); break;
                     case ui_texts::Menu::TEST: go(Screen::TEST); break;
@@ -433,33 +471,45 @@ void Model::act(Button button, uint32_t nowMs) {
                 }
             }
             break;
+        }
         case Screen::STATUS:
+            // Ostatnie wiersze: PRZEKAZANIE ZMIANY (nie w węźle OSP) i USŁUGI.
             if (up) moveCursor(-1, lastCount_, LINES);
             else if (downB) moveCursor(1, lastCount_, LINES);
             else if (back) go(Screen::MENU);
-            else if (ok && lastCount_ >= STATUS_EXTRA) {
-                if (cursor_ == lastCount_ - 2) go(Screen::HANDOVER);
-                else if (cursor_ == lastCount_ - 1) go(Screen::SERVICES);
+            else if (ok && lastCount_ >= 2) {
+                if (cursor_ == lastCount_ - 1) go(Screen::SERVICES);
+                else if (cursor_ == lastCount_ - 2 && !node()) go(Screen::HANDOVER);
             }
             break;
         case Screen::HANDOVER:
             if (ok || back) go(Screen::STATUS);
             else scroll(up, downB);
             break;
-        case Screen::SERVICES:
-            if (up) moveCursor(-1, SERVICE_ITEMS, LINES);
-            else if (downB) moveCursor(1, SERVICE_ITEMS, LINES);
+        case Screen::SERVICES: {
+            Service items[SERVICE_ITEMS];
+            const size_t count = services(items);
+            if (up) moveCursor(-1, count, LINES);
+            else if (downB) moveCursor(1, count, LINES);
             else if (back) go(Screen::STATUS);
-            else if (ok && cursor_ == 0) {
-                // Ogłoszenie bez sekwencji: nie zmienia danych, w ciszy czeka na jej odwołanie.
-                result_ = host_ && host_->announce() ? Submit::ANNOUNCED : Submit::ERROR;
-                serviceResult_ = true;
-                go(Screen::RESULT);
-            } else if (ok && cursor_ == 1) {
-                muted_ = !muted_;
-                changed_ = true;
-            } else if (ok) go(cursor_ == 2 ? Screen::BACKUP : Screen::DESTROY);
+            else if (ok && cursor_ < count) {
+                switch (items[cursor_]) {
+                    case Service::ANNOUNCE:
+                        // Ogłoszenie bez sekwencji: nie zmienia danych, w ciszy czeka na jej odwołanie.
+                        result_ = host_ && host_->announce() ? Submit::ANNOUNCED : Submit::ERROR;
+                        serviceResult_ = true;
+                        go(Screen::RESULT);
+                        break;
+                    case Service::MUTE:
+                        muted_ = !muted_;
+                        changed_ = true;
+                        break;
+                    case Service::BACKUP: go(Screen::BACKUP); break;
+                    case Service::DESTROY: go(Screen::DESTROY); break;
+                }
+            }
             break;
+        }
         case Screen::BACKUP:
         case Screen::DESTROY:
             // Sekwencja GÓRA, DÓŁ, GÓRA, OK; inny przycisk zaczyna od nowa, WSTECZ wychodzi.
@@ -657,6 +707,34 @@ void Model::renderMain(const Status& s, char out[][LINE_BYTES], size_t count) co
     char value[24];
     char tmp[LINE_BYTES * 2];
     size_t n = 0;
+    if (node()) {
+        // Węzeł OSP: radio, komputer stanowiska, zasilanie (w ciszy: cisza, zasilanie, komputer).
+        char computer[LINE_BYTES];
+        computerLine(s, computer, sizeof(computer));
+        if (s.mains12) {
+            voltage(s.millivolts, lang_, value, sizeof(value));
+            substitute(text(Id::ZASILANIE_12V, lang_), "[x]", value, tmp, sizeof(tmp));
+        } else {
+            formatNumber(value, sizeof(value), s.cellHours);
+            substitute(text(Id::ZASILANIE_AA, lang_), "[x]", value, tmp, sizeof(tmp));
+        }
+        const char* lines[LINES] = {};
+        char silence[3][LINE_BYTES];
+        if (s.silence) {
+            const size_t wrapped = wrap(text(Id::CISZA, lang_), silence, 3);
+            for (size_t i = 0; i < 3; ++i) lines[i] = i < wrapped ? silence[i] : "";
+            lines[3] = tmp;
+            lines[4] = computer;
+        } else {
+            lines[0] = s.radioOk ? text(Id::RADIO_WLACZONE, lang_) : RADIO_DOWN;
+            lines[1] = computer;
+            lines[2] = tmp;
+            lines[3] = muted_ ? text(Id::DZWIEK_WYCISZONY, lang_) : "";
+            lines[4] = "";
+        }
+        for (size_t i = 0; i < count && i < LINES; ++i) copyLine(out[i], LINE_BYTES, lines[i]);
+        return;
+    }
     if (s.silence) {
         // Wiersze 1-3: pełny tekst ciszy; wiersze 4-5: zasilanie i kolejka.
         char lines[3][LINE_BYTES];
@@ -703,11 +781,20 @@ size_t Model::statusLines(const Status& s, char out[][LINE_BYTES], size_t max) c
     snprintf(tmp, sizeof(tmp), "TX %lu DROP %lu", static_cast<unsigned long>(s.txDatagrams), static_cast<unsigned long>(s.txDrop)); put(tmp);
     snprintf(tmp, sizeof(tmp), "DEFER %lu", static_cast<unsigned long>(s.deferrals)); put(tmp);
     snprintf(tmp, sizeof(tmp), "WAIT %lu S", static_cast<unsigned long>((s.debtMs + 999) / 1000)); put(tmp);
-    duration(s.contactS, lang_, value, sizeof(value));
-    substitute(text(s.contactKnown ? Id::OSTATNI_KONTAKT : Id::OSTATNI_KONTAKT_PONAD, lang_), "[czas]", value, tmp, sizeof(tmp));
-    char lines[4][LINE_BYTES];
-    const size_t wrapped = wrap(tmp, lines, 4);
-    for (size_t i = 0; i < wrapped; ++i) put(lines[i]);
+    if (node()) {
+        // Pakiety Reticulum przez USB w obu kierunkach, odrzucone i kontakt z komputerem.
+        snprintf(tmp, sizeof(tmp), "USB IN %lu", static_cast<unsigned long>(s.usbIn)); put(tmp);
+        snprintf(tmp, sizeof(tmp), "USB OUT %lu", static_cast<unsigned long>(s.usbOut)); put(tmp);
+        snprintf(tmp, sizeof(tmp), "USB DROP %lu", static_cast<unsigned long>(s.usbDrop)); put(tmp);
+        computerLine(s, tmp, sizeof(tmp));
+        put(tmp);
+    } else {
+        duration(s.contactS, lang_, value, sizeof(value));
+        substitute(text(s.contactKnown ? Id::OSTATNI_KONTAKT : Id::OSTATNI_KONTAKT_PONAD, lang_), "[czas]", value, tmp, sizeof(tmp));
+        char lines[4][LINE_BYTES];
+        const size_t wrapped = wrap(tmp, lines, 4);
+        for (size_t i = 0; i < wrapped; ++i) put(lines[i]);
+    }
     if (s.mains12) {
         voltage(s.millivolts, lang_, value, sizeof(value));
         substitute(text(Id::ZASILANIE_12V, lang_), "[x]", value, tmp, sizeof(tmp));
@@ -722,7 +809,7 @@ size_t Model::statusLines(const Status& s, char out[][LINE_BYTES], size_t max) c
     if (muted_) put(text(Id::DZWIEK_WYCISZONY, lang_));
     put(s.version);
     put(s.name);
-    put(label(Label::PRZEKAZANIE_ZMIANY, lang_));
+    if (!node()) put(label(Label::PRZEKAZANIE_ZMIANY, lang_));
     put(label(Label::USLUGI, lang_));
     return n;
 }
@@ -874,9 +961,11 @@ void Model::render(const Status& s, Lines& out) {
             break;
         }
         case Screen::MENU: {
+            ui_texts::Menu entries[MENU_ITEMS];
+            const size_t count = menu(entries);
             const char* items[MENU_ITEMS];
-            for (size_t i = 0; i < MENU_ITEMS; ++i) items[i] = ui_texts::MENU[i][L];
-            renderList(items, MENU_ITEMS, window, out, first, true);
+            for (size_t i = 0; i < count; ++i) items[i] = ui_texts::MENU[static_cast<size_t>(entries[i])][L];
+            renderList(items, count, window, out, first, true);
             break;
         }
         case Screen::STATUS: {
@@ -1036,9 +1125,18 @@ void Model::render(const Status& s, Lines& out) {
             renderText(t, window, out, first);
             break;
         case Screen::SERVICES: {
-            const char* items[SERVICE_ITEMS] = {label(Label::OGLOS_ADRES, lang_), label(muted_ ? Label::WLACZ_DZWIEK : Label::WYCISZ_DZWIEK, lang_),
-                                                label(Label::ODBIORCA_ZAPASOWY, lang_), label(Label::ZNISZCZ_DANE, lang_)};
-            renderList(items, SERVICE_ITEMS, window, out, first, true);
+            Service entries[SERVICE_ITEMS];
+            const size_t count = services(entries);
+            const char* items[SERVICE_ITEMS];
+            for (size_t i = 0; i < count; ++i) {
+                switch (entries[i]) {
+                    case Service::ANNOUNCE: items[i] = label(Label::OGLOS_ADRES, lang_); break;
+                    case Service::MUTE: items[i] = label(muted_ ? Label::WLACZ_DZWIEK : Label::WYCISZ_DZWIEK, lang_); break;
+                    case Service::BACKUP: items[i] = label(Label::ODBIORCA_ZAPASOWY, lang_); break;
+                    case Service::DESTROY: items[i] = label(Label::ZNISZCZ_DANE, lang_); break;
+                }
+            }
+            renderList(items, count, window, out, first, true);
             break;
         }
         case Screen::BACKUP:

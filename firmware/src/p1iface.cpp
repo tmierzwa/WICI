@@ -79,7 +79,7 @@ bool Queue::push(Kind kind, const uint8_t* wire, size_t length) {
     return false;
 }
 
-Admit Queue::offer(Kind kind, uint8_t hops, const uint8_t dest[16], const uint8_t* wire, size_t length, uint32_t nowMs) {
+Admit Queue::offer(Kind kind, uint8_t hops, const uint8_t dest[16], const uint8_t* wire, size_t length, uint32_t nowMs, bool osp) {
     if (length == 0 || length > MAX_WIRE || length > p1frame::MAX_DATAGRAM) { ++counters_.tooLarge; return Admit::TOO_LARGE; }
     if (kind == Kind::ANNOUNCE && hops > 0) {
         // Ogłoszenie przekazywane: od razu tylko bez oczekujących i po upływie limitu.
@@ -106,7 +106,8 @@ Admit Queue::offer(Kind kind, uint8_t hops, const uint8_t dest[16], const uint8_
         return Admit::HELD;
     }
     if (full()) { ++counters_.full; return Admit::FULL; }
-    if (kind == Kind::DATA && hops > 0 && ospSet_ && dest && memcmp(dest, osp_, 16) != 0) {
+    const bool toPinned = ospSet_ && dest && !memcmp(dest, osp_, 16);
+    if (kind == Kind::DATA && hops > 0 && (ospSet_ || nodeReserve_) && !osp && !toPinned) {
         // Dane przekazywane poza OSP: rezerwa 50% czasu kanału i ostatnie miejsce w kolejce dla OSP.
         const uint32_t cost = airtimeMs(length) + reservedDebtMs(length);
         const uint32_t budget = RESERVE_WINDOW_MIN * 60000 / 100 * OTHER_SHARE_PERCENT;

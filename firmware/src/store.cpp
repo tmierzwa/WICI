@@ -225,7 +225,7 @@ bool Store::begin() {
                           storage_.read(at += 1, reinterpret_cast<uint8_t*>(config_.objects), sizeof(config_.objects));
         if (!read) return false;
         config_.seq = bestSeq;
-        config_.role = head[4];
+        config_.ospNode = head[4] ? 1 : 0;
         config_.activeOsp = head[5];
         config_.stations = getU16(head + 6);
         config_.address[ADDRESS_MAX] = '\0';
@@ -346,7 +346,7 @@ bool Store::writeConfig(const Config& config) {
     // Rekord konfiguracji (3,3 KB) idzie do FRAM kawałkami z narastającym CRC, bez kopii na stosie.
     uint8_t head[8];
     putU32(head, seq);
-    head[4] = config.role;
+    head[4] = config.ospNode ? 1 : 0;
     head[5] = config.activeOsp;
     putU16(head + 6, config.stations);
     const uint8_t count = config.phraseCount;

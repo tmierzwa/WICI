@@ -88,7 +88,7 @@ Przebieg można powtórzyć najwyżej raz i tylko z przyczyny wypisanej w planie
 1. Płytka stacji R02 w dwóch wykonaniach, projekty torów RF z nastawami rejestrów i oprogramowanie układowe stacji: microReticulum, LXMF, sterownik P1, dziennik FRAM, ekran, przyciski i protokół USB (D14, D15, D16). Na stanowisku są już sterowniki P1 obu układów, dziennik FRAM, ekran, przyciski, protokół USB i stos Reticulum (port microReticulum z interfejsem P1, bez LXMF), bez prób na sprzęcie.
 2. Schemat elektryczny i płytka drukowana przetwornicy, ostateczna ochrona AC oraz oprogramowanie układowe regulatora (poziom 3).
 3. Płytka drukowana ładowarki z odebraną ochroną OVP dla dwóch wariantów portu (poziom 3).
-4. Aplikacja OSP z Reticulum i LXMF w Pythonie, pakiet stanowiska OSP i interfejs Reticulum przez USB w oprogramowaniu stacji (konfiguracja węzła OSP); usunięcie roli OSP z oprogramowania stacji (D19).
+4. Aplikacja OSP z Reticulum i LXMF w Pythonie i pakiet stanowiska OSP (D19). Oprogramowanie stacji ma już konfigurację węzła OSP z interfejsem Reticulum przez USB i nie ma roli OSP, bez prób na sprzęcie.
 5. Aplikacja laptopa z protokołem USB do stacji i trybami kryzysowymi (cisza radiowa, szyfrowanie bazy, ZNISZCZ DANE, wersje językowe), kompletne pakiety offline oraz manifest przypiętych zależności (D17).
 6. Decyzje D01 (limit SA1 jako jeden pakiet okazjonalny wpisany do specyfikacji), D10 (progi kosztu, terminu i wyniku dla P1 wobec LoRa, ustalone przed zamówieniem RF) i D11 (kanał).
 7. Uzgodnienia z gminą: odbiorca, status sieci w stanach nadzwyczajnych, administrator danych i ocena skutków dla ochrony danych (D07, D12, D13) oraz decyzja o typie MELDUNEK (D18).
