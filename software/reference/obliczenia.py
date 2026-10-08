@@ -37,7 +37,10 @@ def lora_frame_seconds(payload_bytes: int, sf: int, preamble_symbols: int | None
 
 
 def lora_tx_seconds(datagram_bytes: int, sf: int) -> float:
-    """Airtime of one Reticulum packet on the LoRa interface: one frame, or two frames above 254 B; excludes CCA."""
+    """Airtime of one datagram (Reticulum packet plus IFAC) on the LoRa interface: one frame, or two frames
+    above 254 B; excludes CCA. Two frames carry at most 508 B, so the packet before IFAC is at most 492 B."""
+    if datagram_bytes > 2 * LORA["single_frame_payload_max"]:
+        raise ValueError(f"{datagram_bytes} B does not fit in two LoRa frames")
     first = min(datagram_bytes, LORA["single_frame_payload_max"])
     frames = [first] + ([datagram_bytes - first] if datagram_bytes > first else [])
     return sum(lora_frame_seconds(b + LORA["frame_header_bytes"], sf) for b in frames)
@@ -210,7 +213,9 @@ def calculate() -> dict:
         osp_two_status_s = sum(13 * lora_tx_seconds(b, sf) for b in osp_two_status)
         connector_dbm = LORA["chip_sensitivity_dbm"][sf] + frontend_loss_db
         lora[f"sf{sf}"] = {
-            "tx_s": tx, "tx_s_500b_reticulum_mtu": lora_tx_seconds(500, sf), "relay_per_request_s": per_req,
+            "tx_s": tx, "two_frame_datagram_max_bytes": 2 * LORA["single_frame_payload_max"],
+            "two_frame_packet_max_before_ifac_bytes": 2 * LORA["single_frame_payload_max"] - IFAC_BYTES,
+            "tx_s_two_frame_max": lora_tx_seconds(2 * LORA["single_frame_payload_max"], sf), "relay_per_request_s": per_req,
             "fifty_requests_min": [50 * t / 60 for t in per_req],
             "relay_s_per_request_two_status": relay_two_status_s,
             "fifty_requests_with_two_status_min": 50 * relay_two_status_s / 60,

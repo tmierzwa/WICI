@@ -339,7 +339,9 @@
         "received": 0.476672,
         "packet_proof": 0.184576
       },
-      "tx_s_500b_reticulum_mtu": 0.809472,
+      "two_frame_datagram_max_bytes": 508,
+      "two_frame_packet_max_before_ifac_bytes": 492,
+      "tx_s_two_frame_max": 0.819712,
       "relay_per_request_s": [
         19.655168,
         20.587007999999997
@@ -378,7 +380,9 @@
         "received": 0.8509439999999999,
         "packet_proof": 0.328192
       },
-      "tx_s_500b_reticulum_mtu": 1.434624,
+      "two_frame_datagram_max_bytes": 508,
+      "two_frame_packet_max_before_ifac_bytes": 492,
+      "tx_s_two_frame_max": 1.455104,
       "relay_per_request_s": [
         34.917376,
         36.514815999999996

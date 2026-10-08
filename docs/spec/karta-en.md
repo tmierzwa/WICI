@@ -26,7 +26,7 @@ Stages on the screen: “SAVED IN STATION – WAITING TO SEND” → “SENDING 
 
 **“NO CONFIRMATION FOR [n] MIN – RUNNER WITH THE FORM IF THE ROUTE IS SAFE”**, “QUEUE FULL – REQUEST NOT SAVED. USE THE PAPER FORM”, “STATION MEMORY ERROR – REQUEST NOT SAVED. FORM; RUNNER IF THE ROUTE IS SAFE”: fill in the form in two copies; one stays, the runner carries the other. OK silences the alarm sound; the text and the light stay.
 
-**Runner only by a safe route.** No runner during fire, flooding, collapse, contamination, shelling, an announced air-raid or other public alarm, or a ban on going out. The runner takes the route written in the log, preferably two people together; write down the time of leaving and of the expected return. **Nobody can go out:** do not send anyone. The request stays in the station, which keeps retrying. Call the recipient or a neighbouring shelter on PMR446, write the time and the reason in the log, check the route again.
+**Runner only by a safe route.** No runner during fire, flooding, collapse, contamination, shelling, an announced air-raid or other public alarm, or a ban on going out. The runner takes the route written in the log, preferably two people together; write down the time of leaving and of the expected return. **Nobody can go out:** do not send anyone. The station keeps retrying only if it showed “SAVED IN STATION – WAITING TO SEND” and there is no radio silence. Otherwise keep the paper form. Call the recipient or a neighbouring shelter on PMR446, write the time and the reason in the log, check the route again.
 
 **Danger to life.** 1) Give first aid. 2) Phone works? Call 112. 3) Safe route? Send a runner; if not – PMR446. Send by radio at the same time (“OK = ALSO SEND BY RADIO”).
 

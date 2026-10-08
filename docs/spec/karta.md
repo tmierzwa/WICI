@@ -28,7 +28,7 @@ Etapy na ekranie: „ZAPISANE W STACJI – CZEKA NA WYSŁANIE” → „WYSYŁAN
 
 **„BRAK POTWIERDZENIA OD [n] MIN – GONIEC Z FORMULARZEM, JEŚLI DROGA BEZPIECZNA”**, „KOLEJKA PEŁNA – ZGŁOSZENIE NIE ZAPISANE. UŻYJ FORMULARZA PAPIEROWEGO”, „BŁĄD PAMIĘCI STACJI – ZGŁOSZENIE NIE ZAPISANE. FORMULARZ; GONIEC, JEŚLI DROGA BEZPIECZNA”: wypełnij formularz w dwóch egzemplarzach, jedna zostaje, drugą niesie goniec. OK wycisza dźwięk alarmu; napis i dioda zostają.
 
-**Goniec tylko bezpieczną drogą.** Nie wychodzi przy pożarze, zalaniu, zawaleniu, skażeniu, ostrzale, ogłoszonym alarmie powietrznym ani przy zakazie wychodzenia. Idzie trasą z dziennika, najlepiej we dwoje; zapisz godzinę wyjścia i spodziewanego powrotu. **Wyjście niemożliwe:** nikogo nie wysyłaj. Zgłoszenie zostaje w stacji, która je ponawia. Wywołaj odbiorcę albo sąsiednie schronienie przez PMR446, zapisz w dzienniku godzinę i powód, sprawdzaj drogę ponownie.
+**Goniec tylko bezpieczną drogą.** Nie wychodzi przy pożarze, zalaniu, zawaleniu, skażeniu, ostrzale, ogłoszonym alarmie powietrznym ani przy zakazie wychodzenia. Idzie trasą z dziennika, najlepiej we dwoje; zapisz godzinę wyjścia i spodziewanego powrotu. **Wyjście niemożliwe:** nikogo nie wysyłaj. Stacja ponawia zgłoszenie tylko wtedy, gdy pokazała „ZAPISANE W STACJI – CZEKA NA WYSŁANIE” i nie ma ciszy radiowej. W pozostałych przypadkach zachowaj formularz papierowy. Wywołaj odbiorcę albo sąsiednie schronienie przez PMR446, zapisz w dzienniku godzinę i powód, sprawdzaj drogę ponownie.
 
 **Zagrożenie życia.** 1) Udziel pierwszej pomocy. 2) Działa telefon? Dzwoń 112. 3) Droga bezpieczna? Wyślij gońca; nie – PMR446. Radiem wysyłaj równolegle („OK = WYŚLIJ TEŻ RADIEM”).
 

@@ -80,7 +80,7 @@ Goniec niesie formularz do odbiorcy albo do najbliższej jednostki PSP lub OSP, 
 
 - Nie wysyłaj gońca przy pożarze, zalaniu, zawaleniu, skażeniu, ostrzale, alarmie o zagrożeniu, zakazie wychodzenia ani w ciemności bez latarki.
 - Gońcem jest dorosła, sprawna osoba; najlepiej idą dwie. Idzie trasą zapisaną na pierwszej stronie dziennika. Zapisz godzinę wyjścia, krótki numer zgłoszenia i spodziewaną godzinę powrotu. Gdy goniec nie wraca w ustalonym czasie, nie wysyłaj następnego tą samą trasą bez nowej oceny.
-- **Wyjście niemożliwe.** Nikogo nie wysyłaj. Zgłoszenie radiowe zostaje w kolejce i stacja dalej je ponawia; nie wysyłaj go drugi raz. Wywołaj odbiorcę albo sąsiednie schronienie przez PMR446 na kanale z planu sieci; sąsiednie schronienie może przekazać zgłoszenie dalej. Wpisz do dziennika godzinę, alarm i powód. Oceniaj drogę ponownie: przy zagrożeniu życia co 15 min, w innych sprawach przy każdej zmianie sytuacji.
+- **Wyjście niemożliwe.** Nikogo nie wysyłaj. Jeśli stacja potwierdziła zapis („ZAPISANE W STACJI – CZEKA NA WYSŁANIE”) i nie ma ciszy radiowej, zgłoszenie zostaje w kolejce i stacja dalej je ponawia; nie wysyłaj go drugi raz. Po „KOLEJKA PEŁNA”, „BŁĄD PAMIĘCI STACJI” albo w ciszy radiowej zgłoszenie nie wychodzi przez radio: zachowaj formularz papierowy i przekaż jego treść przez PMR446. Wywołaj odbiorcę albo sąsiednie schronienie przez PMR446 na kanale z planu sieci; sąsiednie schronienie może przekazać zgłoszenie dalej. Wpisz do dziennika godzinę, alarm i powód. Oceniaj drogę ponownie: przy zagrożeniu życia co 15 min, w innych sprawach przy każdej zmianie sytuacji.
 
 ## Komunikaty od odbiorcy
 

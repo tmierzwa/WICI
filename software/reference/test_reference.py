@@ -92,6 +92,12 @@ class LoraAirtime(unittest.TestCase):
         self.assertAlmostEqual(lora_tx_seconds(254, 7), lora_frame_seconds(255, 7))
         self.assertAlmostEqual(lora_tx_seconds(255, 7), lora_frame_seconds(255, 7) + lora_frame_seconds(2, 7))
 
+    def test_two_frame_limit_includes_ifac(self):
+        from obliczenia import IFAC_BYTES, lora_tx_seconds
+        lora_tx_seconds(492 + IFAC_BYTES, 7)
+        with self.assertRaises(ValueError):
+            lora_tx_seconds(500 + IFAC_BYTES, 7)
+
 
 class Messages(unittest.TestCase):
     """Exercise all SA1 shapes and byte limits, including Polish UTF-8."""
