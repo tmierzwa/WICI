@@ -127,7 +127,7 @@ Drugi producent: ADI LTC2965 (3,5–100 V, 3/7/15 µA) z osobnymi progami w gór
 
 Sprawność ≥85% przy 6 V i ≥80% przy 12,8 V (30–60 mA) wynika z wykresów dla 5 V wyjścia tylko na granicy (Z11). Iq 50 µA jest typowe, bez maksimum. Oba warunki mierzy się na płytce ewaluacyjnej, zanim przetwornica wejdzie do schematu.
 
-TI TPS63070 odpada jako pierwszy wybór: Iq do 103 µA (wymaganie ≤50 µA) i maksimum wejścia 16 V. U TI, MPS i ST nie znaleziono przetwornicy podwyższająco-obniżającej z wejściem ≥20 V, Iq ≤50 µA i wyjściem 3,3 V (TPS552892, TPS55289 i LM5176 mają Iq rzędu 0,8–2 mA, TPS5516x nie ma wyjścia 3,3 V). Drugi producent wymaga więc innej architektury: przetwornica obniżająca o małym Iq z pracą przy 100% wypełnienia, np. TI TPS629210 (3–17 V, 4 µA). Przy ogniwach 4,0 V wystarcza dla nRF52840, ale dla ESP32-S3 jest na granicy w czasie podtrzymania (VSYS spada do 2,7 V), więc decyzja zależy od D14.
+TI TPS63070 odpada jako pierwszy wybór: Iq do 103 µA (wymaganie ≤50 µA) i zalecane wejście tylko do 16 V (maksimum bezwzględne 20 V, SLVSC58B), więc praca z 12 V wymaga zawężenia do 15 V i progu OVP z przerzutem ≤16 V ([elektronika](../../docs/spec/elektronika.md#zasilanie-stacji)). U TI, MPS i ST nie znaleziono przetwornicy podwyższająco-obniżającej z wejściem ≥20 V, Iq ≤50 µA i wyjściem 3,3 V (TPS552892, TPS55289 i LM5176 mają Iq rzędu 0,8–2 mA, TPS5516x nie ma wyjścia 3,3 V). Drugi producent wymaga więc innej architektury: przetwornica obniżająca o małym Iq z pracą przy 100% wypełnienia, np. TI TPS629210 (3–17 V, 4 µA). Przy ogniwach 4,0 V wystarcza dla nRF52840, ale dla ESP32-S3 jest na granicy w czasie podtrzymania (VSYS spada do 2,7 V), więc decyzja zależy od D14.
 
 ### Komparator VSYS
 

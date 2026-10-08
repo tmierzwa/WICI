@@ -1,8 +1,8 @@
 # WICI: projekt stacji
 
-Specyfikacja 0.5 opisuje docelową stację WICI (płytka R02 w dwóch wykonaniach) i zestaw poziomów 1–3, a nie rozwiązanie tymczasowe. Próby przed płytką R02 wykonuje się na stanowisku deweloperskim z płytek rozwojowych i modułów producentów ([radio](radio.md#stanowisko-deweloperskie)); płytki rozwojowe łączy płytka nośna N1 bez toru RF, płytką stacji jest R02, a kontroler R01.3 wycofano. Instrukcje użycia opisują odebrany zestaw, którego jeszcze nie zbudowano.
+Specyfikacja 0.5 opisuje stację WICI i zestaw poziomów 1–3. Przed pilotażem obowiązuje [stacja pilotażowa](elektronika.md#stacja-pilotażowa) z gotowych modułów; własna płytka R02 (wydanie) jest wstrzymana do decyzji po pilotażu. Próby stosu bez radia LoRa wykonuje się też na stanowisku deweloperskim z płytek rozwojowych ([radio](radio.md#stanowisko-deweloperskie)); kontroler R01.3 wycofano. Instrukcje użycia opisują zestaw, którego jeszcze nie zbudowano.
 
-**Pilotaż i wydanie (przegląd praktyczny 2026-10-08, F99).** Pilotaż używa stacji pilotażowej bez własnej płytki: gotowa płytka MCU (ESP32-S3) z układem LoRa SX1262 i deklaracją zgodności UE, moduł FRAM, ekran Sharp memory LCD na module, przyciski, koszyk na ogniwa AA, wejście 12 V przez gotowy moduł przetwornicy, kupiona obudowa z dławikami i antena zewnętrzna. Radio pilotażu to [profil LoRa](radio.md#profil-lora-pilotażu); P1 jest wariantem zapasowym. Pilotaż obejmuje poziom 1 i stanowisko odbiorcze; jego próby wymienia [minimum pilotażu](odbior.md#minimum-pilotażu). Płytka R02, dwa wykonania stacji i poziomy 2–3 należą do zakresu wydania; decyzje o nich zapadają po pilotażu. Poziom 3 używa kupionej stacji zasilania i ładowarki USB z deklaracją UE (D05); opisy własnej przetwornicy 230 V i ładowarki poniżej zostają jako archiwum, bez dalszych prac.
+**Pilotaż i wydanie (przegląd praktyczny 2026-10-08, F99).** Pilotaż używa stacji pilotażowej bez własnej płytki: gotowa płytka MCU (ESP32-S3) z układem LoRa SX1262 i deklaracją zgodności UE, moduł FRAM, ekran Sharp memory LCD na module, przyciski, koszyk na ogniwa AA, wejście 12 V przez gotowy moduł przetwornicy, kupiona obudowa z dławikami i antena zewnętrzna ([elektronika](elektronika.md#stacja-pilotażowa)). Radio pilotażu to [profil LoRa](radio.md#profil-lora-pilotażu); P1 jest wariantem zapasowym. Pilotaż obejmuje poziom 1 i stanowisko odbiorcze; jego próby wymienia [minimum pilotażu](odbior.md#minimum-pilotażu). Płytka R02, dwa wykonania stacji i poziomy 2–3 należą do zakresu wydania; decyzje o nich zapadają po pilotażu. Poziom 3 używa kupionej stacji zasilania i ładowarki USB z deklaracją UE (D05); opisy własnej przetwornicy 230 V, ładowarki i wejść A/B są w [archiwum elektroniki](elektronika.md#archiwum-własny-blok-zasilania-poziomu-3), bez dalszych prac.
 
 ## Zakres
 
@@ -14,15 +14,12 @@ Specyfikacja 0.5 opisuje docelową stację WICI (płytka R02 w dwóch wykonaniac
 | Odbiorca zgłoszeń | stanowisko odbiorcze wyznaczone przez wójta (burmistrza, prezydenta miasta); zwykle jednostka ochotniczej straży pożarnej z grafikiem dyżurów na czas kryzysu, a także gminne centrum zarządzania kryzysowego lub stanowisko gminnego zespołu zarządzania kryzysowego |
 | Informacje radiowe | zgłoszenia, odpowiedzi, statusy, komunikaty; bez zdjęć i głosu |
 | Uruchomienie stacji | gotowość radiowa ≤60 s od włączenia, bez komputera; przekazywanie ruchu innych stacji zawsze, gdy stacja jest włączona |
-| Zasilanie stacji | 4 wymienne ogniwa AA; wejście 12 V (11,5–16 V w pracy): załączenie po podłączeniu źródła ≥12,4 V; odłączenie przy 11,5 V z zatrzaskiem, ponowne załączenie ręczne przy ≥12,4 V; przełączanie między ogniwami i 12 V bez resetu |
+| Zasilanie stacji | 4 wymienne ogniwa AA; wejście 12 V (11,5–16 V w pracy): załączenie po podłączeniu źródła ≥12,4 V; odłączenie przy 11,5 V; ponowne załączenie przy ≥12,4 V (w stacji pilotażowej samoczynnie, w R02 ręcznie przyciskiem OK); przełączanie między ogniwami i 12 V bez resetu; stany: [elektronika](elektronika.md#stany-zasilania-12-v) |
 | Czas pracy stacji | ≥48 h jako przekaźnik na ogniwach litowych AA; z akumulatorem 12 V 60 Ah: około 1–3 miesięcy, z 7 Ah: 4–10 dni (model: [rozdział 06](../concept/06-wykonalnosc-i-budzet-zasobow.html#energia-stacji-poziomu-1)) |
-| Zasilanie poziomu 3 | 12 V; źródła A/B dla laptopa i routera, osobne C dla telefonów |
-| Dopuszczalne źródła 12 V | akumulator kwasowo-ołowiowy 12 V, akumulator LiFePO4 12,8 V z BMS, wyjście 12 V stacji zasilania; 11,5–16 V na złączu A/B/C, odłączenie przy 11,5 V |
-| Ciągłość | nowy akumulator podłączony przed odłączeniem starego |
-| Praca przez dobę (poziom 3) | kolejne źródła z lokalnych zasobów; nie zakłada się pracy z jednego akumulatora |
-| Przetwornica (poziom 3) | cel: 150 W mocy ciągłej, 230 V ±5%, 50 Hz, THD <5% |
-| Gniazdo zapalniczki | profil do 8 A prądu wejściowego; może ograniczyć moc AC do około 70 W |
-| Telefony (poziom 3) | 8 niezależnych portów USB-A, 5 V / 1,5 A, 60 W łącznie |
+| Zasilanie poziomu 3 | kupiona przenośna stacja zasilania z wyjściem 230 V i portami USB oraz kupiona ładowarka USB do telefonów, każda z deklaracją zgodności UE (D05; [elektronika](elektronika.md#poziom-3-kupiona-stacja-zasilania)) |
+| Dopuszczalne źródła 12 V stacji | akumulator kwasowo-ołowiowy 12 V, akumulator LiFePO4 12,8 V z BMS, wyjście 12 V DC stacji zasilania; 11,5–16 V na złączu stacji |
+| Praca przez dobę (poziom 3) | około 1,8 kWh na dobę; stację zasilania ładuje się albo wymienia, nie zakłada się pracy z jednego ładowania |
+| Telefony (poziom 3) | ładowarka USB wielu portów z deklaracją UE; liczba portów według liczby osób |
 
 ## Połączenie
 
@@ -33,20 +30,17 @@ flowchart LR
   SP --> ST[Stacja WICI: MCU, radio LoRa w pilotażu albo P1, ekran, przyciski, FRAM]
   ST <-->|Antena zewnętrzna| S[Inne stacje i stanowisko odbiorcze]
   L[Laptop i pamięć USB] -->|USB, poziom 2| ST
-  A[Źródło A 12 V] --> D[Diody i zabezpieczenia A/B]
-  B[Źródło B 12 V] --> D
-  D --> I[Własna przetwornica 230 V]
-  I --> P[Oryginalny zasilacz laptopa]
-  I --> R[Oryginalny zasilacz routera]
+  PS[Kupiona stacja zasilania 230 V, poziom 3] --> P[Oryginalny zasilacz laptopa]
+  PS --> R[Oryginalny zasilacz routera]
+  PS --> U[Kupiona ładowarka USB]
   P --> L
   R --> W[Router Wi-Fi]
   W -->|LAN Ethernet, poziom 3| L
-  C[Osobny akumulator C] --> U[8 sekcji ładowarki]
   U --> F[Telefony]
   F -->|Wi-Fi| W
 ```
 
-Stacja jest jedynym węzłem sieci w schronieniu: przechowuje tożsamość i kolejkę zgłoszeń, obsługuje radio i przekazuje ruch innych stacji. Laptop jest panelem: przechowuje dane mieszkańców i stronę, a wiadomości przekazuje stacji przez USB. Router nie uczestniczy w łączności radiowej; zapewnia Wi-Fi, DHCP i połączenie telefonu z laptopem. Radio nie przekazuje stron WWW ani internetu. Poziom 3 można zasilić także z innego sprawdzonego źródła 230 V; przetwornica i pula A/B dotyczą tylko laptopa i routera.
+Stacja jest jedynym węzłem sieci w schronieniu: przechowuje tożsamość i kolejkę zgłoszeń, obsługuje radio i przekazuje ruch innych stacji. Laptop jest panelem: przechowuje dane mieszkańców i stronę, a wiadomości przekazuje stacji przez USB. Router nie uczestniczy w łączności radiowej; zapewnia Wi-Fi, DHCP i połączenie telefonu z laptopem. Radio nie przekazuje stron WWW ani internetu. Poziom 3 można zasilić także z innego sprawdzonego źródła 230 V; stacja zasilania dotyczy tylko laptopa, routera i ładowarki telefonów, nie stacji WICI.
 
 ## Zawartość zestawu
 
@@ -64,8 +58,8 @@ Poziom 1, zawsze w zestawie:
 Rozszerzenia poziomów 2–3:
 
 9. Pamięć USB 64 GB z systemem, kompletnymi pakietami START i kluczem szyfrowania bazy laptopa; przewód USB do stacji.
-10. Zespół zasilania laptopa i routera: dwa wejścia A/B i przetwornica, przewody do gniazda zapalniczki oraz do zacisków akumulatora, bezpieczniki przy źródłach.
-11. Osobna ładowarka 8 portów i jej przewód akumulatorowy.
+10. Kupiona przenośna stacja zasilania z wyjściem 230 V i jej ładowarką, z deklaracją zgodności UE i instrukcją po polsku (D05).
+11. Kupiona ładowarka USB do telefonów z deklaracją zgodności UE.
 12. Przewód Ethernet, adapter USB–Ethernet z dołączonymi sterownikami i przejściówka USB-C do laptopa.
 13. Przewody ładowania telefonów oraz jednostronicowa instrukcja strony.
 14. Bateryjny czujnik tlenku węgla (CO) – obowiązkowa część zestawu poziomu 3.
@@ -102,23 +96,23 @@ Zgłoszenie schronienia: wybierz kategorię, liczbę osób, pilność i opcjonal
 
 Stacja pracuje dalej przez cały czas dołączania rozszerzeń.
 
-1. Przy wyłączonym wyłączniku DC (pozycja 0) podłącz oryginalne zasilacze laptopa i routera do wyjść przetwornicy.
-2. Podłącz źródło A do zespołu zasilania i źródło C do ładowarki. Sprawdź na woltomierzach, czy oba mają co najmniej 12,4 V, i włącz wyłącznik DC (pozycja 1).
+1. Sprawdź na wyświetlaczu stacji zasilania stan naładowania. Włącz jej wyjście 230 V według instrukcji producenta.
+2. Podłącz oryginalne zasilacze laptopa i routera oraz ładowarkę USB telefonów do wyjść stacji zasilania.
 3. Połącz laptop ze stacją przewodem USB, a na poziomie 3 także z portem LAN routera. Podłącz pamięć USB zestawu.
 4. Uruchom START w działającym systemie albo system Linux z pamięci USB na obsługiwanym komputerze PC. Zaloguj się hasłem z koperty; konta są na pamięci USB zestawu. Panel pokazuje adres i kartę odbiorcy odczytane ze stacji.
 5. Połącz telefon z główną siecią Wi-Fi routera i otwórz adres z kodu QR wyświetlonego na ekranie laptopa.
 
-Nie podłączaj zasilaczy do pracującej przetwornicy: prąd ładowania ich kondensatorów może wyzwolić zabezpieczenie. Jeżeli router ma nieznane hasło, wyłączony DHCP lub izolację Wi-Fi od LAN, trzeba go skonfigurować w panelu. Wiele routerów domowych obsługuje najwyżej około 32 klientów Wi-Fi lub ma mniejszą pulę DHCP. Kwalifikacja routera obejmuje 50 klientów i pulę co najmniej 60 adresów. Zablokowany router znaleziony na miejscu pozostaje niedostępny: nie resetuj go bez zgody właściciela. Mac z procesorem Apple Silicon nie uruchomi ogólnego obrazu Linuksa, więc pakiet START wymaga na nim sprawnego systemu macOS. Komputer, którego nie da się uruchomić z pamięci USB i który nie ma sprawnego systemu, jest poza zakresem.
+Jeżeli router ma nieznane hasło, wyłączony DHCP lub izolację Wi-Fi od LAN, trzeba go skonfigurować w panelu. Wiele routerów domowych obsługuje najwyżej około 32 klientów Wi-Fi lub ma mniejszą pulę DHCP. Kwalifikacja routera obejmuje 50 klientów i pulę co najmniej 60 adresów. Zablokowany router znaleziony na miejscu pozostaje niedostępny: nie resetuj go bez zgody właściciela. Mac z procesorem Apple Silicon nie uruchomi ogólnego obrazu Linuksa, więc pakiet START wymaga na nim sprawnego systemu macOS. Komputer, którego nie da się uruchomić z pamięci USB i który nie ma sprawnego systemu, jest poza zakresem.
 
 ## Energia stacji
 
-Stacja załącza wejście 12 V po podłączeniu źródła o napięciu ≥12,4 V i korzysta z niego do spadku do 11,5 V; wtedy odłącza je z zatrzaskiem i pracuje z ogniw AA. Ponowne załączenie 12 V jest ręczne, przy napięciu ≥12,4 V: ekran pokazuje „12 V ODŁĄCZONE – ZA NISKIE NAPIĘCIE. PODŁĄCZ NAŁADOWANE ŹRÓDŁO I PRZYTRZYMAJ OK”. Przełączenie nie resetuje stacji. Ekran pokazuje aktywne źródło, napięcie i szacowany czas pracy („OGNIWA: OKOŁO [x] H PRACY”). Przy niskim napięciu ogniw stacja pokazuje „WYMIEŃ OGNIWA W CIĄGU 1 H”, a przed wyłączeniem zapisuje stan („WYŁĄCZANIE – CZEKAJ, ZAPISUJĘ” → „MOŻNA WYJĄĆ OGNIWA”). Tak samo działa wyłączenie przytrzymaniem wyłącznika głównego przez 2 s. W kryzysie stacja pracuje z kompletu kryzysowego; komplet ćwiczebny jest rezerwą tylko przy napięciu powyżej progu z instrukcji. Ogniwa wymienia się przy włączonym źródle 12 V albo po wyłączeniu stacji; kolejka i dług ciszy pozostają w pamięci FRAM. Nie używaj ogniw różnych typów ani różnego stopnia rozładowania w jednym komplecie.
+Stacja załącza wejście 12 V po podłączeniu źródła o napięciu ≥12,4 V i korzysta z niego do spadku do 11,5 V; wtedy odłącza je i pracuje z ogniw AA. Ponowne załączenie 12 V następuje przy napięciu ≥12,4 V: w R02 po przytrzymaniu OK (zatrzask), w stacji pilotażowej samoczynnie (histereza); ekran pokazuje „12 V ODŁĄCZONE – ZA NISKIE NAPIĘCIE. PODŁĄCZ NAŁADOWANE ŹRÓDŁO I PRZYTRZYMAJ OK”, a przytrzymanie OK w stacji pilotażowej niczego nie psuje. Bez ogniw stacja wyłącza się przy 11,5 V i nie włącza się po samej odbudowie napięcia akumulatora ([stany zasilania 12 V](elektronika.md#stany-zasilania-12-v)). Przełączenie nie resetuje stacji. Ekran pokazuje aktywne źródło, napięcie i szacowany czas pracy („OGNIWA: OKOŁO [x] H PRACY”). Przy niskim napięciu ogniw stacja pokazuje „WYMIEŃ OGNIWA W CIĄGU 1 H”, a przed wyłączeniem zapisuje stan („WYŁĄCZANIE – CZEKAJ, ZAPISUJĘ” → „MOŻNA WYJĄĆ OGNIWA”). Tak samo działa wyłączenie przytrzymaniem wyłącznika głównego przez 2 s. W kryzysie stacja pracuje z kompletu kryzysowego; komplet ćwiczebny jest rezerwą tylko przy napięciu powyżej progu z instrukcji. Ogniwa wymienia się przy włączonym źródle 12 V albo po wyłączeniu stacji; kolejka i dług ciszy pozostają w pamięci FRAM. Nie używaj ogniw różnych typów ani różnego stopnia rozładowania w jednym komplecie.
 
-## Wymiana źródła A/B (poziom 3)
+## Energia poziomu 3
 
-Podłącz nowe źródło do wolnego wejścia. Odłącz stare i sprawdź działanie laptopa i routera pod pełnym obciążeniem. Nie odłączaj obu naraz. Źródło wymieniaj, zanim jego napięcie spadnie do progu odłączenia 11,5 V; ostrzeżenie świetlne i dźwiękowe włącza się przy 11,8 V. Akumulator rozruchowy pojazdu wymieniaj już przy około 12,2 V. Po odłączeniu podnapięciowym przetwornica nie rusza sama: podłącz naładowane źródło i naciśnij RESTART. Ustawiony limit 8 A lub 20 A musi pasować do każdego źródła, które może przejąć zasilanie. Nie wolno przełączyć na 20 A tylko dlatego, że jedno z dwóch wejść ma mocniejszy przewód.
+Stację zasilania ładuje się albo wymienia na naładowaną, zanim jej wskaźnik pokaże stan krytyczny według instrukcji producenta. Wyczerpanie stacji zasilania wyłącza laptop, router i ładowanie telefonów, ale nie łączność: stacja WICI ma własne zasilanie. Stację zasilania ładuje się z sieci, z panelu słonecznego albo z instalacji pojazdu według instrukcji producenta, poza pomieszczeniem z ludźmi, jeśli producent tego wymaga.
 
-Wymiana źródła C może przerwać ładowanie telefonów, ale nie łączność. Wyłączenie całego poziomu 3 nie przerywa pracy stacji. Nie łącz plusów akumulatorów bezpośrednio. Nie uruchamiaj silnika pojazdu ani agregatu w schronieniu, w garażu, przy wejściu ani przy wlotach powietrza: tlenek węgla zabija bez ostrzeżenia. Wyjmij akumulator z pojazdu albo zasilaj zestaw z pojazdu stojącego na zewnątrz, kilka metrów od wejść i wlotów powietrza. Przewód nie może utrzymywać otwartych drzwi. Nie podłączaj zestawu przy pracującym silniku, chyba że wejście jest zakwalifikowane na impulsy według ISO 7637-2 ([elektronika](elektronika.md)). Bateryjny czujnik CO z zestawu poziomu 3 umieszcza się w pomieszczeniu z ludźmi. Nie ładuj akumulatorów w pomieszczeniu z ludźmi. Nie używaj źródła 24 V. Podstawowy wariant nie jest dopuszczony do pracy podczas rozruchu silnika.
+Nie uruchamiaj silnika pojazdu ani agregatu w schronieniu, w garażu, przy wejściu ani przy wlotach powietrza: tlenek węgla zabija bez ostrzeżenia. Pojazd lub agregat ładujący stację zasilania stoi na zewnątrz, kilka metrów od wejść i wlotów powietrza; przewód nie może utrzymywać otwartych drzwi. Bateryjny czujnik CO z zestawu poziomu 3 umieszcza się w pomieszczeniu z ludźmi. Nie łącz plusów akumulatorów bezpośrednio i nie używaj źródła 24 V do wejścia 12 V stacji WICI.
 
 ## Przechowywanie i przeglądy
 
@@ -129,8 +123,8 @@ Co kwartał opiekun wykonuje przegląd podstawowy z kompletu ćwiczebnego albo z
 1. Uruchom stację z kompletu ćwiczebnego albo ze źródła 12 V; sprawdź na ekranie adres, kartę odbiorcy i nazwę `WICI-xxxxxx`. Sprawdź datę ważności kompletu kryzysowego bez otwierania opakowania i napięcie kompletu ćwiczebnego; wymień ogniwa przeterminowane albo o napięciu niższym niż podane w [instrukcji](instrukcja.md#energia-stacji) (komplet ćwiczebny: „OGNIWA: [x] V” w STAN co najmniej 5,6 V po minucie pracy).
 2. Sprawdź sumy kontrolne obrazu na pamięci USB, bo pamięć flash bez zasilania traci dane. Wymień ją co kilka lat albo przechowuj drugą, sprawdzoną kopię.
 3. Uruchom aplikację z przygotowanego zestawu na aktualnych komputerach z lokalnej listy; nowe wersje systemów mogą wymagać nowego pakietu START.
-4. W każdym corocznym przeglądzie zmierz i skoryguj częstotliwość nadajnika, aby skontrolować starzenie TCXO ([radio](radio.md)); pomiar wykonuje producent lub serwis przyrządem o dokładności ≤0,1 ppm, a stacje dowozi się w tym dniu do jednego miejsca (około 20 min na stację). Sprawdź wymianę ramek ze stacją drugiego wykonania. Do oceny: ekran pokazuje odchyłkę częstotliwości oszacowaną z odebranych ramek jako tanią samokontrolę między przeglądami.
-5. Uruchom przetwornicę i ładowarkę pod obciążeniem; kondensatory elektrolityczne starzeją się także bez pracy.
+4. W wykonaniu z P1 (wariant zapasowy) w każdym corocznym przeglądzie zmierz i skoryguj częstotliwość nadajnika, aby skontrolować starzenie TCXO ([radio](radio.md)); pomiar wykonuje producent lub serwis przyrządem o dokładności ≤0,1 ppm, a stacje dowozi się w tym dniu do jednego miejsca (około 20 min na stację). W LoRa wystarcza wymiana ramek z sąsiednią stacją w TEST; przy dwóch wykonaniach sprawdź wymianę ramek ze stacją drugiego wykonania. Do oceny: ekran pokazuje odchyłkę częstotliwości oszacowaną z odebranych ramek jako tanią samokontrolę między przeglądami.
+5. Sprawdź stację zasilania poziomu 3 według instrukcji producenta: naładowanie do poziomu przechowywania, pracę pod obciążeniem laptopa i routera, datę wymiany akumulatora.
 6. Zaktualizuj oprogramowanie stacji, jeśli jest nowe wydanie: podpisany obraz przez USB z laptopa z pakietem START, w trybie przygotowania (przycisk pod plombowaną pokrywą serwisową, bez otwierania obudowy głównej); najpierw na jednej stacji z TEST, potem na pozostałych. Po zakończeniu załóż nową plombę na pokrywę serwisową i wpisz jej numer do ewidencji; nienaruszoną plombę sprawdza opiekun w przeglądzie kwartalnym.
 7. Wyślij TEST do odbiorcy i sprawdź aktualność karty zaufanego odbiorcy.
 
@@ -147,10 +141,9 @@ Wynik przeglądu zapisuje się z datą i wersją wydania w ewidencji sprzętu gm
 | Ogniwa AA i wejście 12 V | Start bez ładowania i lata przechowywania; koszt ogniw i kontrola w przeglądzie |
 | LXMF nad Reticulum | Gotowe dostarczanie wiadomości; stacja nadal odpowiada za trwały zapis, a stanowisko odbiorcze za decyzję |
 | Mała własna strona HTTP | Telefon używa zwykłej przeglądarki; NomadNet nie jest takim interfejsem |
-| 8 pojedynczych sekcji ładowania | Uszkodzenie jednej przetwornicy obniżającej wyłącza tylko jeden port; więcej dławików, prostsze naprawy |
-| Pasywne diody A/B (poziom 3) | Bez kodu i sterowania; strata energii oraz konieczne chłodzenie |
-| Mostek niskiego napięcia i transformator 50 Hz | Mniej stopni mocy; większa masa i możliwy większy koszt |
-| Krótkie ramki radiowe | Mieszczą się w kolejce FIFO obu układów; dodatkowy narzut fragmentacji |
+| Stacja pilotażowa z gotowych modułów (F99) | Pilotaż bez własnej płytki, toru RF i bloku zasilania; większa obudowa, więcej połączeń przewodowych, wyniki nie przenoszą się automatycznie na R02 |
+| Profil LoRa SF7 w pilotażu (D10) | Gotowe moduły z deklaracją UE i lepsza czułość niż P1; kanał współdzielony z LoRaWAN RX2 (D11) |
+| Kupiona stacja zasilania poziomu 3 (D05) | Wyrób z deklaracją UE zamiast własnej przetwornicy 230 V i ładowarki; koszt zakupu i zależność od producenta |
 | Standardowy JSON w LXMF | Prosty format w stacji i laptopie; treść ≤256 B po kodowaniu, jeden pakiet okazjonalny (roboczo, do potwierdzenia w D01 i T3) |
 
 Rolę NomadNet opisuje rozdział [Oprogramowanie](oprogramowanie.md). Nie wolno uruchamiać dwóch stacji z tą samą tożsamością ani routera LXMF na laptopie z tożsamością stacji. Router LXMF z tożsamością odbiorcy działa tylko na komputerze stanowiska. Węzeł przechowywania LXMF na stanowisku nie należy do wydania 0.5: mógłby być przyszłą funkcją aplikacji stanowiska po osobnych próbach. W sieci podstawowej ruch przechodzi przez aktywne przekaźniki. [NomadNet](https://github.com/markqvist/NomadNet), [LXMF](https://github.com/markqvist/LXMF).

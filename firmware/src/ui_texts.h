@@ -15,6 +15,10 @@ constexpr size_t MAX_COLUMNS = 20;  // wiersz ekranu
 // Teksty z identyfikatorami (kolumny PL, UK, EN); pusty napis = brak tekstu w tym języku.
 enum class Id : uint8_t {
     RADIO_WLACZONE,
+    RADIO_AWARIA,
+    JEZYK_PL,
+    JEZYK_UK,
+    JEZYK_EN,
     CISZA,
     OSTATNI_KONTAKT,
     OSTATNI_KONTAKT_PONAD,
@@ -70,6 +74,10 @@ enum class Id : uint8_t {
 
 constexpr const char* const TEXTS[static_cast<size_t>(Id::COUNT)][LANGS] = {
     {"RADIO WŁĄCZONE", "РАДІО УВІМКНЕНО", "RADIO ON"},
+    {"RADIO: AWARIA", "РАДІО: НЕСПРАВНЕ", "RADIO: FAULT"},
+    {"POLSKI", "POLSKI", "POLSKI"},
+    {"УКРАЇНСЬКА", "УКРАЇНСЬКА", "УКРАЇНСЬКА"},
+    {"ENGLISH", "ENGLISH", "ENGLISH"},
     {"CISZA RADIOWA – STACJA NIE NADAJE. PILNE: GONIEC", "РАДІОТИША – СТАНЦІЯ НЕ ПЕРЕДАЄ. ТЕРМІНОВО: ПОСИЛЬНИЙ", "RADIO SILENCE – NOT TRANSMITTING. URGENT: RUNNER"},
     {"OSTATNI KONTAKT Z ODBIORCĄ: [czas] TEMU", "ОСТАННІЙ ЗВ'ЯЗОК З ОДЕРЖУВАЧЕМ: [czas] ТОМУ", "LAST CONTACT WITH RECIPIENT: [czas] AGO"},
     {"OSTATNI KONTAKT Z ODBIORCĄ: PONAD [czas] TEMU", "ОСТАННІЙ ЗВ'ЯЗОК З ОДЕРЖУВАЧЕМ: ПОНАД [czas] ТОМУ", "LAST CONTACT WITH RECIPIENT: OVER [czas] AGO"},

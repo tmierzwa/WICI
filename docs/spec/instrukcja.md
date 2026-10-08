@@ -119,13 +119,12 @@ Dołączasz je, gdy stacja już działa; stacja pracuje dalej przez cały czas. 
 - Mieszkaniec dostaje lokalny numer zgłoszenia („ZAPISZ NUMER [xxxx] – PODAJ GO OPIEKUNOWI, ABY SPRAWDZIĆ STAN”). Gdy straci dostęp na telefonie, sprawdź stan po tym numerze w panelu.
 - Brak energii: najpierw wyłącz laptop i router. Stacja pracuje dalej z ogniw lub 12 V.
 
-### Kolejność i wymiana źródeł (poziom 3)
+### Stacja zasilania (poziom 3)
 
-- Źródła A i B zasilają laptop i router, źródło C ładowarkę telefonów. Nie łącz plusów akumulatorów bezpośrednio.
-- Zasilacze laptopa i routera podłączaj przy wyłączniku DC w pozycji 0, potem źródło A i C; włącz wyłącznik DC dopiero przy co najmniej 12,4 V na woltomierzach.
-- Wymieniaj źródło A/B na zakładkę: podłącz nowe do wolnego wejścia, dopiero potem odłącz stare. Wymieniaj przed 11,5 V; ostrzeżenie włącza się przy 11,8 V, a akumulator rozruchowy pojazdu wymieniaj już przy około 12,2 V.
-- Po odłączeniu podnapięciowym podłącz naładowane źródło i naciśnij RESTART.
-- Wymiana źródła C przerywa tylko ładowanie telefonów.
+- Laptop, router i ładowarkę telefonów zasila kupiona stacja zasilania. Stacja WICI ma własne ogniwa i 12 V i nie zależy od niej.
+- Sprawdź na wyświetlaczu stacji zasilania stan naładowania, włącz wyjście 230 V według instrukcji producenta, potem podłącz zasilacze laptopa i routera oraz ładowarkę telefonów.
+- Ładuj stację zasilania albo wymieniaj ją na naładowaną, zanim pokaże stan krytyczny. Ładowanie z pojazdu albo agregatu tylko na zewnątrz, kilka metrów od wejść i wlotów powietrza.
+- Wyczerpanie stacji zasilania wyłącza laptop, router i ładowanie telefonów, ale nie łączność.
 
 ## Przekazanie zmiany
 

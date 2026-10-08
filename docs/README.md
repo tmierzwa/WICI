@@ -2,14 +2,15 @@
 
 Zacznij od [koncepcji systemu](concept/index.html): potrzeby i wymagania, scenariusze pracy, dostępne rozwiązania, analiza opcji, architektura komunikacji, wykonalność, zagrożenia i plan prób. Dokumenty są po polsku, oddzielają wymagania od dowodów i wskazują otwarte decyzje.
 
-Specyfikacja stacji 0.5 składa się z pięciu rozdziałów, rozdziału o stanowisku odbiorczym, karty obsługi, instrukcji opiekuna i dyżurnego oraz BOM stacji. Parametry, kontrakty, warunki odbioru i kandydatów części zmienia się w tych plikach, a uzasadnienia i analizy w `docs/concept/`.
+Specyfikacja stacji 0.5 składa się z pięciu rozdziałów, protokołu USB, rozdziału o stanowisku odbiorczym, karty obsługi, instrukcji opiekuna i dyżurnego oraz BOM stacji. Parametry, kontrakty, warunki odbioru i kandydatów części zmienia się w tych plikach, a uzasadnienia i analizy w `docs/concept/`.
 
 | Rozdział | Zakres |
 |---|---|
 | [Projekt](spec/projekt.md) | Poziomy zestawu, połączenia, przygotowanie i użycie odebranego zestawu |
-| [Radio](spec/radio.md) | Profil LoRa pilotażu, profil P1 (wariant zapasowy), ramki, interfejs P1 w stosie, interfejs Reticulum przez USB (węzeł stanowiska), USB do laptopa, dwa wykonania stacji |
-| [Oprogramowanie](spec/oprogramowanie.md) | Oprogramowanie stacji i laptopa, wiadomości SA1, protokół USB, ekran i przyciski, pakiety offline |
-| [Elektronika](spec/elektronika.md) | Zasilanie stacji, wymagania płytki R02, zasilanie A/B, ładowarka i przetwornica; wstrzymane do decyzji po pilotażu |
+| [Radio](spec/radio.md) | Profil LoRa pilotażu, profil P1 (wariant zapasowy), ramki, dostęp do kanału, interfejs radiowy w stosie z ponowieniami, interfejs Reticulum przez USB (węzeł stanowiska), USB do laptopa, dwa wykonania stacji |
+| [Oprogramowanie](spec/oprogramowanie.md) | Oprogramowanie stacji i laptopa, wiadomości SA1, cykl życia zgłoszenia, trwałość i pamięć FRAM, czas, ekran i przyciski, tryby kryzysowe, pakiety offline i aktualizacja |
+| [Protokół USB](spec/protokol-usb.md) | Kontrakt laptop–stacja (`"usb":2`): polecenia i odpowiedzi, synchronizacja, transfery w częściach, PRZENIEŚ STACJĘ |
+| [Elektronika](spec/elektronika.md) | Stacja pilotażowa z gotowych modułów i jej tor zasilania, zanik zasilania przy zapisie, wymagania płytki R02 (wstrzymanej do decyzji po pilotażu), poziom 3 z kupionej stacji zasilania; własny blok zasilania poziomu 3 jako archiwum |
 | [Stanowisko odbiorcze](spec/stanowisko-osp.md) | Stanowisko odbiorcze: stacja jako węzeł transportu i obowiązkowy komputer z tożsamością odbiorcy (D19), aplikacja, panel, zestaw, awarie |
 | [Odbiór](spec/odbior.md) | Próby z grupami T1–T8, minimum pilotażu, warunki zaliczenia i niezrealizowane części |
 | [Karta obsługi](spec/karta.md) | Tekst dwustronnej karty obsługi stacji i pola formularza papierowego |
@@ -18,7 +19,7 @@ Specyfikacja stacji 0.5 składa się z pięciu rozdziałów, rozdziału o stanow
 | [Instrukcja opiekuna](spec/instrukcja.md) | Tematy obsługi spoza karty: adres, stany zgłoszenia, alarmy, cisza, energia, poziomy 2–3, przekazanie zmiany, koniec zdarzenia, bezpieczeństwo |
 | [BOM stacji](spec/bom-stacji.csv) | Wymagania minimalne części i kandydaci od dwóch producentów, ze stanem kwalifikacji |
 
-Po przeglądzie praktycznym 2026-10-08 (F99 w [przeglądzie](review.md)) pilotaż używa stacji pilotażowej z gotowej płytki ESP32-S3 z układem LoRa SX1262 ([profil LoRa](spec/radio.md#profil-lora-pilotażu)). Lista prób wymaganych przed pilotażem jest w sekcji [Minimum pilotażu](spec/odbior.md#minimum-pilotażu) odbioru; pozostałe wiersze odbioru dotyczą wydania. Wstrzymane do decyzji po pilotażu są: płytka R02 z torem RF i blokiem zasilania, profil P1 (wariant zapasowy), zasilanie poziomu 3 oraz pakiety START.
+Po przeglądzie praktycznym 2026-10-08 (F99 w [przeglądzie](review.md)) pilotaż używa stacji pilotażowej z gotowej płytki ESP32-S3 z układem LoRa SX1262 ([profil LoRa](spec/radio.md#profil-lora-pilotażu)). Lista prób wymaganych przed pilotażem jest w sekcji [Minimum pilotażu](spec/odbior.md#minimum-pilotażu) odbioru; pozostałe wiersze odbioru dotyczą wydania. Wstrzymane do decyzji po pilotażu są: płytka R02 z torem RF i blokiem zasilania, profil P1 (wariant zapasowy), poziomy 2–3 (poziom 3 na kupionej stacji zasilania) oraz pakiety START. Specyfikację dostosowano do koncepcji po F99 i F100 oraz do uwag audytu w F101.
 
 Próby stosu można też wykonać na [stanowisku deweloperskim](../hardware/dev-bench/README.md) z płytek rozwojowych i modułów producentów. Wstrzymany projekt płytki stacji ma [własny folder](../hardware/r02/README.md) z kolejnością prac i [lekcjami z poprzedniego kontrolera R01.3](../hardware/r02/lekcje.md), którego pliki są w historii Git. Wyniki obliczeń są w [modelu](../software/reference/README.md).
 
