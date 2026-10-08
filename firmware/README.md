@@ -6,7 +6,7 @@ Katalog zawiera oprogramowanie układowe stacji. Obecny stan to pierwsze kroki n
 
 Środowisko `bench-b` buduje ten sam program stacji dla [stanowiska B na N1](#stanowisko-b-na-płytce-n1-bench-b): ESP32-S3-DevKitC-1 z X-NUCLEO-S2868A2 (ST S2-LP) zamiast nRF52840 i CC1120. Wspólne są polecenia, polecenia pomiarowe, łącze P1, dziennik, magazyn, protokół USB laptop–stacja z dwoma interfejsami CDC, warstwa aplikacji, ekran i panel N1; różnią się warstwa MCU (`src/platform_*.cpp`), sterownik układu radiowego (`src/radio_console_*.cpp`, `src/*_link.cpp`) i [rejestry P1 dla S2-LP](#rejestry-profilu-p1-dla-s2-lp).
 
-Obrazy skompilowano (PlatformIO, ze stosem Reticulum; rdzeń Adafruit nRF52 1.7.0: `bench-a` 97 548 B RAM statycznej, 503 332 B flash, `bench-n1` 97 764 B RAM, 507 176 B flash, podział w [pomiarze RAM stosu](#pamięć-ram) i [przeglądzie rozmiaru](#rozmiar-i-wydajność); Arduino-ESP32 3.3.12: `bench-b` 144 536 B RAM z 327 680 B, 812 221 B flash). **Żadnego nie uruchomiono na sprzęcie**: odpowiedzi poleceń, numery pinów, działanie SPI z modułem, przyjęcie rejestrów przez układ, USB i łącze radiowe wymagają sprawdzenia na płytce według kroków niżej. Na hoście sprawdzone są tylko moduły bez Arduino, sterownik S2-LP i jego sterownik łącza z modelem układu, `measure::Bench` ze sterownikiem zastępczym, tablica rejestrów S2-LP i zgodność pinów `bench-b` z [połączeniami](../hardware/dev-bench/polaczenia.md) (`tests/`), a stos Reticulum z interfejsem P1 w programie na komputerze z emulatorem łącza wobec Reticulum w Pythonie ([próba zgodności](#próba-zgodności-z-reticulum)).
+Obrazy skompilowano (PlatformIO, ze stosem Reticulum; rdzeń Adafruit nRF52 1.7.0: `bench-a` 98 044 B RAM statycznej, 505 524 B flash, `bench-n1` 98 268 B RAM, 509 648 B flash, podział w [pomiarze RAM stosu](#pamięć-ram) i [przeglądzie rozmiaru](#rozmiar-i-wydajność); Arduino-ESP32 3.3.12: `bench-b` 145 048 B RAM z 327 680 B, 814 349 B flash). **Żadnego nie uruchomiono na sprzęcie**: odpowiedzi poleceń, numery pinów, działanie SPI z modułem, przyjęcie rejestrów przez układ, USB i łącze radiowe wymagają sprawdzenia na płytce według kroków niżej. Na hoście sprawdzone są tylko moduły bez Arduino, sterownik S2-LP i jego sterownik łącza z modelem układu, `measure::Bench` ze sterownikiem zastępczym, tablica rejestrów S2-LP i zgodność pinów `bench-b` z [połączeniami](../hardware/dev-bench/polaczenia.md) (`tests/`), a stos Reticulum z interfejsem P1 w programie na komputerze z emulatorem łącza wobec Reticulum w Pythonie ([próba zgodności](#próba-zgodności-z-reticulum)).
 
 ## Okablowanie stanowiska A
 
@@ -53,14 +53,14 @@ Diody LED1–4 płytki DK zachowują swoje role. Ustalenia dla N1:
 - **Ekran:** DISP w stanie niskim od startu (2,2 kΩ do masy na płytce), stan wysoki dopiero po poleceniu CLEAR w `display.begin()`.
 - **CISZA:** przełącznik działa na zmianę położenia po 50 ms stałego stanu; położenie przy starcie ustawia ciszę od razu. Zmiana trafia do dziennika (`silence on (switch)`) i jako zdarzenie `radio` do laptopa. Przełącznik ma pierwszeństwo ([specyfikacja](../docs/spec/oprogramowanie.md), „Cisza radiowa”): w położeniu „cisza” ani `SILENCE 0`, ani `silence` z laptopa nie wyłącza ciszy (`silence switch on`, `rejected` z `silence switch`). Włączenie ciszy z portu USB przy przełączniku w położeniu „praca” obowiązuje do następnego przełączenia.
 - **Tryb przygotowania:** przytrzymanie przycisku przygotowania przez 3 s przełącza tryb (włącza albo wyłącza; wyłączenie przerywa pomiary jak `PREP 0`), z krótkim sygnałem. Przycisk wciśnięty przy starcie nie przełącza trybu. `PREP` z potwierdzeniem OK zostaje jako zapasowe.
-- **Dioda alarmu** (według [zasad alarmów](../docs/spec/oprogramowanie.md)): świeci, dopóki trwa przyczyna alarmu, także po potwierdzeniu OK, i w ciszy radiowej. Przyczynę (zgłoszenie po progu bez potwierdzenia od odbiorcy albo pilność 2 bez odczytu, niezależnie od potwierdzenia OK) sprawdza `Station::alarmCause` co sekundę; dioda gaśnie, gdy przyjdzie potwierdzenie albo odczyt, albo zgłoszenie zostanie anulowane lub zastąpione. **Brzęczyk** (2048 Hz z `tone()`, PWM2; stały stan wysoki pobierałby około 75 mA z 5 V): na ekranie alarmu 200 ms co 2 s do potwierdzenia OK. Cisza radiowa nie daje sygnału, także przy włączeniu; zostają tekst ekranu i dioda.
+- **Dioda alarmu** (według [zasad alarmów](../docs/spec/oprogramowanie.md), `src/annunciator.cpp`): miga krótkimi błyskami (50 ms co 5 s, 1% czasu jak w modelu energii), dopóki są nieprzeczytane wiadomości, trwa przyczyna alarmu (także po potwierdzeniu OK) albo cisza radiowa; błysk trwa co najmniej 50 ms także przy wolnym obiegu pętli. Przyczynę (zgłoszenie po progu bez potwierdzenia od odbiorcy albo pilność 2 bez odczytu, niezależnie od potwierdzenia OK) sprawdza `Station::alarmCause` co sekundę; dioda gaśnie, gdy przyjdzie potwierdzenie albo odczyt, albo zgłoszenie zostanie anulowane lub zastąpione. **Brzęczyk** (2048 Hz z `tone()`, PWM2; stały stan wysoki pobierałby około 75 mA z 5 V): na ekranie alarmu 200 ms co 2 s do potwierdzenia OK; nowa wiadomość (przyrost nieprzeczytanych, bez sygnału za wiadomości sprzed startu) 100 ms, chyba że opiekun wybrał WYCISZ DŹWIĘK, które alarmów nie wycisza. Cisza radiowa nie daje sygnału, także przy włączeniu; zostają tekst ekranu i dioda. Przypomnienie `wymien_ogniwa` co 15 min przyjdzie z pomiarem ogniw (R02).
 
 Polecenia diagnostyczne do kroków A3–A4 [uruchomienia](../hardware/dev-bench/uruchomienie.md#stanowisko-a) (tylko `bench-n1`):
 
 | Polecenie | Odpowiedź |
 |---|---|
 | `BTN` | cztery przyciski oraz `silence_switch` i `prep_button` (true = linia zwarta do masy), stan `silence` i `prep`, `alarm_led` |
-| `LED 5 <0\|1>` | dioda alarmu; obowiązuje do następnej zmiany alarmu (ekran, przyczyna) albo ciszy |
+| `LED 5 <0\|1>` | dioda alarmu; obowiązuje (bez migania) do następnej zmiany powodu migania: alarm, cisza, nieprzeczytane |
 | `BUZZ [<ms>] [<hz>]` | brzęczyk przez `ms` (domyślnie 500, do 5000; 0 przerywa) z częstotliwością `hz` (100–10 000, domyślnie 2048) |
 | `VTEST` | `vtest_mv` (napięcie na zacisku J12 = napięcie pinu × 6), `pin_mv`, `raw`: średnia 16 próbek SAADC, 12 bitów, pełna skala 3,6 V; `ain` i `divider` (6) |
 | `DISPLAY <hz>` | zegar SPI ekranu 125 000–2 000 000 Hz do restartu, potem odpowiedź jak `DISPLAY` z polem `spi_hz` |
@@ -243,7 +243,7 @@ Port USB nRF (J3, nie port J-Link J2) zgłasza się jako urządzenie z dwoma int
 | `DISPLAY` | EXTCOMIN: licznik RTC2 i stan pinu, tryb VCOM, liczba odświeżeń, numery pinów, zegar SPI ekranu `spi_hz` |
 | `VCOM <0\|1>` | zapasowe odwracanie VCOM bitem w poleceniach ekranu (pin EMD ekranu w stanie niskim) |
 | `REBOOT` | restart programowy; ekran i język wracają jak po restarcie przez watchdog |
-| `STORE` | magazyn FRAM: konfiguracja (rola, adres, OSP, frazy), kolejka, skrzynka, zdarzenia bez `ack`, liczniki protokołu |
+| `STORE` | magazyn FRAM: konfiguracja (rola, adres wybranego obiektu, `addresses` i `selected` listy obiektów, OSP, frazy), kolejka, skrzynka, zdarzenia bez `ack`, liczniki protokołu |
 | `USB <wiersz JSON>` | wiersz protokołu danych podany przez port diagnostyki (próby z jednym terminalem); odpowiedź idzie na port danych, a gdy jest zamknięty, na diagnostykę |
 | `APP` | warstwa aplikacji: intencja w drodze, liczniki nadanych, dostarczonych (dowód transportowy), nieudanych, odmów stosu (`refused`), odebranych, odrzuconych, duplikatów, następna intencja do nadania |
 | `LINK <0\|1>` | zatrzymanie i wznowienie nadawania intencji z kolejki przez warstwę aplikacji (próby ręczne `P1TX` przy zatrzymanym); ruch własny stosu (ogłoszenia, dowody, odpowiedzi o trasę) idzie dalej |
@@ -302,9 +302,9 @@ Kod w `src/journal.cpp` (bez zależności od Arduino, sprawdzany na komputerze z
 |---|---|---|---|
 | dług ciszy | 0x0000 | 32 × 16 B | numer, dług [ms], czas pracy przy zapisie, CRC-16, znacznik zatwierdzenia |
 | zegar | 0x0200 | 32 × 16 B | numer, czas pracy [s], liczba restartów, CRC-16, znacznik zatwierdzenia |
-| ustawienia ekranu | 0x0400 | 32 × 16 B | numer, język + 1 (0 = niewybrany), znaczniki (wyciszenie dźwięku), CRC-16, znacznik zatwierdzenia |
+| ustawienia ekranu | 0x0400 | 32 × 16 B | numer, język + 1 (0 = niewybrany), znaczniki (wyciszenie dźwięku, obiekt wybrany z listy adresów), CRC-16, znacznik zatwierdzenia |
 | zdarzenia | 0x1000 | 512 × 64 B (32 KiB) | numer, czas pracy, tekst do 53 znaków, CRC-16 |
-| konfiguracja (`src/store.cpp`) | 0x9000 | 2 × 4 KiB | rola, adres, skróty OSP, liczba stacji, 11 fraz × 3 języki, IFAC; nowszy z dwóch slotów |
+| konfiguracja (`src/store.cpp`) | 0x9000 | 2 × 4 KiB | rola, adres (pierwszy obiekt), skróty OSP, liczba stacji, 11 fraz × 3 języki, IFAC, do 7 dalszych obiektów listy adresów; nowszy z dwóch slotów |
 | numery rekordów | 0xB000 | 2 × 32 B | numer zapisu, najwyższe numery kolejki, skrzynki i zdarzeń sprzed ZAMKNIJ ZDARZENIE; nowszy z dwóch slotów |
 | kolejka wychodząca | 0x10000 | 128 × 512 B | intencja: typ, klucz (odbiorca, id, revision, event), treść SA1 kanoniczna; część zmienna w dwóch kopiach zapisywanych na zmianę (numer pokolenia): stan, próby, następna próba, najwyższy event |
 | skrzynka odbiorcza | 0x20000 | 128 × 512 B | wiadomość od OSP albo (rola OSP) `incoming`: źródło, klucz, treść; część zmienna: przeczytana |
@@ -354,14 +354,14 @@ Przepływy ekranów są w modelu (`src/ui.cpp`), a dane i działania dostarcza m
 
 | Ekran | Działanie |
 |---|---|
-| start | po wyborze języka `adres_kontrola` z adresem z konfiguracji (WSTECZ = NIE albo brak adresu: `adres_brak`), potem propozycja TEST startowego: OK planuje TEST z losowym opóźnieniem w oknie 50 s × liczba stacji z `configure` (bez niej 15 min) i pokazuje `test_zaplanowany`; WSTECZ pomija |
+| start | po wyborze języka przy liście obiektów najpierw lista do wyboru (GÓRA, DÓŁ, OK; WSTECZ = żaden: `adres_brak`), potem `adres_kontrola` z adresem wybranego obiektu (WSTECZ = NIE: przy liście powrót do listy, przy jednym adresie albo braku adresu `adres_brak`); wybrany obiekt idzie do nowych zgłoszeń i TEST z przycisków i laptopa, rewizja zachowuje lokalizację zgłoszenia, a wybór przetrwa restart (rekord ustawień); potem propozycja TEST startowego: OK planuje TEST z losowym opóźnieniem w oknie 50 s × liczba stacji z `configure` (bez niej 15 min) i pokazuje `test_zaplanowany`; WSTECZ pomija |
 | ZGŁOSZENIE | kategoria 0–9 → liczba osób z listy 1, 2, 5, 10, 20, 50, 100, INNA (wpis setek, dziesiątek i jednostek; przytrzymanie przycisku powtarza zmianę co 150 ms; domyślnie ostatnio użyta wartość) → pilność bez wartości domyślnej (`pilnosc_2` wymaga `pilnosc_2_potw`) → fraza z konfiguracji albo domyślna lista (kategoria 9 bez pozycji „brak”) → podsumowanie z `podsumowanie_klawisze` → wynik: `zapisane_w_stacji` albo `zapisane_w_ciszy` z `zapisz_numer`, `kolejka_pelna`, `blad_pamieci`, `adres_brak`. WSTECZ cofa o krok; szkic zostaje po powrocie do ekranu głównego. Zgłoszenie dostaje `location` z adresu konfiguracji, id z generatora sprzętowego losowane ponownie, dopóki krótki numer (pierwsze 16 bitów modulo 10 000) jest zajęty w kolejce; `submit` z laptopa o zajętym numerze dostaje `rejected` z `numer_zajety` |
 | WIADOMOŚCI | lista najnowszych najpierw: własne zgłoszenia i TEST w najnowszej rewizji (`NNNN` i kategoria), odpowiedzi i komunikaty (`*` przed nieprzeczytaną treścią). Własne: etap (`zapisane_w_stacji`, `wysylanie` z próbą i czasem do następnej, `zapisane_w_ciszy`, `stan_1`…`stan_6`, ANULUJ WYSYŁKĘ po anulowaniu), kategoria, liczba osób i pilność, fraza w wybranym języku, `zapisz_numer`; OK otwiera ZMIEŃ LICZBĘ OSÓB, ZMIEŃ PILNOŚĆ, POTRZEBA USTAŁA (nowa rewizja tego samego id; nienadana starsza rewizja zostaje oznaczona jako zastąpiona) i ANULUJ WYSYŁKĘ (tylko przed `stan_1`; wpis w dzienniku). Odebrane: `odpowiedzi_po_polsku` (UK, EN), treść, czas od odbioru, dla komunikatu `stopka_komunikatu`; otwarcie oznacza jako przeczytane |
 | TEST | `test_zaplanowany` (WSTECZ anuluje), `test_wyslany`, stan po RECEIVED/STATUS albo `test_wstrzymany`; OK otwiera menu TEST (nadanie od razu) i WSTRZYMAJ (anuluje czekający TEST i blokuje nadawanie TEST) / WZNÓW |
 | STAN | wiersze stanu z kursorem, na końcu PRZEKAZANIE ZMIANY (otwarte zgłoszenia z etapem, nieprzeczytane, cisza, zasilanie) i USŁUGI: OGŁOŚ ADRES (ogłoszenie stosu jak `ANNOUNCE`, wynik `adres_ogloszony`, w ciszy radiowej ogłoszenie czeka na jej koniec; bez działającego stosu `blad_pamieci`), WYCISZ DŹWIĘK / WŁĄCZ DŹWIĘK (znacznik w pierścieniu ustawień FRAM, przetrwa restart; `dzwiek_wyciszony` w STAN, PRZEKAZANIE ZMIANY i w wierszu 4 ekranu głównego przy pustej kolejce; brzęczyka jeszcze nie ma), ODBIORCA ZAPASOWY (`odbiorca_zapasowy`; nowe intencje i niepotwierdzone intencje do głównej OSP idą do zapasowej tożsamości z konfiguracji, a czekające próby wracają od razu) i ZNISZCZ DANE (`zniszcz_ostrzezenie`; usuwa konfigurację, kolejkę, skrzynkę, zdarzenia, klucze odbioru, dziennik zdarzeń oraz tożsamość i tablice stosu, zostawia dług ciszy, zegar i ustawienia ekranu); dwie ostatnie wymagają sekwencji GÓRA, DÓŁ, GÓRA, OK, inny przycisk zaczyna od nowa |
 | alarm | `brak_potwierdzenia` po 15 min / 1 h / 6 h od zapisu według pilności (TEST: 30 min od nadania) i `brak_odczytu` 30 min po `stan_1` dla pilności 2; zajmuje cały ekran, OK potwierdza (alarm tego zgłoszenia nie wraca), `zapisz_numer` wskazuje zgłoszenie |
 
-Braki tego kroku: brzęczyk, lista adresów obiektów, powrót ekranu alarmu po wybudzeniu (bez podświetlenia).
+Braki tego kroku: przypomnienie `wymien_ogniwa` (bez pomiaru ogniw), powrót ekranu alarmu po wybudzeniu (bez podświetlenia).
 
 ## Audyt kodu stanowiska
 
@@ -400,7 +400,7 @@ Kontrakt: [specyfikacja oprogramowania](../docs/spec/oprogramowanie.md#protokó�
 | `ack` z `cursor` albo `record` | potwierdzenie zdarzeń do numeru albo jednego; po potwierdzeniu ostatnio wysłanego zdarzenia następne zaległe idzie od razu, bez czekania 5 s |
 | `test` | TEST z konfiguracji (kategoria 9, 1 osoba, pilność 0, adres stacji, „test”), id z generatora sprzętowego; `stored` |
 | `silence` z `on` | potwierdzenie przyciskiem OK w ciągu 30 s, potem `ok`; brak potwierdzenia: `rejected` i wpis w dzienniku; `on: false` przy przełączniku CISZA w położeniu „cisza” (N1): `rejected` z `silence switch` bez czekania na OK |
-| `configure` z `address`, `role`, `osp`, `osp_backup`, `stations`, `phrases` (tablica `[PL, UK, EN]`), `ifac` | tylko w trybie przygotowania; kontrola najgorszego zgłoszenia z przycisków jak `check_button_configuration` (`worst_request` w odpowiedzi); zapis do FRAM, w odpowiedzi `config_seq` (numer zapisu konfiguracji) |
+| `configure` z `address` albo `addresses` (lista 1–8 obiektów, pierwszy jak `address`; `address` zastępuje listę), `role`, `osp`, `osp_backup`, `stations`, `phrases` (tablica `[PL, UK, EN]`), `ifac` | tylko w trybie przygotowania; kontrola najgorszego zgłoszenia z przycisków jak `check_button_configuration` (`worst_request` w odpowiedzi); zapis do FRAM, w odpowiedzi `config_seq` (numer zapisu konfiguracji) |
 | `close` | ZAMKNIJ ZDARZENIE: usuwa kolejkę, skrzynkę i zdarzenia, zachowuje najwyższy event na id; numery rekordów rosną dalej od najwyższych sprzed zamknięcia |
 | `destroy` | potwierdzenie przyciskiem OK, potem usunięcie konfiguracji i wszystkich rekordów, rekordu tożsamości i tablic stosu w FRAM; stos stoi do restartu, po nim nowa tożsamość |
 | `announce` | ogłoszenie adresu stacji (jak `ANNOUNCE`); `ok` z `"announce":true`, bez stosu `rejected` z `unsupported` |
@@ -449,6 +449,7 @@ Licencje zależności są zgodne z MIT kodu WICI i nie dodają ograniczeń użyc
 | `0001-pool-without-full-walk` | `pool_malloc` bez `tlsf_walk_pool` i `tlsf_check` przy każdym przydziale (zostają z `-DRNS_DEBUG_HEAP`); liczniki zajętości i szczytu puli (bloki z nagłówkami TLSF i struktura sterująca) | przegląd całej puli przy każdym `new` czynił przetwarzanie ogłoszenia kwadratowym; liczniki do pomiaru RAM |
 | `0002-short-packet-hashes` | z `-DRNS_SHORT_PACKET_HASHES` lista skrótów pakietów to `pkthash::ShortHashList` | 4096 × 8 B w RAM (specyfikacja, „Pojemności stosu”) zamiast pełnych skrótów w kontenerach |
 | `0003-build-without-neighbor-probing` | licznik sond tylko z `RNS_NEIGHBOR_PROBING` | kompilacja z wyłączonymi sondami sąsiadów |
+| microStore `0001-keep-pinned-keys` | limit liczby rekordów (`max_recs`) pomija klucze przypięte przez `microStore::pinned_key` (`src/rns_node.cpp`: skróty celów OSP głównej i zapasowej z konfiguracji) | specyfikacja, „Pojemności stosu”: wpisów OSP nigdy się nie usuwa; wygaśnięcie TTL i jawne usunięcie działają dalej |
 
 Kompilacja: C++17 z wyjątkami i RTTI (wymóg portu); pliki z `.pio/stack` z `-w` (ostrzeżenia zależności nie są ostrzeżeniami WICI; kod WICI kompiluje się z `-Wall` bez ostrzeżeń) i z `-Os`, bo rdzeń Adafruit kompiluje z `-Ofast`, przy którym stos zajmował 254 KB flash więcej (rozwinięte pętle Curve25519 i kontenerów). Wpływu `-Os` na czas podpisu i weryfikacji ogłoszenia na nRF52840 nie zmierzono (lista prób na sprzęcie niżej).
 
@@ -486,7 +487,7 @@ ZNISZCZ DANE (`destroy` przez USB albo z menu USŁUGI) kasuje oba sloty tożsamo
 | tablica ogłoszeń do retransmisji: 16 wpisów (port: 100, Reticulum: bez limitu) | mniejszy szczyt RAM (−16 KB); przy limicie 2% więcej retransmisji i tak nie wyjdzie |
 | sondy sąsiadów portu wyłączone | brak dodatkowego ruchu; funkcja nie istnieje w Reticulum |
 | limit ogłoszeń w interfejsie, nie w transporcie | zachowanie jak `announce_cap` dla ogłoszeń przekazywanych; własne ogłoszenia i odpowiedzi o trasę bez limitu jak w Reticulum |
-| usuwanie wpisów tras | port usuwa najstarsze po przekroczeniu `RNS_PATH_TABLE_MAX`; ochrona wpisu OSP i zaufanych stacji (specyfikacja) nie jest zaimplementowana |
+| usuwanie wpisów tras | port ustawiał `RNS_PATH_TABLE_MAX` tylko dla dawnej tablicy w RAM (`cull_path_table`), a magazyn tras w FRAM nie miał limitu; `rns_node.cpp` ustawia go przez `Transport::path_table_maxsize`. Przy pełnej tablicy (256 tras, 256 znanych tożsamości) odpada najstarszy wpis poza celami OSP z konfiguracji (łata microStore 0001; [próba zgodności](#próba-zgodności-z-reticulum), krok 7). Ochrona zaufanych stacji przyjdzie z kartami (LXMF) |
 | skróty 8 B | fałszywy duplikat z prawdopodobieństwem rzędu 4096 / 2^64 na pakiet |
 | zegar stosu | port odrzuca przesunięcie czasu powyżej 2^32 ms (około 49 dni pracy); do sprawdzenia przed pilotażem |
 
@@ -502,7 +503,7 @@ python3 -m venv .venv-rns && .venv-rns/bin/pip install "git+https://github.com/m
 cd firmware && ../.venv-pio/bin/pio run -e host && ../.venv-rns/bin/python tools/rns_interop.py --program .pio/build/host/program --fill 256
 ```
 
-Wynik (2026-10-08, ostatni przebieg na kodzie z tego commitu): wszystkie 15 sprawdzeń zaliczone.
+Wynik (2026-10-08, ostatni przebieg na kodzie z tego commitu, z `--fill 256`): wszystkie 17 sprawdzeń zaliczone.
 
 | Sprawdzenie | Wynik |
 |---|---|
@@ -512,8 +513,9 @@ Wynik (2026-10-08, ostatni przebieg na kodzie z tego commitu): wszystkie 15 spra
 | pakiet okazjonalny Python → stacja, dowód w Pythonie | tak; RTT dowodu 4,9 s |
 | pakiet odrzucony przez warstwę aplikacji bez dowodu | tak (`PacketReceipt` w Pythonie kończy się `FAILED`) |
 | datagram bez IFAC i z błędnym IFAC odrzucony przed stosem | tak, oba policzone |
-| 256 dodatkowych ogłoszeń: tablica tras pełna (257 celów), lista skrótów 4096 | tak |
-| po restarcie programu z tym samym plikiem FRAM: ta sama tożsamość, trasa i tożsamość celu z FRAM (257 tras), pakiet bez nowego ogłoszenia, dowód | tak |
+| 256 dodatkowych ogłoszeń przy celu Pythona przypiętym jako OSP: tablica tras pełna (256 celów, limit `RNS_PATH_TABLE_MAX`), lista skrótów 4096 | tak |
+| po restarcie programu z tym samym plikiem FRAM: ta sama tożsamość, trasa i tożsamość celu OSP z FRAM, tablica w limicie (256 tras), pakiet bez nowego ogłoszenia, dowód | tak |
+| krok 7, nowa pamięć FRAM i tablice po 6 wpisów: cel OSP i 9 dalszych ogłoszeń; odpada najstarszy cel bez ochrony, OSP zostaje (trasa i tożsamość) | tak; bez przypięcia OSP odpada (próba kontrolna) |
 
 Domyślny limit potwierdzenia w Reticulum dla jednego skoku przez szybki interfejs wynosi 12 s; dowód po datagramie 600 B przez P1 może przyjść dopiero po długu ciszy nadawcy i odbiorcy (16,3 s każdy), więc nadawca w Pythonie musi ustawić dłuższy limit (próba: 120 s). Stacja liczy limit według wzoru z [interfejsu P1](../docs/spec/radio.md#interfejs-p1-w-stosie-reticulum) (`rnsnode::send`): co najmniej 60 s, więcej przy wielu skokach, długu i pełnej kolejce. To potwierdza uwagę F02 o limitach czasu po stronie OSP i laptopa.
 
@@ -529,35 +531,35 @@ Wymagają sprzętu (stanowisko A, dwie płytki albo płytka i Reticulum w Python
 
 ### Pamięć RAM
 
-Pomiar dla obrazu `bench-a` (nRF52840, 256 KiB RAM) przy pojemnościach ze specyfikacji: 257 celów w tablicy tras i znanych tożsamości (256 ogłoszeń z Reticulum w Pythonie i jego własne), 4096 skrótów na liście skrótów pakietów. RAM statyczna z kompilacji (`arm-none-eabi-size`), stosy zadań z rdzenia Adafruit i `main.cpp`, pula stosu z liczników łaty 0001 (bloki z nagłówkami TLSF i struktura sterująca). Pulę zmierzono w programie węzła zbudowanym jako 32-bitowy (i386, te same rozmiary typów co ARM) przez `tools/rns_ram32.py`, który odtwarza datagramy nagrane w próbie zgodności (`rns_interop.py --fill 256 --capture`); program 64-bitowy na komputerze daje tylko górne ograniczenie (166 904 B szczytu, 154 792 B w stanie ustalonym).
+Pomiar dla obrazu `bench-a` (nRF52840, 256 KiB RAM) przy pojemnościach ze specyfikacji: 257 celów w tablicy tras i znanych tożsamości (256 ogłoszeń z Reticulum w Pythonie i jego własne; pomiar sprzed limitu 256 wpisów, więc z zapasem jednego celu), 4096 skrótów na liście skrótów pakietów. RAM statyczna z kompilacji (`arm-none-eabi-size`), stosy zadań z rdzenia Adafruit i `main.cpp`, pula stosu z liczników łaty 0001 (bloki z nagłówkami TLSF i struktura sterująca). Pulę zmierzono w programie węzła zbudowanym jako 32-bitowy (i386, te same rozmiary typów co ARM) przez `tools/rns_ram32.py`, który odtwarza datagramy nagrane w próbie zgodności (`rns_interop.py --fill 256 --capture`); program 64-bitowy na komputerze daje tylko górne ograniczenie (166 904 B szczytu, 154 792 B w stanie ustalonym).
 
 | Pozycja | B | Uwagi |
 |---|---|---|
 | RAM nRF52840 | 262 144 | |
 | obszar SoftDevice S140 | 24 576 | 0x20000000–0x20005FFF zarezerwowane przez bootloader i skrypt linkera, choć Bluetooth nie działa |
 | RAM aplikacji | 237 568 | PlatformIO podaje 248 832 B z opisu płytki; skrypt linkera daje mniej |
-| statyczna (`.data`, `.bss`, `.noinit`) | 97 548 | bez stosu 51 636; stos dokłada 45 912 B, w tym lista skrótów 4096 × 8 B (32 784), kopia tablicy przydziału i skrótów nazw systemu plików FRAM (6 296), obiekty magazynów (1 456) |
+| statyczna (`.data`, `.bss`, `.noinit`) | 98 044 | bez stosu 52 132 (w tym konfiguracja z listą 8 obiektów); stos dokłada 45 912 B, w tym lista skrótów 4096 × 8 B (32 784), kopia tablicy przydziału i skrótów nazw systemu plików FRAM (6 296), obiekty magazynów (1 456) |
 | stos główny (MSP) | 2 048 | skrypt linkera |
 | stosy zadań FreeRTOS | 24 784 | stacja 16 384, pętla rdzenia 4 096, wywołania zwrotne 3 072, USB 800, bloki zadań około 430 |
 | pula stosu na starcie | 17 176 | puste tablice; w tym struktura sterująca TLSF, kolejka i lista ogłoszeń interfejsu P1 |
 | pula stosu, stan ustalony przy pełnych tablicach | 77 164 | 233 B na cel w RAM: indeks magazynów microStore i obiekty kontenerów stosu |
 | pula stosu, szczyt przy pełnych tablicach | 100 620 | przetwarzanie 256 ogłoszeń w tempie 3 na sekundę; z tablicą ogłoszeń 100 wpisów (domyślna portu) szczyt wynosił 116 572 B i nie mieścił się w RAM, stąd `RNS_ANNOUNCE_TABLE_MAX=16` |
-| pula skonfigurowana (`RNS_HEAP_POOL_BUFFER_SIZE`) | 106 496 | szczyt i 6%; zostaje 6 692 B sterty na inne przydziały (TinyUSB, newlib), do sprawdzenia na płytce |
+| pula skonfigurowana (`RNS_HEAP_POOL_BUFFER_SIZE`) | 106 496 | szczyt i 6%; zostaje 6 196 B sterty na inne przydziały (TinyUSB, newlib), do sprawdzenia na płytce |
 
-**Zapas** (RAM niezajęty wobec 256 KiB, obszar SoftDevice liczony jako zajęty): 237 568 − 97 548 − 2 048 − 24 784 = 113 188 B zostaje na pulę i resztę sterty. Przy szczycie puli wolne jest 12 568 B, czyli **4,8%**; w stanie ustalonym 36 024 B, czyli **13,7%**. Próg D14 to 30% (78 643 B). Brakuje 66 075 B w szczycie i 42 619 B w stanie ustalonym, jeszcze bez LXMF.
+**Zapas** (RAM niezajęty wobec 256 KiB, obszar SoftDevice liczony jako zajęty): 237 568 − 98 044 − 2 048 − 24 784 = 112 692 B zostaje na pulę i resztę sterty. Przy szczycie puli wolne jest 12 072 B, czyli **4,6%**; w stanie ustalonym 35 528 B, czyli **13,6%**. Próg D14 to 30% (78 643 B). Brakuje 66 571 B w szczycie i 43 115 B w stanie ustalonym, jeszcze bez LXMF.
 
 **Wniosek dla D14.** Obraz stacji ze stosem w tym kształcie nie spełnia warunku zapasu RAM ≥30% na nRF52840. Podział ze specyfikacji (pełne wpisy w FRAM, w RAM indeks 256 × 16 B) jest spełniony tylko co do wpisów: indeks magazynów portu (mapa haszująca z kluczem jako wektor i położeniem 16 B, dwa magazyny) i obiekty kontenerów stosu dają 233 B na cel zamiast około 16 B, czyli około 60 KB przy 256 celach. Zejście do 30% wymagałoby naraz zwartego indeksu w porcie (tablica posortowanych skrótów i położeń, około 6 KB; zmiana microStore i Transport, czyli głęboka zmiana portu) i odchudzenia obrazu stacji o około 20 KB ([odłożone zmiany](#rozmiar-i-wydajność): pas ekranu −9,6 KB, frazy i indeksy magazynu −7,3 KB, lista konsoli −1 KB), a LXMF dołoży router, bufor wiadomości i własne tablice. Według [specyfikacji](../docs/spec/oprogramowanie.md#trwałość-i-potwierdzenia) („Pojemności stosu”) taki wynik jest przesłanką za MCU z większą pamięcią w wykonaniu A albo za wykonaniem B (ESP32-S3, 512 KiB SRAM). Pomiar na płytce (polecenie `RNS`) ma potwierdzić liczby z odtworzenia.
 
 System plików FRAM przy pełnych tablicach: 135 680 B z 195 456 B (69%), 8 plików.
 
-Flash: 503 332 B z 815 104 B (61,8%); stos dokłada około 324 KB, w tym Curve25519 i Ed25519, kontenery C++17 z wyjątkami (tablice odwijania `.ARM.extab` i `.ARM.exidx` 27 KB), MsgPack i ArduinoJson.
+Flash: 505 524 B z 815 104 B (62,0%); stos dokłada około 324 KB, w tym Curve25519 i Ed25519, kontenery C++17 z wyjątkami (tablice odwijania `.ARM.extab` i `.ARM.exidx` 27 KB), MsgPack i ArduinoJson.
 
 ### Co zostaje na etap LXMF
 
 - LXMF na stacji: wiadomość jako jeden pakiet okazjonalny (D01) z podpisem nadawcy i adresem LXMF zamiast koperty `["WICI",1,od,do,…]`; odstęp ponowienia LXMF co najmniej max(60 s, 2 × skoki × 13 × czas TX największego datagramu + dług ciszy + czas opróżnienia kolejki P1) i najwyżej 2 próby LXMF na ponowienie intencji ([interfejs P1](../docs/spec/radio.md#interfejs-p1-w-stosie-reticulum), F02); 2 własne wiadomości w drodze (dziś 1).
 - Flaga pojedynczego zgłoszenia wyjętego spod ciszy radiowej w interfejsie P1 (dziś cisza wstrzymuje całą kolejkę).
 - Zaufanie po kluczu nadawcy (OSP, karty stacji) zamiast adresu w treści; obsługa SOURCE_UNKNOWN po stronie OSP.
-- Ochrona wpisów OSP i zaufanych stacji przed usunięciem z tablicy tras; rozpoznanie ruchu od OSP po nadawcy (dziś rezerwa liczy go jako pozostały).
+- Ochrona wpisów zaufanych stacji przed usunięciem z tablicy tras (karty); rozpoznanie ruchu od OSP po nadawcy (dziś rezerwa liczy go jako pozostały).
 - Szyfrowanie rekordów FRAM (AEAD z kluczem w chronionej pamięci MCU) razem z kluczem tożsamości.
 - Pamięć: LXMF dokłada router i bufor wiadomości; budżet z tabeli wyżej.
 
@@ -612,4 +614,4 @@ Czasy, które nie wymagają zmian: alarmy sprawdzane co 1 s w indeksie 128 wpis�
    - przesunięcie RSSI modułu (wpływa na próg CCA −100 dBm i `rssi_avg_dbm`), ustawienia AFC, AGC i odtwarzania zegara symboli przy pomiarze czułości (T4);
    - przegląd tablicy S2-LP w ST STSW-S2LP-DK (S2-LP DK GUI) dla P1, gdy narzędzie będzie dostępne; pomiar mocy i dobór PA_POWER oraz SMPS;
    - własne nazwy interfejsów CDC („WICI diagnostyka”, „WICI dane”) wymagają zmiany w rdzeniu Arduino-ESP32 (nazwy są stałe w `USBCDC.cpp`) albo własnych deskryptorów TinyUSB.
-5. Dioda alarmu: na stanowisku świeci stale (1 mA); specyfikacja wymaga krótkich błysków (około 1% czasu) i sygnalizacji nowej wiadomości do odczytu, co wchodzi razem ze skrzynką odczytów i stosem.
+5. Dioda alarmu i brzęczyk na N1: jasność błysku 50 ms przy 1 mA i głośność sygnałów do oceny na płytce; przypomnienie `wymien_ogniwa` z pomiarem ogniw (R02).

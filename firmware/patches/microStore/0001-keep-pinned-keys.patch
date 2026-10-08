@@ -1,0 +1,55 @@
+Łata WICI do microStore 0f28567 (Apache-2.0, jak plik, który zmienia).
+
+Limit liczby rekordów (max_recs) usuwa najstarszy wpis. Specyfikacja stacji wymaga, żeby wpisów
+tożsamości głównej i zapasowej OSP nigdy nie usuwać ze względu na pojemność (oprogramowanie.md,
+„Pojemności stosu”), więc usuwanie pomija klucze, które aplikacja uznaje za przypięte
+(microStore::pinned_key, definicja w src/rns_node.cpp). Wygaśnięcie TTL i jawne usunięcie
+działają jak dotąd.
+
+diff --git a/include/microStore/FileStore.h b/include/microStore/FileStore.h
+--- a/include/microStore/FileStore.h
++++ b/include/microStore/FileStore.h
+@@ -29,6 +29,11 @@
+ 
+ namespace microStore {
+ 
++// WICI: keys never evicted to enforce max_recs (the station keeps the path and identity of its
++// OSP whatever the table size; WICI docs/spec/oprogramowanie.md, "Pojemności stosu"). Defined by
++// the application; TTL expiry and explicit removal still apply.
++bool pinned_key(const uint8_t* key, size_t key_len);
++
+ /* ---------------- CONFIG ---------------- */
+ 
+ #ifndef USTORE_DEFAULT_SEGMENT_COUNT
+@@ -990,22 +995,26 @@
+ 		size_t to_evict = _index.size() - target;
+ 
+ 		if (to_evict == 1) {
+-			// Fast path: single linear scan for the oldest entry.
+-			auto oldest = _index.begin();
++			// Fast path: single linear scan for the oldest entry (WICI: pinned keys skipped).
++			auto oldest = _index.end();
+ 			for (auto it = _index.begin(); it != _index.end(); ++it) {
+-				if (it->second.timestamp < oldest->second.timestamp) oldest = it;
++				if (pinned_key(it->first.data(), it->first.size())) continue;
++				if (oldest == _index.end() || it->second.timestamp < oldest->second.timestamp) oldest = it;
+ 			}
++			if (oldest == _index.end()) return 0;
+ 			_index.erase(oldest);
+ 		}
+ 		else {
+-			// Bulk path: collect (timestamp, key) pairs, partial-sort, then erase.
++			// Bulk path: collect (timestamp, key) pairs, partial-sort, then erase (WICI: pinned keys skipped).
+ 			using KTSPair = std::pair<uint32_t, KeyType>;
+ 			using KTSAlloc = rebind_alloc<KTSPair>;
+ 			KTSAlloc kts_alloc(_alloc);
+ 			std::vector<KTSPair, KTSAlloc> candidates(kts_alloc);
+ 			candidates.reserve(_index.size());
+ 			for (auto& kv : _index)
+-				candidates.push_back(std::make_pair(kv.second.timestamp, kv.first));
++				if (!pinned_key(kv.first.data(), kv.first.size()))
++					candidates.push_back(std::make_pair(kv.second.timestamp, kv.first));
++			if (to_evict > candidates.size()) to_evict = candidates.size();
+ 			std::partial_sort(candidates.begin(), candidates.begin() + (long)to_evict, candidates.end(),
+ 				[](const KTSPair& a, const KTSPair& b){ return a.first < b.first; });
+ 			for (size_t i = 0; i < to_evict; i++) {

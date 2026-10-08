@@ -307,15 +307,19 @@ bool Station::handleMessage(const uint8_t from[store::HASH], const sa1::Message&
 }
 
 Create Station::putIntent(sa1::Message& m, uint8_t type, const uint8_t id[store::HASH], uint32_t delayS, uint32_t& seq) {
-    const store::Config& c = store_.config();
-    if (!c.address[0]) return Create::NO_ADDRESS;
+    // Nowe zgłoszenie dostaje adres wybranego obiektu; rewizja zachowuje lokalizację zgłoszenia
+    // (także wpisaną w panelu laptopa albo obiekt wybrany przed restartem).
+    if (!m.location[0]) {
+        if (!store_.address()[0]) return Create::NO_ADDRESS;
+        strncpy(m.location, store_.address(), sa1::LOCATION_MAX);
+        m.location[sa1::LOCATION_MAX] = '\0';
+    }
     m.type = type;
     store::bytesToHex(id, m.id);
-    strncpy(m.location, c.address, sa1::LOCATION_MAX);
-    m.location[sa1::LOCATION_MAX] = '\0';
     store::QueueRecord record;
     record.sa1Length = static_cast<uint16_t>(sa1::encode(m, record.sa1, sizeof(record.sa1)));
     if (!record.sa1Length) return Create::TOO_LARGE;
+    const store::Config& c = store_.config();
     memcpy(record.to, c.osp[c.activeOsp ? 1 : 0], store::HASH);
     memcpy(record.id, id, store::HASH);
     record.type = type;

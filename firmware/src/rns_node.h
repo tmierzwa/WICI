@@ -4,8 +4,9 @@
 // - transport włączony, jeden interfejs P1 nad łączem radiowym (Radio) z kolejką na 4 datagramy,
 //   limitem ogłoszeń przekazywanych i kodem IFAC 16 B z konfiguracji (config.ifac);
 // - jedna tożsamość stacji w rekordzie FRAM (framfs::loadKey), także jako tożsamość transportu;
-// - tablica tras, znane tożsamości i buforowane ogłoszenia w systemie plików FRAM (framfs),
-//   lista skrótów pakietów 4096 x 8 B w RAM (pkthash.h, łata 0002);
+// - tablica tras, znane tożsamości i buforowane ogłoszenia w systemie plików FRAM (framfs), po 256
+//   wpisów bez usuwania wpisów OSP (łata microStore 0001); lista skrótów pakietów 4096 x 8 B w RAM
+//   (pkthash.h, łata 0002);
 // - cel SINGLE "wici.sa1" stacji z dowodem pakietu przyjętego przez warstwę aplikacji
 //   (PROVE_APP): pakiet okazjonalny do stacji wraca z potwierdzeniem transportowym, jak dawny
 //   datagram "ack" stacji; pakiet odrzucony (zły format, obcy adresat, nadawca spoza zaufania)
@@ -74,8 +75,11 @@ struct Status {
 // stos liczy swój zegar monotoniczny także między restartami (oprogramowanie.md, "Czas").
 bool begin(journal::Storage& fram, Radio& radio, const uint8_t ifac[16], uint64_t clockMs, const Hooks& hooks);
 void setIfac(const uint8_t ifac[16]);   // po configure
-// Przypięta OSP (aktywna tożsamość z konfiguracji) dla rezerwy 50% czasu kanału; zera = bez rezerwy.
-void setOsp(const uint8_t destination[HASH]);
+// Cele OSP z konfiguracji (główny, zapasowy; zera = brak): aktywny (active 0 albo 1) dostaje
+// rezerwę 50% czasu kanału, a trasy i tożsamości obu nie są usuwane przy pełnych tablicach
+// (oprogramowanie.md, „Pojemności stosu”). Wywoływane także przed begin(), żeby porządkowanie
+// tablic przy starcie nie usunęło wpisów OSP.
+void setOsp(const uint8_t osp[2][HASH], uint8_t active);
 void loop(uint32_t nowMs);
 void received(const uint8_t* wire, size_t length);   // datagram złożony z ramek P1
 void txDone(bool ok);                                // koniec nadawania datagramu z transmit()
@@ -107,6 +111,8 @@ bool wipe();
 void persist();
 
 #ifndef ARDUINO
+// Próba ochrony wpisów OSP: mniejszy limit tablicy tras i znanych tożsamości (domyślnie 256).
+void debugTableMax(uint16_t n);
 // Pomiar pamięci na komputerze: n losowych skrótów na liście skrótów pakietów (pełną tablicę
 // tras wypełniają ogłoszenia z Reticulum w Pythonie, tools/rns_interop.py --fill).
 uint32_t debugFillHashes(uint32_t n);

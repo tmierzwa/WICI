@@ -8,7 +8,7 @@ namespace console {
 Console::Console(store::Store& store, station::Station& station, station::Services& services, journal::Journal* journal)
     : store_(store), station_(station), services_(services), journal_(journal) {}
 
-const char* Console::address() { return store_.config().address; }
+const char* Console::address() { return store_.address(); }
 
 size_t Console::phraseCount() {
     const uint8_t n = store_.config().phraseCount;

@@ -22,6 +22,7 @@
 #include <USB.h>
 #endif
 
+#include "annunciator.h"
 #include "board.h"
 #include "cmdargs.h"
 #include "console.h"
@@ -195,12 +196,12 @@ void screenChanged() {
     screenDirty = true;
 }
 
-// Przypięta OSP dla rezerwy czasu kanału w interfejsie P1: aktywna tożsamość z konfiguracji
-// (configure, ODBIORCA ZAPASOWY).
+// Przypięte OSP z konfiguracji (configure, ODBIORCA ZAPASOWY): rezerwa czasu kanału dla aktywnej
+// w interfejsie P1, trasy i tożsamości obu chronione przed usunięciem z pełnych tablic.
 void pinOsp() {
     if (!rnsOk || !storeOk) return;
     const store::Config& c = stationStore.config();
-    rnsnode::setOsp(c.osp[c.activeOsp ? 1 : 0]);
+    rnsnode::setOsp(c.osp, c.activeOsp);
 }
 
 void BenchHost::configChanged() {
@@ -307,8 +308,6 @@ void BenchHost::setSilence(bool on) { applySilence(on, " (usb)"); }
 // zapasowe i obowiązują do następnego przełączenia.
 constexpr uint32_t SWITCH_SETTLE_MS = 50;   // przełącznik CISZA: stan stały przez 50 ms
 constexpr uint32_t PREP_HOLD_MS = 3000;     // przytrzymanie przycisku przygotowania
-constexpr uint32_t ALARM_BEEP_MS = 200;     // ekran alarmu: sygnał co 2 s do potwierdzenia OK
-constexpr uint32_t ALARM_BEEP_EVERY_MS = 2000;
 bool silenceSwitchLevel = false;
 uint32_t silenceSwitchSince = 0;
 bool silenceSwitchState = false;
@@ -316,10 +315,11 @@ uint32_t prepPressedSince = 0;
 bool prepWas = false;
 bool prepToggled = false;
 bool alarmLedOn = false;
-bool alarmLedWanted = false;  // stan wynikający z alarmu i ciszy; LED 5 zmienia tylko alarmLedOn
+bool ledManual = false;      // LED 5: stan ręczny do następnej zmiany powodu migania
+bool ledActive = false;
 bool alarmCause = false;     // przyczyna alarmu trwa (także po potwierdzeniu OK)
 uint32_t alarmCauseMs = 0;
-uint32_t lastAlarmBeep = 0;
+annunciator::Annunciator annunciation;
 
 bool silenceSwitch() { return digitalRead(board::SW_SILENCE) == LOW; }
 
@@ -367,23 +367,25 @@ void pollPanel(uint32_t now) {
         beep(100);
     }
     prepWas = prep;
-    // Dioda świeci do usunięcia przyczyny alarmu (potwierdzenie OK gasi tylko dźwięk) i w ciszy radiowej;
-    // przyczyna sprawdzana co sekundę jak alarmy ekranu. Zapis tylko przy zmianie tego stanu, więc LED 5
-    // obowiązuje do następnej zmiany alarmu albo ciszy.
-    const bool alarm = screenModel.screen() == ui::Screen::ALARM;
+    // Dioda i brzęczyk (annunciator.h); przyczyna alarmu sprawdzana co sekundę jak alarmy ekranu.
+    // LED 5 obowiązuje do następnej zmiany powodu migania (alarm, cisza, nieprzeczytane).
     if (now - alarmCauseMs >= 1000) {
         alarmCauseMs = now;
         alarmCause = storeOk && app.alarmCause(uptimeS());
     }
-    const bool led = alarm || alarmCause || bench.silence;
-    if (led != alarmLedWanted) {
-        alarmLedWanted = led;
-        alarmLed(led);
+    annunciator::Inputs in;
+    in.alarmScreen = screenModel.screen() == ui::Screen::ALARM;
+    in.alarmCause = alarmCause;
+    in.silence = bench.silence;
+    in.muted = screenModel.muted();
+    in.unread = storeOk ? static_cast<uint32_t>(stationStore.inboxUnread()) : 0;
+    const uint32_t ms = annunciation.poll(now, in);
+    if (ms) beep(ms);
+    if (annunciation.active() != ledActive) {
+        ledActive = annunciation.active();
+        ledManual = false;
     }
-    if (alarm && now - lastAlarmBeep >= ALARM_BEEP_EVERY_MS) {
-        lastAlarmBeep = now;
-        beep(ALARM_BEEP_MS);
-    }
+    if (!ledManual && annunciation.led() != alarmLedOn) alarmLed(annunciation.led());
 }
 
 #else
@@ -475,6 +477,8 @@ const char* BenchHost::stationName() { return ::stationName; }
 // ekranu zapisywanego tam przez wcześniejsze wersje).
 constexpr uint32_t SETTINGS_FLAGS = 0x100;
 constexpr uint32_t SETTINGS_MUTED = 0x001;
+constexpr uint32_t SETTINGS_OBJECT_SHIFT = 4;   // bity 4–6: obiekt wybrany z listy adresów
+constexpr uint32_t SETTINGS_OBJECT_MASK = 0x070;
 
 // Język i ekran w pamięci niezerowanej po każdej zmianie (restart programowy, watchdog); w FRAM
 // język i wyciszenie przy ich zmianie (po włączeniu zasilania stacja zaczyna od wyboru języka z podpowiedzią).
@@ -482,7 +486,8 @@ void persistScreen() {
     if (!screenModel.takeChange()) return;
     retain();
     const uint32_t lang = static_cast<uint32_t>(screenModel.language()) + 1;
-    const uint32_t flags = SETTINGS_FLAGS | (screenModel.muted() ? SETTINGS_MUTED : 0);
+    const uint32_t flags = SETTINGS_FLAGS | (screenModel.muted() ? SETTINGS_MUTED : 0) |
+                           ((static_cast<uint32_t>(stationStore.selectedAddress()) << SETTINGS_OBJECT_SHIFT) & SETTINGS_OBJECT_MASK);
     const journal::SmallRecord& saved = stationJournal.settings();
     if (journalOk && (saved.a != lang || saved.b != flags) && !stationJournal.writeSettings(lang, flags)) {
         journalOk = false;
@@ -516,6 +521,8 @@ void beginScreen() {
     }
     // Wyciszenie dźwięku przetrwa także zanik zasilania (rekord ustawień w FRAM).
     screenModel.setMuted(journalOk && (saved.b & SETTINGS_FLAGS) && (saved.b & SETTINGS_MUTED));
+    // Obiekt z listy adresów wybrany przed restartem albo wyłączeniem (po włączeniu kursor listy).
+    if (journalOk && (saved.b & SETTINGS_FLAGS)) stationStore.selectAddress((saved.b & SETTINGS_OBJECT_MASK) >> SETTINGS_OBJECT_SHIFT);
     retain();
     updateScreen(true);
 }
@@ -736,8 +743,10 @@ void printStore() {
     // Części poniżej 256 znaków (zob. printRns); adres z laptopa z sekwencjami ucieczki.
     Serial.printf("{\"store_ok\":%s,\"configured\":%s,\"config_seq\":%lu,\"role\":\"%s\",", boolName(storeOk),
                   boolName(stationStore.configured()), static_cast<unsigned long>(c.seq), c.role == store::OSP ? "osp" : "station");
-    jsonprint::field(Serial, "address", c.address);
-    Serial.printf(",\"osp\":\"%s\",\"phrases\":%u,\"stations\":%u,", osp, c.phraseCount, c.stations);
+    jsonprint::field(Serial, "address", stationStore.address());   // obiekt wybrany na ekranie
+    Serial.printf(",\"addresses\":%u,\"selected\":%u,\"osp\":\"%s\",\"phrases\":%u,\"stations\":%u,",
+                  static_cast<unsigned>(stationStore.addressCount()), static_cast<unsigned>(stationStore.selectedAddress()), osp,
+                  c.phraseCount, c.stations);
     Serial.printf("\"queued\":%u,\"inbox\":%u,\"unread\":%u,\"notes_pending\":%u,\"note_latest\":%lu,"
                   "\"usb_synced\":%s,\"usb_stored\":%lu,\"usb_overflow\":%lu,\"usb_resends\":%lu}\n",
                   static_cast<unsigned>(stationStore.queueLive()), static_cast<unsigned>(stationStore.inboxCount()),
@@ -862,7 +871,8 @@ void handle(char* cmd) {
         bool on = false;
         const bool valid = cmdargs::parseUint(words[0], 1, 5, index) && cmdargs::parseFlag(words[1], on);
 #if defined(WICI_BOARD_N1)
-        if (valid && index == 5) {  // dioda alarmu N1; obowiązuje do następnej zmiany stanu alarmu albo ciszy
+        if (valid && index == 5) {  // dioda alarmu N1; obowiązuje do następnej zmiany powodu migania
+            ledManual = true;
             alarmLed(on);
             Serial.printf("{\"led\":5,\"on\":%s}\n", boolName(alarmLedOn));
             return;
@@ -971,6 +981,8 @@ void beginStack() {
     hooks.log = onStackLog;
     uint8_t ifac[store::HASH] = {};
     if (storeOk) memcpy(ifac, stationStore.config().ifac, sizeof(ifac));
+    // Cele OSP przypięte przed startem: porządkowanie tablic przy starcie też ich nie usuwa.
+    if (storeOk) rnsnode::setOsp(stationStore.config().osp, stationStore.config().activeOsp);
     rnsOk = rnsnode::begin(memory, benchRadio, ifac, static_cast<uint64_t>(uptimeS()) * 1000, hooks);
     if (!rnsOk) { bench.log("rns start failed"); return; }
     pinOsp();

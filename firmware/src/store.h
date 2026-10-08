@@ -38,6 +38,7 @@ constexpr size_t NOTE_TEXT = 400;
 constexpr size_t PHRASES = 11;
 constexpr size_t PHRASE_MAX = 96;
 constexpr size_t ADDRESS_MAX = 64;
+constexpr size_t ADDRESSES = 8;      // adres schronienia i lista obiektów (wybór na ekranie)
 constexpr uint8_t COMMITTED = journal::COMMITTED;
 
 enum Role : uint8_t { STATION = 0, OSP = 1 };
@@ -52,6 +53,9 @@ struct Config {
     uint8_t phraseCount = 0;
     char phrases[PHRASES][3][PHRASE_MAX + 1] = {};  // PL (wysyłana), UK, EN (ekran)
     uint8_t ifac[HASH] = {};    // kod dostępu sieci (IFAC)
+    // Dalsze obiekty z listy adresów (configure "addresses"); address to pierwszy z nich.
+    uint8_t objectCount = 0;
+    char objects[ADDRESSES - 1][ADDRESS_MAX + 1] = {};
 };
 
 // Flagi stanu intencji w kolejce.
@@ -156,6 +160,13 @@ public:
     const Config& config() const { return config_; }
     bool configured() const { return config_.seq != 0; }
     bool writeConfig(const Config& config);
+    // Adres dołączany do zgłoszeń: obiekt wybrany na ekranie z listy (0 = pierwszy); "" bez adresu.
+    // Wybór jest w RAM; trwale zapisuje go ekran (ustawienia w dzienniku FRAM).
+    size_t addressCount() const { return config_.address[0] ? 1u + config_.objectCount : 0u; }
+    const char* addressAt(size_t index) const;
+    const char* address() const { return addressAt(selected_); }
+    size_t selectedAddress() const { return selected_; }
+    void selectAddress(size_t index) { selected_ = index < addressCount() ? static_cast<uint8_t>(index) : 0; }
 
     // Kolejka: klucz (to, typ, id, revision, event); ta sama treść = DUPLICATE (seq rekordu w record.seq),
     // inna treść = CONFLICT; 128 żywych intencji = FULL. Zakończona intencja o tym samym kluczu
@@ -215,6 +226,7 @@ private:
     journal::Storage& storage_;
     bool ok_ = false;
     Config config_;
+    uint8_t selected_ = 0;
     QueueEntry queue_[QUEUE_SLOTS];
     uint32_t queueSeq_ = 0;
     InboxEntry inbox_[INBOX_SLOTS];

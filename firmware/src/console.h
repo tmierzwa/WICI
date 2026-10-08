@@ -19,6 +19,10 @@ public:
     void invalidate() { dirty_ = true; }  // po każdej zmianie kolejki albo skrzynki
 
     const char* address() override;
+    size_t addressCount() override { return store_.addressCount(); }
+    const char* addressAt(size_t index) override { return store_.addressAt(index); }
+    size_t selectedAddress() override { return store_.selectedAddress(); }
+    void selectAddress(size_t index) override { store_.selectAddress(index); }
     size_t phraseCount() override;
     const char* phrase(size_t index, ui::Lang lang) override;
     size_t itemCount() override;
@@ -37,6 +41,7 @@ public:
     bool announce() override;
 
 private:
+    static_assert(ui::ADDRESS_CHOICES == store::ADDRESSES, "lista obiektów ekranu i magazynu");
     static constexpr size_t MAX_ITEMS = store::QUEUE_SLOTS + store::INBOX_SLOTS;
     static constexpr uint32_t OWN = 0x80000000u;
     struct Ref { uint32_t time; uint32_t seq; };  // bit 31 seq = kolejka

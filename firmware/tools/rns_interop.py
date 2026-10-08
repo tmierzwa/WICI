@@ -11,7 +11,8 @@ in both directions with a transport proof (PacketReceipt DELIVERED on both sides
 station application layer rejects gets no proof (PROVE_APP), so the Python receipt fails; after a restart
 of the station program with the same FRAM file the identity is the same and the path and identity of
 the Python destination come from FRAM; datagrams without IFAC or with a wrong IFAC are dropped before
-the stack.
+the stack; with the Python destination pinned as the OSP and the tables limited to 6 entries, further
+announces evict the oldest unprotected destination and never the OSP.
 
 With --fill N, after the checks Python announces N further destinations through the same link, the
 station fills its packet hash list to 4096 entries, and the station status (path table, TLSF pool
@@ -37,6 +38,8 @@ import time
 APP_NAME = "wici"
 ASPECT = "sa1"
 NETWORK_KEY = "5749434954335f696661635f74657374"  # 16 B test key, not a field key
+TABLE_MAX = 256    # RNS_PATH_TABLE_MAX obrazu (platformio.ini)
+PINNED_TABLE = 6   # limit tablic w próbie ochrony wpisu OSP (krok 7)
 
 
 def log(text):
@@ -46,8 +49,10 @@ def log(text):
 class Station:
     """The host program with line JSON events."""
 
-    def __init__(self, program, fram, listen, peer, debt, capture=None):
+    def __init__(self, program, fram, listen, peer, debt, capture=None, table_max=0, osp=None):
         extra = ["--capture", capture] if capture else []
+        extra += ["--table-max", str(table_max)] if table_max else []
+        extra += ["--osp", osp] if osp else []   # jak stacja z konfiguracją OSP: przypięcie przed startem stosu
         self.proc = subprocess.Popen([program, "--fram", fram, "--ifac", NETWORK_KEY, "--listen", str(listen),
                                       "--peer", str(peer), "--debt", str(debt)] + extra,
                                      stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
@@ -243,13 +248,16 @@ def main():
         if args.fill:
             # Pomiar pamięci: N ogłoszeń nowych celów (po 2 na sekundę, bez wyzwalania ograniczeń
             # napływu ogłoszeń), potem lista skrótów pakietów dopełniona do 4096.
+            # Cel Pythona jako OSP: zostaje w pełnej tablicy, więc krok 6 sprawdza jego trasę z FRAM.
+            station.command(f"osp {destination.hash.hex()}")
+            station.wait("osp", 5)
             fill_destinations = []
             for i in range(args.fill):
                 d = RNS.Destination(RNS.Identity(), RNS.Destination.IN, RNS.Destination.SINGLE, APP_NAME, ASPECT)
                 d.announce(app_data=b"fill%d" % i)
                 fill_destinations.append(d)
                 time.sleep(0.5)
-            target = after["paths"] + args.fill
+            target = min(after["paths"] + args.fill, TABLE_MAX)
             end = time.time() + 120
             status = station.status()
             while status and status["paths"] < target and time.time() < end:
@@ -267,11 +275,13 @@ def main():
     finally:
         station.stop()
 
-    # 6. Restart stacji z tym samym plikiem FRAM: tożsamość i trasa z FRAM.
-    station = Station(args.program, fram, station_port, python_port, args.debt)
+    # 6. Restart stacji z tym samym plikiem FRAM (cel Pythona jako OSP z konfiguracji): tożsamość
+    # i trasa z FRAM, tablica tras w limicie także po wczytaniu.
+    station = Station(args.program, fram, station_port, python_port, args.debt, osp=destination.hash.hex())
     try:
         ready = station.ready or {}
         checks["identity_restored"] = ready.get("identity") == results.get("station_identity") and not ready.get("identity_new", True)
+        checks["table_limit_after_restart"] = ready.get("paths", TABLE_MAX + 1) <= TABLE_MAX
         station.command(f"path {destination.hash.hex()}")
         p = station.wait("path", 5)
         checks["path_and_identity_restored"] = bool(p and p["known"] and p["path"])
@@ -284,6 +294,40 @@ def main():
             lambda: any(p[1] == payload2 for p in seen["packets"]), 90)
         receipt = station.wait("receipt", 120, lambda e: e["handle"] == handle) if handle else None
         checks["receipt_after_restart"] = bool(receipt and receipt["delivered"])
+    finally:
+        station.stop()
+
+    # 7. Pełne tablice: wpis przypiętej OSP zostaje (oprogramowanie.md, „Pojemności stosu”). Nowa
+    # pamięć FRAM i limit tablic 6 zamiast 256: cel Pythona jako OSP, potem cel bez ochrony
+    # i 8 kolejnych; usunięty ma być najstarszy cel bez ochrony, a nie OSP.
+    station = Station(args.program, os.path.join(work, "fram_pinned.bin"), station_port, python_port, args.debt,
+                      table_max=PINNED_TABLE)
+    try:
+        station.command(f"osp {destination.hash.hex()}")
+        station.wait("osp", 5)
+        destination.announce()
+        osp_learned = station.wait("announce", 30, lambda e: e["dest"] == destination.hash.hex()) is not None
+        time.sleep(2)   # znaczniki czasu wpisów w sekundach: cel bez ochrony wyraźnie starszy od reszty
+        victim = RNS.Destination(RNS.Identity(), RNS.Destination.IN, RNS.Destination.SINGLE, APP_NAME, ASPECT)
+        victim.announce()
+        station.wait("announce", 30, lambda e: e["dest"] == victim.hash.hex())
+        time.sleep(2)
+        fillers = []
+        for _ in range(PINNED_TABLE + 2):
+            d = RNS.Destination(RNS.Identity(), RNS.Destination.IN, RNS.Destination.SINGLE, APP_NAME, ASPECT)
+            d.announce()
+            fillers.append(d)
+            station.wait("announce", 30, lambda e, h=d.hash.hex(): e["dest"] == h)
+            time.sleep(0.5)
+        status = station.status() or {}
+        station.command(f"path {destination.hash.hex()}")
+        osp = station.wait("path", 5) or {}
+        station.command(f"path {victim.hash.hex()}")
+        gone = station.wait("path", 5) or {}
+        results["pinned_table"] = {"limit": PINNED_TABLE, "paths": status.get("paths"), "osp": osp, "unprotected": gone}
+        checks["osp_entry_kept_in_full_table"] = (osp_learned and status.get("paths", 99) <= PINNED_TABLE
+                                                  and osp.get("known") is True and osp.get("path") is True
+                                                  and gone.get("path") is False)
     finally:
         station.stop()
 

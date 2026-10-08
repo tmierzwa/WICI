@@ -265,7 +265,7 @@ void Protocol::doSubmit(const json::Value& msg, int64_t seq) {
 
 void Protocol::doTest(int64_t seq) {
     const store::Config& c = store_.config();
-    if (!store_.configured() || !c.address[0]) { rejected(seq, "not configured"); return; }
+    if (!store_.configured() || !store_.address()[0]) { rejected(seq, "not configured"); return; }
     if (c.role != store::STATION) { rejected(seq, "invalid", "type not allowed for this role"); return; }
     sa1::Message m;
     m.type = sa1::TEST;
@@ -278,7 +278,7 @@ void Protocol::doTest(int64_t seq) {
     m.revision = 0;
     m.category = 9;
     m.people = 1;
-    strncpy(m.location, c.address, sa1::LOCATION_MAX);
+    strncpy(m.location, store_.address(), sa1::LOCATION_MAX);
     strncpy(m.text, "test", sizeof(m.text) - 1);
     m.urgency = 0;
     store::QueueRecord record;
@@ -312,7 +312,24 @@ void Protocol::doConfigure(const json::Value& msg, int64_t seq) {
     if (!host_.prep()) { rejected(seq, "preparation mode required"); return; }
     store::Config c = store_.config();
     json::Value v;
-    if (json::field(msg, "address", v) && !json::string(v, c.address, sizeof(c.address))) { rejected(seq, "invalid", "address"); return; }
+    if (json::field(msg, "address", v)) {
+        if (!json::string(v, c.address, sizeof(c.address))) { rejected(seq, "invalid", "address"); return; }
+        c.objectCount = 0;   // pojedynczy adres zastępuje listę obiektów
+        memset(c.objects, 0, sizeof(c.objects));
+    }
+    json::Value list;
+    if (json::field(msg, "addresses", list)) {
+        // Lista obiektów (oprogramowanie.md, „Start”): 1–8 adresów, pierwszy jak "address"; nie razem z nim.
+        const size_t n = list.kind == json::Kind::ARRAY ? json::count(list) : 0;
+        if (n < 1 || n > store::ADDRESSES || json::field(msg, "address", v)) { rejected(seq, "invalid", "addresses"); return; }
+        memset(c.objects, 0, sizeof(c.objects));
+        c.objectCount = static_cast<uint8_t>(n - 1);
+        for (size_t i = 0; i < n; ++i) {
+            json::Value s;
+            char* out = i ? c.objects[i - 1] : c.address;
+            if (!json::item(list, i, s) || !json::string(s, out, store::ADDRESS_MAX + 1) || !out[0]) { rejected(seq, "invalid", "addresses"); return; }
+        }
+    }
     char role[12];
     if (json::field(msg, "role", v)) {
         if (!json::string(v, role, sizeof(role))) { rejected(seq, "invalid", "role"); return; }
@@ -346,9 +363,10 @@ void Protocol::doConfigure(const json::Value& msg, int64_t seq) {
     for (size_t i = 0; i < c.phraseCount; ++i) phrases[i] = c.phrases[i][0];
     const char* why = nullptr;
     size_t size = 0;
-    if (c.address[0]) {
-        size = sa1::buttonConfigurationSize(c.address, phrases, c.phraseCount, &why);
-        if (!size) { rejected(seq, "invalid", why); return; }
+    for (size_t i = 0; c.address[0] && i <= c.objectCount; ++i) {
+        const size_t s = sa1::buttonConfigurationSize(i ? c.objects[i - 1] : c.address, phrases, c.phraseCount, &why);
+        if (!s) { rejected(seq, "invalid", why); return; }
+        if (s > size) size = s;
     }
     if (!store_.writeConfig(c)) { rejected(seq, "memory"); return; }
     host_.configChanged();

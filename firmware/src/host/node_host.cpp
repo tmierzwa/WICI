@@ -217,6 +217,8 @@ int main(int argc, char** argv) {
     FILE* capture = nullptr;   // --capture: datagramy od drugiej strony (szesnastkowo) do odtworzenia w pomiarze RAM
     int listenPort = 4242, peerPort = 4243;
     uint8_t ifac[16] = {};
+    uint16_t tableMax = 0;   // --table-max: mniejsze tablice do próby ochrony wpisów OSP
+    uint8_t osp[2][16] = {};
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--fram") && i + 1 < argc) framPath = argv[++i];
         else if (!strcmp(argv[i], "--listen") && i + 1 < argc) listenPort = atoi(argv[++i]);
@@ -224,6 +226,12 @@ int main(int argc, char** argv) {
         else if (!strcmp(argv[i], "--trace")) radio.trace = true;
         else if (!strcmp(argv[i], "--capture") && i + 1 < argc) capture = fopen(argv[++i], "w");
         else if (!strcmp(argv[i], "--debt") && i + 1 < argc) radio.debtFactor = static_cast<uint32_t>(atoi(argv[++i]));
+        else if (!strcmp(argv[i], "--table-max") && i + 1 < argc) tableMax = static_cast<uint16_t>(atoi(argv[++i]));
+        else if (!strcmp(argv[i], "--osp") && i + 1 < argc) {   // cel OSP przypięty przed startem stosu
+            std::vector<uint8_t> k;
+            if (!unhex(argv[++i], k) || k.size() != 16) { fprintf(stderr, "--osp: 32 hex digits\n"); return 2; }
+            memcpy(osp[0], k.data(), 16);
+        }
         else if (!strcmp(argv[i], "--ifac") && i + 1 < argc) {
             std::vector<uint8_t> k;
             if (!unhex(argv[++i], k) || k.size() != 16) { fprintf(stderr, "--ifac: 32 hex digits\n"); return 2; }
@@ -246,7 +254,9 @@ int main(int argc, char** argv) {
     hooks.receipt = onReceipt;
     hooks.announce = onAnnounce;
     hooks.log = onLog;
+    rnsnode::setOsp(osp, 0);
     if (!rnsnode::begin(fram, radio, ifac, 0, hooks)) { printf("{\"event\":\"error\",\"what\":\"begin\"}\n"); return 1; }
+    if (tableMax) rnsnode::debugTableMax(tableMax);
     fram.save();
     const rnsnode::Status st = rnsnode::status();
     printf("{\"event\":\"ready\",\"address\":\"%s\",\"identity\":\"%s\",\"identity_new\":%s,\"paths\":%u,\"bitrate\":%u}\n",
@@ -292,6 +302,11 @@ int main(int argc, char** argv) {
                 } else if (sscanf(cmd.c_str(), "path %1199s", a) == 1 && unhex(a, x) && x.size() == 16) {
                     printf("{\"event\":\"path\",\"known\":%s,\"path\":%s}\n", rnsnode::knows(x.data()) ? "true" : "false",
                            rnsnode::hasPath(x.data()) ? "true" : "false");
+                } else if (sscanf(cmd.c_str(), "osp %1199s", a) == 1 && unhex(a, x) && x.size() == 16) {
+                    uint8_t osp[2][16] = {};
+                    memcpy(osp[0], x.data(), 16);
+                    rnsnode::setOsp(osp, 0);
+                    printf("{\"event\":\"osp\"}\n");
                 } else if (sscanf(cmd.c_str(), "request %1199s", a) == 1 && unhex(a, x) && x.size() == 16) {
                     rnsnode::requestPath(x.data());
                     printf("{\"event\":\"requested\"}\n");

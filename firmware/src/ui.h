@@ -32,13 +32,14 @@ constexpr uint32_t REPEAT_DELAY_MS = 500;     // wpis cyfr: przytrzymanie przysp
 constexpr uint32_t REPEAT_MS = 150;
 constexpr size_t STATUS_MAX_LINES = 17;
 constexpr size_t TEXT_MAX_LINES = 24;
+constexpr size_t ADDRESS_CHOICES = 8;        // lista obiektów (store::ADDRESSES)
 constexpr size_t ITEM_TEXT = 193;             // treść REPLY/BULLETIN albo fraza (UTF-8)
 constexpr uint16_t PEOPLE_MAX = 999;
 
 enum class Button : uint8_t { UP, DOWN, OK, BACK };
 enum class Screen : uint8_t {
     LANGUAGE, MAIN, MENU, STATUS, LANGUAGE_MENU,
-    ADDRESS, TEST_OFFER,
+    ADDRESS, ADDRESS_LIST, TEST_OFFER,
     CATEGORY, PEOPLE, DIGITS, URGENCY, URGENCY_CONFIRM, PHRASE, SUMMARY, RESULT, DISCARD,
     MESSAGES, ITEM, ITEM_MENU,
     TEST, TEST_MENU,
@@ -124,7 +125,12 @@ struct AlarmInfo {
 // Dane i działania stacji dla ekranu.
 struct Host {
     virtual ~Host() = default;
-    virtual const char* address() = 0;                        // "" gdy stacja nie ma adresu
+    virtual const char* address() = 0;                        // wybrany obiekt; "" gdy stacja nie ma adresu
+    // Lista obiektów z konfiguracji (oprogramowanie.md, „Start”): wybór przyciskami po języku.
+    virtual size_t addressCount() { return address()[0] ? 1 : 0; }
+    virtual const char* addressAt(size_t index) { return index ? "" : address(); }
+    virtual size_t selectedAddress() { return 0; }
+    virtual void selectAddress(size_t) {}
     virtual size_t phraseCount() = 0;
     virtual const char* phrase(size_t index, Lang lang) = 0;  // tekst ekranu
     virtual size_t itemCount() = 0;                           // najnowsze najpierw

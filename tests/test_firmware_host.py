@@ -25,6 +25,7 @@ HARNESS = r"""
 #include <cstdlib>
 #include <cstring>
 #include <vector>
+#include "annunciator.h"
 #include "crc16.h"
 #include "fram_id.h"
 #include "journal.h"
@@ -227,6 +228,34 @@ int uiScript() {
             memset(cfg.osp[1], 0xDD, store::HASH);
             printf("config %d\n", store.writeConfig(cfg));
             con.invalidate();
+        } else if (!strncmp(line, "AL ", 3)) {
+            // Lista obiektów "a|b|c" (configure "addresses").
+            store::Config cfg = store.config();
+            cfg.role = store::STATION;
+            memset(cfg.osp[0], 0xCC, store::HASH);
+            memset(cfg.osp[1], 0xDD, store::HASH);
+            memset(cfg.address, 0, sizeof(cfg.address));
+            memset(cfg.objects, 0, sizeof(cfg.objects));
+            cfg.objectCount = 0;
+            char list[512];
+            strncpy(list, line + 3, sizeof(list) - 1);
+            list[sizeof(list) - 1] = '\0';
+            size_t n = 0;
+            for (char* s = strtok(list, "|"); s && n < store::ADDRESSES; s = strtok(nullptr, "|"), ++n) {
+                strncpy(n ? cfg.objects[n - 1] : cfg.address, s, store::ADDRESS_MAX);
+            }
+            cfg.objectCount = static_cast<uint8_t>(n ? n - 1 : 0);
+            printf("config %d\n", store.writeConfig(cfg));
+            con.invalidate();
+        } else if (!strcmp(line, "AD")) {
+            printf("addresses %zu selected %zu", store.addressCount(), store.selectedAddress());
+            for (size_t i = 0; i < store.addressCount(); ++i) printf(" |%s", store.addressAt(i));
+            printf(" |location %s\n", store.address());
+        } else if (sscanf(line, "SEL %u", &a) == 1) {
+            store.selectAddress(a);
+        } else if (sscanf(line, "RV %u %u", &a, &b) == 2) {
+            uint32_t newSeq = 0;
+            printf("revise %d %u\n", static_cast<int>(app.revise(a, static_cast<uint16_t>(b), 0, nullptr, newSeq)), newSeq);
         } else if (!strcmp(line, "PH")) {
             // Własna lista fraz stacji (jedna fraza) zamiast domyślnej.
             store::Config cfg = store.config();
@@ -529,6 +558,25 @@ int linkScript() {
 }
 
 int main(int argc, char** argv) {
+    if (argc >= 3 && !strcmp(argv[1], "annun")) {
+        // Kroki "<ms>/<znaczniki>/<nieprzeczytane>": S ekran alarmu, C przyczyna alarmu, Q cisza,
+        // M wyciszony dźwięk; wynik na krok "<dioda>,<sygnał ms>".
+        annunciator::Annunciator a;
+        for (int i = 2; i < argc; ++i) {
+            char flags[8] = {};
+            unsigned ms = 0, unread = 0;
+            if (sscanf(argv[i], "%u/%7[A-Z]/%u", &ms, flags, &unread) != 3 && sscanf(argv[i], "%u//%u", &ms, &unread) != 2) return 2;
+            annunciator::Inputs in;
+            in.alarmScreen = strchr(flags, 'S') != nullptr;
+            in.alarmCause = strchr(flags, 'C') != nullptr;
+            in.silence = strchr(flags, 'Q') != nullptr;
+            in.muted = strchr(flags, 'M') != nullptr;
+            in.unread = unread;
+            const uint32_t beep = a.poll(ms, in);
+            printf("%d,%u\n", a.led() ? 1 : 0, static_cast<unsigned>(beep));
+        }
+        return 0;
+    }
     if (argc == 3 && !strcmp(argv[1], "framid")) {
         uint8_t id[fram::ID_BYTES] = {};
         for (size_t i = 0; i < fram::ID_BYTES && argv[2][2 * i] && argv[2][2 * i + 1]; ++i) {
@@ -608,7 +656,7 @@ class HostUnitTests(unittest.TestCase):
         (root / "harness.cpp").write_text(HARNESS, encoding="utf-8")
         cls.binary = root / "harness"
         subprocess.run([compiler(), "-std=c++17", "-Wall", "-Wextra", "-Werror", f"-I{SRC}", str(root / "harness.cpp"),
-                        str(SRC / "testframe.cpp"), str(SRC / "journal.cpp"), str(SRC / "p1frame.cpp"), str(SRC / "ui.cpp"),
+                        str(SRC / "testframe.cpp"), str(SRC / "annunciator.cpp"), str(SRC / "journal.cpp"), str(SRC / "p1frame.cpp"), str(SRC / "ui.cpp"),
                         str(SRC / "font.cpp"), str(SRC / "jsonlite.cpp"), str(SRC / "sa1.cpp"), str(SRC / "store.cpp"),
                         str(SRC / "usbproto.cpp"), str(SRC / "station.cpp"), str(SRC / "console.cpp"), "-o", str(cls.binary)],
                        check=True)
@@ -619,6 +667,32 @@ class HostUnitTests(unittest.TestCase):
 
     def run_harness(self, *args):
         return subprocess.run([str(self.binary), *args], capture_output=True, text=True, check=True).stdout.split()
+
+    def annun(self, *steps):
+        return [tuple(int(v) for v in s.split(",")) for s in self.run_harness("annun", *steps)]
+
+    def test_led_flashes_one_percent_for_each_cause(self):
+        # oprogramowanie.md: dioda miga krótkimi błyskami do odczytu, do usunięcia przyczyny alarmu i w ciszy.
+        for flags, unread in (("", 1), ("C", 0), ("Q", 0), ("S", 0)):
+            steps = [f"{ms}/{flags}/{unread}" for ms in (1000, 1049, 1050, 3000, 5999, 6000, 6050)]
+            self.assertEqual([led for led, _ in self.annun(*steps)], [1, 1, 0, 0, 0, 1, 0], (flags, unread))
+        self.assertEqual([led for led, _ in self.annun("1000//0", "6000//0", "12000//0")], [0, 0, 0])
+
+    def test_flash_survives_slow_loop(self):
+        # Obieg pętli dłuższy niż błysk: błysk trwa do następnego obiegu, żaden okres nie ginie.
+        self.assertEqual([led for led, _ in self.annun("0/Q/0", "300/Q/0", "5200/Q/0", "5400/Q/0", "10500/Q/0")],
+                         [1, 0, 1, 0, 1])
+
+    def test_alarm_beeps_every_two_seconds_until_ok(self):
+        steps = ["0//0", "100/SC/0", "1000/SC/0", "2100/SC/0", "3000/C/0", "4200/C/0", "4300/SC/0"]
+        self.assertEqual([beep for _, beep in self.annun(*steps)], [0, 200, 0, 200, 0, 0, 200])
+
+    def test_new_message_beep_respects_mute_only(self):
+        # Wyciszenie dotyczy tylko zwykłego sygnału nowej wiadomości; po starcie bez sygnału za stare.
+        self.assertEqual([b for _, b in self.annun("0//3", "100//4", "200//4", "300//3", "400//4")], [0, 100, 0, 0, 100])
+        self.assertEqual([b for _, b in self.annun("0/M/0", "100/M/1", "200/QM/2")], [0, 0, 0])
+        self.assertEqual([b for _, b in self.annun("0//0", "100/Q/1")], [0, 100])
+        self.assertEqual([b for _, b in self.annun("0//0", "100/SMC/1")], [0, 200])
 
     def test_fram_identification(self):
         # RDID: MB85RS4MT 4 bajty (Adafruit_FRAM_SPI), CY15B104Q 9 bajtów (karta Infineon 001-94895, „Device ID”).
@@ -872,6 +946,34 @@ class HostUnitTests(unittest.TestCase):
         self.assertIn("log test cancelled", out)
         self.assertHas("type 5 rev 0 flags 8", intents[1:])
         self.assertEqual(menu[0], "menu")
+
+    def test_object_list_choice_at_startup(self):
+        # oprogramowanie.md, „Start”: lista adresów obiektów z wyborem przyciskami; WSTECZ na kontroli
+        # adresu wraca do listy, WSTECZ na liście = żaden obiekt (adres_brak).
+        texts = ui_texts.load()["texts"]
+        out = self.ui(["H", "AL Szkoła A|Hala sportowa B|Kościół C", "S 0", "O 1", "K OK 0", "R", "K DOWN 0", "K OK 0", "R",
+                       "K BACK 0", "R", "K BACK 0", "R", "AD"])
+        listed, check, again, missing = self.screens(out)
+        self.assertEqual(listed[0], "address_list")
+        self.assertEqual(self.lines(listed), ["Szkoła A", "Hala sportowa B", "Kościół C", "", ""])
+        self.assertEqual([inv for inv, _ in listed[2]], [True, False, False, False, False])
+        self.assertEqual(" ".join(self.lines(check)).strip(), texts["adres_kontrola"][0].replace("[x]", "Hala sportowa B"))
+        self.assertEqual(again[0], "address_list")
+        self.assertEqual([inv for inv, _ in again[2]], [False, True, False, False, False])
+        self.assertEqual(" ".join(self.lines(missing)).strip(), texts["adres_brak"][0])
+        self.assertIn("addresses 3 selected 1 |Szkoła A |Hala sportowa B |Kościół C |location Hala sportowa B", out)
+
+    def test_chosen_object_goes_into_requests_and_revision_keeps_it(self):
+        out = self.ui(["H", "AL Obiekt Alfa|Obiekt Beta|Obiekt Gamma", "S 0", "O 1", "K OK 0", "K DOWN 0", "K DOWN 0", "K OK 0",
+                       "K OK 0", "K OK 0", "J", "SEL 0", "RV 1 3", "J", "H", "AD", "A Jeden adres", "AD"])
+        intents = [line for line in out if line.startswith("intent ")]
+        self.assertIn('"Obiekt Gamma"', intents[0])          # TEST startowy z wybranego obiektu
+        self.assertIn("revise 0 2", out)
+        self.assertIn('"Obiekt Gamma"', intents[-1])         # rewizja po zmianie wyboru: ta sama lokalizacja
+        self.assertNotIn("Obiekt Alfa", " ".join(intents))
+        # Lista w FRAM po ponownym starcie magazynu; wybór wraca do pierwszego (main.cpp odtwarza go z ustawień).
+        self.assertIn("addresses 3 selected 0 |Obiekt Alfa |Obiekt Beta |Obiekt Gamma |location Obiekt Alfa", out)
+        self.assertIn("addresses 1 selected 0 |Jeden adres |location Jeden adres", out)
 
     def test_wizard_creates_request_with_phrase_and_short_number(self):
         data = ui_texts.load()
@@ -1183,6 +1285,23 @@ class HostUnitTests(unittest.TestCase):
         if resend:
             msg["resend"] = True
         return "> " + json.dumps(msg, ensure_ascii=False)
+
+    def test_usb_configure_object_list(self):
+        # Lista obiektów: 1–8 adresów, nie razem z "address"; najgorsze zgłoszenie liczone dla każdego.
+        def configure(seq, **fields):
+            return "> " + json.dumps({"usb": 1, "seq": seq, "type": "configure", **fields}, ensure_ascii=False)
+        objects = ["Szkoła A", "Hala sportowa B", "ś" * 32]
+        out = self.usb(["C 0", configure(1, addresses=objects), "S", configure(2, addresses=["a"] * 9),
+                        configure(3, addresses=[]), configure(4, addresses=["a", ""]), configure(5, addresses=["a", "x" * 65]),
+                        configure(6, addresses=["a"], address="b"), configure(7, addresses="a"),
+                        configure(8, addresses=["Testowa 10", "ł" * 49], phrases=[["ł" * 48, "a", "a"]]),
+                        configure(9, address="Jeden"), "S"])
+        r = self.replies(out)[1:]   # po C 0 stacja wysyła sync
+        self.assertEqual([x["type"] for x in r], ["ok"] + ["rejected"] * 7 + ["ok"])
+        self.assertEqual(r[0]["worst_request"], check_button_configuration("ś" * 32, ()))
+        self.assertEqual({x["detail"] for x in r[1:6]}, {"addresses"})
+        self.assertIn("store live 0 inbox 0 pending 0 latest 0 configured 1 address Szkoła A", out)
+        self.assertIn("store live 0 inbox 0 pending 0 latest 0 configured 1 address Jeden", out)
 
     def test_usb_sync_submit_duplicate_conflict_and_role(self):
         request = [1, 0, self.MID, 0, 2, 10, "Szkoła", "osoba na wózku", 2]

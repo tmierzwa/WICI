@@ -96,6 +96,7 @@ const char* screenName(Screen screen) {
         case Screen::STATUS: return "status";
         case Screen::LANGUAGE_MENU: return "language_menu";
         case Screen::ADDRESS: return "address";
+        case Screen::ADDRESS_LIST: return "address_list";
         case Screen::TEST_OFFER: return "test_offer";
         case Screen::CATEGORY: return "category";
         case Screen::PEOPLE: return "people";
@@ -234,6 +235,7 @@ void Model::go(Screen screen) {
         cursor_ = PEOPLE_CHOICES - 1;  // INNA, chyba że liczba jest na liście
         for (size_t i = 0; i < PEOPLE_CHOICES - 1; ++i) if (PEOPLE_VALUES[i] == draft_.people) cursor_ = static_cast<uint16_t>(i);
     } else if (screen == Screen::URGENCY) { cursor_ = 0; urgencyPicked_ = false; }
+    else if (screen == Screen::ADDRESS_LIST) cursor_ = static_cast<uint16_t>(host_ ? host_->selectedAddress() : 0);
     else if (screen == Screen::PHRASE) {
         const size_t none = draft_.category == 9 ? 0 : 1;
         cursor_ = static_cast<uint16_t>(draft_.phrase >= 0 ? draft_.phrase + none : 0);
@@ -381,16 +383,34 @@ void Model::act(Button button, uint32_t nowMs) {
             else if (ok) {
                 lang_ = static_cast<Lang>(cursor_);
                             changed_ = true;
-                if (screen_ == Screen::LANGUAGE) { addressMissing_ = false; go(host_ ? Screen::ADDRESS : Screen::MAIN); }
+                if (screen_ == Screen::LANGUAGE) {
+                    addressMissing_ = false;
+                    go(!host_ ? Screen::MAIN : host_->addressCount() > 1 ? Screen::ADDRESS_LIST : Screen::ADDRESS);
+                }
                 else go(Screen::MENU);
             } else if (back && screen_ == Screen::LANGUAGE_MENU) go(Screen::MENU);
             break;
         case Screen::ADDRESS:
             if (ok || back) {
-                if (!addressMissing_ && back && host_ && host_->address()[0]) addressMissing_ = true;  // NIE: adres_brak
+                // NIE: przy liście obiektów powrót do wyboru, przy jednym adresie adres_brak.
+                if (!addressMissing_ && back && host_ && host_->addressCount() > 1) go(Screen::ADDRESS_LIST);
+                else if (!addressMissing_ && back && host_ && host_->address()[0]) addressMissing_ = true;
                 else go(Screen::TEST_OFFER);
             } else scroll(up, downB);
             break;
+        case Screen::ADDRESS_LIST: {
+            const size_t count = host_ ? host_->addressCount() : 0;
+            if (up) moveCursor(-1, count, LINES);
+            else if (downB) moveCursor(1, count, LINES);
+            else if (ok) {
+                if (host_) host_->selectAddress(cursor_);
+                go(Screen::ADDRESS);   // zmiana ekranu zapisuje też wybór obiektu (main.cpp, ustawienia)
+            } else if (back) {
+                addressMissing_ = true;   // żaden obiekt z listy: adres_brak
+                go(Screen::ADDRESS);
+            }
+            break;
+        }
         case Screen::TEST_OFFER:
             if (ok) { if (host_) host_->scheduleTest(true); go(Screen::TEST); }
             else if (back) go(Screen::MAIN);
@@ -872,6 +892,13 @@ void Model::render(const Status& s, Lines& out) {
             if (addressMissing_ || !address[0]) t.add(text(Id::ADRES_BRAK, lang_));
             else { substitute(text(Id::ADRES_KONTROLA, lang_), "[x]", address, tmp, sizeof(tmp)); t.add(tmp); }
             renderText(t, window, out, first);
+            break;
+        }
+        case Screen::ADDRESS_LIST: {
+            const char* items[ADDRESS_CHOICES];
+            const size_t count = host_ ? host_->addressCount() : 0;
+            for (size_t i = 0; i < count && i < ADDRESS_CHOICES; ++i) items[i] = host_->addressAt(i);
+            renderList(items, count < ADDRESS_CHOICES ? count : ADDRESS_CHOICES, window, out, first, true);
             break;
         }
         case Screen::TEST_OFFER:

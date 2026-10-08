@@ -52,6 +52,9 @@ uint32_t packetsUnproven = 0;   // odrzucone przez warstwę aplikacji, bez dowod
 uint32_t delivered = 0;
 uint32_t timedOut = 0;
 uint32_t announcesSeen = 0;
+// Cele OSP z konfiguracji (główna, zapasowa): ich tras i tożsamości limit tablic nie usuwa
+// (microStore::pinned_key niżej, łata microStore 0001).
+uint8_t pinned[2][HASH] = {};
 
 void log(const char* text) {
     if (hooks.log) hooks.log(text, hooks.context);
@@ -232,6 +235,12 @@ bool begin(journal::Storage& storage, Radio& r, const uint8_t ifac[16], uint64_t
         reticulum = RNS::Reticulum();
         reticulum.transport_enabled(true);
         RNS::Transport::identity(identity);
+        // Port ustawia limit tras tylko dla dawnej tablicy w RAM (cull_path_table), a trasy są
+        // w magazynie microStore bez limitu; limit znanych tożsamości ustawia dopiero po wczytaniu
+        // magazynu. Oba limity przed startem: wczytanie z FRAM usuwa nadmiar (poza celami OSP
+        // z setOsp), więc wpisy usunięte w pracy nie wracają po restarcie.
+        RNS::Transport::path_table_maxsize(RNS_PATH_TABLE_MAX);
+        RNS::Identity::known_destinations_maxsize(RNS_KNOWN_DESTINATIONS_MAX);
         reticulum.start();
 #ifdef ARDUINO
         // Zegar stosu = czas pracy z dziennika FRAM (Reticulum::start wczytuje przesunięcie z pliku
@@ -270,8 +279,9 @@ void setIfac(const uint8_t ifac[16]) {
     }
 }
 
-void setOsp(const uint8_t dest[HASH]) {
-    if (p1) p1->queue().setOsp(dest);
+void setOsp(const uint8_t osp[2][HASH], uint8_t active) {
+    memcpy(pinned, osp, sizeof(pinned));
+    if (p1) p1->queue().setOsp(osp[active ? 1 : 0]);
 }
 
 void loop(uint32_t) {
@@ -467,6 +477,11 @@ void persist() {
 }
 
 #ifndef ARDUINO
+void debugTableMax(uint16_t n) {
+    RNS::Transport::path_table_maxsize(n);
+    RNS::Identity::known_destinations_maxsize(n);
+}
+
 uint32_t debugFillHashes(uint32_t n) {
     if (!started) return 0;
     for (uint32_t i = 0; i < n; ++i) RNS::Transport::add_packet_hash(RNS::Identity::get_random_hash());
@@ -475,3 +490,16 @@ uint32_t debugFillHashes(uint32_t n) {
 #endif
 
 }  // namespace rnsnode
+
+namespace microStore {
+
+bool pinned_key(const uint8_t* key, size_t length) {
+    if (length != rnsnode::HASH) return false;
+    static const uint8_t zero[rnsnode::HASH] = {};
+    for (const auto& dest : rnsnode::pinned) {
+        if (memcmp(dest, zero, rnsnode::HASH) && !memcmp(dest, key, rnsnode::HASH)) return true;
+    }
+    return false;
+}
+
+}  // namespace microStore

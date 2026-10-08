@@ -31,7 +31,8 @@ constexpr size_t INBOX_STATE = 1;
 constexpr size_t NOTE_IMMUTABLE = 4 + 4 + 1 + 4 + 2 + NOTE_TEXT;
 constexpr size_t NOTE_STATE = 1;
 constexpr size_t SEEN_IMMUTABLE = 4 + HASH + 2 + 4 + 1;
-constexpr size_t CONFIG_IMMUTABLE = 4 + 1 + 1 + 2 + (ADDRESS_MAX + 1) + 2 * HASH + 1 + PHRASES * 3 * (PHRASE_MAX + 1) + HASH;
+constexpr size_t CONFIG_IMMUTABLE = 4 + 1 + 1 + 2 + (ADDRESS_MAX + 1) + 2 * HASH + 1 + PHRASES * 3 * (PHRASE_MAX + 1) + HASH +
+                                    1 + (ADDRESSES - 1) * (ADDRESS_MAX + 1);
 constexpr size_t COUNTERS = 4 + 3 * 4;  // numer zapisu, najwyższe numery kolejki, skrzynki i zdarzeń
 static_assert(MSG_IMMUTABLE + 3 <= STATE_OFFSET, "record layout");
 static_assert(QUEUE_STATE_B + QUEUE_STATE + 3 <= RECORD, "record layout");
@@ -193,6 +194,7 @@ bool Store::begin() {
     // Konfiguracja: nowszy z dwóch slotów. CRC liczone kawałkami i pola czytane wprost do config_,
     // bez kopii rekordu 3,3 KB na stosie.
     config_ = Config();
+    selected_ = 0;
     uint32_t bestSeq = 0;
     uint32_t bestSlot = 0;
     for (uint32_t slot = 0; slot < CONFIG_SLOTS; ++slot) {
@@ -218,7 +220,9 @@ bool Store::begin() {
         const bool read = storage_.read(at, head, sizeof(head)) && storage_.read(at += sizeof(head), reinterpret_cast<uint8_t*>(config_.address), ADDRESS_MAX + 1) &&
                           storage_.read(at += ADDRESS_MAX + 1, &config_.osp[0][0], 2 * HASH) && storage_.read(at += 2 * HASH, &config_.phraseCount, 1) &&
                           storage_.read(at += 1, reinterpret_cast<uint8_t*>(config_.phrases), sizeof(config_.phrases)) &&
-                          storage_.read(at += sizeof(config_.phrases), config_.ifac, HASH);
+                          storage_.read(at += sizeof(config_.phrases), config_.ifac, HASH) &&
+                          storage_.read(at += HASH, &config_.objectCount, 1) &&
+                          storage_.read(at += 1, reinterpret_cast<uint8_t*>(config_.objects), sizeof(config_.objects));
         if (!read) return false;
         config_.seq = bestSeq;
         config_.role = head[4];
@@ -226,6 +230,8 @@ bool Store::begin() {
         config_.stations = getU16(head + 6);
         config_.address[ADDRESS_MAX] = '\0';
         if (config_.phraseCount > PHRASES) config_.phraseCount = PHRASES;
+        if (config_.objectCount > ADDRESSES - 1) config_.objectCount = ADDRESSES - 1;
+        for (auto& object : config_.objects) object[ADDRESS_MAX] = '\0';
         for (auto& phrase : config_.phrases) for (auto& text : phrase) text[PHRASE_MAX] = '\0';
     }
     // Najwyższe numery sprzed ostatniego ZAMKNIJ ZDARZENIE: numeracja rośnie dalej, a kursor
@@ -328,6 +334,11 @@ bool Store::writeCounters() {
     return true;
 }
 
+const char* Store::addressAt(size_t index) const {
+    if (index >= addressCount()) return "";
+    return index ? config_.objects[index - 1] : config_.address;
+}
+
 bool Store::writeConfig(const Config& config) {
     if (!ok_) return false;
     uint32_t seq = config_.seq + 1;
@@ -339,6 +350,7 @@ bool Store::writeConfig(const Config& config) {
     head[5] = config.activeOsp;
     putU16(head + 6, config.stations);
     const uint8_t count = config.phraseCount;
+    const uint8_t objects = config.objectCount;
     struct Piece { const uint8_t* data; size_t length; };
     const Piece pieces[] = {
         {head, sizeof(head)},
@@ -347,6 +359,8 @@ bool Store::writeConfig(const Config& config) {
         {&count, 1},
         {reinterpret_cast<const uint8_t*>(config.phrases), sizeof(config.phrases)},
         {config.ifac, HASH},
+        {&objects, 1},
+        {reinterpret_cast<const uint8_t*>(config.objects), sizeof(config.objects)},
     };
     const uint32_t address = CONFIG_BASE + (seq % CONFIG_SLOTS) * CONFIG_SLOT;
     if (!invalidate(address, CONFIG_IMMUTABLE)) return false;
@@ -365,6 +379,7 @@ bool Store::writeConfig(const Config& config) {
     if (!storage_.write(address + offset + 2, &committed, 1)) return false;
     config_ = config;
     config_.seq = seq;
+    if (selected_ >= addressCount()) selected_ = 0;
     return true;
 }
 
