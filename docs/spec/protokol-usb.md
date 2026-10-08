@@ -7,7 +7,7 @@ W pilotażu protokół służy tylko w trybie przygotowania: konfiguracja, karta
 ## Zasady
 
 - **Źródło prawdy.** Stan zgłoszeń, skrzynki i konfiguracji przechowuje stacja w FRAM. Laptop przechowuje kopię i własne dane (zgłoszenia mieszkańców, tokeny), a stacji przekazuje tylko intencje. Laptop nie ma tożsamości Reticulum.
-- **Bezpieczeństwo przy powtórzeniu.** Każde polecenie zmieniające stan jest idempotentne po kluczu treści (tabela niżej), nie po numerze `seq`. Laptop po utracie odpowiedzi wysyła to samo polecenie ponownie, z nowym `seq`.
+- **Bezpieczeństwo przy powtórzeniu.** Każde polecenie zmieniające stan jest idempotentne po kluczu treści (tabela niżej), nie po numerze `seq`. Laptop po utracie odpowiedzi wysyła to samo polecenie ponownie, z nowym `seq`. Klucz powtórzenia obowiązuje w obrębie jednej epoki ([synchronizacja](#synchronizacja)), dopóki stacja pamięta jego skutek; kiedy tej pamięci zabraknie, laptop nie ponawia automatycznie, tylko pokazuje wynik jako nieznany ([niepewny wynik](#niepewny-wynik-polecenia)).
 - **Brak pozornego sukcesu.** Stacja odpowiada `stored` albo `ok` dopiero po zatwierdzeniu zapisu w FRAM (COMMIT). Laptop potwierdza `ack` dopiero po COMMIT w SQLite.
 - **Laptop jest opcjonalny.** Nic w stacji nie czeka na laptop i nic nie rośnie bez niego bez ograniczenia: zdarzenia dla laptopa mają stały pierścień, a luka w nim prowadzi do migawki stanu ([synchronizacja](#synchronizacja)).
 
@@ -51,21 +51,21 @@ Każdy wiersz w obu kierunkach:
 | `ack` | `epoch`, `cursor` | każdy | brak | `cursor` (zbiorczo) |
 | `snapshot` | `epoch` | każdy | `snap_begin`, `snap`…, `snap_end` | sesja |
 | `submit` | `id`, `revision`, `sa1` | zwykły | `stored` albo `rejected` | (`id`, `revision`) |
-| `cancel` | `id` | zwykły | `ok` albo `rejected` | `id` |
+| `cancel` | `id` | zwykły | `ok` albo `rejected`; dla zwolnionego `id` `ok` z `"released":true` | `id` |
 | `test` | `nonce` | zwykły | `stored` albo `rejected` | `nonce` |
 | `announce` | brak | zwykły | `ok` albo `rejected` | łączone w 30 s |
 | `silence` | `on`, opcjonalnie `exception_id` | zwykły | `pending`, potem `ok` albo `rejected` | stan docelowy |
 | `mark_read` | `msg` (numer wiadomości z `snap` lub `event`) | zwykły | `ok` | `msg` |
 | `status` | brak | każdy | `status` | – |
-| `close` | brak | zwykły | `pending`, potem `ok` albo `rejected` | stan docelowy |
+| `close` | `epoch`, `head` | zwykły | `pending`, potem `ok` albo `rejected` | (`epoch`, `head`) |
 | `destroy` | brak | każdy | `pending`, potem `ok` albo `rejected` | stan docelowy |
 | `card` | brak | przygotowania | `card` | – |
-| `xfer_begin` | `op`, dalsze pola według `op` | przygotowania | `ok` z `xfer` albo `rejected` | (`op`, `sha256`) |
+| `xfer_begin` | `op`, dalsze pola według `op` | przygotowania | `ok` z `xfer` albo `rejected`; `export` najpierw `pending` | (`op`, `sha256`), dla `export` (`op`, `mid`) |
 | `xfer_part` | `xfer`, `offset`, `data` | przygotowania | `ok` z `next` | (`xfer`, `offset`) |
 | `xfer_read` | `xfer`, `offset`, `length` (≤512) | przygotowania | `data` | (`xfer`, `offset`) |
 | `xfer_commit` | `xfer` | przygotowania | `ok` z wynikiem albo `rejected` | `xfer` |
 | `xfer_abort` | `xfer` | przygotowania | `ok` | `xfer` |
-| `migrate` | `step`, dalsze pola według kroku | przygotowania | `ok` albo `rejected` | (`step`, skrót paczki) |
+| `migrate` | `step`, dalsze pola według kroku ([przeniesienie](#przeniesienie-stacji)) | przygotowania | `ok` albo `rejected`; przy krokach z przyciskiem najpierw `pending` | (`step`, `mid`) |
 
 „Tryb przygotowania” włącza przycisk pod plombowaną pokrywą serwisową; stacja pokazuje wtedy stale `tryb_przygotowania`. Polecenie z kolumny „przygotowania” poza tym trybem daje `prep_required`. Stacja w konfiguracji węzła stanowiska używa tego protokołu tylko w trybie przygotowania; poza nim interfejs danych przenosi pakiety Reticulum w ramkach KISS ([radio](radio.md#interfejs-reticulum-przez-usb-węzeł-stanowiska)), a polecenia `submit`, `cancel`, `test`, `announce`, `mark_read` i `close` dają tam `role`.
 
@@ -75,7 +75,8 @@ Każdy wiersz w obu kierunkach:
 - `revision` większa od najnowszej znanej dla `id`: nowa rewizja według [cyklu życia](oprogramowanie.md#cykl-życia-zgłoszenia);
 - ta sama `revision` i ta sama treść: `stored` z `"duplicate":true`; inna treść: `conflict`;
 - `revision` mniejsza od najnowszej: `stale`;
-- zgłoszenie zamknięte lokalnie (anulowane): `closed`.
+- zgłoszenie zamknięte lokalnie (anulowane): `closed`;
+- `id` z wpisem zwolnionym z rejestru (w pamięci zwolnionych wpisów, [pamięć FRAM](oprogramowanie.md#pamięć-fram)): ta sama `revision` daje `stored` z `"duplicate":true` i `"released":true`, większa `closed`, mniejsza `stale`. Stacja nigdy nie tworzy ponownie wpisu dla `id` z tej pamięci.
 
 Odpowiedź `stored`: `{"id":…,"revision":…,"number":"0427","duplicate":false}`; `number` to krótki numer zgłoszenia.
 
@@ -83,7 +84,7 @@ Odpowiedź `stored`: `{"id":…,"revision":…,"number":"0427","duplicate":false
 
 **`test`** tworzy TEST jak z menu stacji. `nonce` (16 cyfr szesnastkowych losowanych przez laptop) chroni przed podwójnym TEST przy powtórzeniu polecenia: stacja pamięta ostatnie 8 wartości `nonce` z `id` utworzonego TEST i na powtórzenie odpowiada tym samym `stored`.
 
-**`silence`, `close`, `destroy`** wymagają potwierdzenia przyciskiem OK na stacji w ciągu 30 s. Stacja od razu odpowiada `pending` z `"confirm_s":30`, pokazuje pytanie na ekranie i po potwierdzeniu wykonuje operację; bez potwierdzenia odpowiada `not_confirmed`. `silence` z `"on":false` przy przełączniku CISZA w położeniu „cisza” daje `silence_switch`. `exception_id` (wyjątek dla pojedynczego zgłoszenia) wolno podać tylko przy `"on":true` i tylko gdy ciszę ustawiono z panelu; zasady wyjątku są w [trybach kryzysowych](oprogramowanie.md#tryby-kryzysowe). `close` to ZAMKNIJ ZDARZENIE po stronie stacji: laptop wysyła je dopiero po zapisaniu zaszyfrowanego archiwum; stacja usuwa rejestr, kolejkę, skrzynkę i pierścień zdarzeń, losuje nowe `epoch` i odpowiada `ok` z nowym `epoch`. `destroy` to [ZNISZCZ DANE](oprogramowanie.md#tryby-kryzysowe).
+**`silence`, `close`, `destroy`** wymagają potwierdzenia przyciskiem OK na stacji w ciągu 30 s. Stacja od razu odpowiada `pending` z `"confirm_s":30`, pokazuje pytanie na ekranie i po potwierdzeniu wykonuje operację; bez potwierdzenia odpowiada `not_confirmed`. `silence` z `"on":false` przy przełączniku CISZA w położeniu „cisza” daje `silence_switch`. `exception_id` (wyjątek dla pojedynczego zgłoszenia) wolno podać tylko przy `"on":true` i tylko gdy ciszę ustawiono z panelu; zasady wyjątku są w [trybach kryzysowych](oprogramowanie.md#tryby-kryzysowe). `close` to ZAMKNIJ ZDARZENIE po stronie stacji: laptop wysyła je dopiero po zapisaniu zaszyfrowanego archiwum, z `epoch` i `head` stanu, który zarchiwizował, i tylko bez niepotwierdzonych poleceń `submit`. Stacja sprawdza warunek dopiero po potwierdzeniu przyciskiem i w tej samej transakcji co usunięcie: `epoch` musi być bieżącą epoką, a po `head` nie może być zdarzenia, które zmienia dane (`own`, `msg` ani `stage` z etapem `received`, `cancelled`, `released` albo nową decyzją); zdarzenia samego postępu wysyłki (`stage` z `sending` i `delivered`), `radio`, `power` i `station` nie blokują. Inaczej stacja odpowiada `stale` i laptop synchronizuje się i archiwizuje ponownie, więc dane przyjęte po archiwizacji nigdy nie znikają. Stacja usuwa rejestr, kolejkę, skrzynkę, pamięć zwolnionych wpisów i pierścień zdarzeń, losuje nowe `epoch`, zapamiętuje parę (stary `epoch`, `head`) i odpowiada `ok` z nowym `epoch`. Ponowione `close` z zapamiętaną parą daje to samo `ok` z `"duplicate":true`, bez drugiego usunięcia. `destroy` to [ZNISZCZ DANE](oprogramowanie.md#tryby-kryzysowe).
 
 **`card`** zwraca kartę stacji: `{"name":"WICI-3fa21c","lxmf":…,"key":<128 cyfr szesnastkowych: klucz publiczny 64 B>,"address":[…],"fingerprint":"…"}`. Odcisk (pierwsze 8 B SHA-256 klucza w grupach po 4 cyfry) stacja pokazuje jednocześnie na ekranie.
 
@@ -99,22 +100,37 @@ Odpowiedź `stored`: `{"id":…,"revision":…,"number":"0427","duplicate":false
 | `stored`, `ok`, `pending`, `data`, `status`, `card` | według polecenia | odpowiedź |
 | `rejected` | `re`, `reason`, opcjonalnie `detail` | odmowa; stan stacji bez zmian |
 
-Pola `hello`: `epoch` to bieżąca epoka pierścienia zdarzeń, `head` numer ostatniego zdarzenia, `min` najstarszego zachowanego, `migration` stan [przeniesienia](#przeniesienie-stacji) (`none`, `export`, `imported`, `retired`).
+Pola `hello`: `epoch` to bieżąca epoka pierścienia zdarzeń, `head` numer ostatniego zdarzenia, `min` najstarszego zachowanego, `migration` stan [przeniesienia](#przeniesienie-stacji) (`none`, `receiving`, `export`, `imported`, `retired`).
+
+**Pola decyzji** (w `stage` i w wierszu `snap` zgłoszenia): `decision` to liczba 0 (brak decyzji) albo stan 2–6 z ostatniego przyjętego STATUS, `decision_rev` rewizja tego STATUS (0, gdy `decision` = 0), `status_event` najwyższy przyjęty `event` STATUS (0, gdy brak).
+
+**Odpowiedź `status`:**
+
+| Pole | Znaczenie |
+|---|---|
+| `role`, `prep`, `configured`, `config_seq`, `fw`, `secure_version`, `fram_format` | rola, tryb przygotowania, konfiguracja i wersje (`fram_format`: [wersja formatu FRAM](oprogramowanie.md#aktualizacja-oprogramowania-stacji)) |
+| `uptime` | licznik czasu pracy w sekundach ([czas](oprogramowanie.md#czas)) |
+| `register`, `intents`, `inbox`, `unread` | zajęte wpisy rejestru (z 256), aktywne intencje, zajęte gniazda skrzynki (z 128), nieprzeczytane wiadomości |
+| `receiver`, `last_contact`, `last_contact_lower` | aktywna tożsamość odbiorcy (`main`, `backup`); sekundy czasu pracy od ostatniej przyjętej wiadomości odbiorcy albo `null`, a `last_contact_lower` = `true`, gdy to dolne oszacowanie po restarcie |
+| `silence`, `silence_source`, `exception_id` | cisza radiowa jak w zdarzeniu `radio` |
+| `power` | `source`, `mv_aa`, `mv_12v`, `alarm` jak w zdarzeniu `power` |
+| `migration`, `mid` | stan przeniesienia i jego identyfikator (pusty poza przeniesieniem) |
+| `diag` | liczniki diagnostyki: odrzucone wiadomości, odrzucone pakiety K2, długie odroczenia CCA, restarty przez watchdog, BULLETIN pominięte |
 
 **Rodzaje zdarzeń** (`kind`):
 
 | `kind` | Pola | Znaczenie |
 |---|---|---|
 | `own` | `id`, `revision`, `sa1`, `origin` (`buttons`, `usb`) | nowa rewizja zgłoszenia albo TEST zapisana w stacji, także utworzona przyciskami; rejestr trzyma treść tylko najnowszej rewizji, więc zdarzenie rewizji już zastąpionej wychodzi z `"superseded":true` i bez `sa1` |
-| `stage` | `id`, `revision`, `stage`, `attempt`, `next_s`, `decision`, `event` | zmiana etapu wysyłki według [cyklu życia](oprogramowanie.md#cykl-życia-zgłoszenia): `stored`, `sending`, `delivered`, `received`, `superseded`, `cancelled` |
-| `msg` | `msg`, `from`, `sa1`, `lost` | wiadomość od aktywnej tożsamości odbiorcy przyjęta do skrzynki (REPLY, BULLETIN; RECEIVED i STATUS zmieniają wpis rejestru i dają zdarzenie `stage` z polami `decision` i `event`); `msg` to numer w skrzynce; `"lost":true` i brak `sa1`, gdy wiadomość usunięto ze skrzynki, zanim zdarzenie wyszło |
+| `stage` | `id`, `revision`, `stage`, `attempt`, `next_s`, `decision`, `decision_rev`, `status_event` | zmiana etapu wysyłki według [cyklu życia](oprogramowanie.md#cykl-życia-zgłoszenia): `stored`, `sending`, `delivered`, `received`, `superseded`, `cancelled`, `released` (wpis zwolniony z rejestru) |
+| `msg` | `msg`, `from`, `sa1`, `lost` | wiadomość od aktywnej tożsamości odbiorcy przyjęta do skrzynki (REPLY, BULLETIN; RECEIVED i STATUS zmieniają wpis rejestru i dają zdarzenie `stage` z polami `decision`, `decision_rev` i `status_event`); `msg` to numer w skrzynce; `"lost":true` i brak `sa1`, gdy wiadomość usunięto ze skrzynki, zanim zdarzenie wyszło |
 | `radio` | `silence`, `silence_source` (`switch`, `panel`), `exception_id` | zmiana ciszy radiowej |
 | `power` | `source` (`aa`, `12v`), `mv_aa`, `mv_12v`, `alarm` (`none`, `wymien_ogniwa`, `odlaczone_12v`) | zmiana źródła albo alarm energii |
 | `station` | `what` (`restart`, `config`, `receiver_backup`, `prep`), `detail` | restart (z przyczyną), nowa konfiguracja, przełączenie na KLUCZ ZAPASOWY, tryb przygotowania |
 
 `at` to czas pracy stacji w sekundach ([czas](oprogramowanie.md#czas)), nie czas kalendarzowy.
 
-**Odmowy** (`reason`): `contract`, `too_long`, `seq`, `unknown_type`, `invalid`, `role`, `prep_required`, `not_configured`, `full`, `numer_zajety`, `conflict`, `stale`, `closed`, `too_late`, `memory`, `not_confirmed`, `silence_switch`, `busy`, `size`, `hash`, `signature`, `version`, `migration`. Znaczenie dla panelu i ekranu:
+**Odmowy** (`reason`): `contract`, `too_long`, `seq`, `unknown_type`, `invalid`, `role`, `prep_required`, `not_configured`, `full`, `numer_zajety`, `conflict`, `stale`, `closed`, `too_late`, `memory`, `not_confirmed`, `silence_switch`, `busy`, `size`, `hash`, `signature`, `version`, `format`, `migration`. Znaczenie dla panelu i ekranu:
 
 | `reason` | Panel laptopa pokazuje |
 |---|---|
@@ -140,9 +156,23 @@ Pola `hello`: `epoch` to bieżąca epoka pierścienia zdarzeń, `head` numer ost
 
 Polecenie bez odpowiedzi w limicie traktuje się jak niewykonane, dopóki ponowienie po kluczu powtórzenia nie da odpowiedzi; dzięki kluczom ponowienie nie podwaja zgłoszenia ani TEST.
 
+### Niepewny wynik polecenia
+
+Laptop zapisuje przy każdym niepotwierdzonym `submit` epokę i swój kursor (`epoch`, C) z chwili pierwszego wysłania. Stacja przy zwolnieniu wpisu z rejestru zapisuje `id`, `revision` i numer zdarzenia `released` w pamięci zwolnionych wpisów (256 ostatnich w epoce, [pamięć FRAM](oprogramowanie.md#pamięć-fram)). `tomb_floor` to najmniejszy numer zdarzenia, od którego pamięć jest kompletna: 1, dopóki nic z niej nie wypadło, potem numer `released` najstarszego zachowanego wpisu. Po ponownym połączeniu laptop rozstrzyga:
+
+| Sytuacja | Postępowanie laptopa |
+|---|---|
+| ta sama epoka i `sync_ok` | zdarzenia od C + 1 pokazują `own` dla (`id`, `revision`), jeśli zapis nastąpił; ponowienie jest bezpieczne (stacja odpowie z wpisu albo z pamięci zwolnionych) |
+| ta sama epoka, migawka, `tomb_floor` ≤ C + 1 | `id` z `revision` co najmniej równą wysłanej w migawce albo wśród zwolnionych: zapis nastąpił (wcześniej albo z nowszą rewizją); poza nimi: zapisu nie było, ponowienie jest bezpieczne |
+| ta sama epoka, migawka, `tomb_floor` > C + 1 albo inna epoka | wynik nieznany: laptop nie ponawia, a panel pokazuje wynik „nieznany” z `id` i krótkim numerem; opiekun sprawdza zgłoszenie na ekranie stacji i w razie potrzeby tworzy nowe (nowe `id`) |
+
+Migawka zawiera zwolnione wpisy jako wiersze `{"item":"released","id":…,"revision":…,"ev":…,"number":…}`, a `snap_begin` pole `tomb_floor`. Krótki numer zwolnionego wpisu pozostaje zajęty, dopóki wpis jest w pamięci zwolnionych wpisów.
+
+**`test` i `cancel`.** Wpis TEST w rejestrze przechowuje `nonce`, a zdarzenie `own` i wiersz `snap` TEST mają pole `nonce`; laptop rozpoznaje więc zapis po `nonce` tak jak `submit` po `id`. Po zwolnieniu wpisu TEST pamięć 8 ostatnich `nonce` nie wystarcza do rozstrzygnięcia, więc przy luce laptop nie ponawia TEST automatycznie, tylko pokazuje wynik „nieznany”; podwójny TEST jest nieszkodliwy, a brakujący opiekun widzi na ekranie stacji. `cancel` jest bezpieczny do ponowienia zawsze: dla wpisu anulowanego daje `ok`, dla zwolnionego `id` `ok` z `"released":true`, a po RECEIVED `too_late`.
+
 ## Synchronizacja
 
-**Pierścień zdarzeń.** Stacja zapisuje każde zdarzenie w pierścieniu w FRAM na 256 wpisów, w tej samej transakcji co zmianę stanu, której dotyczy. Wpis zawiera numer `ev`, czas, rodzaj i odwołanie do rekordu (rejestru zgłoszeń albo skrzynki); treść SA1 stacja czyta z tego rekordu przy wysyłaniu. Nowy wpis nadpisuje najstarszy niezależnie od `ack`, więc laptop nie jest potrzebny do pracy stacji. `ev` rośnie o 1 w obrębie epoki; `min` to najstarszy zachowany wpis.
+**Pierścień zdarzeń.** Stacja zapisuje każde zdarzenie w pierścieniu w FRAM na 256 wpisów (16 bloków po 16 wpisów, [pamięć FRAM](oprogramowanie.md#pamięć-fram)), w tej samej transakcji co zmianę stanu, której dotyczy. Wpis (24 B) zawiera numer `ev`, czas, rodzaj, odwołanie do rekordu (gniazdo rejestru zgłoszeń albo skrzynki z generacją gniazda 2 B i rewizją; dla `released` numer wpisu w pamięci zwolnionych) i pola rodzaju bez treści SA1. Generacja gniazda rośnie przy każdym ponownym zajęciu gniazda; gdy przy wysyłaniu zdarzenia nie zgadza się z gniazdem, zdarzenie wychodzi z `"lost":true` i bez `sa1`, a `id` laptop bierze z wcześniejszego zdarzenia albo z migawki. Wpis pamięci zwolnionych przeżywa każde zdarzenie pierścienia, które na niego wskazuje, bo obie struktury mają 256 wpisów, a zwolnienie zawsze daje zdarzenie; treść SA1 stacja czyta z tego rekordu przy wysyłaniu. Nowy wpis nadpisuje najstarszy niezależnie od `ack`, więc laptop nie jest potrzebny do pracy stacji. `ev` rośnie o 1 w obrębie epoki; `min` to najstarszy zachowany wpis.
 
 **Epoka.** `epoch` to 8 losowych bajtów. Stacja losuje nową epokę przy utworzeniu tożsamości, po ZAMKNIJ ZDARZENIE, po ZNISZCZ DANE, po imporcie PRZENIEŚ STACJĘ, po odtworzeniu uszkodzonego pierścienia i gdy `ev` osiągnie 2³²−1. Nowa epoka zaczyna od `ev` = 1.
 
@@ -159,7 +189,7 @@ Polecenie bez odpowiedzi w limicie traktuje się jak niewykonane, dopóki ponowi
 
 Kursor nie jest numerem rekordu FRAM, więc porządkowanie pamięci stacji go nie zmienia.
 
-**Migawka.** Na `snapshot` stacja wysyła `snap_begin` (`epoch`, `head`, `count`), potem po jednym wierszu `snap` na każdy wpis rejestru zgłoszeń i każdą wiadomość skrzynki, potem `snap_end` (`epoch`, `head`). Wiersz `snap` zgłoszenia: `{"item":"request","id":…,"revision":…,"sa1":[…],"stage":…,"decision":…,"status_event":…,"reply_event":…,"number":…}`; wiadomości: `{"item":"msg","msg":…,"from":…,"received_at":…,"read":…,"sa1":[…]}`. Migawkę stacja buduje z jednego, spójnego stanu: zmiany w czasie migawki dostają zwykłe zdarzenia z `ev` > `head`. Laptop stosuje migawkę w jednej transakcji SQLite dopiero po `snap_end`: zastępuje kopię stanu stacji, zachowuje własne dane mieszkańców i ustawia kursor (`epoch`, `head`). Przerwana migawka nie zmienia bazy laptopa.
+**Migawka.** Na `snapshot` stacja wysyła `snap_begin` (`epoch`, `head`, `count`, `tomb_floor`), potem po jednym wierszu `snap` na każdy wpis rejestru zgłoszeń, każdy zwolniony wpis i każdą wiadomość skrzynki, potem `snap_end` (`epoch`, `head`). Wiersz `snap` zgłoszenia: `{"item":"request","id":…,"revision":…,"sa1":[…],"stage":…,"decision":…,"decision_rev":…,"status_event":…,"reply_event":…,"number":…}`; wiadomości: `{"item":"msg","msg":…,"from":…,"received_at":…,"read":…,"sa1":[…]}`. Migawkę stacja buduje z jednego, spójnego stanu: zmiany w czasie migawki dostają zwykłe zdarzenia z `ev` > `head`. Laptop stosuje migawkę w jednej transakcji SQLite dopiero po `snap_end`: zastępuje kopię stanu stacji, zachowuje własne dane mieszkańców i ustawia kursor (`epoch`, `head`). Przerwana migawka nie zmienia bazy laptopa.
 
 **Powiązanie laptopa ze stacją.** Baza laptopa zapisuje nazwę i adres LXMF stacji z pierwszego `hello` po konfiguracji. Stacja o innym adresie wymaga potwierdzenia w panelu („inna stacja”) i zawsze migawki; dane mieszkańców pozostają przy zgłoszeniach, które już mają `id` SA1 tej drugiej stacji, tylko jako historia.
 
@@ -169,10 +199,10 @@ Dane większe niż jeden wiersz przechodzą przez transfer: konfiguracja (`confi
 
 | `op` | Kierunek | Pola `xfer_begin` | Największy rozmiar | Zatwierdzenie |
 |---|---|---|---|---|
-| `configure` | do stacji | `size`, `sha256` | 8 KiB | pełna kontrola i zapis w drugiej kopii konfiguracji, przełączenie kopii jednym zapisem znacznika (konfiguracja nigdy nie jest łączona z poprzednią) |
-| `import` | do stacji | `size`, `sha256` | 256 KiB | według [przeniesienia](#przeniesienie-stacji) |
-| `firmware` | do stacji | `size`, `sha256`, `version` | rozmiar gniazda obrazu ([aktualizacja](oprogramowanie.md#aktualizacja-oprogramowania-stacji)) | sprawdzenie podpisu i wersji, oznaczenie gniazda jako oczekującego |
-| `export` | ze stacji | `target_key` | 256 KiB | według [przeniesienia](#przeniesienie-stacji) |
+| `configure` | do stacji | `size`, `sha256` | 8 KiB | pełna kontrola i zapis w drugiej kopii konfiguracji, przełączenie kopii zwykłą transakcją wskaźnika ([zapis kopii A/B](oprogramowanie.md#zapisy-większe-niż-transakcja); konfiguracja nigdy nie jest łączona z poprzednią) |
+| `import` | do stacji | `size`, `sha256`, `mid` | 256 KiB | według [przeniesienia](#przeniesienie-stacji) |
+| `firmware` | do stacji | `size`, `sha256`, `version` | rozmiar gniazda obrazu ([aktualizacja](oprogramowanie.md#aktualizacja-oprogramowania-stacji)) | sprawdzenie podpisu, wersji i obsługiwanego formatu FRAM (`format`), oznaczenie gniazda jako oczekującego |
+| `export` | ze stacji | `target_key`, `mid` | 256 KiB | według [przeniesienia](#przeniesienie-stacji) |
 | `config_get` | ze stacji | brak | 8 KiB | – |
 
 Zapis: `xfer_begin` → `ok` z `xfer` (8 cyfr szesnastkowych) i `"max_part":512`; potem `xfer_part` z kolejnymi `offset` od 0 (`offset` musi być równy `next` z poprzedniej odpowiedzi; część powtórzona z mniejszym `offset` i tą samą treścią daje `ok`, z inną treścią `invalid`); na końcu `xfer_commit`. Stacja sprawdza łączny rozmiar (`size`) i SHA-256 (`hash`), potem treść; każdy błąd daje `rejected` i zostawia poprzedni stan bez zmian. Odczyt: `xfer_begin` → `ok` z `xfer`, `size` i `sha256`; potem `xfer_read` → `data` z `offset` i `data`.
@@ -193,26 +223,40 @@ Stacja przy zatwierdzeniu sprawdza każdy tekst według reguł SA1 i odrzuca kon
 
 ## Przeniesienie stacji
 
-PRZENIEŚ STACJĘ przenosi tożsamość, licznik czasu pracy, konfigurację, rejestr zgłoszeń i skrzynkę ze sprawnej stacji źródłowej na stację zapasową. W każdej chwili najwyżej jedna z nich nadaje z tą tożsamością. Obie stacje są w trybie przygotowania i każdy stan zapisują trwale w FRAM, więc zanik zasilania albo odłączenie przewodu w dowolnym kroku pozwala wznowić albo wycofać operację.
+PRZENIEŚ STACJĘ przenosi tożsamość, licznik czasu pracy, konfigurację, rejestr zgłoszeń, pamięć zwolnionych wpisów, skrzynkę i zbiór powtórzeń BULLETIN ze sprawnej stacji źródłowej na stację zapasową. W każdej chwili najwyżej jedna z nich nadaje z tą tożsamością. Obie stacje są w trybie przygotowania i każdy stan zapisują trwale w FRAM, więc zanik zasilania albo odłączenie przewodu w dowolnym kroku pozwala wznowić albo wycofać operację.
+
+**Klucze i potwierdzenia.** Stacja docelowa w kroku 1 losuje identyfikator przeniesienia `mid` (16 B) i parę kluczy przeniesienia X25519 (`target_key`). Stacja źródłowa w kroku 2 losuje raz dla danego `mid` parę efemeryczną X25519 (`eph`), zapisuje ją w FRAM ze stanem `export` i używa jej przy każdym ponownym wydaniu paczki, i wyznacza klucz potwierdzeń `k` = HKDF-SHA-256(X25519(`eph`, `target_key`), „WICI migrate” ‖ `mid`); docelowa wyznacza ten sam `k` z własnego klucza prywatnego i publicznego `eph`. `eph` nie jest tajny: jest w nagłówku paczki, a źródłowa podaje go też w odpowiedzi na `status` przeniesienia. Docelowa zna więc `k` także wtedy, gdy paczka do niej nie dotarła. Potwierdzenia „imported” i „retired” to HMAC-SHA-256(`k`, nazwa ‖ `mid` ‖ skrót paczki), a „aborted” zawsze HMAC-SHA-256(`k`, „aborted” ‖ `mid`), bo docelowa może nie mieć paczki albo mieć ją tylko częściowo. Laptop, który poda fałszywy `eph`, dostaje potwierdzenie, którego źródłowa nie przyjmie, więc operacja pozostaje bezpieczna.
 
 | Krok | Polecenie (stacja) | Skutek | Stan po kroku |
 |---|---|---|---|
-| 1 | `migrate` `"step":"receive_key"` (docelowa) | stacja pusta (bez tożsamości albo po ZNISZCZ DANE i ponownym przygotowaniu) tworzy parę kluczy przeniesienia X25519 i zwraca klucz publiczny; ekran pokazuje jego odcisk | docelowa: `receiving` |
-| 2 | `xfer_begin` `"op":"export"` z `target_key` (źródłowa) | porównanie odcisku z ekranem stacji docelowej przyciskiem OK na źródłowej; stacja przestaje nadawać (także ruch przekazywany i ogłoszenia), zatrzymuje kolejkę i przyciski zgłoszeń, losuje klucz paczki `k` i wydaje paczkę zaszyfrowaną dla `target_key` | źródłowa: `export` |
-| 3 | `xfer_begin` `"op":"import"` … `xfer_commit` (docelowa) | odszyfrowanie, kontrola, zapis wszystkich danych pod własnym kluczem FRAM i nową epoką, jedna transakcja; potwierdzenie importu HMAC(`k`, „imported” ‖ skrót paczki) | docelowa: `imported`, nie nadaje |
-| 4 | `migrate` `"step":"retire"` z potwierdzeniem importu (źródłowa) | sprawdzenie potwierdzenia; usunięcie tożsamości i danych jak w ZNISZCZ DANE, z zachowaniem długu ciszy; potwierdzenie wycofania HMAC(`k`, „retired” ‖ skrót paczki) | źródłowa: `retired` |
-| 5 | `migrate` `"step":"activate"` z potwierdzeniem wycofania (docelowa) | sprawdzenie potwierdzenia, start nadawania z przeniesioną tożsamością | docelowa: zwykła praca |
+| 1 | `migrate` `"step":"receive_key"` (docelowa) | stacja pusta (bez tożsamości albo po ZNISZCZ DANE i ponownym przygotowaniu) losuje `mid` i `target_key`; odpowiedź `ok` z `mid`, `key` i `fingerprint`; ekran pokazuje odcisk | docelowa: `receiving` |
+| 2 | `xfer_begin` `"op":"export"` z `target_key` i `mid` (źródłowa) | porównanie odcisku z ekranem stacji docelowej przyciskiem OK na źródłowej (`pending`); stacja przestaje nadawać (także ruch przekazywany i ogłoszenia), zatrzymuje kolejkę i przyciski zgłoszeń, wyznacza `k` i wydaje paczkę zaszyfrowaną dla `target_key` | źródłowa: `export` |
+| 3 | `xfer_begin` `"op":"import"` z `mid` … `xfer_commit` (docelowa) | odszyfrowanie, kontrola i zapis etapami z publikacją jednym znacznikiem ([import](oprogramowanie.md#zapisy-większe-niż-transakcja)); odpowiedź `ok` z `confirm` = potwierdzenie „imported” | docelowa: `imported`, nie nadaje |
+| 4 | `migrate` `"step":"retire"` z `mid` i `confirm` (źródłowa) | sprawdzenie potwierdzenia; usunięcie tożsamości i danych jak w ZNISZCZ DANE, z zachowaniem długu ciszy; odpowiedź `ok` z `confirm` = potwierdzenie „retired” | źródłowa: `retired` |
+| 5 | `migrate` `"step":"activate"` z `mid` i `confirm` (docelowa) | sprawdzenie potwierdzenia, usunięcie klucza prywatnego przeniesienia, start nadawania z przeniesioną tożsamością | docelowa: zwykła praca, `none` |
 
-Paczka: nagłówek (wersja, skrót tożsamości, klucz efemeryczny X25519, skrót paczki), potem części po 512 B, każda szyfrowana AEAD (ChaCha20-Poly1305) kluczem z X25519 i HKDF, z numerem części w nonce. Klucz `k` jest wewnątrz zaszyfrowanej paczki, więc znają go tylko obie stacje; służy wyłącznie do potwierdzeń HMAC. Stacja źródłowa w stanie `export` nie zmienia danych, więc może wydać tę samą paczkę ponownie. Paczka nigdy nie zawiera jawnego klucza prywatnego. Licznik czasu pracy stacji docelowej przyjmuje większą z dwóch wartości ([czas](oprogramowanie.md#czas)).
+**Pola `migrate`:**
+
+| `step` | Stacja | Pola | Odpowiedź |
+|---|---|---|---|
+| `receive_key` | docelowa | brak | `ok` z `mid`, `key`, `fingerprint`; powtórzenie w stanie `receiving` zwraca te same wartości |
+| `status` | każda | brak | `ok` z `migration`, `mid`, `eph` (źródłowa w stanie `export`), `package` (skrót paczki albo pusty) |
+| `retire` | źródłowa | `mid`, `confirm` | `ok` z `confirm` |
+| `activate` | docelowa | `mid` i `confirm` albo `"forced":true` | przy `forced` najpierw `pending`; `ok`; stacja pamięta `mid` ostatniego zakończonego przeniesienia, więc powtórzenie daje `ok` z `"duplicate":true` |
+| `abort` | docelowa | `mid`, `eph` (pusty przed krokiem 2) | przy stanie `imported` najpierw `pending`; `ok` z `confirm` = potwierdzenie „aborted”, a przy pustym `eph` `ok` bez `confirm` |
+| `abort` | źródłowa | `mid` i `confirm` albo `"forced":true` | przy `forced` najpierw `pending`; `ok` |
+
+Nieznany `mid` albo krok niezgodny ze stanem daje `migration`, błędne potwierdzenie `signature`. Paczka: nagłówek (wersja, `mid`, skrót tożsamości, `eph`, skrót paczki), potem części po 512 B, każda szyfrowana AEAD (ChaCha20-Poly1305) kluczem HKDF-SHA-256(X25519(`eph`, `target_key`), „WICI migrate pkg” ‖ `mid`), oddzielonym od `k` innym ciągiem HKDF, z numerem części w nonce. Stacja źródłowa w stanie `export` nie zmienia danych, więc może wydać tę samą paczkę ponownie. Paczka nigdy nie zawiera jawnego klucza prywatnego. Licznik czasu pracy stacji docelowej przyjmuje większą z dwóch wartości ([czas](oprogramowanie.md#czas)).
 
 **Wznowienie i wycofanie:**
 
 | Przerwanie | Postępowanie |
 |---|---|
-| przed krokiem 3 albo z niepewnym wynikiem kroku 3 | najpierw `migrate` `"step":"abort"` na docelowej: usuwa zaimportowane dane, jeśli są, i zwraca potwierdzenie HMAC(`k`, „aborted” ‖ skrót paczki); dopiero z tym potwierdzeniem `abort` na źródłowej przywraca zwykłą pracę i unieważnia `k`. Gdy docelowa nie odpowiada, źródłowa wraca do pracy dopiero po ZNISZCZ DANE na docelowej, potwierdzonym przyciskiem i wpisanym do dziennika; tak dwie stacje nigdy nie mają naraz aktywnej tej samej tożsamości |
+| po kroku 1, przed krokiem 2 | `abort` na docelowej z `mid` i pustym `eph`: usuwa klucz przeniesienia i wraca do `none`; źródłowa nic nie zmieniła |
+| po kroku 2, przed krokiem 3 albo z niepewnym wynikiem kroku 3 | laptop odczytuje `eph` ze źródłowej (`migrate` `"step":"status"`), potem `abort` na docelowej z `mid` i `eph`: usuwa dane importu, jeśli są (w stanie `imported` po potwierdzeniu przyciskiem), usuwa klucz prywatny przeniesienia, więc paczki nie da się już odszyfrować, i zwraca potwierdzenie „aborted”. Dopiero z nim `abort` na źródłowej przywraca zwykłą pracę i unieważnia `k`. Gdy docelowa nie odpowiada albo straciła klucz przeniesienia (np. po ZNISZCZ DANE), źródłowa wraca do pracy przez `abort` z `"forced":true` dopiero po ZNISZCZ DANE na docelowej, potwierdzonym przyciskiem na źródłowej i wpisanym do dziennika; tak dwie stacje nigdy nie mają naraz aktywnej tej samej tożsamości |
 | po kroku 3, przed 4 | powtórzyć krok 4; docelowa nie nadaje, dopóki nie dostanie potwierdzenia wycofania |
-| źródłowa uległa awarii po kroku 3 | `migrate` `"step":"activate"` z `"forced":true` na docelowej, z potwierdzeniem przyciskiem OK na niej i wpisem w dzienniku zdarzeń; osoba utrzymująca system odłącza źródłową od anteny i zasilania, a przy ponownym uruchomieniu wykonuje na niej ZNISZCZ DANE |
-| po kroku 4, przed 5 | powtórzyć krok 5 (potwierdzenie wycofania zapisuje źródłowa) |
+| źródłowa uległa awarii po kroku 3 | `activate` z `"forced":true` na docelowej, z potwierdzeniem przyciskiem OK na niej i wpisem w dzienniku zdarzeń; osoba utrzymująca system odłącza źródłową od anteny i zasilania, a przy ponownym uruchomieniu wykonuje na niej ZNISZCZ DANE |
+| po kroku 4, przed 5 | powtórzyć krok 5 (potwierdzenie wycofania zapisuje źródłowa); źródłowa w stanie `retired` nie przyjmuje `abort`, a laptop nie wysyła `abort` do docelowej, gdy `status` źródłowej podaje `retired` |
 
 Źródłowa w stanie `export` albo `retired` i docelowa w stanie `imported` pokazują na ekranie `tryb_przygotowania` i nie wychodzą z trybu przygotowania, dopóki operacja się nie zakończy albo nie zostanie wycofana. Uszkodzonej stacji nie da się przenieść: stacja zapasowa dostaje nową tożsamość, a stanowisko odbiorcze zmienia listę zaufanych stacji ([model zaufania](oprogramowanie.md#model-zaufania-i-kluczy)).
 
