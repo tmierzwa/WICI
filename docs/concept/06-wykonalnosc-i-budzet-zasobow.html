@@ -193,7 +193,7 @@
   <li>szyna 5 V ekranu z pamięcią 0,5 mA; FRAM, przyciski i nadzór 0,5 mA;</li>
   <li>podświetlenie ekranu 15 mA przez 30 min na dobę;</li>
   <li>dioda alarmu 5 mA przez 1% czasu i brzęczyk 20 mA przez 0,25% czasu;</li>
-  <li>obwody wejściowe, osobno dla źródła: przy ogniwach LTC4412, TPS3710, LTC2954 i dzielniki ADC (razem około 0,033 mA), przy 12 V LM74800, zatrzask podnapięciowy (UV), TPS3710, LTC2954 i dzielniki (razem około 0,44 mA);</li>
+  <li>obwody wejściowe, osobno dla źródła: przy ogniwach TPS3710, LTC2954 i dzielniki ADC (razem około 0,022 mA; dioda Schottky’ego toru ogniw nie pobiera prądu, a jej spadek 0,35 V zwiększa moc z ogniw o około 6%), przy 12 V LM74800, zatrzask podnapięciowy (UV), TPS3710, LTC2954 i dzielniki (razem około 0,44 mA);</li>
   <li>mikrokontroler średnio 3 mA (nRF52840) albo 30, 45 lub 60 mA (ESP32-S3 z wyłączonym Wi-Fi; realny prąd aktywny wynosi 40–60 mA, a 30 mA wymaga lekkiego uśpienia);</li>
   <li>rezerwa 20%.</li>
 </ul>
@@ -209,17 +209,17 @@
 <th scope="col" class="num">4 ogniwa AA litowe, 14,4 Wh</th>
 <th scope="col" class="num">Akumulator 12 V, 360 Wh</th>
 </tr></thead><tbody>
-<tr><td>nRF52840, 3 mA</td><td class="num">32 mA</td><td class="num">0,124 W</td><td class="num">3,6 / 4,0 Wh</td><td class="num">97 h</td><td class="num">91 dni</td></tr>
-<tr><td>ESP32-S3, 30 mA</td><td class="num">59 mA</td><td class="num">0,229 W</td><td class="num">6,6 / 7,2 Wh</td><td class="num">52 h</td><td class="num">50 dni</td></tr>
-<tr><td>ESP32-S3, 45 mA</td><td class="num">74 mA</td><td class="num">0,287 W</td><td class="num">8,3 / 8,9 Wh</td><td class="num">42 h</td><td class="num">40 dni</td></tr>
-<tr><td>ESP32-S3, 60 mA</td><td class="num">89 mA</td><td class="num">0,345 W</td><td class="num">9,9 / 10,7 Wh</td><td class="num">35 h</td><td class="num">34 dni</td></tr>
+<tr><td>nRF52840, 3 mA</td><td class="num">32 mA</td><td class="num">0,132 W</td><td class="num">3,8 / 4,0 Wh</td><td class="num">91 h</td><td class="num">91 dni</td></tr>
+<tr><td>ESP32-S3, 30 mA</td><td class="num">59 mA</td><td class="num">0,243 W</td><td class="num">7,0 / 7,2 Wh</td><td class="num">49 h</td><td class="num">50 dni</td></tr>
+<tr><td>ESP32-S3, 45 mA</td><td class="num">74 mA</td><td class="num">0,305 W</td><td class="num">8,8 / 8,9 Wh</td><td class="num">39 h</td><td class="num">40 dni</td></tr>
+<tr><td>ESP32-S3, 60 mA</td><td class="num">89 mA</td><td class="num">0,367 W</td><td class="num">10,6 / 10,7 Wh</td><td class="num">33 h</td><td class="num">34 dni</td></tr>
 </tbody></table></div>
 
 <p>Komplet czterech ogniw litowych AA przyjęto jako 4 × 4,5 Wh z wykorzystaniem 80%, co uwzględnia napięcie odcięcia i niską temperaturę. Ogniwa litowe Li-FeS2 znoszą lata przechowywania i pracę do −20 °C, więc nadają się do zestawu trzymanego w magazynie organizatora sieci. Ogniwa alkaliczne i NiMH tracą w temperaturze od −10 do −20 °C około 50–80% pojemności. Dlatego W23 i próba w −10 °C dotyczą wyłącznie ogniw Li-FeS2, a pozostałe ogniwa służą tylko awaryjnie. Progi napięcia ocenia się na filtrowanej średniej z okresów samego odbioru, bo impulsy TX chwilowo obniżają napięcie zimnych ogniw.</p>
 
-<p>W23 (≥48 h na ogniwach) dopuszcza w modelu średnio najwyżej około 64 mA z szyny 3,3 V. nRF52840 spełnia je z zapasem. ESP32-S3 spełnia je tylko przy średnim poborze MCU około 30 mA, czyli przy lekkim uśpieniu z odbiornikiem stale włączonym; przy prądzie aktywnym 45–60 mA daje 35–42 h. Celem dla wykonania B jest średnio ≤60 mA z szyny 3,3 V w pracy przekaźnika. Warunek odbioru (T6) to ≥48 h w 20 °C i ≥40 h w −10 °C na ogniwach Li-FeS2; współczynnik 0,8 modelu sprawdza się pomiarem energii w obu temperaturach. Pomiar poboru w RX i TX rozstrzyga D14. Gdyby W23 nie zostało spełnione, możliwa jest przyszła wersja P1 z dłuższą preambułą, pozwalającą na nasłuch z próbkowaniem (odbiornik włączany okresowo) (<a href="../spec/radio.md">specyfikacja radia</a>).</p>
+<p>W23 (≥48 h na ogniwach) dopuszcza w modelu średnio najwyżej około 61 mA z szyny 3,3 V. nRF52840 spełnia je z zapasem. ESP32-S3 spełnia je tylko przy średnim poborze MCU około 30 mA, czyli przy lekkim uśpieniu z odbiornikiem stale włączonym; przy prądzie aktywnym 45–60 mA daje 33–39 h. Celem dla wykonania B jest średnio ≤60 mA z szyny 3,3 V w pracy przekaźnika. Warunek odbioru (T6) to ≥48 h w 20 °C i ≥40 h w −10 °C na ogniwach Li-FeS2; współczynnik 0,8 modelu sprawdza się pomiarem energii w obu temperaturach. Pomiar poboru w RX i TX rozstrzyga D14. Gdyby W23 nie zostało spełnione, możliwa jest przyszła wersja P1 z dłuższą preambułą, pozwalającą na nasłuch z próbkowaniem (odbiornik włączany okresowo) (<a href="../spec/radio.md">specyfikacja radia</a>).</p>
 
-<p>Dla porównania: wariant 0.4, w którym przekaźnik był laptopem z <code>rnsd</code>, potrzebował 788–2312 Wh na dobę. Stacja poziomu 1 zużywa w modelu od około 79 do 650 razy mniej energii, zależnie od wykonania i źródła zasilania. To zmienia planowanie sieci. Przekaźnik można postawić na dachu lub wyższym piętrze na ogniwach albo jednym akumulatorze i odwiedzać co kilka dni, a nie co dobę.</p>
+<p>Dla porównania: wariant 0.4, w którym przekaźnik był laptopem z <code>rnsd</code>, potrzebował 788–2312 Wh na dobę. Stacja poziomu 1 zużywa w modelu od około 75 do 610 razy mniej energii, zależnie od wykonania i źródła zasilania. To zmienia planowanie sieci. Przekaźnik można postawić na dachu lub wyższym piętrze na ogniwach albo jednym akumulatorze i odwiedzać co kilka dni, a nie co dobę.</p>
 
 <h2 id="energia-dwa-niezalezne-zasoby">Energia poziomu 3: dwa niezależne zasoby</h2>
 
@@ -260,7 +260,7 @@
 
 <p>Dobór oszczędnego hosta i pomiar poboru mają większy wpływ na zapas niż sama moc radia. Nie należy gwarantować 24 h pracy dla dowolnego PC. Gdy energii brakuje, wyłącza się laptop i router, a stacja poziomu 1 pracuje dalej z ogniw lub osobnego źródła 12 V. Gniazdo zapalniczki ogranicza prąd i możliwą moc AC. Nominalne 150 W wymaga odpowiednich zacisków oraz przewodów. Każde pojedyncze źródło A lub B musi samodzielnie utrzymać dozwolone obciążenie.</p>
 
-<p>Przekaźnik bez schronienia to sama stacja poziomu 1: 3,6–10,7 Wh na dobę z rezerwą (z ogniw 3,6–9,9 Wh, z 12 V 4,0–10,7 Wh). Miejsce przekaźnika może nie mieć opiekuna. Jeśli jest jedyną drogą schronienia do OSP, ma pierwszeństwo w energii (<a href="02-scenariusze-i-organizacja.html">rozdział 02</a>). Wymaga osobnego planu wymiany ogniw lub akumulatora i osoby odpowiedzialnej, ale nie wymiany źródeł co dobę. Budżet schronienia go nie obejmuje.</p>
+<p>Przekaźnik bez schronienia to sama stacja poziomu 1: 3,8–10,7 Wh na dobę z rezerwą (z ogniw 3,8–10,6 Wh, z 12 V 4,0–10,7 Wh). Miejsce przekaźnika może nie mieć opiekuna. Jeśli jest jedyną drogą schronienia do OSP, ma pierwszeństwo w energii (<a href="02-scenariusze-i-organizacja.html">rozdział 02</a>). Wymaga osobnego planu wymiany ogniw lub akumulatora i osoby odpowiedzialnej, ale nie wymiany źródeł co dobę. Budżet schronienia go nie obejmuje.</p>
 
 <p id="przekaznik-staly">Przekaźnik stały pracuje stale z zasilacza buforowego 13,8 V z akumulatorem (wyrób z deklaracją UE, jak w systemach alarmowych), zasilanego z sieci budynku, przez wejście 12 V stacji. Po zaniku 230 V działa z akumulatora bufora. Przy założonym wykorzystaniu 50% pojemności akumulator 12 V 7 Ah wystarcza w modelu na około 255 h (nRF52840) albo 94 h (ESP32-S3, 60 mA), a 17 Ah na około 620 h albo 228 h. Wynik zależy od własnego poboru zasilacza buforowego, który trzeba doliczyć z jego karty katalogowej, i od temperatury akumulatora.</p>
 

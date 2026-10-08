@@ -8,7 +8,7 @@
 
 ```text
                  ┌──────────────── zasilanie (wspólne dla A i B) ────────────────┐
- 4 × AA ─────────┤ idealna dioda ─┐                                              │
+ 4 × AA ─────────┤ 1 Ω, Schottky ─┐                                              │
  12 V (IP67) ────┤ bezpiecznik, TVS, S12 (OVP, zatrzask UV) ─┴─ VSYS ─ przetwornica 3V3 ─┼─ 3V3
  przycisk zasil. ┤ sterownik wyłącznika (soft-latch) ── ON, INT, KILL                    │
                  │ komparator VSYS 3,4 V ── VSYS_FAIL; dzielniki ADC z kluczami          │
@@ -82,7 +82,7 @@ Krok 1 kolejności prac wymaga wyboru jednego z dwóch podziałów.
 | Koszt prototypu | dwie płytki 4-warstwowe w pełnym rozmiarze panelu (około 200 × 120 mm, [obudowa](obudowa.md#płyta-bazowa-obrys-i-ograniczenia)) | płyta 2-warstwowa 200 × 120 mm i dwa małe moduły 4-warstwowe; niższy |
 | Ryzyko | mniej części, mniej połączeń | złącze w torze zasilania i sygnałów; więcej plików do utrzymania |
 
-**Propozycja: podział 2.** Dwie z trzech otwartych decyzji (D14 i D10) zmieniają tylko MCU i tor RF. W podziale 2 ich wynik nie przerabia zasilania, panelu, złączy ani obudowy, więc te części mogą powstać teraz. Kwalifikacja drugiego dostawcy sprowadza się do wymiany modułu w tej samej płycie. Panel dla dłoni w rękawicach wymaga płytki około 200 × 120 mm, a tak duża płytka jest tania tylko jako dwuwarstwowa. Złącze płyta–moduł to typowe złącze płytka–płytka o rastrze 1,27 mm albo dwie listwy 2,54 mm. Zasilanie idzie przez kilka styków równolegle, a linie od przycisków przez filtr RC i ESD na płycie bazowej, przy przyciskach. **Wybór należy do właściciela projektu.** Do czasu wyboru dokumenty [zasilania](zasilanie.md) i [obudowy](obudowa.md) traktują płytę bazową jako osobny blok, co pasuje do obu podziałów.
+**Decyzja: podział 2** (autor, 2026-10-08). Dwie z trzech otwartych decyzji (D14 i D10) zmieniają tylko MCU i tor RF. W podziale 2 ich wynik nie przerabia zasilania, panelu, złączy ani obudowy, więc te części mogą powstać teraz. Kwalifikacja drugiego dostawcy sprowadza się do wymiany modułu w tej samej płycie. Panel dla dłoni w rękawicach wymaga płytki około 200 × 120 mm, a tak duża płytka jest tania tylko jako dwuwarstwowa. Złącze płyta–moduł to typowe złącze płytka–płytka o rastrze 1,27 mm albo dwie listwy 2,54 mm. Zasilanie idzie przez kilka styków równolegle, a linie od przycisków przez filtr RC i ESD na płycie bazowej, przy przyciskach. Dokumenty [zasilania](zasilanie.md) i [obudowy](obudowa.md) traktują płytę bazową jako osobny blok.
 
 ## Ustalone teraz
 

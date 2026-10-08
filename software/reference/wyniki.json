@@ -30,12 +30,12 @@
       "buzzer_ma": 20.0,
       "buzzer_duty": 0.0025,
       "aa_vsys_v": 6.0,
+      "aa_diode_v": 0.35,
       "aa_rail_efficiency": 0.85,
       "battery_vsys_v": 12.8,
       "battery_rail_efficiency": 0.8,
       "input_side_ma": {
         "aa": {
-          "ltc4412": 0.011,
           "tps3710": 0.006,
           "ltc2954": 0.006,
           "dividers": 0.01
@@ -49,7 +49,7 @@
         }
       },
       "input_side_ma_total": {
-        "aa": 0.033,
+        "aa": 0.022,
         "12v": 0.442
       },
       "reserve_fraction": 0.2,
@@ -58,7 +58,7 @@
       "aa_usable_fraction": 0.8
     },
     "wh_24h_with_reserve_range": [
-      3.569594888687783,
+      3.788466189756937,
       10.721174649230765
     ],
     "holdup": {
@@ -68,16 +68,16 @@
       "load_rail_ma": 108.0,
       "load_w": 0.4192941176470588,
       "required_uf": 392.7813748450202,
-      "selected_uf": 470.0,
-      "selected_to_required_ratio": 1.1965944163860824
+      "selected_uf": 680.0,
+      "selected_to_required_ratio": 1.7312429854096512
     },
     "variants": {
       "nrf52840": {
         "mcu_ma_assumed": 3.0,
         "rail_ma": 31.87403846153846,
-        "input_w": 0.1239442669683258,
-        "wh_24h_with_reserve": 3.569594888687783,
-        "aa_set_hours": 96.81770922947669,
+        "input_w": 0.13154396492211587,
+        "wh_24h_with_reserve": 3.788466189756937,
+        "aa_set_hours": 91.22425348137348,
         "input_w_12v": 0.13713800865384618,
         "wh_24h_with_reserve_12v": 3.9495746492307697,
         "battery_12v_days": 91.1490557774657,
@@ -86,9 +86,9 @@
       "esp32_s3_30ma": {
         "mcu_ma_assumed": 30.0,
         "rail_ma": 58.874038461538454,
-        "input_w": 0.22876779638009048,
-        "wh_24h_with_reserve": 6.588512535746606,
-        "aa_set_hours": 52.45493548428634,
+        "input_w": 0.24286098730629074,
+        "wh_24h_with_reserve": 6.994396434421173,
+        "aa_set_hours": 49.41098252584255,
         "input_w_12v": 0.24851300865384612,
         "wh_24h_with_reserve_12v": 7.157174649230769,
         "battery_12v_days": 50.299177768240106,
@@ -97,9 +97,9 @@
       "esp32_s3_45ma": {
         "mcu_ma_assumed": 45.0,
         "rail_ma": 73.87403846153846,
-        "input_w": 0.28700309049773753,
-        "wh_24h_with_reserve": 8.26568900633484,
-        "aa_set_hours": 41.811396452870596,
+        "input_w": 0.3047037775197213,
+        "wh_24h_with_reserve": 8.775468792567972,
+        "aa_set_hours": 39.382511426932766,
         "input_w_12v": 0.31038800865384614,
         "wh_24h_with_reserve_12v": 8.939174649230768,
         "battery_12v_days": 40.27217434788329,
@@ -108,9 +108,9 @@
       "esp32_s3_60ma": {
         "mcu_ma_assumed": 60.0,
         "rail_ma": 88.87403846153846,
-        "input_w": 0.34523838461538453,
-        "wh_24h_with_reserve": 9.942865476923073,
-        "aa_set_hours": 34.758591555132824,
+        "input_w": 0.3665465677331517,
+        "wh_24h_with_reserve": 10.55654115071477,
+        "aa_set_hours": 32.737995813770866,
         "input_w_12v": 0.37226300865384604,
         "wh_24h_with_reserve_12v": 10.721174649230765,
         "battery_12v_days": 33.57841018155876,
@@ -132,15 +132,15 @@
         }
       }
     },
-    "w23_max_rail_ma_on_aa": 64.3429393939394,
-    "w23_max_mcu_ma_on_aa": 35.46890093240094,
+    "w23_max_rail_ma_on_aa": 60.6056095959596,
+    "w23_max_mcu_ma_on_aa": 31.731571134421138,
     "laptop_relay_wh_24h_with_reserve": [
       787.5952941176471,
       2312.3011764705884
     ],
     "laptop_relay_to_station_ratio": [
-      79.21210399010417,
-      647.776918271141
+      74.60732477363763,
+      610.3528606702288
     ]
   },
   "level3_pools": {

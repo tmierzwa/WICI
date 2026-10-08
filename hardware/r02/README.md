@@ -29,7 +29,7 @@ R02 jest płytką stacji: samodzielna stacja z mikrokontrolerem, torem radiowym 
 
 ## Kolejność prac
 
-1. **Architektura płytki.** Podział na bloki: zasilanie (ogniwa, 12 V, suma diodowa, przetwornica 3V3, szyna 5 V, nadzór), MCU, tor RF, FRAM, ekran i wejścia, USB-C, ochrona. Decyzja do podjęcia: dwa osobne projekty PCB (A i B) ze wspólnymi arkuszami schematu, albo płyta bazowa ze wspólnymi blokami i wymiennym modułem MCU+RF. Druga droga upraszcza kwalifikację dwóch dostawców (W14), ale dodaje złącze w torze zasilania i sygnałów. Stan: [architektura](architektura.md), z propozycją płyty bazowej i modułu MCU+RF.
+1. **Architektura płytki.** Podział na bloki: zasilanie (ogniwa, 12 V, suma diodowa, przetwornica 3V3, szyna 5 V, nadzór), MCU, tor RF, FRAM, ekran i wejścia, USB-C, ochrona. Zdecydowane (2026-10-08): płyta bazowa ze wspólnymi blokami i wymienny moduł MCU+RF, bo upraszcza kwalifikację dwóch dostawców (W14) kosztem złącza w torze zasilania i sygnałów. Stan: [architektura](architektura.md).
 2. **Stos warstw.** Cztery warstwy. Tor RF przenosi się z referencji producenta razem z jej stosem i geometrią, nie jako przerysowane ścieżki na innym stosie ([lekcje](lekcje.md#tor-rf)). Stos zapisuje się jawnie w PCB i w `checks/stackup.json` i potwierdza u wykonawcy przed zamówieniem. Stan: propozycja wspólnego stosu dla obu wykonań w [torze RF](tor-rf.md#stos-warstw).
 3. **Schemat.** Każdy blok z kandydatami z BOM; przegląd elektryczny względem kart katalogowych, osobny od ERC: zegary i ich piny sterujące, prądy w stanach wyłączenia, pojemność za regulatorami, progi komparatorów, ochrona wejść.
 4. **Layout.** Zasady z [lekcji](lekcje.md#zasady-layoutu); jawne reguły w `.kicad_dru`; zero wyjątków DRC; obrys i otwory według obudowy.

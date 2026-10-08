@@ -6,23 +6,29 @@ Liczby pochodzą z kart producentów odczytanych 2026-10-08 (lista w [źródłac
 
 ## Ustalenia, które zmieniają specyfikację
 
-Przegląd kart wykazał błędy i sprzeczności w obecnych wymaganiach ([F87](../../docs/review.md)).
+Przegląd kart wykazał błędy i sprzeczności w obecnych wymaganiach ([F87](../../docs/review.md)). Decyzje autora z 2026-10-08, przeniesione do [elektroniki](../../docs/spec/elektronika.md#zasilanie-stacji), [BOM](../../docs/spec/bom-stacji.csv) i modelu energii:
+- tor ogniw z diodą Schottky’ego zamiast idealnej diody (Z7);
+- kondensator podtrzymania ≥680 µF o małym upływie (Z4, Z5);
+- tłumik RC na wejściu 12 V (Z8);
+- OVP jako reguła 0,9 × maksimum zamiast ±2% (Z6);
+- jeden próg załączenia 12 V: 12,4 V (Z9);
+- podział na płytę bazową i moduł MCU+RF ([architektura](architektura.md#podział-na-płytki)).
 
 | # | Ustalenie | Źródło | Skutek |
 |---|---|---|---|
 | Z1 | **TPS610995 to wersja 3,6 V, nie 5 V.** Wersja 5 V to TPS610997, dostępna tylko w WCSP 1,23 × 0,88 mm. W obudowie WSON 2 × 2 mm jest regulowany TPS61099DRV z dzielnikiem | TI SLVSD88M, tabela porównania wersji i 6.5 | poprawione w elektronice i BOM: TPS61099 (DRV) ustawiony na 5 V |
 | Z2 | **LTC2954 nie ma licznika czasu wyłączenia bez naciśniętego przycisku.** Przy braku odpowiedzi MCU wyłączenie wymusza tylko przycisk przytrzymany przez t_PDT. Sam sterownik nie wyłączy się po puszczeniu przycisku. INT idzie w stan niski 32 ms po naciśnięciu i trwa, dopóki przycisk jest wciśnięty, więc 2 s odmierza program | ADI LTC2954 rew. B, s. 6 i 9 | poprawione w elektronice: wymuszenie przytrzymaniem przycisku ≥5 s |
 | Z3 | **KILL musi być w stanie wysokim najpóźniej 400 ms po włączeniu EN**, inaczej sterownik znowu wyłącza zasilanie | LTC2954, t_KILL,ON BLANK 400/512/650 ms | rezystor podciągający KILL do 3V3, a MCU ściąga KILL otwartym drenem; zasilanie trzyma się od chwili, gdy jest 3V3 |
-| Z4 | **Polimerowy kondensator podtrzymania przekracza budżet stanu wyłączonego.** VSYS jest stale połączone z ogniwami (tor ogniw nie ma łącznika). Nichicon PCR 470 µF/25 V ma gwarantowany upływ ≤352 µA przy napięciu znamionowym, a budżet to ≤20 µA | Nichicon PCR, CAT.8100N | aluminiowy elektrolit o małym upływie (Nichicon UKL, 0,002 CV) i ceramika; upływ przy 6 V do zmierzenia |
-| Z5 | **Pojemność podtrzymania przy najgorszym progu:** komparator może zadziałać już przy 3,325 V, więc C ≥450 µF; po tolerancji −20% i spadku w −20 °C potrzeba nominalnie 680 µF, a nie 470 µF | §[podtrzymanie](#kondensator-podtrzymania-vsys) | wymaganie ≥680 µF |
-| Z6 | **LM74800-Q1 nie da progu OVP 17 V ±2%.** Sam komparator OV ma ±2,9%: przy rezystorach 0,1% próg wynosi 16,40–17,45 V. Reguła 0,9 × 40 V dla LTC3115-1 i tak jest spełniona z dużym zapasem. ADI LTC4368-2 daje 16,71–17,29 V | TI SNOSD95C s. 5; ADI LTC4368 rew. C s. 4 | wymaganie ±2% zastępuje się regułą 0,9 × maksimum oraz warunkiem, że dolna granica progu leży powyżej 16 V |
-| Z7 | **Prąd z ogniw w stanie wyłączonym:** typowo około 24 µA, najgorzej około 49 µA przy cel ≤20 µA. Składniki: LTC4412 (11/19 µA), LTC2954 (6/12 µA), LTC3115-1 w wyłączeniu (3/10 µA), LM74800 zasilany wstecznie z VSYS przez diodę podłożową (2,9/5 µA) | §[bilans](#bilans-prądu-w-stanie-wyłączonym) | decyzja: dioda Schottky’ego zamiast idealnej diody (około 12/28 µA) albo cel ≤30 µA najgorzej. Przy 3000 mAh nawet 50 µA to lata, więc ryzykiem jest tylko zgodność z wymaganiem, nie czas pracy |
-| Z8 | **Bipolarny kondensator tłumiący 47 µF/35 V ma gwarantowany upływ 49–52 µA**, ponad budżet 12 V | Nichicon UES, Panasonic SU-A | zamiast niego tłumik RC (ceramika 10–22 µF/50 V z rezystorem 0,5–1 Ω) albo elektrolit za S12, na co specyfikacja już pozwala |
-| Z9 | **Sprzeczność progów 12 V:** elektronika mówi „pierwsze załączenie przy ≥12,0 V”, a gdzie indziej „ponowne załączenie zawsze tylko przy V12 ≥12,4 V” | elektronika, wiersze „Wejście 12 V” i „Odłączenie 12 V” | projekt przyjmuje 12,4 V w obu przypadkach; osobny próg 12,0 V wymagałby trzeciego komparatora |
+| Z4 | **Polimerowy kondensator podtrzymania przekracza budżet stanu wyłączonego.** VSYS jest stale połączone z ogniwami (tor ogniw nie ma łącznika). Nichicon PCR 470 µF/25 V ma gwarantowany upływ ≤352 µA przy napięciu znamionowym, a budżet to ≤20 µA | Nichicon PCR, CAT.8100N | zdecydowane: aluminiowy elektrolit o małym upływie (Nichicon UKL, 0,002 CV) i ceramika; upływ przy 6 V do zmierzenia |
+| Z5 | **Pojemność podtrzymania przy najgorszym progu:** komparator może zadziałać już przy 3,325 V, więc C ≥450 µF; po tolerancji −20% i spadku w −20 °C potrzeba nominalnie 680 µF, a nie 470 µF | §[podtrzymanie](#kondensator-podtrzymania-vsys) | zdecydowane: ≥680 µF |
+| Z6 | **LM74800-Q1 nie da progu OVP 17 V ±2%.** Sam komparator OV ma ±2,9%: przy rezystorach 0,1% próg wynosi 16,40–17,45 V. Reguła 0,9 × 40 V dla LTC3115-1 i tak jest spełniona z dużym zapasem. ADI LTC4368-2 daje 16,71–17,29 V | TI SNOSD95C s. 5; ADI LTC4368 rew. C s. 4 | zdecydowane: reguła 0,9 × maksimum i dolna granica progu powyżej 16 V zamiast ±2% |
+| Z7 | **Prąd z ogniw w stanie wyłączonym:** typowo około 24 µA, najgorzej około 49 µA przy cel ≤20 µA. Składniki: LTC4412 (11/19 µA), LTC2954 (6/12 µA), LTC3115-1 w wyłączeniu (3/10 µA), LM74800 zasilany wstecznie z VSYS przez diodę podłożową (2,9/5 µA) | §[bilans](#bilans-prądu-w-stanie-wyłączonym) | zdecydowane: dioda Schottky’ego zamiast idealnej diody, około 12/28 µA; najgorszy przypadek nadal przekracza 20 µA ([bilans](#bilans-prądu-w-stanie-wyłączonym)) |
+| Z8 | **Bipolarny kondensator tłumiący 47 µF/35 V ma gwarantowany upływ 49–52 µA**, ponad budżet 12 V | Nichicon UES, Panasonic SU-A | zdecydowane: tłumik RC (ceramika 10–22 µF/50 V z rezystorem 0,5–1 Ω) |
+| Z9 | **Sprzeczność progów 12 V:** elektronika mówi „pierwsze załączenie przy ≥12,0 V”, a gdzie indziej „ponowne załączenie zawsze tylko przy V12 ≥12,4 V” | elektronika, wiersze „Wejście 12 V” i „Odłączenie 12 V” | zdecydowane: 12,4 V w obu przypadkach |
 | Z10 | **Komparator VSYS:** TPS3710 ma sam próg opadający −1,9%/+1,4%, więc ±2% wychodzi tylko typowo (najgorzej −2,2%/+2,0%). Wejście SENSE wytrzymuje 7 V, więc dzielnika nie odłącza się od dołu | TI SBVS271A, 5.1 i 5.5 | odłączanie dzielnika od góry (PMOS); wymaganie ±2,5% albo pojemność liczona przy 3,32 V (Z5) |
 | Z11 | **Nominalne Iq LTC3115-1 w Burst Mode to 50 µA typowo, bez wartości maksymalnej**, a sprawność ≥85% przy 6 V wychodzi z wykresów tylko na granicy (około 82–85% dla 3,3 V, oszacowanie) | ADI LTC3115-1 rew. C, s. 3 i 6 | pomiar na płytce ewaluacyjnej przed schematem |
-| Z12 | **Tranzystor PMOS toru ogniw wg wymagania (≤50 mΩ przy −2,5 V, ≥30 V) ma tylko jednego producenta (Vishay).** W pracy ogniwa mają ≥4,0 V, a LTC4412 ściąga bramkę do około 0 V | Vishay, Diodes, Nexperia | wymaganie przy VGS −4,5 V; wtedy są Diodes DMP3018SFV i Nexperia BUK6Y19-30P |
-| Z13 | **LTC4412 nie ogranicza udaru przy wkładaniu ogniw**, bo prąd płynie najpierw przez diodę podłożową. Szacunkowo 7–15 A do około 600 µF; opór ogniw do sprawdzenia | LTC4412 rew. C | rezystor 1 Ω impulsowy w torze ogniw: ≤5 A, spadek 0,08–0,12 V |
+| Z12 | **Tranzystor PMOS toru ogniw wg wymagania (≤50 mΩ przy −2,5 V, ≥30 V) ma tylko jednego producenta (Vishay).** W pracy ogniwa mają ≥4,0 V, a LTC4412 ściąga bramkę do około 0 V | Vishay, Diodes, Nexperia | nieaktualne po decyzji Z7 (tor ogniw bez PMOS) |
+| Z13 | **LTC4412 nie ogranicza udaru przy wkładaniu ogniw**, bo prąd płynie najpierw przez diodę podłożową. Szacunkowo 7–15 A do około 600 µF; opór ogniw do sprawdzenia | LTC4412 rew. C | rezystor 1 Ω impulsowy w torze ogniw: ≤5 A, spadek 0,08–0,12 V; dotyczy też diody Schottky’ego |
 | Z14 | **LTC2954 widzi przez sumę diodową impuls 29 V** z TVS, a pracuje do 26,4 V | LTC2954 s. 2–3 | filtr RC 1 kΩ / 1 µF za diodą od strony 12 V |
 | Z15 | **Diody sumy zasilania:** diody Schottky’ego mają w 45 °C upływ rzędu µA i ten prąd płynie do pierwotnych ogniw litowych. Krzemowa dioda o małym upływie (Nexperia BAS116H, ≤5 nA) jest lepsza, a spadek nie ma znaczenia | Nexperia BAS116H, BAT46WJ | dioda krzemowa o małym upływie zamiast Schottky’ego; od strony 12 V ≥40 V |
 
@@ -71,12 +77,17 @@ Drugi producent: ADI LTC2965 (3,5–100 V, 3/7/15 µA) z osobnymi progami w gór
 
 ### Tor ogniw
 
-- **Ogniwa:** 4 × AA → rezystor 1 Ω impulsowy (2512) → LTC4412 z PMOS → VSYS.
+- **Ogniwa:** 4 × AA → rezystor 1 Ω impulsowy (2512) → dioda Schottky’ego → VSYS (decyzja Z7).
   - Rezystor ogranicza udar do ≤5 A (Z13).
   - Napięcie ogniw mierzy się przed rezystorem, więc progi 4,4 i 4,0 V się nie przesuwają.
-- **LTC4412** (DigiKey 26 576 szt., 5,18 USD): pracuje od 2,5 V, Iq 11/19 µA przy 3,6 V.
-- **PMOS**, specyfikowany przy VGS −4,5 V (Z12): Vishay SQ3495EV (21 mΩ, AEC-Q101), Diodes DMP3018SFV (21 mΩ) albo Nexperia BUK6Y19-30P (50 mΩ najwyżej). Napięcie VDS ogranicza OVP łącznika S12 (≤17,8 V), więc −30 V ma zapas.
-- **Wariant z diodą Schottky’ego:** bez Iq, oszczędza 11–21 µA z ogniw w stanie wyłączonym. Kosztem jest 0,3–0,45 V spadku, który uwzględnia się w progach ogniw. Wybór zależy od decyzji o budżecie (Z7).
+- **Dioda:** VR ≥30 V (VSYS ogranicza OVP łącznika S12 do ≤18,3 V), spadek ≤0,4 V przy 120 mA, impuls ≥5 A.
+  - Gdy stacja pracuje z 12 V, VSYS jest wyższe od ogniw, a prąd wsteczny diody płynie do pierwotnych ogniw litowych. Diodę wybiera się więc o małym upływie przy 16 V i 45 °C, a dopuszczalny prąd bierze z karty ogniw (Energizer L91, do sprawdzenia).
+  - Konkretne części dwóch producentów do wyboru po tym sprawdzeniu.
+- **Koszt w energii:** spadek 0,35 V przy 6 V zwiększa moc pobieraną z ogniw o około 6%. Model energii liczy go jawnie:
+  - nRF52840: 91 h na komplecie ogniw;
+  - ESP32-S3 z MCU 30 mA: 49 h, czyli nadal ≥48 h;
+  - W23 dopuszcza średnio najwyżej około 61 mA z szyny 3V3, wcześniej 64 mA.
+- **Zapas do komparatora VSYS:** przy wyłączeniu przez ogniwa (4,0 V) VSYS wynosi około 3,65 V zamiast 4,0 V. Do progu zaniku (3,4 V, najwyżej 3,47 V) zostaje około 0,2 V. Impuls TX przy zimnych, wyczerpanych ogniwach może więc wywołać fałszywe przerwanie VSYS_FAIL. T6 sprawdza to w −10 °C przy końcu pracy ogniw. W razie potrzeby obniża się próg komparatora (z przeliczeniem pojemności) albo podnosi próg wyłączenia ogniw.
 
 ### Suma diodowa i sterownik wyłącznika
 
@@ -157,12 +168,14 @@ Upływ elektrolitu przy 6 V (około 25% napięcia znamionowego) jest zwykle duż
 
 | Źródło i stan | Składniki | Razem |
 |---|---|---|
-| Ogniwa, bez 12 V | LTC4412 12/21 µA, LTC2954 6/12 µA, LTC3115-1 3/10 µA, LM74800 przez diodę podłożową 2,9/5 µA, klucze dzielników 0/1 µA, dioda sumy od strony 12 V (BAS116H) ≈0 | **około 24/49 µA** (cel ≤20 µA) |
-| To samo z diodą Schottky’ego zamiast LTC4412 | | około 12/28 µA |
+| Ogniwa, bez 12 V (dioda Schottky’ego, decyzja Z7) | LTC2954 6/12 µA, LTC3115-1 3/10 µA, LM74800 przez diodę podłożową 2,9/5 µA, klucze dzielników 0/1 µA, dioda sumy od strony 12 V (BAS116H) ≈0 | **około 12/28 µA** (cel ≤20 µA) |
+| Dla porównania: z LTC4412 | LTC4412 dokładał 12/21 µA | około 24/49 µA |
 | 12 V, z ogniwami | LTC2954 6/12 µA, LM74800 2,9/5 µA, TVS ≈0/1 µA, dzielnik i PMOS zatrzasku ≈0/2 µA | **około 9/20 µA**, bez bipolarnego elektrolitu |
-| Ogniwa przy obecnym 12 V | LTC4412 12/21 µA, LTC3115-1 3/10 µA | około 15/31 µA |
+| Ogniwa przy obecnym 12 V | LTC3115-1 nie pobiera z ogniw (VSYS z 12 V); prąd wsteczny diody Schottky’ego płynie do ogniw (do sprawdzenia w karcie diody) | prąd wsteczny diody |
 
 Do tego dochodzi upływ kondensatora podtrzymania VSYS, którego karta nie podaje dla 6 V (Z4). Dlatego bilans potwierdza się pomiarem.
+
+Typowo cel ≤20 µA jest spełniony, a najgorszy przypadek (28 µA) wynika z wartości maksymalnych dwóch kart: LTC2954 (12 µA) i LTC3115-1 (10 µA). ADI LTC2955 (0,5/1,2/3 µA, ten sam schemat INT i KILL) obniża najgorszy przypadek do około 19 µA. Jego karta wymaga sprawdzenia przy próbie sterownika wyłącznika.
 
 ## Reguła OVP
 
@@ -170,7 +183,7 @@ Do tego dochodzi upływ kondensatora podtrzymania VSYS, którego karta nie podaj
 |---|---|---|---|---|
 | LTC3115-1 (VIN) | 40 V | 36 V | OVP 17,75 V + 0,5 V przerzutu = 18,3 V | spełniona |
 | TPS3710 zasilany z 3V3 | 18 V | 16,2 V | 3,3 V | spełniona |
-| LTC4412 | 28 V | 25,2 V | 18,3 V | spełniona |
+| Dioda Schottky’ego toru ogniw (VR) | ≥30 V | 27 V | 18,3 V | spełniona |
 | LTC2954 (przed S12) | 26,4 V | 23,8 V | impuls około 28,5 V | spełniona dopiero z filtrem RC (Z14) |
 | TPS3701 | 36 V | 32,4 V | 29,2 V | spełniona |
 | TPS70933 | 30 V | 27 V | 29,2 V | spełniona dopiero z rezystorem i diodą Zenera |
@@ -186,7 +199,7 @@ Wyniki tych prób są potrzebne do schematu zasilania, a nie wymagają T3–T5.
 | Przetwornica 3V3 | ADI DC1687B (LTC3115-1; zmienić dzielnik na 3,3 V i R_T na 750 kHz) | około 230 USD (element14) | sprawność przy 30–60 mA z 6 V i 12,8 V w Burst Mode, Iq bez obciążenia, prąd w wyłączeniu, granica Burst Mode, przejście PWM/SYNC przy impulsie TX |
 | Sterownik wyłącznika | ADI DC1090A (LTC2954-2) | 40,60 USD | INT przy krótkim i długim naciśnięciu, KILL i okno 400 ms, wymuszone wyłączenie z C_PDT 1,5 µF, prąd w stanie wyłączonym |
 | Łącznik S12 | TI LM74800EVM-CD i ADI DC2418A-B (LTC4368-2) | 126,22 i 118,28 USD | próg OVP, narastanie przy 600 µF, odwrotne podłączenie 16 V, impuls 30 V, prąd w wyłączeniu z obu stron |
-| Tor ogniw | ADI DC1635A (LTC4412) | 118,28 USD | Iq przy 6 V, udar przy wkładaniu ogniw Li-FeS2 z rezystorem 1 Ω i bez niego, przełączanie ogniwa ↔ 12 V bez spadku 3V3 |
+| Tor ogniw | płytka uniwersalna z diodą Schottky’ego i rezystorem 1 Ω | części kilka USD | spadek przy 40–120 mA, prąd wsteczny przy 16 V w 25 °C i 45 °C, udar przy wkładaniu ogniw Li-FeS2, przełączanie ogniwa ↔ 12 V bez spadku 3V3, VSYS przy impulsie TX na zimnych ogniwach |
 | Szyna 5 V | TI TPS61099EVM-023 albo -768 (sklep TI: 20 i 53 szt.; która wersja układu jest na płytce, do sprawdzenia) | do sprawdzenia | zasilanie panelu Sharp z N1, prąd w wyłączeniu |
 | Zatrzask UV | płytka uniwersalna z TPS3701 i 74LVC | części około 10 USD | progi 11,5 i 12,4 V, kasowanie przy wyłączeniu i odłączeniu 12 V, pobór |
 | Kondensator podtrzymania | próbki UKL i PCR | | upływ przy 6 V w 25 °C i 45 °C |
@@ -195,7 +208,9 @@ Pomiary zapisuje się w `hardware/r02/checks/` (osoba, data, przyrządy), a wyni
 
 ## Otwarte
 
-- Decyzja o budżecie prądu z ogniw w stanie wyłączonym (Z7): dioda Schottky’ego albo cel ≤30 µA.
+- Najgorszy przypadek prądu z ogniw w stanie wyłączonym (28 µA): LTC2955 zamiast LTC2954 albo pomiar wykazujący ≤20 µA.
+- Dioda Schottky’ego toru ogniw: dopuszczalny prąd wsteczny ogniw Li-FeS2 i części dwóch producentów.
+- Zapas VSYS do progu komparatora przy zimnych ogniwach (T6).
 - Drugi producent dla:
   - sterownika wyłącznika (propozycja: STM6601 z LDO TPS70930, do próby);
   - przetwornicy 3V3 (propozycja: przetwornica obniżająca TPS629210, zależna od D14);

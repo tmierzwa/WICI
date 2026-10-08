@@ -40,10 +40,11 @@ STATION = {"rail_v": 3.3, "rx_ma": 22.0, "tcxo_ma": 2.0, "tx_ma_13dbm": 45.0,
            "tx_fraction": 1 / 13, "lcd_5v_rail_ma": 0.5, "fram_buttons_supervisor_ma": 0.5,
            "front_light_ma": 15.0, "front_light_duty": 0.5 / 24,
            "alarm_led_ma": 5.0, "alarm_led_duty": 0.01, "buzzer_ma": 20.0, "buzzer_duty": 0.0025,
-           "aa_vsys_v": 6.0, "aa_rail_efficiency": 0.85,
+           "aa_vsys_v": 6.0, "aa_diode_v": 0.35, "aa_rail_efficiency": 0.85,
            "battery_vsys_v": 12.8, "battery_rail_efficiency": 0.80}
 # Input-side quiescent currents per source; the converter Iq is inside its efficiency and is not added again.
-INPUT_SIDE_MA = {"aa": {"ltc4412": 0.011, "tps3710": 0.006, "ltc2954": 0.006, "dividers": 0.01},
+# The cell path is a Schottky diode (no controller Iq); its drop scales the power drawn from the cells.
+INPUT_SIDE_MA = {"aa": {"tps3710": 0.006, "ltc2954": 0.006, "dividers": 0.01},
                  "12v": {"lm74800": 0.4, "uv_latch": 0.02, "tps3710": 0.006, "ltc2954": 0.006, "dividers": 0.01}}
 SOURCES = {"aa": ("aa_vsys_v", "aa_rail_efficiency"), "12v": ("battery_vsys_v", "battery_rail_efficiency")}
 
@@ -60,7 +61,8 @@ def station_power_w(mcu_ma: float, source: str = "aa") -> float:
     """Station input power from one source: 3V3 rail through the converter plus that source's input-side currents."""
     c = STATION
     vsys_key, efficiency_key = SOURCES[source]
-    return (c["rail_v"] * station_rail_ma(mcu_ma) / 1000 / c[efficiency_key]
+    diode = c["aa_vsys_v"] / (c["aa_vsys_v"] - c["aa_diode_v"]) if source == "aa" else 1.0
+    return (c["rail_v"] * station_rail_ma(mcu_ma) / 1000 / c[efficiency_key] * diode
             + c[vsys_key] * sum(INPUT_SIDE_MA[source].values()) / 1000)
 
 
@@ -103,10 +105,11 @@ def calculate() -> dict:
     # Highest average 3V3 current that still meets W23 (48 h on the AA set, with reserve).
     w23_input_w = aa_set_wh / 48 / reserve
     w23_rail_ma = ((w23_input_w - STATION["aa_vsys_v"] * sum(INPUT_SIDE_MA["aa"].values()) / 1000)
-                   * STATION["aa_rail_efficiency"] / STATION["rail_v"] * 1000)
+                   * STATION["aa_rail_efficiency"] * (1 - STATION["aa_diode_v"] / STATION["aa_vsys_v"])
+                   / STATION["rail_v"] * 1000)
     # Hold-up after the VSYS comparator (3.4 V) until the converter stops (2.7 V): C >= 2 P t / (V1^2 - V2^2).
     # Load: TX 13 dBm, active MCU (worst variant), TCXO, LCD and FRAM; light, LED and buzzer are switched off first.
-    holdup_v1, holdup_v2, holdup_t_s, holdup_selected_uf = 3.4, 2.7, 0.002, 470.0
+    holdup_v1, holdup_v2, holdup_t_s, holdup_selected_uf = 3.4, 2.7, 0.002, 680.0
     holdup_rail_ma = STATION["tx_ma_13dbm"] + 60.0 + STATION["tcxo_ma"] + STATION["lcd_5v_rail_ma"] + STATION["fram_buttons_supervisor_ma"]
     holdup_w = STATION["rail_v"] * holdup_rail_ma / 1000 / STATION["aa_rail_efficiency"]
     holdup_c_uf = 2 * holdup_w * holdup_t_s / (holdup_v1**2 - holdup_v2**2) * 1e6
