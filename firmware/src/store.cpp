@@ -170,6 +170,8 @@ enum MetaFlag : uint8_t { M_SILENCE = 0x01, M_EXCEPTION = 0x02, M_TEST_PAUSED = 
 size_t encodeMeta(const Meta& m, uint8_t* body) {
     Out o(body);
     o.bytes(m.epoch, EPOCH);
+    o.u32(m.ringBase);
+    o.bytes(m.dataEpoch, EPOCH);
     o.u32(m.tombFloor);
     o.u8(static_cast<uint8_t>(m.configCopy));
     o.u8(m.receiver);
@@ -191,6 +193,8 @@ size_t encodeMeta(const Meta& m, uint8_t* body) {
 bool decodeMeta(const uint8_t* body, size_t length, Meta& m) {
     In in(body, length);
     in.bytes(m.epoch, EPOCH);
+    m.ringBase = in.u32();
+    in.bytes(m.dataEpoch, EPOCH);
     m.tombFloor = in.u32();
     m.configCopy = static_cast<int8_t>(in.u8());
     m.receiver = in.u8();
@@ -323,7 +327,7 @@ void Tx::request(uint16_t slot, const Request& r, bool fresh) {
     // Generacja rośnie przy każdym ponownym zajęciu gniazda.
     Request copy = r;
     copy.gen = static_cast<uint16_t>(store_.register_[slot].gen + (fresh ? 1 : 0));
-    c->length = static_cast<uint16_t>(encodeRequest(store_.meta_.epoch, copy, c->body));
+    c->length = static_cast<uint16_t>(encodeRequest(store_.meta_.dataEpoch, copy, c->body));
 }
 
 void Tx::message(uint16_t slot, const Message& m, bool fresh) {
@@ -331,7 +335,7 @@ void Tx::message(uint16_t slot, const Message& m, bool fresh) {
     if (!c) return;
     Message copy = m;
     copy.gen = static_cast<uint16_t>(store_.inbox_[slot].gen + (fresh ? 1 : 0));
-    c->length = static_cast<uint16_t>(encodeMessage(store_.meta_.epoch, copy, c->body));
+    c->length = static_cast<uint16_t>(encodeMessage(store_.meta_.dataEpoch, copy, c->body));
 }
 
 void Tx::free(Kind kind, uint16_t slot) {
@@ -449,7 +453,7 @@ SlotState Store::decode(const uint8_t record[SLOT], Kind kind, uint16_t slot, ui
     memcpy(body, b, length);
     const bool epochTagged = kind == REGISTER || kind == INBOX || kind == RELEASED || kind == RING;
     if (kind == REGISTER || kind == INBOX) gen = get16(b + EPOCH);
-    if (epochTagged && (length < EPOCH || memcmp(b, meta_.epoch, EPOCH))) return SlotState::STALE;
+    if (epochTagged && (length < EPOCH || memcmp(b, kind == RING ? meta_.epoch : meta_.dataEpoch, EPOCH))) return SlotState::STALE;
     return SlotState::USED;
 }
 
@@ -480,7 +484,7 @@ bool Store::readBlock(Kind kind, uint16_t block, uint8_t body[BODY_MAX]) {
     if (!readSlot(addressOf(kind, block), kind, block, body, length, state, gen)) return false;
     if (state != SlotState::USED || length != (kind == BULLETIN ? BLOCK_ENTRIES * ENTRY : BLOCK_BODY)) {
         memset(body, 0, BODY_MAX);
-        if (kind != BULLETIN) memcpy(body, meta_.epoch, EPOCH);
+        if (kind != BULLETIN) memcpy(body, kind == RING ? meta_.epoch : meta_.dataEpoch, EPOCH);
     }
     return true;
 }
@@ -634,8 +638,14 @@ bool Store::recover() {
     return true;
 }
 
+void Store::staleRing() {
+    // Nowa epoka pierścienia: bloki starej epoki są wolne, numeracja od ringBase + 1.
+    for (SlotState& s : ringState_) if (s == SlotState::USED) s = SlotState::STALE;
+    head_ = meta_.ringBase;
+}
+
 void Store::staleAll() {
-    // Nowa epoka: rejestr, skrzynka, pamięć zwolnionych i pierścień starej epoki są wolne.
+    // Nowa epoka danych: rejestr, skrzynka, pamięć zwolnionych i pierścień starej epoki są wolne.
     for (RequestIndex& r : register_) if (r.state == SlotState::USED) { const uint16_t gen = r.gen; r = RequestIndex(); r.gen = gen; r.state = SlotState::STALE; }
     for (MessageIndex& m : inbox_) if (m.state == SlotState::USED) { const uint16_t gen = m.gen; m = MessageIndex(); m.gen = gen; m.state = SlotState::STALE; }
     for (SlotState& s : releasedState_) if (s == SlotState::USED) s = SlotState::STALE;
@@ -648,15 +658,20 @@ void Store::staleAll() {
 }
 
 void Store::absorb(Kind kind, uint16_t slot, const uint8_t* body, size_t length, SlotState state, uint16_t gen) {
-    if (state == SlotState::CORRUPT) ++diag_.corruptSlots;
+    if (state == SlotState::CORRUPT) {
+        ++diag_.corruptSlots;
+        corruptBlocks_ |= kind == RING ? 1 : kind == RELEASED ? 2 : kind == BULLETIN ? 4 : 0;
+    }
     switch (kind) {
         case META: {
             Meta m;
             if (state != SlotState::USED || !decodeMeta(body, length, m)) break;
-            const bool newEpoch = memcmp(m.epoch, meta_.epoch, EPOCH) != 0;
+            const bool newData = memcmp(m.dataEpoch, meta_.dataEpoch, EPOCH) != 0;
+            const bool newRing = memcmp(m.epoch, meta_.epoch, EPOCH) != 0;
             const bool newReceiver = m.receiver != meta_.receiver;
             meta_ = m;
-            if (newEpoch) staleAll();
+            if (newData) staleAll();
+            if (newRing) staleRing();
             if (newReceiver) memset(bulletinEvent_, 0, sizeof(bulletinEvent_));   // zbiór powtórzeń od zera
             break;
         }
@@ -749,7 +764,7 @@ bool Store::scan() {
     size_t length = 0;
     SlotState state;
     uint16_t gen;
-    head_ = 0;
+    head_ = meta_.ringBase;
     for (Kind kind : {BULLETIN, REGISTER, INBOX, RELEASED, RING}) {
         for (uint16_t slot = 0; slot < slotsOf(kind); ++slot) {
             if (!readSlot(addressOf(kind, slot), kind, slot, body, length, state, gen)) return false;
@@ -763,6 +778,7 @@ bool Store::format(uint32_t flags) {
     // Pusty magazyn: nowa epoka w rekordzie meta, potem rekord formatu w dzienniku.
     meta_ = Meta();
     random_(meta_.epoch, EPOCH);
+    random_(meta_.dataEpoch, EPOCH);
     ok_ = true;
     Tx tx(*this);
     tx.meta() = meta_;
@@ -807,7 +823,9 @@ Begin Store::begin() {
             break;
     }
     ok_ = true;
+    corruptBlocks_ = 0;
     if (!scan() || !loadConfig()) { ok_ = false; return Begin::MEMORY; }
+    if (corruptBlocks_ && !recoverBlocks()) { ok_ = false; return Begin::MEMORY; }
     return result;
 }
 
@@ -1163,8 +1181,32 @@ bool Store::close() {
     memcpy(m.closedEpoch, meta_.epoch, EPOCH);
     m.closedHead = head_;
     random_(m.epoch, EPOCH);
+    random_(m.dataEpoch, EPOCH);
+    m.ringBase = 0;
     m.tombFloor = 1;
     return tx.commit();
+}
+
+bool Store::recoverBlocks() {
+    // Uszkodzone bloki małych wpisów (oprogramowanie.md, "Pamięć FRAM"): ich wpisy przepadły, więc
+    // stacja nie udaje pełnej wiedzy, a maintain() zapisuje bloki od nowa.
+    // - pierścień (protokol-usb.md, "Epoka"): numery z bloku laptop mógł już widzieć; nowa epoka wymusza
+    //   migawkę, a numeracja biegnie dalej od najwyższego numeru możliwego w bloku, bo numery zdarzeń
+    //   wskazuje też pamięć zwolnionych wpisów (kolejność po `ev`);
+    // - pamięć zwolnionych: `tomb_floor` za bieżący numer (pamięć niekompletna, laptop nie ponawia);
+    // - zbiór BULLETIN: `bulletin_floor` = najwyższy przyjęty `event` (stare komunikaty nie wrócą).
+    Tx tx(*this);
+    Meta& m = tx.meta();
+    uint32_t head = head_;
+    if (corruptBlocks_ & 1) {
+        random_(m.epoch, EPOCH);
+        m.ringBase = head = head_ + BLOCK_ENTRIES;
+    }
+    if (corruptBlocks_ & 2) m.tombFloor = head + 1;
+    if (corruptBlocks_ & 4) m.bulletinFloor = m.bulletinMax;
+    if (!tx.commit()) return false;
+    corruptBlocks_ = 0;
+    return true;
 }
 
 bool Store::maintain() {
@@ -1175,8 +1217,15 @@ bool Store::maintain() {
     size_t n = 0;
     for (uint16_t i = 0; i < REGISTER_SLOTS && n < Tx::MAX_CHANGES; ++i) if (register_[i].state == SlotState::STALE) { tx.free(REGISTER, i); ++n; }
     for (uint16_t i = 0; i < INBOX_SLOTS && n < Tx::MAX_CHANGES; ++i) if (inbox_[i].state == SlotState::STALE) { tx.free(INBOX, i); ++n; }
-    for (uint16_t i = 0; i < RELEASED_BLOCKS && n < Tx::MAX_CHANGES; ++i) if (releasedState_[i] == SlotState::STALE) { tx.free(RELEASED, i); ++n; }
-    for (uint16_t i = 0; i < RING_BLOCKS && n < Tx::MAX_CHANGES; ++i) if (ringState_[i] == SlotState::STALE) { tx.free(RING, i); ++n; }
+    // Bloki starej epoki i bloki uszkodzone (po recoverBlocks(); inaczej każdy start odtwarzałby je od nowa).
+    const auto blocks = [&](Kind kind, const SlotState* states, uint16_t count, bool stale) {
+        for (uint16_t i = 0; i < count && n < Tx::MAX_CHANGES; ++i) {
+            if ((stale && states[i] == SlotState::STALE) || states[i] == SlotState::CORRUPT) { tx.free(kind, i); ++n; }
+        }
+    };
+    blocks(RELEASED, releasedState_, RELEASED_BLOCKS, true);
+    blocks(RING, ringState_, RING_BLOCKS, true);
+    blocks(BULLETIN, bulletinState_, BULLETIN_BLOCKS, false);
     if (!n) return false;
     if (!tx.commit()) return false;
     diag_.scrubbed += static_cast<uint32_t>(n);

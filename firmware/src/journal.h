@@ -40,7 +40,7 @@ constexpr size_t EVENT_RECORD = 64;
 constexpr size_t EVENT_TEXT = 53;
 constexpr uint8_t COMMITTED = 0xA5;
 constexpr uint32_t RESTART_SKIP_S = 60;   // przesunięcie licznika przy starcie (oprogramowanie.md, "Czas")
-constexpr uint32_t FRAM_FORMAT = 1;       // wersja formatu rekordów magazynu (fram_format)
+constexpr uint32_t FRAM_FORMAT = 2;       // wersja formatu rekordów magazynu (fram_format)
 constexpr uint32_t FORMAT_IDENTITY = 0x01;   // tożsamość stacji zapisana w FRAM
 static_assert(FORMAT_BASE + RING_SPAN <= EVENT_BASE, "pierścienie przed dziennikiem zdarzeń");
 

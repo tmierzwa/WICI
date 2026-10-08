@@ -246,14 +246,15 @@ void Protocol::handleLine(const char* line, uint32_t nowMs) {
     char type[24] = "";
     if (!json::parse(line, msg) || msg.kind != json::Kind::OBJECT) { rejected(-1, "invalid", "json"); return; }
     if (!json::field(msg, "seq", v) || !json::integer(v, seq) || seq < 1 || seq > 0xFFFFFFFFLL) { rejected(-1, "seq"); return; }
+    // `seq` rośnie o 1 w sesji; każdy wiersz z poprawnym `seq` go zużywa (także odmowa `contract`),
+    // a po odmowie `seq` stacja liczy dalej od numeru laptopa.
+    const bool inOrder = seq == seqIn_ + 1;
+    seqIn_ = seq;
     if (!json::field(msg, "usb", v) || !json::integer(v, usb) || usb != CONTRACT) {
         rejected(seq, "contract");
         hello();
         return;
     }
-    // `seq` rośnie o 1 w sesji; po odmowie liczy się dalej od numeru laptopa.
-    const bool inOrder = seq == seqIn_ + 1;
-    seqIn_ = seq;
     if (!inOrder) { rejected(seq, "seq"); return; }
     if (!json::field(msg, "type", v) || !json::string(v, type, sizeof(type))) { rejected(seq, "invalid", "type"); return; }
     for (char* c = type; *c; ++c) if (*c < 0x21 || *c > 0x7E) *c = '?';   // do dziennika tylko drukowalne ASCII
@@ -298,7 +299,7 @@ void Protocol::dispatch(const char* type, const json::Value& msg, int64_t seq, u
         pending_.type = Pending::DESTROY;
         pending_.seq = seq;
         pending_.sinceMs = nowMs;
-        host_.confirmBegin(Question::DESTROY);
+        host_.confirmBegin(Question::DESTROY, "");
         send("pending", seq, "\"confirm_s\":30");
     } else if (!strcmp(type, "card")) doCard(seq);
     else if (!strcmp(type, "xfer_begin")) doXferBegin(msg, seq, nowMs);
@@ -543,12 +544,18 @@ void Protocol::doSilence(const json::Value& msg, int64_t seq, uint32_t nowMs) {
     p.on = v.kind == json::Kind::TRUE_;
     p.exceptionSet = json::field(msg, "exception_id", v);
     // Wyjątek tylko przy włączaniu ciszy z panelu; przełącznik CISZA ma pierwszeństwo i go wyklucza.
-    if (p.exceptionSet && (!p.on || !json::hexField(msg, "exception_id", p.exception, store::HASH))) { rejected(seq, "invalid", "exception_id"); return; }
+    // Wyjątek obejmuje wpis rejestru (para id, r_max z chwili potwierdzenia); id spoza rejestru: `invalid`.
+    if (p.exceptionSet && (!p.on || !json::hexField(msg, "exception_id", p.exception, store::HASH) || store_.findRequest(p.exception) < 0)) {
+        rejected(seq, "invalid", "exception_id");
+        return;
+    }
     if (host_.silenceSwitch() && (!p.on || p.exceptionSet)) { rejected(seq, "silence_switch"); return; }
     p.seq = seq;
     p.sinceMs = nowMs;
     pending_ = p;
-    host_.confirmBegin(p.on ? Question::SILENCE_ON : Question::SILENCE_OFF);
+    char number[5] = "";
+    if (p.exceptionSet) numberText(store::shortNumber(p.exception), number);
+    host_.confirmBegin(p.exceptionSet ? Question::SILENCE_EXCEPTION : p.on ? Question::SILENCE_ON : Question::SILENCE_OFF, number);
     send("pending", seq, "\"confirm_s\":30");
 }
 
@@ -569,7 +576,7 @@ void Protocol::doClose(const json::Value& msg, int64_t seq, uint32_t nowMs) {
     p.seq = seq;
     p.sinceMs = nowMs;
     pending_ = p;
-    host_.confirmBegin(Question::CLOSE);
+    host_.confirmBegin(Question::CLOSE, "");
     send("pending", seq, "\"confirm_s\":30");
 }
 
@@ -582,6 +589,8 @@ size_t Protocol::radioFields(char* out, size_t size, uint8_t bits) {
     appendf(out, size, n, "\"silence\":%s,\"silence_source\":%s,\"exception_id\":%s%s%s", boolName(silence),
             !silence ? "null" : (bits & store::RADIO_SWITCH) ? "\"switch\"" : "\"panel\"", exception ? "\"" : "null", exception ? hex : "",
             exception ? "\"" : "");
+    if (exception) appendf(out, size, n, ",\"exception_revision\":%u", static_cast<unsigned>(store_.meta().exceptionRev));
+    else appendf(out, size, n, ",\"exception_revision\":null");
     return n;
 }
 

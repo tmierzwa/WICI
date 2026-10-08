@@ -341,7 +341,7 @@ struct FakeHost : usbproto::Host {
     bool announce() override { printf("announce %d\n", announceOk); return announceOk; }
     bool destroy() override;
     void configChanged(bool roleChanged) override { printf("config changed %d\n", roleChanged); }
-    void confirmBegin(usbproto::Question question) override;
+    void confirmBegin(usbproto::Question question, const char* detail) override;
     usbproto::Confirm confirmPoll() override;
     void confirmEnd() override;
     void showCard(const char* fingerprint) override;
@@ -406,9 +406,9 @@ bool FakeHost::destroy() {
     w->con->invalidate();
     return ok;
 }
-void FakeHost::confirmBegin(usbproto::Question question) {
+void FakeHost::confirmBegin(usbproto::Question question, const char* detail) {
     printf("ask %u\n", static_cast<unsigned>(question));
-    w->model.ask(static_cast<ui::Question>(question));
+    w->model.ask(static_cast<ui::Question>(question), detail);
 }
 usbproto::Confirm FakeHost::confirmPoll() {
     const ui::Answer a = w->model.answer();
@@ -1147,11 +1147,11 @@ class HostUnitTests(unittest.TestCase):
             "clock 1 0 500 60 1",                # zapis co 60 s; licznik się nie cofa
             "restart 1 560 120 2",               # po restarcie czas nie cofa się wobec czasu sprzed restartu
             "settings 1 3 5 reserve 1 1 0",      # rezerwacja tylko rosnąca
-            "format 1 1 1 1 4294968320 3 5",     # READY, wersja 1, znacznik tożsamości
+            "format 1 1 2 1 4294968320 3 5",     # READY, wersja 2, znacznik tożsamości
             "destroying 1 2 0",
             "events 600 1 e600 1 e89 0",
             "long 53",
-            "erase 1 0 0 0 139 4294968320 2 1",  # dług, rezerwacja i format zostają
+            "erase 1 0 0 0 139 4294968320 2 2",  # dług, rezerwacja i format zostają
             "format_corrupt 3",                  # zatwierdzone z błędnym CRC bez poprawnych: CORRUPT
         ])
 
@@ -1312,11 +1312,22 @@ class HostUnitTests(unittest.TestCase):
     def test_store_corrupt_ring_block_is_rewritten(self):
         # Blok pierścienia z błędnym znacznikiem (policzony przy starcie) nie blokuje transakcji ze zdarzeniem.
         ring = 0x42000   # store::RING_BASE
-        out = self.world([self.CONFIG, self.sub(self.request(self.rid(41))), "flip %d" % (ring + 40), "restart", "diag",
-                          self.sub(self.request(self.rid(42))), "restart", "diag"])
+        out = self.world([self.CONFIG, self.sub(self.request(self.rid(41))), "diag", "flip %d" % (ring + 40), "restart", "diag",
+                          self.sub(self.request(self.rid(42))), "maintain", "restart", "diag"])
         self.assertEqual(self.find(out, "sub ")[1].split()[1], "stored")
-        corrupt = [line.split()[2] for line in self.find(out, "diag ")]
-        self.assertEqual(corrupt, ["corrupt=1", "corrupt=0"])   # blok zapisany od nowa
+        diags = [dict(f.split("=", 1) for f in line.split()[1:] if "=" in f) for line in self.find(out, "diag ")]
+        self.assertEqual([d["corrupt"] for d in diags], ["0", "1", "0"])   # maintain zapisał blok od nowa
+        # Nowa epoka pierścienia (laptop robi migawkę), numeracja dalej za uszkodzonym blokiem; rejestr zostaje.
+        self.assertNotEqual(diags[0]["epoch"], diags[1]["epoch"])
+        self.assertEqual(diags[1]["epoch"], diags[2]["epoch"])
+        self.assertEqual((diags[0]["head"], diags[1]["head"], diags[1]["min"], diags[2]["head"]), ("2", "16", "17", "17"))
+        self.assertEqual([d["requests"] for d in diags], ["1", "1", "2"])
+        # Uszkodzony blok zbioru BULLETIN: `bulletin_floor` = najwyższy przyjęty event, komunikat nie wraca.
+        bulletin = 0xF200   # store::BULLETIN_BASE
+        b = self.rid(77)
+        out = self.world([self.CONFIG, "in " + compact([1, 4, b, 7, "Komunikat"]), "flip %d" % (bulletin + 40), "restart",
+                          "in " + compact([1, 4, b, 7, "Komunikat"]), "in " + compact([1, 4, b, 8, "Komunikat 2"]), "diag"])
+        self.assertIn("messages=2", self.find(out, "diag ")[0])
 
     def test_store_event_ring_close_maintain_and_destroy(self):
         out = self.world([
@@ -1631,14 +1642,14 @@ class HostUnitTests(unittest.TestCase):
         status = r[1]
         self.assertEqual((status["type"], status["re"], status["configured"], status["uptime"], status["register"],
                           status["receiver"], status["last_contact"], status["fram_format"]),
-                         ("status", 1, False, 1050, 0, "main", None, 1))
-        self.assertEqual((status["silence"], status["silence_source"], status["exception_id"], status["power"]),
-                         (False, None, None, {"source": "12v"}))
+                         ("status", 1, False, 1050, 0, "main", None, 2))
+        self.assertEqual((status["silence"], status["silence_source"], status["exception_id"], status["exception_revision"], status["power"]),
+                         (False, None, None, None, {"source": "12v"}))
         rejected = [(x.get("re"), x["reason"], x.get("detail")) for x in r[2:] if x["type"] == "rejected"]
         self.assertEqual(rejected, [
             (5, "seq", None),                           # przeskok numeru; dalej od numeru laptopa
             (7, "invalid", "colour"), (8, "unknown_type", None), (9, "invalid", "id"), (10, "contract", None),
-            (None, "invalid", "json"), (None, "seq", None), (10, "prep_required", None), (None, "too_long", None),
+            (None, "invalid", "json"), (None, "seq", None), (10, "seq", None), (None, "too_long", None),
             (11, "unknown_type", None),                 # `export` to `op` transferu, nie polecenie
             (12, "migration", "unsupported"), (13, "not_configured", None)])
         self.assertEqual([x["type"] for x in r].count("hello"), 2)
@@ -1778,11 +1789,12 @@ class HostUnitTests(unittest.TestCase):
         u = self.Lines()
         epoch = self.replies(self.world(["connect"]))[0]["epoch"]
         x = self.rid(1234)
-        script = ["H", self.CONFIG, "connect", u("silence", on=True), u("status"), u("cancel", id=x), "R", "K OK 0", "upoll", "R",
+        # Zgłoszenie x przed poleceniami: wyjątek ciszy dotyczy tylko wpisu rejestru.
+        script = ["H", self.CONFIG, self.sub(self.request(x)), "connect", u("silence", on=True), u("status"), u("cancel", id=x), "R", "K OK 0", "upoll", "R",
                   u("silence", on=False), "K BACK 0", "upoll",
                   u("silence", on=True, exception_id=x), "ms 29999", "upoll", "ms 30000", "upoll",
                   "switch 1", u("silence", on=False), u("silence", on=True, exception_id=x), "switch 0",
-                  self.sub(self.request(x)), "ms 31000", u("close", epoch=epoch, head=1), "K OK 0", "upoll",
+                  u("silence", on=True, exception_id=self.rid(999)), "ms 31000", u("close", epoch=epoch, head=1), "K OK 0", "upoll",
                   u("close", epoch=epoch, head=3), "K OK 0", "upoll", u("close", epoch=epoch, head=3),
                   u("destroy"), "K OK 0", "upoll", "diag"]
         out = self.world(script)
@@ -1793,14 +1805,15 @@ class HostUnitTests(unittest.TestCase):
             ("pending", None), ("rejected", "not_confirmed"),                             # WSTECZ
             ("pending", None), ("rejected", "not_confirmed"),                             # brak odpowiedzi przez 30 s
             ("rejected", "silence_switch"), ("rejected", "silence_switch"),
+            ("rejected", "invalid"),                           # wyjątek dla id spoza rejestru
             ("pending", None), ("rejected", "stale"),          # po head 1 jest `own` (`radio` nie blokuje)
             ("pending", None), ("ok", None), ("ok", None), ("pending", None), ("ok", None)])
         self.assertEqual(r[0]["confirm_s"], 30)
         self.assertEqual((r[3]["silence"], r[3]["silence_source"]), (True, "panel"))
-        close = r[13]
+        close = r[14]
         self.assertEqual(close["duplicate"], False)
         self.assertNotEqual(close["epoch"], epoch)
-        self.assertEqual((r[14]["duplicate"], r[14]["epoch"]), (True, close["epoch"]))   # powtórzone `close`: ten sam wynik
+        self.assertEqual((r[15]["duplicate"], r[15]["epoch"]), (True, close["epoch"]))   # powtórzone `close`: ten sam wynik
         self.assertIn("ask 0", out)
         screens = [line for line in out if line.startswith("screen ")]
         self.assertEqual(screens[0].split()[1], "confirm")
@@ -2101,12 +2114,13 @@ class HostUnitTests(unittest.TestCase):
         self.assertTrue(" ".join(self.lines(handover)[2:]).startswith(texts["zapisane_w_stacji"][0][:15]))
 
     def test_confirm_question_and_node_menu(self):
-        out = self.ui(["L 0", "ask 0", "R", "answer", "K OK 0", "answer", "R", "ask 3", "K BACK 0", "answer", "ask 4 ABCD", "R",
-                       "K OK 0", "answer", "ask 1", "dismiss", "answer", "R"])
+        out = self.ui(["L 0", "ask 0", "R", "answer", "K OK 0", "answer", "R", "ask 3", "K BACK 0", "answer", "ask 5 ABCD", "R",
+                       "K OK 0", "answer", "ask 1", "dismiss", "answer", "R", "ask 4 0427", "R", "dismiss"])
         s = self.screens(out)
-        self.assertEqual([x[0] for x in s], ["confirm", "main", "confirm", "main"])
-        self.assertTrue(self.shown(s[0]).startswith("WŁĄCZYĆ CISZĘ RADIOWĄ?"))
+        self.assertEqual([x[0] for x in s], ["confirm", "main", "confirm", "main", "confirm"])
+        self.assertTrue(self.shown(s[0]).startswith("LAPTOP: WŁĄCZYĆ CISZĘ RADIOWĄ?"))
         self.assertIn("ABCD", self.shown(s[2]))
+        self.assertIn("NR 0427", self.shown(s[4]))   # pytanie_cisza_wyjatek z krótkim numerem
         # OK = TAK, WSTECZ = NIE, odcisk karty zamyka się bez zgody, dismiss() kończy pytanie bez odpowiedzi.
         self.assertEqual(self.find(out, "answer "), ["answer 0", "answer 1", "answer 2", "answer 2", "answer 2"])
         # Konfiguracja węzła stanowiska: menu tylko STAN i JĘZYK, bez kontroli adresu i TEST.

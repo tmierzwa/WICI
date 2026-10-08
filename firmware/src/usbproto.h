@@ -32,7 +32,7 @@ constexpr uint32_t ANNOUNCE_MERGE_MS = 30000;
 constexpr size_t PART_MAX = 512;         // dane binarne w jednym wierszu
 constexpr size_t BOOT_HEX = 16;
 
-enum class Question : uint8_t { SILENCE_ON, SILENCE_OFF, CLOSE, DESTROY };
+enum class Question : uint8_t { SILENCE_ON, SILENCE_OFF, CLOSE, DESTROY, SILENCE_EXCEPTION };
 enum class Confirm : uint8_t { WAITING, YES, NO };
 
 // Usługi stacji dla protokołu; dostarcza je main.cpp albo program testowy.
@@ -55,7 +55,8 @@ struct Host {
     virtual bool announce() = 0;                           // ogłoszenie adresu; false: stos nie działa
     virtual bool destroy() = 0;                            // ZNISZCZ DANE: magazyn, dziennik, tożsamość
     virtual void configChanged(bool roleChanged) = 0;      // nowa konfiguracja (zmiana roli: restart)
-    virtual void confirmBegin(Question question) = 0;      // pytanie na ekranie
+    // Pytanie na ekranie; detail: krótki numer zgłoszenia dla SILENCE_EXCEPTION, inaczej pusty.
+    virtual void confirmBegin(Question question, const char* detail) = 0;
     virtual Confirm confirmPoll() = 0;                     // OK = YES, WSTECZ = NO
     virtual void confirmEnd() = 0;
     virtual void showCard(const char* fingerprint) = 0;   // odcisk `card` na ekranie do porównania

@@ -122,7 +122,8 @@ struct Draft {
 
 enum class Submit : uint8_t { STORED, NO_ADDRESS, FULL, ERROR, ANNOUNCED, NOT_ANNOUNCED };  // (NOT_)ANNOUNCED: OGŁOŚ ADRES
 // Pytanie polecenia USB (OK = tak, WSTECZ = nie) albo odcisk klucza dla `card` (dowolny przycisk zamyka).
-enum class Question : uint8_t { SILENCE_ON, SILENCE_OFF, CLOSE, DESTROY, CARD };
+// Pierwsze pozycje są równe usbproto::Question.
+enum class Question : uint8_t { SILENCE_ON, SILENCE_OFF, CLOSE, DESTROY, SILENCE_EXCEPTION, CARD };
 enum class Answer : uint8_t { WAITING, YES, NO };
 enum class TestState : uint8_t { NONE, SCHEDULED, SENT, CONFIRMED, PAUSED };
 struct TestInfo {
@@ -191,7 +192,7 @@ public:
     bool muted() const { return muted_; }
     void setMuted(bool muted) { muted_ = muted; }
     // Pytanie polecenia USB na cały ekran (przed alarmem); answer() = WAITING do odpowiedzi.
-    // detail: odcisk klucza dla CARD. dismiss(): koniec pytania bez odpowiedzi (limit czasu, port zamknięty).
+    // detail: odcisk klucza dla CARD ([x]), krótki numer zgłoszenia dla SILENCE_EXCEPTION ([xxxx]). dismiss(): koniec pytania bez odpowiedzi (limit czasu, port zamknięty).
     void ask(Question question, const char* detail = "");
     Answer answer() const { return answer_; }
     void dismiss();

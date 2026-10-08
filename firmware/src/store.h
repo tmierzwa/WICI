@@ -214,7 +214,13 @@ struct TestNonce {
 
 // Stan stacji poza magazynami (jedno gniazdo, zawsze przez transakcję).
 struct Meta {
+    // Epoka pierścienia zdarzeń i protokołu USB (`epoch`). Nowa po ZAMKNIJ ZDARZENIE, ZNISZCZ DANE i po
+    // odtworzeniu uszkodzonego pierścienia; numeracja tej epoki zaczyna się od ringBase + 1.
     uint8_t epoch[EPOCH] = {};
+    uint32_t ringBase = 0;
+    // Epoka danych: rejestr, skrzynka i pamięć zwolnionych wpisów (nowa tylko po ZAMKNIJ ZDARZENIE
+    // i ZNISZCZ DANE), więc odtworzenie pierścienia ich nie usuwa.
+    uint8_t dataEpoch[EPOCH] = {};
     uint32_t tombFloor = 1;          // od tego zdarzenia pamięć zwolnionych jest kompletna
     int8_t configCopy = -1;          // aktywna kopia konfiguracji (0 A, 1 B), -1 brak
     uint32_t configSeq = 0;
@@ -372,7 +378,10 @@ public:
 
     // Pierścień zdarzeń.
     uint32_t head() const { return head_; }
-    uint32_t minEvent() const { return head_ >= RING_ENTRIES ? head_ - RING_ENTRIES + 1 : 1; }
+    uint32_t minEvent() const {
+        const uint32_t first = meta_.ringBase + 1;
+        return head_ >= first + RING_ENTRIES ? head_ - RING_ENTRIES + 1 : first;
+    }
     bool readEvent(uint32_t ev, Event& out);
     // Po zdarzeniu head nie ma zdarzeń zmieniających dane (warunek `close`).
     bool quietSince(uint32_t head);
@@ -401,6 +410,8 @@ private:
     bool format(uint32_t flags);
     void absorb(Kind kind, uint16_t slot, const uint8_t* body, size_t length, SlotState state, uint16_t gen);
     void staleAll();
+    void staleRing();
+    bool recoverBlocks();   // po uszkodzonych blokach pierścienia, pamięci zwolnionych albo zbioru BULLETIN
     bool readBlock(Kind kind, uint16_t block, uint8_t body[BODY_MAX]);
     bool copyCrc(uint32_t base, uint32_t& crc);
     bool hashCopy(int8_t copy, uint32_t size, uint8_t out[32]);
@@ -432,6 +443,8 @@ private:
     SlotState bulletinState_[BULLETIN_BLOCKS] = {};
     SlotState ringState_[RING_BLOCKS] = {};
     uint32_t head_ = 0;
+    // Uszkodzone bloki przy starcie (bity: 1 pierścień, 2 pamięć zwolnionych, 4 zbiór BULLETIN).
+    uint8_t corruptBlocks_ = 0;
     uint64_t nextWrite_ = 0;
     uint64_t reservedUpper_ = 0;
     uint8_t txArea_ = 0;               // rekord transakcji następnej transakcji

@@ -24,16 +24,9 @@ constexpr Button SEQUENCE[4] = {Button::UP, Button::DOWN, Button::UP, Button::OK
 constexpr Id STATE_TEXTS[6] = {Id::STAN_1, Id::STAN_2, Id::STAN_3, Id::STAN_4, Id::STAN_5, Id::STAN_6};
 constexpr Id URGENCY_TEXTS[3] = {Id::PILNOSC_0, Id::PILNOSC_1, Id::PILNOSC_2};
 constexpr uint8_t SA1_REQUEST = 0, SA1_REPLY = 3, SA1_BULLETIN = 4, SA1_TEST = 5;
-const char* const RADIO_DOWN = "RADIO ---";  // radio niesprawne (brak tekstu w liście kanonicznej, F80)
-// Pytania poleceń USB i odcisk `card` (ui::Question): teksty tymczasowe, bez listy kanonicznej (F107).
-const char* const QUESTION_TEXTS[5][ui_texts::LANGS] = {
-    {"WŁĄCZYĆ CISZĘ RADIOWĄ? OK = TAK / WSTECZ = NIE", "УВІМКНУТИ РАДІОТИШУ? OK = ТАК / НАЗАД = НІ", "TURN RADIO SILENCE ON? OK = YES / BACK = NO"},
-    {"WYŁĄCZYĆ CISZĘ RADIOWĄ? OK = TAK / WSTECZ = NIE", "ВИМКНУТИ РАДІОТИШУ? OK = ТАК / НАЗАД = НІ", "TURN RADIO SILENCE OFF? OK = YES / BACK = NO"},
-    {"ZAMKNĄĆ ZDARZENIE? DANE ZDARZENIA ZNIKNĄ ZE STACJI. OK = TAK / WSTECZ = NIE", "ЗАКРИТИ ПОДІЮ? ДАНІ ПОДІЇ БУДЕ ВИДАЛЕНО ЗІ СТАНЦІЇ. OK = ТАК / НАЗАД = НІ",
-     "CLOSE THE EVENT? EVENT DATA WILL BE REMOVED FROM THE STATION. OK = YES / BACK = NO"},
-    {"ZNISZCZYĆ DANE? NIEODWRACALNE. OK = TAK / WSTECZ = NIE", "ЗНИЩИТИ ДАНІ? НЕЗВОРОТНО. OK = ТАК / НАЗАД = НІ", "DESTROY DATA? IRREVERSIBLE. OK = YES / BACK = NO"},
-    {"ODCISK KLUCZA STACJI: [x]", "ВІДБИТОК КЛЮЧА СТАНЦІЇ: [x]", "STATION KEY FINGERPRINT: [x]"},
-};
+// Teksty pytań poleceń USB i odcisku `card` według ui::Question.
+constexpr Id QUESTION_TEXTS[] = {Id::PYTANIE_CISZA_WLACZ, Id::PYTANIE_CISZA_WYLACZ, Id::PYTANIE_ZAMKNIJ, Id::PYTANIE_ZNISZCZ,
+                                 Id::PYTANIE_CISZA_WYJATEK, Id::ODCISK_KLUCZA};
 
 size_t utf8Bytes(const char* text, size_t chars) {
     // Długość w bajtach pierwszych `chars` znaków.
@@ -756,7 +749,7 @@ void Model::renderMain(const Status& s, char out[][LINE_BYTES], size_t count) co
             lines[3] = tmp;
             lines[4] = computer;
         } else {
-            lines[0] = s.radioOk ? text(Id::RADIO_WLACZONE, lang_) : RADIO_DOWN;
+            lines[0] = text(s.radioOk ? Id::RADIO_WLACZONE : Id::RADIO_AWARIA, lang_);
             lines[1] = computer;
             lines[2] = tmp;
             lines[3] = muted_ ? text(Id::DZWIEK_WYCISZONY, lang_) : "";
@@ -771,7 +764,7 @@ void Model::renderMain(const Status& s, char out[][LINE_BYTES], size_t count) co
         const size_t wrapped = wrap(text(Id::CISZA, lang_), lines, 3);
         for (size_t i = 0; i < 3; ++i) copyLine(out[n++], LINE_BYTES, i < wrapped ? lines[i] : "");
     } else {
-        copyLine(out[n++], LINE_BYTES, s.radioOk ? text(Id::RADIO_WLACZONE, lang_) : RADIO_DOWN);
+        copyLine(out[n++], LINE_BYTES, text(s.radioOk ? Id::RADIO_WLACZONE : Id::RADIO_AWARIA, lang_));
         duration(s.contactS, lang_, value, sizeof(value));
         substitute(text(s.contactKnown ? Id::KONTAKT_KROTKI : Id::KONTAKT_PONAD_KROTKI, lang_), "[czas]", value, tmp, sizeof(tmp));
         copyLine(out[n++], LINE_BYTES, tmp);
@@ -805,7 +798,7 @@ size_t Model::statusLines(const Status& s, char out[][LINE_BYTES], size_t max) c
     char value[24];
     char tmp[LINE_BYTES * 2];
     auto put = [&](const char* line) { if (n < max) copyLine(out[n++], LINE_BYTES, line); };
-    put(s.radioOk ? text(Id::RADIO_WLACZONE, lang_) : RADIO_DOWN);
+    put(text(s.radioOk ? Id::RADIO_WLACZONE : Id::RADIO_AWARIA, lang_));
     snprintf(tmp, sizeof(tmp), "RX OK %lu", static_cast<unsigned long>(s.rxOk)); put(tmp);
     snprintf(tmp, sizeof(tmp), "RX BAD %lu", static_cast<unsigned long>(s.rxBad)); put(tmp);
     snprintf(tmp, sizeof(tmp), "TX %lu DROP %lu", static_cast<unsigned long>(s.txDatagrams), static_cast<unsigned long>(s.txDrop)); put(tmp);
@@ -1189,7 +1182,8 @@ void Model::render(const Status& s, Lines& out) {
             renderText(t, window, out, first);
             break;
         case Screen::CONFIRM:
-            substitute(QUESTION_TEXTS[static_cast<size_t>(question_)][L], "[x]", questionDetail_, tmp, sizeof(tmp));
+            substitute(text(QUESTION_TEXTS[static_cast<size_t>(question_)], lang_), question_ == Question::CARD ? "[x]" : "[xxxx]", questionDetail_,
+                       tmp, sizeof(tmp));
             t.add(tmp);
             renderText(t, window, out, first);
             break;

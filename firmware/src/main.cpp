@@ -78,7 +78,7 @@ void stationRandom(uint8_t* out, size_t count) {
     // Ziarno powstaje pierwsze w stationSetup(); odmowa to błąd programu: restart zamiast bajtów spoza generatora.
     if (!generator.generate(out, count)) platform::reboot();
 }
-constexpr const char* RADIO_PROFILE = "p1";   // profil radiowy stanowisk A i B (`radio.profile` w configure, F107)
+constexpr const char* RADIO_PROFILE = "p1";   // profil radiowy stanowisk A i B (`radio.profile` w configure, protokol-usb.md)
 store::Store stationStore(memory, stationJournal, stationRandom, RADIO_PROFILE);
 // Drugi interfejs CDC: dane (protokół laptop–stacja); Serial = diagnostyka.
 #if defined(ARDUINO_ARCH_NRF52)
@@ -160,7 +160,7 @@ struct BenchHost : usbproto::Host {
     bool announce() override;
     bool destroy() override;
     void configChanged(bool roleChanged) override;
-    void confirmBegin(usbproto::Question question) override;
+    void confirmBegin(usbproto::Question question, const char* detail) override;
     usbproto::Confirm confirmPoll() override;
     void confirmEnd() override;
     void showCard(const char* fingerprint) override;
@@ -470,8 +470,9 @@ void pollPanel(uint32_t now) {
 
 bool BenchHost::silenceSwitch() { return switchSilence; }
 
-void BenchHost::confirmBegin(usbproto::Question question) {
-    screenModel.ask(static_cast<ui::Question>(question));
+static_assert(static_cast<int>(usbproto::Question::SILENCE_EXCEPTION) == static_cast<int>(ui::Question::SILENCE_EXCEPTION), "pytania USB i ekranu");
+void BenchHost::confirmBegin(usbproto::Question question, const char* detail) {
+    screenModel.ask(static_cast<ui::Question>(question), detail);
     screenChanged();
 }
 usbproto::Confirm BenchHost::confirmPoll() {
