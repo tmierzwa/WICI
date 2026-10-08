@@ -49,7 +49,7 @@
 </ol>
 </nav>
 
-<p>Cel: przekazać krótkie zgłoszenie ze schronienia do miejsca zdolnego udzielić pomocy, gdy nie działa internet ani sieć komórkowa. Podstawą jest samodzielna stacja z ekranem i przyciskami. Zasada obsługi brzmi: „włączam stację, wystawiam antenę i jestem w sieci”. Użytkownik wysyła zgłoszenia schronienia przyciskami, a stacja zawsze przekazuje ruch innych stacji. Opcjonalny laptop i router dodają wygodny panel i stronę, przez którą mieszkańcy zgłaszają potrzeby z telefonów.</p>
+<p>Cel: przekazać krótkie zgłoszenie ze schronienia do miejsca zdolnego udzielić pomocy, gdy nie działa internet ani sieć komórkowa. Podstawą jest samodzielna stacja z ekranem i przyciskami. Zasada obsługi brzmi: „włączam stację, wystawiam antenę i jestem w sieci”. Użytkownik wysyła zgłoszenia schronienia przyciskami, a stacja zawsze przekazuje ruch innych stacji. Opcjonalny laptop i router dodają wygodny panel i stronę, przez którą mieszkańcy zgłaszają potrzeby z telefonów. Stanowisko odbiorcze (OSP) ma natomiast obowiązkowy komputer z zapasem: na nim działa tożsamość OSP, wiadomości i baza zgłoszeń, a stacja przy OSP przekazuje ruch sieci (D19).</p>
 
 <h2 id="film">Film</h2>
 
@@ -99,7 +99,7 @@
 
 <p>Koncepcja nadaje się do budowy prototypów i sprawdzania hipotez. Nie ma jeszcze dowodu łączności 1 km, działania całego stosu radiowego, pracy dobowej ani bezpieczeństwa własnej przetwornicy. Oprogramowanie i próby przed R02 prowadzi się na stanowisku deweloperskim z płytek rozwojowych i modułów producentów połączonych płytką nośną N1 bez własnego toru RF; płytką stacji jest R02. Płytka stacji R02, moduły RF, oprogramowanie układowe, aplikacja i pakiety START nie są ukończone. Wyniki modelu i projekt CAD nie zastępują prób sprzętu.</p>
 
-<p><a href="../review.md">Aktualne ustalenia przeglądu wewnętrznego</a> obejmują problem prądu w stanie wstrzymania USB (suspend), budżet ogranicznika ładowarki oraz kontrprzykład czasowy dla stosu sieciowego. Wersja 0.5 przenosi stos do stacji zasilanej z własnych źródeł. Dlatego problem wstrzymania USB i limit czasu protokołu KISS (prostego formatu ramek między komputerem a modemem) nie blokują już wariantu bazowego. Nowym głównym ryzykiem jest dojrzałość stosu na mikrokontrolerze.</p>
+<p><a href="../review.md">Aktualne ustalenia przeglądu wewnętrznego</a> obejmują problem prądu w stanie wstrzymania USB (suspend), budżet ogranicznika ładowarki oraz kontrprzykład czasowy dla stosu sieciowego. Wersja 0.5 przenosi stos do stacji zasilanej z własnych źródeł. Dlatego problem wstrzymania USB i limit czasu protokołu KISS (prostego formatu ramek między komputerem a modemem) nie blokują już wariantu bazowego. KISS wraca tylko na stanowisku OSP, między komputerem a stacją; jego kontrolę przepływu i limity czasu sprawdzono w kodzie przypiętych wersji Reticulum i LXMF, a działanie potwierdza T3. Nowym głównym ryzykiem jest dojrzałość stosu na mikrokontrolerze.</p>
 
 <p>Najpierw trzeba rozstrzygnąć:</p>
 <ul>
@@ -120,7 +120,7 @@
 
 <p><strong>Status dokumentu.</strong> To koncepcja prototypu 0.5, projektu prowadzonego na razie przez jedną osobę. Duża część analiz i obliczeń powstała z pomocą asystenta AI. Autor je przegląda, ale nie sprawdził ich niezależny inżynier, a uwag prawnych nie sprawdził prawnik. Każdą liczbę traktuj jako hipotezę do sprawdzenia; zgłoszenia błędów są mile widziane w zakładce <a href="https://github.com/tmierzwa/WICI/issues">Issues</a> repozytorium.</p>
 
-<p lang="en"><em>In English:</em> WICI is an open design of an emergency communication station for shelters in Poland. The base unit is a self-contained station with a screen and buttons that also relays traffic whenever it is on, passing messages from station to station until they reach someone who can help. The name comes from the Polish <i lang="pl">wici</i> (pronounced “VEE-chee”), the bundle of twigs once passed from village to village to raise the alarm and summon help. A laptop and a Wi-Fi router are optional extensions. This is a prototype concept (0.5), written in Polish with AI assistance and not independently reviewed; no hardware has been built or tested yet. <a href="https://github.com/tmierzwa/WICI">Repository</a>.</p>
+<p lang="en"><em>In English:</em> WICI is an open design of an emergency communication station for shelters in Poland. The base unit is a self-contained station with a screen and buttons that also relays traffic whenever it is on, passing messages from station to station until they reach someone who can help. The name comes from the Polish <i lang="pl">wici</i> (pronounced “VEE-chee”), the bundle of twigs once passed from village to village to raise the alarm and summon help. A laptop and a Wi-Fi router are optional extensions in shelters; the receiving post runs the network stack on a mandatory computer with a spare. This is a prototype concept (0.5), written in Polish with AI assistance and not independently reviewed; no hardware has been built or tested yet. <a href="https://github.com/tmierzwa/WICI">Repository</a>.</p>
 
 <p>Licencje: <a href="../../LICENSE.md">mapa projektu</a>. Analizy są dostępne na licencji CC-BY-4.0, a rozdział 05, jako opis konstrukcji komunikacji, na licencji CERN-OHL-P-2.0.</p>
 </article>

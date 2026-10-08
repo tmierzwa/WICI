@@ -52,7 +52,7 @@
 
 <h2 id="rozdzielenie-warstw">Rozdzielenie warstw</h2>
 
-<p>Modulacja radiowa przenosi bity między stacjami. Wi-Fi daje mieszkańcowi dostęp do lokalnej strony na poziomie 3. Reticulum jest działającą implementacją stosu sieciowego i protokołu, a LXMF – implementacją protokołu wiadomości. Oprogramowanie stacji WICI odpowiada za trwałą kolejkę, statusy, ekran i przyciski. Aplikacja laptopa odpowiada za formularz, panel i pracę dyżurnego. Żaden pojedynczy wybór w tej tabeli nie dostarcza całego systemu.</p>
+<p>Modulacja radiowa przenosi bity między stacjami. Wi-Fi daje mieszkańcowi dostęp do lokalnej strony na poziomie 3. Reticulum jest działającą implementacją stosu sieciowego i protokołu, a LXMF – implementacją protokołu wiadomości. Oprogramowanie stacji WICI odpowiada za trwałą kolejkę, statusy, ekran i przyciski. Aplikacja laptopa w schronieniu odpowiada za formularz i panel opiekuna. Pracę dyżurnego obsługuje aplikacja OSP na komputerze stanowiska, z Reticulum i LXMF w Pythonie (D19). Żaden pojedynczy wybór w tej tabeli nie dostarcza całego systemu.</p>
 
 <div class="table-wrap"><table class="cols-3">
 <thead><tr>
@@ -85,7 +85,7 @@
 
 <h2 id="reticulum-i-lxmf-w-tym-projekcie">Reticulum i LXMF w tym projekcie</h2>
 
-<p>Reticulum działa w mikrokontrolerze stacji jako port microReticulum z włączoną funkcją transportu (przekazywania pakietów między węzłami), więc każda włączona stacja przekazuje pakiety innych stacji. Interfejs P1 jest częścią tego samego oprogramowania układowego: stos zna dług ciszy i nie czeka na zgodę modemu przez USB. Komputer nie uruchamia Reticulum, tylko łączy się ze stacją lokalnym protokołem USB. Implementacja w Pythonie pozostaje wzorcem protokołu i narzędziem prób zgodności. Reticulum nie jest urządzeniem radiowym ani samą deklaracją standardu. <a href="https://reticulum.network/manual/understanding.html">Dokumentacja implementacji</a>.</p>
+<p>Reticulum działa w mikrokontrolerze stacji jako port microReticulum z włączoną funkcją transportu (przekazywania pakietów między węzłami), więc każda włączona stacja przekazuje pakiety innych stacji. Interfejs P1 jest częścią tego samego oprogramowania układowego: stos zna dług ciszy i nie czeka na zgodę modemu przez USB. Komputer w schronieniu nie uruchamia Reticulum, tylko łączy się ze stacją lokalnym protokołem USB. Komputer stanowiska OSP uruchamia Reticulum i LXMF w Pythonie za stacją przy OSP (D19). Implementacja w Pythonie pozostaje wzorcem protokołu i narzędziem prób zgodności. Reticulum nie jest urządzeniem radiowym ani samą deklaracją standardu. <a href="https://reticulum.network/manual/understanding.html">Dokumentacja implementacji</a>.</p>
 
 <p>LXMF buduje na tym warstwę wiadomości. Węzeł transportowy Reticulum przekazuje bieżący ruch, a węzeł przechowywania LXMF (propagation node) może zachować wiadomość dla nieobecnego odbiorcy. To różne role. Bazowy przekaźnik WICI nie dostaje automatycznie trwałej skrzynki dla całej sieci. Trwała kolejka własnych zgłoszeń jest w pamięci nieulotnej stacji. <a href="https://github.com/markqvist/LXMF">Opis LXMF</a>.</p>
 

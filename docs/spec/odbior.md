@@ -1,6 +1,6 @@
 # WICI: odbiór prototypu
 
-Kolumna „Grupa” wskazuje grupę prób T1–T8 z [planu weryfikacji](../concept/08-plan-weryfikacji-i-decyzje.html#proby-i-pokrycie-wymagan); tam też jest pokrycie wymagań W01–W24. Teksty ekranu w warunkach zaliczenia pochodzą z tabeli „Teksty ekranu” w rozdziale [Oprogramowanie](oprogramowanie.md).
+Kolumna „Grupa” wskazuje grupę prób T1–T8 z [planu weryfikacji](../concept/08-plan-weryfikacji-i-decyzje.html#proby-i-pokrycie-wymagan); tam też jest pokrycie wymagań W01–W25. Teksty ekranu w warunkach zaliczenia pochodzą z tabeli „Teksty ekranu” w rozdziale [Oprogramowanie](oprogramowanie.md).
 
 | Próba | Grupa | Warunek zaliczenia | Stan |
 |---|---|---|---|
@@ -43,6 +43,9 @@ Kolumna „Grupa” wskazuje grupę prób T1–T8 z [planu weryfikacji](../conce
 | Zniszczenie danych | T2 | ZNISZCZ DANE w ≤1 min na laptopie, na komputerze stanowiska OSP i na stacji; na stacji najpierw usunięcie klucza FRAM (kryptograficzne wymazanie), potem nadpisanie; po operacji baza, tożsamość, karta OSP, adres, kolejka, skrzynka, dziennik zdarzeń i eksport nieczytelne także po odzyskaniu usuniętych plików z nośnika i odczycie pamięci FRAM; dziennik długu ciszy zachowany; `destroy` przez USB tylko po potwierdzeniu przyciskiem na stacji w 30 s; żadna wiadomość radiowa nie uruchamia operacji | niewykonana |
 | Zamknięcie zdarzenia | T2, T8 | ZAMKNIJ ZDARZENIE: zaszyfrowane archiwum dla administratora danych (klucz publiczny z D13) odczytane przez administratora; potem na laptopie brak zgłoszeń, tokenów, eksportów i dzienników z danymi, na stacji pusta kolejka i skrzynka, w OSP brak treści; tożsamości i klucze odbioru zachowane | niewykonana |
 | Przeniesienie | T2 | kompletna kopia, zatrzymanie starej stacji, zachowana tożsamość, licznik czasu pracy i kolejka na stacji zapasowej; trasa do przeniesionej stacji odtworzona bez ręcznych zmian w innych stacjach; baza laptopa przeniesiona osobno; uszkodzona stacja: nowa tożsamość, dodanie nowej karty i unieważnienie starej w aplikacji OSP | niewykonana |
+| Panel dyżurnego | T1, T8 | według [instrukcji dyżurnego](instrukcja-dyzurnego.md): sortowanie według pilności, alarm przy pilności 2, PRZECZYTANE jednym przyciskiem, TEST osobno i zbiorczo, brak stanu 5 bez REPLY, kwarantanna z licznikiem odrzuceń, postęp BULLETIN, stan węzła; osobne konta, blokada po 5 min, dziennik działań; ≥2 dyżurnych spoza zespołu | niewykonana |
+| Pojemność stanowiska | T5 | aplikacja OSP przyjmuje 8700 zgłoszeń (121/h przez 72 h, emulacja na komputerze za stacją) bez odrzucenia z powodu pamięci i bez wzrostu czasu do RECEIVED ponad czas nadawania; BULLETIN do 50 stacji wysłany osobno do każdej, z postępem w panelu i w granicach czasu nadawania P1 | niewykonana |
+| Zasilanie stanowiska | T6 | stacja przy OSP i komputer stanowiska ≥72 h ze źródła stanowiska; zmiana źródła bez przerwy pracy stacji i aplikacji | niewykonana |
 | Zmiana komputera stanowiska | T2, T8 | odcięcie zasilania komputera OSP w trakcie przyjmowania 50 zgłoszeń; nośnik stanowiska w komputerze zapasowym; przyjmowanie wznowione w ≤15 min; żadne zgłoszenie z COMMIT nie zgubione ani przyjęte dwa razy; zaległe zgłoszenia dostarczone ponowieniami schronień; 1000 odcięć zasilania nośnika w trakcie zapisu bez pozornego RECEIVED | niewykonana |
 | Strona | T1, T2 | 50 podłączonych telefonów, 15 aktywnych (T1); brak dostępu do cudzego zgłoszenia, także przez odgadnięcie lokalnego numeru albo `<lid>` (T2); lokalne numery i krótkie numery SA1 unikalne w obrębie stacji przy 1000 zgłoszeń; odłączona stacja nie blokuje zapisu formularza; odnośnik „Informacja o danych” i pouczenie o art. 66 § 1 pkt 1 Kodeksu wykroczeń pod formularzem | niewykonana |
 | Języki i dostępność | T1, T8 | zgłoszenie wysłane po polsku, ukraińsku i angielsku przez osoby spoza zespołu; obsługa czytnikiem ekranu i przy powiększeniu 200%; brak okien zgód przed formularzem | niewykonana |
@@ -85,9 +88,10 @@ Przebieg można powtórzyć najwyżej raz i tylko z przyczyny wypisanej w planie
 1. Płytka stacji R02 w dwóch wykonaniach, projekty torów RF z nastawami rejestrów i oprogramowanie układowe stacji: microReticulum, LXMF, sterownik P1, dziennik FRAM, ekran, przyciski i protokół USB (D14, D15, D16). Na stanowisku są już sterowniki P1 obu układów, dziennik FRAM, ekran, przyciski, protokół USB i stos Reticulum (port microReticulum z interfejsem P1, bez LXMF), bez prób na sprzęcie.
 2. Schemat elektryczny i płytka drukowana przetwornicy, ostateczna ochrona AC oraz oprogramowanie układowe regulatora (poziom 3).
 3. Płytka drukowana ładowarki z odebraną ochroną OVP dla dwóch wariantów portu (poziom 3).
-4. Aplikacja laptopa z protokołem USB do stacji i trybami kryzysowymi (cisza radiowa, szyfrowanie bazy, ZNISZCZ DANE, wersje językowe), kompletne pakiety offline oraz manifest przypiętych zależności (D17).
-5. Decyzje D01 (limit SA1 jako jeden pakiet okazjonalny wpisany do specyfikacji), D10 (progi kosztu, terminu i wyniku dla P1 wobec LoRa, ustalone przed zamówieniem RF) i D11 (kanał).
-6. Uzgodnienia z gminą: odbiorca, status sieci w stanach nadzwyczajnych, administrator danych i ocena skutków dla ochrony danych (D07, D12, D13) oraz decyzja o typie MELDUNEK (D18).
-7. Powyższe próby oraz wyceny rzeczywistych zestawień materiałowych (BOM) od niezależnych wykonawców.
+4. Aplikacja OSP z Reticulum i LXMF w Pythonie, pakiet stanowiska OSP i interfejs Reticulum przez USB w oprogramowaniu stacji (konfiguracja węzła OSP); usunięcie roli OSP z oprogramowania stacji (D19).
+5. Aplikacja laptopa z protokołem USB do stacji i trybami kryzysowymi (cisza radiowa, szyfrowanie bazy, ZNISZCZ DANE, wersje językowe), kompletne pakiety offline oraz manifest przypiętych zależności (D17).
+6. Decyzje D01 (limit SA1 jako jeden pakiet okazjonalny wpisany do specyfikacji), D10 (progi kosztu, terminu i wyniku dla P1 wobec LoRa, ustalone przed zamówieniem RF) i D11 (kanał).
+7. Uzgodnienia z gminą: odbiorca, status sieci w stanach nadzwyczajnych, administrator danych i ocena skutków dla ochrony danych (D07, D12, D13) oraz decyzja o typie MELDUNEK (D18).
+8. Powyższe próby oraz wyceny rzeczywistych zestawień materiałowych (BOM) od niezależnych wykonawców.
 
 Zgodność czasowa stosu na mikrokontrolerze i niezależność wszystkich wariantów pozostają otwarte.
