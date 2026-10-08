@@ -2,6 +2,8 @@
 
 ## Przegląd Gerberów i wierceń
 
+**Rewizja po audycie wobec F106 (2026-10-08):** kontrola liczbowa paczki z gerbonara 1.6.3: obrys 170 × 100 mm, osiem warstw jak w `FAB-NOTES.txt`, 227 otworów PTH (w tym 67 przelotek 0,4 mm) i 17 NPTH (1,8 i 3,2 mm), 114 otwarć pasty, czyli dokładnie tyle, ile padów SMD ma 43 elementy (36 dwupadowych, D3 i Q1 po 3, U1 8, U2 6, U3 i U4 po 5, J7 10 + 2). Pełny przegląd z renderem warstw dla tej rewizji jest **otwarty**.
+
 **Rewizja F103 (2026-10-08):** kontrola liczbowa paczki z gerbonara 1.6.3: obrys 170 × 100 mm, osiem warstw jak w `FAB-NOTES.txt`, 222 otwory PTH (w tym 62 przelotki 0,4 mm) i 17 NPTH (1,8 i 3,2 mm), 100 otwarć pasty, czyli dokładnie tyle, ile padów SMD ma 39 elementów (34 dwupadowe, D3 i Q1 po 3, U1 8, U2 6, J7 10 + 2). Pełny przegląd z renderem warstw (jak niżej) dla tej rewizji jest **otwarty**.
 
 Poniżej przegląd rewizji sprzed F103 (bez przetwornicy panelu).

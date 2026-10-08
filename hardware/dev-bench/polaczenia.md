@@ -15,7 +15,7 @@ Plik generuje `tools/make_schematic.py` z `tools/design.py`; nie edytować ręcz
 | RF_GPIO1 | A2 (J2.3) | P0.28 | GPIO21 (J6.18) |  |
 | RF_GPIO2 | A3 (J2.4) | P0.29 | GPIO4 (J5.4) | J9.12, J11.9 |
 | RF_GPIO3 | A5 (J2.6) | P0.31 | GPIO42 (J6.6) | J10.18 |
-| FRAM_CS | D9 (J4.2) | P1.11 | GPIO8 (J5.12) | U1.1, J11.6, R20.2 |
+| FRAM_CS | D9 (J4.2) | P1.11 | GPIO8 (J5.12) | U4.1, J11.6, R20.2 |
 | LCD_CS | D4 (J3.5) | P1.05 | GPIO7 (J5.7) | J7.3, J11.7, R13.1 |
 | LCD_EXTCOMIN | D6 (J3.7) | P1.07 | GPIO17 (J5.10) | J7.4 |
 | LCD_DISP | D8 (J4.1) | P1.10 | GPIO16 (J5.9) | J7.5, R19.1, C7.1 |
@@ -33,7 +33,7 @@ Plik generuje `tools/make_schematic.py` z `tools/design.py`; nie edytować ręcz
 
 | Sieć | Piny |
 |---|---|
-| +3V3 | J1.4, U1.3, U1.7, U1.8, JP1.1, JP3.1, R20.1, D3.2, R5.1, R6.1, R7.1, R8.1, R9.1, R10.1, R11.1, C3.1, U2.3, U2.6, L1.1, C8.1 |
+| +3V3 | J1.4, U1.3, U1.7, U1.8, U3.2, U4.5, JP1.1, JP3.1, R20.1, D3.2, R5.1, R6.1, R7.1, R8.1, R9.1, R10.1, R11.1, C3.1, C11.1, C12.1, U2.3, U2.6, L1.1, C8.1 |
 | +3V3_DEVKIT | J5.1, J5.2, JP1.2 |
 | +3V3_RF | J10.7, J10.9, JP3.2, C1.1, C2.1 |
 | +5V | J1.5, JP2.1, R2.1 |
@@ -49,8 +49,10 @@ Plik generuje `tools/make_schematic.py` z `tools/design.py`; nie edytować ręcz
 | BUZZER | J3.3, J5.8, R3.1 |
 | BZ_N | BZ1.2, D2.2, Q1.3 |
 | BZ_P | BZ1.1, R2.2, D2.1 |
-| FRAM_CS | J4.2, J5.12, U1.1, J11.6, R20.2 |
-| GND | J1.6, J1.7, J4.7, J9.1, J9.19, J10.2, J5.22, J6.1, J6.21, J6.22, J7.9, J7.10, J7.MP, U1.4, J11.1, J12.2, SW1.2, SW2.2, SW3.2, SW4.2, SW5.1, SW6.2, D1.1, Q1.2, R4.2, R19.2, D3.1, R12.2, R13.2, R15.2, C1.2, C2.2, C3.2, C4.2, C6.2, C7.2, C5.2, U2.2, C8.2, C9.2, R22.2 |
+| FRAM_CS | J4.2, J5.12, U4.1, J11.6, R20.2 |
+| FRAM_CS_U1 | U1.1, U4.4 |
+| FRAM_GUARD | U3.1, U4.2 |
+| GND | J1.6, J1.7, J4.7, J9.1, J9.19, J10.2, J5.22, J6.1, J6.21, J6.22, J7.9, J7.10, J7.MP, U1.4, U3.3, U4.3, J11.1, J12.2, SW1.2, SW2.2, SW3.2, SW4.2, SW5.1, SW6.2, D1.1, Q1.2, R4.2, R19.2, D3.1, R12.2, R13.2, R15.2, C1.2, C2.2, C3.2, C11.2, C12.2, C4.2, C6.2, C7.2, C5.2, U2.2, C8.2, C9.2, R22.2 |
 | LCD_CS | J3.5, J5.7, J7.3, J11.7, R13.1 |
 | LCD_DISP | J4.1, J5.9, J7.5, R19.1, C7.1 |
 | LCD_EXTCOMIN | J3.7, J5.10, J7.4 |

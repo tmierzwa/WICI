@@ -131,10 +131,22 @@ part('J7', 'Connector_Generic_MountingPin:Conn_01x10_MountingPin', 'SHARP LS027B
      spec='złącze FPC 10-pin, 0,5 mm, styki od dołu, FPC 0,3 mm, SMD',
      note='panel Sharp LS027B7DH01A ekranem do góry, taśma FPC płasko; styk 1 panelu (SCLK) na padzie 1 po prawej')
 part('U1', 'Memory_NVRAM:MB85RS2MT', 'CY15B104QN-50SXI', 'Package_SO:SOIC-8_5.3x5.3mm_P1.27mm',
-     {1: 'FRAM_CS', 2: 'SPI_MISO', 3: '+3V3', 4: 'GND', 5: 'SPI_MOSI', 6: 'SPI_SCK', 7: '+3V3', 8: '+3V3'},
+     {1: 'FRAM_CS_U1', 2: 'SPI_MISO', 3: '+3V3', 4: 'GND', 5: 'SPI_MOSI', 6: 'SPI_SCK', 7: '+3V3', 8: '+3V3'},
      (86.0, 12.0, 0), mpn='CY15B104QN-50SXI', manufacturer='Infineon',
      spec='FRAM 4 Mbit SPI, 1,8–3,6 V, SOIC-8 208 mil',
      note='zamiennik na tym samym footprincie: RAMXEED MB85RS4MTPF-G-BCERE1; pin 7 (HOLD albo RESET) i WP na stałe do 3,3 V')
+# FRAM guard (elektronika.md, "Zanik zasilania i zapis", point 2): below 2.66-2.74 V the supervisor U3
+# forces CS of U1 high through the OR gate U4, whatever the MCU drives. The board cannot use the MCU
+# reset for this: the Arduino RESET pin of nRF52840-DK is not connected (R45 not fitted, PCA10056 BOM).
+part('U3', 'WICI:TPS3840PH', 'TPS3840PH27', 'Package_TO_SOT_SMD:SOT-23-5',
+     {1: 'FRAM_GUARD', 2: '+3V3', 3: 'GND'}, (77.5, 14.0, 0),
+     mpn='TPS3840PH27DBVR', manufacturer='Texas Instruments',
+     spec='nadzorca napięcia, próg 2,7 V ±1,5%, histereza 75–125 mV, wyjście push-pull aktywne stanem wysokim, SOT-23-5',
+     note='RESET = H, gdy +3V3 < 2,66–2,74 V; MR (4) i CT (5) wolne: opóźnienie startu ≤350 µs bez kondensatora')
+part('U4', '74xGxx:74LVC1G32', '74LVC1G32', 'Package_TO_SOT_SMD:SOT-23-5',
+     {1: 'FRAM_CS', 2: 'FRAM_GUARD', 3: 'GND', 4: 'FRAM_CS_U1', 5: '+3V3'}, (77.5, 8.0, 0),
+     mpn='SN74LVC1G32DBVR', manufacturer='Texas Instruments', spec='bramka OR 1-kanałowa, 1,65–5,5 V, SOT-23-5',
+     note='CS FRAM = CS z MCU lub RESET z U3: przy spadku zasilania FRAM niewybrana niezależnie od MCU')
 part('J11', 'Connector_Generic:Conn_01x09', 'ANALIZATOR',
      'Connector_PinHeader_2.54mm:PinHeader_1x09_P2.54mm_Vertical',
      {1: 'GND', 2: 'SPI_SCK', 3: 'SPI_MOSI', 4: 'SPI_MISO', 5: 'RF_CS', 6: 'FRAM_CS',
@@ -250,6 +262,12 @@ part('C2', 'Device:C', '100n', C0805, {1: '+3V3_RF', 2: 'GND'}, (151.0, 57.0, 90
 part('C3', 'Device:C', '100n', C0805, {1: '+3V3', 2: 'GND'}, (92.5, 12.0, 90),
      mpn='CL21B104KBCNNNC', manufacturer='Samsung Electro-Mechanics', spec='100 nF 50 V X7R 0805',
      note='+3V3 przy FRAM U1')
+part('C11', 'Device:C', '100n', C0805, {1: '+3V3', 2: 'GND'}, (77.5, 4.0, 90),
+     mpn='CL21B104KBCNNNC', manufacturer='Samsung Electro-Mechanics', spec='100 nF 50 V X7R 0805',
+     note='+3V3 przy bramce U4')
+part('C12', 'Device:C', '100n', C0805, {1: '+3V3', 2: 'GND'}, (77.5, 18.5, 90),
+     mpn='CL21B104KBCNNNC', manufacturer='Samsung Electro-Mechanics', spec='100 nF 50 V X7R 0805',
+     note='+3V3 przy nadzorcy U3')
 part('C4', 'Device:C', '10u', C0805, {1: '+5V_LCD', 2: 'GND'}, (FPC_ORIGIN[0] - 8.0, FPC_ORIGIN[1] - 2.0, 90),
      mpn='CL21A106KAYNNNG', manufacturer='Samsung Electro-Mechanics', spec='10 µF 25 V X5R 0805',
      note='VDD panelu (Sharp zaleca ≥1 µF)')

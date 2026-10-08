@@ -1,6 +1,12 @@
 (sym_lib_table
   (version 7)
   (lib
+    (name "74xGxx")
+    (type "KiCad")
+    (uri "${KIPRJMOD}/symbols/74xGxx.kicad_sym")
+    (options "")
+    (descr "KiCad 10.0.6 subset, see KICAD-LIBRARY-LICENSE.md"))
+  (lib
     (name "Connector")
     (type "KiCad")
     (uri "${KIPRJMOD}/symbols/Connector.kicad_sym")
@@ -60,6 +66,12 @@
     (uri "${KIPRJMOD}/symbols/Transistor_BJT.kicad_sym")
     (options "")
     (descr "KiCad 10.0.6 subset, see KICAD-LIBRARY-LICENSE.md"))
+  (lib
+    (name "WICI")
+    (type "KiCad")
+    (uri "${KIPRJMOD}/symbols/WICI.kicad_sym")
+    (options "")
+    (descr "own symbols, CERN-OHL-P-2.0"))
   (lib
     (name "power")
     (type "KiCad")

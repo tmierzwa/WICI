@@ -26,10 +26,37 @@ def uid(name):
     return str(uuid.uuid5(NS, name))
 
 
+# Own symbols (library WICI): parts the KiCad 10.0.6 library lacks. TPS3840PH pins from TI SNVSB03E
+# figure 5-2 (DBV, top view): 1 RESET (active high), 2 VDD, 3 GND, 4 MR, 5 CT.
+def own_pin(kind, x, y, rot, name, num):
+    return (f'(pin {kind} line (at {x} {y} {rot}) (length 2.54) (name "{name}" (effects (font (size 1.27 1.27)))) '
+            f'(number "{num}" (effects (font (size 1.27 1.27)))))')
+
+
+OWN_SYMBOLS = (
+    '(kicad_symbol_lib (symbol "TPS3840PH" (exclude_from_sim no) (in_bom yes) (on_board yes) '
+    '(property "Reference" "U" (at -5.08 6.35 0) (effects (font (size 1.27 1.27)) (justify left))) '
+    '(property "Value" "TPS3840PH" (at 1.27 6.35 0) (effects (font (size 1.27 1.27)) (justify left))) '
+    '(property "Footprint" "Package_TO_SOT_SMD:SOT-23-5" (at 0 -10.16 0) (effects (font (size 1.27 1.27)) (hide yes))) '
+    '(property "Datasheet" "https://www.ti.com/lit/ds/symlink/tps3840.pdf" (at 0 -12.7 0) '
+    '(effects (font (size 1.27 1.27)) (hide yes))) '
+    '(property "Description" "Supervisor, push-pull active-high RESET, manual reset, programmable delay, SOT-23-5" '
+    '(at 0 0 0) (effects (font (size 1.27 1.27)) (hide yes))) '
+    '(symbol "TPS3840PH_0_1" (rectangle (start -5.08 5.08) (end 5.08 -5.08) (stroke (width 0.254) (type default)) '
+    '(fill (type background)))) '
+    '(symbol "TPS3840PH_1_1" '
+    + own_pin('output', 7.62, 0, 180, 'RESET', 1) + ' '
+    + own_pin('power_in', 0, 7.62, 270, 'VDD', 2) + ' '
+    + own_pin('power_in', 0, -7.62, 90, 'GND', 3) + ' '
+    + own_pin('input', -7.62, 2.54, 0, 'MR', 4) + ' '
+    + own_pin('passive', -7.62, -2.54, 0, 'CT', 5) + ')))')
+
+
 def symbol(lib_id):
     """Resolve library inheritance while preserving child properties."""
     lib, name = lib_id.split(':')
-    defs = {s[1]: s for s in children(parse((LIB / (lib + '.kicad_sym')).read_text()), 'symbol')}
+    text = OWN_SYMBOLS if lib == 'WICI' else (LIB / (lib + '.kicad_sym')).read_text()
+    defs = {s[1]: s for s in children(parse(text), 'symbol')}
 
     def resolve(key):
         own = deepcopy(defs[key])
@@ -65,7 +92,7 @@ GROUPS = [
     ['J5', 'J6', 'JP1', 'JP2', 'R17', 'R18'],
     ['J9', 'J10', 'JP3', 'C1', 'C2', 'R11', 'R12', 'J11'],
     ['J7', 'C4', 'C6', 'C7', 'R13', 'R19', 'U2', 'L1', 'C8', 'C9', 'R21', 'R22', 'C10'],
-    ['U1', 'C3', 'R20', 'J12', 'R14', 'R15', 'C5', 'D3'],
+    ['U1', 'C3', 'R20', 'U4', 'C11', 'U3', 'C12', 'J12', 'R14', 'R15', 'C5', 'D3'],
     ['SW1', 'SW2', 'SW3', 'SW4', 'SW5', 'SW6', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10', 'R16'],
     ['D1', 'R1', 'BZ1', 'R2', 'D2', 'Q1', 'R3', 'R4'],
     ['H%d' % i for i in range(1, 10)],
@@ -175,7 +202,8 @@ def generate():
     for lib in sorted(grouped):
         table.append([A('lib'), [A('name'), lib], [A('type'), 'KiCad'],
                       [A('uri'), '${KIPRJMOD}/symbols/' + lib + '.kicad_sym'], [A('options'), ''],
-                      [A('descr'), 'KiCad 10.0.6 subset, see KICAD-LIBRARY-LICENSE.md']])
+                      [A('descr'), 'own symbols, CERN-OHL-P-2.0' if lib == 'WICI'
+                       else 'KiCad 10.0.6 subset, see KICAD-LIBRARY-LICENSE.md']])
     (ROOT / 'cad/sym-lib-table').write_text(dump(table) + '\n')
     write_bom()
     write_connections()

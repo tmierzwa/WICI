@@ -23,10 +23,10 @@ Przyciski 12 × 12 mm dostają nasadki Omron B32. Pady masy J6.22 i J4.7 mają p
 
 | Krok | Czynność | Warunek przejścia |
 |---:|---|---|
-| 1 | Oględziny: mostki (zwłaszcza J7 o rastrze 0,5 mm i U2), orientacja D1, D2, Q1, U1, U2, BZ1, SW5; brak opiłków między pinami 1,27 mm | brak usterek |
+| 1 | Oględziny: mostki (zwłaszcza J7 o rastrze 0,5 mm i U2), orientacja D1, D2, Q1, U1, U2, U3, U4, BZ1, SW5; brak opiłków między pinami 1,27 mm | brak usterek |
 | 2 | Miernik bez modułów: rezystancja +3V3–GND, +5V–GND, +3V3_DEVKIT–GND, +5V_DEVKIT–GND, +5V_LCD–GND (piny J1.4, J1.5, J5.1, J5.21 i J7.7 wobec J1.6) | żadnego zwarcia; bez modułów szyny są praktycznie rozwarte (kondensatory się ładują); +5V_LCD przez dzielnik R21+R22 około 1,3 MΩ |
 | 3 | Ciągłość: J1.4 – JP3.1 i JP3.2 – J10.7, J10.9 (+3V3, +3V3_RF; między JP3.1 a JP3.2 bez zworki brak połączenia), J1.6 – J9.1, J9.19, J10.2 (GND); J3.4 – J9.16 (SCK przez R17); J2.2 – J9.14 (RF_CS); J3.8 – J10.15 (RF_RESET) | 0 Ω, a J3.4 – J9.16 około 33 Ω (R17); pozostałe piny J9/J10 nie mają połączenia z GND |
-| 3a | Ciągłość panelu przed wklejeniem: J7.1 – J3.4 przez R17 (SCK, około 33 Ω), J7.2 – J4.4 (MOSI), J7.3 – J3.5 (SCS), J7.4 – J3.7 (EXTCOMIN), J7.5 – J4.1 (DISP), J7.6, J7.7, J7.8 – U2.5 (+5V_LCD), J7.9, J7.10 i uchwyty J7 – J1.6 (GND); U1.8 – J1.4 (+3V3), U1.1 – J4.2 (FRAM_CS) | 0 Ω poza R17. Wspólne z założenia są tylko dwie grupy pinów J7: 6–7–8 (+5V_LCD: VDDA, VDD, EXTMODE) oraz 9–10 z uchwytami (GND). Każda inna para pinów J7 (w tym 5–6 i 8–9 na granicach grup) nie ma zwarcia; między +5V_LCD a GND zostaje tylko dzielnik R21+R22 (około 1,3 MΩ) |
+| 3a | Ciągłość panelu przed wklejeniem: J7.1 – J3.4 przez R17 (SCK, około 33 Ω), J7.2 – J4.4 (MOSI), J7.3 – J3.5 (SCS), J7.4 – J3.7 (EXTCOMIN), J7.5 – J4.1 (DISP), J7.6, J7.7, J7.8 – U2.5 (+5V_LCD), J7.9, J7.10 i uchwyty J7 – J1.6 (GND); U1.8 – J1.4 (+3V3), U1.1 – U4.4 (CS pamięci za bramką), U4.1 – J4.2 (FRAM_CS z MCU), U4.2 – U3.1 (wyjście nadzorcy); U1.1 – J4.2 bez połączenia (bramka między nimi) | 0 Ω poza R17. Wspólne z założenia są tylko dwie grupy pinów J7: 6–7–8 (+5V_LCD: VDDA, VDD, EXTMODE) oraz 9–10 z uchwytami (GND). Każda inna para pinów J7 (w tym 5–6 i 8–9 na granicach grup) nie ma zwarcia; między +5V_LCD a GND zostaje tylko dzielnik R21+R22 (około 1,3 MΩ) |
 | 4 | Orientacja modułu CC1120EM, przed włożeniem: miernikiem na module, między obudową SMA (masa) a stykiem złącza P2 w rzędzie parzystym przy końcu od strony SMA | 0 Ω, bo to P2.2 (masa); ten koniec trafia na pin 2 J10, oznaczony przy złączu |
 | 5 | Zworki: stanowisko A z JP3, bez JP1 i JP2; stanowisko B z JP1 i JP2 (bez JP1 ESP32 zasilałby moduły przez podciągnięcia i diody zabezpieczające wejść) | zgodnie ze stanowiskiem |
 
@@ -68,6 +68,16 @@ Odczyt `VTEST` służy do prób progów napięcia ogniw (4,0 i 4,4 V) i wejścia
 
 Specyfikacja wymaga dla stacji błędu pomiaru ≤2% ([elektronika](../../docs/spec/elektronika.md#zasilanie-stacji), wiersz „Pomiar”); warunek 0,5% zostawia zapas na to, że próby progów na stanowisku sprawdzają oprogramowanie, a nie tor pomiarowy stacji. Oprogramowanie nie stosuje korekcji samo: wynik z `VTEST` przelicza się wzorem z zapisu sztuki.
 
+## Ochrona FRAM przy zaniku zasilania
+
+Nadzorca U3 i bramka U4 wymuszają CS pamięci w stanie wysokim poniżej 2,66–2,74 V ([zasilanie](plytka-nosna.md#zasilanie)). Kroki wykonuje się na każdym stanowisku po krokach A4 albo B3; F3 wymaga oscyloskopu.
+
+| Krok | Czynność | Warunek przejścia |
+|---:|---|---|
+| F1 | Pomiar U3.1 (wyjście nadzorcy) i U3.2 (+3V3) wobec J11.1 (GND) w spoczynku i przy nadawaniu (krok A5, w B nadawanie S2-LP) | U3.1 ≤0,2 V; +3V3 przy nadawaniu ≥2,90 V (wyjście wraca do stanu niskiego najpóźniej przy 2,87 V); `FRAM` przez cały czas `ok: true` |
+| F2 | Wymuszenie progu bez zmiany zasilania: pad U3.4 (MR) zwarty pęsetą do J11.1 na czas polecenia `FRAM`, potem zwolniony | przy zwartym MR: U3.1 ≥0,8 × +3V3, U1.1 w stanie wysokim i `FRAM` nie rozpoznaje układu; po zwolnieniu `FRAM` znów `ok: true` |
+| F3 | Oscyloskop: kanał 1 +3V3 na U1.8, kanał 2 CS na U1.1, kanał 3 CS z MCU na U4.1, wyzwalanie zboczem opadającym kanału 1; w czasie ruchu na FRAM (zapis dziennika albo powtarzane `FRAM`) odłączenie zasilania płytki MCU (USB), pięć razy; potem włączenie | przy spadku: U1.1 ≥0,7 × +3V3 od chwili, gdy +3V3 spada poniżej 2,66 V, aż +3V3 spadnie poniżej 1,8 V, także wtedy, gdy kanał 3 jest w stanie niskim; zmierzony próg 2,66–2,74 V; przy włączeniu U1.1 w stanie wysokim, dopóki +3V3 nie przekroczy 2,74 V; po włączeniu `FRAM` `ok: true` i dziennik bez błędów CRC |
+
 ## Pomiar magistrali oscyloskopem
 
 Analizator stanów logicznych na J11 pokazuje kolejność i treść transmisji, ale nie poziomy, zbocza ani przerzuty przy odbiornikach. Panel wymaga VIH ≥2,7 V, VIL ≤VSS + 0,15 V i zboczy SCLK, SI, SCS i EXTCOMIN ≤50 ns (LCP-1112041, tabele 7-1 i 6-3-2), a FRAM pracuje z 8 MHz. Dlatego każda pierwsza sztuka danego stanowiska (A i B) i każda zmiana napędu pinów albo zegara przechodzi pomiar oscyloskopem o paśmie ≥200 MHz, sondą 10× z krótką sprężynką masy (nie przewodem masy sondy) na padach odbiornika:
@@ -95,6 +105,7 @@ Kroki 1-5:   wynik, uwagi
 Kroki A1-A5 albo B1-B4:  wynik, zmierzone napięcia i prądy (J7.7 bez i z brzęczykiem, spadek na amperomierzu przy TX)
 VTEST:  g =        o =        odchyłki po korekcji (%):
 Oscyloskop:  punkty i wynik, zrzuty
+Ochrona FRAM F1-F3:  +3V3 przy TX (V), próg U3 (V), CS przy 5 odcięciach, zrzuty
 Wysokość dystansów w A (mm):
 Usterki i poprawki:
 ```

@@ -36,6 +36,8 @@ DESCRIPTION = {
     'CL21C101JBANNNC': 'MLCC 100 pF 50 V C0G 0805',
     'RT0805BRD07100KL': 'resistor 100 kohm 0.1 % 25 ppm/K 0805',
     'RT0805BRD0720KL': 'resistor 20 kohm 0.1 % 25 ppm/K 0805',
+    'TPS3840PH27DBVR': 'voltage supervisor 2.7 V, push-pull active-high reset, SOT-23-5',
+    'SN74LVC1G32DBVR': 'single 2-input OR gate, SOT-23-5',
     'CY15B104QN-50SXI': 'F-RAM 4 Mbit SPI, 3 V, SOIC-8 208 mil (alt. RAMXEED MB85RS4MTPF-G-BCERE1)',
     '61300911121': '1x9 male pin header, 2.54 mm, THT',
     '61300211121': '1x2 male pin header, 2.54 mm, THT',
@@ -129,14 +131,15 @@ PCB
 - Origin of Gerbers, drills and positions: lower-left board corner.
 
 Assembly (optional quote)
-- Top side only. Assembler sources and places the {smd_count} SMD parts (0805, 1206, SOT-23, SOT-23-6, SOD-123,
+- Top side only. Assembler sources and places the {smd_count} SMD parts (0805, 1206, SOT-23, SOT-23-5, SOT-23-6, SOD-123,
   SOIC-8, 3.8 mm inductor, 0.5 mm pitch FPC connector J7):
   assembly/bom-assembly.csv (SMD only), positions in assembly/cpl-smd.csv, paste layer F_Paste.
   Equivalent passives (same value, tolerance, voltage, dielectric, size) are acceptable.
 - CPL rotations follow the KiCad convention (counter-clockwise, KiCad library zero orientation);
   please send the placement preview for approval, especially Q1 and D3 (SOT-23, pin 1 marked)
   and D2 (SOD-123, cathode = pad 1, at 180 deg the right-hand end), U1 (SOIC-8, pin 1 dot), U2 (SOT-23-6,
-  pin 1 dot) and J7 (FH12 FPC connector, actuator side towards the display outline above it; check for bridges).
+  pin 1 dot), U3 and U4 (SOT-23-5, pin 1 dot) and J7 (FH12 FPC connector, actuator side towards
+  the display outline above it; check for bridges).
   U1 alternative with the same footprint: RAMXEED MB85RS4MTPF-G-BCERE1.
   R14 and R15 are 0.1 % resistors; do not substitute 1 % parts.
 - All through-hole parts (including the through-hole connectors) are fitted by the owner; do not

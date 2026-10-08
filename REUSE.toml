@@ -62,7 +62,7 @@ SPDX-FileCopyrightText = "KiCad Libraries Team and contributors"
 SPDX-License-Identifier = "CC-BY-SA-4.0 WITH KiCad-libraries-exception"
 
 [[annotations]]
-path = "hardware/*/cad/footprints/WICI.pretty/**"
+path = ["hardware/*/cad/footprints/WICI.pretty/**", "hardware/*/cad/symbols/WICI.kicad_sym"]
 precedence = "closest"
 SPDX-FileCopyrightText = "2026 Tomek Mierzwa and WICI contributors"
 SPDX-License-Identifier = "CERN-OHL-P-2.0"
