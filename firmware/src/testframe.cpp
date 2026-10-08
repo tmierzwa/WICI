@@ -22,7 +22,7 @@ uint8_t pn9Byte(uint16_t& state) {
 
 }  // namespace
 
-bool build(uint8_t* frame, size_t length, uint16_t seq) {
+bool build(uint8_t* frame, size_t length, uint16_t seq, Fill fill) {
     if (length < MIN_LENGTH || length > MAX_LENGTH) {
         return false;
     }
@@ -30,7 +30,7 @@ bool build(uint8_t* frame, size_t length, uint16_t seq) {
     frame[1] = static_cast<uint8_t>(seq & 0xFF);
     uint16_t state = static_cast<uint16_t>((seq | 0x100) & 0x1FF);  // stan PN9 nigdy nie jest zerem
     for (size_t i = 2; i + 2 < length; ++i) {
-        frame[i] = pn9Byte(state);
+        frame[i] = fill == Fill::ZEROS ? 0x00 : fill == Fill::ONES ? 0xFF : pn9Byte(state);
     }
     const uint16_t crc = p1::crc16(frame, length - 2);
     frame[length - 2] = static_cast<uint8_t>(crc >> 8);

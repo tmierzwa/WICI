@@ -158,7 +158,7 @@ void Bench::stopCw() {
                   static_cast<unsigned long>(debtRemainingMs()));
 }
 
-const char* Bench::txpkt(uint16_t count, uint8_t length, uint32_t intervalMs, bool conducted) {
+const char* Bench::txpkt(uint16_t count, uint8_t length, uint32_t intervalMs, bool conducted, testframe::Fill fill) {
     if (count == 0) return "TXPKT <n> <len> [<ms>]";
     if (length < testframe::MIN_LENGTH || length > testframe::MAX_LENGTH) return "len 4..103";
     const uint32_t txMs = static_cast<uint32_t>(count) * frameAirMs(length);
@@ -166,6 +166,7 @@ const char* Bench::txpkt(uint16_t count, uint8_t length, uint32_t intervalMs, bo
     if (error) return error;
     rxMode_ = RxMode::NONE;
     radio_.idle();
+    pktFill_ = fill;
     pktTotal_ = count;
     pktSent_ = 0;
     pktFailed_ = 0;
@@ -187,7 +188,7 @@ const char* Bench::txpkt(uint16_t count, uint8_t length, uint32_t intervalMs, bo
 
 bool Bench::sendOne() {
     uint8_t frame[testframe::MAX_LENGTH];
-    testframe::build(frame, pktLen_, pktSent_);
+    testframe::build(frame, pktLen_, pktSent_, pktFill_);
     radiolink::TxTiming timing;
     const bool ok = radio_.transmit(frame, pktLen_, false, &timing);
     pktTxUs_ += timing.totalUs;

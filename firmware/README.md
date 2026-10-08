@@ -221,7 +221,7 @@ Port USB nRF (J3, nie port J-Link J2) zgłasza się jako urządzenie z dwoma int
 | `PREP <0\|1>` | tryb przygotowania; włączenie wymaga przycisku OK w ciągu 30 s (na N1 zapasowo obok przycisku przygotowania) |
 | `SILENCE <0\|1>` | cisza radiowa (na przewodach zamiast przełącznika CISZA; na N1 zapasowo do następnego przełączenia; nie wyłącza ciszy przy przełączniku w położeniu „cisza”) |
 | `TXCW <s> [CONDUCTED]` | nośna bez modulacji przez 1–10 s; po zakończeniu `tx_ms` i dług ciszy |
-| `TXPKT <n> <len> [<ms>] [CONDUCTED]` | `n` ramek wzorcowych po `len` B (4–103) co `ms`; seria idzie w tle, na końcu `sent`, `failed`, `tx_ms`, czasy pierwszej ramki z GPIO2 |
+| `TXPKT <n> <len> [<ms>] [ZEROS\|ONES] [CONDUCTED]` | `n` ramek wzorcowych po `len` B (4–103) co `ms`, z wypełnieniem PN9 albo z samych zer (`ZEROS`) lub jedynek (`ONES`) między numerem a CRC; seria idzie w tle, na końcu `sent`, `failed`, `tx_ms`, czasy pierwszej ramki z GPIO2 |
 | `RXPER` | zwraca i zeruje liczniki odbioru: `rx_ok`, `rx_bad`, `missing`, `reordered`, `overflow`, `per_percent`, średnie RSSI i LQI |
 | `FOFF [<hz>]` | korekta częstotliwości w Hz (±1 MHz, krok 30,5 Hz) do restartu; bez argumentu odczyt |
 | `P1RX` | odbiór ramek P1 w tle (zmienna długość, LEN do 102); każda ramka i złożony datagram jako wiersz JSON |
@@ -295,7 +295,7 @@ Przebieg pomiaru czułości: na nadajniku `PREP 1`, `TXPKT 2000 103 50 CONDUCTED
 
 ## Dziennik w FRAM
 
-Kod w `src/journal.cpp` (bez zależności od Arduino, sprawdzany na komputerze z pamięcią w RAM w `tests/test_firmware_host.py`) i `src/fram.cpp` (odczyt i zapis MB85RS4MT, adres 3-bajtowy). Wymagania: [dostęp do kanału](../docs/spec/radio.md#dostęp-do-kanału) (dziennik długu ciszy) i [oprogramowanie](../docs/spec/oprogramowanie.md) (licznik czasu pracy co 60 s, dziennik zdarzeń 32 KiB). Obszar nie jest szyfrowany i ma przetrwać ZNISZCZ DANE; ta operacja nie jest jeszcze zaimplementowana.
+Kod w `src/journal.cpp` (bez zależności od Arduino, sprawdzany na komputerze z pamięcią w RAM w `tests/test_firmware_host.py`) i `src/fram.cpp` (odczyt i zapis MB85RS4MT, adres 3-bajtowy; rozpoznaje tylko identyfikator Fujitsu/RAMXEED, więc kandydat A z BOM stacji, Infineon CY15B104Q, wymaga dopisania jego identyfikatora). Wymagania: [dostęp do kanału](../docs/spec/radio.md#dostęp-do-kanału) (dziennik długu ciszy) i [oprogramowanie](../docs/spec/oprogramowanie.md) (licznik czasu pracy co 60 s, dziennik zdarzeń 32 KiB). Obszar nie jest szyfrowany i ma przetrwać ZNISZCZ DANE; ta operacja nie jest jeszcze zaimplementowana.
 
 | Pierścień | Adres w FRAM | Rekordy | Treść rekordu |
 |---|---|---|---|

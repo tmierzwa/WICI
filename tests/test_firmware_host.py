@@ -535,11 +535,12 @@ int main(int argc, char** argv) {
     if (argc == 2 && !strcmp(argv[1], "journal")) return journalScenario();
     if (argc == 2 && !strcmp(argv[1], "buildall")) return buildAll();
     if (argc == 2 && !strcmp(argv[1], "assemble")) return assembleScript();
-    if (argc == 4 && !strcmp(argv[1], "frame")) {
+    if ((argc == 4 || argc == 5) && !strcmp(argv[1], "frame")) {
         uint8_t frame[testframe::MAX_LENGTH];
         const size_t length = strtoul(argv[2], nullptr, 10);
         const uint16_t seq = strtoul(argv[3], nullptr, 10);
-        if (!testframe::build(frame, length, seq)) { printf("build failed\n"); return 1; }
+        const testframe::Fill fill = argc == 5 ? static_cast<testframe::Fill>(atoi(argv[4])) : testframe::Fill::PN9;
+        if (!testframe::build(frame, length, seq, fill)) { printf("build failed\n"); return 1; }
         for (size_t i = 0; i < length; ++i) printf("%02X", frame[i]);
         printf("\n");
         uint16_t back = 0;
@@ -598,6 +599,14 @@ class HostUnitTests(unittest.TestCase):
             self.assertEqual(int.from_bytes(frame[:2], "big"), seq)
             self.assertEqual(int.from_bytes(frame[-2:], "big"), crc16(frame[:-2]))
             self.assertEqual((ok, int(back), corrupt), ("ok", seq, "rejected"), (length, seq))
+
+    def test_zeros_and_ones_fill(self):
+        # radio.md: ramki wzorcowe z samych zer i samych jedynek (długie ciągi jednakowych bitów).
+        for fill, byte in ((1, 0x00), (2, 0xFF)):
+            frame_hex, ok, back, _ = self.run_harness("frame", "103", "5", str(fill))
+            frame = bytes.fromhex(frame_hex)
+            self.assertEqual(set(frame[2:-2]), {byte})
+            self.assertEqual((ok, int(back)), ("ok", 5))
 
     def test_filler_depends_on_sequence_and_is_not_constant(self):
         a = bytes.fromhex(self.run_harness("frame", "40", "7")[0])

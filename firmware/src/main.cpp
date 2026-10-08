@@ -583,7 +583,7 @@ void printButtons() {
 void printHelp() {
     Serial.print("{\"commands\":[\"HELP\",\"INFO\"");
     Serial.print(radiocon::helpCommands());
-    Serial.print(",\"PREP <0|1>\",\"SILENCE <0|1>\",\"TXCW <s> [CONDUCTED]\",\"TXPKT <n> <len> [<ms>] [CONDUCTED]\","
+    Serial.print(",\"PREP <0|1>\",\"SILENCE <0|1>\",\"TXCW <s> [CONDUCTED]\",\"TXPKT <n> <len> [<ms>] [ZEROS|ONES] [CONDUCTED]\","
                  "\"RX [<len>]\",\"RXPER\",\"FOFF [<hz>]\",\"P1RX\",\"P1TX <hex>\",\"P1\",\"STOP\",\"LOG [<n>]\",\"JOURNAL\",\"BENCH\","
                  "\"FRAM\",\"BTN\",\"LED <1-4> <0|1>\",\"SCREEN\",\"KEY <UP|DOWN|OK|BACK> [ms]\",\"DISPLAY\","
                  "\"VCOM <0|1>\",\"REBOOT\",\"STORE\",\"USB <json>\",\"APP\",\"LINK <0|1>\",\"RNS\",\"ANNOUNCE\""
@@ -715,11 +715,14 @@ void handle(char* cmd) {
         }
     } else if (!strcmp(cmd, "TXPKT")) {
         const bool conducted = lastIsConducted(words, n);
-        if (n < 2 || n > 3) printError("TXPKT <n> <len> [<ms>] [CONDUCTED]");
+        testframe::Fill fill = testframe::Fill::PN9;  // ZEROS / ONES: wypełnienie ramek wzorcowych
+        if (n && !strcmp(words[n - 1], "ZEROS")) { fill = testframe::Fill::ZEROS; --n; }
+        else if (n && !strcmp(words[n - 1], "ONES")) { fill = testframe::Fill::ONES; --n; }
+        if (n < 2 || n > 3) printError("TXPKT <n> <len> [<ms>] [ZEROS|ONES] [CONDUCTED]");
         else {
             const char* error = bench.txpkt(static_cast<uint16_t>(parseArg(words[0], 0xFFFF)),
                                             static_cast<uint8_t>(parseArg(words[1], 0xFF)),
-                                            n == 3 ? parseArg(words[2], 3600000) : 0, conducted);
+                                            n == 3 ? parseArg(words[2], 3600000) : 0, conducted, fill);
             if (error) printError(error);
         }
     } else if (!strcmp(cmd, "RX")) {

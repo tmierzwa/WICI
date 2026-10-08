@@ -13,6 +13,7 @@
 #include "journal.h"
 #include "p1frame.h"
 #include "radio_link.h"
+#include "testframe.h"
 
 namespace measure {
 
@@ -80,7 +81,8 @@ public:
 
     // Każda funkcja zwraca nullptr po przyjęciu polecenia albo tekst błędu do odpowiedzi JSON.
     const char* txcw(uint32_t seconds, bool conducted);
-    const char* txpkt(uint16_t count, uint8_t length, uint32_t intervalMs, bool conducted);
+    const char* txpkt(uint16_t count, uint8_t length, uint32_t intervalMs, bool conducted,
+                      testframe::Fill fill = testframe::Fill::PN9);
     const char* rxStart(uint8_t length);
     // Łącze P1: odbiór ramek P1 w tle (tryb zmiennej długości) i nadanie datagramu
     // z CCA 50 ms, odroczeniem losowym 100..1000 ms i długiem ciszy w dzienniku.
@@ -136,6 +138,7 @@ private:
     uint16_t pktTotal_ = 0;
     uint16_t pktSent_ = 0;
     uint8_t pktLen_ = 0;
+    testframe::Fill pktFill_ = testframe::Fill::PN9;
     uint32_t pktIntervalMs_ = 0;
     uint32_t pktNextMs_ = 0;
     uint32_t pktStartMs_ = 0;
