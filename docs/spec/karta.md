@@ -1,6 +1,8 @@
 # WICI: karta obsługi stacji
 
-Karta obsługi to jedna kartka A4 zadrukowana dwustronnie, laminowana, przymocowana do skrzynki stacji. Poniżej jest jej pełny tekst. Napisy w cudzysłowach są cytatami z tabeli „Teksty ekranu” w rozdziale [Oprogramowanie](oprogramowanie.md); zmiana tabeli wymaga zmiany karty, a T1 sprawdza ich zgodność. Karta nie zawiera nazw protokołów ani typów wiadomości. Pozostałe tematy obsługi (lista z [koncepcji, rozdział 02](../concept/02-scenariusze-i-organizacja.html#instrukcja-i-cwiczenie)) są w [instrukcji opiekuna](instrukcja.md), nie na karcie.
+Karta obsługi to jedna kartka A4 zadrukowana dwustronnie, laminowana, przymocowana do skrzynki stacji. Poniżej jest jej pełny tekst. Napisy w cudzysłowach są cytatami z tabeli „Teksty ekranu” w rozdziale [Oprogramowanie](oprogramowanie.md); zmiana tabeli wymaga zmiany karty, a T1 sprawdza ich zgodność.
+
+Karta nie zawiera nazw protokołów ani typów wiadomości. Pozostałe tematy obsługi (lista z [koncepcji, rozdział 02](../concept/02-scenariusze-i-organizacja.html#instrukcja-i-cwiczenie)) są w [instrukcji opiekuna](instrukcja.md), nie na karcie.
 
 W wersjach UK i EN karty cytaty z ekranu, nazwy przycisków, menu i kategorii pochodzą z kolumn UK i EN tabeli tekstów ekranu, a nie z osobnego przekładu; pozostały tekst karty jest w wersjach [UK](karta-uk.md) i [EN](karta-en.md) (tłumaczenie robocze, sprawdzane razem z tabelą przed T1). Obie wersje zawierają tekst `odpowiedzi_po_polsku`. Język ekranu wybiera się na pierwszym ekranie po włączeniu; później, poza kreatorem zgłoszenia, przytrzymanie WSTECZ przez 3 s.
 

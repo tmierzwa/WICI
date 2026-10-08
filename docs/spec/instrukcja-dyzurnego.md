@@ -1,6 +1,10 @@
 # WICI: instrukcja dyżurnego
 
-Instrukcja jest dla dyżurnych stanowiska odbiorczego, czyli stanowiska wyznaczonego przez wójta (burmistrza, prezydenta miasta) do przyjmowania zgłoszeń schronień. Na ekranie stacji i w instrukcji opiekuna stanowisko nazywa się „odbiorcą”. Skrót OSP oznacza w tej instrukcji tylko ochotniczą straż pożarną, także wtedy, gdy to jej jednostka prowadzi stanowisko. Budowę stanowiska, panel i postępowanie przy awarii opisuje [stanowisko odbiorcze](stanowisko-osp.md); tu są czynności dyżurnego. Napisy z ekranu stacji w cudzysłowach są cytatami z tabeli [Teksty ekranu](oprogramowanie.md#teksty-ekranu). Instrukcja opisuje stanowisko po odbiorze technicznym; takiego stanowiska jeszcze nie zbudowano. W instrukcji nie zapisuje się kluczy, haseł ani danych mieszkańców.
+Instrukcja jest dla dyżurnych stanowiska odbiorczego, czyli stanowiska wyznaczonego przez wójta (burmistrza, prezydenta miasta) do przyjmowania zgłoszeń schronień. Na ekranie stacji i w instrukcji opiekuna stanowisko nazywa się „odbiorcą”. Skrót OSP oznacza w tej instrukcji tylko ochotniczą straż pożarną, także wtedy, gdy to jej jednostka prowadzi stanowisko.
+
+Budowę stanowiska, panel i postępowanie przy awarii opisuje [stanowisko odbiorcze](stanowisko-osp.md); tu są czynności dyżurnego. Napisy z ekranu stacji w cudzysłowach są cytatami z tabeli [Teksty ekranu](oprogramowanie.md#teksty-ekranu).
+
+Instrukcja opisuje stanowisko po odbiorze technicznym; takiego stanowiska jeszcze nie zbudowano. W instrukcji nie zapisuje się kluczy, haseł ani danych mieszkańców.
 
 ## Twoja rola
 

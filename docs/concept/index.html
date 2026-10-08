@@ -4,7 +4,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Koncepcja systemu · WICI</title>
+<title>WICI · Łączność awaryjna, gdy milkną telefony</title>
+<meta name="description" content="Otwarty projekt stacji radiowej do zgłoszeń ze schronień, gdy nie działają telefony i internet. Koncepcja, obliczenia, kod i plan prób prototypu 0.5.">
 <link rel="stylesheet" href="style.css">
 <link rel="icon" type="image/svg+xml" href="../../media/logo/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="../../media/logo/ikona-32.png">
@@ -16,7 +17,7 @@
   <div class="inner">
     <a class="brand" href="index.html"><picture><source media="(prefers-color-scheme: dark)" srcset="../../media/logo/WICI-na-ciemnym.svg"><img src="../../media/logo/WICI-na-jasnym.svg" alt="WICI" width="72" height="32"></picture></a>
     <a class="jump" href="#rozdzialy">Rozdziały ↓</a>
-    <span class="status">Prototyp 0.5 · sprzęt <b>HOLD</b></span>
+    <span class="status">Projekt prototypu <b>0.5</b></span>
   </div>
 </header>
 <div class="layout">
@@ -38,29 +39,53 @@
   </nav>
   <main id="tresc">
 <article>
-<h1>WICI: koncepcja systemu</h1>
+<h1>Łączność awaryjna, gdy milkną telefony</h1>
 
 <nav class="on-page" aria-label="Na tej stronie">
 <p>Na tej stronie</p>
 <ol>
+  <li><a href="#jak-ma-dzialac">Jak ma działać</a></li>
+  <li><a href="#pilotaz">Co sprawdzimy najpierw</a></li>
+  <li><a href="#film">Film</a></li>
   <li><a href="#dokumenty">Dokumenty</a></li>
   <li><a href="#jak-czytac-ustalenia">Jak czytać ustalenia</a></li>
   <li><a href="#ocena-obecnego-stanu">Ocena obecnego stanu</a></li>
+  <li><a href="#wspolpraca">Współpraca</a></li>
 </ol>
 </nav>
 
-<p>Cel: przekazać krótkie zgłoszenie ze schronienia do miejsca zdolnego udzielić pomocy, gdy nie działa internet ani sieć komórkowa. Podstawą jest samodzielna stacja z ekranem i przyciskami. Zasada obsługi brzmi: „włączam stację, wystawiam antenę i jestem w sieci”. Użytkownik wysyła zgłoszenia schronienia przyciskami, a stacja zawsze przekazuje ruch innych stacji. Opcjonalny laptop i router dodają wygodny panel i stronę, przez którą mieszkańcy zgłaszają potrzeby z telefonów. Stanowisko odbiorcze ma natomiast obowiązkowy komputer z zapasem: na nim działają tożsamość odbiorcy, obsługa wiadomości i baza zgłoszeń, a stacja stanowiska przekazuje ruch sieci (D19).</p>
+<p>Gdy nie ma prądu, zasięgu komórkowego ani internetu, jak przekazać służbom, że w schronieniu brakuje wody, ktoś potrzebuje lekarza albo transportu? <strong>WICI to otwarty projekt stacji radiowej do krótkich zgłoszeń i odpowiedzi.</strong> Sieć ma łączyć miejsca, w których gromadzą się ludzie, ze stanowiskiem odbiorczym wyznaczonym przez gminę.</p>
+
+<p>Opiekun wybiera na ekranie kategorię potrzeby i liczbę osób. Stacja wysyła zgłoszenie radiem, a inne włączone stacje mają przekazywać je dalej. Ekran ma rozróżniać trwały zapis u odbiorcy, odczyt przez dyżurnego i decyzję o pomocy.</p>
+
+<p><strong>To projekt prototypu 0.5. Stacji jeszcze nie zbudowano ani nie sprawdzono w terenie.</strong> W repozytorium są specyfikacja, model obliczeniowy z testami, projekt płytki nośnej stanowiska deweloperskiego i kod skompilowany dla dwóch stanowisk. Najbliższy cel to pierwsza wymiana zgłoszeń między stacjami i stanowiskiem odbiorczym, a następnie próby w terenie.</p>
+
+<p><a href="https://github.com/tmierzwa/WICI">Repozytorium i kod</a> · <a href="../../CONTRIBUTING.md#od-czego-zacząć">Zadania dla współtwórców</a> · <a href="https://github.com/tmierzwa/WICI/issues">Uwagi i błędy</a></p>
+
+<h2 id="jak-ma-dzialac">Jak ma działać</h2>
+
+<ul>
+  <li><strong>W schronieniu:</strong> samodzielna stacja z ekranem, przyciskami, anteną i ogniwami AA. Laptop może później dodać panel opiekuna, a router Wi-Fi — lokalną stronę do zgłoszeń z telefonów, bez instalowania aplikacji.</li>
+  <li><strong>W sieci:</strong> każda włączona stacja przekazuje wiadomości sąsiadów. Cel to około 1 km między stacjami w zabudowie i co najmniej 48 godzin pracy na ogniwach AA; oba wymagają pomiarów.</li>
+  <li><strong>U odbiorcy:</strong> dyżurny przyjmuje zgłoszenia na obowiązkowym komputerze i przekazuje je właściwym służbom według uzgodnionej procedury. Stanowisko ma komputer zapasowy.</li>
+</ul>
+
+<p>Sieć trzeba przygotować razem z gminą i służbami przed kryzysem: zamontować anteny, sprawdzić trasy radiowe i uzgodnić dyżury. WICI ma uzupełniać lokalny system ochrony ludności. Nie zastępuje numeru 112 ani organizacji pomocy.</p>
+
+<h2 id="pilotaz">Co sprawdzimy najpierw</h2>
+
+<p>Przed budową stacji planujemy pomiary tras gotowymi urządzeniami 868 MHz oraz ćwiczenie przy stole z gminą i odbiorcą. Pierwszy pilotaż ma objąć 6–8 stacji w trzech miejscach, przez co najmniej trzy miesiące, w tym okres zimowy.</p>
+
+<p>Stacje pilotażowe powstaną z gotowych części: płytki ESP32-S3 z radiem LoRa SX1262, pamięci FRAM, ekranu i przycisków. Wybrany profil to LoRa SF7 na kanale 869,525 MHz. Zakres deklaracji zgodności UE kupionych płytek i warunki prób terenowych trzeba ustalić przed pilotażem (D20).</p>
+
+<p>Pilotaż obejmuje samodzielną stację i stanowisko odbiorcze. Własna płytka R02, drugie wykonanie oraz rozszerzenia z laptopem i routerem czekają na wyniki. Własny profil radiowy P1 pozostaje wariantem zapasowym. Szczegóły: <a href="08-plan-weryfikacji-i-decyzje.html#kolejnosc-prac">kolejność prac</a> i <a href="../spec/odbior.md#minimum-pilotażu">minimum pilotażu</a>.</p>
 
 <h2 id="film">Film</h2>
 
 <figure class="film">
 <video controls preload="metadata" playsinline poster="../../media/film/plakat.jpg" src="../../media/film/WICI-film.mp4"></video>
-<figcaption>Koncepcja WICI (niecałe 5 minut, z napisami). Wersja pionowa 60 s na telefon: <a href="../../media/film/WICI-short.mp4">WICI-short.mp4</a>. Scenariusz i pliki do odtworzenia filmu: <a href="../../media/film/README.md">media/film</a>.</figcaption>
+<figcaption>Koncepcja WICI (niecałe 5 minut, z napisami). <a href="../../media/film/WICI-short.mp4">Wersja pionowa, 60 s</a>. <a href="../../media/film/README.md">Scenariusz i źródła filmu</a>.</figcaption>
 </figure>
-
-<p>Zakres bazowy obejmuje jeden budynek, około 50 osób i sąsiednie stacje oddalone od siebie o około 1 km w zabudowie. Według modelu stacja pilotażowa (ESP32-S3 z odbiornikiem LoRa SX1262) pracuje około dwóch dób na litowych ogniwach AA, jeśli mikrokontroler pobiera średnio do około 45 mA (cel W23: ≥48 h; rozstrzyga pomiar), a ze źródła 12 V przez wiele dni. Laptop, router, ich zasilacze i akumulatory pochodzą z lokalnego zasobu i są rozszerzeniami. Z nimi zestaw ma pracować 24 godziny przy wymianie źródeł energii. Poziom 3 zużywa około 1,8 kWh na dobę w jednym schronieniu dlatego planuje się go tylko tam, gdzie można ładować lub wymieniać źródła energii. Zestaw WICI dostarcza stację z anteną, oprogramowanie offline i połączenia; zasilanie poziomu 3 to kupiona stacja zasilania z ładowarką USB (<a href="01-potrzeby-i-wymagania.html#poziomy-zestawu">poziomy zestawu</a>).</p>
-
-<p><strong>Zakres pilotażu (przegląd praktyczny 2026-10-08).</strong> WICI jest otwartym projektem społecznościowym. Dlatego pierwszy pilotaż prowadzi się na stacjach z gotowych części: płytki ESP32-S3 z układem LoRa SX1262 z deklaracją zgodności UE, modułu FRAM, ekranu i przycisków w kupionej obudowie. Radio to LoRa SF7, które w modelu ma lepszą czułość i krótszy czas obsługi zgłoszenia niż własny profil P1; P1 zostaje wariantem zapasowym. Pilotaż obejmuje poziom 1 i stanowisko odbiorcze. Przed próbami terenowymi trzeba ustalić ich podstawę i zakres deklaracji kupionych płytek (D20). Własna płytka R02, drugie wykonanie, pełna ocena zgodności wydania i poziomy 2–3 czekają na wynik pilotażu (<a href="08-plan-weryfikacji-i-decyzje.html#kolejnosc-prac">kolejność prac</a>).</p>
 
 <h2 id="dokumenty">Dokumenty</h2>
 
@@ -99,30 +124,27 @@
 
 <h2 id="ocena-obecnego-stanu">Ocena obecnego stanu</h2>
 
-<p>Koncepcja nadaje się do budowy prototypów i sprawdzania hipotez. Nie ma jeszcze dowodu łączności 1 km, działania całego stosu radiowego ani pracy dobowej. Oprogramowanie stacji ze stosem jest zbudowane dla stanowisk deweloperskich (płytki rozwojowe z modułami P1 na płytce nośnej N1), ale nie ma jeszcze interfejsu LoRa i nie uruchomiono go na sprzęcie. Stacja pilotażowa i aplikacja stanowiska nie są ukończone; pakiety START i płytka R02 czekają na decyzję po pilotażu. Wyniki modelu i projekt CAD nie zastępują prób sprzętu.</p>
+<p>Oprogramowanie stacji ze stosem Reticulum skompilowano dla <a href="../../hardware/dev-bench/README.md">stanowisk deweloperskich A i B</a> z modułami P1. Nie uruchomiono go jeszcze na sprzęcie. Interfejs LoRa, integracja LXMF na stacji i aplikacja stanowiska odbiorczego pozostają do wykonania.</p>
 
-<p><a href="../review.md">Aktualne ustalenia przeglądu wewnętrznego</a> obejmują problem prądu w stanie wstrzymania USB (suspend), budżet ogranicznika ładowarki oraz kontrprzykład czasowy dla stosu sieciowego. Wersja 0.5 przenosi stos do stacji zasilanej z własnych źródeł. Dlatego problem wstrzymania USB i limit czasu protokołu KISS (prostego formatu ramek między komputerem a modemem) nie blokują już wariantu bazowego. KISS wraca tylko na stanowisku odbiorczym, między komputerem a stacją; jego kontrolę przepływu i limity czasu sprawdzono w kodzie przypiętych wersji Reticulum i LXMF, a działanie potwierdza T3. Nowym głównym ryzykiem jest dojrzałość stosu na mikrokontrolerze.</p>
+<p>Wyniki modelu i projekt CAD pozwalają planować próby. Nie potwierdzają jeszcze łączności na 1 km, działania całego stosu radiowego ani 48 godzin pracy na ogniwach. Konkretne przeszkody i warunki ich zamknięcia opisuje <a href="../review.md">przegląd techniczny</a>.</p>
 
-<p>Najpierw trzeba rozstrzygnąć:</p>
-<ul>
-  <li>czy gmina i stanowisko odbiorcze utrzymają dyżur i procedurę (ćwiczenie przy stole przed własnym sprzętem); miejsce sieci w gminnym planie zarządzania kryzysowego; status w stanach nadzwyczajnych przed wdrożeniem;</li>
-  <li>zasięg 1 km przy rzeczywistych wysokościach anten (model propagacji daje dla LoRa SF7 dodatni zapas, dla P1 ujemny przy antenach na wysokości okien; zapas na zaniki trzeba doliczyć);</li>
-  <li>trwałe przyjęcie zgłoszenia przez stanowisko odbiorcze i inne służby;</li>
-  <li>działanie microReticulum i LXMF z interfejsem LoRa na ESP32-S3 i zgodność z RNode;</li>
-  <li>rzeczywisty koszt radiowy, w tym zmieszczenie SA1 w jednym pakiecie (roboczo ≤256 B);</li>
-  <li>pojemność sieci przy stanowisku odbiorczym (model LoRa SF7: ok. 95 zgłoszeń/h dla całej sieci przez przekaźnik przed stanowiskiem, ok. 164/h bez niego; dodanie przekaźników jej nie zwiększa);</li>
-  <li>tor zasilania stacji pilotażowej z gotowych modułów, jej pobór wobec W23 i podłączenie 12 V bez resetu;</li>
-  <li>podstawa prawna prób terenowych na kupionych płytkach z własnym oprogramowaniem i anteną (D20);</li>
-  <li>dostępność dyżurnego zdolnego do działania.</li>
-</ul>
+<p>Próby mają odpowiedzieć na trzy pytania: czy zgłoszenie dotrze przez rzeczywistą sieć, czy stacja wytrzyma co najmniej 48 godzin na ogniwach i czy dyżurny zdoła przyjąć zgłoszenie oraz przekazać je do pomocy. <a href="08-plan-weryfikacji-i-decyzje.html">Plan weryfikacji</a> podaje metody i kryteria zaliczenia.</p>
 
-<p>Ryzyko ciągłości projektu, czyli utraty zespołu lub jego zaangażowania, ograniczają otwarta licencja, kompletna paczka źródeł (T7) i wymóg zakupu od producenta z umową wsparcia, a nie od zespołu projektu.</p>
+<p>Otwarte licencje i wymóg kompletnej paczki źródeł (T7) mają umożliwić kontynuację prac przez inne osoby. Docelowe urządzenia organizator sieci ma kupować od producenta z umową wsparcia.</p>
 
-<p>Rygor projektu to jawne założenia, odtwarzalne próby, rozpoznawalne awarie i warunki przerwania pracy. Projekt nie deklaruje kwalifikacji wojskowej, odporności na celowe zagłuszanie ani certyfikacji środowiskowej.</p>
+<p>Założenia, metody prób i wyniki publikujemy tak, by inne osoby mogły je sprawdzić i kontynuować pracę.</p>
 
-<p><strong>Status dokumentu.</strong> To koncepcja prototypu 0.5, projektu prowadzonego na razie przez jedną osobę. Duża część analiz i obliczeń powstała z pomocą asystenta AI. Autor je przegląda, ale nie sprawdził ich niezależny inżynier, a uwag prawnych nie sprawdził prawnik. Każdą liczbę traktuj jako hipotezę do sprawdzenia; zgłoszenia błędów są mile widziane w zakładce <a href="https://github.com/tmierzwa/WICI/issues">Issues</a> repozytorium.</p>
+<h2 id="wspolpraca">Kto pracuje nad projektem</h2>
 
-<p lang="en"><em>In English:</em> WICI is an open design of an emergency communication station for shelters in Poland. The base unit is a self-contained station with a screen and buttons that also relays traffic whenever it is on, passing messages from station to station until they reach someone who can help. The name comes from the Polish <i lang="pl">wici</i> (pronounced “VEE-chee”), the bundle of twigs once passed from village to village to raise the alarm and summon help. A laptop and a Wi-Fi router are optional extensions in shelters; the receiving post runs the network stack on a mandatory computer with a spare. The first pilot uses stations built from off-the-shelf parts (an ESP32-S3 board with a Semtech SX1262 LoRa radio); a custom board, a second hardware variant and conformity assessment wait for the pilot results. This is a prototype concept (0.5), written in Polish with AI assistance and not independently reviewed; no hardware has been built or tested yet. <a href="https://github.com/tmierzwa/WICI">Repository</a>.</p>
+<p>Na razie projekt prowadzi jedna osoba: <a href="https://github.com/tmierzwa">@tmierzwa</a>. Duża część analiz i obliczeń powstała z pomocą asystenta AI. Autor je przegląda; obliczenia i założenia prawne czekają na niezależny przegląd.</p>
+
+<p>Przyda się pomoc w pomiarach radiowych, oprogramowaniu ESP32-S3 i SX1262 oraz organizacji pomocy w gminie. Można też pomóc bez sprzętu: sprawdzić obliczenia, uprościć kartę obsługi lub poprawić tłumaczenia.</p>
+
+<p><a href="../../CONTRIBUTING.md#od-czego-zacząć">Lista zadań</a> podaje zakres i sposób sprawdzenia wyniku. Jeśli chcesz podjąć zadanie lub wskazać błąd, otwórz <a href="https://github.com/tmierzwa/WICI/issues">Issue</a>. Drobne poprawki możesz od razu przesłać jako PR.</p>
+
+<p lang="en"><em>In English:</em> WICI is an open-source project for an emergency radio station for shelters in Poland, designed to send short requests for help when power, mobile networks and the internet are down. Stations would relay neighbouring stations’ messages; a receiving post with a computer and a duty officer would pass requests to emergency services.</p>
+
+<p lang="en">The project is at the prototype design stage (0.5). No station has been built or field-tested. The planned pilot uses off-the-shelf ESP32-S3 boards with an SX1262 LoRa radio. Range and battery life remain to be measured. One person maintains the project with AI assistance; independent review and contributions are welcome. <a href="https://github.com/tmierzwa/WICI">Repository</a>.</p>
 
 <p>Licencje: <a href="../../LICENSE.md">mapa projektu</a>. Analizy są dostępne na licencji CC-BY-4.0, a rozdział 05, jako opis konstrukcji komunikacji, na licencji CERN-OHL-P-2.0.</p>
 </article>

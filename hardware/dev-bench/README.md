@@ -1,17 +1,22 @@
 # WICI: stanowisko deweloperskie
 
 **Rola po przeglądzie praktycznym (2026-10-08, F99).** Stanowiska A i B są narzędziem do prób stosu (T1–T3) i do opcjonalnego porównania z profilem P1 (wariant zapasowy). Pilotaż ich nie wymaga i nie trzeba do niego montować N1. Sprzętem pilotażu jest gotowa płytka ESP32-S3 z układem LoRa SX1262 ([koncepcja 08](../../docs/concept/08-plan-weryfikacji-i-decyzje.html), [profil LoRa](../../docs/spec/radio.md#profil-lora-pilotażu)); R02 jest wstrzymana do decyzji po pilotażu.
+
 Stanowisko deweloperskie to zestaw kupnych płytek rozwojowych i modułów producentów, na którym powstaje oprogramowanie układowe stacji i wykonuje się próby T1–T4 przed płytką stacji. Płytką stacji jest [R02](../../docs/spec/elektronika.md#płytka-stacji-r02-wymagania); jedyną inną płytką projektu jest [płytka nośna N1](plytka-nosna.md) stanowiska, narzędzie bez własnego toru RF i zasilania. Wcześniejszy kontroler R01.3 nie jest budowany; jego ustalenia są w [lekcjach R02](../r02/lekcje.md), a pliki w historii Git.
 
 Codzienną pracę na zmontowanym stanowisku opisuje [obsługa stanowiska](obsluga.md), a montaż i pierwsze włączenie płytki N1 [uruchomienie](uruchomienie.md).
 
 Obrazy oprogramowania są w [firmware/](../../firmware/README.md): `bench-a` (stanowisko A na przewodach), `bench-n1` (A na płytce nośnej N1) i `bench-b` (B na N1). Wszystkie się budują; żadnego nie uruchomiono jeszcze na sprzęcie.
 
-Zasada: tor RF, wzorzec częstotliwości i zasilanie stanowiska pochodzą z płytek producentów; własnych płytek radiowych do prób się nie projektuje. Moduły łączy [płytka nośna N1](plytka-nosna.md) (jedna płytka dla stanowisk A i B, [F81](../../docs/review.md)) albo, do czasu montażu N1, przewody: stanowisko A według [firmware/README.md](../../firmware/README.md#okablowanie-stanowiska-a) i [tabeli złączy EM](#złącza-modułu-cc1120em); dla stanowiska B tabeli przewodów nie ma, B buduje się tylko na N1. Stanowisko uruchamia to samo oprogramowanie układowe co stacja, z własnym plikiem opisu płytki (przypisanie wyprowadzeń). Przypisania różnią się (SPI SCK na D13 przy przewodach, na D3 na N1), więc każdy wariant ma własny plik opisu płytki. Nie ma osobnego oprogramowania stanowiska ani osobnego kontraktu modemu.
+Zasada: tor RF, wzorzec częstotliwości i zasilanie stanowiska pochodzą z płytek producentów; własnych płytek radiowych do prób się nie projektuje. Moduły łączy [płytka nośna N1](plytka-nosna.md) (jedna płytka dla stanowisk A i B, [F81](../../docs/review.md)) albo, do czasu montażu N1, przewody: stanowisko A według [firmware/README.md](../../firmware/README.md#okablowanie-stanowiska-a) i [tabeli złączy EM](#złącza-modułu-cc1120em); dla stanowiska B tabeli przewodów nie ma, B buduje się tylko na N1.
+
+Stanowisko uruchamia to samo oprogramowanie układowe co stacja, z własnym plikiem opisu płytki (przypisanie wyprowadzeń). Przypisania różnią się (SPI SCK na D13 przy przewodach, na D3 na N1), więc każdy wariant ma własny plik opisu płytki. Nie ma osobnego oprogramowania stanowiska ani osobnego kontraktu modemu.
 
 ## Dwa stanowiska
 
-Stanowiska deweloperskie odpowiadają dwóm wykonaniom stacji ([specyfikacja radia](../../docs/spec/radio.md#dwa-wykonania)), więc wynik prób przenosi się na R02 w zakresie MCU, radia, stosu i interfejsu użytkownika. Do prób mieszanych TI–ST potrzeba po jednym stanowisku każdego rodzaju; do sieci A–B–stanowisko odbiorcze z zapasem potrzeba czterech (dwa A i dwa B), co odpowiada dwóm modułom w zestawie CC1120EMK.
+Stanowiska deweloperskie odpowiadają dwóm dotychczasowym wariantom P1 ([specyfikacja radia](../../docs/spec/radio.md#dwa-wykonania)), więc pozwalają sprawdzić MCU, radio, stos i interfejs użytkownika. Wyniki dotyczą konfiguracji stanowiska; po wyborze części R02 trzeba wskazać, które próby wymagają powtórzenia.
+
+Do prób mieszanych TI–ST potrzeba po jednym stanowisku każdego rodzaju; do sieci A–B–stanowisko odbiorcze z zapasem potrzeba czterech (dwa A i dwa B), co odpowiada dwóm modułom w zestawie CC1120EMK.
 
 | Element | Stanowisko A (TI) | Stanowisko B (ST) | Uwagi |
 |---|---|---|---|

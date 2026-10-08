@@ -1,6 +1,6 @@
 # Współpraca przy WICI
 
-Projekt jest prototypem. Zmiany mają upraszczać wykonanie, usuwać zależność od jednego dostawcy i zwiększać niezawodność; wygląd i dodatkowe funkcje nie są priorytetem. Najcenniejszym wkładem są zgłoszone błędy w obliczeniach, założeniach i kontraktach oraz raporty z prób fizycznych.
+Projekt jest na etapie projektowania prototypu. Najbliższy cel to wymiana zgłoszeń na gotowych płytkach ESP32-S3 z SX1262 oraz próby w terenie. Zmiany mają upraszczać wykonanie, usuwać zależność od jednego dostawcy i zwiększać niezawodność; wygląd i dodatkowe funkcje nie są priorytetem. Najcenniejszym wkładem są zgłoszone błędy w obliczeniach, założeniach i kontraktach oraz raporty z prób fizycznych.
 
 ## Jak zgłosić zmianę
 
@@ -20,7 +20,7 @@ Oprogramowanie stacji w [firmware/](firmware/README.md) skompilowano dla stanowi
 Każde wymaga tylko Pythona 3.12 i edytora. Recenzję wykonuje opiekun repozytorium; przy zadaniu 3 także druga osoba ze znajomością danego języka, jeśli jest dostępna.
 
 1. **Kontrola cytatów z ekranu.** Wejście: tabela [Teksty ekranu](docs/spec/oprogramowanie.md#teksty-ekranu) (czyta ją `firmware/tools/ui_texts.py`) oraz karty i instrukcje w `docs/spec/`. Wynik: test w `tests/`, który sprawdza, że każdy cytat wielkimi literami w cudzysłowie „…” (w karcie UK «…», w karcie EN “…”) występuje w kolumnie właściwego języka tabeli, z wartościami w nawiasach kwadratowych. Kryterium przyjęcia: test przechodzi w `python3 -m unittest discover -s tests` bez nowych zależności, a znalezione niezgodności są poprawione w tym samym PR albo opisane w Issue.
-2. **Model ruchu mieszanego.** Wejście: `software/reference/obliczenia.py` i wiersz „Ruch mieszany z dyżurnym” w [odbiorze](docs/spec/odbior.md). Wynik: obliczenie czasu nadawania przekaźnika B dla 50 zgłoszeń, 5 rewizji, PRZECZYTANE i jednej decyzji na rewizję oraz jednego komunikatu, zapisane w `wyniki.json`. Obok P1 model ma już wartości dla LoRa SF7 (`lora_pilot` w `wyniki.json`, przybliżenie: 55 rewizji po cyklu z dwoma STATUS, bez komunikatu); dokładne obliczenie ma objąć oba profile. Kryterium przyjęcia: testy modelu przechodzą, `weryfikacja.json` jest odświeżony według [kontroli przed PR](#kontrole-przed-pr), a wynik zastępuje w odbiorze i rozdziale 06 przybliżenie „około 44 min bez rewizji”.
+2. **Model ruchu mieszanego.** Wejście: `software/reference/obliczenia.py` i wiersz „Ruch mieszany z dyżurnym” w [odbiorze](docs/spec/odbior.md). Wynik: obliczenie czasu nadawania przekaźnika B dla 50 zgłoszeń, 5 rewizji, PRZECZYTANE i jednej decyzji na rewizję oraz jednego komunikatu, zapisane w `wyniki.json`. Obok P1 model ma już wartości dla LoRa SF7 (`lora_pilot` w `wyniki.json`, przybliżenie: 55 rewizji po cyklu z dwoma STATUS, bez komunikatu); dokładne obliczenie ma objąć oba profile. Kryterium przyjęcia: testy modelu przechodzą, `weryfikacja.json` jest odświeżony według [kontroli przed PR](#kontrole-przed-pr), a dokładny wynik z komunikatem zastępuje przybliżenia ruchu mieszanego w odbiorze i rozdziale 06.
 3. **Przegląd karty obsługi prostym językiem.** Wejście: [karta](docs/spec/karta.md) i jej wersja [UK](docs/spec/karta-uk.md) lub [EN](docs/spec/karta-en.md). Wynik: Issue albo PR z poprawkami zdań, które są niejasne dla osoby bez przygotowania technicznego. Kryterium przyjęcia: cytaty z ekranu zmieniają się tylko razem z tabelą tekstów ekranu, krótkie formy mają nadal ≤20 znaków (`tests/test_ui_texts.py`), a każda zmiana ma krótkie uzasadnienie.
 
 ### Zadania ze sprzętem i integracją stosu
@@ -64,7 +64,7 @@ Jeżeli korzystasz z narzędzi AI, napisz o tym w opisie PR i sprawdź wynik tak
 
 ## Decyzje i przeglądy
 
-Na razie projekt ma jednego opiekuna repozytorium ([@tmierzwa](https://github.com/tmierzwa)). Opiekun repozytorium scala PR, zamyka decyzje D01–D19 z [planu weryfikacji](docs/concept/08-plan-weryfikacji-i-decyzje.html) i wydaje wersje. Decyzja zapada w Issue lub PR, z uzasadnieniem i dowodem wymaganym w tabeli decyzji; zmiana decyzji wymaga nowego dowodu, nie samej dyskusji.
+Na razie projekt ma jednego opiekuna repozytorium ([@tmierzwa](https://github.com/tmierzwa)). Opiekun repozytorium scala PR, zamyka decyzje D01–D20 z [planu weryfikacji](docs/concept/08-plan-weryfikacji-i-decyzje.html) i wydaje wersje. Decyzja zapada w Issue lub PR, z uzasadnieniem i dowodem wymaganym w tabeli decyzji; zmiana decyzji wymaga nowego dowodu, nie samej dyskusji.
 
 Zmiany krytyczne dla bezpieczeństwa ludzi (przetwornica 230 V i ochrona PE, ochrona portów telefonów przed przepięciem, zabezpieczenia akumulatorów, budżet czasu nadawania) wymagają, oprócz opiekuna repozytorium, przeglądu przez osobę z odpowiednimi kwalifikacjami. Dopóki taka osoba nie dołączy do projektu, te części pozostają opisem do prób i mają status HOLD.
 

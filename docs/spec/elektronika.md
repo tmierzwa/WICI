@@ -1,6 +1,8 @@
 # WICI: elektronika
 
-Zakres po przeglądzie praktycznym (2026-10-08, F99, F100): przed pilotażem obowiązuje [stacja pilotażowa](#stacja-pilotażowa) z gotowych modułów i reguła [zaniku zasilania przy zapisie](#zanik-zasilania-i-zapis), wspólna dla wszystkich wykonań. Części [zasilanie stacji](#zasilanie-stacji) i [płytka R02](#płytka-stacji-r02-wymagania) opisują własną płytkę, **wstrzymaną do decyzji po pilotażu** ([koncepcja 08](../concept/08-plan-weryfikacji-i-decyzje.html)). Poziom 3 używa [kupionej stacji zasilania](#poziom-3-kupiona-stacja-zasilania) (D05 zamknięte); własny blok zasilania poziomu 3 jest w [archiwum](#archiwum-własny-blok-zasilania-poziomu-3).
+Zakres po przeglądzie praktycznym (2026-10-08, F99, F100): przed pilotażem obowiązuje [stacja pilotażowa](#stacja-pilotażowa) z gotowych modułów i reguła [zaniku zasilania przy zapisie](#zanik-zasilania-i-zapis), wspólna dla wszystkich wykonań. Części [zasilanie stacji](#zasilanie-stacji) i [płytka R02](#płytka-stacji-r02-wymagania) opisują własną płytkę, **wstrzymaną do decyzji po pilotażu** ([koncepcja 08](../concept/08-plan-weryfikacji-i-decyzje.html)).
+
+Poziom 3 używa [kupionej stacji zasilania](#poziom-3-kupiona-stacja-zasilania) (D05 zamknięte); własny blok zasilania poziomu 3 jest w [archiwum](#archiwum-własny-blok-zasilania-poziomu-3).
 
 Podane wartości służą do wykonania i pomiaru prototypu. Warianty różnych producentów wymagają oddzielnego sprawdzenia tolerancji i nie zawsze mają zgodne wyprowadzenia. Schemat połączeń nie zastępuje projektu płytki drukowanej (PCB) ani odbioru części 230 V.
 
