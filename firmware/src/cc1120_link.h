@@ -16,7 +16,6 @@ class LinkDriver : public radiolink::Driver {
 public:
     LinkDriver(Radio& radio, uint8_t pinSync) : radio_(radio), pinSync_(pinSync) {}
 
-    const char* name() const override { return "CC1120"; }
     const char* stateName() override { return marcStateName(radio_.readMarcState()); }
     void idle() override;
     bool startCw() override;

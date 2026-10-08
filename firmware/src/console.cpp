@@ -226,6 +226,7 @@ bool Console::switchBackup() {
     c.activeOsp = 1;
     if (!store_.writeConfig(c)) { services_.log("backup recipient: write failed"); return false; }
     services_.log("switched to backup recipient");
+    station_.backupSwitched();
     dirty_ = true;
     services_.changed();
     return true;

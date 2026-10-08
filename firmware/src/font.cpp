@@ -41,10 +41,4 @@ uint32_t next(const char*& text) {
     return value;
 }
 
-size_t length(const char* text) {
-    size_t n = 0;
-    while (next(text)) ++n;
-    return n;
-}
-
 }  // namespace font

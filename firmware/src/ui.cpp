@@ -119,17 +119,12 @@ const char* screenName(Screen screen) {
     return "?";
 }
 
-size_t utf8Length(const char* text) {
-    size_t n = 0;
-    for (const char* p = text; *p; ++p) {
-        if ((static_cast<uint8_t>(*p) & 0xC0) != 0x80) ++n;
-    }
-    return n;
-}
-
 void copyLine(char* out, size_t size, const char* text) {
     size_t bytes = utf8Bytes(text, COLS);
-    if (bytes >= size) bytes = size - 1;
+    if (bytes >= size) {
+        bytes = size - 1;
+        while (bytes && (static_cast<uint8_t>(text[bytes]) & 0xC0) == 0x80) --bytes;  // bez połowy znaku
+    }
     memcpy(out, text, bytes);
     out[bytes] = '\0';
 }
@@ -188,7 +183,6 @@ size_t wrap(const char* text, char out[][LINE_BYTES], size_t maxLines) {
 
 void Model::start(Lang lang) {
     lang_ = lang;
-    chosen_ = false;
     screen_ = Screen::LANGUAGE;
     cursor_ = static_cast<uint16_t>(lang);
     top_ = 0;
@@ -196,7 +190,6 @@ void Model::start(Lang lang) {
 
 void Model::restore(Lang lang, Screen screen) {
     lang_ = lang;
-    chosen_ = true;
     screen_ = screen == Screen::MENU || screen == Screen::STATUS ? screen : Screen::MAIN;
     cursor_ = 0;
     top_ = 0;
@@ -349,8 +342,7 @@ void Model::act(Button button, uint32_t nowMs) {
             else if (downB) moveCursor(1, ui_texts::LANGS, LINES);
             else if (ok) {
                 lang_ = static_cast<Lang>(cursor_);
-                chosen_ = true;
-                changed_ = true;
+                            changed_ = true;
                 if (screen_ == Screen::LANGUAGE) { addressMissing_ = false; go(host_ ? Screen::ADDRESS : Screen::MAIN); }
                 else go(Screen::MENU);
             } else if (back && screen_ == Screen::LANGUAGE_MENU) go(Screen::MENU);
@@ -411,8 +403,13 @@ void Model::act(Button button, uint32_t nowMs) {
             else if (button == SEQUENCE[sequence_]) {
                 if (++sequence_ == 4) {
                     const bool done = host_ && (screen_ == Screen::BACKUP ? host_->switchBackup() : host_->destroy());
-                    go(screen_ == Screen::BACKUP ? Screen::STATUS : Screen::MAIN);
-                    (void)done;
+                    if (done) go(screen_ == Screen::BACKUP ? Screen::STATUS : Screen::MAIN);
+                    else {
+                        // Brak zapasowej tożsamości OSP albo błąd zapisu: komunikat, nie cichy powrót.
+                        result_ = Submit::ERROR;
+                        serviceFailed_ = true;
+                        go(Screen::RESULT);
+                    }
                 }
             } else sequence_ = button == SEQUENCE[0] ? 1 : 0;
             break;
@@ -421,9 +418,7 @@ void Model::act(Button button, uint32_t nowMs) {
             else if (downB) moveCursor(1, 10, LINES);
             else if (back) go(Screen::MENU);
             else if (ok) {
-                if (draft_.category != cursor_ && draft_.category == 9) draft_.phrase = PHRASE_NONE;
                 draft_.category = static_cast<uint8_t>(cursor_);
-                if (draft_.category == 9 && draft_.phrase < 0) draft_.phrase = PHRASE_NONE;
                 go(Screen::PEOPLE);
             }
             break;
@@ -499,7 +494,8 @@ void Model::act(Button button, uint32_t nowMs) {
             else if (downB && top_ + 1 < lastCount_) ++top_;
             break;
         case Screen::RESULT:
-            if (ok || back) { draft_ = Draft(); draft_.people = lastPeople_; go(Screen::MAIN); }
+            if ((ok || back) && serviceFailed_) { serviceFailed_ = false; go(Screen::SERVICES); }
+            else if (ok || back) { draft_ = Draft(); draft_.people = lastPeople_; go(Screen::MAIN); }
             else if (up && top_ > 0) --top_;
             else if (downB && top_ + 1 < lastCount_) ++top_;
             break;
@@ -529,7 +525,7 @@ void Model::act(Button button, uint32_t nowMs) {
             else if (ok) {
                 Item item;
                 uint8_t menu[4];
-                if (host_ && host_->item(itemIndex_, item) && item.own && item.ref == itemRef_ && itemMenu(menu)) go(Screen::ITEM_MENU);
+                if (openItem(item) && item.own && itemMenu(menu)) go(Screen::ITEM_MENU);
                 else go(Screen::MESSAGES);
             } else if (up && top_ > 0) --top_;
             else if (downB && top_ + 1 < lastCount_) ++top_;
@@ -543,7 +539,7 @@ void Model::act(Button button, uint32_t nowMs) {
             else if (back) go(Screen::ITEM);
             else if (ok && cursor_ < count) {
                 Item item;
-                if (!host_ || !host_->item(itemIndex_, item) || item.ref != itemRef_) { go(Screen::MESSAGES); break; }
+                if (!openItem(item)) { go(Screen::MESSAGES); break; }
                 switch (static_cast<Label>(menu[cursor_])) {
                     case Label::ZMIEN_LICZBE_OSOB: beginWizard(DraftKind::PEOPLE, item.ref, &item); go(Screen::PEOPLE); break;
                     case Label::ZMIEN_PILNOSC: beginWizard(DraftKind::URGENCY, item.ref, &item); go(Screen::URGENCY); break;
@@ -695,6 +691,20 @@ void Model::renderText(Text& text, size_t window, Lines& out, size_t first) {
     renderList(items, text.count, window, out, first, false);
 }
 
+bool Model::openItem(Item& item) {
+    // Nowa wiadomość przesuwa listę (najnowsze najpierw): pozycja szukana po numerze rekordu.
+    if (!host_) return false;
+    if (host_->item(itemIndex_, item) && item.ref == itemRef_) return true;
+    const size_t count = host_->itemCount();
+    for (size_t i = 0; i < count; ++i) {
+        if (host_->item(i, item) && item.ref == itemRef_) {
+            itemIndex_ = i;
+            return true;
+        }
+    }
+    return false;
+}
+
 void Model::stageText(const Item& item, const Status& status, char* out, size_t size) const {
     // Etap własnego zgłoszenia z tabeli tekstów.
     char tmp[320];
@@ -714,7 +724,7 @@ void Model::buildSummary(Text& t) const {
     char tmp[LINE_BYTES * 2];
     t.addLine(ui_texts::CATEGORIES[draft_.category < 10 ? draft_.category : 9][L]);
     snprintf(tmp, sizeof(tmp), "%u %s", static_cast<unsigned>(draft_.people), text(URGENCY_TEXTS[draft_.urgency < 3 ? draft_.urgency : 0], lang_));
-    t.addLine(tmp);
+    t.add(tmp);  // pilność słownie, łamana na wiersze (nie obcinana)
     if (draft_.phrase == PHRASE_RESOLVED) t.add(ui_texts::PHRASES[ui_texts::PHRASES_COUNT - 1][L]);
     else if (draft_.phrase >= 0 && host_) t.add(host_->phrase(static_cast<size_t>(draft_.phrase), lang_));
     if (host_) t.add(host_->address());
@@ -726,8 +736,10 @@ void Model::buildItem(const Item& item, Text& t) const {
     char tmp[LINE_BYTES * 2];
     if (item.own) {
         t.addLine(item.type == SA1_TEST ? label(Label::TEST, lang_) : ui_texts::CATEGORIES[item.category < 10 ? item.category : 9][L]);
-        snprintf(tmp, sizeof(tmp), "%u %s", static_cast<unsigned>(item.people), text(URGENCY_TEXTS[item.urgency < 3 ? item.urgency : 0], lang_));
-        t.addLine(tmp);
+        if (item.type != SA1_TEST) {  // TEST nie ma liczby osób ani pilności do pokazania
+            snprintf(tmp, sizeof(tmp), "%u %s", static_cast<unsigned>(item.people), text(URGENCY_TEXTS[item.urgency < 3 ? item.urgency : 0], lang_));
+            t.add(tmp);
+        }
         if (item.text[0]) {
             // Fraza z konfiguracji pokazana w wybranym języku; inna treść (z panelu) po polsku.
             const char* shown = item.text;
@@ -767,7 +779,10 @@ void Model::buildHandover(const Status& status, Text& t) {
         formatShort(digits, sizeof(digits), item.number);
         snprintf(tmp, sizeof(tmp), "%s %s", digits, item.type == SA1_TEST ? label(Label::TEST, lang_) : ui_texts::CATEGORIES[item.category < 10 ? item.category : 9][L]);
         t.addLine(tmp);
-        if (item.state == 0) t.addLine(text(item.attempts ? Id::WYSYLANIE : Id::ZAPISANE_W_STACJI, lang_));
+        if (item.state == 0) {  // etap z podstawionymi [n] i [m], łamany na wiersze
+            stageText(item, status, tmp, sizeof(tmp));
+            t.add(tmp);
+        }
     }
     copyLine(tmp, sizeof(tmp), text(Id::NOWE_KROTKI, lang_));
     substituteNumber(tmp, sizeof(tmp), "[n]", status.newMessages);
@@ -915,7 +930,7 @@ void Model::render(const Status& s, Lines& out) {
         }
         case Screen::ITEM: {
             Item item;
-            if (host_ && host_->item(itemIndex_, item) && item.ref == itemRef_) {
+            if (openItem(item)) {
                 if (item.own) { stageText(item, s, tmp, sizeof(tmp)); t.add(tmp); }
                 buildItem(item, t);
             }

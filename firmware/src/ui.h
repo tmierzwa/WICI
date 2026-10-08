@@ -23,7 +23,8 @@ using ui_texts::Lang;
 
 constexpr size_t LINES = 5;
 constexpr size_t COLS = ui_texts::MAX_COLUMNS;
-constexpr size_t LINE_BYTES = 3 * COLS + 1;  // UTF-8 do 3 B na znak
+// UTF-8 do 4 B na znak: tekst z radia i z konfiguracji może mieć znaki spoza BMP (font pokazuje je jako U+FFFD).
+constexpr size_t LINE_BYTES = 4 * COLS + 1;
 constexpr uint32_t IDLE_MS = 180000;          // powrót do ekranu głównego po 3 min bezczynności
 constexpr uint32_t HOLD_DISCARD_MS = 2000;    // przytrzymanie WSTECZ w kreatorze: porzucić?
 constexpr uint32_t HOLD_LANGUAGE_MS = 3000;   // przytrzymanie WSTECZ poza kreatorem: wybór języka
@@ -159,12 +160,10 @@ public:
     void render(const Status& status, Lines& out);
     Lang language() const { return lang_; }
     Screen screen() const { return screen_; }
-    bool languageChosen() const { return chosen_; }
     // true jeden raz po zmianie języka albo ekranu (do zapisu w FRAM).
     bool takeChange();
     // Wiersze ekranu STAN (również do testów); zwraca ich liczbę.
     size_t statusLines(const Status& status, char out[][LINE_BYTES], size_t max) const;
-    const Draft& draft() const { return draft_; }
 
 private:
     struct Text;  // wiersze tekstu do przewijania
@@ -178,6 +177,7 @@ private:
     void buildItem(const Item& item, Text& text) const;
     void buildHandover(const Status& status, Text& text);
     void stageText(const Item& item, const Status& status, char* out, size_t size) const;
+    bool openItem(Item& item);  // otwarta pozycja po numerze rekordu (lista mogła się przesunąć)
     size_t phraseListCount() const;
     size_t itemMenu(uint8_t out[4]) const;
     Screen afterPeople() const;
@@ -188,7 +188,6 @@ private:
 
     Host* host_ = nullptr;
     Lang lang_ = Lang::PL;
-    bool chosen_ = false;
     Screen screen_ = Screen::LANGUAGE;
     uint16_t cursor_ = 0;
     uint16_t top_ = 0;
@@ -205,6 +204,7 @@ private:
     Submit result_ = Submit::STORED;
     uint16_t resultNumber_ = 0;
     bool resultSilence_ = false;
+    bool serviceFailed_ = false;  // RESULT po nieudanej usłudze (ODBIORCA ZAPASOWY, ZNISZCZ DANE): szkic zostaje
     Status lastStatus_;           // stan z ostatniego rysowania (cisza przy wyniku, liczba wierszy STAN)
     Screen returnTo_ = Screen::MAIN;
     bool addressMissing_ = false;
@@ -235,6 +235,5 @@ void voltage(uint16_t millivolts, Lang lang, char* out, size_t size);
 void substitute(const char* text, const char* key, const char* value, char* out, size_t size);
 // Kopia obcięta do COLS znaków.
 void copyLine(char* out, size_t size, const char* text);
-size_t utf8Length(const char* text);
 
 }  // namespace ui

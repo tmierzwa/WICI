@@ -21,7 +21,6 @@ class LinkDriver : public radiolink::Driver {
 public:
     explicit LinkDriver(Radio& radio) : radio_(radio) {}
 
-    const char* name() const override { return "S2LP"; }
     const char* stateName() override { return s2lp::stateName(radio_.status().state()); }
     void idle() override;
     bool startCw() override;

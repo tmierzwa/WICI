@@ -43,12 +43,7 @@ Protocol::Protocol(store::Store& store, Host& host) : store_(store), host_(host)
 void Protocol::begin() {
     uint8_t bytes[BOOT_HEX / 2];
     host_.randomBytes(bytes, sizeof(bytes));
-    static const char digits[] = "0123456789abcdef";
-    for (size_t i = 0; i < sizeof(bytes); ++i) {
-        boot_[2 * i] = digits[bytes[i] >> 4];
-        boot_[2 * i + 1] = digits[bytes[i] & 15];
-    }
-    boot_[BOOT_HEX] = '\0';
+    for (size_t i = 0; i < sizeof(bytes); ++i) snprintf(boot_ + 2 * i, 3, "%02x", bytes[i]);
 }
 
 void Protocol::connected(uint32_t nowMs) {
@@ -82,6 +77,10 @@ void Protocol::feed(const char* bytes, size_t count, uint32_t nowMs) {
             lineLength_ = 0;
         } else if (overflow_) {
             continue;
+        } else if (c == '\0') {
+            // NUL ucina wiersz w C: cały wiersz odrzucony (jak przy przepełnieniu, z tym samym licznikiem)
+            overflow_ = true;
+            lineLength_ = 0;
         } else if (lineLength_ < MAX_LINE) {
             line_[lineLength_++] = c;
         } else {
@@ -145,14 +144,14 @@ void Protocol::handleLine(const char* line, uint32_t nowMs) {
     if (!fieldInt(msg, "usb", usb) || usb != CONTRACT) { rejected(-1, "contract"); return; }
     if (!fieldInt(msg, "seq", seq) || seq < 0) { rejected(-1, "seq"); return; }
     if (!typeName(msg, type, sizeof(type))) { rejected(seq, "type"); return; }
+    // Typ z laptopa trafia do dziennika tylko jako znaki drukowalne ASCII (bez wstrzykiwania wierszy LOG).
+    for (char* c = type; *c; ++c) if (*c < 0x21 || *c > 0x7E) *c = '?';
     char text[64];
     snprintf(text, sizeof(text), "usb %s", type);
     if (strcmp(type, "ack")) host_.log(text);  // każde polecenie w dzienniku; ack nie jest poleceniem
     if (!strcmp(type, "sync")) {
-        json::Value v;
-        if (json::field(msg, "boot", v)) json::string(v, laptopBoot_, sizeof(laptopBoot_));
         int64_t cursor = 0;
-        if (fieldInt(msg, "cursor", cursor) && cursor >= 0) {
+        if (fieldInt(msg, "cursor", cursor) && cursor >= 0 && cursor <= UINT32_MAX) {
             cursor_ = static_cast<uint32_t>(cursor);
             store_.noteAckUpTo(cursor_);
         }
@@ -160,10 +159,10 @@ void Protocol::handleLine(const char* line, uint32_t nowMs) {
         lastSentSeq_ = 0;
         lastSentMs_ = nowMs - RESEND_MS;  // zaległe zdarzenia od razu
         sendSync(seq);
-    } else if (!strcmp(type, "ack")) doAck(msg);
-    else if (!strcmp(type, "submit")) doSubmit(msg, seq, nowMs);
-    else if (!strcmp(type, "test")) doTest(seq, nowMs);
-    else if (!strcmp(type, "silence")) doSilence(msg, seq, nowMs);
+    } else if (!strcmp(type, "ack")) doAck(msg, nowMs);
+    else if (!strcmp(type, "submit")) doSubmit(msg, seq);
+    else if (!strcmp(type, "test")) doTest(seq);
+    else if (!strcmp(type, "silence")) doSilence(msg, seq);
     else if (!strcmp(type, "configure")) doConfigure(msg, seq);
     else if (!strcmp(type, "close")) {
         if (!store_.close()) { rejected(seq, "memory"); return; }
@@ -187,14 +186,19 @@ void Protocol::handleLine(const char* line, uint32_t nowMs) {
     else rejected(seq, "unknown type");
 }
 
-void Protocol::doAck(const json::Value& msg) {
+void Protocol::doAck(const json::Value& msg, uint32_t nowMs) {
     int64_t value = 0;
-    if (fieldInt(msg, "cursor", value) && value >= 0) {
+    bool last = false;
+    if (fieldInt(msg, "cursor", value) && value >= 0 && value <= UINT32_MAX) {
         cursor_ = static_cast<uint32_t>(value);
         store_.noteAckUpTo(cursor_);
-    } else if (fieldInt(msg, "record", value) && value > 0) {
+        last = cursor_ >= lastSentSeq_;
+    } else if (fieldInt(msg, "record", value) && value > 0 && value <= UINT32_MAX) {
         store_.noteAck(static_cast<uint32_t>(value));
+        last = static_cast<uint32_t>(value) == lastSentSeq_;
     }
+    // Potwierdzone ostatnio wysłane: następne zaległe zdarzenie od razu, nie po 5 s.
+    if (last) lastSentMs_ = nowMs - RESEND_MS;
 }
 
 void Protocol::recipient(uint8_t out[store::HASH]) const {
@@ -202,8 +206,7 @@ void Protocol::recipient(uint8_t out[store::HASH]) const {
     memcpy(out, c.osp[c.activeOsp ? 1 : 0], store::HASH);
 }
 
-void Protocol::doSubmit(const json::Value& msg, int64_t seq, uint32_t nowMs) {
-    (void)nowMs;
+void Protocol::doSubmit(const json::Value& msg, int64_t seq) {
     store::QueueRecord record;
     json::Value array;
     if (!fieldHex(msg, "to", record.to)) { rejected(seq, "invalid", "to"); return; }
@@ -260,8 +263,7 @@ void Protocol::doSubmit(const json::Value& msg, int64_t seq, uint32_t nowMs) {
     }
 }
 
-void Protocol::doTest(int64_t seq, uint32_t nowMs) {
-    (void)nowMs;
+void Protocol::doTest(int64_t seq) {
     const store::Config& c = store_.config();
     if (!store_.configured() || !c.address[0]) { rejected(seq, "not configured"); return; }
     if (c.role != store::STATION) { rejected(seq, "invalid", "type not allowed for this role"); return; }
@@ -296,8 +298,7 @@ void Protocol::doTest(int64_t seq, uint32_t nowMs) {
     host_.queueChanged();
 }
 
-void Protocol::doSilence(const json::Value& msg, int64_t seq, uint32_t nowMs) {
-    (void)nowMs;
+void Protocol::doSilence(const json::Value& msg, int64_t seq) {
     bool on = false;
     if (!fieldBool(msg, "on", on)) { rejected(seq, "invalid", "on"); return; }
     // Przełącznik na stacji ma pierwszeństwo przed panelem (oprogramowanie.md, „Cisza radiowa”).
@@ -352,7 +353,7 @@ void Protocol::doConfigure(const json::Value& msg, int64_t seq) {
     if (!store_.writeConfig(c)) { rejected(seq, "memory"); return; }
     host_.configChanged();
     char fields[80];
-    snprintf(fields, sizeof(fields), "\"configured\":true,\"worst_request\":%u,\"seq\":%lu", static_cast<unsigned>(size),
+    snprintf(fields, sizeof(fields), "\"configured\":true,\"worst_request\":%u,\"config_seq\":%lu", static_cast<unsigned>(size),
              static_cast<unsigned long>(store_.config().seq));
     send("ok", seq, fields);
 }

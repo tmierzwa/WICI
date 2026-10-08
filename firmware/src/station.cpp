@@ -52,7 +52,7 @@ bool Station::buildDatagram(const store::QueueRecord& record, char* out, size_t 
     services_.address(self);
     char from[2 * store::HASH + 1], to[2 * store::HASH + 1];
     store::bytesToHex(self, from);
-    store::bytesToHex(record.to, to);
+    store::bytesToHex(recipient(record), to);  // po ODBIORCA ZAPASOWY: tożsamość zapasowa
     const int n = snprintf(out, size, "[\"WICI\",1,\"%s\",\"%s\",%s]", from, to, record.sa1);
     if (n <= 0 || static_cast<size_t>(n) >= size || static_cast<size_t>(n) > PACKET_MAX) return false;
     length = static_cast<size_t>(n);
@@ -92,7 +92,7 @@ void Station::poll(uint32_t nowMs) {
         services_.log("intent too large for a packet");
         return;
     }
-    const uint32_t handle = services_.send(r.to, reinterpret_cast<const uint8_t*>(packet), length, ACK_TIMEOUT_S);
+    const uint32_t handle = services_.send(recipient(r), reinterpret_cast<const uint8_t*>(packet), length, ACK_TIMEOUT_S);
     if (!handle) {
         // Cel nieznany (stos wysłał zapytanie o trasę) albo interfejs odmówił: bez liczenia próby,
         // następna po 1, 2, 5, 15 min ±20% kolejnych odmów, żeby zapytania o trasę nie szły co minutę.
@@ -163,7 +163,7 @@ bool Station::received(const uint8_t* data, size_t length) {
     char marker[8], fromHex[2 * store::HASH + 2], toHex[2 * store::HASH + 2];
     uint8_t from[store::HASH], to[store::HASH], self[store::HASH];
     int64_t version = 0;
-    if (!json::parse(copy, array) || array.kind != json::Kind::ARRAY || json::count(array) < 5 ||
+    if (!json::parse(copy, array) || array.kind != json::Kind::ARRAY || json::count(array) != 5 ||
         !json::item(array, 0, v) || !json::string(v, marker, sizeof(marker)) || strcmp(marker, "WICI") ||
         !json::item(array, 1, v) || !json::integer(v, version) || version != 1 ||
         !json::item(array, 2, v) || !json::string(v, fromHex, sizeof(fromHex)) || !store::hexToBytes(fromHex, from) ||
@@ -176,7 +176,7 @@ bool Station::received(const uint8_t* data, size_t length) {
     ++stats_.received;
     json::Value payload;
     json::item(array, 4, payload);
-    if (payload.kind != json::Kind::ARRAY || json::count(array) != 5 || payload.length > sa1::MAX_CONTENT) { ++stats_.rejected; return false; }
+    if (payload.kind != json::Kind::ARRAY || payload.length > sa1::MAX_CONTENT) { ++stats_.rejected; return false; }
     if (!trustedSource(from)) { ++stats_.rejected; services_.log("datagram from untrusted source"); return false; }
     sa1::Message m;
     if (sa1::decode(payload.begin, payload.length, m)) { ++stats_.rejected; return false; }
@@ -430,8 +430,29 @@ void Station::pauseTest(bool paused) {
     services_.changed();
 }
 
-bool Station::alarmAcked(size_t slot, AlarmKind kind) const {
-    return alarmAcked_[slot] & (kind == AlarmKind::NO_READ ? 2 : 1);
+bool Station::alarmAcked(size_t slot, const store::QueueEntry& e, AlarmKind kind) const {
+    return alarmAckedSeq_[slot] == static_cast<uint16_t>(e.seq) && (alarmAcked_[slot] & (kind == AlarmKind::NO_READ ? 2 : 1));
+}
+
+void Station::backupSwitched() {
+    const uint32_t nowS = services_.uptimeS();
+    for (size_t i = 0; i < store_.queueSize(); ++i) {
+        const store::QueueEntry* e = store_.queueEntry(i);
+        if (!e || !(e->flags & store::ACTIVE) || e->state != 0) continue;
+        store::QueueRecord r;
+        if (!store_.queueRead(e->seq, r)) continue;
+        r.nextTryS = 0;
+        r.updatedS = nowS;
+        store_.queueUpdate(r);
+    }
+}
+
+const uint8_t* Station::recipient(const store::QueueRecord& r) const {
+    // Po ODBIORCA ZAPASOWY niepotwierdzone intencje do tożsamości głównej idą do zapasowej
+    // z tym samym id i revision (oprogramowanie.md, „Klucz OSP”); rekord w FRAM się nie zmienia.
+    const store::Config& c = store_.config();
+    if (c.activeOsp && !memcmp(r.to, c.osp[0], store::HASH)) return c.osp[1];
+    return r.to;
 }
 
 bool Station::alarm(uint32_t nowS, Alarm& out, bool withAcked) const {
@@ -457,7 +478,7 @@ bool Station::alarm(uint32_t nowS, Alarm& out, bool withAcked) const {
             since = e->updatedS;
             kind = AlarmKind::NO_READ;
         } else continue;
-        if (!withAcked && alarmAcked(i, kind)) continue;
+        if (!withAcked && alarmAcked(i, *e, kind)) continue;
         const uint32_t age = nowS - since;
         if (!found || age > bestAge) {
             found = true;
@@ -474,7 +495,10 @@ bool Station::alarm(uint32_t nowS, Alarm& out, bool withAcked) const {
 void Station::ackAlarm(const Alarm& alarm) {
     for (size_t i = 0; i < store_.queueSize(); ++i) {
         const store::QueueEntry* e = store_.queueEntry(i);
-        if (e && e->seq == alarm.seq) alarmAcked_[i] |= alarm.kind == AlarmKind::NO_READ ? 2 : 1;
+        if (!e || e->seq != alarm.seq) continue;
+        if (alarmAckedSeq_[i] != static_cast<uint16_t>(e->seq)) alarmAcked_[i] = 0;  // slot po innej intencji
+        alarmAckedSeq_[i] = static_cast<uint16_t>(e->seq);
+        alarmAcked_[i] |= alarm.kind == AlarmKind::NO_READ ? 2 : 1;
     }
 }
 

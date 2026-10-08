@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Układ radiowy stanowiska w programie stacji (main.cpp): sterownik układu, sterownik łącza dla
 // measure::Bench, start z konfiguracją P1 i polecenia diagnostyczne zależne od układu (RADIO,
-// RESET, CONFIG, VERIFY, CAL, FREQ, RSSI, STATE, REG, IDLE, SDN). Wykonania:
-// radio_console_cc1120.cpp (stanowisko A) i radio_console_s2lp.cpp (stanowisko B); odpowiedzi
-// stanowiska A bez zmian względem wcześniejszego main.cpp.
+// RESET, CONFIG, VERIFY, FREQ, RSSI, STATE, REG, IDLE; CC1120: CAL; S2-LP: SDN, REGW). Wykonania:
+// radio_console_cc1120.cpp (stanowisko A) i radio_console_s2lp.cpp (stanowisko B).
 #pragma once
 
 #include <Arduino.h>

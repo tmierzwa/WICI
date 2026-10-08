@@ -6,9 +6,11 @@
 #include <driver/gpio.h>
 #include <esp_mac.h>
 #include <esp_system.h>
+#include <esp_timer.h>
 #include <esp_task_wdt.h>
 
 #include "board.h"
+#include "cmdargs.h"
 
 namespace platform {
 
@@ -46,6 +48,8 @@ void chipId(uint32_t id[2]) {
 }
 
 uint32_t resetReason() { return static_cast<uint32_t>(esp_reset_reason()); }
+
+uint64_t uptimeMs() { return static_cast<uint64_t>(esp_timer_get_time()) / 1000; }
 
 bool resetByWatchdog() {
     const esp_reset_reason_t r = esp_reset_reason();
@@ -87,8 +91,8 @@ bool handle(const char* cmd, char* words[], size_t n) {
     if (strcmp(cmd, "DRIVE") || n > 1) return false;
     // Napęd SCK i MOSI do prób zboczy z analizatorem na J11; do restartu.
     if (n == 1) {
-        const int level = atoi(words[0]);
-        if (level < 0 || level > 3) {
+        uint32_t level = 0;
+        if (!cmdargs::parseUint(words[0], 0, 3, level)) {
             Serial.println("{\"error\":\"DRIVE <0-3>\"}");
             return true;
         }

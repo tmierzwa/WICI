@@ -16,7 +16,5 @@ bool has(uint32_t codepoint);
 
 // Kolejny znak UTF-8 z tekstu; przesuwa wskaźnik. Błędne bajty dają U+FFFD.
 uint32_t next(const char*& text);
-// Liczba znaków (nie bajtów) tekstu UTF-8.
-size_t length(const char* text);
 
 }  // namespace font

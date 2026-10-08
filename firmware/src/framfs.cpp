@@ -138,12 +138,16 @@ bool Fs::setFat(uint16_t block, uint16_t next) {
     return true;
 }
 
-bool Fs::format() {
+bool Fs::format(bool scrub) {
     uint8_t header[HEADER];
     encodeHeader(header);
-    uint8_t zero[INODE] = {};
+    uint8_t zero[BLOCK] = {};
     for (size_t i = 0; i < INODES; ++i)
-        if (!storage_.write(nodeAddress(i), zero, sizeof(zero))) return false;
+        if (!storage_.write(nodeAddress(i), zero, INODE)) return false;
+    if (scrub) {
+        for (uint16_t b = 0; b < BLOCKS; ++b)
+            if (!storage_.write(blockAddress(b), zero, BLOCK)) return false;
+    }
     uint8_t zeros[64] = {};
     for (size_t at = 0; at < BLOCKS * 2u; at += sizeof(zeros)) {
         const size_t n = BLOCKS * 2u - at < sizeof(zeros) ? BLOCKS * 2u - at : sizeof(zeros);
@@ -342,8 +346,8 @@ bool Fs::name(int inode, char out[NAME_LEN + 1]) const {
 
 uint16_t Fs::blockAt(int inode, uint32_t index) const {
     uint16_t b = first_[inode];
-    for (uint32_t k = 0; k < index && b != END; ++k) b = fat_[b];
-    return b;
+    for (uint32_t k = 0; k < index && b != END; ++k) b = b != FREE && b < BLOCKS ? fat_[b] : END;
+    return b != FREE && b < BLOCKS ? b : END;
 }
 
 uint16_t Fs::allocate() {
@@ -367,7 +371,7 @@ size_t Fs::read(int inode, uint32_t position, uint8_t* out, size_t count) {
     if (count > size - position) count = size - position;
     uint16_t b = blockAt(inode, position / BLOCK);
     size_t done = 0;
-    while (done < count && b != END) {
+    while (done < count && b != END && b != FREE && b < BLOCKS) {
         const uint32_t offset = (position + done) % BLOCK;
         size_t n = BLOCK - offset;
         if (n > count - done) n = count - done;
@@ -384,7 +388,11 @@ size_t Fs::write(int inode, uint32_t position, const uint8_t* data, size_t count
     const uint32_t startIndex = position / BLOCK;
     uint16_t prev = END;
     uint16_t b = first_[inode];
-    for (uint32_t k = 0; k < startIndex; ++k) { prev = b; b = fat_[b]; }
+    for (uint32_t k = 0; k < startIndex; ++k) {
+        if (b == END || b == FREE || b >= BLOCKS) return 0;   // łańcuch krótszy niż długość z węzła
+        prev = b;
+        b = fat_[b];
+    }
     size_t done = 0;
     bool firstChanged = false;
     uint16_t newFirst = first_[inode];
@@ -394,6 +402,8 @@ size_t Fs::write(int inode, uint32_t position, const uint8_t* data, size_t count
             if (b == END) break;
             if (prev == END) { newFirst = b; firstChanged = true; }
             else if (!setFat(prev, b)) break;
+        } else if (b == FREE || b >= BLOCKS) {
+            break;
         }
         const uint32_t offset = (position + done) % BLOCK;
         size_t n = BLOCK - offset;

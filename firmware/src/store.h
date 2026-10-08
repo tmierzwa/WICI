@@ -4,9 +4,10 @@
 // skrzynka odbiorcza (128 wiadomości), zdarzenia do laptopa czekające na `ack` (128) oraz pamięć
 // najwyższego event na id po usunięciu treści. Każdy rekord ma numer, CRC-16 i znacznik
 // zatwierdzenia zapisywany jako ostatni bajt; część zmienna rekordu (stan intencji, odczyt,
-// potwierdzenie) ma własne CRC i znacznik, a jej uszkodzenie cofa stan do wartości domyślnych.
-// Rekordy nie są jeszcze szyfrowane (AEAD z kluczem w MCU przyjdzie ze stosem). Bez zależności
-// od Arduino; sprawdzany na komputerze z pamięcią w RAM.
+// potwierdzenie) ma własne CRC i znacznik.
+// Stan intencji ma dwie kopie zapisywane na zmianę, a CRC każdej części zmiennej obejmuje numer
+// rekordu. Rekordy nie są jeszcze szyfrowane (AEAD z kluczem w MCU razem z kluczem tożsamości
+// i kartami). Bez zależności od Arduino; sprawdzany na komputerze z pamięcią w RAM.
 #pragma once
 
 #include <stddef.h>
@@ -20,6 +21,7 @@ namespace store {
 constexpr uint32_t CONFIG_BASE = 0x009000;
 constexpr size_t CONFIG_SLOT = 4096;
 constexpr uint32_t CONFIG_SLOTS = 2;
+constexpr uint32_t COUNTERS_BASE = 0x00B000;  // 2 × 32 B: najwyższe numery rekordów po ZAMKNIJ ZDARZENIE
 constexpr uint32_t QUEUE_BASE = 0x010000;
 constexpr uint32_t QUEUE_SLOTS = 128;
 constexpr uint32_t INBOX_BASE = 0x020000;
@@ -111,6 +113,7 @@ struct QueueEntry {
     uint8_t flags = 0;
     uint8_t state = 0;
     uint8_t category = 0;
+    uint8_t stateGen = 0;  // pokolenie bieżącej kopii stanu w FRAM
     uint16_t revision = 0;
     uint16_t attempts = 0;
     uint32_t event = 0;
@@ -157,7 +160,6 @@ public:
     bool queueRead(uint32_t seq, QueueRecord& record);
     bool queueUpdate(const QueueRecord& record);  // zapis części zmiennej
     size_t queueLive() const;                      // intencje bez DONE/REPLACED/CANCELLED
-    uint32_t queueOldestActiveS(bool& found) const;  // czas utworzenia najstarszej żywej intencji
     size_t queueUnsent() const;                      // aktywne bez potwierdzenia dostarczenia (SENT)
     uint32_t queueOldestUnsentS(bool& found) const;
     size_t queueSize() const { return QUEUE_SLOTS; }
@@ -193,10 +195,13 @@ public:
 
 private:
     bool erase(uint32_t base, size_t count, size_t size);
-    bool readRecord(uint32_t address, uint8_t* buffer, size_t immutable, size_t stateOffset, size_t stateSize, bool& stateValid);
+    bool readRecord(uint32_t address, uint8_t* buffer, size_t immutable, size_t span);
+    void fillQueueEntry(QueueEntry& e, const uint8_t* buffer);
+    static void encodeQueueState(uint8_t* state, const QueueRecord& record, uint8_t gen);
+    bool writeCounters();
     bool writeImmutable(uint32_t address, uint8_t* buffer, size_t immutable);
     bool invalidate(uint32_t address, size_t immutable);
-    bool writeState(uint32_t address, uint8_t* state, size_t stateSize);
+    bool writeState(uint32_t address, uint32_t seq, uint8_t* state, size_t stateSize);
     int freeSlot(const uint32_t* seqs, const uint8_t* live, size_t slots) const;
 
     journal::Storage& storage_;
@@ -209,6 +214,7 @@ private:
     NoteEntry notes_[NOTE_SLOTS];
     uint32_t noteSeq_ = 0;
     uint32_t seenSeq_ = 0;
+    uint32_t countersSeq_ = 0;
 };
 
 // Pomocnicze: skrót szesnastkowy 32 znaków <-> 16 bajtów; krótki numer = pierwsze 16 bitów id modulo 10 000.

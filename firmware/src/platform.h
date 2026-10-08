@@ -12,7 +12,10 @@
 // Pamięć RTC niezerowana przy restarcie programowym i przez watchdog (po włączeniu zasilania przypadkowa).
 #define PLATFORM_NOINIT RTC_NOINIT_ATTR
 #else
-#define PLATFORM_NOINIT __attribute__((section(".noinit")))
+// Skrypty linkera rdzenia Adafruit nie znają .noinit: zwykła sekcja trafiłaby między .data i .bss
+// z kopią we flashu nadpisywaną przy starcie. Sekcja oznaczona jako NOBITS (bez treści w obrazie)
+// trafia za .bss, poza kopiowanie .data i zerowanie .bss (sprawdzenie: objdump -h, tylko ALLOC).
+#define PLATFORM_NOINIT __attribute__((section(".noinit,\"aw\",%nobits@")))
 #endif
 
 namespace platform {
@@ -23,10 +26,13 @@ extern const char* const EXTCOMIN_SOURCE;  // licznik EXTCOMIN ekranu (pole "ext
 SPIClass& bus();  // magistrala radia, FRAM i ekranu
 void beginBus();  // piny i kontroler SPI (po ustawieniu CS wszystkich układów w stan nieaktywny)
 
-// 8 bajtów identyfikatora układu (nRF52840: FICR DEVICEID; ESP32-S3: adres MAC z eFuse);
+// Identyfikator układu w dwóch słowach (nRF52840: 8 B FICR DEVICEID; ESP32-S3: 6 B adresu MAC z eFuse);
 // id[0] & 0xFFFFFF daje nazwę WICI-xxxxxx.
 void chipId(uint32_t id[2]);
 uint32_t resetReason();  // nRF52840: RESETREAS; ESP32-S3: esp_reset_reason()
+// Czas od startu w ms bez zawijania (millis() zawija się po około 49 dniach). Na nRF52840 liczy
+// przejścia licznika taktów FreeRTOS, więc trzeba go wołać częściej niż co 48 dni (obieg pętli).
+uint64_t uptimeMs();
 bool resetByWatchdog();
 
 void beginWatchdog(uint32_t seconds);

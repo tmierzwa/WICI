@@ -229,7 +229,12 @@ int ifaceScenario() {
            kindName(classify(plain, 3)), kindName(classify(link, 3)), kindName(classify(plainProof, 3)));
     uint8_t h1[40] = {0x00, 0x00}, h2[40] = {0x40, 0x00};
     for (int i = 0; i < 38; ++i) { h1[2 + i] = (uint8_t)i; h2[2 + i] = (uint8_t)i; }
-    printf("dest %d %d %d\n", destination(h1, 40) == h1 + 2, destination(h2, 40) == h2 + 18, destination(h2, 30) == nullptr);
+    printf("dest %d %d %d", destination(h1, 40) == h1 + 2, destination(h2, 40) == h2 + 18, destination(h2, 30) == nullptr);   // wiersz kończy "pr"
+    uint8_t r1[40] = {0x01, 0x02}, r2[40] = {0x41, 0x02};
+    r1[18] = 0x0B;
+    r2[34] = 0x0B;
+    h1[18] = 0x0B;   // DATA z tym samym bajtem kontekstu
+    printf(" pr %d %d %d %d\n", pathResponse(r1, 40), pathResponse(r2, 40), pathResponse(h1, 40), pathResponse(r2, 34));
 
     Queue q;
     uint8_t w[600];
@@ -447,9 +452,10 @@ class StackUnitTests(unittest.TestCase):
         # 1 B: jedna ramka 18 B; 86 B: pełna ramka; 87 B: dwie; 600 B: 7 ramek, 1362 ms; dług 12x -> 271 bit/s.
         self.assertEqual(out[0], "air 53 195 248 1362 bitrate 271")
         self.assertEqual(out[1], "kind data announce control control data control")
-        self.assertEqual(out[2], "dest 1 1 1")
+        self.assertEqual(out[2], "dest 1 1 1 pr 1 1 0 0")   # PATH_RESPONSE: tylko ogłoszenie, nagłówek 1 i 2
         self.assertEqual(out[3:8], ["offer0 queued", "offer1 queued", "offer2 queued", "offer3 queued", "offer4 full"])
-        self.assertEqual(out[8], f"counters queued 4 full 1 waitMs {1000 + 4 * 270 * 13}")   # 100 B: 2 ramki, 270 ms
+        self.assertEqual(out[8], f"counters queued 4 full 1 waitMs {1000 + 4 * (270 + 2 * 195 * 12)}")
+        # 100 B: 2 ramki, 270 ms; dług jak rezerwacja łącza: 2 ramki pełnej długości (195 ms) x 12
         self.assertEqual(out[9], "first 10 len 100 busy 1 second 0")
         self.assertEqual(out[10], "proof queued")
         self.assertEqual(out[11], "next c0")   # dowód przed danymi

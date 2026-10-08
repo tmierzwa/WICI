@@ -34,7 +34,13 @@ int digitalRead(uint8_t pin);
 void digitalWrite(uint8_t pin, uint8_t level);
 inline long random(long max) { return std::rand() % max; }
 inline void randomSeed(uint32_t seed) { std::srand(seed); }
-struct FakeSerial {
+struct Print {
+    size_t write(uint8_t c) { std::putchar(c); return 1; }
+    size_t write(const uint8_t* data, size_t n) { return std::fwrite(data, 1, n, stdout); }
+    void print(const char* text) { std::fputs(text, stdout); }
+    void print(char c) { std::putchar(c); }
+};
+struct FakeSerial : Print {
     int printf(const char* format, ...) {
         va_list args;
         va_start(args, format);
@@ -42,8 +48,6 @@ struct FakeSerial {
         va_end(args);
         return n;
     }
-    void print(const char* text) { std::fputs(text, stdout); }
-    void print(char c) { std::putchar(c); }
     void println(const char* text) { std::puts(text); }
     void flush() {}
 };
@@ -306,7 +310,6 @@ struct FakeDriver : radiolink::Driver {
     uint8_t rxLength = 0;
     int busyChecks = 0;
     int32_t offset = 0;
-    const char* name() const override { return "FAKE"; }
     const char* stateName() override { return cw ? "TX" : rxActive ? "RX" : "IDLE"; }
     void idle() override { rxActive = false; cw = false; }
     bool startCw() override { cw = true; return true; }
@@ -368,6 +371,8 @@ int main() {
     const char* error = bench.txpkt(3, 20, 0, false);
     printf("NOPREP %s\n", error ? error : "-");
     bench.prep = true;
+    printf("NOCONFIG %s %s\n", bench.txpkt(3, 20, 0, false), bench.p1send(reinterpret_cast<const uint8_t*>("x"), 1));
+    bench.p1Ready = true;  // tablica P1 zapisana (main.cpp: radiocon::p1Ok)
     error = bench.txpkt(3, 20, 0, false);
     runFor(bench, 50);
     int good = 0;
@@ -540,6 +545,8 @@ class BenchTests(unittest.TestCase):
 
     def test_test_series_needs_preparation_and_writes_debt(self):
         self.assertEqual(line(self.out, "NOPREP"), "NOPREP preparation mode off: PREP 1")
+        # Bez zapisanej tablicy P1 nie nadaje ani seria, ani datagram (układ na wartościach domyślnych).
+        self.assertEqual(line(self.out, "NOCONFIG"), "NOCONFIG radio not configured: CONFIG radio not configured: CONFIG")
         self.assertEqual(line(self.out, "TXPKT"), "TXPKT - 3 3 0 0 1")  # fixed length, valid test frames
         self.assertEqual(line(self.out, "DEBTLOCK"), "DEBTLOCK silence debt pending: see INFO tx_wait_ms")
 
@@ -556,7 +563,7 @@ class BenchTests(unittest.TestCase):
         self.assertEqual(line(self.out, "TESTRX"), "TESTRX 3 -240 90")
 
     def test_frequency_offset_and_carrier_via_driver(self):
-        self.assertEqual(line(self.out, "FOFF"), "FOFF FOFF outside +-1000000 Hz - 40")
+        self.assertEqual(line(self.out, "FOFF"), "FOFF FOFF outside the radio range (about +-1 MHz) - 40")
         self.assertIn('{"foff_hz":1000,"set":true,"freqoff":40,"applied_hz":1000.0,"step_hz":25.00}', self.out)
         self.assertEqual(line(self.out, "TXCW"), "TXCW - 1")
         self.assertIn('"marc":"TX"', next(text for text in self.out if text.startswith('{"txcw":true')))

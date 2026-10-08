@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 #include "fram.h"
 
+#include <string.h>
+
 namespace fram {
 
 Memory::Memory(SPIClass& spi, uint8_t cs, uint32_t hz)
@@ -50,9 +52,9 @@ bool Memory::read(uint32_t address, uint8_t* data, size_t count) {
     if (address + count > SIZE) return false;
     select();
     sendAddress(OP_READ, address);
-    for (size_t i = 0; i < count; ++i) {
-        data[i] = spi_.transfer(0x00);
-    }
+    // Bufor w jednym wywołaniu (DMA SPIM na nRF52840) zamiast osobnej transakcji na każdy bajt.
+    memset(data, 0, count);
+    spi_.transfer(data, count);
     release();
     return true;
 }
@@ -65,8 +67,11 @@ bool Memory::write(uint32_t address, const uint8_t* data, size_t count) {
     delayMicroseconds(1);  // CS w stanie wysokim między poleceniami (tCSH MB85RS4MT)
     digitalWrite(cs_, LOW);
     sendAddress(OP_WRITE, address);
-    for (size_t i = 0; i < count; ++i) {
-        spi_.transfer(data[i]);
+    uint8_t chunk[64];  // transfer nadpisuje bufor odebranymi bajtami, więc kopia danych
+    for (size_t done = 0; done < count; done += sizeof(chunk)) {
+        const size_t n = count - done < sizeof(chunk) ? count - done : sizeof(chunk);
+        memcpy(chunk, data + done, n);
+        spi_.transfer(chunk, n);
     }
     release();
     return true;

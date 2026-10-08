@@ -7,7 +7,9 @@
 // - Kolejność: dowody i pakiety do celów PLAIN (zapytania o trasę) przed danymi, ogłoszenia na końcu.
 // - Limit ogłoszeń przekazywanych (hops > 0): jak announce_cap w Reticulum, 2% przepływności
 //   deklarowanej; ogłoszenie ponad limit czeka na liście 4 ogłoszeń (jedno na cel), potem odpada.
-//   Ogłoszenia własne (hops = 0) nie podlegają limitowi, jak w implementacji referencyjnej.
+//   Ogłoszenia własne (hops = 0) i odpowiedzi na zapytania o trasę (kontekst PATH_RESPONSE)
+//   nie podlegają limitowi, jak w implementacji referencyjnej (tam odpowiedź ma przypisany
+//   interfejs, a limit dotyczy tylko ogłoszeń bez niego).
 // - Deklarowana przepływność uwzględnia ramkowanie P1 i dług ciszy 12 x czas TX.
 // - Kod dostępu IFAC 16 B: maskowanie i zdejmowanie maski jak Transport.handle_outgoing_ifac i
 //   handle_ifac w Reticulum e40191b; podpis i HKDF liczy warstwa ze stosem (rns_node.cpp).
@@ -34,6 +36,9 @@ constexpr uint32_t RAMP_MS = 3;              // narastanie i zaokrąglenie jak f
 
 // Czas nadawania datagramu P1 o długości length: ramki LEN|BODY|CRC z preambułą i słowem.
 uint32_t airtimeMs(size_t length);
+// Dług ciszy rezerwowany przez łącze za datagram (measure::Bench): 12 x czas TX ramki pełnej
+// długości za każdy fragment.
+uint32_t reservedDebtMs(size_t length);
 // Przepływność deklarowana stosowi [bit/s]: datagram 600 B przez czas nadawania i długu ciszy.
 uint32_t declaredBitrate();
 
@@ -42,6 +47,8 @@ enum class Kind : uint8_t { CONTROL, DATA, ANNOUNCE };
 Kind classify(const uint8_t* raw, size_t length);
 // Skrót celu (16 B) z pakietu; nagłówek typu 2 ma przed nim identyfikator transportu.
 const uint8_t* destination(const uint8_t* raw, size_t length);
+// Ogłoszenie z kontekstem PATH_RESPONSE (bajt po skrócie celu).
+bool pathResponse(const uint8_t* raw, size_t length);
 
 enum class Admit : uint8_t { QUEUED, HELD, FULL, ANNOUNCE_LIMIT, TOO_LARGE };
 const char* admitName(Admit admit);
@@ -63,8 +70,9 @@ struct Counters {
 
 class Queue {
 public:
-    // Przyjęcie pakietu od stosu: wire to bajty po IFAC, kind i hops z pakietu przed IFAC,
-    // dest to skrót celu (deduplikacja ogłoszeń oczekujących).
+    // Przyjęcie pakietu od stosu: wire to bajty po IFAC, kind i hops z pakietu przed IFAC
+    // (hops = 0 także dla odpowiedzi na zapytanie o trasę: bez limitu ogłoszeń), dest to skrót
+    // celu (deduplikacja ogłoszeń oczekujących).
     Admit offer(Kind kind, uint8_t hops, const uint8_t dest[16], const uint8_t* wire, size_t length, uint32_t nowMs);
     // Ogłoszenia oczekujące przechodzą do kolejki, gdy limit pozwala i jest miejsce.
     void poll(uint32_t nowMs);
@@ -77,8 +85,8 @@ public:
     size_t queued() const { return count_; }
     size_t held() const;
     bool full() const { return count_ >= QUEUE; }
-    // Przewidywany czas do opuszczenia kolejki przez nowy datagram: dług ciszy i czas nadawania
-    // datagramów w kolejce, każdy z własnym długiem 12 x TX.
+    // Przewidywany czas do opuszczenia kolejki przez nowy datagram: dług ciszy oraz czas nadawania
+    // i rezerwacja długu (reservedDebtMs) datagramów w kolejce.
     uint32_t waitMs(uint32_t debtMs) const;
     uint32_t announceAllowedInMs(uint32_t nowMs) const;
     const Counters& counters() const { return counters_; }

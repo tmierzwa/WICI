@@ -46,23 +46,19 @@ constexpr uint16_t RSSI0 = 0x2F72;
 constexpr uint16_t MARCSTATE = 0x2F73;
 constexpr uint16_t FREQOFF_EST1 = 0x2F77;
 constexpr uint16_t FREQOFF_EST0 = 0x2F78;
-constexpr uint16_t FSCAL_CTRL = 0x2F8D;
 constexpr uint16_t PARTNUMBER = 0x2F8F;
 constexpr uint16_t PARTVERSION = 0x2F90;
 constexpr uint16_t NUM_TXBYTES = 0x2FD6;
 constexpr uint16_t NUM_RXBYTES = 0x2FD7;
 
 constexpr uint8_t PARTNUMBER_CC1120 = 0x48;
-constexpr uint8_t PARTNUMBER_CC1121 = 0x49;
-constexpr uint8_t PARTNUMBER_CC1125 = 0x58;
 
 // Bajt stanu zwracany przy każdym nagłówku: bit 7 = CHIP_RDYn, bity 6:4 = stan.
 constexpr uint8_t STATUS_CHIP_RDYn = 0x80;
 inline uint8_t statusState(uint8_t status) { return (status >> 4) & 0x07; }
 const char* stateName(uint8_t state);
 
-// MARCSTATE: bity 6:5 = stan dwupinowy, bity 4:0 = stan MARC; 0x41 = IDLE po kalibracji.
-constexpr uint8_t MARCSTATE_IDLE = 0x41;
+// MARCSTATE: bity 6:5 = stan dwupinowy, bity 4:0 = stan MARC (marcState()).
 constexpr uint8_t MARC_STATE_IDLE = 0x01;
 constexpr uint8_t MARC_STATE_RX = 0x0D;
 constexpr uint8_t MARC_STATE_RX_FIFO_ERR = 0x11;
@@ -77,7 +73,6 @@ constexpr uint16_t PKT_CFG0 = 0x0028;
 constexpr uint16_t PKT_LEN = 0x002E;
 constexpr uint8_t PKT_FORMAT_RANDOM = 0x02;        // PKT_CFG2.PKT_FORMAT = 10: dane z generatora PN9
 constexpr uint8_t LENGTH_CONFIG_INFINITE = 0x40;   // PKT_CFG0.LENGTH_CONFIG = 10
-constexpr size_t FIFO_SIZE = 128;
 inline uint8_t marcState(uint8_t marcstate) { return marcstate & 0x1F; }
 const char* marcStateName(uint8_t marcState);
 

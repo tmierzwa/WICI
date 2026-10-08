@@ -2,8 +2,8 @@
 // Protokół USB laptop–stacja na interfejsie danych (docs/spec/oprogramowanie.md, "Protokół USB
 // laptop–stacja"): wiersze UTF-8 JSON do 1024 B z numerem seq, kontrakt "usb":1, identyfikator
 // sesji boot po obu stronach, sync z kursorem, submit -> stored/rejected po zapisie w FRAM,
-// event/incoming -> ack, polecenia test, silence, configure, close, destroy (pozostałe odrzucane
-// jako nieobsługiwane do czasu stosu i kluczy). Każde polecenie trafia do dziennika zdarzeń.
+// event/incoming -> ack, polecenia test, silence, configure, close, destroy, announce (export,
+// import, trust i revoke odrzucane jako nieobsługiwane do czasu kluczy i kart). Każde polecenie trafia do dziennika zdarzeń.
 // Bez zależności od Arduino; sprawdzany na komputerze.
 #pragma once
 
@@ -47,7 +47,7 @@ struct Stats {
     uint32_t linesOut = 0;
     uint32_t rejected = 0;
     uint32_t stored = 0;
-    uint32_t overflow = 0;   // wiersze dłuższe niż 1024 B
+    uint32_t overflow = 0;   // wiersze dłuższe niż 1024 B albo z bajtem NUL
     uint32_t resends = 0;
 };
 
@@ -72,17 +72,16 @@ private:
     void rejected(int64_t re, const char* reason, const char* detail = nullptr);
     void sendSync(int64_t re);
     bool sendNote(uint32_t seq);
-    void doSubmit(const json::Value& msg, int64_t seq, uint32_t nowMs);
-    void doTest(int64_t seq, uint32_t nowMs);
-    void doSilence(const json::Value& msg, int64_t seq, uint32_t nowMs);
+    void doSubmit(const json::Value& msg, int64_t seq);
+    void doTest(int64_t seq);
+    void doSilence(const json::Value& msg, int64_t seq);
     void doConfigure(const json::Value& msg, int64_t seq);
-    void doAck(const json::Value& msg);
+    void doAck(const json::Value& msg, uint32_t nowMs);
     void recipient(uint8_t out[store::HASH]) const;
 
     store::Store& store_;
     Host& host_;
     char boot_[BOOT_HEX + 1] = {};
-    char laptopBoot_[BOOT_HEX + 1] = {};
     uint32_t seq_ = 0;
     bool connected_ = false;
     bool synced_ = false;

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 #include "cc1120_link.h"
 
-#include <string.h>
-
 #include "p1_registers.h"
 #include "p1frame.h"
 
@@ -10,17 +8,17 @@ namespace cc1120 {
 
 namespace {
 
-const RegisterValue* find(const char* name) {
-    for (size_t i = 0; i < p1::REGISTER_COUNT; ++i) {
-        if (!strcmp(p1::REGISTERS[i].name, name)) return &p1::REGISTERS[i];
-    }
-    return nullptr;
+// Wartość P1 rejestru z tablicy; rejestry przywracane po nośnej muszą w niej być.
+constexpr size_t tableIndex(uint16_t address) {
+    size_t i = 0;
+    while (i < p1::REGISTER_COUNT && p1::REGISTERS[i].address != address) ++i;
+    return i;
 }
+constexpr bool inTable(uint16_t address) { return tableIndex(address) < p1::REGISTER_COUNT; }
+static_assert(inTable(DEVIATION_M) && inTable(MODCFG_DEV_E) && inTable(PKT_CFG2) && inTable(PKT_CFG0), "rejestry nośnej w tablicy P1");
+constexpr uint8_t tableValue(uint16_t address) { return p1::REGISTERS[tableIndex(address)].value; }
 
-void restore(Radio& radio, const char* name) {
-    const RegisterValue* reg = find(name);
-    if (reg) radio.writeReg(reg->address, reg->value);
-}
+void restore(Radio& radio, uint16_t address) { radio.writeReg(address, tableValue(address)); }
 
 }  // namespace
 
@@ -28,6 +26,8 @@ void LinkDriver::idle() {
     rxActive_ = false;
     rxPendingLen_ = 0;
     radio_.idle();
+    radio_.strobe(SFRX);  // kolejki opróżnione, jak obiecuje radiolink::Driver::idle
+    radio_.strobe(SFTX);
 }
 
 bool LinkDriver::startCw() {
@@ -36,7 +36,7 @@ bool LinkDriver::startCw() {
     // Nośna bez modulacji: 2-FSK z dewiacją 0, dane losowe PN9, pakiet nieskończony.
     radio_.writeReg(DEVIATION_M, 0x00);
     radio_.writeReg(MODCFG_DEV_E, 0x00);
-    radio_.writeReg(PKT_CFG2, static_cast<uint8_t>((find("PKT_CFG2")->value & ~0x03) | PKT_FORMAT_RANDOM));
+    radio_.writeReg(PKT_CFG2, static_cast<uint8_t>((tableValue(PKT_CFG2) & ~0x03) | PKT_FORMAT_RANDOM));
     radio_.writeReg(PKT_CFG0, LENGTH_CONFIG_INFINITE);
     const uint8_t seed = 0x00;
     radio_.writeFifo(&seed, 1);  // TXLAST != TXFIRST wymagane w trybie losowym
@@ -47,10 +47,10 @@ bool LinkDriver::startCw() {
 void LinkDriver::stopCw() {
     radio_.idle();
     radio_.strobe(SFTX);
-    restore(radio_, "DEVIATION_M");
-    restore(radio_, "MODCFG_DEV_E");
-    restore(radio_, "PKT_CFG2");
-    restore(radio_, "PKT_CFG0");
+    restore(radio_, DEVIATION_M);
+    restore(radio_, MODCFG_DEV_E);
+    restore(radio_, PKT_CFG2);
+    restore(radio_, PKT_CFG0);
 }
 
 void LinkDriver::setLength(bool variable, uint8_t fixedLength) {
@@ -70,6 +70,7 @@ bool LinkDriver::waitSync(bool level, uint32_t timeoutUs) {
 }
 
 bool LinkDriver::transmit(const uint8_t* frame, size_t length, bool variable, radiolink::TxTiming* timing) {
+    if (length == 0 || length > radiolink::MAX_FRAME) return false;
     if (rxActive_) idle();  // odbiór wyłączony tylko na czas własnego nadawania
     setLength(variable, static_cast<uint8_t>(length));
     radio_.strobe(SFTX);
@@ -93,9 +94,9 @@ bool LinkDriver::transmit(const uint8_t* frame, size_t length, bool variable, ra
     const uint32_t tEnd = micros();
     const bool idleReached = radio_.waitMarcState(MARC_STATE_IDLE, rose ? 30 : (onAirUs / 1000) + 120);
     const uint32_t tIdle = micros();
-    if (radio_.readMarcState() == MARC_STATE_TX_FIFO_ERR) {
-        radio_.strobe(SFTX);
+    if (!idleReached) {  // także TX_FIFO_ERR: nadajnik nie może zostać włączony po powrocie
         radio_.idle();
+        radio_.strobe(SFTX);
     }
     timing->valid = rose && fell;
     timing->totalUs = tIdle - t0;
@@ -106,6 +107,7 @@ bool LinkDriver::transmit(const uint8_t* frame, size_t length, bool variable, ra
 }
 
 bool LinkDriver::startRx(bool variable, uint8_t fixedLength) {
+    if (!variable && (fixedLength == 0 || fixedLength > radiolink::MAX_FRAME)) return false;
     radio_.idle();
     radio_.strobe(SFRX);
     setLength(variable, fixedLength);
@@ -128,7 +130,10 @@ radiolink::RxPoll LinkDriver::pollRx(radiolink::Frame& out) {
     const uint8_t marc = radio_.readMarcState();
     if (marc == MARC_STATE_RX_FIFO_ERR) return restartRx(radiolink::RxPoll::Overflow);
     if (marc != MARC_STATE_RX) {
-        radio_.strobe(SRX);  // np. po IDLE z innego polecenia
+        // Po IDLE z innego polecenia wystarczy SRX; TX_FIFO_ERR wymaga opróżnienia kolejki (stany
+        // przejściowe, np. ustalanie syntezera po SRX, przechodzą same).
+        if (marc == MARC_STATE_IDLE) radio_.strobe(SRX);
+        else if (marc == MARC_STATE_TX_FIFO_ERR) { radio_.strobe(SFTX); restartRx(radiolink::RxPoll::Nothing); }
         return radiolink::RxPoll::Nothing;
     }
     uint8_t bytes = radio_.rxBytes();
@@ -198,7 +203,9 @@ void LinkDriver::applyOffset() {
     const bool wasRx = rxActive_;
     radio_.idle();
     radio_.setFrequencyOffset(reg);
-    if (wasRx) radio_.strobe(SRX);
+    // Ramka przerwana w połowie zostawiłaby bajty w kolejce, a tryb stałej długości nie odzyskuje
+    // wyrównania: odbiór od nowa z pustą kolejką.
+    if (wasRx) restartRx(radiolink::RxPoll::Nothing);
 }
 
 int32_t LinkDriver::frequencyOffsetHz() {

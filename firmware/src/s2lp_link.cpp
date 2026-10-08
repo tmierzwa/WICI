@@ -18,16 +18,22 @@ constexpr size_t FIFO_BYTES = 128;
 constexpr uint8_t PM_CONF3_TX = 0x9C;  // SMPS przy nadawaniu jak w S2LP::send biblioteki ST
 constexpr uint8_t PM_CONF3_RX = 0x90;  // wartość tablicy P1 (S2LP::begin, S2LP::read)
 
-uint8_t tableValue(const char* name) {
-    for (size_t i = 0; i < p1s2::REGISTER_COUNT; ++i) {
-        if (!strcmp(p1s2::REGISTERS[i].name, name)) return p1s2::REGISTERS[i].value;
-    }
-    return 0;
+// Wartość P1 rejestru z tablicy; rejestry używane przez sterownik łącza muszą w niej być.
+constexpr size_t tableIndex(uint8_t address) {
+    size_t i = 0;
+    while (i < p1s2::REGISTER_COUNT && p1s2::REGISTERS[i].address != address) ++i;
+    return i;
 }
+constexpr bool inTable(uint8_t address) { return tableIndex(address) < p1s2::REGISTER_COUNT; }
+constexpr uint8_t SYNT0 = SYNT3 + 3;  // SYNT3..SYNT0 pod kolejnymi adresami
+static_assert(inTable(SYNT3) && inTable(SYNT3 + 1) && inTable(SYNT3 + 2) && inTable(SYNT0) && inTable(MOD2) && inTable(PCKTCTRL1) &&
+                  inTable(PCKTCTRL2),
+              "rejestry sterownika łącza w tablicy P1");
+constexpr uint8_t tableValue(uint8_t address) { return p1s2::REGISTERS[tableIndex(address)].value; }
 
-uint32_t baseSynth() {
-    return (static_cast<uint32_t>(tableValue("SYNT3") & 0x0F) << 24) | (static_cast<uint32_t>(tableValue("SYNT2")) << 16) |
-           (static_cast<uint32_t>(tableValue("SYNT1")) << 8) | tableValue("SYNT0");
+constexpr uint32_t baseSynth() {
+    return (static_cast<uint32_t>(tableValue(SYNT3) & 0x0F) << 24) | (static_cast<uint32_t>(tableValue(SYNT3 + 1)) << 16) |
+           (static_cast<uint32_t>(tableValue(SYNT3 + 2)) << 8) | tableValue(SYNT0);
 }
 
 }  // namespace
@@ -61,22 +67,22 @@ void LinkDriver::idle() {
 
 bool LinkDriver::startCw() {
     idle();
-    radio_.writeReg(MOD2, static_cast<uint8_t>((MOD_TYPE_CW << 4) | (tableValue("MOD2") & 0x0F)));
-    radio_.writeReg(PCKTCTRL1, static_cast<uint8_t>((tableValue("PCKTCTRL1") & ~0x0C) | TXSOURCE_PN9));
+    radio_.writeReg(MOD2, static_cast<uint8_t>((MOD_TYPE_CW << 4) | (tableValue(MOD2) & 0x0F)));
+    radio_.writeReg(PCKTCTRL1, static_cast<uint8_t>((tableValue(PCKTCTRL1) & ~0x0C) | TXSOURCE_PN9));
     radio_.writeReg(PM_CONF3, PM_CONF3_TX);
     return radio_.commandAndWait(CMD_TX, STATE_TX, STATE_TIMEOUT_US);
 }
 
 void LinkDriver::stopCw() {
     toReady();
-    radio_.writeReg(MOD2, tableValue("MOD2"));
-    radio_.writeReg(PCKTCTRL1, tableValue("PCKTCTRL1"));
+    radio_.writeReg(MOD2, tableValue(MOD2));
+    radio_.writeReg(PCKTCTRL1, tableValue(PCKTCTRL1));
     radio_.writeReg(PM_CONF3, PM_CONF3_RX);
     radio_.command(CMD_FLUSHTXFIFO);
 }
 
 void LinkDriver::setLength(bool variable, uint16_t length) {
-    radio_.writeReg(PCKTCTRL2, static_cast<uint8_t>((tableValue("PCKTCTRL2") & ~0x01) | (variable ? 0x01 : 0x00)));
+    radio_.writeReg(PCKTCTRL2, static_cast<uint8_t>((tableValue(PCKTCTRL2) & ~0x01) | (variable ? 0x01 : 0x00)));
     const uint8_t bytes[2] = {static_cast<uint8_t>(length >> 8), static_cast<uint8_t>(length)};
     radio_.writeRegs(PCKTLEN1, bytes, 2);
 }
@@ -198,7 +204,7 @@ void LinkDriver::writeSynth(int32_t steps) {
     const uint32_t word = static_cast<uint32_t>(static_cast<int32_t>(baseSynth()) + steps);
     const bool wasRx = rxActive_;
     toReady();  // słowo SYNT działa przy następnym przejściu do LOCK
-    const uint8_t bytes[4] = {static_cast<uint8_t>((tableValue("SYNT3") & 0xF0) | ((word >> 24) & 0x0F)),
+    const uint8_t bytes[4] = {static_cast<uint8_t>((tableValue(SYNT3) & 0xF0) | ((word >> 24) & 0x0F)),
                               static_cast<uint8_t>(word >> 16), static_cast<uint8_t>(word >> 8), static_cast<uint8_t>(word)};
     radio_.writeRegs(SYNT3, bytes, 4);
     if (wasRx) rxActive_ = radio_.commandAndWait(CMD_RX, STATE_RX, STATE_TIMEOUT_US);

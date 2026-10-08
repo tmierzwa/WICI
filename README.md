@@ -19,7 +19,7 @@ Projekt jest na etapie **projektu prototypu (wersja 0.5)**. Mamy:
 - specyfikację stacji;
 - model obliczeniowy z testami;
 - projekt płytki nośnej stanowiska deweloperskiego (N1) i rozpoczęty projekt płytki stacji R02;
-- oprogramowanie stacji dla stanowisk A i B, jeszcze bez stosu Reticulum i bez prób na sprzęcie.
+- oprogramowanie stacji dla stanowisk A i B ze stosem Reticulum (bez LXMF), jeszcze bez prób na sprzęcie.
 
 Nie zbudowaliśmy jeszcze stacji ani nie przeprowadziliśmy prób w terenie, więc to jeszcze nie jest urządzenie do użycia.
 

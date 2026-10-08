@@ -23,9 +23,11 @@
 #endif
 
 #include "board.h"
+#include "cmdargs.h"
 #include "console.h"
 #include "fram.h"
 #include "journal.h"
+#include "jsonprint.h"
 #include "measure.h"
 #include "p1_registers.h"
 #include "p1frame.h"
@@ -115,9 +117,11 @@ void ledWrite(int16_t pin, bool on) {
 
 bool pressed(uint8_t pin) { return digitalRead(pin) == LOW; }
 
-const char* boolName(bool value) { return value ? "true" : "false"; }
+using cmdargs::boolName;
 
-uint32_t uptimeS() { return uptimeBaseS + millis() / 1000; }
+// Czas pracy z dziennika plus czas od startu z 64-bitowego licznika platformy: millis() zawija się
+// po około 49 dniach (na nRF52840 po 48,5 dnia, bez przejścia przez 2^32), a zegar stacji nie może się cofnąć.
+uint32_t uptimeS() { return uptimeBaseS + static_cast<uint32_t>(platform::uptimeMs() / 1000); }
 void updateScreen(bool force);
 void setStationName();
 
@@ -150,8 +154,11 @@ usbproto::Protocol protocol(stationStore, host);
 
 // Łącze P1 stanowiska pod interfejsem P1 stosu: datagram z kolejki interfejsu idzie przez
 // Bench (dług ciszy, CCA, odroczenia, fragmentacja); w ciszy radiowej kolejka czeka.
+// Układ odpowiada, tablica P1 zapisana i zweryfikowana, łącze P1 w odbiorze.
+bool p1Listening() { return radiocon::ok() && radiocon::p1Ok() && bench.receiving(); }
+
 struct BenchRadio : rnsnode::Radio {
-    bool ready() override { return radiocon::ok() && radiocon::p1Ok() && bench.receiving() && !bench.busy() && !bench.silence; }
+    bool ready() override { return p1Listening() && !bench.busy() && !bench.silence; }
     bool transmit(const uint8_t* data, size_t length) override { return bench.p1send(data, length) == nullptr; }
     uint32_t debtMs() override { return bench.debtRemainingMs(); }
 };
@@ -163,7 +170,7 @@ rnsannounce::Policy announcePolicy;
 struct BenchServices : station::Services {
     uint32_t uptimeS() override { return ::uptimeS(); }
     bool silence() override { return bench.silence; }
-    bool radioReady() override { return rnsOk && radiocon::ok() && radiocon::p1Ok() && bench.receiving() && rnsnode::online(); }
+    bool radioReady() override { return rnsOk && p1Listening() && rnsnode::online(); }
     bool busy() override { return rnsnode::queueFull(); }
     uint32_t send(const uint8_t to[store::HASH], const uint8_t* data, size_t length, uint32_t timeoutS) override {
         return rnsnode::send(to, data, length, timeoutS);
@@ -179,21 +186,49 @@ BenchServices services;
 station::Station app(stationStore, services);
 console::Console screenHost(stationStore, app, services, &stationJournal);
 bool linkAuto = true;  // LINK 0 zatrzymuje nadawanie z kolejki (próby ręczne P1TX)
+// Zmiana danych ekranu: przerysowanie raz na obieg pętli, także po serii zapisów z USB.
+bool screenDirty = false;
+
+void screenChanged() {
+    screenHost.invalidate();
+    screenDirty = true;
+}
 
 void BenchHost::configChanged() {
     if (rnsOk) rnsnode::setIfac(stationStore.config().ifac);   // configure może zmienić kod IFAC
-    screenHost.invalidate();
-    updateScreen(false);
+    screenChanged();
 }
-void BenchHost::queueChanged() { screenHost.invalidate(); updateScreen(false); }
-void BenchServices::changed() { screenHost.invalidate(); updateScreen(false); }
+void BenchHost::queueChanged() { screenChanged(); }
+void BenchServices::changed() { screenChanged(); }
 
 void onDatagram(const uint8_t* data, size_t length, void*) { if (rnsOk) rnsnode::received(data, length); }
 void onTxDone(bool ok, void*) { rnsnode::txDone(ok); }
 
 bool onPacket(const uint8_t* data, size_t length, void*) { return storeOk && app.received(data, length); }
 void onReceipt(uint32_t handle, bool delivered, void*) { app.receipt(handle, delivered); }
-void onStackLog(const char* text, void*) { bench.log(text); }
+// Wiersze stosu w dzienniku zdarzeń: najwyżej 10 na minutę, żeby powtarzający się błąd stosu
+// nie wypchnął z pierścienia w FRAM zdarzeń obsługi; pominięte są liczone w następnym oknie.
+void onStackLog(const char* text, void*) {
+    constexpr uint32_t WINDOW_MS = 60000;
+    constexpr uint8_t PER_WINDOW = 10;
+    static uint32_t windowMs = 0;
+    static uint8_t count = 0;
+    static uint32_t suppressed = 0;
+    const uint32_t now = millis();
+    if (now - windowMs >= WINDOW_MS) {
+        if (suppressed) {
+            char line[48];
+            snprintf(line, sizeof(line), "rns: %lu log lines suppressed", static_cast<unsigned long>(suppressed));
+            bench.log(line);
+        }
+        windowMs = now;
+        count = 0;
+        suppressed = 0;
+    }
+    if (count >= PER_WINDOW) { ++suppressed; return; }
+    ++count;
+    bench.log(text);
+}
 
 // ZNISZCZ DANE (menu albo destroy przez USB): tożsamość i tablice w FRAM skasowane; stos stoi
 // do restartu, potem nowa tożsamość.
@@ -231,12 +266,27 @@ void radioEvent() {
     if (storeOk) protocol.event(store::NOTE_RADIO, 0, fields, millis());
 }
 
-void BenchHost::setSilence(bool on) {
+// Zmiana ciszy albo trybu przygotowania: wpis w dzienniku ze źródłem i zdarzenie do laptopa.
+void applySilence(bool on, const char* source) {
     if (bench.silence == on) return;
     bench.silence = on;
-    bench.log(on ? "silence on (usb)" : "silence off (usb)");
+    char text[40];
+    snprintf(text, sizeof(text), "silence %s%s", on ? "on" : "off", source);
+    bench.log(text);
     radioEvent();
 }
+
+void applyPrep(bool on, const char* source) {
+    if (!on) bench.stop();  // wyjście z trybu przygotowania przerywa pomiary
+    if (bench.prep == on) return;
+    bench.prep = on;
+    char text[48];
+    snprintf(text, sizeof(text), "preparation mode %s%s", on ? "on" : "off", source);
+    bench.log(text);
+    radioEvent();
+}
+
+void BenchHost::setSilence(bool on) { applySilence(on, " (usb)"); }
 
 #if defined(WICI_BOARD_N1)
 // Panel płytki N1: przełącznik CISZA, przycisk przygotowania, dioda alarmu i brzęczyk.
@@ -267,23 +317,8 @@ void alarmLed(bool on) {
     digitalWrite(board::LED_ALARM, on ? HIGH : LOW);  // dioda alarmu aktywna stanem wysokim
 }
 
-void setSilenceFromSwitch(bool on) {
-    if (bench.silence == on) return;
-    bench.silence = on;
-    bench.log(on ? "silence on (switch)" : "silence off (switch)");
-    radioEvent();
-}
-
 // Przełącznik na stacji ma pierwszeństwo: w położeniu „cisza” polecenie z USB nie wyłącza ciszy.
 bool silenceLocked() { return silenceSwitchState; }
-
-void setPrepFromButton(bool on) {
-    if (!on) bench.stop();
-    bench.prep = on;
-    bench.log(on ? "preparation mode on (button)" : "preparation mode off (button)");
-    beep(100);
-    radioEvent();
-}
 
 void beginPanel() {
     pinMode(board::LED_ALARM, OUTPUT);
@@ -308,14 +343,15 @@ void pollPanel(uint32_t now) {
         silenceSwitchSince = now;
     } else if (level != silenceSwitchState && now - silenceSwitchSince >= SWITCH_SETTLE_MS) {
         silenceSwitchState = level;
-        setSilenceFromSwitch(level);
+        applySilence(level, " (switch)");
     }
     const bool prep = pressed(board::BTN_PREP);
     if (prep && !prepWas) prepPressedSince = now;
     if (!prep) prepToggled = false;
     else if (!prepToggled && now - prepPressedSince >= PREP_HOLD_MS) {
         prepToggled = true;
-        setPrepFromButton(!bench.prep);
+        applyPrep(!bench.prep, " (button)");
+        beep(100);
     }
     prepWas = prep;
     // Dioda świeci do usunięcia przyczyny alarmu (potwierdzenie OK gasi tylko dźwięk) i w ciszy radiowej;
@@ -399,10 +435,7 @@ void printScreen() {
     Serial.printf("{\"screen\":\"%s\",\"lang\":\"%s\",\"lines\":[", ui::screenName(screenModel.screen()), langName(screenModel.language()));
     for (size_t i = 0; i < ui::LINES; ++i) {
         Serial.print('"');
-        for (const char* p = shown.text[i]; *p; ++p) {
-            if (*p == '"' || *p == '\\') Serial.print('\\');
-            Serial.print(*p);
-        }
+        jsonprint::text(Serial, shown.text[i]);
         Serial.printf("\"%s", i + 1 < ui::LINES ? "," : "");
     }
     Serial.print("],\"inverted\":[");
@@ -425,12 +458,14 @@ void BenchHost::stationAddress(uint8_t out[store::HASH]) {
 
 const char* BenchHost::stationName() { return ::stationName; }
 
-// Zapis języka i ekranu w FRAM i w pamięci niezerowanej po każdej zmianie.
+// Język i ekran w pamięci niezerowanej po każdej zmianie (restart programowy, watchdog); w FRAM tylko
+// język przy jego zmianie (po włączeniu zasilania stacja zaczyna od wyboru języka z podpowiedzią).
 void persistScreen() {
     if (!screenModel.takeChange()) return;
     retain();
-    if (journalOk && !stationJournal.writeSettings(static_cast<uint32_t>(screenModel.language()) + 1,
-                                                   static_cast<uint32_t>(screenModel.screen()))) {
+    const uint32_t lang = static_cast<uint32_t>(screenModel.language()) + 1;
+    if (journalOk && stationJournal.settings().a != lang &&
+        !stationJournal.writeSettings(lang, static_cast<uint32_t>(screenModel.screen()))) {
         journalOk = false;
         ledWrite(board::LED_FRAM, false);
     }
@@ -485,9 +520,14 @@ void syncButtons() {
 
 // Liczba z polecenia nasycona do `cap`, żeby rzutowanie ani mnożenie nie zawinęło wartości
 // (np. TXPKT 1 260 dałoby długość 4); wartości ponad limit odrzuca potem kontrola zakresu.
-uint32_t parseArg(const char* text, uint32_t cap) {
-    const unsigned long value = strtoul(text, nullptr, 10);
-    return value > cap ? cap : static_cast<uint32_t>(value);
+// false, gdy tekst nie jest liczbą dziesiętną bez znaku.
+bool parseArg(const char* text, uint32_t cap, uint32_t& out) {
+    if (*text < '0' || *text > '9') return false;
+    char* end = nullptr;
+    const unsigned long value = strtoul(text, &end, 10);
+    if (*end) return false;
+    out = value > cap ? cap : static_cast<uint32_t>(value);
+    return true;
 }
 
 void printError(const char* text) { Serial.printf("{\"error\":\"%s\"}\n", text); }
@@ -495,7 +535,7 @@ void printError(const char* text) { Serial.printf("{\"error\":\"%s\"}\n", text);
 void printFram() {
     const fram::Id id = memory.identify();
     framOk = id.mb85rs4m;
-    ledWrite(board::LED_FRAM, framOk);
+    ledWrite(board::LED_FRAM, framOk && journalOk);  // jak przy starcie: FRAM i działający dziennik
     Serial.printf("{\"fram\":\"MB85RS4MT\",\"id\":\"%02X%02X%02X%02X\",\"status\":\"0x%02X\",\"fujitsu\":%s,\"ok\":%s}\n",
                   id.bytes[0], id.bytes[1], id.bytes[2], id.bytes[3], id.status, boolName(id.fujitsu), boolName(framOk));
 }
@@ -519,7 +559,7 @@ void printInfo() {
     Serial.printf("\"tx_power_dbm\":%d,\"uptime_s\":%lu,\"boot_s\":%lu,\"screen\":\"%s\",\"lang\":\"%s\",\"name\":\"%s\","
                   "\"reset_reason\":\"0x%08lX\",\"store_ok\":%s,\"queued\":%u,\"inbox\":%u,\"pending\":%u,",
                   radiocon::TX_POWER_DBM, static_cast<unsigned long>(uptimeS()),
-                  static_cast<unsigned long>(millis() / 1000), ui::screenName(screenModel.screen()), langName(screenModel.language()),
+                  static_cast<unsigned long>(platform::uptimeMs() / 1000), ui::screenName(screenModel.screen()), langName(screenModel.language()),
                   stationName, static_cast<unsigned long>(platform::resetReason()), boolName(storeOk),
                   static_cast<unsigned>(storeOk ? stationStore.queueLive() : 0), static_cast<unsigned>(storeOk ? stationStore.inboxCount() : 0),
                   static_cast<unsigned>(storeOk ? stationStore.notesPending() : 0));
@@ -541,7 +581,7 @@ void printJournal() {
                   "\"max_debt_ms\":%lu,\"journal_resets\":%lu}\n",
                   static_cast<unsigned long>(bench.debtRemainingMs()), static_cast<unsigned long>(k.seq),
                   static_cast<unsigned long>(uptimeS()), static_cast<unsigned long>(restarts),
-                  static_cast<unsigned long>(stationJournal.eventSeq()), static_cast<unsigned long>(p1::MAX_DEBT_MS),
+                  static_cast<unsigned long>(stationJournal.eventSeq()), static_cast<unsigned long>(measure::MAX_DEBT_MS),
                   static_cast<unsigned long>(journalResets));
 }
 
@@ -560,7 +600,7 @@ void beginJournal() {
     if (stationJournal.debtFresh()) {
         // radio.md, "Dostęp do kanału": bez poprawnego rekordu odczekać największy możliwy dług,
         // założyć nowy dziennik i zliczyć zdarzenie w diagnostyce.
-        debtMs = p1::MAX_DEBT_MS;
+        debtMs = measure::MAX_DEBT_MS;
         journalResets = 1;
         stationJournal.writeDebt(debtMs, uptimeS());
         bench.log("debt journal missing: new journal, max debt");
@@ -591,7 +631,11 @@ void printHelp() {
     Serial.print(radiocon::helpCommands());
     Serial.print(",\"PREP <0|1>\",\"SILENCE <0|1>\",\"TXCW <s> [CONDUCTED]\",\"TXPKT <n> <len> [<ms>] [ZEROS|ONES] [CONDUCTED]\","
                  "\"RX [<len>]\",\"RXPER\",\"FOFF [<hz>]\",\"P1RX\",\"P1TX <hex>\",\"P1\",\"STOP\",\"LOG [<n>]\",\"JOURNAL\",\"BENCH\","
-                 "\"FRAM\",\"BTN\",\"LED <1-4> <0|1>\",\"SCREEN\",\"KEY <UP|DOWN|OK|BACK> [ms]\",\"DISPLAY\","
+                 "\"FRAM\",\"BTN\","
+#if !defined(WICI_BENCH_B)
+                 "\"LED <1-4> <0|1>\","  // stanowisko B nie ma diod stanu
+#endif
+                 "\"SCREEN\",\"KEY <UP|DOWN|OK|BACK> [ms]\",\"DISPLAY\","
                  "\"VCOM <0|1>\",\"REBOOT\",\"STORE\",\"USB <json>\",\"APP\",\"LINK <0|1>\",\"RNS\",\"ANNOUNCE\""
 #if defined(WICI_BOARD_N1)
                  ",\"LED 5 <0|1>\",\"BUZZ [<ms>] [<hz>]\",\"VTEST\",\"DISPLAY <hz>\""
@@ -601,10 +645,15 @@ void printHelp() {
     Serial.println("]}");
 }
 
-// Argumenty po poleceniu: do czterech słów; zwraca liczbę słów.
-size_t splitArgs(char* text, char* words[], size_t max) {
+// Argumenty po poleceniu (najwięcej MAX_ARGS słów: TXPKT ma pięć); zwraca liczbę słów albo
+// MAX_ARGS + 1, gdy słów jest więcej.
+constexpr size_t MAX_ARGS = 5;
+size_t splitArgs(char* text, char* words[]) {
     size_t n = 0;
-    for (char* word = strtok(text, " "); word && n < max; word = strtok(nullptr, " ")) words[n++] = word;
+    for (char* word = strtok(text, " "); word; word = strtok(nullptr, " ")) {
+        if (n == MAX_ARGS) return MAX_ARGS + 1;
+        words[n++] = word;
+    }
     return n;
 }
 
@@ -661,11 +710,11 @@ void printStore() {
     const store::Config& c = stationStore.config();
     char osp[2 * store::HASH + 1];
     store::bytesToHex(c.osp[c.activeOsp ? 1 : 0], osp);
-    // Dwie części poniżej 256 znaków (zob. printRns); adres ma do 64 znaków.
-    Serial.printf("{\"store_ok\":%s,\"configured\":%s,\"config_seq\":%lu,\"role\":\"%s\",\"address\":\"%s\",\"osp\":\"%s\","
-                  "\"phrases\":%u,\"stations\":%u,",
-                  boolName(storeOk), boolName(stationStore.configured()), static_cast<unsigned long>(c.seq),
-                  c.role == store::OSP ? "osp" : "station", c.address, osp, c.phraseCount, c.stations);
+    // Części poniżej 256 znaków (zob. printRns); adres z laptopa z sekwencjami ucieczki.
+    Serial.printf("{\"store_ok\":%s,\"configured\":%s,\"config_seq\":%lu,\"role\":\"%s\",", boolName(storeOk),
+                  boolName(stationStore.configured()), static_cast<unsigned long>(c.seq), c.role == store::OSP ? "osp" : "station");
+    jsonprint::field(Serial, "address", c.address);
+    Serial.printf(",\"osp\":\"%s\",\"phrases\":%u,\"stations\":%u,", osp, c.phraseCount, c.stations);
     Serial.printf("\"queued\":%u,\"inbox\":%u,\"unread\":%u,\"notes_pending\":%u,\"note_latest\":%lu,"
                   "\"usb_synced\":%s,\"usb_stored\":%lu,\"usb_overflow\":%lu,\"usb_resends\":%lu}\n",
                   static_cast<unsigned>(stationStore.queueLive()), static_cast<unsigned>(stationStore.inboxCount()),
@@ -683,60 +732,60 @@ void handle(char* cmd) {
         protocol.handleLine(cmd + 4, millis());
         return;
     }
-    for (char* p = cmd; *p; ++p) *p = toupper(*p);
+    for (char* p = cmd; *p; ++p) *p = static_cast<char>(toupper(static_cast<unsigned char>(*p)));
     char* arg = strchr(cmd, ' ');
     if (arg) *arg++ = '\0';
-    char* words[4];
-    size_t n = arg ? splitArgs(arg, words, 4) : 0;
+    char* words[MAX_ARGS];
+    const size_t n = arg ? splitArgs(arg, words) : 0;
+    if (n > MAX_ARGS) { printError("too many arguments"); return; }
     if (!strcmp(cmd, "INFO")) printInfo();
     else if (radiocon::handle(cmd, words, n)) return;
     else if (platform::handle(cmd, words, n)) return;
     else if (!strcmp(cmd, "PREP") && n == 1) {
         // Na stacji tryb przygotowania włącza przycisk pod plombowaną pokrywą; na stanowisku
         // zastępuje go polecenie potwierdzone przyciskiem OK w ciągu 30 s.
-        const bool on = atoi(words[0]) != 0;
-        if (on && !bench.prep && !bench.confirm()) {
+        bool on = false;
+        if (!cmdargs::parseFlag(words[0], on)) printError("PREP <0|1>");
+        else if (on && !bench.prep && !bench.confirm()) {
             bench.log("PREP not confirmed");
             printError("PREP not confirmed by OK");
         } else {
-            if (!on) bench.stop();
-            if (bench.prep != on) {
-                bench.prep = on;
-                bench.log(on ? "preparation mode on" : "preparation mode off");
-                radioEvent();
-            }
+            applyPrep(on, "");
             Serial.printf("{\"prep\":%s}\n", boolName(bench.prep));
         }
     } else if (!strcmp(cmd, "SILENCE") && n == 1) {
-        const bool on = atoi(words[0]) != 0;  // na stacji: przełącznik CISZA
+        bool on = false;  // na stacji: przełącznik CISZA
+        if (!cmdargs::parseFlag(words[0], on)) { printError("SILENCE <0|1>"); return; }
         if (!on && silenceLocked()) printError("silence switch on");
-        else if (on != bench.silence) {
-            bench.silence = on;
-            bench.log(bench.silence ? "silence on" : "silence off");
-            radioEvent();
-        }
+        else applySilence(on, "");
         Serial.printf("{\"silence\":%s}\n", boolName(bench.silence));
     } else if (!strcmp(cmd, "TXCW")) {
-        const bool conducted = lastIsConducted(words, n);
-        if (n != 1) printError("TXCW <s> [CONDUCTED]");
+        size_t count = n;
+        const bool conducted = lastIsConducted(words, count);
+        uint32_t seconds = 0;
+        if (count != 1 || !parseArg(words[0], 1000, seconds)) printError("TXCW <s> [CONDUCTED]");
         else {
-            const char* error = bench.txcw(parseArg(words[0], 1000), conducted);
+            const char* error = bench.txcw(seconds, conducted);
             if (error) printError(error);
         }
     } else if (!strcmp(cmd, "TXPKT")) {
-        const bool conducted = lastIsConducted(words, n);
+        size_t count = n;
+        const bool conducted = lastIsConducted(words, count);
         testframe::Fill fill = testframe::Fill::PN9;  // ZEROS / ONES: wypełnienie ramek wzorcowych
-        if (n && !strcmp(words[n - 1], "ZEROS")) { fill = testframe::Fill::ZEROS; --n; }
-        else if (n && !strcmp(words[n - 1], "ONES")) { fill = testframe::Fill::ONES; --n; }
-        if (n < 2 || n > 3) printError("TXPKT <n> <len> [<ms>] [ZEROS|ONES] [CONDUCTED]");
-        else {
-            const char* error = bench.txpkt(static_cast<uint16_t>(parseArg(words[0], 0xFFFF)),
-                                            static_cast<uint8_t>(parseArg(words[1], 0xFF)),
-                                            n == 3 ? parseArg(words[2], 3600000) : 0, conducted, fill);
+        if (count && !strcmp(words[count - 1], "ZEROS")) { fill = testframe::Fill::ZEROS; --count; }
+        else if (count && !strcmp(words[count - 1], "ONES")) { fill = testframe::Fill::ONES; --count; }
+        uint32_t frames = 0, length = 0, interval = 0;
+        if (count < 2 || count > 3 || !parseArg(words[0], 0xFFFF, frames) || !parseArg(words[1], 0xFF, length) ||
+            (count == 3 && !parseArg(words[2], 3600000, interval))) {
+            printError("TXPKT <n> <len> [<ms>] [ZEROS|ONES] [CONDUCTED]");
+        } else {
+            const char* error = bench.txpkt(static_cast<uint16_t>(frames), static_cast<uint8_t>(length), interval, conducted, fill);
             if (error) printError(error);
         }
-    } else if (!strcmp(cmd, "RX")) {
-        const uint8_t length = n ? static_cast<uint8_t>(parseArg(words[0], 0xFF)) : p1::MAX_PACKET_BYTES;
+    } else if (!strcmp(cmd, "RX") && n <= 1) {
+        uint32_t value = p1::MAX_PACKET_BYTES;
+        if (n && !parseArg(words[0], 0xFF, value)) { printError("RX [<len>]"); return; }
+        const uint8_t length = static_cast<uint8_t>(value);
         const char* error = bench.rxStart(length);
         if (error) printError(error);
         else Serial.printf("{\"rx\":true,\"len\":%u}\n", length);
@@ -752,10 +801,13 @@ void handle(char* cmd) {
         const size_t hexLength = strlen(words[0]);
         if (hexLength % 2 || hexLength < 2 || hexLength > 2 * p1frame::MAX_DATAGRAM) { printError("P1TX <hex of 1..600 B>"); return; }
         for (size_t i = 0; i < hexLength / 2; ++i) {
-            char pair[3] = {words[0][2 * i], words[0][2 * i + 1], '\0'};
-            char* end = nullptr;
-            data[i] = static_cast<uint8_t>(strtoul(pair, &end, 16));
-            if (*end) { printError("P1TX: not hex"); return; }
+            const char pair[3] = {words[0][2 * i], words[0][2 * i + 1], '\0'};
+            uint32_t value = 0;
+            if (!isxdigit(static_cast<unsigned char>(pair[0])) || !cmdargs::parseUint(pair, 0, 0xFF, value, 16)) {
+                printError("P1TX: not hex");
+                return;
+            }
+            data[i] = static_cast<uint8_t>(value);
         }
         const char* error = bench.p1send(data, hexLength / 2);
         if (error) printError(error);
@@ -764,7 +816,9 @@ void handle(char* cmd) {
     } else if (!strcmp(cmd, "P1")) bench.printLink();
     else if (!strcmp(cmd, "FOFF")) {
         if (n == 1) {
-            const char* error = bench.foff(strtol(words[0], nullptr, 10));
+            int32_t hz = 0;
+            if (!cmdargs::parseInt(words[0], -2000000, 2000000, hz)) { printError("FOFF [<hz>]"); return; }
+            const char* error = bench.foff(hz);
             if (error) { printError(error); return; }
         }
         bench.printFoff();
@@ -773,24 +827,27 @@ void handle(char* cmd) {
         Serial.println("{\"stop\":true}");
         radiocon::printState();
     } else if (!strcmp(cmd, "LOG")) {
-        const uint32_t count = n ? strtoul(words[0], nullptr, 10) : 16;
-        bench.printLog(count > 64 ? 64 : count);
+        uint32_t count = 16;
+        if (n && !cmdargs::parseUint(words[0], 1, 64, count)) { printError("LOG [<1-64>]"); return; }
+        bench.printLog(count);
     } else if (!strcmp(cmd, "JOURNAL")) printJournal();
     else if (!strcmp(cmd, "BENCH")) bench.printStatus();
     else if (!strcmp(cmd, "FRAM")) printFram();
     else if (!strcmp(cmd, "BTN")) printButtons();
     else if (!strcmp(cmd, "LED") && n == 2) {
-        const int index = atoi(words[0]);
+        uint32_t index = 0;
+        bool on = false;
+        const bool valid = cmdargs::parseUint(words[0], 1, 5, index) && cmdargs::parseFlag(words[1], on);
 #if defined(WICI_BOARD_N1)
-        if (index == 5) {  // dioda alarmu N1; obowiązuje do następnej zmiany stanu alarmu albo ciszy
-            alarmLed(atoi(words[1]) != 0);
+        if (valid && index == 5) {  // dioda alarmu N1; obowiązuje do następnej zmiany stanu alarmu albo ciszy
+            alarmLed(on);
             Serial.printf("{\"led\":5,\"on\":%s}\n", boolName(alarmLedOn));
             return;
         }
 #endif
-        if (index >= 1 && index <= 4 && leds[index - 1] >= 0) {
-            ledWrite(leds[index - 1], atoi(words[1]) != 0);
-            Serial.printf("{\"led\":%d,\"on\":%s}\n", index, boolName(atoi(words[1]) != 0));
+        if (valid && index <= 4 && leds[index - 1] >= 0) {
+            ledWrite(leds[index - 1], on);
+            Serial.printf("{\"led\":%lu,\"on\":%s}\n", static_cast<unsigned long>(index), boolName(on));
         } else printError(leds[0] >= 0 ? "LED <1-4> <0|1>" : "LED 5 <0|1>");
     } else if (!strcmp(cmd, "SCREEN")) printScreen();
     else if (!strcmp(cmd, "KEY") && (n == 1 || n == 2)) {
@@ -801,7 +858,8 @@ void handle(char* cmd) {
         while (index < 4 && strcmp(words[0], names[index])) ++index;
         if (index == 4) { printError("KEY <UP|DOWN|OK|BACK> [ms]"); return; }
         const uint32_t now = millis();
-        const uint32_t held = n == 2 ? static_cast<uint32_t>(atoi(words[1])) : 0;
+        uint32_t held = 0;
+        if (n == 2 && !cmdargs::parseUint(words[1], 0, 60000, held)) { printError("KEY <UP|DOWN|OK|BACK> [<0-60000 ms>]"); return; }
         screenModel.down(static_cast<ui::Button>(index), now - held);
         if (held) screenModel.tick(now);
         screenModel.up(static_cast<ui::Button>(index), now);
@@ -812,15 +870,17 @@ void handle(char* cmd) {
 #if defined(WICI_BOARD_N1)
     else if (!strcmp(cmd, "DISPLAY") && n == 1) {
         // Zegar SPI ekranu do prób z analizatorem na J11; do restartu. Odpowiedź po pełnym przerysowaniu.
-        const uint32_t hz = strtoul(words[0], nullptr, 10);
-        if (hz < 125000 || hz > sharp::SPI_HZ) { printError("DISPLAY <125000..2000000>"); return; }
+        uint32_t hz = 0;
+        if (!cmdargs::parseUint(words[0], 125000, sharp::SPI_HZ, hz)) { printError("DISPLAY <125000..2000000>"); return; }
         display.spiHz(hz);
         updateScreen(true);
         printDisplay();
     } else if (!strcmp(cmd, "BUZZ") && n <= 2) {
-        const uint32_t ms = n >= 1 ? strtoul(words[0], nullptr, 10) : 500;
-        const uint32_t hz = n == 2 ? strtoul(words[1], nullptr, 10) : board::BUZZER_HZ;
-        if (ms > 5000 || hz < 100 || hz > 10000) { printError("BUZZ [<0..5000 ms>] [<100..10000 Hz>]"); return; }
+        uint32_t ms = 500, hz = board::BUZZER_HZ;
+        if ((n >= 1 && !cmdargs::parseUint(words[0], 0, 5000, ms)) || (n == 2 && !cmdargs::parseUint(words[1], 100, 10000, hz))) {
+            printError("BUZZ [<0..5000 ms>] [<100..10000 Hz>]");
+            return;
+        }
         if (ms) tone(board::BUZZER, hz, ms);
         else noTone(board::BUZZER);
         Serial.printf("{\"buzz_ms\":%lu,\"hz\":%lu}\n", static_cast<unsigned long>(ms), static_cast<unsigned long>(hz));
@@ -829,7 +889,10 @@ void handle(char* cmd) {
     else if (!strcmp(cmd, "DISPLAY")) printDisplay();
     else if (!strcmp(cmd, "STORE")) printStore();
     else if (!strcmp(cmd, "APP")) printApp();
-    else if (!strcmp(cmd, "LINK") && n == 1) { linkAuto = atoi(words[0]) != 0; printApp(); }
+    else if (!strcmp(cmd, "LINK") && n == 1) {
+        if (!cmdargs::parseFlag(words[0], linkAuto)) printError("LINK <0|1>");
+        else printApp();
+    }
     else if (!strcmp(cmd, "RNS")) printRns();
     else if (!strcmp(cmd, "ANNOUNCE")) {
         // Ogłoszenie na polecenie: wychodzi przy najbliższym obiegu, poza ciszą radiową i z kodem IFAC.
@@ -837,7 +900,9 @@ void handle(char* cmd) {
         else printRns();
     }
     else if (!strcmp(cmd, "VCOM") && n == 1) {
-        display.softwareVcom(atoi(words[0]) != 0);  // zapasowo, gdy zworka EXTMODE płytki jest niska
+        bool on = false;
+        if (!cmdargs::parseFlag(words[0], on)) { printError("VCOM <0|1>"); return; }
+        display.softwareVcom(on);  // zapasowo, gdy zworka EXTMODE płytki jest niska
         printDisplay();
     } else if (!strcmp(cmd, "REBOOT")) {
         // Restart programowy: pamięć niezerowana zostaje, więc ekran i język wracają (jak po watchdogu).
@@ -849,21 +914,26 @@ void handle(char* cmd) {
     } else if (!strcmp(cmd, "HELP") || !*cmd) printHelp();
     else {
         // Słowo polecenia ma do 1399 znaków (bufor wiersza): przez print, nie przez Print::printf (zob. printRns).
-        Serial.print("{\"error\":\"unknown\",\"cmd\":\"");
-        Serial.print(cmd);
-        Serial.print("\"}\n");
+        Serial.print("{\"error\":\"unknown\",");
+        jsonprint::field(Serial, "cmd", cmd);
+        Serial.print("}\n");
     }
 }
 
 void pollSerial() {
+    static bool overflow = false;  // wiersz dłuższy niż bufor: odrzucony w całości, nie wykonany ucięty
     while (Serial.available()) {
         const char c = static_cast<char>(Serial.read());
         if (c == '\n' || c == '\r') {
             line[lineLength] = '\0';
-            if (lineLength) { handle(line); syncButtons(); }
+            if (overflow) printError("line too long");
+            else if (lineLength) { handle(line); syncButtons(); }
             lineLength = 0;
+            overflow = false;
         } else if (lineLength < sizeof(line) - 1) {
             line[lineLength++] = c;
+        } else {
+            overflow = true;
         }
     }
 }
@@ -954,6 +1024,7 @@ void stationLoop() {
     static bool radioLed = false;
     const uint32_t now = millis();
     platform::feedWatchdog();
+    platform::uptimeMs();  // licznik 64-bitowy liczy przejścia przez zero przy każdym obiegu
     if (now - lastBeat >= 500) {
         lastBeat = now;
         beat = !beat;
@@ -983,7 +1054,7 @@ void stationLoop() {
             ledWrite(board::LED_FRAM, false);
         }
     }
-    bench.p1Ready = radiocon::ok() && radiocon::p1Ok();
+    bench.p1Ready = radioReady;
     if (radiocon::ok()) bench.poll();
     if (rnsOk) {
         rnsnode::loop(now);
@@ -1002,17 +1073,19 @@ void stationLoop() {
     screenModel.tick(now);
     persistScreen();
     static uint32_t lastScreen = 0;
-    if (now - lastScreen >= SCREEN_POLL_MS) {
+    if (screenDirty || now - lastScreen >= SCREEN_POLL_MS) {
+        screenDirty = false;
         lastScreen = now;
         updateScreen(false);
     }
     display.maintain(now);
-    // Interfejs danych: otwarcie portu wysyła sync, zamknięcie odrzuca niepełny wiersz.
+    // Interfejs danych: otwarcie portu wysyła sync, zamknięcie odrzuca niepełny wiersz. Bez magazynu
+    // protokół też odpowiada (zapis kończy się odmową "memory"), żeby laptop nie czekał bez odpowiedzi.
     const bool dataOpen = SerialData;
     if (dataOpen && !dataWas) protocol.connected(now);
     else if (!dataOpen && dataWas) protocol.disconnected();
     dataWas = dataOpen;
-    if (dataOpen && storeOk) {
+    if (dataOpen) {
         char chunk[64];
         while (SerialData.available()) {
             size_t n = 0;
@@ -1036,6 +1109,7 @@ void stationTask() {
         stationSetup();
     }
     stationLoop();
+    delay(1);  // jak na ESP32: zadanie bezczynności (tryb uśpienia FreeRTOS) dostaje rdzeń, obieg co około 1 ms
 }
 
 void setup() {

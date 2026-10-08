@@ -13,11 +13,11 @@ Projekt jest prototypem. Zmiany mają upraszczać wykonanie, usuwać zależnoś�
 
 ## Od czego zacząć
 
-Oprogramowanie stacji w [firmware/](firmware/README.md) działa na stanowiskach A i B (bez microReticulum, jeszcze nie uruchomione na sprzęcie), a płytki R02 jeszcze nie ma. Zadania, które można wykonać teraz:
+Oprogramowanie stacji w [firmware/](firmware/README.md) działa na stanowiskach A i B (ze stosem Reticulum z portu microReticulum, bez LXMF; jeszcze nie uruchomione na sprzęcie), a płytki R02 jeszcze nie ma. Zadania, które można wykonać teraz:
 
 1. Zmontować płytkę nośną N1, uruchomić obraz `bench-n1` albo `bench-b` według [uruchomienia](hardware/dev-bench/uruchomienie.md) i zgłosić raport z kroków A1–A5 albo B1–B4. Kod oprogramowania układowego trafia do `firmware/` (licencja MIT); ramka P1 jest już w `firmware/src/p1frame.cpp`.
-2. Uruchomić microReticulum na płytkach rozwojowych nRF52840 i ESP32-S3 i wymienić pakiety z implementacją Reticulum w Pythonie. To pierwsza część T3; w raporcie podaj przypięte commity i zapas RAM.
-3. Opisać i zbudować emulator ograniczeń P1: czas TX, dług ciszy 12×, CCA i kolejka do 4 datagramów ([radio.md](docs/spec/radio.md)).
+2. Uruchomić obraz ze stosem na płytkach rozwojowych nRF52840 i ESP32-S3 i wymienić pakiety z implementacją Reticulum w Pythonie przez łącze P1; na komputerze ta wymiana już przechodzi z emulatorem łącza ([próba zgodności](firmware/README.md#próba-zgodności-z-reticulum)). To pierwsza część T3; w raporcie podaj zapas RAM zmierzony poleceniem `RNS` i listę prób na sprzęcie z tej sekcji.
+3. Rozszerzyć emulator łącza P1 programu `host` (`firmware/src/host/node_host.cpp`: czas TX z modelu ramki, dług ciszy 12×; kolejka do 4 datagramów jest w interfejsie P1) o CCA, odroczenia i kolizje między kilkoma węzłami ([radio.md](docs/spec/radio.md)).
 4. Dodać do modelu protokół USB laptop–stacja (D17) i dziennik FRAM z długiem ciszy.
 5. Zbudować [stanowisko deweloperskie](hardware/dev-bench/README.md) A lub B z kupnych płytek i wykonać na nim pierwsze pomiary P1 poleceniami pomiarowymi z [radio.md](docs/spec/radio.md); wynik jest wejściem do projektu płytki [R02](hardware/r02/README.md).
 

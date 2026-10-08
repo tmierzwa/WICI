@@ -170,6 +170,8 @@ bool Radio::calibrate(uint32_t timeoutMs) {
     writeReg(FS_CAL2, static_cast<uint8_t>(originalFsCal2 + VCDAC_START_OFFSET));
     strobe(SCAL);
     if (!waitMarcState(MARC_STATE_IDLE, timeoutMs)) {
+        idle();
+        writeReg(FS_CAL2, originalFsCal2);  // FS_CAL2 nie jest w tablicy P1: CONFIG by go nie przywrócił
         return false;
     }
     // 4) Wynik dla wyższego VCDAC_START.
@@ -182,6 +184,7 @@ bool Radio::calibrate(uint32_t timeoutMs) {
     writeReg(FS_CAL2, originalFsCal2);
     strobe(SCAL);
     if (!waitMarcState(MARC_STATE_IDLE, timeoutMs)) {
+        idle();
         return false;
     }
     // 8) Wynik dla pierwotnego VCDAC_START.

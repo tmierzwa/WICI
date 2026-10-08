@@ -17,7 +17,7 @@ namespace board {
 constexpr const char* NAME = "N1";
 
 // SPI na D3/D11/D12, nie na D13 domyślnego SPI wariantu (D13 to na N1 przełącznik CISZA).
-// Własna instancja SPIClass na SPIM2 (main.cpp); SPIClass::begin() rdzenia ustawia napęd H0H1
+// Własna instancja SPIClass na SPIM2 (platform_nrf.cpp); SPIClass::begin() rdzenia ustawia napęd H0H1
 // na SCK i MOSI. P1.04 i P1.13 Nordic zaleca tylko do sygnałów
 // wolnozmiennych ("low frequency I/O only"), żeby nie zakłócać radia 2,4 GHz; stanowisko go nie
 // używa, więc ograniczenie nie dotyczy działania, a zegar zostaje przy 1 MHz.

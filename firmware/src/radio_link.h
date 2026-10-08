@@ -50,7 +50,6 @@ class Driver {
 public:
     virtual ~Driver() = default;
 
-    virtual const char* name() const = 0;     // "CC1120", "S2LP"
     virtual const char* stateName() = 0;      // stan układu do odpowiedzi poleceń
     virtual void idle() = 0;                  // przerwanie TX i RX, stan spoczynku, kolejki opróżnione
 

@@ -29,7 +29,6 @@ constexpr uint32_t FAILED_LATE_INTERVAL_S = 3600;
 // Treść pakietu okazjonalnego do celu SINGLE przy MTU 500 (Packet.ENCRYPTED_MDU w Reticulum);
 // koperta z treścią SA1 do 256 B mieści się z zapasem.
 constexpr size_t PACKET_MAX = 383;
-constexpr uint8_t MAX_INFLIGHT = 1;
 constexpr uint32_t TEST_WINDOW_S = 900;             // TEST startowy bez liczby stacji: okno 15 min
 constexpr uint32_t TEST_WINDOW_PER_STATION_S = 50;  // 50 s x liczba stacji z configure
 constexpr uint32_t TEST_ALARM_S = 1800;             // brak_potwierdzenia dla TEST: 30 min od nadania
@@ -116,6 +115,8 @@ public:
     // Przyczyna alarmu trwa (dioda alarmu): potwierdzenie OK gasi dźwięk, nie diodę.
     bool alarmCause(uint32_t nowS) const { Alarm a; return alarm(nowS, a, true); }
     void ackAlarm(const Alarm& alarm);
+    // Po ODBIORCA ZAPASOWY: niepotwierdzone intencje do nadania od razu, już do tożsamości zapasowej.
+    void backupSwitched();
 
 private:
     bool buildDatagram(const store::QueueRecord& record, char* out, size_t size, size_t& length);
@@ -125,7 +126,8 @@ private:
     int priority(const store::QueueEntry& e) const;
     bool trustedSource(const uint8_t from[store::HASH]) const;
     Create putIntent(sa1::Message& m, uint8_t type, const uint8_t id[store::HASH], uint32_t delayS, uint32_t& seq);
-    bool alarmAcked(size_t slot, AlarmKind kind) const;
+    bool alarmAcked(size_t slot, const store::QueueEntry& e, AlarmKind kind) const;
+    const uint8_t* recipient(const store::QueueRecord& r) const;
 
     store::Store& store_;
     Services& services_;
@@ -135,7 +137,10 @@ private:
     uint32_t inFlightSentS_ = 0;
     uint16_t refusals_ = 0;          // kolejne odmowy stosu (odstęp następnej próby)
     bool testPaused_ = false;
-    uint8_t alarmAcked_[store::QUEUE_SLOTS] = {};  // bit 0: brak potwierdzenia, bit 1: brak odczytu
+    // Potwierdzone alarmy według slotu kolejki: bit 0 brak potwierdzenia, bit 1 brak odczytu, ważne
+    // tylko dla intencji o tym numerze (młodsze 16 bitów), bo zakończony slot dostaje nową intencję.
+    uint8_t alarmAcked_[store::QUEUE_SLOTS] = {};
+    uint16_t alarmAckedSeq_[store::QUEUE_SLOTS] = {};
 };
 
 }  // namespace station

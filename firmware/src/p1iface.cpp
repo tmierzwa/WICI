@@ -18,6 +18,10 @@ uint32_t airtimeMs(size_t length) {
     return total;
 }
 
+uint32_t reservedDebtMs(size_t length) {
+    return p1frame::fragmentCount(length) * airtimeMs(p1frame::CHUNK) * DEBT_FACTOR;
+}
+
 uint32_t declaredBitrate() {
     return p1frame::MAX_DATAGRAM * 8 * 1000 / (airtimeMs(p1frame::MAX_DATAGRAM) * (1 + DEBT_FACTOR));
 }
@@ -35,6 +39,12 @@ Kind classify(const uint8_t* raw, size_t length) {
 const uint8_t* destination(const uint8_t* raw, size_t length) {
     const size_t at = (raw[0] & 0x40) ? 2 + 16 : 2;
     return length >= at + 16 ? raw + at : nullptr;
+}
+
+bool pathResponse(const uint8_t* raw, size_t length) {
+    constexpr uint8_t PATH_RESPONSE = 0x0B;
+    const size_t at = (raw[0] & 0x40) ? 2 + 16 + 16 : 2 + 16;
+    return length > at && (raw[0] & 0x03) == 0x01 && raw[at] == PATH_RESPONSE;
 }
 
 const char* admitName(Admit admit) {
@@ -162,7 +172,7 @@ void Queue::finish(bool sent) {
 uint32_t Queue::waitMs(uint32_t debtMs) const {
     uint32_t total = debtMs;
     for (const Slot& s : slots_)
-        if (s.used) total += airtimeMs(s.length) * (1 + DEBT_FACTOR);
+        if (s.used) total += airtimeMs(s.length) + reservedDebtMs(s.length);
     return total;
 }
 

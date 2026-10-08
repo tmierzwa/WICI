@@ -327,7 +327,7 @@ struct TestHost : usbproto::Host {
 // Protokół USB sterowany z wejścia: "> <json>" wiersz od laptopa, "E <kind> <pola>" zdarzenie stacji,
 // "T <ms>" poll, "C <ms>" połączenie, "D" rozłączenie, "P <0|1>" tryb przygotowania, "K <0|1>" potwierdzenie,
 // "W <0|1>" przełącznik CISZA, "U <s>" czas pracy, "R" restart stacji (ta sama pamięć), "Z <adres> <bajt>" uszkodzenie bajtu FRAM,
-// "S" stan magazynu, "Q <seq>" rekord kolejki.
+// "S" stan magazynu, "Q <seq>" rekord kolejki, "X <seq> <flagi>" zapis stanu intencji.
 int usbScript() {
     RamStorage ram;
     TestHost host;
@@ -355,6 +355,7 @@ int usbScript() {
             proto = new usbproto::Protocol(*store, host); proto->begin();
         } else if (sscanf(line, "Z %u %u", &a, &b) == 2) ram.bytes[a] = static_cast<uint8_t>(b);
         else if (line[0] == 'S') printf("store live %zu inbox %zu pending %zu latest %u configured %d address %s\n", store->queueLive(), store->inboxCount(), store->notesPending(), store->noteLatest(), store->configured(), store->config().address);
+        else if (sscanf(line, "X %u %u", &a, &b) == 2) { store::QueueRecord r; printf("update %d\n", store->queueRead(a, r) && (r.flags = static_cast<uint8_t>(b), store->queueUpdate(r))); }
         else if (sscanf(line, "Q %u", &a) == 1) { store::QueueRecord r; if (store->queueRead(a, r)) printf("queue %u flags %u attempts %u %s\n", r.seq, r.flags, r.attempts, r.sa1); else printf("queue none\n"); }
     }
     delete proto; delete store;
@@ -844,7 +845,9 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual(phrase[0], "phrase")
         self.assertEqual(self.lines(phrase)[:2], ["-", data["phrases"][0][0]])
         self.assertEqual(summary[0], "summary")
-        self.assertEqual(self.lines(summary)[:3], [data["categories"][2][0], "5 " + texts["pilnosc_1"][0][:18], data["phrases"][0][0]])
+        # Pilność słownie łamana na wiersze, nie obcinana do 20 znaków.
+        self.assertEqual(self.lines(summary)[:4], [data["categories"][2][0], "5 PILNE – KILKA", "GODZIN", data["phrases"][0][0]])
+        self.assertEqual(" ".join(self.lines(summary)[1:3]), "5 " + texts["pilnosc_1"][0])
         self.assertEqual(result[0], "result")
         self.assertEqual(" ".join(self.lines(result)).strip(),
                          texts["zapisane_w_stacji"][0] + " " + texts["zapisz_numer"][0].replace("[xxxx]", "2594"))
@@ -907,7 +910,7 @@ class HostUnitTests(unittest.TestCase):
         self.assertTrue(own.startswith(texts["stan_1"][0]))
         self.assertIn(data["categories"][2][0], own)
         self.assertEqual(self.lines(s[5]), [labels["zmien_liczbe_osob"][0], labels["zmien_pilnosc"][0], labels["potrzeba_ustala"][0], "", ""])
-        self.assertEqual(self.lines(s[6])[2], data["phrases"][10][0])  # POTRZEBA USTAŁA: fraza w podsumowaniu
+        self.assertIn(data["phrases"][10][0], self.lines(s[6]))  # POTRZEBA USTAŁA: fraza w podsumowaniu
         self.assertIn("log request 2594 revision 1", out)
         revised = [1, 0, self.REQUEST_ID, 1, 2, 5, "Szkoła, wejście B", "potrzeba ustała", 1]
         self.assertIn("intent 2 type 0 rev 1 flags 1 attempts 0 next 0 state 0 number 2594 sa1 " + self.wire(revised), out)
@@ -975,7 +978,9 @@ class HostUnitTests(unittest.TestCase):
     def test_services_backup_and_destroy_sequences(self):
         labels = {name.lower(): strings for name, strings in ui_texts.load()["labels"].items()}
         texts = ui_texts.load()["texts"]
-        to_services = ["K OK 0", "K DOWN 0", "K DOWN 0", "K DOWN 0", "K OK 0"] + ["K DOWN 0"] * 14 + ["R", "K OK 0", "R"]
+        # Zgłoszenie zapisane przed przełączeniem (do tożsamości głównej, bez nadania).
+        before = ["K OK 0", "K OK 0", "K OK 0", "K OK 0", "K DOWN 0", "K OK 0", "K OK 0", "K OK 0", "K OK 0", "K OK 0"]
+        to_services = before + ["K OK 0", "K DOWN 0", "K DOWN 0", "K DOWN 0", "K OK 0"] + ["K DOWN 0"] * 14 + ["R", "K OK 0", "R"]
         # Po przełączeniu: zgłoszenie W CIĄGU DOBY bez frazy, nadane do zapasowej tożsamości; potem ZNISZCZ DANE.
         script = to_services + ["K OK 0", "R", "K UP 0", "K DOWN 0", "K UP 0", "K OK 0", "R", "K BACK 0", "K UP 0", "K UP 0", "K UP 0",
                                 "K OK 0", "K OK 0", "K OK 0", "K UP 0", "K OK 0", "K OK 0", "K OK 0", "K OK 0", "E 1", "J", "K OK 0",
@@ -990,8 +995,12 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual(self.lines(s[1])[:2], [labels["odbiorca_zapasowy"][0], labels["zniszcz_dane"][0]])
         self.assertEqual(" ".join(self.lines(s[2])).strip(), texts["odbiorca_zapasowy"][0])
         self.assertIn("log switched to backup recipient", out)
-        # Nowe zgłoszenie idzie do zapasowej tożsamości OSP (0xDD..).
-        self.assertTrue(any(line.startswith('-> ["WICI",1,"abab') and '"dddddddddddddddddddddddddddddddd"' in line for line in out))
+        # Zgłoszenie zapisane przed przełączeniem (jedno w locie naraz) idzie do zapasowej tożsamości OSP (0xDD..),
+        # nigdy do głównej.
+        sent = [line for line in out if line.startswith('-> ["WICI",1,"abab')]
+        self.assertTrue(sent)
+        self.assertTrue(all('"dddddddddddddddddddddddddddddddd"' in line for line in sent), sent)
+        self.assertIn("Szkoła, wejście B", sent[0])
         self.assertEqual(" ".join(self.lines(s[4])).strip(), texts["zniszcz_ostrzezenie"][0])
         self.assertEqual(s[5][0], "destroy")  # zła sekwencja: nic się nie dzieje
         self.assertIn("log data destroyed", out)
@@ -1002,14 +1011,17 @@ class HostUnitTests(unittest.TestCase):
         data = ui_texts.load()
         texts = data["texts"]
         long_pl = texts["pilnosc_2_potw"][0]
-        out = self.ui([f"W {long_pl}", "D 5940", "D 6000", "D 172799", "D 172800", "D 9000000", "W " + "A" * 45])
+        out = self.ui([f"W {long_pl}", "D 5940", "D 6000", "D 172799", "D 172800", "D 9000000", "W " + "A" * 45,
+                       "W " + "\U0001F600" * 25])
         count = int(out[0].split()[1])
         lines = [row[1:] for row in out[1:1 + count]]
         self.assertEqual(" ".join(lines), long_pl)
         self.assertTrue(all(len(line) <= 20 for line in lines), lines)
         self.assertEqual(out[1 + count:1 + count + 5], ["99 MIN|99 ХВ|99 MIN", "1 H|1 ГОД|1 H", "47 H|47 ГОД|47 H",
                                                        "2 D|2 Д|2 D", "99 D|99 Д|99 D"])
-        self.assertEqual(out[1 + count + 5:], ["wrap 3", "|" + "A" * 20, "|" + "A" * 20, "|" + "A" * 5])
+        self.assertEqual(out[1 + count + 5:1 + count + 9], ["wrap 3", "|" + "A" * 20, "|" + "A" * 20, "|" + "A" * 5])
+        # Znaki 4-bajtowe (spoza BMP, np. z komunikatu przez radio): 20 znaków = 80 B mieści się w wierszu.
+        self.assertEqual(out[1 + count + 9:1 + count + 12], ["wrap 2", "|" + "\U0001F600" * 20, "|" + "\U0001F600" * 5])
         # Każdy znak każdego tekstu kanonicznego ma glif w foncie.
         every = "".join(sorted(ui_texts.charset(data)))
         self.assertEqual(self.ui([f"G {every}"]), [f"glyphs {len(every)} 0"])
@@ -1162,7 +1174,27 @@ class HostUnitTests(unittest.TestCase):
                          ["not confirmed", "preparation mode required", "preparation mode required", "unsupported", "not json", "contract", "seq"])
         self.assertEqual(r[10]["silence"], True)
         self.assertIn("log usb silence not confirmed", out)
-        self.assertIn("store live 0 inbox 0 pending 0 latest 0 configured 0 address ", out)
+        self.assertIn("store live 0 inbox 0 pending 0 latest 2 configured 0 address ", out)  # numeracja rośnie dalej
+
+    def test_close_keeps_record_numbers_after_restart(self):
+        # ZAMKNIJ ZDARZENIE nie cofa numerów: nowe zdarzenie ma numer większy od kursora laptopa także po restarcie.
+        out = self.usb(["C 0", '> {"usb":1,"seq":1,"type":"sync","boot":"b","cursor":0}', 'E 2 "kind":"radio","silence":true',
+                        'E 2 "kind":"radio","silence":false', '> {"usb":1,"seq":2,"type":"ack","cursor":2}',
+                        '> {"usb":1,"seq":3,"type":"close"}', "R", "S", "C 0", '> {"usb":1,"seq":4,"type":"sync","boot":"b","cursor":2}',
+                        'E 2 "kind":"radio","silence":true', "S"])
+        self.assertIn("begin 1", out)
+        self.assertIn("store live 0 inbox 0 pending 0 latest 2 configured 0 address ", out)
+        events = [x for x in self.replies(out) if x["type"] == "event"]
+        self.assertEqual(events[-1]["record"], 3)
+        self.assertIn("store live 0 inbox 0 pending 1 latest 3 configured 0 address ", out)
+
+    def test_torn_state_write_keeps_previous_state(self):
+        # Stan intencji ma dwie kopie: uszkodzony zapis nowej kopii zostawia poprzedni stan, nie „aktywna od nowa”.
+        slot_a = 0x10000 + 448
+        out = self.usb(["C 0", self.submit(1, [1, 0, "%032x" % 1, 0, 1, 1, "a", "", 0]), "X 1 8", "X 1 2",
+                        "Z %d 0" % (slot_a + 21 + 2), "R", "Q 1"])
+        self.assertEqual(out.count("update 1"), 2)
+        self.assertTrue(any(line.startswith("queue 1 flags 8 attempts 0 ") for line in out))
 
     def test_usb_silence_switch_has_priority(self):
         # Przełącznik CISZA ma pierwszeństwo przed panelem: laptop nie wyłącza ciszy ustawionej przełącznikiem.

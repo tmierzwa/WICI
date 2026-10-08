@@ -59,7 +59,8 @@ public:
     explicit Fs(journal::Storage& storage) : storage_(storage) {}
 
     bool mount();    // czyta nagłówek i węzły; formatuje nową albo uszkodzoną pamięć
-    bool format();
+    // scrub: także bloki danych zerowane (ZNISZCZ DANE); bez niego tylko węzły i tablica przydziału.
+    bool format(bool scrub = false);
     bool mounted() const { return mounted_; }
 
     // Węzły: numer 0..INODES-1 albo -1. Ścieżki "./a/b", "/a/b" i "a/b" są tą samą nazwą.

@@ -7,6 +7,7 @@
 #include "radio_console.h"
 
 #include "board.h"
+#include "cmdargs.h"
 #include "platform.h"
 #include "s2lp.h"
 #include "s2lp_link.h"
@@ -25,9 +26,10 @@ s2lp::LinkDriver driver(chip);
 measure::Bench* bench = nullptr;
 bool radioOk = false;
 bool configured = false;  // tablica P1 zapisana i zweryfikowana odczytem
+bool modified = false;    // rejestr zmieniony poleceniem REGW (tylko w trybie przygotowania; CONFIG cofa)
 const uint8_t radioGpios[] = {board::RADIO_GPIO0, board::RADIO_GPIO1, board::RADIO_GPIO2, board::RADIO_GPIO3};
 
-const char* boolName(bool value) { return value ? "true" : "false"; }
+using cmdargs::boolName;
 
 void identify() { radioOk = chip.identify().s2lp; }
 
@@ -60,6 +62,7 @@ s2lp::VerifyResult configureP1() {
     bench->stop();
     const s2lp::VerifyResult result = chip.configure(p1s2::REGISTERS, p1s2::REGISTER_COUNT);
     configured = result.mismatches == 0;
+    modified = false;
     bench->applyOffset();
     return result;
 }
@@ -103,7 +106,8 @@ void start() {
 }
 
 bool ok() { return radioOk; }
-bool p1Ok() { return configured; }
+// Rejestry zmienione przez REGW: P1 tylko w trybie przygotowania (próby w eterze), poza nim do CONFIG.
+bool p1Ok() { return configured && (!modified || bench->prep); }
 
 void report() {
     printRadio();
@@ -130,7 +134,9 @@ bool handle(const char* cmd, char* words[], size_t n) {
         printRadio();
     } else if (!strcmp(cmd, "SDN") && n == 1) {
         bench->stop();
-        chip.shutdown(atoi(words[0]) != 0);  // wyłączenie kasuje rejestry
+        bool off = false;
+        if (!cmdargs::parseFlag(words[0], off)) { Serial.println("{\"error\":\"SDN <0|1>\"}"); return true; }
+        chip.shutdown(off);  // wyłączenie kasuje rejestry
         configured = false;
         Serial.printf("{\"sdn\":%s}\n", boolName(chip.isShutdown()));
     } else if (!strcmp(cmd, "CONFIG")) printVerify("config", configureP1());
@@ -143,10 +149,11 @@ bool handle(const char* cmd, char* words[], size_t n) {
     } else if (!strcmp(cmd, "RSSI")) printRssi();
     else if (!strcmp(cmd, "STATE")) printState();
     else if (!strcmp(cmd, "REG") && n == 1) {
-        const uint8_t address = static_cast<uint8_t>(strtoul(words[0], nullptr, 16));
-        const uint8_t value = chip.readReg(address);
+        uint32_t address = 0;  // 0xFF to kolejka FIFO: odczyt zabrałby bajty odbioru
+        if (!cmdargs::parseUint(words[0], 0, 0xFE, address, 16)) { Serial.println("{\"error\":\"REG <00-FE>\"}"); return true; }
+        const uint8_t value = chip.readReg(static_cast<uint8_t>(address));
         const s2lp::Status st = chip.lastStatus();
-        Serial.printf("{\"reg\":\"0x%02X\",\"value\":\"0x%02X\",\"mc_state1\":\"0x%02X\",\"mc_state0\":\"0x%02X\"}\n", address, value,
+        Serial.printf("{\"reg\":\"0x%02X\",\"value\":\"0x%02X\",\"mc_state1\":\"0x%02X\",\"mc_state0\":\"0x%02X\"}\n", static_cast<unsigned>(address), value,
                       st.mcState1, st.mcState0);
     } else if (!strcmp(cmd, "REGW") && n == 2) {
         // Zapis rejestru do prób (np. kolejność bajtów słowa synchronizacji SYNC0..3 w eterze),
@@ -155,17 +162,21 @@ bool handle(const char* cmd, char* words[], size_t n) {
             Serial.println("{\"error\":\"preparation mode off: PREP 1\"}");
             return true;
         }
-        const uint8_t address = static_cast<uint8_t>(strtoul(words[0], nullptr, 16));
-        const uint8_t value = static_cast<uint8_t>(strtoul(words[1], nullptr, 16));
-        bench->stop();  // zapis w READY; odbiór P1 wraca poleceniem P1RX albo po PREP 0
-        chip.writeReg(address, value);
-        Serial.printf("{\"reg\":\"0x%02X\",\"written\":\"0x%02X\",\"value\":\"0x%02X\"}\n", address, value,
-                      chip.readReg(address));
+        uint32_t address = 0, value = 0;
+        if (!cmdargs::parseUint(words[0], 0, 0xFE, address, 16) || !cmdargs::parseUint(words[1], 0, 0xFF, value, 16)) {
+            Serial.println("{\"error\":\"REGW <00-FE> <00-FF>\"}");
+            return true;
+        }
+        bench->stop();  // zapis w READY; odbiór P1 wraca poleceniem P1RX; poza trybem przygotowania P1 stoi do CONFIG
+        chip.writeReg(static_cast<uint8_t>(address), static_cast<uint8_t>(value));
+        modified = true;
+        Serial.printf("{\"reg\":\"0x%02X\",\"written\":\"0x%02X\",\"value\":\"0x%02X\"}\n", static_cast<unsigned>(address),
+                      static_cast<unsigned>(value), chip.readReg(static_cast<uint8_t>(address)));
     } else return false;
     return true;
 }
 
-const char* helpCommands() { return ",\"RADIO\",\"RESET\",\"SDN <0|1>\",\"CONFIG\",\"VERIFY\",\"FREQ\",\"IDLE\",\"RSSI\",\"STATE\",\"REG <hex>\",\"REGW <hex> <hex>\""; }
+const char* helpCommands() { return ",\"RADIO\",\"RESET\",\"SDN <0|1>\",\"CONFIG\",\"VERIFY\",\"FREQ\",\"IDLE\",\"RSSI\",\"STATE\",\"REG <00-FE>\",\"REGW <00-FE> <00-FF>\""; }
 
 }  // namespace radiocon
 

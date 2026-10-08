@@ -294,7 +294,6 @@ def header(table: list[Register]) -> str:
         f"constexpr int8_t CCA_THRESHOLD_DBM = {P1['cca_threshold_dbm']};",
         f"constexpr uint8_t MAX_PACKET_BYTES = {P1['max_packet_bytes']};",
         f"constexpr uint8_t DEBT_FACTOR = {P1['debt_factor']};",
-        f"constexpr uint32_t MAX_DEBT_MS = {max_debt_ms()};  // 12 x TX of a 600 B datagram with {P1['ramp_ms_assumed']} ms ramp per fragment",
         "",
         "constexpr RegisterValue REGISTERS[] = {",
     ]

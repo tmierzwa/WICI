@@ -91,10 +91,10 @@ bool Journal::scanSmall(uint32_t base, uint32_t slots, SmallRecord& latest, uint
 
 bool Journal::begin() {
     ok_ = false;
-    uint32_t clockValid = 0;
+    uint32_t unused = 0;  // liczba poprawnych rekordów potrzebna tylko dla długu (JOURNAL)
     if (!scanSmall(DEBT_BASE, DEBT_SLOTS, debt_, debtValid_)) return false;
-    if (!scanSmall(CLOCK_BASE, CLOCK_SLOTS, clock_, clockValid)) return false;
-    if (!scanSmall(SETTINGS_BASE, SETTINGS_SLOTS, settings_, clockValid)) return false;
+    if (!scanSmall(CLOCK_BASE, CLOCK_SLOTS, clock_, unused)) return false;
+    if (!scanSmall(SETTINGS_BASE, SETTINGS_SLOTS, settings_, unused)) return false;
     event_ = EventRecord();
     uint8_t buffer[EVENT_RECORD];
     for (uint32_t slot = 0; slot < EVENT_SLOTS; ++slot) {

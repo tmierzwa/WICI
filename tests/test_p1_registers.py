@@ -2,6 +2,7 @@
 """Checks of the P1 register table for the CC1120 against the SWRU295E equations."""
 
 from pathlib import Path
+import re
 import sys
 import unittest
 
@@ -63,7 +64,12 @@ class EquationTests(unittest.TestCase):
         from obliczenia import p1_tx_seconds
         self.assertEqual(p1.max_debt_ms(), round(12 * p1_tx_seconds(600, ramp_ms=2.0) * 1000))
         self.assertEqual(p1.max_debt_ms(), 16228)  # radio.md: about 16 s
-        self.assertIn("MAX_DEBT_MS = 16228", p1.HEADER.read_text(encoding="utf-8"))
+        # Stanowisko odczekuje po starcie bez rekordu długu największy dług, jaki samo zapisuje
+        # (seria do 1400 ms, rezerwacja z najdłuższych ramek), nie mniejszy niż w modelu.
+        measure = (ROOT / "firmware" / "src" / "measure.h").read_text(encoding="utf-8")
+        series = int(re.search(r"SERIES_MAX_MS = (\d+);", measure).group(1))
+        self.assertIn("MAX_DEBT_MS = SERIES_MAX_MS * 12;", measure)
+        self.assertGreaterEqual(series * 12, p1.max_debt_ms())
 
     def test_low_if_allows_image_compensation(self):
         bandwidth = p1.channel_bandwidth_hz(0, 8)

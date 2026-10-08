@@ -57,6 +57,12 @@ void log(const char* text) {
     if (hooks.log) hooks.log(text, hooks.context);
 }
 
+void logFailure(const char* what, const std::exception& e) {
+    char text[96];
+    snprintf(text, sizeof(text), "rns: %s failed: %s", what, e.what());
+    log(text);
+}
+
 class P1Interface : public RNS::InterfaceImpl {
 public:
     P1Interface() : RNS::InterfaceImpl("P1") {
@@ -126,12 +132,16 @@ protected:
         p1iface::Counters& c = queue_.counters();
         if (!online_) { ++c.offline; return false; }
         if (raw.size() < 2 || raw.size() > p1iface::HW_MTU) { ++c.tooLarge; return false; }
+        const p1iface::Kind kind = p1iface::classify(raw.data(), raw.size());
+        // Pełna kolejka: odmowa przed podpisem IFAC (ogłoszenia przekazywane mogą jeszcze czekać na liście).
+        if (kind != p1iface::Kind::ANNOUNCE && queue_.full()) { ++c.full; return false; }
         const RNS::Bytes signature = ifacIdentity_.sign(raw);
         const uint8_t* tag = signature.data() + signature.size() - p1iface::IFAC_SIZE;
         const RNS::Bytes mask = RNS::Cryptography::hkdf(raw.size() + p1iface::IFAC_SIZE, RNS::Bytes(tag, p1iface::IFAC_SIZE), ifacKey_);
         uint8_t wire[p1iface::MAX_WIRE];
         p1iface::ifacMask(raw.data(), raw.size(), tag, p1iface::IFAC_SIZE, mask.data(), wire);
-        const p1iface::Admit admit = queue_.offer(p1iface::classify(raw.data(), raw.size()), raw.data()[1],
+        const uint8_t hops = p1iface::pathResponse(raw.data(), raw.size()) ? 0 : raw.data()[1];
+        const p1iface::Admit admit = queue_.offer(kind, hops,
                                                   p1iface::destination(raw.data(), raw.size()), wire,
                                                   raw.size() + p1iface::IFAC_SIZE, nowMs());
         if (admit != p1iface::Admit::QUEUED && admit != p1iface::Admit::HELD) return false;
@@ -246,20 +256,27 @@ bool begin(journal::Storage& storage, Radio& r, const uint8_t ifac[16], uint64_t
         started = true;
         return true;
     } catch (const std::exception& e) {
-        char text[96];
-        snprintf(text, sizeof(text), "rns: start failed: %s", e.what());
-        log(text);
+        logFailure("start", e);
         return false;
     }
 }
 
 void setIfac(const uint8_t ifac[16]) {
-    if (p1) p1->setIfac(ifac);
+    if (!p1) return;
+    try {
+        p1->setIfac(ifac);
+    } catch (const std::exception& e) {
+        logFailure("ifac", e);
+    }
 }
 
 void loop(uint32_t) {
     if (!started) return;
-    reticulum.loop();
+    try {
+        reticulum.loop();
+    } catch (const std::exception& e) {
+        logFailure("loop", e);
+    }
 }
 
 void received(const uint8_t* wire, size_t length) {
@@ -267,9 +284,7 @@ void received(const uint8_t* wire, size_t length) {
     try {
         p1->receive(wire, length);
     } catch (const std::exception& e) {
-        char text[96];
-        snprintf(text, sizeof(text), "rns: inbound failed: %s", e.what());
-        log(text);
+        logFailure("inbound", e);
     }
 }
 
@@ -280,24 +295,45 @@ void txDone(bool ok) {
 bool announce(const uint8_t* appData, size_t length) {
     if (!started) return false;
     try {
-        destination.announce(RNS::Bytes(appData, length));
-        return true;
-    } catch (const std::exception&) {
+        // Pakiet bez wysyłki, żeby wynik mówił, czy interfejs P1 przyjął ogłoszenie (announce()
+        // z send = true nie zwraca wyniku).
+        RNS::Packet packet = destination.announce(RNS::Bytes(appData, length), false, {RNS::Type::NONE}, {}, false);
+        if (!packet) return false;
+        packet.receipt_send();
+        return packet.sent();
+    } catch (const std::exception& e) {
+        logFailure("announce", e);
         return false;
     }
 }
 
 bool knows(const uint8_t dest[HASH]) {
     if (!started) return false;
-    return (bool)RNS::Identity::recall(RNS::Bytes(dest, HASH));
+    try {
+        return (bool)RNS::Identity::recall(RNS::Bytes(dest, HASH));
+    } catch (const std::exception& e) {
+        logFailure("recall", e);
+        return false;
+    }
 }
 
 bool hasPath(const uint8_t dest[HASH]) {
-    return started && RNS::Transport::has_path(RNS::Bytes(dest, HASH));
+    if (!started) return false;
+    try {
+        return RNS::Transport::has_path(RNS::Bytes(dest, HASH));
+    } catch (const std::exception& e) {
+        logFailure("path lookup", e);
+        return false;
+    }
 }
 
 void requestPath(const uint8_t dest[HASH]) {
-    if (started) RNS::Transport::request_path(RNS::Bytes(dest, HASH));
+    if (!started) return;
+    try {
+        RNS::Transport::request_path(RNS::Bytes(dest, HASH));
+    } catch (const std::exception& e) {
+        logFailure("path request", e);
+    }
 }
 
 uint32_t send(const uint8_t dest[HASH], const uint8_t* data, size_t length, uint32_t timeoutS) {
@@ -317,9 +353,16 @@ uint32_t send(const uint8_t dest[HASH], const uint8_t* data, size_t length, uint
         const uint32_t handle = ++nextHandle ? nextHandle : ++nextHandle;
         ++packetsSent;
         ++pending;
-        // Limit liczy się od przekazania do stosu: doliczony czas oczekiwania w kolejce radiowej
-        // (dług ciszy i datagramy przed tym pakietem), bo dowód nie może wrócić przed nadaniem.
-        uint32_t limit = (timeoutS < RECEIPT_MIN_S ? RECEIPT_MIN_S : timeoutS) + queueWaitMs() / 1000;
+        // Limit od przekazania do stosu (radio.md, "Interfejs P1 w stosie Reticulum"):
+        // max(60 s, 2 × skoki × 13 × czas TX największego datagramu + dług ciszy + kolejka P1).
+        // Trasa nieznana (pakiet rozgłaszany) liczy się jako 1 skok.
+        uint32_t hops = RNS::Transport::hops_to(hash);
+        if (hops == 0 || hops >= RNS::Type::Transport::PATHFINDER_M) hops = 1;
+        const uint64_t waitMs = static_cast<uint64_t>(2) * hops * (1 + p1iface::DEBT_FACTOR) *
+                                    p1iface::airtimeMs(p1frame::MAX_DATAGRAM) + queueWaitMs();
+        uint64_t limit = (waitMs + 999) / 1000;
+        if (limit < timeoutS) limit = timeoutS;
+        if (limit < RECEIPT_MIN_S) limit = RECEIPT_MIN_S;
         if (limit > 32767) limit = 32767;
         receipt.set_timeout(static_cast<int16_t>(limit));
         receipt.set_delivery_handler([handle](const RNS::PacketReceipt&) {
@@ -334,9 +377,7 @@ uint32_t send(const uint8_t dest[HASH], const uint8_t* data, size_t length, uint
         });
         return handle;
     } catch (const std::exception& e) {
-        char text[96];
-        snprintf(text, sizeof(text), "rns: send failed: %s", e.what());
-        log(text);
+        logFailure("send", e);
         return 0;
     }
 }
@@ -407,12 +448,17 @@ bool wipe() {
         p1->setIfac(none);
     }
     bool ok = fram && framfs::wipeKey(*fram);
-    if (fs) ok = fs->format() && ok;
+    if (fs) ok = fs->format(true) && ok;   // także treść tras, tożsamości i ogłoszeń
     return ok;
 }
 
 void persist() {
-    if (started) RNS::Transport::persist_data();
+    if (!started) return;
+    try {
+        RNS::Transport::persist_data();
+    } catch (const std::exception& e) {
+        logFailure("persist", e);
+    }
 }
 
 #ifndef ARDUINO

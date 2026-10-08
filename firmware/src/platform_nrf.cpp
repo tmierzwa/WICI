@@ -34,6 +34,17 @@ void chipId(uint32_t id[2]) {
 
 uint32_t resetReason() { return readResetReason(); }
 
+uint64_t uptimeMs() {
+    // millis() rdzenia to takty FreeRTOS (1024 Hz) przeliczone na ms: po 2^32 taktach spada do zera
+    // z około 4,19 mln s, nie z 2^32 ms. Różnica taktów bez znaku jest poprawna mimo zawinięcia.
+    static uint32_t lastTick = 0;
+    static uint64_t ticks = 0;
+    const uint32_t tick = xTaskGetTickCount();
+    ticks += static_cast<uint32_t>(tick - lastTick);
+    lastTick = tick;
+    return ticks * 1000 / configTICK_RATE_HZ;
+}
+
 bool resetByWatchdog() { return readResetReason() & POWER_RESETREAS_DOG_Msk; }
 
 // Watchdog sprzętowy (WDT, LFCLK): zatrzymany, gdy debugger zatrzyma rdzeń; raz uruchomionego

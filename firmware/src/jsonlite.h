@@ -29,11 +29,7 @@ size_t count(const Value& array);  // elementy tablicy albo pola obiektu; 0 dla 
 // Liczba całkowita bez ułamka i wykładnika w zakresie int64.
 bool integer(const Value& value, int64_t& out);
 // Napis zdekodowany do UTF-8 (sekwencje \", \\, \/, \b, \f, \n, \r, \t, \uXXXX z parami zastępczymi);
-// false przy błędnej sekwencji albo braku miejsca. Zwraca długość w bajtach.
+// false przy błędnej sekwencji, \u0000 (ucięłoby napis w C) albo braku miejsca. Zwraca długość w bajtach.
 bool string(const Value& value, char* out, size_t size, size_t* length = nullptr);
-// Napis w JSON z cudzysłowami; znaki spoza ASCII bez zamiany na \u (jak koder modelu). false, gdy brak miejsca.
-bool quote(const char* text, char* out, size_t size, size_t* length = nullptr);
-// Surowy tekst wartości skopiowany z zerem na końcu; false, gdy brak miejsca.
-bool raw(const Value& value, char* out, size_t size);
 
 }  // namespace json

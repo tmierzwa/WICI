@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Polecenia pomiarowe interfejsu diagnostyki (docs/spec/radio.md, "USB do laptopa"):
-// TXCW, TXPKT, RXPER, FOFF. Działają tylko w trybie przygotowania, podlegają ciszy
-// radiowej i limitowi nadawania (dług ciszy 12 x czas TX zapisany w dzienniku FRAM
+// TXCW, TXPKT, RX, FOFF (RXPER tylko czyta liczniki). Działają tylko w trybie przygotowania
+// i przy zapisanej tablicy P1, podlegają ciszy radiowej i limitowi nadawania (dług ciszy 12 x czas TX zapisany w dzienniku FRAM
 // przed serią, seria nie dłuższa niż najdłuższy datagram P1); dłuższą serię dopuszcza
 // argument conducted potwierdzony przyciskiem OK w ciągu 30 s i zapisany w dzienniku.
 // Operacje układu radiowego idą przez radiolink::Driver (CC1120: cc1120_link.cpp, S2-LP:
@@ -19,9 +19,13 @@ namespace measure {
 
 constexpr uint32_t CW_MAX_MS = 10000;         // TXCW <= 10 s (specyfikacja)
 constexpr uint32_t SERIES_MAX_MS = 1400;      // najdłuższa seria P1: 7 ramek po 103 B z narastaniem
+// Największy dług, jaki stanowisko zapisuje (seria do SERIES_MAX_MS i rezerwacja datagramu P1
+// z 7 najdłuższych ramek, 1365 ms): odczekiwany po starcie bez poprawnego rekordu długu.
+constexpr uint32_t MAX_DEBT_MS = SERIES_MAX_MS * 12;
 constexpr uint32_t CONFIRM_MS = 30000;        // potwierdzenie przyciskiem OK
 constexpr size_t LOG_ENTRIES = 16;            // dziennik zapasowy w RAM, gdy nie ma FRAM
 constexpr uint32_t CCA_MS = 50;               // kanał wolny przez 50 ms przed serią
+constexpr uint32_t CCA_GAP_MS = 10;           // przerwa między próbkami CCA ponad tyle zaczyna okno od nowa
 constexpr uint32_t BACKOFF_MIN_MS = 100;      // odroczenie losowe 100..1000 ms
 constexpr uint32_t BACKOFF_MAX_MS = 1000;
 constexpr uint32_t LONG_DEFERRAL_MS = 1000;   // odroczenie łączne powyżej 1 s liczy się jako długie
@@ -52,9 +56,9 @@ struct LinkCounters {
     uint32_t rxDatagrams = 0;   // złożone datagramy
     uint32_t txDatagrams = 0;
     uint32_t txFragments = 0;
-    uint32_t txDrop = 0;        // datagramy odrzucone (cisza, dziennik, zbyt wiele odroczeń)
+    uint32_t txDrop = 0;        // datagramy odrzucone (cisza, STOP, dziennik, zbyt wiele odroczeń)
     uint32_t deferrals = 0;     // odroczenia CCA
-    uint32_t longDeferrals = 0; // nadania odroczone łącznie o ponad 1 s
+    uint32_t longDeferrals = 0; // nadania odroczone przez CCA łącznie o ponad 1 s (bez czekania na dług)
 };
 
 enum class RxMode : uint8_t { NONE, TEST, P1 };
@@ -102,7 +106,7 @@ public:
     void printStatus();
     void log(const char* text);
     void applyOffset();  // ponowny zapis korekty częstotliwości po CONFIG
-    bool confirm();      // czeka na przycisk OK do CONFIRM_MS
+    bool confirm();      // czeka na przycisk OK do CONFIRM_MS (seria TXCW/TXPKT w toku zostaje przerwana)
     uint32_t debtRemainingMs() const;
     bool busy() const { return cwActive_ || pktActive_ || txState_ != TxState::IDLE; }
     bool receiving() const { return rxMode_ != RxMode::NONE; }
@@ -118,6 +122,7 @@ private:
     void receiveP1();
     bool enterRx(RxMode mode, uint8_t length);
     bool channelBusy();
+    void startCca(uint32_t now, bool first);
     void pollP1Tx();
     bool sendFragments();
     void finishP1Tx(const char* result);
@@ -153,8 +158,8 @@ private:
     RxMode rxMode_ = RxMode::NONE;
     uint8_t rxLen_ = 0;
     uint32_t rxPollMs_ = 0;
-    uint32_t autoRxMs_ = 0;
-    uint32_t seriesDebtMs_ = 0;  // dług serii TXCW/TXPKT do odliczenia od jej końca  // ostatnia próba samoczynnego powrotu do odbioru P1
+    uint32_t autoRxMs_ = 0;      // ostatnia próba samoczynnego powrotu do odbioru P1
+    uint32_t seriesDebtMs_ = 0;  // dług serii TXCW/TXPKT do odliczenia od jej końca
     Counters counters_;
 
     p1frame::Assembler assembler_;
@@ -167,7 +172,9 @@ private:
     size_t txLength_ = 0;
     uint8_t txId_[p1frame::ID_BYTES] = {};
     uint32_t txRequestedMs_ = 0;
+    uint32_t ccaFirstMs_ = 0;    // pierwsze wejście w CCA (po odczekaniu długu): miara odroczeń
     uint32_t ccaStartMs_ = 0;
+    uint32_t ccaFrames_ = 0;     // ramki odebrane do początku okna CCA
     uint32_t ccaCheckMs_ = 0;
     uint32_t backoffUntilMs_ = 0;
     uint8_t txDeferrals_ = 0;

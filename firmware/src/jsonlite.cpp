@@ -242,6 +242,8 @@ bool string(const Value& value, char* out, size_t size, size_t* length) {
                     cp = 0x10000 + ((cp - 0xD800) << 10) + (low - 0xDC00);
                     p += 6;
                 } else if (cp >= 0xDC00 && cp <= 0xDFFF) return false;
+                // NUL ucięłoby tekst w C: reszta pola nie przeszłaby kontroli (SA1 i tak odrzuca Cc)
+                if (cp == 0) return false;
                 if (!putUtf8(cp, out, size, n)) return false;
                 continue;
             }
@@ -253,35 +255,6 @@ bool string(const Value& value, char* out, size_t size, size_t* length) {
     }
     out[n] = '\0';
     if (length) *length = n;
-    return true;
-}
-
-bool quote(const char* text, char* out, size_t size, size_t* length) {
-    size_t n = 0;
-    auto put = [&](char c) { if (n + 1 >= size) return false; out[n++] = c; return true; };
-    if (!put('"')) return false;
-    for (const char* p = text; *p; ++p) {
-        const unsigned char c = static_cast<unsigned char>(*p);
-        if (c == '"' || c == '\\') { if (!put('\\') || !put(static_cast<char>(c))) return false; }
-        else if (c < 0x20) {
-            static const char hex[] = "0123456789abcdef";
-            if (!put('\\')) return false;
-            if (c == '\n') { if (!put('n')) return false; }
-            else if (c == '\r') { if (!put('r')) return false; }
-            else if (c == '\t') { if (!put('t')) return false; }
-            else if (!put('u') || !put('0') || !put('0') || !put(hex[c >> 4]) || !put(hex[c & 15])) return false;
-        } else if (!put(static_cast<char>(c))) return false;
-    }
-    if (!put('"')) return false;
-    out[n] = '\0';
-    if (length) *length = n;
-    return true;
-}
-
-bool raw(const Value& value, char* out, size_t size) {
-    if (value.length + 1 > size) return false;
-    memcpy(out, value.begin, value.length);
-    out[value.length] = '\0';
     return true;
 }
 

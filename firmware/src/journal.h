@@ -2,10 +2,11 @@
 // Dziennik stacji w FRAM (docs/spec/radio.md "Dostęp do kanału", oprogramowanie.md "Czas"
 // i "Pamięć FRAM według roli"): dług ciszy, licznik czasu pracy z liczbą restartów oraz
 // dziennik zdarzeń oraz ustawienia ekranu (język, ostatni ekran). Cztery pierścienie rekordów
-// o stałej długości; każdy rekord ma numer,
-// CRC-16 i (dług, zegar) znacznik zatwierdzenia zapisywany po treści, więc zanik zasilania
-// w trakcie zapisu zostawia poprzedni rekord. Obszar nie jest szyfrowany i ma przetrwać
-// ZNISZCZ DANE. Bez zależności od Arduino: sprawdzany na komputerze z pamięcią w RAM.
+// o stałej długości; każdy rekord ma numer i CRC-16, a rekordy długu, zegara i ustawień także
+// znacznik zatwierdzenia zapisywany po treści, więc zanik zasilania w trakcie zapisu zostawia
+// poprzedni rekord. Obszar nie jest szyfrowany. ZNISZCZ DANE kasuje tylko dziennik zdarzeń;
+// dług ciszy, zegar i ustawienia zostają. Bez zależności od Arduino: sprawdzany na komputerze
+// z pamięcią w RAM.
 #pragma once
 
 #include <stddef.h>

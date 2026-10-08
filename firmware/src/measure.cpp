@@ -7,6 +7,8 @@
 #include <esp_random.h>
 #endif
 
+#include "cmdargs.h"
+#include "jsonprint.h"
 #include "p1_registers.h"
 #include "testframe.h"
 
@@ -14,12 +16,14 @@ namespace measure {
 
 namespace {
 
-const char* boolName(bool value) { return value ? "true" : "false"; }
+using cmdargs::boolName;
 
 // Czas nadawania jednej ramki wzorcowej: preambuła 8 B, słowo 4 B, ramka len B, narastanie.
-uint32_t frameAirMs(uint8_t length) {
+constexpr uint32_t frameAirMs(uint8_t length) {
     return (static_cast<uint32_t>(12 + length) * 8 * 1000 + p1::SYMBOL_RATE - 1) / p1::SYMBOL_RATE + 3;
 }
+static_assert(MAX_DEBT_MS == SERIES_MAX_MS * p1::DEBT_FACTOR, "MAX_DEBT_MS");
+static_assert(p1frame::MAX_FRAGMENTS * frameAirMs(p1frame::MAX_LEN + 1) <= SERIES_MAX_MS, "rezerwacja P1 mieści się w MAX_DEBT_MS");
 
 }  // namespace
 
@@ -57,19 +61,23 @@ void Bench::printLog(uint32_t count) {
         bool first = true;
         for (uint32_t back = 0; back < count; ++back) {
             if (!journal_->readEvent(back, record)) break;
-            Serial.printf("%s{\"seq\":%lu,\"uptime_s\":%lu,\"event\":\"%s\"}", first ? "" : ",",
-                          static_cast<unsigned long>(record.seq), static_cast<unsigned long>(record.uptimeS), record.text);
+            Serial.printf("%s{\"seq\":%lu,\"uptime_s\":%lu,", first ? "" : ",", static_cast<unsigned long>(record.seq),
+                          static_cast<unsigned long>(record.uptimeS));
+            jsonprint::field(Serial, "event", record.text);  // tekst z laptopa i stosu: z sekwencjami ucieczki
+            Serial.print('}');
             first = false;
         }
         Serial.printf("],\"total\":%lu,\"fram\":true}\n", static_cast<unsigned long>(journal_->eventSeq()));
         return;
     }
     Serial.printf("{\"log\":[");
-    const size_t shown = eventCount_ < LOG_ENTRIES ? eventCount_ : LOG_ENTRIES;
-    const size_t firstIndex = eventCount_ - shown;
-    for (size_t i = 0; i < shown; ++i) {
-        const Event& e = events_[(firstIndex + i) % LOG_ENTRIES];
-        Serial.printf("%s{\"ms\":%lu,\"event\":\"%s\"}", i ? "," : "", static_cast<unsigned long>(e.ms), e.text);
+    const size_t available = eventCount_ < LOG_ENTRIES ? eventCount_ : LOG_ENTRIES;
+    const size_t shown = count < available ? count : available;
+    for (size_t i = 0; i < shown; ++i) {  // od najnowszego, jak z FRAM
+        const Event& e = events_[(eventCount_ - 1 - i) % LOG_ENTRIES];
+        Serial.printf("%s{\"ms\":%lu,", i ? "," : "", static_cast<unsigned long>(e.ms));
+        jsonprint::field(Serial, "event", e.text);
+        Serial.print('}');
     }
     Serial.printf("],\"total\":%u,\"fram\":false}\n", static_cast<unsigned>(eventCount_));
 }
@@ -80,15 +88,23 @@ uint32_t Bench::debtRemainingMs() const {
 }
 
 bool Bench::confirm() {
+    // Pętla stacji stoi w czasie oczekiwania, więc nośna albo seria nie może trwać dłużej niż jej dług.
+    if (cwActive_ || pktActive_) {
+        log("series stopped for confirmation");
+        if (cwActive_) stopCw();
+        if (pktActive_) finishPkt();
+    }
     Serial.printf("{\"confirm\":\"press OK within %lu s\"}\n", static_cast<unsigned long>(CONFIRM_MS / 1000));
     const uint32_t start = millis();
-    while (digitalRead(pinOk_) == LOW) delay(5);  // czekaj na puszczenie, jeśli już wciśnięty
+    // Czekaj na puszczenie, jeśli już wciśnięty (zablokowany przycisk nie zatrzyma pętli dłużej niż CONFIRM_MS).
+    while (digitalRead(pinOk_) == LOW && millis() - start < CONFIRM_MS) delay(5);
     while (millis() - start < CONFIRM_MS) {
         led((millis() / 100) & 1);  // szybkie miganie: czekam
         if (digitalRead(pinOk_) == LOW) {
             delay(20);
             if (digitalRead(pinOk_) == LOW) {
-                while (digitalRead(pinOk_) == LOW) delay(5);
+                const uint32_t pressed = millis();
+                while (digitalRead(pinOk_) == LOW && millis() - pressed < CONFIRM_MS) delay(5);
                 led(false);
                 return true;
             }
@@ -103,6 +119,7 @@ const char* Bench::gate(uint32_t txMs, bool conducted) {
     if (!prep) return "preparation mode off: PREP 1";
     if (silence) return "radio silence";
     if (busy()) return "busy: STOP first";
+    if (!p1Ready) return "radio not configured: CONFIG";  // bez tablicy P1 układ nadawałby na wartościach domyślnych
     if (conducted) {
         if (!confirm()) {
             log("conducted not confirmed");
@@ -152,8 +169,13 @@ const char* Bench::txcw(uint32_t seconds, bool conducted) {
 void Bench::stopCw() {
     radio_.stopCw();
     cwActive_ = false;
-    endSeriesDebt();
     const uint32_t txMs = millis() - cwStartMs_;
+    // Nośna trwała dłużej niż zaplanowano (pętla stała): dług z rzeczywistego czasu, zapisany ponownie.
+    if (seriesDebtMs_ && txMs * p1::DEBT_FACTOR > seriesDebtMs_) {
+        seriesDebtMs_ = txMs * p1::DEBT_FACTOR;
+        if (journal_) journal_->writeDebt(seriesDebtMs_, uptimeS());
+    }
+    endSeriesDebt();
     Serial.printf("{\"txcw\":\"done\",\"tx_ms\":%lu,\"tx_wait_ms\":%lu}\n", static_cast<unsigned long>(txMs),
                   static_cast<unsigned long>(debtRemainingMs()));
 }
@@ -222,6 +244,8 @@ bool Bench::enterRx(RxMode mode, uint8_t length) {
 }
 
 const char* Bench::rxStart(uint8_t length) {
+    // Odbiór ramek wzorcowych wyłącza odbiór P1 stacji: tylko w trybie przygotowania.
+    if (!prep) return "preparation mode off: PREP 1";
     if (length < testframe::MIN_LENGTH || length > testframe::MAX_LENGTH) return "len 4..103";
     if (busy()) return "busy: STOP first";
     counters_ = Counters();
@@ -275,8 +299,11 @@ void Bench::rxper() {
 }
 
 const char* Bench::foff(int32_t hz) {
-    // CC1120: FREQOFF (krok 30,5 Hz); S2-LP: słowo SYNT (krok 23,8 Hz); zakres ±1 MHz.
-    if (!radio_.setFrequencyOffset(hz)) return "FOFF outside +-1000000 Hz";
+    // CC1120: FREQOFF (krok 30,5 Hz, zakres ±999 985 Hz); S2-LP: słowo SYNT (krok 23,8 Hz, ±1 MHz).
+    // Zmienia częstotliwość łącza P1 stacji: tylko w trybie przygotowania i bez nadawania w toku.
+    if (!prep) return "preparation mode off: PREP 1";
+    if (busy()) return "busy: STOP first";
+    if (!radio_.setFrequencyOffset(hz)) return "FOFF outside the radio range (about +-1 MHz)";
     foffHz_ = hz;
     foffSet_ = true;
     char text[40];
@@ -308,7 +335,7 @@ void Bench::printStatus() {
 void Bench::stop() {
     if (cwActive_) stopCw();
     if (pktActive_) finishPkt();
-    if (txState_ != TxState::IDLE) finishP1Tx("stopped");
+    if (txState_ != TxState::IDLE) { ++link_.txDrop; finishP1Tx("stopped"); }
     rxMode_ = RxMode::NONE;
     radio_.idle();
 }
@@ -322,13 +349,14 @@ void Bench::poll() {
             log("silence debt cleared");
         }
     }
+    // Cisza radiowa przerywa każdą serię, także przewodową (radio.md: cisza blokuje każde nadawanie).
     if (cwActive_) {
         if (static_cast<int32_t>(now - cwEndMs_) >= 0) stopCw();
         else if (silence) { log("silence during TXCW"); stopCw(); }
         return;
     }
     if (pktActive_) {
-        if (silence && !pktConducted_) { log("silence during TXPKT"); finishPkt(); return; }
+        if (silence) { log("silence during TXPKT"); finishPkt(); return; }
         if (static_cast<int32_t>(now - pktNextMs_) >= 0) {
             if (!sendOne()) ++pktFailed_;
             ++pktSent_;
@@ -392,11 +420,11 @@ void Bench::receiveP1() {
 
 namespace {
 
-// Identyfikator datagramu z generatora sprzętowego MCU (randomBytes).
-void randomId(uint8_t out[p1frame::ID_BYTES]) {
-    randomBytes(out, p1frame::ID_BYTES);
-    randomSeed((static_cast<uint32_t>(out[0]) << 24) | (static_cast<uint32_t>(out[1]) << 16) |
-               (static_cast<uint32_t>(out[2]) << 8) | out[3]);  // ziarno odroczeń losowych
+// Odroczenie losowe 100..1000 ms z generatora sprzętowego (nie z identyfikatora, który idzie w eter).
+uint32_t backoffMs() {
+    uint8_t b[2];
+    randomBytes(b, sizeof(b));
+    return BACKOFF_MIN_MS + ((static_cast<uint32_t>(b[0]) << 8) | b[1]) % (BACKOFF_MAX_MS - BACKOFF_MIN_MS + 1);
 }
 
 }  // namespace
@@ -423,52 +451,68 @@ void randomBytes(uint8_t* out, size_t count) {
 const char* Bench::p1send(const uint8_t* data, size_t length) {
     if (length < 1 || length > p1frame::MAX_DATAGRAM) return "datagram 1..600 B";
     if (busy()) return "busy: STOP first";
+    if (!p1Ready) return "radio not configured: CONFIG";
     if (silence) { ++link_.txDrop; return "radio silence"; }
     if (!journal_ || !journal_->ok()) { ++link_.txDrop; return "debt journal unavailable: no FRAM"; }
     memcpy(txData_, data, length);
     txLength_ = length;
-    randomId(txId_);
+    randomBytes(txId_, p1frame::ID_BYTES);  // identyfikator datagramu z generatora sprzętowego
     txDeferrals_ = 0;
     txRequestedMs_ = millis();
     if (rxMode_ != RxMode::P1 && !enterRx(RxMode::P1, 0)) return "radio did not enter RX";
-    txState_ = debtRemainingMs() ? TxState::WAIT_DEBT : TxState::CCA;
-    ccaStartMs_ = millis();
-    ccaCheckMs_ = 0;
+    if (debtRemainingMs()) txState_ = TxState::WAIT_DEBT;
+    else startCca(txRequestedMs_, true);
     return nullptr;
 }
 
+void Bench::startCca(uint32_t now, bool first) {
+    txState_ = TxState::CCA;
+    if (first) ccaFirstMs_ = now;
+    ccaStartMs_ = now;
+    ccaCheckMs_ = now;
+    ccaFrames_ = link_.rxOk + link_.rxBad;
+}
+
 bool Bench::channelBusy() {
-    // Kanał zajęty: RSSI ponad progiem CCA albo trwa odbiór po słowie synchronizacji.
+    // Kanał zajęty: trwa odbiór po słowie synchronizacji, ramka przyszła w czasie okna CCA albo
+    // RSSI ponad progiem CCA.
     if (radio_.receivingFrame()) return true;
+    receiveP1();  // ramka, która zaczęła się i skończyła między próbkami, czeka w kolejce
+    if (link_.rxOk + link_.rxBad != ccaFrames_) return true;
     const radiolink::Rssi r = radio_.rssi();
     return r.valid && r.dbm > p1::CCA_THRESHOLD_DBM;
 }
 
 void Bench::pollP1Tx() {
     const uint32_t now = millis();
-    if (silence) { finishP1Tx("silence"); return; }
+    if (silence) { ++link_.txDrop; finishP1Tx("silence"); return; }
     switch (txState_) {
         case TxState::WAIT_DEBT:
-            if (debtRemainingMs() == 0) { txState_ = TxState::CCA; ccaStartMs_ = now; }
+            if (debtRemainingMs() == 0) startCca(now, true);
             return;
         case TxState::BACKOFF:
-            if (static_cast<int32_t>(now - backoffUntilMs_) >= 0) { txState_ = TxState::CCA; ccaStartMs_ = now; }
+            if (static_cast<int32_t>(now - backoffUntilMs_) >= 0) startCca(now, false);
             return;
-        case TxState::CCA:
+        case TxState::CCA: {
             if (now == ccaCheckMs_) return;
+            // Okno 50 ms musi być obserwowane: po długiej przerwie między próbkami (pętla zajęta
+            // kryptografią stosu) zaczyna się od nowa.
+            const bool gap = now - ccaCheckMs_ > CCA_GAP_MS;
             ccaCheckMs_ = now;
             if (channelBusy()) {
                 if (++txDeferrals_ > MAX_DEFERRALS) { ++link_.txDrop; finishP1Tx("too many deferrals"); return; }
                 ++link_.deferrals;
-                backoffUntilMs_ = now + BACKOFF_MIN_MS + random(BACKOFF_MAX_MS - BACKOFF_MIN_MS + 1);
+                backoffUntilMs_ = now + backoffMs();
                 txState_ = TxState::BACKOFF;
                 return;
             }
+            if (gap) { startCca(now, false); return; }
             if (now - ccaStartMs_ < CCA_MS) return;
-            txState_ = TxState::SEND;
-            return;
+            txState_ = TxState::SEND;  // nadanie w tym samym obiegu, bez przerwy po ostatniej próbce
+        }
+            [[fallthrough]];
         case TxState::SEND: {
-            if (now - txRequestedMs_ > LONG_DEFERRAL_MS) ++link_.longDeferrals;
+            if (now - ccaFirstMs_ > LONG_DEFERRAL_MS) ++link_.longDeferrals;
             const uint8_t count = p1frame::fragmentCount(txLength_);
             const uint32_t txMs = count * frameAirMs(p1frame::MAX_LEN + 1);  // rezerwacja: najdłuższe ramki
             if (!journal_->writeDebt(txMs * p1::DEBT_FACTOR, uptimeS())) { ++link_.txDrop; finishP1Tx("debt journal write failed"); return; }

@@ -78,10 +78,13 @@ void loop(uint32_t nowMs);
 void received(const uint8_t* wire, size_t length);   // datagram złożony z ramek P1
 void txDone(bool ok);                                // koniec nadawania datagramu z transmit()
 
+// Ogłoszenie celu "wici.sa1"; true, gdy interfejs P1 przyjął pakiet (false: stos nie działa,
+// brak IFAC albo pełna kolejka; ponowienie ustala rns_announce.h).
 bool announce(const uint8_t* appData, size_t length);
 // Pakiet okazjonalny do celu "wici.sa1" o skrócie destination z dowodem; zwraca uchwyt
 // potwierdzenia albo 0, gdy cel nie jest znany (wysłane zapytanie o trasę) albo interfejs
-// odmówił (pełna kolejka, brak IFAC). timeoutS: limit potwierdzenia (>= RECEIPT_MIN_S).
+// odmówił (pełna kolejka, brak IFAC). timeoutS: najkrótszy limit potwierdzenia; stos wydłuża go do
+// max(RECEIPT_MIN_S, 2 x skoki x 13 x czas TX datagramu 600 B + dług ciszy + kolejka P1).
 uint32_t send(const uint8_t destination[HASH], const uint8_t* data, size_t length, uint32_t timeoutS);
 bool knows(const uint8_t destination[HASH]);   // tożsamość celu znana z ogłoszenia
 bool hasPath(const uint8_t destination[HASH]);

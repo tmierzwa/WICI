@@ -27,9 +27,9 @@ constexpr uint8_t SPI_MISO = 13;  // J5.19 -> S2-LP SDO, FRAM
 constexpr uint8_t SPI_DRIVE = 0;  // gpio_drive_cap_t: 0 = najsłabszy
 
 // S2-LP na X-NUCLEO-S2868A2 (kwarc 50 MHz na module).
-constexpr uint8_t RADIO_CS = 10;     // J5.16 -> CSn (R13), 10 kΩ do 3,3 V
+constexpr uint8_t RADIO_CS = 10;     // J5.16 -> CSn (R13 na X-NUCLEO), 10 kΩ do 3,3 V
 constexpr uint8_t RADIO_SDN = 9;     // J5.15 -> SDN: stan wysoki wyłącza układ; 10 kΩ do masy
-constexpr uint8_t RADIO_GPIO0 = 14;  // J5.20 -> GPIO0 (R12), J11
+constexpr uint8_t RADIO_GPIO0 = 14;  // J5.20 -> GPIO0 (R12 na X-NUCLEO), J11
 constexpr uint8_t RADIO_GPIO1 = 21;  // J6.18 -> GPIO1
 constexpr uint8_t RADIO_GPIO2 = 4;   // J5.4  -> GPIO2, J11
 constexpr uint8_t RADIO_GPIO3 = 42;  // J6.6  -> GPIO3

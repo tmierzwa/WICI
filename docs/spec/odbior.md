@@ -80,7 +80,7 @@ Przebieg można powtórzyć najwyżej raz i tylko z przyczyny wypisanej w planie
 
 ## Braki do wydania
 
-1. Płytka stacji R02 w dwóch wykonaniach, projekty torów RF z nastawami rejestrów i oprogramowanie układowe stacji: microReticulum, LXMF, sterownik P1, dziennik FRAM, ekran, przyciski i protokół USB (D14, D15, D16). Na stanowisku są już sterowniki P1 obu układów, dziennik FRAM, ekran, przyciski i protokół USB, bez stosu i bez prób na sprzęcie.
+1. Płytka stacji R02 w dwóch wykonaniach, projekty torów RF z nastawami rejestrów i oprogramowanie układowe stacji: microReticulum, LXMF, sterownik P1, dziennik FRAM, ekran, przyciski i protokół USB (D14, D15, D16). Na stanowisku są już sterowniki P1 obu układów, dziennik FRAM, ekran, przyciski, protokół USB i stos Reticulum (port microReticulum z interfejsem P1, bez LXMF), bez prób na sprzęcie.
 2. Schemat elektryczny i płytka drukowana przetwornicy, ostateczna ochrona AC oraz oprogramowanie układowe regulatora (poziom 3).
 3. Płytka drukowana ładowarki z odebraną ochroną OVP dla dwóch wariantów portu (poziom 3).
 4. Aplikacja laptopa z protokołem USB do stacji i trybami kryzysowymi (cisza radiowa, szyfrowanie bazy, ZNISZCZ DANE, wersje językowe), kompletne pakiety offline oraz manifest przypiętych zależności (D17).
