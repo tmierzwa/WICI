@@ -51,6 +51,7 @@ DESCRIPTION = {
     '1N4148W-7-F': 'switching diode 75 V, SOD-123',
     'BAT54SLT1G': 'dual Schottky diode series, SOT-23',
     'CL21A106KAYNNNG': 'MLCC 10 uF 25 V X5R 0805',
+    'LMK325ABJ107MM-P': 'MLCC 100 uF 10 V X5R 1210',
     'CL21B104KBCNNNC': 'MLCC 100 nF 50 V X7R 0805',
 }
 
@@ -131,7 +132,7 @@ PCB
 - Origin of Gerbers, drills and positions: lower-left board corner.
 
 Assembly (optional quote)
-- Top side only. Assembler sources and places the {smd_count} SMD parts (0805, 1206, SOT-23, SOT-23-5, SOT-23-6, SOD-123,
+- Top side only. Assembler sources and places the {smd_count} SMD parts (0805, 1206, 1210, SOT-23, SOT-23-5, SOT-23-6, SOD-123,
   SOIC-8, 3.8 mm inductor, 0.5 mm pitch FPC connector J7):
   assembly/bom-assembly.csv (SMD only), positions in assembly/cpl-smd.csv, paste layer F_Paste.
   Equivalent passives (same value, tolerance, voltage, dielectric, size) are acceptable.

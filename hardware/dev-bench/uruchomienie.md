@@ -76,7 +76,7 @@ Nadzorca U3 i bramka U4 wymuszają CS pamięci w stanie wysokim poniżej 2,66–
 |---:|---|---|
 | F1 | Pomiar U3.1 (wyjście nadzorcy) i U3.2 (+3V3) wobec J11.1 (GND) w spoczynku i przy nadawaniu (krok A5, w B nadawanie S2-LP) | U3.1 ≤0,2 V; +3V3 przy nadawaniu ≥2,90 V (wyjście wraca do stanu niskiego najpóźniej przy 2,87 V); `FRAM` przez cały czas `ok: true` |
 | F2 | Wymuszenie progu bez zmiany zasilania: pad U3.4 (MR) zwarty pęsetą do J11.1 na czas polecenia `FRAM`, potem zwolniony | przy zwartym MR: U3.1 ≥0,8 × +3V3, U1.1 w stanie wysokim i `FRAM` nie rozpoznaje układu; po zwolnieniu `FRAM` znów `ok: true` |
-| F3 | Oscyloskop: kanał 1 +3V3 na U1.8, kanał 2 CS na U1.1, kanał 3 CS z MCU na U4.1, wyzwalanie zboczem opadającym kanału 1; w czasie ruchu na FRAM (zapis dziennika albo powtarzane `FRAM`) odłączenie zasilania płytki MCU (USB), pięć razy; potem włączenie | przy spadku: U1.1 ≥0,7 × +3V3 od chwili, gdy +3V3 spada poniżej 2,66 V, aż +3V3 spadnie poniżej 1,8 V, także wtedy, gdy kanał 3 jest w stanie niskim; zmierzony próg 2,66–2,74 V; przy włączeniu U1.1 w stanie wysokim, dopóki +3V3 nie przekroczy 2,74 V; po włączeniu `FRAM` `ok: true` i dziennik bez błędów CRC |
+| F3 | Oscyloskop: kanał 1 +3V3 na U1.8, kanał 2 CS na U1.1, kanał 3 CS z MCU na U4.1, wyzwalanie zboczem opadającym kanału 1. Największe obciążenie szyny +3V3: nadawanie ciągłe z największą mocą (A: `TXCW`, B: nadawanie S2-LP; w trybie przygotowania, przewodowo do obciążenia), dioda alarmu włączona, odświeżanie ekranu i ruch na FRAM (zapis dziennika albo powtarzane `FRAM`). Odłączenie zasilania płytki MCU (USB), pięć razy; potem włączenie | przy spadku: tempo opadania +3V3 między 2,4 V a 2,0 V ≤6,6 mV/µs; U1.1 osiąga 0,7 × +3V3 najpóźniej 30 µs po spadku +3V3 do 2,394 V, a +3V3 w tej chwili jest ≥2,2 V (0,2 V nad minimum CY15B104Q); od tej chwili U1.1 ≥0,7 × +3V3, aż +3V3 spadnie poniżej 1,8 V, także wtedy, gdy kanał 3 jest w stanie niskim; zmierzony próg 2,66–2,74 V. Przy włączeniu U1.1 w stanie wysokim, dopóki +3V3 nie przekroczy 2,74 V; po włączeniu `FRAM` `ok: true` i dziennik bez błędów CRC. Niespełniony warunek czasu oznacza usterkę płytki (za mała pojemność C13 albo za duży pobór), nie dopuszczenie wyniku |
 
 ## Pomiar magistrali oscyloskopem
 
@@ -105,7 +105,7 @@ Kroki 1-5:   wynik, uwagi
 Kroki A1-A5 albo B1-B4:  wynik, zmierzone napięcia i prądy (J7.7 bez i z brzęczykiem, spadek na amperomierzu przy TX)
 VTEST:  g =        o =        odchyłki po korekcji (%):
 Oscyloskop:  punkty i wynik, zrzuty
-Ochrona FRAM F1-F3:  +3V3 przy TX (V), próg U3 (V), CS przy 5 odcięciach, zrzuty
+Ochrona FRAM F1-F3:  +3V3 przy TX (V), próg U3 (V), tempo opadania (mV/us), +3V3 przy CS = H (V), CS przy 5 odcięciach, zrzuty
 Wysokość dystansów w A (mm):
 Usterki i poprawki:
 ```

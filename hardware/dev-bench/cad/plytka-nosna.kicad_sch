@@ -7576,7 +7576,7 @@
     (uuid "2b9c918c-cec2-5420-bdb8-c2c30fb417da"))
   (symbol
     (lib_id "Connector:Screw_Terminal_01x02")
-    (at 335.28 228.6 0)
+    (at 335.28 254.0 0)
     (unit 1)
     (exclude_from_sim no)
     (in_bom yes)
@@ -7584,41 +7584,41 @@
     (dnp no)
     (uuid "fc785e12-9c58-5630-a1ef-7a6cafc7732a")
     (property "Reference" "J12"
-      (at 335.28 220.98 0)
+      (at 335.28 246.38 0)
       (effects
         (font
           (size 1.27 1.27))))
     (property "Value" "VTEST 0-15V"
-      (at 335.28 223.52 0)
+      (at 335.28 248.92 0)
       (effects
         (font
           (size 1.27 1.27))))
     (property "Footprint" "TerminalBlock_Phoenix:TerminalBlock_Phoenix_MKDS-1,5-2-5.08_1x02_P5.08mm_Horizontal"
-      (at 335.28 228.6 0)
+      (at 335.28 254.0 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Datasheet" ""
-      (at 335.28 228.6 0)
+      (at 335.28 254.0 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Manufacturer" "Phoenix Contact"
-      (at 335.28 228.6 0)
+      (at 335.28 254.0 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "MPN" "1715721"
-      (at 335.28 228.6 0)
+      (at 335.28 254.0 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Variant" "A i B"
-      (at 335.28 228.6 0)
+      (at 335.28 254.0 0)
       (effects
         (font
           (size 1.27 1.27))
@@ -7634,14 +7634,14 @@
           (unit 1)))))
   (wire
     (pts
-      (xy 330.2 228.6)
-      (xy 325.12 228.6))
+      (xy 330.2 254.0)
+      (xy 325.12 254.0))
     (stroke
       (width 0)
       (type default))
     (uuid "18afa81e-c5cd-54af-aa39-772038fb6deb"))
   (label "VTEST_IN"
-    (at 325.12 228.6 180)
+    (at 325.12 254.0 180)
     (effects
       (font
         (size 1.27 1.27))
@@ -7649,14 +7649,14 @@
     (uuid "6b41dd19-15b2-50d3-9b4c-022514bc1013"))
   (wire
     (pts
-      (xy 330.2 231.14)
-      (xy 325.12 231.14))
+      (xy 330.2 256.54)
+      (xy 325.12 256.54))
     (stroke
       (width 0)
       (type default))
     (uuid "9735b046-a874-5979-8d3d-30f50cb25a01"))
   (label "GND"
-    (at 325.12 231.14 180)
+    (at 325.12 256.54 180)
     (effects
       (font
         (size 1.27 1.27))
@@ -9358,7 +9358,7 @@
     (uuid "0c4277d8-8808-5d78-b311-2d58a0cfa5b7"))
   (symbol
     (lib_id "Diode:BAT54S")
-    (at 335.28 314.96 0)
+    (at 335.28 345.44 0)
     (unit 1)
     (exclude_from_sim no)
     (in_bom yes)
@@ -9366,41 +9366,41 @@
     (dnp no)
     (uuid "4f1680ce-f46d-5fe4-9c44-0256cba4d7d2")
     (property "Reference" "D3"
-      (at 335.28 307.34 0)
+      (at 335.28 337.82 0)
       (effects
         (font
           (size 1.27 1.27))))
     (property "Value" "BAT54S"
-      (at 335.28 309.88 0)
+      (at 335.28 340.36 0)
       (effects
         (font
           (size 1.27 1.27))))
     (property "Footprint" "Package_TO_SOT_SMD:SOT-23"
-      (at 335.28 314.96 0)
+      (at 335.28 345.44 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Datasheet" ""
-      (at 335.28 314.96 0)
+      (at 335.28 345.44 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Manufacturer" "onsemi"
-      (at 335.28 314.96 0)
+      (at 335.28 345.44 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "MPN" "BAT54SLT1G"
-      (at 335.28 314.96 0)
+      (at 335.28 345.44 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Variant" "A i B"
-      (at 335.28 314.96 0)
+      (at 335.28 345.44 0)
       (effects
         (font
           (size 1.27 1.27))
@@ -9418,14 +9418,14 @@
           (unit 1)))))
   (wire
     (pts
-      (xy 327.66 314.96)
-      (xy 322.58 314.96))
+      (xy 327.66 345.44)
+      (xy 322.58 345.44))
     (stroke
       (width 0)
       (type default))
     (uuid "cfb1a1ab-7cbe-5f8d-bb8c-5adb081d4aec"))
   (label "GND"
-    (at 322.58 314.96 180)
+    (at 322.58 345.44 180)
     (effects
       (font
         (size 1.27 1.27))
@@ -9433,14 +9433,14 @@
     (uuid "03066fbb-afbe-531a-bf85-6b092abf49d1"))
   (wire
     (pts
-      (xy 342.9 314.96)
-      (xy 347.98 314.96))
+      (xy 342.9 345.44)
+      (xy 347.98 345.44))
     (stroke
       (width 0)
       (type default))
     (uuid "bd567b72-f8f1-5699-9ac2-5b7559f53f48"))
   (label "+3V3"
-    (at 347.98 314.96 0)
+    (at 347.98 345.44 0)
     (effects
       (font
         (size 1.27 1.27))
@@ -9448,14 +9448,14 @@
     (uuid "55b8a95d-b58d-58ea-a9d0-97d2d38d4d6d"))
   (wire
     (pts
-      (xy 335.28 320.04)
-      (xy 335.28 325.12))
+      (xy 335.28 350.52)
+      (xy 335.28 355.6))
     (stroke
       (width 0)
       (type default))
     (uuid "0d8f1e7c-3b29-5a7f-a763-08398a68cbec"))
   (label "VTEST"
-    (at 335.28 325.12 270)
+    (at 335.28 355.6 270)
     (effects
       (font
         (size 1.27 1.27))
@@ -10255,7 +10255,7 @@
     (uuid "f871466f-a465-5036-ba04-5f83c4da5973"))
   (symbol
     (lib_id "Device:R")
-    (at 335.28 248.92000000000002 0)
+    (at 335.28 276.86 0)
     (unit 1)
     (exclude_from_sim no)
     (in_bom yes)
@@ -10263,41 +10263,41 @@
     (dnp no)
     (uuid "bfa43fc7-5a01-5f40-8eb9-305ae2f7ebd1")
     (property "Reference" "R14"
-      (at 335.28 240.03 0)
+      (at 335.28 267.97 0)
       (effects
         (font
           (size 1.27 1.27))))
     (property "Value" "100k"
-      (at 335.28 242.57 0)
+      (at 335.28 270.51 0)
       (effects
         (font
           (size 1.27 1.27))))
     (property "Footprint" "Resistor_SMD:R_0805_2012Metric"
-      (at 335.28 248.92 0)
+      (at 335.28 276.86 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Datasheet" ""
-      (at 335.28 248.92 0)
+      (at 335.28 276.86 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Manufacturer" "Yageo"
-      (at 335.28 248.92 0)
+      (at 335.28 276.86 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "MPN" "RT0805BRD07100KL"
-      (at 335.28 248.92 0)
+      (at 335.28 276.86 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Variant" "A i B"
-      (at 335.28 248.92 0)
+      (at 335.28 276.86 0)
       (effects
         (font
           (size 1.27 1.27))
@@ -10313,14 +10313,14 @@
           (unit 1)))))
   (wire
     (pts
-      (xy 335.28 245.11)
-      (xy 335.28 240.03))
+      (xy 335.28 273.05)
+      (xy 335.28 267.97))
     (stroke
       (width 0)
       (type default))
     (uuid "020ed4c0-c91b-5991-ac3b-4d908e4b26b3"))
   (label "VTEST_IN"
-    (at 335.28 240.03 90)
+    (at 335.28 267.97 90)
     (effects
       (font
         (size 1.27 1.27))
@@ -10328,14 +10328,14 @@
     (uuid "71c7187e-c65c-56a0-8934-754556e16d55"))
   (wire
     (pts
-      (xy 335.28 252.73)
-      (xy 335.28 257.81))
+      (xy 335.28 280.67)
+      (xy 335.28 285.75))
     (stroke
       (width 0)
       (type default))
     (uuid "31813a11-0978-5b44-9cdc-2935b29abcdf"))
   (label "VTEST"
-    (at 335.28 257.81 270)
+    (at 335.28 285.75 270)
     (effects
       (font
         (size 1.27 1.27))
@@ -10343,7 +10343,7 @@
     (uuid "6c1820e6-84a7-5890-95e3-78f0a8c45d8a"))
   (symbol
     (lib_id "Device:R")
-    (at 335.28 271.78000000000003 0)
+    (at 335.28 299.72 0)
     (unit 1)
     (exclude_from_sim no)
     (in_bom yes)
@@ -10351,41 +10351,41 @@
     (dnp no)
     (uuid "fb5d8370-752b-5205-bd9e-6db93e885d94")
     (property "Reference" "R15"
-      (at 335.28 262.89 0)
+      (at 335.28 290.83 0)
       (effects
         (font
           (size 1.27 1.27))))
     (property "Value" "20k"
-      (at 335.28 265.43 0)
+      (at 335.28 293.37 0)
       (effects
         (font
           (size 1.27 1.27))))
     (property "Footprint" "Resistor_SMD:R_0805_2012Metric"
-      (at 335.28 271.78 0)
+      (at 335.28 299.72 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Datasheet" ""
-      (at 335.28 271.78 0)
+      (at 335.28 299.72 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Manufacturer" "Yageo"
-      (at 335.28 271.78 0)
+      (at 335.28 299.72 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "MPN" "RT0805BRD0720KL"
-      (at 335.28 271.78 0)
+      (at 335.28 299.72 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Variant" "A i B"
-      (at 335.28 271.78 0)
+      (at 335.28 299.72 0)
       (effects
         (font
           (size 1.27 1.27))
@@ -10401,14 +10401,14 @@
           (unit 1)))))
   (wire
     (pts
-      (xy 335.28 267.97)
-      (xy 335.28 262.89))
+      (xy 335.28 295.91)
+      (xy 335.28 290.83))
     (stroke
       (width 0)
       (type default))
     (uuid "3ea8a6fc-d68a-5164-84e2-d69cd2dc4f75"))
   (label "VTEST"
-    (at 335.28 262.89 90)
+    (at 335.28 290.83 90)
     (effects
       (font
         (size 1.27 1.27))
@@ -10416,14 +10416,14 @@
     (uuid "cae2863f-373f-5ae0-b7b0-d0906fa46ade"))
   (wire
     (pts
-      (xy 335.28 275.59)
-      (xy 335.28 280.67))
+      (xy 335.28 303.53)
+      (xy 335.28 308.61))
     (stroke
       (width 0)
       (type default))
     (uuid "764284b1-122c-5a87-8070-05cce1578c16"))
   (label "GND"
-    (at 335.28 280.67 270)
+    (at 335.28 308.61 270)
     (effects
       (font
         (size 1.27 1.27))
@@ -10871,6 +10871,94 @@
     (uuid "6038902e-bd5f-5b36-9064-29175e79719f"))
   (symbol
     (lib_id "Device:C")
+    (at 335.28 231.14000000000001 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (uuid "da5d012a-5579-5019-8ca5-01e1edd78aa0")
+    (property "Reference" "C13"
+      (at 335.28 222.25 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Value" "100u"
+      (at 335.28 224.79 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Footprint" "Capacitor_SMD:C_1210_3225Metric"
+      (at 335.28 231.14 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "Datasheet" ""
+      (at 335.28 231.14 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "Manufacturer" "Taiyo Yuden"
+      (at 335.28 231.14 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "MPN" "LMK325ABJ107MM-P"
+      (at 335.28 231.14 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "Variant" "A i B"
+      (at 335.28 231.14 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (pin "1"
+      (uuid "24ac4540-d32e-50c5-a12e-28654c63dda0"))
+    (pin "2"
+      (uuid "6992bcb2-88f6-5ee2-b7d9-51435042d98a"))
+    (instances
+      (project "plytka-nosna"
+        (path "/345cada4-e7c9-5f8c-a8ed-f520a1bfed0c"
+          (reference "C13")
+          (unit 1)))))
+  (wire
+    (pts
+      (xy 335.28 227.33)
+      (xy 335.28 222.25))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "379b6823-5d66-5825-a158-be70ed9143e5"))
+  (label "+3V3"
+    (at 335.28 222.25 90)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify right))
+    (uuid "2ab04e9d-b4e4-5654-9af2-faad5c6bbb37"))
+  (wire
+    (pts
+      (xy 335.28 234.95)
+      (xy 335.28 240.03))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "fc0c2864-5ecc-5e36-b82f-9046cc7cf64a"))
+  (label "GND"
+    (at 335.28 240.03 270)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify left))
+    (uuid "9e4d46ff-80ad-5d4f-bab9-61ce381e130c"))
+  (symbol
+    (lib_id "Device:C")
     (at 259.08 86.36 0)
     (unit 1)
     (exclude_from_sim no)
@@ -11135,7 +11223,7 @@
     (uuid "21fed50b-26a6-5114-8e1b-9f2e6f13c82d"))
   (symbol
     (lib_id "Device:C")
-    (at 335.28 294.64 0)
+    (at 335.28 322.58 0)
     (unit 1)
     (exclude_from_sim no)
     (in_bom yes)
@@ -11143,41 +11231,41 @@
     (dnp no)
     (uuid "622e6276-92ff-5532-81ea-9d324313f5a1")
     (property "Reference" "C5"
-      (at 335.28 285.75 0)
+      (at 335.28 313.69 0)
       (effects
         (font
           (size 1.27 1.27))))
     (property "Value" "100n"
-      (at 335.28 288.29 0)
+      (at 335.28 316.23 0)
       (effects
         (font
           (size 1.27 1.27))))
     (property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
-      (at 335.28 294.64 0)
+      (at 335.28 322.58 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Datasheet" ""
-      (at 335.28 294.64 0)
+      (at 335.28 322.58 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Manufacturer" "Samsung Electro-Mechanics"
-      (at 335.28 294.64 0)
+      (at 335.28 322.58 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "MPN" "CL21B104KBCNNNC"
-      (at 335.28 294.64 0)
+      (at 335.28 322.58 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Variant" "A i B"
-      (at 335.28 294.64 0)
+      (at 335.28 322.58 0)
       (effects
         (font
           (size 1.27 1.27))
@@ -11193,14 +11281,14 @@
           (unit 1)))))
   (wire
     (pts
-      (xy 335.28 290.83)
-      (xy 335.28 285.75))
+      (xy 335.28 318.77)
+      (xy 335.28 313.69))
     (stroke
       (width 0)
       (type default))
     (uuid "0e9e9308-3c36-5dd7-9a19-d5e777e620c4"))
   (label "VTEST"
-    (at 335.28 285.75 90)
+    (at 335.28 313.69 90)
     (effects
       (font
         (size 1.27 1.27))
@@ -11208,14 +11296,14 @@
     (uuid "796c377f-9fea-569f-9c59-38a41aacc94b"))
   (wire
     (pts
-      (xy 335.28 298.45)
-      (xy 335.28 303.53))
+      (xy 335.28 326.39)
+      (xy 335.28 331.47))
     (stroke
       (width 0)
       (type default))
     (uuid "3f272d82-bbbb-52d7-abec-05adf5b3a980"))
   (label "GND"
-    (at 335.28 303.53 270)
+    (at 335.28 331.47 270)
     (effects
       (font
         (size 1.27 1.27))

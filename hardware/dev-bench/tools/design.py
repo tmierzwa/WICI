@@ -268,6 +268,13 @@ part('C11', 'Device:C', '100n', C0805, {1: '+3V3', 2: 'GND'}, (77.5, 4.0, 90),
 part('C12', 'Device:C', '100n', C0805, {1: '+3V3', 2: 'GND'}, (77.5, 18.5, 90),
      mpn='CL21B104KBCNNNC', manufacturer='Samsung Electro-Mechanics', spec='100 nF 50 V X7R 0805',
      note='+3V3 przy nadzorcy U3')
+# Hold-up for the FRAM guard: U3 asserts at most 30 us after +3V3 is 10 % below its threshold
+# (2.394 V worst case, TI SNVSB03E table 6.6); +3V3 must stay above 2.0 V (CY15B104Q) for twice that
+# at 150 mA, i.e. >= 23 uF effective counting only this board. C13 gives >= 32 uF at 3.3 V
+# (40 % left after DC bias, -20 % tolerance), C8 about 6 uF more; module capacitance is not counted.
+part('C13', 'Device:C', '100u', 'Capacitor_SMD:C_1210_3225Metric', {1: '+3V3', 2: 'GND'}, (77.5, 23.0, 90),
+     mpn='LMK325ABJ107MM-P', manufacturer='Taiyo Yuden', spec='100 µF 10 V X5R 1210',
+     note='podtrzymanie +3V3 przez czas reakcji nadzorcy U3 (budżet w plytka-nosna.md, „Zasilanie”)')
 part('C4', 'Device:C', '10u', C0805, {1: '+5V_LCD', 2: 'GND'}, (FPC_ORIGIN[0] - 8.0, FPC_ORIGIN[1] - 2.0, 90),
      mpn='CL21A106KAYNNNG', manufacturer='Samsung Electro-Mechanics', spec='10 µF 25 V X5R 0805',
      note='VDD panelu (Sharp zaleca ≥1 µF)')

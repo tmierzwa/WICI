@@ -2,7 +2,7 @@
 <export version="E">
   <design>
     <source>cad/plytka-nosna.kicad_sch</source>
-    <date>2026-10-08T17:07:44</date>
+    <date>2026-10-08T17:20:31</date>
     <tool>Eeschema 10.0.6</tool>
     <sheet number="1" name="/" tstamps="/">
       <title_block>
@@ -405,6 +405,36 @@
       <property name="ki_fp_filters" value="C_*"/>
       <sheetpath names="/" tstamps="/"/>
       <tstamps>1022c6a9-6efb-589a-a9a8-539fc2da4b32</tstamps>
+      <units>
+        <unit name="A">
+          <pins>
+            <pin num="1"/>
+            <pin num="2"/>
+          </pins>
+        </unit>
+      </units>
+    </comp>
+    <comp ref="C13">
+      <value>100u</value>
+      <footprint>Capacitor_SMD:C_1210_3225Metric</footprint>
+      <fields>
+        <field name="Manufacturer">Taiyo Yuden</field>
+        <field name="MPN">LMK325ABJ107MM-P</field>
+        <field name="Variant">A i B</field>
+        <field name="Footprint">Capacitor_SMD:C_1210_3225Metric</field>
+        <field name="Datasheet"/>
+        <field name="Description"/>
+      </fields>
+      <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
+      <property name="Manufacturer" value="Taiyo Yuden"/>
+      <property name="MPN" value="LMK325ABJ107MM-P"/>
+      <property name="Variant" value="A i B"/>
+      <property name="Sheetname" value="plytka-nosna"/>
+      <property name="Sheetfile" value="plytka-nosna.kicad_sch"/>
+      <property name="ki_keywords" value="cap capacitor"/>
+      <property name="ki_fp_filters" value="C_*"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>da5d012a-5579-5019-8ca5-01e1edd78aa0</tstamps>
       <units>
         <unit name="A">
           <pins>
@@ -2875,6 +2905,7 @@
     <net code="1" name="/+3V3" class="Power">
       <node ref="C11" pin="1" pintype="passive"/>
       <node ref="C12" pin="1" pintype="passive"/>
+      <node ref="C13" pin="1" pintype="passive"/>
       <node ref="C3" pin="1" pintype="passive"/>
       <node ref="C8" pin="1" pintype="passive"/>
       <node ref="D3" pin="2" pinfunction="K_2" pintype="passive"/>
@@ -3004,6 +3035,7 @@
       <node ref="C1" pin="2" pintype="passive"/>
       <node ref="C11" pin="2" pintype="passive"/>
       <node ref="C12" pin="2" pintype="passive"/>
+      <node ref="C13" pin="2" pintype="passive"/>
       <node ref="C2" pin="2" pintype="passive"/>
       <node ref="C3" pin="2" pintype="passive"/>
       <node ref="C4" pin="2" pintype="passive"/>

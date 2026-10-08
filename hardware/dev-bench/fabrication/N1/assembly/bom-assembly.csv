@@ -1,6 +1,7 @@
 Designator,Qty per board,Value,Manufacturer,MPN,Description,Footprint,Type,Fit,Placed by
 C1 C4 C8 C9,4,10u,Samsung Electro-Mechanics,CL21A106KAYNNNG,MLCC 10 uF 25 V X5R 0805,C_0805_2012Metric,SMD,all,assembler
 C10,1,100p,Samsung Electro-Mechanics,CL21C101JBANNNC,MLCC 100 pF 50 V C0G 0805,C_0805_2012Metric,SMD,all,assembler
+C13,1,100u,Taiyo Yuden,LMK325ABJ107MM-P,MLCC 100 uF 10 V X5R 1210,C_1210_3225Metric,SMD,all,assembler
 C2 C3 C11 C12 C6 C7 C5,7,100n,Samsung Electro-Mechanics,CL21B104KBCNNNC,MLCC 100 nF 50 V X7R 0805,C_0805_2012Metric,SMD,all,assembler
 D2,1,,Diodes Incorporated,1N4148W-7-F,"switching diode 75 V, SOD-123",D_SOD-123,SMD,all,assembler
 D3,1,,onsemi,BAT54SLT1G,"dual Schottky diode series, SOT-23",SOT-23,SMD,all,assembler

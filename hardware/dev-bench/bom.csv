@@ -28,6 +28,7 @@ R14,1,100k,Yageo,RT0805BRD07100KL,"100 kΩ 0,1% 25 ppm/K 0805",Resistor_SMD:R_08
 R15,1,20k,Yageo,RT0805BRD0720KL,"20 kΩ 0,1% 25 ppm/K 0805",Resistor_SMD:R_0805_2012Metric,A i B,"VTEST = VTEST_IN / 6 (±0,17% z tolerancji); 15 V daje 2,5 V"
 C1 C4 C8 C9,4,10u,Samsung Electro-Mechanics,CL21A106KAYNNNG,10 µF 25 V X5R 0805,Capacitor_SMD:C_0805_2012Metric,A i B,"C1: +3V3_RF przy module CC1120EM; C4: VDD panelu (Sharp zaleca ≥1 µF); C8: wejście U2 (karta: ≥4,7 µF); C9: wyjście U2; razem z C4 przy panelu ≥10 µF także po spadku pojemności przy 5 V"
 C2 C3 C11 C12 C6 C7 C5,7,100n,Samsung Electro-Mechanics,CL21B104KBCNNNC,100 nF 50 V X7R 0805,Capacitor_SMD:C_0805_2012Metric,A i B,"C2: +3V3_RF przy module CC1120EM; C3: +3V3 przy FRAM U1; C11: +3V3 przy bramce U4; C12: +3V3 przy nadzorcy U3; C6: VDDA panelu (Sharp zaleca ≥0,1 µF); C7: DISP panelu (Sharp zaleca 0,1 µF); C5: filtr wejścia ADC VTEST"
+C13,1,100u,Taiyo Yuden,LMK325ABJ107MM-P,100 µF 10 V X5R 1210,Capacitor_SMD:C_1210_3225Metric,A i B,"podtrzymanie +3V3 przez czas reakcji nadzorcy U3 (budżet w plytka-nosna.md, „Zasilanie”)"
 U2,1,MCP1640,Microchip,MCP1640T-I/CHY,"przetwornica podwyższająca synchroniczna 0,65–5,5 V, PFM, SOT-23-6",Package_TO_SOT_SMD:SOT-23-6,A i B,"5,1 V panelu z +3V3 (3,0 V w stanowisku A); EN na stałe do VIN"
 L1,1,4u7,Würth Elektronik,744031004,"4,7 µH, Isat 0,9 A, 105 mΩ, ekranowana, 3,8 × 3,8 mm",Inductor_SMD:L_Wuerth_WE-TPC-3816,A i B,cewka z tabeli 5-2 karty MCP1640
 R21,1,1M,Yageo,RC0805FR-071ML,"1,00 MΩ 1% 0805",Resistor_SMD:R_0805_2012Metric,A i B,RTOP dzielnika U2
