@@ -6,7 +6,7 @@ Katalog zawiera oprogramowanie układowe stacji. Obecny stan to pierwsze kroki n
 
 Środowisko `bench-b` buduje ten sam program stacji dla [stanowiska B na N1](#stanowisko-b-na-płytce-n1-bench-b): ESP32-S3-DevKitC-1 z X-NUCLEO-S2868A2 (ST S2-LP) zamiast nRF52840 i CC1120. Wspólne są polecenia, polecenia pomiarowe, łącze P1, dziennik, magazyn, protokół USB laptop–stacja z dwoma interfejsami CDC, warstwa aplikacji, ekran i panel N1; różnią się warstwa MCU (`src/platform_*.cpp`), sterownik układu radiowego (`src/radio_console_*.cpp`, `src/*_link.cpp`) i [rejestry P1 dla S2-LP](#rejestry-profilu-p1-dla-s2-lp).
 
-Obrazy skompilowano (PlatformIO, ze stosem Reticulum; rdzeń Adafruit nRF52 1.7.0: `bench-a` 96 952 B RAM statycznej, 500 372 B flash, `bench-n1` 97 160 B RAM, 504 144 B flash, podział w [pomiarze RAM stosu](#pamięć-ram) i [przeglądzie rozmiaru](#rozmiar-i-wydajność); Arduino-ESP32 3.3.12: `bench-b` 143 936 B RAM z 327 680 B, 807 265 B flash). **Żadnego nie uruchomiono na sprzęcie**: odpowiedzi poleceń, numery pinów, działanie SPI z modułem, przyjęcie rejestrów przez układ, USB i łącze radiowe wymagają sprawdzenia na płytce według kroków niżej. Na hoście sprawdzone są tylko moduły bez Arduino, sterownik S2-LP i jego sterownik łącza z modelem układu, `measure::Bench` ze sterownikiem zastępczym, tablica rejestrów S2-LP i zgodność pinów `bench-b` z [połączeniami](../hardware/dev-bench/polaczenia.md) (`tests/`), a stos Reticulum z interfejsem P1 w programie na komputerze z emulatorem łącza wobec Reticulum w Pythonie ([próba zgodności](#próba-zgodności-z-reticulum)).
+Obrazy skompilowano (PlatformIO, ze stosem Reticulum; rdzeń Adafruit nRF52 1.7.0: `bench-a` 96 952 B RAM statycznej, 500 860 B flash, `bench-n1` 97 160 B RAM, 504 792 B flash, podział w [pomiarze RAM stosu](#pamięć-ram) i [przeglądzie rozmiaru](#rozmiar-i-wydajność); Arduino-ESP32 3.3.12: `bench-b` 143 936 B RAM z 327 680 B, 807 801 B flash). **Żadnego nie uruchomiono na sprzęcie**: odpowiedzi poleceń, numery pinów, działanie SPI z modułem, przyjęcie rejestrów przez układ, USB i łącze radiowe wymagają sprawdzenia na płytce według kroków niżej. Na hoście sprawdzone są tylko moduły bez Arduino, sterownik S2-LP i jego sterownik łącza z modelem układu, `measure::Bench` ze sterownikiem zastępczym, tablica rejestrów S2-LP i zgodność pinów `bench-b` z [połączeniami](../hardware/dev-bench/polaczenia.md) (`tests/`), a stos Reticulum z interfejsem P1 w programie na komputerze z emulatorem łącza wobec Reticulum w Pythonie ([próba zgodności](#próba-zgodności-z-reticulum)).
 
 ## Okablowanie stanowiska A
 
@@ -533,7 +533,7 @@ Pomiar dla obrazu `bench-a` (nRF52840, 256 KiB RAM) przy pojemnościach ze specy
 
 System plików FRAM przy pełnych tablicach: 135 680 B z 195 456 B (69%), 8 plików.
 
-Flash: 500 372 B z 815 104 B (61,4%); stos dokłada około 324 KB, w tym Curve25519 i Ed25519, kontenery C++17 z wyjątkami (tablice odwijania `.ARM.extab` i `.ARM.exidx` 27 KB), MsgPack i ArduinoJson.
+Flash: 500 860 B z 815 104 B (61,4%); stos dokłada około 324 KB, w tym Curve25519 i Ed25519, kontenery C++17 z wyjątkami (tablice odwijania `.ARM.extab` i `.ARM.exidx` 27 KB), MsgPack i ArduinoJson.
 
 ### Co zostaje na etap LXMF
 

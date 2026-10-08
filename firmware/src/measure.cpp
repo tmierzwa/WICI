@@ -512,16 +512,17 @@ void Bench::finishP1Tx(const char* result) {
 
 void Bench::printLink() {
     const p1frame::Stats& s = assembler_.stats();
+    // Dwie części poniżej 256 znaków: Print::printf rdzenia Adafruit nRF52 formatuje do bufora 256 B.
     Serial.printf("{\"p1\":{\"rx\":%s,\"tx\":\"%s\",\"rx_ok\":%lu,\"rx_bad\":%lu,\"rx_datagrams\":%lu,\"tx_datagrams\":%lu,"
-                  "\"tx_fragments\":%lu,\"tx_drop\":%lu,\"deferrals\":%lu,\"long_deferrals\":%lu,\"attempts\":%u,"
-                  "\"stored\":%lu,\"duplicates\":%lu,\"conflicts\":%lu,\"late\":%lu,\"evicted\":%lu,\"expired\":%lu,"
-                  "\"cca_threshold_dbm\":%d,\"tx_wait_ms\":%lu}}\n",
+                  "\"tx_fragments\":%lu,\"tx_drop\":%lu,\"deferrals\":%lu,\"long_deferrals\":%lu,",
                   boolName(rxMode_ == RxMode::P1), txState_ == TxState::IDLE ? "idle" : txState_ == TxState::WAIT_DEBT ? "wait_debt"
                   : txState_ == TxState::CCA ? "cca" : txState_ == TxState::BACKOFF ? "backoff" : "send",
                   static_cast<unsigned long>(link_.rxOk), static_cast<unsigned long>(link_.rxBad),
                   static_cast<unsigned long>(link_.rxDatagrams), static_cast<unsigned long>(link_.txDatagrams),
                   static_cast<unsigned long>(link_.txFragments), static_cast<unsigned long>(link_.txDrop),
-                  static_cast<unsigned long>(link_.deferrals), static_cast<unsigned long>(link_.longDeferrals),
+                  static_cast<unsigned long>(link_.deferrals), static_cast<unsigned long>(link_.longDeferrals));
+    Serial.printf("\"attempts\":%u,\"stored\":%lu,\"duplicates\":%lu,\"conflicts\":%lu,\"late\":%lu,\"evicted\":%lu,\"expired\":%lu,"
+                  "\"cca_threshold_dbm\":%d,\"tx_wait_ms\":%lu}}\n",
                   static_cast<unsigned>(assembler_.active()), static_cast<unsigned long>(s.stored),
                   static_cast<unsigned long>(s.duplicates), static_cast<unsigned long>(s.conflicts),
                   static_cast<unsigned long>(s.late), static_cast<unsigned long>(s.evicted),

@@ -503,36 +503,42 @@ void printFram() {
 void printInfo() {
     // Pola jak w INFO ze specyfikacji radia; napięcie jest zerowe, bo stanowisko go nie mierzy.
     // uptime_s to zegar z dziennika FRAM (ciągły między restartami), boot_s czas od startu.
+    // Wiersz w częściach poniżej 256 znaków (Print::printf rdzenia nRF52, zob. printRns).
     const measure::LinkCounters& c = bench.link();
     Serial.printf("{\"contract\":2,\"profile\":\"P1\",\"radio\":\"%s\",\"mcu\":\"%s\",\"fw\":\"%s\","
-                  "\"src\":\"USB\",\"mv\":0,\"tx_wait_ms\":%lu,\"rx_ok\":%lu,\"rx_bad\":%lu,\"tx_drop\":%lu,\"restarts\":%lu,"
-                  "\"bench\":\"%s\",\"prep\":%s,\"silence\":%s,\"radio_ok\":%s,\"p1_ok\":%s,\"fram_ok\":%s,\"journal_ok\":%s,"
-                  "\"journal_resets\":%lu,\"carrier_hz\":%lu,\"symbol_rate\":%u,\"deviation_hz\":%u,\"rx_filter_hz\":%u,"
-                  "\"tx_power_dbm\":%d,\"uptime_s\":%lu,\"boot_s\":%lu,\"screen\":\"%s\",\"lang\":\"%s\",\"name\":\"%s\","
-                  "\"reset_reason\":\"0x%08lX\",\"store_ok\":%s,\"queued\":%u,\"inbox\":%u,\"pending\":%u,\"usb_data\":%s,"
-                  "\"usb_in\":%lu,\"usb_out\":%lu,\"usb_rejected\":%lu,\"usb_boot\":\"%s\",\"wdt_s\":%lu,\"board\":\"%s\"}\n",
+                  "\"src\":\"USB\",\"mv\":0,\"tx_wait_ms\":%lu,\"rx_ok\":%lu,\"rx_bad\":%lu,\"tx_drop\":%lu,\"restarts\":%lu,",
                   radiocon::NAME, platform::MCU, WICI_FW_VERSION, static_cast<unsigned long>(bench.debtRemainingMs()),
                   static_cast<unsigned long>(c.rxOk), static_cast<unsigned long>(c.rxBad), static_cast<unsigned long>(c.txDrop),
-                  static_cast<unsigned long>(restarts), BENCH, boolName(bench.prep),
+                  static_cast<unsigned long>(restarts));
+    Serial.printf("\"bench\":\"%s\",\"prep\":%s,\"silence\":%s,\"radio_ok\":%s,\"p1_ok\":%s,\"fram_ok\":%s,\"journal_ok\":%s,"
+                  "\"journal_resets\":%lu,\"carrier_hz\":%lu,\"symbol_rate\":%u,\"deviation_hz\":%u,\"rx_filter_hz\":%u,",
+                  BENCH, boolName(bench.prep),
                   boolName(bench.silence), boolName(radiocon::ok()), boolName(radiocon::p1Ok()), boolName(framOk), boolName(journalOk),
                   static_cast<unsigned long>(journalResets), static_cast<unsigned long>(p1::CARRIER_HZ), p1::SYMBOL_RATE,
-                  p1::DEVIATION_HZ, radiocon::RX_FILTER_HZ, radiocon::TX_POWER_DBM, static_cast<unsigned long>(uptimeS()),
+                  p1::DEVIATION_HZ, radiocon::RX_FILTER_HZ);
+    Serial.printf("\"tx_power_dbm\":%d,\"uptime_s\":%lu,\"boot_s\":%lu,\"screen\":\"%s\",\"lang\":\"%s\",\"name\":\"%s\","
+                  "\"reset_reason\":\"0x%08lX\",\"store_ok\":%s,\"queued\":%u,\"inbox\":%u,\"pending\":%u,",
+                  radiocon::TX_POWER_DBM, static_cast<unsigned long>(uptimeS()),
                   static_cast<unsigned long>(millis() / 1000), ui::screenName(screenModel.screen()), langName(screenModel.language()),
                   stationName, static_cast<unsigned long>(platform::resetReason()), boolName(storeOk),
                   static_cast<unsigned>(storeOk ? stationStore.queueLive() : 0), static_cast<unsigned>(storeOk ? stationStore.inboxCount() : 0),
-                  static_cast<unsigned>(storeOk ? stationStore.notesPending() : 0), boolName(protocol.isConnected()),
-                  static_cast<unsigned long>(protocol.stats().linesIn), static_cast<unsigned long>(protocol.stats().linesOut),
+                  static_cast<unsigned>(storeOk ? stationStore.notesPending() : 0));
+    Serial.printf("\"usb_data\":%s,\"usb_in\":%lu,\"usb_out\":%lu,\"usb_rejected\":%lu,\"usb_boot\":\"%s\",\"wdt_s\":%lu,"
+                  "\"board\":\"%s\"}\n",
+                  boolName(protocol.isConnected()), static_cast<unsigned long>(protocol.stats().linesIn),
+                  static_cast<unsigned long>(protocol.stats().linesOut),
                   static_cast<unsigned long>(protocol.stats().rejected), protocol.bootId(), static_cast<unsigned long>(WDT_TIMEOUT_S), BOARD_NAME);
 }
 
 void printJournal() {
     const journal::SmallRecord& d = stationJournal.debt();
     const journal::SmallRecord& k = stationJournal.clock();
-    Serial.printf("{\"journal_ok\":%s,\"debt_seq\":%lu,\"debt_ms\":%lu,\"debt_written_at_s\":%lu,\"debt_records\":%lu,"
-                  "\"tx_wait_ms\":%lu,\"clock_seq\":%lu,\"uptime_s\":%lu,\"restarts\":%lu,\"event_seq\":%lu,"
-                  "\"max_debt_ms\":%lu,\"journal_resets\":%lu}\n",
+    // Dwie części poniżej 256 znaków (zob. printRns).
+    Serial.printf("{\"journal_ok\":%s,\"debt_seq\":%lu,\"debt_ms\":%lu,\"debt_written_at_s\":%lu,\"debt_records\":%lu,",
                   boolName(journalOk), static_cast<unsigned long>(d.seq), static_cast<unsigned long>(d.a),
-                  static_cast<unsigned long>(d.b), static_cast<unsigned long>(stationJournal.debtValid()),
+                  static_cast<unsigned long>(d.b), static_cast<unsigned long>(stationJournal.debtValid()));
+    Serial.printf("\"tx_wait_ms\":%lu,\"clock_seq\":%lu,\"uptime_s\":%lu,\"restarts\":%lu,\"event_seq\":%lu,"
+                  "\"max_debt_ms\":%lu,\"journal_resets\":%lu}\n",
                   static_cast<unsigned long>(bench.debtRemainingMs()), static_cast<unsigned long>(k.seq),
                   static_cast<unsigned long>(uptimeS()), static_cast<unsigned long>(restarts),
                   static_cast<unsigned long>(stationJournal.eventSeq()), static_cast<unsigned long>(p1::MAX_DEBT_MS),
@@ -609,12 +615,14 @@ bool lastIsConducted(char* words[], size_t& n) {
 
 void printApp() {
     const station::Stats& s = app.stats();
-    Serial.printf("{\"link\":%s,\"in_flight\":%lu,\"sent\":%lu,\"delivered\":%lu,\"failed\":%lu,\"received\":%lu,\"rejected\":%lu,"
-                  "\"duplicates\":%lu,\"conflicts\":%lu,\"refused\":%lu,\"confirmed\":%lu,\"live\":%u,\"unsent\":%u,\"next\":%lu,"
-                  "\"test_paused\":%s,\"items\":%u}\n",
+    // Dwie części poniżej 256 znaków (zob. printRns).
+    Serial.printf("{\"link\":%s,\"in_flight\":%lu,\"sent\":%lu,\"delivered\":%lu,\"failed\":%lu,\"received\":%lu,\"rejected\":%lu,",
                   boolName(linkAuto), static_cast<unsigned long>(app.inFlightSeq()), static_cast<unsigned long>(s.sent),
                   static_cast<unsigned long>(s.delivered), static_cast<unsigned long>(s.failed), static_cast<unsigned long>(s.received),
-                  static_cast<unsigned long>(s.rejected), static_cast<unsigned long>(s.duplicates), static_cast<unsigned long>(s.conflicts),
+                  static_cast<unsigned long>(s.rejected));
+    Serial.printf("\"duplicates\":%lu,\"conflicts\":%lu,\"refused\":%lu,\"confirmed\":%lu,\"live\":%u,\"unsent\":%u,\"next\":%lu,"
+                  "\"test_paused\":%s,\"items\":%u}\n",
+                  static_cast<unsigned long>(s.duplicates), static_cast<unsigned long>(s.conflicts),
                   static_cast<unsigned long>(s.refused), static_cast<unsigned long>(s.confirmed),
                   static_cast<unsigned>(stationStore.queueLive()), static_cast<unsigned>(stationStore.queueUnsent()),
                   static_cast<unsigned long>(app.nextToSend(uptimeS())), boolName(app.testPaused()),
@@ -653,11 +661,13 @@ void printStore() {
     const store::Config& c = stationStore.config();
     char osp[2 * store::HASH + 1];
     store::bytesToHex(c.osp[c.activeOsp ? 1 : 0], osp);
+    // Dwie części poniżej 256 znaków (zob. printRns); adres ma do 64 znaków.
     Serial.printf("{\"store_ok\":%s,\"configured\":%s,\"config_seq\":%lu,\"role\":\"%s\",\"address\":\"%s\",\"osp\":\"%s\","
-                  "\"phrases\":%u,\"stations\":%u,\"queued\":%u,\"inbox\":%u,\"unread\":%u,\"notes_pending\":%u,\"note_latest\":%lu,"
-                  "\"usb_synced\":%s,\"usb_stored\":%lu,\"usb_overflow\":%lu,\"usb_resends\":%lu}\n",
+                  "\"phrases\":%u,\"stations\":%u,",
                   boolName(storeOk), boolName(stationStore.configured()), static_cast<unsigned long>(c.seq),
-                  c.role == store::OSP ? "osp" : "station", c.address, osp, c.phraseCount, c.stations,
+                  c.role == store::OSP ? "osp" : "station", c.address, osp, c.phraseCount, c.stations);
+    Serial.printf("\"queued\":%u,\"inbox\":%u,\"unread\":%u,\"notes_pending\":%u,\"note_latest\":%lu,"
+                  "\"usb_synced\":%s,\"usb_stored\":%lu,\"usb_overflow\":%lu,\"usb_resends\":%lu}\n",
                   static_cast<unsigned>(stationStore.queueLive()), static_cast<unsigned>(stationStore.inboxCount()),
                   static_cast<unsigned>(stationStore.inboxUnread()), static_cast<unsigned>(stationStore.notesPending()),
                   static_cast<unsigned long>(stationStore.noteLatest()), boolName(protocol.synced()),
@@ -837,7 +847,12 @@ void handle(char* cmd) {
         delay(20);
         platform::reboot();
     } else if (!strcmp(cmd, "HELP") || !*cmd) printHelp();
-    else Serial.printf("{\"error\":\"unknown\",\"cmd\":\"%s\"}\n", cmd);
+    else {
+        // Słowo polecenia ma do 1399 znaków (bufor wiersza): przez print, nie przez Print::printf (zob. printRns).
+        Serial.print("{\"error\":\"unknown\",\"cmd\":\"");
+        Serial.print(cmd);
+        Serial.print("\"}\n");
+    }
 }
 
 void pollSerial() {
