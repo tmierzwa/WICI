@@ -44,8 +44,8 @@ STATION = {"rail_v": 3.3, "rx_ma": 22.0, "tcxo_ma": 2.0, "tx_ma_13dbm": 45.0,
            "battery_vsys_v": 12.8, "battery_rail_efficiency": 0.80}
 # Input-side quiescent currents per source; the converter Iq is inside its efficiency and is not added again.
 # The cell path is a Schottky diode (no controller Iq); its drop scales the power drawn from the cells.
-INPUT_SIDE_MA = {"aa": {"tps3710": 0.006, "ltc2954": 0.006, "dividers": 0.01},
-                 "12v": {"lm74800": 0.4, "uv_latch": 0.02, "tps3710": 0.006, "ltc2954": 0.006, "dividers": 0.01}}
+INPUT_SIDE_MA = {"aa": {"tps3710": 0.006, "ltc2955": 0.0012, "dividers": 0.01},
+                 "12v": {"lm74800": 0.4, "uv_latch": 0.02, "tps3710": 0.006, "ltc2955": 0.0012, "dividers": 0.01}}
 SOURCES = {"aa": ("aa_vsys_v", "aa_rail_efficiency"), "12v": ("battery_vsys_v", "battery_rail_efficiency")}
 
 

@@ -17,19 +17,19 @@ Przegląd kart wykazał błędy i sprzeczności w obecnych wymaganiach ([F87](..
 | # | Ustalenie | Źródło | Skutek |
 |---|---|---|---|
 | Z1 | **TPS610995 to wersja 3,6 V, nie 5 V.** Wersja 5 V to TPS610997, dostępna tylko w WCSP 1,23 × 0,88 mm. W obudowie WSON 2 × 2 mm jest regulowany TPS61099DRV z dzielnikiem | TI SLVSD88M, tabela porównania wersji i 6.5 | poprawione w elektronice i BOM: TPS61099 (DRV) ustawiony na 5 V |
-| Z2 | **LTC2954 nie ma licznika czasu wyłączenia bez naciśniętego przycisku.** Przy braku odpowiedzi MCU wyłączenie wymusza tylko przycisk przytrzymany przez t_PDT. Sam sterownik nie wyłączy się po puszczeniu przycisku. INT idzie w stan niski 32 ms po naciśnięciu i trwa, dopóki przycisk jest wciśnięty, więc 2 s odmierza program | ADI LTC2954 rew. B, s. 6 i 9 | poprawione w elektronice: wymuszenie przytrzymaniem przycisku ≥5 s |
-| Z3 | **KILL musi być w stanie wysokim najpóźniej 400 ms po włączeniu EN**, inaczej sterownik znowu wyłącza zasilanie | LTC2954, t_KILL,ON BLANK 400/512/650 ms | rezystor podciągający KILL do 3V3, a MCU ściąga KILL otwartym drenem; zasilanie trzyma się od chwili, gdy jest 3V3 |
+| Z2 | **LTC2954 nie ma licznika czasu wyłączenia bez naciśniętego przycisku.** Przy braku odpowiedzi MCU wyłączenie wymusza tylko przycisk przytrzymany przez t_PDT. Sam sterownik nie wyłączy się po puszczeniu przycisku. INT idzie w stan niski 32 ms po naciśnięciu i trwa, dopóki przycisk jest wciśnięty, więc 2 s odmierza program. LTC2955, wybrany zamiast LTC2954, działa tak samo: INT po 32 ms, trwa najmniej 32 ms i do puszczenia przycisku albo końca licznika TMR | ADI LTC2954 rew. B, s. 6 i 9; LTC2955 rew. A, s. 9–10 | poprawione w elektronice: wymuszenie przytrzymaniem przycisku ≥5 s |
+| Z3 | **KILL musi być w stanie wysokim najpóźniej 304 ms po włączeniu EN** (LTC2955; dla LTC2954 400 ms), inaczej sterownik znowu wyłącza zasilanie | LTC2955, t_KILL(ON BLANK) 304/512/720 ms | rezystor podciągający KILL do 3V3, a MCU ściąga KILL otwartym drenem; zasilanie trzyma się od chwili, gdy jest 3V3 |
 | Z4 | **Polimerowy kondensator podtrzymania przekracza budżet stanu wyłączonego.** VSYS jest stale połączone z ogniwami (tor ogniw nie ma łącznika). Nichicon PCR 470 µF/25 V ma gwarantowany upływ ≤352 µA przy napięciu znamionowym, a budżet to ≤20 µA | Nichicon PCR, CAT.8100N | zdecydowane: aluminiowy elektrolit o małym upływie (Nichicon UKL, 0,002 CV) i ceramika; upływ przy 6 V do zmierzenia |
 | Z5 | **Pojemność podtrzymania przy najgorszym progu:** komparator może zadziałać już przy 3,325 V, więc C ≥450 µF; po tolerancji −20% i spadku w −20 °C potrzeba nominalnie 680 µF, a nie 470 µF | §[podtrzymanie](#kondensator-podtrzymania-vsys) | zdecydowane: ≥680 µF |
 | Z6 | **LM74800-Q1 nie da progu OVP 17 V ±2%.** Sam komparator OV ma ±2,9%: przy rezystorach 0,1% próg wynosi 16,40–17,45 V. Reguła 0,9 × 40 V dla LTC3115-1 i tak jest spełniona z dużym zapasem. ADI LTC4368-2 daje 16,71–17,29 V | TI SNOSD95C s. 5; ADI LTC4368 rew. C s. 4 | zdecydowane: reguła 0,9 × maksimum i dolna granica progu powyżej 16 V zamiast ±2% |
-| Z7 | **Prąd z ogniw w stanie wyłączonym:** typowo około 24 µA, najgorzej około 49 µA przy cel ≤20 µA. Składniki: LTC4412 (11/19 µA), LTC2954 (6/12 µA), LTC3115-1 w wyłączeniu (3/10 µA), LM74800 zasilany wstecznie z VSYS przez diodę podłożową (2,9/5 µA) | §[bilans](#bilans-prądu-w-stanie-wyłączonym) | zdecydowane: dioda Schottky’ego zamiast idealnej diody, około 12/28 µA; najgorszy przypadek nadal przekracza 20 µA ([bilans](#bilans-prądu-w-stanie-wyłączonym)) |
+| Z7 | **Prąd z ogniw w stanie wyłączonym:** typowo około 24 µA, najgorzej około 49 µA przy cel ≤20 µA. Składniki: LTC4412 (11/19 µA), LTC2954 (6/12 µA), LTC3115-1 w wyłączeniu (3/10 µA), LM74800 zasilany wstecznie z VSYS przez diodę podłożową (2,9/5 µA) | §[bilans](#bilans-prądu-w-stanie-wyłączonym) | zdecydowane: dioda Schottky’ego zamiast idealnej diody i LTC2955 zamiast LTC2954, około 7/19 µA ([bilans](#bilans-prądu-w-stanie-wyłączonym)) |
 | Z8 | **Bipolarny kondensator tłumiący 47 µF/35 V ma gwarantowany upływ 49–52 µA**, ponad budżet 12 V | Nichicon UES, Panasonic SU-A | zdecydowane: tłumik RC (ceramika 10–22 µF/50 V z rezystorem 0,5–1 Ω) |
 | Z9 | **Sprzeczność progów 12 V:** elektronika mówi „pierwsze załączenie przy ≥12,0 V”, a gdzie indziej „ponowne załączenie zawsze tylko przy V12 ≥12,4 V” | elektronika, wiersze „Wejście 12 V” i „Odłączenie 12 V” | zdecydowane: 12,4 V w obu przypadkach |
 | Z10 | **Komparator VSYS:** TPS3710 ma sam próg opadający −1,9%/+1,4%, więc ±2% wychodzi tylko typowo (najgorzej −2,2%/+2,0%). Wejście SENSE wytrzymuje 7 V, więc dzielnika nie odłącza się od dołu | TI SBVS271A, 5.1 i 5.5 | odłączanie dzielnika od góry (PMOS); wymaganie ±2,5% albo pojemność liczona przy 3,32 V (Z5) |
 | Z11 | **Nominalne Iq LTC3115-1 w Burst Mode to 50 µA typowo, bez wartości maksymalnej**, a sprawność ≥85% przy 6 V wychodzi z wykresów tylko na granicy (około 82–85% dla 3,3 V, oszacowanie) | ADI LTC3115-1 rew. C, s. 3 i 6 | pomiar na płytce ewaluacyjnej przed schematem |
 | Z12 | **Tranzystor PMOS toru ogniw wg wymagania (≤50 mΩ przy −2,5 V, ≥30 V) ma tylko jednego producenta (Vishay).** W pracy ogniwa mają ≥4,0 V, a LTC4412 ściąga bramkę do około 0 V | Vishay, Diodes, Nexperia | nieaktualne po decyzji Z7 (tor ogniw bez PMOS) |
 | Z13 | **LTC4412 nie ogranicza udaru przy wkładaniu ogniw**, bo prąd płynie najpierw przez diodę podłożową. Szacunkowo 7–15 A do około 600 µF; opór ogniw do sprawdzenia | LTC4412 rew. C | rezystor 1 Ω impulsowy w torze ogniw: ≤5 A, spadek 0,08–0,12 V; dotyczy też diody Schottky’ego |
-| Z14 | **LTC2954 widzi przez sumę diodową impuls 29 V** z TVS, a pracuje do 26,4 V | LTC2954 s. 2–3 | filtr RC 1 kΩ / 1 µF za diodą od strony 12 V |
+| Z14 | **LTC2954 widzi przez sumę diodową impuls 29 V** z TVS, a pracuje do 26,4 V | LTC2954 s. 2–3; LTC2955 s. 2, 3 i 6 | LTC2955 pracuje do 36 V (maksimum 40 V), więc reguła 0,9 jest spełniona bez filtra; karta zaleca dla VIN >20 V rezystor 1 kΩ i kondensator ≥10 nF, więc filtr 1 kΩ / 1 µF za diodą od strony 12 V zostaje |
 | Z15 | **Diody sumy zasilania:** diody Schottky’ego mają w 45 °C upływ rzędu µA i ten prąd płynie do pierwotnych ogniw litowych. Krzemowa dioda o małym upływie (Nexperia BAS116H, ≤5 nA) jest lepsza, a spadek nie ma znaczenia | Nexperia BAS116H, BAT46WJ | dioda krzemowa o małym upływie zamiast Schottky’ego; od strony 12 V ≥40 V |
 
 LM74800-Q1 obsługuje oba połączenia tranzystorów: ze wspólnym drenem (przykład aplikacji TI) i ze wspólnym źródłem (jak w obecnym opisie). Wspólny dren pozwala użyć punktu środkowego do sumy diodowej. Wybór należy do schematu.
@@ -92,20 +92,21 @@ Drugi producent: ADI LTC2965 (3,5–100 V, 3/7/15 µA) z osobnymi progami w gór
 ### Suma diodowa i sterownik wyłącznika
 
 - **Suma diodowa:** dwie diody Nexperia BAS116H (75 V, ≤5 nA).
-  - Od strony 12 V za diodą jest filtr 1 kΩ / 1 µF (Z14).
+  - Od strony 12 V za diodą jest filtr 1 kΩ / 1 µF (Z14, zalecenie karty LTC2955 dla VIN >20 V).
   - Drugi producent diody o małym upływie do znalezienia.
-- **Sterownik: ADI LTC2954-2** (EN aktywny niski, otwarty dren).
-  - Steruje bramką PMOS, który z sumy diodowej tworzy szynę ON.
+- **Sterownik: ADI LTC2955ITS8-2** (TSOT-23-8, −40–85 °C; 1,5–36 V, 0,5/1,2/3 µA w pełnym zakresie temperatur). Zastępuje LTC2954-2 (6/12 µA), bo obniża najgorszy prąd z ogniw w stanie wyłączonym poniżej 20 µA ([bilans](#bilans-prądu-w-stanie-wyłączonym)).
+  - EN̄ (wersja -2) jest wyjściem wysokonapięciowym do bramki PMOS, który z sumy diodowej tworzy szynę ON. W stanie wyłączonym wewnętrzny rezystor 0,45–1,35 MΩ podciąga EN̄ do VIN, więc bramka nie pobiera prądu.
+  - Karta gwarantuje w stanie wysokim tylko VIN − 1,5 V przy −0,5 µA. Dlatego bramkę PMOS podciąga do źródła zewnętrzny rezystor 100 kΩ, na co karta pozwala, a od EN̄ idzie rezystor 100 kΩ. Ten dzielnik trzyma też |VGS| ≤15 V przy impulsie 29 V i pobiera prąd tylko przy włączonej stacji (około 60 µA przy 12 V).
   - Szyna ON zasila zatrzask UV (V12L przez swój PMOS), steruje EN łącznika S12 i podciągnięciem RUN przetwornicy.
-  - W stanie wyłączonym EN jest w wysokiej impedancji, więc rezystor bramki nie pobiera prądu; wersja -1 pobierałaby 1,3–3,4 µA przez podciągnięcie.
-  - PMOS szyny ON ma |VGS| ≤20 V albo dzielnik bramki.
+  - ON (wejście samoczynnego włączenia) jest zwarte do GND, bo stacja włącza się tylko przyciskiem. W obudowie TSOT-23 SEL jest wewnętrznie zwarty do GND, a wyjścia PGD nie ma.
 - **Czasy:**
-  - C_PDT = 1,5 µF X7R daje wymuszone wyłączenie po 5,8–14,3 s przytrzymania (9,6 s nominalnie). Rozrzut ekstrapolowano z karty, więc mierzy się go na próbce.
-  - Opcjonalnie C_ONT = 47 nF daje około 0,3 s przytrzymania do włączenia, co chroni przed przypadkowym włączeniem.
-- **Przerwanie i KILL:** INT do MCU; 2 s przytrzymania odmierza program. KILL ma podciągnięcie do 3V3, a MCU ściąga go otwartym drenem (Z3).
+  - Włączenie po 19–45 ms naciśnięcia (stałe, bez kondensatora). Stacja nie ma więc ochrony przed przypadkowym włączeniem krótkim dotknięciem, którą w LTC2954 dawał C_ONT; przycisk jest zagłębiony w panelu ([obudowa](obudowa.md)).
+  - C_TMR = 2,2 µF X7R: wymuszone wyłączenie po 64 ms + t_TMR, przy czym t_TMR = C_TMR / 0,19 µF/s, czyli około 11,6 s nominalnie. Karta podaje rozrzut t_TMR tylko dla 2,2 nF (5,8/11,5/17,2 ms, ±50%). Po przeniesieniu na 2,2 µF i z tolerancją kondensatora ±10% wychodzi około 5,2–19 s, więc ≥5 s jest spełnione. Rozrzut mierzy się na próbce.
+  - Po wyłączeniu sterownik przez 0,6–1,4 s ignoruje przycisk.
+- **Przerwanie i KILL:** INT (otwarty dren, do 6 V) z podciągnięciem do 3V3 idzie do MCU. Przy wyłączaniu INT idzie w stan niski po 19–45 ms naciśnięcia i trwa, dopóki przycisk jest wciśnięty. Puszczenie przycisku przed końcem t_TMR przerywa wyłączanie i zwalnia INT, więc 2 s przytrzymania odmierza program, jak przy LTC2954.
+  - KILL (do 6 V, próg 0,8 V) ma podciągnięcie do 3V3, a MCU ściąga go otwartym drenem. Po włączeniu EN̄ KILL musi być w stanie wysokim najpóźniej po 304 ms (Z3); narastanie S12 (około 19 ms) i rozruch przetwornicy mieszczą się w tym czasie z zapasem, do potwierdzenia pomiarem.
 - **Drugi producent:** nie znaleziono sterownika spoza ADI z INT i KILL na 2,7–26 V. TI na swoim forum podaje, że nie ma odpowiednika LTC2954.
-  - Droga zastępcza: stale włączony LDO TPS70930 z sumy diodowej (1,3/2,05 µA) zasila ST STM6601CA2BDM6F (1,6–5,5 V, 0,6 µA w spoczynku, INT, PSHOLD w roli KILL, blokada podnapięciowa 2,6 V, C_SRD 1 µF daje około 10 s wymuszonego wyłączenia; kartę czytano z kopii u dystrybutora). Razem około 1,9 µA typowo i 3,1 µA najwyżej, mniej niż LTC2954 (6/12 µA). Wyjścia mają poziom 3,3 V, więc szynę ON nadal tworzy PMOS.
-  - Tańszy w prądzie odpowiednik od ADI to LTC2955 (1,5–36 V, 0,5/1,2/3 µA).
+  - Droga zastępcza: stale włączony LDO TPS70930 z sumy diodowej (1,3/2,05 µA) zasila ST STM6601CA2BDM6F (1,6–5,5 V, 0,6 µA w spoczynku, INT, PSHOLD w roli KILL, blokada podnapięciowa 2,6 V, C_SRD 1 µF daje około 10 s wymuszonego wyłączenia; kartę czytano z kopii u dystrybutora). Razem około 1,9 µA typowo i 3,1 µA najwyżej, czyli podobnie jak LTC2955 (1,2/3 µA). Wyjścia mają poziom 3,3 V, więc szynę ON nadal tworzy PMOS.
 
 ### Przetwornica 3V3
 
@@ -168,14 +169,15 @@ Upływ elektrolitu przy 6 V (około 25% napięcia znamionowego) jest zwykle duż
 
 | Źródło i stan | Składniki | Razem |
 |---|---|---|
-| Ogniwa, bez 12 V (dioda Schottky’ego, decyzja Z7) | LTC2954 6/12 µA, LTC3115-1 3/10 µA, LM74800 przez diodę podłożową 2,9/5 µA, klucze dzielników 0/1 µA, dioda sumy od strony 12 V (BAS116H) ≈0 | **około 12/28 µA** (cel ≤20 µA) |
-| Dla porównania: z LTC4412 | LTC4412 dokładał 12/21 µA | około 24/49 µA |
-| 12 V, z ogniwami | LTC2954 6/12 µA, LM74800 2,9/5 µA, TVS ≈0/1 µA, dzielnik i PMOS zatrzasku ≈0/2 µA | **około 9/20 µA**, bez bipolarnego elektrolitu |
+| Ogniwa, bez 12 V (dioda Schottky’ego i LTC2955) | LTC2955 1,2/3 µA, LTC3115-1 3/10 µA, LM74800 przez diodę podłożową 2,9/5 µA, klucze dzielników 0/1 µA, dioda sumy od strony 12 V (BAS116H) ≈0 | **około 7/19 µA** (cel ≤20 µA) |
+| Dla porównania: z LTC2954 | LTC2954 6/12 µA zamiast LTC2955 | około 12/28 µA |
+| Dla porównania: z LTC4412 i LTC2954 | LTC4412 dokładał 12/21 µA | około 24/49 µA |
+| 12 V, z ogniwami | LTC2955 1,2/3 µA, LM74800 2,9/5 µA, TVS ≈0/1 µA, dzielnik i PMOS zatrzasku ≈0/2 µA | **około 4/11 µA**, bez bipolarnego elektrolitu |
 | Ogniwa przy obecnym 12 V | LTC3115-1 nie pobiera z ogniw (VSYS z 12 V); prąd wsteczny diody Schottky’ego płynie do ogniw (do sprawdzenia w karcie diody) | prąd wsteczny diody |
 
 Do tego dochodzi upływ kondensatora podtrzymania VSYS, którego karta nie podaje dla 6 V (Z4). Dlatego bilans potwierdza się pomiarem.
 
-Typowo cel ≤20 µA jest spełniony, a najgorszy przypadek (28 µA) wynika z wartości maksymalnych dwóch kart: LTC2954 (12 µA) i LTC3115-1 (10 µA). ADI LTC2955 (0,5/1,2/3 µA, ten sam schemat INT i KILL) obniża najgorszy przypadek do około 19 µA. Jego karta wymaga sprawdzenia przy próbie sterownika wyłącznika.
+Z LTC2955 cel ≤20 µA jest spełniony także w najgorszym przypadku, ale z zapasem tylko około 1 µA. Największy składnik to LTC3115-1 w wyłączeniu (10 µA najwyżej), a upływ kondensatora podtrzymania dochodzi osobno. Bez pomiaru wynik nie jest więc rozstrzygnięty.
 
 ## Reguła OVP
 
@@ -184,7 +186,7 @@ Typowo cel ≤20 µA jest spełniony, a najgorszy przypadek (28 µA) wynika z wa
 | LTC3115-1 (VIN) | 40 V | 36 V | OVP 17,75 V + 0,5 V przerzutu = 18,3 V | spełniona |
 | TPS3710 zasilany z 3V3 | 18 V | 16,2 V | 3,3 V | spełniona |
 | Dioda Schottky’ego toru ogniw (VR) | ≥30 V | 27 V | 18,3 V | spełniona |
-| LTC2954 (przed S12) | 26,4 V | 23,8 V | impuls około 28,5 V | spełniona dopiero z filtrem RC (Z14) |
+| LTC2955 (przed S12) | 36 V | 32,4 V | impuls około 28,5 V | spełniona; filtr RC 1 kΩ / 1 µF według zalecenia karty dla VIN >20 V (Z14) |
 | TPS3701 | 36 V | 32,4 V | 29,2 V | spełniona |
 | TPS70933 | 30 V | 27 V | 29,2 V | spełniona dopiero z rezystorem i diodą Zenera |
 
@@ -197,7 +199,7 @@ Wyniki tych prób są potrzebne do schematu zasilania, a nie wymagają T3–T5.
 | Próba | Płytka | Cena (DigiKey, 2026-10-08) | Co mierzyć |
 |---|---|---|---|
 | Przetwornica 3V3 | ADI DC1687B (LTC3115-1; zmienić dzielnik na 3,3 V i R_T na 750 kHz) | około 230 USD (element14) | sprawność przy 30–60 mA z 6 V i 12,8 V w Burst Mode, Iq bez obciążenia, prąd w wyłączeniu, granica Burst Mode, przejście PWM/SYNC przy impulsie TX |
-| Sterownik wyłącznika | ADI DC1090A (LTC2954-2) | 40,60 USD | INT przy krótkim i długim naciśnięciu, KILL i okno 400 ms, wymuszone wyłączenie z C_PDT 1,5 µF, prąd w stanie wyłączonym |
+| Sterownik wyłącznika | ADI DC1836A-B (LTC2955IDDB-2; ta sama struktura w obudowie DFN, ON zwarty do GND, SEL do GND) | do sprawdzenia | INT przy krótkim i długim naciśnięciu, przerwanie wyłączania po puszczeniu przycisku, KILL i okno 304 ms, wymuszone wyłączenie z C_TMR 2,2 µF, stan EN̄ z dzielnikiem bramki 100 kΩ / 100 kΩ, prąd w stanie wyłączonym przy 4,0–6,6 V i 16 V |
 | Łącznik S12 | TI LM74800EVM-CD i ADI DC2418A-B (LTC4368-2) | 126,22 i 118,28 USD | próg OVP, narastanie przy 600 µF, odwrotne podłączenie 16 V, impuls 30 V, prąd w wyłączeniu z obu stron |
 | Tor ogniw | płytka uniwersalna z diodą Schottky’ego i rezystorem 1 Ω | części kilka USD | spadek przy 40–120 mA, prąd wsteczny przy 16 V w 25 °C i 45 °C, udar przy wkładaniu ogniw Li-FeS2, przełączanie ogniwa ↔ 12 V bez spadku 3V3, VSYS przy impulsie TX na zimnych ogniwach |
 | Szyna 5 V | TI TPS61099EVM-023 albo -768 (sklep TI: 20 i 53 szt.; która wersja układu jest na płytce, do sprawdzenia) | do sprawdzenia | zasilanie panelu Sharp z N1, prąd w wyłączeniu |
@@ -208,7 +210,8 @@ Pomiary zapisuje się w `hardware/r02/checks/` (osoba, data, przyrządy), a wyni
 
 ## Otwarte
 
-- Najgorszy przypadek prądu z ogniw w stanie wyłączonym (28 µA): LTC2955 zamiast LTC2954 albo pomiar wykazujący ≤20 µA.
+- Prąd z ogniw w stanie wyłączonym: najgorszy przypadek z LTC2955 wynosi około 19 µA przy celu ≤20 µA, więc rozstrzyga pomiar razem z upływem kondensatora podtrzymania.
+- Rozrzut t_TMR przy 2,2 µF (karta podaje go tylko dla 2,2 nF).
 - Dioda Schottky’ego toru ogniw: dopuszczalny prąd wsteczny ogniw Li-FeS2 i części dwóch producentów.
 - Zapas VSYS do progu komparatora przy zimnych ogniwach (T6).
 - Drugi producent dla:
@@ -224,7 +227,7 @@ Pomiary zapisuje się w `hardware/r02/checks/` (osoba, data, przyrządy), a wyni
 
 ## Źródła
 
-- ADI LTC2954 rew. B: https://www.analog.com/media/en/technical-documentation/data-sheets/2954fb.pdf; LTC2955 rew. A: https://www.analog.com/media/en/technical-documentation/data-sheets/2955fa.pdf
+- ADI LTC2955 rew. A (s. 2–4, 6, 8–10, 13–14): https://www.analog.com/media/en/technical-documentation/data-sheets/2955fa.pdf; LTC2954 rew. B (poprzedni wybór): https://www.analog.com/media/en/technical-documentation/data-sheets/2954fb.pdf
 - ADI LTC3115-1 rew. C: https://www.analog.com/media/en/technical-documentation/data-sheets/LTC3115-1.pdf
 - ADI LTC4412 rew. C: https://www.analog.com/media/en/technical-documentation/data-sheets/LTC4412.pdf; LTC4368 rew. C: https://www.analog.com/media/en/technical-documentation/data-sheets/LTC4368.pdf; LTC2965 rew. C: https://www.analog.com/media/en/technical-documentation/data-sheets/2965fc.pdf; ADCMP361 rew. B
 - TI LM7480-Q1 SNOSD95C: https://www.ti.com/lit/ds/symlink/lm7480-q1.pdf; TPS3701 SBVS240C; TPS3710 SBVS271A: https://www.ti.com/lit/ds/symlink/tps3710.pdf; TPS709 SBVS186H; TPS61099 SLVSD88M: https://www.ti.com/lit/ds/symlink/tps61099.pdf; TPS63070 SLVSC58B
