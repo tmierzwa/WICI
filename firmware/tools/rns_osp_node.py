@@ -11,7 +11,8 @@ Reticulum przez USB"). The computer has transport and network interfaces off; th
 Checks: the node has no address of its own and does not announce; the computer turns flow control on;
 the computer announce reaches the station through the node over P1, and its destination is protected
 in the node tables; the station announce reaches the computer; an opportunistic packet in both
-directions with a transport proof; a burst of packets from the computer passes the KISS flow control
+directions with a transport proof, the computer receipt time-out set only by the interface bitrate
+in the Reticulum config (no set_timeout, no change in the stack code); a burst of packets from the computer passes the KISS flow control
 without the 5 s time-out of the Python interface and without drops at the node.
 
 Run with a Python that has Reticulum at the pinned commit (e40191b) and pyserial, for example:
@@ -92,13 +93,16 @@ def main():
     parser.add_argument("--program", required=True)
     parser.add_argument("--debt", type=int, default=12, help="silence debt factor of the emulated P1 link")
     parser.add_argument("--port", type=int, default=47440)
+    parser.add_argument("--bitrate", type=int, default=24,
+                        help="bitrate of the computer KISS interface in the Reticulum config (bit/s); it sets the receipt "
+                             "timeouts: 500 B x 8 / bitrate + 6 s + 6 s per hop")
     args = parser.parse_args()
 
     import RNS  # noqa: E402 (needs the reference Reticulum)
 
     work = tempfile.mkdtemp(prefix="wici_osp_node_")
     station_port, node_port = args.port, args.port + 1
-    results = {"reticulum": "e40191b", "debt_factor": args.debt, "checks": {}}
+    results = {"reticulum": "e40191b", "debt_factor": args.debt, "bitrate": args.bitrate, "checks": {}}
     checks = results["checks"]
     node = Program(args.program, os.path.join(work, "node.bin"), node_port, station_port, args.debt, osp_node=True)
     station = Program(args.program, os.path.join(work, "station.bin"), station_port, node_port, args.debt)
@@ -128,6 +132,7 @@ def main():
     port = {pty}
     speed = 115200
     flow_control = Yes
+    bitrate = {args.bitrate}
 """
         os.makedirs(os.path.join(work, "rns"))
         with open(os.path.join(work, "rns", "config"), "w") as f:
@@ -193,10 +198,13 @@ def main():
             back = b'["WICI",1,"osp node","computer to station"]'
             r = RNS.Packet(out, back).send()
             if r:
-                results["computer_default_receipt_timeout_s"] = round(r.timeout, 2)
-                r.set_timeout(180)
+                # Limit z samej konfiguracji (bitrate interfejsu), bez set_timeout: warunek D19 dla T3.
+                results["computer_receipt_timeout_s"] = round(r.timeout, 2)
             checks["computer_to_station_packet"] = station.wait("packet", 120, lambda e: e["data"] == back.hex()) is not None
-            checks["computer_receipt_delivered"] = bool(r) and wait_for(lambda: r.status == RNS.PacketReceipt.DELIVERED, 180)
+            t0 = time.time()
+            checks["computer_receipt_delivered"] = bool(r) and wait_for(lambda: r.status == RNS.PacketReceipt.DELIVERED, 240)
+            if checks["computer_receipt_delivered"]:
+                results["computer_receipt_s"] = round(time.time() - t0, 2)
 
             # 6. Seria pakietów z komputera: gotowość po każdym przyjętym pakiecie, bez czekania 5 s
             # na zwolnienie blokady w Pythonie i bez odrzutów w węźle; wszystkie docierają do stacji.

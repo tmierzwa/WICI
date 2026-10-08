@@ -536,7 +536,7 @@ Wynik (2026-10-08, ostatni przebieg na kodzie z tego commitu, z `--fill 256`): w
 
 Domyślny limit potwierdzenia w Reticulum dla jednego skoku przez szybki interfejs wynosi 12 s; dowód po datagramie 600 B przez P1 może przyjść dopiero po długu ciszy nadawcy i odbiorcy (16,3 s każdy), więc nadawca w Pythonie musi ustawić dłuższy limit (próba: 120 s). Stacja liczy limit według wzoru z [interfejsu P1](../docs/spec/radio.md#interfejs-p1-w-stosie-reticulum) (`rnsnode::send`): co najmniej 60 s, więcej przy wielu skokach, długu i pełnej kolejce. To potwierdza uwagę F02 o limitach czasu po stronie OSP i laptopa.
 
-**Węzeł OSP** (`tools/rns_osp_node.py`, druga klasa w `tests/test_rns_stack.py`): dwa programy `host` połączone emulowanym P1 przez UDP, stacja i węzeł OSP (`--osp-node`), a w Pythonie Reticulum e40191b jako komputer stanowiska: KISSInterface z `flow_control = Yes` na pseudoterminalu węzła, bez transportu i interfejsów sieciowych, cel `wici.sa1` w miejscu adresu OSP. Wynik (2026-10-08, kod z tego commitu, dług 12 × TX): wszystkie 12 sprawdzeń zaliczone.
+**Węzeł OSP** (`tools/rns_osp_node.py`, druga klasa w `tests/test_rns_stack.py`): dwa programy `host` połączone emulowanym P1 przez UDP, stacja i węzeł OSP (`--osp-node`), a w Pythonie Reticulum e40191b jako komputer stanowiska: KISSInterface z `flow_control = Yes` i `bitrate = 24` na pseudoterminalu węzła, bez transportu i interfejsów sieciowych, cel `wici.sa1` w miejscu adresu OSP. Wynik (2026-10-08, kod z tego commitu, dług 12 × TX): wszystkie 12 sprawdzeń zaliczone.
 
 | Sprawdzenie | Wynik |
 |---|---|
@@ -545,7 +545,7 @@ Domyślny limit potwierdzenia w Reticulum dla jednego skoku przez szybki interfe
 | ogłoszenie komputera przez węzeł i P1 widoczne w stacji; cel komputera chroniony w tablicach węzła, cel stacji nie | tak; 1,0 s |
 | ogłoszenie stacji przez węzeł widoczne w komputerze | tak |
 | pakiet okazjonalny stacja → komputer, dowód w stacji | tak |
-| pakiet okazjonalny komputer → stacja, dowód w komputerze (limit 180 s; domyślny w Reticulum 21,3 s przy dwóch skokach) | tak |
+| pakiet okazjonalny komputer → stacja, dowód w komputerze; limit 184,7 s z samej konfiguracji (`bitrate = 24`: 500 B × 8 / 24 + 6 s + 2 × 6 s), bez `set_timeout` i zmian w kodzie Reticulum; bez opcji `bitrate` limit wynosi 21,3 s ([stanowisko odbiorcze, czasy](../docs/spec/stanowisko-osp.md#komputer-i-aplikacja-osp)) | tak |
 | seria 6 pakietów z komputera: kolejka KISS w Pythonie pusta po 0,27 s (bez blokady 5 s), 6 gotowości, bez odrzutów; wszystkie w stacji po 25 s długu ciszy | tak |
 
 Wymagają sprzętu (stanowisko A, dwie płytki albo płytka i Reticulum w Pythonie z modemem P1):
