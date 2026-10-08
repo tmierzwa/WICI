@@ -269,7 +269,7 @@ Zasady wiążące resztę specyfikacji: źródłem prawdy o zgłoszeniach i wiad
 
 Ekran graficzny ma najwyżej 5 wierszy po ≤20 znaków, wysoki kontrast i wysokość wersalików ≥3,5 mm. W stacji pilotażowej daje to panel z pamięcią 2,7" (LS027B7DH01, 400 × 240, szerokość 58,8 mm) z krojem o stałej szerokości w komórce 20 × 40 px; wcześniejszy cel 4 mm wymagałby ≤17 znaków w wierszu (F80). Czytelność 3,5 mm w świetle dziennym, przy świetle latarki i z odległości 50 cm sprawdza T8 w pilotażu; większy panel albo krój skondensowany dla wydania rozstrzyga D15. Pełne teksty stanu nie mieszczą się razem na 5 wierszach, więc ekran główny używa krótkich form z tabeli, po jednym wierszu:
 
-1. stan radia: `radio_wlaczone`, a gdy układ radiowy nie odpowiada albo nie przechodzi kontroli przy starcie, `radio_awaria` (stacja zapisuje dalej zgłoszenia, alarm jak przy `brak_potwierdzenia`);
+1. stan radia: `radio_wlaczone`, a gdy układ radiowy nie odpowiada albo nie przechodzi kontroli, `radio_awaria` (stacja zapisuje dalej zgłoszenia, alarm jak przy `brak_potwierdzenia`). Kontrola jest przy starcie i co 10 s w pracy, gdy radio nie nadaje: numer części układu i konfiguracja radiowa (słowo synchronizacji, które po resecie układu wraca do wartości domyślnej); układ, który stracił konfigurację, dostaje ją od nowa. Brak ruchu w eterze nie jest awarią;
 2. kontakt z odbiorcą: `kontakt_krotki` albo `kontakt_ponad_krotki` (brak świeżego kontaktu nie jest awarią);
 3. zasilanie: `zasilanie_aa` albo `zasilanie_12v`;
 4. najstarsze niewysłane zgłoszenie: `kolejka_krotki` (pusty wiersz przy pustej kolejce);

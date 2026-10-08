@@ -326,7 +326,6 @@ struct FakeHost : usbproto::Host {
     bool silenceSwitch() override;
     void randomBytes(uint8_t* out, size_t count) override { for (size_t i = 0; i < count; ++i) out[i] = xorshift(rng); }
     void log(const char* text) override { printf("log %s\n", text); }
-    void emit(const char* line) override { printf("<- %s\n", line); }
     bool identity(uint8_t key[64], uint8_t lxmf[store::HASH]) override {
         for (size_t i = 0; i < 64; ++i) key[i] = static_cast<uint8_t>(0x40 + i);
         sha2::destinationHash(key, config::LXMF_NAME, lxmf);
@@ -367,6 +366,8 @@ struct World {
     FakeActions actions;
     ui::Model model;
     bool hosted = false;
+    bool stalled = false;   // laptop nie czyta portu (kolejka wyjściowa się nie opróżnia)
+    std::string received;   // bajty z kolejki do najbliższego LF
     uint32_t ms = 0;
     World() { services.w = this; host.w = this; actions.w = this; }
     ~World() { stop(); }
@@ -489,7 +490,27 @@ int world() {
     status.name = "WICI-000000";
     const char* const names[] = {"UP", "DOWN", "OK", "BACK"};
     static char line[16384];
+    // Laptop czyta port po każdym poleceniu programu testowego: wiersze z kolejki wyjściowej, a migawka
+    // biegnie dalej (poll), dopóki jest miejsce.
+    const auto drain = [&w]() {
+        while (!w.stalled) {
+            size_t n = 0;
+            const char* data = w.proto->output(n);
+            if (!n) {
+                if (!w.proto->snapshotActive()) return;
+                w.proto->poll(w.ms);
+                continue;
+            }
+            for (size_t i = 0; i < n; ++i) {
+                if (data[i] != '\n') { w.received += data[i]; continue; }
+                printf("<- %s\n", w.received.c_str());
+                w.received.clear();
+            }
+            w.proto->consume(n);
+        }
+    };
     while (fgets(line, sizeof(line), stdin)) {
+        drain();
         char* nl = strchr(line, '\n');
         if (nl) *nl = '\0';
         char cmd[16] = "";
@@ -636,7 +657,7 @@ int world() {
         } else if (!strcmp(cmd, "slot")) {
             printf("slot %d state=%u\n", atoi(arg), static_cast<unsigned>(w.store->request(static_cast<size_t>(atoi(arg))).state));
         } else if (!strcmp(cmd, "close")) {
-            const bool ok = w.store->close();
+            const bool ok = w.store->close(w.store->head());
             printf("close %d\n", ok);
         } else if (!strcmp(cmd, "maintain")) {
             unsigned rounds = 0;
@@ -676,6 +697,13 @@ int world() {
             printf(" |location %s\n", w.store->address());
         } else if (!strcmp(cmd, "sel")) w.store->selectAddress(strtoul(arg, nullptr, 10));
         else if (!strcmp(cmd, "connect")) w.proto->connected(w.ms);
+        else if (!strcmp(cmd, "stall")) w.stalled = atoi(arg) != 0;
+        else if (!strcmp(cmd, "queue")) {
+            size_t n = 0;
+            w.proto->output(n);
+            printf("queue accepts=%d snapshot=%d dropped=%u first=%zu\n", w.proto->acceptsInput(), w.proto->snapshotActive(),
+                   w.proto->stats().dropped, n);
+        }
         else if (!strcmp(cmd, "disconnect")) w.proto->disconnected();
         else if (!strcmp(cmd, "usb")) {
             w.proto->feed(arg, strlen(arg), w.ms);
@@ -687,6 +715,7 @@ int world() {
         } else if (!strcmp(cmd, "upoll")) w.proto->poll(w.ms);
         else if (!strcmp(cmd, "prep")) w.host.prepFlag = atoi(arg) != 0;
         else if (!strcmp(cmd, "announce")) w.host.announceOk = atoi(arg) != 0;
+        else if (!strcmp(cmd, "cause")) printf("cause %d\n", w.con->alarmCause());
         else if (!strcmp(cmd, "ask")) {
             char detail[32] = "";
             sscanf(arg, "%u %31s", &a, detail);
@@ -711,7 +740,7 @@ int world() {
         } else if (sscanf(line, "T %u", &a) == 1) w.model.tick(a);
         else if (sscanf(line, "P %u", &a) == 1) status.prep = a;
         else if (sscanf(line, "Q %u", &a) == 1) { status.silence = a; w.services.forced = a; }
-        else if (sscanf(line, "O %u", &a) == 1) status.radioOk = a;
+        else if (sscanf(line, "O %u", &a) == 1) { status.radioOk = a; w.con->setRadioFault(!a); }   // jak main.cpp: jedno źródło
         else if (sscanf(line, "U %u", &a) == 1) status.contactS = a;
         else if (sscanf(line, "N %u", &a) == 1) status.newMessages = a;
         else if (sscanf(line, "C %u %u", &a, &b) == 2) { status.queued = a; status.queueAgeS = b; }
@@ -757,6 +786,7 @@ int world() {
             return 3;
         }
     }
+    drain();
     delete wp;
     return 0;
 }
@@ -1322,6 +1352,14 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual(diags[1]["epoch"], diags[2]["epoch"])
         self.assertEqual((diags[0]["head"], diags[1]["head"], diags[1]["min"], diags[2]["head"]), ("2", "16", "17", "17"))
         self.assertEqual([d["requests"] for d in diags], ["1", "1", "2"])
+        # Dwa uszkodzone bloki na końcu pierścienia (zdarzenia 33-64): numeracja za najwyższym możliwym
+        # numerem (32 + 2 × 16), więc nowa wiadomość nie dostaje numeru `msg` zachowanej wiadomości 49.
+        out = self.world([self.CONFIG, "sevents 47", "in " + compact([1, 4, self.rid(78), 7, "Komunikat"]), "sevents 15", "diag",
+                          "flip %d" % (ring + 2 * 512 + 40), "flip %d" % (ring + 3 * 512 + 40), "restart", "diag",
+                          "in " + compact([1, 4, self.rid(79), 8, "Komunikat 2"]), "inbox a"])
+        diags = [dict(f.split("=", 1) for f in line.split()[1:] if "=" in f) for line in self.find(out, "diag ")]
+        self.assertEqual((diags[0]["head"], diags[1]["head"], diags[1]["corrupt"]), ("64", "64", "2"))
+        self.assertEqual(sorted(int(line.split("msg=")[1].split()[0]) for line in self.find(out, "msg a ")), [49, 65])
         # Uszkodzony blok zbioru BULLETIN: `bulletin_floor` = najwyższy przyjęty event, komunikat nie wraca.
         bulletin = 0xF200   # store::BULLETIN_BASE
         b = self.rid(77)
@@ -1368,7 +1406,7 @@ class HostUnitTests(unittest.TestCase):
         self.assertIn("ident=0", diags[6])
         self.assertEqual(self.find(out, "begin "), ["begin ok"] * 4 + ["begin new"])
         self.assertIn("requests=0", diags[8])
-        self.assertEqual(self.find(out, "ev ")[-3:], ["ev 1 1 kind=4 a=5 value=0", "ev 1 2 kind=4 a=3 value=0", "ev 1 3 kind=4 a=5 value=0"])
+        self.assertEqual(self.find(out, "ev ")[-3:], ["ev 1 1 kind=4 a=5 value=4369", "ev 1 2 kind=4 a=3 value=0", "ev 1 3 kind=4 a=5 value=4369"])
 
     def test_store_config_copies_hash_invalid_and_restart(self):
         doc = json.dumps(station_doc(addresses=["Obiekt A", "Obiekt B"]), ensure_ascii=False)
@@ -1750,7 +1788,8 @@ class HostUnitTests(unittest.TestCase):
             ("stored", None, None), ("rejected", "stale", None)])
         self.assertEqual((r[0]["id"], r[0]["revision"], r[0]["number"], r[0]["duplicate"]), (x, 0, "1234", False))
         self.assertTrue(r[1]["duplicate"])
-        self.assertEqual(r[15]["id"], r[16]["id"])   # nonce: jeden TEST
+        # nonce: jeden TEST; krótki numer już w pierwszej odpowiedzi (ponowienie liczy go z id).
+        self.assertEqual((r[15]["id"], r[15]["number"]), (r[16]["id"], r[16]["number"]))
         self.assertIn("log usb submit", out)
 
     def test_usb_sync_events_window_resend_and_snapshot(self):
@@ -1785,6 +1824,27 @@ class HostUnitTests(unittest.TestCase):
         last = r[-1]
         self.assertEqual((last["type"], last["reason"], last["min"]), ("snap_required", "gap", 313 - 256 + 1))
 
+    def test_usb_output_queue_with_stalled_laptop(self):
+        # Laptop przestaje czytać w trakcie migawki: kolejka ma najwyżej jeden pełny wiersz, wejście czeka,
+        # nic nie przepada; po wznowieniu odczytu migawka kończy się pełna. Zdarzenie w trakcie: `stale`.
+        u = self.Lines()
+        epoch = self.replies(self.world(["connect"]))[0]["epoch"]
+        subs = [self.sub(self.request(self.rid(2000 + i))) for i in range(30)]
+        out = self.world([self.CONFIG] + subs + ["connect", "stall 1", u("snapshot", epoch=epoch), "upoll", "upoll", "queue",
+                                                 "stall 0", "queue"])
+        snap = [x_ for x_ in self.replies(out) if x_["type"] in ("snap_begin", "snap", "snap_end")]
+        self.assertEqual([s_["type"] for s_ in snap], ["snap_begin"] + ["snap"] * 30 + ["snap_end"])
+        self.assertEqual(snap[0]["count"], 30)
+        queues = self.find(out, "queue ")
+        self.assertTrue(queues[0].startswith("queue accepts=0 snapshot=1 dropped=0"), queues[0])
+        self.assertTrue(0 < int(queues[0].split("first=")[1]) <= 1025)
+        self.assertTrue(queues[1].startswith("queue accepts=1 snapshot=0 dropped=0"), queues[1])
+        u = self.Lines()
+        out = self.world([self.CONFIG] + subs + ["connect", "stall 1", u("snapshot", epoch=epoch), "sevents 1", "stall 0", "upoll"])
+        r = [x_ for x_ in self.replies(out) if x_["type"] in ("snap_begin", "snap", "snap_end", "rejected")]
+        self.assertEqual((r[0]["type"], r[-1]["type"], r[-1]["reason"], r[-1]["re"]), ("snap_begin", "rejected", "stale", r[0]["re"]))
+        self.assertNotIn("snap_end", [x_["type"] for x_ in r])
+
     def test_usb_confirmed_commands_silence_close_destroy(self):
         u = self.Lines()
         epoch = self.replies(self.world(["connect"]))[0]["epoch"]
@@ -1795,7 +1855,7 @@ class HostUnitTests(unittest.TestCase):
                   u("silence", on=True, exception_id=x), "ms 29999", "upoll", "ms 30000", "upoll",
                   "switch 1", u("silence", on=False), u("silence", on=True, exception_id=x), "switch 0",
                   u("silence", on=True, exception_id=self.rid(999)), "ms 31000", u("close", epoch=epoch, head=1), "K OK 0", "upoll",
-                  u("close", epoch=epoch, head=3), "K OK 0", "upoll", u("close", epoch=epoch, head=3),
+                  "sevents 1", u("close", epoch=epoch, head=3), "K OK 0", "upoll", u("close", epoch=epoch, head=3),
                   u("destroy"), "K OK 0", "upoll", "diag"]
         out = self.world(script)
         r = self.replies(out)[1:]
@@ -1813,13 +1873,31 @@ class HostUnitTests(unittest.TestCase):
         close = r[14]
         self.assertEqual(close["duplicate"], False)
         self.assertNotEqual(close["epoch"], epoch)
-        self.assertEqual((r[15]["duplicate"], r[15]["epoch"]), (True, close["epoch"]))   # powtórzone `close`: ten sam wynik
+        # Powtórzone `close`: ten sam wynik, także gdy po head 3 przyszło zdarzenie nieblokujące (`station` 4).
+        self.assertEqual((r[15]["duplicate"], r[15]["epoch"]), (True, close["epoch"]))
         self.assertIn("ask 0", out)
         screens = [line for line in out if line.startswith("screen ")]
         self.assertEqual(screens[0].split()[1], "confirm")
         self.assertNotEqual(screens[1].split()[1], "confirm")
         self.assertIn("destroyed 1", out)
         self.assertIn("requests=0", self.find(out, "diag ")[0])
+
+    def test_usb_radio_events_keep_their_exception(self):
+        # Zdarzenie `radio` podaje wyjątek z chwili zdarzenia: po wyłączeniu ciszy (meta bez wyjątku)
+        # i po zwolnieniu wpisu (id z pamięci zwolnionych wpisów).
+        u = self.Lines()
+        epoch = self.replies(self.world(["connect"]))[0]["epoch"]
+        x = self.rid(1234)
+        script = ["H", self.CONFIG, self.sub(self.request(x)), "connect", u("silence", on=True, exception_id=x), "K OK 0", "upoll",
+                  u("silence", on=False), "K OK 0", "upoll", u("cancel", id=x)]
+        # Pełny rejestr (x w gnieździe 0): nowe zgłoszenie zwalnia anulowane x do pamięci zwolnionych wpisów.
+        script += ["txreq %d %x 0 1" % (slot, slot) for slot in range(1, 256)]
+        script += [self.sub(self.request(self.rid(4321))), u("cancel", id=x), u("sync", boot="b", epoch=epoch, cursor=0), "upoll"]
+        out = self.world(script)
+        self.assertEqual([x_.get("released") for x_ in self.replies(out) if x_["type"] == "ok" and "silence" not in x_], [None, True])
+        radio = [x_ for x_ in self.replies(out) if x_["type"] == "event" and x_["kind"] == "radio"]
+        self.assertEqual([(e["silence"], e["exception_id"], e["exception_revision"]) for e in radio], [(True, x, 0), (False, None, None)])
+        self.assertNotIn("lost", radio[0])
 
     # --- ekran -----------------------------------------------------------------
 
@@ -2112,6 +2190,26 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual(handover[0], "handover")
         self.assertEqual(self.lines(handover)[:2], [labels["PRZEKAZANIE_ZMIANY"][0], number + " " + ui_texts.load()["categories"][0][0]])
         self.assertTrue(" ".join(self.lines(handover)[2:]).startswith(texts["zapisane_w_stacji"][0][:15]))
+
+    def test_radio_fault_alarm(self):
+        # oprogramowanie.md: radio_awaria to alarm krytyczny jak brak_potwierdzenia: ekran alarmu do OK,
+        # przyczyna (dioda, PRZEKAZANIE ZMIANY) trwa do naprawy; nowa awaria alarmuje od nowa.
+        texts = ui_texts.load()["texts"]
+        labels = ui_texts.load()["labels"]
+        out = self.ui(["H", self.CONFIG, "L 0", "O 0", "cause", "T 1000", "R", "K OK 1000", "T 2000", "R", "cause",
+                       "K OK 2050", "K DOWN 2100", "K DOWN 2200", "K DOWN 2300", "K OK 2400"] + ["K DOWN 2500"] * 13 + ["K OK 2600", "R",
+                       "O 1", "cause", "K BACK 2700", "K BACK 2800", "K BACK 2900", "T 4000", "R", "O 0", "T 5000", "R"])
+        s = self.screens(out)
+        self.assertEqual([x[0] for x in s], ["alarm", "main", "handover", "main", "alarm"])
+        self.assertEqual(self.shown(s[0]), texts["radio_awaria"][0])
+        self.assertEqual(self.lines(s[1])[0], texts["radio_awaria"][0])
+        self.assertIn(texts["radio_awaria"][0], self.lines(s[2]))
+        self.assertEqual(self.lines(s[2])[0], labels["PRZEKAZANIE_ZMIANY"][0])
+        self.assertEqual(self.find(out, "cause "), ["cause 1", "cause 1", "cause 0"])
+        # Magazyn zatrzymany (zanik zasilania w zapisie): awaria radia nadal jest przyczyną alarmu (dioda).
+        out = self.ui([self.CONFIG, "txreq 0 11 0 1", "tear 552", "txreq 0 11 1 0", "diag", "O 0", "cause", "O 1", "cause"])
+        self.assertIn("ok=0", self.find(out, "diag ")[0])
+        self.assertEqual(self.find(out, "cause "), ["cause 1", "cause 0"])
 
     def test_confirm_question_and_node_menu(self):
         out = self.ui(["L 0", "ask 0", "R", "answer", "K OK 0", "answer", "R", "ask 3", "K BACK 0", "answer", "ask 5 ABCD", "R",

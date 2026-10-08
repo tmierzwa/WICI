@@ -195,9 +195,19 @@ bool Console::scheduleTest(bool startup) {
 void Console::cancelTest() { dirty_ = true; station_.cancelTest(); }
 void Console::pauseTest(bool paused) { dirty_ = true; station_.pauseTest(paused); }
 
+void Console::setRadioFault(bool fault) {
+    if (!fault) radioAcked_ = false;
+    radioFault_ = fault;
+}
+
 bool Console::alarm(ui::AlarmInfo& out) {
     station::Alarm a;
-    if (!station_.alarm(a)) return false;
+    if (!station_.alarm(a)) {
+        if (!radioFault_ || radioAcked_) return false;
+        out = ui::AlarmInfo();
+        out.kind = ui::AlarmKind::RADIO_FAULT;
+        return true;
+    }
     out.kind = a.kind == station::AlarmKind::NO_READ ? ui::AlarmKind::NO_READ : ui::AlarmKind::NO_CONFIRMATION;
     out.ref = ownRef(a.slot, a.gen);
     out.number = a.number;
@@ -206,6 +216,7 @@ bool Console::alarm(ui::AlarmInfo& out) {
 }
 
 void Console::ackAlarm(const ui::AlarmInfo& alarm) {
+    if (alarm.kind == ui::AlarmKind::RADIO_FAULT) { radioAcked_ = true; return; }
     station::Alarm a;
     a.kind = alarm.kind == ui::AlarmKind::NO_READ ? station::AlarmKind::NO_READ : station::AlarmKind::NO_CONFIRMATION;
     a.slot = static_cast<uint16_t>(alarm.ref & 0xFFFF);

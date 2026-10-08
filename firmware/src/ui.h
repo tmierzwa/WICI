@@ -131,7 +131,8 @@ struct TestInfo {
     uint32_t minutes = 0;    // SCHEDULED: do nadania
     uint8_t confirmed = 0;   // CONFIRMED: stan 1-6 (1: odebrany bez decyzji)
 };
-enum class AlarmKind : uint8_t { NONE, NO_CONFIRMATION, NO_READ };
+// RADIO_FAULT: radio_awaria, układ radiowy nie działa (bez wpisu rejestru).
+enum class AlarmKind : uint8_t { NONE, NO_CONFIRMATION, NO_READ, RADIO_FAULT };
 struct AlarmInfo {
     AlarmKind kind = AlarmKind::NONE;
     uint32_t ref = 0;        // wpis rejestru (jak Item::ref)

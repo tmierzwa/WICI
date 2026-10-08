@@ -26,9 +26,14 @@ bool configured = false;  // tablica P1 zapisana, zweryfikowana i syntezer skali
 
 using cmdargs::boolName;
 
-void printRadio() {
+cc1120::Identity identify() {
     const cc1120::Identity id = chip.identify();
     radioOk = id.ready && id.partNumber == cc1120::PARTNUMBER_CC1120;
+    return id;
+}
+
+void printRadio() {
+    const cc1120::Identity id = identify();
     Serial.printf("{\"radio\":\"CC1120\",\"ready\":%s,\"partnumber\":\"0x%02X\",\"partversion\":\"0x%02X\","
                   "\"marcstate\":\"0x%02X\",\"marc\":\"%s\",\"state\":\"%s\",\"p1_ok\":%s,\"ok\":%s}\n",
                   boolName(id.ready), id.partNumber, id.partVersion, id.marcState,
@@ -94,8 +99,7 @@ void begin() {
 
 void start() {
     chip.reset();
-    const cc1120::Identity id = chip.identify();
-    radioOk = id.ready && id.partNumber == cc1120::PARTNUMBER_CC1120;
+    identify();
     if (radioOk) {
         bool calibrated = false;
         configureP1(calibrated);
@@ -104,6 +108,19 @@ void start() {
 
 bool ok() { return radioOk; }
 bool p1Ok() { return configured; }
+
+bool check() {
+    // lost: konfiguracja utracona w pracy (nie poleceniem RESET), więc wraca bez polecenia CONFIG.
+    static const cc1120::RegisterValue* const sync = findRegister(p1::REGISTERS, p1::REGISTER_COUNT, "SYNC3");
+    static bool lost = false;
+    identify();
+    if (!radioOk) { lost = lost || configured; configured = false; return false; }
+    if (configured ? chip.verify(sync, SYNC_REGISTERS).mismatches == 0 : !lost) return false;
+    bool calibrated = false;
+    configureP1(calibrated);
+    lost = !configured;
+    return configured;
+}
 
 void report() {
     printRadio();

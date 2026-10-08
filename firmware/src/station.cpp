@@ -539,8 +539,8 @@ Result Station::test(const uint8_t nonce[store::NONCE], Stored& out) {
         out.released = store_.findRequest(t.id) < 0 && store_.releasedFind(t.id, released);
         return Result::STORED;
     }
-    uint16_t number = 0;
-    return createWith(sa1::TEST, 9, 1, 0, store_.address(), "test", 0, store::USB, nonce, out.id, number);
+    out = Stored();
+    return createWith(sa1::TEST, 9, 1, 0, store_.address(), "test", 0, store::USB, nonce, out.id, out.number);
 }
 
 bool Station::cancelTest() {
@@ -596,19 +596,21 @@ bool Station::markRead(uint32_t number) {
     return true;
 }
 
-bool Station::note(store::EventKind kind, uint8_t a, uint32_t value) {
+bool Station::note(const store::Event& e) {
     store::Tx tx(store_);
-    store::Event e;
-    e.kind = kind;
-    e.a = a;
-    e.value = value;
     tx.event(e);
     return tx.commit();
 }
 
-bool Station::radioEvent(bool switchOn) { return note(store::EventKind::RADIO, store::radioBits(store_.meta(), switchOn), 0); }
+bool Station::radioEvent(bool switchOn) { return note(store_.radioEvent(store_.meta(), switchOn)); }
 
-bool Station::stationEvent(store::StationWhat what, uint32_t detail) { return note(store::EventKind::STATION, what, detail); }
+bool Station::stationEvent(store::StationWhat what, uint32_t detail) {
+    store::Event e;
+    e.kind = store::EventKind::STATION;
+    e.a = what;
+    e.value = detail;
+    return note(e);
+}
 
 bool Station::setSilence(bool on, const uint8_t* exception, bool switchOn) {
     store::Tx tx(store_);
@@ -622,10 +624,7 @@ bool Station::setSilence(bool on, const uint8_t* exception, bool switchOn) {
         const int slot = store_.findRequest(exception);
         if (slot >= 0) m.exceptionRev = store_.request(static_cast<size_t>(slot)).rMax;
     }
-    store::Event e;
-    e.kind = store::EventKind::RADIO;
-    e.a = store::radioBits(m, switchOn);
-    tx.event(e);
+    tx.event(store_.radioEvent(m, switchOn));
     if (!tx.commit()) return false;
     services_.changed();
     return true;

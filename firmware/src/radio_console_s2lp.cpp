@@ -109,6 +109,19 @@ bool ok() { return radioOk; }
 // Rejestry zmienione przez REGW: P1 tylko w trybie przygotowania (próby w eterze), poza nim do CONFIG.
 bool p1Ok() { return configured && (!modified || bench->prep); }
 
+bool check() {
+    // lost: konfiguracja utracona w pracy (nie poleceniem RESET, SDN ani REGW), więc wraca bez CONFIG.
+    static const s2lp::RegisterValue* const sync = findRegister(p1s2::REGISTERS, p1s2::REGISTER_COUNT, "SYNC3");
+    static bool lost = false;
+    if (chip.isShutdown()) return false;   // SDN 1: układ wyłączony poleceniem
+    identify();
+    if (!radioOk) { lost = lost || configured; configured = false; return false; }
+    if (configured ? modified || chip.verify(sync, SYNC_REGISTERS).mismatches == 0 : !lost) return false;
+    configureP1();
+    lost = !configured;
+    return configured;
+}
+
 void report() {
     printRadio();
     if (radioOk) {

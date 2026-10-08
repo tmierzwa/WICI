@@ -1173,13 +1173,43 @@ bool Store::quietSince(uint32_t head) {
     return true;
 }
 
-bool Store::close() {
-    // Nowa epoka i para (stara epoka, head) do powtórzenia `close` w jednej transakcji.
+Event Store::radioEvent(const Meta& m, bool switchOn) {
+    Event e;
+    e.kind = EventKind::RADIO;
+    e.a = radioBits(m, switchOn);
+    if (!(e.a & RADIO_EXCEPTION)) return e;
+    const int slot = findRequest(m.exception);
+    e.slot = slot >= 0 ? static_cast<uint16_t>(slot) : 0xFFFF;
+    e.gen = slot >= 0 ? register_[slot].gen : 0;
+    e.revision = m.exceptionRev;
+    e.value = shortNumber(m.exception);
+    return e;
+}
+
+bool Store::exceptionId(const Event& e, uint8_t id[HASH]) {
+    if (e.kind != EventKind::RADIO || !(e.a & RADIO_EXCEPTION)) return false;
+    Request r;
+    if (e.slot < REGISTER_SLOTS && register_[e.slot].used() && register_[e.slot].gen == e.gen && readRequest(e.slot, r)) {
+        memcpy(id, r.id, HASH);
+        return true;
+    }
+    for (size_t i = 0; i < RELEASED_ENTRIES; ++i) {
+        Released rel;
+        if (!releasedEv_[i] || (releasedNumber_[i] & 0x3FFF) != e.value || !releasedAt(i, rel) || rel.revision < e.revision) continue;
+        memcpy(id, rel.id, HASH);
+        return true;
+    }
+    return false;
+}
+
+bool Store::close(uint32_t head) {
+    // Nowa epoka i para (stara epoka, head z polecenia) do powtórzenia `close` w jednej transakcji;
+    // zdarzenia nieblokujące po head nie zmieniają pary, którą laptop ponowi.
     Tx tx(*this);
     Meta& m = tx.meta();
     m.closedSet = true;
     memcpy(m.closedEpoch, meta_.epoch, EPOCH);
-    m.closedHead = head_;
+    m.closedHead = head;
     random_(m.epoch, EPOCH);
     random_(m.dataEpoch, EPOCH);
     m.ringBase = 0;
@@ -1191,16 +1221,24 @@ bool Store::recoverBlocks() {
     // Uszkodzone bloki małych wpisów (oprogramowanie.md, "Pamięć FRAM"): ich wpisy przepadły, więc
     // stacja nie udaje pełnej wiedzy, a maintain() zapisuje bloki od nowa.
     // - pierścień (protokol-usb.md, "Epoka"): numery z bloku laptop mógł już widzieć; nowa epoka wymusza
-    //   migawkę, a numeracja biegnie dalej od najwyższego numeru możliwego w bloku, bo numery zdarzeń
-    //   wskazuje też pamięć zwolnionych wpisów (kolejność po `ev`);
+    //   migawkę, a numeracja biegnie dalej za najwyższym numerem, jaki mógł zostać nadany, bo numery
+    //   zdarzeń wskazują też wiadomości skrzynki (`msg`) i pamięć zwolnionych wpisów (kolejność po `ev`).
+    //   Zdarzenia po najwyższym zachowanym numerze leżą w kolejnych blokach za jego blokiem i każdy
+    //   z nich jest uszkodzony (zachowany miałby wyższy numer), więc górna granica to zachowany head
+    //   + 16 × liczba uszkodzonych bloków (numery skrzynki i pamięci zwolnionych to tylko kontrola);
     // - pamięć zwolnionych: `tomb_floor` za bieżący numer (pamięć niekompletna, laptop nie ponawia);
     // - zbiór BULLETIN: `bulletin_floor` = najwyższy przyjęty `event` (stare komunikaty nie wrócą).
     Tx tx(*this);
     Meta& m = tx.meta();
     uint32_t head = head_;
     if (corruptBlocks_ & 1) {
+        uint32_t corrupt = 0;
+        for (SlotState s : ringState_) corrupt += s == SlotState::CORRUPT;
+        head += corrupt * BLOCK_ENTRIES;
+        for (const MessageIndex& x : inbox_) if (x.used() && x.number > head) head = x.number;
+        for (uint32_t ev : releasedEv_) if (ev > head) head = ev;
         random_(m.epoch, EPOCH);
-        m.ringBase = head = head_ + BLOCK_ENTRIES;
+        m.ringBase = head;
     }
     if (corruptBlocks_ & 2) m.tombFloor = head + 1;
     if (corruptBlocks_ & 4) m.bulletinFloor = m.bulletinMax;

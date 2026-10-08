@@ -165,6 +165,8 @@ void Protocol::begin() {
 void Protocol::connected(uint32_t nowMs) {
     connected_ = true;
     synced_ = false;
+    snap_ = Snap();
+    outStart_ = outCount_ = 0;   // wiersze poprzedniej sesji nie trafią do nowej
     seqOut_ = 0;
     seqIn_ = 0;
     lineLength_ = 0;
@@ -176,6 +178,8 @@ void Protocol::connected(uint32_t nowMs) {
 void Protocol::disconnected() {
     connected_ = false;
     synced_ = false;
+    snap_ = Snap();
+    outStart_ = outCount_ = 0;
     lineLength_ = 0;
     overflow_ = false;
     xfer_ = Xfer();
@@ -202,18 +206,41 @@ void Protocol::feed(const char* bytes, size_t count, uint32_t nowMs) {
     }
 }
 
-void Protocol::send(const char* type, int64_t re, const char* fields) {
-    char line[MAX_LINE + 1];
+void Protocol::send(const char* type, int64_t re, const char* fields) { push(type, re, fields, OUT_BYTES); }
+
+bool Protocol::push(const char* type, int64_t re, const char* fields, size_t reserve) {
+    // reserve = OUT_BYTES: odpowiedź, dla której wejście zostawiło miejsce (brak miejsca to błąd programu);
+    // inaczej wiersz z inicjatywy stacji (zdarzenie, migawka): tylko gdy zostanie reserve wolnych bajtów.
+    char line[LINE_ROOM + 1];   // wiersz, LF i NUL
     size_t n = 0;
     bool ok = appendf(line, sizeof(line), n, "{\"usb\":%u,\"seq\":%lu,\"type\":\"%s\"", static_cast<unsigned>(CONTRACT),
                       static_cast<unsigned long>(seqOut_ + 1), type);
     if (re >= 0) ok = ok && appendf(line, sizeof(line), n, ",\"re\":%lld", static_cast<long long>(re));
     if (fields && *fields) ok = ok && appendf(line, sizeof(line), n, ",%s", fields);
-    ok = ok && appendf(line, sizeof(line), n, "}");
-    if (!ok) { host_.log("usb: reply too long"); return; }
+    ok = ok && appendf(line, sizeof(line), n, "}\n");
+    if (!ok) { host_.log("usb: reply too long"); return true; }
+    const bool reply = reserve == OUT_BYTES;
+    if (n > room() || (!reply && n + reserve > room())) {
+        if (reply) { ++stats_.dropped; host_.log("usb: output queue full"); }
+        return false;
+    }
     ++seqOut_;
     ++stats_.linesOut;
-    host_.emit(line);
+    for (size_t i = 0; i < n; ++i) out_[(outStart_ + outCount_ + i) % OUT_BYTES] = line[i];
+    outCount_ += n;
+    return true;
+}
+
+const char* Protocol::output(size_t& length) const {
+    length = outStart_ + outCount_ <= OUT_BYTES ? outCount_ : OUT_BYTES - outStart_;
+    return out_ + outStart_;
+}
+
+void Protocol::consume(size_t length) {
+    if (length > outCount_) length = outCount_;
+    outStart_ = (outStart_ + length) % OUT_BYTES;
+    outCount_ -= length;
+    if (!outCount_) outStart_ = 0;
 }
 
 void Protocol::rejected(int64_t re, const char* reason, const char* detail) {
@@ -416,17 +443,21 @@ bool Protocol::sendEvent(uint32_t ev) {
             else appendf(fields, sizeof(fields), n, ",\"lost\":true");
             break;
         }
-        case store::EventKind::RADIO:
+        case store::EventKind::RADIO: {
+            // Wyjątek z chwili zdarzenia (odwołanie w zdarzeniu), nie z bieżącego meta.
+            uint8_t id[store::HASH];
+            const bool known = store_.exceptionId(e, id);
             appendf(fields, sizeof(fields), n, "\"kind\":\"radio\",");
-            n += radioFields(fields + n, sizeof(fields) - n, e.a);
+            n += radioFields(fields + n, sizeof(fields) - n, e.a, known ? id : nullptr, e.revision, (e.a & store::RADIO_EXCEPTION) && !known);
             break;
+        }
         case store::EventKind::STATION:
             appendf(fields, sizeof(fields), n, "\"kind\":\"station\",\"what\":\"%s\",\"detail\":%lu", e.a < 4 ? STATION_WHAT[e.a] : "?",
                     static_cast<unsigned long>(e.value));
             break;
     }
-    send("event", -1, fields);
-    return true;
+    // Zdarzenie tylko z miejscem w kolejce; przy pytaniu przyciskiem miejsce na jego odpowiedź zostaje.
+    return push("event", -1, fields, pending() ? PENDING_RESERVE : 0);
 }
 
 size_t Protocol::requestFields(const store::Request& r, char* out, size_t size) {
@@ -450,43 +481,81 @@ size_t Protocol::requestFields(const store::Request& r, char* out, size_t size) 
 void Protocol::doSnapshot(const json::Value& msg, int64_t seq) {
     uint8_t epoch[store::EPOCH];
     if (!json::hexField(msg, "epoch", epoch, store::EPOCH) || memcmp(epoch, store_.meta().epoch, store::EPOCH)) { rejected(seq, "invalid", "epoch"); return; }
-    // Jeden spójny stan: pętla stacji nie zmienia magazynu w trakcie migawki.
     size_t count = store_.requestCount() + store_.messageCount();
     for (size_t i = 0; i < store::RELEASED_ENTRIES; ++i) count += store_.releasedUsed(i);
-    char hex[2 * store::EPOCH + 1], fields[MAX_LINE - 64];
-    hexstr::encode(store_.meta().epoch, store::EPOCH, hex);
+    char hex[2 * store::EPOCH + 1], fields[160];
+    hexstr::encode(epoch, store::EPOCH, hex);
     snprintf(fields, sizeof(fields), "\"epoch\":\"%s\",\"head\":%lu,\"count\":%u,\"tomb_floor\":%lu", hex, static_cast<unsigned long>(store_.head()),
              static_cast<unsigned>(count), static_cast<unsigned long>(store_.meta().tombFloor));
     send("snap_begin", seq, fields);
-    for (size_t i = 0; i < store::REGISTER_SLOTS; ++i) {
-        store::Request r;
-        if (store_.request(i).used() && store_.readRequest(i, r) && requestFields(r, fields, sizeof(fields))) send("snap", seq, fields);
+    snap_ = Snap();
+    snap_.active = true;
+    snap_.seq = seq;
+    snap_.head = store_.head();
+    memcpy(snap_.epoch, epoch, store::EPOCH);
+    continueSnapshot();
+}
+
+void Protocol::continueSnapshot() {
+    // Wiersze w miarę miejsca w kolejce. Migawka opisuje jeden stan: zdarzenie albo nowa epoka w jej
+    // trakcie kończy ją odmową `stale` (laptop powtarza `snapshot`), bo stan po `snap_begin` się zmienił.
+    char fields[MAX_LINE - 64];
+    while (snap_.active) {
+        if (store_.head() != snap_.head || memcmp(store_.meta().epoch, snap_.epoch, store::EPOCH)) {
+            if (room() < LINE_ROOM) return;   // odpowiedź końcowa przy pustej kolejce
+            snap_.active = false;
+            rejected(snap_.seq, "stale");
+            return;
+        }
+        const Snap before = snap_;
+        if (snapItem(fields, sizeof(fields))) {
+            if (!push("snap", snap_.seq, fields, 0)) { snap_ = before; return; }   // wiersz czeka na miejsce
+            continue;
+        }
+        if (room() < LINE_ROOM) return;
+        char hex[2 * store::EPOCH + 1];
+        hexstr::encode(snap_.epoch, store::EPOCH, hex);
+        snprintf(fields, sizeof(fields), "\"epoch\":\"%s\",\"head\":%lu", hex, static_cast<unsigned long>(snap_.head));
+        snap_.active = false;
+        send("snap_end", snap_.seq, fields);
+        // Laptop stosuje migawkę z kursorem (epoch, head); dalsze zdarzenia idą od head + 1.
+        synced_ = true;
+        memcpy(syncedEpoch_, snap_.epoch, store::EPOCH);
+        cursor_ = snap_.head;
+        nextEv_ = cursor_ + 1;
+        return;
     }
-    for (size_t i = 0; i < store::RELEASED_ENTRIES; ++i) {
+}
+
+bool Protocol::snapItem(char* fields, size_t size) {
+    // Następny wpis migawki: rejestr (faza 0), pamięć zwolnionych wpisów (1), skrzynka (2); false na końcu.
+    for (; snap_.phase == 0 && snap_.index < store::REGISTER_SLOTS; ++snap_.index) {
+        store::Request r;
+        if (store_.request(snap_.index).used() && store_.readRequest(snap_.index, r) && requestFields(r, fields, size)) { ++snap_.index; return true; }
+    }
+    if (snap_.phase == 0) { snap_.phase = 1; snap_.index = 0; }
+    for (; snap_.phase == 1 && snap_.index < store::RELEASED_ENTRIES; ++snap_.index) {
         store::Released rel;
-        if (!store_.releasedAt(i, rel)) continue;
+        if (!store_.releasedAt(snap_.index, rel)) continue;
         char id[2 * store::HASH + 1], number[5];
         hexstr::encode(rel.id, store::HASH, id);
         numberText(rel.number, number);
-        snprintf(fields, sizeof(fields), "\"item\":\"released\",\"id\":\"%s\",\"revision\":%u,\"ev\":%lu,\"number\":\"%s\"", id, rel.revision,
+        snprintf(fields, size, "\"item\":\"released\",\"id\":\"%s\",\"revision\":%u,\"ev\":%lu,\"number\":\"%s\"", id, rel.revision,
                  static_cast<unsigned long>(rel.ev), number);
-        send("snap", seq, fields);
+        ++snap_.index;
+        return true;
     }
-    for (size_t i = 0; i < store::INBOX_SLOTS; ++i) {
+    if (snap_.phase == 1) { snap_.phase = 2; snap_.index = 0; }
+    for (; snap_.index < store::INBOX_SLOTS; ++snap_.index) {
         store::Message m;
-        if (!store_.message(i).used() || !store_.readMessage(i, m)) continue;
-        snprintf(fields, sizeof(fields), "\"item\":\"msg\",\"msg\":%lu,\"from\":\"%s\",\"received_at\":%lu,\"read\":%s,\"sa1\":%s",
+        if (!store_.message(snap_.index).used() || !store_.readMessage(snap_.index, m)) continue;
+        snprintf(fields, size, "\"item\":\"msg\",\"msg\":%lu,\"from\":\"%s\",\"received_at\":%lu,\"read\":%s,\"sa1\":%s",
                  static_cast<unsigned long>(m.number), m.source == config::BACKUP ? "backup" : "main", static_cast<unsigned long>(m.receivedS),
                  boolName(m.read), m.sa1);
-        send("snap", seq, fields);
+        ++snap_.index;
+        return true;
     }
-    snprintf(fields, sizeof(fields), "\"epoch\":\"%s\",\"head\":%lu", hex, static_cast<unsigned long>(store_.head()));
-    send("snap_end", seq, fields);
-    // Laptop stosuje migawkę z kursorem (epoch, head); dalsze zdarzenia idą od head + 1.
-    synced_ = true;
-    memcpy(syncedEpoch_, store_.meta().epoch, store::EPOCH);
-    cursor_ = store_.head();
-    nextEv_ = cursor_ + 1;
+    return false;
 }
 
 // --- Polecenia -------------------------------------------------------------------------------
@@ -580,18 +649,24 @@ void Protocol::doClose(const json::Value& msg, int64_t seq, uint32_t nowMs) {
     send("pending", seq, "\"confirm_s\":30");
 }
 
-size_t Protocol::radioFields(char* out, size_t size, uint8_t bits) {
-    // Pola ciszy z bitów zdarzenia `radio` (store::radioBits); id wyjątku z meta.
-    const bool silence = bits & store::RADIO_SILENCE, exception = bits & store::RADIO_EXCEPTION;
-    char hex[2 * store::HASH + 1];
-    hexstr::encode(store_.meta().exception, store::HASH, hex);
+size_t Protocol::radioFields(char* out, size_t size, uint8_t bits, const uint8_t* exception, uint16_t revision, bool lost) {
+    // Pola ciszy z bitów store::radioBits i wyjątku (id, rewizja); exception = nullptr: id nieznane
+    // (`lost`: wpis zdarzenia opuścił rejestr i pamięć zwolnionych wpisów).
+    const bool silence = bits & store::RADIO_SILENCE, excepted = bits & store::RADIO_EXCEPTION;
+    char hex[2 * store::HASH + 1] = "";
+    if (excepted && exception) hexstr::encode(exception, store::HASH, hex);
     size_t n = 0;
     appendf(out, size, n, "\"silence\":%s,\"silence_source\":%s,\"exception_id\":%s%s%s", boolName(silence),
-            !silence ? "null" : (bits & store::RADIO_SWITCH) ? "\"switch\"" : "\"panel\"", exception ? "\"" : "null", exception ? hex : "",
-            exception ? "\"" : "");
-    if (exception) appendf(out, size, n, ",\"exception_revision\":%u", static_cast<unsigned>(store_.meta().exceptionRev));
+            !silence ? "null" : (bits & store::RADIO_SWITCH) ? "\"switch\"" : "\"panel\"", hex[0] ? "\"" : "null", hex, hex[0] ? "\"" : "");
+    if (excepted) appendf(out, size, n, ",\"exception_revision\":%u", static_cast<unsigned>(revision));
     else appendf(out, size, n, ",\"exception_revision\":null");
+    if (lost) appendf(out, size, n, ",\"lost\":true");
     return n;
+}
+
+size_t Protocol::currentRadioFields(char* out, size_t size) {
+    const store::Meta& m = store_.meta();
+    return radioFields(out, size, store::radioBits(m, host_.silenceSwitch()), m.exception, m.exceptionRev);
 }
 
 void Protocol::finishPending(bool confirmed) {
@@ -604,13 +679,13 @@ void Protocol::finishPending(bool confirmed) {
         case Pending::SILENCE:
             if (!p.on && host_.silenceSwitch()) { rejected(p.seq, "silence_switch"); return; }
             if (!station_.setSilence(p.on, p.exceptionSet ? p.exception : nullptr, host_.silenceSwitch())) { rejected(p.seq, "memory"); return; }
-            radioFields(fields, sizeof(fields), store::radioBits(store_.meta(), host_.silenceSwitch()));
+            currentRadioFields(fields, sizeof(fields));
             send("ok", p.seq, fields);
             return;
         case Pending::CLOSE: {
             // Warunek sprawdzany po potwierdzeniu, przed jedną transakcją nowej epoki.
             if (memcmp(p.epoch, store_.meta().epoch, store::EPOCH) || !store_.quietSince(p.head)) { rejected(p.seq, "stale"); return; }
-            if (!store_.close()) { rejected(p.seq, "memory"); return; }
+            if (!store_.close(p.head)) { rejected(p.seq, "memory"); return; }
             synced_ = false;
             char hex[2 * store::EPOCH + 1];
             hexstr::encode(store_.meta().epoch, store::EPOCH, hex);
@@ -630,7 +705,7 @@ void Protocol::finishPending(bool confirmed) {
 void Protocol::doStatus(int64_t seq) {
     const store::Meta& m = store_.meta();
     char fields[MAX_LINE - 64], radio[160], power[160], diag[200];
-    radioFields(radio, sizeof(radio), store::radioBits(store_.meta(), host_.silenceSwitch()));
+    currentRadioFields(radio, sizeof(radio));
     host_.power(power, sizeof(power));
     host_.diag(diag, sizeof(diag));
     uint32_t oldest = 0;
@@ -787,7 +862,9 @@ void Protocol::doXferCommit(const json::Value& msg, int64_t seq) {
 }
 
 void Protocol::poll(uint32_t nowMs) {
-    if (pending()) {
+    if (snap_.active) { continueSnapshot(); return; }   // migawka przed zdarzeniami; polecenia czekają
+    // Odpowiedź na pytanie przyciskiem z miejscem w kolejce (`status` w czasie pytania mógł ją zająć).
+    if (pending() && room() >= PENDING_RESERVE) {
         const Confirm c = host_.confirmPoll();
         if (c != Confirm::WAITING) finishPending(c == Confirm::YES);
         else if (nowMs - pending_.sinceMs >= CONFIRM_MS) finishPending(false);

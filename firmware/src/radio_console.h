@@ -24,6 +24,20 @@ void begin();  // piny układu (przed platform::beginBus)
 void start();
 bool ok();    // układ odpowiada właściwym numerem części
 bool p1Ok();  // tablica P1 zapisana i zweryfikowana (CC1120: także skalibrowany syntezer)
+// Kontrola sprawności w pracy (main.cpp co CHECK_MS, gdy łącze nie nadaje): numer części i słowo
+// synchronizacji P1, które po resecie albo zaniku zasilania układu wraca do wartości domyślnej.
+// Układ, który stracił konfigurację P1, dostaje ją od nowa (true: odbiór trzeba wznowić); układ,
+// który nie odpowiada, jest niesprawny do następnej udanej kontroli. Brak ruchu nie jest awarią.
+constexpr uint32_t CHECK_MS = 10000;
+bool check();
+
+// Wpis tablicy rejestrów o nazwie name albo nullptr.
+template <typename Register>
+const Register* findRegister(const Register* table, size_t count, const char* name) {
+    for (size_t i = 0; i < count; ++i) if (!strcmp(table[i].name, name)) return &table[i];
+    return nullptr;
+}
+constexpr size_t SYNC_REGISTERS = 4;   // SYNC3..SYNC0, kolejne wpisy tablicy P1
 
 void report();       // raport po otwarciu portu diagnostyki: RADIO, VERIFY, FREQ
 void printState();   // stan układu (STATE; także po RX, STOP i IDLE)

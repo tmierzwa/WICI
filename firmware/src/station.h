@@ -162,7 +162,7 @@ private:
     void stageEvent(store::Tx& tx, uint16_t slot, uint16_t gen, const store::Request& r, store::StageCode code, bool decisionChanged);
     void touchContact(store::Tx& tx);
     void markCancelled(store::Tx& tx, uint16_t slot, store::Request& r);   // ANULUJ albo WSTRZYMAJ TEST
-    bool note(store::EventKind kind, uint8_t a, uint32_t value);   // samo zdarzenie w jednej transakcji
+    bool note(const store::Event& e);   // samo zdarzenie w jednej transakcji
 
     store::Store& store_;
     Services& services_;

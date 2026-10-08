@@ -6,6 +6,9 @@
 // `xfer_*` (`configure`, `config_get`). `silence`, `close` i `destroy` czekają na przycisk OK do 30 s
 // bez blokowania pętli stacji (`pending`, potem wynik); w tym czasie inne polecenia dostają `busy`.
 // Pole nieznane albo złego typu daje `invalid` z nazwą pola. Każde polecenie trafia do dziennika.
+// Wyjście idzie przez kolejkę na jeden pełny wiersz, którą main.cpp opróżnia tyle, ile przyjmie port
+// (zapis nie blokuje pętli stacji); następny wiersz wejścia jest czytany dopiero przy pustej kolejce,
+// a migawka wychodzi wierszami w miarę miejsca. Laptop, który przestał czytać, wstrzymuje tylko siebie.
 // Nie ma jeszcze PRZENIEŚ STACJĘ (`migrate`, `export`, `import`: odmowa `migration` albo `invalid`)
 // ani aktualizacji oprogramowania (`firmware`), co opisuje przegląd (F107).
 // Węzeł stanowiska używa protokołu tylko w trybie przygotowania; poza nim interfejs danych przenosi
@@ -23,6 +26,13 @@
 namespace usbproto {
 
 constexpr size_t MAX_LINE = 1024;
+constexpr size_t LINE_ROOM = MAX_LINE + 1;      // wiersz z LF
+// Kolejka wyjściowa: jeden pełny wiersz. Odpowiedź na wiersz wejścia to jeden wiersz, a dwa tylko przy
+// odmowie `contract` (`rejected` do 160 B i `hello` do 460 B), więc pusta kolejka mieści każdą odpowiedź.
+constexpr size_t OUT_BYTES = LINE_ROOM;
+// Miejsce na odpowiedź po pytaniu przyciskiem (najdłuższa: `ok` polecenia `silence` z polami ciszy,
+// do 230 B), którego zdarzenia nie zajmują.
+constexpr size_t PENDING_RESERVE = 256;
 constexpr uint32_t CONTRACT = 2;
 constexpr uint32_t RESEND_MS = 5000;     // ponowienie zdarzeń bez `ack`
 constexpr uint32_t WINDOW = 8;           // zdarzenia w drodze bez `ack`
@@ -42,7 +52,6 @@ struct Host {
     virtual bool silenceSwitch() = 0;
     virtual void randomBytes(uint8_t* out, size_t count) = 0;
     virtual void log(const char* text) = 0;
-    virtual void emit(const char* line) = 0;               // wiersz do laptopa bez znaku nowego wiersza
     // Tożsamość stacji: klucz publiczny 64 B i adres LXMF; false bez tożsamości (węzeł, brak stosu).
     virtual bool identity(uint8_t key[64], uint8_t lxmf[store::HASH]) = 0;
     virtual const char* stationName() = 0;
@@ -69,6 +78,7 @@ struct Stats {
     uint32_t stored = 0;
     uint32_t overflow = 0;   // wiersze dłuższe niż 1024 B albo z bajtem NUL
     uint32_t resends = 0;
+    uint32_t dropped = 0;    // wiersze bez miejsca w kolejce (błąd programu: wejście czeka na pustą kolejkę)
 };
 
 class Protocol {
@@ -80,7 +90,15 @@ public:
     bool isConnected() const { return connected_; }
     void feed(const char* bytes, size_t count, uint32_t nowMs);
     void handleLine(const char* line, uint32_t nowMs);
-    void poll(uint32_t nowMs);        // zdarzenia, ponowienia, potwierdzenie przyciskiem, limit transferu
+    void poll(uint32_t nowMs);        // migawka, zdarzenia, ponowienia, potwierdzenie przyciskiem, limit transferu
+    // Następny wiersz wejścia może być przetworzony: kolejka pusta (każda odpowiedź się zmieści)
+    // i migawka nie trwa. Inaczej port nie jest czytany, a wiersze czekają u laptopa.
+    bool acceptsInput() const { return !snap_.active && outCount_ == 0; }
+    bool snapshotActive() const { return snap_.active; }
+    // Kolejka wyjściowa: ciągły fragment do zapisu w porcie i consume() z liczbą bajtów, które port
+    // przyjął (zapis częściowy zostaje w kolejce).
+    const char* output(size_t& length) const;
+    void consume(size_t length);
     const char* bootId() const { return boot_; }
     const Stats& stats() const { return stats_; }
     bool synced() const { return synced_; }
@@ -97,6 +115,15 @@ private:
         uint8_t epoch[store::EPOCH] = {};
         uint32_t head = 0;
     };
+    // Migawka w toku: wiersze `snap` po kolei z rejestru, pamięci zwolnionych wpisów i skrzynki.
+    struct Snap {
+        bool active = false;
+        int64_t seq = 0;
+        uint8_t phase = 0;
+        size_t index = 0;
+        uint32_t head = 0;
+        uint8_t epoch[store::EPOCH] = {};
+    };
     struct Xfer {
         enum Op : uint8_t { NONE, CONFIGURE, CONFIG_GET } op = NONE;
         uint32_t id = 0;
@@ -106,6 +133,7 @@ private:
         uint32_t lastMs = 0;
     };
     void send(const char* type, int64_t re, const char* fields);
+    bool push(const char* type, int64_t re, const char* fields, size_t reserve);
     void rejected(int64_t re, const char* reason, const char* detail = nullptr);
     void hello();
     bool sendEvent(uint32_t ev);
@@ -113,6 +141,9 @@ private:
     void doSync(const json::Value& msg, int64_t seq, uint32_t nowMs);
     void doAck(const json::Value& msg, uint32_t nowMs);
     void doSnapshot(const json::Value& msg, int64_t seq);
+    void continueSnapshot();
+    bool snapItem(char* fields, size_t size);
+    size_t room() const { return OUT_BYTES - outCount_; }
     void doSubmit(const json::Value& msg, int64_t seq);
     void doCancel(const json::Value& msg, int64_t seq);
     void doTest(const json::Value& msg, int64_t seq);
@@ -127,7 +158,8 @@ private:
     void finishPending(bool confirmed);
     void stored(int64_t seq, const station::Stored& s);
     size_t requestFields(const store::Request& r, char* out, size_t size);
-    size_t radioFields(char* out, size_t size, uint8_t bits);
+    size_t radioFields(char* out, size_t size, uint8_t bits, const uint8_t* exception, uint16_t revision, bool lost = false);
+    size_t currentRadioFields(char* out, size_t size);
     bool xferOpen(const json::Value& msg, int64_t seq, uint32_t nowMs);
 
     store::Store& store_;
@@ -145,7 +177,11 @@ private:
     uint32_t announceMs_ = 0;
     bool announced_ = false;
     Pending pending_;
+    Snap snap_;
     Xfer xfer_;
+    char out_[OUT_BYTES] = {};
+    size_t outStart_ = 0;
+    size_t outCount_ = 0;
     char line_[MAX_LINE + 1] = {};
     size_t lineLength_ = 0;
     bool overflow_ = false;

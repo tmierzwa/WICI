@@ -149,7 +149,6 @@ struct BenchHost : usbproto::Host {
     bool silenceSwitch() override;
     void randomBytes(uint8_t* out, size_t count) override { stationRandom(out, count); }
     void log(const char* text) override { bench.log(text); }
-    void emit(const char* line) override;
     bool identity(uint8_t key[64], uint8_t lxmf[store::HASH]) override;
     const char* stationName() override;
     const char* version() override { return WICI_FW_VERSION; }
@@ -168,10 +167,13 @@ struct BenchHost : usbproto::Host {
 BenchHost host;
 
 
+// Układ radiowy odpowiada, a tablica P1 jest zapisana i zweryfikowana (wiersz 1 ekranu, LED2, radio_awaria).
+bool radioWorks() { return radiocon::ok() && radiocon::p1Ok(); }
+
 // Łącze P1 stanowiska pod interfejsem P1 stosu: datagram z kolejki interfejsu idzie przez
 // Bench (dług ciszy, CCA, odroczenia, fragmentacja); w ciszy radiowej kolejka czeka.
-// Układ odpowiada, tablica P1 zapisana i zweryfikowana, łącze P1 w odbiorze.
-bool p1Listening() { return radiocon::ok() && radiocon::p1Ok() && bench.receiving(); }
+// Radio działa i łącze P1 jest w odbiorze.
+bool p1Listening() { return radioWorks() && bench.receiving(); }
 
 struct BenchRadio : rnsnode::Radio {
     bool ready() override { return p1Listening() && !bench.busy() && (!bench.silence || bench.silenceException); }
@@ -189,13 +191,6 @@ uint32_t rebootAtMs = 0;          // restart po zmianie roli (0 = brak)
 bool computerHeard = false;       // pakiet od komputera stanowiska od startu
 uint32_t computerAtS = 0;         // czas pracy przy ostatnim pakiecie od komputera
 uint32_t computerPackets = 0;
-
-void BenchHost::emit(const char* line) {
-    // Odpowiedzi idą na interfejs danych; bez otwartego portu danych albo przy ramkach KISS
-    // (węzeł stanowiska poza trybem przygotowania) na diagnostykę (polecenie USB).
-    if (SerialData && !kissMode()) SerialData.println(line);
-    else Serial.println(line);
-}
 
 // Przełącznik CISZA na stacji (na stanowisku bez przełącznika: polecenie SILENCE); ma pierwszeństwo
 // przed ciszą z panelu (meta) i wyklucza wyjątek dla pojedynczego zgłoszenia.
@@ -219,6 +214,23 @@ struct BenchServices : station::Services {
 BenchServices services;
 station::Station app(stationStore, services);
 usbproto::Protocol protocol(stationStore, app, host);
+
+// Kolejka wyjściowa protokołu do portu: tyle, ile przyjmie bufor CDC, z wynikiem write() (ESP32 może
+// przyjąć mniej po limicie czasu), więc laptop, który nie czyta, nie zatrzymuje pętli stacji.
+template <typename Port>
+void drainProtocol(Port& port) {
+    int room = port.availableForWrite();
+    while (room > 0) {
+        size_t n = 0;
+        const char* data = protocol.output(n);
+        if (!n) return;
+        if (n > static_cast<size_t>(room)) n = static_cast<size_t>(room);
+        const size_t written = port.write(reinterpret_cast<const uint8_t*>(data), n);
+        protocol.consume(written);
+        if (written < n) return;
+        room -= static_cast<int>(written);
+    }
+}
 
 // Działania ekranu poza magazynem: OGŁOŚ ADRES, ZNISZCZ DANE, rola.
 struct ScreenActions : console::Actions {
@@ -449,7 +461,7 @@ void pollPanel(uint32_t now) {
     // LED 5 obowiązuje do następnej zmiany powodu migania (alarm, cisza, nieprzeczytane).
     if (now - alarmCauseMs >= 1000) {
         alarmCauseMs = now;
-        alarmCause = storeOk && app.alarmCause();
+        alarmCause = screenHost.alarmCause();
     }
     annunciator::Inputs in;
     in.alarmScreen = screenModel.screen() == ui::Screen::ALARM;
@@ -521,7 +533,7 @@ ui::Status screenStatus() {
     const uint32_t nowS = serviceS();
     s.prep = bench.prep;
     s.silence = silenceAny();
-    s.radioOk = radiocon::ok() && radiocon::p1Ok();
+    s.radioOk = radioWorks();
     // Kontakt z odbiorcą: znany od ostatniej przyjętej wiadomości; bez niej dolne oszacowanie z czasu pracy.
     const store::Meta& m = stationStore.meta();
     s.contactKnown = storeOk && m.contactKnown && m.contactS >= startServiceS;
@@ -889,6 +901,7 @@ void handle(char* cmd) {
     // treść zostaje w oryginalnej wielkości liter.
     if (!strncasecmp(cmd, "USB ", 4)) {
         if (!storeOk) { printError("store not ready"); return; }
+        if (!protocol.acceptsInput()) { printError("usb output busy"); return; }
         protocol.handleLine(cmd + 4, millis());
         return;
     }
@@ -1201,7 +1214,7 @@ void stationSetup() {
     if (storeOk && !nodeRole()) app.stationEvent(store::RESTART, stationJournal.starts());
     bench.onDatagram(onDatagram, nullptr);
     bench.onTxDone(onTxDone, nullptr);
-    if (radiocon::ok() && radiocon::p1Ok()) bench.p1rxStart();  // łącze P1 w odbiorze od startu (radio niezależne od ekranu)
+    if (radioWorks()) bench.p1rxStart();  // łącze P1 w odbiorze od startu (radio niezależne od ekranu)
     const bool extcominOk = display.begin();  // CLEAR czyści pamięć ekranu
 #if defined(WICI_BOARD_N1)
     // Bez EXTCOMIN z licznika panel dostałby składową stałą (EXTMODE na stałe wysoki): zostaje wyłączony.
@@ -1231,11 +1244,20 @@ void stationLoop() {
         ledWrite(board::LED_HEARTBEAT, beat);
     }
     // LED2: P1 gotowe; zapis przy zmianie, więc LED 2 z portu obowiązuje do następnej zmiany.
-    const bool radioReady = radiocon::ok() && radiocon::p1Ok();
-    if (radioReady != radioLed) {
-        radioLed = radioReady;
-        ledWrite(board::LED_RADIO, radioReady);
+    static uint32_t radioCheckMs = 0;
+    if (now - radioCheckMs >= radiocon::CHECK_MS && !bench.busy()) {
+        radioCheckMs = now;
+        if (radiocon::check()) {
+            bench.log("radio reconfigured after lost P1 settings");
+            bench.p1rxStart();
+        }
     }
+    const bool radio = radioWorks();
+    if (radio != radioLed) {
+        radioLed = radio;
+        ledWrite(board::LED_RADIO, radio);
+    }
+    screenHost.setRadioFault(!radio);   // alarm radio_awaria (oprogramowanie.md, ekran główny)
     const bool usb = Serial;  // CDC otwarty przez hosta
     ledWrite(board::LED_USB, usb);
     if (usb && !reported) {  // jednorazowy raport po otwarciu portu
@@ -1254,7 +1276,7 @@ void stationLoop() {
             ledWrite(board::LED_FRAM, false);
         }
     }
-    bench.p1Ready = radioReady;
+    bench.p1Ready = radio;
     if (radiocon::ok()) bench.poll();
     if (rnsOk) {
         rnsnode::loop(now);
@@ -1296,14 +1318,13 @@ void stationLoop() {
         kissWas = kiss;
     }
     if (dataOpen) {
-        char chunk[64];
-        while (SerialData.available()) {
-            size_t n = 0;
-            while (n < sizeof(chunk) && SerialData.available()) chunk[n++] = static_cast<char>(SerialData.read());
-            if (kiss) rnsnode::usbFeed(reinterpret_cast<const uint8_t*>(chunk), n, now);
-            else protocol.feed(chunk, n, now);
-        }
         if (kiss) {
+            char chunk[64];
+            while (SerialData.available()) {
+                size_t n = 0;
+                while (n < sizeof(chunk) && SerialData.available()) chunk[n++] = static_cast<char>(SerialData.read());
+                rnsnode::usbFeed(reinterpret_cast<const uint8_t*>(chunk), n, now);
+            }
             // Do komputera tyle, ile przyjmie bufor CDC (zapis nie blokuje pętli stacji).
             uint8_t out[64];
             int room = SerialData.availableForWrite();
@@ -1313,9 +1334,19 @@ void stationLoop() {
                 SerialData.write(out, n);
                 room -= static_cast<int>(n);
             }
+        } else {
+            // Bajt po bajcie, dopóki odpowiedź zmieści się w kolejce: koniec wiersza może dać do dwóch wierszy.
+            while (protocol.acceptsInput() && SerialData.available()) {
+                const char c = static_cast<char>(SerialData.read());
+                protocol.feed(&c, 1, now);
+            }
         }
     }
     if (!kiss) protocol.poll(now);   // także bez portu: limit potwierdzenia przyciskiem i transferu
+    // Odpowiedzi na interfejs danych; bez otwartego portu danych albo przy ramkach KISS na diagnostykę
+    // (polecenie USB z portu diagnostyki).
+    if (dataOpen && !kiss) drainProtocol(SerialData);
+    else drainProtocol(Serial);
     if (nodeRole()) {
         const uint32_t packets = rnsnode::usbStatus().counters.fromComputer;
         if (packets != computerPackets) {

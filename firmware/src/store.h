@@ -383,11 +383,18 @@ public:
         return head_ >= first + RING_ENTRIES ? head_ - RING_ENTRIES + 1 : first;
     }
     bool readEvent(uint32_t ev, Event& out);
+    // Zdarzenie `radio`: bity ciszy i odwołanie do wyjątku z chwili zdarzenia (gniazdo i generacja wpisu
+    // rejestru, rewizja wyjątku, krótki numer w `value`), bo meta zmienia się później.
+    Event radioEvent(const Meta& m, bool switchOn);
+    // Id wyjątku zdarzenia `radio`: z wpisu rejestru, po jego zwolnieniu z pamięci zwolnionych wpisów
+    // (krótki numer jest tam jednoznaczny); false bez wyjątku albo gdy wpisu już nie ma.
+    bool exceptionId(const Event& e, uint8_t id[HASH]);
     // Po zdarzeniu head nie ma zdarzeń zmieniających dane (warunek `close`).
     bool quietSince(uint32_t head);
 
     // ZAMKNIJ ZDARZENIE: nowa epoka w jednej transakcji; dane starej epoki nadpisuje maintain().
-    bool close();
+    // head: wartość z potwierdzonego `close`, zapamiętana do powtórzenia polecenia.
+    bool close(uint32_t head);
     // Nadpisanie gniazd starej epoki (jedna transakcja na wywołanie); false, gdy nic nie zostało.
     bool maintain();
     // ZNISZCZ DANE: znacznik w dzienniku, skasowanie TX_BASE..FRAM_END i dziennika (bez długu ciszy

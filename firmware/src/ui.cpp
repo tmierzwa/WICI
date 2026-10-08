@@ -941,7 +941,7 @@ void Model::buildItem(const Item& item, Text& t) const {
 }
 
 void Model::buildHandover(const Status& status, Text& t) {
-    // Otwarte i niepotwierdzone zgłoszenia, nieprzeczytane wiadomości, energia, cisza.
+    // Otwarte i niepotwierdzone zgłoszenia, nieprzeczytane wiadomości, awaria radia, energia, cisza.
     char tmp[LINE_BYTES * 2];
     char digits[8];
     t.addLine(label(Label::PRZEKAZANIE_ZMIANY, lang_));
@@ -963,6 +963,7 @@ void Model::buildHandover(const Status& status, Text& t) {
     char lines[LINES][LINE_BYTES];
     renderMain(status, lines, LINES);
     if (status.silence) t.addLine(lines[0]);
+    if (!status.radioOk) t.addLine(text(Id::RADIO_AWARIA, lang_));  // wpis alarmu do usunięcia przyczyny
     t.addLine(lines[status.silence ? 3 : 2]);  // zasilanie
     if (muted_) t.addLine(text(Id::DZWIEK_WYCISZONY, lang_));
 }
@@ -1176,6 +1177,11 @@ void Model::render(const Status& s, Lines& out) {
             renderText(t, window, out, first);
             break;
         case Screen::ALARM:
+            if (alarm_.kind == AlarmKind::RADIO_FAULT) {
+                t.add(text(Id::RADIO_AWARIA, lang_));
+                renderText(t, window, out, first);
+                break;
+            }
             if (alarm_.kind == AlarmKind::NO_READ) t.add(text(Id::BRAK_ODCZYTU, lang_));
             else t.addNumber(Id::BRAK_POTWIERDZENIA, "[n]", alarm_.minutes, lang_);
             t.addShort(Id::ZAPISZ_NUMER, alarm_.number, lang_);
