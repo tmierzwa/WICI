@@ -2,7 +2,7 @@
 """Compatibility trial of the OSP node (decision D19) with reference Reticulum (Python), without a radio.
 
 Two station programs (the "host" PlatformIO program, firmware/src/host/node_host.cpp) are joined by the
-emulated P1 link over UDP: a station and a station in the OSP node configuration (--osp-node). The node
+emulated P1 link over UDP: a station and a station in the OSP node configuration (--node). The node
 has the second Reticulum interface over USB; here the USB data port is a pseudo-terminal, and this
 process runs reference Reticulum with a KISSInterface (flow control on) on it, as the computer of the
 receiving station does (docs/spec/stanowisko-osp.md, "Komputer i aplikacja stanowiska"; radio.md, "Interfejs
@@ -16,7 +16,7 @@ in the Reticulum config (no set_timeout, no change in the stack code); a burst o
 without the 5 s time-out of the Python interface and without drops at the node.
 
 Run with a Python that has Reticulum at the pinned commit (e40191b) and pyserial, for example:
-  .venv-rns/bin/python firmware/tools/rns_osp_node.py --program firmware/.pio/build/host/program
+  .venv-rns/bin/python firmware/tools/rns_node.py --program firmware/.pio/build/host/program
 Prints one JSON object with the results; exit code 0 when every check passed.
 """
 
@@ -43,8 +43,8 @@ def log(text):
 class Program:
     """The host program with line JSON events."""
 
-    def __init__(self, program, fram, listen, peer, debt, osp_node=False):
-        extra = ["--osp-node"] if osp_node else []
+    def __init__(self, program, fram, listen, peer, debt, node=False):
+        extra = ["--node"] if node else []
         self.proc = subprocess.Popen([program, "--fram", fram, "--ifac", NETWORK_KEY, "--listen", str(listen),
                                       "--peer", str(peer), "--debt", str(debt)] + extra,
                                      stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
@@ -104,14 +104,14 @@ def main():
     station_port, node_port = args.port, args.port + 1
     results = {"reticulum": "e40191b", "debt_factor": args.debt, "bitrate": args.bitrate, "checks": {}}
     checks = results["checks"]
-    node = Program(args.program, os.path.join(work, "node.bin"), node_port, station_port, args.debt, osp_node=True)
+    node = Program(args.program, os.path.join(work, "node.bin"), node_port, station_port, args.debt, node=True)
     station = Program(args.program, os.path.join(work, "station.bin"), station_port, node_port, args.debt)
     try:
         if not node.ready or not station.ready:
             raise RuntimeError("host programs did not start")
         pty = node.ready["usb"]
         station_address = bytes.fromhex(station.ready["address"])
-        checks["node_without_address"] = node.ready["osp_node"] is True and node.ready["address"] == "0" * 32
+        checks["node_without_address"] = node.ready["node"] is True and node.ready["address"] == "0" * 32
         node.command("announce")
         e = node.wait("announced", 5)
         checks["node_does_not_announce"] = e is not None and e["ok"] is False

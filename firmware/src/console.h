@@ -1,24 +1,33 @@
 // SPDX-License-Identifier: MIT
-// Dane i działania stacji dla ekranu (ui::Host) nad magazynem FRAM i warstwą aplikacji:
-// lista WIADOMOŚCI (własne zgłoszenia i TEST z kolejki w najnowszej rewizji, odpowiedzi
-// i komunikaty ze skrzynki, najnowsze najpierw), frazy z konfiguracji albo domyślne,
-// zgłoszenie z kreatora, rewizje, anulowanie, TEST, alarmy, KLUCZ ZAPASOWY i ZNISZCZ DANE.
+// Dane i działania stacji dla ekranu (ui::Host) nad rejestrem i skrzynką w FRAM (store.h) i warstwą
+// aplikacji (station.h): lista WIADOMOŚCI (własne zgłoszenia i TEST z rejestru bez anulowanych,
+// odpowiedzi i komunikaty ze skrzynki, najnowsze najpierw), frazy z konfiguracji albo domyślne,
+// zgłoszenie z kreatora, rewizje, ANULUJ WYSYŁKĘ, TEST, alarmy, KLUCZ ZAPASOWY, OGŁOŚ ADRES
+// i ZNISZCZ DANE (przez usługi stacji, jak polecenie `destroy`).
 // Bez zależności od Arduino; sprawdzany na komputerze razem z magazynem w RAM.
 #pragma once
 
-#include "journal.h"
 #include "station.h"
 #include "store.h"
 #include "ui.h"
 
 namespace console {
 
+// Usługi poza magazynem i warstwą aplikacji (main.cpp albo program testowy).
+struct Actions {
+    virtual ~Actions() = default;
+    virtual bool announce() = 0;   // OGŁOŚ ADRES: false = stos nie działa albo cisza
+    virtual bool destroy() = 0;    // ZNISZCZ DANE: magazyn, dziennik, tożsamość
+    virtual bool node() = 0;       // konfiguracja węzła stanowiska
+    virtual void log(const char* text) = 0;
+};
+
 class Console : public ui::Host {
 public:
-    Console(store::Store& store, station::Station& station, station::Services& services, journal::Journal* journal);
-    void invalidate() { dirty_ = true; }  // po każdej zmianie kolejki albo skrzynki
+    Console(store::Store& store, station::Station& station, Actions& actions);
+    void invalidate() { dirty_ = true; }  // po każdej zmianie rejestru albo skrzynki
 
-    const char* address() override;
+    const char* address() override { return store_.address(); }
     size_t addressCount() override { return store_.addressCount(); }
     const char* addressAt(size_t index) override { return store_.addressAt(index); }
     size_t selectedAddress() override { return store_.selectedAddress(); }
@@ -39,27 +48,32 @@ public:
     bool switchBackup() override;
     bool destroy() override;
     bool announce() override;
-    bool ospNode() override { return store_.config().ospNode != 0; }
+    bool node() override { return actions_.node(); }
 
 private:
-    static_assert(ui::ADDRESS_CHOICES == store::ADDRESSES, "lista obiektów ekranu i magazynu");
-    static constexpr size_t MAX_ITEMS = store::QUEUE_SLOTS + store::INBOX_SLOTS;
+    static_assert(ui::ADDRESS_CHOICES == config::ADDRESSES, "lista obiektów ekranu i konfiguracji");
+    static constexpr size_t MAX_ITEMS = store::REGISTER_SLOTS + store::INBOX_SLOTS;
+    // Ref własnego zgłoszenia: bit 31, generacja gniazda w bitach 16..30, gniazdo w 0..15;
+    // wiadomość skrzynki: jej numer `msg` (< 2^31).
     static constexpr uint32_t OWN = 0x80000000u;
-    struct Ref { uint32_t time; uint32_t seq; };  // bit 31 seq = kolejka
+    static uint32_t ownRef(size_t slot, uint16_t gen) { return OWN | (static_cast<uint32_t>(gen & 0x7FFF) << 16) | static_cast<uint32_t>(slot); }
+    int ownSlot(uint32_t ref) const;   // gniazdo wpisu wskazanego przez ref albo -1
+    struct Entry { uint32_t time; uint32_t ref; };
     void rebuild();
-    bool brief(const Ref& ref, uint32_t nowS, ui::Item& out);
+    bool brief(uint32_t ref, ui::Item& out);
     const char* phraseText(const ui::Draft& draft);
 
     store::Store& store_;
     station::Station& station_;
-    station::Services& services_;
-    journal::Journal* journal_;
+    Actions& actions_;
     bool dirty_ = true;
     size_t count_ = 0;
-    Ref list_[MAX_ITEMS];
-    // Treść ostatnio otwartej pozycji: część stała rekordu nie zmienia się dla danego numeru (numery
-    // się nie powtarzają), więc ekran pozycji nie dekoduje rekordu z FRAM przy każdym rysowaniu.
-    uint32_t cachedSeq_ = 0;   // Ref::seq z bitem kolejki; 0 = pusto
+    Entry list_[MAX_ITEMS];
+    // Treść ostatnio otwartej pozycji: liczba osób i fraza zmieniają się tylko z nową rewizją,
+    // więc ekran pozycji nie dekoduje rekordu z FRAM przy każdym rysowaniu.
+    uint32_t cachedRef_ = 0;           // 0 = pusto
+    uint16_t cachedRevision_ = 0;
+    uint8_t cachedEpoch_[store::EPOCH] = {};
     uint16_t cachedPeople_ = 0;
     char cachedText_[ui::ITEM_TEXT] = {};
 };

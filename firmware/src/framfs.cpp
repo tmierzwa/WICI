@@ -73,11 +73,6 @@ bool saveKey(journal::Storage& storage, const uint8_t key[KEY_BYTES]) {
            storage.read(IDENTITY_BASE + slot * IDENTITY_SLOT, check, sizeof(check)) && !memcmp(b, check, sizeof(b));
 }
 
-bool wipeKey(journal::Storage& storage) {
-    uint8_t zero[IDENTITY_SLOT] = {};
-    return storage.write(IDENTITY_BASE, zero, sizeof(zero)) && storage.write(IDENTITY_BASE + IDENTITY_SLOT, zero, sizeof(zero));
-}
-
 // --- system plików -----------------------------------------------------------------------
 
 void Fs::normalize(const char* path, char out[NAME_LEN + 1]) {

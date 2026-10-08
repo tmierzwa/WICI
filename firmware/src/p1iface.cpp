@@ -18,8 +18,16 @@ uint32_t airtimeMs(size_t length) {
     return total;
 }
 
+uint32_t reservedTxMs(size_t length) {
+    return p1frame::fragmentCount(length) * airtimeMs(p1frame::CHUNK);
+}
+
 uint32_t reservedDebtMs(size_t length) {
-    return p1frame::fragmentCount(length) * airtimeMs(p1frame::CHUNK) * DEBT_FACTOR;
+    return reservedTxMs(length) * DEBT_FACTOR;
+}
+
+uint32_t channelMs(size_t length) {
+    return reservedTxMs(length) * (1 + DEBT_FACTOR);
 }
 
 uint32_t declaredBitrate() {
@@ -47,6 +55,23 @@ bool pathResponse(const uint8_t* raw, size_t length) {
     return length > at && (raw[0] & 0x03) == 0x01 && raw[at] == PATH_RESPONSE;
 }
 
+const uint8_t* pathRequestTarget(const uint8_t* raw, size_t length) {
+    if (length < 2 || (raw[0] & 0x0F) != 0x08) return nullptr;   // DATA do PLAIN
+    const size_t at = (raw[0] & 0x40) ? 2 + 16 + 16 + 1 : 2 + 16 + 1;
+    return length >= at + 16 ? raw + at : nullptr;
+}
+
+const char* laneName(Lane lane) {
+    switch (lane) {
+        case Lane::CONTROL: return "control";
+        case Lane::K0: return "k0";
+        case Lane::K1: return "k1";
+        case Lane::K2: return "k2";
+        case Lane::ANNOUNCE: return "announce";
+    }
+    return "?";
+}
+
 const char* admitName(Admit admit) {
     switch (admit) {
         case Admit::QUEUED: return "queued";
@@ -54,21 +79,68 @@ const char* admitName(Admit admit) {
         case Admit::FULL: return "full";
         case Admit::ANNOUNCE_LIMIT: return "announce_limit";
         case Admit::TOO_LARGE: return "too_large";
-        case Admit::OSP_RESERVE: return "osp_reserve";
+        case Admit::K2_SLOT: return "k2_slot";
+        case Admit::K2_POOL: return "k2_pool";
+        case Admit::K2_DEST: return "k2_dest";
+        case Admit::PATH_REQUEST_LIMIT: return "path_request_limit";
     }
     return "?";
 }
 
-uint32_t Queue::costMs(size_t length) const {
-    // announce_cap: czas TX przy przepływności deklarowanej podzielony przez udział 2%.
-    return static_cast<uint32_t>(static_cast<uint64_t>(length) * 8 * 1000 * 100 / ANNOUNCE_CAP_PERCENT / declaredBitrate());
+namespace {
+
+// Pierwszeństwo w kolejce: K0 i K1 razem.
+uint8_t rank(Lane lane) {
+    switch (lane) {
+        case Lane::CONTROL: return 0;
+        case Lane::K0:
+        case Lane::K1: return 1;
+        case Lane::K2: return 2;
+        case Lane::ANNOUNCE: return 3;
+    }
+    return 3;
 }
 
-bool Queue::push(Kind kind, const uint8_t* wire, size_t length) {
+uint32_t percentOfWindow(uint32_t percent) { return WINDOW_MS / 100 * percent; }
+
+}  // namespace
+
+void Queue::Window::advance(uint32_t nowMs) {
+    const uint32_t now = nowMs / 60000;
+    const uint32_t elapsed = now - minute;   // także po zawinięciu millis(): całe okno od nowa
+    for (uint32_t k = 1; k <= elapsed && k <= WINDOW_MIN; ++k) ms[(minute + k) % WINDOW_MIN] = 0;
+    minute = now;
+}
+
+uint32_t Queue::Window::used(uint32_t nowMs) {
+    advance(nowMs);
+    uint32_t total = 0;
+    for (uint32_t v : ms) total += v;
+    return total;
+}
+
+void Queue::Window::add(uint32_t nowMs, uint32_t cost) {
+    advance(nowMs);
+    ms[minute % WINDOW_MIN] += cost;
+}
+
+Lane Queue::lane(const uint8_t* raw, size_t length, Hint hint) const {
+    if (length < 2) return Lane::K0;
+    const Kind kind = classify(raw, length);
+    if (kind == Kind::CONTROL) return Lane::CONTROL;
+    if (kind == Kind::ANNOUNCE) return pathResponse(raw, length) ? Lane::CONTROL : Lane::ANNOUNCE;
+    if (hint == Hint::OWN || raw[1] == 0) return Lane::K0;
+    if (hint == Hint::RECEIVER) return Lane::K1;
+    const uint8_t* dest = destination(raw, length);
+    if (receiverSet_ && dest && !memcmp(dest, receiver_, 16)) return Lane::K1;
+    return Lane::K2;
+}
+
+bool Queue::push(Lane lane, const uint8_t* wire, size_t length) {
     for (Slot& s : slots_) {
         if (s.used) continue;
         s.used = true;
-        s.kind = kind;
+        s.lane = lane;
         s.order = order_++;
         s.length = static_cast<uint16_t>(length);
         memcpy(s.data, wire, length);
@@ -79,64 +151,152 @@ bool Queue::push(Kind kind, const uint8_t* wire, size_t length) {
     return false;
 }
 
-Admit Queue::offer(Kind kind, uint8_t hops, const uint8_t dest[16], const uint8_t* wire, size_t length, uint32_t nowMs, bool osp) {
-    if (length == 0 || length > MAX_WIRE || length > p1frame::MAX_DATAGRAM) { ++counters_.tooLarge; return Admit::TOO_LARGE; }
-    if (kind == Kind::ANNOUNCE && hops > 0) {
-        // Ogłoszenie przekazywane: od razu tylko bez oczekujących i po upływie limitu.
-        if (held() == 0 && announceOpen(nowMs) && !full()) {
-            push(kind, wire, length);
-            announceAllowedAt_ = nowMs + costMs(length);
-            announceGate_ = true;
-            return Admit::QUEUED;
-        }
-        Held* slot = nullptr;
-        for (Held& h : held_)
-            if (h.used && dest && !memcmp(h.dest, dest, 16)) slot = &h;   // nowsze ogłoszenie tego samego celu
-        for (Held& h : held_)
-            if (!slot && !h.used) slot = &h;
-        if (!slot) { ++counters_.announcesDropped; return Admit::ANNOUNCE_LIMIT; }
-        slot->used = true;
-        slot->hops = hops;
-        if (dest) memcpy(slot->dest, dest, 16);
-        slot->sinceMs = nowMs;
-        slot->costMs = costMs(length);
-        slot->length = static_cast<uint16_t>(length);
-        memcpy(slot->data, wire, length);
-        ++counters_.announcesHeld;
-        return Admit::HELD;
+Admit Queue::offer(const uint8_t* raw, size_t rawLength, const uint8_t* wire, size_t wireLength, uint32_t nowMs, Hint hint) {
+    if (rawLength < 2 || wireLength == 0 || wireLength > MAX_WIRE || wireLength > p1frame::MAX_DATAGRAM) {
+        ++counters_.tooLarge;
+        return Admit::TOO_LARGE;
     }
+    const Lane l = lane(raw, rawLength, hint);
+    if (l == Lane::ANNOUNCE) return offerAnnounce(raw[1], destination(raw, rawLength), wire, wireLength, nowMs);
     if (full()) { ++counters_.full; return Admit::FULL; }
-    const bool toPinned = ospSet_ && dest && !memcmp(dest, osp_, 16);
-    if (kind == Kind::DATA && hops > 0 && (ospSet_ || nodeReserve_) && !osp && !toPinned) {
-        // Dane przekazywane poza OSP: rezerwa 50% czasu kanału i ostatnie miejsce w kolejce dla OSP.
-        const uint32_t cost = airtimeMs(length) + reservedDebtMs(length);
-        const uint32_t budget = RESERVE_WINDOW_MIN * 60000 / 100 * OTHER_SHARE_PERCENT;
-        if (count_ + 1 >= QUEUE || otherUsedMs(nowMs) + cost > budget) { ++counters_.reserved; return Admit::OSP_RESERVE; }
-        window_[windowMinute_ % RESERVE_WINDOW_MIN] += cost;
-    }
-    push(kind, wire, length);
+    // Zapytanie o trasę bez wskazania stosu: przekazywane (Reticulum nadaje je od nowa z hops = 0).
+    if (hint == Hint::NONE && (raw[0] & 0x0F) == 0x08)
+        return offerPathRequest(pathRequestTarget(raw, rawLength), wire, wireLength, nowMs);
+    if (l == Lane::K2) return offerK2(destination(raw, rawLength), wire, wireLength, nowMs);
+    push(l, wire, wireLength);
     return Admit::QUEUED;
 }
 
-void Queue::setOsp(const uint8_t dest[16]) {
-    ospSet_ = false;
+bool Queue::poolAllows(uint32_t nowMs, size_t length) {
+    return pool_.used(nowMs) + channelMs(length) <= percentOfWindow(POOL_PERCENT);
+}
+
+bool Queue::k0k1Waiting() const {
+    for (size_t i = 0; i < QUEUE; ++i) {
+        const Slot& s = slots_[i];
+        if (s.used && (int)i != current_ && rank(s.lane) <= rank(Lane::K1)) return true;
+    }
+    return false;
+}
+
+Queue::DestWindow* Queue::findDest(const uint8_t* dest) {
+    for (DestWindow& d : dests_)
+        if (d.used && !memcmp(d.dest, dest, 16)) return &d;
+    return nullptr;
+}
+
+Admit Queue::offerK2(const uint8_t* dest, const uint8_t* wire, size_t length, uint32_t nowMs) {
+    if (count_ + 1 >= QUEUE) { ++counters_.k2Slot; return Admit::K2_SLOT; }
+    if (!poolAllows(nowMs, length)) { ++counters_.k2Pool; return Admit::K2_POOL; }
+    const uint32_t cost = channelMs(length);
+    DestWindow* d = dest ? findDest(dest) : nullptr;
+    if (d && k0k1Waiting() && d->window.used(nowMs) + cost > percentOfWindow(DEST_PERCENT)) {
+        ++counters_.k2Dest;
+        return Admit::K2_DEST;
+    }
+    if (dest && !d) {
+        // Nowy cel: wolne miejsce albo cel najmniej używany w oknie.
+        for (DestWindow& e : dests_) {
+            if (!e.used) { d = &e; break; }
+            if (!d || e.window.used(nowMs) < d->window.used(nowMs)) d = &e;
+        }
+        d->used = true;
+        memcpy(d->dest, dest, 16);
+        d->window = Window();
+    }
+    if (d) d->window.add(nowMs, cost);
+    pool_.add(nowMs, cost);
+    push(Lane::K2, wire, length);
+    return Admit::QUEUED;
+}
+
+Admit Queue::offerPathRequest(const uint8_t* target, const uint8_t* wire, size_t length, uint32_t nowMs) {
+    PathRequest* slot = nullptr;
+    if (target) {
+        for (PathRequest& r : recentRequests_) {
+            if (!r.used || memcmp(r.target, target, 16)) continue;
+            if (nowMs - r.atMs < PATH_REQUEST_GAP_MS) { ++counters_.pathRequestLimited; return Admit::PATH_REQUEST_LIMIT; }
+            slot = &r;
+        }
+    }
+    const uint32_t cost = channelMs(length);
+    if (pathRequests_.used(nowMs) + cost > percentOfWindow(PATH_REQUEST_PERCENT)) {
+        ++counters_.pathRequestLimited;
+        return Admit::PATH_REQUEST_LIMIT;
+    }
+    if (target) {
+        // Nowy cel: wolne miejsce albo najstarszy wpis.
+        for (PathRequest& r : recentRequests_) {
+            if (slot) break;
+            if (!r.used) { slot = &r; break; }
+        }
+        if (!slot) {
+            slot = &recentRequests_[0];
+            for (PathRequest& r : recentRequests_)
+                if (static_cast<int32_t>(r.atMs - slot->atMs) < 0) slot = &r;
+        }
+        slot->used = true;
+        memcpy(slot->target, target, 16);
+        slot->atMs = nowMs;
+    }
+    pathRequests_.add(nowMs, cost);
+    push(Lane::CONTROL, wire, length);
+    return Admit::QUEUED;
+}
+
+void Queue::releaseAnnounce(const uint8_t* wire, size_t length, uint32_t nowMs) {
+    push(Lane::ANNOUNCE, wire, length);
+    pool_.add(nowMs, channelMs(length));
+    // Limit 2%: następne ogłoszenie po czasie TX tego ogłoszenia x 100 / 2.
+    announceAllowedAt_ = nowMs + reservedTxMs(length) * 100 / ANNOUNCE_CAP_PERCENT;
+    announceGate_ = true;
+}
+
+Admit Queue::offerAnnounce(uint8_t hops, const uint8_t* dest, const uint8_t* wire, size_t length, uint32_t nowMs) {
+    // Od razu tylko bez oczekujących, po upływie limitu 2% i w puli 60%.
+    if (held() == 0 && !full() && announceOpen(nowMs) && poolAllows(nowMs, length)) {
+        releaseAnnounce(wire, length, nowMs);
+        return Admit::QUEUED;
+    }
+    Held* slot = nullptr;
+    for (Held& h : held_)
+        if (h.used && dest && !memcmp(h.dest, dest, 16)) slot = &h;   // nowsze ogłoszenie tego samego celu
+    for (Held& h : held_)
+        if (!slot && !h.used) slot = &h;
+    if (!slot) {
+        // Pełna lista: ogłoszenie z mniejszą liczbą skoków zastępuje to z największą (najstarsze z nich).
+        Held* worst = nullptr;
+        for (Held& h : held_)
+            if (!worst || h.hops > worst->hops || (h.hops == worst->hops && static_cast<int32_t>(h.sinceMs - worst->sinceMs) < 0)) worst = &h;
+        ++counters_.announcesDropped;
+        if (worst->hops <= hops) return Admit::ANNOUNCE_LIMIT;
+        slot = worst;
+    }
+    slot->used = true;
+    slot->hops = hops;
+    if (dest) memcpy(slot->dest, dest, 16);
+    else memset(slot->dest, 0, 16);
+    slot->sinceMs = nowMs;
+    slot->length = static_cast<uint16_t>(length);
+    memcpy(slot->data, wire, length);
+    ++counters_.announcesHeld;
+    return Admit::HELD;
+}
+
+void Queue::setReceiver(const uint8_t dest[16]) {
+    receiverSet_ = false;
     if (!dest) return;
-    for (int i = 0; i < 16; ++i) ospSet_ |= dest[i] != 0;
-    memcpy(osp_, dest, 16);
+    for (int i = 0; i < 16; ++i) receiverSet_ |= dest[i] != 0;
+    memcpy(receiver_, dest, 16);
 }
 
-void Queue::advanceWindow(uint32_t nowMs) {
-    const uint32_t minute = nowMs / 60000;
-    const uint32_t elapsed = minute - windowMinute_;   // także po zawinięciu millis(): całe okno od nowa
-    for (uint32_t k = 1; k <= elapsed && k <= RESERVE_WINDOW_MIN; ++k) window_[(windowMinute_ + k) % RESERVE_WINDOW_MIN] = 0;
-    windowMinute_ = minute;
-}
+uint32_t Queue::poolUsedMs(uint32_t nowMs) { return pool_.used(nowMs); }
 
-uint32_t Queue::otherUsedMs(uint32_t nowMs) {
-    advanceWindow(nowMs);
-    uint32_t total = 0;
-    for (uint32_t ms : window_) total += ms;
-    return total;
+uint32_t Queue::pathRequestUsedMs(uint32_t nowMs) { return pathRequests_.used(nowMs); }
+
+uint32_t Queue::destUsedMs(const uint8_t dest[16], uint32_t nowMs) {
+    DestWindow* d = dest ? findDest(dest) : nullptr;
+    return d ? d->window.used(nowMs) : 0;
 }
 
 size_t Queue::held() const {
@@ -157,9 +317,8 @@ void Queue::poll(uint32_t nowMs) {
         if (!h.used) continue;
         if (!best || h.hops < best->hops || (h.hops == best->hops && static_cast<int32_t>(h.sinceMs - best->sinceMs) < 0)) best = &h;
     }
-    push(Kind::ANNOUNCE, best->data, best->length);
-    announceAllowedAt_ = nowMs + best->costMs;
-    announceGate_ = true;
+    if (!poolAllows(nowMs, best->length)) return;
+    releaseAnnounce(best->data, best->length, nowMs);
     best->used = false;
 }
 
@@ -175,7 +334,7 @@ int Queue::head() const {
         if (!s.used) continue;
         if (best < 0) { best = (int)i; continue; }
         const Slot& b = slots_[best];
-        if (s.kind < b.kind || (s.kind == b.kind && static_cast<int32_t>(s.order - b.order) < 0)) best = (int)i;
+        if (rank(s.lane) < rank(b.lane) || (rank(s.lane) == rank(b.lane) && static_cast<int32_t>(s.order - b.order) < 0)) best = (int)i;
     }
     return best;
 }
@@ -197,6 +356,15 @@ void Queue::finish(bool sent) {
     --count_;
     if (sent) ++counters_.sent;
     else ++counters_.sendFailed;
+}
+
+void Queue::drop() {
+    for (size_t i = 0; i < QUEUE; ++i) {
+        if (!slots_[i].used || static_cast<int>(i) == current_) continue;
+        slots_[i].used = false;
+        --count_;
+        ++counters_.silenced;
+    }
 }
 
 uint32_t Queue::waitMs(uint32_t debtMs) const {

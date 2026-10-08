@@ -3,799 +3,1206 @@
 
 #include <string.h>
 
-#include "crc16.h"
+#include <initializer_list>
+
+#include "crc32.h"
+#include "sha2.h"
 
 namespace store {
 
 namespace {
 
-void putU16(uint8_t* out, uint16_t v) { out[0] = static_cast<uint8_t>(v); out[1] = static_cast<uint8_t>(v >> 8); }
-void putU32(uint8_t* out, uint32_t v) { putU16(out, static_cast<uint16_t>(v)); putU16(out + 2, static_cast<uint16_t>(v >> 16)); }
-uint16_t getU16(const uint8_t* in) { return static_cast<uint16_t>(in[0] | (in[1] << 8)); }
-uint32_t getU32(const uint8_t* in) { return static_cast<uint32_t>(getU16(in)) | (static_cast<uint32_t>(getU16(in + 2)) << 16); }
-bool seqUsable(uint32_t seq) { return seq != 0 && seq != 0xFFFFFFFF; }
+const uint8_t RECORD_MARK[4] = {'W', 'R', 'E', 'C'};
+const uint8_t TX_MAGIC[4] = {'W', 'T', 'X', '1'};
+const uint8_t TX_MARK[4] = {'W', 'T', 'X', 'C'};
+const uint8_t TX_APPLIED[4] = {'W', 'T', 'X', 'A'};
 
-// Jedna kopia pętli CRC: rdzeń kompiluje z -Ofast, który rozwijałby funkcję z crc16.h w każdym miejscu.
-__attribute__((noinline)) uint16_t crc16(const uint8_t* data, size_t length, uint16_t crc = 0xFFFF) {
-    return p1::crc16(data, length, crc);
+constexpr size_t TX_HEADER = 24;          // magia 4, numer zapisu 8, liczba rekordów 2, długość 4, zapas 6
+constexpr size_t TX_ITEM = 8 + SLOT;      // adres 4, długość 2, zapas 2, rekord
+constexpr uint32_t TX_APPLIED_AT = TX_AREA - 16;   // numer zapisu 8, stała 4, zapas 4
+constexpr size_t TX_ITEMS_MAX = (TX_APPLIED_AT - TX_HEADER - MARKER) / TX_ITEM;   // 7
+constexpr size_t CONFIG_DOC = RECORD_HEADER + 2 + 32;  // dokument w kopii za nagłówkiem, długością i skrótem
+constexpr uint32_t CONFIG_MARKER_AT = CONFIG_COPY - MARKER;
+static_assert(CONFIG_DOC + config::DOC_MAX <= CONFIG_MARKER_AT - TAG, "dokument mieści się w kopii");
+constexpr size_t BLOCK_BODY = EPOCH + BLOCK_ENTRIES * ENTRY;   // 392 B
+constexpr size_t CHUNK = 256;             // seria SPI (oprogramowanie.md, "Zapis w FRAM")
+
+void put16(uint8_t* p, uint16_t v) { p[0] = static_cast<uint8_t>(v); p[1] = static_cast<uint8_t>(v >> 8); }
+void put32(uint8_t* p, uint32_t v) { put16(p, static_cast<uint16_t>(v)); put16(p + 2, static_cast<uint16_t>(v >> 16)); }
+void put64(uint8_t* p, uint64_t v) { put32(p, static_cast<uint32_t>(v)); put32(p + 4, static_cast<uint32_t>(v >> 32)); }
+uint16_t get16(const uint8_t* p) { return static_cast<uint16_t>(p[0] | (p[1] << 8)); }
+uint32_t get32(const uint8_t* p) { return get16(p) | (static_cast<uint32_t>(get16(p + 2)) << 16); }
+uint64_t get64(const uint8_t* p) { return get32(p) | (static_cast<uint64_t>(get32(p + 4)) << 32); }
+
+// Kodowanie treści rekordów polami po kolei (ta sama kolejność w obu kierunkach).
+struct Out {
+    uint8_t* p;
+    size_t n = 0;
+    explicit Out(uint8_t* out) : p(out) {}
+    void u8(uint8_t v) { p[n++] = v; }
+    void u16(uint16_t v) { put16(p + n, v); n += 2; }
+    void u32(uint32_t v) { put32(p + n, v); n += 4; }
+    void bytes(const void* v, size_t length) { memcpy(p + n, v, length); n += length; }
+};
+
+struct In {
+    const uint8_t* p;
+    size_t length;
+    size_t n = 0;
+    In(const uint8_t* in, size_t size) : p(in), length(size) {}
+    bool ok() const { return n <= length; }
+    uint8_t u8() { return n + 1 <= length ? p[n++] : (n = length + 1, 0); }
+    uint16_t u16() { if (n + 2 > length) { n = length + 1; return 0; } n += 2; return get16(p + n - 2); }
+    uint32_t u32() { if (n + 4 > length) { n = length + 1; return 0; } n += 4; return get32(p + n - 4); }
+    void bytes(void* v, size_t size) {
+        if (n + size > length) { n = length + 1; memset(v, 0, size); return; }
+        memcpy(v, p + n, size);
+        n += size;
+    }
+};
+
+size_t encodeRequest(const uint8_t epoch[EPOCH], const Request& r, uint8_t* body) {
+    Out o(body);
+    o.bytes(epoch, EPOCH);
+    o.u16(r.gen);
+    o.u8(r.type);
+    o.u8(r.origin);
+    o.bytes(r.id, HASH);
+    o.u16(r.rMax);
+    o.u32(static_cast<uint32_t>(r.rRcv));
+    o.u8(static_cast<uint8_t>(r.stage));
+    o.u8(r.flags);
+    o.u8(r.decision);
+    o.u8(r.urgency);
+    o.u16(r.decisionRev);
+    o.u8(r.category);
+    o.u16(r.people);
+    o.u16(r.attempts);
+    o.u32(r.statusHi);
+    o.u32(r.replyHi);
+    o.u32(r.createdS);
+    o.u32(r.changedS);
+    o.u32(r.receivedS);
+    o.u32(r.nextTryS);
+    o.u32(r.firstSentS);
+    o.u8(r.revisionCount);
+    for (const RevisionTime& t : r.revisions) { o.u16(t.revision); o.u32(t.commitS); }
+    o.bytes(r.nonce, NONCE);
+    o.u16(r.sa1Length);
+    o.bytes(r.sa1, r.sa1Length);
+    return o.n;
 }
 
-// Układ rekordu 512 B kolejki i skrzynki (część stała): numer 4, czas 4, typ 1, revision 2, event 4,
-// adres 16, id 16, długość 2, treść 256, aux 1, kategoria 1 = 307 B; CRC 2 i znacznik 1 -> 310 B.
-constexpr size_t MSG_IMMUTABLE = 4 + 4 + 1 + 2 + 4 + HASH + HASH + 2 + sa1::MAX_CONTENT + 2;
-// Część zmienna intencji: flagi, próby, następna próba, event, stan, czas, pierwsze nadanie, pokolenie.
-// Dwie kopie na zmianę (QUEUE_STATE_B): zanik zasilania w trakcie zapisu zostawia poprzednią.
-constexpr size_t QUEUE_STATE = 1 + 2 + 4 + 4 + 1 + 4 + 4 + 1;
-constexpr size_t QUEUE_STATE_B = STATE_OFFSET + QUEUE_STATE + 3;
-constexpr size_t INBOX_STATE = 1;
-constexpr size_t NOTE_IMMUTABLE = 4 + 4 + 1 + 4 + 2 + NOTE_TEXT;
-constexpr size_t NOTE_STATE = 1;
-constexpr size_t SEEN_IMMUTABLE = 4 + HASH + 2 + 4 + 1;
-constexpr size_t CONFIG_IMMUTABLE = 4 + 1 + 1 + 2 + (ADDRESS_MAX + 1) + 2 * HASH + 1 + PHRASES * 3 * (PHRASE_MAX + 1) + HASH +
-                                    1 + (ADDRESSES - 1) * (ADDRESS_MAX + 1);
-constexpr size_t COUNTERS = 4 + 3 * 4;  // numer zapisu, najwyższe numery kolejki, skrzynki i zdarzeń
-static_assert(MSG_IMMUTABLE + 3 <= STATE_OFFSET, "record layout");
-static_assert(QUEUE_STATE_B + QUEUE_STATE + 3 <= RECORD, "record layout");
-static_assert(NOTE_IMMUTABLE + 3 <= STATE_OFFSET, "note layout");
-static_assert(SEEN_IMMUTABLE + 3 <= SEEN_RECORD, "seen layout");
-static_assert(CONFIG_IMMUTABLE + 3 <= CONFIG_SLOT, "config layout");
-
-void encodeMessageHeader(uint8_t* b, uint32_t seq, uint32_t timeS, uint8_t type, uint16_t revision, uint32_t event,
-                         const uint8_t* address, const uint8_t* id, const char* sa1, uint16_t length, uint8_t aux = 0,
-                         uint8_t category = 0) {
-    memset(b, 0, MSG_IMMUTABLE);
-    putU32(b, seq);
-    putU32(b + 4, timeS);
-    b[8] = type;
-    putU16(b + 9, revision);
-    putU32(b + 11, event);
-    memcpy(b + 15, address, HASH);
-    memcpy(b + 31, id, HASH);
-    putU16(b + 47, length);
-    memcpy(b + 49, sa1, length);
-    b[49 + sa1::MAX_CONTENT] = aux;
-    b[50 + sa1::MAX_CONTENT] = category;
+bool decodeRequest(const uint8_t* body, size_t length, Request& r) {
+    In in(body, length);
+    uint8_t epoch[EPOCH];
+    in.bytes(epoch, EPOCH);
+    r.gen = in.u16();
+    r.type = in.u8();
+    r.origin = in.u8();
+    in.bytes(r.id, HASH);
+    r.rMax = in.u16();
+    r.rRcv = static_cast<int32_t>(in.u32());
+    r.stage = static_cast<Stage>(in.u8());
+    r.flags = in.u8();
+    r.decision = in.u8();
+    r.urgency = in.u8();
+    r.decisionRev = in.u16();
+    r.category = in.u8();
+    r.people = in.u16();
+    r.attempts = in.u16();
+    r.statusHi = in.u32();
+    r.replyHi = in.u32();
+    r.createdS = in.u32();
+    r.changedS = in.u32();
+    r.receivedS = in.u32();
+    r.nextTryS = in.u32();
+    r.firstSentS = in.u32();
+    r.revisionCount = in.u8();
+    for (RevisionTime& t : r.revisions) { t.revision = in.u16(); t.commitS = in.u32(); }
+    in.bytes(r.nonce, NONCE);
+    r.sa1Length = in.u16();
+    if (r.sa1Length > sa1::MAX_CONTENT || r.revisionCount > REVISION_TIMES || r.stage > Stage::CANCELLED) return false;
+    in.bytes(r.sa1, r.sa1Length);
+    r.sa1[r.sa1Length] = '\0';
+    return in.ok();
 }
 
-// CRC części zmiennej zaczyna się od numeru rekordu: stan nie pasuje do części stałej innego
-// rekordu, który wcześniej zajmował ten slot.
-uint16_t stateCrc(uint32_t seq, const uint8_t* state, size_t size) {
-    uint8_t b[4];
-    putU32(b, seq);
-    return crc16(state, size, crc16(b, sizeof(b)));
+size_t encodeMessage(const uint8_t epoch[EPOCH], const Message& m, uint8_t* body) {
+    Out o(body);
+    o.bytes(epoch, EPOCH);
+    o.u16(m.gen);
+    o.u8(m.type);
+    o.u8(m.source);
+    o.u8(m.read ? 1 : 0);
+    o.bytes(m.id, HASH);
+    o.u16(m.revision);
+    o.u32(m.event);
+    o.u32(m.number);
+    o.u32(m.receivedS);
+    o.u16(m.sa1Length);
+    o.bytes(m.sa1, m.sa1Length);
+    return o.n;
 }
 
-bool stateValid(uint32_t seq, const uint8_t* state, size_t size) {
-    return state[size + 2] == COMMITTED && stateCrc(seq, state, size) == getU16(state + size);
+bool decodeMessage(const uint8_t* body, size_t length, Message& m) {
+    In in(body, length);
+    uint8_t epoch[EPOCH];
+    in.bytes(epoch, EPOCH);
+    m.gen = in.u16();
+    m.type = in.u8();
+    m.source = in.u8();
+    m.read = in.u8() != 0;
+    in.bytes(m.id, HASH);
+    m.revision = in.u16();
+    m.event = in.u32();
+    m.number = in.u32();
+    m.receivedS = in.u32();
+    m.sa1Length = in.u16();
+    if (m.sa1Length > sa1::MAX_CONTENT) return false;
+    in.bytes(m.sa1, m.sa1Length);
+    m.sa1[m.sa1Length] = '\0';
+    return in.ok();
 }
 
-// Nowsza z dwóch poprawnych kopii stanu intencji (pokolenie w ostatnim bajcie, porównanie modulo 256).
-const uint8_t* queueState(uint32_t seq, const uint8_t* record) {
-    const uint8_t* a = record + STATE_OFFSET;
-    const uint8_t* b = record + QUEUE_STATE_B;
-    const bool va = stateValid(seq, a, QUEUE_STATE);
-    const bool vb = stateValid(seq, b, QUEUE_STATE);
-    if (va && vb) return static_cast<uint8_t>(b[QUEUE_STATE - 1] - a[QUEUE_STATE - 1]) < 128 ? b : a;
-    return va ? a : vb ? b : nullptr;
+enum MetaFlag : uint8_t { M_SILENCE = 0x01, M_EXCEPTION = 0x02, M_TEST_PAUSED = 0x04, M_CONTACT = 0x08, M_CLOSED = 0x10 };
+
+size_t encodeMeta(const Meta& m, uint8_t* body) {
+    Out o(body);
+    o.bytes(m.epoch, EPOCH);
+    o.u32(m.tombFloor);
+    o.u8(static_cast<uint8_t>(m.configCopy));
+    o.u8(m.receiver);
+    o.u8(static_cast<uint8_t>((m.silence ? M_SILENCE : 0) | (m.exceptionSet ? M_EXCEPTION : 0) | (m.testPaused ? M_TEST_PAUSED : 0) |
+                              (m.contactKnown ? M_CONTACT : 0) | (m.closedSet ? M_CLOSED : 0)));
+    o.u8(m.nonceNext);
+    o.u32(m.configSeq);
+    o.bytes(m.exception, HASH);
+    o.u16(m.exceptionRev);
+    o.u32(m.contactS);
+    o.bytes(m.closedEpoch, EPOCH);
+    o.u32(m.closedHead);
+    o.u32(m.bulletinFloor);
+    o.u32(m.bulletinMax);
+    for (const TestNonce& t : m.nonces) { o.bytes(t.nonce, NONCE); o.bytes(t.id, HASH); }
+    return o.n;
 }
 
-void decodeQueueState(const uint8_t* s, QueueRecord& r) {
-    r.flags = s[0];
-    r.attempts = getU16(s + 1);
-    r.nextTryS = getU32(s + 3);
-    r.statusEvent = getU32(s + 7);
-    r.state = s[11];
-    r.updatedS = getU32(s + 12);
-    r.sentS = getU32(s + 16);
+bool decodeMeta(const uint8_t* body, size_t length, Meta& m) {
+    In in(body, length);
+    in.bytes(m.epoch, EPOCH);
+    m.tombFloor = in.u32();
+    m.configCopy = static_cast<int8_t>(in.u8());
+    m.receiver = in.u8();
+    const uint8_t flags = in.u8();
+    m.nonceNext = in.u8();
+    m.configSeq = in.u32();
+    in.bytes(m.exception, HASH);
+    m.exceptionRev = in.u16();
+    m.contactS = in.u32();
+    in.bytes(m.closedEpoch, EPOCH);
+    m.closedHead = in.u32();
+    m.bulletinFloor = in.u32();
+    m.bulletinMax = in.u32();
+    for (TestNonce& t : m.nonces) { in.bytes(t.nonce, NONCE); in.bytes(t.id, HASH); }
+    m.silence = flags & M_SILENCE;
+    m.exceptionSet = flags & M_EXCEPTION;
+    m.testPaused = flags & M_TEST_PAUSED;
+    m.contactKnown = flags & M_CONTACT;
+    m.closedSet = flags & M_CLOSED;
+    return in.ok() && m.configCopy >= -1 && m.configCopy <= 1 && m.receiver <= config::BACKUP && m.nonceNext < TEST_NONCES;
 }
 
-// Część stała wiadomości kolejki albo skrzynki; adres to odbiorca (kolejka) albo źródło (skrzynka).
-bool decodeMessageHeader(const uint8_t* b, uint32_t& timeS, uint8_t& type, uint16_t& revision, uint32_t& event, uint8_t* address,
-                         uint8_t* id, char* sa1, uint16_t& length) {
-    timeS = getU32(b + 4);
-    type = b[8];
-    revision = getU16(b + 9);
-    event = getU32(b + 11);
-    memcpy(address, b + 15, HASH);
-    memcpy(id, b + 31, HASH);
-    length = getU16(b + 47);
-    if (length > sa1::MAX_CONTENT) return false;
-    memcpy(sa1, b + 49, length);
-    sa1[length] = '\0';
-    return true;
+// Wpis pierścienia zdarzeń 24 B: ev 4, at 4, rodzaj 1, a 1 (bit 7: nowa decyzja), gniazdo 2,
+// generacja 2, rewizja 2, decyzja 1, próba 1, rewizja decyzji 2, wartość 4.
+void encodeEvent(const Event& e, uint8_t* p) {
+    Out o(p);
+    o.u32(e.ev);
+    o.u32(e.at);
+    o.u8(static_cast<uint8_t>(e.kind));
+    o.u8(static_cast<uint8_t>((e.a & 0x7F) | (e.decisionChanged ? 0x80 : 0)));
+    o.u16(e.slot);
+    o.u16(e.gen);
+    o.u16(e.revision);
+    o.u8(e.decision);
+    o.u8(e.attempt);
+    o.u16(e.decisionRev);
+    o.u32(e.value);
+}
+
+void decodeEvent(const uint8_t* p, Event& e) {
+    In in(p, ENTRY);
+    e.ev = in.u32();
+    e.at = in.u32();
+    e.kind = static_cast<EventKind>(in.u8());
+    const uint8_t a = in.u8();
+    e.a = a & 0x7F;
+    e.decisionChanged = a & 0x80;
+    e.slot = in.u16();
+    e.gen = in.u16();
+    e.revision = in.u16();
+    e.decision = in.u8();
+    e.attempt = in.u8();
+    e.decisionRev = in.u16();
+    e.value = in.u32();
+}
+
+// Wpis pamięci zwolnionych 24 B: id 16, rewizja 2, ev 4, krótki numer 14 b i znacznik anulowania 1 b.
+void encodeReleased(const Released& r, uint8_t* p) {
+    memcpy(p, r.id, HASH);
+    put16(p + 16, r.revision);
+    put32(p + 18, r.ev);
+    put16(p + 22, static_cast<uint16_t>((r.number & 0x3FFF) | (r.cancelled ? 0x8000 : 0)));
+}
+
+void decodeReleased(const uint8_t* p, Released& r) {
+    memcpy(r.id, p, HASH);
+    r.revision = get16(p + 16);
+    r.ev = get32(p + 18);
+    r.number = get16(p + 22) & 0x3FFF;
+    r.cancelled = get16(p + 22) & 0x8000;
+}
+
+// Wpis zbioru powtórzeń BULLETIN 24 B: id 16, event 4, tożsamość odbiorcy 1, zapas 3.
+constexpr size_t BULLETIN_EVENT = 16;
+constexpr size_t BULLETIN_SOURCE = 20;
+
+uint32_t oldestPending(const Request& r) {
+    // COMMIT najstarszej rewizji nowszej niż r_rcv.
+    for (uint8_t i = 0; i < r.revisionCount; ++i) {
+        if (static_cast<int32_t>(r.revisions[i].revision) > r.rRcv) return r.revisions[i].commitS;
+    }
+    return r.changedS;
 }
 
 }  // namespace
 
-const char* putName(Put result) {
-    switch (result) {
-        case Put::STORED: return "stored";
-        case Put::DUPLICATE: return "duplicate";
-        case Put::CONFLICT: return "conflict";
-        case Put::FULL: return "full";
-        case Put::ERROR: return "error";
-    }
-    return "?";
+uint16_t prefixNumber(uint32_t prefix) { return static_cast<uint16_t>((prefix >> 16) % 10000); }
+uint16_t shortNumber(const uint8_t id[HASH]) { return prefixNumber(idPrefix(id)); }
+uint32_t idPrefix(const uint8_t id[HASH]) {
+    return (static_cast<uint32_t>(id[0]) << 24) | (static_cast<uint32_t>(id[1]) << 16) | (static_cast<uint32_t>(id[2]) << 8) | id[3];
+}
+uint16_t RequestIndex::number() const { return prefixNumber(idPrefix); }
+
+const char* stageCodeName(StageCode code) {
+    static const char* const names[] = {"stored", "sending", "delivered", "received", "cancelled", "superseded", "released"};
+    const size_t i = static_cast<size_t>(code);
+    return i < sizeof(names) / sizeof(names[0]) ? names[i] : "?";
 }
 
-bool hexToBytes(const char* hex, uint8_t out[HASH]) {
-    if (strlen(hex) != 2 * HASH) return false;
-    for (size_t i = 0; i < HASH; ++i) {
-        uint8_t v = 0;
-        for (int k = 0; k < 2; ++k) {
-            const char c = hex[2 * i + k];
-            v = static_cast<uint8_t>(v << 4);
-            if (c >= '0' && c <= '9') v |= static_cast<uint8_t>(c - '0');
-            else if (c >= 'a' && c <= 'f') v |= static_cast<uint8_t>(c - 'a' + 10);
-            else return false;
+const char* beginName(Begin result) {
+    static const char* const names[] = {"ok", "new", "memory", "format", "corrupt"};
+    return names[static_cast<size_t>(result)];
+}
+
+// --- Transakcja ----------------------------------------------------------------------------
+
+Tx::Tx(Store& store) : store_(store) {}
+
+Tx::Change* Tx::change(Kind kind, uint16_t slot) {
+    for (size_t i = 0; i < count_; ++i) {
+        if (changes_[i].kind == kind && changes_[i].slot == slot) return &changes_[i];
+    }
+    if (count_ == MAX_CHANGES) { overflow_ = true; return nullptr; }
+    Change* c = &changes_[count_++];
+    c->kind = kind;
+    c->slot = slot;
+    return c;
+}
+
+uint16_t Tx::gen(Kind kind, uint16_t slot) const {
+    for (size_t i = 0; i < count_; ++i) {
+        if (changes_[i].kind == kind && changes_[i].slot == slot) return get16(changes_[i].body + (changes_[i].length ? EPOCH : 0));
+    }
+    return kind == REGISTER ? store_.register_[slot].gen : store_.inbox_[slot].gen;
+}
+
+void Tx::request(uint16_t slot, const Request& r, bool fresh) {
+    Change* c = change(REGISTER, slot);
+    if (!c) return;
+    // Generacja rośnie przy każdym ponownym zajęciu gniazda.
+    Request copy = r;
+    copy.gen = static_cast<uint16_t>(store_.register_[slot].gen + (fresh ? 1 : 0));
+    c->length = static_cast<uint16_t>(encodeRequest(store_.meta_.epoch, copy, c->body));
+}
+
+void Tx::message(uint16_t slot, const Message& m, bool fresh) {
+    Change* c = change(INBOX, slot);
+    if (!c) return;
+    Message copy = m;
+    copy.gen = static_cast<uint16_t>(store_.inbox_[slot].gen + (fresh ? 1 : 0));
+    c->length = static_cast<uint16_t>(encodeMessage(store_.meta_.epoch, copy, c->body));
+}
+
+void Tx::free(Kind kind, uint16_t slot) {
+    Change* c = change(kind, slot);
+    if (!c) return;
+    c->length = 0;   // rekord „wolne”: treść to tylko generacja gniazda
+    put16(c->body, kind == REGISTER ? store_.register_[slot].gen : kind == INBOX ? store_.inbox_[slot].gen : 0);
+}
+
+void Tx::released(const Released& r) {
+    releasedSet_ = true;
+    released_ = r;
+    // Nadpisanie najstarszego wpisu: pamięć jest kompletna od następnego najstarszego.
+    const size_t next = store_.releasedNext_;
+    if (store_.releasedEv_[next]) meta().tombFloor = store_.releasedEv_[(next + 1) % RELEASED_ENTRIES];
+}
+
+void Tx::bulletin(const uint8_t id[HASH], uint32_t event) {
+    // Wolny wpis (także wpis innej tożsamości odbiorcy) albo wpis o najmniejszym event, który
+    // staje się bulletin_floor.
+    const uint8_t source = store_.meta_.receiver;
+    size_t target = BULLETIN_ENTRIES;
+    for (size_t i = 0; i < BULLETIN_ENTRIES && target == BULLETIN_ENTRIES; ++i) {
+        if (!store_.bulletinEvent_[i] || store_.bulletinSource_[i] != source) target = i;
+    }
+    if (target == BULLETIN_ENTRIES) {
+        target = 0;
+        for (size_t i = 1; i < BULLETIN_ENTRIES; ++i) {
+            if (store_.bulletinEvent_[i] < store_.bulletinEvent_[target]) target = i;
         }
-        out[i] = v;
+        Meta& m = meta();
+        if (store_.bulletinEvent_[target] > m.bulletinFloor) m.bulletinFloor = store_.bulletinEvent_[target];
+    }
+    if (event > meta().bulletinMax) meta().bulletinMax = event;
+    bulletinSet_ = true;
+    bulletinIndex_ = target;
+    memcpy(bulletinId_, id, HASH);
+    bulletinEvent_ = event;
+}
+
+Meta& Tx::meta() {
+    if (!metaSet_) { meta_ = store_.meta_; metaSet_ = true; }
+    return meta_;
+}
+
+uint32_t Tx::event(const Event& e) {
+    if (eventCount_ == MAX_EVENTS || store_.head_ + eventCount_ + 1 == 0) { overflow_ = true; return 0; }
+    Event& out = events_[eventCount_++];
+    out = e;
+    out.ev = store_.head_ + static_cast<uint32_t>(eventCount_);
+    out.at = store_.nowS_;
+    return out.ev;
+}
+
+bool Tx::commit() { return !overflow_ && store_.commitTx(*this); }
+
+// --- Magazyn ---------------------------------------------------------------------------------
+
+Store::Store(journal::Storage& memory, journal::Journal& journal, void (*random)(uint8_t*, size_t), const char* profile)
+    : memory_(memory), journal_(journal), random_(random), profile_(profile) {}
+
+namespace {
+
+uint32_t addressOf(Kind kind, uint16_t slot) {
+    switch (kind) {
+        case META: return META_BASE;
+        case BULLETIN: return BULLETIN_BASE + slot * SLOT;
+        case REGISTER: return REGISTER_BASE + slot * SLOT;
+        case INBOX: return INBOX_BASE + slot * SLOT;
+        case RELEASED: return RELEASED_BASE + slot * SLOT;
+        case RING: return RING_BASE + slot * SLOT;
+        default: return 0;
+    }
+}
+
+uint16_t slotsOf(Kind kind) {
+    switch (kind) {
+        case META: return 1;
+        case BULLETIN: return BULLETIN_BLOCKS;
+        case REGISTER: return REGISTER_SLOTS;
+        case INBOX: return INBOX_SLOTS;
+        case RELEASED: return RELEASED_BLOCKS;
+        case RING: return RING_BLOCKS;
+        default: return 0;
+    }
+}
+
+}  // namespace
+
+void Store::encode(Kind kind, uint16_t slot, uint64_t writeNo, const uint8_t* body, size_t length, uint8_t out[SLOT]) const {
+    memset(out, 0, SLOT);
+    out[0] = kind;
+    put16(out + 1, slot);
+    out[3] = static_cast<uint8_t>(journal::FRAM_FORMAT);
+    put32(out + 4, 0);                    // generacja klucza: rekord jawny
+    put64(out + 8, writeNo);
+    put16(out + 16, static_cast<uint16_t>(length));
+    memcpy(out + RECORD_HEADER, body, length ? length : 2);   // rekord „wolne”: generacja gniazda
+    put32(out + SLOT - MARKER, crc32::of(out, SLOT - MARKER));
+    memcpy(out + SLOT - 4, RECORD_MARK, 4);
+}
+
+SlotState Store::decode(const uint8_t record[SLOT], Kind kind, uint16_t slot, uint8_t* body, size_t& length, uint16_t& gen) const {
+    length = 0;
+    gen = 0;
+    if (journal::blank(record, SLOT)) return SlotState::FREE;
+    length = get16(record + 16);
+    if (memcmp(record + SLOT - 4, RECORD_MARK, 4) || get32(record + SLOT - MARKER) != crc32::of(record, SLOT - MARKER) ||
+        record[0] != kind || get16(record + 1) != slot || record[3] != journal::FRAM_FORMAT || get32(record + 4) != 0 || length > BODY_MAX) {
+        length = 0;
+        return SlotState::CORRUPT;
+    }
+    const uint8_t* b = record + RECORD_HEADER;
+    if (!length) { gen = get16(b); return SlotState::FREE; }
+    memcpy(body, b, length);
+    const bool epochTagged = kind == REGISTER || kind == INBOX || kind == RELEASED || kind == RING;
+    if (kind == REGISTER || kind == INBOX) gen = get16(b + EPOCH);
+    if (epochTagged && (length < EPOCH || memcmp(b, meta_.epoch, EPOCH))) return SlotState::STALE;
+    return SlotState::USED;
+}
+
+bool Store::readSlot(uint32_t address, Kind kind, uint16_t slot, uint8_t* body, size_t& length, SlotState& state, uint16_t& gen) {
+    uint8_t record[SLOT];
+    if (!memory_.read(address, record, SLOT)) return false;
+    state = decode(record, kind, slot, body, length, gen);
+    return true;
+}
+
+bool Store::allocate(uint64_t& out) {
+    // Numer z bloku zarezerwowanego w dzienniku; nowy blok zapisany przed użyciem pierwszego numeru.
+    if (nextWrite_ >= reservedUpper_) {
+        if (!journal_.writeReservation(reservedUpper_ + WRITE_BLOCK)) return false;
+        reservedUpper_ += WRITE_BLOCK;
+    }
+    out = nextWrite_++;
+    return true;
+}
+
+bool Store::readBlock(Kind kind, uint16_t block, uint8_t body[BODY_MAX]) {
+    // Blok bieżącej epoki albo pusty blok (wolny, starej epoki). Blok uszkodzony (policzony przy
+    // starcie w diag_.corruptSlots) też zaczyna od pustego: jego wpisy przepadły, a zostawiony
+    // blokowałby każdą transakcję ze zdarzeniem, zwolnieniem albo BULLETIN.
+    size_t length = 0;
+    SlotState state;
+    uint16_t gen;
+    if (!readSlot(addressOf(kind, block), kind, block, body, length, state, gen)) return false;
+    if (state != SlotState::USED || length != (kind == BULLETIN ? BLOCK_ENTRIES * ENTRY : BLOCK_BODY)) {
+        memset(body, 0, BODY_MAX);
+        if (kind != BULLETIN) memcpy(body, meta_.epoch, EPOCH);
     }
     return true;
 }
 
-void bytesToHex(const uint8_t in[HASH], char out[2 * HASH + 1]) {
-    static const char digits[] = "0123456789abcdef";
-    for (size_t i = 0; i < HASH; ++i) {
-        out[2 * i] = digits[in[i] >> 4];
-        out[2 * i + 1] = digits[in[i] & 15];
+bool Store::commitTx(Tx& tx) {
+    if (!ok_) return false;
+    // Rekordy transakcji: gniazda, bloki pierścienia, blok pamięci zwolnionych, blok zbioru
+    // powtórzeń, meta. Każdy z własnym numerem zapisu.
+    struct Item {
+        Kind kind;
+        uint16_t slot;
+        const uint8_t* body;
+        size_t length;
+    };
+    Item items[TX_ITEMS_MAX];
+    size_t count = 0;
+    for (size_t i = 0; i < tx.count_; ++i) items[count++] = {tx.changes_[i].kind, tx.changes_[i].slot, tx.changes_[i].body, tx.changes_[i].length};
+    uint8_t ring[2][BODY_MAX];
+    uint16_t ringBlock[2] = {};
+    size_t ringCount = 0;
+    for (size_t i = 0; i < tx.eventCount_; ++i) {
+        const Event& e = tx.events_[i];
+        const uint16_t block = static_cast<uint16_t>(((e.ev - 1) % RING_ENTRIES) / BLOCK_ENTRIES);
+        size_t b = 0;
+        while (b < ringCount && ringBlock[b] != block) ++b;
+        if (b == ringCount) {
+            if (ringCount == 2 || !readBlock(RING, block, ring[b])) return false;
+            ringBlock[ringCount++] = block;
+        }
+        encodeEvent(e, ring[b] + EPOCH + ((e.ev - 1) % BLOCK_ENTRIES) * ENTRY);
     }
-    out[2 * HASH] = '\0';
-}
+    if (count + ringCount + tx.releasedSet_ + tx.bulletinSet_ + tx.metaSet_ > TX_ITEMS_MAX) return false;   // błąd programu
+    for (size_t b = 0; b < ringCount; ++b) items[count++] = {RING, ringBlock[b], ring[b], BLOCK_BODY};
+    uint8_t releasedBody[BODY_MAX], bulletinBody[BODY_MAX], metaBody[BODY_MAX];
+    if (tx.releasedSet_) {
+        const uint16_t block = static_cast<uint16_t>(releasedNext_ / BLOCK_ENTRIES);
+        if (!readBlock(RELEASED, block, releasedBody)) return false;
+        encodeReleased(tx.released_, releasedBody + EPOCH + (releasedNext_ % BLOCK_ENTRIES) * ENTRY);
+        items[count++] = {RELEASED, block, releasedBody, BLOCK_BODY};
+    }
+    if (tx.bulletinSet_) {
+        const uint16_t block = static_cast<uint16_t>(tx.bulletinIndex_ / BLOCK_ENTRIES);
+        if (!readBlock(BULLETIN, block, bulletinBody)) return false;
+        uint8_t* entry = bulletinBody + (tx.bulletinIndex_ % BLOCK_ENTRIES) * ENTRY;
+        memset(entry, 0, ENTRY);
+        memcpy(entry, tx.bulletinId_, HASH);
+        put32(entry + BULLETIN_EVENT, tx.bulletinEvent_);
+        entry[BULLETIN_SOURCE] = meta_.receiver;
+        items[count++] = {BULLETIN, block, bulletinBody, BLOCK_ENTRIES * ENTRY};
+    }
+    if (tx.metaSet_) items[count++] = {META, 0, metaBody, encodeMeta(tx.meta_, metaBody)};
+    if (!count) return true;
 
-Store::Store(journal::Storage& storage) : storage_(storage) {}
-
-bool Store::readRecord(uint32_t address, uint8_t* buffer, size_t immutable, size_t span) {
-    // Czyta span bajtów; true, gdy część stała jest poprawna i zatwierdzona (stan sprawdza wołający).
-    if (!storage_.read(address, buffer, span)) return false;
-    if (buffer[immutable + 2] != COMMITTED) return false;
-    if (crc16(buffer, immutable) != getU16(buffer + immutable)) return false;
-    return seqUsable(getU32(buffer));
-}
-
-bool Store::writeImmutable(uint32_t address, uint8_t* buffer, size_t immutable) {
-    putU16(buffer + immutable, crc16(buffer, immutable));
-    buffer[immutable + 2] = 0;
-    if (!storage_.write(address, buffer, immutable + 3)) return false;
-    const uint8_t committed = COMMITTED;
-    return storage_.write(address + immutable + 2, &committed, 1);
-}
-
-bool Store::invalidate(uint32_t address, size_t immutable) {
-    // Ponowne użycie slotu: stary rekord traci znacznik, zanim powstanie nowy (zanik zasilania
-    // między zapisem stanu a zapisem części stałej nie ożywi starego rekordu z nowym stanem).
-    const uint8_t zero = 0;
-    return storage_.write(address + immutable + 2, &zero, 1);
-}
-
-bool Store::writeState(uint32_t address, uint32_t seq, uint8_t* state, size_t stateSize) {
-    putU16(state + stateSize, stateCrc(seq, state, stateSize));
-    state[stateSize + 2] = 0;
-    if (!storage_.write(address, state, stateSize + 3)) return false;
-    const uint8_t committed = COMMITTED;
-    return storage_.write(address + stateSize + 2, &committed, 1);
-}
-
-bool Store::erase(uint32_t base, size_t count, size_t size) {
-    uint8_t zeros[RECORD];
-    memset(zeros, 0, sizeof(zeros));
+    // Rekord transakcji: nagłówek, rekordy, znacznik zatwierdzenia (CRC liczone w tej kolejności).
+    const uint32_t area = TX_BASE + txArea_ * TX_AREA;
+    uint64_t txNo = 0;
+    if (!allocate(txNo)) return false;
+    uint8_t header[TX_HEADER] = {};
+    memcpy(header, TX_MAGIC, 4);
+    put64(header + 4, txNo);
+    put16(header + 12, static_cast<uint16_t>(count));
+    put32(header + 14, static_cast<uint32_t>(count * TX_ITEM));
+    uint32_t crc = crc32::update(crc32::START, header, TX_HEADER);
+    if (!memory_.write(area, header, TX_HEADER)) return false;
+    uint8_t item[TX_ITEM];
     for (size_t i = 0; i < count; ++i) {
-        for (size_t offset = 0; offset < size; offset += sizeof(zeros)) {
-            const size_t chunk = size - offset < sizeof(zeros) ? size - offset : sizeof(zeros);
-            if (!storage_.write(base + static_cast<uint32_t>(i * size + offset), zeros, chunk)) return false;
+        uint64_t writeNo = 0;
+        if (!allocate(writeNo)) return false;
+        memset(item, 0, 8);
+        put32(item, addressOf(items[i].kind, items[i].slot));
+        put16(item + 4, static_cast<uint16_t>(SLOT));
+        encode(items[i].kind, items[i].slot, writeNo, items[i].body, items[i].length, item + 8);
+        crc = crc32::update(crc, item, TX_ITEM);
+        if (!memory_.write(area + TX_HEADER + i * TX_ITEM, item, TX_ITEM)) return false;
+    }
+    uint8_t marker[MARKER];
+    put32(marker, crc32::finish(crc));
+    memcpy(marker + 4, TX_MARK, 4);
+    if (!memory_.write(area + TX_HEADER + count * TX_ITEM, marker, MARKER)) return false;   // COMMIT
+    txArea_ ^= 1;
+    bool found = false;
+    if (!applyTx(area, true, found) || !found) {
+        // Zatwierdzona transakcja zostanie wykonana przy następnym starcie; do tego czasu magazyn stoi.
+        ok_ = false;
+        return false;
+    }
+    return true;   // head_ i indeksy zaktualizował absorb()
+}
+
+bool Store::applyTx(uint32_t area, bool absorbRecords, bool& found) {
+    // Zatwierdzony rekord transakcji: bajty do gniazd, indeksy, znacznik wykonania.
+    uint8_t header[TX_HEADER];
+    found = false;
+    if (!memory_.read(area, header, TX_HEADER)) return false;
+    const size_t count = get16(header + 12);
+    const uint32_t length = get32(header + 14);
+    if (memcmp(header, TX_MAGIC, 4) || count == 0 || count > TX_ITEMS_MAX || length != count * TX_ITEM) return true;   // brak transakcji
+    uint32_t crc = crc32::update(crc32::START, header, TX_HEADER);
+    uint8_t item[TX_ITEM];
+    for (size_t i = 0; i < count; ++i) {
+        if (!memory_.read(area + TX_HEADER + i * TX_ITEM, item, TX_ITEM)) return false;
+        crc = crc32::update(crc, item, TX_ITEM);
+    }
+    uint8_t marker[MARKER];
+    if (!memory_.read(area + TX_HEADER + length, marker, MARKER)) return false;
+    if (get32(marker) != crc32::finish(crc) || memcmp(marker + 4, TX_MARK, 4)) return true;   // niezatwierdzona: odrzucona
+    const uint64_t writeNo = get64(header + 4);
+    found = true;
+    uint8_t applied[16];
+    if (!memory_.read(area + TX_APPLIED_AT, applied, sizeof(applied))) return false;
+    if (!absorbRecords && get64(applied) == writeNo && !memcmp(applied + 8, TX_APPLIED, 4)) return true;   // już wykonana
+    for (size_t i = 0; i < count; ++i) {
+        if (!memory_.read(area + TX_HEADER + i * TX_ITEM, item, TX_ITEM)) return false;
+        const uint32_t address = get32(item);
+        const uint8_t* record = item + 8;
+        const Kind kind = static_cast<Kind>(record[0]);
+        const uint16_t slot = get16(record + 1);
+        if (slot >= slotsOf(kind) || address != addressOf(kind, slot)) return false;   // nie zdarza się przy poprawnym CRC
+        if (!memory_.write(address, record, SLOT)) return false;
+        if (absorbRecords) {
+            uint8_t body[BODY_MAX];
+            size_t bodyLength = 0;
+            uint16_t gen = 0;
+            const SlotState state = decode(record, kind, slot, body, bodyLength, gen);
+            absorb(kind, slot, body, bodyLength, state, gen);
+        }
+    }
+    if (!absorbRecords) ++diag_.replayed;
+    memset(applied, 0, sizeof(applied));
+    put64(applied, writeNo);
+    memcpy(applied + 8, TX_APPLIED, 4);
+    return memory_.write(area + TX_APPLIED_AT, applied, sizeof(applied));
+}
+
+bool Store::recover() {
+    // Zatwierdzone, niewykonane transakcje po kolei numerów zapisu; następna transakcja trafia do
+    // rekordu ze starszą transakcją.
+    uint64_t numbers[2] = {};
+    uint8_t header[TX_HEADER];
+    for (uint8_t a = 0; a < 2; ++a) {
+        if (!memory_.read(TX_BASE + a * TX_AREA, header, TX_HEADER)) return false;
+        if (!memcmp(header, TX_MAGIC, 4)) numbers[a] = get64(header + 4) + 1;
+    }
+    const uint8_t first = numbers[1] && (!numbers[0] || numbers[1] < numbers[0]) ? 1 : 0;
+    for (uint8_t i = 0; i < 2; ++i) {
+        const uint8_t a = i ? first ^ 1 : first;
+        bool found = false;
+        if (numbers[a] && !applyTx(TX_BASE + a * TX_AREA, false, found)) return false;
+    }
+    txArea_ = numbers[0] <= numbers[1] ? 0 : 1;
+    return true;
+}
+
+void Store::staleAll() {
+    // Nowa epoka: rejestr, skrzynka, pamięć zwolnionych i pierścień starej epoki są wolne.
+    for (RequestIndex& r : register_) if (r.state == SlotState::USED) { const uint16_t gen = r.gen; r = RequestIndex(); r.gen = gen; r.state = SlotState::STALE; }
+    for (MessageIndex& m : inbox_) if (m.state == SlotState::USED) { const uint16_t gen = m.gen; m = MessageIndex(); m.gen = gen; m.state = SlotState::STALE; }
+    for (SlotState& s : releasedState_) if (s == SlotState::USED) s = SlotState::STALE;
+    for (SlotState& s : ringState_) if (s == SlotState::USED) s = SlotState::STALE;
+    memset(releasedPrefix_, 0, sizeof(releasedPrefix_));
+    memset(releasedEv_, 0, sizeof(releasedEv_));
+    memset(releasedNumber_, 0, sizeof(releasedNumber_));
+    releasedNext_ = 0;
+    head_ = 0;
+}
+
+void Store::absorb(Kind kind, uint16_t slot, const uint8_t* body, size_t length, SlotState state, uint16_t gen) {
+    if (state == SlotState::CORRUPT) ++diag_.corruptSlots;
+    switch (kind) {
+        case META: {
+            Meta m;
+            if (state != SlotState::USED || !decodeMeta(body, length, m)) break;
+            const bool newEpoch = memcmp(m.epoch, meta_.epoch, EPOCH) != 0;
+            const bool newReceiver = m.receiver != meta_.receiver;
+            meta_ = m;
+            if (newEpoch) staleAll();
+            if (newReceiver) memset(bulletinEvent_, 0, sizeof(bulletinEvent_));   // zbiór powtórzeń od zera
+            break;
+        }
+        case REGISTER: {
+            RequestIndex& x = register_[slot];
+            x = RequestIndex();
+            x.state = state;
+            x.gen = gen;
+            Request r;
+            if (state != SlotState::USED) break;
+            if (!decodeRequest(body, length, r)) { x.state = SlotState::CORRUPT; ++diag_.corruptSlots; break; }
+            x.type = r.type;
+            x.stage = r.stage;
+            x.flags = r.flags;
+            x.decision = r.decision;
+            x.urgency = r.urgency;
+            x.category = r.category;
+            x.rMax = r.rMax;
+            x.decisionRev = r.decisionRev;
+            x.attempts = r.attempts;
+            x.idPrefix = idPrefix(r.id);
+            x.commitS = r.revisionCount ? r.revisions[r.revisionCount - 1].commitS : r.createdS;
+            x.changedS = r.changedS;
+            x.nextTryS = r.nextTryS;
+            if (r.stage == Stage::RECEIVED) x.alarmS = r.receivedS;
+            else if (r.stage != Stage::CANCELLED) x.alarmS = r.type == sa1::TEST ? r.firstSentS : oldestPending(r);
+            break;
+        }
+        case INBOX: {
+            MessageIndex& x = inbox_[slot];
+            x = MessageIndex();
+            x.state = state;
+            x.gen = gen;
+            Message m;
+            if (state != SlotState::USED) break;
+            if (!decodeMessage(body, length, m)) { x.state = SlotState::CORRUPT; ++diag_.corruptSlots; break; }
+            x.type = m.type;
+            x.source = m.source;
+            x.read = m.read;
+            x.idPrefix = idPrefix(m.id);
+            x.number = m.number;
+            x.receivedS = m.receivedS;
+            break;
+        }
+        case RELEASED: {
+            releasedState_[slot] = state;
+            uint32_t newest = 0;
+            for (size_t i = 0; i < BLOCK_ENTRIES; ++i) {
+                const size_t index = slot * BLOCK_ENTRIES + i;
+                Released r;
+                if (state == SlotState::USED) decodeReleased(body + EPOCH + i * ENTRY, r);
+                releasedPrefix_[index] = idPrefix(r.id);
+                releasedEv_[index] = r.ev;
+                releasedNumber_[index] = static_cast<uint16_t>(r.number | (r.cancelled ? 0x8000 : 0));
+            }
+            // Następny wpis: za wpisem o najwyższym ev (pamięć wypełnia się po kolei).
+            for (size_t i = 0; i < RELEASED_ENTRIES; ++i) {
+                if (releasedEv_[i] > newest) { newest = releasedEv_[i]; releasedNext_ = (i + 1) % RELEASED_ENTRIES; }
+            }
+            if (!newest) releasedNext_ = 0;
+            break;
+        }
+        case RING: {
+            ringState_[slot] = state;
+            if (state != SlotState::USED) break;
+            for (size_t i = 0; i < BLOCK_ENTRIES; ++i) {
+                const uint32_t ev = get32(body + EPOCH + i * ENTRY);
+                if (ev > head_) head_ = ev;
+            }
+            break;
+        }
+        case BULLETIN: {
+            bulletinState_[slot] = state;
+            for (size_t i = 0; i < BLOCK_ENTRIES; ++i) {
+                const size_t index = slot * BLOCK_ENTRIES + i;
+                const uint8_t* entry = body + i * ENTRY;
+                const bool used = state == SlotState::USED;
+                bulletinPrefix_[index] = used ? idPrefix(entry) : 0;
+                bulletinEvent_[index] = used ? get32(entry + BULLETIN_EVENT) : 0;
+                bulletinSource_[index] = used ? entry[BULLETIN_SOURCE] : 0;
+            }
+            break;
+        }
+        default: break;
+    }
+}
+
+bool Store::scan() {
+    uint8_t body[BODY_MAX];
+    size_t length = 0;
+    SlotState state;
+    uint16_t gen;
+    head_ = 0;
+    for (Kind kind : {BULLETIN, REGISTER, INBOX, RELEASED, RING}) {
+        for (uint16_t slot = 0; slot < slotsOf(kind); ++slot) {
+            if (!readSlot(addressOf(kind, slot), kind, slot, body, length, state, gen)) return false;
+            absorb(kind, slot, body, length, state, gen);
         }
     }
     return true;
 }
 
-bool Store::begin() {
+bool Store::format(uint32_t flags) {
+    // Pusty magazyn: nowa epoka w rekordzie meta, potem rekord formatu w dzienniku.
+    meta_ = Meta();
+    random_(meta_.epoch, EPOCH);
+    ok_ = true;
+    Tx tx(*this);
+    tx.meta() = meta_;
+    if (!tx.commit()) return false;
+    return journal_.writeFormat(journal::FormatState::READY, flags);
+}
+
+Begin Store::begin() {
     ok_ = false;
-    uint8_t buffer[RECORD];
-    // Konfiguracja: nowszy z dwóch slotów. CRC liczone kawałkami i pola czytane wprost do config_,
-    // bez kopii rekordu 3,3 KB na stosie.
-    config_ = Config();
-    selected_ = 0;
-    uint32_t bestSeq = 0;
-    uint32_t bestSlot = 0;
-    for (uint32_t slot = 0; slot < CONFIG_SLOTS; ++slot) {
-        const uint32_t base = CONFIG_BASE + slot * CONFIG_SLOT;
-        uint8_t tail[3];
-        if (!storage_.read(base + CONFIG_IMMUTABLE, tail, sizeof(tail))) return false;
-        if (tail[2] != COMMITTED) continue;
-        uint16_t crc = 0xFFFF;
-        uint32_t seq = 0;
-        for (size_t offset = 0; offset < CONFIG_IMMUTABLE; offset += sizeof(buffer)) {
-            const size_t chunk = CONFIG_IMMUTABLE - offset < sizeof(buffer) ? CONFIG_IMMUTABLE - offset : sizeof(buffer);
-            if (!storage_.read(base + static_cast<uint32_t>(offset), buffer, chunk)) return false;
-            if (!offset) seq = getU32(buffer);
-            crc = crc16(buffer, chunk, crc);
-        }
-        if (crc != getU16(tail) || !seqUsable(seq) || seq <= bestSeq) continue;
-        bestSeq = seq;
-        bestSlot = slot;
-    }
-    if (bestSeq) {
-        uint32_t at = CONFIG_BASE + bestSlot * CONFIG_SLOT;
-        uint8_t head[8];
-        const bool read = storage_.read(at, head, sizeof(head)) && storage_.read(at += sizeof(head), reinterpret_cast<uint8_t*>(config_.address), ADDRESS_MAX + 1) &&
-                          storage_.read(at += ADDRESS_MAX + 1, &config_.osp[0][0], 2 * HASH) && storage_.read(at += 2 * HASH, &config_.phraseCount, 1) &&
-                          storage_.read(at += 1, reinterpret_cast<uint8_t*>(config_.phrases), sizeof(config_.phrases)) &&
-                          storage_.read(at += sizeof(config_.phrases), config_.ifac, HASH) &&
-                          storage_.read(at += HASH, &config_.objectCount, 1) &&
-                          storage_.read(at += 1, reinterpret_cast<uint8_t*>(config_.objects), sizeof(config_.objects));
-        if (!read) return false;
-        config_.seq = bestSeq;
-        config_.ospNode = head[4] ? 1 : 0;
-        config_.activeOsp = head[5];
-        config_.stations = getU16(head + 6);
-        config_.address[ADDRESS_MAX] = '\0';
-        if (config_.phraseCount > PHRASES) config_.phraseCount = PHRASES;
-        if (config_.objectCount > ADDRESSES - 1) config_.objectCount = ADDRESSES - 1;
-        for (auto& object : config_.objects) object[ADDRESS_MAX] = '\0';
-        for (auto& phrase : config_.phrases) for (auto& text : phrase) text[PHRASE_MAX] = '\0';
-    }
-    // Najwyższe numery sprzed ostatniego ZAMKNIJ ZDARZENIE: numeracja rośnie dalej, a kursor
-    // laptopa i numery rekordów nie wskazują nowych rekordów.
-    queueSeq_ = inboxSeq_ = noteSeq_ = 0;
-    countersSeq_ = 0;
-    for (uint32_t slot = 0; slot < 2; ++slot) {
-        if (!readRecord(COUNTERS_BASE + slot * 32, buffer, COUNTERS, COUNTERS + 3)) continue;
-        const uint32_t seq = getU32(buffer);
-        if (seq <= countersSeq_) continue;
-        countersSeq_ = seq;
-        queueSeq_ = getU32(buffer + 4);
-        inboxSeq_ = getU32(buffer + 8);
-        noteSeq_ = getU32(buffer + 12);
-    }
-    // Kolejka.
-    for (uint32_t slot = 0; slot < QUEUE_SLOTS; ++slot) {
-        queue_[slot] = QueueEntry();
-        if (!storage_.read(QUEUE_BASE + slot * RECORD, buffer, RECORD)) return false;
-        if (buffer[MSG_IMMUTABLE + 2] != COMMITTED || crc16(buffer, MSG_IMMUTABLE) != getU16(buffer + MSG_IMMUTABLE)) continue;
-        const uint32_t seq = getU32(buffer);
-        if (!seqUsable(seq)) continue;
-        QueueEntry& e = queue_[slot];
-        e.seq = seq;
-        fillQueueEntry(e, buffer);
-        if (seq > queueSeq_) queueSeq_ = seq;
-    }
-    // Skrzynka.
-    for (uint32_t slot = 0; slot < INBOX_SLOTS; ++slot) {
-        inbox_[slot] = InboxEntry();
-        if (!readRecord(INBOX_BASE + slot * RECORD, buffer, MSG_IMMUTABLE, STATE_OFFSET + INBOX_STATE + 3)) continue;
-        InboxEntry& e = inbox_[slot];
-        e.seq = getU32(buffer);
-        e.type = buffer[8];
-        e.receivedS = getU32(buffer + 4);
-        e.revision = getU16(buffer + 9);
-        e.event = getU32(buffer + 11);
-        memcpy(e.source, buffer + 15, HASH);
-        memcpy(e.id, buffer + 31, HASH);
-        e.flags = stateValid(e.seq, buffer + STATE_OFFSET, INBOX_STATE) ? buffer[STATE_OFFSET] : 0;
-        if (e.seq > inboxSeq_) inboxSeq_ = e.seq;
-    }
-    // Zdarzenia.
-    for (uint32_t slot = 0; slot < NOTE_SLOTS; ++slot) {
-        notes_[slot] = NoteEntry();
-        if (!readRecord(NOTE_BASE + slot * RECORD, buffer, NOTE_IMMUTABLE, STATE_OFFSET + NOTE_STATE + 3)) continue;
-        notes_[slot].seq = getU32(buffer);
-        notes_[slot].acked = stateValid(notes_[slot].seq, buffer + STATE_OFFSET, NOTE_STATE) && buffer[STATE_OFFSET] != 0;
-        if (notes_[slot].seq > noteSeq_) noteSeq_ = notes_[slot].seq;
-    }
-    // Pamięć event: tylko najwyższy numer.
-    seenSeq_ = 0;
-    for (uint32_t slot = 0; slot < SEEN_SLOTS; ++slot) {
-        if (!readRecord(SEEN_BASE + slot * SEEN_RECORD, buffer, SEEN_IMMUTABLE, SEEN_IMMUTABLE + 3)) continue;
-        const uint32_t seq = getU32(buffer);
-        if (seq > seenSeq_) seenSeq_ = seq;
+    diag_ = Diagnostics();
+    meta_ = Meta();
+    config_ = config::Config();
+    configSize_ = 0;
+    for (RequestIndex& r : register_) r = RequestIndex();
+    for (MessageIndex& m : inbox_) m = MessageIndex();
+    staleAll();
+    memset(bulletinEvent_, 0, sizeof(bulletinEvent_));
+    if (!journal_.ok()) return Begin::MEMORY;
+    nextWrite_ = reservedUpper_ = journal_.reservation();
+    if (!recover()) return Begin::MEMORY;
+    uint8_t body[BODY_MAX];
+    size_t length = 0;
+    SlotState state;
+    uint16_t gen;
+    if (!readSlot(META_BASE, META, 0, body, length, state, gen)) return Begin::MEMORY;
+    Begin result = Begin::OK;
+    switch (journal_.formatState()) {
+        case journal::FormatState::DESTROYING:
+            // ZNISZCZ DANE przerwane zanikiem zasilania: dokończone przed czymkolwiek innym.
+            ok_ = true;
+            return destroy() ? Begin::NEW : Begin::MEMORY;
+        case journal::FormatState::CORRUPT: return Begin::FORMAT;
+        case journal::FormatState::BLANK:
+            // Nowa pamięć; meta bez rekordu formatu to dane, których stacja nie zna (nie nowa stacja).
+            if (state != SlotState::FREE) return Begin::CORRUPT;
+            if (!format(0)) return Begin::MEMORY;
+            result = Begin::NEW;
+            break;
+        case journal::FormatState::READY:
+            if (journal_.formatVersion() != journal::FRAM_FORMAT) return Begin::FORMAT;
+            if (state != SlotState::USED || !decodeMeta(body, length, meta_)) return Begin::CORRUPT;
+            break;
     }
     ok_ = true;
-    return true;
+    if (!scan() || !loadConfig()) { ok_ = false; return Begin::MEMORY; }
+    return result;
 }
 
-void Store::fillQueueEntry(QueueEntry& e, const uint8_t* buffer) {
-    // Indeks w RAM z rekordu przeczytanego w całości (część stała już sprawdzona).
-    e.createdS = getU32(buffer + 4);
-    e.type = buffer[8];
-    e.revision = getU16(buffer + 9);
-    e.event = getU32(buffer + 11);
-    memcpy(e.to, buffer + 15, HASH);
-    memcpy(e.id, buffer + 31, HASH);
-    e.aux = buffer[49 + sa1::MAX_CONTENT];
-    e.category = buffer[50 + sa1::MAX_CONTENT];
-    QueueRecord r;
-    if (const uint8_t* s = queueState(e.seq, buffer)) {
-        decodeQueueState(s, r);
-        e.stateGen = s[QUEUE_STATE - 1];
-    } else {
-        r.flags = ACTIVE;  // obie kopie stanu nieczytelne (nie powinno się zdarzyć): intencja aktywna od nowa
-        e.stateGen = 0;
+bool Store::copyCrc(uint32_t base, uint32_t& crc) {
+    uint8_t chunk[CHUNK];
+    crc = crc32::START;
+    for (uint32_t offset = 0; offset < CONFIG_MARKER_AT; offset += CHUNK) {
+        const size_t n = CONFIG_MARKER_AT - offset < CHUNK ? CONFIG_MARKER_AT - offset : CHUNK;
+        if (!memory_.read(base + offset, chunk, n)) return false;
+        crc = crc32::update(crc, chunk, n);
     }
-    e.flags = r.flags;
-    e.attempts = r.attempts;
-    e.nextTryS = r.nextTryS;
-    e.state = r.state;
-    e.updatedS = r.updatedS;
-    e.sentS = r.sentS;
-}
-
-bool Store::writeCounters() {
-    // Dwa sloty po 32 B na zmianę, jak rekordy dziennika: stary slot traci znacznik dopiero przy zapisie.
-    uint32_t seq = countersSeq_ + 1;
-    if (!seqUsable(seq)) seq = 1;
-    uint8_t buffer[COUNTERS + 3];
-    putU32(buffer, seq);
-    putU32(buffer + 4, queueSeq_);
-    putU32(buffer + 8, inboxSeq_);
-    putU32(buffer + 12, noteSeq_);
-    const uint32_t address = COUNTERS_BASE + (seq % 2) * 32;
-    if (!invalidate(address, COUNTERS) || !writeImmutable(address, buffer, COUNTERS)) return false;
-    countersSeq_ = seq;
+    crc = crc32::finish(crc);
     return true;
 }
 
-const char* Store::addressAt(size_t index) const {
-    if (index >= addressCount()) return "";
-    return index ? config_.objects[index - 1] : config_.address;
+bool Store::hashCopy(int8_t copy, uint32_t size, uint8_t out[32]) {
+    sha2::Hash hash;
+    uint8_t chunk[CHUNK];
+    const uint32_t base = CONFIG_BASE + copy * CONFIG_COPY + CONFIG_DOC;
+    for (uint32_t offset = 0; offset < size; offset += CHUNK) {
+        const size_t n = size - offset < CHUNK ? size - offset : CHUNK;
+        if (!memory_.read(base + offset, chunk, n)) return false;
+        hash.update(chunk, n);
+    }
+    hash.finish(out);
+    return true;
 }
 
-bool Store::writeConfig(const Config& config) {
+namespace {
+
+// Dokument konfiguracji czytany wprost z kopii w FRAM.
+struct CopySource : config::Source {
+    journal::Storage& memory;
+    uint32_t base;
+    CopySource(journal::Storage& m, uint32_t b) : memory(m), base(b) {}
+    bool read(uint32_t offset, char* out, size_t length) override {
+        return memory.read(base + offset, reinterpret_cast<uint8_t*>(out), length);
+    }
+};
+
+}  // namespace
+
+bool Store::loadConfig() {
+    // Aktywna kopia: znacznik, nagłówek, SHA-256 dokumentu i pełna kontrola treści; kopia
+    // nieczytelna zostawia stację bez konfiguracji (diagnostyka), nigdy z częściową.
+    config_ = config::Config();
+    configSize_ = 0;
+    if (meta_.configCopy < 0) return true;
+    const uint32_t base = CONFIG_BASE + meta_.configCopy * CONFIG_COPY;
+    uint8_t head[CONFIG_DOC], marker[MARKER];
+    uint32_t crc = 0;
+    if (!memory_.read(base, head, sizeof(head)) || !memory_.read(base + CONFIG_MARKER_AT, marker, MARKER) || !copyCrc(base, crc)) {
+        diag_.configCorrupt = true;   // także po odmowie configure: konfiguracja w RAM pusta do restartu
+        return false;
+    }
+    const uint32_t size = get16(head + RECORD_HEADER);
+    uint8_t sha[32];
+    size_t worst = 0;
+    CopySource source(memory_, base + CONFIG_DOC);
+    if (get32(marker) != crc || memcmp(marker + 4, RECORD_MARK, 4) || head[0] != CONFIG || get16(head + 1) != meta_.configCopy ||
+        head[3] != journal::FRAM_FORMAT || size > config::DOC_MAX || !hashCopy(meta_.configCopy, size, sha) ||
+        memcmp(sha, head + RECORD_HEADER + 2, 32) || config::parse(source, size, profile_, config_, worst)) {
+        config_ = config::Config();
+        diag_.configCorrupt = true;
+        return true;
+    }
+    config_.seq = meta_.configSeq;
+    configSize_ = size;
+    memcpy(configSha_, sha, sizeof(sha));
+    if (selected_ >= config_.addressCount) selected_ = 0;
+    return true;
+}
+
+bool Store::configBegin() {
     if (!ok_) return false;
-    uint32_t seq = config_.seq + 1;
-    if (!seqUsable(seq)) seq = 1;
-    // Rekord konfiguracji (3,3 KB) idzie do FRAM kawałkami z narastającym CRC, bez kopii na stosie.
-    uint8_t head[8];
-    putU32(head, seq);
-    head[4] = config.ospNode ? 1 : 0;
-    head[5] = config.activeOsp;
-    putU16(head + 6, config.stations);
-    const uint8_t count = config.phraseCount;
-    const uint8_t objects = config.objectCount;
-    struct Piece { const uint8_t* data; size_t length; };
-    const Piece pieces[] = {
-        {head, sizeof(head)},
-        {reinterpret_cast<const uint8_t*>(config.address), ADDRESS_MAX + 1},
-        {&config.osp[0][0], 2 * HASH},
-        {&count, 1},
-        {reinterpret_cast<const uint8_t*>(config.phrases), sizeof(config.phrases)},
-        {config.ifac, HASH},
-        {&objects, 1},
-        {reinterpret_cast<const uint8_t*>(config.objects), sizeof(config.objects)},
-    };
-    const uint32_t address = CONFIG_BASE + (seq % CONFIG_SLOTS) * CONFIG_SLOT;
-    if (!invalidate(address, CONFIG_IMMUTABLE)) return false;
-    uint16_t crc = 0xFFFF;
-    uint32_t offset = 0;
-    for (const Piece& piece : pieces) {
-        if (!storage_.write(address + offset, piece.data, piece.length)) return false;
-        crc = crc16(piece.data, piece.length, crc);
-        offset += static_cast<uint32_t>(piece.length);
-    }
-    uint8_t tail[3];
-    putU16(tail, crc);
-    tail[2] = 0;
-    if (!storage_.write(address + offset, tail, sizeof(tail))) return false;
-    const uint8_t committed = COMMITTED;
-    if (!storage_.write(address + offset + 2, &committed, 1)) return false;
-    config_ = config;
-    config_.seq = seq;
-    if (selected_ >= addressCount()) selected_ = 0;
-    return true;
+    configNext_ = meta_.configCopy == 0 ? 1 : 0;
+    const uint8_t zero[MARKER] = {};
+    return memory_.write(CONFIG_BASE + configNext_ * CONFIG_COPY + CONFIG_MARKER_AT, zero, MARKER);
 }
 
-int Store::freeSlot(const uint32_t* seqs, const uint8_t* live, size_t slots) const {
-    // Wolny slot: pusty, a gdy brak, zakończony rekord z najmniejszym numerem.
+bool Store::configWrite(uint32_t offset, const uint8_t* data, size_t length) {
+    if (!ok_ || configNext_ < 0 || offset > config::DOC_MAX || length > config::DOC_MAX - offset) return false;
+    return memory_.write(CONFIG_BASE + configNext_ * CONFIG_COPY + CONFIG_DOC + offset, data, length);
+}
+
+bool Store::configStaged(uint32_t offset, uint8_t* out, size_t length) {
+    if (!ok_ || configNext_ < 0 || offset > config::DOC_MAX || length > config::DOC_MAX - offset) return false;
+    return memory_.read(CONFIG_BASE + configNext_ * CONFIG_COPY + CONFIG_DOC + offset, out, length);
+}
+
+Store::ConfigResult Store::configCommit(uint32_t size, const uint8_t sha[32], const char*& detail, size_t& worst) {
+    detail = nullptr;
+    if (!ok_ || configNext_ < 0 || size > config::DOC_MAX) return ConfigResult::MEMORY;
+    const int8_t copy = configNext_;
+    const uint32_t base = CONFIG_BASE + copy * CONFIG_COPY;
+    uint8_t digest[32];
+    if (!hashCopy(copy, size, digest)) return ConfigResult::MEMORY;
+    if (memcmp(digest, sha, sizeof(digest))) return ConfigResult::HASH;
+    // Rozbiór wprost do konfiguracji w RAM; przy odmowie wraca aktywna kopia.
+    uint8_t mainLxmf[HASH];
+    memcpy(mainLxmf, config_.receivers[config::MAIN].lxmf, HASH);
+    CopySource source(memory_, base + CONFIG_DOC);
+    detail = config::parse(source, size, profile_, config_, worst);
+    if (detail) {
+        const char* why = detail;
+        loadConfig();
+        detail = why;
+        return ConfigResult::INVALID;
+    }
+    // Nagłówek kopii, długość i skrót, potem znacznik zatwierdzenia kopii.
+    uint8_t head[CONFIG_DOC] = {};
+    uint64_t writeNo = 0;
+    if (!allocate(writeNo)) { loadConfig(); return ConfigResult::MEMORY; }
+    head[0] = CONFIG;
+    put16(head + 1, static_cast<uint16_t>(copy));
+    head[3] = static_cast<uint8_t>(journal::FRAM_FORMAT);
+    put64(head + 8, writeNo);
+    put16(head + 16, static_cast<uint16_t>(2 + 32 + size));
+    put16(head + RECORD_HEADER, static_cast<uint16_t>(size));
+    memcpy(head + RECORD_HEADER + 2, digest, 32);
+    const uint8_t zero[CHUNK] = {};
+    bool written = memory_.write(base, head, sizeof(head));
+    for (uint32_t offset = CONFIG_DOC + size; written && offset < CONFIG_MARKER_AT; offset += CHUNK) {
+        const size_t n = CONFIG_MARKER_AT - offset < CHUNK ? CONFIG_MARKER_AT - offset : CHUNK;
+        written = memory_.write(base + offset, zero, n);   // dopełnienie i znacznik AEAD: zera
+    }
+    uint32_t crc = 0;
+    uint8_t marker[MARKER];
+    if (written && copyCrc(base, crc)) {
+        put32(marker, crc);
+        memcpy(marker + 4, RECORD_MARK, 4);
+        written = memory_.write(base + CONFIG_MARKER_AT, marker, MARKER);
+    } else written = false;
+    // Publikacja: transakcja wskaźnika kopii (rola odbiorcy wraca do głównej z nowej karty).
+    Tx tx(*this);
+    Meta& m = tx.meta();
+    m.configCopy = copy;
+    m.configSeq = meta_.configSeq + 1;
+    if (m.receiver != config::MAIN || memcmp(mainLxmf, config_.receivers[config::MAIN].lxmf, HASH)) {
+        m.receiver = config::MAIN;
+        m.bulletinFloor = m.bulletinMax = 0;
+        m.contactKnown = false;
+    }
+    Event e;
+    e.kind = EventKind::STATION;
+    e.a = CONFIGURED;
+    e.value = m.configSeq;
+    tx.event(e);
+    if (!written || !tx.commit()) { loadConfig(); return ConfigResult::MEMORY; }
+    configNext_ = -1;
+    config_.seq = meta_.configSeq;
+    configSize_ = size;
+    memcpy(configSha_, digest, sizeof(digest));
+    if (selected_ >= config_.addressCount) selected_ = 0;
+    return ConfigResult::OK;
+}
+
+bool Store::configRead(uint32_t offset, uint8_t* out, size_t length) {
+    if (!configured() || offset > configSize_ || length > configSize_ - offset) return false;
+    return memory_.read(CONFIG_BASE + meta_.configCopy * CONFIG_COPY + CONFIG_DOC + offset, out, length);
+}
+
+const uint8_t* Store::recipient() const {
+    return station() ? config_.receivers[meta_.receiver].sa1 : nullptr;
+}
+
+bool Store::readRequest(size_t slot, Request& out) {
+    if (slot >= REGISTER_SLOTS || !register_[slot].used()) return false;
+    uint8_t body[BODY_MAX];
+    size_t length = 0;
+    SlotState state;
+    uint16_t gen;
+    return readSlot(addressOf(REGISTER, static_cast<uint16_t>(slot)), REGISTER, static_cast<uint16_t>(slot), body, length, state, gen) &&
+           state == SlotState::USED && decodeRequest(body, length, out);
+}
+
+int Store::findRequest(const uint8_t id[HASH]) {
+    const uint32_t prefix = idPrefix(id);
+    Request r;
+    for (size_t i = 0; i < REGISTER_SLOTS; ++i) {
+        if (register_[i].used() && register_[i].idPrefix == prefix && readRequest(i, r) && !memcmp(r.id, id, HASH)) return static_cast<int>(i);
+    }
+    return -1;
+}
+
+int Store::freeRequestSlot() const {
+    for (size_t i = 0; i < REGISTER_SLOTS; ++i) {
+        if (register_[i].state == SlotState::FREE || register_[i].state == SlotState::STALE) return static_cast<int>(i);
+    }
+    return -1;
+}
+
+bool Store::requestClosed(size_t slot) const {
+    // Wpis zamknięty (oprogramowanie.md, "Cykl życia zgłoszenia"): bez aktywnej intencji i (a) decyzja 6
+    // z rewizji r_max po RECEIVED r_max, (b) anulowany, (c) TEST po RECEIVED r_max.
+    const RequestIndex& r = register_[slot];
+    if (!r.used()) return false;
+    if (r.stage == Stage::CANCELLED) return true;
+    if (r.stage != Stage::RECEIVED) return false;
+    return r.type == sa1::TEST || (r.decision == 6 && r.decisionRev == r.rMax);
+}
+
+int Store::closedRequest() const {
     int best = -1;
-    for (size_t i = 0; i < slots; ++i) {
-        if (seqs[i] == 0) return static_cast<int>(i);
-        if (!live[i] && (best < 0 || seqs[i] < seqs[best])) best = static_cast<int>(i);
+    for (size_t i = 0; i < REGISTER_SLOTS; ++i) {
+        if (requestClosed(i) && (best < 0 || register_[i].changedS < register_[best].changedS)) best = static_cast<int>(i);
     }
     return best;
 }
 
-const QueueEntry* Store::queueFind(const uint8_t to[HASH], uint8_t type, const uint8_t id[HASH], uint16_t revision, uint32_t event) const {
-    for (const QueueEntry& e : queue_) {
-        if (e.seq && e.type == type && e.revision == revision && e.event == event && !memcmp(e.to, to, HASH) && !memcmp(e.id, id, HASH)) return &e;
+bool Store::numberTaken(uint16_t number, const uint8_t id[HASH]) {
+    // Krótki numer innego id w rejestrze albo w pamięci zwolnionych wpisów (przedrostek równy:
+    // porównanie pełnego id z rekordu).
+    const uint32_t prefix = idPrefix(id);
+    for (size_t i = 0; i < REGISTER_SLOTS; ++i) {
+        const RequestIndex& r = register_[i];
+        if (!r.used() || r.number() != number) continue;
+        Request full;
+        if (r.idPrefix != prefix || !readRequest(i, full) || memcmp(full.id, id, HASH)) return true;
     }
-    return nullptr;
-}
-
-bool Store::queueNumberTaken(uint16_t number, const uint8_t id[HASH]) const {
-    for (const QueueEntry& e : queue_) {
-        if (e.seq && (e.type == sa1::REQUEST || e.type == sa1::TEST) && memcmp(e.id, id, HASH) && shortNumber(e.id) == number) return true;
-    }
-    return false;
-}
-
-size_t Store::queueLive() const {
-    size_t n = 0;
-    for (const QueueEntry& e : queue_) n += (e.seq && !(e.flags & (DONE | REPLACED | CANCELLED))) ? 1 : 0;
-    return n;
-}
-
-size_t Store::queueUnsent() const {
-    size_t n = 0;
-    for (const QueueEntry& e : queue_) n += (e.seq && (e.flags & ACTIVE) && !(e.flags & SENT)) ? 1 : 0;
-    return n;
-}
-
-uint32_t Store::queueOldestUnsentS(bool& found) const {
-    found = false;
-    uint32_t oldest = 0;
-    for (const QueueEntry& e : queue_) {
-        if (!e.seq || !(e.flags & ACTIVE) || (e.flags & SENT)) continue;
-        if (!found || e.createdS < oldest) oldest = e.createdS;
-        found = true;
-    }
-    return oldest;
-}
-
-Put Store::queuePut(QueueRecord& record, bool resend) {
-    if (!ok_ || record.sa1Length > sa1::MAX_CONTENT) return Put::ERROR;
-    const QueueEntry* existing = queueFind(record.to, record.type, record.id, record.revision, record.event);
-    if (existing) {
-        QueueRecord old;
-        if (!queueRead(existing->seq, old)) return Put::ERROR;
-        if (old.sa1Length != record.sa1Length || memcmp(old.sa1, record.sa1, record.sa1Length)) return Put::CONFLICT;
-        record = old;
-        if (resend && (old.flags & (DONE | CANCELLED))) {
-            record.flags = ACTIVE;
-            record.attempts = 0;
-            record.nextTryS = 0;
-            if (!queueUpdate(record)) return Put::ERROR;
-            return Put::STORED;
-        }
-        return Put::DUPLICATE;
-    }
-    uint32_t seqs[QUEUE_SLOTS];
-    uint8_t live[QUEUE_SLOTS];
-    for (size_t i = 0; i < QUEUE_SLOTS; ++i) {
-        seqs[i] = queue_[i].seq;
-        live[i] = queue_[i].seq && !(queue_[i].flags & (DONE | REPLACED | CANCELLED));
-    }
-    const int slot = freeSlot(seqs, live, QUEUE_SLOTS);
-    if (slot < 0) return Put::FULL;
-    uint32_t seq = queueSeq_ + 1;
-    if (!seqUsable(seq)) seq = 1;
-    uint8_t buffer[RECORD];
-    memset(buffer, 0, sizeof(buffer));
-    encodeMessageHeader(buffer, seq, record.createdS, record.type, record.revision, record.event, record.to, record.id,
-                        record.sa1, record.sa1Length, record.aux, record.category);
-    const uint32_t address = QUEUE_BASE + static_cast<uint32_t>(slot) * RECORD;
-    // Stary rekord traci znacznik, potem stan (nowa intencja aktywna), potem część stała ze znacznikiem:
-    // rekord staje się ważny na końcu.
-    if (seqs[slot] && !invalidate(address, MSG_IMMUTABLE)) return Put::ERROR;
-    record.seq = seq;
-    record.flags = ACTIVE;
-    record.attempts = 0;
-    record.statusEvent = 0;
-    record.state = 0;
-    record.sentS = 0;
-    // Pierwsza kopia stanu, pokolenie 0 (nextTryS: zaplanowane nadanie TEST startowego); druga kopia
-    // starego rekordu nie przejdzie CRC z nowym numerem.
-    uint8_t* state = buffer + STATE_OFFSET;
-    encodeQueueState(state, record, 0);
-    if (!writeState(address + STATE_OFFSET, seq, state, QUEUE_STATE)) return Put::ERROR;
-    if (!writeImmutable(address, buffer, MSG_IMMUTABLE)) return Put::ERROR;
-    queueSeq_ = seq;  // numer zużyty także przy błędzie odczytu kontrolnego
-    // Odczyt kontrolny całego rekordu; przy niezgodności rekord traci znacznik, a slot zostaje pusty.
-    uint8_t back[RECORD];
-    queue_[slot] = QueueEntry();
-    if (!readRecord(address, back, MSG_IMMUTABLE, RECORD) || memcmp(back, buffer, MSG_IMMUTABLE) || queueState(seq, back) != back + STATE_OFFSET) {
-        invalidate(address, MSG_IMMUTABLE);
-        return Put::ERROR;
-    }
-    queue_[slot].seq = seq;
-    fillQueueEntry(queue_[slot], back);
-    return Put::STORED;
-}
-
-bool Store::queueRead(uint32_t seq, QueueRecord& record) {
-    for (size_t slot = 0; slot < QUEUE_SLOTS; ++slot) {
-        if (queue_[slot].seq != seq) continue;
-        uint8_t buffer[RECORD];
-        if (!readRecord(QUEUE_BASE + slot * RECORD, buffer, MSG_IMMUTABLE, RECORD)) return false;
-        record = QueueRecord();
-        record.seq = seq;
-        if (!decodeMessageHeader(buffer, record.createdS, record.type, record.revision, record.event, record.to, record.id, record.sa1,
-                                 record.sa1Length)) return false;
-        record.aux = buffer[49 + sa1::MAX_CONTENT];
-        record.category = buffer[50 + sa1::MAX_CONTENT];
-        if (const uint8_t* s = queueState(seq, buffer)) decodeQueueState(s, record);
-        return true;
+    for (size_t i = 0; i < RELEASED_ENTRIES; ++i) {
+        if (!releasedEv_[i] || (releasedNumber_[i] & 0x3FFF) != number) continue;
+        Released r;
+        if (releasedPrefix_[i] != prefix || !releasedAt(i, r) || memcmp(r.id, id, HASH)) return true;
     }
     return false;
 }
 
-bool Store::queueUpdate(const QueueRecord& record) {
-    for (size_t slot = 0; slot < QUEUE_SLOTS; ++slot) {
-        if (queue_[slot].seq != record.seq) continue;
-        // Nowe pokolenie do kopii, która nie jest bieżąca: bieżąca zostaje do zatwierdzenia nowej.
-        QueueEntry& e = queue_[slot];
-        const uint8_t gen = static_cast<uint8_t>(e.stateGen + 1);
-        uint8_t state[QUEUE_STATE + 3];
-        encodeQueueState(state, record, gen);
-        const uint32_t address = QUEUE_BASE + slot * RECORD + ((gen & 1) ? QUEUE_STATE_B : STATE_OFFSET);
-        if (!writeState(address, record.seq, state, QUEUE_STATE)) return false;
-        e.stateGen = gen;
-        e.flags = record.flags;
-        e.attempts = record.attempts;
-        e.nextTryS = record.nextTryS;
-        e.state = record.state;
-        e.updatedS = record.updatedS;
-        e.sentS = record.sentS;
-        return true;
+size_t Store::requestCount() const {
+    size_t n = 0;
+    for (const RequestIndex& r : register_) n += r.used();
+    return n;
+}
+
+size_t Store::activeIntents() const {
+    size_t n = 0;
+    for (const RequestIndex& r : register_) n += r.used() && r.stage <= Stage::DELIVERED;
+    return n;
+}
+
+size_t Store::unsent(uint32_t& oldestS) const {
+    size_t n = 0;
+    for (const RequestIndex& r : register_) {
+        if (!r.used() || r.stage > Stage::SENDING) continue;
+        if (!n || r.commitS < oldestS) oldestS = r.commitS;
+        ++n;
+    }
+    return n;
+}
+
+bool Store::readMessage(size_t slot, Message& out) {
+    if (slot >= INBOX_SLOTS || !inbox_[slot].used()) return false;
+    uint8_t body[BODY_MAX];
+    size_t length = 0;
+    SlotState state;
+    uint16_t gen;
+    return readSlot(addressOf(INBOX, static_cast<uint16_t>(slot)), INBOX, static_cast<uint16_t>(slot), body, length, state, gen) &&
+           state == SlotState::USED && decodeMessage(body, length, out);
+}
+
+int Store::findMessage(uint32_t number) const {
+    for (size_t i = 0; i < INBOX_SLOTS; ++i) {
+        if (inbox_[i].used() && inbox_[i].number == number) return static_cast<int>(i);
+    }
+    return -1;
+}
+
+int Store::freeMessageSlot() const {
+    for (size_t i = 0; i < INBOX_SLOTS; ++i) {
+        if (inbox_[i].state == SlotState::FREE || inbox_[i].state == SlotState::STALE) return static_cast<int>(i);
+    }
+    return -1;
+}
+
+size_t Store::messageCount() const {
+    size_t n = 0;
+    for (const MessageIndex& m : inbox_) n += m.used();
+    return n;
+}
+
+size_t Store::unread() const {
+    size_t n = 0;
+    for (const MessageIndex& m : inbox_) n += m.used() && !m.read;
+    return n;
+}
+
+bool Store::releasedAt(size_t index, Released& out) {
+    if (index >= RELEASED_ENTRIES || !releasedEv_[index]) return false;
+    uint8_t body[BODY_MAX];
+    size_t length = 0;
+    SlotState state;
+    uint16_t gen;
+    const uint16_t block = static_cast<uint16_t>(index / BLOCK_ENTRIES);
+    if (!readSlot(addressOf(RELEASED, block), RELEASED, block, body, length, state, gen) || state != SlotState::USED) return false;
+    decodeReleased(body + EPOCH + (index % BLOCK_ENTRIES) * ENTRY, out);
+    return out.ev == releasedEv_[index];
+}
+
+bool Store::releasedFind(const uint8_t id[HASH], Released& out) {
+    const uint32_t prefix = idPrefix(id);
+    for (size_t i = 0; i < RELEASED_ENTRIES; ++i) {
+        if (releasedEv_[i] && releasedPrefix_[i] == prefix && releasedAt(i, out) && !memcmp(out.id, id, HASH)) return true;
     }
     return false;
 }
 
-void Store::encodeQueueState(uint8_t* s, const QueueRecord& record, uint8_t gen) {
-    memset(s, 0, QUEUE_STATE + 3);
-    s[0] = record.flags;
-    putU16(s + 1, record.attempts);
-    putU32(s + 3, record.nextTryS);
-    putU32(s + 7, record.statusEvent);
-    s[11] = record.state;
-    putU32(s + 12, record.updatedS);
-    putU32(s + 16, record.sentS);
-    s[QUEUE_STATE - 1] = gen;
-}
-
-const InboxEntry* Store::inboxFind(const uint8_t source[HASH], uint8_t type, const uint8_t id[HASH], uint16_t revision, uint32_t event) const {
-    for (const InboxEntry& e : inbox_) {
-        if (e.seq && e.type == type && e.revision == revision && e.event == event && !memcmp(e.source, source, HASH) && !memcmp(e.id, id, HASH)) return &e;
+bool Store::bulletinSeen(const uint8_t id[HASH], uint32_t event) {
+    // Pominięty: e ≤ bulletin_floor, starszy o ponad dobę od najnowszego albo para (id, e) w zbiorze.
+    if (event <= meta_.bulletinFloor) return true;
+    if (meta_.bulletinMax > BULLETIN_WINDOW && event <= meta_.bulletinMax - BULLETIN_WINDOW) return true;
+    const uint32_t prefix = idPrefix(id);
+    for (size_t i = 0; i < BULLETIN_ENTRIES; ++i) {
+        if (bulletinEvent_[i] != event || bulletinPrefix_[i] != prefix || bulletinSource_[i] != meta_.receiver) continue;
+        uint8_t body[BODY_MAX];
+        if (!readBlock(BULLETIN, static_cast<uint16_t>(i / BLOCK_ENTRIES), body)) return true;   // błąd odczytu: bez przyjęcia
+        if (!memcmp(body + (i % BLOCK_ENTRIES) * ENTRY, id, HASH)) return true;
     }
-    return nullptr;
+    return false;
 }
 
-size_t Store::inboxCount() const {
-    size_t n = 0;
-    for (const InboxEntry& e : inbox_) n += e.seq ? 1 : 0;
-    return n;
+bool Store::readEvent(uint32_t ev, Event& out) {
+    if (ev == 0 || ev > head_ || ev < minEvent()) return false;
+    const uint16_t block = static_cast<uint16_t>(((ev - 1) % RING_ENTRIES) / BLOCK_ENTRIES);
+    if (ringState_[block] != SlotState::USED) return false;
+    uint8_t body[BODY_MAX];
+    if (!readBlock(RING, block, body)) return false;
+    decodeEvent(body + EPOCH + ((ev - 1) % BLOCK_ENTRIES) * ENTRY, out);
+    return out.ev == ev;
 }
 
-size_t Store::inboxUnread() const {
-    size_t n = 0;
-    for (const InboxEntry& e : inbox_) n += (e.seq && !(e.flags & INBOX_READ)) ? 1 : 0;
-    return n;
-}
-
-Put Store::inboxPut(InboxRecord& record) {
-    if (!ok_ || record.sa1Length > sa1::MAX_CONTENT) return Put::ERROR;
-    const InboxEntry* existing = inboxFind(record.source, record.type, record.id, record.revision, record.event);
-    if (existing) {
-        InboxRecord old;
-        if (!inboxRead(existing->seq, old)) return Put::ERROR;
-        if (old.sa1Length != record.sa1Length || memcmp(old.sa1, record.sa1, record.sa1Length)) return Put::CONFLICT;
-        record = old;
-        return Put::DUPLICATE;
-    }
-    // Pełna skrzynka: odpada najstarsza przeczytana (najpierw BULLETIN), potem najstarsza bez
-    // zaległego zdarzenia do laptopa, na końcu najstarsza w ogóle.
-    uint32_t seqs[INBOX_SLOTS];
-    uint8_t live[INBOX_SLOTS];
-    for (size_t i = 0; i < INBOX_SLOTS; ++i) { seqs[i] = inbox_[i].seq; live[i] = 1; }
-    int slot = freeSlot(seqs, live, INBOX_SLOTS);
-    if (slot < 0) {
-        for (int pass = 0; pass < 4 && slot < 0; ++pass) {
-            for (size_t i = 0; i < INBOX_SLOTS; ++i) {
-                const InboxEntry& e = inbox_[i];
-                const bool candidate = pass == 0   ? ((e.flags & INBOX_READ) && e.type == sa1::BULLETIN)
-                                       : pass == 1 ? (e.flags & INBOX_READ) != 0
-                                       : pass == 2 ? !(e.flags & INBOX_NOTIFY)
-                                                   : true;
-                if (candidate && (slot < 0 || e.seq < inbox_[slot].seq)) slot = static_cast<int>(i);
-            }
+bool Store::quietSince(uint32_t head) {
+    // Zdarzenia po head bez zmiany danych: postęp wysyłki (`sending`, `delivered` bez nowej decyzji),
+    // `radio` i `station` nie blokują ZAMKNIJ ZDARZENIE.
+    if (head > head_) return false;
+    if (head < head_ && head + 1 < minEvent()) return false;
+    for (uint32_t ev = head + 1; ev <= head_ && ev; ++ev) {
+        Event e;
+        if (!readEvent(ev, e)) return false;
+        if (e.kind == EventKind::OWN || e.kind == EventKind::MSG) return false;
+        if (e.kind == EventKind::STAGE) {
+            const StageCode code = static_cast<StageCode>(e.a);
+            if (e.decisionChanged || (code != StageCode::SENDING && code != StageCode::DELIVERED)) return false;
         }
     }
-    uint32_t seq = inboxSeq_ + 1;
-    if (!seqUsable(seq)) seq = 1;
-    uint8_t buffer[RECORD];
-    memset(buffer, 0, sizeof(buffer));
-    encodeMessageHeader(buffer, seq, record.receivedS, record.type, record.revision, record.event, record.source, record.id,
-                        record.sa1, record.sa1Length);
-    const uint32_t address = INBOX_BASE + static_cast<uint32_t>(slot) * RECORD;
-    if (inbox_[slot].seq && !invalidate(address, MSG_IMMUTABLE)) return Put::ERROR;
-    uint8_t state[INBOX_STATE + 3] = {static_cast<uint8_t>(record.flags & INBOX_NOTIFY)};
-    if (!writeState(address + STATE_OFFSET, seq, state, INBOX_STATE)) return Put::ERROR;
-    if (!writeImmutable(address, buffer, MSG_IMMUTABLE)) return Put::ERROR;
-    InboxEntry& e = inbox_[slot];
-    e = InboxEntry();
-    e.seq = seq;
-    e.receivedS = record.receivedS;
-    e.type = record.type;
-    e.revision = record.revision;
-    e.event = record.event;
-    memcpy(e.source, record.source, HASH);
-    memcpy(e.id, record.id, HASH);
-    e.flags = state[0];
-    record.seq = seq;
-    record.flags = state[0];
-    inboxSeq_ = seq;
-    return Put::STORED;
-}
-
-bool Store::inboxRead(uint32_t seq, InboxRecord& record) {
-    for (size_t slot = 0; slot < INBOX_SLOTS; ++slot) {
-        if (inbox_[slot].seq != seq) continue;
-        uint8_t buffer[RECORD];
-        if (!readRecord(INBOX_BASE + slot * RECORD, buffer, MSG_IMMUTABLE, STATE_OFFSET + INBOX_STATE + 3)) return false;
-        record = InboxRecord();
-        record.seq = seq;
-        if (!decodeMessageHeader(buffer, record.receivedS, record.type, record.revision, record.event, record.source, record.id, record.sa1,
-                                 record.sa1Length)) return false;
-        record.flags = stateValid(seq, buffer + STATE_OFFSET, INBOX_STATE) ? buffer[STATE_OFFSET] : 0;
-        return true;
-    }
-    return false;
-}
-
-bool Store::inboxSetFlags(uint32_t seq, uint8_t flags) {
-    for (size_t slot = 0; slot < INBOX_SLOTS; ++slot) {
-        if (inbox_[slot].seq != seq) continue;
-        if (inbox_[slot].flags == flags) return true;
-        uint8_t state[INBOX_STATE + 3] = {flags};
-        if (!writeState(INBOX_BASE + slot * RECORD + STATE_OFFSET, seq, state, INBOX_STATE)) return false;
-        inbox_[slot].flags = flags;
-        return true;
-    }
-    return false;
-}
-
-bool Store::inboxMarkRead(uint32_t seq) {
-    for (size_t slot = 0; slot < INBOX_SLOTS; ++slot)
-        if (inbox_[slot].seq == seq) return inboxSetFlags(seq, inbox_[slot].flags | INBOX_READ);
-    return false;
-}
-
-bool Store::notePut(NoteRecord& record) {
-    if (!ok_) return false;
-    const size_t length = strlen(record.text);
-    if (length > NOTE_TEXT) return false;
-    uint32_t seqs[NOTE_SLOTS];
-    uint8_t live[NOTE_SLOTS];
-    for (size_t i = 0; i < NOTE_SLOTS; ++i) { seqs[i] = notes_[i].seq; live[i] = notes_[i].seq && !notes_[i].acked; }
-    const int slot = freeSlot(seqs, live, NOTE_SLOTS);
-    if (slot < 0) return false;   // wszystkie niepotwierdzone: zdarzenie bez ack zostaje (oprogramowanie.md)
-    uint32_t seq = noteSeq_ + 1;
-    if (!seqUsable(seq)) seq = 1;
-    uint8_t buffer[RECORD];
-    memset(buffer, 0, sizeof(buffer));
-    putU32(buffer, seq);
-    putU32(buffer + 4, record.createdS);
-    buffer[8] = record.kind;
-    putU32(buffer + 9, record.ref);
-    putU16(buffer + 13, static_cast<uint16_t>(length));
-    memcpy(buffer + 15, record.text, length);
-    const uint32_t address = NOTE_BASE + static_cast<uint32_t>(slot) * RECORD;
-    if (notes_[slot].seq && !invalidate(address, NOTE_IMMUTABLE)) return false;
-    uint8_t state[NOTE_STATE + 3] = {};
-    if (!writeState(address + STATE_OFFSET, seq, state, NOTE_STATE)) return false;
-    if (!writeImmutable(address, buffer, NOTE_IMMUTABLE)) return false;
-    notes_[slot].seq = seq;
-    notes_[slot].acked = false;
-    record.seq = seq;
-    record.acked = false;
-    noteSeq_ = seq;
-    return true;
-}
-
-bool Store::noteRead(uint32_t seq, NoteRecord& record) {
-    for (size_t slot = 0; slot < NOTE_SLOTS; ++slot) {
-        if (notes_[slot].seq != seq) continue;
-        uint8_t buffer[RECORD];
-        if (!readRecord(NOTE_BASE + slot * RECORD, buffer, NOTE_IMMUTABLE, STATE_OFFSET + NOTE_STATE + 3)) return false;
-        record = NoteRecord();
-        record.seq = seq;
-        record.createdS = getU32(buffer + 4);
-        record.kind = buffer[8];
-        record.ref = getU32(buffer + 9);
-        const uint16_t length = getU16(buffer + 13);
-        if (length > NOTE_TEXT) return false;
-        memcpy(record.text, buffer + 15, length);
-        record.text[length] = '\0';
-        record.acked = stateValid(seq, buffer + STATE_OFFSET, NOTE_STATE) && buffer[STATE_OFFSET] != 0;
-        return true;
-    }
-    return false;
-}
-
-bool Store::noteAck(uint32_t seq) {
-    for (size_t slot = 0; slot < NOTE_SLOTS; ++slot) {
-        if (notes_[slot].seq != seq) continue;
-        if (notes_[slot].acked) return true;
-        uint8_t state[NOTE_STATE + 3] = {1};
-        if (!writeState(NOTE_BASE + slot * RECORD + STATE_OFFSET, seq, state, NOTE_STATE)) return false;
-        notes_[slot].acked = true;
-        return true;
-    }
-    return false;
-}
-
-bool Store::noteAckUpTo(uint32_t cursor) {
-    for (size_t slot = 0; slot < NOTE_SLOTS; ++slot) {
-        if (notes_[slot].seq && notes_[slot].seq <= cursor && !notes_[slot].acked && !noteAck(notes_[slot].seq)) return false;
-    }
-    return true;
-}
-
-size_t Store::notesPending() const {
-    size_t n = 0;
-    for (const NoteEntry& e : notes_) n += (e.seq && !e.acked) ? 1 : 0;
-    return n;
-}
-
-uint32_t Store::notePendingAfter(uint32_t cursor) const {
-    uint32_t best = 0;
-    for (const NoteEntry& e : notes_) {
-        if (e.seq > cursor && !e.acked && (best == 0 || e.seq < best)) best = e.seq;
-    }
-    return best;
-}
-
-bool Store::seenGet(const uint8_t id[HASH], uint16_t revision, uint32_t& event, uint8_t& state) {
-    uint8_t buffer[SEEN_RECORD];
-    uint32_t bestSeq = 0;
-    for (uint32_t slot = 0; slot < SEEN_SLOTS; ++slot) {
-        if (!readRecord(SEEN_BASE + slot * SEEN_RECORD, buffer, SEEN_IMMUTABLE, SEEN_IMMUTABLE + 3)) continue;
-        if (memcmp(buffer + 4, id, HASH) || getU16(buffer + 20) != revision) continue;
-        const uint32_t seq = getU32(buffer);
-        if (seq > bestSeq) {
-            bestSeq = seq;
-            event = getU32(buffer + 22);
-            state = buffer[26];
-        }
-    }
-    return bestSeq != 0;
-}
-
-bool Store::seenPut(const uint8_t id[HASH], uint16_t revision, uint32_t event, uint8_t state) {
-    if (!ok_) return false;
-    uint32_t known = 0;
-    uint8_t knownState = 0;
-    if (seenGet(id, revision, known, knownState) && known == event && knownState == state) return true;  // bez zbędnego wpisu
-    uint32_t seq = seenSeq_ + 1;
-    if (!seqUsable(seq)) seq = 1;
-    uint8_t buffer[SEEN_RECORD];
-    memset(buffer, 0, sizeof(buffer));
-    putU32(buffer, seq);
-    memcpy(buffer + 4, id, HASH);
-    putU16(buffer + 20, revision);
-    putU32(buffer + 22, event);
-    buffer[26] = state;
-    const uint32_t address = SEEN_BASE + (seq % SEEN_SLOTS) * SEEN_RECORD;
-    if (!invalidate(address, SEEN_IMMUTABLE) || !writeImmutable(address, buffer, SEEN_IMMUTABLE)) return false;
-    seenSeq_ = seq;
     return true;
 }
 
 bool Store::close() {
+    // Nowa epoka i para (stara epoka, head) do powtórzenia `close` w jednej transakcji.
+    Tx tx(*this);
+    Meta& m = tx.meta();
+    m.closedSet = true;
+    memcpy(m.closedEpoch, meta_.epoch, EPOCH);
+    m.closedHead = head_;
+    random_(m.epoch, EPOCH);
+    m.tombFloor = 1;
+    return tx.commit();
+}
+
+bool Store::maintain() {
+    // Do trzech gniazd starej epoki w jednej transakcji: rejestr, skrzynka, bloki pamięci zwolnionych
+    // i pierścienia. Gniazda STALE są już wolne do użycia; tu znika ich treść.
     if (!ok_) return false;
-    // Najwyższy event każdej intencji do pamięci kluczy, potem usunięcie treści.
-    for (const QueueEntry& e : queue_) {
-        if (!e.seq) continue;
-        QueueRecord r;
-        if (queueRead(e.seq, r) && r.statusEvent && !seenPut(r.id, r.revision, r.statusEvent, r.state)) return false;
-    }
-    // Najwyższe numery przed usunięciem: numeracja rekordów i kursor zdarzeń laptopa rosną dalej
-    // (numer rekordu nigdy się nie powtarza; oprogramowanie.md, „Trwałość i potwierdzenia”).
-    if (!writeCounters()) return false;
-    if (!erase(QUEUE_BASE, QUEUE_SLOTS, RECORD) || !erase(INBOX_BASE, INBOX_SLOTS, RECORD) || !erase(NOTE_BASE, NOTE_SLOTS, RECORD)) return false;
-    for (QueueEntry& e : queue_) e = QueueEntry();
-    for (InboxEntry& e : inbox_) e = InboxEntry();
-    for (NoteEntry& e : notes_) e = NoteEntry();
+    Tx tx(*this);
+    size_t n = 0;
+    for (uint16_t i = 0; i < REGISTER_SLOTS && n < Tx::MAX_CHANGES; ++i) if (register_[i].state == SlotState::STALE) { tx.free(REGISTER, i); ++n; }
+    for (uint16_t i = 0; i < INBOX_SLOTS && n < Tx::MAX_CHANGES; ++i) if (inbox_[i].state == SlotState::STALE) { tx.free(INBOX, i); ++n; }
+    for (uint16_t i = 0; i < RELEASED_BLOCKS && n < Tx::MAX_CHANGES; ++i) if (releasedState_[i] == SlotState::STALE) { tx.free(RELEASED, i); ++n; }
+    for (uint16_t i = 0; i < RING_BLOCKS && n < Tx::MAX_CHANGES; ++i) if (ringState_[i] == SlotState::STALE) { tx.free(RING, i); ++n; }
+    if (!n) return false;
+    if (!tx.commit()) return false;
+    diag_.scrubbed += static_cast<uint32_t>(n);
     return true;
 }
 
 bool Store::destroy() {
-    if (!ok_) return false;
-    if (!erase(CONFIG_BASE, CONFIG_SLOTS, CONFIG_SLOT) || !erase(QUEUE_BASE, QUEUE_SLOTS, RECORD) || !erase(INBOX_BASE, INBOX_SLOTS, RECORD) ||
-        !erase(NOTE_BASE, NOTE_SLOTS, RECORD) || !erase(SEEN_BASE, SEEN_SLOTS, SEEN_RECORD) || !erase(COUNTERS_BASE, 1, 64)) return false;
-    return begin();
+    // Znacznik w dzienniku najpierw: przerwane kasowanie wznawia begin().
+    const uint32_t flags = journal_.formatFlags() & ~journal::FORMAT_IDENTITY;
+    if (!journal_.writeFormat(journal::FormatState::DESTROYING, flags)) return false;
+    uint8_t zero[CHUNK] = {};
+    for (uint32_t address = TX_BASE; address < FRAM_END; address += CHUNK) {
+        if (!memory_.write(address, zero, CHUNK)) return false;
+    }
+    if (!journal_.erase()) return false;
+    selected_ = 0;
+    nextWrite_ = reservedUpper_ = journal_.reservation();
+    txArea_ = 0;
+    if (!format(flags)) { ok_ = false; return false; }
+    return begin() == Begin::OK;
 }
 
-uint16_t shortNumber(const uint8_t id[HASH]) {
-    return static_cast<uint16_t>(((static_cast<uint16_t>(id[0]) << 8) | id[1]) % 10000);
+bool Store::identitySaved() const { return journal_.formatFlags() & journal::FORMAT_IDENTITY; }
+
+bool Store::setIdentitySaved() {
+    return identitySaved() || journal_.writeFormat(journal::FormatState::READY, journal_.formatFlags() | journal::FORMAT_IDENTITY);
 }
 
 }  // namespace store

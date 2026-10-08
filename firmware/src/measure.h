@@ -63,8 +63,7 @@ struct LinkCounters {
 
 enum class RxMode : uint8_t { NONE, TEST, P1 };
 
-// Bajty losowe z generatora sprzętowego MCU (nRF52840: RNG z korekcją obciążenia; ESP32-S3:
-// esp_fill_random).
+// Bajty losowe z generatora stacji (drbg.h, ziarno z platform::entropy); dostarcza main.cpp.
 void randomBytes(uint8_t* out, size_t count);
 
 class Bench {
@@ -73,7 +72,10 @@ public:
     Bench(radiolink::Driver& radio, uint8_t pinOk, int16_t pinLed);
 
     bool prep = false;     // tryb przygotowania (na stacji: przycisk pod plombowaną pokrywą)
-    bool silence = false;  // cisza radiowa (na stacji: przełącznik CISZA)
+    bool silence = false;  // cisza radiowa (przełącznik CISZA albo panel): blokuje każde nadanie
+    // Cisza z panelu z wyjątkiem jednego zgłoszenia: nadanie P1 od stosu (p1send z stack = true)
+    // przechodzi, bo stos przepuszcza wtedy tylko ruch wyjątku (rns_node.h); pomiary i P1TX nie.
+    bool silenceException = false;
     // Układ skonfigurowany profilem P1: poza trybem przygotowania odbiór P1 wraca sam po każdym
     // przerwaniu (radio.md: odbiór wyłącza się tylko na czas własnego nadawania).
     bool p1Ready = false;
@@ -91,7 +93,7 @@ public:
     // Łącze P1: odbiór ramek P1 w tle (tryb zmiennej długości) i nadanie datagramu
     // z CCA 50 ms, odroczeniem losowym 100..1000 ms i długiem ciszy w dzienniku.
     const char* p1rxStart();
-    const char* p1send(const uint8_t* data, size_t length);
+    const char* p1send(const uint8_t* data, size_t length, bool stack = false);
     void printLink();
     const LinkCounters& link() const { return link_; }
     // Złożony datagram P1 i koniec nadawania (ok = seria wyszła) dla warstwy aplikacji.
@@ -170,6 +172,7 @@ private:
     TxState txState_ = TxState::IDLE;
     uint8_t txData_[p1frame::MAX_DATAGRAM] = {};
     size_t txLength_ = 0;
+    bool txStack_ = false;      // datagram od stosu (wyjątek ciszy)
     uint8_t txId_[p1frame::ID_BYTES] = {};
     uint32_t txRequestedMs_ = 0;
     uint32_t ccaFirstMs_ = 0;    // pierwsze wejście w CCA (po odczekaniu długu): miara odroczeń

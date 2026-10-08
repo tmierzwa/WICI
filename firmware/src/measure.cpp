@@ -3,10 +3,6 @@
 
 #include <string.h>
 
-#if defined(ESP_PLATFORM)
-#include <esp_random.h>
-#endif
-
 #include "cmdargs.h"
 #include "jsonprint.h"
 #include "p1_registers.h"
@@ -420,7 +416,7 @@ void Bench::receiveP1() {
 
 namespace {
 
-// Odroczenie losowe 100..1000 ms z generatora sprzętowego (nie z identyfikatora, który idzie w eter).
+// Odroczenie losowe 100..1000 ms z generatora stacji (nie z identyfikatora, który idzie w eter).
 uint32_t backoffMs() {
     uint8_t b[2];
     randomBytes(b, sizeof(b));
@@ -429,34 +425,16 @@ uint32_t backoffMs() {
 
 }  // namespace
 
-void randomBytes(uint8_t* out, size_t count) {
-#if defined(ESP_PLATFORM)
-    esp_fill_random(out, count);  // przy wyłączonym radiu Wi-Fi/BT źródło szumu jest słabsze (karta ESP32-S3)
-#elif defined(NRF52_SERIES) || defined(NRF52840_XXAA)
-    // RNG z korekcją obciążenia; bez SoftDevice rejestry RNG są dostępne bezpośrednio.
-    NRF_RNG->CONFIG = RNG_CONFIG_DERCEN_Msk;
-    NRF_RNG->EVENTS_VALRDY = 0;
-    NRF_RNG->TASKS_START = 1;
-    for (size_t i = 0; i < count; ++i) {
-        while (!NRF_RNG->EVENTS_VALRDY) {}
-        NRF_RNG->EVENTS_VALRDY = 0;
-        out[i] = static_cast<uint8_t>(NRF_RNG->VALUE);
-    }
-    NRF_RNG->TASKS_STOP = 1;
-#else
-    for (size_t i = 0; i < count; ++i) out[i] = static_cast<uint8_t>(random(256));
-#endif
-}
-
-const char* Bench::p1send(const uint8_t* data, size_t length) {
+const char* Bench::p1send(const uint8_t* data, size_t length, bool stack) {
     if (length < 1 || length > p1frame::MAX_DATAGRAM) return "datagram 1..600 B";
     if (busy()) return "busy: STOP first";
     if (!p1Ready) return "radio not configured: CONFIG";
-    if (silence) { ++link_.txDrop; return "radio silence"; }
+    if (silence && !(stack && silenceException)) { ++link_.txDrop; return "radio silence"; }
     if (!journal_ || !journal_->ok()) { ++link_.txDrop; return "debt journal unavailable: no FRAM"; }
     memcpy(txData_, data, length);
     txLength_ = length;
-    randomBytes(txId_, p1frame::ID_BYTES);  // identyfikator datagramu z generatora sprzętowego
+    txStack_ = stack;
+    randomBytes(txId_, p1frame::ID_BYTES);  // identyfikator datagramu z generatora stacji
     txDeferrals_ = 0;
     txRequestedMs_ = millis();
     if (rxMode_ != RxMode::P1 && !enterRx(RxMode::P1, 0)) return "radio did not enter RX";
@@ -485,7 +463,7 @@ bool Bench::channelBusy() {
 
 void Bench::pollP1Tx() {
     const uint32_t now = millis();
-    if (silence) { ++link_.txDrop; finishP1Tx("silence"); return; }
+    if (silence && !(txStack_ && silenceException)) { ++link_.txDrop; finishP1Tx("silence"); return; }
     switch (txState_) {
         case TxState::WAIT_DEBT:
             if (debtRemainingMs() == 0) startCca(now, true);

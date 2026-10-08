@@ -23,6 +23,8 @@ bool scan(const char*& p, Value& out);
 bool parse(const char* text, Value& out);
 // Pole obiektu o danym kluczu (bez sekwencji ucieczki w kluczu); false, gdy brak.
 bool field(const Value& object, const char* key, Value& out);
+// Pole obiektu o danym indeksie: klucz (zakres napisu z cudzysłowami) i wartość.
+bool member(const Value& object, size_t index, Value& key, Value& out);
 // Element tablicy o danym indeksie; liczba elementów.
 bool item(const Value& array, size_t index, Value& out);
 size_t count(const Value& array);  // elementy tablicy albo pola obiektu; 0 dla innych
@@ -31,5 +33,7 @@ bool integer(const Value& value, int64_t& out);
 // Napis zdekodowany do UTF-8 (sekwencje \", \\, \/, \b, \f, \n, \r, \t, \uXXXX z parami zastępczymi);
 // false przy błędnej sekwencji, \u0000 (ucięłoby napis w C) albo braku miejsca. Zwraca długość w bajtach.
 bool string(const Value& value, char* out, size_t size, size_t* length = nullptr);
+// Pole obiektu z napisem szesnastkowym (hexstr.h) o dokładnie length ≤ 64 bajtach.
+bool hexField(const Value& object, const char* key, uint8_t* out, size_t length);
 
 }  // namespace json

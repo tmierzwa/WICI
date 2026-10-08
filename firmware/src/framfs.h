@@ -51,8 +51,6 @@ struct Stats {
 bool loadKey(journal::Storage& storage, uint8_t key[KEY_BYTES]);
 // Zapisuje klucz do starszego slotu (numer + 1) i sprawdza odczytem.
 bool saveKey(journal::Storage& storage, const uint8_t key[KEY_BYTES]);
-// Kasuje oba sloty (ZNISZCZ DANE).
-bool wipeKey(journal::Storage& storage);
 
 class Fs {
 public:

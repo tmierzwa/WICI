@@ -6,15 +6,17 @@
 // składacz P1, a złożony datagram (bajty z IFAC) idzie datagramem UDP do interfejsu UDP Reticulum
 // w Pythonie. W drugą stronę tak samo. FRAM 512 KiB jest plikiem, więc restart programu odtwarza
 // tożsamość i tablice jak restart stacji. Próba zgodności: firmware/tools/rns_interop.py.
-// --osp-node: konfiguracja węzła OSP (D19) z interfejsem Reticulum przez USB; zamiast portu CDC
+// --node: konfiguracja węzła stanowiska z interfejsem Reticulum przez USB; zamiast portu CDC
 // pseudoterminal, którego nazwę podaje zdarzenie "ready" ("usb"), a KISSInterface Reticulum
 // w Pythonie otwiera go jak port szeregowy (firmware/tools/rns_osp_node.py).
 //
 // Polecenia na stdin (wiersze): announce [hex danych], send <cel hex> <dane hex> [limit s],
 // path <cel hex>, request <cel hex>, accept <0|1> (warstwa aplikacji przyjmuje pakiety i stos
-// wysyła dowód; domyślnie 1), status, hashes <n> (n losowych skrótów na liście skrótów pakietów,
-// pomiar RAM), pinned <cel hex> (cel chroniony jako ogłoszony przez komputer), quit. Zdarzenia na
-// stdout jako wiersze JSON.
+// wysyła dowód; domyślnie 1), receiver <cel hex> [klucz hex] (tożsamość odbiorcy z karty: cel
+// chroniony w tablicach i K1; z kluczem także znana tożsamość), silence <off|full|exception>
+// (exception: dowody i send() w ciszy z wyjątkiem), status, hashes <n> (n losowych skrótów na liście
+// skrótów pakietów, pomiar RAM), pinned <cel hex> (cel chroniony jako ogłoszony przez komputer), quit.
+// Zdarzenia na stdout jako wiersze JSON.
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <netinet/in.h>
@@ -181,7 +183,8 @@ EmulatedP1 radio;
 
 bool acceptPackets = true;
 
-bool onPacket(const uint8_t* data, size_t length, void*) {
+bool onPacket(const uint8_t* data, size_t length, bool& exception, void*) {
+    exception = true;   // w ciszy z wyjątkiem dowód każdego przyjętego pakietu wychodzi
     printf("{\"event\":\"packet\",\"data\":\"%s\",\"accepted\":%s}\n", hex(data, length).c_str(), acceptPackets ? "true" : "false");
     fflush(stdout);
     return acceptPackets;
@@ -225,22 +228,23 @@ int main(int argc, char** argv) {
     FILE* capture = nullptr;   // --capture: datagramy od drugiej strony (szesnastkowo) do odtworzenia w pomiarze RAM
     int listenPort = 4242, peerPort = 4243;
     uint8_t ifac[16] = {};
-    uint16_t tableMax = 0;   // --table-max: mniejsze tablice do próby ochrony wpisów OSP
-    uint8_t osp[2][16] = {};
-    bool ospNode = false;   // --osp-node: interfejs USB przez pseudoterminal
+    uint16_t tableMax = 0;   // --table-max: mniejsze tablice do próby ochrony wpisów odbiorcy
+    uint8_t receiverKeys[2][64] = {};
+    uint8_t receivers[2][16] = {};
+    bool nodeMode = false;   // --node: interfejs USB przez pseudoterminal
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--fram") && i + 1 < argc) framPath = argv[++i];
         else if (!strcmp(argv[i], "--listen") && i + 1 < argc) listenPort = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--peer") && i + 1 < argc) peerPort = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--trace")) radio.trace = true;
-        else if (!strcmp(argv[i], "--osp-node")) ospNode = true;
+        else if (!strcmp(argv[i], "--node")) nodeMode = true;
         else if (!strcmp(argv[i], "--capture") && i + 1 < argc) capture = fopen(argv[++i], "w");
         else if (!strcmp(argv[i], "--debt") && i + 1 < argc) radio.debtFactor = static_cast<uint32_t>(atoi(argv[++i]));
         else if (!strcmp(argv[i], "--table-max") && i + 1 < argc) tableMax = static_cast<uint16_t>(atoi(argv[++i]));
-        else if (!strcmp(argv[i], "--osp") && i + 1 < argc) {   // cel OSP przypięty przed startem stosu
+        else if (!strcmp(argv[i], "--receiver") && i + 1 < argc) {   // cel odbiorcy przypięty przed startem stosu
             std::vector<uint8_t> k;
-            if (!unhex(argv[++i], k) || k.size() != 16) { fprintf(stderr, "--osp: 32 hex digits\n"); return 2; }
-            memcpy(osp[0], k.data(), 16);
+            if (!unhex(argv[++i], k) || k.size() != 16) { fprintf(stderr, "--receiver: 32 hex digits\n"); return 2; }
+            memcpy(receivers[0], k.data(), 16);
         }
         else if (!strcmp(argv[i], "--ifac") && i + 1 < argc) {
             std::vector<uint8_t> k;
@@ -264,13 +268,13 @@ int main(int argc, char** argv) {
     hooks.receipt = onReceipt;
     hooks.announce = onAnnounce;
     hooks.log = onLog;
-    rnsnode::setOsp(osp, 0);
-    rnsnode::setOspNode(ospNode);
-    // Port USB węzła OSP: strona główna pseudoterminalu w trybie surowym; port uznaje się za
+    rnsnode::setReceivers(receiverKeys, receivers, 0);
+    rnsnode::setNode(nodeMode);
+    // Port USB węzła stanowiska: strona główna pseudoterminalu w trybie surowym; port uznaje się za
     // otwarty od startu (komputer włącza kontrolę przepływu po otwarciu strony podrzędnej).
     int usb = -1;
     std::string usbName;
-    if (ospNode) {
+    if (nodeMode) {
         usb = posix_openpt(O_RDWR | O_NOCTTY);
         if (usb < 0 || grantpt(usb) != 0 || unlockpt(usb) != 0) { perror("pty"); return 2; }
         usbName = ptsname(usb);
@@ -278,15 +282,18 @@ int main(int argc, char** argv) {
         if (tcgetattr(usb, &t) == 0) { cfmakeraw(&t); tcsetattr(usb, TCSANOW, &t); }
         fcntl(usb, F_SETFL, fcntl(usb, F_GETFL) | O_NONBLOCK);
     }
-    if (!rnsnode::begin(fram, radio, ifac, 0, hooks)) { printf("{\"event\":\"error\",\"what\":\"begin\"}\n"); return 1; }
-    if (ospNode) rnsnode::usbOpen(true);
+    uint8_t seed[32];
+    std::random_device device;
+    for (uint8_t& b : seed) b = static_cast<uint8_t>(device());
+    if (!rnsnode::begin(fram, radio, ifac, 0, false, seed, hooks)) { printf("{\"event\":\"error\",\"what\":\"begin\"}\n"); return 1; }
+    if (nodeMode) rnsnode::usbOpen(true);
     if (tableMax) rnsnode::debugTableMax(tableMax);
     fram.save();
     const rnsnode::Status st = rnsnode::status();
     printf("{\"event\":\"ready\",\"address\":\"%s\",\"identity\":\"%s\",\"identity_new\":%s,\"paths\":%u,\"bitrate\":%u,"
-           "\"osp_node\":%s,\"usb\":\"%s\"}\n",
+           "\"node\":%s,\"usb\":\"%s\"}\n",
            hex(rnsnode::address(), 16).c_str(), hex(rnsnode::identityHash(), 16).c_str(), st.identityNew ? "true" : "false",
-           (unsigned)st.paths, st.bitrate, rnsnode::ospNode() ? "true" : "false", usbName.c_str());
+           (unsigned)st.paths, st.bitrate, rnsnode::node() ? "true" : "false", usbName.c_str());
     fflush(stdout);
 
     std::string line;
@@ -342,11 +349,16 @@ int main(int argc, char** argv) {
                 } else if (sscanf(cmd.c_str(), "path %1199s", a) == 1 && unhex(a, x) && x.size() == 16) {
                     printf("{\"event\":\"path\",\"known\":%s,\"path\":%s}\n", rnsnode::knows(x.data()) ? "true" : "false",
                            rnsnode::hasPath(x.data()) ? "true" : "false");
-                } else if (sscanf(cmd.c_str(), "osp %1199s", a) == 1 && unhex(a, x) && x.size() == 16) {
-                    uint8_t osp[2][16] = {};
-                    memcpy(osp[0], x.data(), 16);
-                    rnsnode::setOsp(osp, 0);
-                    printf("{\"event\":\"osp\"}\n");
+                } else if (sscanf(cmd.c_str(), "receiver %1199s %1199s", a, b) >= 1 && unhex(a, x) && x.size() == 16 &&
+                           (!b[0] || (unhex(b, y) && y.size() == 64))) {
+                    memcpy(receivers[0], x.data(), 16);
+                    memset(receiverKeys[0], 0, 64);
+                    if (b[0]) memcpy(receiverKeys[0], y.data(), 64);
+                    rnsnode::setReceivers(receiverKeys, receivers, 0);
+                    printf("{\"event\":\"receiver\"}\n");
+                } else if (sscanf(cmd.c_str(), "silence %1199s", a) == 1 && (!strcmp(a, "off") || !strcmp(a, "full") || !strcmp(a, "exception"))) {
+                    rnsnode::setSilence(!strcmp(a, "off") ? rnsnode::Silence::OFF : !strcmp(a, "full") ? rnsnode::Silence::FULL : rnsnode::Silence::EXCEPTION);
+                    printf("{\"event\":\"silence\",\"mode\":\"%s\"}\n", a);
                 } else if (sscanf(cmd.c_str(), "pinned %1199s", a) == 1 && unhex(a, x) && x.size() == 16) {
                     printf("{\"event\":\"pinned\",\"pinned\":%s}\n", rnsnode::usbPinned(x.data()) ? "true" : "false");
                 } else if (sscanf(cmd.c_str(), "request %1199s", a) == 1 && unhex(a, x) && x.size() == 16) {

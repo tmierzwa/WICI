@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 #include "jsonlite.h"
 
+#include "hexstr.h"
+
 #include <string.h>
 
 namespace json {
@@ -171,6 +173,16 @@ bool field(const Value& object, const char* key, Value& out) {
     return false;
 }
 
+bool member(const Value& object, size_t index, Value& key, Value& out) {
+    if (object.kind != Kind::OBJECT) return false;
+    const char* p = object.begin + 1;
+    size_t i = 0;
+    while (next(p, '}', &key, out)) {
+        if (i++ == index) return true;
+    }
+    return false;
+}
+
 bool item(const Value& array, size_t index, Value& out) {
     if (array.kind != Kind::ARRAY) return false;
     const char* p = array.begin + 1;
@@ -256,6 +268,12 @@ bool string(const Value& value, char* out, size_t size, size_t* length) {
     out[n] = '\0';
     if (length) *length = n;
     return true;
+}
+
+bool hexField(const Value& object, const char* key, uint8_t* out, size_t length) {
+    Value v;
+    char text[2 * 64 + 2];
+    return length <= 64 && field(object, key, v) && string(v, text, sizeof(text)) && hexstr::decode(text, out, length);
 }
 
 }  // namespace json

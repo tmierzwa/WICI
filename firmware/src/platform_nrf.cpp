@@ -32,6 +32,19 @@ void chipId(uint32_t id[2]) {
     id[1] = NRF_FICR->DEVICEID[1];
 }
 
+void entropy(uint8_t* out, size_t count) {
+    // Bez SoftDevice rejestry RNG są dostępne bezpośrednio.
+    NRF_RNG->CONFIG = RNG_CONFIG_DERCEN_Msk;
+    NRF_RNG->EVENTS_VALRDY = 0;
+    NRF_RNG->TASKS_START = 1;
+    for (size_t i = 0; i < count; ++i) {
+        while (!NRF_RNG->EVENTS_VALRDY) {}
+        NRF_RNG->EVENTS_VALRDY = 0;
+        out[i] = static_cast<uint8_t>(NRF_RNG->VALUE);
+    }
+    NRF_RNG->TASKS_STOP = 1;
+}
+
 uint32_t resetReason() { return readResetReason(); }
 
 uint64_t uptimeMs() {

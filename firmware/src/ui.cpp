@@ -25,6 +25,15 @@ constexpr Id STATE_TEXTS[6] = {Id::STAN_1, Id::STAN_2, Id::STAN_3, Id::STAN_4, I
 constexpr Id URGENCY_TEXTS[3] = {Id::PILNOSC_0, Id::PILNOSC_1, Id::PILNOSC_2};
 constexpr uint8_t SA1_REQUEST = 0, SA1_REPLY = 3, SA1_BULLETIN = 4, SA1_TEST = 5;
 const char* const RADIO_DOWN = "RADIO ---";  // radio niesprawne (brak tekstu w liście kanonicznej, F80)
+// Pytania poleceń USB i odcisk `card` (ui::Question): teksty tymczasowe, bez listy kanonicznej (F107).
+const char* const QUESTION_TEXTS[5][ui_texts::LANGS] = {
+    {"WŁĄCZYĆ CISZĘ RADIOWĄ? OK = TAK / WSTECZ = NIE", "УВІМКНУТИ РАДІОТИШУ? OK = ТАК / НАЗАД = НІ", "TURN RADIO SILENCE ON? OK = YES / BACK = NO"},
+    {"WYŁĄCZYĆ CISZĘ RADIOWĄ? OK = TAK / WSTECZ = NIE", "ВИМКНУТИ РАДІОТИШУ? OK = ТАК / НАЗАД = НІ", "TURN RADIO SILENCE OFF? OK = YES / BACK = NO"},
+    {"ZAMKNĄĆ ZDARZENIE? DANE ZDARZENIA ZNIKNĄ ZE STACJI. OK = TAK / WSTECZ = NIE", "ЗАКРИТИ ПОДІЮ? ДАНІ ПОДІЇ БУДЕ ВИДАЛЕНО ЗІ СТАНЦІЇ. OK = ТАК / НАЗАД = НІ",
+     "CLOSE THE EVENT? EVENT DATA WILL BE REMOVED FROM THE STATION. OK = YES / BACK = NO"},
+    {"ZNISZCZYĆ DANE? NIEODWRACALNE. OK = TAK / WSTECZ = NIE", "ЗНИЩИТИ ДАНІ? НЕЗВОРОТНО. OK = ТАК / НАЗАД = НІ", "DESTROY DATA? IRREVERSIBLE. OK = YES / BACK = NO"},
+    {"ODCISK KLUCZA STACJI: [x]", "ВІДБИТОК КЛЮЧА СТАНЦІЇ: [x]", "STATION KEY FINGERPRINT: [x]"},
+};
 
 size_t utf8Bytes(const char* text, size_t chars) {
     // Długość w bajtach pierwszych `chars` znaków.
@@ -116,6 +125,7 @@ const char* screenName(Screen screen) {
         case Screen::BACKUP: return "backup";
         case Screen::DESTROY: return "destroy";
         case Screen::ALARM: return "alarm";
+        case Screen::CONFIRM: return "confirm";
         case Screen::COUNT: break;
     }
     return "?";
@@ -234,6 +244,19 @@ void Model::restore(Lang lang, Screen screen) {
     item_ = 0;
 }
 
+void Model::ask(Question question, const char* detail) {
+    if (screen_ != Screen::CONFIRM) beforeQuestion_ = screen_;
+    question_ = question;
+    answer_ = Answer::WAITING;
+    snprintf(questionDetail_, sizeof(questionDetail_), "%s", detail ? detail : "");
+    go(Screen::CONFIRM);
+}
+
+void Model::dismiss() {
+    if (answer_ == Answer::WAITING) answer_ = Answer::NO;
+    if (screen_ == Screen::CONFIRM) go(beforeQuestion_);
+}
+
 bool Model::takeChange() {
     const bool changed = changed_;
     changed_ = false;
@@ -333,8 +356,8 @@ const char* Model::shownPhrase(const char* polish) const {
 }
 
 void Model::tick(uint32_t nowMs) {
-    // Alarm zajmuje cały ekran do potwierdzenia (sprawdzany co sekundę).
-    if (host_ && screen_ != Screen::ALARM && screen_ != Screen::LANGUAGE && nowMs - alarmCheckMs_ >= 1000) {
+    // Alarm zajmuje cały ekran do potwierdzenia (sprawdzany co sekundę); pytanie USB czeka najwyżej 30 s.
+    if (host_ && screen_ != Screen::ALARM && screen_ != Screen::LANGUAGE && screen_ != Screen::CONFIRM && nowMs - alarmCheckMs_ >= 1000) {
         alarmCheckMs_ = nowMs;
         AlarmInfo alarm;
         if (host_->alarm(alarm)) {
@@ -353,7 +376,8 @@ void Model::tick(uint32_t nowMs) {
             returnTo_ = screen_;
             go(Screen::DISCARD);
         } else if (!inWizard() && held >= HOLD_LANGUAGE_MS && screen_ != Screen::LANGUAGE && screen_ != Screen::ALARM &&
-                   screen_ != Screen::BACKUP && screen_ != Screen::DESTROY && screen_ != Screen::RESULT && screen_ != Screen::DISCARD) {
+                   screen_ != Screen::BACKUP && screen_ != Screen::DESTROY && screen_ != Screen::RESULT && screen_ != Screen::DISCARD &&
+                   screen_ != Screen::CONFIRM) {
             holdConsumed_ = true;
             item_ = menuIndex(ui_texts::Menu::JEZYK);
             go(Screen::LANGUAGE_MENU);
@@ -370,7 +394,7 @@ void Model::tick(uint32_t nowMs) {
             }
         }
     }
-    if (screen_ == Screen::LANGUAGE || screen_ == Screen::MAIN || screen_ == Screen::ALARM) return;
+    if (screen_ == Screen::LANGUAGE || screen_ == Screen::MAIN || screen_ == Screen::ALARM || screen_ == Screen::CONFIRM) return;
     if (nowMs - lastPressMs_ >= IDLE_MS) go(Screen::MAIN);  // szkic kreatora zostaje w pamięci
 }
 
@@ -684,22 +708,28 @@ void Model::act(Button button, uint32_t nowMs) {
                 go(beforeAlarm_ == Screen::ALARM ? Screen::MAIN : beforeAlarm_);
             }
             break;
+        case Screen::CONFIRM:
+            if (ok || back) {
+                answer_ = question_ == Question::CARD ? Answer::NO : ok ? Answer::YES : Answer::NO;
+                go(beforeQuestion_);
+            }
+            break;
         case Screen::COUNT:
             break;
     }
 }
 
 size_t Model::itemMenu(uint8_t out[4]) const {
-    // ZMIEŃ LICZBĘ OSÓB, ZMIEŃ PILNOŚĆ, POTRZEBA USTAŁA; ANULUJ WYSYŁKĘ tylko przed "odbiorca zapisał".
+    // ZMIEŃ LICZBĘ OSÓB, ZMIEŃ PILNOŚĆ, POTRZEBA USTAŁA; ANULUJ WYSYŁKĘ tylko przed pierwszym nadaniem (`nadane`).
     Item item;
-    if (!host_ || !host_->item(itemIndex_, item, true) || !item.own || item.ref != itemRef_ || item.cancelled) return 0;
+    if (!host_ || !host_->item(itemIndex_, item, true) || !item.own || item.ref != itemRef_) return 0;
     size_t n = 0;
     if (item.type == SA1_REQUEST) {
         out[n++] = static_cast<uint8_t>(Label::ZMIEN_LICZBE_OSOB);
         out[n++] = static_cast<uint8_t>(Label::ZMIEN_PILNOSC);
         out[n++] = static_cast<uint8_t>(Label::POTRZEBA_USTALA);
     }
-    if (item.state == 0) out[n++] = static_cast<uint8_t>(Label::ANULUJ_WYSYLKE);
+    if (!item.sentOnce) out[n++] = static_cast<uint8_t>(Label::ANULUJ_WYSYLKE);
     return n;
 }
 
@@ -853,17 +883,21 @@ bool Model::openItem(Item& item) {
 }
 
 void Model::stageText(const Item& item, const Status& status, char* out, size_t size) const {
-    // Etap własnego zgłoszenia z tabeli tekstów.
+    // Etap własnego zgłoszenia (oprogramowanie.md, "Cykl życia zgłoszenia", "Ekran"): `zapisane`
+    // (w ciszy `zapisane_w_ciszy`), `wysylanie` i `dostarczone` z próbą, a pod nimi stan z decyzji;
+    // `odebrane`: stan z decyzji albo `stan_1`.
+    const char* decision = item.decision >= 2 && item.decision <= 6 ? text(STATE_TEXTS[item.decision - 1], lang_) : "";
+    if (item.stage == Stage::RECEIVED) { snprintf(out, size, "%s", decision[0] ? decision : text(STATE_TEXTS[0], lang_)); return; }
     char tmp[320];
-    if (item.cancelled) { snprintf(out, size, "%s", label(Label::ANULUJ_WYSYLKE, lang_)); return; }
-    if (item.state >= 1 && item.state <= 6) { snprintf(out, size, "%s", text(STATE_TEXTS[item.state - 1], lang_)); return; }
-    if (status.silence) { snprintf(out, size, "%s", text(Id::ZAPISANE_W_CISZY, lang_)); return; }
-    if (item.attempts == 0) { snprintf(out, size, "%s", text(Id::ZAPISANE_W_STACJI, lang_)); return; }
-    char number[12];
-    formatNumber(number, sizeof(number), item.attempts);
-    substitute(text(Id::WYSYLANIE, lang_), "[n]", number, tmp, sizeof(tmp));
-    formatNumber(number, sizeof(number), (item.nextInS + 59) / 60);
-    substitute(tmp, "[m]", number, out, size);
+    if (item.stage == Stage::SAVED) snprintf(tmp, sizeof(tmp), "%s", text(status.silence ? Id::ZAPISANE_W_CISZY : Id::ZAPISANE_W_STACJI, lang_));
+    else {
+        char number[12], step[320];
+        formatNumber(number, sizeof(number), item.attempts);
+        substitute(text(Id::WYSYLANIE, lang_), "[n]", number, step, sizeof(step));
+        formatNumber(number, sizeof(number), (item.nextInS + 59) / 60);
+        substitute(step, "[m]", number, tmp, sizeof(tmp));
+    }
+    snprintf(out, size, decision[0] ? "%s %s" : "%s", tmp, decision);
 }
 
 void Model::buildSummary(Text& t) const {
@@ -921,11 +955,11 @@ void Model::buildHandover(const Status& status, Text& t) {
     const size_t count = host_ ? host_->itemCount() : 0;
     for (size_t i = 0; i < count && t.count + 4 < TEXT_MAX_LINES; ++i) {
         Item item;
-        if (!host_->item(i, item, true) || !item.own || item.cancelled || item.state == 6) continue;
+        if (!host_->item(i, item, true) || !item.own || (item.stage == Stage::RECEIVED && item.decision == 6)) continue;
         formatShort(digits, sizeof(digits), item.number);
         snprintf(tmp, sizeof(tmp), "%s %s", digits, itemLabel(item));
         t.addLine(tmp);
-        if (item.state == 0) {  // etap z podstawionymi [n] i [m], łamany na wiersze
+        if (item.stage != Stage::RECEIVED) {  // etap z podstawionymi [n] i [m], łamany na wiersze
             stageText(item, status, tmp, sizeof(tmp));
             t.add(tmp);
         }
@@ -1152,6 +1186,11 @@ void Model::render(const Status& s, Lines& out) {
             if (alarm_.kind == AlarmKind::NO_READ) t.add(text(Id::BRAK_ODCZYTU, lang_));
             else t.addNumber(Id::BRAK_POTWIERDZENIA, "[n]", alarm_.minutes, lang_);
             t.addShort(Id::ZAPISZ_NUMER, alarm_.number, lang_);
+            renderText(t, window, out, first);
+            break;
+        case Screen::CONFIRM:
+            substitute(QUESTION_TEXTS[static_cast<size_t>(question_)][L], "[x]", questionDetail_, tmp, sizeof(tmp));
+            t.add(tmp);
             renderText(t, window, out, first);
             break;
         case Screen::COUNT:

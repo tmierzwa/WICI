@@ -3,8 +3,10 @@
 #if defined(ARDUINO_ARCH_ESP32)
 #include "platform.h"
 
+#include <bootloader_random.h>
 #include <driver/gpio.h>
 #include <esp_mac.h>
+#include <esp_random.h>
 #include <esp_system.h>
 #include <esp_timer.h>
 #include <esp_task_wdt.h>
@@ -45,6 +47,12 @@ void chipId(uint32_t id[2]) {
     esp_efuse_mac_get_default(mac);
     id[0] = (static_cast<uint32_t>(mac[3]) << 16) | (static_cast<uint32_t>(mac[4]) << 8) | mac[5];
     id[1] = (static_cast<uint32_t>(mac[0]) << 16) | (static_cast<uint32_t>(mac[1]) << 8) | mac[2];
+}
+
+void entropy(uint8_t* out, size_t count) {
+    bootloader_random_enable();
+    esp_fill_random(out, count);
+    bootloader_random_disable();
 }
 
 uint32_t resetReason() { return static_cast<uint32_t>(esp_reset_reason()); }

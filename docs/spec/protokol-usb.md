@@ -1,6 +1,6 @@
 # WICI: protokół USB laptop–stacja
 
-Rozdział jest samodzielnym kontraktem implementacyjnym protokołu między aplikacją laptopa (poziomy 2–3) albo laptopem osoby utrzymującej system (tryb przygotowania) a stacją. Zamyka decyzję D17 po stronie specyfikacji; próby są w [odbiorze](odbior.md) (wiersze „Protokół USB”, „Laptop i USB”, „Przeniesienie”, „Aktualizacja oprogramowania”). Kod stanowiska deweloperskiego (`firmware/src/usbproto.cpp`, kontrakt `"usb":1`) jest prototypem wcześniejszej wersji; obowiązuje ten rozdział, a różnice wymienia [przegląd](../review.md) (F101).
+Rozdział jest samodzielnym kontraktem implementacyjnym protokołu między aplikacją laptopa (poziomy 2–3) albo laptopem osoby utrzymującej system (tryb przygotowania) a stacją. Zamyka decyzję D17 po stronie specyfikacji; próby są w [odbiorze](odbior.md) (wiersze „Protokół USB”, „Laptop i USB”, „Przeniesienie”, „Aktualizacja oprogramowania”). Kod stanowiska deweloperskiego (`firmware/src/usbproto.cpp`) realizuje wersję 2 bez przeniesienia i aktualizacji oprogramowania; różnice wymienia [przegląd](../review.md) (F107).
 
 W pilotażu protokół służy tylko w trybie przygotowania: konfiguracja, karta stacji, PRZENIEŚ STACJĘ i aktualizacja oprogramowania. Aplikacja laptopa w schronieniu (poziomy 2–3) dochodzi po pilotażu i używa tego samego kontraktu.
 
@@ -41,7 +41,7 @@ Każdy wiersz w obu kierunkach:
 | `type` | ciąg | typ wiadomości z tabel niżej |
 | `re` | liczba | tylko w odpowiedzi: `seq` polecenia, na które odpowiada |
 
-**Wersje.** Każda zmiana schematu, nowe pole albo nowy typ oznacza nową wersję. Wyjątek: wersja 2 jest projektem do pierwszej implementacji (stanowisko deweloperskie ma `"usb":1`), więc do tego czasu poprawki tego rozdziału jej numeru nie zmieniają. Stacja przyjmuje tylko wersje z listy w `hello`; inna wersja w poleceniu daje `rejected` z `contract`, a stacja nie zmienia stanu. Laptop, który nie zna żadnej wersji z listy, pokazuje „niezgodna wersja stacji” i nie wysyła poleceń.
+**Wersje.** Każda zmiana schematu, nowe pole albo nowy typ oznacza nową wersję. Wyjątek: wersja 2 jest projektem do pierwszego wydania (stanowisko deweloperskie realizuje ją bez przeniesienia i aktualizacji), więc do tego czasu poprawki tego rozdziału jej numeru nie zmieniają. Stacja przyjmuje tylko wersje z listy w `hello`; inna wersja w poleceniu daje `rejected` z `contract`, a stacja nie zmienia stanu. Laptop, który nie zna żadnej wersji z listy, pokazuje „niezgodna wersja stacji” i nie wysyła poleceń.
 
 ## Polecenia laptopa
 

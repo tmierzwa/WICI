@@ -1,245 +1,445 @@
 // SPDX-License-Identifier: MIT
-// Trwałe struktury stacji w FRAM (docs/spec/oprogramowanie.md, "Trwałość i potwierdzenia",
-// "Protokół USB laptop–stacja"): konfiguracja z `configure`, kolejka wychodząca (128 intencji),
-// skrzynka odbiorcza (128 wiadomości), zdarzenia do laptopa czekające na `ack` (128) oraz pamięć
-// najwyższego event na id po usunięciu treści. Każdy rekord ma numer, CRC-16 i znacznik
-// zatwierdzenia zapisywany jako ostatni bajt; część zmienna rekordu (stan intencji, odczyt,
-// potwierdzenie) ma własne CRC i znacznik.
-// Stan intencji ma dwie kopie zapisywane na zmianę, a CRC każdej części zmiennej obejmuje numer
-// rekordu. Rekordy nie są jeszcze szyfrowane (AEAD z kluczem w MCU razem z kluczem tożsamości
-// i kartami). Bez zależności od Arduino; sprawdzany na komputerze z pamięcią w RAM.
+// Magazyny stacji w FRAM (docs/spec/oprogramowanie.md, "Pamięć FRAM", "Trwałość i potwierdzenia",
+// "Zapisy większe niż transakcja", "Cykl życia zgłoszenia"; protokol-usb.md, "Synchronizacja").
+//
+// Każdy magazyn ma stałe gniazda, bez dziennika dopisywanego i kompaktowania. Rekord gniazda (512 B)
+// ma nagłówek 24 B (magazyn 1, gniazdo 2, wersja formatu 1, generacja klucza 4, numer zapisu 8,
+// długość 2, zapas 6), treść ≤464 B, miejsce na znacznik AEAD 16 B (zera: generacja klucza 0, rekordy
+// jeszcze nie są szyfrowane, F99) i znacznik zatwierdzenia 8 B (CRC-32 bajtów 0..503 i stała).
+// Gniazdo puste (same 0x00 albo 0xFF) jest wolne; rekord „wolne” niesie tylko generację gniazda.
+// Rekord niepusty z błędnym znacznikiem, magazynem, gniazdem albo wersją to uszkodzenie: gniazdo
+// zostaje wyłączone z użycia i liczone w diagnostyce, nigdy nie staje się samo wolnym miejscem.
+//
+// Każda zmiana gniazd przechodzi przez transakcję (Tx): rekord transakcji (4 KiB, dwa na zmianę)
+// dostaje pełne nowe bajty wszystkich zmienianych gniazd i znacznik zatwierdzenia (COMMIT), potem
+// bajty trafiają do gniazd, a rekord dostaje znacznik wykonania. Po restarcie zatwierdzona, niewykonana
+// transakcja jest wykonywana ponownie tymi samymi bajtami, niezatwierdzona odrzucana. Numer zapisu
+// rośnie z każdym rekordem i nie wraca (rezerwacja blokami po 1024 w dzienniku, journal.h).
+//
+// Rejestr zgłoszeń, skrzynka, pamięć zwolnionych wpisów i pierścień zdarzeń należą do epoki (8 B
+// w treści): ZAMKNIJ ZDARZENIE to jedna transakcja nowej epoki w rekordzie meta, po której rekordy
+// starej epoki są wolne, a maintain() nadpisuje je kolejnymi transakcjami (także po restarcie).
+// Zbiór powtórzeń BULLETIN, konfiguracja i meta przechodzą przez ZAMKNIJ ZDARZENIE.
+// Indeksy w RAM (≈15 KB) mają tylko pola potrzebne do kolejki, list ekranu i alarmów; treść SA1
+// i pełne `id` czyta się z rekordu. Bez zależności od Arduino; sprawdzany na komputerze z pamięcią w RAM.
 #pragma once
 
 #include <stddef.h>
 #include <stdint.h>
 
+#include "config.h"
 #include "journal.h"
 #include "sa1.h"
 
 namespace store {
 
-constexpr uint32_t CONFIG_BASE = 0x009000;
-constexpr size_t CONFIG_SLOT = 4096;
-constexpr uint32_t CONFIG_SLOTS = 2;
-constexpr uint32_t COUNTERS_BASE = 0x00B000;  // 2 × 32 B: najwyższe numery rekordów po ZAMKNIJ ZDARZENIE
-constexpr uint32_t QUEUE_BASE = 0x010000;
-constexpr uint32_t QUEUE_SLOTS = 128;
-constexpr uint32_t INBOX_BASE = 0x020000;
+// Układ FRAM (512 KiB): dziennik 0x00000–0x08FFF (journal.h), magazyny 0x09000–0x43FFF,
+// tożsamość i system plików stosu 0x44000–0x7FFFF (framfs.h).
+constexpr uint32_t TX_BASE = 0x009000;
+constexpr uint32_t TX_AREA = 4096;
+constexpr uint32_t CONFIG_BASE = 0x00B000;            // kopie A i B
+constexpr uint32_t CONFIG_COPY = 8192;
+constexpr uint32_t META_BASE = 0x00F000;
+constexpr uint32_t BULLETIN_BASE = 0x00F200;
+constexpr uint32_t BULLETIN_BLOCKS = 4;
+constexpr uint32_t REGISTER_BASE = 0x010000;
+constexpr uint32_t REGISTER_SLOTS = 256;
+constexpr uint32_t INBOX_BASE = 0x030000;
 constexpr uint32_t INBOX_SLOTS = 128;
-constexpr uint32_t NOTE_BASE = 0x030000;
-constexpr uint32_t NOTE_SLOTS = 128;
-constexpr uint32_t SEEN_BASE = 0x040000;
-constexpr uint32_t SEEN_SLOTS = 256;
-constexpr size_t RECORD = 512;        // kolejka, skrzynka, zdarzenia
-constexpr size_t SEEN_RECORD = 32;
-constexpr size_t STATE_OFFSET = 448;  // część zmienna rekordu 512 B
-constexpr size_t HASH = 16;           // skrót adresu LXMF i identyfikator SA1 w bajtach
-constexpr size_t NOTE_TEXT = 400;
-constexpr size_t PHRASES = 11;
-constexpr size_t PHRASE_MAX = 96;
-constexpr size_t ADDRESS_MAX = 64;
-constexpr size_t ADDRESSES = 8;      // adres schronienia i lista obiektów (wybór na ekranie)
-constexpr uint8_t COMMITTED = journal::COMMITTED;
+constexpr uint32_t RELEASED_BASE = 0x040000;
+constexpr uint32_t RELEASED_BLOCKS = 16;
+constexpr uint32_t RING_BASE = 0x042000;
+constexpr uint32_t RING_BLOCKS = 16;
+constexpr uint32_t STORE_END = 0x044000;
+constexpr uint32_t FRAM_END = 0x080000;               // ZNISZCZ DANE kasuje TX_BASE..FRAM_END
+constexpr size_t SLOT = 512;
+constexpr size_t RECORD_HEADER = 24;
+constexpr size_t TAG = 16;                             // znacznik AEAD (zera do czasu szyfrowania)
+constexpr size_t MARKER = 8;                           // CRC-32 i stała
+constexpr size_t BODY_MAX = SLOT - RECORD_HEADER - TAG - MARKER;   // 464 B
+constexpr size_t BLOCK_ENTRIES = 16;                   // wpisy 24 B w bloku 512 B
+constexpr size_t ENTRY = 24;
+constexpr size_t RELEASED_ENTRIES = RELEASED_BLOCKS * BLOCK_ENTRIES;   // 256
+constexpr size_t RING_ENTRIES = RING_BLOCKS * BLOCK_ENTRIES;           // 256
+constexpr size_t BULLETIN_ENTRIES = BULLETIN_BLOCKS * BLOCK_ENTRIES;   // 64
+constexpr uint32_t BULLETIN_WINDOW = 86400;            // okno event komunikatów
+constexpr size_t HASH = 16;
+constexpr size_t EPOCH = 8;
+constexpr size_t NONCE = 8;                            // `nonce` polecenia `test`
+constexpr size_t TEST_NONCES = 8;
+constexpr size_t REVISION_TIMES = 8;                   // COMMIT niepotwierdzonych rewizji (alarm)
+constexpr uint32_t WRITE_BLOCK = 1024;                 // rezerwacja numerów zapisu
+static_assert(RING_BASE + RING_BLOCKS * SLOT == STORE_END, "pierścień zdarzeń kończy magazyny");
+static_assert(BULLETIN_BASE + BULLETIN_BLOCKS * SLOT <= REGISTER_BASE, "zbiór powtórzeń przed rejestrem");
+static_assert(CONFIG_BASE + 2 * CONFIG_COPY <= META_BASE, "kopie konfiguracji przed meta");
+static_assert(TX_BASE + 2 * TX_AREA <= CONFIG_BASE, "rekordy transakcji przed konfiguracją");
 
-struct Config {
-    uint32_t seq = 0;
-    // Konfiguracja węzła OSP (D19, configure "osp_node"): stacja przy OSP przekazuje ruch i łączy
-    // radio z komputerem stanowiska; bez adresu, karty OSP i fraz (stanowisko-osp.md).
-    uint8_t ospNode = 0;
-    uint8_t activeOsp = 0;      // 0 główna, 1 zapasowa
-    uint16_t stations = 0;      // liczba stacji w sieci (okno TEST startowego); 0 = nieznana
-    char address[ADDRESS_MAX + 1] = {};
-    uint8_t osp[2][HASH] = {};  // skróty adresów tożsamości OSP: główna, zapasowa
-    uint8_t phraseCount = 0;
-    char phrases[PHRASES][3][PHRASE_MAX + 1] = {};  // PL (wysyłana), UK, EN (ekran)
-    uint8_t ifac[HASH] = {};    // kod dostępu sieci (IFAC)
-    // Dalsze obiekty z listy adresów (configure "addresses"); address to pierwszy z nich.
-    uint8_t objectCount = 0;
-    char objects[ADDRESSES - 1][ADDRESS_MAX + 1] = {};
-};
+// Magazyn w nagłówku rekordu (rekordu nie da się przenieść do innego magazynu ani gniazda).
+enum Kind : uint8_t { CONFIG = 1, META = 2, REGISTER = 3, INBOX = 4, RELEASED = 5, BULLETIN = 6, RING = 7 };
 
-// Flagi stanu intencji w kolejce.
-enum QueueFlag : uint8_t { ACTIVE = 0x01, DONE = 0x02, REPLACED = 0x04, CANCELLED = 0x08, SENT = 0x10 };
+// Etap wysyłki najnowszej rewizji (oprogramowanie.md, "Cykl życia zgłoszenia").
+enum class Stage : uint8_t { SAVED, SENDING, DELIVERED, RECEIVED, CANCELLED };
 
-struct QueueRecord {
-    uint32_t seq = 0;
-    uint32_t createdS = 0;
-    uint8_t type = 0;
+enum Origin : uint8_t { BUTTONS = 0, USB = 1 };
+// SENT_ONCE: `nadane` (zapis jednokrotny przed pierwszym przekazaniem do stosu); READ_MAX: STATUS
+// rewizji r_max przyjęty (alarm brak_odczytu); BACKUP: liczniki i wysyłka dotyczą tożsamości zapasowej.
+enum RequestFlag : uint8_t { SENT_ONCE = 0x01, READ_MAX = 0x02, BACKUP = 0x04 };
+
+struct RevisionTime {
     uint16_t revision = 0;
-    uint32_t event = 0;         // STATUS, REPLY, BULLETIN; 0 dla pozostałych
-    uint8_t to[HASH] = {};
+    uint32_t commitS = 0;
+};
+
+// Wpis rejestru: najnowsza rewizja z treścią, wysyłka i decyzja odbiorcy.
+struct Request {
+    uint16_t gen = 0;            // generacja gniazda (zdarzenia `lost`); nadaje magazyn
+    uint8_t type = sa1::REQUEST; // REQUEST albo TEST
+    uint8_t origin = BUTTONS;
     uint8_t id[HASH] = {};
-    char sa1[sa1::MAX_CONTENT + 1] = {};
-    uint16_t sa1Length = 0;
-    uint8_t aux = 0;            // pilność (REQUEST, TEST) do kolejności nadawania
-    uint8_t category = 0;       // kategoria (REQUEST, TEST) do list na ekranie
-    // część zmienna
-    uint8_t flags = ACTIVE;
-    uint16_t attempts = 0;
-    uint32_t nextTryS = 0;
-    uint32_t statusEvent = 0;   // najwyższy event z RECEIVED/STATUS dla tej intencji
-    uint8_t state = 0;          // stan 1-6; 0 = brak potwierdzenia
-    uint32_t updatedS = 0;
-    uint32_t sentS = 0;         // czas pierwszej próby nadania (alarm TEST); 0 = nienadana
-};
-
-struct InboxRecord {
-    uint32_t seq = 0;
-    uint32_t receivedS = 0;
-    uint8_t type = 0;
-    uint16_t revision = 0;
-    uint32_t event = 0;
-    uint8_t source[HASH] = {};
-    uint8_t id[HASH] = {};
-    char sa1[sa1::MAX_CONTENT + 1] = {};
-    uint16_t sa1Length = 0;
-    // część zmienna
-    uint8_t flags = 0;          // InboxFlag
-};
-
-// Flagi wiadomości w skrzynce. INBOX_NOTIFY: zdarzenie do laptopa jeszcze nie zapisane (pełny
-// pierścień zdarzeń albo zanik zasilania między zapisem wiadomości a zdarzenia).
-enum InboxFlag : uint8_t { INBOX_READ = 0x01, INBOX_NOTIFY = 0x02 };
-
-enum NoteKind : uint8_t { NOTE_MESSAGE = 1, NOTE_RADIO = 2, NOTE_STATION = 4 };   // 3: dawne `incoming` roli OSP
-
-struct NoteRecord {
-    uint32_t seq = 0;
-    uint32_t createdS = 0;
-    uint8_t kind = NOTE_MESSAGE;
-    uint32_t ref = 0;           // numer rekordu skrzynki albo 0
-    char text[NOTE_TEXT + 1] = {};  // pola JSON zdarzenia (bez nawiasów zewnętrznych)
-    // część zmienna
-    bool acked = false;
-};
-
-struct QueueEntry {
-    uint32_t seq = 0;
-    uint32_t createdS = 0;
-    uint8_t type = 0;
-    uint8_t aux = 0;
+    uint16_t rMax = 0;
+    int32_t rRcv = -1;
+    Stage stage = Stage::SAVED;
     uint8_t flags = 0;
-    uint8_t state = 0;
+    uint8_t decision = 0;        // 0 albo stan 2–6
+    uint16_t decisionRev = 0;
+    uint8_t urgency = 0;
     uint8_t category = 0;
-    uint8_t stateGen = 0;  // pokolenie bieżącej kopii stanu w FRAM
-    uint16_t revision = 0;
-    uint16_t attempts = 0;
-    uint32_t event = 0;
+    uint16_t people = 0;
+    uint16_t attempts = 0;       // próby nadania r_max
+    uint32_t statusHi = 0;
+    uint32_t replyHi = 0;
+    uint32_t createdS = 0;       // czasy dla obsługi (journal.h)
+    uint32_t changedS = 0;
+    uint32_t receivedS = 0;      // RECEIVED r_max
     uint32_t nextTryS = 0;
-    uint32_t updatedS = 0;
-    uint32_t sentS = 0;
-    uint8_t to[HASH] = {};
-    uint8_t id[HASH] = {};
+    uint32_t firstSentS = 0;     // pierwsze przekazanie r_max (TEST: test_wyslany)
+    // COMMIT rewizji nowszych niż r_rcv, rosnąco; przy więcej niż 8 wypada druga najstarsza
+    // (najstarsza wyznacza alarm), więc alarm nigdy nie przychodzi później, niż wynika z COMMIT.
+    uint8_t revisionCount = 0;
+    RevisionTime revisions[REVISION_TIMES];
+    uint8_t nonce[NONCE] = {};   // TEST z polecenia `test`
+    uint16_t sa1Length = 0;
+    char sa1[sa1::MAX_CONTENT + 1] = {};
 };
 
-struct InboxEntry {
-    uint32_t seq = 0;
-    uint32_t receivedS = 0;
+enum class SlotState : uint8_t { FREE, USED, CORRUPT, STALE };   // STALE: rekord starej epoki do nadpisania
+
+// Indeks wpisu w RAM; pełny wpis czyta readRequest.
+struct RequestIndex {
+    SlotState state = SlotState::FREE;
     uint8_t type = 0;
+    Stage stage = Stage::SAVED;
     uint8_t flags = 0;
+    uint8_t decision = 0;
+    uint8_t urgency = 0;
+    uint8_t category = 0;
+    uint16_t gen = 0;
+    uint16_t rMax = 0;
+    uint16_t decisionRev = 0;
+    uint16_t attempts = 0;
+    uint32_t idPrefix = 0;
+    uint32_t commitS = 0;        // COMMIT r_max (kolejność w kolejce)
+    uint32_t changedS = 0;
+    // Początek alarmu: przed RECEIVED COMMIT najstarszej niepotwierdzonej rewizji (TEST: pierwsze
+    // nadanie, ważne ze znacznikiem SENT_ONCE), po RECEIVED czas RECEIVED r_max.
+    uint32_t alarmS = 0;
+    uint32_t nextTryS = 0;
+    bool used() const { return state == SlotState::USED; }
+    uint16_t number() const;     // krótki numer
+};
+
+// Wiadomość skrzynki (REPLY, BULLETIN).
+struct Message {
+    uint16_t gen = 0;
+    uint8_t type = sa1::REPLY;
+    uint8_t source = config::MAIN;   // tożsamość odbiorcy, od której przyszła
+    bool read = false;
+    uint8_t id[HASH] = {};
     uint16_t revision = 0;
     uint32_t event = 0;
-    uint8_t source[HASH] = {};
+    uint32_t number = 0;         // `msg`: numer zdarzenia `msg` w epoce
+    uint32_t receivedS = 0;
+    uint16_t sa1Length = 0;
+    char sa1[sa1::MAX_CONTENT + 1] = {};
+};
+
+struct MessageIndex {
+    SlotState state = SlotState::FREE;
+    uint8_t type = 0;
+    uint8_t source = 0;
+    bool read = false;
+    uint16_t gen = 0;
+    uint32_t idPrefix = 0;
+    uint32_t number = 0;
+    uint32_t receivedS = 0;
+    bool used() const { return state == SlotState::USED; }
+};
+
+// Zwolniony wpis rejestru (protokol-usb.md, "Niepewny wynik polecenia").
+struct Released {
+    uint8_t id[HASH] = {};
+    uint16_t revision = 0;
+    uint32_t ev = 0;             // numer zdarzenia `released`; 0 = wpis pusty
+    uint16_t number = 0;
+    bool cancelled = false;
+};
+
+// Zdarzenie dla laptopa: wpis 24 B pierścienia bez treści SA1 (protokol-usb.md, "Synchronizacja").
+enum class EventKind : uint8_t { OWN = 1, STAGE = 2, MSG = 3, RADIO = 4, STATION = 6 };
+// Pierwsze wartości są równe etapom (Stage), więc zmiana etapu daje kod wprost.
+enum class StageCode : uint8_t { STORED, SENDING, DELIVERED, RECEIVED, CANCELLED, SUPERSEDED, RELEASED };
+const char* stageCodeName(StageCode code);   // także nazwa etapu w wierszu `snap`
+enum StationWhat : uint8_t { RESTART = 0, CONFIGURED = 1, RECEIVER_BACKUP = 2, PREP = 3 };
+enum RadioBits : uint8_t { RADIO_SILENCE = 0x01, RADIO_SWITCH = 0x02, RADIO_EXCEPTION = 0x04 };
+struct Event {
+    uint32_t ev = 0;
+    uint32_t at = 0;             // czas dla obsługi
+    EventKind kind = EventKind::STATION;
+    // OWN: pochodzenie; STAGE: StageCode; MSG: źródło; RADIO: RadioBits; STATION: StationWhat.
+    uint8_t a = 0;
+    bool decisionChanged = false;   // STAGE: nowa decyzja (blokuje `close`)
+    uint16_t slot = 0;           // gniazdo rejestru albo skrzynki; RELEASED: indeks pamięci zwolnionych
+    uint16_t gen = 0;
+    uint16_t revision = 0;
+    uint8_t decision = 0;        // STAGE
+    uint8_t attempt = 0;         // STAGE: próba (nasycona)
+    uint16_t decisionRev = 0;
+    uint32_t value = 0;          // STAGE: status_event; STATION: szczegół
+};
+
+struct TestNonce {
+    uint8_t nonce[NONCE] = {};
     uint8_t id[HASH] = {};
 };
 
-struct NoteEntry {
-    uint32_t seq = 0;
-    bool acked = false;
+// Stan stacji poza magazynami (jedno gniazdo, zawsze przez transakcję).
+struct Meta {
+    uint8_t epoch[EPOCH] = {};
+    uint32_t tombFloor = 1;          // od tego zdarzenia pamięć zwolnionych jest kompletna
+    int8_t configCopy = -1;          // aktywna kopia konfiguracji (0 A, 1 B), -1 brak
+    uint32_t configSeq = 0;
+    uint8_t receiver = config::MAIN; // aktywna tożsamość odbiorcy (KLUCZ ZAPASOWY nieodwracalny)
+    bool silence = false;            // cisza ustawiona z panelu (USB); przełącznik CISZA osobno
+    bool exceptionSet = false;
+    uint8_t exception[HASH] = {};    // wyjątek ciszy dla jednej pary (id, revision)
+    uint16_t exceptionRev = 0;       // r_max zgłoszenia przy ustawieniu wyjątku
+    bool testPaused = false;
+    bool contactKnown = false;
+    uint32_t contactS = 0;           // ostatnia przyjęta wiadomość od aktywnej tożsamości odbiorcy
+    bool closedSet = false;          // ostatnie ZAMKNIJ ZDARZENIE (powtórzenie `close`)
+    uint8_t closedEpoch[EPOCH] = {};
+    uint32_t closedHead = 0;
+    uint32_t bulletinFloor = 0;      // aktywnej tożsamości odbiorcy
+    uint32_t bulletinMax = 0;
+    uint8_t nonceNext = 0;
+    TestNonce nonces[TEST_NONCES];
 };
 
-enum class Put : uint8_t { STORED, DUPLICATE, CONFLICT, FULL, ERROR };
-const char* putName(Put result);
+// Cisza wynikowa (oprogramowanie.md, "Tryby kryzysowe"): przełącznik CISZA ma pierwszeństwo i wyklucza
+// wyjątek; wyjątek tylko przy ciszy ustawionej z panelu. Jedna reguła dla łącza, stosu, wysyłki i USB.
+enum class Silence : uint8_t { OFF, FULL, EXCEPTION };
+inline Silence silenceMode(const Meta& m, bool switchOn) {
+    return switchOn ? Silence::FULL : !m.silence ? Silence::OFF : m.exceptionSet ? Silence::EXCEPTION : Silence::FULL;
+}
+inline uint8_t radioBits(const Meta& m, bool switchOn) {   // RadioBits zdarzenia `radio`
+    const Silence s = silenceMode(m, switchOn);
+    return static_cast<uint8_t>((s != Silence::OFF ? RADIO_SILENCE : 0) | (switchOn ? RADIO_SWITCH : 0) | (s == Silence::EXCEPTION ? RADIO_EXCEPTION : 0));
+}
+
+enum class Begin : uint8_t { OK, NEW, MEMORY, FORMAT, CORRUPT };
+const char* beginName(Begin result);
+
+struct Diagnostics {
+    uint32_t corruptSlots = 0;       // gniazda wyłączone z użycia
+    uint32_t replayed = 0;           // transakcje wykonane ponownie przy starcie
+    uint32_t scrubbed = 0;           // gniazda starej epoki nadpisane po ZAMKNIJ ZDARZENIE
+    bool configCorrupt = false;      // aktywna kopia konfiguracji nieczytelna: stacja bez konfiguracji
+};
+
+class Store;
+
+// Transakcja: zmiany gniazd i zdarzenia, zapisane razem albo wcale. Indeksy w RAM zmieniają się
+// dopiero po zatwierdzeniu i wykonaniu. Najwyżej 7 rekordów 512 B w jednym rekordzie transakcji.
+class Tx {
+public:
+    explicit Tx(Store& store);
+    // Treść gniazda; fresh: nowy wpis w gnieździe (generacja + 1), inaczej zmiana tego samego wpisu.
+    void request(uint16_t slot, const Request& r, bool fresh);
+    void message(uint16_t slot, const Message& m, bool fresh);
+    void free(Kind kind, uint16_t slot);             // rekord „wolne” (z generacją gniazda)
+    // Dopisanie do pamięci zwolnionych wpisów (ev = numer zdarzenia `released` z tej transakcji).
+    void released(const Released& r);
+    void bulletin(const uint8_t id[HASH], uint32_t event);   // zbiór powtórzeń aktywnej tożsamości
+    Meta& meta();                                    // kopia meta do zmiany
+    uint32_t event(const Event& e);                  // nadaje kolejne `ev` epoki i `at`
+    uint16_t gen(Kind kind, uint16_t slot) const;    // generacja gniazda po tej transakcji
+    bool commit();
+
+private:
+    friend class Store;
+    static constexpr size_t MAX_CHANGES = 3;
+    static constexpr size_t MAX_EVENTS = 3;
+    struct Change {
+        Kind kind;
+        uint16_t slot;
+        uint16_t length;             // 0 = rekord „wolne”
+        uint8_t body[BODY_MAX];
+    };
+    Change* change(Kind kind, uint16_t slot);
+    Store& store_;
+    Change changes_[MAX_CHANGES];
+    size_t count_ = 0;
+    Event events_[MAX_EVENTS];
+    size_t eventCount_ = 0;
+    bool releasedSet_ = false;
+    Released released_;
+    bool bulletinSet_ = false;
+    size_t bulletinIndex_ = 0;
+    uint8_t bulletinId_[HASH] = {};
+    uint32_t bulletinEvent_ = 0;
+    bool metaSet_ = false;
+    Meta meta_;
+    bool overflow_ = false;
+};
 
 class Store {
 public:
-    explicit Store(journal::Storage& storage);
-    bool begin();  // przegląda wszystkie pierścienie; false przy błędzie pamięci
+    // random: generator stacji (epoka); profile: profil radiowy układu (config::parse).
+    Store(journal::Storage& memory, journal::Journal& journal, void (*random)(uint8_t* out, size_t count), const char* profile);
+    // Przegląd: ponowne wykonanie zatwierdzonej transakcji, meta, konfiguracja, indeksy, wznowienie
+    // ZNISZCZ DANE. NEW: pusta pamięć sformatowana teraz. MEMORY (błąd odczytu), FORMAT (inna wersja
+    // formatu albo rekord formatu nieczytelny) i CORRUPT (meta uszkodzone albo dane bez rekordu
+    // formatu): stacja bez magazynu (blad_pamieci), naprawa przez ZNISZCZ DANE.
+    Begin begin();
     bool ok() const { return ok_; }
+    const Diagnostics& diagnostics() const { return diag_; }
+    // Czas dla obsługi do czasów rekordów i `at` zdarzeń (main.cpp ustawia go w każdym obiegu).
+    void now(uint32_t nowS) { nowS_ = nowS; }
+    uint32_t now() const { return nowS_; }
 
-    const Config& config() const { return config_; }
+    // Konfiguracja: dokument zapisywany w nieaktywnej kopii, potem configCommit.
+    const config::Config& config() const { return config_; }
     bool configured() const { return config_.seq != 0; }
-    bool writeConfig(const Config& config);
-    // Adres dołączany do zgłoszeń: obiekt wybrany na ekranie z listy (0 = pierwszy); "" bez adresu.
-    // Wybór jest w RAM; trwale zapisuje go ekran (ustawienia w dzienniku FRAM).
-    size_t addressCount() const { return config_.address[0] ? 1u + config_.objectCount : 0u; }
-    const char* addressAt(size_t index) const;
+    bool station() const { return configured() && config_.role == config::Role::STATION; }
+    bool configBegin();                                                // nieaktywna kopia bez znacznika
+    bool configWrite(uint32_t offset, const uint8_t* data, size_t length);
+    bool configStaged(uint32_t offset, uint8_t* out, size_t length);   // odczyt zapisanej części nieaktywnej kopii
+    enum class ConfigResult : uint8_t { OK, HASH, INVALID, MEMORY };
+    // Kontrola SHA-256 i treści, znacznik kopii, transakcja wskaźnika ze zdarzeniem `station`.
+    ConfigResult configCommit(uint32_t size, const uint8_t sha[32], const char*& detail, size_t& worst);
+    uint32_t configSize() const { return configSize_; }
+    bool configRead(uint32_t offset, uint8_t* out, size_t length);
+    const uint8_t* configSha() const { return configSha_; }
+    // Adres dołączany do zgłoszeń z przycisków: obiekt wybrany na ekranie (RAM; zapis w ustawieniach).
+    size_t addressCount() const { return config_.addressCount; }
+    const char* addressAt(size_t index) const { return index < config_.addressCount ? config_.addresses[index] : ""; }
     const char* address() const { return addressAt(selected_); }
     size_t selectedAddress() const { return selected_; }
     void selectAddress(size_t index) { selected_ = index < addressCount() ? static_cast<uint8_t>(index) : 0; }
+    // Cel "wici.sa1" aktywnej tożsamości odbiorcy albo nullptr (bez konfiguracji stacji).
+    const uint8_t* recipient() const;
 
-    // Kolejka: klucz (to, typ, id, revision, event); ta sama treść = DUPLICATE (seq rekordu w record.seq),
-    // inna treść = CONFLICT; 128 żywych intencji = FULL. Zakończona intencja o tym samym kluczu
-    // jest ponownie uaktywniana, gdy resend = true (w przeciwnym razie DUPLICATE).
-    Put queuePut(QueueRecord& record, bool resend);
-    bool queueRead(uint32_t seq, QueueRecord& record);
-    bool queueUpdate(const QueueRecord& record);  // zapis części zmiennej
-    size_t queueLive() const;                      // intencje bez DONE/REPLACED/CANCELLED
-    size_t queueUnsent() const;                      // aktywne bez potwierdzenia dostarczenia (SENT)
-    uint32_t queueOldestUnsentS(bool& found) const;
-    size_t queueSize() const { return QUEUE_SLOTS; }
-    const QueueEntry* queueEntry(size_t slot) const { return queue_[slot].seq ? &queue_[slot] : nullptr; }
-    const QueueEntry* queueFind(const uint8_t to[HASH], uint8_t type, const uint8_t id[HASH], uint16_t revision, uint32_t event) const;
-    // Krótki numer zgłoszenia zajęty przez inne id w kolejce (oprogramowanie.md: numer unikalny w stacji).
-    bool queueNumberTaken(uint16_t number, const uint8_t id[HASH]) const;
+    const Meta& meta() const { return meta_; }
 
-    // Skrzynka: klucz (źródło, typ, id, revision, event); deduplikacja jak w kolejce. Nowy rekord
-    // dostaje flagi z record.flags (INBOX_NOTIFY zapisane razem z wiadomością). Przy pełnej skrzynce
-    // odpada najstarsza przeczytana, potem najstarsza bez zaległego zdarzenia, na końcu najstarsza.
-    Put inboxPut(InboxRecord& record);
-    bool inboxRead(uint32_t seq, InboxRecord& record);
-    bool inboxMarkRead(uint32_t seq);
-    bool inboxSetFlags(uint32_t seq, uint8_t flags);
-    size_t inboxCount() const;
-    size_t inboxUnread() const;
-    const InboxEntry* inboxEntry(size_t slot) const { return inbox_[slot].seq ? &inbox_[slot] : nullptr; }
-    const InboxEntry* inboxFind(const uint8_t source[HASH], uint8_t type, const uint8_t id[HASH], uint16_t revision, uint32_t event) const;
+    // Rejestr.
+    const RequestIndex& request(size_t slot) const { return register_[slot]; }
+    bool readRequest(size_t slot, Request& out);
+    int findRequest(const uint8_t id[HASH]);           // gniazdo albo -1
+    int freeRequestSlot() const;
+    int closedRequest() const;                          // wpis zamknięty o najdawniejszej zmianie albo -1
+    bool requestClosed(size_t slot) const;
+    bool numberTaken(uint16_t number, const uint8_t id[HASH]);   // inne id w rejestrze albo zwolnionych
+    size_t requestCount() const;
+    size_t activeIntents() const;                       // SAVED, SENDING, DELIVERED
+    size_t unsent(uint32_t& oldestS) const;             // SAVED, SENDING; COMMIT najstarszego
 
-    // Zdarzenia do laptopa: dopisanie, odczyt, potwierdzenie do kursora, pierwsze niepotwierdzone po kursorze.
-    // Przy 128 niepotwierdzonych notePut odmawia (false): zdarzenie bez ack nigdy nie jest nadpisywane.
-    bool notePut(NoteRecord& record);
-    bool noteRead(uint32_t seq, NoteRecord& record);
-    bool noteAck(uint32_t seq);
-    bool noteAckUpTo(uint32_t cursor);
-    uint32_t noteLatest() const { return noteSeq_; }
-    size_t notesPending() const;
-    uint32_t notePendingAfter(uint32_t cursor) const;  // 0, gdy brak
+    // Skrzynka.
+    const MessageIndex& message(size_t slot) const { return inbox_[slot]; }
+    bool readMessage(size_t slot, Message& out);
+    int findMessage(uint32_t number) const;
+    int freeMessageSlot() const;
+    size_t messageCount() const;
+    size_t unread() const;
 
-    // Najwyższy event na id (również po usunięciu treści).
-    bool seenGet(const uint8_t id[HASH], uint16_t revision, uint32_t& event, uint8_t& state);
-    bool seenPut(const uint8_t id[HASH], uint16_t revision, uint32_t event, uint8_t state);
+    // Pamięć zwolnionych wpisów (indeks pierścienia 0..255).
+    bool releasedFind(const uint8_t id[HASH], Released& out);
+    bool releasedAt(size_t index, Released& out);
+    bool releasedUsed(size_t index) const { return releasedEv_[index] != 0; }
+    size_t releasedNext() const { return releasedNext_; }
 
-    bool close();    // ZAMKNIJ ZDARZENIE: usuwa kolejkę, skrzynkę i zdarzenia; klucze odbioru zostają
-    bool destroy();  // ZNISZCZ DANE: usuwa wszystko łącznie z konfiguracją i pamięcią event
+    // Zbiór powtórzeń BULLETIN aktywnej tożsamości odbiorcy.
+    bool bulletinSeen(const uint8_t id[HASH], uint32_t event);
+
+    // Pierścień zdarzeń.
+    uint32_t head() const { return head_; }
+    uint32_t minEvent() const { return head_ >= RING_ENTRIES ? head_ - RING_ENTRIES + 1 : 1; }
+    bool readEvent(uint32_t ev, Event& out);
+    // Po zdarzeniu head nie ma zdarzeń zmieniających dane (warunek `close`).
+    bool quietSince(uint32_t head);
+
+    // ZAMKNIJ ZDARZENIE: nowa epoka w jednej transakcji; dane starej epoki nadpisuje maintain().
+    bool close();
+    // Nadpisanie gniazd starej epoki (jedna transakcja na wywołanie); false, gdy nic nie zostało.
+    bool maintain();
+    // ZNISZCZ DANE: znacznik w dzienniku, skasowanie TX_BASE..FRAM_END i dziennika (bez długu ciszy
+    // i rezerwacji numerów zapisu), nowy pusty magazyn bez tożsamości stacji.
+    bool destroy();
+    // Znacznik zapisanej tożsamości stacji w rekordzie formatu (rns_node).
+    bool identitySaved() const;
+    bool setIdentitySaved();
 
 private:
-    bool erase(uint32_t base, size_t count, size_t size);
-    bool readRecord(uint32_t address, uint8_t* buffer, size_t immutable, size_t span);
-    void fillQueueEntry(QueueEntry& e, const uint8_t* buffer);
-    static void encodeQueueState(uint8_t* state, const QueueRecord& record, uint8_t gen);
-    bool writeCounters();
-    bool writeImmutable(uint32_t address, uint8_t* buffer, size_t immutable);
-    bool invalidate(uint32_t address, size_t immutable);
-    bool writeState(uint32_t address, uint32_t seq, uint8_t* state, size_t stateSize);
-    int freeSlot(const uint32_t* seqs, const uint8_t* live, size_t slots) const;
+    friend class Tx;
+    bool readSlot(uint32_t address, Kind kind, uint16_t slot, uint8_t* body, size_t& length, SlotState& state, uint16_t& gen);
+    void encode(Kind kind, uint16_t slot, uint64_t writeNo, const uint8_t* body, size_t length, uint8_t out[SLOT]) const;
+    bool allocate(uint64_t& out);
+    SlotState decode(const uint8_t record[SLOT], Kind kind, uint16_t slot, uint8_t* body, size_t& length, uint16_t& gen) const;
+    bool applyTx(uint32_t area, bool absorbRecords, bool& found);
+    bool recover();
+    bool loadConfig();
+    bool scan();
+    bool format(uint32_t flags);
+    void absorb(Kind kind, uint16_t slot, const uint8_t* body, size_t length, SlotState state, uint16_t gen);
+    void staleAll();
+    bool readBlock(Kind kind, uint16_t block, uint8_t body[BODY_MAX]);
+    bool copyCrc(uint32_t base, uint32_t& crc);
+    bool hashCopy(int8_t copy, uint32_t size, uint8_t out[32]);
+    bool commitTx(Tx& tx);
 
-    journal::Storage& storage_;
+    journal::Storage& memory_;
+    journal::Journal& journal_;
+    void (*random_)(uint8_t*, size_t);
+    const char* profile_;
     bool ok_ = false;
-    Config config_;
+    uint32_t nowS_ = 0;
+    Diagnostics diag_;
+    config::Config config_;
+    uint32_t configSize_ = 0;
+    uint8_t configSha_[32] = {};
+    int8_t configNext_ = -1;           // kopia w zapisie (configBegin)
     uint8_t selected_ = 0;
-    QueueEntry queue_[QUEUE_SLOTS];
-    uint32_t queueSeq_ = 0;
-    InboxEntry inbox_[INBOX_SLOTS];
-    uint32_t inboxSeq_ = 0;
-    NoteEntry notes_[NOTE_SLOTS];
-    uint32_t noteSeq_ = 0;
-    uint32_t seenSeq_ = 0;
-    uint32_t countersSeq_ = 0;
+    Meta meta_;
+    RequestIndex register_[REGISTER_SLOTS];
+    MessageIndex inbox_[INBOX_SLOTS];
+    uint32_t releasedPrefix_[RELEASED_ENTRIES] = {};
+    uint32_t releasedEv_[RELEASED_ENTRIES] = {};
+    uint16_t releasedNumber_[RELEASED_ENTRIES] = {};   // krótki numer, bit 15: anulowany
+    SlotState releasedState_[RELEASED_BLOCKS] = {};
+    size_t releasedNext_ = 0;
+    uint32_t bulletinPrefix_[BULLETIN_ENTRIES] = {};
+    uint32_t bulletinEvent_[BULLETIN_ENTRIES] = {};    // 0 = wpis pusty
+    uint8_t bulletinSource_[BULLETIN_ENTRIES] = {};    // tożsamość odbiorcy wpisu
+    SlotState bulletinState_[BULLETIN_BLOCKS] = {};
+    SlotState ringState_[RING_BLOCKS] = {};
+    uint32_t head_ = 0;
+    uint64_t nextWrite_ = 0;
+    uint64_t reservedUpper_ = 0;
+    uint8_t txArea_ = 0;               // rekord transakcji następnej transakcji
 };
 
-// Pomocnicze: skrót szesnastkowy 32 znaków <-> 16 bajtów; krótki numer = pierwsze 16 bitów id modulo 10 000.
-bool hexToBytes(const char* hex, uint8_t out[HASH]);
-void bytesToHex(const uint8_t in[HASH], char out[2 * HASH + 1]);
+// Krótki numer = pierwsze 16 bitów id modulo 10 000; przedrostek = pierwsze 4 B id.
 uint16_t shortNumber(const uint8_t id[HASH]);
+uint32_t idPrefix(const uint8_t id[HASH]);
+uint16_t prefixNumber(uint32_t prefix);   // krótki numer z przedrostka
 
 }  // namespace store

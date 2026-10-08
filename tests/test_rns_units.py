@@ -182,8 +182,6 @@ int keyScenario() {
     ram.bytes[framfs::IDENTITY_BASE + framfs::IDENTITY_SLOT + 20] ^= 0x40;
     loaded = framfs::loadKey(ram, out);
     printf("fallback %d %02x\n", loaded, out[0]);
-    const int wiped = framfs::wipeKey(ram);
-    printf("wipe %d %d\n", wiped, framfs::loadKey(ram, out));
     return 0;
 }
 
@@ -217,6 +215,44 @@ int hashScenario() {
     return 0;
 }
 
+// Pakiet Reticulum (nagłówek typu 1): bajt 0, skoki, cel 16 B, kontekst, dane (cel zapytania o trasę).
+const uint8_t* pkt(uint8_t flags, uint8_t hops, const uint8_t* dest, size_t length, uint8_t context = 0,
+                   const uint8_t* target = nullptr) {
+    static uint8_t raw[600];
+    memset(raw, 0, sizeof(raw));
+    raw[0] = flags;
+    raw[1] = hops;
+    if (dest) memcpy(raw + 2, dest, 16);
+    raw[18] = context;
+    if (target) memcpy(raw + 19, target, 16);
+    (void)length;
+    return raw;
+}
+
+// Pakiet od stosu: w eterze raw + 16 B IFAC, pierwszy bajt w eterze = mark (rozpoznanie w kolejce).
+p1iface::Admit put(p1iface::Queue& q, uint8_t flags, uint8_t hops, const uint8_t* dest, size_t length, uint32_t nowMs,
+                   uint8_t mark, p1iface::Hint hint = p1iface::Hint::NONE, uint8_t context = 0, const uint8_t* target = nullptr) {
+    static uint8_t wire[700];
+    memset(wire, 0, sizeof(wire));
+    wire[0] = mark;
+    return q.offer(pkt(flags, hops, dest, length, context, target), length, wire, length + p1iface::IFAC_SIZE, nowMs, hint);
+}
+
+void drain(p1iface::Queue& q) {
+    const uint8_t* d;
+    size_t n;
+    while (q.start(d, n)) q.finish(true);
+}
+
+std::string order(p1iface::Queue& q) {
+    std::string s;
+    const uint8_t* d;
+    size_t n;
+    char b[4];
+    while (q.start(d, n)) { snprintf(b, sizeof(b), "%02x ", d[0]); s += b; q.finish(true); }
+    return s;
+}
+
 const char* kindName(p1iface::Kind k) {
     return k == p1iface::Kind::CONTROL ? "control" : k == p1iface::Kind::DATA ? "data" : "announce";
 }
@@ -238,10 +274,9 @@ int ifaceScenario() {
     printf(" pr %d %d %d %d\n", pathResponse(r1, 40), pathResponse(r2, 40), pathResponse(h1, 40), pathResponse(r2, 34));
 
     Queue q;
-    uint8_t w[600];
     const uint8_t d1[16] = {1}, d2[16] = {2}, d3[16] = {3}, d4[16] = {4}, d5[16] = {5}, d6[16] = {6}, d7[16] = {7};
-    // 4 miejsca, piąty odrzucony z licznikiem.
-    for (int i = 0; i < 5; ++i) { w[0] = (uint8_t)(0x10 + i); printf("offer%d %s\n", i, admitName(q.offer(Kind::DATA, 0, d1, w, 100, 0))); }
+    // 4 miejsca, piąty odrzucony z licznikiem (84 B + IFAC = 100 B w eterze).
+    for (int i = 0; i < 5; ++i) printf("offer%d %s\n", i, admitName(put(q, 0x00, 0, d1, 84, 0, (uint8_t)(0x10 + i))));
     printf("counters queued %u full %u waitMs %u\n", q.counters().queued, q.counters().full, q.waitMs(1000));
     const uint8_t* p; size_t n;
     q.start(p, n);
@@ -251,56 +286,60 @@ int ifaceScenario() {
     printf("first %02x len %u busy %d second %d\n", first, firstLength, busy, q.start(p, n));
     // W trakcie nadawania wchodzi dowód (wyższa klasa): kończy się nadawany, nie dowód.
     q.finish(true);
-    w[0] = 0xC0;
-    printf("proof %s\n", admitName(q.offer(Kind::CONTROL, 0, d1, w, 50, 0)));
+    printf("proof %s\n", admitName(put(q, 0x03, 0, d1, 34, 0, 0xC0)));
     q.start(p, n);
     printf("next %02x\n", p[0]);
-    w[0] = 0xD0;
     q.finish(true);
     q.start(p, n);
-    w[0] = 0xE0;
-    printf("during %s\n", admitName(q.offer(Kind::CONTROL, 0, d1, w, 50, 0)));
+    printf("during %s\n", admitName(put(q, 0x03, 0, d1, 34, 0, 0xE0)));
     const uint8_t sending = p[0];
     q.finish(true);
     q.start(p, n);
     printf("kept %02x then %02x\n", sending, p[0]);
     q.finish(false);
     printf("failed %u sent %u left %u\n", q.counters().sendFailed, q.counters().sent, (unsigned)q.queued());
-    while (q.start(p, n)) q.finish(true);
+    drain(q);
 
-    // Limit ogłoszeń: własne (hops 0) bez limitu, przekazywane 2% przepływności deklarowanej.
+    // Limit ogłoszeń 2% czasu zegarowego z czasu TX: własne i przekazywane (202 B + IFAC = 218 B).
     Queue a;
-    w[0] = 0x01;
-    const char* own1 = admitName(a.offer(Kind::ANNOUNCE, 0, d1, w, 200, 1000));
-    printf("own %s %s\n", own1, admitName(a.offer(Kind::ANNOUNCE, 0, d1, w, 200, 1001)));
-    printf("fwd %s\n", admitName(a.offer(Kind::ANNOUNCE, 1, d2, w, 202, 1000)));
+    const char* own1 = admitName(put(a, 0x01, 0, d1, 202, 1000, 0xA1));
+    printf("own %s %s\n", own1, admitName(put(a, 0x01, 0, d1, 202, 1001, 0xA2)));
     const uint32_t gap = a.announceAllowedInMs(1000);
-    printf("gap %u expected %u\n", gap, (unsigned)(202ULL * 8 * 1000 * 100 / ANNOUNCE_CAP_PERCENT / declaredBitrate()));
-    const char* held1 = admitName(a.offer(Kind::ANNOUNCE, 2, d3, w, 202, 1100));
-    const char* held2 = admitName(a.offer(Kind::ANNOUNCE, 1, d3, w, 202, 1200));
-    const char* held3 = admitName(a.offer(Kind::ANNOUNCE, 1, d4, w, 202, 1300));
-    printf("held %s %s %s %s\n", held1, held2, held3, admitName(a.offer(Kind::ANNOUNCE, 3, d5, w, 202, 1400)));
-    printf("fourth %s\n", admitName(a.offer(Kind::ANNOUNCE, 1, d6, w, 202, 1500)));
-    const char* dropped = admitName(a.offer(Kind::ANNOUNCE, 1, d7, w, 202, 1600));
-    printf("drop %s held %u dropped %u\n", dropped, (unsigned)a.held(), a.counters().announcesDropped);
-    while (a.start(p, n)) a.finish(true);
+    printf("gap %u expected %u\n", gap, reservedTxMs(218) * 100 / ANNOUNCE_CAP_PERCENT);
+    // Oczekujące: jedno na cel (nowsze zastępuje), 4 miejsca; przy pełnej liście ogłoszenie
+    // z mniejszą liczbą skoków zastępuje to z największą, inne odpada.
+    const char* held1 = admitName(put(a, 0x01, 2, d3, 202, 1100, 0xA3));
+    const char* held2 = admitName(put(a, 0x01, 1, d3, 202, 1200, 0xA4));
+    const char* held3 = admitName(put(a, 0x01, 1, d4, 202, 1300, 0xA5));
+    const char* held4 = admitName(put(a, 0x01, 3, d5, 202, 1400, 0xA6));
+    printf("held %s %s %s held %u\n", held1, held2, held3, (unsigned)a.held());
+    printf("fourth %s\n", held4);
+    const char* dropped = admitName(put(a, 0x01, 3, d6, 202, 1500, 0xA7));
+    const char* better = admitName(put(a, 0x01, 1, d7, 202, 1600, 0xA8));
+    printf("drop %s better %s held %u dropped %u\n", dropped, better, (unsigned)a.held(), a.counters().announcesDropped);
+    // Odpowiedź na zapytanie o trasę (K0): poza limitem ogłoszeń.
+    const char* response = admitName(put(a, 0x01, 4, d2, 202, 1700, 0xB0, Hint::NONE, 0x0B));
+    printf("path response %s lane %s\n", response, laneName(a.lane(pkt(0x01, 4, d2, 202, 0x0B), 202)));
+    drain(a);
     a.poll(1000 + gap - 1);
     printf("early %u\n", (unsigned)a.queued());
     a.poll(1000 + gap);
-    printf("released %u held %u\n", (unsigned)a.queued(), (unsigned)a.held());
+    a.start(p, n);
+    printf("released %u held %u first %02x\n", (unsigned)a.queued(), (unsigned)a.held(), p[0]);   // najmniej skoków najpierw
+    a.finish(true);
     a.poll(1000 + gap + 1);
     printf("one per gap %u\n", (unsigned)a.queued());
     a.poll(1000 + gap + HELD_LIFE_MS + 1);
     printf("expired %u held %u\n", a.counters().announcesExpired, (unsigned)a.held());
-    printf("too large %s\n", admitName(a.offer(Kind::DATA, 0, d1, w, MAX_WIRE + 1, 0)));
-    // Ponad 2^31 ms bez przekazanego ogłoszenia: limit nie może się znów zamknąć przez zmianę znaku.
-    while (a.start(p, n)) a.finish(true);
+    printf("too large %s\n", admitName(put(a, 0x00, 0, d1, MAX_WIRE + 1 - IFAC_SIZE, 0, 0)));
+    // Ponad 2^31 ms bez ogłoszenia: limit nie może się znów zamknąć przez zmianę znaku.
+    drain(a);
     const uint32_t t = 2000000000u;
-    a.offer(Kind::ANNOUNCE, 1, d1, w, 202, t);
-    while (a.start(p, n)) a.finish(true);
+    put(a, 0x01, 1, d1, 202, t, 0xA9);
+    drain(a);
     const uint32_t open = t + a.announceAllowedInMs(t);
     a.poll(open);
-    const char* idle = admitName(a.offer(Kind::ANNOUNCE, 1, d2, w, 202, open + 0x80000000u + 1));
+    const char* idle = admitName(put(a, 0x01, 1, d2, 202, open + 0x80000000u + 1, 0xAA));
     printf("idle %s wait %u\n", idle, a.announceAllowedInMs(open + 0x80000000u + 1) > 0);
     return 0;
 }
@@ -345,65 +384,145 @@ int announceScenario() {
     return 0;
 }
 
-// Rezerwa dla OSP: dane przekazywane poza OSP najwyżej 50% czasu kanału w oknie 1 h.
-int reserveScenario() {
+// Dostęp do kanału (radio.md, punkt 6): klasy K0/K1/K2, pula 60%, 25% na cel, zapytania o trasę,
+// kolejność nadawania, okno przesuwne 3600 s.
+int channelScenario() {
     using namespace p1iface;
-    uint8_t osp[16], other[16], w[600] = {};
-    memset(osp, 0x11, 16);
+    uint8_t rx[16], other[16], third[16];
+    memset(rx, 0x11, 16);
     memset(other, 0x22, 16);
+    memset(third, 0x33, 16);
     const uint32_t t0 = 3600000;
-    auto drain = [](Queue& q) { const uint8_t* d; size_t n; while (q.start(d, n)) q.finish(true); };
-    Queue q;
-    printf("unpinned %s\n", admitName(q.offer(Kind::DATA, 1, other, w, 516, t0)));
-    drain(q);
-    q.setOsp(osp);
-    // Ostatnie wolne miejsce zostaje dla OSP.
-    const char* a1 = admitName(q.offer(Kind::DATA, 1, other, w, 516, t0));
-    const char* a2 = admitName(q.offer(Kind::DATA, 1, other, w, 516, t0));
-    const char* a3 = admitName(q.offer(Kind::DATA, 1, other, w, 516, t0));
-    const char* a4 = admitName(q.offer(Kind::DATA, 1, other, w, 516, t0));
-    const char* a5 = admitName(q.offer(Kind::DATA, 1, osp, w, 516, t0));
-    printf("slots %s %s %s %s osp %s\n", a1, a2, a3, a4, a5);
-    drain(q);
-    // Wyczerpanie budżetu: 3 datagramy już policzone, potem do odmowy.
-    unsigned admitted = 3;
-    while (q.offer(Kind::DATA, 1, other, w, 516, t0) == Admit::QUEUED) { ++admitted; drain(q); }
-    printf("budget %u used %u reserved %u\n", admitted, q.otherUsedMs(t0), q.counters().reserved);
-    // Każde offer() osobno: kolejność obliczania argumentów printf nie jest określona (GCC od prawej).
-    const char* own = admitName(q.offer(Kind::DATA, 0, other, w, 516, t0));
-    const char* proof = admitName(q.offer(Kind::CONTROL, 1, other, w, 50, t0));
-    const char* toOsp = admitName(q.offer(Kind::DATA, 1, osp, w, 516, t0));
-    printf("exempt own %s proof %s osp %s\n", own, proof, toOsp);
-    drain(q);
-    const char* at59 = admitName(q.offer(Kind::DATA, 1, other, w, 516, t0 + 59 * 60000));
-    const char* at60 = admitName(q.offer(Kind::DATA, 1, other, w, 516, t0 + 60 * 60000));
-    printf("later %s %s\n", at59, at60);
-    return 0;
-}
+    // Klasy.
+    Queue c;
+    c.setReceiver(rx);
+    uint8_t h2[60] = {0x40, 3};   // nagłówek typu 2: identyfikator transportu, potem cel
+    memcpy(h2 + 18, rx, 16);
+    std::string lanes;
+    lanes += std::string(laneName(c.lane(pkt(0x00, 0, other, 100), 100))) + " ";                  // własne dane
+    lanes += std::string(laneName(c.lane(pkt(0x00, 2, other, 100), 100))) + " ";                  // przekazywane obce
+    lanes += std::string(laneName(c.lane(pkt(0x00, 2, rx, 100), 100))) + " ";                     // do odbiorcy
+    lanes += std::string(laneName(c.lane(h2, 60))) + " ";                                         // do odbiorcy, nagłówek 2
+    lanes += std::string(laneName(c.lane(pkt(0x00, 2, other, 100), 100, Hint::RECEIVER))) + " ";  // węzeł: USB
+    lanes += std::string(laneName(c.lane(pkt(0x00, 2, other, 100), 100, Hint::OWN))) + " ";
+    lanes += std::string(laneName(c.lane(pkt(0x03, 3, other, 34), 34))) + " ";                     // dowód przekazywany
+    lanes += std::string(laneName(c.lane(pkt(0x08, 0, other, 67), 67))) + " ";                     // zapytanie o trasę
+    lanes += std::string(laneName(c.lane(pkt(0x01, 0, rx, 150, 0x0B), 150))) + " ";               // odpowiedź na nie
+    lanes += std::string(laneName(c.lane(pkt(0x01, 0, rx, 150), 150)));                            // ogłoszenie własne
+    printf("lanes %s\n", lanes.c_str());
+    c.setReceiver(nullptr);
+    printf("unset %s\n", laneName(c.lane(pkt(0x00, 2, rx, 100), 100)));
 
-// Węzeł OSP: rezerwa bez przypiętego celu, ruch OSP wskazuje stos (pakiet z USB albo do celu komputera).
-int nodeReserveScenario() {
-    using namespace p1iface;
-    uint8_t other[16], w[600] = {};
-    memset(other, 0x22, 16);
-    const uint32_t t0 = 3600000;
-    auto drain = [](Queue& q) { const uint8_t* d; size_t n; while (q.start(d, n)) q.finish(true); };
+    // Ostatnie wolne miejsce nie dla K2.
+    Queue s;
+    s.setReceiver(rx);
+    for (int i = 0; i < 3; ++i) put(s, 0x00, 0, other, 500, t0, 0x01);
+    const char* k2 = admitName(put(s, 0x00, 1, other, 500, t0, 0x02));
+    const char* k1 = admitName(put(s, 0x00, 1, rx, 500, t0, 0x03));
+    printf("last slot %s %s slot %u\n", k2, k1, s.counters().k2Slot);
+
+    // Pula 60%: K2 (różne cele) do wyczerpania, potem K0, K1, dowód dalej; ogłoszenie czeka.
     Queue q;
-    q.setNodeReserve(true);
-    const char* a1 = admitName(q.offer(Kind::DATA, 1, other, w, 516, t0));
-    const char* a2 = admitName(q.offer(Kind::DATA, 1, other, w, 516, t0));
-    const char* a3 = admitName(q.offer(Kind::DATA, 1, other, w, 516, t0));
-    const char* a4 = admitName(q.offer(Kind::DATA, 1, other, w, 516, t0));
-    const char* a5 = admitName(q.offer(Kind::DATA, 1, other, w, 516, t0, true));
-    printf("node slots %s %s %s %s osp %s\n", a1, a2, a3, a4, a5);
+    q.setReceiver(rx);
+    unsigned admitted = 0;
+    uint8_t d[16] = {};
+    for (;;) {
+        d[0] = (uint8_t)admitted;
+        d[1] = (uint8_t)(admitted >> 8);
+        if (put(q, 0x00, 1, d, 500, t0, 0x20) != Admit::QUEUED) break;
+        ++admitted;
+        drain(q);
+    }
+    printf("pool %u used %u k2_pool %u\n", admitted, q.poolUsedMs(t0), q.counters().k2Pool);
+    const char* own = admitName(put(q, 0x00, 0, other, 500, t0, 0x30));
+    const char* toRx = admitName(put(q, 0x00, 1, rx, 500, t0, 0x31));
+    const char* proof = admitName(put(q, 0x03, 1, other, 34, t0, 0x32));
+    printf("exempt own %s k1 %s proof %s\n", own, toRx, proof);
     drain(q);
-    unsigned admitted = 3;
-    while (q.offer(Kind::DATA, 1, other, w, 516, t0) == Admit::QUEUED) { ++admitted; drain(q); }
-    const char* flagged = admitName(q.offer(Kind::DATA, 1, other, w, 516, t0, true));
-    printf("node budget %u flagged %s\n", admitted, flagged);
+    const char* ann = admitName(put(q, 0x01, 1, other, 150, t0, 0x33));
+    q.poll(t0 + 59 * 60000);
+    const unsigned at59 = (unsigned)q.queued();
+    const char* k2at59 = admitName(put(q, 0x00, 1, other, 500, t0 + 59 * 60000, 0x34));
+    // Okno przesuwne: przedział z t0 wypada po 60 min.
+    q.poll(t0 + 60 * 60000);
+    const unsigned at60 = (unsigned)q.queued();
+    printf("announce %s at59 %u %s at60 %u used %u\n", ann, at59, k2at59, at60, q.poolUsedMs(t0 + 60 * 60000));
     drain(q);
-    q.setNodeReserve(false);
-    printf("station %s\n", admitName(q.offer(Kind::DATA, 1, other, w, 516, t0)));
+
+    // Ogłoszenia liczą się do puli.
+    Queue an;
+    put(an, 0x01, 0, rx, 150, t0, 0x40);
+    printf("announce pool %u expected %u\n", an.poolUsedMs(t0), channelMs(166));
+
+    // 25% na cel w K2 tylko przy czekającym K0 lub K1.
+    Queue g;
+    g.setReceiver(rx);
+    unsigned one = 0;
+    for (; one < 80; ++one) {
+        if (put(g, 0x00, 1, other, 500, t0, 0x50) != Admit::QUEUED) break;
+        drain(g);
+    }
+    const uint32_t destUsed = g.destUsedMs(other, t0);
+    put(g, 0x00, 0, rx, 500, t0, 0x51);               // K0 czeka
+    const char* busyDest = admitName(put(g, 0x00, 1, other, 500, t0, 0x52));
+    const char* busyOther = admitName(put(g, 0x00, 1, third, 500, t0, 0x53));   // inny cel K2
+    printf("dest free %u used %u contended %s other %s k2_dest %u\n", one, destUsed, busyDest, busyOther, g.counters().k2Dest);
+    drain(g);
+    put(g, 0x00, 0, rx, 500, t0, 0x54);
+    const uint8_t* p;
+    size_t n;
+    g.start(p, n);                                    // K0 w nadawaniu, nie czeka
+    const char* sending = admitName(put(g, 0x00, 1, other, 500, t0, 0x55));
+    printf("k0 sending %s\n", sending);
+    g.finish(true);
+    drain(g);
+    put(g, 0x00, 1, rx, 500, t0, 0x56);               // K1 czeka
+    const char* k1wait = admitName(put(g, 0x00, 1, other, 500, t0, 0x57));
+    printf("k1 waiting %s\n", k1wait);
+    drain(g);
+
+    // Przekazywane zapytania o trasę: 1 na cel na 60 s, łącznie 5%; własne bez limitu.
+    Queue r;
+    uint8_t target[16], target2[16];
+    memset(target, 0x77, 16);
+    memset(target2, 0x78, 16);
+    const char* r1 = admitName(put(r, 0x08, 0, other, 67, t0, 0x60, Hint::NONE, 0, target));
+    drain(r);
+    const char* r2 = admitName(put(r, 0x08, 0, other, 67, t0 + 59999, 0x61, Hint::NONE, 0, target));
+    const char* r3 = admitName(put(r, 0x08, 0, other, 67, t0 + 1000, 0x62, Hint::NONE, 0, target2));
+    const char* r4 = admitName(put(r, 0x08, 0, other, 67, t0 + 1000, 0x63, Hint::OWN, 0, target));
+    const char* r5 = admitName(put(r, 0x08, 0, other, 67, t0 + 1000, 0x64, Hint::RECEIVER, 0, target));
+    drain(r);
+    const char* r6 = admitName(put(r, 0x08, 0, other, 67, t0 + 60000, 0x65, Hint::NONE, 0, target));
+    drain(r);
+    printf("path requests %s %s %s own %s receiver %s after %s limited %u used %u\n", r1, r2, r3, r4, r5, r6,
+           r.counters().pathRequestLimited, r.pathRequestUsedMs(t0 + 60000));
+    Queue r5q;
+    unsigned requests = 0;
+    for (;;) {
+        uint8_t tg[16] = {};
+        tg[0] = (uint8_t)requests;
+        tg[1] = (uint8_t)(requests >> 8);
+        if (put(r5q, 0x08, 0, other, 67, t0, 0x66, Hint::NONE, 0, tg) != Admit::QUEUED) break;
+        ++requests;
+        drain(r5q);
+    }
+    const char* ownOver = admitName(put(r5q, 0x08, 0, other, 67, t0, 0x67, Hint::OWN, 0, target));
+    printf("path request share %u used %u own %s\n", requests, r5q.pathRequestUsedMs(t0), ownOver);
+
+    // Kolejność: dowody i zapytania o trasę, potem K0 i K1 (od najstarszego), potem K2, na końcu ogłoszenia.
+    Queue o;
+    o.setReceiver(rx);
+    put(o, 0x01, 1, other, 150, t0, 0xA0);   // ogłoszenie
+    put(o, 0x00, 1, other, 100, t0, 0x20);   // K2
+    put(o, 0x00, 1, rx, 100, t0, 0x10);      // K1
+    put(o, 0x03, 1, other, 34, t0, 0x01);    // dowód
+    const std::string first = order(o);
+    put(o, 0x00, 1, rx, 100, t0, 0x11);      // K1
+    put(o, 0x00, 0, other, 100, t0, 0x12);   // K0
+    put(o, 0x08, 0, other, 67, t0, 0x02, Hint::OWN, 0, target);   // zapytanie o trasę
+    put(o, 0x01, 1, rx, 150, t0, 0x03, Hint::NONE, 0x0B);          // odpowiedź na zapytanie
+    printf("order %s| %s\n", first.c_str(), order(o).c_str());
     return 0;
 }
 
@@ -496,8 +615,7 @@ int kissScenario() {
 
 int main(int argc, char** argv) {
     const std::string mode = argc > 1 ? argv[1] : "";
-    if (mode == "reserve") return reserveScenario();
-    if (mode == "node") return nodeReserveScenario();
+    if (mode == "channel") return channelScenario();
     if (mode == "kiss") return kissScenario();
     if (mode == "announce") return announceScenario();
     if (mode == "fs") return fsScenario();
@@ -582,7 +700,7 @@ class StackUnitTests(unittest.TestCase):
 
     def test_identity_record_two_slots(self):
         self.assertEqual(self.run_harness("key"),
-                         ["empty 0", "save 1", "load 1 1", "newer 1 aa", "fallback 1 00", "wipe 1 0"])
+                         ["empty 0", "save 1", "load 1 1", "newer 1 aa", "fallback 1 00"])
 
     def test_packet_hash_list_eight_bytes(self):
         out = self.run_harness("hash")
@@ -594,18 +712,29 @@ class StackUnitTests(unittest.TestCase):
         self.assertEqual(out[5], "short 1 1 1")
         self.assertLessEqual(int(out[6].split()[1]), 32 * 1024 + 64)   # 4096 x 8 B i liczniki
 
-    def test_p1_interface_osp_reserve(self):
-        out = self.run_harness("reserve")
-        self.assertEqual(out[0], "unpinned queued")
-        self.assertEqual(out[1], "slots queued queued queued osp_reserve osp queued")
-        # 516 B (MTU z IFAC): 6 pełnych ramek po 195 ms TX i 12 x tyle długu = 15 210 ms czasu kanału;
-        # 50% z 1 h = 1 800 000 ms.
+    def test_p1_interface_channel_access(self):
+        out = self.run_harness("channel")
+        self.assertEqual(out[0], "lanes k0 k2 k1 k1 k1 k0 control control control announce")
+        self.assertEqual(out[1], "unset k2")
+        self.assertEqual(out[2], "last slot k2_slot queued slot 1")
+        # 500 B + IFAC = 516 B: 6 ramek po 195 ms TX, czas kanału 13t = 15 210 ms; 60% z 1 h = 2 160 000 ms.
         cost = 6 * 195 * 13
-        n = 1800000 // cost
-        self.assertEqual(out[2], f"budget {n} used {n * cost} reserved 2")
-        self.assertEqual(out[3], "exempt own queued proof queued osp queued")
-        # Okno przesuwne: po 59 min wciąż pełne, po 60 min przedział z t0 wypada.
-        self.assertEqual(out[4], "later osp_reserve queued")
+        n = 2160000 // cost
+        self.assertEqual(out[3], f"pool {n} used {n * cost} k2_pool 1")
+        self.assertEqual(out[4], "exempt own queued k1 queued proof queued")
+        # Ogłoszenie ponad pulę czeka; po 60 min przedział z t0 wypada i ogłoszenie (166 B: 2 ramki) wychodzi.
+        self.assertEqual(out[5], f"announce held at59 0 k2_pool at60 1 used {2 * 195 * 13}")
+        self.assertEqual(out[6], f"announce pool {2 * 195 * 13} expected {2 * 195 * 13}")
+        # Jeden cel bez rywalizacji ponad 25% (900 000 ms); przy czekającym K0 albo K1 odmowa.
+        self.assertEqual(out[7], f"dest free 80 used {80 * cost} contended k2_dest other queued k2_dest 1")
+        self.assertEqual(out[8], "k0 sending queued")   # K0 w nadawaniu już nie czeka
+        self.assertEqual(out[9], "k1 waiting k2_dest")
+        # 67 B + IFAC = 83 B: jedna ramka, 2 535 ms czasu kanału; 5% z 1 h = 180 000 ms.
+        pr = 195 * 13
+        self.assertEqual(out[10], f"path requests queued path_request_limit queued own queued receiver queued after queued "
+                                  f"limited 1 used {3 * pr}")
+        self.assertEqual(out[11], f"path request share {180000 // pr} used {180000 // pr * pr} own queued")
+        self.assertEqual(out[12], "order 01 10 20 a0 | 02 03 11 12 ")
 
     def test_p1_interface_queue_priorities_and_announce_limit(self):
         out = self.run_harness("iface")
@@ -623,18 +752,17 @@ class StackUnitTests(unittest.TestCase):
         self.assertEqual(out[12], "during queued")
         self.assertEqual(out[13], "kept 11 then e0")
         self.assertEqual(out[14], "failed 1 sent 3 left 2")
-        self.assertEqual(out[15], "own queued queued")
-        self.assertEqual(out[16], "fwd queued")
-        gap = int(out[17].split()[1])
-        self.assertEqual(out[17], f"gap {gap} expected {gap}")
-        self.assertGreater(gap, 290000)   # 202 B przy 271 bit/s i 2%: ok. 5 min
-        # Oczekujące: jedno na cel (nowsze zastępuje), 4 miejsca, piąty cel odpada z licznikiem.
-        self.assertEqual(out[18], "held held held held held")
-        self.assertEqual(out[19], "fourth held")
-        self.assertEqual(out[20], "drop announce_limit held 4 dropped 1")
+        # Ogłoszenia własne też w limicie 2%: odstęp = czas TX (218 B: 3 ramki po 195 ms) x 50.
+        self.assertEqual(out[15], "own queued held")
+        self.assertEqual(out[16], f"gap {3 * 195 * 50} expected {3 * 195 * 50}")
+        # Oczekujące: jedno na cel (nowsze zastępuje), 4 miejsca; pełna lista: mniej skoków wypiera najwięcej.
+        self.assertEqual(out[17], "held held held held held 4")
+        self.assertEqual(out[18], "fourth held")
+        self.assertEqual(out[19], "drop announce_limit better held held 4 dropped 2")
+        self.assertEqual(out[20], "path response queued lane control")
         self.assertEqual(out[21], "early 0")
-        self.assertEqual(out[22], "released 1 held 3")   # najmniej skoków najpierw
-        self.assertEqual(out[23], "one per gap 1")
+        self.assertEqual(out[22], "released 1 held 3 first a2")   # najmniej skoków najpierw, nowsze tego samego celu
+        self.assertEqual(out[23], "one per gap 0")
         self.assertEqual(out[24], "expired 3 held 0")
         self.assertEqual(out[25], "too large too_large")
         self.assertEqual(out[26], "idle queued wait 1")   # po 2^31 ms przerwy ogłoszenie od razu, potem nowy odstęp
@@ -651,15 +779,6 @@ class StackUnitTests(unittest.TestCase):
             "after manual 0",
             "failed 0 1",           # stos nie wysłał: ponowienie po 60 s
         ])
-
-    def test_p1_interface_osp_node_reserve(self):
-        # Węzeł OSP (D19): bez karty OSP rezerwa obejmuje cały ruch przekazywany poza ruchem OSP,
-        # który wskazuje stos (pakiet z USB albo do celu ogłoszonego przez komputer).
-        out = self.run_harness("node")
-        self.assertEqual(out[0], "node slots queued queued queued osp_reserve osp queued")
-        n = 1800000 // (6 * 195 * 13)
-        self.assertEqual(out[1], f"node budget {n} flagged queued")
-        self.assertEqual(out[2], "station queued")   # stacja bez karty OSP: bez rezerwy
 
     def test_kiss_frames_flow_control_and_buffer(self):
         out = self.run_harness("kiss")

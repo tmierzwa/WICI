@@ -287,6 +287,11 @@ uint32_t fakeUs = 0;
 FakeSerial Serial;
 int digitalRead(uint8_t) { return HIGH; }
 void digitalWrite(uint8_t, uint8_t) {}
+// Generator stacji (w obrazie: main.cpp nad drbg); tu deterministyczny licznik.
+void measure::randomBytes(uint8_t* out, size_t count) {
+    static uint8_t next = 1;
+    for (size_t i = 0; i < count; ++i) out[i] = next++;
+}
 
 struct RamStorage : journal::Storage {
     std::vector<uint8_t> bytes = std::vector<uint8_t>(512 * 1024, 0xFF);

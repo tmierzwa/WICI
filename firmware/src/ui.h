@@ -7,9 +7,11 @@
 // (nowa rewizja, POTRZEBA USTAŁA, ANULUJ WYSYŁKĘ), TEST z WSTRZYMAJ/WZNÓW, STAN z PRZEKAZANIEM
 // ZMIANY i USŁUGAMI (KLUCZ ZAPASOWY, ZNISZCZ DANE z sekwencją GÓRA, DÓŁ, GÓRA, OK), alarmy
 // na cały ekran, przytrzymanie WSTECZ (2 s: porzucenie zgłoszenia, 3 s: wybór języka).
-// Stacja w konfiguracji węzła OSP (Host::ospNode, D19) po wyborze języka pokazuje radio, kontakt
+// Stacja w konfiguracji węzła stanowiska (Host::node) po wyborze języka pokazuje radio, kontakt
 // z komputerem stanowiska (`komputer_osp`, `komputer_brak`) i zasilanie; menu ma tylko STAN
 // i JĘZYK, a USŁUGI tylko WYCISZ DŹWIĘK i ZNISZCZ DANE.
+// Polecenia USB `silence`, `close` i `destroy` pokazują pytanie (ask) z odpowiedzią OK albo WSTECZ;
+// `card` pokazuje odcisk klucza stacji. Kanonicznych tekstów tych ekranów spec jeszcze nie ma (F107).
 // Dane i działania stacji dostarcza Host (console.cpp nad magazynem FRAM i warstwą aplikacji).
 // Wynikiem jest 5 wierszy tekstu UTF-8 po najwyżej 20 znaków z zaznaczeniem wiersza
 // odwróconego; rysowanie jest poza modelem. Bez zależności od Arduino; sprawdzany na komputerze.
@@ -47,7 +49,7 @@ enum class Screen : uint8_t {
     MESSAGES, ITEM, ITEM_MENU,
     TEST, TEST_MENU,
     HANDOVER, SERVICES, BACKUP, DESTROY,
-    ALARM,
+    ALARM, CONFIRM,
     COUNT
 };
 const char* screenName(Screen screen);
@@ -71,7 +73,7 @@ struct Status {
     int32_t foffHz = 0;
     const char* version = "";
     const char* name = "";
-    // Węzeł OSP: kontakt z komputerem stanowiska i liczniki pakietów interfejsu USB.
+    // Węzeł stanowiska: kontakt z komputerem stanowiska i liczniki pakietów interfejsu USB.
     bool computerHeard = false;  // pakiet od komputera od startu stacji
     uint32_t computerS = 0;      // czas od ostatniego pakietu od komputera [s]
     uint32_t usbIn = 0, usbOut = 0, usbDrop = 0;
@@ -82,20 +84,24 @@ struct Lines {
     bool inverted[LINES] = {};
 };
 
-// Pozycja listy WIADOMOŚCI: własne zgłoszenie albo TEST z kolejki, odpowiedź albo komunikat ze skrzynki.
+// Etap wysyłki własnego zgłoszenia (store::Stage; zgłoszenie anulowane nie trafia na listę).
+enum class Stage : uint8_t { SAVED, SENDING, DELIVERED, RECEIVED };
+
+// Pozycja listy WIADOMOŚCI: własne zgłoszenie albo TEST z rejestru, odpowiedź albo komunikat ze skrzynki.
 struct Item {
-    uint32_t ref = 0;        // numer rekordu kolejki (own) albo skrzynki
+    uint32_t ref = 0;        // wpis rejestru (own) albo numer wiadomości skrzynki
     bool own = false;
     uint8_t type = 0;        // SA1: 0 REQUEST, 3 REPLY, 4 BULLETIN, 5 TEST
     uint16_t number = 0;     // krótki numer zgłoszenia (own, REPLY)
     uint8_t category = 0;
     uint16_t people = 0;
     uint8_t urgency = 0;
-    uint8_t state = 0;       // 0 brak potwierdzenia, 1-6 stan
+    Stage stage = Stage::SAVED;
+    uint8_t decision = 0;    // 0 albo stan 2-6 z STATUS
+    bool sentOnce = false;   // `nadane`: ANULUJ WYSYŁKĘ niedostępne
     uint16_t attempts = 0;
     uint32_t nextInS = 0;    // do następnej próby nadania
     uint32_t ageS = 0;       // od utworzenia (own) albo odbioru
-    bool cancelled = false;
     bool unread = false;
     char text[ITEM_TEXT] = {};  // fraza PL (own) albo treść (REPLY, BULLETIN)
 };
@@ -115,16 +121,19 @@ struct Draft {
 };
 
 enum class Submit : uint8_t { STORED, NO_ADDRESS, FULL, ERROR, ANNOUNCED, NOT_ANNOUNCED };  // (NOT_)ANNOUNCED: OGŁOŚ ADRES
+// Pytanie polecenia USB (OK = tak, WSTECZ = nie) albo odcisk klucza dla `card` (dowolny przycisk zamyka).
+enum class Question : uint8_t { SILENCE_ON, SILENCE_OFF, CLOSE, DESTROY, CARD };
+enum class Answer : uint8_t { WAITING, YES, NO };
 enum class TestState : uint8_t { NONE, SCHEDULED, SENT, CONFIRMED, PAUSED };
 struct TestInfo {
     TestState state = TestState::NONE;
     uint32_t minutes = 0;    // SCHEDULED: do nadania
-    uint8_t confirmed = 0;   // CONFIRMED: stan 1-6
+    uint8_t confirmed = 0;   // CONFIRMED: stan 1-6 (1: odebrany bez decyzji)
 };
 enum class AlarmKind : uint8_t { NONE, NO_CONFIRMATION, NO_READ };
 struct AlarmInfo {
     AlarmKind kind = AlarmKind::NONE;
-    uint32_t ref = 0;
+    uint32_t ref = 0;        // wpis rejestru (jak Item::ref)
     uint16_t number = 0;
     uint32_t minutes = 0;
 };
@@ -156,7 +165,7 @@ struct Host {
     virtual bool switchBackup() = 0;
     virtual bool destroy() = 0;
     virtual bool announce() { return false; }   // OGŁOŚ ADRES: zlecenie ogłoszenia; false = stos nie działa
-    virtual bool ospNode() { return false; }    // konfiguracja węzła OSP
+    virtual bool node() { return false; }       // konfiguracja węzła stanowiska
 };
 
 class Model {
@@ -181,14 +190,19 @@ public:
     // Wyciszenie zwykłego sygnału nowej wiadomości (USŁUGI); alarmów nie wycisza.
     bool muted() const { return muted_; }
     void setMuted(bool muted) { muted_ = muted; }
+    // Pytanie polecenia USB na cały ekran (przed alarmem); answer() = WAITING do odpowiedzi.
+    // detail: odcisk klucza dla CARD. dismiss(): koniec pytania bez odpowiedzi (limit czasu, port zamknięty).
+    void ask(Question question, const char* detail = "");
+    Answer answer() const { return answer_; }
+    void dismiss();
     // Wiersze ekranu STAN (również do testów); zwraca ich liczbę.
     size_t statusLines(const Status& status, char out[][LINE_BYTES], size_t max) const;
 
 private:
     struct Text;  // wiersze tekstu do przewijania
     enum class Service : uint8_t { ANNOUNCE, MUTE, BACKUP, DESTROY };
-    bool node() const { return host_ && host_->ospNode(); }
-    size_t menu(ui_texts::Menu out[]) const;        // pozycje menu (węzeł OSP: STAN i JĘZYK)
+    bool node() const { return host_ && host_->node(); }
+    size_t menu(ui_texts::Menu out[]) const;        // pozycje menu (węzeł stanowiska: STAN i JĘZYK)
     uint8_t menuIndex(ui_texts::Menu item) const;
     size_t services(Service out[]) const;           // pozycje USŁUG
     void computerLine(const Status& status, char* out, size_t size) const;
@@ -255,6 +269,11 @@ private:
     AlarmInfo alarm_;
     Screen beforeAlarm_ = Screen::MAIN;
     uint32_t alarmCheckMs_ = 0;
+    // Pytanie polecenia USB.
+    Question question_ = Question::SILENCE_ON;
+    Answer answer_ = Answer::NO;
+    char questionDetail_[24] = {};
+    Screen beforeQuestion_ = Screen::MAIN;
 };
 
 // Pomocnicze (sprawdzane osobno).

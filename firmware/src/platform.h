@@ -29,6 +29,10 @@ void beginBus();  // piny i kontroler SPI (po ustawieniu CS wszystkich układów
 // Identyfikator układu w dwóch słowach (nRF52840: 8 B FICR DEVICEID; ESP32-S3: 6 B adresu MAC z eFuse);
 // id[0] & 0xFFFFFF daje nazwę WICI-xxxxxx.
 void chipId(uint32_t id[2]);
+// Bajty ze sprzętowego źródła entropii do ziarna generatora stacji (drbg.h): nRF52840 RNG z korekcją
+// obciążenia; ESP32-S3 esp_fill_random ze źródłem SAR ADC włączonym bootloader_random_enable() (bez
+// radia Wi-Fi/BT jedyne pełne źródło), więc przed konfiguracją ADC pomiaru VTEST (beginVtest).
+void entropy(uint8_t* out, size_t count);
 uint32_t resetReason();  // nRF52840: RESETREAS; ESP32-S3: esp_reset_reason()
 // Czas od startu w ms bez zawijania (millis() zawija się po około 49 dniach). Na nRF52840 liczy
 // przejścia licznika taktów FreeRTOS, więc trzeba go wołać częściej niż co 48 dni (obieg pętli).

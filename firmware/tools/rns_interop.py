@@ -11,8 +11,8 @@ in both directions with a transport proof (PacketReceipt DELIVERED on both sides
 station application layer rejects gets no proof (PROVE_APP), so the Python receipt fails; after a restart
 of the station program with the same FRAM file the identity is the same and the path and identity of
 the Python destination come from FRAM; datagrams without IFAC or with a wrong IFAC are dropped before
-the stack; with the Python destination pinned as the OSP and the tables limited to 6 entries, further
-announces evict the oldest unprotected destination and never the OSP.
+the stack; with the Python destination pinned as the receiver from the card and the tables limited to 6 entries, further
+announces evict the oldest unprotected destination and never the receiver. Step 8 sends to a receiver known only from its card key, in silence with the exception.
 
 With --fill N, after the checks Python announces N further destinations through the same link, the
 station fills its packet hash list to 4096 entries, and the station status (path table, TLSF pool
@@ -39,7 +39,7 @@ APP_NAME = "wici"
 ASPECT = "sa1"
 NETWORK_KEY = "5749434954335f696661635f74657374"  # 16 B test key, not a field key
 TABLE_MAX = 256    # RNS_PATH_TABLE_MAX obrazu (platformio.ini)
-PINNED_TABLE = 6   # limit tablic w próbie ochrony wpisu OSP (krok 7)
+PINNED_TABLE = 6   # limit tablic w próbie ochrony wpisu odbiorcy (krok 7)
 
 
 def log(text):
@@ -49,10 +49,10 @@ def log(text):
 class Station:
     """The host program with line JSON events."""
 
-    def __init__(self, program, fram, listen, peer, debt, capture=None, table_max=0, osp=None):
+    def __init__(self, program, fram, listen, peer, debt, capture=None, table_max=0, receiver=None):
         extra = ["--capture", capture] if capture else []
         extra += ["--table-max", str(table_max)] if table_max else []
-        extra += ["--osp", osp] if osp else []   # jak stacja z konfiguracją OSP: przypięcie przed startem stosu
+        extra += ["--receiver", receiver] if receiver else []   # jak stacja z kartą odbiorcy: przypięcie przed startem stosu
         self.proc = subprocess.Popen([program, "--fram", fram, "--ifac", NETWORK_KEY, "--listen", str(listen),
                                       "--peer", str(peer), "--debt", str(debt)] + extra,
                                      stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
@@ -177,7 +177,7 @@ def main():
         results["station_app_data"] = next((a[3].hex() for a in seen["announces"] if a[1] == address and a[3]), "")
 
         # 2. Ogłoszenie z Pythona widoczne w stacji.
-        destination.announce(app_data=b"OSP")
+        destination.announce(app_data=b"receiver")
         e = station.wait("announce", 60, lambda e: e["dest"] == destination.hash.hex())
         checks["python_announce_in_station"] = e is not None
 
@@ -248,9 +248,9 @@ def main():
         if args.fill:
             # Pomiar pamięci: N ogłoszeń nowych celów (po 2 na sekundę, bez wyzwalania ograniczeń
             # napływu ogłoszeń), potem lista skrótów pakietów dopełniona do 4096.
-            # Cel Pythona jako OSP: zostaje w pełnej tablicy, więc krok 6 sprawdza jego trasę z FRAM.
-            station.command(f"osp {destination.hash.hex()}")
-            station.wait("osp", 5)
+            # Cel Pythona jako odbiorca z karty: zostaje w pełnej tablicy, więc krok 6 sprawdza jego trasę z FRAM.
+            station.command(f"receiver {destination.hash.hex()}")
+            station.wait("receiver", 5)
             fill_destinations = []
             for i in range(args.fill):
                 d = RNS.Destination(RNS.Identity(), RNS.Destination.IN, RNS.Destination.SINGLE, APP_NAME, ASPECT)
@@ -275,9 +275,9 @@ def main():
     finally:
         station.stop()
 
-    # 6. Restart stacji z tym samym plikiem FRAM (cel Pythona jako OSP z konfiguracji): tożsamość
+    # 6. Restart stacji z tym samym plikiem FRAM (cel Pythona jako odbiorca z karty): tożsamość
     # i trasa z FRAM, tablica tras w limicie także po wczytaniu.
-    station = Station(args.program, fram, station_port, python_port, args.debt, osp=destination.hash.hex())
+    station = Station(args.program, fram, station_port, python_port, args.debt, receiver=destination.hash.hex())
     try:
         ready = station.ready or {}
         checks["identity_restored"] = ready.get("identity") == results.get("station_identity") and not ready.get("identity_new", True)
@@ -297,16 +297,16 @@ def main():
     finally:
         station.stop()
 
-    # 7. Pełne tablice: wpis przypiętej OSP zostaje (oprogramowanie.md, „Pojemności stosu”). Nowa
-    # pamięć FRAM i limit tablic 6 zamiast 256: cel Pythona jako OSP, potem cel bez ochrony
-    # i 8 kolejnych; usunięty ma być najstarszy cel bez ochrony, a nie OSP.
+    # 7. Pełne tablice: wpis odbiorcy z karty zostaje (oprogramowanie.md, „Pojemności stosu”). Nowa
+    # pamięć FRAM i limit tablic 6 zamiast 256: cel Pythona jako odbiorca, potem cel bez ochrony
+    # i 8 kolejnych; usunięty ma być najstarszy cel bez ochrony, a nie odbiorca.
     station = Station(args.program, os.path.join(work, "fram_pinned.bin"), station_port, python_port, args.debt,
                       table_max=PINNED_TABLE)
     try:
-        station.command(f"osp {destination.hash.hex()}")
-        station.wait("osp", 5)
+        station.command(f"receiver {destination.hash.hex()}")
+        station.wait("receiver", 5)
         destination.announce()
-        osp_learned = station.wait("announce", 30, lambda e: e["dest"] == destination.hash.hex()) is not None
+        receiver_learned = station.wait("announce", 30, lambda e: e["dest"] == destination.hash.hex()) is not None
         time.sleep(2)   # znaczniki czasu wpisów w sekundach: cel bez ochrony wyraźnie starszy od reszty
         victim = RNS.Destination(RNS.Identity(), RNS.Destination.IN, RNS.Destination.SINGLE, APP_NAME, ASPECT)
         victim.announce()
@@ -321,13 +321,37 @@ def main():
             time.sleep(0.5)
         status = station.status() or {}
         station.command(f"path {destination.hash.hex()}")
-        osp = station.wait("path", 5) or {}
+        kept = station.wait("path", 5) or {}
         station.command(f"path {victim.hash.hex()}")
         gone = station.wait("path", 5) or {}
-        results["pinned_table"] = {"limit": PINNED_TABLE, "paths": status.get("paths"), "osp": osp, "unprotected": gone}
-        checks["osp_entry_kept_in_full_table"] = (osp_learned and status.get("paths", 99) <= PINNED_TABLE
-                                                  and osp.get("known") is True and osp.get("path") is True
-                                                  and gone.get("path") is False)
+        results["pinned_table"] = {"limit": PINNED_TABLE, "paths": status.get("paths"), "receiver": kept, "unprotected": gone}
+        checks["receiver_entry_kept_in_full_table"] = (receiver_learned and status.get("paths", 99) <= PINNED_TABLE
+                                                       and kept.get("known") is True and kept.get("path") is True
+                                                       and gone.get("path") is False)
+    finally:
+        station.stop()
+
+    # 8. Tożsamość odbiorcy z klucza karty: wysyłka bez ogłoszenia odbiorcy (nowa pamięć FRAM), w ciszy
+    # z wyjątkiem pakiet z send() wychodzi, a ogłoszenie stacji nie.
+    station = Station(args.program, os.path.join(work, "fram_card.bin"), station_port, python_port, args.debt)
+    try:
+        key = destination.identity.get_public_key().hex()
+        station.command(f"receiver {destination.hash.hex()} {key}")
+        station.wait("receiver", 5)
+        station.command(f"path {destination.hash.hex()}")
+        known = station.wait("path", 5) or {}
+        checks["receiver_known_from_card"] = known.get("known") is True
+        station.command("silence exception")
+        station.wait("silence", 5)
+        station.command("announce")
+        silenced = station.wait("announced", 10) or {}
+        checks["announce_blocked_in_silence"] = silenced.get("ok") is False
+        payload3 = b'["WICI",1,"interop","card key in exception"]'
+        station.command(f"send {destination.hash.hex()} {payload3.hex()} 120")
+        sent = station.wait("sent", 10)
+        handle = sent["handle"] if sent else 0
+        checks["send_from_card_key_in_exception"] = handle > 0 and wait_for(
+            lambda: any(p[1] == payload3 for p in seen["packets"]), 90)
     finally:
         station.stop()
 
