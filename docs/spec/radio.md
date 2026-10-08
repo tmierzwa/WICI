@@ -96,12 +96,12 @@ Tryb ciszy radiowej blokuje w sterowniku P1 każde nadawanie, także ruchu przek
 Stacja w konfiguracji węzła OSP ([stanowisko odbiorcze](stanowisko-osp.md#stacja-przy-osp)) ma w stosie drugi interfejs Reticulum: interfejs danych CDC poza trybem przygotowania przenosi pakiety Reticulum do komputera stanowiska i z powrotem. W trybie przygotowania ten sam interfejs przenosi [protokół USB](oprogramowanie.md#protokół-usb-laptopstacja), aby można było zmienić konfigurację i oprogramowanie.
 
 - **Ramki:** KISS (FEND, FESC), jedna ramka danych to jeden pakiet Reticulum do 500 B; zgodne z interfejsem KISS Reticulum w Pythonie z kontrolą przepływu. Polecenia konfiguracji KISS od komputera (TXDELAY, P, SLOTTIME, TXTAIL) stacja przyjmuje i pomija, bo dostęp do kanału określa P1.
-- **Kontrola przepływu:** stacja wysyła ramkę gotowości (polecenie KISS 0x0F, jak RNode) po przyjęciu pakietu, gdy kolejka radiowa P1 ma wolne miejsce; komputer wysyła następny pakiet dopiero po niej. Pełna kolejka wstrzymuje gotowość, a nie gubi pakietów.
+- **Kontrola przepływu:** komputer włącza ją przy starcie poleceniem KISS 0x0F z wartością 1. Stacja wysyła ramkę gotowości (0x0F, jak RNode) po przyjęciu pakietu do bufora USB na co najmniej 8 pakietów po 500 B; komputer wysyła następny pakiet dopiero po niej. Reticulum w Pythonie (`e40191b`) sam zwalnia blokadę po 5 s bez gotowości (stała `flow_control_timeout` interfejsu KISS), więc wstrzymanie gotowości nie zatrzyma komputera na czas długu ciszy. Pakiet ponad bufor stacja odrzuca i liczy, a ponowienie zapewnia LXMF; aplikacja OSP ogranicza ruch do 4 wiadomości w drodze, aby bufor wystarczał.
 - **Kierunek do komputera:** stacja przekazuje pakiety, które transport kieruje do interfejsu USB: ruch do tożsamości OSP, ogłoszenia i zapytania o trasę.
 - **Limity:** pakiety z USB przechodzą przez interfejs P1 z jego priorytetami, długiem ciszy, limitem ogłoszeń i ciszą radiową. IFAC dotyczy tylko P1; pakiet z USB dostaje kod dostępu sieci przy nadaniu, a pakiet z P1 bez poprawnego kodu nie trafia do komputera. Ruch do i od OSP ma rezerwę ≥50% budżetu nadawania.
 - **Diagnostyka:** liczniki pakietów w obu kierunkach i czas od ostatniego pakietu od komputera (`komputer_osp` na ekranie, pola w `INFO` i `RNS`).
 
-Kod operacji gotowości, zachowanie przy nieznanych poleceniach KISS i przepływność deklarowaną po stronie komputera potwierdza T3 z Reticulum `e40191b` w Pythonie. Interfejs przez USB nie jest dostępny w stacji schronienia.
+Ramki, polecenia i kontrolę przepływu sprawdzono w kodzie interfejsu KISS Reticulum `e40191b`; działanie ze stacją i wartość `bitrate` po stronie komputera ([stanowisko odbiorcze](stanowisko-osp.md#komputer-i-aplikacja-osp)) potwierdza T3. Interfejs przez USB nie jest dostępny w stacji schronienia.
 
 ## USB do laptopa
 
