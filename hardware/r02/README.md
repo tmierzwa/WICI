@@ -3,12 +3,14 @@
 **Wstrzymane do decyzji po pilotażu (przegląd praktyczny 2026-10-08, F99):** pilotaż używa stacji z gotowej płytki MCU z układem LoRa SX1262 ([koncepcja 08](../../docs/concept/08-plan-weryfikacji-i-decyzje.html)).
 
 **Status: projekt rozpoczęty 2026-10-07. Nie ma jeszcze schematu ani PCB. HOLD: nie zamawiać.** Części niezależne od prób T3–T5 opisano 2026-10-08:
-- [architektura](architektura.md): bloki, sygnały i budżet pinów obu wykonań, podział na płytki do wyboru;
+- [architektura](architektura.md): bloki, sygnały i budżet pinów obu wykonań, płyta bazowa z wymiennym modułem MCU i radia;
 - [zasilanie](zasilanie.md): projekt bloku z wartościami, bilans prądu i próby na płytkach ewaluacyjnych;
 - [obudowa](obudowa.md): obudowa, panel i obrys płyty bazowej;
 - [tor RF](tor-rf.md): referencje, stos warstw, części i to, co czeka na T4.
 
-R02 jest płytką stacji: samodzielna stacja z mikrokontrolerem, torem radiowym P1, pamięcią FRAM, ekranem, przyciskami i własnym zasilaniem z ogniw i z wejścia 12 V. Powstaje w dwóch wykonaniach o wspólnym zachowaniu: A (nRF52840 + CC1120) i B (ESP32-S3 + S2-LP). Do czasu R02 oprogramowanie i próby T1–T4 prowadzi się na [stanowisku deweloperskim](../dev-bench/README.md) z płytek rozwojowych i modułów producentów, połączonych [płytką nośną N1](../dev-bench/plytka-nosna.md) bez własnego toru RF. Wcześniejszy kontroler R01.3 (STM32F103, modem USB) nie jest częścią R02; jego ustalenia i lekcje są w [lekcje.md](lekcje.md), a pliki CAD w historii Git.
+R02 to planowana płytka samodzielnej stacji: mikrokontroler, radio, pamięć FRAM, ekran, przyciski i zasilanie z ogniw oraz wejścia 12 V. Dotychczasowe opracowania opisują warianty P1: A (nRF52840 + CC1120) i B (ESP32-S3 + S2-LP). Wybór MCU, radia i drugiego wykonania dla wydania zapadnie po pilotażu.
+
+Oprogramowanie i próby wariantu P1 można rozwijać na [stanowisku deweloperskim](../dev-bench/README.md) z płytek rozwojowych i modułów producentów, połączonych [płytką nośną N1](../dev-bench/plytka-nosna.md) bez własnego toru RF. Wcześniejszy kontroler R01.3 (STM32F103, modem USB) nie jest częścią R02; jego ustalenia i lekcje są w [lekcje.md](lekcje.md), a pliki CAD w historii Git.
 
 ## Źródła wymagań
 

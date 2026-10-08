@@ -16,7 +16,7 @@
   <div class="inner">
     <a class="brand" href="index.html"><picture><source media="(prefers-color-scheme: dark)" srcset="../../media/logo/WICI-na-ciemnym.svg"><img src="../../media/logo/WICI-na-jasnym.svg" alt="WICI" width="72" height="32"></picture></a>
     <a class="jump" href="#rozdzialy">Rozdziały ↓</a>
-    <span class="status">Prototyp 0.5 · sprzęt <b>HOLD</b></span>
+    <span class="status">Projekt prototypu <b>0.5</b></span>
   </div>
 </header>
 <div class="layout">
@@ -107,7 +107,11 @@
 
 <p>Zagrożenia obejmują przypadkowego użytkownika, osobę w tej samej sieci, podszycie się pod odbiorcę, kradzież laptopa, stacji lub komputera stanowiska odbiorczego i celowe zakłócanie radia. Bazowe szyfrowanie Reticulum nie chroni przed zagrożeniami na obu końcach transmisji. Nie można deklarować bezpiecznej pracy na przejętym komputerze.</p>
 
-<p>Token ogranicza dostęp do zgłoszenia w aplikacji, ale przesyłany przez HTTP może zostać przechwycony. Hasło Wi-Fi nie zastępuje HTTPS. Baza laptopa jest na dysku zaszyfrowana kluczem z pamięci USB zestawu. Start nie wymaga hasła, więc szyfrowanie nie opóźnia uruchomienia. Klucz tożsamości, karta odbiorcy i kolejka są w pamięci stacji. Szyfrowanie rekordów FRAM (AEAD) jest wymagane przed wydaniem, nie przed pilotażem: na poziomie 1 kolejka zawiera tylko frazy z przycisków, a dane o zdrowiu tylko pośrednio, przez kategorie. Kolejka zawiera adres schronienia i zgłoszenia zbiorcze. Po dołączeniu laptopa (poziom 2, po pilotażu) może zawierać też dane o zdrowiu: opis z panelu oraz kategorie 0–1 przy małej liczbie osób mogą wskazywać konkretną osobę. Stacja zapisuje tylko treść SA1. Laptop zapisuje SA1, skrót tokenu i czas, bez adresu IP, adresu MAC, numeru telefonu i nazwiska. Panel ostrzega „nie wpisuj nazwisk”.</p>
+<p>Token ogranicza dostęp do zgłoszenia w aplikacji, ale przesyłany przez HTTP może zostać przechwycony. Hasło Wi-Fi nie zastępuje HTTPS. Baza laptopa jest na dysku zaszyfrowana kluczem z pamięci USB zestawu. Start nie wymaga hasła, więc szyfrowanie nie opóźnia uruchomienia.</p>
+
+<p>Klucz tożsamości, karta odbiorcy i kolejka są w pamięci stacji. Szyfrowanie rekordów FRAM (AEAD) jest wymagane przed wydaniem, nie przed pilotażem: na poziomie 1 kolejka zawiera tylko frazy z przycisków, a dane o zdrowiu tylko pośrednio, przez kategorie. Kolejka zawiera adres schronienia i zgłoszenia zbiorcze.</p>
+
+<p>Po dołączeniu laptopa (poziom 2, po pilotażu) może zawierać też dane o zdrowiu: opis z panelu oraz kategorie 0–1 przy małej liczbie osób mogą wskazywać konkretną osobę. Stacja zapisuje tylko treść SA1. Laptop zapisuje SA1, skrót tokenu i czas, bez adresu IP, adresu MAC, numeru telefonu i nazwiska. Panel ostrzega „nie wpisuj nazwisk”.</p>
 
 <p id="zniszcz-dane">ZNISZCZ DANE ma jedną definicję, wiążącą w <a href="../spec/oprogramowanie.md#tryby-kryzysowe">specyfikacji oprogramowania</a>. Na stacji usuwa klucz szyfrowania FRAM (kryptograficzne wymazanie), klucz tożsamości, kartę odbiorcy, adres, kolejkę, skrzynkę i dziennik zdarzeń. Dziennik długu ciszy zostaje, bo chroni warunki nadawania. Dopóki FRAM nie jest szyfrowana (pilotaż), skuteczność zależy od skasowania samych danych, a nie klucza; T8 w pilotażu sprawdza tylko brak przypadkowego uruchomienia. Uruchamia się je tylko na stacji (STAN → USŁUGI, potwierdzenie sekwencją przycisków) albo przez USB z potwierdzeniem przyciskiem na stacji w ciągu 30 s, a na komputerze stanowiska odbiorczego z panelu dyżurnego z podwójnym potwierdzeniem; nigdy na podstawie wiadomości radiowej. Na komputerze stanowiska usuwa tożsamość odbiorcy, bazę i plik kont z nośnika i z kopii, a decyduje fizyczne zniszczenie obu nośników. Na laptopie klucz bazy powstaje z pliku na pamięci USB i sekretu w magazynie systemowym (DPAPI/TPM albo Keychain); ZNISZCZ DANE usuwa wpis z magazynu, bazę i eksporty. Nadpisanie pamięci flash i dysków SSD nie gwarantuje usunięcia danych, dlatego o skuteczności decyduje usunięcie klucza, a przed odczytem samego nośnika USB chroni tylko jego fizyczne zniszczenie. Zbiorcza baza odbiorcy zawiera adresy schronień i liczbę osób, czyli informację cenną dla przeciwnika. Jej ochrona i procedura zniszczenia są częścią przygotowania stanowiska. Należy zbierać tylko minimum danych, nie publikować zbiorczej listy potrzeb mieszkańców i ograniczać fizyczny dostęp do laptopa, stacji oraz kopii.</p>
 

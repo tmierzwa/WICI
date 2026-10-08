@@ -4,7 +4,9 @@ Kolumna „Grupa” wskazuje grupę prób T1–T8 z [planu weryfikacji](../conce
 
 ## Minimum pilotażu
 
-Po przeglądzie praktycznym 2026-10-08 ([F99, F100](../review.md)) pilotaż ma własną, krótszą listę prób. Przed próbami terenowymi musi być ustalona ich podstawa (D20), a stacje pilotażowe przechodzą najpierw [pełną wymianę na stole](#próby). Pilotaż używa stacji pilotażowych jednej rodziny (ESP32-S3 na gotowej płytce z SX1262) i [profilu LoRa](radio.md#profil-lora-pilotażu). Gdzie wiersz tabeli prób mówi o P1, w pilotażu obowiązuje profil LoRa. Przed pilotażem trzeba zaliczyć tylko pozycje z tabeli niżej. Wartość dla pilotażu zastępuje w pilotażu liczbę z wiersza; liczba z wiersza zostaje warunkiem wydania.
+Po przeglądzie praktycznym 2026-10-08 ([F99, F100](../review.md)) pilotaż ma własną, krótszą listę prób. Przed próbami terenowymi musi być ustalona ich podstawa (D20), a stacje pilotażowe przechodzą najpierw [pełną wymianę na stole](#próby).
+
+Pilotaż używa stacji pilotażowych jednej rodziny (ESP32-S3 na gotowej płytce z SX1262) i [profilu LoRa](radio.md#profil-lora-pilotażu). Gdzie wiersz tabeli prób mówi o P1, w pilotażu obowiązuje profil LoRa. Przed pilotażem trzeba zaliczyć tylko pozycje z tabeli niżej. Wartość dla pilotażu zastępuje w pilotażu liczbę z wiersza; liczba z wiersza zostaje warunkiem wydania.
 
 | Pozycja | Wiersze tabeli prób | Wartość dla pilotażu |
 |---|---|---|

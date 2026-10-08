@@ -20,7 +20,9 @@ Reguły modelu:
 - ZAMKNIJ ZDARZENIE (`purge_content`): usuwa treść zgłoszeń, odpowiedzi i kwarantanny; klucze odbioru ze skrótami i ACK zostają, więc powtórzona wiadomość dostaje ten sam RECEIVED, a inna treść pod tym samym kluczem nadal jest konfliktem.
 - STATUS ze stanem 5 wymaga wcześniejszej REPLY dla tego id; kolejność stanów według `status_after`.
 
-Testy obejmują wszystkie długości datagramu 1–600 B, znany wektor CRC, błędy i duplikaty, sześć typów wiadomości z przypadkami najgorszymi, odrzucanie znaków i tekstu spoza NFC, przerwanie transakcji bez ACK, kwarantannę z limitami i zatwierdzaniem pojedynczych wiadomości, karty stacji, usunięcie z listy i ponowne dodanie, zamknięcie zdarzenia, regułę stanu 5, zaufanie stacji do odbiorcy, zmieszczenie zgłoszenia z przycisków w jednym pakiecie okazjonalnym oraz czas nadawania LoRa (znana ramka według wzoru Semtech i podział pakietu na dwie ramki jak w RNode).
+Testy obejmują wszystkie długości datagramu 1–600 B, znany wektor CRC, błędy i duplikaty, sześć typów wiadomości z przypadkami najgorszymi, odrzucanie znaków i tekstu spoza NFC, przerwanie transakcji bez ACK, kwarantannę z limitami i zatwierdzaniem pojedynczych wiadomości, karty stacji, usunięcie z listy i ponowne dodanie, zamknięcie zdarzenia, regułę stanu 5 i zaufanie stacji do odbiorcy.
+
+Model sprawdza też zmieszczenie zgłoszenia z przycisków w jednym pakiecie okazjonalnym oraz czas nadawania LoRa (znana ramka według wzoru Semtech i podział pakietu na dwie ramki jak w RNode).
 
 | Plik | Rola |
 |---|---|

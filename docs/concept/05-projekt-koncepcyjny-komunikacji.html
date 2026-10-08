@@ -16,7 +16,7 @@
   <div class="inner">
     <a class="brand" href="index.html"><picture><source media="(prefers-color-scheme: dark)" srcset="../../media/logo/WICI-na-ciemnym.svg"><img src="../../media/logo/WICI-na-jasnym.svg" alt="WICI" width="72" height="32"></picture></a>
     <a class="jump" href="#rozdzialy">Rozdziały ↓</a>
-    <span class="status">Prototyp 0.5 · sprzęt <b>HOLD</b></span>
+    <span class="status">Projekt prototypu <b>0.5</b></span>
   </div>
 </header>
 <div class="layout">
@@ -196,7 +196,11 @@
 
 <p>Interfejs radiowy ma ograniczone bufory (sterownik P1: cztery miejsca na datagramy i osiem kontekstów składania). Przepełnienie musi być widoczne w licznikach. Limity trwałej kolejki stacji, bazy laptopa i dzienników oraz zachowanie przycisków i formularza po ich osiągnięciu określa <a href="../spec/oprogramowanie.md">specyfikacja oprogramowania</a>. Nie wolno pozornie potwierdzić odrzuconych danych.</p>
 
-<p>Tryb ciszy radiowej zatrzymuje całe nadawanie stacji, także przekazywanie cudzych pakietów. W ciszy stacja nie nadaje też żadnych ogłoszeń. Ekran, strona, odbiór i zapis działają, a kolejka rośnie. Kolejka wychodzi po ręcznym wyłączeniu ciszy, gdy organ, który polecił ciszę, ją odwoła. Polecenie ciszy przekazuje odbiorca komunikatem BULLETIN i przez gońca. Wyjątek dla pojedynczego zgłoszenia dotyczy wyłącznie ciszy operacyjnej ustawionej z panelu (poziom 2) i tylko wtedy, gdy polecenie wprost go dopuszcza. Przełącznik CISZA na stacji wyklucza wyjątek. Wyjątek nie zwalnia z ciszy przekaźników, więc zgłoszenie dociera tylko drogą przez stacje, które nie są w ciszy. Wyjątek nie dotyczy też zakazu używania urządzeń nadawczych w stanie wojennym lub wyjątkowym – wtedy podstawową procedurą jest goniec. Wyjątek zapisuje się w dzienniku stacji i na papierze. Szczegóły w <a href="../spec/oprogramowanie.md">specyfikacji oprogramowania</a>, uzasadnienie w rozdziale <a href="02-scenariusze-i-organizacja.html#miejsce-w-systemie-ochrony-ludnosci">02</a>.</p>
+<p>Tryb ciszy radiowej zatrzymuje całe nadawanie stacji, także przekazywanie cudzych pakietów. W ciszy stacja nie nadaje też żadnych ogłoszeń. Ekran, strona, odbiór i zapis działają, a kolejka rośnie. Kolejka wychodzi po ręcznym wyłączeniu ciszy, gdy organ, który polecił ciszę, ją odwoła. Polecenie ciszy przekazuje odbiorca komunikatem BULLETIN i przez gońca.</p>
+
+<p>Wyjątek dla pojedynczego zgłoszenia dotyczy wyłącznie ciszy operacyjnej ustawionej z panelu (poziom 2) i tylko wtedy, gdy polecenie wprost go dopuszcza. Przełącznik CISZA na stacji wyklucza wyjątek. Wyjątek nie zwalnia z ciszy przekaźników, więc zgłoszenie dociera tylko drogą przez stacje, które nie są w ciszy.</p>
+
+<p>Wyjątek nie dotyczy też zakazu używania urządzeń nadawczych w stanie wojennym lub wyjątkowym – wtedy podstawową procedurą jest goniec. Wyjątek zapisuje się w dzienniku stacji i na papierze. Szczegóły w <a href="../spec/oprogramowanie.md">specyfikacji oprogramowania</a>, uzasadnienie w rozdziale <a href="02-scenariusze-i-organizacja.html#miejsce-w-systemie-ochrony-ludnosci">02</a>.</p>
 
 <p>Węzeł transportowy jest aktywnym przekaźnikiem, nie magazynem wszystkich cudzych zgłoszeń. Opcjonalny węzeł przechowywania LXMF (<em>propagation node</em>) na stanowisku odbiorczym jest inną funkcją: mógłby być przyszłą funkcją aplikacji stanowiska na komputerze stanowiska, poza wydaniem 0.5, i wymaga osobnych prób, zwłaszcza przy długim braku odbiorcy. <a href="https://github.com/markqvist/LXMF">Role LXMF</a>.</p>
 
@@ -208,7 +212,9 @@
 
 <p>Ponawianie intencji: po DELIVERED stacja czeka 10 min na RECEIVED, a potem ponawia co 30–60 min (±20%). Po FAILED ponawia po 1, 2, 5 i 15 min (±20%), a po 6 h co 60 min. STATUS lub REPLY od przypiętej tożsamości odbiorcy także kończy ponawianie danej rewizji. Intencja w oczekiwaniu nie blokuje następnych; stacja przekazuje do LXMF najwyżej 2 własne wiadomości jednocześnie. Kolejka radiowa ma priorytety: potwierdzenia pakietów i zapytania o trasę, potem dane, ogłoszenia na końcu. Szczegóły w <a href="../spec/oprogramowanie.md">specyfikacji oprogramowania</a>.</p>
 
-<p>Pojemność całej sieci, a nie pojedynczego przekaźnika, ogranicza najbardziej obciążony węzeł – zwykle stacja stanowiska i przekaźnik obok niej. W modelu bez strat dla LoRa SF7 stanowisko odbiorcze obsługuje ok. 164 zgłoszenia/h z RECEIVED i dwoma STATUS, a przekaźnik przed stanowiskiem ok. 95/h (P1: 121/h i 68/h). 50 zgłoszeń przechodzi przez przekaźnik B w 16,4–17,2 min z 30 min W10 (P1: 22,6–24,0 min). SF8 tego nie mieści (29,1–30,4 min), więc nie jest profilem bazowym. Dodanie przekaźników nie zwiększa tego limitu; zwiększa go tylko drugi odbiorca albo podział sieci. BULLETIN wysyła się osobno do każdej stacji (w modelu LoRa SF7 50 stacji ≈ 8,5 min pracy nadajnika stanowiska z obowiązkową ciszą, P1 ≈ 11,9 min; tyle trwa też rozesłanie polecenia ciszy). Okno, w którym stacje w losowej chwili wysyłają startowy TEST, skaluje się z wielkością sieci: ≥50 s × liczba stacji (0–15 min tylko dla małej sieci). Obliczenie w <a href="06-wykonalnosc-i-budzet-zasobow.html">rozdziale 06</a> i w <a href="../../software/reference/obliczenia.py">modelu</a> (<code>lora_pilot</code>), pomiar w T5.</p>
+<p>Pojemność całej sieci, a nie pojedynczego przekaźnika, ogranicza najbardziej obciążony węzeł – zwykle stacja stanowiska i przekaźnik obok niej. W modelu bez strat dla LoRa SF7 stanowisko odbiorcze obsługuje ok. 164 zgłoszenia/h z RECEIVED i dwoma STATUS, a przekaźnik przed stanowiskiem ok. 95/h (P1: 121/h i 68/h). 50 zgłoszeń przechodzi przez przekaźnik B w 16,4–17,2 min z 30 min W10 (P1: 22,6–24,0 min). SF8 tego nie mieści (29,1–30,4 min), więc nie jest profilem bazowym. Dodanie przekaźników nie zwiększa tego limitu; zwiększa go tylko drugi odbiorca albo podział sieci.</p>
+
+<p>BULLETIN wysyła się osobno do każdej stacji (w modelu LoRa SF7 50 stacji ≈ 8,5 min pracy nadajnika stanowiska z obowiązkową ciszą, P1 ≈ 11,9 min; tyle trwa też rozesłanie polecenia ciszy). Okno, w którym stacje w losowej chwili wysyłają startowy TEST, skaluje się z wielkością sieci: ≥50 s × liczba stacji (0–15 min tylko dla małej sieci). Obliczenie w <a href="06-wykonalnosc-i-budzet-zasobow.html">rozdziale 06</a> i w <a href="../../software/reference/obliczenia.py">modelu</a> (<code>lora_pilot</code>), pomiar w T5.</p>
 
 <h2 id="zaufanie-i-informacja-lokalna">Zaufanie i informacja lokalna</h2>
 
