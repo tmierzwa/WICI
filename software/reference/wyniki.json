@@ -523,7 +523,7 @@
   "cold_start_announces": {
     "announce_bytes": 221,
     "announce_tx_s": 0.5133333333333333,
-    "announce_cap_share_of_tx": 0.02,
+    "announce_cap_share_of_wall_clock": 0.02,
     "path_request_bytes": 83,
     "path_request_tx_s": 0.18666666666666668,
     "test_packet_bytes": 339,
@@ -588,6 +588,78 @@
       "share_of_test_window": [
         0.6067,
         0.7999
+      ],
+      "announce_drain_exceeds_window": false
+    }
+  },
+  "cold_start_announces_lora_sf7": {
+    "announce_bytes": 221,
+    "announce_tx_s": 0.358656,
+    "announce_cap_share_of_wall_clock": 0.02,
+    "path_request_bytes": 83,
+    "path_request_tx_s": 0.158976,
+    "test_packet_bytes": 339,
+    "test_exchange_tx_s": 2.885632,
+    "10_stations": {
+      "network_announce_transmissions": 100,
+      "channel_airtime_min_single_collision_domain": 0.59776,
+      "per_station_tx_plus_quiet_min": 0.7770879999999999,
+      "per_hop_drain_at_cap_min": 2.9887999999999995,
+      "test_window_min": 8.333333333333334,
+      "path_request_airtime_min": [
+        0.08627199999999999,
+        0.38451199999999996
+      ],
+      "test_airtime_min": 0.48093866666666674,
+      "total_airtime_min": [
+        1.1649706666666666,
+        1.4632106666666667
+      ],
+      "share_of_test_window": [
+        0.13979648,
+        0.17558528
+      ],
+      "announce_drain_exceeds_window": false
+    },
+    "30_stations": {
+      "network_announce_transmissions": 900,
+      "channel_airtime_min_single_collision_domain": 5.37984,
+      "per_station_tx_plus_quiet_min": 2.3312639999999996,
+      "per_hop_drain_at_cap_min": 8.966399999999998,
+      "test_window_min": 25.0,
+      "path_request_airtime_min": [
+        0.258816,
+        2.743296
+      ],
+      "test_airtime_min": 1.442816,
+      "total_airtime_min": [
+        7.081472,
+        9.565952000000001
+      ],
+      "share_of_test_window": [
+        0.28325888,
+        0.38263808000000005
+      ],
+      "announce_drain_exceeds_window": false
+    },
+    "50_stations": {
+      "network_announce_transmissions": 2500,
+      "channel_airtime_min_single_collision_domain": 14.943999999999999,
+      "per_station_tx_plus_quiet_min": 3.88544,
+      "per_hop_drain_at_cap_min": 14.943999999999999,
+      "test_window_min": 41.666666666666664,
+      "path_request_airtime_min": [
+        0.43135999999999997,
+        7.221760000000001
+      ],
+      "test_airtime_min": 2.4046933333333333,
+      "total_airtime_min": [
+        17.780053333333335,
+        24.570453333333333
+      ],
+      "share_of_test_window": [
+        0.42672128000000004,
+        0.58969088
       ],
       "announce_drain_exceeds_window": false
     }

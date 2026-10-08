@@ -276,45 +276,52 @@ def calculate() -> dict:
     ram_kib["reference_layout_share_of_nrf52840"] = ram_kib["reference_layout_kib"] / 256
     ram_kib["specified_layout_share_of_nrf52840"] = ram_kib["specified_layout_kib"] / 256
     # Cold network start of N stations inside the TEST start window (50 s x N): every transport station rebroadcasts
-    # each announce once (no losses), the P1 interface limits announces to a share of TX time, each station asks
-    # once for a path to the OSP and sends one start TEST through the relay next to the OSP.
+    # each announce once (no losses), Reticulum limits announces on an interface to a share of wall-clock time at the
+    # declared interface bitrate, each station asks once for a path to the OSP and sends one start TEST through the
+    # relay next to the OSP.
     # Announce = 19 B header + cached announce (170 B) + 16 B transport id; path request = 19 B header + target hash,
-    # requesting transport id and tag (3 x 16 B); path response = announce replay. All P1 datagrams carry the IFAC.
+    # requesting transport id and tag (3 x 16 B); path response = announce replay. All datagrams carry the IFAC.
     announce_cap = 0.02
     announce_bytes = p1_datagram(19 + 170 + transport_id)
-    announce_tx_s = p1_tx_seconds(announce_bytes)
     path_request_bytes = p1_datagram(19 + 3 * 16)
-    path_request_tx_s = p1_tx_seconds(path_request_bytes)
     test_packet = p1_datagram(lxmf_packet_bytes(len(encode_message([1, 5, mid, 0, 9, 1, "x" * 64, "test", 0]))))
     # TEST A -> B -> OSP: A sends TEST, B forwards it, OSP proves and sends RECEIVED, B forwards both, A proves.
     test_chain = [test_packet + transport_id, test_packet, proof, proof,
                   relay_packets["received"] + transport_id, relay_packets["received"], proof, proof]
-    test_tx_s = sum(p1_tx_seconds(b) for b in test_chain)
-    cold_start = {"announce_bytes": announce_bytes, "announce_tx_s": announce_tx_s,
-                  "announce_cap_share_of_tx": announce_cap,
-                  "path_request_bytes": path_request_bytes, "path_request_tx_s": path_request_tx_s,
-                  "test_packet_bytes": test_packet, "test_exchange_tx_s": test_tx_s}
-    for n in (10, 30, 50):
-        window_s = 50 * n
-        announce_air_s = n * n * announce_tx_s
-        # Best case: the nearest neighbour answers from its path table (request + response once).
-        # Worst case: nobody knows the OSP, the request floods all N stations and the response returns over 2 hops.
-        path_best_s = n * (path_request_tx_s + announce_tx_s)
-        path_worst_s = n * (n * path_request_tx_s + 2 * announce_tx_s)
-        test_air_s = n * test_tx_s
-        cold_start[f"{n}_stations"] = {
-            "network_announce_transmissions": n * n,
-            "channel_airtime_min_single_collision_domain": announce_air_s / 60,
-            "per_station_tx_plus_quiet_min": n * 13 * announce_tx_s / 60,
-            "per_hop_drain_at_cap_min": n * announce_tx_s / announce_cap / 60,
-            "test_window_min": window_s / 60,
-            "path_request_airtime_min": [path_best_s / 60, path_worst_s / 60],
-            "test_airtime_min": test_air_s / 60,
-            "total_airtime_min": [(announce_air_s + path_best_s + test_air_s) / 60,
-                                  (announce_air_s + path_worst_s + test_air_s) / 60],
-            "share_of_test_window": [(announce_air_s + path_best_s + test_air_s) / window_s,
-                                     (announce_air_s + path_worst_s + test_air_s) / window_s],
-            "announce_drain_exceeds_window": n * announce_tx_s / announce_cap > window_s}
+
+    def cold_start_for(tx_seconds) -> dict:
+        announce_tx_s = tx_seconds(announce_bytes)
+        path_request_tx_s = tx_seconds(path_request_bytes)
+        test_tx_s = sum(tx_seconds(b) for b in test_chain)
+        out = {"announce_bytes": announce_bytes, "announce_tx_s": announce_tx_s,
+               "announce_cap_share_of_wall_clock": announce_cap,
+               "path_request_bytes": path_request_bytes, "path_request_tx_s": path_request_tx_s,
+               "test_packet_bytes": test_packet, "test_exchange_tx_s": test_tx_s}
+        for n in (10, 30, 50):
+            window_s = 50 * n
+            announce_air_s = n * n * announce_tx_s
+            # Best case: the nearest neighbour answers from its path table (request + response once).
+            # Worst case: nobody knows the OSP, the request floods all N stations and the response returns over 2 hops.
+            path_best_s = n * (path_request_tx_s + announce_tx_s)
+            path_worst_s = n * (n * path_request_tx_s + 2 * announce_tx_s)
+            test_air_s = n * test_tx_s
+            out[f"{n}_stations"] = {
+                "network_announce_transmissions": n * n,
+                "channel_airtime_min_single_collision_domain": announce_air_s / 60,
+                "per_station_tx_plus_quiet_min": n * 13 * announce_tx_s / 60,
+                "per_hop_drain_at_cap_min": n * announce_tx_s / announce_cap / 60,
+                "test_window_min": window_s / 60,
+                "path_request_airtime_min": [path_best_s / 60, path_worst_s / 60],
+                "test_airtime_min": test_air_s / 60,
+                "total_airtime_min": [(announce_air_s + path_best_s + test_air_s) / 60,
+                                      (announce_air_s + path_worst_s + test_air_s) / 60],
+                "share_of_test_window": [(announce_air_s + path_best_s + test_air_s) / window_s,
+                                         (announce_air_s + path_worst_s + test_air_s) / window_s],
+                "announce_drain_exceeds_window": n * announce_tx_s / announce_cap > window_s}
+        return out
+
+    cold_start = cold_start_for(p1_tx_seconds)
+    cold_start_lora = cold_start_for(lambda b: lora_tx_seconds(b, 7))
     result = {
         "assumptions": {"station_ac_w": ac_w, "conversion_efficiency_excluding_idle": efficiency,
                         "inverter_idle_w": idle_w, "diode_loss_w": diode_w,
@@ -383,6 +390,7 @@ def calculate() -> dict:
                          "fram_size_kib": fram_size_kib},
         "station_ram_kib": ram_kib,
         "cold_start_announces": cold_start,
+        "cold_start_announces_lora_sf7": cold_start_lora,
         "tcxo_budget_ppm": {**tcxo_ppm, "linear_sum": sum(tcxo_ppm.values()),
                             "root_sum_square": math.sqrt(sum(v**2 for v in tcxo_ppm.values())),
                             "p1_limit": 2.5, "linear_sum_hz_at_carrier": sum(tcxo_ppm.values()) * f_mhz,
