@@ -564,6 +564,7 @@ bool Store::commitTx(Tx& tx) {
     put32(marker, crc32::finish(crc));
     memcpy(marker + 4, TX_MARK, 4);
     if (!memory_.write(area + TX_HEADER + count * TX_ITEM, marker, MARKER)) return false;   // COMMIT
+    ++changes_;
     txArea_ ^= 1;
     bool found = false;
     if (!applyTx(area, true, found) || !found) {

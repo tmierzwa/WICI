@@ -378,6 +378,9 @@ public:
 
     // Pierścień zdarzeń.
     uint32_t head() const { return head_; }
+    // Licznik zatwierdzonych transakcji od startu (w RAM): rośnie przy każdej zmianie danych, także bez
+    // zdarzenia (odczyt wiadomości na ekranie), więc migawka USB wykrywa zmianę stanu w swoim trakcie.
+    uint32_t changes() const { return changes_; }
     uint32_t minEvent() const {
         const uint32_t first = meta_.ringBase + 1;
         return head_ >= first + RING_ENTRIES ? head_ - RING_ENTRIES + 1 : first;
@@ -450,6 +453,7 @@ private:
     SlotState bulletinState_[BULLETIN_BLOCKS] = {};
     SlotState ringState_[RING_BLOCKS] = {};
     uint32_t head_ = 0;
+    uint32_t changes_ = 0;
     // Uszkodzone bloki przy starcie (bity: 1 pierścień, 2 pamięć zwolnionych, 4 zbiór BULLETIN).
     uint8_t corruptBlocks_ = 0;
     uint64_t nextWrite_ = 0;

@@ -492,16 +492,18 @@ void Protocol::doSnapshot(const json::Value& msg, int64_t seq) {
     snap_.active = true;
     snap_.seq = seq;
     snap_.head = store_.head();
+    snap_.changes = store_.changes();
     memcpy(snap_.epoch, epoch, store::EPOCH);
     continueSnapshot();
 }
 
 void Protocol::continueSnapshot() {
-    // Wiersze w miarę miejsca w kolejce. Migawka opisuje jeden stan: zdarzenie albo nowa epoka w jej
-    // trakcie kończy ją odmową `stale` (laptop powtarza `snapshot`), bo stan po `snap_begin` się zmienił.
+    // Wiersze w miarę miejsca w kolejce. Migawka opisuje jeden stan: każda zatwierdzona zmiana danych
+    // w jej trakcie (ze zdarzeniem albo bez, np. odczyt wiadomości na ekranie, także nowa epoka) kończy
+    // ją odmową `stale` (laptop powtarza `snapshot`).
     char fields[MAX_LINE - 64];
     while (snap_.active) {
-        if (store_.head() != snap_.head || memcmp(store_.meta().epoch, snap_.epoch, store::EPOCH)) {
+        if (store_.changes() != snap_.changes) {
             if (room() < LINE_ROOM) return;   // odpowiedź końcowa przy pustej kolejce
             snap_.active = false;
             rejected(snap_.seq, "stale");

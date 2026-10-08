@@ -698,6 +698,7 @@ int world() {
         } else if (!strcmp(cmd, "sel")) w.store->selectAddress(strtoul(arg, nullptr, 10));
         else if (!strcmp(cmd, "connect")) w.proto->connected(w.ms);
         else if (!strcmp(cmd, "stall")) w.stalled = atoi(arg) != 0;
+        else if (!strcmp(cmd, "markread")) printf("markread %d\n", w.app->markRead(static_cast<uint32_t>(strtoul(arg, nullptr, 10))));
         else if (!strcmp(cmd, "queue")) {
             size_t n = 0;
             w.proto->output(n);
@@ -1844,6 +1845,16 @@ class HostUnitTests(unittest.TestCase):
         r = [x_ for x_ in self.replies(out) if x_["type"] in ("snap_begin", "snap", "snap_end", "rejected")]
         self.assertEqual((r[0]["type"], r[-1]["type"], r[-1]["reason"], r[-1]["re"]), ("snap_begin", "rejected", "stale", r[0]["re"]))
         self.assertNotIn("snap_end", [x_["type"] for x_ in r])
+        # Odczyt wiadomości na ekranie nie daje zdarzenia, a też zmienia stan: migawka z wiadomością 2
+        # nieprzeczytaną nie może skończyć się wiadomością 10 przeczytaną (stan, którego nie było).
+        u = self.Lines()
+        messages = ["in " + compact([1, 4, self.rid(80), 7, "Komunikat"]), "sevents 7", "in " + compact([1, 4, self.rid(81), 8, "Komunikat 2"])]
+        out = self.world([self.CONFIG] + messages + ["inbox a", "connect", "stall 1", u("snapshot", epoch=epoch), "upoll", "markread 2",
+                                                     "markread 10", "stall 0", "upoll"])
+        self.assertEqual(sorted(int(line.split("msg=")[1].split()[0]) for line in self.find(out, "msg a ")), [2, 10])
+        self.assertEqual(self.find(out, "markread "), ["markread 1", "markread 1"])
+        r = [x_ for x_ in self.replies(out) if x_["type"] in ("snap_begin", "snap", "snap_end", "rejected")]
+        self.assertEqual((r[0]["type"], r[-1]["type"], r[-1]["reason"]), ("snap_begin", "rejected", "stale"))
 
     def test_usb_confirmed_commands_silence_close_destroy(self):
         u = self.Lines()

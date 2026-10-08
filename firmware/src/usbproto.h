@@ -122,6 +122,7 @@ private:
         uint8_t phase = 0;
         size_t index = 0;
         uint32_t head = 0;
+        uint32_t changes = 0;   // store::Store::changes() przy `snap_begin`
         uint8_t epoch[store::EPOCH] = {};
     };
     struct Xfer {
