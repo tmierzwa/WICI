@@ -59,7 +59,7 @@ Amperomierz wpina się w miejsce zworki przy odłączonym zasilaniu, na zakresie
 |---|---|---|
 | JP3 | A | prąd samego modułu CC1120EM (nadawanie +14 dBm około 45 mA według karty układu) |
 | JP1 | B | prąd szyny 3,3 V z DevKitC: X-NUCLEO-S2868A2, FRAM i rezystory podciągające, bez samego ESP32-S3 |
-| JP2 | B | prąd szyny 5 V z DevKitC: panel ekranu i brzęczyk |
+| JP2 | B | prąd szyny 5 V z DevKitC: brzęczyk (panel ma własną przetwornicę U2 z 3,3 V, więc jego prąd jest w JP1) |
 
 Te pomiary służą uruchomieniu i porównaniu modułów. Budżetu energii stacji (T6) na stanowisku się nie mierzy.
 
@@ -68,8 +68,8 @@ Te pomiary służą uruchomieniu i porównaniu modułów. Budżetu energii stacj
 | Objaw | Prawdopodobna przyczyna | Co sprawdzić |
 |---|---|---|
 | `RADIO`: `partnumber` 0x00 albo 0xFF | moduł radiowy niewpięty albo obrócony; w A zdjęta JP3; w B zdjęta zworka JP1 na X-NUCLEO | orientacja modułu, zworki, sygnały SCK, MISO i CS radia na J11 |
-| Ekran pusty | taśma FPC niewsunięta do oporu albo klapka J7 otwarta; w B zdjęta JP2 albo za niskie 5 V; obraz nie uruchomił ekranu | taśma w J7, napięcie na J7.7 (VDD) wobec J7.9 (GND), co najmniej 4,8 V; `DISPLAY` |
-| Obraz ekranu blednie albo zostają cienie | brak przebiegu EXTCOMIN | `DISPLAY`: `counter` rośnie, a `level` zmienia się co 0,5 s; J7.8 (EXTMODE panelu) na 5 V wobec J7.9 |
+| Ekran pusty | taśma FPC niewsunięta do oporu albo klapka J7 otwarta; w B zdjęta JP1; usterka przetwornicy U2; licznik EXTCOMIN nie ruszył (`DISPLAY`: `extcomin_ok: false`, panel celowo wyłączony) | taśma w J7, napięcie na J7.7 (VDD) wobec J7.9 (GND) 4,90–5,36 V; `DISPLAY` i dziennik (`display off: EXTCOMIN timer failed`) |
+| Obraz ekranu blednie albo zostają cienie | brak przebiegu EXTCOMIN | `DISPLAY`: `counter` rośnie, a `level` zmienia się co 0,5 s; J7.8 (EXTMODE panelu) na +5V_LCD wobec J7.9. Polecenie `VCOM` na N1 nie działa (EXTMODE na stałe wysoki) |
 | `FRAM` nie rozpoznaje układu (`unknown`) | układ spoza listy (np. wersja 1,8 V albo 2 Mbit) albo usterka lutowania U1 | oznaczenie układu U1 i bajty RDID w odpowiedzi `FRAM`, CS FRAM na J11 |
 | Cisza radiowa nie daje się wyłączyć | przełącznik CISZA w położeniu „cisza” | `BTN`: `silence_switch` |
 | Polecenia pomiarowe odrzucane | brak trybu przygotowania, cisza radiowa albo radio nieskonfigurowane | `INFO` (`prep`, `silence`), `RADIO` (`p1_ok`); w razie potrzeby `CONFIG` |

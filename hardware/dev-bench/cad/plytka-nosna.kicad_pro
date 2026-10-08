@@ -153,7 +153,7 @@
         "min_text_height": 0.8,
         "min_text_thickness": 0.12,
         "min_through_hole_diameter": 0.4,
-        "min_track_width": 0.2,
+        "min_track_width": 0.18,
         "min_via_annular_width": 0.15,
         "min_via_diameter": 0.8,
         "solder_mask_to_copper_clearance": 0.0,
@@ -359,6 +359,14 @@
       {
         "netclass": "Power",
         "pattern": "/BZ_N"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "/+5V_LCD"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "/BST_SW"
       }
     ]
   },

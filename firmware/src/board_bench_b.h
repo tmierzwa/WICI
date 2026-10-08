@@ -72,6 +72,9 @@ constexpr int16_t LED_RADIO = -1;
 constexpr int16_t LED_FRAM = -1;
 constexpr int16_t LED_USB = -1;
 
-constexpr uint32_t SPI_HZ = 1000000;  // radio i FRAM, jak na stanowisku A
+constexpr uint32_t SPI_HZ = 1000000;  // radio, jak na stanowisku A
+// FRAM: ≥8 MHz jak w każdej stacji (seria 256 B ≤0,3 ms, specyfikacja: zanik zasilania i zapis).
+// Zbocza i poziomy przy U1 sprawdza oscyloskop przy uruchomieniu.
+constexpr uint32_t FRAM_SPI_HZ = 8000000;
 
 }  // namespace board

@@ -5,8 +5,9 @@ Quantity: 5 boards (pilot). Prototype tool board, no RF, no impedance control.
 
 PCB
 - 2 layers, FR-4 (Tg >= 130 C), finished thickness 1.6 mm +/-10 %.
-- Copper 35 um (1 oz) both sides. Min track 0.25 mm (0.24 mm only in short stubs between the
-  0.5 mm pitch pads of J7), min space 0.2 mm, min annular ring 0.175 mm
+- Copper 35 um (1 oz) both sides. Nominal track 0.25 mm (power 0.4 mm); min track 0.18 mm only in short
+  router neck-downs at fine-pitch pads (0.24 mm between the 0.5 mm pitch pads of J7), min space 0.2 mm,
+  min annular ring 0.175 mm
   (J9/J10, 0.65 mm holes in 1.0 mm pads; pads may be enlarged where spacing permits).
 - Solder mask: openings 1:1 with pads in the files; your standard expansion is fine (keep a mask
   dam between the 1.27 mm pitch pads of J9/J10 if possible, a bridge-free opening is acceptable).
@@ -25,15 +26,16 @@ PCB
 - Origin of Gerbers, drills and positions: lower-left board corner.
 
 Assembly (optional quote)
-- Top side only. Assembler sources and places the 32 SMD parts (0805, 1206, SOT-23, SOD-123, SOIC-8,
-  0.5 mm pitch FPC connector J7):
+- Top side only. Assembler sources and places the 39 SMD parts (0805, 1206, SOT-23, SOT-23-6, SOD-123,
+  SOIC-8, 3.8 mm inductor, 0.5 mm pitch FPC connector J7):
   assembly/bom-assembly.csv (SMD only), positions in assembly/cpl-smd.csv, paste layer F_Paste.
   Equivalent passives (same value, tolerance, voltage, dielectric, size) are acceptable.
 - CPL rotations follow the KiCad convention (counter-clockwise, KiCad library zero orientation);
   please send the placement preview for approval, especially Q1 and D3 (SOT-23, pin 1 marked)
-  and D2 (SOD-123, cathode = pad 1, at 180 deg the right-hand end), U1 (SOIC-8, pin 1 dot) and J7
-  (FH12 FPC connector, actuator side towards the display outline above it; check for bridges).
+  and D2 (SOD-123, cathode = pad 1, at 180 deg the right-hand end), U1 (SOIC-8, pin 1 dot), U2 (SOT-23-6,
+  pin 1 dot) and J7 (FH12 FPC connector, actuator side towards the display outline above it; check for bridges).
   U1 alternative with the same footprint: RAMXEED MB85RS4MTPF-G-BCERE1.
+  R14 and R15 are 0.1 % resistors; do not substitute 1 % parts.
 - All through-hole parts (including the through-hole connectors) are fitted by the owner; do not
   supply or fit them.
 - No fiducials: use pads for vision, or add panel rails with fiducials if you need them.

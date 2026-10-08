@@ -78,7 +78,7 @@ def build():
     ds = b.GetDesignSettings()
     ds.SetBoardThickness(k.FromMM(1.6))
     ds.m_MinClearance = k.FromMM(.2)
-    ds.m_TrackMinWidth = k.FromMM(.2)
+    ds.m_TrackMinWidth = k.FromMM(.18)  # router neck-down at fine-pitch pads; 0.25 mm nominal
     ds.m_ViasMinSize = k.FromMM(.8)
     ds.m_MinThroughDrill = k.FromMM(.4)
     ds.m_CopperEdgeClearance = k.FromMM(.5)

@@ -3,8 +3,10 @@
 // zapis wierszy zmienionych, rysowanie znaków z font_glyphs.h. EXTCOMIN (inwersja VCOM,
 // 1 Hz) generuje licznik MCU bez udziału programu (specyfikacja: "EXTCOMIN z wyjścia licznika
 // MCU, nie z programu"): na nRF52840 RTC2 przez PPI i GPIOTE (sharp_extcomin_nrf.cpp), na
-// ESP32-S3 MCPWM (sharp_extcomin_esp32.cpp); zapasowo bit VCOM w poleceniach, gdy pin EMD
-// (EXTMODE) płytki jest w stanie niskim. Reszta sterownika nie zależy od MCU.
+// ESP32-S3 MCPWM (sharp_extcomin_esp32.cpp). Bit VCOM w poleceniach działa tylko przy pinie EMD
+// (EXTMODE) w stanie niskim, czyli przy przewodach bez połączenia EMD; na N1 EXTMODE jest na stałe
+// w stanie wysokim, więc bez EXTCOMIN z licznika ekran musi zostać wyłączony (DISP = L).
+// Reszta sterownika nie zależy od MCU.
 #pragma once
 
 #include <Arduino.h>
@@ -32,8 +34,10 @@ class Display {
 public:
     Display(SPIClass& spi, uint8_t pinCs, uint8_t pinExtcomin, uint32_t spiHz = SPI_HZ);
 
-    // CS w stan niski, bufor biały, polecenie CLEAR, EXTCOMIN z licznika MCU.
-    void begin();
+    // CS w stan niski, bufor biały, polecenie CLEAR, EXTCOMIN z licznika MCU. Zwraca false, gdy
+    // licznik EXTCOMIN nie ruszył: wtedy nie wolno włączać panelu przy EXTMODE w stanie wysokim.
+    bool begin();
+    bool extcominOk() const { return extcominOk_; }
     void clear();
     // Wiersz tekstu UTF-8 (20 komórek, dopełniany spacjami); inverse = białe litery na czarnym.
     void drawLine(uint8_t row, const char* utf8, bool inverse);
@@ -41,7 +45,7 @@ public:
     void setPixel(uint16_t x, uint16_t y, bool black);
     // Wysyła zmienione wiersze; zwraca ich liczbę.
     uint16_t refresh();
-    // Zapasowe odwracanie VCOM z programu (EMD niski): bit VCOM w poleceniu co 500 ms.
+    // Odwracanie VCOM z programu, tylko przy EMD w stanie niskim (przewody): bit VCOM co 500 ms.
     void softwareVcom(bool on);
     bool softwareVcom() const { return softwareVcom_; }
     void maintain(uint32_t nowMs);
@@ -52,7 +56,7 @@ public:
     bool extcominLevel() const;        // stan pinu EXTCOMIN
 
 private:
-    void beginExtcomin();
+    bool beginExtcomin();
     void transaction(uint8_t command, bool allLines);
     void send(uint8_t byte);
 
@@ -63,6 +67,7 @@ private:
     uint8_t buffer_[HEIGHT][LINE_BYTES];  // bit 0 bajtu 0 = lewy piksel; 1 = biały
     uint8_t dirty_[HEIGHT / 8];
     bool softwareVcom_ = false;
+    bool extcominOk_ = false;
     uint8_t vcom_ = 0;
     uint32_t lastVcomMs_ = 0;
     uint32_t refreshes_ = 0;

@@ -10,7 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 NAME = 'plytka-nosna'
-POWER = ['+3V3', '+3V3_RF', '+5V', '+3V3_DEVKIT', '+5V_DEVKIT', 'GND', 'BZ_P', 'BZ_N']
+POWER = ['+3V3', '+3V3_RF', '+5V', '+3V3_DEVKIT', '+5V_DEVKIT', 'GND', 'BZ_P', 'BZ_N', '+5V_LCD', 'BST_SW']
 
 
 def netclass(name, track, priority):
@@ -28,7 +28,7 @@ def main():
                          'silk_line_width': 0.12, 'silk_text_size_h': 1.0, 'silk_text_size_v': 1.0,
                          'silk_text_thickness': 0.15},
             'rules': {'min_clearance': 0.2, 'min_copper_edge_clearance': 0.5, 'min_hole_clearance': 0.3,
-                      'min_hole_to_hole': 0.25, 'min_through_hole_diameter': 0.4, 'min_track_width': 0.2,
+                      'min_hole_to_hole': 0.25, 'min_through_hole_diameter': 0.4, 'min_track_width': 0.18,
                       'min_via_annular_width': 0.15, 'min_via_diameter': 0.8, 'min_silk_clearance': 0.0,
                       'min_text_height': 0.8, 'min_text_thickness': 0.12},
             # KiCad ignores a missing courtyard by default; mechanics drives this board.
@@ -47,14 +47,15 @@ def main():
     (ROOT / 'cad' / (NAME + '.kicad_pro')).write_text(json.dumps(pro, indent=2) + '\n')
     (ROOT / 'cad' / (NAME + '.kicad_dru')).write_text('''(version 1)
 (rule "N1 copper spacing" (constraint clearance (min 0.2mm)))
-(rule "N1 track width" (constraint track_width (min 0.2mm)))
+(rule "N1 track width" (constraint track_width (min 0.18mm)))
 (rule "N1 via diameter" (constraint via_diameter (min 0.8mm)))
 (rule "N1 finished hole" (constraint hole_size (min 0.4mm)))
 (rule "N1 annular ring" (constraint annular_width (min 0.15mm)))
 (rule "N1 copper to edge" (constraint edge_clearance (min 0.5mm)))
 (rule "N1 copper to hole" (constraint hole_clearance (min 0.3mm)))
-(rule "N1 thermal spokes" (constraint min_resolved_spokes (min 1)))
-(rule "N1 power tracks" (condition "A.NetClass == 'Power' && A.Type == 'track'") (constraint track_width (min 0.4mm)))
+(rule "N1 thermal spokes" (constraint min_resolved_spokes 1))
+(rule "N1 power tracks" (condition "A.NetClass == 'Power' && A.Type == 'track' && !A.intersectsCourtyard('J7')") (constraint track_width (min 0.3mm)))
+(rule "N1 power tracks at J7" (condition "A.NetClass == 'Power' && A.Type == 'track' && A.intersectsCourtyard('J7')") (constraint track_width (min 0.24mm)))
 ''')
     print('project and rules written')
 

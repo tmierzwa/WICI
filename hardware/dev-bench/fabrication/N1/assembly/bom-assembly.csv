@@ -1,14 +1,20 @@
 Designator,Qty per board,Value,Manufacturer,MPN,Description,Footprint,Type,Fit,Placed by
-C1 C4,2,10u,Samsung Electro-Mechanics,CL21A106KAYNNNE,MLCC 10 uF 25 V X5R 0805,C_0805_2012Metric,SMD,all,assembler
+C1 C4 C8 C9,4,10u,Samsung Electro-Mechanics,CL21A106KAYNNNG,MLCC 10 uF 25 V X5R 0805,C_0805_2012Metric,SMD,all,assembler
+C10,1,100p,Samsung Electro-Mechanics,CL21C101JBANNNC,MLCC 100 pF 50 V C0G 0805,C_0805_2012Metric,SMD,all,assembler
 C2 C3 C6 C7 C5,5,100n,Samsung Electro-Mechanics,CL21B104KBCNNNC,MLCC 100 nF 50 V X7R 0805,C_0805_2012Metric,SMD,all,assembler
 D2,1,,Diodes Incorporated,1N4148W-7-F,"switching diode 75 V, SOD-123",D_SOD-123,SMD,all,assembler
 D3,1,,onsemi,BAT54SLT1G,"dual Schottky diode series, SOT-23",SOT-23,SMD,all,assembler
 J7,1,,Hirose,FH12-10S-0.5SH(55),"FPC connector 10 pos, 0.5 mm, bottom contact, right angle, SMD",Hirose_FH12-10S-0.5SH_1x10-1MP_P0.50mm_Horizontal,SMD,all,assembler
+L1,1,,Wurth Elektronik,744031004,"shielded power inductor 4.7 uH, Isat 0.9 A, 3.8 x 3.8 mm (WE-TPC 3816)",L_Wuerth_WE-TPC-3816,SMD,all,assembler
 Q1,1,,onsemi,MMBT3904LT1G,"NPN transistor 40 V 200 mA, SOT-23",SOT-23,SMD,all,assembler
 R1 R3 R16,3,1k,Yageo,RC0805FR-071KL,resistor 1k 1 % 0805,R_0805_2012Metric,SMD,all,assembler
-R15,1,20k,Yageo,RC0805FR-0720KL,resistor 20k 1 % 0805,R_0805_2012Metric,SMD,all,assembler
+R14,1,100k,Yageo,RT0805BRD07100KL,resistor 100 kohm 0.1 % 25 ppm/K 0805,R_0805_2012Metric,SMD,all,assembler
+R15,1,20k,Yageo,RT0805BRD0720KL,resistor 20 kohm 0.1 % 25 ppm/K 0805,R_0805_2012Metric,SMD,all,assembler
 R17 R18,2,33R,Yageo,RC0805FR-0733RL,resistor 33 ohm 1 % 0805,R_0805_2012Metric,SMD,all,assembler
 R19 R20 R5 R6 R7 R8 R9 R10 R11 R12 R13,11,10k,Yageo,RC0805FR-0710KL,resistor 10k 1 % 0805,R_0805_2012Metric,SMD,all,assembler
 R2,1,22R,Yageo,RC1206FR-0722RL,resistor 22 ohm 1 % 1206,R_1206_3216Metric,SMD,all,assembler
-R4 R14,2,100k,Yageo,RC0805FR-07100KL,resistor 100k 1 % 0805,R_0805_2012Metric,SMD,all,assembler
+R21,1,1M,Yageo,RC0805FR-071ML,resistor 1M 1 % 0805,R_0805_2012Metric,SMD,all,assembler
+R22,1,309k,Yageo,RC0805FR-07309KL,resistor 309k 1 % 0805,R_0805_2012Metric,SMD,all,assembler
+R4,1,100k,Yageo,RC0805FR-07100KL,resistor 100k 1 % 0805,R_0805_2012Metric,SMD,all,assembler
 U1,1,,Infineon,CY15B104QN-50SXI,"F-RAM 4 Mbit SPI, 3 V, SOIC-8 208 mil (alt. RAMXEED MB85RS4MTPF-G-BCERE1)",SOIC-8_5.3x5.3mm_P1.27mm,SMD,all,assembler
+U2,1,,Microchip,MCP1640T-I/CHY,"synchronous boost regulator, adjustable, PFM, SOT-23-6",SOT-23-6,SMD,all,assembler

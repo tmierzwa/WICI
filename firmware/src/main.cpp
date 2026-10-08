@@ -61,7 +61,7 @@ constexpr const char* BENCH = "B";
 constexpr const char* BENCH = "A";
 #endif
 
-fram::Memory memory(platform::bus(), board::FRAM_CS, board::SPI_HZ);
+fram::Memory memory(platform::bus(), board::FRAM_CS, board::FRAM_SPI_HZ);
 journal::Journal stationJournal(memory);
 measure::Bench bench(radiocon::link(), board::BTN_OK, board::LED_HEARTBEAT);
 #if defined(WICI_BOARD_N1)
@@ -485,10 +485,10 @@ void printScreen() {
 }
 
 void printDisplay() {
-    Serial.printf("{\"extcomin\":\"%s\",\"counter\":%lu,\"level\":%s,\"software_vcom\":%s,\"refreshes\":%lu,\"cs\":%u,\"extcomin_pin\":%u,"
-                  "\"spi_hz\":%lu}\n",
-                  platform::EXTCOMIN_SOURCE, static_cast<unsigned long>(display.extcominCounter()), boolName(display.extcominLevel()),
-                  boolName(display.softwareVcom()), static_cast<unsigned long>(display.refreshes()), board::DISPLAY_CS,
+    Serial.printf("{\"extcomin\":\"%s\",\"extcomin_ok\":%s,\"counter\":%lu,\"level\":%s,\"software_vcom\":%s,\"refreshes\":%lu,"
+                  "\"cs\":%u,\"extcomin_pin\":%u,\"spi_hz\":%lu}\n",
+                  platform::EXTCOMIN_SOURCE, boolName(display.extcominOk()), static_cast<unsigned long>(display.extcominCounter()),
+                  boolName(display.extcominLevel()), boolName(display.softwareVcom()), static_cast<unsigned long>(display.refreshes()), board::DISPLAY_CS,
                   board::DISPLAY_EXTCOMIN, static_cast<unsigned long>(display.spiHz()));
 }
 
@@ -592,8 +592,8 @@ void printFram() {
     ledWrite(board::LED_FRAM, framOk && journalOk);  // jak przy starcie: FRAM i działający dziennik
     char hex[2 * fram::ID_BYTES + 1];
     for (size_t i = 0; i < fram::ID_BYTES; ++i) snprintf(hex + 2 * i, 3, "%02X", id.bytes[i]);
-    Serial.printf("{\"fram\":\"%s\",\"id\":\"%s\",\"status\":\"0x%02X\",\"ok\":%s}\n",
-                  fram::partName(id.part), hex, id.status, boolName(framOk));
+    Serial.printf("{\"fram\":\"%s\",\"id\":\"%s\",\"status\":\"0x%02X\",\"ok\":%s,\"spi_hz\":%lu}\n",
+                  fram::partName(id.part), hex, id.status, boolName(framOk), static_cast<unsigned long>(board::FRAM_SPI_HZ));
 }
 
 void printInfo() {
@@ -969,8 +969,13 @@ void handle(char* cmd) {
     else if (!strcmp(cmd, "VCOM") && n == 1) {
         bool on = false;
         if (!cmdargs::parseFlag(words[0], on)) { printError("VCOM <0|1>"); return; }
-        display.softwareVcom(on);  // zapasowo, gdy pin EMD (EXTMODE) płytki jest niski
+#if defined(WICI_BOARD_N1)
+        // EXTMODE panelu na N1 jest na stałe w stanie wysokim: bit VCOM nic by nie zmienił.
+        printError("VCOM: EXTMODE tied high on N1");
+#else
+        display.softwareVcom(on);  // przewody: tylko przy pinie EMD (EXTMODE) w stanie niskim
         printDisplay();
+#endif
     } else if (!strcmp(cmd, "REBOOT")) {
         // Restart programowy: pamięć niezerowana zostaje, więc ekran i język wracają (jak po watchdogu).
         if (rnsOk) rnsnode::persist();   // tablice stosu w FRAM przed restartem
@@ -1077,9 +1082,13 @@ void stationSetup() {
     bench.onDatagram(onDatagram, nullptr);
     bench.onTxDone(onTxDone, nullptr);
     if (radiocon::ok() && radiocon::p1Ok()) bench.p1rxStart();  // łącze P1 w odbiorze od startu (radio niezależne od ekranu)
-    display.begin();  // CLEAR czyści pamięć ekranu
+    const bool extcominOk = display.begin();  // CLEAR czyści pamięć ekranu
 #if defined(WICI_BOARD_N1)
-    digitalWrite(board::DISPLAY_DISP, HIGH);
+    // Bez EXTCOMIN z licznika panel dostałby składową stałą (EXTMODE na stałe wysoki): zostaje wyłączony.
+    if (extcominOk) digitalWrite(board::DISPLAY_DISP, HIGH);
+    else bench.log("display off: EXTCOMIN timer failed");
+#else
+    if (!extcominOk) bench.log("EXTCOMIN timer failed");
 #endif
     if (storeOk) screenModel.attach(&screenHost);  // bez magazynu: ekran bez kreatora i wiadomości
     beginScreen();

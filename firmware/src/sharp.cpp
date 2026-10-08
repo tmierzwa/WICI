@@ -11,11 +11,12 @@ Display::Display(SPIClass& spi, uint8_t pinCs, uint8_t pinExtcomin, uint32_t spi
     memset(dirty_, 0xFF, sizeof(dirty_));
 }
 
-void Display::begin() {
+bool Display::begin() {
     pinMode(pinCs_, OUTPUT);
     digitalWrite(pinCs_, LOW);  // CS aktywny stanem wysokim
-    beginExtcomin();
+    extcominOk_ = beginExtcomin();
     clear();
+    return extcominOk_;
 }
 
 void Display::send(uint8_t byte) { spi_.transfer(byte); }

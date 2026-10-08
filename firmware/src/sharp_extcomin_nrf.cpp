@@ -5,7 +5,7 @@
 
 namespace sharp {
 
-void Display::beginExtcomin() {
+bool Display::beginExtcomin() {
     // Pin w GPIOTE w trybie zadania (toggle), RTC2 z preskalerem 4095 (8 Hz) i COMPARE0 = 4
     // (0,5 s); PPI: zdarzenie COMPARE0 -> zadanie OUT pinu i (rozgałęzienie) CLEAR licznika.
     const uint32_t pin = g_ADigitalPinMap[pinExtcomin_];
@@ -34,6 +34,7 @@ void Display::beginExtcomin() {
     NRF_PPI->FORK[PPI_CHANNEL].TEP = reinterpret_cast<uint32_t>(&NRF_RTC2->TASKS_CLEAR);
     NRF_PPI->CHENSET = 1u << PPI_CHANNEL;
     NRF_RTC2->TASKS_START = 1;
+    return true;  // rejestry RTC2, PPI i GPIOTE nie zgłaszają błędu
 }
 
 uint32_t Display::extcominCounter() const { return NRF_RTC2->COUNTER; }

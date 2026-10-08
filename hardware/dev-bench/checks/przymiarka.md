@@ -2,6 +2,10 @@
 
 ## Przegląd Gerberów i wierceń
 
+**Rewizja F103 (2026-10-08):** kontrola liczbowa paczki z gerbonara 1.6.3: obrys 170 × 100 mm, osiem warstw jak w `FAB-NOTES.txt`, 222 otwory PTH (w tym 62 przelotki 0,4 mm) i 17 NPTH (1,8 i 3,2 mm), 100 otwarć pasty, czyli dokładnie tyle, ile padów SMD ma 39 elementów (34 dwupadowe, D3 i Q1 po 3, U1 8, U2 6, J7 10 + 2). Pełny przegląd z renderem warstw (jak niżej) dla tej rewizji jest **otwarty**.
+
+Poniżej przegląd rewizji sprzed F103 (bez przetwornicy panelu).
+
 Data: 2026-10-08. Wykonał autor z pomocą AI; nie jest niezależnym audytem. Pliki: paczka `fabrication/N1/wici-plytka-nosna-N1-gerber.zip` z commita, w którym leży ten zapis (Gerbery X2 i Excellon z KiCad 10.0.6). Narzędzia: gerbonara 1.6.3 (złożenie warstw obu stron i kontrola geometrii z shapely) i pygerber 2.4.3 (render każdej warstwy osobno). Nie użyto przeglądarki wykonawcy; jej podgląd ogląda się przy zamówieniu razem z raportem DFM.
 
 Obejrzane warstwy: miedź góra i dół, maska góra i dół, pasta, opis góra i dół, obrys, wiercenia PTH i NPTH, złożenie obu stron i powiększenia J7, U1, Q1 i D2, J9 i J10.

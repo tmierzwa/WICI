@@ -121,11 +121,12 @@ part('J6', 'Connector_Generic:Conn_01x22', 'DEVKITC J3',
      (DEVKIT_J3_X, DEVKIT_PIN1_Y, 0), **DEVKIT)
 
 # Panel terminals (LCP-2110015A table 4-1): 1 SCLK, 2 SI, 3 SCS, 4 EXTCOMIN, 5 DISP,
-# 6 VDDA, 7 VDD, 8 EXTMODE (to VDD: VCOM from EXTCOMIN), 9 VSS, 10 VSSA.
+# 6 VDDA, 7 VDD, 8 EXTMODE (to VDD: VCOM from EXTCOMIN), 9 VSS, 10 VSSA. VDD from the board's own
+# 5 V boost U2, not from the MCU board's 5 V pin (DevKitC gives 4.6-4.8 V behind a diode).
 part('J7', 'Connector_Generic_MountingPin:Conn_01x10_MountingPin', 'SHARP LS027B7DH01A',
      'Connector_FFC-FPC:Hirose_FH12-10S-0.5SH_1x10-1MP_P0.50mm_Horizontal',
-     {1: 'SPI_SCK', 2: 'SPI_MOSI', 3: 'LCD_CS', 4: 'LCD_EXTCOMIN', 5: 'LCD_DISP', 6: '+5V', 7: '+5V',
-      8: '+5V', 9: 'GND', 10: 'GND', 'MP': 'GND'}, (*FPC_ORIGIN, 180),
+     {1: 'SPI_SCK', 2: 'SPI_MOSI', 3: 'LCD_CS', 4: 'LCD_EXTCOMIN', 5: 'LCD_DISP', 6: '+5V_LCD', 7: '+5V_LCD',
+      8: '+5V_LCD', 9: 'GND', 10: 'GND', 'MP': 'GND'}, (*FPC_ORIGIN, 180),
      mpn='FH12-10S-0.5SH(55)', manufacturer='Hirose',
      spec='złącze FPC 10-pin, 0,5 mm, styki od dołu, FPC 0,3 mm, SMD',
      note='panel Sharp LS027B7DH01A ekranem do góry, taśma FPC płasko; styk 1 panelu (SCLK) na padzie 1 po prawej')
@@ -149,7 +150,7 @@ part('JP2', 'Connector_Generic:Conn_01x02', '5V DEVKITC',
      'Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical',
      {1: '+5V', 2: '+5V_DEVKIT'}, (70.6, 80.0, 0),
      mpn='61300211121', manufacturer='Würth Elektronik', spec='listwa męska 1x2, 2,54 mm, ze zworką',
-     note='założona tylko w stanowisku B; zasila ekran, pomiar prądu 5 V')
+     note='założona tylko w stanowisku B; zasila brzęczyk, pomiar prądu 5 V')
 part('JP3', 'Connector_Generic:Conn_01x02', '3V3 RADIO A',
      'Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical',
      {1: '+3V3', 2: '+3V3_RF'}, (131.0, 88.0, 90),
@@ -235,12 +236,13 @@ part('R13', 'Device:R', '10k', R0805, {1: 'LCD_CS', 2: 'GND'}, (FPC_ORIGIN[0] - 
      mpn='RC0805FR-0710KL', manufacturer='Yageo', spec='10 kΩ 1% 0805',
      note='ściąga LCD_CS do masy; CS ekranu jest aktywny stanem wysokim')
 part('R14', 'Device:R', '100k', R0805, {1: 'VTEST_IN', 2: 'VTEST'}, (158.5, 82.0, 0),
-     mpn='RC0805FR-07100KL', manufacturer='Yageo', spec='100 kΩ 1% 0805', note='górny rezystor dzielnika VTEST')
+     mpn='RT0805BRD07100KL', manufacturer='Yageo', spec='100 kΩ 0,1% 25 ppm/K 0805',
+     note='górny rezystor dzielnika VTEST; 0,1%, bo dzielnik z rezystorów 1% sam dawał do ±1,7% błędu skali')
 part('R15', 'Device:R', '20k', R0805, {1: 'VTEST', 2: 'GND'}, (163.0, 82.0, 90),
-     mpn='RC0805FR-0720KL', manufacturer='Yageo', spec='20 kΩ 1% 0805',
-     note='VTEST = VTEST_IN / 6; 15 V daje 2,5 V')
+     mpn='RT0805BRD0720KL', manufacturer='Yageo', spec='20 kΩ 0,1% 25 ppm/K 0805',
+     note='VTEST = VTEST_IN / 6 (±0,17% z tolerancji); 15 V daje 2,5 V')
 part('C1', 'Device:C', '10u', C0805, {1: '+3V3_RF', 2: 'GND'}, (148.0, 57.0, 90),
-     mpn='CL21A106KAYNNNE', manufacturer='Samsung Electro-Mechanics', spec='10 µF 25 V X5R 0805',
+     mpn='CL21A106KAYNNNG', manufacturer='Samsung Electro-Mechanics', spec='10 µF 25 V X5R 0805',
      note='+3V3_RF przy module CC1120EM')
 part('C2', 'Device:C', '100n', C0805, {1: '+3V3_RF', 2: 'GND'}, (151.0, 57.0, 90),
      mpn='CL21B104KBCNNNC', manufacturer='Samsung Electro-Mechanics', spec='100 nF 50 V X7R 0805',
@@ -248,10 +250,10 @@ part('C2', 'Device:C', '100n', C0805, {1: '+3V3_RF', 2: 'GND'}, (151.0, 57.0, 90
 part('C3', 'Device:C', '100n', C0805, {1: '+3V3', 2: 'GND'}, (92.5, 12.0, 90),
      mpn='CL21B104KBCNNNC', manufacturer='Samsung Electro-Mechanics', spec='100 nF 50 V X7R 0805',
      note='+3V3 przy FRAM U1')
-part('C4', 'Device:C', '10u', C0805, {1: '+5V', 2: 'GND'}, (FPC_ORIGIN[0] - 8.0, FPC_ORIGIN[1] - 2.0, 90),
-     mpn='CL21A106KAYNNNE', manufacturer='Samsung Electro-Mechanics', spec='10 µF 25 V X5R 0805',
+part('C4', 'Device:C', '10u', C0805, {1: '+5V_LCD', 2: 'GND'}, (FPC_ORIGIN[0] - 8.0, FPC_ORIGIN[1] - 2.0, 90),
+     mpn='CL21A106KAYNNNG', manufacturer='Samsung Electro-Mechanics', spec='10 µF 25 V X5R 0805',
      note='VDD panelu (Sharp zaleca ≥1 µF)')
-part('C6', 'Device:C', '100n', C0805, {1: '+5V', 2: 'GND'}, (FPC_ORIGIN[0] + 8.0, FPC_ORIGIN[1] - 2.0, 90),
+part('C6', 'Device:C', '100n', C0805, {1: '+5V_LCD', 2: 'GND'}, (FPC_ORIGIN[0] + 8.0, FPC_ORIGIN[1] - 2.0, 90),
      mpn='CL21B104KBCNNNC', manufacturer='Samsung Electro-Mechanics', spec='100 nF 50 V X7R 0805',
      note='VDDA panelu (Sharp zaleca ≥0,1 µF)')
 part('C7', 'Device:C', '100n', C0805, {1: 'LCD_DISP', 2: 'GND'}, (FPC_ORIGIN[0] + 10.5, FPC_ORIGIN[1] - 2.0, 90),
@@ -260,6 +262,33 @@ part('C7', 'Device:C', '100n', C0805, {1: 'LCD_DISP', 2: 'GND'}, (FPC_ORIGIN[0] 
 part('C5', 'Device:C', '100n', C0805, {1: 'VTEST', 2: 'GND'}, (165.5, 82.0, 90),
      mpn='CL21B104KBCNNNC', manufacturer='Samsung Electro-Mechanics', spec='100 nF 50 V X7R 0805',
      note='filtr wejścia ADC VTEST')
+
+
+# Panel supply: Microchip MCP1640 synchronous boost (DS20002234D) from +3V3 to +5V_LCD.
+# VOUT = VFB (1 + RTOP / RBOT) = 1.21 V x (1 + 1000/309) = 5.13 V; with VFB 1.175-1.245 V and 1 %
+# resistors 4.90-5.36 V, inside the panel's 4.8-5.5 V. CIN >= 4.7 uF, COUT >= 10 uF, L 4.7 uH
+# (Table 5-1, 5-2); 100 pF across RTOP against output spikes in PFM (section 5.4).
+BOOST = (64.0, 51.0)
+part('U2', 'Regulator_Switching:MCP1640x-xCHY', 'MCP1640', 'Package_TO_SOT_SMD:SOT-23-6',
+     {1: 'BST_SW', 2: 'GND', 3: '+3V3', 4: 'BST_FB', 5: '+5V_LCD', 6: '+3V3'}, (*BOOST, 0),
+     mpn='MCP1640T-I/CHY', manufacturer='Microchip', spec='przetwornica podwyższająca synchroniczna 0,65–5,5 V, PFM, SOT-23-6',
+     note='5,1 V panelu z +3V3 (3,0 V w stanowisku A); EN na stałe do VIN')
+part('L1', 'Device:L', '4u7', 'Inductor_SMD:L_Wuerth_WE-TPC-3816', {1: '+3V3', 2: 'BST_SW'},
+     (BOOST[0] - 6.0, BOOST[1], 90), mpn='744031004', manufacturer='Würth Elektronik',
+     spec='4,7 µH, Isat 0,9 A, 105 mΩ, ekranowana, 3,8 × 3,8 mm', note='cewka z tabeli 5-2 karty MCP1640')
+part('C8', 'Device:C', '10u', C0805, {1: '+3V3', 2: 'GND'}, (BOOST[0] - 6.0, BOOST[1] + 4.5, 0),
+     mpn='CL21A106KAYNNNG', manufacturer='Samsung Electro-Mechanics', spec='10 µF 25 V X5R 0805',
+     note='wejście U2 (karta: ≥4,7 µF)')
+part('C9', 'Device:C', '10u', C0805, {1: '+5V_LCD', 2: 'GND'}, (BOOST[0] + 4.5, BOOST[1] + 1.0, 90),
+     mpn='CL21A106KAYNNNG', manufacturer='Samsung Electro-Mechanics', spec='10 µF 25 V X5R 0805',
+     note='wyjście U2; razem z C4 przy panelu ≥10 µF także po spadku pojemności przy 5 V')
+part('R21', 'Device:R', '1M', R0805, {1: '+5V_LCD', 2: 'BST_FB'}, (BOOST[0] + 1.0, BOOST[1] + 4.5, 0),
+     mpn='RC0805FR-071ML', manufacturer='Yageo', spec='1,00 MΩ 1% 0805', note='RTOP dzielnika U2')
+part('R22', 'Device:R', '309k', R0805, {1: 'BST_FB', 2: 'GND'}, (BOOST[0] + 1.0, BOOST[1] + 7.0, 0),
+     mpn='RC0805FR-07309KL', manufacturer='Yageo', spec='309 kΩ 1% 0805', note='RBOT dzielnika U2')
+part('C10', 'Device:C', '100p', C0805, {1: '+5V_LCD', 2: 'BST_FB'}, (BOOST[0] + 5.5, BOOST[1] + 5.75, 90),
+     mpn='CL21C101JBANNNC', manufacturer='Samsung Electro-Mechanics', spec='100 pF 50 V C0G 0805',
+     note='równolegle do R21 (karta MCP1640, 5.4)')
 
 # Loose items without a footprint, listed in the BOM after the board parts.
 EXTRAS = [
@@ -292,9 +321,9 @@ NOTCH_P5 = (uno(61.0, 32.3)[0], uno(61.0, 32.3)[1], BOARD_W, uno(61.0, 23.0)[1])
 SLOT_P20 = (uno(17.0, 42.1)[0], uno(17.0, 42.1)[1], uno(51.0, 39.2)[0], uno(51.0, 39.2)[1])
 
 # Ground pads that DRC reported as starved thermals for the kept routing session.
-SOLID_GND_PADS = [('J6', '22'), ('J4', '7')]
+SOLID_GND_PADS = [('J6', '22'), ('J4', '7'), ('Q1', '2')]
 
-POWER_NETS = {'+3V3', '+3V3_RF', '+5V', '+3V3_DEVKIT', '+5V_DEVKIT', 'GND'}
+POWER_NETS = {'+3V3', '+3V3_RF', '+5V', '+5V_LCD', '+3V3_DEVKIT', '+5V_DEVKIT', 'GND'}
 FLAGS = ['+3V3', '+3V3_RF', '+5V', '+3V3_DEVKIT', '+5V_DEVKIT', 'GND', 'VTEST_IN']
 # Signal nets reached from an MCU pin through a series resistor.
 SERIES = {'SPI_SCK': ('SPI_SCK_DK', 'SPI_SCK_DEVKIT')}

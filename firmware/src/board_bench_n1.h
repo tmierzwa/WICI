@@ -69,6 +69,9 @@ constexpr uint8_t LED_RADIO = PIN_LED2;      // P0.14
 constexpr uint8_t LED_FRAM = PIN_LED3;       // P0.15
 constexpr uint8_t LED_USB = PIN_LED4;        // P0.16
 
-constexpr uint32_t SPI_HZ = 1000000;  // radio i FRAM, jak na przewodach
+constexpr uint32_t SPI_HZ = 1000000;  // radio, jak na przewodach
+// FRAM: ≥8 MHz jak w każdej stacji (seria 256 B ≤0,3 ms, specyfikacja: zanik zasilania i zapis);
+// SPIM2 nRF52840 daje najwyżej 8 MHz. Zbocza i poziomy przy U1 sprawdza oscyloskop przy uruchomieniu.
+constexpr uint32_t FRAM_SPI_HZ = 8000000;
 
 }  // namespace board

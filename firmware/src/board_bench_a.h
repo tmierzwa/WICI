@@ -40,5 +40,8 @@ constexpr uint8_t LED_FRAM = PIN_LED3;       // P0.15
 constexpr uint8_t LED_USB = PIN_LED4;        // P0.16
 
 constexpr uint32_t SPI_HZ = 1000000;  // pierwsza próba 1 MHz, jak w lekcjach R02
+// FRAM na przewodach zostaje przy 1 MHz: ten wariant nie spełnia wymagania ≥8 MHz stacji
+// i nie służy do prób zaniku zasilania; spełniają je płytka N1 (bench-n1, bench-b).
+constexpr uint32_t FRAM_SPI_HZ = SPI_HZ;
 
 }  // namespace board

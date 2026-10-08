@@ -49,6 +49,12 @@
     (options "")
     (descr "KiCad 10.0.6 subset or own (WICI), see KICAD-LIBRARY-LICENSE.md"))
   (lib
+    (name "Inductor_SMD")
+    (type "KiCad")
+    (uri "${KIPRJMOD}/footprints/Inductor_SMD.pretty")
+    (options "")
+    (descr "KiCad 10.0.6 subset or own (WICI), see KICAD-LIBRARY-LICENSE.md"))
+  (lib
     (name "LED_THT")
     (type "KiCad")
     (uri "${KIPRJMOD}/footprints/LED_THT.pretty")
