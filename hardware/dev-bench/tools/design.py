@@ -37,7 +37,10 @@ DEVKIT_PIN1_Y = round(DEVKIT_PIN22_Y - 21 * 2.54, 4)
 DEVKIT_J1_X, DEVKIT_J3_X = DEVKIT_X + 1.27, DEVKIT_X + 24.13
 
 # Adafruit 4694 (63.50 x 55.88 mm) top-left corner; header 2.54 mm below the
-# top edge, pin EIN at x 21.59 mm. Holes 2.54 mm in from each corner.
+# top edge. The glass is on the side opposite the parts, so with the display face
+# up the header reads VIN 3V3 GND CLK DI CS EMD DISP EIN from the left (the
+# Adafruit fab print shows the parts side, mirrored); VIN at x 21.59 mm.
+# Holes 2.54 mm in from each corner.
 LCD_X, LCD_Y = 8.0, 3.0
 LCD_PIN1 = (LCD_X + 21.59, LCD_Y + 2.54)
 # Adafruit 4719 (25.40 x 17.78 mm) top-left corner; header 2.54 mm above the
@@ -83,8 +86,9 @@ part('J4', 'Connector_Generic:Conn_01x10', 'ARDUINO D8-SCL',
       6: 'SW_CISZA', 7: 'GND', 8: 'BTN_PREP', 9: 'BTN_OK', 10: 'BTN_BACK'},
      (*uno(41.656, 50.8), 270), **STACK)
 
-EM = dict(mpn='FTS-110-01-L-DV', manufacturer='Samtec',
-          spec='listwa męska 2x10, 1,27 mm, THT, piny kwadratowe 0,4 mm (wtyk do Samtec SFM modułu)',
+EM = dict(mpn='TFM-110-01-L-D', manufacturer='Samtec',
+          spec='listwa Tiger Eye 2x10, 1,27 mm, przewlekana (styl -01), partner gniazd SFM-110-02-S-D-A '
+               'modułu według karty Samtec F-226; wysokość po złączeniu 5,97 mm',
           variant='A', note='moduł CC1120EM-868-915 wpina się od góry; pin 1 od strony SMA modułu')
 part('J9', 'Connector_Generic:Conn_02x10_Odd_Even', 'CC1120EM P1',
      'Connector_PinHeader_1.27mm:PinHeader_2x10_P1.27mm_Vertical',
@@ -112,10 +116,11 @@ part('J6', 'Connector_Generic:Conn_01x22', 'DEVKITC J3',
 
 part('J7', 'Connector_Generic:Conn_01x09', 'SHARP 4694',
      'Connector_PinSocket_2.54mm:PinSocket_1x09_P2.54mm_Vertical',
-     {1: 'LCD_EXTCOMIN', 2: 'LCD_DISP', 3: '+3V3', 4: 'LCD_CS', 5: 'SPI_MOSI',
-      6: 'SPI_SCK', 7: 'GND', 9: '+5V'}, (*LCD_PIN1, 90),
+     {1: '+5V', 3: 'GND', 4: 'SPI_SCK', 5: 'SPI_MOSI', 6: 'LCD_CS', 7: '+3V3', 8: 'LCD_DISP',
+      9: 'LCD_EXTCOMIN'}, (*LCD_PIN1, 90),
      mpn='PPTC091LFBN-RC', manufacturer='Sullins', spec='gniazdo żeńskie 1x9, 2,54 mm, proste, THT',
-     note='Adafruit 4694: EIN DISP EMD CS DI CLK GND 3V3 VIN; EMD = H (EXTCOMIN z MCU); 3V3 modułu nie podłączone')
+     note='Adafruit 4694 ekranem do góry, piny od lewej: VIN 3V3 GND CLK DI CS EMD DISP EIN (schemat Adafruit: '
+          'JP1.1 VIN ... JP1.9 EXTCOMIN); EMD = H (EXTCOMIN z MCU); wyjście 3V3 modułu nie podłączone')
 part('J8', 'Connector_Generic:Conn_01x09', 'FRAM 4719',
      'Connector_PinSocket_2.54mm:PinSocket_1x09_P2.54mm_Vertical',
      {1: '+3V3', 3: 'GND', 4: 'SPI_SCK', 5: 'SPI_MISO', 6: 'SPI_MOSI', 7: 'FRAM_CS'},
@@ -140,9 +145,10 @@ part('JP2', 'Connector_Generic:Conn_01x02', '5V DEVKITC',
      note='założona tylko w stanowisku B; zasila ekran, pomiar prądu 5 V')
 part('JP3', 'Connector_Generic:Conn_01x02', '3V3 RADIO A',
      'Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical',
-     {1: '+3V3', 2: '+3V3_RF'}, (147.0, 67.0, 90),
+     {1: '+3V3', 2: '+3V3_RF'}, (131.0, 88.0, 90),
      mpn='61300211121', manufacturer='Würth Elektronik', spec='listwa męska 1x2, 2,54 mm, ze zworką',
-     note='założona w stanowisku A (zasila CC1120EM); amperomierz zamiast zworki mierzy prąd radia')
+     note='założona w stanowisku A (zasila CC1120EM); amperomierz zamiast zworki mierzy prąd radia '
+          '(zakres ≥200 mA); poza obrysem X-NUCLEO, bo listwa ze zworką (8,9 mm) sięga spodu nakładki w stanowisku B')
 part('J12', 'Connector:Screw_Terminal_01x02', 'VTEST 0-15V',
      'TerminalBlock_Phoenix:TerminalBlock_Phoenix_MKDS-1,5-2-5.08_1x02_P5.08mm_Horizontal',
      {1: 'VTEST_IN', 2: 'GND'}, (150.0, 92.0, 0),
@@ -272,7 +278,7 @@ NOTCH_P5 = (uno(61.0, 32.3)[0], uno(61.0, 32.3)[1], BOARD_W, uno(61.0, 23.0)[1])
 SLOT_P20 = (uno(17.0, 42.1)[0], uno(17.0, 42.1)[1], uno(51.0, 39.2)[0], uno(51.0, 39.2)[1])
 
 # Ground pads that DRC reported as starved thermals for the kept routing session.
-SOLID_GND_PADS = [('J6', '22')]
+SOLID_GND_PADS = [('J6', '22'), ('J7', '3')]
 
 POWER_NETS = {'+3V3', '+3V3_RF', '+5V', '+3V3_DEVKIT', '+5V_DEVKIT', 'GND'}
 FLAGS = ['+3V3', '+3V3_RF', '+5V', '+3V3_DEVKIT', '+5V_DEVKIT', 'GND', 'VTEST_IN']

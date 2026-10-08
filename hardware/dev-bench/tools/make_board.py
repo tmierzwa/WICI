@@ -15,7 +15,7 @@ import pcbnew as k
 from make_project import POWER
 
 from design import (PARTS, BOARD_W, BOARD_H, NOTCH_P5, SLOT_P20, EM_P1, EM_W, EM_H, EM_X_U, EM_Y_U, EM_SMA,
-                    LCD_X, LCD_Y, FRAM_X, FRAM_Y, DEVKIT_X, DEVKIT_USB_Y, uno)
+                    LCD_X, LCD_Y, LCD_PIN1, FRAM_X, FRAM_Y, FRAM_PIN1, DEVKIT_X, DEVKIT_USB_Y, uno)
 
 ROOT = Path(__file__).resolve().parents[1]
 NS = uuid.UUID('9b1f0b57-36c4-4f4e-9d0c-2f6a1c8f2a10')
@@ -204,6 +204,11 @@ def build():
     for x in (0, 10, 20, 30, 40, 50):
         line(b, (x, sy - (1.5 if x in (0, 50) else .8)), (x, sy), k.Dwgs_User, .2)
     text(b, 'skala: 50 mm przy wydruku 1:1', 25, sy + 2.5, 1.5, layer=k.Dwgs_User)
+    # Copper-free band over the DK header P20, drawn for the 1:1 fit print.
+    px0, py0, px1, py1 = SLOT_P20
+    for p0, p1 in (((px0, py0), (px1, py0)), ((px1, py0), (px1, py1)), ((px1, py1), (px0, py1)), ((px0, py1), (px0, py0))):
+        line(b, p0, p1, k.Dwgs_User, .2)
+    text(b, 'pas bez miedzi nad P20 płytki DK', (px0 + px1) / 2, py1 + 1.6, 1.0, layer=k.Dwgs_User)
     b.BuildConnectivity()
     return b, fps
 
@@ -223,13 +228,18 @@ def silkscreen(b, fps):
         ('GND SCK MO MI RF FR LCD G0 G2', 115.2, 94.8, 1.0, False),
         ('CC1120EM (A): SMA w kółku', 125.6, 48.0, 1.0, False),
         ('DevKitC (B): USB w dół', 86.2, 33.5, 1.0, False), ('USB', 86.2, 96.6, 1.0, True),
-        ('Sharp 4694', 39.8, 31.0, 1.0, False), ('FRAM 4719', 86.2, 13.0, 1.0, False),
+        ('Sharp 4694 ekranem do góry', 39.8, 31.0, 1.0, False), ('FRAM 4719', 86.2, 13.0, 1.0, False),
     ]
     for s, x, y, size, bold in texts:
         text(b, s, x, y, size, bold=bold)
     text(b, 'JP1 3V3 (B)', 92.8, 24.0, 1.0)
     text(b, 'JP2 5V (B)', 68.0, 81.3, 1.0, angle=90)
-    text(b, 'JP3 RADIO (A)', 148.3, 71.2, 1.0)
+    text(b, 'JP3 RADIO (A)', 132.3, 84.6, 1.0)
+    # Header pin names under the modules, read with the module in place (display face up).
+    for i, name in enumerate(('VIN', '3V3', 'GND', 'CLK', 'DI', 'CS', 'EMD', 'DISP', 'EIN')):
+        text(b, name, LCD_PIN1[0] + 2.54 * i, LCD_PIN1[1] + 3.6, 1.0, angle=90)
+    for i, name in enumerate(('VIN', '3V3', 'GND', 'SCK', 'MISO', 'MOSI', 'CS', 'WP', 'HOLD')):
+        text(b, name, FRAM_PIN1[0] + 2.54 * i, FRAM_PIN1[1] - 3.8, 1.0, angle=90)
     boxes = []
 
     def box(item):

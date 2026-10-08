@@ -332,7 +332,7 @@
       (place J12 180000 -122000 front 0 (PN "VTEST 0-15V"))
     )
     (component Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical
-      (place JP3 177000 -97000 front 90 (PN "3V3 RADIO A"))
+      (place JP3 161000 -118000 front 90 (PN "3V3 RADIO A"))
       (place JP1 119000 -56500 front 90 (PN "3V3 DEVKITC"))
     )
     (component Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical::1
@@ -1176,7 +1176,7 @@
   )
   (network
     (net /+3V3
-      (pins C3-1 R11-1 R10-1 R9-1 R8-1 R7-1 R6-1 R5-1 D3-2 JP3-1 JP1-1 J8-1 J7-3 J1-4)
+      (pins C3-1 R11-1 R10-1 R9-1 R8-1 R7-1 R6-1 R5-1 D3-2 JP3-1 JP1-1 J8-1 J7-7 J1-4)
     )
     (net /+3V3_DEVKIT
       (pins JP1-2 J5-1 J5-2)
@@ -1185,7 +1185,7 @@
       (pins C2-1 C1-1 JP3-2 J10-7 J10-9)
     )
     (net /+5V
-      (pins C4-1 R2-1 JP2-1 J7-9 J1-5)
+      (pins C4-1 R2-1 JP2-1 J7-1 J1-5)
     )
     (net /+5V_DEVKIT
       (pins JP2-2 J5-21)
@@ -1220,16 +1220,16 @@
     (net /GND
       (pins C5-2 C4-2 C3-2 C2-2 C1-2 R15-2 R13-2 R12-2 D3-1 R19-2 R4-2 Q1-2 D1-1 SW6-2
         SW6-2@1 SW5-1 SW4-2 SW4-2@1 SW3-2 SW3-2@1 SW2-2 SW2-2@1 SW1-2 SW1-2@1 J12-2
-        J11-1 J8-3 J7-7 J6-1 J6-21 J6-22 J5-22 J10-2 J9-1 J9-19 J4-7 J1-6 J1-7)
+        J11-1 J8-3 J7-3 J6-1 J6-21 J6-22 J5-22 J10-2 J9-1 J9-19 J4-7 J1-6 J1-7)
     )
     (net /LCD_CS
-      (pins R13-1 J11-7 J7-4 J5-7 J3-5)
+      (pins R13-1 J11-7 J7-6 J5-7 J3-5)
     )
     (net /LCD_DISP
-      (pins R19-1 J7-2 J5-9 J4-1)
+      (pins R19-1 J7-8 J5-9 J4-1)
     )
     (net /LCD_EXTCOMIN
-      (pins J7-1 J5-10 J3-7)
+      (pins J7-9 J5-10 J3-7)
     )
     (net /LED_A
       (pins R1-2 D1-2)
@@ -1265,7 +1265,7 @@
       (pins J11-3 J8-6 J7-5 J5-17 J9-18 J4-4)
     )
     (net /SPI_SCK
-      (pins R18-2 R17-2 J11-2 J8-4 J7-6 J9-16)
+      (pins R18-2 R17-2 J11-2 J8-4 J7-4 J9-16)
     )
     (net /SPI_SCK_DEVKIT
       (pins R18-1 J5-18)
@@ -1390,8 +1390,8 @@
     (net "unconnected-(J6-Pin_3-Pad3)"
       (pins J6-3)
     )
-    (net "unconnected-(J7-Pin_8-Pad8)"
-      (pins J7-8)
+    (net "unconnected-(J7-Pin_2-Pad2)"
+      (pins J7-2)
     )
     (net "unconnected-(J8-Pin_2-Pad2)"
       (pins J8-2)
@@ -1456,7 +1456,7 @@
       "unconnected-(J6-Pin_11-Pad11)" "unconnected-(J6-Pin_12-Pad12)" "unconnected-(J6-Pin_13-Pad13)"
       "unconnected-(J6-Pin_14-Pad14)" "unconnected-(J6-Pin_15-Pad15)" "unconnected-(J6-Pin_16-Pad16)"
       "unconnected-(J6-Pin_17-Pad17)" "unconnected-(J6-Pin_19-Pad19)" "unconnected-(J6-Pin_2-Pad2)"
-      "unconnected-(J6-Pin_20-Pad20)" "unconnected-(J6-Pin_3-Pad3)" "unconnected-(J7-Pin_8-Pad8)"
+      "unconnected-(J6-Pin_20-Pad20)" "unconnected-(J6-Pin_3-Pad3)" "unconnected-(J7-Pin_2-Pad2)"
       "unconnected-(J8-Pin_2-Pad2)" "unconnected-(J8-Pin_8-Pad8)" "unconnected-(J8-Pin_9-Pad9)"
       "unconnected-(J9-Pin_11-Pad11)" "unconnected-(J9-Pin_13-Pad13)" "unconnected-(J9-Pin_15-Pad15)"
       "unconnected-(J9-Pin_17-Pad17)" "unconnected-(J9-Pin_2-Pad2)" "unconnected-(J9-Pin_3-Pad3)"

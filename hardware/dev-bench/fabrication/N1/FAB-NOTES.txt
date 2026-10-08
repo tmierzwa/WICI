@@ -1,0 +1,27 @@
+WICI carrier board N1 - fabrication and assembly notes
+=====================================================
+Open hardware, CERN-OHL-P-2.0. Source: https://github.com/tmierzwa/WICI (hardware/dev-bench).
+Quantity: 5 boards (pilot). Prototype tool board, no RF, no impedance control.
+
+PCB
+- 2 layers, FR-4 (Tg >= 130 C), finished thickness 1.6 mm +/-10 %.
+- Copper 35 um (1 oz) both sides. Min track/space 0.2 mm, min annular ring 0.175 mm (J9/J10).
+- Surface finish: lead-free HASL (all parts hand soldered or reflowed; ENIG acceptable).
+- Solder mask green both sides; silkscreen white, top side only (bottom silk file is empty).
+- Outline 170 x 100 mm (Edge_Cuts) with a rectangular notch 7.58 x 9.3 mm on the
+  right edge; notch inner corners at router radius (up to 1 mm is fine).
+- Drill sizes in the Excellon files are finished hole sizes. PTH and NPTH in separate files.
+  Hole sizes: PTH 0.4, 0.65, 0.9, 1, 1.2, 1.3, 1.85 mm; NPTH 1.8, 2.7, 3.2 mm.
+- No plated slots, no castellations, no blind/buried vias. Vias 0.8/0.4 mm, may be tented or open.
+- Electrical test 100 %. IPC-A-600 class 2.
+- Fab order number: if needed, on the bottom side (no bottom silkscreen), clear of pads.
+- Origin of Gerbers, drills and positions: lower-left board corner.
+
+Assembly (optional quote)
+- Top side only. Assembler places the 27 SMD parts (0805, 1206, SOT-23, SOD-123):
+  assembly/bom-assembly.csv rows with 'Placed by = assembler', positions in assembly/cpl-smd.csv.
+- All through-hole parts, connectors and modules are fitted by the owner; do not fit them.
+- Polarity: Q1 and D3 SOT-23 pin 1 per footprint; D2 cathode band at the marked side
+  (assembly/montaz.pdf). No fiducials: use pads or add panel rails with fiducials.
+- Modules (nRF52840-DK, ESP32-S3-DevKitC-1, CC1120EM, X-NUCLEO-S2868A2, Adafruit 4694/4719) are not
+  part of the order.

@@ -4316,7 +4316,7 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "FTS-110-01-L-DV"
+    (property "MPN" "TFM-110-01-L-D"
       (at 182.88 48.26 0)
       (effects
         (font
@@ -4566,7 +4566,7 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "FTS-110-01-L-DV"
+    (property "MPN" "TFM-110-01-L-D"
       (at 182.88 86.36 0)
       (effects
         (font
@@ -5499,28 +5499,16 @@
       (width 0)
       (type default))
     (uuid "f6f60617-258a-5469-9ac9-975cd8faa17b"))
-  (label "LCD_EXTCOMIN"
+  (label "+5V"
     (at 248.92 38.1 180)
     (effects
       (font
         (size 1.27 1.27))
       (justify right))
     (uuid "f91863b3-d75b-5758-9076-d72df9b3abb5"))
-  (wire
-    (pts
-      (xy 254.0 40.64)
-      (xy 248.92 40.64))
-    (stroke
-      (width 0)
-      (type default))
-    (uuid "f0fd8bb7-71b7-5d76-98d5-0ea6c147afd5"))
-  (label "LCD_DISP"
-    (at 248.92 40.64 180)
-    (effects
-      (font
-        (size 1.27 1.27))
-      (justify right))
-    (uuid "a04c650c-1bf8-52a0-96d5-6f670a1a59ba"))
+  (no_connect
+    (at 254.0 40.64)
+    (uuid "1ff95a92-fd6b-53b6-8731-8528366814cd"))
   (wire
     (pts
       (xy 254.0 43.18)
@@ -5529,7 +5517,7 @@
       (width 0)
       (type default))
     (uuid "956873f2-cdb7-5267-bd2a-734093b83d2e"))
-  (label "+3V3"
+  (label "GND"
     (at 248.92 43.18 180)
     (effects
       (font
@@ -5544,7 +5532,7 @@
       (width 0)
       (type default))
     (uuid "800c1044-85cf-55ec-bdd7-717fe192cd3d"))
-  (label "LCD_CS"
+  (label "SPI_SCK"
     (at 248.92 45.72 180)
     (effects
       (font
@@ -5574,7 +5562,7 @@
       (width 0)
       (type default))
     (uuid "63e97c31-a3fe-57ce-9b3e-e59dc899a551"))
-  (label "SPI_SCK"
+  (label "LCD_CS"
     (at 248.92 50.8 180)
     (effects
       (font
@@ -5589,16 +5577,28 @@
       (width 0)
       (type default))
     (uuid "ff693fc5-8c3f-5576-ae74-b2f5b06939d5"))
-  (label "GND"
+  (label "+3V3"
     (at 248.92 53.34 180)
     (effects
       (font
         (size 1.27 1.27))
       (justify right))
     (uuid "c1f800d9-6cd4-562b-8c24-091c507d55d1"))
-  (no_connect
-    (at 254.0 55.88)
-    (uuid "d2963a87-fa4b-5997-a4a2-76a7b6967557"))
+  (wire
+    (pts
+      (xy 254.0 55.88)
+      (xy 248.92 55.88))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "0a383094-0995-531d-95c4-c8f8807d35ad"))
+  (label "LCD_DISP"
+    (at 248.92 55.88 180)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify right))
+    (uuid "2c3412e9-9814-5520-8958-54ce573ac664"))
   (wire
     (pts
       (xy 254.0 58.42)
@@ -5607,7 +5607,7 @@
       (width 0)
       (type default))
     (uuid "e37cdb32-7205-5305-82c8-9672e0dad911"))
-  (label "+5V"
+  (label "LCD_EXTCOMIN"
     (at 248.92 58.42 180)
     (effects
       (font

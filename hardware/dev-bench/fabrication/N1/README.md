@@ -4,14 +4,17 @@
 
 | Plik | Zawartość |
 |---|---|
-| `wici-plytka-nosna-N1-gerber.zip` | Gerbery i wiercenia do wysłania wykonawcy |
+| `wici-plytka-nosna-N1-gerber.zip` | Gerbery, wiercenia i `FAB-NOTES.txt` do wysłania wykonawcy |
+| `FAB-NOTES.txt` | parametry płytki i zakres montażu dla wykonawcy, po angielsku |
 | `gerbers/` | miedź, maska, opis obu stron i obrys (`Edge_Cuts`), RS-274X |
 | `drill/` | wiercenia Excellon w mm, otwory platerowane (PTH) i nieplaterowane (NPTH) osobno, mapa wierceń w PDF |
 | `assembly/positions.csv` | pozycje części od strony elementów (wszystkie części są na stronie górnej) |
 | `assembly/montaz.pdf` | rysunek montażowy w skali 1,5 |
 | `assembly/bom.csv` | kopia [BOM](../../bom.csv) |
+| `assembly/bom-assembly.csv` | BOM dla montażowni po angielsku: oznaczenia, ilość na płytkę, MPN, typ SMD/THT, wariant, kto montuje |
+| `assembly/cpl-smd.csv` | pozycje 27 elementów SMD w kolumnach Designator, Mid X, Mid Y, Layer, Rotation |
 | `mechanika-1-do-1.pdf` | wydruk do przymiarki w skali 1:1 z kreską kontrolną 50 mm |
 
 Punktem odniesienia Gerberów, wierceń i pozycji jest lewy dolny narożnik płytki.
 
-Parametry dla wykonawcy: dwie warstwy, FR-4 1,6 mm, miedź 35 µm, maska i opis obustronne, ścieżka i odstęp ≥0,2 mm, otwór ≥0,4 mm, wycięcie przy prawej krawędzi z narożnikami w promieniu frezu. Płytka nie ma kontroli impedancji. Licencja plików: CERN-OHL-P-2.0 ([LICENSE.md](../../../../LICENSE.md)).
+Parametry dla wykonawcy (pełna lista w `FAB-NOTES.txt`): dwie warstwy, FR-4 1,6 mm, miedź 35 µm, HASL bezołowiowy, maska obustronna, opis tylko na górze (plik opisu spodu jest pusty), ścieżka i odstęp ≥0,2 mm, otwór ≥0,4 mm, wycięcie przy prawej krawędzi z narożnikami w promieniu frezu. Płytka nie ma kontroli impedancji. Licencja plików: CERN-OHL-P-2.0 ([LICENSE.md](../../../../LICENSE.md)).

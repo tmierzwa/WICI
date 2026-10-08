@@ -1,7 +1,7 @@
 #!/bin/sh
 # SPDX-License-Identifier: MIT
 # Route checks/routing.dsn with Freerouting 2.5.0 into checks/routing.ses.
-# Environment: JAVA (a Java 21+ runtime), FREEROUTING (freerouting-2.5.0.jar).
+# Environment: JAVA (a Java 25+ runtime; the 2.5.0 jar is built for Java 25), FREEROUTING (freerouting-2.5.0.jar).
 # Freerouting exits 0 with nets left unrouted; this script then fails instead.
 set -eu
 cd "$(dirname "$0")/.."

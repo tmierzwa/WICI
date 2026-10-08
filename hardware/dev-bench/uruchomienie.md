@@ -15,7 +15,7 @@ Wszystko lutuje się ręcznie. Elementy SMD to 0805, 1206 (R2), SOT-23 i SOD-123
 5. **Złącza Arduino J1–J4:** listwy przelotowe z długimi pinami (zestaw Adafruit 85), wkładane od góry. Lutuje się je od spodu z płytką odwróconą, nie na płytce DK, bo grot nie zmieści się między płytkami i stopiłby gniazda DK. Piny ustawia przyrząd: druga płytka nośna albo płytka uniwersalna nasunięta na długie piny. Najpierw jeden pin każdej listwy, przymiarka na DK, potem reszta.
 6. **Od spodu w polu Arduino** przycina się wyprowadzenia elementów przewlekanych do ≤1,5 mm. Nie dotyczy to długich pinów J1–J4. Pod polem leży płytka DK.
 
-Przyciski 12 × 12 mm dostają nasadki Omron B32. Pad masy J6.22 ma pełne połączenie z polem masy; lutuje się go grotem o większej pojemności cieplnej. Do płytek ekranu i FRAM lutuje się listwy męskie dołączone do zestawów Adafruit, pinami w dół. Ekran mocuje się czterema dystansami M2,5 (wysokość = gniazdo 8,5 mm + korpus listwy, zmierzyć na płytce), a FRAM dwoma.
+Przyciski 12 × 12 mm dostają nasadki Omron B32. Pady masy J6.22 i J7.3 mają pełne połączenie z polem masy; lutuje się go grotem o większej pojemności cieplnej. Do płytek ekranu i FRAM lutuje się listwy męskie dołączone do zestawów Adafruit, pinami w dół. Ekran mocuje się czterema dystansami M2,5 (wysokość = gniazdo 8,5 mm + korpus listwy, zmierzyć na płytce), a FRAM dwoma.
 
 ## Kontrola przed zasilaniem
 
@@ -40,8 +40,8 @@ Kroki A3–A5 i B3–B4 wymagają obrazu z plikiem opisu płytki N1 (na przykła
 | A1 | nRF52840-DK z wgranym obrazem N1 (instrukcja w [firmware](../../firmware/README.md#płytka-nośna-n1-bench-n1), środowisko `bench-n1`), zasilanie DK w ustawieniu fabrycznym (VDD z przetwornicy płytki, 3,0 V), wyłącznik SW8 włączony, przełącznik TRACE (SW7) w pozycji „Default”; przełączniki DK ustawia się przed nałożeniem płytki, bo potem są pod nią. Płytka nośna bez modułów na DK; lewa część płytki na dystansach M3 (H1, H2, H5) tak, by leżała poziomo | płytka nie naciska na części DK |
 | A2 | Zasilanie z USB DK (J2 albo J3) przez miernik USB; pomiar J1.4 i J1.5 wobec masy | około 3,0 V i około 5 V; prąd bez modułów zgodny z samą płytką DK (wzrost < 20 mA) |
 | A3 | Przyciski, CISZA, przycisk przygotowania, dioda i brzęczyk poleceniem diagnostycznym obrazu | każdy przycisk zmienia stan tylko swojej linii; brzęczyk słychać przy 2048 Hz |
-| A4 | Wpięte FRAM i ekran | `FRAM` rozpoznaje układ; ekran pokazuje obraz, EXTCOMIN z MCU (EMD w stanie wysokim) |
-| A5 | Wpięty CC1120EM (orientacja z kroku 4, złącze SMA nad kółkiem na opisie), amperomierz w miejscu JP3 przy pierwszym włączeniu | `RADIO` daje `partnumber: 0x48`; dalej kroki z [lekcji R02](../r02/lekcje.md#uruchomienie) i pomiary z README stanowiska |
+| A4 | Wpięte FRAM i ekran; przed wpięciem: ekran szkłem do góry, pin VIN modułu nad napisem VIN przy J7, a miernikiem między J7.3 (GND) i J7.7 (EMD, +3V3) bez modułu: brak zwarcia | `FRAM` rozpoznaje układ; ekran pokazuje obraz, EXTCOMIN z MCU (EMD w stanie wysokim) |
+| A5 | Wpięty CC1120EM (orientacja z kroku 4, złącze SMA nad kółkiem na opisie), amperomierz w miejscu JP3 przy pierwszym włączeniu (zakres ≥200 mA: C1 10 µF i nadawanie około 45 mA; bez zworki szyna 3,3 V zasila moduł słabo przez R11 i diody wejść) | `RADIO` daje `partnumber: 0x48`; dalej kroki z [lekcji R02](../r02/lekcje.md#uruchomienie) i pomiary z README stanowiska |
 
 ## Stanowisko B
 
