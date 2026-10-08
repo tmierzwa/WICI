@@ -117,8 +117,13 @@ def rows(entries, indent="    ") -> str:
     return "\n".join(f"{indent}{{{', '.join(cstring(s) for s in strings)}}}," for strings in entries)
 
 
+# Teksty tylko strony mieszkańców i panelu laptopa: nie trafiają do obrazu stacji (zostają w liście
+# kanonicznej i w zestawie znaków fontu).
+PAGE_ONLY = {"czeka_na_opiekuna", "opiekun_polaczyl", "nie_wyslane", "zostalo_znakow", "nie_wpisuj_nazwisk"}
+
+
 def header(data: dict) -> str:
-    texts = data["texts"]
+    texts = {key: value for key, value in data["texts"].items() if key not in PAGE_ONLY}
     labels = data["labels"]
     ids = list(texts)
     out = [

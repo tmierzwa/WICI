@@ -270,6 +270,10 @@ void setIfac(const uint8_t ifac[16]) {
     }
 }
 
+void setOsp(const uint8_t dest[HASH]) {
+    if (p1) p1->queue().setOsp(dest);
+}
+
 void loop(uint32_t) {
     if (!started) return;
     try {
@@ -427,12 +431,13 @@ size_t interfaceJson(char* out, size_t size) {
     const int n = snprintf(out, size,
                            "\"q_len\":%u,\"q_held\":%u,\"q_queued\":%lu,\"q_full\":%lu,\"too_large\":%lu,\"ann_held\":%lu,"
                            "\"ann_drop\":%lu,\"ann_expired\":%lu,\"tx_sent\":%lu,\"tx_failed\":%lu,\"rx_ok\":%lu,"
-                           "\"ifac_missing\":%lu,\"ifac_invalid\":%lu,\"offline\":%lu",
+                           "\"ifac_missing\":%lu,\"ifac_invalid\":%lu,\"offline\":%lu,\"q_reserved\":%lu,\"other_ms\":%lu",
                            (unsigned)p1->queue().queued(), (unsigned)p1->queue().held(), (unsigned long)c.queued,
                            (unsigned long)c.full, (unsigned long)c.tooLarge, (unsigned long)c.announcesHeld,
                            (unsigned long)c.announcesDropped, (unsigned long)c.announcesExpired, (unsigned long)c.sent,
                            (unsigned long)c.sendFailed, (unsigned long)c.received, (unsigned long)c.ifacMissing,
-                           (unsigned long)c.ifacInvalid, (unsigned long)c.offline);
+                           (unsigned long)c.ifacInvalid, (unsigned long)c.offline, (unsigned long)c.reserved,
+                           (unsigned long)p1->queue().otherUsedMs(nowMs()));
     return n < 0 ? 0 : (size_t)n;
 }
 

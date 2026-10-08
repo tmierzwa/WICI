@@ -30,7 +30,7 @@ constexpr uint32_t HOLD_DISCARD_MS = 2000;    // przytrzymanie WSTECZ w kreatorz
 constexpr uint32_t HOLD_LANGUAGE_MS = 3000;   // przytrzymanie WSTECZ poza kreatorem: wybór języka
 constexpr uint32_t REPEAT_DELAY_MS = 500;     // wpis cyfr: przytrzymanie przyspiesza zmianę
 constexpr uint32_t REPEAT_MS = 150;
-constexpr size_t STATUS_MAX_LINES = 16;
+constexpr size_t STATUS_MAX_LINES = 17;
 constexpr size_t TEXT_MAX_LINES = 24;
 constexpr size_t ITEM_TEXT = 193;             // treść REPLY/BULLETIN albo fraza (UTF-8)
 constexpr uint16_t PEOPLE_MAX = 999;
@@ -95,6 +95,7 @@ struct Item {
 enum class DraftKind : uint8_t { NEW, PEOPLE, URGENCY, RESOLVED };
 constexpr int8_t PHRASE_NONE = -1;
 constexpr int8_t PHRASE_RESOLVED = -2;  // "potrzeba ustała"
+constexpr int8_t PHRASE_KEPT = -3;      // rewizja liczby osób albo pilności: treść spoza listy fraz (z panelu)
 
 struct Draft {
     DraftKind kind = DraftKind::NEW;
@@ -105,7 +106,7 @@ struct Draft {
     int8_t phrase = PHRASE_NONE;
 };
 
-enum class Submit : uint8_t { STORED, NO_ADDRESS, FULL, ERROR };
+enum class Submit : uint8_t { STORED, NO_ADDRESS, FULL, ERROR, ANNOUNCED };  // ANNOUNCED: OGŁOŚ ADRES
 enum class TestState : uint8_t { NONE, SCHEDULED, SENT, CONFIRMED, PAUSED };
 struct TestInfo {
     TestState state = TestState::NONE;
@@ -141,6 +142,7 @@ struct Host {
     virtual void ackAlarm(const AlarmInfo& alarm) = 0;
     virtual bool switchBackup() = 0;
     virtual bool destroy() = 0;
+    virtual bool announce() { return false; }   // OGŁOŚ ADRES: zlecenie ogłoszenia; false = stos nie działa
 };
 
 class Model {
@@ -160,8 +162,11 @@ public:
     void render(const Status& status, Lines& out);
     Lang language() const { return lang_; }
     Screen screen() const { return screen_; }
-    // true jeden raz po zmianie języka albo ekranu (do zapisu w FRAM).
+    // true jeden raz po zmianie języka, ekranu albo wyciszenia (do zapisu w FRAM).
     bool takeChange();
+    // Wyciszenie zwykłego sygnału nowej wiadomości (USŁUGI); alarmów nie wycisza.
+    bool muted() const { return muted_; }
+    void setMuted(bool muted) { muted_ = muted; }
     // Wiersze ekranu STAN (również do testów); zwraca ich liczbę.
     size_t statusLines(const Status& status, char out[][LINE_BYTES], size_t max) const;
 
@@ -173,6 +178,13 @@ private:
     void renderMain(const Status& status, char out[][LINE_BYTES], size_t count) const;
     void renderList(const char* const* items, size_t count, size_t window, Lines& out, size_t first, bool mark);
     void renderText(Text& text, size_t window, Lines& out, size_t first);
+    // Fraza po polsku (z SA1) w wybranym języku: lista fraz stacji, potem frazy domyślne, inaczej bez zmian.
+    const char* shownPhrase(const char* polish) const;
+    int8_t phraseIndex(const char* polish) const;   // indeks na liście fraz stacji albo PHRASE_*
+    void scroll(bool up, bool down);               // przewijanie tekstu o wiersz
+    void resetDraft();                              // pusty szkic z ostatnią liczbą osób
+    const char* itemLabel(const Item& item) const;  // TEST albo kategoria
+    void peopleLine(uint16_t people, uint8_t urgency, char* out, size_t size) const;   // „liczba pilność”
     void buildSummary(Text& text) const;
     void buildItem(const Item& item, Text& text) const;
     void buildHandover(const Status& status, Text& text);
@@ -204,7 +216,8 @@ private:
     Submit result_ = Submit::STORED;
     uint16_t resultNumber_ = 0;
     bool resultSilence_ = false;
-    bool serviceFailed_ = false;  // RESULT po nieudanej usłudze (ODBIORCA ZAPASOWY, ZNISZCZ DANE): szkic zostaje
+    bool serviceResult_ = false;  // RESULT po usłudze (ogłoszenie, nieudane ODBIORCA ZAPASOWY albo ZNISZCZ DANE): szkic zostaje
+    bool muted_ = false;
     Status lastStatus_;           // stan z ostatniego rysowania (cisza przy wyniku, liczba wierszy STAN)
     Screen returnTo_ = Screen::MAIN;
     bool addressMissing_ = false;

@@ -54,6 +54,7 @@ const char* admitName(Admit admit) {
         case Admit::FULL: return "full";
         case Admit::ANNOUNCE_LIMIT: return "announce_limit";
         case Admit::TOO_LARGE: return "too_large";
+        case Admit::OSP_RESERVE: return "osp_reserve";
     }
     return "?";
 }
@@ -105,8 +106,36 @@ Admit Queue::offer(Kind kind, uint8_t hops, const uint8_t dest[16], const uint8_
         return Admit::HELD;
     }
     if (full()) { ++counters_.full; return Admit::FULL; }
+    if (kind == Kind::DATA && hops > 0 && ospSet_ && dest && memcmp(dest, osp_, 16) != 0) {
+        // Dane przekazywane poza OSP: rezerwa 50% czasu kanału i ostatnie miejsce w kolejce dla OSP.
+        const uint32_t cost = airtimeMs(length) + reservedDebtMs(length);
+        const uint32_t budget = RESERVE_WINDOW_MIN * 60000 / 100 * OTHER_SHARE_PERCENT;
+        if (count_ + 1 >= QUEUE || otherUsedMs(nowMs) + cost > budget) { ++counters_.reserved; return Admit::OSP_RESERVE; }
+        window_[windowMinute_ % RESERVE_WINDOW_MIN] += cost;
+    }
     push(kind, wire, length);
     return Admit::QUEUED;
+}
+
+void Queue::setOsp(const uint8_t dest[16]) {
+    ospSet_ = false;
+    if (!dest) return;
+    for (int i = 0; i < 16; ++i) ospSet_ |= dest[i] != 0;
+    memcpy(osp_, dest, 16);
+}
+
+void Queue::advanceWindow(uint32_t nowMs) {
+    const uint32_t minute = nowMs / 60000;
+    const uint32_t elapsed = minute - windowMinute_;   // także po zawinięciu millis(): całe okno od nowa
+    for (uint32_t k = 1; k <= elapsed && k <= RESERVE_WINDOW_MIN; ++k) window_[(windowMinute_ + k) % RESERVE_WINDOW_MIN] = 0;
+    windowMinute_ = minute;
+}
+
+uint32_t Queue::otherUsedMs(uint32_t nowMs) {
+    advanceWindow(nowMs);
+    uint32_t total = 0;
+    for (uint32_t ms : window_) total += ms;
+    return total;
 }
 
 size_t Queue::held() const {

@@ -90,8 +90,12 @@ struct InboxRecord {
     char sa1[sa1::MAX_CONTENT + 1] = {};
     uint16_t sa1Length = 0;
     // część zmienna
-    uint8_t flags = 0;          // bit 0 = przeczytana
+    uint8_t flags = 0;          // InboxFlag
 };
+
+// Flagi wiadomości w skrzynce. INBOX_NOTIFY: zdarzenie do laptopa jeszcze nie zapisane (pełny
+// pierścień zdarzeń albo zanik zasilania między zapisem wiadomości a zdarzenia).
+enum InboxFlag : uint8_t { INBOX_READ = 0x01, INBOX_NOTIFY = 0x02 };
 
 enum NoteKind : uint8_t { NOTE_MESSAGE = 1, NOTE_RADIO = 2, NOTE_INCOMING = 3, NOTE_STATION = 4 };
 
@@ -168,16 +172,20 @@ public:
     // Krótki numer zgłoszenia zajęty przez inne id w kolejce (oprogramowanie.md: numer unikalny w stacji).
     bool queueNumberTaken(uint16_t number, const uint8_t id[HASH]) const;
 
-    // Skrzynka: klucz (źródło, typ, id, revision, event); deduplikacja jak w kolejce.
+    // Skrzynka: klucz (źródło, typ, id, revision, event); deduplikacja jak w kolejce. Nowy rekord
+    // dostaje flagi z record.flags (INBOX_NOTIFY zapisane razem z wiadomością). Przy pełnej skrzynce
+    // odpada najstarsza przeczytana, potem najstarsza bez zaległego zdarzenia, na końcu najstarsza.
     Put inboxPut(InboxRecord& record);
     bool inboxRead(uint32_t seq, InboxRecord& record);
     bool inboxMarkRead(uint32_t seq);
+    bool inboxSetFlags(uint32_t seq, uint8_t flags);
     size_t inboxCount() const;
     size_t inboxUnread() const;
     const InboxEntry* inboxEntry(size_t slot) const { return inbox_[slot].seq ? &inbox_[slot] : nullptr; }
     const InboxEntry* inboxFind(const uint8_t source[HASH], uint8_t type, const uint8_t id[HASH], uint16_t revision, uint32_t event) const;
 
     // Zdarzenia do laptopa: dopisanie, odczyt, potwierdzenie do kursora, pierwsze niepotwierdzone po kursorze.
+    // Przy 128 niepotwierdzonych notePut odmawia (false): zdarzenie bez ack nigdy nie jest nadpisywane.
     bool notePut(NoteRecord& record);
     bool noteRead(uint32_t seq, NoteRecord& record);
     bool noteAck(uint32_t seq);

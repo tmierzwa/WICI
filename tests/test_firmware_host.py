@@ -185,6 +185,7 @@ struct UiServices : station::Services {
     void randomBytes(uint8_t* out, size_t count) override { for (size_t i = 0; i < count; ++i) out[i] = static_cast<uint8_t>(0x30 + (++counter)); }
     void log(const char* text) override { printf("log %s\n", text); }
     void destroyed() override { printf("stack wiped\n"); }
+    bool announce() override { printf("announce requested\n"); return true; }
     bool notify(uint8_t kind, uint32_t ref, const char* fields) override { printf("event %u %u %s\n", kind, ref, fields); return true; }
     void address(uint8_t* out) override { memset(out, 0xAB, store::HASH); }
 };
@@ -223,6 +224,15 @@ int uiScript() {
             strncpy(cfg.address, line + 2, store::ADDRESS_MAX);
             memset(cfg.osp[0], 0xCC, store::HASH);
             memset(cfg.osp[1], 0xDD, store::HASH);
+            printf("config %d\n", store.writeConfig(cfg));
+            con.invalidate();
+        } else if (!strcmp(line, "PH")) {
+            // Własna lista fraz stacji (jedna fraza) zamiast domyślnej.
+            store::Config cfg = store.config();
+            cfg.phraseCount = 1;
+            strcpy(cfg.phrases[0][0], "brama zamknięta");
+            strcpy(cfg.phrases[0][1], "ворота зачинені");
+            strcpy(cfg.phrases[0][2], "gate closed");
             printf("config %d\n", store.writeConfig(cfg));
             con.invalidate();
         } else if (!strncmp(line, "I ", 2)) {
@@ -467,8 +477,21 @@ int linkScript() {
                     else printf("%c-> lost\n", x->name);
                 }
             }
-            for (Node* x : nodes) x->app->poll(v * 1000);
+            for (Node* x : nodes) { x->app->notifyPending(); x->app->poll(v * 1000); }
         } else if (sscanf(line, "L %u", &v) == 1) a.lossy = b.lossy = v;
+        else if (sscanf(line, "F %u", &v) == 1) {
+            // Pierścień zdarzeń B zapełniony niepotwierdzonymi zdarzeniami radia.
+            unsigned ok = 0;
+            for (unsigned i = 0; i < v; ++i) ok += b.proto->event(store::NOTE_RADIO, 0, "\"kind\":\"radio\"", b.uptime * 1000);
+            printf("filled %u pending %zu\n", ok, b.store->notesPending());
+        } else if (line[0] == 'P') {
+            size_t notify = 0;
+            for (size_t i = 0; i < store::INBOX_SLOTS; ++i) {
+                const store::InboxEntry* e = b.store->inboxEntry(i);
+                notify += e && (e->flags & store::INBOX_NOTIFY);
+            }
+            printf("B notes pending %zu inbox %zu notify %zu\n", b.store->notesPending(), b.store->inboxCount(), notify);
+        }
         else if (sscanf(line, "Q %u", &v) == 1) { a.host.silence_ = v; }
         else if (sscanf(line, "N %u", &v) == 1) a.refuse = v;
         else if (line[0] == 'R' && line[1] == 'A') {
@@ -923,6 +946,25 @@ class HostUnitTests(unittest.TestCase):
         self.assertHas("intent 2 type 0 rev 1 flags 8", out)
         self.assertIn("item 2 1 0 2594 2 5 1 0 0 1 0 |potrzeba ustała", out)
 
+    def test_own_phrase_list_revision_keeps_and_translates_phrase(self):
+        # Własna lista fraz: rewizja liczby osób pokazuje zachowaną frazę w podsumowaniu, a POTRZEBA USTAŁA
+        # (fraza domyślna spoza listy) jest tłumaczona na ekranie zgłoszenia.
+        create = ["PH", "K OK 0", "K OK 0", "K DOWN 0", "K DOWN 0", "K OK 0", "K DOWN 0", "K DOWN 0", "K OK 0", "K DOWN 0",
+                  "K DOWN 0", "K OK 0", "K DOWN 0", "K OK 0", "K OK 0", "K OK 0", "E 1", "I [1,1,\"%s\",0,1,1]" % self.REQUEST_ID]
+        # WIADOMOŚCI → zgłoszenie → ZMIEŃ LICZBĘ OSÓB → ta sama liczba → podsumowanie; wysłanie.
+        people = ["L 2", "K OK 0", "K DOWN 0", "K OK 0", "K OK 0", "K OK 0", "K OK 0", "K OK 0", "K OK 0", "K OK 0"]
+        # Najnowsza rewizja → POTRZEBA USTAŁA → wysłanie; potem ekran zgłoszenia przewinięty do frazy.
+        resolved = ["K OK 0", "K DOWN 0", "K OK 0", "K OK 0", "K OK 0", "K DOWN 0", "K DOWN 0", "K OK 0", "K OK 0", "K OK 0",
+                    "K OK 0", "K DOWN 0", "K OK 0", "K OK 0", "K DOWN 0", "K DOWN 0", "R"]
+        script = list(create)
+        for key in people + resolved:
+            script += [key, "R"] if key != "R" else []
+        out = self.hosted(script)
+        s = [x for x in self.screens(out) if x[0] in ("summary", "item")]
+        self.assertEqual([x[0] for x in s], ["item", "summary", "item", "summary", "item", "item", "item"])
+        self.assertEqual(self.lines(s[1])[3], "gate closed")      # zachowana fraza z listy stacji, po angielsku
+        self.assertIn("need resolved", self.lines(s[-1]))         # nie „potrzeba ustała”
+
     def test_test_screen_menu_pause_and_resume(self):
         texts = ui_texts.load()["texts"]
         labels = {name.lower(): strings for name, strings in ui_texts.load()["labels"].items()}
@@ -962,7 +1004,7 @@ class HostUnitTests(unittest.TestCase):
 
     def test_lists_render_from_the_ram_index(self):
         # Lista WIADOMOŚCI i PRZEKAZANIE ZMIANY korzystają ze skrótu z indeksu w RAM: rysowanie nie czyta rekordów
-        # własnych zgłoszeń z FRAM; pełny rekord czyta się dopiero po otwarciu pozycji i dla treści odebranych.
+        # własnych zgłoszeń z FRAM; treść (liczba osób, fraza, tekst komunikatu) dekoduje się raz na rekord.
         create = ["K OK 0", "K OK 0", "K OK 0", "K OK 0", "K DOWN 0", "K OK 0", "K OK 0", "K OK 0", "K OK 0", "K OK 0"]
         script = create * 3 + ["I [1,4,\"41424344454647484950515253545556\",7,\"Komunikat\"]", "K OK 0", "K DOWN 0", "K OK 0", "R", "B",
                                "R", "B", "K OK 0", "R", "B", "K BACK 0", "K BACK 0", "K DOWN 0", "K DOWN 0", "K OK 0"] + \
@@ -971,29 +1013,39 @@ class HostUnitTests(unittest.TestCase):
         s = self.screens(out)
         self.assertEqual([x[0] for x in s], ["messages", "messages", "item", "handover", "handover"])
         reads = [int(line.split()[1]) for line in out if line.startswith("read ")]
-        self.assertEqual(reads[1], 452)   # lista: jeden rekord skrzynki (część stała i stan) dla treści komunikatu
-        self.assertGreaterEqual(reads[2], 452)  # otwarty komunikat: pełny rekord
-        self.assertEqual(reads[4], 0)     # PRZEKAZANIE ZMIANY: wyłącznie indeks w RAM
+        self.assertEqual(reads[1], 0)     # ponowne rysowanie listy: treść komunikatu z pamięci ostatniej pozycji
+        self.assertGreaterEqual(reads[2], 452)  # otwarcie oznacza jako przeczytany: rekord czytany raz od nowa
+        self.assertEqual(reads[3:], [0, 0])   # PRZEKAZANIE ZMIANY: wyłącznie indeks w RAM
 
     def test_services_backup_and_destroy_sequences(self):
         labels = {name.lower(): strings for name, strings in ui_texts.load()["labels"].items()}
         texts = ui_texts.load()["texts"]
         # Zgłoszenie zapisane przed przełączeniem (do tożsamości głównej, bez nadania).
         before = ["K OK 0", "K OK 0", "K OK 0", "K OK 0", "K DOWN 0", "K OK 0", "K OK 0", "K OK 0", "K OK 0", "K OK 0"]
-        to_services = before + ["K OK 0", "K DOWN 0", "K DOWN 0", "K DOWN 0", "K OK 0"] + ["K DOWN 0"] * 14 + ["R", "K OK 0", "R"]
+        to_services = before + ["K OK 0", "K DOWN 0", "K DOWN 0", "K DOWN 0", "K OK 0"] + ["K DOWN 0"] * 16 + ["R", "K OK 0", "R"]
+        # USŁUGI: OGŁOŚ ADRES (wynik), powrót, WYCISZ DŹWIĘK, ODBIORCA ZAPASOWY.
+        services = ["K OK 0", "R", "K OK 0", "R", "K DOWN 0", "K OK 0", "R", "K DOWN 0", "K OK 0", "R"]
         # Po przełączeniu: zgłoszenie W CIĄGU DOBY bez frazy, nadane do zapasowej tożsamości; potem ZNISZCZ DANE.
-        script = to_services + ["K OK 0", "R", "K UP 0", "K DOWN 0", "K UP 0", "K OK 0", "R", "K BACK 0", "K UP 0", "K UP 0", "K UP 0",
-                                "K OK 0", "K OK 0", "K OK 0", "K UP 0", "K OK 0", "K OK 0", "K OK 0", "K OK 0", "E 1", "J", "K OK 0",
-                                "K DOWN 0", "K DOWN 0", "K DOWN 0", "K OK 0"] + ["K DOWN 0"] * 14 + \
-                 ["K OK 0", "K DOWN 0", "K OK 0", "R", "K UP 0", "K DOWN 0", "K DOWN 0", "K UP 0", "R", "K UP 0", "K DOWN 0", "K UP 0",
-                  "K OK 0", "R", "J"]
+        script = to_services + services + ["K UP 0", "K DOWN 0", "K UP 0", "K OK 0", "R", "K BACK 0", "K UP 0", "K UP 0", "K UP 0",
+                                           "K OK 0", "K OK 0", "K OK 0", "K UP 0", "K OK 0", "K OK 0", "K OK 0", "K OK 0", "E 1", "J",
+                                           "K OK 0", "K DOWN 0", "K DOWN 0", "K DOWN 0", "K OK 0"] + ["K DOWN 0"] * 16 + \
+                 ["K OK 0", "K DOWN 0", "K DOWN 0", "K DOWN 0", "K OK 0", "R", "K UP 0", "K DOWN 0", "K DOWN 0", "K UP 0", "R",
+                  "K UP 0", "K DOWN 0", "K UP 0", "K OK 0", "R", "J"]
         out = self.hosted(script)
         s = self.screens(out)
-        self.assertEqual([x[0] for x in s], ["status", "services", "backup", "status", "destroy", "destroy", "main"])
+        self.assertEqual([x[0] for x in s], ["status", "services", "result", "services", "services", "backup", "status", "destroy",
+                                             "destroy", "main"])
         self.assertEqual(self.lines(s[0])[-2:], [labels["przekazanie_zmiany"][0], labels["uslugi"][0]])
         self.assertEqual([inv for inv, _ in s[0][2]], [False, False, False, False, True])
-        self.assertEqual(self.lines(s[1])[:2], [labels["odbiorca_zapasowy"][0], labels["zniszcz_dane"][0]])
-        self.assertEqual(" ".join(self.lines(s[2])).strip(), texts["odbiorca_zapasowy"][0])
+        self.assertEqual(self.lines(s[1])[:4], [labels["oglos_adres"][0], labels["wycisz_dzwiek"][0], labels["odbiorca_zapasowy"][0],
+                                                labels["zniszcz_dane"][0]])
+        # OGŁOŚ ADRES: zlecenie bez sekwencji, wynik, powrót do USŁUG.
+        self.assertIn("announce requested", out)
+        self.assertEqual(" ".join(self.lines(s[2])).strip(), texts["adres_ogloszony"][0])
+        # WYCISZ DŹWIĘK przełącza pozycję na WŁĄCZ DŹWIĘK; wyciszenie widać na ekranie głównym (wiersz 4, pusta kolejka).
+        self.assertEqual(self.lines(s[4])[1], labels["wlacz_dzwiek"][0])
+        self.assertIn(texts["dzwiek_wyciszony"][0], self.lines(s[9]))
+        self.assertEqual(" ".join(self.lines(s[5])).strip(), texts["odbiorca_zapasowy"][0])
         self.assertIn("log switched to backup recipient", out)
         # Zgłoszenie zapisane przed przełączeniem (jedno w locie naraz) idzie do zapasowej tożsamości OSP (0xDD..),
         # nigdy do głównej.
@@ -1001,8 +1053,8 @@ class HostUnitTests(unittest.TestCase):
         self.assertTrue(sent)
         self.assertTrue(all('"dddddddddddddddddddddddddddddddd"' in line for line in sent), sent)
         self.assertIn("Szkoła, wejście B", sent[0])
-        self.assertEqual(" ".join(self.lines(s[4])).strip(), texts["zniszcz_ostrzezenie"][0])
-        self.assertEqual(s[5][0], "destroy")  # zła sekwencja: nic się nie dzieje
+        self.assertEqual(" ".join(self.lines(s[7])).strip(), texts["zniszcz_ostrzezenie"][0])
+        self.assertEqual(s[8][0], "destroy")  # zła sekwencja: nic się nie dzieje
         self.assertIn("log data destroyed", out)
         self.assertEqual(out.count("stack wiped"), 1)   # tożsamość i kod IFAC stosu też, jak destroy przez USB
         self.assertIn("queue live 0 unsent 0 configured 0 paused 0", out)
@@ -1265,6 +1317,25 @@ class HostUnitTests(unittest.TestCase):
         # Po ponownym REQUEST: B zalicza duplikat, uaktywnia RECEIVED i najnowszy STATUS i nadaje je ponownie; A liczy duplikaty.
         self.assertEqual(stats[4], "A stats sent 2 delivered 2 failed 0 received 6 rejected 0 duplicates 2 conflicts 0 refused 0 confirmed 3 live 1 unsent 0 inbox 4 unread 4")
         self.assertEqual(stats[5], "B stats sent 6 delivered 6 failed 0 received 2 rejected 0 duplicates 1 conflicts 0 refused 0 confirmed 6 live 0 unsent 0 inbox 1 unread 1")
+
+    def test_link_full_event_ring_keeps_events_and_notifies_later(self):
+        # 128 zdarzeń bez ack: nowe incoming nie nadpisuje najstarszego, wiadomość czeka w skrzynce
+        # z flagą INBOX_NOTIFY, a zdarzenie powstaje po ack laptopa.
+        request = [1, 0, self.MID, 0, 2, 10, "Szkoła", "osoba na wózku", 2]
+        out = self.link(['B {"usb":1,"seq":1,"type":"configure","role":"osp"}', "F 129", self.usb_submit("A", 2, request, self.B),
+                         "T 101", "T 102", "P", "T 103", "P",
+                         'B {"usb":1,"seq":2,"type":"ack","cursor":128}', "T 104", "P", "T 105", "P"])
+        self.assertIn("filled 128 pending 128", out)   # 129. zdarzenie odrzucone, nic nie nadpisane
+        pending = [line for line in out if line.startswith("B notes")]
+        self.assertEqual(pending[0], "B notes pending 128 inbox 1 notify 1")
+        self.assertEqual(pending[1], "B notes pending 128 inbox 1 notify 1")
+        self.assertEqual(pending[3], "B notes pending 1 inbox 1 notify 0")
+        incoming = [r for r in self.usb_replies(out, "B") if r["type"] == "incoming"]
+        self.assertEqual([(r["source"], r["sa1"]) for r in incoming], [(self.A, request)])
+        self.assertEqual(incoming[0]["record"], 129)   # numer po 128 potwierdzonych
+        # Dowód poszedł mimo pełnego pierścienia: wiadomość jest zapisana w skrzynce.
+        self.assertIn("A stats sent 1 delivered 1", "\n".join(self.link(['B {"usb":1,"seq":1,"type":"configure","role":"osp"}', "F 128",
+                      self.usb_submit("A", 2, request, self.B), "T 101", "T 102", "T 103", "S"])))
 
     def test_link_loss_retry_schedule_and_untrusted_source(self):
         request = [1, 0, self.MID, 0, 2, 10, "Szkoła", "", 1]

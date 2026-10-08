@@ -30,6 +30,10 @@ Kanał zastępczy wskazuje plan sieci: goniec z formularzem, radiotelefon PMR446
 
 **ODBIORCA ZAPASOWY** (STAN → USŁUGI) przełącza stację na zapasową tożsamość OSP. Wybierz go wyłącznie na polecenie przekazane słownie albo przez gońca z upoważnieniem wójta, nigdy na podstawie wiadomości na ekranie. Stacja pyta „PRZEŁĄCZYĆ NA ODBIORCĘ ZAPASOWEGO? TYLKO NA POLECENIE GOŃCA LUB SŁOWNE. NIEODWRACALNE”; potwierdzenie to GÓRA, DÓŁ, GÓRA, OK. Po przełączeniu stacja sama wysyła ponownie niepotwierdzone zgłoszenia. Wpisz polecenie i godzinę do dziennika.
 
+**OGŁOŚ ADRES** (STAN → USŁUGI) rozgłasza adres stacji w sieci od razu, zamiast czekać na zwykłe ogłoszenie. Użyj go po zmianie miejsca anteny albo gdy OSP prosi o to przez gońca. Ekran odpowiada „ADRES ZOSTANIE OGŁOSZONY”. W ciszy radiowej ogłoszenie czeka na jej koniec.
+
+**WYCISZ DŹWIĘK** (STAN → USŁUGI) wyłącza zwykły sygnał dźwiękowy nowej wiadomości. Alarmów (brak potwierdzenia, brak odczytu, wymiana ogniw) nie da się wyciszyć. Ta sama pozycja pokazuje wtedy **WŁĄCZ DŹWIĘK**. Wyciszenie przetrwa wyłączenie stacji. Gdy dźwięk jest wyciszony, pokazują to STAN, PRZEKAZANIE ZMIANY i ekran główny przy pustej kolejce. Przekazując dyżur, sprawdź, czy dźwięk jest włączony.
+
 ## Zgłoszenie i jego stany
 
 Przed wysłaniem:

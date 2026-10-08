@@ -191,7 +191,7 @@ Przyciski: GÓRA, DÓŁ, OK, WSTECZ, duże i wyczuwalne, obsługiwane w rękawic
 | ZGŁOSZENIE | kreator: kategoria 0–9 z piktogramem → liczba osób → pilność (bez wartości domyślnej) → gotowa fraza lub brak (kategoria 9: fraza obowiązkowa) → podsumowanie; po wysłaniu ekran pokazuje etap i krótki numer |
 | WIADOMOŚCI | etapy własnych zgłoszeń, odpowiedzi (REPLY) i komunikaty (BULLETIN) ze źródłem i czasem od odbioru; przy własnym zgłoszeniu: ZMIEŃ LICZBĘ OSÓB, ZMIEŃ PILNOŚĆ, POTRZEBA USTAŁA, ANULUJ WYSYŁKĘ |
 | TEST | wysłanie TEST i wynik; WSTRZYMAJ i WZNÓW na prośbę odbiorcy z komunikatu |
-| STAN | radio, liczniki, energia (`ogniwa_napiecie`, `ogniwa_czas`, napięcie 12 V), `ostatni_kontakt`, wersja, nazwa `WICI-xxxxxx`; PRZEKAZANIE ZMIANY; USŁUGI: ogłoszenie adresu, wyciszenie dźwięku, ODBIORCA ZAPASOWY, ZNISZCZ DANE |
+| STAN | radio, liczniki, energia (`ogniwa_napiecie`, `ogniwa_czas`, napięcie 12 V), `ostatni_kontakt`, wersja, nazwa `WICI-xxxxxx`; PRZEKAZANIE ZMIANY; USŁUGI: OGŁOŚ ADRES, WYCISZ DŹWIĘK (po wyciszeniu WŁĄCZ DŹWIĘK), ODBIORCA ZAPASOWY, ZNISZCZ DANE |
 | JĘZYK/МОВА/LANGUAGE | polski, ukraiński, angielski; etykieta zawsze w trzech językach, bez spacji wokół ukośników (19 znaków) |
 
 **Kreator zgłoszenia.** WSTECZ cofa o jeden krok; przytrzymanie WSTECZ przez 2 s pokazuje `porzucic`. Liczba osób: lista „1, 2, 5, 10, 20, 50, 100, INNA”; INNA to wpis cyfra po cyfrze (setki, dziesiątki, jednostki), przytrzymanie przycisku przyspiesza zmianę, domyślnie stoi ostatnio użyta wartość. Pilność wybiera się z etykiet `pilnosc_2`, `pilnosc_1`, `pilnosc_0`; pilność 2 wymaga potwierdzenia `pilnosc_2_potw`. Podsumowanie pokazuje piktogram i kategorię, liczbę osób, pilność słownie, frazę, adres i `podsumowanie_klawisze`. Po 3 min bezczynności szkic zostaje zapisany, a stacja wraca do ekranu głównego. Po wysłaniu ekran pokazuje kolejne etapy z tabeli.
@@ -232,7 +232,8 @@ Jedyna kanoniczna lista tekstów stacji i strony mieszkańca; inne dokumenty cyt
 | `stan_6` | ZAMKNIĘTE | ЗАКРИТО | CLOSED | state 6 |
 | `brak_potwierdzenia` | BRAK POTWIERDZENIA OD [n] MIN – WYŚLIJ GOŃCA Z FORMULARZEM | НЕМАЄ ПІДТВЕРДЖЕННЯ [n] ХВ – ВІДПРАВТЕ ПОСИЛЬНОГО З ФОРМОЮ | NO CONFIRMATION FOR [n] MIN – SEND A RUNNER WITH THE FORM | alarm krytyczny; 15 min / 1 h / 6 h według pilności, 30 min dla TEST |
 | `brak_odczytu` | ODBIORCA NIE PRZECZYTAŁ OD 30 MIN – WYŚLIJ GOŃCA Z FORMULARZEM | ОДЕРЖУВАЧ НЕ ПРОЧИТАВ 30 ХВ – ВІДПРАВТЕ ПОСИЛЬНОГО З ФОРМОЮ | NOT READ BY RECIPIENT FOR 30 MIN – SEND A RUNNER WITH THE FORM | alarm krytyczny, tylko pilność 2; brzmienie do potwierdzenia w T1 |
-| `dzwiek_wyciszony` | DŹWIĘK WYCISZONY | ЗВУК ВИМКНЕНО | SOUND MUTED | zwykły sygnał wyciszony |
+| `dzwiek_wyciszony` | DŹWIĘK WYCISZONY | ЗВУК ВИМКНЕНО | SOUND MUTED | zwykły sygnał wyciszony; ekran główny, wiersz 4 przy pustej kolejce, oraz STAN i PRZEKAZANIE ZMIANY |
+| `adres_ogloszony` | ADRES ZOSTANIE OGŁOSZONY | АДРЕСУ БУДЕ ОГОЛОШЕНО | ADDRESS WILL BE ANNOUNCED | po OGŁOŚ ADRES (STAN → USŁUGI); w ciszy radiowej ogłoszenie wychodzi po jej odwołaniu |
 | `test_zaplanowany` | TEST ZAPLANOWANY ZA OKOŁO [mm] MIN – NIE WYŁĄCZAJ. WSTECZ = ANULUJ | ТЕСТ ЗАПЛАНОВАНО ПРИБЛИЗНО ЧЕРЕЗ [mm] ХВ – НЕ ВИМИКАЙТЕ. НАЗАД = СКАСУВАТИ | TEST SCHEDULED IN ABOUT [mm] MIN – DO NOT SWITCH OFF. BACK = CANCEL | TEST startowy w losowym oknie |
 | `test_wyslany` | TEST WYSŁANY – CZEKA NA ODBIORCĘ | ТЕСТ ВІДПРАВЛЕНО – ЧЕКАЄ НА ОДЕРЖУВАЧА | TEST SENT – WAITING FOR RECIPIENT | TEST nadany, brak RECEIVED |
 | `test_wstrzymany` | TEST WSTRZYMANY PRZEZ ODBIORCĘ | ТЕСТ ПРИЗУПИНЕНО НА ПРОХАННЯ ОДЕРЖУВАЧА | TEST PAUSED AT RECIPIENT'S REQUEST | opiekun wybrał TEST → WSTRZYMAJ po komunikacie OSP |
@@ -276,6 +277,9 @@ Pozycje menu, nazwy przycisków i etykiety kategorii są częścią tej listy. K
 | WZNÓW | ВІДНОВИТИ | RESUME |
 | STAN | СТАН | STATUS |
 | USŁUGI | СЕРВІС | SERVICES |
+| OGŁOŚ ADRES | ОГОЛОСИТИ АДРЕСУ | ANNOUNCE ADDRESS |
+| WYCISZ DŹWIĘK | ВИМКНУТИ ЗВУК | MUTE SOUND |
+| WŁĄCZ DŹWIĘK | УВІМКНУТИ ЗВУК | UNMUTE SOUND |
 | PRZEKAZANIE ZMIANY | ПЕРЕДАЧА ЗМІНИ | SHIFT HANDOVER |
 | ODBIORCA ZAPASOWY | РЕЗЕРВНИЙ ОДЕРЖУВАЧ | BACKUP RECIPIENT |
 | ZNISZCZ DANE | ЗНИЩИТИ ДАНІ | DESTROY DATA |

@@ -74,6 +74,28 @@ void Station::attemptFailed(uint32_t seq) {
     if (inFlightSeq_ == seq) { inFlightSeq_ = 0; inFlightHandle_ = 0; }
 }
 
+bool Station::notifyInbox(const store::InboxRecord& record) {
+    char fields[sa1::MAX_CONTENT + 96];
+    char sourceHex[2 * store::HASH + 1];
+    store::bytesToHex(record.source, sourceHex);
+    snprintf(fields, sizeof(fields), "\"kind\":\"message\",\"source\":\"%s\",\"inbox\":%lu,\"sa1\":%s", sourceHex,
+             static_cast<unsigned long>(record.seq), record.sa1);
+    const bool osp = store_.config().role == store::OSP;
+    return services_.notify(osp ? store::NOTE_INCOMING : store::NOTE_MESSAGE, record.seq, fields);
+}
+
+void Station::notifyPending() {
+    const store::InboxEntry* oldest = nullptr;
+    for (size_t i = 0; i < store::INBOX_SLOTS; ++i) {
+        const store::InboxEntry* e = store_.inboxEntry(i);
+        if (e && (e->flags & store::INBOX_NOTIFY) && (!oldest || e->seq < oldest->seq)) oldest = e;
+    }
+    if (!oldest) return;
+    store::InboxRecord record;
+    if (!store_.inboxRead(oldest->seq, record)) return;
+    if (notifyInbox(record)) store_.inboxSetFlags(record.seq, static_cast<uint8_t>(oldest->flags & ~store::INBOX_NOTIFY));
+}
+
 void Station::poll(uint32_t nowMs) {
     const uint32_t nowS = services_.uptimeS();
     (void)nowMs;
@@ -230,6 +252,7 @@ bool Station::handleMessage(const uint8_t from[store::HASH], const sa1::Message&
     memcpy(record.id, idBytes, store::HASH);
     memcpy(record.sa1, wire, wireLength + 1);
     record.sa1Length = static_cast<uint16_t>(wireLength);
+    record.flags = store::INBOX_NOTIFY;   // kasowane po zapisie zdarzenia do laptopa
     const store::Put put = store_.inboxPut(record);
     if (put == store::Put::CONFLICT) { ++stats_.conflicts; services_.log("conflicting duplicate"); return false; }
     if (put == store::Put::ERROR) { services_.log("inbox write failed"); return false; }
@@ -260,13 +283,9 @@ bool Station::handleMessage(const uint8_t from[store::HASH], const sa1::Message&
         }
         return true;
     }
-    // Nowa wiadomość: zdarzenie do laptopa i skutki dla intencji.
-    char fields[sa1::MAX_CONTENT + 96];
-    char sourceHex[2 * store::HASH + 1];
-    store::bytesToHex(from, sourceHex);
-    snprintf(fields, sizeof(fields), "\"kind\":\"message\",\"source\":\"%s\",\"inbox\":%lu,\"sa1\":%s", sourceHex,
-             static_cast<unsigned long>(record.seq), wire);
-    services_.notify(osp ? store::NOTE_INCOMING : store::NOTE_MESSAGE, record.seq, fields);
+    // Nowa wiadomość: zdarzenie do laptopa (przy pełnym pierścieniu zdarzeń później, z notifyPending)
+    // i skutki dla intencji.
+    if (notifyInbox(record)) store_.inboxSetFlags(record.seq, static_cast<uint8_t>(record.flags & ~store::INBOX_NOTIFY));
     if (haveIntent) {
         if (m.type == sa1::RECEIVED || m.type == sa1::STATUS) {
             // Pierwsze potwierdzenie ustala (1, 1); kolejne STATUS przechodzą przez status_after modelu.

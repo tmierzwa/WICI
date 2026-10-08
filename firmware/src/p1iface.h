@@ -10,6 +10,10 @@
 //   Ogłoszenia własne (hops = 0) i odpowiedzi na zapytania o trasę (kontekst PATH_RESPONSE)
 //   nie podlegają limitowi, jak w implementacji referencyjnej (tam odpowiedź ma przypisany
 //   interfejs, a limit dotyczy tylko ogłoszeń bez niego).
+// - Rezerwa dla OSP (radio.md, punkt 6): dane przekazywane (hops > 0) do celu innego niż
+//   przypięta OSP zajmują najwyżej 50% czasu kanału (TX i dług ciszy) w oknie 1 h i nie biorą
+//   ostatniego wolnego miejsca w kolejce; ponad limit interfejs odmawia (stos odrzuca pakiet
+//   przekazywany, nadawca ponawia). Ruch do OSP, dowody, zapytania o trasę i własne pakiety bez limitu.
 // - Deklarowana przepływność uwzględnia ramkowanie P1 i dług ciszy 12 x czas TX.
 // - Kod dostępu IFAC 16 B: maskowanie i zdejmowanie maski jak Transport.handle_outgoing_ifac i
 //   handle_ifac w Reticulum e40191b; podpis i HKDF liczy warstwa ze stosem (rns_node.cpp).
@@ -33,6 +37,8 @@ constexpr uint16_t SYMBOL_RATE = 4800;
 constexpr uint8_t DEBT_FACTOR = 12;
 constexpr uint32_t FRAME_OVERHEAD = 12;      // preambuła 8 B i słowo synchronizacji 4 B
 constexpr uint32_t RAMP_MS = 3;              // narastanie i zaokrąglenie jak frameAirMs w measure.cpp
+constexpr uint32_t RESERVE_WINDOW_MIN = 60;  // okno rezerwy dla OSP: 60 przedziałów po 1 min
+constexpr uint32_t OTHER_SHARE_PERCENT = 50; // ruch przekazywany poza OSP: najwyżej 50% czasu kanału
 
 // Czas nadawania datagramu P1 o długości length: ramki LEN|BODY|CRC z preambułą i słowem.
 uint32_t airtimeMs(size_t length);
@@ -50,7 +56,7 @@ const uint8_t* destination(const uint8_t* raw, size_t length);
 // Ogłoszenie z kontekstem PATH_RESPONSE (bajt po skrócie celu).
 bool pathResponse(const uint8_t* raw, size_t length);
 
-enum class Admit : uint8_t { QUEUED, HELD, FULL, ANNOUNCE_LIMIT, TOO_LARGE };
+enum class Admit : uint8_t { QUEUED, HELD, FULL, ANNOUNCE_LIMIT, TOO_LARGE, OSP_RESERVE };
 const char* admitName(Admit admit);
 
 struct Counters {
@@ -66,6 +72,7 @@ struct Counters {
     uint32_t ifacMissing = 0;     // pakiet bez flagi IFAC albo za krótki
     uint32_t ifacInvalid = 0;     // zły kod IFAC
     uint32_t offline = 0;         // pakiety odrzucone bez skonfigurowanego IFAC
+    uint32_t reserved = 0;        // dane przekazywane poza OSP odrzucone przez rezerwę dla OSP
 };
 
 class Queue {
@@ -76,6 +83,9 @@ public:
     Admit offer(Kind kind, uint8_t hops, const uint8_t dest[16], const uint8_t* wire, size_t length, uint32_t nowMs);
     // Ogłoszenia oczekujące przechodzą do kolejki, gdy limit pozwala i jest miejsce.
     void poll(uint32_t nowMs);
+    // Skrót celu przypiętej (aktywnej) OSP; same zera albo nullptr = brak rezerwy.
+    void setOsp(const uint8_t dest[16]);
+    uint32_t otherUsedMs(uint32_t nowMs);   // czas kanału ruchu poza OSP w bieżącym oknie
     // Następny datagram do nadania (najwyższa klasa, najstarszy); false, gdy kolejka pusta albo
     // trwa nadawanie. Wybrany datagram zostaje w kolejce do finish(): pakiet przyjęty w trakcie
     // nadawania nie może go wyprzedzić ani zastąpić.
@@ -122,6 +132,11 @@ private:
     bool announceGate_ = false;   // announceAllowedAt_ ustawione
     // Limit ogłoszeń minął: zamyka porównanie, które po 2^31 ms bez ogłoszeń zmieniłoby znak.
     bool announceOpen(uint32_t nowMs);
+    void advanceWindow(uint32_t nowMs);
+    uint8_t osp_[16] = {};
+    bool ospSet_ = false;
+    uint32_t window_[RESERVE_WINDOW_MIN] = {};   // czas kanału ruchu poza OSP na minutę
+    uint32_t windowMinute_ = 0;
     Counters counters_;
 };
 

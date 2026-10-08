@@ -139,8 +139,8 @@ bool Journal::writeClock(uint32_t uptimeS, uint32_t restarts) {
     return writeSmall(CLOCK_BASE, CLOCK_SLOTS, clock_, uptimeS, restarts);
 }
 
-bool Journal::writeSettings(uint32_t language, uint32_t screen) {
-    return writeSmall(SETTINGS_BASE, SETTINGS_SLOTS, settings_, language, screen);
+bool Journal::writeSettings(uint32_t language, uint32_t flags) {
+    return writeSmall(SETTINGS_BASE, SETTINGS_SLOTS, settings_, language, flags);
 }
 
 bool Journal::eraseEvents() {

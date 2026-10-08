@@ -52,6 +52,7 @@ struct Services {
     virtual void address(uint8_t out[store::HASH]) = 0;   // własny adres
     virtual void changed() {}                             // odświeżenie ekranu
     virtual void destroyed() {}                           // ZNISZCZ DANE z menu: tożsamość i tablice stosu
+    virtual bool announce() { return false; }             // OGŁOŚ ADRES z menu; false = stos nie działa
 };
 
 // Wynik utworzenia zgłoszenia z przycisków (REQUEST, TEST, nowa rewizja).
@@ -82,6 +83,9 @@ class Station {
 public:
     Station(store::Store& store, Services& services);
     void poll(uint32_t nowMs);
+    // Zaległe zdarzenia do laptopa dla wiadomości w skrzynce (INBOX_NOTIFY), najstarsze najpierw;
+    // niezależne od radia i LINK, wołane razem z poll().
+    void notifyPending();
     // Wynik potwierdzenia transportowego pakietu o uchwycie z Services::send.
     void receipt(uint32_t handle, bool delivered);
     // Pakiet do celu "wici.sa1" stacji; true = przyjęty (zapisany albo duplikat), wtedy stos
@@ -121,6 +125,7 @@ public:
 private:
     bool buildDatagram(const store::QueueRecord& record, char* out, size_t size, size_t& length);
     bool handleMessage(const uint8_t from[store::HASH], const sa1::Message& m, const char* wire, size_t wireLength);
+    bool notifyInbox(const store::InboxRecord& record);   // zdarzenie do laptopa; true = zapisane w FRAM
     void attemptFailed(uint32_t seq);
     void finishIntent(store::QueueRecord& record, uint32_t event, uint8_t state);
     int priority(const store::QueueEntry& e) const;

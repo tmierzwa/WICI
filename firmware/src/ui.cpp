@@ -20,10 +20,12 @@ const uint16_t PEOPLE_VALUES[] = {1, 2, 5, 10, 20, 50, 100};
 constexpr size_t PEOPLE_CHOICES = sizeof(PEOPLE_VALUES) / sizeof(PEOPLE_VALUES[0]) + 1;
 constexpr uint8_t MENU_ITEMS = static_cast<uint8_t>(ui_texts::MENU_ITEMS);
 constexpr size_t STATUS_EXTRA = 2;  // PRZEKAZANIE ZMIANY, USŁUGI
+constexpr size_t SERVICE_ITEMS = 4;  // OGŁOŚ ADRES, WYCISZ/WŁĄCZ DŹWIĘK, ODBIORCA ZAPASOWY, ZNISZCZ DANE
 constexpr Button SEQUENCE[4] = {Button::UP, Button::DOWN, Button::UP, Button::OK};
 constexpr Id STATE_TEXTS[6] = {Id::STAN_1, Id::STAN_2, Id::STAN_3, Id::STAN_4, Id::STAN_5, Id::STAN_6};
 constexpr Id URGENCY_TEXTS[3] = {Id::PILNOSC_0, Id::PILNOSC_1, Id::PILNOSC_2};
 constexpr uint8_t SA1_REQUEST = 0, SA1_REPLY = 3, SA1_BULLETIN = 4, SA1_TEST = 5;
+const char* const RADIO_DOWN = "RADIO ---";  // radio niesprawne (brak tekstu w liście kanonicznej, F80)
 
 size_t utf8Bytes(const char* text, size_t chars) {
     // Długość w bajtach pierwszych `chars` znaków.
@@ -202,6 +204,24 @@ bool Model::takeChange() {
     return changed;
 }
 
+void Model::scroll(bool up, bool down) {
+    if (up && top_ > 0) --top_;
+    else if (down && top_ + 1 < lastCount_) ++top_;
+}
+
+void Model::resetDraft() {
+    draft_ = Draft();
+    draft_.people = lastPeople_;
+}
+
+const char* Model::itemLabel(const Item& item) const {
+    return item.type == SA1_TEST ? label(Label::TEST, lang_) : ui_texts::CATEGORIES[item.category < 10 ? item.category : 9][static_cast<size_t>(lang_)];
+}
+
+void Model::peopleLine(uint16_t people, uint8_t urgency, char* out, size_t size) const {
+    snprintf(out, size, "%u %s", static_cast<unsigned>(people), text(URGENCY_TEXTS[urgency < 3 ? urgency : 0], lang_));
+}
+
 bool Model::inWizard() const { return screen_ >= Screen::CATEGORY && screen_ <= Screen::SUMMARY; }
 
 void Model::go(Screen screen) {
@@ -252,9 +272,27 @@ void Model::beginWizard(DraftKind kind, uint32_t ref, const Item* item) {
         draft_.category = item->category;
         draft_.people = item->people;
         draft_.urgency = item->urgency;
-        draft_.phrase = PHRASE_NONE;
+        draft_.phrase = phraseIndex(item->text);   // zmiana liczby osób albo pilności zachowuje frazę
     }
     if (kind == DraftKind::RESOLVED) draft_.phrase = PHRASE_RESOLVED;
+}
+
+int8_t Model::phraseIndex(const char* polish) const {
+    if (!polish[0]) return PHRASE_NONE;
+    const size_t count = host_ ? host_->phraseCount() : 0;
+    for (size_t i = 0; i < count; ++i)
+        if (!strcmp(host_->phrase(i, Lang::PL), polish)) return static_cast<int8_t>(i);
+    if (!strcmp(ui_texts::PHRASES[ui_texts::PHRASES_COUNT - 1][0], polish)) return PHRASE_RESOLVED;
+    return PHRASE_KEPT;
+}
+
+const char* Model::shownPhrase(const char* polish) const {
+    const int8_t index = phraseIndex(polish);
+    if (index >= 0) return host_->phrase(static_cast<size_t>(index), lang_);
+    // Frazy domyślne także przy własnej liście stacji (np. POTRZEBA USTAŁA, zgłoszenie z panelu).
+    for (size_t i = 0; i < ui_texts::PHRASES_COUNT; ++i)
+        if (!strcmp(ui_texts::PHRASES[i][0], polish)) return ui_texts::PHRASES[i][static_cast<size_t>(lang_)];
+    return polish;
 }
 
 void Model::tick(uint32_t nowMs) {
@@ -351,8 +389,7 @@ void Model::act(Button button, uint32_t nowMs) {
             if (ok || back) {
                 if (!addressMissing_ && back && host_ && host_->address()[0]) addressMissing_ = true;  // NIE: adres_brak
                 else go(Screen::TEST_OFFER);
-            } else if (up && top_ > 0) --top_;
-            else if (downB && top_ + 1 < lastCount_) ++top_;
+            } else scroll(up, downB);
             break;
         case Screen::TEST_OFFER:
             if (ok) { if (host_) host_->scheduleTest(true); go(Screen::TEST); }
@@ -387,14 +424,21 @@ void Model::act(Button button, uint32_t nowMs) {
             break;
         case Screen::HANDOVER:
             if (ok || back) go(Screen::STATUS);
-            else if (up && top_ > 0) --top_;
-            else if (downB && top_ + 1 < lastCount_) ++top_;
+            else scroll(up, downB);
             break;
         case Screen::SERVICES:
-            if (up) moveCursor(-1, 2, LINES);
-            else if (downB) moveCursor(1, 2, LINES);
+            if (up) moveCursor(-1, SERVICE_ITEMS, LINES);
+            else if (downB) moveCursor(1, SERVICE_ITEMS, LINES);
             else if (back) go(Screen::STATUS);
-            else if (ok) go(cursor_ == 0 ? Screen::BACKUP : Screen::DESTROY);
+            else if (ok && cursor_ == 0) {
+                // Ogłoszenie bez sekwencji: nie zmienia danych, w ciszy czeka na jej odwołanie.
+                result_ = host_ && host_->announce() ? Submit::ANNOUNCED : Submit::ERROR;
+                serviceResult_ = true;
+                go(Screen::RESULT);
+            } else if (ok && cursor_ == 1) {
+                muted_ = !muted_;
+                changed_ = true;
+            } else if (ok) go(cursor_ == 2 ? Screen::BACKUP : Screen::DESTROY);
             break;
         case Screen::BACKUP:
         case Screen::DESTROY:
@@ -407,7 +451,7 @@ void Model::act(Button button, uint32_t nowMs) {
                     else {
                         // Brak zapasowej tożsamości OSP albo błąd zapisu: komunikat, nie cichy powrót.
                         result_ = Submit::ERROR;
-                        serviceFailed_ = true;
+                        serviceResult_ = true;
                         go(Screen::RESULT);
                     }
                 }
@@ -466,8 +510,7 @@ void Model::act(Button button, uint32_t nowMs) {
         case Screen::URGENCY_CONFIRM:
             if (ok) go(afterUrgency());
             else if (back) go(Screen::URGENCY);
-            else if (up && top_ > 0) --top_;
-            else if (downB && top_ + 1 < lastCount_) ++top_;
+            else scroll(up, downB);
             break;
         case Screen::PHRASE: {
             const size_t count = phraseListCount();
@@ -490,17 +533,15 @@ void Model::act(Button button, uint32_t nowMs) {
                     case DraftKind::URGENCY: go(Screen::URGENCY); break;
                     case DraftKind::RESOLVED: go(Screen::ITEM_MENU); break;
                 }
-            } else if (up && top_ > 0) --top_;
-            else if (downB && top_ + 1 < lastCount_) ++top_;
+            } else scroll(up, downB);
             break;
         case Screen::RESULT:
-            if ((ok || back) && serviceFailed_) { serviceFailed_ = false; go(Screen::SERVICES); }
-            else if (ok || back) { draft_ = Draft(); draft_.people = lastPeople_; go(Screen::MAIN); }
-            else if (up && top_ > 0) --top_;
-            else if (downB && top_ + 1 < lastCount_) ++top_;
+            if ((ok || back) && serviceResult_) { serviceResult_ = false; go(Screen::SERVICES); }
+            else if (ok || back) { resetDraft(); go(Screen::MAIN); }
+            else scroll(up, downB);
             break;
         case Screen::DISCARD:
-            if (ok) { draft_ = Draft(); draft_.people = lastPeople_; go(Screen::MAIN); }
+            if (ok) { resetDraft(); go(Screen::MAIN); }
             else if (back) go(returnTo_);
             break;
         case Screen::MESSAGES: {
@@ -527,8 +568,7 @@ void Model::act(Button button, uint32_t nowMs) {
                 uint8_t menu[4];
                 if (openItem(item) && item.own && itemMenu(menu)) go(Screen::ITEM_MENU);
                 else go(Screen::MESSAGES);
-            } else if (up && top_ > 0) --top_;
-            else if (downB && top_ + 1 < lastCount_) ++top_;
+            } else scroll(up, downB);
             break;
         }
         case Screen::ITEM_MENU: {
@@ -555,8 +595,7 @@ void Model::act(Button button, uint32_t nowMs) {
             else if (back) {
                 if (host_ && host_->test().state == TestState::SCHEDULED) host_->cancelTest();  // WSTECZ = ANULUJ
                 go(Screen::MENU);
-            } else if (up && top_ > 0) --top_;
-            else if (downB && top_ + 1 < lastCount_) ++top_;
+            } else scroll(up, downB);
             break;
         case Screen::TEST_MENU:
             if (up) moveCursor(-1, 2, LINES);
@@ -604,7 +643,7 @@ void Model::renderMain(const Status& s, char out[][LINE_BYTES], size_t count) co
         const size_t wrapped = wrap(text(Id::CISZA, lang_), lines, 3);
         for (size_t i = 0; i < 3; ++i) copyLine(out[n++], LINE_BYTES, i < wrapped ? lines[i] : "");
     } else {
-        copyLine(out[n++], LINE_BYTES, s.radioOk ? text(Id::RADIO_WLACZONE, lang_) : "RADIO ---");
+        copyLine(out[n++], LINE_BYTES, s.radioOk ? text(Id::RADIO_WLACZONE, lang_) : RADIO_DOWN);
         duration(s.contactS, lang_, value, sizeof(value));
         substitute(text(s.contactKnown ? Id::KONTAKT_KROTKI : Id::KONTAKT_PONAD_KROTKI, lang_), "[czas]", value, tmp, sizeof(tmp));
         copyLine(out[n++], LINE_BYTES, tmp);
@@ -623,7 +662,7 @@ void Model::renderMain(const Status& s, char out[][LINE_BYTES], size_t count) co
         copyLine(out[n], LINE_BYTES, tmp);
         substituteNumber(out[n], LINE_BYTES, "[n]", s.queued);
     } else {
-        out[n][0] = '\0';
+        copyLine(out[n], LINE_BYTES, muted_ ? text(Id::DZWIEK_WYCISZONY, lang_) : "");
     }
     ++n;
     if (n < count) {
@@ -638,7 +677,7 @@ size_t Model::statusLines(const Status& s, char out[][LINE_BYTES], size_t max) c
     char value[24];
     char tmp[LINE_BYTES * 2];
     auto put = [&](const char* line) { if (n < max) copyLine(out[n++], LINE_BYTES, line); };
-    put(s.radioOk ? text(Id::RADIO_WLACZONE, lang_) : "RADIO ---");
+    put(s.radioOk ? text(Id::RADIO_WLACZONE, lang_) : RADIO_DOWN);
     snprintf(tmp, sizeof(tmp), "RX OK %lu", static_cast<unsigned long>(s.rxOk)); put(tmp);
     snprintf(tmp, sizeof(tmp), "RX BAD %lu", static_cast<unsigned long>(s.rxBad)); put(tmp);
     snprintf(tmp, sizeof(tmp), "TX %lu DROP %lu", static_cast<unsigned long>(s.txDatagrams), static_cast<unsigned long>(s.txDrop)); put(tmp);
@@ -660,6 +699,7 @@ size_t Model::statusLines(const Status& s, char out[][LINE_BYTES], size_t max) c
     if (s.foffValid) snprintf(tmp, sizeof(tmp), "FOFF %+ld HZ", static_cast<long>(s.foffHz));
     else snprintf(tmp, sizeof(tmp), "FOFF ---");
     put(tmp);
+    if (muted_) put(text(Id::DZWIEK_WYCISZONY, lang_));
     put(s.version);
     put(s.name);
     put(label(Label::PRZEKAZANIE_ZMIANY, lang_));
@@ -723,33 +763,33 @@ void Model::buildSummary(Text& t) const {
     const size_t L = static_cast<size_t>(lang_);
     char tmp[LINE_BYTES * 2];
     t.addLine(ui_texts::CATEGORIES[draft_.category < 10 ? draft_.category : 9][L]);
-    snprintf(tmp, sizeof(tmp), "%u %s", static_cast<unsigned>(draft_.people), text(URGENCY_TEXTS[draft_.urgency < 3 ? draft_.urgency : 0], lang_));
+    peopleLine(draft_.people, draft_.urgency, tmp, sizeof(tmp));
     t.add(tmp);  // pilność słownie, łamana na wiersze (nie obcinana)
     if (draft_.phrase == PHRASE_RESOLVED) t.add(ui_texts::PHRASES[ui_texts::PHRASES_COUNT - 1][L]);
     else if (draft_.phrase >= 0 && host_) t.add(host_->phrase(static_cast<size_t>(draft_.phrase), lang_));
+    else if (draft_.phrase == PHRASE_KEPT && host_) {
+        // Treść spoza listy (z panelu) zostaje w rewizji: pokazana z rekordu zgłoszenia.
+        const size_t count = host_->itemCount();
+        Item item;
+        for (size_t i = 0; i < count; ++i) {
+            if (!host_->item(i, item, true) || item.ref != draft_.ref) continue;
+            if (host_->item(i, item)) t.add(shownPhrase(item.text));
+            break;
+        }
+    }
     if (host_) t.add(host_->address());
     t.add(text(Id::PODSUMOWANIE_KLAWISZE, lang_));
 }
 
 void Model::buildItem(const Item& item, Text& t) const {
-    const size_t L = static_cast<size_t>(lang_);
     char tmp[LINE_BYTES * 2];
     if (item.own) {
-        t.addLine(item.type == SA1_TEST ? label(Label::TEST, lang_) : ui_texts::CATEGORIES[item.category < 10 ? item.category : 9][L]);
+        t.addLine(itemLabel(item));
         if (item.type != SA1_TEST) {  // TEST nie ma liczby osób ani pilności do pokazania
-            snprintf(tmp, sizeof(tmp), "%u %s", static_cast<unsigned>(item.people), text(URGENCY_TEXTS[item.urgency < 3 ? item.urgency : 0], lang_));
+            peopleLine(item.people, item.urgency, tmp, sizeof(tmp));
             t.add(tmp);
         }
-        if (item.text[0]) {
-            // Fraza z konfiguracji pokazana w wybranym języku; inna treść (z panelu) po polsku.
-            const char* shown = item.text;
-            if (host_) {
-                for (size_t i = 0; i < host_->phraseCount(); ++i) {
-                    if (!strcmp(host_->phrase(i, Lang::PL), item.text)) { shown = host_->phrase(i, lang_); break; }
-                }
-            }
-            t.add(shown);
-        }
+        if (item.text[0]) t.add(shownPhrase(item.text));   // fraza w wybranym języku; treść z panelu po polsku
         t.addShort(Id::ZAPISZ_NUMER, item.number, lang_);
     } else {
         const char* polish = text(Id::ODPOWIEDZI_PO_POLSKU, lang_);
@@ -768,7 +808,6 @@ void Model::buildItem(const Item& item, Text& t) const {
 
 void Model::buildHandover(const Status& status, Text& t) {
     // Otwarte i niepotwierdzone zgłoszenia, nieprzeczytane wiadomości, energia, cisza.
-    const size_t L = static_cast<size_t>(lang_);
     char tmp[LINE_BYTES * 2];
     char digits[8];
     t.addLine(label(Label::PRZEKAZANIE_ZMIANY, lang_));
@@ -777,7 +816,7 @@ void Model::buildHandover(const Status& status, Text& t) {
         Item item;
         if (!host_->item(i, item, true) || !item.own || item.cancelled || item.state == 6) continue;
         formatShort(digits, sizeof(digits), item.number);
-        snprintf(tmp, sizeof(tmp), "%s %s", digits, item.type == SA1_TEST ? label(Label::TEST, lang_) : ui_texts::CATEGORIES[item.category < 10 ? item.category : 9][L]);
+        snprintf(tmp, sizeof(tmp), "%s %s", digits, itemLabel(item));
         t.addLine(tmp);
         if (item.state == 0) {  // etap z podstawionymi [n] i [m], łamany na wiersze
             stageText(item, status, tmp, sizeof(tmp));
@@ -791,6 +830,7 @@ void Model::buildHandover(const Status& status, Text& t) {
     renderMain(status, lines, LINES);
     if (status.silence) t.addLine(lines[0]);
     t.addLine(lines[status.silence ? 3 : 2]);  // zasilanie
+    if (muted_) t.addLine(text(Id::DZWIEK_WYCISZONY, lang_));
 }
 
 void Model::render(const Status& s, Lines& out) {
@@ -897,6 +937,7 @@ void Model::render(const Status& s, Lines& out) {
                 case Submit::NO_ADDRESS: t.add(text(Id::ADRES_BRAK, lang_)); break;
                 case Submit::FULL: t.add(text(Id::KOLEJKA_PELNA, lang_)); break;
                 case Submit::ERROR: t.add(text(Id::BLAD_PAMIECI, lang_)); break;
+                case Submit::ANNOUNCED: t.add(text(Id::ADRES_OGLOSZONY, lang_)); break;
             }
             renderText(t, window, out, first);
             break;
@@ -920,7 +961,7 @@ void Model::render(const Status& s, Lines& out) {
                 if (index < count && host_->item(index, item, true) && (item.own || host_->item(index, item))) {
                     char digits[8];
                     formatShort(digits, sizeof(digits), item.number);
-                    if (item.own) snprintf(tmp, sizeof(tmp), "%s %s", digits, item.type == SA1_TEST ? label(Label::TEST, lang_) : ui_texts::CATEGORIES[item.category < 10 ? item.category : 9][L]);
+                    if (item.own) snprintf(tmp, sizeof(tmp), "%s %s", digits, itemLabel(item));
                     else snprintf(tmp, sizeof(tmp), "%s%s", item.unread ? "*" : " ", item.text);
                     copyLine(out.text[first + i], LINE_BYTES, tmp);
                 }
@@ -968,8 +1009,9 @@ void Model::render(const Status& s, Lines& out) {
             renderText(t, window, out, first);
             break;
         case Screen::SERVICES: {
-            const char* items[2] = {label(Label::ODBIORCA_ZAPASOWY, lang_), label(Label::ZNISZCZ_DANE, lang_)};
-            renderList(items, 2, window, out, first, true);
+            const char* items[SERVICE_ITEMS] = {label(Label::OGLOS_ADRES, lang_), label(muted_ ? Label::WLACZ_DZWIEK : Label::WYCISZ_DZWIEK, lang_),
+                                                label(Label::ODBIORCA_ZAPASOWY, lang_), label(Label::ZNISZCZ_DANE, lang_)};
+            renderList(items, SERVICE_ITEMS, window, out, first, true);
             break;
         }
         case Screen::BACKUP:

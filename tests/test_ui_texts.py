@@ -45,6 +45,9 @@ class TextTests(unittest.TestCase):
     def test_header_cites_specification_texts(self):
         text = ui_texts.HEADER.read_text(encoding="utf-8")
         for key, strings in self.data["texts"].items():
+            if key in ui_texts.PAGE_ONLY:   # tylko strona i panel: poza obrazem stacji
+                self.assertNotIn(f"    {key.upper()},", text)
+                continue
             self.assertIn(f"    {key.upper()},", text)
             for s in strings:
                 if s:

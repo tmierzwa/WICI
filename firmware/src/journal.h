@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Dziennik stacji w FRAM (docs/spec/radio.md "Dostęp do kanału", oprogramowanie.md "Czas"
 // i "Pamięć FRAM według roli"): dług ciszy, licznik czasu pracy z liczbą restartów oraz
-// dziennik zdarzeń oraz ustawienia ekranu (język, ostatni ekran). Cztery pierścienie rekordów
+// dziennik zdarzeń oraz ustawienia ekranu (język, wyciszenie dźwięku). Cztery pierścienie rekordów
 // o stałej długości; każdy rekord ma numer i CRC-16, a rekordy długu, zegara i ustawień także
 // znacznik zatwierdzenia zapisywany po treści, więc zanik zasilania w trakcie zapisu zostawia
 // poprzedni rekord. Obszar nie jest szyfrowany. ZNISZCZ DANE kasuje tylko dziennik zdarzeń;
@@ -39,7 +39,7 @@ struct SmallRecord {
     uint32_t seq = 0;
     uint32_t a = 0;  // dług: dług [ms]; zegar: czas pracy [s]
     uint32_t b = 0;  // dług: czas pracy przy zapisie [s]; zegar: liczba restartów
-                     // ustawienia: a = język + 1 (0 = niewybrany), b = ostatni ekran
+                     // ustawienia: a = język + 1 (0 = niewybrany), b = znaczniki (0x100 | wyciszenie)
 };
 
 struct EventRecord {
@@ -71,7 +71,7 @@ public:
     // Zapis treści, potem znacznika, potem odczyt kontrolny; false blokuje nadawanie.
     bool writeDebt(uint32_t debtMs, uint32_t uptimeS);
     bool writeClock(uint32_t uptimeS, uint32_t restarts);
-    bool writeSettings(uint32_t language, uint32_t screen);
+    bool writeSettings(uint32_t language, uint32_t flags);  // język + 1, znaczniki ekranu (main.cpp)
     bool writeEvent(uint32_t uptimeS, const char* text);
     // Zdarzenie sprzed `back` wpisów (0 = najnowsze); false, gdy brak albo uszkodzone.
     bool readEvent(uint32_t back, EventRecord& record);

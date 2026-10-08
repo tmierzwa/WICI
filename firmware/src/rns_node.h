@@ -74,6 +74,8 @@ struct Status {
 // stos liczy swój zegar monotoniczny także między restartami (oprogramowanie.md, "Czas").
 bool begin(journal::Storage& fram, Radio& radio, const uint8_t ifac[16], uint64_t clockMs, const Hooks& hooks);
 void setIfac(const uint8_t ifac[16]);   // po configure
+// Przypięta OSP (aktywna tożsamość z konfiguracji) dla rezerwy 50% czasu kanału; zera = bez rezerwy.
+void setOsp(const uint8_t destination[HASH]);
 void loop(uint32_t nowMs);
 void received(const uint8_t* wire, size_t length);   // datagram złożony z ramek P1
 void txDone(bool ok);                                // koniec nadawania datagramu z transmit()

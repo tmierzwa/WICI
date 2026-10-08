@@ -28,6 +28,8 @@ const char* Console::phrase(size_t index, ui::Lang lang) {
 
 void Console::rebuild() {
     // Własne zgłoszenia i TEST w najnowszej rewizji (bez zastąpionych), odpowiedzi i komunikaty; najnowsze najpierw.
+    // Pamięć treści też od nowa: po ZNISZCZ DANE numery rekordów zaczynają się od 1.
+    cachedSeq_ = 0;
     count_ = 0;
     for (size_t i = 0; i < store_.queueSize(); ++i) {
         const store::QueueEntry* e = store_.queueEntry(i);
@@ -62,73 +64,64 @@ size_t Console::itemCount() {
     return count_;
 }
 
-bool Console::item(size_t index, ui::Item& out, bool brief) {
-    if (dirty_) rebuild();
-    if (index >= count_) return false;
-    const Ref ref = list_[index];
-    const uint32_t nowS = services_.uptimeS();
-    out = ui::Item();
-    sa1::Message m;
-    if (brief) {
-        // Skrót z indeksu w RAM: listy i PRZEKAZANIE ZMIANY nie czytają rekordów z FRAM przy każdym rysowaniu.
-        if (ref.seq & OWN) {
-            for (size_t i = 0; i < store_.queueSize(); ++i) {
-                const store::QueueEntry* e = store_.queueEntry(i);
-                if (!e || e->seq != (ref.seq & ~OWN)) continue;
-                out.ref = e->seq;
-                out.own = true;
-                out.type = e->type;
-                out.number = store::shortNumber(e->id);
-                out.category = e->category;
-                out.urgency = e->aux;
-                out.state = e->state;
-                out.attempts = e->attempts;
-                out.nextInS = e->nextTryS > nowS ? e->nextTryS - nowS : 0;
-                out.ageS = nowS > e->createdS ? nowS - e->createdS : 0;
-                out.cancelled = e->flags & store::CANCELLED;
-                return true;
-            }
-            return false;
-        }
-        for (size_t i = 0; i < store::INBOX_SLOTS; ++i) {
-            const store::InboxEntry* e = store_.inboxEntry(i);
-            if (!e || e->seq != ref.seq) continue;
+bool Console::brief(const Ref& ref, uint32_t nowS, ui::Item& out) {
+    // Skrót z indeksu w RAM: listy i PRZEKAZANIE ZMIANY nie czytają rekordów z FRAM przy każdym rysowaniu.
+    if (ref.seq & OWN) {
+        for (size_t i = 0; i < store_.queueSize(); ++i) {
+            const store::QueueEntry* e = store_.queueEntry(i);
+            if (!e || e->seq != (ref.seq & ~OWN)) continue;
             out.ref = e->seq;
+            out.own = true;
             out.type = e->type;
             out.number = store::shortNumber(e->id);
-            out.ageS = nowS > e->receivedS ? nowS - e->receivedS : 0;
-            out.unread = !(e->flags & 1);
+            out.category = e->category;
+            out.urgency = e->aux;
+            out.state = e->state;
+            out.attempts = e->attempts;
+            out.nextInS = e->nextTryS > nowS ? e->nextTryS - nowS : 0;
+            out.ageS = nowS > e->createdS ? nowS - e->createdS : 0;
+            out.cancelled = e->flags & store::CANCELLED;
             return true;
         }
         return false;
     }
-    if (ref.seq & OWN) {
-        store::QueueRecord r;
-        if (!store_.queueRead(ref.seq & ~OWN, r) || sa1::decode(r.sa1, r.sa1Length, m)) return false;
-        out.ref = r.seq;
-        out.own = true;
-        out.type = r.type;
-        out.number = store::shortNumber(r.id);
-        out.category = m.category;
-        out.people = m.people;
-        out.urgency = m.urgency;
-        out.state = r.state;
-        out.attempts = r.attempts;
-        out.nextInS = r.nextTryS > nowS ? r.nextTryS - nowS : 0;
-        out.ageS = nowS > r.createdS ? nowS - r.createdS : 0;
-        out.cancelled = r.flags & store::CANCELLED;
-        strncpy(out.text, m.text, sizeof(out.text) - 1);
+    for (size_t i = 0; i < store::INBOX_SLOTS; ++i) {
+        const store::InboxEntry* e = store_.inboxEntry(i);
+        if (!e || e->seq != ref.seq) continue;
+        out.ref = e->seq;
+        out.type = e->type;
+        out.number = store::shortNumber(e->id);
+        out.ageS = nowS > e->receivedS ? nowS - e->receivedS : 0;
+        out.unread = !(e->flags & store::INBOX_READ);
         return true;
     }
-    store::InboxRecord r;
-    if (!store_.inboxRead(ref.seq, r) || sa1::decode(r.sa1, r.sa1Length, m)) return false;
-    out.ref = r.seq;
-    out.own = false;
-    out.type = r.type;
-    out.number = store::shortNumber(r.id);
-    out.ageS = nowS > r.receivedS ? nowS - r.receivedS : 0;
-    out.unread = !(r.flags & 1);
-    strncpy(out.text, m.text, sizeof(out.text) - 1);
+    return false;
+}
+
+bool Console::item(size_t index, ui::Item& out, bool briefOnly) {
+    if (dirty_) rebuild();
+    if (index >= count_) return false;
+    const Ref ref = list_[index];
+    out = ui::Item();
+    if (!brief(ref, services_.uptimeS(), out)) return false;
+    if (briefOnly) return true;
+    if (cachedSeq_ != ref.seq) {
+        // Liczba osób i treść tylko z rekordu w FRAM (SA1); stan i czasy są w indeksie.
+        sa1::Message m;
+        if (ref.seq & OWN) {
+            store::QueueRecord r;
+            if (!store_.queueRead(ref.seq & ~OWN, r) || sa1::decode(r.sa1, r.sa1Length, m)) return false;
+        } else {
+            store::InboxRecord r;
+            if (!store_.inboxRead(ref.seq, r) || sa1::decode(r.sa1, r.sa1Length, m)) return false;
+        }
+        cachedSeq_ = ref.seq;
+        cachedPeople_ = m.people;
+        strncpy(cachedText_, m.text, sizeof(cachedText_) - 1);
+        cachedText_[sizeof(cachedText_) - 1] = '\0';
+    }
+    if (out.own) out.people = cachedPeople_;
+    memcpy(out.text, cachedText_, sizeof(out.text));
     return true;
 }
 
@@ -216,6 +209,12 @@ void Console::ackAlarm(const ui::AlarmInfo& alarm) {
     a.kind = alarm.kind == ui::AlarmKind::NO_READ ? station::AlarmKind::NO_READ : station::AlarmKind::NO_CONFIRMATION;
     a.seq = alarm.ref;
     station_.ackAlarm(a);
+}
+
+bool Console::announce() {
+    const bool ok = services_.announce();
+    services_.log(ok ? "announce requested (screen)" : "announce: stack not running");
+    return ok;
 }
 
 bool Console::switchBackup() {

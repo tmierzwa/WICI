@@ -351,8 +351,40 @@ int announceScenario() {
     return 0;
 }
 
+// Rezerwa dla OSP: dane przekazywane poza OSP najwyżej 50% czasu kanału w oknie 1 h.
+int reserveScenario() {
+    using namespace p1iface;
+    uint8_t osp[16], other[16], w[600] = {};
+    memset(osp, 0x11, 16);
+    memset(other, 0x22, 16);
+    const uint32_t t0 = 3600000;
+    auto drain = [](Queue& q) { const uint8_t* d; size_t n; while (q.start(d, n)) q.finish(true); };
+    Queue q;
+    printf("unpinned %s\n", admitName(q.offer(Kind::DATA, 1, other, w, 516, t0)));
+    drain(q);
+    q.setOsp(osp);
+    // Ostatnie wolne miejsce zostaje dla OSP.
+    const char* a1 = admitName(q.offer(Kind::DATA, 1, other, w, 516, t0));
+    const char* a2 = admitName(q.offer(Kind::DATA, 1, other, w, 516, t0));
+    const char* a3 = admitName(q.offer(Kind::DATA, 1, other, w, 516, t0));
+    const char* a4 = admitName(q.offer(Kind::DATA, 1, other, w, 516, t0));
+    printf("slots %s %s %s %s osp %s\n", a1, a2, a3, a4, admitName(q.offer(Kind::DATA, 1, osp, w, 516, t0)));
+    drain(q);
+    // Wyczerpanie budżetu: 3 datagramy już policzone, potem do odmowy.
+    unsigned admitted = 3;
+    while (q.offer(Kind::DATA, 1, other, w, 516, t0) == Admit::QUEUED) { ++admitted; drain(q); }
+    printf("budget %u used %u reserved %u\n", admitted, q.otherUsedMs(t0), q.counters().reserved);
+    printf("exempt own %s proof %s osp %s\n", admitName(q.offer(Kind::DATA, 0, other, w, 516, t0)),
+           admitName(q.offer(Kind::CONTROL, 1, other, w, 50, t0)), admitName(q.offer(Kind::DATA, 1, osp, w, 516, t0)));
+    drain(q);
+    printf("later %s %s\n", admitName(q.offer(Kind::DATA, 1, other, w, 516, t0 + 59 * 60000)),
+           admitName(q.offer(Kind::DATA, 1, other, w, 516, t0 + 60 * 60000)));
+    return 0;
+}
+
 int main(int argc, char** argv) {
     const std::string mode = argc > 1 ? argv[1] : "";
+    if (mode == "reserve") return reserveScenario();
     if (mode == "announce") return announceScenario();
     if (mode == "fs") return fsScenario();
     if (mode == "fsfull") return fsFull();
@@ -446,6 +478,19 @@ class StackUnitTests(unittest.TestCase):
         self.assertEqual(out[4], "remove 1 0 0")
         self.assertEqual(out[5], "short 1 1 1")
         self.assertLessEqual(int(out[6].split()[1]), 32 * 1024 + 64)   # 4096 x 8 B i liczniki
+
+    def test_p1_interface_osp_reserve(self):
+        out = self.run_harness("reserve")
+        self.assertEqual(out[0], "unpinned queued")
+        self.assertEqual(out[1], "slots queued queued queued osp_reserve osp queued")
+        # 516 B (MTU z IFAC): 6 pełnych ramek po 195 ms TX i 12 x tyle długu = 15 210 ms czasu kanału;
+        # 50% z 1 h = 1 800 000 ms.
+        cost = 6 * 195 * 13
+        n = 1800000 // cost
+        self.assertEqual(out[2], f"budget {n} used {n * cost} reserved 2")
+        self.assertEqual(out[3], "exempt own queued proof queued osp queued")
+        # Okno przesuwne: po 59 min wciąż pełne, po 60 min przedział z t0 wypada.
+        self.assertEqual(out[4], "later osp_reserve queued")
 
     def test_p1_interface_queue_priorities_and_announce_limit(self):
         out = self.run_harness("iface")

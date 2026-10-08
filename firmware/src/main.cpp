@@ -178,6 +178,7 @@ struct BenchServices : station::Services {
     void randomBytes(uint8_t* out, size_t count) override { measure::randomBytes(out, count); }
     void log(const char* text) override { bench.log(text); }
     void destroyed() override;
+    bool announce() override { return host.announce(); }
     bool notify(uint8_t kind, uint32_t ref, const char* fields) override { return protocol.event(kind, ref, fields, millis()); }
     void address(uint8_t out[store::HASH]) override { host.stationAddress(out); }
     void changed() override;
@@ -194,12 +195,24 @@ void screenChanged() {
     screenDirty = true;
 }
 
+// Przypięta OSP dla rezerwy czasu kanału w interfejsie P1: aktywna tożsamość z konfiguracji
+// (configure, ODBIORCA ZAPASOWY).
+void pinOsp() {
+    if (!rnsOk || !storeOk) return;
+    const store::Config& c = stationStore.config();
+    rnsnode::setOsp(c.osp[c.activeOsp ? 1 : 0]);
+}
+
 void BenchHost::configChanged() {
     if (rnsOk) rnsnode::setIfac(stationStore.config().ifac);   // configure może zmienić kod IFAC
+    pinOsp();
     screenChanged();
 }
 void BenchHost::queueChanged() { screenChanged(); }
-void BenchServices::changed() { screenChanged(); }
+void BenchServices::changed() {
+    pinOsp();
+    screenChanged();
+}
 
 void onDatagram(const uint8_t* data, size_t length, void*) { if (rnsOk) rnsnode::received(data, length); }
 void onTxDone(bool ok, void*) { rnsnode::txDone(ok); }
@@ -458,14 +471,20 @@ void BenchHost::stationAddress(uint8_t out[store::HASH]) {
 
 const char* BenchHost::stationName() { return ::stationName; }
 
-// Język i ekran w pamięci niezerowanej po każdej zmianie (restart programowy, watchdog); w FRAM tylko
-// język przy jego zmianie (po włączeniu zasilania stacja zaczyna od wyboru języka z podpowiedzią).
+// Rekord ustawień w FRAM: a = język + 1, b = znaczniki (SETTINGS_FLAGS odróżnia je od numeru
+// ekranu zapisywanego tam przez wcześniejsze wersje).
+constexpr uint32_t SETTINGS_FLAGS = 0x100;
+constexpr uint32_t SETTINGS_MUTED = 0x001;
+
+// Język i ekran w pamięci niezerowanej po każdej zmianie (restart programowy, watchdog); w FRAM
+// język i wyciszenie przy ich zmianie (po włączeniu zasilania stacja zaczyna od wyboru języka z podpowiedzią).
 void persistScreen() {
     if (!screenModel.takeChange()) return;
     retain();
     const uint32_t lang = static_cast<uint32_t>(screenModel.language()) + 1;
-    if (journalOk && stationJournal.settings().a != lang &&
-        !stationJournal.writeSettings(lang, static_cast<uint32_t>(screenModel.screen()))) {
+    const uint32_t flags = SETTINGS_FLAGS | (screenModel.muted() ? SETTINGS_MUTED : 0);
+    const journal::SmallRecord& saved = stationJournal.settings();
+    if (journalOk && (saved.a != lang || saved.b != flags) && !stationJournal.writeSettings(lang, flags)) {
         journalOk = false;
         ledWrite(board::LED_FRAM, false);
     }
@@ -495,6 +514,8 @@ void beginScreen() {
     } else {
         screenModel.start(savedLang);
     }
+    // Wyciszenie dźwięku przetrwa także zanik zasilania (rekord ustawień w FRAM).
+    screenModel.setMuted(journalOk && (saved.b & SETTINGS_FLAGS) && (saved.b & SETTINGS_MUTED));
     retain();
     updateScreen(true);
 }
@@ -950,6 +971,7 @@ void beginStack() {
     if (storeOk) memcpy(ifac, stationStore.config().ifac, sizeof(ifac));
     rnsOk = rnsnode::begin(memory, benchRadio, ifac, static_cast<uint64_t>(uptimeS()) * 1000, hooks);
     if (!rnsOk) { bench.log("rns start failed"); return; }
+    pinOsp();
     uint32_t random = 0;
     measure::randomBytes(reinterpret_cast<uint8_t*>(&random), sizeof(random));
     announcePolicy.begin(storeOk && stationStore.config().role == store::OSP, uptimeS(), random);
@@ -1061,9 +1083,10 @@ void stationLoop() {
         pollAnnounce();
     }
     static uint32_t lastApp = 0;
-    if (storeOk && linkAuto && radiocon::ok() && now - lastApp >= APP_POLL_MS) {  // przegląd kolejki co 100 ms, nie w każdym obiegu
+    if (storeOk && now - lastApp >= APP_POLL_MS) {  // przegląd kolejki co 100 ms, nie w każdym obiegu
         lastApp = now;
-        app.poll(now);
+        app.notifyPending();   // zdarzenia do laptopa także przy LINK 0 i bez radia
+        if (linkAuto && radiocon::ok()) app.poll(now);
     }
     pollSerial();
     pollButtons(now);

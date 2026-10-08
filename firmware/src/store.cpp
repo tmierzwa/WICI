@@ -541,7 +541,7 @@ size_t Store::inboxCount() const {
 
 size_t Store::inboxUnread() const {
     size_t n = 0;
-    for (const InboxEntry& e : inbox_) n += (e.seq && !(e.flags & 1)) ? 1 : 0;
+    for (const InboxEntry& e : inbox_) n += (e.seq && !(e.flags & INBOX_READ)) ? 1 : 0;
     return n;
 }
 
@@ -555,16 +555,20 @@ Put Store::inboxPut(InboxRecord& record) {
         record = old;
         return Put::DUPLICATE;
     }
-    // Pełna skrzynka: odpada najstarsza przeczytana (najpierw BULLETIN), potem najstarsza w ogóle.
+    // Pełna skrzynka: odpada najstarsza przeczytana (najpierw BULLETIN), potem najstarsza bez
+    // zaległego zdarzenia do laptopa, na końcu najstarsza w ogóle.
     uint32_t seqs[INBOX_SLOTS];
     uint8_t live[INBOX_SLOTS];
     for (size_t i = 0; i < INBOX_SLOTS; ++i) { seqs[i] = inbox_[i].seq; live[i] = 1; }
     int slot = freeSlot(seqs, live, INBOX_SLOTS);
     if (slot < 0) {
-        for (int pass = 0; pass < 3 && slot < 0; ++pass) {
+        for (int pass = 0; pass < 4 && slot < 0; ++pass) {
             for (size_t i = 0; i < INBOX_SLOTS; ++i) {
                 const InboxEntry& e = inbox_[i];
-                const bool candidate = pass == 0 ? ((e.flags & 1) && e.type == sa1::BULLETIN) : pass == 1 ? (e.flags & 1) != 0 : true;
+                const bool candidate = pass == 0   ? ((e.flags & INBOX_READ) && e.type == sa1::BULLETIN)
+                                       : pass == 1 ? (e.flags & INBOX_READ) != 0
+                                       : pass == 2 ? !(e.flags & INBOX_NOTIFY)
+                                                   : true;
                 if (candidate && (slot < 0 || e.seq < inbox_[slot].seq)) slot = static_cast<int>(i);
             }
         }
@@ -577,7 +581,7 @@ Put Store::inboxPut(InboxRecord& record) {
                         record.sa1, record.sa1Length);
     const uint32_t address = INBOX_BASE + static_cast<uint32_t>(slot) * RECORD;
     if (inbox_[slot].seq && !invalidate(address, MSG_IMMUTABLE)) return Put::ERROR;
-    uint8_t state[INBOX_STATE + 3] = {};
+    uint8_t state[INBOX_STATE + 3] = {static_cast<uint8_t>(record.flags & INBOX_NOTIFY)};
     if (!writeState(address + STATE_OFFSET, seq, state, INBOX_STATE)) return Put::ERROR;
     if (!writeImmutable(address, buffer, MSG_IMMUTABLE)) return Put::ERROR;
     InboxEntry& e = inbox_[slot];
@@ -589,8 +593,9 @@ Put Store::inboxPut(InboxRecord& record) {
     e.event = record.event;
     memcpy(e.source, record.source, HASH);
     memcpy(e.id, record.id, HASH);
+    e.flags = state[0];
     record.seq = seq;
-    record.flags = 0;
+    record.flags = state[0];
     inboxSeq_ = seq;
     return Put::STORED;
 }
@@ -610,14 +615,21 @@ bool Store::inboxRead(uint32_t seq, InboxRecord& record) {
     return false;
 }
 
-bool Store::inboxMarkRead(uint32_t seq) {
+bool Store::inboxSetFlags(uint32_t seq, uint8_t flags) {
     for (size_t slot = 0; slot < INBOX_SLOTS; ++slot) {
         if (inbox_[slot].seq != seq) continue;
-        uint8_t state[INBOX_STATE + 3] = {1};
+        if (inbox_[slot].flags == flags) return true;
+        uint8_t state[INBOX_STATE + 3] = {flags};
         if (!writeState(INBOX_BASE + slot * RECORD + STATE_OFFSET, seq, state, INBOX_STATE)) return false;
-        inbox_[slot].flags |= 1;
+        inbox_[slot].flags = flags;
         return true;
     }
+    return false;
+}
+
+bool Store::inboxMarkRead(uint32_t seq) {
+    for (size_t slot = 0; slot < INBOX_SLOTS; ++slot)
+        if (inbox_[slot].seq == seq) return inboxSetFlags(seq, inbox_[slot].flags | INBOX_READ);
     return false;
 }
 
@@ -628,11 +640,8 @@ bool Store::notePut(NoteRecord& record) {
     uint32_t seqs[NOTE_SLOTS];
     uint8_t live[NOTE_SLOTS];
     for (size_t i = 0; i < NOTE_SLOTS; ++i) { seqs[i] = notes_[i].seq; live[i] = notes_[i].seq && !notes_[i].acked; }
-    int slot = freeSlot(seqs, live, NOTE_SLOTS);
-    if (slot < 0) {
-        // Wszystkie niepotwierdzone: odpada najstarsze (laptop odtworzy stan z kursora i skrzynki).
-        for (size_t i = 0; i < NOTE_SLOTS; ++i) if (slot < 0 || notes_[i].seq < notes_[slot].seq) slot = static_cast<int>(i);
-    }
+    const int slot = freeSlot(seqs, live, NOTE_SLOTS);
+    if (slot < 0) return false;   // wszystkie niepotwierdzone: zdarzenie bez ack zostaje (oprogramowanie.md)
     uint32_t seq = noteSeq_ + 1;
     if (!seqUsable(seq)) seq = 1;
     uint8_t buffer[RECORD];
