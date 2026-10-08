@@ -19,7 +19,7 @@ namespace board {
 constexpr const char* NAME = "N1";
 
 // SPI: piny IO_MUX FSPI (FSPID 11, FSPICLK 12, FSPIQ 13) na kontrolerze SPI2 (FSPI).
-// SCK przez 33 Ω (R18) przy GPIO12; sieć SCK ma około 240 mm z odgałęzieniami, więc SCK i MOSI
+// SCK przez 33 Ω (R18) przy GPIO12; sieć SCK ma około 265 mm z odgałęzieniami, więc SCK i MOSI
 // startują z najniższym napędem (DRIVE_CAP 0, około 5 mA); polecenie DRIVE zmienia go do restartu.
 constexpr uint8_t SPI_SCK = 12;   // J5.18 -> R18 -> S2-LP SCLK, FRAM, ekran, J11
 constexpr uint8_t SPI_MOSI = 11;  // J5.17 -> S2-LP SDI, FRAM, ekran

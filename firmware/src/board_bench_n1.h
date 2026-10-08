@@ -41,7 +41,7 @@ constexpr uint8_t FRAM_CS = 32 + 11;  // P1.11, D9
 constexpr uint8_t DISPLAY_CS = 32 + 5;        // P1.05, D4
 constexpr uint8_t DISPLAY_EXTCOMIN = 32 + 7;  // P1.07, D6
 constexpr uint8_t DISPLAY_DISP = 32 + 10;     // P1.10, D8
-// Sieć SCK ma około 240 mm z odgałęzieniami; 2 MHz (granica LS027B7DH01) dopiero po próbie
+// Sieć SCK ma około 265 mm z odgałęzieniami; 2 MHz (granica LS027B7DH01) dopiero po próbie
 // z analizatorem na J11 (polecenie DISPLAY <hz>).
 constexpr uint32_t DISPLAY_SPI_HZ = 1000000;
 

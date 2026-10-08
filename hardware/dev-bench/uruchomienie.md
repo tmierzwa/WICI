@@ -37,7 +37,7 @@ Kroki A3–A5 i B3–B4 wymagają obrazu z plikiem opisu płytki N1 (na przykła
 
 | Krok | Czynność | Warunek przejścia |
 |---:|---|---|
-| A1 | nRF52840-DK z wgranym obrazem N1 (instrukcja w [firmware](../../firmware/README.md#płytka-nośna-n1-bench-n1), środowisko `bench-n1`), zasilanie DK w ustawieniu fabrycznym (VDD z przetwornicy płytki, 3,0 V), wyłącznik SW8 włączony, przełącznik TRACE (SW7) w pozycji „Default”; przełączniki DK ustawia się przed nałożeniem płytki, bo potem są pod nią. Płytka nośna bez modułów na DK; lewa część płytki na dystansach M3 (H1, H2, H5) tak, by leżała poziomo | płytka nie naciska na części DK |
+| A1 | nRF52840-DK z wgranym obrazem N1 (instrukcja w [firmware](../../firmware/README.md#płytka-nośna-n1-bench-n1), środowisko `bench-n1`), zasilanie DK w ustawieniu fabrycznym (VDD z przetwornicy płytki, 3,0 V), wyłącznik SW8 włączony, przełącznik TRACE (SW7) w pozycji „Default”; przełączniki DK ustawia się przed nałożeniem płytki, bo potem są pod nią. Płytka nośna bez modułów na DK; lewa część płytki na dystansach M3 (H1, H2, H5) tak, by leżała poziomo (wysokość z przymiarki; dystanse 12 mm z BOM służą stanowisku B, w A zwykle trzeba dołożyć podkładki albo użyć dłuższych) | płytka nie naciska na części DK |
 | A2 | Zasilanie z USB DK (J2 albo J3) przez miernik USB; pomiar J1.4 i J1.5 wobec masy | około 3,0 V i około 5 V; prąd bez modułów zgodny z samą płytką DK (wzrost < 20 mA) |
 | A3 | Przyciski, CISZA, przycisk przygotowania, dioda i brzęczyk poleceniem diagnostycznym obrazu | każdy przycisk zmienia stan tylko swojej linii; brzęczyk słychać przy 2048 Hz |
 | A4 | Wpięte FRAM i ekran; przed wpięciem: ekran szkłem do góry, pin VIN modułu nad napisem VIN przy J7, a miernikiem między J7.3 (GND) i J7.7 (EMD, +3V3) bez modułu: brak zwarcia | `FRAM` rozpoznaje układ; ekran pokazuje obraz, EXTCOMIN z MCU (EMD w stanie wysokim) |
@@ -47,10 +47,26 @@ Kroki A3–A5 i B3–B4 wymagają obrazu z plikiem opisu płytki N1 (na przykła
 
 | Krok | Czynność | Warunek przejścia |
 |---:|---|---|
-| B1 | Płytka nośna na ośmiu dystansach M3. JP1 i JP2 założone, bez modułów | płytka stoi stabilnie; długie piny J1–J4 nie dotykają podłoża; śruby w otworach Arduino nie dotykają listew |
-| B2 | ESP32-S3-DevKitC-1 (moduł N8, N8R2 albo N8R8), USB w stronę napisu USB na płytce, do komputera, amperomierz w miejscu JP1; pomiar J1.4 i J1.5 | około 3,3 V i około 4,7 V; prąd przez JP1 bez modułów < 5 mA (podciągnięcia) |
+| B1 | Płytka nośna na dziewięciu dystansach M3 (H1–H9, w otworach Arduino H6–H9 nylonowe). JP1 i JP2 założone, bez modułów | płytka stoi stabilnie; długie piny J1–J4 nie dotykają podłoża; śruby w otworach Arduino nie dotykają listew |
+| B2 | ESP32-S3-DevKitC-1 (moduł N8R8 albo N8; N8R2 jest wycofany, ale też pasuje), USB w stronę napisu USB na płytce, do komputera, amperomierz w miejscu JP1; pomiar J1.4 i J1.5 | około 3,3 V i około 4,7 V; prąd przez JP1 bez modułów < 5 mA (podciągnięcia) |
 | B3 | Jak A3 i A4 | jak w A |
 | B4 | X-NUCLEO-S2868A2 z fabrycznymi rezystorami, zworka JP1 na X-NUCLEO założona, wpięta w J1–J4 | `RADIO` obrazu `bench-b` daje `partnumber: 0x03`, `partversion` (rejestr wersji S2-LP) i stan `RX` (odbiór P1 od startu); `VERIFY` bez niezgodności |
+
+## Wzór zapisu sztuki
+
+Zapis prowadzi się w zgłoszeniu (Issues, formularz raportu z próby) albo w pliku przy stanowisku. Po zaliczeniu kroków stanowisko obsługuje się według [obsługi](obsluga.md).
+
+```text
+Sztuka N1 nr:            Rewizja PCB: N1      Data i osoba:
+Wykonawca PCB / montaż SMD (albo ręcznie):
+Części spoza BOM (oznaczenie, zamiennik, powód):
+Stanowisko: A / B        Płytka MCU i moduły (numery seryjne):
+Obraz (INFO: bench, board, wersja):
+Kroki 1-5:   wynik, uwagi
+Kroki A1-A5 albo B1-B4:  wynik, zmierzone napięcia i prądy
+Wysokość dystansów w A (mm):
+Usterki i poprawki:
+```
 
 ## Czego płytka nie sprawdza
 

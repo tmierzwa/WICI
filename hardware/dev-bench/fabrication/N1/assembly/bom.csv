@@ -25,5 +25,5 @@ C1 C4,2,10u,Samsung Electro-Mechanics,CL21A106KAYNNNE,10 µF 25 V X5R 0805,Capac
 C2 C3 C5,3,100n,Samsung Electro-Mechanics,CL21B104KBCNNNC,100 nF 50 V X7R 0805,Capacitor_SMD:C_0805_2012Metric,A i B,C2: +3V3_RF przy module CC1120EM; C3: +3V3 przy FRAM; C5: filtr wejścia ADC VTEST
 JP1-JP3,3,,Würth Elektronik,60900213421,"zworka 2,54 mm",bez footprintu,A i B,"stanowisko A: JP3; stanowisko B: JP1, JP2"
 SW1-SW4,4,,Omron,B32-1310,"nasadka przycisku B3F, czarna",bez footprintu,A i B,
-H1-H9,9,,,,"dystans M3 × 12 mm z dwiema śrubami (w H6-H9 nylonowe albo M2,5, łeb ≤4,4 mm)",bez footprintu,A i B,"stanowisko B stoi na H1-H9; w A dystanse H1, H2, H5 podpierają lewą część płytki"
+H1-H9,9,,,,"dystans M3 × 12 mm z dwiema śrubami (w H6-H9 nylonowe, łeb śruby ≤4,4 mm)",bez footprintu,A i B,"stanowisko B stoi na H1-H9; w A dystanse H1, H2, H5 podpierają lewą część płytki, wysokość z przymiarki"
 H10-H15,6,,,,"dystans M2,5 z dwiema śrubami, wysokość jak gniazdo z listwą (zmierzyć)",bez footprintu,A i B,ekran (4) i FRAM (2)

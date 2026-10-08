@@ -73,8 +73,8 @@ Obrys 170 × 100 mm. Prawa część płytki ma obrys i otwory Arduino Uno R3. W 
 - Moduł CC1120EM wpina się złączami SFM (Samtec, 2 × 10, 1,27 mm, na spodzie modułu) w listwy męskie 1,27 mm J9/J10 o rozstawie 30,48 mm. Pin 1 obu złączy leży od strony złącza SMA modułu; położenia padów pochodzą z archiwum CADSTAR referencji TI (swrr091).
 - Ekran (Adafruit 4694, 63,5 × 55,9 mm) i FRAM (Adafruit 4719) wpina się listwami w gniazda 1 × 9 i mocuje dystansami M2,5 w otworach płytek Adafruit. Ekran leży szkłem do góry, a szkło jest po stronie płytki modułu przeciwnej do elementów, więc piny J7 od lewej to VIN 3V3 GND CLK DI CS EMD DISP EIN; rysunek montażowy Adafruit pokazuje stronę elementów i odwraca tę kolejność (F83). Moduł jest symetryczny względem złącza i otworów, więc obrócony też wchodzi: nazwy pinów są na warstwie opisu przy J7 i J8 i sprawdza się je przed wpięciem.
 - DevKitC leży złączem USB do dolnej krawędzi płytki. Antena modułu ESP32-S3 wystaje nad płytkę nośną; stacja nie używa Wi-Fi ani Bluetooth.
-- Stanowisko B stoi na dystansach M3 w czterech narożnikach i czterech otworach Arduino; długie piny J1–J4 wystają wtedy od spodu o około 10 mm.
-- W otworach Arduino śruby M2,5 albo nylonowe M3 z łbem ≤4,4 mm, bo otwór leży 3,56 mm od listew. Wokół wszystkich otworów montażowych (promień 3,3 mm dla M3, 3,0 mm dla M2,5) nie biegną ścieżki, więc dystans i łeb leżą na masie albo na laminacie.
+- Stanowisko B stoi na dziewięciu dystansach M3 × 12 mm: w czterech narożnikach (H1–H4), przy dolnej krawędzi (H5) i w czterech otworach Arduino (H6–H9); długie piny J1–J4 wystają wtedy od spodu o około 10 mm. W stanowisku A lewą część płytki podpierają H1, H2 i H5; wysokość, przy której płytka leży poziomo na płytce DK, mierzy się przy przymiarce, bo Nordic nie podaje wysokości DK z gniazdami.
+- W otworach Arduino śruby M2,5 albo nylonowe M3 z łbem ≤4,4 mm, bo środek otworu leży 3,56 mm od środka najbliższego padu listwy (J4.10 przy H7). Wokół otworów montażowych nie biegną ścieżki w promieniu 3,3 mm (M3), 3,0 mm (M2,5) i 2,6 mm (otwory Arduino), więc dystans i łeb leżą na masie albo na laminacie. W otworach Arduino ten promień jest mniejszy niż narożnik metalowego dystansu sześciokątnego M3 (5,5 mm pod klucz, około 3,2 mm), a od spodu najbliżej leżą ścieżki RF_CS przy H6 i BTN_BACK przy H7 (2,8 mm od środka otworu): dlatego w H6–H9 stosuje się dystanse nylonowe.
 - JP3 (listwa ze zworką, 8,9 mm) leży przy J11, poza obrysem X-NUCLEO-S2868A2, którego spód w stanowisku B jest około 8,5 mm nad płytką; pod nakładką zostają tylko części niskie (J10, C1, C2, C5, R11, R12, R14, R15, R17) i łby śrub H7–H9.
 - Moduł CC1120EM i DevKitC wchodzą w gniazda także obrócone o 180°, co zamienia zasilanie z sygnałami albo masą. Obrysy modułów, kółko w miejscu złącza SMA i napis USB są na warstwie opisu; orientację sprawdza się przed każdym wpięciem.
 - Przełączniki nRF52840-DK (SW8 zasilanie, SW9 źródło zasilania nRF, SW10) leżą pod płytką nośną; ustawia się je przed nałożeniem płytki.
@@ -85,7 +85,7 @@ Płytka nie ma stabilizatora. Szyna 3,3 V zasila FRAM i X-NUCLEO, a przez zwork�
 
 ## Rozważone uproszczenia
 
-Przegląd po audycie (2026-10-07; płytka: 65 elementów, 28 pozycji BOM, 4,8 m ścieżek, 51 przelotek, jedna strona montażu).
+Przegląd po audycie (2026-10-07; płytka: 65 elementów, 28 pozycji BOM, 4,8 m ścieżek, 51 przelotek, jedna strona montażu; po ponownym trasowaniu w F83 48 przelotek).
 
 | Możliwość | Decyzja | Powód |
 |---|---|---|
@@ -93,9 +93,30 @@ Przegląd po audycie (2026-10-07; płytka: 65 elementów, 28 pozycji BOM, 4,8 m 
 | Bezpośrednie połączenie zamiast JP1 i JP2 | nie | zworki chronią przed walką stabilizatorów DK i DevKitC przy pomyłce i służą do pomiaru prądu w stanowisku B |
 | Złącze analizatora J11 nad J3/J4 zamiast przy dolnej krawędzi | nie | próba trasowania: ścieżki krótsze tylko o 2,5%, trzy przelotki więcej |
 | Dzielnik VTEST 10 kΩ / 2,2 kΩ, R4 10 kΩ (bez wartości 100 kΩ i 20 kΩ w BOM) | nie | dwie pozycje BOM mniej, ale zmienia się skala VTEST (1/5,55 zamiast 1/6) w oprogramowaniu i rośnie prąd przy przepięciu na zacisku |
-| Rezystory 33 Ω na SCK zastąpić zworą | nie | sieć SCK ma około 240 mm z odgałęzieniami; rezystory łagodzą zbocza ESP32 przy wejściach 74HC4050 bez przerzutnika Schmitta |
+| Rezystory 33 Ω na SCK zastąpić zworą | nie | sieć SCK ma około 265 mm z odgałęzieniami; rezystory łagodzą zbocza ESP32 przy wejściach 74HC4050 bez przerzutnika Schmitta |
 | Cztery warstwy albo mniejsza płytka | nie | dwie warstwy mieszczą trasowanie; wymiar wyznaczają ekran, przyciski i obrys Arduino |
 | `route.sh` kończy się błędem przy niepoprowadzonych połączeniach; `drc.sh` z pełnym zestawem opcji | tak | Freerouting zwraca kod 0 także z niepoprowadzonymi sieciami; jedna komenda DRC zamiast długiej linii w dokumentacji |
+
+## Koszt i dostępność
+
+Ceny netto w PLN z DigiKey.pl z 2026-10-08, przy zakupie na cztery płytki; koszt PCB to typowa cena wykonawcy, nie oferta. Ceny i stany zmieniają się z tygodnia na tydzień, więc przed zakupem sprawdza się je ponownie.
+
+| Pozycja | Netto na stanowisko | Uwagi |
+|---|---:|---|
+| Części płytki N1 z [BOM](bom.csv) z dystansami | około 100 | najdroższe: listwy TFM J9/J10 (około 21, tylko A), gniazda J5/J6 (10), przełącznik SW5 (11) |
+| PCB N1 (5 sztuk 170 × 100 mm, JLCPCB, z wysyłką) | około 30 | PCBWay około 65; płytka większa niż 100 × 100 mm wypada z najtańszej oferty |
+| Montaż 27 elementów SMD u wykonawcy (opcja) | około 60 | przy kilku sztukach taniej lutować ręcznie (0805, SOT-23, SOD-123) |
+| Moduły stanowiska A: nRF52840-DK, połowa CC1120EMK-868-915, Adafruit 4694, Adafruit 4719 | około 685 | zestaw CC1120EMK (dwa moduły) kosztuje około 512 |
+| Moduły stanowiska B: ESP32-S3-DevKitC-1-N8R8, X-NUCLEO-S2868A2, Adafruit 4694, Adafruit 4719 | około 440 | |
+| **Razem stanowisko A / B** z płytką lutowaną ręcznie | **około 815 / 570** | brutto około 1000 / 700; adapter BOOST-CCEMADAPTER (około 160) niepotrzebny przy N1 |
+
+Koszt stanowiska wyznaczają moduły producentów (zestaw CC1120EMK, nRF52840-DK i ekran na każdym stanowisku), a nie płytka nośna. W BOM płytki rozważono jeszcze dwie oszczędności i obu nie przyjęto. Tańsze listwy 1,27 mm innych producentów zamiast Samtec TFM odpadają, bo Samtec podaje TFM jako jedyny partner gniazd SFM modułu, a różnica wynosi kilka złotych. Tańszy przełącznik dźwigienkowy wymaga innego footprintu i ponownego trasowania, a SW5 jest dostępny od ręki.
+
+Dostępność w dniu sprawdzenia:
+- **Adafruit 4719 (FRAM 4 Mbit) jest niedostępna**: brak w sklepie Adafruit i w DigiKey (zapowiedź dostawy 2027-01-18). Zamiennik 4718 ma 2 Mbit, a oprogramowanie i specyfikacja wymagają 4 Mbit. Do czasu dostawy można użyć układu MB85RS4MT w obudowie SOP-8 na płytce przejściowej SOP-8/DIP wpiętej przewodami w J8: VIN (J8.1) do VDD układu, GND, SCK, MISO (SO), MOSI (SI), CS z rezystorem 10 kΩ do VIN (płytka N1 nie ma podciągnięcia FRAM_CS) oraz WP i HOLD do VIN. Ta przeróbka nie jest sprawdzona na sprzęcie.
+- **ESP32-S3-DevKitC-1-N8R2 jest wycofana**; płytka N1 i obraz `bench-b` przyjmują wersje N8 i N8R8, dostępne u dystrybutorów.
+- Ekran Adafruit 4694: brak w sklepie Adafruit, w DigiKey kilkadziesiąt sztuk; zestaw CC1120EMK-868-915: w DigiKey kilka sztuk, potem około 12 tygodni.
+- Kondensator 10 µF CL21A106KAYNNNE: brak w DigiKey; wystarczy każdy 10 µF 25 V X5R 0805 ([notatki dla wykonawcy](fabrication/N1/FAB-NOTES.txt) dopuszczają zamienniki).
 
 ## Źródła
 
@@ -120,5 +141,6 @@ Geometrię złączy i otworów wzięto z plików producentów pobranych 2026-10-
 | `checks/` | raporty ERC/DRC, [zapis odtworzenia](checks/odtworzenie.md), [zgodność z oprogramowaniem](checks/zgodnosc-firmware.md) i dowody |
 | [BOM](bom.csv) | części z MPN |
 | [pliki produkcyjne](fabrication/N1/README.md) | Gerber, wiercenia, pozycje, rysunek montażowy, wydruk 1:1 |
-| [uruchomienie](uruchomienie.md) | montaż i pierwsze włączenie |
+| [uruchomienie](uruchomienie.md) | montaż, pierwsze włączenie i wzór zapisu sztuki |
+| [obsługa](obsluga.md) | konfiguracja A i B, zasady, elementy płytki, pomiar prądu, typowe problemy |
 | [przed zamówieniem](przed-produkcja.md) | warunki przed zamówieniem i odtworzenie |

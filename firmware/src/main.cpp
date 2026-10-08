@@ -902,7 +902,7 @@ void handle(char* cmd) {
     else if (!strcmp(cmd, "VCOM") && n == 1) {
         bool on = false;
         if (!cmdargs::parseFlag(words[0], on)) { printError("VCOM <0|1>"); return; }
-        display.softwareVcom(on);  // zapasowo, gdy zworka EXTMODE płytki jest niska
+        display.softwareVcom(on);  // zapasowo, gdy pin EMD (EXTMODE) płytki jest niski
         printDisplay();
     } else if (!strcmp(cmd, "REBOOT")) {
         // Restart programowy: pamięć niezerowana zostaje, więc ekran i język wracają (jak po watchdogu).

@@ -250,8 +250,8 @@ EXTRAS = [
     ('JP1-JP3', 3, 'Würth Elektronik', '60900213421', 'zworka 2,54 mm', 'A i B',
      'stanowisko A: JP3; stanowisko B: JP1, JP2'),
     ('SW1-SW4', 4, 'Omron', 'B32-1310', 'nasadka przycisku B3F, czarna', 'A i B', ''),
-    ('H1-H9', 9, '', '', 'dystans M3 × 12 mm z dwiema śrubami (w H6-H9 nylonowe albo M2,5, łeb ≤4,4 mm)', 'A i B',
-     'stanowisko B stoi na H1-H9; w A dystanse H1, H2, H5 podpierają lewą część płytki'),
+    ('H1-H9', 9, '', '', 'dystans M3 × 12 mm z dwiema śrubami (w H6-H9 nylonowe, łeb śruby ≤4,4 mm)', 'A i B',
+     'stanowisko B stoi na H1-H9; w A dystanse H1, H2, H5 podpierają lewą część płytki, wysokość z przymiarki'),
     ('H10-H15', 6, '', '', 'dystans M2,5 z dwiema śrubami, wysokość jak gniazdo z listwą (zmierzyć)', 'A i B',
      'ekran (4) i FRAM (2)'),
 ]

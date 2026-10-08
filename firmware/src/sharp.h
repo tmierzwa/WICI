@@ -3,8 +3,8 @@
 // zapis wierszy zmienionych, rysowanie znaków z font_glyphs.h. EXTCOMIN (inwersja VCOM,
 // 1 Hz) generuje licznik MCU bez udziału programu (specyfikacja: "EXTCOMIN z wyjścia licznika
 // MCU, nie z programu"): na nRF52840 RTC2 przez PPI i GPIOTE (sharp_extcomin_nrf.cpp), na
-// ESP32-S3 MCPWM (sharp_extcomin_esp32.cpp); zapasowo bit VCOM w poleceniach, gdy zworka
-// EXTMODE płytki jest w położeniu niskim. Reszta sterownika nie zależy od MCU.
+// ESP32-S3 MCPWM (sharp_extcomin_esp32.cpp); zapasowo bit VCOM w poleceniach, gdy pin EMD
+// (EXTMODE) płytki jest w stanie niskim. Reszta sterownika nie zależy od MCU.
 #pragma once
 
 #include <Arduino.h>
@@ -41,7 +41,7 @@ public:
     void setPixel(uint16_t x, uint16_t y, bool black);
     // Wysyła zmienione wiersze; zwraca ich liczbę.
     uint16_t refresh();
-    // Zapasowe odwracanie VCOM z programu (EXTMODE niski): bit VCOM w poleceniu co 500 ms.
+    // Zapasowe odwracanie VCOM z programu (EMD niski): bit VCOM w poleceniu co 500 ms.
     void softwareVcom(bool on);
     bool softwareVcom() const { return softwareVcom_; }
     void maintain(uint32_t nowMs);
