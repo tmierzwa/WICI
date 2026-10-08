@@ -101,7 +101,8 @@ Quantity: 5 boards (pilot). Prototype tool board, no RF, no impedance control.
 
 PCB
 - 2 layers, FR-4 (Tg >= 130 C), finished thickness 1.6 mm +/-10 %.
-- Copper 35 um (1 oz) both sides. Min track 0.25 mm, min space 0.2 mm, min annular ring 0.175 mm
+- Copper 35 um (1 oz) both sides. Min track 0.25 mm (0.24 mm only in short stubs between the
+  0.5 mm pitch pads of J7), min space 0.2 mm, min annular ring 0.175 mm
   (J9/J10, 0.65 mm holes in 1.0 mm pads; pads may be enlarged where spacing permits).
 - Solder mask: openings 1:1 with pads in the files; your standard expansion is fine (keep a mask
   dam between the 1.27 mm pitch pads of J9/J10 if possible, a bridge-free opening is acceptable).
@@ -109,7 +110,9 @@ PCB
 - Surface finish: lead-free HASL (all parts hand soldered or reflowed; ENIG acceptable).
 - Solder mask green both sides; silkscreen white, top side only (bottom silk file is empty).
 - Outline {BOARD_W:.0f} x {BOARD_H:.0f} mm (Edge_Cuts) with a rectangular notch {notch_w} x {notch_h} mm on the
-  right edge; notch inner corners at router radius (up to 1 mm is fine).
+  right edge; notch inner corners at router radius (up to 1 mm is fine). Two NPTH 3.2 mm holes
+  (x 167.46 mm, y 31.28 and 59.22 mm) are 0.94 mm from the right edge (the upper one 1.66 mm from the notch):
+  intended (Arduino Uno hole pattern of the module underneath), please keep them.
 - Drill sizes in the Excellon files are finished hole sizes. PTH and NPTH in separate files.
   Hole sizes: {drills}.
 - No plated slots, no castellations, no blind/buried vias. Vias 0.8/0.4 mm, may be tented or open.
