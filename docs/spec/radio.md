@@ -87,9 +87,21 @@ Sterownik P1 jest interfejsem Reticulum w oprogramowaniu stacji, opartym na porc
 
 Interfejs deklaruje stosowi jawną przepływność (wartość wyznacza się pomiarem w T3; sama wartość nie przesądza o zgodności czasów) i osobny limit ogłoszeń. Każdy pakiet na interfejsie P1 niesie kod dostępu sieci (IFAC Reticulum, 16 B) ustawiany przy przygotowaniu; pakiety bez poprawnego kodu są odrzucane przed przetwarzaniem. Zgodność IFAC w microReticulum potwierdza T3. Próba „wrogi węzeł” (zalew ogłoszeniami, zapytaniami o trasę i fragmentami) należy do T3 i T5.
 
-Znajomość długu ciszy nie zmienia limitów czasu całego stosu. Osobno trzeba sprawdzić wyszukiwanie trasy, zestawianie linku, przesyłanie zasobu i potwierdzenia, także gdy pakiet czeka za ruchem przekazywanym; zob. [kontrprzykład czasowy i stan przeglądu](../review.md). Wszystkie stacje sieci, w tym OSP, używają tego samego oprogramowania stacji. Zgodność z implementacją Reticulum i LXMF w Pythonie sprawdza się w T3, bo to implementacja w Pythonie definiuje protokół.
+Znajomość długu ciszy nie zmienia limitów czasu całego stosu. Osobno trzeba sprawdzić wyszukiwanie trasy, zestawianie linku, przesyłanie zasobu i potwierdzenia, także gdy pakiet czeka za ruchem przekazywanym; zob. [kontrprzykład czasowy i stan przeglądu](../review.md). Wszystkie stacje sieci, także stacja przy OSP, używają tego samego oprogramowania stacji. Komputer stanowiska OSP używa implementacji Reticulum i LXMF w Pythonie (D19), więc zgodność z nią, sprawdzana w T3, jest warunkiem działania sieci, a nie tylko próbą laboratoryjną.
 
 Tryb ciszy radiowej blokuje w sterowniku P1 każde nadawanie, także ruchu przekazywanego. Sterownik ma osobną flagę dla pojedynczego zgłoszenia wyjętego spod ciszy.
+
+## Interfejs Reticulum przez USB (węzeł OSP)
+
+Stacja w konfiguracji węzła OSP ([stanowisko odbiorcze](stanowisko-osp.md#stacja-przy-osp)) ma w stosie drugi interfejs Reticulum: interfejs danych CDC poza trybem przygotowania przenosi pakiety Reticulum do komputera stanowiska i z powrotem. W trybie przygotowania ten sam interfejs przenosi [protokół USB](oprogramowanie.md#protokół-usb-laptopstacja), aby można było zmienić konfigurację i oprogramowanie.
+
+- **Ramki:** KISS (FEND, FESC), jedna ramka danych to jeden pakiet Reticulum do 500 B; zgodne z interfejsem KISS Reticulum w Pythonie z kontrolą przepływu. Polecenia konfiguracji KISS od komputera (TXDELAY, P, SLOTTIME, TXTAIL) stacja przyjmuje i pomija, bo dostęp do kanału określa P1.
+- **Kontrola przepływu:** stacja wysyła ramkę gotowości (polecenie KISS 0x0F, jak RNode) po przyjęciu pakietu, gdy kolejka radiowa P1 ma wolne miejsce; komputer wysyła następny pakiet dopiero po niej. Pełna kolejka wstrzymuje gotowość, a nie gubi pakietów.
+- **Kierunek do komputera:** stacja przekazuje pakiety, które transport kieruje do interfejsu USB: ruch do tożsamości OSP, ogłoszenia i zapytania o trasę.
+- **Limity:** pakiety z USB przechodzą przez interfejs P1 z jego priorytetami, długiem ciszy, limitem ogłoszeń i ciszą radiową. IFAC dotyczy tylko P1; pakiet z USB dostaje kod dostępu sieci przy nadaniu, a pakiet z P1 bez poprawnego kodu nie trafia do komputera. Ruch do i od OSP ma rezerwę ≥50% budżetu nadawania.
+- **Diagnostyka:** liczniki pakietów w obu kierunkach i czas od ostatniego pakietu od komputera (`komputer_osp` na ekranie, pola w `INFO` i `RNS`).
+
+Kod operacji gotowości, zachowanie przy nieznanych poleceniach KISS i przepływność deklarowaną po stronie komputera potwierdza T3 z Reticulum `e40191b` w Pythonie. Interfejs przez USB nie jest dostępny w stacji schronienia.
 
 ## USB do laptopa
 
@@ -114,7 +126,7 @@ Dwa wykonania stacji mają wspólny P1, wspólny protokół USB do laptopa i to 
 | Radio | TI CC1120 | ST S2-LPQTR; wariant dla 413–479 i 826–958 MHz |
 | MCU stacji | Nordic nRF52840; Bluetooth wyłączony, sposób trwałego wyłączenia i argumentacja RED w D14 | Espressif ESP32-S3 z pamięcią PSRAM; Wi-Fi i Bluetooth wyłączone, sposób trwałego wyłączenia i argumentacja RED w D14 |
 | Pamięć RAM | ≥256 KiB na port microReticulum, LXMF, tablicę tras i bufory; nRF52840 ma 256 KiB, czyli jest na granicy szacowanego zapotrzebowania, więc wymagany zmierzony zapas ≥30% w T3, przed projektem płytki R02; wariant zapasowy z większą pamięcią: nRF5340 (rdzeń aplikacyjny 512 KiB), RP2350 lub STM32U5 (D14) | 512 KiB SRAM i PSRAM; zmierzony zapas ≥30% w T3 |
-| Pamięć nieulotna | FRAM SPI 4 Mbit we wszystkich stacjach, także OSP ([pamięć według roli](oprogramowanie.md#trwałość-i-potwierdzenia)): Infineon CY15B104Q (rodzina 4 Mbit; wariant i status do potwierdzenia przed R02); rekordy szyfrowane | FRAM SPI 4 Mbit: RAMXEED (dawniej Fujitsu) MB85RS4MT (wariant i status do potwierdzenia przed R02); rekordy szyfrowane |
+| Pamięć nieulotna | FRAM SPI 4 Mbit we wszystkich stacjach ([pamięć FRAM](oprogramowanie.md#trwałość-i-potwierdzenia)): Infineon CY15B104Q (rodzina 4 Mbit; wariant i status do potwierdzenia przed R02); rekordy szyfrowane | FRAM SPI 4 Mbit: RAMXEED (dawniej Fujitsu) MB85RS4MT (wariant i status do potwierdzenia przed R02); rekordy szyfrowane |
 | Ekran | graficzny monochromatyczny z pamięcią obrazu (memory LCD) lub e-papier, cyrylica i piktogramy | wykonanie innego producenta, ten sam układ treści |
 | Połączenie MCU–radio | SPI: SCK, MOSI, MISO, CS; IRQ; reset/shutdown | ten sam podział funkcji, inne piny |
 | Wzorzec częstotliwości RF | zgodny z dokumentacją CC1120 | zgodny z dokumentacją S2-LP |

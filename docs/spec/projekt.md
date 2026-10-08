@@ -70,20 +70,11 @@ Rozszerzenia poziomów 2–3:
 
 Laptop, router, ich oryginalne zasilacze i akumulatory pochodzą z miejsca uruchomienia. Adapter USB–Ethernet nie współpracuje z każdym komputerem. Jego kontroler również musi mieć dwa zakwalifikowane wykonania, np. Realtek RTL8153 i ASIX AX88179.
 
-Zestaw stanowiska OSP (wymagania i warianty: [stanowisko odbiorcze](stanowisko-osp.md), do decyzji D19):
-
-1. Stacja WICI i stacja zapasowa: do kontrolowanej wymiany sprawnej stacji (PRZENIEŚ STACJĘ) albo do wczytania tożsamości zapasowej OSP; tożsamości uszkodzonej stacji nie da się odzyskać.
-2. Stały laptop z pakietem START, przypisany do stanowiska (nie znaleziony na miejscu), bez usypiania i samoczynnych aktualizacji, z pełnym szyfrowaniem dysku.
-3. Antena kolinearna w najwyższym dostępnym punkcie budynku, z odgromnikiem.
-4. Zasilanie laptopa i stacji na ≥72 h: agregat lub stacja zasilania z deklaracją zgodności UE.
-5. Papierowy dziennik zgłoszeń i decyzji.
-6. Para radiotelefonów PMR446 z nasłuchem w ustalonych godzinach.
-7. Grafik co najmniej 4 dyżurnych.
-8. Łącze satelitarne do powiatu, jeśli jest dostępne.
+Zestaw stanowiska OSP (dwie stacje w konfiguracji węzła OSP, obowiązkowy komputer stanowiska z zapasem, nośnik stanowiska, antena, zasilanie na ≥72 h) opisuje [stanowisko odbiorcze](stanowisko-osp.md#zestaw-stanowiska).
 
 ## Przygotowanie przed kryzysem
 
-Osoba utrzymująca system, w porozumieniu z organizatorem sieci (zwykle samorządem gminy), przełącza stację w tryb przygotowania przyciskiem pod plombowaną pokrywą serwisową (pokrywa daje dostęp tylko do tego przycisku; zerwanie plomby i numer nowej zapisuje się w ewidencji) i przez laptop z pakietem START zapisuje w stacji dokładny adres i wejście schronienia (≤64 B w krótkiej postaci), kartę zaufanej OSP z tożsamością główną i zapasową oraz liczbę stacji w sieci, od której zależy okno TEST startowego. Polecenia konfiguracji, eksportu, importu i aktualizacji oprogramowania stacja przyjmuje tylko w tym trybie. Stacja generuje własną tożsamość i nazwę `WICI-xxxxxx` (6 cyfr szesnastkowych skrótu tożsamości) oraz eksportuje przez USB kartę stacji: klucz publiczny, skrót adresu, nazwę, adres schronienia i odcisk do porównania z ekranem. OSP importuje kartę stacji (plik lub kod QR) po porównaniu odcisku. Kartę OSP (skróty adresów i klucze publiczne tożsamości głównej i zapasowej OSP) osoba utrzymująca system otrzymuje uzgodnionym kanałem poza radiem; stacja nigdy nie przyjmuje jej przez radio. Szczegóły: model zaufania i kluczy w rozdziale [Oprogramowanie](oprogramowanie.md). Następnie stacja wysyła TEST, a wynik zapisuje się w ewidencji. Hasła panelu dla opiekuna i zastępców generuje się w tym samym przygotowaniu, offline, na pamięci USB zestawu; wkłada się je do numerowanych, zaklejonych kopert przy stacji.
+Osoba utrzymująca system, w porozumieniu z organizatorem sieci (zwykle samorządem gminy), przełącza stację w tryb przygotowania przyciskiem pod plombowaną pokrywą serwisową (pokrywa daje dostęp tylko do tego przycisku; zerwanie plomby i numer nowej zapisuje się w ewidencji) i przez laptop z pakietem START zapisuje w stacji dokładny adres i wejście schronienia (≤64 B w krótkiej postaci), kartę zaufanej OSP z tożsamością główną i zapasową oraz liczbę stacji w sieci, od której zależy okno TEST startowego. Polecenia konfiguracji, eksportu, importu i aktualizacji oprogramowania stacja przyjmuje tylko w tym trybie. Stacja generuje własną tożsamość i nazwę `WICI-xxxxxx` (6 cyfr szesnastkowych skrótu tożsamości) oraz eksportuje przez USB kartę stacji: klucz publiczny, skrót adresu, nazwę, adres schronienia i odcisk do porównania z ekranem. Aplikacja OSP importuje kartę stacji (plik lub kod QR) po porównaniu odcisku. Kartę OSP (skróty adresów i klucze publiczne tożsamości głównej i zapasowej OSP) osoba utrzymująca system otrzymuje uzgodnionym kanałem poza radiem; stacja nigdy nie przyjmuje jej przez radio. Szczegóły: model zaufania i kluczy w rozdziale [Oprogramowanie](oprogramowanie.md). Następnie stacja wysyła TEST, a wynik zapisuje się w ewidencji. Hasła panelu dla opiekuna i zastępców generuje się w tym samym przygotowaniu, offline, na pamięci USB zestawu; wkłada się je do numerowanych, zaklejonych kopert przy stacji.
 
 Na poziomie 3 przygotowuje się wcześniej plakat przy stacji: nazwa sieci Wi-Fi, hasło i adres strony, dla routera sprawdzonego na miejscu. Router dostaje rezerwację DHCP dla adresu MAC adaptera USB–Ethernet z zestawu, więc adres z plakatu nie zależy od laptopa. Przy innym routerze obowiązuje kod QR na ekranie laptopa.
 
@@ -148,7 +139,8 @@ Wynik przeglądu zapisuje się z datą i wersją wydania w ewidencji sprzętu gm
 | Wybór | Uzasadnienie i koszt |
 |---|---|
 | Samodzielna stacja; laptop i router jako rozszerzenia | Łączność i przekaźnik bez znalezionego sprzętu i bez 230 V; oprogramowanie układowe stosu, kolejki i interfejsu na MCU |
-| Stacja jedynym węzłem, laptop bez tożsamości Reticulum | Jedna tożsamość i jedna kolejka; potrzebny protokół USB laptop–stacja (D17) |
+| Stacja jedynym węzłem schronienia, laptop bez tożsamości Reticulum | Jedna tożsamość i jedna kolejka; potrzebny protokół USB laptop–stacja (D17) |
+| Węzeł OSP na komputerze stanowiska, stacja przy OSP jako węzeł transportu (D19) | Dojrzały stos i pamięć bez stałych limitów w najbardziej obciążonym węźle, jedna rola stacji; komputer stanowiska obowiązkowy, z zapasem; interfejs Reticulum przez USB w stacji |
 | microReticulum i LXMF na MCU | Gotowy stos zamiast własnego; młodszy projekt, zgodność do sprawdzenia w T3 |
 | Ogniwa AA i wejście 12 V | Start bez ładowania i lata przechowywania; koszt ogniw i kontrola w przeglądzie |
 | LXMF nad Reticulum | Gotowe dostarczanie wiadomości; stacja nadal odpowiada za trwały zapis, a OSP za decyzję |
@@ -159,4 +151,4 @@ Wynik przeglądu zapisuje się z datą i wersją wydania w ewidencji sprzętu gm
 | Krótkie ramki radiowe | Mieszczą się w kolejce FIFO obu układów; dodatkowy narzut fragmentacji |
 | Standardowy JSON w LXMF | Prosty format w stacji i laptopie; treść ≤256 B po kodowaniu, jeden pakiet okazjonalny (roboczo, do potwierdzenia w D01 i T3) |
 
-Rolę NomadNet opisuje rozdział [Oprogramowanie](oprogramowanie.md). Nie wolno uruchamiać dwóch stacji z tą samą tożsamością ani routera LXMF na laptopie z tożsamością stacji. Węzeł przechowywania LXMF w OSP jest opcjonalny i nie należy do wydania 0.5: działałby jako osobny węzeł laboratoryjny z własną tożsamością albo jako przyszła funkcja po osobnych próbach. W sieci podstawowej ruch przechodzi przez aktywne przekaźniki. [NomadNet](https://github.com/markqvist/NomadNet), [LXMF](https://github.com/markqvist/LXMF).
+Rolę NomadNet opisuje rozdział [Oprogramowanie](oprogramowanie.md). Nie wolno uruchamiać dwóch stacji z tą samą tożsamością ani routera LXMF na laptopie z tożsamością stacji. Router LXMF z tożsamością OSP działa tylko na komputerze stanowiska OSP. Węzeł przechowywania LXMF w OSP nie należy do wydania 0.5: mógłby być przyszłą funkcją aplikacji OSP po osobnych próbach. W sieci podstawowej ruch przechodzi przez aktywne przekaźniki. [NomadNet](https://github.com/markqvist/NomadNet), [LXMF](https://github.com/markqvist/LXMF).
