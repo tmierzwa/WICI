@@ -350,10 +350,10 @@ const char* Model::shownPhrase(const char* polish) const {
 
 void Model::tick(uint32_t nowMs) {
     // Alarm zajmuje cały ekran do potwierdzenia (sprawdzany co sekundę); pytanie USB czeka najwyżej 30 s.
-    if (host_ && screen_ != Screen::ALARM && screen_ != Screen::LANGUAGE && screen_ != Screen::CONFIRM && nowMs - alarmCheckMs_ >= 1000) {
+    if (alarms_ && screen_ != Screen::ALARM && screen_ != Screen::LANGUAGE && screen_ != Screen::CONFIRM && nowMs - alarmCheckMs_ >= 1000) {
         alarmCheckMs_ = nowMs;
         AlarmInfo alarm;
-        if (host_->alarm(alarm)) {
+        if (alarms_->alarm(alarm)) {
             alarm_ = alarm;
             beforeAlarm_ = screen_;
             go(Screen::ALARM);
@@ -696,7 +696,7 @@ void Model::act(Button button, uint32_t nowMs) {
             break;
         case Screen::ALARM:
             if (ok) {
-                if (host_) host_->ackAlarm(alarm_);
+                if (alarms_) alarms_->ackAlarm(alarm_);
                 alarmCheckMs_ = nowMs;  // następny alarm dopiero po sekundzie
                 go(beforeAlarm_ == Screen::ALARM ? Screen::MAIN : beforeAlarm_);
             }

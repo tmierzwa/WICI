@@ -140,9 +140,15 @@ struct AlarmInfo {
     uint32_t minutes = 0;
 };
 
+// Alarmy ekranu. Stacja bez magazynu podłącza tylko je (awaria radia, oprogramowanie.md, „Alarmy”).
+struct Alarms {
+    virtual ~Alarms() = default;
+    virtual bool alarm(AlarmInfo& out) = 0;
+    virtual void ackAlarm(const AlarmInfo& alarm) = 0;
+};
+
 // Dane i działania stacji dla ekranu.
-struct Host {
-    virtual ~Host() = default;
+struct Host : Alarms {
     virtual const char* address() = 0;                        // wybrany obiekt; "" gdy stacja nie ma adresu
     // Lista obiektów z konfiguracji (oprogramowanie.md, „Start”): wybór przyciskami po języku.
     virtual size_t addressCount() { return address()[0] ? 1 : 0; }
@@ -162,8 +168,6 @@ struct Host {
     virtual bool scheduleTest(bool startup) = 0;
     virtual void cancelTest() = 0;
     virtual void pauseTest(bool paused) = 0;
-    virtual bool alarm(AlarmInfo& out) = 0;
-    virtual void ackAlarm(const AlarmInfo& alarm) = 0;
     virtual bool switchBackup() = 0;
     virtual bool destroy() = 0;
     virtual bool announce() { return false; }   // OGŁOŚ ADRES: zlecenie ogłoszenia; false = stos nie działa
@@ -172,7 +176,9 @@ struct Host {
 
 class Model {
 public:
-    void attach(Host* host) { host_ = host; }
+    void attach(Host* host) { host_ = host; alarms_ = host; }
+    // Bez magazynu: tylko alarmy, ekran bez kreatora i wiadomości.
+    void attachAlarms(Alarms* alarms) { alarms_ = alarms; }
     // Po włączeniu: ekran wyboru języka (lang to tylko położenie kursora).
     void start(Lang lang);
     // Po restarcie przez watchdog: język z pamięci i poprzedni ekran.
@@ -235,6 +241,7 @@ private:
     bool inWizard() const;
 
     Host* host_ = nullptr;
+    Alarms* alarms_ = nullptr;
     Lang lang_ = Lang::PL;
     Screen screen_ = Screen::LANGUAGE;
     uint16_t cursor_ = 0;

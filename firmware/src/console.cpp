@@ -202,7 +202,7 @@ void Console::setRadioFault(bool fault) {
 
 bool Console::alarm(ui::AlarmInfo& out) {
     station::Alarm a;
-    if (!station_.alarm(a)) {
+    if (!store_.ok() || !station_.alarm(a)) {
         if (!radioFault_ || radioAcked_) return false;
         out = ui::AlarmInfo();
         out.kind = ui::AlarmKind::RADIO_FAULT;

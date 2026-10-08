@@ -1228,7 +1228,9 @@ void stationSetup() {
 #else
     if (!extcominOk) bench.log("EXTCOMIN timer failed");
 #endif
-    if (storeOk) screenModel.attach(&screenHost);  // bez magazynu: ekran bez kreatora i wiadomości
+    // Bez magazynu ekran nie ma kreatora ani wiadomości, ale alarm awarii radia działa.
+    if (storeOk) screenModel.attach(&screenHost);
+    else screenModel.attachAlarms(&screenHost);
     beginScreen();
     syncButtons();
     if (platform::resetByWatchdog()) bench.log("restart by watchdog");

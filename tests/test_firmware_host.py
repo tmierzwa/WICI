@@ -726,6 +726,8 @@ int world() {
         else if (!strcmp(cmd, "H")) {
             w.hosted = true;
             w.model.attach(w.con);
+        } else if (!strcmp(cmd, "alarms")) {
+            w.model.attachAlarms(w.con);  // main.cpp bez magazynu
         } else if (sscanf(line, "L %u", &a) == 1) w.model.restore(static_cast<ui::Lang>(a), ui::Screen::MAIN);
         else if (sscanf(line, "S %u", &a) == 1) w.model.start(static_cast<ui::Lang>(a));
         else if (sscanf(line, "PC %u %u %u %u %u", &a, &b, &c, &d, &e) == 5) {
@@ -2221,6 +2223,14 @@ class HostUnitTests(unittest.TestCase):
         out = self.ui([self.CONFIG, "txreq 0 11 0 1", "tear 552", "txreq 0 11 1 0", "diag", "O 0", "cause", "O 1", "cause"])
         self.assertIn("ok=0", self.find(out, "diag ")[0])
         self.assertEqual(self.find(out, "cause "), ["cause 1", "cause 0"])
+        # Bez magazynu ekran ma tylko alarmy (main.cpp): awaria radia zajmuje cały ekran do OK.
+        out = self.ui([self.CONFIG, "txreq 0 11 0 1", "tear 552", "txreq 0 11 1 0", "diag", "alarms", "L 0", "O 0",
+                       "T 1000", "R", "K OK 1000", "T 2000", "R", "T 3000", "R"])
+        self.assertIn("ok=0", self.find(out, "diag ")[0])
+        s = self.screens(out)
+        self.assertEqual([x[0] for x in s], ["alarm", "main", "main"])
+        self.assertEqual(self.shown(s[0]), texts["radio_awaria"][0])
+        self.assertEqual(self.lines(s[1])[0], texts["radio_awaria"][0])
 
     def test_confirm_question_and_node_menu(self):
         out = self.ui(["L 0", "ask 0", "R", "answer", "K OK 0", "answer", "R", "ask 3", "K BACK 0", "answer", "ask 5 ABCD", "R",
