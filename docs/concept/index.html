@@ -44,9 +44,8 @@
 <nav class="on-page" aria-label="Na tej stronie">
 <p>Na tej stronie</p>
 <ol>
-  <li><a href="#jak-ma-dzialac">Jak ma działać</a></li>
+  <li><a href="#jak-ma-dzialac">Jak to ma działać</a></li>
   <li><a href="#pilotaz">Co sprawdzimy najpierw</a></li>
-  <li><a href="#film">Film</a></li>
   <li><a href="#dokumenty">Dokumenty</a></li>
   <li><a href="#jak-czytac-ustalenia">Jak czytać ustalenia</a></li>
   <li><a href="#ocena-obecnego-stanu">Ocena obecnego stanu</a></li>
@@ -62,7 +61,7 @@
 
 <p><a href="https://github.com/tmierzwa/WICI">Repozytorium i kod</a> · <a href="../../CONTRIBUTING.md#od-czego-zacząć">Zadania dla współtwórców</a> · <a href="https://github.com/tmierzwa/WICI/issues">Uwagi i błędy</a></p>
 
-<h2 id="jak-ma-dzialac">Jak ma działać</h2>
+<h2 id="jak-ma-dzialac">Jak to ma działać</h2>
 
 <ul>
   <li><strong>W schronieniu:</strong> samodzielna stacja z ekranem, przyciskami, anteną i ogniwami AA. Laptop może później dodać panel opiekuna, a router Wi-Fi umożliwi korzystanie z lokalnej strony do zgłoszeń z telefonów, bez instalowania aplikacji.</li>
@@ -72,6 +71,11 @@
 
 <p>Sieć trzeba przygotować razem z gminą i służbami przed kryzysem: zamontować anteny, sprawdzić trasy radiowe i uzgodnić dyżury. WICI ma uzupełniać lokalny system ochrony ludności. Nie zastępuje numeru 112 ani organizacji pomocy.</p>
 
+<figure class="film" id="film">
+<video controls preload="metadata" playsinline poster="../../media/film/plakat.jpg" src="../../media/film/WICI-film.mp4"></video>
+<figcaption>Koncepcja WICI (niecałe 5 minut, z napisami). <a href="../../media/film/WICI-short.mp4">Wersja pionowa, 60 s</a>. <a href="../../media/film/README.md">Scenariusz i źródła filmu</a>.</figcaption>
+</figure>
+
 <h2 id="pilotaz">Co sprawdzimy najpierw</h2>
 
 <p>Przed budową stacji planujemy pomiary tras gotowymi urządzeniami 868 MHz oraz ćwiczenie przy stole z gminą i odbiorcą. Pierwszy pilotaż ma objąć 6–8 stacji w trzech miejscach, przez co najmniej trzy miesiące, w tym okres zimowy.</p>
@@ -79,13 +83,6 @@
 <p>Stacje pilotażowe powstaną z gotowych części: płytki ESP32-S3 z radiem LoRa SX1262, pamięci FRAM, ekranu i przycisków. Wybrany profil to LoRa SF7 na kanale 869,525 MHz. Zakres deklaracji zgodności UE kupionych płytek i warunki prób terenowych trzeba ustalić przed pilotażem (D20).</p>
 
 <p>Pilotaż obejmuje samodzielną stację i stanowisko odbiorcze. Własna płytka R02, drugie wykonanie oraz rozszerzenia z laptopem i routerem czekają na wyniki. Własny profil radiowy P1 pozostaje wariantem zapasowym. Szczegóły: <a href="08-plan-weryfikacji-i-decyzje.html#kolejnosc-prac">kolejność prac</a> i <a href="../spec/odbior.md#minimum-pilotażu">minimum pilotażu</a>.</p>
-
-<h2 id="film">Film</h2>
-
-<figure class="film">
-<video controls preload="metadata" playsinline poster="../../media/film/plakat.jpg" src="../../media/film/WICI-film.mp4"></video>
-<figcaption>Koncepcja WICI (niecałe 5 minut, z napisami). <a href="../../media/film/WICI-short.mp4">Wersja pionowa, 60 s</a>. <a href="../../media/film/README.md">Scenariusz i źródła filmu</a>.</figcaption>
-</figure>
 
 <h2 id="dokumenty">Dokumenty</h2>
 
