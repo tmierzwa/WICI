@@ -35,7 +35,7 @@ Podział na lokalną stronę, osobny transport, trwałą kolejkę aplikacji i os
 | F23 | Wystawienie anteny przez okno nie działa w piwnicy ani w budowli ochronnej | antena z przepustem montowana na stałe w przygotowaniu; okno jako procedura zapasowa |
 | F24 | Cisza radiowa: brak organu wydającego polecenie; wyjątek opiekuna mógł naruszać zakaz nadawania | polecenie wydaje wójt na podstawie decyzji uprawnionych organów; wyjątek tylko przy ciszy operacyjnej, gdy polecenie go dopuszcza |
 | F25 | Ramy zarządzania kryzysowego, terminologia obiektów, RODO, kategorie potrzeb i stany zgłoszeń były zbyt ogólne | koncepcja i specyfikacja: ustawa o zarządzaniu kryzysowym, 10 kategorii, 6 stanów, D18 dla meldunku o stanie obiektu; uzgodnienia z gminą D07, D12, D13 |
-| F26 | Brak ścieżki dla kontrybutorów oprogramowania układowego i licencji kodu C/C++ | CONTRIBUTING: zadania na start; REUSE i LICENSE.md obejmują `firmware/`; licencja microReticulum do potwierdzenia przed D14 |
+| F26 | Brak ścieżki dla kontrybutorów oprogramowania układowego i licencji kodu C/C++ | CONTRIBUTING: zadania na start; REUSE i LICENSE.md obejmują `firmware/`; licencja microReticulum: propozycja 2026-10-08 ([F26](#f26-licencja-portu-microreticulum)), port traktowany jak utwór zależny od Reticulum; do decyzji przed D14 |
 | F27 | Sprawdzenie części i przepisów w źródłach: TPS25947 ma maksimum 28 V, TPS3840 nie mierzy VSYS do 16 V, TPS61222 w wyłączeniu przepuszcza napięcie, MAX16150 wymaga szyny 1,3–5,5 V, LM74502 nie blokuje prądu wstecznego; rozporządzenie Dz.U. 2022 poz. 567 nie obejmuje pasma 869,4–869,65 MHz, a podstawą pracy bez pozwolenia jest art. 145 ust. 2 pkt 5 Pke; logo używało kroju Avenir Next bez prawa do rozpowszechniania kształtów liter | poprawione w specyfikacji, koncepcji i BOM; logo przerysowane krojem Nunito Sans (SIL OFL 1.1) |
 | F28 | Opiekun nie miał karty obsługi ani jednej listy tekstów ekranu; brak alarmów braku potwierdzenia, kontroli adresu i bezpiecznego ZNISZCZ DANE | karta obsługi (`karta.md`), tabela tekstów ekranu, progi alarmów zależne od pilności, ZNISZCZ DANE w menu usług z sekwencją; zamknięcie po T1 i T8 z osobami spoza zespołu |
 | F29 | Zaufanie opierało się na skrótach adresów z ogłoszeń; zatwierdzenie w kwarantannie dodawało nadawcę na stałe; polecenia USB bez trybu przygotowania; brak podpisu oprogramowania | karty stacji i OSP z pełnymi kluczami, zapasowy klucz OSP, unieważnienie, zatwierdzanie pojedynczej wiadomości, tryb przygotowania dla eksportu i aktualizacji, podpisany obraz z ochroną przed starszą wersją; model obejmuje kwarantannę z limitami i unieważnienie; T2, T3, T7 |
@@ -152,6 +152,27 @@ TPS2553: tabela doboru dla 15 kΩ /1% podaje minimum 1594,5 mA, poniżej wymagan
 Analizowane LICENSE Reticulum i LXMF zawierają dodatkowe ograniczenia użycia oraz tworzenia zbiorów do treningu AI. Nie są więc niezmodyfikowaną licencją MIT. GPL nie dopuszcza takich dodatkowych ograniczeń w rozpowszechnianym połączonym dziele, dlatego 2026-10-07 kod WICI przeniesiono na MIT. Pakiet START dołącza teksty licencji Reticulum i LXMF przypiętych wersji; jego użytkownicy podlegają ich warunkom, a pakiet jako całość nie jest oprogramowaniem otwartym w rozumieniu OSI. [Reticulum LICENSE](https://github.com/markqvist/Reticulum/blob/e40191b3d193b46b7f2d8a44424a594cd758839b/LICENSE), [LXMF LICENSE](https://github.com/markqvist/LXMF/blob/c3ff2d6dc2f256daab896dadc044dd5a913ecbb7/LICENSE), [mapa licencji WICI](../LICENSE.md).
 
 Repozytorium zawiera własny model i dokumentację; nie dołącza kodu tych zależności. Publikacja obecnych źródeł i kwalifikacja przyszłej paczki START są osobnymi ocenami.
+
+## F26: licencja portu microReticulum
+
+Propozycja z 2026-10-08, do decyzji przed D14. Nie jest to ocena prawna.
+
+Stan faktyczny:
+
+- Licencja Reticulum (ta sama w przypiętym commicie `e40191b` i na gałęzi głównej) to tekst MIT z dwoma dodatkowymi warunkami: zakaz użycia w systemie, którego funkcją jest celowe szkodzenie ludziom, oraz zakaz użycia przy tworzeniu zbiorów do trenowania AI. Warunek o nocie dotyczy kopii „oprogramowania lub jego istotnych części”.
+- README Reticulum rozdziela protokół od kodu: protokół jest w domenie publicznej od 2016, implementacja referencyjna w Pythonie ma licencję Reticulum. Według podręcznika (rozdział „Brandolini's Reference”) port jest przekładem, a przekład utworem zależnym, niezależnie od tego, kto lub co go wykonało; implementacja napisana od zera według protokołu nic licencji nie zawdzięcza.
+- microReticulum (`40fa628`) opisuje się jako port Reticulum na C++ z API naśladującym implementację referencyjną. Od pierwszego commitu (2023) ma Apache-2.0 i notę tylko Chada Attermanna, bez tekstu i noty licencji Reticulum. W 27,6 tys. wierszy źródeł około 90 wierszy komentarzy to kod Pythona implementacji referencyjnej (9 plików, najwięcej `Packet.cpp`).
+- README Reticulum wymienia microReticulum wśród uznanych implementacji społeczności. To uznanie zgodności i jakości, nie udzielenie licencji.
+
+Propozycja:
+
+1. Port traktuje się ostrożnie jako utwór zależny od Reticulum. Obraz stacji z portem podlega więc licencji Reticulum obok Apache-2.0 i licencji bibliotek, tak jak pakiet START (F08), i jako całość nie jest oprogramowaniem otwartym w rozumieniu OSI.
+2. Obrazy w `USB/firmware/` dołączają tekst licencji Reticulum z notą „Copyright (c) 2016-2026 Mark Qvist” obok tekstów Apache-2.0, MIT, BSD-3-Clause i ISC. Łaty WICI do portu (`firmware/patches/microReticulum/`) zostają na Apache-2.0 w REUSE i mają w nagłówku informację, że zmieniany kod może podlegać także licencji Reticulum.
+3. Kod WICI zostaje na MIT. Repozytorium nie dołącza kodu portu, a własny kod stosu (`p1iface.cpp`, `rns_node.cpp`, `rns_announce.h` i inne) powstaje według protokołu i podręcznika, bez przepisywania kodu implementacji referencyjnej. Stałe i zachowanie protokołu (np. limit ogłoszeń 2%, czas życia kolejki ogłoszeń) są częścią protokołu. Przed D14 przegląd tych plików potwierdza, że nie zawierają przekładu kodu Pythona.
+4. Warunek o systemach szkodzących ludziom nie koliduje z celem WICI (łączność alarmowa). Warunek o zbiorach do trenowania AI dotyczy obrazu i kodu portu; dokumentacja dla odbiorców pakietu go powtarza.
+5. Zapytanie do autora portu (zgłoszenie w repozytorium microReticulum: stosunek licencji Apache-2.0 do licencji Reticulum, plik NOTICE) i ewentualnie do autora Reticulum. Odpowiedź może złagodzić punkty 1–2, ale ich nie blokuje: D14 może zapaść przy założeniu ostrożnym.
+
+Źródła: [Reticulum LICENSE](https://github.com/markqvist/Reticulum/blob/e40191b3d193b46b7f2d8a44424a594cd758839b/LICENSE), [Reticulum README, „Reference Implementation” i „Community Implementations”](https://github.com/markqvist/Reticulum/blob/e40191b3d193b46b7f2d8a44424a594cd758839b/README.md#reference-implementation), [podręcznik, Brandolini's Reference](https://reticulum.network/manual/brandolinis.html), [microReticulum `40fa628`](https://github.com/attermann/microReticulum/tree/40fa628).
 
 ## Dowody i granice przeglądu
 
