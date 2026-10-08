@@ -26,6 +26,7 @@ HARNESS = r"""
 #include <cstring>
 #include <vector>
 #include "crc16.h"
+#include "fram_id.h"
 #include "journal.h"
 #include "p1frame.h"
 #include "testframe.h"
@@ -528,6 +529,15 @@ int linkScript() {
 }
 
 int main(int argc, char** argv) {
+    if (argc == 3 && !strcmp(argv[1], "framid")) {
+        uint8_t id[fram::ID_BYTES] = {};
+        for (size_t i = 0; i < fram::ID_BYTES && argv[2][2 * i] && argv[2][2 * i + 1]; ++i) {
+            char byte[3] = {argv[2][2 * i], argv[2][2 * i + 1], 0};
+            id[i] = static_cast<uint8_t>(strtoul(byte, nullptr, 16));
+        }
+        printf("%s\n", fram::partName(fram::classify(id)));
+        return 0;
+    }
     if (argc == 2 && !strcmp(argv[1], "ui")) return uiScript();
     if (argc == 2 && !strcmp(argv[1], "link")) return linkScript();
     if (argc == 2 && !strcmp(argv[1], "usb")) return usbScript();
@@ -609,6 +619,16 @@ class HostUnitTests(unittest.TestCase):
 
     def run_harness(self, *args):
         return subprocess.run([str(self.binary), *args], capture_output=True, text=True, check=True).stdout.split()
+
+    def test_fram_identification(self):
+        # RDID: MB85RS4MT 4 bajty (Adafruit_FRAM_SPI), CY15B104Q 9 bajtów (karta Infineon 001-94895, „Device ID”).
+        cases = {"047F4903": "MB85RS4MT", "047F490B": "MB85RS4MT", "7F7F7F7F7F7FC22608": "CY15B104Q",
+                 "7F7F7F7F7F7FC22610": "CY15B104Q",   # inna wersja układu
+                 "7F7F7F7F7F7FC22508": "unknown",     # FM25V20A, 2 Mbit
+                 "047F4803": "unknown",               # MB85RS2MT, 2 Mbit
+                 "7F7F7F7F7FC22608": "unknown", "FFFFFFFFFFFFFFFFFF": "unknown", "000000000000000000": "unknown"}
+        for hexid, part in cases.items():
+            self.assertEqual(self.run_harness("framid", hexid), [part], hexid)
 
     def test_crc_matches_spec_vector_and_model(self):
         self.assertEqual(self.run_harness("crc", "123456789"), ["29B1"])

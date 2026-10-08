@@ -38,13 +38,12 @@ Id Memory::identify() {
         b = spi_.transfer(0x00);
     }
     digitalWrite(cs_, HIGH);
-    delayMicroseconds(1);  // CS w stanie wysokim między poleceniami (tCSH MB85RS4MT)
+    delayMicroseconds(1);  // CS w stanie wysokim między poleceniami (MB85RS4MT i CY15B104Q: kilkadziesiąt ns)
     digitalWrite(cs_, LOW);
     spi_.transfer(OP_RDSR);
     id.status = spi_.transfer(0x00);
     release();
-    id.fujitsu = id.bytes[0] == MANUFACTURER_FUJITSU && id.bytes[1] == 0x7F;
-    id.mb85rs4m = id.fujitsu && id.bytes[2] == 0x49 && (id.bytes[3] == 0x03 || id.bytes[3] == 0x0B);
+    id.part = classify(id.bytes);
     return id;
 }
 
@@ -64,7 +63,7 @@ bool Memory::write(uint32_t address, const uint8_t* data, size_t count) {
     select();
     spi_.transfer(OP_WREN);  // WEL kasuje się po każdym zapisie
     digitalWrite(cs_, HIGH);
-    delayMicroseconds(1);  // CS w stanie wysokim między poleceniami (tCSH MB85RS4MT)
+    delayMicroseconds(1);  // CS w stanie wysokim między poleceniami (MB85RS4MT i CY15B104Q: kilkadziesiąt ns)
     digitalWrite(cs_, LOW);
     sendAddress(OP_WRITE, address);
     uint8_t chunk[64];  // transfer nadpisuje bufor odebranymi bajtami, więc kopia danych

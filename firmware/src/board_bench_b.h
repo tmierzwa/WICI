@@ -35,7 +35,7 @@ constexpr uint8_t RADIO_GPIO2 = 4;   // J5.4  -> GPIO2, J11
 constexpr uint8_t RADIO_GPIO3 = 42;  // J6.6  -> GPIO3
 constexpr uint32_t RADIO_XTAL_HZ = 50000000;
 
-// FRAM MB85RS4MT (Adafruit 4719) na tej samej magistrali SPI.
+// FRAM MB85RS4MT (Adafruit 4719) albo CY15B104Q na tej samej magistrali SPI.
 constexpr uint8_t FRAM_CS = 8;  // J5.12
 
 // Ekran Sharp LS027B7DH01 (Adafruit 4694): CS aktywny stanem wysokim (10 kΩ do masy), EXTCOMIN

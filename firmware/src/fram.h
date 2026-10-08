@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
-// FRAM SPI (RAMXEED/Fujitsu MB85RS4MT, 512 KiB, adres 3-bajtowy): identyfikacja RDID,
-// odczyt i zapis dowolnej długości (FRAM nie ma stron ani czasu programowania).
+// FRAM SPI 4 Mbit (RAMXEED/Fujitsu MB85RS4MT albo Infineon CY15B104Q, 512 KiB, adres 3-bajtowy):
+// identyfikacja RDID, odczyt i zapis dowolnej długości (FRAM nie ma stron ani czasu programowania).
 // Implementuje journal::Storage dla dziennika stacji.
 #pragma once
 
 #include <Arduino.h>
 #include <SPI.h>
 
+#include "fram_id.h"
 #include "journal.h"
 
 namespace fram {
@@ -18,15 +19,10 @@ constexpr uint8_t OP_WRITE = 0x02;
 constexpr uint8_t OP_RDID = 0x9F;
 constexpr uint32_t SIZE = 512UL * 1024;
 
-// Odpowiedź RDID MB85RS4MT: producent 0x04, kod kontynuacji 0x7F, produkt 0x49 0x03
-// (MB85RS4MTY: 0x49 0x0B). Tablica zgodna z biblioteką Adafruit_FRAM_SPI.
-constexpr uint8_t MANUFACTURER_FUJITSU = 0x04;
-
 struct Id {
-    uint8_t bytes[4];
+    uint8_t bytes[ID_BYTES];
     uint8_t status;
-    bool fujitsu;
-    bool mb85rs4m;  // 4 Mbit: produkt 0x4903 albo 0x490B
+    Part part;  // UNKNOWN: brak układu albo inna pamięć
 };
 
 class Memory : public journal::Storage {

@@ -555,10 +555,12 @@ void printError(const char* text) { Serial.printf("{\"error\":\"%s\"}\n", text);
 
 void printFram() {
     const fram::Id id = memory.identify();
-    framOk = id.mb85rs4m;
+    framOk = id.part != fram::Part::UNKNOWN;
     ledWrite(board::LED_FRAM, framOk && journalOk);  // jak przy starcie: FRAM i działający dziennik
-    Serial.printf("{\"fram\":\"MB85RS4MT\",\"id\":\"%02X%02X%02X%02X\",\"status\":\"0x%02X\",\"fujitsu\":%s,\"ok\":%s}\n",
-                  id.bytes[0], id.bytes[1], id.bytes[2], id.bytes[3], id.status, boolName(id.fujitsu), boolName(framOk));
+    char hex[2 * fram::ID_BYTES + 1];
+    for (size_t i = 0; i < fram::ID_BYTES; ++i) snprintf(hex + 2 * i, 3, "%02X", id.bytes[i]);
+    Serial.printf("{\"fram\":\"%s\",\"id\":\"%s\",\"status\":\"0x%02X\",\"ok\":%s}\n",
+                  fram::partName(id.part), hex, id.status, boolName(framOk));
 }
 
 void printInfo() {
@@ -1019,7 +1021,7 @@ void stationSetup() {
 #endif
     delay(50);
     radiocon::start();  // LED2 świeci dopiero po zapisanym i (CC1120) skalibrowanym P1
-    framOk = memory.identify().mb85rs4m;
+    framOk = memory.identify().part != fram::Part::UNKNOWN;
     beginJournal();
     ledWrite(board::LED_FRAM, framOk && journalOk);  // LED3 świeci dopiero z działającym dziennikiem
     storeOk = framOk && stationStore.begin();

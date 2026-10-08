@@ -6,7 +6,7 @@ Katalog zawiera oprogramowanie układowe stacji. Obecny stan to pierwsze kroki n
 
 Środowisko `bench-b` buduje ten sam program stacji dla [stanowiska B na N1](#stanowisko-b-na-płytce-n1-bench-b): ESP32-S3-DevKitC-1 z X-NUCLEO-S2868A2 (ST S2-LP) zamiast nRF52840 i CC1120. Wspólne są polecenia, polecenia pomiarowe, łącze P1, dziennik, magazyn, protokół USB laptop–stacja z dwoma interfejsami CDC, warstwa aplikacji, ekran i panel N1; różnią się warstwa MCU (`src/platform_*.cpp`), sterownik układu radiowego (`src/radio_console_*.cpp`, `src/*_link.cpp`) i [rejestry P1 dla S2-LP](#rejestry-profilu-p1-dla-s2-lp).
 
-Obrazy skompilowano (PlatformIO, ze stosem Reticulum; rdzeń Adafruit nRF52 1.7.0: `bench-a` 97 548 B RAM statycznej, 503 260 B flash, `bench-n1` 97 764 B RAM, 507 168 B flash, podział w [pomiarze RAM stosu](#pamięć-ram) i [przeglądzie rozmiaru](#rozmiar-i-wydajność); Arduino-ESP32 3.3.12: `bench-b` 144 536 B RAM z 327 680 B, 811 973 B flash). **Żadnego nie uruchomiono na sprzęcie**: odpowiedzi poleceń, numery pinów, działanie SPI z modułem, przyjęcie rejestrów przez układ, USB i łącze radiowe wymagają sprawdzenia na płytce według kroków niżej. Na hoście sprawdzone są tylko moduły bez Arduino, sterownik S2-LP i jego sterownik łącza z modelem układu, `measure::Bench` ze sterownikiem zastępczym, tablica rejestrów S2-LP i zgodność pinów `bench-b` z [połączeniami](../hardware/dev-bench/polaczenia.md) (`tests/`), a stos Reticulum z interfejsem P1 w programie na komputerze z emulatorem łącza wobec Reticulum w Pythonie ([próba zgodności](#próba-zgodności-z-reticulum)).
+Obrazy skompilowano (PlatformIO, ze stosem Reticulum; rdzeń Adafruit nRF52 1.7.0: `bench-a` 97 548 B RAM statycznej, 503 332 B flash, `bench-n1` 97 764 B RAM, 507 176 B flash, podział w [pomiarze RAM stosu](#pamięć-ram) i [przeglądzie rozmiaru](#rozmiar-i-wydajność); Arduino-ESP32 3.3.12: `bench-b` 144 536 B RAM z 327 680 B, 812 221 B flash). **Żadnego nie uruchomiono na sprzęcie**: odpowiedzi poleceń, numery pinów, działanie SPI z modułem, przyjęcie rejestrów przez układ, USB i łącze radiowe wymagają sprawdzenia na płytce według kroków niżej. Na hoście sprawdzone są tylko moduły bez Arduino, sterownik S2-LP i jego sterownik łącza z modelem układu, `measure::Bench` ze sterownikiem zastępczym, tablica rejestrów S2-LP i zgodność pinów `bench-b` z [połączeniami](../hardware/dev-bench/polaczenia.md) (`tests/`), a stos Reticulum z interfejsem P1 w programie na komputerze z emulatorem łącza wobec Reticulum w Pythonie ([próba zgodności](#próba-zgodności-z-reticulum)).
 
 ## Okablowanie stanowiska A
 
@@ -65,7 +65,7 @@ Polecenia diagnostyczne do kroków A3–A4 [uruchomienia](../hardware/dev-bench/
 | `VTEST` | `vtest_mv` (napięcie na zacisku J12 = napięcie pinu × 6), `pin_mv`, `raw`: średnia 16 próbek SAADC, 12 bitów, pełna skala 3,6 V; `ain` i `divider` (6) |
 | `DISPLAY <hz>` | zegar SPI ekranu 125 000–2 000 000 Hz do restartu, potem odpowiedź jak `DISPLAY` z polem `spi_hz` |
 
-Przebieg A3: `BTN` bez naciśnięć daje same `false` (przy CISZA w położeniu „cisza” `silence_switch: true`); każde naciśnięcie zmienia tylko swoje pole; `LED 5 1`, `LED 5 0`; `BUZZ` daje słyszalny sygnał 2048 Hz. Przebieg A4: `FRAM` z `fujitsu: true`, ekran pokazuje wybór języka, a kolejne `DISPLAY` pokazują `counter` RTC2 rosnący od 0 do 4 i `level` (EXTCOMIN) zmieniający się co 0,5 s. `VTEST` przy zacisku J12 zwartym daje około 0 mV, a przy 12 V z zasilacza około 12 000 mV (sprawdzić miernikiem; dokładność zależy od rezystorów 1% i wewnętrznego odniesienia SAADC).
+Przebieg A3: `BTN` bez naciśnięć daje same `false` (przy CISZA w położeniu „cisza” `silence_switch: true`); każde naciśnięcie zmienia tylko swoje pole; `LED 5 1`, `LED 5 0`; `BUZZ` daje słyszalny sygnał 2048 Hz. Przebieg A4: `FRAM` z `ok: true` i nazwą układu, ekran pokazuje wybór języka, a kolejne `DISPLAY` pokazują `counter` RTC2 rosnący od 0 do 4 i `level` (EXTCOMIN) zmieniający się co 0,5 s. `VTEST` przy zacisku J12 zwartym daje około 0 mV, a przy 12 V z zasilacza około 12 000 mV (sprawdzić miernikiem; dokładność zależy od rezystorów 1% i wewnętrznego odniesienia SAADC).
 
 Budowa i wgranie (bootloader jak niżej):
 
@@ -123,7 +123,7 @@ Polecenia są jak na [stanowisku A](#polecenia) i [N1](#płytka-nośna-n1-bench-
 | `DRIVE [<0-3>]` | napęd SCK i MOSI (`gpio_drive_cap_t`, około 5/10/20/40 mA) do restartu |
 | `REBOOT` | `esp_restart()`; pamięć RTC niezerowana zostaje |
 
-Przebieg B3 (jak A3–A4): `BTN` bez naciśnięć daje same `false`; każde naciśnięcie zmienia tylko swoje pole; `LED 5 1`, `LED 5 0`; `BUZZ` daje sygnał 2048 Hz; `FRAM` z `fujitsu: true`; ekran pokazuje wybór języka, a kolejne `DISPLAY` pokazują zmieniający się `counter` i `level` zmieniający się co 0,5 s; system operacyjny widzi dwa porty szeregowe. Przebieg B4: po wpięciu X-NUCLEO-S2868A2 `RADIO` daje `partnumber: 0x03`, `xo_on: true` i stan `RX` (odbiór P1 od startu); `VERIFY` daje `mismatches: 0`, `FREQ` około 869 525 003 Hz. Bez modułu (albo z przerwą na MISO) `partnumber` wynosi `0x00` albo `0xFF`, a `ok` jest `false`. Karta DS11896 Rev 5 podaje VERSION `0x91`; biblioteka ST zna też `0x81` i `0xC1`, więc `partversion` nie wpływa na `ok`. Dalej jak na A: `PREP 1`, `TXCW 2` z miernikiem częstotliwości, `FOFF`, `TXPKT`/`RX`/`RXPER` i `P1TX`/`P1RX` między stanowiskami A i B.
+Przebieg B3 (jak A3–A4): `BTN` bez naciśnięć daje same `false`; każde naciśnięcie zmienia tylko swoje pole; `LED 5 1`, `LED 5 0`; `BUZZ` daje sygnał 2048 Hz; `FRAM` z `ok: true` i nazwą układu; ekran pokazuje wybór języka, a kolejne `DISPLAY` pokazują zmieniający się `counter` i `level` zmieniający się co 0,5 s; system operacyjny widzi dwa porty szeregowe. Przebieg B4: po wpięciu X-NUCLEO-S2868A2 `RADIO` daje `partnumber: 0x03`, `xo_on: true` i stan `RX` (odbiór P1 od startu); `VERIFY` daje `mismatches: 0`, `FREQ` około 869 525 003 Hz. Bez modułu (albo z przerwą na MISO) `partnumber` wynosi `0x00` albo `0xFF`, a `ok` jest `false`. Karta DS11896 Rev 5 podaje VERSION `0x91`; biblioteka ST zna też `0x81` i `0xC1`, więc `partversion` nie wpływa na `ok`. Dalej jak na A: `PREP 1`, `TXCW 2` z miernikiem częstotliwości, `FOFF`, `TXPKT`/`RX`/`RXPER` i `P1TX`/`P1RX` między stanowiskami A i B.
 
 Budowa i wgranie (port USB-OTG DevKitC, nie UART):
 
@@ -235,7 +235,7 @@ Port USB nRF (J3, nie port J-Link J2) zgłasza się jako urządzenie z dwoma int
 | `RSSI` | RSSI w dBm z przyjętym przesunięciem −99 dB (`rssi_offset_db`), znaczniki ważności i nośnej; sens tylko w stanie RX |
 | `STATE` | stan MARC nazwą i liczbą, bajt stanu, liczba bajtów w kolejkach RX i TX |
 | `REG <hex>` | odczyt rejestru z przestrzeni zwykłej (00–2E) albo rozszerzonej (2F00–2FFF), np. `REG 2F73` (MARCSTATE), `REG 2F0C` (FREQ2) |
-| `FRAM` | cztery bajty RDID (MB85RS4MT: `047F4903`, MB85RS4MTY: `047F490B`), rejestr stanu, `ok` |
+| `FRAM` | rozpoznany układ (`MB85RS4MT`, `CY15B104Q` albo `unknown`), dziewięć bajtów RDID (MB85RS4MT: `047F4903…`, MB85RS4MTY: `047F490B…`, CY15B104Q: `7F7F7F7F7F7FC22608`), rejestr stanu, `ok` |
 | `BTN` | stan czterech przycisków (na N1 także panelu, patrz [N1](#płytka-nośna-n1-bench-n1)) |
 | `LED <1-4> <0\|1>` | sterowanie diodą |
 | `SCREEN` | treść ekranu: nazwa ekranu, język, pięć wierszy i które są odwrócone, liczba odświeżeń |
@@ -250,7 +250,7 @@ Port USB nRF (J3, nie port J-Link J2) zgłasza się jako urządzenie z dwoma int
 | `RNS` | stos Reticulum: adres `wici.sa1` i skrót tożsamości, `online` (IFAC skonfigurowany), liczba tras, skrótów pakietów, wpisów tablicy ogłoszeń i potwierdzeń w toku, pula TLSF (`pool`, `pool_used`, `pool_peak`), system plików FRAM, liczniki pakietów, dowodów i ogłoszeń (`announced`), czas do następnego ogłoszenia, przewidywane oczekiwanie w kolejce radiowej (`wait_ms`), przepływność deklarowana (`bitrate`), kolejka interfejsu P1 (`q_len`, `q_held`, `q_full`, `ann_held`, `ann_drop`, `tx_sent`, `tx_failed`, `rx_ok`, `ifac_missing`, `ifac_invalid`, `offline`, `q_reserved` — odmowy z rezerwy OSP, `other_ms` — czas kanału ruchu innego niż do OSP w ostatniej godzinie) |
 | `ANNOUNCE` | ogłoszenie adresu na polecenie; wychodzi w najbliższym obiegu poza ciszą radiową i z kodem IFAC, potem `RNS` |
 
-Warunek przejścia kroku 6 z [lekcji R02](../hardware/r02/lekcje.md#uruchomienie): `RADIO` daje `ready: true`, `partnumber: 0x48` i stan `IDLE`; `FRAM` daje `fujitsu: true`. Bez modułu `partnumber` wynosi `0xFF` albo `0x00`, a `ready` jest `false`. Po starcie obraz sam zapisuje i kalibruje P1; LED2 świeci dopiero, gdy `RADIO` daje `ok: true` i `p1_ok: true`. Po otwarciu portu obraz wysyła też wynik `VERIFY` i `FREQ`.
+Warunek przejścia kroku 6 z [lekcji R02](../hardware/r02/lekcje.md#uruchomienie): `RADIO` daje `ready: true`, `partnumber: 0x48` i stan `IDLE`; `FRAM` daje `ok: true`. Bez modułu `partnumber` wynosi `0xFF` albo `0x00`, a `ready` jest `false`. Po starcie obraz sam zapisuje i kalibruje P1; LED2 świeci dopiero, gdy `RADIO` daje `ok: true` i `p1_ok: true`. Po otwarciu portu obraz wysyła też wynik `VERIFY` i `FREQ`.
 
 ## Rejestry profilu P1
 
@@ -296,7 +296,7 @@ Przebieg pomiaru czułości: na nadajniku `PREP 1`, `TXPKT 2000 103 50 CONDUCTED
 
 ## Dziennik w FRAM
 
-Kod w `src/journal.cpp` (bez zależności od Arduino, sprawdzany na komputerze z pamięcią w RAM w `tests/test_firmware_host.py`) i `src/fram.cpp` (odczyt i zapis MB85RS4MT, adres 3-bajtowy; rozpoznaje tylko identyfikator Fujitsu/RAMXEED, więc kandydat A z BOM stacji, Infineon CY15B104Q, wymaga dopisania jego identyfikatora). Wymagania: [dostęp do kanału](../docs/spec/radio.md#dostęp-do-kanału) (dziennik długu ciszy) i [oprogramowanie](../docs/spec/oprogramowanie.md) (licznik czasu pracy co 60 s, dziennik zdarzeń 32 KiB). Obszar nie jest szyfrowany. ZNISZCZ DANE kasuje pierścień zdarzeń; dług ciszy, zegar i ustawienia ekranu zostają, bo chronią przed złamaniem limitu nadawania po restarcie.
+Kod w `src/journal.cpp` (bez zależności od Arduino, sprawdzany na komputerze z pamięcią w RAM w `tests/test_firmware_host.py`) i `src/fram.cpp` (odczyt i zapis FRAM 4 Mbit, adres 3-bajtowy; `src/fram_id.h` rozpoznaje po RDID RAMXEED MB85RS4MT i Infineon CY15B104Q, kandydata A z BOM stacji, a inne układy, także 2 Mbit, odrzuca). Wymagania: [dostęp do kanału](../docs/spec/radio.md#dostęp-do-kanału) (dziennik długu ciszy) i [oprogramowanie](../docs/spec/oprogramowanie.md) (licznik czasu pracy co 60 s, dziennik zdarzeń 32 KiB). Obszar nie jest szyfrowany. ZNISZCZ DANE kasuje pierścień zdarzeń; dług ciszy, zegar i ustawienia ekranu zostają, bo chronią przed złamaniem limitu nadawania po restarcie.
 
 | Pierścień | Adres w FRAM | Rekordy | Treść rekordu |
 |---|---|---|---|
@@ -550,7 +550,7 @@ Pomiar dla obrazu `bench-a` (nRF52840, 256 KiB RAM) przy pojemnościach ze specy
 
 System plików FRAM przy pełnych tablicach: 135 680 B z 195 456 B (69%), 8 plików.
 
-Flash: 503 260 B z 815 104 B (61,7%); stos dokłada około 324 KB, w tym Curve25519 i Ed25519, kontenery C++17 z wyjątkami (tablice odwijania `.ARM.extab` i `.ARM.exidx` 27 KB), MsgPack i ArduinoJson.
+Flash: 503 332 B z 815 104 B (61,8%); stos dokłada około 324 KB, w tym Curve25519 i Ed25519, kontenery C++17 z wyjątkami (tablice odwijania `.ARM.extab` i `.ARM.exidx` 27 KB), MsgPack i ArduinoJson.
 
 ### Co zostaje na etap LXMF
 
