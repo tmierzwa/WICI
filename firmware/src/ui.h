@@ -5,7 +5,7 @@
 // STAN, JĘZYK), kreator zgłoszenia (kategoria, liczba osób z wpisem cyfr, pilność z potwierdzeniem
 // pilności 2, fraza, podsumowanie, wynik), WIADOMOŚCI z etapami własnych zgłoszeń i działaniami
 // (nowa rewizja, POTRZEBA USTAŁA, ANULUJ WYSYŁKĘ), TEST z WSTRZYMAJ/WZNÓW, STAN z PRZEKAZANIEM
-// ZMIANY i USŁUGAMI (ODBIORCA ZAPASOWY, ZNISZCZ DANE z sekwencją GÓRA, DÓŁ, GÓRA, OK), alarmy
+// ZMIANY i USŁUGAMI (KLUCZ ZAPASOWY, ZNISZCZ DANE z sekwencją GÓRA, DÓŁ, GÓRA, OK), alarmy
 // na cały ekran, przytrzymanie WSTECZ (2 s: porzucenie zgłoszenia, 3 s: wybór języka).
 // Stacja w konfiguracji węzła OSP (Host::ospNode, D19) po wyborze języka pokazuje radio, kontakt
 // z komputerem stanowiska (`komputer_osp`, `komputer_brak`) i zasilanie; menu ma tylko STAN
@@ -236,7 +236,7 @@ private:
     Submit result_ = Submit::STORED;
     uint16_t resultNumber_ = 0;
     bool resultSilence_ = false;
-    bool serviceResult_ = false;  // RESULT po usłudze (ogłoszenie, nieudane ODBIORCA ZAPASOWY albo ZNISZCZ DANE): szkic zostaje
+    bool serviceResult_ = false;  // RESULT po usłudze (ogłoszenie, nieudane KLUCZ ZAPASOWY albo ZNISZCZ DANE): szkic zostaje
     bool muted_ = false;
     Status lastStatus_;           // stan z ostatniego rysowania (cisza przy wyniku, liczba wierszy STAN)
     Screen returnTo_ = Screen::MAIN;

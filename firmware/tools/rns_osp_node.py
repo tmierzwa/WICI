@@ -5,7 +5,7 @@ Two station programs (the "host" PlatformIO program, firmware/src/host/node_host
 emulated P1 link over UDP: a station and a station in the OSP node configuration (--osp-node). The node
 has the second Reticulum interface over USB; here the USB data port is a pseudo-terminal, and this
 process runs reference Reticulum with a KISSInterface (flow control on) on it, as the computer of the
-receiving station does (docs/spec/stanowisko-osp.md, "Komputer i aplikacja OSP"; radio.md, "Interfejs
+receiving station does (docs/spec/stanowisko-osp.md, "Komputer i aplikacja stanowiska"; radio.md, "Interfejs
 Reticulum przez USB"). The computer has transport and network interfaces off; the node forwards.
 
 Checks: the node has no address of its own and does not announce; the computer turns flow control on;

@@ -34,7 +34,7 @@ body:
     id: result
     attributes:
       label: Wynik i surowe dane
-      description: Wynik względem warunku zaliczenia; załącz surowe dane. Dla komunikacji podaj id/revision, czas lokalnego zapisu, COMMIT w OSP i powrotu RECEIVED, liczbę datagramów, czas TX, odrzuty i restarty. Nie publikuj kluczy, tokenów ani danych mieszkańców.
+      description: Wynik względem warunku zaliczenia; załącz surowe dane. Dla komunikacji podaj id/revision, czas lokalnego zapisu, COMMIT u odbiorcy i powrotu RECEIVED, liczbę datagramów, czas TX, odrzuty i restarty. Nie publikuj kluczy, tokenów ani danych mieszkańców.
     validations:
       required: true
   - type: checkboxes

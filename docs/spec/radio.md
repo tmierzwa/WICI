@@ -1,8 +1,43 @@
 # WICI: radio
 
+**Pilotaż używa LoRa** (decyzja D10, rozstrzygnięta roboczo 2026-10-08; przegląd praktyczny, F99 w [przeglądzie](../review.md)). Profil pilotażu opisuje część [Profil LoRa pilotażu](#profil-lora-pilotażu). Profil P1 i dwa wykonania TI/ST opisane dalej są wariantem zapasowym i pytaniem do wydania. Prace nad torami RF płytki R02 są wstrzymane do decyzji po pilotażu.
+
+## Profil LoRa pilotażu
+
+Stacje pilotażowe używają gotowych modułów lub płytek z układem Semtech SX1262 i deklaracją zgodności UE. Interfejs LoRa jest interfejsem Reticulum w porcie microReticulum, tak jak interfejs P1. Format w eterze jest zgodny z RNode; zgodność potwierdza T3 (wymiana z Reticulum w Pythonie przez RNode; [odbiór](odbior.md#minimum-pilotażu), wiersz „Interfejs LoRa stacji”).
+
+| Parametr | Wartość |
+|---|---|
+| Częstotliwość nośna | 869,525 MHz (D11 bez zmian) |
+| Szerokość kanału | 125 kHz |
+| Współczynnik rozpraszania | SF7; SF8 tylko do porównania zasięgu w etapie 0 |
+| Kodowanie (CR) | 4/5 |
+| Nagłówek LoRa | jawny |
+| CRC | włączone |
+| Preambuła | 18 symboli (założenie modelu, do potwierdzenia w T3 wobec RNode) |
+| Moc na złączu | 13 dBm; limit pasma 27 dBm ERP |
+| Cisza po nadaniu | po każdym nadaniu ta sama cisza 12t co w P1 (limit pasma 10%); punkty 1–4 i 6 [dostępu do kanału](#dostęp-do-kanału) obowiązują także na interfejsie LoRa; próg i sposób wykrywania zajętości kanału (punkt 5) dla LoRa ustala się w T4 |
+| Kod dostępu sieci | IFAC Reticulum, 16 B, jak na interfejsie P1 |
+| Rozmiar pakietu | pakiet Reticulum do 254 B w jednej ramce LoRa; większy (do 500 B) w dwóch ramkach; model przyjmuje 1 B nagłówka ramki, jak w RNode |
+| Sprzęt | gotowa płytka MCU (ESP32-S3) z SX1262 albo moduł SX1262, z deklaracją zgodności UE |
+
+Czas nadawania w SF7 według modelu ([wyniki modelu](../../software/reference/wyniki.json), `lora_pilot`): typowe zgłoszenie 0,67 s, zgłoszenie z najdłuższymi polami 0,74 s, RECEIVED 0,48 s, dowód pakietu 0,18 s, pakiet 500 B w dwóch ramkach 0,81 s.
+
+Czułość katalogowa SX1262 w SF7 wynosi −124 dBm. Przy 3 dB strat toru wejściowego daje to −121 dBm na złączu, czyli 11 dB lepiej niż cel P1 (−110 dBm). Zapas modelu Okumury-Haty na 1 km wynosi +10,3 dB (anteny na 30 m i 1,5 m), +3,7 dB (10 m i 1,5 m) i +7,5 dB (10 m i 3 m); przy instalacji stałej +7,3, +0,7 i +4,5 dB. Dla P1 te same przypadki dają −0,7, −7,3 i −3,5 dB oraz −3,7, −10,3 i −6,5 dB. To nadal mediany, bez zapasu na zaniki (zob. budżet łącza na końcu tego rozdziału); o zasięgu rozstrzyga etap 0 i T5.
+
+Model ruchu w SF7: 50 zgłoszeń przez przekaźnik B zajmuje 16,4–17,2 min nadawania z 30 min (P1: 22,6–24,0 min); z PRZECZYTANE i decyzją (dwa STATUS) 31,5 min (P1: 43,8 min); próba ruchu mieszanego 55 rewizji około 34,6 min z 60 (P1: około 48 min). Pojemność: przekaźnik przed stanowiskiem około 95 zgłoszeń/h (P1: około 68), stacja stanowiska około 164/h (P1: około 121).
+
+SF8 daje 2 dB czułości więcej (−126 dBm), ale 50 zgłoszeń zajmuje 29,1–30,4 min, więc W10 nie mieści się w 30 min, a próba mieszana trwa około 61,6 min z 60. SF8 nie jest więc profilem bazowym.
+
+Odbiornik SX1262 pobiera 4,6 mA zamiast 22 mA w CC1120. Przy tych samych założeniach przetwornicy komplet ogniw AA Li-FeS2 daje ESP32-S3 około 70, 52 i 41 h przy 30, 45 i 60 mA poboru MCU (nRF52840 około 200 h). W23 (≥48 h) wymaga więc średnio najwyżej około 45 mA MCU; sprawdza to pomiar.
+
+Powrót do P1 następuje tylko wtedy, gdy: (1) w T5 LoRa SF7 nie daje 99/100 na parze miejsc, na której P1 (jeśli stanowiska P1 są zmontowane) daje 99/100; (2) w T3 lub T5 profil LoRa nie mieści W10 przy zmierzonym ruchu, a P1 tak; (3) brak gotowych modułów SX1262 z deklaracją UE od co najmniej dwóch producentów.
+
 ## Profil P1 do prototypu
 
-P1 jest wspólnym kontraktem dwóch wykonań stacji, a nie ustawieniami istniejącego RNode. Zmiana profilu obejmuje całą sieć. P1 jest wyborem bazowym, ale warunkowym: warunki powrotu do LoRa ustala decyzja D10 przed zamówieniem RF ([koncepcja, rozdział 04](../concept/04-analiza-opcji.html)).
+Wariant zapasowy (przegląd praktyczny 2026-10-08, F99): ta część i dalsze części o P1, ramce P1 i dwóch wykonaniach nie są potrzebne do pilotażu i nie są dalej rozwijane. Sterowniki P1 i stanowiska deweloperskie A/B zostają do prób stosu i opcjonalnego porównania. Części ogólne (współdzielenie kanału, dostęp do kanału, warunki prawne, USB) dotyczą także profilu LoRa.
+
+P1 jest wspólnym kontraktem dwóch wykonań stacji, a nie ustawieniami istniejącego RNode. Zmiana profilu obejmuje całą sieć. Decyzja D10 z 2026-10-08 wybrała roboczo LoRa; warunki powrotu do P1 są w [profilu LoRa](#profil-lora-pilotażu) ([koncepcja, rozdział 04](../concept/04-analiza-opcji.html)).
 
 | Parametr | Wartość |
 |---|---|
@@ -58,7 +93,7 @@ Odbiornik składa najwyżej 8 datagramów, maksymalnie 600 B każdy, przez 120 s
 3. Fragmenty datagramu wysyła się jedną serią. Następnie odczekuje się zapisany dług ciszy. Przy ruchu ciągłym daje to około 7,7% czasu nadawania, z rezerwą względem limitu 10%.
 4. Po ponownym uruchomieniu odczekuje się cały ostatni zapisany dług. Kasuje się go dopiero po odczekaniu; restart nie zeruje budżetu.
 5. Przed serią kanał musi być wolny przez 50 ms; kanał jest zajęty, gdy RSSI przekracza próg CCA albo trwa odbiór po wykryciu słowa synchronizacji. Gdy kanał jest zajęty, nadawanie zostaje odroczone o losowy czas 100–1000 ms; licznik długich odroczeń trafia do diagnostyki. CCA nie zastępuje limitu czasu TX. Początkowy próg −100 dBm leży 10 dB powyżej czułości −110 dBm, więc słabsi sąsiedzi pozostają dla CCA niewidoczni (ukryte węzły); próg wyznacza się w T4.
-6. Co najmniej 50% budżetu TX jest zarezerwowane dla ruchu do i od przypiętej OSP. Stacja rozpoznaje ten ruch po adresie docelowym: przekazywane pakiety danych (liczba przeskoków większa od zera) do innego celu niż przypięta OSP zajmują łącznie najwyżej 50% czasu kanału (nadawanie i dług ciszy) w przesuwnym oknie 1 h. Powyżej limitu stacja ich nie przyjmuje i nie oddaje im ostatniego miejsca w kolejce. Ruch do OSP, potwierdzenia pakietów, zapytania o trasę i własne pakiety stacji nie mają tego limitu. Ruch od OSP przekazywany do innych stacji liczy się jako pozostały, dopóki nagłówek nie wskazuje nadawcy (do czasu LXMF). Ogłoszenia i zapytania o trasę mają na interfejsie osobne limity częstości (ogłoszenia początkowo 2% czasu nadawania; [ogłoszenia](oprogramowanie.md#tryby-kryzysowe)). W kolejce P1 zapytania o trasę idą razem z potwierdzeniami pakietów przed danymi, bo bez trasy dane nie wyjdą; ogłoszenia mają najniższy priorytet ([kolejność w kolejce](oprogramowanie.md#trwałość-i-potwierdzenia)).
+6. Co najmniej 50% budżetu TX jest zarezerwowane dla ruchu do i od przypiętego odbiorcy. Stacja rozpoznaje ten ruch po adresie docelowym: przekazywane pakiety danych (liczba przeskoków większa od zera) do innego celu niż przypięty odbiorca zajmują łącznie najwyżej 50% czasu kanału (nadawanie i dług ciszy) w przesuwnym oknie 1 h. Powyżej limitu stacja ich nie przyjmuje i nie oddaje im ostatniego miejsca w kolejce. Ruch do odbiorcy, potwierdzenia pakietów, zapytania o trasę i własne pakiety stacji nie mają tego limitu. Ruch od odbiorcy przekazywany do innych stacji liczy się jako pozostały, dopóki nagłówek nie wskazuje nadawcy (do czasu LXMF). Ogłoszenia i zapytania o trasę mają na interfejsie osobne limity częstości (ogłoszenia początkowo 2% czasu nadawania; [ogłoszenia](oprogramowanie.md#tryby-kryzysowe)). W kolejce P1 zapytania o trasę idą razem z potwierdzeniami pakietów przed danymi, bo bez trasy dane nie wyjdą; ogłoszenia mają najniższy priorytet ([kolejność w kolejce](oprogramowanie.md#trwałość-i-potwierdzenia)).
 
 Rezerwacja obejmuje preambuły, słowa synchronizacji, pola długości, CRC oraz zmierzony czas narastania mocy i przełączenia nadajnika dla każdego fragmentu; model przyjmuje go jako parametr (`ramp_ms`), a dowód limitu 10% opiera się na wartości zmierzonej. Dług zapisuje się przed pierwszym fragmentem serii; zachowanie przy zaniku zasilania w trakcie zapisu sprawdza się z kondensatorem podtrzymania i komparatorem zaniku ([elektronika](elektronika.md#zasilanie-stacji)). Dług przechowuje dziennik w pamięci FRAM stacji, tej samej co kolejka zgłoszeń. Każdy rekord zawiera numer, dług, CRC i znacznik zatwierdzenia; dziennik utrzymuje co najmniej dwa poprawne rekordy. W najgorszym przypadku, przy ciągłym nadawaniu najkrótszych datagramów, zapis następuje co 0,65 s, czyli około 133 000 razy na dobę. Trwałość FRAM (co najmniej 10¹³ cykli według kart katalogowych kandydatów) nie ogranicza czasu pracy, więc rozkładanie zapisów nie jest potrzebne. Dziennik długu ciszy nie jest szyfrowany i przetrwa ZNISZCZ DANE. Gdy przy starcie brak poprawnego rekordu, stacja odczekuje największy możliwy dług (12 × czas TX datagramu 600 B z narastaniem mocy; około 16 s przy założonych 2 ms na fragment, do potwierdzenia pomiarem w T4), zakłada nowy dziennik i zlicza zdarzenie w diagnostyce; nie blokuje nadawania do czasu diagnostyki. Odbiór pozostaje czynny także podczas długu ciszy i oczekiwania CCA; wyłącza się go tylko na czas własnego nadawania, bo stacja jest przekaźnikiem.
 
@@ -75,7 +110,7 @@ Wykaz do kwalifikacji i deklaracji zgodności:
 - RoHS (EN IEC 63000), WEEE (dla wszystkich modułów zestawu) oraz rozporządzenie bateryjne (UE) 2023/1542;
 - maksymalny deklarowany zysk anteny 6 dBi, wpisany do deklaracji i karty stacji.
 
-Nadajniki Wi-Fi i Bluetooth mikrokontrolera stacji są wyłączone, ale radio 2,4 GHz wyłączone tylko w oprogramowaniu układowym może być nadal traktowane jako zamierzony nadajnik. Opcje do rozstrzygnięcia w D14: (a) trwała blokada (eFuse lub konfiguracja startowa, gdzie MCU ją zapewnia), bezpieczny rozruch (secure boot) i pisemna argumentacja RED; (b) budżet badań według EN 300 328 i EN 301 489-17; (c) MCU bez radia, np. RP2350 (520 KiB RAM) albo STM32U5.
+Nadajniki Wi-Fi i Bluetooth mikrokontrolera stacji są wyłączone, ale radio 2,4 GHz wyłączone tylko w oprogramowaniu układowym może być nadal traktowane jako zamierzony nadajnik. W pilotażu Wi-Fi i Bluetooth ESP32-S3 są wyłączone programowo; stacje pilotażowe są urządzeniami badanymi, własnością zespołu, więc ta kwestia wraca przy wydaniu. Opcje do rozstrzygnięcia w D14 dla wydania: (a) trwała blokada (eFuse lub konfiguracja startowa, gdzie MCU ją zapewnia), bezpieczny rozruch (secure boot) i pisemna argumentacja RED; (b) budżet badań według EN 300 328 i EN 301 489-17; (c) MCU bez radia, np. RP2350 (520 KiB RAM) albo STM32U5.
 
 Moduły poziomu 3 bez nadajnika (przetwornica 230 V, ładowarka) podlegają dyrektywom LVD 2014/35/UE i EMC 2014/30/UE; normy ustala jednostka badawcza ([elektronika](elektronika.md#przetwornica-poziom-3)).
 
@@ -87,21 +122,21 @@ Sterownik P1 jest interfejsem Reticulum w oprogramowaniu stacji, opartym na porc
 
 Interfejs deklaruje stosowi jawną przepływność (wartość wyznacza się pomiarem w T3; sama wartość nie przesądza o zgodności czasów) i osobny limit ogłoszeń. Każdy pakiet na interfejsie P1 niesie kod dostępu sieci (IFAC Reticulum, 16 B) ustawiany przy przygotowaniu; pakiety bez poprawnego kodu są odrzucane przed przetwarzaniem. Zgodność IFAC w microReticulum potwierdza T3. Próba „wrogi węzeł” (zalew ogłoszeniami, zapytaniami o trasę i fragmentami) należy do T3 i T5.
 
-Znajomość długu ciszy nie zmienia limitów czasu całego stosu. Osobno trzeba sprawdzić wyszukiwanie trasy, zestawianie linku, przesyłanie zasobu i potwierdzenia, także gdy pakiet czeka za ruchem przekazywanym; zob. [kontrprzykład czasowy i stan przeglądu](../review.md). Wszystkie stacje sieci, także stacja przy OSP, używają tego samego oprogramowania stacji. Komputer stanowiska OSP używa implementacji Reticulum i LXMF w Pythonie (D19), więc zgodność z nią, sprawdzana w T3, jest warunkiem działania sieci, a nie tylko próbą laboratoryjną.
+Znajomość długu ciszy nie zmienia limitów czasu całego stosu. Osobno trzeba sprawdzić wyszukiwanie trasy, zestawianie linku, przesyłanie zasobu i potwierdzenia, także gdy pakiet czeka za ruchem przekazywanym; zob. [kontrprzykład czasowy i stan przeglądu](../review.md). Wszystkie stacje sieci, także stacja stanowiska, używają tego samego oprogramowania stacji. Komputer stanowiska używa implementacji Reticulum i LXMF w Pythonie (D19), więc zgodność z nią, sprawdzana w T3, jest warunkiem działania sieci, a nie tylko próbą laboratoryjną.
 
 Tryb ciszy radiowej blokuje w sterowniku P1 każde nadawanie, także ruchu przekazywanego. Sterownik ma osobną flagę dla pojedynczego zgłoszenia wyjętego spod ciszy.
 
-## Interfejs Reticulum przez USB (węzeł OSP)
+## Interfejs Reticulum przez USB (węzeł stanowiska)
 
-Stacja w konfiguracji węzła OSP ([stanowisko odbiorcze](stanowisko-osp.md#stacja-przy-osp)) ma w stosie drugi interfejs Reticulum: interfejs danych CDC poza trybem przygotowania przenosi pakiety Reticulum do komputera stanowiska i z powrotem. W trybie przygotowania ten sam interfejs przenosi [protokół USB](oprogramowanie.md#protokół-usb-laptopstacja), aby można było zmienić konfigurację i oprogramowanie.
+Stacja w konfiguracji węzła stanowiska ([stanowisko odbiorcze](stanowisko-osp.md#stacja-stanowiska)) ma w stosie drugi interfejs Reticulum: interfejs danych CDC poza trybem przygotowania przenosi pakiety Reticulum do komputera stanowiska i z powrotem. W trybie przygotowania ten sam interfejs przenosi [protokół USB](oprogramowanie.md#protokół-usb-laptopstacja), aby można było zmienić konfigurację i oprogramowanie.
 
 - **Ramki:** KISS (FEND, FESC), jedna ramka danych to jeden pakiet Reticulum do 500 B; zgodne z interfejsem KISS Reticulum w Pythonie z kontrolą przepływu. Polecenia konfiguracji KISS od komputera (TXDELAY, P, SLOTTIME, TXTAIL) stacja przyjmuje i pomija, bo dostęp do kanału określa P1.
-- **Kontrola przepływu:** komputer włącza ją przy starcie poleceniem KISS 0x0F z wartością 1. Stacja wysyła ramkę gotowości (0x0F, jak RNode) po przyjęciu pakietu do bufora USB na co najmniej 8 pakietów po 500 B; komputer wysyła następny pakiet dopiero po niej. Reticulum w Pythonie (`e40191b`) sam zwalnia blokadę po 5 s bez gotowości (stała `flow_control_timeout` interfejsu KISS), więc wstrzymanie gotowości nie zatrzyma komputera na czas długu ciszy. Pakiet ponad bufor stacja odrzuca i liczy, a ponowienie zapewnia LXMF; aplikacja OSP ogranicza ruch do 4 wiadomości w drodze, aby bufor wystarczał.
-- **Kierunek do komputera:** stacja przekazuje pakiety, które transport kieruje do interfejsu USB: ruch do tożsamości OSP, ogłoszenia i zapytania o trasę.
-- **Limity:** pakiety z USB przechodzą przez interfejs P1 z jego priorytetami, długiem ciszy, limitem ogłoszeń i ciszą radiową. IFAC dotyczy tylko P1; pakiet z USB dostaje kod dostępu sieci przy nadaniu, a pakiet z P1 bez poprawnego kodu nie trafia do komputera. W konfiguracji węzła OSP ruchem do i od OSP (rezerwa ≥50% budżetu nadawania z punktu 6 w [dostępie do kanału](#dostęp-do-kanału)) są pakiety do celów osiągalnych przez interfejs USB i pakiety z tego interfejsu, bo stacja nie ma karty OSP.
+- **Kontrola przepływu:** komputer włącza ją przy starcie poleceniem KISS 0x0F z wartością 1. Stacja wysyła ramkę gotowości (0x0F, jak RNode) po przyjęciu pakietu do bufora USB na co najmniej 8 pakietów po 500 B; komputer wysyła następny pakiet dopiero po niej. Reticulum w Pythonie (`e40191b`) sam zwalnia blokadę po 5 s bez gotowości (stała `flow_control_timeout` interfejsu KISS), więc wstrzymanie gotowości nie zatrzyma komputera na czas długu ciszy. Pakiet ponad bufor stacja odrzuca i liczy, a ponowienie zapewnia LXMF; aplikacja stanowiska ogranicza ruch do 4 wiadomości w drodze, aby bufor wystarczał.
+- **Kierunek do komputera:** stacja przekazuje pakiety, które transport kieruje do interfejsu USB: ruch do tożsamości odbiorcy, ogłoszenia i zapytania o trasę.
+- **Limity:** pakiety z USB przechodzą przez interfejs P1 z jego priorytetami, długiem ciszy, limitem ogłoszeń i ciszą radiową. IFAC dotyczy tylko P1; pakiet z USB dostaje kod dostępu sieci przy nadaniu, a pakiet z P1 bez poprawnego kodu nie trafia do komputera. W konfiguracji węzła stanowiska ruchem do i od odbiorcy (rezerwa ≥50% budżetu nadawania z punktu 6 w [dostępie do kanału](#dostęp-do-kanału)) są pakiety do celów osiągalnych przez interfejs USB i pakiety z tego interfejsu, bo stacja nie ma karty odbiorcy.
 - **Diagnostyka:** liczniki pakietów w obu kierunkach i czas od ostatniego pakietu od komputera (`komputer_osp` na ekranie, pola w `INFO` i `RNS`).
 
-Ramki, polecenia i kontrolę przepływu sprawdzono w kodzie interfejsu KISS Reticulum `e40191b`; działanie ze stacją i wartość `bitrate` po stronie komputera ([stanowisko odbiorcze](stanowisko-osp.md#komputer-i-aplikacja-osp)) potwierdza T3. Interfejs przez USB nie jest dostępny w stacji schronienia.
+Ramki, polecenia i kontrolę przepływu sprawdzono w kodzie interfejsu KISS Reticulum `e40191b`; działanie ze stacją i wartość `bitrate` po stronie komputera ([stanowisko odbiorcze](stanowisko-osp.md#komputer-i-aplikacja-stanowiska)) potwierdza T3. Interfejs przez USB nie jest dostępny w stacji schronienia.
 
 ## USB do laptopa
 
@@ -119,13 +154,15 @@ Wyniki czułości i emisji ze stanowiska dotyczą toru RF producenta bez toru we
 
 ## Dwa wykonania
 
+Wariant zapasowy i pytanie do wydania (F99): pilotaż używa jednej rodziny, ESP32-S3 na gotowej płytce z SX1262, w [profilu LoRa](#profil-lora-pilotażu). Drugie niezależne wykonanie (inna rodzina MCU albo inny układ radiowy) to decyzja po pilotażu.
+
 Dwa wykonania stacji mają wspólny P1, wspólny protokół USB do laptopa i to samo zachowanie ekranu i przycisków, ale różne układy RF i rodziny MCU (W14). Wybór MCU zamyka D14, a ekranu D15.
 
 | Funkcja | Wykonanie A | Wykonanie B |
 |---|---|---|
 | Radio | TI CC1120 | ST S2-LPQTR; wariant dla 413–479 i 826–958 MHz |
 | MCU stacji | Nordic nRF52840; Bluetooth wyłączony, sposób trwałego wyłączenia i argumentacja RED w D14 | Espressif ESP32-S3 z pamięcią PSRAM; Wi-Fi i Bluetooth wyłączone, sposób trwałego wyłączenia i argumentacja RED w D14 |
-| Pamięć RAM | ≥256 KiB na port microReticulum, LXMF, tablicę tras i bufory; nRF52840 ma 256 KiB, czyli jest na granicy szacowanego zapotrzebowania, więc wymagany zmierzony zapas ≥30% w T3, przed projektem płytki R02; wariant zapasowy z większą pamięcią: nRF5340 (rdzeń aplikacyjny 512 KiB), RP2350 lub STM32U5 (D14) | 512 KiB SRAM i PSRAM; zmierzony zapas ≥30% w T3 |
+| Pamięć RAM | ≥256 KiB na port microReticulum, LXMF, tablicę tras i bufory; nRF52840 ma 256 KiB, a odtworzenie na komputerze daje 4,5% wolnej RAM w szczycie (warunek niespełniony); wymagany zmierzony zapas ≥30% w T3, przed projektem płytki R02; wariant zapasowy z większą pamięcią: nRF5340 (rdzeń aplikacyjny 512 KiB), RP2350 lub STM32U5 (D14) | 512 KiB SRAM i PSRAM; zmierzony zapas ≥30% w T3. Pilotaż używa jednej rodziny: ESP32-S3 na gotowej płytce z SX1262 (D14 dla pilotażu) |
 | Pamięć nieulotna | FRAM SPI 4 Mbit we wszystkich stacjach ([pamięć FRAM](oprogramowanie.md#trwałość-i-potwierdzenia)): Infineon CY15B104QN-50SXI (SOIC-8, w sprzedaży; sprawdzany na płytce nośnej N1); rekordy szyfrowane | FRAM SPI 4 Mbit: RAMXEED (dawniej Fujitsu) MB85RS4MTPF-G-BCERE1 (SOIC-8, w sprzedaży; ten sam footprint co w A); rekordy szyfrowane |
 | Ekran | graficzny monochromatyczny z pamięcią obrazu (memory LCD) lub e-papier, cyrylica i piktogramy | wykonanie innego producenta, ten sam układ treści |
 | Połączenie MCU–radio | SPI: SCK, MOSI, MISO, CS; IRQ; reset/shutdown | ten sam podział funkcji, inne piny |

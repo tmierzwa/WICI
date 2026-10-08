@@ -57,7 +57,7 @@ def load(spec: Path = SPEC) -> dict:
     """Read the canonical tables; returns texts, labels, buttons, menu, categories and phrases."""
     text = spec.read_text(encoding="utf-8")
     start = text.index("## Ekran i przyciski stacji")
-    end = text.index("## Stanowisko dyżurnego OSP")
+    end = text.index("## Stanowisko odbiorcze")
     section = text[start:end]
     found = tables(section)
     menu_table = next(t for t in found if t[0][:2] == ["Menu", "Działanie"])

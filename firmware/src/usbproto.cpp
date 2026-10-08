@@ -310,7 +310,7 @@ void Protocol::doConfigure(const json::Value& msg, int64_t seq) {
     if (!host_.prep()) { rejected(seq, "preparation mode required"); return; }
     store::Config c = store_.config();
     json::Value v;
-    // Konfiguracja węzła OSP (stanowisko-osp.md, „Stacja przy OSP”): bez adresu, karty OSP, fraz
+    // Konfiguracja węzła OSP (stanowisko-osp.md, „Stacja stanowiska”): bez adresu, karty OSP, fraz
     // i liczby stacji; z nich wychodzi się tylko jawnym "osp_node":false.
     if (json::field(msg, "osp_node", v)) {
         bool node = false;

@@ -209,7 +209,7 @@ void screenChanged() {
     screenDirty = true;
 }
 
-// Przypięte OSP z konfiguracji (configure, ODBIORCA ZAPASOWY): rezerwa czasu kanału dla aktywnej
+// Przypięte OSP z konfiguracji (configure, KLUCZ ZAPASOWY): rezerwa czasu kanału dla aktywnej
 // w interfejsie P1, trasy i tożsamości obu chronione przed usunięciem z pełnych tablic.
 void pinOsp() {
     if (!rnsOk || !storeOk) return;

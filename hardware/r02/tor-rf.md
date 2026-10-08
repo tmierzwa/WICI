@@ -1,5 +1,7 @@
 # WICI R02: tor RF i stos warstw
 
+**Wstrzymane do decyzji po pilotażu (przegląd praktyczny 2026-10-08, F99):** pilotaż używa stacji z gotowej płytki MCU z układem LoRa SX1262 ([koncepcja 08](../../docs/concept/08-plan-weryfikacji-i-decyzje.html)).
+
 **Status: 2026-10-08, przed schematem. Nie zamawiać.** Dokument zbiera referencje producentów, wybiera stos warstw, geometrię linii 50 Ω i części toru RF obu wykonań oraz oddziela to, co da się ustalić teraz, od tego, co rozstrzyga T4 (D10). Wymagania są w [radiu](../../docs/spec/radio.md) i [BOM stacji](../../docs/spec/bom-stacji.csv), lekcje z R01.3 w [lekcjach](lekcje.md#tor-rf). Materiały producentów czytano lokalnie i nie są w repozytorium. Oznaczenie „do sprawdzenia” dotyczy danych, których nie potwierdzono w karcie producenta.
 
 ## Referencje producentów
@@ -101,7 +103,7 @@ Wspólny tor z SAW (wariant b) odpada więc przy dostępnych częściach. Zostaj
 | Budżet czułości | czułość układu w P1 i strata toru wejściowego | wymagana czułość układu = −110 dBm minus strata toru wejściowego; zapis w radiu |
 | Amplituda TCXO | przebieg na EXT_XOSC i XIN z wybranym TCXO | obcięty sinus albo TCXO z wyjściem CMOS |
 | Niedopasowanie anteny | 60 s przy rozwartym i 60 s przy zwartym złączu z docelowym ESD i filtrem | moc i widmo bez zmian |
-| D10 (P1 albo LoRa) | całe T4 i T5 | przy LoRa zmieniają się referencje i TCXO, a stos 0,43 mm zostaje |
+| D10 (P1 albo LoRa) | porównanie P1/LoRa w terenie i T4 na stanowisku deweloperskim przed projektem; T4 na R02 może otworzyć wybór ponownie (warunki 1 i 4 D10) | przy LoRa zmieniają się referencje i TCXO, a stos 0,43 mm zostaje |
 
 ## Źródła
 

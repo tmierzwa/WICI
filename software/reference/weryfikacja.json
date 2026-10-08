@@ -1,7 +1,7 @@
 {
   "scope": "Reference model only; no physical hardware or packaged OS tested",
   "command": "python3 -m unittest discover -s software/reference -v",
-  "test_cases": 32,
+  "test_cases": 34,
   "result": "PASS",
   "datagram_sizes_exercised": [
     1,
@@ -607,9 +607,9 @@
   ],
   "source_hashes": {
     "reference.py": "30d4b56332ed336d8d1c6ca83bb786b823b318e12f541999550a532a0762f35e",
-    "test_reference.py": "01eab7b79b5f776296813a426b58bd9bdadb076a37b3ecbf3f9b07816eb4ea6b",
+    "test_reference.py": "961729097016de8420627eecc9ff2731374f7ba83f286f6366306daf012877db",
     "schema.sql": "f93c98118c4b5cd4d5d79bd0d704cba04da7058935b86e473092e3437203df7e",
-    "obliczenia.py": "4550b91221f765bc7e127aa84e83f3fac8d9b16a4790ece687b320eec26c9271"
+    "obliczenia.py": "3c4c2376e718cba07294e12a070254a80367596df46cdc9f8b7234b86ac91c66"
   },
   "runtime": {
     "python": "3.14.5",

@@ -1,5 +1,7 @@
 # WICI R02: architektura płytki stacji
 
+**Wstrzymane do decyzji po pilotażu (przegląd praktyczny 2026-10-08, F99):** pilotaż używa stacji z gotowej płytki MCU z układem LoRa SX1262 ([koncepcja 08](../../docs/concept/08-plan-weryfikacji-i-decyzje.html)).
+
 **Status: 2026-10-08, przed schematem. Nie zamawiać.** Dokument opisuje bloki R02, sygnały między nimi i budżet pinów obu wykonań. Porównuje też dwa możliwe podziały na płytki (krok 1 [kolejności prac](README.md#kolejność-prac)). Wszystko tutaj wynika z wymagań, a nie z wyników prób, więc nie czeka na T3–T5. Rzeczy zależne od prób są wymienione na końcu.
 
 Źródła: [elektronika](../../docs/spec/elektronika.md) (zasilanie i wymagania R02), [radio](../../docs/spec/radio.md#dwa-wykonania), [oprogramowanie](../../docs/spec/oprogramowanie.md#ekran-i-przyciski-stacji), przypisanie sygnałów stanowiska N1 ([płytka nośna](../dev-bench/plytka-nosna.md), `firmware/src/board_bench_n1.h` i `board_bench_b.h`). Projekt bloku zasilania jest w [zasilaniu](zasilanie.md), obudowa w [obudowie](obudowa.md), a tor RF i stos warstw w [torze RF](tor-rf.md).

@@ -1,5 +1,7 @@
 # WICI R02: blok zasilania
 
+**Wstrzymane do decyzji po pilotażu (przegląd praktyczny 2026-10-08, F99):** pilotaż używa stacji z gotowej płytki MCU z układem LoRa SX1262 ([koncepcja 08](../../docs/concept/08-plan-weryfikacji-i-decyzje.html)).
+
 **Status: 2026-10-08, projekt przed schematem. Nie zamawiać.** Blok jest wspólny dla obu wykonań i nie zależy od prób T3–T5. Dokument dobiera części i wartości elementów do wymagań z [elektroniki](../../docs/spec/elektronika.md#zasilanie-stacji) i [BOM stacji](../../docs/spec/bom-stacji.csv), liczy prąd w stanie wyłączonym i opisuje próby, które da się zrobić teraz na płytkach ewaluacyjnych.
 
 Liczby pochodzą z kart producentów odczytanych 2026-10-08 (lista w [źródłach](#źródła)). Ceny i stany są z DigiKey z tego dnia. Oznaczenie „do sprawdzenia” dotyczy danych, których nie potwierdzono w karcie albo które wymagają pomiaru.

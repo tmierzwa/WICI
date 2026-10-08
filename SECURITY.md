@@ -8,7 +8,7 @@ Podatności **nie zgłaszaj publicznie w Issues**. Użyj [prywatnego zgłoszenia
 
 Zgłaszaj prywatnie zwłaszcza:
 
-- obejście weryfikacji nadawcy, podszycie pod odbiorcę (OSP) lub ujawnienie danych mieszkańców;
+- obejście weryfikacji nadawcy, podszycie się pod odbiorcę (stanowisko odbiorcze) lub ujawnienie danych mieszkańców;
 - sposób wyłudzenia potwierdzenia RECEIVED bez trwałego zapisu;
 - obejście budżetu czasu nadawania, ciszy radiowej lub polecenia ZNISZCZ DANE;
 - polecenia protokołu USB `configure`, `export`, `import` lub aktualizacja oprogramowania wykonane poza trybem przygotowania (przycisk wewnątrz obudowy); `destroy` lub `silence` przez USB wykonane bez potwierdzenia przyciskiem na stacji w ciągu 30 s; ZNISZCZ DANE uruchomione wiadomością radiową (radio nigdy go nie uruchamia);

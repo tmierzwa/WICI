@@ -1,5 +1,7 @@
 # WICI R02: ustalenia i lekcje z R01.3
 
+**Wstrzymane do decyzji po pilotażu (przegląd praktyczny 2026-10-08, F99):** pilotaż używa stacji z gotowej płytki MCU z układem LoRa SX1262 ([koncepcja 08](../../docs/concept/08-plan-weryfikacji-i-decyzje.html)).
+
 Kontroler R01.3 (STM32F103 z modułem CC1120 według referencji TI, modem USB/KISS) powstał w wersji 0.4, gdy węzłem sieci był laptop. W 0.5 stacja jest samodzielna, więc kontroler stracił rolę: za mało RAM na stos Reticulum (D14), zasilanie z VBUS i kontrakt KISS z limitem 5 s nie pasują do stacji. Rewizje R01.2 i R01.3 doszły do zweryfikowanych plików produkcyjnych kontrolera, ale płytki nigdy nie zamówiono ani nie uruchomiono. Poniżej jest wszystko, co z tej pracy ma wartość dla R02. Pliki CAD, raporty i skrypty R01.3 są w historii Git do commitu `ea32e7c`.
 
 ## Tor RF

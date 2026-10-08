@@ -1214,7 +1214,7 @@ class HostUnitTests(unittest.TestCase):
         # Zgłoszenie zapisane przed przełączeniem (do tożsamości głównej, bez nadania).
         before = ["K OK 0", "K OK 0", "K OK 0", "K OK 0", "K DOWN 0", "K OK 0", "K OK 0", "K OK 0", "K OK 0", "K OK 0"]
         to_services = before + ["K OK 0", "K DOWN 0", "K DOWN 0", "K DOWN 0", "K OK 0"] + ["K DOWN 0"] * 16 + ["R", "K OK 0", "R"]
-        # USŁUGI: OGŁOŚ ADRES (wynik), powrót, WYCISZ DŹWIĘK, ODBIORCA ZAPASOWY.
+        # USŁUGI: OGŁOŚ ADRES (wynik), powrót, WYCISZ DŹWIĘK, KLUCZ ZAPASOWY.
         services = ["K OK 0", "R", "K OK 0", "R", "K DOWN 0", "K OK 0", "R", "K DOWN 0", "K OK 0", "R"]
         # Po przełączeniu: zgłoszenie W CIĄGU DOBY bez frazy, nadane do zapasowej tożsamości; potem ZNISZCZ DANE.
         script = to_services + services + ["K UP 0", "K DOWN 0", "K UP 0", "K OK 0", "R", "K BACK 0", "K UP 0", "K UP 0", "K UP 0",
@@ -1228,7 +1228,7 @@ class HostUnitTests(unittest.TestCase):
                                              "destroy", "main"])
         self.assertEqual(self.lines(s[0])[-2:], [labels["przekazanie_zmiany"][0], labels["uslugi"][0]])
         self.assertEqual([inv for inv, _ in s[0][2]], [False, False, False, False, True])
-        self.assertEqual(self.lines(s[1])[:4], [labels["oglos_adres"][0], labels["wycisz_dzwiek"][0], labels["odbiorca_zapasowy"][0],
+        self.assertEqual(self.lines(s[1])[:4], [labels["oglos_adres"][0], labels["wycisz_dzwiek"][0], labels["klucz_zapasowy"][0],
                                                 labels["zniszcz_dane"][0]])
         # OGŁOŚ ADRES: zlecenie bez sekwencji, wynik, powrót do USŁUG.
         self.assertIn("announce requested", out)
@@ -1240,7 +1240,7 @@ class HostUnitTests(unittest.TestCase):
         # WYCISZ DŹWIĘK przełącza pozycję na WŁĄCZ DŹWIĘK; wyciszenie widać na ekranie głównym (wiersz 4, pusta kolejka).
         self.assertEqual(self.lines(s[4])[1], labels["wlacz_dzwiek"][0])
         self.assertIn(texts["dzwiek_wyciszony"][0], self.lines(s[9]))
-        self.assertEqual(" ".join(self.lines(s[5])).strip(), texts["odbiorca_zapasowy"][0])
+        self.assertEqual(" ".join(self.lines(s[5])).strip(), texts["klucz_zapasowy"][0])
         self.assertIn("log switched to backup recipient", out)
         # Zgłoszenie zapisane przed przełączeniem (jedno w locie naraz) idzie do zapasowej tożsamości OSP (0xDD..),
         # nigdy do głównej.
@@ -1374,7 +1374,7 @@ class HostUnitTests(unittest.TestCase):
         self.assertIn("store live 0 inbox 0 pending 0 latest 0 configured 1 address Jeden", out)
 
     def test_usb_configure_osp_node(self):
-        # D19 (stanowisko-osp.md, „Stacja przy OSP”): węzeł OSP bez adresu, karty OSP, fraz i liczby
+        # D19 (stanowisko-osp.md, „Stacja stanowiska”): węzeł OSP bez adresu, karty OSP, fraz i liczby
         # stacji, z kodem dostępu sieci; bez zgłoszeń i TEST; wyjście tylko jawnym "osp_node":false.
         def configure(seq, **fields):
             return "> " + json.dumps({"usb": 1, "seq": seq, "type": "configure", **fields}, ensure_ascii=False)

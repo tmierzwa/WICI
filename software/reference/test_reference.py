@@ -79,6 +79,20 @@ class AirContract(unittest.TestCase):
             parse_frame(forged)
 
 
+class LoraAirtime(unittest.TestCase):
+    """Check the LoRa time-on-air model against the Semtech formula and the RNode-style split."""
+
+    def test_known_frame(self):
+        from obliczenia import lora_frame_seconds
+        # SF7, 125 kHz, CR 4/5, 8-symbol preamble, explicit header, CRC, 10 B: 28 payload symbols, 41.216 ms.
+        self.assertAlmostEqual(lora_frame_seconds(10, 7, preamble_symbols=8), 0.041216, places=6)
+
+    def test_split_above_single_frame(self):
+        from obliczenia import lora_frame_seconds, lora_tx_seconds
+        self.assertAlmostEqual(lora_tx_seconds(254, 7), lora_frame_seconds(255, 7))
+        self.assertAlmostEqual(lora_tx_seconds(255, 7), lora_frame_seconds(255, 7) + lora_frame_seconds(2, 7))
+
+
 class Messages(unittest.TestCase):
     """Exercise all SA1 shapes and byte limits, including Polish UTF-8."""
 

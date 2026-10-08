@@ -19,7 +19,7 @@ const char* const LANGUAGE_NAMES[ui_texts::LANGS] = {"POLSKI", "УКРАЇНСЬ
 const uint16_t PEOPLE_VALUES[] = {1, 2, 5, 10, 20, 50, 100};
 constexpr size_t PEOPLE_CHOICES = sizeof(PEOPLE_VALUES) / sizeof(PEOPLE_VALUES[0]) + 1;
 constexpr uint8_t MENU_ITEMS = static_cast<uint8_t>(ui_texts::MENU_ITEMS);
-constexpr size_t SERVICE_ITEMS = 4;  // OGŁOŚ ADRES, WYCISZ/WŁĄCZ DŹWIĘK, ODBIORCA ZAPASOWY, ZNISZCZ DANE
+constexpr size_t SERVICE_ITEMS = 4;  // OGŁOŚ ADRES, WYCISZ/WŁĄCZ DŹWIĘK, KLUCZ ZAPASOWY, ZNISZCZ DANE
 constexpr Button SEQUENCE[4] = {Button::UP, Button::DOWN, Button::UP, Button::OK};
 constexpr Id STATE_TEXTS[6] = {Id::STAN_1, Id::STAN_2, Id::STAN_3, Id::STAN_4, Id::STAN_5, Id::STAN_6};
 constexpr Id URGENCY_TEXTS[3] = {Id::PILNOSC_0, Id::PILNOSC_1, Id::PILNOSC_2};
@@ -201,7 +201,7 @@ uint8_t Model::menuIndex(ui_texts::Menu item) const {
 }
 
 size_t Model::services(Service out[]) const {
-    // Węzeł OSP nie ma adresu LXMF ani karty OSP: bez OGŁOŚ ADRES i ODBIORCA ZAPASOWY.
+    // Węzeł OSP nie ma adresu LXMF ani karty OSP: bez OGŁOŚ ADRES i KLUCZ ZAPASOWY.
     size_t n = 0;
     if (!node()) out[n++] = Service::ANNOUNCE;
     out[n++] = Service::MUTE;
@@ -1133,7 +1133,7 @@ void Model::render(const Status& s, Lines& out) {
                 switch (entries[i]) {
                     case Service::ANNOUNCE: items[i] = label(Label::OGLOS_ADRES, lang_); break;
                     case Service::MUTE: items[i] = label(muted_ ? Label::WLACZ_DZWIEK : Label::WYCISZ_DZWIEK, lang_); break;
-                    case Service::BACKUP: items[i] = label(Label::ODBIORCA_ZAPASOWY, lang_); break;
+                    case Service::BACKUP: items[i] = label(Label::KLUCZ_ZAPASOWY, lang_); break;
                     case Service::DESTROY: items[i] = label(Label::ZNISZCZ_DANE, lang_); break;
                 }
             }
@@ -1141,7 +1141,7 @@ void Model::render(const Status& s, Lines& out) {
             break;
         }
         case Screen::BACKUP:
-            t.add(text(Id::ODBIORCA_ZAPASOWY, lang_));
+            t.add(text(Id::KLUCZ_ZAPASOWY, lang_));
             renderText(t, window, out, first);
             break;
         case Screen::DESTROY:

@@ -2,7 +2,7 @@
 // Dane i działania stacji dla ekranu (ui::Host) nad magazynem FRAM i warstwą aplikacji:
 // lista WIADOMOŚCI (własne zgłoszenia i TEST z kolejki w najnowszej rewizji, odpowiedzi
 // i komunikaty ze skrzynki, najnowsze najpierw), frazy z konfiguracji albo domyślne,
-// zgłoszenie z kreatora, rewizje, anulowanie, TEST, alarmy, ODBIORCA ZAPASOWY i ZNISZCZ DANE.
+// zgłoszenie z kreatora, rewizje, anulowanie, TEST, alarmy, KLUCZ ZAPASOWY i ZNISZCZ DANE.
 // Bez zależności od Arduino; sprawdzany na komputerze razem z magazynem w RAM.
 #pragma once
 

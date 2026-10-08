@@ -59,10 +59,10 @@
   <li><a href="../../software/reference/README.md">Model i dowody</a>: ramki, komunikaty i transakcje; <a href="../../software/reference/wyniki.json">wyniki obliczeń</a>.</li>
   <li><a href="../../hardware/dev-bench/README.md">Stanowisko deweloperskie</a>: płytki rozwojowe i moduły producentów połączone <a href="../../hardware/dev-bench/plytka-nosna.md">płytką nośną N1</a> do prób T1–T4; <a href="../../hardware/r02/README.md">projekt płytki R02</a> z <a href="../../hardware/r02/lekcje.md">lekcjami z kontrolera R01.3</a> (jego CAD i raporty są w historii Git).</li>
   <li><a href="../spec/bom-stacji.csv">BOM całej stacji</a>: kandydaci elementów, nie zakwalifikowana oferta produkcji.</li>
-  <li><a href="../spec/karta.md">Karta obsługi</a>: tekst jednej dwustronnej kartki A4 przy stacji; teksty ekranu pochodzą z <a href="../spec/oprogramowanie.md">specyfikacji oprogramowania</a>.</li>
+  <li><a href="../spec/karta.md">Karta obsługi</a>: tekst jednej dwustronnej kartki A4 przy stacji; teksty ekranu pochodzą ze <a href="../spec/oprogramowanie.md">specyfikacji oprogramowania</a>.</li>
 </ul>
 
-<p>Obliczenia rozdziału 06 są oszacowaniami projektowymi z podanymi wzorami. Rozdział 08 oddziela istniejące warunki odbioru od nowych propozycji organizacji prób. Rozdział 02 opisuje proponowany sposób pracy; nie stanowi uzgodnienia z konkretną gminą ani OSP.</p>
+<p>Obliczenia rozdziału 06 są oszacowaniami projektowymi z podanymi wzorami. Rozdział 08 oddziela istniejące warunki odbioru od nowych propozycji organizacji prób. Rozdział 02 opisuje proponowany sposób pracy; nie stanowi uzgodnienia z konkretną gminą ani stanowiskiem odbiorczym.</p>
 
 <h2 id="implementacje-i-dokumentacja-pierwotna">Implementacje i dokumentacja pierwotna</h2>
 
@@ -72,8 +72,9 @@
 <th scope="col">Zastosowanie w analizie</th>
 </tr></thead><tbody>
 <tr><td><a href="https://reticulum.network/manual/understanding.html">Reticulum: działanie</a></td><td>role tożsamości, transportu i fizycznych interfejsów</td></tr>
-<tr><td><a href="https://reticulum.network/manual/interfaces.html">Reticulum: interfejsy</a></td><td>RNode, KISS i możliwość własnego adaptera</td></tr>
-<tr><td><a href="https://github.com/markqvist/Reticulum/blob/master/RNS/Interfaces/KISSInterface.py">KISSInterface: kod</a></td><td>limit czasu kontroli przepływu (5 s); w 0.5 dotyczy łącza między komputerem stanowiska OSP a stacją przy OSP (D19), dlatego stacja buforuje pakiety zamiast wstrzymywać gotowość</td></tr>
+<tr><td><a href="https://reticulum.network/manual/interfaces.html">Reticulum: interfejsy</a></td><td>RNode (<code>RNodeInterface</code>: parametry LoRa interfejsu), KISS i możliwość własnego adaptera</td></tr>
+<tr><td><a href="https://github.com/markqvist/RNode_Firmware">RNode Firmware</a></td><td>format ramek LoRa w eterze i podział pakietu Reticulum na dwie ramki; wzorzec zgodności interfejsu LoRa stacji (do potwierdzenia w T3)</td></tr>
+<tr><td><a href="https://github.com/markqvist/Reticulum/blob/master/RNS/Interfaces/KISSInterface.py">KISSInterface: kod</a></td><td>limit czasu kontroli przepływu (5 s); w 0.5 dotyczy łącza między komputerem stanowiska a stacją stanowiska (D19), dlatego stacja buforuje pakiety zamiast wstrzymywać gotowość</td></tr>
 <tr><td><a href="https://github.com/markqvist/LXMF">LXMF: projekt</a></td><td>wiadomości i opcjonalne węzły przechowywania</td></tr>
 <tr><td><a href="https://github.com/markqvist/LXMF/blob/master/LXMF/LXMessage.py">LXMessage: kod</a></td><td>wybór pakietu lub zasobu; narzut trzeba zmierzyć dla wydania</td></tr>
 <tr><td><a href="https://github.com/markqvist/NomadNet">NomadNet</a></td><td>klient tekstowy i strony Micron</td></tr>
@@ -84,18 +85,19 @@
 <tr><td><a href="https://github.com/jrl290/RTNode-HeltecV4">RTNode</a>, <a href="https://github.com/dobrevit/RetiMesh_Node">RetiMesh Node</a></td><td>samodzielne węzły transportowe Reticulum na ESP32-S3 z LoRa; wzorzec przekaźnika bez komputera</td></tr>
 <tr><td><a href="https://github.com/torlando-tech/pyxis">pyxis</a>, <a href="https://github.com/thicketgarden/thicket-firmware">thicket</a></td><td>klienty LXMF z ekranem i klawiaturą na ESP32-S3 i nRF52840; wzorzec stacji z własnym interfejsem; projekty społecznościowe, ze znanymi błędami</td></tr>
 <tr><td><a href="https://www.ti.com/lit/ds/symlink/cc1120.pdf">TI CC1120: karta katalogowa</a></td><td>funkcje układu RF; nie dowód zasięgu P1</td></tr>
-<tr><td><a href="https://www.st.com/resource/en/datasheet/s2-lp.pdf">ST S2-LP: karta katalogowa</a></td><td>drugie wykonanie RF; osobne dopasowanie i konfiguracja</td></tr>
+<tr><td><a href="https://www.st.com/resource/en/datasheet/s2-lp.pdf">ST S2-LP: karta katalogowa</a></td><td>drugie wykonanie RF P1 (wariant zapasowy); osobne dopasowanie i konfiguracja</td></tr>
 <tr><td><a href="https://www.ti.com/tool/CC1120EMK-868-915">TI CC1120EMK-868-915</a> i <a href="https://www.ti.com/tool/BOOST-CCEMADAPTER">BOOST-CCEMADAPTER</a></td><td>moduły radiowe toru referencyjnego TI i adapter złączy EM na stanowisku deweloperskim A</td></tr>
 <tr><td><a href="https://www.st.com/en/evaluation-tools/x-nucleo-s2868a2.html">ST X-NUCLEO-S2868A2</a></td><td>płytka radiowa S2-LP 868 MHz na stanowisku deweloperskim B</td></tr>
 <tr><td><a href="https://www.nordicsemi.com/Products/Development-hardware/nRF52840-DK">Nordic nRF52840-DK</a> i <a href="https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-devkitc-1/index.html">Espressif ESP32-S3-DevKitC-1</a></td><td>płytki rozwojowe obu rodzin MCU stanowiska deweloperskiego</td></tr>
 <tr><td><a href="https://www.adafruit.com/product/4694">Adafruit 4694</a> i <a href="https://www.adafruit.com/product/4719">Adafruit 4719</a></td><td>ekran Sharp LS027B7DH01 i pamięć FRAM MB85RS4MT stanowiska przy okablowaniu przewodami; płytka nośna N1 ma te same układy bez płytek pośrednich</td></tr>
-<tr><td><a href="https://www.semtech.com/products/wireless-rf/lora-connect/sx1276">Semtech SX1276: karta katalogowa</a></td><td>katalogowa czułość LoRa w porównaniu z P1 (rozdział 04); nie pomiar</td></tr>
+<tr><td><a href="https://www.semtech.com/products/wireless-rf/lora-connect/sx1276">Semtech SX1276: karta katalogowa</a></td><td>porównanie historyczne czułości LoRa z P1; rozdział 04 używa SX1262; nie pomiar</td></tr>
+<tr><td><a href="https://www.semtech.com/products/wireless-rf/lora-connect/sx1262">Semtech SX1262</a></td><td>układ radiowy stacji pilotażowej: katalogowa czułość i prąd odbioru; wzór czasu nadawania LoRa w karcie katalogowej SX1261/2, rozdz. 6.1.4; dane katalogowe, nie pomiar</td></tr>
 <tr><td>M. Hata, <em>Empirical formula for propagation loss in land mobile radio services</em>, IEEE Transactions on Vehicular Technology, VT-29(3), 1980</td><td>model Okumury-Haty użyty jako ostrzeżenie w rozdziale 06</td></tr>
 <tr><td><a href="https://www.zetetic.net/sqlcipher/license/">SQLCipher: licencja</a> i <a href="https://pypi.org/project/sqlcipher3/">sqlcipher3</a></td><td>kandydat do szyfrowania bazy w spoczynku (D13)</td></tr>
 <tr><td><a href="https://sqlite.org/atomiccommit.html">SQLite: atomic commit</a> i <a href="https://sqlite.org/backup.html">backup API</a></td><td>warunki trwałości i kontrolowanej kopii bazy</td></tr>
 </tbody></table></div>
 
-<p>Licencja WICI nie zastępuje licencji zależności. <a href="https://github.com/markqvist/Reticulum/blob/e40191b3d193b46b7f2d8a44424a594cd758839b/LICENSE">LICENSE Reticulum</a> oraz <a href="https://github.com/markqvist/LXMF/blob/c3ff2d6dc2f256daab896dadc044dd5a913ecbb7/LICENSE">LICENSE LXMF</a> zawierają dodatkowe ograniczenia dotyczące celowego krzywdzenia ludzi i tworzenia zbiorów do treningu AI. Te warunki nie dają się pogodzić z GPL, dlatego kod WICI jest od 2026-10-07 na licencji MIT. Pakiet START i pakiet stanowiska OSP, który zawiera Reticulum i LXMF w Pythonie (D19), dołączają licencje Reticulum i LXMF, a ich użytkownicy podlegają ich warunkom. Obecne repozytorium nie dołącza kodu Reticulum/LXMF; analiza nie oznacza zatwierdzenia przyszłej paczki zależności.</p>
+<p>Licencja WICI nie zastępuje licencji zależności. <a href="https://github.com/markqvist/Reticulum/blob/e40191b3d193b46b7f2d8a44424a594cd758839b/LICENSE">LICENSE Reticulum</a> oraz <a href="https://github.com/markqvist/LXMF/blob/c3ff2d6dc2f256daab896dadc044dd5a913ecbb7/LICENSE">LICENSE LXMF</a> zawierają dodatkowe ograniczenia dotyczące celowego krzywdzenia ludzi i tworzenia zbiorów do treningu AI. Te warunki nie dają się pogodzić z GPL, dlatego kod WICI jest od 2026-10-07 na licencji MIT. Pakiet START i pakiet stanowiska, który zawiera Reticulum i LXMF w Pythonie (D19), dołączają licencje Reticulum i LXMF, a ich użytkownicy podlegają ich warunkom. Obecne repozytorium nie dołącza kodu Reticulum/LXMF; analiza nie oznacza zatwierdzenia przyszłej paczki zależności.</p>
 
 <p>Rozważone drogi rozstrzygnięcia; wybrano drugą:</p>
 

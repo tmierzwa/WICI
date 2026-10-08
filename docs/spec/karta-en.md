@@ -4,7 +4,7 @@ English version of the [station card](karta.md). Text in quotation marks is quot
 
 ## Page 1: start-up
 
-**WICI STATION – MESSAGES TO THE REQUEST RECIPIENT (OSP) WHEN PHONES DO NOT WORK. NOT A REPLACEMENT FOR 112: IF A PHONE WORKS, CALL 112.**
+**WICI STATION – MESSAGES TO THE REQUEST RECIPIENT WHEN PHONES DO NOT WORK. NOT A REPLACEMENT FOR 112: IF A PHONE WORKS, CALL 112.**
 
 Buttons: UP, DOWN, OK, BACK. The first press on a dark screen only switches on the light. Replies from the recipient arrive in Polish.
 
@@ -14,7 +14,7 @@ Buttons: UP, DOWN, OK, BACK. The first press on a dark screen only switches on t
 4. Choose the language. Wait for “RADIO ON” (up to 1 min). Check the address: “ADDRESS: [x] – IS THIS THE PLACE? OK = YES / BACK = NO”. Wrong address or “STATION DOES NOT HAVE YOUR ADDRESS – USE THE PAPER FORM”: requests only on the paper form (page 2).
 5. The station proposes a TEST: OK. (Later TEST from the menu: TEST → OK.) Screen: “TEST SCHEDULED IN ABOUT [mm] MIN – DO NOT SWITCH OFF. BACK = CANCEL”, then “TEST SENT – WAITING FOR RECIPIENT”.
 6. Wait for “RECIPIENT SAVED IT”, then “RECIPIENT READ IT”. A message from the recipient asks to pause the TEST? TEST → PAUSE; screen: “TEST PAUSED AT RECIPIENT'S REQUEST”. Do not send a TEST until told otherwise.
-7. After 30 min without a reply the station shows “NO CONFIRMATION FOR [n] MIN – SEND A RUNNER WITH THE FORM” → page 2: runner with the form.
+7. After 30 min without a reply the station shows “NO CONFIRMATION FOR [n] MIN – RUNNER WITH THE FORM IF THE ROUTE IS SAFE” → page 2: runner.
 
 “RADIO ON” does not mean that help is available. “LAST CONTACT WITH RECIPIENT: [czas] AGO” shows when the recipient last replied; a long time is not a fault. A switched-on station passes on messages of other shelters: do not switch it off without need.
 
@@ -24,15 +24,17 @@ Buttons: UP, DOWN, OK, BACK. The first press on a dark screen only switches on t
 
 Stages on the screen: “SAVED IN STATION – WAITING TO SEND” → “SENDING – ATTEMPT [n], NEXT IN [m] MIN” → “RECIPIENT SAVED IT” → “RECIPIENT READ IT” → decision: “HELP DISPATCHED (DECISION, NOT ARRIVAL TIME)”, “FORWARDED (FIRE SERVICE / AMBULANCE / COUNTY)”, “RECIPIENT CANNOT HELP NOW – READ THE REPLY” or “CLOSED”. Change or end of the need: MESSAGES → own request → “CHANGE PEOPLE COUNT / CHANGE URGENCY / NEED RESOLVED”.
 
-**“NO CONFIRMATION FOR [n] MIN – SEND A RUNNER WITH THE FORM”**, “QUEUE FULL – REQUEST NOT SAVED. USE THE PAPER FORM”, “STATION MEMORY ERROR – REQUEST NOT SAVED. FORM + RUNNER”: fill in the form in two copies; one stays, the runner carries the other. OK silences the alarm sound; the text and the light stay.
+**“NO CONFIRMATION FOR [n] MIN – RUNNER WITH THE FORM IF THE ROUTE IS SAFE”**, “QUEUE FULL – REQUEST NOT SAVED. USE THE PAPER FORM”, “STATION MEMORY ERROR – REQUEST NOT SAVED. FORM; RUNNER IF THE ROUTE IS SAFE”: fill in the form in two copies; one stays, the runner carries the other. OK silences the alarm sound; the text and the light stay.
 
-**Danger to life.** 1) Give first aid. 2) Phone works? Call 112. 3) Safe route? Send a runner. Send by radio at the same time (“OK = ALSO SEND BY RADIO”).
+**Runner only by a safe route.** No runner during fire, flooding, collapse, contamination, shelling, an announced air-raid or other public alarm, or a ban on going out. The runner takes the route written in the log, preferably two people together; write down the time of leaving and of the expected return. **Nobody can go out:** do not send anyone. The request stays in the station, which keeps retrying. Call the recipient or a neighbouring shelter on PMR446, write the time and the reason in the log, check the route again.
 
-**Radio silence.** “RADIO SILENCE – NOT TRANSMITTING. URGENT: RUNNER”. Request saved during silence: “SAVED – NOT SENT UNTIL SILENCE ENDS”. Switch on the CISZA (SILENCE) switch only when ordered; write the order in the log.
+**Danger to life.** 1) Give first aid. 2) Phone works? Call 112. 3) Safe route? Send a runner; if not – PMR446. Send by radio at the same time (“OK = ALSO SEND BY RADIO”).
+
+**Radio silence.** “RADIO SILENCE – NOT TRANSMITTING. URGENT: RUNNER”: a runner only by a safe route. Request saved during silence: “SAVED – NOT SENT UNTIL SILENCE ENDS”. Switch on the CISZA (SILENCE) switch only when ordered; write the order in the log.
 
 **Changing cells.** “REPLACE CELLS WITHIN 1 H”. Best connect 12 V first. Without 12 V: hold the main switch 2 s, wait for “SWITCHING OFF – WAIT, SAVING”, then “CELLS CAN BE REMOVED”. Replace the whole set (+ to the + mark), press the main switch. Requests stay in the station.
 
-**Message about leaving or evacuation.** “ORDER TO LEAVE OR EVACUATE? CONFIRM ON PUBLIC RADIO OR WITH THE RUNNER”. Do not leave on the basis of a station message alone: confirm through a second channel (the radio receiver from the kit, the runner).
+**Message about leaving or evacuation.** “ORDER TO LEAVE OR EVACUATE? CONFIRM ON PUBLIC RADIO OR WITH THE RUNNER”. Do not leave on the basis of a station message alone: confirm through a second channel (the radio receiver from the kit, the runner). No second channel: get people ready to leave, try to confirm every 15 min (radio, PMR446), write it in the log. **A danger on the spot (fire, smoke, CO, flooding, collapse, an order from services on the spot) does not wait for confirmation: lead people out at once under the building's evacuation rules.**
 
 **DESTROY DATA – only if capture of the station threatens.** STATUS → SERVICES → DESTROY DATA. Screen: “IRREVERSIBLE – STATION WILL STOP WORKING; ONLY IF CAPTURE THREATENS”; confirmation: UP, DOWN, UP, OK. Never on the basis of a radio message. Write it in the log.
 

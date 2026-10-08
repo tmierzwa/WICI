@@ -11,7 +11,7 @@
 //   (PROVE_APP): pakiet okazjonalny do stacji wraca z potwierdzeniem transportowym, jak dawny
 //   datagram "ack" stacji; pakiet odrzucony (zły format, obcy adresat, nadawca spoza zaufania)
 //   nie dostaje dowodu. LXMF przyjdzie w następnym etapie.
-// - konfiguracja węzła OSP (D19, docs/spec/stanowisko-osp.md, „Stacja przy OSP”): bez celu
+// - konfiguracja węzła OSP (D19, docs/spec/stanowisko-osp.md, „Stacja stanowiska”): bez celu
 //   "wici.sa1" i bez ogłoszeń własnych, z drugim interfejsem Reticulum przez USB do komputera
 //   stanowiska (ramki KISS z kontrolą przepływu, kiss.h; radio.md, „Interfejs Reticulum przez USB”).
 //   Pakiet z USB przechodzi do stosu, gdy kolejka P1 ma miejsce. Cele ogłoszone przez komputer

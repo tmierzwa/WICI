@@ -119,7 +119,7 @@ public:
     // Przyczyna alarmu trwa (dioda alarmu): potwierdzenie OK gasi dźwięk, nie diodę.
     bool alarmCause(uint32_t nowS) const { Alarm a; return alarm(nowS, a, true); }
     void ackAlarm(const Alarm& alarm);
-    // Po ODBIORCA ZAPASOWY: niepotwierdzone intencje do nadania od razu, już do tożsamości zapasowej.
+    // Po KLUCZ ZAPASOWY: niepotwierdzone intencje do nadania od razu, już do tożsamości zapasowej.
     void backupSwitched();
 
 private:

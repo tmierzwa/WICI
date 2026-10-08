@@ -4,7 +4,7 @@ Projekt jest prototypem. Zmiany mają upraszczać wykonanie, usuwać zależnoś�
 
 ## Jak zgłosić zmianę
 
-1. Dla większej zmiany otwórz [Issue](https://github.com/tmierzwa/WICI/issues/new/choose): problem, proponowany zakres i warunek sprawdzenia. Małe poprawki można wysłać bezpośrednio jako pull request.
+1. Dla większej zmiany otwórz [Issue](https://github.com/tmierzwa/WICI/issues/new/choose): problem, proponowany zakres i warunek sprawdzenia. Małe poprawki można wysłać bezpośrednio jako zgłoszenie zmiany (pull request, PR).
 2. Pracuj w swojej gałęzi. Opisz, co zmienia PR i jak to sprawdzono; wymagane punkty podaje szablon PR.
 3. Parametry i kontrakty stacji zmieniaj w `docs/spec/`. Potrzeby, uzasadnienia, opcje i analizę wykonalności utrzymuj w [docs/concept](docs/concept/index.html). Aktualizuj powiązane wymagania i próby; odróżniaj założenie od pomiaru. Nie twórz drugiej pełnej kopii specyfikacji.
 4. Zmiana kodu kontraktów wymaga przypadku, który pokazuje problem, i wyniku odpowiednich testów. Raport aktualizuj dopiero po ich wykonaniu.
@@ -13,13 +13,27 @@ Projekt jest prototypem. Zmiany mają upraszczać wykonanie, usuwać zależnoś�
 
 ## Od czego zacząć
 
-Oprogramowanie stacji w [firmware/](firmware/README.md) działa na stanowiskach A i B (ze stosem Reticulum z portu microReticulum, bez LXMF; jeszcze nie uruchomione na sprzęcie), a płytki R02 jeszcze nie ma. Zadania, które można wykonać teraz:
+Oprogramowanie stacji w [firmware/](firmware/README.md) skompilowano dla stanowisk deweloperskich A i B, ze stosem Reticulum z portu microReticulum, bez LXMF; nie uruchomiono go jeszcze na sprzęcie. Pilotaż używa gotowej płytki ESP32-S3 z układem LoRa SX1262; płytka R02 jest wstrzymana do decyzji po pilotażu.
 
-1. Zmontować płytkę nośną N1, uruchomić obraz `bench-n1` albo `bench-b` według [uruchomienia](hardware/dev-bench/uruchomienie.md) i zgłosić raport z kroków A1–A5 albo B1–B4. Kod oprogramowania układowego trafia do `firmware/` (licencja MIT); ramka P1 jest już w `firmware/src/p1frame.cpp`.
-2. Uruchomić obraz ze stosem na płytkach rozwojowych nRF52840 i ESP32-S3 i wymienić pakiety z implementacją Reticulum w Pythonie przez łącze P1; na komputerze ta wymiana już przechodzi z emulatorem łącza ([próba zgodności](firmware/README.md#próba-zgodności-z-reticulum)). To pierwsza część T3; w raporcie podaj zapas RAM zmierzony poleceniem `RNS` i listę prób na sprzęcie z tej sekcji.
-3. Rozszerzyć emulator łącza P1 programu `host` (`firmware/src/host/node_host.cpp`: czas TX z modelu ramki, dług ciszy 12×; kolejka do 4 datagramów jest w interfejsie P1) o CCA, odroczenia i kolizje między kilkoma węzłami ([radio.md](docs/spec/radio.md)).
-4. Dodać do modelu protokół USB laptop–stacja (D17) i dziennik FRAM z długiem ciszy.
-5. Zbudować [stanowisko deweloperskie](hardware/dev-bench/README.md) A lub B z kupnych płytek i wykonać na nim pierwsze pomiary P1 poleceniami pomiarowymi z [radio.md](docs/spec/radio.md); wynik jest wejściem do projektu płytki [R02](hardware/r02/README.md).
+### Małe zadania bez sprzętu
+
+Każde wymaga tylko Pythona 3.12 i edytora. Recenzję wykonuje opiekun repozytorium; przy zadaniu 3 także druga osoba ze znajomością danego języka, jeśli jest dostępna.
+
+1. **Kontrola cytatów z ekranu.** Wejście: tabela [Teksty ekranu](docs/spec/oprogramowanie.md#teksty-ekranu) (czyta ją `firmware/tools/ui_texts.py`) oraz karty i instrukcje w `docs/spec/`. Wynik: test w `tests/`, który sprawdza, że każdy cytat wielkimi literami w cudzysłowie „…” (w karcie UK «…», w karcie EN “…”) występuje w kolumnie właściwego języka tabeli, z wartościami w nawiasach kwadratowych. Kryterium przyjęcia: test przechodzi w `python3 -m unittest discover -s tests` bez nowych zależności, a znalezione niezgodności są poprawione w tym samym PR albo opisane w Issue.
+2. **Model ruchu mieszanego.** Wejście: `software/reference/obliczenia.py` i wiersz „Ruch mieszany z dyżurnym” w [odbiorze](docs/spec/odbior.md). Wynik: obliczenie czasu nadawania przekaźnika B dla 50 zgłoszeń, 5 rewizji, PRZECZYTANE i jednej decyzji na rewizję oraz jednego komunikatu, zapisane w `wyniki.json`. Obok P1 model ma już wartości dla LoRa SF7 (`lora_pilot` w `wyniki.json`, przybliżenie: 55 rewizji po cyklu z dwoma STATUS, bez komunikatu); dokładne obliczenie ma objąć oba profile. Kryterium przyjęcia: testy modelu przechodzą, `weryfikacja.json` jest odświeżony według [kontroli przed PR](#kontrole-przed-pr), a wynik zastępuje w odbiorze i rozdziale 06 przybliżenie „około 44 min bez rewizji”.
+3. **Przegląd karty obsługi prostym językiem.** Wejście: [karta](docs/spec/karta.md) i jej wersja [UK](docs/spec/karta-uk.md) lub [EN](docs/spec/karta-en.md). Wynik: Issue albo PR z poprawkami zdań, które są niejasne dla osoby bez przygotowania technicznego. Kryterium przyjęcia: cytaty z ekranu zmieniają się tylko razem z tabelą tekstów ekranu, krótkie formy mają nadal ≤20 znaków (`tests/test_ui_texts.py`), a każda zmiana ma krótkie uzasadnienie.
+
+### Zadania ze sprzętem i integracją stosu
+
+Pilotaż używa gotowej płytki ESP32-S3 z układem LoRa SX1262 ([profil LoRa](docs/spec/radio.md#profil-lora-pilotażu)). Zadania 1–2 są pierwsze w kolejności prac. Zadania 3–7 dotyczą wariantu zapasowego P1 i stanowisk deweloperskich A/B; nadal pomagają w próbach stosu (T1–T3), ale nie blokują pilotażu.
+
+1. **Interfejs LoRa w oprogramowaniu stacji.** Dodać do `firmware/` interfejs SX1262 dla stosu: format w eterze zgodny z RNode, po każdym nadaniu cisza 12t, IFAC. Uruchomić go na gotowej płytce ESP32-S3 + SX1262 i wymienić pakiety z implementacją Reticulum w Pythonie przez RNode. To pierwsza część T3 dla pilotażu; w raporcie podaj płytkę, zapas RAM zmierzony poleceniem `RNS` i wynik wymiany.
+2. **Etap 0: pomiar tłumienia tras.** Gotowymi urządzeniami LoRa z deklaracją zgodności UE zmierzyć tłumienie na rzeczywistych parach miejsc przy SF7 i SF8, według [planu prób](docs/concept/08-plan-weryfikacji-i-decyzje.html). Nie wymaga własnego sprzętu ani oprogramowania stacji.
+3. Wariant zapasowy P1: zmontować płytkę nośną N1, uruchomić obraz `bench-n1` albo `bench-b` według [uruchomienia](hardware/dev-bench/uruchomienie.md) i zgłosić raport z kroków A1–A5 albo B1–B4. Kod oprogramowania układowego trafia do `firmware/` (licencja MIT); ramka P1 jest już w `firmware/src/p1frame.cpp`.
+4. Wariant zapasowy P1: uruchomić obraz ze stosem na płytkach rozwojowych nRF52840 i ESP32-S3 i wymienić pakiety z implementacją Reticulum w Pythonie przez łącze P1; na komputerze ta wymiana już przechodzi z emulatorem łącza ([próba zgodności](firmware/README.md#próba-zgodności-z-reticulum)). W raporcie podaj zapas RAM zmierzony poleceniem `RNS` i listę prób na sprzęcie z tej sekcji.
+5. Rozszerzyć emulator łącza P1 programu `host` (`firmware/src/host/node_host.cpp`: czas TX z modelu ramki, dług ciszy 12×; kolejka do 4 datagramów jest w interfejsie P1) o CCA, odroczenia i kolizje między kilkoma węzłami ([radio.md](docs/spec/radio.md)).
+6. Dodać do modelu protokół USB laptop–stacja (D17) i dziennik FRAM z długiem ciszy.
+7. Wariant zapasowy P1: zbudować [stanowisko deweloperskie](hardware/dev-bench/README.md) A lub B z kupnych płytek i wykonać na nim pierwsze pomiary P1 poleceniami pomiarowymi z [radio.md](docs/spec/radio.md); wynik służy do porównania z LoRa.
 
 Przed pracą otwórz Issue lub skomentuj istniejące, aby nie dublować wysiłku.
 

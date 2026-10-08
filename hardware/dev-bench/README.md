@@ -1,5 +1,6 @@
 # WICI: stanowisko deweloperskie
 
+**Rola po przeglądzie praktycznym (2026-10-08, F99).** Stanowiska A i B są narzędziem do prób stosu (T1–T3) i do opcjonalnego porównania z profilem P1 (wariant zapasowy). Pilotaż ich nie wymaga i nie trzeba do niego montować N1. Sprzętem pilotażu jest gotowa płytka ESP32-S3 z układem LoRa SX1262 ([koncepcja 08](../../docs/concept/08-plan-weryfikacji-i-decyzje.html), [profil LoRa](../../docs/spec/radio.md#profil-lora-pilotażu)); R02 jest wstrzymana do decyzji po pilotażu.
 Stanowisko deweloperskie to zestaw kupnych płytek rozwojowych i modułów producentów, na którym powstaje oprogramowanie układowe stacji i wykonuje się próby T1–T4 przed płytką stacji. Płytką stacji jest [R02](../../docs/spec/elektronika.md#płytka-stacji-r02-wymagania); jedyną inną płytką projektu jest [płytka nośna N1](plytka-nosna.md) stanowiska, narzędzie bez własnego toru RF i zasilania. Wcześniejszy kontroler R01.3 nie jest budowany; jego ustalenia są w [lekcjach R02](../r02/lekcje.md), a pliki w historii Git.
 
 Codzienną pracę na zmontowanym stanowisku opisuje [obsługa stanowiska](obsluga.md), a montaż i pierwsze włączenie płytki N1 [uruchomienie](uruchomienie.md).
@@ -10,7 +11,7 @@ Zasada: tor RF, wzorzec częstotliwości i zasilanie stanowiska pochodzą z pły
 
 ## Dwa stanowiska
 
-Stanowiska odpowiadają dwóm wykonaniom stacji ([specyfikacja radia](../../docs/spec/radio.md#dwa-wykonania)), więc wynik prób przenosi się na R02 w zakresie MCU, radia, stosu i interfejsu użytkownika. Do prób mieszanych TI–ST potrzeba po jednym stanowisku każdego rodzaju; do sieci A–B–OSP z zapasem potrzeba czterech (dwa A i dwa B), co odpowiada dwóm modułom w zestawie CC1120EMK.
+Stanowiska deweloperskie odpowiadają dwóm wykonaniom stacji ([specyfikacja radia](../../docs/spec/radio.md#dwa-wykonania)), więc wynik prób przenosi się na R02 w zakresie MCU, radia, stosu i interfejsu użytkownika. Do prób mieszanych TI–ST potrzeba po jednym stanowisku każdego rodzaju; do sieci A–B–stanowisko odbiorcze z zapasem potrzeba czterech (dwa A i dwa B), co odpowiada dwóm modułom w zestawie CC1120EMK.
 
 | Element | Stanowisko A (TI) | Stanowisko B (ST) | Uwagi |
 |---|---|---|---|

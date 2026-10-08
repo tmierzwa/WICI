@@ -1,5 +1,7 @@
 # WICI: płytka nośna N1 przed zamówieniem
 
+**Wstrzymane do decyzji po pilotażu (przegląd praktyczny 2026-10-08, F99):** pilotaż używa stacji z gotowej płytki MCU z układem LoRa SX1262 ([koncepcja 08](../../docs/concept/08-plan-weryfikacji-i-decyzje.html)). Do pilotażu nie trzeba montować N1; płytka nośna zostaje narzędziem do prób stosu i opcjonalnego porównania P1.
+
 Płytka nośna jest narzędziem stanowiska, nie częścią stacji. Proces kontroli jest więc lżejszy niż dla R02 ([lekcje](../r02/lekcje.md#proces-kontroli-i-dowody)), ale jawny. Obowiązuje:
 - ERC i DRC równe 0 z `--severity-all`; kontrola braku obrysu zajętości (`missing_courtyard`) jest włączona, a cztery kontrole wyłączone domyślnie w KiCad zostają wyłączone (lista w `checks/drc.json`, `ignored_checks`);
 - zgodność PCB ze schematem;
@@ -26,7 +28,7 @@ Nie obowiązuje kontrola impedancji ani kwalifikacja stosu warstw, bo płytka ni
 | Części z [BOM](bom.csv) dostępne u dystrybutora; zamienniki zapisane w zapisie sztuki. Stan 2026-10-08 ([koszt i dostępność](plytka-nosna.md#koszt-i-dostępność)): FRAM U1 CY15B104QN-50SXI albo MB85RS4MTPF-G-BCERE1 i panel LS027B7DH01A (nie wersja bez „A”) w magazynach DigiKey; ESP32-S3-DevKitC-1-N8R2 wycofana (kupuje się N8R8 albo N8); CL21A106KAYNNNE brak w DigiKey (zamiennik 10 µF 25 V X5R 0805); zestaw CC1120EMK-868-915 w DigiKey kilka sztuk, potem około 12 tygodni | do potwierdzenia przy zakupie |
 | Napięcie panelu w stanowisku B: pin 5V DevKitC (za diodą Schottky'ego) daje około 4,6–4,8 V, a panel wymaga 4,8–5,5 V | **otwarte**: pomiar w kroku B2 [uruchomienia](uruchomienie.md#stanowisko-b); przy za niskim napięciu port USB albo koncentrator 5,1 V |
 
-Zamówienie zwalniają zamknięte warunki z tabeli, w tym przymiarka 1:1. Płytka jest sprawdzona dopiero po uruchomieniu pierwszej sztuki według [uruchomienia](uruchomienie.md); do tego służą obrazy `bench-n1` (stanowisko A) i `bench-b` (stanowisko B) z poleceniami diagnostycznymi (stan: [zgodność z oprogramowaniem](checks/zgodnosc-firmware.md)). Zielone CI tego nie zastępuje. Zamówienie: 2–5 sztuk (cztery stanowiska do sieci A–B–OSP plus zapas).
+Zamówienie zwalniają zamknięte warunki z tabeli, w tym przymiarka 1:1. Płytka jest sprawdzona dopiero po uruchomieniu pierwszej sztuki według [uruchomienia](uruchomienie.md); do tego służą obrazy `bench-n1` (stanowisko A) i `bench-b` (stanowisko B) z poleceniami diagnostycznymi (stan: [zgodność z oprogramowaniem](checks/zgodnosc-firmware.md)). Zielone CI tego nie zastępuje. Zamówienie: 2–5 sztuk (cztery stanowiska deweloperskie do sieci A–B–stanowisko odbiorcze plus zapas).
 
 ## Odtworzenie
 

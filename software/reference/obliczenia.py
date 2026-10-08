@@ -20,6 +20,29 @@ def p1_tx_seconds(datagram_bytes: int, bit_rate: float = 4800, ramp_ms: float = 
     return 8 * (datagram_bytes + 29 * fragments) / bit_rate + fragments * ramp_ms / 1000
 
 
+# LoRa pilot profile (concept 04, D10): SX1262 catalogue values, 125 kHz, CR 4/5, explicit header, CRC on.
+# Reticulum over an RNode-compatible interface: one header byte per LoRa frame, packets above 254 B in two frames.
+LORA = {"bw_hz": 125_000, "coding_rate_denominator_minus_4": 1, "preamble_symbols": 18, "frame_header_bytes": 1,
+        "single_frame_payload_max": 254, "chip_sensitivity_dbm": {7: -124.0, 8: -126.0}, "rx_ma": 4.6}
+
+
+def lora_frame_seconds(payload_bytes: int, sf: int, preamble_symbols: int | None = None) -> float:
+    """Semtech time on air of one explicit-header LoRa frame with CRC (SX1261/2 data sheet, 6.1.4)."""
+    preamble = LORA["preamble_symbols"] if preamble_symbols is None else preamble_symbols
+    symbol_s = 2 ** sf / LORA["bw_hz"]
+    low_rate = 1 if symbol_s > 0.016 else 0
+    cr = LORA["coding_rate_denominator_minus_4"]
+    payload_symbols = 8 + max(math.ceil((8 * payload_bytes - 4 * sf + 28 + 16) / (4 * (sf - 2 * low_rate))) * (cr + 4), 0)
+    return (preamble + 4.25 + payload_symbols) * symbol_s
+
+
+def lora_tx_seconds(datagram_bytes: int, sf: int) -> float:
+    """Airtime of one Reticulum packet on the LoRa interface: one frame, or two frames above 254 B; excludes CCA."""
+    first = min(datagram_bytes, LORA["single_frame_payload_max"])
+    frames = [first] + ([datagram_bytes - first] if datagram_bytes > first else [])
+    return sum(lora_frame_seconds(b + LORA["frame_header_bytes"], sf) for b in frames)
+
+
 def lxmf_packet_bytes(content_bytes: int) -> int:
     """Reticulum packet on the last hop for an opportunistic LXMF message (reference versions)."""
     plaintext = 80 + 19 + content_bytes
@@ -49,20 +72,20 @@ INPUT_SIDE_MA = {"aa": {"tps3710": 0.006, "ltc2955": 0.0012, "dividers": 0.01},
 SOURCES = {"aa": ("aa_vsys_v", "aa_rail_efficiency"), "12v": ("battery_vsys_v", "battery_rail_efficiency")}
 
 
-def station_rail_ma(mcu_ma: float) -> float:
+def station_rail_ma(mcu_ma: float, rx_ma: float | None = None) -> float:
     """Average 3V3 rail current: always-on RX with TCXO, TX at the 1/13 debt limit, LCD, FRAM, light, alarm LED, buzzer."""
     c = STATION
-    return (mcu_ma + c["rx_ma"] + c["tcxo_ma"] + c["tx_fraction"] * c["tx_ma_13dbm"] + c["lcd_5v_rail_ma"]
+    return (mcu_ma + (c["rx_ma"] if rx_ma is None else rx_ma) + c["tcxo_ma"] + c["tx_fraction"] * c["tx_ma_13dbm"] + c["lcd_5v_rail_ma"]
             + c["fram_buttons_supervisor_ma"] + c["front_light_ma"] * c["front_light_duty"]
             + c["alarm_led_ma"] * c["alarm_led_duty"] + c["buzzer_ma"] * c["buzzer_duty"])
 
 
-def station_power_w(mcu_ma: float, source: str = "aa") -> float:
+def station_power_w(mcu_ma: float, source: str = "aa", rx_ma: float | None = None) -> float:
     """Station input power from one source: 3V3 rail through the converter plus that source's input-side currents."""
     c = STATION
     vsys_key, efficiency_key = SOURCES[source]
     diode = c["aa_vsys_v"] / (c["aa_vsys_v"] - c["aa_diode_v"]) if source == "aa" else 1.0
-    return (c["rail_v"] * station_rail_ma(mcu_ma) / 1000 / c[efficiency_key] * diode
+    return (c["rail_v"] * station_rail_ma(mcu_ma, rx_ma) / 1000 / c[efficiency_key] * diode
             + c[vsys_key] * sum(INPUT_SIDE_MA[source].values()) / 1000)
 
 
@@ -174,6 +197,42 @@ def calculate() -> dict:
         retry[f"{hops}_hop_min_interval_worst_debt_full_queue_s"] = max(60.0, 2 * hops * largest_cycle_s
                                                                         + worst_debt_s + full_queue_s)
     fixed_gain_db = tx_dbm + 2 * antenna_dbi - 2 * fixed_cable_db
+    # LoRa pilot profile on the same packets, the same silence debt (cycle 13t) and the same link budget as P1.
+    lora = {"assumptions": {**LORA, "chip_sensitivity_dbm": {f"sf{k}": v for k, v in LORA["chip_sensitivity_dbm"].items()},
+                            "frontend_loss_db": frontend_loss_db, "tx_dbm": tx_dbm,
+                            "quiet_after_tx": "12t, as P1 (band limit 10%)"}}
+    for sf in (7, 8):
+        tx = {k: lora_tx_seconds(v, sf) for k, v in relay_packets.items()}
+        per_req = [13 * (tx[r] + tx["received"] + 2 * tx["packet_proof"]) for r in ("typical_request", "max_fields_request")]
+        relay_two_status = [relay_packets["max_fields_request"], proof, relay_packets["received"]] + 2 * [status_packet] + 3 * [proof]
+        relay_two_status_s = sum(13 * lora_tx_seconds(b, sf) for b in relay_two_status)
+        osp_two_status = [proof, relay_packets["received"] + transport_id] + 2 * [status_packet + transport_id]
+        osp_two_status_s = sum(13 * lora_tx_seconds(b, sf) for b in osp_two_status)
+        connector_dbm = LORA["chip_sensitivity_dbm"][sf] + frontend_loss_db
+        lora[f"sf{sf}"] = {
+            "tx_s": tx, "tx_s_500b_reticulum_mtu": lora_tx_seconds(500, sf), "relay_per_request_s": per_req,
+            "fifty_requests_min": [50 * t / 60 for t in per_req],
+            "relay_s_per_request_two_status": relay_two_status_s,
+            "fifty_requests_with_two_status_min": 50 * relay_two_status_s / 60,
+            "mixed_trial_55_revisions_min": 55 * relay_two_status_s / 60,
+            "relay_before_osp_requests_per_h": 3600 / relay_two_status_s,
+            "osp_requests_per_h": 3600 / osp_two_status_s,
+            "ratio_to_p1_fifty_requests": per_req[1] / per_request[1],
+            "bulletin_s_per_station": 13 * lora_tx_seconds(bulletin_packet, sf),
+            "bulletin_osp_tx_min_50_stations": 50 * 13 * lora_tx_seconds(bulletin_packet, sf) / 60,
+            "announce_tx_s": lora_tx_seconds(p1_datagram(19 + 170 + transport_id), sf),
+            "announce_tx_ratio_to_p1": lora_tx_seconds(p1_datagram(19 + 170 + transport_id), sf)
+                                       / p1_tx_seconds(p1_datagram(19 + 170 + transport_id)),
+            "connector_sensitivity_dbm": connector_dbm,
+            "gain_over_p1_target_db": sensitivity_dbm - connector_dbm,
+            "hata_urban_margin_1km_db": {k: link_gain_db - v - connector_dbm for k, v in urban.items()},
+            "hata_urban_margin_1km_fixed_installation_db": {k: fixed_gain_db - v - connector_dbm for k, v in urban.items()}}
+    lora_level1 = {}
+    for name, mcu_ma in (("nrf52840", 3.0), ("esp32_s3_30ma", 30.0), ("esp32_s3_45ma", 45.0), ("esp32_s3_60ma", 60.0)):
+        day_wh = 24 * station_power_w(mcu_ma, rx_ma=LORA["rx_ma"]) * reserve
+        lora_level1[name] = {"mcu_ma_assumed": mcu_ma, "rail_ma": station_rail_ma(mcu_ma, LORA["rx_ma"]),
+                             "wh_24h_with_reserve": day_wh, "aa_set_hours": aa_set_wh / day_wh * 24}
+    lora["station_level1_sx1262_rx"] = lora_level1
     # FRAM occupancy by role (oprogramowanie.md, "Pamięć FRAM według roli"); conservative fixed-size slots.
     # Every record: header 16 B (number, type, length, version) + AEAD tag 16 B. Sizes are assumptions, not a layout.
     fram_record_overhead = 16 + 16
@@ -313,6 +372,7 @@ def calculate() -> dict:
                              "test_window_s_per_station": 50,
                              "test_window_min": {f"{n}_stations": 50 * n / 60 for n in (10, 30, 50)}},
         "lxmf_retry": retry,
+        "lora_pilot": lora,
         "fram_by_role": {"record_bytes_assumed": fram_b, "counts": fram_counts, "roles": fram_kib,
                          "fram_stacja_kib": fram_kib["station"]["total_kib"], "fram_osp_kib": fram_kib["osp"]["total_kib"],
                          "fram_size_kib": fram_size_kib},
@@ -394,7 +454,8 @@ def calculate() -> dict:
                    "No battery capacity measurement",
                    "Network capacity is per node at the debt limit; shared channel, hidden nodes and retries reduce it",
             "Cold start: one rebroadcast per announce and station, one path request per station (best and worst case), single collision domain, no losses, retries or announce suppression",
-                   "Fixed installation loss of 2.5 dB per end is an assumption until the installed cable is measured", "No thermal or electrical safety verification"],
+                   "Fixed installation loss of 2.5 dB per end is an assumption until the installed cable is measured",
+                   "LoRa: catalogue SX1262 sensitivity and RX current, RNode-style frame split and 18-symbol preamble are assumptions; the pilot board power path is modelled with the R02 converter assumptions", "No thermal or electrical safety verification"],
     }
     if available_low_v <= required_low_v:
         raise ValueError("Insufficient estimated transformer headroom")

@@ -52,7 +52,7 @@ bool Station::buildDatagram(const store::QueueRecord& record, char* out, size_t 
     services_.address(self);
     char from[2 * store::HASH + 1], to[2 * store::HASH + 1];
     store::bytesToHex(self, from);
-    store::bytesToHex(recipient(record), to);  // po ODBIORCA ZAPASOWY: tożsamość zapasowa
+    store::bytesToHex(recipient(record), to);  // po KLUCZ ZAPASOWY: tożsamość zapasowa
     const int n = snprintf(out, size, "[\"WICI\",1,\"%s\",\"%s\",%s]", from, to, record.sa1);
     if (n <= 0 || static_cast<size_t>(n) >= size || static_cast<size_t>(n) > PACKET_MAX) return false;
     length = static_cast<size_t>(n);
@@ -447,7 +447,7 @@ void Station::backupSwitched() {
 }
 
 const uint8_t* Station::recipient(const store::QueueRecord& r) const {
-    // Po ODBIORCA ZAPASOWY niepotwierdzone intencje do tożsamości głównej idą do zapasowej
+    // Po KLUCZ ZAPASOWY niepotwierdzone intencje do tożsamości głównej idą do zapasowej
     // z tym samym id i revision (oprogramowanie.md, „Klucz OSP”); rekord w FRAM się nie zmienia.
     const store::Config& c = store_.config();
     if (c.activeOsp && !memcmp(r.to, c.osp[0], store::HASH)) return c.osp[1];

@@ -1,5 +1,7 @@
 # WICI R02: płytka stacji
 
+**Wstrzymane do decyzji po pilotażu (przegląd praktyczny 2026-10-08, F99):** pilotaż używa stacji z gotowej płytki MCU z układem LoRa SX1262 ([koncepcja 08](../../docs/concept/08-plan-weryfikacji-i-decyzje.html)).
+
 **Status: projekt rozpoczęty 2026-10-07. Nie ma jeszcze schematu ani PCB. HOLD: nie zamawiać.** Części niezależne od prób T3–T5 opisano 2026-10-08:
 - [architektura](architektura.md): bloki, sygnały i budżet pinów obu wykonań, podział na płytki do wyboru;
 - [zasilanie](zasilanie.md): projekt bloku z wartościami, bilans prądu i próby na płytkach ewaluacyjnych;
@@ -21,9 +23,9 @@ R02 jest płytką stacji: samodzielna stacja z mikrokontrolerem, torem radiowym 
 
 ## Wejścia, które muszą być zamknięte przed schematem
 
-- **D14 (MCU):** T3 na stanowisku deweloperskim, z zapasem RAM ≥30% dla obu rodzin; bez tego nie wiadomo, czy wykonanie A w ogóle powstaje.
+- **D14 (MCU):** pilotaż używa jednej rodziny MCU na gotowej płytce z SX1262, domyślnie ESP32-S3 (512 KiB SRAM), bo odtworzenie na komputerze daje nRF52840 4,5% wolnej RAM w szczycie wobec 30%, bez LXMF ([pomiar](../../firmware/README.md#pamięć-ram)); nRF52840 wraca tylko po przebudowie portu. Decyzja dla wydania (rodzina MCU R02, drugie wykonanie W14, RED dla radia 2,4 GHz ESP32-S3) zapada po pilotażu, z zapasem RAM ≥30% potwierdzonym poleceniem `RNS` na płytce.
 - **D15 (ekran):** wybór Sharp LS027B7DH01 albo zamiennika i złącze wspólne dla obu wykonań; dla panelu Sharp złącze Hirose FH12-10S-0.5SH jak na N1 ([architektura](architektura.md#ustalone-teraz)), zostaje czytelność w −20 °C.
-- **D10 (P1 wobec LoRa):** wyniki T4 ze stanowiska: czułość toru producenta, harmoniczne, blokowanie LTE 800 i GSM 900 z filtrem SAW i bez niego; od nich zależy, czy R02 ma przełącznik RF i osobny tor odbiorczy.
+- **D10 (P1 wobec LoRa):** rozstrzygnięte roboczo 2026-10-08: radio pilotażu to LoRa (SX1262, [profil](../../docs/spec/radio.md#profil-lora-pilotażu)), P1 jest wariantem zapasowym. Tor RF R02 (jeden układ LoRa albo dwa tory P1, przełącznik RF, osobny tor odbiorczy, filtr SAW) projektuje się dopiero po pilotażu, na podstawie etapu 0, T4 i T5.
 - **Zasilanie poziomu 1:** liczba ogniw, przetwornica i sterownik wyłącznika według [elektroniki](../../docs/spec/elektronika.md); projekt w [zasilaniu](zasilanie.md), otwarte decyzje F87 i pomiary na płytkach ewaluacyjnych.
 - **Obudowa:** wymiary, położenie ekranu, przycisków, złączy i plombowanej pokrywy serwisowej, bo wyznaczają obrys i otwory płytki; propozycja w [obudowie](obudowa.md), do potwierdzenia na modelu STEP i przymiarce próbek.
 

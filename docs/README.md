@@ -7,23 +7,25 @@ Specyfikacja stacji 0.5 składa się z pięciu rozdziałów, rozdziału o stanow
 | Rozdział | Zakres |
 |---|---|
 | [Projekt](spec/projekt.md) | Poziomy zestawu, połączenia, przygotowanie i użycie odebranego zestawu |
-| [Radio](spec/radio.md) | Profil P1, ramki, interfejs P1 w stosie, interfejs Reticulum przez USB (węzeł OSP), USB do laptopa, dwa wykonania stacji |
+| [Radio](spec/radio.md) | Profil LoRa pilotażu, profil P1 (wariant zapasowy), ramki, interfejs P1 w stosie, interfejs Reticulum przez USB (węzeł stanowiska), USB do laptopa, dwa wykonania stacji |
 | [Oprogramowanie](spec/oprogramowanie.md) | Oprogramowanie stacji i laptopa, wiadomości SA1, protokół USB, ekran i przyciski, pakiety offline |
-| [Elektronika](spec/elektronika.md) | Zasilanie stacji, wymagania płytki R02, zasilanie A/B, ładowarka i przetwornica |
-| [Stanowisko odbiorcze](spec/stanowisko-osp.md) | Stanowisko OSP: stacja jako węzeł transportu i obowiązkowy komputer z tożsamością OSP (D19), aplikacja, panel, zestaw, awarie |
-| [Odbiór](spec/odbior.md) | Próby z grupami T1–T8, warunki zaliczenia i niezrealizowane części |
+| [Elektronika](spec/elektronika.md) | Zasilanie stacji, wymagania płytki R02, zasilanie A/B, ładowarka i przetwornica; wstrzymane do decyzji po pilotażu |
+| [Stanowisko odbiorcze](spec/stanowisko-osp.md) | Stanowisko odbiorcze: stacja jako węzeł transportu i obowiązkowy komputer z tożsamością odbiorcy (D19), aplikacja, panel, zestaw, awarie |
+| [Odbiór](spec/odbior.md) | Próby z grupami T1–T8, minimum pilotażu, warunki zaliczenia i niezrealizowane części |
 | [Karta obsługi](spec/karta.md) | Tekst dwustronnej karty obsługi stacji i pola formularza papierowego |
 | Karta [UK](spec/karta-uk.md) i [EN](spec/karta-en.md) | Ukraińska i angielska wersja karty obsługi; cytaty z kolumn UK i EN tabeli tekstów ekranu |
-| [Instrukcja dyżurnego](spec/instrukcja-dyzurnego.md) | Czynności dyżurnego OSP: początek dyżuru, decyzje i stany, TEST, komunikaty, zaufanie, cisza, przekazanie zmiany, awarie stanowiska |
+| [Instrukcja dyżurnego](spec/instrukcja-dyzurnego.md) | Czynności dyżurnego: początek dyżuru, decyzje i stany, TEST, komunikaty, zaufanie, cisza, przekazanie zmiany, awarie stanowiska |
 | [Instrukcja opiekuna](spec/instrukcja.md) | Tematy obsługi spoza karty: adres, stany zgłoszenia, alarmy, cisza, energia, poziomy 2–3, przekazanie zmiany, koniec zdarzenia, bezpieczeństwo |
 | [BOM stacji](spec/bom-stacji.csv) | Wymagania minimalne części i kandydaci od dwóch producentów, ze stanem kwalifikacji |
 
-Próby przed płytką R02 wykonuje się na [stanowisku deweloperskim](../hardware/dev-bench/README.md) z płytek rozwojowych i modułów producentów. Projekt płytki stacji ma [własny folder](../hardware/r02/README.md) z kolejnością prac i [lekcjami z poprzedniego kontrolera R01.3](../hardware/r02/lekcje.md), którego pliki są w historii Git. Wyniki obliczeń są w [modelu](../software/reference/README.md).
+Po przeglądzie praktycznym 2026-10-08 (F99 w [przeglądzie](review.md)) pilotaż używa stacji pilotażowej z gotowej płytki ESP32-S3 z układem LoRa SX1262 ([profil LoRa](spec/radio.md#profil-lora-pilotażu)). Lista prób wymaganych przed pilotażem jest w sekcji [Minimum pilotażu](spec/odbior.md#minimum-pilotażu) odbioru; pozostałe wiersze odbioru dotyczą wydania. Wstrzymane do decyzji po pilotażu są: płytka R02 z torem RF i blokiem zasilania, profil P1 (wariant zapasowy), zasilanie poziomu 3 oraz pakiety START.
+
+Próby stosu można też wykonać na [stanowisku deweloperskim](../hardware/dev-bench/README.md) z płytek rozwojowych i modułów producentów. Wstrzymany projekt płytki stacji ma [własny folder](../hardware/r02/README.md) z kolejnością prac i [lekcjami z poprzedniego kontrolera R01.3](../hardware/r02/lekcje.md), którego pliki są w historii Git. Wyniki obliczeń są w [modelu](../software/reference/README.md).
 
 [Narzędzia i tworzenie paczek](development.md). Bieżąca kontrola repozytorium: `tools/verify_repository.py` i CI dla aktualnego commita.
 
 [Aktualne ustalenia przeglądu technicznego](review.md): poprawione rozbieżności, konkretne przeszkody i warunki ich zamknięcia.
 
-W specyfikacji skrót OSP oznacza rolę stanowiska odbiorczego wyznaczonego przez wójta (burmistrza, prezydenta miasta); typowo pełni ją jednostka ochotniczej straży pożarnej z grafikiem dyżurów na czas kryzysu, a także gminne centrum zarządzania kryzysowego lub stanowisko gminnego zespołu zarządzania kryzysowego ([koncepcja, rozdział 02](concept/02-scenariusze-i-organizacja.html#miejsce-w-systemie-ochrony-ludnosci)).
+W specyfikacji skrót OSP oznacza tylko ochotniczą straż pożarną. Stanowisko odbiorcze to rola wyznaczona przez wójta (burmistrza, prezydenta miasta); zwykle pełni ją jednostka ochotniczej straży pożarnej z grafikiem dyżurów na czas kryzysu, a także gminne centrum zarządzania kryzysowego lub stanowisko gminnego zespołu zarządzania kryzysowego ([koncepcja, rozdział 02](concept/02-scenariusze-i-organizacja.html#miejsce-w-systemie-ochrony-ludnosci)).
 
 Status: prototyp; sprzęt HOLD. Instrukcje użycia opisują docelowy odebrany zestaw, a nie gotowy produkt.

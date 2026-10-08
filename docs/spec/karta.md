@@ -6,7 +6,7 @@ W wersjach UK i EN karty cytaty z ekranu, nazwy przycisków, menu i kategorii po
 
 ## Strona 1: uruchomienie
 
-**STACJA WICI – WIADOMOŚCI DO ODBIORCY ZGŁOSZEŃ (OSP), GDY NIE DZIAŁAJĄ TELEFONY. NIE ZASTĘPUJE 112: JEŚLI TELEFON DZIAŁA, DZWOŃ 112.**
+**STACJA WICI – WIADOMOŚCI DO ODBIORCY ZGŁOSZEŃ, GDY NIE DZIAŁAJĄ TELEFONY. NIE ZASTĘPUJE 112: JEŚLI TELEFON DZIAŁA, DZWOŃ 112.**
 
 Przyciski: GÓRA, DÓŁ, OK, WSTECZ. Pierwsze naciśnięcie przy zgaszonym ekranie tylko zapala światło.
 
@@ -16,7 +16,7 @@ Przyciski: GÓRA, DÓŁ, OK, WSTECZ. Pierwsze naciśnięcie przy zgaszonym ekran
 4. Wybierz język. Czekaj na „RADIO WŁĄCZONE” (do 1 min). Sprawdź adres: „ADRES: [x] – CZY TO TO MIEJSCE? OK = TAK / WSTECZ = NIE”. Zły adres albo „STACJA NIE MA TWOJEGO ADRESU – UŻYJ FORMULARZA PAPIEROWEGO”: zgłoszenia tylko formularzem (strona 2).
 5. Stacja proponuje TEST: OK. (Później TEST z menu: TEST → OK.) Ekran: „TEST ZAPLANOWANY ZA OKOŁO [mm] MIN – NIE WYŁĄCZAJ. WSTECZ = ANULUJ”, potem „TEST WYSŁANY – CZEKA NA ODBIORCĘ”.
 6. Czekaj na „ODBIORCA ZAPISAŁ”, potem „ODBIORCA PRZECZYTAŁ”. Komunikat od odbiorcy prosi o wstrzymanie TEST? TEST → WSTRZYMAJ; ekran: „TEST WSTRZYMANY PRZEZ ODBIORCĘ”. Nie wysyłaj TEST do odwołania.
-7. Po 30 min bez odpowiedzi stacja podaje „BRAK POTWIERDZENIA OD [n] MIN – WYŚLIJ GOŃCA Z FORMULARZEM” → strona 2: goniec z formularzem.
+7. Po 30 min bez odpowiedzi stacja podaje „BRAK POTWIERDZENIA OD [n] MIN – GONIEC Z FORMULARZEM, JEŚLI DROGA BEZPIECZNA” → strona 2: goniec.
 
 „RADIO WŁĄCZONE” nie oznacza, że pomoc jest dostępna. „OSTATNI KONTAKT Z ODBIORCĄ: [czas] TEMU” pokazuje, kiedy odbiorca ostatnio odpowiedział; długi czas nie jest awarią. Włączona stacja przekazuje wiadomości innych schronień: nie wyłączaj jej bez potrzeby.
 
@@ -26,15 +26,17 @@ Przyciski: GÓRA, DÓŁ, OK, WSTECZ. Pierwsze naciśnięcie przy zgaszonym ekran
 
 Etapy na ekranie: „ZAPISANE W STACJI – CZEKA NA WYSŁANIE” → „WYSYŁANIE – PRÓBA [n], NASTĘPNA ZA [m] MIN” → „ODBIORCA ZAPISAŁ” → „ODBIORCA PRZECZYTAŁ” → decyzja: „POMOC SKIEROWANA (DECYZJA, NIE GODZINA PRZYJAZDU)”, „PRZEKAZANE DALEJ (PSP / POGOTOWIE / POWIAT)”, „ODBIORCA NIE MOŻE TERAZ POMÓC – CZYTAJ ODPOWIEDŹ” albo „ZAMKNIĘTE”. Zmiana lub koniec potrzeby: WIADOMOŚCI → własne zgłoszenie → „ZMIEŃ LICZBĘ OSÓB / ZMIEŃ PILNOŚĆ / POTRZEBA USTAŁA”.
 
-**„BRAK POTWIERDZENIA OD [n] MIN – WYŚLIJ GOŃCA Z FORMULARZEM”**, „KOLEJKA PEŁNA – ZGŁOSZENIE NIE ZAPISANE. UŻYJ FORMULARZA PAPIEROWEGO”, „BŁĄD PAMIĘCI STACJI – ZGŁOSZENIE NIE ZAPISANE. FORMULARZ + GONIEC”: wypełnij formularz w dwóch kopiach, jedna zostaje, drugą niesie goniec. OK wycisza dźwięk alarmu; napis i dioda zostają.
+**„BRAK POTWIERDZENIA OD [n] MIN – GONIEC Z FORMULARZEM, JEŚLI DROGA BEZPIECZNA”**, „KOLEJKA PEŁNA – ZGŁOSZENIE NIE ZAPISANE. UŻYJ FORMULARZA PAPIEROWEGO”, „BŁĄD PAMIĘCI STACJI – ZGŁOSZENIE NIE ZAPISANE. FORMULARZ; GONIEC, JEŚLI DROGA BEZPIECZNA”: wypełnij formularz w dwóch egzemplarzach, jedna zostaje, drugą niesie goniec. OK wycisza dźwięk alarmu; napis i dioda zostają.
 
-**Zagrożenie życia.** 1) Udziel pierwszej pomocy. 2) Działa telefon? Dzwoń 112. 3) Droga bezpieczna? Wyślij gońca. Radiem wysyłaj równolegle („OK = WYŚLIJ TEŻ RADIEM”).
+**Goniec tylko bezpieczną drogą.** Nie wychodzi przy pożarze, zalaniu, zawaleniu, skażeniu, ostrzale, ogłoszonym alarmie powietrznym ani przy zakazie wychodzenia. Idzie trasą z dziennika, najlepiej we dwoje; zapisz godzinę wyjścia i spodziewanego powrotu. **Wyjście niemożliwe:** nikogo nie wysyłaj. Zgłoszenie zostaje w stacji, która je ponawia. Wywołaj odbiorcę albo sąsiednie schronienie przez PMR446, zapisz w dzienniku godzinę i powód, sprawdzaj drogę ponownie.
 
-**Cisza radiowa.** „CISZA RADIOWA – STACJA NIE NADAJE. PILNE: GONIEC”. Zgłoszenie zapisane w ciszy: „ZAPISANE – NIE WYJDZIE DO KOŃCA CISZY”. Przełącznik CISZA włączaj tylko na polecenie; wpisz je do dziennika.
+**Zagrożenie życia.** 1) Udziel pierwszej pomocy. 2) Działa telefon? Dzwoń 112. 3) Droga bezpieczna? Wyślij gońca; nie – PMR446. Radiem wysyłaj równolegle („OK = WYŚLIJ TEŻ RADIEM”).
+
+**Cisza radiowa.** „CISZA RADIOWA – STACJA NIE NADAJE. PILNE: GONIEC”: goniec tylko bezpieczną drogą. Zgłoszenie zapisane w ciszy: „ZAPISANE – NIE WYJDZIE DO KOŃCA CISZY”. Przełącznik CISZA włączaj tylko na polecenie; wpisz je do dziennika.
 
 **Wymiana ogniw.** „WYMIEŃ OGNIWA W CIĄGU 1 H”. Najlepiej podłącz najpierw 12 V. Bez 12 V: przytrzymaj wyłącznik główny 2 s, czekaj na „WYŁĄCZANIE – CZEKAJ, ZAPISUJĘ”, potem „MOŻNA WYJĄĆ OGNIWA”. Wymień cały komplet (+ do znaku +), naciśnij wyłącznik główny. Zgłoszenia zostają w stacji.
 
-**Komunikat o wyjściu lub ewakuacji.** „NAKAZ WYJŚCIA LUB EWAKUACJI? POTWIERDŹ W RADIU PUBLICZNYM LUB U GOŃCA”. Nie wychodź na podstawie samego komunikatu ze stacji: potwierdź drugim kanałem (odbiornik radiowy z zestawu, goniec).
+**Komunikat o wyjściu lub ewakuacji.** „NAKAZ WYJŚCIA LUB EWAKUACJI? POTWIERDŹ W RADIU PUBLICZNYM LUB U GOŃCA”. Nie wychodź na podstawie samego komunikatu ze stacji: potwierdź drugim kanałem (odbiornik radiowy z zestawu, goniec). Brak drugiego kanału: przygotuj ludzi do wyjścia, próbuj potwierdzić co 15 min (radio, PMR446), zapisz w dzienniku. **Zagrożenie na miejscu (pożar, dym, CO, zalanie, zawalenie, polecenie służb na miejscu) nie czeka na potwierdzenie: wyprowadź ludzi od razu według zasad ewakuacji obiektu.**
 
 **ZNISZCZ DANE – tylko przy groźbie przejęcia stacji.** STAN → USŁUGI → ZNISZCZ DANE. Ekran: „NIEODWRACALNE – STACJA PRZESTANIE DZIAŁAĆ; TYLKO PRZY GROŹBIE PRZEJĘCIA”; potwierdzenie: GÓRA, DÓŁ, GÓRA, OK. Nigdy na podstawie wiadomości radiowej. Wpisz do dziennika.
 
