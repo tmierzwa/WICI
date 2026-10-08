@@ -36,7 +36,7 @@ Kanał zastępczy wskazuje plan sieci: goniec z formularzem, radiotelefon PMR446
 
 **OGŁOŚ ADRES** (STAN → USŁUGI) rozgłasza adres stacji w sieci od razu, zamiast czekać na zwykłe ogłoszenie. Użyj go po zmianie miejsca anteny albo gdy odbiorca prosi o to przez gońca. Ekran odpowiada „ADRES ZOSTANIE OGŁOSZONY”. W ciszy radiowej ogłoszenie czeka na jej koniec. Gdy ekran pokaże „STACJA NIE NADAJE – ADRES NIE OGŁOSZONY. FORMULARZ; GONIEC, JEŚLI DROGA BEZPIECZNA”, stacja nie wyśle radiem także zgłoszeń: wysyłaj je formularzem przez gońca, jeśli droga jest bezpieczna ([goniec](#goniec)), i zgłoś błąd osobie utrzymującej system.
 
-**WYCISZ DŹWIĘK** (STAN → USŁUGI) wyłącza zwykły sygnał dźwiękowy nowej wiadomości. Alarmów (brak potwierdzenia, brak odczytu, wymiana ogniw) nie da się wyciszyć. Ta sama pozycja pokazuje wtedy **WŁĄCZ DŹWIĘK**. Wyciszenie przetrwa wyłączenie stacji. Gdy dźwięk jest wyciszony, pokazują to STAN, PRZEKAZANIE ZMIANY i ekran główny przy pustej kolejce. Przekazując dyżur, sprawdź, czy dźwięk jest włączony.
+**WYCISZ DŹWIĘK** (STAN → USŁUGI) wyłącza zwykły sygnał dźwiękowy nowej wiadomości. Alarmów (brak potwierdzenia, brak odczytu, awaria radia, wymiana ogniw) nie da się wyciszyć. Ta sama pozycja pokazuje wtedy **WŁĄCZ DŹWIĘK**. Wyciszenie przetrwa wyłączenie stacji. Gdy dźwięk jest wyciszony, pokazują to STAN, PRZEKAZANIE ZMIANY i ekran główny przy pustej kolejce. Przekazując dyżur, sprawdź, czy dźwięk jest włączony.
 
 ## Zgłoszenie i jego stany
 
@@ -73,6 +73,7 @@ Krótki numer i nazwa stacji `WICI-xxxxxx` (STAN) jednoznacznie wskazują zgłos
 |---|---|---|
 | „BRAK POTWIERDZENIA OD [n] MIN – GONIEC Z FORMULARZEM, JEŚLI DROGA BEZPIECZNA” | brak „ODBIORCA ZAPISAŁ” po 15 min (zagrożenie życia), 1 h (pilne), 6 h (w ciągu doby) albo 30 min (TEST) | oceń drogę; wypełnij formularz w dwóch egzemplarzach i wyślij gońca albo, gdy wyjść nie można, postępuj według części [Goniec](#goniec); zgłoszenie radiowe zostaje w kolejce |
 | „ODBIORCA NIE PRZECZYTAŁ OD 30 MIN – GONIEC Z FORMULARZEM, JEŚLI DROGA BEZPIECZNA” | tylko zagrożenie życia: brak „ODBIORCA PRZECZYTAŁ” 30 min po „ODBIORCA ZAPISAŁ” | jak wyżej; dyżurny może być zajęty albo nieobecny |
+| „RADIO: AWARIA” | układ radiowy stacji nie działa (stacja sprawdza go przy starcie i co 10 s) | zgłoszenia zapisują się w stacji, ale nie wychodzą radiem: pilne formularzem i gońcem, jeśli droga jest bezpieczna ([goniec](#goniec)); zgłoś błąd osobie utrzymującej system; nie wyłączaj stacji, bo gdy układ znów zadziała, wraca do pracy sama |
 | „WYMIEŃ OGNIWA W CIĄGU 1 H” | niskie napięcie ogniw | [energia](#energia-stacji) |
 | „12 V ODŁĄCZONE – ZA NISKIE NAPIĘCIE. PODŁĄCZ NAŁADOWANE ŹRÓDŁO I PRZYTRZYMAJ OK” | źródło 12 V spadło do 11,5 V | stacja pracuje z ogniw; podłącz naładowane źródło |
 
