@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from reference import (MAX_CONTENT, OSPStore, PREFIX, QuarantineFull, RevokedSender, accept_from_osp, assemble,
+from reference import (MAX_CONTENT, OSPStore, PREFIX, QuarantineFull, accept_from_osp, assemble,
                        check_button_configuration, crc16, decode_message, encode_message, fragment, parse_frame,
                        status_after)
 
@@ -333,21 +333,44 @@ class Trust(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.store.add_trusted(self.unknown, bytes(64), ("Dyżurny A", "Dyżurny B"))
 
-    def test_revoked_sender_rejected_counted_not_quarantined(self):
+    def test_removed_station_quarantined_counted_and_added_back(self):
+        def request(revision):
+            return encode_message(REQUEST[:3] + [revision] + REQUEST[4:])
         self.store.add_trusted(self.unknown, PUBKEY, ("A", "B"))
-        other = b"V" * 16
-        self.store.receive(other, self.wire, True)
-        self.store.revoke(self.unknown)
-        self.store.revoke(other)
-        for source in (self.unknown, other, other):
-            with self.assertRaises(RevokedSender):
-                self.store.receive(source, self.wire, True)
+        self.assertIsNotNone(self.store.receive(self.unknown, request(0), True))
+        self.store.remove_trusted(self.unknown)
+        with self.assertRaises(ValueError):
+            self.store.remove_trusted(self.unknown)
+        self.assertIsNotNone(self.store.receive(self.unknown, request(0), True))  # already accepted: same RECEIVED
+        for revision in range(1, 5):
+            self.assertIsNone(self.store.receive(self.unknown, request(revision), True))
+        with self.assertRaises(QuarantineFull):
+            self.store.receive(self.unknown, request(5), True)
         self.store.close()
         self.store = OSPStore(self.path)
-        self.assertEqual((self.store.rejected_count(self.unknown), self.store.rejected_count(other)), (1, 2))
-        self.assertEqual((self.count("quarantine"), self.count("received"), self.count("trusted")), (0, 0, 0))
-        with self.assertRaises(RevokedSender):
-            self.store.add_trusted(other, PUBKEY, ("A", "B"))
+        self.assertEqual(self.store.removed_messages(self.unknown), 6)
+        self.store.add_trusted(b"V" * 16, PUBKEY, ("A", "B"))
+        self.store.receive(b"V" * 16, request(0), True)
+        self.assertIsNone(self.store.removed_messages(b"V" * 16))
+        mid = REQUEST[2]
+        self.assertIsNotNone(self.store.approve_message(self.unknown, mid, 1))
+        self.assertIsNone(self.store.receive(self.unknown, request(7), True))  # approval does not trust the sender
+        self.store.approve_message(self.unknown, mid, 7)
+        self.assertEqual((self.count("quarantine"), self.count("received"), self.count("trusted")), (3, 4, 1))
+        with self.assertRaises(ValueError):
+            self.store.add_trusted(self.unknown, PUBKEY, ("A", "A"))
+        self.store.add_trusted(self.unknown, PUBKEY, ("A", "B"))
+        self.assertIsNone(self.store.removed_messages(self.unknown))
+        self.assertEqual(self.count("quarantine"), 0)
+        self.assertIsNotNone(self.store.receive(self.unknown, request(2), True))  # resent after re-adding
+        self.assertIsNotNone(self.store.receive(self.unknown, request(6), True))
+        self.store.remove_trusted(self.unknown)
+        self.store.close()
+        with self.assertRaises(ValueError):
+            OSPStore(self.path, {self.unknown: PUBKEY}).close()
+        self.store = OSPStore(self.path)
+        self.assertIsNone(self.store.db.execute("SELECT 1 FROM trusted WHERE source=?", (self.unknown,)).fetchone())
+        self.assertEqual(self.store.removed_messages(self.unknown), 0)
 
     def test_quarantine_limits(self):
         def request(revision):

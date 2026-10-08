@@ -12,7 +12,7 @@ Decyzja D19 (2026-10-08): tożsamość OSP, Reticulum i LXMF w Pythonie oraz baz
 | Miejsce | obiekt bez prądu, często piwnica; stacja w skrzynce, wyjmowana w kryzysie | stały punkt z agregatem lub stacją zasilania na ≥72 h, antena w najwyższym punkcie budynku |
 | Ruch | własne zgłoszenia i przekazywanie ruchu sąsiadów | każde zgłoszenie z sieci; najbardziej obciążony węzeł (model: ok. 121 zgłoszeń/h, przekaźnik przed OSP ok. 68/h) |
 | Stan do przechowania | kolejka do 128 intencji, skrzynka do 128 wiadomości | wszystkie zgłoszenia zdarzenia, rewizje, statusy, klucze odbioru, kwarantanna, karty stacji, dziennik decyzji |
-| Bezpieczeństwo | jeden klucz stacji; karta OSP | klucz, któremu ufa cała sieć; tożsamość zapasowa; dodawanie i unieważnianie stacji |
+| Bezpieczeństwo | jeden klucz stacji; karta OSP | klucz, któremu ufa cała sieć; tożsamość zapasowa; lista zaufanych stacji |
 | Dane osobowe | mało, bez nazwisk | całość zdarzenia; administrator danych, umowa powierzenia, archiwum przy ZAMKNIJ ZDARZENIE |
 | Drugi kanał | goniec, PMR446 | telefon lub radio służb, PMR446 z nasłuchem, łącze do powiatu |
 | Komputer | opcjonalny (poziomy 2–3), bez tożsamości sieciowej | obowiązkowy, z tożsamością OSP i stosem; drugi komputer w zapasie |
@@ -23,7 +23,7 @@ Decyzja D19 (2026-10-08): tożsamość OSP, Reticulum i LXMF w Pythonie oraz baz
 |---|---|---|
 | O01 | RECEIVED dopiero po zatwierdzeniu zapisu (COMMIT) zgłoszenia, tożsamości nadawcy, klucza odbioru i intencji RECEIVED w jednej transakcji ([trwałość](oprogramowanie.md#trwałość-i-potwierdzenia)) | model, T2 |
 | O02 | Deduplikacja po kluczu odbioru (nadawca, id, revision); ten sam klucz z inną treścią to konflikt bez nadpisania; powtórzony REQUEST dostaje ten sam RECEIVED i najnowszy STATUS | model, T2 |
-| O03 | Zaufanie z kart stacji z pełnym kluczem; kwarantanna nieznanych nadawców bez RECEIVED (≤4 wiadomości na nadawcę, ≤256 łącznie); unieważnienie z alarmem „możliwe przejęcie stacji”; dodanie zaufanej stacji za zgodą dwóch osób | model, T2, T8 |
+| O03 | Zaufanie z kart stacji z pełnym kluczem; kwarantanna nieznanych nadawców bez RECEIVED (≤4 wiadomości na nadawcę, ≤256 łącznie); jedna lista zaufanych stacji: dodanie za zgodą dwóch osób, usunięcie przez jedną, wiadomości stacji usuniętej w kwarantannie z alarmem „możliwe przejęcie stacji” | model, T2, T8 |
 | O04 | Panel dyżurnego według części [Panel dyżurnego](#panel-dyżurnego) | T1, T8 |
 | O05 | Osobne konta dyżurnych, blokada ekranu po 5 min, dziennik działań tylko do dopisywania, przekazanie zmiany z listą otwartych zgłoszeń | T8 |
 | O06 | Stanowisko przyjmuje cały ruch, jaki może do niego dotrzeć radiem (121 zgłoszeń/h przez 72 h, ok. 8700 zgłoszeń), bez odrzucania z powodu pełnej pamięci | T5, próba obciążenia |
@@ -71,11 +71,11 @@ Stacja przy OSP nie ma tożsamości OSP, więc nie wymaga PRZENIEŚ STACJĘ. Zap
 
 `bitrate` ustawia się więc nie na przepływność USB ani P1, lecz tak, aby 500 B × 8 / `bitrate` odpowiadało zmierzonemu w T3 czasowi powrotu potwierdzenia przez P1 (na przykład 33 b/s dla 120 s). Niska wartość nie opóźnia ogłoszeń OSP, bo własne ogłoszenia nie podlegają limitowi ogłoszeń interfejsu, a komputer bez transportu nie wysyła rekurencyjnych zapytań o trasę. Potwierdzenie, które przyjdzie po limicie, nie zalicza dostarczenia; LXMF nadaje wtedy wiadomość ponownie, a deduplikacja w schronieniu chroni poprawność kosztem czasu nadawania. Zmiana kodu stosu wzorcowego otwiera ponownie D19.
 
-**Przyjęcie.** Funkcja zwrotna dostarczenia LXMF sprawdza `signature_validated`, limit rozmiaru i stan nadawcy w bazie: karta zaufanej stacji, unieważnienie albo nadawca nieznany. Zaufane REQUEST i TEST przyjmuje jedna transakcja SQLite (O01, O02), a RECEIVED wychodzi po COMMIT. Wiadomość nieznanego nadawcy trafia do kwarantanny bez RECEIVED; przy SOURCE_UNKNOWN aplikacja wysyła zapytanie o trasę i sprawdza podpis po nadejściu ogłoszenia. Wiadomość tożsamości unieważnionej jest odrzucana, liczona i wywołuje alarm. Schemat i przejścia stanów są w [modelu wzorcowym](../../software/reference/README.md) (`OSPStore`, `schema.sql`); aplikacja używa tego schematu. Czas odbioru to czas komputera; znacznik czasu LXMF jest ignorowany.
+**Przyjęcie.** Funkcja zwrotna dostarczenia LXMF sprawdza `signature_validated`, limit rozmiaru i stan nadawcy w bazie: stacja na liście zaufanych, usunięta z listy albo nieznana. Zaufane REQUEST i TEST przyjmuje jedna transakcja SQLite (O01, O02), a RECEIVED wychodzi po COMMIT. Wiadomość od stacji spoza listy trafia do kwarantanny bez RECEIVED; przy SOURCE_UNKNOWN aplikacja wysyła zapytanie o trasę i sprawdza podpis po nadejściu ogłoszenia. Wiadomość stacji usuniętej z listy trafia do kwarantanny tak samo, ale jest liczona i oznaczona alarmem. Schemat i przejścia stanów są w [modelu wzorcowym](../../software/reference/README.md) (`OSPStore`, `schema.sql`); aplikacja używa tego schematu. Czas odbioru to czas komputera; znacznik czasu LXMF jest ignorowany.
 
 **Wysyłka.** RECEIVED, STATUS, REPLY i BULLETIN mają intencje w SQLite, zapisywane w tej samej transakcji co zdarzenie, które je wywołało. Kolejność jak w stacji: RECEIVED i STATUS, potem REPLY i BULLETIN. Po FAILED aplikacja ponawia jak stacja: po 1, 2, 5 i 15 min, każdy odstęp ±20%; po 6 h co 60 min. Po DELIVERED intencja jest zakończona; powtórzony REQUEST dostaje zapisany RECEIVED i najnowszy STATUS. W drodze są najwyżej 4 wiadomości naraz, a BULLETIN rozsyła się do stacji po kolei, z postępem w panelu (dla 50 stacji ok. 12 min). Nieodesłany STATUS dla tej samej pary (id, revision) zastępuje się nowszym.
 
-**Zaufanie.** Karty zaufanych stacji i stan „unieważniona” przechowuje baza aplikacji OSP, która podejmuje decyzję o każdej wiadomości. Dodanie zaufanej stacji wymaga karty stacji (plik lub QR), porównania odcisku z ekranem stacji albo z kartą w ewidencji i zgody dwóch zalogowanych dyżurnych. Unieważnienie wykonuje jeden zalogowany dyżurny z wpisem do dziennika działań; cofnięcie unieważnienia wymaga zgody dwóch osób i wpisu w ewidencji. Zatwierdzenie w kwarantannie dotyczy pojedynczej wiadomości i nie dodaje nadawcy do zaufanych.
+**Zaufanie.** Baza aplikacji OSP przechowuje jedną listę zaufanych stacji z ich kartami; na jej podstawie aplikacja decyduje o każdej wiadomości. Dodanie stacji do listy wymaga karty stacji (plik lub QR), porównania odcisku z ekranem stacji albo z kartą w ewidencji i zgody dwóch zalogowanych dyżurnych; tak samo wraca stacja usunięta przez pomyłkę. Usunięcie z listy wykonuje jeden zalogowany dyżurny z wpisem do dziennika działań, bo usunięcie tylko odbiera zaufanie. Wiadomości stacji usuniętej trafiają do kwarantanny z alarmem „możliwe przejęcie stacji”; limit 4 wiadomości na nadawcę chroni kwarantannę przed zapełnieniem. Po ponownym dodaniu stacji jej wiadomości z kwarantanny są usuwane, bo stacja ponawia je do RECEIVED. Zatwierdzenie w kwarantannie dotyczy pojedynczej wiadomości i nie dodaje nadawcy do zaufanych.
 
 **Ogłoszenia.** Aplikacja ogłasza adres OSP po starcie, po każdym ponownym połączeniu ze stacją, co 6 h ±20% i na polecenie dyżurnego. Ogłoszenia przechodzą przez limit ogłoszeń interfejsu P1 stacji. W ciszy radiowej stacja ich nie nadaje.
 
@@ -93,7 +93,7 @@ Panel nasłuchuje wyłącznie na 127.0.0.1. Wymaga logowania; konta i hasła two
 - „PRZECZYTANE” jednym przyciskiem wysyła STATUS ze state=2;
 - pokazuje TEST osobno i pozwala potwierdzić kilka TEST zbiorczo, po sprawdzeniu adresu każdego;
 - nie wyśle stanu 5 bez REPLY z instrukcją;
-- ma widok kwarantanny z wiadomościami „do weryfikacji” i licznikiem odrzuconych wiadomości od tożsamości unieważnionych (alarm „możliwe przejęcie stacji”);
+- ma widok kwarantanny z wiadomościami „do weryfikacji”, a przy stacjach usuniętych z listy alarm „możliwe przejęcie stacji” z liczbą odebranych od nich wiadomości (z powtórzeniami);
 - wysyła BULLETIN osobno do każdej stacji i pokazuje postęp rozsyłania;
 - pokazuje stan węzła: połączenie ze stacją, czas od ostatniego pakietu z radia, liczbę intencji w drodze i w oczekiwaniu, wiek najstarszej;
 - przekazanie zmiany: otwarte zgłoszenia, niewysłane intencje, kwarantanna, kopia bazy.
@@ -106,8 +106,8 @@ Panel nasłuchuje wyłącznie na 127.0.0.1. Wymaga logowania; konta i hasła two
 | `POST /api/operator/reply` | odpowiedź REPLY do zgłoszenia |
 | `POST /api/operator/bulletin` | komunikat BULLETIN, osobno do każdej stacji |
 | `POST /api/operator/quarantine` | zatwierdzenie pojedynczej wiadomości (nadawca, id, revision) bez dodania nadawcy do zaufanych albo jej odrzucenie |
-| `POST /api/operator/trust` | dodanie zaufanej stacji z karty; zgoda dwóch zalogowanych osób |
-| `POST /api/operator/revoke` | unieważnienie tożsamości stacji; cofnięcie za zgodą dwóch osób |
+| `POST /api/operator/trust` | dodanie stacji do listy zaufanych z karty; zgoda dwóch zalogowanych osób |
+| `POST /api/operator/trust/remove` | usunięcie stacji z listy zaufanych; jeden zalogowany dyżurny |
 | `POST /api/operator/announce` | ogłoszenie adresu OSP |
 | `POST /api/operator/backup` | kopia bazy na drugi nośnik |
 | `POST /api/operator/close` | ZAMKNIJ ZDARZENIE |

@@ -196,10 +196,6 @@ def check_button_configuration(address: str, phrases: tuple[str, ...]) -> int:
     return size
 
 
-class RevokedSender(ValueError):
-    """A message from a revoked identity: rejected, counted, never quarantined."""
-
-
 class QuarantineFull(ValueError):
     """A quarantine limit (per sender or in total) would be exceeded."""
 
@@ -209,7 +205,7 @@ def _ack(mid: str, revision: int) -> bytes:
 
 
 class OSPStore:
-    """Model atomic OSP reception, per-message quarantine, revocation, ACK outbox and content purge."""
+    """Model atomic OSP reception, per-message quarantine, one trusted list, ACK outbox and content purge."""
 
     def __init__(self, path: Path, trusted: dict[bytes, bytes] | None = None):
         """Open a test database with the specified SQLite durability settings and station cards (source -> public key)."""
@@ -219,13 +215,13 @@ class OSPStore:
         self.db.executescript(Path(__file__).with_name("schema.sql").read_text())
         with self.db:
             for source, pubkey in (trusted or {}).items():
+                if self.db.execute("SELECT 1 FROM removed WHERE source=?", (source,)).fetchone() is not None:
+                    raise ValueError("Removed station returns only through add_trusted")
                 self._insert_trusted(source, pubkey)
 
     def _insert_trusted(self, source: bytes, pubkey: bytes) -> None:
         if len(source) != 16 or len(pubkey) != 64:
             raise ValueError("Invalid station card")
-        if self.db.execute("SELECT 1 FROM revoked WHERE source=?", (source,)).fetchone() is not None:
-            raise RevokedSender("Revoked identity cannot be trusted again")
         previous = self.db.execute("SELECT pubkey FROM trusted WHERE source=?", (source,)).fetchone()
         if previous is not None and previous[0] != pubkey:
             raise ValueError("Conflicting public key for a trusted station")
@@ -253,14 +249,13 @@ class OSPStore:
 
         Deduplication is by (source, id, revision, SHA-256 of canonical content); the same key with other content
         is a conflict. A message already accepted (also after purge or single-message approval) returns its ACK.
-        A revoked sender is counted and rejected with RevokedSender; nothing is quarantined.
+        A station removed from the trusted list is quarantined like an unknown sender. For the takeover alarm its
+        messages are counted before decoding, in their own transaction, including repeats, invalid and over-limit ones.
         """
         if signature_valid is not True or len(source) != 16:
             raise ValueError("Unverified sender")
-        if self.db.execute("SELECT 1 FROM revoked WHERE source=?", (source,)).fetchone() is not None:
-            with self.db:
-                self.db.execute("UPDATE revoked SET rejected = rejected + 1 WHERE source=?", (source,))
-            raise RevokedSender("Revoked sender")
+        with self.db:
+            self.db.execute("UPDATE removed SET messages = messages + 1 WHERE source=?", (source,))
         value = decode_message(wire)
         if value[1] not in (0, 5):
             raise ValueError("Expected REQUEST or TEST")
@@ -301,26 +296,30 @@ class OSPStore:
         return ack
 
     def add_trusted(self, source: bytes, pubkey: bytes, approvers: tuple[str, str]) -> None:
-        """Add a station from its card (64 B public key) with the consent of two different people."""
+        """Add a station from its card (64 B public key) with the consent of two different people.
+
+        The station's quarantined messages are dropped: it resends each one until RECEIVED, now as trusted.
+        A source is the hash of its key, so a removed station returning with another key is not modelled.
+        """
         if (len(approvers) != 2 or any(type(a) is not str or not a.strip() for a in approvers)
                 or approvers[0].strip() == approvers[1].strip()):
             raise ValueError("Two different approvers required")
         with self.db:
             self._insert_trusted(source, pubkey)
-
-    def revoke(self, source: bytes) -> None:
-        """Mark an identity as revoked: drop trust and its quarantine; later messages are rejected and counted."""
-        if len(source) != 16:
-            raise ValueError("Invalid sender")
-        with self.db:
-            self.db.execute("INSERT OR IGNORE INTO revoked(source) VALUES(?)", (source,))
-            self.db.execute("DELETE FROM trusted WHERE source=?", (source,))
+            self.db.execute("DELETE FROM removed WHERE source=?", (source,))
             self.db.execute("DELETE FROM quarantine WHERE source=?", (source,))
 
-    def rejected_count(self, source: bytes) -> int:
-        """Messages rejected from a revoked identity (diagnostics and possible takeover alarm)."""
-        row = self.db.execute("SELECT rejected FROM revoked WHERE source=?", (source,)).fetchone()
-        return 0 if row is None else row[0]
+    def remove_trusted(self, source: bytes) -> None:
+        """One duty officer removes a station from the trusted list; adding it back is add_trusted (two people)."""
+        with self.db:
+            if self.db.execute("DELETE FROM trusted WHERE source=?", (source,)).rowcount != 1:
+                raise ValueError("Station is not trusted")
+            self.db.execute("INSERT OR IGNORE INTO removed(source) VALUES(?)", (source,))
+
+    def removed_messages(self, source: bytes) -> int | None:
+        """Messages from a removed station (possible takeover alarm); None if the station was not removed."""
+        row = self.db.execute("SELECT messages FROM removed WHERE source=?", (source,)).fetchone()
+        return None if row is None else row[0]
 
     def send_reply(self, dest: bytes, mid: str, revision: int, event: int, text: str) -> bytes:
         """Record a REPLY to an accepted request and return its SA1 content."""

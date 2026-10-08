@@ -21,9 +21,10 @@ CREATE TABLE IF NOT EXISTS trusted (
     source BLOB PRIMARY KEY CHECK(length(source)=16),
     pubkey BLOB NOT NULL CHECK(length(pubkey)=64)
 );
-CREATE TABLE IF NOT EXISTS revoked (
+-- Stations removed from the trusted list: their messages go to quarantine flagged as a possible takeover.
+CREATE TABLE IF NOT EXISTS removed (
     source BLOB PRIMARY KEY CHECK(length(source)=16),
-    rejected INTEGER NOT NULL DEFAULT 0
+    messages INTEGER NOT NULL DEFAULT 0
 );
 -- Limits (4 per sender, 256 in total) are enforced by the model before insertion.
 CREATE TABLE IF NOT EXISTS quarantine (

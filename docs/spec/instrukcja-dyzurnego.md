@@ -8,7 +8,7 @@ Instrukcja jest dla dyżurnych stanowiska odbiorczego (OSP), czyli stanowiska wy
 - Oceniasz, kto może pomóc, i przekazujesz zgłoszenie służbom zdolnym do pomocy (PSP, OSP, PRM, Policja, służby komunalne) według gminnego planu zarządzania kryzysowego. Nie zlecasz im działań.
 - Odsyłasz schronieniu decyzję, a gdy nie możesz pomóc, odpowiedź z instrukcją.
 - Rozsyłasz komunikaty na polecenie wójta lub sztabu kryzysowego.
-- Pilnujesz zaufania: nieznane stacje, unieważnione stacje, podejrzenie przejęcia.
+- Pilnujesz listy zaufanych stacji i kwarantanny; reagujesz na podejrzenie przejęcia.
 - Prowadzisz papierowy dziennik zgłoszeń i decyzji.
 
 Decyzja dyżurnego nie jest obietnicą przyjazdu. WICI nie zastępuje numeru 112: zgłoszenie zagrożenia życia, które da się przekazać telefonem, przekazujesz telefonem.
@@ -55,9 +55,9 @@ Każdy komunikat ma na ekranie stacji stopkę „NAKAZ WYJŚCIA LUB EWAKUACJI? P
 
 ## Zaufanie i kwarantanna
 
-- **Kwarantanna.** Zgłoszenie od stacji, której karty nie ma w bazie, trafia do kwarantanny i nie dostaje „ODBIORCA ZAPISAŁ”. Zanim je zatwierdzisz, potwierdź je drugim kanałem: goniec, PMR446, telefon, służby na miejscu. Zatwierdzenie dotyczy tylko tej jednej wiadomości. Po zatwierdzeniu traktuj zgłoszenie jako niesprawdzone źródło.
-- **Nowa zaufana stacja** (np. stacja zastępcza ze schronienia) wymaga karty stacji, porównania odcisku z ekranem stacji albo z ewidencją i zgody dwóch zalogowanych dyżurnych. Nie dodawaj stacji na podstawie samej wiadomości radiowej.
-- **Unieważnienie.** Gdy stacja zaginęła, została skradziona albo opiekun zgłasza jej przejęcie, unieważnij jej tożsamość w panelu i wpisz powód do dziennika. Panel pokazuje potem odrzucone wiadomości tej stacji z alarmem „możliwe przejęcie stacji”. Unieważnienie cofa się tylko za zgodą dwóch osób.
+- **Kwarantanna.** Zgłoszenie od stacji spoza listy zaufanych trafia do kwarantanny i nie dostaje „ODBIORCA ZAPISAŁ”. Zanim je zatwierdzisz, potwierdź je drugim kanałem: goniec, PMR446, telefon, służby na miejscu. Zatwierdzenie dotyczy tylko tej jednej wiadomości. Po zatwierdzeniu traktuj zgłoszenie jako niesprawdzone źródło.
+- **Dodanie do listy** (np. stacja zastępcza ze schronienia albo stacja usunięta przez pomyłkę) wymaga karty stacji, porównania odcisku z ekranem stacji albo z ewidencją i zgody dwóch zalogowanych dyżurnych. Nie dodawaj stacji na podstawie samej wiadomości radiowej.
+- **Usunięcie z listy.** Gdy stacja zaginęła, została skradziona albo opiekun zgłasza jej przejęcie, usuń ją z listy w panelu i wpisz powód do dziennika; zgoda drugiego dyżurnego nie jest potrzebna. Jej nowe wiadomości trafiają potem do kwarantanny z alarmem „możliwe przejęcie stacji”. Takiej wiadomości nie zatwierdzaj bez potwierdzenia drugim kanałem u opiekuna schronienia.
 
 ## Cisza radiowa
 
@@ -76,7 +76,7 @@ Przed zejściem ze zmiany otwórz w panelu przekazanie zmiany i wykonaj kopię b
 | stacja przy OSP uszkodzona | podłącz stację zapasową w to samo miejsce: antena, zasilanie, USB. Tożsamość OSP jest na komputerze, więc schronienia niczego nie zmieniają |
 | nośnik stanowiska uszkodzony | wezwij osobę utrzymującą system; odtworzenie z kopii bazy. Zgłoszenia przyjęte po ostatniej kopii i decyzje wysłane po niej odtwarzasz z dziennika papierowego, bo schronienia, które dostały „ODBIORCA ZAPISAŁ”, ich nie ponowią |
 | brak zasilania | laptop pracuje z akumulatora; uruchom agregat albo stację zasilania i przełącz źródło przed wyczerpaniem akumulatora |
-| dużo zgłoszeń w kwarantannie albo odrzuconych od unieważnionej stacji | możliwa próba podszycia; nie zatwierdzaj bez drugiego kanału; zawiadom organizatora sieci |
+| dużo zgłoszeń w kwarantannie albo wiadomości od stacji usuniętej z listy | możliwa próba podszycia; nie zatwierdzaj bez drugiego kanału; zawiadom organizatora sieci |
 
 **Podejrzenie przejęcia stanowiska** (kradzież komputera lub nośnika, ktoś obcy przy działającym komputerze): zawiadom wójta i organizatora sieci. O przełączeniu schronień na odbiorcę zapasowego decyduje wójt; polecenie idzie do opiekunów wyłącznie słownie albo przez gońców, nigdy komunikatem radiowym. Tożsamość zapasową wczytuje osoba utrzymująca system na komputerze zapasowym, z obu kopert od organizatora sieci, na nowy nośnik z pustą bazą. Zanim aplikacja zacznie przyjmować zgłoszenia, wczytuje z ewidencji karty zaufanych stacji (zatwierdzasz to razem z drugim dyżurnym) i zakłada od nowa konta dyżurnych z nowymi hasłami; potem aplikacja ogłasza nowy adres. Schronienia po przełączeniu wysyłają niepotwierdzone zgłoszenia ponownie; otwarte sprawy odtwarzasz z dziennika papierowego. Gdy grozi przejęcie stanowiska, uruchom w panelu ZNISZCZ DANE i zniszcz fizycznie oba nośniki; zapisz to w dzienniku.
 

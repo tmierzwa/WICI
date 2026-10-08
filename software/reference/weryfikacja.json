@@ -606,9 +606,9 @@
     600
   ],
   "source_hashes": {
-    "reference.py": "21bbef4e5c8787ce6cdd10ac44e4dfc52c55a265f0b20754eb9ae3784486d1fe",
-    "test_reference.py": "b0b2e905ee62ab6484dbe732f4396b870de857757ad424482d82115213813224",
-    "schema.sql": "9feacc35c6d0599ef1aa17fa83c6c49bf4ea686fc46b5f2954324338f6fab412",
+    "reference.py": "30d4b56332ed336d8d1c6ca83bb786b823b318e12f541999550a532a0762f35e",
+    "test_reference.py": "01eab7b79b5f776296813a426b58bd9bdadb076a37b3ecbf3f9b07816eb4ea6b",
+    "schema.sql": "f93c98118c4b5cd4d5d79bd0d704cba04da7058935b86e473092e3437203df7e",
     "obliczenia.py": "05ef9e19b158c6fa72c005c1d011dd25be19a50e85a66bc7212565ce9b2ea8cf"
   },
   "runtime": {
