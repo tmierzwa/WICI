@@ -114,7 +114,7 @@ struct Draft {
     int8_t phrase = PHRASE_NONE;
 };
 
-enum class Submit : uint8_t { STORED, NO_ADDRESS, FULL, ERROR, ANNOUNCED };  // ANNOUNCED: OGŁOŚ ADRES
+enum class Submit : uint8_t { STORED, NO_ADDRESS, FULL, ERROR, ANNOUNCED, NOT_ANNOUNCED };  // (NOT_)ANNOUNCED: OGŁOŚ ADRES
 enum class TestState : uint8_t { NONE, SCHEDULED, SENT, CONFIRMED, PAUSED };
 struct TestInfo {
     TestState state = TestState::NONE;

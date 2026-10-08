@@ -169,7 +169,7 @@ int assembleScript() {
 // warstwę aplikacji i konsolę: "A <adres>" konfiguracja (OSP 0xCC.., 2 stacje), "I <sa1>" wiadomość od OSP,
 // "E <ack 0|1>" krok łącza (nadanie z kolejki, dowód transportowy od OSP), "Y <s>" czas pracy,
 // "KD/KU <przycisk> <ms>" naciśnięcie i zwolnienie, "M" lista WIADOMOŚCI, "J" kolejka,
-// "ON <0|1>" konfiguracja węzła OSP, "PC <słyszany> <s> <usb in> <usb out> <odrzuty>" komputer stanowiska.
+// "ON <0|1>" konfiguracja węzła OSP, "RN <0|1>" stos sieciowy działa, "PC <słyszany> <s> <usb in> <usb out> <odrzuty>" komputer stanowiska.
 struct UiServices : station::Services {
     uint32_t uptime = 100;
     bool silence_ = false;
@@ -188,7 +188,8 @@ struct UiServices : station::Services {
     void randomBytes(uint8_t* out, size_t count) override { for (size_t i = 0; i < count; ++i) out[i] = static_cast<uint8_t>(0x30 + (++counter)); }
     void log(const char* text) override { printf("log %s\n", text); }
     void destroyed() override { printf("stack wiped\n"); }
-    bool announce() override { printf("announce requested\n"); return true; }
+    bool stack = true;
+    bool announce() override { if (stack) printf("announce requested\n"); return stack; }
     bool notify(uint8_t kind, uint32_t ref, const char* fields) override { printf("event %u %u %s\n", kind, ref, fields); return true; }
     void address(uint8_t* out) override { memset(out, 0xAB, store::HASH); }
 };
@@ -252,6 +253,8 @@ int uiScript() {
             if (a) { memset(cfg.address, 0, sizeof(cfg.address)); memset(cfg.osp, 0, sizeof(cfg.osp)); }
             printf("config %d\n", store.writeConfig(cfg));
             con.invalidate();
+        } else if (sscanf(line, "RN %u", &a) == 1) {
+            services.stack = a;
         } else if (sscanf(line, "PC %u %u %u %u %u", &a, &b, &c, &d, &e) == 5) {
             status.computerHeard = a; status.computerS = b; status.usbIn = c; status.usbOut = d; status.usbDrop = e;
         } else if (!strcmp(line, "AD")) {
@@ -1230,6 +1233,10 @@ class HostUnitTests(unittest.TestCase):
         # OGŁOŚ ADRES: zlecenie bez sekwencji, wynik, powrót do USŁUG.
         self.assertIn("announce requested", out)
         self.assertEqual(" ".join(self.lines(s[2])).strip(), texts["adres_ogloszony"][0])
+        # Bez działającego stosu: własny komunikat, nie błąd zapisu zgłoszenia.
+        failed = self.screens(self.hosted(to_services + ["RN 0", "K OK 0", "R"]))[-1]
+        self.assertEqual(failed[0], "result")
+        self.assertEqual(" ".join(self.lines(failed)).strip(), texts["adres_nie_ogloszony"][0])
         # WYCISZ DŹWIĘK przełącza pozycję na WŁĄCZ DŹWIĘK; wyciszenie widać na ekranie głównym (wiersz 4, pusta kolejka).
         self.assertEqual(self.lines(s[4])[1], labels["wlacz_dzwiek"][0])
         self.assertIn(texts["dzwiek_wyciszony"][0], self.lines(s[9]))

@@ -496,7 +496,7 @@ void Model::act(Button button, uint32_t nowMs) {
                 switch (items[cursor_]) {
                     case Service::ANNOUNCE:
                         // Ogłoszenie bez sekwencji: nie zmienia danych, w ciszy czeka na jej odwołanie.
-                        result_ = host_ && host_->announce() ? Submit::ANNOUNCED : Submit::ERROR;
+                        result_ = host_ && host_->announce() ? Submit::ANNOUNCED : Submit::NOT_ANNOUNCED;
                         serviceResult_ = true;
                         go(Screen::RESULT);
                         break;
@@ -1054,6 +1054,7 @@ void Model::render(const Status& s, Lines& out) {
                 case Submit::FULL: t.add(text(Id::KOLEJKA_PELNA, lang_)); break;
                 case Submit::ERROR: t.add(text(Id::BLAD_PAMIECI, lang_)); break;
                 case Submit::ANNOUNCED: t.add(text(Id::ADRES_OGLOSZONY, lang_)); break;
+                case Submit::NOT_ANNOUNCED: t.add(text(Id::ADRES_NIE_OGLOSZONY, lang_)); break;
             }
             renderText(t, window, out, first);
             break;
