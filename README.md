@@ -10,7 +10,7 @@ Opiekun schronienia wybiera na ekranie kategorię potrzeby i liczbę osób, a st
 
 Podstawowy zestaw to stacja z ekranem, przyciskami, anteną i ogniwami AA. Cel: co najmniej 48 godzin pracy na ogniwach i dłuższa praca ze źródła 12 V. Pilotaż planujemy na gotowej płytce ESP32-S3 z radiem LoRa SX1262. Zasięg i czas pracy muszą zostać potwierdzone pomiarami.
 
-W schronieniu stacja ma działać samodzielnie. Laptop może później dodać wygodniejszy panel, a router Wi-Fi — lokalną stronę do zgłoszeń z telefonów, bez instalowania aplikacji. Na stanowisku odbiorczym komputer jest obowiązkowy: dyżurny przyjmuje na nim zgłoszenia i przekazuje je służbom.
+W schronieniu stacja ma działać samodzielnie. Laptop może później dodać wygodniejszy panel, a router Wi-Fi umożliwi korzystanie z lokalnej strony do zgłoszeń z telefonów, bez instalowania aplikacji. Na stanowisku odbiorczym komputer jest obowiązkowy: dyżurny przyjmuje na nim zgłoszenia i przekazuje je służbom.
 
 Sieć trzeba przygotować razem z gminą i służbami przed kryzysem: zamontować anteny, sprawdzić trasy radiowe i uzgodnić dyżury. WICI ma uzupełniać lokalny system ochrony ludności. Nie zastępuje numeru 112 ani organizacji pomocy.
 
