@@ -232,18 +232,23 @@ int main() {
     printf("POLL1 %d\n", static_cast<int>(link.pollRx(out)));
     chip.commands.clear();
     injectFrame(5, 0x10, 60, 0x15);  // LEN poniżej MIN_LEN: odrzucona, kolejka opróżniona, znów RX
-    printf("SHORT %d %s %zu\n", static_cast<int>(link.pollRx(out)), link.stateName(), chip.rxFifo.size());
+    // pollRx zmienia stan: wynik najpierw do zmiennej (kolejność argumentów printf zależy od kompilatora).
+    int polled = static_cast<int>(link.pollRx(out));
+    printf("SHORT %d %s %zu\n", polled, link.stateName(), chip.rxFifo.size());
     printCommands("SHORTCMD");
     // Bajty następnego pakietu w kolejce obok ramki (pętla stała): ramka odpada, kolejka pusta, znów RX.
     injectFrame(20, 0x10, 60, 0x15);
     chip.rxFifo.push_back(0x55);
-    printf("EXTRA %d %s %zu\n", static_cast<int>(link.pollRx(out)), link.stateName(), chip.rxFifo.size());
+    polled = static_cast<int>(link.pollRx(out));
+    printf("EXTRA %d %s %zu\n", polled, link.stateName(), chip.rxFifo.size());
     chip.irq |= s2lp::IRQ_RX_FIFO_ERROR;
-    printf("OVERFLOW %d %s\n", static_cast<int>(link.pollRx(out)), link.stateName());
+    polled = static_cast<int>(link.pollRx(out));
+    printf("OVERFLOW %d %s\n", polled, link.stateName());
     chip.irq |= s2lp::IRQ_RX_DATA_DISC;
     printf("DISC %d\n", static_cast<int>(link.pollRx(out)));
     chip.state = s2lp::STATE_READY;  // np. SABORT z polecenia portu
-    printf("REENTER %d %s\n", static_cast<int>(link.pollRx(out)), link.stateName());
+    polled = static_cast<int>(link.pollRx(out));
+    printf("REENTER %d %s\n", polled, link.stateName());
     chip.regs[s2lp::RSSI_LEVEL_RUN] = 40;
     const radiolink::Rssi r = link.rssi();
     printf("RSSI %d %d\n", r.valid, r.dbm);
@@ -416,7 +421,9 @@ int main() {
 
     // Odbiór ramek wzorcowych: RSSI i jakość z ramki sterownika.
     bench.stop();
-    printf("RXSTART %s %d %d %u\n", bench.rxStart(20) ? "error" : "-", radio.rxActive, radio.rxVariable, radio.rxLength);
+    // rxStart zmienia stan atrapy radia: najpierw wynik, potem odczyt pól.
+    const char* rxStarted = bench.rxStart(20) ? "error" : "-";
+    printf("RXSTART %s %d %d %u\n", rxStarted, radio.rxActive, radio.rxVariable, radio.rxLength);
     for (uint16_t seq = 0; seq < 3; ++seq) {
         radiolink::Frame f;
         testframe::build(f.bytes, 20, seq);
@@ -429,8 +436,9 @@ int main() {
     const measure::Counters& t = bench.counters();
     printf("TESTRX %lu %ld %lu\n", static_cast<unsigned long>(t.rxOk), static_cast<long>(t.rssiSum), static_cast<unsigned long>(t.lqiSum));
 
-    printf("FOFF %s %s %ld\n", bench.foff(2000000) ? bench.foff(2000000) : "-", bench.foff(1000) ? "error" : "-",
-           static_cast<long>(radio.offset));
+    const char* foffOutside = bench.foff(2000000);
+    const char* foffInside = bench.foff(1000) ? "error" : "-";
+    printf("FOFF %s %s %ld\n", foffOutside ? foffOutside : "-", foffInside, static_cast<long>(radio.offset));
     bench.printFoff();
 
     // Nośna po odczekaniu długu: stan układu w polu "marc", koniec po czasie.

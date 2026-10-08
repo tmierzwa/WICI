@@ -117,8 +117,12 @@ void report() {
 
 void printState() {
     const uint8_t marc = radio().readMarcState();
+    // Status z odczytu MARCSTATE, zanim następne odczyty go nadpiszą (kolejność argumentów printf jest nieokreślona).
+    const uint8_t status = radio().lastStatus();
+    const uint8_t rxBytes = radio().rxBytes();
+    const uint8_t txBytes = radio().txBytes();
     Serial.printf("{\"marc\":\"%s\",\"marcstate\":\"0x%02X\",\"status\":\"0x%02X\",\"rxbytes\":%u,\"txbytes\":%u}\n",
-                  cc1120::marcStateName(marc), marc, radio().lastStatus(), radio().rxBytes(), radio().txBytes());
+                  cc1120::marcStateName(marc), marc, status, rxBytes, txBytes);
 }
 
 bool handle(const char* cmd, char* words[], size_t n) {

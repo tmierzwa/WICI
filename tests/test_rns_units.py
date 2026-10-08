@@ -63,7 +63,10 @@ void listOne(const char* name, void*) { printf("entry %s\n", name); }
 int fsScenario() {
     Ram ram;
     framfs::Fs fs(ram);
-    printf("mount %d formats %u blocks %u\n", fs.mount(), fs.stats().formats, (unsigned)framfs::BLOCKS);
+    // Argumenty ze skutkami ubocznymi najpierw do zmiennych: kolejność obliczania argumentów printf
+    // zależy od kompilatora (gcc na x86-64 liczy od prawej).
+    const int mounted = fs.mount();
+    printf("mount %d formats %u blocks %u\n", mounted, fs.stats().formats, (unsigned)framfs::BLOCKS);
     const int a = fs.create("./path_store/seg0.dat");
     std::vector<uint8_t> data(1000);
     for (size_t i = 0; i < data.size(); ++i) data[i] = (uint8_t)(i * 7 + 3);
@@ -82,17 +85,23 @@ int fsScenario() {
     fs.create("cache/sub/x");
     printf("list %u\n", (unsigned)fs.list("./cache", listOne, nullptr));
     printf("dir %d %d\n", fs.directoryExists("cache"), fs.directoryExists("nothing"));
-    printf("rename %d %d %d\n", fs.rename("cache/0011", "cache/2233"), fs.find("cache/0011"), fs.size(fs.find("cache/2233")) == 10);
+    const int renamed = fs.rename("cache/0011", "cache/2233");
+    printf("rename %d %d %d\n", renamed, fs.find("cache/0011"), fs.size(fs.find("cache/2233")) == 10);
     const size_t used = fs.stats().usedBlocks;
-    printf("truncate %d size %u freed %d\n", fs.truncate(a), (unsigned)fs.size(a), fs.stats().usedBlocks < used);
-    printf("remove %d %d files %u\n", fs.remove("cache/2233"), fs.remove("cache/2233"), (unsigned)fs.stats().files);
+    const int truncated = fs.truncate(a);
+    printf("truncate %d size %u freed %d\n", truncated, (unsigned)fs.size(a), fs.stats().usedBlocks < used);
+    const int removed = fs.remove("cache/2233");
+    const int removedAgain = fs.remove("cache/2233");
+    printf("remove %d %d files %u\n", removed, removedAgain, (unsigned)fs.stats().files);
     fs.write(a, 0, data.data(), 700);
     framfs::Fs again(ram);
-    printf("remount %d files %u formats %u size %u\n", again.mount(), (unsigned)again.stats().files, again.stats().formats,
+    const int remounted = again.mount();
+    printf("remount %d files %u formats %u size %u\n", remounted, (unsigned)again.stats().files, again.stats().formats,
            (unsigned)again.size(again.find("path_store/seg0.dat")));
     char name[framfs::NAME_LEN + 1];
     printf("name %d %s\n", again.name(again.find("path_store/seg0.dat"), name), name);
-    printf("removedir %d files %u\n", again.removeDirectory("cache"), (unsigned)again.stats().files);
+    const int removedDir = again.removeDirectory("cache");
+    printf("removedir %d files %u\n", removedDir, (unsigned)again.stats().files);
     return 0;
 }
 
@@ -148,7 +157,8 @@ int fsRepair() {
            fs.stats().reclaimed, (unsigned)fs.stats().usedBlocks);
     printf("exists %d %d %d\n", fs.find("a") >= 0, fs.find("b") >= 0, fs.find("c") >= 0);
     std::vector<uint8_t> back(200);
-    printf("c intact %u %d\n", (unsigned)fs.read(fs.find("c"), 0, back.data(), 200), back[199] == 0x11);
+    const unsigned readC = (unsigned)fs.read(fs.find("c"), 0, back.data(), 200);
+    printf("c intact %u %d\n", readC, back[199] == 0x11);
     framfs::Fs fs2(ram);
     fs2.mount();
     printf("stable dropped %u reclaimed %u used %u\n", fs2.stats().dropped, fs2.stats().reclaimed, (unsigned)fs2.stats().usedBlocks);
@@ -161,14 +171,18 @@ int keyScenario() {
     printf("empty %d\n", framfs::loadKey(ram, out));
     for (int i = 0; i < 64; ++i) key[i] = (uint8_t)i;
     printf("save %d\n", framfs::saveKey(ram, key));
-    printf("load %d %d\n", framfs::loadKey(ram, out), !memcmp(out, key, 64));
+    int loaded = framfs::loadKey(ram, out);
+    printf("load %d %d\n", loaded, !memcmp(out, key, 64));
     key[0] = 0xAA;
     framfs::saveKey(ram, key);
-    printf("newer %d %02x\n", framfs::loadKey(ram, out), out[0]);
+    loaded = framfs::loadKey(ram, out);
+    printf("newer %d %02x\n", loaded, out[0]);
     // Uszkodzony nowszy slot: zostaje starszy.
     ram.bytes[framfs::IDENTITY_BASE + framfs::IDENTITY_SLOT + 20] ^= 0x40;
-    printf("fallback %d %02x\n", framfs::loadKey(ram, out), out[0]);
-    printf("wipe %d %d\n", framfs::wipeKey(ram), framfs::loadKey(ram, out));
+    loaded = framfs::loadKey(ram, out);
+    printf("fallback %d %02x\n", loaded, out[0]);
+    const int wiped = framfs::wipeKey(ram);
+    printf("wipe %d %d\n", wiped, framfs::loadKey(ram, out));
     return 0;
 }
 
@@ -189,7 +203,9 @@ int hashScenario() {
     printf("evict %u %d %d %u\n", (unsigned)list.size(), list.contains(0x100000001ULL), list.contains(7), list.evicted());
     list.add(7);
     printf("dup %u\n", list.evicted());
-    printf("remove %d %d %d\n", list.remove(7), list.contains(7), list.remove(7));
+    const int removed = list.remove(7);
+    const int still = list.contains(7);
+    printf("remove %d %d %d\n", removed, still, list.remove(7));
     NoStore store;
     static pkthash::ShortHashList<FakeBytes, NoStore> shl(store);
     FakeBytes a{std::vector<uint8_t>(32, 0x42)}, b{std::vector<uint8_t>(32, 0x42)};
@@ -223,7 +239,10 @@ int ifaceScenario() {
     printf("counters queued %u full %u waitMs %u\n", q.counters().queued, q.counters().full, q.waitMs(1000));
     const uint8_t* p; size_t n;
     q.start(p, n);
-    printf("first %02x len %u busy %d second %d\n", p[0], (unsigned)n, q.transmitting(), q.start(p, n));
+    const uint8_t first = p[0];
+    const unsigned firstLength = (unsigned)n;
+    const int busy = q.transmitting();
+    printf("first %02x len %u busy %d second %d\n", first, firstLength, busy, q.start(p, n));
     // W trakcie nadawania wchodzi dowód (wyższa klasa): kończy się nadawany, nie dowód.
     q.finish(true);
     w[0] = 0xC0;
@@ -246,14 +265,18 @@ int ifaceScenario() {
     // Limit ogłoszeń: własne (hops 0) bez limitu, przekazywane 2% przepływności deklarowanej.
     Queue a;
     w[0] = 0x01;
-    printf("own %s %s\n", admitName(a.offer(Kind::ANNOUNCE, 0, d1, w, 200, 1000)), admitName(a.offer(Kind::ANNOUNCE, 0, d1, w, 200, 1001)));
+    const char* own1 = admitName(a.offer(Kind::ANNOUNCE, 0, d1, w, 200, 1000));
+    printf("own %s %s\n", own1, admitName(a.offer(Kind::ANNOUNCE, 0, d1, w, 200, 1001)));
     printf("fwd %s\n", admitName(a.offer(Kind::ANNOUNCE, 1, d2, w, 202, 1000)));
     const uint32_t gap = a.announceAllowedInMs(1000);
     printf("gap %u expected %u\n", gap, (unsigned)(202ULL * 8 * 1000 * 100 / ANNOUNCE_CAP_PERCENT / declaredBitrate()));
-    printf("held %s %s %s %s\n", admitName(a.offer(Kind::ANNOUNCE, 2, d3, w, 202, 1100)), admitName(a.offer(Kind::ANNOUNCE, 1, d3, w, 202, 1200)),
-           admitName(a.offer(Kind::ANNOUNCE, 1, d4, w, 202, 1300)), admitName(a.offer(Kind::ANNOUNCE, 3, d5, w, 202, 1400)));
+    const char* held1 = admitName(a.offer(Kind::ANNOUNCE, 2, d3, w, 202, 1100));
+    const char* held2 = admitName(a.offer(Kind::ANNOUNCE, 1, d3, w, 202, 1200));
+    const char* held3 = admitName(a.offer(Kind::ANNOUNCE, 1, d4, w, 202, 1300));
+    printf("held %s %s %s %s\n", held1, held2, held3, admitName(a.offer(Kind::ANNOUNCE, 3, d5, w, 202, 1400)));
     printf("fourth %s\n", admitName(a.offer(Kind::ANNOUNCE, 1, d6, w, 202, 1500)));
-    printf("drop %s held %u dropped %u\n", admitName(a.offer(Kind::ANNOUNCE, 1, d7, w, 202, 1600)), (unsigned)a.held(), a.counters().announcesDropped);
+    const char* dropped = admitName(a.offer(Kind::ANNOUNCE, 1, d7, w, 202, 1600));
+    printf("drop %s held %u dropped %u\n", dropped, (unsigned)a.held(), a.counters().announcesDropped);
     while (a.start(p, n)) a.finish(true);
     a.poll(1000 + gap - 1);
     printf("early %u\n", (unsigned)a.queued());
@@ -271,8 +294,8 @@ int ifaceScenario() {
     while (a.start(p, n)) a.finish(true);
     const uint32_t open = t + a.announceAllowedInMs(t);
     a.poll(open);
-    printf("idle %s wait %u\n", admitName(a.offer(Kind::ANNOUNCE, 1, d2, w, 202, open + 0x80000000u + 1)),
-           a.announceAllowedInMs(open + 0x80000000u + 1) > 0);
+    const char* idle = admitName(a.offer(Kind::ANNOUNCE, 1, d2, w, 202, open + 0x80000000u + 1));
+    printf("idle %s wait %u\n", idle, a.announceAllowedInMs(open + 0x80000000u + 1) > 0);
     return 0;
 }
 
