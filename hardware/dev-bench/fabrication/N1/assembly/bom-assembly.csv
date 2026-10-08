@@ -1,5 +1,5 @@
 Designator,Qty per board,Value,Manufacturer,MPN,Description,Footprint,Type,Fit,Placed by
-C1 C4,2,10u,Samsung Electro-Mechanics,CL21A106KAYNNNC,MLCC 10 uF 25 V X5R 0805,C_0805_2012Metric,SMD,all,assembler
+C1 C4,2,10u,Samsung Electro-Mechanics,CL21A106KAYNNNE,MLCC 10 uF 25 V X5R 0805,C_0805_2012Metric,SMD,all,assembler
 C2 C3 C5,3,100n,Samsung Electro-Mechanics,CL21B104KBCNNNC,MLCC 100 nF 50 V X7R 0805,C_0805_2012Metric,SMD,all,assembler
 D2,1,,Diodes Incorporated,1N4148W-7-F,"switching diode 75 V, SOD-123",D_SOD-123,SMD,all,assembler
 D3,1,,onsemi,BAT54SLT1G,"dual Schottky diode series, SOT-23",SOT-23,SMD,all,assembler
@@ -11,17 +11,3 @@ R19,1,2k2,Yageo,RC0805FR-072K2L,resistor 2k2 1 % 0805,R_0805_2012Metric,SMD,all,
 R2,1,22R,Yageo,RC1206FR-0722RL,resistor 22 ohm 1 % 1206,R_1206_3216Metric,SMD,all,assembler
 R4 R14,2,100k,Yageo,RC0805FR-07100KL,resistor 100k 1 % 0805,R_0805_2012Metric,SMD,all,assembler
 R5 R6 R7 R8 R9 R10 R11 R12 R13,9,10k,Yageo,RC0805FR-0710KL,resistor 10k 1 % 0805,R_0805_2012Metric,SMD,all,assembler
-BZ1,1,,Same Sky (CUI Devices),CEM-1203(42),"magnetic buzzer 12 mm, external drive, THT (hand solder only)",MagneticBuzzer_ProSignal_ABT-410-RC,THT,all,owner (hand solder)
-D1,1,,Kingbright,WP7113ID,"LED 5 mm red diffused, THT",LED_D5.0mm,THT,all,owner (hand solder)
-J1 J2 J3 J4,1 kit,,Adafruit,Adafruit 85,"Arduino R3 stacking header kit (1x10, 2x 1x8, 1x6), long tails",PinSocket_1x08_P2.54mm_Vertical,THT,all,owner (hand solder)
-J11,1,,Wurth Elektronik,61300911121,"1x9 male pin header, 2.54 mm, THT",PinHeader_1x09_P2.54mm_Vertical,THT,all,owner (hand solder)
-J12,1,,Phoenix Contact,1715721,"2-pole screw terminal, 5.08 mm, THT","TerminalBlock_Phoenix_MKDS-1,5-2-5.08_1x02_P5.08mm_Horizontal",THT,all,owner (hand solder)
-J5 J6,2,,Sullins,PPTC221LFBN-RC,"1x22 female header, 2.54 mm, vertical, THT",PinSocket_1x22_P2.54mm_Vertical,THT,variant B only,owner (hand solder)
-J7 J8,2,,Sullins,PPTC091LFBN-RC,"1x9 female header, 2.54 mm, vertical, THT",PinSocket_1x09_P2.54mm_Vertical,THT,all,owner (hand solder)
-J9 J10,2,,Samtec,TFM-110-01-L-D,"Tiger Eye 2x10 terminal strip, 1.27 mm, through-hole, mates Samtec SFM",PinHeader_2x10_P1.27mm_Vertical,THT,variant A only,owner (hand solder)
-JP1 JP2 JP3,3,,Wurth Elektronik,61300211121,"1x2 male pin header, 2.54 mm, THT",PinHeader_1x02_P2.54mm_Vertical,THT,all,owner (hand solder)
-SW1 SW2 SW3 SW4,4,,Omron,B3F-4055,"tactile switch 12x12 mm, THT",SW_SPST_Omron_B3F-40xx,THT,all,owner (hand solder)
-SW5,1,,E-Switch,100SP1T1B4M2QE,"toggle switch SPDT ON-NONE-ON, PCB pins, THT",Toggle_ESwitch_100SP1T1B4M2QE,THT,all,owner (hand solder)
-SW6,1,,Omron,B3F-1000,"tactile switch 6x6 mm, THT",SW_TH_Tactile_Omron_B3F-100x,THT,all,owner (hand solder)
-,3,,Wurth Elektronik,60900213421,jumper 2.54 mm,loose item,loose,all,owner (JP1-JP3)
-,4,,Omron,B32-1310,cap for B3F tactile switch,loose item,loose,all,owner (SW1-SW4)

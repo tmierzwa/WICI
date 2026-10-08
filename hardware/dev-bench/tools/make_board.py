@@ -82,6 +82,12 @@ def build():
     ds.m_ViasMinSize = k.FromMM(.8)
     ds.m_MinThroughDrill = k.FromMM(.4)
     ds.m_CopperEdgeClearance = k.FromMM(.5)
+    ds.m_HoleClearance = k.FromMM(.3)
+    # Revision for the Gerber X2 attributes, the job file and the assembly drawing.
+    tb = b.GetTitleBlock()
+    tb.SetTitle('WICI carrier board N1')
+    tb.SetRevision('N1')
+    tb.SetCompany('WICI (CERN-OHL-P-2.0)')
     # Fabrication files take the lower-left board corner as origin.
     ds.SetAuxOrigin(pt(0, BOARD_H))
     nl = netlist()

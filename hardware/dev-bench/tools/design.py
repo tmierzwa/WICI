@@ -88,7 +88,7 @@ part('J4', 'Connector_Generic:Conn_01x10', 'ARDUINO D8-SCL',
 
 EM = dict(mpn='TFM-110-01-L-D', manufacturer='Samtec',
           spec='listwa Tiger Eye 2x10, 1,27 mm, przewlekana (styl -01), partner gniazd SFM-110-02-S-D-A '
-               'modułu według karty Samtec F-226; wysokość po złączeniu 5,97 mm',
+               'modułu według karty Samtec F-226 (wysokość po złączeniu z SFM-02 do pomiaru)',
           variant='A', note='moduł CC1120EM-868-915 wpina się od góry; pin 1 od strony SMA modułu')
 part('J9', 'Connector_Generic:Conn_02x10_Odd_Even', 'CC1120EM P1',
      'Connector_PinHeader_1.27mm:PinHeader_2x10_P1.27mm_Vertical',
@@ -230,7 +230,7 @@ part('R15', 'Device:R', '20k', R0805, {1: 'VTEST', 2: 'GND'}, (163.0, 82.0, 90),
      mpn='RC0805FR-0720KL', manufacturer='Yageo', spec='20 kΩ 1% 0805',
      note='VTEST = VTEST_IN / 6; 15 V daje 2,5 V')
 part('C1', 'Device:C', '10u', C0805, {1: '+3V3_RF', 2: 'GND'}, (148.0, 57.0, 90),
-     mpn='CL21A106KAYNNNC', manufacturer='Samsung Electro-Mechanics', spec='10 µF 25 V X5R 0805',
+     mpn='CL21A106KAYNNNE', manufacturer='Samsung Electro-Mechanics', spec='10 µF 25 V X5R 0805',
      note='+3V3_RF przy module CC1120EM')
 part('C2', 'Device:C', '100n', C0805, {1: '+3V3_RF', 2: 'GND'}, (151.0, 57.0, 90),
      mpn='CL21B104KBCNNNC', manufacturer='Samsung Electro-Mechanics', spec='100 nF 50 V X7R 0805',
@@ -239,7 +239,7 @@ part('C3', 'Device:C', '100n', C0805, {1: '+3V3', 2: 'GND'}, (78.0, 25.0, 0),
      mpn='CL21B104KBCNNNC', manufacturer='Samsung Electro-Mechanics', spec='100 nF 50 V X7R 0805',
      note='+3V3 przy FRAM')
 part('C4', 'Device:C', '10u', C0805, {1: '+5V', 2: 'GND'}, (50.0, 12.0, 0),
-     mpn='CL21A106KAYNNNC', manufacturer='Samsung Electro-Mechanics', spec='10 µF 25 V X5R 0805',
+     mpn='CL21A106KAYNNNE', manufacturer='Samsung Electro-Mechanics', spec='10 µF 25 V X5R 0805',
      note='+5V przy wejściu VIN ekranu')
 part('C5', 'Device:C', '100n', C0805, {1: 'VTEST', 2: 'GND'}, (165.5, 82.0, 90),
      mpn='CL21B104KBCNNNC', manufacturer='Samsung Electro-Mechanics', spec='100 nF 50 V X7R 0805',

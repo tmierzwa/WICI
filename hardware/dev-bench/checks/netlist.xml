@@ -2,7 +2,7 @@
 <export version="E">
   <design>
     <source>cad/plytka-nosna.kicad_sch</source>
-    <date>2026-10-08T01:59:04</date>
+    <date>2026-10-08T02:23:45</date>
     <tool>Eeschema 10.0.6</tool>
     <sheet number="1" name="/" tstamps="/">
       <title_block>
@@ -59,7 +59,7 @@
       <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
       <fields>
         <field name="Manufacturer">Samsung Electro-Mechanics</field>
-        <field name="MPN">CL21A106KAYNNNC</field>
+        <field name="MPN">CL21A106KAYNNNE</field>
         <field name="Variant">A i B</field>
         <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
         <field name="Datasheet"/>
@@ -67,7 +67,7 @@
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
       <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
-      <property name="MPN" value="CL21A106KAYNNNC"/>
+      <property name="MPN" value="CL21A106KAYNNNE"/>
       <property name="Variant" value="A i B"/>
       <property name="Sheetname" value="plytka-nosna"/>
       <property name="Sheetfile" value="plytka-nosna.kicad_sch"/>
@@ -149,7 +149,7 @@
       <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
       <fields>
         <field name="Manufacturer">Samsung Electro-Mechanics</field>
-        <field name="MPN">CL21A106KAYNNNC</field>
+        <field name="MPN">CL21A106KAYNNNE</field>
         <field name="Variant">A i B</field>
         <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
         <field name="Datasheet"/>
@@ -157,7 +157,7 @@
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
       <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
-      <property name="MPN" value="CL21A106KAYNNNC"/>
+      <property name="MPN" value="CL21A106KAYNNNE"/>
       <property name="Variant" value="A i B"/>
       <property name="Sheetname" value="plytka-nosna"/>
       <property name="Sheetfile" value="plytka-nosna.kicad_sch"/>

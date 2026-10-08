@@ -27,7 +27,7 @@ def main():
             'defaults': {'board_outline_line_width': 0.05, 'copper_line_width': 0.2,
                          'silk_line_width': 0.12, 'silk_text_size_h': 1.0, 'silk_text_size_v': 1.0,
                          'silk_text_thickness': 0.15},
-            'rules': {'min_clearance': 0.2, 'min_copper_edge_clearance': 0.5, 'min_hole_clearance': 0.25,
+            'rules': {'min_clearance': 0.2, 'min_copper_edge_clearance': 0.5, 'min_hole_clearance': 0.3,
                       'min_hole_to_hole': 0.25, 'min_through_hole_diameter': 0.4, 'min_track_width': 0.2,
                       'min_via_annular_width': 0.15, 'min_via_diameter': 0.8, 'min_silk_clearance': 0.0,
                       'min_text_height': 0.8, 'min_text_thickness': 0.12},
@@ -52,6 +52,7 @@ def main():
 (rule "N1 finished hole" (constraint hole_size (min 0.4mm)))
 (rule "N1 annular ring" (constraint annular_width (min 0.15mm)))
 (rule "N1 copper to edge" (constraint edge_clearance (min 0.5mm)))
+(rule "N1 copper to hole" (constraint hole_clearance (min 0.3mm)))
 (rule "N1 thermal spokes" (constraint min_resolved_spokes (min 1)))
 (rule "N1 power tracks" (condition "A.NetClass == 'Power' && A.Type == 'track'") (constraint track_width (min 0.4mm)))
 ''')

@@ -12,6 +12,7 @@ are compared by geometry, not bytes; the ZIP is a convenience for the fab.
 from pathlib import Path
 import argparse
 import csv
+import json
 import os
 import shutil
 import subprocess
@@ -40,7 +41,7 @@ DESCRIPTION = {
     'MMBT3904LT1G': 'NPN transistor 40 V 200 mA, SOT-23',
     '1N4148W-7-F': 'switching diode 75 V, SOD-123',
     'BAT54SLT1G': 'dual Schottky diode series, SOT-23',
-    'CL21A106KAYNNNC': 'MLCC 10 uF 25 V X5R 0805',
+    'CL21A106KAYNNNE': 'MLCC 10 uF 25 V X5R 0805',
     'CL21B104KBCNNNC': 'MLCC 100 nF 50 V X7R 0805',
 }
 
@@ -67,20 +68,16 @@ def write_assembly_bom(path):
         w = csv.writer(f)
         w.writerow(['Designator', 'Qty per board', 'Value', 'Manufacturer', 'MPN', 'Description',
                     'Footprint', 'Type', 'Fit', 'Placed by'])
-        for (mpn, _value, variant), items in sorted(groups.items(), key=lambda kv: (not smd(kv[1][0]['footprint']),
-                                                                                    kv[1][0]['ref'])):
+        for (mpn, _value, variant), items in sorted(groups.items(), key=lambda kv: kv[1][0]['ref']):
             p = items[0]
+            if not smd(p['footprint']):
+                continue  # through-hole parts, modules and loose items: owner, full list in bom.csv
             kit = mpn == 'Adafruit 85'
             fit = {'A': 'variant A only', 'B': 'variant B only', 'AB': 'all'}[variant]
             w.writerow([' '.join(i['ref'] for i in items), '1 kit' if kit else len(items),
                         p['value'] if p['ref'][0] in 'RC' else '', p['manufacturer'].replace('ü', 'u'), mpn,
                         describe(p), p['footprint'].split(':')[1], 'SMD' if smd(p['footprint']) else 'THT', fit,
                         'assembler' if smd(p['footprint']) else 'owner (hand solder)'])
-        for refs, qty, manufacturer, mpn, _spec, _variant, _note in EXTRAS:
-            if mpn:  # loose items with a part number; standoffs are bought by the owner
-                w.writerow(['', qty, '', manufacturer.replace('ü', 'u'), mpn,
-                            {'60900213421': 'jumper 2.54 mm', 'B32-1310': 'cap for B3F tactile switch'}[mpn],
-                            'loose item', 'loose', 'all', f'owner ({refs})'])
 
 
 def write_cpl(positions, path):
@@ -105,7 +102,11 @@ Quantity: 5 boards (pilot). Prototype tool board, no RF, no impedance control.
 
 PCB
 - 2 layers, FR-4 (Tg >= 130 C), finished thickness 1.6 mm +/-10 %.
-- Copper 35 um (1 oz) both sides. Min track/space 0.2 mm, min annular ring 0.175 mm (J9/J10).
+- Copper 35 um (1 oz) both sides. Min track 0.25 mm, min space 0.2 mm, min annular ring 0.175 mm
+  (J9/J10, 0.65 mm holes in 1.0 mm pads; pads may be enlarged where spacing permits).
+- Solder mask: openings 1:1 with pads in the files; your standard expansion is fine (keep a mask
+  dam between the 1.27 mm pitch pads of J9/J10 if possible, a bridge-free opening is acceptable).
+  Vias tented. Copper pour keeps 0.3 mm from NPTH holes.
 - Surface finish: lead-free HASL (all parts hand soldered or reflowed; ENIG acceptable).
 - Solder mask green both sides; silkscreen white, top side only (bottom silk file is empty).
 - Outline {BOARD_W:.0f} x {BOARD_H:.0f} mm (Edge_Cuts) with a rectangular notch {notch_w} x {notch_h} mm on the
@@ -114,15 +115,18 @@ PCB
   Hole sizes: {drills}.
 - No plated slots, no castellations, no blind/buried vias. Vias 0.8/0.4 mm, may be tented or open.
 - Electrical test 100 %. IPC-A-600 class 2.
-- Fab order number: if needed, on the bottom side (no bottom silkscreen), clear of pads.
+- No fab order number on the board, please; if your process needs one, propose a position on top.
 - Origin of Gerbers, drills and positions: lower-left board corner.
 
 Assembly (optional quote)
-- Top side only. Assembler places the {smd_count} SMD parts (0805, 1206, SOT-23, SOD-123):
-  assembly/bom-assembly.csv rows with 'Placed by = assembler', positions in assembly/cpl-smd.csv.
-- All through-hole parts, connectors and modules are fitted by the owner; do not fit them.
-- Polarity: Q1 and D3 SOT-23 pin 1 per footprint; D2 cathode band at the marked side
-  (assembly/montaz.pdf). No fiducials: use pads or add panel rails with fiducials.
+- Top side only. Assembler sources and places the {smd_count} SMD parts (0805, 1206, SOT-23, SOD-123):
+  assembly/bom-assembly.csv (SMD only), positions in assembly/cpl-smd.csv, paste layer F_Paste.
+  Equivalent passives (same value, tolerance, voltage, dielectric, size) are acceptable.
+- CPL rotations follow the KiCad convention (counter-clockwise, KiCad library zero orientation);
+  please send the placement preview for approval, especially Q1 and D3 (SOT-23, pin 1 marked)
+  and D2 (SOD-123, cathode = pad 1, at 180 deg the right-hand end).
+- All through-hole parts, connectors and modules are fitted by the owner; do not supply or fit them.
+- No fiducials: use pads for vision, or add panel rails with fiducials if you need them.
 - Modules (nRF52840-DK, ESP32-S3-DevKitC-1, CC1120EM, X-NUCLEO-S2868A2, Adafruit 4694/4719) are not
   part of the order.
 """, encoding='utf-8')
@@ -145,14 +149,19 @@ def main():
     def pcb(*args):
         subprocess.run([cli, 'pcb', 'export', *map(str, args), str(board)], check=True,
                        stdout=subprocess.DEVNULL)
-    pcb('gerbers', '--layers', 'F.Cu,B.Cu,F.Mask,B.Mask,F.SilkS,B.SilkS,Edge.Cuts',
+    pcb('gerbers', '--layers', 'F.Cu,B.Cu,F.Mask,B.Mask,F.Paste,F.SilkS,B.SilkS,Edge.Cuts',
         '--subtract-soldermask', '--use-drill-file-origin', '--output', str(g) + '/')
+    # KiCad writes the finish from a board stackup, which the generated board does not carry.
+    job = g / 'plytka-nosna-job.gbrjob'
+    data = json.loads(job.read_text())
+    data['GeneralSpecs']['Finish'] = 'HAL lead-free'
+    job.write_text(json.dumps(data, indent=2) + '\n')
     pcb('drill', '--format', 'excellon', '--excellon-units', 'mm', '--excellon-zeros-format', 'decimal',
         '--excellon-separate-th', '--drill-origin', 'plot', '--generate-map', '--map-format', 'pdf',
         '--output', str(d) + '/')
     pcb('pos', '--format', 'csv', '--units', 'mm', '--side', 'front', '--use-drill-file-origin',
         '--output', a / 'positions.csv')
-    pcb('pdf', '--layers', 'F.Fab,F.SilkS,Edge.Cuts', '--mode-single', '--black-and-white',
+    pcb('pdf', '--layers', 'F.Fab,F.SilkS,Edge.Cuts', '--mode-single', '--black-and-white', '--include-border-title',
         '--sketch-pads-on-fab-layers', '--scale', '1.5', '--output', a / 'montaz.pdf')
     pcb('pdf', '--layers', 'Edge.Cuts,F.Fab,F.SilkS,Dwgs.User', '--mode-single', '--black-and-white',
         '--sketch-pads-on-fab-layers', '--drill-shape-opt', '2', '--scale', '1',

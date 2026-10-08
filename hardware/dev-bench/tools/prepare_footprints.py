@@ -7,7 +7,7 @@ rev. G (three terminals at 4.70 mm, recommended hole 1.85 mm; body 12.70 mm
 along the terminals, 6.86 mm across).
 """
 from pathlib import Path
-import shutil
+import re
 import sys
 
 from design import PARTS
@@ -22,7 +22,7 @@ TOGGLE = '''(footprint "Toggle_ESwitch_100SP1T1B4M2QE"
  (property "Reference" "REF**" (at 0 -5.2 0) (layer "F.SilkS") (effects (font (size 1 1) (thickness 0.15))))
  (property "Value" "100SP1T1B4M2QE" (at 0 5.2 0) (layer "F.Fab") (effects (font (size 1 1) (thickness 0.15))))
  (fp_rect (start -6.35 -3.43) (end 6.35 3.43) (stroke (width 0.1) (type solid)) (fill none) (layer "F.Fab"))
- (fp_rect (start -6.47 -3.55) (end 6.47 3.55) (stroke (width 0.12) (type solid)) (fill none) (layer "F.SilkS"))
+ (fp_rect (start -6.47 -3.55) (end 6.47 3.55) (stroke (width 0.15) (type solid)) (fill none) (layer "F.SilkS"))
  (fp_rect (start -6.85 -3.95) (end 6.85 3.95) (stroke (width 0.05) (type solid)) (fill none) (layer "F.CrtYd"))
  (fp_text user "1" (at -4.7 2.4 0) (layer "F.SilkS") (effects (font (size 1.0 1.0) (thickness 0.15))))
  (pad "1" thru_hole rect (at -4.7 0) (size 2.8 2.8) (drill 1.85) (layers "*.Cu" "*.Mask"))
@@ -59,7 +59,11 @@ def prepare(source):
         target.mkdir(parents=True, exist_ok=True)
         if lib == 'WICI':
             continue
-        shutil.copy2(source / (lib + '.pretty') / (fp + '.kicad_mod'), target)
+        text = (source / (lib + '.pretty') / (fp + '.kicad_mod')).read_text()
+        # Library silkscreen lines of 0.12 mm are below the usual fab minimum: draw them 0.15 mm.
+        text = re.sub(r'\(width 0\.12\)(\s*\(type \w+\)\s*\)\s*(?:\(fill \w+\)\s*)?\(layer "F\.SilkS"\))',
+                      r'(width 0.15)\1', text)
+        (target / (fp + '.kicad_mod')).write_text(text)
     (out / 'WICI.pretty/Toggle_ESwitch_100SP1T1B4M2QE.kicad_mod').write_text(TOGGLE)
     (out / 'WICI.pretty/MountingHole_3.2mm_Arduino.kicad_mod').write_text(UNO_HOLE)
     table = [A('fp_lib_table'), [A('version'), 7]]

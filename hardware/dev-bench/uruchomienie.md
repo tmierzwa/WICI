@@ -6,7 +6,7 @@ Każda sztuka dostaje zapis: numer, rewizja PCB (N1), stanowisko (A albo B), cz�
 
 ## Montaż
 
-Wszystko lutuje się ręcznie. Elementy SMD to 0805, 1206 (R2), SOT-23 i SOD-123.
+Elementy SMD (0805, 1206 dla R2, SOT-23 i SOD-123) montuje montażownia według `fabrication/N1/FAB-NOTES.txt` albo lutuje się je ręcznie; wszystkie elementy przewlekane, złącza i moduły lutuje się ręcznie. Przy płytce z montażownią krok 1 sprowadza się do oględzin orientacji Q1, D2 i D3.
 
 1. **SMD najpierw:** R1–R19, C1–C5, Q1 (SOT-23; baza = pad 1), D3 (SOT-23, BAT54S), D2 (SOD-123; katoda, czyli pasek, po stronie oznaczonej na płytce; katoda łączy się z „+” brzęczyka).
 2. **Niskie elementy przewlekane:** D1 (katoda, płaski bok i kwadratowy pad 1, do masy), SW6, SW1–SW4, SW5, BZ1 („+” brzęczyka na kwadratowym padzie 1), J12, J11, JP1, JP2, JP3.
