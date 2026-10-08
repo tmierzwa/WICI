@@ -215,22 +215,27 @@ BenchServices services;
 station::Station app(stationStore, services);
 usbproto::Protocol protocol(stationStore, app, host);
 
-// Kolejka wyjściowa protokołu do portu: tyle, ile przyjmie bufor CDC, z wynikiem write() (ESP32 może
-// przyjąć mniej po limicie czasu), więc laptop, który nie czyta, nie zatrzymuje pętli stacji.
-template <typename Port>
-void drainProtocol(Port& port) {
+// Kolejka wyjściowa (protokół laptop–stacja albo ramki KISS) do portu: tyle, ile przyjmie bufor CDC,
+// z wynikiem write() (ESP32 może przyjąć mniej po limicie czasu), więc komputer, który nie czyta, nie
+// zatrzymuje pętli stacji, a zapis częściowy zostaje w kolejce. Source: output(length) i consume(n).
+template <typename Port, typename Source>
+void drain(Port& port, Source& source) {
     int room = port.availableForWrite();
     while (room > 0) {
         size_t n = 0;
-        const char* data = protocol.output(n);
+        const uint8_t* data = reinterpret_cast<const uint8_t*>(source.output(n));
         if (!n) return;
         if (n > static_cast<size_t>(room)) n = static_cast<size_t>(room);
-        const size_t written = port.write(reinterpret_cast<const uint8_t*>(data), n);
-        protocol.consume(written);
+        const size_t written = port.write(data, n);
+        source.consume(written);
         if (written < n) return;
         room -= static_cast<int>(written);
     }
 }
+struct KissOutput {   // ramki KISS węzła stanowiska jako źródło dla drain()
+    const uint8_t* output(size_t& length) { return rnsnode::usbOutput(length); }
+    void consume(size_t length) { rnsnode::usbConsume(length); }
+} kissOutput;
 
 // Działania ekranu poza magazynem: OGŁOŚ ADRES, ZNISZCZ DANE, rola.
 struct ScreenActions : console::Actions {
@@ -1325,15 +1330,7 @@ void stationLoop() {
                 while (n < sizeof(chunk) && SerialData.available()) chunk[n++] = static_cast<char>(SerialData.read());
                 rnsnode::usbFeed(reinterpret_cast<const uint8_t*>(chunk), n, now);
             }
-            // Do komputera tyle, ile przyjmie bufor CDC (zapis nie blokuje pętli stacji).
-            uint8_t out[64];
-            int room = SerialData.availableForWrite();
-            while (room > 0) {
-                const size_t n = rnsnode::usbTake(out, static_cast<size_t>(room) < sizeof(out) ? static_cast<size_t>(room) : sizeof(out));
-                if (!n) break;
-                SerialData.write(out, n);
-                room -= static_cast<int>(n);
-            }
+            drain(SerialData, kissOutput);
         } else {
             // Bajt po bajcie, dopóki odpowiedź zmieści się w kolejce: koniec wiersza może dać do dwóch wierszy.
             while (protocol.acceptsInput() && SerialData.available()) {
@@ -1345,8 +1342,8 @@ void stationLoop() {
     if (!kiss) protocol.poll(now);   // także bez portu: limit potwierdzenia przyciskiem i transferu
     // Odpowiedzi na interfejs danych; bez otwartego portu danych albo przy ramkach KISS na diagnostykę
     // (polecenie USB z portu diagnostyki).
-    if (dataOpen && !kiss) drainProtocol(SerialData);
-    else drainProtocol(Serial);
+    if (dataOpen && !kiss) drain(SerialData, protocol);
+    else drain(Serial, protocol);
     if (nodeRole()) {
         const uint32_t packets = rnsnode::usbStatus().counters.fromComputer;
         if (packets != computerPackets) {

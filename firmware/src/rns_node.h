@@ -109,10 +109,11 @@ void setSilence(Silence mode);
 constexpr size_t USB_PINNED = 8;   // cele ogłoszone przez komputer stanowiska, chronione w tablicach
 
 // Interfejs danych USB w konfiguracji węzła stanowiska (poza trybem przygotowania): port otwarty przez
-// komputer, bajty od komputera i do niego (zapis tyle, ile przyjmie CDC).
+// komputer, bajty od komputera i do niego (zapis tyle, ile przyjmie CDC: kiss::Port::output()).
 void usbOpen(bool open);
 void usbFeed(const uint8_t* data, size_t length, uint32_t nowMs);
-size_t usbTake(uint8_t* out, size_t max);
+const uint8_t* usbOutput(size_t& length);
+void usbConsume(size_t length);
 struct UsbStatus {
     bool enabled = false;          // węzeł stanowiska z interfejsem USB w stosie
     bool open = false;

@@ -426,7 +426,11 @@ void usbFeed(const uint8_t* data, size_t length, uint32_t now) {
     if (usbPort) usbPort->feed(data, length, now);
 }
 
-size_t usbTake(uint8_t* out, size_t max) { return usbPort ? usbPort->take(out, max) : 0; }
+const uint8_t* usbOutput(size_t& length) {
+    length = 0;
+    return usbPort ? usbPort->output(length) : nullptr;
+}
+void usbConsume(size_t length) { if (usbPort) usbPort->consume(length); }
 
 UsbStatus usbStatus() {
     UsbStatus s;

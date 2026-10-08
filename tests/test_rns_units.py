@@ -533,10 +533,17 @@ std::string hexOf(const uint8_t* d, size_t n) {
     return s;
 }
 
-std::string drainKiss(kiss::Port& p) {
-    uint8_t out[2048];
-    const size_t n = p.take(out, sizeof(out));
-    return hexOf(out, n);
+// Odczyt jak pętla stacji: fragmenty z output(), consume() po zapisie (najwyżej limit bajtów naraz).
+std::string drainKiss(kiss::Port& p, size_t limit = 2048) {
+    std::string s;
+    for (;;) {
+        size_t n = 0;
+        const uint8_t* data = p.output(n);
+        if (!n) return s;
+        if (n > limit) n = limit;
+        s += hexOf(data, n);
+        p.consume(n);
+    }
 }
 
 void feedHex(kiss::Port& p, const char* hex, uint32_t nowMs) {
@@ -553,7 +560,7 @@ int kissScenario() {
     // Polecenia konfiguracji z configure_device() Reticulum: TXDELAY 35, TXTAIL 2, P 64, SLOTTIME 2, gotowość 1.
     feedHex(p, "c00123c0c00402c0c00240c0c00302c0c00f01c0", 0);
     const kiss::Counters& c = p.counters();
-    // Każde wywołanie z efektem (take, send, pop) osobno: kolejność obliczania argumentów printf
+    // Każde wywołanie z efektem (output, send, pop) osobno: kolejność obliczania argumentów printf
     // nie jest określona (GCC od prawej).
     std::string out = drainKiss(p);
     printf("config commands %u flow %d ready %u out %s\n", c.commands, p.flowControl(), c.ready, out.c_str());
@@ -600,6 +607,10 @@ int kissScenario() {
     const bool sent = p.send(payload, sizeof(payload));
     out = drainKiss(p);
     printf("send %d out %s\n", sent, out.c_str());
+    // Port przyjmuje po 3 B (zapis częściowy): bajty znikają z bufora dopiero po przyjęciu, ramka cała.
+    const bool again = p.send(payload, sizeof(payload));
+    out = drainKiss(p, 3);
+    printf("partial %d out %s\n", again, out.c_str());
     static uint8_t block[500];
     memset(block, 0x5A, sizeof(block));
     const bool s1 = p.send(block, sizeof(block));
@@ -793,8 +804,9 @@ class StackUnitTests(unittest.TestCase):
         self.assertEqual(out[6], "large 1 buffered 0")
         self.assertEqual(out[7], "shared aa bb cc ")
         self.assertEqual(out[8], "send 1 out c00001dbdcdbdd02c0")
-        self.assertEqual(out[9], "tx 1 1 0 pending 1006 dropped 1")
-        self.assertEqual(out[10], "closed 0 flow 0 pending 0 dropped 2 to 3 from 12")
+        self.assertEqual(out[9], "partial 1 out c00001dbdcdbdd02c0")   # zapis po 3 B: ta sama ramka
+        self.assertEqual(out[10], "tx 1 1 0 pending 1006 dropped 1")
+        self.assertEqual(out[11], "closed 0 flow 0 pending 0 dropped 2 to 4 from 12")
 
     def test_ifac_masking_matches_reference_vector(self):
         out = self.run_harness("ifac", IFAC_RAW, IFAC_TAG, IFAC_MASK, IFAC_WIRE)

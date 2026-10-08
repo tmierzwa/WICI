@@ -11,7 +11,8 @@
 //   odrzucany i liczony (Reticulum na komputerze zwalnia blokadę sam po 5 s).
 // - Niepełna ramka po 100 ms bez bajtu jest porzucana (jak readLoop w Reticulum).
 // - Pakiety do komputera czekają w buforze bajtów zakodowanych ramek, z którego pętla stacji
-//   zapisuje tyle, ile przyjmie interfejs CDC; ramka, która się nie mieści, przepada i jest liczona.
+//   zapisuje tyle, ile przyjmie interfejs CDC; bajty znikają z bufora dopiero po przyjęciu przez port
+//   (zapis częściowy nie gubi części ramki). Ramka, która się nie mieści, przepada i jest liczona.
 // Bez zależności od Arduino i od stosu; sprawdzany na komputerze (tests/test_rns_units.py).
 #pragma once
 
@@ -54,7 +55,10 @@ public:
     size_t buffered() const { return count_; }
     // Pakiet do komputera; false: port zamknięty, pakiet za długi albo brak miejsca (liczone).
     bool send(const uint8_t* data, size_t length);
-    size_t take(uint8_t* out, size_t max);   // bajty do zapisu w CDC (najwyżej max)
+    // Bajty do zapisu w CDC: ciągły fragment bufora (najpierw zaległa ramka gotowości) i consume()
+    // z liczbą bajtów, które port przyjął.
+    const uint8_t* output(size_t& length);
+    void consume(size_t length);
     size_t pendingBytes() const { return txCount_; }
     bool flowControl() const { return flowControl_; }
     const Counters& counters() const { return counters_; }

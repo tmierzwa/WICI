@@ -131,15 +131,16 @@ bool Port::send(const uint8_t* data, size_t length) {
     return true;
 }
 
-size_t Port::take(uint8_t* out, size_t max) {
+const uint8_t* Port::output(size_t& length) {
     if (readyOwed_ && count_ < RX_SLOTS) readyNow();
-    size_t n = 0;
-    while (n < max && txCount_) {
-        out[n++] = tx_[txHead_];
-        txHead_ = (txHead_ + 1) % TX_BYTES;
-        --txCount_;
-    }
-    return n;
+    length = txHead_ + txCount_ <= TX_BYTES ? txCount_ : TX_BYTES - txHead_;
+    return tx_ + txHead_;
+}
+
+void Port::consume(size_t length) {
+    if (length > txCount_) length = txCount_;
+    txHead_ = (txHead_ + length) % TX_BYTES;
+    txCount_ -= length;
 }
 
 }  // namespace kiss
