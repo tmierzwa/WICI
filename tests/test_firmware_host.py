@@ -255,7 +255,8 @@ int uiScript() {
             store.selectAddress(a);
         } else if (sscanf(line, "RV %u %u", &a, &b) == 2) {
             uint32_t newSeq = 0;
-            printf("revise %d %u\n", static_cast<int>(app.revise(a, static_cast<uint16_t>(b), 0, nullptr, newSeq)), newSeq);
+            const int result = static_cast<int>(app.revise(a, static_cast<uint16_t>(b), 0, nullptr, newSeq));
+            printf("revise %d %u\n", result, newSeq);
         } else if (!strcmp(line, "PH")) {
             // Własna lista fraz stacji (jedna fraza) zamiast domyślnej.
             store::Config cfg = store.config();

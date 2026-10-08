@@ -368,17 +368,22 @@ int reserveScenario() {
     const char* a2 = admitName(q.offer(Kind::DATA, 1, other, w, 516, t0));
     const char* a3 = admitName(q.offer(Kind::DATA, 1, other, w, 516, t0));
     const char* a4 = admitName(q.offer(Kind::DATA, 1, other, w, 516, t0));
-    printf("slots %s %s %s %s osp %s\n", a1, a2, a3, a4, admitName(q.offer(Kind::DATA, 1, osp, w, 516, t0)));
+    const char* a5 = admitName(q.offer(Kind::DATA, 1, osp, w, 516, t0));
+    printf("slots %s %s %s %s osp %s\n", a1, a2, a3, a4, a5);
     drain(q);
     // Wyczerpanie budżetu: 3 datagramy już policzone, potem do odmowy.
     unsigned admitted = 3;
     while (q.offer(Kind::DATA, 1, other, w, 516, t0) == Admit::QUEUED) { ++admitted; drain(q); }
     printf("budget %u used %u reserved %u\n", admitted, q.otherUsedMs(t0), q.counters().reserved);
-    printf("exempt own %s proof %s osp %s\n", admitName(q.offer(Kind::DATA, 0, other, w, 516, t0)),
-           admitName(q.offer(Kind::CONTROL, 1, other, w, 50, t0)), admitName(q.offer(Kind::DATA, 1, osp, w, 516, t0)));
+    // Każde offer() osobno: kolejność obliczania argumentów printf nie jest określona (GCC od prawej).
+    const char* own = admitName(q.offer(Kind::DATA, 0, other, w, 516, t0));
+    const char* proof = admitName(q.offer(Kind::CONTROL, 1, other, w, 50, t0));
+    const char* toOsp = admitName(q.offer(Kind::DATA, 1, osp, w, 516, t0));
+    printf("exempt own %s proof %s osp %s\n", own, proof, toOsp);
     drain(q);
-    printf("later %s %s\n", admitName(q.offer(Kind::DATA, 1, other, w, 516, t0 + 59 * 60000)),
-           admitName(q.offer(Kind::DATA, 1, other, w, 516, t0 + 60 * 60000)));
+    const char* at59 = admitName(q.offer(Kind::DATA, 1, other, w, 516, t0 + 59 * 60000));
+    const char* at60 = admitName(q.offer(Kind::DATA, 1, other, w, 516, t0 + 60 * 60000));
+    printf("later %s %s\n", at59, at60);
     return 0;
 }
 
