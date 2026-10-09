@@ -91,7 +91,7 @@
 
 <ul>
   <li><strong>Zajętość kanału (D11):</strong> Meshtastic zajmuje całe podpasmo 869,40–869,65 MHz, w tym kanał pilotażu. Publiczne statystyki pakietów (np. <a href="https://lorastats.pl/">lorastats.pl</a>) dają wstępną ocenę ruchu przed własnym pomiarem; pomiar w etapie 0 rozróżnia LoRaWAN, Meshtastic i MeshCore (<a href="07-zagrozenia-i-odpornosc.html">rozdział 07</a>, T2).</li>
-  <li><strong>Tłumienie tras (etap 0):</strong> pilotaż używa tych samych rodzin płytek co obie sieci (Heltec V4, LilyGO T3-S3, Seeed XIAO ESP32S3 z Wio-SX1262). RSSI i SNR z istniejących węzłów oraz mapa z profilem terenu i widocznością między punktami (<a href="https://mapa.meshcorepolska.org/">mapa MeshCore Polska</a>) pomagają wybrać pary miejsc do pomiaru (<a href="02-scenariusze-i-organizacja.html#planowanie-sieci">planowanie sieci</a>).</li>
+  <li><strong>Tłumienie tras (etap 0):</strong> kandydaci na płytkę pilotażu to płytki popularne w obu sieciach (RAK3312, Heltec V3.2, LilyGO T3-S3, Seeed XIAO ESP32S3 z Wio-SX1262; <a href="../spec/elektronika.md#stacja-pilotażowa">elektronika</a>). RSSI i SNR z istniejących węzłów oraz mapa z profilem terenu i widocznością między punktami (<a href="https://mapa.meshcorepolska.org/">mapa MeshCore Polska</a>) pomagają wybrać pary miejsc do pomiaru (<a href="02-scenariusze-i-organizacja.html#planowanie-sieci">planowanie sieci</a>).</li>
   <li><strong>Miejsca na przekaźniki i ludzie:</strong> operatorzy przekaźników znają dostęp do dachów i masztów, zasilanie off-grid i te same płytki. To naturalni partnerzy przy wyborze miejsc i montażu anten. Na wspólnym maszcie antena WICI potrzebuje odstępu od anteny przekaźnika, bo oba nadają w tym samym podpaśmie.</li>
   <li><strong>Opcja po pilotażu:</strong> obowiązkowy komputer stanowiska może dostać węzeł MeshCore na USB i bibliotekę <a href="https://github.com/meshcore-dev/meshcore_py">meshcore_py</a>. Służyłby jako osobny kanał: przyjmowanie wiadomości z sieci publicznej, oznaczonych jako niezweryfikowane i bez gwarancji WICI, oraz rozsyłanie komunikatów gminy. Ryzykiem jest zalanie dyżurnego wiadomościami, dlatego decyzja zapada po pilotażu (<a href="08-plan-weryfikacji-i-decyzje.html">rozdział 08</a>).</li>
 </ul>
@@ -100,7 +100,7 @@
 
 <ul>
   <li>pomiar zajętości kanału i tła szumowego w etapie 0 dwoma gotowymi węzłami LoRa (w profilu WICI i w lokalnym presecie Meshtastic, bo każdy widzi tylko ramki o swoim SF i szerokości pasma), także przy włączonym zasilaniu awaryjnym obiektu (UPS, przetwornice i falowniki zakłócają odbiór), z wstępnym progiem istotnego zajęcia (D11, <a href="08-plan-weryfikacji-i-decyzje.html">rozdział 08</a>);</li>
-  <li>porównanie w T4 czułości i poboru SX1262 w trybie odbioru ze wzmocnieniem (boosted gain), domyślnie włączonym w MeshCore;</li>
+  <li>odbiór SX1262 w trybie ze wzmocnieniem (boosted gain), domyślnym w MeshCore: dla tego trybu karta podaje czułość użytą w budżecie łącza, a po resecie układ pracuje w trybie oszczędnym;</li>
   <li>uszczelnienie złączy zewnętrznych i ich kontrola w przeglądzie technicznym; samoczynny start stacji po całkowitym zaniku i powrocie 12 V (znana usterka części płytek ESP32 w węzłach solarnych);</li>
   <li>płytki z zewnętrznym wzmacniaczem nadajnika (np. Heltec V4) nie są kandydatami: stacja nadaje 13 dBm, a kolejne rewizje tych płytek mają różne układy wzmacniacza i sterowanie;</li>
   <li>stacji i przekaźników WICI nie umieszcza się na publicznych mapach społeczności.</li>

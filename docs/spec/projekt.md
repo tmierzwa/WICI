@@ -145,7 +145,7 @@ Wynik przeglądu zapisuje się z datą i wersją wydania w ewidencji sprzętu gm
 | LXMF nad Reticulum | Gotowe dostarczanie wiadomości; stacja nadal odpowiada za trwały zapis, a stanowisko odbiorcze za decyzję |
 | Mała własna strona HTTP | Telefon używa zwykłej przeglądarki; NomadNet nie jest takim interfejsem |
 | Stacja pilotażowa z gotowych modułów (F99) | Pilotaż bez własnej płytki, toru RF i bloku zasilania; większa obudowa, więcej połączeń przewodowych, wyniki nie przenoszą się automatycznie na R02 |
-| Profil LoRa SF7 w pilotażu (D10) | Gotowe moduły z deklaracją UE i lepsza czułość niż P1; kanał współdzielony z LoRaWAN RX2 (D11) |
+| Profil LoRa SF7 w pilotażu (D10) | Gotowe moduły z deklaracją UE i lepsza czułość niż P1; kanał współdzielony z LoRaWAN RX2 i Meshtastic (D11) |
 | Kupiona stacja zasilania poziomu 3 (D05) | Wyrób z deklaracją UE zamiast własnej przetwornicy 230 V i ładowarki; koszt zakupu i zależność od producenta |
 | Standardowy JSON w LXMF | Prosty format w stacji i laptopie; treść ≤256 B po kodowaniu, jeden pakiet okazjonalny (roboczo, do potwierdzenia w D01 i T3) |
 
