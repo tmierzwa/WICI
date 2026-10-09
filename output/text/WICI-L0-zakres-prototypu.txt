@@ -1,0 +1,92 @@
+ WICI: prototyp biurkowy L0
+ Zakres do wyceny jednej sztuki • 9 października 2026
+
+ Cel: sprawdzić współpracę procesora, radia LoRa, ekranu, pamięci i panelu sterowania. Prototyp zasilany z USB,
+ na prostej izolacyjnej podstawie.
+
+ Co wykonuje firma
+ Zakup części i PCB, montaż SMD/THT, wiązki i adaptera Wio, mocowanie ekranu oraz uruchomienie i
+ sprawdzenie funkcji opisanych na stronie 2. Jeden kompletny prototyp, przewód USB danych i krótki raport z
+ wynikami. Zapas części/PCB i odłączony XIAO oddać klientowi.
+
+ Podzespoły
+  Element                     Wymaganie
+
+  Procesor                    ESP32-S3-DevKitC-1-N8R8, oryginalny Espressif, rev.1.1
+
+  Radio                       1 nowy zestaw Seeed 102010611: Wio z anteną do L0; XIAO odłączyć
+
+  Ekran                       Sharp LS027B7DH01A
+
+  Płytka N1                   170 × 100 mm, 2 warstwy; 44 SMD i wskazane THT według BOM
+
+  Pozostałe                   FRAM CY15B104QN-50SXI; przyciski, przełącznik CISZA, LED i brzęczyk; 3 SMD adaptera Wio
+
+
+
+ Po stronie klienta
+ Oprogramowanie diagnostyczne L0 i instrukcja testów przed uruchomieniem funkcjonalnym. Firma wgrywa
+ program i wykonuje testy; tworzenie oprogramowania jest poza zakresem.
+
+ Do prób radiowych potrzebne jest drugie zgodne radio z anteną i osobnym zasilaniem. Klient może udostępnić
+ posiadany zestaw 102010611 z przewodem USB; dostępność potwierdzamy przed próbami. Można użyć radia
+ wykonawcy. Dodatkowy zakup wyłącznie po uzgodnieniu; sprzęt klienta zwrócić po testach.
+
+ Oferta i wykonanie
+ Proszę rozdzielić części/PCB, montaż i uruchomienie; podać netto/brutto, dostawę, termin i wyłączenia.
+ Wyprodukować minimalną partię PCB, zmontować jedną sztukę. Istotne zamienniki uzgodnić przed zakupem.
+ Program i sprzęt do prób potwierdzić przed uruchomieniem.
+
+ Zakres obejmuje prototyp USB. Zasilanie AA/12V, obudowa docelowa, badania terenowe, aplikacja WICI i
+ certyfikacja pozostają poza tym zleceniem. Przyrządy do uruchomienia zapewnia wykonawca.
+
+
+
+
+WICI L0 • zakres prototypu • 2026-10-09                                                                                 1
+ Połączenia i sprawdzenie prototypu
+ Wymagania montażowe
+ BOM i CPL dotyczą 44 SMD N1; osobny BOM dodatków zawiera 3 SMD adaptera Wio. R12: 1k, 1%, 0805. Wio
+ RXEN (J1.5) do GPIO42 / N1 J6.6, lokalny 10k do GND. Wio: lokalne 100nF + 10µF, 3V3 z JP1 pad1 przez
+ rozłączany pomiar prądu; masa J11.1. Wio VIN nie podłączać. XIAO odłączony od B2B.
+
+ N1: nie obsadzać J1-J4, J9/J10 i JP3; JP1/JP2 zamontować i zewrzeć. Zasilanie przez jeden port USB/OTG
+ DevKitC. Pozostawić elementy DevKitC bez przeróbek. Połączenia według CSV. Zapewnić dostęp do punktów
+ pomiarowych po zamocowaniu ekranu; krótkie końcówki/pady, bez długich odgałęzień SPI.
+ Ustawienia programu diagnostycznego: radio RXEN aktywne H w odbiorze, DIO2 przełącza TX, TCXO 1.8V. SPI mode0:
+ FRAM/radio MSB-first, LCD LSB-first; FRAM 8MHz, LCD początkowo 1 MHz. EXTCOMIN z timera 1 Hz. Program dla XIAO jest tylko
+ programem partnera, nie obrazem L0.
+
+ Sprawdzenie i odbiór
+  Próba                    Co sprawdzamy
+
+  Start i zasilanie        10 restartów, USB/programowanie, reset radia. 3V3: po ustaleniu 3.2-3.4V, minimum 3.0V przy pracy; LCD 5V:
+                           4.8-5.5V. Zmierzyć prąd całego L0 i Wio.
+
+  FRAM                     RDID; zapis/odczyt całych 512 KiB wzorcami 00/FF/AA/55 i pseudolosowym z CRC; zgodność po odłączeniu
+                           USB.
+
+  Zanik zasilania          Podczas aktywnego zapisu zmierzyć VDD, CS za bramką i GUARD. CS ma przejść H przed spadkiem poniżej
+                           minimum FRAM 1.8V; U3 ma próg 2.7V.
+
+  Ekran i panel            Plansze, tekst, czyszczenie; EXTCOMIN 1 Hz także przy pauzie pętli bez resetu. Wszystkie 6 wejść, LED i
+                           brzęczyk 2048 Hz.
+
+  Wspólny SPI              15 min pracy LCD, FRAM i radia razem: bez restartów, błędów pamięci i blokowania magistrali.
+
+  Radio i CISZA            Po 100 numerowanych krótkich pakietów w obu kierunkach, bez retry; zgodność treści 100/100. Powtórzyć po
+                           wyłączeniu obu urządzeń. CISZA blokuje TX programowo.
+
+
+ Radio: zgodny partner, 869.525 MHz, BW 125 kHz, SF7, CR4/5, sync 0x12, preambuła 8, CRC, moc 0 dBm. Anteny założone;
+ odległość 2-5 m. Odstęp pakietów co najmniej 3 s i 12 czasów transmisji. Zapis RSSI/SNR, błędów i restartów. Logi z obu urządzeń.
+
+ Raport: użyty program/wersja, wynik każdej próby, napięcia i prądy, przebieg ochrony FRAM i EXTCOMIN, logi radia, zdjęcia
+ montażu oraz lista rzeczy nieukończonych. Schemat i instrukcja testów stanowią podstawę pomiarów; rozruch i wyłączenie oceniać
+ osobno od pracy ustalonej.
+
+
+
+
+WICI L0 • zakres prototypu • 2026-10-09                                                                                                 2
+

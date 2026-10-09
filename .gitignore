@@ -14,6 +14,15 @@ __pycache__/
 
 /dist/
 
+# Earlier local PDF drafts; the final L0 scope stays tracked.
+/output/pdf/WICI-L0-review-i-koszt-Q2.pdf
+/output/pdf/WICI-L0-zakres-i-odbior-Q2.pdf
+/output/pdf/WICI-L0-zakres-i-odbior.pdf
+/output/pdf/WICI-kontrola-przed-wycena-2026-10-08.pdf
+/output/pdf/WICI-kwalifikacja-prototypu-LoRa-2026-10-08.pdf
+/output/pdf/WICI-nastepny-etap-oprogramowania-LoRa.pdf
+/output/pdf/WICI-plan-zakupow-i-testow-PL-2026-10-08.pdf
+
 # PlatformIO build output and local Python environment of the firmware
 /firmware/.pio/
 /firmware/src/idf_component.yml

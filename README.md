@@ -16,6 +16,14 @@ Sieć trzeba przygotować razem z gminą i służbami przed kryzysem: zamontowa�
 
 ## Gdzie jesteśmy
 
+Stan przygotowania testów na 9 października 2026 r.:
+
+- **R0:** zamówione dwa zestawy Seeed 102010611 do pierwszego testu pary radiowej; czekamy na dostawę.
+- **L0:** zapytanie o wycenę jednego prototypu wysłane do trzech firm; czekamy na oferty. Nie zlecono jeszcze wykonania.
+- Programy diagnostyczne R0 i L0 są skompilowane i sprawdzone testami automatycznymi. Próby na rzeczywistym sprzęcie pozostają do wykonania.
+
+Zakres przekazany do wyceny i zasady wyboru dokumentów są w [dokumentach przygotowania testów](output/README.md). Instrukcje bieżących prób opisuje [hardware](hardware/README.md).
+
 W repozytorium są:
 
 - [koncepcja](https://tmierzwa.github.io/WICI/);
