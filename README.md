@@ -52,7 +52,7 @@ Konkretne zadania opisuje [CONTRIBUTING.md](CONTRIBUTING.md#od-czego-zacząć). 
 | [docs/spec](docs/README.md) | Specyfikacja stacji, warunki odbioru i lista części |
 | [firmware](firmware/README.md) | Oprogramowanie stacji dla stanowisk deweloperskich A (nRF52840-DK + CC1120EM, na przewodach i na N1) i B (ESP32-S3-DevKitC-1 + X-NUCLEO-S2868A2 na N1); skompilowane, jeszcze nie uruchomione na sprzęcie |
 | [software/reference](software/reference/README.md) | Model wiadomości i potwierdzeń z testami; obliczenia zasięgu, energii i czasu nadawania |
-| [hardware](hardware/r02/README.md) | Projekt płytki stacji R02 (rozpoczęty, wstrzymany do decyzji po pilotażu) i [stanowisko deweloperskie](hardware/dev-bench/README.md) z płytek rozwojowych i płytką nośną N1 |
+| [hardware](hardware/README.md) | Testy radiowe R0, diagnostyka prototypu L0, projekt nośnej N1 i dokumentacja przyszłej płytki R02 (wstrzymanej do decyzji po pilotażu) |
 | [media/film](media/film/README.md) | Dwa filmy o projekcie: około 4,5 min i 60 s |
 | [media/logo](media/logo/README.md) | Znak WICI i ikony |
 | [tools](docs/development.md) | Kontrola repozytorium i tworzenie paczki źródłowej |
