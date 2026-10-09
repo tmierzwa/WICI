@@ -175,7 +175,7 @@ def run_mixed(args, base):
         ready = report['node']
         folder = base.with_name(base.name + '-radio')
         runner_args = argparse.Namespace(a=args.port, b=args.peer, list=False, count=100,
-                                        version_a=radio_test.L0_VERSION, version_b='pair-0.1',
+                                        version_a=radio_test.L0_VERSION, version_b='pair-0.2',
                                         interval=4.5, output=folder, expected_nodes={'A': ready})
         if radio_test.run(runner_args):
             raise RuntimeError('Test radiowy niezaliczony; szczegóły w logach.')

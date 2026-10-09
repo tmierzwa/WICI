@@ -20,7 +20,7 @@ bool listen() {
   return code == RADIOLIB_ERR_NONE;
 }
 void info() {
-  Serial.printf("INFO pair-0.1 %012llX %d %d %08lX 869.525 125 7 5 0 1.8\n",
+  Serial.printf("INFO pair-0.2 %012llX %d %d %08lX 869.525 125 7 5 0 1.8\n",
                 ESP.getEfuseMac(), ready, esp_reset_reason(), static_cast<unsigned long>(bootId));
 }
 void execute(const String &line) {

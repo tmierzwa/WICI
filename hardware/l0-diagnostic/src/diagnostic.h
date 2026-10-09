@@ -7,7 +7,7 @@
 
 namespace diagnostic {
 
-constexpr const char* VERSION = "l0-0.2";
+constexpr const char* VERSION = "l0-0.3";
 constexpr uint32_t FRAM_SIZE = 512UL * 1024;
 constexpr size_t BLOCK_SIZE = 256;
 constexpr size_t MAX_PACKET = 80;

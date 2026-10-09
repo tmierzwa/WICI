@@ -44,7 +44,7 @@ test_missing_completion_retains_failed_log (test_usb.UsbChecks.test_missing_comp
 FRAM_PASS 4 0 00000000 00000000
 ok
 test_restart_during_command_is_rejected (test_usb.UsbChecks.test_restart_during_command_is_rejected) ... CMD FRAMVERIFY 00000001
-INFO l0-0.2 L0SIM 1 1 NEWBOOT 869.525 125 7 5 0 1.8
+INFO l0-0.3 L0SIM 1 1 NEWBOOT 869.525 125 7 5 0 1.8
 ok
 test_retention_real_serial (test_usb.UsbChecks.test_retention_real_serial) ... CMD FRAMVERIFY 00000001
 FRAM_PASS 4 0 381D0D1D 381D0D1D
@@ -56,6 +56,6 @@ ok
 test_wrong_image_blocks_command (test_usb.UsbChecks.test_wrong_image_blocks_command) ... ok
 
 ----------------------------------------------------------------------
-Ran 32 tests in 16.086s
+Ran 32 tests in 16.164s
 
 OK

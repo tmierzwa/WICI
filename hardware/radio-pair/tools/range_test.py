@@ -25,7 +25,7 @@ def summarize(a, b):
         raise ValueError('Wybierz raporty A i B z tego samego punktu.')
     for report in (a, b):
         info = report.get('node', {})
-        if info.get('version') != 'pair-0.1' or not info.get('ready') or info.get('profile') != PROFILE:
+        if info.get('version') != 'pair-0.2' or not info.get('ready') or info.get('profile') != PROFILE:
             raise ValueError('Brak potwierdzenia właściwego firmware/profilu.')
     if a['node']['id'] == b['node']['id']:
         raise ValueError('Raporty dotyczą tej samej płytki.')
@@ -126,7 +126,7 @@ def run(args):
                 raise RuntimeError(event.get('message', line))
             if event['kind'] == 'info':
                 last_info_rx = time.monotonic()
-                if not event['ready'] or event['version'] != 'pair-0.1' or event['profile'] != PROFILE:
+                if not event['ready'] or event['version'] != 'pair-0.2' or event['profile'] != PROFILE:
                     raise RuntimeError('Niewłaściwy program/profil albo radio niegotowe.')
                 if report['node'] is not None and report['node'] != event:
                     raise RuntimeError('Restart lub zmiana konfiguracji płytki.')

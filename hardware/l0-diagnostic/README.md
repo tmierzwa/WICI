@@ -1,9 +1,9 @@
-# WICI — program diagnostyczny L0, l0-0.2
+# WICI — program diagnostyczny L0, l0-0.3
 
 Obraz dla jednego prototypu biurkowego z paczki wyceny 2026-10-09:
 ESP32-S3-DevKitC-1-N8R8 rev.1.1 + nośna N1 + Wio SX1262 +
 Sharp LS027B7DH01A + CY15B104QN-50SXI + panel.
-Nie wgrywać do XIAO 102010611. Dla XIAO pozostaje osobny obraz R0 `pair-0.1`.
+Nie wgrywać do XIAO 102010611. Dla XIAO pozostaje osobny obraz R0 `pair-0.2`.
 To diagnostyka połączeń i podzespołów, nie aplikacja WICI.
 
 ## Stan weryfikacji
@@ -25,7 +25,7 @@ konfigurację timerów LCD i brzęczyka; ekran nie ma kanału potwierdzania odbi
    model pamięci i wszystkie połączenia z `reference/polaczenia-MCU-L0.csv`.
    Ten obraz akceptuje wyłącznie CY15B104QN; zamiennik wymaga osobnej zmiany.
 3. Zapewnić multimetr i oscyloskop ≥3 kanały, ≥50MHz, sondy x10.
-   Partner radiowy: jeden XIAO 102010611 z anteną i obrazem R0 `pair-0.1`.
+   Partner radiowy: jeden XIAO 102010611 z anteną i obrazem R0 `pair-0.2`.
    Klient ma zamówione dwa zestawy, termin ich udostępnienia ustalany osobno.
    Jeden Mac z dwoma USB wystarcza. Dwa komputery mogą służyć do ręcznych prób;
    do dołączonego automatycznego testu oba urządzenia podłączyć do jednego hosta.
@@ -75,7 +75,7 @@ Alternatywnie budować i wgrywać ze źródeł:
 
 Konsola: `.venv/bin/pio device monitor --port PORT_L0 --baud 115200`.
 Każde polecenie zakończyć Enter. Monitor zamknąć przed uruchomieniem skryptów.
-`INFO` musi zwrócić `INFO l0-0.2 ... 1 ... 869.525 125 7 5 0 1.8`.
+`INFO` musi zwrócić `INFO l0-0.3 ... 1 ... 869.525 125 7 5 0 1.8`.
 `STATUS` pokazuje stan podzespołów, wejść i testu. Każde polecenie jest poprzedzone
 echem `CMD ...`; skrypt wymaga tego echa i kontroluje ciągłość identyfikatora startu.
 STATUS i test FRAM można wykonać także wtedy, gdy inne peryferium jest niegotowe. `ERR` wymaga wyjaśnienia;
@@ -167,7 +167,7 @@ kolejną próbą nacisnąć RESET.
 Po restarcie powtórzyć samą próbę radia (około10min):
 
 ```sh
-.venv/bin/python tools/radio_test.py --a PORT_L0 --b PORT_R0 --version-a l0-0.2 --version-b pair-0.1 --count 100
+.venv/bin/python tools/radio_test.py --a PORT_L0 --b PORT_R0 --version-a l0-0.3 --version-b pair-0.2 --count 100
 ```
 
 CISZA: na L0 włączyć SW5, sprawdzić bit4 oraz `silence=1`; `TX WICI-SILENCE-01`

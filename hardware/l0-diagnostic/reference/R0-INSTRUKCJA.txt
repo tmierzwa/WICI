@@ -1,4 +1,4 @@
-R0 pair-0.1: WYŁĄCZNIE Seeed 102010611, XIAO ESP32S3 + Wio SX1262.
+R0 pair-0.2: WYŁĄCZNIE Seeed 102010611, XIAO ESP32S3 + Wio SX1262.
 Nie wgrywać tego obrazu do prototypu L0/DevKitC.
 Podłączyć antenę LoRa. USB-C z transmisją danych.
 Polecenia wykonywać w głównym katalogu paczki L0, po instalacji requirements.txt.
@@ -11,7 +11,7 @@ mkdir -p backups
 
 Jeśli USB nie pojawia się: BOOT przytrzymany, RESET nacisnąć/zwolnić, zwolnić BOOT.
 Po wgraniu RESET i ponownie sprawdzić port. Nie wykonywać erase_flash.
-Konsola 115200: INFO ma podać pair-0.1, ready=1, profil 869.525 125 7 5 0 1.8.
+Konsola 115200: INFO ma podać pair-0.2, ready=1, profil 869.525 125 7 5 0 1.8.
 
 Dla pierwszej próby R0 użyć dwóch XIAO, około 2-3m od siebie:
 .venv/bin/python tools/radio_test.py --a PORT_R0_A --b PORT_R0_B --count 100

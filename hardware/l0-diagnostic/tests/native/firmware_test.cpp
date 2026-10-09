@@ -42,7 +42,7 @@ int main(int argc,char** argv) {
         }
     } else if(scenario=="boot") {
         assert(radioOk && framOk && lcdOk && buzzerOk);
-        assert(contains("INFO l0-0.2 001122334455 1"));
+        assert(contains("INFO l0-0.3 001122334455 1"));
         assert(pins[7]==LOW && pins[8]==HIGH && pins[16]==HIGH && pins[15]==LOW && buzzerDuty==0);
         assert(!SPI.lcd.empty() && SPI.lcd.front()==std::vector<uint8_t>({4,0}));
     } else if(scenario=="fram") {

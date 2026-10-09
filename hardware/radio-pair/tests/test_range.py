@@ -23,7 +23,7 @@ def reports(count=100):
     for role in 'AB':
         pair.append({'role': role, 'point': 'P1', 'notes': role, 'count': count,
                      'session': '0123456789abcdef', 'completed': role == 'A', 'issues': [],
-                     'node': {'version': 'pair-0.1', 'ready': True, 'profile': rt.PROFILE, 'id': role},
+                     'node': {'version': 'pair-0.2', 'ready': True, 'profile': rt.PROFILE, 'id': role},
                      'events': []})
     for seq in range(1, count + 1):
         for i, role in enumerate('AB'):
@@ -99,7 +99,7 @@ class Reports(unittest.TestCase):
                             line, buffers[fd] = buffers[fd].split(b'\n', 1)
                             i = masters.index(fd)
                             if line == b'INFO':
-                                os.write(fd, f'INFO pair-0.1 DEVICE{i} 1 1 BOOT{i} 869.525 125 7 5 0 1.8\n'.encode())
+                                os.write(fd, f'INFO pair-0.2 DEVICE{i} 1 1 BOOT{i} 869.525 125 7 5 0 1.8\n'.encode())
                             elif line.startswith(b'TX '):
                                 os.write(fd, b'TX 0 ' + line[3:] + b'\n')
                                 os.write(masters[1-i], b'RX -80 4 ' + line[3:] + b'\n')

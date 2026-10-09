@@ -1,4 +1,4 @@
-WICI / para Seeed 102010611 / pair-0.1 / 2026-10-09
+WICI / para Seeed 102010611 / pair-0.2 / 2026-10-09
 
 Główna instrukcja: WICI-pierwszy-test-LoRa-macOS.pdf w dostarczonej paczce.
 W repozytorium: output/pdf/WICI-pierwszy-test-LoRa-macOS.pdf.
