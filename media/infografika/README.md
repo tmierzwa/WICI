@@ -1,6 +1,6 @@
 # Infografika WICI
 
-Infografika do mediów społecznościowych w formacie 4:5 (1080 × 1350 px, eksport 2×): jak działa WICI, czego nie zastępuje (112) i kogo szukamy.
+Infografika do mediów społecznościowych w formacie 4:5 (1080 × 1350 px, eksport 2×): jak działa WICI, czego nie zastępuje (112) i kogo szukamy. Odsyła do [strony koncepcji](https://tmierzwa.github.io/WICI/).
 
 | Plik | Zawartość |
 |---|---|
