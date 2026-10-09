@@ -1,0 +1,22 @@
+{
+  "date": "2026-10-09",
+  "firmware": "pair-0.1",
+  "compiled": true,
+  "automated_tests": 9,
+  "automated_tests_passed": 9,
+  "usb_integration": "two POSIX pseudo-terminals, real pyserial, shortened run; no physical USB hardware",
+  "physical_rf_test_done": false,
+  "factory_backup_done": false,
+  "hardware_flashed": false,
+  "pdf_pages": 3,
+  "profile": {
+    "MHz": 869.525,
+    "bandwidth_kHz": 125,
+    "sf": 7,
+    "cr": "4/5",
+    "power_dBm": 0,
+    "tcxo_volts": 1.8,
+    "rxen_gpio": 38
+  },
+  "hardware_revision_confirmed": false
+}

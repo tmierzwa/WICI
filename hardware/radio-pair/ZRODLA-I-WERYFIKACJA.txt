@@ -1,0 +1,49 @@
+WICI / para Seeed 102010611 / pair-0.1 / 2026-10-09
+
+Główna instrukcja: WICI-pierwszy-test-LoRa-macOS.pdf w dostarczonej paczce.
+W repozytorium: output/pdf/WICI-pierwszy-test-LoRa-macOS.pdf.
+Projekt PlatformIO jest niezależny od firmware WICI.
+Nie wgrywać obrazu bench-a / bench-b na zestawy XIAO.
+
+Źródła (sprawdzone 2026-10-09):
+https://wiki.seeedstudio.com/wio_sx1262_with_xiao_esp32s3_kit/
+https://raw.githubusercontent.com/meshtastic/firmware/master/variants/esp32s3/seeed_xiao_s3/variant.h
+https://github.com/jgromes/RadioLib/tree/7.6.0
+
+Aktualna konfiguracja upstream Meshtastic: SCK7 MISO8 MOSI9 CS41
+RESET42 DIO1 39 BUSY40 RXEN38, DIO2 jako RF switch, TCXO1.8V.
+To zmienia wcześniejsze założenie RNode używające TCXO3.3V i nieużywające
+zewnętrznego RXEN. Rozbieżność została ujawniona, nie zamaskowana.
+Brak pomiaru dostarczonej rewizji. Nie zwiększać TCXO "na próbę".
+
+RadioLib 7.6.0 begin() włącza CRC, ustawienia prywatnego LoRa, bez LoRaWAN.
+Moc 0 dBm do testu biurkowego, częstotliwość 869.525 MHz.
+Każdy pakiet jest wysyłany tylko raz. Host czeka 3 sekundy na każdą próbę.
+Płytka wymusza 13 airtimes odstępu, także gdy ktoś wysyła polecenia ręcznie.
+Przed pełnym testem odstęp 2-5m; podłączone anteny przy obu płytkach.
+
+Sprawdzenia wykonane:
+- Kompilacja finalnego źródła przez PlatformIO: SUCCESS.
+- Pamięć RAM: 19824/327680 bajtów; flash: 299061/3342336 bajtów.
+- 8 testów parsera i licznika + 1 integracyjny test dwóch portów PTY:
+  realny pyserial, symulowane odpowiedzi płytek, raport JSON i JSONL.
+  9/9 PASS. Próba skrócona nie daje wyniku kwalifikującego.
+- Instrukcja PDF: 3 strony, render i kontrola wizualna każdej strony.
+- Nie wykonano flashowania, odczytu fabrycznej pamięci ani testów RF.
+- Nie zmieniono istniejącego firmware WICI ani plików innych prac.
+
+Powtórzenie sprawdzenia kodu (z katalogu tego projektu):
+.venv/bin/python -m unittest discover -s tests -v
+.venv/bin/pio run
+
+Przed pierwszym wgraniem odczyt pełnej pamięci 8MB do A-factory.bin / B-factory.bin.
+Komenda read_flash nie zmienia flash; upload nadpisuje program fabryczny.
+Kopie trzymać lokalnie (mogą zawierać klucze i ustawienia Meshtastic).
+Nie usuwać kopii po teście. Odtwarzanie tylko na tej samej płytce:
+.venv/bin/python -m esptool --chip esp32s3 --port PORT_A write_flash 0 backups/A-factory.bin
+Nie wgrywać kopii A na B. Po odtworzeniu RESET, ponowne sprawdzenie portu.
+
+Pozytywne dwa pełne raporty (przed i po odłączeniu USB): przejście do integracji
+oprogramowania WICI, następnie jednego pełniejszego prototypu.
+Wynik negatywny/nieukończony: zatrzymanie zakupów kolejnego etapu, diagnostyka.
+100/100 nie jest dowodem zasięgu terenowego ani działania pełnego protokołu WICI.
