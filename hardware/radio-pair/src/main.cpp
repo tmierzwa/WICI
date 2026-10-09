@@ -52,6 +52,9 @@ void setup() {
   if (code) { error("begin", code); return; }
   code = radio.setDio2AsRfSwitch(true);
   if (code) { error("switch", code); return; }
+  // Profile RX gain: catalogue -124 dBm (SF7/125 kHz) holds only in Rx Boosted gain.
+  code = radio.setRxBoostedGainMode(true);
+  if (code) { error("rx_gain", code); return; }
   radio.setDio1Action(onReceive);
   ready = listen();
   info();

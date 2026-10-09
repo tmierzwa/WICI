@@ -1,0 +1,21 @@
+sygnal,GPIO,N1_zlacze_pin,siec_N1,cel,etap,warunek
+SPI_SCK,12,J5.18,SPI_SCK_DEVKIT,N1 R18 -> SPI_SCK; Wio J2.6,L0,Wspólna magistrala; N1 ma R18 33 ohm
+SPI_MOSI,11,J5.17,SPI_MOSI,N1 LCD/FRAM; Wio J2.4,L0,SPI mode 0; kolejność bitów zmienia się per urządzenie
+SPI_MISO,13,J5.19,SPI_MISO,N1 FRAM; Wio J2.5,L0,Wio musi zwalniać MISO przy NSS=H
+RADIO_NSS,10,J5.16,RF_CS,Wio J1.4,L0,Aktywne L; N1 R11 10k do 3V3
+RADIO_NRST,9,J5.15,RF_RESET,Wio J1.3,L0,"Aktywne L; N1 R12=1k do GND, Wio R1=10k pull-up; boot około 0.3V, po starcie H"
+RADIO_BUSY,14,J5.20,RF_GPIO0,Wio J1.2,L0,Wejście; nie zastępować DIO1
+RADIO_DIO1,21,J6.18,RF_GPIO1,Wio J1.1,L0,Wejście przerwania
+RADIO_RXEN,42,J6.6,RF_GPIO3,Wio J1.5 RF_SW1/RXEN,L0,"H w RX, L w TX i spoczynku; R_RXEN_PD10kdoGND; DIO2radia wewnętrzny przełącznikTX"
+FRAM_CS,8,J5.12,FRAM_CS,N1 U4 -> U1.1,L0,Aktywne L; sprzętowa bramka chroni przy spadku 3V3
+LCD_CS,7,J5.7,LCD_CS,N1 J7.3,L0,"Aktywne H, domyślnie L"
+LCD_EXTCOMIN,17,J5.10,LCD_EXTCOMIN,N1 J7.4,L0,Sprzętowy MCPWM; bez generowania w pętli programu
+LCD_DISP,16,J5.9,LCD_DISP,N1 J7.5,L0,Domyślnie L; H po starcie licznika i czyszczeniu obrazu
+LED_ALARM,18,J5.11,LED_ALARM,N1 R1/D1,L0,Aktywne H
+BUZZER,15,J5.8,BUZZER,N1 R3/Q1/BZ1,L0,2048 Hz sprzętowo; nie stałe H
+BTN_UP,41,J6.7,BTN_UP,N1 SW1,L0,"Aktywne L, pull-up N1 10k"
+BTN_DOWN,40,J6.8,BTN_DOWN,N1 SW2,L0,"Aktywne L, pull-up N1 10k"
+BTN_OK,39,J6.9,BTN_OK,N1 SW3,L0,"Aktywne L, pull-up N1 10k"
+BTN_BACK,2,J6.5,BTN_BACK,N1 SW4,L0,"Aktywne L, pull-up N1 10k"
+SW_CISZA,1,J6.4,SW_CISZA,N1 SW5/R16,L0,Masa = cisza; test blokady nadawania
+BTN_PREP,6,J5.6,BTN_PREP,N1 SW6,L0,Aktywne L

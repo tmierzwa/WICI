@@ -1,0 +1,24 @@
+R0 pair-0.1: WYŁĄCZNIE Seeed 102010611, XIAO ESP32S3 + Wio SX1262.
+Nie wgrywać tego obrazu do prototypu L0/DevKitC.
+Podłączyć antenę LoRa. USB-C z transmisją danych.
+Polecenia wykonywać w głównym katalogu paczki L0, po instalacji requirements.txt.
+PORT_R0 zastąpić rzeczywistym /dev/cu.usbmodem...; każda płytka ma inny port.
+
+Przed pierwszym nadpisaniem zachować kopię fabrycznego 8MB flash lokalnie:
+mkdir -p backups
+.venv/bin/python -m esptool --chip esp32s3 --port PORT_R0 read_flash 0 0x800000 backups/r0-factory.bin
+.venv/bin/python -m esptool --chip esp32s3 --port PORT_R0 write_flash 0x0 partner-r0/images/r0-full.bin
+
+Jeśli USB nie pojawia się: BOOT przytrzymany, RESET nacisnąć/zwolnić, zwolnić BOOT.
+Po wgraniu RESET i ponownie sprawdzić port. Nie wykonywać erase_flash.
+Konsola 115200: INFO ma podać pair-0.1, ready=1, profil 869.525 125 7 5 0 1.8.
+
+Dla pierwszej próby R0 użyć dwóch XIAO, około 2-3m od siebie:
+.venv/bin/python tools/radio_test.py --a PORT_R0_A --b PORT_R0_B --count 100
+
+Dla próby L0/R0 użyć poleceń z głównego README.
+Obraz kompletny r0-full.bin: adres0x0; składniki:
+bootloader0x0, partitions0x8000, boot_app00xe000, firmware0x10000.
+Nie nadpisywać plików kopii fabrycznej przy kolejnych wgraniach.
+Odtwarzanie programu R0 ze źródeł: cd partner-r0; ../.venv/bin/pio run.
+Testy hosta nie oznaczają zaliczenia fizycznej próby radiowej.

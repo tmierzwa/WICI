@@ -28,8 +28,15 @@ class PairResults(unittest.TestCase):
         self.assertTrue(item['ready'])
         self.assertEqual(item['boot'], '12345678')
     def test_noise(self):
-        for line in ('', 'RX bad', 'TX xx p', 'booting', 'RX -50 8 payload injected'):
+        for line in ('', 'booting'):
             self.assertEqual(decode(line)['kind'], 'other')
+
+    def test_malformed_record_is_error(self):
+        for line in ('RX bad', 'TX xx p', 'RX -50 8 payload injected', 'RX nan 9 p'):
+            self.assertEqual(decode(line)['kind'], 'error')
+
+    def test_silence_aborts_radio_trial(self):
+        self.assertFalse(judge(self.events()+[('A', decode('BLOCKED SILENCE'))], 'A', 'expected')['ok'])
 
 if __name__ == '__main__':
     unittest.main()

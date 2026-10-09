@@ -1,0 +1,61 @@
+test_fram_report_rejects_missing_pass (test_diagnostic.L0Checks.test_fram_report_rejects_missing_pass) ... ok
+test_mixed_requires_completion_and_no_errors (test_diagnostic.L0Checks.test_mixed_requires_completion_and_no_errors) ... ok
+test_native_diagnostic_vectors (test_diagnostic.L0Checks.test_native_diagnostic_vectors) ... ok
+test_pinmap_matches_quote (test_diagnostic.L0Checks.test_pinmap_matches_quote) ... ok
+test_retention_cannot_be_write_report (test_diagnostic.L0Checks.test_retention_cannot_be_write_report) ... ok
+test_actual_spi_fram_and_retention_crc (test_firmware_native.FirmwareNative.test_actual_spi_fram_and_retention_crc) ... ok
+test_boot_is_read_only_and_selects_safe (test_firmware_native.FirmwareNative.test_boot_is_read_only_and_selects_safe) ... ok
+test_firmware_to_host_over_real_serial (test_firmware_native.FirmwareNative.test_firmware_to_host_over_real_serial) ... CMD FRAMTEST ERASE 00000001
+FRAM_PASS 0 0 75660AAC 75660AAC
+FRAM_PASS 1 0 504BF849 504BF849
+FRAM_PASS 2 0 FA7FABD5 FA7FABD5
+FRAM_PASS 3 0 DF525930 DF525930
+FRAM_PASS 4 0 381D0D1D 381D0D1D
+FRAM_DONE 00000001 WRITE
+CMD FRAMVERIFY 00000001
+FRAM_PASS 4 0 381D0D1D 381D0D1D
+FRAM_DONE 00000001 VERIFY
+ok
+test_full_mixed_duration_rollover_and_pause_block (test_firmware_native.FirmwareNative.test_full_mixed_duration_rollover_and_pause_block) ... ok
+test_guard_exclusive_bus_and_stop (test_firmware_native.FirmwareNative.test_guard_exclusive_bus_and_stop) ... ok
+test_lcd_timer_failure_keeps_disp_low (test_firmware_native.FirmwareNative.test_lcd_timer_failure_keeps_disp_low) ... ok
+test_silence_cooldown_and_embedded_nul_rx (test_firmware_native.FirmwareNative.test_silence_cooldown_and_embedded_nul_rx) ... ok
+test_usb_overflow_nul_and_seed_rejection (test_firmware_native.FirmwareNative.test_usb_overflow_nul_and_seed_rejection) ... ok
+test_different_binary_is_rejected (test_package.PackageChecks.test_different_binary_is_rejected) ... ok
+test_host_and_firmware_protocol_constants_match (test_package.PackageChecks.test_host_and_firmware_protocol_constants_match) ... ok
+test_stale_source_or_added_file_is_rejected (test_package.PackageChecks.test_stale_source_or_added_file_is_rejected) ... ok
+test_two_serial_devices_and_report (test_radio_usb.UsbSimulation.test_two_serial_devices_and_report) ... ok
+test_command_injection_and_empty_ack_rejected (test_reports.CommandReports.test_command_injection_and_empty_ack_rejected) ... ok
+test_mixed_failure_attempts_stop (test_reports.CommandReports.test_mixed_failure_attempts_stop) ... ok
+test_radio_nan_and_malformed_ready_rejected (test_reports.CommandReports.test_radio_nan_and_malformed_ready_rejected) ... ok
+test_duplicate_completion_is_rejected (test_reports.FramReports.test_duplicate_completion_is_rejected) ... ok
+test_malformed_pass_is_reported_as_failure (test_reports.FramReports.test_malformed_pass_is_reported_as_failure) ... ok
+test_matching_but_wrong_crc_is_rejected (test_reports.FramReports.test_matching_but_wrong_crc_is_rejected) ... ok
+test_nonzero_error_count_is_rejected (test_reports.FramReports.test_nonzero_error_count_is_rejected) ... ok
+test_rejects_short_stalled_or_malformed_mixed_trial (test_reports.MixedReports.test_rejects_short_stalled_or_malformed_mixed_trial) ... ok
+test_blocked_tx_fails_without_waiting_for_timeout (test_usb.UsbChecks.test_blocked_tx_fails_without_waiting_for_timeout) ... CMD TX TEST
+BLOCKED SILENCE
+ok
+test_failed_crc_never_writes_success_report (test_usb.UsbChecks.test_failed_crc_never_writes_success_report) ... CMD FRAMVERIFY 00000001
+FRAM_PASS 4 0 00000000 00000000
+FRAM_DONE 00000001 VERIFY
+ok
+test_missing_completion_retains_failed_log (test_usb.UsbChecks.test_missing_completion_retains_failed_log) ... CMD FRAMVERIFY 00000001
+FRAM_PASS 4 0 00000000 00000000
+ok
+test_restart_during_command_is_rejected (test_usb.UsbChecks.test_restart_during_command_is_rejected) ... CMD FRAMVERIFY 00000001
+INFO l0-0.2 L0SIM 1 1 NEWBOOT 869.525 125 7 5 0 1.8
+ok
+test_retention_real_serial (test_usb.UsbChecks.test_retention_real_serial) ... CMD FRAMVERIFY 00000001
+FRAM_PASS 4 0 381D0D1D 381D0D1D
+FRAM_DONE 00000001 VERIFY
+ok
+test_status_can_diagnose_not_ready_board (test_usb.UsbChecks.test_status_can_diagnose_not_ready_board) ... CMD STATUS
+STATUS radio=0 fram=1 ext=1
+ok
+test_wrong_image_blocks_command (test_usb.UsbChecks.test_wrong_image_blocks_command) ... ok
+
+----------------------------------------------------------------------
+Ran 32 tests in 16.086s
+
+OK

@@ -2,13 +2,12 @@
   "date": "2026-10-09",
   "firmware": "pair-0.1",
   "compiled": true,
-  "automated_tests": 9,
-  "automated_tests_passed": 9,
-  "usb_integration": "two POSIX pseudo-terminals, real pyserial, shortened run; no physical USB hardware",
+  "automated_tests": 11,
+  "automated_tests_passed": 11,
+  "usb_integration": "Two POSIX PTYs, real pyserial, shortened run; shared runner used by L0; no physical USB/RF hardware",
   "physical_rf_test_done": false,
   "factory_backup_done": false,
   "hardware_flashed": false,
-  "pdf_pages": 3,
   "profile": {
     "MHz": 869.525,
     "bandwidth_kHz": 125,
@@ -16,7 +15,20 @@
     "cr": "4/5",
     "power_dBm": 0,
     "tcxo_volts": 1.8,
-    "rxen_gpio": 38
+    "rxen_gpio": 38,
+    "rx_boosted_gain": true
   },
-  "hardware_revision_confirmed": false
+  "hardware_revision_confirmed": false,
+  "last_software_verification_utc": "2026-10-09T12:17:07.033337+00:00",
+  "hardware_delivery": "pending: user confirmed kits have not arrived",
+  "source_sha256": {
+    "ZRODLA-I-WERYFIKACJA.txt": "cf03cee903c0ab0c24336bac0bf434aebcfbb4523113e10c66e63604f3052ad2",
+    "platformio.ini": "e5128e0996281084dd5b7106582feadbca08dc23bc569a28cc220d60e39bc5ed",
+    "requirements.txt": "a3442d78bbf2f568bb25a70df0bbec214d12fa0afa6eaf9061594890565a1b75",
+    "src/main.cpp": "c8c1d51053c1b17a6ff853456590773dfc6066efbe2ac75af1568b8049814c86",
+    "tests/test_pair.py": "56b699d1d6ce228e5e59ce4e8560d5009da15fe3b3da1b27d559845d239eb3fb",
+    "tests/test_usb_simulation.py": "68610ce7b698a1b7dca68a76344f756853638bee52df7e81f307ca3cf0106fb9",
+    "tools/pair_test.py": "ca287001461453b3e5c32d3808b9ea0fc56f08639cbcbc3a2142ee127f81ede4"
+  },
+  "firmware_bin_sha256": "99149dd6fc9573c5f81573f882855638c6b69018ecf9253dd2031efaec5d7cbf"
 }

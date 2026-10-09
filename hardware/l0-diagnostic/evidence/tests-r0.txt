@@ -1,0 +1,16 @@
+test_duplicate_not_success (test_pair.PairResults.test_duplicate_not_success) ... ok
+test_error (test_pair.PairResults.test_error) ... ok
+test_failed_tx_not_success (test_pair.PairResults.test_failed_tx_not_success) ... ok
+test_info (test_pair.PairResults.test_info) ... ok
+test_malformed_record_is_error (test_pair.PairResults.test_malformed_record_is_error) ... ok
+test_missing_and_wrong_payload (test_pair.PairResults.test_missing_and_wrong_payload) ... ok
+test_noise (test_pair.PairResults.test_noise) ... ok
+test_silence_aborts_radio_trial (test_pair.PairResults.test_silence_aborts_radio_trial) ... ok
+test_success (test_pair.PairResults.test_success) ... ok
+test_wrong_direction (test_pair.PairResults.test_wrong_direction) ... ok
+test_two_serial_devices_and_report (test_usb_simulation.UsbSimulation.test_two_serial_devices_and_report) ... ok
+
+----------------------------------------------------------------------
+Ran 11 tests in 11.156s
+
+OK
