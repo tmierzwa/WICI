@@ -349,11 +349,17 @@ const char* Model::shownPhrase(const char* polish) const {
 }
 
 void Model::tick(uint32_t nowMs) {
-    // Alarm zajmuje cały ekran do potwierdzenia (sprawdzany co sekundę); pytanie USB czeka najwyżej 30 s.
-    if (alarms_ && screen_ != Screen::ALARM && screen_ != Screen::LANGUAGE && screen_ != Screen::CONFIRM && nowMs - alarmCheckMs_ >= 1000) {
+    // Alarm zajmuje cały ekran do potwierdzenia (sprawdzany co sekundę, także na wyborze języka po
+    // włączeniu); pytanie USB czeka najwyżej 30 s. Na ekranie alarmu treść (minuty) odświeża się co
+    // sekundę, a alarm, którego przyczyna ustąpiła, schodzi z ekranu bez potwierdzenia.
+    if (alarms_ && screen_ != Screen::CONFIRM && nowMs - alarmCheckMs_ >= 1000) {
         alarmCheckMs_ = nowMs;
         AlarmInfo alarm;
-        if (alarms_->alarm(alarm)) {
+        const bool active = alarms_->alarm(alarm);
+        if (screen_ == Screen::ALARM) {
+            if (active) alarm_ = alarm;
+            else go(beforeAlarm_ == Screen::ALARM ? Screen::MAIN : beforeAlarm_);
+        } else if (active) {
             alarm_ = alarm;
             beforeAlarm_ = screen_;
             go(Screen::ALARM);
@@ -480,7 +486,12 @@ void Model::act(Button button, uint32_t nowMs) {
             else if (ok && cursor_ < count) {
                 item_ = static_cast<uint8_t>(cursor_);
                 switch (items[cursor_]) {
-                    case ui_texts::Menu::ZGLOSZENIE: beginWizard(DraftKind::NEW, 0, nullptr); go(Screen::CATEGORY); break;
+                    case ui_texts::Menu::ZGLOSZENIE:
+                        // Po NIE w kontroli adresu nowe zgłoszenie nie startuje: adres_brak (formularz papierowy).
+                        if (addressMissing_) { result_ = Submit::NO_ADDRESS; go(Screen::RESULT); break; }
+                        beginWizard(DraftKind::NEW, 0, nullptr);
+                        go(Screen::CATEGORY);
+                        break;
                     case ui_texts::Menu::WIADOMOSCI: messagesCursor_ = 0; go(Screen::MESSAGES); break;
                     case ui_texts::Menu::TEST: go(Screen::TEST); break;
                     case ui_texts::Menu::STAN: go(Screen::STATUS); break;
@@ -529,7 +540,9 @@ void Model::act(Button button, uint32_t nowMs) {
         }
         case Screen::BACKUP:
         case Screen::DESTROY:
-            // Sekwencja GÓRA, DÓŁ, GÓRA, OK; inny przycisk zaczyna od nowa, WSTECZ wychodzi.
+            // Sekwencja GÓRA, DÓŁ, GÓRA, OK; inny przycisk zaczyna od nowa, WSTECZ wychodzi. GÓRA i DÓŁ
+            // przewijają też tekst, więc ostrzeżenie da się doczytać przed sekwencją.
+            scroll(up, downB);
             if (back) go(Screen::SERVICES);
             else if (button == SEQUENCE[sequence_]) {
                 if (++sequence_ == 4) {
@@ -630,6 +643,7 @@ void Model::act(Button button, uint32_t nowMs) {
         case Screen::DISCARD:
             if (ok) { resetDraft(); go(Screen::MAIN); }
             else if (back) go(returnTo_);
+            else scroll(up, downB);
             break;
         case Screen::MESSAGES: {
             const size_t count = host_ ? host_->itemCount() : 0;
@@ -699,23 +713,23 @@ void Model::act(Button button, uint32_t nowMs) {
                 if (alarms_) alarms_->ackAlarm(alarm_);
                 alarmCheckMs_ = nowMs;  // następny alarm dopiero po sekundzie
                 go(beforeAlarm_ == Screen::ALARM ? Screen::MAIN : beforeAlarm_);
-            }
+            } else scroll(up, downB);
             break;
         case Screen::CONFIRM:
             if (ok || back) {
                 answer_ = question_ == Question::CARD ? Answer::NO : ok ? Answer::YES : Answer::NO;
                 go(beforeQuestion_);
-            }
+            } else scroll(up, downB);
             break;
         case Screen::COUNT:
             break;
     }
 }
 
-size_t Model::itemMenu(uint8_t out[4]) const {
+size_t Model::itemMenu(uint8_t out[4]) {
     // ZMIEŃ LICZBĘ OSÓB, ZMIEŃ PILNOŚĆ, POTRZEBA USTAŁA; ANULUJ WYSYŁKĘ tylko przed pierwszym nadaniem (`nadane`).
     Item item;
-    if (!host_ || !host_->item(itemIndex_, item, true) || !item.own || item.ref != itemRef_) return 0;
+    if (!openItem(item) || !item.own) return 0;
     size_t n = 0;
     if (item.type == SA1_REQUEST) {
         out[n++] = static_cast<uint8_t>(Label::ZMIEN_LICZBE_OSOB);
@@ -941,14 +955,29 @@ void Model::buildItem(const Item& item, Text& t) const {
 }
 
 void Model::buildHandover(const Status& status, Text& t) {
-    // Otwarte i niepotwierdzone zgłoszenia, nieprzeczytane wiadomości, awaria radia, energia, cisza.
-    char tmp[LINE_BYTES * 2];
+    // Najpierw stan stacji (cisza, awarie, nowe wiadomości, energia, wyciszenie), potem otwarte i
+    // niepotwierdzone zgłoszenia od najstarszego (te najpierw alarmują). Zgłoszenia, które się nie
+    // mieszczą, nie znikają po cichu: ostatni wiersz podaje ich liczbę („+N”).
+    char tmp[320];
     char digits[8];
     t.addLine(label(Label::PRZEKAZANIE_ZMIANY, lang_));
+    char lines[LINES][LINE_BYTES];
+    renderMain(status, lines, LINES);
+    if (status.silence) t.addLine(lines[0]);
+    if (!status.radioOk) t.addLine(text(Id::RADIO_AWARIA, lang_));  // wpis alarmu do usunięcia przyczyny
+    if (!status.storeOk) t.add(text(Id::BLAD_PAMIECI, lang_));
+    if (addressMissing_) t.add(text(Id::ADRES_BRAK, lang_));   // następna zmiana wie o NIE w kontroli adresu
+    copyLine(tmp, sizeof(tmp), text(Id::NOWE_KROTKI, lang_));
+    substituteNumber(tmp, sizeof(tmp), "[n]", status.newMessages);
+    t.addLine(tmp);
+    t.addLine(lines[status.silence ? 3 : 2]);  // zasilanie
+    if (muted_) t.addLine(text(Id::DZWIEK_WYCISZONY, lang_));
     const size_t count = host_ ? host_->itemCount() : 0;
-    for (size_t i = 0; i < count && t.count + 4 < TEXT_MAX_LINES; ++i) {
+    uint32_t hidden = 0;
+    for (size_t i = count; i-- > 0;) {
         Item item;
         if (!host_->item(i, item, true) || !item.own || (item.stage == Stage::RECEIVED && item.decision == 6)) continue;
+        const size_t before = t.count;
         formatShort(digits, sizeof(digits), item.number);
         snprintf(tmp, sizeof(tmp), "%s %s", digits, itemLabel(item));
         t.addLine(tmp);
@@ -956,16 +985,15 @@ void Model::buildHandover(const Status& status, Text& t) {
             stageText(item, status, tmp, sizeof(tmp));
             t.add(tmp);
         }
+        if (hidden || t.count >= TEXT_MAX_LINES) {  // zgłoszenie mogło zostać ucięte: ostatni wiersz na „+N”
+            t.count = before;
+            ++hidden;
+        }
     }
-    copyLine(tmp, sizeof(tmp), text(Id::NOWE_KROTKI, lang_));
-    substituteNumber(tmp, sizeof(tmp), "[n]", status.newMessages);
-    t.addLine(tmp);
-    char lines[LINES][LINE_BYTES];
-    renderMain(status, lines, LINES);
-    if (status.silence) t.addLine(lines[0]);
-    if (!status.radioOk) t.addLine(text(Id::RADIO_AWARIA, lang_));  // wpis alarmu do usunięcia przyczyny
-    t.addLine(lines[status.silence ? 3 : 2]);  // zasilanie
-    if (muted_) t.addLine(text(Id::DZWIEK_WYCISZONY, lang_));
+    if (hidden) {
+        snprintf(tmp, sizeof(tmp), "+%lu", static_cast<unsigned long>(hidden));
+        t.addLine(tmp);
+    }
 }
 
 void Model::render(const Status& s, Lines& out) {
@@ -1177,8 +1205,8 @@ void Model::render(const Status& s, Lines& out) {
             renderText(t, window, out, first);
             break;
         case Screen::ALARM:
-            if (alarm_.kind == AlarmKind::RADIO_FAULT) {
-                t.add(text(Id::RADIO_AWARIA, lang_));
+            if (alarm_.kind == AlarmKind::RADIO_FAULT || alarm_.kind == AlarmKind::MEMORY_FAULT) {
+                t.add(text(alarm_.kind == AlarmKind::RADIO_FAULT ? Id::RADIO_AWARIA : Id::BLAD_PAMIECI, lang_));
                 renderText(t, window, out, first);
                 break;
             }

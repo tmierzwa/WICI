@@ -101,6 +101,9 @@ public:
     void onTxDone(void (*handler)(bool ok, void* context), void* context) { txDoneHandler_ = handler; txDoneContext_ = context; }
     const char* foff(int32_t hz);
     void stop();         // przerwanie zadania i IDLE
+    // Datagram czekający na dług, kanał albo odstęp odpada (cisza albo inny wyjątek ciszy niż przy
+    // przyjęciu); nadawany właśnie (SEND) kończy się.
+    void dropP1Tx();
     void poll();         // z loop(): nadawanie serii, odbiór ramek, koniec nośnej, kasowanie długu
     void rxper();        // drukuje i zeruje liczniki
     void printFoff();
@@ -111,6 +114,9 @@ public:
     bool confirm();      // czeka na przycisk OK do CONFIRM_MS (seria TXCW/TXPKT w toku zostaje przerwana)
     uint32_t debtRemainingMs() const;
     bool busy() const { return cwActive_ || pktActive_ || txState_ != TxState::IDLE; }
+    // Układ nadaje albo mierzy kanał przed nadaniem; datagram czekający na dług lub odstęp (układ w
+    // odbiorze) nie wstrzymuje kontroli radia, inaczej pod stałym ruchem nie byłoby jej wcale.
+    bool transmitting() const { return cwActive_ || pktActive_ || txState_ == TxState::CCA || txState_ == TxState::SEND; }
     bool receiving() const { return rxMode_ != RxMode::NONE; }
     const Counters& counters() const { return counters_; }
 
@@ -183,6 +189,7 @@ private:
     uint8_t txDeferrals_ = 0;
 
     uint32_t debtUntilMs_ = 0;
+    mutable bool debtActive_ = false;   // dług jeszcze nieodczekany; gaszony w debtRemainingMs() (main.cpp co obieg)
     bool debtPending_ = false;   // dług zapisany w dzienniku, jeszcze nieskasowany
     int32_t foffHz_ = 0;
     bool foffSet_ = false;

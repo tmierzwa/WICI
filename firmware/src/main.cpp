@@ -87,6 +87,7 @@ Adafruit_USBD_CDC SerialData;
 USBCDC SerialData(1);  // interfejs dopisany do deskryptora przed USB.begin() rdzenia
 #endif
 bool storeOk = false;
+bool destroyed = false;   // po ZNISZCZ DANE do restartu: bez zapisu zegara i ustawień ekranu
 bool dataWas = false;
 ui::Model screenModel;
 ui::Lines shown;                 // wiersze wysłane na ekran
@@ -281,6 +282,17 @@ void applySilence() {
     bench.silence = mode != store::Silence::OFF;
     bench.silenceException = mode == store::Silence::EXCEPTION;
     rnsnode::setSilence(mode == store::Silence::EXCEPTION ? rnsnode::Silence::EXCEPTION : bench.silence ? rnsnode::Silence::FULL : rnsnode::Silence::OFF);
+    // Datagram przyjęty przed ciszą albo dla innego wyjątku nie wychodzi: przy wyjątku łącze przepuszcza
+    // każdy datagram stosu, więc ruch sprzed zmiany (przekazywany, ogłoszenie) odpada tu, nie w łączu.
+    static store::Silence lastMode = store::Silence::OFF;
+    static uint8_t lastException[store::HASH] = {};
+    const uint8_t* exception = stationStore.meta().exception;
+    if (mode != store::Silence::OFF && (mode != lastMode || (mode == store::Silence::EXCEPTION && memcmp(exception, lastException, store::HASH)))) {
+        bench.dropP1Tx();
+        rnsnode::dropQueue();
+    }
+    lastMode = mode;
+    memcpy(lastException, exception, store::HASH);
 }
 
 void restartSoon(const char* why) {
@@ -350,6 +362,8 @@ bool BenchHost::destroy() {
     // Po skasowaniu restart: stan w RAM (próby w drodze, potwierdzone alarmy, stos bez tożsamości)
     // należy do skasowanych rekordów, a nowa tożsamość powstaje przy starcie stosu.
     wipeStack();
+    destroyed = true;
+    retained.magic = 0;   // język i ekran nie wracają po restarcie (ustawienia ekranu skasowane)
     const bool ok = stationStore.destroy();
     storeOk = ok;
     bench.log(ok ? "data destroyed" : "destroy failed");
@@ -539,6 +553,7 @@ ui::Status screenStatus() {
     s.prep = bench.prep;
     s.silence = silenceAny();
     s.radioOk = radioWorks();
+    s.storeOk = stationStore.ok();
     // Kontakt z odbiorcą: znany od ostatniej przyjętej wiadomości; bez niej dolne oszacowanie z czasu pracy.
     const store::Meta& m = stationStore.meta();
     s.contactKnown = storeOk && m.contactKnown && m.contactS >= startServiceS;
@@ -614,7 +629,7 @@ constexpr uint32_t SETTINGS_OBJECT_MASK = 0x070;
 // Język i ekran w pamięci niezerowanej po każdej zmianie (restart programowy, watchdog); w FRAM
 // język i wyciszenie przy ich zmianie (po włączeniu zasilania stacja zaczyna od wyboru języka z podpowiedzią).
 void persistScreen() {
-    if (!screenModel.takeChange()) return;
+    if (!screenModel.takeChange() || destroyed) return;
     retain();
     const uint32_t lang = static_cast<uint32_t>(screenModel.language()) + 1;
     const uint32_t flags = SETTINGS_FLAGS | (screenModel.muted() ? SETTINGS_MUTED : 0) |
@@ -1210,6 +1225,13 @@ void stationSetup() {
         stationStore.now(serviceS());
         const store::Begin begun = stationStore.begin();
         storeOk = begun == store::Begin::OK || begun == store::Begin::NEW;
+        // ZNISZCZ DANE przerwane i dokończone w begin() skasowało zegar: licznik czasu od nowa.
+        if (stationJournal.counterAtStart() < counterBaseS && stationJournal.startClock()) {
+            counterBaseS = stationJournal.counterAtStart();
+            skipS = stationJournal.skipS();
+            startServiceS = serviceS();
+            stationStore.now(serviceS());
+        }
         char text[40];
         snprintf(text, sizeof(text), "store: %s", store::beginName(begun));
         bench.log(text);
@@ -1245,6 +1267,7 @@ void stationLoop() {
     const uint32_t now = millis();
     platform::feedWatchdog();
     platform::uptimeMs();  // licznik 64-bitowy liczy przejścia przez zero przy każdym obiegu
+    bench.debtRemainingMs();   // odczekany dług gaśnie, zanim millis() przejdzie przez 2^31 ms
     if (now - lastBeat >= 500) {
         lastBeat = now;
         beat = !beat;
@@ -1252,7 +1275,7 @@ void stationLoop() {
     }
     // LED2: P1 gotowe; zapis przy zmianie, więc LED 2 z portu obowiązuje do następnej zmiany.
     static uint32_t radioCheckMs = 0;
-    if (now - radioCheckMs >= radiocon::CHECK_MS && !bench.busy()) {
+    if (now - radioCheckMs >= radiocon::CHECK_MS && !bench.transmitting()) {
         radioCheckMs = now;
         if (radiocon::check()) {
             bench.log("radio reconfigured after lost P1 settings");
@@ -1276,7 +1299,7 @@ void stationLoop() {
     }
     if (!usb) reported = false;
     static uint32_t lastClock = 0;
-    if (journalOk && now - lastClock >= CLOCK_WRITE_MS) {
+    if (journalOk && !destroyed && now - lastClock >= CLOCK_WRITE_MS) {
         lastClock = now;
         if (!stationJournal.writeClock(counterS())) {
             journalOk = false;

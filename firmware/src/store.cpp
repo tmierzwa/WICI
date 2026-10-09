@@ -3,6 +3,7 @@
 
 #include <string.h>
 
+#include <algorithm>
 #include <initializer_list>
 
 #include "crc32.h"
@@ -350,7 +351,8 @@ void Tx::released(const Released& r) {
     released_ = r;
     // Nadpisanie najstarszego wpisu: pamięć jest kompletna od następnego najstarszego.
     const size_t next = store_.releasedNext_;
-    if (store_.releasedEv_[next]) meta().tombFloor = store_.releasedEv_[(next + 1) % RELEASED_ENTRIES];
+    // tomb_floor tylko rośnie: po odtworzeniu uszkodzonego bloku następny wpis może być starszy albo pusty.
+    if (store_.releasedEv_[next]) meta().tombFloor = std::max(meta().tombFloor, store_.releasedEv_[next] + 1);
 }
 
 void Tx::bulletin(const uint8_t id[HASH], uint32_t event) {
@@ -646,9 +648,10 @@ void Store::staleRing() {
 }
 
 void Store::staleAll() {
-    // Nowa epoka danych: rejestr, skrzynka, pamięć zwolnionych i pierścień starej epoki są wolne.
-    for (RequestIndex& r : register_) if (r.state == SlotState::USED) { const uint16_t gen = r.gen; r = RequestIndex(); r.gen = gen; r.state = SlotState::STALE; }
-    for (MessageIndex& m : inbox_) if (m.state == SlotState::USED) { const uint16_t gen = m.gen; m = MessageIndex(); m.gen = gen; m.state = SlotState::STALE; }
+    // Nowa epoka danych: rejestr, skrzynka, pamięć zwolnionych i pierścień starej epoki są wolne;
+    // gniazda uszkodzone wracają do użytku (oprogramowanie.md: wyłączone do ZAMKNIJ ZDARZENIE).
+    for (RequestIndex& r : register_) if (r.state == SlotState::USED || r.state == SlotState::CORRUPT) { const uint16_t gen = r.gen; r = RequestIndex(); r.gen = gen; r.state = SlotState::STALE; }
+    for (MessageIndex& m : inbox_) if (m.state == SlotState::USED || m.state == SlotState::CORRUPT) { const uint16_t gen = m.gen; m = MessageIndex(); m.gen = gen; m.state = SlotState::STALE; }
     for (SlotState& s : releasedState_) if (s == SlotState::USED) s = SlotState::STALE;
     for (SlotState& s : ringState_) if (s == SlotState::USED) s = SlotState::STALE;
     memset(releasedPrefix_, 0, sizeof(releasedPrefix_));
@@ -698,7 +701,8 @@ void Store::absorb(Kind kind, uint16_t slot, const uint8_t* body, size_t length,
             x.changedS = r.changedS;
             x.nextTryS = r.nextTryS;
             if (r.stage == Stage::RECEIVED) x.alarmS = r.receivedS;
-            else if (r.stage != Stage::CANCELLED) x.alarmS = r.type == sa1::TEST ? r.firstSentS : oldestPending(r);
+            // TEST liczy od nadania; nowa rewizja przed nadaniem (firstSentS = 0) nie alarmuje.
+            else if (r.stage != Stage::CANCELLED) x.alarmS = r.type == sa1::TEST ? (r.firstSentS ? r.firstSentS : UINT32_MAX) : oldestPending(r);
             break;
         }
         case INBOX: {
@@ -815,7 +819,8 @@ Begin Store::begin() {
         case journal::FormatState::BLANK:
             // Nowa pamięć; meta bez rekordu formatu to dane, których stacja nie zna (nie nowa stacja).
             if (state != SlotState::FREE) return Begin::CORRUPT;
-            if (!format(0)) return Begin::MEMORY;
+            // Znacznik kasowania przed formatem: zanik zasilania w formatowaniu wznawia begin() jak ZNISZCZ DANE.
+            if (!journal_.writeFormat(journal::FormatState::DESTROYING, 0) || !format(0)) return Begin::MEMORY;
             result = Begin::NEW;
             break;
         case journal::FormatState::READY:

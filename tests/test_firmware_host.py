@@ -1827,6 +1827,44 @@ class HostUnitTests(unittest.TestCase):
         last = r[-1]
         self.assertEqual((last["type"], last["reason"], last["min"]), ("snap_required", "gap", 313 - 256 + 1))
 
+    def test_usb_event_stream_after_late_ack_and_lost_sync(self):
+        # Zbiorczy `ack` po rozpoczętym ponowieniu: wysyłka idzie dalej od cursor + 1 (wcześniej stawała
+        # do następnego `sync`). Pierścień nadpisany przed wysłaniem: `snap_required` bez `re`.
+        u = self.Lines()
+        epoch = self.replies(self.world(["connect"]))[0]["epoch"]
+        subs = [self.sub(self.request(self.rid(3000 + i), text="x" * 80)) for i in range(10)]
+        script = [self.CONFIG] + subs + ["connect", u("sync", boot="b", epoch=epoch, cursor=0), "ms 1000"] + ["upoll"] * 8
+        script += ["ms 7000", "stall 1", "upoll", "stall 0", u("ack", epoch=epoch, cursor=8)]
+        for ms in range(8000, 12000, 1000): script += [f"ms {ms}", "upoll"]
+        events = [x_["ev"] for x_ in self.replies(self.world(script)) if x_["type"] == "event"]
+        head = events[:8]
+        self.assertEqual(head, list(range(1, 9)))
+        self.assertIn(max(head) + 1, events[8:])   # po `ack` 8 kolejne zdarzenia wychodzą
+        u = self.Lines()
+        script = [self.CONFIG, "connect", u("sync", boot="b", epoch=epoch, cursor=0), "ms 1000", "upoll", "sevents 300", "ms 7000", "upoll",
+                  "ms 8000", "upoll"]
+        lost = [x_ for x_ in self.replies(self.world(script)) if x_["type"] == "snap_required"]
+        self.assertEqual(len(lost), 1)
+        self.assertEqual((lost[0]["reason"], "re" in lost[0], lost[0]["epoch"]), ("gap", False, epoch))
+
+    def test_usb_test_paused_and_mark_read_retry(self):
+        u = self.Lines()
+        # TEST z laptopa przy WSTRZYMAJ: odmowa jak z menu, a nie `stored` bez nadania.
+        out = self.world([self.CONFIG, "now 100", "pause 1", "connect", u("test", nonce="0102030405060708"), u("mark_read", msg=1),
+                          u("mark_read", msg=9999)])
+        r = self.replies(out)[1:]
+        self.assertEqual((r[0]["type"], r[0]["reason"], r[0]["detail"]), ("rejected", "invalid", "paused"))
+        # Numer nadany, ale bez wiadomości w skrzynce (wypadła albo to inne zdarzenie): `ok` dla ponowienia.
+        self.assertEqual(r[1]["type"], "ok")
+        self.assertEqual((r[2]["type"], r[2]["reason"]), ("rejected", "invalid"))
+
+    def test_test_revision_before_sending_does_not_alarm(self):
+        # Nowa rewizja TEST po nadaniu poprzedniej: alarm liczy się od nadania nowej, nie od czasu 0.
+        x = self.rid(77)
+        test = lambda revision: [1, 5, x, revision, 9, 1, "Szkoła", "test", 0]
+        out = self.world([self.CONFIG, "now 5000", self.sub(test(0)), "poll", "now 5010", self.sub(test(1)), "alarm"])
+        self.assertEqual(self.find(out, "alarm "), ["alarm none cause=0"])
+
     def test_usb_output_queue_with_stalled_laptop(self):
         # Laptop przestaje czytać w trakcie migawki: kolejka ma najwyżej jeden pełny wiersz, wejście czeka,
         # nic nie przepada; po wznowieniu odczytu migawka kończy się pełna. Zdarzenie w trakcie: `stale`.
@@ -1864,7 +1902,7 @@ class HostUnitTests(unittest.TestCase):
         x = self.rid(1234)
         # Zgłoszenie x przed poleceniami: wyjątek ciszy dotyczy tylko wpisu rejestru.
         script = ["H", self.CONFIG, self.sub(self.request(x)), "connect", u("silence", on=True), u("status"), u("cancel", id=x), "R", "K OK 0", "upoll", "R",
-                  u("silence", on=False), "K BACK 0", "upoll",
+                  u("silence", on=True), u("silence", on=False), "K BACK 0", "upoll",
                   u("silence", on=True, exception_id=x), "ms 29999", "upoll", "ms 30000", "upoll",
                   "switch 1", u("silence", on=False), u("silence", on=True, exception_id=x), "switch 0",
                   u("silence", on=True, exception_id=self.rid(999)), "ms 31000", u("close", epoch=epoch, head=1), "K OK 0", "upoll",
@@ -1875,6 +1913,7 @@ class HostUnitTests(unittest.TestCase):
         kinds = [(x_["type"], x_.get("reason")) for x_ in r]
         self.assertEqual(kinds, [
             ("pending", None), ("status", None), ("rejected", "busy"), ("ok", None),     # OK na ekranie stacji
+            ("ok", None),                                      # ponowienie: stan docelowy już jest, bez pytania
             ("pending", None), ("rejected", "not_confirmed"),                             # WSTECZ
             ("pending", None), ("rejected", "not_confirmed"),                             # brak odpowiedzi przez 30 s
             ("rejected", "silence_switch"), ("rejected", "silence_switch"),
@@ -1883,11 +1922,12 @@ class HostUnitTests(unittest.TestCase):
             ("pending", None), ("ok", None), ("ok", None), ("pending", None), ("ok", None)])
         self.assertEqual(r[0]["confirm_s"], 30)
         self.assertEqual((r[3]["silence"], r[3]["silence_source"]), (True, "panel"))
-        close = r[14]
+        self.assertEqual(r[4]["silence"], True)
+        close = r[15]
         self.assertEqual(close["duplicate"], False)
         self.assertNotEqual(close["epoch"], epoch)
         # Powtórzone `close`: ten sam wynik, także gdy po head 3 przyszło zdarzenie nieblokujące (`station` 4).
-        self.assertEqual((r[15]["duplicate"], r[15]["epoch"]), (True, close["epoch"]))
+        self.assertEqual((r[16]["duplicate"], r[16]["epoch"]), (True, close["epoch"]))
         self.assertIn("ask 0", out)
         screens = [line for line in out if line.startswith("screen ")]
         self.assertEqual(screens[0].split()[1], "confirm")
@@ -2035,8 +2075,11 @@ class HostUnitTests(unittest.TestCase):
     def test_startup_address_check_object_list_and_test_offer(self):
         texts = ui_texts.load()["texts"]
         out = self.ui(["H", self.CONFIG, "S 0", "O 1", "K OK 0", "R", "K BACK 0", "R", "K OK 0", "R", "K OK 0", "R", "reg a",
-                       "K BACK 0", "R", "reg b"])
-        address, missing, offer, test, menu = self.screens(out)
+                       "K BACK 0", "R", "reg b", "K OK 0", "R"])
+        address, missing, offer, test, menu, blocked = self.screens(out)
+        # Po NIE ZGŁOSZENIE nie startuje kreatora z odrzuconym adresem: adres_brak.
+        self.assertEqual(blocked[0], "result")
+        self.assertEqual(self.shown(blocked), texts["adres_brak"][0])
         self.assertEqual(address[0], "address")
         self.assertEqual(self.shown(address), texts["adres_kontrola"][0].replace("[x]", "Szkoła, wejście B"))
         self.assertEqual(self.shown(missing), texts["adres_brak"][0])  # WSTECZ = NIE
@@ -2201,8 +2244,16 @@ class HostUnitTests(unittest.TestCase):
         status, handover = self.screens(out)
         self.assertEqual([t for inv, t in status[2] if inv], [labels["PRZEKAZANIE_ZMIANY"][0]])
         self.assertEqual(handover[0], "handover")
-        self.assertEqual(self.lines(handover)[:2], [labels["PRZEKAZANIE_ZMIANY"][0], number + " " + ui_texts.load()["categories"][0][0]])
-        self.assertTrue(" ".join(self.lines(handover)[2:]).startswith(texts["zapisane_w_stacji"][0][:15]))
+        # Najpierw stan stacji (nowe wiadomości, energia), potem zgłoszenia.
+        self.assertEqual(self.lines(handover)[0], labels["PRZEKAZANIE_ZMIANY"][0])
+        self.assertEqual(self.lines(handover)[3], number + " " + ui_texts.load()["categories"][0][0])
+        self.assertTrue(" ".join(self.lines(handover)[4:]).startswith(texts["zapisane_w_stacji"][0][:15]))
+        # Zgłoszenia ponad 24 wiersze tekstu nie znikają po cichu: ostatni wiersz podaje ich liczbę.
+        out = self.ui(self.HOSTED + ["create 1 2 2 x"] * 12 + ["K OK 0", "K DOWN 0", "K DOWN 0", "K DOWN 0", "K OK 0"] +
+                      ["K DOWN 0"] * 13 + ["K OK 0"] + ["R", "K DOWN 0"] * 30 + ["R"])
+        last = self.screens(out)[-1]
+        self.assertEqual(last[0], "handover")
+        self.assertRegex(self.lines(last)[-1], r"^\+\d+$", self.lines(last))   # przewinięte do końca
 
     def test_radio_fault_alarm(self):
         # oprogramowanie.md: radio_awaria to alarm krytyczny jak brak_potwierdzenia: ekran alarmu do OK,
@@ -2219,18 +2270,39 @@ class HostUnitTests(unittest.TestCase):
         self.assertIn(texts["radio_awaria"][0], self.lines(s[2]))
         self.assertEqual(self.lines(s[2])[0], labels["PRZEKAZANIE_ZMIANY"][0])
         self.assertEqual(self.find(out, "cause "), ["cause 1", "cause 1", "cause 0"])
-        # Magazyn zatrzymany (zanik zasilania w zapisie): awaria radia nadal jest przyczyną alarmu (dioda).
+        # Magazyn zatrzymany (zanik zasilania w zapisie): awaria radia nadal jest przyczyną alarmu (dioda),
+        # a sam magazyn też (blad_pamieci) do restartu.
         out = self.ui([self.CONFIG, "txreq 0 11 0 1", "tear 552", "txreq 0 11 1 0", "diag", "O 0", "cause", "O 1", "cause"])
         self.assertIn("ok=0", self.find(out, "diag ")[0])
-        self.assertEqual(self.find(out, "cause "), ["cause 1", "cause 0"])
-        # Bez magazynu ekran ma tylko alarmy (main.cpp): awaria radia zajmuje cały ekran do OK.
+        self.assertEqual(self.find(out, "cause "), ["cause 1", "cause 1"])
+        # Bez magazynu ekran ma tylko alarmy (main.cpp): awaria radia, potem blad_pamieci, każdy do OK.
         out = self.ui([self.CONFIG, "txreq 0 11 0 1", "tear 552", "txreq 0 11 1 0", "diag", "alarms", "L 0", "O 0",
-                       "T 1000", "R", "K OK 1000", "T 2000", "R", "T 3000", "R"])
+                       "T 1000", "R", "K OK 1000", "T 2000", "R", "K OK 2000", "T 3000", "R", "T 4000", "R"])
         self.assertIn("ok=0", self.find(out, "diag ")[0])
         s = self.screens(out)
-        self.assertEqual([x[0] for x in s], ["alarm", "main", "main"])
+        self.assertEqual([x[0] for x in s], ["alarm", "alarm", "main", "main"])
         self.assertEqual(self.shown(s[0]), texts["radio_awaria"][0])
-        self.assertEqual(self.lines(s[1])[0], texts["radio_awaria"][0])
+        self.assertTrue(self.shown(s[1]).startswith(texts["blad_pamieci"][0][:20]))
+        self.assertEqual(self.lines(s[2])[0], texts["radio_awaria"][0])
+
+    def test_alarm_on_language_screen_refresh_and_new_revision(self):
+        texts = ui_texts.load()["texts"]
+        # Po włączeniu (wybór języka) alarm zgłoszenia zajmuje ekran; OK wraca do wyboru języka.
+        out = self.ui(["H", self.CONFIG, "S 0", "create 1 2 2 x", "poll", "now 2000", "T 2000000", "R", "K OK 2000000", "T 2002000", "R"])
+        self.assertEqual([x[0] for x in self.screens(out)], ["alarm", "language"])
+        # Ekran alarmu odświeża minuty co sekundę (wcześniej zostawały z chwili wywołania).
+        out = self.ui(self.HOSTED + ["create 1 2 2 x", "poll", "now 1100", "T 1000000", "R", "now 8000", "T 1002000", "R"])
+        first, later = self.screens(out)[-2:]
+        self.assertEqual((first[0], later[0]), ("alarm", "alarm"))
+        self.assertNotEqual(self.shown(first), self.shown(later))
+        self.assertIn(texts["brak_potwierdzenia"][0].split("[n]")[0] + "133", self.shown(later))
+        # Potwierdzony alarm wraca przy nowej rewizji (np. wyższa pilność), nie tylko po restarcie.
+        out = self.ui(self.HOSTED + ["create 1 2 0 x", "poll", "now 30000", "T 1000000", "R", "K OK 1000000", "T 1002000", "R"])
+        number = self.find(out, "create ")[0].split()[2]
+        self.assertEqual([x[0] for x in self.screens(out)], ["alarm", "main"])
+        out = self.ui(self.HOSTED + ["create 1 2 0 x", "poll", "now 30000", "T 1000000", "K OK 1000000", "T 1002000",
+                                     f"revise {int(number)} 2 2", "poll", "now 31200", "T 1004000", "R"])
+        self.assertEqual(self.screens(out)[-1][0], "alarm")
 
     def test_confirm_question_and_node_menu(self):
         out = self.ui(["L 0", "ask 0", "R", "answer", "K OK 0", "answer", "R", "ask 3", "K BACK 0", "answer", "ask 5 ABCD", "R",

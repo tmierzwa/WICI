@@ -202,11 +202,11 @@ void Console::setRadioFault(bool fault) {
 
 bool Console::alarm(ui::AlarmInfo& out) {
     station::Alarm a;
-    if (!store_.ok() || !station_.alarm(a)) {
-        if (!radioFault_ || radioAcked_) return false;
+    if (!station_.alarm(a)) {
         out = ui::AlarmInfo();
-        out.kind = ui::AlarmKind::RADIO_FAULT;
-        return true;
+        if (radioFault_ && !radioAcked_) out.kind = ui::AlarmKind::RADIO_FAULT;
+        else if (!store_.ok() && !memoryAcked_) out.kind = ui::AlarmKind::MEMORY_FAULT;
+        return out.kind != ui::AlarmKind::NONE;
     }
     out.kind = a.kind == station::AlarmKind::NO_READ ? ui::AlarmKind::NO_READ : ui::AlarmKind::NO_CONFIRMATION;
     out.ref = ownRef(a.slot, a.gen);
@@ -217,6 +217,7 @@ bool Console::alarm(ui::AlarmInfo& out) {
 
 void Console::ackAlarm(const ui::AlarmInfo& alarm) {
     if (alarm.kind == ui::AlarmKind::RADIO_FAULT) { radioAcked_ = true; return; }
+    if (alarm.kind == ui::AlarmKind::MEMORY_FAULT) { memoryAcked_ = true; return; }
     station::Alarm a;
     a.kind = alarm.kind == ui::AlarmKind::NO_READ ? station::AlarmKind::NO_READ : station::AlarmKind::NO_CONFIRMATION;
     a.slot = static_cast<uint16_t>(alarm.ref & 0xFFFF);

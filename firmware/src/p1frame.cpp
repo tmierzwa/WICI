@@ -155,6 +155,17 @@ Outcome Assembler::push(const Fragment& f, uint32_t nowMs) {
         ++stats_.conflicts;
         return Outcome::CONFLICT;
     }
+    if (!a && f.count == 1) {
+        // Datagram z jednej ramki kończy się od razu: nie zajmuje miejsca próby, więc nie wypycha
+        // składanego datagramu z wielu ramek.
+        memcpy(completed_, f.chunk, f.chunkLength);
+        completedLength_ = f.total;
+        memcpy(completedId_, f.id, ID_BYTES);
+        remember(f.id);
+        ++stats_.stored;
+        ++stats_.completed;
+        return Outcome::COMPLETE;
+    }
     if (!a) {
         a = allocate(nowMs);
         memcpy(a->id, f.id, ID_BYTES);

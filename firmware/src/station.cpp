@@ -415,6 +415,7 @@ Result Station::revision(uint16_t slot, Request& r, const sa1::Message& m, const
     if (superseded) stageEvent(tx, slot, gen, old, StageCode::SUPERSEDED, false);
     tx.event(e);
     if (!tx.commit()) return Result::MEMORY;
+    alarmAcked_[slot] = 0;   // nowa rewizja (np. wyższa pilność) alarmuje od nowa
     char line[48];
     snprintf(line, sizeof(line), "request %04u revision %u", store::shortNumber(r.id), r.rMax);
     services_.log(line);
@@ -540,6 +541,7 @@ Result Station::test(const uint8_t nonce[store::NONCE], Stored& out) {
         return Result::STORED;
     }
     out = Stored();
+    if (testPaused()) return Result::INVALID;   // jak z menu: wstrzymany TEST nie byłby nadany
     return createWith(sa1::TEST, 9, 1, 0, store_.address(), "test", 0, store::USB, nonce, out.id, out.number);
 }
 

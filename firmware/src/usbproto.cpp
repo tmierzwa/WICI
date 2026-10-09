@@ -165,6 +165,7 @@ void Protocol::begin() {
 void Protocol::connected(uint32_t nowMs) {
     connected_ = true;
     synced_ = false;
+    lostSync_ = nullptr;
     snap_ = Snap();
     outStart_ = outCount_ = 0;   // wiersze poprzedniej sesji nie trafią do nowej
     seqOut_ = 0;
@@ -178,6 +179,7 @@ void Protocol::connected(uint32_t nowMs) {
 void Protocol::disconnected() {
     connected_ = false;
     synced_ = false;
+    lostSync_ = nullptr;
     snap_ = Snap();
     outStart_ = outCount_ = 0;
     lineLength_ = 0;
@@ -317,7 +319,10 @@ void Protocol::dispatch(const char* type, const json::Value& msg, int64_t seq, u
         send("ok", seq, "");
     } else if (!strcmp(type, "silence")) doSilence(msg, seq, nowMs);
     else if (!strcmp(type, "mark_read")) {
-        if (!station_.markRead(intField(msg, "msg"))) rejected(seq, store_.ok() ? "invalid" : "memory", "msg");
+        // Numer wiadomości to numer zdarzenia; wiadomość, która wypadła już ze skrzynki, daje `ok` (ponowienie).
+        const uint32_t number = intField(msg, "msg");
+        if (!number || number > store_.head()) rejected(seq, "invalid", "msg");
+        else if (store_.findMessage(number) >= 0 && !station_.markRead(number)) rejected(seq, "memory");
         else send("ok", seq, "");
     } else if (!strcmp(type, "status")) doStatus(seq);
     else if (!strcmp(type, "close")) doClose(msg, seq, nowMs);
@@ -357,10 +362,9 @@ void Protocol::doSync(const json::Value& msg, int64_t seq, uint32_t nowMs) {
                          : cursor + 1 < min                                                  ? "gap"
                                                                                              : nullptr;
     synced_ = false;
+    lostSync_ = nullptr;
     if (reason) {
-        snprintf(fields, sizeof(fields), "\"epoch\":\"%s\",\"head\":%lu,\"min\":%lu,\"reason\":\"%s\"", current,
-                 static_cast<unsigned long>(head), static_cast<unsigned long>(min), reason);
-        send("snap_required", seq, fields);
+        sendSnapRequired(seq, reason, OUT_BYTES);
         return;
     }
     snprintf(fields, sizeof(fields), "\"epoch\":\"%s\",\"from\":%lu,\"head\":%lu", current, static_cast<unsigned long>(cursor + 1),
@@ -379,13 +383,28 @@ void Protocol::doAck(const json::Value& msg, uint32_t nowMs) {
     if (!synced_ || !json::hexField(msg, "epoch", epoch, store::EPOCH) || memcmp(epoch, syncedEpoch_, store::EPOCH) || cursor > store_.head()) return;
     if (cursor > cursor_) {
         cursor_ = cursor;
+        // `ack` spóźniony wobec ponowienia potwierdza zdarzenia przed nextEv_: wysyłka idzie dalej od cursor + 1.
+        if (nextEv_ <= cursor_) nextEv_ = cursor_ + 1;
         if (cursor_ + 1 >= nextEv_) lastSentMs_ = nowMs;   // wszystko potwierdzone: następne bez czekania na ponowienie
     }
 }
 
-bool Protocol::sendEvent(uint32_t ev) {
-    store::Event e;
-    if (!store_.readEvent(ev, e)) return false;
+bool Protocol::sendSnapRequired(int64_t re, const char* reason, size_t reserve) {
+    char current[2 * store::EPOCH + 1], fields[160];
+    hexstr::encode(store_.meta().epoch, store::EPOCH, current);
+    snprintf(fields, sizeof(fields), "\"epoch\":\"%s\",\"head\":%lu,\"min\":%lu,\"reason\":\"%s\"", current,
+             static_cast<unsigned long>(store_.head()), static_cast<unsigned long>(store_.minEvent()), reason);
+    return push("snap_required", re, fields, reserve);
+}
+
+// Strumień zdarzeń nie może iść dalej (nowa epoka, zdarzenie nadpisane albo nieczytelne): laptop dostaje
+// `snap_required` bez `re` i robi migawkę; bez tego czekałby na zdarzenia, które nie przyjdą.
+void Protocol::loseSync(const char* reason) {
+    synced_ = false;
+    lostSync_ = reason;
+}
+
+bool Protocol::sendEvent(const store::Event& e) {
     char fields[MAX_LINE - 64], hex[2 * store::HASH + 1];
     size_t n = 0;
     hexstr::encode(store_.meta().epoch, store::EPOCH, hex);
@@ -416,7 +435,7 @@ bool Protocol::sendEvent(uint32_t ev) {
             appendf(fields, sizeof(fields), n, "\"kind\":\"stage\",\"revision\":%u,\"stage\":\"%s\"", e.revision, store::stageCodeName(code));
             if (code == store::StageCode::RELEASED) {
                 store::Released rel;
-                if (store_.releasedAt(e.slot, rel)) {
+                if (store_.releasedAt(e.slot, rel) && rel.ev == e.ev) {   // wpis mógł zostać zajęty od nowa po odtworzeniu
                     hexstr::encode(rel.id, store::HASH, hex);
                     appendf(fields, sizeof(fields), n, ",\"id\":\"%s\"", hex);
                 } else appendf(fields, sizeof(fields), n, ",\"lost\":true");
@@ -604,6 +623,7 @@ void Protocol::doTest(const json::Value& msg, int64_t seq) {
     station::Stored s;
     const station::Result result = station_.test(nonce, s);
     if (result == station::Result::STORED) stored(seq, s);
+    else if (result == station::Result::INVALID) rejected(seq, "invalid", "paused");   // TEST wstrzymany (WSTRZYMAJ)
     else rejected(seq, station::resultName(result));
 }
 
@@ -621,6 +641,16 @@ void Protocol::doSilence(const json::Value& msg, int64_t seq, uint32_t nowMs) {
         return;
     }
     if (host_.silenceSwitch() && (!p.on || p.exceptionSet)) { rejected(seq, "silence_switch"); return; }
+    // Klucz powtórzenia to stan docelowy: stan już osiągnięty daje `ok` bez pytania i bez zdarzenia.
+    const store::Meta& m = store_.meta();
+    const int slot = p.exceptionSet ? store_.findRequest(p.exception) : -1;
+    if (m.silence == p.on && m.exceptionSet == p.exceptionSet &&
+        (!p.exceptionSet || (!memcmp(m.exception, p.exception, store::HASH) && m.exceptionRev == store_.request(static_cast<size_t>(slot)).rMax))) {
+        char fields[160];
+        currentRadioFields(fields, sizeof(fields));
+        send("ok", seq, fields);
+        return;
+    }
     p.seq = seq;
     p.sinceMs = nowMs;
     pending_ = p;
@@ -872,15 +902,18 @@ void Protocol::poll(uint32_t nowMs) {
         else if (nowMs - pending_.sinceMs >= CONFIRM_MS) finishPending(false);
     }
     if (xfer_.op != Xfer::NONE && nowMs - xfer_.lastMs >= XFER_IDLE_MS) xfer_ = Xfer();
+    if (connected_ && lostSync_ && sendSnapRequired(-1, lostSync_, pending() ? PENDING_RESERVE : 0)) lostSync_ = nullptr;
     if (!connected_ || !synced_) return;
-    if (memcmp(syncedEpoch_, store_.meta().epoch, store::EPOCH)) { synced_ = false; return; }   // nowa epoka: laptop robi `sync`
+    if (memcmp(syncedEpoch_, store_.meta().epoch, store::EPOCH)) { loseSync("epoch"); return; }
     if (nextEv_ > cursor_ + 1 && nowMs - lastSentMs_ >= RESEND_MS) {
         nextEv_ = cursor_ + 1;   // bez `ack` przez 5 s: od cursor + 1
         ++stats_.resends;
     }
-    while (nextEv_ <= store_.head() && nextEv_ - cursor_ - 1 < WINDOW) {
-        if (nextEv_ < store_.minEvent()) { synced_ = false; return; }   // nadpisane przed wysłaniem: laptop dostanie `gap`
-        if (!sendEvent(nextEv_)) return;
+    while (nextEv_ <= store_.head() && nextEv_ <= cursor_ + WINDOW) {
+        if (nextEv_ < store_.minEvent()) { loseSync("gap"); return; }   // nadpisane przed wysłaniem
+        store::Event e;
+        if (!store_.readEvent(nextEv_, e)) { loseSync("gap"); return; }
+        if (!sendEvent(e)) return;
         ++nextEv_;
         lastSentMs_ = nowMs;
     }

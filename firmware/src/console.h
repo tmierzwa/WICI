@@ -52,8 +52,9 @@ public:
     // Awaria układu radiowego (radio_awaria), podawana przez main.cpp przy każdym obiegu: alarm
     // do potwierdzenia OK; po ustąpieniu przyczyny następna awaria alarmuje od nowa.
     void setRadioFault(bool fault);
-    // Przyczyna alarmu trwa (także po potwierdzeniu): awaria radia (także bez magazynu) albo alarm zgłoszenia.
-    bool alarmCause() const { return radioFault_ || (store_.ok() && station_.alarmCause()); }
+    // Przyczyna alarmu trwa (także po potwierdzeniu): awaria radia, magazyn niedziałający albo alarm
+    // zgłoszenia. Alarmy zgłoszeń liczą się z indeksu w RAM, więc działają też po zatrzymaniu magazynu.
+    bool alarmCause() const { return radioFault_ || !store_.ok() || station_.alarmCause(); }
 
 private:
     static_assert(ui::ADDRESS_CHOICES == config::ADDRESSES, "lista obiektów ekranu i konfiguracji");
@@ -74,6 +75,7 @@ private:
     bool dirty_ = true;
     bool radioFault_ = false;
     bool radioAcked_ = false;
+    bool memoryAcked_ = false;   // magazyn wraca dopiero po restarcie, więc potwierdzenie trwa do niego
     size_t count_ = 0;
     Entry list_[MAX_ITEMS];
     // Treść ostatnio otwartej pozycji: liczba osób i fraza zmieniają się tylko z nową rewizją,

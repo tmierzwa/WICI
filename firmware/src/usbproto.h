@@ -137,7 +137,9 @@ private:
     bool push(const char* type, int64_t re, const char* fields, size_t reserve);
     void rejected(int64_t re, const char* reason, const char* detail = nullptr);
     void hello();
-    bool sendEvent(uint32_t ev);
+    bool sendEvent(const store::Event& e);
+    void loseSync(const char* reason);
+    bool sendSnapRequired(int64_t re, const char* reason, size_t reserve);
     void dispatch(const char* type, const json::Value& msg, int64_t seq, uint32_t nowMs);
     void doSync(const json::Value& msg, int64_t seq, uint32_t nowMs);
     void doAck(const json::Value& msg, uint32_t nowMs);
@@ -171,6 +173,7 @@ private:
     int64_t seqIn_ = 0;
     bool connected_ = false;
     bool synced_ = false;
+    const char* lostSync_ = nullptr;   // powód `snap_required` bez `re` do wysłania po utracie synchronizacji
     uint8_t syncedEpoch_[store::EPOCH] = {};
     uint32_t cursor_ = 0;        // ostatnie zdarzenie potwierdzone przez laptop
     uint32_t nextEv_ = 0;        // następne zdarzenie do wysłania

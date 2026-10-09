@@ -23,6 +23,15 @@ static_assert(p1frame::MAX_FRAGMENTS * frameAirMs(p1frame::MAX_LEN + 1) <= SERIE
 
 }  // namespace
 
+namespace {
+
+// Wiersz diagnostyczny z inicjatywy stacji (odbiór, koniec nadania) tylko przy wolnym miejscu w buforze
+// portu: zapis do CDC na nRF52 czeka, aż komputer odczyta, więc terminal, który przestał czytać,
+// zatrzymałby pętlę stacji aż do watchdoga. Pominięty wiersz nie zmienia liczników łącza.
+bool diagFree() { return Serial.availableForWrite() > 0; }
+
+}  // namespace
+
 Bench::Bench(radiolink::Driver& radio, uint8_t pinOk, int16_t pinLed) : radio_(radio), pinOk_(pinOk), pinLed_(pinLed) {}
 
 void Bench::led(bool on) {
@@ -36,6 +45,7 @@ void Bench::attach(journal::Journal* journal, uint32_t (*uptimeS)()) {
 
 void Bench::restoreDebt(uint32_t debtMs) {
     debtUntilMs_ = millis() + debtMs;
+    debtActive_ = debtMs > 0;
     debtPending_ = debtMs > 0;
 }
 
@@ -79,8 +89,13 @@ void Bench::printLog(uint32_t count) {
 }
 
 uint32_t Bench::debtRemainingMs() const {
+    // Odczekany dług gaśnie na stałe: inaczej po 2^31 ms bez nadawania (cisza dłuższa niż 24,8 doby)
+    // różnica znowu wyszłaby dodatnia i zablokowała nadawanie na tyle samo.
+    if (!debtActive_) return 0;
     const uint32_t now = millis();
-    return static_cast<int32_t>(debtUntilMs_ - now) > 0 ? debtUntilMs_ - now : 0;
+    if (static_cast<int32_t>(debtUntilMs_ - now) > 0) return debtUntilMs_ - now;
+    debtActive_ = false;
+    return 0;
 }
 
 bool Bench::confirm() {
@@ -99,8 +114,8 @@ bool Bench::confirm() {
         if (digitalRead(pinOk_) == LOW) {
             delay(20);
             if (digitalRead(pinOk_) == LOW) {
-                const uint32_t pressed = millis();
-                while (digitalRead(pinOk_) == LOW && millis() - pressed < CONFIRM_MS) delay(5);
+                // Puszczenie też liczone od startu: całe oczekiwanie ≤ CONFIRM_MS, poniżej limitu watchdoga.
+                while (digitalRead(pinOk_) == LOW && millis() - start < CONFIRM_MS) delay(5);
                 led(false);
                 return true;
             }
@@ -132,6 +147,7 @@ const char* Bench::gate(uint32_t txMs, bool conducted) {
     const uint32_t debtMs = txMs * p1::DEBT_FACTOR;
     if (!journal_->writeDebt(debtMs, uptimeS())) return "debt journal write failed";
     debtUntilMs_ = millis() + txMs + debtMs;  // dług liczy się od końca serii (endSeriesDebt)
+    debtActive_ = true;
     seriesDebtMs_ = debtMs;
     debtPending_ = true;
     return nullptr;
@@ -139,7 +155,7 @@ const char* Bench::gate(uint32_t txMs, bool conducted) {
 
 void Bench::endSeriesDebt() {
     // radio.md: po nadaniu odczekuje się zapisany dług, więc liczy się go od końca serii.
-    if (seriesDebtMs_) debtUntilMs_ = millis() + seriesDebtMs_;
+    if (seriesDebtMs_) { debtUntilMs_ = millis() + seriesDebtMs_; debtActive_ = true; }
     seriesDebtMs_ = 0;
 }
 
@@ -392,7 +408,7 @@ void Bench::receiveP1() {
         const p1frame::Parse parse = p1frame::parseFrame(frame, length, fragment);
         if (parse != p1frame::Parse::OK) {
             ++link_.rxBad;
-            Serial.printf("{\"p1rx\":\"rejected\",\"reason\":\"%s\",\"len\":%u,\"rssi_dbm\":%d}\n", p1frame::parseName(parse),
+            if (diagFree()) Serial.printf("{\"p1rx\":\"rejected\",\"reason\":\"%s\",\"len\":%u,\"rssi_dbm\":%d}\n", p1frame::parseName(parse),
                           frame[0], rssiDbm);
             continue;
         }
@@ -400,14 +416,16 @@ void Bench::receiveP1() {
         const p1frame::Outcome outcome = assembler_.push(fragment, millis());
         if (outcome == p1frame::Outcome::COMPLETE) {
             ++link_.rxDatagrams;
-            Serial.printf("{\"p1rx\":\"datagram\",\"id\":\"");
-            for (size_t i = 0; i < p1frame::ID_BYTES; ++i) Serial.printf("%02X", assembler_.completedId()[i]);
-            Serial.printf("\",\"len\":%u,\"fragments\":%u,\"rssi_dbm\":%d,\"data\":\"",
-                          static_cast<unsigned>(assembler_.completedLength()), fragment.count, rssiDbm);
-            for (size_t i = 0; i < assembler_.completedLength(); ++i) Serial.printf("%02X", assembler_.completed()[i]);
-            Serial.println("\"}");
+            if (diagFree()) {
+                Serial.printf("{\"p1rx\":\"datagram\",\"id\":\"");
+                for (size_t i = 0; i < p1frame::ID_BYTES; ++i) Serial.printf("%02X", assembler_.completedId()[i]);
+                Serial.printf("\",\"len\":%u,\"fragments\":%u,\"rssi_dbm\":%d,\"data\":\"",
+                              static_cast<unsigned>(assembler_.completedLength()), fragment.count, rssiDbm);
+                for (size_t i = 0; i < assembler_.completedLength(); ++i) Serial.printf("%02X", assembler_.completed()[i]);
+                Serial.println("\"}");
+            }
             if (datagramHandler_) datagramHandler_(assembler_.completed(), assembler_.completedLength(), datagramContext_);
-        } else {
+        } else if (diagFree()) {
             Serial.printf("{\"p1rx\":\"%s\",\"index\":%u,\"count\":%u,\"total\":%u,\"rssi_dbm\":%d}\n",
                           p1frame::outcomeName(outcome), fragment.index, fragment.count, fragment.total, rssiDbm);
         }
@@ -427,6 +445,7 @@ uint32_t backoffMs() {
 
 const char* Bench::p1send(const uint8_t* data, size_t length, bool stack) {
     if (length < 1 || length > p1frame::MAX_DATAGRAM) return "datagram 1..600 B";
+    if (!stack && !prep) return "preparation mode off: PREP 1";   // P1TX z portu diagnostycznego: tylko w przygotowaniu
     if (busy()) return "busy: STOP first";
     if (!p1Ready) return "radio not configured: CONFIG";
     if (silence && !(stack && silenceException)) { ++link_.txDrop; return "radio silence"; }
@@ -497,6 +516,7 @@ void Bench::pollP1Tx() {
             debtPending_ = true;
             const bool ok = sendFragments();
             debtUntilMs_ = millis() + txMs * p1::DEBT_FACTOR;  // dług od końca nadawania
+            debtActive_ = true;
             finishP1Tx(ok ? "sent" : "tx error");
             return;
         }
@@ -521,13 +541,21 @@ bool Bench::sendFragments() {
     return ok;
 }
 
+void Bench::dropP1Tx() {
+    if (txState_ != TxState::WAIT_DEBT && txState_ != TxState::CCA && txState_ != TxState::BACKOFF) return;
+    ++link_.txDrop;
+    finishP1Tx("silence");
+}
+
 void Bench::finishP1Tx(const char* result) {
     txState_ = TxState::IDLE;
-    Serial.printf("{\"p1tx\":\"%s\",\"id\":\"", result);
-    for (size_t i = 0; i < p1frame::ID_BYTES; ++i) Serial.printf("%02X", txId_[i]);
-    Serial.printf("\",\"len\":%u,\"fragments\":%u,\"deferrals\":%u,\"wait_ms\":%lu,\"tx_wait_ms\":%lu}\n",
-                  static_cast<unsigned>(txLength_), p1frame::fragmentCount(txLength_), txDeferrals_,
-                  static_cast<unsigned long>(millis() - txRequestedMs_), static_cast<unsigned long>(debtRemainingMs()));
+    if (diagFree()) {
+        Serial.printf("{\"p1tx\":\"%s\",\"id\":\"", result);
+        for (size_t i = 0; i < p1frame::ID_BYTES; ++i) Serial.printf("%02X", txId_[i]);
+        Serial.printf("\",\"len\":%u,\"fragments\":%u,\"deferrals\":%u,\"wait_ms\":%lu,\"tx_wait_ms\":%lu}\n",
+                      static_cast<unsigned>(txLength_), p1frame::fragmentCount(txLength_), txDeferrals_,
+                      static_cast<unsigned long>(millis() - txRequestedMs_), static_cast<unsigned long>(debtRemainingMs()));
+    }
     if (rxMode_ != RxMode::P1) enterRx(RxMode::P1, 0);
     if (txDoneHandler_) txDoneHandler_(!strcmp(result, "sent"), txDoneContext_);
 }

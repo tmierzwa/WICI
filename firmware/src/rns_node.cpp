@@ -146,6 +146,7 @@ public:
         if (!radio) return;
         const uint32_t now = nowMs();
         if (silence == Silence::OFF) queue_.poll(now);   // ogłoszenia oczekujące nie wychodzą w ciszy
+        else queue_.tick(now);
         if (queue_.transmitting() || !radio->ready()) return;
         const uint8_t* data;
         size_t length;
@@ -416,6 +417,10 @@ void setSilence(Silence mode) {
     if (mode == silence) return;
     silence = mode;
     if (mode != Silence::OFF && p1) p1->queue().drop();   // nic z kolejki sprzed ciszy nie wychodzi
+}
+
+void dropQueue() {
+    if (p1) p1->queue().drop();
 }
 
 void usbOpen(bool open) {

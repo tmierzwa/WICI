@@ -124,6 +124,9 @@ public:
     Lane lane(const uint8_t* raw, size_t length, Hint hint = Hint::NONE) const;
     // Ogłoszenia oczekujące przechodzą do kolejki, gdy limit 2%, pula i miejsce pozwalają.
     void poll(uint32_t nowMs);
+    // Bramka ogłoszeń gaśnie po swoim czasie także w ciszy (poll() wtedy nie działa): inaczej po
+    // ciszy dłuższej niż 2^31 ms różnica czasu znowu wyszłaby dodatnia i trzymała ogłoszenia.
+    void tick(uint32_t nowMs) { announceOpen(nowMs); }
     // Aktywna tożsamość odbiorcy z karty (cel K1); same zera albo nullptr = brak.
     void setReceiver(const uint8_t dest[16]);
     uint32_t poolUsedMs(uint32_t nowMs);          // czas kanału K2 i ogłoszeń w bieżącym oknie

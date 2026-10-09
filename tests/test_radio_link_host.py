@@ -50,6 +50,7 @@ struct FakeSerial : Print {
     }
     void println(const char* text) { std::puts(text); }
     void flush() {}
+    int availableForWrite() { return 4096; }
 };
 extern FakeSerial Serial;
 """,

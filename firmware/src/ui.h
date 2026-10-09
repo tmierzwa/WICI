@@ -59,6 +59,7 @@ struct Status {
     bool prep = false;
     bool silence = false;
     bool radioOk = false;
+    bool storeOk = true;         // false: blad_pamieci w PRZEKAZANIU ZMIANY
     bool contactKnown = false;   // false: dolne oszacowanie "PONAD [czas]" (bez RTC)
     uint32_t contactS = 0;       // czas od ostatniego kontaktu albo dolne oszacowanie [s]
     bool mains12 = true;         // praca z 12 V (false: ogniwa)
@@ -131,8 +132,9 @@ struct TestInfo {
     uint32_t minutes = 0;    // SCHEDULED: do nadania
     uint8_t confirmed = 0;   // CONFIRMED: stan 1-6 (1: odebrany bez decyzji)
 };
-// RADIO_FAULT: radio_awaria, układ radiowy nie działa (bez wpisu rejestru).
-enum class AlarmKind : uint8_t { NONE, NO_CONFIRMATION, NO_READ, RADIO_FAULT };
+// RADIO_FAULT: radio_awaria, układ radiowy nie działa; MEMORY_FAULT: blad_pamieci, magazyn nie
+// wystartował albo zatrzymał się po błędzie zapisu FRAM (oba bez wpisu rejestru).
+enum class AlarmKind : uint8_t { NONE, NO_CONFIRMATION, NO_READ, RADIO_FAULT, MEMORY_FAULT };
 struct AlarmInfo {
     AlarmKind kind = AlarmKind::NONE;
     uint32_t ref = 0;        // wpis rejestru (jak Item::ref)
@@ -233,7 +235,7 @@ private:
     void stageText(const Item& item, const Status& status, char* out, size_t size) const;
     bool openItem(Item& item);  // otwarta pozycja po numerze rekordu (lista mogła się przesunąć)
     size_t phraseListCount() const;
-    size_t itemMenu(uint8_t out[4]) const;
+    size_t itemMenu(uint8_t out[4]);   // szuka pozycji po numerze rekordu (lista mogła się przesunąć)
     Screen afterPeople() const;
     Screen afterUrgency() const;
     void beginWizard(DraftKind kind, uint32_t ref, const Item* item);

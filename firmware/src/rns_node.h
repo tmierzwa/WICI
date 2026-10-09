@@ -106,6 +106,8 @@ void setNode(bool on);
 bool node();
 enum class Silence : uint8_t { OFF, FULL, EXCEPTION };
 void setSilence(Silence mode);
+// Nowa cisza albo inny wyjątek: kolejka P1 bez datagramu w drodze (ten przerywa Bench::dropP1Tx).
+void dropQueue();
 constexpr size_t USB_PINNED = 8;   // cele ogłoszone przez komputer stanowiska, chronione w tablicach
 
 // Interfejs danych USB w konfiguracji węzła stanowiska (poza trybem przygotowania): port otwarty przez
