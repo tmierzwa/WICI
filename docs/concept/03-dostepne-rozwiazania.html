@@ -96,6 +96,18 @@
   <li><strong>Opcja po pilotażu:</strong> obowiązkowy komputer stanowiska może dostać węzeł MeshCore na USB i bibliotekę <a href="https://github.com/meshcore-dev/meshcore_py">meshcore_py</a>. Służyłby jako osobny kanał: przyjmowanie wiadomości z sieci publicznej, oznaczonych jako niezweryfikowane i bez gwarancji WICI, oraz rozsyłanie komunikatów gminy. Ryzykiem jest zalanie dyżurnego wiadomościami, dlatego decyzja zapada po pilotażu (<a href="08-plan-weryfikacji-i-decyzje.html">rozdział 08</a>).</li>
 </ul>
 
+<p>Przegląd forów i dokumentacji obu społeczności (2026-10-09, <a href="../review.md">F112</a>) potwierdził większość rozwiązań, które WICI już ma: twardy budżet czasu nadawania w każdej stacji, rzadkie ogłoszenia z losowym opóźnieniem, złącza N, odgromnik i strojenie anteny w miejscu montażu. Przejęto tylko uzupełnienia bez zmiany protokołu i bez nowych części:</p>
+
+<ul>
+  <li>pomiar zajętości kanału i tła szumowego w etapie 0 dwoma gotowymi węzłami LoRa (w profilu WICI i w lokalnym presecie Meshtastic, bo każdy widzi tylko ramki o swoim SF i szerokości pasma), także przy włączonym zasilaniu awaryjnym obiektu (UPS, przetwornice i falowniki zakłócają odbiór), z wstępnym progiem istotnego zajęcia (D11, <a href="08-plan-weryfikacji-i-decyzje.html">rozdział 08</a>);</li>
+  <li>porównanie w T4 czułości i poboru SX1262 w trybie odbioru ze wzmocnieniem (boosted gain), domyślnie włączonym w MeshCore;</li>
+  <li>uszczelnienie złączy zewnętrznych i ich kontrola w przeglądzie technicznym; samoczynny start stacji po całkowitym zaniku i powrocie 12 V (znana usterka części płytek ESP32 w węzłach solarnych);</li>
+  <li>płytki z zewnętrznym wzmacniaczem nadajnika (np. Heltec V4) nie są kandydatami: stacja nadaje 13 dBm, a kolejne rewizje tych płytek mają różne układy wzmacniacza i sterowanie;</li>
+  <li>stacji i przekaźników WICI nie umieszcza się na publicznych mapach społeczności.</li>
+</ul>
+
+<p>Odrzucono jako zmiany protokołu albo koszt bez wartości w sieci 6–8 stacji: trasowanie po ścieżkach i wielokrotne potwierdzenia MeshCore, potwierdzenie przez usłyszaną retransmisję (Meshtastic), odbiór z próbkowaniem SX1262 (wymaga dłuższej preambuły w całej sieci), kolejność retransmisji według SNR (Transport Reticulum nie zalewa sieci pakietami danych, a własna logika nadawania wymagałaby zgodności z Reticulum w Pythonie) oraz stacje bez przekazywania (każda stacja przekazuje, co upraszcza obsługę i daje zastępstwo trasy).</p>
+
 <h2 id="reticulum-i-lxmf-w-tym-projekcie">Reticulum i LXMF w tym projekcie</h2>
 
 <p>Reticulum działa w mikrokontrolerze stacji jako port microReticulum z włączoną funkcją transportu (przekazywania pakietów między węzłami), więc każda włączona stacja przekazuje pakiety innych stacji. Interfejs radiowy (LoRa w pilotażu, P1 w wariancie zapasowym) jest częścią tego samego oprogramowania układowego: stos zna dług ciszy i nie czeka na zgodę modemu przez USB. Komputer w schronieniu nie uruchamia Reticulum, tylko łączy się ze stacją lokalnym protokołem USB. Komputer stanowiska uruchamia Reticulum i LXMF w Pythonie za stacją stanowiska (D19). Implementacja w Pythonie pozostaje wzorcem protokołu i narzędziem prób zgodności. Reticulum nie jest urządzeniem radiowym ani samą deklaracją standardu. <a href="https://reticulum.network/manual/understanding.html">Dokumentacja implementacji</a>.</p>

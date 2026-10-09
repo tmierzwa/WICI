@@ -129,6 +129,7 @@ Co kwartał opiekun wykonuje przegląd podstawowy z kompletu ćwiczebnego albo z
 5. Sprawdź stację zasilania poziomu 3 według instrukcji producenta: naładowanie do poziomu przechowywania, pracę pod obciążeniem laptopa i routera, datę wymiany akumulatora.
 6. Zaktualizuj oprogramowanie stacji, jeśli jest nowe wydanie: podpisany obraz przez USB z laptopa z pakietem START, w trybie przygotowania (przycisk pod plombowaną pokrywą serwisową, bez otwierania obudowy głównej); najpierw na jednej stacji z TEST, potem na pozostałych. Po zakończeniu załóż nową plombę na pokrywę serwisową i wpisz jej numer do ewidencji; nienaruszoną plombę sprawdza opiekun w przeglądzie kwartalnym.
 7. Wyślij TEST do odbiorcy i sprawdź aktualność karty zaufanego odbiorcy.
+8. Obejrzyj antenę, przewód, uszczelnienia złączy i odgromnik; przy śladach wilgoci lub uszkodzeniu wymień element i zmierz WFS (≤2), jak przy montażu ([radio](radio.md#dwa-wykonania)).
 
 Wynik przeglądu zapisuje się z datą i wersją wydania w ewidencji sprzętu gminy. TEST z każdej stacji wysyła się raz w miesiącu w ustalonym, rozłożonym oknie czasowym; ćwiczenie całej sieci ze stanowiskiem odbiorczym i gońcem odbywa się raz w roku w ramach ćwiczeń zarządzania kryzysowego ([koncepcja, rozdział 02](../concept/02-scenariusze-i-organizacja.html#instrukcja-i-cwiczenie)).
 
