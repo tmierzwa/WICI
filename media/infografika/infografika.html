@@ -52,11 +52,15 @@ h1 em{font-style:normal;color:var(--sig)}
 .warn p b{color:var(--ink);font-weight:900}
 .cta{background:var(--sig);color:var(--bg);border-radius:20px;padding:16px 22px}
 .cta .k{font-size:17px;font-weight:950;letter-spacing:.12em;text-transform:uppercase;opacity:.75}
-.cta .h{margin-top:3px;font-size:21px;line-height:1.2;font-weight:950}
+.cta{display:flex;flex-direction:column;justify-content:center}
+.cta .h{margin-top:6px;font-size:24px;line-height:1.2;font-weight:950}
 .cta .u{margin-top:6px;font-size:22px;font-weight:950;letter-spacing:.01em}
 
 .foot{margin-top:14px;display:flex;justify-content:space-between;font-size:16.5px;font-weight:700;color:#7f8996}
-.foot b{color:var(--muted);font-weight:850}
+.foot b{color:var(--ink);font-weight:900;font-size:19px}
+.foot{align-items:baseline}
+.mini{display:block;width:100%;height:auto;margin-top:20px}
+.note{font-size:17px!important;color:var(--muted)!important;margin-top:10px!important}
 </style>
 </head>
 <body>
@@ -124,7 +128,7 @@ h1 em{font-style:normal;color:var(--sig)}
 
   <div class="steps">
     <div class="step"><span class="num">1</span><h3 data-t="s1h"></h3><p data-t="s1"></p><div class="chips" id="chips"></div></div>
-    <div class="step"><span class="num">2</span><h3 data-t="s2h"></h3><p data-t="s2"></p><div class="status" id="s2x"></div></div>
+    <div class="step"><span class="num">2</span><h3 data-t="s2h"></h3><p data-t="s2"></p><svg class="mini" viewBox="0 0 300 44" aria-hidden="true"><g fill="none" stroke="#f4d345" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"><path d="M22 26H54L63 12L76 34L84 22L89 26H124"/><path d="M152 26H184L193 12L206 34L214 22L219 26H254"/></g><g fill="#fff"><circle cx="22" cy="26" r="14"/><circle cx="138" cy="26" r="14"/><circle cx="262" cy="26" r="14"/></g></svg><p class="note" data-t="s2x"></p></div>
     <div class="step"><span class="num">3</span><h3 data-t="s3h"></h3><p data-t="s3"></p><div class="status" id="status"></div></div>
   </div>
 
@@ -132,7 +136,7 @@ h1 em{font-style:normal;color:var(--sig)}
 
   <div class="bottom">
     <div class="warn"><div class="n">112</div><p data-t="warn"></p></div>
-    <div class="cta"><div class="k" data-t="ctak"></div><div class="h" data-t="ctah"></div><div class="u">github.com/tmierzwa/WICI</div></div>
+    <div class="cta"><div class="k" data-t="ctak"></div><div class="h" data-t="ctah"></div></div>
   </div>
   <div class="foot"><span data-t="foot1"></span><span data-t="foot2"></span></div>
 </div>
@@ -151,14 +155,14 @@ pl:{
  s1h:"Wpisz", s1:"Opiekun schronienia wskazuje <b>potrzebę, liczbę osób i pilność</b>. Kilka przycisków, bez klawiatury.",
  chips:["Pomoc medyczna","Woda","Leki","Ewakuacja","Ogrzewanie","Żywność"],
  s2h:"Wyślij", s2:"Stacja nadaje <b>krótką wiadomość radiem</b>. Jak dawne wici: od sąsiada do sąsiada.",
- s2x:["Czeka zapisane w stacji","Ponawia, aż dotrze"],
+ s2x:"Brak drogi? Stacja zapamięta zgłoszenie i&nbsp;ponowi próbę.",
  s3h:"Odbierz", s3:"Dyżurny przyjmuje zgłoszenie i <b>odsyła decyzję</b>. Ekran w schronieniu pokazuje, co się dzieje:",
  status:["Odbiorca zapisał","Odbiorca przeczytał","Pomoc skierowana"],
- facts:[["AA","zwykłe baterie<br>cel: min. 48 h pracy"],["0","internetu i sieci<br>komórkowej"],["~1 km","między stacjami<br>(cel do sprawdzenia)"],["100%","otwarte: kod,<br>schematy, dokumenty"]],
- warn:"<b>Działa telefon? Dzwoń 112.</b> Stacje WICI uzupełniają system ochrony ludności, nie zastępują numeru alarmowego ani służb.",
+ facts:[["2 doby","pracy na bateriach AA<br>(cel do sprawdzenia)"],["0","internetu i sieci<br>komórkowej"],["~1 km","między stacjami<br>(cel do sprawdzenia)"],["100%","otwarte: kod,<br>schematy, dokumenty"]],
+ warn:"<b>Działa telefon? Dzwoń 112.</b><br>Stacje WICI uzupełniają system ochrony ludności, nie zastępują numeru alarmowego ani służb.",
  ctak:"Rozsyłamy WICI",
  ctah:"Szukamy krótkofalowców, elektroników, programistów i ludzi ze służb i gmin.",
- foot1:"<b>Prototyp w przygotowaniu.</b> Stacji jeszcze nie sprawdzono w terenie.",
+ foot1:"<b>github.com/tmierzwa/WICI</b> – prototyp w przygotowaniu",
  foot2:"Projekt niekomercyjny · CC BY 4.0"
 },
 en:{
@@ -173,14 +177,14 @@ en:{
  s1h:"Enter", s1:"The shelter warden picks <b>the need, number of people and urgency</b>. A few buttons, no keyboard.",
  chips:["Medical help","Water","Medicines","Evacuation","Heating","Food"],
  s2h:"Send", s2:"The station sends <b>a short radio message</b>, relayed neighbour to neighbour.",
- s2x:["Saved in the station","Retries until delivered"],
+ s2x:"No route yet? The station keeps the request and tries again.",
  s3h:"Receive", s3:"The duty officer takes the request and <b>sends back the decision</b>. The shelter's screen shows progress:",
  status:["Recipient saved it","Recipient read it","Help dispatched"],
- facts:[["AA","ordinary batteries<br>target: 48 h+"],["0","internet or mobile<br>network needed"],["~1 km","between stations<br>(target, to be tested)"],["100%","open: code,<br>hardware, docs"]],
- warn:"<b>Phone working? Call 112.</b> WICI stations support local civil protection. They do not replace the emergency number or services.",
+ facts:[["2 days","on AA batteries<br>(target, to be tested)"],["0","internet or mobile<br>network needed"],["~1 km","between stations<br>(target, to be tested)"],["100%","open: code,<br>hardware, docs"]],
+ warn:"<b>Phone working? Call 112.</b><br>WICI stations support local civil protection. They do not replace the emergency number or services.",
  ctak:"Spread the word",
  ctah:"Looking for radio amateurs, engineers, developers and civil-protection people.",
- foot1:"<b>Prototype in preparation.</b> Not yet field-tested.",
+ foot1:"<b>github.com/tmierzwa/WICI</b> – prototype in preparation",
  foot2:"Non-commercial project · CC BY 4.0"
 }};
 const lang=(new URLSearchParams(location.search).get("lang"))||"pl";
@@ -188,7 +192,6 @@ const t=T[lang]; document.documentElement.lang=lang;
 document.querySelectorAll("[data-t]").forEach(e=>{e.innerHTML=t[e.dataset.t]});
 document.getElementById("chips").innerHTML=t.chips.map(c=>`<span class="chip">${c}</span>`).join("");
 document.getElementById("status").innerHTML=t.status.map(c=>`<span><i></i>${c}</span>`).join("");
-document.getElementById("s2x").innerHTML=t.s2x.map(c=>`<span><i></i>${c}</span>`).join("");
 document.getElementById("facts").innerHTML=t.facts.map(([a,b])=>`<div class="fact"><strong>${a}</strong><span>${b}</span></div>`).join("");
 </script>
 <script>
