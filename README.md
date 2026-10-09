@@ -62,7 +62,7 @@ Konkretne zadania opisuje [CONTRIBUTING.md](CONTRIBUTING.md#od-czego-zacząć). 
 | [software/reference](software/reference/README.md) | Model wiadomości i potwierdzeń z testami; obliczenia zasięgu, energii i czasu nadawania |
 | [hardware](hardware/README.md) | Testy radiowe R0, diagnostyka prototypu L0, projekt nośnej N1 i dokumentacja przyszłej płytki R02 (wstrzymanej do decyzji po pilotażu) |
 | [media/film](media/film/README.md) | Dwa filmy o projekcie: około 4,5 min i 60 s |
-| [media/infografika](media/infografika/README.md) | Infografika do mediów społecznościowych (PL, EN) |
+| [media/infografika](media/infografika/README.md) | Infografika do mediów społecznościowych: post i Stories (PL, EN) |
 | [media/logo](media/logo/README.md) | Znak WICI i ikony |
 | [tools](docs/development.md) | Kontrola repozytorium i tworzenie paczki źródłowej |
 

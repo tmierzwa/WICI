@@ -61,10 +61,24 @@ h1 em{font-style:normal;color:var(--sig)}
 .foot{align-items:baseline}
 .mini{display:block;width:100%;height:auto;margin-top:20px}
 .note{font-size:17px!important;color:var(--muted)!important;margin-top:10px!important}
+
+/* Stories 1080x1920: key content kept out of the top ~250 px and bottom ~300 px covered by app UI */
+body.story{height:1920px}
+.story .page{height:1920px;padding:250px 72px 300px}
+.story h1{margin-top:44px;font-size:82px}
+.story .lead{margin-top:24px;font-size:28px}
+.story .chain{margin-top:28px}
+.story .steps{margin-top:16px}
+.story .facts{margin-top:30px}
+.story .bottom{margin-top:30px}
+.story .foot{margin-top:20px}
+.deco{display:none}
+.story .deco{display:block;position:absolute;left:0;right:0;bottom:120px;width:1080px;height:auto;opacity:.18;z-index:0}
 </style>
 </head>
 <body>
 <div class="page">
+  <svg class="deco" viewBox="0 0 1080 80" aria-hidden="true"><path fill="none" stroke="#f4d345" stroke-width="6" stroke-linejoin="round" d="M0 40H470L494 4L528 76L548 22L560 40H1080"/></svg>
 
   <div class="top">
     <svg class="logo" viewBox="-40 -1010 2407 1050" role="img" aria-label="WICI" id="logo"></svg>
@@ -189,6 +203,7 @@ en:{
 }};
 const lang=(new URLSearchParams(location.search).get("lang"))||"pl";
 const t=T[lang]; document.documentElement.lang=lang;
+if(new URLSearchParams(location.search).get("format")==="story") document.body.classList.add("story");
 document.querySelectorAll("[data-t]").forEach(e=>{e.innerHTML=t[e.dataset.t]});
 document.getElementById("chips").innerHTML=t.chips.map(c=>`<span class="chip">${c}</span>`).join("");
 document.getElementById("status").innerHTML=t.status.map(c=>`<span><i></i>${c}</span>`).join("");
