@@ -5,6 +5,10 @@ Program `pair-0.2` jest diagnostyką surowego LoRa. Test zasięgu nie wymaga
 zmiany firmware: odpowiedzią drugiej płytki steruje program na jej Macu.
 Brak Reticulum/LXMF, przekazywania pakietów i wiadomości WICI.
 
+Jeśli oba Maki mają internet i Tailscale, użyj [trybu online](ONLINE.md):
+niezależne transmisje obu płytek, bieżący feedback i automatyczny koniec.
+Poniżej pozostaje tryb offline na miejsca bez połączenia.
+
 ## Najpierw przy stole
 
 Zanim rozdzielisz urządzenia, wgraj właściwy program i wykonaj test

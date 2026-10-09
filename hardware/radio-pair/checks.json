@@ -2,9 +2,9 @@
   "date": "2026-10-09",
   "firmware": "pair-0.2",
   "compiled": true,
-  "automated_tests": 17,
-  "automated_tests_passed": 17,
-  "usb_integration": "Real pyserial over POSIX PTYs: one-host pair runner and two offline host processes; full/loss/duplicate/mismatch report validation. No physical USB/RF hardware.",
+  "automated_tests": 25,
+  "automated_tests_passed": 25,
+  "usb_integration": "Real pyserial over POSIX PTYs; one-Mac pair, two-Mac offline, two-process online TCP; RF loss, USB errors, wrong key and TCP disconnect. No physical RF/USB or two-device Tailscale verification.",
   "physical_rf_test_done": false,
   "factory_backup_done": false,
   "hardware_flashed": false,
@@ -19,20 +19,23 @@
     "rx_boosted_gain": true
   },
   "hardware_revision_confirmed": false,
-  "last_software_verification_utc": "2026-10-09T12:49:25.436558+00:00",
+  "last_software_verification_utc": "2026-10-09T12:57:14.878518+00:00",
   "hardware_delivery": "pending: user confirmed kits have not arrived",
   "source_sha256": {
-    "README.md": "41cb247f3a540144b08ac414d1e4d691402974cecd3999726822904c92f2e8ba",
+    "ONLINE.md": "c17386968d902e77b7d24051a8a42b1af93949da1fe9de1d2f30e4a61f8bf706",
+    "README.md": "c3bf7e6654ab1e5db10797de04b929963735cf25338ee4b9bc280cfd77bda8f6",
     "ZRODLA-I-WERYFIKACJA.txt": "1bb138c6e70cdf9a110e120b84a6bb6213a66c8cfbe04d14fbe48213a1b2108f",
-    "evidence/tests-r0.txt": "df0daae51c281dbff236c7926951d1d77165c06702c270bfd406f5dfec759514",
+    "evidence/tests-r0.txt": "9b2608ef3b5b1841e72491981048dae7a37fd095c474c91b2acedf29be4838b4",
     "platformio.ini": "e5128e0996281084dd5b7106582feadbca08dc23bc569a28cc220d60e39bc5ed",
     "requirements.txt": "a3442d78bbf2f568bb25a70df0bbec214d12fa0afa6eaf9061594890565a1b75",
     "src/main.cpp": "00fa86d41017ac45213b34e9086fa911ca1437c206007e5eff1714a359339746",
     "tests/test_pair.py": "adea4f854a520d264abcd945a447c47a047125c3646db8e8c297acd266c26d20",
     "tests/test_range.py": "785a1fca2a5d2f573b0763d5368b0e90a5aeec9909ac14a72fafbee405142702",
+    "tests/test_range_online.py": "c48ceb55865268bffd11d65e1c1ccc5f42c2b41459ac35e8f3f887f54782593e",
     "tests/test_usb_simulation.py": "d1087cb3922a95d6de7b205ef0c37c61716c8851bb26c100662a5956a395c917",
     "tools/pair_test.py": "1558e0f51893f4518bf2854cd43a34bab820da4bdc0c19dcbd9d0aa91f871875",
-    "tools/range_test.py": "7b64a365a4bb3752840f7c2c200eac9e9b9b33432ea3134e83c825e8dd76706a"
+    "tools/range_online.py": "25073ab16ebe43dc4ce7ef9561f85170c5848aa5f714c8487621e8e0cfdee64d",
+    "tools/range_test.py": "83119bf93aa27172a76b1a28600470344771345354d1d1acd377d2d93d208b2c"
   },
   "firmware_bin_sha256": "e7bbd53fa60aa264b37112fef5eb0c12e734726f7bcdc2da9589c40fbc0c99fd"
 }

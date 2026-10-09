@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_DIRS = ('src', 'tools', 'tests', 'reference', 'licenses', 'evidence')
-SOURCE_FILES = ('README.md', 'platformio.ini', 'requirements.txt', 'ZRODLA-I-WERYFIKACJA.txt')
+SOURCE_FILES = ('README.md', 'ONLINE.md', 'platformio.ini', 'requirements.txt', 'ZRODLA-I-WERYFIKACJA.txt')
 OFFSETS = {'bootloader.bin': 0, 'partitions.bin': 0x8000,
            'boot_app0.bin': 0xe000, 'firmware.bin': 0x10000}
 

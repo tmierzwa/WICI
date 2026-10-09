@@ -49,11 +49,11 @@
     "tests/test_reports.py": "13a1a247cd30cbb7ec296d34fbeead1122eda219676b0fdbb415b26ab897e85a",
     "tests/test_usb.py": "ba6b3f665459da687fe6d1b879c21d531da2b4dbe58586c185e04b05aa21de04",
     "tools/diagnose.py": "9be855eefbbf27a78237227d51a75dd95d76d09c1228034d09d45bbe4916c280",
-    "tools/package.py": "edb4f4fb0db83f48ffa425453eaebc1448a5b62bc8e10fd381df8f54ba440008",
+    "tools/package.py": "db69301894feced480fe21c939fe1e65dd623b74959a09c2dff959dc55cecb6f",
     "tools/radio_test.py": "5529bf77d292caa13d730e737a6130cf69866143dae303e8cb4f526a51ac9834"
   },
   "firmware_bin_sha256": "7cf3a20fc6615194b6dfbb45cbc3b728719b8ea95070b58af828de08d42a8d0e",
-  "last_software_verification_utc": "2026-10-09T12:49:25.436558+00:00",
+  "last_software_verification_utc": "2026-10-09T12:57:14.881008+00:00",
   "physical_remaining": [
     "E1 montaż/start/reset",
     "E2 napięcia/prąd",

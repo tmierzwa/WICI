@@ -14,9 +14,17 @@ test_lost_request_is_not_100_replies (test_range.Reports.test_lost_request_is_no
 test_mismatch (test_range.Reports.test_mismatch) ... ok
 test_no_radio_contact (test_range.Reports.test_no_radio_contact) ... ok
 test_two_offline_host_processes (test_range.Reports.test_two_offline_host_processes) ... ok
+test_mixed_modes_rejected (test_range_online.Online.test_mixed_modes_rejected) ... ok
+test_network_disconnect_keeps_local_report (test_range_online.Online.test_network_disconnect_keeps_local_report) ... ok
+test_online_needs_both_completed_and_all_transmissions (test_range_online.Online.test_online_needs_both_completed_and_all_transmissions) ... ok
+test_online_rf_loss_does_not_block_independent_b_transmission (test_range_online.Online.test_online_rf_loss_does_not_block_independent_b_transmission) ... ok
+test_online_two_processes (test_range_online.Online.test_online_two_processes) ... ok
+test_peer_usb_error_is_not_labelled_radio_loss (test_range_online.Online.test_peer_usb_error_is_not_labelled_radio_loss) ... ok
+test_private_addresses_only (test_range_online.Online.test_private_addresses_only) ... ok
+test_wrong_key_no_radio_transmission (test_range_online.Online.test_wrong_key_no_radio_transmission) ... ok
 test_two_serial_devices_and_report (test_usb_simulation.UsbSimulation.test_two_serial_devices_and_report) ... ok
 
 ----------------------------------------------------------------------
-Ran 17 tests in 17.854s
+Ran 25 tests in 58.204s
 
 OK

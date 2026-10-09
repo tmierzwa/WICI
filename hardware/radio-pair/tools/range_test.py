@@ -13,6 +13,7 @@ from pathlib import Path
 
 from pair_test import PROFILE, decode, open_serial
 
+R0_VERSION = 'pair-0.2'
 PACKET = re.compile(r'^WICIR:([0-9a-f]{16}):([AB]):([0-9]{3}):0123456789ABCDEF$')
 
 
@@ -25,12 +26,15 @@ def summarize(a, b):
         raise ValueError('Wybierz raporty A i B z tego samego punktu.')
     for report in (a, b):
         info = report.get('node', {})
-        if info.get('version') != 'pair-0.2' or not info.get('ready') or info.get('profile') != PROFILE:
+        if info.get('version') != R0_VERSION or not info.get('ready') or info.get('profile') != PROFILE:
             raise ValueError('Brak potwierdzenia właściwego firmware/profilu.')
     if a['node']['id'] == b['node']['id']:
         raise ValueError('Raporty dotyczą tej samej płytki.')
     if not a['session'] or b['session'] not in (None, a['session']) or a['count'] != b['count']:
         raise ValueError('Niezgodna sesja lub liczba pakietów.')
+    online = a.get('mode') == b.get('mode') == 'online'
+    if (a.get('mode') == 'online') != (b.get('mode') == 'online'):
+        raise ValueError('Nie łącz raportów online i offline.')
     directions = {}
     for sender, source, target in [('A', a, b), ('B', b, a)]:
         records = []
@@ -48,10 +52,12 @@ def summarize(a, b):
             'delivery_percent': 100 * received / sent if sent else None, 'packets': records}
     issues = a['issues'] + b['issues']
     valid = a['completed'] and not issues and directions['A->B']['sent'] == a['count']
+    if online:
+        valid = valid and b['completed'] and directions['B->A']['sent'] == a['count']
     return {'session': a['session'], 'point': a['point'], 'count': a['count'],
             'valid_trial': valid, 'issues': issues, 'directions': directions,
             'passed': valid and a['count'] == 100 and all(d['received'] == 100 for d in directions.values()),
-            'note': 'B odpowiada tylko na odebrane A. Wynik B->A jest warunkowy; brak odpowiedzi sam nie wskazuje kierunku straty.',
+            'note': 'Online: niezależne transmisje obu urządzeń, potwierdzenie odbioru wyłącznie przez USB radia.' if online else 'B odpowiada tylko na odebrane A. Wynik B->A jest warunkowy; brak odpowiedzi sam nie wskazuje kierunku straty.',
             'metadata': {'A': a['notes'], 'B': b['notes']}}
 
 
@@ -126,7 +132,7 @@ def run(args):
                 raise RuntimeError(event.get('message', line))
             if event['kind'] == 'info':
                 last_info_rx = time.monotonic()
-                if not event['ready'] or event['version'] != 'pair-0.2' or event['profile'] != PROFILE:
+                if not event['ready'] or event['version'] != R0_VERSION or event['profile'] != PROFILE:
                     raise RuntimeError('Niewłaściwy program/profil albo radio niegotowe.')
                 if report['node'] is not None and report['node'] != event:
                     raise RuntimeError('Restart lub zmiana konfiguracji płytki.')
