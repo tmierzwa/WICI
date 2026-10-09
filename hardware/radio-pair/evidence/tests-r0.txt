@@ -1,0 +1,22 @@
+test_duplicate_not_success (test_pair.PairResults.test_duplicate_not_success) ... ok
+test_error (test_pair.PairResults.test_error) ... ok
+test_failed_tx_not_success (test_pair.PairResults.test_failed_tx_not_success) ... ok
+test_info (test_pair.PairResults.test_info) ... ok
+test_malformed_record_is_error (test_pair.PairResults.test_malformed_record_is_error) ... ok
+test_missing_and_wrong_payload (test_pair.PairResults.test_missing_and_wrong_payload) ... ok
+test_noise (test_pair.PairResults.test_noise) ... ok
+test_silence_aborts_radio_trial (test_pair.PairResults.test_silence_aborts_radio_trial) ... ok
+test_success (test_pair.PairResults.test_success) ... ok
+test_wrong_direction (test_pair.PairResults.test_wrong_direction) ... ok
+test_duplicate_failed_tx_and_restart (test_range.Reports.test_duplicate_failed_tx_and_restart) ... ok
+test_full_and_short (test_range.Reports.test_full_and_short) ... ok
+test_lost_request_is_not_100_replies (test_range.Reports.test_lost_request_is_not_100_replies) ... ok
+test_mismatch (test_range.Reports.test_mismatch) ... ok
+test_no_radio_contact (test_range.Reports.test_no_radio_contact) ... ok
+test_two_offline_host_processes (test_range.Reports.test_two_offline_host_processes) ... ok
+test_two_serial_devices_and_report (test_usb_simulation.UsbSimulation.test_two_serial_devices_and_report) ... ok
+
+----------------------------------------------------------------------
+Ran 17 tests in 17.854s
+
+OK
