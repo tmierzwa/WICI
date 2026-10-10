@@ -86,6 +86,12 @@ LCSC = {
 }
 
 
+# JLCPCB orients these packages differently from the KiCad library zero; degrees added to the
+# KiCad rotation, counter-clockwise, checked in the JLC placement preview 2026-10-10 (pin 1 at the
+# silkscreen mark): SOT-23, SOT-23-5 and SOT-23-6 turn 180, SOIC-8 turns 90 clockwise.
+JLC_ROTATION = {'SOT-23': 180, 'SOIC-8': 270}
+
+
 def smd(footprint):
     return footprint.split(':')[1].startswith(SMD_PACKAGES)
 
@@ -138,15 +144,20 @@ def write_jlc_bom(path):
             w.writerow([comment, ','.join(i['ref'] for i in items), p['footprint'].split(':')[1], lcsc])
 
 
-def write_cpl(positions, path):
-    """SMD placement list in the column names assemblers expect (mm, top side)."""
+def write_cpl(positions, path, jlc=False):
+    """SMD placement list in the column names assemblers expect (mm, top side).
+
+    With jlc, rotations carry the JLCPCB package corrections from JLC_ROTATION."""
     with positions.open(newline='') as f, path.open('w', newline='') as out:
         w = csv.writer(out)
         w.writerow(['Designator', 'Mid X', 'Mid Y', 'Layer', 'Rotation'])
         for r in csv.DictReader(f):
             if r['Package'].startswith(SMD_PACKAGES):
+                rot = float(r['Rot'])
+                if jlc:
+                    rot += next((v for k, v in JLC_ROTATION.items() if r['Package'].startswith(k)), 0)
                 w.writerow([r['Ref'], f"{float(r['PosX']):.3f}", f"{float(r['PosY']):.3f}", 'Top',
-                            f"{float(r['Rot']):.0f}"])
+                            f"{rot % 360:.0f}"])
 
 
 def write_fab_notes(path, drills):
@@ -196,7 +207,8 @@ Assembly (optional quote)
   (PWM only) or third-party MCP1640 copies.
   R14 and R15 are 0.1 % resistors; do not substitute 1 % parts.
 - JLCPCB: assembly/jlc-bom.csv carries LCSC part numbers (stock checked 2026-10-10) and places
-  U1 as MB85RS4MTPF-G-BCERE1 and U2 as MCP1640CT-I/CHY; use it with assembly/cpl-smd.csv.
+  U1 as MB85RS4MTPF-G-BCERE1 and U2 as MCP1640CT-I/CHY; use it with assembly/jlc-cpl.csv, which
+  carries the JLC rotations (SOT-23, SOT-23-5, SOT-23-6 +180 deg, SOIC-8 +270 deg vs cpl-smd.csv).
 - All through-hole parts (including the through-hole connectors) are fitted by the owner; do not
   supply or fit them.
 - No fiducials: use pads for vision, or add panel rails with fiducials if you need them.
@@ -276,6 +288,7 @@ def main():
     write_assembly_bom(a / 'bom-assembly.csv')
     write_jlc_bom(a / 'jlc-bom.csv')
     write_cpl(a / 'positions.csv', a / 'cpl-smd.csv')
+    write_cpl(a / 'positions.csv', a / 'jlc-cpl.csv', jlc=True)
     sizes = set()
     for f in d.glob('*.drl'):
         for line in f.read_text().splitlines():

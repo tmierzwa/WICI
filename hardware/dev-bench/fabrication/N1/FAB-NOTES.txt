@@ -41,7 +41,8 @@ Assembly (optional quote)
   (PWM only) or third-party MCP1640 copies.
   R14 and R15 are 0.1 % resistors; do not substitute 1 % parts.
 - JLCPCB: assembly/jlc-bom.csv carries LCSC part numbers (stock checked 2026-10-10) and places
-  U1 as MB85RS4MTPF-G-BCERE1 and U2 as MCP1640CT-I/CHY; use it with assembly/cpl-smd.csv.
+  U1 as MB85RS4MTPF-G-BCERE1 and U2 as MCP1640CT-I/CHY; use it with assembly/jlc-cpl.csv, which
+  carries the JLC rotations (SOT-23, SOT-23-5, SOT-23-6 +180 deg, SOIC-8 +270 deg vs cpl-smd.csv).
 - All through-hole parts (including the through-hole connectors) are fitted by the owner; do not
   supply or fit them.
 - No fiducials: use pads for vision, or add panel rails with fiducials if you need them.
