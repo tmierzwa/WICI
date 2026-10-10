@@ -1,0 +1,151 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: CC-BY-4.0 -->
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Najczęstsze pytania · WICI</title>
+<link rel="stylesheet" href="style.css">
+<link rel="icon" type="image/svg+xml" href="../../media/logo/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="../../media/logo/ikona-32.png">
+<link rel="apple-touch-icon" href="../../media/logo/ikona-180.png">
+</head>
+<body>
+<a class="skip" href="#tresc">Przejdź do treści</a>
+<header class="site-header">
+  <div class="inner">
+    <a class="brand" href="index.html"><picture><source media="(prefers-color-scheme: dark)" srcset="../../media/logo/WICI-na-ciemnym.svg"><img src="../../media/logo/WICI-na-jasnym.svg" alt="WICI" width="72" height="32"></picture></a>
+    <a class="jump" href="#rozdzialy">Rozdziały ↓</a>
+    <span class="status">Projekt prototypu <b>0.5</b></span>
+  </div>
+</header>
+<div class="layout">
+  <nav class="chapters" id="rozdzialy" aria-label="Rozdziały koncepcji">
+    <p class="nav-title">Rozdziały</p>
+    <ol>
+      <li><a href="index.html">Przegląd koncepcji</a></li>
+      <li><a href="faq.html" aria-current="page">Najczęstsze pytania</a></li>
+      <li><a href="01-potrzeby-i-wymagania.html">01. Potrzeby i wymagania</a></li>
+      <li><a href="02-scenariusze-i-organizacja.html">02. Scenariusze i organizacja</a></li>
+      <li><a href="03-dostepne-rozwiazania.html">03. Dostępne rozwiązania</a></li>
+      <li><a href="04-analiza-opcji.html">04. Analiza opcji</a></li>
+      <li><a href="05-projekt-koncepcyjny-komunikacji.html">05. Projekt koncepcyjny komunikacji</a></li>
+      <li><a href="06-wykonalnosc-i-budzet-zasobow.html">06. Wykonalność i budżet zasobów</a></li>
+      <li><a href="07-zagrozenia-i-odpornosc.html">07. Zagrożenia i odporność</a></li>
+      <li><a href="08-plan-weryfikacji-i-decyzje.html">08. Plan weryfikacji i decyzje</a></li>
+      <li><a href="slownik.html">Słownik</a></li>
+      <li><a href="zrodla.html">Źródła</a></li>
+    </ol>
+  </nav>
+  <main id="tresc">
+<article>
+<h1>Najczęstsze pytania</h1>
+
+<p>Krótkie odpowiedzi na pytania, które zadajecie najczęściej. Każda odpowiedź odsyła do rozdziału koncepcji, który omawia temat dokładniej. Do konkretnego pytania można podać link, np. <code>wici.net.pl/faq.html#zasilanie</code>.</p>
+
+<nav class="on-page" aria-label="Na tej stronie">
+<p>Na tej stronie</p>
+<ol>
+  <li><a href="#czym-jest">Czym jest WICI?</a></li>
+  <li><a href="#112">Czy WICI zastępuje numer 112?</a></li>
+  <li><a href="#kto-odbiera">Kto odbiera zgłoszenia?</a></li>
+  <li><a href="#dlaczego">Po co to, skoro jest telefonia, a w razie czego Starlink?</a></li>
+  <li><a href="#cb-pmr">Dlaczego nie CB-radio albo krótkofalówki PMR?</a></li>
+  <li><a href="#meshcore">Dlaczego nie MeshCore albo Meshtastic?</a></li>
+  <li><a href="#telefon">Dlaczego nie aplikacja na telefon albo komunikator przez Bluetooth?</a></li>
+  <li><a href="#zasilanie">Dlaczego baterie AA, a nie akumulator 18650 z panelem słonecznym?</a></li>
+  <li><a href="#zasieg">Jaki jest zasięg?</a></li>
+  <li><a href="#pozwolenie">Czy do używania stacji potrzebne jest pozwolenie radiowe?</a></li>
+  <li><a href="#bezpieczenstwo">Czy ktoś może podszyć się pod schronienie albo podsłuchać zgłoszenia?</a></li>
+  <li><a href="#cisza">Co, jeśli władze zarządzą ciszę radiową?</a></li>
+  <li><a href="#gmina">Co musi zrobić gmina?</a></li>
+  <li><a href="#etap">Na jakim etapie jest projekt?</a></li>
+  <li><a href="#kto">Kto za tym stoi i ile to kosztuje?</a></li>
+  <li><a href="#kaniemieckie">Czy ktoś robi coś podobnego?</a></li>
+  <li><a href="#pomoc">Jak mogę pomóc?</a></li>
+</ol>
+</nav>
+
+<h2 id="czym-jest">Czym jest WICI?</h2>
+
+<p>To otwarty, niekomercyjny projekt prostych stacji radiowych na baterie. Stacja stoi w miejscu, gdzie w kryzysie gromadzą się ludzie: w szkole, świetlicy, schronie. Gdy nie działa prąd, telefonia i internet, opiekun tego miejsca wybiera przyciskami, czego brakuje (np. woda, leki, ewakuacja), ile osób potrzebuje pomocy i jak pilnie. Zgłoszenie idzie radiem od stacji do stacji do dyżurnego wyznaczonego przez gminę, a ekran pokazuje, czy zostało zapisane, przeczytane i czy zapadła decyzja o pomocy (<a href="index.html">przegląd koncepcji</a>).</p>
+
+<h2 id="112">Czy WICI zastępuje numer 112?</h2>
+
+<p>Nie. Gdy działa telefon, dzwoni się na 112. WICI uzupełnia system ochrony ludności tam, gdzie zwykle nie ma żadnej łączności: między miejscem schronienia a gminą, w czasie, gdy telefony nie działają. Nie zastępuje też służb ani organizacji pomocy.</p>
+
+<h2 id="kto-odbiera">Kto odbiera zgłoszenia?</h2>
+
+<p>Dyżurny na stanowisku odbiorczym, które wyznacza wójt, burmistrz lub prezydent miasta. Może ono działać w urzędzie gminy, w jednostce ochotniczej straży pożarnej albo w innym miejscu wskazanym przez gminę. Dyżurny przyjmuje zgłoszenie, przekazuje je służbom, które mogą pomóc, i odsyła do schronienia odpowiedź. Sam nie kieruje siłami ratowniczymi (<a href="02-scenariusze-i-organizacja.html">rozdział 02</a>).</p>
+
+<h2 id="dlaczego">Po co to, skoro jest telefonia, a w razie czego Starlink?</h2>
+
+<p>Bo w poważnym kryzysie telefonia przestaje działać, a terminal satelitarny to jeden punkt, który ktoś musi dowieźć, zasilić i obsłużyć. Po powodzi w 2024 r. Ministerstwo Cyfryzacji napisało, że naziemna infrastruktura wszystkich operatorów może zostać wyłączona naraz, a jej przywrócenie wymaga techników na miejscu. W Stroniu Śląskim 16 września 2024 r. reporterka notowała: „Nie ma kontaktu ze służbami i lokalnymi władzami”. Przykłady z Polski i innych krajów UE są w <a href="03-dostepne-rozwiazania.html#doswiadczenia-z-kryzysow">rozdziale 03</a>.</p>
+
+<h2 id="cb-pmr">Dlaczego nie CB-radio albo krótkofalówki PMR?</h2>
+
+<p>To rozmowa głosowa: ktoś musi stale nasłuchiwać, ręcznie zapisywać i odpowiadać, a gdy nikt nie słucha, wiadomość przepada. Kanały są wspólne, nie ma kolejki, potwierdzeń ani pewności, kto nadaje. PMR446 ma jednak swoje miejsce w procedurach WICI: jako zapasowy kanał głosowy do sąsiedniego schronienia lub do odbiorcy, gdy zasięg na to pozwala (<a href="03-dostepne-rozwiazania.html">rozdział 03</a>).</p>
+
+<h2 id="meshcore">Dlaczego nie MeshCore albo Meshtastic?</h2>
+
+<p>To świetne sieci społeczności i WICI używa tego samego rodzaju radia (LoRa). Różnica nie leży w technice, tylko w tym, kto jest po drugiej stronie. W tych sieciach wiadomość trafia „do sieci”, a nie do kogoś, kto ma dyżur i obowiązek ją przyjąć; ich potwierdzenie oznacza dostarczenie, a nie zapis u odbiorcy, odczyt przez dyżurnego ani decyzję o pomocy. Przekaźniki prowadzą prywatne osoby bez porozumienia z gminą. Operatorzy tych sieci są naturalnymi partnerami WICI przy wyborze miejsc na anteny i pomiarach (<a href="03-dostepne-rozwiazania.html#spolecznosci-meshcore-i-meshtastic">rozdział 03</a>).</p>
+
+<h2 id="telefon">Dlaczego nie aplikacja na telefon albo komunikator przez Bluetooth?</h2>
+
+<p>Komunikatory Bluetooth sięgają na około 100 metrów, a dalej działają tylko wtedy, gdy w pobliżu są inne telefony z tą samą aplikacją. Telefony rozładowują się w ciągu doby bez prądu, a aplikację trzeba wcześniej zainstalować. Stacja WICI działa sama, bez telefonu i bez instalowania czegokolwiek. Później do stacji można dołączyć laptop i router, żeby mieszkańcy zgłaszali potrzeby z telefonów przez lokalną stronę, ale to dodatek, a nie podstawa (<a href="01-potrzeby-i-wymagania.html#poziomy-zestawu">poziomy zestawu</a>).</p>
+
+<h2 id="zasilanie">Dlaczego baterie AA, a nie akumulator 18650 z panelem słonecznym?</h2>
+
+<p>Stacja ma latami leżeć w skrzynce i zadziałać w dniu kryzysu. Dlatego używa 4 litowych ogniw AA (jednorazowych, Li-FeS2), które prawie się nie rozładowują podczas przechowywania, działają na mrozie i które każdy wymieni bez narzędzi. W stacji nie ma ładowarki ani ogniwa Li-ion, które po latach zaniedbania może być martwe albo w uszkodzonej obudowie stwarzać ryzyko pożaru. Ogniw Li-ion nie wolno też ładować poniżej 0 °C. Mały panel, np. z lampki ogrodowej, nie wystarczy dla stacji w budynku, często w piwnicy, w listopadzie. Cel to co najmniej 48 godzin pracy na ogniwach.</p><p>Stacja ma też wejście 12 V. Stałe przekaźniki na dachach i masztach mogą być zasilane z panelu z regulatorem i akumulatorem, bez zmiany samej stacji (<a href="04-analiza-opcji.html">rozdział 04</a>, <a href="06-wykonalnosc-i-budzet-zasobow.html">rozdział 06</a>).</p>
+
+<h2 id="zasieg">Jaki jest zasięg?</h2>
+
+<p>Cel to około 1 km między stacjami w zabudowie. To założenie, a nie zmierzona wartość: obliczenia pokazują niewielki zapas przy nisko zawieszonych antenach, a rzeczywisty zasięg zależy od budynków i terenu. Dlatego każda włączona stacja przekazuje wiadomości sąsiadów, a przed budową sieci planujemy pomiary tras gotowymi urządzeniami (<a href="06-wykonalnosc-i-budzet-zasobow.html">rozdział 06</a>, <a href="08-plan-weryfikacji-i-decyzje.html">rozdział 08</a>).</p>
+
+<h2 id="pozwolenie">Czy do używania stacji potrzebne jest pozwolenie radiowe?</h2>
+
+<p>Według dotychczasowej analizy nie. Stacja ma pracować w paśmie 869,4–869,65 MHz dla urządzeń bliskiego zasięgu, w którym używanie urządzeń nie wymaga pozwolenia, przy mocy do 500 mW ERP i ograniczonym czasie nadawania; stacja sama pilnuje tego limitu. Urządzenia w tym paśmie nie mają jednak ochrony przed zakłóceniami. Analiza nie jest opinią prawną, a warunki trzeba potwierdzić przed pilotażem (<a href="zrodla.html#radio-warunki-prawne-do-potwierdzenia">źródła</a>).</p>
+
+<h2 id="bezpieczenstwo">Czy ktoś może podszyć się pod schronienie albo podsłuchać zgłoszenia?</h2>
+
+<p>Stacje i stanowisko odbiorcze mają własne klucze kryptograficzne, a odbiorca przyjmuje zgłoszenia tylko od zaufanych stacji. Zgłoszenia z przycisków zawierają kategorię, liczbę osób, pilność i adres, bez nazwisk. Projekt jawnie opisuje też ograniczenia, np. że nagrany ruch można odczytać po przejęciu klucza odbiorcy. Pełna lista zagrożeń i zabezpieczeń jest w <a href="07-zagrozenia-i-odpornosc.html">rozdziale 07</a>.</p>
+
+<h2 id="cisza">Co, jeśli władze zarządzą ciszę radiową?</h2>
+
+<p>Stacja ma przełącznik CISZA. Po jego włączeniu odbiera i zapisuje, ale nie nadaje, także cudzego ruchu, a ekran stale o tym przypomina. Zgłoszenia czekają w kolejce. Pilne sprawy przekazuje się wtedy gońcem, jeśli droga jest bezpieczna (<a href="02-scenariusze-i-organizacja.html">rozdział 02</a>).</p>
+
+<h2 id="gmina">Co musi zrobić gmina?</h2>
+
+<p>Sieć trzeba przygotować przed kryzysem, a nie w jego trakcie: wyznaczyć stanowisko odbiorcze i dyżury, zamontować anteny, sprawdzić trasy radiowe i przećwiczyć procedurę. Pierwszym krokiem jest ćwiczenie przy stole z gminą i odbiorcą, bez własnego sprzętu (<a href="08-plan-weryfikacji-i-decyzje.html">rozdział 08</a>).</p>
+
+<h2 id="etap">Na jakim etapie jest projekt?</h2>
+
+<p>To projekt prototypu 0.5: stacji jeszcze nie zbudowano ani nie sprawdzono w terenie. Gotowe są koncepcja, specyfikacja, model obliczeniowy z testami i oprogramowanie skompilowane dla stanowisk deweloperskich. Najbliżej są pomiary tras radiowych, pierwszy prototyp biurkowy i ćwiczenie przy stole z gminą. Pilotaż ma objąć 6–8 stacji w trzech miejscach przez co najmniej trzy miesiące, w tym zimę (<a href="index.html#pilotaz">przegląd koncepcji</a>).</p>
+
+<h2 id="kto">Kto za tym stoi i ile to kosztuje?</h2>
+
+<p>Na razie projekt prowadzi jedna osoba, z dużą pomocą asystenta AI przy analizach i dokumentacji. Projekt jest niekomercyjny: kod jest na licencji MIT, konstrukcja na CERN-OHL-P-2.0, a dokumentacja na CC BY 4.0, więc każdy może z niego korzystać i go rozwijać. Stacja pilotażowa powstaje z gotowych, ogólnie dostępnych części. Koszt stacji podamy po pilotażu, gdy będzie znany ostateczny skład.</p>
+
+<h2 id="kaniemieckie">Czy ktoś robi coś podobnego?</h2>
+
+<p>Najbliższym odpowiednikiem są niemieckie Katastrophenschutz-Leuchttürme: wyznaczone przez gminy miejsca z zasilaniem awaryjnym, gdzie mieszkańcy mogą wezwać pomoc, gdy nie działają telefony. Sama Brandenburgia ma ich 332 i przeznaczyła na nie w 2024 r. ponad 40 mln euro. WICI realizuje tę samą funkcję na poziomie pojedynczego schronienia, tanią stacją obsługiwaną przez jego opiekuna (<a href="03-dostepne-rozwiazania.html#doswiadczenia-z-kryzysow">rozdział 03</a>).</p>
+
+<h2 id="pomoc">Jak mogę pomóc?</h2>
+
+<p>Przydadzą się krótkofalowcy (pomiary tras i anteny), elektronicy i programiści (ESP32-S3, SX1262, Python), osoby z gmin i służb (procedura odbioru zgłoszeń) oraz każdy, kto niezależnie sprawdzi obliczenia albo uprości kartę obsługi i tłumaczenia. Konkretne zadania opisuje <a href="../../CONTRIBUTING.md#od-czego-zacząć">lista zadań</a>. Pytania, uwagi i propozycje: <a href="mailto:kontakt@wici.net.pl">kontakt@wici.net.pl</a> albo <a href="https://github.com/tmierzwa/WICI/issues">Issues</a> na GitHubie.</p>
+
+</article>
+<nav class="pager" aria-label="Kolejność czytania">
+  <a class="prev" href="index.html" rel="prev"><span>← Poprzedni</span>Przegląd koncepcji</a>
+  <a class="next" href="01-potrzeby-i-wymagania.html" rel="next"><span>Następny →</span>01. Potrzeby i wymagania</a>
+</nav>
+  </main>
+</div>
+<footer class="site-footer">
+  <div class="inner">
+    <p>Analiza: <a href="../../LICENSES/CC-BY-4.0.txt">CC-BY-4.0</a>. <a href="../../LICENSE.md">Mapa licencji projektu</a>.</p>
+    <p>Parametry i warunki odbioru: <a href="../README.md">specyfikacja 0.5</a>. Kod: <a href="https://github.com/tmierzwa/WICI">tmierzwa/WICI</a>.</p>
+  </div>
+</footer>
+</body>
+</html>
