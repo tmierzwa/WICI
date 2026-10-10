@@ -26,7 +26,7 @@ Zakres przekazany do wyceny i zasady wyboru dokumentów są w [dokumentach przyg
 
 W repozytorium są:
 
-- [koncepcja](https://tmierzwa.github.io/WICI/);
+- [koncepcja](https://wici.net.pl/);
 - specyfikacja stacji;
 - model obliczeniowy z testami;
 - projekt płytki nośnej stanowiska deweloperskiego (N1) i rozpoczęty projekt płytki stacji R02 (wstrzymany);
@@ -56,7 +56,7 @@ Konkretne zadania opisuje [CONTRIBUTING.md](CONTRIBUTING.md#od-czego-zacząć). 
 
 | Katalog | Zawartość |
 |---|---|
-| [docs/concept](docs/concept/index.html) | Koncepcja: potrzeby, scenariusze, dostępne rozwiązania, architektura, wykonalność, zagrożenia, plan prób i otwarte decyzje; [strona online](https://tmierzwa.github.io/WICI/) |
+| [docs/concept](docs/concept/index.html) | Koncepcja: potrzeby, scenariusze, dostępne rozwiązania, architektura, wykonalność, zagrożenia, plan prób i otwarte decyzje; [strona online](https://wici.net.pl/) |
 | [docs/spec](docs/README.md) | Specyfikacja stacji, warunki odbioru i lista części |
 | [firmware](firmware/README.md) | Oprogramowanie stacji dla stanowisk deweloperskich A (nRF52840-DK + CC1120EM, na przewodach i na N1) i B (ESP32-S3-DevKitC-1 + X-NUCLEO-S2868A2 na N1); skompilowane, jeszcze nie uruchomione na sprzęcie |
 | [software/reference](software/reference/README.md) | Model wiadomości i potwierdzeń z testami; obliczenia zasięgu, energii i czasu nadawania |

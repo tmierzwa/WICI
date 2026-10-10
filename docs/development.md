@@ -18,7 +18,7 @@ Katalog [firmware/](../firmware/README.md) buduje się PlatformIO w osobnym śro
 
 ## Strona koncepcji
 
-Koncepcja jest publikowana na [GitHub Pages](https://tmierzwa.github.io/WICI/) przez workflow `pages.yml` po każdej zmianie `docs/concept/` na `main`. `tools/build_pages.py` kopiuje strony i arkusz stylów bez zmiany treści. Linki wychodzące poza koncepcję zamienia na adresy plików w repozytorium dla publikowanego commitu. Lokalnie strony nie wymagają budowania: wystarczy otworzyć `docs/concept/index.html`.
+Koncepcja jest publikowana na [GitHub Pages](https://docs.github.com/pages) pod adresem [wici.net.pl](https://wici.net.pl/) (domena w home.pl; rekordy A, AAAA i CNAME `www` wskazują na GitHub Pages, a domena jest zweryfikowana na koncie GitHub) przez workflow `pages.yml` po każdej zmianie `docs/concept/` na `main`. `tools/build_pages.py` kopiuje strony i arkusz stylów bez zmiany treści. Linki wychodzące poza koncepcję zamienia na adresy plików w repozytorium dla publikowanego commitu. Lokalnie strony nie wymagają budowania: wystarczy otworzyć `docs/concept/index.html`.
 
 ## Narzędzia CAD
 
