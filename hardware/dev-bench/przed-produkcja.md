@@ -2,6 +2,17 @@
 
 **Wstrzymane do decyzji po pilotażu (przegląd praktyczny 2026-10-08, F99):** pilotaż używa stacji z gotowej płytki MCU z układem LoRa SX1262 ([koncepcja 08](../../docs/concept/08-plan-weryfikacji-i-decyzje.html)). Do pilotażu nie trzeba montować N1; płytka nośna zostaje narzędziem do prób stosu i opcjonalnego porównania P1.
 
+## Zamówienie 2026-10-10 (L0)
+
+N1 zamówiono jako płytkę prototypu biurkowego L0 ([program L0](../l0-diagnostic/README.md), paczka RFQ Q2 z 2026-10-09, ta sama geometria miedzi i wierceń):
+- JLCPCB: 5 płytek N1, w tym 2 z montażem 44 elementów SMD według `fabrication/N1/assembly/jlc-bom.csv` i `jlc-cpl.csv`; obroty sprawdzone w podglądzie montażu JLC (SOT-23, SOT-23-5, SOT-23-6 o 180°, SOIC-8 o 270° względem konwencji KiCad). Części BOM bez stanu w JLC zastąpiono: U1 MB85RS4MTPF-G-BCERE1 (zamiennik z BOM; wymaga programu `l0-0.4` lub nowszego), U2 MCP1640CT-I/CHY (wariant C tej samej przetwornicy; różni się tylko zachowaniem przy wyłączeniu, którego N1 nie używa, bo EN jest na stałe do VIN).
+- R12 na zamówionych płytkach ma 10 kΩ według BOM N1. L0 wymaga 1 kΩ (RFQ Q2: bez tego reset Wio przy starcie leży około 1,65 V zamiast 0,3 V); wymiana ręczna przy montażu, zapis w karcie sztuki jako część spoza BOM.
+- Części przewlekane, panele Sharp i moduły na dwa L0 kupiono osobno: dwa komplety części THT według [BOM](bom.csv) bez J1–J4, J9/J10 i JP3, dwa panele LS027B7DH01A, dwa ESP32-S3-DevKitC-1-N8R8 i dwa zestawy Seeed 102010611 (Wio do L0; dwa zestawy R0 zostają parą R0).
+
+Zamówienie złożono przy otwartej przymiarce 1:1 (tabela niżej). Ryzyko przyjęto świadomie: geometria przeszła dwa przeglądy wobec dokumentów producentów (F81, F83), a koszt pięciu płytek jest mały wobec czasu oczekiwania na moduły. Przymiarkę wykonuje się po dostawie DevKitC i panelu, przed lutowaniem. Wysokości części nRF52840-DK dotyczą tylko stanowiska A, którego L0 nie używa.
+
+Montaż L0: dystanse M3 × 12 mm z gwintem zewnętrznym od spodu, przez płytkę, z nakrętką od góry; w H6–H9 tylko nakrętki nylonowe albo bez dystansu, bo środek otworu H7 leży 3,56 mm od środka padu J4.10, a pady niemontowanych J1–J4 są połączone z sieciami. Panel przykleja się taśmą dopiero po poprawnym teście ekranu, a nie zaraz po wpięciu FPC jak w kroku 7 [uruchomienia](uruchomienie.md); klej akrylowy nie pozwala go potem zdjąć bez ryzyka pęknięcia szkła.
+
 Płytka nośna jest narzędziem stanowiska, nie częścią stacji. Proces kontroli jest więc lżejszy niż dla R02 ([lekcje](../r02/lekcje.md#proces-kontroli-i-dowody)), ale jawny. Obowiązuje:
 - ERC i DRC równe 0 z `--severity-all`; kontrola braku obrysu zajętości (`missing_courtyard`) jest włączona, a cztery kontrole wyłączone domyślnie w KiCad zostają wyłączone (lista w `checks/drc.json`, `ignored_checks`); DRC liczy się tylko wtedy, gdy KiCad wczytał reguły projektu z `cad/plytka-nosna.kicad_dru`: `kicad-cli` pomija bez ostrzeżenia cały plik reguł, jeśli jedna reguła się nie parsuje, dlatego `tools/drc.sh` i eksport najpierw sprawdzają regułę-kanarek, która musi zgłosić naruszenie (F103);
 - zgodność PCB ze schematem;
