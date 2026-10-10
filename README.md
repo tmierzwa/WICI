@@ -78,7 +78,7 @@ W zgłoszeniu zmiany (PR) użyj `python3 tools/verify_repository.py --pull-reque
 
 ## Kto za tym stoi
 
-Na razie projekt prowadzi jedna osoba: [@tmierzwa](https://github.com/tmierzwa). Duża część analiz, obliczeń i dokumentacji powstała z pomocą asystenta AI (Claude); takie commity mają wiersz `Co-Authored-By`.
+Na razie projekt prowadzi jedna osoba: [@tmierzwa](https://github.com/tmierzwa). Kontakt dla gmin, służb, krótkofalowców i mediów: [kontakt@wici.net.pl](mailto:kontakt@wici.net.pl); sprawy techniczne najlepiej zgłaszać w Issues. Duża część analiz, obliczeń i dokumentacji powstała z pomocą asystenta AI (Claude); takie commity mają wiersz `Co-Authored-By`.
 
 Autor przegląda każdą zmianę. Obliczenia i założenia prawne czekają na niezależny przegląd; wyniki modelu wymagają potwierdzenia pomiarami.
 
@@ -90,4 +90,4 @@ WICI is an open-source project for an emergency radio station for shelters in Po
 
 The project is at the **prototype design stage (0.5)**. No station has been built or field-tested. The planned pilot uses off-the-shelf ESP32-S3 boards with an SX1262 LoRa radio; the custom board and the project's own FSK profile are deferred until after the pilot. Range and battery life remain to be measured.
 
-One person currently maintains the project with AI assistance. Help with radio, firmware, civil protection, field testing and independent review is welcome. Documentation is in Polish; issues and pull requests in English are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md#in-english).
+One person currently maintains the project with AI assistance. Help with radio, firmware, civil protection, field testing and independent review is welcome. Documentation is in Polish; issues and pull requests in English are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md#in-english). Contact: [kontakt@wici.net.pl](mailto:kontakt@wici.net.pl).
