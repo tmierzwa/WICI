@@ -36,7 +36,12 @@ Assembly (optional quote)
   pin 1 dot), U3 and U4 (SOT-23-5, pin 1 dot) and J7 (FH12 FPC connector, actuator side towards
   the display outline above it; check for bridges).
   U1 alternative with the same footprint: RAMXEED MB85RS4MTPF-G-BCERE1.
+  U2 alternative with the same footprint: MCP1640CT-I/CHY (EN is tied to VIN, so the shutdown
+  behaviour that differs between the variants is never used). Do not use the B or D variants
+  (PWM only) or third-party MCP1640 copies.
   R14 and R15 are 0.1 % resistors; do not substitute 1 % parts.
+- JLCPCB: assembly/jlc-bom.csv carries LCSC part numbers (stock checked 2026-10-10) and places
+  U1 as MB85RS4MTPF-G-BCERE1 and U2 as MCP1640CT-I/CHY; use it with assembly/cpl-smd.csv.
 - All through-hole parts (including the through-hole connectors) are fitted by the owner; do not
   supply or fit them.
 - No fiducials: use pads for vision, or add panel rails with fiducials if you need them.

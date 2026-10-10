@@ -56,6 +56,36 @@ DESCRIPTION = {
 }
 
 
+# LCSC part numbers for JLCPCB assembly, JLC stock checked 2026-10-10. Where the BOM part had no
+# stock, the second field names the part JLC places instead: U1 is the FRAM alternative already in
+# the BOM; U2 is the C variant of the same boost (PFM, input-to-output bypass in shutdown instead of
+# output disconnect), which the board never sees because EN is tied to VIN.
+LCSC = {
+    'CL21A106KAYNNNG': ('C318691', None),
+    'CL21C101JBANNNC': ('C1790', None),
+    'LMK325ABJ107MM-P': ('C386065', None),
+    'CL21B104KBCNNNC': ('C1711', None),
+    '1N4148W-7-F': ('C83528', None),
+    'BAT54SLT1G': ('C19726', None),
+    'FH12-10S-0.5SH(55)': ('C506791', None),
+    '744031004': ('C2649331', None),
+    'MMBT3904LT1G': ('C81464', None),
+    'RC0805FR-071KL': ('C95781', None),
+    'RT0805BRD07100KL': ('C122537', None),
+    'RT0805BRD0720KL': ('C469660', None),
+    'RC0805FR-0733RL': ('C126353', None),
+    'RC0805FR-0710KL': ('C84376', None),
+    'RC1206FR-0722RL': ('C114943', None),
+    'RC0805FR-071ML': ('C107700', None),
+    'RC0805FR-07309KL': ('C273874', None),
+    'RC0805FR-07100KL': ('C96346', None),
+    'CY15B104QN-50SXI': ('C42742723', 'MB85RS4MTPF-G-BCERE1'),
+    'MCP1640T-I/CHY': ('C511326', 'MCP1640CT-I/CHY'),
+    'TPS3840PH27DBVR': ('C2866252', None),
+    'SN74LVC1G32DBVR': ('C10096', None),
+}
+
+
 def smd(footprint):
     return footprint.split(':')[1].startswith(SMD_PACKAGES)
 
@@ -87,6 +117,25 @@ def write_assembly_bom(path):
                         p['value'] if p['ref'][0] in 'RC' else '', p['manufacturer'].replace('ü', 'u'), mpn,
                         describe(p), p['footprint'].split(':')[1], 'SMD' if smd(p['footprint']) else 'THT', fit,
                         'assembler' if smd(p['footprint']) else 'owner (hand solder)'])
+
+
+def write_jlc_bom(path):
+    """JLCPCB assembly BOM: Comment, Designator, Footprint, LCSC Part #; SMD parts only."""
+    groups = {}
+    for p in PARTS:
+        if p['bom'] and smd(p['footprint']):
+            groups.setdefault(p['mpn'], []).append(p)
+    missing = sorted(set(groups) - set(LCSC))
+    if missing:
+        raise SystemExit(f'no LCSC part number for {missing}')
+    with path.open('w', newline='', encoding='utf-8') as f:
+        w = csv.writer(f)
+        w.writerow(['Comment', 'Designator', 'Footprint', 'LCSC Part #'])
+        for mpn, items in sorted(groups.items(), key=lambda kv: kv[1][0]['ref']):
+            lcsc, placed = LCSC[mpn]
+            p = items[0]
+            comment = f"{p['value']} {placed or mpn}" if p['ref'][0] in 'RC' else placed or mpn
+            w.writerow([comment, ','.join(i['ref'] for i in items), p['footprint'].split(':')[1], lcsc])
 
 
 def write_cpl(positions, path):
@@ -142,7 +191,12 @@ Assembly (optional quote)
   pin 1 dot), U3 and U4 (SOT-23-5, pin 1 dot) and J7 (FH12 FPC connector, actuator side towards
   the display outline above it; check for bridges).
   U1 alternative with the same footprint: RAMXEED MB85RS4MTPF-G-BCERE1.
+  U2 alternative with the same footprint: MCP1640CT-I/CHY (EN is tied to VIN, so the shutdown
+  behaviour that differs between the variants is never used). Do not use the B or D variants
+  (PWM only) or third-party MCP1640 copies.
   R14 and R15 are 0.1 % resistors; do not substitute 1 % parts.
+- JLCPCB: assembly/jlc-bom.csv carries LCSC part numbers (stock checked 2026-10-10) and places
+  U1 as MB85RS4MTPF-G-BCERE1 and U2 as MCP1640CT-I/CHY; use it with assembly/cpl-smd.csv.
 - All through-hole parts (including the through-hole connectors) are fitted by the owner; do not
   supply or fit them.
 - No fiducials: use pads for vision, or add panel rails with fiducials if you need them.
@@ -220,6 +274,7 @@ def main():
                     str(ROOT / 'cad/plytka-nosna.kicad_sch')], check=True, stdout=subprocess.DEVNULL)
     shutil.copyfile(ROOT / 'bom.csv', a / 'bom.csv')
     write_assembly_bom(a / 'bom-assembly.csv')
+    write_jlc_bom(a / 'jlc-bom.csv')
     write_cpl(a / 'positions.csv', a / 'cpl-smd.csv')
     sizes = set()
     for f in d.glob('*.drl'):

@@ -12,6 +12,7 @@
 | `assembly/montaz.pdf` | rysunek montażowy w skali 1,5 z tabliczką (rewizja N1) |
 | `assembly/bom.csv` | kopia [BOM](../../bom.csv) |
 | `assembly/bom-assembly.csv` | BOM dla montażowni po angielsku, tylko 32 elementy SMD: oznaczenia, ilość na płytkę, MPN; resztę lutuje właściciel według [BOM](../../bom.csv) |
+| `assembly/jlc-bom.csv` | BOM w formacie JLCPCB z numerami LCSC (stany z 2026-10-10), razem z `cpl-smd.csv`; w miejsce części bez stanu U1 to MB85RS4MTPF-G-BCERE1, a U2 to MCP1640CT-I/CHY (wariant C tej samej przetwornicy, EN na stałe do VIN) |
 | `assembly/cpl-smd.csv` | pozycje 32 elementów SMD w kolumnach Designator, Mid X, Mid Y, Layer, Rotation |
 | `mechanika-1-do-1.pdf` | wydruk do przymiarki w skali 1:1 z kreską kontrolną 50 mm |
 
