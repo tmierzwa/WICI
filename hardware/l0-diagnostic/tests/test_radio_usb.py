@@ -35,7 +35,7 @@ class UsbSimulation(unittest.TestCase):
                             line, buffers[fd] = buffers[fd].split(b'\n', 1)
                             index = masters.index(fd)
                             if line == b'INFO':
-                                version = 'l0-0.4' if index == 0 else 'pair-0.2'
+                                version = 'l0-0.4' if index == 0 else 'pair-0.3'
                                 reply = f'INFO {version} DEVICE{index} 1 1 BOOT{index} 869.525 125 7 5 0 1.8\n'
                                 os.write(fd, reply.encode())
                             elif line.startswith(b'TX '):

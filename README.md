@@ -16,11 +16,11 @@ Sieć trzeba przygotować razem z gminą i służbami przed kryzysem: zamontowa�
 
 ## Gdzie jesteśmy
 
-Stan przygotowania testów na 9 października 2026 r.:
+Stan przygotowania testów na 10 października 2026 r.:
 
-- **R0:** zamówione dwa zestawy Seeed 102010611 do pierwszego testu pary radiowej; czekamy na dostawę.
+- **R0:** dwa zestawy Seeed 102010611 dostarczone; próba przy stole zaliczona (100/100 w obie strony, dwa raporty). Następny krok: próby zasięgu na dwóch laptopach.
 - **L0:** zapytanie o wycenę jednego prototypu wysłane do trzech firm; czekamy na oferty. Nie zlecono jeszcze wykonania.
-- Programy diagnostyczne R0 i L0 są skompilowane i sprawdzone testami automatycznymi. Próby na rzeczywistym sprzęcie pozostają do wykonania.
+- Programy diagnostyczne R0 i L0 są skompilowane i sprawdzone testami automatycznymi. R0 działa na rzeczywistym sprzęcie przy stole; próby L0 pozostają do wykonania.
 
 Zakres przekazany do wyceny i zasady wyboru dokumentów są w [dokumentach przygotowania testów](output/README.md). Instrukcje bieżących prób opisuje [hardware](hardware/README.md).
 

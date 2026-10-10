@@ -6,7 +6,7 @@ Obecna kolejność prac: **R0 — test pary radiowej, potem L0 — test kompletn
 
 | Katalog | Zawartość i powód pozostawienia | Wykorzystanie teraz |
 |---|---|---|
-| [radio-pair](radio-pair/README.md) | Program R0 `pair-0.2`, test pary na jednym Macu, test zasięgu na dwóch Macach i testy automatyczne. Narzędzie testu pary jest współdzielone z L0. | Pierwszy test dwóch zamówionych zestawów Seeed 102010611, następnie próby zasięgu w budynku i terenie. |
+| [radio-pair](radio-pair/README.md) | Program R0 `pair-0.3`, test pary na jednym Macu, test zasięgu na dwóch Macach i testy automatyczne. Narzędzie testu pary jest współdzielone z L0. | Pierwszy test dwóch zamówionych zestawów Seeed 102010611, następnie próby zasięgu w budynku i terenie. |
 | [l0-diagnostic](l0-diagnostic/README.md) | Program L0 `l0-0.4`, instrukcja wgrania i odbioru, narzędzia, testy oraz zapis weryfikacji. | Test zmontowanego prototypu: radio, FRAM, ekran, wejścia, LED, brzęczyk i wspólna magistrala SPI. |
 | [dev-bench](dev-bench/README.md) | Projekt CAD, BOM i pliki produkcyjne nośnej N1 oraz dokumentacja stanowisk TI/ST. Zachowujemy źródła sprzętu i powiązania z dokumentacją oraz firmware stanowisk. | Materiały N1; montaż L0 według uzgodnionej paczki wyceny, z połączeniami MCU z [tabeli L0](l0-diagnostic/reference/polaczenia-MCU-L0.csv). Stanowiska TI/ST są wariantem zapasowym. |
 | [r02](r02/README.md) | Założenia przyszłej własnej płytki stacji: architektura, zasilanie, radio, obudowa i wnioski z poprzedniego projektu. | Projekt wstrzymany. Nie jest potrzebny do wykonania testów R0/L0; nie zamawiać płytki na jego podstawie. |
@@ -23,7 +23,7 @@ Programu L0 nie wgrywa się do zestawu R0. Dokumentacja połączeń stanowisk TI
 
 ## Od czego zacząć
 
-1. Po dostawie zestawów uruchomić R0: podłączyć anteny i przewody USB danych, wykonać kopie fabrycznych pamięci, wgrać program i przeprowadzić test komunikacji. Instrukcja: [R0](l0-diagnostic/reference/R0-INSTRUKCJA.txt).
+1. R0 przy stole: wykonane 2026-10-10 — kopie fabrycznych pamięci, program `pair-0.3`, dwa raporty 100/100 ([wyniki](radio-pair/evidence/bench-r0-2026-10-10.txt)). Następnie próby zasięgu w budynku i terenie według [radio-pair](radio-pair/README.md). Instrukcja: [R0](l0-diagnostic/reference/R0-INSTRUKCJA.txt).
 2. Po montażu L0 wykonać odbiór elektryczny oraz próby podzespołów według [instrukcji L0](l0-diagnostic/README.md). Jeden zestaw R0 jest partnerem radiowym L0.
 3. Na podstawie wyników zdecydować o dalszym oprogramowaniu WICI i pilotażu. Projekt R02 pozostaje wstrzymany do decyzji po pilotażu.
 

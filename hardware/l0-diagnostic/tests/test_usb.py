@@ -69,7 +69,7 @@ class UsbChecks(unittest.TestCase):
         self.exercise()
 
     def test_wrong_image_blocks_command(self):
-        self.exercise(version='pair-0.2', success=False)
+        self.exercise(version='pair-0.3', success=False)
 
     def test_failed_crc_never_writes_success_report(self):
         self.exercise(response='FRAM_PASS 4 0 00000000 00000000\nFRAM_DONE 00000001 VERIFY\n', success=False)

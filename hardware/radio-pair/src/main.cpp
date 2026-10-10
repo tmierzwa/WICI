@@ -10,8 +10,11 @@ uint32_t nextTx = 0;
 String command;
 uint32_t bootId;
 void IRAM_ATTR onReceive() { received = true; }
+// Each record is flushed: on the S3 USB-Serial/JTAG a short record could stay
+// queued until the next host command (seen as 2.9 s USB lag in the R0 bench test).
 void error(const char *where, int code) {
   Serial.printf("ERR %s %d\n", where, code);
+  Serial.flush();
 }
 bool listen() {
   received = false;
@@ -20,8 +23,9 @@ bool listen() {
   return code == RADIOLIB_ERR_NONE;
 }
 void info() {
-  Serial.printf("INFO pair-0.2 %012llX %d %d %08lX 869.525 125 7 5 0 1.8\n",
+  Serial.printf("INFO pair-0.3 %012llX %d %d %08lX 869.525 125 7 5 0 1.8\n",
                 ESP.getEfuseMac(), ready, esp_reset_reason(), static_cast<unsigned long>(bootId));
+  Serial.flush();
 }
 void execute(const String &line) {
   if (line == "INFO") { info(); return; }
@@ -36,6 +40,7 @@ void execute(const String &line) {
   radio.clearDio1Action();
   int code = radio.transmit(packet);
   Serial.printf("TX %d %s\n", code, packet.c_str());
+  Serial.flush();
   radio.setDio1Action(onReceive);
   if (code) error("transmit", code);
   listen();
@@ -69,8 +74,10 @@ void loop() {
       bool valid = packet.length() <= 80;
       for (size_t i = 0; i < packet.length(); ++i)
         if (packet[i] < 32 || packet[i] > 126) valid = false;
-      if (valid) Serial.printf("RX %.1f %.1f %s\n", radio.getRSSI(), radio.getSNR(), packet.c_str());
-      else error("payload", -1);
+      if (valid) {
+        Serial.printf("RX %.1f %.1f %s\n", radio.getRSSI(), radio.getSNR(), packet.c_str());
+        Serial.flush();
+      } else error("payload", -1);
     } else error("read", code);
     listen();
   }

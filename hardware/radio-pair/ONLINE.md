@@ -14,7 +14,7 @@ Nie wymaga synchronizacji zegarów Maców.
 ## 1. Przygotowanie przed wyjściem
 
 Najpierw zalicz próbę radia przy stole według [instrukcji R0](README.md).
-Program płytek pozostaje `pair-0.2`; tryb online uruchamia się na laptopach.
+Program płytek pozostaje `pair-0.3`; tryb online uruchamia się na laptopach.
 Na obu Macach pobierz tę samą aktualną wersję repozytorium i otwórz
 Terminal w `hardware/radio-pair`:
 

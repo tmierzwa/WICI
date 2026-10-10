@@ -25,6 +25,6 @@ test_wrong_key_no_radio_transmission (test_range_online.Online.test_wrong_key_no
 test_two_serial_devices_and_report (test_usb_simulation.UsbSimulation.test_two_serial_devices_and_report) ... ok
 
 ----------------------------------------------------------------------
-Ran 25 tests in 57.833s
+Ran 25 tests in 58.019s
 
 OK

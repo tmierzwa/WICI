@@ -81,7 +81,7 @@ def run(args):
     interval = getattr(args, 'interval', 3.0)
     if not math.isfinite(interval) or not 3 <= interval <= 60:
         raise ValueError('--interval musi wynosić od 3 do 60 sekund.')
-    versions = {'A': getattr(args, 'version_a', 'pair-0.2'), 'B': getattr(args, 'version_b', 'pair-0.2')}
+    versions = {'A': getattr(args, 'version_a', 'pair-0.3'), 'B': getattr(args, 'version_b', 'pair-0.3')}
     args.output.mkdir(parents=True, exist_ok=True)
     session = uuid.uuid4().hex[:16]
     base = args.output / (datetime.now().strftime('%Y%m%d-%H%M%S-') + session)
@@ -201,8 +201,8 @@ def main(argv=None):
     parser.add_argument('--a')
     parser.add_argument('--b')
     parser.add_argument('--count', type=int, default=100)
-    parser.add_argument('--version-a', choices=['pair-0.2', L0_VERSION], default='pair-0.2')
-    parser.add_argument('--version-b', choices=['pair-0.2', L0_VERSION], default='pair-0.2')
+    parser.add_argument('--version-a', choices=['pair-0.3', L0_VERSION], default='pair-0.3')
+    parser.add_argument('--version-b', choices=['pair-0.3', L0_VERSION], default='pair-0.3')
     parser.add_argument('--interval', type=float, default=3.0)
     parser.add_argument('--output', type=Path, default=Path('results'))
     try:

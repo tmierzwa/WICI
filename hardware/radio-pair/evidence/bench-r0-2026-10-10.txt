@@ -1,0 +1,33 @@
+WICI / R0 / próba przy stole na jednym Macu / 2026-10-10
+
+Sprzęt: dwa zestawy Seeed 102010611 (XIAO ESP32S3 + Wio SX1262), anteny zestawu.
+A: MAC 44:b1:76:ad:28:a0 (INFO A028AD76B144), B: MAC 68:ee:8f:60:d1:6c (INFO 6CD1608FEE68).
+Profil: 869.525 MHz, BW125 kHz, SF7, CR4/5, 0 dBm, TCXO 1.8 V.
+Narzędzie: tools/pair_test.py, 100 pakietów w każdą stronę co 3 s, bez ponowień.
+Pełne raporty JSON/JSONL zostają lokalnie w results/ (ignorowane przez Git).
+
+Kopie fabryczne 8MB przed pierwszym wgraniem (lokalnie w backups/):
+r0-A-factory.bin 66d47ef4d58497a168ae3c41ff088e6a442366974d1d3fca744245877df5b1cc
+r0-B-factory.bin 37bfb30dd70b4aa3fb9f1012594d63c1bfa6a313918411f248a5ef06d5a74cf5
+Odczyt 8MB przez natywne USB trwał ok. 16 min na płytkę (71.6 kbit/s).
+
+1. Sesja 4d7a24890c2e4337, pair-0.2, płytki bardzo blisko siebie: NEGATYWNY.
+   Radio: w logu JSONL 100/100 A->B i 100/100 B->A, RSSI -42..-25 dBm,
+   SNR 11.5..13.5 dB, bez duplikatów i restartów. 40 linii TX/RX dotarło
+   przez USB ok. 2.9 s później, przy następnym poleceniu hosta, poza oknem
+   3 s; narzędzie uznało 43/200 pakietów za błędne. Wynik nie został zmieniony.
+   Przyczyna: zapis w buforze USB Serial/JTAG ESP32-S3 czekał na kolejne
+   polecenie hosta. Poprawka pair-0.3: Serial.flush() po każdym rekordzie.
+
+2. Sesja 309cc60893ad423d, pair-0.3, płytki bardzo blisko siebie: POZYTYWNY.
+   A->B 100/100, RSSI -30..-25 dBm; B->A 100/100, RSSI -30..-26 dBm.
+
+3. Sesja bdb7a4b330654eba, pair-0.3, po odłączeniu i ponownym podłączeniu
+   USB obu płytek (nowe identyfikatory startu), 2 m, bez przeszkód: POZYTYWNY.
+   A->B 100/100, RSSI -42..-37 dBm; B->A 100/100, RSSI -41..-37 dBm.
+
+Próba przerwana między 2 i 3 (sesja afa94d9e7efe43e6): płytka B niewidoczna
+na USB przez przewód bez transmisji danych; nie wysłano żadnego pakietu.
+
+Wynik dotyczy odległości biurkowej. Nie jest pomiarem zasięgu terenowego,
+pracy przez ściany ani działania protokołu WICI.

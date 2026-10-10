@@ -13,7 +13,7 @@ from pathlib import Path
 
 from pair_test import PROFILE, decode, open_serial
 
-R0_VERSION = 'pair-0.2'
+R0_VERSION = 'pair-0.3'
 PACKET = re.compile(r'^WICIR:([0-9a-f]{16}):([AB]):([0-9]{3}):0123456789ABCDEF$')
 
 
