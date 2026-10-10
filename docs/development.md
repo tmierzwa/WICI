@@ -18,7 +18,25 @@ Katalog [firmware/](../firmware/README.md) buduje się PlatformIO w osobnym śro
 
 ## Strona koncepcji
 
-Koncepcja jest publikowana na [GitHub Pages](https://docs.github.com/pages) pod adresem [wici.net.pl](https://wici.net.pl/) (domena w home.pl; rekordy A, AAAA i CNAME `www` wskazują na GitHub Pages, a domena jest zweryfikowana na koncie GitHub) przez workflow `pages.yml` po każdej zmianie `docs/concept/` na `main`. `tools/build_pages.py` kopiuje strony i arkusz stylów bez zmiany treści. Linki wychodzące poza koncepcję zamienia na adresy plików w repozytorium dla publikowanego commitu. Lokalnie strony nie wymagają budowania: wystarczy otworzyć `docs/concept/index.html`.
+Koncepcja jest publikowana na [GitHub Pages](https://docs.github.com/pages) pod adresem [wici.net.pl](https://wici.net.pl/) przez workflow `pages.yml` po każdej zmianie `docs/concept/` na `main`. `tools/build_pages.py` kopiuje strony i arkusz stylów bez zmiany treści. Linki wychodzące poza koncepcję zamienia na adresy plików w repozytorium dla publikowanego commitu. Lokalnie strony nie wymagają budowania: wystarczy otworzyć `docs/concept/index.html`.
+
+## Domena i poczta
+
+Domenę `wici.net.pl` zarejestrowano w home.pl 10 października 2026 r. (odnowienie do 10 października 2027 r.); strefę DNS obsługują serwery `dns.home.pl`, `dns2.home.pl` i `dns3.home.pl`. Strona działa na GitHub Pages, a poczta na serwerze Hosting Biznes w home.pl. Domena jest przypisana do serwera w trybie „Brak obsługi WWW”, żeby panel nie nadpisał rekordów strony.
+
+| Rekord | Host | Wartość | Cel |
+|---|---|---|---|
+| A (4) | `wici.net.pl` | `185.199.108.153`, `.109.153`, `.110.153`, `.111.153` | GitHub Pages |
+| AAAA (4) | `wici.net.pl` | `2606:50c0:8000::153` … `8003::153` | GitHub Pages |
+| CNAME | `www` | `tmierzwa.github.io.` | GitHub Pages; GitHub przekierowuje `www` na domenę główną |
+| TXT | `_github-pages-challenge-tmierzwa` | kod weryfikacji z ustawień konta GitHub | zabezpieczenie przed przejęciem domeny; nie usuwać |
+| MX | `wici.net.pl` | `10 serwer2617177.hosting-home.pl.` | poczta |
+| SRV (6) | `_imap`, `_imaps`, `_pop3`, `_pop3s`, `_smtps`, `_submission` | `serwer2617177.hosting-home.pl.`, porty 143, 993, 110, 995, 465, 587 | autokonfiguracja programów pocztowych |
+| TXT | `wici.net.pl` | `v=spf1 mx ~all` | SPF |
+| TXT | `dkim._domainkey` | klucz publiczny z panelu home.pl | DKIM |
+| TXT | `_dmarc` | `v=DMARC1; p=none; rua=mailto:kontakt@wici.net.pl` | DMARC w trybie raportowania |
+
+Ustawienia repozytorium (Settings → Pages): źródło GitHub Actions, Custom domain `wici.net.pl`, Enforce HTTPS. Przy publikacji przez Actions plik `CNAME` w repozytorium nie jest potrzebny. Adres `tmierzwa.github.io/WICI` przekierowuje na domenę. Przy przypisywaniu domeny do serwera w home.pl nie wybierać „Główny katalog na serwerze” ani innej opcji WWW, bo panel podmieni rekordy A. SRV muszą wskazywać nazwę serwera pocztowego, a nie `wici.net.pl`, bo ta nazwa prowadzi do GitHub Pages. Adres projektu: `kontakt@wici.net.pl`; hasła i dane logowania nie należą do repozytorium.
 
 ## Narzędzia CAD
 
