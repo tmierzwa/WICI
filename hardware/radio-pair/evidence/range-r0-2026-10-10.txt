@@ -1,6 +1,6 @@
 WICI / R0 / próby zasięgu online (Tailscale) / 2026-10-10
 
-Sprzęt i program jak w bench-r0-2026-10-10.txt: pair-0.3, 869.525 MHz,
+Sprzęt i program jak w bench-r0-2026-10-10.txt: pair-0.3 (do P03), 869.525 MHz,
 BW125 kHz, SF7, CR4/5, 0 dBm, anteny zestawu ustawione pionowo.
 Mac A z płytką A w stałym miejscu (blok mieszkalny); Mac B z płytką B w punkcie.
 Narzędzie: tools/range_online.py, 100 niezależnych transmisji w każdą stronę.
@@ -31,6 +31,19 @@ P02 (A: b600755d; wcześniej 8b57e62e: B nie połączył się w 120 s):
   typowego tła; możliwe zakłócenia lokalne przy B. Nie jest wynikiem zasięgu.
   Po tej próbie narzędzia liczą błąd CRC jako stratę radiową
   (corrupt_received), protokół online WICI-RANGE-ONLINE-2.
+
+P02, druga próba: B dwa piętra niżej niż A — brak sygnału (relacja
+  wykonawcy, raport nie jest wynikiem zasięgu).
+
+P03 (A: 3f5c8474, B: f5472be0, sesja 28754418ae094000): według wykonawcy
+  B na tym samym piętrze co A, w poziomie ok. 20 m, przez ok. 5 ścian,
+  z czego 2-3 nośne (opis w raporcie A „1 piętro niżej” jest błędny).
+  Przerwana przy B->A 72: płytka B nadała pakiet (A go odebrał), ale jej
+  rekord TX nie dotarł przez USB do Maca B, choć późniejszy INFO dotarł.
+  Do przerwania A->B 64/72 (3 uszkodzone CRC, 5 zgubionych),
+  B->A 56/71 (4 uszkodzone, 11 zgubionych); RSSI -104..-95 dBm,
+  SNR -8.8..-1.0 dB. Granica zasięgu tego profilu w tym budynku.
+  Nie jest wynikiem zasięgu. Po tej próbie pair-0.4 dodaje LAST.
 
 Wyniki dotyczą tego budynku, tych położeń i profilu R0. Nie są
 uniwersalnym zasięgiem ani kwalifikacją pełnego systemu WICI.

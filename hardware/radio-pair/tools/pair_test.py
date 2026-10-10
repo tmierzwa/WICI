@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 PROFILE = ['869.525', '125', '7', '5', '0', '1.8']
+R0_VERSION = 'pair-0.4'  # first R0 image with LAST
 L0_VERSION = 'l0-0.5'
 
 
@@ -26,6 +27,9 @@ def decode(line):
         if parts[0] == 'RX' and len(parts) == 4 and all(math.isfinite(float(v)) for v in parts[1:3]):
             return {'kind': 'rx', 'rssi': float(parts[1]), 'snr': float(parts[2]),
                     'payload': parts[3]}
+        if parts[0] == 'LAST' and len(parts) == 4:
+            return {'kind': 'last', 'count': int(parts[1]), 'status': int(parts[2]),
+                    'payload': parts[3]}
         if line == 'BLOCKED SILENCE':
             return {'kind': 'blocked', 'message': line}
         if line == 'ERR read -7':
@@ -35,21 +39,32 @@ def decode(line):
             return {'kind': 'error', 'message': line}
     except (IndexError, ValueError):
         pass
-    if parts and parts[0] in ('INFO', 'TX', 'RX'):
+    if parts and parts[0] in ('INFO', 'TX', 'RX', 'LAST'):
         return {'kind': 'error', 'message': 'Malformed serial record: ' + line}
     return {'kind': 'other', 'message': line}
 
 
+def tx_records(events, payload):
+    """TX confirmations of one board; LAST replaces a TX record lost on USB.
+
+    Each LAST count is one transmission, so two counts for a payload stay a duplicate.
+    """
+    tx = [e for e in events if e['kind'] == 'tx' and e['payload'] == payload]
+    if tx:
+        return tx, False
+    last = {e['count']: e for e in events if e['kind'] == 'last' and e['payload'] == payload}
+    return list(last.values()), bool(last)
+
+
 def judge(events, sender, payload):
     receiver = 'B' if sender == 'A' else 'A'
-    tx = [e for node, e in events if node == sender and e['kind'] == 'tx'
-          and e['payload'] == payload]
+    tx, recovered = tx_records([e for node, e in events if node == sender], payload)
     rx = [e for node, e in events if node == receiver and e['kind'] == 'rx'
           and e['payload'] == payload]
     errors = [e for _, e in events if e['kind'] in ('error', 'blocked')]
     corrupt = sum(node == receiver and e['kind'] == 'corrupt' for node, e in events)
     return {'ok': len(tx) == 1 and tx[0]['status'] == 0 and len(rx) == 1 and not errors and not corrupt,
-            'tx_records': len(tx), 'rx_records': len(rx), 'corrupt_records': corrupt,
+            'tx_records': len(tx), 'tx_recovered': recovered, 'rx_records': len(rx), 'corrupt_records': corrupt,
             'tx_status': tx[0]['status'] if tx else None,
             'rssi': rx[0]['rssi'] if rx else None,
             'snr': rx[0]['snr'] if rx else None, 'errors': errors}
@@ -85,7 +100,7 @@ def run(args):
     interval = getattr(args, 'interval', 3.0)
     if not math.isfinite(interval) or not 3 <= interval <= 60:
         raise ValueError('--interval musi wynosić od 3 do 60 sekund.')
-    versions = {'A': getattr(args, 'version_a', 'pair-0.3'), 'B': getattr(args, 'version_b', 'pair-0.3')}
+    versions = {'A': getattr(args, 'version_a', R0_VERSION), 'B': getattr(args, 'version_b', R0_VERSION)}
     args.output.mkdir(parents=True, exist_ok=True)
     session = uuid.uuid4().hex[:16]
     base = args.output / (datetime.now().strftime('%Y%m%d-%H%M%S-') + session)
@@ -163,6 +178,10 @@ def run(args):
                 payload = f'WICI0:{session}:{sender}:{seq:03d}:0123456789ABCDEF'
                 ports[sender].write(('TX ' + payload + '\n').encode('ascii'))
                 batch = collect(interval)
+                if versions[sender] == R0_VERSION and not tx_records(
+                        [e for node, e in batch if node == sender], payload)[0]:
+                    ports[sender].write(b'LAST\n')
+                    batch += collect(1)
                 result = judge(batch, sender, payload)
                 result.update({'sender': sender, 'seq': seq, 'payload': payload})
                 report['packets'].append(result)
@@ -205,8 +224,8 @@ def main(argv=None):
     parser.add_argument('--a')
     parser.add_argument('--b')
     parser.add_argument('--count', type=int, default=100)
-    parser.add_argument('--version-a', choices=['pair-0.3', L0_VERSION], default='pair-0.3')
-    parser.add_argument('--version-b', choices=['pair-0.3', L0_VERSION], default='pair-0.3')
+    parser.add_argument('--version-a', choices=[R0_VERSION, L0_VERSION], default=R0_VERSION)
+    parser.add_argument('--version-b', choices=[R0_VERSION, L0_VERSION], default=R0_VERSION)
     parser.add_argument('--interval', type=float, default=3.0)
     parser.add_argument('--output', type=Path, default=Path('results'))
     try:

@@ -11,9 +11,8 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from pair_test import PROFILE, decode, open_serial
+from pair_test import PROFILE, R0_VERSION, decode, open_serial, tx_records
 
-R0_VERSION = 'pair-0.3'
 PACKET = re.compile(r'^WICIR:([0-9a-f]{16}):([AB]):([0-9]{3}):0123456789ABCDEF$')
 
 
@@ -40,7 +39,7 @@ def summarize(a, b):
         records = []
         for seq in range(1, a['count'] + 1):
             text = payload(a['session'], sender, seq)
-            tx = [e for e in source['events'] if e.get('kind') == 'tx' and e['payload'] == text]
+            tx, _ = tx_records(source['events'], text)
             rx = [e for e in target['events'] if e.get('kind') == 'rx' and e['payload'] == text]
             records.append({'seq': seq, 'tx_ok': len(tx) == 1 and tx[0]['status'] == 0,
                             'rx_ok': len(rx) == 1, 'tx_records': len(tx), 'rx_records': len(rx),
@@ -109,6 +108,7 @@ def run(args):
             now = time.monotonic()
             if now - last_info >= 2:
                 send('INFO')
+                send('LAST')  # Recovers a TX record lost on USB; summarize() uses it.
                 last_info = now
             if now - last_info_rx > 10:
                 raise RuntimeError('Brak odpowiedzi USB INFO przez 10 s.')

@@ -15,11 +15,19 @@ ROOT = Path(__file__).resolve().parents[1]
 @unittest.skipUnless(os.name == 'posix', 'Requires POSIX pseudo-terminals')
 class UsbSimulation(unittest.TestCase):
     def test_two_serial_devices_and_report(self):
+        self.exercise(lost_tx=False)
+
+    def test_tx_record_lost_on_usb_is_recovered_by_last(self):
+        report = self.exercise(lost_tx=True)
+        self.assertTrue(report['packets'][0]['tx_recovered'])
+
+    def exercise(self, lost_tx):
         import serial  # dependency check; PTYs use real pyserial
         del serial
         pairs = [pty.openpty(), pty.openpty()]
         masters = [p[0] for p in pairs]
         buffers = {fd: b'' for fd in masters}
+        last = ['LAST 0 0 -', 'LAST 0 0 -']
         with tempfile.TemporaryDirectory() as output:
             proc = subprocess.Popen([sys.executable, str(ROOT/'tools/pair_test.py'),
                                      '--a', os.ttyname(pairs[0][1]),
@@ -35,11 +43,15 @@ class UsbSimulation(unittest.TestCase):
                             line, buffers[fd] = buffers[fd].split(b'\n', 1)
                             index = masters.index(fd)
                             if line == b'INFO':
-                                reply = f'INFO pair-0.3 DEVICE{index} 1 1 BOOT{index} 869.525 125 7 5 0 1.8\n'
+                                reply = f'INFO pair-0.4 DEVICE{index} 1 1 BOOT{index} 869.525 125 7 5 0 1.8\n'
                                 os.write(fd, reply.encode())
+                            elif line == b'LAST':
+                                os.write(fd, last[index].encode() + b'\n')
                             elif line.startswith(b'TX '):
                                 payload = line[3:]
-                                os.write(fd, b'TX 0 '+payload+b'\n')
+                                last[index] = 'LAST 1 0 ' + payload.decode()
+                                if not (lost_tx and index == 0):  # A's TX record lost on USB
+                                    os.write(fd, b'TX 0 '+payload+b'\n')
                                 os.write(masters[1-index], b'RX -60 9 '+payload+b'\n')
                 if proc.poll() is None:
                     proc.kill()
@@ -53,6 +65,7 @@ class UsbSimulation(unittest.TestCase):
                 self.assertEqual(report['received_unique'], {'A': 1, 'B': 1})
                 self.assertEqual(report['issues'], [])
                 self.assertTrue(list(Path(output).glob('*.jsonl')))
+                return report
             finally:
                 if proc.poll() is None:
                     proc.kill(); proc.wait()

@@ -3,6 +3,7 @@ test_duplicate_not_success (test_pair.PairResults.test_duplicate_not_success) ..
 test_error (test_pair.PairResults.test_error) ... ok
 test_failed_tx_not_success (test_pair.PairResults.test_failed_tx_not_success) ... ok
 test_info (test_pair.PairResults.test_info) ... ok
+test_last_recovers_lost_tx_record (test_pair.PairResults.test_last_recovers_lost_tx_record) ... ok
 test_malformed_record_is_error (test_pair.PairResults.test_malformed_record_is_error) ... ok
 test_missing_and_wrong_payload (test_pair.PairResults.test_missing_and_wrong_payload) ... ok
 test_noise (test_pair.PairResults.test_noise) ... ok
@@ -23,10 +24,12 @@ test_online_rf_loss_does_not_block_independent_b_transmission (test_range_online
 test_online_two_processes (test_range_online.Online.test_online_two_processes) ... ok
 test_peer_usb_error_is_not_labelled_radio_loss (test_range_online.Online.test_peer_usb_error_is_not_labelled_radio_loss) ... ok
 test_private_addresses_only (test_range_online.Online.test_private_addresses_only) ... ok
+test_tx_record_lost_on_usb_is_recovered_by_last (test_range_online.Online.test_tx_record_lost_on_usb_is_recovered_by_last) ... ok
 test_wrong_key_no_radio_transmission (test_range_online.Online.test_wrong_key_no_radio_transmission) ... ok
 test_two_serial_devices_and_report (test_usb_simulation.UsbSimulation.test_two_serial_devices_and_report) ... ok
+test_tx_record_lost_on_usb_is_recovered_by_last (test_usb_simulation.UsbSimulation.test_tx_record_lost_on_usb_is_recovered_by_last) ... ok
 
 ----------------------------------------------------------------------
-Ran 27 tests in 58.086s
+Ran 30 tests in 82.078s
 
 OK

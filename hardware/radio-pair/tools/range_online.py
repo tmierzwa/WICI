@@ -14,10 +14,10 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from pair_test import PROFILE, decode, judge, open_serial
+from pair_test import PROFILE, decode, judge, open_serial, tx_records
 from range_test import R0_VERSION, payload, summarize
 
-PROTOCOL = 'WICI-RANGE-ONLINE-2'
+PROTOCOL = 'WICI-RANGE-ONLINE-3'
 MAX_LINE = 262144
 
 
@@ -231,6 +231,9 @@ def run(args):
                 if sender == args.role:
                     device.write('TX ' + payload(local['session'], sender, seq))
                 own = device.collect(args.slot)
+                if sender == args.role and not tx_records(own, payload(local['session'], sender, seq))[0]:
+                    device.write('LAST')
+                    own += device.collect(1)
                 phase = 'internet'
                 if args.role == 'B':
                     channel.send({'kind': 'observed', 'events': own})

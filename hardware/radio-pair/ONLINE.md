@@ -14,7 +14,7 @@ Nie wymaga synchronizacji zegarów Maców.
 ## 1. Przygotowanie przed wyjściem
 
 Najpierw zalicz próbę radia przy stole według [instrukcji R0](README.md).
-Program płytek pozostaje `pair-0.3`; tryb online uruchamia się na laptopach.
+Program płytek pozostaje `pair-0.4`; tryb online uruchamia się na laptopach.
 Na obu Macach pobierz tę samą aktualną wersję repozytorium i otwórz
 Terminal w `hardware/radio-pair`:
 
@@ -86,7 +86,10 @@ z płytki nadawcy i jednego odbioru dokładnej treści przez USB płytki odbiorc
 `STRATA / DUPLIKAT` nie jest błędem internetu. `USZKODZONY (CRC)` oznacza
 pakiet odebrany ze złą sumą kontrolną (`ERR read -7`): liczy się jako strata
 radiowa, w podsumowaniu jako `corrupt_received`, i nie przerywa próby.
-Brak potwierdzenia TX, inny błąd płytki, restart lub brak USB unieważnia próbę.
+Gdy linia `TX` nie dotrze przez USB, program pyta płytkę poleceniem `LAST`
+o jej ostatnie nadanie (licznik, kod, treść) i przyjmuje tylko dokładnie ten
+pakiet. Brak potwierdzenia TX także po `LAST`, inny błąd płytki, restart lub
+brak USB unieważnia próbę.
 
 ## 4. Wynik i przerwanie
 

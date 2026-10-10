@@ -22,6 +22,16 @@ class PairResults(unittest.TestCase):
         self.assertFalse(judge(self.events(), 'B', 'expected')['ok'])
     def test_error(self):
         self.assertFalse(judge(self.events()+[('B', decode('ERR receive -2'))], 'A', 'expected')['ok'])
+    def test_last_recovers_lost_tx_record(self):
+        last = ('A', decode('LAST 7 0 expected'))
+        self.assertEqual(last[1]['kind'], 'last')
+        result = judge([last, self.events()[1]], 'A', 'expected')
+        self.assertTrue(result['ok'])
+        self.assertTrue(result['tx_recovered'])
+        self.assertFalse(judge([('A', decode('LAST 7 -2 expected')), self.events()[1]], 'A', 'expected')['ok'])
+        self.assertFalse(judge([last, ('A', decode('LAST 8 0 expected')), self.events()[1]], 'A', 'expected')['ok'])
+        self.assertFalse(judge([('A', decode('LAST 7 0 old')), self.events()[1]], 'A', 'expected')['ok'])
+        self.assertEqual(decode('LAST x 0 p')['kind'], 'error')
     def test_crc_failure_is_radio_loss(self):
         self.assertEqual(decode('ERR read -7')['kind'], 'corrupt')
         self.assertEqual(decode('ERR read -2')['kind'], 'error')
@@ -29,7 +39,7 @@ class PairResults(unittest.TestCase):
         self.assertFalse(result['ok'])
         self.assertEqual((result['corrupt_records'], result['errors']), (1, []))
     def test_info(self):
-        item = decode('INFO pair-0.3 ABCDEF 1 1 12345678 869.525 125 7 5 0 1.8')
+        item = decode('INFO pair-0.4 ABCDEF 1 1 12345678 869.525 125 7 5 0 1.8')
         self.assertEqual(item['kind'], 'info')
         self.assertTrue(item['ready'])
         self.assertEqual(item['boot'], '12345678')

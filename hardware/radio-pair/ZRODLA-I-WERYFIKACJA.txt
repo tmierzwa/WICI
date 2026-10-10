@@ -1,4 +1,4 @@
-WICI / para Seeed 102010611 / pair-0.3 / 2026-10-10
+WICI / para Seeed 102010611 / pair-0.4 / 2026-10-10
 
 Główna instrukcja: WICI-pierwszy-test-LoRa-macOS.pdf w dostarczonej paczce.
 W repozytorium: output/pdf/WICI-pierwszy-test-LoRa-macOS.pdf.
@@ -24,7 +24,7 @@ Przed pełnym testem odstęp 2-5m; podłączone anteny przy obu płytkach.
 
 Sprawdzenia wykonane:
 - Kompilacja finalnego źródła przez PlatformIO: SUCCESS.
-- Pamięć RAM: 19824/327680 bajtów; flash: 299225/3342336 bajtów.
+- Pamięć RAM: 19848/327680 bajtów; flash: 299461/3342336 bajtów (pair-0.4).
 - 8 testów parsera i licznika + 1 integracyjny test dwóch portów PTY:
   realny pyserial, symulowane odpowiedzi płytek, raport JSON i JSONL.
   9/9 PASS. Próba skrócona nie daje wyniku kwalifikującego.
@@ -33,6 +33,9 @@ Sprawdzenia wykonane:
   raporty 100/100 przy stole (przed i po odłączeniu USB):
   evidence/bench-r0-2026-10-10.txt. pair-0.2 dał wynik negatywny przez
   opóźnione rekordy USB; pair-0.3 opróżnia bufor USB po każdym rekordzie.
+- pair-0.4 (2026-10-10): polecenie LAST zwraca licznik, kod i treść ostatniego
+  nadania; narzędzia używają go, gdy rekord TX zginie na USB (punkt P03).
+  Profil radiowy i pozostałe rekordy bez zmian.
 - Nie zmieniono istniejącego firmware WICI ani plików innych prac.
 
 Powtórzenie sprawdzenia kodu (z katalogu tego projektu):

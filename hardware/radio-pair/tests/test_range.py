@@ -23,7 +23,7 @@ def reports(count=100):
     for role in 'AB':
         pair.append({'role': role, 'point': 'P1', 'notes': role, 'count': count,
                      'session': '0123456789abcdef', 'completed': role == 'A', 'issues': [],
-                     'node': {'version': 'pair-0.3', 'ready': True, 'profile': rt.PROFILE, 'id': role},
+                     'node': {'version': 'pair-0.4', 'ready': True, 'profile': rt.PROFILE, 'id': role},
                      'events': []})
     for seq in range(1, count + 1):
         for i, role in enumerate('AB'):
@@ -91,6 +91,7 @@ class Reports(unittest.TestCase):
         pairs = [pty.openpty(), pty.openpty()]
         masters = [p[0] for p in pairs]
         buffers = {fd: b'' for fd in masters}
+        last = ['LAST 0 0 -', 'LAST 0 0 -']
         procs = []
         with tempfile.TemporaryDirectory() as folder:
             try:
@@ -110,9 +111,13 @@ class Reports(unittest.TestCase):
                             line, buffers[fd] = buffers[fd].split(b'\n', 1)
                             i = masters.index(fd)
                             if line == b'INFO':
-                                os.write(fd, f'INFO pair-0.3 DEVICE{i} 1 1 BOOT{i} 869.525 125 7 5 0 1.8\n'.encode())
+                                os.write(fd, f'INFO pair-0.4 DEVICE{i} 1 1 BOOT{i} 869.525 125 7 5 0 1.8\n'.encode())
+                            elif line == b'LAST':
+                                os.write(fd, last[i].encode() + b'\n')
                             elif line.startswith(b'TX '):
-                                os.write(fd, b'TX 0 ' + line[3:] + b'\n')
+                                last[i] = 'LAST 1 0 ' + line[3:].decode()
+                                if i == 1:  # A's TX record is lost on USB; LAST must recover it
+                                    os.write(fd, b'TX 0 ' + line[3:] + b'\n')
                                 os.write(masters[1-i], b'RX -80 4 ' + line[3:] + b'\n')
                 self.assertEqual(procs[1].poll(), 0)
                 procs[0].send_signal(signal.SIGINT)

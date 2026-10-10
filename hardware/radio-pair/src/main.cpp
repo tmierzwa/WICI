@@ -9,6 +9,11 @@ bool ready = false;
 uint32_t nextTx = 0;
 String command;
 uint32_t bootId;
+// Last transmission, re-readable with LAST: the S3 USB-Serial/JTAG can drop a
+// TX record while later records arrive (R0 range point P03).
+uint32_t txCount = 0;
+int lastTxCode = 0;
+String lastTx = "-";
 void IRAM_ATTR onReceive() { received = true; }
 // Each record is flushed: on the S3 USB-Serial/JTAG a short record could stay
 // queued until the next host command (seen as 2.9 s USB lag in the R0 bench test).
@@ -23,12 +28,17 @@ bool listen() {
   return code == RADIOLIB_ERR_NONE;
 }
 void info() {
-  Serial.printf("INFO pair-0.3 %012llX %d %d %08lX 869.525 125 7 5 0 1.8\n",
+  Serial.printf("INFO pair-0.4 %012llX %d %d %08lX 869.525 125 7 5 0 1.8\n",
                 ESP.getEfuseMac(), ready, esp_reset_reason(), static_cast<unsigned long>(bootId));
+  Serial.flush();
+}
+void last() {
+  Serial.printf("LAST %lu %d %s\n", static_cast<unsigned long>(txCount), lastTxCode, lastTx.c_str());
   Serial.flush();
 }
 void execute(const String &line) {
   if (line == "INFO") { info(); return; }
+  if (line == "LAST") { last(); return; }
   if (!line.startsWith("TX ")) { error("command", -1); return; }
   if (!ready) { error("not_ready", -1); return; }
   String packet = line.substring(3);
@@ -39,6 +49,9 @@ void execute(const String &line) {
   nextTx = millis() + (airtime * 13UL + 999UL) / 1000UL;
   radio.clearDio1Action();
   int code = radio.transmit(packet);
+  ++txCount;
+  lastTxCode = code;
+  lastTx = packet;
   Serial.printf("TX %d %s\n", code, packet.c_str());
   Serial.flush();
   radio.setDio1Action(onReceive);

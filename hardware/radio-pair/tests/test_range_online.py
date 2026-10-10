@@ -51,6 +51,10 @@ class Online(unittest.TestCase):
         self.exercise(drop=False)
 
     @unittest.skipUnless(os.name == 'posix', 'PTY required')
+    def test_tx_record_lost_on_usb_is_recovered_by_last(self):
+        self.exercise(lost_tx=True)
+
+    @unittest.skipUnless(os.name == 'posix', 'PTY required')
     def test_wrong_key_no_radio_transmission(self):
         self.exercise(wrong_key=True)
 
@@ -62,7 +66,7 @@ class Online(unittest.TestCase):
     def test_peer_usb_error_is_not_labelled_radio_loss(self):
         self.exercise(usb_error=True)
 
-    def exercise(self, drop=False, wrong_key=False, disconnect=False, usb_error=False):
+    def exercise(self, drop=False, wrong_key=False, disconnect=False, usb_error=False, lost_tx=False):
         pairs = [pty.openpty(), pty.openpty()]
         masters = [p[0] for p in pairs]
         buffers = {fd: b'' for fd in masters}
@@ -71,6 +75,7 @@ class Online(unittest.TestCase):
             tcp_port = sock.getsockname()[1]
         procs = []
         transmitted = []
+        last = {0: 'LAST 0 0 -', 1: 'LAST 0 0 -'}
         killed = False
         with tempfile.TemporaryDirectory() as folder:
             try:
@@ -96,12 +101,16 @@ class Online(unittest.TestCase):
                             i = masters.index(fd)
                             if line == b'INFO':
                                 os.write(fd, f'INFO {R0_VERSION} DEVICE{i} 1 1 BOOT{i} 869.525 125 7 5 0 1.8\n'.encode())
+                            elif line == b'LAST':
+                                os.write(fd, last[i].encode() + b'\n')
                             elif line.startswith(b'TX '):
                                 transmitted.append(i)
+                                last[i] = f'LAST {transmitted.count(i)} 0 {line[3:].decode()}'
                                 if usb_error:
                                     os.write(fd, b'ERR transmit -1\n')
                                     continue
-                                os.write(fd, b'TX 0 '+line[3:]+b'\n')
+                                if not (lost_tx and i == 1):  # B's TX record lost on USB
+                                    os.write(fd, b'TX 0 '+line[3:]+b'\n')
                                 if not (drop and i == 0):
                                     os.write(masters[1-i], b'RX -80 4 '+line[3:]+b'\n')
                                 if disconnect and not killed:

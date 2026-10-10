@@ -1,7 +1,7 @@
 # R0 — test radia i zasięgu
 
 Dwa zestawy Seeed 102010611, każdy XIAO ESP32S3 + Wio SX1262 z anteną.
-Program `pair-0.3` jest diagnostyką surowego LoRa. Test zasięgu nie wymaga
+Program `pair-0.4` jest diagnostyką surowego LoRa. Test zasięgu nie wymaga
 zmiany firmware: odpowiedzią drugiej płytki steruje program na jej Macu.
 Brak Reticulum/LXMF, przekazywania pakietów i wiadomości WICI.
 

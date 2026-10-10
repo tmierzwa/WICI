@@ -3,7 +3,7 @@
 Obraz dla jednego prototypu biurkowego z paczki wyceny 2026-10-09:
 ESP32-S3-DevKitC-1-N8R8 rev.1.1 + nośna N1 + Wio SX1262 +
 Sharp LS027B7DH01A + FRAM CY15B104QN-50SXI albo MB85RS4MTPF-G-BCERE1 + panel.
-Nie wgrywać do XIAO 102010611. Dla XIAO pozostaje osobny obraz R0 `pair-0.3`.
+Nie wgrywać do XIAO 102010611. Dla XIAO pozostaje osobny obraz R0 `pair-0.4`.
 To diagnostyka połączeń i podzespołów, nie aplikacja WICI.
 
 ## Stan weryfikacji
@@ -11,7 +11,7 @@ To diagnostyka połączeń i podzespołów, nie aplikacja WICI.
 Kompilacja L0 i R0 zakończona poprawnie. Testy hosta sprawdzają logikę,
 raporty i USB przez pseudoporty szeregowe. Testy natywne wykonują rzeczywisty
 kod firmware i sterowników na symulowanych GPIO/SPI, z sanitizacją pamięci. Nie potwierdzają działania fizycznego
-sprzętu. Prototyp L0 nie został jeszcze zmontowany. R0 `pair-0.3` zaliczył próbę przy stole 2026-10-10.
+sprzętu. Prototyp L0 nie został jeszcze zmontowany. R0 `pair-0.3` zaliczył próbę przy stole 2026-10-10; obecny obraz to `pair-0.4`.
 `checks.json` i `SHA256SUMS.txt` zawierają wyniki i identyfikację plików.
 Pole `ready=1` w INFO potwierdza inicjalizację radia, rozpoznanie FRAM i
 konfigurację timerów LCD i brzęczyka; ekran nie ma kanału potwierdzania odbioru, wymaga oględzin.
@@ -27,7 +27,7 @@ konfigurację timerów LCD i brzęczyka; ekran nie ma kanału potwierdzania odbi
    JLCPCB z 2026-10-10 mają MB85RS4MTPF-G-BCERE1); `RDID` pokazuje, który jest wlutowany.
    Inna pamięć daje `ERR fram_id_unsupported` i blokuje próby FRAM.
 3. Zapewnić multimetr i oscyloskop ≥3 kanały, ≥50MHz, sondy x10.
-   Partner radiowy: jeden XIAO 102010611 z anteną i obrazem R0 `pair-0.3`.
+   Partner radiowy: jeden XIAO 102010611 z anteną i obrazem R0 `pair-0.4`.
    Klient ma zamówione dwa zestawy, termin ich udostępnienia ustalany osobno.
    Jeden Mac z dwoma USB wystarcza. Dwa komputery mogą służyć do ręcznych prób;
    do dołączonego automatycznego testu oba urządzenia podłączyć do jednego hosta.
@@ -171,7 +171,7 @@ kolejną próbą nacisnąć RESET.
 Po restarcie powtórzyć samą próbę radia (około10min):
 
 ```sh
-.venv/bin/python tools/radio_test.py --a PORT_L0 --b PORT_R0 --version-a l0-0.5 --version-b pair-0.3 --count 100
+.venv/bin/python tools/radio_test.py --a PORT_L0 --b PORT_R0 --version-a l0-0.5 --version-b pair-0.4 --count 100
 ```
 
 CISZA: na L0 włączyć SW5, sprawdzić bit4 oraz `silence=1`; `TX WICI-SILENCE-01`
