@@ -19,10 +19,10 @@ Sieć trzeba przygotować razem z gminą i służbami przed kryzysem: zamontowa�
 Stan przygotowania testów na 10 października 2026 r.:
 
 - **R0:** dwa zestawy Seeed 102010611 dostarczone; próba przy stole zaliczona (100/100 w obie strony, dwa raporty). Następny krok: próby zasięgu na dwóch laptopach.
-- **L0:** zapytanie o wycenę jednego prototypu wysłane do trzech firm; czekamy na oferty. Nie zlecono jeszcze wykonania.
+- **L0:** prototyp składam sam. 10 października zamówiono w JLCPCB 5 płytek N1 (2 z montażem SMD) oraz części, panele i moduły na dwa prototypy ([zamówienie](hardware/dev-bench/przed-produkcja.md#zamówienie-2026-10-10-l0)); zapytania ofertowe do firm nie są już potrzebne. Czekamy na dostawę.
 - Programy diagnostyczne R0 i L0 są skompilowane i sprawdzone testami automatycznymi. R0 działa na rzeczywistym sprzęcie przy stole; próby L0 pozostają do wykonania.
 
-Zakres przekazany do wyceny i zasady wyboru dokumentów są w [dokumentach przygotowania testów](output/README.md). Instrukcje bieżących prób opisuje [hardware](hardware/README.md).
+Zakres prototypu L0 (przygotowany do wyceny, teraz podstawa samodzielnego montażu) i zasady wyboru dokumentów są w [dokumentach przygotowania testów](output/README.md). Instrukcje bieżących prób opisuje [hardware](hardware/README.md).
 
 W repozytorium są:
 
