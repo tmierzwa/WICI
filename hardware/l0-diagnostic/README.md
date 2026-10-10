@@ -1,4 +1,4 @@
-# WICI — program diagnostyczny L0, l0-0.4
+# WICI — program diagnostyczny L0, l0-0.5
 
 Obraz dla jednego prototypu biurkowego z paczki wyceny 2026-10-09:
 ESP32-S3-DevKitC-1-N8R8 rev.1.1 + nośna N1 + Wio SX1262 +
@@ -77,7 +77,9 @@ Alternatywnie budować i wgrywać ze źródeł:
 
 Konsola: `.venv/bin/pio device monitor --port PORT_L0 --baud 115200`.
 Każde polecenie zakończyć Enter. Monitor zamknąć przed uruchomieniem skryptów.
-`INFO` musi zwrócić `INFO l0-0.4 ... 1 ... 869.525 125 7 5 0 1.8`.
+`INFO` musi zwrócić `INFO l0-0.5 ... 1 ... 869.525 125 7 5 0 1.8`.
+Każdy kompletny rekord jest wysyłany od razu (`Serial.flush()`); w pierwszym teście R0 bez tego
+część linii docierała do hosta dopiero przy następnym poleceniu, około 2,9 s później.
 `STATUS` pokazuje stan podzespołów, wejść i testu. Każde polecenie jest poprzedzone
 echem `CMD ...`; skrypt wymaga tego echa i kontroluje ciągłość identyfikatora startu.
 STATUS i test FRAM można wykonać także wtedy, gdy inne peryferium jest niegotowe. `ERR` wymaga wyjaśnienia;
@@ -169,7 +171,7 @@ kolejną próbą nacisnąć RESET.
 Po restarcie powtórzyć samą próbę radia (około10min):
 
 ```sh
-.venv/bin/python tools/radio_test.py --a PORT_L0 --b PORT_R0 --version-a l0-0.4 --version-b pair-0.3 --count 100
+.venv/bin/python tools/radio_test.py --a PORT_L0 --b PORT_R0 --version-a l0-0.5 --version-b pair-0.3 --count 100
 ```
 
 CISZA: na L0 włączyć SW5, sprawdzić bit4 oraz `silence=1`; `TX WICI-SILENCE-01`

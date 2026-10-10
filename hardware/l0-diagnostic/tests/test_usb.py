@@ -15,7 +15,7 @@ import diagnose
 
 @unittest.skipUnless(os.name == 'posix', 'POSIX PTY required')
 class UsbChecks(unittest.TestCase):
-    def exercise(self, *, version='l0-0.4', response=None, success=True, ready=1,
+    def exercise(self, *, version='l0-0.5', response=None, success=True, ready=1,
                  command='FRAMVERIFY 00000001', end='FRAM_DONE ', validate=True):
         master, slave = pty.openpty()
         stop = threading.Event()
@@ -54,7 +54,7 @@ class UsbChecks(unittest.TestCase):
                 report = json.loads(output.read_text())
                 self.assertEqual(report['software_command_completed'], success)
                 self.assertFalse(report['physical_acceptance'])
-                if version != 'l0-0.4':
+                if version != 'l0-0.5':
                     self.assertNotIn(command.encode(), commands)
                 if not success:
                     self.assertIn('error', report)
@@ -79,7 +79,7 @@ class UsbChecks(unittest.TestCase):
         self.assertTrue(any(line.startswith('FRAM_PASS') for line in report['records']))
 
     def test_restart_during_command_is_rejected(self):
-        self.exercise(response='INFO l0-0.4 L0SIM 1 1 NEWBOOT 869.525 125 7 5 0 1.8\n', success=False)
+        self.exercise(response='INFO l0-0.5 L0SIM 1 1 NEWBOOT 869.525 125 7 5 0 1.8\n', success=False)
 
     def test_status_can_diagnose_not_ready_board(self):
         self.exercise(ready=0, command='STATUS', end='STATUS ', validate=False,

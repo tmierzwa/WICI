@@ -24,7 +24,7 @@ class UsbSimulation(unittest.TestCase):
             proc = subprocess.Popen([sys.executable, str(ROOT/'tools/radio_test.py'),
                                      '--a', os.ttyname(pairs[0][1]),
                                      '--b', os.ttyname(pairs[1][1]), '--count', '1',
-                                     '--version-a', 'l0-0.4', '--output', output], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                                     '--version-a', 'l0-0.5', '--output', output], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             try:
                 deadline = time.monotonic() + 25
                 while proc.poll() is None and time.monotonic() < deadline:
@@ -35,7 +35,7 @@ class UsbSimulation(unittest.TestCase):
                             line, buffers[fd] = buffers[fd].split(b'\n', 1)
                             index = masters.index(fd)
                             if line == b'INFO':
-                                version = 'l0-0.4' if index == 0 else 'pair-0.3'
+                                version = 'l0-0.5' if index == 0 else 'pair-0.3'
                                 reply = f'INFO {version} DEVICE{index} 1 1 BOOT{index} 869.525 125 7 5 0 1.8\n'
                                 os.write(fd, reply.encode())
                             elif line.startswith(b'TX '):

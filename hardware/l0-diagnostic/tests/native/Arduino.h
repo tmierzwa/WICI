@@ -26,15 +26,19 @@ inline void ledcAttachPin(unsigned,unsigned) {}
 inline void ledcWrite(unsigned,unsigned duty) { buzzerDuty=duty; }
 struct SerialMock {
     std::string output;
+    std::string unflushed;  // Every complete record must be flushed, never a partial one.
     std::deque<char> input;
     void begin(unsigned) {}
-    void flush() {}
+    void flush() { assert(unflushed.empty() || unflushed.back()=='\n');unflushed.clear(); }
     int available() { return static_cast<int>(input.size()); }
     int read() { char c=input.front();input.pop_front();return c; }
-    void println(const char* text) { output+=text;output+='\n'; }
+    void write(const std::string& text) {
+        assert(unflushed.empty() || unflushed.back()!='\n');output+=text;unflushed+=text;
+    }
+    void println(const char* text) { write(std::string(text)+'\n'); }
     template<typename... Args> void printf(const char* format,Args... args) {
         char text[512];int n=snprintf(text,sizeof(text),format,args...);
-        assert(n>=0 && n<static_cast<int>(sizeof(text)));output+=text;
+        assert(n>=0 && n<static_cast<int>(sizeof(text)));write(text);
     }
 };
 extern SerialMock Serial;

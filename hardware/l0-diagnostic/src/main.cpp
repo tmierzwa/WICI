@@ -47,8 +47,16 @@ commands::LineBuffer command;
 
 void IRAM_ATTR receive() { received = true; }
 
+// Each complete record is flushed: on the S3 USB-Serial/JTAG a short record could stay
+// queued until the next host command (seen as 2.9 s USB lag in the R0 bench test).
+void reply(const char* record) {
+    Serial.println(record);
+    Serial.flush();
+}
+
 void error(const char* where, int code) {
     Serial.printf("ERR %s %d\n", where, code);
+    Serial.flush();
 }
 
 bool listen() {
@@ -74,6 +82,7 @@ void info() {
     Serial.printf("INFO %s %012llX %d %d %08lX 869.525 125 7 5 0 1.8\n",
                   diagnostic::VERSION, ESP.getEfuseMac(), radioOk && framOk && lcdOk && buzzerOk,
                   esp_reset_reason(), static_cast<unsigned long>(bootId));
+    Serial.flush();
 }
 
 void status() {
@@ -83,12 +92,14 @@ void status() {
                   panel(), silence(), mode == Mode::Mixed, mode == Mode::Guard,
                   static_cast<unsigned long>(mixCycles), static_cast<unsigned long>(mixErrors),
                   static_cast<unsigned long>(lcdFrames), buzzerOk);
+    Serial.flush();
 }
 
 void printFramId(const fram::Id& id) {
     Serial.printf("FRAM_ID %s ", fram::partName(id.part));
     for (uint8_t byte : id.bytes) Serial.printf("%02X", byte);
     Serial.printf(" status=%02X\n", id.status);
+    Serial.flush();
 }
 
 bool screen(unsigned pattern) {
@@ -157,6 +168,7 @@ void framTest(uint32_t seed, bool verifyOnly) {
                       static_cast<unsigned long>(errors),
                       static_cast<unsigned long>(want ^ 0xFFFFFFFFUL),
                       static_cast<unsigned long>(got ^ 0xFFFFFFFFUL));
+        Serial.flush();
         if (errors != 0 || want != got) {
             error("fram_compare", -1);
             return;
@@ -164,6 +176,7 @@ void framTest(uint32_t seed, bool verifyOnly) {
     }
     Serial.printf("FRAM_DONE %08lX %s\n", static_cast<unsigned long>(seed),
                   verifyOnly ? "VERIFY" : "WRITE");
+    Serial.flush();
 }
 
 void transmit(const char* payload) {
@@ -172,7 +185,7 @@ void transmit(const char* payload) {
         return;
     }
     if (silence()) {
-        Serial.println("BLOCKED SILENCE");
+        reply("BLOCKED SILENCE");
         return;
     }
     if (!diagnostic::validPayload(payload)) {
@@ -185,7 +198,7 @@ void transmit(const char* payload) {
     }
     String packet(payload);  // RadioLib's blocking API requires a mutable String.
     if (silence()) {  // Check again immediately before starting TX.
-        Serial.println("BLOCKED SILENCE");
+        reply("BLOCKED SILENCE");
         return;
     }
     lastTx = millis();
@@ -193,6 +206,7 @@ void transmit(const char* payload) {
     radio.clearDio1Action();
     const int code = radio.transmit(packet);
     Serial.printf("TX %d %s\n", code, payload);
+    Serial.flush();
     radio.setDio1Action(receive);
     if (code != RADIOLIB_ERR_NONE) error("transmit", code);
     listen();
@@ -224,8 +238,7 @@ void startGuard() {
     SPI.transfer(0);
     mode = Mode::Guard;
     // Acknowledge only after CS is low; STOP or power loss ends this transaction.
-    Serial.println("GUARD_START ERASES_FRAM CS_LOW");
-    Serial.flush();
+    reply("GUARD_START ERASES_FRAM CS_LOW");
 }
 
 void stop() {
@@ -233,12 +246,12 @@ void stop() {
     if (wasGuard) {
         digitalWrite(FRAM_CS, HIGH);
         SPI.endTransaction();
-        Serial.println("GUARD_STOP");
+        reply("GUARD_STOP");
     }
     mode = Mode::Idle;
     ledcWrite(BUZZER_CHANNEL, 0);
     if (wasGuard && radioOk) listen();
-    Serial.println("STOPPED");
+    reply("STOPPED");
 }
 
 void startMixed() {
@@ -251,10 +264,12 @@ void startMixed() {
     mixTick = mixStarted - diagnostic::MIX_INTERVAL_MS;
     mixCycles = mixErrors = mixMaxGap = lcdFrames = 0;
     Serial.printf("MIX_START %lu\n", static_cast<unsigned long>(diagnostic::MIX_DURATION_MS));
+    Serial.flush();
 }
 
 void execute(const char* line) {
     Serial.printf("CMD %s\n", line);  // Host separates command responses from stale boot output.
+    Serial.flush();
     const commands::Command parsed = commands::parse(line);
     if (!commands::allowed(parsed.kind, mode)) {
         error(mode == Mode::Guard ? "guard_busy_use_STOP" : "mixed_busy_use_STOP", -1);
@@ -265,30 +280,29 @@ void execute(const char* line) {
     case Kind::Status: status(); break;
     case Kind::Stop: stop(); break;
     case Kind::Help:
-        Serial.println("COMMANDS INFO STATUS RDID LCD 0..4 LED 0/1 BUZZ 0/1 PAUSE 10000 "
-                       "FRAMTEST ERASE seedhex FRAMVERIFY seedhex GUARD ERASE MIXSTART ERASE STOP TX payload");
+        reply("COMMANDS INFO STATUS RDID LCD 0..4 LED 0/1 BUZZ 0/1 PAUSE 10000 "
+              "FRAMTEST ERASE seedhex FRAMVERIFY seedhex GUARD ERASE MIXSTART ERASE STOP TX payload");
         break;
     case Kind::Tx: transmit(parsed.payload); break;
     case Kind::Rdid: printFramId(memory.identify()); break;
     case Kind::Led:
         digitalWrite(LED_ALARM, parsed.value ? HIGH : LOW);
-        Serial.println("LED_SET");
+        reply("LED_SET");
         break;
     case Kind::Buzzer:
         if (!buzzerOk) error("buzzer_timer", -1);
         else {
             ledcWrite(BUZZER_CHANNEL, parsed.value ? 128 : 0);
-            Serial.println("BUZZ_SET");
+            reply("BUZZ_SET");
         }
         break;
     case Kind::Lcd:
-        if (screen(parsed.value)) Serial.println("LCD_DONE");
+        if (screen(parsed.value)) reply("LCD_DONE");
         break;
     case Kind::Pause:
-        Serial.println("PAUSE_START 10000");
-        Serial.flush();
+        reply("PAUSE_START 10000");
         delay(10000);
-        Serial.println("PAUSE_DONE");
+        reply("PAUSE_DONE");
         break;
     case Kind::FramTest: framTest(parsed.value, false); break;
     case Kind::FramVerify: framTest(parsed.value, true); break;
@@ -305,9 +319,10 @@ void pollRadio() {
     const int code = radio.readData(packet);
     if (code == RADIOLIB_ERR_NONE) {
         if (packet.length() <= diagnostic::MAX_PACKET &&
-            strlen(packet.c_str()) == packet.length() && diagnostic::validPayload(packet.c_str()))
+            strlen(packet.c_str()) == packet.length() && diagnostic::validPayload(packet.c_str())) {
             Serial.printf("RX %.1f %.1f %s\n", radio.getRSSI(), radio.getSNR(), packet.c_str());
-        else error("rx_payload", -1);
+            Serial.flush();
+        } else error("rx_payload", -1);
     } else error("read", code);
     listen();
 }
@@ -341,6 +356,7 @@ void pollMixed() {
                       static_cast<unsigned long>(mixCycles), static_cast<unsigned long>(mixErrors),
                       static_cast<unsigned long>(lcdFrames), static_cast<unsigned long>(elapsed),
                       static_cast<unsigned long>(mixMaxGap));
+        Serial.flush();
     }
 }
 
@@ -418,6 +434,7 @@ void loop() {
     if (state != lastInputs) {
         lastInputs = state;
         Serial.printf("INPUT %02X\n", state);
+        Serial.flush();
     }
     pollUsb();
     delay(1);

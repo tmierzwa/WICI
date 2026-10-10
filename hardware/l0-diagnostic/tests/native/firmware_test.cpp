@@ -44,7 +44,7 @@ int main(int argc,char** argv) {
         }
     } else if(scenario=="boot") {
         assert(radioOk && framOk && lcdOk && buzzerOk);
-        assert(contains("INFO l0-0.4 001122334455 1") && contains("FRAM_ID CY15B104QN "));
+        assert(contains("INFO l0-0.5 001122334455 1") && contains("FRAM_ID CY15B104QN "));
         assert(pins[7]==LOW && pins[8]==HIGH && pins[16]==HIGH && pins[15]==LOW && buzzerDuty==0);
         assert(!SPI.lcd.empty() && SPI.lcd.front()==std::vector<uint8_t>({4,0}));
     } else if(scenario=="fram") {
@@ -108,5 +108,5 @@ int main(int argc,char** argv) {
         Serial.output.clear();execute("LCD 1");assert(contains("ERR lcd_timer") && !contains("LCD_DONE"));
         startMixed();assert(mode==Mode::Idle);
     } else return 2;
-    assert(SPI.depth==0);
+    assert(SPI.depth==0 && Serial.unflushed.empty());
 }

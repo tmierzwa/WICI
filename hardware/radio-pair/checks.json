@@ -19,14 +19,14 @@
     "rx_boosted_gain": true
   },
   "hardware_revision_confirmed": false,
-  "last_software_verification_utc": "2026-10-10T18:08:16.410368+00:00",
+  "last_software_verification_utc": "2026-10-10T18:14:55.757951+00:00",
   "hardware_delivery": "delivered 2026-10-10: two Seeed 102010611 kits",
   "source_sha256": {
     "ONLINE.md": "851b9d8027ccd84b5b58d785a13c6e366f5e7e2f3917f5f56376589a0fd3ba04",
     "README.md": "41e655e4e83e13edc2d08bf6a18618b39f115af77e98d9d3d0de4da2bb3e2719",
     "ZRODLA-I-WERYFIKACJA.txt": "4d79fc42bf8731f09980331e615623ac8072851749e9184ee7a577efec4c03c4",
     "evidence/bench-r0-2026-10-10.txt": "711ee0fcdba991cc71a92967e57739ee8e15c76a491da8a0a70350f5e72c49c8",
-    "evidence/tests-r0.txt": "4e16935feb6d6121d0828629c236e5bbdb3a241b28b32466f81106698833dcf5",
+    "evidence/tests-r0.txt": "e9d221639574a98e41d79399b1f8dff9957f67c885973dbf49213327174678ee",
     "platformio.ini": "e5128e0996281084dd5b7106582feadbca08dc23bc569a28cc220d60e39bc5ed",
     "requirements.txt": "a3442d78bbf2f568bb25a70df0bbec214d12fa0afa6eaf9061594890565a1b75",
     "src/main.cpp": "5ded388e0c45d7d3fa30e84f68a72a4723b640c16dc68870046fd7a2ba39a10f",
@@ -34,7 +34,7 @@
     "tests/test_range.py": "35473740e31f827f854a7c8100df849909ee1aea52cd83826a488ec5015eee90",
     "tests/test_range_online.py": "c48ceb55865268bffd11d65e1c1ccc5f42c2b41459ac35e8f3f887f54782593e",
     "tests/test_usb_simulation.py": "84d665aa1157d7e25c96629780ed640c074cf190a84c501c9ddbba82aef22a04",
-    "tools/pair_test.py": "afb2f00d54d0347db22a3326f02c3581a0c892c8e3d08b694af98b5108d89f06",
+    "tools/pair_test.py": "649cc052d62ff6a498b992eac196a32cd0907c008e524ec9273787f9a6a9d12e",
     "tools/range_online.py": "25073ab16ebe43dc4ce7ef9561f85170c5848aa5f714c8487621e8e0cfdee64d",
     "tools/range_test.py": "9817823a07246f645f7da768fc36c4641216783d4596076516d6e22db6158820"
   },

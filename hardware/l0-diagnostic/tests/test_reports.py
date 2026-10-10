@@ -28,7 +28,7 @@ class CommandReports(unittest.TestCase):
             with self.assertRaises(RuntimeError):diagnose.check_command(command,end)
 
     def test_radio_nan_and_malformed_ready_rejected(self):
-        for line in ['RX nan 9 TEST','RX -60 inf TEST','INFO l0-0.4 ID 2 1 BOOT 869.525 125 7 5 0 1.8']:
+        for line in ['RX nan 9 TEST','RX -60 inf TEST','INFO l0-0.5 ID 2 1 BOOT 869.525 125 7 5 0 1.8']:
             self.assertEqual(diagnose.radio_test.decode(line)['kind'],'error')
 
     def test_mixed_failure_attempts_stop(self):
