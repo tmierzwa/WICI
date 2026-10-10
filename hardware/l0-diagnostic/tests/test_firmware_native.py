@@ -34,6 +34,8 @@ class FirmwareNative(unittest.TestCase):
     def test_usb_overflow_nul_and_seed_rejection(self):self.run_case('usb')
     def test_silence_cooldown_and_embedded_nul_rx(self):self.run_case('radio')
     def test_lcd_timer_failure_keeps_disp_low(self):self.run_case('lcd-failure')
+    def test_mb85rs4mt_alternative_accepted(self):self.run_case('boot-mb85rs4mt')
+    def test_unsupported_fram_blocks_tests(self):self.run_case('fram-unsupported')
 
     @unittest.skipUnless(sys.platform == 'darwin' or sys.platform.startswith('linux'), 'POSIX PTY required')
     def test_firmware_to_host_over_real_serial(self):

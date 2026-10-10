@@ -19,7 +19,9 @@ ok
 test_full_mixed_duration_rollover_and_pause_block (test_firmware_native.FirmwareNative.test_full_mixed_duration_rollover_and_pause_block) ... ok
 test_guard_exclusive_bus_and_stop (test_firmware_native.FirmwareNative.test_guard_exclusive_bus_and_stop) ... ok
 test_lcd_timer_failure_keeps_disp_low (test_firmware_native.FirmwareNative.test_lcd_timer_failure_keeps_disp_low) ... ok
+test_mb85rs4mt_alternative_accepted (test_firmware_native.FirmwareNative.test_mb85rs4mt_alternative_accepted) ... ok
 test_silence_cooldown_and_embedded_nul_rx (test_firmware_native.FirmwareNative.test_silence_cooldown_and_embedded_nul_rx) ... ok
+test_unsupported_fram_blocks_tests (test_firmware_native.FirmwareNative.test_unsupported_fram_blocks_tests) ... ok
 test_usb_overflow_nul_and_seed_rejection (test_firmware_native.FirmwareNative.test_usb_overflow_nul_and_seed_rejection) ... ok
 test_different_binary_is_rejected (test_package.PackageChecks.test_different_binary_is_rejected) ... ok
 test_host_and_firmware_protocol_constants_match (test_package.PackageChecks.test_host_and_firmware_protocol_constants_match) ... ok
@@ -44,7 +46,7 @@ test_missing_completion_retains_failed_log (test_usb.UsbChecks.test_missing_comp
 FRAM_PASS 4 0 00000000 00000000
 ok
 test_restart_during_command_is_rejected (test_usb.UsbChecks.test_restart_during_command_is_rejected) ... CMD FRAMVERIFY 00000001
-INFO l0-0.3 L0SIM 1 1 NEWBOOT 869.525 125 7 5 0 1.8
+INFO l0-0.4 L0SIM 1 1 NEWBOOT 869.525 125 7 5 0 1.8
 ok
 test_retention_real_serial (test_usb.UsbChecks.test_retention_real_serial) ... CMD FRAMVERIFY 00000001
 FRAM_PASS 4 0 381D0D1D 381D0D1D
@@ -56,6 +58,6 @@ ok
 test_wrong_image_blocks_command (test_usb.UsbChecks.test_wrong_image_blocks_command) ... ok
 
 ----------------------------------------------------------------------
-Ran 32 tests in 16.164s
+Ran 34 tests in 16.532s
 
 OK

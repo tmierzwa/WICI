@@ -50,6 +50,7 @@ int main(){
  assert(pattern(123,4,7)==pattern(123,4,7));assert(pattern(123,4,7)!=pattern(123,4,8));
  uint8_t id[]={0x7f,0x7f,0x7f,0x7f,0x7f,0x7f,0xc2,0x2c,0xa1};assert(fram::classify(id)==fram::Part::CY15B104QN);
  id[8]=0xa5;assert(fram::classify(id)==fram::Part::UNKNOWN);
+ uint8_t mb[]={0x04,0x7f,0x49,0x03,0xff,0xff,0xff,0xff,0xff};assert(fram::classify(mb)==fram::Part::MB85RS4MT);
  assert(commands::parse("FRAMVERIFY FFFFFFFF").value==0xFFFFFFFF);
  for(const char* bad:{"FRAMVERIFY -1","FRAMVERIFY 100000000","LCD +1","LCD 01"})
    assert(commands::parse(bad).kind==commands::Kind::Unknown);

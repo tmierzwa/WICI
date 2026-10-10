@@ -11,6 +11,7 @@ struct SPIClass {
     std::vector<std::vector<uint8_t>> lcd;
     unsigned depth=0,writes=0;
     bool wel=false,corruptRead=false;
+    std::array<uint8_t,9> id{{0x7f,0x7f,0x7f,0x7f,0x7f,0x7f,0xc2,0x2c,0xa1}};  // CY15B104QN
     uint8_t op=0;unsigned position=0;uint32_t address=0;
     SPISettings settings{0,MSBFIRST,SPI_MODE0};
     void begin(int=-1,int=-1,int=-1,int=-1) {}
@@ -23,7 +24,7 @@ struct SPIClass {
         }
         assert(pins[8]==LOW && settings.order==MSBFIRST);
         if(position++==0) {op=value;if(op==0x06)wel=true;return 0;}
-        if(op==0x9F) {const uint8_t id[]={0x7f,0x7f,0x7f,0x7f,0x7f,0x7f,0xc2,0x2c,0xa1};assert(position<=10);return id[position-2];}
+        if(op==0x9F) {assert(position<=10);return id[position-2];}
         if(op==0x05)return 0;
         if(op==0x03 || op==0x02) {
             if(position<=4) {address=(address<<8)|value;return 0;}

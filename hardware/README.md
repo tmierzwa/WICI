@@ -7,7 +7,7 @@ Obecna kolejność prac: **R0 — test pary radiowej, potem L0 — test kompletn
 | Katalog | Zawartość i powód pozostawienia | Wykorzystanie teraz |
 |---|---|---|
 | [radio-pair](radio-pair/README.md) | Program R0 `pair-0.2`, test pary na jednym Macu, test zasięgu na dwóch Macach i testy automatyczne. Narzędzie testu pary jest współdzielone z L0. | Pierwszy test dwóch zamówionych zestawów Seeed 102010611, następnie próby zasięgu w budynku i terenie. |
-| [l0-diagnostic](l0-diagnostic/README.md) | Program L0 `l0-0.3`, instrukcja wgrania i odbioru, narzędzia, testy oraz zapis weryfikacji. | Test zmontowanego prototypu: radio, FRAM, ekran, wejścia, LED, brzęczyk i wspólna magistrala SPI. |
+| [l0-diagnostic](l0-diagnostic/README.md) | Program L0 `l0-0.4`, instrukcja wgrania i odbioru, narzędzia, testy oraz zapis weryfikacji. | Test zmontowanego prototypu: radio, FRAM, ekran, wejścia, LED, brzęczyk i wspólna magistrala SPI. |
 | [dev-bench](dev-bench/README.md) | Projekt CAD, BOM i pliki produkcyjne nośnej N1 oraz dokumentacja stanowisk TI/ST. Zachowujemy źródła sprzętu i powiązania z dokumentacją oraz firmware stanowisk. | Materiały N1; montaż L0 według uzgodnionej paczki wyceny, z połączeniami MCU z [tabeli L0](l0-diagnostic/reference/polaczenia-MCU-L0.csv). Stanowiska TI/ST są wariantem zapasowym. |
 | [r02](r02/README.md) | Założenia przyszłej własnej płytki stacji: architektura, zasilanie, radio, obudowa i wnioski z poprzedniego projektu. | Projekt wstrzymany. Nie jest potrzebny do wykonania testów R0/L0; nie zamawiać płytki na jego podstawie. |
 
@@ -16,7 +16,7 @@ Wszystkie cztery katalogi mają odrębną rolę w repozytorium. Do uruchomienia 
 ## Właściwy program do właściwej płytki
 
 - **R0:** zestaw Seeed 102010611 → `radio-pair`, środowisko PlatformIO `pair`.
-- **L0:** ESP32-S3-DevKitC-1-N8R8 rev.1.1 + N1 + zewnętrzny Wio SX1262 + ekran Sharp LS027B7DH01A + FRAM CY15B104QN-50SXI + panel → `l0-diagnostic`, środowisko PlatformIO `l0`.
+- **L0:** ESP32-S3-DevKitC-1-N8R8 rev.1.1 + N1 + zewnętrzny Wio SX1262 + ekran Sharp LS027B7DH01A + FRAM CY15B104QN-50SXI albo MB85RS4MTPF-G-BCERE1 + panel → `l0-diagnostic`, środowisko PlatformIO `l0`.
 - Programy stanowisk TI/ST są w osobnym katalogu [firmware](../firmware/README.md). Nie zastępują programów R0/L0.
 
 Programu L0 nie wgrywa się do zestawu R0. Dokumentacja połączeń stanowisk TI/ST w `dev-bench` nie zastępuje tabeli połączeń MCU dla L0.

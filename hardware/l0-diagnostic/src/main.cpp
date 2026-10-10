@@ -381,9 +381,11 @@ void setup() {
 
     memory.begin();
     const auto id = memory.identify();
-    framOk = id.part == fram::Part::CY15B104QN;
+    // N1 fits either BOM part on the same footprint (CY15B104QN-50SXI or MB85RS4MTPF-G-BCERE1);
+    // both take the same commands, 3-byte address and 8 MHz clock. Any other ID stops FRAM tests.
+    framOk = id.part == fram::Part::CY15B104QN || id.part == fram::Part::MB85RS4MT;
     printFramId(id);
-    if (!framOk) error("fram_id_requires_CY15B104QN", -1);
+    if (!framOk) error("fram_id_unsupported", -1);
     lcdOk = display.begin();
     if (lcdOk) {
         digitalWrite(board::LCD_DISP, HIGH);

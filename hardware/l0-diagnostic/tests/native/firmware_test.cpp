@@ -33,6 +33,8 @@ int main(int argc,char** argv) {
     assert(argc==2);pins.fill(HIGH);
     const std::string scenario=argv[1];
     if(scenario=="lcd-failure")timerOk=false;
+    if(scenario=="boot-mb85rs4mt")SPI.id={{0x04,0x7f,0x49,0x03,0xff,0xff,0xff,0xff,0xff}};
+    if(scenario=="fram-unsupported")SPI.id={{0x7f,0x7f,0x7f,0x7f,0x7f,0x7f,0xc2,0x2c,0xa5}};  // 1.8 V CY15V104QN
     setup();assert(SPI.writes==0);assert(SPI.depth==0);
     if(scenario=="console") {
         std::cout<<Serial.output<<std::flush;Serial.output.clear();
@@ -42,7 +44,7 @@ int main(int argc,char** argv) {
         }
     } else if(scenario=="boot") {
         assert(radioOk && framOk && lcdOk && buzzerOk);
-        assert(contains("INFO l0-0.3 001122334455 1"));
+        assert(contains("INFO l0-0.4 001122334455 1") && contains("FRAM_ID CY15B104QN "));
         assert(pins[7]==LOW && pins[8]==HIGH && pins[16]==HIGH && pins[15]==LOW && buzzerDuty==0);
         assert(!SPI.lcd.empty() && SPI.lcd.front()==std::vector<uint8_t>({4,0}));
     } else if(scenario=="fram") {
@@ -93,6 +95,14 @@ int main(int argc,char** argv) {
         radioState.packet=String("OK\0BAD",6);received=true;Serial.output.clear();pollRadio();
         assert(contains("ERR rx_payload") && !contains("RX "));
         radioState.receiveCode=-1;listen();assert(!radioOk);
+    } else if(scenario=="boot-mb85rs4mt") {
+        assert(framOk && contains("FRAM_ID MB85RS4MT ") && !contains("ERR "));
+        Serial.output.clear();execute("FRAMTEST ERASE 00000001");
+        assert(contains("FRAM_DONE 00000001 WRITE") && !contains("ERR "));
+    } else if(scenario=="fram-unsupported") {
+        assert(!framOk && contains("FRAM_ID unknown ") && contains("ERR fram_id_unsupported"));
+        Serial.output.clear();execute("FRAMTEST ERASE 00000001");
+        assert(contains("ERR fram_unknown") && SPI.writes==0);
     } else if(scenario=="lcd-failure") {
         assert(!lcdOk && pins[16]==LOW && SPI.lcd.empty());
         Serial.output.clear();execute("LCD 1");assert(contains("ERR lcd_timer") && !contains("LCD_DONE"));

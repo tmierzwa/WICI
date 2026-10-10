@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// FRAM SPI 4 Mbit (CY15B104QN, 512 KiB, adres 3-bajtowy):
+// FRAM SPI 4 Mbit (CY15B104QN albo MB85RS4MT, 512 KiB, adres 3-bajtowy):
 // identyfikacja RDID, odczyt i zapis dowolnej długości (FRAM nie ma stron ani czasu programowania).
 #pragma once
 

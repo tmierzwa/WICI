@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 PROFILE = ['869.525', '125', '7', '5', '0', '1.8']
-L0_VERSION = 'l0-0.3'
+L0_VERSION = 'l0-0.4'
 
 
 def decode(line):

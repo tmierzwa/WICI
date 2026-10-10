@@ -1,8 +1,8 @@
-# WICI — program diagnostyczny L0, l0-0.3
+# WICI — program diagnostyczny L0, l0-0.4
 
 Obraz dla jednego prototypu biurkowego z paczki wyceny 2026-10-09:
 ESP32-S3-DevKitC-1-N8R8 rev.1.1 + nośna N1 + Wio SX1262 +
-Sharp LS027B7DH01A + CY15B104QN-50SXI + panel.
+Sharp LS027B7DH01A + FRAM CY15B104QN-50SXI albo MB85RS4MTPF-G-BCERE1 + panel.
 Nie wgrywać do XIAO 102010611. Dla XIAO pozostaje osobny obraz R0 `pair-0.2`.
 To diagnostyka połączeń i podzespołów, nie aplikacja WICI.
 
@@ -23,7 +23,9 @@ konfigurację timerów LCD i brzęczyka; ekran nie ma kanału potwierdzania odbi
    JP1/JP2 zwarte; źródła AA/12V odłączone. Nie zasłaniać punktów pomiarowych.
 2. Przed podaniem napięcia: sprawdzić zwarcia, polaryzację, orientację LCD/FRAM,
    model pamięci i wszystkie połączenia z `reference/polaczenia-MCU-L0.csv`.
-   Ten obraz akceptuje wyłącznie CY15B104QN; zamiennik wymaga osobnej zmiany.
+   Obraz akceptuje oba układy FRAM z BOM N1, CY15B104QN i MB85RS4MT (płytki z montażem
+   JLCPCB z 2026-10-10 mają MB85RS4MTPF-G-BCERE1); `RDID` pokazuje, który jest wlutowany.
+   Inna pamięć daje `ERR fram_id_unsupported` i blokuje próby FRAM.
 3. Zapewnić multimetr i oscyloskop ≥3 kanały, ≥50MHz, sondy x10.
    Partner radiowy: jeden XIAO 102010611 z anteną i obrazem R0 `pair-0.2`.
    Klient ma zamówione dwa zestawy, termin ich udostępnienia ustalany osobno.
@@ -75,7 +77,7 @@ Alternatywnie budować i wgrywać ze źródeł:
 
 Konsola: `.venv/bin/pio device monitor --port PORT_L0 --baud 115200`.
 Każde polecenie zakończyć Enter. Monitor zamknąć przed uruchomieniem skryptów.
-`INFO` musi zwrócić `INFO l0-0.3 ... 1 ... 869.525 125 7 5 0 1.8`.
+`INFO` musi zwrócić `INFO l0-0.4 ... 1 ... 869.525 125 7 5 0 1.8`.
 `STATUS` pokazuje stan podzespołów, wejść i testu. Każde polecenie jest poprzedzone
 echem `CMD ...`; skrypt wymaga tego echa i kontroluje ciągłość identyfikatora startu.
 STATUS i test FRAM można wykonać także wtedy, gdy inne peryferium jest niegotowe. `ERR` wymaga wyjaśnienia;
@@ -97,7 +99,7 @@ Ocena końcowa wymaga wszystkich prób, nie tylko komunikatu skryptu.
 | R1/R2 — radio | Po restarcie 100 pakietów w każdą stronę bez retry | Wszystkie pakiety zgodne, raport RSSI/SNR, brak ERR/restartu |
 | R3 — CISZA | Włączyć SW5, polecić TX; następnie wyłączyć i powtórzyć | `BLOCKED SILENCE`, brak odpowiadającego pakietu u partnera; po wyłączeniu odbiór wraca |
 
-E2/E4: FRAM CY15B104QN działa przy 1.8–3.6V; próg nadzorcy około 2.7V
+E2/E4: FRAM CY15B104QN i MB85RS4MT działają przy 1.8–3.6V; próg nadzorcy około 2.7V
 ma zakończyć wybór pamięci wcześniej. Samo wykrycie zmiany GUARD nie wystarcza:
 sondować **CS za bramką na U1.1**, nie tylko GPIO MCU. Oscyloskop nie może
 podtrzymywać zasilania prototypu. Nie podłączać równocześnie drugiego źródła USB.
@@ -167,7 +169,7 @@ kolejną próbą nacisnąć RESET.
 Po restarcie powtórzyć samą próbę radia (około10min):
 
 ```sh
-.venv/bin/python tools/radio_test.py --a PORT_L0 --b PORT_R0 --version-a l0-0.3 --version-b pair-0.2 --count 100
+.venv/bin/python tools/radio_test.py --a PORT_L0 --b PORT_R0 --version-a l0-0.4 --version-b pair-0.2 --count 100
 ```
 
 CISZA: na L0 włączyć SW5, sprawdzić bit4 oraz `silence=1`; `TX WICI-SILENCE-01`
