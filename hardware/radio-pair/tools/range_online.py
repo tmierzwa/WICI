@@ -17,7 +17,7 @@ from pathlib import Path
 from pair_test import PROFILE, decode, judge, open_serial
 from range_test import R0_VERSION, payload, summarize
 
-PROTOCOL = 'WICI-RANGE-ONLINE-1'
+PROTOCOL = 'WICI-RANGE-ONLINE-2'
 MAX_LINE = 262144
 
 
@@ -161,7 +161,7 @@ def feedback(local, remote, sender, seq, own, other):
     if result['tx_records'] != 1 or result['tx_status'] != 0:
         raise RuntimeError('Brak pojedynczego potwierdzenia TX z płytki; próba nieprawidłowa.')
     print(f'{sender}->{receiver} {seq}/{local["count"]}: '
-          f'{"ODEBRANO" if result["ok"] else "STRATA / DUPLIKAT"} '
+          f'{"ODEBRANO" if result["ok"] else "USZKODZONY (CRC)" if result["corrupt_records"] else "STRATA / DUPLIKAT"} '
           f'RSSI={result["rssi"]} SNR={result["snr"]}', flush=True)
     return result
 

@@ -83,8 +83,10 @@ kolejne transmisje są odraczane, zamiast nakładać się na siebie.
 
 Bieżący komunikat `ODEBRANO` wymaga jednego poprawnego potwierdzenia TX
 z płytki nadawcy i jednego odbioru dokładnej treści przez USB płytki odbiorcy.
-`STRATA / DUPLIKAT` nie jest błędem internetu. Brak potwierdzenia TX,
-restart lub brak USB unieważnia próbę.
+`STRATA / DUPLIKAT` nie jest błędem internetu. `USZKODZONY (CRC)` oznacza
+pakiet odebrany ze złą sumą kontrolną (`ERR read -7`): liczy się jako strata
+radiowa, w podsumowaniu jako `corrupt_received`, i nie przerywa próby.
+Brak potwierdzenia TX, inny błąd płytki, restart lub brak USB unieważnia próbę.
 
 ## 4. Wynik i przerwanie
 

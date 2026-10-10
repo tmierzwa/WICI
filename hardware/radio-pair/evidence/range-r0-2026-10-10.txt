@@ -1,0 +1,36 @@
+WICI / R0 / próby zasięgu online (Tailscale) / 2026-10-10
+
+Sprzęt i program jak w bench-r0-2026-10-10.txt: pair-0.3, 869.525 MHz,
+BW125 kHz, SF7, CR4/5, 0 dBm, anteny zestawu ustawione pionowo.
+Mac A z płytką A w stałym miejscu (blok mieszkalny); Mac B z płytką B w punkcie.
+Narzędzie: tools/range_online.py, 100 niezależnych transmisji w każdą stronę.
+Pełne raporty zostają lokalnie w results/ obu Maców (ignorowane przez Git).
+
+STOL (sesja 19b241c5 po stronie A), 3 pakiety, notebooki obok siebie:
+  próba przygotowawcza poprawna; 3/3 w obie strony, RSSI -39..-38 dBm.
+
+Wcześniej STOL 384f323b: B nie połączył się w 120 s; bez transmisji.
+
+P01 (A: 4cae556c zatrzymana przed startem po zmianie portu USB A;
+  6ef0ccda): B na 2. piętrze, ok. 20 m,
+  2 ściany. Przerwana przy pakiecie 97 przez brak odpowiedzi Maca B przez
+  internet (15 s). Do przerwania radio 96/96 i 96/96, RSSI -73..-67 dBm.
+  Nie jest wynikiem zasięgu.
+
+P01-2 (sesja 509e62f444e44568): powtórka P01 w tych samych położeniach
+  (wcześniej 12fa3e28: inna nazwa punktu na B, bez transmisji).
+  ZALICZONA: A->B 100/100, RSSI -71..-67 dBm, SNR 11.5..13.2 dB;
+             B->A 100/100, RSSI -71..-67 dBm, SNR 11.2..12.8 dB.
+
+P02 (A: b600755d; wcześniej 8b57e62e: B nie połączył się w 120 s):
+  B na klatce schodowej, 2 piętra niżej niż A.
+  Przerwana przy pakiecie 8 przez ERR read -7 (błąd CRC) na płytce B,
+  który narzędzie traktowało wtedy jak awarię płytki. Do przerwania odebrano
+  3 z 16 transmisji: RSSI -100..-96 dBm, SNR -6.0..-2.8 dB (granica SF7
+  ok. -7.5 dB). Szum wyliczony z RSSI-SNR ok. -93 dBm, wyraźnie powyżej
+  typowego tła; możliwe zakłócenia lokalne przy B. Nie jest wynikiem zasięgu.
+  Po tej próbie narzędzia liczą błąd CRC jako stratę radiową
+  (corrupt_received), protokół online WICI-RANGE-ONLINE-2.
+
+Wyniki dotyczą tego budynku, tych położeń i profilu R0. Nie są
+uniwersalnym zasięgiem ani kwalifikacją pełnego systemu WICI.

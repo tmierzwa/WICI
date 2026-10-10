@@ -2,8 +2,8 @@
   "date": "2026-10-10",
   "firmware": "pair-0.3",
   "compiled": true,
-  "automated_tests": 25,
-  "automated_tests_passed": 25,
+  "automated_tests": 27,
+  "automated_tests_passed": 27,
   "usb_integration": "Real pyserial over POSIX PTYs; one-Mac pair, two-Mac offline, two-process online TCP; RF loss, USB errors, wrong key and TCP disconnect. Physical USB and RF verified only on the one-Mac bench (2026-10-10); no two-device Tailscale verification.",
   "physical_rf_test_done": true,
   "factory_backup_done": true,
@@ -19,25 +19,26 @@
     "rx_boosted_gain": true
   },
   "hardware_revision_confirmed": false,
-  "last_software_verification_utc": "2026-10-10T18:14:55.757951+00:00",
+  "last_software_verification_utc": "2026-10-10T19:26:02.745581+00:00",
   "hardware_delivery": "delivered 2026-10-10: two Seeed 102010611 kits",
   "source_sha256": {
-    "ONLINE.md": "851b9d8027ccd84b5b58d785a13c6e366f5e7e2f3917f5f56376589a0fd3ba04",
-    "README.md": "41e655e4e83e13edc2d08bf6a18618b39f115af77e98d9d3d0de4da2bb3e2719",
+    "ONLINE.md": "86bfea0b520ed91a743ba3eac8ae15e40436cd67fbc4f0ba58c1d9f9f176317b",
+    "README.md": "1549614051a33f77c6dd5a5e0ccf2026dda82146a963a6403ac89ec1368a59ca",
     "ZRODLA-I-WERYFIKACJA.txt": "4d79fc42bf8731f09980331e615623ac8072851749e9184ee7a577efec4c03c4",
     "evidence/bench-r0-2026-10-10.txt": "711ee0fcdba991cc71a92967e57739ee8e15c76a491da8a0a70350f5e72c49c8",
-    "evidence/tests-r0.txt": "e9d221639574a98e41d79399b1f8dff9957f67c885973dbf49213327174678ee",
+    "evidence/range-r0-2026-10-10.txt": "77a484514e6536770029e655f1b04b94cc995b906c72fc21d7ccfb655dfd8c53",
+    "evidence/tests-r0.txt": "c3e4779ffa19808553c37cd213af0742be779da9351719872e48b623eb6dd9aa",
     "platformio.ini": "e5128e0996281084dd5b7106582feadbca08dc23bc569a28cc220d60e39bc5ed",
     "requirements.txt": "a3442d78bbf2f568bb25a70df0bbec214d12fa0afa6eaf9061594890565a1b75",
     "src/main.cpp": "5ded388e0c45d7d3fa30e84f68a72a4723b640c16dc68870046fd7a2ba39a10f",
-    "tests/test_pair.py": "331f6ca52a9cdd52275621c8d1c374697874ec09e3a012720424dbdf09ac5db0",
-    "tests/test_range.py": "35473740e31f827f854a7c8100df849909ee1aea52cd83826a488ec5015eee90",
+    "tests/test_pair.py": "36d0583140d3ad1a34f3281b8c86993ec9292592eccf32e9c97149738b58fae8",
+    "tests/test_range.py": "a9f20c9521a8ea33cce2b3a1ef7a4e0f12e7d92dec919fa0f19a8084359620fe",
     "tests/test_range_online.py": "c48ceb55865268bffd11d65e1c1ccc5f42c2b41459ac35e8f3f887f54782593e",
     "tests/test_usb_simulation.py": "84d665aa1157d7e25c96629780ed640c074cf190a84c501c9ddbba82aef22a04",
-    "tools/pair_test.py": "649cc052d62ff6a498b992eac196a32cd0907c008e524ec9273787f9a6a9d12e",
-    "tools/range_online.py": "25073ab16ebe43dc4ce7ef9561f85170c5848aa5f714c8487621e8e0cfdee64d",
-    "tools/range_test.py": "9817823a07246f645f7da768fc36c4641216783d4596076516d6e22db6158820"
+    "tools/pair_test.py": "3cd45d75129947d5b05759f9ba20138152fd7492367dc53f4d044084890fb082",
+    "tools/range_online.py": "3a32d083ebed21dea9b58d6060bd6bc929fe49c65ea3a2ece6c201f9c64c51e5",
+    "tools/range_test.py": "f082dfc2ca3d6c7db7919f0e71533f72c332309c0a57f143ef9cecf4e720c5c3"
   },
   "firmware_bin_sha256": "4ee60f06163896732c6fb50af6af8640d140ccadef79e507a716f1c9e15a7786",
-  "physical_rf_test": "bench only, one Mac: two passing 100/100 reports (before/after USB reconnect, 2 m); pair-0.2 run failed on delayed USB records, see evidence/bench-r0-2026-10-10.txt. No range or field test yet."
+  "physical_rf_test": "bench only, one Mac: two passing 100/100 reports (before/after USB reconnect, 2 m); pair-0.2 run failed on delayed USB records, see evidence/bench-r0-2026-10-10.txt. Indoor range 2026-10-10: P01-2 passed 100/100 at ~20 m through 2 walls; no field test yet; see evidence/range-r0-2026-10-10.txt."
 }

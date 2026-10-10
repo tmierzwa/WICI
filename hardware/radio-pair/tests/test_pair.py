@@ -21,7 +21,13 @@ class PairResults(unittest.TestCase):
     def test_wrong_direction(self):
         self.assertFalse(judge(self.events(), 'B', 'expected')['ok'])
     def test_error(self):
-        self.assertFalse(judge(self.events()+[('B', decode('ERR read -7'))], 'A', 'expected')['ok'])
+        self.assertFalse(judge(self.events()+[('B', decode('ERR receive -2'))], 'A', 'expected')['ok'])
+    def test_crc_failure_is_radio_loss(self):
+        self.assertEqual(decode('ERR read -7')['kind'], 'corrupt')
+        self.assertEqual(decode('ERR read -2')['kind'], 'error')
+        result = judge(self.events()[:1] + [('B', decode('ERR read -7'))], 'A', 'expected')
+        self.assertFalse(result['ok'])
+        self.assertEqual((result['corrupt_records'], result['errors']), (1, []))
     def test_info(self):
         item = decode('INFO pair-0.3 ABCDEF 1 1 12345678 869.525 125 7 5 0 1.8')
         self.assertEqual(item['kind'], 'info')

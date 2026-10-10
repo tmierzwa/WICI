@@ -1,3 +1,4 @@
+test_crc_failure_is_radio_loss (test_pair.PairResults.test_crc_failure_is_radio_loss) ... ok
 test_duplicate_not_success (test_pair.PairResults.test_duplicate_not_success) ... ok
 test_error (test_pair.PairResults.test_error) ... ok
 test_failed_tx_not_success (test_pair.PairResults.test_failed_tx_not_success) ... ok
@@ -8,6 +9,7 @@ test_noise (test_pair.PairResults.test_noise) ... ok
 test_silence_aborts_radio_trial (test_pair.PairResults.test_silence_aborts_radio_trial) ... ok
 test_success (test_pair.PairResults.test_success) ... ok
 test_wrong_direction (test_pair.PairResults.test_wrong_direction) ... ok
+test_crc_failure_counts_as_loss (test_range.Reports.test_crc_failure_counts_as_loss) ... ok
 test_duplicate_failed_tx_and_restart (test_range.Reports.test_duplicate_failed_tx_and_restart) ... ok
 test_full_and_short (test_range.Reports.test_full_and_short) ... ok
 test_lost_request_is_not_100_replies (test_range.Reports.test_lost_request_is_not_100_replies) ... ok
@@ -25,6 +27,6 @@ test_wrong_key_no_radio_transmission (test_range_online.Online.test_wrong_key_no
 test_two_serial_devices_and_report (test_usb_simulation.UsbSimulation.test_two_serial_devices_and_report) ... ok
 
 ----------------------------------------------------------------------
-Ran 25 tests in 58.031s
+Ran 27 tests in 58.086s
 
 OK

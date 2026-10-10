@@ -88,7 +88,8 @@ i `P01-B.json`:
 
 Podsumowanie sprawdza zgodność punktu, sesji, profilu i dwóch różnych
 płytek, potem porównuje dokładną treść wysłanych i odebranych pakietów.
-Pokazuje A→B i B→A, straty, RSSI/SNR i błędy. `valid_trial=true` oznacza
+Pokazuje A→B i B→A, straty, uszkodzone odbiory (błąd CRC,
+`corrupt_received`; liczone jako strata, nie jako błąd płytki), RSSI/SNR i błędy. `valid_trial=true` oznacza
 poprawnie przeprowadzoną próbę, także przy stratach radiowych.
 `passed=true` wymaga 100/100 w obu kierunkach i braku błędów.
 `false` nie zawsze oznacza awarię — przeczytaj liczniki i przyczynę.

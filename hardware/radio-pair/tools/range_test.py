@@ -47,8 +47,10 @@ def summarize(a, b):
                             'rssi': rx[0]['rssi'] if rx else None, 'snr': rx[0]['snr'] if rx else None})
         sent = sum(p['tx_ok'] for p in records)
         received = sum(p['tx_ok'] and p['rx_ok'] for p in records)
+        # Only the sender transmits to this target, so its CRC failures belong to this direction.
+        corrupt = sum(e.get('kind') == 'corrupt' for e in target['events'])
         directions[sender + '->' + ('B' if sender == 'A' else 'A')] = {
-            'sent': sent, 'received': received, 'lost': sent - received,
+            'sent': sent, 'received': received, 'lost': sent - received, 'corrupt_received': corrupt,
             'delivery_percent': 100 * received / sent if sent else None, 'packets': records}
     issues = a['issues'] + b['issues']
     valid = a['completed'] and not issues and directions['A->B']['sent'] == a['count']

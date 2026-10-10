@@ -48,6 +48,17 @@ class Reports(unittest.TestCase):
         self.assertEqual(result['directions']['A->B']['received'], 99)
         self.assertEqual(result['directions']['B->A']['sent'], 99)
 
+    def test_crc_failure_counts_as_loss(self):
+        a, b = reports()
+        b['events'] = [e for e in b['events'] if e.get('payload') != rt.payload(a['session'], 'A', 5)]
+        b['events'].append({'kind': 'corrupt', 'message': 'ERR read -7'})
+        result = rt.summarize(a, b)
+        self.assertTrue(result['valid_trial'])
+        self.assertFalse(result['passed'])
+        self.assertEqual(result['directions']['A->B']['received'], 99)
+        self.assertEqual(result['directions']['A->B']['corrupt_received'], 1)
+        self.assertEqual(result['directions']['B->A']['corrupt_received'], 0)
+
     def test_duplicate_failed_tx_and_restart(self):
         a, b = reports()
         b['events'].append(copy.deepcopy(b['events'][0]))

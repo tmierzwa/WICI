@@ -28,6 +28,9 @@ def decode(line):
                     'payload': parts[3]}
         if line == 'BLOCKED SILENCE':
             return {'kind': 'blocked', 'message': line}
+        if line == 'ERR read -7':
+            # RadioLib CRC mismatch: a damaged packet is a radio loss, not a device fault.
+            return {'kind': 'corrupt', 'message': line}
         if parts[0] == 'ERR':
             return {'kind': 'error', 'message': line}
     except (IndexError, ValueError):
@@ -44,8 +47,9 @@ def judge(events, sender, payload):
     rx = [e for node, e in events if node == receiver and e['kind'] == 'rx'
           and e['payload'] == payload]
     errors = [e for _, e in events if e['kind'] in ('error', 'blocked')]
-    return {'ok': len(tx) == 1 and tx[0]['status'] == 0 and len(rx) == 1 and not errors,
-            'tx_records': len(tx), 'rx_records': len(rx),
+    corrupt = sum(node == receiver and e['kind'] == 'corrupt' for node, e in events)
+    return {'ok': len(tx) == 1 and tx[0]['status'] == 0 and len(rx) == 1 and not errors and not corrupt,
+            'tx_records': len(tx), 'rx_records': len(rx), 'corrupt_records': corrupt,
             'tx_status': tx[0]['status'] if tx else None,
             'rssi': rx[0]['rssi'] if rx else None,
             'snr': rx[0]['snr'] if rx else None, 'errors': errors}
