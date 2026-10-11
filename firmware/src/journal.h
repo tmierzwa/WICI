@@ -50,7 +50,7 @@ constexpr uint32_t RESTART_SKIP_S = 60;   // przesunięcie licznika przy starcie
 constexpr uint32_t FRAM_FORMAT = 2;       // wersja formatu rekordów magazynu (fram_format)
 constexpr uint32_t FORMAT_IDENTITY = 0x01;   // tożsamość stacji zapisana w FRAM
 constexpr uint32_t PREP_CONFIG = 0x0001;   // w wejściu zatwierdzono nową konfigurację (`configure`)
-constexpr uint32_t PREP_RESTARTED = 0x8000;  // licznik zaczęty od 1 po uszkodzonym pierścieniu (przechodzi dalej)
+constexpr uint32_t PREP_RESTARTED = 0x8000;  // licznik niepewny po uszkodzonym rekordzie pierścienia (przechodzi dalej)
 constexpr uint32_t PREP_CHANGES = 0xFFFF;  // młodsze 16 bitów c: zmiany; starsze: 16 bitów SHA-256 konfiguracji
 static_assert(PREP_BASE + PREP_SLOTS * SMALL_RECORD <= EVENT_BASE, "pierścienie przed dziennikiem zdarzeń");
 
@@ -128,9 +128,9 @@ public:
 
     // Wejścia w tryb przygotowania. enterPrep: numer wejścia + 1 przy liczniku czasu counterS,
     // zapisany przed włączeniem trybu (false: tryb się nie włącza). notePrep: zmiana w bieżącym wejściu
-    // (PREP_CONFIG i 16 bitów SHA-256 konfiguracji). prepCorrupt: pierścień ma zatwierdzone rekordy
-    // z błędnym CRC i żadnego poprawnego, więc licznik jest nieznany (nie zero); następne wejście
-    // zaczyna od 1 ze znacznikiem PREP_RESTARTED.
+    // (PREP_CONFIG i 16 bitów SHA-256 konfiguracji). prepCorrupt: pierścień ma zatwierdzony rekord
+    // z błędnym CRC, który mógł być najnowszym wejściem, więc licznik jest niepewny; następne wejście
+    // dostaje numer po najnowszym poprawnym (albo 1), znacznik PREP_RESTARTED i czyści uszkodzone gniazda.
     bool enterPrep(uint32_t counterS);
     bool notePrep(uint32_t change, uint16_t configSha);
     uint32_t prepEntries() const { return prep_.a; }
@@ -160,6 +160,7 @@ private:
     SmallRecord format_;
     SmallRecord prep_;
     bool prepCorrupt_ = false;
+    uint32_t prepCorruptSlots_ = 0;   // bity gniazd pierścienia wejść z rekordem uszkodzonym
     FormatState formatState_ = FormatState::BLANK;
     EventRecord event_;
 };

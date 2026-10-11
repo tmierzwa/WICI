@@ -202,6 +202,20 @@ int journalPrepScenario() {
     journal::Journal j2(ram);
     j2.begin();
     printf("kept %u %u %u %04X %d\n", j2.prepEntries(), j2.prepAtS(), j2.prepChanges(), j2.prepConfigSha(), j2.prepRestarted());
+    // Uszkodzony tylko najnowszy rekord (zmiana w wejściu 27): licznik niepewny, następne wejście ze znacznikiem,
+    // uszkodzone gniazdo wyczyszczone, więc po restarcie licznik jest znów pewny.
+    {
+        const uint32_t at = journal::PREP_BASE + (j2.prep().seq % journal::PREP_SLOTS) * journal::SMALL_RECORD;
+        ram.bytes[at + 5] ^= 0x01;
+        journal::Journal n1(ram);
+        n1.begin();
+        const bool uncertain = n1.prepCorrupt();
+        const uint32_t before = n1.prepEntries();
+        const bool entered = n1.enterPrep(500);
+        journal::Journal n2(ram);
+        n2.begin();
+        printf("newest_corrupt %d %u %d %u %d %d\n", uncertain, before, entered, n2.prepEntries(), n2.prepRestarted(), n2.prepCorrupt());
+    }
     for (uint32_t slot = 0; slot < journal::PREP_SLOTS; ++slot) {
         const uint32_t at = journal::PREP_BASE + slot * journal::SMALL_RECORD;
         if (!journal::blank(&ram.bytes[at], journal::SMALL_RECORD)) ram.bytes[at + 5] ^= 0x01;
@@ -1237,6 +1251,8 @@ class HostUnitTests(unittest.TestCase):
             "first 1 1 1 100 1 BEEF",      # wejście 1 przy 100 s, nowa konfiguracja
             "second 1 2 200 0",            # wejście 2: zmiany od zera
             "kept 27 324 1 0018 0",        # po zawinięciu, 1000 zdarzeniach i ZNISZCZ DANE licznik zostaje
+            "newest_corrupt 1 27 1 28 1 0",  # najnowszy rekord (zmiana w wejściu 27) uszkodzony: zostaje rekord
+                                             # wejścia 27, licznik niepewny, wejście 28 ze znacznikiem
             "corrupt 1 1 2 1 0",           # uszkodzony pierścień: od 1 ze znacznikiem, który przechodzi dalej
             "layout 3840 4080",            # 0xF00..0xFF0, przed dziennikiem zdarzeń 0x1000
         ])

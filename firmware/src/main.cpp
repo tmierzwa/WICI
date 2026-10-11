@@ -125,6 +125,14 @@ const char* const buttonNames[] = {"up", "down", "ok", "back"};
 const int16_t leds[] = {board::LED_HEARTBEAT, board::LED_RADIO, board::LED_FRAM, board::LED_USB};
 
 // Diody DK aktywne stanem niskim; -1: płytka bez diody (stanowisko B).
+void ledWrite(int16_t pin, bool on);
+
+// Zapis dziennika nie powiódł się: dziennik wyłączony (LED3 gaśnie), jak przy zegarze i ustawieniach.
+void journalFailed() {
+    journalOk = false;
+    ledWrite(board::LED_FRAM, false);
+}
+
 void ledWrite(int16_t pin, bool on) {
     if (pin >= 0) digitalWrite(static_cast<uint8_t>(pin), on ? LOW : HIGH);
 }
@@ -305,7 +313,11 @@ void restartSoon(const char* why) {
 void BenchHost::configChanged(bool roleChanged) {
     // Nowa konfiguracja w bieżącym wejściu w tryb przygotowania (STAN, PRZEKAZANIE ZMIANY).
     const uint8_t* sha = stationStore.configSha();
-    if (!stationJournal.notePrep(journal::PREP_CONFIG, static_cast<uint16_t>((sha[0] << 8) | sha[1]))) bench.log("prep log: config not noted");
+    // Konfiguracja jest już zatwierdzona; nieudany zapis wyłącza dziennik, więc STAN pokazuje licznik „?”.
+    if (journalOk && !stationJournal.notePrep(journal::PREP_CONFIG, static_cast<uint16_t>((sha[0] << 8) | sha[1]))) {
+        bench.log("prep log: config not noted");
+        journalFailed();
+    }
     if (rnsOk) rnsnode::setIfac(stationStore.config().ifac);   // configure może zmienić kod IFAC
     applyReceivers();
     // Zmiana roli: interfejs USB i cel "wici.sa1" zmienia dopiero start stosu, więc stacja wraca
@@ -406,21 +418,25 @@ void setSwitchSilence(bool on, const char* source) {
     screenChanged();
 }
 
-void applyPrep(bool on, const char* source) {
+// Zwraca false, gdy wejście w tryb odmówiono (brak zapisu w dzienniku).
+bool applyPrep(bool on, const char* source) {
     if (!on) bench.stop();  // wyjście z trybu przygotowania przerywa pomiary
-    if (bench.prep == on) return;
+    if (bench.prep == on) return true;
     char text[48];
     // Wejście zapisane w dzienniku FRAM, zanim tryb zacznie działać (oprogramowanie.md, "Tryb
     // przygotowania i naklejka serwisowa"); bez zapisu tryb się nie włącza.
     if (on && !(journalOk && stationJournal.enterPrep(counterS()))) {
+        if (journalOk) journalFailed();
         snprintf(text, sizeof(text), "preparation mode refused: journal%s", source);
         bench.log(text);
-        return;
+        screenChanged();   // STAN pokazuje licznik „?”
+        return false;
     }
     bench.prep = on;
     snprintf(text, sizeof(text), "preparation mode %s%s", on ? "on" : "off", source);
     bench.log(text);
     if (storeOk && !nodeRole()) app.stationEvent(store::PREP, on);
+    return true;
 }
 
 #if defined(WICI_BOARD_N1)
@@ -482,8 +498,8 @@ void pollPanel(uint32_t now) {
     if (!prep) prepToggled = false;
     else if (!prepToggled && now - prepPressedSince >= PREP_HOLD_MS) {
         prepToggled = true;
-        applyPrep(!bench.prep, " (button)");
-        beep(100);
+        // Krótki sygnał: tryb przełączony; długi: wejście odmówione (dziennik FRAM nie przyjął zapisu).
+        beep(applyPrep(!bench.prep, " (button)") ? 100 : 1500);
     }
     prepWas = prep;
     // Dioda i brzęczyk (annunciator.h); przyczyna alarmu sprawdzana co sekundę jak alarmy ekranu.

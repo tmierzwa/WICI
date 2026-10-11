@@ -116,13 +116,22 @@ def _aux_origin(text: str) -> tuple[float, float]:
     return float(x), float(y)
 
 
+def _top_level(text: str, kind: str) -> list[str]:
+    """Top-level elements of a KiCad board file of one kind, each up to the next top-level element.
+
+    Elements are matched one by one, so a pattern never runs from one element into the next."""
+    starts = [m.start() for m in re.finditer(r"^\t\(", text, re.M)] + [len(text)]
+    return [text[a:b] for a, b in zip(starts, starts[1:]) if text.startswith(f"\t({kind}", a)]
+
+
 def n1_outline() -> tuple[float, float]:
     """Width and height of the N1 outline from the Edge.Cuts lines."""
-    text = _pcb_text()
     points = []
-    for block in re.findall(r"\(gr_line\s+\(start ([\d.]+) ([\d.]+)\)\s+\(end ([\d.]+) ([\d.]+)\).*?\(layer \"Edge\.Cuts\"\)",
-                            text, re.S):
-        points += [(float(block[0]), float(block[1])), (float(block[2]), float(block[3]))]
+    for block in _top_level(_pcb_text(), "gr_line"):
+        if '(layer "Edge.Cuts")' not in block:
+            continue
+        x0, y0, x1, y1 = re.search(r"\(start ([\d.]+) ([\d.]+)\)\s+\(end ([\d.]+) ([\d.]+)\)", block).groups()
+        points += [(float(x0), float(y0)), (float(x1), float(y1))]
     xs, ys = [p[0] for p in points], [p[1] for p in points]
     return round(max(xs) - min(xs), 3), round(max(ys) - min(ys), 3)
 
@@ -132,8 +141,11 @@ def n1_holes() -> list[dict]:
     text = _pcb_text()
     ox, oy = _aux_origin(text)
     holes = []
-    for lib, x, y in re.findall(r"\(footprint \"((?:MountingHole|WICI):MountingHole[^\"]*)\".*?\(at ([\d.]+) ([\d.]+)\)",
-                                text, re.S):
+    for block in _top_level(text, "footprint"):
+        found = re.match(r"\t\(footprint \"((?:MountingHole|WICI):MountingHole[^\"]*)\".*?\(at ([\d.]+) ([\d.]+)", block, re.S)
+        if not found:
+            continue
+        lib, x, y = found.groups()
         holes.append({"footprint": lib, "x": round(float(x) - ox, 3), "y": round(oy - float(y), 3),
                       "arduino": "Arduino" in lib})
     return sorted(holes, key=lambda h: (h["y"], h["x"]))

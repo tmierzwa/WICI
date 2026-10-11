@@ -2,6 +2,7 @@
 """DCO check of pull request commits (tools/check_dco.py) on a throwaway Git repository."""
 
 from pathlib import Path
+import os
 import subprocess
 import sys
 import tempfile
@@ -13,8 +14,9 @@ import check_dco  # noqa: E402
 
 
 def git(repo: Path, *args: str) -> str:
-    env = {"GIT_AUTHOR_NAME": "T", "GIT_AUTHOR_EMAIL": "t@example.org", "GIT_COMMITTER_NAME": "T",
-           "GIT_COMMITTER_EMAIL": "t@example.org", "HOME": str(repo), "PATH": "/usr/bin:/bin:/usr/local/bin"}
+    # PATH from the caller (Homebrew, Nix); user and system Git config ignored (signing, hooks, default branch).
+    env = dict(os.environ, GIT_AUTHOR_NAME="T", GIT_AUTHOR_EMAIL="t@example.org", GIT_COMMITTER_NAME="T",
+               GIT_COMMITTER_EMAIL="t@example.org", HOME=str(repo), GIT_CONFIG_NOSYSTEM="1", GIT_CONFIG_GLOBAL=os.devnull)
     return subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True, check=True, env=env).stdout.strip()
 
 

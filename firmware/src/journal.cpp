@@ -117,8 +117,21 @@ bool Journal::begin() {
     if (!scanSmall(FORMAT_BASE, format_, valid, corrupt)) return false;
     if (valid) formatState_ = format_.b == static_cast<uint32_t>(FormatState::DESTROYING) ? FormatState::DESTROYING : FormatState::READY;
     else formatState_ = corrupt ? FormatState::CORRUPT : FormatState::BLANK;
-    if (!scanSmall(PREP_BASE, prep_, valid, corrupt, PREP_SLOTS)) return false;
-    prepCorrupt_ = !valid && corrupt;
+    // Pierścień wejść: każdy zatwierdzony rekord z błędnym CRC może być najnowszym wejściem, więc
+    // licznik jest wtedy niepewny (prepCorrupt), a gniazda zapamiętane do wyczyszczenia przy wejściu.
+    prep_ = SmallRecord();
+    prepCorruptSlots_ = 0;
+    uint8_t record[SMALL_RECORD];
+    for (uint32_t slot = 0; slot < PREP_SLOTS; ++slot) {
+        if (!storage_.read(PREP_BASE + slot * SMALL_RECORD, record, SMALL_RECORD)) return false;
+        SmallRecord r;
+        if (decodeSmall(record, r)) {
+            if (r.seq > prep_.seq) prep_ = r;
+        } else if (!blank(record, SMALL_RECORD) && record[SMALL_MARK] == COMMITTED) {
+            prepCorruptSlots_ |= 1u << slot;
+        }
+    }
+    prepCorrupt_ = prepCorruptSlots_ != 0;
     event_ = EventRecord();
     uint8_t buffer[EVENT_RECORD];
     for (uint32_t slot = 0; slot < EVENT_SLOTS; ++slot) {
@@ -185,12 +198,20 @@ bool Journal::writeFormat(FormatState state, uint32_t flags) {
 }
 
 bool Journal::enterPrep(uint32_t counterS) {
-    // Pierścień uszkodzony: licznik zaczyna się od 1 ze znacznikiem PREP_RESTARTED, który przechodzi
-    // na kolejne wejścia. Stan niższy niż w ewidencji wykrywa to w przeglądzie, a stacji nadal da się
-    // przygotować (blokada wejścia nie miałaby naprawy, bo ZNISZCZ DANE pierścienia nie kasuje).
+    // Uszkodzony rekord mógł być najnowszym wejściem: następne wejście dostaje numer po najnowszym
+    // poprawnym (albo 1) i znacznik PREP_RESTARTED, który przechodzi na kolejne wejścia, a uszkodzone
+    // gniazda są czyszczone. Licznik niższy niż w ewidencji albo znacznik wykrywa przegląd; stacji
+    // nadal da się przygotować (blokada nie miałaby naprawy, bo ZNISZCZ DANE pierścienia nie kasuje).
     const uint32_t carried = (prep_.c & PREP_RESTARTED) | (prepCorrupt_ ? PREP_RESTARTED : 0);
-    const uint32_t entry = prepCorrupt_ || prep_.a == 0xFFFFFFFF ? 1 : prep_.a + 1;
+    const uint32_t entry = prep_.a == 0xFFFFFFFF ? 1 : prep_.a + 1;
     if (!writeSmall(PREP_BASE, prep_, entry, counterS, carried, PREP_SLOTS)) return false;
+    const uint32_t written = prep_.seq % PREP_SLOTS;
+    const uint8_t zero[SMALL_RECORD] = {};
+    for (uint32_t slot = 0; slot < PREP_SLOTS; ++slot) {
+        if (slot == written || !(prepCorruptSlots_ & (1u << slot))) continue;
+        if (!storage_.write(PREP_BASE + slot * SMALL_RECORD, zero, SMALL_RECORD)) return false;
+    }
+    prepCorruptSlots_ = 0;
     prepCorrupt_ = false;
     return true;
 }

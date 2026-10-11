@@ -19,6 +19,13 @@ class N1Geometry(unittest.TestCase):
     def test_outline(self):
         self.assertEqual(z.n1_outline(), (170.0, 100.0))
 
+    def test_elements_are_parsed_one_by_one(self):
+        # Rectangle with the cut-out around the DK header P5: 8 Edge.Cuts lines, none from other layers.
+        lines = z._top_level(z._pcb_text(), "gr_line")
+        edges = [block for block in lines if '(layer "Edge.Cuts")' in block]
+        self.assertEqual(len(edges), 8)
+        self.assertTrue(all(block.count("(gr_line") == 1 for block in lines))
+
     def test_holes(self):
         holes = z.n1_holes()
         self.assertEqual(len(holes), 9)
