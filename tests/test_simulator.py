@@ -91,6 +91,7 @@ int main() {
 
     def test_panel_logo_is_the_project_logo(self):
         self.assertEqual((SIM / "web" / "wici-logo.svg").read_bytes(), (ROOT / "media" / "logo" / "WICI-na-jasnym.svg").read_bytes())
+        self.assertEqual((SIM / "web" / "wici-logo-ciemne.svg").read_bytes(), (ROOT / "media" / "logo" / "WICI-na-ciemnym.svg").read_bytes())
 
     @unittest.skipUnless(shutil.which("node"), "Node.js not installed")
     def test_exercises_and_layout_rules(self):

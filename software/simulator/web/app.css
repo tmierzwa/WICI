@@ -93,8 +93,15 @@ p { margin: 0; }
 .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; padding-block: 12px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
 .brand { display: flex; align-items: center; gap: 10px; font-size: 1.05rem; margin-right: auto; }
 .brand strong { letter-spacing: 0.06em; }
-.mark { width: 40px; height: 24px; fill: var(--ink); stroke: var(--signal); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
-.mark path { fill: none; }
+/* Logo projektu (media/logo): wersja na jasne albo na ciemne tło, zgodnie z motywem strony. */
+.logo { height: 26px; width: auto; display: block; }
+.logo.on-dark { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .logo.on-light { display: none; }
+  :root:not([data-theme="light"]) .logo.on-dark { display: block; }
+}
+:root[data-theme="dark"] .logo.on-light { display: none; }
+:root[data-theme="dark"] .logo.on-dark { display: block; }
 .clock { display: flex; flex-direction: column; line-height: 1.1; }
 .clock-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
 .clock-value { font: 600 1.25rem/1.2 var(--mono); font-variant-numeric: tabular-nums; }
