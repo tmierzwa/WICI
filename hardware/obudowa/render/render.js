@@ -5,6 +5,8 @@ const fs = require('fs'), path = require('path');
 const VIEWS = [
   { view: 'front', file: 'stacja-front.png' },
   { view: 'zlacza', file: 'stacja-zlacza.png' },
+  // Bez podpisu, 3600 × 2400 px, do materiałów (koncepcja, nie wygląd wykonanej stacji).
+  { view: 'materialy', file: 'stacja-materialy.png', width: 2400, height: 1600, scale: 1.5 },
 ];
 const CDN = 'https://cdn.jsdelivr.net/npm/three@0.160.0/';
 (async () => {
@@ -16,7 +18,7 @@ const CDN = 'https://cdn.jsdelivr.net/npm/three@0.160.0/';
   if (!threeDir) console.warn('three.js not installed locally; loading it from', CDN);
   const browser = await chromium.launch({ args: ['--allow-file-access-from-files', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   for (const v of VIEWS) {
-    const page = await browser.newPage({ viewport: { width: 1800, height: 1250 } });
+    const page = await browser.newPage({ viewport: { width: v.width || 1800, height: v.height || 1250 }, deviceScaleFactor: v.scale || 1 });
     page.on('pageerror', e => { console.error(e); process.exitCode = 1; });
     if (threeDir) await page.route(CDN + '**', route => {
       const file = path.join(threeDir, route.request().url().slice(CDN.length));

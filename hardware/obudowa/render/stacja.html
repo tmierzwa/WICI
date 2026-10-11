@@ -42,7 +42,7 @@ await document.fonts.load('700 40px "DejaVu Mono"');
 
 // ---------- renderer, scene, lights ----------
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-renderer.setPixelRatio(1);
+renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -275,8 +275,10 @@ for (const c of U.connectors) {
 }
 
 // ---------- camera ----------
-const camera = new THREE.PerspectiveCamera(VIEW === "front" ? 30 : 34, innerWidth / innerHeight, 1, 5000);
+const camera = new THREE.PerspectiveCamera(VIEW === "zlacza" ? 34 : VIEW === "materialy" ? 24 : 30, innerWidth / innerHeight, 1, 5000);
 if (VIEW === "front") { camera.position.set(95, 75, 560); camera.lookAt(10, -28, 0); }
+// Materiały: kadr 3/4 bez podpisu, sama stacja z początkiem przewodów.
+else if (VIEW === "materialy") { camera.position.set(230, 120, 640); camera.lookAt(8, -22, 0); document.getElementById("caption").hidden = true; }
 else { camera.position.set(-200, -310, 270); camera.lookAt(20, -10, -5); document.getElementById("caption").className = "side"; }
 renderer.render(scene, camera);
 

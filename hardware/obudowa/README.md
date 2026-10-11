@@ -6,6 +6,8 @@
 
 ![Koncepcja stacji, złącza na dolnej ściance](render/stacja-zlacza.png)
 
+Do materiałów: [render/stacja-materialy.png](render/stacja-materialy.png), 3600 × 2400 px, bez podpisu. Pokazuje koncepcję, nie wykonaną stację; w materiałach podpisuj go jako wizualizację założeń.
+
 Render pokazuje założenia z [obudowy R02](../r02/obudowa.md) z 2026-10-08: Hammond 1599KBAT (220 × 140 × 40 mm), ekran Sharp LS027B7DH01A w oknie 61,5 × 38 mm, cztery przyciski PV6 w rozstawie 32 mm, kolumna ALARM, CISZA z osłoną i wyłącznik główny, przycisk przygotowania za otworem Ø4 mm pod numerowaną naklejką VOID (zamiast plombowanej pokrywy serwisowej, [F113](../../docs/review.md)) oraz USB-C, 12 V (EN3) i SMA na dolnej ściance. Na ekranie jest ekran główny z [oprogramowania](../../docs/spec/oprogramowanie.md#ekran-i-przyciski-stacji), a na folii panelu nazwy przycisków z [karty](../../docs/spec/karta.md) i jej wersji UK i EN. Umowne są: wnętrze, słupki, śruby pokrywy, linia podziału, wysokość osi złączy, kształt osłony CISZY i kolor wyłącznika.
 
 ## Dwa etapy
