@@ -56,7 +56,7 @@ Nie odświeżaj sum w odpowiedzi na nieznany błąd CI; najpierw ustal, co się 
 
 ## Pochodzenie wkładu (DCO)
 
-Każdy commit w PR kończy się wierszem `Signed-off-by: Imię Nazwisko <email>` (`git commit -s`). Oznacza on zgodę na [Developer Certificate of Origin 1.1](https://developercertificate.org/): masz prawo przesłać ten materiał na licencji właściwej dla ścieżki. Nie wymagamy CLA ani przeniesienia praw autorskich.
+Każdy commit w PR kończy się wierszem `Signed-off-by: Imię Nazwisko <email>` (`git commit -s`). Oznacza on zgodę na [Developer Certificate of Origin 1.1](https://developercertificate.org/): masz prawo przesłać ten materiał na licencji właściwej dla ścieżki. Nie wymagamy CLA ani przeniesienia praw autorskich. CI sprawdza podpis w każdym commicie PR poza commitami scalającymi (`tools/check_dco.py`); brakujący podpis dodaje `git rebase --signoff <gałąź bazowa>` i ponowne wypchnięcie gałęzi.
 
 Nie dodawaj kluczy, danych mieszkańców, kopii prywatnych rozmów ani materiałów producenta bez uprawnień do dystrybucji. Lokalny `reference-private/` nie należy do wydania. Dla nowej biblioteki lub footprintu zapisz źródło, wersję, modyfikacje i licencję.
 
@@ -80,7 +80,7 @@ Contributions in English are welcome; documentation stays in Polish, and maintai
 
 - Open an issue for larger changes; small fixes can go straight to a pull request.
 - Run the three checks above with `--pull-request`. **Do not refresh `manifest.json`**; the maintainer does it after merging. Refresh only the evidence your change affects (calculation results, hardware evidence).
-- Sign off every commit (`git commit -s`, [DCO 1.1](https://developercertificate.org/)). No CLA.
+- Sign off every commit (`git commit -s`, [DCO 1.1](https://developercertificate.org/)); CI rejects unsigned commits (`tools/check_dco.py`). No CLA.
 - Keep assumptions separate from measurements; never mark an unperformed test as passed.
 - Safety-critical parts (230 V inverter, phone over-voltage protection, batteries, transmit budget) need review by a qualified person and stay on HOLD until then.
 - Disclose AI assistance in the PR; you are responsible for every line.

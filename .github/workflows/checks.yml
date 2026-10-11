@@ -26,3 +26,17 @@ jobs:
         run: python tools/release.py --source-zip dist/WICI-0.5-source.zip
       - name: License annotations (REUSE)
         run: pipx run reuse==5.0.2 lint
+  dco:
+    # CONTRIBUTING.md, "Pochodzenie wkładu (DCO)": każdy commit PR ma Signed-off-by.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+      - name: Signed-off-by in every commit
+        run: python tools/check_dco.py ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }}
