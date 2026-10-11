@@ -27,3 +27,6 @@ __pycache__/
 /firmware/.pio/
 /firmware/src/idf_component.yml
 /.venv-pio/
+
+# Native simulator build (software/simulator/build.py --native)
+/software/simulator/build/
