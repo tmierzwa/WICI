@@ -238,7 +238,7 @@ Port USB nRF (J3, nie port J-Link J2) zgłasza się jako urządzenie z dwoma int
 | `P1` | liczniki łącza: ramki, datagramy, odrzuty, odroczenia, stan składania |
 | `STOP` | przerwanie `TXCW`, `TXPKT`, `P1TX` i odbioru |
 | `LOG [<n>]` | ostatnie `n` (domyślnie 16, do 64) zdarzeń z dziennika w FRAM, od najnowszego, z numerem i czasem pracy; bez FRAM do 16 ostatnich wpisów z RAM, też od najnowszego |
-| `JOURNAL` | stan dziennika: rekord długu (numer, dług, czas zapisu, liczba poprawnych rekordów), licznik czasu pracy (numer, `uptime_s`, `skip_s` = suma przeskoków S, liczba startów), numer ostatniego zdarzenia, największy dług |
+| `JOURNAL` | stan dziennika: rekord długu (numer, dług, czas zapisu, liczba poprawnych rekordów), licznik czasu pracy (numer, `uptime_s`, `skip_s` = suma przeskoków S, liczba startów), numer ostatniego zdarzenia, największy dług; wejścia w tryb przygotowania: `prep_entries`, `prep_at_s` (licznik czasu przy ostatnim wejściu), `prep_changes` (bit 0: nowa konfiguracja), `prep_config_sha`, `prep_restarted`, `prep_corrupt` |
 | `BENCH` | stan trybu przygotowania, ciszy, zadań i długu |
 | `RSSI` | RSSI w dBm z przyjętym przesunięciem −99 dB (`rssi_offset_db`), znaczniki ważności i nośnej; sens tylko w stanie RX |
 | `STATE` | stan MARC nazwą i liczbą, bajt stanu, liczba bajtów w kolejkach RX i TX |
@@ -291,7 +291,7 @@ Czego tablica nie zamyka: błędu częstotliwości kwarcu modułu (mierzy się `
 
 ## Polecenia pomiarowe
 
-Kontrakt jest w [specyfikacji radia](../docs/spec/radio.md#usb-do-laptopa); kod w `src/measure.cpp`. Polecenia działają tylko w trybie przygotowania (`PREP 1`, potwierdzony przyciskiem OK, bo na stacji włącza go przycisk pod plombowaną pokrywą) i są odrzucane w ciszy radiowej (`SILENCE 1`; cisza włączona w trakcie przerywa każdą serię, także przewodową, bo cisza blokuje każde nadawanie). Wymagają też skonfigurowanego radia (`p1_ok`; inaczej błąd `radio not configured: CONFIG`). Odpowiedzi odmowne mają pole `error`.
+Kontrakt jest w [specyfikacji radia](../docs/spec/radio.md#usb-do-laptopa); kod w `src/measure.cpp`. Polecenia działają tylko w trybie przygotowania (`PREP 1`, potwierdzony przyciskiem OK, bo na stacji włącza go przycisk pod naklejką serwisową; wejście, także poleceniem, najpierw trafia do pierścienia wejść w FRAM, a bez zapisu tryb się nie włącza) i są odrzucane w ciszy radiowej (`SILENCE 1`; cisza włączona w trakcie przerywa każdą serię, także przewodową, bo cisza blokuje każde nadawanie). Wymagają też skonfigurowanego radia (`p1_ok`; inaczej błąd `radio not configured: CONFIG`). Odpowiedzi odmowne mają pole `error`.
 
 Limit nadawania na stanowisku: po każdej serii obowiązuje dług ciszy 12 × czas nadawania (jak w P1), widoczny w `INFO` jako `tx_wait_ms`, a seria bez argumentu `CONDUCTED` nie może przekroczyć 1,4 s czasu nadawania, czyli najdłuższego datagramu P1 (7 ramek po 103 B z narastaniem mocy). Specyfikacja nie podaje tej liczby wprost; to przyjęta interpretacja. `CONDUCTED` znosi oba ograniczenia wyłącznie do nadawania przewodowego do tłumika lub obciążenia sztucznego: obraz prosi o przycisk OK, czeka na niego do 30 s (LED1 miga szybko) i zapisuje potwierdzenie albo jego brak w dzienniku `LOG`. Dług jest zapisywany w [dzienniku FRAM](#dziennik-i-magazyny-w-fram) przed pierwszą ramką serii; błąd zapisu albo brak FRAM blokuje nadawanie radiowe. Seria `CONDUCTED` (do obciążenia, bez emisji) nie tworzy długu.
 
@@ -313,6 +313,7 @@ Kod w `src/journal.cpp` (jawny obszar: dług ciszy, licznik czasu, ustawienia, r
 | ustawienia ekranu | 0x00600 | 32 × 24 B | język + 1, znaczniki (wyciszenie, obiekt z listy adresów) |
 | rezerwacja numerów zapisu | 0x00900 | 32 × 24 B | górna granica bloku 1024 numerów, zapisywana przed użyciem pierwszego numeru bloku |
 | format FRAM | 0x00C00 | 32 × 24 B | `fram_format` (1), stan (zainicjowana, w trakcie ZNISZCZ DANE), znacznik zapisanej tożsamości |
+| wejścia w tryb przygotowania | 0x00F00 | 10 × 24 B | numer wejścia (licznik tylko rośnie), licznik czasu przy wejściu, zmiany wejścia (nowa konfiguracja, znacznik licznika zaczętego od nowa) i 16 bitów SHA-256 konfiguracji; ZNISZCZ DANE ich nie kasuje ([tryb przygotowania](../docs/spec/oprogramowanie.md#tryb-przygotowania-i-naklejka-serwisowa)) |
 | dziennik zdarzeń | 0x01000 | 512 × 64 B | numer, licznik, tekst do 53 znaków, CRC-16 |
 | rekordy transakcji | 0x09000 | 2 × 4 KiB | nagłówek, do 7 par (adres, rekord 512 B), znacznik zatwierdzenia, znacznik wykonania |
 | konfiguracja | 0x0B000 | 2 × 8 KiB | kopie A i B: nagłówek, długość i SHA-256 dokumentu `configure`, dokument do 7680 B, znacznik |

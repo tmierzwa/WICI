@@ -35,7 +35,7 @@ constexpr uint32_t HOLD_DISCARD_MS = 2000;    // przytrzymanie WSTECZ w kreatorz
 constexpr uint32_t HOLD_LANGUAGE_MS = 3000;   // przytrzymanie WSTECZ poza kreatorem: wybór języka
 constexpr uint32_t REPEAT_DELAY_MS = 500;     // wpis cyfr: przytrzymanie przyspiesza zmianę
 constexpr uint32_t REPEAT_MS = 150;
-constexpr size_t STATUS_MAX_LINES = 17;
+constexpr size_t STATUS_MAX_LINES = 23;
 constexpr size_t TEXT_MAX_LINES = 24;
 constexpr size_t ADDRESS_CHOICES = 8;        // lista obiektów (store::ADDRESSES)
 constexpr size_t ITEM_TEXT = 193;             // treść REPLY/BULLETIN albo fraza (UTF-8)
@@ -74,6 +74,14 @@ struct Status {
     int32_t foffHz = 0;
     const char* version = "";
     const char* name = "";
+    // Wejścia w tryb przygotowania z dziennika FRAM (oprogramowanie.md, "Tryb przygotowania i naklejka
+    // serwisowa"); prepKnown false: pierścień uszkodzony, licznik nieznany.
+    bool prepKnown = true;
+    uint32_t prepEntries = 0;
+    bool prepAgeKnown = false;   // false: brak wejść albo licznik czasu cofnięty po ZNISZCZ DANE
+    uint32_t prepAgeS = 0;
+    bool prepConfig = false;     // ostatnie wejście zapisało konfigurację
+    uint16_t prepConfigSha = 0;  // 16 bitów jej SHA-256
     // Węzeł stanowiska: kontakt z komputerem stanowiska i liczniki pakietów interfejsu USB.
     bool computerHeard = false;  // pakiet od komputera od startu stacji
     uint32_t computerS = 0;      // czas od ostatniego pakietu od komputera [s]
@@ -232,6 +240,8 @@ private:
     void buildSummary(Text& text) const;
     void buildItem(const Item& item, Text& text) const;
     void buildHandover(const Status& status, Text& text);
+    // Wiersze wejść w tryb przygotowania: licznik z czasem, ostatnia zmiana (pusta bez wejść).
+    void prepText(const Status& status, char* entries, char* change, size_t size) const;
     void stageText(const Item& item, const Status& status, char* out, size_t size) const;
     bool openItem(Item& item);  // otwarta pozycja po numerze rekordu (lista mogła się przesunąć)
     size_t phraseListCount() const;

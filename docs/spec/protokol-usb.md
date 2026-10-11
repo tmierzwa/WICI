@@ -71,7 +71,7 @@ Każdy wiersz w obu kierunkach:
 | `xfer_abort` | `xfer` | przygotowania | `ok` | `xfer` |
 | `migrate` | `step`, dalsze pola według kroku ([przeniesienie](#przeniesienie-stacji)) | przygotowania | `ok` albo `rejected`; przy krokach z przyciskiem najpierw `pending` | (`step`, `mid`) |
 
-„Tryb przygotowania” włącza przycisk pod plombowaną pokrywą serwisową; stacja pokazuje wtedy stale `tryb_przygotowania`. Polecenie z kolumny „przygotowania” poza tym trybem daje `prep_required`. Stacja w konfiguracji węzła stanowiska używa tego protokołu tylko w trybie przygotowania; poza nim interfejs danych przenosi pakiety Reticulum w ramkach KISS ([radio](radio.md#interfejs-reticulum-przez-usb-węzeł-stanowiska)), a polecenia `submit`, `cancel`, `test`, `announce`, `mark_read` i `close` dają tam `role`.
+„Tryb przygotowania” włącza przycisk pod naklejką serwisową, a stacja zapisuje każde wejście w FRAM przed włączeniem trybu ([tryb przygotowania](oprogramowanie.md#tryb-przygotowania-i-naklejka-serwisowa)); stacja pokazuje wtedy stale `tryb_przygotowania`. Polecenie z kolumny „przygotowania” poza tym trybem daje `prep_required`. Stacja w konfiguracji węzła stanowiska używa tego protokołu tylko w trybie przygotowania; poza nim interfejs danych przenosi pakiety Reticulum w ramkach KISS ([radio](radio.md#interfejs-reticulum-przez-usb-węzeł-stanowiska)), a polecenia `submit`, `cancel`, `test`, `announce`, `mark_read` i `close` dają tam `role`.
 
 **`submit`.** `sa1` to tablica REQUEST albo TEST zgodna z [SA1](oprogramowanie.md#wiadomości-sa1); `id` i `revision` muszą być równe polom tablicy. Stacja wysyła wiadomość zawsze do aktywnej tożsamości odbiorcy, więc laptop nie podaje adresu. Reguły:
 

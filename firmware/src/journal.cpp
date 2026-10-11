@@ -88,12 +88,12 @@ bool decodeEvent(const uint8_t in[EVENT_RECORD], EventRecord& record) {
 
 Journal::Journal(Storage& storage) : storage_(storage) {}
 
-bool Journal::scanSmall(uint32_t base, SmallRecord& latest, uint32_t& validCount, uint32_t& corruptCount) {
+bool Journal::scanSmall(uint32_t base, SmallRecord& latest, uint32_t& validCount, uint32_t& corruptCount, uint32_t slots) {
     latest = SmallRecord();
     validCount = 0;
     corruptCount = 0;
     uint8_t buffer[SMALL_RECORD];
-    for (uint32_t slot = 0; slot < SMALL_SLOTS; ++slot) {
+    for (uint32_t slot = 0; slot < slots; ++slot) {
         if (!storage_.read(base + slot * SMALL_RECORD, buffer, SMALL_RECORD)) return false;
         SmallRecord record;
         if (decodeSmall(buffer, record)) {
@@ -117,6 +117,8 @@ bool Journal::begin() {
     if (!scanSmall(FORMAT_BASE, format_, valid, corrupt)) return false;
     if (valid) formatState_ = format_.b == static_cast<uint32_t>(FormatState::DESTROYING) ? FormatState::DESTROYING : FormatState::READY;
     else formatState_ = corrupt ? FormatState::CORRUPT : FormatState::BLANK;
+    if (!scanSmall(PREP_BASE, prep_, valid, corrupt, PREP_SLOTS)) return false;
+    prepCorrupt_ = !valid && corrupt;
     event_ = EventRecord();
     uint8_t buffer[EVENT_RECORD];
     for (uint32_t slot = 0; slot < EVENT_SLOTS; ++slot) {
@@ -128,7 +130,7 @@ bool Journal::begin() {
     return true;
 }
 
-bool Journal::writeSmall(uint32_t base, SmallRecord& current, uint32_t a, uint32_t b, uint32_t c) {
+bool Journal::writeSmall(uint32_t base, SmallRecord& current, uint32_t a, uint32_t b, uint32_t c, uint32_t slots) {
     if (!ok_) return false;
     SmallRecord next;
     next.seq = current.seq + 1;
@@ -136,7 +138,7 @@ bool Journal::writeSmall(uint32_t base, SmallRecord& current, uint32_t a, uint32
     next.a = a;
     next.b = b;
     next.c = c;
-    const uint32_t address = base + (next.seq % SMALL_SLOTS) * SMALL_RECORD;  // najstarszy slot; najnowsze zostają
+    const uint32_t address = base + (next.seq % slots) * SMALL_RECORD;  // najstarszy slot; najnowsze zostają
     uint8_t buffer[SMALL_RECORD];
     encodeSmall(next, buffer);
     if (!storage_.write(address, buffer, SMALL_RECORD)) return false;  // treść ze znacznikiem 0
@@ -180,6 +182,23 @@ bool Journal::writeFormat(FormatState state, uint32_t flags) {
     if (!writeSmall(FORMAT_BASE, format_, FRAM_FORMAT, static_cast<uint32_t>(state), flags)) return false;
     formatState_ = state;
     return true;
+}
+
+bool Journal::enterPrep(uint32_t counterS) {
+    // Pierścień uszkodzony: licznik zaczyna się od 1 ze znacznikiem PREP_RESTARTED, który przechodzi
+    // na kolejne wejścia. Stan niższy niż w ewidencji wykrywa to w przeglądzie, a stacji nadal da się
+    // przygotować (blokada wejścia nie miałaby naprawy, bo ZNISZCZ DANE pierścienia nie kasuje).
+    const uint32_t carried = (prep_.c & PREP_RESTARTED) | (prepCorrupt_ ? PREP_RESTARTED : 0);
+    const uint32_t entry = prepCorrupt_ || prep_.a == 0xFFFFFFFF ? 1 : prep_.a + 1;
+    if (!writeSmall(PREP_BASE, prep_, entry, counterS, carried, PREP_SLOTS)) return false;
+    prepCorrupt_ = false;
+    return true;
+}
+
+bool Journal::notePrep(uint32_t change, uint16_t configSha) {
+    if (prep_.a == 0) return false;   // zmiana bez zapisanego wejścia
+    const uint32_t c = ((prep_.c | change) & PREP_CHANGES) | (static_cast<uint32_t>(configSha) << 16);
+    return writeSmall(PREP_BASE, prep_, prep_.a, prep_.b, c, PREP_SLOTS);
 }
 
 bool Journal::eraseRing(uint32_t base, SmallRecord& current) {

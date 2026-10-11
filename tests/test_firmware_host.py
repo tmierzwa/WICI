@@ -182,6 +182,44 @@ int journalScenario() {
     return 0;
 }
 
+// Wejścia w tryb przygotowania (journal.h): licznik tylko rośnie, zmiany należą do bieżącego wejścia,
+// pierścień przetrwa zawinięcie, 1000 zdarzeń diagnostycznych i ZNISZCZ DANE; uszkodzony pierścień
+// zaczyna od 1 ze znacznikiem.
+int journalPrepScenario() {
+    RamStorage ram;
+    journal::Journal j(ram);
+    j.begin();
+    const bool early = j.notePrep(journal::PREP_CONFIG, 0x1234);   // zmiana bez wejścia: odmowa
+    printf("fresh %u %d %d\n", j.prepEntries(), j.prepCorrupt(), early);
+    const bool e1 = j.enterPrep(100);
+    const bool n1 = j.notePrep(journal::PREP_CONFIG, 0xBEEF);
+    printf("first %d %d %u %u %u %04X\n", e1, n1, j.prepEntries(), j.prepAtS(), j.prepChanges(), j.prepConfigSha());
+    const bool e2 = j.enterPrep(200);   // nowe wejście bez zmian
+    printf("second %d %u %u %u\n", e2, j.prepEntries(), j.prepAtS(), j.prepChanges());
+    for (uint32_t i = 0; i < 25; ++i) { j.enterPrep(300 + i); j.notePrep(journal::PREP_CONFIG, static_cast<uint16_t>(i)); }
+    for (int i = 0; i < 1000; ++i) j.writeEvent(i, "noise");
+    j.erase();   // ZNISZCZ DANE
+    journal::Journal j2(ram);
+    j2.begin();
+    printf("kept %u %u %u %04X %d\n", j2.prepEntries(), j2.prepAtS(), j2.prepChanges(), j2.prepConfigSha(), j2.prepRestarted());
+    for (uint32_t slot = 0; slot < journal::PREP_SLOTS; ++slot) {
+        const uint32_t at = journal::PREP_BASE + slot * journal::SMALL_RECORD;
+        if (!journal::blank(&ram.bytes[at], journal::SMALL_RECORD)) ram.bytes[at + 5] ^= 0x01;
+    }
+    journal::Journal j3(ram);
+    j3.begin();
+    const bool corrupt = j3.prepCorrupt();
+    const bool e3 = j3.enterPrep(900);
+    j3.enterPrep(950);
+    journal::Journal j4(ram);
+    j4.begin();
+    printf("corrupt %d %d %u %d %d\n", corrupt, e3, j4.prepEntries(), j4.prepRestarted(), j4.prepCorrupt());
+    // Pierścień wejść nie nachodzi na dziennik zdarzeń ani pierścień formatu.
+    printf("layout %u %u\n", static_cast<unsigned>(journal::PREP_BASE),
+           static_cast<unsigned>(journal::PREP_BASE + journal::PREP_SLOTS * journal::SMALL_RECORD));
+    return 0;
+}
+
 // --- SHA-256, HMAC, DRBG, konfiguracja ----------------------------------------------------------
 
 int shaCommand(int argc, char** argv) {
@@ -478,7 +516,7 @@ void dumpInbox(World& w, const char* label) {
 // "KD/KU <przycisk> <ms>" naciśnięcie i zwolnienie, "T <ms>" czas, "P <0|1>" tryb przygotowania,
 // "Q <0|1>" cisza, "O <0|1>" radio, "U <s>" kontakt, "N <n>" nowe, "C <n> <s>" kolejka, "V <mV>" napięcie,
 // "X <rxok> <rxbad> <tx> <drop> <defer> <debt_ms>", "F <hz>" odchyłka, "PC <słyszany> <s> <in> <out> <odrzuty>"
-// komputer stanowiska, "R" ekran, "M" lista WIADOMOŚCI, "B" bajty odczytane z FRAM, "W <tekst>" łamanie,
+// komputer stanowiska, "PP <znany> <wejścia> <czas_znany> <s> <konfiguracja> <sha>" wejścia w tryb przygotowania, "R" ekran, "M" lista WIADOMOŚCI, "B" bajty odczytane z FRAM, "W <tekst>" łamanie,
 // "D <s>" czas, "G <tekst>" glify. Polecenia stacji (małe litery): zob. world().
 int world() {
     World* wp = new World();
@@ -732,6 +770,9 @@ int world() {
         else if (sscanf(line, "S %u", &a) == 1) w.model.start(static_cast<ui::Lang>(a));
         else if (sscanf(line, "PC %u %u %u %u %u", &a, &b, &c, &d, &e) == 5) {
             status.computerHeard = a; status.computerS = b; status.usbIn = c; status.usbOut = d; status.usbDrop = e;
+        } else if (sscanf(line, "PP %u %u %u %u %u %x", &a, &b, &c, &d, &e, &f) == 6) {
+            status.prepKnown = a; status.prepEntries = b; status.prepAgeKnown = c; status.prepAgeS = d;
+            status.prepConfig = e; status.prepConfigSha = static_cast<uint16_t>(f);
         } else if (sscanf(line, "KD %15s %u", word, &a) == 2 || sscanf(line, "KU %15s %u", word, &a) == 2) {
             size_t i = 0;
             while (i < 4 && strcmp(word, names[i])) ++i;
@@ -906,6 +947,7 @@ int main(int argc, char** argv) {
         return 0;
     }
     if (argc == 2 && !strcmp(argv[1], "journal")) return journalScenario();
+    if (argc == 2 && !strcmp(argv[1], "journal_prep")) return journalPrepScenario();
     if (argc == 2 && !strcmp(argv[1], "buildall")) return buildAll();
     if (argc == 2 && !strcmp(argv[1], "assemble")) return assembleScript();
     if ((argc == 4 || argc == 5) && !strcmp(argv[1], "frame")) {
@@ -1186,6 +1228,17 @@ class HostUnitTests(unittest.TestCase):
             "long 53",
             "erase 1 0 0 0 139 4294968320 2 2",  # dług, rezerwacja i format zostają
             "format_corrupt 3",                  # zatwierdzone z błędnym CRC bez poprawnych: CORRUPT
+        ])
+
+    def test_journal_preparation_entries(self):
+        lines = subprocess.run([str(self.binary), "journal_prep"], capture_output=True, text=True, check=True).stdout.splitlines()
+        self.assertEqual(lines, [
+            "fresh 0 0 0",                 # bez wejścia nie ma czego oznaczyć
+            "first 1 1 1 100 1 BEEF",      # wejście 1 przy 100 s, nowa konfiguracja
+            "second 1 2 200 0",            # wejście 2: zmiany od zera
+            "kept 27 324 1 0018 0",        # po zawinięciu, 1000 zdarzeniach i ZNISZCZ DANE licznik zostaje
+            "corrupt 1 1 2 1 0",           # uszkodzony pierścień: od 1 ze znacznikiem, który przechodzi dalej
+            "layout 3840 4080",            # 0xF00..0xFF0, przed dziennikiem zdarzeń 0x1000
         ])
 
     # --- SHA-256, HMAC, DRBG --------------------------------------------------
@@ -2019,34 +2072,79 @@ class HostUnitTests(unittest.TestCase):
             self.assertEqual(" ".join(silence_lines[1:4]), texts["cisza"][lang])
             self.assertEqual(silence_lines[4], expected[2])
 
+    def test_status_and_handover_show_preparation_entries(self):
+        data = ui_texts.load()
+        texts, labels = data["texts"], data["labels"]
+        open_status = ["L 0", "O 1", "K OK 0", "K DOWN 0", "K DOWN 0", "K DOWN 0", "K OK 0", "R"] + ["K DOWN 0", "R"] * 22
+
+        def status_lines(prep):
+            seen = []
+            for name, _, rows in self.screens(self.ui([prep] + open_status)):
+                if name == "status":
+                    for _, text in rows:
+                        if text not in seen:
+                            seen.append(text)
+            return seen
+
+        seen = status_lines("PP 1 3 1 7200 1 beef")
+        entries = texts["przygotowanie_wejscia"][0].replace("[n]", "3").replace("[czas]", "2 " + ui_texts.UNITS["PL"][1])
+        change = texts["przygotowanie_konfiguracja"][0].replace("[xxxx]", "BEEF")
+        at = seen.index("TRYB PRZYGOTOWANIA:")
+        self.assertEqual(" ".join(seen[at:at + 6]), entries + " " + change)
+        self.assertEqual(seen[at + 6:at + 8], ["bench-a-test", "WICI-000000"])   # przed wersją i nazwą
+        unknown = status_lines("PP 0 0 0 0 0 0")
+        at = unknown.index("TRYB PRZYGOTOWANIA:")
+        self.assertEqual(unknown[at + 1:at + 3], ["WEJŚCIA ?", "bench-a-test"])   # pierścień uszkodzony: bez zmiany
+        no_change = status_lines("PP 1 1 0 0 0 0")   # czas nieznany (po ZNISZCZ DANE), wejście bez zmian
+        at = no_change.index("TRYB PRZYGOTOWANIA:")
+        self.assertEqual(" ".join(no_change[at:at + 4]),
+                         texts["przygotowanie_wejscia_bez_czasu"][0].replace("[n]", "1") + " " + texts["przygotowanie_bez_zmian"][0])
+        # PRZEKAZANIE ZMIANY: ten sam licznik i zmiana, przed zgłoszeniami.
+        downs = seen.index(labels["PRZEKAZANIE_ZMIANY"][0])
+        out = self.ui(["PP 1 3 1 7200 1 beef", "L 0", "O 1", "K OK 0", "K DOWN 0", "K DOWN 0", "K DOWN 0", "K OK 0", "R"] +
+                      ["K DOWN 0"] * downs + ["K OK 0", "R"] + ["K DOWN 0", "R"] * 8)
+        handover = []
+        for name, _, rows in self.screens(out):
+            if name == "handover":
+                for _, text in rows:
+                    if text not in handover:
+                        handover.append(text)
+        at = handover.index("TRYB PRZYGOTOWANIA:")
+        self.assertEqual(" ".join(handover[at:at + 6]), entries + " " + change)
+
     def test_menu_status_and_language_navigation(self):
         data = ui_texts.load()
         labels = data["labels"]
         menu = [strings[0] for _, strings in data["menu"]]
         out = self.ui(["L 0", "O 1", "X 12 3 4 1 7 16228", "F 123", "K OK 0", "R", "K DOWN 0", "K DOWN 0", "K DOWN 0", "R",
-                       "K OK 0", "R"] + ["K DOWN 0"] * 14 + ["R",
+                       "K OK 0", "R"] + ["K DOWN 0"] * 12 + ["R"] + ["K DOWN 0"] * 4 + ["R",
                        "K BACK 0", "R", "K DOWN 0", "K OK 0", "R", "K DOWN 0", "K DOWN 0", "K OK 0", "R", "K BACK 0", "R",
                        "K OK 0", "K OK 0", "R", "T 179999", "R", "T 180000", "R"])
         screens = self.screens(out)
         self.assertEqual([s[0] for s in screens],
-                         ["menu", "menu", "status", "status", "menu", "language_menu", "menu", "main", "category", "category", "main"])
+                         ["menu", "menu", "status", "status", "status", "menu", "language_menu", "menu", "main", "category", "category", "main"])
         self.assertEqual([t for _, t in screens[0][2]], menu)
         self.assertEqual([inv for inv, _ in screens[0][2]], [True, False, False, False, False])
         self.assertEqual([inv for inv, _ in screens[1][2]], [False, False, False, True, False])
         status_top = [t for _, t in screens[2][2]]
         self.assertEqual(status_top[:5], [data["texts"]["radio_wlaczone"][0], "RX OK 12", "RX BAD 3", "TX 4 DROP 1", "DEFER 7"])
-        status_end = [t for _, t in screens[3][2]]
+        status_mid = [t for _, t in screens[3][2]]
+        self.assertIn("FOFF +123 HZ", status_mid)
+        # Wejścia w tryb przygotowania przed wersją: bez wejść sam licznik (przygotowanie_wejscia_bez_czasu).
+        texts_prep = data["texts"]["przygotowanie_wejscia_bez_czasu"][0].replace("[n]", "0")
+        self.assertEqual(" ".join(status_mid[-2:]), texts_prep)
+        status_end = [t for _, t in screens[4][2]]
         # Koniec ekranu STAN: wersja, nazwa, PRZEKAZANIE ZMIANY i USŁUGI (kursor na ostatnim wierszu).
         self.assertEqual(status_end[-4:], ["bench-a-test", "WICI-000000", labels["PRZEKAZANIE_ZMIANY"][0], labels["USLUGI"][0]])
-        self.assertEqual([inv for inv, _ in screens[3][2]], [False, False, False, False, True])
-        self.assertIn("FOFF +123 HZ", status_end)
-        self.assertEqual([inv for inv, _ in screens[4][2]], [False, False, False, True, False])  # kursor wraca na STAN
-        self.assertEqual([t for _, t in screens[5][2]][:3], ["POLSKI", "УКРАЇНСЬКА", "ENGLISH"])
-        self.assertEqual(screens[6][1], 2)  # wybrano ENGLISH, powrót do menu
-        self.assertEqual([t for _, t in screens[6][2]], [strings[2] for _, strings in data["menu"]])
-        self.assertEqual([t for _, t in screens[8][2]][0], "MEDICAL HELP")  # kreator: kategoria 0 w języku EN
-        self.assertEqual(screens[9][0], "category")   # 179 999 ms bez naciśnięcia: ekran zostaje
-        self.assertEqual(screens[10][0], "main")  # 3 min bezczynności: ekran główny
+        self.assertTrue(texts_prep.endswith(status_end[0]))
+        self.assertEqual([inv for inv, _ in screens[4][2]], [False, False, False, False, True])
+        self.assertEqual([inv for inv, _ in screens[5][2]], [False, False, False, True, False])  # kursor wraca na STAN
+        self.assertEqual([t for _, t in screens[6][2]][:3], ["POLSKI", "УКРАЇНСЬКА", "ENGLISH"])
+        self.assertEqual(screens[7][1], 2)  # wybrano ENGLISH, powrót do menu
+        self.assertEqual([t for _, t in screens[7][2]], [strings[2] for _, strings in data["menu"]])
+        self.assertEqual([t for _, t in screens[9][2]][0], "MEDICAL HELP")  # kreator: kategoria 0 w języku EN
+        self.assertEqual(screens[10][0], "category")   # 179 999 ms bez naciśnięcia: ekran zostaje
+        self.assertEqual(screens[11][0], "main")  # 3 min bezczynności: ekran główny
 
     def test_wrap_duration_and_glyph_coverage(self):
         data = ui_texts.load()
@@ -2238,7 +2336,7 @@ class HostUnitTests(unittest.TestCase):
         self.assertTrue((texts["brak_potwierdzenia"][0].replace("[n]", "15") + " " +
                          texts["zapisz_numer"][0].replace("[xxxx]", number)).startswith(self.shown(s[1])))
         # PRZEKAZANIE ZMIANY: otwarte zgłoszenie z numerem, kategorią i etapem.
-        out = self.ui(self.HOSTED + self.CREATE + ["K OK 0", "K DOWN 0", "K DOWN 0", "K DOWN 0", "K OK 0"] + ["K DOWN 0"] * 13 +
+        out = self.ui(self.HOSTED + self.CREATE + ["K OK 0", "K DOWN 0", "K DOWN 0", "K DOWN 0", "K OK 0"] + ["K DOWN 0"] * 15 +
                       ["R", "K OK 0", "R", "reg a"])
         number = list(self.regs(out, "a").values())[0]["num"]
         status, handover = self.screens(out)
@@ -2250,7 +2348,7 @@ class HostUnitTests(unittest.TestCase):
         self.assertTrue(" ".join(self.lines(handover)[4:]).startswith(texts["zapisane_w_stacji"][0][:15]))
         # Zgłoszenia ponad 24 wiersze tekstu nie znikają po cichu: ostatni wiersz podaje ich liczbę.
         out = self.ui(self.HOSTED + ["create 1 2 2 x"] * 12 + ["K OK 0", "K DOWN 0", "K DOWN 0", "K DOWN 0", "K OK 0"] +
-                      ["K DOWN 0"] * 13 + ["K OK 0"] + ["R", "K DOWN 0"] * 30 + ["R"])
+                      ["K DOWN 0"] * 15 + ["K OK 0"] + ["R", "K DOWN 0"] * 30 + ["R"])
         last = self.screens(out)[-1]
         self.assertEqual(last[0], "handover")
         self.assertRegex(self.lines(last)[-1], r"^\+\d+$", self.lines(last))   # przewinięte do końca
@@ -2261,7 +2359,7 @@ class HostUnitTests(unittest.TestCase):
         texts = ui_texts.load()["texts"]
         labels = ui_texts.load()["labels"]
         out = self.ui(["H", self.CONFIG, "L 0", "O 0", "cause", "T 1000", "R", "K OK 1000", "T 2000", "R", "cause",
-                       "K OK 2050", "K DOWN 2100", "K DOWN 2200", "K DOWN 2300", "K OK 2400"] + ["K DOWN 2500"] * 13 + ["K OK 2600", "R",
+                       "K OK 2050", "K DOWN 2100", "K DOWN 2200", "K DOWN 2300", "K OK 2400"] + ["K DOWN 2500"] * 15 + ["K OK 2600", "R",
                        "O 1", "cause", "K BACK 2700", "K BACK 2800", "K BACK 2900", "T 4000", "R", "O 0", "T 5000", "R"])
         s = self.screens(out)
         self.assertEqual([x[0] for x in s], ["alarm", "main", "handover", "main", "alarm"])
@@ -2319,25 +2417,26 @@ class HostUnitTests(unittest.TestCase):
         menu = [strings[0] for _, strings in data["menu"]]
         texts, labels = data["texts"], data["labels"]
         out = self.ui(["H", "cfg " + json.dumps(node_doc()), "S 0", "O 1", "K OK 0", "R", "PC 1 300 12 30 1", "R", "K OK 0", "R",
-                       "K OK 0", "R"] + ["K DOWN 0"] * 14 + ["R", "K OK 0", "R"])
+                       "K OK 0", "R"] + ["K DOWN 0"] * 16 + ["R", "K OK 0", "R"])
         main, heard, menu_screen, status_top, status_end, services = self.screens(out)
         power = texts["zasilanie_12v"][0].replace("[x]", "0,0")
         self.assertEqual(self.lines(main), [texts["radio_wlaczone"][0], texts["komputer_brak"][0], power, "", ""])
         self.assertEqual(self.lines(heard)[1], texts["komputer_osp"][0].replace("[czas]", "5 " + ui_texts.UNITS["PL"][0]))
         self.assertEqual(self.lines(menu_screen), [menu[3], menu[4], "", "", ""])
         self.assertEqual(status_top[0], "status")
-        self.assertEqual(self.lines(status_end), [power, "FOFF ---", "bench-a-test", "WICI-000000", labels["USLUGI"][0]])
+        prep = texts["przygotowanie_wejscia_bez_czasu"][0].replace("[n]", "0").split(": ")
+        self.assertEqual(self.lines(status_end), [prep[0] + ":", prep[1], "bench-a-test", "WICI-000000", labels["USLUGI"][0]])
         self.assertEqual(self.lines(services), [labels["WYCISZ_DZWIEK"][0], labels["ZNISZCZ_DANE"][0], "", "", ""])
 
     def test_services_backup_and_destroy_sequences(self):
         labels = ui_texts.load()["labels"]
         texts = ui_texts.load()["texts"]
-        to_services = ["K OK 0", "K DOWN 0", "K DOWN 0", "K DOWN 0", "K OK 0"] + ["K DOWN 0"] * 14 + ["K OK 0", "R"]
+        to_services = ["K OK 0", "K DOWN 0", "K DOWN 0", "K DOWN 0", "K OK 0"] + ["K DOWN 0"] * 16 + ["K OK 0", "R"]
         script = self.HOSTED + self.CREATE + to_services + [
             "K OK 0", "R", "K OK 0",                                    # OGŁOŚ ADRES: wynik, powrót
             "K DOWN 0", "K OK 0", "R",                                  # WYCISZ DŹWIĘK
             "K DOWN 0", "K OK 0", "R", "K UP 0", "K DOWN 0", "K UP 0", "K OK 0", "R", "diag", "poll"] + \
-            ["K DOWN 0"] * 16 + ["K OK 0", "K DOWN 0", "K DOWN 0", "K DOWN 0", "K OK 0", "R", "K UP 0", "K DOWN 0", "K DOWN 0", "R",
+            ["K DOWN 0"] * 18 + ["K OK 0", "K DOWN 0", "K DOWN 0", "K DOWN 0", "K OK 0", "R", "K UP 0", "K DOWN 0", "K DOWN 0", "R",
                                  "K UP 0", "K DOWN 0", "K UP 0", "K OK 0", "R", "diag"]
         out = self.ui(script)
         s = self.screens(out)
@@ -2366,7 +2465,7 @@ class HostUnitTests(unittest.TestCase):
         # własnych zgłoszeń z FRAM; treść komunikatu dekoduje się raz na rekord.
         script = self.HOSTED + self.CREATE * 3 + ["in " + compact([1, 4, self.rid(77), 7, "Komunikat"]), "K OK 0", "K DOWN 0",
                                                   "K OK 0", "R", "B", "R", "B", "K OK 0", "R", "B", "K BACK 0", "K BACK 0",
-                                                  "K DOWN 0", "K DOWN 0", "K OK 0"] + ["K DOWN 0"] * 13 + ["K OK 0", "R", "B", "R", "B"]
+                                                  "K DOWN 0", "K DOWN 0", "K OK 0"] + ["K DOWN 0"] * 15 + ["K OK 0", "R", "B", "R", "B"]
         out = self.ui(script)
         s = self.screens(out)
         self.assertEqual([x[0] for x in s], ["messages", "messages", "item", "handover", "handover"])
