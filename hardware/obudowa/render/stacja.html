@@ -14,7 +14,7 @@ html, body { margin: 0; background: #d9d4cb; overflow: hidden; font-family: "Nun
 #caption span { display: block; font-size: 18px; margin-top: 6px; color: #3d4148; max-width: 1500px; }
 #caption.side { top: auto; bottom: 32px; left: 1150px; }
 #caption.side span { max-width: 600px; }
-#caption.material { top: auto; bottom: 44px; left: 56px; }
+#caption.material { top: 40px; left: 56px; }
 #caption.material b { font-size: 34px; }
 #caption.material span { font-size: 20px; max-width: 1100px; line-height: 1.4; white-space: pre-line; }
 </style>
@@ -181,7 +181,7 @@ for (const b of U.panel) {
 }
 // connector hints on the bottom edge
 for (const c of U.connectors) {
-  text(`${c.id} ▾`, c.x, H - foy - 1.6, 2.4, 800, "#4a4f57");
+  text(`${c.label} ▾`, c.x, H - foy - 1.6, 2.6, 800, "#4a4f57");
 }
 const foilTex = new THREE.CanvasTexture(foil);
 foilTex.colorSpace = THREE.SRGBColorSpace;
@@ -258,9 +258,14 @@ function cable(points, r, material) {
 }
 for (const c of U.connectors) {
   const x = px(c.x);
-  if (c.id === "USB-C") {
-    add(new RoundedBoxGeometry(13, 5, 6.5, 4, 1.8), RUBBER, x, BOTTOM - 2.3, CZ);
-    add(new RoundedBoxGeometry(4, 9, 1.2, 2, 0.5), RUBBER, x + 8, BOTTOM - 4.5, CZ + 2.5);
+  if (c.id === "USB-C") {   // laptop podłączony: wtyk z przewodem, zatyczka zwisa na uwięzi
+    const PLUG = mat("#d4d7db", { roughness: 0.45 });
+    add(new RoundedBoxGeometry(11.5, 1.2, 5.5, 3, 1.2), STEEL, x, BOTTOM - 0.5, CZ);
+    add(new RoundedBoxGeometry(12.5, 20, 7, 4, 2.6), PLUG, x, BOTTOM - 11, CZ);
+    add(new THREE.CylinderGeometry(2.4, 3.0, 9, 32), PLUG, x, BOTTOM - 25, CZ);
+    cable([[x, BOTTOM - 29, CZ], [x, BOTTOM - 55, CZ - 1], [x - 12, BOTTOM - 140, CZ - 8], [x - 30, BOTTOM - 400, -D / 2 + 3]], 2.0, PLUG);
+    add(new RoundedBoxGeometry(3.5, 12, 1.0, 2, 0.4), RUBBER, x + 9.5, BOTTOM - 6, CZ + 3);
+    add(new RoundedBoxGeometry(12, 6.5, 5, 4, 1.8), RUBBER, x + 10, BOTTOM - 15, CZ + 3.5, [0.15, 0, 0.25]);
   }
   if (c.id === "12 V") {
     add(new THREE.CylinderGeometry(10, 10, 3, 6), STEEL, x, BOTTOM - 1.5, CZ);
