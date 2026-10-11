@@ -9,9 +9,10 @@ Obecna kolejność prac: **R0 — test pary radiowej, potem L0 — test kompletn
 | [radio-pair](radio-pair/README.md) | Program R0 `pair-0.4`, test pary na jednym Macu, test zasięgu na dwóch Macach i testy automatyczne. Narzędzie testu pary jest współdzielone z L0. | Pierwszy test dwóch zamówionych zestawów Seeed 102010611, następnie próby zasięgu w budynku i terenie. |
 | [l0-diagnostic](l0-diagnostic/README.md) | Program L0 `l0-0.5`, instrukcja wgrania i odbioru, narzędzia, testy oraz zapis weryfikacji. | Test zmontowanego prototypu: radio, FRAM, ekran, wejścia, LED, brzęczyk i wspólna magistrala SPI. |
 | [dev-bench](dev-bench/README.md) | Projekt CAD, BOM i pliki produkcyjne nośnej N1 oraz dokumentacja stanowisk TI/ST. Zachowujemy źródła sprzętu i powiązania z dokumentacją oraz firmware stanowisk. | Materiały N1; montaż L0 według uzgodnionej paczki wyceny, z połączeniami MCU z [tabeli L0](l0-diagnostic/reference/polaczenia-MCU-L0.csv). Stanowiska TI/ST są wariantem zapasowym. |
+| [obudowa](obudowa/README.md) | Szkielet obudowy: założenia, lista pomiarów z przymiarki, generator odmawiający pracy bez pomiarów i render koncepcyjny stacji. | Pomiary po dostawie DevKitC i paneli; geometria obudowy dopiero po nich. |
 | [r02](r02/README.md) | Założenia przyszłej własnej płytki stacji: architektura, zasilanie, radio, obudowa i wnioski z poprzedniego projektu. | Projekt wstrzymany. Nie jest potrzebny do wykonania testów R0/L0; nie zamawiać płytki na jego podstawie. |
 
-Wszystkie cztery katalogi mają odrębną rolę w repozytorium. Do uruchomienia bieżących testów potrzebne są programy R0 i L0 oraz właściwy sprzęt. Zachowanie dokumentacji R02 nie oznacza rozpoczynania jej budowy.
+Wszystkich pięć katalogów ma odrębną rolę w repozytorium. Do uruchomienia bieżących testów potrzebne są programy R0 i L0 oraz właściwy sprzęt. Zachowanie dokumentacji R02 nie oznacza rozpoczynania jej budowy.
 
 ## Właściwy program do właściwej płytki
 

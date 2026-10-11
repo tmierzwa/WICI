@@ -854,6 +854,14 @@ size_t Model::statusLines(const Status& s, char out[][LINE_BYTES], size_t max) c
     else snprintf(tmp, sizeof(tmp), "FOFF ---");
     put(tmp);
     if (muted_) put(text(Id::DZWIEK_WYCISZONY, lang_));
+    char entries[LINE_BYTES * 4], change[LINE_BYTES * 4];
+    prepText(s, entries, change, sizeof(entries));
+    const char* const prepLines[] = {entries, change};
+    for (const char* line : prepLines) {
+        char lines[3][LINE_BYTES];
+        const size_t wrapped = line[0] ? wrap(line, lines, 3) : 0;
+        for (size_t i = 0; i < wrapped; ++i) put(lines[i]);
+    }
     put(s.version);
     put(s.name);
     if (!node()) put(label(Label::PRZEKAZANIE_ZMIANY, lang_));
@@ -964,6 +972,23 @@ void Model::buildItem(const Item& item, Text& t) const {
     }
 }
 
+void Model::prepText(const Status& s, char* entries, char* change, size_t size) const {
+    char count[12], value[24], tmp[LINE_BYTES * 4];
+    if (s.prepKnown) formatNumber(count, sizeof(count), s.prepEntries);
+    else snprintf(count, sizeof(count), "?");
+    if (s.prepKnown && s.prepAgeKnown) {
+        duration(s.prepAgeS, lang_, value, sizeof(value));
+        substitute(text(Id::PRZYGOTOWANIE_WEJSCIA, lang_), "[czas]", value, tmp, sizeof(tmp));
+    } else snprintf(tmp, sizeof(tmp), "%s", text(Id::PRZYGOTOWANIE_WEJSCIA_BEZ_CZASU, lang_));
+    substitute(tmp, "[n]", count, entries, size);
+    change[0] = '\0';
+    if (!s.prepKnown || !s.prepEntries) return;
+    if (!s.prepConfig) { snprintf(change, size, "%s", text(Id::PRZYGOTOWANIE_BEZ_ZMIAN, lang_)); return; }
+    char digits[8];
+    snprintf(digits, sizeof(digits), "%04X", static_cast<unsigned>(s.prepConfigSha));
+    substitute(text(Id::PRZYGOTOWANIE_KONFIGURACJA, lang_), "[xxxx]", digits, change, size);
+}
+
 void Model::buildHandover(const Status& status, Text& t) {
     // Najpierw stan stacji (cisza, awarie, nowe wiadomości, energia, wyciszenie), potem otwarte i
     // niepotwierdzone zgłoszenia od najstarszego (te najpierw alarmują). Zgłoszenia, które się nie
@@ -982,6 +1007,14 @@ void Model::buildHandover(const Status& status, Text& t) {
     t.addLine(tmp);
     t.addLine(lines[status.silence ? 3 : 2]);  // zasilanie
     if (muted_) t.addLine(text(Id::DZWIEK_WYCISZONY, lang_));
+    // Wejścia w tryb przygotowania (po przygotowaniu stacji zawsze ≥1): następna zmiana porównuje
+    // licznik z ewidencją; stanowisko bez wejść niczego tu nie dodaje.
+    if (!node() && (status.prepEntries || !status.prepKnown)) {
+        char entries[LINE_BYTES * 4], change[LINE_BYTES * 4];
+        prepText(status, entries, change, sizeof(entries));
+        t.add(entries);
+        if (change[0]) t.add(change);
+    }
     const size_t count = host_ ? host_->itemCount() : 0;
     uint32_t hidden = 0;
     for (size_t i = count; i-- > 0;) {

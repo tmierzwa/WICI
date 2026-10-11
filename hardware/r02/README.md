@@ -18,7 +18,7 @@ Oprogramowanie i próby wariantu P1 można rozwijać na [stanowisku deweloperski
 |---|---|
 | [Elektronika](../../docs/spec/elektronika.md#płytka-stacji-r02-wymagania) | zasilanie z ogniw i 12 V, progi, pomiar, pobór, szyna 5 V ekranu, tabela wymagań płytki: MCU, zegar, FRAM, ekran, przyciski, ESD, programowanie, nadzór, USB, ochrona odgromowa, temperatura, obudowa |
 | [Radio](../../docs/spec/radio.md) | profil P1, moc 13 dBm, TCXO ±0,5 ppm z budżetem ±2,0 ppm, czułość ≤−110 dBm na złączu z pełnym torem wejściowym, dwa wykonania RF, USB do laptopa, polecenia pomiarowe |
-| [Oprogramowanie](../../docs/spec/oprogramowanie.md#ekran-i-przyciski-stacji) | ekran, przyciski, dioda alarmu, brzęczyk, tryb przygotowania pod plombowaną pokrywą, dwa interfejsy CDC |
+| [Oprogramowanie](../../docs/spec/oprogramowanie.md#ekran-i-przyciski-stacji) | ekran, przyciski, dioda alarmu, brzęczyk, tryb przygotowania pod naklejką serwisową z zapisem wejść, dwa interfejsy CDC |
 | [BOM stacji](../../docs/spec/bom-stacji.csv) | kandydaci części od dwóch producentów ze stanem kwalifikacji; R02 nie dodaje części bez wpisu w BOM |
 | [Odbiór](../../docs/spec/odbior.md) | próby T4 (radio), T6 (energia i bezpieczeństwo), T7 (odtworzenie i dostawcy) i ich warunki zaliczenia |
 | [Lekcje z R01.3](lekcje.md) | tor RF według referencji producenta, zasilanie i USB, zasady layoutu, mechanika, proces kontroli, kolejność uruchomienia |
@@ -29,7 +29,7 @@ Oprogramowanie i próby wariantu P1 można rozwijać na [stanowisku deweloperski
 - **D15 (ekran):** wybór Sharp LS027B7DH01 albo zamiennika i złącze wspólne dla obu wykonań; dla panelu Sharp złącze Hirose FH12-10S-0.5SH jak na N1 ([architektura](architektura.md#ustalone-teraz)), zostaje czytelność w −20 °C.
 - **D10 (P1 wobec LoRa):** rozstrzygnięte roboczo 2026-10-08: radio pilotażu to LoRa (SX1262, [profil](../../docs/spec/radio.md#profil-lora-pilotażu)), P1 jest wariantem zapasowym. Tor RF R02 (jeden układ LoRa albo dwa tory P1, przełącznik RF, osobny tor odbiorczy, filtr SAW) projektuje się dopiero po pilotażu, na podstawie etapu 0, T4 i T5.
 - **Zasilanie poziomu 1:** liczba ogniw, przetwornica i sterownik wyłącznika według [elektroniki](../../docs/spec/elektronika.md); projekt w [zasilaniu](zasilanie.md), otwarte decyzje F87 i pomiary na płytkach ewaluacyjnych.
-- **Obudowa:** wymiary, położenie ekranu, przycisków, złączy i plombowanej pokrywy serwisowej, bo wyznaczają obrys i otwory płytki; propozycja w [obudowie](obudowa.md), do potwierdzenia na modelu STEP i przymiarce próbek.
+- **Obudowa:** wymiary, położenie ekranu, przycisków, złączy i otworu przycisku przygotowania pod naklejką serwisową, bo wyznaczają obrys i otwory płytki; propozycja w [obudowie](obudowa.md), do potwierdzenia na modelu STEP i przymiarce próbek.
 
 ## Kolejność prac
 

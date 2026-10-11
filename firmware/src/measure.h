@@ -71,7 +71,7 @@ public:
     // pinLed: dioda miganiem sygnalizująca czekanie na potwierdzenie OK (aktywna stanem niskim); -1 = brak.
     Bench(radiolink::Driver& radio, uint8_t pinOk, int16_t pinLed);
 
-    bool prep = false;     // tryb przygotowania (na stacji: przycisk pod plombowaną pokrywą)
+    bool prep = false;     // tryb przygotowania (na stacji: przycisk pod naklejką serwisową)
     bool silence = false;  // cisza radiowa (przełącznik CISZA albo panel): blokuje każde nadanie
     // Cisza z panelu z wyjątkiem jednego zgłoszenia: nadanie P1 od stosu (p1send z stack = true)
     // przechodzi, bo stos przepuszcza wtedy tylko ruch wyjątku (rns_node.h); pomiary i P1TX nie.

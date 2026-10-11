@@ -13,11 +13,16 @@
 // - wersja formatu FRAM (`fram_format`), stan (zainicjowana albo w trakcie ZNISZCZ DANE) i znacznik
 //   zapisanej tożsamości stacji. Brak każdego rekordu przy pustej pamięci to nowa stacja; rekordy
 //   niepuste i niepoprawne bez żadnego poprawnego to uszkodzenie, nie nowa stacja (formatState),
-//   a pusty rekord tożsamości przy znaczniku to uszkodzenie, nie powód do nowej tożsamości.
+//   a pusty rekord tożsamości przy znaczniku to uszkodzenie, nie powód do nowej tożsamości;
+// - wejścia w tryb przygotowania (oprogramowanie.md, "Tryb przygotowania i naklejka serwisowa"):
+//   licznik wejść, który tylko rośnie, licznik czasu pracy przy wejściu i zmiany wykonane w tym
+//   wejściu (nowa konfiguracja i 16 bitów jej SHA-256). Wejście zapisuje się, zanim tryb zacznie
+//   działać (enterPrep); każda zmiana dopisuje rekord tego samego wejścia. Pierścień ma 10 rekordów
+//   poza dziennikiem zdarzeń, więc zdarzenia diagnostyczne go nie nadpisują.
 // Rekordy 24 B mają numer, trzy wartości, CRC-16 i znacznik zatwierdzenia zapisywany po treści,
 // więc zanik zasilania w trakcie zapisu zostawia poprzedni rekord. Obszar nie jest szyfrowany.
 // ZNISZCZ DANE (erase) kasuje dziennik zdarzeń, zegar i ustawienia; dług ciszy, rezerwacja numerów
-// zapisu i rekord formatu zostają. Bez zależności od Arduino: sprawdzany na komputerze z pamięcią w RAM.
+// zapisu, rekord formatu i wejścia w tryb przygotowania zostają. Bez zależności od Arduino: sprawdzany na komputerze z pamięcią w RAM.
 #pragma once
 
 #include <stddef.h>
@@ -34,6 +39,8 @@ constexpr uint32_t CLOCK_BASE = DEBT_BASE + RING_SPAN;
 constexpr uint32_t SETTINGS_BASE = CLOCK_BASE + RING_SPAN;
 constexpr uint32_t RESERVE_BASE = SETTINGS_BASE + RING_SPAN;
 constexpr uint32_t FORMAT_BASE = RESERVE_BASE + RING_SPAN;
+constexpr uint32_t PREP_BASE = FORMAT_BASE + RING_SPAN;
+constexpr uint32_t PREP_SLOTS = 10;       // 240 B między pierścieniem formatu a dziennikiem zdarzeń
 constexpr uint32_t EVENT_BASE = 0x001000;
 constexpr uint32_t EVENT_SLOTS = 512;  // 512 x 64 B = 32 KiB (oprogramowanie.md)
 constexpr size_t EVENT_RECORD = 64;
@@ -42,7 +49,10 @@ constexpr uint8_t COMMITTED = 0xA5;
 constexpr uint32_t RESTART_SKIP_S = 60;   // przesunięcie licznika przy starcie (oprogramowanie.md, "Czas")
 constexpr uint32_t FRAM_FORMAT = 2;       // wersja formatu rekordów magazynu (fram_format)
 constexpr uint32_t FORMAT_IDENTITY = 0x01;   // tożsamość stacji zapisana w FRAM
-static_assert(FORMAT_BASE + RING_SPAN <= EVENT_BASE, "pierścienie przed dziennikiem zdarzeń");
+constexpr uint32_t PREP_CONFIG = 0x0001;   // w wejściu zatwierdzono nową konfigurację (`configure`)
+constexpr uint32_t PREP_RESTARTED = 0x8000;  // licznik niepewny po uszkodzonym rekordzie pierścienia (przechodzi dalej)
+constexpr uint32_t PREP_CHANGES = 0xFFFF;  // młodsze 16 bitów c: zmiany; starsze: 16 bitów SHA-256 konfiguracji
+static_assert(PREP_BASE + PREP_SLOTS * SMALL_RECORD <= EVENT_BASE, "pierścienie przed dziennikiem zdarzeń");
 
 struct Storage {
     virtual ~Storage() = default;
@@ -57,7 +67,9 @@ struct SmallRecord {
                      // format: wersja
     uint32_t b = 0;  // dług: czas pracy przy zapisie [s]; zegar: suma przeskoków S [s]; ustawienia: znaczniki;
                      // rezerwacja: starsze słowo; format: stan (FormatState)
-    uint32_t c = 0;  // zegar: liczba startów; format: znaczniki (FORMAT_IDENTITY)
+    uint32_t c = 0;  // zegar: liczba startów; format: znaczniki (FORMAT_IDENTITY);
+                     // wejścia: zmiany (PREP_CHANGES) i SHA-256 konfiguracji << 16
+    // Wejścia w tryb przygotowania: a = numer wejścia (licznik), b = licznik czasu pracy przy wejściu [s].
 };
 
 struct EventRecord {
@@ -114,12 +126,28 @@ public:
     uint32_t formatFlags() const { return format_.c; }
     bool writeFormat(FormatState state, uint32_t flags);
 
-    // ZNISZCZ DANE: dziennik zdarzeń, zegar i ustawienia; dług ciszy, rezerwacja i format zostają.
+    // Wejścia w tryb przygotowania. enterPrep: numer wejścia + 1 przy liczniku czasu counterS,
+    // zapisany przed włączeniem trybu (false: tryb się nie włącza). notePrep: zmiana w bieżącym wejściu
+    // (PREP_CONFIG i 16 bitów SHA-256 konfiguracji). prepCorrupt: pierścień ma zatwierdzony rekord
+    // z błędnym CRC, który mógł być najnowszym wejściem, więc licznik jest niepewny; następne wejście
+    // dostaje numer po najnowszym poprawnym (albo 1), znacznik PREP_RESTARTED i czyści uszkodzone gniazda.
+    bool enterPrep(uint32_t counterS);
+    bool notePrep(uint32_t change, uint16_t configSha);
+    uint32_t prepEntries() const { return prep_.a; }
+    uint32_t prepAtS() const { return prep_.b; }
+    uint32_t prepChanges() const { return prep_.c & PREP_CHANGES & ~PREP_RESTARTED; }
+    bool prepRestarted() const { return prep_.c & PREP_RESTARTED; }
+    uint16_t prepConfigSha() const { return static_cast<uint16_t>(prep_.c >> 16); }
+    bool prepCorrupt() const { return prepCorrupt_; }
+    const SmallRecord& prep() const { return prep_; }
+
+    // ZNISZCZ DANE: dziennik zdarzeń, zegar i ustawienia; dług ciszy, rezerwacja, format i wejścia
+    // w tryb przygotowania zostają.
     bool erase();
 
 private:
-    bool scanSmall(uint32_t base, SmallRecord& latest, uint32_t& validCount, uint32_t& corruptCount);
-    bool writeSmall(uint32_t base, SmallRecord& current, uint32_t a, uint32_t b, uint32_t c);
+    bool scanSmall(uint32_t base, SmallRecord& latest, uint32_t& validCount, uint32_t& corruptCount, uint32_t slots = SMALL_SLOTS);
+    bool writeSmall(uint32_t base, SmallRecord& current, uint32_t a, uint32_t b, uint32_t c, uint32_t slots = SMALL_SLOTS);
     bool eraseRing(uint32_t base, SmallRecord& current);
 
     Storage& storage_;
@@ -130,6 +158,9 @@ private:
     SmallRecord settings_;
     SmallRecord reserve_;
     SmallRecord format_;
+    SmallRecord prep_;
+    bool prepCorrupt_ = false;
+    uint32_t prepCorruptSlots_ = 0;   // bity gniazd pierścienia wejść z rekordem uszkodzonym
     FormatState formatState_ = FormatState::BLANK;
     EventRecord event_;
 };

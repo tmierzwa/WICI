@@ -188,7 +188,7 @@ part('SW5', 'Switch:SW_SPDT', 'CISZA', 'WICI:Toggle_ESwitch_100SP1T1B4M2QE',
      note='zwarte 1-2 = cisza radiowa (SW_CISZA = L); 2-3 = praca')
 part('SW6', 'Switch:SW_Push', 'PRZYGOTOWANIE', 'Button_Switch_THT:SW_TH_Tactile_Omron_B3F-100x',
      {1: 'BTN_PREP', 2: 'GND'}, (25.0, 86.75, 0), mpn='B3F-1000', manufacturer='Omron',
-     spec='przycisk 6x6 mm', note='na stacji pod plombowaną pokrywą')
+     spec='przycisk 6x6 mm', note='na stacji pod naklejką serwisową')
 part('D1', 'Device:LED', 'ALARM', 'LED_THT:LED_D5.0mm', {1: 'GND', 2: 'LED_A'}, (36.0, 89.0, 0),
      mpn='WP7113ID', manufacturer='Kingbright', spec='LED 5 mm czerwona, rozproszona',
      note='katoda (pad kwadratowy 1) do masy')

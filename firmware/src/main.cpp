@@ -125,6 +125,14 @@ const char* const buttonNames[] = {"up", "down", "ok", "back"};
 const int16_t leds[] = {board::LED_HEARTBEAT, board::LED_RADIO, board::LED_FRAM, board::LED_USB};
 
 // Diody DK aktywne stanem niskim; -1: płytka bez diody (stanowisko B).
+void ledWrite(int16_t pin, bool on);
+
+// Zapis dziennika nie powiódł się: dziennik wyłączony (LED3 gaśnie), jak przy zegarze i ustawieniach.
+void journalFailed() {
+    journalOk = false;
+    ledWrite(board::LED_FRAM, false);
+}
+
 void ledWrite(int16_t pin, bool on) {
     if (pin >= 0) digitalWrite(static_cast<uint8_t>(pin), on ? LOW : HIGH);
 }
@@ -303,6 +311,13 @@ void restartSoon(const char* why) {
 }
 
 void BenchHost::configChanged(bool roleChanged) {
+    // Nowa konfiguracja w bieżącym wejściu w tryb przygotowania (STAN, PRZEKAZANIE ZMIANY).
+    const uint8_t* sha = stationStore.configSha();
+    // Konfiguracja jest już zatwierdzona; nieudany zapis wyłącza dziennik, więc STAN pokazuje licznik „?”.
+    if (journalOk && !stationJournal.notePrep(journal::PREP_CONFIG, static_cast<uint16_t>((sha[0] << 8) | sha[1]))) {
+        bench.log("prep log: config not noted");
+        journalFailed();
+    }
     if (rnsOk) rnsnode::setIfac(stationStore.config().ifac);   // configure może zmienić kod IFAC
     applyReceivers();
     // Zmiana roli: interfejs USB i cel "wici.sa1" zmienia dopiero start stosu, więc stacja wraca
@@ -403,14 +418,25 @@ void setSwitchSilence(bool on, const char* source) {
     screenChanged();
 }
 
-void applyPrep(bool on, const char* source) {
+// Zwraca false, gdy wejście w tryb odmówiono (brak zapisu w dzienniku).
+bool applyPrep(bool on, const char* source) {
     if (!on) bench.stop();  // wyjście z trybu przygotowania przerywa pomiary
-    if (bench.prep == on) return;
-    bench.prep = on;
+    if (bench.prep == on) return true;
     char text[48];
+    // Wejście zapisane w dzienniku FRAM, zanim tryb zacznie działać (oprogramowanie.md, "Tryb
+    // przygotowania i naklejka serwisowa"); bez zapisu tryb się nie włącza.
+    if (on && !(journalOk && stationJournal.enterPrep(counterS()))) {
+        if (journalOk) journalFailed();
+        snprintf(text, sizeof(text), "preparation mode refused: journal%s", source);
+        bench.log(text);
+        screenChanged();   // STAN pokazuje licznik „?”
+        return false;
+    }
+    bench.prep = on;
     snprintf(text, sizeof(text), "preparation mode %s%s", on ? "on" : "off", source);
     bench.log(text);
     if (storeOk && !nodeRole()) app.stationEvent(store::PREP, on);
+    return true;
 }
 
 #if defined(WICI_BOARD_N1)
@@ -472,8 +498,8 @@ void pollPanel(uint32_t now) {
     if (!prep) prepToggled = false;
     else if (!prepToggled && now - prepPressedSince >= PREP_HOLD_MS) {
         prepToggled = true;
-        applyPrep(!bench.prep, " (button)");
-        beep(100);
+        // Krótki sygnał: tryb przełączony; długi: wejście odmówione (dziennik FRAM nie przyjął zapisu).
+        beep(applyPrep(!bench.prep, " (button)") ? 100 : 1500);
     }
     prepWas = prep;
     // Dioda i brzęczyk (annunciator.h); przyczyna alarmu sprawdzana co sekundę jak alarmy ekranu.
@@ -575,6 +601,13 @@ ui::Status screenStatus() {
     s.foffHz = foffHz;
     s.version = WICI_FW_VERSION;
     s.name = stationName;
+    s.prepKnown = journalOk && !stationJournal.prepCorrupt();
+    s.prepEntries = stationJournal.prepEntries();
+    // Licznik czasu pracy cofa się tylko po ZNISZCZ DANE: wtedy czas od wejścia jest nieznany.
+    s.prepAgeKnown = s.prepEntries && counterS() >= stationJournal.prepAtS();
+    s.prepAgeS = s.prepAgeKnown ? counterS() - stationJournal.prepAtS() : 0;
+    s.prepConfig = stationJournal.prepChanges() & journal::PREP_CONFIG;
+    s.prepConfigSha = stationJournal.prepConfigSha();
     const rnsnode::UsbStatus usb = rnsnode::usbStatus();
     s.computerHeard = computerHeard;
     s.computerS = computerHeard && counterS() > computerAtS ? counterS() - computerAtS : 0;
@@ -751,19 +784,31 @@ void printInfo() {
                   static_cast<unsigned long>(protocol.stats().rejected), protocol.bootId(), static_cast<unsigned long>(WDT_TIMEOUT_S), BOARD_NAME);
 }
 
+// Wejścia w tryb przygotowania (JOURNAL): licznik, licznik czasu przy wejściu, zmiany.
+void printPrepLog(char* out, size_t size) {
+    snprintf(out, size, "\"prep_entries\":%lu,\"prep_at_s\":%lu,\"prep_changes\":%lu,\"prep_config_sha\":\"%04X\","
+             "\"prep_restarted\":%s,\"prep_corrupt\":%s",
+             static_cast<unsigned long>(stationJournal.prepEntries()), static_cast<unsigned long>(stationJournal.prepAtS()),
+             static_cast<unsigned long>(stationJournal.prepChanges()), static_cast<unsigned>(stationJournal.prepConfigSha()),
+             boolName(stationJournal.prepRestarted()), boolName(stationJournal.prepCorrupt()));
+}
+
 void printJournal() {
     const journal::SmallRecord& d = stationJournal.debt();
     const journal::SmallRecord& k = stationJournal.clock();
-    // Dwie części poniżej 256 znaków (zob. printRns).
+    // Trzy części poniżej 256 znaków (zob. printRns).
     Serial.printf("{\"journal_ok\":%s,\"debt_seq\":%lu,\"debt_ms\":%lu,\"debt_written_at_s\":%lu,\"debt_records\":%lu,",
                   boolName(journalOk), static_cast<unsigned long>(d.seq), static_cast<unsigned long>(d.a),
                   static_cast<unsigned long>(d.b), static_cast<unsigned long>(stationJournal.debtValid()));
     Serial.printf("\"tx_wait_ms\":%lu,\"clock_seq\":%lu,\"uptime_s\":%lu,\"skip_s\":%lu,\"restarts\":%lu,\"event_seq\":%lu,"
-                  "\"max_debt_ms\":%lu,\"journal_resets\":%lu}\n",
+                  "\"max_debt_ms\":%lu,\"journal_resets\":%lu,",
                   static_cast<unsigned long>(bench.debtRemainingMs()), static_cast<unsigned long>(k.seq),
                   static_cast<unsigned long>(counterS()), static_cast<unsigned long>(skipS), static_cast<unsigned long>(stationJournal.starts()),
                   static_cast<unsigned long>(stationJournal.eventSeq()), static_cast<unsigned long>(measure::MAX_DEBT_MS),
                   static_cast<unsigned long>(journalResets));
+    char prepLog[200];
+    printPrepLog(prepLog, sizeof(prepLog));
+    Serial.printf("%s}\n", prepLog);
 }
 
 // Start dziennika: licznik czasu pracy z przeskokiem 60 s zapisany przed pierwszą ramką i pierwszym
@@ -935,7 +980,7 @@ void handle(char* cmd) {
     else if (radiocon::handle(cmd, words, n)) return;
     else if (platform::handle(cmd, words, n)) return;
     else if (!strcmp(cmd, "PREP") && n == 1) {
-        // Na stacji tryb przygotowania włącza przycisk pod plombowaną pokrywą; na stanowisku
+        // Na stacji tryb przygotowania włącza przycisk pod naklejką serwisową; na stanowisku
         // zastępuje go polecenie potwierdzone przyciskiem OK w ciągu 30 s.
         bool on = false;
         if (!cmdargs::parseFlag(words[0], on)) printError("PREP <0|1>");

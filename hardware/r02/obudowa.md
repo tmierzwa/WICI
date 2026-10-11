@@ -35,8 +35,8 @@ Bopla BOS 801 przy szerokości 100 mm nie mieści czterech przycisków dla dłon
 | GÓRA, DÓŁ, OK, WSTECZ | E-Switch PV6F240SS-341: otwór Ø16 mm, 1 000 000 cykli mechanicznych, IP65; DigiKey 3633 sztuk, 15,60 USD | APEM AV091003C900: otwór Ø19,2 mm, IP65; DigiKey 439 sztuk, 51,30 USD | metalowe przyciski montowane w panelu, połączone z płytką krótką wiązką z kluczowanym wtykiem; ESD i filtr RC przy wejściu na płytkę. Wariant przycisków lutowanych na płytce (APEM Multimec 5G z nasadkami 15 mm) wiąże wysokość płytki z frontem z dokładnością ±0,3 mm i wymaga wczesnej przymiarki |
 | CISZA z osłoną | przełącznik dźwigniowy CW Industries GTS z klapką GT-4R; klapka DigiKey 3301 sztuk, 5,72 USD | Bulgin 3900 (otwór Ø12,2 mm, IP67) z osłoną TG1-RED; DigiKey 773 sztuki, 18,30 USD | położenie przełącznika jest stanem CISZY, odczytywanym przy starcie; klapka wystaje 25–35 mm nad panel, więc najbliższy przycisk stoi ≥20 mm dalej. Otwór przełącznika GTS do sprawdzenia |
 | Wyłącznik główny | PV6 w innym kolorze albo z symbolem | AV | zagłębiony około 3 mm w pierścieniu folii, ≥30 mm od rzędu nawigacji; wyłączenie i tak wymaga przytrzymania 2 s |
-| Przycisk przygotowania | przycisk SMD na płytce (np. E-Switch TL1105 albo C&K PTS645, do sprawdzenia) | inny producent | naciska się go rysikiem przez otwór Ø3–4 mm pod plombowaną pokrywą; przy otworze montażowym płytki, żeby się nie uginała; w promieniu 10 mm żadnych ścieżek ani padów widocznych przez otwór |
-| Pokrywa serwisowa | płytka około 25 × 20 mm na jednej śrubie plombowej (łeb z otworem poprzecznym) wkręconej w mosiężną wkładkę | | drut plombowy przez łeb i ucho pokrywy, plomba ołowiana albo plastikowa obrotowa; tańsza odmiana to naklejka VOID na łbie. Pokrywa daje dostęp tylko do otworu przycisku, nie do płytki |
+| Przycisk przygotowania | przycisk SMD na płytce (np. E-Switch TL1105 albo C&K PTS645, do sprawdzenia) | inny producent | naciska się go rysikiem przez otwór Ø3–4 mm pod numerowaną naklejką serwisową; przy otworze montażowym płytki, żeby się nie uginała; w promieniu 10 mm żadnych ścieżek ani padów widocznych przez otwór |
+| Naklejka serwisowa | numerowana naklejka VOID około 22 × 12 mm na otworze przycisku przygotowania, co najmniej 3 mm kleju wokół otworu | pokrywa około 25 × 20 mm na śrubie plombowej z plombą ołowianą (do oceny przy wydaniu) | przyjęte dla pilotażu ([F113](../../docs/review.md)): naklejka tylko ujawnia wejście, a każde wejście zapisuje stacja ([tryb przygotowania](../../docs/spec/oprogramowanie.md#tryb-przygotowania-i-naklejka-serwisowa)) |
 | Dioda alarmu | dioda na płytce ze światłowodem albo dioda panelowa Ø5 mm | | widoczna z drugiego końca pomieszczenia |
 | Brzęczyk | na płytce, za otworami w folii albo ścianie | | ≥20 mm od toru RF |
 
@@ -77,7 +77,7 @@ Współrzędne w milimetrach od zewnętrznego lewego górnego narożnika pokrywy
  |  [WSTECZ]  [GÓRA]   [DÓŁ]    [OK]                                |
  |  (30, 98)  (62, 98) (94, 98) (126, 98)           ((WYŁĄCZNIK))   |
  |                                                  (185, 100)      |
- | o                                [POKRYWA SERWISOWA (150, 122)] o |
+ | o                               [NAKLEJKA SERWISOWA (150, 122)] o |
  +------------------------------------------------------------------+ 140
    dolna ściana: USB-C (x 60), 12 V EN3 (x 110), SMA (x 170)
 ```
@@ -100,7 +100,7 @@ Wstępnie, do potwierdzenia na modelu STEP Hammonda:
 - **Przyciski panelowe:** strefa Ø20–24 mm wolna od wysokich elementów wokół osi każdego przycisku na pozycjach z rysunku. Wokół wspornika osłony CISZY strefa 30 × 40 mm.
 - **Ekran:** strefa 64 × 45 mm pod modułem bez elementów wyższych niż około 1 mm. Złącze FPC po stronie taśmy panelu, diody podświetlenia przy górnej krawędzi okna.
 - **Złącza na dolnej krawędzi:** USB-C, EN3 i SMA 0–1 mm od wewnętrznej ściany. Wysokość osi złącza nad płytką musi się zgadzać ze środkiem otworu w ścianie. Elementy ESD i TVS leżą ≤10 mm od każdego złącza, przed elementami szeregowymi.
-- **Przycisk przygotowania:** około (150, 122), w osi otworu pod pokrywą serwisową.
+- **Przycisk przygotowania:** około (150, 122), w osi otworu pod naklejką serwisową.
 - **Powłoka ochronna:** maskuje się złącza, przyciski, złącze FPC, złącze koszyka, pola programowania i strefy otworów montażowych.
 - **Ciepło:** stacja traci poniżej 0,5 W, więc wystarczy trzymać przetwornice z dala od ekranu, bo kontrast panelu zależy od temperatury.
 

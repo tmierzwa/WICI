@@ -1,0 +1,171 @@
+{
+ "source": "hardware/r02/obudowa.md (2026-10-08), naklejka zamiast pokrywy serwisowej (F113); koncepcja, nie rysunek wykonawczy",
+ "enclosure": {
+  "model": "Hammond 1599KBAT",
+  "outer": [
+   220.0,
+   140.0,
+   40.0
+  ],
+  "inner": [
+   213.6,
+   133.6,
+   33.0
+  ],
+  "foil_recess": [
+   206.25,
+   126.5,
+   1.0
+  ],
+  "material": "ABS UL94 V-0"
+ },
+ "display": {
+  "panel": "Sharp LS027B7DH01A",
+  "outline": [
+   62.8,
+   42.82,
+   1.64
+  ],
+  "active": [
+   58.8,
+   35.28
+  ],
+  "pixels": [
+   400,
+   240
+  ],
+  "window": [
+   61.5,
+   38.0
+  ],
+  "window_center": [
+   52.0,
+   42.0
+  ]
+ },
+ "panel": [
+  {
+   "id": "WSTECZ",
+   "kind": "nav",
+   "xy": [
+    30.0,
+    98.0
+   ],
+   "hole": 16.0,
+   "uk": "НАЗАД",
+   "en": "BACK"
+  },
+  {
+   "id": "GÓRA",
+   "kind": "nav",
+   "xy": [
+    62.0,
+    98.0
+   ],
+   "hole": 16.0,
+   "uk": "ВГОРУ",
+   "en": "UP"
+  },
+  {
+   "id": "DÓŁ",
+   "kind": "nav",
+   "xy": [
+    94.0,
+    98.0
+   ],
+   "hole": 16.0,
+   "uk": "ВНИЗ",
+   "en": "DOWN"
+  },
+  {
+   "id": "OK",
+   "kind": "nav",
+   "xy": [
+    126.0,
+    98.0
+   ],
+   "hole": 16.0,
+   "uk": "OK",
+   "en": "OK"
+  },
+  {
+   "id": "ALARM",
+   "kind": "led",
+   "xy": [
+    185.0,
+    22.0
+   ],
+   "hole": 5.0
+  },
+  {
+   "id": "CISZA",
+   "kind": "guard",
+   "xy": [
+    185.0,
+    58.0
+   ],
+   "hole": null
+  },
+  {
+   "id": "WYŁĄCZNIK",
+   "kind": "power",
+   "xy": [
+    185.0,
+    100.0
+   ],
+   "hole": 16.0
+  },
+  {
+   "id": "SERWIS",
+   "kind": "seal",
+   "xy": [
+    150.0,
+    122.0
+   ],
+   "hole": 4.0,
+   "size": [
+    22.0,
+    12.0
+   ]
+  }
+ ],
+ "connectors": [
+  {
+   "id": "USB-C",
+   "x": 60.0,
+   "label": "USB-C",
+   "part": "USB-C z zatyczką na uwięzi; połączenie z laptopem"
+  },
+  {
+   "id": "12 V",
+   "x": 110.0,
+   "label": "12 V",
+   "part": "Switchcraft EN3, 2 styki, otwór 15,5 mm"
+  },
+  {
+   "id": "ANTENA",
+   "x": 170.0,
+   "label": "ANTENA",
+   "part": "SMA-F przepustowe z nakrętką na ściance"
+  }
+ ],
+ "screen_rows": [
+  "RADIO WŁĄCZONE",
+  "KONTAKT 12 MIN TEMU",
+  "OGNIWA: OKOŁO 46 H",
+  "",
+  "NOWE WIADOMOŚCI: 1"
+ ],
+ "unmeasured": [
+  "devkitc_top",
+  "button_top",
+  "display_top",
+  "fpc_free_length",
+  "wio_position",
+  "usb_otg_position",
+  "hammond_bosses",
+  "hammond_lid_screws",
+  "pilot_board",
+  "guard_footprint"
+ ]
+}
