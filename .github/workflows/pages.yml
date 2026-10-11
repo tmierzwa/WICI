@@ -8,6 +8,7 @@ on:
       - 'media/film/*.mp4'
       - 'media/film/*.jpg'
       - 'media/logo/**'
+      - 'software/simulator/web/**'
       - 'tools/build_pages.py'
       - '.github/workflows/pages.yml'
   workflow_dispatch:

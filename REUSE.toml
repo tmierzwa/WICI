@@ -111,3 +111,18 @@ path = "hardware/*/cad/KICAD-LIBRARY-LICENSE.md"
 precedence = "override"
 SPDX-FileCopyrightText = "KiCad Libraries Team and contributors"
 SPDX-License-Identifier = "CC-BY-SA-4.0 WITH KiCad-libraries-exception"
+
+[[annotations]]
+path = "software/simulator/web/build.json"
+precedence = "closest"
+SPDX-FileCopyrightText = "2026 Tomek Mierzwa and WICI contributors"
+SPDX-License-Identifier = "CC-BY-4.0"
+
+# Skompilowane obrazy symulatora: firmware/src (MIT, glify fontu DejaVu), wirtualna płytka (MIT) i pinowany stos
+# z firmware/tools/stack_deps.py (microReticulum i microStore Apache-2.0 z TLSF BSD-3-Clause i heatshrink ISC;
+# Crypto, MsgPack, ArxContainer, ArxTypeTraits, DebugLog, ArduinoJson MIT). Otwarta kwestia F26 dotyczy też ich.
+[[annotations]]
+path = ["software/simulator/web/wici-station.mjs", "software/simulator/web/wici-post.mjs"]
+precedence = "override"
+SPDX-FileCopyrightText = ["2026 Tomek Mierzwa and WICI contributors", "2003 Bitstream, Inc. (Bitstream Vera); DejaVu changes are in public domain", "Chad Attermann (microReticulum, microStore, Crypto)", "2015-2018 Southern Storm Software, Pty Ltd. (Crypto)", "2006-2016 Matthew Conte (TLSF)", "2013-2015 Scott Vokes (heatshrink)", "Hideaki Tai (MsgPack, ArxContainer, ArxTypeTraits, DebugLog)", "2014-2025 Benoit Blanchon (ArduinoJson)"]
+SPDX-License-Identifier = "MIT AND Bitstream-Vera AND Apache-2.0 AND BSD-3-Clause AND ISC"
