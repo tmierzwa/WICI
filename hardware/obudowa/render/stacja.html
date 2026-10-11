@@ -14,6 +14,9 @@ html, body { margin: 0; background: #d9d4cb; overflow: hidden; font-family: "Nun
 #caption span { display: block; font-size: 18px; margin-top: 6px; color: #3d4148; max-width: 1500px; }
 #caption.side { top: auto; bottom: 32px; left: 1150px; }
 #caption.side span { max-width: 600px; }
+#caption.material { top: auto; bottom: 44px; left: 56px; }
+#caption.material b { font-size: 34px; }
+#caption.material span { font-size: 20px; max-width: 860px; line-height: 1.4; }
 </style>
 <script type="importmap">
 { "imports": {
@@ -275,18 +278,26 @@ for (const c of U.connectors) {
 }
 
 // ---------- camera ----------
-const camera = new THREE.PerspectiveCamera(VIEW === "zlacza" ? 34 : VIEW === "materialy" ? 24 : 30, innerWidth / innerHeight, 1, 5000);
+const camera = new THREE.PerspectiveCamera(VIEW === "zlacza" ? 34 : VIEW === "materialy" ? 20 : 30, innerWidth / innerHeight, 1, 5000);
 if (VIEW === "front") { camera.position.set(95, 75, 560); camera.lookAt(10, -28, 0); }
-// Materiały: kadr 3/4 bez podpisu, sama stacja z początkiem przewodów.
-else if (VIEW === "materialy") { camera.position.set(230, 120, 640); camera.lookAt(8, -22, 0); document.getElementById("caption").hidden = true; }
+// Materiały: ciasny kadr 3/4 z krótkim podpisem, że to wizualizacja koncepcyjna.
+else if (VIEW === "materialy") { camera.position.set(200, 105, 600); camera.lookAt(-6, -8, 0); document.getElementById("caption").className = "material"; }
 else { camera.position.set(-200, -310, 270); camera.lookAt(20, -10, -5); document.getElementById("caption").className = "side"; }
 renderer.render(scene, camera);
 
-document.querySelector("#caption b").textContent =
-  VIEW === "front" ? "WICI – koncepcja stacji (założenia na 2026-10-11)" : "WICI – złącza na dolnej ściance (koncepcja)";
-document.querySelector("#caption span").textContent =
-  `${U.enclosure.model} ${W} × ${H} × ${D} mm · układ panelu: ${U.source}. ` +
-  `Bez pomiarów (${U.unmeasured.length}): wnętrze, słupki, śruby pokrywy, linia podziału, wysokości złączy i kształt osłony CISZY są umowne. Przycisk przygotowania pod naklejką VOID (F113).`;
+if (VIEW === "materialy") {
+  document.querySelector("#caption b").textContent = "Stacja WICI – wizualizacja koncepcyjna";
+  document.querySelector("#caption span").textContent =
+    "Projekt otwarty w fazie prototypu: stacji jeszcze nie zbudowano ani nie sprawdzono w terenie. " +
+    "Wygląd, obudowa i rozmieszczenie elementów zmienią się po próbach i pilotażu. " +
+    "Założenia: ekran 2,7\", przyciski do obsługi w rękawicach, zasilanie z ogniw AA albo 12 V, antena zewnętrzna 868 MHz.";
+} else {
+  document.querySelector("#caption b").textContent =
+    VIEW === "front" ? "WICI – koncepcja stacji (założenia na 2026-10-11)" : "WICI – złącza na dolnej ściance (koncepcja)";
+  document.querySelector("#caption span").textContent =
+    `${U.enclosure.model} ${W} × ${H} × ${D} mm · układ panelu: ${U.source}. ` +
+    `Bez pomiarów (${U.unmeasured.length}): wnętrze, słupki, śruby pokrywy, linia podziału, wysokości złączy i kształt osłony CISZY są umowne. Przycisk przygotowania pod naklejką VOID (F113).`;
+}
 window.RENDER_DONE = true;
 </script>
 </body>

@@ -5,7 +5,7 @@ const fs = require('fs'), path = require('path');
 const VIEWS = [
   { view: 'front', file: 'stacja-front.png' },
   { view: 'zlacza', file: 'stacja-zlacza.png' },
-  // Bez podpisu, 3600 × 2400 px, do materiałów (koncepcja, nie wygląd wykonanej stacji).
+  // Do materiałów: 3600 × 2400 px, ciasny kadr z krótkim podpisem „wizualizacja koncepcyjna”.
   { view: 'materialy', file: 'stacja-materialy.png', width: 2400, height: 1600, scale: 1.5 },
 ];
 const CDN = 'https://cdn.jsdelivr.net/npm/three@0.160.0/';
