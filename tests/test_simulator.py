@@ -4,8 +4,8 @@
 The committed WebAssembly build is the bench-b source set and flags of firmware/platformio.ini with the
 pinned stack (build.json stamp of every input), only the MCU files listed in REPLACED are swapped for
 virtual-board versions of the same interface, the firmware has no simulator hooks, the ROM AES stand-in
-follows FIPS-197, every training exercise passes on the committed image (Node) and the panel layouts
-follow hardware/r02/obudowa.md."""
+follows FIPS-197, every training exercise passes on the committed image (Node) and the R02 panel layout
+follows hardware/r02/obudowa.md."""
 
 from pathlib import Path
 import json
@@ -91,18 +91,18 @@ int main() {
 
     def test_panel_logo_is_the_project_logo(self):
         self.assertEqual((SIM / "web" / "wici-logo.svg").read_bytes(), (ROOT / "media" / "logo" / "WICI-na-jasnym.svg").read_bytes())
+        self.assertEqual((SIM / "web" / "wici-logo-ciemne.svg").read_bytes(), (ROOT / "media" / "logo" / "WICI-na-ciemnym.svg").read_bytes())
 
     @unittest.skipUnless(shutil.which("node"), "Node.js not installed")
     def test_exercises_and_layout_rules(self):
         out = subprocess.run(["node", str(SIM / "test_scenarios.mjs")], capture_output=True, text=True)
         self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
         self.assertEqual(out.stdout.count("\nok "), 8, out.stdout)
-        script = ("import { LAYOUTS, RULES } from './web/layouts.js';"
-                  "console.log(JSON.stringify(Object.fromEntries(Object.entries(LAYOUTS).map(([k, l]) => [k, RULES.map((r) => r.test(l).ok)]))));")
+        script = ("import { R02, RULES } from './web/layouts.js';"
+                  "console.log(JSON.stringify(RULES.map((r) => [r.id, r.test(R02).ok])));")
         out = subprocess.run(["node", "--input-type=module", "-e", script], cwd=SIM, capture_output=True, text=True, check=True)
-        rules = json.loads(out.stdout)
-        self.assertTrue(all(rules["r02"]), rules)   # propozycja R02 spełnia zasady z obudowa.md
-        self.assertFalse(rules["n1"][4])            # N1: OK po lewej od WSTECZ (stanowisko deweloperskie)
+        rules = dict(json.loads(out.stdout))
+        self.assertTrue(all(rules.values()), rules)   # panel R02 spełnia zasady z obudowa.md
 
 
 if __name__ == "__main__":

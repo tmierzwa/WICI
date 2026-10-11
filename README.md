@@ -9,6 +9,8 @@ Opiekun schronienia wybiera na ekranie kategorię potrzeby i liczbę osób, a st
 <p align="center"><img src="hardware/obudowa/render/stacja-materialy-web.jpg" alt="Wizualizacja koncepcyjna stacji WICI: obudowa naścienna z ekranem, czterema przyciskami, diodą alarmu, przełącznikiem CISZA z osłoną i wyłącznikiem; przewody 12 V i anteny wychodzą dołem" width="820"></p>
 <p align="center"><sub>Wizualizacja koncepcyjna stacji według dzisiejszych założeń; <a href="hardware/obudowa/README.md">obudowa i render</a>, <a href="hardware/obudowa/render/stacja-materialy.png">pełna rozdzielczość</a>.</sub></p>
 
+**Wypróbuj stację w przeglądarce:** [symulator](https://wici.net.pl/symulator/) uruchamia ten sam program co prawdziwa stacja, z ćwiczeniami opiekuna i stanowiskiem odbiorczym. Uwagi zgłosisz przyciskiem „Zgłoś uwagę” albo [formularzem](https://github.com/tmierzwa/WICI/issues/new?template=uwaga-symulator.yml).
+
 **To projekt prototypu 0.5. Stacji jeszcze nie zbudowano ani nie sprawdzono w terenie.** Dokumentacja, obliczenia i kod są otwarte; poniżej opisujemy plan prac i możliwości współpracy.
 
 Podstawowy zestaw to stacja z ekranem, przyciskami, anteną i ogniwami AA. Cel: co najmniej 48 godzin pracy na ogniwach i dłuższa praca ze źródła 12 V. Pilotaż planujemy na gotowej płytce ESP32-S3 z radiem LoRa SX1262. Zasięg i czas pracy muszą zostać potwierdzone pomiarami.

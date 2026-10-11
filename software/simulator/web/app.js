@@ -4,25 +4,22 @@
 // oprogramowania (wici-station.mjs) na wirtualnej płytce; strona zmienia tylko poziomy pinów (przyciski,
 // przełącznik), zasilanie i warunki świata, a pokazuje piksele panelu Sharp, diodę i brzęczyk.
 import { Simulation } from "./sim.js";
-import { LAYOUTS, LABELS, RULES, ACTIVE, sequenceCost, cloneLayout, labelOf } from "./layouts.js";
+import { R02, LABELS, ACTIVE, labelOf } from "./layouts.js";
 import { SCENARIOS, Exercise } from "./scenarios.js";
 
 // ---- teksty strony ------------------------------------------------------------------------------
 
 const T = {
   pl: {
-    title: "symulator stacji", simTime: "czas symulacji", pause: "pauza", soundOff: "dźwięk wył.", soundOn: "dźwięk wł.",
-    layout: "układ", realSize: "skala 1:1", editMode: "przesuwanie elementów", card: "karta płatnicza 85,6 × 54 mm",
+    title: "symulator stacji", feedback: "Zgłoś uwagę",
+    simTime: "czas symulacji", pause: "pauza", soundOff: "dźwięk wył.", soundOn: "dźwięk wł.", realSize: "skala 1:1", card: "karta płatnicza 85,6 × 54 mm",
     calibrate: "Dopasuj ramkę do prawdziwej karty przyłożonej do ekranu",
-    keys: "Klawiatura: ↑ GÓRA, ↓ DÓŁ, Enter OK, Backspace albo Esc WSTECZ. Przytrzymanie działa jak na stacji. WYŁĄCZNIK: krótko włącza, 2 s wyłącza. SERWIS: pierwsze dotknięcie przebija naklejkę VOID (rysik), potem przycisk przygotowania w otworze trzyma się 3 s.",
-    tabTrain: "Ćwiczenia", tabRx: "Dyżurny", tabEnv: "Warunki", tabConsole: "Konsola", tabDesign: "Projekt", tabLog: "Dziennik",
-    foot: "Stacja i węzeł stanowiska to obraz bench-b oprogramowania (firmware/src, te same pliki i flagi co na płytce) z pinowanym stosem Reticulum, uruchomiony na wirtualnej płytce ESP32-S3 z emulacją S2-LP, FRAM i panelu Sharp. Modelami są: eter (tłumienie i zanik), zasilanie i aplikacja komputera stanowiska.",
+    keys: "Klawiatura: ↑ GÓRA, ↓ DÓŁ, Enter OK, Backspace albo Esc WSTECZ. Przytrzymanie działa jak na stacji. WYŁĄCZNIK: krótko włącza, 2 s wyłącza. SERWIS: kliknięcie przebija naklejkę, a przytrzymanie przycisku pod nią przez 3 s włącza tryb serwisowy.",
+    tabTrain: "Ćwiczenia", tabRx: "Dyżurny", tabEnv: "Warunki", tabConsole: "Konsola", tabLog: "Dziennik",
     preparing: "Przygotowanie sieci (stanowisko, węzeł, stacja) przez protokół USB…", starting: "Przygotowanie ćwiczenia…",
     freeTitle: "Praca swobodna", freeText: "Stacja jest włączona i ma trasę do stanowiska. Wysyłaj zgłoszenia, odpowiadaj jako dyżurny i zmieniaj warunki łącza. Ćwiczenie zaczyna się od tego samego obrazu sieci.",
     exercises: "Ćwiczenia opiekuna", again: "Powtórz", list: "Lista ćwiczeń", stop: "Przerwij", hint: "Podpowiedź",
     done: "Ćwiczenie ukończone", totalTime: "czas symulacji", presses: "naciśnięcia", hints: "podpowiedzi",
-    costTitle: "Ten sam przebieg na innych układach", costNote: "Droga palca między środkami przycisków i czas ruchu z prawa Fittsa (a = 0,2 s, b = 0,1 s/bit; do kalibracji w T1).",
-    travel: "droga palca", fitts: "czas ruchu", layoutCol: "układ",
     rxTitle: "Stanowisko odbiorcze", rxOn: "port węzła otwarty", identity: "tożsamość", main: "główna", backup: "zapasowa",
     autoRead: "potwierdzaj odczyt po", autoDecide: "decyzja automatyczna", none: "brak", after: "po", min: "min",
     noRequests: "Stanowisko nie ma jeszcze zgłoszeń. Wyślij zgłoszenie ze stacji albo TEST.", copies: "kopii", reply: "Odpowiedź",
@@ -39,24 +36,18 @@ const T = {
     radioState: "radio", transmitting: "nadaje",
     consoleTitle: "Port diagnostyki USB", consoleNote: "Polecenia jak z terminala na porcie diagnostyki płytki (HELP, INFO, RNS, STORE, JOURNAL, SCREEN, VTEST…). Port pozostaje otwarty, jak podłączony laptop.",
     device: "urządzenie", command: "polecenie", clear: "Wyczyść", disconnect: "Odłącz",
-    rules: "Zasady panelu (hardware/r02/obudowa.md)", custom: "Własny", editHint: "Włącz „przesuwanie elementów” i przeciągaj elementy panelu; zmiany trafiają do układu Własny. Siatka 0,5 mm.",
-    exportLayout: "Układ Własny (JSON)", copy: "Kopiuj", copied: "Skopiowano", copyFail: "Zaznacz tekst i skopiuj ręcznie",
-    resetCustom: "Własny = kopia bieżącego", sessionPresses: "naciśnięcia w tej sesji", noPresses: "Brak naciśnięć do porównania.",
     logEmpty: "Brak zdarzeń.", logAir: "pokaż ramki radiowe", sealTorn: "naklejka serwisowa przebita (VOID)",
   },
   en: {
-    title: "station simulator", simTime: "simulated time", pause: "pause", soundOff: "sound off", soundOn: "sound on",
-    layout: "layout", realSize: "1:1 scale", editMode: "move controls", card: "payment card 85.6 × 54 mm",
+    title: "station simulator", feedback: "Send feedback",
+    simTime: "simulated time", pause: "pause", soundOff: "sound off", soundOn: "sound on", realSize: "1:1 scale", card: "payment card 85.6 × 54 mm",
     calibrate: "Match the frame to a real card held against the screen",
-    keys: "Keyboard: ↑ UP, ↓ DOWN, Enter OK, Backspace or Esc BACK. Holding works as on the station. POWER: short press turns on, 2 s turns off. SERVICE: the first touch pierces the VOID sticker (stylus), then hold the preparation button in the hole for 3 s.",
-    tabTrain: "Exercises", tabRx: "Duty officer", tabEnv: "Conditions", tabConsole: "Console", tabDesign: "Design", tabLog: "Log",
-    foot: "The station and the post’s node run the bench-b firmware image (firmware/src, the same files and flags as on the board) with the pinned Reticulum stack, on a virtual ESP32-S3 board emulating the S2-LP, FRAM and Sharp panel. Models: the air (path loss and fading), power and the receiving post’s computer application.",
+    keys: "Keyboard: ↑ UP, ↓ DOWN, Enter OK, Backspace or Esc BACK. Holding works as on the station. POWER: short press turns on, 2 s turns off. SERVICE: a click pierces the sticker; holding the button under it for 3 s enters service mode.",
+    tabTrain: "Exercises", tabRx: "Duty officer", tabEnv: "Conditions", tabConsole: "Console", tabLog: "Log",
     preparing: "Preparing the network (post, node, station) over the USB protocol…", starting: "Preparing the exercise…",
     freeTitle: "Free play", freeText: "The station is on and has a path to the post. Send requests, answer as the duty officer and change link conditions. Exercises start from the same network image.",
     exercises: "Warden exercises", again: "Repeat", list: "All exercises", stop: "Stop", hint: "Hint",
     done: "Exercise complete", totalTime: "simulated time", presses: "presses", hints: "hints",
-    costTitle: "The same run on other layouts", costNote: "Finger travel between button centres and movement time from Fitts’s law (a = 0.2 s, b = 0.1 s/bit; to be calibrated in T1).",
-    travel: "finger travel", fitts: "movement time", layoutCol: "layout",
     rxTitle: "Receiving post", rxOn: "node port open", identity: "identity", main: "main", backup: "backup",
     autoRead: "confirm reading after", autoDecide: "automatic decision", none: "none", after: "after", min: "min",
     noRequests: "No requests at the post yet. Send a request or a TEST from the station.", copies: "copies", reply: "Reply",
@@ -73,9 +64,6 @@ const T = {
     radioState: "radio", transmitting: "transmitting",
     consoleTitle: "USB diagnostic port", consoleNote: "Commands as from a terminal on the board’s diagnostic port (HELP, INFO, RNS, STORE, JOURNAL, SCREEN, VTEST…). The port stays open, like a connected laptop.",
     device: "device", command: "command", clear: "Clear", disconnect: "Disconnect",
-    rules: "Panel rules (hardware/r02/obudowa.md)", custom: "Custom", editHint: "Turn on “move controls” and drag panel controls; changes go to the Custom layout. 0.5 mm grid.",
-    exportLayout: "Custom layout (JSON)", copy: "Copy", copied: "Copied", copyFail: "Select the text and copy it by hand",
-    resetCustom: "Custom = copy of current", sessionPresses: "presses this session", noPresses: "No presses to compare yet.",
     logEmpty: "No events.", logAir: "show radio frames", sealTorn: "service sticker pierced (VOID)",
   },
 };
@@ -88,7 +76,7 @@ const STATES = {
   pl: ["", "zapisane", "przeczytane", "pomoc skierowana", "przekazane dalej", "nie może pomóc", "zamknięte"],
   en: ["", "saved", "read", "help dispatched", "passed on", "cannot help", "closed"],
 };
-const SENSITIVITY_DBM = -112;   // S2-LP przy 38,4 kb/s (model odbiornika, hal/s2lp_chip.cpp)
+const SENSITIVITY_DBM = -112;   // S2-LP, profil P1: 2-GFSK 4,8 kBd (model odbiornika, hal/s2lp_chip.cpp)
 const TX_DBM = 13;              // moc profilu p1
 
 const pref = {
@@ -107,13 +95,8 @@ let ready = false;
 let s = {};                 // obserwacja: ekran (OCR), stanowisko, płytka stacji
 let speed = 1;
 let tab = pref.get("tab", "train");
-let layoutId = pref.get("layout", "r02");
-// Układ Własny z wcześniejszej wersji strony (R02 bez folii, pokrywa przygotowania) nie jest wczytywany.
-const layouts = { r02: LAYOUTS.r02, n1: LAYOUTS.n1, custom: pref.get("customLayout.v2", null) ?? { ...cloneLayout(LAYOUTS.r02), short: "custom" } };
-layouts.custom.name = { pl: "Własny układ", en: "Custom layout" };
 let exercise = null;
 let showHint = false;
-let presses = [];
 const held = new Set();
 let logItems = [];
 let showAir = pref.get("logAir", false);
@@ -127,6 +110,7 @@ const consoles = { stacja: "", "węzeł": "" };
 let consoleDevice = "stacja";
 let postPort = true;   // aplikacja stanowiska ma otwarty port danych węzła
 let sealBroken = false;   // naklejka serwisowa R02 przebita w tej sesji (nowa sieć i ćwiczenie: nowa naklejka)
+let buildStamp = "";   // wersja obrazu z build.json (do zgłoszeń)
 
 // Zadania na symulacji idą po kolei (przebieg czasu, start ćwiczenia, polecenia stanowiska).
 let chain = Promise.resolve();
@@ -154,6 +138,7 @@ async function main() {
   busy(t("preparing"));
   try {
     const b = await (await fetch("build.json")).json();
+    buildStamp = `${b.env} wici-station.mjs ${b.outputs["wici-station.mjs"].sha256.slice(0, 12)}`;
     const o = b.outputs["wici-station.mjs"];
     $("build-info").textContent = `${b.env} · ${b.firmware.length} plików firmware/src · wici-station.mjs ${o.bytes} B, sha256 ${o.sha256.slice(0, 12)}… · ${b.emscripten.split(" ").slice(-2, -1)[0] ?? ""}`;
   } catch { /* opis budowy jest opcjonalny */ }
@@ -171,9 +156,9 @@ function busy(text) {
 }
 
 async function freePlay() {
+  ledOff();
   releaseAll();
   exercise = null;
-  presses = [];
   logItems = [];
   busy(t("preparing"));
   await sim.reset();
@@ -188,8 +173,8 @@ async function freePlay() {
 }
 
 async function startExercise(scenario) {
+  ledOff();
   releaseAll();
-  presses = [];
   showHint = false;
   logItems = [];
   exercise = new Exercise(sim, scenario);
@@ -244,6 +229,7 @@ function skip(ms) {
 
 // Zdarzenia świata: restarty płytek i ramki w eterze (dziennik).
 function onWorld(e) {
+  if (e.kind === "restart" && e.source === "stacja") ledOff();
   if (e.kind === "restart") logItems.push({ t: e.t, kind: "restart", source: e.source, text: { 3: "restart programowy", 6: "watchdog", 1: "włączenie" }[e.reason] ?? `przyczyna ${e.reason}` });
   else if (e.kind === "air") {
     const f = e.frame;
@@ -298,6 +284,7 @@ function draw(force = false) {
 // ---- dioda i brzęczyk ---------------------------------------------------------------------------
 
 let ledSince = 0;
+function ledOff() { document.querySelector(".ctl.led")?.classList.remove("on"); }
 function led(on) {
   const el = document.querySelector(".ctl.led");
   if (!el) return;
@@ -324,7 +311,7 @@ function beep(ms) {
 
 // ---- panel stacji -------------------------------------------------------------------------------
 
-const layout = () => layouts[layoutId];
+const layout = () => R02;   // obudowa R02 według renderu koncepcyjnego
 const pctX = (L, x) => `${(x / L.w) * 100}%`;
 const pctY = (L, y) => `${(y / L.h) * 100}%`;
 
@@ -339,20 +326,14 @@ function buildDevice() {
   const L = layout();
   const dev = $("device");
   dev.innerHTML = "";
-  dev.className = `device ${L.kind}${L.foil ? " foil-case" : ""}`;
+  dev.className = "device case foil-case";
   dev.style.aspectRatio = `${L.w} / ${L.h}`;
   const body = document.createElement("div");
   body.className = "body";
   body.style.borderRadius = `${(L.radius / L.w) * 100}% / ${(L.radius / L.h) * 100}%`;
   dev.append(body);
-  if (L.foil) { dev.insertAdjacentHTML("beforeend", foilSvg(L)); }
-  else if (L.recess) { const r = document.createElement("div"); r.className = "recess"; place(r, L, L.recess.x, L.recess.y, L.recess.w, L.recess.h); dev.append(r); }
-  for (const z of L.zones ?? []) { const d = document.createElement("div"); d.className = "zone"; d.textContent = z[lang] ?? z.pl; place(d, L, z.x, z.y, z.w, z.h); dev.append(d); }
-  for (const [x, y] of L.screws ?? []) { const d = document.createElement("div"); d.className = "screw"; place(d, L, x, y); dev.append(d); }
-  for (const [x, y] of L.holes ?? []) { const d = document.createElement("div"); d.className = "hole"; place(d, L, x, y); dev.append(d); }
-  if (L.glass) { const g = document.createElement("div"); g.className = "glass"; place(g, L, L.glass.x, L.glass.y, L.glass.w, L.glass.h); dev.append(g); }
+  dev.insertAdjacentHTML("beforeend", foilSvg(L));
   const w = L.window;
-  if (L.kind === "case" && !L.foil) { const win = document.createElement("div"); win.className = "window"; place(win, L, w.cx - w.w / 2, w.cy - w.h / 2, w.w, w.h); dev.append(win); }
   const canvas = document.createElement("canvas");
   canvas.className = "lcd";
   canvas.width = 400;
@@ -363,13 +344,13 @@ function buildDevice() {
   dev.append(canvas);
   lcdCtx = canvas.getContext("2d");
   lcdImage = lcdCtx.createImageData(400, 240);
-  for (const e of L.edge ?? []) {
+  for (const e of L.edge) {   // złącza na dolnej ściance; nazwy są na folii
     const d = document.createElement("div");
-    d.className = `edge${e.part ? " part " + e.part : ""}`;
-    if (e.part) { d.innerHTML = `<span class="stub"></span>`; d.setAttribute("aria-hidden", "true"); }   // nazwa złącza jest na folii
-    else d.textContent = e.label;
+    d.className = `edge part ${e.part}`;
+    d.innerHTML = `<span class="stub"></span>`;
+    d.setAttribute("aria-hidden", "true");
     d.style.left = pctX(L, e.x);
-    if (e.part) d.style.width = pctX(L, { usb: 13, en3: 18, sma: 9.2 }[e.part]);
+    d.style.width = pctX(L, { usb: 13, en3: 18, sma: 9.2 }[e.part]);
     dev.append(d);
   }
   for (const c of L.controls) dev.append(control(L, c));
@@ -448,45 +429,29 @@ function resetSeal() {
 }
 
 function control(L, c) {
-  const interactive = ["button", "power", "toggle", "cover", "tact", "seal"].includes(c.type);
+  const interactive = ["button", "power", "toggle", "seal"].includes(c.type);
   const el = document.createElement(interactive ? "button" : "div");
   if (interactive) el.type = "button";
-  el.className = `ctl ${c.type} ${c.shape ?? ""}${c.virtual ? " virtual" : ""}`;
+  el.className = `ctl ${c.type} ${c.shape ?? ""}`;
   el.dataset.id = c.id;
   place(el, L, c.x, c.y);
-  // Na folii R02 obrys części jest większy niż otwór: pierścień przycisku Ø19,4, kołnierz wyłącznika Ø26,
-  // oprawka diody Ø8,6 (stacja.html).
-  const visual = L.foil ? { button: 19.4, power: 26, led: 8.6 }[c.type] : null;
+  // Obrys części jest większy niż otwór: pierścień przycisku Ø19,4, kołnierz wyłącznika Ø26, oprawka
+  // diody Ø8,6 (stacja.html).
+  const visual = { button: 19.4, power: 26, led: 8.6 }[c.type];
   el.style.width = pctX(L, visual ?? c.d ?? c.w);
   if (c.h && !c.d) el.style.height = pctY(L, c.h);
   const name = labelOf(c, lang === "en" ? "en" : "pl");
   el.setAttribute("aria-label", name);
-  const glyphs = { UP: "▲", DOWN: "▼", OK: "OK", BACK: "↩", POWER: "⏻" };
-  if (glyphs[c.id] && !L.foil) el.innerHTML = `<span class="glyph" aria-hidden="true">${glyphs[c.id]}</span>`;
   if (c.type === "toggle") el.innerHTML = `<span class="base"></span><span class="lever"></span><span class="pos top">I</span><span class="pos bottom">${lang === "en" ? "S" : "C"}</span>${c.guard ? '<span class="cover"></span>' : ""}`;
-  if (c.type === "cover") el.innerHTML = `<span class="seal"></span><span class="pin"></span>`;
   if (c.type === "seal") { el.innerHTML = sealSvg(c); el.classList.toggle("broken", sealBroken); }
-  if (L.foil && c.type === "button") el.innerHTML = `<span class="cap"></span>`;
-  if (L.foil && c.type === "power") el.innerHTML = `<span class="bezel"><span class="cap"></span></span>`;
-  if (!L.foil && (c.id !== "LED" || L.kind === "case")) {
-    const label = document.createElement("span");
-    label.className = "label";
-    label.innerHTML = c.virtual ? esc(lang === "en" ? "USB plug (power)" : "wtyk USB (zasilanie)")
-      : `${esc(labelOf(c, "pl"))}<small>${esc(labelOf(c, "uk"))} · ${esc(labelOf(c, "en"))}</small>`;
-    el.append(label);
-  }
+  if (c.type === "button") el.innerHTML = `<span class="cap"></span>`;
+  if (c.type === "power") el.innerHTML = `<span class="bezel"><span class="cap"></span></span>`;
   if (interactive) {
     el.addEventListener("pointerdown", (ev) => onDown(ev, el, c));
     el.addEventListener("pointerup", (ev) => onUp(ev, el, c));
     el.addEventListener("pointercancel", (ev) => onUp(ev, el, c));
-    el.addEventListener("pointermove", (ev) => onDrag(ev, el, c));
     el.addEventListener("keydown", (ev) => { if ((ev.key === " " || ev.key === "Enter") && !ev.repeat) { ev.preventDefault(); ev.stopPropagation(); press(c, true, el); } });
     el.addEventListener("keyup", (ev) => { if (ev.key === " " || ev.key === "Enter") { ev.preventDefault(); ev.stopPropagation(); press(c, false, el); } });
-  } else if ($("edit-mode").checked) {
-    el.addEventListener("pointerdown", (ev) => onDown(ev, el, c));
-    el.addEventListener("pointermove", (ev) => onDrag(ev, el, c));
-    el.addEventListener("pointerup", (ev) => onUp(ev, el, c));
-    el.addEventListener("pointercancel", (ev) => onUp(ev, el, c));
   }
   return el;
 }
@@ -510,7 +475,12 @@ const ppmm = () => pref.get("ppmm", 96 / 25.4);
 // Stan elementów: dźwignia CISZA (poziom pinu), ekran bez zasilania.
 function reflect() {
   const on = !!s.power;
-  $("station-state").textContent = on ? `${t("on")}${s.board?.tx ? " · " + t("transmitting") : ""} · ${(s.screen?.lines ?? [])[0] ?? ""}`.trim() : t("off");
+  const lines = s.screen?.lines ?? [], inv = s.screen?.inverted ?? [];
+  const row = Math.max(0, inv.lastIndexOf(true));   // kursor (pasek trybu serwisowego jest w wierszu 0)
+  $("station-state").textContent = on ? `${t("on")}${s.board?.tx ? " · " + t("transmitting") : ""} · ${(lines[row] ?? "").trim()}`.trim() : t("off");
+  if (!on) ledOff();
+  // Czytnik ekranu: tekst odczytany z pikseli panelu.
+  document.querySelector("canvas.lcd")?.setAttribute("aria-label", on ? lines.filter((l) => l.trim()).join(". ") : t("off"));
   const sw = document.querySelector(".ctl.toggle");
   if (sw) sw.classList.toggle("on", !!s.switch);
   document.querySelector("canvas.lcd")?.classList.toggle("off", !on || !s.board?.lcd_on);
@@ -518,44 +488,18 @@ function reflect() {
 
 // ---- obsługa przycisków -------------------------------------------------------------------------
 
-let drag = null;
 let powerTimer = null;
 let guardTimer = null;
 const NAV = ["UP", "DOWN", "OK", "BACK"];
 
 function onDown(ev, el, c) {
-  if ($("edit-mode").checked) {
-    drag = { c, el };
-    el.setPointerCapture(ev.pointerId);
-    ev.preventDefault();
-    return;
-  }
   el.setPointerCapture?.(ev.pointerId);
   ev.preventDefault();
   press(c, true, el);
 }
 function onUp(ev, el, c) {
-  if (drag) {
-    drag = null;
-    pref.set("customLayout.v2", layouts.custom);
-    renderPanel(true);
-    return;
-  }
   press(c, false, el);
 }
-function onDrag(ev, el, c) {
-  if (!drag || drag.c !== c) return;
-  const L = layout();
-  const rect = $("device").getBoundingClientRect();
-  c.x = Math.round(((ev.clientX - rect.left) / rect.width) * L.w * 2) / 2;
-  c.y = Math.round(((ev.clientY - rect.top) / rect.height) * L.h * 2) / 2;
-  c.x = Math.max(0, Math.min(L.w, c.x));
-  c.y = Math.max(0, Math.min(L.h, c.y));
-  place(el, L, c.x, c.y);
-  if (L.foil) document.querySelector("#device svg.foil")?.replaceWith(document.createRange().createContextualFragment(foilSvg(L)));
-  markRules();
-}
-
 // Przyciski zmieniają tylko poziom pinu; czy program go odczyta, zależy od programu (pętla stoi
 // w czasie nadawania ramki i rysowania ekranu, jak na płytce).
 function press(c, down, el) {
@@ -565,7 +509,6 @@ function press(c, down, el) {
     if (down === held.has(c.id)) return;
     if (down) {
       held.add(c.id);
-      presses.push(c.id);
       exercise?.press();
     } else held.delete(c.id);
     el?.classList.toggle("pressed", down);
@@ -611,7 +554,7 @@ function press(c, down, el) {
     logItems.push({ t: sim.nowUs, kind: "seal", source: "stacja", text: t("sealTorn") });
     return;
   }
-  if (c.type === "cover" || c.type === "tact" || c.type === "seal") {
+  if (c.type === "seal") {
     el?.classList.toggle("pressed", down);
     if (down) held.add("PREP"); else held.delete("PREP");
     sim.station.setInput(sim.pins.PREP, down ? 0 : 1);
@@ -634,7 +577,7 @@ function releaseAll() {
 const KEYS = { ArrowUp: "UP", ArrowDown: "DOWN", Enter: "OK", Backspace: "BACK", Escape: "BACK" };
 function typing(target) { return target && ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName); }
 function keyboard(ev, down) {
-  if (typing(ev.target) || ev.target?.closest?.(".ctl") || ev.altKey || ev.ctrlKey || ev.metaKey) return;
+  if (typing(ev.target) || ev.target?.closest?.(".tabs") || ev.altKey || ev.ctrlKey || ev.metaKey) return;
   const id = KEYS[ev.key];
   if (!id || ev.repeat) { if (id) ev.preventDefault(); return; }
   if (ev.target?.closest?.(".side") && (ev.key === "Enter")) return;
@@ -668,7 +611,7 @@ function clock(ms) {
 const minutes = (ms) => `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, "0")}`;
 
 function selectTab(name) {
-  if (!["train", "rx", "env", "console", "design", "log"].includes(name)) name = "train";
+  if (!["train", "rx", "env", "console", "log"].includes(name)) name = "train";
   tab = name;
   pref.set("tab", name);
   for (const b of document.querySelectorAll(".tabs button")) b.setAttribute("aria-selected", String(b.dataset.tab === name));
@@ -680,8 +623,8 @@ function selectTab(name) {
 function renderPanel(force) {
   const panel = $(`panel-${tab}`);
   if (!panel) return;
-  if (!ready && tab !== "design") { panel.innerHTML = ""; return; }
-  const html = { train: trainPanel, rx: rxPanel, env: envPanel, console: consolePanel, design: designPanel, log: logPanel }[tab]();
+  if (!ready) { panel.innerHTML = ""; return; }
+  const html = { train: trainPanel, rx: rxPanel, env: envPanel, console: consolePanel, log: logPanel }[tab]();
   if (!force && html === panelKey) return;
   if (!force && panel.contains(document.activeElement) && typing(document.activeElement)) return;
   panelKey = html;
@@ -720,22 +663,12 @@ function trainPanel() {
     end = `<div class="group"><h2>${t("done")}</h2><div class="summary">
       <div><b>${minutes(exercise.totalS * 1000)}</b><span>${t("totalTime")}</span></div>
       <div><b>${exercise.presses}</b><span>${t("presses")}</span></div>
-      <div><b>${exercise.hints}</b><span>${t("hints")}</span></div></div>${costTable(presses)}</div>`;
+      <div><b>${exercise.hints}</b><span>${t("hints")}</span></div></div></div>`;
   }
   return `<div class="group"><h2>${esc(sc.title[lang])}</h2><p class="muted">${esc(sc.brief[lang])}</p></div>
     <div class="group"><ol class="steps">${steps}</ol>${hint}${warn}</div>${end}
     <div class="row"><button type="button" class="btn" data-act="again">${t("again")}</button>
     <button type="button" class="btn" data-act="list">${exercise.finished ? t("list") : t("stop")}</button></div>`;
-}
-
-function costTable(list) {
-  const nav = list.filter((id) => NAV.includes(id));
-  if (!nav.length) return `<p class="empty">${t("noPresses")}</p>`;
-  const rows = ["r02", "n1", "custom"].map((id) => {
-    const c = sequenceCost(layouts[id], nav);
-    return `<tr><td>${esc(id === "custom" ? t("custom") : layouts[id].short)}</td><td class="num">${c.presses}</td><td class="num">${Math.round(c.travel)} mm</td><td class="num">${c.time.toFixed(1)} s</td></tr>`;
-  }).join("");
-  return `<h3>${t("costTitle")}</h3><div class="table-wrap"><table><thead><tr><th>${t("layoutCol")}</th><th class="num">${t("presses")}</th><th class="num">${t("travel")}</th><th class="num">${t("fitts")}</th></tr></thead><tbody>${rows}</tbody></table></div><p class="muted">${t("costNote")}</p>`;
 }
 
 function rxPanel() {
@@ -806,36 +739,35 @@ function consolePanel() {
       <button type="submit" class="btn primary">${t("send")}</button></form></div>`;
 }
 
-function ruleCells(id) { return RULES.map((r) => r.test(layouts[id])); }
-function markRules() {
-  const L = layout();
-  const failing = new Set();
-  for (const r of RULES) if (!r.test(L).ok && r.id !== "order") failing.add(r.id);
-  document.querySelectorAll(".device .ctl").forEach((el) => el.classList.toggle("bad", failing.size > 0 && ["UP", "DOWN", "OK", "BACK", "SILENCE", "POWER"].includes(el.dataset.id)));
-}
-
-function designPanel() {
-  const ids = ["r02", "n1", "custom"];
-  const cells = Object.fromEntries(ids.map((id) => [id, ruleCells(id)]));
-  const rows = RULES.map((r, i) => `<tr><td>${esc(r[lang])}</td>${ids.map((id) => {
-    const v = cells[id][i];
-    return `<td class="num"><span class="${v.ok ? "pass" : "fail"}">${v.ok ? "✓" : "✗"}</span> ${esc(v.value)}</td>`;
-  }).join("")}</tr>`).join("");
-  const json = JSON.stringify({ w: layouts.custom.w, h: layouts.custom.h, window: layouts.custom.window, controls: layouts.custom.controls.map(({ id, type, x, y, d, w, h }) => ({ id, type, x, y, d, w, h })) }, null, 1);
-  return `<div class="group"><h2>${t("rules")}</h2><div class="table-wrap"><table><thead><tr><th></th><th class="num">R02</th><th class="num">N1</th><th class="num">${t("custom")}</th></tr></thead><tbody>${rows}</tbody></table></div></div>
-    <div class="group"><p class="muted">${presses.filter((p) => NAV.includes(p)).length} ${t("sessionPresses")}</p>${costTable(presses)}</div>
-    <div class="group"><h2>${t("custom")}</h2><p class="muted">${t("editHint")}</p>
-      <div class="row"><button type="button" class="btn" data-act="custom-reset">${t("resetCustom")}</button></div>
-      <label for="layout-json">${t("exportLayout")}</label><textarea id="layout-json" rows="8" readonly class="num">${esc(json)}</textarea>
-      <div class="row"><button type="button" class="btn" data-act="copy">${t("copy")}</button><span id="copy-msg" class="muted"></span></div></div>`;
-}
-
 function logPanel() {
   const items = logItems.filter((e) => showAir || e.kind !== "air");
   const head = `<label class="check"><input type="checkbox" id="log-air"${showAir ? " checked" : ""}> ${t("logAir")}</label>`;
   if (!items.length) return `${head}<p class="empty">${t("logEmpty")}</p>`;
   return `${head}<ol class="log">${[...items].reverse().slice(0, 300).map((e) =>
     `<li><span class="t">${clock(e.t / 1000)}</span><span class="k ${esc(e.kind)}">${esc(e.source ?? "")} ${esc(e.kind)}</span><span>${esc(e.text ?? "")}</span></li>`).join("")}</ol>`;
+}
+
+// ---- zgłoszenie uwagi --------------------------------------------------------------------------
+
+// Nowe zgłoszenie w GitHub Issues (formularz .github/ISSUE_TEMPLATE/uwaga-symulator.yml) z polem
+// „Dane z symulatora”: ćwiczenie i krok, ekran stacji, czas, układ, wersja obrazu, przeglądarka.
+const ISSUE_URL = "https://github.com/tmierzwa/WICI/issues/new";
+function feedbackContext() {
+  const lines = [
+    `obraz: ${buildStamp || "?"}`,
+    `język strony: ${lang}, tempo: ${speed}×`,
+    `czas symulacji: ${sim?.world ? clock(sim.nowUs / 1000) : "-"}`,
+    exercise ? `ćwiczenie: ${exercise.scenario.id}, krok ${Math.min(exercise.index + 1, exercise.scenario.steps.length)}/${exercise.scenario.steps.length}${exercise.finished ? " (ukończone)" : ""}`
+      : "praca swobodna",
+    `stacja: ${s.power ? "włączona" : "wyłączona"}, CISZA ${s.switch ? "wł." : "wył."}${sealBroken ? ", naklejka SERWIS przebita" : ""}`,
+    ...(s.power && s.screen ? ["ekran:", ...s.screen.lines.map((l, i) => `  ${s.screen.inverted?.[i] ? ">" : " "} ${l}`)] : []),
+    `przeglądarka: ${navigator.userAgent}`,
+  ];
+  return lines.join("\n");
+}
+function updateFeedbackLink() {
+  const params = new URLSearchParams({ template: "uwaga-symulator.yml", labels: "symulator", context: feedbackContext() });
+  $("feedback").href = `${ISSUE_URL}?${params}`;
 }
 
 // ---- zdarzenia strony ---------------------------------------------------------------------------
@@ -850,6 +782,8 @@ function bind() {
   });
   for (const b of document.querySelectorAll("[data-skip]")) b.addEventListener("click", () => skip(Number(b.dataset.skip)));
   for (const b of document.querySelectorAll(".tabs button")) b.addEventListener("click", () => selectTab(b.dataset.tab));
+  // Link aktualizowany tuż przed otwarciem (także środkowym przyciskiem i z klawiatury).
+  for (const ev of ["pointerdown", "focus", "mouseenter"]) $("feedback").addEventListener(ev, updateFeedbackLink);
   $("sound").addEventListener("click", () => {
     soundOn = !soundOn;
     if (soundOn && !audio) { try { audio = new AudioContext(); } catch { soundOn = false; } }
@@ -858,34 +792,13 @@ function bind() {
     $("sound").textContent = t(soundOn ? "soundOn" : "soundOff");
   });
   $("lang").addEventListener("click", () => { lang = lang === "pl" ? "en" : "pl"; pref.set("lang", lang); applyLang(); buildDevice(); renderPanel(true); });
-  const select = $("layout-select");
-  select.addEventListener("change", () => { layoutId = select.value; pref.set("layout", layoutId); buildDevice(); renderPanel(true); });
   $("real-size").addEventListener("change", () => { sizeDevice(); $("device-wrap").classList.toggle("real", $("real-size").checked); });
   $("ppmm").addEventListener("input", () => { pref.set("ppmm", Number($("ppmm").value)); sizeDevice(); });
-  $("edit-mode").addEventListener("change", () => {
-    if ($("edit-mode").checked && layoutId !== "custom") {
-      layouts.custom = { ...cloneLayout(layout()), short: "custom", name: { pl: "Własny układ", en: "Custom layout" } };
-      layoutId = "custom";
-      pref.set("layout", layoutId);
-      pref.set("customLayout.v2", layouts.custom);
-    }
-    fillLayouts();
-    buildDevice();
-    $("device").classList.toggle("editing", $("edit-mode").checked);
-    markRules();
-    if ($("edit-mode").checked) selectTab("design");
-  });
-  for (const id of ["train", "rx", "env", "console", "design", "log"]) {
+  for (const id of ["train", "rx", "env", "console", "log"]) {
     $(`panel-${id}`).addEventListener("click", panelClick);
     $(`panel-${id}`).addEventListener("change", panelChange);
     $(`panel-${id}`).addEventListener("submit", panelSubmit);
   }
-  fillLayouts();
-}
-
-function fillLayouts() {
-  const select = $("layout-select");
-  select.innerHTML = ["r02", "n1", "custom"].map((id) => `<option value="${id}"${id === layoutId ? " selected" : ""}>${esc(layouts[id].name[lang])}</option>`).join("");
 }
 
 function applyLang() {
@@ -893,7 +806,6 @@ function applyLang() {
   for (const el of document.querySelectorAll("[data-t]")) el.textContent = t(el.dataset.t);
   $("lang").textContent = lang === "pl" ? "EN" : "PL";
   $("sound").textContent = t(soundOn ? "soundOn" : "soundOff");
-  fillLayouts();
 }
 
 // Polecenie aplikacji stanowiska; błąd pokazany przy polu, z którego przyszedł tekst.
@@ -933,17 +845,6 @@ function panelClick(ev) {
         d.setUsb(0, false);
         break;
       }
-      case "custom-reset":
-        layouts.custom = { ...cloneLayout(layoutId === "custom" ? LAYOUTS.r02 : layout()), short: "custom", name: { pl: "Własny układ", en: "Custom layout" } };
-        pref.set("customLayout.v2", layouts.custom);
-        if (layoutId === "custom") buildDevice();
-        break;
-      case "copy": {
-        const area = $("layout-json");
-        navigator.clipboard?.writeText(area.value).then(() => { $("copy-msg").textContent = t("copied"); },
-          () => { area.select(); $("copy-msg").textContent = t("copyFail"); });
-        return;
-      }
       default: return;
     }
   }
@@ -971,7 +872,11 @@ function panelChange(ev) {
   const el = ev.target;
   if (!ready) return;
   switch (el.id) {
-    case "rx-on": postPort = el.checked; sim.post.cmd(`port ${postPort ? "open" : "close"}`); break;
+    case "rx-on":
+      postPort = el.checked;
+      sim.post.cmd(`port ${postPort ? "open" : "close"}`);
+      sim.node.setUsb(1, postPort);   // aplikacja zamyka port: węzeł widzi rozłączenie, nic nie płynie w żadną stronę
+      break;
     case "rx-identity": postCommand(`identity ${el.value}`); break;
     case "auto-read": case "auto-read-min": case "auto-decision": case "auto-decide-min":
       postCommand(`auto ${$("auto-read").checked ? 1 : 0} ${Number($("auto-read-min").value) || 0} ${$("auto-decision").value} ${Number($("auto-decide-min").value) || 0}`);
@@ -980,7 +885,7 @@ function panelChange(ev) {
     case "link-loss": lastLoss = Number(el.value); sim.setLoss(lastLoss); break;
     case "fault-radio": sim.station.fault("radio", el.checked); break;
     case "fault-fram": sim.station.fault("fram", el.checked); break;
-    case "node-on": serial(async () => { if (el.checked) await sim.node.powerOn(sim.nowUs); else sim.node.powerOff(); }); break;
+    case "node-on": serial(async () => { if (el.checked) await sim.node.powerOn(sim.nowUs); else sim.node.powerOff(sim.nowUs); }); break;
     case "console-device": consoleDevice = el.value; renderPanel(true); return;
     case "log-air": showAir = el.checked; pref.set("logAir", showAir); renderPanel(true); return;
     default: return;

@@ -28,9 +28,11 @@ const up = (text) => text.toLocaleUpperCase("pl");
 const shown = (o, text) => up(o.screen.lines.join(" ")).includes(up(text));
 const requests = (o) => o.post.requests.filter((r) => r.type === "request");
 const tests = (o) => o.post.requests.filter((r) => r.type === "test");
+// Ekran pokazał tekst, a potem (przy włączonej stacji) przeszedł dalej; pusty ekran wyłączonej stacji
+// nie zalicza kroku.
 const seenThenGone = (o, ctx, key, text) => {
   if (shown(o, text)) ctx[key] = true;
-  return !!ctx[key] && !shown(o, text);
+  return !!ctx[key] && o.power && o.screen.on !== false && !shown(o, text);
 };
 
 export const SCENARIOS = [
@@ -198,7 +200,8 @@ export const SCENARIOS = [
       { pl: "Włącz stację.", en: "Switch the station on.", done: (o) => o.power && o.screen.on },
       { pl: "Przejdź start (język, adres; TEST możesz pominąć: WSTECZ) i znajdź zgłoszenie w WIADOMOŚCI.",
         en: "Go through the start (language, address; you may skip TEST: BACK) and find the request in MESSAGES.",
-        done: (o) => shown(o, "ŻYWNOŚĆ") && !shown(o, "POMOC MEDYCZNA") },
+        // Pozycja w WIADOMOŚCIACH: numer zgłoszenia i kategoria („0918 ŻYWNOŚĆ”), nie lista kategorii kreatora.
+        done: (o) => o.screen.lines.some((l) => /^\d{4} ŻYWNOŚĆ/.test(l)) },
     ],
     solution: ["power off", "wait 5", "power on", "wait 1.5", "press OK", "press OK", "press BACK", "wait 5", "press OK", "press DOWN", "press OK", "wait 0.3"],
   },

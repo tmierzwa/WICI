@@ -11,8 +11,9 @@
 <body>
 <header class="bar">
   <div class="brand">
-    <svg class="mark" viewBox="0 0 40 24" aria-hidden="true"><circle cx="8" cy="5" r="3.2"/><circle cx="32" cy="5" r="3.2"/><path d="M2 16h9l3-7 4 13 4-9 2 3h14"/></svg>
-    <div><strong>WICI</strong> <span data-t="title">symulator stacji</span></div>
+    <img class="logo on-light" src="wici-logo.svg" alt="WICI" width="76" height="33">
+    <img class="logo on-dark" src="wici-logo-ciemne.svg" alt="WICI" width="76" height="33">
+    <span data-t="title">symulator stacji</span>
   </div>
   <div class="clock" aria-live="off">
     <span class="clock-label" data-t="simTime">czas symulacji</span>
@@ -32,6 +33,7 @@
   <div class="tools">
     <button type="button" id="sound" aria-pressed="false" data-t="soundOff">dźwięk wył.</button>
     <button type="button" id="lang" aria-label="Język interfejsu">EN</button>
+    <a id="feedback" class="feedback" href="https://github.com/tmierzwa/WICI/issues/new?template=uwaga-symulator.yml" target="_blank" rel="noopener" data-t="feedback">Zgłoś uwagę</a>
   </div>
 </header>
 
@@ -39,18 +41,16 @@
   <section class="bench" aria-labelledby="bench-title">
     <div class="bench-head">
       <h1 id="bench-title"><span id="station-name">WICI</span><span class="state" id="station-state"></span></h1>
-      <div class="bench-controls">
-        <label for="layout-select" data-t="layout">układ</label>
-        <select id="layout-select"></select>
-        <label class="check"><input type="checkbox" id="real-size"> <span data-t="realSize">skala 1:1</span></label>
-        <label class="check"><input type="checkbox" id="edit-mode"> <span data-t="editMode">przesuwanie elementów</span></label>
-      </div>
+      <label class="check"><input type="checkbox" id="real-size"> <span data-t="realSize">skala 1:1</span></label>
     </div>
     <p class="busy" id="busy" role="status" hidden></p>
     <div class="device-wrap" id="device-wrap">
       <div class="device" id="device"></div>
     </div>
-    <p class="keys" data-t="keys">Klawiatura: ↑ GÓRA, ↓ DÓŁ, Enter OK, Backspace albo Esc WSTECZ. Przytrzymanie działa jak na stacji.</p>
+    <div class="fine">
+      <p data-t="keys"></p>
+      <p id="build-info"></p>
+    </div>
     <div class="calib" id="calib" hidden>
       <div class="card-outline" id="card-outline"><span data-t="card">karta płatnicza 85,6 × 54 mm</span></div>
       <label for="ppmm"><span data-t="calibrate">Dopasuj ramkę do prawdziwej karty</span> <output id="ppmm-out"></output></label>
@@ -60,26 +60,20 @@
 
   <section class="side">
     <nav class="tabs" role="tablist">
-      <button type="button" role="tab" id="tab-train" data-tab="train" aria-selected="true" data-t="tabTrain">Ćwiczenia</button>
-      <button type="button" role="tab" id="tab-rx" data-tab="rx" aria-selected="false" data-t="tabRx">Dyżurny</button>
-      <button type="button" role="tab" id="tab-env" data-tab="env" aria-selected="false" data-t="tabEnv">Warunki</button>
-      <button type="button" role="tab" id="tab-console" data-tab="console" aria-selected="false" data-t="tabConsole">Konsola</button>
-      <button type="button" role="tab" id="tab-design" data-tab="design" aria-selected="false" data-t="tabDesign">Projekt</button>
-      <button type="button" role="tab" id="tab-log" data-tab="log" aria-selected="false" data-t="tabLog">Dziennik</button>
+      <button type="button" role="tab" id="tab-train" data-tab="train" aria-controls="panel-train" aria-selected="true" data-t="tabTrain">Ćwiczenia</button>
+      <button type="button" role="tab" id="tab-rx" data-tab="rx" aria-controls="panel-rx" aria-selected="false" data-t="tabRx">Dyżurny</button>
+      <button type="button" role="tab" id="tab-env" data-tab="env" aria-controls="panel-env" aria-selected="false" data-t="tabEnv">Warunki</button>
+      <button type="button" role="tab" id="tab-console" data-tab="console" aria-controls="panel-console" aria-selected="false" data-t="tabConsole">Konsola</button>
+      <button type="button" role="tab" id="tab-log" data-tab="log" aria-controls="panel-log" aria-selected="false" data-t="tabLog">Dziennik</button>
     </nav>
-    <div class="panel" id="panel-train" role="tabpanel"></div>
-    <div class="panel" id="panel-rx" role="tabpanel" hidden></div>
-    <div class="panel" id="panel-env" role="tabpanel" hidden></div>
-    <div class="panel" id="panel-console" role="tabpanel" hidden></div>
-    <div class="panel" id="panel-design" role="tabpanel" hidden></div>
-    <div class="panel" id="panel-log" role="tabpanel" hidden></div>
+    <div class="panel" id="panel-train" role="tabpanel" aria-labelledby="tab-train"></div>
+    <div class="panel" id="panel-rx" role="tabpanel" aria-labelledby="tab-rx" hidden></div>
+    <div class="panel" id="panel-env" role="tabpanel" aria-labelledby="tab-env" hidden></div>
+    <div class="panel" id="panel-console" role="tabpanel" aria-labelledby="tab-console" hidden></div>
+    <div class="panel" id="panel-log" role="tabpanel" aria-labelledby="tab-log" hidden></div>
   </section>
 </main>
 
-<footer class="foot">
-  <p data-t="foot"></p>
-  <p id="build-info"></p>
-</footer>
 <script type="module" src="app.js"></script>
 </body>
 </html>

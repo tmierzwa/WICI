@@ -102,8 +102,8 @@
  ],
  "outputs": {
   "wici-station.mjs": {
-   "sha256": "1507ca2f2309ae7f5519f0a25dfe27870158a20cc2580e32345605c238aaf77b",
-   "bytes": 1103934,
+   "sha256": "0f2518d24e48aeb3b7fad45c896d3d4470854b9a662de0685219ff1b84cebfdd",
+   "bytes": 1104026,
    "sources": [
     "firmware/src/annunciator.cpp",
     "firmware/src/config.cpp",
@@ -142,8 +142,8 @@
    ]
   },
   "wici-post.mjs": {
-   "sha256": "d598203a2c0796107e7ef88191228e5f03b48512231231cc33736e1e091c61c6",
-   "bytes": 811429,
+   "sha256": "97dc684bc154be1e4faa516ea18ff43fba2e2cd3f172f1884c0bcc4b12c5d0c5",
+   "bytes": 811605,
    "sources": [
     "firmware/src/config.cpp",
     "firmware/src/framfs.cpp",
@@ -263,11 +263,11 @@
   "software/simulator/hal/nvs.h": "b81be20b0fcff1e615f0953d04ccf9932408da08eabb5905c8bd43dc408b2a95",
   "software/simulator/hal/pgmspace.h": "b20b1a3d829fc78de978ba0cbff4c23dd6cdc17ddf1eb582b8e8e4885be52c36",
   "software/simulator/hal/platform_sim.cpp": "b1b52fc558f472b02dd357ba00f8bd7f8d0c68886b6e3414b85cb23aa85af5ee",
-  "software/simulator/hal/s2lp_chip.cpp": "68a6f990d16a6222083eb65c161196c934f1c97a198a2a7eb4a1ad94276ccc06",
+  "software/simulator/hal/s2lp_chip.cpp": "43bbf8e1bf30e436de86046da591d2255672dc161e58f978869025d3468593ff",
   "software/simulator/hal/sharp_extcomin_sim.cpp": "d308ceaab49e57054dc67421429f4955756c28ed877ed2c0162b2cb20b7f43dd",
-  "software/simulator/hal/vboard.cpp": "780be447ace931862e1a93fa0a4857627aa5bdccd44fd984bd8bd0c4635abc73",
+  "software/simulator/hal/vboard.cpp": "36d6257f17a7e3afe18e11cd44b59457ffdb94a6b4510692491a173ddf124152",
   "software/simulator/hal/vboard.h": "c9d6642034dd57ac6d3c3c38b37aba5361a88e8681266be5270b9e5006f3371b",
-  "software/simulator/post/post.cpp": "f1e79a4d153c33b6a86ff8aeb4a09c14ea595c991ce2df77882023e64b1de423",
+  "software/simulator/post/post.cpp": "d60718bf6375c70141150dffb16bd71672690df1c444d3d62d7faa2d605d231b",
   "software/simulator/build.py": "cfbf01f1dca9e901f0512604dedfb1260d4f3f1dfbd23164534d09eb758364cd"
  }
 }

@@ -228,8 +228,9 @@ int usbPeek(uint8_t itf) { return itf > 1 || b().usb[itf].in.empty() ? -1 : b().
 size_t usbWrite(uint8_t itf, const uint8_t* data, size_t n) {
     if (itf > 1) return 0;
     Usb& u = b().usb[itf];
-    // Zamknięty port: Arduino-ESP32 odrzuca bajty, gdy komputer nie czyta.
-    if (!u.open) return n;
+    // Zamknięty port: USBCDC::write w Arduino-ESP32 nie przyjmuje bajtów, gdy komputer nie jest
+    // podłączony (wynik 0); oprogramowanie i tak pisze tylko tyle, ile zwraca availableForWrite().
+    if (!u.open) return 0;
     const size_t room = USB_BUFFER > u.out.size() ? USB_BUFFER - u.out.size() : 0;
     const size_t take = n < room ? n : room;
     u.out.append(reinterpret_cast<const char*>(data), take);
