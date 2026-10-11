@@ -136,7 +136,7 @@ constexpr const char* const TEXTS[static_cast<size_t>(Id::COUNT)][LANGS] = {
     {"WYŁĄCZANIE – CZEKAJ, ZAPISUJĘ", "ВИМКНЕННЯ – ЗАЧЕКАЙТЕ, ЗБЕРІГАЮ", "SWITCHING OFF – WAIT, SAVING"},
     {"MOŻNA WYJĄĆ OGNIWA", "МОЖНА ВИЙНЯТИ БАТАРЕЇ", "CELLS CAN BE REMOVED"},
     {"12 V ODŁĄCZONE – ZA NISKIE NAPIĘCIE. PODŁĄCZ NAŁADOWANE ŹRÓDŁO I PRZYTRZYMAJ OK", "12 В ВІДКЛЮЧЕНО – ЗАНИЗЬКА НАПРУГА. ПІДКЛЮЧІТЬ ЗАРЯДЖЕНЕ ДЖЕРЕЛО І УТРИМУЙТЕ OK", "12 V DISCONNECTED – VOLTAGE TOO LOW. CONNECT A CHARGED SOURCE AND HOLD OK"},
-    {"TRYB SERWISOWY", "СЕРВІСНИЙ РЕЖИМ", "SERVICE MODE"},
+    {"-- TRYB SERWISOWY --", "- СЕРВІСНИЙ РЕЖИМ -", "-- SERVICE MODE --"},
     {"TRYB SERWISOWY: WEJŚCIA [n], OSTATNIE [czas] TEMU", "СЕРВІСНИЙ РЕЖИМ: ВХОДІВ [n], ОСТАННІЙ [czas] ТОМУ", "SERVICE MODE: ENTRIES [n], LAST [czas] AGO"},
     {"TRYB SERWISOWY: WEJŚCIA [n]", "СЕРВІСНИЙ РЕЖИМ: ВХОДІВ [n]", "SERVICE MODE: ENTRIES [n]"},
     {"OSTATNIE WEJŚCIE: NOWA KONFIGURACJA [xxxx]", "ОСТАННІЙ ВХІД: НОВА КОНФІГУРАЦІЯ [xxxx]", "LAST ENTRY: NEW CONFIGURATION [xxxx]"},
