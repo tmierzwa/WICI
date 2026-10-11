@@ -1,6 +1,6 @@
 # Symulator stacji WICI
 
-Stacja WICI w przeglądarce, do pokazów, szkolenia opiekunów i oceny projektu panelu. Online: [wici.net.pl/symulator](https://wici.net.pl/symulator/) (po publikacji `main`); lokalnie:
+Stacja WICI w przeglądarce, do pokazów, szkolenia opiekunów i zbierania uwag. Online: [wici.net.pl/symulator](https://wici.net.pl/symulator/) (po publikacji `main`); lokalnie:
 
 ```sh
 python3 -m http.server -d software/simulator/web 8000   # potem http://localhost:8000/
@@ -30,7 +30,7 @@ Modelami pozostają:
 |---|---|
 | Eter | tłumienie trasy stacja–węzeł (domyślnie 100 dB, suwak w *Warunkach*), zanik o rozkładzie normalnym σ = 4 dB na ramkę, moc z rejestrów S2-LP, czułość −112 dBm, kolizje ramek nakładających się w czasie |
 | Komputer stanowiska | `post/post.cpp`: aplikacja na tym samym stosie (microReticulum, interfejs KISS do portu danych węzła, tożsamość główna i zapasowa, dowody `PROVE_ALL`), z modułami `sa1`, `store`, `framfs` z `firmware/src`. To model aplikacji stanowiska, nie sama aplikacja: ma włączony transport (microReticulum zakłada magazyny tożsamości i tras tylko w tym trybie) |
-| Zasilanie | wyłącznik R02 albo wtyk USB N1; obraz bench-b nie mierzy napięcia (ekran podaje „12 V: 0,0 V”) |
+| Zasilanie | wyłącznik R02; obraz bench-b nie mierzy napięcia (ekran podaje „12 V: 0,0 V”) |
 | Człowiek | przycisk zmienia tylko poziom pinu; czy program go odczyta, zależy od programu |
 
 Sieć ćwiczeniowa powstaje jak w terenie: stanowisko podaje kartę odbiorcy, węzeł i stacja są przygotowywane protokołem USB `"usb":2` (przytrzymanie przycisku przygotowania, `configure`, ponowne przytrzymanie), z kluczem sieci ćwiczeniowej (nie polowym). Stan po przygotowaniu (FRAM, NVS, dysk komputera stanowiska) jest obrazem, z którego startuje każde ćwiczenie.
@@ -39,7 +39,7 @@ Sieć ćwiczeniowa powstaje jak w terenie: stanowisko podaje kartę odbiorcy, w�
 
 - **Pokaz.** Praca swobodna: stacja jest włączona i ma trasę do stanowiska; *Dyżurny* odpowiada, wysyła komunikaty, podejmuje decyzje i przełącza tożsamość, *Warunki* zmieniają tłumienie, przerywają łącze, wyłączają węzeł i wprowadzają awarie (S2-LP, FRAM). Czas można przyspieszyć (×10, ×60) albo przeskoczyć (+1 min, +15 min, +1 h).
 - **Szkolenie.** Osiem ćwiczeń według [karty obsługi](../../docs/spec/karta.md) i [instrukcji opiekuna](../../docs/spec/instrukcja.md): uruchomienie, pierwsze zgłoszenie, zmiana liczby osób, zagrożenie życia bez łączności, cisza radiowa, odpowiedź „nie może pomóc”, klucz zapasowy, zanik zasilania. Kroki sprawdza się tak jak człowiek: tekst odczytany z pikseli panelu, aplikacja stanowiska, położenie przełącznika.
-- **Projekt panelu.** Układy R02 i N1 w milimetrach. R02 wygląda jak render koncepcyjny obudowy z 2026-10-11 (`hardware/obudowa/render/stacja.html`, gałąź `obudowa-szkielet`): czarna Hammond 1599KBAT, folia z logo i nadrukiem w trzech językach, kolumna ALARM–CISZA RADIOWA–WYŁĄCZNIK, złącza na dolnej ściance i pole SERWIS: przycisk przygotowania pod numerowaną naklejką VOID (pierwsze dotknięcie przebija naklejkę jak rysik w terenie; ekran pokazuje wtedy pasek TRYB SERWISOWY, `tryb_przygotowania` w oprogramowanie.md). Dalej: skala 1:1 z kalibracją kartą płatniczą, zasady panelu sprawdzane na żywo, przesuwanie elementów (układ Własny, eksport JSON), droga palca i czas ruchu z prawa Fittsa na tym samym przebiegu.
+- **Panel.** Stacja R02 w milimetrach, jak render koncepcyjny obudowy (`hardware/obudowa/render/stacja.html`): czarna Hammond 1599KBAT, folia z logo i nadrukiem w trzech językach, kolumna ALARM–CISZA RADIOWA–WYŁĄCZNIK, złącza na dolnej ściance i pole SERWIS: przycisk przygotowania pod numerowaną naklejką VOID (pierwsze dotknięcie przebija naklejkę jak rysik w terenie). Skala 1:1 z kalibracją kartą płatniczą; zasady panelu z obudowa.md sprawdza test.
 - **Uruchamianie.** *Konsola* to port diagnostyki USB płytki (`HELP`, `INFO`, `RNS`, `STORE`, `JOURNAL`, `SCREEN`, `VTEST`…) stacji albo węzła; *Dziennik* pokazuje restarty, ramki w eterze i zdarzenia stanowiska.
 
 **Uwagi.** Przycisk „Zgłoś uwagę” otwiera formularz GitHub Issues (`.github/ISSUE_TEMPLATE/uwaga-symulator.yml`, etykieta `symulator`) z wypełnionym polem „Dane z symulatora”: wersja obrazu, ćwiczenie i krok, ekran stacji, czas symulacji, układ i przeglądarka.
@@ -63,7 +63,7 @@ Symulator pokazuje zachowanie samego oprogramowania, także to, którego nie wid
 | `post/post.cpp` | aplikacja komputera stanowiska na stosie Reticulum |
 | `cli.cpp` | jedno urządzenie jako proces (polecenia płytki ze stdin, `run <µs>`) |
 | `web/device.js`, `web/world.js`, `web/sim.js` | urządzenie (instancja WebAssembly, restarty z przeniesieniem FRAM, NVS i pamięci RTC), świat (eter, USB, przygotowanie), symulacja ćwiczeń |
-| `web/index.html`, `app.js`, `app.css`, `layouts.js`, `scenarios.js` | strona, układy paneli i zasady, ćwiczenia |
+| `web/index.html`, `app.js`, `app.css`, `layouts.js`, `scenarios.js` | strona, panel R02 i jego zasady, ćwiczenia |
 | `test_scenarios.mjs` | przejście każdego ćwiczenia jego przykładowym przebiegiem na zbudowanych obrazach (Node) |
 
 ## Budowa i kontrola

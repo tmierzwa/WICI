@@ -38,21 +38,18 @@
 <p class="intro" data-t="intro"></p>
 
 <main class="work">
-  <section class="bench" aria-labelledby="bench-title">
-    <div class="bench-head">
-      <h1 id="bench-title"><span id="station-name">WICI</span><span class="state" id="station-state"></span></h1>
-      <div class="bench-controls">
-        <label for="layout-select" data-t="layout">układ</label>
-        <select id="layout-select"></select>
-        <label class="check"><input type="checkbox" id="real-size"> <span data-t="realSize">skala 1:1</span></label>
-        <label class="check"><input type="checkbox" id="edit-mode"> <span data-t="editMode">przesuwanie elementów</span></label>
-      </div>
-    </div>
+  <section class="bench" aria-label="Stacja WICI">
+    <h1 class="visually-hidden" data-t="title">symulator stacji</h1>
     <p class="busy" id="busy" role="status" hidden></p>
     <div class="device-wrap" id="device-wrap">
       <div class="device" id="device"></div>
     </div>
-    <p class="keys" data-t="keys">Klawiatura: ↑ GÓRA, ↓ DÓŁ, Enter OK, Backspace albo Esc WSTECZ. Przytrzymanie działa jak na stacji.</p>
+    <div class="fine">
+      <p data-t="keys"></p>
+      <label class="check"><input type="checkbox" id="real-size"> <span data-t="realSize">skala 1:1</span></label>
+      <p data-t="foot"></p>
+      <p id="build-info"></p>
+    </div>
     <div class="calib" id="calib" hidden>
       <div class="card-outline" id="card-outline"><span data-t="card">karta płatnicza 85,6 × 54 mm</span></div>
       <label for="ppmm"><span data-t="calibrate">Dopasuj ramkę do prawdziwej karty</span> <output id="ppmm-out"></output></label>
@@ -66,22 +63,16 @@
       <button type="button" role="tab" id="tab-rx" data-tab="rx" aria-selected="false" data-t="tabRx">Dyżurny</button>
       <button type="button" role="tab" id="tab-env" data-tab="env" aria-selected="false" data-t="tabEnv">Warunki</button>
       <button type="button" role="tab" id="tab-console" data-tab="console" aria-selected="false" data-t="tabConsole">Konsola</button>
-      <button type="button" role="tab" id="tab-design" data-tab="design" aria-selected="false" data-t="tabDesign">Projekt</button>
       <button type="button" role="tab" id="tab-log" data-tab="log" aria-selected="false" data-t="tabLog">Dziennik</button>
     </nav>
     <div class="panel" id="panel-train" role="tabpanel"></div>
     <div class="panel" id="panel-rx" role="tabpanel" hidden></div>
     <div class="panel" id="panel-env" role="tabpanel" hidden></div>
     <div class="panel" id="panel-console" role="tabpanel" hidden></div>
-    <div class="panel" id="panel-design" role="tabpanel" hidden></div>
     <div class="panel" id="panel-log" role="tabpanel" hidden></div>
   </section>
 </main>
 
-<footer class="foot">
-  <p data-t="foot"></p>
-  <p id="build-info"></p>
-</footer>
 <script type="module" src="app.js"></script>
 </body>
 </html>
