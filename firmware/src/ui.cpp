@@ -1042,7 +1042,11 @@ void Model::buildHandover(const Status& status, Text& t) {
 void Model::render(const Status& s, Lines& out) {
     for (size_t i = 0; i < LINES; ++i) { out.text[i][0] = '\0'; out.inverted[i] = false; }
     size_t first = 0;
-    if (s.prep) copyLine(out.text[first++], LINE_BYTES, text(Id::TRYB_PRZYGOTOWANIA, lang_));
+    if (s.prep) {
+        // Pasek trybu serwisowego w inwersji: odróżnia się od treści ekranu i jest widoczny z daleka.
+        copyLine(out.text[first], LINE_BYTES, text(Id::TRYB_PRZYGOTOWANIA, lang_));
+        out.inverted[first++] = true;
+    }
     const size_t window = LINES - first;
     const size_t L = static_cast<size_t>(lang_);
     lastStatus_ = s;

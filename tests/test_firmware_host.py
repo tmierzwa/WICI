@@ -2082,6 +2082,7 @@ class HostUnitTests(unittest.TestCase):
             for text in expected:
                 self.assertLessEqual(len(text), 20, text)
             self.assertEqual([t for _, t in prep[2]], [texts["tryb_przygotowania"][lang]] + expected[:4], lang)
+            self.assertEqual([inv for inv, _ in prep[2]], [True, False, False, False, False])   # pasek w inwersji
             # Cisza: pełny tekst `cisza` w wierszach 1-3, potem zasilanie i kolejka.
             silence_lines = [t for _, t in silence[2]]
             self.assertEqual(silence_lines[0], texts["tryb_przygotowania"][lang])
