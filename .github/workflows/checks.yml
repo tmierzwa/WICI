@@ -19,10 +19,11 @@ jobs:
         run: python -m unittest discover -s software/reference -v
       - name: Publication regressions
         run: python -m unittest discover -s tests -v
+      # Manifest hashes are refreshed after merging (CONTRIBUTING.md), so only a v* tag checks them.
       - name: Read-only source and controller checks
-        run: python tools/verify_repository.py ${{ github.event_name == 'pull_request' && '--pull-request' || '' }}
+        run: python tools/verify_repository.py ${{ !startsWith(github.ref, 'refs/tags/') && '--pull-request' || '' }}
       - name: Source archive
-        if: github.event_name != 'pull_request'
+        if: startsWith(github.ref, 'refs/tags/')
         run: python tools/release.py --source-zip dist/WICI-0.5-source.zip
       - name: License annotations (REUSE)
         run: pipx run reuse==5.0.2 lint

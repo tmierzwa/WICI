@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: MIT
+# Odświeża przypięte SHA akcji w .github/workflows/ (repozytorium wymaga przypięcia do SHA).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ['*']
