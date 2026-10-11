@@ -62,6 +62,24 @@ Nie dodawaj kluczy, danych mieszkańców, kopii prywatnych rozmów ani materiał
 
 Jeżeli korzystasz z narzędzi AI, napisz o tym w opisie PR i sprawdź wynik tak, jakby był Twój: odpowiadasz za każdy wiersz.
 
+## Podpisy kluczem i scalanie
+
+`Signed-off-by` (DCO) jest deklaracją, nie dowodem tożsamości. Commity na gałęzi `main` są dodatkowo podpisane kryptograficznie:
+
+- PR scala się wyłącznie przez „Squash and merge”. GitHub tworzy wtedy jeden commit podpisany swoim kluczem (znacznik „Verified”), więc commity w PR nie muszą mieć podpisu kluczem; podpis DCO jest w nich wymagany.
+- Ochrona gałęzi `main` wymaga podpisanych commitów („Require signed commits”) i przejścia CI, w tym kontroli `dco`.
+- Opiekun repozytorium podpisuje swoje commity kluczem SSH albo GPG zapisanym w GitHubie jako klucz podpisujący. Kontrybutorom to zalecamy, ale nie wymagamy.
+- Zmiany przygotowane przez narzędzia AI w chmurze (np. Claude Code) nie mają podpisu kluczem, bo środowisko nie ma klucza autora; podpis DCO składa autor, który zlecił zmianę i za nią odpowiada.
+
+Podpisywanie kluczem SSH (Git 2.34 lub nowszy):
+
+```sh
+git config --global gpg.format ssh
+git config --global user.signingkey ~/.ssh/id_ed25519.pub
+git config --global commit.gpgsign true
+git log --show-signature -1   # sprawdzenie; GitHub pokazuje „Verified”, gdy klucz jest dodany jako signing key
+```
+
 ## Decyzje i przeglądy
 
 Na razie projekt ma jednego opiekuna repozytorium ([@tmierzwa](https://github.com/tmierzwa)); poza GitHubem kontakt: [kontakt@wici.net.pl](mailto:kontakt@wici.net.pl). Opiekun repozytorium scala PR, zamyka decyzje D01–D20 z [planu weryfikacji](docs/concept/08-plan-weryfikacji-i-decyzje.html) i wydaje wersje. Decyzja zapada w Issue lub PR, z uzasadnieniem i dowodem wymaganym w tabeli decyzji; zmiana decyzji wymaga nowego dowodu, nie samej dyskusji.
@@ -81,6 +99,7 @@ Contributions in English are welcome; documentation stays in Polish, and maintai
 - Open an issue for larger changes; small fixes can go straight to a pull request.
 - Run the three checks above with `--pull-request`. **Do not refresh `manifest.json`**; the maintainer does it after merging. Refresh only the evidence your change affects (calculation results, hardware evidence).
 - Sign off every commit (`git commit -s`, [DCO 1.1](https://developercertificate.org/)); CI rejects unsigned commits (`tools/check_dco.py`). No CLA.
+- Pull requests are merged with "Squash and merge", so `main` gets a commit signed by GitHub; signing your own commits with an SSH or GPG key is recommended, not required.
 - Keep assumptions separate from measurements; never mark an unperformed test as passed.
 - Safety-critical parts (230 V inverter, phone over-voltage protection, batteries, transmit budget) need review by a qualified person and stay on HOLD until then.
 - Disclose AI assistance in the PR; you are responsible for every line.
