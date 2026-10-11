@@ -473,6 +473,7 @@ const ppmm = () => pref.get("ppmm", 96 / 25.4);
 // Stan elementów: dźwignia CISZA (poziom pinu), ekran bez zasilania.
 function reflect() {
   const on = !!s.power;
+  $("station-state").textContent = on ? `${t("on")}${s.board?.tx ? " · " + t("transmitting") : ""} · ${(s.screen?.lines ?? [])[0] ?? ""}`.trim() : t("off");
   const sw = document.querySelector(".ctl.toggle");
   if (sw) sw.classList.toggle("on", !!s.switch);
   document.querySelector("canvas.lcd")?.classList.toggle("off", !on || !s.board?.lcd_on);

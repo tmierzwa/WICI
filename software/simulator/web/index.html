@@ -37,15 +37,17 @@
 </header>
 
 <main class="work">
-  <section class="bench" aria-label="Stacja WICI">
-    <h1 class="visually-hidden" data-t="title">symulator stacji</h1>
+  <section class="bench" aria-labelledby="bench-title">
+    <div class="bench-head">
+      <h1 id="bench-title"><span id="station-name">WICI</span><span class="state" id="station-state"></span></h1>
+      <label class="check"><input type="checkbox" id="real-size"> <span data-t="realSize">skala 1:1</span></label>
+    </div>
     <p class="busy" id="busy" role="status" hidden></p>
     <div class="device-wrap" id="device-wrap">
       <div class="device" id="device"></div>
     </div>
     <div class="fine">
       <p data-t="keys"></p>
-      <label class="check"><input type="checkbox" id="real-size"> <span data-t="realSize">skala 1:1</span></label>
       <p data-t="foot"></p>
       <p id="build-info"></p>
     </div>
