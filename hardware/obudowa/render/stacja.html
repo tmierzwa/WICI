@@ -16,7 +16,7 @@ html, body { margin: 0; background: #d9d4cb; overflow: hidden; font-family: "Nun
 #caption.side span { max-width: 600px; }
 #caption.material { top: auto; bottom: 44px; left: 56px; }
 #caption.material b { font-size: 34px; }
-#caption.material span { font-size: 20px; max-width: 860px; line-height: 1.4; }
+#caption.material span { font-size: 20px; max-width: 1100px; line-height: 1.4; white-space: pre-line; }
 </style>
 <script type="importmap">
 { "imports": {
@@ -288,8 +288,7 @@ renderer.render(scene, camera);
 if (VIEW === "materialy") {
   document.querySelector("#caption b").textContent = "Stacja WICI – wizualizacja koncepcyjna";
   document.querySelector("#caption span").textContent =
-    "Projekt otwarty w fazie prototypu: stacji jeszcze nie zbudowano ani nie sprawdzono w terenie. " +
-    "Wygląd, obudowa i rozmieszczenie elementów zmienią się po próbach i pilotażu. " +
+    "Wygląd, obudowa i rozmieszczenie elementów zmienią się po próbach i pilotażu.\n" +
     "Założenia: ekran 2,7\", przyciski do obsługi w rękawicach, zasilanie z ogniw AA albo 12 V, antena zewnętrzna 868 MHz.";
 } else {
   document.querySelector("#caption b").textContent =
