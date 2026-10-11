@@ -12,7 +12,6 @@ import { SCENARIOS, Exercise } from "./scenarios.js";
 const T = {
   pl: {
     title: "symulator stacji", feedback: "Zgłoś uwagę",
-    intro: "WICI to otwarty system łączności awaryjnej dla schronień: stacja z czterema przyciskami wysyła zgłoszenia (np. woda pitna dla 40 osób) przez sieć radiową do stanowiska w gminie. Tu działa ten sam program co na prawdziwej stacji; radio i stanowisko odbiorcze są modelami. Wypróbuj ćwiczenia albo pracę swobodną i zgłoś, co jest niejasne lub do poprawy — przycisk „Zgłoś uwagę” dołącza stan symulatora.",
     simTime: "czas symulacji", pause: "pauza", soundOff: "dźwięk wył.", soundOn: "dźwięk wł.", realSize: "skala 1:1", card: "karta płatnicza 85,6 × 54 mm",
     calibrate: "Dopasuj ramkę do prawdziwej karty przyłożonej do ekranu",
     keys: "Klawiatura: ↑ GÓRA, ↓ DÓŁ, Enter OK, Backspace albo Esc WSTECZ. Przytrzymanie działa jak na stacji. WYŁĄCZNIK: krótko włącza, 2 s wyłącza. SERWIS: pierwsze dotknięcie przebija naklejkę VOID (rysik), potem przycisk przygotowania w otworze trzyma się 3 s.",
@@ -42,7 +41,6 @@ const T = {
   },
   en: {
     title: "station simulator", feedback: "Send feedback",
-    intro: "WICI is an open emergency communication system for shelters: a four-button station sends requests (e.g. drinking water for 40 people) over a radio network to a municipal post. This page runs the same program as the real station; the radio and the receiving post are models. Try the exercises or free play and tell us what is unclear or should change: “Send feedback” attaches the simulator state.",
     simTime: "simulated time", pause: "pause", soundOff: "sound off", soundOn: "sound on", realSize: "1:1 scale", card: "payment card 85.6 × 54 mm",
     calibrate: "Match the frame to a real card held against the screen",
     keys: "Keyboard: ↑ UP, ↓ DOWN, Enter OK, Backspace or Esc BACK. Holding works as on the station. POWER: short press turns on, 2 s turns off. SERVICE: the first touch pierces the VOID sticker (stylus), then hold the preparation button in the hole for 3 s.",

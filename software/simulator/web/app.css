@@ -117,7 +117,6 @@ p { margin: 0; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .check { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
 .keys { font-size: 0.82rem; color: var(--muted); }
-.intro { margin: 0 0 16px; max-width: 90ch; font-size: 0.92rem; color: var(--muted); }
 .feedback { border: 1px solid var(--signal); background: var(--signal-soft); color: var(--text); border-radius: var(--radius); padding: 5px 10px; text-decoration: none; font-weight: 600; }
 .feedback:hover { border-color: var(--text); }
 .device-wrap { overflow-x: auto; padding-block: 8px 26px; }
