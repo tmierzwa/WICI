@@ -73,7 +73,7 @@ class PanelConcept(unittest.TestCase):
             self.assertTrue(x0 <= bx0 and bx1 <= x1 and y0 <= by0 and by1 <= y1, (bx0, by0, bx1, by1))
 
     def test_seal_sticker_covers_hole(self):
-        seal = self.parts["PRZYGOTOWANIE"]
+        seal = self.parts["SERWIS"]
         self.assertEqual(seal["kind"], "seal")
         self.assertGreaterEqual(min(seal["size"]) - seal["hole"], 6.0)  # >= 3 mm adhesive around the hole
 

@@ -52,7 +52,7 @@ PANEL = [
     {"id": "ALARM", "kind": "led", "xy": (185.0, 22.0), "hole": 5.0},
     {"id": "CISZA", "kind": "guard", "xy": (185.0, 58.0), "hole": None},
     {"id": "WYŁĄCZNIK", "kind": "power", "xy": (185.0, 100.0), "hole": 16.0},
-    {"id": "PRZYGOTOWANIE", "kind": "seal", "xy": (150.0, 122.0), "hole": 4.0, "size": (22.0, 12.0)},
+    {"id": "SERWIS", "kind": "seal", "xy": (150.0, 122.0), "hole": 4.0, "size": (22.0, 12.0)},
 ]
 # Bottom wall, x from the left outer edge. Axis height above the board is a measurement.
 CONNECTORS = [
