@@ -172,8 +172,8 @@ for (const b of U.panel) {
     text("WYŁĄCZNIK", u, v + 18.5, 3.4, 900);
     text("WYŁĄCZ: TRZYMAJ 2 s", u, v + 22.6, 2.3, 700, "#4a4f57");
   }
-  if (b.kind === "service") {
-    text("SERWIS · PLOMBA", u, v - b.size[1] / 2 - 1.5, 2.2, 700, "#4a4f57");
+  if (b.kind === "seal") {
+    text("PRZYGOTOWANIE", u, v - b.size[1] / 2 - 1.6, 2.2, 800, "#4a4f57");
   }
 }
 // connector hints on the bottom edge
@@ -232,16 +232,19 @@ for (const p of U.panel) {
         x, y - 1, FRONT + 3 + 7.5);
     add(new THREE.CylinderGeometry(1.6, 1.6, 18, 32), STEEL, x, y + 16.5, FRONT + 4, [0, 0, Math.PI / 2]);
   }
-  if (p.kind === "service") {
-    const [sw, sh] = p.size;
-    add(new RoundedBoxGeometry(sw, sh, 1.6, 4, 1.5), mat("#8e9399", { metalness: 0.6, roughness: 0.45 }), x, y, FRONT + 0.8);
-    add(cylZ(2.6, 2.6, 2.2), STEEL, x + 6, y, FRONT + 2.2, FACE);
-    // seal wire from the screw head to a lead seal hanging on the foil
-    const wire = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(x + 6, y, FRONT + 3.2), new THREE.Vector3(x + 10, y - 3, FRONT + 2.6),
-      new THREE.Vector3(x + 15, y - 3, FRONT + 1.8), new THREE.Vector3(x + 18, y - 1, FRONT + 1.5)]);
-    add(new THREE.TubeGeometry(wire, 40, 0.25, 8), STEEL_DARK, 0, 0, 0);
-    add(cylZ(3.4, 3.4, 1.8, 40), mat("#7d8086", { metalness: 0.4, roughness: 0.8 }), x + 19.5, y + 0.5, FRONT + 1.2, FACE);
+  if (p.kind === "seal") {  // numbered VOID sticker over the preparation button hole
+    const [sw, sh] = p.size, k = 40;
+    const c = document.createElement("canvas"); c.width = sw * k; c.height = sh * k;
+    const t = c.getContext("2d");
+    t.fillStyle = "#c9ccd0"; t.fillRect(0, 0, c.width, c.height);
+    t.fillStyle = "rgba(255,255,255,0.35)"; t.font = `900 ${3.2 * k}px "Nunito Sans"`; t.textAlign = "center";
+    for (let i = -1; i < 4; i++) for (let j = 0; j < 3; j++) t.fillText("VOID", (i * 9 + (j % 2) * 4.5) * k, (j * 4.5 + 3.4) * k);
+    t.fillStyle = "#15181c"; t.font = `900 ${2.6 * k}px "Nunito Sans"`;
+    t.fillText("PLOMBA WICI", c.width / 2, 4.4 * k);
+    t.font = `700 ${3.0 * k}px "DejaVu Mono"`; t.fillText("Nr 000123", c.width / 2, 8.6 * k);
+    t.font = `600 ${1.5 * k}px "Nunito Sans"`; t.fillText("NIE ZRYWAĆ", c.width / 2, 11 * k);
+    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+    add(new THREE.PlaneGeometry(sw, sh), mat("#ffffff", { map: tex, metalness: 0.55, roughness: 0.35 }), x, y, FRONT + 0.32).castShadow = false;
   }
 }
 
@@ -281,7 +284,7 @@ document.querySelector("#caption b").textContent =
   VIEW === "front" ? "WICI – koncepcja stacji (założenia na 2026-10-11)" : "WICI – złącza na dolnej ściance (koncepcja)";
 document.querySelector("#caption span").textContent =
   `${U.enclosure.model} ${W} × ${H} × ${D} mm · układ panelu: ${U.source}. ` +
-  `Bez pomiarów (${U.unmeasured.length}): wnętrze, słupki, śruby pokrywy, linia podziału, wysokości złączy i kształt osłony CISZY są umowne.`;
+  `Bez pomiarów (${U.unmeasured.length}): wnętrze, słupki, śruby pokrywy, linia podziału, wysokości złączy i kształt osłony CISZY są umowne. Przycisk przygotowania pod naklejką VOID (F113).`;
 window.RENDER_DONE = true;
 </script>
 </body>

@@ -42,7 +42,8 @@ DISPLAY = {
 }
 # kind: nav = E-Switch PV6 (hole 16 mm), power = PV6 recessed ~3 mm in a foil ring,
 # guard = toggle switch with flip guard (CW Industries GT-4R), led = 5 mm alarm LED,
-# service = sealed service cover ~25 x 20 mm over the preparation button.
+# seal = hole over the preparation button covered by a numbered VOID sticker (F113;
+# replaces the sealed service cover of obudowa.md for the pilot).
 PANEL = [
     {"id": "WSTECZ", "kind": "nav", "xy": (30.0, 98.0), "hole": 16.0, "uk": "НАЗАД", "en": "BACK"},
     {"id": "GÓRA", "kind": "nav", "xy": (62.0, 98.0), "hole": 16.0, "uk": "ВГОРУ", "en": "UP"},
@@ -51,7 +52,7 @@ PANEL = [
     {"id": "ALARM", "kind": "led", "xy": (185.0, 22.0), "hole": 5.0},
     {"id": "CISZA", "kind": "guard", "xy": (185.0, 58.0), "hole": None},
     {"id": "WYŁĄCZNIK", "kind": "power", "xy": (185.0, 100.0), "hole": 16.0},
-    {"id": "SERWIS", "kind": "service", "xy": (150.0, 122.0), "size": (25.0, 20.0)},
+    {"id": "PRZYGOTOWANIE", "kind": "seal", "xy": (150.0, 122.0), "hole": 4.0, "size": (22.0, 12.0)},
 ]
 # Bottom wall, x from the left outer edge. Axis height above the board is a measurement.
 CONNECTORS = [
@@ -142,7 +143,7 @@ def n1_holes() -> list[dict]:
 def layout() -> dict:
     """Concept data passed to render/stacja.html; derived only from CONCEPT above."""
     return {
-        "source": "hardware/r02/obudowa.md (2026-10-08); koncepcja, nie rysunek wykonawczy",
+        "source": "hardware/r02/obudowa.md (2026-10-08), naklejka zamiast pokrywy serwisowej (F113); koncepcja, nie rysunek wykonawczy",
         "enclosure": ENCLOSURE,
         "display": DISPLAY,
         "panel": PANEL,

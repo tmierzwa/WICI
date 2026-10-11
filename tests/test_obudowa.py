@@ -72,6 +72,11 @@ class PanelConcept(unittest.TestCase):
         for bx0, by0, bx1, by1 in boxes:
             self.assertTrue(x0 <= bx0 and bx1 <= x1 and y0 <= by0 and by1 <= y1, (bx0, by0, bx1, by1))
 
+    def test_seal_sticker_covers_hole(self):
+        seal = self.parts["PRZYGOTOWANIE"]
+        self.assertEqual(seal["kind"], "seal")
+        self.assertGreaterEqual(min(seal["size"]) - seal["hole"], 6.0)  # >= 3 mm adhesive around the hole
+
     def test_connectors_on_bottom_wall(self):
         w, _, _ = z.ENCLOSURE["outer"]
         xs = sorted(c["x"] for c in z.CONNECTORS)

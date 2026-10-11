@@ -1,5 +1,5 @@
 {
- "source": "hardware/r02/obudowa.md (2026-10-08); koncepcja, nie rysunek wykonawczy",
+ "source": "hardware/r02/obudowa.md (2026-10-08), naklejka zamiast pokrywy serwisowej (F113); koncepcja, nie rysunek wykonawczy",
  "enclosure": {
   "model": "Hammond 1599KBAT",
   "outer": [
@@ -116,15 +116,16 @@
    "hole": 16.0
   },
   {
-   "id": "SERWIS",
-   "kind": "service",
+   "id": "PRZYGOTOWANIE",
+   "kind": "seal",
    "xy": [
     150.0,
     122.0
    ],
+   "hole": 4.0,
    "size": [
-    25.0,
-    20.0
+    22.0,
+    12.0
    ]
   }
  ],
