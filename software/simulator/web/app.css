@@ -117,6 +117,9 @@ p { margin: 0; }
 .bench-controls select { flex: 1 1 12rem; min-width: 0; padding: 3px 6px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); max-width: 100%; }
 .check { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
 .keys { font-size: 0.82rem; color: var(--muted); }
+.intro { margin: 0 0 16px; max-width: 90ch; font-size: 0.92rem; color: var(--muted); }
+.feedback { border: 1px solid var(--signal); background: var(--signal-soft); color: var(--text); border-radius: var(--radius); padding: 5px 10px; text-decoration: none; font-weight: 600; }
+.feedback:hover { border-color: var(--text); }
 .device-wrap { overflow-x: auto; padding-block: 8px 26px; }
 .device-wrap.real { overflow-x: auto; }
 

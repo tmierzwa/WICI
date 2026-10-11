@@ -219,3 +219,4 @@ figure.render img {
   border: 1px solid var(--border); border-radius: var(--radius);
 }
 figure.render figcaption { margin-top: 0.5rem; color: var(--muted); font-size: 0.92rem; }
+p.callout { background: var(--note-bg); border-left: 4px solid var(--note-border); padding: 0.6rem 0.9rem; border-radius: 4px; }

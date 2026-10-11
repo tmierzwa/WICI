@@ -11,7 +11,9 @@ import { SCENARIOS, Exercise } from "./scenarios.js";
 
 const T = {
   pl: {
-    title: "symulator stacji", simTime: "czas symulacji", pause: "pauza", soundOff: "dźwięk wył.", soundOn: "dźwięk wł.",
+    title: "symulator stacji", feedback: "Zgłoś uwagę",
+    intro: "WICI to otwarty system łączności awaryjnej dla schronień: stacja z czterema przyciskami wysyła zgłoszenia (np. woda pitna dla 40 osób) przez sieć radiową do stanowiska w gminie. Tu działa ten sam program co na prawdziwej stacji; radio i stanowisko odbiorcze są modelami. Wypróbuj ćwiczenia albo pracę swobodną i zgłoś, co jest niejasne lub do poprawy — przycisk „Zgłoś uwagę” dołącza stan symulatora.",
+    simTime: "czas symulacji", pause: "pauza", soundOff: "dźwięk wył.", soundOn: "dźwięk wł.",
     layout: "układ", realSize: "skala 1:1", editMode: "przesuwanie elementów", card: "karta płatnicza 85,6 × 54 mm",
     calibrate: "Dopasuj ramkę do prawdziwej karty przyłożonej do ekranu",
     keys: "Klawiatura: ↑ GÓRA, ↓ DÓŁ, Enter OK, Backspace albo Esc WSTECZ. Przytrzymanie działa jak na stacji. WYŁĄCZNIK: krótko włącza, 2 s wyłącza. SERWIS: pierwsze dotknięcie przebija naklejkę VOID (rysik), potem przycisk przygotowania w otworze trzyma się 3 s.",
@@ -45,7 +47,9 @@ const T = {
     logEmpty: "Brak zdarzeń.", logAir: "pokaż ramki radiowe", sealTorn: "naklejka serwisowa przebita (VOID)",
   },
   en: {
-    title: "station simulator", simTime: "simulated time", pause: "pause", soundOff: "sound off", soundOn: "sound on",
+    title: "station simulator", feedback: "Send feedback",
+    intro: "WICI is an open emergency communication system for shelters: a four-button station sends requests (e.g. drinking water for 40 people) over a radio network to a municipal post. This page runs the same program as the real station; the radio and the receiving post are models. Try the exercises or free play and tell us what is unclear or should change: “Send feedback” attaches the simulator state.",
+    simTime: "simulated time", pause: "pause", soundOff: "sound off", soundOn: "sound on",
     layout: "layout", realSize: "1:1 scale", editMode: "move controls", card: "payment card 85.6 × 54 mm",
     calibrate: "Match the frame to a real card held against the screen",
     keys: "Keyboard: ↑ UP, ↓ DOWN, Enter OK, Backspace or Esc BACK. Holding works as on the station. POWER: short press turns on, 2 s turns off. SERVICE: the first touch pierces the VOID sticker (stylus), then hold the preparation button in the hole for 3 s.",
@@ -127,6 +131,7 @@ const consoles = { stacja: "", "węzeł": "" };
 let consoleDevice = "stacja";
 let postPort = true;   // aplikacja stanowiska ma otwarty port danych węzła
 let sealBroken = false;   // naklejka serwisowa R02 przebita w tej sesji (nowa sieć i ćwiczenie: nowa naklejka)
+let buildStamp = "";   // wersja obrazu z build.json (do zgłoszeń)
 
 // Zadania na symulacji idą po kolei (przebieg czasu, start ćwiczenia, polecenia stanowiska).
 let chain = Promise.resolve();
@@ -154,6 +159,7 @@ async function main() {
   busy(t("preparing"));
   try {
     const b = await (await fetch("build.json")).json();
+    buildStamp = `${b.env} wici-station.mjs ${b.outputs["wici-station.mjs"].sha256.slice(0, 12)}`;
     const o = b.outputs["wici-station.mjs"];
     $("build-info").textContent = `${b.env} · ${b.firmware.length} plików firmware/src · wici-station.mjs ${o.bytes} B, sha256 ${o.sha256.slice(0, 12)}… · ${b.emscripten.split(" ").slice(-2, -1)[0] ?? ""}`;
   } catch { /* opis budowy jest opcjonalny */ }
@@ -838,6 +844,29 @@ function logPanel() {
     `<li><span class="t">${clock(e.t / 1000)}</span><span class="k ${esc(e.kind)}">${esc(e.source ?? "")} ${esc(e.kind)}</span><span>${esc(e.text ?? "")}</span></li>`).join("")}</ol>`;
 }
 
+// ---- zgłoszenie uwagi --------------------------------------------------------------------------
+
+// Nowe zgłoszenie w GitHub Issues (formularz .github/ISSUE_TEMPLATE/uwaga-symulator.yml) z polem
+// „Dane z symulatora”: ćwiczenie i krok, ekran stacji, czas, układ, wersja obrazu, przeglądarka.
+const ISSUE_URL = "https://github.com/tmierzwa/WICI/issues/new";
+function feedbackContext() {
+  const lines = [
+    `obraz: ${buildStamp || "?"}`,
+    `układ: ${layoutId}, język strony: ${lang}, tempo: ${speed}×`,
+    `czas symulacji: ${sim?.world ? clock(sim.nowUs / 1000) : "-"}`,
+    exercise ? `ćwiczenie: ${exercise.scenario.id}, krok ${Math.min(exercise.index + 1, exercise.scenario.steps.length)}/${exercise.scenario.steps.length}${exercise.finished ? " (ukończone)" : ""}`
+      : "praca swobodna",
+    `stacja: ${s.power ? "włączona" : "wyłączona"}, CISZA ${s.switch ? "wł." : "wył."}${sealBroken ? ", naklejka SERWIS przebita" : ""}`,
+    ...(s.power && s.screen ? ["ekran:", ...s.screen.lines.map((l, i) => `  ${s.screen.inverted?.[i] ? ">" : " "} ${l}`)] : []),
+    `przeglądarka: ${navigator.userAgent}`,
+  ];
+  return lines.join("\n");
+}
+function updateFeedbackLink() {
+  const params = new URLSearchParams({ template: "uwaga-symulator.yml", labels: "symulator", context: feedbackContext() });
+  $("feedback").href = `${ISSUE_URL}?${params}`;
+}
+
 // ---- zdarzenia strony ---------------------------------------------------------------------------
 
 function bind() {
@@ -850,6 +879,8 @@ function bind() {
   });
   for (const b of document.querySelectorAll("[data-skip]")) b.addEventListener("click", () => skip(Number(b.dataset.skip)));
   for (const b of document.querySelectorAll(".tabs button")) b.addEventListener("click", () => selectTab(b.dataset.tab));
+  // Link aktualizowany tuż przed otwarciem (także środkowym przyciskiem i z klawiatury).
+  for (const ev of ["pointerdown", "focus", "mouseenter"]) $("feedback").addEventListener(ev, updateFeedbackLink);
   $("sound").addEventListener("click", () => {
     soundOn = !soundOn;
     if (soundOn && !audio) { try { audio = new AudioContext(); } catch { soundOn = false; } }

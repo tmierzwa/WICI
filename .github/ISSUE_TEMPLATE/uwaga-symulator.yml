@@ -1,0 +1,41 @@
+name: Uwaga do symulatora / Simulator feedback
+description: Uwaga po wypróbowaniu stacji w symulatorze (wici.net.pl/symulator) — obsługa, teksty, ćwiczenia, działanie sieci
+labels: [symulator]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Dziękujemy za wypróbowanie stacji WICI. Symulator uruchamia to samo oprogramowanie co płytka; radio i stanowisko odbiorcze są modelami. Uwagi mogą być krótkie i nietechniczne.
+        Thank you for trying the WICI station. English is fine.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Czego dotyczy / Area
+      options:
+        - Obsługa panelu (przyciski, przełącznik, czytelność) / Panel handling
+        - Teksty na ekranie / Screen texts
+        - Ćwiczenia opiekuna / Warden exercises
+        - Działanie łącza i stanowiska odbiorczego / Link and receiving post
+        - Wygląd obudowy / Enclosure design
+        - Strona symulatora / Simulator page
+        - Inne / Other
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: Co zauważyłeś(-aś) / What did you notice
+      description: Co zrobiłeś(-aś), czego się spodziewałeś(-aś), co się stało albo co warto zmienić
+    validations:
+      required: true
+  - type: input
+    id: who
+    attributes:
+      label: Perspektywa (opcjonalnie) / Your perspective (optional)
+      description: np. opiekun schronienia, OSP, gmina, radioamator, programista
+  - type: textarea
+    id: context
+    attributes:
+      label: Dane z symulatora / Simulator context
+      description: Wypełnia przycisk „Zgłoś uwagę” w symulatorze; można zostawić bez zmian
+      render: text

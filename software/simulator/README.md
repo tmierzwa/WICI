@@ -42,6 +42,8 @@ Sieć ćwiczeniowa powstaje jak w terenie: stanowisko podaje kartę odbiorcy, w�
 - **Projekt panelu.** Układy R02 i N1 w milimetrach. R02 wygląda jak render koncepcyjny obudowy z 2026-10-11 (`hardware/obudowa/render/stacja.html`, gałąź `obudowa-szkielet`): czarna Hammond 1599KBAT, folia z logo i nadrukiem w trzech językach, kolumna ALARM–CISZA RADIOWA–WYŁĄCZNIK, złącza na dolnej ściance i pole SERWIS: przycisk przygotowania pod numerowaną naklejką VOID (pierwsze dotknięcie przebija naklejkę jak rysik w terenie; ekran pokazuje wtedy pasek TRYB SERWISOWY, `tryb_przygotowania` w oprogramowanie.md). Dalej: skala 1:1 z kalibracją kartą płatniczą, zasady panelu sprawdzane na żywo, przesuwanie elementów (układ Własny, eksport JSON), droga palca i czas ruchu z prawa Fittsa na tym samym przebiegu.
 - **Uruchamianie.** *Konsola* to port diagnostyki USB płytki (`HELP`, `INFO`, `RNS`, `STORE`, `JOURNAL`, `SCREEN`, `VTEST`…) stacji albo węzła; *Dziennik* pokazuje restarty, ramki w eterze i zdarzenia stanowiska.
 
+**Uwagi.** Przycisk „Zgłoś uwagę” otwiera formularz GitHub Issues (`.github/ISSUE_TEMPLATE/uwaga-symulator.yml`, etykieta `symulator`) z wypełnionym polem „Dane z symulatora”: wersja obrazu, ćwiczenie i krok, ekran stacji, czas symulacji, układ i przeglądarka.
+
 Klawiatura: ↑ GÓRA, ↓ DÓŁ, Enter OK, Backspace albo Esc WSTECZ; przytrzymanie działa jak na stacji.
 
 ## Obserwacje z obrazu bench-b
