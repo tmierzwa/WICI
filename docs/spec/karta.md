@@ -24,7 +24,7 @@ Przyciski: GÓRA, DÓŁ, OK, WSTECZ. Pierwsze naciśnięcie przy zgaszonym ekran
 
 ## Strona 2: zgłoszenie i sytuacje szczególne
 
-**Zgłoszenie.** Kategoria (piktogram) → liczba osób (1, 2, 5, 10, 20, 50, 100, INNA) → pilność: „ZAGROŻENIE ŻYCIA”, „PILNE – KILKA GODZIN” albo „W CIĄGU DOBY” → gotowa fraza (opcjonalnie; przy kategorii 9 obowiązkowo) → podsumowanie „OK = WYŚLIJ, WSTECZ = POPRAW”. WSTECZ cofa o krok; przytrzymanie WSTECZ 2 s: „PORZUCIĆ ZGŁOSZENIE? OK = TAK”. Zapisz krótki numer zgłoszenia w dzienniku.
+**Zgłoszenie.** Kategoria (piktogram) → liczba osób („1 OSOBA”, „2 OSOBY”, „5 OSÓB” … „100 OSÓB”, „INNA LICZBA”) → pilność: „ZAGROŻENIE ŻYCIA”, „PILNE – KILKA GODZIN” albo „W CIĄGU DOBY” → gotowa fraza (opcjonalnie; przy kategorii 9 obowiązkowo) → podsumowanie „OK = WYŚLIJ, WSTECZ = POPRAW”. WSTECZ cofa o krok; przytrzymanie WSTECZ 2 s: „PORZUCIĆ ZGŁOSZENIE? OK = TAK”. Zapisz krótki numer zgłoszenia w dzienniku.
 
 Etapy na ekranie: „ZAPISANE W STACJI – CZEKA NA WYSŁANIE” → „WYSYŁANIE – PRÓBA [n], NASTĘPNA ZA [m] MIN” → „ODBIORCA ZAPISAŁ” → „ODBIORCA PRZECZYTAŁ” → decyzja: „POMOC SKIEROWANA (DECYZJA, NIE GODZINA PRZYJAZDU)”, „PRZEKAZANE DALEJ (PSP / POGOTOWIE / POWIAT)”, „ODBIORCA NIE MOŻE TERAZ POMÓC – CZYTAJ ODPOWIEDŹ” albo „ZAMKNIĘTE”. Zmiana lub koniec potrzeby: WIADOMOŚCI → własne zgłoszenie → „ZMIEŃ LICZBĘ OSÓB / ZMIEŃ PILNOŚĆ / POTRZEBA USTAŁA”.
 

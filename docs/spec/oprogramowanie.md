@@ -295,7 +295,7 @@ Przyciski: GÓRA, DÓŁ, OK, WSTECZ, duże i wyczuwalne, obsługiwane w rękawic
 | STAN | radio, liczniki, energia (`ogniwa_napiecie`, `ogniwa_czas`, napięcie 12 V), `ostatni_kontakt`, wersja, nazwa `WICI-xxxxxx`; PRZEKAZANIE ZMIANY; USŁUGI: OGŁOŚ ADRES, WYCISZ DŹWIĘK (po wyciszeniu WŁĄCZ DŹWIĘK), KLUCZ ZAPASOWY, ZNISZCZ DANE |
 | JĘZYK/МОВА/LANGUAGE | polski, ukraiński, angielski; etykieta zawsze w trzech językach, bez spacji wokół ukośników (19 znaków) |
 
-**Kreator zgłoszenia.** WSTECZ cofa o jeden krok; przytrzymanie WSTECZ przez 2 s pokazuje `porzucic`. Liczba osób: lista „1, 2, 5, 10, 20, 50, 100, INNA”; INNA to wpis cyfra po cyfrze (setki, dziesiątki, jednostki), przytrzymanie przycisku przyspiesza zmianę, domyślnie stoi ostatnio użyta wartość. Pilność wybiera się z etykiet `pilnosc_2`, `pilnosc_1`, `pilnosc_0`; pilność 2 wymaga potwierdzenia `pilnosc_2_potw`. Podsumowanie pokazuje piktogram i kategorię, liczbę osób, pilność słownie, frazę, adres i `podsumowanie_klawisze`. Po 3 min bezczynności szkic zostaje zapisany, a stacja wraca do ekranu głównego; tak samo wraca każdy inny ekran poza głównym, wyborem języka, alarmem i pytaniem polecenia USB (ono kończy się po 30 s odmową `not_confirmed`). Po wysłaniu ekran pokazuje kolejne etapy z tabeli.
+**Kreator zgłoszenia.** WSTECZ cofa o jeden krok; przytrzymanie WSTECZ przez 2 s pokazuje `porzucic`. Liczba osób: lista z liczbą i rzeczownikiem (`osoby_1`, `osoby_2`, `osoby_5`): „1 OSOBA, 2 OSOBY, 5 OSÓB, 10 OSÓB, 20 OSÓB, 50 OSÓB, 100 OSÓB, INNA LICZBA”, bez osobnego tytułu, żeby lista mieściła 5 wierszy; INNA LICZBA to wpis cyfra po cyfrze (setki, dziesiątki, jednostki), przytrzymanie przycisku przyspiesza zmianę, domyślnie stoi ostatnio użyta wartość. Pilność wybiera się z etykiet `pilnosc_2`, `pilnosc_1`, `pilnosc_0`; pilność 2 wymaga potwierdzenia `pilnosc_2_potw`. Podsumowanie pokazuje piktogram i kategorię, liczbę osób, pilność słownie, frazę, adres i `podsumowanie_klawisze`. Po 3 min bezczynności szkic zostaje zapisany, a stacja wraca do ekranu głównego; tak samo wraca każdy inny ekran poza głównym, wyborem języka, alarmem i pytaniem polecenia USB (ono kończy się po 30 s odmową `not_confirmed`). Po wysłaniu ekran pokazuje kolejne etapy z tabeli.
 
 **Własne zgłoszenie.** ZMIEŃ LICZBĘ OSÓB i ZMIEŃ PILNOŚĆ tworzą nową rewizję, jak na stronie. POTRZEBA USTAŁA tworzy nową rewizję z frazą „potrzeba ustała”. ANULUJ WYSYŁKĘ jest dostępne tylko, dopóki zgłoszenie nie wyszło ze stacji (ekran `zapisane_w_stacji` albo `zapisane_w_ciszy` od utworzenia): oznacza intencję jako anulowaną i zapisuje to w dzienniku zdarzeń. Zgłoszenie, które stacja choć raz nadała, mogło dotrzeć do odbiorcy, nawet bez potwierdzenia, a odbiorca o anulowaniu by nie wiedział; dlatego po pierwszym nadaniu zamiast ANULUJ jest tylko POTRZEBA USTAŁA. Swobodny opis wpisuje się tylko w panelu laptopa.
 
@@ -346,6 +346,9 @@ Jedyna kanoniczna lista tekstów stacji i strony mieszkańca; inne dokumenty cyt
 | `adres_kontrola` | ADRES: [x] – CZY TO TO MIEJSCE? OK = TAK / WSTECZ = NIE | АДРЕСА: [x] – ЦЕ ЦЕ МІСЦЕ? OK = ТАК / НАЗАД = НІ | ADDRESS: [x] – IS THIS THE PLACE? OK = YES / BACK = NO | kontrola adresu przy starcie |
 | `adres_brak` | STACJA NIE MA TWOJEGO ADRESU – UŻYJ FORMULARZA PAPIEROWEGO | СТАНЦІЯ НЕ МАЄ ВАШОЇ АДРЕСИ – ВИКОРИСТАЙТЕ ПАПЕРОВУ ФОРМУ | STATION DOES NOT HAVE YOUR ADDRESS – USE THE PAPER FORM | odpowiedź NIE albo brak adresu |
 | `porzucic` | PORZUCIĆ ZGŁOSZENIE? OK = TAK | СКАСУВАТИ ЗАЯВКУ? OK = ТАК | DISCARD REQUEST? OK = YES | przytrzymanie WSTECZ 2 s w kreatorze |
+| `osoby_1` | [n] OSOBA | [n] ОСОБА | [n] PERSON | kreator, lista liczby osób: liczba z rzeczownikiem w liczbie pojedynczej (PL: 1; UK: 1, 21, 31…) |
+| `osoby_2` | [n] OSOBY | [n] ОСОБИ | [n] PEOPLE | jak wyżej: PL i UK 2–4, 22–24…, bez 12–14; EN każda liczba poza 1 |
+| `osoby_5` | [n] OSÓB | [n] ОСІБ | [n] PEOPLE | jak wyżej: pozostałe liczby (5, 10, 20, 50, 100…) |
 | `pilnosc_2` | ZAGROŻENIE ŻYCIA | ЗАГРОЗА ЖИТТЮ | DANGER TO LIFE | urgency 2 |
 | `pilnosc_1` | PILNE – KILKA GODZIN | ТЕРМІНОВО – КІЛЬКА ГОДИН | URGENT – A FEW HOURS | urgency 1 |
 | `pilnosc_0` | W CIĄGU DOBY | ПРОТЯГОМ ДОБИ | WITHIN A DAY | urgency 0 |
@@ -358,7 +361,7 @@ Jedyna kanoniczna lista tekstów stacji i strony mieszkańca; inne dokumenty cyt
 | `wylaczanie` | WYŁĄCZANIE – CZEKAJ, ZAPISUJĘ | ВИМКНЕННЯ – ЗАЧЕКАЙТЕ, ЗБЕРІГАЮ | SWITCHING OFF – WAIT, SAVING | kończenie zapisu przed wyłączeniem |
 | `mozna_wyjac` | MOŻNA WYJĄĆ OGNIWA | МОЖНА ВИЙНЯТИ БАТАРЕЇ | CELLS CAN BE REMOVED | zapis zakończony |
 | `odlaczone_12v` | 12 V ODŁĄCZONE – ZA NISKIE NAPIĘCIE. PODŁĄCZ NAŁADOWANE ŹRÓDŁO I PRZYTRZYMAJ OK | 12 В ВІДКЛЮЧЕНО – ЗАНИЗЬКА НАПРУГА. ПІДКЛЮЧІТЬ ЗАРЯДЖЕНЕ ДЖЕРЕЛО І УТРИМУЙТЕ OK | 12 V DISCONNECTED – VOLTAGE TOO LOW. CONNECT A CHARGED SOURCE AND HOLD OK | zatrzask podnapięciowy 12 V; praca z ogniw |
-| `tryb_przygotowania` | TRYB PRZYGOTOWANIA | РЕЖИМ ПІДГОТОВКИ | PREPARATION MODE | stały pasek w trybie przygotowania |
+| `tryb_przygotowania` | TRYB SERWISOWY | СЕРВІСНИЙ РЕЖИМ | SERVICE MODE | stały pasek w trybie przygotowania |
 | `klucz_zapasowy` | PRZEŁĄCZYĆ NA KLUCZ ZAPASOWY ODBIORCY? TYLKO NA POLECENIE SŁOWNE LUB PRZEZ GOŃCA. NIEODWRACALNE | ПЕРЕМКНУТИ НА РЕЗЕРВНИЙ КЛЮЧ ОДЕРЖУВАЧА? ЛИШЕ ЗА УСНИМ НАКАЗОМ АБО ЧЕРЕЗ ПОСИЛЬНОГО. НЕЗВОРОТНО | SWITCH TO RECIPIENT'S BACKUP KEY? ONLY ON A SPOKEN ORDER OR ONE BROUGHT BY A RUNNER. IRREVERSIBLE | przed sekwencją GÓRA, DÓŁ, GÓRA, OK |
 | `komputer_osp` | KOMPUTER [czas] TEMU | ПК [czas] ТОМУ | COMPUTER [czas] AGO | węzeł stanowiska, ekran główny, wiersz 2: czas od ostatniego pakietu od komputera stanowiska |
 | `komputer_brak` | BRAK KOMPUTERA | НЕМАЄ ЗВ'ЯЗКУ З ПК | NO COMPUTER | węzeł stanowiska, ekran główny, wiersz 2: brak pakietu od komputera od startu stacji |
@@ -400,7 +403,7 @@ Pozycje menu, nazwy przycisków i etykiety kategorii są częścią tej listy. K
 | ZMIEŃ PILNOŚĆ | ЗМІНИТИ ТЕРМІНОВІСТЬ | CHANGE URGENCY |
 | POTRZEBA USTAŁA | ПОТРЕБА ЗНИКЛА | NEED RESOLVED |
 | ANULUJ WYSYŁKĘ | СКАСУВАТИ ВІДПРАВКУ | CANCEL SENDING |
-| INNA (liczba osób) | ІНША | OTHER |
+| INNA LICZBA (liczba osób) | ІНША КІЛЬКІСТЬ | OTHER NUMBER |
 
 Etykiety kategorii na ekranie, obok piktogramu (pełny opis kategorii: [wiadomości SA1](#wiadomości-sa1)):
 

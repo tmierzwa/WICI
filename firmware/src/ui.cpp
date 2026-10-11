@@ -15,7 +15,7 @@ using ui_texts::label;
 
 // Nazwy języków na ekranie wyboru: nie ma ich w kanonicznej liście tekstów (do dopisania w specyfikacji).
 const char* const LANGUAGE_NAMES[ui_texts::LANGS] = {"POLSKI", "УКРАЇНСЬКА", "ENGLISH"};
-// Lista liczby osób ze specyfikacji; ostatnia pozycja to INNA (wpis cyfra po cyfrze).
+// Lista liczby osób ze specyfikacji; ostatnia pozycja to INNA LICZBA (wpis cyfra po cyfrze).
 const uint16_t PEOPLE_VALUES[] = {1, 2, 5, 10, 20, 50, 100};
 constexpr size_t PEOPLE_CHOICES = sizeof(PEOPLE_VALUES) / sizeof(PEOPLE_VALUES[0]) + 1;
 constexpr uint8_t MENU_ITEMS = static_cast<uint8_t>(ui_texts::MENU_ITEMS);
@@ -55,6 +55,16 @@ void substituteNumber(char* line, size_t size, const char* key, uint32_t value) 
     formatNumber(number, sizeof(number), value);
     substitute(line, key, number, tmp, sizeof(tmp));
     copyLine(line, size, tmp);
+}
+
+// Liczba osób z rzeczownikiem w odpowiedniej formie (oprogramowanie.md: osoby_1, osoby_2, osoby_5).
+// PL: 1 OSOBA, 2–4 OSOBY (bez 12–14), reszta OSÓB; UK jak PL, ale także 21, 31… ОСОБА; EN: 1 PERSON, reszta PEOPLE.
+Id peopleForm(uint32_t n, Lang lang) {
+    const uint32_t tens = n % 100, ones = n % 10;
+    if (lang == Lang::EN) return n == 1 ? Id::OSOBY_1 : Id::OSOBY_2;
+    if (n == 1 || (lang == Lang::UK && ones == 1 && tens != 11)) return Id::OSOBY_1;
+    if (ones >= 2 && ones <= 4 && (tens < 12 || tens > 14)) return Id::OSOBY_2;
+    return Id::OSOBY_5;
 }
 
 // Krótki numer zgłoszenia: cztery cyfry.
@@ -283,7 +293,7 @@ void Model::go(Screen screen) {
     else if (screen == Screen::MENU) cursor_ = item_;
     else if (screen == Screen::CATEGORY) cursor_ = draft_.category;
     else if (screen == Screen::PEOPLE) {
-        cursor_ = PEOPLE_CHOICES - 1;  // INNA, chyba że liczba jest na liście
+        cursor_ = PEOPLE_CHOICES - 1;  // INNA LICZBA, chyba że liczba jest na liście
         for (size_t i = 0; i < PEOPLE_CHOICES - 1; ++i) if (PEOPLE_VALUES[i] == draft_.people) cursor_ = static_cast<uint16_t>(i);
     } else if (screen == Screen::URGENCY) { cursor_ = 0; urgencyPicked_ = false; }
     else if (screen == Screen::ADDRESS_LIST) cursor_ = static_cast<uint16_t>(host_ ? host_->selectedAddress() : 0);
@@ -1060,16 +1070,21 @@ void Model::render(const Status& s, Lines& out) {
             break;
         }
         case Screen::PEOPLE: {
-            char values[PEOPLE_CHOICES][8];
+            // Liczby z rzeczownikiem (1 OSOBA, 2 OSOBY, 5 OSÓB…): bez tytułu wiadomo, co się wybiera.
+            char values[PEOPLE_CHOICES][LINE_BYTES];
             const char* items[PEOPLE_CHOICES];
-            for (size_t i = 0; i + 1 < PEOPLE_CHOICES; ++i) { formatNumber(values[i], sizeof(values[i]), PEOPLE_VALUES[i]); items[i] = values[i]; }
-            items[PEOPLE_CHOICES - 1] = label(Label::INNA, lang_);
+            for (size_t i = 0; i + 1 < PEOPLE_CHOICES; ++i) {
+                copyLine(values[i], sizeof(values[i]), text(peopleForm(PEOPLE_VALUES[i], lang_), lang_));
+                substituteNumber(values[i], sizeof(values[i]), "[n]", PEOPLE_VALUES[i]);
+                items[i] = values[i];
+            }
+            items[PEOPLE_CHOICES - 1] = label(Label::INNA_LICZBA, lang_);
             renderList(items, PEOPLE_CHOICES, window, out, first, true);
             break;
         }
         case Screen::DIGITS: {
             // Setki, dziesiątki, jednostki; znacznik pod zmienianą cyfrą.
-            t.addLine(label(Label::INNA, lang_));
+            t.addLine(label(Label::INNA_LICZBA, lang_));
             snprintf(tmp, sizeof(tmp), "%u %u %u", digits_[0], digits_[1], digits_[2]);
             t.addLine(tmp);
             snprintf(tmp, sizeof(tmp), "%*s^", digitPos_ * 2, "");

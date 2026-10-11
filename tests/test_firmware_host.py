@@ -2137,7 +2137,9 @@ class HostUnitTests(unittest.TestCase):
         s = self.screens(self.ui(self.HOSTED + script))
         self.assertEqual([x[0] for x in s], ["people", "digits", "digits", "digits", "urgency", "urgency", "discard", "discard",
                                              "urgency", "discard", "discard", "main", "language_menu", "menu", "people"])
-        self.assertEqual([inv for inv, _ in s[0][2]], [False, False, False, False, True])  # INNA
+        self.assertEqual([inv for inv, _ in s[0][2]], [False, False, False, False, True])  # INNA LICZBA
+        # Liczby z rzeczownikiem (osoby_1, osoby_2, osoby_5): lista mówi sama, co się wybiera.
+        self.assertEqual(self.lines(s[0]), ["10 OSÓB", "20 OSÓB", "50 OSÓB", "100 OSÓB", "INNA LICZBA"])
         self.assertEqual(self.lines(s[1])[1:3], ["0 0 1", "^"])
         self.assertEqual(self.lines(s[2])[1:3], ["2 0 9", "    ^"])
         self.assertEqual(self.lines(s[3])[1:3], ["2 0 2", "    ^"])  # przytrzymanie: 9 -> 0 od razu, potem co 150 ms

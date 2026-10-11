@@ -20,7 +20,7 @@ Buttons: UP, DOWN, OK, BACK. The first press on a dark screen only switches on t
 
 ## Page 2: request and special situations
 
-**Request.** Category (pictogram) → number of people (1, 2, 5, 10, 20, 50, 100, OTHER) → urgency: “DANGER TO LIFE”, “URGENT – A FEW HOURS” or “WITHIN A DAY” → ready phrase (optional; required for category 9) → summary “OK = SEND, BACK = EDIT”. BACK goes one step back; hold BACK 2 s: “DISCARD REQUEST? OK = YES”. Write the short request number in the log.
+**Request.** Category (pictogram) → number of people (“1 PERSON”, “2 PEOPLE” … “100 PEOPLE”, “OTHER NUMBER”) → urgency: “DANGER TO LIFE”, “URGENT – A FEW HOURS” or “WITHIN A DAY” → ready phrase (optional; required for category 9) → summary “OK = SEND, BACK = EDIT”. BACK goes one step back; hold BACK 2 s: “DISCARD REQUEST? OK = YES”. Write the short request number in the log.
 
 Stages on the screen: “SAVED IN STATION – WAITING TO SEND” → “SENDING – ATTEMPT [n], NEXT IN [m] MIN” → “RECIPIENT SAVED IT” → “RECIPIENT READ IT” → decision: “HELP DISPATCHED (DECISION, NOT ARRIVAL TIME)”, “FORWARDED (FIRE SERVICE / AMBULANCE / COUNTY)”, “RECIPIENT CANNOT HELP NOW – READ THE REPLY” or “CLOSED”. Change or end of the need: MESSAGES → own request → “CHANGE PEOPLE COUNT / CHANGE URGENCY / NEED RESOLVED”.
 
