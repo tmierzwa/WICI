@@ -67,7 +67,7 @@ export const RULES = [
     en: "SILENCE and power ≥30 mm from the navigation row",
     test(layout) {
       const nav = layout.controls.filter((c) => NAV.includes(c.id));
-      const far = layout.controls.filter((c) => (c.id === "SILENCE" || c.id === "POWER") && !c.virtual);
+      const far = layout.controls.filter((c) => (c.id === "SILENCE" || c.id === "POWER"));
       const min = Math.min(...far.flatMap((f) => nav.map((n) => dist(f, n))));
       return { ok: min >= 30, value: `${min.toFixed(1)} mm` };
     },
@@ -79,7 +79,7 @@ export const RULES = [
     test(layout) {
       // Obrysu klapki GT-4R nie ma jeszcze w dokumentacji: odległość od osi przełącznika do krawędzi przycisku.
       const s = layout.controls.find((c) => c.id === "SILENCE");
-      const others = layout.controls.filter((c) => (c.type === "button" || c.type === "power") && !c.virtual);
+      const others = layout.controls.filter((c) => (c.type === "button" || c.type === "power"));
       const min = Math.min(...others.map((o) => dist(s, o) - extent(o)));
       return { ok: s.guard && min >= 20, value: s.guard ? `${min.toFixed(1)} mm` : "—" };
     },

@@ -77,11 +77,12 @@ uint32_t S2lp::mask() const {
 }
 
 double S2lp::rate() const {
-    // Wzór 14: DR = f_dig · (2^16 + M) · 2^E / 2^33 dla E > 0, f_dig = f_xo / 2 przy PD_CLKDIV = 0.
+    // Wzór 14: DR = f_dig · (2^16 + M) · 2^E / 2^33 dla E > 0, DR = f_dig · M / 2^32 dla E = 0;
+    // f_dig = f_xo / 2 przy PD_CLKDIV = 0.
     const double fdig = (regs_[0x6C] & 0x10) ? F_XO : F_XO / 2;
     const uint16_t m = static_cast<uint16_t>(regs_[0x0E] << 8 | regs_[0x0F]);
     const uint8_t e = regs_[0x10] & 0x0F;
-    if (e == 0) return fdig * m / 8589934592.0;
+    if (e == 0) return fdig * m / 4294967296.0;
     return fdig * (65536.0 + m) * pow(2.0, e) / 8589934592.0;
 }
 
@@ -102,8 +103,8 @@ int16_t S2lp::txDbm() const {
 }
 
 uint8_t S2lp::status1() const {
-    // MC_STATE1: bit 2 RX_FIFO_EMPTY, bit 1 TX_FIFO_FULL (podzbiór).
-    return static_cast<uint8_t>((rxFifo_.empty() ? 0x04 : 0) | (txFifo_.size() >= FIFO ? 0x02 : 0));
+    // MC_STATE1: bit 2 TX_FIFO_FULL, bit 1 RX_FIFO_EMPTY, bit 0 ERROR_LOCK (podzbiór, karta S2-LP).
+    return static_cast<uint8_t>((txFifo_.size() >= FIFO ? 0x04 : 0) | (rxFifo_.empty() ? 0x02 : 0));
 }
 
 void S2lp::select() { byteIndex_ = 0; }
@@ -313,6 +314,9 @@ void S2lp::tick(uint64_t now) {
                 locked_ = 0;
                 continue;
             }
+            // W czasie odbioru pakietu układ nie szuka słowa synchronizacji: ramka, której słowo
+            // minęło w tym czasie, przepada (nie zostaje odebrana później).
+            if (locked_ && f.id != locked_ && !f.carrier && f.syncUs <= now) { f.seen = true; continue; }
             if (locked_ || f.carrier || f.syncUs > now || f.syncUs < rxSince_ + 1) continue;
             if (f.startUs < rxSince_) continue;   // odbiornik włączony po początku preambuły
             if (f.seen) continue;

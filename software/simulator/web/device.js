@@ -26,6 +26,10 @@ export class Device {
     this.fram = null;              // kopia FRAM poza instancją (wyłączona stacja)
     this.nvs = "";
     this.restarts = 0;
+    this.generation = 0;           // kolejna instancja (włączenie, restart): składnik id ramek w eterze
+    this.pendingAir = [];          // ramki i zdarzenia poprzedniej instancji, jeszcze nieodebrane
+    this.pendingEvents = [];
+    this.cutAt = null;             // chwila utraty zasilania układu radiowego (restart, wyłączenie)
     this.radioFault = false;
     this.framFault = false;
     this.listeners = [];
@@ -34,6 +38,7 @@ export class Device {
   async powerOn(worldUs, reason = RESET.POWERON, noinit = null) {
     const mod = await createStation();
     this.mod = mod;
+    this.generation++;
     this.cmd(`boot ${Math.round(worldUs)} ${reason} ${this.seed}`);
     const ram = mod._sim_fram(), size = mod._sim_fram_size();
     if (this.fram) mod.HEAPU8.set(this.fram, ram);
@@ -50,8 +55,13 @@ export class Device {
   }
 
   // Wyłączenie: pamięć nieulotna zostaje poza instancją.
-  powerOff() {
+  // `atUs`: chwila wyłączenia w czasie świata. Zegar płytki może ją wyprzedzać (pętla programu stoi w czasie
+  // nadawania), więc ramka urywa się w chwili wyłączenia, a nie według zegara płytki.
+  powerOff(atUs) {
     if (!this.powered) return;
+    this.drain();
+    const boardUs = JSON.parse(this.cmd("state")).world_us;
+    this.cutAt = atUs === undefined ? boardUs : Math.min(atUs, boardUs);
     this.saveNonvolatile();
     this.mod = null;
     this.powered = false;
@@ -76,6 +86,8 @@ export class Device {
     const reason = this.mod._sim_reboot_reason();
     const noinit = new Uint8Array(this.mod.HEAPU8.subarray(this.mod._sim_noinit(), this.mod._sim_noinit() + this.mod._sim_noinit_size()));
     const world = JSON.parse(this.cmd("state")).world_us;
+    this.drain();
+    this.cutAt = world;   // restart zeruje układ radiowy: trwające nadawanie urywa się
     this.saveNonvolatile();
     this.restarts++;
     this.emit({ kind: "restart", reason, t: world });
@@ -118,8 +130,21 @@ export class Device {
   lcd() { return this.powered ? this.mod.HEAPU8.subarray(this.mod._sim_lcd(), this.mod._sim_lcd() + 50 * 240) : null; }
   lcdVersion() { return this.powered ? this.mod._sim_lcd_version() : 0; }
   board() { return this.powered ? JSON.parse(this.cmd("state")) : null; }
-  takeEvents() { return this.powered ? JSON.parse(this.cmd("events")) : []; }
-  takeAir() { return this.powered ? JSON.parse(this.cmd("air")) : []; }
+  // Ramki i zdarzenia odebrane z instancji przed jej zastąpieniem (restart, wyłączenie).
+  drain() {
+    this.pendingAir.push(...JSON.parse(this.cmd("air")).map((f) => ({ ...f, gen: this.generation })));
+    this.pendingEvents.push(...JSON.parse(this.cmd("events")));
+  }
+  takeEvents() {
+    const out = this.pendingEvents.splice(0);
+    if (this.powered) out.push(...JSON.parse(this.cmd("events")));
+    return out;
+  }
+  takeAir() {
+    const out = this.pendingAir.splice(0);
+    if (this.powered) out.push(...JSON.parse(this.cmd("air")).map((f) => ({ ...f, gen: this.generation })));
+    return out;
+  }
   putAir(frame) { if (this.powered) this.cmd(`airin ${JSON.stringify(frame)}`); }
 
   on(fn) { this.listeners.push(fn); }

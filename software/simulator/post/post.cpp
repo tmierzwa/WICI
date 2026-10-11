@@ -126,6 +126,7 @@ void kissPump() {
 }
 
 void kissFeed(const std::vector<uint8_t>& bytes) {
+    if (!portOpen) return;   // aplikacja zamknęła port węzła: nic z niego nie czyta
     for (uint8_t c : bytes) {
         if (c == kiss::FEND) {
             if (kissIn && !kissFrame.empty()) {
@@ -482,7 +483,8 @@ void autoOperator() {
         if (r.autoReadAt && now >= r.autoReadAt) { r.autoReadAt = 0; if (r.state < 2) decide(r, 2, "auto"); }
         if (r.autoDecideAt && now >= r.autoDecideAt) {
             r.autoDecideAt = 0;
-            if (r.state < 3) decide(r, r.type == sa1::TEST ? 2 : autoDecision, "auto");
+            // TEST kończy się na odczycie (state 2), bez decyzji o pomocy.
+            if (r.state < 3 && r.type != sa1::TEST && autoDecision) decide(r, autoDecision, "auto");
         }
     }
 }
@@ -590,7 +592,8 @@ std::string run(const char* line) {
         sscanf(rest, "%u %u %u %u", &read, &rm, &dec, &dm);
         autoRead = read != 0;
         readMin = rm;
-        autoDecision = static_cast<uint8_t>(dec <= 6 ? dec : 0);
+        if (dec != 0 && (dec < 3 || dec > 6)) return "err decyzja automatyczna 0 albo 3-6";
+        autoDecision = static_cast<uint8_t>(dec);
         decideMin = dm;
         return "ok";
     }

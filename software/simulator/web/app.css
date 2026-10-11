@@ -206,7 +206,6 @@ textarea { width: 100%; resize: vertical; }
 .summary b { font: 600 1.3rem var(--mono); font-variant-numeric: tabular-nums; }
 .summary span { font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
 
-.table-wrap { overflow-x: auto; }
 table { border-collapse: collapse; width: 100%; font-size: 0.86rem; }
 th, td { text-align: left; padding: 6px 6px; border-bottom: 1px solid var(--border); vertical-align: top; }
 th { font-weight: 600; color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
@@ -226,7 +225,7 @@ td.num, th.num { text-align: right; }
 .log .t { font-family: var(--mono); color: var(--muted); }
 .log .k { font: 0.75rem var(--mono); color: var(--muted); }
 .log .k.lost, .log .k.timeout { color: var(--alarm); }
-.log .k.ack, .log .k.rx-ack { color: var(--ok); }
+.log .k.ack { color: var(--ok); }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 .log li { grid-template-columns: 5.2em 9em minmax(0, 1fr); }

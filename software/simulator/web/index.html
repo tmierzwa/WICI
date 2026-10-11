@@ -60,17 +60,17 @@
 
   <section class="side">
     <nav class="tabs" role="tablist">
-      <button type="button" role="tab" id="tab-train" data-tab="train" aria-selected="true" data-t="tabTrain">Ćwiczenia</button>
-      <button type="button" role="tab" id="tab-rx" data-tab="rx" aria-selected="false" data-t="tabRx">Dyżurny</button>
-      <button type="button" role="tab" id="tab-env" data-tab="env" aria-selected="false" data-t="tabEnv">Warunki</button>
-      <button type="button" role="tab" id="tab-console" data-tab="console" aria-selected="false" data-t="tabConsole">Konsola</button>
-      <button type="button" role="tab" id="tab-log" data-tab="log" aria-selected="false" data-t="tabLog">Dziennik</button>
+      <button type="button" role="tab" id="tab-train" data-tab="train" aria-controls="panel-train" aria-selected="true" data-t="tabTrain">Ćwiczenia</button>
+      <button type="button" role="tab" id="tab-rx" data-tab="rx" aria-controls="panel-rx" aria-selected="false" data-t="tabRx">Dyżurny</button>
+      <button type="button" role="tab" id="tab-env" data-tab="env" aria-controls="panel-env" aria-selected="false" data-t="tabEnv">Warunki</button>
+      <button type="button" role="tab" id="tab-console" data-tab="console" aria-controls="panel-console" aria-selected="false" data-t="tabConsole">Konsola</button>
+      <button type="button" role="tab" id="tab-log" data-tab="log" aria-controls="panel-log" aria-selected="false" data-t="tabLog">Dziennik</button>
     </nav>
-    <div class="panel" id="panel-train" role="tabpanel"></div>
-    <div class="panel" id="panel-rx" role="tabpanel" hidden></div>
-    <div class="panel" id="panel-env" role="tabpanel" hidden></div>
-    <div class="panel" id="panel-console" role="tabpanel" hidden></div>
-    <div class="panel" id="panel-log" role="tabpanel" hidden></div>
+    <div class="panel" id="panel-train" role="tabpanel" aria-labelledby="tab-train"></div>
+    <div class="panel" id="panel-rx" role="tabpanel" aria-labelledby="tab-rx" hidden></div>
+    <div class="panel" id="panel-env" role="tabpanel" aria-labelledby="tab-env" hidden></div>
+    <div class="panel" id="panel-console" role="tabpanel" aria-labelledby="tab-console" hidden></div>
+    <div class="panel" id="panel-log" role="tabpanel" aria-labelledby="tab-log" hidden></div>
   </section>
 </main>
 

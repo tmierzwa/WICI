@@ -56,8 +56,6 @@ export class World {
     this.defaultLoss = 100;
     this.rngState = seed >>> 0 || 1;
     this.listeners = [];
-    this.usbLines = new Map();   // urządzenie -> bufor wierszy z portu danych
-    this.airLog = [];
   }
 
   rand() {
@@ -94,26 +92,46 @@ export class World {
     }
   }
 
+  // Id ramki w eterze: urządzenie, instancja (po restarcie licznik układu zaczyna od 1) i licznik układu.
+  frameId(tx, f) { return (this.devices.indexOf(tx) + 1) * 100000000 + (f.gen % 100) * 1000000 + (f.id % 1000000); }
+
+  send(tx, f, id) {
+    for (const rx of this.devices) {
+      if (rx === tx || !rx.powered) continue;
+      const loss = this.lossOf(tx, rx);
+      if (!isFinite(loss)) continue;
+      // Ten sam zanik dla aktualizacji przerwanej ramki (to samo id): pamiętany przy ramce.
+      tx.fades ??= new Map();
+      const keyFade = `${id}|${rx.name}`;
+      let fade = tx.fades.get(keyFade);
+      if (fade === undefined) {
+        fade = gauss(() => this.rand()) * FADING_DB;
+        tx.fades.set(keyFade, fade);
+        if (tx.fades.size > 2000) tx.fades.delete(tx.fades.keys().next().value);   // najstarszy wpis
+      }
+      rx.putAir({ ...f, id, dbm: Math.round(f.dbm - loss + fade) });
+    }
+  }
+
   air() {
     for (const tx of this.devices) {
-      if (!tx.powered) continue;
+      tx.onAir ??= new Map();   // id -> ramka nadawana (do urwania przy restarcie lub wyłączeniu)
       for (const f of tx.takeAir()) {
-        const id = (this.devices.indexOf(tx) + 1) * 1000000 + f.id;
-        this.airLog.push({ from: tx.name, start: f.start, end: f.end, bytes: f.payload.length / 2, carrier: f.carrier, aborted: f.aborted });
-        if (this.airLog.length > 500) this.airLog.splice(0, 250);
+        const id = this.frameId(tx, f);
         this.emit(tx, { kind: "air", frame: f });
-        for (const rx of this.devices) {
-          if (rx === tx || !rx.powered) continue;
-          const loss = this.lossOf(tx, rx);
-          if (!isFinite(loss)) continue;
-          // Ten sam zanik dla aktualizacji przerwanej ramki (to samo id): pamiętany przy ramce.
-          tx.fades ??= new Map();
-          const keyFade = `${id}|${rx.name}`;
-          if (!tx.fades.has(keyFade)) tx.fades.set(keyFade, gauss(() => this.rand()) * FADING_DB);
-          if (tx.fades.size > 2000) tx.fades.clear();
-          rx.putAir({ ...f, id, dbm: Math.round(f.dbm - loss + tx.fades.get(keyFade)) });
-        }
+        if (f.aborted) tx.onAir.delete(id); else tx.onAir.set(id, f);
+        this.send(tx, f, id);
       }
+      if (tx.cutAt !== null) {
+        // Restart albo wyłączenie w czasie nadawania: odbiorcy dostają ramkę urwaną w tej chwili.
+        for (const [id, f] of tx.onAir) {
+          // Ramka zaczęta (według zegara płytki) po wyłączeniu nie istnieje: długość zero.
+          if (f.end > tx.cutAt) this.send(tx, { ...f, end: Math.max(f.start, tx.cutAt), aborted: true }, id);
+        }
+        tx.onAir.clear();
+        tx.cutAt = null;
+      }
+      for (const [id, f] of tx.onAir) if (f.end <= this.nowUs) tx.onAir.delete(id);
     }
   }
 
@@ -134,7 +152,7 @@ export class World {
 
   async usbSession(device) {
     device.setUsb(1, true);
-    const session = { device, seq: 0, buffer: "" };
+    const session = { device, seq: 0, buffer: "", decoder: new TextDecoder() };
     await this.waitLine(session, (m) => m.type === "hello", 5e6);
     return session;
   }
@@ -142,7 +160,7 @@ export class World {
   async waitLine(session, match, timeoutUs) {
     const start = this.nowUs;
     for (;;) {
-      session.buffer += new TextDecoder().decode(session.device.usbRead(1));
+      session.buffer += session.decoder.decode(session.device.usbRead(1), { stream: true });
       let nl;
       while ((nl = session.buffer.indexOf("\n")) >= 0) {
         const line = session.buffer.slice(0, nl).trim();

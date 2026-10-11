@@ -121,7 +121,7 @@ export class Simulation {
   async power(on) {
     const st = this.station;
     if (on && !st.powered) await st.powerOn(this.nowUs);
-    if (!on && st.powered) st.powerOff();
+    if (!on && st.powered) st.powerOff(this.nowUs);
   }
 
   screen() {

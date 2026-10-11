@@ -76,7 +76,7 @@ const STATES = {
   pl: ["", "zapisane", "przeczytane", "pomoc skierowana", "przekazane dalej", "nie może pomóc", "zamknięte"],
   en: ["", "saved", "read", "help dispatched", "passed on", "cannot help", "closed"],
 };
-const SENSITIVITY_DBM = -112;   // S2-LP przy 38,4 kb/s (model odbiornika, hal/s2lp_chip.cpp)
+const SENSITIVITY_DBM = -112;   // S2-LP, profil P1: 2-GFSK 4,8 kBd (model odbiornika, hal/s2lp_chip.cpp)
 const TX_DBM = 13;              // moc profilu p1
 
 const pref = {
@@ -156,6 +156,7 @@ function busy(text) {
 }
 
 async function freePlay() {
+  ledOff();
   releaseAll();
   exercise = null;
   logItems = [];
@@ -172,6 +173,7 @@ async function freePlay() {
 }
 
 async function startExercise(scenario) {
+  ledOff();
   releaseAll();
   showHint = false;
   logItems = [];
@@ -227,6 +229,7 @@ function skip(ms) {
 
 // Zdarzenia świata: restarty płytek i ramki w eterze (dziennik).
 function onWorld(e) {
+  if (e.kind === "restart" && e.source === "stacja") ledOff();
   if (e.kind === "restart") logItems.push({ t: e.t, kind: "restart", source: e.source, text: { 3: "restart programowy", 6: "watchdog", 1: "włączenie" }[e.reason] ?? `przyczyna ${e.reason}` });
   else if (e.kind === "air") {
     const f = e.frame;
@@ -281,6 +284,7 @@ function draw(force = false) {
 // ---- dioda i brzęczyk ---------------------------------------------------------------------------
 
 let ledSince = 0;
+function ledOff() { document.querySelector(".ctl.led")?.classList.remove("on"); }
 function led(on) {
   const el = document.querySelector(".ctl.led");
   if (!el) return;
@@ -471,7 +475,12 @@ const ppmm = () => pref.get("ppmm", 96 / 25.4);
 // Stan elementów: dźwignia CISZA (poziom pinu), ekran bez zasilania.
 function reflect() {
   const on = !!s.power;
-  $("station-state").textContent = on ? `${t("on")}${s.board?.tx ? " · " + t("transmitting") : ""} · ${(s.screen?.lines ?? [])[0] ?? ""}`.trim() : t("off");
+  const lines = s.screen?.lines ?? [], inv = s.screen?.inverted ?? [];
+  const row = Math.max(0, inv.lastIndexOf(true));   // kursor (pasek trybu serwisowego jest w wierszu 0)
+  $("station-state").textContent = on ? `${t("on")}${s.board?.tx ? " · " + t("transmitting") : ""} · ${(lines[row] ?? "").trim()}`.trim() : t("off");
+  if (!on) ledOff();
+  // Czytnik ekranu: tekst odczytany z pikseli panelu.
+  document.querySelector("canvas.lcd")?.setAttribute("aria-label", on ? lines.filter((l) => l.trim()).join(". ") : t("off"));
   const sw = document.querySelector(".ctl.toggle");
   if (sw) sw.classList.toggle("on", !!s.switch);
   document.querySelector("canvas.lcd")?.classList.toggle("off", !on || !s.board?.lcd_on);
@@ -568,7 +577,7 @@ function releaseAll() {
 const KEYS = { ArrowUp: "UP", ArrowDown: "DOWN", Enter: "OK", Backspace: "BACK", Escape: "BACK" };
 function typing(target) { return target && ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName); }
 function keyboard(ev, down) {
-  if (typing(ev.target) || ev.target?.closest?.(".ctl") || ev.altKey || ev.ctrlKey || ev.metaKey) return;
+  if (typing(ev.target) || ev.target?.closest?.(".tabs") || ev.altKey || ev.ctrlKey || ev.metaKey) return;
   const id = KEYS[ev.key];
   if (!id || ev.repeat) { if (id) ev.preventDefault(); return; }
   if (ev.target?.closest?.(".side") && (ev.key === "Enter")) return;
@@ -863,7 +872,11 @@ function panelChange(ev) {
   const el = ev.target;
   if (!ready) return;
   switch (el.id) {
-    case "rx-on": postPort = el.checked; sim.post.cmd(`port ${postPort ? "open" : "close"}`); break;
+    case "rx-on":
+      postPort = el.checked;
+      sim.post.cmd(`port ${postPort ? "open" : "close"}`);
+      sim.node.setUsb(1, postPort);   // aplikacja zamyka port: węzeł widzi rozłączenie, nic nie płynie w żadną stronę
+      break;
     case "rx-identity": postCommand(`identity ${el.value}`); break;
     case "auto-read": case "auto-read-min": case "auto-decision": case "auto-decide-min":
       postCommand(`auto ${$("auto-read").checked ? 1 : 0} ${Number($("auto-read-min").value) || 0} ${$("auto-decision").value} ${Number($("auto-decide-min").value) || 0}`);
@@ -872,7 +885,7 @@ function panelChange(ev) {
     case "link-loss": lastLoss = Number(el.value); sim.setLoss(lastLoss); break;
     case "fault-radio": sim.station.fault("radio", el.checked); break;
     case "fault-fram": sim.station.fault("fram", el.checked); break;
-    case "node-on": serial(async () => { if (el.checked) await sim.node.powerOn(sim.nowUs); else sim.node.powerOff(); }); break;
+    case "node-on": serial(async () => { if (el.checked) await sim.node.powerOn(sim.nowUs); else sim.node.powerOff(sim.nowUs); }); break;
     case "console-device": consoleDevice = el.value; renderPanel(true); return;
     case "log-air": showAir = el.checked; pref.set("logAir", showAir); renderPanel(true); return;
     default: return;
