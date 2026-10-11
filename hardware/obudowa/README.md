@@ -33,6 +33,18 @@ Znane wartości mają źródło w repozytorium: obrys N1 (170 × 100 mm), 9 otwo
 
 Największe ryzyko L0 to różnica wysokości: panel leży około 2,5 mm nad N1, a DevKitC w gniazdach 8,5 mm sięga znacznie wyżej. Pokrywa potrzebuje więc wgłębionego, fazowanego okna albo garbu nad DevKitC. Wybór zapada po pomiarze, nie wcześniej.
 
+## Następne kroki
+
+Stan 2026-10-11: przed testami i pomiarami nic więcej w obudowie się nie projektuje. Każdy krok ma swój wyzwalacz.
+
+| Kiedy | Krok |
+|---|---|
+| teraz, decyzja opiekuna projektu | jeden komplet próbek do przymiarki (około 100–150 USD): Hammond 1599KBAT, cztery przyciski PV6, osłona GT-4R z przełącznikiem GTS, gniazdo EN3 z wtykiem, koszyk BH4AAW; sprawdza obsługę w rękawicach przy rozstawie 32 mm, wysokość osłony CISZY, słupki i śruby pokrywy oraz miejsce na koszyk; nie zależy od wyboru płytki pilotażowej ([obudowa R02](../r02/obudowa.md) ma status „nie zamawiać”, więc zakup wymaga decyzji) |
+| po dostawie L0, przed lutowaniem | przymiarka 1:1 ([przed produkcją](../dev-bench/przed-produkcja.md#zamówienie-2026-10-10-l0)) i wpisanie pomiarów do `MEASUREMENTS` w `zalozenia.py`: wysokości DevKitC, nasadki przycisku i szkła panelu, długość taśmy FPC, położenie Wio z u.FL i gniazda USB/OTG |
+| po komplecie pomiarów L0 | generator `build.py` (build123d): drukowana obudowa L0 z PETG albo ASA, szablon wiercenia 1:1, test zgodności otworów z N1; wybór między wgłębionym oknem a garbem nad DevKitC |
+| po wyborze płytki pilotażowej (`pilot_board`) | wkład montażowy modułów w kupionej skrzynce, obróbka frontu (szablon albo CNC), folia panelu PL/UK/EN; jedna sztuka, próba montażu i T8, potem 6–8 sztuk |
+| po pilotażu | obudowa R02: model STEP Hammonda, obrys płyty bazowej, klasa palności, ESD, próba klimatyczna; ocena pokrywy z plombą wobec naklejki ([F113](../../docs/review.md)) |
+
 ## Pliki
 
 | Plik | Rola |
