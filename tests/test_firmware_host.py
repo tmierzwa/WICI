@@ -2105,14 +2105,14 @@ class HostUnitTests(unittest.TestCase):
         seen = status_lines("PP 1 3 1 7200 1 beef")
         entries = texts["przygotowanie_wejscia"][0].replace("[n]", "3").replace("[czas]", "2 " + ui_texts.UNITS["PL"][1])
         change = texts["przygotowanie_konfiguracja"][0].replace("[xxxx]", "BEEF")
-        at = seen.index("TRYB PRZYGOTOWANIA:")
+        at = seen.index("TRYB SERWISOWY:")
         self.assertEqual(" ".join(seen[at:at + 6]), entries + " " + change)
         self.assertEqual(seen[at + 6:at + 8], ["bench-a-test", "WICI-000000"])   # przed wersją i nazwą
         unknown = status_lines("PP 0 0 0 0 0 0")
-        at = unknown.index("TRYB PRZYGOTOWANIA:")
+        at = unknown.index("TRYB SERWISOWY:")
         self.assertEqual(unknown[at + 1:at + 3], ["WEJŚCIA ?", "bench-a-test"])   # pierścień uszkodzony: bez zmiany
         no_change = status_lines("PP 1 1 0 0 0 0")   # czas nieznany (po ZNISZCZ DANE), wejście bez zmian
-        at = no_change.index("TRYB PRZYGOTOWANIA:")
+        at = no_change.index("TRYB SERWISOWY:")
         self.assertEqual(" ".join(no_change[at:at + 4]),
                          texts["przygotowanie_wejscia_bez_czasu"][0].replace("[n]", "1") + " " + texts["przygotowanie_bez_zmian"][0])
         # PRZEKAZANIE ZMIANY: ten sam licznik i zmiana, przed zgłoszeniami.
@@ -2125,7 +2125,7 @@ class HostUnitTests(unittest.TestCase):
                 for _, text in rows:
                     if text not in handover:
                         handover.append(text)
-        at = handover.index("TRYB PRZYGOTOWANIA:")
+        at = handover.index("TRYB SERWISOWY:")
         self.assertEqual(" ".join(handover[at:at + 6]), entries + " " + change)
 
     def test_menu_status_and_language_navigation(self):
@@ -2251,7 +2251,9 @@ class HostUnitTests(unittest.TestCase):
         s = self.screens(self.ui(self.HOSTED + script))
         self.assertEqual([x[0] for x in s], ["people", "digits", "digits", "digits", "urgency", "urgency", "discard", "discard",
                                              "urgency", "discard", "discard", "main", "language_menu", "menu", "people"])
-        self.assertEqual([inv for inv, _ in s[0][2]], [False, False, False, False, True])  # INNA
+        self.assertEqual([inv for inv, _ in s[0][2]], [False, False, False, False, True])  # INNA LICZBA
+        # Liczby z rzeczownikiem (osoby_1, osoby_2, osoby_5): lista mówi sama, co się wybiera.
+        self.assertEqual(self.lines(s[0]), ["10 OSÓB", "20 OSÓB", "50 OSÓB", "100 OSÓB", "INNA LICZBA"])
         self.assertEqual(self.lines(s[1])[1:3], ["0 0 1", "^"])
         self.assertEqual(self.lines(s[2])[1:3], ["2 0 9", "    ^"])
         self.assertEqual(self.lines(s[3])[1:3], ["2 0 2", "    ^"])  # przytrzymanie: 9 -> 0 od razu, potem co 150 ms

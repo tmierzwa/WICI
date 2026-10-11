@@ -49,6 +49,9 @@ enum class Id : uint8_t {
     ADRES_KONTROLA,
     ADRES_BRAK,
     PORZUCIC,
+    OSOBY_1,
+    OSOBY_2,
+    OSOBY_5,
     PILNOSC_2,
     PILNOSC_1,
     PILNOSC_0,
@@ -118,6 +121,9 @@ constexpr const char* const TEXTS[static_cast<size_t>(Id::COUNT)][LANGS] = {
     {"ADRES: [x] – CZY TO TO MIEJSCE? OK = TAK / WSTECZ = NIE", "АДРЕСА: [x] – ЦЕ ЦЕ МІСЦЕ? OK = ТАК / НАЗАД = НІ", "ADDRESS: [x] – IS THIS THE PLACE? OK = YES / BACK = NO"},
     {"STACJA NIE MA TWOJEGO ADRESU – UŻYJ FORMULARZA PAPIEROWEGO", "СТАНЦІЯ НЕ МАЄ ВАШОЇ АДРЕСИ – ВИКОРИСТАЙТЕ ПАПЕРОВУ ФОРМУ", "STATION DOES NOT HAVE YOUR ADDRESS – USE THE PAPER FORM"},
     {"PORZUCIĆ ZGŁOSZENIE? OK = TAK", "СКАСУВАТИ ЗАЯВКУ? OK = ТАК", "DISCARD REQUEST? OK = YES"},
+    {"[n] OSOBA", "[n] ОСОБА", "[n] PERSON"},
+    {"[n] OSOBY", "[n] ОСОБИ", "[n] PEOPLE"},
+    {"[n] OSÓB", "[n] ОСІБ", "[n] PEOPLE"},
     {"ZAGROŻENIE ŻYCIA", "ЗАГРОЗА ЖИТТЮ", "DANGER TO LIFE"},
     {"PILNE – KILKA GODZIN", "ТЕРМІНОВО – КІЛЬКА ГОДИН", "URGENT – A FEW HOURS"},
     {"W CIĄGU DOBY", "ПРОТЯГОМ ДОБИ", "WITHIN A DAY"},
@@ -130,9 +136,9 @@ constexpr const char* const TEXTS[static_cast<size_t>(Id::COUNT)][LANGS] = {
     {"WYŁĄCZANIE – CZEKAJ, ZAPISUJĘ", "ВИМКНЕННЯ – ЗАЧЕКАЙТЕ, ЗБЕРІГАЮ", "SWITCHING OFF – WAIT, SAVING"},
     {"MOŻNA WYJĄĆ OGNIWA", "МОЖНА ВИЙНЯТИ БАТАРЕЇ", "CELLS CAN BE REMOVED"},
     {"12 V ODŁĄCZONE – ZA NISKIE NAPIĘCIE. PODŁĄCZ NAŁADOWANE ŹRÓDŁO I PRZYTRZYMAJ OK", "12 В ВІДКЛЮЧЕНО – ЗАНИЗЬКА НАПРУГА. ПІДКЛЮЧІТЬ ЗАРЯДЖЕНЕ ДЖЕРЕЛО І УТРИМУЙТЕ OK", "12 V DISCONNECTED – VOLTAGE TOO LOW. CONNECT A CHARGED SOURCE AND HOLD OK"},
-    {"TRYB PRZYGOTOWANIA", "РЕЖИМ ПІДГОТОВКИ", "PREPARATION MODE"},
-    {"TRYB PRZYGOTOWANIA: WEJŚCIA [n], OSTATNIE [czas] TEMU", "РЕЖИМ ПІДГОТОВКИ: ВХОДІВ [n], ОСТАННІЙ [czas] ТОМУ", "PREPARATION MODE: ENTRIES [n], LAST [czas] AGO"},
-    {"TRYB PRZYGOTOWANIA: WEJŚCIA [n]", "РЕЖИМ ПІДГОТОВКИ: ВХОДІВ [n]", "PREPARATION MODE: ENTRIES [n]"},
+    {"TRYB SERWISOWY", "СЕРВІСНИЙ РЕЖИМ", "SERVICE MODE"},
+    {"TRYB SERWISOWY: WEJŚCIA [n], OSTATNIE [czas] TEMU", "СЕРВІСНИЙ РЕЖИМ: ВХОДІВ [n], ОСТАННІЙ [czas] ТОМУ", "SERVICE MODE: ENTRIES [n], LAST [czas] AGO"},
+    {"TRYB SERWISOWY: WEJŚCIA [n]", "СЕРВІСНИЙ РЕЖИМ: ВХОДІВ [n]", "SERVICE MODE: ENTRIES [n]"},
     {"OSTATNIE WEJŚCIE: NOWA KONFIGURACJA [xxxx]", "ОСТАННІЙ ВХІД: НОВА КОНФІГУРАЦІЯ [xxxx]", "LAST ENTRY: NEW CONFIGURATION [xxxx]"},
     {"OSTATNIE WEJŚCIE: BEZ ZMIAN", "ОСТАННІЙ ВХІД: БЕЗ ЗМІН", "LAST ENTRY: NO CHANGES"},
     {"PRZEŁĄCZYĆ NA KLUCZ ZAPASOWY ODBIORCY? TYLKO NA POLECENIE SŁOWNE LUB PRZEZ GOŃCA. NIEODWRACALNE", "ПЕРЕМКНУТИ НА РЕЗЕРВНИЙ КЛЮЧ ОДЕРЖУВАЧА? ЛИШЕ ЗА УСНИМ НАКАЗОМ АБО ЧЕРЕЗ ПОСИЛЬНОГО. НЕЗВОРОТНО", "SWITCH TO RECIPIENT'S BACKUP KEY? ONLY ON A SPOKEN ORDER OR ONE BROUGHT BY A RUNNER. IRREVERSIBLE"},
@@ -169,7 +175,7 @@ enum class Label : uint8_t {
     ZMIEN_PILNOSC,
     POTRZEBA_USTALA,
     ANULUJ_WYSYLKE,
-    INNA,
+    INNA_LICZBA,
     COUNT
 };
 
@@ -191,7 +197,7 @@ constexpr const char* const LABELS[static_cast<size_t>(Label::COUNT)][LANGS] = {
     {"ZMIEŃ PILNOŚĆ", "ЗМІНИТИ ТЕРМІНОВІСТЬ", "CHANGE URGENCY"},
     {"POTRZEBA USTAŁA", "ПОТРЕБА ЗНИКЛА", "NEED RESOLVED"},
     {"ANULUJ WYSYŁKĘ", "СКАСУВАТИ ВІДПРАВКУ", "CANCEL SENDING"},
-    {"INNA", "ІНША", "OTHER"},
+    {"INNA LICZBA", "ІНША КІЛЬКІСТЬ", "OTHER NUMBER"},
 };
 
 // Przyciski: GÓRA, DÓŁ, OK, WSTECZ.

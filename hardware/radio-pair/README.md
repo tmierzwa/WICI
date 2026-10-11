@@ -7,7 +7,7 @@ Brak Reticulum/LXMF, przekazywania pakietów i wiadomości WICI.
 
 Jeśli oba Maki mają internet i Tailscale, użyj [trybu online](ONLINE.md):
 niezależne transmisje obu płytek, stała stacja A, próby uruchamiane z Maca B
-i bieżący feedback.
+i bieżący feedback; logi B trafiają do stacji A.
 Poniżej pozostaje tryb offline na miejsca bez połączenia.
 
 ## Najpierw przy stole

@@ -1,9 +1,12 @@
 # SPDX-License-Identifier: MIT
 """Real TCP + real pyserial PTYs: RF is simulated and can be dropped independently."""
+import contextlib
+import io
 import json
 import os
 import pty
 import select
+import signal
 import socket
 import subprocess
 import sys
@@ -72,18 +75,57 @@ class Online(unittest.TestCase):
                 online.check_plan(*plan)
 
     @unittest.skipUnless(os.name == 'posix', 'PTY required')
+    def test_upload_retry_sends_b_logs_to_station(self):
+        with tempfile.TemporaryDirectory() as folder, socket.socket() as sock:
+            sock.bind(('127.0.0.1', 0))
+            tcp_port = str(sock.getsockname()[1])
+            sock.close()
+            key = Path(folder)/'key'
+            key.write_text('a'*64)
+            report = Path(folder)/'B'/'20261011-101500-B-online-0123abcd.json'
+            report.parent.mkdir()
+            report.write_text('{}')
+            report.with_suffix('.jsonl').write_text('')
+            common = ['--address', '127.0.0.1', '--tcp-port', tcp_port, '--key-file', str(key)]
+            station = subprocess.Popen([sys.executable, str(ROOT/'tools/range_online.py'), '--role', 'A', *common,
+                '--port', 'unused', '--notes', 'stol', '--output', str(Path(folder)/'A')], stdout=subprocess.PIPE)
+            try:
+                time.sleep(.6)
+                result = subprocess.run([sys.executable, str(ROOT/'tools/range_online.py'), '--role', 'B', *common,
+                    '--upload', str(report)], capture_output=True, text=True, timeout=20)
+                self.assertEqual(result.returncode, 0, result)
+                self.assertEqual(sorted(p.name for p in (Path(folder)/'A'/'from-B').iterdir()),
+                                 [report.name, report.with_suffix('.jsonl').name])
+            finally:
+                station.send_signal(signal.SIGINT)
+                station.communicate(timeout=5)
+
+    @unittest.skipUnless(os.name == 'posix', 'PTY required')
     def test_wrong_key_no_radio_transmission(self):
         self.exercise(wrong_key=True, trials=2)  # A survives a rejected trial and serves the next
+
+    def test_only_b_trial_logs_are_stored(self):
+        with tempfile.TemporaryDirectory() as folder, contextlib.redirect_stdout(io.StringIO()):
+            online.store(Path(folder), {'20261011-101500-B-online-0123abcd-summary.json': '{}'})
+            self.assertTrue((Path(folder)/'20261011-101500-B-online-0123abcd-summary.json').exists())
+            for files in ({'../x.json': ''}, {'20261011-101500-A-online-0123abcd.json': ''}, {}, None,
+                          {'20261011-101500-B-online-0123abcd.json': 1}):
+                with self.assertRaises(ValueError):
+                    online.store(Path(folder), files)
 
     @unittest.skipUnless(os.name == 'posix', 'PTY required')
     def test_network_disconnect_keeps_local_report(self):
         self.exercise(disconnect=True)
 
     @unittest.skipUnless(os.name == 'posix', 'PTY required')
+    def test_ctrl_c_on_b_is_operator_stop_and_logs_reach_a(self):
+        self.exercise(ctrl_c=True)
+
+    @unittest.skipUnless(os.name == 'posix', 'PTY required')
     def test_peer_usb_error_is_not_labelled_radio_loss(self):
         self.exercise(usb_error=True)
 
-    def exercise(self, drop=False, wrong_key=False, disconnect=False, usb_error=False, lost_tx=False, trials=1):
+    def exercise(self, drop=False, wrong_key=False, disconnect=False, usb_error=False, lost_tx=False, trials=1, ctrl_c=False):
         pairs = [pty.openpty(), pty.openpty()]
         masters = [p[0] for p in pairs]
         buffers = {fd: b'' for fd in masters}
@@ -107,14 +149,13 @@ class Online(unittest.TestCase):
                         '--role', role, '--address', '127.0.0.1', '--tcp-port', str(tcp_port),
                         '--key-file', str(badkey if wrong_key and i == 1 else key),
                         '--port', os.ttyname(pairs[i][1]), '--notes', 'stol', *plan,
-                        *(['--trials', str(trials)] if role == 'A' else []),
                         '--output', str(Path(folder)/role)],
                         stdout=subprocess.PIPE, stderr=subprocess.PIPE))
                 start(0)
                 time.sleep(.6)
                 start(1, 'P1')
                 deadline = time.monotonic() + 25 * trials
-                while any(p.poll() is None for p in procs) and time.monotonic() < deadline:
+                while (len(procs) < trials + 1 or any(p.poll() is None for p in procs[1:])) and time.monotonic() < deadline:
                     if len(procs) < trials + 1 and procs[-1].poll() is not None:
                         start(1, f'P{len(procs)}')  # B starts the next point; A stays up
                     for fd in select.select(masters, [], [], .1)[0]:
@@ -139,19 +180,37 @@ class Online(unittest.TestCase):
                                 if disconnect and not killed:
                                     procs[1].kill()
                                     killed = True
+                                if ctrl_c and not killed:
+                                    procs[1].send_signal(signal.SIGINT)
+                                    killed = True
+                expected = 0 if wrong_key else trials
+                while time.monotonic() < deadline and len([p for p in (Path(folder)/'A').glob('*.json')
+                        if not p.stem.endswith(('-peer', '-summary'))]) < expected:
+                    time.sleep(.1)  # A records each trial before serving the next connection
+                time.sleep(.5)
+                procs[0].send_signal(signal.SIGINT)  # Ctrl+C ends station A
+                procs[0].wait(timeout=5)
                 outputs = []
                 for p in procs:
                     if p.poll() is None:
                         p.kill()
                     outputs.append(p.communicate(timeout=3))
                 if usb_error:
-                    self.assertTrue(all(p.returncode == 1 for p in procs), outputs)
+                    self.assertTrue(all(p.returncode == 1 for p in procs[1:]), outputs)
                     categories = []
                     for role in 'AB':
                         p = next(p for p in (Path(folder)/role).glob('*.json') if not p.stem.endswith(('-peer', '-summary')))
                         categories.extend(e['category'] for e in json.loads(p.read_text())['issues'])
                     self.assertIn('usb', categories)
                     self.assertIn('peer-usb', categories)
+                    return
+                if ctrl_c:
+                    self.assertEqual(procs[0].returncode, 0, outputs)  # station A kept serving
+                    self.assertEqual(procs[1].returncode, 1, outputs)
+                    b = json.loads(next(p for p in (Path(folder)/'B').glob('*.json') if not p.stem.endswith(('-peer', '-summary'))).read_text())
+                    self.assertEqual([e['category'] for e in b['issues']], ['operator'], outputs)
+                    self.assertEqual(sorted(p.name for p in (Path(folder)/'A'/'from-B').iterdir()),
+                                     sorted(p.name for p in (Path(folder)/'B').iterdir()))
                     return
                 if disconnect:
                     a = json.loads(next(p for p in (Path(folder)/'A').glob('*.json') if not p.stem.endswith(('-peer', '-summary'))).read_text())
@@ -161,12 +220,15 @@ class Online(unittest.TestCase):
                 if wrong_key:
                     self.assertEqual(transmitted, [])
                     reports = [p for p in (Path(folder)/'A').glob('*.json') if not p.stem.endswith(('-peer', '-summary'))]
-                    self.assertEqual(len(reports), trials)
-                    self.assertTrue(all(p.returncode == 1 for p in procs), outputs)
+                    self.assertEqual(reports, [])  # rejected before any trial
+                    self.assertTrue(all(p.returncode == 1 for p in procs[1:]), outputs)  # 2: A unreachable
                     return
                 self.assertTrue(all(p.returncode == 0 for p in procs), outputs)
                 points = sorted(json.loads(s.read_text())['point'] for s in (Path(folder)/'A').glob('*-summary.json'))
                 self.assertEqual(points, [f'P{n}' for n in range(1, trials + 1)])
+                b_logs = sorted(p.name for p in (Path(folder)/'B').iterdir())
+                self.assertEqual(len(b_logs), 4 * trials)
+                self.assertEqual(sorted(p.name for p in (Path(folder)/'A'/'from-B').iterdir()), b_logs)
                 for path in Path(folder).glob('*/*-summary.json'):
                     summary = json.loads(path.read_text())
                     self.assertTrue(summary['valid_trial'])

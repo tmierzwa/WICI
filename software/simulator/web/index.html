@@ -1,0 +1,85 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: MIT -->
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Symulator stacji WICI</title>
+<meta name="description" content="Stacja WICI w przeglądarce: ten sam obraz oprogramowania co na płytce bench-b, na wirtualnej płytce ESP32-S3 z S2-LP, FRAM i panelem Sharp; węzeł, stanowisko odbiorcze i ćwiczenia opiekuna.">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="bar">
+  <div class="brand">
+    <svg class="mark" viewBox="0 0 40 24" aria-hidden="true"><circle cx="8" cy="5" r="3.2"/><circle cx="32" cy="5" r="3.2"/><path d="M2 16h9l3-7 4 13 4-9 2 3h14"/></svg>
+    <div><strong>WICI</strong> <span data-t="title">symulator stacji</span></div>
+  </div>
+  <div class="clock" aria-live="off">
+    <span class="clock-label" data-t="simTime">czas symulacji</span>
+    <output id="clock" class="clock-value">00:00:00</output>
+  </div>
+  <div class="speed" role="group" aria-label="Tempo">
+    <button type="button" id="speed-0" data-speed="0" data-t="pause">pauza</button>
+    <button type="button" id="speed-1" data-speed="1" class="on">1×</button>
+    <button type="button" id="speed-10" data-speed="10">10×</button>
+    <button type="button" id="speed-60" data-speed="60">60×</button>
+  </div>
+  <div class="skip" role="group" aria-label="Przeskok">
+    <button type="button" id="skip-1" data-skip="60000">+1 min</button>
+    <button type="button" id="skip-15" data-skip="900000">+15 min</button>
+    <button type="button" id="skip-60" data-skip="3600000">+1 h</button>
+  </div>
+  <div class="tools">
+    <button type="button" id="sound" aria-pressed="false" data-t="soundOff">dźwięk wył.</button>
+    <button type="button" id="lang" aria-label="Język interfejsu">EN</button>
+  </div>
+</header>
+
+<main class="work">
+  <section class="bench" aria-labelledby="bench-title">
+    <div class="bench-head">
+      <h1 id="bench-title"><span id="station-name">WICI</span><span class="state" id="station-state"></span></h1>
+      <div class="bench-controls">
+        <label for="layout-select" data-t="layout">układ</label>
+        <select id="layout-select"></select>
+        <label class="check"><input type="checkbox" id="real-size"> <span data-t="realSize">skala 1:1</span></label>
+        <label class="check"><input type="checkbox" id="edit-mode"> <span data-t="editMode">przesuwanie elementów</span></label>
+      </div>
+    </div>
+    <p class="busy" id="busy" role="status" hidden></p>
+    <div class="device-wrap" id="device-wrap">
+      <div class="device" id="device"></div>
+    </div>
+    <p class="keys" data-t="keys">Klawiatura: ↑ GÓRA, ↓ DÓŁ, Enter OK, Backspace albo Esc WSTECZ. Przytrzymanie działa jak na stacji.</p>
+    <div class="calib" id="calib" hidden>
+      <div class="card-outline" id="card-outline"><span data-t="card">karta płatnicza 85,6 × 54 mm</span></div>
+      <label for="ppmm"><span data-t="calibrate">Dopasuj ramkę do prawdziwej karty</span> <output id="ppmm-out"></output></label>
+      <input type="range" id="ppmm" min="2" max="8" step="0.01">
+    </div>
+  </section>
+
+  <section class="side">
+    <nav class="tabs" role="tablist">
+      <button type="button" role="tab" id="tab-train" data-tab="train" aria-selected="true" data-t="tabTrain">Ćwiczenia</button>
+      <button type="button" role="tab" id="tab-rx" data-tab="rx" aria-selected="false" data-t="tabRx">Dyżurny</button>
+      <button type="button" role="tab" id="tab-env" data-tab="env" aria-selected="false" data-t="tabEnv">Warunki</button>
+      <button type="button" role="tab" id="tab-console" data-tab="console" aria-selected="false" data-t="tabConsole">Konsola</button>
+      <button type="button" role="tab" id="tab-design" data-tab="design" aria-selected="false" data-t="tabDesign">Projekt</button>
+      <button type="button" role="tab" id="tab-log" data-tab="log" aria-selected="false" data-t="tabLog">Dziennik</button>
+    </nav>
+    <div class="panel" id="panel-train" role="tabpanel"></div>
+    <div class="panel" id="panel-rx" role="tabpanel" hidden></div>
+    <div class="panel" id="panel-env" role="tabpanel" hidden></div>
+    <div class="panel" id="panel-console" role="tabpanel" hidden></div>
+    <div class="panel" id="panel-design" role="tabpanel" hidden></div>
+    <div class="panel" id="panel-log" role="tabpanel" hidden></div>
+  </section>
+</main>
+
+<footer class="foot">
+  <p data-t="foot"></p>
+  <p id="build-info"></p>
+</footer>
+<script type="module" src="app.js"></script>
+</body>
+</html>

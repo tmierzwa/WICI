@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: MIT
-"""Build the GitHub Pages site from docs/concept without changing the sources."""
+"""Build the GitHub Pages site from docs/concept without changing the sources, with the station simulator
+(software/simulator/web) under symulator/."""
 
 from pathlib import Path
 import argparse
@@ -9,6 +10,7 @@ import shutil
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "docs/concept"
 LOCAL_LINK = re.compile(r'(href|src|srcset|poster)="([^"#:]+)(#[^"]*)?"')
+SIMULATOR = ROOT / "software/simulator/web"
 MEDIA = {".mp4", ".webm", ".vtt", ".jpg", ".png", ".svg"}  # served with the site so browsers can play them
 
 
@@ -42,6 +44,8 @@ def build(target: Path, blob: str, source: Path = SOURCE, root: Path = ROOT) -> 
             (target / path.name).write_text(text, encoding="utf-8")
         elif path.suffix == ".css":
             shutil.copyfile(path, target / path.name)
+    if SIMULATOR.is_dir() and source == SOURCE:
+        shutil.copytree(SIMULATOR, target / "symulator")
     (target / ".nojekyll").write_bytes(b"")
     return rewritten
 

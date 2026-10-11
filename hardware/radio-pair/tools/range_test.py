@@ -5,6 +5,7 @@ import argparse
 import json
 import queue
 import re
+import signal
 import threading
 import time
 import uuid
@@ -98,6 +99,10 @@ def run(args):
     def send(command):
         port.write((command + '\n').encode('ascii'))
 
+    # Ctrl+C only sets a flag checked below: a KeyboardInterrupt raised inside a library call
+    # can leave a lock released ("release unlocked lock") and be reported as a device error.
+    ctrl_c = []
+    signal.signal(signal.SIGINT, lambda *_: ctrl_c.append(1))
     try:
         port = open_serial(args.port)
         thread = threading.Thread(target=reader, daemon=True)
@@ -105,6 +110,8 @@ def run(args):
         print('Raport:', base.with_suffix('.json'), flush=True)
         print('Nie przemieszczaj urządzeń podczas jednej próby. B zakończ Ctrl+C po zakończeniu A.', flush=True)
         while True:
+            if ctrl_c:
+                raise KeyboardInterrupt
             now = time.monotonic()
             if now - last_info >= 2:
                 send('INFO')

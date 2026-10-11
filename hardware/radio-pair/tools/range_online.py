@@ -4,11 +4,14 @@
 
 Mac A is an unattended station serving trials; Mac B starts each trial and sets its point and count."""
 import argparse
+import contextlib
 import ipaddress
 import json
 import math
 import queue
+import re
 import secrets
+import signal
 import socket
 import threading
 import time
@@ -21,6 +24,8 @@ from range_test import R0_VERSION, payload, summarize
 
 PROTOCOL = 'WICI-RANGE-ONLINE-4'
 MAX_LINE = 262144
+UPLOAD_LIMIT = 16 * 1024 * 1024
+LOG_NAME = re.compile(r'\d{8}-\d{6}-B-online-[0-9a-f]{8}(-peer|-summary)?\.jsonl?')
 
 
 def private_address(text):
@@ -39,6 +44,34 @@ def check_plan(point, count, slot):
         raise ValueError('Slot 3..30 sekund.')
 
 
+class CtrlC:
+    """Ctrl+C raises at once only inside socket calls (C code, safe to interrupt). Elsewhere, e.g. in
+    Queue.get with its Python-level locks, it is deferred to check(): an interrupt there can leave a
+    lock released ("release unlocked lock") and be recorded as a device error."""
+    pending = direct = False
+
+    @classmethod
+    def handler(cls, *_):
+        cls.pending = True
+        if cls.direct:
+            raise KeyboardInterrupt
+
+    @classmethod
+    def check(cls):
+        if cls.pending:
+            raise KeyboardInterrupt
+
+    @classmethod
+    @contextlib.contextmanager
+    def socket_call(cls):
+        cls.direct = True
+        try:
+            cls.check()
+            yield
+        finally:
+            cls.direct = False
+
+
 class PeerFailure(RuntimeError):
     def __init__(self, item):
         super().__init__('Partner: ' + str(item.get('message', 'błąd')))
@@ -51,20 +84,22 @@ class Channel:
         self.sock.settimeout(15)
         self.file = sock.makefile('rb')
 
-    def send(self, item):
+    def send(self, item, limit=MAX_LINE):
         data = json.dumps(item, allow_nan=False).encode() + b'\n'
-        if len(data) > MAX_LINE:
+        if len(data) > limit:
             raise ValueError('Zbyt duży komunikat kontrolny.')
-        self.sock.sendall(data)
+        with CtrlC.socket_call():
+            self.sock.sendall(data)
 
-    def receive(self, kind):
-        data = self.file.readline(MAX_LINE + 1)
-        if not data or len(data) > MAX_LINE or not data.endswith(b'\n'):
+    def receive(self, kinds, limit=MAX_LINE):
+        with CtrlC.socket_call():
+            data = self.file.readline(limit + 1)
+        if not data or len(data) > limit or not data.endswith(b'\n'):
             raise ConnectionError('Kanał internetowy zamknięty lub nieprawidłowy.')
         item = json.loads(data)
         if isinstance(item, dict) and item.get('kind') == 'abort':
             raise PeerFailure(item)
-        if not isinstance(item, dict) or item.get('kind') != kind:
+        if not isinstance(item, dict) or item.get('kind') not in kinds.split():
             raise ValueError('Nieoczekiwany komunikat kanału sterowania.')
         return item
 
@@ -103,6 +138,7 @@ class Device:
         self.last_info = self.last_received = time.monotonic()
         end = time.monotonic() + duration
         while time.monotonic() < end:
+            CtrlC.check()
             now = time.monotonic()
             if now - self.last_info >= 2:
                 self.write('INFO')
@@ -185,44 +221,94 @@ def run(args):
     args.output.mkdir(parents=True, exist_ok=True)
     if args.role == 'B':
         check_plan(args.point, args.count, args.slot)
-        try:
-            sock = socket.create_connection((address, args.tcp_port), timeout=15)
-        except OSError as exc:
-            raise OSError(f'Brak połączenia ze stacją A ({exc}); czy stacja A działa?') from exc
-        return trial(args, token, sock)
+        code, base = trial(args, token, Channel(connect(address, args.tcp_port)))
+        upload(address, args.tcp_port, token, base)
+        return code
     listener = socket.socket()
     listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     listener.bind((address, args.tcp_port))
     listener.listen(1)
-    code, served = 0, 0
     try:
-        while not args.trials or served < args.trials:
+        while True:
             print('Stacja A czeka na próbę z Maca B:', address, args.tcp_port, '(Ctrl+C kończy)', flush=True)
-            sock, _ = listener.accept()
-            served += 1
-            code = trial(args, token, sock)
+            with CtrlC.socket_call():
+                sock = listener.accept()[0]
+            channel = Channel(sock)
+            try:
+                first = channel.receive('hello upload', UPLOAD_LIMIT)
+                if first.get('protocol') != PROTOCOL or not secrets.compare_digest(str(first.get('token', '')), token):
+                    raise ValueError('Nieprawidłowy klucz lub protokół partnera.')
+                if first['kind'] == 'upload':
+                    store(args.output / 'from-B', first.get('files'))
+                    channel.send({'kind': 'stored'})
+                    channel.close()
+                    continue
+            except (OSError, RuntimeError, ValueError, TypeError) as exc:
+                print('Odrzucono połączenie:', exc, flush=True)
+                try:
+                    channel.send({'kind': 'abort', 'category': 'internet', 'message': str(exc)})
+                except OSError:
+                    pass
+                channel.close()
+                continue
+            trial(args, token, channel, first)
     except KeyboardInterrupt:
         print('Zatrzymano stację A.', flush=True)
     finally:
         listener.close()
-    return code
+    return 0
 
 
-def trial(args, token, sock):
+def connect(address, port):
+    try:
+        with CtrlC.socket_call():
+            return socket.create_connection((address, port), timeout=15)
+    except OSError as exc:
+        raise OSError(f'Brak połączenia ze stacją A ({exc}); czy stacja A działa?') from exc
+
+
+def store(folder, files):
+    if not isinstance(files, dict) or not files or not all(
+            isinstance(n, str) and LOG_NAME.fullmatch(n) and isinstance(v, str) for n, v in files.items()):
+        raise ValueError('Nieprawidłowe logi z Maca B.')
+    folder.mkdir(parents=True, exist_ok=True)
+    for name, text in files.items():
+        (folder / name).write_text(text)
+    print('Zapisano logi Maca B:', folder, ', '.join(sorted(files)), flush=True)
+
+
+def upload(address, port, token, base):
+    """Send this Mac B trial's local files to station A, where trials are analysed."""
+    paths = [base.with_suffix('.json'), base.with_suffix('.jsonl'),
+             base.with_name(base.name + '-peer.json'), base.with_name(base.name + '-summary.json')]
+    try:
+        channel = Channel(connect(address, port))
+        channel.sock.settimeout(120)  # sendall timeout covers the whole upload
+        try:
+            channel.send({'kind': 'upload', 'protocol': PROTOCOL, 'token': token,
+                          'files': {p.name: p.read_text() for p in paths if p.exists()}}, UPLOAD_LIMIT)
+            channel.receive('stored')
+        finally:
+            channel.close()
+    except (OSError, RuntimeError, ValueError) as exc:
+        print(f'NIE przesłano logów do stacji A ({exc}). Ponów później:\n'
+              f'  --role B --address {address} --key-file KLUCZ --upload {base.with_suffix(".json")}', flush=True)
+        return 1
+    print('Przesłano logi do stacji A.', flush=True)
+    return 0
+
+
+def trial(args, token, channel, hello=None):
     base = args.output / (datetime.now().strftime('%Y%m%d-%H%M%S-') + args.role + '-online-' + uuid.uuid4().hex[:8])
     local = {'mode': 'online', 'role': args.role, 'point': args.point, 'notes': args.notes,
              'count': args.count, 'slot_s': args.slot, 'node': None, 'events': [], 'issues': [],
              'completed': False, 'session': uuid.uuid4().hex[:16] if args.role == 'A' else None,
              'started_utc': datetime.now(timezone.utc).isoformat()}
-    peer, channel, device, interrupted = None, None, None, False
+    peer, device, interrupted = None, None, False
     raw = base.with_suffix('.jsonl').open('w')
     phase = 'internet'
     try:
-        channel = Channel(sock)
         if args.role == 'A':
-            hello = channel.receive('hello')
-            if hello.get('protocol') != PROTOCOL or not secrets.compare_digest(str(hello.get('token', '')), token):
-                raise ValueError('Nieprawidłowy klucz lub protokół partnera.')
             peer = hello.get('report')
             if not isinstance(peer, dict):
                 raise ValueError('Nieprawidłowy raport partnera.')
@@ -288,21 +374,20 @@ def trial(args, token, sock):
         local['completed'] = peer['completed'] = True
     except KeyboardInterrupt:
         local['issues'].append({'category': 'operator', 'message': 'Przerwano próbę.'})
-        interrupted = True
+        interrupted, CtrlC.pending = True, False  # B still uploads the aborted trial's logs
     except (OSError, RuntimeError, ValueError, KeyError, TypeError) as exc:
         category = exc.category if isinstance(exc, PeerFailure) else phase
         local['issues'].append({'category': category, 'message': str(exc)})
-        if channel is not None and not isinstance(exc, PeerFailure):
+        if not isinstance(exc, PeerFailure):
             try:
                 channel.send({'kind': 'abort', 'category': category, 'message': str(exc)})
             except OSError:
                 pass
-        print(f'BŁĄD ({category}): {exc}. Zatrzymano próbę; logi pozostają lokalnie.', flush=True)
+        print(f'BŁĄD ({category}): {exc}. Zatrzymano próbę.', flush=True)
     finally:
         if device is not None:
             device.close()
-        if channel is not None:
-            channel.close()
+        channel.close()
         raw.close()
         local['ended_utc'] = datetime.now(timezone.utc).isoformat()
         base.with_suffix('.json').write_text(json.dumps(local, indent=2, ensure_ascii=False) + '\n')
@@ -316,7 +401,7 @@ def trial(args, token, sock):
         print('Zapisano lokalny raport:', base.with_suffix('.json'), flush=True)
     if interrupted and args.role == 'A':
         raise KeyboardInterrupt
-    return 0 if local['completed'] and not local['issues'] else 1
+    return (0 if local['completed'] and not local['issues'] else 1), base
 
 
 def main():
@@ -331,9 +416,10 @@ def main():
     parser.add_argument('--notes', help='Opis położenia tej płytki.')
     parser.add_argument('--count', type=int, help='Tylko B: liczba pakietów (domyślnie 100).')
     parser.add_argument('--slot', type=float, help='Tylko B: okno odbioru w s (domyślnie 3).')
-    parser.add_argument('--trials', type=int, default=0, help='Tylko A: zakończ po tylu próbach (0 = bez końca).')
+    parser.add_argument('--upload', type=Path, help='Tylko B: ponów przesłanie logów tej próby (raport *.json) do stacji A.')
     parser.add_argument('--output', type=Path, default=Path('results'))
     args = parser.parse_args()
+    signal.signal(signal.SIGINT, CtrlC.handler)
     try:
         if args.make_key:
             args.make_key.parent.mkdir(parents=True, exist_ok=True)
@@ -342,13 +428,16 @@ def main():
                 file.write(secrets.token_hex(32) + '\n')
             print('Utworzono klucz. Skopiuj plik na drugi Mac; nie dodawaj go do Git.')
             return 0
+        if args.upload:
+            if args.role != 'B' or args.address is None or args.key_file is None or not args.upload.exists():
+                raise ValueError('--upload: podaj --role B, --address, --key-file i istniejący raport *.json.')
+            return upload(private_address(args.address), args.tcp_port, args.key_file.read_text().strip(),
+                          args.upload.with_suffix(''))
         if any(getattr(args, key) is None for key in ('role', 'address', 'key_file', 'port', 'notes')):
             raise ValueError('Podaj --role, --address, --key-file, --port i --notes.')
         if args.role == 'A':
             if any(getattr(args, key) is not None for key in ('point', 'count', 'slot')):
                 raise ValueError('Na A punkt, liczbę i slot ustawia Mac B.')
-            if args.trials < 0:
-                raise ValueError('Nieprawidłowe --trials.')
         else:
             if args.point is None:
                 raise ValueError('Podaj --point.')
@@ -357,6 +446,9 @@ def main():
         if not 1 <= args.tcp_port <= 65535:
             raise ValueError('Nieprawidłowy port TCP.')
         return run(args)
+    except KeyboardInterrupt:
+        print('Przerwano.', flush=True)
+        return 130
     except (OSError, ValueError, ImportError) as exc:
         parser.error(str(exc))
 
