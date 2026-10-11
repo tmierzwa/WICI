@@ -105,11 +105,20 @@ Oba Maki zapisują w `results/`:
 - kopię odebranych zdarzeń partnera w `*-peer.json`;
 - podsumowanie `*-summary.json`, jeśli uzgodniona próba została ukończona.
 
+Po każdej próbie, także przerwanej, Mac B przesyła swoje cztery pliki
+do stacji A, do `results/from-B/`. Analizę prowadzi się na Macu A. Gdy B
+wypisze `NIE przesłano logów`, ponów przesyłanie przy działającym
+internecie (stacja A musi działać):
+
+```sh
+.venv/bin/python tools/range_online.py --role B --address IP_MAC_A --key-file secrets/range.key --upload results/RAPORT_B.json
+```
+
 Podsumowanie daje osobne liczniki A→B i B→A, straty i RSSI/SNR.
 `valid_trial=true` oznacza poprawną próbę także przy stratach LoRa.
 `passed=true` wymaga 100/100 w obu kierunkach i braku błędów.
-Zachowaj oryginalne lokalne logi **obu** Maców — kopia partnera obejmuje
-zdarzenia przekazane przez kanał sterowania, nie zastępuje jego surowego logu.
+Pliki na Macu B zostają także po przesłaniu; nie usuwaj ich przed
+sprawdzeniem `results/from-B/` na Macu A.
 
 Utrata internetu zatrzymuje kolejne transmisje, zapisuje błąd kategorii
 `internet` i nie zalicza próby. Błąd USB partnera przekazany przed
