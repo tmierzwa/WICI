@@ -7,6 +7,8 @@ const VIEWS = [
   { view: 'zlacza', file: 'stacja-zlacza.png' },
   // Do materiałów: 3600 × 2400 px, ciasny kadr z krótkim podpisem „wizualizacja koncepcyjna”.
   { view: 'materialy', file: 'stacja-materialy.png', width: 2400, height: 1600, scale: 1.5 },
+  // Ten sam kadr dla strony i README: 1800 × 1200 px, JPEG.
+  { view: 'materialy', file: 'stacja-materialy-web.jpg', width: 2400, height: 1600, scale: 0.75, quality: 85 },
 ];
 const CDN = 'https://cdn.jsdelivr.net/npm/three@0.160.0/';
 (async () => {
@@ -27,7 +29,7 @@ const CDN = 'https://cdn.jsdelivr.net/npm/three@0.160.0/';
     await page.addInitScript(([u, l]) => { window.UKLAD = u; window.LOGO = l; }, [uklad, logo]);
     await page.goto('file://' + path.join(dir, 'stacja.html') + `?view=${v.view}`);
     await page.waitForFunction(() => window.RENDER_DONE === true, null, { timeout: 120000 });
-    await page.screenshot({ path: path.join(dir, v.file) });
+    await page.screenshot({ path: path.join(dir, v.file), ...(v.quality ? { type: 'jpeg', quality: v.quality } : {}) });
     await page.close();
   }
   await browser.close();

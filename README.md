@@ -6,8 +6,8 @@ Gdy nie ma prądu, zasięgu komórkowego ani internetu, jak przekazać służbom
 
 Opiekun schronienia wybiera na ekranie kategorię potrzeby i liczbę osób, a stacja wysyła zgłoszenie radiem. Ekran ma rozróżniać trwały zapis u odbiorcy, odczyt przez dyżurnego i decyzję o pomocy. Każda włączona stacja ma też przekazywać wiadomości sąsiadów, wydłużając drogę do odbiorcy.
 
-<p align="center"><img src="hardware/obudowa/render/stacja-materialy.png" alt="Wizualizacja koncepcyjna stacji WICI: obudowa naścienna z ekranem, czterema przyciskami, diodą alarmu, przełącznikiem CISZA z osłoną i wyłącznikiem; przewody 12 V i anteny wychodzą dołem" width="820"></p>
-<p align="center"><sub>Wizualizacja koncepcyjna stacji według dzisiejszych założeń; <a href="hardware/obudowa/README.md">obudowa i render</a>.</sub></p>
+<p align="center"><img src="hardware/obudowa/render/stacja-materialy-web.jpg" alt="Wizualizacja koncepcyjna stacji WICI: obudowa naścienna z ekranem, czterema przyciskami, diodą alarmu, przełącznikiem CISZA z osłoną i wyłącznikiem; przewody 12 V i anteny wychodzą dołem" width="820"></p>
+<p align="center"><sub>Wizualizacja koncepcyjna stacji według dzisiejszych założeń; <a href="hardware/obudowa/README.md">obudowa i render</a>, <a href="hardware/obudowa/render/stacja-materialy.png">pełna rozdzielczość</a>.</sub></p>
 
 **To projekt prototypu 0.5. Stacji jeszcze nie zbudowano ani nie sprawdzono w terenie.** Dokumentacja, obliczenia i kod są otwarte; poniżej opisujemy plan prac i możliwości współpracy.
 
