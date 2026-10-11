@@ -47,6 +47,13 @@ size_t utf8Bytes(const char* text, size_t chars) {
     return bytes;
 }
 
+// Liczba znaków (nie bajtów) tekstu UTF-8.
+size_t utf8Chars(const char* text) {
+    size_t n = 0;
+    for (; *text; ++text) n += (static_cast<uint8_t>(*text) & 0xC0) != 0x80;
+    return n;
+}
+
 void formatNumber(char* out, size_t size, uint32_t value) { snprintf(out, size, "%lu", static_cast<unsigned long>(value)); }
 
 void substituteNumber(char* line, size_t size, const char* key, uint32_t value) {
@@ -1043,8 +1050,13 @@ void Model::render(const Status& s, Lines& out) {
     for (size_t i = 0; i < LINES; ++i) { out.text[i][0] = '\0'; out.inverted[i] = false; }
     size_t first = 0;
     if (s.prep) {
-        // Pasek trybu serwisowego w inwersji: odróżnia się od treści ekranu i jest widoczny z daleka.
-        copyLine(out.text[first], LINE_BYTES, text(Id::TRYB_PRZYGOTOWANIA, lang_));
+        // Pasek trybu serwisowego w inwersji, wyśrodkowany: odróżnia się od treści ekranu i jest
+        // widoczny z daleka.
+        const char* bar = text(Id::TRYB_PRZYGOTOWANIA, lang_);
+        const size_t chars = utf8Chars(bar);
+        char centered[LINE_BYTES];
+        snprintf(centered, sizeof(centered), "%*s%s", static_cast<int>(chars < COLS ? (COLS - chars) / 2 : 0), "", bar);
+        copyLine(out.text[first], LINE_BYTES, centered);
         out.inverted[first++] = true;
     }
     const size_t window = LINES - first;
