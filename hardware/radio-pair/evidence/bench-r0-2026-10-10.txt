@@ -29,5 +29,16 @@ Odczyt 8MB przez natywne USB trwał ok. 16 min na płytkę (71.6 kbit/s).
 Próba przerwana między 2 i 3 (sesja afa94d9e7efe43e6): płytka B niewidoczna
 na USB przez przewód bez transmisji danych; nie wysłano żadnego pakietu.
 
+2026-10-11, pair-0.4 (LAST), ten sam Mac, obie płytki przy biurku
+(odległość nie mierzona; RSSI wskazuje bliskie położenie):
+
+4. Sesja c99b08ae0e0b494d, 10 pakietów w każdą stronę: 10/10 i 10/10
+   (próba skrócona, bez kwalifikacji); RSSI -35..-33 dBm.
+
+5. Sesja 94873a35e680461d, pair-0.4 na obu płytkach: POZYTYWNY.
+   A->B 100/100, RSSI -37..-32 dBm, SNR 11.8..13.5 dB;
+   B->A 100/100, RSSI -36..-32 dBm, SNR 12.0..13.5 dB.
+   Bez błędów CRC, bez rekordów TX odzyskanych przez LAST, bez restartów.
+
 Wynik dotyczy odległości biurkowej. Nie jest pomiarem zasięgu terenowego,
 pracy przez ściany ani działania protokołu WICI.

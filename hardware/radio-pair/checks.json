@@ -25,7 +25,7 @@
     "ONLINE.md": "6df30b0cc95add8606acad7bfd01df57964c6a4da6055cefe582fea427aebbdd",
     "README.md": "958e34cd37e72259285e016a7593d28188dd1294576ce0f999bdf3910f2037b2",
     "ZRODLA-I-WERYFIKACJA.txt": "0a05ac232f0dc05e62c3b62f11365478161b34fc981a08d24d5764b7c65878ec",
-    "evidence/bench-r0-2026-10-10.txt": "711ee0fcdba991cc71a92967e57739ee8e15c76a491da8a0a70350f5e72c49c8",
+    "evidence/bench-r0-2026-10-10.txt": "347507c25d757de207400ecb60e33d50e3f7586fe9b74686c1754d91d89b74d7",
     "evidence/range-r0-2026-10-10.txt": "d5051ece812b0d6e085757ce66553c49380f8d3e20fe352661af35acdeb1f350",
     "evidence/tests-r0.txt": "6f7413122ad45f609b497f7016c3815281e09e9b9348bdd7436be8daa70b106c",
     "platformio.ini": "e5128e0996281084dd5b7106582feadbca08dc23bc569a28cc220d60e39bc5ed",
@@ -40,5 +40,5 @@
     "tools/range_test.py": "e45c4912cbef67ea9b91245492042010ecf97cf15e1be5d20db782213e8e091f"
   },
   "firmware_bin_sha256": "64c5b4e184e12095a5c80b11cce4fdf024b271ae8e9ff141bc26c120ec8f3607",
-  "physical_rf_test": "bench only, one Mac: two passing 100/100 reports (before/after USB reconnect, 2 m); pair-0.2 run failed on delayed USB records, see evidence/bench-r0-2026-10-10.txt. Indoor range 2026-10-10: P01-2 passed 100/100 at ~20 m through 2 walls; no field test yet; see evidence/range-r0-2026-10-10.txt. pair-0.4 (LAST) flashed on both boards 2026-10-10; INFO and LAST checked on each board alone; pair test with pair-0.4 still pending."
+  "physical_rf_test": "bench only, one Mac: two passing 100/100 reports (before/after USB reconnect, 2 m); pair-0.2 run failed on delayed USB records, see evidence/bench-r0-2026-10-10.txt. Indoor range 2026-10-10: P01-2 passed 100/100 at ~20 m through 2 walls; no field test yet; see evidence/range-r0-2026-10-10.txt. pair-0.4 (LAST) flashed on both boards 2026-10-10; one-Mac pair test with pair-0.4 passed 100/100 both ways on 2026-10-11 (session 94873a35e680461d)."
 }
