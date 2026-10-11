@@ -27,8 +27,10 @@ P02 (A: b600755d; wcześniej 8b57e62e: B nie połączył się w 120 s):
   Przerwana przy pakiecie 8 przez ERR read -7 (błąd CRC) na płytce B,
   który narzędzie traktowało wtedy jak awarię płytki. Do przerwania odebrano
   3 z 16 transmisji: RSSI -100..-96 dBm, SNR -6.0..-2.8 dB (granica SF7
-  ok. -7.5 dB). Szum wyliczony z RSSI-SNR ok. -93 dBm, wyraźnie powyżej
-  typowego tła; możliwe zakłócenia lokalne przy B. Nie jest wynikiem zasięgu.
+  ok. -7.5 dB). Przy ujemnym SNR RSSI mierzy głównie szum: szum ok.
+  -100..-96 dBm, sygnał ok. RSSI+SNR = -106..-99 dBm. Szum wyraźnie
+  powyżej typowego tła (ok. -117 dBm dla 125 kHz); możliwe zakłócenia
+  lokalne przy B. Nie jest wynikiem zasięgu.
   Po tej próbie narzędzia liczą błąd CRC jako stratę radiową
   (corrupt_received), protokół online WICI-RANGE-ONLINE-2.
 
@@ -42,7 +44,8 @@ P03 (A: 3f5c8474, B: f5472be0, sesja 28754418ae094000): według wykonawcy
   rekord TX nie dotarł przez USB do Maca B, choć późniejszy INFO dotarł.
   Do przerwania A->B 64/72 (3 uszkodzone CRC, 5 zgubionych),
   B->A 56/71 (4 uszkodzone, 11 zgubionych); RSSI -104..-95 dBm,
-  SNR -8.8..-1.0 dB. Granica zasięgu tego profilu w tym budynku.
+  SNR -8.8..-1.0 dB (przy ujemnym SNR sygnał ok. RSSI+SNR, najsłabszy
+  odebrany ok. -113 dBm). Granica zasięgu tego profilu w tym budynku.
   Nie jest wynikiem zasięgu. Po tej próbie pair-0.4 dodaje LAST.
 
 Wyniki dotyczą tego budynku, tych położeń i profilu R0. Nie są

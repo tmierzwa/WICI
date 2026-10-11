@@ -55,8 +55,25 @@ class Online(unittest.TestCase):
         self.exercise(lost_tx=True)
 
     @unittest.skipUnless(os.name == 'posix', 'PTY required')
+    def test_station_a_serves_consecutive_trials_started_by_b(self):
+        self.exercise(trials=2)
+
+    def test_station_a_rejects_point_and_count(self):
+        result = subprocess.run([sys.executable, str(ROOT/'tools/range_online.py'), '--role', 'A',
+            '--address', '127.0.0.1', '--key-file', 'k', '--port', 'p', '--notes', 'n', '--point', 'P1'],
+            capture_output=True, text=True)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn('ustawia Mac B', result.stderr)
+
+    def test_plan_from_b_is_checked(self):
+        online.check_plan('P1', 100, 3)
+        for plan in (('', 1, 3), ('P1', 0, 3), ('P1', True, 3), ('P1', 1, 2), ('P1', 1, float('nan')), (None, 1, 3)):
+            with self.assertRaises(ValueError):
+                online.check_plan(*plan)
+
+    @unittest.skipUnless(os.name == 'posix', 'PTY required')
     def test_wrong_key_no_radio_transmission(self):
-        self.exercise(wrong_key=True)
+        self.exercise(wrong_key=True, trials=2)  # A survives a rejected trial and serves the next
 
     @unittest.skipUnless(os.name == 'posix', 'PTY required')
     def test_network_disconnect_keeps_local_report(self):
@@ -66,7 +83,7 @@ class Online(unittest.TestCase):
     def test_peer_usb_error_is_not_labelled_radio_loss(self):
         self.exercise(usb_error=True)
 
-    def exercise(self, drop=False, wrong_key=False, disconnect=False, usb_error=False, lost_tx=False):
+    def exercise(self, drop=False, wrong_key=False, disconnect=False, usb_error=False, lost_tx=False, trials=1):
         pairs = [pty.openpty(), pty.openpty()]
         masters = [p[0] for p in pairs]
         buffers = {fd: b'' for fd in masters}
@@ -83,17 +100,23 @@ class Online(unittest.TestCase):
                 key.write_text('a'*64)
                 badkey = Path(folder)/'badkey'
                 badkey.write_text('b'*64)
-                for i, role in enumerate('AB'):
+                def start(i, point=None):
+                    role = 'AB'[i]
+                    plan = [] if role == 'A' else ['--point', point, '--count', '1']
                     procs.append(subprocess.Popen([sys.executable, str(ROOT/'tools/range_online.py'),
                         '--role', role, '--address', '127.0.0.1', '--tcp-port', str(tcp_port),
                         '--key-file', str(badkey if wrong_key and i == 1 else key),
-                        '--port', os.ttyname(pairs[i][1]), '--point', 'P1', '--notes', 'stol',
-                        '--count', '1', '--output', str(Path(folder)/role)],
+                        '--port', os.ttyname(pairs[i][1]), '--notes', 'stol', *plan,
+                        *(['--trials', str(trials)] if role == 'A' else []),
+                        '--output', str(Path(folder)/role)],
                         stdout=subprocess.PIPE, stderr=subprocess.PIPE))
-                    if i == 0:
-                        time.sleep(.6)
-                deadline = time.monotonic() + 25
+                start(0)
+                time.sleep(.6)
+                start(1, 'P1')
+                deadline = time.monotonic() + 25 * trials
                 while any(p.poll() is None for p in procs) and time.monotonic() < deadline:
+                    if len(procs) < trials + 1 and procs[-1].poll() is not None:
+                        start(1, f'P{len(procs)}')  # B starts the next point; A stays up
                     for fd in select.select(masters, [], [], .1)[0]:
                         buffers[fd] += os.read(fd, 4096)
                         while b'\n' in buffers[fd]:
@@ -137,11 +160,15 @@ class Online(unittest.TestCase):
                     return
                 if wrong_key:
                     self.assertEqual(transmitted, [])
+                    reports = [p for p in (Path(folder)/'A').glob('*.json') if not p.stem.endswith(('-peer', '-summary'))]
+                    self.assertEqual(len(reports), trials)
                     self.assertTrue(all(p.returncode == 1 for p in procs), outputs)
                     return
                 self.assertTrue(all(p.returncode == 0 for p in procs), outputs)
-                for role in 'AB':
-                    summary = json.loads(next((Path(folder)/role).glob('*-summary.json')).read_text())
+                points = sorted(json.loads(s.read_text())['point'] for s in (Path(folder)/'A').glob('*-summary.json'))
+                self.assertEqual(points, [f'P{n}' for n in range(1, trials + 1)])
+                for path in Path(folder).glob('*/*-summary.json'):
+                    summary = json.loads(path.read_text())
                     self.assertTrue(summary['valid_trial'])
                     self.assertEqual(summary['directions']['A->B']['received'], 0 if drop else 1)
                     self.assertEqual(summary['directions']['B->A']['sent'], 1)

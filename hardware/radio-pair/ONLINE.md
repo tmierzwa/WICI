@@ -4,7 +4,9 @@ Każdy Mac ma jedną płytkę R0 i dostęp do internetu. Tailscale jest już
 zainstalowany; oba Maki muszą być połączone z tą samą siecią Tailscale
 z możliwością połączenia między urządzeniami.
 
-Mac A prowadzi próbę. Mac B dołącza. Programy uzgadniają kolejność przez
+Mac A z płytką A stoi w stałym miejscu jako **stacja**: uruchamiasz go raz
+i zostawiasz. Każdą próbę rozpoczyna Mac B w punkcie pomiarowym; to B podaje
+nazwę punktu i liczbę pakietów. Programy uzgadniają kolejność przez
 internet, a płytki **niezależnie nadają po 100 pakietów przez LoRa**.
 B nadaje również wtedy, gdy nie odebrało poprzedniego pakietu A.
 Na obu ekranach widać dla każdego pakietu odbiór/stratę oraz RSSI/SNR.
@@ -46,35 +48,38 @@ samego katalogu względem `hardware/radio-pair`. Klucz musi być identyczny.
 Katalog `secrets/` jest ignorowany przez Git. Nie dodawaj klucza do logów
 ani repozytorium. Jeśli plik już istnieje, generator go nie nadpisze.
 
-## 2. Krótka próba przy stole na dwóch Macach
+## 2. Stacja A
 
-**Najpierw Mac A:**
+Na Macu A, przed wyjściem z Makiem B:
 
 ```sh
-.venv/bin/python tools/range_online.py --role A --address IP_MAC_A --key-file secrets/range.key --port PORT_A --point STOL --notes 'A: stol, antena pionowo' --count 3
+caffeinate -dims .venv/bin/python tools/range_online.py --role A --address IP_MAC_A --key-file secrets/range.key --port PORT_A --notes 'A: stałe miejsce, antena pionowo'
 ```
 
-Poczekaj na `Czekam na Mac B`.
+`caffeinate` nie pozwala Macowi A zasnąć; podłącz go do zasilania.
+Stacja wypisuje `Stacja A czeka na próbę z Maca B` i obsługuje kolejne
+próby jedna po drugiej, także po próbie przerwanej. Kończy ją dopiero
+Ctrl+C na Macu A. Jeśli zapora macOS pyta o zgodę na połączenia przychodzące
+Pythona, zezwól dla programu wykonującego test. Nie wyłączaj zapory globalnie.
+Opis `--notes` dotyczy położenia A i trafia do każdego raportu A.
 
-**Następnie Mac B:**
+## 3. Próby z Maca B
+
+Najpierw krótka próba przy stole, obok Maca A:
 
 ```sh
 .venv/bin/python tools/range_online.py --role B --address IP_MAC_A --key-file secrets/range.key --port PORT_B --point STOL --notes 'B: stol, antena pionowo, odleglosc 2-3 m' --count 3
 ```
 
-Mac A czeka do 120 sekund na dołączenie B. Oba programy kończą się
-automatycznie. Próba 3 pakietów sprawdza przygotowanie, ale nie zalicza
-pełnego testu. Jeśli zapora macOS pyta o zgodę na połączenia przychodzące
-Pythona, zezwól dla programu wykonującego test. W razie braku połączenia
-sprawdź Tailscale na obu Macach, właściwy adres A, klucz i zaporę.
-Nie wyłączaj zapory globalnie.
+Próba 3 pakietów sprawdza przygotowanie, ale nie zalicza pełnego testu.
+W razie braku połączenia sprawdź, czy stacja A działa, Tailscale na obu
+Macach, właściwy adres A i klucz.
 
-## 3. Punkty terenowe
-
-Powtórz te same polecenia z `--count 100`, nazwą punktu np. `P01`
-i rzeczywistymi opisami. **Nazwa punktu i liczba pakietów muszą być
-identyczne na obu Macach.** Zapisz położenie, dystans, wysokość/orientację
-anten, przeszkody, pomieszczenia/piętra. Podczas próby stój w miejscu.
+W punktach terenowych uruchamiaj na Macu B to samo polecenie z nazwą punktu,
+np. `P01`, rzeczywistym opisem i bez `--count` (domyślnie 100). Na Macu A
+nic nie trzeba robić. Każdy punkt to nowe polecenie na B z nową nazwą.
+Zapisz położenie, dystans, wysokość/orientację anten, przeszkody,
+pomieszczenia/piętra. Podczas próby stój w miejscu.
 
 Transmisje są naprzemienne A→B, B→A, z oknem odbioru minimum 3 sekundy
 na pakiet. Internet potwierdza gotowość i przenosi odczyty USB; nie dostarcza
@@ -108,8 +113,8 @@ zdarzenia przekazane przez kanał sterowania, nie zastępuje jego surowego logu.
 
 Utrata internetu zatrzymuje kolejne transmisje, zapisuje błąd kategorii
 `internet` i nie zalicza próby. Błąd USB partnera przekazany przed
-rozłączeniem ma kategorię `peer-usb`, a lokalny błąd USB — `usb`. Logi USB pozostają lokalnie. Ctrl+C przerywa
-próbę; partner również zatrzyma się po zamknięciu połączenia.
+rozłączeniem ma kategorię `peer-usb`, a lokalny błąd USB — `usb`. Logi USB pozostają lokalnie. Ctrl+C na Macu B
+przerywa próbę; stacja A zapisuje przerwaną próbę i czeka na następną.
 Jeżeli kanał internetowy nie działa, uruchom nową próbę
 [offline](README.md) z nową nazwą punktu. Nie łącz wyników dwóch trybów
 jako jednej próby i nie traktuj przerwanej sesji jako wyniku zasięgu.

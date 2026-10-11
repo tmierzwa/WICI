@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Live two-Mac LoRa trial over private Tailscale TCP; RF receipts come only from USB."""
+"""Live two-Mac LoRa trial over private Tailscale TCP; RF receipts come only from USB.
+
+Mac A is an unattended station serving trials; Mac B starts each trial and sets its point and count."""
 import argparse
 import ipaddress
 import json
@@ -17,7 +19,7 @@ from pathlib import Path
 from pair_test import PROFILE, decode, judge, open_serial, tx_records
 from range_test import R0_VERSION, payload, summarize
 
-PROTOCOL = 'WICI-RANGE-ONLINE-3'
+PROTOCOL = 'WICI-RANGE-ONLINE-4'
 MAX_LINE = 262144
 
 
@@ -26,6 +28,15 @@ def private_address(text):
     if address.version != 4 or not (address.is_loopback or address in ipaddress.ip_network('100.64.0.0/10')):
         raise ValueError('Użyj adresu IPv4 Tailscale 100.64.0.0/10 lub 127.0.0.1 do próby lokalnej.')
     return text
+
+
+def check_plan(point, count, slot):
+    if not isinstance(point, str) or not 1 <= len(point) <= 64 or not point.isprintable():
+        raise ValueError('Nazwa punktu: 1..64 znaki.')
+    if isinstance(count, bool) or not isinstance(count, int) or not 1 <= count <= 100:
+        raise ValueError('Liczba 1..100.')
+    if isinstance(slot, bool) or not isinstance(slot, (int, float)) or not math.isfinite(slot) or not 3 <= slot <= 30:
+        raise ValueError('Slot 3..30 sekund.')
 
 
 class PeerFailure(RuntimeError):
@@ -168,42 +179,65 @@ def feedback(local, remote, sender, seq, own, other):
 
 def run(args):
     address = private_address(args.address)
-    if not 1 <= args.count <= 100 or not math.isfinite(args.slot) or not 3 <= args.slot <= 30:
-        raise ValueError('Liczba 1..100; slot 3..30 sekund.')
     token = args.key_file.read_text().strip()
     if len(token) < 32:
         raise ValueError('Nieprawidłowy klucz sesji.')
     args.output.mkdir(parents=True, exist_ok=True)
+    if args.role == 'B':
+        check_plan(args.point, args.count, args.slot)
+        try:
+            sock = socket.create_connection((address, args.tcp_port), timeout=15)
+        except OSError as exc:
+            raise OSError(f'Brak połączenia ze stacją A ({exc}); czy stacja A działa?') from exc
+        return trial(args, token, sock)
+    listener = socket.socket()
+    listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    listener.bind((address, args.tcp_port))
+    listener.listen(1)
+    code, served = 0, 0
+    try:
+        while not args.trials or served < args.trials:
+            print('Stacja A czeka na próbę z Maca B:', address, args.tcp_port, '(Ctrl+C kończy)', flush=True)
+            sock, _ = listener.accept()
+            served += 1
+            code = trial(args, token, sock)
+    except KeyboardInterrupt:
+        print('Zatrzymano stację A.', flush=True)
+    finally:
+        listener.close()
+    return code
+
+
+def trial(args, token, sock):
     base = args.output / (datetime.now().strftime('%Y%m%d-%H%M%S-') + args.role + '-online-' + uuid.uuid4().hex[:8])
     local = {'mode': 'online', 'role': args.role, 'point': args.point, 'notes': args.notes,
              'count': args.count, 'slot_s': args.slot, 'node': None, 'events': [], 'issues': [],
              'completed': False, 'session': uuid.uuid4().hex[:16] if args.role == 'A' else None,
              'started_utc': datetime.now(timezone.utc).isoformat()}
-    peer, channel, listener, device = None, None, None, None
+    peer, channel, device, interrupted = None, None, None, False
     raw = base.with_suffix('.jsonl').open('w')
-    phase = 'usb'
+    phase = 'internet'
     try:
+        channel = Channel(sock)
+        if args.role == 'A':
+            hello = channel.receive('hello')
+            if hello.get('protocol') != PROTOCOL or not secrets.compare_digest(str(hello.get('token', '')), token):
+                raise ValueError('Nieprawidłowy klucz lub protokół partnera.')
+            peer = hello.get('report')
+            if not isinstance(peer, dict):
+                raise ValueError('Nieprawidłowy raport partnera.')
+            check_plan(peer.get('point'), peer.get('count'), peer.get('slot_s'))
+            local.update(point=peer['point'], count=peer['count'], slot_s=peer['slot_s'])
+            print(f'Próba z Maca B: punkt {local["point"]}, {local["count"]} pakietów.', flush=True)
+        phase = 'usb'
         device = Device(args.port, local, raw)
         device.prepare()
         print('GOTOWE USB. Raport:', base.with_suffix('.json'), flush=True)
         phase = 'internet'
         if args.role == 'A':
-            listener = socket.socket()
-            listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            listener.bind((address, args.tcp_port))
-            listener.listen(1)
-            listener.settimeout(120)
-            print('Czekam na Mac B:', address, args.tcp_port, flush=True)
-            sock, _ = listener.accept()
-            channel = Channel(sock)
-            hello = channel.receive('hello')
-            if hello.get('protocol') != PROTOCOL or not secrets.compare_digest(str(hello.get('token', '')), token):
-                raise ValueError('Nieprawidłowy klucz lub protokół partnera.')
-            peer = hello['report']
             validate_peer(peer, local)
             channel.send({'kind': 'hello', 'protocol': PROTOCOL, 'report': local})
         else:
-            channel = Channel(socket.create_connection((address, args.tcp_port), timeout=15))
             channel.send({'kind': 'hello', 'protocol': PROTOCOL, 'token': token, 'report': local})
             hello = channel.receive('hello')
             if hello.get('protocol') != PROTOCOL:
@@ -213,8 +247,8 @@ def run(args):
         phase = 'usb'
         device.collect(2)  # Detect restarts queued during the network handshake.
         print('Oba Maki połączone. Przewidywany czas: co najmniej '
-              f'{2 * args.count * args.slot / 60:.1f} min. Internet nie zastępuje odbioru LoRa.', flush=True)
-        for seq in range(1, args.count + 1):
+              f'{2 * local["count"] * local["slot_s"] / 60:.1f} min. Internet nie zastępuje odbioru LoRa.', flush=True)
+        for seq in range(1, local['count'] + 1):
             for sender in 'AB':
                 phase = 'internet'
                 if args.role == 'A':
@@ -230,7 +264,7 @@ def run(args):
                 phase = 'usb'
                 if sender == args.role:
                     device.write('TX ' + payload(local['session'], sender, seq))
-                own = device.collect(args.slot)
+                own = device.collect(local['slot_s'])
                 if sender == args.role and not tx_records(own, payload(local['session'], sender, seq))[0]:
                     device.write('LAST')
                     own += device.collect(1)
@@ -254,6 +288,7 @@ def run(args):
         local['completed'] = peer['completed'] = True
     except KeyboardInterrupt:
         local['issues'].append({'category': 'operator', 'message': 'Przerwano próbę.'})
+        interrupted = True
     except (OSError, RuntimeError, ValueError, KeyError, TypeError) as exc:
         category = exc.category if isinstance(exc, PeerFailure) else phase
         local['issues'].append({'category': category, 'message': str(exc)})
@@ -268,8 +303,6 @@ def run(args):
             device.close()
         if channel is not None:
             channel.close()
-        if listener is not None:
-            listener.close()
         raw.close()
         local['ended_utc'] = datetime.now(timezone.utc).isoformat()
         base.with_suffix('.json').write_text(json.dumps(local, indent=2, ensure_ascii=False) + '\n')
@@ -281,6 +314,8 @@ def run(args):
             base.with_name(base.name + '-summary').with_suffix('.json').write_text(json.dumps(result, indent=2, ensure_ascii=False) + '\n')
             print('Pełny test 100/100:', result['passed'], '| Próba poprawnie wykonana:', result['valid_trial'])
         print('Zapisano lokalny raport:', base.with_suffix('.json'), flush=True)
+    if interrupted and args.role == 'A':
+        raise KeyboardInterrupt
     return 0 if local['completed'] and not local['issues'] else 1
 
 
@@ -292,10 +327,11 @@ def main():
     parser.add_argument('--tcp-port', type=int, default=8765)
     parser.add_argument('--key-file', type=Path)
     parser.add_argument('--port')
-    parser.add_argument('--point')
-    parser.add_argument('--notes')
-    parser.add_argument('--count', type=int, default=100)
-    parser.add_argument('--slot', type=float, default=3)
+    parser.add_argument('--point', help='Tylko B: nazwa punktu.')
+    parser.add_argument('--notes', help='Opis położenia tej płytki.')
+    parser.add_argument('--count', type=int, help='Tylko B: liczba pakietów (domyślnie 100).')
+    parser.add_argument('--slot', type=float, help='Tylko B: okno odbioru w s (domyślnie 3).')
+    parser.add_argument('--trials', type=int, default=0, help='Tylko A: zakończ po tylu próbach (0 = bez końca).')
     parser.add_argument('--output', type=Path, default=Path('results'))
     args = parser.parse_args()
     try:
@@ -306,8 +342,18 @@ def main():
                 file.write(secrets.token_hex(32) + '\n')
             print('Utworzono klucz. Skopiuj plik na drugi Mac; nie dodawaj go do Git.')
             return 0
-        if any(getattr(args, key) is None for key in ('role', 'address', 'key_file', 'port', 'point', 'notes')):
-            raise ValueError('Podaj --role, --address, --key-file, --port, --point i --notes.')
+        if any(getattr(args, key) is None for key in ('role', 'address', 'key_file', 'port', 'notes')):
+            raise ValueError('Podaj --role, --address, --key-file, --port i --notes.')
+        if args.role == 'A':
+            if any(getattr(args, key) is not None for key in ('point', 'count', 'slot')):
+                raise ValueError('Na A punkt, liczbę i slot ustawia Mac B.')
+            if args.trials < 0:
+                raise ValueError('Nieprawidłowe --trials.')
+        else:
+            if args.point is None:
+                raise ValueError('Podaj --point.')
+            args.count = 100 if args.count is None else args.count
+            args.slot = 3 if args.slot is None else args.slot
         if not 1 <= args.tcp_port <= 65535:
             raise ValueError('Nieprawidłowy port TCP.')
         return run(args)
