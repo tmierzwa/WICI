@@ -56,7 +56,7 @@ PANEL = [
 ]
 # Bottom wall, x from the left outer edge. Axis height above the board is a measurement.
 CONNECTORS = [
-    {"id": "USB-C", "x": 60.0, "label": "LAPTOP · USB-C", "part": "USB-C z zatyczką na uwięzi; połączenie z laptopem"},
+    {"id": "USB-C", "x": 60.0, "label": "USB-C", "part": "USB-C z zatyczką na uwięzi; połączenie z laptopem"},
     {"id": "12 V", "x": 110.0, "label": "12 V", "part": "Switchcraft EN3, 2 styki, otwór 15,5 mm"},
     {"id": "ANTENA", "x": 170.0, "label": "ANTENA", "part": "SMA-F przepustowe z nakrętką na ściance"},
 ]
