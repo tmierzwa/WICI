@@ -35,6 +35,6 @@ test_two_serial_devices_and_report (test_usb_simulation.UsbSimulation.test_two_s
 test_tx_record_lost_on_usb_is_recovered_by_last (test_usb_simulation.UsbSimulation.test_tx_record_lost_on_usb_is_recovered_by_last) ... ok
 
 ----------------------------------------------------------------------
-Ran 35 tests in 124.220s
+Ran 35 tests in 123.841s
 
 OK
