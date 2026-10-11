@@ -118,10 +118,14 @@ class Online(unittest.TestCase):
         self.exercise(disconnect=True)
 
     @unittest.skipUnless(os.name == 'posix', 'PTY required')
+    def test_ctrl_c_on_b_is_operator_stop_and_logs_reach_a(self):
+        self.exercise(ctrl_c=True)
+
+    @unittest.skipUnless(os.name == 'posix', 'PTY required')
     def test_peer_usb_error_is_not_labelled_radio_loss(self):
         self.exercise(usb_error=True)
 
-    def exercise(self, drop=False, wrong_key=False, disconnect=False, usb_error=False, lost_tx=False, trials=1):
+    def exercise(self, drop=False, wrong_key=False, disconnect=False, usb_error=False, lost_tx=False, trials=1, ctrl_c=False):
         pairs = [pty.openpty(), pty.openpty()]
         masters = [p[0] for p in pairs]
         buffers = {fd: b'' for fd in masters}
@@ -176,6 +180,9 @@ class Online(unittest.TestCase):
                                 if disconnect and not killed:
                                     procs[1].kill()
                                     killed = True
+                                if ctrl_c and not killed:
+                                    procs[1].send_signal(signal.SIGINT)
+                                    killed = True
                 expected = 0 if wrong_key else trials
                 while time.monotonic() < deadline and len([p for p in (Path(folder)/'A').glob('*.json')
                         if not p.stem.endswith(('-peer', '-summary'))]) < expected:
@@ -196,6 +203,14 @@ class Online(unittest.TestCase):
                         categories.extend(e['category'] for e in json.loads(p.read_text())['issues'])
                     self.assertIn('usb', categories)
                     self.assertIn('peer-usb', categories)
+                    return
+                if ctrl_c:
+                    self.assertEqual(procs[0].returncode, 0, outputs)  # station A kept serving
+                    self.assertEqual(procs[1].returncode, 1, outputs)
+                    b = json.loads(next(p for p in (Path(folder)/'B').glob('*.json') if not p.stem.endswith(('-peer', '-summary'))).read_text())
+                    self.assertEqual([e['category'] for e in b['issues']], ['operator'], outputs)
+                    self.assertEqual(sorted(p.name for p in (Path(folder)/'A'/'from-B').iterdir()),
+                                     sorted(p.name for p in (Path(folder)/'B').iterdir()))
                     return
                 if disconnect:
                     a = json.loads(next(p for p in (Path(folder)/'A').glob('*.json') if not p.stem.endswith(('-peer', '-summary'))).read_text())

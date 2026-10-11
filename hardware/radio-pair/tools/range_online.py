@@ -4,12 +4,14 @@
 
 Mac A is an unattended station serving trials; Mac B starts each trial and sets its point and count."""
 import argparse
+import contextlib
 import ipaddress
 import json
 import math
 import queue
 import re
 import secrets
+import signal
 import socket
 import threading
 import time
@@ -42,6 +44,34 @@ def check_plan(point, count, slot):
         raise ValueError('Slot 3..30 sekund.')
 
 
+class CtrlC:
+    """Ctrl+C raises at once only inside socket calls (C code, safe to interrupt). Elsewhere, e.g. in
+    Queue.get with its Python-level locks, it is deferred to check(): an interrupt there can leave a
+    lock released ("release unlocked lock") and be recorded as a device error."""
+    pending = direct = False
+
+    @classmethod
+    def handler(cls, *_):
+        cls.pending = True
+        if cls.direct:
+            raise KeyboardInterrupt
+
+    @classmethod
+    def check(cls):
+        if cls.pending:
+            raise KeyboardInterrupt
+
+    @classmethod
+    @contextlib.contextmanager
+    def socket_call(cls):
+        cls.direct = True
+        try:
+            cls.check()
+            yield
+        finally:
+            cls.direct = False
+
+
 class PeerFailure(RuntimeError):
     def __init__(self, item):
         super().__init__('Partner: ' + str(item.get('message', 'błąd')))
@@ -58,10 +88,12 @@ class Channel:
         data = json.dumps(item, allow_nan=False).encode() + b'\n'
         if len(data) > limit:
             raise ValueError('Zbyt duży komunikat kontrolny.')
-        self.sock.sendall(data)
+        with CtrlC.socket_call():
+            self.sock.sendall(data)
 
     def receive(self, kinds, limit=MAX_LINE):
-        data = self.file.readline(limit + 1)
+        with CtrlC.socket_call():
+            data = self.file.readline(limit + 1)
         if not data or len(data) > limit or not data.endswith(b'\n'):
             raise ConnectionError('Kanał internetowy zamknięty lub nieprawidłowy.')
         item = json.loads(data)
@@ -106,6 +138,7 @@ class Device:
         self.last_info = self.last_received = time.monotonic()
         end = time.monotonic() + duration
         while time.monotonic() < end:
+            CtrlC.check()
             now = time.monotonic()
             if now - self.last_info >= 2:
                 self.write('INFO')
@@ -198,7 +231,9 @@ def run(args):
     try:
         while True:
             print('Stacja A czeka na próbę z Maca B:', address, args.tcp_port, '(Ctrl+C kończy)', flush=True)
-            channel = Channel(listener.accept()[0])
+            with CtrlC.socket_call():
+                sock = listener.accept()[0]
+            channel = Channel(sock)
             try:
                 first = channel.receive('hello upload', UPLOAD_LIMIT)
                 if first.get('protocol') != PROTOCOL or not secrets.compare_digest(str(first.get('token', '')), token):
@@ -226,7 +261,8 @@ def run(args):
 
 def connect(address, port):
     try:
-        return socket.create_connection((address, port), timeout=15)
+        with CtrlC.socket_call():
+            return socket.create_connection((address, port), timeout=15)
     except OSError as exc:
         raise OSError(f'Brak połączenia ze stacją A ({exc}); czy stacja A działa?') from exc
 
@@ -338,7 +374,7 @@ def trial(args, token, channel, hello=None):
         local['completed'] = peer['completed'] = True
     except KeyboardInterrupt:
         local['issues'].append({'category': 'operator', 'message': 'Przerwano próbę.'})
-        interrupted = True
+        interrupted, CtrlC.pending = True, False  # B still uploads the aborted trial's logs
     except (OSError, RuntimeError, ValueError, KeyError, TypeError) as exc:
         category = exc.category if isinstance(exc, PeerFailure) else phase
         local['issues'].append({'category': category, 'message': str(exc)})
@@ -383,6 +419,7 @@ def main():
     parser.add_argument('--upload', type=Path, help='Tylko B: ponów przesłanie logów tej próby (raport *.json) do stacji A.')
     parser.add_argument('--output', type=Path, default=Path('results'))
     args = parser.parse_args()
+    signal.signal(signal.SIGINT, CtrlC.handler)
     try:
         if args.make_key:
             args.make_key.parent.mkdir(parents=True, exist_ok=True)
@@ -409,6 +446,9 @@ def main():
         if not 1 <= args.tcp_port <= 65535:
             raise ValueError('Nieprawidłowy port TCP.')
         return run(args)
+    except KeyboardInterrupt:
+        print('Przerwano.', flush=True)
+        return 130
     except (OSError, ValueError, ImportError) as exc:
         parser.error(str(exc))
 

@@ -17,6 +17,7 @@ test_lost_request_is_not_100_replies (test_range.Reports.test_lost_request_is_no
 test_mismatch (test_range.Reports.test_mismatch) ... ok
 test_no_radio_contact (test_range.Reports.test_no_radio_contact) ... ok
 test_two_offline_host_processes (test_range.Reports.test_two_offline_host_processes) ... ok
+test_ctrl_c_on_b_is_operator_stop_and_logs_reach_a (test_range_online.Online.test_ctrl_c_on_b_is_operator_stop_and_logs_reach_a) ... ok
 test_mixed_modes_rejected (test_range_online.Online.test_mixed_modes_rejected) ... ok
 test_network_disconnect_keeps_local_report (test_range_online.Online.test_network_disconnect_keeps_local_report) ... ok
 test_online_needs_both_completed_and_all_transmissions (test_range_online.Online.test_online_needs_both_completed_and_all_transmissions) ... ok
@@ -35,6 +36,6 @@ test_two_serial_devices_and_report (test_usb_simulation.UsbSimulation.test_two_s
 test_tx_record_lost_on_usb_is_recovered_by_last (test_usb_simulation.UsbSimulation.test_tx_record_lost_on_usb_is_recovered_by_last) ... ok
 
 ----------------------------------------------------------------------
-Ran 35 tests in 123.841s
+Ran 36 tests in 134.355s
 
 OK
