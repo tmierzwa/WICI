@@ -1,6 +1,6 @@
 # WICI: licencje i zakres
 
-Własne materiały: współtwórcy WICI. Licencja zależy od ścieżki i rodzaju pliku, zgodnie z poniższą mapą. Pliki w paczkach mają te same licencje co ich źródła. Cel projektu jest niekomercyjny, ale poniższe licencje pozwalają na zastosowania komercyjne.
+Własne materiały: współtwórcy WICI. Licencja zależy od ścieżki i rodzaju pliku, zgodnie z poniższą mapą. Pliki w paczkach mają te same licencje co ich źródła. Projekt jest otwarty; poniższe licencje dopuszczają zastosowania komercyjne.
 
 | Ścieżki | Licencja |
 |---|---|
