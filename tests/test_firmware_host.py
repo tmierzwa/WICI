@@ -2284,6 +2284,127 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual(self.lines(s[1])[3], "gate closed")      # zachowana fraza z listy stacji, po angielsku
         self.assertIn("need resolved", self.lines(s[-1]))         # nie „potrzeba ustała”
 
+    def test_own_text_entry_by_letter_groups(self):
+        # Wpis tekstu (oprogramowanie.md, „Wpis tekstu”): lista GOTOWE, SPACJA i grupy; OK otwiera grupę, OK dopisuje
+        # znak i wraca na tę samą grupę; WSTECZ na liście usuwa ostatni znak; GOTOWE kończy, a tekst trafia do SA1.
+        data = ui_texts.load()
+        texts, labels = data["texts"], data["labels"]
+        to_phrase = ["K OK 0", "K OK 0", "K DOWN 0", "K DOWN 0", "K OK 0", "K DOWN 0", "K DOWN 0", "K OK 0", "K DOWN 0",
+                     "K DOWN 0", "K OK 0"]
+        own = ["K DOWN 0", "K DOWN 0", "K OK 0", "R"]    # brak, fraza stacji, WŁASNY TEKST
+
+        def letter(moves, index):   # ruch po liście (+ w dół), otwarcie grupy, znak w grupie, dopisanie
+            return ["K DOWN 0" if moves > 0 else "K UP 0"] * abs(moves) + ["K OK 0"] + ["K DOWN 0"] * index + ["K OK 0"]
+
+        # PIĘTRO 2: P(gr. 6), I(4), Ę(3), T(7), R(6), O(5), spacja (1), 2 (9) i 3 usunięte WSTECZ; kursor startuje na grupie 2.
+        typed = (letter(4, 1) + letter(-2, 1) + ["R"] + letter(-1, 2) + ["K OK 0", "K DOWN 0", "K DOWN 0", "R", "K BACK 0"] + letter(4, 1) + letter(-1, 3) +
+                 letter(-1, 4) + ["K UP 0"] * 4 + ["K OK 0"] + letter(8, 2) + letter(0, 3) + ["K BACK 0", "R"])
+        done = ["K UP 0"] * 9 + ["K OK 0", "R", "K BACK 0", "R", "K UP 0"] + ["K UP 0"] * 7 + ["K OK 0", "K OK 0", "R", "M"]
+        out = self.ui(self.HOSTED + to_phrase + ["R"] + own + typed + done)
+        s = self.screens(out)
+        phrase, empty, two, group, typed_screen, summary, back, final = s[0], s[1], s[2], s[3], s[4], s[5], s[6], s[7]
+        self.assertEqual(self.lines(phrase)[2], labels["WLASNY_TEKST"][0])
+        self.assertEqual(empty[0], "text")
+        self.assertEqual(" ".join(self.lines(empty)[:2]).strip(), texts["nie_wpisuj_nazwisk"][0])
+        self.assertEqual(self.lines(empty)[2], texts["wpis_wolne"][0].replace("[n]", "48"))
+        self.assertEqual([(inv, t) for inv, t in empty[2][3:]], [(False, labels["SPACJA"][0]), (True, "A Ą B C Ć")])
+        self.assertEqual(self.lines(two)[0], "PI_")
+        self.assertEqual(self.lines(group)[3:], ["D E Ę F G", "    ^"])    # otwarta grupa ze znacznikiem pod Ę
+        self.assertEqual(self.lines(typed_screen)[0], "PIĘTRO 2_")             # spacja i „2”, „3” usunięte WSTECZ
+        self.assertEqual(self.lines(typed_screen)[2], texts["wpis_wolne"][0].replace("[n]", "40"))
+        self.assertEqual(summary[0], "summary")
+        self.assertEqual(self.lines(summary)[3], "PIĘTRO 2")
+        self.assertEqual(back[0], "text")                                       # WSTECZ z podsumowania: wpis
+        self.assertEqual(final[0], "result")
+        self.assertTrue(any(line.endswith("|PIĘTRO 2") for line in out if line.startswith("item ")), out)
+
+        # Limit 48 znaków, GOTOWE bez spacji na końcu, cyrylica przy ukraińskim ekranie.
+        many = ["K OK 0", "K OK 0"] * 50
+        out = self.ui(self.HOSTED + to_phrase + own + many + ["R"])
+        full = self.screens(out)[-1]
+        self.assertEqual(self.lines(full)[:2], ["A" * 20, "A" * 8 + "_"])   # 48 znaków, wiersze od początku tekstu
+        self.assertEqual(self.lines(full)[2], texts["wpis_wolne"][0].replace("[n]", "0"))
+        out = self.ui(["H", self.CONFIG, "L 1", "O 1"] + to_phrase + own + ["K OK 0", "K DOWN 0", "K OK 0", "K UP 0", "K OK 0",
+                                                                             "K UP 0", "K OK 0", "R"])
+        self.assertEqual(self.screens(out)[-1][0], "summary")
+        self.assertIn("Б", self.lines(self.screens(out)[-1]))
+        # GOTOWE przy pustym tekście wraca do listy fraz.
+        out = self.ui(self.HOSTED + to_phrase + own + ["K UP 0", "K UP 0", "K OK 0", "R"])
+        self.assertEqual(self.screens(out)[-1][0], "phrase")
+        # Na ekranie wpisu powrót do ekranu głównego po 10 min zamiast 3 min; szkic z tekstem zostaje.
+        out = self.ui(self.HOSTED + to_phrase + own + ["K OK 0", "K OK 0", "T 200000", "R", "T 600000", "R"] + ["K OK 0"] * 4 +
+                      ["K DOWN 0", "K DOWN 0", "K OK 0", "K DOWN 0", "K DOWN 0", "K OK 0", "R"])
+        self.assertEqual([x[0] for x in self.screens(out)[-3:]], ["text", "main", "text"])
+        self.assertEqual(self.lines(self.screens(out)[-1])[0], "A_")
+
+    def test_own_text_spaces_hold_category_nine_and_revision(self):
+        data = ui_texts.load()
+        texts, labels = data["texts"], data["labels"]
+        to_phrase = ["K OK 0", "K OK 0", "K DOWN 0", "K DOWN 0", "K OK 0", "K DOWN 0", "K DOWN 0", "K OK 0", "K DOWN 0",
+                     "K DOWN 0", "K OK 0"]
+        own = ["K DOWN 0", "K DOWN 0", "K OK 0"]
+        # Tryb przygotowania (pasek u góry): jeden wiersz tekstu; SPACJA nie na początku i nie druga z rzędu.
+        out = self.ui(["P 1"] + self.HOSTED + to_phrase + own + ["K UP 0", "K OK 0", "K DOWN 0", "K OK 0", "K OK 0", "K UP 0",
+                                                                  "K OK 0", "K OK 0", "R", "K UP 0", "K OK 0", "R"])
+        entry, summary = self.screens(out)[-2:]
+        self.assertEqual(self.lines(entry)[0], texts["tryb_przygotowania"][0][:20])
+        self.assertEqual(self.lines(entry)[1:3], ["A _", texts["wpis_wolne"][0].replace("[n]", "46")])
+        self.assertIn((True, labels["SPACJA"][0]), entry[2][3:])
+        self.assertEqual(summary[0], "summary")
+        self.assertIn("A", self.lines(summary))                         # GOTOWE usuwa spację z końca
+        # Przytrzymanie WSTECZ usuwa kolejne znaki (po 0,5 s co 150 ms), bez pytania o porzucenie i bez wyjścia z wpisu.
+        out = self.ui(self.HOSTED + to_phrase + own + ["K OK 0", "K OK 0"] * 3 + ["KD BACK 1000", "T 1400", "R", "T 1500", "T 1650",
+                                                                                 "KU BACK 1700", "R", "KD BACK 2000", "T 2500", "T 4200",
+                                                                                 "KU BACK 4300", "R"])
+        before, held, emptied = self.screens(out)[-3:]
+        self.assertEqual(self.lines(before)[0], "AAA_")
+        self.assertEqual(self.lines(held)[0], "A_")
+        self.assertEqual(emptied[0], "text")
+        self.assertEqual(" ".join(self.lines(emptied)[:2]).strip(), texts["nie_wpisuj_nazwisk"][0])
+        # Kategoria 9: lista bez „-”, własny tekst spełnia wymóg opisu.
+        out = self.ui(self.HOSTED + ["K OK 0", "K OK 0"] + ["K DOWN 0"] * 9 + ["K OK 0", "K OK 0", "K DOWN 0", "K DOWN 0", "K OK 0",
+                      "R", "K DOWN 0", "K OK 0", "K OK 0", "K OK 0", "K UP 0", "K UP 0", "K OK 0", "R"])
+        phrases, summary = self.screens(out)[-2:]
+        self.assertEqual(self.lines(phrases)[:2], [data["phrases"][0][0], labels["WLASNY_TEKST"][0]])
+        self.assertEqual((summary[0], self.lines(summary)[0]), ("summary", data["categories"][9][0]))
+        self.assertIn("A", self.lines(summary))
+        # Rewizja zgłoszenia z własnym tekstem zachowuje tekst i nie kasuje przerwanego szkicu nowego zgłoszenia.
+        create = to_phrase + own + ["K OK 0", "K OK 0", "K OK 0", "K DOWN 0", "K DOWN 0", "K OK 0", "K UP 0", "K UP 0", "K OK 0", "K OK 0", "K OK 0"]
+        draft = ["K OK 0", "K OK 0", "K OK 0", "K OK 0", "K DOWN 0", "K DOWN 0", "K OK 0", "K DOWN 0", "K DOWN 0", "K OK 0",
+                 "K OK 0", "K DOWN 0", "K DOWN 0", "K DOWN 0", "K OK 0", "T 700000"]
+        revise = ["K OK 0", "K DOWN 0", "K OK 0", "K OK 0", "K OK 0", "K OK 0", "K OK 0", "R", "K OK 0", "K OK 0"]
+        resume = ["K OK 0", "K OK 0", "K OK 0", "K OK 0", "K DOWN 0", "K DOWN 0", "K OK 0", "K DOWN 0", "K DOWN 0", "K OK 0", "R", "M"]
+        out = self.ui(self.HOSTED + create + draft + revise + resume)
+        rev, resumed = self.screens(out)[-2:]
+        self.assertEqual((rev[0], self.lines(rev)[3]), ("summary", "AB"))
+        self.assertEqual((resumed[0], self.lines(resumed)[0]), ("text", "C_"))
+        own_items = [line for line in out if line.startswith("item ") and line.endswith("|AB")]
+        self.assertEqual(len(own_items), 1, out)
+        # Wynik zamknięty bezczynnością nie zostawia wysłanego zgłoszenia jako szkicu (kategoria wraca na 0).
+        out = self.ui(self.HOSTED + create[:-1] + ["T 200000", "R", "K OK 0", "K OK 0", "R"])
+        idle, category = self.screens(out)[-2:]
+        self.assertEqual(idle[0], "main")
+        self.assertEqual(category[0], "category")
+        self.assertEqual([inv for inv, _ in category[2]][:3], [True, False, False])
+        # Po rewizji nierozpoczęty szkic dostaje ostatnio użytą liczbę osób (10 z rewizji, nie 5).
+        to_ten = ["K OK 0", "K DOWN 0", "K OK 0", "K OK 0", "K OK 0", "K OK 0", "K DOWN 0", "K OK 0", "K OK 0", "K OK 0"]
+        out = self.ui(self.HOSTED + create + to_ten + ["K OK 0", "K OK 0", "K OK 0", "R"])
+        people = self.screens(out)[-1]
+        self.assertEqual(people[0], "people")
+        self.assertIn((True, "10 OSÓB"), people[2])
+        # Przytrzymanie WSTECZ przy pustym tekście: zwolnienie działa jak WSTECZ (lista fraz).
+        out = self.ui(self.HOSTED + to_phrase + own + ["KD BACK 1000", "T 1600", "KU BACK 1700", "R"])
+        self.assertEqual(self.screens(out)[-1][0], "phrase")
+        # Jeden wiersz tekstu (pasek przygotowania): 20 znaków bez samotnego kursora w wierszu.
+        out = self.ui(["P 1"] + self.HOSTED + to_phrase + own + ["K OK 0", "K OK 0"] * 20 + ["R", "K OK 0", "K OK 0", "R"])
+        twenty, more = self.screens(out)[-2:]
+        self.assertEqual((self.lines(twenty)[1], self.lines(more)[1]), ("A" * 20, "A_"))
+        # Alarm w trakcie wpisu: po potwierdzeniu ta sama grupa, nadal otwarta, ze znacznikiem na tym samym znaku.
+        out = self.ui(self.HOSTED + to_phrase + own + ["K DOWN 0", "K OK 0", "K DOWN 0", "O 0", "T 1000", "R", "K OK 1000", "R"])
+        alarm, back = self.screens(out)[-2:]
+        self.assertEqual((alarm[0], back[0]), ("alarm", "text"))
+        self.assertEqual(self.lines(back)[3:], ["D E Ę F G", "  ^"])
+
     def test_wizard_creates_request_and_item_shows_stage(self):
         data = ui_texts.load()
         texts, labels = data["texts"], data["labels"]

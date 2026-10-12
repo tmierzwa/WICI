@@ -41,7 +41,7 @@ Pola TEST startowego i TEST z menu: `category` = 9, `people` = 1, `urgency` = 0,
 
 Zmiana danych zgłoszenia tworzy nową rewizję (revision). Każda rewizja zawiera pełną lokalizację i treść, więc odbiorca nie potrzebuje wcześniej przekazanych danych o budynku. Stanowisko pokazuje rewizje jako jedno zgłoszenie, ale każdą potwierdza się osobno. Przez radio nie wysyła się imion, numerów PESEL, danych dokumentów ani tokenów strony. Dyżurny nie wpisuje nazwisk ani informacji o zdrowiu do REPLY i BULLETIN. Typ stanu obiektu (MELDUNEK) nie jest częścią SA1 0.5 – rozstrzyga D18.
 
-Zgłoszenie z przycisków (poziom 1) tworzy stacja: `category` i `urgency` z menu (pilność bez wartości domyślnej), `people` 1–999 z listy gotowych wartości lub wpisu cyfra po cyfrze, `location` z adresu zapisanego podczas przygotowania (przy liście obiektów: z obiektu wybranego po włączeniu; rewizja zachowuje lokalizację zgłoszenia), `text` pusty albo jedna z gotowych fraz z konfiguracji (każda ≤96 B UTF-8, zapisana po polsku; ekran pokazuje jej tłumaczenie z konfiguracji w wybranym języku, a dyżurny otrzymuje wersję polską). Kategoria 9 wymaga frazy. `urgency` = 2 wymaga dodatkowego potwierdzenia. `configure` odrzuca adres i frazę, jeśli najgorsze zgłoszenie z przycisków przekroczyłoby limit 256 B. Domyślna lista fraz: osoba na wózku; osoba leżąca – potrzebne nosze; dializy – termin dziś; insulina na 1 dzień; niemowlę – mleko modyfikowane; osoba niewidoma lub niesłysząca; tlen na wyczerpaniu; dziecko bez opieki; czujnik CO alarmuje; woda w budynku; potrzeba ustała. Ekran i panel pokazują krótki numer zgłoszenia: pierwsze 16 bitów `id` modulo 10 000, jako cztery cyfry. Cztery cyfry powtarzają się już przy kilkudziesięciu zgłoszeniach (około 4% przy 30), dlatego numer jest unikalny w obrębie stacji: stacja losuje `id` ponownie, dopóki krótki numer nie różni się od numerów zgłoszeń w jej kolejce i dzienniku zdarzenia, a nowe `id` z laptopa o zajętym numerze odrzuca (`rejected`, przyczyna `numer_zajety`) i laptop losuje nowe. Numer ten razem z nazwą stacji `WICI-xxxxxx` jednoznacznie wskazuje zgłoszenie przy przekazaniu telefonicznym lub przez gońca.
+Zgłoszenie z przycisków (poziom 1) tworzy stacja: `category` i `urgency` z menu (pilność bez wartości domyślnej), `people` 1–999 z listy gotowych wartości lub wpisu cyfra po cyfrze, `location` z adresu zapisanego podczas przygotowania (przy liście obiektów: z obiektu wybranego po włączeniu; rewizja zachowuje lokalizację zgłoszenia), `text` pusty, jedna z gotowych fraz z konfiguracji (każda ≤96 B UTF-8, zapisana po polsku; ekran pokazuje jej tłumaczenie z konfiguracji w wybranym języku, a dyżurny otrzymuje wersję polską) albo własny tekst do 48 znaków wpisany przyciskami ([wpis tekstu](#ekran-i-przyciski-stacji)); 48 znaków po najwyżej 2 B mieści się w limicie 96 B, a własny tekst trafia do dyżurnego tak, jak go wpisano. Kategoria 9 wymaga frazy albo własnego tekstu. `urgency` = 2 wymaga dodatkowego potwierdzenia. `configure` odrzuca adres i frazę, jeśli najgorsze zgłoszenie z przycisków przekroczyłoby limit 256 B. Domyślna lista fraz: osoba na wózku; osoba leżąca – potrzebne nosze; dializy – termin dziś; insulina na 1 dzień; niemowlę – mleko modyfikowane; osoba niewidoma lub niesłysząca; tlen na wyczerpaniu; dziecko bez opieki; czujnik CO alarmuje; woda w budynku; potrzeba ustała. Ekran i panel pokazują krótki numer zgłoszenia: pierwsze 16 bitów `id` modulo 10 000, jako cztery cyfry. Cztery cyfry powtarzają się już przy kilkudziesięciu zgłoszeniach (około 4% przy 30), dlatego numer jest unikalny w obrębie stacji: stacja losuje `id` ponownie, dopóki krótki numer nie różni się od numerów zgłoszeń w jej kolejce i dzienniku zdarzenia, a nowe `id` z laptopa o zajętym numerze odrzuca (`rejected`, przyczyna `numer_zajety`) i laptop losuje nowe. Numer ten razem z nazwą stacji `WICI-xxxxxx` jednoznacznie wskazuje zgłoszenie przy przekazaniu telefonicznym lub przez gońca.
 
 ## Cykl życia zgłoszenia
 
@@ -256,7 +256,7 @@ Zasady wiążące resztę specyfikacji: źródłem prawdy o zgłoszeniach i wiad
 
 **Polecenia USB.** `configure`, `export`, `import` i aktualizacja oprogramowania działają wyłącznie w trybie przygotowania, włączanym przyciskiem pod numerowaną naklejką serwisową, z zapisem każdego wejścia w FRAM ([tryb przygotowania](#tryb-przygotowania-i-naklejka-serwisowa)). Paczka eksportu jest szyfrowana kluczem publicznym stacji docelowej (X25519 + HKDF-SHA-256 + ChaCha20-Poly1305) i nigdy nie zawiera jawnego klucza prywatnego. Stacja źródłowa przestaje nadawać po eksporcie, a tożsamość usuwa dopiero po potwierdzeniu importu przez stację docelową; stany i odtwarzanie po przerwaniu są w [protokole USB](protokol-usb.md#przeniesienie-stacji). `destroy`, `close` i `silence` przez USB wymagają potwierdzenia przyciskiem na stacji w ciągu 30 s. Każde polecenie USB trafia do dziennika zdarzeń stacji.
 
-**Dane osobowe.** Kolejka stacji może zawierać dane o zdrowiu: pole `text` z panelu oraz kategorie 0–1 przy małej liczbie osób. Panel ostrzega `nie_wpisuj_nazwisk`.
+**Dane osobowe.** Kolejka stacji może zawierać dane o zdrowiu: pole `text` z panelu albo z wpisu przyciskami oraz kategorie 0–1 przy małej liczbie osób. Panel i ekran wpisu stacji ostrzegają `nie_wpisuj_nazwisk`.
 
 | Miejsce | Zapisuje | Nie zapisuje |
 |---|---|---|
@@ -300,15 +300,17 @@ Przyciski: GÓRA, DÓŁ, OK, WSTECZ, duże i wyczuwalne, obsługiwane w rękawic
 
 | Menu | Działanie |
 |---|---|
-| ZGŁOSZENIE | kreator: kategoria 0–9 z piktogramem → liczba osób → pilność (bez wartości domyślnej) → gotowa fraza lub brak (kategoria 9: fraza obowiązkowa) → podsumowanie; po wysłaniu ekran pokazuje etap i krótki numer |
+| ZGŁOSZENIE | kreator: kategoria 0–9 z piktogramem → liczba osób → pilność (bez wartości domyślnej) → gotowa fraza, WŁASNY TEKST lub brak (kategoria 9: fraza albo własny tekst obowiązkowe) → podsumowanie; po wysłaniu ekran pokazuje etap i krótki numer |
 | WIADOMOŚCI | etapy własnych zgłoszeń, odpowiedzi (REPLY) i komunikaty (BULLETIN) ze źródłem i czasem od odbioru; przy własnym zgłoszeniu: ZMIEŃ LICZBĘ OSÓB, ZMIEŃ PILNOŚĆ, POTRZEBA USTAŁA, ANULUJ WYSYŁKĘ |
 | TEST | wysłanie TEST i wynik; WSTRZYMAJ i WZNÓW na prośbę odbiorcy z komunikatu |
 | STAN | radio, liczniki, energia (`ogniwa_napiecie`, `ogniwa_czas`, napięcie 12 V), `ostatni_kontakt`, wejścia w tryb przygotowania (`przygotowanie_wejscia` i zmiana ostatniego wejścia), wersja, nazwa `WICI-xxxxxx`; PRZEKAZANIE ZMIANY; USŁUGI: OGŁOŚ ADRES, WYCISZ DŹWIĘK (po wyciszeniu WŁĄCZ DŹWIĘK), KLUCZ ZAPASOWY, ZNISZCZ DANE |
 | JĘZYK/МОВА/LANGUAGE | polski, ukraiński, angielski; etykieta zawsze w trzech językach, bez spacji wokół ukośników (19 znaków) |
 
-**Kreator zgłoszenia.** WSTECZ cofa o jeden krok; przytrzymanie WSTECZ przez 2 s pokazuje `porzucic`. Liczba osób: lista z liczbą i rzeczownikiem (`osoby_1`, `osoby_2`, `osoby_5`): „1 OSOBA, 2 OSOBY, 5 OSÓB, 10 OSÓB, 20 OSÓB, 50 OSÓB, 100 OSÓB, INNA LICZBA”, bez osobnego tytułu, żeby lista mieściła 5 wierszy; INNA LICZBA to wpis cyfra po cyfrze (setki, dziesiątki, jednostki), przytrzymanie przycisku przyspiesza zmianę, domyślnie stoi ostatnio użyta wartość. Pilność wybiera się z etykiet `pilnosc_2`, `pilnosc_1`, `pilnosc_0`; pilność 2 wymaga potwierdzenia `pilnosc_2_potw`. Podsumowanie pokazuje piktogram i kategorię, liczbę osób, pilność słownie, frazę, adres i `podsumowanie_klawisze`. Po 3 min bezczynności szkic zostaje zapisany, a stacja wraca do ekranu głównego; tak samo wraca każdy inny ekran poza głównym, wyborem języka, alarmem i pytaniem polecenia USB (ono kończy się po 30 s odmową `not_confirmed`). Po wysłaniu ekran pokazuje kolejne etapy z tabeli.
+**Kreator zgłoszenia.** WSTECZ cofa o jeden krok; przytrzymanie WSTECZ przez 2 s pokazuje `porzucic` (poza ekranem wpisu tekstu, niżej). Liczba osób: lista z liczbą i rzeczownikiem (`osoby_1`, `osoby_2`, `osoby_5`): „1 OSOBA, 2 OSOBY, 5 OSÓB, 10 OSÓB, 20 OSÓB, 50 OSÓB, 100 OSÓB, INNA LICZBA”, bez osobnego tytułu, żeby lista mieściła 5 wierszy; INNA LICZBA to wpis cyfra po cyfrze (setki, dziesiątki, jednostki), przytrzymanie przycisku przyspiesza zmianę, domyślnie stoi ostatnio użyta wartość. Pilność wybiera się z etykiet `pilnosc_2`, `pilnosc_1`, `pilnosc_0`; pilność 2 wymaga potwierdzenia `pilnosc_2_potw`. Podsumowanie pokazuje piktogram i kategorię, liczbę osób, pilność słownie, frazę, adres i `podsumowanie_klawisze`. Po 3 min bezczynności szkic zostaje zapisany, a stacja wraca do ekranu głównego; zmiana własnego zgłoszenia z WIADOMOŚCI (nowa rewizja) nie nadpisuje tego szkicu, który wraca po jej wysłaniu albo porzuceniu; ekran wyniku po wysłaniu zamyka się po bezczynności tak jak OK, więc wysłane zgłoszenie nie wraca jako szkic; nierozpoczęty szkic dostaje ostatnio użytą liczbę osób także po rewizji; tak samo wraca każdy inny ekran poza głównym, wyborem języka, alarmem i pytaniem polecenia USB (ono kończy się po 30 s odmową `not_confirmed`). Po wysłaniu ekran pokazuje kolejne etapy z tabeli.
 
-**Własne zgłoszenie.** ZMIEŃ LICZBĘ OSÓB i ZMIEŃ PILNOŚĆ tworzą nową rewizję, jak na stronie. POTRZEBA USTAŁA tworzy nową rewizję z frazą „potrzeba ustała”. ANULUJ WYSYŁKĘ jest dostępne tylko, dopóki zgłoszenie nie wyszło ze stacji (ekran `zapisane_w_stacji` albo `zapisane_w_ciszy` od utworzenia): oznacza intencję jako anulowaną i zapisuje to w dzienniku zdarzeń. Zgłoszenie, które stacja choć raz nadała, mogło dotrzeć do odbiorcy, nawet bez potwierdzenia, a odbiorca o anulowaniu by nie wiedział; dlatego po pierwszym nadaniu zamiast ANULUJ jest tylko POTRZEBA USTAŁA. Swobodny opis wpisuje się tylko w panelu laptopa.
+**Wpis tekstu.** WŁASNY TEKST to ostatnia pozycja listy fraz. Wpis ma dwa poziomy: GÓRA i DÓŁ wybierają pozycję listy GOTOWE, SPACJA i grup znaków z tabeli [Grupy znaków wpisu](#teksty-ekranu), OK otwiera grupę; w grupie GÓRA i DÓŁ wybierają znak (znacznik `^` pod znakiem, jak przy INNA LICZBA), OK go dopisuje i wraca do listy na tej samej grupie, a WSTECZ wraca do listy bez dopisania. WSTECZ na liście usuwa ostatni znak, a przy pustym tekście wraca do listy fraz; przytrzymanie WSTECZ na liście usuwa kolejne znaki (po 0,5 s co 150 ms, bez wyjścia z wpisu) i na tym ekranie nie pokazuje `porzucic`. SPACJA nie dopisuje spacji na początku ani drugiej z rzędu. GOTOWE usuwa spację z końca i przechodzi do podsumowania; przy pustym tekście wraca do listy fraz. Kursor listy staje po wejściu na pierwszej grupie liter. Język ekranu wybiera alfabet: przy polskim i angielskim grupy PL, przy ukraińskim grupy UK; cyfry i znaki interpunkcyjne są wspólne. Tekst ma najwyżej 48 znaków; po ostatnim wolnym miejscu stacja nie dopisuje znaku. Ekran pokazuje u góry koniec wpisanego tekstu z kursorem `_` (przy pustym tekście ostrzeżenie `nie_wpisuj_nazwisk`), pod nim `wpis_wolne`, a w dwóch dolnych wierszach listę albo grupę ze znacznikiem. Na ekranie wpisu powrót do ekranu głównego następuje po 10 min bezczynności zamiast 3 min; szkic z tekstem zostaje. Po alarmie albo pytaniu polecenia USB wpis wraca na tę samą pozycję listy i grupy. Tekst ginie przy restarcie stacji (watchdog, restart programowy, wyłączenie), bo szkic jest tylko w RAM. WSTECZ z podsumowania wraca do wpisu. Zmiana liczby osób albo pilności zachowuje własny tekst. Podpowiadanie słów ze słownika stacji rozważa się po zmierzeniu czasu wpisu w T8.
+
+**Własne zgłoszenie.** ZMIEŃ LICZBĘ OSÓB i ZMIEŃ PILNOŚĆ tworzą nową rewizję, jak na stronie. POTRZEBA USTAŁA tworzy nową rewizję z frazą „potrzeba ustała”. ANULUJ WYSYŁKĘ jest dostępne tylko, dopóki zgłoszenie nie wyszło ze stacji (ekran `zapisane_w_stacji` albo `zapisane_w_ciszy` od utworzenia): oznacza intencję jako anulowaną i zapisuje to w dzienniku zdarzeń. Zgłoszenie, które stacja choć raz nadała, mogło dotrzeć do odbiorcy, nawet bez potwierdzenia, a odbiorca o anulowaniu by nie wiedział; dlatego po pierwszym nadaniu zamiast ANULUJ jest tylko POTRZEBA USTAŁA. Opis wpisany przyciskami nie zmienia się w rewizji; inny opis wymaga nowego zgłoszenia albo panelu laptopa.
 
 **PRZEKAZANIE ZMIANY** (STAN) pokazuje najpierw stan stacji: ciszę, `radio_awaria`, `blad_pamieci`, `adres_brak` po odpowiedzi NIE, nieprzeczytane wiadomości, energię, wyciszenie dźwięku i wejścia w tryb przygotowania (licznik i zmianę ostatniego wejścia, do porównania z ewidencją), a potem otwarte i niepotwierdzone zgłoszenia od najstarszego. Zgłoszenia, które nie mieszczą się w tekście, liczy ostatni wiersz „+N”.
 
@@ -393,7 +395,8 @@ Jedyna kanoniczna lista tekstów stacji i strony mieszkańca; inne dokumenty cyt
 | `nie_wyslane` | NIE WYSŁANE – PODEJDŹ DO OPIEKUNA | НЕ ВІДПРАВЛЕНО – ПІДІЙДІТЬ ДО КООРДИНАТОРА | NOT SENT – SEE THE WARDEN | strona: opiekun nie przekazał zgłoszenia |
 | `zapisz_numer` | ZAPISZ NUMER [xxxx] – PODAJ GO OPIEKUNOWI, ABY SPRAWDZIĆ STAN | ЗАПИШІТЬ НОМЕР [xxxx] – НАЗВІТЬ ЙОГО КООРДИНАТОРУ, ЩОБ ПЕРЕВІРИТИ СТАН | NOTE NUMBER [xxxx] – GIVE IT TO THE WARDEN TO CHECK THE STATUS | strona: po wysłaniu, z lokalnym numerem |
 | `zostalo_znakow` | ZOSTAŁO OKOŁO [n] ZNAKÓW | ЗАЛИШИЛОСЯ ПРИБЛИЗНО [n] ЗНАКІВ | ABOUT [n] CHARACTERS LEFT | strona i panel: licznik pod opisem, z limitu bajtów |
-| `nie_wpisuj_nazwisk` | NIE WPISUJ NAZWISK | НЕ ВПИСУЙТЕ ПРІЗВИЩ | DO NOT ENTER SURNAMES | strona i panel: ostrzeżenie przy opisie |
+| `nie_wpisuj_nazwisk` | NIE WPISUJ NAZWISK | НЕ ВПИСУЙТЕ ПРІЗВИЩ | DO NOT ENTER SURNAMES | strona, panel i ekran wpisu stacji przy pustym tekście: ostrzeżenie przy opisie |
+| `wpis_wolne` | WOLNE ZNAKI: [n] | ВІЛЬНІ ЗНАКИ: [n] | CHARS LEFT: [n] | ekran wpisu tekstu stacji: wolne miejsce z 48 znaków |
 | `odpowiedzi_po_polsku` | – | ВІДПОВІДІ ВІД ОДЕРЖУВАЧА НАДХОДЯТЬ ПОЛЬСЬКОЮ | REPLIES FROM THE RECIPIENT ARRIVE IN POLISH | WIADOMOŚCI w wersji UK i EN, nad każdą odpowiedzią i komunikatem; zdanie karty UK i EN |
 
 Pozycje menu, nazwy przycisków i etykiety kategorii są częścią tej listy. Krótkie formy ekranu głównego, pozycje menu i etykiety kategorii mają ≤20 znaków po wstawieniu największych wartości w każdym języku; T1 sprawdza to dla PL, UK i EN.
@@ -419,6 +422,9 @@ Pozycje menu, nazwy przycisków i etykiety kategorii są częścią tej listy. K
 | POTRZEBA USTAŁA | ПОТРЕБА ЗНИКЛА | NEED RESOLVED |
 | ANULUJ WYSYŁKĘ | СКАСУВАТИ ВІДПРАВКУ | CANCEL SENDING |
 | INNA LICZBA (liczba osób) | ІНША КІЛЬКІСТЬ | OTHER NUMBER |
+| WŁASNY TEKST (lista fraz) | СВІЙ ТЕКСТ | OWN TEXT |
+| GOTOWE (wpis tekstu) | ГОТОВО | DONE |
+| SPACJA (wpis tekstu) | ПРОБІЛ | SPACE |
 
 Etykiety kategorii na ekranie, obok piktogramu (pełny opis kategorii: [wiadomości SA1](#wiadomości-sa1)):
 
@@ -434,6 +440,21 @@ Etykiety kategorii na ekranie, obok piktogramu (pełny opis kategorii: [wiadomo�
 | 7 | ZAGROŻENIE BUDYNKU | ЗАГРОЗА БУДІВЛІ | BUILDING HAZARD |
 | 8 | POSZUKIWANIE, INFO | ПОШУК ЛЮДЕЙ, ІНФО | MISSING PEOPLE, INFO |
 | 9 | INNE | ІНШЕ | OTHER |
+
+Grupy znaków wpisu tekstu, po pozycjach GOTOWE i SPACJA. Ekran pokazuje grupę ze spacjami między znakami. Grupy PL obejmują też Q, V i X (wyrazy obce, nazwy), grupy UK apostrof.
+
+| Grupa | PL i EN | UK |
+|---|---|---|
+| 1 | AĄBCĆ | АБВГҐ |
+| 2 | DEĘFG | ДЕЄЖЗ |
+| 3 | HIJKL | ИІЇЙК |
+| 4 | ŁMNŃO | ЛМНОП |
+| 5 | ÓPQRS | РСТУФ |
+| 6 | ŚTUVW | ХЦЧШЩ |
+| 7 | XYZŹŻ | ЬЮЯ' |
+| 8 | 01234 | 01234 |
+| 9 | 56789 | 56789 |
+| 10 | .,-?/ | .,-?/ |
 
 Domyślne gotowe frazy ([zgłoszenie z przycisków](#wiadomości-sa1)): do SA1 trafia zawsze wersja polska, a ekran pokazuje tłumaczenie w wybranym języku.
 

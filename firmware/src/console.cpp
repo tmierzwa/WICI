@@ -131,8 +131,9 @@ void Console::markRead(uint32_t ref) {
 }
 
 const char* Console::phraseText(const ui::Draft& draft) {
-    // Do SA1 trafia wersja polska frazy; POTRZEBA USTAŁA to ostatnia fraza domyślna.
+    // Do SA1 trafia wersja polska frazy albo własny tekst; POTRZEBA USTAŁA to ostatnia fraza domyślna.
     if (draft.phrase == ui::PHRASE_RESOLVED) return ui_texts::PHRASES[ui_texts::PHRASES_COUNT - 1][0];
+    if (draft.phrase == ui::PHRASE_OWN) return draft.text;   // własny tekst wpisany przyciskami
     if (draft.phrase < 0) return "";
     const config::Config& c = store_.config();
     const size_t index = static_cast<size_t>(draft.phrase);

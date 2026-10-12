@@ -24,7 +24,7 @@ Adres schronienia zapisano w stacji przed kryzysem. Przy uruchomieniu stacja pyt
 - Adres jest błędny albo stacja pokazuje „STACJA NIE MA TWOJEGO ADRESU – UŻYJ FORMULARZA PAPIEROWEGO”: wysyłaj zgłoszenia tylko formularzem przez gońca, jeśli droga jest bezpieczna ([goniec](#goniec)), i zgłoś błąd osobie utrzymującej system. Adresu nie da się zmienić w schronieniu, bo stacja przyjmuje go tylko w trybie przygotowania.
 - Jeśli stacja ma listę kilku obiektów, najpierw wybierz właściwy przyciskami GÓRA i DÓŁ i potwierdź OK; stacja zapyta wtedy o adres tego obiektu. WSTECZ przy pytaniu o adres wraca do listy. Gdy żaden obiekt z listy nie pasuje, naciśnij WSTECZ na liście i postępuj jak przy błędnym adresie.
 
-Miejsce w budynku (piętro, sala) nie należy do adresu. Na poziomie 1 wybierz pasującą gotową frazę albo przekaż je gońcem, jeśli droga jest bezpieczna. W panelu laptopa i na stronie mieszkańca wpisuje się je na początku opisu.
+Miejsce w budynku (piętro, sala) nie należy do adresu. Na poziomie 1 wybierz pasującą gotową frazę albo wpisz je przyciskami jako „WŁASNY TEKST” (na przykład „PIĘTRO 2 SALA 14”). W panelu laptopa i na stronie mieszkańca wpisuje się je na początku opisu.
 
 ## Odbiorca, kontakt i zastępstwo
 

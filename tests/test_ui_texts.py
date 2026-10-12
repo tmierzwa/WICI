@@ -42,6 +42,20 @@ class TextTests(unittest.TestCase):
         self.assertEqual([key for key, _ in self.data["menu"]], ["ZGLOSZENIE", "WIADOMOSCI", "TEST", "STAN", "JEZYK"])
         self.assertEqual(self.data["buttons"][0], ("GÓRA", "DÓŁ", "OK", "WSTECZ"))
 
+    def test_text_entry_groups_fit_and_are_sa1_safe(self):
+        # oprogramowanie.md, „Wpis tekstu”: 10 grup w PL i UK; grupa ze spacjami mieści się w wierszu ekranu.
+        groups = self.data["groups"]
+        self.assertEqual(len(groups), 10)
+        for strings in groups:
+            self.assertEqual(strings[0], strings[2])   # EN używa grup PL
+            for s in strings:
+                self.assertLessEqual(2 * len(s) - 1, 20, s)
+                self.assertFalse(set(s) & {'"', "\\"}, s)
+        pl = "".join(g[0] for g in groups)
+        self.assertTrue(set("AĄBCĆDEĘFGHIJKLŁMNŃOÓPRSŚTUWYZŹŻ0123456789") <= set(pl))
+        uk = "".join(g[1] for g in groups)
+        self.assertTrue(set("АБВГҐДЕЄЖЗИІЇЙКЛМНОПРСТУФХЦЧШЩЬЮЯ") <= set(uk))
+
     def test_header_cites_specification_texts(self):
         text = ui_texts.HEADER.read_text(encoding="utf-8")
         for key, strings in self.data["texts"].items():
