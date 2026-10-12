@@ -110,7 +110,7 @@
 
 <p>Token ogranicza dostęp do zgłoszenia w aplikacji, ale przesyłany przez HTTP może zostać przechwycony. Hasło Wi-Fi nie zastępuje HTTPS. Baza laptopa jest na dysku zaszyfrowana kluczem z pamięci USB zestawu. Start nie wymaga hasła, więc szyfrowanie nie opóźnia uruchomienia.</p>
 
-<p>Klucz tożsamości, karta odbiorcy i kolejka są w pamięci stacji. Szyfrowanie rekordów FRAM (AEAD) jest wymagane przed wydaniem, nie przed pilotażem: na poziomie 1 kolejka zawiera tylko frazy z przycisków, a dane o zdrowiu tylko pośrednio, przez kategorie. Kolejka zawiera adres schronienia i zgłoszenia zbiorcze.</p>
+<p>Klucz tożsamości, karta odbiorcy i kolejka są w pamięci stacji. Szyfrowanie rekordów FRAM (AEAD) jest wymagane przed wydaniem, nie przed pilotażem: na poziomie 1 kolejka zawiera frazy z przycisków i krótkie opisy wpisane przyciskami, adres schronienia i zgłoszenia zbiorcze. Własny opis może zawierać dane o zdrowiu konkretnej osoby, dlatego ekran wpisu i karta ostrzegają „nie wpisuj nazwisk”, a w pilotażu stacje pozostają pod nadzorem zespołu projektu. Jeżeli pilotaż wykaże, że opisy wskazują osoby mimo ostrzeżenia, szyfrowanie FRAM przechodzi przed kolejne próby.</p>
 
 <p>Po dołączeniu laptopa (poziom 2, po pilotażu) może zawierać też dane o zdrowiu: opis z panelu oraz kategorie 0–1 przy małej liczbie osób mogą wskazywać konkretną osobę. Stacja zapisuje tylko treść SA1. Laptop zapisuje SA1, skrót tokenu i czas, bez adresu IP, adresu MAC, numeru telefonu i nazwiska. Panel ostrzega „nie wpisuj nazwisk”.</p>
 

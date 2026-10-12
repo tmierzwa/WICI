@@ -81,6 +81,8 @@ enum class Id : uint8_t {
     ODCISK_KLUCZA,
     STOPKA_KOMUNIKATU,
     ZAPISZ_NUMER,
+    NIE_WPISUJ_NAZWISK,
+    WPIS_WOLNE,
     ODPOWIEDZI_PO_POLSKU,
     COUNT
 };
@@ -153,6 +155,8 @@ constexpr const char* const TEXTS[static_cast<size_t>(Id::COUNT)][LANGS] = {
     {"ODCISK KLUCZA STACJI: [x] – PORÓWNAJ Z LAPTOPEM. OK = ZAMKNIJ", "ВІДБИТОК КЛЮЧА СТАНЦІЇ: [x] – ПОРІВНЯЙТЕ З НОУТБУКОМ. OK = ЗАКРИТИ", "STATION KEY FINGERPRINT: [x] – COMPARE WITH THE LAPTOP. OK = CLOSE"},
     {"NAKAZ WYJŚCIA LUB EWAKUACJI? POTWIERDŹ W RADIU PUBLICZNYM LUB U GOŃCA", "НАКАЗ ВИЙТИ АБО ЕВАКУЮВАТИСЯ? ПІДТВЕРДІТЬ ПО СУСПІЛЬНОМУ РАДІО АБО В ПОСИЛЬНОГО", "ORDER TO LEAVE OR EVACUATE? CONFIRM ON PUBLIC RADIO OR WITH THE RUNNER"},
     {"ZAPISZ NUMER [xxxx] – PODAJ GO OPIEKUNOWI, ABY SPRAWDZIĆ STAN", "ЗАПИШІТЬ НОМЕР [xxxx] – НАЗВІТЬ ЙОГО КООРДИНАТОРУ, ЩОБ ПЕРЕВІРИТИ СТАН", "NOTE NUMBER [xxxx] – GIVE IT TO THE WARDEN TO CHECK THE STATUS"},
+    {"NIE WPISUJ NAZWISK", "НЕ ВПИСУЙТЕ ПРІЗВИЩ", "DO NOT ENTER SURNAMES"},
+    {"WOLNE ZNAKI: [n]", "ВІЛЬНІ ЗНАКИ: [n]", "CHARS LEFT: [n]"},
     {"", "ВІДПОВІДІ ВІД ОДЕРЖУВАЧА НАДХОДЯТЬ ПОЛЬСЬКОЮ", "REPLIES FROM THE RECIPIENT ARRIVE IN POLISH"},
 };
 
@@ -176,6 +180,9 @@ enum class Label : uint8_t {
     POTRZEBA_USTALA,
     ANULUJ_WYSYLKE,
     INNA_LICZBA,
+    WLASNY_TEKST,
+    GOTOWE,
+    SPACJA,
     COUNT
 };
 
@@ -198,6 +205,9 @@ constexpr const char* const LABELS[static_cast<size_t>(Label::COUNT)][LANGS] = {
     {"POTRZEBA USTAŁA", "ПОТРЕБА ЗНИКЛА", "NEED RESOLVED"},
     {"ANULUJ WYSYŁKĘ", "СКАСУВАТИ ВІДПРАВКУ", "CANCEL SENDING"},
     {"INNA LICZBA", "ІНША КІЛЬКІСТЬ", "OTHER NUMBER"},
+    {"WŁASNY TEKST", "СВІЙ ТЕКСТ", "OWN TEXT"},
+    {"GOTOWE", "ГОТОВО", "DONE"},
+    {"SPACJA", "ПРОБІЛ", "SPACE"},
 };
 
 // Przyciski: GÓRA, DÓŁ, OK, WSTECZ.
@@ -246,6 +256,21 @@ constexpr const char* const PHRASES[PHRASES_COUNT][LANGS] = {
     {"czujnik CO alarmuje", "датчик CO спрацював", "CO alarm sounding"},
     {"woda w budynku", "вода в будівлі", "water in the building"},
     {"potrzeba ustała", "потреба зникла", "need resolved"},
+};
+
+// Grupy znaków wpisu tekstu (PL, UK, EN), po pozycjach GOTOWE i SPACJA.
+constexpr size_t GROUPS_COUNT = 10;
+constexpr const char* const GROUPS[GROUPS_COUNT][LANGS] = {
+    {"AĄBCĆ", "АБВГҐ", "AĄBCĆ"},
+    {"DEĘFG", "ДЕЄЖЗ", "DEĘFG"},
+    {"HIJKL", "ИІЇЙК", "HIJKL"},
+    {"ŁMNŃO", "ЛМНОП", "ŁMNŃO"},
+    {"ÓPQRS", "РСТУФ", "ÓPQRS"},
+    {"ŚTUVW", "ХЦЧШЩ", "ŚTUVW"},
+    {"XYZŹŻ", "ЬЮЯ'", "XYZŹŻ"},
+    {"01234", "01234", "01234"},
+    {"56789", "56789", "56789"},
+    {".,-?/", ".,-?/", ".,-?/"},
 };
 
 // Jednostki [czas] (minuty, godziny, doby) i separator dziesiętny napięcia.

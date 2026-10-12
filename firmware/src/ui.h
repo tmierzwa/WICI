@@ -3,7 +3,7 @@
 // wybór języka po włączeniu, kontrola adresu i propozycja TEST startowego, ekran główny z pięciu
 // krótkich form, cisza radiowa, pasek trybu przygotowania, menu (ZGŁOSZENIE, WIADOMOŚCI, TEST,
 // STAN, JĘZYK), kreator zgłoszenia (kategoria, liczba osób z wpisem cyfr, pilność z potwierdzeniem
-// pilności 2, fraza, podsumowanie, wynik), WIADOMOŚCI z etapami własnych zgłoszeń i działaniami
+// pilności 2, fraza albo własny tekst wpisany grupami znaków, podsumowanie, wynik), WIADOMOŚCI z etapami własnych zgłoszeń i działaniami
 // (nowa rewizja, POTRZEBA USTAŁA, ANULUJ WYSYŁKĘ), TEST z WSTRZYMAJ/WZNÓW, STAN z PRZEKAZANIEM
 // ZMIANY i USŁUGAMI (KLUCZ ZAPASOWY, ZNISZCZ DANE z sekwencją GÓRA, DÓŁ, GÓRA, OK), alarmy
 // na cały ekran, przytrzymanie WSTECZ (2 s: porzucenie zgłoszenia, 3 s: wybór języka).
@@ -31,6 +31,7 @@ constexpr size_t COLS = ui_texts::MAX_COLUMNS;
 // UTF-8 do 4 B na znak: tekst z radia i z konfiguracji może mieć znaki spoza BMP (font pokazuje je jako U+FFFD).
 constexpr size_t LINE_BYTES = 4 * COLS + 1;
 constexpr uint32_t IDLE_MS = 180000;          // powrót do ekranu głównego po 3 min bezczynności
+constexpr uint32_t IDLE_TEXT_MS = 600000;     // na ekranie wpisu tekstu: po 10 min
 constexpr uint32_t HOLD_DISCARD_MS = 2000;    // przytrzymanie WSTECZ w kreatorze: porzucić?
 constexpr uint32_t HOLD_LANGUAGE_MS = 3000;   // przytrzymanie WSTECZ poza kreatorem: wybór języka
 constexpr uint32_t REPEAT_DELAY_MS = 500;     // wpis cyfr: przytrzymanie przyspiesza zmianę
@@ -40,12 +41,14 @@ constexpr size_t TEXT_MAX_LINES = 24;
 constexpr size_t ADDRESS_CHOICES = 8;        // lista obiektów (store::ADDRESSES)
 constexpr size_t ITEM_TEXT = 193;             // treść REPLY/BULLETIN albo fraza (UTF-8)
 constexpr uint16_t PEOPLE_MAX = 999;
+constexpr size_t OWN_TEXT_CHARS = 48;         // własny tekst: 48 znaków po najwyżej 2 B mieści się w 96 B SA1
+constexpr size_t OWN_TEXT_BYTES = 2 * OWN_TEXT_CHARS + 1;
 
 enum class Button : uint8_t { UP, DOWN, OK, BACK };
 enum class Screen : uint8_t {
     LANGUAGE, MAIN, MENU, STATUS, LANGUAGE_MENU,
     ADDRESS, ADDRESS_LIST, TEST_OFFER,
-    CATEGORY, PEOPLE, DIGITS, URGENCY, URGENCY_CONFIRM, PHRASE, SUMMARY, RESULT, DISCARD,
+    CATEGORY, PEOPLE, DIGITS, URGENCY, URGENCY_CONFIRM, PHRASE, TEXT, SUMMARY, RESULT, DISCARD,
     MESSAGES, ITEM, ITEM_MENU,
     TEST, TEST_MENU,
     HANDOVER, SERVICES, BACKUP, DESTROY,
@@ -119,6 +122,7 @@ enum class DraftKind : uint8_t { NEW, PEOPLE, URGENCY, RESOLVED };
 constexpr int8_t PHRASE_NONE = -1;
 constexpr int8_t PHRASE_RESOLVED = -2;  // "potrzeba ustała"
 constexpr int8_t PHRASE_KEPT = -3;      // rewizja liczby osób albo pilności: treść spoza listy fraz (z panelu)
+constexpr int8_t PHRASE_OWN = -4;       // własny tekst wpisany przyciskami (Draft::text)
 
 struct Draft {
     DraftKind kind = DraftKind::NEW;
@@ -127,6 +131,7 @@ struct Draft {
     uint16_t people = 1;
     uint8_t urgency = 0;
     int8_t phrase = PHRASE_NONE;
+    char text[OWN_TEXT_BYTES] = {};   // własny tekst (PHRASE_OWN), UTF-8 w NFC
 };
 
 enum class Submit : uint8_t { STORED, NO_ADDRESS, FULL, ERROR, ANNOUNCED, NOT_ANNOUNCED };  // (NOT_)ANNOUNCED: OGŁOŚ ADRES
@@ -244,7 +249,10 @@ private:
     void prepText(const Status& status, char* entries, char* change, size_t size) const;
     void stageText(const Item& item, const Status& status, char* out, size_t size) const;
     bool openItem(Item& item);  // otwarta pozycja po numerze rekordu (lista mogła się przesunąć)
-    size_t phraseListCount() const;
+    size_t phraseListCount() const;   // brak (poza kategorią 9), frazy, WŁASNY TEKST
+    void textAct(bool up, bool down, bool ok, bool back);
+    bool eraseLast();                 // wpis tekstu: usuwa ostatni znak UTF-8; false = tekst pusty
+    void renderTextEntry(Lines& out, size_t first, size_t window);
     size_t itemMenu(uint8_t out[4]);   // szuka pozycji po numerze rekordu (lista mogła się przesunąć)
     Screen afterPeople() const;
     Screen afterUrgency() const;
@@ -264,10 +272,15 @@ private:
     bool changed_ = false;
     // Kreator.
     Draft draft_;
+    Draft pending_;               // szkic nowego zgłoszenia przerwany rewizją (draft_ to wtedy rewizja)
     uint16_t lastPeople_ = 1;
     uint8_t digits_[3] = {0, 0, 1};
     uint8_t digitPos_ = 0;
     bool urgencyPicked_ = false;
+    bool textGroupOpen_ = false;  // wpis tekstu: wybór znaku w grupie (inaczej lista GOTOWE, SPACJA, grupy)
+    uint8_t textLetter_ = 0;
+    uint16_t textCursor_ = 0;     // pozycja listy wpisu przed alarmem albo pytaniem USB
+    bool newStarted_ = false;     // szkic nowego zgłoszenia rozpoczęty (ZGŁOSZENIE) od ostatniego wyczyszczenia
     Submit result_ = Submit::STORED;
     uint16_t resultNumber_ = 0;
     bool resultSilence_ = false;
@@ -284,6 +297,7 @@ private:
     bool held_[4] = {};
     uint32_t heldSinceMs_[4] = {};
     bool holdConsumed_ = false;
+    bool holdErased_ = false;     // wpis tekstu: przytrzymanie WSTECZ usuwało znaki
     uint32_t repeatMs_ = 0;
     // Sekwencja GÓRA, DÓŁ, GÓRA, OK i alarm.
     uint8_t sequence_ = 0;

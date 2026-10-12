@@ -54,6 +54,24 @@ size_t utf8Chars(const char* text) {
     return n;
 }
 
+// Wpis tekstu: pozycje GOTOWE, SPACJA i grupy znaków; lista mieści się w dwóch dolnych wierszach.
+constexpr size_t TEXT_ITEMS = 2 + ui_texts::GROUPS_COUNT;
+constexpr uint16_t TEXT_FIRST_GROUP = 2;
+constexpr size_t TEXT_LIST_ROWS = 2;
+
+// Grupa ze spacjami między znakami („A Ą B C Ć”).
+void spacedGroup(const char* group, char* out, size_t size) {
+    size_t n = 0;
+    for (size_t bytes = 0; group[bytes] && n + 6 < size;) {
+        const size_t width = utf8Bytes(group + bytes, 1);
+        if (n) out[n++] = ' ';
+        memcpy(out + n, group + bytes, width);
+        n += width;
+        bytes += width;
+    }
+    out[n] = '\0';
+}
+
 void formatNumber(char* out, size_t size, uint32_t value) { snprintf(out, size, "%lu", static_cast<unsigned long>(value)); }
 
 void substituteNumber(char* line, size_t size, const char* key, uint32_t value) {
@@ -122,6 +140,7 @@ const char* screenName(Screen screen) {
         case Screen::URGENCY: return "urgency";
         case Screen::URGENCY_CONFIRM: return "urgency_confirm";
         case Screen::PHRASE: return "phrase";
+        case Screen::TEXT: return "text";
         case Screen::SUMMARY: return "summary";
         case Screen::RESULT: return "result";
         case Screen::DISCARD: return "discard";
@@ -279,8 +298,16 @@ void Model::scroll(bool up, bool down) {
 }
 
 void Model::resetDraft() {
+    // Koniec rewizji przywraca przerwany szkic nowego zgłoszenia (z własnym tekstem); koniec nowego go czyści.
+    if (draft_.kind != DraftKind::NEW) {
+        draft_ = pending_;
+        if (!newStarted_) draft_.people = lastPeople_;   // nierozpoczęty szkic: ostatnio użyta liczba osób
+        return;
+    }
     draft_ = Draft();
     draft_.people = lastPeople_;
+    pending_ = draft_;
+    newStarted_ = false;
 }
 
 const char* Model::itemLabel(const Item& item) const {
@@ -295,6 +322,7 @@ bool Model::inWizard() const { return screen_ >= Screen::CATEGORY && screen_ <= 
 
 void Model::go(Screen screen) {
     if (screen == screen_) return;
+    if (screen_ == Screen::TEXT) textCursor_ = cursor_;
     if (screen == Screen::MESSAGES) cursor_ = messagesCursor_;  // powrót na pozycję listy
     else if (screen == Screen::LANGUAGE_MENU) cursor_ = static_cast<uint16_t>(lang_);
     else if (screen == Screen::MENU) cursor_ = item_;
@@ -306,8 +334,14 @@ void Model::go(Screen screen) {
     else if (screen == Screen::ADDRESS_LIST) cursor_ = static_cast<uint16_t>(host_ ? host_->selectedAddress() : 0);
     else if (screen == Screen::PHRASE) {
         const size_t none = draft_.category == 9 ? 0 : 1;
-        cursor_ = static_cast<uint16_t>(draft_.phrase >= 0 ? draft_.phrase + none : 0);
-    } else cursor_ = 0;
+        if (draft_.phrase == PHRASE_OWN) cursor_ = static_cast<uint16_t>(phraseListCount() - 1);   // WŁASNY TEKST
+        else cursor_ = static_cast<uint16_t>(draft_.phrase >= 0 ? draft_.phrase + none : 0);
+    } else if (screen == Screen::TEXT) {
+        // Po alarmie albo pytaniu USB wpis wraca na tę samą pozycję (także z otwartą grupą).
+        if (screen_ == Screen::ALARM || screen_ == Screen::CONFIRM) cursor_ = textCursor_;
+        else { cursor_ = TEXT_FIRST_GROUP; textGroupOpen_ = false; }
+    }
+    else cursor_ = 0;
     screen_ = screen;
     top_ = 0;
     sequence_ = 0;
@@ -328,14 +362,22 @@ void Model::moveCursor(int delta, size_t count, size_t window) {
 }
 
 size_t Model::phraseListCount() const {
-    const size_t phrases = host_ ? host_->phraseCount() : 0;
-    return phrases + (draft_.category == 9 ? 0 : 1);
+    size_t phrases = host_ ? host_->phraseCount() : 0;
+    if (phrases > ui_texts::PHRASES_COUNT) phrases = ui_texts::PHRASES_COUNT;
+    return phrases + (draft_.category == 9 ? 0 : 1) + 1;
 }
 
 Screen Model::afterPeople() const { return draft_.kind == DraftKind::NEW ? Screen::URGENCY : Screen::SUMMARY; }
 Screen Model::afterUrgency() const { return draft_.kind == DraftKind::NEW ? Screen::PHRASE : Screen::SUMMARY; }
 
 void Model::beginWizard(DraftKind kind, uint32_t ref, const Item* item) {
+    // Rewizja nie nadpisuje szkicu nowego zgłoszenia: szkic czeka w pending_ do jej końca albo do ZGŁOSZENIA.
+    if (kind != DraftKind::NEW && draft_.kind == DraftKind::NEW) pending_ = draft_;
+    else if (kind == DraftKind::NEW && draft_.kind != DraftKind::NEW) {
+        draft_ = pending_;
+        if (!newStarted_) draft_.people = lastPeople_;
+    }
+    if (kind == DraftKind::NEW) newStarted_ = true;
     draft_.kind = kind;
     draft_.ref = ref;
     if (item) {
@@ -387,7 +429,15 @@ void Model::tick(uint32_t nowMs) {
     const size_t back = static_cast<size_t>(Button::BACK);
     if (held_[back] && !holdConsumed_) {
         const uint32_t held = nowMs - heldSinceMs_[back];
-        if (inWizard() && held >= HOLD_DISCARD_MS) {
+        if (screen_ == Screen::TEXT) {
+            // Na ekranie wpisu przytrzymanie WSTECZ usuwa kolejne znaki (bez pytania o porzucenie i bez wyjścia
+            // do listy fraz); przy otwartej grupie zwolnienie ją zamyka.
+            if (!textGroupOpen_ && held >= REPEAT_DELAY_MS && nowMs - repeatMs_ >= REPEAT_MS) {
+                repeatMs_ = nowMs;
+                if (eraseLast()) holdErased_ = true;   // pusty tekst: zwolnienie działa jak zwykłe WSTECZ
+                lastPressMs_ = nowMs;
+            }
+        } else if (inWizard() && held >= HOLD_DISCARD_MS) {
             holdConsumed_ = true;
             returnTo_ = screen_;
             go(Screen::DISCARD);
@@ -411,7 +461,15 @@ void Model::tick(uint32_t nowMs) {
         }
     }
     if (screen_ == Screen::LANGUAGE || screen_ == Screen::MAIN || screen_ == Screen::ALARM || screen_ == Screen::CONFIRM) return;
-    if (nowMs - lastPressMs_ >= IDLE_MS) go(Screen::MAIN);  // szkic kreatora zostaje w pamięci
+    if (nowMs - lastPressMs_ >= (screen_ == Screen::TEXT ? IDLE_TEXT_MS : IDLE_MS)) {
+        // Szkic kreatora zostaje w pamięci; wynik bez reakcji kończy się jak OK, żeby wysłane zgłoszenie
+        // nie wróciło jako szkic następnego.
+        if (screen_ == Screen::RESULT) {
+            if (serviceResult_) serviceResult_ = false;
+            else resetDraft();
+        }
+        go(Screen::MAIN);
+    }
 }
 
 void Model::down(Button button, uint32_t nowMs) {
@@ -419,7 +477,7 @@ void Model::down(Button button, uint32_t nowMs) {
     held_[i] = true;
     heldSinceMs_[i] = nowMs;
     repeatMs_ = nowMs;
-    if (button == Button::BACK) { holdConsumed_ = false; lastPressMs_ = nowMs; return; }
+    if (button == Button::BACK) { holdConsumed_ = false; holdErased_ = false; lastPressMs_ = nowMs; return; }
     act(button, nowMs);
 }
 
@@ -427,8 +485,9 @@ void Model::up(Button button, uint32_t nowMs) {
     const size_t i = static_cast<size_t>(button);
     held_[i] = false;
     if (button == Button::BACK) {
-        if (!holdConsumed_) act(button, nowMs);
+        if (!holdConsumed_ && !holdErased_) act(button, nowMs);   // po usuwaniu przytrzymaniem zwolnienie nic nie robi
         holdConsumed_ = false;
+        holdErased_ = false;
     }
 }
 
@@ -635,17 +694,22 @@ void Model::act(Button button, uint32_t nowMs) {
             else if (downB) moveCursor(1, count, LINES);
             else if (back) go(Screen::URGENCY);
             else if (ok && count) {
+                if (cursor_ == count - 1) { go(Screen::TEXT); break; }   // WŁASNY TEKST
                 const size_t none = draft_.category == 9 ? 0 : 1;
                 draft_.phrase = cursor_ < none ? PHRASE_NONE : static_cast<int8_t>(cursor_ - none);
+                draft_.text[0] = '\0';
                 go(Screen::SUMMARY);
             }
             break;
         }
+        case Screen::TEXT:
+            textAct(up, downB, ok, back);
+            break;
         case Screen::SUMMARY:
             if (ok) { submit(); go(Screen::RESULT); }
             else if (back) {
                 switch (draft_.kind) {
-                    case DraftKind::NEW: go(Screen::PHRASE); break;
+                    case DraftKind::NEW: go(draft_.phrase == PHRASE_OWN ? Screen::TEXT : Screen::PHRASE); break;
                     case DraftKind::PEOPLE: go(Screen::PEOPLE); break;
                     case DraftKind::URGENCY: go(Screen::URGENCY); break;
                     case DraftKind::RESOLVED: go(Screen::ITEM_MENU); break;
@@ -740,6 +804,56 @@ void Model::act(Button button, uint32_t nowMs) {
             break;
         case Screen::COUNT:
             break;
+    }
+}
+
+bool Model::eraseLast() {
+    char* text = draft_.text;
+    size_t end = strlen(text);
+    if (!end) return false;
+    --end;
+    while (end && (static_cast<uint8_t>(text[end]) & 0xC0) == 0x80) --end;   // początek ostatniego znaku
+    text[end] = '\0';
+    return true;
+}
+
+void Model::textAct(bool up, bool down, bool ok, bool back) {
+    // Dwa poziomy: lista (GOTOWE, SPACJA, grupy) i znak w otwartej grupie (oprogramowanie.md, „Wpis tekstu”).
+    char* text = draft_.text;
+    const size_t length = strlen(text);
+    const bool room = utf8Chars(text) < OWN_TEXT_CHARS;
+    if (textGroupOpen_) {
+        const char* group = ui_texts::GROUPS[cursor_ - TEXT_FIRST_GROUP][static_cast<size_t>(lang_)];
+        if (up && textLetter_ > 0) --textLetter_;
+        else if (down && static_cast<size_t>(textLetter_) + 1 < utf8Chars(group)) ++textLetter_;
+        else if (back) textGroupOpen_ = false;
+        else if (ok) {
+            const char* letter = group + utf8Bytes(group, textLetter_);
+            const size_t width = utf8Bytes(letter, 1);
+            if (room && length + width < OWN_TEXT_BYTES) { memcpy(text + length, letter, width); text[length + width] = '\0'; }
+            textGroupOpen_ = false;   // powrót do listy na tej samej grupie
+        }
+        return;
+    }
+    if (up) moveCursor(-1, TEXT_ITEMS, TEXT_LIST_ROWS);
+    else if (down) moveCursor(1, TEXT_ITEMS, TEXT_LIST_ROWS);
+    else if (back) {
+        if (!length) { if (draft_.phrase == PHRASE_OWN) draft_.phrase = PHRASE_NONE; go(Screen::PHRASE); return; }
+        eraseLast();
+    } else if (ok) {
+        if (cursor_ == 0) {   // GOTOWE: bez spacji na końcu; pusty tekst wraca do listy fraz
+            size_t end = length;
+            while (end && text[end - 1] == ' ') --end;
+            text[end] = '\0';
+            if (!end) { if (draft_.phrase == PHRASE_OWN) draft_.phrase = PHRASE_NONE; go(Screen::PHRASE); return; }
+            draft_.phrase = PHRASE_OWN;
+            go(Screen::SUMMARY);
+        } else if (cursor_ == 1) {   // SPACJA: nie na początku i nie druga z rzędu
+            if (length && text[length - 1] != ' ' && room && length + 1 < OWN_TEXT_BYTES) { text[length] = ' '; text[length + 1] = '\0'; }
+        } else {
+            textGroupOpen_ = true;
+            textLetter_ = 0;
+        }
     }
 }
 
@@ -940,6 +1054,7 @@ void Model::buildSummary(Text& t) const {
     t.add(tmp);  // pilność słownie, łamana na wiersze (nie obcinana)
     if (draft_.phrase == PHRASE_RESOLVED) t.add(ui_texts::PHRASES[ui_texts::PHRASES_COUNT - 1][L]);
     else if (draft_.phrase >= 0 && host_) t.add(host_->phrase(static_cast<size_t>(draft_.phrase), lang_));
+    else if (draft_.phrase == PHRASE_OWN) t.add(draft_.text);
     else if (draft_.phrase == PHRASE_KEPT && host_) {
         // Treść spoza listy (z panelu) zostaje w rewizji: pokazana z rekordu zgłoszenia.
         const size_t count = host_->itemCount();
@@ -1044,6 +1159,60 @@ void Model::buildHandover(const Status& status, Text& t) {
         snprintf(tmp, sizeof(tmp), "+%lu", static_cast<unsigned long>(hidden));
         t.addLine(tmp);
     }
+}
+
+void Model::renderTextEntry(Lines& out, size_t first, size_t window) {
+    // U góry koniec tekstu z kursorem „_” (pusty: ostrzeżenie), pod nim wolne znaki, na dole lista albo grupa.
+    const size_t textRows = window > TEXT_LIST_ROWS + 1 ? window - TEXT_LIST_ROWS - 1 : 1;
+    size_t row = first;
+    const size_t chars = utf8Chars(draft_.text);
+    if (!draft_.text[0]) {
+        char lines[TEXT_LIST_ROWS][LINE_BYTES];   // textRows <= 2
+        const size_t wrapped = wrap(text(Id::NIE_WPISUJ_NAZWISK, lang_), lines, textRows);
+        for (size_t i = 0; i < textRows; ++i) copyLine(out.text[row++], LINE_BYTES, i < wrapped ? lines[i] : "");
+    } else {
+        // Wiersze po COLS znaków od początku tekstu, pokazane ostatnie: podział nie przeskakuje przy wpisie.
+        // Kursor „_” stoi za tekstem, jeśli ostatni wiersz ma miejsce (pełny wiersz nie ustępuje samemu kursorowi).
+        const size_t lines = (chars + COLS - 1) / COLS;
+        const size_t skip = lines > textRows ? lines - textRows : 0;
+        const char* p = draft_.text + utf8Bytes(draft_.text, skip * COLS);
+        for (size_t i = 0; i < textRows; ++i) {
+            char* line = out.text[row++];
+            copyLine(line, LINE_BYTES, p);
+            p += utf8Bytes(p, COLS);
+            if (!*p && line[0] != '\0' && utf8Chars(line) < COLS) {
+                const size_t n = strlen(line);
+                line[n] = '_';
+                line[n + 1] = '\0';
+                break;
+            }
+        }
+        row = first + textRows;
+    }
+    copyLine(out.text[row], LINE_BYTES, text(Id::WPIS_WOLNE, lang_));
+    substituteNumber(out.text[row], LINE_BYTES, "[n]", static_cast<uint32_t>(OWN_TEXT_CHARS - (chars < OWN_TEXT_CHARS ? chars : OWN_TEXT_CHARS)));
+    ++row;
+    const size_t L = static_cast<size_t>(lang_);
+    if (textGroupOpen_) {
+        spacedGroup(ui_texts::GROUPS[cursor_ - TEXT_FIRST_GROUP][L], out.text[row], LINE_BYTES);
+        snprintf(out.text[row + 1], LINE_BYTES, "%*s^", textLetter_ * 2, "");
+        return;
+    }
+    // Rozstawione są tylko widoczne grupy: okno dwóch wierszy liczone jak w renderList.
+    size_t top = top_;
+    if (cursor_ < top) top = cursor_;
+    if (cursor_ >= top + TEXT_LIST_ROWS) top = cursor_ - TEXT_LIST_ROWS + 1;
+    if (top + TEXT_LIST_ROWS > TEXT_ITEMS) top = TEXT_ITEMS - TEXT_LIST_ROWS;
+    char shownGroups[TEXT_LIST_ROWS][LINE_BYTES];
+    const char* items[TEXT_ITEMS] = {label(Label::GOTOWE, lang_), label(Label::SPACJA, lang_)};
+    for (size_t i = TEXT_FIRST_GROUP; i < TEXT_ITEMS; ++i) {
+        items[i] = "";
+        if (i >= top && i < top + TEXT_LIST_ROWS) {
+            spacedGroup(ui_texts::GROUPS[i - TEXT_FIRST_GROUP][L], shownGroups[i - top], LINE_BYTES);
+            items[i] = shownGroups[i - top];
+        }
+    }
+    renderList(items, TEXT_ITEMS, TEXT_LIST_ROWS, out, row, true);
 }
 
 void Model::render(const Status& s, Lines& out) {
@@ -1153,13 +1322,17 @@ void Model::render(const Status& s, Lines& out) {
         case Screen::PHRASE: {
             const size_t count = phraseListCount();
             const size_t none = draft_.category == 9 ? 0 : 1;
-            const char* items[ui_texts::PHRASES_COUNT + 1];
+            const char* items[ui_texts::PHRASES_COUNT + 2];
             size_t n = 0;
             if (none) items[n++] = "-";
-            for (size_t i = 0; i + none < count && n < ui_texts::PHRASES_COUNT + 1; ++i) items[n++] = host_->phrase(i, lang_);
+            for (size_t i = 0; n + 1 < count; ++i) items[n++] = host_->phrase(i, lang_);
+            items[n++] = label(Label::WLASNY_TEKST, lang_);
             renderList(items, n, window, out, first, true);
             break;
         }
+        case Screen::TEXT:
+            renderTextEntry(out, first, window);
+            break;
         case Screen::SUMMARY:
             buildSummary(t);
             renderText(t, window, out, first);

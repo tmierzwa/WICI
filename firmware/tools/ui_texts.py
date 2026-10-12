@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import unicodedata
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -65,6 +66,7 @@ def load(spec: Path = SPEC) -> dict:
     labels_table = next(t for t in found if t[0] == ["PL", "UK", "EN"])
     categories_table = next(t for t in found if t[0][0] == "Kategoria")
     phrases_table = next(t for t in found if t[0][0].startswith("PL (wysyłane)"))
+    groups_table = next(t for t in found if t[0][0] == "Grupa")
 
     texts = {}
     for row in texts_table[1:]:
@@ -86,15 +88,28 @@ def load(spec: Path = SPEC) -> dict:
             menu.append((identifier(name), labels[identifier(name)]))
     categories = [tuple(row[1:4]) for row in categories_table[1:]]
     phrases = [tuple(row[0:3]) for row in phrases_table[1:]]
+    # Grupy znaków wpisu tekstu: kolumna PL służy też ekranowi EN.
+    groups = [(row[1], row[2], row[1]) for row in groups_table[1:]]
+    for strings in groups:
+        for s in strings:
+            # Grupa ze spacjami mieści się w wierszu; znaki trafiają do SA1 bez zamiany (bez " i \\, w NFC).
+            # ValueError, nie assert: kontrola działa także przy python -O.
+            if not s or 2 * len(s) - 1 > MAX_COLUMNS:
+                raise ValueError(f"group does not fit {MAX_COLUMNS} columns: {s!r}")
+            if not unicodedata.is_normalized("NFC", s) or set(s) & {'"', "\\"}:
+                raise ValueError(f"group not SA1-safe: {s!r}")
+            if not all(unicodedata.category(c)[0] in "LNP" for c in s):
+                raise ValueError(f"group has a character outside letters, digits, punctuation: {s!r}")
     assert buttons and len(buttons) == 3 and all(len(b) == 4 for b in buttons), buttons
     assert len(categories) == 10 and len(menu) == 5, (len(categories), len(menu))
-    return {"texts": texts, "labels": labels, "buttons": buttons, "menu": menu, "categories": categories, "phrases": phrases}
+    return {"texts": texts, "labels": labels, "buttons": buttons, "menu": menu, "categories": categories, "phrases": phrases,
+            "groups": groups}
 
 
 def charset(data: dict) -> set[str]:
     """Every character that can appear on the screen from the canonical tables and units."""
     chars: set[str] = set()
-    for group in (data["texts"].values(), data["labels"].values(), data["categories"], data["phrases"], data["menu"]):
+    for group in (data["texts"].values(), data["labels"].values(), data["categories"], data["phrases"], data["groups"], data["menu"]):
         for entry in group:
             strings = entry[1] if isinstance(entry[1], tuple) else entry
             for s in strings:
@@ -119,7 +134,7 @@ def rows(entries, indent="    ") -> str:
 
 # Teksty tylko strony mieszkańców i panelu laptopa: nie trafiają do obrazu stacji (zostają w liście
 # kanonicznej i w zestawie znaków fontu).
-PAGE_ONLY = {"czeka_na_opiekuna", "opiekun_polaczyl", "nie_wyslane", "zostalo_znakow", "nie_wpisuj_nazwisk"}
+PAGE_ONLY = {"czeka_na_opiekuna", "opiekun_polaczyl", "nie_wyslane", "zostalo_znakow"}
 
 
 def header(data: dict) -> str:
@@ -182,6 +197,12 @@ def header(data: dict) -> str:
         f"constexpr size_t PHRASES_COUNT = {len(data['phrases'])};",
         "constexpr const char* const PHRASES[PHRASES_COUNT][LANGS] = {",
         rows(data["phrases"]),
+        "};",
+        "",
+        "// Grupy znaków wpisu tekstu (PL, UK, EN), po pozycjach GOTOWE i SPACJA.",
+        f"constexpr size_t GROUPS_COUNT = {len(data['groups'])};",
+        "constexpr const char* const GROUPS[GROUPS_COUNT][LANGS] = {",
+        rows(data["groups"]),
         "};",
         "",
         "// Jednostki [czas] (minuty, godziny, doby) i separator dziesiętny napięcia.",
