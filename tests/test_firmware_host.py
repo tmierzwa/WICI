@@ -2577,13 +2577,13 @@ class HostUnitTests(unittest.TestCase):
             "K OK 0", "R", "K OK 0",                                    # OGŁOŚ ADRES: wynik, powrót
             "K DOWN 0", "K OK 0", "R",                                  # WYCISZ DŹWIĘK
             "K DOWN 0", "K OK 0", "R", "K UP 0", "K DOWN 0", "K UP 0", "K OK 0", "R", "diag", "poll"] + \
-            ["K DOWN 0"] * 18 + ["K OK 0", "K DOWN 0", "K DOWN 0", "K DOWN 0", "K OK 0", "R", "K UP 0", "K DOWN 0", "K DOWN 0", "R",
+            ["K DOWN 0"] * 18 + ["K OK 0", "K DOWN 0", "K DOWN 0", "K DOWN 0", "K DOWN 0", "K OK 0", "R", "K UP 0", "K DOWN 0", "K DOWN 0", "R",
                                  "K UP 0", "K DOWN 0", "K UP 0", "K OK 0", "R", "diag"]
         out = self.ui(script)
         s = self.screens(out)
         self.assertEqual([x[0] for x in s], ["services", "result", "services", "backup", "status", "destroy", "destroy", "main"])
-        self.assertEqual(self.lines(s[0])[:4], [labels["OGLOS_ADRES"][0], labels["WYCISZ_DZWIEK"][0], labels["KLUCZ_ZAPASOWY"][0],
-                                                labels["ZNISZCZ_DANE"][0]])
+        self.assertEqual(self.lines(s[0]), [labels["OGLOS_ADRES"][0], labels["WYCISZ_DZWIEK"][0], labels["KLUCZ_ZAPASOWY"][0],
+                                            labels["ZAMKNIJ_ZDARZENIE"][0], labels["ZNISZCZ_DANE"][0]])
         self.assertIn("announce 1", out)
         self.assertEqual(self.shown(s[1]), texts["adres_ogloszony"][0])
         self.assertEqual(self.lines(s[2])[1], labels["WLACZ_DZWIEK"][0])
@@ -2600,6 +2600,28 @@ class HostUnitTests(unittest.TestCase):
         # Bez działającego stosu: własny komunikat.
         failed = self.screens(self.ui(self.HOSTED + to_services + ["announce 0", "K OK 0", "R"]))[-1]
         self.assertEqual((failed[0], self.shown(failed)), ("result", texts["adres_nie_ogloszony"][0]))
+
+    def test_services_close_event_sequence(self):
+        # ZAMKNIJ ZDARZENIE z menu: WSTECZ wychodzi bez zmian, zła sekwencja nic nie robi, GÓRA, DÓŁ, GÓRA, OK
+        # zamyka zdarzenie jak potwierdzone `close`: nowa epoka, pusty rejestr i lista WIADOMOŚCI.
+        texts = ui_texts.load()["texts"]
+        to_services = ["K OK 0", "K DOWN 0", "K DOWN 0", "K DOWN 0", "K OK 0"] + ["K DOWN 0"] * 16 + ["K OK 0"]
+        to_close = ["K DOWN 0"] * 3 + ["K OK 0", "R"]
+        script = self.HOSTED + self.CREATE + ["diag"] + to_services + to_close + ["K BACK 0", "R", "diag"] + to_close + [
+            "K UP 0", "K UP 0", "R", "diag", "K UP 0", "K DOWN 0", "K UP 0", "K OK 0", "R", "diag",
+            "K OK 0", "K DOWN 0", "K OK 0", "R"]
+        out = self.ui(script)
+        s = self.screens(out)
+        self.assertEqual([x[0] for x in s], ["close", "services", "close", "close", "main", "messages"])
+        self.assertEqual(self.shown(s[0]), texts["zamknij_ostrzezenie"][0])
+        diags = self.find(out, "diag ")
+        self.assertIn("requests=1", diags[0])
+        self.assertEqual(diags[1], diags[0])   # WSTECZ: bez zmian
+        self.assertEqual(diags[2], diags[0])   # zła sekwencja: bez zmian
+        self.assertIn("requests=0", diags[3])
+        self.assertNotEqual(diags[3].split("epoch=")[1], diags[0].split("epoch=")[1])
+        self.assertIn("log event closed (screen)", out)
+        self.assertEqual(self.shown(s[5]), "")   # WIADOMOŚCI puste
 
     def test_lists_render_from_the_ram_index(self):
         # Lista WIADOMOŚCI i PRZEKAZANIE ZMIANY korzystają ze skrótu z indeksu w RAM: rysowanie nie czyta rekordów

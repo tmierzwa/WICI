@@ -240,6 +240,16 @@ bool Console::switchBackup() {
     return ok;
 }
 
+bool Console::closeEvent() {
+    // ZAMKNIJ ZDARZENIE z menu (oprogramowanie.md, „Ekran i przyciski stacji”): ta sama transakcja co
+    // potwierdzone `close` z bieżącym head; laptop podłączony później dostaje snap_required (epoch).
+    const bool ok = store_.close(store_.head());
+    actions_.log(ok ? "event closed (screen)" : "event close: write failed");
+    dirty_ = true;
+    cachedRef_ = 0;   // rejestr i skrzynka nowej epoki są puste
+    return ok;
+}
+
 bool Console::destroy() {
     const bool ok = actions_.destroy();
     dirty_ = true;

@@ -3,7 +3,7 @@
 // aplikacji (station.h): lista WIADOMOŚCI (własne zgłoszenia i TEST z rejestru bez anulowanych,
 // odpowiedzi i komunikaty ze skrzynki, najnowsze najpierw), frazy z konfiguracji albo domyślne,
 // zgłoszenie z kreatora, rewizje, ANULUJ WYSYŁKĘ, TEST, alarmy, KLUCZ ZAPASOWY, OGŁOŚ ADRES
-// i ZNISZCZ DANE (przez usługi stacji, jak polecenie `destroy`).
+// ZAMKNIJ ZDARZENIE (jak potwierdzone `close`) i ZNISZCZ DANE (przez usługi stacji, jak polecenie `destroy`).
 // Bez zależności od Arduino; sprawdzany na komputerze razem z magazynem w RAM.
 #pragma once
 
@@ -47,6 +47,7 @@ public:
     void ackAlarm(const ui::AlarmInfo& alarm) override;
     bool switchBackup() override;
     bool destroy() override;
+    bool closeEvent() override;
     bool announce() override;
     bool node() override { return actions_.node(); }
     // Awaria układu radiowego (radio_awaria), podawana przez main.cpp przy każdym obiegu: alarm

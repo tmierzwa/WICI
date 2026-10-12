@@ -2,7 +2,7 @@
 
 Zacznij od [koncepcji systemu](concept/index.html): potrzeby i wymagania, scenariusze pracy, dostępne rozwiązania, analiza opcji, architektura komunikacji, wykonalność, zagrożenia i plan prób. Dokumenty są po polsku, oddzielają wymagania od dowodów i wskazują otwarte decyzje.
 
-Specyfikacja stacji 0.5 składa się z pięciu rozdziałów, protokołu USB, rozdziału o stanowisku odbiorczym, karty obsługi, instrukcji opiekuna i dyżurnego oraz BOM stacji. Parametry, kontrakty, warunki odbioru i kandydatów części zmienia się w tych plikach, a uzasadnienia i analizy w `docs/concept/`.
+Specyfikacja stacji 0.5 składa się z pięciu rozdziałów, protokołu USB, rozdziału o stanowisku odbiorczym, instrukcji opiekuna oraz BOM stacji; karta obsługi i instrukcja dyżurnego są w [dokumentach obsługi](obsluga/README.md). Parametry, kontrakty, warunki odbioru i kandydatów części zmienia się w tych plikach, a uzasadnienia i analizy w `docs/concept/`.
 
 | Rozdział | Zakres |
 |---|---|
@@ -13,9 +13,8 @@ Specyfikacja stacji 0.5 składa się z pięciu rozdziałów, protokołu USB, roz
 | [Elektronika](spec/elektronika.md) | Stacja pilotażowa z gotowych modułów i jej tor zasilania, zanik zasilania przy zapisie, wymagania płytki R02 (wstrzymanej do decyzji po pilotażu), poziom 3 z kupionej stacji zasilania; własny blok zasilania poziomu 3 jako archiwum |
 | [Stanowisko odbiorcze](spec/stanowisko-osp.md) | Stanowisko odbiorcze: stacja jako węzeł transportu i obowiązkowy komputer z tożsamością odbiorcy (D19), aplikacja, panel, zestaw, awarie |
 | [Odbiór](spec/odbior.md) | Próby z grupami T1–T8, minimum pilotażu, warunki zaliczenia i niezrealizowane części |
-| [Karta obsługi](spec/karta.md) | Tekst dwustronnej karty obsługi stacji i pola formularza papierowego |
-| Karta [UK](spec/karta-uk.md) i [EN](spec/karta-en.md) | Ukraińska i angielska wersja karty obsługi; cytaty z kolumn UK i EN tabeli tekstów ekranu |
-| [Instrukcja dyżurnego](spec/instrukcja-dyzurnego.md) | Czynności dyżurnego: początek dyżuru, decyzje i stany, TEST, komunikaty, zaufanie, cisza, przekazanie zmiany, awarie stanowiska |
+| [Karta obsługi](obsluga/karta-stacji.html) | Karta obsługi stacji do druku: PL, UK i EN, każda na jednej kartce A4 (strona 1 najważniejsze, strona 2 gdy trzeba), i formularz papierowy; CC BY 4.0 ([dokumenty obsługi](obsluga/README.md)) |
+| [Instrukcja dyżurnego](obsluga/instrukcja-dyzurnego.md) | Czynności dyżurnego: uruchomienie, potwierdzenia, odpowiedzi i komunikaty, kwarantanna, przekazywanie służbom, rejestr, awarie, ćwiczenia, cisza, zamknięcie zdarzenia; tabele dla gminy; CC BY 4.0 |
 | [Instrukcja opiekuna](spec/instrukcja.md) | Tematy obsługi spoza karty: adres, stany zgłoszenia, alarmy, cisza, energia, poziomy 2–3, przekazanie zmiany, koniec zdarzenia, bezpieczeństwo |
 | [BOM stacji](spec/bom-stacji.csv) | Wymagania minimalne części i kandydaci od dwóch producentów, ze stanem kwalifikacji |
 

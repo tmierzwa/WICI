@@ -1,6 +1,6 @@
 # WICI: instrukcja opiekuna
 
-Instrukcja jest dla opiekuna schronienia i zastępców. Uzupełnia [kartę obsługi](karta.md), która leży przy stacji i prowadzi przez uruchomienie i zgłoszenie. Tu są tematy, które nie mieszczą się na karcie ([koncepcja, rozdział 02](../concept/02-scenariusze-i-organizacja.html#instrukcja-i-cwiczenie)).
+Instrukcja jest dla opiekuna schronienia i zastępców. Uzupełnia [kartę obsługi](../obsluga/karta-stacji.html), która leży przy stacji i prowadzi przez uruchomienie i zgłoszenie. Tu są tematy, które nie mieszczą się na karcie ([koncepcja, rozdział 02](../concept/02-scenariusze-i-organizacja.html#instrukcja-i-cwiczenie)).
 
 Napisy w cudzysłowach są cytatami z tabeli [Teksty ekranu](oprogramowanie.md#teksty-ekranu); wersje UK i EN instrukcji używają kolumn UK i EN tej tabeli.
 
@@ -137,7 +137,7 @@ Zmiana trwa najwyżej 12 h. Przed zejściem ze zmiany otwórz STAN → PRZEKAZAN
 
 ## Koniec zdarzenia i zniszczenie danych
 
-**ZAMKNIJ ZDARZENIE** wykonuje się po odwołaniu stanu kryzysowego, na polecenie gminy, z panelu laptopa. Operacja zapisuje zaszyfrowane archiwum dla administratora danych i usuwa zgłoszenia z laptopa i stacji. Tożsamość stacji i karta odbiorcy zostają, więc stacja jest gotowa do następnego użycia. Potem odłóż stację do skrzynki i zgłoś zużycie ogniw organizatorowi sieci.
+**ZAMKNIJ ZDARZENIE** wykonuje się po odwołaniu stanu kryzysowego, tylko na polecenie gminy przekazane słownie, przez gońca albo pisemnie, nigdy na podstawie wiadomości radiowej. Na stacji: STAN → USŁUGI → ZAMKNIJ ZDARZENIE; ekran „ZAMKNĄĆ ZDARZENIE? ZGŁOSZENIA I WIADOMOŚCI ZNIKNĄ ZE STACJI. TYLKO NA POLECENIE GMINY”, potwierdzenie GÓRA, DÓŁ, GÓRA, OK. Stacja usuwa zgłoszenia i wiadomości, także niewysłane. Z laptopem (poziomy 2–3) operację uruchamia się w panelu: zapisuje on zaszyfrowane archiwum dla administratora danych, a stacja pyta „LAPTOP: ZAMKNĄĆ ZDARZENIE? …” i czeka na OK. Tożsamość stacji, karta odbiorcy i adres zostają, więc stacja jest gotowa do następnego użycia. Wpisz polecenie i godzinę do dziennika; dziennik papierowy przekaż gminie. Potem odłóż stację do skrzynki i zgłoś zużycie ogniw organizatorowi sieci.
 
 **ZNISZCZ DANE** (STAN → USŁUGI) uruchamiasz tylko przy groźbie przejęcia stacji lub laptopa, także na polecenie odbiorcy przekazane słownie albo przez gońca, nigdy na podstawie wiadomości radiowej. Ekran „NIEODWRACALNE – STACJA PRZESTANIE DZIAŁAĆ; TYLKO PRZY GROŹBIE PRZEJĘCIA”, potwierdzenie GÓRA, DÓŁ, GÓRA, OK. Stacja przestaje działać na stałe. Pamięć USB zestawu zniszcz fizycznie, bo samo usunięcie plików jej nie chroni. Wpisz zdarzenie do dziennika.
 

@@ -5,7 +5,7 @@
 // STAN, JĘZYK), kreator zgłoszenia (kategoria, liczba osób z wpisem cyfr, pilność z potwierdzeniem
 // pilności 2, fraza albo własny tekst wpisany grupami znaków, podsumowanie, wynik), WIADOMOŚCI z etapami własnych zgłoszeń i działaniami
 // (nowa rewizja, POTRZEBA USTAŁA, ANULUJ WYSYŁKĘ), TEST z WSTRZYMAJ/WZNÓW, STAN z PRZEKAZANIEM
-// ZMIANY i USŁUGAMI (KLUCZ ZAPASOWY, ZNISZCZ DANE z sekwencją GÓRA, DÓŁ, GÓRA, OK), alarmy
+// ZMIANY i USŁUGAMI (KLUCZ ZAPASOWY, ZAMKNIJ ZDARZENIE, ZNISZCZ DANE z sekwencją GÓRA, DÓŁ, GÓRA, OK), alarmy
 // na cały ekran, przytrzymanie WSTECZ (2 s: porzucenie zgłoszenia, 3 s: wybór języka).
 // Stacja w konfiguracji węzła stanowiska (Host::node) po wyborze języka pokazuje radio, kontakt
 // z komputerem stanowiska (`komputer_osp`, `komputer_brak`) i zasilanie; menu ma tylko STAN
@@ -51,7 +51,7 @@ enum class Screen : uint8_t {
     CATEGORY, PEOPLE, DIGITS, URGENCY, URGENCY_CONFIRM, PHRASE, TEXT, SUMMARY, RESULT, DISCARD,
     MESSAGES, ITEM, ITEM_MENU,
     TEST, TEST_MENU,
-    HANDOVER, SERVICES, BACKUP, DESTROY,
+    HANDOVER, SERVICES, BACKUP, DESTROY, CLOSE,
     ALARM, CONFIRM,
     COUNT
 };
@@ -185,6 +185,7 @@ struct Host : Alarms {
     virtual void pauseTest(bool paused) = 0;
     virtual bool switchBackup() = 0;
     virtual bool destroy() = 0;
+    virtual bool closeEvent() { return false; }   // ZAMKNIJ ZDARZENIE z menu: jak potwierdzone `close`
     virtual bool announce() { return false; }   // OGŁOŚ ADRES: zlecenie ogłoszenia; false = stos nie działa
     virtual bool node() { return false; }       // konfiguracja węzła stanowiska
 };
@@ -223,7 +224,7 @@ public:
 
 private:
     struct Text;  // wiersze tekstu do przewijania
-    enum class Service : uint8_t { ANNOUNCE, MUTE, BACKUP, DESTROY };
+    enum class Service : uint8_t { ANNOUNCE, MUTE, BACKUP, CLOSE, DESTROY };
     bool node() const { return host_ && host_->node(); }
     size_t menu(ui_texts::Menu out[]) const;        // pozycje menu (węzeł stanowiska: STAN i JĘZYK)
     uint8_t menuIndex(ui_texts::Menu item) const;

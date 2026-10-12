@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Ćwiczenia opiekuna według karty obsługi (docs/spec/karta.md) i instrukcji opiekuna
+// Ćwiczenia opiekuna według karty obsługi (docs/obsluga/karta-stacji.html) i instrukcji opiekuna
 // (docs/spec/instrukcja.md), na prawdziwym oprogramowaniu stacji (sim.js). Warunki kroków sprawdzają
 // tylko to, co widzi człowiek albo stanowisko odbiorcze: tekst ekranu odczytany z pikseli panelu,
 // położenie przełącznika, zasilanie i zapisy aplikacji stanowiska (w tym dowody dostarczenia od stacji).

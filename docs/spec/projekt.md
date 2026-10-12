@@ -52,10 +52,10 @@ Poziom 1, zawsze w zestawie:
 2. Dwa komplety po 4 ogniwa litowe AA: komplet kryzysowy w zamkniętym opakowaniu, otwierany tylko w kryzysie, i komplet ćwiczebny do TEST i przeglądów.
 3. Antena zewnętrzna z uchwytem do stałego montażu, przewód koncentryczny o małym tłumieniu (np. LMR-240) o długości według miejsca montażu (do 2 m ≤1 dB; model instalacji stałej przyjmuje 2,5 dB na końcu, dłuższy przewód wymaga nowego bilansu łącza), odgromnik gazowy (GDT) i przepust ścienny; zapasowy dipol z uchwytem do wystawienia przez okno.
 4. Przewód zasilania stacji 12 V z bezpiecznikiem 1 A i końcówkami do gniazda zapalniczki oraz zacisków akumulatora.
-5. [Karta obsługi stacji](karta.md) w trzech językach ([UK](karta-uk.md), [EN](karta-en.md)) z piktogramami kategorii oraz drukowana [instrukcja opiekuna](instrukcja.md).
+5. [Karta obsługi stacji](../obsluga/karta-stacji.html) w trzech językach (PL, UK, EN), zalaminowana, oraz drukowana [instrukcja opiekuna](instrukcja.md).
 6. Odbiornik bateryjny lub z korbką: FM i fale długie 225 kHz (Polskie Radio Program 1), w miarę możliwości DAB+, z zapasem baterii. Alert RCB i aplikacja RSO wymagają sieci komórkowej lub internetu, więc podczas awarii sieci schronienie ich nie odbierze.
 7. Para ręcznych radiotelefonów PMR446 jako głosowy kanał zastępczy; kanał i podton zapisane w planie; zasięg w zabudowie zwykle kilkaset metrów, więc służą do łączności z gońcem lub sąsiednim punktem, a ze stanowiskiem odbiorczym tylko po potwierdzeniu zasięgu.
-8. Formularze papierowe zgłoszeń ([pola](karta.md)) do wypełniania w dwóch egzemplarzach i papierowy dziennik zmian.
+8. Formularze papierowe zgłoszeń ([wzór na ostatniej stronie karty](../obsluga/karta-stacji.html)) do wypełniania w dwóch egzemplarzach i papierowy dziennik zmian.
 
 Rozszerzenia poziomów 2–3:
 
@@ -82,7 +82,7 @@ Stacja jest przechowywana w obiekcie, w zamkniętej skrzynce, z kluczem u zarzą
 
 ## Uruchomienie stacji (poziom 1)
 
-Kolejność odpowiada [karcie obsługi](karta.md).
+Kolejność odpowiada [karcie obsługi](../obsluga/karta-stacji.html).
 
 1. Podłącz do stacji przewód anteny zamontowanej na stałe podczas przygotowania. Tylko gdy jej nie ma (procedura zapasowa): wyprowadź zapasowy dipol przez okno i ustaw go pionowo, w miarę możliwości wysoko i z dala od pomieszczenia z ludźmi; nie kładź go przy metalowej framudze ani nie prowadź przewodu przez drzwi hermetyczne, gazoszczelne lub przeciwpożarowe.
 2. Włóż ogniwa AA kompletu kryzysowego (+ do znaku +) albo podłącz źródło 12 V.
