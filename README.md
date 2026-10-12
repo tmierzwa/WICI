@@ -88,7 +88,7 @@ Na razie projekt prowadzi jedna osoba: [@tmierzwa](https://github.com/tmierzwa).
 
 Autor przegląda każdą zmianę. Obliczenia i założenia prawne czekają na niezależny przegląd; wyniki modelu wymagają potwierdzenia pomiarami.
 
-Projekt jest niekomercyjny i otwarty. Kod jest na licencji MIT, konstrukcja na CERN-OHL-P-2.0, a dokumentacja na CC-BY-4.0. Szczegóły są w [LICENSE.md](LICENSE.md). Podatności zgłaszaj prywatnie według [SECURITY.md](SECURITY.md). Obowiązuje [kodeks postępowania](CODE_OF_CONDUCT.md).
+Projekt jest otwarty; licencje dopuszczają zastosowania komercyjne. Kod jest na licencji MIT, konstrukcja na CERN-OHL-P-2.0, a dokumentacja na CC-BY-4.0. Szczegóły są w [LICENSE.md](LICENSE.md). Podatności zgłaszaj prywatnie według [SECURITY.md](SECURITY.md). Obowiązuje [kodeks postępowania](CODE_OF_CONDUCT.md).
 
 ## In English
 
