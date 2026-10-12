@@ -15,11 +15,11 @@ Brief dla wykonawcy. WICI to otwarty projekt stacji łączności awaryjnej LoRa 
 1. **Montaż przewlekany** na N1 według [uruchomienia N1](../dev-bench/uruchomienie.md#montaż) (stanowisko B): gniazda DevKitC J5/J6, przyciski SW1–SW6, przełącznik CISZA, LED, brzęczyk, J11, J12, JP1 i JP2. JP1 i JP2 zwarte. Nie obsadzać J1–J4, J9/J10 i JP3.
 2. **R12: wymiana 10 kΩ na 1 kΩ** (1%, 0805). Bez tego reset radia przy starcie nie schodzi do stanu niskiego.
 3. **Adapter Wio** (moduł obok N1, krótkie przewody albo mała płytka uniwersalna):
-   - XIAO odłączony od Wio (złącze B2B); Wio VIN niepodłączone;
-   - zasilanie 3,3 V z JP1 pad 1 przez rozłączany punkt pomiaru prądu (zworka albo listwa na amperomierz), masa z J11.1;
-   - przy Wio 100 nF i 10 µF na 3,3 V oraz 10 kΩ z RXEN (Wio J1.5) do masy;
-   - sygnały według tabeli niżej i [polaczenia-MCU-L0.csv](reference/polaczenia-MCU-L0.csv); bez długich odgałęzień SPI, bo magistrala jest wspólna z ekranem i FRAM;
-   - antena założona przed pierwszym uruchomieniem radia.
+    - XIAO odłączony od Wio (złącze B2B); Wio VIN niepodłączone;
+    - zasilanie 3,3 V z JP1 pad 1 przez rozłączany punkt pomiaru prądu (zworka albo listwa na amperomierz), masa z J11.1;
+    - przy Wio 100 nF i 10 µF na 3,3 V oraz 10 kΩ z RXEN (Wio J1.5) do masy;
+    - sygnały według tabeli niżej i [polaczenia-MCU-L0.csv](reference/polaczenia-MCU-L0.csv); bez długich odgałęzień SPI, bo magistrala jest wspólna z ekranem i FRAM;
+    - antena założona przed pierwszym uruchomieniem radia.
 4. **Ekran:** taśma FPC w J7, panel ekranem do góry. Panel przykleić taśmą 3M 4032 dopiero po poprawnym teście ekranu; klej nie pozwala go potem zdjąć bez ryzyka pęknięcia szkła. Punkty pomiarowe muszą zostać dostępne.
 5. **Kontrola przed zasilaniem** według [tabeli](../dev-bench/uruchomienie.md#kontrola-przed-zasilaniem): oględziny pod lupą (zwłaszcza mostki na J7, raster 0,5 mm), zwarcia szyn, ciągłość.
 6. **Wgranie programu i próby** E1–E6, R1–R3 według [instrukcji L0](README.md#kolejność-prób-po-montażu): start i zasilanie, pełny test FRAM z retencją, ochrona FRAM przy zaniku zasilania (oscyloskop), ekran i panel, 15 minut wspólnego SPI, 100 pakietów radiowych w obie strony, blokada CISZA.
