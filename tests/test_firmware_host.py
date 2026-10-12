@@ -675,6 +675,10 @@ int world() {
             const bool cause = w.app->alarmCause();
             if (any) printf("alarm %u %04u %u cause=%d\n", static_cast<unsigned>(al.kind), al.number, al.minutes, cause);
             else printf("alarm none cause=%d\n", cause);
+        } else if (!strcmp(cmd, "poweron")) {
+            const store::Begin result = w.start();   // włączenie zasilania: restart magazynu i powerOn()
+            w.app->powerOn();
+            printf("begin %s\n", store::beginName(result));
         } else if (!strcmp(cmd, "ackalarm")) {
             station::Alarm al;
             if (w.app->alarm(al)) w.app->ackAlarm(al);
@@ -1696,6 +1700,32 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual(tests[0], tests[1])   # powtórzone nonce: ten sam wynik
         self.assertEqual(len(self.regs(out, "d")), 3)
 
+    def test_alarms_after_power_on(self):
+        # oprogramowanie.md, "Czas": bez RTC czas wyłączenia jest nieznany, więc po włączeniu zasilania
+        # próg alarmu zgłoszenia odliczanego sprzed włączenia jest przekroczony; [n] to dolne oszacowanie.
+        x, y, z = self.rid(31), self.rid(32), self.rid(33)
+        out = self.world([self.CONFIG, "now 1000", self.sub(self.request(x, urgency=0)), "now 1130", "restart", "alarm",
+                          "poweron", "alarm", "ackalarm", "alarm", self.sub(self.request(y, urgency=2)), "now 1200", "alarm"])
+        self.assertEqual(self.find(out, "alarm "), [
+            "alarm none cause=0",                 # restart programowy (watchdog): czas wyłączenia ≤60 s, zwykły próg
+            "alarm 1 0031 2 cause=1",             # włączenie: pilność 0 bez RECEIVED alarmuje od razu
+            "alarm none cause=1",                 # potwierdzony OK; przyczyna trwa
+            "alarm none cause=1"])                # nowe zgłoszenie po włączeniu: zwykły próg 15 min
+        # brak_odczytu sprzed włączenia; nowa rewizja i odpowiedź odbiorcy po włączeniu.
+        out = self.world([self.CONFIG, "now 1000", self.sub(self.request(x, urgency=2)), "in " + compact([1, 1, x, 0, 1, 1]),
+                          self.sub(self.request(y, urgency=1)), self.sub(self.request(z, urgency=1)), "now 1100", "poweron",
+                          "alarm", "ackalarm", "alarm", "ackalarm", "alarm", "ackalarm", "alarm",
+                          self.sub(self.request(y, revision=1, urgency=2)), "alarm",
+                          "in " + compact([1, 1, z, 0, 1, 1]), "alarm"])
+        self.assertEqual(self.find(out, "alarm ")[:4], [
+            "alarm 2 0031 1 cause=1", "alarm 1 0032 1 cause=1", "alarm 1 0033 1 cause=1", "alarm none cause=1"])
+        self.assertEqual(self.find(out, "alarm ")[4:], [
+            "alarm 1 0032 1 cause=1",             # nowa rewizja y: niepotwierdzona rewizja sprzed włączenia zostaje
+            "alarm 1 0032 1 cause=1"])            # RECEIVED z po włączeniu: z bez alarmu, y nadal
+        # TEST pomijany: po włączeniu stacja proponuje nowy.
+        out = self.world([self.CONFIG, "now 100", "stest 1", "poll", "now 200", "poweron", "alarm"])
+        self.assertEqual(self.find(out, "alarm "), ["alarm none cause=0"])
+
     # --- protokół USB "usb":2 --------------------------------------------------
 
     @staticmethod
@@ -2577,13 +2607,13 @@ class HostUnitTests(unittest.TestCase):
             "K OK 0", "R", "K OK 0",                                    # OGŁOŚ ADRES: wynik, powrót
             "K DOWN 0", "K OK 0", "R",                                  # WYCISZ DŹWIĘK
             "K DOWN 0", "K OK 0", "R", "K UP 0", "K DOWN 0", "K UP 0", "K OK 0", "R", "diag", "poll"] + \
-            ["K DOWN 0"] * 18 + ["K OK 0", "K DOWN 0", "K DOWN 0", "K DOWN 0", "K OK 0", "R", "K UP 0", "K DOWN 0", "K DOWN 0", "R",
+            ["K DOWN 0"] * 18 + ["K OK 0", "K DOWN 0", "K DOWN 0", "K DOWN 0", "K DOWN 0", "K OK 0", "R", "K UP 0", "K DOWN 0", "K DOWN 0", "R",
                                  "K UP 0", "K DOWN 0", "K UP 0", "K OK 0", "R", "diag"]
         out = self.ui(script)
         s = self.screens(out)
         self.assertEqual([x[0] for x in s], ["services", "result", "services", "backup", "status", "destroy", "destroy", "main"])
-        self.assertEqual(self.lines(s[0])[:4], [labels["OGLOS_ADRES"][0], labels["WYCISZ_DZWIEK"][0], labels["KLUCZ_ZAPASOWY"][0],
-                                                labels["ZNISZCZ_DANE"][0]])
+        self.assertEqual(self.lines(s[0]), [labels["OGLOS_ADRES"][0], labels["WYCISZ_DZWIEK"][0], labels["KLUCZ_ZAPASOWY"][0],
+                                            labels["ZAMKNIJ_ZDARZENIE"][0], labels["ZNISZCZ_DANE"][0]])
         self.assertIn("announce 1", out)
         self.assertEqual(self.shown(s[1]), texts["adres_ogloszony"][0])
         self.assertEqual(self.lines(s[2])[1], labels["WLACZ_DZWIEK"][0])
@@ -2600,6 +2630,28 @@ class HostUnitTests(unittest.TestCase):
         # Bez działającego stosu: własny komunikat.
         failed = self.screens(self.ui(self.HOSTED + to_services + ["announce 0", "K OK 0", "R"]))[-1]
         self.assertEqual((failed[0], self.shown(failed)), ("result", texts["adres_nie_ogloszony"][0]))
+
+    def test_services_close_event_sequence(self):
+        # ZAMKNIJ ZDARZENIE z menu: WSTECZ wychodzi bez zmian, zła sekwencja nic nie robi, GÓRA, DÓŁ, GÓRA, OK
+        # zamyka zdarzenie jak potwierdzone `close`: nowa epoka, pusty rejestr i lista WIADOMOŚCI.
+        texts = ui_texts.load()["texts"]
+        to_services = ["K OK 0", "K DOWN 0", "K DOWN 0", "K DOWN 0", "K OK 0"] + ["K DOWN 0"] * 16 + ["K OK 0"]
+        to_close = ["K DOWN 0"] * 3 + ["K OK 0", "R"]
+        script = self.HOSTED + self.CREATE + ["diag"] + to_services + to_close + ["K BACK 0", "R", "diag"] + to_close + [
+            "K UP 0", "K UP 0", "R", "diag", "K UP 0", "K DOWN 0", "K UP 0", "K OK 0", "R", "diag",
+            "K OK 0", "K DOWN 0", "K OK 0", "R"]
+        out = self.ui(script)
+        s = self.screens(out)
+        self.assertEqual([x[0] for x in s], ["close", "services", "close", "close", "main", "messages"])
+        self.assertEqual(self.shown(s[0]), texts["zamknij_ostrzezenie"][0])
+        diags = self.find(out, "diag ")
+        self.assertIn("requests=1", diags[0])
+        self.assertEqual(diags[1], diags[0])   # WSTECZ: bez zmian
+        self.assertEqual(diags[2], diags[0])   # zła sekwencja: bez zmian
+        self.assertIn("requests=0", diags[3])
+        self.assertNotEqual(diags[3].split("epoch=")[1], diags[0].split("epoch=")[1])
+        self.assertIn("log event closed (screen)", out)
+        self.assertEqual(self.shown(s[5]), "")   # WIADOMOŚCI puste
 
     def test_lists_render_from_the_ram_index(self):
         # Lista WIADOMOŚCI i PRZEKAZANIE ZMIANY korzystają ze skrótu z indeksu w RAM: rysowanie nie czyta rekordów

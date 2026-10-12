@@ -19,7 +19,7 @@ const char* const LANGUAGE_NAMES[ui_texts::LANGS] = {"POLSKI", "УКРАЇНСЬ
 const uint16_t PEOPLE_VALUES[] = {1, 2, 5, 10, 20, 50, 100};
 constexpr size_t PEOPLE_CHOICES = sizeof(PEOPLE_VALUES) / sizeof(PEOPLE_VALUES[0]) + 1;
 constexpr uint8_t MENU_ITEMS = static_cast<uint8_t>(ui_texts::MENU_ITEMS);
-constexpr size_t SERVICE_ITEMS = 4;  // OGŁOŚ ADRES, WYCISZ/WŁĄCZ DŹWIĘK, KLUCZ ZAPASOWY, ZNISZCZ DANE
+constexpr size_t SERVICE_ITEMS = 5;  // OGŁOŚ ADRES, WYCISZ/WŁĄCZ DŹWIĘK, KLUCZ ZAPASOWY, ZAMKNIJ ZDARZENIE, ZNISZCZ DANE
 constexpr Button SEQUENCE[4] = {Button::UP, Button::DOWN, Button::UP, Button::OK};
 constexpr Id STATE_TEXTS[6] = {Id::STAN_1, Id::STAN_2, Id::STAN_3, Id::STAN_4, Id::STAN_5, Id::STAN_6};
 constexpr Id URGENCY_TEXTS[3] = {Id::PILNOSC_0, Id::PILNOSC_1, Id::PILNOSC_2};
@@ -153,6 +153,7 @@ const char* screenName(Screen screen) {
         case Screen::SERVICES: return "services";
         case Screen::BACKUP: return "backup";
         case Screen::DESTROY: return "destroy";
+        case Screen::CLOSE: return "close";
         case Screen::ALARM: return "alarm";
         case Screen::CONFIRM: return "confirm";
         case Screen::COUNT: break;
@@ -240,11 +241,12 @@ uint8_t Model::menuIndex(ui_texts::Menu item) const {
 }
 
 size_t Model::services(Service out[]) const {
-    // Węzeł OSP nie ma adresu LXMF ani karty OSP: bez OGŁOŚ ADRES i KLUCZ ZAPASOWY.
+    // Węzeł OSP nie ma adresu LXMF, karty OSP ani zgłoszeń: bez OGŁOŚ ADRES, KLUCZ ZAPASOWY i ZAMKNIJ ZDARZENIE.
     size_t n = 0;
     if (!node()) out[n++] = Service::ANNOUNCE;
     out[n++] = Service::MUTE;
     if (!node()) out[n++] = Service::BACKUP;
+    if (!node()) out[n++] = Service::CLOSE;
     out[n++] = Service::DESTROY;
     return n;
 }
@@ -442,7 +444,7 @@ void Model::tick(uint32_t nowMs) {
             returnTo_ = screen_;
             go(Screen::DISCARD);
         } else if (!inWizard() && held >= HOLD_LANGUAGE_MS && screen_ != Screen::LANGUAGE && screen_ != Screen::ALARM &&
-                   screen_ != Screen::BACKUP && screen_ != Screen::DESTROY && screen_ != Screen::RESULT && screen_ != Screen::DISCARD &&
+                   screen_ != Screen::BACKUP && screen_ != Screen::DESTROY && screen_ != Screen::CLOSE && screen_ != Screen::RESULT && screen_ != Screen::DISCARD &&
                    screen_ != Screen::CONFIRM) {
             holdConsumed_ = true;
             item_ = menuIndex(ui_texts::Menu::JEZYK);
@@ -609,6 +611,7 @@ void Model::act(Button button, uint32_t nowMs) {
                         changed_ = true;
                         break;
                     case Service::BACKUP: go(Screen::BACKUP); break;
+                    case Service::CLOSE: go(Screen::CLOSE); break;
                     case Service::DESTROY: go(Screen::DESTROY); break;
                 }
             }
@@ -616,14 +619,20 @@ void Model::act(Button button, uint32_t nowMs) {
         }
         case Screen::BACKUP:
         case Screen::DESTROY:
+        case Screen::CLOSE:
             // Sekwencja GÓRA, DÓŁ, GÓRA, OK; inny przycisk zaczyna od nowa, WSTECZ wychodzi. GÓRA i DÓŁ
             // przewijają też tekst, więc ostrzeżenie da się doczytać przed sekwencją.
             scroll(up, downB);
             if (back) go(Screen::SERVICES);
             else if (button == SEQUENCE[sequence_]) {
                 if (++sequence_ == 4) {
-                    const bool done = host_ && (screen_ == Screen::BACKUP ? host_->switchBackup() : host_->destroy());
-                    if (done) go(screen_ == Screen::BACKUP ? Screen::STATUS : Screen::MAIN);
+                    const bool done = host_ && (screen_ == Screen::BACKUP ? host_->switchBackup()
+                                                : screen_ == Screen::CLOSE ? host_->closeEvent()
+                                                                           : host_->destroy());
+                    if (done) {
+                        if (screen_ == Screen::CLOSE) { resetDraft(); messagesCursor_ = 0; }   // zgłoszenia znikły
+                        go(screen_ == Screen::BACKUP ? Screen::STATUS : Screen::MAIN);
+                    }
                     else {
                         // Brak zapasowej tożsamości OSP albo błąd zapisu: komunikat, nie cichy powrót.
                         result_ = Submit::ERROR;
@@ -1427,6 +1436,7 @@ void Model::render(const Status& s, Lines& out) {
                     case Service::ANNOUNCE: items[i] = label(Label::OGLOS_ADRES, lang_); break;
                     case Service::MUTE: items[i] = label(muted_ ? Label::WLACZ_DZWIEK : Label::WYCISZ_DZWIEK, lang_); break;
                     case Service::BACKUP: items[i] = label(Label::KLUCZ_ZAPASOWY, lang_); break;
+                    case Service::CLOSE: items[i] = label(Label::ZAMKNIJ_ZDARZENIE, lang_); break;
                     case Service::DESTROY: items[i] = label(Label::ZNISZCZ_DANE, lang_); break;
                 }
             }
@@ -1439,6 +1449,10 @@ void Model::render(const Status& s, Lines& out) {
             break;
         case Screen::DESTROY:
             t.add(text(Id::ZNISZCZ_OSTRZEZENIE, lang_));
+            renderText(t, window, out, first);
+            break;
+        case Screen::CLOSE:
+            t.add(text(Id::ZAMKNIJ_OSTRZEZENIE, lang_));
             renderText(t, window, out, first);
             break;
         case Screen::ALARM:

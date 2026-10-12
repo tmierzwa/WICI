@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: CC-BY-4.0 -->
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WICI: karta obsługi stacji</title>
+<style>
+/* Karta do druku: A4 pionowo, dwustronnie (strona 1 i 2 każdej wersji językowej na jednej kartce), do laminowania.
+   Bez zewnętrznych czcionek i skryptów. Każda <section class="page"> to jedna strona A4. */
+@page { size: A4 portrait; margin: 9mm; }
+* { box-sizing: border-box; }
+html { background: #ddd; }
+body { margin: 0; font-family: "DejaVu Sans", "Helvetica Neue", Arial, sans-serif; font-size: 8.8pt; line-height: 1.24; color: #000; }
+.page { width: 192mm; height: 279mm; margin: 8mm auto; padding: 0; background: #fff; overflow: hidden; position: relative; display: flex; flex-direction: column; }
+@media screen { .page { box-shadow: 0 0 0 9mm #fff, 0 2px 14px 9mm rgba(0,0,0,.25); margin: 18mm auto; } }
+@media print { html { background: #fff; } .page { margin: 0; break-after: page; } .page:last-child { break-after: auto; } }
+header.top { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1.6mm solid #000; padding-bottom: 1mm; margin-bottom: 1.6mm; }
+header.top h1 { font-size: 15pt; margin: 0; letter-spacing: .02em; }
+header.top .side { font-size: 10.5pt; font-weight: bold; text-align: right; }
+.p2 header.top { border-bottom-width: .6mm; }
+.rules { border: .8mm solid #000; padding: 1.2mm 2mm; margin-bottom: 1.6mm; font-size: 10.4pt; font-weight: bold; }
+.rules p { margin: .3mm 0; }
+.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0 4mm; margin-bottom: 1.6mm; font-size: 8.4pt; }
+.fields div { border-bottom: .3mm solid #000; padding: 1.7mm 0 .3mm; white-space: nowrap; overflow: hidden; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 4mm; flex: 1; min-height: 0; }
+.col { min-width: 0; }
+h2 { font-size: 10.2pt; margin: 1.6mm 0 .8mm; padding: .5mm 1.5mm; background: #000; color: #fff; }
+.p2 h2 { background: #fff; color: #000; border: .4mm solid #000; }
+h2:first-child { margin-top: 0; }
+ol, ul { margin: 0 0 .8mm; padding-left: 4.6mm; }
+li { margin: 0 0 .45mm; }
+p { margin: 0 0 .8mm; }
+q { quotes: "„" "”"; font-weight: bold; }
+html[lang="en"] q, .lang-en q { quotes: "“" "”"; }
+.lang-uk q { quotes: "«" "»"; }
+.key { font-weight: bold; border: .25mm solid #000; padding: 0 .6mm; white-space: nowrap; }
+table { border-collapse: collapse; width: 100%; margin: 0 0 1mm; }
+td, th { border: .25mm solid #000; padding: .4mm 1mm; vertical-align: top; text-align: left; }
+th { background: #e6e6e6; }
+.cat td:nth-child(odd) { width: 4.5mm; text-align: center; font-weight: bold; }
+.note { border-left: 1mm solid #000; padding-left: 1.5mm; }
+.todo { font-size: 8pt; }
+.todo::before { content: "◆ "; }
+.mark { font-weight: bold; }
+.check li { list-style: none; position: relative; }
+.check li::before { content: "☐"; position: absolute; left: -4.4mm; }
+footer { border-top: .3mm solid #000; padding-top: .8mm; margin-top: 1mm; font-size: 6.6pt; line-height: 1.2; color: #222; }
+/* Formularz papierowy */
+.form h1 { font-size: 15pt; }
+.form table td { height: 9.5mm; font-size: 9.5pt; }
+.form table td:first-child { width: 47mm; font-weight: bold; }
+.form .small { font-size: 7.5pt; font-weight: normal; }
+.copy { display: flex; flex-direction: column; height: 50%; padding: 2mm 0; }
+.copy + .copy { border-top: .4mm dashed #000; }
+</style>
+</head>
+<body>
+
+<!-- ===================================================== PL, strona 1 ===================================================== -->
+<section class="page p1" lang="pl">
+<header class="top"><h1>WICI · KARTA OBSŁUGI STACJI</h1><div class="side">STRONA 1 · NAJWAŻNIEJSZE<br>Najpierw ta strona</div></header>
+<div class="rules">
+<p>System nie zastępuje numeru 112. Jeśli 112 działa, dzwoń.</p>
+<p>Nie wpisuj nazwisk.</p>
+<p>Komunikat o ewakuacji potwierdź drugim kanałem.</p>
+</div>
+<div class="fields">
+<div>Nr i nazwa punktu:</div><div>Adres:</div>
+<div>Stanowisko odbiorcze:</div><div>Zastępcy opiekuna:</div>
+<div>Radiotelefon PMR leży:</div><div>Goniec idzie do:</div>
+</div>
+<div class="cols">
+<div class="col">
+<h2>1. Uruchom stację</h2>
+<ol>
+<li>Podłącz antenę: przewód ze ściany przykręć do złącza anteny. Brak przewodu: antena zapasowa ze skrzynki, przez okno, pionowo.</li>
+<li>Otwórz komplet ogniw kryzysowych. Włóż ogniwa (+ do znaku +). Albo podłącz 12 V przewodem z zestawu.</li>
+<li>Naciśnij wyłącznik główny.</li>
+<li>Wybierz język: <span class="key">GÓRA</span>/<span class="key">DÓŁ</span>, potem <span class="key">OK</span>.</li>
+<li>Sprawdź adres: <q>ADRES: [x] – CZY TO TO MIEJSCE? OK = TAK / WSTECZ = NIE</q>. Zgadza się: <span class="key">OK</span>. Nie zgadza się: <span class="key">WSTECZ</span>. Wtedy stacja pokaże <q>STACJA NIE MA TWOJEGO ADRESU – UŻYJ FORMULARZA PAPIEROWEGO</q>. Zgłaszaj tylko formularzem.</li>
+<li>Stacja proponuje <q>TEST</q>. Naciśnij <span class="key">OK</span>. Nie wyłączaj stacji do wysłania testu.</li>
+<li>Sprawdź ekran główny (do 1 min):
+<ul>
+<li>wiersz 1: <q>RADIO WŁĄCZONE</q>. <q>RADIO: AWARIA</q> = używaj formularza;</li>
+<li>wiersz 2: <q>KONTAKT [czas] TEMU</q> = ostatnia wiadomość od odbiorcy. Długi czas to nie awaria;</li>
+<li>wiersz 3: energia: <q>OGNIWA: OKOŁO [x] H</q> albo <q>12 V: [x] V</q> <span class="mark">◆</span>;</li>
+<li>wiersz 4: <q>CZEKA [n]: OD [czas]</q> = zgłoszenia jeszcze niewysłane;</li>
+<li>wiersz 5: <q>NOWE WIADOMOŚCI: [n]</q>.</li>
+</ul></li>
+</ol>
+<p class="note"><q>RADIO WŁĄCZONE</q> nie znaczy, że pomoc jest dostępna. Nie wyłączaj stacji bez potrzeby: przekazuje wiadomości innych punktów.</p>
+
+<h2>2. Wyślij zgłoszenie</h2>
+<ol>
+<li>Na ekranie głównym naciśnij <span class="key">OK</span>. Wybierz <q>ZGŁOSZENIE</q>, <span class="key">OK</span>.</li>
+<li>Wybierz rodzaj potrzeby (tabela obok), <span class="key">OK</span>.</li>
+<li>Wybierz liczbę osób: <q>1 OSOBA</q>, <q>2 OSOBY</q>, <q>5 OSÓB</q> … <q>100 OSÓB</q>, <span class="key">OK</span>. Inna liczba: <q>INNA LICZBA</q>; <span class="key">GÓRA</span>/<span class="key">DÓŁ</span> zmienia cyfrę, <span class="key">OK</span> przechodzi do następnej.</li>
+<li>Pilność: naciśnij <span class="key">GÓRA</span> albo <span class="key">DÓŁ</span> (nic nie jest wybrane z góry). Wybierz, <span class="key">OK</span>. Przy <q>ZAGROŻENIE ŻYCIA</q> przeczytaj ekran i naciśnij <span class="key">OK</span>.</li>
+<li>Opis: <q>-</q> (bez opisu), gotowa fraza albo <q>WŁASNY TEKST</q> (strona 2). Przy <q>INNE</q> opis jest obowiązkowy. <span class="key">OK</span>.</li>
+<li>Sprawdź podsumowanie. <q>OK = WYŚLIJ, WSTECZ = POPRAW</q>.</li>
+<li>Zapisz w dzienniku numer z ekranu <q>ZAPISZ NUMER [xxxx]</q> i godzinę.</li>
+</ol>
+<p><span class="key">WSTECZ</span> cofa o krok. Przytrzymaj <span class="key">WSTECZ</span> 2 s: <q>PORZUCIĆ ZGŁOSZENIE? OK = TAK</q>.</p>
+<p class="note"><b>Zagrożenie życia:</b> 1) udziel pierwszej pomocy; 2) działa telefon? dzwoń 112; 3) droga bezpieczna? goniec; nie – PMR. Zgłoszenie radiem wysyłaj równolegle. Nie czekaj na alarm.</p>
+</div>
+
+<div class="col">
+<table class="cat"><tr><th colspan="4">Rodzaj potrzeby (kolejność na ekranie)</th></tr>
+<tr><td>0</td><td>POMOC MEDYCZNA</td><td>5</td><td>OGRZEWANIE, ENERGIA</td></tr>
+<tr><td>1</td><td>LEKI I SPRZĘT MED.</td><td>6</td><td>SANITARNE, HIGIENA</td></tr>
+<tr><td>2</td><td>EWAKUACJA, TRANSPORT</td><td>7</td><td>ZAGROŻENIE BUDYNKU</td></tr>
+<tr><td>3</td><td>WODA PITNA</td><td>8</td><td>POSZUKIWANIE, INFO</td></tr>
+<tr><td>4</td><td>ŻYWNOŚĆ</td><td>9</td><td>INNE (wymaga opisu)</td></tr>
+</table>
+<table><tr><th>Pilność</th><th>Alarm bez potwierdzenia po</th></tr>
+<tr><td><b>ZAGROŻENIE ŻYCIA</b></td><td>15 min</td></tr>
+<tr><td><b>PILNE – KILKA GODZIN</b></td><td>1 h</td></tr>
+<tr><td><b>W CIĄGU DOBY</b></td><td>6 h</td></tr>
+<tr><td><b>TEST</b></td><td>30 min</td></tr>
+</table>
+
+<h2>3. Trzy potwierdzenia</h2>
+<p>Stan zgłoszenia: <span class="key">OK</span> → <q>WIADOMOŚCI</q> → zgłoszenie (numer).</p>
+<table>
+<tr><td colspan="2"><q>ZAPISANE W STACJI – CZEKA NA WYSŁANIE</q>, <q>WYSYŁANIE – PRÓBA [n], NASTĘPNA ZA [m] MIN</q>: zgłoszenie jest tylko w stacji. Stacja ponawia sama.</td></tr>
+<tr><td><b>1. Zapisane</b></td><td><q>ODBIORCA ZAPISAŁ</q>: zgłoszenie dotarło i jest zapisane u odbiorcy.</td></tr>
+<tr><td><b>2. Odczytane</b></td><td><q>ODBIORCA PRZECZYTAŁ</q>: dyżurny przeczytał zgłoszenie.</td></tr>
+<tr><td><b>3. Rozstrzygnięte</b></td><td><q>POMOC SKIEROWANA (DECYZJA, NIE GODZINA PRZYJAZDU)</q><br><q>PRZEKAZANE DALEJ (PSP / POGOTOWIE / POWIAT)</q><br><q>ODBIORCA NIE MOŻE TERAZ POMÓC – CZYTAJ ODPOWIEDŹ</q>: odpowiedź jest w <q>WIADOMOŚCI</q><br><q>ZAMKNIĘTE</q></td></tr>
+</table>
+
+<h2>4. Potwierdzenie nie przychodzi</h2>
+<p>Po czasie z tabeli pilności stacja piszczy i pokazuje <q>BRAK POTWIERDZENIA OD [n] MIN – GONIEC Z FORMULARZEM, JEŚLI DROGA BEZPIECZNA</q>. Przy <q>ZAGROŻENIE ŻYCIA</q> także po 30 min bez odczytu: <q>ODBIORCA NIE PRZECZYTAŁ OD 30 MIN – …</q>.</p>
+<ol>
+<li>Naciśnij <span class="key">OK</span>: dźwięk cichnie, dioda miga dalej.</li>
+<li>Wypełnij formularz papierowy w 2 egzemplarzach. Wpisz numer zgłoszenia.</li>
+<li>Droga bezpieczna? Goniec niesie jeden egzemplarz (adres na górze strony). Drugi zostaje.</li>
+<li>Droga niebezpieczna? Nikogo nie wysyłaj. Wywołaj odbiorcę albo sąsiedni punkt przez radiotelefon PMR.</li>
+<li>Zapisz w dzienniku godzinę i co zrobiono.</li>
+</ol>
+</div>
+</div>
+<footer><span class="mark">◆</span> = oprogramowanie 0.1 jeszcze tego nie pokazuje (pomiar energii). Dotyczy: oprogramowanie stacji WICI, specyfikacja 0.5, obrazy bench-n1-0.1 i bench-b-0.1 (teksty ekranu z firmware/src/ui_texts.h, 2026-10-12); sprzęt: stacja deweloperska na płytce nośnej N1. Wersja robocza do ćwiczenia przy stole, nie do użycia w kryzysie. CC BY 4.0, Fundacja Łączności Awaryjnej WICI (w organizacji).</footer>
+</section>
+
+<!-- ===================================================== PL, strona 2 ===================================================== -->
+<section class="page p2" lang="pl">
+<header class="top"><h1>WICI · KARTA OBSŁUGI STACJI</h1><div class="side">STRONA 2 · GDY TRZEBA<br>Najpierw strona 1</div></header>
+<div class="cols">
+<div class="col">
+<h2>Odpowiedzi i komunikaty</h2>
+<ol>
+<li>Wiersz <q>NOWE WIADOMOŚCI: [n]</q> większy niż 0? Naciśnij <span class="key">OK</span>, wybierz <q>WIADOMOŚCI</q>.</li>
+<li>Gwiazdka <b>*</b> oznacza nieprzeczytaną wiadomość. Otwórz ją <span class="key">OK</span>. Przewijaj <span class="key">GÓRA</span>/<span class="key">DÓŁ</span>.</li>
+</ol>
+<p class="note">Każdy komunikat kończy się zdaniem <q>NAKAZ WYJŚCIA LUB EWAKUACJI? POTWIERDŹ W RADIU PUBLICZNYM LUB U GOŃCA</q>. Nie wychodź na podstawie samego komunikatu ze stacji. Potwierdź przez odbiornik radiowy z zestawu albo u gońca. Brak potwierdzenia: przygotuj ludzi, próbuj co 15 min, zapisuj w dzienniku. <b>Pożar, dym, alarm czujnika CO, zalanie, zawalenie, polecenie służb na miejscu: wyprowadź ludzi od razu.</b></p>
+
+<h2>Zmiana zgłoszenia</h2>
+<ol>
+<li><span class="key">OK</span> → <q>WIADOMOŚCI</q> → zgłoszenie → <span class="key">OK</span>.</li>
+<li>Wybierz: <q>ZMIEŃ LICZBĘ OSÓB</q>, <q>ZMIEŃ PILNOŚĆ</q> albo <q>POTRZEBA USTAŁA</q>.</li>
+<li><q>ANULUJ WYSYŁKĘ</q> jest tylko, dopóki stacja nie nadała zgłoszenia. Później użyj <q>POTRZEBA USTAŁA</q>.</li>
+</ol>
+
+<h2>Własny tekst</h2>
+<ol>
+<li><span class="key">GÓRA</span>/<span class="key">DÓŁ</span>: grupa liter. <span class="key">OK</span>: otwórz grupę.</li>
+<li><span class="key">GÓRA</span>/<span class="key">DÓŁ</span>: litera. <span class="key">OK</span>: dopisz.</li>
+<li><span class="key">WSTECZ</span> na liście grup usuwa ostatni znak.</li>
+<li><q>SPACJA</q> dzieli wyrazy. <q>GOTOWE</q> kończy.</li>
+</ol>
+<p>Najwyżej 48 znaków. Pisz krótko: co, ile, gdzie w budynku. Przykład: PIĘTRO 2 SALA 14. Dyżurny czyta po polsku. Nie wpisuj nazwisk.</p>
+
+<h2>Zgłoszenie testowe</h2>
+<ol>
+<li><span class="key">OK</span> → <q>TEST</q> → <span class="key">OK</span>. Na ekranie testu naciśnij <span class="key">OK</span>, wybierz <q>TEST</q>, <span class="key">OK</span>.</li>
+<li>Czekaj na <q>TEST WYSŁANY – CZEKA NA ODBIORCĘ</q>, potem <q>ODBIORCA ZAPISAŁ</q> i <q>ODBIORCA PRZECZYTAŁ</q>.</li>
+<li>Komunikat prosi o wstrzymanie testów? Na ekranie testu naciśnij <span class="key">OK</span>, wybierz <q>WSTRZYMAJ</q>, <span class="key">OK</span>. Ekran: <q>TEST WSTRZYMANY PRZEZ ODBIORCĘ</q>. Gdy odbiorca pozwoli: <q>WZNÓW</q>.</li>
+</ol>
+<p>Test nie jest prośbą o pomoc. Nie wysyłaj testów bez potrzeby: zajmują wspólny kanał.</p>
+
+<h2>Cisza radiowa</h2>
+<ol>
+<li>Włącz przełącznik CISZA (pod osłoną) tylko na polecenie: komunikat od odbiorcy albo goniec. Wpisz polecenie do dziennika.</li>
+<li>Ekran: <q>CISZA RADIOWA – STACJA NIE NADAJE. PILNE: GONIEC</q>. Stacja odbiera, ale nic nie nadaje.</li>
+<li>Nowe zgłoszenie czeka: <q>ZAPISANE – NIE WYJDZIE DO KOŃCA CISZY</q>. Pilne sprawy: goniec, jeśli droga bezpieczna.</li>
+<li>Wyłącz CISZA dopiero po odwołaniu. Wpisz godzinę do dziennika.</li>
+</ol>
+</div>
+
+<div class="col">
+<h2>Wymiana ogniw <span class="mark">◆</span></h2>
+<ol>
+<li>Ekran <q>WYMIEŃ OGNIWA W CIĄGU 1 H</q>: najlepiej podłącz najpierw 12 V.</li>
+<li>Bez 12 V: przytrzymaj wyłącznik główny 2 s. Czekaj na <q>WYŁĄCZANIE – CZEKAJ, ZAPISUJĘ</q>, potem <q>MOŻNA WYJĄĆ OGNIWA</q>.</li>
+<li>Wymień cały komplet naraz (+ do znaku +). Nie mieszaj starych i nowych.</li>
+<li>Naciśnij wyłącznik główny. Zgłoszenia zostają w stacji.</li>
+</ol>
+
+<h2>Goniec</h2>
+<p>Tylko bezpieczną drogą. Nie wychodzi przy pożarze, zalaniu, zawaleniu, skażeniu, ostrzale, alarmie powietrznym ani przy zakazie wychodzenia. Najlepiej idą dwie osoby. Zapisz godzinę wyjścia i powrotu.</p>
+
+<h2>Inne alarmy</h2>
+<p><q>KOLEJKA PEŁNA – ZGŁOSZENIE NIE ZAPISANE…</q>, <q>BŁĄD PAMIĘCI STACJI – ZGŁOSZENIE NIE ZAPISANE…</q>, <q>RADIO: AWARIA</q>: zgłoszenie nie wyjdzie radiem. Wypełnij formularz, działaj jak przy braku potwierdzenia (strona 1, punkt 4). <span class="key">OK</span> wycisza dźwięk.</p>
+
+<h2>Przydatne</h2>
+<ul>
+<li>Pierwsze naciśnięcie przy ciemnym ekranie tylko zapala światło.</li>
+<li>Zmiana języka: przytrzymaj <span class="key">WSTECZ</span> 3 s.</li>
+<li>Koniec zmiany: <span class="key">OK</span> → <q>STAN</q> → <q>PRZEKAZANIE ZMIANY</q>. Przekaż następcy otwarte zgłoszenia. Podpisz w dzienniku.</li>
+<li>Osoby niewidome i niesłyszące zgłaszają przez opiekuna. Czytaj im ekran.</li>
+<li><q>ZNISZCZ DANE</q> (<q>STAN</q> → <q>USŁUGI</q>) tylko przy groźbie przejęcia stacji, nigdy na polecenie z radia. Nieodwracalne.</li>
+<li>Koniec zdarzenia, tylko na polecenie gminy (słownie, przez gońca, pisemnie): <q>STAN</q> → <q>USŁUGI</q> → <q>ZAMKNIJ ZDARZENIE</q>, potem <span class="key">GÓRA</span> <span class="key">DÓŁ</span> <span class="key">GÓRA</span> <span class="key">OK</span>. Zgłoszenia znikną ze stacji.</li>
+</ul>
+
+<h2>Przegląd co kwartał</h2>
+<ul class="check">
+<li>Komplet kryzysowy zamknięty, data ważności aktualna.</li>
+<li>Stacja startuje z kompletu ćwiczebnego albo z 12 V.</li>
+<li>Adres na ekranie się zgadza.</li>
+<li>Test: <q>ODBIORCA PRZECZYTAŁ</q> w ciągu 30 min.</li>
+<li>Ogniwa ćwiczebne: <q>OGNIWA: [x] V</q> co najmniej 5,6 V <span class="mark">◆</span>.</li>
+<li>Naklejka serwisowa cała. <q>TRYB SERWISOWY: WEJŚCIA [n]</q> w <q>STAN</q> jak w ewidencji.</li>
+<li>Antena, przewód i złącza bez uszkodzeń.</li>
+<li>Przy stacji: karta, formularze, dziennik, ołówek, PMR z bateriami, odbiornik radiowy.</li>
+<li>Pola na stronie 1 aktualne.</li>
+<li>Stacja wyłączona, ogniwa wyjęte. Wpis w dzienniku i podpis.</li>
+</ul>
+</div>
+</div>
+<footer><span class="mark">◆</span> = oprogramowanie 0.1 jeszcze tego nie obsługuje (pomiar ogniw, wyłączanie przyciskiem). Dotyczy: oprogramowanie stacji WICI, specyfikacja 0.5, obrazy bench-n1-0.1 i bench-b-0.1; sprzęt: stacja deweloperska na płytce nośnej N1. Wersja robocza. CC BY 4.0.</footer>
+</section>
+
+<!-- ===================================================== UK, сторінка 1 ===================================================== -->
+<section class="page p1 lang-uk" lang="uk">
+<header class="top"><h1>WICI · КАРТКА ОБСЛУГОВУВАННЯ СТАНЦІЇ</h1><div class="side">СТОРІНКА 1 · НАЙВАЖЛИВІШЕ<br>Спочатку ця сторінка</div></header>
+<div class="rules">
+<p>Система не замінює номер 112. Якщо 112 працює, телефонуйте.</p>
+<p>Не вписуйте прізвищ.</p>
+<p>Повідомлення про евакуацію підтвердіть іншим каналом.</p>
+</div>
+<div class="fields">
+<div>Номер і назва пункту:</div><div>Адреса:</div>
+<div>Пункт прийому:</div><div>Заступники координатора:</div>
+<div>Рація PMR лежить:</div><div>Посильний іде до:</div>
+</div>
+<div class="cols">
+<div class="col">
+<h2>1. Увімкніть станцію</h2>
+<ol>
+<li>Під'єднайте антену: кабель зі стіни прикрутіть до роз'єму антени. Немає кабелю: запасна антена з ящика, через вікно, вертикально.</li>
+<li>Відкрийте кризовий комплект батарей. Вставте батареї (+ до знака +). Або під'єднайте 12 В кабелем з комплекту.</li>
+<li>Натисніть головний вимикач.</li>
+<li>Виберіть мову: <span class="key">ВГОРУ</span>/<span class="key">ВНИЗ</span>, потім <span class="key">OK</span>.</li>
+<li>Перевірте адресу: <q>АДРЕСА: [x] – ЦЕ ЦЕ МІСЦЕ? OK = ТАК / НАЗАД = НІ</q>. Правильно: <span class="key">OK</span>. Неправильно: <span class="key">НАЗАД</span>. Тоді станція покаже <q>СТАНЦІЯ НЕ МАЄ ВАШОЇ АДРЕСИ – ВИКОРИСТАЙТЕ ПАПЕРОВУ ФОРМУ</q>. Надсилайте заявки лише паперовою формою.</li>
+<li>Станція пропонує <q>ТЕСТ</q>. Натисніть <span class="key">OK</span>. Не вимикайте станцію, доки тест не відправлено.</li>
+<li>Перевірте головний екран (до 1 хв):
+<ul>
+<li>рядок 1: <q>РАДІО УВІМКНЕНО</q>. <q>РАДІО: НЕСПРАВНЕ</q> = використовуйте форму;</li>
+<li>рядок 2: <q>ЗВ'ЯЗОК [czas] ТОМУ</q> = останнє повідомлення від одержувача. Довгий час – це не несправність;</li>
+<li>рядок 3: живлення: <q>БАТАРЕЇ: ЩЕ [x] ГОД</q> або <q>12 В: [x] В</q> <span class="mark">◆</span>;</li>
+<li>рядок 4: <q>ЧЕКАЮТЬ [n]: [czas]</q> = заявки, ще не відправлені;</li>
+<li>рядок 5: <q>НОВИХ ПОВІДОМЛ.: [n]</q>.</li>
+</ul></li>
+</ol>
+<p class="note"><q>РАДІО УВІМКНЕНО</q> не означає, що допомога доступна. Не вимикайте станцію без потреби: вона передає повідомлення інших пунктів.</p>
+
+<h2>2. Надішліть заявку</h2>
+<ol>
+<li>На головному екрані натисніть <span class="key">OK</span>. Виберіть <q>ЗАЯВКА</q>, <span class="key">OK</span>.</li>
+<li>Виберіть вид потреби (таблиця поруч), <span class="key">OK</span>.</li>
+<li>Виберіть кількість людей: <q>1 ОСОБА</q>, <q>2 ОСОБИ</q>, <q>5 ОСІБ</q> … <q>100 ОСІБ</q>, <span class="key">OK</span>. Інша кількість: <q>ІНША КІЛЬКІСТЬ</q>; <span class="key">ВГОРУ</span>/<span class="key">ВНИЗ</span> змінює цифру, <span class="key">OK</span> – до наступної.</li>
+<li>Терміновість: натисніть <span class="key">ВГОРУ</span> або <span class="key">ВНИЗ</span> (нічого не вибрано заздалегідь). Виберіть, <span class="key">OK</span>. Для <q>ЗАГРОЗА ЖИТТЮ</q> прочитайте екран і натисніть <span class="key">OK</span>.</li>
+<li>Опис: <q>-</q> (без опису), готова фраза або <q>СВІЙ ТЕКСТ</q> (сторінка 2). Для <q>ІНШЕ</q> опис обов'язковий. <span class="key">OK</span>.</li>
+<li>Перевірте підсумок. <q>OK = НАДІСЛАТИ, НАЗАД = ВИПРАВИТИ</q>.</li>
+<li>Запишіть у журнал номер з екрана <q>ЗАПИШІТЬ НОМЕР [xxxx]</q> і час.</li>
+</ol>
+<p><span class="key">НАЗАД</span> повертає на крок. Утримуйте <span class="key">НАЗАД</span> 2 с: <q>СКАСУВАТИ ЗАЯВКУ? OK = ТАК</q>.</p>
+<p class="note"><b>Загроза життю:</b> 1) надайте першу допомогу; 2) працює телефон? телефонуйте 112; 3) дорога безпечна? посильний; ні – PMR. Заявку радіо надсилайте одночасно. Не чекайте на тривогу.</p>
+</div>
+
+<div class="col">
+<table class="cat"><tr><th colspan="4">Вид потреби (порядок на екрані)</th></tr>
+<tr><td>0</td><td>МЕДИЧНА ДОПОМОГА</td><td>5</td><td>ОПАЛЕННЯ, ЕНЕРГІЯ</td></tr>
+<tr><td>1</td><td>ЛІКИ, МЕДОБЛАДНАННЯ</td><td>6</td><td>САНІТАРІЯ, ГІГІЄНА</td></tr>
+<tr><td>2</td><td>ЕВАКУАЦІЯ, ТРАНСПОРТ</td><td>7</td><td>ЗАГРОЗА БУДІВЛІ</td></tr>
+<tr><td>3</td><td>ПИТНА ВОДА</td><td>8</td><td>ПОШУК ЛЮДЕЙ, ІНФО</td></tr>
+<tr><td>4</td><td>ХАРЧУВАННЯ</td><td>9</td><td>ІНШЕ (потрібен опис)</td></tr>
+</table>
+<table><tr><th>Терміновість</th><th>Тривога без підтвердження через</th></tr>
+<tr><td><b>ЗАГРОЗА ЖИТТЮ</b></td><td>15 хв</td></tr>
+<tr><td><b>ТЕРМІНОВО – КІЛЬКА ГОДИН</b></td><td>1 год</td></tr>
+<tr><td><b>ПРОТЯГОМ ДОБИ</b></td><td>6 год</td></tr>
+<tr><td><b>ТЕСТ</b></td><td>30 хв</td></tr>
+</table>
+
+<h2>3. Три підтвердження</h2>
+<p>Стан заявки: <span class="key">OK</span> → <q>ПОВІДОМЛЕННЯ</q> → заявка (номер).</p>
+<table>
+<tr><td colspan="2"><q>ЗБЕРЕЖЕНО В СТАНЦІЇ – ЧЕКАЄ НА ВІДПРАВЛЕННЯ</q>, <q>ВІДПРАВЛЕННЯ – СПРОБА [n], НАСТУПНА ЧЕРЕЗ [m] ХВ</q>: заявка є лише в станції. Станція повторює сама.</td></tr>
+<tr><td><b>1. Збережено</b></td><td><q>ОДЕРЖУВАЧ ЗБЕРІГ</q>: заявка дійшла і збережена в одержувача.</td></tr>
+<tr><td><b>2. Прочитано</b></td><td><q>ОДЕРЖУВАЧ ПРОЧИТАВ</q>: черговий прочитав заявку.</td></tr>
+<tr><td><b>3. Вирішено</b></td><td><q>ДОПОМОГУ НАПРАВЛЕНО (РІШЕННЯ, НЕ ЧАС ПРИБУТТЯ)</q><br><q>ПЕРЕДАНО ДАЛІ (ПОЖЕЖНИКИ / ШВИДКА / ПОВІТ)</q><br><q>ОДЕРЖУВАЧ ЗАРАЗ НЕ МОЖЕ ДОПОМОГТИ – ЧИТАЙТЕ ВІДПОВІДЬ</q>: відповідь у <q>ПОВІДОМЛЕННЯ</q><br><q>ЗАКРИТО</q></td></tr>
+</table>
+
+<h2>4. Підтвердження не надходить</h2>
+<p>Після часу з таблиці терміновості станція пищить і показує <q>НЕМАЄ ПІДТВЕРДЖЕННЯ [n] ХВ – ПОСИЛЬНИЙ З ФОРМОЮ, ЯКЩО ДОРОГА БЕЗПЕЧНА</q>. Для <q>ЗАГРОЗА ЖИТТЮ</q> також через 30 хв без прочитання: <q>ОДЕРЖУВАЧ НЕ ПРОЧИТАВ УЖЕ 30 ХВ – …</q>.</p>
+<ol>
+<li>Натисніть <span class="key">OK</span>: звук вимикається, світлодіод блимає далі.</li>
+<li>Заповніть паперову форму у 2 примірниках. Впишіть номер заявки.</li>
+<li>Дорога безпечна? Посильний несе один примірник (адреса вгорі сторінки). Другий залишається.</li>
+<li>Дорога небезпечна? Нікого не посилайте. Викличте одержувача або сусідній пункт рацією PMR.</li>
+<li>Запишіть у журнал час і що зроблено.</li>
+</ol>
+</div>
+</div>
+<footer><span class="mark">◆</span> = програма 0.1 ще цього не показує (вимірювання живлення). Стосується: програма станції WICI, специфікація 0.5, образи bench-n1-0.1 і bench-b-0.1; обладнання: станція розробника на платі N1. Робоча версія. Переклад потребує перевірки носієм мови. Відповіді від одержувача надходять польською. CC BY 4.0.</footer>
+</section>
+
+<!-- ===================================================== UK, сторінка 2 ===================================================== -->
+<section class="page p2 lang-uk" lang="uk">
+<header class="top"><h1>WICI · КАРТКА ОБСЛУГОВУВАННЯ СТАНЦІЇ</h1><div class="side">СТОРІНКА 2 · КОЛИ ПОТРІБНО<br>Спочатку сторінка 1</div></header>
+<div class="cols">
+<div class="col">
+<h2>Відповіді та повідомлення</h2>
+<ol>
+<li>У рядку <q>НОВИХ ПОВІДОМЛ.: [n]</q> більше 0? Натисніть <span class="key">OK</span>, виберіть <q>ПОВІДОМЛЕННЯ</q>.</li>
+<li>Зірочка <b>*</b> означає непрочитане повідомлення. Відкрийте його <span class="key">OK</span>. Гортайте <span class="key">ВГОРУ</span>/<span class="key">ВНИЗ</span>.</li>
+</ol>
+<p class="note">Кожне повідомлення закінчується реченням <q>НАКАЗ ВИЙТИ АБО ЕВАКУЮВАТИСЯ? ПІДТВЕРДІТЬ ПО СУСПІЛЬНОМУ РАДІО АБО В ПОСИЛЬНОГО</q>. Не виходьте лише через повідомлення станції. Підтвердіть через радіоприймач з комплекту або в посильного. Немає підтвердження: підготуйте людей, пробуйте кожні 15 хв, записуйте в журнал. <b>Пожежа, дим, сигнал датчика CO, затоплення, обвал, наказ служб на місці: виводьте людей одразу.</b></p>
+
+<h2>Зміна заявки</h2>
+<ol>
+<li><span class="key">OK</span> → <q>ПОВІДОМЛЕННЯ</q> → заявка → <span class="key">OK</span>.</li>
+<li>Виберіть: <q>КІЛЬКІСТЬ ЛЮДЕЙ</q>, <q>ЗМІНИТИ ТЕРМІНОВІСТЬ</q> або <q>ПОТРЕБА ЗНИКЛА</q>.</li>
+<li><q>СКАСУВАТИ ВІДПРАВКУ</q> є лише, доки станція не передала заявку. Пізніше використовуйте <q>ПОТРЕБА ЗНИКЛА</q>.</li>
+</ol>
+
+<h2>Свій текст</h2>
+<ol>
+<li><span class="key">ВГОРУ</span>/<span class="key">ВНИЗ</span>: група літер. <span class="key">OK</span>: відкрити групу.</li>
+<li><span class="key">ВГОРУ</span>/<span class="key">ВНИЗ</span>: літера. <span class="key">OK</span>: додати.</li>
+<li><span class="key">НАЗАД</span> у списку груп видаляє останній знак.</li>
+<li><q>ПРОБІЛ</q> розділяє слова. <q>ГОТОВО</q> завершує.</li>
+</ol>
+<p>Не більше 48 знаків. Пишіть коротко: що, скільки, де в будівлі. Черговий читає польською; текст не перекладається. Не вписуйте прізвищ.</p>
+
+<h2>Тестова заявка</h2>
+<ol>
+<li><span class="key">OK</span> → <q>ТЕСТ</q> → <span class="key">OK</span>. На екрані тесту натисніть <span class="key">OK</span>, виберіть <q>ТЕСТ</q>, <span class="key">OK</span>.</li>
+<li>Чекайте на <q>ТЕСТ ВІДПРАВЛЕНО – ЧЕКАЄ НА ОДЕРЖУВАЧА</q>, потім <q>ОДЕРЖУВАЧ ЗБЕРІГ</q> і <q>ОДЕРЖУВАЧ ПРОЧИТАВ</q>.</li>
+<li>Повідомлення просить призупинити тести? На екрані тесту натисніть <span class="key">OK</span>, виберіть <q>ПРИЗУПИНИТИ</q>, <span class="key">OK</span>. Екран: <q>ТЕСТ ПРИЗУПИНЕНО НА ПРОХАННЯ ОДЕРЖУВАЧА</q>. Коли одержувач дозволить: <q>ВІДНОВИТИ</q>.</li>
+</ol>
+<p>Тест – не прохання про допомогу. Не надсилайте тести без потреби: вони займають спільний канал.</p>
+
+<h2>Радіотиша</h2>
+<ol>
+<li>Вмикайте перемикач CISZA (ТИША, під кришкою) лише за наказом: повідомлення від одержувача або посильний. Запишіть наказ у журнал.</li>
+<li>Екран: <q>РАДІОТИША – СТАНЦІЯ НЕ ПЕРЕДАЄ. ТЕРМІНОВО: ПОСИЛЬНИЙ</q>. Станція приймає, але нічого не передає.</li>
+<li>Нова заявка чекає: <q>ЗБЕРЕЖЕНО – НЕ ВІДПРАВИТЬСЯ ДО КІНЦЯ ТИШІ</q>. Термінові справи: посильний, якщо дорога безпечна.</li>
+<li>Вимкніть CISZA лише після скасування. Запишіть час у журнал.</li>
+</ol>
+</div>
+
+<div class="col">
+<h2>Заміна батарей <span class="mark">◆</span></h2>
+<ol>
+<li>Екран <q>ЗАМІНІТЬ БАТАРЕЇ ПРОТЯГОМ 1 ГОД</q>: найкраще спочатку під'єднайте 12 В.</li>
+<li>Без 12 В: утримуйте головний вимикач 2 с. Чекайте на <q>ВИМКНЕННЯ – ЗАЧЕКАЙТЕ, ЗБЕРІГАЮ</q>, потім <q>МОЖНА ВИЙНЯТИ БАТАРЕЇ</q>.</li>
+<li>Замініть увесь комплект одразу (+ до знака +). Не змішуйте старі й нові.</li>
+<li>Натисніть головний вимикач. Заявки залишаються в станції.</li>
+</ol>
+
+<h2>Посильний</h2>
+<p>Лише безпечною дорогою. Не виходить під час пожежі, затоплення, обвалу, забруднення, обстрілу, повітряної тривоги або заборони виходити. Найкраще йдуть дві особи. Запишіть час виходу й повернення.</p>
+
+<h2>Інші тривоги</h2>
+<p><q>ЧЕРГА ПОВНА – ЗАЯВКУ НЕ ЗБЕРЕЖЕНО…</q>, <q>ПОМИЛКА ПАМ'ЯТІ СТАНЦІЇ – ЗАЯВКУ НЕ ЗБЕРЕЖЕНО…</q>, <q>РАДІО: НЕСПРАВНЕ</q>: заявка не піде по радіо. Заповніть форму, дійте як за відсутності підтвердження (сторінка 1, пункт 4). <span class="key">OK</span> вимикає звук.</p>
+
+<h2>Корисно</h2>
+<ul>
+<li>Перше натискання при темному екрані лише вмикає підсвічування.</li>
+<li>Зміна мови: утримуйте <span class="key">НАЗАД</span> 3 с.</li>
+<li>Кінець зміни: <span class="key">OK</span> → <q>СТАН</q> → <q>ПЕРЕДАЧА ЗМІНИ</q>. Передайте наступнику відкриті заявки. Підпишіть у журналі.</li>
+<li>Незрячі та нечуючі люди надсилають заявки через координатора. Читайте їм екран.</li>
+<li><q>ЗНИЩИТИ ДАНІ</q> (<q>СТАН</q> → <q>СЕРВІС</q>) лише при загрозі захоплення станції, ніколи за наказом по радіо. Незворотно.</li>
+<li>Кінець події, лише за наказом гміни (усно, через посильного, письмово): <q>СТАН</q> → <q>СЕРВІС</q> → <q>ЗАКРИТИ ПОДІЮ</q>, потім <span class="key">ВГОРУ</span> <span class="key">ВНИЗ</span> <span class="key">ВГОРУ</span> <span class="key">OK</span>. Заявки зникнуть зі станції.</li>
+</ul>
+
+<h2>Огляд щокварталу</h2>
+<ul class="check">
+<li>Кризовий комплект закритий, термін придатності дійсний.</li>
+<li>Станція вмикається від навчального комплекту або від 12 В.</li>
+<li>Адреса на екрані правильна.</li>
+<li>Тест: <q>ОДЕРЖУВАЧ ПРОЧИТАВ</q> протягом 30 хв.</li>
+<li>Навчальні батареї: <q>БАТАРЕЇ: [x] В</q> не менше 5,6 В <span class="mark">◆</span>.</li>
+<li>Сервісна наліпка ціла. <q>СЕРВІСНИЙ РЕЖИМ: ВХОДІВ [n]</q> у <q>СТАН</q> як в обліку.</li>
+<li>Антена, кабель і роз'єми без пошкоджень.</li>
+<li>Біля станції: картка, форми, журнал, олівець, PMR з батареями, радіоприймач.</li>
+<li>Поля на сторінці 1 актуальні.</li>
+<li>Станцію вимкнено, батареї вийнято. Запис у журналі й підпис.</li>
+</ul>
+</div>
+</div>
+<footer><span class="mark">◆</span> = програма 0.1 ще цього не підтримує (вимірювання батарей, вимкнення кнопкою). Стосується: програма станції WICI, специфікація 0.5, образи bench-n1-0.1 і bench-b-0.1; обладнання: станція розробника на платі N1. Робоча версія. Переклад потребує перевірки носієм мови. CC BY 4.0.</footer>
+</section>
+
+<!-- ===================================================== EN, page 1 ===================================================== -->
+<section class="page p1 lang-en" lang="en">
+<header class="top"><h1>WICI · STATION CARD</h1><div class="side">PAGE 1 · MOST IMPORTANT<br>Read this page first</div></header>
+<div class="rules">
+<p>The system does not replace 112. If 112 works, call it.</p>
+<p>Do not enter surnames.</p>
+<p>Confirm an evacuation message through a second channel.</p>
+</div>
+<div class="fields">
+<div>Point no. and name:</div><div>Address:</div>
+<div>Receiving station:</div><div>Deputy wardens:</div>
+<div>PMR radio is kept:</div><div>Runner goes to:</div>
+</div>
+<div class="cols">
+<div class="col">
+<h2>1. Start the station</h2>
+<ol>
+<li>Connect the antenna: screw the cable from the wall onto the antenna connector. No cable: spare antenna from the box, out of a window, vertical.</li>
+<li>Open the crisis cell set. Insert the cells (+ to the + mark). Or connect 12 V with the cable from the kit.</li>
+<li>Press the main switch.</li>
+<li>Choose the language: <span class="key">UP</span>/<span class="key">DOWN</span>, then <span class="key">OK</span>.</li>
+<li>Check the address: <q>ADDRESS: [x] – IS THIS THE PLACE? OK = YES / BACK = NO</q>. Correct: <span class="key">OK</span>. Wrong: <span class="key">BACK</span>. The station then shows <q>STATION DOES NOT HAVE YOUR ADDRESS – USE THE PAPER FORM</q>. Send requests only on the paper form.</li>
+<li>The station offers a <q>TEST</q>. Press <span class="key">OK</span>. Do not switch the station off until the test is sent.</li>
+<li>Check the main screen (up to 1 min):
+<ul>
+<li>line 1: <q>RADIO ON</q>. <q>RADIO: FAULT</q> = use the form;</li>
+<li>line 2: <q>CONTACT [czas] AGO</q> = last message from the recipient. A long time is not a fault;</li>
+<li>line 3: power: <q>CELLS: ABOUT [x] H</q> or <q>12 V: [x] V</q> <span class="mark">◆</span>;</li>
+<li>line 4: <q>WAITING [n]: [czas]</q> = requests not yet sent;</li>
+<li>line 5: <q>NEW MESSAGES: [n]</q>.</li>
+</ul></li>
+</ol>
+<p class="note"><q>RADIO ON</q> does not mean that help is available. Do not switch the station off without need: it passes on messages of other points.</p>
+
+<h2>2. Send a request</h2>
+<ol>
+<li>On the main screen press <span class="key">OK</span>. Choose <q>REQUEST</q>, <span class="key">OK</span>.</li>
+<li>Choose the type of need (table on the right), <span class="key">OK</span>.</li>
+<li>Choose the number of people: <q>1 PERSON</q>, <q>2 PEOPLE</q>, <q>5 PEOPLE</q> … <q>100 PEOPLE</q>, <span class="key">OK</span>. Other number: <q>OTHER NUMBER</q>; <span class="key">UP</span>/<span class="key">DOWN</span> changes a digit, <span class="key">OK</span> goes to the next one.</li>
+<li>Urgency: press <span class="key">UP</span> or <span class="key">DOWN</span> (nothing is chosen in advance). Choose, <span class="key">OK</span>. For <q>DANGER TO LIFE</q> read the screen and press <span class="key">OK</span>.</li>
+<li>Description: <q>-</q> (none), a ready phrase or <q>OWN TEXT</q> (page 2). For <q>OTHER</q> a description is required. <span class="key">OK</span>.</li>
+<li>Check the summary. <q>OK = SEND, BACK = EDIT</q>.</li>
+<li>Write the number from the screen <q>NOTE NUMBER [xxxx]</q> and the time in the log.</li>
+</ol>
+<p><span class="key">BACK</span> goes one step back. Hold <span class="key">BACK</span> 2 s: <q>DISCARD REQUEST? OK = YES</q>.</p>
+<p class="note"><b>Danger to life:</b> 1) give first aid; 2) phone works? call 112; 3) route safe? runner; if not – PMR. Send the radio request at the same time. Do not wait for the alarm.</p>
+</div>
+
+<div class="col">
+<table class="cat"><tr><th colspan="4">Type of need (order on the screen)</th></tr>
+<tr><td>0</td><td>MEDICAL HELP</td><td>5</td><td>HEATING, POWER</td></tr>
+<tr><td>1</td><td>MEDICINES, EQUIPMENT</td><td>6</td><td>SANITATION, HYGIENE</td></tr>
+<tr><td>2</td><td>EVACUATION/TRANSPORT</td><td>7</td><td>BUILDING HAZARD</td></tr>
+<tr><td>3</td><td>DRINKING WATER</td><td>8</td><td>MISSING PEOPLE, INFO</td></tr>
+<tr><td>4</td><td>FOOD</td><td>9</td><td>OTHER (needs a description)</td></tr>
+</table>
+<table><tr><th>Urgency</th><th>Alarm without confirmation after</th></tr>
+<tr><td><b>DANGER TO LIFE</b></td><td>15 min</td></tr>
+<tr><td><b>URGENT – A FEW HOURS</b></td><td>1 h</td></tr>
+<tr><td><b>WITHIN A DAY</b></td><td>6 h</td></tr>
+<tr><td><b>TEST</b></td><td>30 min</td></tr>
+</table>
+
+<h2>3. Three confirmations</h2>
+<p>Request status: <span class="key">OK</span> → <q>MESSAGES</q> → request (number).</p>
+<table>
+<tr><td colspan="2"><q>SAVED IN STATION – WAITING TO SEND</q>, <q>SENDING – ATTEMPT [n], NEXT IN [m] MIN</q>: the request is only in the station. The station retries by itself.</td></tr>
+<tr><td><b>1. Saved</b></td><td><q>RECIPIENT SAVED IT</q>: the request arrived and is saved by the recipient.</td></tr>
+<tr><td><b>2. Read</b></td><td><q>RECIPIENT READ IT</q>: the duty officer has read the request.</td></tr>
+<tr><td><b>3. Decided</b></td><td><q>HELP DISPATCHED (DECISION, NOT ARRIVAL TIME)</q><br><q>FORWARDED (FIRE SERVICE / AMBULANCE / COUNTY)</q><br><q>RECIPIENT CANNOT HELP NOW – READ THE REPLY</q>: the reply is in <q>MESSAGES</q><br><q>CLOSED</q></td></tr>
+</table>
+
+<h2>4. No confirmation arrives</h2>
+<p>After the time in the urgency table the station beeps and shows <q>NO CONFIRMATION FOR [n] MIN – RUNNER WITH THE FORM IF THE ROUTE IS SAFE</q>. For <q>DANGER TO LIFE</q> also after 30 min without reading: <q>NOT READ BY RECIPIENT FOR 30 MIN – …</q>.</p>
+<ol>
+<li>Press <span class="key">OK</span>: the sound stops, the light keeps blinking.</li>
+<li>Fill in the paper form in 2 copies. Write the request number.</li>
+<li>Route safe? The runner carries one copy (address at the top of this page). The other copy stays.</li>
+<li>Route not safe? Send nobody. Call the recipient or a neighbouring point on the PMR radio.</li>
+<li>Write the time and what was done in the log.</li>
+</ol>
+</div>
+</div>
+<footer><span class="mark">◆</span> = software 0.1 does not show this yet (power measurement). Applies to: WICI station software, specification 0.5, images bench-n1-0.1 and bench-b-0.1; hardware: development station on carrier board N1. Working draft. Translation to be checked by a native speaker. Replies from the recipient arrive in Polish. CC BY 4.0.</footer>
+</section>
+
+<!-- ===================================================== EN, page 2 ===================================================== -->
+<section class="page p2 lang-en" lang="en">
+<header class="top"><h1>WICI · STATION CARD</h1><div class="side">PAGE 2 · WHEN NEEDED<br>Page 1 comes first</div></header>
+<div class="cols">
+<div class="col">
+<h2>Replies and messages</h2>
+<ol>
+<li>Is <q>NEW MESSAGES: [n]</q> more than 0? Press <span class="key">OK</span>, choose <q>MESSAGES</q>.</li>
+<li>A star <b>*</b> marks an unread message. Open it with <span class="key">OK</span>. Scroll with <span class="key">UP</span>/<span class="key">DOWN</span>.</li>
+</ol>
+<p class="note">Every message ends with <q>ORDER TO LEAVE OR EVACUATE? CONFIRM ON PUBLIC RADIO OR WITH THE RUNNER</q>. Do not leave because of a station message alone. Confirm on the radio receiver from the kit or with the runner. No confirmation: get people ready, try every 15 min, write it in the log. <b>Fire, smoke, CO alarm, flooding, collapse, an order from services on the spot: lead people out at once.</b></p>
+
+<h2>Change a request</h2>
+<ol>
+<li><span class="key">OK</span> → <q>MESSAGES</q> → request → <span class="key">OK</span>.</li>
+<li>Choose: <q>CHANGE PEOPLE COUNT</q>, <q>CHANGE URGENCY</q> or <q>NEED RESOLVED</q>.</li>
+<li><q>CANCEL SENDING</q> exists only until the station has transmitted the request. After that use <q>NEED RESOLVED</q>.</li>
+</ol>
+
+<h2>Own text</h2>
+<ol>
+<li><span class="key">UP</span>/<span class="key">DOWN</span>: letter group. <span class="key">OK</span>: open the group.</li>
+<li><span class="key">UP</span>/<span class="key">DOWN</span>: letter. <span class="key">OK</span>: add it.</li>
+<li><span class="key">BACK</span> in the group list deletes the last character.</li>
+<li><q>SPACE</q> separates words. <q>DONE</q> finishes.</li>
+</ol>
+<p>At most 48 characters. Write briefly: what, how many, where in the building. The duty officer reads Polish; the text is not translated. Do not enter surnames.</p>
+
+<h2>Test request</h2>
+<ol>
+<li><span class="key">OK</span> → <q>TEST</q> → <span class="key">OK</span>. On the test screen press <span class="key">OK</span>, choose <q>TEST</q>, <span class="key">OK</span>.</li>
+<li>Wait for <q>TEST SENT – WAITING FOR RECIPIENT</q>, then <q>RECIPIENT SAVED IT</q> and <q>RECIPIENT READ IT</q>.</li>
+<li>A message asks to pause tests? On the test screen press <span class="key">OK</span>, choose <q>PAUSE</q>, <span class="key">OK</span>. Screen: <q>TEST PAUSED AT RECIPIENT'S REQUEST</q>. When the recipient allows it: <q>RESUME</q>.</li>
+</ol>
+<p>A test is not a request for help. Do not send tests without need: they use the shared channel.</p>
+
+<h2>Radio silence</h2>
+<ol>
+<li>Switch on CISZA (SILENCE, under the cover) only when ordered: a message from the recipient or a runner. Write the order in the log.</li>
+<li>Screen: <q>RADIO SILENCE – NOT TRANSMITTING. URGENT: RUNNER</q>. The station receives but transmits nothing.</li>
+<li>A new request waits: <q>SAVED – NOT SENT UNTIL SILENCE ENDS</q>. Urgent matters: runner, if the route is safe.</li>
+<li>Switch CISZA off only when silence is lifted. Write the time in the log.</li>
+</ol>
+</div>
+
+<div class="col">
+<h2>Changing cells <span class="mark">◆</span></h2>
+<ol>
+<li>Screen <q>REPLACE CELLS WITHIN 1 H</q>: best connect 12 V first.</li>
+<li>Without 12 V: hold the main switch 2 s. Wait for <q>SWITCHING OFF – WAIT, SAVING</q>, then <q>CELLS CAN BE REMOVED</q>.</li>
+<li>Replace the whole set at once (+ to the + mark). Do not mix old and new cells.</li>
+<li>Press the main switch. Requests stay in the station.</li>
+</ol>
+
+<h2>Runner</h2>
+<p>Only by a safe route. No runner during fire, flooding, collapse, contamination, shelling, an air-raid alarm or a ban on going out. Best two people together. Write down the time of leaving and of return.</p>
+
+<h2>Other alarms</h2>
+<p><q>QUEUE FULL – REQUEST NOT SAVED…</q>, <q>STATION MEMORY ERROR – REQUEST NOT SAVED…</q>, <q>RADIO: FAULT</q>: the request will not go by radio. Fill in the form and act as for a missing confirmation (page 1, point 4). <span class="key">OK</span> silences the sound.</p>
+
+<h2>Useful</h2>
+<ul>
+<li>The first press on a dark screen only switches on the light.</li>
+<li>Change the language: hold <span class="key">BACK</span> 3 s.</li>
+<li>End of shift: <span class="key">OK</span> → <q>STATUS</q> → <q>SHIFT HANDOVER</q>. Hand over open requests. Sign the log.</li>
+<li>Blind and deaf people send requests through the warden. Read the screen to them.</li>
+<li><q>DESTROY DATA</q> (<q>STATUS</q> → <q>SERVICES</q>) only if capture of the station threatens, never on an order by radio. Irreversible.</li>
+<li>End of the event, only on the municipality's order (spoken, by runner, in writing): <q>STATUS</q> → <q>SERVICES</q> → <q>CLOSE EVENT</q>, then <span class="key">UP</span> <span class="key">DOWN</span> <span class="key">UP</span> <span class="key">OK</span>. Requests will be removed from the station.</li>
+</ul>
+
+<h2>Quarterly check</h2>
+<ul class="check">
+<li>Crisis cell set sealed, expiry date valid.</li>
+<li>Station starts from the training set or from 12 V.</li>
+<li>Address on the screen is correct.</li>
+<li>Test: <q>RECIPIENT READ IT</q> within 30 min.</li>
+<li>Training cells: <q>CELLS: [x] V</q> at least 5.6 V <span class="mark">◆</span>.</li>
+<li>Service sticker intact. <q>SERVICE MODE: ENTRIES [n]</q> in <q>STATUS</q> as in the register.</li>
+<li>Antenna, cable and connectors undamaged.</li>
+<li>At the station: card, forms, log, pencil, PMR with batteries, radio receiver.</li>
+<li>Fields on page 1 up to date.</li>
+<li>Station off, cells removed. Log entry and signature.</li>
+</ul>
+</div>
+</div>
+<footer><span class="mark">◆</span> = software 0.1 does not support this yet (cell measurement, switching off with the button). Applies to: WICI station software, specification 0.5, images bench-n1-0.1 and bench-b-0.1; hardware: development station on carrier board N1. Working draft. Translation to be checked by a native speaker. CC BY 4.0.</footer>
+</section>
+
+<!-- ===================================================== Formularz papierowy (PL) ===================================================== -->
+<section class="page form" lang="pl">
+<div class="copy">
+<header class="top"><h1>WICI · FORMULARZ ZGŁOSZENIA</h1><div class="side">Egzemplarz 1: zostaje przy stacji</div></header>
+<table>
+<tr><td>Godzina <span class="small">/ Час / Time</span></td><td></td></tr>
+<tr><td>Punkt (nr, nazwa) <span class="small">/ Пункт / Point</span></td><td></td></tr>
+<tr><td>Stacja <span class="small">(ekran STAN)</span></td><td>WICI-</td></tr>
+<tr><td>Nr zgłoszenia <span class="small">(jeśli był na ekranie)</span></td><td></td></tr>
+<tr><td>Rodzaj potrzeby <span class="small">/ Потреба / Need</span></td><td class="small">☐ 0 pomoc medyczna ☐ 1 leki, sprzęt med. ☐ 2 ewakuacja, transport ☐ 3 woda pitna ☐ 4 żywność ☐ 5 ogrzewanie, energia ☐ 6 sanitarne, higiena ☐ 7 zagrożenie budynku ☐ 8 poszukiwanie, informacja ☐ 9 inne</td></tr>
+<tr><td>Liczba osób <span class="small">/ Людей / People</span></td><td></td></tr>
+<tr><td>Pilność <span class="small">/ Терміновість / Urgency</span></td><td class="small">☐ zagrożenie życia ☐ pilne – kilka godzin ☐ w ciągu doby</td></tr>
+<tr><td>Adres i wejście</td><td></td></tr>
+<tr><td>Opis <span class="small">(krótko, bez nazwisk; po polsku)</span></td><td></td></tr>
+<tr><td>Kto wysłał <span class="small">(funkcja, podpis)</span></td><td></td></tr>
+</table>
+</div>
+<div class="copy">
+<header class="top"><h1>WICI · FORMULARZ ZGŁOSZENIA</h1><div class="side">Egzemplarz 2: niesie goniec</div></header>
+<table>
+<tr><td>Godzina <span class="small">/ Час / Time</span></td><td></td></tr>
+<tr><td>Punkt (nr, nazwa) <span class="small">/ Пункт / Point</span></td><td></td></tr>
+<tr><td>Stacja <span class="small">(ekran STAN)</span></td><td>WICI-</td></tr>
+<tr><td>Nr zgłoszenia <span class="small">(jeśli był na ekranie)</span></td><td></td></tr>
+<tr><td>Rodzaj potrzeby <span class="small">/ Потреба / Need</span></td><td class="small">☐ 0 pomoc medyczna ☐ 1 leki, sprzęt med. ☐ 2 ewakuacja, transport ☐ 3 woda pitna ☐ 4 żywność ☐ 5 ogrzewanie, energia ☐ 6 sanitarne, higiena ☐ 7 zagrożenie budynku ☐ 8 poszukiwanie, informacja ☐ 9 inne</td></tr>
+<tr><td>Liczba osób <span class="small">/ Людей / People</span></td><td></td></tr>
+<tr><td>Pilność <span class="small">/ Терміновість / Urgency</span></td><td class="small">☐ zagrożenie życia ☐ pilne – kilka godzin ☐ w ciągu doby</td></tr>
+<tr><td>Adres i wejście</td><td></td></tr>
+<tr><td>Opis <span class="small">(krótko, bez nazwisk; po polsku)</span></td><td></td></tr>
+<tr><td>Kto wysłał <span class="small">(funkcja, podpis)</span></td><td></td></tr>
+</table>
+</div>
+</section>
+
+</body>
+</html>

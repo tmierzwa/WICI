@@ -1,6 +1,6 @@
 # WICI: stanowisko odbiorcze
 
-Rozdział opisuje stanowisko, które przyjmuje zgłoszenia schronień. Stanowisko odbiorcze to rola wyznaczona przez wójta (burmistrza, prezydenta miasta), a nie konkretna jednostka; skrót OSP oznacza tylko ochotniczą straż pożarną ([koncepcja, rozdział 02](../concept/02-scenariusze-i-organizacja.html#miejsce-w-systemie-ochrony-ludnosci)). Wiadomości SA1, zasady trwałości i model zaufania wspólne dla stacji i stanowiska opisuje rozdział [Oprogramowanie](oprogramowanie.md), a interfejsy stosu rozdział [Radio](radio.md). Czynności dyżurnego opisuje [instrukcja dyżurnego](instrukcja-dyzurnego.md).
+Rozdział opisuje stanowisko, które przyjmuje zgłoszenia schronień. Stanowisko odbiorcze to rola wyznaczona przez wójta (burmistrza, prezydenta miasta), a nie konkretna jednostka; skrót OSP oznacza tylko ochotniczą straż pożarną ([koncepcja, rozdział 02](../concept/02-scenariusze-i-organizacja.html#miejsce-w-systemie-ochrony-ludnosci)). Wiadomości SA1, zasady trwałości i model zaufania wspólne dla stacji i stanowiska opisuje rozdział [Oprogramowanie](oprogramowanie.md), a interfejsy stosu rozdział [Radio](radio.md). Czynności dyżurnego opisuje [instrukcja dyżurnego](../obsluga/instrukcja-dyzurnego.md).
 
 Decyzja D19 (2026-10-08): tożsamość odbiorcy, Reticulum i LXMF w Pythonie oraz baza zgłoszeń działają na **komputerze stanowiska**. **Stacja stanowiska** jest zwykłą stacją WICI w konfiguracji węzła stanowiska: przekazuje ruch sieci i łączy radio z komputerem przez USB. Komputer stanowiska jest obowiązkowy i ma zapas. Warunek utrzymania decyzji i porównanie wariantów są w części [Uzasadnienie decyzji](#uzasadnienie-decyzji). Żadna część stanowiska nie jest jeszcze zbudowana.
 
@@ -31,7 +31,7 @@ Decyzja D19 (2026-10-08): tożsamość odbiorcy, Reticulum i LXMF w Pythonie ora
 | O08 | Przekazywanie ruchu innych stacji przy stanowisku nie zależy od komputera | T3, T5 |
 | O09 | Zasilanie stacji i komputera na ≥72 h; zmiana źródła bez przerwy pracy | T6 |
 | O10 | Tożsamość odbiorcy i baza zaszyfrowane w spoczynku; komputer bez połączenia z siecią i bez samoczynnych aktualizacji; tożsamość zapasowa w kopertach poza stanowiskiem | T2 |
-| O11 | Zapisywane dane: SA1, adres nadawcy, czas odbioru, klucze odbioru, dziennik działań; bez IP, MAC, telefonów i nazwisk; ZAMKNIJ ZDARZENIE z archiwum dla administratora (D13) | T2, T8 |
+| O11 | Zapisywane dane: SA1, adres nadawcy, czas odbioru, klucze odbioru, dziennik działań; bez IP, MAC, telefonów i nazwisk; ZAMKNIJ ZDARZENIE z archiwum dla administratora (D13), a potem usunięcie kopii bazy; eksport rejestru do CSV | T2, T8 |
 | O12 | Ogłoszenie adresu odbiorcy co 6 h ±20% i po starcie aplikacji; BULLETIN osobno do każdej stacji w granicach czasu nadawania profilu radiowego (LoRa SF7: około 8,5 min dla 50 stacji) | T5 |
 
 ## Budowa
@@ -79,7 +79,7 @@ Stacja stanowiska nie ma tożsamości odbiorcy, więc nie wymaga PRZENIEŚ STACJ
 2. pyta o liczbę odzyskań wpisanych do dziennika zmiany od daty kopii (zwykle 0) i w jednej transakcji ustawia P = P z kopii + 3600 s × (1 + ta liczba), zapisuje odzyskanie w dzienniku działań i wykonuje nową kopię, która ma już nowe P;
 3. dopiero potem nadaje.
 
-Każde odzyskanie podnosi P o 3600 s ponad wszystkie wcześniejsze przesunięcia, więc numery po nim przewyższają numery nadane po wykonaniu kopii, także w czasie wcześniejszego odzyskania, jeśli rozbieżność zegara komputera, który nadawał, i zegara odzyskania nie przekracza łącznie 1 h. Sprawdzenie zegara na początku każdego dyżuru utrzymuje każdą z nich w ±1 min ([instrukcja dyżurnego](instrukcja-dyzurnego.md)). Kontrola przy starcie używa czasu nadania bez P, więc zwykły restart po odzyskaniu nie jest blokowany (odzyskanie o 10:00, STATUS z numerem odpowiadającym 11:00, restart o 10:01: start przechodzi). Kolejność rewizji jednego zgłoszenia nie jest gwarantowana w sieci: aplikacja przyjmuje każdą rewizję osobno, pokazuje najnowszą, a starszą, która przyszła później, zapisuje bez zmiany widoku ([cykl życia](oprogramowanie.md#cykl-życia-zgłoszenia)).
+Każde odzyskanie podnosi P o 3600 s ponad wszystkie wcześniejsze przesunięcia, więc numery po nim przewyższają numery nadane po wykonaniu kopii, także w czasie wcześniejszego odzyskania, jeśli rozbieżność zegara komputera, który nadawał, i zegara odzyskania nie przekracza łącznie 1 h. Sprawdzenie zegara na początku każdego dyżuru utrzymuje każdą z nich w ±1 min ([instrukcja dyżurnego](../obsluga/instrukcja-dyzurnego.md)). Kontrola przy starcie używa czasu nadania bez P, więc zwykły restart po odzyskaniu nie jest blokowany (odzyskanie o 10:00, STATUS z numerem odpowiadającym 11:00, restart o 10:01: start przechodzi). Kolejność rewizji jednego zgłoszenia nie jest gwarantowana w sieci: aplikacja przyjmuje każdą rewizję osobno, pokazuje najnowszą, a starszą, która przyszła później, zapisuje bez zmiany widoku ([cykl życia](oprogramowanie.md#cykl-życia-zgłoszenia)).
 
 **Zaufanie.** Baza aplikacji stanowiska przechowuje jedną listę zaufanych stacji z ich kartami; na jej podstawie aplikacja decyduje o każdej wiadomości. Dodanie stacji do listy wymaga karty stacji (plik lub QR), porównania odcisku z ekranem stacji albo z kartą w ewidencji i zgody dwóch zalogowanych dyżurnych; tak samo wraca stacja usunięta przez pomyłkę. Usunięcie z listy wykonuje jeden zalogowany dyżurny z wpisem do dziennika działań, bo usunięcie tylko odbiera zaufanie. Wiadomości stacji usuniętej trafiają do kwarantanny z alarmem „możliwe przejęcie stacji”; limit 4 wiadomości na nadawcę chroni kwarantannę przed zapełnieniem. Po ponownym dodaniu stacji jej wiadomości z kwarantanny są usuwane, bo stacja ponawia je do RECEIVED. Zatwierdzenie w kwarantannie dotyczy pojedynczej wiadomości i nie dodaje nadawcy do zaufanych.
 
@@ -89,7 +89,9 @@ Każde odzyskanie podnosi P o 3600 s ponad wszystkie wcześniejsze przesunięcia
 
 **Komputer.** Laptop przypisany do stanowiska (wbudowany akumulator działa jak zasilacz awaryjny), z pakietem stanowiska i systemem z listy pakietu START (D04), z pełnym szyfrowaniem dysku, bez usypiania i samoczynnych aktualizacji. Wi-Fi, Bluetooth i Ethernet są wyłączone w systemie; jedynym połączeniem jest USB do stacji. Drugi komputer tego samego typu ma ten sam pakiet i jest sprawdzany w przeglądzie kwartalnym.
 
-**ZNISZCZ DANE i ZAMKNIJ ZDARZENIE.** ZNISZCZ DANE na komputerze stanowiska usuwa tożsamość odbiorcy, bazę i plik kont z nośnika i z kopii; decyduje fizyczne zniszczenie obu nośników, które nakazuje [instrukcja dyżurnego](instrukcja-dyzurnego.md#awarie). ZAMKNIJ ZDARZENIE eksportuje zaszyfrowane archiwum dla administratora danych (D13) i usuwa treść zgłoszeń; tożsamości i klucze odbioru zostają ([model zaufania](oprogramowanie.md#model-zaufania-i-kluczy)).
+**ZNISZCZ DANE i ZAMKNIJ ZDARZENIE.** ZNISZCZ DANE na komputerze stanowiska usuwa tożsamość odbiorcy, bazę i plik kont z nośnika i z kopii; decyduje fizyczne zniszczenie obu nośników, które nakazuje [instrukcja dyżurnego](../obsluga/instrukcja-dyzurnego.md). ZAMKNIJ ZDARZENIE eksportuje zaszyfrowane archiwum dla administratora danych (D13), razem z rejestrem w CSV, i usuwa treść zgłoszeń; tożsamości i klucze odbioru zostają ([model zaufania](oprogramowanie.md#model-zaufania-i-kluczy)). Kopie bazy na drugim nośniku mają nadal treść zgłoszeń, więc po zamknięciu panel pokazuje zadanie „usuń kopie”. Gdy administrator potwierdzi odbiór archiwum, dyżurny wpisuje potwierdzenie (kto, kiedy), podłącza drugi nośnik, a aplikacja usuwa z niego kopie bazy i zapisuje to w dzienniku działań. Do tego czasu kopie zostają, bo są jedyną drogą odtworzenia, gdyby archiwum okazało się nieczytelne.
+
+**Eksport rejestru.** Panel eksportuje rejestr do pliku CSV (UTF-8, separator przecinek, pierwszy wiersz z nazwami kolumn) na żądanie zalogowanego dyżurnego i przy ZAMKNIJ ZDARZENIE (do archiwum). Plik trafia na nośnik stanowiska, a na inny nośnik tylko za zgodą dwóch dyżurnych, z wpisem w dzienniku działań. Jeden wiersz to jedno zdarzenie rejestru: odbiór zgłoszenia lub rewizji, decyzja, odpowiedź, komunikat, przekazanie służbie, zatwierdzenie lub odrzucenie w kwarantannie, zmiana listy zaufanych, cisza, kopia i odzyskanie bazy, przekazanie zmiany. Kolumny: `czas` (ISO 8601 z czasem lokalnym), `rodzaj`, `stacja` (`WICI-xxxxxx`), `numer` (krótki numer), `id`, `rewizja`, `kategoria`, `osoby`, `pilnosc`, `adres`, `tresc`, `stan`, `adresat` (komu przekazano), `potwierdzil` (podmiot i funkcja), `kanal`, `dyzurny` (konto). CSV nie zawiera kluczy, haseł ani adresów LXMF poza skrótem stacji.
 
 ## Panel dyżurnego
 
@@ -103,7 +105,8 @@ Panel nasłuchuje wyłącznie na 127.0.0.1. Wymaga logowania; konta i hasła two
 - ma widok kwarantanny z wiadomościami „do weryfikacji”, a przy stacjach usuniętych z listy alarm „możliwe przejęcie stacji” z liczbą odebranych od nich wiadomości (z powtórzeniami);
 - wysyła BULLETIN osobno do każdej stacji i pokazuje postęp rozsyłania;
 - pokazuje stan węzła: połączenie ze stacją, czas od ostatniego pakietu z radia, liczbę intencji w drodze i w oczekiwaniu, wiek najstarszej;
-- przekazanie zmiany: otwarte zgłoszenia, sprawy w stanie 4 bez potwierdzenia skierowania pomocy, niewysłane intencje, kwarantanna, kopia bazy.
+- przekazanie zmiany: otwarte zgłoszenia, sprawy w stanie 4 bez potwierdzenia skierowania pomocy, niewysłane intencje, kwarantanna, kopia bazy;
+- eksportuje rejestr do CSV ([eksport rejestru](#komputer-i-aplikacja-stanowiska)); po ZAMKNIJ ZDARZENIE pokazuje zadanie „usuń kopie” do potwierdzenia odbioru archiwum.
 
 | Adres | Działanie |
 |---|---|
@@ -118,7 +121,9 @@ Panel nasłuchuje wyłącznie na 127.0.0.1. Wymaga logowania; konta i hasła two
 | `POST /api/operator/announce` | ogłoszenie adresu odbiorcy |
 | `POST /api/operator/backup` | kopia bazy na drugi nośnik, ze znacznikiem „kopia” |
 | `POST /api/operator/restore` | odtworzenie bazy z kopii; zgoda dwóch zalogowanych dyżurnych, potem tryb odzyskania z potwierdzeniem zegara |
-| `POST /api/operator/close` | ZAMKNIJ ZDARZENIE |
+| `POST /api/operator/export` | eksport rejestru do CSV na nośnik stanowiska; na inny nośnik za zgodą dwóch zalogowanych dyżurnych |
+| `POST /api/operator/close` | ZAMKNIJ ZDARZENIE: archiwum z rejestrem w CSV, usunięcie treści |
+| `POST /api/operator/backup/purge` | usunięcie kopii bazy z drugiego nośnika po wpisaniu potwierdzenia odbioru archiwum przez administratora |
 | `POST /api/operator/destroy` | ZNISZCZ DANE; podwójne potwierdzenie |
 | `GET /health` | stan aplikacji, zapisu i połączenia ze stacją, liczniki odrzutów |
 

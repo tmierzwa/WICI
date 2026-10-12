@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Ćwiczenia opiekuna według karty obsługi (docs/spec/karta.md) i instrukcji opiekuna
+// Ćwiczenia opiekuna według karty obsługi (docs/obsluga/karta-stacji.html) i instrukcji opiekuna
 // (docs/spec/instrukcja.md), na prawdziwym oprogramowaniu stacji (sim.js). Warunki kroków sprawdzają
 // tylko to, co widzi człowiek albo stanowisko odbiorcze: tekst ekranu odczytany z pikseli panelu,
 // położenie przełącznika, zasilanie i zapisy aplikacji stanowiska (w tym dowody dostarczenia od stacji).
@@ -191,19 +191,19 @@ export const SCENARIOS = [
     id: "power",
     title: { pl: "Zanik zasilania", en: "Power loss" },
     brief: {
-      pl: "Zgłoszenie czeka w stacji na wysyłkę, gdy znika zasilanie. Po powrocie zasilania zgłoszenie jest nadal w pamięci FRAM.",
-      en: "A request is waiting in the station when power is lost. After power returns the request is still in FRAM.",
+      pl: "Zgłoszenie czeka w stacji na wysyłkę, gdy znika zasilanie. Po powrocie zasilania zgłoszenie jest nadal w pamięci FRAM. Stacja nie wie, jak długo była wyłączona, więc od razu alarmuje o braku potwierdzenia.",
+      en: "A request is waiting in the station when power is lost. After power returns the request is still in FRAM. The station does not know how long it was off, so it raises the no-confirmation alarm at once.",
     },
     setup: ["boot", "link down", ...wizard({ category: 4, people: 4, urgency: 1 })],
     steps: [
       { pl: "Przytrzymaj WYŁĄCZNIK 2 s (albo odłącz zasilanie).", en: "Hold POWER for 2 s (or disconnect power).", done: (o) => !o.power },
       { pl: "Włącz stację.", en: "Switch the station on.", done: (o) => o.power && o.screen.on },
-      { pl: "Przejdź start (język, adres; TEST możesz pominąć: WSTECZ) i znajdź zgłoszenie w WIADOMOŚCI.",
-        en: "Go through the start (language, address; you may skip TEST: BACK) and find the request in MESSAGES.",
+      { pl: "Potwierdź alarm braku potwierdzenia (OK), przejdź start (język, adres; TEST możesz pominąć: WSTECZ) i znajdź zgłoszenie w WIADOMOŚCI.",
+        en: "Acknowledge the no-confirmation alarm (OK), go through the start (language, address; you may skip TEST: BACK) and find the request in MESSAGES.",
         // Pozycja w WIADOMOŚCIACH: numer zgłoszenia i kategoria („0918 ŻYWNOŚĆ”), nie lista kategorii kreatora.
         done: (o) => o.screen.lines.some((l) => /^\d{4} ŻYWNOŚĆ/.test(l)) },
     ],
-    solution: ["power off", "wait 5", "power on", "wait 1.5", "press OK", "press OK", "press BACK", "wait 5", "press OK", "press DOWN", "press OK", "wait 0.3"],
+    solution: ["power off", "wait 5", "power on", "wait 1.5", "press OK", "press OK", "press OK", "press BACK", "wait 5", "press OK", "press DOWN", "press OK", "wait 0.3"],
   },
 ];
 
