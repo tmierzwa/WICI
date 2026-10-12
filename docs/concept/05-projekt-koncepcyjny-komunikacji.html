@@ -163,7 +163,7 @@
   <li>wymagana jest normalizacja NFC, a znaki kategorii Cc, Cf, Cs, Co, Cn, Zl i Zp są odrzucane.</li>
 </ul>
 
-<p>Polecenie <code>configure</code> odrzuca adres i frazę, jeśli najgorsze zgłoszenie z przycisków przekroczyłoby limit. Najgorsze przypadki to wtedy REQUEST 222 B, BULLETIN 246 B i REPLY 156 B, z zapasem wobec około 284 B pakietu okazjonalnego. Limit sprawdza się po kodowaniu JSON, nie tylko dla pól, a przypadek graniczny jest częścią modelu.</p>
+<p>Polecenie <code>configure</code> odrzuca adres i frazę, jeśli najgorsze zgłoszenie z przycisków przekroczyłoby limit. Najgorsze przypadki to wtedy REQUEST 222 B, BULLETIN 246 B i REPLY 156 B, z zapasem wobec około 284 B pakietu okazjonalnego. Limit sprawdza się po kodowaniu JSON, nie tylko dla pól, a przypadek graniczny jest częścią modelu. Własny tekst wpisany przyciskami ma ten sam limit 96 B co fraza, więc nie zmienia najgorszego przypadku.</p>
 
 <p>Na mikrokontrolerze jeden pakiet na wiadomość ma dodatkową zaletę. Omija przesyłanie zasobu, w którym microReticulum (implementacja Reticulum dla mikrokontrolerów) ma znane błędy przy stratnym łączu, i ogranicza pamięć potrzebną na wiadomość. Zgłoszenie wybrane przyciskami jest krótsze niż typowe zgłoszenie z formularza: w <a href="../../software/reference/wyniki.json">modelu</a> około 106 B bez frazy.</p>
 
