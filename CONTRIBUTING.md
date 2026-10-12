@@ -90,7 +90,7 @@ Główna gałąź jest chroniona: scalenie PR wymaga przejścia kontroli `public
 
 ## Licencje
 
-Wkład pozostaje pod licencją właściwą dla ścieżki w [LICENSE.md](LICENSE.md): kod MIT, konstrukcja CERN-OHL-P-2.0, dokumentacja CC-BY-4.0. Cel projektu jest niekomercyjny; wybrane otwarte licencje nie zabraniają zastosowań komercyjnych. Obowiązuje [kodeks postępowania](CODE_OF_CONDUCT.md); podatności zgłaszaj według [SECURITY.md](SECURITY.md).
+Wkład pozostaje pod licencją właściwą dla ścieżki w [LICENSE.md](LICENSE.md): kod MIT, konstrukcja CERN-OHL-P-2.0, dokumentacja CC-BY-4.0. Projekt jest otwarty; licencje dopuszczają zastosowania komercyjne. Obowiązuje [kodeks postępowania](CODE_OF_CONDUCT.md); podatności zgłaszaj według [SECURITY.md](SECURITY.md).
 
 ## In English
 
