@@ -102,8 +102,8 @@
  ],
  "outputs": {
   "wici-station.mjs": {
-   "sha256": "e0ebd6126c55eb01f318a0a5afb44f2190bf3c501eaa116cd674c4051e851cfa",
-   "bytes": 1114970,
+   "sha256": "3fbec4ad1ef450a5a1b68e2f401bc7e1c7e944510b4e46da48b9558304513402",
+   "bytes": 1115234,
    "sources": [
     "firmware/src/annunciator.cpp",
     "firmware/src/config.cpp",
@@ -197,7 +197,7 @@
   "firmware/src/jsonprint.h": "592f08bb1368e14acec106279274d1d29402c751846f4b1de3be74a32fd5de35",
   "firmware/src/kiss.cpp": "57ad351ca583dfb2aa125aacee6bcf8682ed70d9f0f6ce1b7bcf250998732f30",
   "firmware/src/kiss.h": "6b0ad94ce5fe8c2ccb8fb0cd3e36f01e87669ee22db18d192473e2da5ae072f7",
-  "firmware/src/main.cpp": "adc8fe1b5d6c86b3ea032c3675d1220612918ec995deb916c6f40be4d524a334",
+  "firmware/src/main.cpp": "9419854d7ea080ab264b8237a43687bfe3d932a6dfac113663d50a2d76e793b5",
   "firmware/src/measure.cpp": "71ba5c78d18ea39c17adb0f88aa6be1a08efdddae3f2f91cab884a9c2241ddd7",
   "firmware/src/measure.h": "55d6cb086375a1117aa81dd25adcc8bdb4843665520a96d02bd6788cc585034e",
   "firmware/src/p1_registers.h": "4cc79a7f2471477a8ae1860a331664c21664dcaee4b85f197684df97bdb5d6ad",
@@ -230,8 +230,8 @@
   "firmware/src/sharp.h": "a2ac3ac7b9c811f9a438b67209dc644592f348053f0cc5c987446b4fd7ff1451",
   "firmware/src/sharp_extcomin_esp32.cpp": "f151fa001c2a3f4346687fac5f581323ecbf55704124d443c5d9087a4dcb33fb",
   "firmware/src/sharp_extcomin_nrf.cpp": "b26323614a98ad9c29d7ee14191db6108439a8c476f1eb7f94148f480785b3be",
-  "firmware/src/station.cpp": "e031f464586db658d00ca2310fa748c68e321477c7dab89a9d7615f2f91be866",
-  "firmware/src/station.h": "348559e123853270ee0d18953ff0d892b24df3dfd9e83c856a1cbfd4b57a848e",
+  "firmware/src/station.cpp": "cc5596875282ffee6e037372bb0655cf64451cd31b6b61bb3b279677c808396b",
+  "firmware/src/station.h": "5ec308c88ba62311058b3832b58e9078b73db698efc0ce5163d07a3edac884ac",
   "firmware/src/store.cpp": "d4ef76a7c7e1ffef6173f3cf60d023a111847a0f66a2722256e1a138e53de0a9",
   "firmware/src/store.h": "0e4ea40534a11f2eb49000c439b0015ef8f0018cb32a193bf7d035e26cd6dd9d",
   "firmware/src/testframe.cpp": "43f8f149a317f4a6c9f4c5aecf426204a88fcb98eb7f29c4f84e9845931402cf",

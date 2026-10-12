@@ -415,7 +415,8 @@ Result Station::revision(uint16_t slot, Request& r, const sa1::Message& m, const
     if (superseded) stageEvent(tx, slot, gen, old, StageCode::SUPERSEDED, false);
     tx.event(e);
     if (!tx.commit()) return Result::MEMORY;
-    alarmAcked_[slot] = 0;   // nowa rewizja (np. wyższa pilność) alarmuje od nowa
+    // Nowa rewizja (np. wyższa pilność) alarmuje od nowa; niepotwierdzona rewizja sprzed włączenia zostaje.
+    alarmAcked_[slot] &= BEFORE_ON_CONFIRM;
     char line[48];
     snprintf(line, sizeof(line), "request %04u revision %u", store::shortNumber(r.id), r.rMax);
     services_.log(line);
@@ -744,6 +745,8 @@ bool Station::handleOwn(const sa1::Message& m, const uint8_t id[store::HASH], co
     if (!accepted) ++stats_.skipped;   // STATUS albo REPLY z event ≤ licznika: powtórzenie albo spóźniona
     const bool stageChanged = accepted && confirm(r, m.revision, store_.now());
     if (accepted) {
+        // Odbiorca odpowiedział po włączeniu: alarmy tego wpisu liczą się już zwykłym czasem.
+        if (alarmAckedGen_[slot] == gen) alarmAcked_[slot] &= static_cast<uint8_t>(~(BEFORE_ON_CONFIRM | BEFORE_ON_READ));
         r.changedS = store_.now();
         tx.request(slot, r, false);
         if (stageChanged || decisionChanged) {
@@ -797,23 +800,27 @@ bool Station::handleBulletin(const sa1::Message& m, const uint8_t id[store::HASH
 bool Station::alarm(Alarm& out, bool withAcked) const {
     // Najstarszy przekroczony próg: brak_potwierdzenia (r_max bez RECEIVED; TEST 30 min od nadania),
     // brak_odczytu (pilność 2, 30 min po RECEIVED r_max bez STATUS tej rewizji).
+    // Odliczanie sprzed włączenia zasilania: próg przekroczony od razu, a [n] to dolne oszacowanie.
     const uint32_t nowS = store_.now();
     bool found = false;
     uint32_t bestAge = 0;
     for (size_t i = 0; i < store::REGISTER_SLOTS; ++i) {
         const RequestIndex& r = store_.request(i);
-        if (!r.used() || r.stage == Stage::CANCELLED || nowS < r.alarmS) continue;
+        if (!r.used() || r.stage == Stage::CANCELLED) continue;
         if (r.type == sa1::TEST && r.stage != Stage::RECEIVED && !(r.flags & store::SENT_ONCE)) continue;   // TEST przed nadaniem
-        const uint32_t age = nowS - r.alarmS;
+        const uint8_t marks = alarmAckedGen_[i] == r.gen ? alarmAcked_[i] : 0;
+        const uint32_t age = nowS > r.alarmS ? nowS - r.alarmS : 0;
         AlarmKind kind = AlarmKind::NONE;
         if (r.stage != Stage::RECEIVED) {
-            if (age >= (r.type == sa1::TEST ? TEST_ALARM_S : CONFIRM_ALARM_S[r.urgency < 3 ? r.urgency : 0])) kind = AlarmKind::NO_CONFIRMATION;
-        } else if (r.type == sa1::REQUEST && r.urgency == 2 && !(r.flags & store::READ_MAX) && age >= READ_ALARM_S) {
+            if ((nowS >= r.alarmS && age >= (r.type == sa1::TEST ? TEST_ALARM_S : CONFIRM_ALARM_S[r.urgency < 3 ? r.urgency : 0])) ||
+                (marks & BEFORE_ON_CONFIRM)) kind = AlarmKind::NO_CONFIRMATION;
+        } else if (r.type == sa1::REQUEST && r.urgency == 2 && !(r.flags & store::READ_MAX) &&
+                   ((nowS >= r.alarmS && age >= READ_ALARM_S) || (marks & BEFORE_ON_READ))) {
             kind = AlarmKind::NO_READ;
         }
         if (kind == AlarmKind::NONE) continue;
         const uint8_t bit = kind == AlarmKind::NO_READ ? 2 : 1;
-        if (!withAcked && alarmAckedGen_[i] == r.gen && (alarmAcked_[i] & bit)) continue;
+        if (!withAcked && (marks & bit)) continue;
         if (!found || age > bestAge) {
             found = true;
             bestAge = age;
@@ -825,6 +832,16 @@ bool Station::alarm(Alarm& out, bool withAcked) const {
         }
     }
     return found;
+}
+
+void Station::powerOn() {
+    // TEST pomijany: po włączeniu stacja i tak proponuje nowy TEST.
+    for (size_t i = 0; i < store::REGISTER_SLOTS; ++i) {
+        const RequestIndex& r = store_.request(i);
+        if (!r.used() || r.type != sa1::REQUEST || r.stage == Stage::CANCELLED) continue;
+        alarmAckedGen_[i] = r.gen;
+        alarmAcked_[i] = r.stage == Stage::RECEIVED ? BEFORE_ON_READ : BEFORE_ON_CONFIRM;
+    }
 }
 
 void Station::ackAlarm(const Alarm& alarm) {

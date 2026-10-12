@@ -135,6 +135,9 @@ public:
     bool alarm(Alarm& out, bool withAcked = false) const;
     bool alarmCause() const { Alarm a; return alarm(a, true); }
     void ackAlarm(const Alarm& alarm);
+    // Po włączeniu zasilania (nie po restarcie programowym): stacja bez RTC nie zna czasu wyłączenia,
+    // więc próg alarmu zgłoszenia odliczanego sprzed włączenia jest już przekroczony (oprogramowanie.md, "Czas").
+    void powerOn();
 
 private:
     struct Flight {
@@ -173,7 +176,9 @@ private:
     mutable uint16_t exceptionGen_ = 0;
     mutable uint8_t exceptionId_[store::HASH] = {};
     Flight flights_[IN_FLIGHT];
-    // Potwierdzone alarmy według gniazda (bit 0 brak potwierdzenia, bit 1 brak odczytu) dla generacji gniazda.
+    // Potwierdzone alarmy według gniazda (bit 0 brak potwierdzenia, bit 1 brak odczytu) dla generacji gniazda;
+    // bity 2 i 3: odliczanie tych alarmów trwało przed włączeniem zasilania (powerOn).
+    static constexpr uint8_t BEFORE_ON_CONFIRM = 0x04, BEFORE_ON_READ = 0x08;
     uint8_t alarmAcked_[store::REGISTER_SLOTS] = {};
     uint16_t alarmAckedGen_[store::REGISTER_SLOTS] = {};
 };

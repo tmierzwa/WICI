@@ -697,6 +697,7 @@ void beginScreen() {
         bench.log("screen restored after restart");
     } else {
         screenModel.start(savedLang);
+        if (storeOk && !nodeRole()) app.powerOn();   // bez RTC: czas wyłączenia nieznany (oprogramowanie.md, "Czas")
     }
     // Wyciszenie dźwięku przetrwa także zanik zasilania (rekord ustawień w FRAM).
     screenModel.setMuted(journalOk && (saved.b & SETTINGS_FLAGS) && (saved.b & SETTINGS_MUTED));

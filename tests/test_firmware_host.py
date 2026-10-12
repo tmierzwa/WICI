@@ -675,6 +675,10 @@ int world() {
             const bool cause = w.app->alarmCause();
             if (any) printf("alarm %u %04u %u cause=%d\n", static_cast<unsigned>(al.kind), al.number, al.minutes, cause);
             else printf("alarm none cause=%d\n", cause);
+        } else if (!strcmp(cmd, "poweron")) {
+            const store::Begin result = w.start();   // włączenie zasilania: restart magazynu i powerOn()
+            w.app->powerOn();
+            printf("begin %s\n", store::beginName(result));
         } else if (!strcmp(cmd, "ackalarm")) {
             station::Alarm al;
             if (w.app->alarm(al)) w.app->ackAlarm(al);
@@ -1695,6 +1699,32 @@ class HostUnitTests(unittest.TestCase):
         tests = self.find(out, "test ")
         self.assertEqual(tests[0], tests[1])   # powtórzone nonce: ten sam wynik
         self.assertEqual(len(self.regs(out, "d")), 3)
+
+    def test_alarms_after_power_on(self):
+        # oprogramowanie.md, "Czas": bez RTC czas wyłączenia jest nieznany, więc po włączeniu zasilania
+        # próg alarmu zgłoszenia odliczanego sprzed włączenia jest przekroczony; [n] to dolne oszacowanie.
+        x, y, z = self.rid(31), self.rid(32), self.rid(33)
+        out = self.world([self.CONFIG, "now 1000", self.sub(self.request(x, urgency=0)), "now 1130", "restart", "alarm",
+                          "poweron", "alarm", "ackalarm", "alarm", self.sub(self.request(y, urgency=2)), "now 1200", "alarm"])
+        self.assertEqual(self.find(out, "alarm "), [
+            "alarm none cause=0",                 # restart programowy (watchdog): czas wyłączenia ≤60 s, zwykły próg
+            "alarm 1 0031 2 cause=1",             # włączenie: pilność 0 bez RECEIVED alarmuje od razu
+            "alarm none cause=1",                 # potwierdzony OK; przyczyna trwa
+            "alarm none cause=1"])                # nowe zgłoszenie po włączeniu: zwykły próg 15 min
+        # brak_odczytu sprzed włączenia; nowa rewizja i odpowiedź odbiorcy po włączeniu.
+        out = self.world([self.CONFIG, "now 1000", self.sub(self.request(x, urgency=2)), "in " + compact([1, 1, x, 0, 1, 1]),
+                          self.sub(self.request(y, urgency=1)), self.sub(self.request(z, urgency=1)), "now 1100", "poweron",
+                          "alarm", "ackalarm", "alarm", "ackalarm", "alarm", "ackalarm", "alarm",
+                          self.sub(self.request(y, revision=1, urgency=2)), "alarm",
+                          "in " + compact([1, 1, z, 0, 1, 1]), "alarm"])
+        self.assertEqual(self.find(out, "alarm ")[:4], [
+            "alarm 2 0031 1 cause=1", "alarm 1 0032 1 cause=1", "alarm 1 0033 1 cause=1", "alarm none cause=1"])
+        self.assertEqual(self.find(out, "alarm ")[4:], [
+            "alarm 1 0032 1 cause=1",             # nowa rewizja y: niepotwierdzona rewizja sprzed włączenia zostaje
+            "alarm 1 0032 1 cause=1"])            # RECEIVED z po włączeniu: z bez alarmu, y nadal
+        # TEST pomijany: po włączeniu stacja proponuje nowy.
+        out = self.world([self.CONFIG, "now 100", "stest 1", "poll", "now 200", "poweron", "alarm"])
+        self.assertEqual(self.find(out, "alarm "), ["alarm none cause=0"])
 
     # --- protokół USB "usb":2 --------------------------------------------------
 
