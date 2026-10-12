@@ -825,7 +825,7 @@ void Model::textAct(bool up, bool down, bool ok, bool back) {
     if (textGroupOpen_) {
         const char* group = ui_texts::GROUPS[cursor_ - TEXT_FIRST_GROUP][static_cast<size_t>(lang_)];
         if (up && textLetter_ > 0) --textLetter_;
-        else if (down && textLetter_ + 1 < utf8Chars(group)) ++textLetter_;
+        else if (down && static_cast<size_t>(textLetter_) + 1 < utf8Chars(group)) ++textLetter_;
         else if (back) textGroupOpen_ = false;
         else if (ok) {
             const char* letter = group + utf8Bytes(group, textLetter_);

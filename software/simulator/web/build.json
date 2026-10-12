@@ -236,7 +236,7 @@
   "firmware/src/store.h": "0e4ea40534a11f2eb49000c439b0015ef8f0018cb32a193bf7d035e26cd6dd9d",
   "firmware/src/testframe.cpp": "43f8f149a317f4a6c9f4c5aecf426204a88fcb98eb7f29c4f84e9845931402cf",
   "firmware/src/testframe.h": "e19f4c229982119ac303eab9820530d0da86d5dbcec6a8ff90813f9c4a88ec1b",
-  "firmware/src/ui.cpp": "6c60b0322d1802ddc5b1eb131a0fdfc13cfb03ca57c979564da71f03aa24c9a6",
+  "firmware/src/ui.cpp": "e559b9ed435041fc2b483043c20bdb248583bef02722e991ce0bb2d749ea31a3",
   "firmware/src/ui.h": "61707f0d52ab7925e3ed0aec368540a2b68ad35cbbf5a7f5f2d49cbb34aac236",
   "firmware/src/ui_texts.h": "63cf41e0fdb4e96edff629401e21c811bdc80c6a538aec19d7c7604a2a21da35",
   "firmware/src/unicode_tables.h": "ef324616bebbcb72f111ce9453ed943d9b57fad9ae73cdc79d22a81161d88739",
