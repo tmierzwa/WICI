@@ -4,6 +4,7 @@
 
 - [Zakres prototypu L0 do wyceny](pdf/WICI-L0-zakres-prototypu.pdf): końcowy dokument z 9 października 2026 r., identyczny bajtowo z `ZAKRES-PROTOTYPU.pdf` w końcowej paczce RFQ. Zapytania wysłano do trzech firm, ale ostatecznie prototyp składa autor; zamówienie płytek i części z 2026-10-10 opisuje [przed-produkcja.md](../hardware/dev-bench/przed-produkcja.md#zamówienie-2026-10-10-l0). Dokument pozostaje zakresem prób i odbioru L0.
 - [Treść zakresu L0](text/WICI-L0-zakres-prototypu.txt): tekst wyodrębniony z powyższego PDF do przeszukiwania i porównania. To transkrypcja, nie generator odtwarzający układ PDF.
+- [Zlecenie montażu i uruchomienia L0](pdf/WICI-L0-zlecenie.pdf): brief dla zewnętrznego wykonawcy, wydruk [ZLECENIE.md](../hardware/l0-diagnostic/ZLECENIE.md) przez `python3 tools/doc_pdf.py hardware/l0-diagnostic/ZLECENIE.md output/pdf/WICI-L0-zlecenie.pdf` (pakiet Python `markdown` i Chrome albo Chromium). Po zmianie źródła PDF generuje się ponownie.
 - [Pierwszy test LoRa na macOS](pdf/WICI-pierwszy-test-LoRa-macOS.pdf): wcześniejsza instrukcja już zapisana w repozytorium. Zawiera lokalną ścieżkę autora; dostosować ją do miejsca pobrania projektu. Bieżąca instrukcja R0 jest w [instrukcji partnera radiowego](../hardware/l0-diagnostic/reference/R0-INSTRUKCJA.txt).
 
 Aktualny zakres i procedura odbioru sprzętu są w [instrukcji L0](../hardware/l0-diagnostic/README.md). Diagnostyka L0 jest gotowa do rozpoczęcia prób; wyniki sprzętowe pozostają niepotwierdzone. Status zamówień jest w [głównym README](../README.md#gdzie-jesteśmy).

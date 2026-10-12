@@ -18,6 +18,8 @@ konfigurację timerów LCD i brzęczyka; ekran nie ma kanału potwierdzania odbi
 
 ## Przygotowanie wykonawcy
 
+Zakres zlecenia montażu i uruchomienia dla zewnętrznego wykonawcy: [ZLECENIE.md](ZLECENIE.md).
+
 1. Montaż według paczki RFQ, w tym adapter Wio, antena, RXEN, odsprzęganie,
    rezystor resetu R12=1k i punkty pomiarowe. Zasilanie wyłącznie z USB.
    JP1/JP2 zwarte; źródła AA/12V odłączone. Nie zasłaniać punktów pomiarowych.
