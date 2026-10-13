@@ -22,4 +22,4 @@ Status: wersja robocza do ćwiczenia przy stole. Znak ◆ oznacza czynność, kt
 3. Strony 1–2: PL, 3–4: UK, 5–6: EN, 7: formularz (drukuj jednostronnie, w wielu kopiach).
 4. Po wydruku, przed laminowaniem, wpisz ręcznie na stronie 1 dane punktu: nr i nazwę, adres, stanowisko odbiorcze, zastępców, miejsce radiotelefonu PMR i cel gońca.
 
-Układ karty: krój bezszeryfowy, czarno-biały, tekst co najmniej 8,8 pt, stałe zasady 10,4 pt. Każda strona mieści się na A4 przy marginesach 9 mm; po zmianie treści sprawdź to wydrukiem do PDF (7 stron).
+Układ karty: krój bezszeryfowy, czarno-biały, tekst co najmniej 9 pt, stałe zasady 10,4 pt. Każda strona mieści się na A4 przy marginesach 9 mm; po zmianie treści sprawdź to wydrukiem do PDF (7 stron).
