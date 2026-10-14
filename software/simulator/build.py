@@ -52,6 +52,8 @@ ROM_SOURCES = {"microReticulum/src/microReticulum/Utilities/tlsf/tlsf.c": ["-UES
 PLATFORM_DEFINES = ["-DARDUINO=10819", "-DARDUINO_ARCH_ESP32", "-DESP32", "-DWICI_SIM"]
 # Pre-skrypt stosu (firmware/tools/stack_deps.py) dopisuje te flagi C++ w każdym środowisku.
 CXX_FLAGS = ["-std=gnu++17", "-fexceptions", "-frtti"]
+# Pliki, które budowa PlatformIO zapisuje w firmware/src (w .gitignore); nie są wejściami obrazu.
+GENERATED = {"idf_component.yml"}
 
 
 
@@ -249,7 +251,8 @@ def digest(path):
 
 def inputs():
     """Every input of the build: firmware src/, platformio.ini, stack pins and patches, simulator HAL and post."""
-    files = sorted(p for p in SRC.rglob("*") if p.is_file()) + [INI, FIRMWARE / "tools" / "stack_deps.py"]
+    files = sorted(p for p in SRC.rglob("*") if p.is_file() and p.name not in GENERATED)
+    files += [INI, FIRMWARE / "tools" / "stack_deps.py"]
     files += sorted((FIRMWARE / "patches").rglob("*.patch")) + sorted(p for p in HAL.iterdir() if p.is_file())
     files += sorted((HERE / "post").iterdir()) + [Path(__file__)]
     return {p.relative_to(ROOT).as_posix(): digest(p) for p in files}

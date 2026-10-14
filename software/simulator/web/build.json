@@ -268,6 +268,6 @@
   "software/simulator/hal/vboard.cpp": "36d6257f17a7e3afe18e11cd44b59457ffdb94a6b4510692491a173ddf124152",
   "software/simulator/hal/vboard.h": "c9d6642034dd57ac6d3c3c38b37aba5361a88e8681266be5270b9e5006f3371b",
   "software/simulator/post/post.cpp": "d60718bf6375c70141150dffb16bd71672690df1c444d3d62d7faa2d605d231b",
-  "software/simulator/build.py": "cfbf01f1dca9e901f0512604dedfb1260d4f3f1dfbd23164534d09eb758364cd"
+  "software/simulator/build.py": "ef54852311d632b9216caa6e1374f1a572e62cf3cc1f8d57003f9c74361f8aa3"
  }
 }
