@@ -6,6 +6,7 @@ Dokumenty dla ludzi, którzy obsługują system: opiekunów punktów i dyżurnyc
 |---|---|---|
 | [karta-stacji.html](karta-stacji.html) | opiekun punktu (sołtys, nauczyciel, strażak OSP) | karta obsługi stacji do druku dwustronnego i laminowania: wersje PL, UK i EN, każda na jednej kartce A4 (strona 1: najważniejsze, strona 2: gdy trzeba); na końcu formularz papierowy zgłoszenia w dwóch egzemplarzach |
 | [instrukcja-dyzurnego.md](instrukcja-dyzurnego.md) | dyżurny stanowiska odbiorczego (strażak OSP, pracownik gminy) | uruchomienie, potwierdzenia, odpowiedzi i komunikaty, kwarantanna, przekazywanie służbom, rejestr, awarie, ćwiczenia, cisza radiowa, zamknięcie zdarzenia; tabele do wypełnienia przez gminę |
+| [szkolenie.md](szkolenie.md) | prowadzący szkolenie, gmina | program 2-godzinnego szkolenia opiekunów i dyżurnych przed pracą stacji w terenie: cele, organizacja, przebieg, ścieżki opiekuna i dyżurnego, sprawdzian, po szkoleniu |
 
 Tematy obsługi spoza karty (adres, alarmy, energia, poziomy 2–3, koniec zdarzenia) są w [instrukcji opiekuna](../spec/instrukcja.md).
 
