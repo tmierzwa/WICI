@@ -35,6 +35,22 @@ class SimulatorTest(unittest.TestCase):
     def test_committed_build_is_current(self):
         self.assertEqual(build.check(), [], "rebuild: python3 software/simulator/build.py (Emscripten %s)" % build.EMSCRIPTEN)
 
+    def test_generated_build_files_are_not_inputs(self):
+        # PlatformIO writes them into firmware/src during a local build; the stamp must not depend on them.
+        for name in build.GENERATED:
+            path = SRC / name
+            if (ROOT / ".git").exists():
+                ignored = subprocess.run(["git", "check-ignore", "-q", str(path.relative_to(ROOT))], cwd=ROOT)
+                self.assertEqual(ignored.returncode, 0, "%s is not in .gitignore" % name)
+            created = not path.exists()
+            if created:
+                path.write_text("dependencies:\n  idf: '>=5.1'\n", encoding="utf-8")
+            try:
+                self.assertNotIn(path.relative_to(ROOT).as_posix(), build.inputs())
+            finally:
+                if created:
+                    path.unlink()
+
     def test_image_is_the_bench_b_source_set(self):
         cfg = build.platformio()
         image = build.firmware_sources(cfg)
