@@ -1,0 +1,185 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: MIT -->
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WICI · przygotowanie stacji</title>
+<link rel="icon" href='data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"%3E%3Crect width="64" height="64" rx="14" fill="%230f1216"/%3E%3Cpath fill="none" stroke="%23f4d345" stroke-width="5" stroke-linejoin="round" d="M13 38H26L32 20L37 44L39 38H51"/%3E%3Ccircle cx="13" cy="38" r="7.5" fill="%23ffffff"/%3E%3Ccircle cx="51" cy="38" r="7.5" fill="%23ffffff"/%3E%3C/svg%3E'>
+<link rel="stylesheet" href="app.css">
+<script src="app.js" defer></script>
+</head>
+<body>
+<header class="bar">
+  <img class="logo on-light" src="logo.svg" alt="WICI">
+  <img class="logo on-dark" src="logo-dark.svg" alt="WICI">
+  <span class="bar-title">Przygotowanie stacji</span>
+  <span id="conn" class="pill pill-wait" role="status">Uruchamianie…</span>
+  <button id="quit" class="btn btn-ghost" type="button">Zakończ</button>
+</header>
+
+<main>
+  <section id="offline" class="card notice notice-alarm" hidden>
+    <h2>Panel nie ma połączenia z aplikacją</h2>
+    <p id="offline-text">Aplikacja WICI została zamknięta albo przestała odpowiadać. Uruchom START ponownie.</p>
+  </section>
+
+  <section id="search" class="card hero" hidden>
+    <div class="hero-icon" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div>
+      <h1>Podłącz stację przewodem USB</h1>
+      <ol class="steps">
+        <li>Włącz stację (ogniwa albo źródło 12 V).</li>
+        <li>Połącz ją z tym komputerem przewodem USB-C z zestawu.</li>
+        <li>Panel sam znajdzie stację. Sterowniki nie są potrzebne.</li>
+      </ol>
+      <p id="search-problem" class="problem" hidden></p>
+      <p id="search-skipped" class="hint skipped" hidden></p>
+      <button type="button" class="btn" id="rescan">Szukaj ponownie</button>
+    </div>
+  </section>
+
+  <section id="station" class="card station" hidden>
+    <div class="station-head">
+      <div>
+        <p class="eyebrow" id="st-role">Stacja</p>
+        <h1 id="st-name" class="mono">WICI-······</h1>
+      </div>
+      <span id="st-prep" class="pill"></span>
+    </div>
+    <dl class="facts">
+      <div><dt>Konfiguracja</dt><dd id="st-config">–</dd></div>
+      <div><dt>Zasilanie</dt><dd id="st-power">–</dd></div>
+      <div><dt>Czas pracy</dt><dd id="st-uptime">–</dd></div>
+      <div><dt>Oprogramowanie</dt><dd id="st-fw">–</dd></div>
+      <div><dt>Port</dt><dd id="st-port" class="mono">–</dd></div>
+    </dl>
+    <p id="st-banner" class="banner" hidden></p>
+  </section>
+
+  <nav class="tabs" role="tablist" aria-label="Sekcje">
+    <button type="button" role="tab" id="tab-config" aria-controls="panel-config" aria-selected="true">Konfiguracja</button>
+    <button type="button" role="tab" id="tab-card" aria-controls="panel-card" aria-selected="false">Karta stacji</button>
+    <button type="button" role="tab" id="tab-journal" aria-controls="panel-journal" aria-selected="false">Dziennik</button>
+  </nav>
+
+  <section id="panel-config" role="tabpanel" aria-labelledby="tab-config" class="tabpanel">
+    <form id="form" class="card form" novalidate>
+      <fieldset class="group">
+        <legend>Rola urządzenia</legend>
+        <div class="choices">
+          <label class="choice"><input type="radio" name="role" value="stacja" checked>
+            <span><strong>Stacja schronienia</strong><small>adres obiektu, karta odbiorcy, zgłoszenia</small></span></label>
+          <label class="choice"><input type="radio" name="role" value="wezel">
+            <span><strong>Węzeł stanowiska</strong><small>radio przy komputerze odbiorcy, bez zgłoszeń</small></span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="group only-station">
+        <legend>Adres obiektu</legend>
+        <p class="hint">Pierwszy adres jest domyślny. Kilka adresów: gdy jedna stacja obsługuje kilka budynków (do 8).</p>
+        <div id="addresses" class="rows"></div>
+        <button type="button" class="btn btn-ghost" id="add-address">+ Dodaj adres</button>
+        <p class="field-error" data-error="addresses"></p>
+      </fieldset>
+
+      <fieldset class="group only-station">
+        <legend>Karta odbiorcy</legend>
+        <p class="hint">Dwie tożsamości stanowiska odbiorczego: główna i zapasowa. Najprościej wczytać je z pliku karty odbiorcy.</p>
+        <div class="identity">
+          <h3>Tożsamość główna</h3>
+          <label class="field"><span>Adres LXMF</span><input class="mono" name="receiver.main.lxmf" data-field="receiver.main.lxmf" maxlength="32" spellcheck="false" autocomplete="off"></label>
+          <label class="field"><span>Klucz publiczny</span><textarea class="mono" name="receiver.main.key" data-field="receiver.main.key" rows="2" maxlength="128" spellcheck="false"></textarea></label>
+          <p class="field-error" data-error="receiver.main"></p>
+        </div>
+        <div class="identity">
+          <h3>Tożsamość zapasowa</h3>
+          <label class="field"><span>Adres LXMF</span><input class="mono" name="receiver.backup.lxmf" data-field="receiver.backup.lxmf" maxlength="32" spellcheck="false" autocomplete="off"></label>
+          <label class="field"><span>Klucz publiczny</span><textarea class="mono" name="receiver.backup.key" data-field="receiver.backup.key" rows="2" maxlength="128" spellcheck="false"></textarea></label>
+          <p class="field-error" data-error="receiver.backup"></p>
+        </div>
+        <button type="button" class="btn btn-ghost" id="load-receiver">Wczytaj kartę odbiorcy z pliku</button>
+        <p class="field-error" data-error="receiver"></p>
+      </fieldset>
+
+      <fieldset class="group only-station">
+        <legend>Sieć</legend>
+        <label class="field narrow"><span>Liczba stacji w sieci</span>
+          <input type="number" name="stations" data-field="stations" min="1" max="1000" step="1" inputmode="numeric"></label>
+        <p class="hint">Wyznacza okno TEST po starcie sieci, żeby stacje nie nadawały naraz.</p>
+        <p class="field-error" data-error="stations"></p>
+      </fieldset>
+
+      <fieldset class="group only-station">
+        <legend>Gotowe frazy</legend>
+        <p class="hint">Do 11 fraz wybieranych przyciskami na stacji. Do zgłoszenia trafia wersja polska; ukraińska i angielska są tylko na ekranie.</p>
+        <div id="phrases" class="rows"></div>
+        <button type="button" class="btn btn-ghost" id="add-phrase">+ Dodaj frazę</button>
+        <p class="field-error" data-error="phrases"></p>
+      </fieldset>
+
+      <fieldset class="group">
+        <legend>Dostęp do sieci radiowej</legend>
+        <label class="field"><span>Kod dostępu sieci (IFAC)</span>
+          <input class="mono" name="ifac" data-field="ifac" maxlength="32" spellcheck="false" autocomplete="off"></label>
+        <p class="hint">Ten sam kod we wszystkich stacjach i węźle jednej sieci. Przechowuj go jak hasło.</p>
+        <button type="button" class="btn btn-ghost" id="new-ifac">Nowy kod dla nowej sieci</button>
+        <p class="field-error" data-error="ifac"></p>
+        <label class="field narrow"><span>Profil radiowy</span>
+          <select name="radio" data-field="radio">
+            <option value="lora-sf7">LoRa SF7 (pilotaż)</option>
+            <option value="p1">P1 (stanowisko deweloperskie, wariant zapasowy)</option>
+          </select></label>
+        <p class="field-error" data-error="radio"></p>
+      </fieldset>
+
+      <div class="actions">
+        <p id="doc-size" class="hint"></p>
+        <div class="buttons">
+          <button type="button" class="btn" id="read-config">Odczytaj ze stacji</button>
+          <button type="button" class="btn" id="load-file">Wczytaj z pliku</button>
+          <button type="button" class="btn" id="save-file">Zapisz do pliku</button>
+          <button type="submit" class="btn btn-primary" id="send">Wyślij do stacji</button>
+        </div>
+      </div>
+      <div id="result" class="result" hidden></div>
+    </form>
+  </section>
+
+  <section id="panel-card" role="tabpanel" aria-labelledby="tab-card" class="tabpanel" hidden>
+    <div class="card">
+      <p class="hint">Karta stacji trafia do aplikacji stanowiska odbiorczego, która dodaje stację do zaufanych. Dyżurni porównują odcisk z ekranem stacji.</p>
+      <button type="button" class="btn btn-primary" id="read-card">Odczytaj kartę stacji</button>
+      <div id="card-view" class="card-view" hidden>
+        <p class="eyebrow">Odcisk klucza: porównaj z ekranem stacji</p>
+        <p id="card-fp" class="fingerprint mono"></p>
+        <dl class="facts">
+          <div><dt>Nazwa</dt><dd id="card-name" class="mono"></dd></div>
+          <div><dt>Adres LXMF</dt><dd id="card-lxmf" class="mono"></dd></div>
+          <div class="wide"><dt>Adresy obiektu</dt><dd id="card-address"></dd></div>
+        </dl>
+        <details><summary>Klucz publiczny</summary><p id="card-key" class="mono break"></p></details>
+        <button type="button" class="btn" id="save-card">Zapisz kartę do pliku</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="panel-journal" role="tabpanel" aria-labelledby="tab-journal" class="tabpanel" hidden>
+    <div class="card">
+      <p class="hint">Każda czynność na stacji, z wynikiem. Wpisów nie da się zmienić ani usunąć. Kod dostępu sieci nie trafia do dziennika.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Czas</th><th>Stacja</th><th>Czynność</th><th>Wynik</th></tr></thead>
+          <tbody id="journal"></tbody>
+        </table>
+      </div>
+      <p id="journal-empty" class="hint">Dziennik jest pusty.</p>
+    </div>
+  </section>
+</main>
+
+<footer id="foot" class="foot"></footer>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<input type="file" id="file" accept=".json,application/json" hidden>
+</body>
+</html>

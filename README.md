@@ -65,6 +65,7 @@ Konkretne zadania opisuje [CONTRIBUTING.md](CONTRIBUTING.md#od-czego-zacząć). 
 | [docs/spec](docs/README.md) | Specyfikacja stacji, warunki odbioru i lista części |
 | [firmware](firmware/README.md) | Oprogramowanie stacji dla stanowisk deweloperskich A (nRF52840-DK + CC1120EM, na przewodach i na N1) i B (ESP32-S3-DevKitC-1 + X-NUCLEO-S2868A2 na N1); skompilowane, jeszcze nie uruchomione na sprzęcie |
 | [software/reference](software/reference/README.md) | Model wiadomości i potwierdzeń z testami; obliczenia zasięgu, energii i czasu nadawania |
+| [software/laptop](software/laptop/README.md) | Aplikacja laptopa z pamięci USB (Windows, macOS, Linux), etap 1: przygotowanie stacji przez USB; [plan](software/laptop/PLAN.md) kolejnych etapów |
 | [software/simulator](software/simulator/README.md) | Symulator stacji w przeglądarce: obraz bench-b oprogramowania stacji (te same źródła i flagi) na wirtualnej płytce ESP32-S3 z emulacją S2-LP, FRAM i Sharp, węzeł i stanowisko odbiorcze, panel R02 i N1 w skali, ćwiczenia opiekuna; [online](https://wici.net.pl/symulator/) |
 | [hardware](hardware/README.md) | Testy radiowe R0, diagnostyka prototypu L0, projekt nośnej N1 i dokumentacja przyszłej płytki R02 (wstrzymanej do decyzji po pilotażu) |
 | [media/film](media/film/README.md) | Dwa filmy o projekcie: około 4,5 min i 60 s |
