@@ -1,0 +1,84 @@
+# SPDX-License-Identifier: MIT
+# Aplikacja laptopa (software/laptop): testy na każdym systemie i pamięć USB zbudowana z przypiętych
+# środowisk Pythona, uruchomiona przez START na Windows, macOS (Apple Silicon i Intel) i Linuksie.
+name: Laptop
+on:
+  pull_request:
+    # Druga strona kontraktu też: firmware, symulator i protokół USB.
+    paths: ['software/laptop/**', 'tests/test_laptop.py', '.github/workflows/laptop.yml', 'firmware/src/**',
+            'software/simulator/web/**', 'docs/spec/protokol-usb.md']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025, macos-15]
+        python: ['3.12', '3.14']
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Unit, panel, build and simulator tests
+        run: python -m unittest tests.test_laptop -v
+
+  usb:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-24.04, runtime: linux-x86_64}
+          - {os: windows-2025, runtime: windows-amd64}
+          - {os: macos-15, runtime: macos-arm64}
+          - {os: macos-15-intel, runtime: macos-x86_64}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.14'
+      - name: MinGW-w64 for START-WINDOWS.exe
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: if (-not (Get-Command gcc -ErrorAction SilentlyContinue)) { choco install mingw -y --no-progress }
+      - name: Build the USB tree (pinned runtimes, checked SHA-256)
+        run: python software/laptop/build/build_usb.py --out usb --only ${{ matrix.runtime }}
+      - name: Selftest through START (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sh usb/START-LINUX.sh --selftest | tee selftest.txt
+          grep -q "stdlib .*usb/runtime/python314.zip" selftest.txt
+          chmod -x usb/runtime/linux-x86_64/bin/python3.14   # pamięć bez prawa wykonywania: kopia do ~/.cache
+          sh usb/START-LINUX.sh --selftest | tee selftest-copy.txt
+          grep -q "stdlib .*/.cache/wici/.*/python314.zip" selftest-copy.txt
+      - name: Selftest through START (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          usb/START-MAC.app/Contents/MacOS/START --selftest | tee selftest.txt
+          grep -q "stdlib .*usb/runtime/python314.zip" selftest.txt
+      - name: Selftest through START (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath usb\START-WINDOWS.exe -ArgumentList '--selftest' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "START-WINDOWS.exe --selftest: $($p.ExitCode)" }
+          $out = & usb\runtime\windows\python.exe usb\app\wici.pyz --selftest
+          $out
+          if (-not ($out -match 'usb\\runtime\\python314\.zip')) { throw 'shared standard library not on sys.path' }
+
+  size:
+    # Cała pamięć USB naraz: rozmiar każdej części i budżet z build_usb.py (BUDGET).
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.14'
+      - name: MinGW-w64 cross compiler
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends gcc-mingw-w64-x86-64
+      - name: Build every runtime and check the size budget
+        run: python software/laptop/build/build_usb.py --out usb

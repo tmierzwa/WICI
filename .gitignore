@@ -30,3 +30,6 @@ __pycache__/
 
 # Native simulator build (software/simulator/build.py --native)
 /software/simulator/build/
+
+# Archiwa środowisk Pythona pobierane przez software/laptop/build/build_usb.py
+/software/laptop/build/cache/
