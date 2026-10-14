@@ -44,7 +44,7 @@ VERSION = PINS["python"]
 MINOR = ".".join(VERSION.split(".")[:2])          # 3.14
 TAG = MINOR.replace(".", "")                       # 314
 STDLIB_ZIP = f"python{TAG}.zip"
-BUDGET = 60 * 1024 * 1024                          # cała pamięć USB poza obrazem Linuksa; zob. PLAN.md
+BUDGET = 90_000_000                                 # cała pamięć USB poza obrazem Linuksa; zmierzone 83,6 MB; zob. PLAN.md
 ZIP_TIME = (1980, 1, 1, 0, 0, 0)                   # powtarzalne archiwa: stałe znaczniki czasu
 
 # Pakiety biblioteki dołączane w całości: kodeki ładowane po nazwie oraz pakiety, których aplikacja używa
@@ -64,16 +64,23 @@ EXCLUDE = ["tkinter", "turtle", "turtledemo", "idlelib", "test", "unittest", "py
            "__hello__"]
 
 # Moduły binarne zachowywane z katalogu lib-dynload albo DLLs (w wielu kompilacjach są wbudowane w interpreter).
-EXTENSIONS = {"_ctypes", "_sqlite3", "select", "_socket", "unicodedata", "_hashlib", "_queue", "_json", "_struct",
+EXTENSIONS = {"_ctypes", "_sqlite3", "select", "_socket", "unicodedata", "_queue", "_json", "_struct",
               "math", "cmath", "_random", "_bisect", "_heapq", "binascii", "zlib", "_contextvars", "_datetime",
               "_posixsubprocess", "fcntl", "termios", "_blake2", "_sha2", "_sha1", "_md5", "_sha3", "_hmac", "array",
               "mmap", "_opcode", "_statistics", "_uuid", "_scproxy", "grp", "pwd"}
 WINDOWS_FILES = {"python.exe", "pythonw.exe", f"python{TAG}.dll", "python3.dll", "vcruntime140.dll", "vcruntime140_1.dll",
-                 "libffi-8.dll", "sqlite3.dll", "libcrypto-3.dll", "LICENSE.txt"}
+                 "libffi-8.dll", "sqlite3.dll", "LICENSE.txt"}
 
 
 def log(*args):
     print(*args, flush=True)
+
+
+def plain_console():
+    """Polish messages must not crash a cp1252 console or pipe (Windows CI, older terminals)."""
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="backslashreplace")
 
 
 # ---- pobieranie ------------------------------------------------------------------------------
@@ -166,12 +173,15 @@ def extension_name(filename):
 
 
 def unpack_pbs(name, archive, out):
-    """Interpreter, shared library and needed extension modules; returns the stdlib source dir."""
+    """Interpreter and needed extension modules; returns the kept archive paths.
+
+    PBS links the interpreter statically (needed modules included), so lib/libpython* is a second copy
+    of the same code: 33 MB on Linux, 19 MB per Mac. Leaving it out is checked by --selftest in CI."""
     stdlib_prefix = f"lib/python{MINOR}/"
     dest = out / "runtime" / name
     kept = []
     for rel, member, data in pbs_members(archive):
-        if rel in (f"bin/python{MINOR}",) or (rel.startswith("lib/libpython") and "/" not in rel[4:]):
+        if rel == f"bin/python{MINOR}":
             write(dest / rel, data, executable=bool(member.mode & 0o111))
             kept.append(rel)
         elif rel.startswith(stdlib_prefix + "lib-dynload/"):
@@ -360,6 +370,7 @@ def main():
     parser.add_argument("--out", default=str(ROOT / "dist" / "wici-usb"))
     parser.add_argument("--only", nargs="*", choices=sorted(PINS["runtimes"]), help="tylko te środowiska")
     parser.add_argument("--windows-launcher", help="gotowy START-WINDOWS.exe zamiast kompilacji")
+    plain_console()
     args = parser.parse_args()
     sys.path.insert(0, str(LAPTOP))
     build(Path(args.out), args.only or sorted(PINS["runtimes"]), args.windows_launcher)

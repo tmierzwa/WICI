@@ -128,6 +128,9 @@ def main(argv=None):
     parser.add_argument("--http", type=int, default=8080, help="port panelu na 127.0.0.1")
     parser.add_argument("--no-browser", action="store_true", help="nie otwieraj przeglądarki")
     parser.add_argument("--selftest", action="store_true", help="sprawdź środowisko i zakończ")
+    for stream in (sys.stdout, sys.stderr):      # pythonw: brak konsoli; Windows: cp1252
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="backslashreplace")
     args = parser.parse_args(argv)
     if args.selftest:
         return selftest()

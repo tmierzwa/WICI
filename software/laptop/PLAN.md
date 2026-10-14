@@ -78,12 +78,12 @@ Archiwa czterech środowisk mają razem 102 MB (po rozpakowaniu około 300 MB). 
 | Sposób | Zysk |
 |---|---|
 | jedna biblioteka standardowa dla wszystkich systemów, tylko moduły używane przez aplikację (ModuleFinder i pakiety używane wprost w całości), bajtkod `-OO` w ZIP | zmierzone: 320 modułów, 2,2 MB zamiast około 4 × 40 MB |
-| z każdego środowiska tylko interpreter, jego biblioteka i potrzebne moduły binarne: bez Tcl/Tk, testów, nagłówków, pip, TLS | do zmierzenia w CI (zadanie `size`) |
+| z każdego środowiska tylko interpreter i potrzebne moduły binarne: bez Tcl/Tk, testów, nagłówków, pip, TLS, OpenSSL; bez `libpython`, bo interpreter python-build-standalone jest zlinkowany statycznie i zawiera ją w sobie | zmierzone: Linux 32,5 MB, macOS arm64 18,9 MB, macOS x86_64 19,8 MB, Windows 10,2 MB (zamiast 66, 38, 40 i 16 MB z `libpython` i OpenSSL) |
 | aplikacja jako jeden ZIP ze źródłami | zmierzone: 36 KB |
 | jeden START-MAC.app zamiast dwóch | jedna ikona i jedna instrukcja dla użytkownika |
 | bez zewnętrznych bibliotek JS i CSS, fonty systemowe | panel: 47 KB z logo |
 
-Budżet całej pamięci poza obrazem startowym Linuksa: 60 MB (`BUDGET` w build_usb.py; zadanie `size` w CI przerywa budowę po przekroczeniu). Szacunek przed pierwszym pomiarem: 30–45 MB. Kompletność przyciętej biblioteki sprawdza `--selftest` na każdym systemie. Dwie luki znalezione w ten sposób przy budowie planu: `runpy` i `pkgutil` (start z ZIP) oraz `ctypes._layout` i `stringprep` (ładowane z kodu w C).
+Zmierzona cała pamięć poza obrazem startowym Linuksa: 83,6 MB, z czego 81,6 MB to cztery interpretery. Szacunek przed pierwszym pomiarem (30–45 MB) nie uwzględniał, że interpretery python-build-standalone mają wkompilowane wszystkie moduły binarne. Budżet: 90 MB (`BUDGET` w build_usb.py; zadanie `size` w CI przerywa budowę po przekroczeniu), czyli zapas na drobne zmiany, a nie na nowe środowisko. SHA-256 bez OpenSSL zapewnia wbudowany moduł `_sha2`. Kompletność przyciętej biblioteki sprawdza `--selftest` na każdym systemie. Dwie luki znalezione w ten sposób przy budowie planu: `runpy` i `pkgutil` (start z ZIP) oraz `ctypes._layout` i `stringprep` (ładowane z kodu w C).
 
 System plików pamięci: FAT32, bo czytają go wszystkie systemy i oprogramowanie UEFI (obraz startowy w etapie 4 może leżeć na tej samej partycji). Partycja ext4 na stan Linuksa dochodzi z obrazem startowym.
 
@@ -148,10 +148,12 @@ CI sprawdza budowę i start na czystych systemach, ale nie zastąpi prawdziwych 
 | wyszukiwanie stacji po `hello` | działa przed przydziałem VID/PID i nie wysyła niczego do cudzych urządzeń |
 | odrzucone: Electron, Tauri, Go, Web Serial, okno natywne | uzasadnienia w poprzedniej analizie: waga, drugi język, brak trwałego zapisu i magazynu kluczy, dwa interfejsy |
 | odrzucone: osobna biblioteka standardowa na każdy system | +6,6 MB bez zysku dla użytkownika |
+| odrzucone: kompresja binarek (UPX) | około −40 MB, ale skompresowane pliki wykonywalne często budzą alarmy antywirusów na Windows i psują podpisy na macOS |
+| odrzucone na etap 1: własna kompilacja Pythona z mniejszą liczbą modułów | może zejść do około 50 MB, ale oznacza własny łańcuch kompilacji na trzy systemy i utratę gotowych, sprawdzanych kompilacji; na pamięci 8 GB różnica jest dla użytkownika niewidoczna |
 
 ## Pytania do rozstrzygnięcia
 
-1. Gałąź `laptop-etap-1` jest zacommitowana lokalnie. Czy wypchnąć ją i otworzyć PR? Workflow `Laptop` uruchamia się na PR i dopiero tam zbuduje prawdziwą pamięć USB na czterech systemach (pobiera 102 MB przypiętych archiwów).
+1. Gałąź `laptop-etap-1` jest w PR. Pierwszy przebieg CI zbudował prawdziwą pamięć USB i dał pomiar rozmiaru (pytanie 11); START uruchamia się w CI na każdym z czterech środowisk.
 2. Minimalne systemy: macOS 11 czy także 10.15 dla starszych Maków z Intelem (trzeba sprawdzić cel wdrożenia python-build-standalone)? Linux na ARM: tak czy nie (+30 MB)?
 3. Router: czy przyjąć router z zestawu przygotowany centralnie? Który model kwalifikować? Co z zaporą Windows na laptopach bez uprawnień administratora na poziomie 3?
 4. Podpisy: certyfikat Authenticode (Windows) i Apple Developer ID z notaryzacją (99 USD rocznie) czy instrukcja „uruchom mimo to”? Kto przechowuje klucz podpisu manifestu (minisign lub Ed25519)?
@@ -161,3 +163,4 @@ CI sprawdza budowę i start na czystych systemach, ale nie zastąpi prawdziwych 
 8. Licencje środowisk: na USB są pliki licencji Pythona. Środowiska zawierają też OpenSSL, SQLite, libffi, zlib i inne. Pełny zestaw licencji trzeba przejrzeć przed pierwszą dystrybucją.
 9. Obraz startowy Linuksa (etap 4): na jakiej dystrybucji go oprzeć (Debian live z shim dla Secure Boot?) i jaki rozmiar jest akceptowalny (zwykle 1–1,5 GB)?
 10. VID/PID stacji: specyfikacja wymaga legalnego przydziału przed wydaniem. Kiedy będzie, aplikacja otworzy tylko porty z tym identyfikatorem i przestanie sondować cudze urządzenia. Czy przydział (np. pid.codes dla projektów otwartych) jest już w planie?
+11. Rozmiar: czy 84 MB pamięci (bez obrazu startowego Linuksa) jest akceptowalne? Mniej wymaga własnej kompilacji Pythona (zob. odrzucone warianty).

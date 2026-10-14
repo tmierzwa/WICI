@@ -540,7 +540,7 @@ class BuildTreeTest(unittest.TestCase):
                         tar_add(tar, f"python/lib/python{minor}/{rel}", p.read_bytes())
             emb = tmp / "embed.zip"
             with zipfile.ZipFile(emb, "w") as z:
-                for name in ("python.exe", "pythonw.exe", f"python{tag}.dll", "_ctypes.pyd", "_ssl.pyd", "libssl-3.dll",
+                for name in ("python.exe", "pythonw.exe", f"python{tag}.dll", "_ctypes.pyd", "_ssl.pyd", "libssl-3.dll", "_hashlib.pyd", "libcrypto-3.dll",
                              f"python{tag}.zip", "LICENSE.txt", "sqlite3.dll"):
                     z.writestr(name, name)
             exe = tmp / "START-WINDOWS.exe"
@@ -554,7 +554,8 @@ class BuildTreeTest(unittest.TestCase):
             self.assertIn(f"runtime/linux-x86_64/bin/python{minor}", files)
             self.assertIn(f"runtime/linux-x86_64/lib-dynload/_ctypes.cpython-{tag}-darwin.so", files)
             self.assertFalse([f for f in files if "tkinter" in f or "tcl" in f or "include/" in f or "_ssl" in f
-                              or "libssl" in f or f.endswith(f"windows/python{tag}.zip")], files)
+                              or "libssl" in f or "libcrypto" in f or "_hashlib" in f or "libpython" in f
+                              or f.endswith(f"windows/python{tag}.zip")], files)
             self.assertEqual((out / f"runtime/linux-x86_64/bin/python{minor}._pth").read_text(),
                              f"../../{build_usb.STDLIB_ZIP}\n../lib-dynload\n")
             self.assertEqual((out / f"runtime/windows/python{tag}._pth").read_bytes(),
