@@ -22,7 +22,7 @@ Narzędzie trybu przygotowania i fundament dla następnych etapów.
 | Testy | jednostkowe, bezpieczeństwo panelu, budowa USB, pełne przygotowanie na obrazie firmware | [tests/test_laptop.py](../../tests/test_laptop.py) |
 | CI | testy na Windows, macOS i Linuksie; pamięć USB budowana i uruchamiana przez START na każdym systemie; budżet rozmiaru | [.github/workflows/laptop.yml](../../.github/workflows/laptop.yml) |
 
-Czego etap 1 celowo nie ma: PRZENIEŚ STACJĘ i aktualizacji oprogramowania (firmware jeszcze ich nie realizuje, [przegląd F107](../../docs/review.md)), logowania hasłami z kopert (narzędzie przygotowania obsługuje osoba utrzymująca system na własnym komputerze; panel opiekuna w etapie 2 je dostaje) oraz strony mieszkańca (tryb kiosku w etapie 2, strona dla telefonów w etapie 3).
+Czego etap 1 celowo nie ma: PRZENIEŚ STACJĘ i aktualizacji oprogramowania (firmware jeszcze ich nie realizuje, [przegląd F107](../../docs/review.md)), logowania hasłami z kopert (narzędzie przygotowania obsługuje osoba utrzymująca system na własnym komputerze; panel gospodarza w etapie 2 je dostaje) oraz strony mieszkańca (tryb kiosku w etapie 2, strona dla telefonów w etapie 3).
 
 ## Systemy docelowe
 
@@ -54,7 +54,7 @@ Bezpieczeństwo panelu: inne strony otwarte w tej samej przeglądarce nie mogą 
 
 | Problem | Rozwiązanie | Gdzie sprawdzone |
 |---|---|---|
-| VID/PID stacji jeszcze nieprzydzielone, więc nie da się wybrać portu po identyfikatorze | aplikacja otwiera tylko porty USB CDC ACM (`/dev/ttyACM*`, `/dev/cu.usbmodem*`, porty `USBSER` z rejestru Windows) i czeka 2,5 s na `hello`; nic do nich nie wysyła. Port bez `hello` (diagnostyka, węzeł poza trybem przygotowania, cudze urządzenie) nie jest otwierany ponownie, dopóki nie zniknie albo opiekun nie kliknie „Szukaj ponownie”, bo otwarcie portu podnosi DTR, a to resetuje np. Arduino. Bufor wejściowy nie jest czyszczony po otwarciu, żeby nie zgubić `hello` | test na obrazie firmware; test pomijania portów |
+| VID/PID stacji jeszcze nieprzydzielone, więc nie da się wybrać portu po identyfikatorze | aplikacja otwiera tylko porty USB CDC ACM (`/dev/ttyACM*`, `/dev/cu.usbmodem*`, porty `USBSER` z rejestru Windows) i czeka 2,5 s na `hello`; nic do nich nie wysyła. Port bez `hello` (diagnostyka, węzeł poza trybem przygotowania, cudze urządzenie) nie jest otwierany ponownie, dopóki nie zniknie albo gospodarz nie kliknie „Szukaj ponownie”, bo otwarcie portu podnosi DTR, a to resetuje np. Arduino. Bufor wejściowy nie jest czyszczony po otwarciu, żeby nie zgubić `hello` | test na obrazie firmware; test pomijania portów |
 | sterowniki | stacja ma dwa interfejsy CDC ACM z IAD: Windows 10+, macOS i Linux mają wbudowany sterownik | spec. [radio](../../docs/spec/radio.md#usb-do-laptopa); próba na płytce |
 | pyserial i inne zależności | port szeregowy na bibliotece standardowej, około 260 wierszy; na Windows krótki odczyt (30 ms), bo bez `FILE_FLAG_OVERLAPPED` zapis czeka na trwający odczyt | struktury kernel32 w teście, pty w teście POSIX |
 | 1200 Bd resetuje ESP32 z rdzeniem Arduino do programu rozruchowego | port zawsze 115200 Bd, DTR i RTS włączone | kod; próba na płytce |
@@ -111,7 +111,7 @@ Laptop i router są z obiektu albo przyniesione na miejscu (decyzje z 2026-10-14
 | Ścieżka | Kiedy działa | Co robi aplikacja |
 |---|---|---|
 | 1. Strona dla telefonów przez router obiektu | macOS i Linux zwykle od razu; Windows, gdy użytkownik laptopa jest administratorem (zwykle na laptopie prywatnym) | wybiera interfejs z prywatnym adresem IPv4 i bramą, przy kilku ten na kablu; nasłuchuje tylko na nim, port 8080; pokazuje kod QR sieci Wi-Fi (`WIFI:T:WPA;S:…;P:…;;`, nazwa i hasło wpisane raz z naklejki routera) i kod QR adresu, także jako plakat A4 do wydruku; odświeża kody po zmianie adresu; licznik połączonych telefonów |
-| 2. Tryb kiosku: strona mieszkańca na ekranie laptopa | zawsze, gdy działa START | otwiera stronę mieszkańca pod 127.0.0.1; mieszkańcy zgłaszają się po kolei przy laptopie; bez sieci, routera, zapory i administratora |
+| 2. Tryb kiosku: strona mieszkańca na ekranie laptopa | zawsze, gdy działa START | otwiera stronę mieszkańca pod adresem lokalnym; mieszkańcy zgłaszają się po kolei przy laptopie; bez sieci, routera, zapory i administratora. Po wysłaniu numer zgłoszenia, potem pusty formularz dla następnej osoby, bez ciasteczka mieszkańca. Panel gospodarza pod inną nazwą hosta (`localhost` i `127.0.0.1` mają osobne ciasteczka) i zablokowany do ponownego logowania na czas kiosku ([specyfikacja](../../docs/spec/oprogramowanie.md#tryb-kiosku)) |
 | 3. Linux WICI z pamięci USB | Windows bez administratora, jeśli laptop pozwala uruchomić system z USB | obraz startowy etapu 4 z tą samą aplikacją; w Windows nic się nie zmienia i nic nie zostaje na dysku |
 | 4. Następny laptop | gdy żadna ścieżka nie daje stron dla telefonów, a kiosk nie wystarcza | instrukcja podaje kolejność: laptop prywatny albo Mac, Linux, na końcu laptop firmowy |
 
@@ -143,7 +143,7 @@ Laptop nie uruchamia własnego serwera DHCP, DNS ani portalu przechwytującego, 
 
 | Etap | Zakres | Zależy od |
 |---|---|---|
-| 2: panel opiekuna (poziom 2) i tryb kiosku | `sync`, migawka, zdarzenia i `ack` z kursorem w SQLite; `submit`, `cancel`, `test`, `announce`, `mark_read`; `silence`, `close`, `destroy` z potwierdzeniem przyciskiem; niepewny wynik polecenia; logowanie hasłami z kopert (scrypt z `hashlib`); przekazanie zmiany; strona mieszkańca w trybie kiosku na ekranie laptopa (formularz w trzech językach, lokalne numery, kolejka opiekuna), bo działa na każdym laptopie bez sieci | firmware z pełnym kontraktem w2 |
+| 2: panel gospodarza (poziom 2) i tryb kiosku | `sync`, migawka, zdarzenia i `ack` z kursorem w SQLite; `submit`, `cancel`, `test`, `announce`, `mark_read`; `silence`, `close`, `destroy` z potwierdzeniem przyciskiem; niepewny wynik polecenia; logowanie hasłami z kopert (scrypt z `hashlib`); przekazanie zmiany; strona mieszkańca w trybie kiosku na ekranie laptopa (formularz w trzech językach, lokalne numery, kolejka gospodarza), bo działa na każdym laptopie bez sieci | firmware z pełnym kontraktem w2 |
 | 2a: przygotowanie, ciąg dalszy | PRZENIEŚ STACJĘ (pięć kroków z wycofaniem), aktualizacja oprogramowania stacji z podpisanego obrazu | firmware (F107) |
 | 3: strona dla telefonów (poziom 3) | wybór interfejsu i adresu (`getifaddrs`, `GetAdaptersAddresses` przez ctypes), nasłuch tylko na nim, tokeny mieszkańców, kody QR sieci i adresu (własny koder, kilka KB), plakat A4, reguła zapory Windows przez UAC, diagnostyka | etap 2; próba zapory na czystym Windows 11 |
 | 4: wydanie | szyfrowanie bazy (SQLCipher albo zaszyfrowany wolumen, D13), ZNISZCZ DANE na laptopie, obraz startowy Linuksa (Debian live z shim; droga dla laptopów z Windows bez administratora), podpis manifestu w CI, podpisy START, macierz D04 na prawdziwych laptopach | D13, D04 |
@@ -182,10 +182,11 @@ CI sprawdza budowę i start na czystych systemach, ale nie zastąpi prawdziwych 
 | identyfikator USB z pid.codes (VID 0x1209) | darmowy dla otwartego sprzętu, niezależny od mikrokontrolera. Warunki ([pid.codes/howto](https://pid.codes/howto/), sprawdzone 2026-10-14): publiczne repozytorium z plikiem licencji, projekt płytki i oprogramowanie na uznanych licencjach otwartych (WICI: CERN-OHL-P i MIT); wniosek to pull request do `pidcodes/pidcodes.github.com` z plikami `org/<organizacja>/index.md` i `1209/<PID>/index.md` (pola `license` i `source`), PID spoza zakresów 0xxx i 1xxx; wniosek do akceptacji (2026-10-14) |
 | obraz startowy: Debian live z shim | Secure Boot, długie wsparcie, około 1–1,5 GB (2026-10-14) |
 | router obiektu, laptop przyniesiony na miejscu | [Laptop i router na miejscu](#laptop-i-router-na-miejscu) (2026-10-14) |
+| baza na dysku laptopa, zaszyfrowana kopia na pamięci USB po każdej zmianie, „Oddaj laptop” usuwa bazę z dysku | aktywna baza na FAT32 lub exFAT może się uszkodzić przy wyrwaniu pamięci albo zaniku zasilania; kopia pozwala przejść na inny laptop, a dane nie zostają u właściciela laptopa (2026-10-14) |
 
 ## Do zrobienia po rozstrzygnięciach
 
-1. Dokumenty, w tej kolejności: rozdział 08 koncepcji (systemy, laptop i router na miejscu, tryb kiosku, podpisy, odrzucona stacja jako punkt dostępu), a po jego zamknięciu specyfikacja: „Pakiet USB” (jeden START-MAC.app, wspólna biblioteka, FAT32, 84 MB), poziom 3 bez routera i adaptera z zestawu i bez laptopa przypisanego do obiektu, nazwa stacji wielkimi literami, format karty odbiorcy.
+1. Etap 2: kopia bazy na pamięci USB po każdej zmianie, wczytanie kopii na innym laptopie i polecenie „Oddaj laptop” ([specyfikacja](../../docs/spec/oprogramowanie.md#pakiet-usb)); rozstrzygnięte 2026-10-14.
 2. Próba zapory na czystym Windows 11 (sekcja [Laptop i router na miejscu](#laptop-i-router-na-miejscu)).
 3. Wnioski do SignPath i pid.codes po akceptacji (warunki w tabeli rozstrzygnięć). SignPath wymaga wcześniejszego wydania w podpisywanej postaci, więc pierwsze wydanie START-WINDOWS.exe jest bez podpisu; przed wnioskiem zasób VERSIONINFO i strona z „Code signing policy”.
 4. Przegląd licencji środowisk (OpenSSL, SQLite, libffi, zlib i inne) przed pierwszą dystrybucją.

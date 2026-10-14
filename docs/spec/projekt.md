@@ -10,7 +10,7 @@ Radio pilotażu to [profil LoRa](radio.md#profil-lora-pilotażu); P1 jest warian
 
 | Parametr | Wartość projektowa |
 |---|---|
-| Poziomy zestawu | 1: sama stacja; 2: stacja + laptop przez USB; 3: stacja + laptop + router Wi-Fi dla telefonów |
+| Poziomy zestawu | 1: sama stacja; 2: stacja + laptop przyniesiony na miejscu, przez USB; 3: stacja + laptop + router Wi-Fi obiektu dla telefonów, a bez połączenia telefonów tryb kiosku na ekranie laptopa |
 | Mieszkańcy | około 50; jedna stacja obsługuje obiekt niezależnie od liczby osób; strona poziomu 3 sprawdzana dla 15 aktywnych użytkowników jednocześnie; większy obiekt wymaga więcej osób obsługi |
 | Sąsiednia stacja | cel: 1 km w zabudowie; wynik wymaga próby terenowej |
 | Odbiorca zgłoszeń | stanowisko odbiorcze wyznaczone przez wójta (burmistrza, prezydenta miasta); zwykle jednostka ochotniczej straży pożarnej z grafikiem dyżurów na czas kryzysu, a także gminne centrum zarządzania kryzysowego lub stanowisko gminnego zespołu zarządzania kryzysowego |
@@ -31,18 +31,18 @@ flowchart LR
   S12[Źródło 12 V stacji] --> SP
   SP --> ST[Stacja WICI: MCU, radio LoRa w pilotażu albo P1, ekran, przyciski, FRAM]
   ST <-->|Antena zewnętrzna| S[Inne stacje i stanowisko odbiorcze]
-  L[Laptop i pamięć USB] -->|USB, poziom 2| ST
+  L[Laptop przyniesiony na miejscu i pamięć USB zestawu] -->|USB, poziom 2| ST
   PS[Kupiona stacja zasilania 230 V, poziom 3] --> P[Oryginalny zasilacz laptopa]
   PS --> R[Oryginalny zasilacz routera]
   PS --> U[Kupiona ładowarka USB]
   P --> L
-  R --> W[Router Wi-Fi]
+  R --> W[Router Wi-Fi obiektu]
   W -->|LAN Ethernet, poziom 3| L
   U --> F[Telefony]
   F -->|Wi-Fi| W
 ```
 
-Stacja jest jedynym węzłem sieci w schronieniu: przechowuje tożsamość i kolejkę zgłoszeń, obsługuje radio i przekazuje ruch innych stacji. Laptop jest panelem: przechowuje dane mieszkańców i stronę, a wiadomości przekazuje stacji przez USB. Router nie uczestniczy w łączności radiowej; zapewnia Wi-Fi, DHCP i połączenie telefonu z laptopem. Radio nie przekazuje stron WWW ani internetu. Poziom 3 można zasilić także z innego sprawdzonego źródła 230 V; stacja zasilania dotyczy tylko laptopa, routera i ładowarki telefonów, nie stacji WICI.
+Stacja jest jedynym węzłem sieci w schronieniu: przechowuje tożsamość i kolejkę zgłoszeń, obsługuje radio i przekazuje ruch innych stacji. Laptop jest panelem: przechowuje dane mieszkańców i stronę, a wiadomości przekazuje stacji przez USB. Router nie uczestniczy w łączności radiowej; zapewnia Wi-Fi, DHCP i połączenie telefonu z laptopem. Gdy telefony nie mogą połączyć się z laptopem, strona mieszkańca działa w [trybie kiosku](oprogramowanie.md#tryb-kiosku) na ekranie laptopa. Radio nie przekazuje stron WWW ani internetu. Poziom 3 można zasilić także z innego sprawdzonego źródła 230 V; stacja zasilania dotyczy tylko laptopa, routera i ładowarki telefonów, nie stacji WICI.
 
 ## Zawartość zestawu
 
@@ -66,7 +66,7 @@ Rozszerzenia poziomów 2–3:
 13. Przewody ładowania telefonów oraz jednostronicowa instrukcja strony.
 14. Bateryjny czujnik tlenku węgla (CO) – obowiązkowa część zestawu poziomu 3.
 
-Laptop, router, ich oryginalne zasilacze i akumulatory pochodzą z miejsca uruchomienia. Adapter USB–Ethernet nie współpracuje z każdym komputerem. Jego kontroler również musi mieć dwa zakwalifikowane wykonania, np. Realtek RTL8153 i ASIX AX88179.
+Laptop, router, ich oryginalne zasilacze i akumulatory pochodzą z miejsca uruchomienia. Zestaw nie zawiera laptopa i laptopa nie przygotowuje się wcześniej: w kryzysie ktoś przynosi dowolny laptop, a gdy ten nie zadziała, podłącza się następny (D04). Router jest routerem obiektu. Adapter USB–Ethernet nie współpracuje z każdym komputerem. Jego kontroler również musi mieć dwa zakwalifikowane wykonania, np. Realtek RTL8153 i ASIX AX88179.
 
 Zestaw stanowiska odbiorczego (dwie stacje w konfiguracji węzła stanowiska, obowiązkowy komputer stanowiska z zapasem, nośnik stanowiska, antena, zasilanie na ≥72 h) opisuje [stanowisko odbiorcze](stanowisko-osp.md#zestaw-stanowiska).
 
@@ -74,7 +74,7 @@ Zestaw stanowiska odbiorczego (dwie stacje w konfiguracji węzła stanowiska, ob
 
 Osoba utrzymująca system, w porozumieniu z organizatorem sieci (zwykle samorządem gminy), przełącza stację w tryb przygotowania przyciskiem za otworem pod numerowaną naklejką serwisową (otwór daje dostęp tylko do tego przycisku; stacja zapisuje każde wejście, a numer nowej naklejki, stan licznika wejść i skrót konfiguracji z ekranu STAN zapisuje się w ewidencji, [tryb przygotowania](oprogramowanie.md#tryb-przygotowania-i-naklejka-serwisowa)) i przez laptop z pakietem START zapisuje w stacji dokładny adres i wejście schronienia (≤64 B w krótkiej postaci), kartę zaufanego odbiorcy z tożsamością główną i zapasową oraz liczbę stacji w sieci, od której zależy okno TEST startowego. Polecenia konfiguracji, eksportu, importu i aktualizacji oprogramowania stacja przyjmuje tylko w tym trybie. Stacja generuje własną tożsamość i nazwę `WICI-xxxxxx` (6 cyfr szesnastkowych skrótu tożsamości) oraz eksportuje przez USB kartę stacji: klucz publiczny, skrót adresu, nazwę, adres schronienia i odcisk do porównania z ekranem. Aplikacja stanowiska importuje kartę stacji (plik lub kod QR) po porównaniu odcisku. Kartę odbiorcy (skróty adresów i klucze publiczne tożsamości głównej i zapasowej odbiorcy) osoba utrzymująca system otrzymuje uzgodnionym kanałem poza radiem; stacja nigdy nie przyjmuje jej przez radio. Szczegóły: model zaufania i kluczy w rozdziale [Oprogramowanie](oprogramowanie.md). Następnie stacja wysyła TEST, a wynik zapisuje się w ewidencji. Hasła panelu dla gospodarza i zastępców generuje się w tym samym przygotowaniu, offline, na pamięci USB zestawu; wkłada się je do numerowanych, zaklejonych kopert przy stacji.
 
-Na poziomie 3 przygotowuje się wcześniej plakat przy stacji: nazwa sieci Wi-Fi, hasło i adres strony, dla routera sprawdzonego na miejscu. Router dostaje rezerwację DHCP dla adresu MAC adaptera USB–Ethernet z zestawu, więc adres z plakatu nie zależy od laptopa. Przy innym routerze obowiązuje kod QR na ekranie laptopa.
+Na poziomie 3 uzgadnia się z zarządcą router obiektu: zasilanie awaryjne (UPS albo stacja zasilania), główna sieć Wi-Fi bez izolacji od sieci LAN i hasło Wi-Fi dostępne w kryzysie. Laptopa się nie przygotowuje. Adres strony zależy od laptopa i routera, więc plakat z kodami QR sieci i adresu pokazuje albo drukuje aplikacja na miejscu.
 
 Antenę zewnętrzną z przewodem i przepustem montuje się na stałe podczas przygotowania obiektu, za pisemną zgodą zarządcy, w miejscu wskazanym po próbie zasięgu. Montaż wykonuje firma lub osoba z uprawnieniami do prac na wysokości; odgromnik łączy z uziemieniem elektryk z uprawnieniami. Przepust w budowli ochronnej uzgadnia się z zarządcą i komendą powiatową PSP, w obiekcie zabytkowym potrzebna jest zgoda konserwatora, a potrzebę zgłoszenia budowlanego sprawdza się we właściwym urzędzie. Koszt montażu ujmuje się w budżecie wdrożenia. Przewodu nie prowadzi się przez drzwi hermetyczne, gazoszczelne ani przeciwpożarowe. W piwnicy lub garażu podziemnym stację umieszcza się na kondygnacji naziemnej albo stosuje dłuższy przewód o małym tłumieniu z nowym bilansem łącza. Wystawienie anteny przez okno jest procedurą zapasową.
 
@@ -101,10 +101,13 @@ Stacja pracuje dalej przez cały czas dołączania rozszerzeń.
 1. Sprawdź na wyświetlaczu stacji zasilania stan naładowania. Włącz jej wyjście 230 V według instrukcji producenta.
 2. Podłącz oryginalne zasilacze laptopa i routera oraz ładowarkę USB telefonów do wyjść stacji zasilania.
 3. Połącz laptop ze stacją przewodem USB, a na poziomie 3 także z portem LAN routera. Podłącz pamięć USB zestawu.
-4. Uruchom START w działającym systemie albo system Linux z pamięci USB na obsługiwanym komputerze PC. Zaloguj się hasłem z koperty; konta są na pamięci USB zestawu. Panel pokazuje adres i kartę odbiorcy odczytane ze stacji.
-5. Połącz telefon z główną siecią Wi-Fi routera i otwórz adres z kodu QR wyświetlonego na ekranie laptopa.
+4. Uruchom START w działającym systemie albo system Linux z pamięci USB na komputerze PC. Zaloguj się hasłem z koperty; konta są na pamięci USB zestawu. Panel pokazuje adres i kartę odbiorcy odczytane ze stacji.
+5. Wpisz w panelu nazwę i hasło sieci Wi-Fi routera. Połącz telefon z główną siecią Wi-Fi routera kodem QR sieci i otwórz stronę kodem QR adresu, wyświetlonymi na ekranie laptopa albo wydrukowanymi z panelu jako plakat.
+6. Gdy panel mówi, że telefony nie mogą się połączyć, przełącz stronę mieszkańca w tryb kiosku na ekranie laptopa albo podłącz inny laptop.
 
-Jeżeli router ma nieznane hasło, wyłączony DHCP lub izolację Wi-Fi od LAN, trzeba go skonfigurować w panelu. Wiele routerów domowych obsługuje najwyżej około 32 klientów Wi-Fi lub ma mniejszą pulę DHCP. Kwalifikacja routera obejmuje 50 klientów i pulę co najmniej 60 adresów. Zablokowany router znaleziony na miejscu pozostaje niedostępny: nie resetuj go bez zgody właściciela. Mac z procesorem Apple Silicon nie uruchomi ogólnego obrazu Linuksa, więc pakiet START wymaga na nim sprawnego systemu macOS. Komputer, którego nie da się uruchomić z pamięci USB i który nie ma sprawnego systemu, jest poza zakresem.
+Panel sam przechodzi kolejne drogi i przy każdej przeszkodzie mówi, co zrobić dalej ([oprogramowanie](oprogramowanie.md#sieć-lokalna-i-zapora)): strona dla telefonów przez router obiektu; na Windows zgoda administratora na regułę zapory jednym oknem systemu; na komputerze PC z Windows bez uprawnień administratora system Linux z pamięci USB; tryb kiosku; inny laptop. Laptop łączy się z routerem kablem, gdy ma gniazdo sieciowe albo adapter USB–Ethernet; inaczej przez Wi-Fi routera, co działa, jeśli router nie izoluje urządzeń od siebie.
+
+Jeżeli router ma nieznane hasło, wyłączony DHCP lub izolację Wi-Fi od LAN, a nikt nie może tego zmienić, zostaje tryb kiosku. Wiele routerów domowych obsługuje najwyżej około 32 klientów Wi-Fi lub ma mniejszą pulę DHCP; wtedy mieszkańcy korzystają ze strony kolejno. Router obiektu nie musi przejść kwalifikacji, ale z zarządcą uzgadnia się zasilanie awaryjne i brak izolacji Wi-Fi od LAN. Zablokowany router znaleziony na miejscu pozostaje niedostępny: nie resetuj go bez zgody właściciela. Mac z procesorem Apple Silicon nie uruchomi ogólnego obrazu Linuksa, więc pakiet START wymaga na nim sprawnego systemu macOS. Gdy żaden laptop na miejscu nie uruchomi aplikacji, zostaje poziom 1.
 
 ## Energia stacji
 
@@ -124,7 +127,7 @@ Co kwartał gospodarz wykonuje przegląd podstawowy z kompletu ćwiczebnego albo
 
 1. Uruchom stację z kompletu ćwiczebnego albo ze źródła 12 V; sprawdź na ekranie adres, kartę odbiorcy i nazwę `WICI-xxxxxx`. Sprawdź datę ważności kompletu kryzysowego bez otwierania opakowania i napięcie kompletu ćwiczebnego; wymień ogniwa przeterminowane albo o napięciu niższym niż podane w [instrukcji](instrukcja.md#energia-stacji) (komplet ćwiczebny: „OGNIWA: [x] V” w STAN co najmniej 5,6 V po minucie pracy).
 2. Sprawdź sumy kontrolne obrazu na pamięci USB, bo pamięć flash bez zasilania traci dane. Wymień ją co kilka lat albo przechowuj drugą, sprawdzoną kopię.
-3. Uruchom aplikację z przygotowanego zestawu na aktualnych komputerach z lokalnej listy; nowe wersje systemów mogą wymagać nowego pakietu START.
+3. Uruchom aplikację z pamięci USB zestawu na laptopie z aktualnym systemem, np. prywatnym laptopie uczestnika przeglądu; nowe wersje systemów mogą wymagać nowego pakietu START.
 4. W wykonaniu z P1 (wariant zapasowy) w każdym corocznym przeglądzie zmierz i skoryguj częstotliwość nadajnika, aby skontrolować starzenie TCXO ([radio](radio.md)); pomiar wykonuje producent lub serwis przyrządem o dokładności ≤0,1 ppm, a stacje dowozi się w tym dniu do jednego miejsca (około 20 min na stację). W LoRa wystarcza wymiana ramek z sąsiednią stacją w TEST; przy dwóch wykonaniach sprawdź wymianę ramek ze stacją drugiego wykonania. Do oceny: ekran pokazuje odchyłkę częstotliwości oszacowaną z odebranych ramek jako tanią samokontrolę między przeglądami.
 5. Sprawdź stację zasilania poziomu 3 według instrukcji producenta: naładowanie do poziomu przechowywania, pracę pod obciążeniem laptopa i routera, datę wymiany akumulatora.
 6. Zaktualizuj oprogramowanie stacji, jeśli jest nowe wydanie: podpisany obraz przez USB z laptopa z pakietem START, w trybie przygotowania (przycisk pod naklejką serwisową, bez otwierania obudowy głównej); najpierw na jednej stacji z TEST, potem na pozostałych. Po zakończeniu załóż nową naklejkę serwisową i wpisz do ewidencji jej numer, licznik wejść w tryb przygotowania i skrót konfiguracji z ekranu STAN; gospodarz w przeglądzie kwartalnym porównuje naklejkę, licznik i skrót z ewidencją.

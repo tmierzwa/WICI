@@ -119,7 +119,9 @@ Stacja ma dwa komplety ogniw litowych AA: kryzysowy w zamkniętym opakowaniu i �
 Dołączasz je, gdy stacja już działa; stacja pracuje dalej przez cały czas. Kolejność podłączenia podaje [projekt](projekt.md#dołączenie-laptopa-i-routera-poziomy-23).
 
 - Zaloguj się do panelu hasłem z numerowanej koperty przy stacji. Po otwarciu koperty hasło zmienia osoba utrzymująca system; wpisz numer koperty do dziennika.
-- Wi-Fi i adres strony: przy routerze z zestawu, sprawdzonym w przygotowaniu, obowiązuje plakat przy stacji (sieć, hasło, adres). Przy innym routerze pokaż mieszkańcom kod QR z ekranu laptopa.
+- Laptop przynosi ktoś na miejscu. Gdy aplikacja nie startuje albo panel mówi, że nic więcej nie da się zrobić, podłącz inny laptop: najpierw prywatny albo Mac, potem laptop z Linuksem, na końcu laptop firmowy. Na komputerze PC z Windows bez hasła administratora uruchom system Linux z pamięci USB (klawisz menu startowego: tabela na pamięci USB).
+- Wi-Fi i adres strony: wpisz w panelu nazwę i hasło sieci Wi-Fi routera obiektu; pokaż mieszkańcom dwa kody QR z ekranu laptopa (sieć i adres) albo wydrukuj z panelu plakat. Laptop połącz z gniazdem LAN routera, nie WAN. Telefony łączą się z główną siecią, nie gościnną.
+- Gdy telefony nie mogą się połączyć, włącz tryb kiosku: mieszkańcy zgłaszają się po kolei na ekranie laptopa. Panel gospodarza jest wtedy zablokowany do czasu ponownego logowania.
 - Zgłoszenie z telefonu trafia najpierw do Twojej kolejki w panelu i nie wychodzi radiem samo. Sprawdź je, połącz z powtarzalnymi, ustal pilność i zatwierdź.
 - Mieszkaniec dostaje lokalny numer zgłoszenia („ZAPISZ NUMER [xxxx] – PODAJ GOSPODARZOWI DO SPRAWDZENIA STANU”). Gdy straci dostęp na telefonie, sprawdź stan po tym numerze w panelu.
 - Brak energii: najpierw wyłącz laptop i router. Stacja pracuje dalej z ogniw lub 12 V.
