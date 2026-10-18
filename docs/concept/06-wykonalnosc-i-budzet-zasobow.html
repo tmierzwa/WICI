@@ -181,7 +181,7 @@
   <li><strong>Rezerwa ciszy:</strong> 12t daje 7,7% aktywności wobec dopuszczalnych 10%. Cisza 10t skraca cykl z 13t do 11t, czyli daje około 18% więcej przepustowości, kosztem mniejszej rezerwy względem limitu 10%.</li>
   <li><strong>Narzut ramki:</strong> 29 B na każdy fragment 86 B to około 25% czasu TX. Dłuższa ramka wymaga uzupełniania bufora nadawczego (FIFO) podczas nadawania w obu układach.</li>
   <li><strong>Topologia:</strong> bezpośredni zasięg do stanowiska odbiorczego albo drugi przekaźnik dzielą ruch, ale nie każde miejsce je ma.</li>
-  <li><strong>Ruch:</strong> łączenie powtarzalnych potrzeb przez opiekuna zmniejsza liczbę zgłoszeń, ale nie zmienia warunku W10.</li>
+  <li><strong>Ruch:</strong> łączenie powtarzalnych potrzeb przez gospodarza zmniejsza liczbę zgłoszeń, ale nie zmienia warunku W10.</li>
 </ul>
 
 <p>Dwie pierwsze zmiany oznaczają nową wersję P1 dla całej sieci. Nie zastępują pomiaru T3/T5. Wskazują, co zmienić, jeśli rozstrzygnięcie D01 będzie negatywne.</p>
@@ -284,7 +284,7 @@
 
 <p>Dobór oszczędnego hosta i pomiar poboru mają większy wpływ na zapas niż sama moc radia. Nie należy gwarantować 24 h pracy dla dowolnego PC. Gdy energii brakuje, wyłącza się laptop i router, a stacja poziomu 1 pracuje dalej z ogniw lub osobnego źródła 12 V. Gniazdo zapalniczki ogranicza prąd i możliwą moc AC. Nominalne 150 W wymaga odpowiednich zacisków oraz przewodów. Każde pojedyncze źródło A lub B musi samodzielnie utrzymać dozwolone obciążenie.</p>
 
-<p>Przekaźnik bez schronienia to sama stacja poziomu 1: 3,8–10,7 Wh na dobę z rezerwą w modelu z odbiornikiem CC1120 (ze SX1262 mniej: 1,7–8,5 Wh z ogniw) (z ogniw 3,8–10,6 Wh, z 12 V 4,0–10,7 Wh). Miejsce przekaźnika może nie mieć opiekuna. Jeśli jest jedyną drogą schronienia do stanowiska odbiorczego, ma pierwszeństwo w energii (<a href="02-scenariusze-i-organizacja.html">rozdział 02</a>). Wymaga osobnego planu wymiany ogniw lub akumulatora i osoby odpowiedzialnej, ale nie wymiany źródeł co dobę. Budżet schronienia go nie obejmuje.</p>
+<p>Przekaźnik bez schronienia to sama stacja poziomu 1: 3,8–10,7 Wh na dobę z rezerwą w modelu z odbiornikiem CC1120 (ze SX1262 mniej: 1,7–8,5 Wh z ogniw) (z ogniw 3,8–10,6 Wh, z 12 V 4,0–10,7 Wh). Miejsce przekaźnika może nie mieć gospodarza. Jeśli jest jedyną drogą schronienia do stanowiska odbiorczego, ma pierwszeństwo w energii (<a href="02-scenariusze-i-organizacja.html">rozdział 02</a>). Wymaga osobnego planu wymiany ogniw lub akumulatora i osoby odpowiedzialnej, ale nie wymiany źródeł co dobę. Budżet schronienia go nie obejmuje.</p>
 
 <p id="przekaznik-staly">Przekaźnik stały pracuje stale z zasilacza buforowego 13,8 V z akumulatorem (wyrób z deklaracją UE, jak w systemach alarmowych), zasilanego z sieci budynku, przez wejście 12 V stacji. Po zaniku 230 V działa z akumulatora bufora. Przy założonym wykorzystaniu 50% pojemności akumulator 12 V 7 Ah wystarcza w modelu z odbiornikiem CC1120 (ze SX1262 dłużej) na około 255 h (nRF52840) albo 94 h (ESP32-S3, 60 mA), a 17 Ah na około 620 h albo 228 h. Wynik zależy od własnego poboru zasilacza buforowego, który trzeba doliczyć z jego karty katalogowej, i od temperatury akumulatora.</p>
 
@@ -296,7 +296,7 @@
 
 <p>Otwarty charakter projektu nie usuwa kosztu części ani badań. Koszt jednostkowy po kwalifikacji nie jest kosztem pierwszego działającego zestawu. Przed ofertami i pełnymi projektami wykonawczymi dokładna kwota byłaby pozorną precyzją. Dlatego W24 ma na razie wartości robocze z szacunku BOM: stacja bez anteny ≤200 € brutto przy serii 100 sztuk, antena z montażem stałym ≤250 € brutto. Zatwierdza je opiekun repozytorium przed decyzją o własnej płytce stacji, a później zastępują je ceny z ofert.</p>
 
-<p><strong>Koszt projektu przed pilotażem.</strong> WICI jest otwartym projektem społecznościowym, a nie programem z budżetem na kwalifikację wyrobu. Dlatego przed pilotażem projekt nie płaci za własną płytkę, dwa tory RF, badania zgodności ani własne zasilanie 230 V. Koszt pilotażu to głównie 6–8 stacji pilotażowych z gotowych części, anteny, ogniwa, dwa komputery stanowiska i praca nad oprogramowaniem. Wycenę stacji pilotażowej robi się z wykazu gotowych części przed zamówieniem. Wydatki wydania (płytka, drugie wykonanie, pełna ocena zgodności) planuje się dopiero na podstawie wyników pilotażu; ustalenie podstawy prób terenowych (D20) jest przed pilotażem.</p>
+<p><strong>Koszt projektu przed pilotażem.</strong> WICI jest otwartym projektem społecznościowym, a nie programem z budżetem na kwalifikację wyrobu. Dlatego przed pilotażem projekt nie płaci za własną płytkę, dwa tory RF ani własne zasilanie 230 V. Koszt pilotażu to głównie 6–8 stacji pilotażowych z gotowych części, anteny, ogniwa, dwa komputery stanowiska i praca nad oprogramowaniem. Wycenę stacji pilotażowej robi się z wykazu gotowych części przed zamówieniem. Badania konfiguracji pilotażowej według norm zharmonizowanych (D20) są przed pilotażem. Wydatki na własną płytkę i drugie wykonanie, z oceną zgodności każdej nowej konstrukcji, planuje się dopiero na podstawie wyników pilotażu.</p>
 </article>
 <nav class="pager" aria-label="Kolejność czytania">
   <a class="prev" href="05-projekt-koncepcyjny-komunikacji.html" rel="prev"><span>← Poprzedni</span>05. Projekt koncepcyjny komunikacji</a>

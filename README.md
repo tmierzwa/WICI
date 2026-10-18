@@ -4,12 +4,12 @@
 
 Gdy nie ma prądu, zasięgu komórkowego ani internetu, jak przekazać służbom, że w schronieniu brakuje wody, ktoś potrzebuje lekarza albo transportu? **WICI to otwarty projekt stacji radiowej do krótkich zgłoszeń i odpowiedzi.** Sieć ma łączyć miejsca, w których gromadzą się ludzie, ze stanowiskiem odbiorczym wyznaczonym przez gminę.
 
-Opiekun schronienia wybiera na ekranie kategorię potrzeby i liczbę osób, a stacja wysyła zgłoszenie radiem. Ekran ma rozróżniać trwały zapis u odbiorcy, odczyt przez dyżurnego i decyzję o pomocy. Każda włączona stacja ma też przekazywać wiadomości sąsiadów, wydłużając drogę do odbiorcy.
+Gospodarz schronienia wybiera na ekranie kategorię potrzeby i liczbę osób, a stacja wysyła zgłoszenie radiem. Ekran ma rozróżniać trwały zapis u odbiorcy, odczyt przez dyżurnego i decyzję o pomocy. Każda włączona stacja ma też przekazywać wiadomości sąsiadów, wydłużając drogę do odbiorcy.
 
 <p align="center"><img src="hardware/obudowa/render/stacja-materialy-web.jpg" alt="Wizualizacja koncepcyjna stacji WICI: obudowa naścienna z ekranem, czterema przyciskami, diodą alarmu, przełącznikiem CISZA z osłoną i wyłącznikiem; przewody 12 V i anteny wychodzą dołem" width="820"></p>
 <p align="center"><sub>Wizualizacja koncepcyjna stacji według dzisiejszych założeń; <a href="hardware/obudowa/README.md">obudowa i render</a>, <a href="hardware/obudowa/render/stacja-materialy.png">pełna rozdzielczość</a>.</sub></p>
 
-**Wypróbuj stację w przeglądarce:** [symulator](https://wici.net.pl/symulator/) uruchamia ten sam program co prawdziwa stacja, z ćwiczeniami opiekuna i stanowiskiem odbiorczym. Uwagi zgłosisz przyciskiem „Zgłoś uwagę” albo [formularzem](https://github.com/tmierzwa/WICI/issues/new?template=uwaga-symulator.yml).
+**Wypróbuj stację w przeglądarce:** [symulator](https://wici.net.pl/symulator/) uruchamia ten sam program co prawdziwa stacja, z ćwiczeniami gospodarza i stanowiskiem odbiorczym. Uwagi zgłosisz przyciskiem „Zgłoś uwagę” albo [formularzem](https://github.com/tmierzwa/WICI/issues/new?template=uwaga-symulator.yml).
 
 **To projekt prototypu 0.5. Stacji jeszcze nie zbudowano ani nie sprawdzono w terenie.** Dokumentacja, obliczenia i kod są otwarte; poniżej opisujemy plan prac i możliwości współpracy.
 
@@ -66,7 +66,7 @@ Konkretne zadania opisuje [CONTRIBUTING.md](CONTRIBUTING.md#od-czego-zacząć). 
 | [firmware](firmware/README.md) | Oprogramowanie stacji dla stanowisk deweloperskich A (nRF52840-DK + CC1120EM, na przewodach i na N1) i B (ESP32-S3-DevKitC-1 + X-NUCLEO-S2868A2 na N1); skompilowane, jeszcze nie uruchomione na sprzęcie |
 | [software/reference](software/reference/README.md) | Model wiadomości i potwierdzeń z testami; obliczenia zasięgu, energii i czasu nadawania |
 | [software/laptop](software/laptop/README.md) | Aplikacja laptopa z pamięci USB (Windows, macOS, Linux), etap 1: przygotowanie stacji przez USB; [plan](software/laptop/PLAN.md) kolejnych etapów |
-| [software/simulator](software/simulator/README.md) | Symulator stacji w przeglądarce: obraz bench-b oprogramowania stacji (te same źródła i flagi) na wirtualnej płytce ESP32-S3 z emulacją S2-LP, FRAM i Sharp, węzeł i stanowisko odbiorcze, panel R02 i N1 w skali, ćwiczenia opiekuna; [online](https://wici.net.pl/symulator/) |
+| [software/simulator](software/simulator/README.md) | Symulator stacji w przeglądarce: obraz bench-b oprogramowania stacji (te same źródła i flagi) na wirtualnej płytce ESP32-S3 z emulacją S2-LP, FRAM i Sharp, węzeł i stanowisko odbiorcze, panel R02 i N1 w skali, ćwiczenia gospodarza; [online](https://wici.net.pl/symulator/) |
 | [hardware](hardware/README.md) | Testy radiowe R0, diagnostyka prototypu L0, projekt nośnej N1 i dokumentacja przyszłej płytki R02 (wstrzymanej do decyzji po pilotażu) |
 | [media/film](media/film/README.md) | Dwa filmy o projekcie: około 4,5 min i 60 s |
 | [media/infografika](media/infografika/README.md) | Infografika do mediów społecznościowych: post i Stories (PL, EN) |

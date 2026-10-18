@@ -8,7 +8,7 @@ Decyzja D19 (2026-10-08): tożsamość odbiorcy, Reticulum i LXMF w Pythonie ora
 
 | | Stacja w schronieniu | Stanowisko odbiorcze |
 |---|---|---|
-| Obsługa | opiekun i zastępcy po krótkim szkoleniu; karta i przyciski | dyżurni po szkoleniu (4 h i ćwiczenie T8), grafik co najmniej 4 osób, konta i dziennik działań |
+| Obsługa | gospodarz i zastępcy po krótkim szkoleniu; karta i przyciski | dyżurni po szkoleniu (4 h i ćwiczenie T8), grafik co najmniej 4 osób, konta i dziennik działań |
 | Miejsce | obiekt bez prądu, często piwnica; stacja w skrzynce, wyjmowana w kryzysie | stały punkt z agregatem lub stacją zasilania na ≥72 h, antena w najwyższym punkcie budynku |
 | Ruch | własne zgłoszenia i przekazywanie ruchu sąsiadów | każde zgłoszenie z sieci; najbardziej obciążony węzeł (model LoRa SF7: ok. 164 zgłoszenia/h, przekaźnik przed stanowiskiem ok. 95/h; P1: 121/h i 68/h) |
 | Stan do przechowania | rejestr do 256 własnych zgłoszeń, skrzynka do 128 wiadomości ([pamięć FRAM](oprogramowanie.md#pamięć-fram)) | wszystkie zgłoszenia zdarzenia, rewizje, statusy, klucze odbioru, kwarantanna, karty stacji, dziennik decyzji |
@@ -95,7 +95,7 @@ Każde odzyskanie podnosi P o 3600 s ponad wszystkie wcześniejsze przesunięcia
 
 ## Panel dyżurnego
 
-Panel nasłuchuje wyłącznie na 127.0.0.1. Wymaga logowania; konta i hasła tworzy się podczas przygotowania jak dla opiekuna ([API strony](oprogramowanie.md#api-lokalnej-strony-poziomy-23)).
+Panel nasłuchuje wyłącznie na 127.0.0.1. Wymaga logowania; konta i hasła tworzy się podczas przygotowania jak dla gospodarza ([API strony](oprogramowanie.md#api-lokalnej-strony-poziomy-23)).
 
 - sortuje zgłoszenia według pilności, potem czasu odbioru; zgłoszenie z pilnością 2 uruchamia alarm dźwiękowy;
 - „PRZECZYTANE” jednym przyciskiem wysyła STATUS ze state=2;

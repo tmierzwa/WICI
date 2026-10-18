@@ -171,11 +171,11 @@ Laptop zapisuje przy każdym niepotwierdzonym `submit` epokę i swój kursor (`e
 |---|---|
 | ta sama epoka i `sync_ok` | zdarzenia od C + 1 pokazują `own` dla (`id`, `revision`), jeśli zapis nastąpił; ponowienie jest bezpieczne (stacja odpowie z wpisu albo z pamięci zwolnionych) |
 | ta sama epoka, migawka, `tomb_floor` ≤ C + 1 | `id` z `revision` co najmniej równą wysłanej w migawce albo wśród zwolnionych: zapis nastąpił (wcześniej albo z nowszą rewizją); poza nimi: zapisu nie było, ponowienie jest bezpieczne |
-| ta sama epoka, migawka, `tomb_floor` > C + 1 albo inna epoka | wynik nieznany: laptop nie ponawia, a panel pokazuje wynik „nieznany” z `id` i krótkim numerem; opiekun sprawdza zgłoszenie na ekranie stacji i w razie potrzeby tworzy nowe (nowe `id`) |
+| ta sama epoka, migawka, `tomb_floor` > C + 1 albo inna epoka | wynik nieznany: laptop nie ponawia, a panel pokazuje wynik „nieznany” z `id` i krótkim numerem; gospodarz sprawdza zgłoszenie na ekranie stacji i w razie potrzeby tworzy nowe (nowe `id`) |
 
 Migawka zawiera zwolnione wpisy jako wiersze `{"item":"released","id":…,"revision":…,"ev":…,"number":…}`, a `snap_begin` pole `tomb_floor`. Krótki numer zwolnionego wpisu pozostaje zajęty, dopóki wpis jest w pamięci zwolnionych wpisów.
 
-**`test` i `cancel`.** Wpis TEST w rejestrze przechowuje `nonce`, a zdarzenie `own` i wiersz `snap` TEST mają pole `nonce`; laptop rozpoznaje więc zapis po `nonce` tak jak `submit` po `id`. Po zwolnieniu wpisu TEST pamięć 8 ostatnich `nonce` nie wystarcza do rozstrzygnięcia, więc przy luce laptop nie ponawia TEST automatycznie, tylko pokazuje wynik „nieznany”; podwójny TEST jest nieszkodliwy, a brakujący opiekun widzi na ekranie stacji. `cancel` jest bezpieczny do ponowienia zawsze: dla wpisu anulowanego daje `ok`, dla `id` zwolnionego jako anulowany `ok` z `"released":true` (pamięć zwolnionych wpisów ma znacznik anulowania), a dla zgłoszenia, które stacja już nadała, także zwolnionego, `too_late`.
+**`test` i `cancel`.** Wpis TEST w rejestrze przechowuje `nonce`, a zdarzenie `own` i wiersz `snap` TEST mają pole `nonce`; laptop rozpoznaje więc zapis po `nonce` tak jak `submit` po `id`. Po zwolnieniu wpisu TEST pamięć 8 ostatnich `nonce` nie wystarcza do rozstrzygnięcia, więc przy luce laptop nie ponawia TEST automatycznie, tylko pokazuje wynik „nieznany”; podwójny TEST jest nieszkodliwy, a brakujący gospodarz widzi na ekranie stacji. `cancel` jest bezpieczny do ponowienia zawsze: dla wpisu anulowanego daje `ok`, dla `id` zwolnionego jako anulowany `ok` z `"released":true` (pamięć zwolnionych wpisów ma znacznik anulowania), a dla zgłoszenia, które stacja już nadała, także zwolnionego, `too_late`.
 
 ## Synchronizacja
 
@@ -289,6 +289,6 @@ L→S {"usb":2,"seq":3,"type":"ack","epoch":"51…","cursor":214}
 
 **Laptop odłączony przez kilka dni:** stacja wygenerowała 900 zdarzeń, pierścień trzyma 256. `sync` z kursorem sprzed odłączenia → `snap_required` z `gap` → migawka.
 
-**Odrzucenie i ponowne połączenie:** `submit` przy pełnej kolejce → `rejected` `full`; panel pokazuje `kolejka_pelna`, intencja zostaje w SQLite oznaczona jako odrzucona, a opiekun używa formularza papierowego. Laptop nie ponawia automatycznie odmowy `full`; opiekun może wysłać ją ponownie, gdy kolejka się zwolni.
+**Odrzucenie i ponowne połączenie:** `submit` przy pełnej kolejce → `rejected` `full`; panel pokazuje `kolejka_pelna`, intencja zostaje w SQLite oznaczona jako odrzucona, a gospodarz używa formularza papierowego. Laptop nie ponawia automatycznie odmowy `full`; gospodarz może wysłać ją ponownie, gdy kolejka się zwolni.
 
 **Konfiguracja:** `xfer_begin` `configure` (`size` 5120, `sha256`), 10 × `xfer_part`, `xfer_commit` → `ok` z `worst_request` 220 i `config_seq` 3; zdarzenie `station` `config`.

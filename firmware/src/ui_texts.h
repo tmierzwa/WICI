@@ -156,7 +156,7 @@ constexpr const char* const TEXTS[static_cast<size_t>(Id::COUNT)][LANGS] = {
     {"LAPTOP: ZNISZCZYĆ DANE? NIEODWRACALNE – STACJA PRZESTANIE DZIAŁAĆ. OK = TAK / WSTECZ = NIE", "НОУТБУК: ЗНИЩИТИ ДАНІ? НЕЗВОРОТНО – СТАНЦІЯ ПЕРЕСТАНЕ ПРАЦЮВАТИ. OK = ТАК / НАЗАД = НІ", "LAPTOP: DESTROY DATA? IRREVERSIBLE – STATION WILL STOP WORKING. OK = YES / BACK = NO"},
     {"ODCISK KLUCZA STACJI: [x] – PORÓWNAJ Z LAPTOPEM. OK = ZAMKNIJ", "ВІДБИТОК КЛЮЧА СТАНЦІЇ: [x] – ПОРІВНЯЙТЕ З НОУТБУКОМ. OK = ЗАКРИТИ", "STATION KEY FINGERPRINT: [x] – COMPARE WITH THE LAPTOP. OK = CLOSE"},
     {"NAKAZ WYJŚCIA LUB EWAKUACJI? POTWIERDŹ W RADIU PUBLICZNYM LUB U GOŃCA", "НАКАЗ ВИЙТИ АБО ЕВАКУЮВАТИСЯ? ПІДТВЕРДІТЬ ПО СУСПІЛЬНОМУ РАДІО АБО В ПОСИЛЬНОГО", "ORDER TO LEAVE OR EVACUATE? CONFIRM ON PUBLIC RADIO OR WITH THE RUNNER"},
-    {"ZAPISZ NUMER [xxxx] – PODAJ GO OPIEKUNOWI, ABY SPRAWDZIĆ STAN", "ЗАПИШІТЬ НОМЕР [xxxx] – НАЗВІТЬ ЙОГО КООРДИНАТОРУ, ЩОБ ПЕРЕВІРИТИ СТАН", "NOTE NUMBER [xxxx] – GIVE IT TO THE WARDEN TO CHECK THE STATUS"},
+    {"ZAPISZ NUMER [xxxx] – PODAJ GOSPODARZOWI DO SPRAWDZENIA STANU", "ЗАПИШІТЬ НОМЕР [xxxx] – НАЗВІТЬ ЙОГО КООРДИНАТОРУ, ЩОБ ПЕРЕВІРИТИ СТАН", "NOTE NUMBER [xxxx] – GIVE IT TO THE WARDEN TO CHECK THE STATUS"},
     {"NIE WPISUJ NAZWISK", "НЕ ВПИСУЙТЕ ПРІЗВИЩ", "DO NOT ENTER SURNAMES"},
     {"WOLNE ZNAKI: [n]", "ВІЛЬНІ ЗНАКИ: [n]", "CHARS LEFT: [n]"},
     {"", "ВІДПОВІДІ ВІД ОДЕРЖУВАЧА НАДХОДЯТЬ ПОЛЬСЬКОЮ", "REPLIES FROM THE RECIPIENT ARRIVE IN POLISH"},
