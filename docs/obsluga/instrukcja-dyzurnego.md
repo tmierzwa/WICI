@@ -131,14 +131,14 @@ Nie wysyłaj komunikatów, które mogą poczekać.
 
 ### Ewakuacja
 
-Każdy komunikat ma na ekranie stacji stopkę „NAKAZ WYJŚCIA LUB EWAKUACJI? POTWIERDŹ W RADIU PUBLICZNYM LUB U GOŃCA”. Opiekunowie nie wykonają nakazu wyjścia na podstawie samego komunikatu.
+Każdy komunikat ma na ekranie stacji stopkę „NAKAZ WYJŚCIA LUB EWAKUACJI? POTWIERDŹ W RADIU PUBLICZNYM LUB U GOŃCA”. Gospodarze nie wykonają nakazu wyjścia na podstawie samego komunikatu.
 
 1. Uzgodnij z wójtem drugi kanał: komunikat w radiu publicznym albo gońcy z upoważnieniem.
 2. Upewnij się, że drugi kanał działa równolegle.
 3. Dopiero wtedy wyślij komunikat.
 4. Wpisz do rejestru oba kanały i godziny.
 
-Zagrożenie na miejscu (pożar, dym, CO, zalanie, zawalenie, polecenie służb na miejscu) nie czeka na potwierdzenie. Opiekun wyprowadza ludzi od razu.
+Zagrożenie na miejscu (pożar, dym, CO, zalanie, zawalenie, polecenie służb na miejscu) nie czeka na potwierdzenie. Gospodarz wyprowadza ludzi od razu.
 
 ## 5. Zgłoszenia z nieznanych urządzeń
 
@@ -153,7 +153,7 @@ Zgłoszenie od stacji spoza listy zaufanych trafia do kwarantanny. Panel oznacza
 
 Alarm „możliwe przejęcie stacji” (wiadomość od stacji usuniętej z listy):
 
-1. Nie zatwierdzaj wiadomości bez potwierdzenia drugim kanałem u opiekuna punktu.
+1. Nie zatwierdzaj wiadomości bez potwierdzenia drugim kanałem u gospodarza punktu.
 2. Zawiadom organizatora sieci.
 
 Dodanie stacji do listy (np. stacja zastępcza w punkcie):
@@ -163,7 +163,7 @@ Dodanie stacji do listy (np. stacja zastępcza w punkcie):
 3. Poproś drugiego zalogowanego dyżurnego o zgodę.
 4. Dodaj stację. Nigdy na podstawie samej wiadomości radiowej.
 
-Usunięcie stacji z listy (zaginęła, skradziona, opiekun zgłasza przejęcie):
+Usunięcie stacji z listy (zaginęła, skradziona, gospodarz zgłasza przejęcie):
 
 1. Usuń stację w panelu. Zgoda drugiego dyżurnego nie jest potrzebna.
 2. Wpisz powód do rejestru.
@@ -255,7 +255,7 @@ Sieć przekazuje ruch także bez komputera. Punkty ponawiają niepotwierdzone zg
 ### Podejrzenie przejęcia stanowiska
 
 1. Zawiadom wójta i organizatora sieci.
-2. O przełączeniu punktów na klucz zapasowy odbiorcy decyduje wójt. Polecenie idzie do opiekunów tylko słownie albo przez gońców, nigdy komunikatem radiowym.
+2. O przełączeniu punktów na klucz zapasowy odbiorcy decyduje wójt. Polecenie idzie do gospodarzy tylko słownie albo przez gońców, nigdy komunikatem radiowym.
 3. Grozi przejęcie: uruchom w panelu ZNISZCZ DANE. Zniszcz fizycznie oba nośniki. Wpisz to do rejestru.
 
 ## 9. Tryb ćwiczebny i zgłoszenia testowe
@@ -269,7 +269,7 @@ TEST to próbne zgłoszenie ze stacji punktu. Panel pokazuje je osobno i nie wli
 3. Wpisz TEST do rejestru.
 4. Stany 3–6 dla TEST nadawaj tylko w uzgodnionym ćwiczeniu.
 
-Wiele stacji włącza się naraz i kanał jest zajęty: wyślij komunikat z prośbą o wstrzymanie TEST. Opiekunowie wstrzymują TEST ręcznie (TEST → WSTRZYMAJ).
+Wiele stacji włącza się naraz i kanał jest zajęty: wyślij komunikat z prośbą o wstrzymanie TEST. Gospodarze wstrzymują TEST ręcznie (TEST → WSTRZYMAJ).
 
 ### Ćwiczenie ◆
 
@@ -282,6 +282,17 @@ Panel nie ma osobnego trybu ćwiczebnego. W ćwiczeniu:
 5. Po ćwiczeniu ogłoś koniec ćwiczenia komunikatem.
 
 Ćwiczenie całej sieci ze stanowiskiem i gońcem odbywa się raz w roku. Grafik obejmuje co najmniej 4 dyżurnych; każdy przechodzi szkolenie i ćwiczenie.
+
+### Test roczny wszystkich punktów
+
+Raz w roku dyżurny i gospodarze sprawdzają wszystkie stacje w gminie. Test można połączyć z ćwiczeniem całej sieci. Używa tylko istniejących funkcji: komunikatu, TEST i PRZECZYTANE.
+
+1. Gmina powiadamia gospodarzy o rozpoczęciu testu zwykłą drogą (telefon, SMS). Wpisz godzinę powiadomienia do rejestru.
+2. Wyślij komunikat „ĆWICZENIE – TEST ROCZNY”. Stacja odbierze go po włączeniu.
+3. Gospodarz albo zastępca włącza stację według karty, z kompletu ćwiczebnego albo ze źródła 12 V, i wysyła TEST. Komplet kryzysowy zostaje zamknięty.
+4. Każdy TEST potwierdź (PRZECZYTANE) i wpisz z literą Ć: punkt, godzinę odbioru, uwagi (np. adres niezrozumiały, ponowienia).
+5. Test trwa 2 h od powiadomienia, chyba że gmina ustali inaczej. Punkt bez TEST w tym czasie ma w tabeli „nie”; gmina ustala przyczynę (stacja, antena, ogniwa, brak obsady).
+6. Wypełnij tabelę [wyniku testu rocznego](#wynik-testu-rocznego). Kopię dostaje gmina i komenda powiatowa PSP.
 
 ## 10. Cisza radiowa
 
@@ -309,7 +320,7 @@ Gmina jest administratorem danych. Zamknięcie wykonuje się na polecenie gminy 
 1. Wpisz polecenie gminy do rejestru.
 2. Uruchom w panelu ZAMKNIJ ZDARZENIE. Aplikacja zapisze zaszyfrowane archiwum dla gminy, razem z rejestrem w CSV, i usunie treść zgłoszeń.
 3. Przekaż gminie archiwum i rejestr papierowy. Wpisz w rejestrze, kto przyjął.
-4. Przekaż polecenie zamknięcia do punktów: słownie, przez gońca albo pisemnie, nigdy komunikatem radiowym. Opiekun zamyka zdarzenie na stacji: STAN → USŁUGI → ZAMKNIJ ZDARZENIE, potem GÓRA, DÓŁ, GÓRA, OK.
+4. Przekaż polecenie zamknięcia do punktów: słownie, przez gońca albo pisemnie, nigdy komunikatem radiowym. Gospodarz zamyka zdarzenie na stacji: STAN → USŁUGI → ZAMKNIJ ZDARZENIE, potem GÓRA, DÓŁ, GÓRA, OK.
 5. Wpisz do rejestru, które punkty potwierdziły zamknięcie.
 6. Gmina potwierdza, że archiwum da się odczytać: wpisz w panelu, kto i kiedy potwierdził.
 7. Podłącz drugi nośnik z kopiami bazy. Wykonaj w panelu zadanie „usuń kopie”.
@@ -338,11 +349,23 @@ Drogi łączności bez sieci publicznych: radiotelefon służbowy, łącze satel
 
 ### Tabela punktów
 
-| Stacja `WICI-xxxxxx` | Nr i nazwa punktu | Adres i wejście | Opiekun i zastępcy (funkcje) | Trasa gońca |
+| Stacja `WICI-xxxxxx` | Nr i nazwa punktu | Adres i wejście | Gospodarz i zastępcy (funkcje) | Trasa gońca |
 |---|---|---|---|---|
 | | | | | |
 | | | | | |
 | | | | | |
+
+### Wynik testu rocznego
+
+Data testu: ........ Godzina powiadomienia: ........ Dyżurny: ........
+
+| Punkt (nr i nazwa) | Odpowiedział (tak/nie) | Czas od powiadomienia do TEST | Uwagi |
+|---|---|---|---|
+| | | | |
+| | | | |
+| | | | |
+
+Kopia: gmina, komenda powiatowa PSP.
 
 ### Grafik dyżurnych (co najmniej 4 osoby)
 
@@ -372,4 +395,4 @@ Kanał PMR stanowiska i godziny nasłuchu: ____________________
 
 ---
 
-Licencja: [CC BY 4.0](../../LICENSES/CC-BY-4.0.txt). Fundacja Łączności Awaryjnej WICI (w organizacji).
+Licencja: [CC BY 4.0](../../LICENSES/CC-BY-4.0.txt).

@@ -18,7 +18,7 @@ const T = {
     tabTrain: "Ćwiczenia", tabRx: "Dyżurny", tabEnv: "Warunki", tabConsole: "Konsola", tabLog: "Dziennik",
     preparing: "Przygotowanie sieci (stanowisko, węzeł, stacja) przez protokół USB…", starting: "Przygotowanie ćwiczenia…",
     freeTitle: "Praca swobodna", freeText: "Stacja jest włączona i ma trasę do stanowiska. Wysyłaj zgłoszenia, odpowiadaj jako dyżurny i zmieniaj warunki łącza. Ćwiczenie zaczyna się od tego samego obrazu sieci.",
-    exercises: "Ćwiczenia opiekuna", again: "Powtórz", list: "Lista ćwiczeń", stop: "Przerwij", hint: "Podpowiedź",
+    exercises: "Ćwiczenia gospodarza", again: "Powtórz", list: "Lista ćwiczeń", stop: "Przerwij", hint: "Podpowiedź",
     done: "Ćwiczenie ukończone", totalTime: "czas symulacji", presses: "naciśnięcia", hints: "podpowiedzi",
     rxTitle: "Stanowisko odbiorcze", rxOn: "port węzła otwarty", identity: "tożsamość", main: "główna", backup: "zapasowa",
     autoRead: "potwierdzaj odczyt po", autoDecide: "decyzja automatyczna", none: "brak", after: "po", min: "min",

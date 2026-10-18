@@ -1,6 +1,6 @@
-# WICI: instrukcja opiekuna
+# WICI: instrukcja gospodarza
 
-Instrukcja jest dla opiekuna schronienia i zastępców. Uzupełnia [kartę obsługi](../obsluga/karta-stacji.html), która leży przy stacji i prowadzi przez uruchomienie i zgłoszenie. Tu są tematy, które nie mieszczą się na karcie ([koncepcja, rozdział 02](../concept/02-scenariusze-i-organizacja.html#instrukcja-i-cwiczenie)).
+Instrukcja jest dla gospodarza schronienia i zastępców. Uzupełnia [kartę obsługi](../obsluga/karta-stacji.html), która leży przy stacji i prowadzi przez uruchomienie i zgłoszenie. Tu są tematy, które nie mieszczą się na karcie ([koncepcja, rozdział 02](../concept/02-scenariusze-i-organizacja.html#instrukcja-i-cwiczenie)).
 
 Napisy w cudzysłowach są cytatami z tabeli [Teksty ekranu](oprogramowanie.md#teksty-ekranu); wersje UK i EN instrukcji używają kolumn UK i EN tej tabeli.
 
@@ -81,7 +81,7 @@ OK wycisza dźwięk alarmu; napis i dioda zostają do usunięcia przyczyny. Dźw
 
 ## Goniec
 
-Goniec niesie formularz do odbiorcy albo do najbliższej jednostki PSP lub OSP, gdy radio nie wystarcza. Wysyłasz go tylko wtedy, gdy droga jest bezpieczna. Ocenia to opiekun, nie stacja; tekst alarmu nie jest poleceniem wyjścia.
+Goniec niesie formularz do odbiorcy albo do najbliższej jednostki PSP lub OSP, gdy radio nie wystarcza. Wysyłasz go tylko wtedy, gdy droga jest bezpieczna. Ocenia to gospodarz, nie stacja; tekst alarmu nie jest poleceniem wyjścia.
 
 - Nie wysyłaj gońca przy pożarze, zalaniu, zawaleniu, skażeniu, ostrzale, alarmie o zagrożeniu, zakazie wychodzenia ani w ciemności bez latarki.
 - Gońcem jest dorosła, sprawna osoba; najlepiej idą dwie. Idzie trasą zapisaną na pierwszej stronie dziennika. Zapisz godzinę wyjścia, krótki numer zgłoszenia i spodziewaną godzinę powrotu. Gdy goniec nie wraca w ustalonym czasie, nie wysyłaj następnego tą samą trasą bez nowej oceny.
@@ -121,7 +121,7 @@ Dołączasz je, gdy stacja już działa; stacja pracuje dalej przez cały czas. 
 - Zaloguj się do panelu hasłem z numerowanej koperty przy stacji. Po otwarciu koperty hasło zmienia osoba utrzymująca system; wpisz numer koperty do dziennika.
 - Wi-Fi i adres strony: przy routerze z zestawu, sprawdzonym w przygotowaniu, obowiązuje plakat przy stacji (sieć, hasło, adres). Przy innym routerze pokaż mieszkańcom kod QR z ekranu laptopa.
 - Zgłoszenie z telefonu trafia najpierw do Twojej kolejki w panelu i nie wychodzi radiem samo. Sprawdź je, połącz z powtarzalnymi, ustal pilność i zatwierdź.
-- Mieszkaniec dostaje lokalny numer zgłoszenia („ZAPISZ NUMER [xxxx] – PODAJ GO OPIEKUNOWI, ABY SPRAWDZIĆ STAN”). Gdy straci dostęp na telefonie, sprawdź stan po tym numerze w panelu.
+- Mieszkaniec dostaje lokalny numer zgłoszenia („ZAPISZ NUMER [xxxx] – PODAJ GOSPODARZOWI DO SPRAWDZENIA STANU”). Gdy straci dostęp na telefonie, sprawdź stan po tym numerze w panelu.
 - Brak energii: najpierw wyłącz laptop i router. Stacja pracuje dalej z ogniw lub 12 V.
 
 ### Stacja zasilania (poziom 3)

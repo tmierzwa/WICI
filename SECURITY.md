@@ -16,7 +16,7 @@ Zgłaszaj prywatnie zwłaszcza:
 - przyjęcie obrazu oprogramowania bez poprawnego podpisu wydania lub starszego niż zainstalowany (anti-rollback), aktualizacja przez DFU/UF2 bez podpisu, podmiana podpisanego `build-manifest.json` pakietu START;
 - słaby lub przewidywalny generator liczb losowych przy tworzeniu tożsamości, kluczy lub identyfikatorów wiadomości;
 - odczyt pamięci mikrokontrolera mimo ochrony (SWD, APPROTECT, szyfrowanie flash) albo odczyt FRAM po ZNISZCZ DANE;
-- dostęp z sieci Wi-Fi do panelu opiekuna lub dyżurnego (`/operator`, `/api/operator/*`, dostępne tylko z 127.0.0.1), do cudzego zgłoszenia lub tokenu mieszkańca, albo zapis treści zgłoszeń, tokenów, adresów IP lub MAC w dziennikach;
+- dostęp z sieci Wi-Fi do panelu gospodarza lub dyżurnego (`/operator`, `/api/operator/*`, dostępne tylko z 127.0.0.1), do cudzego zgłoszenia lub tokenu mieszkańca, albo zapis treści zgłoszeń, tokenów, adresów IP lub MAC w dziennikach;
 - błąd w opisie zasilania, który może spowodować porażenie, pożar lub uszkodzenie telefonu.
 
 Błędy obliczeń i dokumentacji bez takich skutków zgłaszaj zwykłym Issue.

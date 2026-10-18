@@ -14,7 +14,7 @@ body:
       options:
         - Obsługa panelu (przyciski, przełącznik, czytelność) / Panel handling
         - Teksty na ekranie / Screen texts
-        - Ćwiczenia opiekuna / Warden exercises
+        - Ćwiczenia gospodarza / Warden exercises
         - Działanie łącza i stanowiska odbiorczego / Link and receiving post
         - Wygląd obudowy / Enclosure design
         - Strona symulatora / Simulator page
@@ -32,7 +32,7 @@ body:
     id: who
     attributes:
       label: Perspektywa (opcjonalnie) / Your perspective (optional)
-      description: np. opiekun schronienia, OSP, gmina, radioamator, programista
+      description: np. gospodarz schronienia, OSP, gmina, radioamator, programista
   - type: textarea
     id: context
     attributes:

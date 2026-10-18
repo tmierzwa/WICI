@@ -116,7 +116,7 @@ Wykaz do kwalifikacji i deklaracji zgodności:
 - RoHS (EN IEC 63000), WEEE (dla wszystkich modułów zestawu) oraz rozporządzenie bateryjne (UE) 2023/1542;
 - maksymalny deklarowany zysk anteny 6 dBi, wpisany do deklaracji i karty stacji.
 
-Nadajniki Wi-Fi i Bluetooth mikrokontrolera stacji są wyłączone, ale radio 2,4 GHz wyłączone tylko w oprogramowaniu układowym może być nadal traktowane jako zamierzony nadajnik. W pilotażu Wi-Fi i Bluetooth ESP32-S3 są wyłączone programowo; stacje pilotażowe są urządzeniami badanymi, własnością zespołu, więc ta kwestia wraca przy wydaniu. Opcje do rozstrzygnięcia w D14 dla wydania: (a) trwała blokada (eFuse lub konfiguracja startowa, gdzie MCU ją zapewnia), bezpieczny rozruch (secure boot) i pisemna argumentacja RED; (b) budżet badań według EN 300 328 i EN 301 489-17; (c) MCU bez radia, np. RP2350 (520 KiB RAM) albo STM32U5.
+Nadajniki Wi-Fi i Bluetooth mikrokontrolera stacji są wyłączone, ale radio 2,4 GHz wyłączone tylko w oprogramowaniu układowym może być nadal traktowane jako zamierzony nadajnik. W pilotażu Wi-Fi i Bluetooth ESP32-S3 są wyłączone programowo. Sposób wyłączenia rozstrzyga się przed badaniami konfiguracji pilotażowej (D20), bo od niego zależy zakres badań. Opcje (D14): (a) trwała blokada (eFuse lub konfiguracja startowa, gdzie MCU ją zapewnia), bezpieczny rozruch (secure boot) i pisemna argumentacja RED; (b) budżet badań według EN 300 328 i EN 301 489-17; (c) MCU bez radia, np. RP2350 (520 KiB RAM) albo STM32U5.
 
 Poziom 3 używa kupionej stacji zasilania i ładowarki USB z deklaracją zgodności UE producenta ([elektronika](elektronika.md#poziom-3-kupiona-stacja-zasilania)); WICI nie jest ich producentem.
 

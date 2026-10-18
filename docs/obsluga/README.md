@@ -1,14 +1,15 @@
 # Dokumenty obsługi WICI
 
-Dokumenty dla ludzi, którzy obsługują system: opiekunów punktów i dyżurnych stanowiska odbiorczego. Licencja CC BY 4.0 (reszta `docs/spec/` jest na CERN-OHL-P-2.0).
+Dokumenty dla ludzi, którzy obsługują system: gospodarzy punktów i dyżurnych stanowiska odbiorczego. Licencja CC BY 4.0 (reszta `docs/spec/` jest na CERN-OHL-P-2.0).
 
 | Plik | Dla kogo | Zawartość |
 |---|---|---|
-| [karta-stacji.html](karta-stacji.html) | opiekun punktu (sołtys, nauczyciel, strażak OSP) | karta obsługi stacji do druku dwustronnego i laminowania: wersje PL, UK i EN, każda na jednej kartce A4 (strona 1: najważniejsze, strona 2: gdy trzeba); na końcu formularz papierowy zgłoszenia w dwóch egzemplarzach |
+| [karta-stacji.html](karta-stacji.html) | gospodarz punktu (sołtys, nauczyciel, strażak OSP) | karta obsługi stacji do druku dwustronnego i laminowania: wersje PL, UK i EN, każda na jednej kartce A4 (strona 1: najważniejsze, strona 2: gdy trzeba); na końcu formularz papierowy zgłoszenia w dwóch egzemplarzach |
 | [instrukcja-dyzurnego.md](instrukcja-dyzurnego.md) | dyżurny stanowiska odbiorczego (strażak OSP, pracownik gminy) | uruchomienie, potwierdzenia, odpowiedzi i komunikaty, kwarantanna, przekazywanie służbom, rejestr, awarie, ćwiczenia, cisza radiowa, zamknięcie zdarzenia; tabele do wypełnienia przez gminę |
-| [szkolenie.md](szkolenie.md) | prowadzący szkolenie, gmina | program 2-godzinnego szkolenia opiekunów i dyżurnych przed pracą stacji w terenie: cele, organizacja, przebieg, ścieżki opiekuna i dyżurnego, sprawdzian, po szkoleniu |
+| [formularz-pomiaru-tras.html](formularz-pomiaru-tras.html) | zespół pomiarowy etapu 0 | formularz do druku (A4 poziomo, 2 strony) do [pomiaru tras](../spec/odbior.md#procedura-etapu-0-pomiar-tras): urządzenia, miejsca, nastawy i wyniki 12 serii |
+| [szkolenie.md](szkolenie.md) | prowadzący szkolenie, gmina | program 2-godzinnego szkolenia gospodarzy i dyżurnych przed pracą stacji w terenie: cele, organizacja, przebieg, ścieżki gospodarza i dyżurnego, sprawdzian, po szkoleniu |
 
-Tematy obsługi spoza karty (adres, alarmy, energia, poziomy 2–3, koniec zdarzenia) są w [instrukcji opiekuna](../spec/instrukcja.md).
+Tematy obsługi spoza karty (adres, alarmy, energia, poziomy 2–3, koniec zdarzenia) są w [instrukcji gospodarza](../spec/instrukcja.md).
 
 ## Wersja
 

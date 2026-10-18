@@ -2,7 +2,7 @@
 
 Zacznij od [koncepcji systemu](concept/index.html): potrzeby i wymagania, scenariusze pracy, dostępne rozwiązania, analiza opcji, architektura komunikacji, wykonalność, zagrożenia i plan prób. Dokumenty są po polsku, oddzielają wymagania od dowodów i wskazują otwarte decyzje.
 
-Specyfikacja stacji 0.5 składa się z pięciu rozdziałów, protokołu USB, rozdziału o stanowisku odbiorczym, instrukcji opiekuna oraz BOM stacji; karta obsługi i instrukcja dyżurnego są w [dokumentach obsługi](obsluga/README.md). Parametry, kontrakty, warunki odbioru i kandydatów części zmienia się w tych plikach, a uzasadnienia i analizy w `docs/concept/`.
+Specyfikacja stacji 0.5 składa się z pięciu rozdziałów, protokołu USB, rozdziału o stanowisku odbiorczym, instrukcji gospodarza oraz BOM stacji; karta obsługi i instrukcja dyżurnego są w [dokumentach obsługi](obsluga/README.md). Parametry, kontrakty, warunki odbioru i kandydatów części zmienia się w tych plikach, a uzasadnienia i analizy w `docs/concept/`.
 
 | Rozdział | Zakres |
 |---|---|
@@ -15,7 +15,7 @@ Specyfikacja stacji 0.5 składa się z pięciu rozdziałów, protokołu USB, roz
 | [Odbiór](spec/odbior.md) | Próby z grupami T1–T8, minimum pilotażu, warunki zaliczenia i niezrealizowane części |
 | [Karta obsługi](obsluga/karta-stacji.html) | Karta obsługi stacji do druku: PL, UK i EN, każda na jednej kartce A4 (strona 1 najważniejsze, strona 2 gdy trzeba), i formularz papierowy; CC BY 4.0 ([dokumenty obsługi](obsluga/README.md)) |
 | [Instrukcja dyżurnego](obsluga/instrukcja-dyzurnego.md) | Czynności dyżurnego: uruchomienie, potwierdzenia, odpowiedzi i komunikaty, kwarantanna, przekazywanie służbom, rejestr, awarie, ćwiczenia, cisza, zamknięcie zdarzenia; tabele dla gminy; CC BY 4.0 |
-| [Instrukcja opiekuna](spec/instrukcja.md) | Tematy obsługi spoza karty: adres, stany zgłoszenia, alarmy, cisza, energia, poziomy 2–3, przekazanie zmiany, koniec zdarzenia, bezpieczeństwo |
+| [Instrukcja gospodarza](spec/instrukcja.md) | Tematy obsługi spoza karty: adres, stany zgłoszenia, alarmy, cisza, energia, poziomy 2–3, przekazanie zmiany, koniec zdarzenia, bezpieczeństwo |
 | [BOM stacji](spec/bom-stacji.csv) | Wymagania minimalne części i kandydaci od dwóch producentów, ze stanem kwalifikacji |
 
 Planowany pilotaż obejmuje stacje na gotowych płytkach ESP32-S3 z układem LoRa SX1262 ([profil LoRa](spec/radio.md#profil-lora-pilotażu)). Lista prób wymaganych przed pilotażem jest w sekcji [Minimum pilotażu](spec/odbior.md#minimum-pilotażu) odbioru; pozostałe wiersze dotyczą wydania.
