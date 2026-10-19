@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-// Ramka wzorcowa poleceń TXPKT/RXPER: stała długość len (4..103 B), numer porządkowy
+// Ramka wzorcowa poleceń TXPKT/RXPER: stała długość len (4..255 B; najdłuższą dla układu podaje
+// radiolink::Driver::maxTestLength: P1 103 B, LoRa 255 B), numer porządkowy
 // (2 B, starszy bajt pierwszy), wypełnienie pseudolosowe PN9 zależne od numeru albo same
 // zera lub same jedynki (radio.md: odporność na długie ciągi jednakowych bitów),
 // na końcu CRC-16 ramki P1 liczone z poprzedzających bajtów. Bez zależności od Arduino.
@@ -11,7 +12,7 @@
 namespace testframe {
 
 constexpr size_t MIN_LENGTH = 4;
-constexpr size_t MAX_LENGTH = 103;  // najdłuższy pakiet P1 (LEN + BODY + CRC)
+constexpr size_t MAX_LENGTH = 255;  // najdłuższa ramka LoRa (SX1262); P1: 103 B (LEN + BODY + CRC)
 
 enum class Fill : uint8_t { PN9, ZEROS, ONES };
 

@@ -13,7 +13,7 @@
 namespace radiocon {
 
 const char* const NAME = "CC1120";
-const uint16_t RX_FILTER_HZ = p1::RX_FILTER_HZ;
+const char* const PROFILE = "P1";
 const int8_t TX_POWER_DBM = p1::TX_POWER_DBM;
 
 namespace {
@@ -85,6 +85,11 @@ void printRssi() {
 }  // namespace
 
 radiolink::Driver& link() { return driver; }
+
+void printProfile() {
+    Serial.printf("\"carrier_hz\":%lu,\"symbol_rate\":%u,\"deviation_hz\":%u,\"rx_filter_hz\":%u,", static_cast<unsigned long>(p1::CARRIER_HZ),
+                  p1::SYMBOL_RATE, p1::DEVIATION_HZ, p1::RX_FILTER_HZ);
+}
 
 void attach(measure::Bench& b) { bench = &b; }
 

@@ -1151,10 +1151,12 @@ class HostUnitTests(unittest.TestCase):
         self.assertGreater(len(set(a[2:-2])), 10)
 
     def test_rejects_bad_lengths(self):
+        # 4..255 B: P1 stations limit TXPKT to 103 B through the driver, LoRa (SX1262) to 255 B.
         with self.assertRaises(subprocess.CalledProcessError):
             self.run_harness("frame", "3", "1")
         with self.assertRaises(subprocess.CalledProcessError):
-            self.run_harness("frame", "104", "1")
+            self.run_harness("frame", "256", "1")
+        self.run_harness("frame", "255", "1")
 
     def test_p1_frames_match_model_for_every_length(self):
         lines = subprocess.run([str(self.binary), "buildall"], capture_output=True, text=True, check=True).stdout.splitlines()

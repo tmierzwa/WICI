@@ -58,7 +58,9 @@ constexpr const char* BOARD_NAME = board::NAME;
 #else
 constexpr const char* BOARD_NAME = "wires";
 #endif
-#if defined(WICI_BENCH_B)
+#if defined(WICI_L0)
+constexpr const char* BENCH = "L0";
+#elif defined(WICI_BENCH_B)
 constexpr const char* BENCH = "B";
 #else
 constexpr const char* BENCH = "A";
@@ -78,7 +80,11 @@ void stationRandom(uint8_t* out, size_t count) {
     // Ziarno powstaje pierwsze w stationSetup(); odmowa to błąd programu: restart zamiast bajtów spoza generatora.
     if (!generator.generate(out, count)) platform::reboot();
 }
+#if defined(WICI_L0)
+constexpr const char* RADIO_PROFILE = "lora-sf7";  // profil radiowy stacji L0 (`radio.profile` w configure, protokol-usb.md)
+#else
 constexpr const char* RADIO_PROFILE = "p1";   // profil radiowy stanowisk A i B (`radio.profile` w configure, protokol-usb.md)
+#endif
 store::Store stationStore(memory, stationJournal, stationRandom, RADIO_PROFILE);
 // Drugi interfejs CDC: dane (protokół laptop–stacja); Serial = diagnostyka.
 #if defined(ARDUINO_ARCH_NRF52)
@@ -755,17 +761,17 @@ void printInfo() {
     // uptime_s to zegar z dziennika FRAM (ciągły między restartami), boot_s czas od startu.
     // Wiersz w częściach poniżej 256 znaków (Print::printf rdzenia nRF52, zob. printRns).
     const measure::LinkCounters& c = bench.link();
-    Serial.printf("{\"contract\":2,\"profile\":\"P1\",\"radio\":\"%s\",\"mcu\":\"%s\",\"fw\":\"%s\","
+    Serial.printf("{\"contract\":2,\"profile\":\"%s\",\"radio\":\"%s\",\"mcu\":\"%s\",\"fw\":\"%s\","
                   "\"src\":\"USB\",\"mv\":0,\"tx_wait_ms\":%lu,\"rx_ok\":%lu,\"rx_bad\":%lu,\"tx_drop\":%lu,\"restarts\":%lu,",
-                  radiocon::NAME, platform::MCU, WICI_FW_VERSION, static_cast<unsigned long>(bench.debtRemainingMs()),
+                  radiocon::PROFILE, radiocon::NAME, platform::MCU, WICI_FW_VERSION, static_cast<unsigned long>(bench.debtRemainingMs()),
                   static_cast<unsigned long>(c.rxOk), static_cast<unsigned long>(c.rxBad), static_cast<unsigned long>(c.txDrop),
                   static_cast<unsigned long>(stationJournal.starts()));
     Serial.printf("\"bench\":\"%s\",\"prep\":%s,\"silence\":%s,\"radio_ok\":%s,\"p1_ok\":%s,\"fram_ok\":%s,\"journal_ok\":%s,"
-                  "\"journal_resets\":%lu,\"carrier_hz\":%lu,\"symbol_rate\":%u,\"deviation_hz\":%u,\"rx_filter_hz\":%u,",
+                  "\"journal_resets\":%lu,",
                   BENCH, boolName(bench.prep),
                   boolName(silenceAny()), boolName(radiocon::ok()), boolName(radiocon::p1Ok()), boolName(framOk), boolName(journalOk),
-                  static_cast<unsigned long>(journalResets), static_cast<unsigned long>(p1::CARRIER_HZ), p1::SYMBOL_RATE,
-                  p1::DEVIATION_HZ, radiocon::RX_FILTER_HZ);
+                  static_cast<unsigned long>(journalResets));
+    radiocon::printProfile();
     Serial.printf("\"tx_power_dbm\":%d,\"uptime_s\":%lu,\"service_s\":%lu,\"boot_s\":%lu,\"screen\":\"%s\",\"lang\":\"%s\","
                   "\"name\":\"%s\",\"reset_reason\":\"0x%08lX\",",
                   radiocon::TX_POWER_DBM, static_cast<unsigned long>(counterS()), static_cast<unsigned long>(serviceS()),
@@ -857,8 +863,8 @@ void printHelp() {
     Serial.print(",\"PREP <0|1>\",\"SILENCE <0|1>\",\"TXCW <s> [CONDUCTED]\",\"TXPKT <n> <len> [<ms>] [ZEROS|ONES] [CONDUCTED]\","
                  "\"RX [<len>]\",\"RXPER\",\"FOFF [<hz>]\",\"P1RX\",\"P1TX <hex>\",\"P1\",\"STOP\",\"LOG [<n>]\",\"JOURNAL\",\"BENCH\","
                  "\"FRAM\",\"BTN\","
-#if !defined(WICI_BENCH_B)
-                 "\"LED <1-4> <0|1>\","  // stanowisko B nie ma diod stanu
+#if !defined(WICI_BENCH_B) && !defined(WICI_L0)
+                 "\"LED <1-4> <0|1>\","  // stanowisko B i L0 (DevKitC) nie mają diod stanu
 #endif
                  "\"SCREEN\",\"KEY <UP|DOWN|OK|BACK> [ms]\",\"DISPLAY\","
                  "\"VCOM <0|1>\",\"REBOOT\",\"STORE\",\"USB <json>\",\"APP\",\"LINK <0|1>\",\"RNS\",\"ANNOUNCE\""

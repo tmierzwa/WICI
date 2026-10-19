@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-# Kompilacja obrazów stacji (firmware/README.md): bench-a, bench-n1 (nRF52840) i bench-b (ESP32-S3).
+# Kompilacja obrazów stacji (firmware/README.md): bench-a, bench-n1 (nRF52840), bench-b i l0 (ESP32-S3).
 # Wersje platform i rdzeni są przypięte w firmware/platformio.ini, stos Reticulum w tools/stack_deps.py.
 name: Firmware
 on:
@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        env: [bench-a, bench-n1, bench-b]
+        env: [bench-a, bench-n1, bench-b, l0]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
