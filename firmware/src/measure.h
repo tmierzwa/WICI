@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Polecenia pomiarowe interfejsu diagnostyki (docs/spec/radio.md, "USB do laptopa"):
 // TXCW, TXPKT, RX, FOFF (RXPER tylko czyta liczniki). Działają tylko w trybie przygotowania
-// i przy zapisanej tablicy P1, podlegają ciszy radiowej i limitowi nadawania (dług ciszy 12 x czas TX zapisany w dzienniku FRAM
-// przed serią, seria nie dłuższa niż najdłuższy datagram P1); dłuższą serię dopuszcza
+// i przy zapisanym profilu układu (P1 albo LoRa), podlegają ciszy radiowej i limitowi nadawania (dług ciszy 12 x czas TX
+// zapisany w dzienniku FRAM przed serią, seria nie dłuższa niż najdłuższy datagram profilu); dłuższą serię dopuszcza
 // argument conducted potwierdzony przyciskiem OK w ciągu 30 s i zapisany w dzienniku.
 // Operacje układu radiowego idą przez radiolink::Driver (CC1120: cc1120_link.cpp, S2-LP:
-// s2lp_link.cpp); reszta, w tym łącze P1, jest wspólna dla obu wykonań.
+// s2lp_link.cpp, SX1262: sx1262_link.cpp), czas ramki w eterze też; reszta, w tym łącze P1, jest
+// wspólna. Łącze P1 działa tylko na układzie, który je ma (Driver::p1Link).
 #pragma once
 
 #include <Arduino.h>
@@ -18,7 +19,8 @@
 namespace measure {
 
 constexpr uint32_t CW_MAX_MS = 10000;         // TXCW <= 10 s (specyfikacja)
-constexpr uint32_t SERIES_MAX_MS = 1400;      // najdłuższa seria P1: 7 ramek po 103 B z narastaniem
+// Najdłuższa seria każdego profilu (P1: 7 ramek po 103 B z narastaniem; LoRa: dwie ramki 255 B, ≤ tyle).
+constexpr uint32_t SERIES_MAX_MS = radiolink::P1_SERIES_MAX_MS;
 // Największy dług, jaki stanowisko zapisuje (seria do SERIES_MAX_MS i rezerwacja datagramu P1
 // z 7 najdłuższych ramek, 1365 ms): odczekiwany po starcie bez poprawnego rekordu długu.
 constexpr uint32_t MAX_DEBT_MS = SERIES_MAX_MS * 12;
@@ -41,6 +43,7 @@ struct Counters {
     uint16_t lastSeq = 0;
     int32_t rssiSum = 0;      // suma RSSI poprawnych ramek (dBm)
     uint32_t lqiSum = 0;      // CC1120: LQI, S2-LP: SQI
+    int32_t snrSumQdb = 0;    // SX1262: suma SNR poprawnych ramek (ćwiartki dB)
     uint32_t startedMs = 0;
 };
 
@@ -76,8 +79,9 @@ public:
     // Cisza z panelu z wyjątkiem jednego zgłoszenia: nadanie P1 od stosu (p1send z stack = true)
     // przechodzi, bo stos przepuszcza wtedy tylko ruch wyjątku (rns_node.h); pomiary i P1TX nie.
     bool silenceException = false;
-    // Układ skonfigurowany profilem P1: poza trybem przygotowania odbiór P1 wraca sam po każdym
-    // przerwaniu (radio.md: odbiór wyłącza się tylko na czas własnego nadawania).
+    // Układ skonfigurowany profilem (P1 albo LoRa): warunek każdego nadania. Na układzie z łączem P1
+    // poza trybem przygotowania odbiór P1 wraca sam po każdym przerwaniu (radio.md: odbiór wyłącza się
+    // tylko na czas własnego nadawania).
     bool p1Ready = false;
 
     // Dziennik FRAM i zegar czasu pracy; bez dziennika nadawanie radiowe jest zablokowane.
@@ -136,6 +140,7 @@ private:
     void finishP1Tx(const char* result);
     void led(bool on);
     uint32_t uptimeS() const { return uptime_ ? uptime_() : millis() / 1000; }
+    const char* lengthError();  // "len 4..<najdłuższa ramka wzorcowa układu>"
 
     radiolink::Driver& radio_;
     uint8_t pinOk_;
@@ -194,6 +199,7 @@ private:
     int32_t foffHz_ = 0;
     bool foffSet_ = false;
 
+    char lengthError_[16] = {};
     Event events_[LOG_ENTRIES];
     size_t eventCount_ = 0;
     void (*datagramHandler_)(const uint8_t*, size_t, void*) = nullptr;

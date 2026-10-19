@@ -1,6 +1,6 @@
 # WICI: oprogramowanie stacji
 
-**Następny krok radiowy (przegląd praktyczny 2026-10-08, F99).** Pilotaż używa gotowej płytki ESP32-S3 z układem LoRa SX1262, więc kolejną pracą radiową jest interfejs LoRa (SX1262) w stosie: format w eterze zgodny z RNode, cisza 12t, IFAC ([profil LoRa](../docs/spec/radio.md#profil-lora-pilotażu)). Sterowniki P1 (CC1120, S2-LP) i obrazy stanowisk zostają dla wariantu zapasowego i prób na stanowiskach deweloperskich.
+**Następny krok radiowy (przegląd praktyczny 2026-10-08, F99).** Pilotaż używa gotowej płytki ESP32-S3 z układem LoRa SX1262. Obraz [`l0`](#stacja-l0-l0) ma już sterownik SX1262 w profilu LoRa z poleceniami pomiarowymi (bez prób na sprzęcie), więc kolejną pracą radiową jest interfejs LoRa w stosie: format w eterze zgodny z RNode, cisza 12t, IFAC ([profil LoRa](../docs/spec/radio.md#profil-lora-pilotażu)). Sterowniki P1 (CC1120, S2-LP) i obrazy stanowisk zostają dla wariantu zapasowego i prób na stanowiskach deweloperskich.
 
 Katalog zawiera oprogramowanie układowe stacji. Poniższy opis zaczyna się od wariantu na [stanowisku deweloperskim A](../hardware/dev-bench/README.md): nRF52840-DK z modułem TI CC1120EM-868-915 i pamięcią FRAM na złączu Arduino płytki. Środowisko `bench-a` w `platformio.ini` buduje obraz, który po podłączeniu USB zgłasza się poleceniem `INFO` w formacie ze [specyfikacji radia](../docs/spec/radio.md#usb-do-laptopa), identyfikuje układ radiowy i FRAM przez SPI, zapisuje do CC1120 [rejestry profilu P1](#rejestry-profilu-p1) z weryfikacją odczytu i kalibracją syntezera, wykonuje [polecenia pomiarowe](#polecenia-pomiarowe) `TXCW`, `TXPKT`, `RXPER`, `FOFF` ze specyfikacji, prowadzi [dziennik i magazyny w FRAM](#dziennik-i-magazyny-w-fram) (dług ciszy, licznik czasu pracy, zdarzenia; rejestr zgłoszeń, skrzynka, pierścień zdarzeń i konfiguracja z transakcjami), obsługuje [łącze P1](#łącze-p1) (odbiór i składanie datagramów, nadawanie z CCA, odroczeniem i długiem ciszy), podaje zaprogramowaną częstotliwość i RSSI, prowadzi [ekran Sharp i menu stacji](#ekran-i-przyciski) na przyciskach płytki (wybór języka, ekran główny, cisza, STAN; EXTCOMIN z licznika RTC2).
 
@@ -14,7 +14,9 @@ Stacja ma jedną rolę (D19): w [konfiguracji węzła stanowiska](#węzeł-stano
 
 Środowisko `bench-b` buduje ten sam program stacji dla [stanowiska B na N1](#stanowisko-b-na-płytce-n1-bench-b): ESP32-S3-DevKitC-1 z X-NUCLEO-S2868A2 (ST S2-LP) zamiast nRF52840 i CC1120. Wspólne są polecenia, polecenia pomiarowe, łącze P1, dziennik, magazyn, protokół USB laptop–stacja z dwoma interfejsami CDC, warstwa aplikacji, ekran i panel N1; różnią się warstwa MCU (`src/platform_*.cpp`), sterownik układu radiowego (`src/radio_console_*.cpp`, `src/*_link.cpp`) i [rejestry P1 dla S2-LP](#rejestry-profilu-p1-dla-s2-lp).
 
-Obrazy skompilowano (PlatformIO, ze stosem Reticulum; rdzeń Adafruit nRF52 1.7.0: `bench-a` 100 908 B RAM statycznej, 603 900 B flash, `bench-n1` 101 132 B RAM, 609 040 B flash, podział w [pomiarze RAM stosu](#pamięć-ram) i [przeglądzie rozmiaru](#rozmiar-i-wydajność); Arduino-ESP32 3.3.12: `bench-b` 147 912 B RAM z 327 680 B, 865 273 B flash). **Żadnego nie uruchomiono na sprzęcie**: odpowiedzi poleceń, numery pinów, działanie SPI z modułem, przyjęcie rejestrów przez układ, USB i łącze radiowe wymagają sprawdzenia na płytce według kroków niżej. Na hoście sprawdzone są tylko moduły bez Arduino, sterownik S2-LP i jego sterownik łącza z modelem układu, `measure::Bench` ze sterownikiem zastępczym, tablica rejestrów S2-LP i zgodność pinów `bench-b` z [połączeniami](../hardware/dev-bench/polaczenia.md) (`tests/`), a stos Reticulum z interfejsem P1 w programie na komputerze z emulatorem łącza wobec Reticulum w Pythonie ([próba zgodności](#próba-zgodności-z-reticulum)).
+Środowisko `l0` buduje ten sam program dla [stacji pilotażowej L0](#stacja-l0-l0) (ESP32-S3 z SX1262 na N1) z poleceniami pomiarowymi w profilu LoRa; łącza P1 i interfejsu LoRa stosu w nim nie ma.
+
+Obrazy skompilowano (PlatformIO, ze stosem Reticulum; rdzeń Adafruit nRF52 1.7.0: `bench-a` 100 908 B RAM statycznej, 603 900 B flash, `bench-n1` 101 132 B RAM, 609 040 B flash, podział w [pomiarze RAM stosu](#pamięć-ram) i [przeglądzie rozmiaru](#rozmiar-i-wydajność); Arduino-ESP32 3.3.12: `bench-b` 147 912 B RAM z 327 680 B, 865 273 B flash, `l0` 148 176 B RAM, 871 969 B flash). **Żadnego nie uruchomiono na sprzęcie**: odpowiedzi poleceń, numery pinów, działanie SPI z modułem, przyjęcie rejestrów przez układ, USB i łącze radiowe wymagają sprawdzenia na płytce według kroków niżej. Na hoście sprawdzone są tylko moduły bez Arduino, sterowniki S2-LP i SX1262 i ich sterowniki łącza z modelem układu, `measure::Bench` ze sterownikiem zastępczym, tablica rejestrów S2-LP i zgodność pinów `bench-b` z [połączeniami](../hardware/dev-bench/polaczenia.md) (`tests/`), a stos Reticulum z interfejsem P1 w programie na komputerze z emulatorem łącza wobec Reticulum w Pythonie ([próba zgodności](#próba-zgodności-z-reticulum)).
 
 ## Okablowanie stanowiska A
 
@@ -187,6 +189,67 @@ Decyzje i otwarte punkty:
 
 Czego tablica nie zamyka: mocy wyjściowej (wzór ST jest przybliżeniem; poziom PA i napięcie SMPS do ustawienia pomiarem 13 dBm ±1 dB), błędu częstotliwości kwarcu modułu (`FREQ` podaje tylko wartość zaprogramowaną), przesunięcia RSSI, ustawień AFC, AGC i odtwarzania zegara symboli dla 4800 Bd (zostają wartości domyślne; sprawdza je pomiar czułości w T4) i potwierdzenia kolejności bajtów słowa synchronizacji w eterze.
 
+## Stacja L0 (l0)
+
+Środowisko `l0` buduje program stacji dla stacji pilotażowej L0: ESP32-S3-DevKitC-1-N8R8 na płytce nośnej N1 z modułem Seeed Wio-SX1262 (SX1262, TCXO 1,8 V) w miejscu X-NUCLEO-S2868A2. Piny są w `src/board_l0.h` według [`polaczenia-MCU-L0.csv`](../hardware/l0-diagnostic/reference/polaczenia-MCU-L0.csv), tych samych co w [programie diagnostycznym L0](../hardware/l0-diagnostic/README.md). Program, warstwa MCU, ekran, panel N1, dziennik i magazyn są te same co w `bench-b`; obraz pomija sterowniki CC1120 i S2-LP i ma sterownik SX1262 w [profilu LoRa pilotażu](../docs/spec/radio.md#profil-lora-pilotażu). Obraz się kompiluje (Arduino-ESP32 3.3.12: 148 176 B RAM z 327 680 B, 871 969 B flash). **Nie uruchomiono go na sprzęcie**; kroki niżej są niewykonane.
+
+| Sygnał | GPIO ESP32-S3 | Uwagi |
+|---|---|---|
+| SPI SCK / MOSI / MISO | 12 / 11 / 13 | jak w `bench-b`; radio 1 MHz, FRAM 8 MHz |
+| NSS / NRESET SX1262 | 10 / 9 | NRESET napędzany stanem wysokim po resecie (N1 R12 = 1 kΩ do masy, Wio 10 kΩ do 3,3 V) |
+| BUSY / DIO1 | 14 / 21 | wejścia; sterownik czeka na BUSY niski przed każdą transakcją, przerwania czyta przez SPI, DIO1 tylko w `RADIO` |
+| RXEN | 42 | stan wysoki tylko w odbiorze, niski w nadawaniu i spoczynku; nadawanie przełącza DIO2 układu |
+| FRAM, ekran, panel, VTEST | jak w `bench-b` | |
+
+Sterownik (`src/sx1262.cpp`: polecenia, rejestry, bufor, BUSY; `src/sx1262_link.cpp`: profil i `radiolink::Driver`; `src/lora_profile.h`: parametry i czas ramki) jest własny, jak dla CC1120 i S2-LP. Sekwencję startu przeniesiono z programu diagnostycznego L0 (RadioLib 7.6.0, `SX1262::begin`, `setRfSwitchPins(RXEN)`, `setDio2AsRfSwitch`, `setRxBoostedGainMode`), a obraz nie łączy RadioLib, żeby test na komputerze sprawdzał ten sam kod z modelem układu bez PlatformIO:
+
+- **Start:** NRESET niski na 1 ms, tekst wersji z rejestru 0x0320 (`ok`, gdy zaczyna się od „SX126”; SX1262 podaje „SX1261 V2D 2D02”), STDBY_RC, TCXO 1,8 V z DIO3 (start 5 ms), skasowanie błędów, kalibracja wszystkich bloków (kalibracja po włączeniu zasilania bez TCXO kończy się błędem XOSC_START), przetwornica DC-DC, DIO2 jako przełącznik RF, typ pakietu LoRa, tryb powrotu STDBY_RC, kalibracja obrazu 863–870 MHz, częstotliwość, PA jak w programie diagnostycznym (RadioLib, tabela dla 13 dBm: 0x01, 0x04, SX1262, wartość 19 w SetTxParams) z rampą 200 µs, limit prądu 60 mA (zapis po SetPaConfig, który ustawia 140 mA), modulacja SF7, 125 kHz, CR 4/5, bez LDRO, pakiet z jawnym nagłówkiem i CRC, poprawki z rozdziału 15 karty (0x0889, 0x08D8, 0x0736), słowo synchronizacji, Rx Boosted (0x08AC = 0x96) dopisany do listy rejestrów zachowywanych w uśpieniu (0x029F = 1, 0x02A0..0x02A1 = 0x08AC). Na końcu weryfikacja odczytem: typ pakietu, 10 rejestrów i brak błędów układu.
+- **Stałe do ustalenia wobec RNode (T3):** preambuła 18 symboli (założenie specyfikacji) i słowo synchronizacji 0x12 (wartość domyślna RadioLib i programu diagnostycznego) są stałymi w `src/lora_profile.h`. Program diagnostyczny nadaje z preambułą 8 symboli i mocą 0 dBm.
+- **Nadawanie:** ramka z bufora od adresu 0, długość w parametrach pakietu, RXEN niski, `SetTx` bez limitu czasu układu; koniec po TxDone (układ wraca sam do STDBY_RC), bez niego po czasie ramki + 100 ms przejście do STDBY_RC i błąd.
+- **Odbiór** ciągły (`SetRx 0xFFFFFF`) z RXEN wysokim: ramka po RxDone, długość i początek z `GetRxBufferStatus`, RSSI pakietu (−RssiPkt/2) i SNR (SnrPkt/4) z `GetPacketStatus`; błąd CRC lub nagłówka albo inna długość niż w `RX <len>` dają `rx_bad`, a układ zostaje w odbiorze.
+- **TXCW:** `SetTxContinuousWave`; **FOFF:** słowo RF ± kroki 32 MHz / 2²⁵ (0,954 Hz), ±1 MHz, zapis w STDBY_RC i powrót do odbioru.
+- **Czas ramki** z wzoru karty (rozdz. 6.1.4; ten sam co `lora_frame_seconds` w `software/reference/obliczenia.py`) plus 3 ms na narastanie (założenie jak w P1, do pomiaru): 255 B w SF7 to 409,9 ms w powietrzu i 413 ms rezerwacji.
+
+Polecenia pomiarowe działają jak na A i B (ten sam `src/measure.cpp`, [opis](#polecenia-pomiarowe)), z czasem ramki, najdłuższą ramką i limitem serii z profilu LoRa:
+
+- `TXPKT <n> <len>` i `RX [<len>]` przyjmują ramki wzorcowe 4–255 B; dług 12 × `n` × czas ramki trafia do dziennika FRAM przed pierwszą ramką, a seria bez `CONDUCTED` nie może przekroczyć 826 ms, czyli najdłuższego datagramu LoRa (dwie ramki 255 B z narastaniem). Przykład: `TXPKT 2 255` planuje 826 ms i zapisuje 9912 ms długu; `TXPKT 3 255` wymaga `CONDUCTED`. `expected_on_air_ms` to cała ramka LoRa od preambuły; `sync_gpio` jest `false` (bez wyjścia „pakiet w powietrzu”).
+- `TXCW` trwa co najmniej 1 s, więc w profilu LoRa wymaga zawsze `CONDUCTED` (pomiar mocy i częstotliwości przewodowo do tłumika).
+- `RXPER` podaje dodatkowo wiersz `{"snr_avg_db":…,"rx_ok":…}`; `lqi_avg` wynosi 0.
+- Łącza P1 nie ma: `P1RX` i `P1TX` zwracają `no P1 link on this radio`, odbiór P1 nie wraca sam poza trybem przygotowania, a stos nie dostaje gotowości interfejsu radiowego, więc niczego nie nadaje. Interfejs LoRa stosu w formacie RNode jest następnym etapem.
+- `INFO` podaje `profile: "LoRa"`, `radio: "SX1262"`, `bench: "L0"` i pola profilu `carrier_hz`, `bw_hz`, `sf`, `cr`, `preamble`, `sync_word` zamiast `symbol_rate`, `deviation_hz`, `rx_filter_hz`; `p1_ok` oznacza tu zapisany i zweryfikowany profil LoRa. Konfiguracja stacji (`configure`) wymaga `radio.profile` = `lora-sf7`.
+
+| Polecenie | Odpowiedź na L0 |
+|---|---|
+| `RADIO` | `version` (tekst z 0x0320), `status` i `state` z bajtu statusu (`STBY_RC`, `STBY_XOSC`, `FS`, `RX`, `TX`, `UNKNOWN`), `device_errors`, `busy`, `dio1`, `rxen`, `irq_seen`, `busy_timeouts`, `p1_ok`, `ok` |
+| `RESET` | NRESET na 1 ms; rejestry wracają do wartości po resecie (0x08AC = 0x94), `p1_ok: false` |
+| `CONFIG` / `VERIFY` | reset i zapis profilu LoRa z weryfikacją / sama weryfikacja (`first`, `reg`, `expected`, `actual` przy różnicy) |
+| `FREQ` | słowo RF, częstotliwość, błąd wobec 869 525 000 Hz, krok, `rf_offset` (kroki `FOFF`) |
+| `STATE`, `IDLE`, `RSSI` | tryb układu, RXEN i BUSY; `IDLE` przechodzi do STDBY_RC; `RSSI` z `GetRssiInst` (tylko w RX) |
+| `REG <hex>` / `REGW <hex> <hex>` | odczyt / zapis rejestru 0000–FFFF; zapis tylko w trybie przygotowania, `CONFIG` go cofa (np. próba słowa synchronizacji 0x0740/0x0741 wobec RNode) |
+| `SLEEP` | uśpienie z ciepłym startem i wybudzenie przez NSS; `rx_gain` i `boosted` pokazują, czy Rx Boosted przetrwał (lista rejestrów zachowywanych) |
+
+Test `tests/test_radio_link_host.py` (`Sx1262LinkTests`) sprawdza sterownik z modelem układu na poziomie poleceń (bajt statusu, BUSY, rejestry, bufor, przerwania kasowane poleceniem, tryb powrotu po TxDone, odbiór ciągły, uśpienie z listą zachowywanych rejestrów: bez wpisu 0x08AC wraca do 0x94) oraz `measure::Bench` nad nim: kolejność startu, parametry profilu, Rx Boosted po uśpieniu, CW, nadanie i brak TxDone, odbiór z RSSI i SNR, błędy CRC i nagłówka, FOFF, BUSY bez zejścia, odmowa P1, limit serii 826 ms, dług w dzienniku i jego skasowanie, cisza, `RXPER` z SNR. Model nie zastępuje karty: zachowanie układu w rzeczywistości sprawdzają kroki niżej.
+
+Budowa i wgranie (port USB-OTG DevKitC, jak `bench-b`):
+
+```bash
+cd firmware && ../.venv-pio/bin/pio run -e l0
+```
+
+```bash
+cd firmware && ../.venv-pio/bin/pio run -e l0 -t upload
+```
+
+Kroki na zmontowanym L0 (**niewykonane**; raport z próby w Issue z etykietą `próba`):
+
+1. L1: `INFO` (`radio_ok`, `p1_ok`, `fram_ok`, `journal_ok` = `true`, `profile: "LoRa"`), `RADIO` (`version` „SX1261 V2D 2D02”, `device_errors` 0x0000, `busy: false`, `busy_timeouts: 0`, `rxen: false` w spoczynku), `VERIFY` (`mismatches: 0`), `FREQ`, `SLEEP` (`boosted: true`), `RESET` i `CONFIG`. Odpowiedzi programu diagnostycznego L0 (R0) są punktem odniesienia dla SPI, FRAM, ekranu i panelu.
+2. R1/R2 obrazem stacji na dwóch L0 (drugi egzemplarz po udanym uruchomieniu pierwszego): `PREP 1`, na odbiorniku `RX 20`, na nadajniku serie `TXPKT 11 20` (770 ms) do 100 ramek, z odczekaniem długu (`INFO` `tx_wait_ms`) między seriami, albo jedną serią `TXPKT 100 20 50 CONDUCTED` przez tłumik; `RXPER` z `rssi_avg_dbm` i `snr_avg_db`; potem w drugą stronę. Odbiór ramek programu diagnostycznego przez obraz stacji nie jest próbą R1/R2 (inna preambuła i treść ramek).
+3. R3: przełącznik CISZA (SW5) albo `SILENCE 1`: `TXPKT` i `TXCW` dają `radio silence`, cisza włączona w trakcie serii ją przerywa (`LOG`: „silence during TXPKT”); partner nie odbiera ramek; po wyłączeniu nadawanie wraca.
+4. Moc i częstotliwość na złączu modułu przewodowo do tłumika: `TXCW 2 CONDUCTED` z miernikiem mocy i częstotliwości (cel 13 dBm, 869,525 MHz), potem `FOFF` i ponowny pomiar; od wyniku zależy wybór ustawień PA (RadioLib albo tabela 13-21 karty).
+5. Cykl pracy ≤10% w oknie godzinnym (wiersz „Limit czasu nadawania” w [odbiorze](../docs/spec/odbior.md#próby)): seria `TXPKT 2 255` powtarzana zaraz po zejściu długu przez godzinę, z pomiarem czasu nadawania w eterze (analizator widma albo odbiornik SDR) wobec rezerwacji 413 ms na ramkę; także restart w trakcie długu (dług odczekany po starcie) i odczekanie `MAX_DEBT_MS` bez poprawnego rekordu.
+6. Czasy: rzeczywisty czas ramki i narastania (pole `tx_ms` wobec `expected_on_air_ms`), start TCXO, prąd odbioru w trybie Rx Boosted.
+7. Brak emisji 2,4 GHz w wybranym sposobie wyłączenia Wi-Fi i Bluetooth (D14; obraz nie uruchamia Wi-Fi ani Bluetooth, ale wybór sposobu wyłączenia jest warunkiem wstępnym etapu).
+
 ## Narzędzia
 
 PlatformIO Core w osobnym środowisku Pythona; wersje platformy i rdzenia są przypięte w `platformio.ini` (nordicnrf52 11.0.0, framework-arduinoadafruitnrf52 1.10700.0, czyli rdzeń Adafruit nRF52 1.7.0 z TinyUSB; dla `bench-b` platforma pioarduino 55.03.312 z Arduino-ESP32 3.3.12 na ESP-IDF 5.5, bo dopiero ta wersja daje dwa interfejsy CDC przez USB-OTG; wersja 2.0.17 z oficjalnej platformy espressif32 ma jeden). Rdzeń Adafruit wybrano, bo tego samego używa microReticulum dla nRF52840 (środowisko `wiscore_rak4631`), więc stos sieciowy wejdzie do tego samego projektu.
@@ -293,7 +356,7 @@ Czego tablica nie zamyka: błędu częstotliwości kwarcu modułu (mierzy się `
 
 Kontrakt jest w [specyfikacji radia](../docs/spec/radio.md#usb-do-laptopa); kod w `src/measure.cpp`. Polecenia działają tylko w trybie przygotowania (`PREP 1`, potwierdzony przyciskiem OK, bo na stacji włącza go przycisk pod naklejką serwisową; wejście, także poleceniem, najpierw trafia do pierścienia wejść w FRAM, a bez zapisu tryb się nie włącza) i są odrzucane w ciszy radiowej (`SILENCE 1`; cisza włączona w trakcie przerywa każdą serię, także przewodową, bo cisza blokuje każde nadawanie). Wymagają też skonfigurowanego radia (`p1_ok`; inaczej błąd `radio not configured: CONFIG`). Odpowiedzi odmowne mają pole `error`.
 
-Limit nadawania na stanowisku: po każdej serii obowiązuje dług ciszy 12 × czas nadawania (jak w P1), widoczny w `INFO` jako `tx_wait_ms`, a seria bez argumentu `CONDUCTED` nie może przekroczyć 1,4 s czasu nadawania, czyli najdłuższego datagramu P1 (7 ramek po 103 B z narastaniem mocy). Specyfikacja nie podaje tej liczby wprost; to przyjęta interpretacja. `CONDUCTED` znosi oba ograniczenia wyłącznie do nadawania przewodowego do tłumika lub obciążenia sztucznego: obraz prosi o przycisk OK, czeka na niego do 30 s (LED1 miga szybko) i zapisuje potwierdzenie albo jego brak w dzienniku `LOG`. Dług jest zapisywany w [dzienniku FRAM](#dziennik-i-magazyny-w-fram) przed pierwszą ramką serii; błąd zapisu albo brak FRAM blokuje nadawanie radiowe. Seria `CONDUCTED` (do obciążenia, bez emisji) nie tworzy długu.
+Limit nadawania na stanowisku: po każdej serii obowiązuje dług ciszy 12 × czas nadawania (jak w P1), widoczny w `INFO` jako `tx_wait_ms`, a seria bez argumentu `CONDUCTED` nie może przekroczyć 1,4 s czasu nadawania, czyli najdłuższego datagramu P1 (7 ramek po 103 B z narastaniem mocy); na L0 826 ms, czyli najdłuższego datagramu LoRa ([stacja L0](#stacja-l0-l0)). Czas ramki i limit podaje sterownik układu (`radiolink::Driver`). Specyfikacja nie podaje tej liczby wprost; to przyjęta interpretacja. `CONDUCTED` znosi oba ograniczenia wyłącznie do nadawania przewodowego do tłumika lub obciążenia sztucznego: obraz prosi o przycisk OK, czeka na niego do 30 s (LED1 miga szybko) i zapisuje potwierdzenie albo jego brak w dzienniku `LOG`. Dług jest zapisywany w [dzienniku FRAM](#dziennik-i-magazyny-w-fram) przed pierwszą ramką serii; błąd zapisu albo brak FRAM blokuje nadawanie radiowe. Seria `CONDUCTED` (do obciążenia, bez emisji) nie tworzy długu.
 
 - **`TXCW`** przełącza układ na 2-FSK z dewiacją 0, dane z generatora PN9 i pakiet nieskończony, więc wychodzi sama nośna; po czasie albo po `STOP` przywraca rejestry P1. Przerwana wcześniej (`STOP`, cisza) zapisuje dług od nowa z rzeczywistego czasu nadawania. Do pomiaru częstotliwości (potem `FOFF`) i mocy.
 - **`TXPKT`** nadaje ramki wzorcowe (`src/testframe.cpp`): numer porządkowy 2 B, wypełnienie PN9 zależne od numeru, na końcu CRC-16 ramki P1; test na komputerze (`tests/test_firmware_host.py`) porównuje CRC i ramkę z modelem. Dla pierwszej ramki obraz mierzy z GPIO2 (PKT_SYNC_RXTX) czas od `STX` do słowa synchronizacji (`lead_ms`: ustalenie syntezera, narastanie, preambuła), czas pakietu w powietrzu (`on_air_ms`, oczekiwane `len` × 8 / 4800) i ogon do IDLE (`tail_ms`); to wejście do parametru `ramp_ms` modelu. Bez przewodu na D3 jest `sync_gpio: false` i odpowiedź podaje tylko `tx_ms` (czas serii ze stanu MARC).
@@ -626,4 +689,5 @@ Odłożone (z szacunkiem zysku; każde wymaga osobnej zmiany i testów):
    - przesunięcie RSSI modułu (wpływa na próg CCA −100 dBm i `rssi_avg_dbm`), ustawienia AFC, AGC i odtwarzania zegara symboli przy pomiarze czułości (T4);
    - przegląd tablicy S2-LP w ST STSW-S2LP-DK (S2-LP DK GUI) dla P1, gdy narzędzie będzie dostępne; pomiar mocy i dobór PA_POWER oraz SMPS;
    - własne nazwy interfejsów CDC („WICI diagnostyka”, „WICI dane”) wymagają zmiany w rdzeniu Arduino-ESP32 (nazwy są stałe w `USBCDC.cpp`) albo własnych deskryptorów TinyUSB.
-5. Dioda alarmu i brzęczyk na N1: jasność błysku 50 ms przy 1 mA i głośność sygnałów do oceny na płytce; przypomnienie `wymien_ogniwa` z pomiarem ogniw (R02).
+5. Stacja L0 (`l0`): kroki z [opisu](#stacja-l0-l0) (L1, R1–R3 obrazem stacji, moc i częstotliwość, cykl pracy, czasy, brak emisji 2,4 GHz), preambuła i słowo synchronizacji wobec RNode (T3), progi CAD i RSSI dla CCA (T4), tryb normalnej pracy z okresowym nadawaniem do badań EMC; potem interfejs LoRa w stosie.
+6. Dioda alarmu i brzęczyk na N1: jasność błysku 50 ms przy 1 mA i głośność sygnałów do oceny na płytce; przypomnienie `wymien_ogniwa` z pomiarem ogniw (R02).

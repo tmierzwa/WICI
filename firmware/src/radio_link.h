@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Interfejs układu radiowego dla stanowiska pomiarowego i łącza P1 (measure::Bench): operacje,
-// które różnią się między CC1120 (wykonanie A, cc1120_link.cpp) i S2-LP (wykonanie B,
-// s2lp_link.cpp). Bench nie zna rejestrów układu; logika P1 (dług ciszy, CCA, odroczenia,
-// fragmentacja, składanie) jest wspólna.
+// które różnią się między CC1120 (wykonanie A, cc1120_link.cpp), S2-LP (wykonanie B,
+// s2lp_link.cpp) i SX1262 w profilu LoRa (L0, sx1262_link.cpp). Bench nie zna rejestrów układu
+// ani profilu: czas ramki w eterze, najdłuższą ramkę wzorcową i limit serii podaje sterownik.
+// Logika P1 (dług ciszy, CCA, odroczenia, fragmentacja, składanie) jest wspólna; SX1262 nie ma
+// łącza P1 (interfejs LoRa stosu to osobny etap), więc ma tylko polecenia pomiarowe.
 //
 // Ramki: w trybie stałej długości (ramki wzorcowe TXPKT/RX) ramka to `length` bajtów treści;
 // w trybie zmiennej długości (P1) ramka zaczyna się od bajtu LEN, a za nim LEN bajtów BODY i CRC,
 // niezależnie od tego, czy układ trzyma LEN w kolejce FIFO (CC1120), czy w rejestrze (S2-LP).
+// W LoRa długość niesie jawny nagłówek, więc ramka to zawsze `length` bajtów treści.
 #pragma once
 
 #include <stddef.h>
@@ -14,7 +17,16 @@
 
 namespace radiolink {
 
-constexpr size_t MAX_FRAME = 103;  // LEN + BODY + CRC w P1, najdłuższa ramka wzorcowa
+constexpr size_t MAX_FRAME = 255;  // najdłuższa ramka: LoRa 255 B (SX1262); P1 103 B (LEN + BODY + CRC)
+
+// Profil P1 (CC1120, S2-LP): ramka w eterze to preambuła 8 B, słowo synchronizacji 4 B i `length` B
+// przy symbolRate Bd, plus 3 ms na narastanie mocy (zaokrąglenie w górę).
+constexpr uint32_t p1FrameAirMs(size_t length, uint32_t symbolRate) {
+    return (static_cast<uint32_t>(12 + length) * 8 * 1000 + symbolRate - 1) / symbolRate + 3;
+}
+// Najdłuższa seria pomiarowa bez CONDUCTED w P1: 7 ramek po 103 B z narastaniem (najdłuższy datagram P1).
+// Także górna granica długu, który stanowisko zapisuje (measure::MAX_DEBT_MS).
+constexpr uint32_t P1_SERIES_MAX_MS = 1400;
 
 struct Rssi {
     bool valid = false;
@@ -25,7 +37,8 @@ struct Frame {
     uint8_t bytes[MAX_FRAME];
     size_t length = 0;      // z bajtem LEN w trybie zmiennej długości
     int16_t rssiDbm = 0;    // RSSI pakietu (dBm, z przesunięciem przyjętym dla układu)
-    uint8_t quality = 0;    // CC1120: LQI; S2-LP: SQI
+    uint8_t quality = 0;    // CC1120: LQI; S2-LP: SQI; SX1262: 0 (jakość jako SNR w snrQdb)
+    int16_t snrQdb = 0;     // SX1262: SNR pakietu w ćwiartkach dB; układy P1 go nie podają
 };
 
 enum class RxPoll : uint8_t {
@@ -74,6 +87,18 @@ public:
     virtual int32_t frequencyOffsetRaw() = 0;   // wartość rejestru korekty
     virtual double frequencyStepHz() const = 0;
     virtual bool frequencyErrorHz(int32_t& hz) = 0;  // błąd nośnej ostatniego odbioru, jeśli układ go mierzy
+
+    // Profil w eterze. Czas nadawania jednej ramki wzorcowej o `length` B (ms, w górę, z narastaniem
+    // mocy): podstawa długu ciszy serii TXPKT i rezerwacji datagramu P1.
+    virtual uint32_t frameAirMs(size_t length) const = 0;
+    // Oczekiwany czas ramki w powietrzu bez narastania (pole expected_on_air_ms w TXPKT): P1 od
+    // słowa synchronizacji do końca pakietu, LoRa cała ramka od preambuły.
+    virtual double onAirMs(size_t length) const = 0;
+    virtual size_t maxTestLength() const = 0;  // najdłuższa ramka wzorcowa TXPKT i RX
+    // Najdłuższa seria bez CONDUCTED (ms czasu nadawania): najdłuższy datagram profilu, ≤ P1_SERIES_MAX_MS.
+    virtual uint32_t seriesMaxMs() const = 0;
+    virtual bool p1Link() const = 0;           // łącze P1 (P1RX, P1TX, stos) na tym układzie
+    virtual bool hasSnr() const { return false; }  // ramki niosą SNR (snrQdb), RXPER podaje średnią
 };
 
 }  // namespace radiolink

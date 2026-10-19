@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Układ radiowy stanowiska w programie stacji (main.cpp): sterownik układu, sterownik łącza dla
 // measure::Bench, start z konfiguracją P1 i polecenia diagnostyczne zależne od układu (RADIO,
-// RESET, CONFIG, VERIFY, FREQ, RSSI, STATE, REG, IDLE; CC1120: CAL; S2-LP: SDN, REGW). Wykonania:
-// radio_console_cc1120.cpp (stanowisko A) i radio_console_s2lp.cpp (stanowisko B).
+// RESET, CONFIG, VERIFY, FREQ, RSSI, STATE, REG, IDLE; CC1120: CAL; S2-LP: SDN, REGW; SX1262: REGW,
+// SLEEP). Wykonania: radio_console_cc1120.cpp (stanowisko A), radio_console_s2lp.cpp (stanowisko B)
+// i radio_console_sx1262.cpp (stacja L0, profil LoRa zamiast P1; "tablica P1" niżej to wtedy profil LoRa).
 #pragma once
 
 #include <Arduino.h>
@@ -12,9 +13,12 @@
 
 namespace radiocon {
 
-extern const char* const NAME;  // pole "radio" w INFO: "CC1120" albo "S2LP"
-extern const uint16_t RX_FILTER_HZ;  // pasmo filtru odbiornika z tablicy rejestrów układu
+extern const char* const NAME;     // pole "radio" w INFO: "CC1120", "S2LP" albo "SX1262"
+extern const char* const PROFILE;  // pole "profile" w INFO: "P1" albo "LoRa"
 extern const int8_t TX_POWER_DBM;
+// Pola profilu w INFO, każde z przecinkiem na końcu (P1: carrier_hz, symbol_rate, deviation_hz,
+// rx_filter_hz z tablicy rejestrów układu; LoRa: carrier_hz, bw_hz, sf, cr, preamble, sync_word).
+void printProfile();
 
 radiolink::Driver& link();
 void attach(measure::Bench& bench);  // przed begin(): STOP pomiarów i FOFF po ponownej konfiguracji

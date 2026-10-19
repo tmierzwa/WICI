@@ -66,8 +66,11 @@ class EquationTests(unittest.TestCase):
         self.assertEqual(p1.max_debt_ms(), 16228)  # radio.md: about 16 s
         # Stanowisko odczekuje po starcie bez rekordu długu największy dług, jaki samo zapisuje
         # (seria do 1400 ms, rezerwacja z najdłuższych ramek), nie mniejszy niż w modelu.
+        # Limit serii P1 jest w radio_link.h (wspólny z profilem LoRa, który ma krótszą serię).
         measure = (ROOT / "firmware" / "src" / "measure.h").read_text(encoding="utf-8")
-        series = int(re.search(r"SERIES_MAX_MS = (\d+);", measure).group(1))
+        link = (ROOT / "firmware" / "src" / "radio_link.h").read_text(encoding="utf-8")
+        series = int(re.search(r"P1_SERIES_MAX_MS = (\d+);", link).group(1))
+        self.assertIn("SERIES_MAX_MS = radiolink::P1_SERIES_MAX_MS;", measure)
         self.assertIn("MAX_DEBT_MS = SERIES_MAX_MS * 12;", measure)
         self.assertGreaterEqual(series * 12, p1.max_debt_ms())
 

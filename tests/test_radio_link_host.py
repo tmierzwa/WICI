@@ -1,8 +1,11 @@
 # SPDX-License-Identifier: MIT
-"""Host checks of the radio link layer shared by bench A and bench B: the S2-LP link driver
+"""Host checks of the radio link layer shared by bench A, bench B and the L0 station: the S2-LP link driver
 (firmware/src/s2lp_link.cpp) against a model of the chip (SPI headers, states, FIFOs, read-clear IRQ
-status, DS11896) and measure::Bench (firmware/src/measure.cpp) against a fake radiolink::Driver
-(test series, P1 send with CCA and debt, P1 receive and assembly, FOFF, carrier)."""
+status, DS11896), measure::Bench (firmware/src/measure.cpp) against a fake radiolink::Driver
+(test series, P1 send with CCA and debt, P1 receive and assembly, FOFF, carrier), and the SX1262 driver
+(firmware/src/sx1262.cpp, sx1262_link.cpp) in the LoRa pilot profile against a command-level model of the
+chip (BUSY, status byte, registers, buffer, IRQ, warm sleep with the retention list), with measure::Bench
+on top of it (TXPKT/TXCW debt and series limit in LoRa air time, RX/RXPER with SNR, no P1 link)."""
 
 from pathlib import Path
 import shutil
@@ -349,6 +352,12 @@ struct FakeDriver : radiolink::Driver {
     int32_t frequencyOffsetRaw() override { return offset; }
     double frequencyStepHz() const override { return 25.0; }
     bool frequencyErrorHz(int32_t&) override { return false; }
+    // Profil P1 jak na CC1120 i S2-LP.
+    uint32_t frameAirMs(size_t length) const override { return radiolink::p1FrameAirMs(length, 4800); }
+    double onAirMs(size_t length) const override { return length * 8 * 1000.0 / 4800; }
+    size_t maxTestLength() const override { return p1frame::MAX_FRAME; }
+    uint32_t seriesMaxMs() const override { return radiolink::P1_SERIES_MAX_MS; }
+    bool p1Link() const override { return true; }
 };
 
 FakeDriver radio;
@@ -464,6 +473,352 @@ int main() {
 """
 
 
+SX1262_HARNESS = r"""
+#include <vector>
+#include "journal.h"
+#include "measure.h"
+#include "sx1262_link.h"
+#include "testframe.h"
+
+uint32_t fakeUs = 0;
+FakeSerial Serial;
+void measure::randomBytes(uint8_t* out, size_t count) {
+    static uint8_t next = 1;
+    for (size_t i = 0; i < count; ++i) out[i] = next++;
+}
+
+constexpr uint8_t PIN_CS = 10, PIN_RESET = 9, PIN_BUSY = 14, PIN_RXEN = 42, PIN_OK = 39;
+
+// Model SX1262 na poziomie poleceń: bajt statusu (tryb), rejestry 16-bitowe, bufor 256 B, IRQ kasowane
+// poleceniem, tryb powrotu STDBY_RC po TxDone, odbiór ciągły, uśpienie z ciepłym startem i listą
+// rejestrów zachowywanych (karta, rozdz. 9.6: bez wpisu 0x08AC wraca do 0x94), BUSY, NRESET i RXEN.
+struct Chip {
+    std::vector<uint8_t> regs = std::vector<uint8_t>(0x10000, 0);
+    uint8_t buffer[256] = {};
+    uint8_t mode = sx1262::MODE_STBY_RC;
+    bool sleeping = false;
+    uint16_t irq = 0, errors = 0;
+    uint8_t packetType = 0;
+    uint8_t packetParams[6] = {}, modulation[4] = {}, paConfig[4] = {}, txParams[2] = {}, tcxo[4] = {};
+    uint32_t rf = 0, rxTimeout = 0;
+    int txCountdown = -1;
+    bool holdTx = false, busyStuck = false, rxen = false, rxenAtTx = true;
+    unsigned txCount = 0;
+    std::vector<uint8_t> lastTx;
+    uint8_t rxLength = 0, rxStart = 0, rssiPkt = 0, snrPkt = 0, rssiInst = 0;
+    std::vector<uint8_t> ops;
+} chip;
+std::vector<uint8_t> bytes;
+
+void resetChip() {
+    std::fill(chip.regs.begin(), chip.regs.end(), 0);
+    const char* version = "SX1261 V2D 2D02";
+    for (size_t i = 0; i < 16; ++i) chip.regs[0x0320 + i] = static_cast<uint8_t>(version[i]);
+    chip.regs[0x0740] = 0x14; chip.regs[0x0741] = 0x24;
+    chip.regs[0x08AC] = 0x94; chip.regs[0x0736] = 0x09; chip.regs[0x08D8] = 0xC0; chip.regs[0x08E7] = 0x18;
+    chip.packetType = 0;
+    chip.mode = sx1262::MODE_STBY_RC;
+    chip.sleeping = false;
+    chip.irq = 0;
+    chip.errors = 0x20;  // kalibracja po włączeniu zasilania bez TCXO: XOSC_START
+    std::fill(chip.tcxo, chip.tcxo + 4, 0);
+    chip.txCountdown = -1;
+}
+
+uint8_t status() { return static_cast<uint8_t>(chip.mode << 4); }
+
+void execute() {
+    if (bytes.empty()) return;
+    const uint8_t op = bytes[0];
+    const uint8_t* p = bytes.data() + 1;
+    const size_t n = bytes.size() - 1;
+    chip.ops.push_back(op);
+    switch (op) {
+        case sx1262::OP_SET_STANDBY: chip.mode = sx1262::MODE_STBY_RC; chip.txCountdown = -1; break;
+        case sx1262::OP_SET_TX:
+            if (chip.mode == sx1262::MODE_STBY_RC || chip.mode == sx1262::MODE_STBY_XOSC) {
+                chip.mode = sx1262::MODE_TX;
+                chip.txCountdown = 3;
+                chip.rxenAtTx = chip.rxen;
+            }
+            break;
+        case sx1262::OP_SET_RX: chip.mode = sx1262::MODE_RX; chip.rxTimeout = p[0] << 16 | p[1] << 8 | p[2]; break;
+        case sx1262::OP_SET_TX_CW: chip.mode = sx1262::MODE_TX; chip.txCountdown = -1; chip.rxenAtTx = chip.rxen; break;
+        case sx1262::OP_SET_SLEEP: {
+            chip.sleeping = true;
+            chip.mode = 0;
+            const bool retained = chip.regs[0x029F] >= 1 && chip.regs[0x02A0] == 0x08 && chip.regs[0x02A1] == 0xAC;
+            if (!(p[0] & 0x04)) resetChip(), chip.sleeping = true, chip.mode = 0;
+            else if (!retained) chip.regs[0x08AC] = 0x94;
+            break;
+        }
+        case sx1262::OP_WRITE_REGISTER: {
+            const uint16_t a = static_cast<uint16_t>(p[0] << 8 | p[1]);
+            for (size_t i = 2; i < n; ++i) chip.regs[static_cast<uint16_t>(a + i - 2)] = p[i];
+            break;
+        }
+        case sx1262::OP_WRITE_BUFFER: for (size_t i = 1; i < n; ++i) chip.buffer[static_cast<uint8_t>(p[0] + i - 1)] = p[i]; break;
+        case sx1262::OP_CLEAR_IRQ_STATUS: chip.irq &= static_cast<uint16_t>(~(p[0] << 8 | p[1])); break;
+        case sx1262::OP_SET_PACKET_TYPE: chip.packetType = p[0]; break;
+        case sx1262::OP_SET_PACKET_PARAMS: std::copy(p, p + 6, chip.packetParams); break;
+        case sx1262::OP_SET_MODULATION_PARAMS: std::copy(p, p + 4, chip.modulation); break;
+        case sx1262::OP_SET_RF_FREQUENCY: chip.rf = static_cast<uint32_t>(p[0]) << 24 | p[1] << 16 | p[2] << 8 | p[3]; break;
+        case sx1262::OP_SET_PA_CONFIG: std::copy(p, p + 4, chip.paConfig); chip.regs[0x08E7] = 0x38; break;
+        case sx1262::OP_SET_TX_PARAMS: std::copy(p, p + 2, chip.txParams); break;
+        case sx1262::OP_SET_DIO3_TCXO: std::copy(p, p + 4, chip.tcxo); break;
+        case sx1262::OP_CLEAR_DEVICE_ERRORS: chip.errors = 0; break;
+        case sx1262::OP_CALIBRATE: if (!chip.tcxo[0]) chip.errors |= 0x20; break;
+        default: break;
+    }
+}
+
+int digitalRead(uint8_t pin) {
+    if (pin == PIN_BUSY) return chip.busyStuck || chip.sleeping ? HIGH : LOW;
+    return pin == PIN_OK ? HIGH : LOW;
+}
+
+void digitalWrite(uint8_t pin, uint8_t level) {
+    if (pin == PIN_RESET && level == LOW) resetChip();
+    if (pin == PIN_RXEN) chip.rxen = level == HIGH;
+    if (pin != PIN_CS) return;
+    if (level == LOW) {
+        if (chip.sleeping) { chip.sleeping = false; chip.mode = sx1262::MODE_STBY_RC; }
+        bytes.clear();
+        if (!chip.holdTx && chip.txCountdown > 0 && --chip.txCountdown == 0) {
+            chip.lastTx.assign(chip.buffer, chip.buffer + chip.packetParams[3]);
+            chip.irq |= sx1262::IRQ_TX_DONE;
+            chip.mode = sx1262::MODE_STBY_RC;
+            chip.txCountdown = -1;
+            ++chip.txCount;
+        }
+    } else {
+        execute();
+    }
+}
+
+uint8_t SPIClass::transfer(uint8_t out) {
+    const size_t pos = bytes.size();
+    bytes.push_back(out);
+    if (pos == 0) return status();
+    switch (bytes[0]) {
+        case sx1262::OP_READ_REGISTER:
+            return pos < 4 ? status() : chip.regs[static_cast<uint16_t>((bytes[1] << 8 | bytes[2]) + pos - 4)];
+        case sx1262::OP_READ_BUFFER: return pos < 3 ? status() : chip.buffer[static_cast<uint8_t>(bytes[1] + pos - 3)];
+        case sx1262::OP_GET_IRQ_STATUS: return pos == 1 ? status() : pos == 2 ? chip.irq >> 8 : chip.irq & 0xFF;
+        case sx1262::OP_GET_RX_BUFFER_STATUS: return pos == 1 ? status() : pos == 2 ? chip.rxLength : chip.rxStart;
+        case sx1262::OP_GET_PACKET_STATUS: return pos == 1 ? status() : pos == 2 ? chip.rssiPkt : pos == 3 ? chip.snrPkt : 0;
+        case sx1262::OP_GET_RSSI_INST: return pos == 1 ? status() : chip.rssiInst;
+        case sx1262::OP_GET_DEVICE_ERRORS: return pos == 1 ? status() : pos == 2 ? chip.errors >> 8 : chip.errors & 0xFF;
+        case sx1262::OP_GET_PACKET_TYPE: return pos == 1 ? status() : chip.packetType;
+        default: return status();
+    }
+}
+
+void injectFrame(size_t length, uint8_t start, uint8_t first, uint16_t extraIrq = 0) {
+    for (size_t i = 0; i < length; ++i) chip.buffer[static_cast<uint8_t>(start + i)] = static_cast<uint8_t>(first + i);
+    chip.rxLength = static_cast<uint8_t>(length);
+    chip.rxStart = start;
+    chip.rssiPkt = 160;  // -80 dBm
+    chip.snrPkt = 0xE4;  // -28 ćwiartek: -7 dB
+    chip.irq |= sx1262::IRQ_PREAMBLE_DETECTED | sx1262::IRQ_HEADER_VALID | sx1262::IRQ_RX_DONE | extraIrq;
+}
+
+int indexOf(uint8_t op) {
+    for (size_t i = 0; i < chip.ops.size(); ++i) if (chip.ops[i] == op) return static_cast<int>(i);
+    return -1;
+}
+
+struct RamStorage : journal::Storage {
+    std::vector<uint8_t> data = std::vector<uint8_t>(512 * 1024, 0xFF);
+    bool read(uint32_t address, uint8_t* out, size_t count) override { memcpy(out, &data[address], count); return true; }
+    bool write(uint32_t address, const uint8_t* in, size_t count) override { memcpy(&data[address], in, count); return true; }
+};
+uint32_t uptime() { return millis() / 1000; }
+
+void runFor(measure::Bench& bench, uint32_t ms) {
+    const uint32_t end = millis() + ms;
+    while (millis() < end) {
+        fakeUs += 1000;
+        bench.poll();
+    }
+}
+
+int main() {
+    SPIClass spi;
+    sx1262::Radio radio(spi, PIN_CS, PIN_RESET, PIN_BUSY, 1000000);
+    sx1262::LinkDriver link(radio, PIN_RXEN);
+    radio.begin();
+    link.begin();
+    fakeUs = 1000000;
+
+    // Reset i identyfikacja z tekstu wersji; profil utracony przed CONFIG.
+    const bool reset = radio.reset();
+    const sx1262::Identity id = radio.identify();
+    printf("ID %d %d %s\n", reset, id.sx126x, id.version);
+    const bool lostBefore = link.profileLost();
+    chip.ops.clear();
+    const sx1262::VerifyResult config = link.configure();
+    printf("CONFIG %u %u %s\n", config.checked, config.mismatches, config.firstName);
+    printf("LOST %d %d\n", lostBefore, link.profileLost());
+    // Kolejność: TCXO, kasowanie błędów, kalibracja, DC-DC, DIO2, typ pakietu, obraz, częstotliwość, PA, moc.
+    printf("ORDER %d %d %d %d %d %d %d %d %d %d\n", indexOf(sx1262::OP_SET_DIO3_TCXO), indexOf(sx1262::OP_CLEAR_DEVICE_ERRORS),
+           indexOf(sx1262::OP_CALIBRATE), indexOf(sx1262::OP_SET_REGULATOR_MODE), indexOf(sx1262::OP_SET_DIO2_RF_SWITCH),
+           indexOf(sx1262::OP_SET_PACKET_TYPE), indexOf(sx1262::OP_CALIBRATE_IMAGE), indexOf(sx1262::OP_SET_RF_FREQUENCY),
+           indexOf(sx1262::OP_SET_PA_CONFIG), indexOf(sx1262::OP_SET_TX_PARAMS));
+    printf("TCXO %02X %02X %02X %02X\n", chip.tcxo[0], chip.tcxo[1], chip.tcxo[2], chip.tcxo[3]);
+    printf("RF %08lX\n", static_cast<unsigned long>(chip.rf));
+    printf("MOD %02X %02X %02X %02X\n", chip.modulation[0], chip.modulation[1], chip.modulation[2], chip.modulation[3]);
+    printf("PKT %02X %02X %02X %02X %02X %02X\n", chip.packetParams[0], chip.packetParams[1], chip.packetParams[2], chip.packetParams[3],
+           chip.packetParams[4], chip.packetParams[5]);
+    printf("PA %02X %02X %02X %02X %02X %02X %02X\n", chip.paConfig[0], chip.paConfig[1], chip.paConfig[2], chip.paConfig[3],
+           chip.txParams[0], chip.txParams[1], chip.regs[0x08E7]);
+    printf("REGS %02X %02X %02X %02X %02X %02X %02X %02X %02X\n", chip.regs[0x0740], chip.regs[0x0741], chip.regs[0x08AC],
+           chip.regs[0x029F], chip.regs[0x02A0], chip.regs[0x02A1], chip.regs[0x0736], chip.regs[0x0889], chip.regs[0x08D8]);
+    printf("RXEN %d %s\n", chip.rxen, link.stateName());
+
+    // Uśpienie z ciepłym startem: Rx Boosted zostaje dzięki liście; bez wpisu wraca do 0x94.
+    uint8_t gain = 0;
+    bool woke = link.sleepAndWake(gain);
+    printf("SLEEP %d %02X %s\n", woke, gain, link.stateName());
+    chip.regs[0x029F] = 0;
+    woke = link.sleepAndWake(gain);
+    printf("SLEEPNORET %d %02X %d\n", woke, gain, link.profileLost());
+    radio.reset();
+    link.configure();
+    const sx1262::VerifyResult again = link.verify();
+    chip.regs[0x0740] = 0x34;  // słowo synchronizacji publiczne: VERIFY wskazuje rejestr
+    const sx1262::VerifyResult changed = link.verify();
+    printf("VERIFY %u %u %s %04X %02X %02X\n", again.mismatches, changed.mismatches, changed.firstName, changed.firstAddress,
+           changed.expected, changed.actual);
+    chip.regs[0x0740] = 0x14;
+
+    // Nośna CW: SetTxContinuousWave, RXEN niski; STOP do STDBY_RC.
+    chip.ops.clear();
+    const bool cw = link.startCw();
+    printf("CW %d %s %d %d\n", cw, link.stateName(), chip.rxenAtTx, indexOf(sx1262::OP_SET_TX_CW) >= 0);
+    link.stopCw();
+    printf("CWSTOP %s\n", link.stateName());
+
+    // Ramka wzorcowa 20 B: długość w parametrach pakietu, treść z bufora, RXEN niski przy TX, powrót do STDBY_RC.
+    uint8_t frame[255];
+    for (int i = 0; i < 255; ++i) frame[i] = static_cast<uint8_t>(0xA0 + i);
+    radiolink::TxTiming timing;
+    const bool sent = link.transmit(frame, 20, false, &timing);
+    printf("TX %d %u %zu %02X %02X %d %s %d %d\n", sent, chip.packetParams[3], chip.lastTx.size(), chip.lastTx.front(), chip.lastTx.back(),
+           chip.rxenAtTx, link.stateName(), timing.valid, timing.totalUs > 0);
+    printf("TXLEN %d %d\n", link.transmit(frame, 0, false, nullptr), link.transmit(frame, 256, false, nullptr));
+    chip.holdTx = true;
+    const uint32_t before = millis();
+    const bool stuck = link.transmit(frame, 20, false, nullptr);
+    printf("TXSTUCK %d %s %d %d\n", stuck, link.stateName(), millis() - before >= lora::frameAirMs(20) + 100,
+           millis() - before < lora::frameAirMs(20) + 120);
+    chip.holdTx = false;
+
+    // Odbiór ciągły ramek 12 B: RXEN wysoki, SetRx 0xFFFFFF; ramka z bufora od wskaźnika, RSSI i SNR pakietu.
+    const bool rx = link.startRx(false, 12);
+    printf("RX %d %s %d %06lX\n", rx, link.stateName(), chip.rxen, static_cast<unsigned long>(chip.rxTimeout));
+    radiolink::Frame out;
+    int polled = static_cast<int>(link.pollRx(out));
+    printf("POLL0 %d\n", polled);
+    chip.irq |= sx1262::IRQ_PREAMBLE_DETECTED;
+    const bool busyPreamble = link.receivingFrame();
+    printf("BUSYPRE %d\n", busyPreamble);
+    injectFrame(12, 0x40, 0x10);
+    polled = static_cast<int>(link.pollRx(out));
+    const bool busyAfter = link.receivingFrame();
+    printf("FRAME %d %zu %02X %02X %d %d %u %d %04X\n", polled, out.length, out.bytes[0], out.bytes[11], out.rssiDbm, out.snrQdb,
+           out.quality, busyAfter, chip.irq);
+    injectFrame(10, 0x00, 0x10);
+    polled = static_cast<int>(link.pollRx(out));
+    printf("WRONGLEN %d %s\n", polled, link.stateName());
+    injectFrame(12, 0x00, 0x10, sx1262::IRQ_CRC_ERR);
+    polled = static_cast<int>(link.pollRx(out));
+    printf("CRC %d %s\n", polled, link.stateName());
+    chip.irq |= sx1262::IRQ_HEADER_ERR;
+    polled = static_cast<int>(link.pollRx(out));
+    printf("HEADER %d %s\n", polled, link.stateName());
+    chip.mode = sx1262::MODE_STBY_RC;  // np. SetStandby z polecenia portu
+    polled = static_cast<int>(link.pollRx(out));
+    printf("REENTER %d %s %d\n", polled, link.stateName(), chip.rxen);
+    chip.rssiInst = 200;
+    const radiolink::Rssi r = link.rssi();
+    printf("RSSI %d %d\n", r.valid, r.dbm);
+    // Preambuła bez końca ramki: kanał zajęty najwyżej przez czas najdłuższej ramki.
+    chip.irq |= sx1262::IRQ_PREAMBLE_DETECTED;
+    const bool preambleBusy = link.receivingFrame();
+    fakeUs += 500000;
+    const bool preambleLater = link.receivingFrame();
+    printf("PREAMBLE %d %d %04X\n", preambleBusy, preambleLater, chip.irq);
+    link.startRx(true, 0);
+    injectFrame(33, 0x80, 0x20);
+    polled = static_cast<int>(link.pollRx(out));
+    printf("VAR %d %zu\n", polled, out.length);
+
+    // Korekta częstotliwości słowem RF (krok 0,954 Hz); odbiór wraca po zapisie.
+    const bool inRange = link.setFrequencyOffset(1000);
+    printf("FOFF %d %ld %ld %ld %s\n", inRange, static_cast<long>(chip.rf) - 911763046L, static_cast<long>(link.frequencyOffsetRaw()),
+           static_cast<long>(link.frequencyOffsetHz()), link.stateName());
+    printf("FOFFMAX %d %d\n", link.setFrequencyOffset(1000001), link.setFrequencyOffset(-1000000));
+    link.setFrequencyOffset(0);
+    printf("FOFF0 %08lX\n", static_cast<unsigned long>(chip.rf));
+    link.idle();
+    const radiolink::Rssi idleRssi = link.rssi();
+    printf("IDLE %s %d %d\n", link.stateName(), chip.rxen, idleRssi.valid);
+
+    // BUSY bez zejścia: transakcja odrzucona i policzona.
+    chip.busyStuck = true;
+    const bool commandOk = radio.command(sx1262::OP_SET_STANDBY);
+    printf("BUSY %d %lu\n", commandOk, static_cast<unsigned long>(radio.busyTimeouts()));
+    chip.busyStuck = false;
+
+    // Polecenia pomiarowe w profilu LoRa (measure::Bench nad tym sterownikiem).
+    RamStorage ram;
+    journal::Journal journal(ram);
+    journal.begin();
+    measure::Bench bench(link, PIN_OK, -1);
+    bench.attach(&journal, uptime);
+    bench.prep = true;
+    bench.p1Ready = true;
+    const uint8_t datagram[1] = {0x42};
+    const char* p1rx = bench.p1rxStart();
+    const char* p1tx = bench.p1send(datagram, 1);
+    printf("NOP1 %s|%s|%lu\n", p1rx, p1tx, static_cast<unsigned long>(bench.link().txDrop));
+    printf("LEN %s|%s\n", bench.txpkt(1, 3, 0, false), bench.rxStart(3));
+    printf("LIMIT %s\n", bench.txpkt(3, 255, 0, false));
+    const unsigned txBefore = chip.txCount;
+    const char* started = bench.txpkt(2, 255, 0, false);
+    const uint32_t debtLogged = journal.debt().a;
+    runFor(bench, 50);
+    const bool frameOk = testframe::check(chip.lastTx.data(), chip.lastTx.size(), nullptr);
+    printf("TXPKT %s %u %zu %d %lu %d\n", started ? started : "-", chip.txCount - txBefore, chip.lastTx.size(), frameOk,
+           static_cast<unsigned long>(debtLogged), bench.busy());
+    const uint32_t wait = bench.debtRemainingMs();
+    printf("DEBT %d %s\n", wait > 9800 && wait <= 9912, bench.txpkt(1, 20, 0, false));
+    runFor(bench, 10000);
+    printf("CLEARED %lu %lu\n", static_cast<unsigned long>(bench.debtRemainingMs()), static_cast<unsigned long>(journal.debt().a));
+    bench.silence = true;
+    printf("SILENCE %s\n", bench.txpkt(1, 20, 0, false));
+    bench.silence = false;
+    // TXCW 1 s nie mieści się w limicie serii LoRa (826 ms) bez CONDUCTED.
+    printf("TXCW %s\n", bench.txcw(1, false));
+    // Odbiór ramek wzorcowych 255 B: RXPER ze średnim SNR.
+    const char* rxStarted = bench.rxStart(255);
+    printf("RXSTART %s %s %d\n", rxStarted ? rxStarted : "-", link.stateName(), chip.rxen);
+    for (uint16_t seq = 0; seq < 3; ++seq) {
+        testframe::build(chip.buffer, 255, seq);
+        chip.rxLength = 255;
+        chip.rxStart = 0;
+        chip.rssiPkt = 180;
+        chip.snrPkt = static_cast<uint8_t>(20 + 4 * seq);
+        chip.irq |= sx1262::IRQ_RX_DONE;
+        runFor(bench, 10);
+    }
+    bench.rxper();
+    return 0;
+}
+"""
+
+
 def host_compiler():
     for name in ("c++", "g++", "clang++"):
         if shutil.which(name):
@@ -574,6 +929,101 @@ class BenchTests(unittest.TestCase):
         self.assertEqual(line(self.out, "TXCW"), "TXCW - 1")
         self.assertIn('"marc":"TX"', next(text for text in self.out if text.startswith('{"txcw":true')))
         self.assertEqual(line(self.out, "TXCWEND"), "TXCWEND 0")
+
+
+@unittest.skipUnless(host_compiler(), "no host C++ compiler")
+class Sx1262LinkTests(unittest.TestCase):
+    """sx1262_link.cpp in the LoRa pilot profile against a command-level model of the SX1262, and
+    measure::Bench on top of it: the measurement commands of the L0 station."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.out = build_and_run(SX1262_HARNESS, ["sx1262.cpp", "sx1262_link.cpp", "measure.cpp", "p1frame.cpp", "testframe.cpp",
+                                                 "journal.cpp"])
+
+    def test_identity_and_profile_verified(self):
+        self.assertEqual(line(self.out, "ID"), "ID 1 1 SX1261 V2D 2D02")  # the SX1262 reports this string (RadioLib checks "SX126")
+        self.assertEqual(line(self.out, "CONFIG"), "CONFIG 12 0 ")  # packet type, 10 registers, device errors
+        self.assertEqual(line(self.out, "LOST"), "LOST 1 0")
+
+    def test_tcxo_before_calibration_then_profile(self):
+        order = [int(v) for v in line(self.out, "ORDER").split()[1:]]
+        self.assertNotIn(-1, order)
+        self.assertEqual(order, sorted(order))
+        self.assertEqual(line(self.out, "TCXO"), "TCXO 02 00 01 40")  # 1.8 V, 5 ms = 320 x 15.625 us
+
+    def test_lora_pilot_profile_parameters(self):
+        self.assertEqual(line(self.out, "RF"), "RF 36586666")  # 869.525 MHz x 2^25 / 32 MHz
+        self.assertEqual(line(self.out, "MOD"), "MOD 07 04 01 00")  # SF7, 125 kHz, CR 4/5, LDRO off
+        self.assertEqual(line(self.out, "PKT"), "PKT 00 12 00 FF 01 00")  # 18 symbols, explicit header, CRC on, normal IQ
+        self.assertEqual(line(self.out, "PA"), "PA 01 04 00 01 13 04 18")  # PA as RadioLib paOptTable for 13 dBm, 200 us ramp, OCP 60 mA
+
+    def test_rx_boosted_sync_word_and_errata_registers(self):
+        # sync 0x12 -> 0x14 0x24; 0x08AC = 0x96 with retention list {0x08AC}; IQ, modulation and clamp fixes.
+        self.assertEqual(line(self.out, "REGS"), "REGS 14 24 96 01 08 AC 0D 04 DE")
+        self.assertEqual(line(self.out, "RXEN"), "RXEN 0 STBY_RC")
+
+    def test_rx_boosted_kept_after_warm_sleep_only_with_retention(self):
+        self.assertEqual(line(self.out, "SLEEP"), "SLEEP 1 96 STBY_RC")
+        self.assertEqual(line(self.out, "SLEEPNORET"), "SLEEPNORET 1 94 1")
+        self.assertEqual(line(self.out, "VERIFY"), "VERIFY 0 1 SYNC_WORD_MSB 0740 14 34")
+
+    def test_carrier(self):
+        self.assertEqual(line(self.out, "CW"), "CW 1 TX 0 1")
+        self.assertEqual(line(self.out, "CWSTOP"), "CWSTOP STBY_RC")
+
+    def test_transmit_frame_and_timeout(self):
+        self.assertEqual(line(self.out, "TX"), "TX 1 20 20 A0 B3 0 STBY_RC 0 1")
+        self.assertEqual(line(self.out, "TXLEN"), "TXLEN 0 0")
+        self.assertEqual(line(self.out, "TXSTUCK"), "TXSTUCK 0 STBY_RC 1 1")
+
+    def test_continuous_receive_with_rssi_and_snr(self):
+        self.assertEqual(line(self.out, "RX"), "RX 1 RX 1 FFFFFF")
+        self.assertEqual(line(self.out, "POLL0"), "POLL0 0")
+        self.assertEqual(line(self.out, "BUSYPRE"), "BUSYPRE 1")
+        # 12 B from buffer offset 0x40; RssiPkt 160 -> -80 dBm; SnrPkt -28 quarter dB; receive IRQs cleared.
+        self.assertEqual(line(self.out, "FRAME"), "FRAME 1 12 10 1B -80 -28 0 0 0000")
+        self.assertEqual(line(self.out, "WRONGLEN"), "WRONGLEN 2 RX")
+        self.assertEqual(line(self.out, "CRC"), "CRC 2 RX")
+        self.assertEqual(line(self.out, "HEADER"), "HEADER 2 RX")
+        self.assertEqual(line(self.out, "REENTER"), "REENTER 0 RX 1")
+        self.assertEqual(line(self.out, "RSSI"), "RSSI 1 -100")
+        self.assertEqual(line(self.out, "PREAMBLE"), "PREAMBLE 1 0 0000")
+        self.assertEqual(line(self.out, "VAR"), "VAR 1 33")
+
+    def test_frequency_offset_moves_rf_word(self):
+        # Step 32 MHz / 2^25 = 0.954 Hz: 1000 Hz -> 1049 steps -> 1000 Hz; receiver back in RX.
+        self.assertEqual(line(self.out, "FOFF"), "FOFF 1 1049 1049 1000 RX")
+        self.assertEqual(line(self.out, "FOFFMAX"), "FOFFMAX 0 1")
+        self.assertEqual(line(self.out, "FOFF0"), "FOFF0 36586666")
+        self.assertEqual(line(self.out, "IDLE"), "IDLE STBY_RC 0 0")
+
+    def test_busy_timeout_refuses_transaction(self):
+        self.assertEqual(line(self.out, "BUSY"), "BUSY 0 1")
+
+    def test_measurement_commands_in_lora_air_time(self):
+        self.assertEqual(line(self.out, "NOP1"), "NOP1 no P1 link on this radio|no P1 link on this radio|0")
+        self.assertEqual(line(self.out, "LEN"), "LEN len 4..255|len 4..255")
+        # 3 x 255 B = 3 x 413 ms > 826 ms (the largest datagram in two frames).
+        self.assertEqual(line(self.out, "LIMIT"), "LIMIT series above limit: add conducted")
+        # 2 x 255 B: debt 12 x 826 ms in the FRAM journal before the first frame.
+        self.assertEqual(line(self.out, "TXPKT"), "TXPKT - 2 255 1 9912 0")
+        self.assertEqual(line(self.out, "DEBT"), "DEBT 1 silence debt pending: see INFO tx_wait_ms")
+        self.assertEqual(line(self.out, "CLEARED"), "CLEARED 0 0")
+        self.assertEqual(line(self.out, "SILENCE"), "SILENCE radio silence")
+        self.assertEqual(line(self.out, "TXCW"), "TXCW series above limit: add conducted")
+        planned = next(text for text in self.out if text.startswith('{"txpkt":"started"'))
+        self.assertIn('"tx_ms_planned":826', planned)
+        done = next(text for text in self.out if text.startswith('{"txpkt":"done"'))
+        self.assertIn('"sent":2,"failed":0,"len":255', done)
+        self.assertIn('"expected_on_air_ms":409.86', done)
+
+    def test_rxper_reports_snr(self):
+        self.assertEqual(line(self.out, "RXSTART"), "RXSTART - RX 1")
+        per = next(text for text in self.out if text.startswith('{"rx_ok":'))
+        self.assertIn('"rx_ok":3,"rx_bad":0,"missing":0', per)
+        self.assertIn('"rssi_avg_dbm":-90.0', per)
+        self.assertIn('{"snr_avg_db":6.00,"rx_ok":3}', self.out)  # (20 + 24 + 28) / 3 / 4
 
 
 if __name__ == "__main__":

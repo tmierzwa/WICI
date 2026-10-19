@@ -70,7 +70,7 @@ bool LinkDriver::waitSync(bool level, uint32_t timeoutUs) {
 }
 
 bool LinkDriver::transmit(const uint8_t* frame, size_t length, bool variable, radiolink::TxTiming* timing) {
-    if (length == 0 || length > radiolink::MAX_FRAME) return false;
+    if (length == 0 || length > p1frame::MAX_FRAME) return false;  // kolejka FIFO 128 B: tylko ramki P1
     if (rxActive_) idle();  // odbiór wyłączony tylko na czas własnego nadawania
     setLength(variable, static_cast<uint8_t>(length));
     radio_.strobe(SFTX);
@@ -107,7 +107,7 @@ bool LinkDriver::transmit(const uint8_t* frame, size_t length, bool variable, ra
 }
 
 bool LinkDriver::startRx(bool variable, uint8_t fixedLength) {
-    if (!variable && (fixedLength == 0 || fixedLength > radiolink::MAX_FRAME)) return false;
+    if (!variable && (fixedLength == 0 || fixedLength > p1frame::MAX_FRAME)) return false;
     radio_.idle();
     radio_.strobe(SFRX);
     setLength(variable, fixedLength);
@@ -137,7 +137,7 @@ radiolink::RxPoll LinkDriver::pollRx(radiolink::Frame& out) {
         return radiolink::RxPoll::Nothing;
     }
     uint8_t bytes = radio_.rxBytes();
-    uint8_t buffer[radiolink::MAX_FRAME + 2];
+    uint8_t buffer[p1frame::MAX_FRAME + 2];
     if (!rxVariable_) {
         const size_t packet = static_cast<size_t>(fixedLength_) + 2;  // ramka + RSSI + LQI
         if (bytes < packet) return radiolink::RxPoll::Nothing;
