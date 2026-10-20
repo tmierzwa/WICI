@@ -22,6 +22,7 @@ static_assert(radiolink::MAX_FRAME >= testframe::MAX_LENGTH && testframe::MAX_LE
 
 constexpr const char* NO_P1_LINK = "no P1 link on this radio";
 constexpr const char* EMC_ON_ERROR = "EMC mode on: EMC 0 first";
+static_assert(FOFF_MAX_HZ == 50000, "tekst błędu FOFF");
 // Okres EMC: ramka i jej dług ciszy (cykl pracy ≤ 1/13).
 static_assert(EMC_PERIOD_FACTOR == p1::DEBT_FACTOR + 1, "EMC_PERIOD_FACTOR");
 
@@ -330,11 +331,13 @@ void Bench::rxper() {
 }
 
 const char* Bench::foff(int32_t hz) {
-    // CC1120: FREQOFF (krok 30,5 Hz, zakres ±999 985 Hz); S2-LP: słowo SYNT (krok 23,8 Hz, ±1 MHz).
-    // Zmienia częstotliwość łącza P1 stacji: tylko w trybie przygotowania i bez nadawania w toku.
+    // Sterownik: CC1120 FREQOFF (krok 30,5 Hz), S2-LP słowo SYNT (23,8 Hz), SX1262 słowo RF (0,95 Hz),
+    // każdy do około ±1 MHz; stanowisko ogranicza korektę do podpasma (FOFF_MAX_HZ). Zmienia
+    // częstotliwość łącza stacji: tylko w trybie przygotowania i bez nadawania w toku.
     if (!prep) return "preparation mode off: PREP 1";
     if (emcActive_) return EMC_ON_ERROR;
     if (busy()) return "busy: STOP first";
+    if (hz > FOFF_MAX_HZ || hz < -FOFF_MAX_HZ) return "FOFF outside the subband: max +-50000 Hz";
     if (!radio_.setFrequencyOffset(hz)) return "FOFF outside the radio range (about +-1 MHz)";
     foffHz_ = hz;
     foffSet_ = true;

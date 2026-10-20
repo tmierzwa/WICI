@@ -128,7 +128,7 @@ Polecenia są jak na [stanowisku A](#polecenia) i [N1](#płytka-nośna-n1-bench-
 | `REGW <hex> <hex>` | zapis rejestru 00–FE w READY, tylko w trybie przygotowania (np. kolejność bajtów SYNC0..3 do próby w eterze); `VERIFY` pokazuje różnicę wobec tablicy P1, `CONFIG` ją cofa. Po wyjściu z trybu przygotowania zmieniona tablica daje `p1_ok: false` (stacja nie nadaje P1) do `CONFIG` |
 | `TXCW` | MOD_TYPE = CW i dane PN9; pole `marc` podaje stan S2-LP (`TX`) |
 | `TXPKT` | ramki wzorcowe o stałej długości; S2-LP nie wyprowadza „pakiet w powietrzu” dla nadawania, więc `sync_gpio: false`, a czas serii liczy się do przerwania TX_DATA_SENT i powrotu do READY |
-| `FOFF [<hz>]` | korekta słowem SYNT (krok 23,84 Hz, ±1 MHz); `freqoff` to liczba kroków |
+| `FOFF [<hz>]` | korekta słowem SYNT (krok 23,84 Hz; do ±50 kHz, jak na A); `freqoff` to liczba kroków |
 | `DISPLAY [<hz>]` | `extcomin: "MCPWM0"`, licznik 0–9 999 |
 | `DRIVE [<0-3>]` | napęd SCK i MOSI (`gpio_drive_cap_t`, około 5/10/20/40 mA) do restartu |
 | `REBOOT` | `esp_restart()`; pamięć RTC niezerowana zostaje |
@@ -207,7 +207,7 @@ Sterownik (`src/sx1262.cpp`: polecenia, rejestry, bufor, BUSY; `src/sx1262_link.
 - **Stałe do ustalenia wobec RNode (T3):** preambuła 18 symboli (założenie specyfikacji) i słowo synchronizacji 0x12 (wartość domyślna RadioLib i programu diagnostycznego) są stałymi w `src/lora_profile.h`. Program diagnostyczny nadaje z preambułą 8 symboli i mocą 0 dBm.
 - **Nadawanie:** ramka z bufora od adresu 0, długość w parametrach pakietu, RXEN niski, `SetTx` bez limitu czasu układu; koniec po TxDone (układ wraca sam do STDBY_RC), bez niego po czasie ramki + 100 ms przejście do STDBY_RC i błąd.
 - **Odbiór** ciągły (`SetRx 0xFFFFFF`) z RXEN wysokim: ramka po RxDone, długość i początek z `GetRxBufferStatus`, RSSI pakietu (−RssiPkt/2) i SNR (SnrPkt/4) z `GetPacketStatus`; błąd CRC lub nagłówka albo inna długość niż w `RX <len>` dają `rx_bad`, a układ zostaje w odbiorze.
-- **TXCW:** `SetTxContinuousWave`; **FOFF:** słowo RF ± kroki 32 MHz / 2²⁵ (0,954 Hz), ±1 MHz, zapis w STDBY_RC i powrót do odbioru.
+- **TXCW:** `SetTxContinuousWave`; **FOFF:** słowo RF ± kroki 32 MHz / 2²⁵ (0,954 Hz), do ±50 kHz (granica podpasma), zapis w STDBY_RC i powrót do odbioru.
 - **Czas ramki** z wzoru karty (rozdz. 6.1.4; ten sam co `lora_frame_seconds` w `software/reference/obliczenia.py`) plus 3 ms na narastanie (założenie jak w P1, do pomiaru): 255 B w SF7 to 409,9 ms w powietrzu i 413 ms rezerwacji.
 
 Polecenia pomiarowe działają jak na A i B (ten sam `src/measure.cpp`, [opis](#polecenia-pomiarowe)), z czasem ramki, najdłuższą ramką i limitem serii z profilu LoRa:
@@ -297,7 +297,7 @@ Port USB nRF (J3, nie port J-Link J2) zgłasza się jako urządzenie z dwoma int
 | `TXCW <s> [CONDUCTED]` | nośna bez modulacji przez 1–10 s; po zakończeniu `tx_ms` i dług ciszy |
 | `TXPKT <n> <len> [<ms>] [ZEROS\|ONES] [CONDUCTED]` | `n` ramek wzorcowych po `len` B (4–103) co `ms`, z wypełnieniem PN9 albo z samych zer (`ZEROS`) lub jedynek (`ONES`) między numerem a CRC; seria idzie w tle, na końcu `sent`, `failed`, `tx_ms`, czasy pierwszej ramki z GPIO2 |
 | `RXPER` | zwraca i zeruje liczniki odbioru: `rx_ok`, `rx_bad`, `missing`, `reordered`, `overflow`, `per_percent`, średnie RSSI i LQI |
-| `FOFF [<hz>]` | korekta częstotliwości w Hz (około ±1 MHz, krok 30,5 Hz) do restartu, tylko w trybie przygotowania i bez trwającej serii; bez argumentu odczyt |
+| `FOFF [<hz>]` | korekta częstotliwości w Hz (do ±50 kHz, krok 30,5 Hz) do restartu, tylko w trybie przygotowania i bez trwającej serii; bez argumentu odczyt |
 | `P1RX` | odbiór ramek P1 w tle (zmienna długość, LEN do 102); każda ramka i złożony datagram jako wiersz JSON |
 | `P1TX <hex>` | tylko w trybie przygotowania: nadanie datagramu 1–600 B zapisanego szesnastkowo: fragmentacja, losowy identyfikator, dług ciszy, CCA, odroczenia; wynik w wierszu `p1tx` po zakończeniu (wiersze `p1rx` i `p1tx` wychodzą tylko przy wolnym miejscu w buforze portu, więc terminal, który przestał czytać, nie zatrzymuje pętli) |
 | `P1` | liczniki łącza: ramki, datagramy, odrzuty, odroczenia, stan składania |
@@ -364,7 +364,7 @@ Limit nadawania na stanowisku: po każdej serii obowiązuje dług ciszy 12 × cz
 - **`TXCW`** przełącza układ na 2-FSK z dewiacją 0, dane z generatora PN9 i pakiet nieskończony, więc wychodzi sama nośna; po czasie albo po `STOP` przywraca rejestry P1. Przerwana wcześniej (`STOP`, cisza) zapisuje dług od nowa z rzeczywistego czasu nadawania. Do pomiaru częstotliwości (potem `FOFF`) i mocy.
 - **`TXPKT`** nadaje ramki wzorcowe (`src/testframe.cpp`): numer porządkowy 2 B, wypełnienie PN9 zależne od numeru, na końcu CRC-16 ramki P1; test na komputerze (`tests/test_firmware_host.py`) porównuje CRC i ramkę z modelem. Dla pierwszej ramki obraz mierzy z GPIO2 (PKT_SYNC_RXTX) czas od `STX` do słowa synchronizacji (`lead_ms`: ustalenie syntezera, narastanie, preambuła), czas pakietu w powietrzu (`on_air_ms`, oczekiwane `len` × 8 / 4800) i ogon do IDLE (`tail_ms`); to wejście do parametru `ramp_ms` modelu. Bez przewodu na D3 jest `sync_gpio: false` i odpowiedź podaje tylko `tx_ms` (czas serii ze stanu MARC).
 - **`RX <len>`** (tryb przygotowania, bez trwającej serii) ustawia stałą długość pakietu i odbiór ciągły; obraz czyta kolejkę co 5 ms, sprawdza CRC i numer, a `RXPER` zwraca liczniki i je zeruje. `missing` to luki w numeracji, `reordered` numer nie większy od poprzedniego, `overflow` przepełnienia kolejki. `rssi_avg_dbm` używa przyjętego przesunięcia −99 dB.
-- **`FOFF`** (tryb przygotowania, bez trwającej serii) przelicza Hz na FREQOFF (równanie 27 instrukcji), zapisuje w IDLE i wraca do odbioru, jeśli trwał; wartość spoza zakresu daje `FOFF outside the radio range (about +-1 MHz)`. Po `CONFIG` wartość jest zapisywana ponownie, po `RESET` lub restarcie znika.
+- **`FOFF`** (tryb przygotowania, bez trwającej serii) przelicza Hz na FREQOFF (równanie 27 instrukcji), zapisuje w IDLE i wraca do odbioru, jeśli trwał; korekta ponad ±50 kHz daje `FOFF outside the subband: max +-50000 Hz`: kanał LoRa 125 kHz ze środkiem 869,525 MHz wychodzi poza podpasmo 869,4–869,65 MHz już przy 62,5 kHz, a pomyłka o rząd wielkości nie może wyprowadzić nadawania poza nie (błąd kwarcu modułów, około ±17 kHz, mieści się w granicy). Wartość poza zakresem układu daje `FOFF outside the radio range (about +-1 MHz)`. Po `CONFIG` wartość jest zapisywana ponownie, po `RESET` lub restarcie znika.
 
 ### Tryb pracy do badań EMC
 

@@ -1386,7 +1386,9 @@ void stationLoop() {
         }
     }
     bench.p1Ready = radio;
-    if (radiocon::ok()) bench.poll();
+    // Także przy układzie uznanym za niesprawny w trakcie nośnej albo serii (np. polecenie RADIO):
+    // koniec TXCW i TXPKT po czasie nie może czekać na odpowiedź układu.
+    if (radiocon::ok() || bench.transmitting()) bench.poll();
     if (rnsOk) {
         rnsnode::loop(now);
         pollAnnounce();
