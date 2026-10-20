@@ -122,7 +122,20 @@ Laptop i router są z obiektu albo przyniesione na miejscu (decyzje z 2026-10-14
 - przy zamknięciu proponuje usunięcie reguły (drugie okno UAC), żeby laptop wrócił do właściciela bez zmian;
 - bez administratora mówi wprost, że telefony się nie połączą, i proponuje ścieżki 2 i 3.
 
-Przed implementacją trzeba sprawdzić na czystym Windows 11 (maszyna wirtualna albo runner CI): czy anulowanie alertu tworzy regułę blokującą, czy odczyt reguł zapory działa bez administratora i jak wygląda okno UAC dla `netsh`.
+Stan wiedzy o systemach (sprawdzone 2026-10-20; źródła poza dokumentacją producenta zaznaczone):
+
+| Twierdzenie | Źródło | Stan |
+|---|---|---|
+| anulowanie alertu zapory Windows tworzy reguły blokujące dla programu i alert już nie wraca | [Rebex](https://blog.rebex.net/beware-pressing-cancel-on-windows-firewall-security-alert), wątki Microsoft Tech Community; brak dokumentacji Microsoft | zgodne relacje, do próby |
+| odczyt reguł (`netsh advfirewall firewall show rule`) działa bez uprawnień administratora | dokumentacja Microsoft wymaga podniesienia uprawnień tylko dla zmian | wniosek, do próby; od tego zależy sprawdzanie reguły przed nasłuchem |
+| okno UAC dla `netsh` pokazuje wydawcę Microsoft | — | do próby |
+| Windows Mobile Hotspot: najwyżej 8 urządzeń | Microsoft Q&A (odpowiedź społeczności), TP-Link, Thurrott | zgodne źródła wtórne |
+| zapora macOS domyślnie wyłączona | cytat strony wsparcia Apple na forum Apple, poradniki | zgodne źródła wtórne |
+| Ubuntu: `ufw` zainstalowany, domyślnie wyłączony | [help.ubuntu.com/community/UFW](https://help.ubuntu.com/community/UFW) | potwierdzone |
+| Fedora Workstation: strefa `FedoraWorkstation` otwiera porty TCP i UDP 1025–65535 | [Fedora Magazine](https://fedoramagazine.org/control-the-firewall-at-the-command-line/), forum Fedory | potwierdzone |
+| macOS 15: niepodpisanej aplikacji nie otworzy się klawiszem Control i kliknięciem; zostaje „Otwórz mimo to” w Ustawieniach systemowych, z hasłem | ogłoszenie Apple dla deweloperów (cytowane przez 9to5Mac, AppleInsider) | potwierdzone; hasło na laptopie bez uprawnień administratora do próby, co wzmacnia potrzebę notaryzacji |
+
+Próba na czystym Windows 11 (maszyna wirtualna) z kontem standardowym przed implementacją etapu 3: alert i anulowanie, odczyt reguł, okno UAC, reguła portu i jej usunięcie.
 
 **Diagnostyka w panelu:** brak kabla, kabel w gnieździe WAN, brak adresu IP, profil sieci „Publiczna”, brak reguły zapory, zero połączonych telefonów po kilku minutach.
 
