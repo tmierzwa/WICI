@@ -7,7 +7,8 @@
 //   starcie licznik i S rosną o 60 s i są zapisywane, zanim stacja nada ramkę albo utworzy rekord
 //   (startClock), więc czas po restarcie nigdy nie cofa się wobec czasu sprzed restartu;
 //   czas dla obsługi = licznik − S;
-// - ustawienia ekranu: język i znaczniki (main.cpp);
+// - ustawienia ekranu: język i znaczniki (main.cpp); trzecie pole: tryb pracy do badań EMC
+//   (measure::Bench::emcStart, 0 = wyłączony), wznawiany po restarcie;
 // - rezerwacja numerów zapisu rekordów magazynu (store.h): górna granica bloku 1024 numerów,
 //   zapisywana przed użyciem pierwszego numeru bloku;
 // - wersja formatu FRAM (`fram_format`), stan (zainicjowana albo w trakcie ZNISZCZ DANE) i znacznik
@@ -67,7 +68,7 @@ struct SmallRecord {
                      // format: wersja
     uint32_t b = 0;  // dług: czas pracy przy zapisie [s]; zegar: suma przeskoków S [s]; ustawienia: znaczniki;
                      // rezerwacja: starsze słowo; format: stan (FormatState)
-    uint32_t c = 0;  // zegar: liczba startów; format: znaczniki (FORMAT_IDENTITY);
+    uint32_t c = 0;  // zegar: liczba startów; ustawienia: tryb EMC (measure::emcEncode); format: znaczniki (FORMAT_IDENTITY);
                      // wejścia: zmiany (PREP_CHANGES) i SHA-256 konfiguracji << 16
     // Wejścia w tryb przygotowania: a = numer wejścia (licznik), b = licznik czasu pracy przy wejściu [s].
 };
@@ -111,7 +112,10 @@ public:
     // Zapis treści, potem znacznika, potem odczyt kontrolny; false blokuje nadawanie.
     bool writeDebt(uint32_t debtMs, uint32_t uptimeS);
     bool writeClock(uint32_t counterS);   // co 60 s; S i liczba startów bez zmian
-    bool writeSettings(uint32_t language, uint32_t flags);  // język + 1, znaczniki ekranu (main.cpp)
+    bool writeSettings(uint32_t language, uint32_t flags);  // język + 1, znaczniki ekranu (main.cpp); tryb EMC zostaje
+    // Tryb pracy do badań EMC w rekordzie ustawień (język i znaczniki zostają); 0 = wyłączony.
+    bool writeEmc(uint32_t mode);
+    uint32_t emc() const { return settings_.c; }
     bool writeEvent(uint32_t uptimeS, const char* text);
     // Zdarzenie sprzed `back` wpisów (0 = najnowsze); false, gdy brak albo uszkodzone.
     bool readEvent(uint32_t back, EventRecord& record);

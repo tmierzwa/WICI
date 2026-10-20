@@ -216,6 +216,7 @@ Polecenia pomiarowe działają jak na A i B (ten sam `src/measure.cpp`, [opis](#
 - `TXCW` trwa co najmniej 1 s, więc w profilu LoRa wymaga zawsze `CONDUCTED` (pomiar mocy i częstotliwości przewodowo do tłumika).
 - `RXPER` podaje dodatkowo wiersz `{"snr_avg_db":…,"rx_ok":…}`; `lqi_avg` wynosi 0.
 - Łącza P1 nie ma: `P1RX` i `P1TX` zwracają `no P1 link on this radio`, odbiór P1 nie wraca sam poza trybem przygotowania, a stos nie dostaje gotowości interfejsu radiowego, więc niczego nie nadaje. Interfejs LoRa stosu w formacie RNode jest następnym etapem.
+- Tryb pracy do badań EMC ([opis](#tryb-pracy-do-badań-emc)): na przykład `EMC 10 255` nadaje ramkę 255 B (413 ms rezerwacji, 4956 ms długu) co 10 s i odbiera ramki 255 B między nimi; najkrótszy okres dla 255 B to 6 s, dla 20 B 1 s.
 - `INFO` podaje `profile: "LoRa"`, `radio: "SX1262"`, `bench: "L0"` i pola profilu `carrier_hz`, `bw_hz`, `sf`, `cr`, `preamble`, `sync_word` zamiast `symbol_rate`, `deviation_hz`, `rx_filter_hz`; `p1_ok` oznacza tu zapisany i zweryfikowany profil LoRa. Konfiguracja stacji (`configure`) wymaga `radio.profile` = `lora-sf7`.
 
 | Polecenie | Odpowiedź na L0 |
@@ -228,7 +229,7 @@ Polecenia pomiarowe działają jak na A i B (ten sam `src/measure.cpp`, [opis](#
 | `REG <hex>` / `REGW <hex> <hex>` | odczyt / zapis rejestru 0000–FFFF; zapis tylko w trybie przygotowania, `CONFIG` go cofa (np. próba słowa synchronizacji 0x0740/0x0741 wobec RNode) |
 | `SLEEP` | uśpienie z ciepłym startem i wybudzenie przez NSS; `rx_gain` i `boosted` pokazują, czy Rx Boosted przetrwał (lista rejestrów zachowywanych) |
 
-Test `tests/test_radio_link_host.py` (`Sx1262LinkTests`) sprawdza sterownik z modelem układu na poziomie poleceń (bajt statusu, BUSY, rejestry, bufor, przerwania kasowane poleceniem, tryb powrotu po TxDone, odbiór ciągły, uśpienie z listą zachowywanych rejestrów: bez wpisu 0x08AC wraca do 0x94) oraz `measure::Bench` nad nim: kolejność startu, parametry profilu, Rx Boosted po uśpieniu, CW, nadanie i brak TxDone, odbiór z RSSI i SNR, błędy CRC i nagłówka, FOFF, BUSY bez zejścia, odmowa P1, limit serii 826 ms, dług w dzienniku i jego skasowanie, cisza, `RXPER` z SNR. Model nie zastępuje karty: zachowanie układu w rzeczywistości sprawdzają kroki niżej.
+Test `tests/test_radio_link_host.py` (`Sx1262LinkTests`) sprawdza sterownik z modelem układu na poziomie poleceń (bajt statusu, BUSY, rejestry, bufor, przerwania kasowane poleceniem, tryb powrotu po TxDone, odbiór ciągły, uśpienie z listą zachowywanych rejestrów: bez wpisu 0x08AC wraca do 0x94) oraz `measure::Bench` nad nim: kolejność startu, parametry profilu, Rx Boosted po uśpieniu, CW, nadanie i brak TxDone, odbiór z RSSI i SNR, błędy CRC i nagłówka, FOFF, BUSY bez zejścia, odmowa P1, limit serii 826 ms, dług w dzienniku i jego skasowanie, cisza, `RXPER` z SNR, tryb EMC (okres najmniej 13 × czas ramki, dług przed każdą ramką, odbiór między ramkami, cisza, wznowienie z dziennika po restarcie bez trybu przygotowania, koniec z kasowaniem rekordu). Model nie zastępuje karty: zachowanie układu w rzeczywistości sprawdzają kroki niżej.
 
 Budowa i wgranie (port USB-OTG DevKitC, jak `bench-b`):
 
@@ -249,6 +250,7 @@ Kroki na zmontowanym L0 (**niewykonane**; raport z próby w Issue z etykietą `p
 5. Cykl pracy ≤10% w oknie godzinnym (wiersz „Limit czasu nadawania” w [odbiorze](../docs/spec/odbior.md#próby)): seria `TXPKT 2 255` powtarzana zaraz po zejściu długu przez godzinę, z pomiarem czasu nadawania w eterze (analizator widma albo odbiornik SDR) wobec rezerwacji 413 ms na ramkę; także restart w trakcie długu (dług odczekany po starcie) i odczekanie `MAX_DEBT_MS` bez poprawnego rekordu.
 6. Czasy: rzeczywisty czas ramki i narastania (pole `tx_ms` wobec `expected_on_air_ms`), start TCXO, prąd odbioru w trybie Rx Boosted.
 7. Brak emisji 2,4 GHz w wybranym sposobie wyłączenia Wi-Fi i Bluetooth (D14; obraz nie uruchamia Wi-Fi ani Bluetooth, ale wybór sposobu wyłączenia jest warunkiem wstępnym etapu).
+8. Tryb EMC przed badaniami: `EMC 10 255` na dwóch L0 przez godzinę (`sent`, `rx_ok`, `missing` po obu stronach, cykl pracy w eterze), restart zasilania i przyciskiem RESET w trakcie (`resumed: true`, pierwsza ramka po odczekaniu długu), CISZA w trakcie (`silenced`), „RADIO: AWARIA” na ekranie przez cały tryb, `EMC 0` (alarm schodzi).
 
 ## Narzędzia
 
@@ -299,10 +301,11 @@ Port USB nRF (J3, nie port J-Link J2) zgłasza się jako urządzenie z dwoma int
 | `P1RX` | odbiór ramek P1 w tle (zmienna długość, LEN do 102); każda ramka i złożony datagram jako wiersz JSON |
 | `P1TX <hex>` | tylko w trybie przygotowania: nadanie datagramu 1–600 B zapisanego szesnastkowo: fragmentacja, losowy identyfikator, dług ciszy, CCA, odroczenia; wynik w wierszu `p1tx` po zakończeniu (wiersze `p1rx` i `p1tx` wychodzą tylko przy wolnym miejscu w buforze portu, więc terminal, który przestał czytać, nie zatrzymuje pętli) |
 | `P1` | liczniki łącza: ramki, datagramy, odrzuty, odroczenia, stan składania |
-| `STOP` | przerwanie `TXCW`, `TXPKT`, `P1TX` i odbioru |
+| `EMC [<s> <len>\|0]` | tryb pracy do badań EMC ([opis](#tryb-pracy-do-badań-emc)): `EMC <s> <len>` (tryb przygotowania) nadaje ramkę wzorcową `len` B co `s` s i odbiera między ramkami; `EMC 0` kończy; bez argumentu stan: `period_s`, `len`, `min_period_s`, `resumed`, `journal`, `sent`, `failed`, `silenced`, `skipped`, `rx_ok`, `rx_bad`, `missing`, `seconds` |
+| `STOP` | przerwanie `TXCW`, `TXPKT`, `P1TX` i odbioru; kończy też tryb EMC |
 | `LOG [<n>]` | ostatnie `n` (domyślnie 16, do 64) zdarzeń z dziennika w FRAM, od najnowszego, z numerem i czasem pracy; bez FRAM do 16 ostatnich wpisów z RAM, też od najnowszego |
 | `JOURNAL` | stan dziennika: rekord długu (numer, dług, czas zapisu, liczba poprawnych rekordów), licznik czasu pracy (numer, `uptime_s`, `skip_s` = suma przeskoków S, liczba startów), numer ostatniego zdarzenia, największy dług; wejścia w tryb przygotowania: `prep_entries`, `prep_at_s` (licznik czasu przy ostatnim wejściu), `prep_changes` (bit 0: nowa konfiguracja), `prep_config_sha`, `prep_restarted`, `prep_corrupt` |
-| `BENCH` | stan trybu przygotowania, ciszy, zadań i długu |
+| `BENCH` | stan trybu przygotowania, ciszy, zadań, długu i trybu EMC (`emc`) |
 | `RSSI` | RSSI w dBm z przyjętym przesunięciem −99 dB (`rssi_offset_db`), znaczniki ważności i nośnej; sens tylko w stanie RX |
 | `STATE` | stan MARC nazwą i liczbą, bajt stanu, liczba bajtów w kolejkach RX i TX |
 | `REG <hex>` | odczyt rejestru z przestrzeni zwykłej (00–2E) albo rozszerzonej (2F00–2FFF), np. `REG 2F73` (MARCSTATE), `REG 2F0C` (FREQ2) |
@@ -363,6 +366,17 @@ Limit nadawania na stanowisku: po każdej serii obowiązuje dług ciszy 12 × cz
 - **`RX <len>`** (tryb przygotowania, bez trwającej serii) ustawia stałą długość pakietu i odbiór ciągły; obraz czyta kolejkę co 5 ms, sprawdza CRC i numer, a `RXPER` zwraca liczniki i je zeruje. `missing` to luki w numeracji, `reordered` numer nie większy od poprzedniego, `overflow` przepełnienia kolejki. `rssi_avg_dbm` używa przyjętego przesunięcia −99 dB.
 - **`FOFF`** (tryb przygotowania, bez trwającej serii) przelicza Hz na FREQOFF (równanie 27 instrukcji), zapisuje w IDLE i wraca do odbioru, jeśli trwał; wartość spoza zakresu daje `FOFF outside the radio range (about +-1 MHz)`. Po `CONFIG` wartość jest zapisywana ponownie, po `RESET` lub restarcie znika.
 
+### Tryb pracy do badań EMC
+
+Badania odporności (EN 301 489-1 i -3) wymagają stacji w pracy z okresowym nadawaniem i odbiorem, a laboratorium ocenia, czy funkcja wraca sama po zakłóceniu (kryterium B). `EMC <s> <len>` w trybie przygotowania, przy zapisanym profilu i działającym dzienniku FRAM, zapisuje tryb w rekordzie ustawień dziennika i od razu nadaje pierwszą ramkę wzorcową `len` B (jak `TXPKT`, numer od 0), potem kolejną co `s` s; między ramkami układ odbiera ramki wzorcowe tej samej długości, np. od drugiej stacji w tym samym trybie albo od `TXPKT` stacji pomocniczej (liczniki jak `RX`, odczyt `RXPER` albo `EMC`). Po każdej ramce wychodzi wiersz `{"emc":"tx","seq":…,"ok":…,"sent":…,"rx_ok":…,"rx_bad":…,"tx_wait_ms":…}`.
+
+- **Budżet nadawania:** każda ramka zapisuje w dzienniku dług 12 × czas ramki przed nadaniem, jak seria `TXPKT`; okres nie może być krótszy niż 13 × czas ramki (`min_period_s`, w górę do sekundy; na L0 dla 255 B 6 s), więc dług mija przed następną ramką, a cykl pracy nie przekracza 1/13 (7,7 %, poniżej 10 % w godzinie). Ramka, przed którą dług jeszcze trwa (dług sprzed restartu, ramka dłuższa od rezerwacji), czeka na jego koniec. Ramki idą bez CCA, jak `TXPKT`; tryb służy tylko badaniom w laboratorium. Nie ma wariantu `CONDUCTED`.
+- **Cisza radiowa** (CISZA albo `SILENCE 1`) pomija ramki (`silenced`), odbiór trwa; ramka bez zapisanego profilu albo z błędem zapisu długu jest pominięta (`skipped`).
+- **Restart:** tryb wraca sam po każdym starcie (`LOG`: „EMC resumed after restart”, `resumed: true`), także bez trybu przygotowania, z numeracją od 0; rekord niepasujący do układu (np. obraz innej stacji na tej samej FRAM) jest kasowany bez nadawania. Wyjście z trybu przygotowania, `CONFIG`, `RESET` i `IDLE` trybu nie kończą: odbiór wraca w ciągu 1 s, a ramki wracają po `CONFIG`.
+- **Koniec:** `EMC 0`, `STOP` albo ZNISZCZ DANE kasują rekord. W trybie EMC `TXCW`, `TXPKT`, `RX`, `FOFF`, `P1RX` i `P1TX` dają `EMC mode on: EMC 0 first`; na stanowiskach A i B odbiór P1 i nadawanie stosu stoją do końca trybu.
+- **Alarm:** przez cały tryb, także po restarcie, stacja daje `radio_awaria` (ekran alarmu do OK, wiersz 1 „RADIO: AWARIA”), bo zgłoszenia nie wychodzą; alarm schodzi po `EMC 0`. Stacja, której po badaniach nie wyłączono trybu, nie wygląda na sprawną. LED2 dalej pokazuje zapisany profil.
+- Reszta programu (ekran, panel, magazyn, stos) pracuje normalnie; stan trybu podają `EMC` i `BENCH`.
+
 Przebieg pomiaru czułości: na nadajniku `PREP 1`, `TXPKT 2000 103 50 CONDUCTED`; na odbiorniku `PREP 1`, `RX 103`, po serii `RXPER`. PER ≤1% przy 2000 ramek oznacza najwyżej 20 ramek w `rx_bad` plus `missing`.
 
 ## Dziennik i magazyny w FRAM
@@ -373,7 +387,7 @@ Kod w `src/journal.cpp` (jawny obszar: dług ciszy, licznik czasu, ustawienia, r
 |---|---|---|---|
 | dług ciszy | 0x00000 | 32 × 24 B | numer, dług [ms], licznik przy zapisie, CRC-16, znacznik zatwierdzenia |
 | licznik czasu | 0x00300 | 32 × 24 B | licznik [s], suma przeskoków restartów S [s], liczba startów |
-| ustawienia ekranu | 0x00600 | 32 × 24 B | język + 1, znaczniki (wyciszenie, obiekt z listy adresów) |
+| ustawienia ekranu | 0x00600 | 32 × 24 B | język + 1, znaczniki (wyciszenie, obiekt z listy adresów), tryb EMC (znacznik, długość ramki, okres; 0 = wyłączony) |
 | rezerwacja numerów zapisu | 0x00900 | 32 × 24 B | górna granica bloku 1024 numerów, zapisywana przed użyciem pierwszego numeru bloku |
 | format FRAM | 0x00C00 | 32 × 24 B | `fram_format` (1), stan (zainicjowana, w trakcie ZNISZCZ DANE), znacznik zapisanej tożsamości |
 | wejścia w tryb przygotowania | 0x00F00 | 10 × 24 B | numer wejścia (licznik tylko rośnie), licznik czasu przy wejściu, zmiany wejścia (nowa konfiguracja, znacznik licznika zaczętego od nowa) i 16 bitów SHA-256 konfiguracji; ZNISZCZ DANE ich nie kasuje ([tryb przygotowania](../docs/spec/oprogramowanie.md#tryb-przygotowania-i-naklejka-serwisowa)) |
@@ -689,5 +703,5 @@ Odłożone (z szacunkiem zysku; każde wymaga osobnej zmiany i testów):
    - przesunięcie RSSI modułu (wpływa na próg CCA −100 dBm i `rssi_avg_dbm`), ustawienia AFC, AGC i odtwarzania zegara symboli przy pomiarze czułości (T4);
    - przegląd tablicy S2-LP w ST STSW-S2LP-DK (S2-LP DK GUI) dla P1, gdy narzędzie będzie dostępne; pomiar mocy i dobór PA_POWER oraz SMPS;
    - własne nazwy interfejsów CDC („WICI diagnostyka”, „WICI dane”) wymagają zmiany w rdzeniu Arduino-ESP32 (nazwy są stałe w `USBCDC.cpp`) albo własnych deskryptorów TinyUSB.
-5. Stacja L0 (`l0`): kroki z [opisu](#stacja-l0-l0) (L1, R1–R3 obrazem stacji, moc i częstotliwość, cykl pracy, czasy, brak emisji 2,4 GHz), preambuła i słowo synchronizacji wobec RNode (T3), progi CAD i RSSI dla CCA (T4), tryb normalnej pracy z okresowym nadawaniem do badań EMC; potem interfejs LoRa w stosie.
+5. Stacja L0 (`l0`): kroki z [opisu](#stacja-l0-l0) (L1, R1–R3 obrazem stacji, moc i częstotliwość, cykl pracy, czasy, brak emisji 2,4 GHz), preambuła i słowo synchronizacji wobec RNode (T3), progi CAD i RSSI dla CCA (T4); potem interfejs LoRa w stosie.
 6. Dioda alarmu i brzęczyk na N1: jasność błysku 50 ms przy 1 mA i głośność sygnałów do oceny na płytce; przypomnienie `wymien_ogniwa` z pomiarem ogniw (R02).

@@ -4,8 +4,8 @@
 The committed WebAssembly build is the bench-b source set and flags of firmware/platformio.ini with the
 pinned stack (build.json stamp of every input), only the MCU files listed in REPLACED are swapped for
 virtual-board versions of the same interface, the firmware has no simulator hooks, the ROM AES stand-in
-follows FIPS-197, every training exercise passes on the committed image (Node) and the R02 panel layout
-follows hardware/r02/obudowa.md."""
+follows FIPS-197, every training exercise passes on the committed image (Node), the EMC mode raises radio_awaria until
+EMC 0, also after a restart, and the R02 panel layout follows hardware/r02/obudowa.md."""
 
 from pathlib import Path
 import json
@@ -119,6 +119,49 @@ int main() {
         out = subprocess.run(["node", "--input-type=module", "-e", script], cwd=SIM, capture_output=True, text=True, check=True)
         rules = dict(json.loads(out.stdout))
         self.assertTrue(all(rules.values()), rules)   # panel R02 spełnia zasady z obudowa.md
+
+    @unittest.skipUnless(shutil.which("node"), "Node.js not installed")
+    def test_emc_mode_raises_radio_fault_until_ended(self):
+        # Tryb EMC zatrzymuje nadawanie stosu: radio_awaria od startu trybu, także po restarcie
+        # (tryb wraca z dziennika FRAM), i schodzi po EMC 0 (firmware/README.md, tryb pracy do badań EMC).
+        script = """
+import { Simulation } from './web/sim.js';
+const sim = await (await Simulation.prepare({ seed: 3 })).reset();
+const st = sim.station, dec = new TextDecoder();
+const say = async (line, s) => { st.usbWrite(0, line + '\\n'); await sim.advance(s * 1e6); return dec.decode(st.usbRead(0)); };
+const row = () => sim.screen().lines.join(' | ');
+const out = {};
+await sim.act('boot');
+st.setUsb(0, true);
+await sim.advance(1e6);
+st.usbRead(0);
+out.before = row();
+await sim.hold('PREP', 3500);
+await sim.advance(1e6);
+out.start = await say('EMC 10 20', 2);
+out.on = row();
+await sim.act('power off');
+await sim.act('power on');
+await sim.advance(5e6);
+out.restarted = row();
+out.resumed = await say('EMC', 1);
+out.stop = await say('EMC 0', 2);
+out.off = row();
+console.log(JSON.stringify(out));
+"""
+        res = subprocess.run(["node", "--input-type=module", "-e", script], cwd=SIM, capture_output=True, text=True)
+        self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
+        out = json.loads(res.stdout.strip().splitlines()[-1])
+        self.assertNotIn("RADIO: AWARIA", out["before"])
+        self.assertIn('"emc":true', out["start"])
+        self.assertIn('"emc":"tx","seq":0,"ok":true', out["start"])
+        self.assertIn("RADIO: AWARIA", out["on"])
+        self.assertIn("RADIO: AWARIA", out["restarted"])
+        self.assertIn('"emc":true', out["resumed"])
+        self.assertIn('"resumed":true', out["resumed"])
+        self.assertIn('"emc":false', out["stop"])
+        self.assertIn('"journal":false', out["stop"])
+        self.assertNotIn("RADIO: AWARIA", out["off"])
 
 
 if __name__ == "__main__":

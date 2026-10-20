@@ -814,6 +814,55 @@ int main() {
         runFor(bench, 10);
     }
     bench.rxper();
+
+    // Tryb pracy do badań EMC: ramka 255 B co 6 s (13 x 413 ms = 5,4 s), odbiór ramek wzorcowych
+    // między ramkami, tryb zapisany w dzienniku i wznawiany po restarcie bez trybu przygotowania.
+    bench.prep = false;
+    printf("EMCPREP %s\n", bench.emcStart(6, 255));
+    bench.prep = true;
+    printf("EMCPERIOD %s\n", bench.emcStart(5, 255));
+    const unsigned emcTxBefore = chip.txCount;
+    const char* emcStarted = bench.emcStart(6, 255);
+    const uint32_t emcRecord = journal.emc();
+    printf("EMCBUSY %s|%s\n", bench.txpkt(1, 20, 0, false), bench.rxStart(20));
+    runFor(bench, 50);
+    const bool emcFrameOk = testframe::check(chip.lastTx.data(), chip.lastTx.size(), nullptr);
+    printf("EMCFIRST %s %u %zu %d %lu %s %d\n", emcStarted ? emcStarted : "-", chip.txCount - emcTxBefore, chip.lastTx.size(),
+           emcFrameOk, static_cast<unsigned long>(journal.debt().a), link.stateName(), chip.rxen);
+    testframe::build(chip.buffer, 255, 7);  // ramka stacji pomocniczej
+    chip.rxLength = 255;
+    chip.rxStart = 0;
+    chip.irq |= sx1262::IRQ_RX_DONE;
+    runFor(bench, 12010);
+    printf("EMCRUN %u\n", chip.txCount - emcTxBefore);
+    bench.silence = true;
+    runFor(bench, 6000);
+    bench.silence = false;
+    printf("EMCSILENT %u\n", chip.txCount - emcTxBefore);
+    bench.stop();  // jak CONFIG albo wyjście z trybu przygotowania: tryb zostaje, odbiór wraca
+    bench.prep = false;
+    runFor(bench, 1100);
+    printf("EMCRX %s %d %d\n", link.stateName(), chip.rxen, bench.emcActive());
+    bench.printEmc();
+    // Restart: nowy dziennik i stanowisko na tej samej pamięci, bez trybu przygotowania.
+    journal::Journal journal2(ram);
+    journal2.begin();
+    measure::Bench bench2(link, PIN_OK, -1);
+    bench2.attach(&journal2, uptime);
+    bench2.p1Ready = true;
+    journal2.writeSettings(3, 5);  // zapis ustawień ekranu nie kasuje trybu
+    const bool resumed = bench2.emcResume(journal2.emc());
+    const unsigned beforeResume = chip.txCount;
+    runFor(bench2, 100);
+    printf("EMCRESUME %d %08lX %08lX %u %d\n", resumed, static_cast<unsigned long>(emcRecord),
+           static_cast<unsigned long>(journal2.emc()), chip.txCount - beforeResume, bench2.prep);
+    bench2.emcStop();
+    journal::Journal journal3(ram);
+    journal3.begin();
+    printf("EMCSTOP %d %lu %lu %lu\n", bench2.emcActive(), static_cast<unsigned long>(journal2.emc()),
+           static_cast<unsigned long>(journal3.emc()), static_cast<unsigned long>(journal3.settings().a));
+    const bool badResumed = bench2.emcResume(measure::emcEncode(1, 255));
+    printf("EMCBAD %d %d %lu\n", badResumed, bench2.emcActive(), static_cast<unsigned long>(journal2.emc()));
     return 0;
 }
 """
@@ -1024,6 +1073,31 @@ class Sx1262LinkTests(unittest.TestCase):
         self.assertIn('"rx_ok":3,"rx_bad":0,"missing":0', per)
         self.assertIn('"rssi_avg_dbm":-90.0', per)
         self.assertIn('{"snr_avg_db":6.00,"rx_ok":3}', self.out)  # (20 + 24 + 28) / 3 / 4
+
+    def test_emc_mode_needs_preparation_and_a_period_of_13_frames(self):
+        self.assertEqual(line(self.out, "EMCPREP"), "EMCPREP preparation mode off: PREP 1")
+        self.assertEqual(line(self.out, "EMCPERIOD"), "EMCPERIOD period 6..3600 s")  # 13 x 413 ms = 5.4 s
+        self.assertEqual(line(self.out, "EMCBUSY"), "EMCBUSY EMC mode on: EMC 0 first|EMC mode on: EMC 0 first")
+
+    def test_emc_mode_sends_with_debt_and_receives_between_frames(self):
+        # First frame at once, debt 12 x 413 ms in the journal before it, then reception of test frames.
+        self.assertEqual(line(self.out, "EMCFIRST"), "EMCFIRST - 1 255 1 4956 RX 1")
+        self.assertEqual(line(self.out, "EMCRUN"), "EMCRUN 3")  # 0, 6 and 12 s
+        self.assertEqual(line(self.out, "EMCSILENT"), "EMCSILENT 3")  # silence skips the 18 s frame
+        self.assertEqual(line(self.out, "EMCRX"), "EMCRX RX 1 1")  # STOP of a task or leaving preparation keeps the mode
+        tx = [text for text in self.out if text.startswith('{"emc":"tx"')]
+        self.assertEqual(len(tx), 4)  # three before the restart, one after it
+        self.assertIn('"seq":2,"ok":true,"sent":3,"rx_ok":1', tx[2])
+        self.assertIn('"seq":0,"ok":true,"sent":1,', tx[3])
+        status = next(text for text in self.out if text.startswith('{"emc":true'))
+        self.assertIn('"period_s":6,"len":255,"min_period_s":6,"resumed":false,"journal":true,', status)
+        self.assertIn('"sent":3,"failed":0,"silenced":1,"skipped":0,"rx_ok":1,"rx_bad":0,"missing":0', status)
+
+    def test_emc_mode_resumes_after_restart_and_stops_with_record(self):
+        # The record survives a screen-settings write and brings the mode back without preparation mode.
+        self.assertEqual(line(self.out, "EMCRESUME"), "EMCRESUME 1 80FF0006 80FF0006 1 0")
+        self.assertEqual(line(self.out, "EMCSTOP"), "EMCSTOP 0 0 0 3")  # cleared, language kept
+        self.assertEqual(line(self.out, "EMCBAD"), "EMCBAD 0 0 0")  # a 1 s period is refused on resume too
 
 
 if __name__ == "__main__":

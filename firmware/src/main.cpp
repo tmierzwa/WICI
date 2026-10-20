@@ -185,10 +185,15 @@ BenchHost host;
 // Układ radiowy odpowiada, a tablica P1 jest zapisana i zweryfikowana (wiersz 1 ekranu, LED2, radio_awaria).
 bool radioWorks() { return radiocon::ok() && radiocon::p1Ok(); }
 
+// Radio służy stacji: działa i nie jest zajęte trybem EMC. Tryb EMC zatrzymuje nadawanie stosu, więc
+// stacja daje radio_awaria (wiersz 1, ekran alarmu): stacja, której po badaniach nie wyłączono trybu,
+// nie wyjdzie w teren jako sprawna (firmware/README.md, tryb pracy do badań EMC).
+bool radioServes() { return radioWorks() && !bench.emcActive(); }
+
 // Łącze P1 stanowiska pod interfejsem P1 stosu: datagram z kolejki interfejsu idzie przez
 // Bench (dług ciszy, CCA, odroczenia, fragmentacja); w ciszy radiowej kolejka czeka.
-// Radio działa i łącze P1 jest w odbiorze.
-bool p1Listening() { return radioWorks() && bench.receiving(); }
+// Radio służy stacji i łącze P1 jest w odbiorze.
+bool p1Listening() { return radioServes() && bench.receiving(); }
 
 struct BenchRadio : rnsnode::Radio {
     bool ready() override { return p1Listening() && !bench.busy() && (!bench.silence || bench.silenceException); }
@@ -383,6 +388,7 @@ bool BenchHost::destroy() {
     // Po skasowaniu restart: stan w RAM (próby w drodze, potwierdzone alarmy, stos bez tożsamości)
     // należy do skasowanych rekordów, a nowa tożsamość powstaje przy starcie stosu.
     wipeStack();
+    bench.emcStop();  // rekord ustawień i tak znika; bez ramek do restartu
     destroyed = true;
     retained.magic = 0;   // język i ekran nie wracają po restarcie (ustawienia ekranu skasowane)
     const bool ok = stationStore.destroy();
@@ -584,7 +590,7 @@ ui::Status screenStatus() {
     const uint32_t nowS = serviceS();
     s.prep = bench.prep;
     s.silence = silenceAny();
-    s.radioOk = radioWorks();
+    s.radioOk = radioServes();
     s.storeOk = stationStore.ok();
     // Kontakt z odbiorcą: znany od ostatniej przyjętej wiadomości; bez niej dolne oszacowanie z czasu pracy.
     const store::Meta& m = stationStore.meta();
@@ -840,6 +846,8 @@ void beginJournal() {
     char text[48];
     snprintf(text, sizeof(text), "start %lu, debt %lu ms", static_cast<unsigned long>(stationJournal.starts()), static_cast<unsigned long>(debtMs));
     bench.log(text);
+    // Tryb pracy do badań EMC wraca po restarcie bez trybu przygotowania (measure.h).
+    if (stationJournal.emc()) bench.emcResume(stationJournal.emc());
 }
 
 void printButtons() {
@@ -861,7 +869,7 @@ void printHelp() {
     Serial.print("{\"commands\":[\"HELP\",\"INFO\"");
     Serial.print(radiocon::helpCommands());
     Serial.print(",\"PREP <0|1>\",\"SILENCE <0|1>\",\"TXCW <s> [CONDUCTED]\",\"TXPKT <n> <len> [<ms>] [ZEROS|ONES] [CONDUCTED]\","
-                 "\"RX [<len>]\",\"RXPER\",\"FOFF [<hz>]\",\"P1RX\",\"P1TX <hex>\",\"P1\",\"STOP\",\"LOG [<n>]\",\"JOURNAL\",\"BENCH\","
+                 "\"RX [<len>]\",\"RXPER\",\"FOFF [<hz>]\",\"P1RX\",\"P1TX <hex>\",\"P1\",\"EMC [<s> <len>|0]\",\"STOP\",\"LOG [<n>]\",\"JOURNAL\",\"BENCH\","
                  "\"FRAM\",\"BTN\","
 #if !defined(WICI_BENCH_B) && !defined(WICI_L0)
                  "\"LED <1-4> <0|1>\","  // stanowisko B i L0 (DevKitC) nie mają diod stanu
@@ -1066,7 +1074,24 @@ void handle(char* cmd) {
             if (error) { printError(error); return; }
         }
         bench.printFoff();
+    } else if (!strcmp(cmd, "EMC")) {
+        // EMC: stan; EMC 0: koniec (rekord w dzienniku skasowany); EMC <s> <len>: start w trybie przygotowania.
+        if (n == 1) {
+            uint32_t zero = 1;
+            if (!cmdargs::parseUint(words[0], 0, 0, zero)) { printError("EMC [<s> <len>|0]"); return; }
+            bench.emcStop();
+        } else if (n == 2) {
+            uint32_t seconds = 0, length = 0;
+            if (!cmdargs::parseUint(words[0], 1, measure::EMC_PERIOD_MAX_S, seconds) || !cmdargs::parseUint(words[1], 0, 255, length)) {
+                printError("EMC [<s> <len>|0]");
+                return;
+            }
+            const char* error = bench.emcStart(seconds, static_cast<uint8_t>(length));
+            if (error) { printError(error); return; }
+        } else if (n) { printError("EMC [<s> <len>|0]"); return; }
+        bench.printEmc();
     } else if (!strcmp(cmd, "STOP")) {
+        bench.emcStop();  // STOP kończy też tryb EMC
         bench.stop();
         Serial.println("{\"stop\":true}");
         radiocon::printState();
@@ -1339,7 +1364,7 @@ void stationLoop() {
         radioLed = radio;
         ledWrite(board::LED_RADIO, radio);
     }
-    screenHost.setRadioFault(!radio);   // alarm radio_awaria (oprogramowanie.md, ekran główny)
+    screenHost.setRadioFault(!radioServes());   // alarm radio_awaria (oprogramowanie.md, ekran główny); także tryb EMC
     const bool usb = Serial;  // CDC otwarty przez hosta
     ledWrite(board::LED_USB, usb);
     if (usb && !reported) {  // jednorazowy raport po otwarciu portu

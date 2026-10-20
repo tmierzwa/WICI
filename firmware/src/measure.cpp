@@ -21,6 +21,7 @@ static_assert(p1frame::MAX_FRAGMENTS * radiolink::p1FrameAirMs(p1frame::MAX_LEN 
 static_assert(radiolink::MAX_FRAME >= testframe::MAX_LENGTH && testframe::MAX_LENGTH >= p1frame::MAX_FRAME, "bufory ramek");
 
 constexpr const char* NO_P1_LINK = "no P1 link on this radio";
+constexpr const char* EMC_ON_ERROR = "EMC mode on: EMC 0 first";
 
 }  // namespace
 
@@ -135,6 +136,7 @@ bool Bench::confirm() {
 
 const char* Bench::gate(uint32_t txMs, bool conducted) {
     if (!prep) return "preparation mode off: PREP 1";
+    if (emcActive_) return EMC_ON_ERROR;
     if (silence) return "radio silence";
     if (busy()) return "busy: STOP first";
     if (!p1Ready) return "radio not configured: CONFIG";  // bez tablicy P1 układ nadawałby na wartościach domyślnych
@@ -266,6 +268,7 @@ bool Bench::enterRx(RxMode mode, uint8_t length) {
 const char* Bench::rxStart(uint8_t length) {
     // Odbiór ramek wzorcowych wyłącza odbiór P1 stacji: tylko w trybie przygotowania.
     if (!prep) return "preparation mode off: PREP 1";
+    if (emcActive_) return EMC_ON_ERROR;
     if (length < testframe::MIN_LENGTH || length > radio_.maxTestLength()) return lengthError();
     if (busy()) return "busy: STOP first";
     counters_ = Counters();
@@ -275,6 +278,7 @@ const char* Bench::rxStart(uint8_t length) {
 
 const char* Bench::p1rxStart() {
     if (!radio_.p1Link()) return NO_P1_LINK;
+    if (emcActive_) return EMC_ON_ERROR;
     if (busy()) return "busy: STOP first";
     return enterRx(RxMode::P1, 0) ? nullptr : "radio did not enter RX";
 }
@@ -327,6 +331,7 @@ const char* Bench::foff(int32_t hz) {
     // CC1120: FREQOFF (krok 30,5 Hz, zakres ±999 985 Hz); S2-LP: słowo SYNT (krok 23,8 Hz, ±1 MHz).
     // Zmienia częstotliwość łącza P1 stacji: tylko w trybie przygotowania i bez nadawania w toku.
     if (!prep) return "preparation mode off: PREP 1";
+    if (emcActive_) return EMC_ON_ERROR;
     if (busy()) return "busy: STOP first";
     if (!radio_.setFrequencyOffset(hz)) return "FOFF outside the radio range (about +-1 MHz)";
     foffHz_ = hz;
@@ -351,10 +356,10 @@ void Bench::printFoff() {
 
 void Bench::printStatus() {
     Serial.printf("{\"prep\":%s,\"silence\":%s,\"txcw\":%s,\"txpkt\":%s,\"rx\":%s,\"tx_wait_ms\":%lu,"
-                  "\"debt_pending\":%s,\"journal\":%s,\"foff_hz\":%ld}\n",
+                  "\"debt_pending\":%s,\"journal\":%s,\"foff_hz\":%ld,\"emc\":%s}\n",
                   boolName(prep), boolName(silence), boolName(cwActive_), boolName(pktActive_), boolName(receiving()),
                   static_cast<unsigned long>(debtRemainingMs()), boolName(debtPending_),
-                  boolName(journal_ && journal_->ok()), static_cast<long>(foffHz_));
+                  boolName(journal_ && journal_->ok()), static_cast<long>(foffHz_), boolName(emcActive_));
 }
 
 void Bench::stop() {
@@ -391,7 +396,8 @@ void Bench::poll() {
         return;
     }
     if (txState_ != TxState::IDLE) pollP1Tx();
-    if (!prep && p1Ready && radio_.p1Link() && rxMode_ == RxMode::NONE && !busy() && now - autoRxMs_ >= 1000) {
+    if (emcActive_) pollEmc(now);
+    if (!prep && !emcActive_ && p1Ready && radio_.p1Link() && rxMode_ == RxMode::NONE && !busy() && now - autoRxMs_ >= 1000) {
         autoRxMs_ = now;  // najwyżej raz na sekundę, gdy układ nie wchodzi w odbiór
         if (enterRx(RxMode::P1, 0)) log("P1 RX resumed");
     }
@@ -400,6 +406,136 @@ void Bench::poll() {
         if (rxMode_ == RxMode::TEST) receive();
         else receiveP1();
     }
+}
+
+// --- tryb pracy do badań EMC ------------------------------------------------------
+
+uint32_t Bench::emcMinPeriodS(uint8_t length) const { return (EMC_PERIOD_FACTOR * radio_.frameAirMs(length) + 999) / 1000; }
+
+bool Bench::emcCommon(uint32_t periodS, uint8_t length) {
+    if (length < testframe::MIN_LENGTH || length > radio_.maxTestLength()) return false;
+    if (periodS < emcMinPeriodS(length) || periodS > EMC_PERIOD_MAX_S) return false;
+    stop();  // seria, odbiór P1 i datagram w drodze kończą się; dalej tylko ramki EMC
+    emcActive_ = true;
+    emcPeriodMs_ = periodS * 1000;
+    emcLen_ = length;
+    emcNextMs_ = millis();
+    emcSeq_ = 0;
+    emcSent_ = emcFailed_ = emcSilenced_ = emcSkipped_ = 0;
+    emcStartedMs_ = millis();
+    counters_ = Counters();
+    counters_.startedMs = emcStartedMs_;
+    rxLen_ = length;
+    return true;
+}
+
+const char* Bench::emcStart(uint32_t periodS, uint8_t length) {
+    if (!prep) return "preparation mode off: PREP 1";
+    if (busy()) return "busy: STOP first";
+    if (!p1Ready) return "radio not configured: CONFIG";
+    if (length < testframe::MIN_LENGTH || length > radio_.maxTestLength()) return lengthError();
+    const uint32_t minS = emcMinPeriodS(length);
+    if (periodS < minS || periodS > EMC_PERIOD_MAX_S) {
+        snprintf(emcError_, sizeof(emcError_), "period %lu..%lu s", static_cast<unsigned long>(minS),
+                 static_cast<unsigned long>(EMC_PERIOD_MAX_S));
+        return emcError_;
+    }
+    // Zapis w dzienniku przed pierwszą ramką: po restarcie tryb wraca z tymi samymi ustawieniami.
+    if (!journal_ || !journal_->ok()) return "debt journal unavailable: no FRAM";
+    if (!journal_->writeEmc(emcEncode(periodS, length))) return "EMC journal write failed";
+    emcCommon(periodS, length);
+    emcResumed_ = false;
+    char text[40];
+    snprintf(text, sizeof(text), "EMC %lu s x %u B", static_cast<unsigned long>(periodS), length);
+    log(text);
+    return nullptr;
+}
+
+bool Bench::emcResume(uint32_t mode) {
+    if (!(mode & EMC_ON)) return false;
+    if (!emcCommon(emcPeriodS(mode), emcLength(mode))) {
+        // Rekord spoza zakresu tego układu (np. obraz innej stacji na tej samej FRAM): bez nadawania.
+        if (journal_ && journal_->ok()) journal_->writeEmc(0);
+        log("EMC record invalid: cleared");
+        return false;
+    }
+    emcResumed_ = true;
+    log("EMC resumed after restart");
+    return true;
+}
+
+void Bench::emcStop() {
+    if (journal_ && journal_->ok() && journal_->emc() && !journal_->writeEmc(0)) log("EMC journal clear failed");
+    if (!emcActive_) return;
+    emcActive_ = false;
+    if (rxMode_ == RxMode::TEST) {
+        rxMode_ = RxMode::NONE;
+        radio_.idle();
+    }
+    log("EMC stopped");
+}
+
+void Bench::pollEmc(uint32_t now) {
+    if (busy()) return;
+    if (static_cast<int32_t>(now - emcNextMs_) >= 0) {
+        // Dług sprzed restartu albo ramka dłuższa od rezerwacji (brak TxDone): ramka po jego odczekaniu.
+        const uint32_t wait = debtRemainingMs();
+        if (wait) emcNextMs_ = now + wait;
+        else {
+            emcNextMs_ = now + emcPeriodMs_;
+            emcSend(now);
+        }
+    }
+    if (rxMode_ == RxMode::NONE && now - autoRxMs_ >= 1000) {
+        autoRxMs_ = now;  // najwyżej raz na sekundę, gdy układ nie wchodzi w odbiór
+        enterRx(RxMode::TEST, emcLen_);
+    }
+}
+
+void Bench::emcSend(uint32_t now) {
+    if (silence) { ++emcSilenced_; return; }  // cisza blokuje każde nadanie, odbiór trwa
+    if (!p1Ready) { ++emcSkipped_; return; }  // bez profilu układ nadawałby na wartościach domyślnych
+    const uint32_t txMs = radio_.frameAirMs(emcLen_);
+    const uint32_t debtMs = txMs * p1::DEBT_FACTOR;
+    // Dług ciszy w dzienniku przed ramką, jak w TXPKT; błąd zapisu blokuje nadanie.
+    if (!journal_ || !journal_->ok() || !journal_->writeDebt(debtMs, uptimeS())) {
+        ++emcSkipped_;
+        log("EMC frame skipped: debt journal");
+        return;
+    }
+    debtUntilMs_ = now + txMs + debtMs;
+    debtActive_ = true;
+    debtPending_ = true;
+    uint8_t frame[testframe::MAX_LENGTH];
+    testframe::build(frame, emcLen_, emcSeq_);
+    rxMode_ = RxMode::NONE;
+    const bool ok = radio_.transmit(frame, emcLen_, false, nullptr);
+    debtUntilMs_ = millis() + debtMs;  // dług od końca ramki
+    ++emcSent_;
+    if (!ok) ++emcFailed_;
+    const uint16_t seq = emcSeq_++;
+    enterRx(RxMode::TEST, emcLen_);
+    if (diagFree()) {
+        Serial.printf("{\"emc\":\"tx\",\"seq\":%u,\"ok\":%s,\"sent\":%lu,\"rx_ok\":%lu,\"rx_bad\":%lu,\"tx_wait_ms\":%lu}\n", seq,
+                      boolName(ok), static_cast<unsigned long>(emcSent_), static_cast<unsigned long>(counters_.rxOk),
+                      static_cast<unsigned long>(counters_.rxBad), static_cast<unsigned long>(debtRemainingMs()));
+    }
+}
+
+void Bench::printEmc() {
+    // Wiersz w dwóch częściach poniżej 256 znaków (Print::printf rdzenia nRF52).
+    Serial.printf("{\"emc\":%s,\"period_s\":%lu,\"len\":%u,\"min_period_s\":%lu,\"resumed\":%s,\"journal\":%s,",
+                  boolName(emcActive_), static_cast<unsigned long>(emcPeriodMs_ / 1000), emcLen_,
+                  static_cast<unsigned long>(emcActive_ ? emcMinPeriodS(emcLen_) : 0), boolName(emcResumed_),
+                  boolName(journal_ && journal_->ok() && journal_->emc()));
+    const Counters& c = counters_;
+    Serial.printf("\"sent\":%lu,\"failed\":%lu,\"silenced\":%lu,\"skipped\":%lu,\"rx_ok\":%lu,\"rx_bad\":%lu,\"missing\":%lu,"
+                  "\"seconds\":%lu,\"tx_wait_ms\":%lu}\n",
+                  static_cast<unsigned long>(emcSent_), static_cast<unsigned long>(emcFailed_),
+                  static_cast<unsigned long>(emcSilenced_), static_cast<unsigned long>(emcSkipped_),
+                  static_cast<unsigned long>(c.rxOk), static_cast<unsigned long>(c.rxBad), static_cast<unsigned long>(c.missing),
+                  static_cast<unsigned long>(emcActive_ ? (millis() - emcStartedMs_) / 1000 : 0),
+                  static_cast<unsigned long>(debtRemainingMs()));
 }
 
 // --- łącze P1 -------------------------------------------------------------------
@@ -458,6 +594,7 @@ uint32_t backoffMs() {
 
 const char* Bench::p1send(const uint8_t* data, size_t length, bool stack) {
     if (!radio_.p1Link()) return NO_P1_LINK;  // nie liczy się jako tx_drop: datagram nie wszedł do łącza
+    if (emcActive_) return EMC_ON_ERROR;
     if (length < 1 || length > p1frame::MAX_DATAGRAM) return "datagram 1..600 B";
     if (!stack && !prep) return "preparation mode off: PREP 1";   // P1TX z portu diagnostycznego: tylko w przygotowaniu
     if (busy()) return "busy: STOP first";
