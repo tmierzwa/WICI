@@ -12,6 +12,8 @@ Brief dla wykonawcy. WICI to otwarty projekt stacji łączności awaryjnej LoRa 
 
 ## Zakres prac
 
+Szczegóły montażu, diagnozy i prób: [instrukcja montażu i prób](MONTAZ-I-TESTY.md).
+
 1. **Montaż przewlekany** na N1 według [uruchomienia N1](../dev-bench/uruchomienie.md#montaż):
     - przed lutowaniem przymiarka DevKitC w J5/J6 i panelu w obrysie na opisie płytki;
     - gniazda DevKitC J5/J6, przyciski SW1–SW6, przełącznik CISZA, LED, brzęczyk, J11, J12, JP1 i JP2; JP1 i JP2 zwarte;
