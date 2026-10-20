@@ -22,6 +22,8 @@ static_assert(radiolink::MAX_FRAME >= testframe::MAX_LENGTH && testframe::MAX_LE
 
 constexpr const char* NO_P1_LINK = "no P1 link on this radio";
 constexpr const char* EMC_ON_ERROR = "EMC mode on: EMC 0 first";
+// Okres EMC: ramka i jej dług ciszy (cykl pracy ≤ 1/13).
+static_assert(EMC_PERIOD_FACTOR == p1::DEBT_FACTOR + 1, "EMC_PERIOD_FACTOR");
 
 }  // namespace
 
@@ -412,9 +414,12 @@ void Bench::poll() {
 
 uint32_t Bench::emcMinPeriodS(uint8_t length) const { return (EMC_PERIOD_FACTOR * radio_.frameAirMs(length) + 999) / 1000; }
 
-bool Bench::emcCommon(uint32_t periodS, uint8_t length) {
+bool Bench::emcValid(uint32_t periodS, uint8_t length) const {
     if (length < testframe::MIN_LENGTH || length > radio_.maxTestLength()) return false;
-    if (periodS < emcMinPeriodS(length) || periodS > EMC_PERIOD_MAX_S) return false;
+    return periodS >= emcMinPeriodS(length) && periodS <= EMC_PERIOD_MAX_S;
+}
+
+void Bench::emcCommon(uint32_t periodS, uint8_t length) {
     stop();  // seria, odbiór P1 i datagram w drodze kończą się; dalej tylko ramki EMC
     emcActive_ = true;
     emcPeriodMs_ = periodS * 1000;
@@ -426,7 +431,6 @@ bool Bench::emcCommon(uint32_t periodS, uint8_t length) {
     counters_ = Counters();
     counters_.startedMs = emcStartedMs_;
     rxLen_ = length;
-    return true;
 }
 
 const char* Bench::emcStart(uint32_t periodS, uint8_t length) {
@@ -434,9 +438,8 @@ const char* Bench::emcStart(uint32_t periodS, uint8_t length) {
     if (busy()) return "busy: STOP first";
     if (!p1Ready) return "radio not configured: CONFIG";
     if (length < testframe::MIN_LENGTH || length > radio_.maxTestLength()) return lengthError();
-    const uint32_t minS = emcMinPeriodS(length);
-    if (periodS < minS || periodS > EMC_PERIOD_MAX_S) {
-        snprintf(emcError_, sizeof(emcError_), "period %lu..%lu s", static_cast<unsigned long>(minS),
+    if (!emcValid(periodS, length)) {
+        snprintf(emcError_, sizeof(emcError_), "period %lu..%lu s", static_cast<unsigned long>(emcMinPeriodS(length)),
                  static_cast<unsigned long>(EMC_PERIOD_MAX_S));
         return emcError_;
     }
@@ -453,26 +456,34 @@ const char* Bench::emcStart(uint32_t periodS, uint8_t length) {
 
 bool Bench::emcResume(uint32_t mode) {
     if (!(mode & EMC_ON)) return false;
-    if (!emcCommon(emcPeriodS(mode), emcLength(mode))) {
+    if (!emcValid(emcPeriodS(mode), emcLength(mode))) {
         // Rekord spoza zakresu tego układu (np. obraz innej stacji na tej samej FRAM): bez nadawania.
         if (journal_ && journal_->ok()) journal_->writeEmc(0);
         log("EMC record invalid: cleared");
         return false;
     }
+    emcCommon(emcPeriodS(mode), emcLength(mode));
     emcResumed_ = true;
     log("EMC resumed after restart");
     return true;
 }
 
-void Bench::emcStop() {
-    if (journal_ && journal_->ok() && journal_->emc() && !journal_->writeEmc(0)) log("EMC journal clear failed");
-    if (!emcActive_) return;
+const char* Bench::emcStop() {
+    // Rekord kasowany przed zatrzymaniem; nieudany zapis zostawia tryb w dzienniku (wróci po restarcie),
+    // więc wynik idzie do odpowiedzi, a następne EMC 0 albo STOP próbuje znowu.
+    const char* error = nullptr;
+    if (journal_ && journal_->ok() && journal_->emc() && !journal_->writeEmc(0)) {
+        error = "EMC journal clear failed: mode returns after restart";
+        log("EMC journal clear failed");
+    }
+    if (!emcActive_) return error;
     emcActive_ = false;
     if (rxMode_ == RxMode::TEST) {
         rxMode_ = RxMode::NONE;
         radio_.idle();
     }
     log("EMC stopped");
+    return error;
 }
 
 void Bench::pollEmc(uint32_t now) {

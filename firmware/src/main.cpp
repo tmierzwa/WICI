@@ -1079,7 +1079,8 @@ void handle(char* cmd) {
         if (n == 1) {
             uint32_t zero = 1;
             if (!cmdargs::parseUint(words[0], 0, 0, zero)) { printError("EMC [<s> <len>|0]"); return; }
-            bench.emcStop();
+            const char* error = bench.emcStop();   // rekord został w dzienniku: tryb wróci po restarcie
+            if (error) { printError(error); return; }
         } else if (n == 2) {
             uint32_t seconds = 0, length = 0;
             if (!cmdargs::parseUint(words[0], 1, measure::EMC_PERIOD_MAX_S, seconds) || !cmdargs::parseUint(words[1], 0, 255, length)) {
@@ -1091,9 +1092,10 @@ void handle(char* cmd) {
         } else if (n) { printError("EMC [<s> <len>|0]"); return; }
         bench.printEmc();
     } else if (!strcmp(cmd, "STOP")) {
-        bench.emcStop();  // STOP kończy też tryb EMC
+        const char* emcError = bench.emcStop();  // STOP kończy też tryb EMC
         bench.stop();
-        Serial.println("{\"stop\":true}");
+        if (emcError) Serial.printf("{\"stop\":true,\"emc_error\":\"%s\"}\n", emcError);
+        else Serial.println("{\"stop\":true}");
         radiocon::printState();
     } else if (!strcmp(cmd, "LOG")) {
         uint32_t count = 16;

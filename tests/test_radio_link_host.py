@@ -630,8 +630,13 @@ int indexOf(uint8_t op) {
 
 struct RamStorage : journal::Storage {
     std::vector<uint8_t> data = std::vector<uint8_t>(512 * 1024, 0xFF);
+    bool failWrites = false;  // zapis do FRAM odrzucony (np. uszkodzona pamięć)
     bool read(uint32_t address, uint8_t* out, size_t count) override { memcpy(out, &data[address], count); return true; }
-    bool write(uint32_t address, const uint8_t* in, size_t count) override { memcpy(&data[address], in, count); return true; }
+    bool write(uint32_t address, const uint8_t* in, size_t count) override {
+        if (failWrites) return false;
+        memcpy(&data[address], in, count);
+        return true;
+    }
 };
 uint32_t uptime() { return millis() / 1000; }
 
@@ -863,6 +868,21 @@ int main() {
            static_cast<unsigned long>(journal3.emc()), static_cast<unsigned long>(journal3.settings().a));
     const bool badResumed = bench2.emcResume(measure::emcEncode(1, 255));
     printf("EMCBAD %d %d %lu\n", badResumed, bench2.emcActive(), static_cast<unsigned long>(journal2.emc()));
+    // EMC 0 przy nieudanym zapisie: tryb staje, ale rekord zostaje i wynik to błąd; następna próba kasuje.
+    bench2.prep = true;
+    const char* restarted = bench2.emcStart(6, 255);
+    ram.failWrites = true;
+    const char* clearError = bench2.emcStop();
+    const bool keptActive = bench2.emcActive();
+    journal::Journal journal4(ram);
+    journal4.begin();
+    printf("EMCCLEARFAIL %s|%s|%d %d\n", restarted ? restarted : "-", clearError ? clearError : "-", keptActive,
+           journal4.emc() != 0);
+    ram.failWrites = false;
+    const char* retryError = bench2.emcStop();
+    journal::Journal journal5(ram);
+    journal5.begin();
+    printf("EMCCLEARRETRY %s %lu\n", retryError ? retryError : "-", static_cast<unsigned long>(journal5.emc()));
     return 0;
 }
 """
@@ -1098,6 +1118,12 @@ class Sx1262LinkTests(unittest.TestCase):
         self.assertEqual(line(self.out, "EMCRESUME"), "EMCRESUME 1 80FF0006 80FF0006 1 0")
         self.assertEqual(line(self.out, "EMCSTOP"), "EMCSTOP 0 0 0 3")  # cleared, language kept
         self.assertEqual(line(self.out, "EMCBAD"), "EMCBAD 0 0 0")  # a 1 s period is refused on resume too
+
+    def test_emc_stop_reports_a_record_left_in_the_journal(self):
+        # A failed clear stops the frames but keeps the record, so EMC 0 must report it; a retry clears it.
+        self.assertEqual(line(self.out, "EMCCLEARFAIL"),
+                         "EMCCLEARFAIL -|EMC journal clear failed: mode returns after restart|0 1")
+        self.assertEqual(line(self.out, "EMCCLEARRETRY"), "EMCCLEARRETRY - 0")
 
 
 if __name__ == "__main__":

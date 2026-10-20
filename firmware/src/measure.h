@@ -124,10 +124,10 @@ public:
     const char* foff(int32_t hz);
     // Tryb EMC: start (tryb przygotowania, zapis w dzienniku przed pierwszą ramką), wznowienie po
     // restarcie z rekordu dziennika (false: rekord nie pasuje do układu i zostaje skasowany),
-    // koniec z kasowaniem rekordu, stan w JSON.
+    // koniec z kasowaniem rekordu (nullptr albo tekst błędu, gdy rekord został w dzienniku), stan w JSON.
     const char* emcStart(uint32_t periodS, uint8_t length);
     bool emcResume(uint32_t mode);
-    void emcStop();
+    const char* emcStop();
     void printEmc();
     bool emcActive() const { return emcActive_; }
     uint32_t emcMinPeriodS(uint8_t length) const;
@@ -167,7 +167,8 @@ private:
     void finishP1Tx(const char* result);
     void pollEmc(uint32_t now);
     void emcSend(uint32_t now);
-    bool emcCommon(uint32_t periodS, uint8_t length);  // wspólne dla startu i wznowienia
+    bool emcValid(uint32_t periodS, uint8_t length) const;  // długość ramki i okres ≥ 13 x czas ramki
+    void emcCommon(uint32_t periodS, uint8_t length);       // wspólne dla startu i wznowienia (po emcValid)
     void led(bool on);
     uint32_t uptimeS() const { return uptime_ ? uptime_() : millis() / 1000; }
     const char* lengthError();  // "len 4..<najdłuższa ramka wzorcowa układu>"
