@@ -183,8 +183,10 @@ bool Journal::writeClock(uint32_t counterS) {
 }
 
 bool Journal::writeSettings(uint32_t language, uint32_t flags) {
-    return writeSmall(SETTINGS_BASE, settings_, language, flags, 0);
+    return writeSmall(SETTINGS_BASE, settings_, language, flags, settings_.c);
 }
+
+bool Journal::writeEmc(uint32_t mode) { return writeSmall(SETTINGS_BASE, settings_, settings_.a, settings_.b, mode); }
 
 bool Journal::writeReservation(uint64_t upper) {
     if (upper < reservation()) return false;

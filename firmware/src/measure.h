@@ -7,6 +7,16 @@
 // Operacje układu radiowego idą przez radiolink::Driver (CC1120: cc1120_link.cpp, S2-LP:
 // s2lp_link.cpp, SX1262: sx1262_link.cpp), czas ramki w eterze też; reszta, w tym łącze P1, jest
 // wspólna. Łącze P1 działa tylko na układzie, który je ma (Driver::p1Link).
+//
+// Tryb pracy do badań EMC (EMC, Issue #21 punkt 5): reszta stacji pracuje normalnie, a radio co `period` s nadaje
+// jedną ramkę wzorcową `len` B z kolejnym numerem i między ramkami odbiera ramki wzorcowe tej samej
+// długości (liczniki jak RX, odczyt RXPER), np. od drugiej stacji w roli stacji pomocniczej.
+// Każda ramka ma dług ciszy 12 x czas ramki zapisany w dzienniku przed nadaniem, a okres jest nie
+// krótszy niż 13 x czas ramki, więc cisza mija przed następną ramką, a cykl pracy ≤ 1/13 (< 10 %
+// w godzinie). Bez CCA, jak TXPKT. Cisza radiowa pomija ramki, odbiór trwa; nadawanie stosu stoi. Włączenie tylko w trybie przygotowania;
+// tryb zapisany w dzienniku FRAM (rekord ustawień) wraca sam po restarcie także bez trybu
+// przygotowania, żeby laboratorium widziało powrót funkcji bez obsługi (kryterium B badań odporności).
+// Kończy go EMC 0 albo STOP; wyjście z trybu przygotowania go nie kończy.
 #pragma once
 
 #include <Arduino.h>
@@ -32,6 +42,14 @@ constexpr uint32_t BACKOFF_MIN_MS = 100;      // odroczenie losowe 100..1000 ms
 constexpr uint32_t BACKOFF_MAX_MS = 1000;
 constexpr uint32_t LONG_DEFERRAL_MS = 1000;   // odroczenie łączne powyżej 1 s liczy się jako długie
 constexpr uint8_t MAX_DEFERRALS = 30;         // potem datagram odrzucony (wybór stanowiska, tx_drop)
+constexpr uint32_t EMC_PERIOD_MAX_S = 3600;
+constexpr uint32_t EMC_PERIOD_FACTOR = 13;    // okres ≥ 13 x czas ramki: ramka i jej dług ciszy 12 x
+
+// Rekord trybu EMC w dzienniku (journal::Journal::writeEmc): znacznik, długość ramki i okres [s].
+constexpr uint32_t EMC_ON = 0x80000000u;
+constexpr uint32_t emcEncode(uint32_t periodS, uint8_t length) { return EMC_ON | (static_cast<uint32_t>(length) << 16) | (periodS & 0xFFFF); }
+constexpr uint32_t emcPeriodS(uint32_t mode) { return mode & 0xFFFF; }
+constexpr uint8_t emcLength(uint32_t mode) { return static_cast<uint8_t>(mode >> 16); }
 
 struct Counters {
     uint32_t rxOk = 0;        // ramki z poprawnym CRC
@@ -104,7 +122,16 @@ public:
     void onDatagram(void (*handler)(const uint8_t* data, size_t length, void* context), void* context) { datagramHandler_ = handler; datagramContext_ = context; }
     void onTxDone(void (*handler)(bool ok, void* context), void* context) { txDoneHandler_ = handler; txDoneContext_ = context; }
     const char* foff(int32_t hz);
-    void stop();         // przerwanie zadania i IDLE
+    // Tryb EMC: start (tryb przygotowania, zapis w dzienniku przed pierwszą ramką), wznowienie po
+    // restarcie z rekordu dziennika (false: rekord nie pasuje do układu i zostaje skasowany),
+    // koniec z kasowaniem rekordu (nullptr albo tekst błędu, gdy rekord został w dzienniku), stan w JSON.
+    const char* emcStart(uint32_t periodS, uint8_t length);
+    bool emcResume(uint32_t mode);
+    const char* emcStop();
+    void printEmc();
+    bool emcActive() const { return emcActive_; }
+    uint32_t emcMinPeriodS(uint8_t length) const;
+    void stop();         // przerwanie zadania i IDLE (tryb EMC zostaje: odbiór wraca w ciągu 1 s)
     // Datagram czekający na dług, kanał albo odstęp odpada (cisza albo inny wyjątek ciszy niż przy
     // przyjęciu); nadawany właśnie (SEND) kończy się.
     void dropP1Tx();
@@ -138,6 +165,10 @@ private:
     void pollP1Tx();
     bool sendFragments();
     void finishP1Tx(const char* result);
+    void pollEmc(uint32_t now);
+    void emcSend(uint32_t now);
+    bool emcValid(uint32_t periodS, uint8_t length) const;  // długość ramki i okres ≥ 13 x czas ramki
+    void emcCommon(uint32_t periodS, uint8_t length);       // wspólne dla startu i wznowienia (po emcValid)
     void led(bool on);
     uint32_t uptimeS() const { return uptime_ ? uptime_() : millis() / 1000; }
     const char* lengthError();  // "len 4..<najdłuższa ramka wzorcowa układu>"
@@ -199,7 +230,20 @@ private:
     int32_t foffHz_ = 0;
     bool foffSet_ = false;
 
+    bool emcActive_ = false;
+    bool emcResumed_ = false;    // wznowiony po restarcie z dziennika
+    uint32_t emcPeriodMs_ = 0;
+    uint8_t emcLen_ = 0;
+    uint32_t emcNextMs_ = 0;
+    uint16_t emcSeq_ = 0;
+    uint32_t emcSent_ = 0;
+    uint32_t emcFailed_ = 0;     // brak TxDone
+    uint32_t emcSilenced_ = 0;   // ramki pominięte w ciszy radiowej
+    uint32_t emcSkipped_ = 0;    // ramki pominięte: profil niezapisany albo błąd dziennika długu
+    uint32_t emcStartedMs_ = 0;
+
     char lengthError_[16] = {};
+    char emcError_[32] = {};   // "period <min>..3600 s"; GCC liczy pełny zakres uint32
     Event events_[LOG_ENTRIES];
     size_t eventCount_ = 0;
     void (*datagramHandler_)(const uint8_t*, size_t, void*) = nullptr;
