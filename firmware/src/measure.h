@@ -242,7 +242,7 @@ private:
     uint32_t emcStartedMs_ = 0;
 
     char lengthError_[16] = {};
-    char emcError_[24] = {};
+    char emcError_[32] = {};   // "period <min>..3600 s"; GCC liczy pełny zakres uint32
     Event events_[LOG_ENTRIES];
     size_t eventCount_ = 0;
     void (*datagramHandler_)(const uint8_t*, size_t, void*) = nullptr;
