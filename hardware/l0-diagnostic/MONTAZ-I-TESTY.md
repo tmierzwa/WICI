@@ -14,8 +14,8 @@ Etapy są ułożone tak, żeby każdy błąd ujawnił się tam, gdzie jego usuni
 ## 1. N1
 
 1. **R12: 10 kΩ → 1 kΩ** (0805, 1%), jako pierwsza czynność, dopóki THT nie utrudnia dostępu. Kontrola na padach: J5.15 (RF_RESET) – GND ≈ 1,0 kΩ.
-2. **THT**, od najniższych: SW1–SW6, D1 (katoda = płaski bok i kwadratowy pad 1, do masy), BZ1 („+” na padzie 1), SW5, J11, JP1, JP2, J12, na końcu J5/J6 (na wpiętym DevKitC albo na listwie, żeby gniazda stały pionowo i w osi). Pad J6.22 ma pełne połączenie z polem masy: grot o większej pojemności cieplnej.
-    - SW5 (SPDT, wyprowadzenia w linii) da się wlutować obrócony o 180°; wtedy położenie CISZA jest odwrócone wobec opisu. Kontrola: w położeniu CISZA J6.4 – GND ≈ 1 kΩ (R16), w położeniu PRACA brak połączenia.
+2. **THT:** SW1–SW6, D1 (katoda = płaski bok i kwadratowy pad 1, do masy), BZ1 („+” na padzie 1), SW5, J11, JP1, JP2, J12, na końcu J5/J6 (na wpiętym DevKitC albo na listwie, żeby gniazda stały pionowo i w osi). Pad J6.22 ma pełne połączenie z polem masy: grot o większej pojemności cieplnej.
+    - SW5 (SPDT, wyprowadzenia w linii) da się wlutować obrócony o 180°; wtedy położenie CISZA jest odwrócone wobec opisu. Kontrola: w położeniu CISZA J6.4 – GND ≈ 1 kΩ (R16), w położeniu PRACA ≫ 10 kΩ.
     - Nie obsadzać J1–J4, J9/J10 i JP3. To złącza stanowisk A/B; J9/J10 leżą na RF_CS, RF_RESET i SPI, wspólnych z Wio.
 3. **Zworki** JP1 i JP2 założone (JP1: 3V3 DevKitC → +3V3 N1; JP2: 5 V dla brzęczyka).
 4. **Dystanse** M3 × 12 mm w H1–H5. W H6–H9 tylko nakrętki nylonowe albo nic: pady nieobsadzonych J1–J4 są połączone z sieciami, a środek H7 leży 3,6 mm od padu J4.10.
@@ -57,7 +57,7 @@ Bez DevKitC i panelu, POWER_BREAK założony.
 | J6.6 – GND | ≈ 10 kΩ | brak rezystora RXEN |
 | J5.16 – JP1.1 | ≤ 10 kΩ (R11) | |
 | Wio J2.3 – JP1.1 | 0 Ω | POWER_BREAK |
-| JP1.1 – GND | bez zwarcia | |
+| JP1.1 (+3V3) – GND, JP2 (+5V) – GND | bez zwarcia | |
 | Wio J2.1 (VIN) – cokolwiek na N1 | brak połączenia | |
 | J7, sąsiednie piny parami | połączone tylko 6–7–8 (+5V_LCD) oraz 9–10 z uchwytami (GND) | mostek na J7 |
 
@@ -65,10 +65,10 @@ Bez DevKitC i panelu, POWER_BREAK założony.
 
 Zasilanie wyłącznie przez gniazdo **USB** DevKitC (natywne USB/OTG, nie UART), przewodem z liniami danych, przez miernik prądu USB. Port UART nie ma konsoli tego obrazu. Jedno źródło zasilania naraz; źródła AA i 12 V odłączone.
 
-1. Narzędzia: `python3 -m venv .venv && .venv/bin/pip install -r requirements.txt`. Obraz z paczki (`images/l0-full.bin` pod adres 0x0) albo kompilacja `pio run` w `hardware/l0-diagnostic`.
-2. Kopia fabryczna i wgranie: `.venv/bin/python -m esptool --chip esp32s3 --port PORT read_flash 0 0x800000 backups/l0-factory-<nr>.bin`, następnie `shasum -a 256 -c SHA256SUMS.txt` i `write_flash 0x0 images/l0-full.bin`. Bez `erase_flash`. Brak portu: przytrzymać BOOT, nacisnąć RESET. Nazwa portu (`/dev/cu.usbmodem…`, na Linuksie `/dev/ttyACM…`) może się zmienić po każdym resecie.
+1. Narzędzia: `python3 -m venv .venv && .venv/bin/pip install -r requirements.txt`. Obraz z paczki (`images/l0-full.bin` pod adres 0x0) albo ze źródeł w `hardware/l0-diagnostic`: `pio run -t upload --upload-port PORT` (wgrywa samą aplikację pod 0x10000; kopia fabryczna wcześniej, krok 2). Windows: `.venv\Scripts\python`, porty `COMn`.
+2. Kopia fabryczna i wgranie: `.venv/bin/python -m esptool --chip esp32s3 --port PORT read_flash 0 0x800000 backups/l0-factory-<nr>.bin`, następnie `shasum -a 256 -c SHA256SUMS.txt` (Linux: `sha256sum -c`) i `write_flash 0x0 images/l0-full.bin`. Bez `erase_flash`. Brak portu: przytrzymać BOOT, nacisnąć RESET. Nazwa portu (`/dev/cu.usbmodem…`, na Linuksie `/dev/ttyACM…`) może się zmienić po każdym resecie.
 3. Konsola: `.venv/bin/pio device monitor --port PORT --baud 115200`. Komunikaty startowe zwykle giną przed otwarciem portu: od razu `INFO`, `STATUS`, `RDID`. Konsolę zamknąć przed uruchomieniem skryptów.
-4. DevKitC na N1, bez panelu. Pomiary według tabeli niżej.
+4. DevKitC wpiąć w N1 bez zasilania, bez panelu. Po podłączeniu USB pomiary według tabeli niżej.
 5. `INFO` ma zwrócić `INFO l0-0.5 <MAC> 1 <reset> <boot_id> 869.525 125 7 5 0 1.8`. Pole 3 = `1`: radio, FRAM, timer ekranu i timer brzęczyka gotowe. Pole 4 (przyczyna resetu): `1` po zasileniu i po RESET; inne wartości zaraz po wgraniu programu przez USB są normalne. `RDID`: `FRAM_ID MB85RS4MT 047F49…` albo `FRAM_ID CY15B104QN 7F7F7F7F7F7FC22C…`. MAC zapisać jako identyfikator sztuki.
 6. Panel, przy odłączonym zasilaniu: FPC stykami w dół do oporu, klapka zamknięta. Panelu **nie** przyklejać przed zaliczeniem E5 (klej akrylowy; zdjęcie grozi pęknięciem szkła).
 
@@ -90,6 +90,7 @@ Prąd nadawania trwa tyle co pakiet (dziesiątki ms) i multimetr go nie uchwyci:
 |---|---|
 | Brak portu | gniazdo UART zamiast USB; przewód bez linii danych; BOOT + RESET |
 | Port pojawia się i znika cyklicznie; pole 4 = `9` | brownout: zwarcie albo spadek +3V3 przy starcie radia; prąd z USB, C13, adapter |
+| Pole 3 = `0` | `STATUS` wskazuje, który z bloków nie wystartował (`radio`, `fram`, `ext`, `buzzer` = 0); dalej według wierszy niżej |
 | Pole 4 = `4`–`7` | wyjątek albo watchdog: zapis konsoli zaraz po resecie |
 | Odpowiedzi dopiero po około 10 s, potem `ERR radio_begin -2` | RadioLib dziesięć razy resetuje układ i nie odczytuje tekstu wersji: przerwa lub pomyłka pinu w adapterze, MISO/MOSI zamienione, Wio bez 3V3, NRST trzymany nisko, BUSY stale w stanie wysokim |
 | `radio_begin -705` | BUSY nie opada po poleceniu: przewód BUSY, zasilanie Wio, oscylator TCXO |
@@ -117,10 +118,10 @@ Pełny opis poleceń: [instrukcja programu L0](README.md#kolejność-prób-po-mo
 | E1 | 10 restartów (RESET i odłączenie USB), za każdym razem `INFO` i `STATUS` | pole 3 = `1`, brak `ERR`, nowy `boot_id`, pole 4 ≠ `9` |
 | E2 | napięcia i prądy z rozdziału 4 w spoczynku, w odbiorze i przy nadawaniu (`TX` do partnera) | wartości w zakresach, bez resetów i nagrzewania |
 | E3 | `tools/diagnose.py --port PORT --fram-write 12345678`; zasilanie odłączone ≥ 60 s; `--fram-verify 12345678` | zapis: 5 × `FRAM_PASS <n> 0 <crc> <crc>` (zero błędów, sumy CRC równe) i `FRAM_DONE … WRITE`; po zaniku zasilania `FRAM_PASS 4 0 …` i `FRAM_DONE … VERIFY` |
-| E4 | `GUARD ERASE`; oscyloskop: CH1 +3V3 (JP1.1), CH2 CS **za bramką** (U1.1), CH3 wyjście nadzorcy (U3.1); wyzwalanie zboczem opadającym CH1 przy ≈ 3,0 V, tryb pojedynczy, podstawa czasu obejmująca spadek poniżej 1,8 V (zacząć od 2 ms/dz.); odłączyć USB po stronie DevKitC | CH3 przechodzi w stan wysoki przy ≈ 2,7 V, a CH2 w stan wysoki, zanim CH1 spadnie do 1,8 V; zrzut ekranu do raportu |
+| E4 | `GUARD ERASE`; oscyloskop: CH1 +3V3 (JP1.1), CH2 CS **za bramką** (U1.1), CH3 wyjście nadzorcy (U3.1); wyzwalanie zboczem opadającym CH1 przy ≈ 3,0 V, tryb pojedynczy, podstawa czasu obejmująca spadek poniżej 1,8 V (zacząć od 2 ms/dz.); odłączyć USB po stronie DevKitC | CH3 przechodzi w stan wysoki przy ≈ 2,7 V, a CH2 w stan wysoki, zanim CH1 spadnie do 1,8 V; zrzut ekranu do raportu. CS mierzyć na U1.1, nie na J11.6 (to linia przed bramką). Niezaliczenie to wynik projektowy: zapisać przebieg, płytki nie przerabiać |
 | E5 | `LCD 0` … `LCD 4`; `PAUSE 10000` z sondą na J7.4; każde wejście (`INPUT xx`, bez eliminacji drgań styków, kilka wpisów na naciśnięcie jest normalne); `LED 1/0`, `BUZZ 1/0` | plansze bez błędów pikseli; EXTCOMIN 1 Hz także w pauzie; 6 wejść, LED, brzęczyk 2048 Hz |
-| E6 | `tools/diagnose.py --port PORT_L0 --mixed --peer PORT_R0` (15 min); sondy na SCK i liniach CS | `MIX_DONE` z 0 błędów, ≥ 900 cykli, liczba plansz równa liczbie cykli, największy odstęp ≤ 1000 ms; 100/100 pakietów; ekran poprawny |
-| R1/R2 | po restarcie obu urządzeń: `tools/radio_test.py --a PORT_L0 --b PORT_R0 --version-a l0-0.5 --version-b pair-0.4 --count 100` | 100/100 w obie strony, treść zgodna; RSSI i SNR w raporcie |
+| E6 | `tools/diagnose.py --port PORT_L0 --mixed --peer PORT_R0` (15 min); sondy na J11.2 (SCK), J11.5 (CS radia), J11.6 (CS FRAM przed bramką), J11.7 (CS ekranu) | `MIX_DONE` z 0 błędów, ≥ 900 cykli, liczba plansz równa liczbie cykli, największy odstęp ≤ 1000 ms; 100/100 pakietów; ekran poprawny |
+| R1/R2 | po restarcie obu urządzeń: `tools/radio_test.py --a PORT_L0 --b PORT_R0 --version-a l0-0.5 --version-b pair-0.4 --count 100` | 100/100 w obie strony, treść zgodna; RSSI i SNR w raporcie. Przy stratach sprawdzić anteny i RXEN; próby nie powtarzać do skutku, każdy przebieg trafia do raportu |
 | R3 | SW5 w położeniu CISZA: `STATUS` pokazuje `silence=1`, `TX WICI-SILENCE-01` zwraca `BLOCKED SILENCE`, partner nic nie odbiera; SW5 w położeniu PRACA: `TX` z nowym numerem dociera; odbiór przy CISZA działa | wszystkie trzy warunki |
 
 Oscyloskop nie może podtrzymywać zasilania płytki: sondy nie na szynach innego źródła, masa tylko przez sondy.
