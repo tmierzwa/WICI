@@ -42,11 +42,15 @@ const stations = world.devices.slice(1);
 const cards = JSON.parse(world.post.cmd("card"));
 console.log(`IFAC (kod dostępu sieci ćwiczeniowej): ${IFAC}`);
 for (const [i, doc] of docs.entries()) {
-  if (doc.ifac !== IFAC) console.log(`uwaga: ${files[i]}: inny kod dostępu sieci niż węzeł świata, stanowisko jej nie usłyszy`);
+  if (String(doc.ifac).toLowerCase() !== IFAC) console.log(`uwaga: ${files[i]}: inny kod dostępu sieci niż węzeł świata, stanowisko jej nie usłyszy`);
   if (doc.role === "stacja" && JSON.stringify(doc.receiver?.main) !== JSON.stringify(cards.main)) {
     console.log(`uwaga: ${files[i]}: inna karta odbiorcy niż stanowisko świata (--card)`);
   }
-  await world.configure(stations[i], doc);
+  try {
+    await world.configure(stations[i], doc);
+  } catch (e) {
+    console.log(`uwaga: ${files[i]}: stacja ${i + 1} nie przyjęła konfiguracji i zostaje bez niej (${e.message})`);
+  }
 }
 if (cardPath) {
   fs.writeFileSync(cardPath, JSON.stringify({ wici: "karta-odbiorcy", v: 1, ...cards }, null, 1) + "\n");
@@ -56,18 +60,22 @@ if (cardPath) {
 // Czas świata biegnie za zegarem ściennym; przyciski z poleceń puszcza się w zaplanowanej chwili.
 const startWall = performance.now(), startUs = world.nowUs;
 const releases = [];   // [czas świata µs, urządzenie, pin]
+const pending = [];    // działania ze strony i ze stdin, wykonywane między krokami świata
 const links = stations.map(() => ({ socket: null, input: [], port: 0 }));
 const servers = [], watchers = new Set();
 let running = true;
 
 function hold(device, pin, us) {
   device.setInput(pin, 0);
+  const r = releases.findIndex(([, d, p]) => d === device && p === pin);
+  if (r >= 0) releases.splice(r, 1);              // ponowne przytrzymanie liczy się od nowa
   releases.push([world.nowUs + us, device, pin]);
 }
 
 async function tick() {
   if (!running) return;
   const target = startUs + Math.floor((performance.now() - startWall) * 1000);
+  for (const action of pending.splice(0)) await action();
   while (world.nowUs < target) {
     const step = Math.min(target - world.nowUs, 10000);
     stations.forEach((d, i) => {
@@ -128,17 +136,26 @@ function snapshot() {
   };
 }
 
+// Sprawdza działanie i odkłada je do pętli świata: włączenie zasilania czeka na nową instancję WebAssembly,
+// więc nie może wejść w środek kroku (restart stacji w trakcie world.advance).
 function act(body) {
   const d = stations[Number(body.station) - 1];
   if (!d) return false;
   const { action, value } = body;
-  if (action === "button" && BUTTONS.includes(value?.button)) d.setInput(d.pins[value.button], value.down ? 0 : 1);
-  else if (action === "prep") hold(d, d.pins.PREP, PREP_US);
-  else if (action === "power" && value === false && d.powered) d.powerOff(world.nowUs);
-  else if (action === "power" && value === true && !d.powered) d.powerOn(world.nowUs);
-  else if (action === "silence") d.setInput(d.pins.SILENCE, value ? 0 : 1);
-  else if (action === "loss") world.setLoss(d, world.node, value === null ? Infinity : Number(value));
-  else return false;
+  let run;
+  if (action === "button" && BUTTONS.includes(value?.button)) run = () => d.setInput(d.pins[value.button], value.down ? 0 : 1);
+  else if (action === "press" && BUTTONS.includes(value)) run = () => hold(d, d.pins[value], PRESS_US);
+  else if (action === "prep") run = () => hold(d, d.pins.PREP, PREP_US);
+  else if (action === "power" && typeof value === "boolean") {
+    run = async () => {
+      if (!value) d.powerOff(world.nowUs);
+      else if (!d.powered) await d.powerOn(world.nowUs);
+    };
+  } else if (action === "silence") run = () => d.setInput(d.pins.SILENCE, value ? 0 : 1);
+  else if (action === "loss" && (value === null || Number.isFinite(value))) {
+    run = () => world.setLoss(d, world.node, value === null ? Infinity : value);
+  } else return false;
+  pending.push(run);
   return true;
 }
 
@@ -200,19 +217,17 @@ readline.createInterface({ input: process.stdin }).on("line", (line) => {
   const [device, numbered] = station(words[1]);
   const rest = words.slice(numbered ? 2 : 1);
   if (!device && cmd !== "post" && cmd !== "quit") return console.log("nie ma takiej stacji");
-  if (cmd === "prep") {
-    hold(device, device.pins.PREP, PREP_US);
+  const n = stations.indexOf(device) + 1;
+  if (cmd === "prep" && act({ station: n, action: "prep" })) {
     console.log("prep held");
-  } else if (cmd === "press" && BUTTONS.includes(rest[0])) {
-    hold(device, device.pins[rest[0]], PRESS_US);
+  } else if (cmd === "press" && act({ station: n, action: "press", value: rest[0] })) {
     console.log("pressed");
   } else if (cmd === "screen") {
     console.log(JSON.stringify(screen(device)));
   } else if (cmd === "power" && (rest[0] === "on" || rest[0] === "off")) {
-    act({ station: stations.indexOf(device) + 1, action: "power", value: rest[0] === "on" });
+    act({ station: n, action: "power", value: rest[0] === "on" });
     console.log(`power ${rest[0]}`);
-  } else if (cmd === "loss" && rest[0]) {
-    world.setLoss(device, world.node, rest[0] === "off" ? Infinity : Number(rest[0]));
+  } else if (cmd === "loss" && act({ station: n, action: "loss", value: rest[0] === "off" ? null : Number(rest[0]) })) {
     console.log(`loss ${rest[0]}`);
   } else if (cmd === "post") {
     const s = world.post.state();

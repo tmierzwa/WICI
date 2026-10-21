@@ -1327,6 +1327,7 @@ class WorldTest(unittest.TestCase):
         self.assertEqual(self.act({"station": 2, "action": "prep"}, "text/plain"), 404)   # bez zapytania wstępnego CORS
         self.assertEqual(self.act({"station": 3, "action": "prep"}), 400)
         self.assertEqual(self.act({"station": 2, "action": "explode"}), 400)
+        self.assertEqual(self.act({"station": 2, "action": "loss", "value": "abc"}), 400)
         self.assertEqual(self.act({"station": 2, "action": "loss", "value": None}), 204)
         self.assertEqual(self.act({"station": 2, "action": "power", "value": False}), 204)
         end = time.monotonic() + 10

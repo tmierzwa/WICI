@@ -14,7 +14,7 @@ python3 -m wici --port /dev/ttyACM1  # wskazany port (Windows: COM5)
 Bez płytki: świat symulatora (obraz firmware bench-b w WebAssembly, wymaga Node.js) ze stacjami, węzłem i stanowiskiem; port danych USB każdej stacji jest na TCP, a strona świata ma ekrany i przyciski stacji, w tym przycisk przygotowania ([opis](../simulator/README.md#osobne-elementy)).
 
 ```sh
-node ../simulator/swiat.mjs --card karta-odbiorcy.json   # w drugim terminalu; strona http://127.0.0.1:7380/
+node ../simulator/swiat.mjs --card ../../dist/karta-odbiorcy.json   # w drugim terminalu; strona http://127.0.0.1:7380/
 python3 -m wici --port tcp:127.0.0.1:7300
 ```
 
