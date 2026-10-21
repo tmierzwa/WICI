@@ -147,7 +147,8 @@ struct EmulatedP1 : rnsnode::Radio {
         }
         busy = true;
         txEndMs = now + tx;
-        debtUntilMs = now + tx + tx * debtFactor;
+        // Dług jak w łączu stacji (measure::Bench): od końca nadawania, z rezerwacji ramek pełnej długości.
+        debtUntilMs = now + tx + p1iface::reservedTxMs(length) * debtFactor;
         return true;
     }
     // Datagram z Pythona: ramki P1 i składanie jak przy odbiorze radiowym.

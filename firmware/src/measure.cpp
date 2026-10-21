@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 #include "measure.h"
 
+#include <stdarg.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "cmdargs.h"
@@ -30,10 +32,30 @@ static_assert(EMC_PERIOD_FACTOR == p1::DEBT_FACTOR + 1, "EMC_PERIOD_FACTOR");
 
 namespace {
 
-// Wiersz diagnostyczny z inicjatywy stacji (odbiór, koniec nadania) tylko przy wolnym miejscu w buforze
-// portu: zapis do CDC na nRF52 czeka, aż komputer odczyta, więc terminal, który przestał czytać,
-// zatrzymałby pętlę stacji aż do watchdoga. Pominięty wiersz nie zmienia liczników łącza.
-bool diagFree() { return Serial.availableForWrite() > 0; }
+// Wiersz diagnostyczny z inicjatywy stacji (odbiór, koniec nadania) wychodzi tylko w całości i tylko wtedy,
+// gdy cały mieści się w wolnym miejscu bufora portu: zapis do CDC na nRF52 czeka, aż komputer odczyta, więc
+// terminal, który przestał czytać, zatrzymałby pętlę stacji aż do watchdoga, także w połowie wiersza.
+// Pominięty wiersz nie zmienia liczników łącza.
+constexpr size_t DIAG_LINE = 192;   // najdłuższy wiersz poza datagramem: p1tx i emc, około 140 B
+
+bool diagFits(size_t length) {
+    const int room = Serial.availableForWrite();
+    return room > 0 && static_cast<size_t>(room) >= length;
+}
+
+void diagLine(const char* format, ...) {
+    char line[DIAG_LINE];
+    va_list args;
+    va_start(args, format);
+    const int n = vsnprintf(line, sizeof(line), format, args);
+    va_end(args);
+    if (n > 0 && static_cast<size_t>(n) < sizeof(line) && diagFits(static_cast<size_t>(n)))
+        Serial.write(reinterpret_cast<const uint8_t*>(line), static_cast<size_t>(n));
+}
+
+void hexInto(char* out, const uint8_t* data, size_t length) {
+    for (size_t i = 0; i < length; ++i) snprintf(out + 2 * i, 3, "%02X", data[i]);
+}
 
 }  // namespace
 
@@ -529,11 +551,9 @@ void Bench::emcSend(uint32_t now) {
     if (!ok) ++emcFailed_;
     const uint16_t seq = emcSeq_++;
     enterRx(RxMode::TEST, emcLen_);
-    if (diagFree()) {
-        Serial.printf("{\"emc\":\"tx\",\"seq\":%u,\"ok\":%s,\"sent\":%lu,\"rx_ok\":%lu,\"rx_bad\":%lu,\"tx_wait_ms\":%lu}\n", seq,
-                      boolName(ok), static_cast<unsigned long>(emcSent_), static_cast<unsigned long>(counters_.rxOk),
-                      static_cast<unsigned long>(counters_.rxBad), static_cast<unsigned long>(debtRemainingMs()));
-    }
+    diagLine("{\"emc\":\"tx\",\"seq\":%u,\"ok\":%s,\"sent\":%lu,\"rx_ok\":%lu,\"rx_bad\":%lu,\"tx_wait_ms\":%lu}\n", seq,
+             boolName(ok), static_cast<unsigned long>(emcSent_), static_cast<unsigned long>(counters_.rxOk),
+             static_cast<unsigned long>(counters_.rxBad), static_cast<unsigned long>(debtRemainingMs()));
 }
 
 void Bench::printEmc() {
@@ -571,26 +591,36 @@ void Bench::receiveP1() {
         const p1frame::Parse parse = p1frame::parseFrame(frame, length, fragment);
         if (parse != p1frame::Parse::OK) {
             ++link_.rxBad;
-            if (diagFree()) Serial.printf("{\"p1rx\":\"rejected\",\"reason\":\"%s\",\"len\":%u,\"rssi_dbm\":%d}\n", p1frame::parseName(parse),
-                          frame[0], rssiDbm);
+            diagLine("{\"p1rx\":\"rejected\",\"reason\":\"%s\",\"len\":%u,\"rssi_dbm\":%d}\n", p1frame::parseName(parse), frame[0],
+                     rssiDbm);
             continue;
         }
         ++link_.rxOk;
         const p1frame::Outcome outcome = assembler_.push(fragment, millis());
         if (outcome == p1frame::Outcome::COMPLETE) {
             ++link_.rxDatagrams;
-            if (diagFree()) {
-                Serial.printf("{\"p1rx\":\"datagram\",\"id\":\"");
-                for (size_t i = 0; i < p1frame::ID_BYTES; ++i) Serial.printf("%02X", assembler_.completedId()[i]);
-                Serial.printf("\",\"len\":%u,\"fragments\":%u,\"rssi_dbm\":%d,\"data\":\"",
-                              static_cast<unsigned>(assembler_.completedLength()), fragment.count, rssiDbm);
-                for (size_t i = 0; i < assembler_.completedLength(); ++i) Serial.printf("%02X", assembler_.completed()[i]);
-                Serial.println("\"}");
+            // Datagram do 600 B to wiersz do około 1 300 B, a bufor CDC ma 256 B: dane wychodzą tylko w wierszu,
+            // który zmieści się cały; inaczej wiersz bez danych z "data_omitted".
+            char id[2 * p1frame::ID_BYTES + 1];
+            hexInto(id, assembler_.completedId(), p1frame::ID_BYTES);
+            const size_t length = assembler_.completedLength();
+            char head[DIAG_LINE];
+            const int n = snprintf(head, sizeof(head), "{\"p1rx\":\"datagram\",\"id\":\"%s\",\"len\":%u,\"fragments\":%u,\"rssi_dbm\":%d",
+                                   id, static_cast<unsigned>(length), fragment.count, rssiDbm);
+            static const char DATA[] = ",\"data\":\"", END[] = "\"}\n";
+            if (n > 0 && static_cast<size_t>(n) < sizeof(head) &&
+                diagFits(static_cast<size_t>(n) + strlen(DATA) + 2 * length + strlen(END))) {
+                Serial.write(reinterpret_cast<const uint8_t*>(head), static_cast<size_t>(n));
+                Serial.print(DATA);
+                for (size_t i = 0; i < length; ++i) Serial.printf("%02X", assembler_.completed()[i]);
+                Serial.print(END);
+            } else {
+                diagLine("%s,\"data_omitted\":true}\n", head);
             }
             if (datagramHandler_) datagramHandler_(assembler_.completed(), assembler_.completedLength(), datagramContext_);
-        } else if (diagFree()) {
-            Serial.printf("{\"p1rx\":\"%s\",\"index\":%u,\"count\":%u,\"total\":%u,\"rssi_dbm\":%d}\n",
-                          p1frame::outcomeName(outcome), fragment.index, fragment.count, fragment.total, rssiDbm);
+        } else {
+            diagLine("{\"p1rx\":\"%s\",\"index\":%u,\"count\":%u,\"total\":%u,\"rssi_dbm\":%d}\n", p1frame::outcomeName(outcome),
+                     fragment.index, fragment.count, fragment.total, rssiDbm);
         }
     }
 }
@@ -714,13 +744,11 @@ void Bench::dropP1Tx() {
 
 void Bench::finishP1Tx(const char* result) {
     txState_ = TxState::IDLE;
-    if (diagFree()) {
-        Serial.printf("{\"p1tx\":\"%s\",\"id\":\"", result);
-        for (size_t i = 0; i < p1frame::ID_BYTES; ++i) Serial.printf("%02X", txId_[i]);
-        Serial.printf("\",\"len\":%u,\"fragments\":%u,\"deferrals\":%u,\"wait_ms\":%lu,\"tx_wait_ms\":%lu}\n",
-                      static_cast<unsigned>(txLength_), p1frame::fragmentCount(txLength_), txDeferrals_,
-                      static_cast<unsigned long>(millis() - txRequestedMs_), static_cast<unsigned long>(debtRemainingMs()));
-    }
+    char id[2 * p1frame::ID_BYTES + 1];
+    hexInto(id, txId_, p1frame::ID_BYTES);
+    diagLine("{\"p1tx\":\"%s\",\"id\":\"%s\",\"len\":%u,\"fragments\":%u,\"deferrals\":%u,\"wait_ms\":%lu,\"tx_wait_ms\":%lu}\n", result, id,
+             static_cast<unsigned>(txLength_), p1frame::fragmentCount(txLength_), txDeferrals_,
+             static_cast<unsigned long>(millis() - txRequestedMs_), static_cast<unsigned long>(debtRemainingMs()));
     if (rxMode_ != RxMode::P1) enterRx(RxMode::P1, 0);
     if (txDoneHandler_) txDoneHandler_(!strcmp(result, "sent"), txDoneContext_);
 }

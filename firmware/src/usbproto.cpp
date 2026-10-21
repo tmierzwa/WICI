@@ -18,7 +18,10 @@ bool appendf(char* out, size_t size, size_t& n, const char* format, ...) {
     va_start(args, format);
     const int written = n < size ? vsnprintf(out + n, size - n, format, args) : -1;
     va_end(args);
-    if (written < 0 || n + static_cast<size_t>(written) >= size) return false;
+    if (written < 0 || n + static_cast<size_t>(written) >= size) {
+        if (n < size) out[n] = '\0';   // bez uciętej części: w buforze zostaje to, co weszło w całości
+        return false;
+    }
     n += static_cast<size_t>(written);
     return true;
 }
@@ -223,8 +226,16 @@ bool Protocol::push(const char* type, int64_t re, const char* fields, size_t res
     if (re >= 0) ok = ok && appendf(line, sizeof(line), n, ",\"re\":%lld", static_cast<long long>(re));
     if (fields && *fields) ok = ok && appendf(line, sizeof(line), n, ",%s", fields);
     ok = ok && appendf(line, sizeof(line), n, "}\n");
-    if (!ok) { host_.log("usb: reply too long"); return true; }
     const bool reply = reserve == OUT_BYTES;
+    if (!ok) {
+        // Wiersz ponad 1024 B to błąd programu (pola mieszczą się w MAX_LINE - 64). Ponowienie nic nie da, więc
+        // wiersz z inicjatywy stacji przepada (true: wołający nie czeka na miejsce), a odpowiedź zastępuje
+        // odmowa `size`, żeby laptop nie czekał na `re` do upływu czasu.
+        ++stats_.dropped;
+        host_.log("usb: line too long");
+        if (reply) rejected(re, "size");
+        return true;
+    }
     if (n > room() || (!reply && n + reserve > room())) {
         if (reply) { ++stats_.dropped; host_.log("usb: output queue full"); }
         return false;

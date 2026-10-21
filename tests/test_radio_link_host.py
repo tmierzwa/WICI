@@ -7,6 +7,7 @@ status, DS11896), measure::Bench (firmware/src/measure.cpp) against a fake radio
 chip (BUSY, status byte, registers, buffer, IRQ, warm sleep with the retention list), with measure::Bench
 on top of it (TXPKT/TXCW debt and series limit in LoRa air time, RX/RXPER with SNR, no P1 link)."""
 
+import json
 from pathlib import Path
 import shutil
 import subprocess
@@ -53,7 +54,8 @@ struct FakeSerial : Print {
     }
     void println(const char* text) { std::puts(text); }
     void flush() {}
-    int availableForWrite() { return 4096; }
+    int room = 4096;   // wolne miejsce w buforze portu
+    int availableForWrite() { return room; }
 };
 extern FakeSerial Serial;
 """,
@@ -438,6 +440,23 @@ int main() {
     printf("P1RX %zu %d %lu %lu %lu\n", received.size(), received.size() == sizeof(incoming) &&
            !memcmp(received.data(), incoming, sizeof(incoming)), static_cast<unsigned long>(c.rxOk),
            static_cast<unsigned long>(c.rxBad), static_cast<unsigned long>(c.rxDatagrams));
+
+    // Wiersz datagramu tylko w całości: 200 B to wiersz około 500 B, więc przy 256 B wolnego bufora (CDC nRF52)
+    // wychodzi wiersz bez danych, a przy 60 B żaden; datagram i tak trafia do warstwy aplikacji.
+    for (const int room : {256, 60}) {
+        Serial.room = room;
+        received.clear();
+        ++id[0];
+        for (uint8_t index = 0; index < p1frame::fragmentCount(sizeof(incoming)); ++index) {
+            radiolink::Frame f;
+            f.length = p1frame::buildFrame(incoming, sizeof(incoming), id, index, f.bytes);
+            f.rssiDbm = -90;
+            radio.rxQueue.push_back(f);
+        }
+        runFor(bench, 50);
+        printf("P1RXROOM %d %zu\n", room, received.size());
+    }
+    Serial.room = 4096;
 
     // Odbiór ramek wzorcowych: RSSI i jakość z ramki sterownika.
     bench.stop();
@@ -1011,6 +1030,12 @@ class BenchTests(unittest.TestCase):
 
     def test_p1_receive_assembles_and_counts_errors(self):
         self.assertEqual(line(self.out, "P1RX"), "P1RX 200 1 3 2 1")
+        datagrams = [l for l in self.out if l.startswith('{"p1rx":"datagram"')]
+        self.assertEqual(len(datagrams), 2)
+        full, omitted = (json.loads(l) for l in datagrams)
+        self.assertEqual(bytes.fromhex(full["data"]), bytes(255 - i for i in range(200)))
+        self.assertEqual((omitted["len"], omitted["data_omitted"], "data" in omitted), (200, True, False))
+        self.assertEqual([l for l in self.out if l.startswith("P1RXROOM")], ["P1RXROOM 256 200", "P1RXROOM 60 200"])
 
     def test_test_frames_received_with_driver_rssi(self):
         self.assertEqual(line(self.out, "RXSTART"), "RXSTART - 1 0 20")

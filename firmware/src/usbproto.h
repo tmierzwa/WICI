@@ -78,7 +78,7 @@ struct Stats {
     uint32_t stored = 0;
     uint32_t overflow = 0;   // wiersze dłuższe niż 1024 B albo z bajtem NUL
     uint32_t resends = 0;
-    uint32_t dropped = 0;    // wiersze bez miejsca w kolejce (błąd programu: wejście czeka na pustą kolejkę)
+    uint32_t dropped = 0;    // odpowiedzi bez miejsca w kolejce i wiersze ponad 1024 B (oba to błąd programu)
 };
 
 class Protocol {

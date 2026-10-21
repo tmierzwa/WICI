@@ -299,7 +299,7 @@ Port USB nRF (J3, nie port J-Link J2) zgłasza się jako urządzenie z dwoma int
 | `RXPER` | zwraca i zeruje liczniki odbioru: `rx_ok`, `rx_bad`, `missing`, `reordered`, `overflow`, `per_percent`, średnie RSSI i LQI |
 | `FOFF [<hz>]` | korekta częstotliwości w Hz (do ±50 kHz, krok 30,5 Hz) do restartu, tylko w trybie przygotowania i bez trwającej serii; bez argumentu odczyt |
 | `P1RX` | odbiór ramek P1 w tle (zmienna długość, LEN do 102); każda ramka i złożony datagram jako wiersz JSON |
-| `P1TX <hex>` | tylko w trybie przygotowania: nadanie datagramu 1–600 B zapisanego szesnastkowo: fragmentacja, losowy identyfikator, dług ciszy, CCA, odroczenia; wynik w wierszu `p1tx` po zakończeniu (wiersze `p1rx` i `p1tx` wychodzą tylko przy wolnym miejscu w buforze portu, więc terminal, który przestał czytać, nie zatrzymuje pętli) |
+| `P1TX <hex>` | tylko w trybie przygotowania: nadanie datagramu 1–600 B zapisanego szesnastkowo: fragmentacja, losowy identyfikator, dług ciszy, CCA, odroczenia; wynik w wierszu `p1tx` po zakończeniu (wiersze `p1rx` i `p1tx` wychodzą tylko w całości i tylko wtedy, gdy cały wiersz mieści się w wolnym miejscu bufora portu, więc terminal, który przestał czytać, nie zatrzymuje pętli; datagram, którego wiersz się nie mieści, ma wiersz bez danych z `"data_omitted":true`) |
 | `P1` | liczniki łącza: ramki, datagramy, odrzuty, odroczenia, stan składania |
 | `EMC [<s> <len>\|0]` | tryb pracy do badań EMC ([opis](#tryb-pracy-do-badań-emc)): `EMC <s> <len>` (tryb przygotowania) nadaje ramkę wzorcową `len` B co `s` s i odbiera między ramkami; `EMC 0` kończy; bez argumentu stan: `period_s`, `len`, `min_period_s`, `resumed`, `journal`, `sent`, `failed`, `silenced`, `skipped`, `rx_ok`, `rx_bad`, `missing`, `seconds` |
 | `STOP` | przerwanie `TXCW`, `TXPKT`, `P1TX` i odbioru; kończy też tryb EMC |
@@ -424,7 +424,7 @@ Kodek i składanie ramek są w `src/p1frame.cpp` (bez zależności od Arduino): 
 
 Łącze w `src/measure.cpp`, wspólne dla A i B; opis odbioru i CCA dotyczy CC1120, różnice S2-LP są w [sterowniku łącza](#sterownik-łącza-s2-lp):
 
-- **Odbiór** (`P1RX`): układ w trybie zmiennej długości z PKT_LEN = 102, więc ramki dłuższe odrzuca sam; obraz czyta bajt LEN, czeka na resztę ramki i dwa bajty statusu (RSSI, LQI), rozbiera ramkę i oddaje ją składaniu. Ramki za krótkie, niekompletne w czasie albo z błędem rozbioru liczą się jako `rx_bad`. Każda ramka daje wiersz `p1rx` ze stanem składania, a złożony datagram wiersz z identyfikatorem i danymi szesnastkowo.
+- **Odbiór** (`P1RX`): układ w trybie zmiennej długości z PKT_LEN = 102, więc ramki dłuższe odrzuca sam; obraz czyta bajt LEN, czeka na resztę ramki i dwa bajty statusu (RSSI, LQI), rozbiera ramkę i oddaje ją składaniu. Ramki za krótkie, niekompletne w czasie albo z błędem rozbioru liczą się jako `rx_bad`. Każda ramka daje wiersz `p1rx` ze stanem składania, a złożony datagram wiersz z identyfikatorem i danymi szesnastkowo (bufor CDC na nRF52840 ma 256 B, więc dane mają tylko datagramy do około 80 B; dłuższe dają wiersz z `"data_omitted":true`, a do stosu trafiają bez zmian).
 - **Nadawanie** (`P1TX`): datagram czeka na koniec długu ciszy, potem 50 ms wolnego kanału (RSSI poniżej progu −100 dBm przy przyjętym przesunięciu RSSI, brak odbioru po słowie synchronizacji na GPIO2 i żadna ramka odebrana w tym czasie; przerwa między próbkami ponad 10 ms zaczyna okno od nowa, a ostatnia próbka i nadanie idą w tym samym obiegu). Zajęty kanał odracza nadanie o losowe 100–1000 ms (`deferrals`; łączne czekanie ponad 1 s liczy się jako `long_deferrals`), po 30 odroczeniach datagram jest odrzucany (`tx_drop`; liczba jest wyborem stanowiska, specyfikacja nie podaje limitu). Przed pierwszą ramką do dziennika trafia dług 12 × zarezerwowany czas serii (liczony dla najdłuższych ramek), potem fragmenty idą jedną serią, a odbiór wraca od razu po serii. Cisza radiowa i `STOP` przerywają i odrzucają nadanie (`tx_drop`). Identyfikator datagramu i czas odroczeń pochodzą z generatora stacji (HMAC-DRBG, [stos](#stos-reticulum)).
 - **Dwie płytki**: na obu `P1RX`; na jednej `P1TX 48656C6C6F` („Hello”); druga wypisuje `p1rx` z `datagram`. Datagram 600 B to 7 ramek i około 1,4 s nadawania, po nim około 16,4 s długu (rezerwacja: 7 ramek pełnej długości × 12).
 
@@ -594,7 +594,7 @@ Rekord formatu magazynu ma znacznik zapisanej tożsamości: przy starcie bez klu
 
 ### Próba zgodności z Reticulum
 
-`tools/rns_interop.py` uruchamia Reticulum e40191b w Pythonie z interfejsem UDP (ten sam klucz IFAC) i program `host` (`pio run -e host`): ten sam węzeł, interfejs P1, IFAC i tablice FRAM (plik) co obraz, z emulatorem łącza P1 (ramki P1, czas nadawania z modelu ramki, dług ciszy 12 × TX). `tests/test_rns_stack.py` robi to samo jako test, gdy podano `WICI_PIO` i `WICI_RNS_PYTHON`.
+`tools/rns_interop.py` uruchamia Reticulum e40191b w Pythonie z interfejsem UDP (ten sam klucz IFAC) i program `host` (`pio run -e host`): ten sam węzeł, interfejs P1, IFAC i tablice FRAM (plik) co obraz, z emulatorem łącza P1 (ramki P1, czas nadawania z modelu ramki, dług ciszy 12 × rezerwacja ramek pełnej długości, jak w łączu stacji). `tests/test_rns_stack.py` robi to samo jako test, gdy podano `WICI_PIO` i `WICI_RNS_PYTHON`.
 
 ```bash
 python3 -m venv .venv-rns && .venv-rns/bin/pip install "git+https://github.com/markqvist/Reticulum@e40191b"
