@@ -204,3 +204,22 @@ td.fail { color: var(--alarm); font-weight: 600; }
   .row-phrase .cell:not(:first-child) { grid-column: 1; }
   .fingerprint { font-size: 22px; }
 }
+
+/* Zestaw: koperty z hasłami, logowanie. Hasło duże i z odstępami, żeby dało się je przepisać bez błędu. */
+.notice-text { padding: 10px 14px; border-radius: 8px; background: var(--signal-soft); border-left: 4px solid var(--signal); }
+.envelope-list { list-style: none; padding: 0; margin: 16px 0; display: grid; gap: 12px; }
+.envelope { border: 1px dashed var(--border); border-radius: 8px; padding: 12px 16px; }
+.envelope .password { font-size: 24px; font-weight: 700; word-spacing: 0.4em; margin: 6px 0 0; overflow-wrap: anywhere; }
+#who { margin-left: auto; }
+#who:not([hidden]) + #conn { margin-left: 8px; }
+@media print {
+  .bar, .foot, .toast, #station, #search, #offline, .buttons, .notice-text, #envelopes h2 { display: none !important; }
+  main > section:not(#envelopes) { display: none !important; }
+  body, .card { background: #fff; color: #000; box-shadow: none; border: 0; }
+  .envelope { break-after: page; page-break-after: always; border: 1px solid #000; padding: 24px; }
+  .envelope:last-child { break-after: auto; page-break-after: auto; }
+}
+#kit-new h2, #login h2, #recover h2, #conflict h2, #envelopes h2 { margin: 0 0 10px; }
+#kit-new p, #recover > p, #conflict > p { margin: 0 0 12px; }
+#panel-kit h3 { margin: 24px 0 4px; }
+#panel-kit .buttons select, #login-account, #kit-deputies, #recover-deputies { max-width: 280px; }

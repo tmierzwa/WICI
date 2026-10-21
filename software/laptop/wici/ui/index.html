@@ -14,6 +14,7 @@
   <img class="logo on-light" src="logo.svg" alt="WICI">
   <img class="logo on-dark" src="logo-dark.svg" alt="WICI">
   <span class="bar-title">Przygotowanie stacji</span>
+  <span id="who" class="pill" hidden></span>
   <span id="conn" class="pill pill-wait" role="status">Uruchamianie…</span>
   <button id="quit" class="btn btn-ghost" type="button">Zakończ</button>
 </header>
@@ -57,10 +58,64 @@
     <p id="st-banner" class="banner" hidden></p>
   </section>
 
-  <nav class="tabs" role="tablist" aria-label="Sekcje">
+  <section id="kit-new" class="card" hidden>
+    <h2>Nowy zestaw: na tej pamięci USB nie ma jeszcze kont</h2>
+    <p>Panel utworzy konto gospodarza, konta zastępców i hasło odtworzenia. Każde hasło to kilka słów; panel pokaże je jeden raz, z numerem koperty.</p>
+    <label class="field narrow"><span>Liczba zastępców</span>
+      <select id="kit-deputies"><option>0</option><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option></select></label>
+    <p class="hint">Przygotuj tyle kopert, ile kont, i jedną więcej na hasło odtworzenia. Koperty zaklej i ponumeruj; leżą przy stacji.</p>
+    <button type="button" class="btn btn-primary" id="kit-create">Utwórz konta i hasła</button>
+  </section>
+
+  <section id="login" class="card" hidden>
+    <h2>Zaloguj się hasłem z koperty</h2>
+    <form id="login-form" class="form" novalidate>
+      <label class="field narrow"><span>Konto</span><select id="login-account"></select></label>
+      <label class="field"><span>Hasło</span>
+        <input id="login-password" type="password" autocomplete="off" spellcheck="false" autocapitalize="off"></label>
+      <p class="hint">Wielkość liter i odstępy między słowami nie mają znaczenia. Po otwarciu koperty wpisz jej numer do dziennika; hasło zmienia potem osoba utrzymująca system.</p>
+      <p id="login-error" class="field-error"></p>
+      <div class="buttons"><button type="submit" class="btn btn-primary" id="login-send">Zaloguj</button></div>
+    </form>
+  </section>
+
+  <section id="recover" class="card" hidden>
+    <h2>Plik kont na pamięci USB jest uszkodzony albo zginął</h2>
+    <p>Dane są w kopii bazy. Otwórz ją hasłem odtworzenia z koperty; panel utworzy nowe konta i nowe hasła do kopert, także nowe hasło odtworzenia.</p>
+    <form id="recover-form" class="form" novalidate>
+      <label class="field"><span>Hasło odtworzenia</span>
+        <input id="recover-password" type="password" autocomplete="off" spellcheck="false" autocapitalize="off"></label>
+      <label class="field narrow"><span>Liczba zastępców w nowych kontach</span>
+        <select id="recover-deputies"><option>0</option><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option></select></label>
+      <p id="recover-error" class="field-error"></p>
+      <div class="buttons"><button type="submit" class="btn btn-primary" id="recover-send">Otwórz kopię</button></div>
+    </form>
+  </section>
+
+  <section id="conflict" class="card notice" hidden>
+    <h2>Dwie różne kopie bazy</h2>
+    <p>Kopia na dysku tego laptopa i kopia na pamięci USB rozeszły się: na każdej są zmiany, których nie ma na drugiej. Zwykle dzieje się tak, gdy pracowały dwa laptopy, a pamięć była wyjęta. Wybierz kopię, z którą pracujesz dalej. Druga zostaje zaszyfrowana na pamięci USB jako plik „konflikt”.</p>
+    <div class="buttons">
+      <button type="button" class="btn" id="choose-disk">Kopia z dysku</button>
+      <button type="button" class="btn" id="choose-usb">Kopia z pamięci USB</button>
+    </div>
+  </section>
+
+  <section id="envelopes" class="card envelopes" hidden>
+    <h2>Hasła do kopert</h2>
+    <p class="notice-text">Hasła widać tylko teraz. Przepisz każde do koperty o tym numerze albo wydrukuj tę stronę, a potem zaklej koperty.</p>
+    <ol id="envelope-list" class="envelope-list"></ol>
+    <div class="buttons">
+      <button type="button" class="btn" id="envelopes-print">Drukuj</button>
+      <button type="button" class="btn btn-primary" id="envelopes-done">Hasła są w kopertach</button>
+    </div>
+  </section>
+
+  <nav class="tabs" role="tablist" aria-label="Sekcje" id="tabs" hidden>
     <button type="button" role="tab" id="tab-config" aria-controls="panel-config" aria-selected="true">Konfiguracja</button>
     <button type="button" role="tab" id="tab-card" aria-controls="panel-card" aria-selected="false">Karta stacji</button>
     <button type="button" role="tab" id="tab-journal" aria-controls="panel-journal" aria-selected="false">Dziennik</button>
+    <button type="button" role="tab" id="tab-kit" aria-controls="panel-kit" aria-selected="false">Zestaw</button>
   </nav>
 
   <section id="panel-config" role="tabpanel" aria-labelledby="tab-config" class="tabpanel">
@@ -174,6 +229,30 @@
         </table>
       </div>
       <p id="journal-empty" class="hint">Dziennik jest pusty.</p>
+    </div>
+  </section>
+
+  <section id="panel-kit" role="tabpanel" aria-labelledby="tab-kit" class="tabpanel" hidden>
+    <div class="card">
+      <dl class="facts">
+        <div><dt>Zalogowano</dt><dd id="kit-user">–</dd></div>
+        <div><dt>Kopia na dysku</dt><dd id="kit-disk">–</dd></div>
+        <div><dt>Kopia na pamięci USB</dt><dd id="kit-usb">–</dd></div>
+        <div class="wide"><dt>Pamięć zestawu</dt><dd id="kit-path" class="mono break">–</dd></div>
+      </dl>
+      <p id="kit-warning" class="banner banner-alarm" hidden></p>
+      <h3>Nowe hasło do koperty</h3>
+      <p class="hint">Po otwarciu koperty hasło tego konta trzeba zmienić. Panel pokaże nowe hasło jeden raz; włóż je do nowej koperty z tym samym numerem.</p>
+      <div class="buttons">
+        <select id="kit-account" aria-label="Konto"></select>
+        <button type="button" class="btn" id="kit-password">Nowe hasło</button>
+      </div>
+      <h3>Koniec pracy na tym laptopie</h3>
+      <p class="hint">„Oddaj laptop” zapisuje ostatnią kopię na pamięci USB, usuwa dane zestawu z dysku i zamyka aplikację. Potem wyjmij pamięć i oddaj laptop właścicielowi.</p>
+      <div class="buttons">
+        <button type="button" class="btn" id="logout">Wyloguj</button>
+        <button type="button" class="btn btn-primary" id="hand-back">Oddaj laptop</button>
+      </div>
     </div>
   </section>
 </main>

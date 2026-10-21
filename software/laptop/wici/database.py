@@ -127,13 +127,16 @@ class Kit:
         self.lock = threading.Lock()
 
     @classmethod
-    def create(cls, keys_dir, passwords, recovery, iterations=ITERATIONS):
-        """New kit: a random data key wrapped for every account (name -> password) and by the recovery password."""
+    def create(cls, keys_dir, passwords, recovery, iterations=ITERATIONS, data_key=None):
+        """New kit: a random data key wrapped for every account (name -> password) and by the recovery password.
+
+        With data_key (from the recovery password) the accounts are written anew for an existing database;
+        then an unreadable account file is replaced."""
         kit = cls(keys_dir)
         kit.dir.mkdir(parents=True, exist_ok=True)
-        if (kit.dir / ACCOUNTS).exists():
+        if (kit.dir / ACCOUNTS).exists() and (data_key is None or kit.readable()):
             raise StorageError("ta pamięć ma już konta zestawu")
-        pepper, data_key = os.urandom(32), os.urandom(32)
+        pepper, data_key = os.urandom(32), data_key or os.urandom(32)
         _write_durable(kit.dir / KIT_KEY, pepper)
         accounts = {name: _slot(data_key, pw, _account_aad(name), iterations, pepper) for name, pw in passwords.items()}
         kit._save({"version": 1, "accounts": accounts,
@@ -157,8 +160,18 @@ class Kit:
         _write_durable(tmp, json.dumps(doc, indent=1).encode("utf-8"))
         os.replace(tmp, self.dir / ACCOUNTS)
 
+    def exists(self):
+        return (self.dir / ACCOUNTS).exists()
+
+    def readable(self):
+        try:
+            self._load()
+            return True
+        except StorageError:
+            return False
+
     def names(self):
-        return sorted(self._load()[0]["accounts"])
+        return list(self._load()[0]["accounts"])
 
     def recovery(self):
         return self._load()[0]["recovery"]
@@ -180,9 +193,14 @@ class Kit:
             return key
 
     def change_password(self, name, old, new, iterations=ITERATIONS):
-        data_key = self.unlock(name, old)
+        self.set_password(name, self.unlock(name, old), new, iterations)
+
+    def set_password(self, name, data_key, new, iterations=ITERATIONS):
+        """New password for an account, by someone already logged in (after an envelope was opened)."""
         with self.lock:
             doc, pepper = self._load()
+            if name not in doc["accounts"]:
+                raise StorageError(f"nie ma konta {name}")
             doc["accounts"][name] = _slot(data_key, new, _account_aad(name), iterations, pepper)
             self._save(doc)
 
@@ -243,8 +261,9 @@ class Database:
     write(fn) runs fn(conn) in one transaction and returns once a disk snapshot covers it, so a 201
     sent after it is durable. read(fn) runs fn(conn) under the same lock."""
 
-    def __init__(self, data_key, disk_dir, usb_dir=None, recovery=None, schema="", prefer=None):
+    def __init__(self, data_key, disk_dir, usb_dir=None, recovery=None, schema="", prefer=None, on_change=None):
         self.key = data_key
+        self.on_change = on_change or (lambda: None)
         self.disk_dir = Path(disk_dir)
         self.usb_dir = Path(usb_dir) if usb_dir else None
         self.disk_dir.mkdir(parents=True, exist_ok=True)
@@ -360,11 +379,14 @@ class Database:
                 with self.cond:
                     self.disk_error = (self.changes, str(e))
                     self.cond.notify_all()
+                self.on_change()
+                with self.cond:
                     self.cond.wait(RETRY)
                 continue
             with self.cond:
                 self.disk_done, self.disk_error, self.pending = upto, None, (upto, gen, blob)
                 self.cond.notify_all()
+            self.on_change()
 
     def _usb_loop(self):
         while True:
@@ -379,13 +401,18 @@ class Database:
                 _write_durable(self.usb_dir / NAMES[gen % 2], blob)
             except OSError as e:
                 with self.cond:
+                    first = self.usb_error is None
                     self.usb_error = str(e)
                     self.cond.notify_all()
+                if first:
+                    self.on_change()
+                with self.cond:
                     self.cond.wait(RETRY)
                 continue
             with self.cond:
                 self.usb_done, self.usb_at, self.usb_error = upto, _now(), None
                 self.cond.notify_all()
+            self.on_change()
 
     def flush(self, usb=True, timeout=30.0):
         """Wait until the disk (and the stick) hold every change; StorageError when they cannot."""
