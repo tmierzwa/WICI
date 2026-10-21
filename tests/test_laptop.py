@@ -31,7 +31,7 @@ LAPTOP = ROOT / "software" / "laptop"
 sys.path.insert(0, str(LAPTOP))
 sys.path.insert(0, str(ROOT / "software" / "reference"))
 
-from wici import configdoc, database, serialport, store, syscrypto, usbproto  # noqa: E402
+from wici import configdoc, database, serialport, session, store, syscrypto, usbproto  # noqa: E402
 from wici.prep import OperationError, Prep  # noqa: E402
 from wici.web import Panel, serve  # noqa: E402
 from wici import __main__ as wici_main  # noqa: E402
@@ -373,6 +373,7 @@ class DatabaseTest(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         root = Path(self.tmp.name)
         self.usb, self.keys = root / "usb" / "kopia", root / "usb" / "keys"
+        (root / "usb").mkdir()
         self.laptop = lambda name: root / name
         self.kit, self.key = database.Kit.create(self.keys, self.PASSWORDS, "zapasowe haslo szesc slow tutaj",
                                                  iterations=1000)
@@ -624,11 +625,159 @@ class PasswordsTest(unittest.TestCase):
         self.assertEqual([w for w in kept if w.startswith(tuple(i[:-1] for i in items if i.endswith("*")))], [])
 
 
+class SessionTest(unittest.TestCase):
+    """Kit on the stick, login and the database behind the panel."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        (self.root / "usb").mkdir()
+
+    def session(self, laptop="a"):
+        s = session.Session(self.root / "usb", self.root / laptop, iterations=1000)
+        self.addCleanup(s.close)
+        return s
+
+    def test_new_kit_envelopes_and_login_on_another_laptop(self):
+        a = self.session("a")
+        self.assertEqual(a.describe()["kit"], "new")
+        envelopes = a.create(2)["envelopes"]
+        self.assertEqual([(e["no"], e["account"]) for e in envelopes],
+                         [(1, "gospodarz"), (2, "zastepca-1"), (3, "zastepca-2"), (4, "odtworzenie")])
+        self.assertEqual([len(e["password"].split()) for e in envelopes], [5, 5, 5, 6])
+        self.assertEqual(a.describe()["user"], "gospodarz")
+        a.add("WICI-3FA21C", "", "configure", True, "config_seq 1")
+        a.close()
+        b = self.session("b")                             # inny laptop, ta sama pamięć
+        state = b.describe()
+        self.assertEqual((state["kit"], [x["label"] for x in state["accounts"]]),
+                         ("ready", ["Gospodarz", "Zastępca 1", "Zastępca 2"]))
+        with self.assertRaises(session.NotLoggedIn):
+            b.add("WICI-3FA21C", "", "card", True)
+        self.assertEqual(b.recent(), [])
+        with self.assertRaises(database.LoginError):
+            b.login("zastepca-1", envelopes[0]["password"])
+        b.login("zastepca-1", envelopes[1]["password"].upper())
+        self.assertEqual([e["op"] for e in b.recent()], ["login", "configure", "kit_create", "login"])
+
+    def test_new_password_logout_and_hand_back(self):
+        a = self.session("a")
+        envelopes = a.create(1)["envelopes"]
+        new = a.new_password("zastepca-1")["envelopes"][0]["password"]
+        a.logout()
+        with self.assertRaises(database.LoginError):
+            a.login("zastepca-1", envelopes[1]["password"])  # stare hasło z otwartej koperty już nie działa
+        a.login("zastepca-1", new)
+        (self.root / "a" / "dziennik.sqlite").write_bytes(b"etap 1")
+        a.hand_back()
+        self.assertEqual(list((self.root / "a" / "baza").iterdir()), [])
+        self.assertFalse((self.root / "a" / "dziennik.sqlite").exists())
+        self.assertEqual(a.describe()["kit"], "ready")
+        b = self.session("b")
+        b.login("gospodarz", envelopes[0]["password"])
+        self.assertIn("hand_back", [e["op"] for e in b.recent()])
+
+    def test_conflict_choice(self):
+        a = self.session("a")
+        envelopes = a.create(0)["envelopes"]
+        a.close()
+        pw = envelopes[0]["password"]
+        off = session.Session(self.root / "bez-pamieci", self.root / "a", iterations=1000)   # pamięci nie ma
+        off.kit = database.Kit(self.root / "usb" / "keys")      # konta z pamięci, kopia bez niej
+        off.login("gospodarz", pw)
+        off.add("", "", "tylko na dysku A", True)
+        with self.assertRaises(database.StorageError):      # pamięci nie ma: zmiana zostaje tylko na dysku A
+            off.db.close(timeout=0.5)
+        off.db = None
+        b = self.session("b")
+        b.login("gospodarz", pw)
+        b.add("", "", "tylko na B", True)
+        b.close()
+        a = self.session("a")
+        with self.assertRaises(database.Conflict):
+            a.login("gospodarz", pw)
+        self.assertEqual(set(a.describe()["conflict"]), {"disk", "usb"})
+        a.choose("usb")
+        self.assertIsNone(a.describe()["conflict"])
+        ops = [e["op"] for e in a.recent()]
+        self.assertIn("tylko na B", ops)
+        self.assertNotIn("tylko na dysku A", ops)
+
+    def test_recovery_without_account_file(self):
+        a = self.session("a")
+        envelopes = a.create(1)["envelopes"]
+        a.add("WICI-3FA21C", "", "configure", True)
+        a.hand_back()
+        (self.root / "usb" / "keys" / "konta.json").write_text("uszkodzony")
+        b = self.session("b")
+        self.assertEqual(b.describe()["kit"], "broken")
+        with self.assertRaises(database.LoginError):
+            b.recover("zle haslo")
+        fresh = b.recover(envelopes[-1]["password"], 1)["envelopes"]
+        self.assertEqual([e["account"] for e in fresh], ["gospodarz", "zastepca-1", "odtworzenie"])
+        self.assertIn("configure", [e["op"] for e in b.recent()])
+        b.logout()
+        b.login("gospodarz", fresh[0]["password"])
+        with self.assertRaises(database.StorageError):
+            b.recover(fresh[-1]["password"])                # plik kont jest cały
+
+    def test_removed_stick(self):
+        a = self.session("a")
+        a.create(1)
+        stick = self.root / "usb"
+        moved = self.root / "usb-wyjeta"
+        a.db.flush()                                        # Windows: nie przenosi katalogu z otwartym plikiem
+        stick.rename(moved)                                 # pamięć wyjęta przy zalogowanym panelu
+        state = a.describe()
+        self.assertEqual((state["kit"], [x["id"] for x in state["accounts"]]), ("open", ["gospodarz", "zastepca-1"]))
+        with self.assertRaises(database.StorageError):
+            a.hand_back()                                   # od razu, bez czekania na zapis
+        self.assertTrue(any((self.root / "a" / "baza").iterdir()))
+        moved.rename(stick)
+        a.close()
+        stick.rename(moved)
+        b = self.session("b")
+        self.assertEqual(b.describe()["kit"], "missing")
+        with self.assertRaises(database.StorageError):
+            b.create(1)
+        self.assertFalse(stick.exists())                    # nie powstał katalog w miejscu pamięci
+
+    def test_second_login_and_recovery_limit(self):
+        a = self.session("a")
+        envelopes = a.create(0)["envelopes"]
+        with self.assertRaises(database.StorageError):
+            a.login("gospodarz", envelopes[0]["password"])  # druga baza na tych samych plikach
+        a.hand_back()
+        (self.root / "usb" / "keys" / "konta.json").unlink()
+        b = self.session("b")
+        for _ in range(database.LOGIN_LIMIT):
+            with self.assertRaises(database.LoginError):
+                b.recover("zle")
+        with self.assertRaisesRegex(database.LoginError, "Poczekaj"):
+            b.recover(envelopes[-1]["password"])
+
+    def test_usb_root(self):
+        with unittest.mock.patch.dict(os.environ, {"WICI_USB": ""}), \
+                unittest.mock.patch.object(sys, "argv", [str(self.root / "E" / "app" / "wici.pyz")]):
+            self.assertEqual(session.usb_root(), (self.root / "E").resolve())
+        with unittest.mock.patch.dict(os.environ, {"WICI_USB": str(self.root / "U")}):
+            self.assertEqual(session.usb_root(), self.root / "U")
+        with unittest.mock.patch.dict(os.environ, {"WICI_USB": ""}), \
+                unittest.mock.patch.object(sys, "argv", ["-m"]):
+            self.assertIsNone(session.usb_root())
+
+
+def memory_journal(tmp):
+    """Journal in an encrypted database with a random key, without a stick (tests of other parts)."""
+    return store.Journal(database.Database(os.urandom(32), Path(tmp) / "baza", None, None, store.SCHEMA))
+
+
 class JournalTest(unittest.TestCase):
     def test_append_only(self):
         import sqlite3
         with tempfile.TemporaryDirectory() as tmp:
-            j = store.Journal.plain(Path(tmp) / "j.sqlite")
+            j = memory_journal(tmp)
             j.add("WICI-1", "ab" * 16, "configure", True, "config_seq 1")
             j.add("WICI-1", "ab" * 16, "card", False, "prep_required")
             self.assertEqual([e["op"] for e in j.recent()], ["card", "configure"])
@@ -663,9 +812,11 @@ class PanelTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tmp = tempfile.TemporaryDirectory()
-        cls.journal = store.Journal.plain(Path(cls.tmp.name) / "j.sqlite")
+        (Path(cls.tmp.name) / "usb").mkdir()
+        cls.session = session.Session(Path(cls.tmp.name) / "usb", Path(cls.tmp.name) / "stan", iterations=1000)
+        cls.envelopes = cls.session.create(1)["envelopes"]
         station = FakeStation()
-        cls.panel = Panel(station, Prep(station, cls.journal), cls.journal, "tok-123", {"version": "t"})
+        cls.panel = Panel(station, Prep(station, cls.session), cls.session, "tok-123", {"version": "t"})
         cls.server = serve(cls.panel, 0)
         cls.port = cls.server.server_address[1]
         threading.Thread(target=cls.server.serve_forever, daemon=True).start()
@@ -674,7 +825,7 @@ class PanelTest(unittest.TestCase):
     def tearDownClass(cls):
         cls.server.shutdown()
         cls.server.server_close()
-        cls.journal.close()
+        cls.session.close()
         cls.tmp.cleanup()
 
     def request(self, method, path, body=None, headers=None, host=None):
@@ -721,6 +872,28 @@ class PanelTest(unittest.TestCase):
             wici_main.write_instance(inst, self.port, "wrong")
             self.assertIsNone(wici_main.running_instance(inst))
 
+    def test_station_operations_need_login(self):
+        c = {"Cookie": self.cookie(), "Content-Type": "application/json"}
+        try:
+            self.session.logout()
+            state = json.loads(self.request("GET", "/api/state?v=-1", headers={"Cookie": c["Cookie"]})[1])
+            self.assertEqual((state["session"]["kit"], state["journal"]), ("ready", []))
+            for path in ("/api/config/read", "/api/config/write", "/api/card", "/api/hand-back"):
+                r, body = self.request("POST", path, "{}", c)
+                self.assertEqual((r.status, json.loads(body)["code"]), (401, "login"), path)
+            self.assertEqual(self.request("POST", "/api/config/check", "{}", c)[0].status, 200)   # bez stacji i dziennika
+            r, body = self.request("POST", "/api/login", json.dumps({"account": "gospodarz", "password": "zle"}), c)
+            self.assertEqual((r.status, json.loads(body)["code"]), (401, "password"))
+            r, body = self.request("POST", "/api/kit/create", json.dumps({"deputies": 1}), c)
+            self.assertEqual((r.status, json.loads(body)["code"]), (409, "storage"))   # zestaw już jest
+            self.assertEqual(json.loads(body)["error"], "Ta pamięć ma już konta zestawu.")
+        finally:
+            body = json.dumps({"account": "gospodarz", "password": self.envelopes[0]["password"]})
+            self.assertEqual(self.request("POST", "/api/login", body, c)[0].status, 200)
+        state = json.loads(self.request("GET", "/api/state?v=-1", headers={"Cookie": c["Cookie"]})[1])
+        self.assertEqual(state["session"]["user"], "gospodarz")
+        self.assertEqual(state["journal"][0]["op"], "login")
+
     def test_foreign_host_origin_and_content_type_are_refused(self):
         c = self.cookie()
         self.assertEqual(self.request("GET", "/", headers={"Cookie": c}, host="evil.example:80")[0].status, 403)
@@ -740,7 +913,7 @@ class PanelTest(unittest.TestCase):
         r, body = self.request("POST", "/api/config/write", json.dumps({"doc": station_doc()}), c)
         self.assertEqual(r.status, 409)
         self.assertIn("Brak odpowiedzi stacji", json.loads(body)["error"])
-        self.assertFalse(self.journal.recent()[0]["ok"])
+        self.assertFalse(self.session.recent()[0]["ok"])
 
     def test_unexpected_error_still_answers(self):
         c = {"Cookie": self.cookie(), "Content-Type": "application/json"}
@@ -764,7 +937,7 @@ class PackageTest(unittest.TestCase):
         files = [p for p in self.PACKAGE.rglob("*") if p.is_file() and "__pycache__" not in p.parts]
         words = self.PACKAGE / "slowa.txt"                  # dane, nie kod: osobny limit
         total = sum(p.stat().st_size for p in files if p != words)
-        self.assertLess(total, 160 * 1024, f"aplikacja ma {total} B; budżet etapu 1 to 160 KiB")
+        self.assertLess(total, 256 * 1024, f"aplikacja ma {total} B; budżet etapu 2 to 256 KiB")
         self.assertLess(words.stat().st_size, 32 * 1024)
         for p in files:
             if p.suffix == ".py":
@@ -902,7 +1075,7 @@ class SimulatorPreparationTest(unittest.TestCase):
         port = int(self.sim.stdout.readline().split()[1])
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
-        self.journal = store.Journal.plain(Path(self.tmp.name) / "j.sqlite")
+        self.journal = memory_journal(self.tmp.name)
         self.addCleanup(self.journal.close)
         self.station = usbproto.Station(f"tcp:127.0.0.1:{port}").start()
         self.addCleanup(self.station.stop)

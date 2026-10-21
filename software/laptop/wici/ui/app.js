@@ -10,8 +10,9 @@ const LANGS = ["PL", "UK", "EN"];
 const enc = new TextEncoder();
 const bytes = (s) => enc.encode(String(s).normalize("NFC")).length;
 
-let state = { v: -1, station: { phase: "searching" }, journal: [], app: {} };
+let state = { v: -1, station: { phase: "searching" }, session: {}, journal: [], app: {} };
 let offline = false, stopped = false, showAll = false, lastCard = null, checkTimer = null, checkSeq = 0;
+let envelopesShown = false;
 let lastProblems = [];
 
 // ---- Komunikacja z aplikacją ----------------------------------------------------------------
@@ -100,6 +101,7 @@ const PROBLEMS = {
 function code(text) { const c = document.createElement("code"); c.textContent = text; return c; }
 
 function render() {
+  if (stopped) return;                  // po „Zakończ” albo „Oddaj laptop” spóźniona odpowiedź nie zmienia ekranu
   const s = station(), h = s.hello || {}, st = s.status || {};
   $("search").hidden = s.phase === "connected" || s.phase === "incompatible";
   $("station").hidden = !$("search").hidden;
@@ -142,20 +144,184 @@ function render() {
     }
     banner.hidden = s.phase !== "incompatible" && prep;
   }
+  renderSession();
   renderJournal();
   const a = state.app || {};
   $("foot").textContent = `WICI ${a.version || ""} · Python ${a.python || ""} · ${a.platform || ""}`;
 }
 
-const OPS = { configure: "Wysłanie konfiguracji", config_get: "Odczyt konfiguracji", card: "Odczyt karty", selftest: "Autotest" };
+// ---- Zestaw, logowanie i kopia bazy ---------------------------------------------------------
+
+function session() { return state.session || {}; }
+function loggedIn() { return !!session().user; }
+
+function fillAccounts(select, accounts) {
+  const keep = select.value;
+  select.replaceChildren(...(accounts || []).map((a) => {
+    const o = document.createElement("option");
+    o.value = a.id;
+    o.textContent = a.label;
+    return o;
+  }));
+  if (keep && [...select.options].some((o) => o.value === keep)) select.value = keep;
+}
+
+function clock(iso) {
+  const d = new Date(iso);
+  return isNaN(d) ? iso : d.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+
+function renderSession() {
+  const s = session(), kit = s.kit;
+  const user = loggedIn();
+  $("kit-missing").hidden = kit !== "missing";
+  $("kit-missing-path").textContent = s.usb || "";
+  $("kit-new").hidden = kit !== "new" || envelopesShown;
+  $("recover").hidden = kit !== "broken" || envelopesShown;
+  $("conflict").hidden = !s.conflict;
+  $("login").hidden = !(kit === "ready" && !user && !s.conflict);
+  $("tabs").hidden = !user || envelopesShown;
+  document.querySelectorAll('[role="tabpanel"]').forEach((p) => {
+    if (!user || envelopesShown) p.hidden = true;
+    else p.hidden = $(p.getAttribute("aria-labelledby")).getAttribute("aria-selected") !== "true";
+  });
+  fillAccounts($("login-account"), s.accounts);
+  fillAccounts($("kit-account"), s.accounts);
+  const who = $("who");
+  who.hidden = !user;
+  who.className = "pill pill-ok";
+  who.textContent = s.user_label || "";
+  if (s.conflict) {
+    for (const side of ["disk", "usb"]) {
+      const c = s.conflict[side];
+      $(`choose-${side}`).textContent = `${side === "disk" ? "Kopia z dysku" : "Kopia z pamięci USB"} (zapis ${c.gen}, ${new Date(c.at).toLocaleString("pl-PL")})`;
+    }
+  }
+  if (!user) return;
+  const db = s.db || {};
+  $("kit-user").textContent = s.user_label || "–";
+  $("kit-disk").textContent = db.disk_error ? "błąd: " + db.disk_error : (db.saved ? "zapisana" : "zapisuję…");
+  $("kit-usb").textContent = db.usb_error ? "błąd zapisu" : db.usb_saved ? `zapisana o ${clock(db.usb_at)}` : (db.usb_at ? `zapisuję… (ostatnia o ${clock(db.usb_at)})` : "zapisuję…");
+  $("kit-path").textContent = s.usb || "–";
+  const warn = $("kit-warning");
+  warn.hidden = !(db.usb_error || db.disk_error);
+  if (db.usb_error) warn.textContent = "Kopia na pamięci USB się nie zapisuje. Sprawdź, czy pamięć zestawu jest włożona; bez niej nowy laptop nie przejmie najnowszych danych, a „Oddaj laptop” nie zadziała.";
+  if (db.disk_error) warn.textContent = "Kopia na dysku laptopa się nie zapisuje (" + db.disk_error + "). Zmiany nie są potwierdzane; zwolnij miejsce na dysku albo użyj innego laptopa.";
+}
+
+function showEnvelopes(list, intro) {
+  envelopesShown = true;
+  const ol = $("envelope-list");
+  ol.replaceChildren(...list.map((e) => {
+    const li = document.createElement("li");
+    li.className = "envelope";
+    const head = document.createElement("p");
+    head.className = "eyebrow";
+    head.textContent = (e.no ? `Koperta ${e.no} · ` : "") + e.label;
+    const pw = document.createElement("p");
+    pw.className = "password mono";
+    pw.textContent = e.password;
+    li.append(head, pw);
+    return li;
+  }));
+  $("envelopes").querySelector(".notice-text").textContent = intro;
+  $("envelopes").hidden = false;
+  render();
+  $("envelopes").scrollIntoView();
+}
+
+function envelopesDone() {
+  if (!confirm("Czy każde hasło jest w kopercie o swoim numerze? Panel nie pokaże ich ponownie.")) return;
+  $("envelope-list").replaceChildren();
+  $("envelopes").hidden = true;
+  envelopesShown = false;
+  render();
+}
+
+async function kitCreate() {
+  const n = Number($("kit-deputies").value);
+  if (!confirm(`Utworzyć konto gospodarza, ${n} ${n === 1 ? "konto zastępcy" : "konta zastępców"} i hasło odtworzenia na tej pamięci USB?`)) return;
+  await busy($("kit-create"), async () => {
+    const r = await api("/api/kit/create", { deputies: n });
+    if (!r.ok) return toast(r.data.error || "Nie udało się utworzyć kont.");
+    showEnvelopes(r.data.envelopes, "Hasła widać tylko teraz. Przepisz każde do koperty o tym numerze albo wydrukuj tę stronę, a potem zaklej koperty. Hasło odtworzenia otwiera kopię bazy, gdy plik kont zginie.");
+  });
+}
+
+async function login(event) {
+  event.preventDefault();
+  await busy($("login-send"), async () => {
+    const r = await api("/api/login", { account: $("login-account").value, password: $("login-password").value });
+    $("login-error").textContent = r.ok || r.data.code === "conflict" ? "" : (r.data.error || "Nie udało się zalogować.");
+    if (r.ok || r.data.code === "conflict") $("login-password").value = "";
+  });
+}
+
+async function recover(event) {
+  event.preventDefault();
+  await busy($("recover-send"), async () => {
+    const r = await api("/api/recover", { password: $("recover-password").value, deputies: Number($("recover-deputies").value) });
+    $("recover-error").textContent = r.ok ? "" : (r.data.error || "Nie udało się otworzyć kopii.");
+    if (!r.ok) return;
+    $("recover-password").value = "";
+    showEnvelopes(r.data.envelopes, "Kopia bazy jest otwarta, a konta są nowe. Stare koperty zniszcz. Przepisz nowe hasła do kopert o tych numerach albo wydrukuj tę stronę; nowe hasło odtworzenia zastępuje użyte.");
+  });
+}
+
+async function choose(prefer) {
+  const other = prefer === "disk" ? "z pamięci USB" : "z dysku";
+  if (!confirm(`Pracować dalej z wybraną kopią? Kopia ${other} zostanie zapisana na pamięci USB jako plik „konflikt” i nie będzie widoczna w panelu.`)) return;
+  const r = await api("/api/copy/choose", { prefer });
+  if (!r.ok) toast(r.data.error || "Nie udało się otworzyć kopii.");
+}
+
+async function newPassword() {
+  const sel = $("kit-account");
+  const name = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent : "";
+  if (!confirm(`Nadać nowe hasło kontu „${name}”? Stare hasło przestanie działać.`)) return;
+  await busy($("kit-password"), async () => {
+    const r = await api("/api/password/new", { account: sel.value });
+    if (!r.ok) return toast(r.data.error || "Nie udało się zmienić hasła.");
+    showEnvelopes(r.data.envelopes, "Nowe hasło widać tylko teraz. Włóż je do nowej koperty z numerem otwartej koperty i zaklej ją.");
+  });
+}
+
+async function logout() {
+  const r = await api("/api/logout");
+  if (!r.ok) toast(r.data.error || "Wylogowano, ale ostatnia kopia nie trafiła na pamięć USB.");
+}
+
+async function handBack() {
+  if (!confirm("Oddać laptop? Aplikacja zapisze ostatnią kopię na pamięci USB, usunie dane zestawu z dysku tego laptopa i zakończy pracę. Stacja pracuje dalej.")) return;
+  await busy($("hand-back"), async () => {
+    const r = await api("/api/hand-back");
+    if (!r.ok) return toast(r.data.error || "Nie udało się zapisać kopii na pamięci USB; dane zostają na dysku.", 9000);
+    stopped = true;
+    setOffline("Kopia jest na pamięci USB, a dane zestawu zniknęły z dysku tego laptopa. Wyjmij pamięć USB i oddaj laptop. Możesz zamknąć tę kartę.");
+    setPill("pill-wait", "Laptop oddany");
+  });
+}
+
+const OPS = {
+  configure: "Wysłanie konfiguracji", config_get: "Odczyt konfiguracji", card: "Odczyt karty", selftest: "Autotest",
+  kit_create: "Utworzenie kont zestawu", kit_recover: "Nowe konta po haśle odtworzenia", login: "Logowanie",
+  logout: "Wylogowanie", password_new: "Nowe hasło do koperty", hand_back: "Oddanie laptopa", copy_choose: "Wybór kopii bazy",
+};
+const ACCOUNT_OPS = new Set(["login", "logout", "password_new", "hand_back"]);
+
+function accountLabel(id) {
+  const a = (session().accounts || []).find((x) => x.id === id);
+  return a ? a.label : id;
+}
 
 function renderJournal() {
   const body = $("journal");
   const rows = (state.journal || []).map((e) => {
     const tr = document.createElement("tr");
     const when = new Date(e.at);
+    const detail = ACCOUNT_OPS.has(e.op) ? accountLabel(e.detail) : e.op === "copy_choose" ? (e.detail === "disk" ? "z dysku" : "z pamięci USB") : e.detail;
     const cells = [isNaN(when) ? e.at : when.toLocaleString("pl-PL"), e.station || "–", OPS[e.op] || e.op,
-      (e.ok ? "✓ " : "✗ ") + (e.detail || "")];
+      (e.ok ? "✓ " : "✗ ") + (detail || "")];
     cells.forEach((text, i) => {
       const td = document.createElement("td");
       td.textContent = text;
@@ -361,6 +527,7 @@ async function busy(button, fn) {
 }
 
 function needStation(withPrep) {
+  if (!loggedIn()) { toast("Najpierw zaloguj się hasłem z koperty."); return false; }
   if (!connected()) { toast("Najpierw podłącz stację przewodem USB."); return false; }
   if (withPrep && !prepMode()) { toast("Włącz tryb przygotowania: przytrzymaj przycisk pod naklejką serwisową."); return false; }
   return true;
@@ -492,7 +659,7 @@ function selectTab(id) {
     const on = t.id === id;
     t.setAttribute("aria-selected", String(on));
     t.tabIndex = on ? 0 : -1;
-    $(t.getAttribute("aria-controls")).hidden = !on;
+    $(t.getAttribute("aria-controls")).hidden = !on || !loggedIn() || envelopesShown;
   });
 }
 
@@ -528,6 +695,16 @@ function init() {
   $("read-card").addEventListener("click", readCard);
   $("save-card").addEventListener("click", () => { if (lastCard) download(`${lastCard.name || "WICI"}-karta.json`, lastCard); });
   $("quit").addEventListener("click", quit);
+  $("kit-create").addEventListener("click", kitCreate);
+  $("login-form").addEventListener("submit", login);
+  $("recover-form").addEventListener("submit", recover);
+  $("choose-disk").addEventListener("click", () => choose("disk"));
+  $("choose-usb").addEventListener("click", () => choose("usb"));
+  $("envelopes-print").addEventListener("click", () => window.print());
+  $("envelopes-done").addEventListener("click", envelopesDone);
+  $("kit-password").addEventListener("click", newPassword);
+  $("logout").addEventListener("click", logout);
+  $("hand-back").addEventListener("click", handBack);
   $("rescan").addEventListener("click", () => busy($("rescan"), async () => {
     await api("/api/rescan");
     toast("Szukam stacji na wszystkich portach USB.");

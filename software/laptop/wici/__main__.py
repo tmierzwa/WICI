@@ -19,7 +19,9 @@ import webbrowser
 
 from . import VERSION, serialport, store
 from .awake import Awake
+from .database import StorageError
 from .prep import Prep
+from .session import Session, usb_root
 from .usbproto import Station
 from .web import Panel, serve
 
@@ -60,12 +62,20 @@ def open_browser(url):
 
 def database_selftest(tmp):
     """Encrypted database of this runtime: accounts, snapshot on disk and stick, reopening on 'another laptop'."""
+    import sqlite3
+
     from . import database
+    (tmp / "usb").mkdir()
     kit, key = database.Kit.create(tmp / "usb" / "keys", {"gospodarz": "las rzeka most okno chleb"}, "odtworzenie",
                                    iterations=1000)
     assert kit.unlock("gospodarz", "Las  Rzeka most okno chleb") == key
     db = database.Database(key, tmp / "dysk", tmp / "usb" / "kopia", kit.recovery(), store.SCHEMA)
     store.Journal(db).add("WICI-000000", "", "selftest", True, "Szkoła nr 5")
+    try:
+        db.write(lambda c: c.execute("DELETE FROM journal"))
+        raise AssertionError("journal accepted DELETE")
+    except sqlite3.DatabaseError:
+        pass
     db.flush()
     db.hand_back()
     if any(b"Szko" in p.read_bytes() for p in (tmp / "usb" / "kopia").iterdir()) or any((tmp / "dysk").iterdir()):
@@ -81,7 +91,6 @@ def database_selftest(tmp):
 def selftest():
     import ctypes
     import hashlib
-    import sqlite3
     import tempfile
     import unicodedata
     from importlib import resources
@@ -112,16 +121,11 @@ def selftest():
     assert len(passwords.generate().split()) == passwords.ACCOUNT_WORDS
     assert configdoc.check({"role": "wezel", "ifac": "11" * 16, "radio": {"profile": "p1"}}) == []
     with tempfile.TemporaryDirectory() as tmp:
-        journal = store.Journal.plain(Path(tmp) / "j.sqlite")
-        journal.add("WICI-000000", "", "selftest", True)
-        try:
-            journal.db.write(lambda c: c.execute("DELETE FROM journal"))
-            raise AssertionError("journal accepted DELETE")
-        except sqlite3.DatabaseError:
-            pass
         checks.append(f"db {database_selftest(Path(tmp))}")
         token = secrets.token_urlsafe(24)
-        panel = Panel(Station(), None, journal, token, info())
+        (Path(tmp) / "zestaw").mkdir()
+        session = Session(Path(tmp) / "zestaw", Path(tmp) / "stan", iterations=1000)
+        panel = Panel(Station(), None, session, token, info())
         server = serve(panel, 0)
         threading.Thread(target=server.serve_forever, daemon=True).start()
         base = f"http://127.0.0.1:{server.server_address[1]}"
@@ -144,9 +148,22 @@ def selftest():
         req = urllib.request.Request(f"{base}/api/config/check", body, {"Cookie": cookie, "Content-Type": "application/json"})
         with urllib.request.urlopen(req, timeout=5) as r:
             assert json.loads(r.read())["problems"] == []
+
+        def post(path, value):
+            req = urllib.request.Request(f"{base}{path}", json.dumps(value).encode(),
+                                         {"Cookie": cookie, "Content-Type": "application/json"})
+            with urllib.request.urlopen(req, timeout=30) as r:
+                return json.loads(r.read())
+
+        envelopes = post("/api/kit/create", {"deputies": 1})["envelopes"]
+        assert [e["account"] for e in envelopes] == ["gospodarz", "zastepca-1", "odtworzenie"]
+        post("/api/logout", {})
+        post("/api/login", {"account": "zastepca-1", "password": envelopes[1]["password"]})
+        assert session.user == "zastepca-1"
+        checks.append("panel ok")
         server.shutdown()
         server.server_close()
-        journal.close()
+        session.close()
     print("selftest ok", info(), *checks)
     return 0
 
@@ -171,11 +188,16 @@ def main(argv=None):
             webbrowser.open(url)
         print(url)
         return 0
-    journal = store.Journal.plain(state / "dziennik.sqlite")
     token = secrets.token_urlsafe(24)
-    panel = Panel(None, None, journal, token, info())
+    panel = Panel(None, None, None, token, info())
+    usb = usb_root()
+    if usb is None:                              # uruchomienie ze źródeł: pamięć zestawu udaje katalog stanu
+        usb = state / "pamiec-usb"
+        usb.mkdir(exist_ok=True)
+        print(f"WICI: brak pamięci USB zestawu, konta i kopia w {usb}", flush=True)
+    panel.session = Session(usb, state, on_change=panel.changed)
     station = Station(args.port, on_change=panel.changed)
-    panel.station, panel.prep = station, Prep(station, journal)
+    panel.station, panel.prep = station, Prep(station, panel.session)
     server = serve(panel, args.http)
     port = server.server_address[1]
     write_instance(instance, port, token)
@@ -193,7 +215,10 @@ def main(argv=None):
         station.stop()
         awake.release()
         server.server_close()
-        journal.close()
+        try:
+            panel.session.close()
+        except StorageError as e:
+            print(f"WICI: ostatnia kopia bazy nie została zapisana: {e}", file=sys.stderr, flush=True)
         try:
             instance.unlink()
         except OSError:

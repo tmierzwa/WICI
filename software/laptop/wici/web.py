@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: MIT
 """Local panel: HTTP on 127.0.0.1 only, opened in the default browser of the laptop.
 
-Access needs the session token in an HttpOnly, SameSite=Strict cookie. The launcher opens
+Access needs the session token in an HttpOnly, SameSite=Strict cookie, and station operations a login
+with an envelope password (session.Session), because they write to the journal in the encrypted database. The launcher opens
 /start?t=<ticket>; a ticket works once, so the browser history does not reveal a working link, and a
 second START asks the running instance for a new one (POST /api/ticket with the session token). The Host header must name the loopback address (no DNS rebinding) and every
 POST must carry JSON with a loopback Origin, so another web page in the same browser cannot drive
@@ -17,8 +18,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib import resources
 from urllib.parse import parse_qs, urlsplit
 
-from . import VERSION, configdoc
+from . import VERSION, configdoc, database
 from .prep import OperationError
+from .session import NotLoggedIn
 
 STATIC = {"/": ("index.html", "text/html; charset=utf-8"), "/app.js": ("app.js", "text/javascript; charset=utf-8"),
           "/app.css": ("app.css", "text/css; charset=utf-8"), "/logo.svg": ("logo.svg", "image/svg+xml"),
@@ -30,8 +32,8 @@ LONG_POLL = 20
 class Panel:
     """State shared by request handlers: version counter for long polling and the operations."""
 
-    def __init__(self, station, prep, journal, token, info):
-        self.station, self.prep, self.journal, self.token, self.info = station, prep, journal, token, info
+    def __init__(self, station, prep, session, token, info):
+        self.station, self.prep, self.session, self.token, self.info = station, prep, session, token, info
         self.version = 0
         self.tickets = set()
         self.cond = threading.Condition()
@@ -61,7 +63,8 @@ class Panel:
             if since == self.version:
                 self.cond.wait(LONG_POLL)
             version = self.version
-        return {"v": version, "station": self.station.state, "journal": self.journal.recent(), "app": self.info}
+        return {"v": version, "station": self.station.state, "session": self.session.describe(),
+                "journal": self.session.recent(), "app": self.info}
 
 
 def make_handler(panel):
@@ -153,13 +156,28 @@ def make_handler(panel):
             except (UnicodeDecodeError, ValueError):
                 return self._send(400, b"{}")
             self.close_connection = False
-            route = ROUTES.get(urlsplit(self.path).path)
+            path = urlsplit(self.path).path
+            route = ROUTES.get(path)
             if route is None or not isinstance(body, dict):
                 return self._send(404, b"{}")
             try:
+                if path in NEEDS_LOGIN and not panel.session.user:
+                    raise NotLoggedIn()
                 result = route(panel, body)
             except OperationError as e:
                 return self._json(409, {"error": e.message, "field": e.field, "code": e.code})
+            except NotLoggedIn:
+                return self._json(401, {"error": "Zaloguj się hasłem z koperty.", "code": "login"})
+            except database.LoginError as e:
+                return self._json(401, {"error": str(e), "code": "password"})
+            except database.Conflict:
+                return self._json(409, {"error": "Kopia na dysku i kopia na pamięci USB rozeszły się. Wybierz, "
+                                                 "z którą pracować dalej.", "code": "conflict"})
+            except database.StorageError as e:
+                text = str(e)
+                return self._json(409, {"error": text[:1].upper() + text[1:] + ".", "code": "storage"})
+            except ValueError as e:
+                return self._json(400, {"error": str(e), "code": "invalid"})
             except Exception as e:   # noqa: BLE001 - panel zawsze dostaje odpowiedź, nie zerwane połączenie
                 return self._json(500, {"error": "Nieoczekiwany błąd aplikacji. Spróbuj ponownie; jeśli się powtarza, "
                                                  "uruchom START jeszcze raz.", "code": type(e).__name__})
@@ -188,6 +206,25 @@ def quit_app(panel, body):
     return {"ok": True}
 
 
+def hand_back(panel, body):
+    panel.session.hand_back()
+    return quit_app(panel, body)
+
+
+def _text(body, key):
+    value = body.get(key)
+    if not isinstance(value, str) or not value or len(value) > 200:
+        raise ValueError(f"brak pola {key}")
+    return value
+
+
+def _deputies(body):
+    n = body.get("deputies", 2)
+    if not isinstance(n, int) or isinstance(n, bool):
+        raise ValueError("liczba zastępców")
+    return n
+
+
 ROUTES = {
     "/api/config/check": check,
     "/api/config/read": lambda panel, body: panel.prep.read_config(),
@@ -196,8 +233,20 @@ ROUTES = {
     "/api/ifac/new": lambda panel, body: {"ifac": configdoc.new_ifac()},
     "/api/rescan": lambda panel, body: (panel.station.rescan(), {"ok": True})[1],
     "/api/quit": quit_app,
+    "/api/kit/create": lambda panel, body: panel.session.create(_deputies(body)),
+    "/api/login": lambda panel, body: (panel.session.login(_text(body, "account"), _text(body, "password")), {"ok": True})[1],
+    "/api/recover": lambda panel, body: panel.session.recover(_text(body, "password"), _deputies(body)),
+    "/api/copy/choose": lambda panel, body: (panel.session.choose(_text(body, "prefer")), {"ok": True})[1],
+    "/api/password/new": lambda panel, body: panel.session.new_password(_text(body, "account")),
+    "/api/logout": lambda panel, body: (panel.session.logout(), {"ok": True})[1],
+    "/api/hand-back": hand_back,
     "/api/ticket": lambda panel, body: {"ticket": panel.ticket()},
 }
+
+
+# Czynności na stacji piszą do dziennika w zaszyfrowanej bazie, więc wymagają zalogowania.
+NEEDS_LOGIN = {"/api/config/read", "/api/config/write", "/api/card", "/api/password/new", "/api/logout",
+               "/api/hand-back"}
 
 
 class Server(ThreadingHTTPServer):
