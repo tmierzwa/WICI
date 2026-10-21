@@ -35,6 +35,11 @@ constexpr uint32_t SERIES_MAX_MS = radiolink::P1_SERIES_MAX_MS;
 // z 7 najdłuższych ramek, 1365 ms): odczekiwany po starcie bez poprawnego rekordu długu.
 constexpr uint32_t MAX_DEBT_MS = SERIES_MAX_MS * 12;
 constexpr uint32_t CONFIRM_MS = 30000;        // potwierdzenie przyciskiem OK
+// FOFF: kanał LoRa 125 kHz ze środkiem 869,525 MHz mieści się w podpaśmie 869,4–869,65 MHz tylko przy
+// przesunięciu ≤ 62,5 kHz (radio.md, "Współdzielenie kanału"); granica z zapasem także dla P1. Błąd
+// kwarcu modułów (±20 ppm, około 17 kHz) mieści się w niej, a pomyłka o rząd wielkości nie wyprowadzi
+// nadawania poza podpasmo.
+constexpr int32_t FOFF_MAX_HZ = 50000;
 constexpr size_t LOG_ENTRIES = 16;            // dziennik zapasowy w RAM, gdy nie ma FRAM
 constexpr uint32_t CCA_MS = 50;               // kanał wolny przez 50 ms przed serią
 constexpr uint32_t CCA_GAP_MS = 10;           // przerwa między próbkami CCA ponad tyle zaczyna okno od nowa

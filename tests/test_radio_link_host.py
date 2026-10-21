@@ -457,8 +457,12 @@ int main() {
     printf("TESTRX %lu %ld %lu\n", static_cast<unsigned long>(t.rxOk), static_cast<long>(t.rssiSum), static_cast<unsigned long>(t.lqiSum));
 
     const char* foffOutside = bench.foff(2000000);
+    const char* foffBand = bench.foff(-50001);   // w zakresie układu, poza podpasmem: bez zapisu do układu
+    const char* foffEdge = bench.foff(50000) ? "error" : "-";
+    const long edgeOffset = static_cast<long>(radio.offset);
     const char* foffInside = bench.foff(1000) ? "error" : "-";
     printf("FOFF %s %s %ld\n", foffOutside ? foffOutside : "-", foffInside, static_cast<long>(radio.offset));
+    printf("FOFFBAND %s|%s %ld\n", foffBand ? foffBand : "-", foffEdge, edgeOffset);
     bench.printFoff();
 
     // Nośna po odczekaniu długu: stan układu w polu "marc", koniec po czasie.
@@ -631,11 +635,17 @@ int indexOf(uint8_t op) {
 struct RamStorage : journal::Storage {
     std::vector<uint8_t> data = std::vector<uint8_t>(512 * 1024, 0xFF);
     bool failWrites = false;  // zapis do FRAM odrzucony (np. uszkodzona pamięć)
+    long budget = -1;         // bajty zapisu do zaniku zasilania (zapis przerwany w połowie serii); -1 bez limitu
     bool read(uint32_t address, uint8_t* out, size_t count) override { memcpy(out, &data[address], count); return true; }
     bool write(uint32_t address, const uint8_t* in, size_t count) override {
         if (failWrites) return false;
-        memcpy(&data[address], in, count);
-        return true;
+        size_t n = count;
+        if (budget >= 0) {
+            if (static_cast<size_t>(budget) < n) n = static_cast<size_t>(budget);
+            budget -= static_cast<long>(n);
+        }
+        memcpy(&data[address], in, n);
+        return n == count;
     }
 };
 uint32_t uptime() { return millis() / 1000; }
@@ -883,6 +893,20 @@ int main() {
     journal::Journal journal5(ram);
     journal5.begin();
     printf("EMCCLEARRETRY %s %lu\n", retryError ? retryError : "-", static_cast<unsigned long>(journal5.emc()));
+    // Zanik zasilania w trakcie nadpisywania zatwierdzonego gniazda pierścienia wejść w tryb
+    // przygotowania: zapis przerwany, nie rekord uszkodzony (fałszywe PREP_RESTARTED przy kontroli naklejki).
+    RamStorage torn;
+    journal::Journal prepJournal(torn);
+    prepJournal.begin();
+    bool prepWritten = true;
+    for (uint32_t entry = 0; entry < 11; ++entry) prepWritten = prepJournal.enterPrep(entry) && prepWritten;
+    torn.budget = 10;
+    const bool tornWritten = prepJournal.enterPrep(11);
+    torn.budget = -1;
+    journal::Journal prepAfter(torn);
+    prepAfter.begin();
+    printf("PREPTORN %d %d %d %lu\n", prepWritten, tornWritten, prepAfter.prepCorrupt(),
+           static_cast<unsigned long>(prepAfter.prepEntries()));
     return 0;
 }
 """
@@ -993,7 +1017,9 @@ class BenchTests(unittest.TestCase):
         self.assertEqual(line(self.out, "TESTRX"), "TESTRX 3 -240 90")
 
     def test_frequency_offset_and_carrier_via_driver(self):
-        self.assertEqual(line(self.out, "FOFF"), "FOFF FOFF outside the radio range (about +-1 MHz) - 40")
+        self.assertEqual(line(self.out, "FOFF"), "FOFF FOFF outside the subband: max +-50000 Hz - 40")
+        # 125 kHz channel at 869.525 MHz leaves the 869.4-869.65 MHz subband beyond 62.5 kHz
+        self.assertEqual(line(self.out, "FOFFBAND"), "FOFFBAND FOFF outside the subband: max +-50000 Hz|- 2000")
         self.assertIn('{"foff_hz":1000,"set":true,"freqoff":40,"applied_hz":1000.0,"step_hz":25.00}', self.out)
         self.assertEqual(line(self.out, "TXCW"), "TXCW - 1")
         self.assertIn('"marc":"TX"', next(text for text in self.out if text.startswith('{"txcw":true')))
@@ -1124,6 +1150,11 @@ class Sx1262LinkTests(unittest.TestCase):
         self.assertEqual(line(self.out, "EMCCLEARFAIL"),
                          "EMCCLEARFAIL -|EMC journal clear failed: mode returns after restart|0 1")
         self.assertEqual(line(self.out, "EMCCLEARRETRY"), "EMCCLEARRETRY - 0")
+
+    def test_torn_overwrite_of_a_small_record_is_not_corrupt(self):
+        # The mark is cleared before the slot is overwritten: a torn write leaves an uncommitted slot,
+        # so the 11 entries stay readable and preparation entries are not flagged as tampered.
+        self.assertEqual(line(self.out, "PREPTORN"), "PREPTORN 1 0 0 11")
 
 
 if __name__ == "__main__":
