@@ -44,4 +44,6 @@ for (const scenario of SCENARIOS) {
     console.log(`  stanowisko: ${JSON.stringify(o.post.requests.map((r) => [r.number, r.type, r.category, r.people, r.urgency, r.revision, r.received_acked, r.state_acked, r.identity]))}`);
   }
 }
-process.exit(failed ? 1 : 0);
+// Bez process.exit(): Node potrafi się na nim zakleszczyć, gdy V8 kompiluje w tle
+// (wątek kompilatora czeka na odśmiecanie, które ma zrobić kończący się wątek główny).
+process.exitCode = failed ? 1 : 0;
