@@ -24,15 +24,17 @@ import threading
 import time
 import unittest
 import unittest.mock
+from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 LAPTOP = ROOT / "software" / "laptop"
 sys.path.insert(0, str(LAPTOP))
 sys.path.insert(0, str(ROOT / "software" / "reference"))
 
-from wici import configdoc, serialport, store, usbproto  # noqa: E402
+from wici import configdoc, serialport, store, syscrypto, usbproto  # noqa: E402
 from wici.prep import OperationError, Prep  # noqa: E402
 from wici.web import Panel, serve  # noqa: E402
+from wici import __main__ as wici_main  # noqa: E402
 import reference  # noqa: E402
 
 MAIN_KEY, BACKUP_KEY = bytes(range(64)), bytes(range(64, 128))
@@ -332,6 +334,36 @@ class SerialPortTest(unittest.TestCase):
             os.close(slave)
 
 
+class SysCryptoTest(unittest.TestCase):
+    """System AES and PBKDF2 (CNG, CommonCrypto, libcrypto): known answers and the sealed copy format."""
+
+    def test_selfcheck_fails_without_assert(self):
+        with unittest.mock.patch.object(syscrypto, "aes_cbc", return_value=bytes(48)):
+            with self.assertRaises(syscrypto.CryptoError):
+                syscrypto.selfcheck()
+
+    def test_known_answers_and_tampering(self):
+        self.assertIn(syscrypto.selfcheck(), ("windows", "mac", "linux"))
+
+    def test_pbkdf2_matches_hashlib(self):
+        if not hasattr(hashlib, "pbkdf2_hmac"):
+            self.skipTest("hashlib bez OpenSSL")
+        self.assertEqual(syscrypto.pbkdf2(b"haslo z koperty", b"sol", 1000),
+                         hashlib.pbkdf2_hmac("sha256", b"haslo z koperty", b"sol", 1000, 32))
+
+    def test_sealed_copy_is_fresh_and_bound(self):
+        key = bytes(range(32))
+        data = bytes(range(256)) * 1000
+        a, b = syscrypto.seal(key, data, b"gen 7"), syscrypto.seal(key, data, b"gen 7")
+        self.assertNotEqual(a, b)                                 # losowy IV przy każdym zapisie
+        self.assertEqual(syscrypto.open_(key, b, b"gen 7"), data)
+        for broken in (a[:1 + 16] + bytes([a[17] ^ 1]) + a[18:], b"\x02" + a[1:], a[:40]):
+            with self.assertRaises(syscrypto.CryptoError):
+                syscrypto.open_(key, broken, b"gen 7")
+        with self.assertRaises(syscrypto.CryptoError):
+            syscrypto.open_(bytes(32), a, b"gen 7")
+
+
 class JournalTest(unittest.TestCase):
     def test_append_only(self):
         import sqlite3
@@ -396,7 +428,7 @@ class PanelTest(unittest.TestCase):
         return r, data
 
     def cookie(self):
-        r, _ = self.request("GET", "/start?t=tok-123")
+        r, _ = self.request("GET", f"/start?t={self.panel.ticket()}")
         self.assertEqual(r.status, 303)
         self.assertIn("HttpOnly", r.getheader("Set-Cookie"))
         self.assertIn("SameSite=Strict", r.getheader("Set-Cookie"))
@@ -414,6 +446,20 @@ class PanelTest(unittest.TestCase):
             self.assertEqual(self.request("GET", path, headers={"Cookie": c})[0].status, 200, path)
         r, body = self.request("GET", "/api/state?v=-1", headers={"Cookie": c})
         self.assertEqual(json.loads(body)["station"]["phase"], "searching")
+
+    def test_start_link_works_once_and_second_start_gets_a_new_one(self):
+        self.assertEqual(self.request("GET", "/start?t=tok-123")[0].status, 403)   # sam token panelu nie otwiera
+        ticket = self.panel.ticket()
+        self.assertEqual(self.request("GET", f"/start?t={ticket}")[0].status, 303)
+        self.assertEqual(self.request("GET", f"/start?t={ticket}")[0].status, 403)
+        with tempfile.TemporaryDirectory() as tmp:
+            inst = Path(tmp) / "instance.json"
+            wici_main.write_instance(inst, self.port, "tok-123")
+            url = wici_main.running_instance(inst)
+            self.assertTrue(url.startswith(f"http://127.0.0.1:{self.port}/start?t="))
+            self.assertEqual(self.request("GET", urlsplit(url)._replace(scheme="", netloc="").geturl())[0].status, 303)
+            wici_main.write_instance(inst, self.port, "wrong")
+            self.assertIsNone(wici_main.running_instance(inst))
 
     def test_foreign_host_origin_and_content_type_are_refused(self):
         c = self.cookie()
