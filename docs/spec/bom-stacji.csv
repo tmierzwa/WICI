@@ -103,11 +103,11 @@ przetwornica (poziom 3),1,przycisk RESTART,"chwilowy, zwierny, montaż panelowy,
 przetwornica (poziom 3),1,sygnalizator ostrzegawczy,"bursztynowa dioda świecąca i brzęczyk z generatorem 12 V, ≥75 dB w odległości 10 cm, pobór ≤30 mA",CUI Devices,Kingstate,"ostrzeżenie przy 11,8 V; sprawdzić słyszalność w schronieniu"
 USB (poziomy 2–3),1,pamięć USB,"64 GB, sprawdzony pakiet offline i klucz szyfrowania bazy",producent A,producent B,obrazy jeszcze nie powstały
 przewody (poziom 3),1,przewód Ethernet,"kategoria 5e, LAN",producent A,producent B,element powszechnie dostępny
-przewody (poziom 3),1,adapter USB–Ethernet,sterowniki offline dla obsługiwanych systemów,Realtek RTL8153,ASIX AX88179,wymagane zakwalifikowane zamienniki
+przewody (poziom 3),1,adapter USB–Ethernet,sterownik wbudowany w Windows 10 i 11; macOS i Linux bez instalowania,producent A,producent B,wymagane dwa zakwalifikowane wykonania kontrolera; kwalifikacja na każdym systemie
 dokumenty,3,karta obsługi stacji,"kartka A4 dwustronna, laminowana, przymocowana do skrzynki; wersje PL, UK i EN; piktogramy kategorii jak na ekranie",otwarty projekt,niezależny druk,teksty z tabeli tekstów ekranu; sprawdzana w T1 i T8
 dokumenty,1,instrukcja gospodarza,"drukowana, w trzech językach; bez kluczy, haseł i danych mieszkańców",otwarty projekt,niezależny druk,po odbiorze modułów
 dokumenty,1,formularze papierowe i dziennik,"blok formularzy zgłoszenia (dwa egzemplarze) i papierowy dziennik zmian",otwarty projekt,niezależny druk,pola według karty obsługi
-dokumenty (poziom 3),1,instrukcja strony i plakat,"jednostronicowa instrukcja strony; plakat z nazwą sieci Wi-Fi, hasłem i adresem strony dla routera sprawdzonego w przygotowaniu, wersja HTML offline na pamięci USB",otwarty projekt,niezależny druk,po odbiorze pakietu START
+dokumenty (poziom 3),1,instrukcja strony i plakat,"jednostronicowa instrukcja strony; plakat z kodami QR sieci Wi-Fi i adresu strony drukowany z panelu na miejscu, wersja HTML offline na pamięci USB",otwarty projekt,niezależny druk,po odbiorze pakietu START
 wyposażenie,1,odbiornik radiowy FM/DW,"FM i fale długie 225 kHz (Polskie Radio Program 1), w miarę możliwości DAB+; zasilanie bateryjne AA lub korbką, zapas baterii na 72 h pracy",producent A,producent B,do wyboru; odbiór komunikatów oficjalnych
 wyposażenie,2,radiotelefon PMR446,"ręczny, bez pozwolenia; zasilanie AA z zapasem; kanał i podton ustalone w planie",producent A,producent B,głosowy kanał zastępczy do gońca lub sąsiedniego punktu; zasięg w zabudowie zwykle kilkaset metrów
 wyposażenie miejsca,1,gaśnica,"proszkowa lub gaśnica do pożarów urządzeń elektrycznych, przy stacji",zasób miejsca,zasób miejsca,zapewnia miejsce uruchomienia
