@@ -749,12 +749,15 @@ class SessionTest(unittest.TestCase):
         stick, moved = self.root / "usb", self.root / "usb-e"
         a.db.flush()
         stick.rename(moved)                                 # wypadła i wróciła pod inną literą dysku
+        stick.mkdir()                                       # a starą literę zajęła inna pamięć
         a.add("WICI-3FA21C", "", "configure", True, "bez pamięci")
+        with self.assertRaises(database.StorageError):
+            a.hand_back()
         self.assertFalse(a.adopt(self.root / "nie-ma"))
         self.assertTrue(a.adopt(moved))
         self.assertEqual(a.describe()["usb"], str(moved))
         a.db.flush(timeout=5)                               # zmiana sprzed przełączenia jest już na pamięci
-        self.assertFalse(stick.exists())
+        self.assertEqual(list(stick.iterdir()), [])         # na obcej pamięci nic nie powstało
         a.hand_back()
         self.assertFalse(any((self.root / "a" / "baza").iterdir()))
         b = session.Session(moved, self.root / "b", iterations=1000)
@@ -775,7 +778,9 @@ class SessionTest(unittest.TestCase):
         self.assertFalse(a.adopt(moved))
         other = self.root / "inny"
         other.mkdir()
-        session.Session(other, self.root / "c", iterations=1000).create(0)   # inny zestaw
+        c = session.Session(other, self.root / "c", iterations=1000)
+        self.addCleanup(c.close)
+        c.create(0)                                         # inny zestaw
         self.assertFalse(a.adopt(other))
         self.assertEqual(a.describe()["usb"], str(stick))
         moved.rename(stick)

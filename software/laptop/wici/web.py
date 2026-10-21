@@ -218,7 +218,7 @@ def ticket(panel, body):
     if isinstance(usb, str) and usb and panel.session:
         try:
             panel.session.adopt(usb)
-        except (OSError, database.StorageError):
+        except (OSError, ValueError, database.StorageError):
             pass                                     # panel dalej ostrzega o kopii na pamięci USB
     return {"ticket": panel.ticket()}
 

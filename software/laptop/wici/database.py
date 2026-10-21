@@ -278,6 +278,11 @@ class Database:
         self.disk_dir = Path(disk_dir)
         self.usb_dir = Path(usb_dir) if usb_dir else None
         self.disk_dir.mkdir(parents=True, exist_ok=True)
+        if self.usb_dir:
+            try:
+                self.usb_dir.mkdir(exist_ok=True)    # teraz, przy pamięci zestawu: później pod tą literą może być inna
+            except OSError:
+                pass                                 # wątek pamięci USB zgłosi błąd zapisu
         found = [c for d, place in ((self.disk_dir, "disk"), (self.usb_dir, "usb")) if d
                  for c in (_read(d / n, data_key, place) for n in NAMES) if c]
         disk = max((c for c in found if c.place == "disk"), key=lambda c: c.gen, default=None)
@@ -424,7 +429,6 @@ class Database:
                     return
                 upto, gen, blob = self.pending
             try:
-                self.usb_dir.mkdir(exist_ok=True)   # bez parents: wyjęta pamięć nie staje się katalogiem na dysku
                 _write_durable(self.usb_dir / NAMES[gen % 2], blob)
             except OSError as e:
                 with self.cond:
