@@ -214,11 +214,17 @@ def hand_back(panel, body):
 
 
 def destroy(panel, body):
-    """ZNISZCZ DANE: the station gets `destroy` (OK on the station), the laptop destroys its data at once."""
+    """ZNISZCZ DANE: the laptop destroys its data at once, then the station gets `destroy` (OK on the station).
+
+    The station is asked whenever the laptop part started, also when a file could not be deleted."""
     if body.get("confirm") != "ZNISZCZ":
         raise ValueError("brak potwierdzenia")
-    station = panel.prep.destroy_station()
-    return {**panel.session.destroy(), "station": station}
+    try:
+        result = panel.session.destroy()        # NotLoggedIn: nic się nie dzieje, także na stacji
+    except database.StorageError:
+        panel.prep.destroy_station()            # dane laptopa już niszczone, tylko nie każdy plik zniknął
+        raise
+    return {**result, "station": panel.prep.destroy_station()}
 
 
 def ticket(panel, body):

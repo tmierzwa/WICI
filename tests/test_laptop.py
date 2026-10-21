@@ -800,9 +800,25 @@ class SessionTest(unittest.TestCase):
             a.create(1)                                     # do ponownego uruchomienia nic nie powstaje
         with self.assertRaises(database.StorageError):
             a.login("gospodarz", envelopes[0]["password"])
+        prep = unittest.mock.Mock()
         with self.assertRaises(session.NotLoggedIn):
-            a.destroy()
+            web.destroy(Panel(None, prep, a, "tok", {}), {"confirm": "ZNISZCZ"})
+        prep.destroy_station.assert_not_called()           # bez zalogowania stacja nie dostaje polecenia
         self.assertEqual(self.session("b").describe()["kit"], "new")
+
+    def test_destroy_reports_a_copy_still_being_written(self):
+        a = self.session("a")
+        a.create(0)
+        a.db.flush()
+        stuck = threading.Thread(target=time.sleep, args=(10,), daemon=True, name="wici-kopia-usb")
+        stuck.start()
+        a.db.threads.append(stuck)                          # zapis na pamięci USB, który utknął
+        with unittest.mock.patch.object(stuck, "join"):
+            with self.assertRaises(database.StorageError) as e:
+                a.destroy()
+        self.assertIn("zapis kopii w toku (wici-kopia-usb)", str(e.exception))
+        self.assertEqual(a.describe()["kit"], "destroyed")
+        self.assertEqual(list((self.root / "usb" / "keys").iterdir()), [])
 
     def test_destroy_without_stick(self):
         a = self.session("a")

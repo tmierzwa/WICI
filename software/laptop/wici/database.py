@@ -492,7 +492,8 @@ class Database:
         self.key = None
         dirs = [self.disk_dir] + ([self.usb_dir] if self.usb_dir else [])
         files = [Path(keys_dir) / n for n in (ACCOUNTS, KIT_KEY)] if keys_dir else []
-        failed = []
+        # Zapis, który utknął (np. na pamięci USB), może skończyć się już po usunięciu: osoba musi o tym wiedzieć.
+        failed = [f"zapis kopii w toku ({t.name})" for t in self.threads if t.is_alive()]
         for d in dirs:
             try:
                 files += [f for f in d.iterdir() if f.name in NAMES or f.name.startswith("konflikt-")]
