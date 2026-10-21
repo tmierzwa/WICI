@@ -19,6 +19,18 @@ Stacja pilotażowa składa się z gotowych modułów połączonych przewodami w 
 | obudowa | kupiona, IP40 lub lepsza, z przepustem anteny i 12 V, z odciążeniem przewodów; koszyk 4 × AA dostępny bez narzędzi | do wyboru z wymiarów modułów |
 | antena | zewnętrzna 868 MHz, zysk ≤6 dBi, zwarta dla prądu stałego, z odgromnikiem przy wejściu do budynku ([radio](radio.md#dwa-wykonania)) | jak w etapie 0 |
 
+**Seeed XIAO ESP32S3 z Wio-SX1262 wobec wymagań (2026-10-21, z dokumentów producenta i programu R0, bez pomiaru):**
+
+| Wymaganie | Stan |
+|---|---|
+| ESP32-S3, SX1262 z TCXO, flash ≥8 MiB, USB-C do USB-OTG, złącze anteny | spełnione: 8 MB flash, TCXO 1,8 V z DIO3, u.FL na Wio |
+| VBUS oddzielony od szyny 5 V diodą na płytce | niepotwierdzone: pin 5V jest według producenta siecią VBUS, a producent zaleca diodę po stronie zewnętrznego źródła; diody na płytce nie podaje. Przy podłączonym laptopie VBUS zasilałby szynę 5 V stacji z C ≥1000 µF. Rozstrzyga schemat XIAO albo pomiar |
+| wyprowadzenia dla stacji | niewystarczające bez rozszerzenia: wolne są tylko D0–D7 (GPIO1–6, 43, 44), bo D8–D10 to SPI wspólne z Wio, a NSS, NRST, BUSY, DIO1 i RXEN zajmują GPIO38–42 przez złącze B2B. Stacja potrzebuje 16–17 sygnałów: CS FRAM i ekranu, EXTCOMIN, DISP, LED, brzęczyk, 4 przyciski, CISZA, przycisk przygotowania, INT i KILL wyłącznika, 2 wejścia ADC (AA, 12 V), ewentualnie odłączanie dzielników. Brakuje 8–9: potrzebny ekspander I/O albo przyciski na drabince rezystorowej (CISZA zostaje na własnym wejściu). GPIO43/44 to UART0 (komunikaty ROM przy starcie), więc tylko jako wejścia |
+| deklaracja zgodności UE | nie znaleziona |
+| oprogramowanie RNode | `rnodeconf` (Reticulum `e40191b`) obsługuje płytkę (model 0xDD, 850–950 MHz), z ostrzeżeniem producenta, że to wsparcie eksperymentalne |
+
+Wniosek: płytka nadaje się do prób przy stole (R0) i jako wzorzec RNode, a na stację pilotażową tylko z ekspanderem I/O i potwierdzonym oddzieleniem VBUS. Kandydaci z większą liczbą wolnych GPIO mają w tym przewagę. Źródła: [mapa pinów XIAO ESP32S3](https://wiki.seeedstudio.com/xiao_esp32s3_pin_multiplexing/), [zasilanie przez pin 5V](https://forum.seeedstudio.com/t/how-to-power-xiao-esp32s3-from-5v-vin-vbus-with-diode/281611), [rnodeconf](https://github.com/markqvist/Reticulum/blob/e40191b/RNS/Utilities/rnodeconf.py), [program R0](../../hardware/radio-pair/src/main.cpp).
+
 ### Tor zasilania
 
 ```text
