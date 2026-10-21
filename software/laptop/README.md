@@ -36,7 +36,9 @@ Testy obejmują reguły dokumentu `configure` (także zgodność z regułą teks
 python3.14 build/build_usb.py --out ../../dist/wici-usb
 ```
 
-Skrypt pobiera przypięte środowiska Pythona ([runtimes.json](build/runtimes.json), sprawdzane SHA-256), przycina je i składa drzewo pamięci z programami START, instrukcją i manifestem. Do `START-WINDOWS.exe` potrzebny jest MinGW-w64 (`x86_64-w64-mingw32-gcc`) albo gotowy plik podany przez `--windows-launcher`.
+Skrypt pobiera przypięte środowiska Pythona ([runtimes.json](build/runtimes.json), sprawdzane SHA-256), przycina je i składa drzewo pamięci z programami START, instrukcją i manifestem. Do `START-WINDOWS.exe` potrzebny jest MinGW-w64 (`x86_64-w64-mingw32-gcc`) albo gotowy plik podany przez `--windows-launcher`. Katalog `--out` jest zastępowany w całości, więc skrypt odmawia, gdy to nie jest poprzednia budowa (brak `build-manifest.json`) albo gdy są w nim konta lub kopia bazy (`keys/`, `kopia/`).
+
+Pamięć zapisuje się bez znacznika kwarantanny macOS: drzewo z archiwum pobranego przeglądarką (np. artefakt `wici-usb` z CI) oczyszcza się przed zapisem poleceniem `xattr -dr com.apple.quarantine <katalog>`, inaczej macOS uruchamia START-MAC z kopii tymczasowej bez reszty pamięci. Archiwum ZIP artefaktu nie zachowuje prawa wykonywania: na pamięci FAT32 nadaje je montowanie, a do próby z dysku APFS albo ext4 trzeba `chmod +x` na `START-MAC.app/Contents/MacOS/START` i `runtime/*/bin/python3.14` (START-LINUX.sh i tak uruchamia się przez `sh`).
 
 | Katalog | Zawartość |
 |---|---|

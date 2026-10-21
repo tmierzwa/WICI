@@ -5,7 +5,6 @@
 "use strict";
 
 const $ = (id) => document.getElementById(id);
-const ADDRESS_MAX = 64, PHRASE_MAX = 96, ADDRESSES = 8, PHRASES = 11;
 const LANGS = ["PL", "UK", "EN"];
 const enc = new TextEncoder();
 const bytes = (s) => enc.encode(String(s).normalize("NFC")).length;
@@ -13,7 +12,7 @@ const bytes = (s) => enc.encode(String(s).normalize("NFC")).length;
 let state = { v: -1, station: { phase: "searching" }, session: {}, journal: [], app: {} };
 let offline = false, stopped = false, showAll = false, lastCard = null, checkTimer = null, checkSeq = 0;
 let envelopesShown = false;
-let lastProblems = [];
+let limits = null;                      // z aplikacji (configdoc): formularz powstaje po pierwszym stanie
 
 // ---- Komunikacja z aplikacją ----------------------------------------------------------------
 
@@ -59,14 +58,19 @@ function setOffline(text) {
 
 // ---- Stan stacji ------------------------------------------------------------------------------
 
+// Tylko przy zmianie: #conn ma role="status", więc czytnik ekranu ogłasza każdą zmianę tekstu.
 function setPill(kind, text) {
   const p = $("conn");
-  p.className = "pill " + kind;
-  p.textContent = text;
+  if (p.className !== "pill " + kind) p.className = "pill " + kind;
+  if (p.textContent !== text) p.textContent = text;
 }
 
 function station() { return state.station || {}; }
 function connected() { return station().phase === "connected"; }
+function configured() {
+  const s = station(), st = s.status || {};
+  return "configured" in st ? st.configured : (s.hello || {}).configured;
+}
 function prepMode() {
   const s = station();
   return !!((s.status && "prep" in s.status) ? s.status.prep : s.hello && s.hello.prep);
@@ -92,7 +96,7 @@ function power(p) {
 
 const PROBLEMS = {
   permission: (p) => [`Brak uprawnień do portu `, code(p.port), `. W terminalu wpisz `, code("sudo usermod -aG dialout $USER"),
-    ` (w Arch Linux grupa `, code("uucp"), `), wyloguj się i zaloguj ponownie. Albo uruchom komputer z pamięci USB zestawu.`],
+    ` (w Arch Linux grupa `, code("uucp"), `), wyloguj się i zaloguj ponownie. Bez hasła administratora tego komputera użyj innego laptopa.`],
   busy: (p) => [`Port `, code(p.port), ` jest zajęty przez inny program, np. monitor portu szeregowego. Zamknij go.`],
   other: (p) => [`Nie udało się otworzyć portu `, code(p.port), `: ${p.detail || "nieznany błąd"}.`],
   missing: (p) => [`Nie ma portu `, code(p.port), `. Sprawdź przewód USB i nazwę portu.`],
@@ -102,6 +106,10 @@ function code(text) { const c = document.createElement("code"); c.textContent = 
 
 function render() {
   if (stopped) return;                  // po „Zakończ” albo „Oddaj laptop” spóźniona odpowiedź nie zmienia ekranu
+  if (!limits && state.app && state.app.limits) {
+    limits = state.app.limits;
+    initForm();
+  }
   const s = station(), h = s.hello || {}, st = s.status || {};
   $("search").hidden = s.phase === "connected" || s.phase === "incompatible";
   $("station").hidden = !$("search").hidden;
@@ -128,8 +136,7 @@ function render() {
     const pill = $("st-prep");
     pill.className = "pill " + (prep ? "pill-ok" : "pill-warn");
     pill.textContent = prep ? "Tryb przygotowania" : "Zwykła praca";
-    const configured = "configured" in st ? st.configured : h.configured;
-    $("st-config").textContent = configured ? `nr ${st.config_seq != null ? st.config_seq : "?"}` : "brak (nowa stacja)";
+    $("st-config").textContent = configured() ? `nr ${st.config_seq != null ? st.config_seq : "?"}` : "brak (nowa stacja)";
     $("st-power").textContent = power(st.power);
     $("st-uptime").textContent = uptime(st.uptime);
     $("st-fw").textContent = h.fw || st.fw || "–";
@@ -138,7 +145,7 @@ function render() {
     banner.className = "banner";
     if (s.phase === "incompatible") {
       banner.classList.add("banner-alarm");
-      banner.textContent = `Stacja obsługuje protokół w wersji ${(h.contracts || []).join(", ") || "?"}, a ta aplikacja wersję 2. Potrzebna jest zgodna wersja aplikacji albo oprogramowania stacji.`;
+      banner.textContent = `Stacja obsługuje protokół w wersji ${(h.contracts || []).join(", ") || "?"}, a ta aplikacja wersję ${(state.app || {}).contract || "?"}. Potrzebna jest zgodna wersja aplikacji albo oprogramowania stacji.`;
     } else if (!prep) {
       banner.textContent = "Konfiguracja i karta wymagają trybu przygotowania: przytrzymaj ok. 3 s przycisk pod naklejką serwisową. Panel zauważy to sam.";
     }
@@ -156,8 +163,10 @@ function session() { return state.session || {}; }
 function loggedIn() { return !!session().user; }
 
 function fillAccounts(select, accounts) {
+  const list = accounts || [];
+  if (list.length === select.options.length && list.every((a, i) => select.options[i].value === a.id)) return;   // otwarta lista zostaje
   const keep = select.value;
-  select.replaceChildren(...(accounts || []).map((a) => {
+  select.replaceChildren(...list.map((a) => {
     const o = document.createElement("option");
     o.value = a.id;
     o.textContent = a.label;
@@ -176,17 +185,19 @@ function renderSession() {
   const user = loggedIn();
   $("kit-missing").hidden = kit !== "missing";
   $("destroyed").hidden = kit !== "destroyed";
-  if (kit === "destroyed") $("destroyed-station").textContent = DESTROY_STATION[(state.destroy || {}).state || "absent"](state.destroy || {});
+  if (kit === "destroyed") {
+    $("destroyed-usb").hidden = s.destroyed_usb === false;
+    $("destroyed-no-usb").hidden = s.destroyed_usb !== false;
+    const d = state.destroy || {};
+    $("destroyed-station").textContent = DESTROY_STATION[d.state || "pending"](d);
+  }
   $("kit-missing-path").textContent = s.usb || "";
   $("kit-new").hidden = kit !== "new" || envelopesShown;
   $("recover").hidden = kit !== "broken" || envelopesShown;
   $("conflict").hidden = !s.conflict;
   $("login").hidden = !(kit === "ready" && !user && !s.conflict);
   $("tabs").hidden = !user || envelopesShown;
-  document.querySelectorAll('[role="tabpanel"]').forEach((p) => {
-    if (!user || envelopesShown) p.hidden = true;
-    else p.hidden = $(p.getAttribute("aria-labelledby")).getAttribute("aria-selected") !== "true";
-  });
+  showTabs();
   fillAccounts($("login-account"), s.accounts);
   fillAccounts($("kit-account"), s.accounts);
   const who = $("who");
@@ -207,7 +218,8 @@ function renderSession() {
   $("kit-path").textContent = s.usb || "–";
   const warn = $("kit-warning");
   warn.hidden = !(db.usb_error || db.disk_error);
-  if (db.usb_error) warn.textContent = "Kopia na pamięci USB się nie zapisuje. Sprawdź, czy pamięć zestawu jest włożona; po ponownym włożeniu uruchom z niej START, a panel zapisze kopię na niej także pod nową literą dysku. Bez pamięci nowy laptop nie przejmie najnowszych danych, a „Oddaj laptop” nie zadziała.";
+  if (db.usb_error === "inna pamięć USB niż pamięć zestawu") warn.textContent = "Pod ścieżką pamięci zestawu jest inna pamięć USB: panel nic na niej nie zapisuje. Włóż pamięć zestawu, z której uruchomiono START.";
+  else if (db.usb_error) warn.textContent = "Kopia na pamięci USB się nie zapisuje. Sprawdź, czy pamięć zestawu jest włożona; po ponownym włożeniu uruchom z niej START, a panel zapisze kopię na niej także pod nową literą dysku. Bez pamięci nowy laptop nie przejmie najnowszych danych, a „Oddaj laptop” nie zadziała.";
   if (db.disk_error) warn.textContent = "Kopia na dysku laptopa się nie zapisuje (" + db.disk_error + "). Zmiany nie są potwierdzane; zwolnij miejsce na dysku albo użyj innego laptopa.";
 }
 
@@ -294,11 +306,12 @@ async function logout() {
 }
 
 const DESTROY_STATION = {
+  pending: () => "Sprawdzam, czy stacja jest podłączona…",
   absent: () => "Stacja nie była podłączona. Zniszcz dane na stacji: STAN → USŁUGI → ZNISZCZ DANE, potem GÓRA, DÓŁ, GÓRA, OK.",
   asking: () => "Wysyłam polecenie do stacji…",
   confirm: (d) => `Stacja pyta o zniszczenie danych: naciśnij na niej OK w ciągu ${d.confirm_s || 30} s.`,
   ok: () => "Stacja zniszczyła swoje dane i uruchomiła się bez konfiguracji.",
-  refused: (d) => `Stacja nie zniszczyła danych: ${d.message || "brak odpowiedzi"} Zniszcz je na stacji: STAN → USŁUGI → ZNISZCZ DANE.`,
+  refused: (d) => `Stacja nie zniszczyła danych: ${d.message || "brak odpowiedzi stacji."} Zniszcz je na stacji: STAN → USŁUGI → ZNISZCZ DANE.`,
 };
 
 async function destroyData() {
@@ -381,8 +394,9 @@ function removeButton(label, onClick) {
 }
 
 function addAddress(value) {
+  if (!limits) return;                  // formularz powstaje dopiero z limitami z aplikacji
   const list = $("addresses");
-  if (list.children.length >= ADDRESSES) return toast(`Najwyżej ${ADDRESSES} adresów.`);
+  if (list.children.length >= limits.addresses) return toast(`Najwyżej ${limits.addresses} adresów.`);
   const row = document.createElement("div");
   row.className = "row";
   const cell = document.createElement("div");
@@ -393,15 +407,16 @@ function addAddress(value) {
   input.placeholder = "np. Szkoła Podstawowa nr 2, ul. Szkolna 4, wejście B";
   const err = document.createElement("p");
   err.className = "field-error";
-  cell.append(input, counter(input, ADDRESS_MAX), err);
+  cell.append(input, counter(input, limits.address), err);
   row.append(cell, removeButton("Usuń adres", () => { row.remove(); renumber(); changed(); }));
   list.appendChild(row);
   renumber();
 }
 
 function addPhrase(values) {
+  if (!limits) return;
   const list = $("phrases");
-  if (list.children.length >= PHRASES) return toast(`Najwyżej ${PHRASES} fraz.`);
+  if (list.children.length >= limits.phrases) return toast(`Najwyżej ${limits.phrases} fraz.`);
   const row = document.createElement("div");
   row.className = "row row-phrase";
   LANGS.forEach((lang, i) => {
@@ -416,7 +431,7 @@ function addPhrase(values) {
     input.setAttribute("aria-label", `Fraza, wersja ${lang}`);
     const err = document.createElement("p");
     err.className = "field-error";
-    cell.append(label, input, counter(input, PHRASE_MAX), err);
+    cell.append(label, input, counter(input, limits.phrase), err);
     row.appendChild(cell);
   });
   row.appendChild(removeButton("Usuń frazę", () => { row.remove(); renumber(); changed(); }));
@@ -502,7 +517,6 @@ async function check() {
   let r;
   try { r = await api("/api/config/check", { doc: readForm() }); } catch (e) { return null; }
   if (seq !== checkSeq || !r.ok) return null;
-  lastProblems = r.data.problems;
   showProblems(r.data.problems);
   $("doc-size").textContent = r.data.size != null
     ? `Konfiguracja: ${r.data.size.toLocaleString("pl-PL")} B z ${r.data.max.toLocaleString("pl-PL")} B`
@@ -511,13 +525,13 @@ async function check() {
 }
 
 function showProblems(problems) {
-  document.querySelectorAll(".bad").forEach((el) => el.classList.remove("bad"));
+  document.querySelectorAll(".bad").forEach((el) => { el.classList.remove("bad"); el.removeAttribute("aria-invalid"); });
   document.querySelectorAll("[data-error]").forEach((el) => { el.textContent = ""; });
   for (const p of problems) {
     const el = document.querySelector(`[data-field="${p.field}"]`);
     const visible = showAll || (el && el.dataset.touched);
     if (!visible) continue;
-    if (el) el.classList.add("bad");
+    if (el) { el.classList.add("bad"); el.setAttribute("aria-invalid", "true"); }
     let key = p.field, box = null;
     while (key && !(box = document.querySelector(`[data-error="${key}"]`))) key = key.split(".").slice(0, -1).join(".");
     if (box && !box.textContent) box.textContent = p.message;
@@ -574,16 +588,15 @@ async function send(event) {
     return toast("Popraw zaznaczone pola.");
   }
   const s = station(), h = s.hello || {}, st = s.status || {};
-  const configured = "configured" in st ? st.configured : h.configured;
-  const doc = result.doc;
-  if (configured && !confirm(`Zastąpić konfigurację stacji ${h.name || ""}? Poprzednia konfiguracja nie zostanie zachowana.`)) return;
-  const roleChange = configured && (st.role || h.role) && (st.role || h.role) !== doc.role;
+  const doc = result.doc, replaced = configured();
+  if (replaced && !confirm(`Zastąpić konfigurację stacji ${h.name || ""}? Poprzednia konfiguracja nie zostanie zachowana.`)) return;
+  const roleChange = replaced && (st.role || h.role) && (st.role || h.role) !== doc.role;
   await busy($("send"), async () => {
     const r = await api("/api/config/write", { doc });
     if (!r.ok) return showResult(false, "Stacja nie przyjęła konfiguracji", [r.data.error || `Błąd ${r.status}`]);
     const lines = [`Konfiguracja nr ${r.data.config_seq}, skrót SHA-256 ${r.data.sha256.slice(0, 16)}…`];
     if (doc.role === "stacja" && r.data.worst_request != null) {
-      lines.push(`Najdłuższe zgłoszenie z przycisków: ${r.data.worst_request} B z 256 B.`);
+      lines.push(`Najdłuższe zgłoszenie z przycisków: ${r.data.worst_request} B z ${limits.message} B.`);
     }
     if (roleChange) lines.push("Zmieniła się rola, więc stacja uruchomi się ponownie. Panel połączy się sam.");
     lines.push("Wyłącz tryb przygotowania tym samym przyciskiem, gdy skończysz.");
@@ -679,23 +692,38 @@ function selectTab(id) {
     const on = t.id === id;
     t.setAttribute("aria-selected", String(on));
     t.tabIndex = on ? 0 : -1;
-    $(t.getAttribute("aria-controls")).hidden = !on || !loggedIn() || envelopesShown;
+  });
+  showTabs();
+}
+
+// Zakładka widoczna, gdy wybrana, ktoś jest zalogowany i nie ma haseł do kopert na ekranie.
+function showTabs() {
+  document.querySelectorAll('[role="tab"]').forEach((t) => {
+    $(t.getAttribute("aria-controls")).hidden = t.getAttribute("aria-selected") !== "true" || !loggedIn() || envelopesShown;
   });
 }
 
+const ENVELOPES_OPEN = "Hasła do kopert są na ekranie i panel nie pokaże ich ponownie. ";
+
 async function quit() {
-  if (!confirm("Zakończyć aplikację WICI? Stacja pracuje dalej bez laptopa.")) return;
+  if (!confirm((envelopesShown ? ENVELOPES_OPEN : "") + "Zakończyć aplikację WICI? Stacja pracuje dalej bez laptopa.")) return;
   stopped = true;
-  try { await api("/api/quit"); } catch (e) { /* aplikacja już się zamyka */ }
-  setOffline("Aplikacja WICI została zakończona. Możesz zamknąć tę kartę przeglądarki.");
+  let r = null;
+  try { r = await api("/api/quit"); } catch (e) { /* aplikacja już się zamyka */ }
+  const lost = r && r.data.usb_error ? ` Ostatnia kopia nie trafiła na pamięć USB (${r.data.usb_error}): jest na dysku tego laptopa, a następny START z pamięci zestawu ją przejmie.` : "";
+  setOffline("Aplikacja WICI została zakończona." + lost + " Możesz zamknąć tę kartę przeglądarki.");
   setPill("pill-wait", "Zakończono");
 }
 
 // ---- Start ------------------------------------------------------------------------------------
 
-function init() {
+function initForm() {
   addAddress("");
   roleChanged();
+  check();
+}
+
+function init() {
   const form = $("form");
   form.addEventListener("input", (e) => { if (e.target.dataset) e.target.dataset.touched = "1"; changed(); });
   form.addEventListener("change", (e) => {
@@ -741,8 +769,9 @@ function init() {
       next.focus();
     });
   });
+  // Zamknięcie karty albo odświeżenie z hasłami na ekranie: przeglądarka pyta, bo haseł nie da się pokazać ponownie.
+  window.addEventListener("beforeunload", (e) => { if (envelopesShown && !stopped) { e.preventDefault(); e.returnValue = ""; } });
   selectTab("tab-config");
-  check();
   poll();
 }
 

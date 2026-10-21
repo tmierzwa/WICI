@@ -20,7 +20,7 @@
 </header>
 
 <main>
-  <section id="offline" class="card notice notice-alarm" hidden>
+  <section id="offline" class="card notice-alarm" hidden>
     <h2>Panel nie ma połączenia z aplikacją</h2>
     <p id="offline-text">Aplikacja WICI została zamknięta albo przestała odpowiadać. Uruchom START ponownie.</p>
   </section>
@@ -58,15 +58,16 @@
     <p id="st-banner" class="banner" hidden></p>
   </section>
 
-  <section id="kit-missing" class="card notice notice-alarm" hidden>
+  <section id="kit-missing" class="card notice-alarm" hidden>
     <h2>Nie ma pamięci USB zestawu</h2>
     <p>Konta i kopia bazy są na pamięci USB, z której uruchomiono START. Włóż ją z powrotem; panel zauważy to sam.</p>
     <p class="mono break" id="kit-missing-path"></p>
   </section>
 
-  <section id="destroyed" class="card notice notice-alarm" hidden>
+  <section id="destroyed" class="card notice-alarm" hidden>
     <h2>Dane zestawu zniszczone na tym laptopie</h2>
-    <p>Klucz bazy zniknął z pamięci aplikacji, kopie z dysku, a kopie i konta z pamięci USB. Usunięcie plików nie chroni samej pamięci USB: zniszcz ją fizycznie. Wpisz zdarzenie i godzinę do dziennika papierowego.</p>
+    <p id="destroyed-usb">Klucz bazy zniknął z pamięci aplikacji, kopie z dysku, a kopie i konta z pamięci USB. Usunięcie plików nie chroni samej pamięci USB: zniszcz ją fizycznie. Wpisz zdarzenie i godzinę do dziennika papierowego.</p>
+    <p id="destroyed-no-usb" hidden>Klucz bazy zniknął z pamięci aplikacji, a kopie z dysku. Pamięci USB zestawu nie było przy laptopie: zostały na niej zaszyfrowane kopie bazy i konta. Zniszcz ją fizycznie. Wpisz zdarzenie i godzinę do dziennika papierowego.</p>
     <p id="destroyed-station" class="banner"></p>
   </section>
 
@@ -85,8 +86,8 @@
       <label class="field narrow"><span>Konto</span><select id="login-account"></select></label>
       <label class="field"><span>Hasło</span>
         <input id="login-password" type="password" autocomplete="off" spellcheck="false" autocapitalize="off"></label>
-      <p class="hint">Wielkość liter i odstępy między słowami nie mają znaczenia. Po otwarciu koperty wpisz jej numer do dziennika; hasło zmienia potem osoba utrzymująca system.</p>
-      <p id="login-error" class="field-error"></p>
+      <p class="hint">Wielkość liter i odstępy między słowami nie mają znaczenia. Po otwarciu koperty wpisz jej numer do dziennika; nowe hasło do koperty nadaje potem osoba utrzymująca system.</p>
+      <p id="login-error" class="field-error" role="alert"></p>
       <div class="buttons"><button type="submit" class="btn btn-primary" id="login-send">Zaloguj</button></div>
     </form>
   </section>
@@ -99,12 +100,12 @@
         <input id="recover-password" type="password" autocomplete="off" spellcheck="false" autocapitalize="off"></label>
       <label class="field narrow"><span>Liczba zastępców w nowych kontach</span>
         <select id="recover-deputies"><option>0</option><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option></select></label>
-      <p id="recover-error" class="field-error"></p>
+      <p id="recover-error" class="field-error" role="alert"></p>
       <div class="buttons"><button type="submit" class="btn btn-primary" id="recover-send">Otwórz kopię</button></div>
     </form>
   </section>
 
-  <section id="conflict" class="card notice" hidden>
+  <section id="conflict" class="card" hidden>
     <h2>Dwie różne kopie bazy</h2>
     <p>Kopia na dysku tego laptopa i kopia na pamięci USB rozeszły się: na każdej są zmiany, których nie ma na drugiej. Zwykle dzieje się tak, gdy pracowały dwa laptopy, a pamięć była wyjęta. Wybierz kopię, z którą pracujesz dalej. Druga zostaje zaszyfrowana na pamięci USB jako plik „konflikt”.</p>
     <div class="buttons">
@@ -254,7 +255,7 @@
       </dl>
       <p id="kit-warning" class="banner banner-alarm" hidden></p>
       <h3>Nowe hasło do koperty</h3>
-      <p class="hint">Po otwarciu koperty hasło tego konta trzeba zmienić. Panel pokaże nowe hasło jeden raz; włóż je do nowej koperty z tym samym numerem.</p>
+      <p class="hint">Po otwarciu koperty osoba utrzymująca system nadaje temu kontu nowe hasło; stare przestaje działać. Panel pokaże nowe hasło jeden raz; włóż je do nowej koperty z tym samym numerem.</p>
       <div class="buttons">
         <select id="kit-account" aria-label="Konto"></select>
         <button type="button" class="btn" id="kit-password">Nowe hasło</button>
@@ -266,7 +267,7 @@
         <button type="button" class="btn btn-primary" id="hand-back">Oddaj laptop</button>
       </div>
       <h3>Zniszczenie danych</h3>
-      <p class="hint">Tylko przy groźbie przejęcia stacji albo laptopa, także na polecenie odbiorcy przekazane słownie albo przez gońca; nigdy na podstawie wiadomości radiowej. Laptop od razu usuwa dane zestawu z dysku i z pamięci USB, a podłączona stacja pyta o potwierdzenie przyciskiem OK i przestaje działać na stałe. Nieodwracalne.</p>
+      <p class="hint">Tylko przy groźbie przejęcia stacji albo laptopa, także na polecenie odbiorcy przekazane słownie albo przez gońca; nigdy na podstawie wiadomości radiowej. Laptop od razu usuwa dane zestawu z dysku i z pamięci USB, a podłączona stacja pyta o potwierdzenie przyciskiem OK i przestaje działać na stałe. Nieodwracalne. Bez laptopa albo bez logowania: na stacji STAN → USŁUGI → ZNISZCZ DANE.</p>
       <div class="buttons">
         <button type="button" class="btn btn-danger" id="destroy">ZNISZCZ DANE</button>
       </div>

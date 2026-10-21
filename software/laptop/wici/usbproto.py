@@ -7,13 +7,14 @@ station among USB CDC ports by waiting for `hello`, keeps the session, polls `st
 """
 
 import base64
+import contextlib
 import hashlib
 import json
 import sys
 import threading
 import time
 
-from . import serialport
+from . import configdoc, serialport
 
 CONTRACT = 2
 LINE_MAX = 1024
@@ -22,6 +23,8 @@ TIMEOUT = 3          # odpowiedź na zwykłe polecenie
 CONFIRM_TIMEOUT = 35  # odpowiedź końcowa po `pending` (przycisk na stacji w ciągu 30 s)
 COMMIT_TIMEOUT = {"configure": 10, "import": 10, "firmware": 60}
 HELLO_WAIT = 2.5
+HELLO_WAIT_NEW = 8    # nowy port czeka na `hello` do 8 s od pojawienia się: stacja może jeszcze startować
+REOPEN_DELAY = 0.5    # stacja zauważa zamknięcie portu (DTR) dopiero w pętli głównej
 # Windows kolejkuje operacje na uchwycie bez FILE_FLAG_OVERLAPPED: zapis czeka na trwający odczyt.
 READ_SLICE = 0.03 if sys.platform == "win32" else 0.2
 POLL = 1.5
@@ -33,19 +36,23 @@ class ProtocolError(Exception):
 
 class Rejected(Exception):
     def __init__(self, reply):
-        self.reason, self.detail = reply.get("reason", ""), reply.get("detail")
+        detail = reply.get("detail")
+        self.reason, self.detail = str(reply.get("reason", "")), str(detail) if detail is not None else None
         super().__init__(f"{self.reason}{': ' + str(self.detail) if self.detail else ''}")
 
 
 def encode(message):
-    """Compact UTF-8 JSON without \\u sequences; texts were checked, so no escapes are produced."""
-    line = json.dumps(message, ensure_ascii=False, separators=(",", ":"))
-    if "\\" in line:
-        raise ValueError("line would need an escape sequence")
-    data = line.encode("utf-8")
-    if len(data) > LINE_MAX:
-        raise ValueError(f"line too long: {len(data)} B")
-    return data + b"\n"
+    """One protocol line: compact UTF-8 JSON without escapes (configdoc.compact) and LF."""
+    return configdoc.compact(message, LINE_MAX) + b"\n"
+
+
+@contextlib.contextmanager
+def _reply_format():
+    """A reply with a missing field or a value of the wrong kind: `ProtocolError`, the link is renewed."""
+    try:
+        yield
+    except (KeyError, TypeError, ValueError) as e:   # binascii.Error to też ValueError
+        raise ProtocolError("bad reply") from e
 
 
 class Link:
@@ -73,7 +80,10 @@ class Link:
                 if len(buffer) > 4 * LINE_MAX:   # strumień bez LF (np. ramki KISS węzła): to nie jest ten kontrakt
                     buffer = b""
                 for raw in lines:
-                    self._line(raw.rstrip(b"\r"))
+                    try:
+                        self._line(raw.rstrip(b"\r"))
+                    except Exception as e:   # błąd wiersza albo on_message nie może zatrzymać wątku odczytu
+                        print(f"WICI: wiersz USB pominięty: {e!r}", file=sys.stderr, flush=True)
         except (serialport.PortClosed, OSError) as e:
             reason = str(e) or "port closed"
         else:
@@ -89,13 +99,17 @@ class Link:
             return
         try:
             message = json.loads(raw.decode("utf-8"))
-        except (UnicodeDecodeError, ValueError):
+        except (ValueError, RecursionError):
             return
         if not isinstance(message, dict) or message.get("usb") != CONTRACT and message.get("type") != "hello":
             return
         if message.get("type") == "hello":
-            self.hello = message
-        if "re" in message:
+            with self.cond:
+                self.hello = message
+                self.cond.notify_all()
+        elif self.hello is None:
+            return   # `hello` jest pierwszym wierszem sesji; wcześniejsze to resztki poprzedniej
+        if type(message.get("re")) is int:
             with self.cond:
                 if message.get("type") == "pending":
                     self.pending = message
@@ -105,10 +119,9 @@ class Link:
         self.on_message(message)
 
     def wait_hello(self, timeout=HELLO_WAIT):
-        end = time.monotonic() + timeout
-        while self.hello is None and self.closed is None and time.monotonic() < end:
-            time.sleep(0.02)
-        return self.hello
+        with self.cond:
+            self.cond.wait_for(lambda: self.hello is not None or self.closed is not None, timeout)
+            return self.hello
 
     def request(self, type_, timeout=TIMEOUT, on_pending=None, **fields):
         """Send one command and return its final answer; `Rejected` for `rejected`."""
@@ -118,6 +131,7 @@ class Link:
                 seq = self.seq
                 with self.cond:
                     self.pending = None
+                    self.replies.pop(seq, None)   # odpowiedź o tym numerze z poprzedniego obiegu nie jest tą
                 port = self.port
                 if port is None or self.closed is not None:
                     raise serialport.PortClosed(self.closed or "closed")
@@ -130,44 +144,57 @@ class Link:
                 if reply.get("type") == "rejected":
                     raise Rejected(reply)
                 return reply
-        raise ProtocolError("seq")
 
     def _wait(self, seq, timeout, on_pending):
         deadline = time.monotonic() + timeout
-        with self.cond:
-            while True:
-                if self.pending is not None and self.pending.get("re") == seq:
-                    if on_pending:
-                        on_pending(self.pending)
-                    deadline = time.monotonic() + max(CONFIRM_TIMEOUT, self.pending.get("confirm_s", 30) + 5)
-                    self.pending = None
-                if seq in self.replies:
-                    return self.replies.pop(seq)
-                if self.closed is not None:
-                    raise serialport.PortClosed(self.closed)
-                left = deadline - time.monotonic()
-                if left <= 0:
-                    raise ProtocolError(f"no answer to {seq}")
-                self.cond.wait(min(left, 0.5))
+        while True:
+            with self.cond:
+                while True:
+                    if self.pending is not None and self.pending.get("re") == seq:
+                        pending, self.pending = self.pending, None
+                        confirm = pending.get("confirm_s", 30)
+                        confirm = confirm if type(confirm) is int else 30
+                        deadline = time.monotonic() + max(CONFIRM_TIMEOUT, confirm + 5)
+                        break
+                    if seq in self.replies:
+                        return self.replies.pop(seq)
+                    if self.closed is not None:
+                        raise serialport.PortClosed(self.closed)
+                    left = deadline - time.monotonic()
+                    if left <= 0:
+                        raise ProtocolError(f"no answer to {seq}")
+                    self.cond.wait(min(left, 0.5))
+            if on_pending:   # poza self.cond: wywołanie zwrotne nie wstrzymuje wątku odczytu
+                on_pending(pending)
 
-    def write_transfer(self, op, data, **extra):
-        """Upload `data` in parts (configure, import, firmware) and return the `xfer_commit` answer."""
-        begin = self.request("xfer_begin", op=op, size=len(data), sha256=hashlib.sha256(data).hexdigest(), **extra)
-        xfer, step = begin["xfer"], min(int(begin.get("max_part", PART_MAX)), PART_MAX)
+    def write_transfer(self, op, data, sha256=None, **extra):
+        """Upload `data` in parts (configure, import, firmware) and return the `xfer_commit` answer.
+
+        `sha256`: the hex digest of `data` when the caller already has it."""
+        begin = self.request("xfer_begin", op=op, size=len(data), sha256=sha256 or hashlib.sha256(data).hexdigest(),
+                             **extra)
+        with _reply_format():
+            xfer, step = str(begin["xfer"]), max(1, min(int(begin.get("max_part", PART_MAX)), PART_MAX))
         offset = 0
         while offset < len(data):
             part = data[offset:offset + step]
             reply = self.request("xfer_part", xfer=xfer, offset=offset, data=base64.b64encode(part).decode("ascii"))
-            offset = int(reply.get("next", offset + len(part)))
+            with _reply_format():
+                after = int(reply.get("next", offset + len(part)))
+            if not offset < after <= len(data):
+                raise ProtocolError(f"transfer stalled at {offset}")   # `next` musi rosnąć, inaczej pętla bez końca
+            offset = after
         return self.request("xfer_commit", timeout=COMMIT_TIMEOUT.get(op, TIMEOUT), xfer=xfer)
 
     def read_transfer(self, op, **extra):
         begin = self.request("xfer_begin", op=op, **extra)
-        xfer, size, digest = begin["xfer"], int(begin["size"]), begin["sha256"]
+        with _reply_format():
+            xfer, size, digest = str(begin["xfer"]), int(begin["size"]), str(begin["sha256"])
         data = b""
         while len(data) < size:
             reply = self.request("xfer_read", xfer=xfer, offset=len(data), length=min(PART_MAX, size - len(data)))
-            part = base64.b64decode(reply["data"])
+            with _reply_format():
+                part = base64.b64decode(reply["data"], validate=True)
             if not part:
                 raise ProtocolError("empty part")
             data += part
@@ -195,7 +222,9 @@ class Station:
 
     A port that opened but sent no `hello` (the diagnostic interface, a node outside preparation mode,
     somebody else's device) is not opened again until it disappears or `rescan()` is called: opening
-    a port raises DTR, which resets e.g. an Arduino connected to the same laptop.
+    a port raises DTR, which resets e.g. an Arduino connected to the same laptop. A port that has just
+    appeared gets HELLO_WAIT_NEW (the station may still be starting); the port of a session that had
+    `hello` is reopened after REOPEN_DELAY and gets one more try before it is skipped.
     """
 
     def __init__(self, port=None, on_change=None):
@@ -205,6 +234,8 @@ class Station:
         self.state = {"phase": "searching", "port": None, "hello": None, "status": None, "problem": None,
                       "skipped": []}
         self.ignored = set()
+        self.seen = None                   # port -> chwila pojawienia się (porty z pierwszego wyszukiwania: dawno)
+        self.retry = {}                    # port po sesji z `hello` -> najwcześniejsze ponowne otwarcie
         self.lock = threading.Lock()       # stan i bieżące połączenie
         self.operation = threading.Lock()  # jedna czynność naraz: transfer nie może przerwać innego
         self.running = True
@@ -249,6 +280,8 @@ class Station:
             current = self.link is link
             if current:
                 self.link = None
+                if link.hello is not None and self.state["port"]:
+                    self.retry[self.state["port"]] = time.monotonic() + REOPEN_DELAY
         link.close()
         if current:
             self._set(phase="searching", port=None, hello=None, status=None)
@@ -279,28 +312,41 @@ class Station:
 
     def _connect(self):
         present = [self.forced] if self.forced else serialport.candidates()
-        self.ignored &= set(present)       # odłączony port: przy ponownym podłączeniu znów sprawdzany
+        now = time.monotonic()
+        # Odłączony port: przy ponownym podłączeniu znów sprawdzany, jak nowy.
+        self.seen = {n: (self.seen.get(n, now) if self.seen is not None else float("-inf")) for n in present}
+        self.ignored &= set(present)
+        self.retry = {n: t for n, t in self.retry.items() if n in self.seen}
         problem = None
         for name in present:
             if name in self.ignored and not self.forced:
                 continue
+            retry = self.retry.pop(name, None)
+            if retry is not None:
+                time.sleep(max(0.0, retry - time.monotonic()))
             try:
                 port = serialport.open_port(name)
             except serialport.PortError as e:
                 problem = {"kind": e.kind, "port": name, "detail": e.detail}
                 continue
             link = Link(port, self._message)
-            hello = link.wait_hello()
+            hello = link.wait_hello(max(HELLO_WAIT, self.seen[name] + HELLO_WAIT_NEW - time.monotonic()))
+            if not self.running:
+                link.close()
+                return
             if hello is None:
                 link.close()
-                self.ignored.add(name)    # port diagnostyki, węzeł poza trybem przygotowania, cudze urządzenie
+                if retry is None:
+                    self.ignored.add(name)    # port diagnostyki, węzeł poza trybem przygotowania, cudze urządzenie
                 continue
             with self.lock:
                 self.link = link
-            if CONTRACT not in hello.get("contracts", []):
-                self._set(phase="incompatible", port=name, hello=hello, status=None, problem=None)
+            contracts = hello.get("contracts")
+            if not isinstance(contracts, list) or CONTRACT not in contracts:
+                self._set(phase="incompatible", port=name, hello=hello, status=None, problem=None,
+                          skipped=sorted(self.ignored))
             else:
-                self._set(phase="connected", port=name, hello=hello, problem=None)
+                self._set(phase="connected", port=name, hello=hello, problem=None, skipped=sorted(self.ignored))
             return
         self._set(problem=problem, skipped=sorted(self.ignored))
 

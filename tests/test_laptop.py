@@ -16,6 +16,7 @@ import http.client
 import json
 import os
 import queue
+import re
 import shutil
 import subprocess
 import sys
@@ -33,6 +34,7 @@ sys.path.insert(0, str(ROOT / "software" / "reference"))
 
 from wici import configdoc, database, serialport, session, store, syscrypto, usbproto  # noqa: E402
 from wici.prep import OperationError, Prep  # noqa: E402
+from wici import prep as prep_module  # noqa: E402
 from wici import web  # noqa: E402
 from wici.web import Panel, serve  # noqa: E402
 from wici import __main__ as wici_main  # noqa: E402
@@ -108,6 +110,30 @@ class ConfigDocTest(unittest.TestCase):
         node = configdoc.normalize(station_doc(role="wezel"))
         self.assertEqual(set(node), {"role", "ifac", "radio"})
         self.assertEqual(configdoc.check(node), [])
+
+    def test_clean_text_handles_pasted_text(self):
+        self.assertEqual(configdoc.clean_text("\ufeffHala\u00adsportowa\n\tul.\u200b  Polna 3 \r\n"),
+                         "Halasportowa ul. Polna 3")
+        doc = configdoc.normalize(station_doc(addresses=["Szkoła\nnr 5"]))
+        self.assertEqual(configdoc.check(doc), [])
+        self.assertEqual(doc["addresses"], ["Szkoła nr 5"])
+
+    def test_missing_phrases_message_and_prepare(self):
+        doc = station_doc()
+        del doc["phrases"]
+        self.assertEqual(configdoc.check(doc), [("phrases", "lista fraz (może być pusta), najwyżej 11")])
+        self.assertEqual(configdoc.check(station_doc(phrases=[])), [])
+        self.assertEqual(configdoc.prepare(doc), (doc, configdoc.check(doc), None))
+        clean, problems, data = configdoc.prepare(station_doc(addresses=[" Szkoła "]))
+        self.assertEqual((clean["addresses"], problems, data), (["Szkoła"], [], configdoc.encode(clean)))
+        with unittest.mock.patch.object(configdoc, "DOC_MAX", 10):
+            self.assertEqual(configdoc.prepare(station_doc())[1][0][0], "")
+
+    def test_unicode_version_matches_the_firmware(self):
+        header = (ROOT / "firmware" / "src" / "unicode_tables.h").read_text()
+        self.assertIn(f'UNIDATA_VERSION = "{configdoc.UNICODE_VERSION}"', header)
+        with unittest.mock.patch.object(configdoc.unicodedata, "unidata_version", "15.1.0"):
+            self.assertIn("15.1.0", configdoc.unicode_warning())
 
     def test_encoding_has_no_escapes_and_respects_the_size(self):
         data = configdoc.encode(station_doc())
@@ -250,9 +276,92 @@ class LinkTest(unittest.TestCase):
         port = FakePort(lambda m: [{"usb": 2, "seq": 2, "type": "status", "re": m["seq"]}], hello=False)
         port.out.put(b"\xc0\x00\x01\x02\xc0" * 2000)           # ramki KISS węzła: bez LF
         port.out.put(b"boot log line\r\n{not json}\n")
+        port.push({"usb": 2, "seq": 1, "type": "hello", "contracts": [2]})
         link = usbproto.Link(port)
         self.assertEqual(link.request("status")["type"], "status")
         link.close()
+
+    def test_lines_before_hello_and_stale_replies_are_not_taken(self):
+        port = FakePort(lambda m: [{"usb": 2, "seq": 5, "re": m["seq"], "type": "status", "fresh": True}], hello=False)
+        port.push({"usb": 2, "seq": 9, "re": 1, "type": "status", "fresh": False})   # resztka poprzedniej sesji
+        port.push({"usb": 2, "seq": 1, "type": "hello", "contracts": [2]})
+        link = usbproto.Link(port)
+        self.assertIsNotNone(link.wait_hello(1))
+        self.assertTrue(link.request("status")["fresh"])
+        link.replies[2] = {"re": 2, "type": "status", "fresh": False}                # odpowiedź spóźniona po limicie
+        self.assertTrue(link.request("status")["fresh"])
+        link.close()
+
+    def test_wait_hello_wakes_on_hello(self):
+        port = FakePort(lambda m: [], hello=False)
+        link = usbproto.Link(port)
+        threading.Timer(0.1, port.push, ({"usb": 2, "seq": 1, "type": "hello", "contracts": [2]},)).start()
+        start = time.monotonic()
+        self.assertIsNotNone(link.wait_hello(5))
+        self.assertLess(time.monotonic() - start, 1)
+        link.close()
+        self.assertIsNone(usbproto.Link(FakePort(lambda m: [], hello=False)).wait_hello(0.05))
+
+    def test_reader_survives_bad_lines_and_callbacks(self):
+        seen = []
+
+        def on_message(m):
+            if m.get("boom"):
+                raise RuntimeError("callback")
+            seen.append(m.get("type"))
+        port = FakePort(lambda m: [{"usb": 2, "seq": 3, "re": m["seq"], "type": "status"}])
+        port.push({"usb": 2, "seq": 2, "type": "event", "boom": True})
+        port.push({"usb": 2, "seq": 3, "type": "status", "re": [1]})                 # niehaszowalne `re`
+        port.out.put(b'{"a":' + b"[" * 100000 + b"\n")                            # RecursionError w json
+        with unittest.mock.patch("sys.stderr"):
+            link = usbproto.Link(port, on_message)
+            self.assertEqual(link.request("status")["type"], "status")
+        self.assertTrue(link.thread.is_alive())
+        self.assertIn("hello", seen)
+        link.close()
+
+    def test_on_pending_runs_outside_the_lock(self):
+        link = usbproto.Link(FakePort(StationScript()))
+        held = []
+
+        def probe(p):
+            def other():
+                got = link.cond.acquire(timeout=1)
+                if got:
+                    link.cond.release()
+                held.append(got)
+            t = threading.Thread(target=other)
+            t.start()
+            t.join()
+        link.request("silence", on_pending=probe, on=True)
+        self.assertEqual(held, [True])
+        link.close()
+
+    def test_malformed_transfer_replies_are_protocol_errors(self):
+        def station(begin, part):
+            def respond(m):
+                r = {"usb": 2, "seq": 2, "re": m["seq"]}
+                if m["type"] == "xfer_begin":
+                    return [{**r, "type": "ok", **begin}]
+                return [{**r, **part}]
+            return usbproto.Link(FakePort(respond))
+        cases = [({}, {}),                                                         # brak `xfer`
+                 ({"xfer": "1", "max_part": "x"}, {}),
+                 ({"xfer": "1"}, {"type": "ok", "next": [3]}),
+                 ({"xfer": "1"}, {"type": "ok", "next": 0})]                      # `next` nie rośnie
+        for begin, part in cases:
+            link = station(begin, part)
+            with self.assertRaises(usbproto.ProtocolError, msg=repr((begin, part))):
+                link.write_transfer("configure", b"abc")
+            link.close()
+        for begin, part in [({"xfer": "1", "size": "x", "sha256": ""}, {}),
+                            ({"xfer": "1", "size": 3, "sha256": ""}, {"type": "data", "data": "!!"}),
+                            ({"xfer": "1", "size": 3, "sha256": ""}, {"type": "data", "data": 5}),
+                            ({"xfer": "1", "size": 3, "sha256": ""}, {"type": "data"})]:
+            link = station(begin, part)
+            with self.assertRaises(usbproto.ProtocolError, msg=repr((begin, part))):
+                link.read_transfer("config_get")
+            link.close()
 
 
 class StationTest(unittest.TestCase):
@@ -264,7 +373,8 @@ class StationTest(unittest.TestCase):
             return FakePort(lambda m: [], hello=(name == "B" and len(opened) > 3))
         with unittest.mock.patch.object(serialport, "candidates", lambda: list(present)), \
                 unittest.mock.patch.object(serialport, "open_port", open_port), \
-                unittest.mock.patch.object(usbproto, "HELLO_WAIT", 0.1):
+                unittest.mock.patch.object(usbproto, "HELLO_WAIT", 0.1), \
+                unittest.mock.patch.object(usbproto, "HELLO_WAIT_NEW", 0.1):
             st = usbproto.Station()
             st._connect()
             self.assertEqual((opened, st.state["skipped"]), (["A", "B"], ["A", "B"]))
@@ -279,7 +389,46 @@ class StationTest(unittest.TestCase):
             st._connect()
             self.assertEqual(opened[3], "B")
             self.assertEqual((st.state["phase"], st.state["port"]), ("connected", "B"))
+            self.assertEqual(st.state["skipped"], [])             # także po udanym połączeniu
             st.stop()
+
+    def test_new_port_waits_longer_and_dropped_session_gets_another_try(self):
+        present, ports = [], []
+
+        def open_port(name):
+            ports.append(FakePort(lambda m: [], hello=False))
+            if len(ports) == 1:                                  # stacja startuje: `hello` po 0,3 s
+                threading.Timer(0.3, ports[0].push, ({"usb": 2, "seq": 1, "type": "hello", "contracts": [2]},)).start()
+            return ports[-1]
+        with unittest.mock.patch.object(serialport, "candidates", lambda: list(present)), \
+                unittest.mock.patch.object(serialport, "open_port", open_port), \
+                unittest.mock.patch.object(usbproto, "HELLO_WAIT", 0.1), \
+                unittest.mock.patch.object(usbproto, "HELLO_WAIT_NEW", 1), \
+                unittest.mock.patch.object(usbproto, "REOPEN_DELAY", 0.2):
+            st = usbproto.Station()
+            st._connect()                                        # pierwsze wyszukiwanie: brak portów
+            present.append("S")
+            st._connect()
+            self.assertEqual(st.state["phase"], "connected")     # nowy port: dłuższe czekanie na `hello`
+            st._drop(st.link)
+            start = time.monotonic()
+            st._connect()                                        # po sesji z `hello`: przerwa i jeszcze jedna próba
+            self.assertGreaterEqual(time.monotonic() - start, 0.2)
+            self.assertEqual((len(ports), st.ignored), (2, set()))
+            time.sleep(1)
+            st._connect()
+            self.assertEqual((len(ports), st.ignored), (3, {"S"}))
+            st.stop()
+
+    def test_connect_stops_when_the_station_is_stopped(self):
+        port = FakePort(lambda m: [])
+        with unittest.mock.patch.object(serialport, "candidates", lambda: ["S"]), \
+                unittest.mock.patch.object(serialport, "open_port", lambda name: port):
+            st = usbproto.Station()
+            st.running = False
+            st._connect()
+            self.assertIsNone(st.link)
+            self.assertTrue(port.closed)
 
     def test_operations_run_one_at_a_time(self):
         st = usbproto.Station()
@@ -299,6 +448,59 @@ class StationTest(unittest.TestCase):
             t.join()
         self.assertEqual(overlap, [1, 1, 1])
         st.stop()
+
+
+class PrepTest(unittest.TestCase):
+    class Station:
+        def __init__(self, link, role="stacja"):
+            self.link = link
+            self.state = {"phase": "connected", "hello": {"name": "WICI-1", "lxmf": "", "role": role}, "status": None}
+
+        def call(self, fn):
+            return fn(self.link)
+
+    class Journal:
+        def __init__(self):
+            self.entries = []
+
+        def add(self, *entry):
+            self.entries.append(entry)
+
+    def test_card_of_a_node_is_refused_on_the_laptop(self):
+        journal = self.Journal()
+        prep = Prep(self.Station(None, role="wezel"), journal)
+        with self.assertRaises(OperationError) as e:
+            prep.card()
+        self.assertEqual((e.exception.code, e.exception.message), ("role", prep_module.REASONS["role"]))
+        self.assertEqual(journal.entries, [])
+
+    def test_unreadable_configuration_is_a_journaled_protocol_error(self):
+        link = unittest.mock.Mock()
+        link.read_transfer.return_value = b"\xff{"
+        journal = self.Journal()
+        with self.assertRaises(OperationError) as e:
+            Prep(self.Station(link), journal).read_config()
+        self.assertEqual(e.exception.code, "timeout")
+        self.assertEqual([(op, ok) for _, _, op, ok, _ in journal.entries], [("config_get", False)])
+
+    def test_write_config_hashes_once_and_sends_the_digest(self):
+        link = unittest.mock.Mock()
+        link.write_transfer.return_value = {"config_seq": 4, "worst_request": 200}
+        out = Prep(self.Station(link), self.Journal()).write_config(station_doc())
+        data = configdoc.encode(station_doc())
+        link.write_transfer.assert_called_once_with("configure", data, sha256=hashlib.sha256(data).hexdigest())
+        self.assertEqual(out["sha256"], hashlib.sha256(data).hexdigest())
+
+    def test_explain_transport_and_migration(self):
+        def rejected(reason, detail=None):
+            return prep_module.explain(usbproto.Rejected({"reason": reason, "detail": detail}))
+        for detail in ("xfer", "offset", "data", "sha256", "op", "json"):
+            err = rejected("invalid", detail)
+            self.assertIn("Wyślij ponownie", err.message)
+            self.assertEqual((err.field, err.code), (None, f"invalid {detail}"))
+        self.assertEqual(rejected("invalid", "addresses").message, "Stacja odrzuciła pole: adresy.")
+        self.assertIn("nie obsługuje przenoszenia", rejected("migration", "unsupported").message)
+        self.assertEqual(rejected("invalid", ["x"]).code, "invalid")             # dziwny `detail` nie wywraca panelu
 
 
 class SerialPortTest(unittest.TestCase):
@@ -395,8 +597,9 @@ class DatabaseTest(unittest.TestCase):
     def test_accounts_unlock_change_and_limit(self):
         self.assertEqual(self.kit.unlock("gospodarz", "  Las RZEKA most  okno chleb "), self.key)
         self.assertEqual(self.kit.unlock("zastepca-1", self.PASSWORDS["zastepca-1"]), self.key)
-        self.kit.change_password("zastepca-1", self.PASSWORDS["zastepca-1"], "nowe haslo z koperty numer dwa",
-                                 iterations=1000)
+        self.kit.set_password("zastepca-1", self.key, "nowe haslo z koperty numer dwa", iterations=1000)
+        with self.assertRaises(database.LoginError):
+            self.kit.unlock("zastepca-1", self.PASSWORDS["zastepca-1"])
         self.assertEqual(self.kit.unlock("zastepca-1", "nowe haslo z koperty numer dwa"), self.key)
         self.assertEqual(self.kit.names(), ["gospodarz", "zastepca-1"])
         kit = database.Kit(self.keys)                       # inny laptop czyta te same pliki
@@ -586,6 +789,7 @@ class DatabaseTest(unittest.TestCase):
         db = self.open("a")
         self.add(db, "x")
         db.flush()
+        (self.keys / "konta.json.tmp").write_bytes(b"przerwany zapis")
         db.destroy(self.keys)
         self.assertEqual(list(self.laptop("a").iterdir()), [])
         self.assertEqual(list(self.usb.iterdir()), [])
@@ -600,6 +804,146 @@ class DatabaseTest(unittest.TestCase):
             db.hand_back()
         self.assertTrue(any(self.laptop("a").iterdir()))   # bez pamięci dysk zostaje nietknięty
         db.close()
+
+    def test_new_kit_refused_over_copies_and_recovery_keeps_the_kit(self):
+        db = self.open("a")
+        self.add(db, "x")
+        db.hand_back()
+        kit_id = database.kit_id(self.keys)
+        (self.keys / "konta.json").unlink()
+        with self.assertRaisesRegex(database.StorageError, "hasła odtworzenia"):
+            database.Kit.create(self.keys, self.PASSWORDS, "x", iterations=1000)   # nowy klucz zgubiłby kopie
+        database.Kit.create(self.keys, self.PASSWORDS, "x", iterations=1000, data_key=self.key)
+        self.assertEqual(database.kit_id(self.keys), kit_id)
+
+    def test_account_file_structure_and_iterations(self):
+        good = json.loads((self.keys / "konta.json").read_text())
+        for bad in ([], {"version": 1}, {**good, "accounts": []}, {**good, "recovery": None},
+                    {**good, "accounts": {"gospodarz": {"salt": "00", "iterations": "1000", "wrap": "00"}}}):
+            (self.keys / "konta.json").write_text(json.dumps(bad))
+            with self.assertRaises(database.StorageError, msg=bad):
+                self.kit.names()
+        slot = dict(good["accounts"]["gospodarz"], iterations=10 ** 9)
+        (self.keys / "konta.json").write_text(json.dumps({**good, "accounts": {"gospodarz": slot}}))
+        with unittest.mock.patch.object(syscrypto, "pbkdf2") as pbkdf2:
+            with self.assertRaises(database.LoginError):
+                self.kit.unlock("gospodarz", self.PASSWORDS["gospodarz"])
+        pbkdf2.assert_not_called()                          # zawieszenie aplikacji spoza zakresu iteracji
+
+    def test_recovery_derives_once_per_wrap(self):
+        db = self.open("a")
+        for i in range(2):
+            self.add(db, str(i))
+        db.flush()
+        db.close()
+        self.assertEqual(len(list(self.usb.iterdir())) + len(list(self.laptop("a").iterdir())), 4)
+        with unittest.mock.patch.object(database, "_wrap_key", wraps=database._wrap_key) as derive:
+            with self.assertRaises(database.LoginError):
+                database.key_from_recovery([self.usb, self.laptop("a")], "zle haslo")
+        self.assertEqual(derive.call_count, 1)
+
+    def test_writes_alternate_and_keep_the_newest_copy(self):
+        db = self.open("a")
+        self.add(db, "1")
+        db.flush()
+        db.close()
+        newest = {f.name: f.read_bytes() for f in self.usb.iterdir()}
+        db = self.open("a", usb=False)                      # pokolenia rosną bez pamięci: przy niej będzie luka
+        for i in range(2, 4):
+            self.add(db, str(i))                            # pokolenie 3: ta sama parzystość co 1
+        db.close()
+        db = self.open("a")
+        db.flush()
+        db.close()
+        for name, raw in newest.items():
+            self.assertEqual((self.usb / name).read_bytes(), raw)   # dotąd najnowsza kopia nietknięta
+        copies = [database._read(self.usb / n, self.key, "usb") for n in database.NAMES]
+        self.assertEqual(sorted(c.gen for c in copies), [1, 3])
+        db = self.open("a")
+        self.add(db, "4")
+        db.flush()
+        self.assertEqual(database._read(self.usb / next(iter(newest)), self.key, "usb").gen, 4)
+        db.close()
+
+    def test_other_stick_under_the_path_gets_nothing(self):
+        db = self.open("a", kit_id=database.kit_id(self.keys))
+        self.add(db, "x")
+        db.flush()
+        before = {f.name: f.read_bytes() for f in self.usb.iterdir()}
+        (self.keys / "zestaw.key").write_bytes(os.urandom(32))   # inna pamięć zestawu pod tą samą literą
+        self.add(db, "y")
+        deadline = time.monotonic() + 5
+        while db.status()["usb_error"] is None and time.monotonic() < deadline:
+            time.sleep(0.05)
+        self.assertEqual(db.status()["usb_error"], database.WRONG_USB)
+        with self.assertRaisesRegex(database.StorageError, "inna pamięć"):
+            db.hand_back()
+        self.assertFalse(db.move_usb(self.usb))
+        db.destroy(self.keys)
+        self.assertEqual({f.name: f.read_bytes() for f in self.usb.iterdir()}, before)
+        self.assertEqual(sorted(f.name for f in self.keys.iterdir()), ["konta.json", "zestaw.key"])
+        self.assertEqual(list(self.laptop("a").iterdir()), [])
+
+    def test_pulled_stick_is_missing_not_another(self):
+        db = self.open("a", kit_id=database.kit_id(self.keys))
+        self.add(db, "x")
+        db.flush()
+        (self.keys / "zestaw.key").rename(self.keys / "schowany")    # pamięć wyjęta: ścieżki bez plików zestawu
+        self.add(db, "y")
+        deadline = time.monotonic() + 5
+        while db.status()["usb_error"] is None and time.monotonic() < deadline:
+            time.sleep(0.05)
+        self.assertEqual(db.status()["usb_error"], database.NO_USB)
+        with self.assertRaisesRegex(database.StorageError, "brak pamięci"):
+            db.hand_back()
+        (self.keys / "schowany").rename(self.keys / "zestaw.key")    # z powrotem: kopia idzie dalej
+        db.flush()
+        self.assertIsNone(db.status()["usb_error"])
+        db.close()
+
+    def test_destroy_during_a_snapshot_writes_nothing_more(self):
+        db = self.open("a")
+        self.add(db, "x")
+        db.flush()
+        entered, release, usb_writes = threading.Event(), threading.Event(), []
+        real = database._write_durable
+
+        def slow(path, data):
+            if path.parent == self.usb:
+                usb_writes.append(path.name)
+            elif not entered.is_set():
+                entered.set()
+                release.wait(5)
+            real(path, data)
+
+        with unittest.mock.patch.object(database, "_write_durable", slow):
+            errors = []
+            writer = threading.Thread(target=lambda: errors.append(self._catch(lambda: self.add(db, "y"))))
+            writer.start()
+            self.assertTrue(entered.wait(5))
+            destroyer = threading.Thread(target=db.destroy, args=(self.keys,))
+            destroyer.start()
+            time.sleep(0.2)
+            release.set()
+            destroyer.join(10)
+            writer.join(10)
+        self.assertEqual(usb_writes, [])                    # migawka z chwili zniszczenia nie trafia na pamięć
+        self.assertEqual(list(self.laptop("a").iterdir()), [])
+        self.assertEqual(list(self.usb.iterdir()), [])
+        self.assertIsInstance(errors[0], database.StorageError)
+
+    @staticmethod
+    def _catch(fn):
+        try:
+            fn()
+        except Exception as e:  # noqa: BLE001
+            return e
+        return None
+
+    def test_account_file_replace_is_durable(self):
+        with unittest.mock.patch.object(database, "_fsync_dir", wraps=database._fsync_dir) as sync:
+            self.kit.set_password("gospodarz", self.key, "nowe haslo", iterations=1000)
+        self.assertEqual(sync.call_args_list[-1], unittest.mock.call(self.keys))   # po os.replace
 
 
 class PasswordsTest(unittest.TestCase):
@@ -854,6 +1198,103 @@ class SessionTest(unittest.TestCase):
                 unittest.mock.patch.object(sys, "argv", ["-m"]):
             self.assertIsNone(session.usb_root())
 
+    def test_lost_account_file_is_broken_not_new(self):
+        a = self.session("a")
+        envelopes = a.create(0)["envelopes"]
+        a.add("WICI-3FA21C", "", "configure", True)
+        a.hand_back()
+        (self.root / "usb" / "keys" / "konta.json").unlink()
+        b = self.session("b")
+        self.assertEqual(b.describe()["kit"], "broken")     # nie "new": nowy zestaw nadpisałby kopie
+        with self.assertRaises(database.StorageError):
+            b.create(0)
+        b.recover(envelopes[-1]["password"], 0)
+        self.assertIn("configure", [e["op"] for e in b.recent()])
+        stray = self.root / "inna"
+        (stray / "keys").mkdir(parents=True)
+        (stray / "keys" / "zestaw.key").write_bytes(os.urandom(32))   # przerwane tworzenie zestawu
+        c = session.Session(stray, self.root / "c", iterations=1000)
+        self.addCleanup(c.close)
+        self.assertEqual(c.describe()["kit"], "new")        # bez kopii nic nie zginie: panel proponuje nowy zestaw
+        c.create(0)
+
+    def test_recover_checks_deputies_before_the_password(self):
+        a = self.session("a")
+        envelopes = a.create(0)["envelopes"]
+        a.hand_back()
+        (self.root / "usb" / "keys" / "konta.json").unlink()
+        b = self.session("b")
+        with unittest.mock.patch.object(database, "key_from_recovery") as derive:
+            with self.assertRaises(ValueError):
+                b.recover(envelopes[-1]["password"], 9)
+        derive.assert_not_called()
+        self.assertEqual(len(b.kit.failures), 0)
+
+    def test_kits_keep_separate_copies_on_one_laptop(self):
+        a = self.session("a")
+        pw_a = a.create(0)["envelopes"][0]["password"]
+        a.add("", "", "zestaw A", True)
+        a.close()
+        other = self.root / "usb-b"
+        other.mkdir()
+        b = session.Session(other, self.root / "a", iterations=1000)   # ten sam laptop, inny zestaw
+        self.addCleanup(b.close)
+        b.create(0)
+        b.close()
+        folders = sorted((self.root / "a" / "baza").iterdir())
+        self.assertEqual(len(folders), 2)
+        a = self.session("a")
+        a.login("gospodarz", pw_a)
+        disk = a.db.disk_dir
+        a.close()
+        for f in disk.iterdir():                            # układ sprzed podkatalogów
+            f.rename(disk.parent / f.name)
+        a = self.session("a")
+        a.login("gospodarz", pw_a)
+        self.assertIn("zestaw A", [e["op"] for e in a.recent()])
+        self.assertEqual(sorted(f.name for f in disk.iterdir()), list(database.NAMES))
+        self.assertFalse(any(f.is_file() for f in disk.parent.iterdir()))
+        a.hand_back()
+        self.assertEqual(sorted((self.root / "a" / "baza").iterdir()), [d for d in folders if d != disk])
+
+    def test_other_kit_under_the_stick_path(self):
+        a = self.session("a")
+        a.create(0)
+        a.db.flush()
+        stick, moved = self.root / "usb", self.root / "usb-e"
+        stick.rename(moved)
+        stick.mkdir()
+        other = session.Session(stick, self.root / "c", iterations=1000)
+        self.addCleanup(other.close)
+        other.create(0)                                     # inny zestaw pod tą samą literą dysku
+        other.close()
+        before = {f: f.read_bytes() for f in stick.rglob("*") if f.is_file()}
+        for call in (a.hand_back, a.flush, lambda: a.new_password("gospodarz")):
+            with self.assertRaisesRegex(database.StorageError, "inna pamięć USB"):
+                call()
+        self.assertFalse(a.adopt(stick))
+        self.assertEqual(a.destroy(), {"usb": False})
+        self.assertFalse(a.describe()["destroyed_usb"])
+        self.assertEqual({f: f.read_bytes() for f in stick.rglob("*") if f.is_file()}, before)
+        self.assertTrue(any((moved / "keys").iterdir()))
+
+    def test_panel_flush_and_destroyed_usb(self):
+        a = self.session("a")
+        a.flush()                                           # bez logowania: nic do zapisania
+        a.create(0)
+        self.assertIsNone(a.describe()["destroyed_usb"])
+        a.add("", "", "x", True)
+        a.flush()
+        self.assertTrue(a.describe()["db"]["usb_saved"])
+        (self.root / "usb").rename(self.root / "usb-wyjeta")
+        t = time.monotonic()
+        with self.assertRaises(database.StorageError):
+            a.flush()
+        self.assertLess(time.monotonic() - t, 1.0)          # od razu, bez czekania na zapis
+        (self.root / "usb-wyjeta").rename(self.root / "usb")
+        a.destroy()
+        self.assertIs(a.describe()["destroyed_usb"], True)
+
 
 def memory_journal(tmp):
     """Journal in an encrypted database with a random key, without a stick (tests of other parts)."""
@@ -871,7 +1312,7 @@ class JournalTest(unittest.TestCase):
             for sql in ("DELETE FROM journal", "UPDATE journal SET ok=1"):
                 with self.assertRaises(sqlite3.DatabaseError):
                     j.db.write(lambda c, sql=sql: c.execute(sql))
-            j.close()
+            j.db.close()
 
     def test_state_dir_override(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -1012,6 +1453,74 @@ class PanelTest(unittest.TestCase):
         r, _ = self.request("POST", "/api/config/check", "{}", {"Content-Type": "application/json"})
         self.assertEqual((r.status, r.getheader("Connection")), (403, "close"))   # treść nieczytana: koniec połączenia
 
+    def test_head_does_not_redeem_or_wait(self):
+        ticket = self.panel.ticket()
+        self.assertEqual(self.request("HEAD", f"/start?t={ticket}")[0].status, 405)
+        self.assertEqual(self.request("GET", f"/start?t={ticket}")[0].status, 303)   # odnośnik nadal ważny
+        c = self.cookie()
+        self.assertEqual(self.request("HEAD", "/api/state?v=0", headers={"Cookie": c})[0].status, 405)
+        self.assertEqual(self.request("HEAD", "/app.js", headers={"Cookie": c})[0].status, 200)
+
+    def test_checks_do_not_wake_long_polls(self):
+        c = {"Cookie": self.cookie(), "Content-Type": "application/json"}
+        before = self.panel.version
+        self.request("POST", "/api/config/check", json.dumps({"doc": station_doc()}), c)
+        self.request("POST", "/api/ifac/new", "{}", c)
+        self.assertEqual(self.panel.version, before)
+        self.request("POST", "/api/copy/choose", json.dumps({"prefer": "disk"}), c)   # czynność: budzi, także z błędem
+        self.assertGreater(self.panel.version, before)
+
+    def test_panel_limits_come_from_configdoc(self):
+        limits = wici_main.info()["limits"]
+        self.assertEqual((limits["addresses"], limits["address"], limits["phrases"], limits["phrase"]),
+                         (configdoc.ADDRESSES, configdoc.ADDRESS_MAX, configdoc.PHRASES, configdoc.PHRASE_MAX))
+        page = (LAPTOP / "wici" / "ui" / "index.html").read_text(encoding="utf-8")
+        select = page[page.index('<select name="radio"'):page.index("</select>", page.index('<select name="radio"'))]
+        self.assertEqual(tuple(re.findall(r'<option value="([^"]+)"', select)), configdoc.PROFILES)
+        script = (LAPTOP / "wici" / "ui" / "app.js").read_text(encoding="utf-8")
+        self.assertNotRegex(script, r"\b(ADDRESS_MAX|PHRASE_MAX)\b|z 256 B|wersję 2\b")   # jedno źródło limitów
+
+
+class InstanceTest(unittest.TestCase):
+    """One instance per laptop: the lock file, a second START waiting for a starting one, start errors."""
+
+    def test_lock_is_exclusive_and_released(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "instance.lock"
+            lock = wici_main.instance_lock(path)
+            self.assertIsNotNone(lock)
+            self.assertIsNone(wici_main.instance_lock(path))
+            lock.close()
+            again = wici_main.instance_lock(path)
+            self.assertIsNotNone(again)
+            again.close()
+
+    def test_second_start_waits_for_a_starting_instance(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            inst = Path(tmp) / "instance.json"
+            held = wici_main.instance_lock(Path(tmp) / "instance.lock")    # instancja jeszcze bez instance.json
+            with unittest.mock.patch.object(wici_main, "STARTING_S", 2), unittest.mock.patch.object(wici_main.time, "sleep"):
+                with self.assertRaises(RuntimeError):
+                    wici_main.claim(inst, None)
+                held.close()
+                url, lock = wici_main.claim(inst, None)
+            self.assertIsNone(url)
+            self.assertIsNotNone(lock)
+            lock.close()
+
+    def test_start_error_is_shown_and_reported(self):
+        with unittest.mock.patch.object(wici_main, "run", side_effect=database.StorageError("pamięć tylko do odczytu")), \
+                unittest.mock.patch.object(wici_main, "alert") as alert, unittest.mock.patch("sys.stderr"):
+            self.assertEqual(wici_main.main([]), wici_main.REPORTED)
+        self.assertIn("pamięć tylko do odczytu", alert.call_args[0][0])
+
+    def test_alert_without_dialog_programs_prints(self):
+        with unittest.mock.patch.object(wici_main.sys, "platform", "linux"), \
+                unittest.mock.patch.object(wici_main.shutil, "which", return_value=None), \
+                unittest.mock.patch("sys.stderr", new_callable=lambda: __import__("io").StringIO()) as err:
+            wici_main.alert("Nie udało się")
+        self.assertIn("WICI: Nie udało się", err.getvalue())
+
 
 class PackageTest(unittest.TestCase):
     PACKAGE = LAPTOP / "wici"
@@ -1065,7 +1574,36 @@ class BuildPinsTest(unittest.TestCase):
         for name, pin in pins["runtimes"].items():
             self.assertRegex(pin["sha256"], r"^[0-9a-f]{64}$", name)
             self.assertTrue(pin["url"].startswith("https://"), name)
-            self.assertIn(pins["python"].replace("+", "%2B"), pin["url"], name)
+            self.assertIn(pins["python"], pin["url"], name)
+            if pin["kind"] == "pbs":   # wydanie python-build-standalone, z którego są licencje bibliotek
+                release = json.loads((LAPTOP / "build" / "licencje" / "zrodla.json").read_text(encoding="utf-8"))["pbs_release"]
+                self.assertIn(f"/download/{release}/cpython-{pins['python']}%2B{release}-", pin["url"], name)
+
+    def test_ci_builds_with_the_pinned_python(self):
+        pins = json.loads((LAPTOP / "build" / "runtimes.json").read_text(encoding="utf-8"))
+        workflow = (ROOT / ".github" / "workflows" / "laptop.yml").read_text(encoding="utf-8")
+        self.assertEqual(workflow.count(f"python-version: '{pins['python']}'"), 2)   # usb i size
+
+    def test_app_zip_skips_junk(self):
+        for rel in ("wici/__main__.py", "wici/ui/index.html", "wici/slowa.txt"):
+            self.assertTrue(build_usb.app_file(rel), rel)
+        for rel in ("wici/.DS_Store", "wici/web.py~", "wici/.web.py.swp", "wici/#web.py#", "wici/web.py.orig",
+                    "wici/__pycache__/web.cpython-314.pyc", "wici/.idea/x.xml"):
+            self.assertFalse(build_usb.app_file(rel), rel)
+
+    def test_out_that_is_not_a_previous_build_is_refused(self):
+        for kept in ("keys", "kopia", "notatki.txt"):   # pamięć zestawu albo dowolny katalog
+            with tempfile.TemporaryDirectory() as tmp:
+                out = Path(tmp) / "pamiec"
+                out.mkdir()
+                if kept == "notatki.txt":
+                    (out / kept).write_text("x")
+                else:
+                    (out / kept).mkdir()
+                    (out / "build-manifest.json").write_text("{}")
+                with self.assertRaises(SystemExit):
+                    build_usb.build(out, [], archives={})
+                self.assertTrue((out / kept).exists(), kept)
 
     def test_launchers_point_at_the_same_layout(self):
         mac = (LAPTOP / "build" / "launcher" / "start-mac.sh").read_text(encoding="utf-8")
@@ -1126,7 +1664,12 @@ class BuildTreeTest(unittest.TestCase):
                               or "libssl" in f or "libcrypto" in f or "_hashlib" in f or "libpython" in f
                               or f.endswith(f"windows/python{tag}.zip")], files)
             self.assertEqual((out / f"runtime/linux-x86_64/bin/python{minor}._pth").read_text(),
-                             f"../../{build_usb.STDLIB_ZIP}\n../lib-dynload\n")
+                             f"../../{build_usb.STDLIB_ZIP}\n../lib-dynload\n")   # lib-dynload tylko, gdy coś do niego trafiło
+            with zipfile.ZipFile(out / "app" / "wici.pyz") as z:
+                self.assertEqual({(i.date_time, i.create_system, i.compress_type) for i in z.infolist()},
+                                 {(build_usb.ZIP_TIME, 3, zipfile.ZIP_DEFLATED)})
+            self.assertIn("<string>10.15</string>", (out / "START-MAC.app/Contents/Info.plist").read_text(encoding="utf-8"))
+            self.assertTrue(doc["build_python"] and "commit" in doc)
             self.assertEqual((out / f"runtime/windows/python{tag}._pth").read_bytes(),
                              f"..\\{build_usb.STDLIB_ZIP}\r\n.\r\n".encode())
             self.assertTrue(os.access(out / "START-MAC.app/Contents/MacOS/START", os.X_OK))
@@ -1200,7 +1743,7 @@ class SimulatorPreparationTest(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.journal = memory_journal(self.tmp.name)
-        self.addCleanup(self.journal.close)
+        self.addCleanup(self.journal.db.close)
         self.station = usbproto.Station(f"tcp:127.0.0.1:{port}").start()
         self.addCleanup(self.station.stop)
         self.prep = Prep(self.station, self.journal)

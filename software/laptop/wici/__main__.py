@@ -3,31 +3,43 @@
 
     python -m wici [--port COM5|/dev/ttyACM1|tcp:127.0.0.1:7300] [--http 8080] [--no-browser] [--selftest]
 
-A second START opens the panel of the instance that already runs, with a new one-time link. --selftest checks the runtime of
-the USB package on this system (modules, SQLite, ports, HTTP) and exits; CI runs it on every system.
+A second START opens the panel of the instance that already runs, with a new one-time link; a lock file held
+by the running instance makes a quick double click wait for it instead of starting a second one. Without a
+console (pythonw, START-MAC.app) a failed start or browser shows a system message, and a failed start exits
+with code 3, so the START programs do not show a second one.
+--selftest checks the runtime of the USB package on this system (modules, SQLite, ports, HTTP) and exits;
+CI runs it on every system.
 """
 
 import argparse
 import json
 import os
 import secrets
+import shutil
+import subprocess
 import sys
 import threading
+import time
+import traceback
 import urllib.error
 import urllib.request
 import webbrowser
 
-from . import VERSION, serialport, store
+from . import VERSION, configdoc, serialport, store
 from .awake import Awake
 from .database import StorageError
 from .prep import Prep
 from .session import Session, usb_root
-from .usbproto import Station
+from .usbproto import CONTRACT, Station
 from .web import Panel, serve
 
 
 def info():
-    return {"version": VERSION, "python": sys.version.split()[0], "platform": sys.platform}
+    """What the panel shows in its footer and the limits it counts while typing (configdoc stays the authority)."""
+    return {"version": VERSION, "python": sys.version.split()[0], "platform": sys.platform,
+            "contract": CONTRACT, "limits": {"addresses": configdoc.ADDRESSES, "address": configdoc.ADDRESS_MAX,
+                                             "phrases": configdoc.PHRASES, "phrase": configdoc.PHRASE_MAX,
+                                             "message": configdoc.SA1_MAX, "profiles": list(configdoc.PROFILES)}}
 
 
 def running_instance(path, usb=None):
@@ -49,6 +61,46 @@ def running_instance(path, usb=None):
     return None
 
 
+def instance_lock(path):
+    """Exclusive lock of the running instance, released by the system also when the process is killed; None when held."""
+    f = open(path, "a+b")
+    try:
+        if sys.platform == "win32":
+            import msvcrt
+            msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        f.close()
+        return None
+    return f
+
+
+def alert(text):
+    """Message for a person without a console: system dialog where there is one, and stderr."""
+    print(f"WICI: {text}", file=sys.stderr, flush=True)
+    try:
+        if sys.platform == "win32":
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(None, text, "WICI", 0x10)
+        elif sys.platform == "darwin":
+            subprocess.run(["osascript", "-e", "on run argv", "-e", 'display alert "WICI" message (item 1 of argv)',
+                            "-e", "end run", text], timeout=600, capture_output=True)
+        elif sys.stderr is not None and sys.stderr.isatty():
+            pass                                 # Linux z terminala: komunikat już jest w terminalu
+        elif shutil.which("zenity"):
+            subprocess.run(["zenity", "--error", "--title=WICI", f"--text={text}"], timeout=600, capture_output=True)
+        elif shutil.which("notify-send"):
+            subprocess.run(["notify-send", "WICI", text], timeout=10, capture_output=True)
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+
+STARTING_S = 30   # s: tyle drugi START czeka na instancję, która się jeszcze uruchamia
+REPORTED = 3      # kod wyjścia po błędzie pokazanym przez alert(): programy START nie pokazują drugiego
+
+
 def write_instance(path, port, token):
     tmp = path.with_suffix(".tmp")
     tmp.write_text(json.dumps({"port": port, "token": token, "pid": os.getpid()}), encoding="utf-8")
@@ -57,8 +109,13 @@ def write_instance(path, port, token):
     os.replace(tmp, path)
 
 
-def open_browser(url):
-    threading.Thread(target=webbrowser.open, args=(url,), daemon=True).start()
+def browse(url):
+    try:
+        opened = webbrowser.open(url)
+    except Exception:   # noqa: BLE001 - webbrowser zgłasza różne wyjątki zależnie od systemu
+        opened = False
+    if not opened:
+        alert(f"Nie udało się otworzyć przeglądarki. Otwórz w niej adres (działa raz):\n{url}")
 
 
 def database_selftest(tmp):
@@ -97,7 +154,7 @@ def selftest():
     from importlib import resources
     from pathlib import Path
 
-    from . import configdoc, syscrypto
+    from . import syscrypto
     from .web import STATIC
     checks = []
     for _, (name, _) in STATIC.items():
@@ -116,12 +173,17 @@ def selftest():
     subprocess.run([sys.executable, "-c", "pass"], check=True, timeout=30)
     checks.append(f"stdlib {os.path.normpath(next((p for p in sys.path if p.endswith('.zip')), '-'))}")
     assert unicodedata.normalize("NFC", "Szkoła") == "Szkoła"
+    if configdoc.unicode_warning():                 # tekst sprawdzany inną wersją Unicode niż w stacji
+        print(f"WICI: {configdoc.unicode_warning()}", file=sys.stderr, flush=True)
     assert hashlib.sha256(b"").hexdigest().startswith("e3b0c442")
     checks.append(f"crypto {syscrypto.selfcheck()}")
     from . import passwords
     assert len(passwords.generate().split()) == passwords.ACCOUNT_WORDS
     assert configdoc.check({"role": "wezel", "ifac": "11" * 16, "radio": {"profile": "p1"}}) == []
     with tempfile.TemporaryDirectory() as tmp:
+        lock = instance_lock(Path(tmp) / "instance.lock")
+        assert lock and instance_lock(Path(tmp) / "instance.lock") is None, "lock"
+        lock.close()
         checks.append(f"db {database_selftest(Path(tmp))}")
         token = secrets.token_urlsafe(24)
         (Path(tmp) / "zestaw").mkdir()
@@ -181,13 +243,38 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if args.selftest:
         return selftest()
+    try:
+        return run(args)
+    except Exception as e:   # noqa: BLE001 - bez konsoli błąd startu byłby niewidoczny
+        traceback.print_exc()
+        alert(f"Aplikacja nie uruchomiła się: {e}. Uruchom START ponownie albo użyj innego laptopa.")
+        return REPORTED
+
+
+def claim(instance, usb):
+    """(URL of the panel that already runs, None), or (None, lock) when this process becomes the instance.
+
+    The running instance holds the lock; while it is still starting (a quick second double click, a login
+    holding the session) there is neither a lock nor an answer, so the second START waits for it."""
+    for _ in range(STARTING_S):
+        url = running_instance(instance, usb)
+        if url:
+            return url, None
+        lock = instance_lock(instance.with_name("instance.lock"))
+        if lock:
+            return None, lock
+        time.sleep(1)
+    raise RuntimeError("inna instancja aplikacji na tym laptopie nie odpowiada")
+
+
+def run(args):
     state = store.state_dir()
     instance = state / "instance.json"
     usb = usb_root()
-    url = running_instance(instance, usb)
+    url, lock = claim(instance, usb)
     if url:
         if not args.no_browser:
-            webbrowser.open(url)
+            browse(url)
         print(url)
         return 0
     token = secrets.token_urlsafe(24)
@@ -207,7 +294,7 @@ def main(argv=None):
     url = f"http://127.0.0.1:{port}/start?t={panel.ticket()}"
     print(f"WICI {VERSION}: panel {url}", flush=True)
     if not args.no_browser:
-        open_browser(url)
+        threading.Thread(target=browse, args=(url,), daemon=True).start()
     try:
         server.serve_forever()
     except KeyboardInterrupt:
@@ -224,6 +311,7 @@ def main(argv=None):
             instance.unlink()
         except OSError:
             pass
+        lock.close()
     return 0
 
 

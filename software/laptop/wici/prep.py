@@ -1,9 +1,11 @@
 # SPDX-License-Identifier: MIT
 """Operations on the connected station: read and write the configuration, read the card, ZNISZCZ DANE.
 
-Each operation returns a JSON-ready dict for the panel and writes one journal entry. Errors become a
-sentence for the person at the laptop; the station's own reason code stays in the journal. ZNISZCZ DANE
-has no journal entry: the laptop destroys the journal at the same time (the paper journal records it).
+Each operation that reaches the station returns a JSON-ready dict for the panel and writes one journal
+entry. Errors become a sentence for the person at the laptop; the station's own reason code stays in the
+journal. Refusals decided on the laptop before anything is sent (form check, a document that cannot be
+encoded, the card of a node) are not journaled. ZNISZCZ DANE returns its state string and has no journal
+entry: the laptop destroys the journal at the same time (the paper journal records it).
 """
 
 import hashlib
@@ -24,8 +26,11 @@ REASONS = {
     "not_confirmed": "Nie potwierdzono przyciskiem na stacji w ciągu 30 s.",
     "contract": "Stacja ma niezgodną wersję oprogramowania.",
     "unknown_type": "Ta wersja oprogramowania stacji nie zna tego polecenia.",
-    "migration": "Stacja jest w trakcie przenoszenia (PRZENIEŚ STACJĘ).",
+    # Odmowa importu, eksportu i `migrate`: PRZENIEŚ STACJĘ ta wersja oprogramowania stacji jeszcze nie ma (F107).
+    "migration": "Ta wersja oprogramowania stacji nie obsługuje przenoszenia (PRZENIEŚ STACJĘ).",
 }
+# Pola transferu i wiersza, nie dokumentu: dane nie dotarły w całości albo w kolejności.
+TRANSPORT = {"xfer", "offset", "data", "sha256", "op", "json"}
 FIELDS = {
     "role": "rola", "addresses": "adresy", "receiver": "karta odbiorcy", "stations": "liczba stacji w sieci",
     "phrases": "gotowe frazy", "ifac": "kod dostępu sieci", "radio": "profil radiowy",
@@ -42,6 +47,9 @@ class OperationError(Exception):
 def explain(error):
     if isinstance(error, Rejected):
         if error.reason == "invalid" and error.detail:
+            if error.detail in TRANSPORT:
+                return OperationError("Dane nie dotarły poprawnie do stacji. Wyślij ponownie.", None,
+                                      f"invalid {error.detail}")
             if error.detail == "radio":
                 return OperationError("Profil radiowy nie pasuje do układu radiowego tej stacji.", "radio", "invalid")
             name = FIELDS.get(error.detail, error.detail)
@@ -76,22 +84,30 @@ class Prep:
         return result
 
     def read_config(self):
-        data = self._run("config_get", lambda link: link.read_transfer("config_get"),
-                         lambda d: "sha256 " + hashlib.sha256(d).hexdigest()[:16])
-        return {"doc": json.loads(data.decode("utf-8"))}
+        def read(link):
+            data = link.read_transfer("config_get")
+            try:
+                return data, json.loads(data.decode("utf-8"))
+            except (ValueError, RecursionError) as e:   # UnicodeDecodeError to też ValueError
+                raise ProtocolError("bad reply") from e
+        data, doc = self._run("config_get", read, lambda r: "sha256 " + hashlib.sha256(r[0]).hexdigest()[:16])
+        return {"doc": doc}
 
     def write_config(self, doc):
-        doc = configdoc.normalize(doc)
-        problems = configdoc.check(doc)
+        doc, problems, data = configdoc.prepare(doc)
         if problems:
             raise OperationError("Popraw zaznaczone pola.", problems[0][0], "check")
-        data = configdoc.encode(doc)
-        reply = self._run("configure", lambda link: link.write_transfer("configure", data),
-                          lambda r: f"config_seq {r.get('config_seq')} sha256 {hashlib.sha256(data).hexdigest()[:16]}")
+        digest = hashlib.sha256(data).hexdigest()
+        reply = self._run("configure", lambda link: link.write_transfer("configure", data, sha256=digest),
+                          lambda r: f"config_seq {r.get('config_seq')} sha256 {digest[:16]}")
         return {"config_seq": reply.get("config_seq"), "worst_request": reply.get("worst_request"),
-                "sha256": hashlib.sha256(data).hexdigest(), "doc": doc}
+                "sha256": digest, "doc": doc}
 
     def card(self):
+        state = self.station.state
+        role = (state.get("status") or {}).get("role") or (state.get("hello") or {}).get("role")
+        if role == "wezel":   # węzeł nie ma karty; stacja odpowiedziałaby not_configured
+            raise OperationError(REASONS["role"], None, "role")
         reply = self._run("card", lambda link: link.request("card"), lambda r: "fingerprint " + r.get("fingerprint", ""))
         return {"card": {k: reply[k] for k in ("name", "lxmf", "key", "address", "fingerprint") if k in reply}}
 

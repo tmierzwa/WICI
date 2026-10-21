@@ -13,12 +13,23 @@ import secrets
 import unicodedata
 
 DOC_MAX = 7680
+SA1_MAX = 256          # treść SA1 po kodowaniu (docs/spec/oprogramowanie.md); stacja liczy najgorsze zgłoszenie
 ADDRESSES, ADDRESS_MAX = 8, 64
 PHRASES, PHRASE_MAX = 11, 96
 STATIONS_MAX = 1000
 PROFILES = ("lora-sf7", "p1")
 REJECTED_CATEGORIES = ("Cc", "Cf", "Cs", "Co", "Cn", "Zl", "Zp")
+UNICODE_VERSION = "16.0.0"   # tabele Unicode oprogramowania stacji (firmware/src/unicode_tables.h)
 HEX = re.compile(r"[0-9a-f]*")
+SPACES = re.compile(r"\s+")
+
+
+def unicode_warning():
+    """None, or why this Python may judge texts differently than the station (another Unicode version)."""
+    if unicodedata.unidata_version == UNICODE_VERSION:
+        return None
+    return (f"Unicode {unicodedata.unidata_version} w Pythonie, {UNICODE_VERSION} w stacji: "
+            "stacja może odrzucić tekst, który laptop przepuścił (albo odwrotnie)")
 
 
 def destination(key, name):
@@ -27,8 +38,11 @@ def destination(key, name):
 
 
 def clean_text(value):
-    """What the form does with typed text: NFC, quotes to „ ” and backslash to /, edges trimmed."""
-    text = unicodedata.normalize("NFC", str(value)).strip().replace("\\", "/")
+    """What the form does with typed or pasted text: invisible format characters (Cf: soft hyphen, ZWSP, BOM)
+    dropped, NFC, whitespace runs (also line breaks and tabs) to one space, edges trimmed, quotes to „ ”
+    and backslash to /."""
+    text = "".join(c for c in str(value) if unicodedata.category(c) != "Cf")
+    text = SPACES.sub(" ", unicodedata.normalize("NFC", text)).strip().replace("\\", "/")
     out, opening = [], True
     for c in text:
         if c == '"':
@@ -110,7 +124,7 @@ def check(doc):
         problems.append(("stations", f"liczba od 1 do {STATIONS_MAX}"))
     phrases = doc.get("phrases")
     if not isinstance(phrases, list) or len(phrases) > PHRASES:
-        problems.append(("phrases", f"najwyżej {PHRASES} fraz"))
+        problems.append(("phrases", f"lista fraz (może być pusta), najwyżej {PHRASES}"))
     else:
         for i, p in enumerate(phrases):
             if not isinstance(p, list) or len(p) != 3:
@@ -139,15 +153,34 @@ def check(doc):
     return problems
 
 
+def compact(value, limit):
+    """Compact UTF-8 JSON without escape sequences (texts were checked), at most `limit` bytes.
+
+    Shared by the `configure` document and protocol lines (usbproto.encode adds the LF)."""
+    text = json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+    if "\\" in text:
+        raise ValueError("wymagałoby sekwencji ucieczki")
+    data = text.encode("utf-8")
+    if len(data) > limit:
+        raise ValueError(f"za długie: {len(data)} B, najwyżej {limit} B")
+    return data
+
+
 def encode(doc):
     """Bytes sent in the `configure` transfer: coded like protocol lines (UTF-8, no escape sequences)."""
-    text = json.dumps(doc, ensure_ascii=False, separators=(",", ":"))
-    if "\\" in text:
-        raise ValueError("dokument wymagałby sekwencji ucieczki")
-    data = text.encode("utf-8")
-    if len(data) > DOC_MAX:
-        raise ValueError(f"dokument ma {len(data)} B, najwyżej {DOC_MAX} B")
-    return data
+    return compact(doc, DOC_MAX)
+
+
+def prepare(doc):
+    """Normalise, check and encode: (doc, problems, data); `data` is None when there are problems."""
+    doc = normalize(doc)
+    problems = check(doc)
+    if problems:
+        return doc, problems, None
+    try:
+        return doc, [], encode(doc)
+    except ValueError as e:
+        return doc, [("", str(e))], None
 
 
 def new_ifac():

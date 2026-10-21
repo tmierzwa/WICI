@@ -5,9 +5,10 @@ Access needs the session token in an HttpOnly, SameSite=Strict cookie, and stati
 with an envelope password (session.Session), because they write to the journal in the encrypted database. The launcher opens
 /start?t=<ticket>; a ticket works once, so the browser history does not reveal a working link, and a
 second START asks the running instance for a new one (POST /api/ticket with the session token) and
-names the stick it runs from, which may come back under another drive letter. The Host header must name the loopback address (no DNS rebinding) and every
-POST must carry JSON with a loopback Origin, so another web page in the same browser cannot drive
-the station. Static files are read from the package, also when it runs from a zip archive.
+names the stick it runs from, which may come back under another drive letter. The Host header must name
+the loopback address (no DNS rebinding), and every POST must carry JSON (a cross-origin page cannot send
+it without a preflight, which the panel does not answer) and a loopback Origin when it has one (the second
+START sends none). Static files are read from the package, also when it runs from a zip archive.
 """
 
 import hmac
@@ -134,7 +135,11 @@ def make_handler(panel):
                 return self._json(200, panel.snapshot(since))
             self._send(404, b"{}")
 
-        do_HEAD = do_GET
+        def do_HEAD(self):
+            # Tylko pliki i /health: HEAD nie wykorzystuje jednorazowego odnośnika ani nie czeka na stan.
+            if urlsplit(self.path).path in STATIC or urlsplit(self.path).path == "/health":
+                return self.do_GET()
+            self._send(405, b"{}", headers=[("Allow", "GET, POST")])
 
         def do_POST(self):
             # Odpowiedź bez odczytu treści: połączenie zamykane, żeby reszta treści nie stała się następnym żądaniem.
@@ -184,33 +189,34 @@ def make_handler(panel):
                 return self._json(500, {"error": "Nieoczekiwany błąd aplikacji. Spróbuj ponownie; jeśli się powtarza, "
                                                  "uruchom START jeszcze raz.", "code": type(e).__name__})
             finally:
-                panel.changed()
+                if path not in READ_ONLY:
+                    panel.changed()
             self._json(200, result)
 
     return Handler
 
 
 def check(panel, body):
-    doc = configdoc.normalize(body.get("doc"))
-    problems = configdoc.check(doc)
-    size = None
-    if not problems:
-        try:
-            size = len(configdoc.encode(doc))
-        except ValueError as e:
-            problems = [("", str(e))]
-    return {"doc": doc, "problems": [{"field": f, "message": m} for f, m in problems], "size": size,
-            "max": configdoc.DOC_MAX}
+    doc, problems, data = configdoc.prepare(body.get("doc"))
+    return {"doc": doc, "problems": [{"field": f, "message": m} for f, m in problems],
+            "size": None if data is None else len(data), "max": configdoc.DOC_MAX}
 
 
 def quit_app(panel, body):
+    """'Zakończ': the last copy is written before the answer, so the panel can say when it did not reach the stick."""
+    try:
+        panel.session.flush()
+        error = None
+    except database.StorageError as e:
+        error = str(e)
     threading.Thread(target=panel.server.shutdown, daemon=True).start()
-    return {"ok": True}
+    return {"ok": True, "usb_error": error}
 
 
 def hand_back(panel, body):
     panel.session.hand_back()
-    return quit_app(panel, body)
+    threading.Thread(target=panel.server.shutdown, daemon=True).start()
+    return {"ok": True}
 
 
 def destroy(panel, body):
@@ -230,7 +236,7 @@ def destroy(panel, body):
 def ticket(panel, body):
     """Second START: a new link to this panel, and the path of the stick it runs from (Session.adopt)."""
     usb = body.get("usb")
-    if isinstance(usb, str) and usb and panel.session:
+    if isinstance(usb, str) and usb:
         try:
             panel.session.adopt(usb)
         except (OSError, ValueError, database.StorageError):
@@ -252,20 +258,28 @@ def _deputies(body):
     return n
 
 
+def ok(action):
+    """Route of an action without a result of its own."""
+    def route(panel, body):
+        action(panel, body)
+        return {"ok": True}
+    return route
+
+
 ROUTES = {
     "/api/config/check": check,
     "/api/config/read": lambda panel, body: panel.prep.read_config(),
     "/api/config/write": lambda panel, body: panel.prep.write_config(body.get("doc")),
     "/api/card": lambda panel, body: panel.prep.card(),
     "/api/ifac/new": lambda panel, body: {"ifac": configdoc.new_ifac()},
-    "/api/rescan": lambda panel, body: (panel.station.rescan(), {"ok": True})[1],
+    "/api/rescan": ok(lambda panel, body: panel.station.rescan()),
     "/api/quit": quit_app,
     "/api/kit/create": lambda panel, body: panel.session.create(_deputies(body)),
-    "/api/login": lambda panel, body: (panel.session.login(_text(body, "account"), _text(body, "password")), {"ok": True})[1],
+    "/api/login": ok(lambda panel, body: panel.session.login(_text(body, "account"), _text(body, "password"))),
     "/api/recover": lambda panel, body: panel.session.recover(_text(body, "password"), _deputies(body)),
-    "/api/copy/choose": lambda panel, body: (panel.session.choose(_text(body, "prefer")), {"ok": True})[1],
+    "/api/copy/choose": ok(lambda panel, body: panel.session.choose(_text(body, "prefer"))),
     "/api/password/new": lambda panel, body: panel.session.new_password(_text(body, "account")),
-    "/api/logout": lambda panel, body: (panel.session.logout(), {"ok": True})[1],
+    "/api/logout": ok(lambda panel, body: panel.session.logout()),
     "/api/hand-back": hand_back,
     "/api/destroy": destroy,
     "/api/ticket": ticket,
@@ -275,6 +289,8 @@ ROUTES = {
 # Czynności na stacji piszą do dziennika w zaszyfrowanej bazie, więc wymagają zalogowania.
 NEEDS_LOGIN = {"/api/config/read", "/api/config/write", "/api/card", "/api/password/new", "/api/logout",
                "/api/hand-back", "/api/destroy"}
+# Bez zmiany stanu: nie budzą długiego odpytywania (sprawdzenie konfiguracji idzie przy każdym wpisanym znaku).
+READ_ONLY = {"/api/config/check", "/api/ifac/new"}
 
 
 class Server(ThreadingHTTPServer):

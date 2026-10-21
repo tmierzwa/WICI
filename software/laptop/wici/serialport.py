@@ -12,8 +12,10 @@ import ctypes
 from ctypes import c_char, c_uint8, c_uint16, c_uint32
 import glob
 import os
+import select
 import socket
 import sys
+import time
 
 BAUD = 115200
 
@@ -30,13 +32,18 @@ class PortClosed(OSError):
     """The device disappeared or the port was closed while in use."""
 
 
+def _order(name):
+    """COM2 before COM10, ttyACM2 before ttyACM10."""
+    return len(name), name
+
+
 def candidates():
     """Ports that may belong to a station: USB CDC ACM devices only, never other serial ports."""
     if sys.platform == "win32":
         return _windows_ports()
     if sys.platform == "darwin":
         return sorted(glob.glob("/dev/cu.usbmodem*"))
-    return sorted(glob.glob("/dev/ttyACM*"), key=lambda p: (len(p), p))
+    return sorted(glob.glob("/dev/ttyACM*"), key=_order)
 
 
 def open_port(name):
@@ -56,24 +63,29 @@ class TcpPort:
         except OSError as e:
             raise PortError(name, "missing", str(e)) from e
         self.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        self.sock.settimeout(None)   # gniazdo blokujące; limit odczytu daje select, bo zapis idzie z innego wątku
 
     def read(self, timeout):
-        self.sock.settimeout(timeout)
         try:
+            ready, _, _ = select.select([self.sock], [], [], timeout)
+            if not ready:
+                return b""
             data = self.sock.recv(4096)
-        except socket.timeout:
-            return b""
-        except OSError as e:
+        except (OSError, ValueError) as e:   # ValueError: gniazdo zamknięte w trakcie select
             raise PortClosed(str(e)) from e
         if not data:
             raise PortClosed("connection closed")
         return data
 
-    def write(self, data):
-        self.sock.settimeout(3)
+    def write(self, data, timeout=3.0):
+        deadline, view = time.monotonic() + timeout, memoryview(data)
         try:
-            self.sock.sendall(data)
-        except OSError as e:
+            while view:
+                left = deadline - time.monotonic()
+                if left <= 0 or not select.select([], [self.sock], [], left)[1]:
+                    raise PortClosed("write timeout")   # druga strona nie czyta
+                view = view[self.sock.send(view):]
+        except (OSError, ValueError) as e:
             raise PortClosed(str(e)) from e
 
     def close(self):
@@ -118,7 +130,6 @@ class PosixPort:
             raise PortError(name, "other", str(e)) from e
 
     def read(self, timeout):
-        import select
         try:
             ready, _, _ = select.select([self.fd], [], [], timeout)
             if not ready:
@@ -133,8 +144,6 @@ class PosixPort:
         return data
 
     def write(self, data):
-        import select
-        import time
         view, deadline = memoryview(data), time.monotonic() + 3
         while view:
             left = deadline - time.monotonic()
@@ -168,7 +177,7 @@ def _windows_ports():
             device, value, _ = winreg.EnumValue(key, i)
             if "USBSER" in device.upper():   # wbudowany sterownik CDC ACM (usbser.sys)
                 ports.append(value)
-    return sorted(ports, key=lambda p: (len(p), p))
+    return sorted(ports, key=_order)
 
 
 # Struktury kernel32 (WindowsPort); zdefiniowane na każdym systemie, żeby test sprawdzał ich rozmiar.
@@ -190,14 +199,13 @@ class COMMTIMEOUTS(ctypes.Structure):
                 ("WriteTotalTimeoutConstant", c_uint32)]
 
 
-class WindowsPort:
-    GENERIC_RW = 0xC0000000
-    OPEN_EXISTING = 3
-    MAXDWORD = 0xFFFFFFFF
-    SETRTS, SETDTR = 3, 5
-    PURGE_TX = 0x0005   # PURGE_TXABORT | PURGE_TXCLEAR; wejścia nie czyścić: `hello` mogło już przyjść
+_kernel32 = None
 
-    def __init__(self, name):
+
+def _kernel():
+    """kernel32 with the prototypes WindowsPort uses; set up once, on first use."""
+    global _kernel32
+    if _kernel32 is None:
         from ctypes import wintypes
         k = ctypes.WinDLL("kernel32", use_last_error=True)
         k.CreateFileW.restype = wintypes.HANDLE
@@ -214,6 +222,20 @@ class WindowsPort:
         k.EscapeCommFunction.argtypes = [wintypes.HANDLE, wintypes.DWORD]
         k.PurgeComm.argtypes = [wintypes.HANDLE, wintypes.DWORD]
         k.SetupComm.argtypes = [wintypes.HANDLE, wintypes.DWORD, wintypes.DWORD]
+        _kernel32 = k
+    return _kernel32
+
+
+class WindowsPort:
+    GENERIC_RW = 0xC0000000
+    OPEN_EXISTING = 3
+    MAXDWORD = 0xFFFFFFFF
+    SETRTS, SETDTR = 3, 5
+    PURGE_TX = 0x0005   # PURGE_TXABORT | PURGE_TXCLEAR; wejścia nie czyścić: `hello` mogło już przyjść
+
+    def __init__(self, name):
+        from ctypes import wintypes
+        k = _kernel()
         self.k, self.name, self.timeout = k, name, None
         h = k.CreateFileW("\\\\.\\" + name, self.GENERIC_RW, 0, None, self.OPEN_EXISTING, 0, None)
         if h in (None, wintypes.HANDLE(-1).value):

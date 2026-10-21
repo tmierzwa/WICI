@@ -22,23 +22,25 @@
 <p>Otwórz pamięć USB w Eksploratorze plików i kliknij dwukrotnie <code>START-WINDOWS.exe</code>. Jeśli Windows pokaże okno „System Windows ochronił ten komputer”, wybierz „Więcej informacji”, a potem „Uruchom mimo to”.</p>
 
 <h2>macOS 10.15 i nowszy (Intel), 11 i nowszy (Apple Silicon)</h2>
-<p>Otwórz pamięć USB w Finderze i kliknij dwukrotnie <code>START-MAC</code>. Jeśli macOS odmówi otwarcia programu od nieznanego dewelopera: w macOS 14 i starszym kliknij go z klawiszem Control, wybierz „Otwórz” i potwierdź; w macOS 15 i nowszym zamknij komunikat, otwórz Ustawienia systemowe → Prywatność i ochrona, na dole wybierz „Otwórz mimo to” i potwierdź hasłem.</p>
+<p>Otwórz pamięć USB w Finderze i kliknij dwukrotnie <code>START-MAC</code>. Jeśli macOS odmówi otwarcia programu od nieznanego dewelopera: w macOS 14 i starszym kliknij go z klawiszem Control, wybierz „Otwórz” i potwierdź; w macOS 15 i nowszym zamknij komunikat, otwórz Ustawienia systemowe → Prywatność i ochrona, na dole wybierz „Otwórz mimo to” i potwierdź hasłem. Jeśli macOS zapyta o dostęp do plików na woluminie wymiennym, wybierz „Pozwól”.</p>
 
 <h2>Linux (komputer PC, x86_64)</h2>
-<p>Kliknij dwukrotnie <code>START-LINUX.desktop</code>. Jeśli menedżer plików tego nie pozwala, kliknij plik prawym przyciskiem i wybierz „Zezwól na uruchamianie”. Albo w terminalu, w katalogu pamięci USB: <code>sh START-LINUX.sh</code>.</p>
-<p>Gdy panel pokazuje brak uprawnień do portu stacji, wpisz w terminalu <code>sudo usermod -aG dialout $USER</code> (w Arch Linux grupa <code>uucp</code>), wyloguj się i zaloguj ponownie. Bez hasła administratora tego komputera użyj innego laptopa. Gdy panel zgłasza brak biblioteki libcrypto (OpenSSL), uruchom system Linux z pamięci USB albo użyj innego laptopa.</p>
+<p>Otwórz pamięć USB w menedżerze plików, kliknij prawym przyciskiem puste miejsce w oknie i wybierz „Otwórz w terminalu” (albo otwórz terminal i przejdź do pamięci poleceniem <code>cd</code>). W terminalu wpisz <code>sh START-LINUX.sh</code> i naciśnij Enter. Nie zamykaj okna terminala w trakcie pracy: zamyka ono aplikację. Komunikaty o błędach pojawiają się w tym oknie.</p>
+<p>Niektóre menedżery plików (np. KDE) uruchamiają też <code>START-LINUX.desktop</code> dwukrotnym kliknięciem; GNOME tego nie robi.</p>
+<p>Gdy panel pokazuje brak uprawnień do portu stacji, wpisz w terminalu <code>sudo usermod -aG dialout $USER</code> (w Arch Linux grupa <code>uucp</code>), wyloguj się i zaloguj ponownie. Bez hasła administratora tego komputera użyj innego laptopa. Gdy aplikacja zgłasza brak biblioteki libcrypto (OpenSSL), użyj innego laptopa.</p>
 
 <h2>Konta i koperty</h2>
 <p>Przy pierwszym uruchomieniu z nowej pamięci zestawu panel tworzy konto gospodarza, konta zastępców i hasło odtworzenia. Każde hasło widać tylko raz: przepisz je do ponumerowanej koperty albo wydrukuj stronę z hasłami i zaklej koperty. Potem panel zawsze pyta o hasło z koperty. Wielkość liter i odstępy między słowami nie mają znaczenia.</p>
 <p>Przed oddaniem laptopa wybierz w zakładce „Zestaw” przycisk „Oddaj laptop”: kopia trafia na pamięć USB, a dane zestawu znikają z dysku laptopa.</p>
-<p>ZNISZCZ DANE w zakładce „Zestaw” uruchamiaj tylko przy groźbie przejęcia stacji albo laptopa. Laptop od razu usuwa dane zestawu, a podłączona stacja czeka na OK i przestaje działać na stałe. Potem zniszcz pamięć USB fizycznie i wpisz zdarzenie do dziennika papierowego.</p>
+<p>ZNISZCZ DANE uruchamiaj tylko przy groźbie przejęcia stacji albo laptopa: po zalogowaniu w panelu zakładka „Zestaw” → ZNISZCZ DANE, dwa potwierdzenia (bez logowania zniszcz dane na stacji: STAN → USŁUGI → ZNISZCZ DANE, a pamięć USB fizycznie). Laptop od razu usuwa dane zestawu, a podłączona stacja czeka na OK i przestaje działać na stałe. Potem zniszcz pamięć USB fizycznie i wpisz zdarzenie do dziennika papierowego.</p>
 <p>Nie wyjmuj pamięci USB w trakcie pracy: aplikacja działa z niej i może się zamknąć. Gdy pamięć wypadła, włóż ją ponownie i uruchom z niej START, także gdy system dał jej inną literę dysku. Dane zapisane w tym czasie czekają zaszyfrowane na dysku laptopa i wracają po zalogowaniu.</p>
 
 <h2>Gdy coś nie działa</h2>
 <ul>
   <li>Panel szuka stacji bez końca: sprawdź przewód (niektóre przewody USB-C tylko ładują) i czy stacja jest włączona.</li>
   <li>Port zajęty: zamknij inne programy do portów szeregowych (monitor portu, Arduino IDE, terminal).</li>
-  <li>Przeglądarka się nie otworzyła: adres panelu jest w oknie terminala (działa raz) albo uruchom START ponownie; drugi START otwiera ten sam panel nowym adresem.</li>
+  <li>Przeglądarka się nie otworzyła: w Windows i macOS aplikacja pokazuje okno z adresem panelu, a w Linuksie adres jest w oknie terminala. Adres działa raz; uruchom START ponownie, a drugi START otworzy ten sam panel z nowym adresem.</li>
+  <li>Aplikacja się nie uruchomiła: pokazuje okno z przyczyną (w Linuksie: w terminalu). Uruchom START ponownie, a gdy to nie pomoże, użyj innego laptopa.</li>
 </ul>
 <p>Zawartość pamięci opisuje plik <code>build-manifest.json</code>: wersje, sumy SHA-256 i źródła wszystkich plików.</p>
 </body>
