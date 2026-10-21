@@ -19,10 +19,18 @@ namespace radiolink {
 
 constexpr size_t MAX_FRAME = 255;  // najdłuższa ramka: LoRa 255 B (SX1262); P1 103 B (LEN + BODY + CRC)
 
-// Profil P1 (CC1120, S2-LP): ramka w eterze to preambuła 8 B, słowo synchronizacji 4 B i `length` B
-// przy symbolRate Bd, plus 3 ms na narastanie mocy (zaokrąglenie w górę).
-constexpr uint32_t p1FrameAirMs(size_t length, uint32_t symbolRate) {
-    return (static_cast<uint32_t>(12 + length) * 8 * 1000 + symbolRate - 1) / symbolRate + 3;
+// Łącze P1 (CC1120, S2-LP; radio.md, „Profil P1” i „Dostęp do kanału”). Tablice rejestrów
+// (p1_registers.h, s2lp_p1_registers.h) mają te same wartości z generatora; sterowniki sprawdzają
+// zgodność static_assert.
+constexpr uint32_t P1_SYMBOL_RATE = 4800;
+constexpr uint32_t P1_FRAME_OVERHEAD = 12;      // preambuła 8 B i słowo synchronizacji 4 B
+constexpr uint32_t P1_RAMP_MS = 3;              // narastanie mocy
+constexpr uint8_t P1_DEBT_FACTOR = 12;          // dług ciszy = 12 x zarezerwowany czas TX (punkt 2)
+constexpr int8_t P1_CCA_THRESHOLD_DBM = -100;   // wartość początkowa, do ustalenia w T4
+
+// Ramka P1 w eterze: narzut i `length` B przy symbolRate Bd (zaokrąglenie w górę) plus narastanie mocy.
+constexpr uint32_t p1FrameAirMs(size_t length, uint32_t symbolRate = P1_SYMBOL_RATE) {
+    return (static_cast<uint32_t>(P1_FRAME_OVERHEAD + length) * 8 * 1000 + symbolRate - 1) / symbolRate + P1_RAMP_MS;
 }
 // Najdłuższa seria pomiarowa bez CONDUCTED w P1: 7 ramek po 103 B z narastaniem (najdłuższy datagram P1).
 // Także górna granica długu, który stanowisko zapisuje (measure::MAX_DEBT_MS).

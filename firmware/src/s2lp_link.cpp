@@ -29,6 +29,7 @@ constexpr uint8_t SYNT0 = SYNT3 + 3;  // SYNT3..SYNT0 pod kolejnymi adresami
 static_assert(inTable(SYNT3) && inTable(SYNT3 + 1) && inTable(SYNT3 + 2) && inTable(SYNT0) && inTable(MOD2) && inTable(PCKTCTRL1) &&
                   inTable(PCKTCTRL2),
               "rejestry sterownika łącza w tablicy P1");
+static_assert(p1s2::SYMBOL_RATE == radiolink::P1_SYMBOL_RATE, "tablica P1 z generatora zgodna z radio_link.h");
 constexpr uint8_t tableValue(uint8_t address) { return p1s2::REGISTERS[tableIndex(address)].value; }
 
 constexpr uint32_t baseSynth() {
@@ -99,12 +100,11 @@ bool LinkDriver::transmit(const uint8_t* frame, size_t length, bool variable, ra
     collectIrq();
     irqPending_ &= ~(IRQ_TX_DATA_SENT | IRQ_TX_FIFO_ERROR);
     radio_.writeReg(PM_CONF3, PM_CONF3_TX);
-    const uint32_t frameMs = static_cast<uint32_t>(12 + length) * 8 * 1000 / p1s2::SYMBOL_RATE;
     const uint32_t t0 = micros();
     radio_.command(CMD_TX);
     const uint32_t start = millis();
     bool sent = false;
-    while (millis() - start < frameMs + 120) {
+    while (millis() - start < frameAirMs(length) + 120) {
         collectIrq();
         if (irqPending_ & IRQ_TX_FIFO_ERROR) break;
         if (irqPending_ & IRQ_TX_DATA_SENT) {

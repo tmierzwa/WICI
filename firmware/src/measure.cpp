@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 #include "measure.h"
 
+#include <stdarg.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "cmdargs.h"
 #include "jsonprint.h"
-#include "p1_registers.h"
 #include "testframe.h"
 
 namespace measure {
@@ -15,21 +16,45 @@ namespace {
 using cmdargs::boolName;
 
 // Czas ramki w eterze podaje sterownik (Driver::frameAirMs); P1 tutaj tylko do sprawdzenia rezerwacji.
-static_assert(MAX_DEBT_MS == SERIES_MAX_MS * p1::DEBT_FACTOR, "MAX_DEBT_MS");
-static_assert(p1frame::MAX_FRAGMENTS * radiolink::p1FrameAirMs(p1frame::MAX_LEN + 1, p1::SYMBOL_RATE) <= SERIES_MAX_MS,
+static_assert(MAX_DEBT_MS == SERIES_MAX_MS * radiolink::P1_DEBT_FACTOR, "MAX_DEBT_MS");
+static_assert(p1frame::MAX_FRAGMENTS * radiolink::p1FrameAirMs(p1frame::MAX_LEN + 1) <= SERIES_MAX_MS,
               "rezerwacja P1 mieści się w MAX_DEBT_MS");
 static_assert(radiolink::MAX_FRAME >= testframe::MAX_LENGTH && testframe::MAX_LENGTH >= p1frame::MAX_FRAME, "bufory ramek");
 
 constexpr const char* NO_P1_LINK = "no P1 link on this radio";
+constexpr const char* EMC_ON_ERROR = "EMC mode on: EMC 0 first";
+static_assert(FOFF_MAX_HZ == 50000, "tekst błędu FOFF");
+// Okres EMC: ramka i jej dług ciszy (cykl pracy ≤ 1/13).
+static_assert(EMC_PERIOD_FACTOR == radiolink::P1_DEBT_FACTOR + 1, "EMC_PERIOD_FACTOR");
 
 }  // namespace
 
 namespace {
 
-// Wiersz diagnostyczny z inicjatywy stacji (odbiór, koniec nadania) tylko przy wolnym miejscu w buforze
-// portu: zapis do CDC na nRF52 czeka, aż komputer odczyta, więc terminal, który przestał czytać,
-// zatrzymałby pętlę stacji aż do watchdoga. Pominięty wiersz nie zmienia liczników łącza.
-bool diagFree() { return Serial.availableForWrite() > 0; }
+// Wiersz diagnostyczny z inicjatywy stacji (odbiór, koniec nadania) wychodzi tylko w całości i tylko wtedy,
+// gdy cały mieści się w wolnym miejscu bufora portu: zapis do CDC na nRF52 czeka, aż komputer odczyta, więc
+// terminal, który przestał czytać, zatrzymałby pętlę stacji aż do watchdoga, także w połowie wiersza.
+// Pominięty wiersz nie zmienia liczników łącza.
+constexpr size_t DIAG_LINE = 192;   // najdłuższy wiersz poza datagramem: p1tx i emc, około 140 B
+
+bool diagFits(size_t length) {
+    const int room = Serial.availableForWrite();
+    return room > 0 && static_cast<size_t>(room) >= length;
+}
+
+void diagLine(const char* format, ...) {
+    char line[DIAG_LINE];
+    va_list args;
+    va_start(args, format);
+    const int n = vsnprintf(line, sizeof(line), format, args);
+    va_end(args);
+    if (n > 0 && static_cast<size_t>(n) < sizeof(line) && diagFits(static_cast<size_t>(n)))
+        Serial.write(reinterpret_cast<const uint8_t*>(line), static_cast<size_t>(n));
+}
+
+void hexInto(char* out, const uint8_t* data, size_t length) {
+    for (size_t i = 0; i < length; ++i) snprintf(out + 2 * i, 3, "%02X", data[i]);
+}
 
 }  // namespace
 
@@ -135,6 +160,7 @@ bool Bench::confirm() {
 
 const char* Bench::gate(uint32_t txMs, bool conducted) {
     if (!prep) return "preparation mode off: PREP 1";
+    if (emcActive_) return EMC_ON_ERROR;
     if (silence) return "radio silence";
     if (busy()) return "busy: STOP first";
     if (!p1Ready) return "radio not configured: CONFIG";  // bez tablicy P1 układ nadawałby na wartościach domyślnych
@@ -151,7 +177,7 @@ const char* Bench::gate(uint32_t txMs, bool conducted) {
     if (txMs > radio_.seriesMaxMs()) return "series above limit: add conducted";
     // Dług ciszy zapisany w dzienniku przed pierwszą ramką; błąd zapisu blokuje nadawanie.
     if (!journal_ || !journal_->ok()) return "debt journal unavailable: no FRAM";
-    const uint32_t debtMs = txMs * p1::DEBT_FACTOR;
+    const uint32_t debtMs = txMs * radiolink::P1_DEBT_FACTOR;
     if (!journal_->writeDebt(debtMs, uptimeS())) return "debt journal write failed";
     debtUntilMs_ = millis() + txMs + debtMs;  // dług liczy się od końca serii (endSeriesDebt)
     debtActive_ = true;
@@ -190,8 +216,8 @@ void Bench::stopCw() {
     cwActive_ = false;
     const uint32_t txMs = millis() - cwStartMs_;
     // Nośna trwała dłużej niż zaplanowano (pętla stała): dług z rzeczywistego czasu, zapisany ponownie.
-    if (seriesDebtMs_ && txMs * p1::DEBT_FACTOR > seriesDebtMs_) {
-        seriesDebtMs_ = txMs * p1::DEBT_FACTOR;
+    if (seriesDebtMs_ && txMs * radiolink::P1_DEBT_FACTOR > seriesDebtMs_) {
+        seriesDebtMs_ = txMs * radiolink::P1_DEBT_FACTOR;
         if (journal_) journal_->writeDebt(seriesDebtMs_, uptimeS());
     }
     endSeriesDebt();
@@ -266,6 +292,7 @@ bool Bench::enterRx(RxMode mode, uint8_t length) {
 const char* Bench::rxStart(uint8_t length) {
     // Odbiór ramek wzorcowych wyłącza odbiór P1 stacji: tylko w trybie przygotowania.
     if (!prep) return "preparation mode off: PREP 1";
+    if (emcActive_) return EMC_ON_ERROR;
     if (length < testframe::MIN_LENGTH || length > radio_.maxTestLength()) return lengthError();
     if (busy()) return "busy: STOP first";
     counters_ = Counters();
@@ -275,6 +302,7 @@ const char* Bench::rxStart(uint8_t length) {
 
 const char* Bench::p1rxStart() {
     if (!radio_.p1Link()) return NO_P1_LINK;
+    if (emcActive_) return EMC_ON_ERROR;
     if (busy()) return "busy: STOP first";
     return enterRx(RxMode::P1, 0) ? nullptr : "radio did not enter RX";
 }
@@ -324,10 +352,13 @@ void Bench::rxper() {
 }
 
 const char* Bench::foff(int32_t hz) {
-    // CC1120: FREQOFF (krok 30,5 Hz, zakres ±999 985 Hz); S2-LP: słowo SYNT (krok 23,8 Hz, ±1 MHz).
-    // Zmienia częstotliwość łącza P1 stacji: tylko w trybie przygotowania i bez nadawania w toku.
+    // Sterownik: CC1120 FREQOFF (krok 30,5 Hz), S2-LP słowo SYNT (23,8 Hz), SX1262 słowo RF (0,95 Hz),
+    // każdy do około ±1 MHz; stanowisko ogranicza korektę do podpasma (FOFF_MAX_HZ). Zmienia
+    // częstotliwość łącza stacji: tylko w trybie przygotowania i bez nadawania w toku.
     if (!prep) return "preparation mode off: PREP 1";
+    if (emcActive_) return EMC_ON_ERROR;
     if (busy()) return "busy: STOP first";
+    if (hz > FOFF_MAX_HZ || hz < -FOFF_MAX_HZ) return "FOFF outside the subband: max +-50000 Hz";
     if (!radio_.setFrequencyOffset(hz)) return "FOFF outside the radio range (about +-1 MHz)";
     foffHz_ = hz;
     foffSet_ = true;
@@ -342,7 +373,8 @@ void Bench::applyOffset() {
 }
 
 void Bench::printFoff() {
-    // "freqoff": rejestr korekty (CC1120: FREQOFF; S2-LP: zmiana słowa SYNT wobec tablicy P1).
+    // "freqoff": rejestr korekty (CC1120: FREQOFF; S2-LP: zmiana słowa SYNT wobec tablicy P1; SX1262:
+    // zmiana słowa RF wobec profilu LoRa).
     const int32_t reg = radio_.frequencyOffsetRaw();
     const double stepHz = radio_.frequencyStepHz();
     Serial.printf("{\"foff_hz\":%ld,\"set\":%s,\"freqoff\":%ld,\"applied_hz\":%.1f,\"step_hz\":%.2f}\n",
@@ -351,10 +383,10 @@ void Bench::printFoff() {
 
 void Bench::printStatus() {
     Serial.printf("{\"prep\":%s,\"silence\":%s,\"txcw\":%s,\"txpkt\":%s,\"rx\":%s,\"tx_wait_ms\":%lu,"
-                  "\"debt_pending\":%s,\"journal\":%s,\"foff_hz\":%ld}\n",
+                  "\"debt_pending\":%s,\"journal\":%s,\"foff_hz\":%ld,\"emc\":%s}\n",
                   boolName(prep), boolName(silence), boolName(cwActive_), boolName(pktActive_), boolName(receiving()),
                   static_cast<unsigned long>(debtRemainingMs()), boolName(debtPending_),
-                  boolName(journal_ && journal_->ok()), static_cast<long>(foffHz_));
+                  boolName(journal_ && journal_->ok()), static_cast<long>(foffHz_), boolName(emcActive_));
 }
 
 void Bench::stop() {
@@ -391,7 +423,8 @@ void Bench::poll() {
         return;
     }
     if (txState_ != TxState::IDLE) pollP1Tx();
-    if (!prep && p1Ready && radio_.p1Link() && rxMode_ == RxMode::NONE && !busy() && now - autoRxMs_ >= 1000) {
+    if (emcActive_) pollEmc(now);
+    if (!prep && !emcActive_ && p1Ready && radio_.p1Link() && rxMode_ == RxMode::NONE && !busy() && now - autoRxMs_ >= 1000) {
         autoRxMs_ = now;  // najwyżej raz na sekundę, gdy układ nie wchodzi w odbiór
         if (enterRx(RxMode::P1, 0)) log("P1 RX resumed");
     }
@@ -400,6 +433,143 @@ void Bench::poll() {
         if (rxMode_ == RxMode::TEST) receive();
         else receiveP1();
     }
+}
+
+// --- tryb pracy do badań EMC ------------------------------------------------------
+
+uint32_t Bench::emcMinPeriodS(uint8_t length) const { return (EMC_PERIOD_FACTOR * radio_.frameAirMs(length) + 999) / 1000; }
+
+bool Bench::emcValid(uint32_t periodS, uint8_t length) const {
+    if (length < testframe::MIN_LENGTH || length > radio_.maxTestLength()) return false;
+    return periodS >= emcMinPeriodS(length) && periodS <= EMC_PERIOD_MAX_S;
+}
+
+void Bench::emcCommon(uint32_t periodS, uint8_t length) {
+    stop();  // seria, odbiór P1 i datagram w drodze kończą się; dalej tylko ramki EMC
+    emcActive_ = true;
+    emcPeriodMs_ = periodS * 1000;
+    emcLen_ = length;
+    emcNextMs_ = millis();
+    emcSeq_ = 0;
+    emcSent_ = emcFailed_ = emcSilenced_ = emcSkipped_ = 0;
+    emcStartedMs_ = millis();
+    counters_ = Counters();
+    counters_.startedMs = emcStartedMs_;
+    rxLen_ = length;
+}
+
+const char* Bench::emcStart(uint32_t periodS, uint8_t length) {
+    if (!prep) return "preparation mode off: PREP 1";
+    if (busy()) return "busy: STOP first";
+    if (!p1Ready) return "radio not configured: CONFIG";
+    if (length < testframe::MIN_LENGTH || length > radio_.maxTestLength()) return lengthError();
+    if (!emcValid(periodS, length)) {
+        snprintf(emcError_, sizeof(emcError_), "period %lu..%lu s", static_cast<unsigned long>(emcMinPeriodS(length)),
+                 static_cast<unsigned long>(EMC_PERIOD_MAX_S));
+        return emcError_;
+    }
+    // Zapis w dzienniku przed pierwszą ramką: po restarcie tryb wraca z tymi samymi ustawieniami.
+    if (!journal_ || !journal_->ok()) return "debt journal unavailable: no FRAM";
+    if (!journal_->writeEmc(emcEncode(periodS, length))) return "EMC journal write failed";
+    emcCommon(periodS, length);
+    emcResumed_ = false;
+    char text[40];
+    snprintf(text, sizeof(text), "EMC %lu s x %u B", static_cast<unsigned long>(periodS), length);
+    log(text);
+    return nullptr;
+}
+
+bool Bench::emcResume(uint32_t mode) {
+    if (!(mode & EMC_ON)) return false;
+    if (!emcValid(emcPeriodS(mode), emcLength(mode))) {
+        // Rekord spoza zakresu tego układu (np. obraz innej stacji na tej samej FRAM): bez nadawania.
+        if (journal_ && journal_->ok()) journal_->writeEmc(0);
+        log("EMC record invalid: cleared");
+        return false;
+    }
+    emcCommon(emcPeriodS(mode), emcLength(mode));
+    emcResumed_ = true;
+    log("EMC resumed after restart");
+    return true;
+}
+
+const char* Bench::emcStop() {
+    // Rekord kasowany przed zatrzymaniem; nieudany zapis zostawia tryb w dzienniku (wróci po restarcie),
+    // więc wynik idzie do odpowiedzi, a następne EMC 0 albo STOP próbuje znowu.
+    const char* error = nullptr;
+    if (journal_ && journal_->ok() && journal_->emc() && !journal_->writeEmc(0)) {
+        error = "EMC journal clear failed: mode returns after restart";
+        log("EMC journal clear failed");
+    }
+    if (!emcActive_) return error;
+    emcActive_ = false;
+    if (rxMode_ == RxMode::TEST) {
+        rxMode_ = RxMode::NONE;
+        radio_.idle();
+    }
+    log("EMC stopped");
+    return error;
+}
+
+void Bench::pollEmc(uint32_t now) {
+    if (busy()) return;
+    if (static_cast<int32_t>(now - emcNextMs_) >= 0) {
+        // Dług sprzed restartu albo ramka dłuższa od rezerwacji (brak TxDone): ramka po jego odczekaniu.
+        const uint32_t wait = debtRemainingMs();
+        if (wait) emcNextMs_ = now + wait;
+        else {
+            emcNextMs_ = now + emcPeriodMs_;
+            emcSend(now);
+        }
+    }
+    if (rxMode_ == RxMode::NONE && now - autoRxMs_ >= 1000) {
+        autoRxMs_ = now;  // najwyżej raz na sekundę, gdy układ nie wchodzi w odbiór
+        enterRx(RxMode::TEST, emcLen_);
+    }
+}
+
+void Bench::emcSend(uint32_t now) {
+    if (silence) { ++emcSilenced_; return; }  // cisza blokuje każde nadanie, odbiór trwa
+    if (!p1Ready) { ++emcSkipped_; return; }  // bez profilu układ nadawałby na wartościach domyślnych
+    const uint32_t txMs = radio_.frameAirMs(emcLen_);
+    const uint32_t debtMs = txMs * radiolink::P1_DEBT_FACTOR;
+    // Dług ciszy w dzienniku przed ramką, jak w TXPKT; błąd zapisu blokuje nadanie.
+    if (!journal_ || !journal_->ok() || !journal_->writeDebt(debtMs, uptimeS())) {
+        ++emcSkipped_;
+        log("EMC frame skipped: debt journal");
+        return;
+    }
+    debtUntilMs_ = now + txMs + debtMs;
+    debtActive_ = true;
+    debtPending_ = true;
+    uint8_t frame[testframe::MAX_LENGTH];
+    testframe::build(frame, emcLen_, emcSeq_);
+    rxMode_ = RxMode::NONE;
+    const bool ok = radio_.transmit(frame, emcLen_, false, nullptr);
+    debtUntilMs_ = millis() + debtMs;  // dług od końca ramki
+    ++emcSent_;
+    if (!ok) ++emcFailed_;
+    const uint16_t seq = emcSeq_++;
+    enterRx(RxMode::TEST, emcLen_);
+    diagLine("{\"emc\":\"tx\",\"seq\":%u,\"ok\":%s,\"sent\":%lu,\"rx_ok\":%lu,\"rx_bad\":%lu,\"tx_wait_ms\":%lu}\n", seq,
+             boolName(ok), static_cast<unsigned long>(emcSent_), static_cast<unsigned long>(counters_.rxOk),
+             static_cast<unsigned long>(counters_.rxBad), static_cast<unsigned long>(debtRemainingMs()));
+}
+
+void Bench::printEmc() {
+    // Wiersz w dwóch częściach poniżej 256 znaków (Print::printf rdzenia nRF52).
+    Serial.printf("{\"emc\":%s,\"period_s\":%lu,\"len\":%u,\"min_period_s\":%lu,\"resumed\":%s,\"journal\":%s,",
+                  boolName(emcActive_), static_cast<unsigned long>(emcPeriodMs_ / 1000), emcLen_,
+                  static_cast<unsigned long>(emcActive_ ? emcMinPeriodS(emcLen_) : 0), boolName(emcResumed_),
+                  boolName(journal_ && journal_->ok() && journal_->emc()));
+    const Counters& c = counters_;
+    Serial.printf("\"sent\":%lu,\"failed\":%lu,\"silenced\":%lu,\"skipped\":%lu,\"rx_ok\":%lu,\"rx_bad\":%lu,\"missing\":%lu,"
+                  "\"seconds\":%lu,\"tx_wait_ms\":%lu}\n",
+                  static_cast<unsigned long>(emcSent_), static_cast<unsigned long>(emcFailed_),
+                  static_cast<unsigned long>(emcSilenced_), static_cast<unsigned long>(emcSkipped_),
+                  static_cast<unsigned long>(c.rxOk), static_cast<unsigned long>(c.rxBad), static_cast<unsigned long>(c.missing),
+                  static_cast<unsigned long>(emcActive_ ? (millis() - emcStartedMs_) / 1000 : 0),
+                  static_cast<unsigned long>(debtRemainingMs()));
 }
 
 // --- łącze P1 -------------------------------------------------------------------
@@ -421,26 +591,36 @@ void Bench::receiveP1() {
         const p1frame::Parse parse = p1frame::parseFrame(frame, length, fragment);
         if (parse != p1frame::Parse::OK) {
             ++link_.rxBad;
-            if (diagFree()) Serial.printf("{\"p1rx\":\"rejected\",\"reason\":\"%s\",\"len\":%u,\"rssi_dbm\":%d}\n", p1frame::parseName(parse),
-                          frame[0], rssiDbm);
+            diagLine("{\"p1rx\":\"rejected\",\"reason\":\"%s\",\"len\":%u,\"rssi_dbm\":%d}\n", p1frame::parseName(parse), frame[0],
+                     rssiDbm);
             continue;
         }
         ++link_.rxOk;
         const p1frame::Outcome outcome = assembler_.push(fragment, millis());
         if (outcome == p1frame::Outcome::COMPLETE) {
             ++link_.rxDatagrams;
-            if (diagFree()) {
-                Serial.printf("{\"p1rx\":\"datagram\",\"id\":\"");
-                for (size_t i = 0; i < p1frame::ID_BYTES; ++i) Serial.printf("%02X", assembler_.completedId()[i]);
-                Serial.printf("\",\"len\":%u,\"fragments\":%u,\"rssi_dbm\":%d,\"data\":\"",
-                              static_cast<unsigned>(assembler_.completedLength()), fragment.count, rssiDbm);
-                for (size_t i = 0; i < assembler_.completedLength(); ++i) Serial.printf("%02X", assembler_.completed()[i]);
-                Serial.println("\"}");
+            // Datagram do 600 B to wiersz do około 1 300 B, a bufor CDC ma 256 B: dane wychodzą tylko w wierszu,
+            // który zmieści się cały; inaczej wiersz bez danych z "data_omitted".
+            char id[2 * p1frame::ID_BYTES + 1];
+            hexInto(id, assembler_.completedId(), p1frame::ID_BYTES);
+            const size_t length = assembler_.completedLength();
+            char head[DIAG_LINE];
+            const int n = snprintf(head, sizeof(head), "{\"p1rx\":\"datagram\",\"id\":\"%s\",\"len\":%u,\"fragments\":%u,\"rssi_dbm\":%d",
+                                   id, static_cast<unsigned>(length), fragment.count, rssiDbm);
+            static const char DATA[] = ",\"data\":\"", END[] = "\"}\n";
+            if (n > 0 && static_cast<size_t>(n) < sizeof(head) &&
+                diagFits(static_cast<size_t>(n) + strlen(DATA) + 2 * length + strlen(END))) {
+                Serial.write(reinterpret_cast<const uint8_t*>(head), static_cast<size_t>(n));
+                Serial.print(DATA);
+                for (size_t i = 0; i < length; ++i) Serial.printf("%02X", assembler_.completed()[i]);
+                Serial.print(END);
+            } else {
+                diagLine("%s,\"data_omitted\":true}\n", head);
             }
             if (datagramHandler_) datagramHandler_(assembler_.completed(), assembler_.completedLength(), datagramContext_);
-        } else if (diagFree()) {
-            Serial.printf("{\"p1rx\":\"%s\",\"index\":%u,\"count\":%u,\"total\":%u,\"rssi_dbm\":%d}\n",
-                          p1frame::outcomeName(outcome), fragment.index, fragment.count, fragment.total, rssiDbm);
+        } else {
+            diagLine("{\"p1rx\":\"%s\",\"index\":%u,\"count\":%u,\"total\":%u,\"rssi_dbm\":%d}\n", p1frame::outcomeName(outcome),
+                     fragment.index, fragment.count, fragment.total, rssiDbm);
         }
     }
 }
@@ -458,6 +638,7 @@ uint32_t backoffMs() {
 
 const char* Bench::p1send(const uint8_t* data, size_t length, bool stack) {
     if (!radio_.p1Link()) return NO_P1_LINK;  // nie liczy się jako tx_drop: datagram nie wszedł do łącza
+    if (emcActive_) return EMC_ON_ERROR;
     if (length < 1 || length > p1frame::MAX_DATAGRAM) return "datagram 1..600 B";
     if (!stack && !prep) return "preparation mode off: PREP 1";   // P1TX z portu diagnostycznego: tylko w przygotowaniu
     if (busy()) return "busy: STOP first";
@@ -491,7 +672,7 @@ bool Bench::channelBusy() {
     receiveP1();  // ramka, która zaczęła się i skończyła między próbkami, czeka w kolejce
     if (link_.rxOk + link_.rxBad != ccaFrames_) return true;
     const radiolink::Rssi r = radio_.rssi();
-    return r.valid && r.dbm > p1::CCA_THRESHOLD_DBM;
+    return r.valid && r.dbm > radiolink::P1_CCA_THRESHOLD_DBM;
 }
 
 void Bench::pollP1Tx() {
@@ -526,10 +707,10 @@ void Bench::pollP1Tx() {
             if (now - ccaFirstMs_ > LONG_DEFERRAL_MS) ++link_.longDeferrals;
             const uint8_t count = p1frame::fragmentCount(txLength_);
             const uint32_t txMs = count * radio_.frameAirMs(p1frame::MAX_LEN + 1);  // rezerwacja: najdłuższe ramki
-            if (!journal_->writeDebt(txMs * p1::DEBT_FACTOR, uptimeS())) { ++link_.txDrop; finishP1Tx("debt journal write failed"); return; }
+            if (!journal_->writeDebt(txMs * radiolink::P1_DEBT_FACTOR, uptimeS())) { ++link_.txDrop; finishP1Tx("debt journal write failed"); return; }
             debtPending_ = true;
             const bool ok = sendFragments();
-            debtUntilMs_ = millis() + txMs * p1::DEBT_FACTOR;  // dług od końca nadawania
+            debtUntilMs_ = millis() + txMs * radiolink::P1_DEBT_FACTOR;  // dług od końca nadawania
             debtActive_ = true;
             finishP1Tx(ok ? "sent" : "tx error");
             return;
@@ -563,13 +744,11 @@ void Bench::dropP1Tx() {
 
 void Bench::finishP1Tx(const char* result) {
     txState_ = TxState::IDLE;
-    if (diagFree()) {
-        Serial.printf("{\"p1tx\":\"%s\",\"id\":\"", result);
-        for (size_t i = 0; i < p1frame::ID_BYTES; ++i) Serial.printf("%02X", txId_[i]);
-        Serial.printf("\",\"len\":%u,\"fragments\":%u,\"deferrals\":%u,\"wait_ms\":%lu,\"tx_wait_ms\":%lu}\n",
-                      static_cast<unsigned>(txLength_), p1frame::fragmentCount(txLength_), txDeferrals_,
-                      static_cast<unsigned long>(millis() - txRequestedMs_), static_cast<unsigned long>(debtRemainingMs()));
-    }
+    char id[2 * p1frame::ID_BYTES + 1];
+    hexInto(id, txId_, p1frame::ID_BYTES);
+    diagLine("{\"p1tx\":\"%s\",\"id\":\"%s\",\"len\":%u,\"fragments\":%u,\"deferrals\":%u,\"wait_ms\":%lu,\"tx_wait_ms\":%lu}\n", result, id,
+             static_cast<unsigned>(txLength_), p1frame::fragmentCount(txLength_), txDeferrals_,
+             static_cast<unsigned long>(millis() - txRequestedMs_), static_cast<unsigned long>(debtRemainingMs()));
     if (rxMode_ != RxMode::P1) enterRx(RxMode::P1, 0);
     if (txDoneHandler_) txDoneHandler_(!strcmp(result, "sent"), txDoneContext_);
 }
@@ -590,7 +769,7 @@ void Bench::printLink() {
                   static_cast<unsigned>(assembler_.active()), static_cast<unsigned long>(s.stored),
                   static_cast<unsigned long>(s.duplicates), static_cast<unsigned long>(s.conflicts),
                   static_cast<unsigned long>(s.late), static_cast<unsigned long>(s.evicted),
-                  static_cast<unsigned long>(s.expired), p1::CCA_THRESHOLD_DBM, static_cast<unsigned long>(debtRemainingMs()));
+                  static_cast<unsigned long>(s.expired), radiolink::P1_CCA_THRESHOLD_DBM, static_cast<unsigned long>(debtRemainingMs()));
 }
 
 }  // namespace measure

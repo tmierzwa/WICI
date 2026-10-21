@@ -7,6 +7,7 @@
 #include <initializer_list>
 
 #include "crc32.h"
+#include "framfs.h"
 #include "sha2.h"
 
 namespace store {
@@ -25,6 +26,9 @@ constexpr size_t TX_ITEMS_MAX = (TX_APPLIED_AT - TX_HEADER - MARKER) / TX_ITEM; 
 constexpr size_t CONFIG_DOC = RECORD_HEADER + 2 + 32;  // dokument w kopii za nagłówkiem, długością i skrótem
 constexpr uint32_t CONFIG_MARKER_AT = CONFIG_COPY - MARKER;
 static_assert(CONFIG_DOC + config::DOC_MAX <= CONFIG_MARKER_AT - TAG, "dokument mieści się w kopii");
+static_assert(STORE_END <= framfs::IDENTITY_BASE && framfs::IDENTITY_BASE + 2 * framfs::IDENTITY_SLOT <= framfs::FS_BASE &&
+                  framfs::FS_BASE + framfs::FS_SIZE == FRAM_END,
+              "magazyny, tożsamość i system plików stosu kończą się na FRAM_END");
 constexpr size_t BLOCK_BODY = EPOCH + BLOCK_ENTRIES * ENTRY;   // 392 B
 constexpr size_t CHUNK = 256;             // seria SPI (oprogramowanie.md, "Zapis w FRAM")
 

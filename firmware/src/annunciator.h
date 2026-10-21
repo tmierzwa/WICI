@@ -4,7 +4,7 @@
 // - dioda miga krótkimi błyskami (50 ms co 5 s, czyli 1% czasu) do odczytu nowych wiadomości, do
 //   usunięcia przyczyny alarmu i przez cały czas ciszy radiowej;
 // - ekran alarmu daje sygnał co 2 s do potwierdzenia OK; nowy alarm wraca z ekranem alarmu;
-// - nowa wiadomość daje jeden krótki sygnał, chyba że opiekun wyciszył dźwięk (WYCISZ DŹWIĘK
+// - nowa wiadomość daje jeden krótki sygnał, chyba że gospodarz wyciszył dźwięk (WYCISZ DŹWIĘK
 //   dotyczy tylko tego sygnału); cisza radiowa sama nie daje dźwięku.
 // Przypomnienie `wymien_ogniwa` co 15 min przyjdzie z pomiarem ogniw (płytka R02).
 // Bez zależności od Arduino; sprawdzany na komputerze w tests/test_firmware_host.py.

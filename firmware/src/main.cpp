@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-// WICI, stanowiska deweloperskie A i B: oprogramowanie stacji ze stosem Reticulum (bez LXMF).
+// WICI, stanowiska deweloperskie A i B oraz stacja pilotażowa L0: oprogramowanie stacji ze stosem
+// Reticulum (bez LXMF).
 // Zakres: USB z dwoma interfejsami CDC (diagnostyka z poleceniami tekstowymi i dane z protokołem
 // laptop–stacja "usb":2 nad rejestrem, skrzynką, pierścieniem zdarzeń i konfiguracją w FRAM, usbproto.h),
 // identyfikacja radia i FRAM przez SPI, konfiguracja rejestrów profilu P1 z weryfikacją odczytu,
@@ -14,7 +15,8 @@
 // poza trybem przygotowania interfejs danych przenosi pakiety Reticulum do komputera stanowiska
 // w ramkach KISS (rns_node.h, kiss.h), a ekran pokazuje kontakt z komputerem.
 // Wykonania: bench-a (nRF52840-DK + CC1120EM na przewodach), bench-n1 (to samo na płytce N1),
-// bench-b (ESP32-S3-DevKitC-1 + X-NUCLEO-S2868A2 z S2-LP na N1). Zależne od MCU części są
+// bench-b (ESP32-S3-DevKitC-1 + X-NUCLEO-S2868A2 z S2-LP na N1), l0 (ESP32-S3-DevKitC-1 + Wio-SX1262
+// na N1, profil LoRa: polecenia pomiarowe bez łącza P1, README, "Stacja L0"). Zależne od MCU części są
 // w platform_*.cpp, zależne od układu radiowego w radio_console_*.cpp i *_link.cpp.
 #include <Arduino.h>
 #include <SPI.h>
@@ -133,7 +135,7 @@ const int16_t leds[] = {board::LED_HEARTBEAT, board::LED_RADIO, board::LED_FRAM,
 // Diody DK aktywne stanem niskim; -1: płytka bez diody (stanowisko B).
 void ledWrite(int16_t pin, bool on);
 
-// Zapis dziennika nie powiódł się: dziennik wyłączony (LED3 gaśnie), jak przy zegarze i ustawieniach.
+// Zapis dziennika nie powiódł się: dziennik wyłączony (LED3 gaśnie); zegar, ustawienia, tryb przygotowania.
 void journalFailed() {
     journalOk = false;
     ledWrite(board::LED_FRAM, false);
@@ -185,10 +187,15 @@ BenchHost host;
 // Układ radiowy odpowiada, a tablica P1 jest zapisana i zweryfikowana (wiersz 1 ekranu, LED2, radio_awaria).
 bool radioWorks() { return radiocon::ok() && radiocon::p1Ok(); }
 
+// Radio służy stacji: działa i nie jest zajęte trybem EMC. Tryb EMC zatrzymuje nadawanie stosu, więc
+// stacja daje radio_awaria (wiersz 1, ekran alarmu): stacja, której po badaniach nie wyłączono trybu,
+// nie wyjdzie w teren jako sprawna (firmware/README.md, tryb pracy do badań EMC).
+bool radioServes() { return radioWorks() && !bench.emcActive(); }
+
 // Łącze P1 stanowiska pod interfejsem P1 stosu: datagram z kolejki interfejsu idzie przez
 // Bench (dług ciszy, CCA, odroczenia, fragmentacja); w ciszy radiowej kolejka czeka.
-// Radio działa i łącze P1 jest w odbiorze.
-bool p1Listening() { return radioWorks() && bench.receiving(); }
+// Radio służy stacji i łącze P1 jest w odbiorze.
+bool p1Listening() { return radioServes() && bench.receiving(); }
 
 struct BenchRadio : rnsnode::Radio {
     bool ready() override { return p1Listening() && !bench.busy() && (!bench.silence || bench.silenceException); }
@@ -221,6 +228,7 @@ struct BenchServices : station::Services {
     uint32_t send(const uint8_t to[store::HASH], const uint8_t* data, size_t length, uint32_t timeoutS) override {
         return rnsnode::send(to, data, length, timeoutS);
     }
+    bool sendReady(const uint8_t to[store::HASH]) override { return rnsnode::sendReady(to); }
     void randomBytes(uint8_t* out, size_t count) override { stationRandom(out, count); }
     void log(const char* text) override { bench.log(text); }
     void address(uint8_t out[store::HASH]) override { memcpy(out, rnsnode::address(), store::HASH); }
@@ -383,6 +391,7 @@ bool BenchHost::destroy() {
     // Po skasowaniu restart: stan w RAM (próby w drodze, potwierdzone alarmy, stos bez tożsamości)
     // należy do skasowanych rekordów, a nowa tożsamość powstaje przy starcie stosu.
     wipeStack();
+    bench.emcStop();  // rekord ustawień i tak znika; bez ramek do restartu
     destroyed = true;
     retained.magic = 0;   // język i ekran nie wracają po restarcie (ustawienia ekranu skasowane)
     const bool ok = stationStore.destroy();
@@ -584,7 +593,7 @@ ui::Status screenStatus() {
     const uint32_t nowS = serviceS();
     s.prep = bench.prep;
     s.silence = silenceAny();
-    s.radioOk = radioWorks();
+    s.radioOk = radioServes();
     s.storeOk = stationStore.ok();
     // Kontakt z odbiorcą: znany od ostatniej przyjętej wiadomości; bez niej dolne oszacowanie z czasu pracy.
     const store::Meta& m = stationStore.meta();
@@ -674,10 +683,7 @@ void persistScreen() {
     const uint32_t flags = SETTINGS_FLAGS | (screenModel.muted() ? SETTINGS_MUTED : 0) |
                            ((static_cast<uint32_t>(stationStore.selectedAddress()) << SETTINGS_OBJECT_SHIFT) & SETTINGS_OBJECT_MASK);
     const journal::SmallRecord& saved = stationJournal.settings();
-    if (journalOk && (saved.a != lang || saved.b != flags) && !stationJournal.writeSettings(lang, flags)) {
-        journalOk = false;
-        ledWrite(board::LED_FRAM, false);
-    }
+    if (journalOk && (saved.a != lang || saved.b != flags) && !stationJournal.writeSettings(lang, flags)) journalFailed();
 }
 
 // Nazwa wyświetlana: 6 cyfr szesnastkowych skrótu tożsamości (oprogramowanie.md, "Tryby kryzysowe");
@@ -840,6 +846,8 @@ void beginJournal() {
     char text[48];
     snprintf(text, sizeof(text), "start %lu, debt %lu ms", static_cast<unsigned long>(stationJournal.starts()), static_cast<unsigned long>(debtMs));
     bench.log(text);
+    // Tryb pracy do badań EMC wraca po restarcie bez trybu przygotowania (measure.h).
+    if (stationJournal.emc()) bench.emcResume(stationJournal.emc());
 }
 
 void printButtons() {
@@ -861,7 +869,7 @@ void printHelp() {
     Serial.print("{\"commands\":[\"HELP\",\"INFO\"");
     Serial.print(radiocon::helpCommands());
     Serial.print(",\"PREP <0|1>\",\"SILENCE <0|1>\",\"TXCW <s> [CONDUCTED]\",\"TXPKT <n> <len> [<ms>] [ZEROS|ONES] [CONDUCTED]\","
-                 "\"RX [<len>]\",\"RXPER\",\"FOFF [<hz>]\",\"P1RX\",\"P1TX <hex>\",\"P1\",\"STOP\",\"LOG [<n>]\",\"JOURNAL\",\"BENCH\","
+                 "\"RX [<len>]\",\"RXPER\",\"FOFF [<hz>]\",\"P1RX\",\"P1TX <hex>\",\"P1\",\"EMC [<s> <len>|0]\",\"STOP\",\"LOG [<n>]\",\"JOURNAL\",\"BENCH\","
                  "\"FRAM\",\"BTN\","
 #if !defined(WICI_BENCH_B) && !defined(WICI_L0)
                  "\"LED <1-4> <0|1>\","  // stanowisko B i L0 (DevKitC) nie mają diod stanu
@@ -1066,9 +1074,28 @@ void handle(char* cmd) {
             if (error) { printError(error); return; }
         }
         bench.printFoff();
+    } else if (!strcmp(cmd, "EMC")) {
+        // EMC: stan; EMC 0: koniec (rekord w dzienniku skasowany); EMC <s> <len>: start w trybie przygotowania.
+        if (n == 1) {
+            uint32_t zero = 1;
+            if (!cmdargs::parseUint(words[0], 0, 0, zero)) { printError("EMC [<s> <len>|0]"); return; }
+            const char* error = bench.emcStop();   // rekord został w dzienniku: tryb wróci po restarcie
+            if (error) { printError(error); return; }
+        } else if (n == 2) {
+            uint32_t seconds = 0, length = 0;
+            if (!cmdargs::parseUint(words[0], 1, measure::EMC_PERIOD_MAX_S, seconds) || !cmdargs::parseUint(words[1], 0, 255, length)) {
+                printError("EMC [<s> <len>|0]");
+                return;
+            }
+            const char* error = bench.emcStart(seconds, static_cast<uint8_t>(length));
+            if (error) { printError(error); return; }
+        } else if (n) { printError("EMC [<s> <len>|0]"); return; }
+        bench.printEmc();
     } else if (!strcmp(cmd, "STOP")) {
+        const char* emcError = bench.emcStop();  // STOP kończy też tryb EMC
         bench.stop();
-        Serial.println("{\"stop\":true}");
+        if (emcError) Serial.printf("{\"stop\":true,\"emc_error\":\"%s\"}\n", emcError);
+        else Serial.println("{\"stop\":true}");
         radiocon::printState();
     } else if (!strcmp(cmd, "LOG")) {
         uint32_t count = 16;
@@ -1339,7 +1366,7 @@ void stationLoop() {
         radioLed = radio;
         ledWrite(board::LED_RADIO, radio);
     }
-    screenHost.setRadioFault(!radio);   // alarm radio_awaria (oprogramowanie.md, ekran główny)
+    screenHost.setRadioFault(!radioServes());   // alarm radio_awaria (oprogramowanie.md, ekran główny); także tryb EMC
     const bool usb = Serial;  // CDC otwarty przez hosta
     ledWrite(board::LED_USB, usb);
     if (usb && !reported) {  // jednorazowy raport po otwarciu portu
@@ -1353,13 +1380,12 @@ void stationLoop() {
     static uint32_t lastClock = 0;
     if (journalOk && !destroyed && now - lastClock >= CLOCK_WRITE_MS) {
         lastClock = now;
-        if (!stationJournal.writeClock(counterS())) {
-            journalOk = false;
-            ledWrite(board::LED_FRAM, false);
-        }
+        if (!stationJournal.writeClock(counterS())) journalFailed();
     }
     bench.p1Ready = radio;
-    if (radiocon::ok()) bench.poll();
+    // Także przy układzie uznanym za niesprawny w trakcie nośnej albo serii (np. polecenie RADIO):
+    // koniec TXCW i TXPKT po czasie nie może czekać na odpowiedź układu.
+    if (radiocon::ok() || bench.transmitting()) bench.poll();
     if (rnsOk) {
         rnsnode::loop(now);
         pollAnnounce();

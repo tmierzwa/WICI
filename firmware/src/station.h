@@ -51,6 +51,9 @@ struct Services {
     // Pakiet do celu `to` z potwierdzeniem transportowym; uchwyt potwierdzenia albo 0 (cel nieznany,
     // interfejs odmówił). Wynik przychodzi do Station::receipt.
     virtual uint32_t send(const uint8_t to[store::HASH], const uint8_t* data, size_t length, uint32_t timeoutS) = 0;
+    // Stos przyjmie teraz pakiet do celu `to` (cel znany, miejsce w kolejce, IFAC); przy nieznanym celu
+    // wysyła zapytanie o trasę. Pytanie przed zapisem `nadane`: odmowa nie blokuje ANULUJ WYSYŁKĘ.
+    virtual bool sendReady(const uint8_t to[store::HASH]) = 0;
     virtual void randomBytes(uint8_t* out, size_t count) = 0;
     virtual void log(const char* text) = 0;
     virtual void address(uint8_t out[store::HASH]) = 0;   // własny cel "wici.sa1"

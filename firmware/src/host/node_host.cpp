@@ -147,7 +147,8 @@ struct EmulatedP1 : rnsnode::Radio {
         }
         busy = true;
         txEndMs = now + tx;
-        debtUntilMs = now + tx + tx * debtFactor;
+        // Dług jak w łączu stacji (measure::Bench): od końca nadawania, z rezerwacji ramek pełnej długości.
+        debtUntilMs = now + tx + p1iface::reservedTxMs(length) * debtFactor;
         return true;
     }
     // Datagram z Pythona: ramki P1 i składanie jak przy odbiorze radiowym.
@@ -306,15 +307,14 @@ int main(int argc, char** argv) {
             uint8_t buffer[512];
             ssize_t n;
             while ((n = ::read(usb, buffer, sizeof(buffer))) > 0) rnsnode::usbFeed(buffer, static_cast<size_t>(n), nowMs());
-            size_t m;
-            while ((m = rnsnode::usbTake(buffer, sizeof(buffer))) > 0) {
-                size_t done = 0;
-                while (done < m) {
-                    const ssize_t w = ::write(usb, buffer + done, m - done);
-                    if (w > 0) done += static_cast<size_t>(w);
-                    else if (w < 0 && errno != EAGAIN) break;   // strona podrzędna zamknięta: bajty przepadają
-                    else { struct pollfd o = {usb, POLLOUT, 0}; ::poll(&o, 1, 10); }
-                }
+            // Kolejka ramek KISS do komputera: usuwa się tylko bajty przyjęte przez zapis (jak drain() w main.cpp).
+            size_t m = 0;
+            const uint8_t* out;
+            while ((out = rnsnode::usbOutput(m)) && m > 0) {
+                const ssize_t w = ::write(usb, out, m);
+                if (w > 0) rnsnode::usbConsume(static_cast<size_t>(w));
+                else if (w < 0 && errno != EAGAIN) rnsnode::usbConsume(m);   // strona podrzędna zamknięta: bajty przepadają
+                else { struct pollfd o = {usb, POLLOUT, 0}; ::poll(&o, 1, 10); }
             }
         }
         if (fds[1].revents & POLLIN) {

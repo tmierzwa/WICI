@@ -78,7 +78,7 @@ struct Stats {
     uint32_t stored = 0;
     uint32_t overflow = 0;   // wiersze dłuższe niż 1024 B albo z bajtem NUL
     uint32_t resends = 0;
-    uint32_t dropped = 0;    // wiersze bez miejsca w kolejce (błąd programu: wejście czeka na pustą kolejkę)
+    uint32_t dropped = 0;    // odpowiedzi bez miejsca w kolejce i wiersze ponad 1024 B (oba to błąd programu)
 };
 
 class Protocol {
@@ -109,6 +109,10 @@ private:
         enum Type : uint8_t { NONE, SILENCE, CLOSE, DESTROY } type = NONE;
         int64_t seq = 0;
         uint32_t sinceMs = 0;
+        // Odpowiedź przyciskiem (albo limit 30 s) już zapadła i ekran zamknięty; wykonanie i odpowiedź
+        // czekają tylko na miejsce w kolejce wyjściowej.
+        bool decided = false;
+        bool confirmed = false;
         bool on = false;
         bool exceptionSet = false;
         uint8_t exception[store::HASH] = {};

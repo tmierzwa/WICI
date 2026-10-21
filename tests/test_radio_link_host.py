@@ -7,6 +7,7 @@ status, DS11896), measure::Bench (firmware/src/measure.cpp) against a fake radio
 chip (BUSY, status byte, registers, buffer, IRQ, warm sleep with the retention list), with measure::Bench
 on top of it (TXPKT/TXCW debt and series limit in LoRa air time, RX/RXPER with SNR, no P1 link)."""
 
+import json
 from pathlib import Path
 import shutil
 import subprocess
@@ -53,7 +54,8 @@ struct FakeSerial : Print {
     }
     void println(const char* text) { std::puts(text); }
     void flush() {}
-    int availableForWrite() { return 4096; }
+    int room = 4096;   // wolne miejsce w buforze portu
+    int availableForWrite() { return room; }
 };
 extern FakeSerial Serial;
 """,
@@ -439,6 +441,23 @@ int main() {
            !memcmp(received.data(), incoming, sizeof(incoming)), static_cast<unsigned long>(c.rxOk),
            static_cast<unsigned long>(c.rxBad), static_cast<unsigned long>(c.rxDatagrams));
 
+    // Wiersz datagramu tylko w całości: 200 B to wiersz około 500 B, więc przy 256 B wolnego bufora (CDC nRF52)
+    // wychodzi wiersz bez danych, a przy 60 B żaden; datagram i tak trafia do warstwy aplikacji.
+    for (const int room : {256, 60}) {
+        Serial.room = room;
+        received.clear();
+        ++id[0];
+        for (uint8_t index = 0; index < p1frame::fragmentCount(sizeof(incoming)); ++index) {
+            radiolink::Frame f;
+            f.length = p1frame::buildFrame(incoming, sizeof(incoming), id, index, f.bytes);
+            f.rssiDbm = -90;
+            radio.rxQueue.push_back(f);
+        }
+        runFor(bench, 50);
+        printf("P1RXROOM %d %zu\n", room, received.size());
+    }
+    Serial.room = 4096;
+
     // Odbiór ramek wzorcowych: RSSI i jakość z ramki sterownika.
     bench.stop();
     // rxStart zmienia stan atrapy radia: najpierw wynik, potem odczyt pól.
@@ -457,8 +476,12 @@ int main() {
     printf("TESTRX %lu %ld %lu\n", static_cast<unsigned long>(t.rxOk), static_cast<long>(t.rssiSum), static_cast<unsigned long>(t.lqiSum));
 
     const char* foffOutside = bench.foff(2000000);
+    const char* foffBand = bench.foff(-50001);   // w zakresie układu, poza podpasmem: bez zapisu do układu
+    const char* foffEdge = bench.foff(50000) ? "error" : "-";
+    const long edgeOffset = static_cast<long>(radio.offset);
     const char* foffInside = bench.foff(1000) ? "error" : "-";
     printf("FOFF %s %s %ld\n", foffOutside ? foffOutside : "-", foffInside, static_cast<long>(radio.offset));
+    printf("FOFFBAND %s|%s %ld\n", foffBand ? foffBand : "-", foffEdge, edgeOffset);
     bench.printFoff();
 
     // Nośna po odczekaniu długu: stan układu w polu "marc", koniec po czasie.
@@ -630,8 +653,19 @@ int indexOf(uint8_t op) {
 
 struct RamStorage : journal::Storage {
     std::vector<uint8_t> data = std::vector<uint8_t>(512 * 1024, 0xFF);
+    bool failWrites = false;  // zapis do FRAM odrzucony (np. uszkodzona pamięć)
+    long budget = -1;         // bajty zapisu do zaniku zasilania (zapis przerwany w połowie serii); -1 bez limitu
     bool read(uint32_t address, uint8_t* out, size_t count) override { memcpy(out, &data[address], count); return true; }
-    bool write(uint32_t address, const uint8_t* in, size_t count) override { memcpy(&data[address], in, count); return true; }
+    bool write(uint32_t address, const uint8_t* in, size_t count) override {
+        if (failWrites) return false;
+        size_t n = count;
+        if (budget >= 0) {
+            if (static_cast<size_t>(budget) < n) n = static_cast<size_t>(budget);
+            budget -= static_cast<long>(n);
+        }
+        memcpy(&data[address], in, n);
+        return n == count;
+    }
 };
 uint32_t uptime() { return millis() / 1000; }
 
@@ -814,6 +848,84 @@ int main() {
         runFor(bench, 10);
     }
     bench.rxper();
+
+    // Tryb pracy do badań EMC: ramka 255 B co 6 s (13 x 413 ms = 5,4 s), odbiór ramek wzorcowych
+    // między ramkami, tryb zapisany w dzienniku i wznawiany po restarcie bez trybu przygotowania.
+    bench.prep = false;
+    printf("EMCPREP %s\n", bench.emcStart(6, 255));
+    bench.prep = true;
+    printf("EMCPERIOD %s\n", bench.emcStart(5, 255));
+    const unsigned emcTxBefore = chip.txCount;
+    const char* emcStarted = bench.emcStart(6, 255);
+    const uint32_t emcRecord = journal.emc();
+    printf("EMCBUSY %s|%s\n", bench.txpkt(1, 20, 0, false), bench.rxStart(20));
+    runFor(bench, 50);
+    const bool emcFrameOk = testframe::check(chip.lastTx.data(), chip.lastTx.size(), nullptr);
+    printf("EMCFIRST %s %u %zu %d %lu %s %d\n", emcStarted ? emcStarted : "-", chip.txCount - emcTxBefore, chip.lastTx.size(),
+           emcFrameOk, static_cast<unsigned long>(journal.debt().a), link.stateName(), chip.rxen);
+    testframe::build(chip.buffer, 255, 7);  // ramka stacji pomocniczej
+    chip.rxLength = 255;
+    chip.rxStart = 0;
+    chip.irq |= sx1262::IRQ_RX_DONE;
+    runFor(bench, 12010);
+    printf("EMCRUN %u\n", chip.txCount - emcTxBefore);
+    bench.silence = true;
+    runFor(bench, 6000);
+    bench.silence = false;
+    printf("EMCSILENT %u\n", chip.txCount - emcTxBefore);
+    bench.stop();  // jak CONFIG albo wyjście z trybu przygotowania: tryb zostaje, odbiór wraca
+    bench.prep = false;
+    runFor(bench, 1100);
+    printf("EMCRX %s %d %d\n", link.stateName(), chip.rxen, bench.emcActive());
+    bench.printEmc();
+    // Restart: nowy dziennik i stanowisko na tej samej pamięci, bez trybu przygotowania.
+    journal::Journal journal2(ram);
+    journal2.begin();
+    measure::Bench bench2(link, PIN_OK, -1);
+    bench2.attach(&journal2, uptime);
+    bench2.p1Ready = true;
+    journal2.writeSettings(3, 5);  // zapis ustawień ekranu nie kasuje trybu
+    const bool resumed = bench2.emcResume(journal2.emc());
+    const unsigned beforeResume = chip.txCount;
+    runFor(bench2, 100);
+    printf("EMCRESUME %d %08lX %08lX %u %d\n", resumed, static_cast<unsigned long>(emcRecord),
+           static_cast<unsigned long>(journal2.emc()), chip.txCount - beforeResume, bench2.prep);
+    bench2.emcStop();
+    journal::Journal journal3(ram);
+    journal3.begin();
+    printf("EMCSTOP %d %lu %lu %lu\n", bench2.emcActive(), static_cast<unsigned long>(journal2.emc()),
+           static_cast<unsigned long>(journal3.emc()), static_cast<unsigned long>(journal3.settings().a));
+    const bool badResumed = bench2.emcResume(measure::emcEncode(1, 255));
+    printf("EMCBAD %d %d %lu\n", badResumed, bench2.emcActive(), static_cast<unsigned long>(journal2.emc()));
+    // EMC 0 przy nieudanym zapisie: tryb staje, ale rekord zostaje i wynik to błąd; następna próba kasuje.
+    bench2.prep = true;
+    const char* restarted = bench2.emcStart(6, 255);
+    ram.failWrites = true;
+    const char* clearError = bench2.emcStop();
+    const bool keptActive = bench2.emcActive();
+    journal::Journal journal4(ram);
+    journal4.begin();
+    printf("EMCCLEARFAIL %s|%s|%d %d\n", restarted ? restarted : "-", clearError ? clearError : "-", keptActive,
+           journal4.emc() != 0);
+    ram.failWrites = false;
+    const char* retryError = bench2.emcStop();
+    journal::Journal journal5(ram);
+    journal5.begin();
+    printf("EMCCLEARRETRY %s %lu\n", retryError ? retryError : "-", static_cast<unsigned long>(journal5.emc()));
+    // Zanik zasilania w trakcie nadpisywania zatwierdzonego gniazda pierścienia wejść w tryb
+    // przygotowania: zapis przerwany, nie rekord uszkodzony (fałszywe PREP_RESTARTED przy kontroli naklejki).
+    RamStorage torn;
+    journal::Journal prepJournal(torn);
+    prepJournal.begin();
+    bool prepWritten = true;
+    for (uint32_t entry = 0; entry < 11; ++entry) prepWritten = prepJournal.enterPrep(entry) && prepWritten;
+    torn.budget = 10;
+    const bool tornWritten = prepJournal.enterPrep(11);
+    torn.budget = -1;
+    journal::Journal prepAfter(torn);
+    prepAfter.begin();
+    printf("PREPTORN %d %d %d %lu\n", prepWritten, tornWritten, prepAfter.prepCorrupt(),
+           static_cast<unsigned long>(prepAfter.prepEntries()));
     return 0;
 }
 """
@@ -918,13 +1030,21 @@ class BenchTests(unittest.TestCase):
 
     def test_p1_receive_assembles_and_counts_errors(self):
         self.assertEqual(line(self.out, "P1RX"), "P1RX 200 1 3 2 1")
+        datagrams = [l for l in self.out if l.startswith('{"p1rx":"datagram"')]
+        self.assertEqual(len(datagrams), 2)
+        full, omitted = (json.loads(l) for l in datagrams)
+        self.assertEqual(bytes.fromhex(full["data"]), bytes(255 - i for i in range(200)))
+        self.assertEqual((omitted["len"], omitted["data_omitted"], "data" in omitted), (200, True, False))
+        self.assertEqual([l for l in self.out if l.startswith("P1RXROOM")], ["P1RXROOM 256 200", "P1RXROOM 60 200"])
 
     def test_test_frames_received_with_driver_rssi(self):
         self.assertEqual(line(self.out, "RXSTART"), "RXSTART - 1 0 20")
         self.assertEqual(line(self.out, "TESTRX"), "TESTRX 3 -240 90")
 
     def test_frequency_offset_and_carrier_via_driver(self):
-        self.assertEqual(line(self.out, "FOFF"), "FOFF FOFF outside the radio range (about +-1 MHz) - 40")
+        self.assertEqual(line(self.out, "FOFF"), "FOFF FOFF outside the subband: max +-50000 Hz - 40")
+        # 125 kHz channel at 869.525 MHz leaves the 869.4-869.65 MHz subband beyond 62.5 kHz
+        self.assertEqual(line(self.out, "FOFFBAND"), "FOFFBAND FOFF outside the subband: max +-50000 Hz|- 2000")
         self.assertIn('{"foff_hz":1000,"set":true,"freqoff":40,"applied_hz":1000.0,"step_hz":25.00}', self.out)
         self.assertEqual(line(self.out, "TXCW"), "TXCW - 1")
         self.assertIn('"marc":"TX"', next(text for text in self.out if text.startswith('{"txcw":true')))
@@ -1024,6 +1144,42 @@ class Sx1262LinkTests(unittest.TestCase):
         self.assertIn('"rx_ok":3,"rx_bad":0,"missing":0', per)
         self.assertIn('"rssi_avg_dbm":-90.0', per)
         self.assertIn('{"snr_avg_db":6.00,"rx_ok":3}', self.out)  # (20 + 24 + 28) / 3 / 4
+
+    def test_emc_mode_needs_preparation_and_a_period_of_13_frames(self):
+        self.assertEqual(line(self.out, "EMCPREP"), "EMCPREP preparation mode off: PREP 1")
+        self.assertEqual(line(self.out, "EMCPERIOD"), "EMCPERIOD period 6..3600 s")  # 13 x 413 ms = 5.4 s
+        self.assertEqual(line(self.out, "EMCBUSY"), "EMCBUSY EMC mode on: EMC 0 first|EMC mode on: EMC 0 first")
+
+    def test_emc_mode_sends_with_debt_and_receives_between_frames(self):
+        # First frame at once, debt 12 x 413 ms in the journal before it, then reception of test frames.
+        self.assertEqual(line(self.out, "EMCFIRST"), "EMCFIRST - 1 255 1 4956 RX 1")
+        self.assertEqual(line(self.out, "EMCRUN"), "EMCRUN 3")  # 0, 6 and 12 s
+        self.assertEqual(line(self.out, "EMCSILENT"), "EMCSILENT 3")  # silence skips the 18 s frame
+        self.assertEqual(line(self.out, "EMCRX"), "EMCRX RX 1 1")  # STOP of a task or leaving preparation keeps the mode
+        tx = [text for text in self.out if text.startswith('{"emc":"tx"')]
+        self.assertEqual(len(tx), 4)  # three before the restart, one after it
+        self.assertIn('"seq":2,"ok":true,"sent":3,"rx_ok":1', tx[2])
+        self.assertIn('"seq":0,"ok":true,"sent":1,', tx[3])
+        status = next(text for text in self.out if text.startswith('{"emc":true'))
+        self.assertIn('"period_s":6,"len":255,"min_period_s":6,"resumed":false,"journal":true,', status)
+        self.assertIn('"sent":3,"failed":0,"silenced":1,"skipped":0,"rx_ok":1,"rx_bad":0,"missing":0', status)
+
+    def test_emc_mode_resumes_after_restart_and_stops_with_record(self):
+        # The record survives a screen-settings write and brings the mode back without preparation mode.
+        self.assertEqual(line(self.out, "EMCRESUME"), "EMCRESUME 1 80FF0006 80FF0006 1 0")
+        self.assertEqual(line(self.out, "EMCSTOP"), "EMCSTOP 0 0 0 3")  # cleared, language kept
+        self.assertEqual(line(self.out, "EMCBAD"), "EMCBAD 0 0 0")  # a 1 s period is refused on resume too
+
+    def test_emc_stop_reports_a_record_left_in_the_journal(self):
+        # A failed clear stops the frames but keeps the record, so EMC 0 must report it; a retry clears it.
+        self.assertEqual(line(self.out, "EMCCLEARFAIL"),
+                         "EMCCLEARFAIL -|EMC journal clear failed: mode returns after restart|0 1")
+        self.assertEqual(line(self.out, "EMCCLEARRETRY"), "EMCCLEARRETRY - 0")
+
+    def test_torn_overwrite_of_a_small_record_is_not_corrupt(self):
+        # The mark is cleared before the slot is overwritten: a torn write leaves an uncommitted slot,
+        # so the 11 entries stay readable and preparation entries are not flagged as tampered.
+        self.assertEqual(line(self.out, "PREPTORN"), "PREPTORN 1 0 0 11")
 
 
 if __name__ == "__main__":

@@ -133,16 +133,12 @@ bool Fs::setFat(uint16_t block, uint16_t next) {
     return true;
 }
 
-bool Fs::format(bool scrub) {
+bool Fs::format() {
     uint8_t header[HEADER];
     encodeHeader(header);
-    uint8_t zero[BLOCK] = {};
+    uint8_t zero[INODE] = {};
     for (size_t i = 0; i < INODES; ++i)
         if (!storage_.write(nodeAddress(i), zero, INODE)) return false;
-    if (scrub) {
-        for (uint16_t b = 0; b < BLOCKS; ++b)
-            if (!storage_.write(blockAddress(b), zero, BLOCK)) return false;
-    }
     uint8_t zeros[64] = {};
     for (size_t at = 0; at < BLOCKS * 2u; at += sizeof(zeros)) {
         const size_t n = BLOCKS * 2u - at < sizeof(zeros) ? BLOCKS * 2u - at : sizeof(zeros);

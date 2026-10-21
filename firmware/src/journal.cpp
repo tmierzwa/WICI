@@ -100,7 +100,8 @@ bool Journal::scanSmall(uint32_t base, SmallRecord& latest, uint32_t& validCount
             ++validCount;
             if (record.seq > latest.seq) latest = record;
         } else if (!blank(buffer, SMALL_RECORD) && buffer[SMALL_MARK] == COMMITTED) {
-            // Zatwierdzony rekord z błędnym CRC; rekord bez znacznika to zapis przerwany zanikiem.
+            // Zatwierdzony rekord z błędnym CRC; rekord bez znacznika to zapis przerwany zanikiem
+            // (writeSmall kasuje znacznik przed nadpisaniem gniazda).
             ++corruptCount;
         }
     }
@@ -154,6 +155,10 @@ bool Journal::writeSmall(uint32_t base, SmallRecord& current, uint32_t a, uint32
     const uint32_t address = base + (next.seq % slots) * SMALL_RECORD;  // najstarszy slot; najnowsze zostają
     uint8_t buffer[SMALL_RECORD];
     encodeSmall(next, buffer);
+    // Najpierw znacznik 0: gniazdo z poprzednim zatwierdzonym rekordem nie może zostać z nową częścią
+    // treści i starym znacznikiem (zanik w trakcie serii dałby rekord uszkodzony zamiast przerwanego).
+    const uint8_t uncommitted = 0;
+    if (!storage_.write(address + SMALL_MARK, &uncommitted, 1)) return false;
     if (!storage_.write(address, buffer, SMALL_RECORD)) return false;  // treść ze znacznikiem 0
     const uint8_t committed = COMMITTED;
     if (!storage_.write(address + SMALL_MARK, &committed, 1)) return false;   // zatwierdzenie po treści
@@ -183,8 +188,10 @@ bool Journal::writeClock(uint32_t counterS) {
 }
 
 bool Journal::writeSettings(uint32_t language, uint32_t flags) {
-    return writeSmall(SETTINGS_BASE, settings_, language, flags, 0);
+    return writeSmall(SETTINGS_BASE, settings_, language, flags, settings_.c);
 }
+
+bool Journal::writeEmc(uint32_t mode) { return writeSmall(SETTINGS_BASE, settings_, settings_.a, settings_.b, mode); }
 
 bool Journal::writeReservation(uint64_t upper) {
     if (upper < reservation()) return false;

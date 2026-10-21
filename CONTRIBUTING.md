@@ -86,7 +86,7 @@ Na razie projekt ma jednego opiekuna repozytorium ([@tmierzwa](https://github.co
 
 Zmiany krytyczne dla bezpieczeństwa ludzi (przetwornica 230 V i ochrona PE, ochrona portów telefonów przed przepięciem, zabezpieczenia akumulatorów, budżet czasu nadawania) wymagają, oprócz opiekuna repozytorium, przeglądu przez osobę z odpowiednimi kwalifikacjami. Dopóki taka osoba nie dołączy do projektu, te części pozostają opisem do prób i mają status HOLD.
 
-Główna gałąź jest chroniona: scalenie PR wymaga przejścia kontroli `publication` i `dco` oraz rozwiązania wątków recenzji; nie można jej nadpisać ani usunąć. Opiekun repozytorium może wypchnąć podpisany commit bezpośrednio na `main`; CI sprawdza go po fakcie. Na `main` i w PR kontrola pomija sumy `manifest.json`, które opiekun odświeża po scaleniu; pełną kontrolę manifestu i paczkę źródłową wykonuje tag `v*`. Akcje GitHub muszą pochodzić od GitHuba i być przypięte do SHA; Dependabot raz w miesiącu proponuje ich aktualizację. Skanowanie sekretów odrzuca push z rozpoznanym kluczem. Wydania mają tagi `v*` i paczkę źródłową z pełną kontrolą manifestu. Reguła repozytorium nie pozwala przesunąć ani usunąć tagu `v*`, także administratorom; poprawka wydania dostaje nowy numer, np. `v0.5.1`.
+Główna gałąź jest chroniona regułą repozytorium bez wyjątków, także dla administratorów: każda zmiana, w tym odświeżenie `manifest.json` przez opiekuna, trafia na `main` przez PR scalany „Squash and merge” po przejściu kontroli `publication` i `dco`; historia jest liniowa, commity podpisane, a gałęzi nie można nadpisać ani usunąć. Na `main` i w PR kontrola pomija sumy `manifest.json`, które opiekun odświeża osobnym PR po scaleniu; pełną kontrolę manifestu i paczkę źródłową wykonuje tag `v*`. Akcje GitHub muszą pochodzić od GitHuba i być przypięte do SHA; Dependabot raz w miesiącu proponuje ich aktualizację. Skanowanie sekretów odrzuca push z rozpoznanym kluczem. Wydania mają tagi `v*` i paczkę źródłową z pełną kontrolą manifestu. Reguła repozytorium nie pozwala przesunąć ani usunąć tagu `v*`, także administratorom; poprawka wydania dostaje nowy numer, np. `v0.5.1`.
 
 ## Licencje
 
@@ -99,7 +99,7 @@ Contributions in English are welcome; documentation stays in Polish, and maintai
 - Open an issue for larger changes; small fixes can go straight to a pull request.
 - Run the three checks above with `--pull-request`. **Do not refresh `manifest.json`**; the maintainer does it after merging. Refresh only the evidence your change affects (calculation results, hardware evidence).
 - Sign off every commit (`git commit -s`, [DCO 1.1](https://developercertificate.org/)); CI rejects unsigned commits (`tools/check_dco.py`). No CLA.
-- Pull requests are merged with "Squash and merge" only, so `main` gets a commit signed by GitHub; `main` accepts signed commits only. Signing your own commits with an SSH or GPG key is recommended, not required.
+- Pull requests are merged with "Squash and merge" only, so `main` gets a commit signed by GitHub; `main` accepts signed commits only and no direct pushes, maintainers included. Signing your own commits with an SSH or GPG key is recommended, not required.
 - Keep assumptions separate from measurements; never mark an unperformed test as passed.
 - Safety-critical parts (230 V inverter, phone over-voltage protection, batteries, transmit budget) need review by a qualified person and stay on HOLD until then.
 - Disclose AI assistance in the PR; you are responsible for every line.

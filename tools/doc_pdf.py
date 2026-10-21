@@ -22,7 +22,7 @@ GITHUB = "https://github.com/tmierzwa/WICI/blob/main/"
 CHROMES = ["chromium", "chromium-browser", "google-chrome", "chrome",
            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"]
 CSS = """
-@page { size: A4; margin: 16mm 16mm 18mm; }
+@page { size: A4; margin: 16mm 16mm 14mm; }
 body { font: 10pt/1.42 "DejaVu Sans", "Helvetica Neue", Arial, sans-serif; color: #1d1d1b; }
 h1 { font-size: 17pt; margin: 0 0 8pt; color: #b5121b; }
 h2 { font-size: 12.5pt; margin: 14pt 0 5pt; border-bottom: 1px solid #ccc; padding-bottom: 2pt; }
@@ -35,7 +35,7 @@ th, td { border: 1px solid #bbb; padding: 2.5pt 6pt; text-align: left; }
 th { background: #f0f0ee; }
 a { color: #1d1d1b; }
 code { font-size: 9pt; }
-footer { margin-top: 14pt; font-size: 8pt; color: #666; }
+footer { margin-top: 8pt; font-size: 8pt; color: #666; }
 """
 
 

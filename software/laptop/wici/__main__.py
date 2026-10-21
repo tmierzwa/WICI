@@ -3,7 +3,7 @@
 
     python -m wici [--port COM5|/dev/ttyACM1|tcp:127.0.0.1:7300] [--http 8080] [--no-browser] [--selftest]
 
-A second START opens the panel of the instance that already runs. --selftest checks the runtime of
+A second START opens the panel of the instance that already runs, with a new one-time link. --selftest checks the runtime of
 the USB package on this system (modules, SQLite, ports, HTTP) and exits; CI runs it on every system.
 """
 
@@ -32,10 +32,15 @@ def running_instance(path):
     """URL of a panel that already runs on this laptop, or None."""
     try:
         inst = json.loads(path.read_text(encoding="utf-8"))
+        base = f"http://127.0.0.1:{int(inst['port'])}"
         direct = urllib.request.build_opener(urllib.request.ProxyHandler({}))   # bez proxy systemu dla 127.0.0.1
-        with direct.open(f"http://127.0.0.1:{int(inst['port'])}/health", timeout=1) as r:
-            if json.loads(r.read().decode()).get("app") == "wici":
-                return f"http://127.0.0.1:{int(inst['port'])}/start?t={inst['token']}"
+        with direct.open(f"{base}/health", timeout=1) as r:
+            if json.loads(r.read().decode()).get("app") != "wici":
+                return None
+        req = urllib.request.Request(f"{base}/api/ticket", b"{}", {"Cookie": f"wici={inst['token']}",
+                                                                   "Content-Type": "application/json"})
+        with direct.open(req, timeout=5) as r:
+            return f"{base}/start?t={json.loads(r.read().decode())['ticket']}"
     except (OSError, ValueError, KeyError, TypeError):
         pass
     return None
@@ -53,6 +58,26 @@ def open_browser(url):
     threading.Thread(target=webbrowser.open, args=(url,), daemon=True).start()
 
 
+def database_selftest(tmp):
+    """Encrypted database of this runtime: accounts, snapshot on disk and stick, reopening on 'another laptop'."""
+    from . import database
+    kit, key = database.Kit.create(tmp / "usb" / "keys", {"gospodarz": "las rzeka most okno chleb"}, "odtworzenie",
+                                   iterations=1000)
+    assert kit.unlock("gospodarz", "Las  Rzeka most okno chleb") == key
+    db = database.Database(key, tmp / "dysk", tmp / "usb" / "kopia", kit.recovery(), store.SCHEMA)
+    store.Journal(db).add("WICI-000000", "", "selftest", True, "Szkoła nr 5")
+    db.flush()
+    db.hand_back()
+    if any(b"Szko" in p.read_bytes() for p in (tmp / "usb" / "kopia").iterdir()) or any((tmp / "dysk").iterdir()):
+        raise AssertionError("plain data or snapshots left behind")
+    other = database.Database(key, tmp / "inny", tmp / "usb" / "kopia", None, store.SCHEMA)
+    rows = store.Journal(other).recent()
+    other.close()
+    if [r["detail"] for r in rows] != ["Szkoła nr 5"]:
+        raise AssertionError(rows)
+    return "ok"
+
+
 def selftest():
     import ctypes
     import hashlib
@@ -62,7 +87,7 @@ def selftest():
     from importlib import resources
     from pathlib import Path
 
-    from . import configdoc
+    from . import configdoc, syscrypto
     from .web import STATIC
     checks = []
     for _, (name, _) in STATIC.items():
@@ -82,15 +107,19 @@ def selftest():
     checks.append(f"stdlib {os.path.normpath(next((p for p in sys.path if p.endswith('.zip')), '-'))}")
     assert unicodedata.normalize("NFC", "Szkoła") == "Szkoła"
     assert hashlib.sha256(b"").hexdigest().startswith("e3b0c442")
+    checks.append(f"crypto {syscrypto.selfcheck()}")
+    from . import passwords
+    assert len(passwords.generate().split()) == passwords.ACCOUNT_WORDS
     assert configdoc.check({"role": "wezel", "ifac": "11" * 16, "radio": {"profile": "p1"}}) == []
     with tempfile.TemporaryDirectory() as tmp:
-        journal = store.Journal(Path(tmp) / "j.sqlite")
+        journal = store.Journal.plain(Path(tmp) / "j.sqlite")
         journal.add("WICI-000000", "", "selftest", True)
         try:
-            journal.db.execute("DELETE FROM journal")
+            journal.db.write(lambda c: c.execute("DELETE FROM journal"))
             raise AssertionError("journal accepted DELETE")
         except sqlite3.DatabaseError:
             pass
+        checks.append(f"db {database_selftest(Path(tmp))}")
         token = secrets.token_urlsafe(24)
         panel = Panel(Station(), None, journal, token, info())
         server = serve(panel, 0)
@@ -103,7 +132,7 @@ def selftest():
 
         opener = urllib.request.build_opener(NoRedirect)
         try:
-            opener.open(f"{base}/start?t={token}", timeout=5)
+            opener.open(f"{base}/start?t={panel.ticket()}", timeout=5)
             raise AssertionError("no redirect")
         except urllib.error.HTTPError as e:
             assert e.code == 303
@@ -142,7 +171,7 @@ def main(argv=None):
             webbrowser.open(url)
         print(url)
         return 0
-    journal = store.Journal(state / "dziennik.sqlite")
+    journal = store.Journal.plain(state / "dziennik.sqlite")
     token = secrets.token_urlsafe(24)
     panel = Panel(None, None, journal, token, info())
     station = Station(args.port, on_change=panel.changed)
@@ -152,7 +181,7 @@ def main(argv=None):
     write_instance(instance, port, token)
     awake = Awake()
     station.start()
-    url = f"http://127.0.0.1:{port}/start?t={token}"
+    url = f"http://127.0.0.1:{port}/start?t={panel.ticket()}"
     print(f"WICI {VERSION}: panel {url}", flush=True)
     if not args.no_browser:
         open_browser(url)

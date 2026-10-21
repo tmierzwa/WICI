@@ -35,6 +35,7 @@
 #include <stdint.h>
 
 #include "p1frame.h"
+#include "radio_link.h"
 
 namespace p1iface {
 
@@ -44,10 +45,7 @@ constexpr size_t IFAC_SIZE = 16;             // kod dostępu sieci w bajtach
 constexpr size_t MAX_WIRE = HW_MTU + IFAC_SIZE;
 constexpr size_t HELD_ANNOUNCES = 4;
 constexpr uint32_t HELD_LIFE_MS = 3UL * 3600 * 1000;    // Reticulum.QUEUED_ANNOUNCE_LIFE (e40191b)
-constexpr uint16_t SYMBOL_RATE = 4800;
-constexpr uint8_t DEBT_FACTOR = 12;          // dług ciszy = 12 x zarezerwowany czas TX (radio.md, punkt 2)
-constexpr uint32_t FRAME_OVERHEAD = 12;      // preambuła 8 B i słowo synchronizacji 4 B
-constexpr uint32_t RAMP_MS = 3;              // narastanie i zaokrąglenie jak frameAirMs w measure.cpp
+constexpr uint8_t DEBT_FACTOR = radiolink::P1_DEBT_FACTOR;
 constexpr uint32_t WINDOW_MIN = 60;          // okno czasu kanału: 60 przedziałów po 1 min
 constexpr uint32_t WINDOW_MS = WINDOW_MIN * 60000;
 constexpr uint32_t POOL_PERCENT = 60;        // K2 i ogłoszenia razem
@@ -152,10 +150,13 @@ public:
     Counters& counters() { return counters_; }
 
 private:
-    // Czas kanału w przesuwnym oknie: przedziały po 1 min.
+    // Czas kanału w przesuwnym oknie: przedziały po 1 min, liczone z upływu czasu, nie z nowMs / 60000,
+    // więc zawinięcie millis() (49,7 dnia) nie zeruje okna.
     struct Window {
         uint32_t ms[WINDOW_MIN] = {};
-        uint32_t minute = 0;
+        uint32_t minute = 0;    // numer bieżącego przedziału
+        uint32_t lastMs = 0;    // nowMs z poprzedniego wywołania
+        uint32_t carryMs = 0;   // czas od początku bieżącego przedziału
         void advance(uint32_t nowMs);
         uint32_t used(uint32_t nowMs);
         void add(uint32_t nowMs, uint32_t cost);

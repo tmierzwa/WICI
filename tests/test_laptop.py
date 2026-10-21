@@ -24,15 +24,17 @@ import threading
 import time
 import unittest
 import unittest.mock
+from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 LAPTOP = ROOT / "software" / "laptop"
 sys.path.insert(0, str(LAPTOP))
 sys.path.insert(0, str(ROOT / "software" / "reference"))
 
-from wici import configdoc, serialport, store, usbproto  # noqa: E402
+from wici import configdoc, database, serialport, store, syscrypto, usbproto  # noqa: E402
 from wici.prep import OperationError, Prep  # noqa: E402
 from wici.web import Panel, serve  # noqa: E402
+from wici import __main__ as wici_main  # noqa: E402
 import reference  # noqa: E402
 
 MAIN_KEY, BACKUP_KEY = bytes(range(64)), bytes(range(64, 128))
@@ -332,17 +334,307 @@ class SerialPortTest(unittest.TestCase):
             os.close(slave)
 
 
+class SysCryptoTest(unittest.TestCase):
+    """System AES and PBKDF2 (CNG, CommonCrypto, libcrypto): known answers and the sealed copy format."""
+
+    def test_selfcheck_fails_without_assert(self):
+        with unittest.mock.patch.object(syscrypto, "aes_cbc", return_value=bytes(48)):
+            with self.assertRaises(syscrypto.CryptoError):
+                syscrypto.selfcheck()
+
+    def test_known_answers_and_tampering(self):
+        self.assertIn(syscrypto.selfcheck(), ("windows", "mac", "linux"))
+
+    def test_pbkdf2_matches_hashlib(self):
+        if not hasattr(hashlib, "pbkdf2_hmac"):
+            self.skipTest("hashlib bez OpenSSL")
+        self.assertEqual(syscrypto.pbkdf2(b"haslo z koperty", b"sol", 1000),
+                         hashlib.pbkdf2_hmac("sha256", b"haslo z koperty", b"sol", 1000, 32))
+
+    def test_sealed_copy_is_fresh_and_bound(self):
+        key = bytes(range(32))
+        data = bytes(range(256)) * 1000
+        a, b = syscrypto.seal(key, data, b"gen 7"), syscrypto.seal(key, data, b"gen 7")
+        self.assertNotEqual(a, b)                                 # losowy IV przy każdym zapisie
+        self.assertEqual(syscrypto.open_(key, b, b"gen 7"), data)
+        for broken in (a[:1 + 16] + bytes([a[17] ^ 1]) + a[18:], b"\x02" + a[1:], a[:40]):
+            with self.assertRaises(syscrypto.CryptoError):
+                syscrypto.open_(key, broken, b"gen 7")
+        with self.assertRaises(syscrypto.CryptoError):
+            syscrypto.open_(bytes(32), a, b"gen 7")
+
+
+class DatabaseTest(unittest.TestCase):
+    """Encrypted laptop database: accounts on the stick, snapshots on disk and stick, laptop swaps."""
+
+    PASSWORDS = {"gospodarz": "las rzeka most okno chleb", "zastepca-1": "sowa dach pole kret lampa"}
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        root = Path(self.tmp.name)
+        self.usb, self.keys = root / "usb" / "kopia", root / "usb" / "keys"
+        self.laptop = lambda name: root / name
+        self.kit, self.key = database.Kit.create(self.keys, self.PASSWORDS, "zapasowe haslo szesc slow tutaj",
+                                                 iterations=1000)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def open(self, laptop="a", usb=True, **kw):
+        return database.Database(self.key, self.laptop(laptop), self.usb if usb else None, self.kit.recovery(),
+                                 store.SCHEMA, **kw)
+
+    def add(self, db, detail):
+        store.Journal(db).add("WICI-3FA21C", "", "test", True, detail)
+
+    def details(self, db):
+        return [r["detail"] for r in reversed(store.Journal(db).recent(5000))]
+
+    def test_accounts_unlock_change_and_limit(self):
+        self.assertEqual(self.kit.unlock("gospodarz", "  Las RZEKA most  okno chleb "), self.key)
+        self.assertEqual(self.kit.unlock("zastepca-1", self.PASSWORDS["zastepca-1"]), self.key)
+        self.kit.change_password("zastepca-1", self.PASSWORDS["zastepca-1"], "nowe haslo z koperty numer dwa",
+                                 iterations=1000)
+        self.assertEqual(self.kit.unlock("zastepca-1", "nowe haslo z koperty numer dwa"), self.key)
+        self.assertEqual(self.kit.names(), ["gospodarz", "zastepca-1"])
+        kit = database.Kit(self.keys)                       # inny laptop czyta te same pliki
+        for _ in range(database.LOGIN_LIMIT):
+            with self.assertRaises(database.LoginError):
+                kit.unlock("gospodarz", "zle haslo")
+        with self.assertRaisesRegex(database.LoginError, "Poczekaj"):
+            kit.unlock("gospodarz", self.PASSWORDS["gospodarz"])   # limit także dla dobrego hasła
+        with unittest.mock.patch.object(database.time, "monotonic", return_value=time.monotonic() + 61):
+            self.assertEqual(kit.unlock("gospodarz", self.PASSWORDS["gospodarz"]), self.key)
+        (self.keys / "zestaw.key").write_bytes(os.urandom(32))   # konta bez pliku zestawu nie otwierają klucza
+        with self.assertRaises(database.LoginError):
+            database.Kit(self.keys).unlock("gospodarz", self.PASSWORDS["gospodarz"])
+        with self.assertRaises(database.StorageError):
+            database.Kit.create(self.keys, self.PASSWORDS, "x")
+
+    def test_no_plain_data_and_another_laptop_continues(self):
+        db = self.open("a")
+        self.add(db, "Szkoła nr 5, piwnica")
+        db.flush()
+        for f in list(self.laptop("a").iterdir()) + list(self.usb.iterdir()):
+            self.assertNotIn("Szkoła".encode(), f.read_bytes(), f)
+            self.assertNotIn(b"SQLite format", f.read_bytes(), f)
+        self.assertTrue(db.status()["usb_saved"])
+        db.close()
+        other = self.open("b")                              # laptop A zniknął; B ma tylko pamięć USB
+        self.assertEqual(self.details(other), ["Szkoła nr 5, piwnica"])
+        self.add(other, "drugi wpis")
+        other.hand_back()
+        self.assertEqual(list(self.laptop("b").iterdir()), [])
+        back = self.open("a")                               # A wraca ze starszą kopią na dysku: wygrywa pamięć
+        self.assertEqual(self.details(back), ["Szkoła nr 5, piwnica", "drugi wpis"])
+        back.close()
+
+    def test_newer_disk_copy_wins_and_heals_the_stick(self):
+        db = self.open("a")
+        self.add(db, "1")
+        db.flush()
+        db.close()
+        db = self.open("a", usb=False)                      # pamięć wyjęta: zmiana tylko na dysku
+        self.add(db, "2")
+        db.close()
+        db = self.open("a")
+        self.assertEqual(self.details(db), ["1", "2"])
+        db.flush()                                          # pamięć dostaje nowszą kopię bez nowej zmiany
+        db.close()
+        db = self.open("c")
+        self.assertEqual(self.details(db), ["1", "2"])
+        db.close()
+
+    def test_diverged_copies_are_a_conflict(self):
+        db = self.open("a")
+        self.add(db, "wspólny")
+        db.close()
+        a = self.open("a", usb=False)
+        self.add(a, "tylko A")
+        a.close()
+        b = self.open("b")
+        self.add(b, "tylko B")
+        b.close()
+        with self.assertRaises(database.Conflict) as cm:
+            self.open("a")
+        self.assertEqual({cm.exception.disk.place, cm.exception.usb.place}, {"disk", "usb"})
+        db = self.open("a", prefer="usb")
+        self.assertEqual(self.details(db), ["wspólny", "tylko B"])
+        self.add(db, "po wyborze")
+        db.close()
+        self.assertEqual(len(list(self.usb.parent.glob("kopia/konflikt-disk-*"))), 1)   # odrzucona zostaje
+        db = self.open("a")                                 # stare pliki A nie wracają jako nowsze
+        self.assertEqual(self.details(db), ["wspólny", "tylko B", "po wyborze"])
+        db.close()
+
+    def test_conflict_choice_holds_without_further_changes(self):
+        db = self.open("a")
+        self.add(db, "wspólny")
+        db.close()
+        a = self.open("a", usb=False)
+        for i in range(3):
+            self.add(a, f"A{i}")                            # A ma wyższe pokolenie niż B
+        a.close()
+        b = self.open("b")
+        self.add(b, "B")
+        b.close()
+        self.open("a", prefer="usb").close()                # wybór bez nowej zmiany
+        db = self.open("a")
+        self.assertEqual(self.details(db), ["wspólny", "B"])
+        db.close()
+
+    def test_recovery_slot_follows_the_account_file(self):
+        db = self.open("a")
+        self.add(db, "x")
+        db.close()
+        slot = database._slot(self.key, "nowe haslo odtworzenia", database.RECOVERY_AAD, 1000)
+        db = database.Database(self.key, self.laptop("a"), self.usb, slot, store.SCHEMA)
+        self.add(db, "y")
+        db.close()
+        self.assertEqual(database.key_from_recovery([self.usb], "nowe haslo odtworzenia"), self.key)
+
+    def test_removed_stick_is_not_recreated_on_the_disk(self):
+        stick = Path(self.tmp.name) / "Volumes" / "WICI"
+        stick.mkdir(parents=True)
+        db = database.Database(self.key, self.laptop("a"), stick / "kopia", None, store.SCHEMA)
+        self.add(db, "x")
+        db.flush()
+        shutil.rmtree(stick)                                # pamięć wyjęta
+        self.add(db, "y")
+        deadline = time.monotonic() + 5
+        while db.status()["usb_error"] is None and time.monotonic() < deadline:
+            time.sleep(0.05)
+        self.assertIsNotNone(db.status()["usb_error"])
+        self.assertFalse(stick.exists())
+        with self.assertRaises(database.StorageError):
+            db.flush(timeout=0.5)
+        with self.assertRaises(database.StorageError):
+            db.close(timeout=0.5)
+
+    def test_torn_write_and_tampering_fall_back(self):
+        db = self.open("a", usb=False)
+        for i in range(3):
+            self.add(db, str(i))
+        db.close()
+        newest = max(self.laptop("a").iterdir(), key=lambda f: database._read(f, self.key, "disk").gen)
+        raw = newest.read_bytes()
+        newest.write_bytes(raw[:len(raw) // 2])             # przerwany zapis
+        db = self.open("a", usb=False)
+        self.assertEqual(self.details(db), ["0", "1"])
+        db.close()
+        head, header, sealed = database._split(raw)
+        header["gen"] += 100                                # podbite pokolenie bez klucza: MAC się nie zgadza
+        text = json.dumps(header).encode()
+        newest.write_bytes(database.MAGIC + len(text).to_bytes(4, "big") + text + sealed)
+        db = self.open("a", usb=False)
+        self.assertEqual(self.details(db), ["0", "1"])
+        db.close()
+
+    def test_recovery_password_without_account_file(self):
+        db = self.open("a")
+        self.add(db, "x")
+        db.hand_back()
+        for f in self.keys.iterdir():
+            f.unlink()
+        with self.assertRaises(database.LoginError):
+            database.key_from_recovery([self.usb], "zle")
+        key = database.key_from_recovery([self.usb], "Zapasowe haslo szesc slow tutaj")
+        self.assertEqual(key, self.key)
+
+    def test_concurrent_writes_are_coalesced_and_fast(self):
+        db = self.open("a")
+        db.write(lambda c: c.executemany("INSERT INTO journal (at, station, lxmf, op, ok, detail) "
+                                         "VALUES ('t','WICI-1','','x',1,?)", [("x" * 300,)] * 1000))
+        writes, latency = [], []
+        real = database._write_durable
+
+        def counting(path, data):
+            writes.append(path.parent.name)
+            real(path, data)
+
+        def phone(n):
+            for i in range(10):
+                t = time.monotonic()
+                self.add(db, f"{n}-{i}")
+                latency.append(time.monotonic() - t)
+
+        with unittest.mock.patch.object(database, "_write_durable", counting):
+            threads = [threading.Thread(target=phone, args=(n,)) for n in range(15)]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+            db.flush()
+        self.assertEqual(len(self.details(db)), 1150)
+        self.assertLess(writes.count("a"), 150)             # migawki łączone, nie jedna na zmianę
+        self.assertLess(max(latency), 1.0, f"max {max(latency):.3f} s, {writes.count('a')} zapisów")
+        db.close()
+
+    def test_disk_error_is_reported_to_the_writer(self):
+        db = self.open("a", usb=False)
+        with unittest.mock.patch.object(database, "_write_durable", side_effect=OSError("dysk pełny")):
+            with self.assertRaisesRegex(database.StorageError, "dysk pełny"):
+                self.add(db, "x")
+            self.assertEqual(db.status()["disk_error"], "dysk pełny")
+        db.flush()                                          # ponowna próba po usunięciu przyczyny
+        self.assertIsNone(db.status()["disk_error"])
+        db.close()
+
+    def test_destroy_removes_copies_and_accounts(self):
+        db = self.open("a")
+        self.add(db, "x")
+        db.flush()
+        db.destroy(self.keys)
+        self.assertEqual(list(self.laptop("a").iterdir()), [])
+        self.assertEqual(list(self.usb.iterdir()), [])
+        self.assertEqual(list(self.keys.iterdir()), [])
+        with self.assertRaises(database.LoginError):
+            database.key_from_recovery([self.usb], "zapasowe haslo szesc slow tutaj")
+
+    def test_hand_back_needs_the_stick(self):
+        db = self.open("a", usb=False)
+        self.add(db, "x")
+        with self.assertRaises(database.StorageError):
+            db.hand_back()
+        self.assertTrue(any(self.laptop("a").iterdir()))   # bez pamięci dysk zostaje nietknięty
+        db.close()
+
+
+class PasswordsTest(unittest.TestCase):
+    def test_word_list(self):
+        from wici import passwords
+        words = passwords.words()
+        self.assertEqual(len(words), 4096)
+        self.assertEqual(words, sorted(words))
+        self.assertTrue(all(set(w) <= set("abcdefghijklmnoprstuwyz") for w in words))   # bez polskich liter
+        for bad in ("kurwa", "trup", "pomocy", "wici", "szwaby", "omg"):
+            self.assertNotIn(bad, words)
+        pw = passwords.generate()
+        self.assertEqual(len(pw.split()), 5)
+        self.assertTrue(all(w in words for w in pw.split()))
+        self.assertEqual(len(passwords.recovery().split()), 6)
+        self.assertEqual(database.normalize_password(pw.upper()), pw.encode())
+
+    def test_excluded_words_are_not_on_the_list(self):
+        from wici import passwords
+        text = (LAPTOP / "build" / "slowa" / "wykluczone.txt").read_text(encoding="utf-8")
+        items = {i for line in text.splitlines() for i in line.split("#", 1)[0].split()}
+        kept = set(passwords.words())
+        self.assertEqual([i for i in items if not i.endswith("*") and i in kept], [])
+        self.assertEqual([w for w in kept if w.startswith(tuple(i[:-1] for i in items if i.endswith("*")))], [])
+
+
 class JournalTest(unittest.TestCase):
     def test_append_only(self):
         import sqlite3
         with tempfile.TemporaryDirectory() as tmp:
-            j = store.Journal(Path(tmp) / "j.sqlite")
+            j = store.Journal.plain(Path(tmp) / "j.sqlite")
             j.add("WICI-1", "ab" * 16, "configure", True, "config_seq 1")
             j.add("WICI-1", "ab" * 16, "card", False, "prep_required")
             self.assertEqual([e["op"] for e in j.recent()], ["card", "configure"])
             for sql in ("DELETE FROM journal", "UPDATE journal SET ok=1"):
                 with self.assertRaises(sqlite3.DatabaseError):
-                    j.db.execute(sql)
+                    j.db.write(lambda c, sql=sql: c.execute(sql))
             j.close()
 
     def test_state_dir_override(self):
@@ -371,7 +663,7 @@ class PanelTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tmp = tempfile.TemporaryDirectory()
-        cls.journal = store.Journal(Path(cls.tmp.name) / "j.sqlite")
+        cls.journal = store.Journal.plain(Path(cls.tmp.name) / "j.sqlite")
         station = FakeStation()
         cls.panel = Panel(station, Prep(station, cls.journal), cls.journal, "tok-123", {"version": "t"})
         cls.server = serve(cls.panel, 0)
@@ -396,7 +688,7 @@ class PanelTest(unittest.TestCase):
         return r, data
 
     def cookie(self):
-        r, _ = self.request("GET", "/start?t=tok-123")
+        r, _ = self.request("GET", f"/start?t={self.panel.ticket()}")
         self.assertEqual(r.status, 303)
         self.assertIn("HttpOnly", r.getheader("Set-Cookie"))
         self.assertIn("SameSite=Strict", r.getheader("Set-Cookie"))
@@ -414,6 +706,20 @@ class PanelTest(unittest.TestCase):
             self.assertEqual(self.request("GET", path, headers={"Cookie": c})[0].status, 200, path)
         r, body = self.request("GET", "/api/state?v=-1", headers={"Cookie": c})
         self.assertEqual(json.loads(body)["station"]["phase"], "searching")
+
+    def test_start_link_works_once_and_second_start_gets_a_new_one(self):
+        self.assertEqual(self.request("GET", "/start?t=tok-123")[0].status, 403)   # sam token panelu nie otwiera
+        ticket = self.panel.ticket()
+        self.assertEqual(self.request("GET", f"/start?t={ticket}")[0].status, 303)
+        self.assertEqual(self.request("GET", f"/start?t={ticket}")[0].status, 403)
+        with tempfile.TemporaryDirectory() as tmp:
+            inst = Path(tmp) / "instance.json"
+            wici_main.write_instance(inst, self.port, "tok-123")
+            url = wici_main.running_instance(inst)
+            self.assertTrue(url.startswith(f"http://127.0.0.1:{self.port}/start?t="))
+            self.assertEqual(self.request("GET", urlsplit(url)._replace(scheme="", netloc="").geturl())[0].status, 303)
+            wici_main.write_instance(inst, self.port, "wrong")
+            self.assertIsNone(wici_main.running_instance(inst))
 
     def test_foreign_host_origin_and_content_type_are_refused(self):
         c = self.cookie()
@@ -456,8 +762,10 @@ class PackageTest(unittest.TestCase):
 
     def test_code_size_budget_and_python_version(self):
         files = [p for p in self.PACKAGE.rglob("*") if p.is_file() and "__pycache__" not in p.parts]
-        total = sum(p.stat().st_size for p in files)
+        words = self.PACKAGE / "slowa.txt"                  # dane, nie kod: osobny limit
+        total = sum(p.stat().st_size for p in files if p != words)
         self.assertLess(total, 160 * 1024, f"aplikacja ma {total} B; budżet etapu 1 to 160 KiB")
+        self.assertLess(words.stat().st_size, 32 * 1024)
         for p in files:
             if p.suffix == ".py":
                 ast.parse(p.read_text(encoding="utf-8"), feature_version=(3, 12))   # najstarszy Python w CI
@@ -594,7 +902,7 @@ class SimulatorPreparationTest(unittest.TestCase):
         port = int(self.sim.stdout.readline().split()[1])
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
-        self.journal = store.Journal(Path(self.tmp.name) / "j.sqlite")
+        self.journal = store.Journal.plain(Path(self.tmp.name) / "j.sqlite")
         self.addCleanup(self.journal.close)
         self.station = usbproto.Station(f"tcp:127.0.0.1:{port}").start()
         self.addCleanup(self.station.stop)

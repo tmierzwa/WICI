@@ -1,6 +1,6 @@
 # Aplikacja laptopa WICI
 
-Panel w przeglądarce do pracy ze stacją przez USB, uruchamiany z pamięci USB zestawu na Windows, macOS i Linuksie, bez instalowania. Etap 1 obsługuje tryb przygotowania: konfigurację stacji i węzła stanowiska, odczyt konfiguracji i kartę stacji. Zakres, decyzje, rozmiar, router Wi-Fi i dalsze etapy opisuje [plan](PLAN.md); kontrakt ze stacją jest w [protokole USB](../../docs/spec/protokol-usb.md).
+Panel w przeglądarce do pracy ze stacją przez USB, uruchamiany z pamięci USB zestawu na Windows, macOS i Linuksie, bez instalowania. Etap 1 obsługuje tryb przygotowania: konfigurację stacji i węzła stanowiska, odczyt konfiguracji i kartę stacji. Zakres, decyzje, rozmiar, laptop i router na miejscu oraz dalsze etapy opisuje [plan](PLAN.md); kontrakt ze stacją jest w [protokole USB](../../docs/spec/protokol-usb.md).
 
 ## Uruchomienie podczas pracy nad kodem
 
@@ -36,7 +36,8 @@ Skrypt pobiera przypięte środowiska Pythona ([runtimes.json](build/runtimes.js
 
 | Katalog | Zawartość |
 |---|---|
-| [wici/](wici/__init__.py) | aplikacja: port szeregowy, protokół, dokument `configure`, czynności, dziennik, panel |
+| [wici/](wici/__init__.py) | aplikacja: port szeregowy, protokół, dokument `configure`, czynności, dziennik, zaszyfrowana baza, panel |
 | [wici/ui/](wici/ui/index.html) | panel: HTML, CSS i JS bez bibliotek |
 | [build/](build/build_usb.py) | budowa pamięci USB, programy START, instrukcja na pamięć |
+| [build/slowa/](build/slowa/build_slowa.py) | budowa listy słów do haseł z kopert ([wici/slowa.txt](wici/slowa.txt)): przypięte źródła, wykluczenia, `--check` |
 | [dev/](dev/sim-station.mjs) | stacja z symulatora na TCP |

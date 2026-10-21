@@ -532,22 +532,47 @@ void requestPath(const uint8_t dest[HASH]) {
     }
 }
 
+namespace {
+
+// Pakiet i zapytanie o trasę z sendReady() i send() to ruch własny stacji; w ciszy z wyjątkiem warstwa
+// aplikacji wysyła tylko zgłoszenie objęte wyjątkiem (station::Station::silencedFor).
+struct OwnTraffic {
+    OwnTraffic() { exceptionOut = silence == Silence::EXCEPTION; }
+    ~OwnTraffic() { exceptionOut = false; ownPathRequest = false; }
+};
+
+bool interfaceAccepts() { return started && !nodeMode && p1 && p1->ifacOnline() && !p1->queue().full(); }
+
+// Tożsamość celu znana; inaczej zapytanie o trasę (ruch własny, K0) i false.
+bool recallOrRequest(const RNS::Bytes& hash, RNS::Identity& remote) {
+    remote = RNS::Identity::recall(hash);
+    if (remote) return true;
+    ownPathRequest = true;
+    RNS::Transport::request_path(hash);
+    return false;
+}
+
+}  // namespace
+
+bool sendReady(const uint8_t dest[HASH]) {
+    if (!interfaceAccepts()) return false;
+    OwnTraffic own;
+    try {
+        RNS::Identity remote{RNS::Type::NONE};
+        return recallOrRequest(RNS::Bytes(dest, HASH), remote);
+    } catch (const std::exception& e) {
+        logFailure("send ready", e);
+        return false;
+    }
+}
+
 uint32_t send(const uint8_t dest[HASH], const uint8_t* data, size_t length, uint32_t timeoutS) {
-    if (!started || nodeMode || !p1 || !p1->ifacOnline() || p1->queue().full()) return 0;
-    // Pakiet i zapytanie o trasę z send() to ruch własny stacji; w ciszy z wyjątkiem warstwa aplikacji
-    // wysyła tylko zgłoszenie objęte wyjątkiem (station::Station::silencedFor).
-    struct Flags {
-        Flags() { exceptionOut = silence == Silence::EXCEPTION; }
-        ~Flags() { exceptionOut = false; ownPathRequest = false; }
-    } flags;
+    if (!interfaceAccepts()) return 0;
+    OwnTraffic own;
     try {
         const RNS::Bytes hash(dest, HASH);
-        const RNS::Identity remote = RNS::Identity::recall(hash);
-        if (!remote) {
-            ownPathRequest = true;
-            RNS::Transport::request_path(hash);
-            return 0;
-        }
+        RNS::Identity remote{RNS::Type::NONE};
+        if (!recallOrRequest(hash, remote)) return 0;
         RNS::Destination out(remote, RNS::Type::Destination::OUT, RNS::Type::Destination::SINGLE, APP_NAME, ASPECT);
         if (out.hash() != hash) return 0;
         RNS::Packet packet(out, RNS::Bytes(data, length));

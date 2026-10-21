@@ -86,7 +86,6 @@ constexpr uint32_t BUSY_TIMEOUT_US = 20000;  // najdłużej Calibrate z TCXO (3,
 struct Status {
     uint8_t raw = 0;
     uint8_t mode() const { return (raw >> 4) & 0x7; }
-    uint8_t command() const { return (raw >> 1) & 0x7; }
 };
 
 struct Identity {

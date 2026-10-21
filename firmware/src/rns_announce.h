@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Kiedy stacja ogłasza swój adres (docs/spec/oprogramowanie.md, "Ogłoszenia adresu"):
 // - przy starcie z losowym opóźnieniem 0–120 s;
-// - na polecenie opiekuna (request);
+// - na polecenie gospodarza (request);
 // - gdy od ostatniego ogłoszenia doszły 2 nieudane próby (brak potwierdzenia transportowego),
 //   najwyżej raz na 30 min;
 // - w ciszy radiowej i bez kodu IFAC (interfejs nie nadaje) nigdy; zaległe ogłoszenie czeka;

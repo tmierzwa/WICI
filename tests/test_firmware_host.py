@@ -349,13 +349,17 @@ struct World;
 
 struct FakeServices : station::Services {
     World* w = nullptr;
-    bool sw = false, forced = false, ready = true, busyFlag = false, refuse = false;
+    bool sw = false, forced = false, ready = true, busyFlag = false, refuse = false, unknown = false;
     uint32_t handle = 0;
     uint32_t rng = 12345;
     bool silence() override;
     bool silenceSwitch() override { return sw; }
     bool radioReady() override { return ready; }
     bool busy() override { return busyFlag; }
+    bool sendReady(const uint8_t*) override {
+        if (unknown) printf("path request\n");   // cel bez trasy: stos pyta o trasę, pakiet nie wychodzi
+        return !unknown;
+    }
     uint32_t send(const uint8_t to[store::HASH], const uint8_t* data, size_t length, uint32_t) override {
         if (refuse) { printf("send refused\n"); return 0; }
         ++handle;
@@ -387,8 +391,16 @@ struct FakeHost : usbproto::Host {
     const char* version() override { return "host"; }
     uint32_t counterS() override;
     bool contactBeforeStart() override { return false; }
-    void power(char* out, size_t size) override { snprintf(out, size, "\"source\":\"12v\""); }
-    void diag(char* out, size_t size) override { snprintf(out, size, "\"corrupt\":0"); }
+    void power(char* out, size_t size) override {
+        static const std::string pad(400, 'x');
+        snprintf(out, size, "\"source\":\"12v\"%s%.*s%s", diagPad ? ",\"pad\":\"" : "", diagPad > 100 ? 100 : diagPad, pad.c_str(),
+                 diagPad ? "\"" : "");
+    }
+    int diagPad = 0;   // dłuższe `diag` i `power` w `status` (stacja ma tam więcej pól niż program testowy)
+    void diag(char* out, size_t size) override {
+        static const std::string pad(400, 'x');
+        snprintf(out, size, "\"corrupt\":0%s%.*s%s", diagPad ? ",\"pad\":\"" : "", diagPad, pad.c_str(), diagPad ? "\"" : "");
+    }
     bool announce() override { printf("announce %d\n", announceOk); return announceOk; }
     bool destroy() override;
     void configChanged(bool roleChanged) override { printf("config changed %d\n", roleChanged); }
@@ -647,6 +659,7 @@ int world() {
         else if (!strcmp(cmd, "radio")) w.services.ready = atoi(arg) != 0;
         else if (!strcmp(cmd, "busy")) w.services.busyFlag = atoi(arg) != 0;
         else if (!strcmp(cmd, "refuse")) w.services.refuse = atoi(arg) != 0;
+        else if (!strcmp(cmd, "unknown")) w.services.unknown = atoi(arg) != 0;
         else if (!strcmp(cmd, "poll")) {
             w.app->poll();
             printf("inflight %zu\n", w.app->inFlight());
@@ -772,6 +785,7 @@ int world() {
         } else if (!strcmp(cmd, "upoll")) w.proto->poll(w.ms);
         else if (!strcmp(cmd, "prep")) w.host.prepFlag = atoi(arg) != 0;
         else if (!strcmp(cmd, "announce")) w.host.announceOk = atoi(arg) != 0;
+        else if (!strcmp(cmd, "diagpad")) w.host.diagPad = atoi(arg);
         else if (!strcmp(cmd, "cause")) printf("cause %d\n", w.con->alarmCause());
         else if (!strcmp(cmd, "ask")) {
             char detail[32] = "";
@@ -1543,6 +1557,16 @@ class HostUnitTests(unittest.TestCase):
         # STATUS(X,0,e=10,s=6), potem nowa rewizja 2: decyzja 6 zostaje, etap zapisane, wpis nie jest zamknięty.
         _, r, s = self.lifecycle([[1, 2, x, 0, 10, 6], self.sub(self.request(x, 2, people=3))])
         self.assertEqual((r["dec"], r["drev"], r["stage"], r["rmax"], r["closed"]), (6, 0, 0, 2, 0))
+        # Cel bez trasy: stos pyta o trasę, pakiet nie wychodzi, więc `nadane` i liczba prób zostają, a ANULUJ działa.
+        out, r, s = self.lifecycle(["unknown 1", "poll", "cancel " + x])
+        self.assertEqual(self.find(out, "path request"), ["path request"])
+        self.assertEqual(self.find(out, "send "), [])
+        self.assertEqual(self.find(out, "cancel "), ["cancel stored 0"])
+        self.assertEqual((r["att"], r["flags"] & 1, s["failed"]), (0, 0, 1))
+        # Stos odmówił już po przekazaniu (sendReady przyjął): `nadane` zostaje, ANULUJ daje too_late.
+        out, r, s = self.lifecycle(["refuse 1", "poll", "cancel " + x])
+        self.assertEqual(self.find(out, "cancel "), ["cancel too_late 0"])
+        self.assertEqual((r["att"], r["flags"] & 1), (1, 1))
         # X nadany (`nadane`), dowód i RECEIVED utracone, ANULUJ: too_late; późny RECEIVED(X,1) daje odebrane.
         out, r, s = self.lifecycle(["poll", "rcpt 1 0", "cancel " + x, [1, 1, x, 1, 1, 1]])
         self.assertEqual(self.find(out, "cancel "), ["cancel too_late 0"])
@@ -1996,6 +2020,20 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual(self.find(out, "markread "), ["markread 1", "markread 1"])
         r = [x_ for x_ in self.replies(out) if x_["type"] in ("snap_begin", "snap", "snap_end", "rejected")]
         self.assertEqual((r[0]["type"], r[-1]["type"], r[-1]["reason"]), ("snap_begin", "rejected", "stale"))
+
+    def test_usb_confirmation_decided_while_laptop_does_not_read(self):
+        # Laptop przestaje czytać; `pending` i długi `status` zostawiają mniej niż PENDING_RESERVE: OK i limit
+        # 30 s i tak zamykają pytanie na ekranie, a operacja i odpowiedź czekają na miejsce w kolejce.
+        for answer, expected in ((["K OK 0"], ("ok", None)), (["ms 30000"], ("rejected", "not_confirmed"))):
+            u = self.Lines()
+            script = ["H", self.CONFIG, "diagpad 170", "connect", "stall 1", u("silence", on=True), u("status"), *answer, "upoll",
+                      "upoll", "queue", "stall 0", "upoll", "queue"]
+            out = self.world(script)
+            queues = self.find(out, "queue ")
+            self.assertIn("ask end", out[:out.index(queues[0])])   # pytanie zamknięte, laptop dalej nie czyta
+            self.assertEqual(out.count("ask end"), 1)
+            kinds = [(x_["type"], x_.get("reason")) for x_ in self.replies(out)[1:]]
+            self.assertEqual(kinds, [("pending", None), ("status", None), expected])
 
     def test_usb_confirmed_commands_silence_close_destroy(self):
         u = self.Lines()

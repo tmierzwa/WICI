@@ -66,7 +66,6 @@ void Hash::update(const uint8_t* data, size_t length) {
     }
 }
 
-void Hash::update(const char* text) { update(reinterpret_cast<const uint8_t*>(text), strlen(text)); }
 
 void Hash::finish(uint8_t out[DIGEST]) {
     const uint64_t bits = bytes_ * 8;

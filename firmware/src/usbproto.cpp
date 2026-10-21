@@ -18,7 +18,10 @@ bool appendf(char* out, size_t size, size_t& n, const char* format, ...) {
     va_start(args, format);
     const int written = n < size ? vsnprintf(out + n, size - n, format, args) : -1;
     va_end(args);
-    if (written < 0 || n + static_cast<size_t>(written) >= size) return false;
+    if (written < 0 || n + static_cast<size_t>(written) >= size) {
+        if (n < size) out[n] = '\0';   // bez uciętej części: w buforze zostaje to, co weszło w całości
+        return false;
+    }
     n += static_cast<size_t>(written);
     return true;
 }
@@ -185,7 +188,10 @@ void Protocol::disconnected() {
     lineLength_ = 0;
     overflow_ = false;
     xfer_ = Xfer();
-    if (pending()) { host_.confirmEnd(); pending_ = Pending(); }   // pytanie bez odbiorcy odpowiedzi
+    if (pending()) {   // pytanie bez odbiorcy odpowiedzi
+        if (!pending_.decided) host_.confirmEnd();
+        pending_ = Pending();
+    }
 }
 
 void Protocol::feed(const char* bytes, size_t count, uint32_t nowMs) {
@@ -220,8 +226,16 @@ bool Protocol::push(const char* type, int64_t re, const char* fields, size_t res
     if (re >= 0) ok = ok && appendf(line, sizeof(line), n, ",\"re\":%lld", static_cast<long long>(re));
     if (fields && *fields) ok = ok && appendf(line, sizeof(line), n, ",%s", fields);
     ok = ok && appendf(line, sizeof(line), n, "}\n");
-    if (!ok) { host_.log("usb: reply too long"); return true; }
     const bool reply = reserve == OUT_BYTES;
+    if (!ok) {
+        // Wiersz ponad 1024 B to błąd programu (pola mieszczą się w MAX_LINE - 64). Ponowienie nic nie da, więc
+        // wiersz z inicjatywy stacji przepada (true: wołający nie czeka na miejsce), a odpowiedź zastępuje
+        // odmowa `size`, żeby laptop nie czekał na `re` do upływu czasu.
+        ++stats_.dropped;
+        host_.log("usb: line too long");
+        if (reply) rejected(re, "size");
+        return true;
+    }
     if (n > room() || (!reply && n + reserve > room())) {
         if (reply) { ++stats_.dropped; host_.log("usb: output queue full"); }
         return false;
@@ -704,7 +718,7 @@ size_t Protocol::currentRadioFields(char* out, size_t size) {
 void Protocol::finishPending(bool confirmed) {
     const Pending p = pending_;
     pending_ = Pending();
-    host_.confirmEnd();
+    if (!p.decided) host_.confirmEnd();
     if (!confirmed) { host_.log("usb command not confirmed"); rejected(p.seq, "not_confirmed"); return; }
     char fields[160];
     switch (p.type) {
@@ -895,12 +909,18 @@ void Protocol::doXferCommit(const json::Value& msg, int64_t seq) {
 
 void Protocol::poll(uint32_t nowMs) {
     if (snap_.active) { continueSnapshot(); return; }   // migawka przed zdarzeniami; polecenia czekają
-    // Odpowiedź na pytanie przyciskiem z miejscem w kolejce (`status` w czasie pytania mógł ją zająć).
-    if (pending() && room() >= PENDING_RESERVE) {
+    // Odpowiedź przyciskiem i limit 30 s liczone zawsze, więc pytanie znika z ekranu także wtedy, gdy laptop
+    // nie czyta; wykonanie i odpowiedź dopiero z miejscem w kolejce (`status` w czasie pytania mógł ją zająć).
+    if (pending() && !pending_.decided) {
         const Confirm c = host_.confirmPoll();
-        if (c != Confirm::WAITING) finishPending(c == Confirm::YES);
-        else if (nowMs - pending_.sinceMs >= CONFIRM_MS) finishPending(false);
+        const bool timedOut = c == Confirm::WAITING && nowMs - pending_.sinceMs >= CONFIRM_MS;
+        if (c != Confirm::WAITING || timedOut) {
+            pending_.decided = true;
+            pending_.confirmed = c == Confirm::YES;
+            host_.confirmEnd();
+        }
     }
+    if (pending() && pending_.decided && room() >= PENDING_RESERVE) finishPending(pending_.confirmed);
     if (xfer_.op != Xfer::NONE && nowMs - xfer_.lastMs >= XFER_IDLE_MS) xfer_ = Xfer();
     if (connected_ && lostSync_ && sendSnapRequired(-1, lostSync_, pending() ? PENDING_RESERVE : 0)) lostSync_ = nullptr;
     if (!connected_ || !synced_) return;

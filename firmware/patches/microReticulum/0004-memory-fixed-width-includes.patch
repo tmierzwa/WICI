@@ -1,0 +1,18 @@
+Łata WICI do microReticulum 40fa628 (Apache-2.0, jak plik, który zmienia).
+
+Memory.h używa uint8_t, uint32_t, uint64_t i size_t bez własnych nagłówków i polegała na tym,
+że dociągnie je <memory>. GCC z Ubuntu 26.04 (ubuntu-latest w CI od października 2026) już tego
+nie robi i program host się nie kompiluje.
+
+diff --git a/src/microReticulum/Utilities/Memory.h b/src/microReticulum/Utilities/Memory.h
+--- a/src/microReticulum/Utilities/Memory.h
++++ b/src/microReticulum/Utilities/Memory.h
+@@ -18,6 +18,8 @@
+
+ #include "tlsf/tlsf.h"
+
++#include <cstddef>
++#include <cstdint>
+ #include <memory>
+
+ #define RNS_HEAP_ALLOCATOR 0		 // Use HEAP for allocator
