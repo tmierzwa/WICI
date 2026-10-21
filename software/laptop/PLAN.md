@@ -20,7 +20,7 @@ Narzędzie trybu przygotowania i fundament dla następnych etapów.
 | Panel | HTTP tylko na 127.0.0.1, token w ciasteczku, kontrola Host i Origin, CSP; długie odpytywanie stanu; ekrany zestawu, logowania i kopert, zakładka „Zestaw” ze stanem kopii i ZNISZCZ DANE | [web.py](wici/web.py), [ui/](wici/ui/index.html) |
 | Start | jedna instancja, przeglądarka, blokada uśpienia, `--selftest` | [\_\_main\_\_.py](wici/__main__.py), [awake.py](wici/awake.py) |
 | Pamięć USB | przypięte środowiska Pythona, przycinanie, wspólna biblioteka, START dla trzech systemów, manifest | [build/build_usb.py](build/build_usb.py) |
-| Symulator | obraz firmware bench-b z portem danych na TCP: praca i testy bez płytki | [dev/sim-station.mjs](dev/sim-station.mjs) |
+| Symulator | świat symulatora (stacje, węzeł, stanowisko) z portami danych stacji na TCP i stroną z ich przyciskami: praca i testy bez płytki | [simulator/swiat.mjs](../simulator/swiat.mjs) |
 | Testy | jednostkowe, bezpieczeństwo panelu, budowa USB, pełne przygotowanie na obrazie firmware | [tests/test_laptop.py](../../tests/test_laptop.py) |
 | CI | testy na Windows, macOS i Linuksie; pamięć USB budowana i uruchamiana przez START na każdym systemie; budżet rozmiaru | [.github/workflows/laptop.yml](../../.github/workflows/laptop.yml) |
 

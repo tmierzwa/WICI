@@ -54,6 +54,36 @@ Symulator pokazuje zachowanie samego oprogramowania, także to, którego nie wid
 - Ekran wyniku zgłoszenia pokazuje tekst `zapisz_numer`, przeznaczony na stronę mieszkańców.
 - Limit 2 % czasu nadawania na ogłoszenia daje w węźle mniej więcej jedno przekazane ogłoszenie na 6 min; stanowisko poznaje nową stację dopiero z jej ogłoszenia.
 
+## Osobne elementy
+
+Symulator składa się z tych samych elementów co sieć w terenie, a każdy rozmawia z innymi tylko przez interfejs, jaki ma urządzenie fizyczne. Ćwiczenia są nakładką: korzystają z elementów w potrzebnym zakresie, ale nie zastępują ich interfejsów.
+
+| Element | Interfejsy | Teraz |
+|---|---|---|
+| Stacja, węzeł stanowiska | piny (przyciski, przycisk przygotowania, CISZA RADIOWA), zasilanie, USB: port danych i port diagnostyki, radio S2-LP | `web/device.js` (obraz bench-b) |
+| Eter | ramki radiowe między stacjami a węzłem, tłumienie tras | `web/world.js` |
+| Komputer stanowiska | KISS na porcie danych węzła, karta odbiorcy | model `post/post.cpp`; później prawdziwa aplikacja stanowiska przez TCP |
+| Aplikacja laptopa | port danych USB stacji (`"usb":2`) | `software/laptop` przez TCP |
+| Człowiek i otoczenie | przyciski, wyłącznik, przełącznik, trasa radiowa | strona świata, polecenia na stdin, ćwiczenia |
+
+Czas biegnie na dwa sposoby. W jednym procesie (strona ćwiczeń, testy, wici.net.pl/symulator) świat ma zegar wirtualny: przyspieszanie i przeskoki czasu działają, bo nic z zewnątrz na niego nie czeka. Gdy dołącza program z zewnątrz (aplikacja laptopa), świat biegnie w czasie rzeczywistym, bo ten program ma własne limity czasu: to robi `swiat.mjs`.
+
+```sh
+node software/simulator/swiat.mjs --stations 2 --card karta-odbiorcy.json   # strona http://127.0.0.1:7380/
+node software/simulator/swiat.mjs --station stacja.json --stations 1         # stacja 1 skonfigurowana z pliku
+```
+
+Stacja k ma port danych USB `tcp:127.0.0.1:<7300 + k − 1>`; połączenie TCP to przewód USB podłączony do laptopa. Stacja startuje bez konfiguracji, chyba że podano dla niej plik w formacie „Zapisz do pliku” panelu laptopa (`--station`); wtedy świat konfiguruje ją protokołem USB jak laptop. Węzeł i stanowisko są przygotowane z kluczem sieci ćwiczeniowej, którego kod dostępu jest w pierwszym wierszu wyjścia, a `--card` zapisuje kartę odbiorcy stanowiska do wczytania w panelu laptopa. Strona świata pokazuje ekrany stacji i ma ich przyciski, przycisk przygotowania, wyłącznik, CISZĘ RADIOWĄ i tłumienie trasy; działa tylko z 127.0.0.1.
+
+Kolejne kroki:
+
+1. `swiat.mjs`: świat z N stacjami, pliki konfiguracji, porty TCP, strona świata, plik karty odbiorcy. Testy aplikacji laptopa na symulatorze używają świata (wcześniej osobny `software/laptop/dev/sim-station.mjs` z jedną stacją bez węzła). **Zrobione.**
+2. Pełny panel R02 ze strony ćwiczeń dołączany do świata w czasie rzeczywistym (ten sam stan przez `/events`, działania przez `/act`).
+3. Port danych węzła na TCP dla przyszłej aplikacji stanowiska; model `post.cpp` wtedy opcjonalny.
+4. Krótkie ćwiczenia poziomu 2 z aplikacją laptopa w czasie rzeczywistym (przygotowanie stacji, ZNISZCZ DANE).
+
+Odrzucone: osobny proces na każde urządzenie (zegar i eter musiałyby się synchronizować przez sieć, bez zysku dla ćwiczeń); WebSocket do strony świata (Node nie ma serwera WebSocket w bibliotece standardowej, a EventSource i POST wystarczają); wszystkie ćwiczenia w czasie rzeczywistym (ćwiczenia z przeskokami czasu trwałyby dziesiątki minut).
+
 ## Pliki
 
 | Plik | Zawartość |
@@ -62,6 +92,7 @@ Symulator pokazuje zachowanie samego oprogramowania, także to, którego nie wid
 | `hal/` | wirtualna płytka: rdzeń Arduino-ESP32, emulatory układów, zastępcze pliki MCU, funkcje ROM |
 | `post/post.cpp` | aplikacja komputera stanowiska na stosie Reticulum |
 | `cli.cpp` | jedno urządzenie jako proces (polecenia płytki ze stdin, `run <µs>`) |
+| `swiat.mjs`, `swiat.html` | świat w czasie rzeczywistym dla programów z zewnątrz: porty danych stacji na TCP, strona świata (Node) |
 | `web/device.js`, `web/world.js`, `web/sim.js` | urządzenie (instancja WebAssembly, restarty z przeniesieniem FRAM, NVS i pamięci RTC), świat (eter, USB, przygotowanie), symulacja ćwiczeń |
 | `web/index.html`, `app.js`, `app.css`, `layouts.js`, `scenarios.js` | strona, panel R02 i jego zasady, ćwiczenia |
 | `test_scenarios.mjs` | przejście każdego ćwiczenia jego przykładowym przebiegiem na zbudowanych obrazach (Node) |

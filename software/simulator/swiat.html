@@ -1,0 +1,144 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: MIT -->
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WICI · świat symulatora</title>
+<style>
+:root {
+  --bg: #f3f2ee; --surface: #fff; --text: #1d1f21; --muted: #5b6066; --border: #d6d2c7;
+  --ink: #0f1216; --on-ink: #fff; --ok: #2f6d3a; --alarm: #b3261e; --lcd: #c9cdbf; --lcd-ink: #1b1d18;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #15171a; --surface: #1e2125; --text: #e6e4de; --muted: #9aa0a6; --border: #33373d;
+    --ink: #e6e4de; --on-ink: #15171a; --ok: #7fc48a; --alarm: #f08a7e; --lcd: #a9ad9f; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 var(--font); }
+header { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline; padding: 16px 20px; }
+h1 { font-size: 18px; margin: 0; }
+.muted { color: var(--muted); font-size: 13px; }
+main { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; padding: 0 20px 24px; }
+.station { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+.station h2 { font-size: 15px; margin: 0 0 2px; display: flex; justify-content: space-between; gap: 8px; }
+.lcd { background: var(--lcd); color: var(--lcd-ink); font: 600 14px/1.5 var(--mono); border-radius: 6px;
+  padding: 8px 10px; margin: 10px 0; min-height: 116px; white-space: pre; overflow: hidden; }
+.lcd .inv { background: var(--lcd-ink); color: var(--lcd); }
+.lcd.off { opacity: 0.35; }
+.keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+button { font: inherit; font-weight: 600; font-size: 14px; padding: 9px 6px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text); touch-action: none; user-select: none; }
+button:active, button.down { background: var(--ink); color: var(--on-ink); }
+.row { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-top: 10px; font-size: 14px; }
+.row button { flex: 1 1 auto; }
+input[type=range] { flex: 1 1 120px; }
+.dot { font-size: 13px; font-weight: 600; }
+.dot.on { color: var(--ok); }
+.dot.alarm { color: var(--alarm); }
+#offline { margin: 0 20px 16px; color: var(--alarm); font-weight: 600; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Świat symulatora WICI</h1>
+  <span class="muted" id="clock">łączę…</span>
+  <span class="muted" id="post"></span>
+</header>
+<p id="offline" hidden>Brak połączenia ze światem (swiat.mjs). Strona połączy się sama, gdy świat znów działa.</p>
+<main id="stations"></main>
+<template id="station">
+  <section class="station">
+    <h2><span class="name"></span><span class="dot laptop"></span></h2>
+    <div class="muted port"></div>
+    <div class="lcd" aria-live="polite"></div>
+    <div class="keys">
+      <button data-button="UP" aria-label="Góra">▲</button>
+      <button data-button="DOWN" aria-label="Dół">▼</button>
+      <button data-button="BACK">WSTECZ</button>
+      <button data-button="OK">OK</button>
+    </div>
+    <div class="row">
+      <button class="prep">Przycisk przygotowania (3 s)</button>
+    </div>
+    <div class="row">
+      <label><input type="checkbox" class="power"> zasilanie</label>
+      <label><input type="checkbox" class="silence"> CISZA RADIOWA</label>
+    </div>
+    <div class="row">
+      <span>Trasa do węzła</span>
+      <input type="range" class="loss" min="60" max="140" step="1" aria-label="Tłumienie trasy w dB">
+      <span class="loss-text muted"></span>
+      <label><input type="checkbox" class="link"> łączność</label>
+    </div>
+  </section>
+</template>
+<script>
+const cards = new Map();
+
+function post(station, action, value) {
+  return fetch("/act", { method: "POST", headers: { "Content-Type": "application/json" },
+                         body: JSON.stringify({ station, action, value }) }).catch(() => {});
+}
+
+function card(n) {
+  if (cards.has(n)) return cards.get(n);
+  const el = document.getElementById("station").content.firstElementChild.cloneNode(true);
+  el.querySelector(".name").textContent = `Stacja ${n}`;
+  for (const b of el.querySelectorAll("[data-button]")) {
+    const press = (down) => (e) => {
+      e.preventDefault();
+      if (down === b.classList.contains("down")) return;
+      b.classList.toggle("down", down);
+      post(n, "button", { button: b.dataset.button, down });
+    };
+    b.addEventListener("pointerdown", (e) => { b.setPointerCapture(e.pointerId); press(true)(e); });
+    b.addEventListener("pointerup", press(false));
+    b.addEventListener("pointercancel", press(false));
+  }
+  el.querySelector(".prep").addEventListener("click", () => post(n, "prep"));
+  el.querySelector(".power").addEventListener("change", (e) => post(n, "power", e.target.checked));
+  el.querySelector(".silence").addEventListener("change", (e) => post(n, "silence", e.target.checked));
+  const loss = el.querySelector(".loss"), link = el.querySelector(".link");
+  loss.addEventListener("change", () => { link.checked = true; post(n, "loss", Number(loss.value)); });
+  link.addEventListener("change", () => post(n, "loss", link.checked ? Number(loss.value) : null));
+  document.getElementById("stations").append(el);
+  cards.set(n, el);
+  return el;
+}
+
+function render(state) {
+  document.getElementById("clock").textContent = `czas świata: ${state.seconds} s`;
+  document.getElementById("post").textContent = `Liczba znanych stacji: ${state.post}`;
+  for (const s of state.stations) {
+    const el = card(s.n);
+    el.querySelector(".port").textContent = `port danych USB: tcp:127.0.0.1:${s.port}`;
+    const laptop = el.querySelector(".laptop");
+    laptop.textContent = s.laptop ? "laptop podłączony" : "bez laptopa";
+    laptop.className = "dot laptop" + (s.laptop ? " on" : "");
+    const lcd = el.querySelector(".lcd");
+    lcd.classList.toggle("off", !s.powered);
+    lcd.replaceChildren(...(s.powered ? s.screen.lines : ["(wyłączona)"]).map((text, i) => {
+      const line = document.createElement("div");
+      line.textContent = text || " ";
+      if (s.screen.inverted?.[i]) line.className = "inv";
+      return line;
+    }));
+    el.querySelector(".power").checked = s.powered;
+    el.querySelector(".silence").checked = s.silence;
+    const loss = el.querySelector(".loss"), link = el.querySelector(".link");
+    const reachable = s.loss !== null && isFinite(s.loss);
+    link.checked = reachable;
+    if (reachable && document.activeElement !== loss) loss.value = s.loss;
+    el.querySelector(".loss-text").textContent = reachable ? `${s.loss} dB` : "brak trasy";
+  }
+}
+
+const events = new EventSource("/events");
+events.onmessage = (e) => { document.getElementById("offline").hidden = true; render(JSON.parse(e.data)); };
+events.onerror = () => { document.getElementById("offline").hidden = false; };
+</script>
+</body>
+</html>

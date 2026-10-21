@@ -1171,17 +1171,32 @@ class ThirdPartyLicensesTest(unittest.TestCase):
         self.assertEqual(hashlib.sha256(cpython).hexdigest(), pins["cpython"]["sha256"])
 
 
+def start_world(test, *args):
+    """software/simulator/swiat.mjs on free ports; returns the process and its start-up lines up to `gotowe`."""
+    sim = subprocess.Popen(["node", str(ROOT / "software" / "simulator" / "swiat.mjs"), "--port", "0", "--http", "0",
+                            *args], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, encoding="utf-8")
+    test.addCleanup(sim.stdout.close)
+    test.addCleanup(sim.wait, 10)
+    test.addCleanup(sim.stdin.close)
+    lines = []
+    for line in sim.stdout:
+        if line.strip() == "gotowe":
+            return sim, lines
+        lines.append(line.strip())
+    test.fail(f"swiat.mjs ended: {lines}")
+
+
+def world_port(lines, station):
+    return int(next(x for x in lines if x.startswith(f"stacja {station} ")).rsplit(":", 1)[1])
+
+
 @unittest.skipUnless(shutil.which("node"), "Node.js not installed")
 class SimulatorPreparationTest(unittest.TestCase):
     """The whole preparation against the bench-b firmware image, as the person at the laptop does it."""
 
     def setUp(self):
-        self.sim = subprocess.Popen(["node", str(LAPTOP / "dev" / "sim-station.mjs"), "0"], stdin=subprocess.PIPE,
-                                    stdout=subprocess.PIPE, text=True)
-        self.addCleanup(self.sim.stdout.close)
-        self.addCleanup(self.sim.wait, 10)
-        self.addCleanup(self.sim.stdin.close)
-        port = int(self.sim.stdout.readline().split()[1])
+        self.sim, lines = start_world(self)
+        port = world_port(lines, 1)
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.journal = memory_journal(self.tmp.name)
@@ -1255,6 +1270,75 @@ class SimulatorPreparationTest(unittest.TestCase):
         self.wait(lambda: (self.station.state["hello"] or {}).get("configured") is False, timeout=30)
         with self.assertRaises(ValueError):
             web.destroy(panel, {})
+
+
+@unittest.skipUnless(shutil.which("node"), "Node.js not installed")
+class WorldTest(unittest.TestCase):
+    """swiat.mjs: stations from preconfiguration files and fresh ones, the receiver card file and the world page."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        tmp = Path(self.tmp.name)
+        (tmp / "stacja.json").write_text(json.dumps(station_doc(ifac="5749434953494d554c41544f52305f30")),
+                                         encoding="utf-8")
+        self.sim, self.lines = start_world(self, "--station", str(tmp / "stacja.json"), "--stations", "1",
+                                           "--card", str(tmp / "karta.json"))
+        self.page = urlsplit(next(x for x in self.lines if x.startswith("strona ")).split()[1])
+
+    def hello(self, station):
+        link = usbproto.Station(f"tcp:127.0.0.1:{world_port(self.lines, station)}").start()
+        try:
+            end = time.monotonic() + 20
+            while link.state["phase"] != "connected" and time.monotonic() < end:
+                time.sleep(0.05)
+            return link.state["hello"]
+        finally:
+            link.stop()
+
+    def request(self, method, path, body=None, headers=None):
+        conn = http.client.HTTPConnection(self.page.hostname, self.page.port, timeout=10)
+        try:
+            conn.request(method, path, body, headers or {})
+            res = conn.getresponse()
+            return res.status, res.read() if path != "/events" else res.readline()   # pierwszy stan, bez czekania na koniec strumienia
+        finally:
+            conn.close()
+
+    def act(self, body, content_type="application/json"):
+        return self.request("POST", "/act", json.dumps(body), {"Content-Type": content_type})[0]
+
+    def test_stations_cards_and_page(self):
+        self.assertIn("uwaga:", " ".join(self.lines))          # karta odbiorcy z pliku nie jest kartą stanowiska świata
+        self.assertNotIn("inny kod dostępu", " ".join(self.lines))
+        card = json.loads((Path(self.tmp.name) / "karta.json").read_text(encoding="utf-8"))
+        self.assertEqual((card["wici"], card["v"]), ("karta-odbiorcy", 1))
+        self.assertEqual(len(bytes.fromhex(card["main"]["key"])), 64)
+        self.assertEqual(self.hello(1)["configured"], True)
+        self.assertEqual(self.hello(2)["configured"], False)
+
+        status, page = self.request("GET", "/")
+        self.assertEqual(status, 200)
+        self.assertIn(b'new EventSource("/events")', page)
+        status, line = self.request("GET", "/events")
+        state = json.loads(line.decode("utf-8").removeprefix("data: "))
+        self.assertEqual([s["n"] for s in state["stations"]], [1, 2])
+        self.assertEqual(self.request("GET", "/", headers={"Host": "wici.example:80"})[0], 403)
+        self.assertEqual(self.act({"station": 2, "action": "prep"}, "text/plain"), 404)   # bez zapytania wstępnego CORS
+        self.assertEqual(self.act({"station": 3, "action": "prep"}), 400)
+        self.assertEqual(self.act({"station": 2, "action": "explode"}), 400)
+        self.assertEqual(self.act({"station": 2, "action": "loss", "value": "abc"}), 400)
+        self.assertEqual(self.act({"station": 2, "action": "loss", "value": None}), 204)
+        self.assertEqual(self.act({"station": 2, "action": "power", "value": False}), 204)
+        end = time.monotonic() + 10
+        while time.monotonic() < end:
+            state = json.loads(self.request("GET", "/events")[1].decode("utf-8").removeprefix("data: "))
+            if not state["stations"][1]["powered"]:
+                break
+        self.assertEqual((state["stations"][1]["powered"], state["stations"][1]["loss"]), (False, None))
+        self.sim.stdin.write("quit\n")
+        self.sim.stdin.flush()
+        self.assertEqual(self.sim.wait(10), 0)
 
 
 if __name__ == "__main__":
