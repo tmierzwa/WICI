@@ -244,7 +244,8 @@ export class World {
 }
 
 // Sieć ćwiczeniowa: komputer stanowiska z węzłem (stacja w roli `wezel`) i stacje schronień.
-export async function prepareNetwork({ seed = 1, stations = 1, addresses, phrases, diag = false } = {}) {
+// configured = false: stacje zostają bez konfiguracji (swiat.mjs konfiguruje je z plików albo z laptopa).
+export async function prepareNetwork({ seed = 1, stations = 1, addresses, phrases, diag = false, configured = true } = {}) {
   const world = new World(seed);
   world.post = new Post(seed * 7 + 3);
   await world.post.start(0);
@@ -259,7 +260,7 @@ export async function prepareNetwork({ seed = 1, stations = 1, addresses, phrase
   }
   await world.advance(2e6);
   await world.configure(world.node, { role: "wezel", ifac: IFAC, radio: { profile: "p1" } });
-  for (const d of world.devices.slice(1)) {
+  for (const d of configured ? world.devices.slice(1) : []) {
     await world.configure(d, {
       role: "stacja",
       addresses: addresses ?? ["Szkoła Podstawowa nr 3, ul. Polna 12, wejście B"],

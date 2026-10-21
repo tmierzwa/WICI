@@ -5,7 +5,7 @@ No pyserial: POSIX uses termios, Windows uses kernel32 through ctypes. Every por
 8N1 at 115200 Bd with DTR and RTS on. The rate is irrelevant for CDC ACM, but it must never be 1200 Bd:
 the Arduino ESP32 core treats "1200 Bd and DTR off" as a request to reboot into the bootloader.
 
-`tcp:<host>:<port>` opens a TCP stream instead (development simulator, dev/sim-station.mjs).
+`tcp:<host>:<port>` opens a TCP stream instead (development simulator, software/simulator/swiat.mjs).
 """
 
 import ctypes

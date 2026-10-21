@@ -11,12 +11,14 @@ python3 -m wici                      # wyszukuje stację na portach USB i otwier
 python3 -m wici --port /dev/ttyACM1  # wskazany port (Windows: COM5)
 ```
 
-Bez płytki: stacja z symulatora (obraz firmware bench-b w WebAssembly, wymaga Node.js) z portem danych na TCP.
+Bez płytki: świat symulatora (obraz firmware bench-b w WebAssembly, wymaga Node.js) ze stacjami, węzłem i stanowiskiem; port danych USB każdej stacji jest na TCP, a strona świata ma ekrany i przyciski stacji, w tym przycisk przygotowania ([opis](../simulator/README.md#osobne-elementy)).
 
 ```sh
-node dev/sim-station.mjs 7300        # w drugim terminalu; `prep` przytrzymuje przycisk przygotowania, `press OK` naciska OK
+node ../simulator/swiat.mjs --card karta-odbiorcy.json   # w drugim terminalu; strona http://127.0.0.1:7380/
 python3 -m wici --port tcp:127.0.0.1:7300
 ```
+
+Kartę odbiorcy stanowiska świata wczytuje się w panelu, a kod dostępu sieci ćwiczeniowej podaje pierwszy wiersz wyjścia. Stację skonfigurowaną z góry daje `--station plik.json` (plik z „Zapisz do pliku” panelu).
 
 Uruchomiony ze źródeł panel trzyma konta i kopię bazy w katalogu `pamiec-usb` w katalogu stanu laptopa; `WICI_USB` wskazuje inny katalog jako pamięć zestawu, a `WICI_STATE` inny katalog stanu.
 
@@ -43,4 +45,3 @@ Skrypt pobiera przypięte środowiska Pythona ([runtimes.json](build/runtimes.js
 | [build/](build/build_usb.py) | budowa pamięci USB, programy START, instrukcja na pamięć |
 | [build/licencje/](build/licencje/zrodla.json) | licencje bibliotek wkompilowanych w interpreter python-build-standalone i kodu wbudowanego w CPython, kopiowane do `licenses/` na pamięci; źródła i sumy w `zrodla.json` |
 | [build/slowa/](build/slowa/build_slowa.py) | budowa listy słów do haseł z kopert ([wici/slowa.txt](wici/slowa.txt)): przypięte źródła, wykluczenia, `--check` |
-| [dev/](dev/sim-station.mjs) | stacja z symulatora na TCP |
