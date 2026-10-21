@@ -727,6 +727,7 @@ class SessionTest(unittest.TestCase):
         a.create(1)
         stick = self.root / "usb"
         moved = self.root / "usb-wyjeta"
+        a.db.flush()                                        # Windows: nie przenosi katalogu z otwartym plikiem
         stick.rename(moved)                                 # pamięć wyjęta przy zalogowanym panelu
         state = a.describe()
         self.assertEqual((state["kit"], [x["id"] for x in state["accounts"]]), ("open", ["gospodarz", "zastepca-1"]))
