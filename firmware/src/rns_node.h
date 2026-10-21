@@ -169,6 +169,9 @@ void debugTableMax(uint16_t n);
 // Pomiar pamięci na komputerze: n losowych skrótów na liście skrótów pakietów (pełną tablicę
 // tras wypełniają ogłoszenia z Reticulum w Pythonie, tools/rns_interop.py --fill).
 uint32_t debugFillHashes(uint32_t n);
+// Zegar symulowany prób na komputerze (tests/native/rns_stress.cpp): czas w ms zamiast steady_clock.
+// Stos (port i microStore) czyta na komputerze gettimeofday, który próba podmienia osobno.
+void debugClock(uint64_t (*nowMs)());
 #endif
 
 }  // namespace rnsnode

@@ -26,10 +26,15 @@ namespace {
 const uint8_t IFAC_SALT[32] = {0xad, 0xf5, 0x4d, 0x88, 0x2c, 0x9a, 0x9b, 0x80, 0x77, 0x1e, 0xb4, 0x99, 0x5d, 0x70, 0x2d, 0x4a,
                                0x3e, 0x73, 0x33, 0x91, 0xb2, 0xa0, 0xf5, 0x3f, 0x41, 0x6d, 0x9f, 0x90, 0x7e, 0x55, 0xcf, 0xf8};
 
+#ifndef ARDUINO
+uint64_t (*hostClock)() = nullptr;   // zegar symulowany prób na komputerze (debugClock)
+#endif
+
 uint32_t nowMs() {
 #ifdef ARDUINO
     return millis();
 #else
+    if (hostClock) return static_cast<uint32_t>(hostClock());
     using namespace std::chrono;
     return static_cast<uint32_t>(duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count());
 #endif
@@ -716,6 +721,8 @@ uint32_t debugFillHashes(uint32_t n) {
     for (uint32_t i = 0; i < n; ++i) RNS::Transport::add_packet_hash(RNS::Identity::get_random_hash());
     return n;
 }
+
+void debugClock(uint64_t (*nowMs)()) { hostClock = nowMs; }
 #endif
 
 }  // namespace rnsnode

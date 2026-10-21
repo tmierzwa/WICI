@@ -90,7 +90,7 @@ if __name__ == "__main__" and "SCons" not in sys.modules:
             print(f"{name}\t{version}\t{license_id}\t{url}\t{commit}")
     else:
         print(fetch(here))
-else:  # PlatformIO pre-script
+elif "SCons" in sys.modules:  # PlatformIO pre-script (import z tests/test_rns_hostile.py nic nie robi)
     Import("env")  # noqa: F821
     stack = fetch(Path(env["PROJECT_DIR"]))  # noqa: F821
     if env.get("PIOPLATFORM") == "native":  # noqa: F821
