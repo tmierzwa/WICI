@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: MIT
 """Local panel: HTTP on 127.0.0.1 only, opened in the default browser of the laptop.
 
-Access needs the session token in an HttpOnly, SameSite=Strict cookie. The launcher opens
+Access needs the session token in an HttpOnly, SameSite=Strict cookie, and station operations a login
+with an envelope password (session.Session), because they write to the journal in the encrypted database. The launcher opens
 /start?t=<ticket>; a ticket works once, so the browser history does not reveal a working link, and a
 second START asks the running instance for a new one (POST /api/ticket with the session token). The Host header must name the loopback address (no DNS rebinding) and every
 POST must carry JSON with a loopback Origin, so another web page in the same browser cannot drive
@@ -173,7 +174,8 @@ def make_handler(panel):
                 return self._json(409, {"error": "Kopia na dysku i kopia na pamięci USB rozeszły się. Wybierz, "
                                                  "z którą pracować dalej.", "code": "conflict"})
             except database.StorageError as e:
-                return self._json(409, {"error": f"Zapis kopii bazy: {e}", "code": "storage"})
+                text = str(e)
+                return self._json(409, {"error": text[:1].upper() + text[1:] + ".", "code": "storage"})
             except ValueError as e:
                 return self._json(400, {"error": str(e), "code": "invalid"})
             except Exception as e:   # noqa: BLE001 - panel zawsze dostaje odpowiedź, nie zerwane połączenie

@@ -373,6 +373,7 @@ class DatabaseTest(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         root = Path(self.tmp.name)
         self.usb, self.keys = root / "usb" / "kopia", root / "usb" / "keys"
+        (root / "usb").mkdir()
         self.laptop = lambda name: root / name
         self.kit, self.key = database.Kit.create(self.keys, self.PASSWORDS, "zapasowe haslo szesc slow tutaj",
                                                  iterations=1000)
@@ -631,6 +632,7 @@ class SessionTest(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
+        (self.root / "usb").mkdir()
 
     def session(self, laptop="a"):
         s = session.Session(self.root / "usb", self.root / laptop, iterations=1000)
@@ -681,7 +683,7 @@ class SessionTest(unittest.TestCase):
         envelopes = a.create(0)["envelopes"]
         a.close()
         pw = envelopes[0]["password"]
-        off = session.Session(self.root / "bez-pamieci", self.root / "a", iterations=1000)
+        off = session.Session(self.root / "bez-pamieci", self.root / "a", iterations=1000)   # pamięci nie ma
         off.kit = database.Kit(self.root / "usb" / "keys")      # konta z pamięci, kopia bez niej
         off.login("gospodarz", pw)
         off.add("", "", "tylko na dysku A", True)
@@ -719,6 +721,40 @@ class SessionTest(unittest.TestCase):
         b.login("gospodarz", fresh[0]["password"])
         with self.assertRaises(database.StorageError):
             b.recover(fresh[-1]["password"])                # plik kont jest cały
+
+    def test_removed_stick(self):
+        a = self.session("a")
+        a.create(1)
+        stick = self.root / "usb"
+        moved = self.root / "usb-wyjeta"
+        stick.rename(moved)                                 # pamięć wyjęta przy zalogowanym panelu
+        state = a.describe()
+        self.assertEqual((state["kit"], [x["id"] for x in state["accounts"]]), ("open", ["gospodarz", "zastepca-1"]))
+        with self.assertRaises(database.StorageError):
+            a.hand_back()                                   # od razu, bez czekania na zapis
+        self.assertTrue(any((self.root / "a" / "baza").iterdir()))
+        moved.rename(stick)
+        a.close()
+        stick.rename(moved)
+        b = self.session("b")
+        self.assertEqual(b.describe()["kit"], "missing")
+        with self.assertRaises(database.StorageError):
+            b.create(1)
+        self.assertFalse(stick.exists())                    # nie powstał katalog w miejscu pamięci
+
+    def test_second_login_and_recovery_limit(self):
+        a = self.session("a")
+        envelopes = a.create(0)["envelopes"]
+        with self.assertRaises(database.StorageError):
+            a.login("gospodarz", envelopes[0]["password"])  # druga baza na tych samych plikach
+        a.hand_back()
+        (self.root / "usb" / "keys" / "konta.json").unlink()
+        b = self.session("b")
+        for _ in range(database.LOGIN_LIMIT):
+            with self.assertRaises(database.LoginError):
+                b.recover("zle")
+        with self.assertRaisesRegex(database.LoginError, "Poczekaj"):
+            b.recover(envelopes[-1]["password"])
 
     def test_usb_root(self):
         with unittest.mock.patch.dict(os.environ, {"WICI_USB": ""}), \
@@ -775,6 +811,7 @@ class PanelTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tmp = tempfile.TemporaryDirectory()
+        (Path(cls.tmp.name) / "usb").mkdir()
         cls.session = session.Session(Path(cls.tmp.name) / "usb", Path(cls.tmp.name) / "stan", iterations=1000)
         cls.envelopes = cls.session.create(1)["envelopes"]
         station = FakeStation()
@@ -848,6 +885,7 @@ class PanelTest(unittest.TestCase):
             self.assertEqual((r.status, json.loads(body)["code"]), (401, "password"))
             r, body = self.request("POST", "/api/kit/create", json.dumps({"deputies": 1}), c)
             self.assertEqual((r.status, json.loads(body)["code"]), (409, "storage"))   # zestaw już jest
+            self.assertEqual(json.loads(body)["error"], "Ta pamięć ma już konta zestawu.")
         finally:
             body = json.dumps({"account": "gospodarz", "password": self.envelopes[0]["password"]})
             self.assertEqual(self.request("POST", "/api/login", body, c)[0].status, 200)

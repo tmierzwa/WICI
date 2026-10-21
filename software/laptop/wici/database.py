@@ -133,7 +133,9 @@ class Kit:
         With data_key (from the recovery password) the accounts are written anew for an existing database;
         then an unreadable account file is replaced."""
         kit = cls(keys_dir)
-        kit.dir.mkdir(parents=True, exist_ok=True)
+        if not kit.dir.parent.is_dir():
+            raise StorageError("brak pamięci USB zestawu")
+        kit.dir.mkdir(exist_ok=True)              # bez parents: wyjęta pamięć nie staje się katalogiem na dysku
         if (kit.dir / ACCOUNTS).exists() and (data_key is None or kit.readable()):
             raise StorageError("ta pamięć ma już konta zestawu")
         pepper, data_key = os.urandom(32), data_key or os.urandom(32)
@@ -176,21 +178,30 @@ class Kit:
     def recovery(self):
         return self._load()[0]["recovery"]
 
-    def unlock(self, name, password):
-        """Data key for a correct password; LoginError otherwise, at most 5 failures a minute."""
+    def throttled(self, attempt):
+        """Run a password attempt (account or recovery) under the limit of 5 failures a minute."""
         with self.lock:
             now = time.monotonic()
             while self.failures and now - self.failures[0] > LOGIN_WINDOW:
                 self.failures.popleft()
             if len(self.failures) >= LOGIN_LIMIT:
                 raise LoginError("Za dużo nieudanych prób. Poczekaj minutę.")
+            try:
+                return attempt()
+            except LoginError:
+                self.failures.append(now)
+                raise
+
+    def unlock(self, name, password):
+        """Data key for a correct password; LoginError otherwise, at most 5 failures a minute."""
+        def attempt():
             doc, pepper = self._load()
             slot = doc["accounts"].get(name)
             key = _unwrap(slot, password, _account_aad(name), pepper) if slot else None
             if key is None:
-                self.failures.append(now)
                 raise LoginError("Zła nazwa konta albo hasło.")
             return key
+        return self.throttled(attempt)
 
     def change_password(self, name, old, new, iterations=ITERATIONS):
         self.set_password(name, self.unlock(name, old), new, iterations)

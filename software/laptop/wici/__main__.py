@@ -65,6 +65,7 @@ def database_selftest(tmp):
     import sqlite3
 
     from . import database
+    (tmp / "usb").mkdir()
     kit, key = database.Kit.create(tmp / "usb" / "keys", {"gospodarz": "las rzeka most okno chleb"}, "odtworzenie",
                                    iterations=1000)
     assert kit.unlock("gospodarz", "Las  Rzeka most okno chleb") == key
@@ -122,6 +123,7 @@ def selftest():
     with tempfile.TemporaryDirectory() as tmp:
         checks.append(f"db {database_selftest(Path(tmp))}")
         token = secrets.token_urlsafe(24)
+        (Path(tmp) / "zestaw").mkdir()
         session = Session(Path(tmp) / "zestaw", Path(tmp) / "stan", iterations=1000)
         panel = Panel(Station(), None, session, token, info())
         server = serve(panel, 0)
@@ -191,6 +193,7 @@ def main(argv=None):
     usb = usb_root()
     if usb is None:                              # uruchomienie ze źródeł: pamięć zestawu udaje katalog stanu
         usb = state / "pamiec-usb"
+        usb.mkdir(exist_ok=True)
         print(f"WICI: brak pamięci USB zestawu, konta i kopia w {usb}", flush=True)
     panel.session = Session(usb, state, on_change=panel.changed)
     station = Station(args.port, on_change=panel.changed)

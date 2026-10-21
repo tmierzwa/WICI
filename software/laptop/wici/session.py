@@ -50,21 +50,29 @@ class Session:
         self.on_change = on_change or (lambda: None)
         self.lock = threading.RLock()
         self.db = self.journal = self.user = None
+        self.accounts = []                          # lista kont z chwili logowania: pamięć może zostać wyjęta
         self.pending = None                         # (konto, klucz danych, konflikt) do wyboru kopii
 
     # ---- stan dla panelu ----------------------------------------------------------------------
 
     def describe(self):
         with self.lock:
+            accounts = self.accounts
             if self.db:
                 kit = "open"
+            elif not self.usb.is_dir():
+                kit = "missing"
             elif not self.kit.exists():
                 kit = "new"
+            elif self.kit.readable():
+                kit = "ready"
+                try:
+                    accounts = self.kit.names()
+                except database.StorageError:
+                    kit = "broken"
             else:
-                kit = "ready" if self.kit.readable() else "broken"
-            accounts = []
-            if kit in ("ready", "open"):
-                accounts = [{"id": a, "label": label(a)} for a in self.kit.names()]
+                kit = "broken"
+            accounts = [{"id": a, "label": label(a)} for a in (accounts if kit in ("ready", "open") else [])]
             conflict = None
             if self.pending:
                 c = self.pending[2]
@@ -91,6 +99,7 @@ class Session:
         if not 0 <= deputies <= 5:
             raise ValueError("zastępców: od 0 do 5")
         with self.lock:
+            self._free()
             accounts = [HOST] + [f"zastepca-{i}" for i in range(1, deputies + 1)]
             chosen = {a: passwords.generate() for a in accounts}
             recovery = passwords.recovery()
@@ -101,15 +110,17 @@ class Session:
 
     def login(self, account, password):
         with self.lock:
+            self._free()
             key = self.kit.unlock(account, password)
             self._open(account, key)
 
     def recover(self, password, deputies=2):
         """Recovery password: the database opens without the account file, which is written anew."""
         with self.lock:
+            self._free()
             if self.kit.readable():
                 raise database.StorageError("plik kont jest cały: zaloguj się hasłem konta")
-            key = database.key_from_recovery([self.copy_dir, self.disk_dir], password)
+            key = self.kit.throttled(lambda: database.key_from_recovery([self.copy_dir, self.disk_dir], password))
             if not 0 <= deputies <= 5:
                 raise ValueError("zastępców: od 0 do 5")
             accounts = [HOST] + [f"zastepca-{i}" for i in range(1, deputies + 1)]
@@ -122,6 +133,7 @@ class Session:
 
     def choose(self, prefer):
         with self.lock:
+            self._free()
             if not self.pending or prefer not in ("disk", "usb"):
                 raise database.StorageError("nie ma kopii do wyboru")
             account, key, _ = self.pending
@@ -137,6 +149,7 @@ class Session:
             raise
         self.pending = None
         self.db, self.journal, self.user = db, store.Journal(db), account
+        self.accounts = self.kit.names()
         if prefer is None:
             self.journal.add("", "", "login", True, account)
 
@@ -151,12 +164,17 @@ class Session:
         if not self.db:
             raise NotLoggedIn()
 
+    def _free(self):
+        if self.db:
+            raise database.StorageError("ktoś jest już zalogowany: najpierw wyloguj")
+
     def new_password(self, account):
         """New password after an envelope was opened; shown once."""
         with self.lock:
             self._need()
             pw = passwords.generate()
             self.kit.set_password(account, self.db.key, pw, self.iterations)
+            self.accounts = self.kit.names()
             self.journal.add("", "", "password_new", True, account)
             return {"envelopes": [{"no": None, "account": account, "label": label(account), "password": pw}]}
 
@@ -171,6 +189,8 @@ class Session:
         """'Oddaj laptop': last copy on the stick, then nothing of the kit stays on the laptop disk."""
         with self.lock:
             self._need()
+            if not self.usb.is_dir():
+                raise database.StorageError("brak pamięci USB zestawu: włóż ją, bez niej dane zostałyby tylko na tym laptopie")
             self.journal.add("", "", "hand_back", True, self.user)
             self.db.hand_back()
             self.db = self.journal = self.user = None

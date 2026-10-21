@@ -174,6 +174,8 @@ function clock(iso) {
 function renderSession() {
   const s = session(), kit = s.kit;
   const user = loggedIn();
+  $("kit-missing").hidden = kit !== "missing";
+  $("kit-missing-path").textContent = s.usb || "";
   $("kit-new").hidden = kit !== "new" || envelopesShown;
   $("recover").hidden = kit !== "broken" || envelopesShown;
   $("conflict").hidden = !s.conflict;

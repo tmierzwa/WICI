@@ -219,7 +219,7 @@ td.fail { color: var(--alarm); font-weight: 600; }
   .envelope { break-after: page; page-break-after: always; border: 1px solid #000; padding: 24px; }
   .envelope:last-child { break-after: auto; page-break-after: auto; }
 }
-#kit-new h2, #login h2, #recover h2, #conflict h2, #envelopes h2 { margin: 0 0 10px; }
-#kit-new p, #recover > p, #conflict > p { margin: 0 0 12px; }
+#kit-missing h2, #kit-new h2, #login h2, #recover h2, #conflict h2, #envelopes h2 { margin: 0 0 10px; }
+#kit-missing p, #kit-new p, #recover > p, #conflict > p { margin: 0 0 12px; }
 #panel-kit h3 { margin: 24px 0 4px; }
 #panel-kit .buttons select, #login-account, #kit-deputies, #recover-deputies { max-width: 280px; }
