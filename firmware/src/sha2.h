@@ -20,7 +20,6 @@ public:
     Hash() { reset(); }
     void reset();
     void update(const uint8_t* data, size_t length);
-    void update(const char* text);   // bez kończącego zera
     void finish(uint8_t out[DIGEST]);
 
 private:

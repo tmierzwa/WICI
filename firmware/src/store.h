@@ -73,6 +73,10 @@ static_assert(RING_BASE + RING_BLOCKS * SLOT == STORE_END, "pierścień zdarzeń
 static_assert(BULLETIN_BASE + BULLETIN_BLOCKS * SLOT <= REGISTER_BASE, "zbiór powtórzeń przed rejestrem");
 static_assert(CONFIG_BASE + 2 * CONFIG_COPY <= META_BASE, "kopie konfiguracji przed meta");
 static_assert(TX_BASE + 2 * TX_AREA <= CONFIG_BASE, "rekordy transakcji przed konfiguracją");
+static_assert(journal::EVENT_BASE + journal::EVENT_SLOTS * journal::EVENT_RECORD <= TX_BASE, "dziennik przed magazynami");
+static_assert(REGISTER_BASE + REGISTER_SLOTS * SLOT <= INBOX_BASE, "rejestr przed skrzynką");
+static_assert(INBOX_BASE + INBOX_SLOTS * SLOT <= RELEASED_BASE, "skrzynka przed zwolnionymi wpisami");
+static_assert(RELEASED_BASE + RELEASED_BLOCKS * SLOT <= RING_BASE, "zwolnione wpisy przed pierścieniem zdarzeń");
 
 // Magazyn w nagłówku rekordu (rekordu nie da się przenieść do innego magazynu ani gniazda).
 enum Kind : uint8_t { CONFIG = 1, META = 2, REGISTER = 3, INBOX = 4, RELEASED = 5, BULLETIN = 6, RING = 7 };

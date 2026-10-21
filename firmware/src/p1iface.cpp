@@ -13,7 +13,7 @@ uint32_t airtimeMs(size_t length) {
         const size_t chunk = left < p1frame::CHUNK ? left : p1frame::CHUNK;
         left -= chunk;
         const uint32_t frame = 1 + p1frame::HEADER_BYTES + chunk + 2;   // LEN, nagłówek, dane, CRC
-        total += ((FRAME_OVERHEAD + frame) * 8 * 1000 + SYMBOL_RATE - 1) / SYMBOL_RATE + RAMP_MS;
+        total += radiolink::p1FrameAirMs(frame);
     }
     return total;
 }
@@ -155,7 +155,8 @@ bool Queue::push(Lane lane, const uint8_t* wire, size_t length) {
 }
 
 Admit Queue::offer(const uint8_t* raw, size_t rawLength, const uint8_t* wire, size_t wireLength, uint32_t nowMs, Hint hint) {
-    if (rawLength < 2 || wireLength == 0 || wireLength > MAX_WIRE || wireLength > p1frame::MAX_DATAGRAM) {
+    static_assert(MAX_WIRE <= p1frame::MAX_DATAGRAM, "datagram P1 mieści największy pakiet z IFAC");
+    if (rawLength < 2 || wireLength == 0 || wireLength > MAX_WIRE) {
         ++counters_.tooLarge;
         return Admit::TOO_LARGE;
     }
