@@ -134,3 +134,10 @@ path = "software/laptop/wici/slowa.txt"
 precedence = "override"
 SPDX-FileCopyrightText = ["Słownik SJP.PL (sjp.pl), wersja 2026-09-01", "Hermit Dave (FrequencyWords, OpenSubtitles 2018)", "2026 Tomek Mierzwa and WICI contributors"]
 SPDX-License-Identifier = "CC-BY-SA-4.0"
+
+# Formy podstawowe 3–7 liter bez polskich liter z przypiętego wydania słownika odmian SJP.PL (build_slowa.py --sjp).
+[[annotations]]
+path = "software/laptop/build/slowa/sjp-lematy.txt"
+precedence = "override"
+SPDX-FileCopyrightText = "Słownik SJP.PL (sjp.pl), wersja 2026-09-01"
+SPDX-License-Identifier = "CC-BY-4.0"

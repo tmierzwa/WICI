@@ -19,7 +19,7 @@ def words():
     global _words
     if _words is None:
         found = resources.files("wici").joinpath("slowa.txt").read_text(encoding="utf-8").split()
-        if len(found) != SIZE or len(set(found)) != SIZE or not all(re.fullmatch(r"[a-z]{3,7}", w) for w in found):
+        if len(found) != SIZE or len(set(found)) != SIZE or not all(re.fullmatch(r"[abcdefghijklmnoprstuwyz]{3,7}", w) for w in found):
             raise ValueError("slowa.txt: lista słów uszkodzona")
         _words = found
     return _words

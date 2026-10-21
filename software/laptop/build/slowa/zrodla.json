@@ -3,7 +3,8 @@
   "url": "https://sjp.pl/sl/odmiany/sjp-odm-20260901.zip",
   "sha256": "d8c2390462b81c6f4e4d80e5a379377b6099d01bd17e238ec2787a9638364bdc",
   "license": "CC-BY-4.0 (do wyboru także GPL-2.0, LGPL-2.1, Apache-2.0)",
-  "attribution": "Słownik SJP.PL, odmiany, wersja 2026-09-01, https://sjp.pl"
+  "attribution": "Słownik SJP.PL, odmiany, wersja 2026-09-01, https://sjp.pl",
+  "note": "SJP.PL usuwa poprzednie wydanie po opublikowaniu nowego; formy podstawowe są w sjp-lematy.txt"
  },
  "czestosc_pl": {
   "url": "https://raw.githubusercontent.com/hermitdave/FrequencyWords/525f9b560de45753a5ea01069454e72e9aa541c6/content/2018/pl/pl_full.txt",

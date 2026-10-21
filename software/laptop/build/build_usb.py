@@ -351,12 +351,12 @@ def build(out, names, launcher_exe=None, archives=None):
     shutil.copyfile(HERE / "usb" / "INSTRUKCJA.html", out / "INSTRUKCJA.html")
     shutil.copyfile(ROOT / "LICENSES" / "MIT.txt", out / "licenses" / "WICI-MIT.txt")
     shutil.copyfile(ROOT / "LICENSES" / "CC-BY-SA-4.0.txt", out / "licenses" / "slowa-CC-BY-SA-4.0.txt")
+    sources = json.loads((HERE / "slowa" / "zrodla.json").read_text(encoding="utf-8"))
     (out / "licenses" / "slowa.txt").write_text(
-        "app/wici.pyz/wici/slowa.txt (lista słów do haseł z kopert) jest na licencji CC BY-SA 4.0.\n"
-        "Źródła: Słownik SJP.PL, odmiany, wersja 2026-09-01 (https://sjp.pl, CC BY 4.0) oraz\n"
-        "Hermit Dave, FrequencyWords, OpenSubtitles 2018 (https://github.com/hermitdave/FrequencyWords,\n"
-        "CC BY-SA 4.0). Zmiany: wybór form podstawowych bez polskich liter, wykluczenia, ranking według\n"
-        "częstości; skrypt budowy w repozytorium WICI: software/laptop/build/slowa/.\n", encoding="utf-8")
+        "app/wici.pyz/wici/slowa.txt (lista słów do haseł z kopert) jest na licencji CC BY-SA 4.0.\nŹródła:\n"
+        + "".join(dict.fromkeys(f"  {s['attribution']} ({s['license']})\n" for s in sources.values()))
+        + "Zmiany: wybór form podstawowych bez polskich liter, wykluczenia, ranking według częstości;\n"
+          "skrypt budowy w repozytorium WICI: software/laptop/build/slowa/.\n", encoding="utf-8")
     (out / "sources").mkdir()
     (out / "sources" / "README.txt").write_text(
         "Kod aplikacji WICI jest w app/wici.pyz jako czytelne pliki źródłowe (archiwum ZIP).\n"

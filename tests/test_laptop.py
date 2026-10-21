@@ -615,7 +615,7 @@ class PasswordsTest(unittest.TestCase):
         self.assertEqual(len(passwords.recovery().split()), 6)
         self.assertEqual(database.normalize_password(pw.upper()), pw.encode())
 
-    def test_exclusions_file_has_no_duplicates_of_kept_words(self):
+    def test_excluded_words_are_not_on_the_list(self):
         from wici import passwords
         text = (LAPTOP / "build" / "slowa" / "wykluczone.txt").read_text(encoding="utf-8")
         items = {i for line in text.splitlines() for i in line.split("#", 1)[0].split()}

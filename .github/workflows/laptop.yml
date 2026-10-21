@@ -82,3 +82,5 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends gcc-mingw-w64-x86-64
       - name: Build every runtime and check the size budget
         run: python software/laptop/build/build_usb.py --out usb
+      - name: Word list matches its pinned sources and exclusions
+        run: python software/laptop/build/slowa/build_slowa.py --check

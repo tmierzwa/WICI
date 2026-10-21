@@ -4,18 +4,18 @@
 # obcych i słów rzadkich albo dziwnych, które trudno przepisać bez błędu.
 
 # wulgaryzmy i obelgi
-kurw* chuj* huj* pierd* jeb* pizd* cip* dup* srak* sra* kutas* fiut* cwel* pedal* ciot* szmat* dziwk* suk* zdzir*
-debil* kretyn* idiot* glupek* cham* menel* frajer* lamus* palant* gnoj* gnida* bydlak* ped* kiep* pala* matol*
-murzyn* czarnuch* cygan* zyd* pedzio* lesb* homo* gej* trans*
+kurw* chuj* huj* pierd* jeb* pizd* cipa cipy cipka cipki cipek dupa dupy dupek dupie dupsk* srak* srac srasz srak* kutas* fiut* cwel* pedal* ciot* szmat* dziwk* suka suki suko sukinsyn* zdzir*
+debil* kretyn* idiot* cham* menel* frajer* lamus* palant* gnoj* gnida* bydlak* pedal* pedzio* pedofil* kiep matol*
+murzyn* czarnuch* cygan* zyd* pedzio* lesb* homo* gej* trans
 seks* sex* porn* orgazm* penis* wagin* sperm* masturb* erekc* prezerw* burdel* alfons* prostyt* gwalc* gwalt*
 # śmierć, przemoc, broń, choroba, katastrofa
-trup* zgon* zwlok* morder* zabi* zabij* zaboj* morduj* mord* rzez* egzek* tortur* kat* wiesz* samobo* topiel* zmarl*
-umar* umier* umrz* pogrzeb* trumn* grob* cmentar* nekro* denat* zalob* wdow* sierot* kalek* ranny* rany ran*
+trup* zgon* zwlok* morder* zabic zabity zabita zabici zabij* zaboj* morduj* mord* rzez* egzek* tortur* kat kata katem katu wieszak* wieszac* samobo* topiel* zmarl*
+umar* umier* umrz* pogrzeb* trumn* grob* cmentar* nekro* denat* zalob* wdow* sierot* kalek* ranny* rany rana ranna ranny ranami ranic*
 bomb* granat* pocisk* karabin* pistolet* rewolwer* strzel* snajper* wojn* wojsk* atak* terror* zamach* ostrzal*
-nalot* rakiet* czolg* bron* noz* sztylet* miecz* szabl* topor* krew* krwaw* krwi*
-rak raka nowotwor* guz* ebola* dzum* chol* tyfus* gruzlic* aids* hiv* covid* wirus* zaraz* epidem* pandem*
-pozar* plon* powodz* tonie* tonac* utop* katastrof* wypad* awari* ewaku* alarm* syren* panik* strach* straszn*
-policj* areszt* wiezien* wiezie* krat* sad* prokur* zbrodn* przestep* zlodziej* kradz* rabun* napad* porwa*
+nalot* rakiet* czolg* bron broni sztylet* miecz* szabl* topor* krwaw* krwi*
+rak raka nowotwor* guz guza guzy ebola* dzum* cholera cholerny cholerne tyfus* gruzlic* aids* hiv* covid* wirus* zaraz* epidem* pandem*
+pozar* powodz* tonac* utop* katastrof* wypad* awari* ewaku* alarm* syren* panik* strach* straszn*
+policj* areszt* wiezien* wiezie* krat* prokur* zbrodn* przestep* zlodziej* kradz* rabun* napad* porwa*
 narkot* heroin* kokain* amfet* marihuan* trawka* spliff* jointa* pijak* pijus* wodka* wodki* piwsko*
 diabel* szatan* demon* piekl* czarc* upior* zombi* wampir*
 # wołanie o pomoc i rozkazy, które przeczytane na głos brzmią jak alarm
@@ -121,3 +121,5 @@ angina nerdy penne pica pisuar renegat rutka showman torus tubylec zlewki
 bambo czopek fizz fluidy
 galery howgh iblis
 jota junko kahuna
+# po zawężeniu rdzeni
+krew bronco cip dup dupcia dupka katana katorga katon palau sadysta sadyzm sracz sraczka guzek ranka

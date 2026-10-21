@@ -79,7 +79,6 @@ asfalt
 aspekt
 astra
 astral
-asysta
 atelier
 atleta
 atrapa
@@ -176,7 +175,6 @@ batuta
 baty
 baza
 bazar
-bazowy
 bazylia
 bebechy
 beczka
@@ -215,7 +213,6 @@ biegiem
 biegun
 biel
 bierny
-bigos
 bila
 bilans
 bilard
@@ -270,7 +267,6 @@ boisko
 boja
 bojler
 bok
-bokami
 boki
 bokiem
 boks
@@ -413,11 +409,11 @@ chody
 choinek
 choinka
 chojrak
+cholewa
 chomik
 chomiki
 chrom
 chrupek
-chrupka
 chrupki
 chrzest
 chuda
@@ -595,7 +591,6 @@ dialog
 diament
 dieta
 disko
-diuna
 dla
 dlatego
 dniowy
@@ -807,7 +802,6 @@ farma
 farsa
 farsi
 farsz
-fartem
 fartuch
 fasada
 fasola
@@ -818,7 +812,6 @@ faul
 fauna
 faworyt
 faza
-feler
 feniks
 fenomen
 ferajna
@@ -995,7 +988,6 @@ gospoda
 gostek
 gotowe
 gotowy
-gouda
 gra
 grabie
 gracja
@@ -1052,6 +1044,7 @@ guma
 gumka
 gumowy
 gust
+guzik
 gwar
 gwiazda
 gwint
@@ -1220,7 +1213,6 @@ kakadu
 kakao
 kaktus
 kaliber
-kalina
 kalipso
 kalmar
 kalmary
@@ -1279,6 +1271,10 @@ kasza
 kaszka
 kaszmir
 kasztan
+katalog
+katar
+katedra
+katolik
 kawa
 kawaler
 kawior
@@ -1297,6 +1293,7 @@ kicz
 kiecka
 kiedy
 kielich
+kiepski
 kij
 kije
 kijek
@@ -1341,7 +1338,6 @@ klimaty
 klin
 klinika
 klip
-klips
 klisza
 kloc
 klocek
@@ -1525,7 +1521,6 @@ kozaki
 kozi
 kpina
 kpiny
-kra
 krab
 kraby
 krach
@@ -1554,6 +1549,8 @@ kres
 kreska
 kret
 krety
+krewna
+krewny
 krocie
 kroczek
 kroczki
@@ -1564,7 +1561,6 @@ kropka
 kropki
 kropla
 krople
-krosno
 krowa
 krowi
 kruchy
@@ -1967,7 +1963,6 @@ mocarny
 moce
 mocniej
 mocny
-moczary
 moda
 modelka
 modem
@@ -2064,7 +2059,6 @@ narcyz
 narcyzm
 narty
 narwany
-narzut
 narzuta
 nasenny
 nasi
@@ -2114,7 +2108,6 @@ niemy
 nieomal
 nieraz
 niesmak
-nietakt
 niezbyt
 nigdy
 nigdzie
@@ -2364,7 +2357,6 @@ owszem
 owy
 ozdoba
 oznaka
-ozon
 pacierz
 paczka
 paella
@@ -2373,6 +2365,7 @@ pakiet
 pakt
 pakunek
 pakunki
+palacz
 palce
 palec
 paleta
@@ -2428,6 +2421,7 @@ pazur
 pazurki
 pech
 pechowy
+pedagog
 pegaz
 pelikan
 pensja
@@ -2509,6 +2503,8 @@ plecy
 plener
 plik
 plomba
+plon
+plony
 plotka
 plotki
 plusk
@@ -2571,7 +2567,6 @@ polny
 polowy
 polski
 polskie
-pomadka
 pomiar
 pomidor
 pomimo
@@ -2784,6 +2779,13 @@ rajski
 ramka
 rampa
 ramy
+rancho
+ranczo
+randka
+ranek
+ranga
+rankiem
+rano
 raper
 raport
 raptem
@@ -2953,6 +2955,10 @@ rzut
 rzutek
 rzutki
 rzymski
+sady
+sadza
+sadze
+sadzone
 sala
 saldo
 salonik
@@ -2983,7 +2989,6 @@ schron
 seans
 sedno
 sejf
-sekator
 sekcja
 sekret
 sekrety
@@ -3241,6 +3246,8 @@ suchy
 sudoku
 sufit
 suflet
+sukces
+suknia
 suma
 sumka
 sumy
@@ -3261,7 +3268,6 @@ synowa
 synteza
 syrop
 syta
-syty
 szabat
 szach
 szachy
@@ -3356,7 +3362,6 @@ szpinak
 szpon
 szrama
 szranki
-szron
 sztuka
 sztywna
 sztywny
@@ -3558,7 +3563,6 @@ twoi
 twoja
 twoje
 tyci
-tyczka
 tygiel
 tygrys
 tygrysi
@@ -3644,7 +3648,6 @@ usterka
 ustnik
 ustny
 ustrzec
-uszko
 utarg
 uwaga
 uznanie
@@ -3704,10 +3707,8 @@ wedle
 weksel
 wektor
 welon
-wena
 wenecki
 wentyl
-weranda
 werbena
 werdykt
 wermut
@@ -3852,7 +3853,6 @@ wybicie
 wybiec
 wybieg
 wybitny
-wyborca
 wyborny
 wybory
 wybrana
@@ -3880,7 +3880,6 @@ wygrany
 wyjazd
 wykaz
 wykop
-wykopy
 wykres
 wykup
 wylewny
@@ -3928,6 +3927,8 @@ wzrost
 zabawa
 zabawka
 zabawny
+zabieg
+zabiegi
 zabobon
 zabytek
 zachwyt
@@ -4082,7 +4083,6 @@ zwarty
 zwiady
 zwierz
 zwinny
-zwis
 zwitek
 zwrot
 zwrotka
