@@ -7,7 +7,7 @@ Brief dla wykonawcy. WICI to otwarty projekt stacji łączności awaryjnej LoRa 
 - Płytka nośna N1 (170 × 100 mm) z fabrycznie zmontowanymi 44 elementami SMD (JLCPCB).
 - Elementy przewlekane według [BOM](../dev-bench/bom.csv), bez J1–J4, J9/J10 i JP3 (wyjaśnienie w punkcie 1).
 - ESP32-S3-DevKitC-1-N8R8, panel Sharp LS027B7DH01A (szkło, taśma FPC) i taśma 3M 4032.
-- Moduł radiowy Wio SX1262 z anteną z zestawu Seeed 102010611 oraz drugi zestaw 102010611 z programem R0 `pair-0.4` jako partner radiowy do prób.
+- Dwa nowe zestawy Seeed 102010611 (XIAO ESP32S3 + Wio SX1262 z anteną): Wio z jednego idzie do L0, drugi zestaw z programem R0 `pair-0.4` jest partnerem radiowym do prób. Przed rozebraniem oba sprawdza się wzajemnie próbą 100 pakietów (instrukcja, rozdział 2).
 - Program diagnostyczny L0 `l0-0.5` z narzędziami i instrukcją prób ([README](README.md)); oprogramowanie jest gotowe, jego tworzenie jest poza zakresem.
 
 Drobne materiały (R12 1 kΩ 0805, 10 kΩ, 100 nF, 10 µF, listwy goldpin, przewody, płytka uniwersalna) zapewnia wykonawca w ramach wyceny, chyba że ustalimy inaczej.
