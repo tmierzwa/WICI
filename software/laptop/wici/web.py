@@ -1,14 +1,16 @@
 # SPDX-License-Identifier: MIT
 """Local panel: HTTP on 127.0.0.1 only, opened in the default browser of the laptop.
 
-Access needs the session token: the launcher opens /start?t=<token>, which sets an HttpOnly,
-SameSite=Strict cookie. The Host header must name the loopback address (no DNS rebinding) and every
+Access needs the session token in an HttpOnly, SameSite=Strict cookie. The launcher opens
+/start?t=<ticket>; a ticket works once, so the browser history does not reveal a working link, and a
+second START asks the running instance for a new one (POST /api/ticket with the session token). The Host header must name the loopback address (no DNS rebinding) and every
 POST must carry JSON with a loopback Origin, so another web page in the same browser cannot drive
 the station. Static files are read from the package, also when it runs from a zip archive.
 """
 
 import hmac
 import json
+import secrets
 import sys
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -31,8 +33,23 @@ class Panel:
     def __init__(self, station, prep, journal, token, info):
         self.station, self.prep, self.journal, self.token, self.info = station, prep, journal, token, info
         self.version = 0
+        self.tickets = set()
         self.cond = threading.Condition()
         self.server = None
+
+    def ticket(self):
+        """One-time START link argument."""
+        t = secrets.token_urlsafe(24)
+        with self.cond:
+            self.tickets.add(t)
+        return t
+
+    def redeem(self, ticket):
+        with self.cond:
+            if ticket in self.tickets:
+                self.tickets.discard(ticket)
+                return True
+        return False
 
     def changed(self):
         with self.cond:
@@ -96,8 +113,7 @@ def make_handler(panel):
             if url.path == "/health":
                 return self._json(200, {"app": "wici", "version": VERSION})
             if url.path == "/start":
-                token = parse_qs(url.query).get("t", [""])[0]
-                if not hmac.compare_digest(token.encode(), panel.token.encode()):
+                if not panel.redeem(parse_qs(url.query).get("t", [""])[0]):
                     return self._send(403, "Nieważny odnośnik. Uruchom START ponownie.".encode(), "text/plain; charset=utf-8")
                 cookie = f"wici={panel.token}; HttpOnly; SameSite=Strict; Path=/"
                 return self._send(303, headers=[("Location", "/"), ("Set-Cookie", cookie)])
@@ -180,6 +196,7 @@ ROUTES = {
     "/api/ifac/new": lambda panel, body: {"ifac": configdoc.new_ifac()},
     "/api/rescan": lambda panel, body: (panel.station.rescan(), {"ok": True})[1],
     "/api/quit": quit_app,
+    "/api/ticket": lambda panel, body: {"ticket": panel.ticket()},
 }
 
 

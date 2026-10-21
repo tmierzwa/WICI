@@ -26,13 +26,13 @@
 
 <h2>Linux (komputer PC, x86_64)</h2>
 <p>Kliknij dwukrotnie <code>START-LINUX.desktop</code>. Jeśli menedżer plików tego nie pozwala, kliknij plik prawym przyciskiem i wybierz „Zezwól na uruchamianie”. Albo w terminalu, w katalogu pamięci USB: <code>sh START-LINUX.sh</code>.</p>
-<p>Gdy panel pokazuje brak uprawnień do portu stacji, wpisz w terminalu <code>sudo usermod -aG dialout $USER</code> (w Arch Linux grupa <code>uucp</code>), wyloguj się i zaloguj ponownie. Bez hasła administratora tego komputera użyj innego laptopa.</p>
+<p>Gdy panel pokazuje brak uprawnień do portu stacji, wpisz w terminalu <code>sudo usermod -aG dialout $USER</code> (w Arch Linux grupa <code>uucp</code>), wyloguj się i zaloguj ponownie. Bez hasła administratora tego komputera użyj innego laptopa. Gdy panel zgłasza brak biblioteki libcrypto (OpenSSL), uruchom system Linux z pamięci USB albo użyj innego laptopa.</p>
 
 <h2>Gdy coś nie działa</h2>
 <ul>
   <li>Panel szuka stacji bez końca: sprawdź przewód (niektóre przewody USB-C tylko ładują) i czy stacja jest włączona.</li>
   <li>Port zajęty: zamknij inne programy do portów szeregowych (monitor portu, Arduino IDE, terminal).</li>
-  <li>Przeglądarka się nie otworzyła: adres panelu jest w oknie terminala albo uruchom START ponownie; drugi START otwiera ten sam panel.</li>
+  <li>Przeglądarka się nie otworzyła: adres panelu jest w oknie terminala (działa raz) albo uruchom START ponownie; drugi START otwiera ten sam panel nowym adresem.</li>
 </ul>
 <p>Zawartość pamięci opisuje plik <code>build-manifest.json</code>: wersje, sumy SHA-256 i źródła wszystkich plików.</p>
 </body>

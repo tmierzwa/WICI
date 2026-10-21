@@ -12,9 +12,11 @@ import hashlib
 import hmac
 import os
 import sys
+import threading
 
 VERSION = b"\x01"
 _impl = None
+_lock = threading.Lock()
 
 
 class CryptoError(Exception):
@@ -36,46 +38,40 @@ class _Windows:
         b.BCryptDeriveKeyPBKDF2.argtypes = [h, p, wintypes.ULONG, p, wintypes.ULONG, ctypes.c_ulonglong, p,
                                             wintypes.ULONG, wintypes.ULONG]
         b.BCryptDestroyKey.argtypes = [h]
-        b.BCryptCloseAlgorithmProvider.argtypes = [h, wintypes.ULONG]
         for name in ("BCryptOpenAlgorithmProvider", "BCryptSetProperty", "BCryptGenerateSymmetricKey",
                      "BCryptEncrypt", "BCryptDecrypt", "BCryptDeriveKeyPBKDF2"):
             getattr(b, name).restype = ctypes.c_long            # NTSTATUS, 0 = sukces
         self.b, self.h, self.ulong = b, h, wintypes.ULONG
+        # dostawcy otwierani raz na proces: Microsoft zaleca trzymać uchwyty, bo otwarcie jest kosztowne
+        self.aes, self.sha = h(), h()
+        self._check(b.BCryptOpenAlgorithmProvider(ctypes.byref(self.aes), "AES", None, 0), "AES")
+        mode = ctypes.create_unicode_buffer("ChainingModeCBC")
+        self._check(b.BCryptSetProperty(self.aes, "ChainingMode", mode, ctypes.sizeof(mode), 0), "CBC")
+        self._check(b.BCryptOpenAlgorithmProvider(ctypes.byref(self.sha), "SHA256", None, 0x8), "HMAC-SHA256")
 
     def _check(self, status, what):
         if status != 0:
             raise CryptoError(f"{what}: 0x{status & 0xFFFFFFFF:08X}")
 
     def aes_cbc(self, encrypt, key, iv, data):
-        b, alg, kh = self.b, self.h(), self.h()
-        self._check(b.BCryptOpenAlgorithmProvider(ctypes.byref(alg), "AES", None, 0), "AES")
+        b, kh = self.b, self.h()
+        self._check(b.BCryptGenerateSymmetricKey(self.aes, ctypes.byref(kh), None, 0, key, len(key), 0), "klucz")
         try:
-            mode = ctypes.create_unicode_buffer("ChainingModeCBC")
-            self._check(b.BCryptSetProperty(alg, "ChainingMode", mode, ctypes.sizeof(mode), 0), "CBC")
-            self._check(b.BCryptGenerateSymmetricKey(alg, ctypes.byref(kh), None, 0, key, len(key), 0), "klucz")
-            try:
-                out = ctypes.create_string_buffer(len(data) + 16)
-                n = self.ulong()
-                fn = b.BCryptEncrypt if encrypt else b.BCryptDecrypt
-                ivbuf = ctypes.create_string_buffer(iv, 16)      # CNG nadpisuje IV
-                status = fn(kh, data, len(data), None, ivbuf, 16, out, len(out), ctypes.byref(n), 1)
-                self._check(status, "szyfrowanie" if encrypt else "odszyfrowanie")
-                return out.raw[:n.value]
-            finally:
-                b.BCryptDestroyKey(kh)
+            out = ctypes.create_string_buffer(len(data) + 16)
+            n = self.ulong()
+            fn = b.BCryptEncrypt if encrypt else b.BCryptDecrypt
+            ivbuf = ctypes.create_string_buffer(iv, 16)      # CNG nadpisuje IV
+            status = fn(kh, data, len(data), None, ivbuf, 16, out, len(out), ctypes.byref(n), 1)
+            self._check(status, "szyfrowanie" if encrypt else "odszyfrowanie")
+            return out.raw[:n.value]
         finally:
-            b.BCryptCloseAlgorithmProvider(alg, 0)
+            b.BCryptDestroyKey(kh)
 
     def pbkdf2(self, password, salt, rounds, size):
-        b, alg = self.b, self.h()
-        self._check(b.BCryptOpenAlgorithmProvider(ctypes.byref(alg), "SHA256", None, 0x8), "HMAC-SHA256")
-        try:
-            out = ctypes.create_string_buffer(size)
-            self._check(b.BCryptDeriveKeyPBKDF2(alg, password, len(password), salt, len(salt), rounds, out, size, 0),
-                        "PBKDF2")
-            return out.raw
-        finally:
-            b.BCryptCloseAlgorithmProvider(alg, 0)
+        out = ctypes.create_string_buffer(size)
+        self._check(self.b.BCryptDeriveKeyPBKDF2(self.sha, password, len(password), salt, len(salt), rounds, out, size,
+                                                 0), "PBKDF2")
+        return out.raw
 
 
 class _Mac:
@@ -115,7 +111,8 @@ class _Linux:
             except OSError:
                 continue
         else:
-            raise CryptoError("brak systemowej biblioteki libcrypto")
+            raise CryptoError("brak systemowej biblioteki libcrypto (OpenSSL): użyj systemu Linux z pamięci USB "
+                              "albo innego laptopa")
         p, i = ctypes.c_void_p, ctypes.c_int
         for name, res, args in (("EVP_CIPHER_CTX_new", p, []), ("EVP_CIPHER_CTX_free", None, [p]),
                                 ("EVP_aes_256_cbc", p, []), ("EVP_sha256", p, []),
@@ -154,8 +151,9 @@ class _Linux:
 
 def _system():
     global _impl
-    if _impl is None:
-        _impl = _Windows() if sys.platform == "win32" else _Mac() if sys.platform == "darwin" else _Linux()
+    with _lock:
+        if _impl is None:
+            _impl = _Windows() if sys.platform == "win32" else _Mac() if sys.platform == "darwin" else _Linux()
     return _impl
 
 
@@ -198,23 +196,28 @@ def open_(key, sealed, aad=b""):
     return aes_cbc(False, enc, body[1:17], body[17:])
 
 
+def _expect(ok, what):
+    if not ok:      # nie assert: python -O usunąłby sprawdzenie
+        raise CryptoError(f"samosprawdzenie: {what}")
+
+
 def selfcheck():
     """Known answers: AES-256-CBC as OpenSSL `enc`, PBKDF2-HMAC-SHA256 from RFC 7914 section 11; then seal/open."""
     ct = aes_cbc(True, bytes(range(32)), bytes(16), b"Szkola nr 5, wejscie od podworza")
-    assert ct.hex() == ("5c7f4bb144d7fd5015e17c2695a236214fc5d2e6be5903aaab35a8650779c1a8"
-                        "743bb88b43ad8b5e3acba0e62687c9ea"), ct.hex()
-    assert aes_cbc(False, bytes(range(32)), bytes(16), ct) == b"Szkola nr 5, wejscie od podworza"
-    assert pbkdf2(b"passwd", b"salt", 1, 64).hex() == (
+    _expect(ct.hex() == ("5c7f4bb144d7fd5015e17c2695a236214fc5d2e6be5903aaab35a8650779c1a8"
+                         "743bb88b43ad8b5e3acba0e62687c9ea"), "AES-256-CBC")
+    _expect(aes_cbc(False, bytes(range(32)), bytes(16), ct) == b"Szkola nr 5, wejscie od podworza", "AES odszyfrowanie")
+    _expect(pbkdf2(b"passwd", b"salt", 1, 64).hex() == (
         "55ac046e56e3089fec1691c22544b605f94185216dde0465e68b9d57c20dacbc"
-        "49ca9cccf179b645991664b39d77ef317c71b845b1e30bd509112041d3a19783")
+        "49ca9cccf179b645991664b39d77ef317c71b845b1e30bd509112041d3a19783"), "PBKDF2")
     key = hashlib.sha256(b"wici").digest()
     text = "Szkoła, wejście od podwórza".encode()
     sealed = seal(key, text, b"kopia")
-    assert open_(key, sealed, b"kopia") == text
+    _expect(open_(key, sealed, b"kopia") == text, "kopia")
     for bad, aad in ((sealed[:-1] + bytes([sealed[-1] ^ 1]), b"kopia"), (sealed, b"inna")):
         try:
             open_(key, bad, aad)
-            raise AssertionError("accepted tampered data")
         except CryptoError:
-            pass
+            continue
+        raise CryptoError("samosprawdzenie: przyjęta zmieniona kopia")
     return type(_system()).__name__.strip("_").lower()
