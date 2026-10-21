@@ -22,8 +22,8 @@ Szczegóły montażu, diagnozy i prób: [instrukcja montażu i prób](MONTAZ-I-T
     - DevKitC bez przeróbek.
 2. **R12: wymiana 10 kΩ na 1 kΩ** (1%, 0805). Bez tego reset radia przy starcie nie schodzi do stanu niskiego.
 3. **Adapter Wio** (moduł obok N1, krótkie przewody albo mała płytka uniwersalna):
-    - XIAO odłączony od Wio (złącze B2B); Wio VIN niepodłączone;
-    - zasilanie 3,3 V z JP1 pad 1 przez rozłączany punkt pomiaru prądu (zworka albo listwa na amperomierz), masa z J11.1;
+    - XIAO odłączony od Wio (złącze B2B); Wio J2.1 (VIN) niepodłączone;
+    - zasilanie Wio J2.3 (+3V3) z JP1 pad 1 przez rozłączany punkt pomiaru prądu (zworka albo listwa na amperomierz), Wio J2.2 (GND) z J11.1;
     - przy Wio 100 nF i 10 µF na 3,3 V oraz 10 kΩ z RXEN (Wio J1.5) do masy;
     - sygnały według tabeli niżej i [polaczenia-MCU-L0.csv](reference/polaczenia-MCU-L0.csv); bez długich odgałęzień SPI, bo magistrala jest wspólna z ekranem i FRAM;
     - antena założona przed pierwszym uruchomieniem radia.
@@ -44,8 +44,9 @@ Szczegóły montażu, diagnozy i prób: [instrukcja montażu i prób](MONTAZ-I-T
 | BUSY | J1.2 | 14 | RF_GPIO0 (J5.20) |
 | DIO1 | J1.1 | 21 | RF_GPIO1 (J6.18) |
 | RXEN | J1.5 | 42 | RF_GPIO3 (J6.6), 10 kΩ do masy przy Wio |
-| 3,3 V | 3V3 | | JP1 pad 1 przez punkt pomiaru prądu |
-| masa | GND | | J11.1 |
+| 3,3 V | J2.3 | | JP1 pad 1 przez punkt pomiaru prądu |
+| masa | J2.2 | | J11.1 |
+| VIN | J2.1 | | nie podłączać |
 
 ## Wymagany sprzęt wykonawcy
 

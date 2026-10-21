@@ -24,9 +24,9 @@ Etapy są ułożone tak, żeby każdy błąd ujawnił się tam, gdzie jego usuni
 
 Przyporządkowanie sygnałów Wio do GPIO XIAO ESP32S3 potwierdzone na sprzęcie programem R0 (`hardware/radio-pair/src/main.cpp`): SCK GPIO7 (D8), MISO GPIO8 (D9), MOSI GPIO9 (D10), NSS GPIO41, DIO1 GPIO39, NRST GPIO42, BUSY GPIO40, RXEN GPIO38. TCXO 1,8 V zasila DIO3, tor nadawania przełącza DIO2.
 
-1. **Przed odłączeniem XIAO** potwierdzić przyporządkowanie padów Wio z tabeli niżej (pochodzi z paczki RFQ) ze schematem Seeed Wio-SX1262. Ciągłość linii SPI sprawdza się omomierzem od padu Wio do D8, D9 i D10 na krawędzi XIAO; NSS, NRST, BUSY, DIO1 i RXEN dochodzą do XIAO tylko przez złącze B2B, więc dla nich obowiązuje schemat. Rozbieżność: lutować według schematu, różnicę zgłosić (do poprawienia w CSV). Błąd w tej tabeli to najbardziej prawdopodobna przyczyna `radio_begin -2`.
-2. XIAO zdjąć ze złącza B2B równomiernie, bez podważania jednego końca; XIAO zachować. Pinu VIN Wio nie podłączać.
-3. Przy Wio: 100 nF i 10 µF między 3V3 a GND, 10 kΩ z RXEN do GND. 3V3 z JP1.1 przez POWER_BREAK (listwa 1 × 2 ze zworką), GND z J11.1.
+1. Tabela niżej jest zgodna ze schematem Seeed „Wio-SX1262 for XIAO V1.0” (KiCad 8): J1 i J2 to listwy 1 × 7, raster 2,54 mm; J1.6, J1.7 i J2.7 niepodłączone. Na module R1 10 kΩ podciąga RST do +3V3; RF_SW1 (RXEN) nie ma rezystora do masy. Płytka w innej wersji: porównać z jej schematem przed lutowaniem. Kontrola bez schematu: ciągłość J2.6, J2.5, J2.4 do D8, D9, D10 na krawędzi XIAO (przy połączonym B2B).
+2. XIAO zdjąć ze złącza B2B (J3 na Wio) równomiernie, bez podważania jednego końca; XIAO zachować. J2.1 (VIN) nie podłączać. Dioda i przycisk na Wio są połączone tylko z J3, po odłączeniu XIAO nie działają.
+3. Przy Wio: 100 nF i 10 µF między 3V3 a GND, 10 kΩ z RXEN do GND. J2.3 (+3V3) z JP1.1 przez POWER_BREAK (listwa 1 × 2 ze zworką), J2.2 (GND) z J11.1.
 4. Przyłączenie do N1 od spodu płytki, na wyprowadzeniach gniazd J5/J6 i listwy JP1. Przewody ≤ 6 cm, linie SPI skręcone z przewodem masy albo taśma z masą co drugą żyłą; bez pętli i odgałęzień. SCK i MOSI biegną także do FRAM (8 MHz) i ekranu, więc długość przewodów adaptera wpływa na całą magistralę.
 5. Antena w gnieździe u.FL (IPEX) przed pierwszym zasileniem, zatrzaśnięta prostopadle, przewód odciążony.
 6. **Nie zasilać płytki ze zdjętą zworką POWER_BREAK.** Wyjścia MCU (NSS i NRST w stanie wysokim) zasilałyby wtedy Wio przez diody zabezpieczające wejść. Prąd Wio mierzy się amperomierzem wpiętym w miejsce zworki.
@@ -41,8 +41,9 @@ Przyporządkowanie sygnałów Wio do GPIO XIAO ESP32S3 potwierdzone na sprzęcie
 | BUSY | J1.2 | J5.20 | 14 |
 | DIO1 | J1.1 | J6.18 | 21 |
 | RXEN | J1.5 | J6.6 (10 kΩ do GND przy Wio) | 42 |
-| 3V3 | 3V3 | JP1.1 przez POWER_BREAK | |
-| GND | GND | J11.1 | |
+| +3V3 | J2.3 | JP1.1 przez POWER_BREAK | |
+| GND | J2.2 | J11.1 | |
+| VIN | J2.1 | nie podłączać | |
 
 ## 3. Kontrola przed zasilaniem
 
@@ -55,8 +56,9 @@ Bez DevKitC i panelu, POWER_BREAK założony.
 | J5.15 – GND | ≈ 1 kΩ | ≈ 10 kΩ: R12 niewymieniony |
 | J6.6 – GND | ≈ 10 kΩ | brak rezystora RXEN |
 | J5.16 – JP1.1 | ≤ 10 kΩ (R11) | |
-| Pad 3V3 Wio – JP1.1 | 0 Ω | POWER_BREAK |
+| Wio J2.3 – JP1.1 | 0 Ω | POWER_BREAK |
 | JP1.1 – GND | bez zwarcia | |
+| Wio J2.1 (VIN) – cokolwiek na N1 | brak połączenia | |
 | J7, sąsiednie piny parami | połączone tylko 6–7–8 (+5V_LCD) oraz 9–10 z uchwytami (GND) | mostek na J7 |
 
 ## 4. Pierwsze zasilanie i program
@@ -89,7 +91,7 @@ Prąd nadawania trwa tyle co pakiet (dziesiątki ms) i multimetr go nie uchwyci:
 | Brak portu | gniazdo UART zamiast USB; przewód bez linii danych; BOOT + RESET |
 | Port pojawia się i znika cyklicznie; pole 4 = `9` | brownout: zwarcie albo spadek +3V3 przy starcie radia; prąd z USB, C13, adapter |
 | Pole 4 = `4`–`7` | wyjątek albo watchdog: zapis konsoli zaraz po resecie |
-| Odpowiedzi dopiero po około 10 s, potem `ERR radio_begin -2` | RadioLib dziesięć razy resetuje układ i nie odczytuje tekstu wersji: pomyłka pinu w adapterze, MISO/MOSI zamienione, Wio bez 3V3, NRST trzymany nisko, BUSY stale w stanie wysokim |
+| Odpowiedzi dopiero po około 10 s, potem `ERR radio_begin -2` | RadioLib dziesięć razy resetuje układ i nie odczytuje tekstu wersji: przerwa lub pomyłka pinu w adapterze, MISO/MOSI zamienione, Wio bez 3V3, NRST trzymany nisko, BUSY stale w stanie wysokim |
 | `radio_begin -705` | BUSY nie opada po poleceniu: przewód BUSY, zasilanie Wio, oscylator TCXO |
 | `radio_begin -706` / `-707` | układ odrzucił polecenie albo nie wykonał go (najczęściej kalibracja przy niestartującym TCXO): napięcie 3V3 na Wio przy starcie, odsprzęganie |
 | `FRAM_ID unknown FFFF…`, `ERR fram_id_unsupported` | CS nie dochodzi do U1: U3.1 (wyjście nadzorcy) ma być w stanie niskim przy 3,3 V, U4.4 ma odwzorowywać J5.12 (FRAM_CS); orientacja U3/U4 |
