@@ -175,6 +175,8 @@ function renderSession() {
   const s = session(), kit = s.kit;
   const user = loggedIn();
   $("kit-missing").hidden = kit !== "missing";
+  $("destroyed").hidden = kit !== "destroyed";
+  if (kit === "destroyed") $("destroyed-station").textContent = DESTROY_STATION[(state.destroy || {}).state || "absent"](state.destroy || {});
   $("kit-missing-path").textContent = s.usb || "";
   $("kit-new").hidden = kit !== "new" || envelopesShown;
   $("recover").hidden = kit !== "broken" || envelopesShown;
@@ -289,6 +291,23 @@ async function newPassword() {
 async function logout() {
   const r = await api("/api/logout");
   if (!r.ok) toast(r.data.error || "Wylogowano, ale ostatnia kopia nie trafiła na pamięć USB.");
+}
+
+const DESTROY_STATION = {
+  absent: () => "Stacja nie była podłączona. Zniszcz dane na stacji: STAN → USŁUGI → ZNISZCZ DANE, potem GÓRA, DÓŁ, GÓRA, OK.",
+  asking: () => "Wysyłam polecenie do stacji…",
+  confirm: (d) => `Stacja pyta o zniszczenie danych: naciśnij na niej OK w ciągu ${d.confirm_s || 30} s.`,
+  ok: () => "Stacja zniszczyła swoje dane i uruchomiła się bez konfiguracji.",
+  refused: (d) => `Stacja nie zniszczyła danych: ${d.message || "brak odpowiedzi"} Zniszcz je na stacji: STAN → USŁUGI → ZNISZCZ DANE.`,
+};
+
+async function destroyData() {
+  if (!confirm("ZNISZCZYĆ DANE? Tylko przy groźbie przejęcia stacji albo laptopa. Laptop usunie dane zestawu z dysku i z pamięci USB, a podłączona stacja po potwierdzeniu przyciskiem OK przestanie działać na stałe.")) return;
+  if (!confirm("To nieodwracalne. Na pewno zniszczyć dane?")) return;
+  await busy($("destroy"), async () => {
+    const r = await api("/api/destroy", { confirm: "ZNISZCZ" });
+    if (!r.ok) toast(r.data.error || "Nie udało się usunąć wszystkich plików. Zniszcz pamięć USB fizycznie.", 12000);
+  });
 }
 
 async function handBack() {
@@ -706,6 +725,7 @@ function init() {
   $("kit-password").addEventListener("click", newPassword);
   $("logout").addEventListener("click", logout);
   $("hand-back").addEventListener("click", handBack);
+  $("destroy").addEventListener("click", destroyData);
   $("rescan").addEventListener("click", () => busy($("rescan"), async () => {
     await api("/api/rescan");
     toast("Szukam stacji na wszystkich portach USB.");

@@ -33,6 +33,7 @@ sys.path.insert(0, str(ROOT / "software" / "reference"))
 
 from wici import configdoc, database, serialport, session, store, syscrypto, usbproto  # noqa: E402
 from wici.prep import OperationError, Prep  # noqa: E402
+from wici import web  # noqa: E402
 from wici.web import Panel, serve  # noqa: E402
 from wici import __main__ as wici_main  # noqa: E402
 import reference  # noqa: E402
@@ -786,6 +787,33 @@ class SessionTest(unittest.TestCase):
         moved.rename(stick)
         self.assertFalse(a.adopt(moved))                    # stara ścieżka znów jest: nic do przełączania
 
+    def test_destroy(self):
+        a = self.session("a")
+        envelopes = a.create(1)["envelopes"]
+        (self.root / "a" / "dziennik.sqlite").write_bytes(b"etap 1")
+        self.assertEqual(a.destroy(), {"usb": True})
+        self.assertEqual(a.describe()["kit"], "destroyed")
+        for d in (self.root / "usb" / "keys", self.root / "usb" / "kopia", self.root / "a" / "baza"):
+            self.assertEqual(list(d.iterdir()), [], d)
+        self.assertFalse((self.root / "a" / "dziennik.sqlite").exists())
+        with self.assertRaises(database.StorageError):
+            a.create(1)                                     # do ponownego uruchomienia nic nie powstaje
+        with self.assertRaises(database.StorageError):
+            a.login("gospodarz", envelopes[0]["password"])
+        with self.assertRaises(session.NotLoggedIn):
+            a.destroy()
+        self.assertEqual(self.session("b").describe()["kit"], "new")
+
+    def test_destroy_without_stick(self):
+        a = self.session("a")
+        a.create(0)
+        a.db.flush()
+        moved = self.root / "usb-wyjeta"
+        (self.root / "usb").rename(moved)
+        self.assertEqual(a.destroy(), {"usb": False})
+        self.assertEqual(list((self.root / "a" / "baza").iterdir()), [])
+        self.assertTrue(any((moved / "keys").iterdir()))     # zostaje: pamięć niszczy się fizycznie
+
     def test_second_login_and_recovery_limit(self):
         a = self.session("a")
         envelopes = a.create(0)["envelopes"]
@@ -922,7 +950,7 @@ class PanelTest(unittest.TestCase):
             self.session.logout()
             state = json.loads(self.request("GET", "/api/state?v=-1", headers={"Cookie": c["Cookie"]})[1])
             self.assertEqual((state["session"]["kit"], state["journal"]), ("ready", []))
-            for path in ("/api/config/read", "/api/config/write", "/api/card", "/api/hand-back"):
+            for path in ("/api/config/read", "/api/config/write", "/api/card", "/api/hand-back", "/api/destroy"):
                 r, body = self.request("POST", path, "{}", c)
                 self.assertEqual((r.status, json.loads(body)["code"]), (401, "login"), path)
             self.assertEqual(self.request("POST", "/api/config/check", "{}", c)[0].status, 200)   # bez stacji i dziennika
@@ -1114,6 +1142,7 @@ class SimulatorPreparationTest(unittest.TestCase):
     def setUp(self):
         self.sim = subprocess.Popen(["node", str(LAPTOP / "dev" / "sim-station.mjs"), "0"], stdin=subprocess.PIPE,
                                     stdout=subprocess.PIPE, text=True)
+        self.addCleanup(self.sim.stdout.close)
         self.addCleanup(self.sim.wait, 10)
         self.addCleanup(self.sim.stdin.close)
         port = int(self.sim.stdout.readline().split()[1])
@@ -1160,6 +1189,36 @@ class SimulatorPreparationTest(unittest.TestCase):
         ops = [(x["op"], x["ok"]) for x in reversed(self.journal.recent())]
         self.assertEqual(ops, [("configure", False), ("configure", True), ("config_get", True), ("card", True),
                                ("configure", False)])
+
+    def test_destroy_with_the_button_on_the_station(self):
+        self.wait(lambda: self.station.state["phase"] == "connected")
+        self.sim.stdin.write("prep\n")
+        self.sim.stdin.flush()
+        self.wait(lambda: (self.station.state["status"] or {}).get("prep"))
+        self.prep.write_config(station_doc())
+        kit = session.Session(Path(self.tmp.name) / "usb", Path(self.tmp.name) / "stan", iterations=1000)
+        self.addCleanup(kit.close)
+        (Path(self.tmp.name) / "usb").mkdir()
+        kit.create(0)
+        prep = Prep(self.station, kit)
+        panel = Panel(self.station, prep, kit, "tok", {})
+
+        def press(button):
+            self.wait(lambda: (prep.destroy_state or {}).get("state") == "confirm")
+            self.sim.stdin.write(f"press {button}\n")
+            self.sim.stdin.flush()
+
+        prep.destroy_station()
+        press("BACK")                                       # WSTECZ = NIE
+        self.wait(lambda: prep.destroy_state["state"] == "refused")
+        self.assertIn("Nie potwierdzono", prep.destroy_state["message"])
+        self.assertEqual(web.destroy(panel, {"confirm": "ZNISZCZ"}), {"usb": True, "station": "asking"})
+        self.assertEqual(kit.describe()["kit"], "destroyed")   # laptop nie czeka na przycisk
+        press("OK")
+        self.wait(lambda: prep.destroy_state["state"] == "ok")
+        self.wait(lambda: (self.station.state["hello"] or {}).get("configured") is False, timeout=30)
+        with self.assertRaises(ValueError):
+            web.destroy(panel, {})
 
 
 if __name__ == "__main__":

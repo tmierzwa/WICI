@@ -491,8 +491,19 @@ class Database:
             self.conn.close()
         self.key = None
         dirs = [self.disk_dir] + ([self.usb_dir] if self.usb_dir else [])
-        files = [f for d in dirs if d.exists() for f in d.iterdir() if f.name in NAMES or f.name.startswith("konflikt-")]
-        if keys_dir:
-            files += [Path(keys_dir) / n for n in (ACCOUNTS, KIT_KEY)]
-        for f in files:
-            f.unlink(missing_ok=True)
+        files = [Path(keys_dir) / n for n in (ACCOUNTS, KIT_KEY)] if keys_dir else []
+        failed = []
+        for d in dirs:
+            try:
+                files += [f for f in d.iterdir() if f.name in NAMES or f.name.startswith("konflikt-")]
+            except FileNotFoundError:
+                pass                                 # wyjęta pamięć: jej pliki niszczy się fizycznie
+            except OSError:
+                failed.append(str(d))
+        for f in files:                              # każdy plik, nawet gdy inny się nie dał
+            try:
+                f.unlink(missing_ok=True)
+            except OSError:
+                failed.append(f.name)
+        if failed:
+            raise StorageError("nie udało się usunąć: " + ", ".join(failed))

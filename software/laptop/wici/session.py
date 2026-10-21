@@ -52,13 +52,16 @@ class Session:
         self.db = self.journal = self.user = None
         self.accounts = []                          # lista kont z chwili logowania: pamięć może zostać wyjęta
         self.pending = None                         # (konto, klucz danych, konflikt) do wyboru kopii
+        self.destroyed = False                      # po ZNISZCZ DANE: do ponownego uruchomienia nic się nie otwiera
 
     # ---- stan dla panelu ----------------------------------------------------------------------
 
     def describe(self):
         with self.lock:
             accounts = self.accounts
-            if self.db:
+            if self.destroyed:
+                kit = "destroyed"
+            elif self.db:
                 kit = "open"
             elif not self.usb.is_dir():
                 kit = "missing"
@@ -165,7 +168,7 @@ class Session:
         continues (database.Database.move_usb). Otherwise nothing changes and the panel keeps warning."""
         usb = Path(usb)
         with self.lock:
-            if usb == self.usb or self.kit.exists() or not usb.is_dir():
+            if self.destroyed or usb == self.usb or self.kit.exists() or not usb.is_dir():
                 return False
             if self.db and not self.db.move_usb(usb / "kopia"):
                 return False
@@ -184,6 +187,8 @@ class Session:
             raise NotLoggedIn()
 
     def _free(self):
+        if self.destroyed:
+            raise database.StorageError("dane zestawu zniszczono: aplikację można zamknąć")
         if self.db:
             raise database.StorageError("ktoś jest już zalogowany: najpierw wyloguj")
 
@@ -214,6 +219,28 @@ class Session:
             self.db.hand_back()
             self.db = self.journal = self.user = None
             (self.state / "dziennik.sqlite").unlink(missing_ok=True)   # jawny dziennik z etapu 1, jeśli został
+
+    def destroy(self):
+        """ZNISZCZ DANE on the laptop: the key leaves memory, the snapshots leave the disk, the copies and
+        the account files leave the stick (database.Database.destroy). Returns whether the stick was there."""
+        with self.lock:
+            self._need()
+            db, usb = self.db, self.kit.exists()
+            self.db = self.journal = self.user = self.pending = None
+            self.accounts, self.destroyed = [], True
+            failed = []
+            try:
+                db.destroy(self.kit.dir)
+            except database.StorageError as e:
+                failed.append(str(e))
+            try:
+                (self.state / "dziennik.sqlite").unlink(missing_ok=True)   # jawny dziennik z etapu 1
+            except OSError:
+                failed.append("nie udało się usunąć: dziennik.sqlite")
+        self.on_change()
+        if failed:
+            raise database.StorageError("; ".join(failed))
+        return {"usb": usb}
 
     def close(self):
         with self.lock:

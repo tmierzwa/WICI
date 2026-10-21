@@ -1,12 +1,14 @@
 # SPDX-License-Identifier: MIT
-"""Preparation-mode operations on the connected station: read and write the configuration, read the card.
+"""Operations on the connected station: read and write the configuration, read the card, ZNISZCZ DANE.
 
 Each operation returns a JSON-ready dict for the panel and writes one journal entry. Errors become a
-sentence for the person at the laptop; the station's own reason code stays in the journal.
+sentence for the person at the laptop; the station's own reason code stays in the journal. ZNISZCZ DANE
+has no journal entry: the laptop destroys the journal at the same time (the paper journal records it).
 """
 
 import hashlib
 import json
+import threading
 
 from . import configdoc
 from .usbproto import ProtocolError, Rejected
@@ -53,8 +55,10 @@ def explain(error):
 
 
 class Prep:
-    def __init__(self, station, journal):
+    def __init__(self, station, journal, on_change=None):
         self.station, self.journal = station, journal
+        self.on_change = on_change or (lambda: None)
+        self.destroy_state = None                    # ZNISZCZ DANE na stacji: {"state": …, "message": …}
 
     def _identity(self):
         hello = self.station.state.get("hello") or {}
@@ -90,3 +94,29 @@ class Prep:
     def card(self):
         reply = self._run("card", lambda link: link.request("card"), lambda r: "fingerprint " + r.get("fingerprint", ""))
         return {"card": {k: reply[k] for k in ("name", "lxmf", "key", "address", "fingerprint") if k in reply}}
+
+    def destroy_station(self):
+        """ZNISZCZ DANE on the station: `destroy`, then the OK button on the station within 30 s.
+
+        Runs in the background, so the laptop destroys its own data at once; the panel follows destroy_state:
+        absent (no station), asking (sent), confirm (waiting for OK), ok, refused (with a message)."""
+        if self.station.state["phase"] != "connected":
+            self._destroyed("absent")
+            return "absent"
+        self._destroyed("asking")
+
+        def run():
+            try:
+                self.station.call(lambda link: link.request(
+                    "destroy", on_pending=lambda p: self._destroyed("confirm", confirm_s=p.get("confirm_s", 30))))
+            except (Rejected, ProtocolError, OSError) as e:
+                self._destroyed("refused", message=explain(e).message)
+                return
+            self._destroyed("ok")
+
+        threading.Thread(target=run, name="wici-zniszcz", daemon=True).start()
+        return "asking"
+
+    def _destroyed(self, state, **fields):
+        self.destroy_state = {"state": state, **fields}
+        self.on_change()

@@ -198,7 +198,7 @@ def main(argv=None):
         print(f"WICI: brak pamięci USB zestawu, konta i kopia w {usb}", flush=True)
     panel.session = Session(usb, state, on_change=panel.changed)
     station = Station(args.port, on_change=panel.changed)
-    panel.station, panel.prep = station, Prep(station, panel.session)
+    panel.station, panel.prep = station, Prep(station, panel.session, on_change=panel.changed)
     server = serve(panel, args.http)
     port = server.server_address[1]
     write_instance(instance, port, token)

@@ -64,6 +64,12 @@
     <p class="mono break" id="kit-missing-path"></p>
   </section>
 
+  <section id="destroyed" class="card notice notice-alarm" hidden>
+    <h2>Dane zestawu zniszczone na tym laptopie</h2>
+    <p>Klucz bazy zniknął z pamięci aplikacji, kopie z dysku, a kopie i konta z pamięci USB. Usunięcie plików nie chroni samej pamięci USB: zniszcz ją fizycznie. Wpisz zdarzenie i godzinę do dziennika papierowego.</p>
+    <p id="destroyed-station" class="banner"></p>
+  </section>
+
   <section id="kit-new" class="card" hidden>
     <h2>Nowy zestaw: na tej pamięci USB nie ma jeszcze kont</h2>
     <p>Panel utworzy konto gospodarza, konta zastępców i hasło odtworzenia. Każde hasło to kilka słów; panel pokaże je jeden raz, z numerem koperty.</p>
@@ -258,6 +264,11 @@
       <div class="buttons">
         <button type="button" class="btn" id="logout">Wyloguj</button>
         <button type="button" class="btn btn-primary" id="hand-back">Oddaj laptop</button>
+      </div>
+      <h3>Zniszczenie danych</h3>
+      <p class="hint">Tylko przy groźbie przejęcia stacji albo laptopa, także na polecenie odbiorcy przekazane słownie albo przez gońca; nigdy na podstawie wiadomości radiowej. Laptop od razu usuwa dane zestawu z dysku i z pamięci USB, a podłączona stacja pyta o potwierdzenie przyciskiem OK i przestaje działać na stałe. Nieodwracalne.</p>
+      <div class="buttons">
+        <button type="button" class="btn btn-danger" id="destroy">ZNISZCZ DANE</button>
       </div>
     </div>
   </section>
