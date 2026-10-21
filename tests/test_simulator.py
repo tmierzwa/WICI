@@ -19,6 +19,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 SIM = ROOT / "software" / "simulator"
 SRC = ROOT / "firmware" / "src"
+TIMEOUT = 120   # s na proces potomny: zawieszenie kończy test błędem, a nie blokuje CI
 sys.path.insert(0, str(SIM))
 import build  # noqa: E402
 
@@ -99,8 +100,9 @@ int main() {
         with tempfile.TemporaryDirectory() as tmp:
             (Path(tmp) / "main.cpp").write_text(main, encoding="utf-8")
             exe = Path(tmp) / "aes"
-            subprocess.run(["c++", "-std=gnu++17", str(SIM / "hal" / "esp_rom.cpp"), str(Path(tmp) / "main.cpp"), "-o", str(exe)], check=True)
-            out = subprocess.run([str(exe)], capture_output=True, text=True, check=True).stdout.split("\n")
+            subprocess.run(["c++", "-std=gnu++17", str(SIM / "hal" / "esp_rom.cpp"), str(Path(tmp) / "main.cpp"), "-o", str(exe)], check=True,
+                           timeout=TIMEOUT)
+            out = subprocess.run([str(exe)], capture_output=True, text=True, check=True, timeout=TIMEOUT).stdout.split("\n")
         # FIPS-197, dodatek C.1–C.3
         self.assertEqual(out[:3], ["69c4e0d86a7b0430d8cdb78070b4c55a 1", "dda97ca4864cdfe06eaf70a0ec0d7191 1",
                                    "8ea2b7ca516745bfeafc49904b496089 1"])
@@ -111,12 +113,13 @@ int main() {
 
     @unittest.skipUnless(shutil.which("node"), "Node.js not installed")
     def test_exercises_and_layout_rules(self):
-        out = subprocess.run(["node", str(SIM / "test_scenarios.mjs")], capture_output=True, text=True)
+        out = subprocess.run(["node", str(SIM / "test_scenarios.mjs")], capture_output=True, text=True, timeout=TIMEOUT)
         self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
         self.assertEqual(out.stdout.count("\nok "), 8, out.stdout)
         script = ("import { R02, RULES } from './web/layouts.js';"
                   "console.log(JSON.stringify(RULES.map((r) => [r.id, r.test(R02).ok])));")
-        out = subprocess.run(["node", "--input-type=module", "-e", script], cwd=SIM, capture_output=True, text=True, check=True)
+        out = subprocess.run(["node", "--input-type=module", "-e", script], cwd=SIM, capture_output=True, text=True, check=True,
+                             timeout=TIMEOUT)
         rules = dict(json.loads(out.stdout))
         self.assertTrue(all(rules.values()), rules)   # panel R02 spełnia zasady z obudowa.md
 
@@ -149,7 +152,8 @@ out.stop = await say('EMC 0', 2);
 out.off = row();
 console.log(JSON.stringify(out));
 """
-        res = subprocess.run(["node", "--input-type=module", "-e", script], cwd=SIM, capture_output=True, text=True)
+        res = subprocess.run(["node", "--input-type=module", "-e", script], cwd=SIM, capture_output=True, text=True,
+                             timeout=TIMEOUT)
         self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
         out = json.loads(res.stdout.strip().splitlines()[-1])
         self.assertNotIn("RADIO: AWARIA", out["before"])
