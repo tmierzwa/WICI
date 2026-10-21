@@ -41,5 +41,6 @@ Skrypt pobiera przypięte środowiska Pythona ([runtimes.json](build/runtimes.js
 | [wici/](wici/__init__.py) | aplikacja: port szeregowy, protokół, dokument `configure`, czynności, dziennik, zaszyfrowana baza, panel |
 | [wici/ui/](wici/ui/index.html) | panel: HTML, CSS i JS bez bibliotek |
 | [build/](build/build_usb.py) | budowa pamięci USB, programy START, instrukcja na pamięć |
+| [build/licencje/](build/licencje/zrodla.json) | licencje bibliotek wkompilowanych w interpreter python-build-standalone i kodu wbudowanego w CPython, kopiowane do `licenses/` na pamięci; źródła i sumy w `zrodla.json` |
 | [build/slowa/](build/slowa/build_slowa.py) | budowa listy słów do haseł z kopert ([wici/slowa.txt](wici/slowa.txt)): przypięte źródła, wykluczenia, `--check` |
 | [dev/](dev/sim-station.mjs) | stacja z symulatora na TCP |

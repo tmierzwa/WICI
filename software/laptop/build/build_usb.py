@@ -43,6 +43,9 @@ PINS = json.loads((HERE / "runtimes.json").read_text(encoding="utf-8"))
 VERSION = PINS["python"]
 MINOR = ".".join(VERSION.split(".")[:2])          # 3.14
 TAG = MINOR.replace(".", "")                       # 314
+# Wydanie python-build-standalone ze ścieżki adresów (…/releases/download/20261009/…), jedno dla wszystkich.
+PBS_RELEASE = ",".join(sorted({r["url"].split("/download/")[1].split("/")[0]
+                               for r in PINS["runtimes"].values() if r["kind"] == "pbs"}))
 STDLIB_ZIP = f"python{TAG}.zip"
 BUDGET = 90_000_000                                 # cała pamięć USB poza obrazem Linuksa; zmierzone 83,6 MB; zob. PLAN.md
 ZIP_TIME = (1980, 1, 1, 0, 0, 0)                   # powtarzalne archiwa: stałe znaczniki czasu
@@ -319,6 +322,24 @@ def manifest(out, names, modules):
     return doc
 
 
+def third_party_licenses(out, names):
+    """Licences the runtime files in LICENSE.txt do not cover (licencje/zrodla.json).
+
+    The python-build-standalone interpreter has OpenSSL, libffi, SQLite, expat and other libraries
+    linked in statically; CPython itself incorporates code under other licences (Doc/license.rst)."""
+    src = HERE / "licencje"
+    pins = json.loads((src / "zrodla.json").read_text(encoding="utf-8"))
+    if (pins["python"], pins["pbs_release"]) != (VERSION, PBS_RELEASE):
+        sys.exit("licencje/zrodla.json opisuje inną wersję środowisk niż runtimes.json")
+    shutil.copyfile(src / pins["cpython"]["file"], out / "licenses" / "python-kod-wbudowany.txt")
+    if any(PINS["runtimes"][n]["kind"] == "pbs" for n in names):
+        parts = [f"Biblioteki wkompilowane w interpreter Pythona {VERSION} z python-build-standalone {PBS_RELEASE}\n"
+                 "(runtime/macos-*, runtime/linux-*). Źródło: licencje/zrodla.json w repozytorium WICI.\n"]
+        for name in pins["pbs"]["files"] + [pins["zstd"]["file"]]:
+            parts.append(f"\n{'=' * 72}\n{name}\n{'=' * 72}\n\n" + (src / name).read_text(encoding="utf-8"))
+        (out / "licenses" / "python-biblioteki.txt").write_text("".join(parts), encoding="utf-8")
+
+
 def build(out, names, launcher_exe=None, archives=None):
     """Build the tree into `out`. `archives` maps runtime names to local files (tests, offline builds)."""
     archives = archives or {}
@@ -349,6 +370,7 @@ def build(out, names, launcher_exe=None, archives=None):
             sys.exit("brak kompilatora MinGW-w64 dla START-WINDOWS.exe; podaj --windows-launcher")
         write(out / "START-WINDOWS.exe", exe)
     shutil.copyfile(HERE / "usb" / "INSTRUKCJA.html", out / "INSTRUKCJA.html")
+    third_party_licenses(out, names)
     shutil.copyfile(ROOT / "LICENSES" / "MIT.txt", out / "licenses" / "WICI-MIT.txt")
     shutil.copyfile(ROOT / "LICENSES" / "CC-BY-SA-4.0.txt", out / "licenses" / "slowa-CC-BY-SA-4.0.txt")
     sources = json.loads((HERE / "slowa" / "zrodla.json").read_text(encoding="utf-8"))

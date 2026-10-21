@@ -1132,7 +1132,8 @@ class BuildTreeTest(unittest.TestCase):
             self.assertTrue(os.access(out / "START-MAC.app/Contents/MacOS/START", os.X_OK))
             self.assertTrue(os.access(out / "START-LINUX.sh", os.X_OK))
             for name in ("START-WINDOWS.exe", "INSTRUKCJA.html", "app/wici.pyz", "licenses/python-windows.txt",
-                         "licenses/WICI-MIT.txt", "sources/README.txt", "START-MAC.app/Contents/Info.plist"):
+                         "licenses/WICI-MIT.txt", "licenses/python-kod-wbudowany.txt", "sources/README.txt",
+                         "START-MAC.app/Contents/Info.plist"):
                 self.assertIn(name, files)
             with zipfile.ZipFile(out / "runtime" / build_usb.STDLIB_ZIP) as z:
                 names = set(z.namelist())
@@ -1142,6 +1143,10 @@ class BuildTreeTest(unittest.TestCase):
             for unneeded in ("tkinter/__init__.pyc", "unittest/__init__.pyc", "asyncio/__init__.pyc", "pydoc.pyc"):
                 self.assertNotIn(unneeded, names)
             self.assertLess((out / "runtime" / build_usb.STDLIB_ZIP).stat().st_size, 3 * 1024 * 1024)
+            libs = (out / "licenses" / "python-biblioteki.txt").read_text(encoding="utf-8")
+            for lib in ("LICENSE.openssl-3.txt", "LICENSE.libffi.txt", "LICENSE.sqlite.txt", "LICENSE.zstd.txt"):
+                self.assertIn(lib, libs)
+            self.assertIn("SipHash24", (out / "licenses" / "python-kod-wbudowany.txt").read_text(encoding="utf-8"))
             out2 = subprocess.run([sys.executable, str(out / "app" / "wici.pyz"), "--selftest"], capture_output=True,
                                   text=True, timeout=60)
             self.assertEqual(out2.returncode, 0, out2.stdout + out2.stderr)
@@ -1149,6 +1154,21 @@ class BuildTreeTest(unittest.TestCase):
             with unittest.mock.patch("sys.stdout", new=__import__("io").StringIO()):
                 build_usb.build(out, ["linux-x86_64", "macos-arm64", "windows-amd64"], str(exe), archives)
             self.assertEqual((out / "runtime" / build_usb.STDLIB_ZIP).read_bytes(), first)   # powtarzalna budowa
+
+
+class ThirdPartyLicensesTest(unittest.TestCase):
+    def test_licences_match_the_pinned_runtimes(self):
+        here = LAPTOP / "build" / "licencje"
+        pins = json.loads((here / "zrodla.json").read_text(encoding="utf-8"))
+        runtimes = json.loads((LAPTOP / "build" / "runtimes.json").read_text(encoding="utf-8"))
+        self.assertEqual(pins["python"], runtimes["python"])   # nowa wersja: licencje pobiera się od nowa
+        for r in runtimes["runtimes"].values():
+            if r["kind"] == "pbs":
+                self.assertIn(f"/download/{pins['pbs_release']}/", r["url"])
+        names = pins["pbs"]["files"] + [pins["zstd"]["file"], pins["cpython"]["file"]]
+        self.assertEqual(sorted(p.name for p in here.glob("LICENSE.*")), sorted(names))
+        cpython = (here / pins["cpython"]["file"]).read_bytes()
+        self.assertEqual(hashlib.sha256(cpython).hexdigest(), pins["cpython"]["sha256"])
 
 
 @unittest.skipUnless(shutil.which("node"), "Node.js not installed")
