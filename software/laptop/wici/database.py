@@ -20,6 +20,7 @@ unwrap is the password check; there is no separate login hash.
 
 import collections
 import datetime
+import hashlib
 import hmac
 import json
 import os
@@ -34,11 +35,14 @@ from pathlib import Path
 from . import syscrypto
 
 ITERATIONS = 600_000
+ITERATIONS_RANGE = (1_000, 10_000_000)  # z pliku: poza zakresem opakowanie nieczytelne (zawieszenie, przepełnienie)
 MAGIC = b"WICI-KOPIA\n"
-NAMES = ("kopia-a", "kopia-b")          # pokolenie parzyste i nieparzyste
+NAMES = ("kopia-a", "kopia-b")          # na zmianę: zapis nie nadpisuje najnowszej kopii
 KIT_KEY, ACCOUNTS = "zestaw.key", "konta.json"
 LOGIN_LIMIT, LOGIN_WINDOW = 5, 60.0      # nieudane próby na minutę
 RETRY = 1.0                              # s między próbami po błędzie zapisu
+WRONG_USB = "inna pamięć USB niż pamięć zestawu"
+NO_USB = "brak pamięci USB zestawu"
 
 
 class LoginError(Exception):
@@ -79,10 +83,16 @@ def _slot(data_key, password, aad, iterations, pepper=b""):
 
 def _unwrap(slot, password, aad, pepper=b""):
     try:
-        key = _wrap_key(password, bytes.fromhex(slot["salt"]), int(slot["iterations"]), pepper)
+        iterations = slot["iterations"]
+        if type(iterations) is not int or not ITERATIONS_RANGE[0] <= iterations <= ITERATIONS_RANGE[1]:
+            return None
+        key = _wrap_key(password, bytes.fromhex(slot["salt"]), iterations, pepper)
         return syscrypto.open_(key, bytes.fromhex(slot["wrap"]), aad)
     except (syscrypto.CryptoError, ValueError, KeyError, TypeError):
         return None
+
+
+SLOT = (("salt", str), ("iterations", int), ("wrap", str))
 
 
 def _account_aad(name):
@@ -103,19 +113,48 @@ def _fsync(fd):
     os.fsync(fd)
 
 
-def _write_durable(path, data):
-    with open(path, "wb") as f:
-        f.write(data)
-        f.flush()
-        _fsync(f.fileno())
+def _fsync_dir(path):
     if sys.platform != "win32":                  # Windows: FlushFileBuffers obejmuje też wpis katalogu
-        fd = os.open(path.parent, os.O_RDONLY)
+        fd = os.open(path, os.O_RDONLY)
         try:
             os.fsync(fd)
         except OSError:
             pass                                 # część systemów nie pozwala na fsync katalogu FAT32
         finally:
             os.close(fd)
+
+
+def _write_durable(path, data):
+    with open(path, "wb") as f:
+        f.write(data)
+        f.flush()
+        _fsync(f.fileno())
+    _fsync_dir(path.parent)
+
+
+def kit_id(keys_dir):
+    """Fingerprint of a kit stick: SHA-256 of keys/zestaw.key (written once by Kit.create); None without it."""
+    try:
+        return hashlib.sha256((Path(keys_dir) / KIT_KEY).read_bytes()).hexdigest()
+    except OSError:
+        return None
+
+
+def has_copies(usb_dir):
+    try:
+        return any((Path(usb_dir) / n).exists() for n in NAMES)
+    except OSError:
+        return False
+
+
+def _valid(doc):
+    """Structure of konta.json: version 1, accounts {name: slot}, recovery slot; a slot has salt, iterations, wrap."""
+    def slot(s):
+        return isinstance(s, dict) and all(isinstance(s.get(f), t) for f, t in SLOT)
+    if not isinstance(doc, dict) or not isinstance(doc.get("accounts"), dict):
+        return False
+    return (doc.get("version") == 1 and slot(doc.get("recovery"))
+            and all(isinstance(n, str) and slot(s) for n, s in doc["accounts"].items()))
 
 
 class Kit:
@@ -138,8 +177,19 @@ class Kit:
         kit.dir.mkdir(exist_ok=True)              # bez parents: wyjęta pamięć nie staje się katalogiem na dysku
         if (kit.dir / ACCOUNTS).exists() and (data_key is None or kit.readable()):
             raise StorageError("ta pamięć ma już konta zestawu")
-        pepper, data_key = os.urandom(32), data_key or os.urandom(32)
-        _write_durable(kit.dir / KIT_KEY, pepper)
+        if data_key is None and has_copies(kit.dir.parent / "kopia"):
+            # nowy klucz danych nadpisałby kopie, których nikt już nie otworzy: tylko hasło odtworzenia
+            raise StorageError("ta pamięć ma kopię bazy zestawu: użyj hasła odtworzenia")
+        pepper = None
+        if data_key is not None:                   # odtworzenie: cały klucz zestawu zostaje, więc i jego kit_id
+            try:
+                pepper = (kit.dir / KIT_KEY).read_bytes()
+            except OSError:
+                pass
+        if pepper is None or len(pepper) != 32:
+            pepper = os.urandom(32)
+            _write_durable(kit.dir / KIT_KEY, pepper)
+        data_key = data_key or os.urandom(32)
         accounts = {name: _slot(data_key, pw, _account_aad(name), iterations, pepper) for name, pw in passwords.items()}
         kit._save({"version": 1, "accounts": accounts,
                    "recovery": _slot(data_key, recovery, RECOVERY_AAD, iterations)})
@@ -153,7 +203,7 @@ class Kit:
             raise StorageError("brak plików kont zestawu na pamięci USB") from None
         except (OSError, ValueError) as e:
             raise StorageError(f"plik kont zestawu nieczytelny: {e}") from None
-        if doc.get("version") != 1 or len(pepper) != 32:
+        if not _valid(doc) or len(pepper) != 32:
             raise StorageError("plik kont zestawu w nieznanym formacie")
         return doc, pepper
 
@@ -161,6 +211,7 @@ class Kit:
         tmp = self.dir / (ACCOUNTS + ".tmp")
         _write_durable(tmp, json.dumps(doc, indent=1).encode("utf-8"))
         os.replace(tmp, self.dir / ACCOUNTS)
+        _fsync_dir(self.dir)                     # sama zmiana nazwy też musi przetrwać zanik zasilania
 
     def exists(self):
         return (self.dir / ACCOUNTS).exists()
@@ -203,9 +254,6 @@ class Kit:
             return key
         return self.throttled(attempt)
 
-    def change_password(self, name, old, new, iterations=ITERATIONS):
-        self.set_password(name, self.unlock(name, old), new, iterations)
-
     def set_password(self, name, data_key, new, iterations=ITERATIONS):
         """New password for an account, by someone already logged in (after an envelope was opened)."""
         with self.lock:
@@ -214,6 +262,10 @@ class Kit:
                 raise StorageError(f"nie ma konta {name}")
             doc["accounts"][name] = _slot(data_key, new, _account_aad(name), iterations, pepper)
             self._save(doc)
+
+
+def _other(name):
+    return NAMES[1] if name == NAMES[0] else NAMES[0]
 
 
 class Copy:
@@ -254,13 +306,18 @@ def _continues(newer, older):
 
 def key_from_recovery(dirs, password):
     """Data key from the recovery password and the header of any copy, when the account file is lost."""
+    tried = {}                                   # opakowanie -> klucz: PBKDF2 raz na opakowanie, nie raz na plik
     for d in dirs:
         for name in NAMES:
             try:
                 _, header, _ = _split((Path(d) / name).read_bytes())
-            except (OSError, ValueError):
+                slot = header.get("recovery") or {}
+                seen = json.dumps(slot, sort_keys=True)
+            except (OSError, ValueError, AttributeError, TypeError):
                 continue
-            key = _unwrap(header.get("recovery") or {}, password, RECOVERY_AAD)
+            if seen not in tried:
+                tried[seen] = _unwrap(slot, password, RECOVERY_AAD)
+            key = tried[seen]
             if key is not None and _read(Path(d) / name, key, "") is not None:
                 return key
     raise LoginError("Złe hasło odtworzenia albo brak kopii.")
@@ -270,10 +327,14 @@ class Database:
     """The open database and its snapshot writers.
 
     write(fn) runs fn(conn) in one transaction and returns once a disk snapshot covers it, so a 201
-    sent after it is durable. read(fn) runs fn(conn) under the same lock."""
+    sent after it is durable. read(fn) runs fn(conn) under the same lock.
 
-    def __init__(self, data_key, disk_dir, usb_dir=None, recovery=None, schema="", prefer=None, on_change=None):
-        self.key = data_key
+    kit_id (kit_id() of the kit stick at login): the stick is checked before every write and removal
+    there, so a different stick under the same path gets nothing."""
+
+    def __init__(self, data_key, disk_dir, usb_dir=None, recovery=None, schema="", prefer=None, on_change=None,
+                 kit_id=None):
+        self.key, self.kit_fp = data_key, kit_id
         self.on_change = on_change or (lambda: None)
         self.disk_dir = Path(disk_dir)
         self.usb_dir = Path(usb_dir) if usb_dir else None
@@ -287,6 +348,8 @@ class Database:
                  for c in (_read(d / n, data_key, place) for n in NAMES) if c]
         disk = max((c for c in found if c.place == "disk"), key=lambda c: c.gen, default=None)
         usb = max((c for c in found if c.place == "usb"), key=lambda c: c.gen, default=None)
+        # Plik z najnowszą kopią w danym miejscu; zapis idzie zawsze do drugiego, więc ona zostaje przy przerwaniu.
+        self.disk_last, self.usb_last = (disk.path.name if disk else None), (usb.path.name if usb else None)
         base = self._choose(disk, usb, prefer)
         self.conn = sqlite3.connect(":memory:", check_same_thread=False, isolation_level=None)
         if base:
@@ -303,7 +366,7 @@ class Database:
         self.pending = None                          # najnowsza migawka dla pamięci USB: (zmiany, pokolenie, bajty)
         if self.usb_dir and base and (usb is None or not _continues(usb, base)):
             self.pending, self.usb_done = (0, base.gen, base.raw), -1   # pamięć nie ma jeszcze tej kopii
-        self.stopping = False
+        self.stopping = self.destroying = False
         self.conn.executescript(schema)
         self.threads = [threading.Thread(target=self._disk_loop, daemon=True, name="wici-kopia-dysk")]
         if self.usb_dir:
@@ -320,6 +383,9 @@ class Database:
             return usb
         if prefer not in ("disk", "usb"):
             raise Conflict(disk, usb)
+        problem = self._stick(self.usb_dir)
+        if problem:
+            raise StorageError(problem)
         win, lose = (disk, usb) if prefer == "disk" else (usb, disk)
         # Odrzucona kopia zostaje na pamięci zestawu (dysk laptopa wraca do właściciela), zaszyfrowana jak była;
         # jej pliki znikają z miejsca, w którym leżały, żeby przy następnym starcie nie wywołały tego samego konfliktu.
@@ -328,6 +394,16 @@ class Database:
             (self.disk_dir if lose.place == "disk" else self.usb_dir).joinpath(name).unlink(missing_ok=True)
         return win
 
+    def _stick(self, usb_dir):
+        """None when the stick at usb_dir is this kit's; otherwise why not (NO_USB, WRONG_USB)."""
+        if self.kit_fp is None:
+            return None
+        found = kit_id(usb_dir.parent / "keys")
+        return NO_USB if found is None else None if found == self.kit_fp else WRONG_USB
+
+    def _ours(self, usb_dir):
+        return self._stick(usb_dir) is None
+
     # ---- dostęp -------------------------------------------------------------------------------
 
     def read(self, fn):
@@ -335,6 +411,10 @@ class Database:
             return fn(self.conn)
 
     def write(self, fn, timeout=30.0):
+        """fn(conn) in one transaction; returns once a disk snapshot covers it.
+
+        StorageError after COMMIT means "not yet durable", not "rejected": the change stays in the open
+        database and the next snapshot that succeeds writes it."""
         with self.lock:
             self.conn.execute("BEGIN IMMEDIATE")
             try:
@@ -354,6 +434,8 @@ class Database:
         with self.cond:
             deadline = time.monotonic() + timeout
             while self.disk_done < mine:
+                if self.destroying:
+                    raise StorageError("dane zniszczono")
                 if self.disk_error and self.disk_error[0] >= mine:
                     raise StorageError(f"zapis kopii na dysku nie powiódł się: {self.disk_error[1]}")
                 left = deadline - time.monotonic()
@@ -368,12 +450,14 @@ class Database:
         Only when its newest copy is one this session continues, which also proves it is the same kit; a copy
         written meanwhile on another laptop is a conflict for the next start (False, nothing changes)."""
         usb_dir = Path(usb_dir)
+        if not self._ours(usb_dir):
+            return False
         copies = [c for c in (_read(usb_dir / n, self.key, "usb") for n in NAMES) if c]
         newest = max(copies, key=lambda c: c.gen, default=None)
         if not self.usb_dir or newest is None or not _continues(self, newest):   # ta baza ma history i gen jak kopia
             return False
         with self.cond:
-            self.usb_dir, self.usb_error = usb_dir, None
+            self.usb_dir, self.usb_error, self.usb_last = usb_dir, None, newest.path.name
             self.cond.notify_all()                   # wątek pamięci USB przerywa czekanie po błędzie
         self.on_change()
         return True
@@ -390,6 +474,8 @@ class Database:
     def _seal(self):
         with self.lock:
             with self.cond:
+                if self.destroying:
+                    return None
                 upto = self.changes
             body = self.conn.serialize()
         self.gen += 1
@@ -402,11 +488,16 @@ class Database:
             with self.cond:
                 while self.changes == self.disk_done and not self.stopping:
                     self.cond.wait()
-                if self.changes == self.disk_done or (self.stopping and self.disk_error):
+                if self.destroying or self.changes == self.disk_done or (self.stopping and self.disk_error):
                     return
             try:
-                upto, gen, blob = self._seal()
-                _write_durable(self.disk_dir / NAMES[gen % 2], blob)
+                sealed = self._seal()
+                if sealed is None or self.destroying:
+                    return
+                upto, gen, blob = sealed
+                target = _other(self.disk_last)
+                _write_durable(self.disk_dir / target, blob)
+                self.disk_last = target
             except (OSError, sqlite3.Error, syscrypto.CryptoError) as e:
                 with self.cond:
                     self.disk_error = (self.changes, str(e))
@@ -416,6 +507,8 @@ class Database:
                     self.cond.wait(RETRY)
                 continue
             with self.cond:
+                if self.destroying:
+                    return                           # ZNISZCZ DANE w trakcie zapisu: bez kopii na pamięć USB
                 self.disk_done, self.disk_error, self.pending = upto, None, (upto, gen, blob)
                 self.cond.notify_all()
             self.on_change()
@@ -425,11 +518,16 @@ class Database:
             with self.cond:
                 while (self.pending is None or self.pending[0] == self.usb_done) and not self.stopping:
                     self.cond.wait()
-                if self.pending is None or self.pending[0] == self.usb_done or (self.stopping and self.usb_error):
+                if (self.destroying or self.pending is None or self.pending[0] == self.usb_done
+                        or (self.stopping and self.usb_error)):
                     return
                 upto, gen, blob = self.pending
+                usb_dir, target = self.usb_dir, _other(self.usb_last)
             try:
-                _write_durable(self.usb_dir / NAMES[gen % 2], blob)
+                problem = self._stick(usb_dir)      # wyjęta albo pod tą ścieżką jest teraz inna pamięć
+                if problem:
+                    raise OSError(problem)
+                _write_durable(usb_dir / target, blob)
             except OSError as e:
                 with self.cond:
                     first = self.usb_error is None
@@ -441,6 +539,8 @@ class Database:
                     self.cond.wait(RETRY)
                 continue
             with self.cond:
+                if usb_dir == self.usb_dir:
+                    self.usb_last = target
                 self.usb_done, self.usb_at, self.usb_error = upto, _now(), None
                 self.cond.notify_all()
             self.on_change()
@@ -471,6 +571,9 @@ class Database:
         """'Oddaj laptop': the last copy on the stick, then the snapshots leave the laptop disk."""
         if not self.usb_dir:
             raise StorageError("brak pamięci USB zestawu: bez niej dane zostałyby tylko na tym laptopie")
+        problem = self._stick(self.usb_dir)
+        if problem:
+            raise StorageError(problem)
         self.flush(usb=True)
         self.close()
         for name in NAMES:
@@ -482,7 +585,7 @@ class Database:
         Deleting files does not erase flash or SSD; against reading the stick itself only destroying
         it works, which the instruction requires."""
         with self.cond:
-            self.stopping = True
+            self.stopping = self.destroying = True
             self.changes, self.pending = self.disk_done, None   # niezapisane zmiany nie trafiają już nigdzie
             self.cond.notify_all()
         for t in self.threads:
@@ -490,8 +593,11 @@ class Database:
         with self.lock:
             self.conn.close()
         self.key = None
-        dirs = [self.disk_dir] + ([self.usb_dir] if self.usb_dir else [])
-        files = [Path(keys_dir) / n for n in (ACCOUNTS, KIT_KEY)] if keys_dir else []
+        # Na pamięci usuwa się tylko pliki tego zestawu: inna pamięć pod tą ścieżką zostaje nietknięta.
+        ours = self.usb_dir is not None and self._ours(self.usb_dir)
+        dirs = [self.disk_dir] + ([self.usb_dir] if ours else [])
+        keep_keys = not keys_dir or (self.kit_fp is not None and kit_id(keys_dir) != self.kit_fp)
+        files = [] if keep_keys else [Path(keys_dir) / n for n in (ACCOUNTS, KIT_KEY, ACCOUNTS + ".tmp")]
         # Zapis, który utknął (np. na pamięci USB), może skończyć się już po usunięciu: osoba musi o tym wiedzieć.
         failed = [f"zapis kopii w toku ({t.name})" for t in self.threads if t.is_alive()]
         for d in dirs:

@@ -24,7 +24,7 @@ Narzędzie trybu przygotowania i fundament dla następnych etapów.
 | Testy | jednostkowe, bezpieczeństwo panelu, budowa USB, pełne przygotowanie na obrazie firmware | [tests/test_laptop.py](../../tests/test_laptop.py) |
 | CI | testy na Windows, macOS i Linuksie; pamięć USB budowana i uruchamiana przez START na każdym systemie; budżet rozmiaru | [.github/workflows/laptop.yml](../../.github/workflows/laptop.yml) |
 
-Czego etap 1 celowo nie ma: PRZENIEŚ STACJĘ i aktualizacji oprogramowania (firmware jeszcze ich nie realizuje, [przegląd F107](../../docs/review.md)), logowania hasłami z kopert (narzędzie przygotowania obsługuje osoba utrzymująca system na własnym komputerze; panel gospodarza w etapie 2 je dostaje) oraz strony mieszkańca (tryb kiosku w etapie 2, strona dla telefonów w etapie 3).
+Czego etap 1 celowo nie ma: PRZENIEŚ STACJĘ i aktualizacji oprogramowania (firmware jeszcze ich nie realizuje, [przegląd F107](../../docs/review.md)) oraz strony mieszkańca (tryb kiosku w etapie 2, strona dla telefonów w etapie 3). Logowanie hasłami z kopert, kopia bazy na pamięci USB, „Oddaj laptop” i ZNISZCZ DANE z etapów 2 i 4 są już gotowe (tabela wyżej).
 
 ## Systemy docelowe
 
@@ -45,12 +45,14 @@ Jeden proces Pythona z biblioteką standardową i bez zależności zewnętrznych
 ```text
 przeglądarka ──HTTP 127.0.0.1──▶ web.py ──▶ prep.py ──▶ usbproto.Station ──▶ serialport ──USB CDC──▶ stacja
                                    │                         (wątek: hello, status, ponowne połączenie)
-                                   └──▶ store.Journal (SQLite, katalog stanu systemu)
+                                   └──▶ session.Session ──▶ database.Database (SQLite w pamięci procesu)
+                                                              ├──▶ zaszyfrowane migawki w katalogu stanu
+                                                              └──▶ zaszyfrowana kopia i konta na pamięci USB zestawu
 ```
 
-Stan: Windows `%LOCALAPPDATA%\WICI`, macOS `~/Library/Application Support/WICI`, Linux `~/.local/share/wici`; zmienna `WICI_STATE` wskazuje inny katalog (obraz startowy Linuksa: partycja ext4 pamięci USB, zgodnie ze specyfikacją). Zaszyfrowana kopia bazy po każdej zmianie trafia na pamięć USB (etap 2).
+Stan: Windows `%LOCALAPPDATA%\WICI`, macOS `~/Library/Application Support/WICI`, Linux `~/.local/share/wici`; zmienna `WICI_STATE` wskazuje inny katalog (obraz startowy Linuksa: partycja ext4 pamięci USB, zgodnie ze specyfikacją). Zaszyfrowana kopia bazy po każdej zmianie trafia na pamięć USB zestawu.
 
-Bezpieczeństwo panelu: inne strony otwarte w tej samej przeglądarce nie mogą sterować stacją. Bez tokenu z odnośnika START nie ma ciasteczka; nagłówek Host musi wskazywać 127.0.0.1 (chroni przed DNS rebinding); POST wymaga JSON i własnego Origin; CSP blokuje skrypty spoza aplikacji.
+Bezpieczeństwo panelu: inne strony otwarte w tej samej przeglądarce nie mogą sterować stacją. Bez tokenu z odnośnika START nie ma ciasteczka; nagłówek Host musi wskazywać 127.0.0.1 (chroni przed DNS rebinding); POST wymaga JSON (bez zapytania wstępnego CORS, na które panel nie odpowiada) i własnego Origin, jeśli żądanie go ma (drugi START nie wysyła); CSP blokuje skrypty spoza aplikacji.
 
 ## Uniwersalność: problemy i rozwiązania
 
@@ -63,14 +65,16 @@ Bezpieczeństwo panelu: inne strony otwarte w tej samej przeglądarce nie mogą 
 | Linux: użytkownik spoza grupy `dialout` | panel rozpoznaje brak uprawnień i podaje dokładne polecenie (wymaga jednorazowo `sudo`); bez hasła administratora zostaje obraz startowy (etap 4, uprawnienia ustawione) albo inny laptop | panel |
 | zapora Windows na stronie dla telefonów | [Laptop i router na miejscu](#laptop-i-router-na-miejscu) | do próby na czystym Windows 11 |
 | Linux: ModemManager sonduje porty ACM | `TIOCEXCL` po otwarciu; obraz startowy z regułą udev | próba na Ubuntu |
-| pamięć FAT bez prawa wykonywania (Linux `showexec`, `noexec`) | START-LINUX.sh kopiuje raz środowisko do `~/.cache/wici/<wersja>` | CI: `chmod -x` i ponowny start |
+| pamięć FAT bez prawa wykonywania (Linux `showexec`, `noexec`) | START-LINUX.sh uruchamiany przez `sh` z terminala kopiuje środowisko do `~/.cache/wici/<wersja>-<suma manifestu>` (inna budowa dostaje własny katalog i nie usuwa środowiska działającej aplikacji); GNOME Files nie uruchamia plików .desktop z katalogu, więc instrukcja zaczyna od terminala | CI: `chmod -x` i ponowny start |
+| macOS: drugi START przez LaunchServices | START-MAC uruchamia Pythona w tle i kończy się, więc każde dwukrotne kliknięcie uruchamia nowy START (proces działający przez cały czas pracy panelu sprawiał, że następne kliknięcia nic nie robiły) | CI: `open` dwa razy |
 | macOS: Apple Silicon i Intel | jeden START-MAC.app wybiera środowisko po `uname -m` i `sysctl.proc_translated` | CI na obu procesorach |
 | Gatekeeper, SmartScreen, antywirus | pliki Windows podpisane przez PSF; przed pilotażem poziomów 2–3 START-MAC.app z Apple Developer ID i notaryzacją, START-WINDOWS.exe z podpisem przez program SignPath dla projektów otwartych; do tego czasu instrukcja na USB podaje, jak uruchomić | do próby T1/T8 |
 | stara albo inna przeglądarka | ES2017, bez bibliotek, bez CSS z ostatnich lat; fonty systemowe z cyrylicą | do macierzy D04 |
-| drugi START | `instance.json` w katalogu stanu: drugi START prosi działającą instancję o nowy jednorazowy odnośnik (`POST /api/ticket` z tokenem panelu) i otwiera nim panel; sprawdzenie omija proxy systemu (laptopy firmowe) | kod |
+| drugi START | `instance.json` w katalogu stanu: drugi START prosi działającą instancję o nowy jednorazowy odnośnik (`POST /api/ticket` z tokenem panelu) i otwiera nim panel; sprawdzenie omija proxy systemu (laptopy firmowe). Działająca instancja trzyma blokadę pliku `instance.lock` (system zwalnia ją także po zabiciu procesu), więc szybki drugi START czeka do 30 s na instancję, która się jeszcze uruchamia, zamiast startować drugą | test |
+| błąd startu bez konsoli (pythonw, START-MAC.app) | aplikacja pokazuje okno systemu (MessageBoxW, osascript, zenity albo notify-send) z błędem startu albo z adresem panelu, gdy przeglądarka się nie otworzyła, i kończy się kodem 3; programy START pokazują własny komunikat tylko przy innych kodach | kod |
 | dwie czynności naraz (dwa przyciski, dwie karty) | jedna czynność na stacji naraz: nowy transfer przerwałby trwający | test |
 | port 8080 zajęty | dowolny wolny port; Windows bez SO_REUSEADDR, żeby nie współdzielić portu | kod |
-| uśpienie laptopa | Windows SetThreadExecutionState, macOS caffeinate, Linux systemd-inhibit | kod |
+| uśpienie laptopa i wygaszenie ekranu (blokada hasłem właściciela) | Windows SetThreadExecutionState, macOS caffeinate, Linux systemd-inhibit | kod |
 | polskie i ukraińskie znaki, ścieżki | `-X utf8`, funkcje „W” Windows, JSON bez sekwencji `\u` | testy |
 | pliki `._pth` | `._pth` obok interpretera wskazuje wspólną bibliotekę i włącza tryb izolowany (bez zmiennych środowiska i site-packages); CPython 3.14 czyta `._pth` na każdym systemie (`Modules/getpath.py`) | CI: autotest wypisuje użytą bibliotekę |
 
@@ -82,9 +86,9 @@ Archiwa czterech środowisk mają razem 102 MB (po rozpakowaniu około 300 MB). 
 |---|---|
 | jedna biblioteka standardowa dla wszystkich systemów, tylko moduły używane przez aplikację (ModuleFinder i pakiety używane wprost w całości), bajtkod `-OO` w ZIP | zmierzone: 320 modułów, 2,2 MB zamiast około 4 × 40 MB |
 | z każdego środowiska tylko interpreter i potrzebne moduły binarne: bez Tcl/Tk, testów, nagłówków, pip, TLS, OpenSSL na Windows (AES i PBKDF2 daje system); bez `libpython`, bo interpreter python-build-standalone jest zlinkowany statycznie i zawiera ją w sobie | zmierzone: Linux 32,5 MB, macOS arm64 18,9 MB, macOS x86_64 19,8 MB, Windows 10,2 MB (zamiast 66, 38, 40 i 16 MB z `libpython` i OpenSSL) |
-| aplikacja jako jeden ZIP ze źródłami | zmierzone: 36 KB |
+| aplikacja jako jeden ZIP ze źródłami | zmierzone 2026-10-21: 79 KB (z listą słów do haseł i panelem) |
 | jeden START-MAC.app zamiast dwóch | jedna ikona i jedna instrukcja dla użytkownika |
-| bez zewnętrznych bibliotek JS i CSS, fonty systemowe | panel: 47 KB z logo |
+| bez zewnętrznych bibliotek JS i CSS, fonty systemowe | panel: 69 KB z logo (przed kompresją w ZIP) |
 
 Zmierzona cała pamięć poza obrazem startowym Linuksa: 83,6 MB, z czego 81,3 MB to cztery interpretery, 2,2 MB wspólna biblioteka, a reszta to aplikacja, START i licencje. Szacunek przed pierwszym pomiarem (30–45 MB) nie uwzględniał, że interpretery python-build-standalone mają wkompilowane wszystkie moduły binarne. Rozmiar 84 MB przyjęty 2026-10-14. Budżet: 90 MB (`BUDGET` w build_usb.py; zadanie `size` w CI przerywa budowę po przekroczeniu), czyli zapas na drobne zmiany, a nie na nowe środowisko. SHA-256 bez OpenSSL zapewnia wbudowany moduł `_sha2`. Kompletność przyciętej biblioteki sprawdza `--selftest` na każdym systemie. Dwie luki znalezione w ten sposób przy budowie planu: `runpy` i `pkgutil` (start z ZIP) oraz `ctypes._layout` i `stringprep` (ładowane z kodu w C).
 
@@ -101,6 +105,8 @@ app/wici.pyz             aplikacja (źródła)
 runtime/python314.zip    wspólna biblioteka standardowa (bajtkod)
 runtime/<system>/        interpreter, moduły binarne, ._pth
 licenses/, sources/
+keys/                    konta i plik zestawu (tworzy panel przy przygotowaniu)
+kopia/                   zaszyfrowana kopia bazy (dwa pliki na zmianę)
 build-manifest.json      wersje, adresy i SHA-256 archiwów, SHA-256 każdego pliku, rozmiary części
 ```
 
@@ -158,17 +164,17 @@ Laptop nie uruchamia własnego serwera DHCP, DNS ani portalu przechwytującego, 
 
 | Etap | Zakres | Zależy od |
 |---|---|---|
-| 2: panel gospodarza (poziom 2) i tryb kiosku | `sync`, migawka, zdarzenia i `ack` z kursorem w SQLite; `submit`, `cancel`, `test`, `announce`, `mark_read`; `silence`, `close`, `destroy` z potwierdzeniem przyciskiem; niepewny wynik polecenia; logowanie hasłami z kopert (PBKDF2 z kryptografii systemu); kopia bazy na pamięci USB z opakowaniem klucza dla każdego konta, dwoma plikami na zmianę i numerem pokolenia; „Oddaj laptop”; przekazanie zmiany; strona mieszkańca w trybie kiosku na ekranie laptopa (formularz w trzech językach, lokalne numery, kolejka gospodarza), bo działa na każdym laptopie bez sieci | firmware z pełnym kontraktem w2 |
+| 2: panel gospodarza (poziom 2) i tryb kiosku | `sync`, migawka, zdarzenia i `ack` z kursorem w SQLite; `submit`, `cancel`, `test`, `announce`, `mark_read`; `silence`, `close`, `destroy` z potwierdzeniem przyciskiem; niepewny wynik polecenia; przekazanie zmiany; strona mieszkańca w trybie kiosku na ekranie laptopa (formularz w trzech językach, lokalne numery, kolejka gospodarza), bo działa na każdym laptopie bez sieci | firmware z pełnym kontraktem w2 |
 | 2a: przygotowanie, ciąg dalszy | PRZENIEŚ STACJĘ (pięć kroków z wycofaniem), aktualizacja oprogramowania stacji z podpisanego obrazu | firmware (F107) |
 | 3: strona dla telefonów (poziom 3) | wybór interfejsu i adresu (`getifaddrs`, `GetAdaptersAddresses` przez ctypes), nasłuch tylko na nim, tokeny mieszkańców, kody QR sieci i adresu (własny koder, kilka KB), plakat A4, reguła zapory Windows przez UAC, diagnostyka | etap 2; próba zapory na czystym Windows 11 |
-| 4: wydanie | parametry szyfrowania migawek, baza w pamięci (D13; bez SQLCipher i bez wolumenu wymagającego administratora), ZNISZCZ DANE na laptopie, obraz startowy Linuksa (Debian live z shim; droga dla laptopów z Windows bez administratora), podpis manifestu w CI, podpisy START, macierz D04 na prawdziwych laptopach | D13, D04 |
+| 4: wydanie | rozstrzygnięcie parametrów szyfrowania migawek w D13 (baza w pamięci już działa, bez SQLCipher i bez wolumenu wymagającego administratora), obraz startowy Linuksa (Debian live z shim; droga dla laptopów z Windows bez administratora), podpis manifestu w CI, podpisy START, macierz D04 na prawdziwych laptopach | D13, D04 |
 
 ## Próby na sprzęcie (do macierzy D04)
 
 CI sprawdza budowę i start na czystych systemach, ale nie zastąpi prawdziwych laptopów i stacji:
 
 1. Stacja pilotażowa przez USB na Windows 10, Windows 11, macOS Apple Silicon, macOS Intel, Ubuntu i Fedora: wykrycie, konfiguracja, karta, odłączenie przewodu w trakcie transferu.
-2. Start z pamięci FAT32 na każdym z nich, w tym Linux z automatycznym montowaniem (`showexec`).
+2. Start z pamięci FAT32 na każdym z nich, w tym Linux z automatycznym montowaniem (`showexec`). Na macOS zanotować, czy pojawia się pytanie o dostęp do plików na woluminie wymiennym („Removable Volumes”), od której wersji systemu i czy po odmowie aplikacja pokazuje czytelny komunikat.
 3. Laptop służbowy z kontem bez uprawnień administratora i z programem antywirusowym: tryb kiosku, komunikat o zaporze, uruchomienie Linuksa z USB.
 4. Najstarszy obsługiwany sprzęt: Windows 10 22H2 na laptopie z 4 GB RAM, Mac z Intelem na macOS 10.15.
 5. Ile przyniesionych laptopów pozwala uruchomić system z USB (menu startowe, Secure Boot, hasło BIOS-u): od tego zależy, jak często zadziała ścieżka 3.
@@ -182,7 +188,7 @@ CI sprawdza budowę i start na czystych systemach, ale nie zastąpi prawdziwych 
 | Python z biblioteką standardową, bez pyserial | port szeregowy to około 260 wierszy; każda zależność to kolejne licencje, wersje i pliki na USB |
 | python.org embeddable na Windows, python-build-standalone na macOS i Linuksie | embeddable ma pliki podpisane przez PSF (mniej fałszywych alarmów); dla macOS i Linuksa nie ma oficjalnego środowiska przenośnego |
 | wspólna biblioteka standardowa przez `._pth` | jedna kopia zamiast czterech; zapasowo każdy system może mieć własną kopię w `lib/python314.zip` (+2,2 MB na system) |
-| bajtkod biblioteki `-OO`, aplikacja jako źródła | biblioteka jest mniejsza; aplikacja zostaje czytelna i niezależna od wersji bajtkodu (36 KB) |
+| bajtkod biblioteki `-OO`, aplikacja jako źródła | biblioteka jest mniejsza; aplikacja zostaje czytelna i niezależna od wersji bajtkodu (79 KB) |
 | panel w przeglądarce | przeglądarka jest na każdym laptopie; ten sam mechanizm obsłuży stronę mieszkańca |
 | wyszukiwanie stacji po `hello` | działa przed przydziałem VID/PID i nie wysyła niczego do cudzych urządzeń |
 | odrzucone: Electron, Tauri, Go, Web Serial, okno natywne | uzasadnienia w poprzedniej analizie: waga, drugi język, brak trwałego zapisu i magazynu kluczy, dwa interfejsy |
@@ -198,7 +204,7 @@ CI sprawdza budowę i start na czystych systemach, ale nie zastąpi prawdziwych 
 | identyfikator USB z pid.codes (VID 0x1209) | darmowy dla otwartego sprzętu, niezależny od mikrokontrolera. Warunki ([pid.codes/howto](https://pid.codes/howto/), sprawdzone 2026-10-14): publiczne repozytorium z plikiem licencji, projekt płytki i oprogramowanie na uznanych licencjach otwartych (WICI: CERN-OHL-P i MIT); wniosek to pull request do `pidcodes/pidcodes.github.com` z plikami `org/<organizacja>/index.md` i `1209/<PID>/index.md` (pola `license` i `source`), PID spoza zakresów 0xxx i 1xxx; wniosek do akceptacji (2026-10-14) |
 | obraz startowy: Debian live z shim | Secure Boot, długie wsparcie, około 1–1,5 GB (2026-10-14) |
 | router obiektu, laptop przyniesiony na miejscu | [Laptop i router na miejscu](#laptop-i-router-na-miejscu) (2026-10-14) |
-| baza w pamięci procesu, zaszyfrowane migawki na dysku (łączone, przed potwierdzeniem zmiany) i na pamięci USB (w tle, najpóźniej 5 s po zmianie), „Oddaj laptop” usuwa migawki z dysku | baza otwarta na FAT32 lub exFAT mogłaby się uszkodzić przy wyrwaniu pamięci albo zaniku zasilania, a jawna baza na dysku zostałaby u właściciela laptopa; kopia pozwala przejść na inny laptop, a dane nie zostają u właściciela laptopa (2026-10-14). Kopia w dwóch plikach na zmianę z numerem pokolenia i historią sesji objętymi MAC, `fsync` (macOS `F_FULLFSYNC`); wygrywa kopia, która jest kontynuacją drugiej, więc laptop wracający po awarii nie nadpisuje nowszej; rozeszłe kopie wybiera człowiek, odrzucona zostaje na pamięci (2026-10-21). Zmierzone 2026-10-21 na MacBooku: 1000 zgłoszeń po 300 B (0,35 MB), 15 wątków po 10 zgłoszeń: 150 zmian w 21 migawkach, potwierdzenie najwyżej 20 ms |
+| baza w pamięci procesu, zaszyfrowane migawki na dysku (łączone, przed potwierdzeniem zmiany) i na pamięci USB (w tle, zaraz po migawce na dysku, na zmianę do dwóch plików), „Oddaj laptop” usuwa migawki z dysku | baza otwarta na FAT32 lub exFAT mogłaby się uszkodzić przy wyrwaniu pamięci albo zaniku zasilania, a jawna baza na dysku zostałaby u właściciela laptopa; kopia pozwala przejść na inny laptop, a dane nie zostają u właściciela laptopa (2026-10-14). Kopia w dwóch plikach na zmianę z numerem pokolenia i historią sesji objętymi MAC, `fsync` (macOS `F_FULLFSYNC`); wygrywa kopia, która jest kontynuacją drugiej, więc laptop wracający po awarii nie nadpisuje nowszej; rozeszłe kopie wybiera człowiek, odrzucona zostaje na pamięci (2026-10-21). Zmierzone 2026-10-21 na MacBooku: 1000 zgłoszeń po 300 B (0,35 MB), 15 wątków po 10 zgłoszeń: 150 zmian w 21 migawkach, potwierdzenie najwyżej 20 ms |
 | kopię otwiera hasło logowania konta | klucz danych opakowany dla każdego konta kluczem z PBKDF2(hasło konta, `keys/zestaw.key` i sól); poprawne odpakowanie jest sprawdzeniem hasła, bez osobnego skrótu do logowania, który dawałby to samo zgadywanie poza aplikacją; logowanie i tak jest potrzebne, więc wymiana laptopa nie dodaje kroku, a sama pamięć USB nie wystarcza; kto ją zabierze, może zgadywać hasła poza aplikacją, więc ochronę daje siła hasła (5 słów) i liczba iteracji PBKDF2 (2026-10-21) |
 | szyfr i PBKDF2 z kryptografii systemu | AES-256-CBC + HMAC-SHA256 i PBKDF2-HMAC-SHA256 z Windows CNG, macOS CommonCrypto i Linux libcrypto; 0 MB na pamięci, ten sam format wszędzie. Interpretery python-build-standalone ukrywają swoje OpenSSL: `ctypes.CDLL(None)` na macOS trafia do prywatnego `libboringssl` i miesza implementacje (sprawdzone 2026-10-21). Odrzucone: pakiet `cryptography` (+15–20 MB, od 49.0.0 bez Maców z Intelem), scrypt (na Windows +6 MB libcrypto) (2026-10-21) |
 | lista 4096 słów bez polskich liter do haseł z kopert | laptop przyniesiony na miejscu może nie mieć polskiego układu klawiatury; 4096 zamiast 7776, bo druga połowa listy 7776 to słowa rzadkie i śmieci z napisów; 5 słów to 60 bitów, 6 słów 72 bity. Formy podstawowe ze słownika odmian SJP.PL (CC BY 4.0; w repozytorium [sjp-lematy.txt](build/slowa/sjp-lematy.txt), bo SJP.PL usuwa poprzednie wydanie po opublikowaniu nowego) według częstości samej formy w FrequencyWords (OpenSubtitles 2018, CC BY-SA 4.0), bez 20 000 najczęstszych słów angielskich i bez [wykluczonych](build/slowa/wykluczone.txt); cała lista przejrzana ręcznie (2026-10-21) |

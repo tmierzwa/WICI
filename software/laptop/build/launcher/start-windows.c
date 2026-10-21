@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 // START-WINDOWS.exe: uruchamia aplikację WICI z pamięci USB bez instalowania czegokolwiek.
 // Szuka runtime\windows\pythonw.exe i app\wici.pyz obok siebie, przekazuje własne argumenty,
-// czeka na zakończenie i zwraca kod wyjścia (CI sprawdza w ten sposób --selftest).
+// czeka na zakończenie i zwraca kod wyjścia (CI sprawdza w ten sposób --selftest). Błędy startu pokazuje
+// sama aplikacja i kończy się kodem 3; START pokazuje komunikat przy innym kodzie różnym od 0 (Python nie
+// ruszył albo przerwał przed aplikacją), poza --selftest, które nie może czekać na kliknięcie w CI.
 // Kompilacja (MinGW-w64): x86_64-w64-mingw32-gcc -Os -s -municode -mwindows -o START-WINDOWS.exe start-windows.c
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -40,7 +42,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, PWSTR args, int show) {
     const wchar_t* extra = rest(GetCommandLineW());
     size_t len = wcslen(python) + wcslen(app) + wcslen(extra) + 32;
     wchar_t* cmd = (wchar_t*)HeapAlloc(GetProcessHeap(), 0, len * sizeof(wchar_t));
-    if (!cmd) return 1;
+    if (!cmd) { fail(L"Za mało pamięci, aby uruchomić aplikację WICI."); return 1; }
     swprintf(cmd, len, L"\"%ls\" -X utf8 \"%ls\" %ls", python, app, extra);
     STARTUPINFOW si;
     PROCESS_INFORMATION pi;
@@ -55,5 +57,12 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, PWSTR args, int show) {
     GetExitCodeProcess(pi.hProcess, &code);
     CloseHandle(pi.hThread);
     CloseHandle(pi.hProcess);
+    if (code != 0 && code != 3 && !wcsstr(extra, L"--selftest")) {
+        wchar_t text[200];
+        swprintf(text, sizeof(text) / sizeof(text[0]),
+                 L"Aplikacja WICI zakończyła się błędem (kod %lu). Uruchom START ponownie, a gdy to nie pomoże, użyj innego laptopa.",
+                 (unsigned long)code);
+        fail(text);
+    }
     return (int)code;
 }

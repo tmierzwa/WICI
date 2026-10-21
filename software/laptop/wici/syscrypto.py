@@ -104,15 +104,16 @@ class _Mac:
 
 class _Linux:
     def __init__(self):
-        for name in ("libcrypto.so.3", "libcrypto.so.1.1", "libcrypto.so.10"):
+        import ctypes.util
+        for name in ("libcrypto.so.3", "libcrypto.so.1.1", "libcrypto.so.10", "libcrypto.so.1.0.0", None):
             try:
-                lib = ctypes.CDLL(name)
+                # None: nazwa, którą zna system (ldconfig), gdy żadna z typowych nie pasuje
+                lib = ctypes.CDLL(name or ctypes.util.find_library("crypto") or "libcrypto.so")
                 break
             except OSError:
                 continue
         else:
-            raise CryptoError("brak systemowej biblioteki libcrypto (OpenSSL): użyj systemu Linux z pamięci USB "
-                              "albo innego laptopa")
+            raise CryptoError("brak systemowej biblioteki libcrypto (OpenSSL): użyj innego laptopa")
         p, i = ctypes.c_void_p, ctypes.c_int
         for name, res, args in (("EVP_CIPHER_CTX_new", p, []), ("EVP_CIPHER_CTX_free", None, [p]),
                                 ("EVP_aes_256_cbc", p, []), ("EVP_sha256", p, []),

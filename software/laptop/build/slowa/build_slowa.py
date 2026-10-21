@@ -6,11 +6,12 @@
 4096 words, so a password of 5 words carries 60 bits and the recovery password of 6 words 72 bits.
 A word is the base form of an entry of the SJP.PL inflection dictionary, 3 to 7 letters, without
 Polish letters (the laptop is any laptop brought on the spot, often without a Polish keyboard
-layout), not among the 20 000 most frequent English words and not excluded in wykluczone.txt
-(vulgar, offensive, death and violence, names, rare or odd words). Words are ranked by how often
-the base form itself appears in Polish film subtitles (FrequencyWords, OpenSubtitles 2018); the 4096 most
-frequent remain, in alphabetical order. The sources are pinned in zrodla.json with SHA-256 and
-cached in software/laptop/build/cache. The result is CC-BY-SA-4.0 (FrequencyWords is ShareAlike).
+layout) and without q, v, x (outside the Polish alphabet, only in loanwords), not among the
+20 000 most frequent English words and not excluded in wykluczone.txt (vulgar, offensive, death and
+violence, names, rare or odd words). Words are ranked by how often the base form itself appears in
+Polish film subtitles (FrequencyWords, OpenSubtitles 2018); the 4096 most frequent remain, in
+alphabetical order. The sources are pinned in zrodla.json with SHA-256 and cached in
+software/laptop/build/cache (build_usb.fetch). The result is CC-BY-SA-4.0 (FrequencyWords is ShareAlike).
 
 SJP.PL removes the previous release when it publishes a new one, so the base forms that can enter the
 list (3 to 7 letters, no Polish letters) are kept in sjp-lematy.txt (CC-BY-4.0); --sjp rebuilds that
@@ -21,17 +22,16 @@ file from the pinned release while it is still available. FrequencyWords is pinn
 """
 
 import argparse
-import hashlib
-import io
 import json
 import re
 import sys
-import urllib.request
 import zipfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-CACHE = HERE.parent / "cache"
+sys.path.insert(0, str(HERE.parent))
+from build_usb import fetch as fetch_pinned  # noqa: E402  (pobieranie z sumą SHA-256 i pamięcią podręczną)
+
 OUT = HERE.parents[1] / "wici" / "slowa.txt"
 LEMMAS = HERE / "sjp-lematy.txt"
 SOURCES = json.loads((HERE / "zrodla.json").read_text(encoding="utf-8"))
@@ -42,16 +42,7 @@ MIN_COUNT = 20                                           # wystąpienia form w n
 
 
 def fetch(name):
-    src = SOURCES[name]
-    path = CACHE / src["url"].rsplit("/", 1)[1]
-    if not path.exists() or hashlib.sha256(path.read_bytes()).hexdigest() != src["sha256"]:
-        CACHE.mkdir(parents=True, exist_ok=True)
-        with urllib.request.urlopen(src["url"], timeout=120) as r:
-            data = r.read()
-        if hashlib.sha256(data).hexdigest() != src["sha256"]:
-            sys.exit(f"{name}: suma SHA-256 niezgodna z zrodla.json")
-        path.write_bytes(data)
-    return path.read_bytes()
+    return fetch_pinned(SOURCES[name], name).read_bytes()
 
 
 def frequencies(data):
@@ -77,7 +68,7 @@ def exclusions():
 
 def sjp_lemmas():
     """Base forms of the pinned SJP.PL release that can enter the list."""
-    with zipfile.ZipFile(io.BytesIO(fetch("odmiany"))) as z:
+    with zipfile.ZipFile(fetch_pinned(SOURCES["odmiany"], "odmiany")) as z:
         odm = z.read("odm.txt").decode("utf-8")
     lemmas = {line.split(",", 1)[0].strip() for line in odm.splitlines()}
     return "".join(w + "\n" for w in sorted(w for w in lemmas if WORD.match(w)))
@@ -113,7 +104,7 @@ def main():
         LEMMAS.write_text(sjp_lemmas(), encoding="utf-8")
         print(f"{LEMMAS}: {len(LEMMAS.read_text(encoding='utf-8').split())} form podstawowych")
         return
-    if args.candidates:
+    if args.candidates is not None:
         print(" ".join(candidates()[:args.candidates]))
         return
     text = build()

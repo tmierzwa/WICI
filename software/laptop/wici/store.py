@@ -8,10 +8,11 @@ access code, only the SHA-256 of the configuration. It lives in the encrypted da
 (database.Database), which a login opens (session.Session).
 """
 
-import datetime
 import os
 import sys
 from pathlib import Path
+
+from . import database
 
 
 def state_dir():
@@ -51,7 +52,7 @@ class Journal:
         self.db = db
 
     def add(self, station, lxmf, op, ok, detail=""):
-        at = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        at = database._now()
         self.db.write(lambda c: c.execute("INSERT INTO journal (at, station, lxmf, op, ok, detail) VALUES (?,?,?,?,?,?)",
                                           (at, station or "", lxmf or "", op, 1 if ok else 0, detail)))
 
@@ -59,6 +60,3 @@ class Journal:
         rows = self.db.read(lambda c: c.execute("SELECT at, station, lxmf, op, ok, detail FROM journal "
                                                 "ORDER BY id DESC LIMIT ?", (limit,)).fetchall())
         return [dict(zip(("at", "station", "lxmf", "op", "ok", "detail"), r)) for r in rows]
-
-    def close(self):
-        self.db.close()

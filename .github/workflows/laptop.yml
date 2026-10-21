@@ -27,6 +27,7 @@ jobs:
         run: python -m unittest tests.test_laptop -v
 
   usb:
+    # Ścieżka ze spacją i polską literą: pamięć bywa zamontowana pod dowolną nazwą.
     strategy:
       fail-fast: false
       matrix:
@@ -36,51 +37,82 @@ jobs:
           - {os: macos-15, runtime: macos-arm64}
           - {os: macos-15-intel, runtime: macos-x86_64}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: '3.14'
+          python-version: '3.14.8'   # = "python" w software/laptop/build/runtimes.json (sprawdza test)
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: software/laptop/build/cache
+          key: usb-${{ matrix.runtime }}-${{ hashFiles('software/laptop/build/runtimes.json') }}
       - name: MinGW-w64 for START-WINDOWS.exe
         if: runner.os == 'Windows'
         shell: pwsh
         run: if (-not (Get-Command gcc -ErrorAction SilentlyContinue)) { choco install mingw -y --no-progress }
       - name: Build the USB tree (pinned runtimes, checked SHA-256)
-        run: python software/laptop/build/build_usb.py --out usb --only ${{ matrix.runtime }}
+        run: python software/laptop/build/build_usb.py --out "usb ż" --only ${{ matrix.runtime }}
       - name: Selftest through START (Linux)
         if: runner.os == 'Linux'
         run: |
-          sh usb/START-LINUX.sh --selftest | tee selftest.txt
-          grep -q "stdlib .*usb/runtime/python314.zip" selftest.txt
-          chmod -x usb/runtime/linux-x86_64/bin/python3.14   # pamięć bez prawa wykonywania: kopia do ~/.cache
-          sh usb/START-LINUX.sh --selftest | tee selftest-copy.txt
+          sh "usb ż/START-LINUX.sh" --selftest | tee selftest.txt
+          grep -q "stdlib .*usb .*/runtime/python314.zip" selftest.txt
+          chmod -x "usb ż/runtime/linux-x86_64/bin/python3.14"   # pamięć bez prawa wykonywania: kopia do ~/.cache
+          sh "usb ż/START-LINUX.sh" --selftest | tee selftest-copy.txt
           grep -q "stdlib .*/.cache/wici/.*/python314.zip" selftest-copy.txt
       - name: Selftest through START (macOS)
         if: runner.os == 'macOS'
+        timeout-minutes: 5
         run: |
-          usb/START-MAC.app/Contents/MacOS/START --selftest | tee selftest.txt
-          grep -q "stdlib .*usb/runtime/python314.zip" selftest.txt
+          "usb ż/START-MAC.app/Contents/MacOS/START" --selftest | tee selftest.txt
+          grep -q "stdlib .*usb .*/runtime/python314.zip" selftest.txt
+          # Jak po dwukrotnym kliknięciu: przez LaunchServices, dwa razy.
+          for i in 1 2; do
+            open -W --stdout "$PWD/open-$i.txt" --stderr "$PWD/open-$i.txt" "usb ż/START-MAC.app" --args --selftest
+            cat "open-$i.txt"
+            grep -q "selftest ok" "open-$i.txt"
+          done
+          # START kończy się, gdy aplikacja działa w tle, więc drugi START nie trafia do „już otwartego” programu
+          # i podaje adres panelu działającej aplikacji.
+          open --stdout "$PWD/run-1.txt" --stderr "$PWD/run-1.txt" "usb ż/START-MAC.app" --args --no-browser --http 0
+          sleep 5
+          open -W --stdout "$PWD/run-2.txt" --stderr "$PWD/run-2.txt" "usb ż/START-MAC.app" --args --no-browser
+          for _ in $(seq 30); do grep -q "http://127.0.0.1" run-2.txt && break; sleep 1; done
+          cat run-1.txt run-2.txt
+          pkill -f "app/wici.pyz" || true
+          grep -q "http://127.0.0.1" run-2.txt
       - name: Selftest through START (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
+        timeout-minutes: 5
         run: |
-          $p = Start-Process -FilePath usb\START-WINDOWS.exe -ArgumentList '--selftest' -Wait -PassThru
+          $p = Start-Process -FilePath "usb ż\START-WINDOWS.exe" -ArgumentList '--selftest' -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "START-WINDOWS.exe --selftest: $($p.ExitCode)" }
-          $out = & usb\runtime\windows\python.exe usb\app\wici.pyz --selftest
+          $out = & "usb ż\runtime\windows\python.exe" "usb ż\app\wici.pyz" --selftest
           $out
-          if (-not ($out -match 'usb\\runtime\\python314\.zip')) { throw 'shared standard library not on sys.path' }
+          if (-not ($out -match 'usb .*\\runtime\\python314\.zip')) { throw 'shared standard library not on sys.path' }
 
   size:
-    # Cała pamięć USB naraz: rozmiar każdej części i budżet z build_usb.py (BUDGET).
+    # Cała pamięć USB naraz: rozmiar każdej części i budżet z build_usb.py (BUDGET); drzewo jako artefakt.
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: '3.14'
+          python-version: '3.14.8'
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: software/laptop/build/cache
+          key: usb-all-${{ hashFiles('software/laptop/build/runtimes.json', 'software/laptop/build/slowa/zrodla.json') }}
       - name: MinGW-w64 cross compiler
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends gcc-mingw-w64-x86-64
       - name: Build every runtime and check the size budget
         run: python software/laptop/build/build_usb.py --out usb
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: wici-usb
+          path: usb
+          if-no-files-found: error
       - name: Word list matches its pinned sources and exclusions
         run: python software/laptop/build/slowa/build_slowa.py --check
