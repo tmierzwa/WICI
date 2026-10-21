@@ -62,7 +62,7 @@ def selftest():
     from importlib import resources
     from pathlib import Path
 
-    from . import configdoc
+    from . import configdoc, syscrypto
     from .web import STATIC
     checks = []
     for _, (name, _) in STATIC.items():
@@ -82,6 +82,7 @@ def selftest():
     checks.append(f"stdlib {os.path.normpath(next((p for p in sys.path if p.endswith('.zip')), '-'))}")
     assert unicodedata.normalize("NFC", "Szkoła") == "Szkoła"
     assert hashlib.sha256(b"").hexdigest().startswith("e3b0c442")
+    checks.append(f"crypto {syscrypto.selfcheck()}")
     assert configdoc.check({"role": "wezel", "ifac": "11" * 16, "radio": {"profile": "p1"}}) == []
     with tempfile.TemporaryDirectory() as tmp:
         journal = store.Journal(Path(tmp) / "j.sqlite")

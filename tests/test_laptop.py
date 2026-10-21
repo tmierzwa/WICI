@@ -30,7 +30,7 @@ LAPTOP = ROOT / "software" / "laptop"
 sys.path.insert(0, str(LAPTOP))
 sys.path.insert(0, str(ROOT / "software" / "reference"))
 
-from wici import configdoc, serialport, store, usbproto  # noqa: E402
+from wici import configdoc, serialport, store, syscrypto, usbproto  # noqa: E402
 from wici.prep import OperationError, Prep  # noqa: E402
 from wici.web import Panel, serve  # noqa: E402
 import reference  # noqa: E402
@@ -330,6 +330,31 @@ class SerialPortTest(unittest.TestCase):
             port.close()
             os.close(master)
             os.close(slave)
+
+
+class SysCryptoTest(unittest.TestCase):
+    """System AES and PBKDF2 (CNG, CommonCrypto, libcrypto): known answers and the sealed copy format."""
+
+    def test_known_answers_and_tampering(self):
+        self.assertIn(syscrypto.selfcheck(), ("windows", "mac", "linux"))
+
+    def test_pbkdf2_matches_hashlib(self):
+        if not hasattr(hashlib, "pbkdf2_hmac"):
+            self.skipTest("hashlib bez OpenSSL")
+        self.assertEqual(syscrypto.pbkdf2(b"haslo z koperty", b"sol", 1000),
+                         hashlib.pbkdf2_hmac("sha256", b"haslo z koperty", b"sol", 1000, 32))
+
+    def test_sealed_copy_is_fresh_and_bound(self):
+        key = bytes(range(64))
+        data = bytes(range(256)) * 1000
+        a, b = syscrypto.seal(key, data, b"gen 7"), syscrypto.seal(key, data, b"gen 7")
+        self.assertNotEqual(a, b)                                 # losowy IV przy każdym zapisie
+        self.assertEqual(syscrypto.open_(key, b, b"gen 7"), data)
+        for broken in (a[:1 + 16] + bytes([a[17] ^ 1]) + a[18:], b"\x02" + a[1:], a[:40]):
+            with self.assertRaises(syscrypto.CryptoError):
+                syscrypto.open_(key, broken, b"gen 7")
+        with self.assertRaises(syscrypto.CryptoError):
+            syscrypto.open_(bytes(64), a, b"gen 7")
 
 
 class JournalTest(unittest.TestCase):
