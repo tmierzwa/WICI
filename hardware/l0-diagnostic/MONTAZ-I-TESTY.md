@@ -24,7 +24,7 @@ Etapy są ułożone tak, żeby każdy błąd ujawnił się tam, gdzie jego usuni
 
 Przyporządkowanie sygnałów Wio do GPIO XIAO ESP32S3 potwierdzone na sprzęcie programem R0 (`hardware/radio-pair/src/main.cpp`): SCK GPIO7 (D8), MISO GPIO8 (D9), MOSI GPIO9 (D10), NSS GPIO41, DIO1 GPIO39, NRST GPIO42, BUSY GPIO40, RXEN GPIO38. TCXO 1,8 V zasila DIO3, tor nadawania przełącza DIO2.
 
-1. **Próba obu nowych zestawów Seeed przed rozebraniem** (zestaw A: Wio do L0, zestaw B: partner do prób). W `hardware/radio-pair`, według [README R0](../radio-pair/README.md#najpierw-przy-stole): antena przed zasileniem; kopia fabryczna każdego zestawu (`esptool … read_flash 0 0x800000`, około 16 min), program `pair-0.4` (`.venv/bin/pio run --target upload --upload-port PORT`), potem `.venv/bin/python tools/pair_test.py --a PORT_A --b PORT_B --count 100`. Warunek przejścia do adaptera: 100/100 w obie strony. Niepowodzenie: porównać każdy zestaw ze sprawdzonym zestawem R0 opiekuna, żeby wskazać wadliwy. Zestaw B zostaje w całości.
+1. **Próba zestawów przed rozebraniem** (A: Wio do L0, B: partner). Kopia fabryczna, `pair-0.4`, `tools/pair_test.py --a PORT_A --b PORT_B --count 100` ([README R0](../radio-pair/README.md#najpierw-przy-stole)). Warunek: 100/100 w obie strony. Niepowodzenie: każdy zestaw z zestawem R0 opiekuna. B nie rozbierać.
 2. Tabela niżej jest zgodna ze schematem Seeed „Wio-SX1262 for XIAO V1.0” (KiCad 8): J1 i J2 to listwy 1 × 7, raster 2,54 mm; J1.6, J1.7 i J2.7 niepodłączone. Na module R1 10 kΩ podciąga RST do +3V3; RF_SW1 (RXEN) nie ma rezystora do masy. Płytka w innej wersji: porównać z jej schematem przed lutowaniem. Kontrola bez schematu: ciągłość J2.6, J2.5, J2.4 do D8, D9, D10 na krawędzi XIAO (przy połączonym B2B).
 3. XIAO zdjąć ze złącza B2B (J3 na Wio) równomiernie, bez podważania jednego końca; XIAO zachować. J2.1 (VIN) nie podłączać. Dioda i przycisk na Wio są połączone tylko z J3, po odłączeniu XIAO nie działają.
 4. Przy Wio: 100 nF i 10 µF między 3V3 a GND, 10 kΩ z RXEN do GND. J2.3 (+3V3) z JP1.1 przez POWER_BREAK (listwa 1 × 2 ze zworką), J2.2 (GND) z J11.1.
@@ -108,11 +108,11 @@ Prąd nadawania trwa tyle co pakiet (dziesiątki ms) i multimetr go nie uchwyci:
 | `inputs` ≠ `00` w spoczynku (SW5 w położeniu PRACA) | mostek albo uszkodzony przycisk; bity: 0 GÓRA, 1 DÓŁ, 2 OK, 3 WSTECZ, 4 CISZA, 5 PREP |
 | Brzęczyk milczy | zworka JP2, Q1 i D2, biegunowość BZ1 |
 
-Podejrzenie modułu: najpierw zamiana na moduł z drugiego kompletu (drugi DevKitC; Wio z zestawu B, wtedy partnerem zostaje zestaw R0 opiekuna). Zapasowy panel tylko w ostateczności (termin dostawy 26–30 tygodni).
+Podejrzenie modułu: najpierw zamiana na moduł z drugiego kompletu (drugi DevKitC; Wio z zestawu B, partnerem zestaw R0 opiekuna). Zapasowy panel tylko w ostateczności (termin dostawy 26–30 tygodni).
 
 ## 5. Próby
 
-Pełny opis poleceń: [instrukcja programu L0](README.md#kolejność-prób-po-montażu). **FRAMTEST, GUARD i MIX niszczą zawartość FRAM**, dlatego retencję (E3) wykonuje się przed E4 i E6. Partner: zestaw B z programem R0 `pair-0.4`, sprawdzony w kroku 1 rozdziału 2; anteny założone, odległość 2–3 m. Zachować wszystkie logi i pliki JSON z `results/`. Pole `physical_acceptance=false` w JSON jest zamierzone: oględziny i przebiegi z oscyloskopu ocenia się osobno.
+Pełny opis poleceń: [instrukcja programu L0](README.md#kolejność-prób-po-montażu). **FRAMTEST, GUARD i MIX niszczą zawartość FRAM**, dlatego retencję (E3) wykonuje się przed E4 i E6. Partner: zestaw B (`pair-0.4`); anteny założone, odległość 2–3 m. Zachować wszystkie logi i pliki JSON z `results/`. Pole `physical_acceptance=false` w JSON jest zamierzone: oględziny i przebiegi z oscyloskopu ocenia się osobno.
 
 | Próba | Wykonanie | Warunek zaliczenia |
 |---|---|---|
