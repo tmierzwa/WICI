@@ -38,8 +38,8 @@ public:
     int32_t frequencyOffsetRaw() override;
     double frequencyStepHz() const override;
     bool frequencyErrorHz(int32_t&) override { return false; }  // AFC_CORR bez jednostki w karcie
-    uint32_t frameAirMs(size_t length) const override { return radiolink::p1FrameAirMs(length, p1s2::SYMBOL_RATE); }
-    double onAirMs(size_t length) const override { return length * 8 * 1000.0 / p1s2::SYMBOL_RATE; }
+    uint32_t frameAirMs(size_t length) const override { return radiolink::p1FrameAirMs(length); }
+    double onAirMs(size_t length) const override { return length * 8 * 1000.0 / radiolink::P1_SYMBOL_RATE; }
     size_t maxTestLength() const override { return p1frame::MAX_FRAME; }
     uint32_t seriesMaxMs() const override { return radiolink::P1_SERIES_MAX_MS; }
     bool p1Link() const override { return true; }

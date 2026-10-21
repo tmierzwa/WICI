@@ -43,7 +43,7 @@ constexpr uint32_t FORMAT_BASE = RESERVE_BASE + RING_SPAN;
 constexpr uint32_t PREP_BASE = FORMAT_BASE + RING_SPAN;
 constexpr uint32_t PREP_SLOTS = 10;       // 240 B między pierścieniem formatu a dziennikiem zdarzeń
 constexpr uint32_t EVENT_BASE = 0x001000;
-constexpr uint32_t EVENT_SLOTS = 512;  // 512 x 64 B = 32 KiB (oprogramowanie.md)
+constexpr uint32_t EVENT_SLOTS = 512;  // 512 wpisów x 64 B = 32 KiB, ile 64 bloki x 512 B w oprogramowanie.md
 constexpr size_t EVENT_RECORD = 64;
 constexpr size_t EVENT_TEXT = 53;
 constexpr uint8_t COMMITTED = 0xA5;

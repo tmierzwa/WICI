@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-// WICI, stanowiska deweloperskie A i B: oprogramowanie stacji ze stosem Reticulum (bez LXMF).
+// WICI, stanowiska deweloperskie A i B oraz stacja pilotażowa L0: oprogramowanie stacji ze stosem
+// Reticulum (bez LXMF).
 // Zakres: USB z dwoma interfejsami CDC (diagnostyka z poleceniami tekstowymi i dane z protokołem
 // laptop–stacja "usb":2 nad rejestrem, skrzynką, pierścieniem zdarzeń i konfiguracją w FRAM, usbproto.h),
 // identyfikacja radia i FRAM przez SPI, konfiguracja rejestrów profilu P1 z weryfikacją odczytu,
@@ -14,7 +15,8 @@
 // poza trybem przygotowania interfejs danych przenosi pakiety Reticulum do komputera stanowiska
 // w ramkach KISS (rns_node.h, kiss.h), a ekran pokazuje kontakt z komputerem.
 // Wykonania: bench-a (nRF52840-DK + CC1120EM na przewodach), bench-n1 (to samo na płytce N1),
-// bench-b (ESP32-S3-DevKitC-1 + X-NUCLEO-S2868A2 z S2-LP na N1). Zależne od MCU części są
+// bench-b (ESP32-S3-DevKitC-1 + X-NUCLEO-S2868A2 z S2-LP na N1), l0 (ESP32-S3-DevKitC-1 + Wio-SX1262
+// na N1, profil LoRa: polecenia pomiarowe bez łącza P1, README, "Stacja L0"). Zależne od MCU części są
 // w platform_*.cpp, zależne od układu radiowego w radio_console_*.cpp i *_link.cpp.
 #include <Arduino.h>
 #include <SPI.h>
@@ -133,7 +135,7 @@ const int16_t leds[] = {board::LED_HEARTBEAT, board::LED_RADIO, board::LED_FRAM,
 // Diody DK aktywne stanem niskim; -1: płytka bez diody (stanowisko B).
 void ledWrite(int16_t pin, bool on);
 
-// Zapis dziennika nie powiódł się: dziennik wyłączony (LED3 gaśnie), jak przy zegarze i ustawieniach.
+// Zapis dziennika nie powiódł się: dziennik wyłączony (LED3 gaśnie); zegar, ustawienia, tryb przygotowania.
 void journalFailed() {
     journalOk = false;
     ledWrite(board::LED_FRAM, false);
@@ -681,10 +683,7 @@ void persistScreen() {
     const uint32_t flags = SETTINGS_FLAGS | (screenModel.muted() ? SETTINGS_MUTED : 0) |
                            ((static_cast<uint32_t>(stationStore.selectedAddress()) << SETTINGS_OBJECT_SHIFT) & SETTINGS_OBJECT_MASK);
     const journal::SmallRecord& saved = stationJournal.settings();
-    if (journalOk && (saved.a != lang || saved.b != flags) && !stationJournal.writeSettings(lang, flags)) {
-        journalOk = false;
-        ledWrite(board::LED_FRAM, false);
-    }
+    if (journalOk && (saved.a != lang || saved.b != flags) && !stationJournal.writeSettings(lang, flags)) journalFailed();
 }
 
 // Nazwa wyświetlana: 6 cyfr szesnastkowych skrótu tożsamości (oprogramowanie.md, "Tryby kryzysowe");
@@ -1381,10 +1380,7 @@ void stationLoop() {
     static uint32_t lastClock = 0;
     if (journalOk && !destroyed && now - lastClock >= CLOCK_WRITE_MS) {
         lastClock = now;
-        if (!stationJournal.writeClock(counterS())) {
-            journalOk = false;
-            ledWrite(board::LED_FRAM, false);
-        }
+        if (!stationJournal.writeClock(counterS())) journalFailed();
     }
     bench.p1Ready = radio;
     // Także przy układzie uznanym za niesprawny w trakcie nośnej albo serii (np. polecenie RADIO):
