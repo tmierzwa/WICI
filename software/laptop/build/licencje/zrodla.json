@@ -1,0 +1,24 @@
+{
+  "python": "3.14.8",
+  "pbs_release": "20261009",
+  "note": "Licencje bibliotek wkompilowanych w interpreter python-build-standalone (macOS, Linux) i kodu wbudowanego w CPython (wszystkie systemy). Przy zmianie wersji w runtimes.json pobierz pliki ponownie z tych źródeł.",
+  "pbs": {
+    "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261009/cpython-3.14.8%2B20261009-x86_64-unknown-linux-gnu-pgo%2Blto-full.tar.zst",
+    "sha256": "d4d83a2dbb9b7ee12373219113e9aa59ad943b8d381a43837209945bb5596e66",
+    "from": "python/licenses/, wybór według python/PYTHON.json: moduły wbudowane w interpreter (bez _dbm i _tkinter, które zostają poza pamięcią); te same pliki w archiwum aarch64-apple-darwin (sha256 6888111560a89c16e471894cca0f50d66f3bc00e5a16e91fab24c50e567ef5ee)",
+    "files": ["LICENSE.bzip2.txt", "LICENSE.expat.txt", "LICENSE.libedit.txt", "LICENSE.libffi.txt", "LICENSE.liblzma.txt",
+              "LICENSE.libuuid.txt", "LICENSE.mpdecimal.txt", "LICENSE.ncurses.txt", "LICENSE.openssl-3.txt",
+              "LICENSE.sqlite.txt", "LICENSE.zlib.txt"],
+    "left_out": "LICENSE.openssl-1.1.txt (wbudowany jest OpenSSL 3), LICENSE.tcl.txt, LICENSE.tix.txt, LICENSE.libX11.txt, LICENSE.libXau.txt, LICENSE.libxcb.txt (tylko _tkinter), LICENSE.bdb.txt (tylko _dbm), LICENSE.cpython.txt (na pamięci jest LICENSE.txt z archiwum środowiska)"
+  },
+  "zstd": {
+    "file": "LICENSE.zstd.txt",
+    "from": "LICENSE.txt w python-3.14.8-embed-amd64.zip (runtimes.json), sekcja „BSD License For Zstandard software”: PYTHON.json wskazuje LICENSE.zstd.txt, którego w archiwum PBS nie ma"
+  },
+  "cpython": {
+    "file": "LICENSE.cpython-3.14.8.rst",
+    "url": "https://raw.githubusercontent.com/python/cpython/v3.14.8/Doc/license.rst",
+    "sha256": "cd6f471c0bfdb099efefc25ddff9b3df8bf62e10428987f1f05e6f2f9e35d563",
+    "from": "licencje kodu wbudowanego w CPython (Mersenne Twister, SipHash24, strtod i dtoa, libmpdec, mimalloc, Unicode Character Database i inne); nie ma ich w LICENSE.txt środowisk"
+  }
+}
