@@ -254,6 +254,7 @@
   "firmware/patches/microReticulum/0001-pool-without-full-walk.patch": "8b3b99e2f8f5b326284732bf8d687cb05ba06f65580b4b364c03c55d88e17135",
   "firmware/patches/microReticulum/0002-short-packet-hashes.patch": "bc0859acdd3218f935781f1faab90ed157c6e694538c9fa2b57b60634620c0ab",
   "firmware/patches/microReticulum/0003-build-without-neighbor-probing.patch": "af484e658e6e73fcf0b9d6a1c209199cee8745861354a6b8374cd4efa7338a12",
+  "firmware/patches/microReticulum/0004-memory-fixed-width-includes.patch": "428ecf4c208c56b03409351dbfc594f3cc8c6fc266adc8e9da324ca8496436c0",
   "firmware/patches/microStore/0001-keep-pinned-keys.patch": "4db4ed7a6b893ea56de87a6daa3c2bb74acbd6e498a08750fb465f84c049aa07",
   "software/simulator/hal/Arduino.h": "784605af32b66a5b54e73b34f82f441514ee8d1d4fdc1b9a34ce987e760a4c57",
   "software/simulator/hal/Print.h": "8506f23a05027ebdc814db0d6a32ee8a1ba9883daa368b76595a9403d94dca5b",
