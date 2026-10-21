@@ -226,6 +226,7 @@ struct BenchServices : station::Services {
     uint32_t send(const uint8_t to[store::HASH], const uint8_t* data, size_t length, uint32_t timeoutS) override {
         return rnsnode::send(to, data, length, timeoutS);
     }
+    bool sendReady(const uint8_t to[store::HASH]) override { return rnsnode::sendReady(to); }
     void randomBytes(uint8_t* out, size_t count) override { stationRandom(out, count); }
     void log(const char* text) override { bench.log(text); }
     void address(uint8_t out[store::HASH]) override { memcpy(out, rnsnode::address(), store::HASH); }

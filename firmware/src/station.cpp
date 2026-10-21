@@ -175,8 +175,20 @@ bool Station::transmit(uint16_t slot) {
     hexstr::encode(to, store::HASH, target);
     const int n = snprintf(packet, sizeof(packet), "[\"WICI\",1,\"%s\",\"%s\",%s]", from, target, r.sa1);
     if (n <= 0 || static_cast<size_t>(n) > PACKET_MAX) return false;   // SA1 ≤256 B: nie zdarza się
-    // `nadane` i etap zatwierdzone przed przekazaniem do stosu; po restarcie w trakcie próba wraca po 60 s.
     const uint32_t nowS = store_.now();
+    if (!services_.sendReady(to)) {
+        // Stos nie przyjmie pakietu (cel bez trasy: zapytanie wysłane; pełna kolejka; brak IFAC): próba
+        // bez przekazania, więc `nadane`, etap, liczba prób i czas pierwszego nadania zostają, a ANULUJ
+        // WYSYŁKĘ działa dalej (oprogramowanie.md, cykl życia zgłoszenia).
+        ++stats_.failed;
+        r.nextTryS = nowS + retryDelayS(r.attempts, false, r.firstSentS ? nowS - r.firstSentS : 0, random32());
+        store::Tx retry(store_);
+        retry.request(slot, r, false);
+        retry.commit();
+        services_.changed();
+        return false;
+    }
+    // `nadane` i etap zatwierdzone przed przekazaniem do stosu; po restarcie w trakcie próba wraca po 60 s.
     const bool backup = store_.meta().receiver == config::BACKUP;
     const bool retarget = backupFlag(r) != backup;
     StageCode code = StageCode::SENDING;
@@ -195,7 +207,7 @@ bool Station::transmit(uint16_t slot) {
     if (!tx.commit()) { services_.log("send: store write failed"); return false; }
     const uint32_t handle = services_.send(to, reinterpret_cast<const uint8_t*>(packet), static_cast<size_t>(n), ACK_TIMEOUT_S);
     if (!handle) {
-        // Stos odmówił (cel bez trasy, pełna kolejka, brak IFAC): próba nieudana.
+        // Stos odmówił mimo sendReady (błąd pakietu albo potwierdzenia w stosie): próba nieudana.
         ++stats_.failed;
         r.nextTryS = nowS + retryDelayS(r.attempts, false, nowS - r.firstSentS, random32());
         store::Tx retry(store_);

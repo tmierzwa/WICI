@@ -140,6 +140,10 @@ bool announce(const uint8_t* appData, size_t length);
 // odmówił (pełna kolejka, brak IFAC). timeoutS: najkrótszy limit potwierdzenia; stos wydłuża go do
 // max(RECEIPT_MIN_S, 2 x skoki x 13 x czas TX datagramu 600 B + dług ciszy + kolejka P1).
 uint32_t send(const uint8_t destination[HASH], const uint8_t* data, size_t length, uint32_t timeoutS);
+// Interfejs przyjmie teraz pakiet do celu (stos działa, IFAC, miejsce w kolejce, tożsamość celu
+// znana); przy nieznanej tożsamości wysyła zapytanie o trasę. Warstwa aplikacji pyta przed
+// zapisem znacznika `nadane`, więc odmowa nie blokuje ANULUJ WYSYŁKĘ.
+bool sendReady(const uint8_t destination[HASH]);
 bool knows(const uint8_t destination[HASH]);   // tożsamość celu znana z ogłoszenia
 bool hasPath(const uint8_t destination[HASH]);
 void requestPath(const uint8_t destination[HASH]);
