@@ -19,17 +19,19 @@ Stacja pilotażowa składa się z gotowych modułów połączonych przewodami w 
 | obudowa | kupiona, IP40 lub lepsza, z przepustem anteny i 12 V, z odciążeniem przewodów; koszyk 4 × AA dostępny bez narzędzi | do wyboru z wymiarów modułów |
 | antena | zewnętrzna 868 MHz, zysk ≤6 dBi, zwarta dla prądu stałego, z odgromnikiem przy wejściu do budynku ([radio](radio.md#dwa-wykonania)) | jak w etapie 0 |
 
-**Seeed XIAO ESP32S3 z Wio-SX1262 wobec wymagań (2026-10-21, z dokumentów producenta i programu R0, bez pomiaru):**
+**Kandydaci wobec wymagań (2026-10-21; z dokumentacji producentów i definicji płytek w oprogramowaniu Meshtastic i `rnodeconf`, bez pomiaru):**
 
-| Wymaganie | Stan |
-|---|---|
-| ESP32-S3, SX1262 z TCXO, flash ≥8 MiB, USB-C do USB-OTG, złącze anteny | spełnione: 8 MB flash, TCXO 1,8 V z DIO3, u.FL na Wio |
-| VBUS oddzielony od szyny 5 V diodą na płytce | niepotwierdzone: pin 5V jest według producenta siecią VBUS, a producent zaleca diodę po stronie zewnętrznego źródła; diody na płytce nie podaje. Przy podłączonym laptopie VBUS zasilałby szynę 5 V stacji z C ≥1000 µF. Rozstrzyga schemat XIAO albo pomiar |
-| wyprowadzenia dla stacji | niewystarczające bez rozszerzenia: wolne są tylko D0–D7 (GPIO1–6, 43, 44), bo D8–D10 to SPI wspólne z Wio, a NSS, NRST, BUSY, DIO1 i RXEN zajmują GPIO38–42 przez złącze B2B. Stacja potrzebuje 16–17 sygnałów: CS FRAM i ekranu, EXTCOMIN, DISP, LED, brzęczyk, 4 przyciski, CISZA, przycisk przygotowania, INT i KILL wyłącznika, 2 wejścia ADC (AA, 12 V), ewentualnie odłączanie dzielników. Brakuje 8–9: potrzebny ekspander I/O albo przyciski na drabince rezystorowej (CISZA zostaje na własnym wejściu). GPIO43/44 to UART0 (komunikaty ROM przy starcie), więc tylko jako wejścia |
-| deklaracja zgodności UE | nie znaleziona |
-| oprogramowanie RNode | `rnodeconf` (Reticulum `e40191b`) obsługuje płytkę (model 0xDD, 850–950 MHz), z ostrzeżeniem producenta, że to wsparcie eksperymentalne |
+| Wymaganie | RAK3312 + płytka bazowa WisBlock | Heltec WiFi LoRa 32 V3.2 | LILYGO T3-S3 SX1262 | Seeed XIAO ESP32S3 + Wio-SX1262 |
+|---|---|---|---|---|
+| flash ≥8 MiB | ✅ 16 MB (+ 8 MB PSRAM) | ✅ 8 MB (ESP32-S3FN8) | ❌ 4 MB (ESP32-S3FH4R2) | ✅ 8 MB |
+| USB-C do USB-OTG (dwa interfejsy CDC, [radio](radio.md#usb-do-laptopa)) | ✅ natywne USB | ❌ USB-C przez mostek CP2102 na UART0; D+/D− ESP32-S3 według analizy pinów niepołączone ze złączem | ✅ natywne USB | ✅ natywne USB |
+| SX1262 z TCXO | ✅ TCXO 1,8 V z DIO3 | ✅ TCXO 1,8 V z DIO3 | ✅ TCXO 1,8 V z DIO3 | ✅ TCXO 1,8 V z DIO3 |
+| VBUS oddzielony od szyny 5 V diodą | ❓ do sprawdzenia na schemacie płytki bazowej | ❓ do sprawdzenia | ❓ do sprawdzenia | ❌ według producenta pin 5V to VBUS, diodę daje się po stronie zewnętrznego źródła; szyna 5 V stacji podawałaby napięcie na VBUS, a stacja nie wykryje hosta |
+| wolne linie poza SPI radia (stacja potrzebuje 16–17: CS FRAM i ekranu, EXTCOMIN, DISP, LED, brzęczyk, 4 przyciski, CISZA, przygotowanie, INT i KILL, 2 × ADC) | ⚠️ około 14 przez złącza WisBlock (IO1–IO6, A0, SPI, 2 × I2C, UART), dostęp przez moduł IO; brakujące przez ekspander I2C | ✅ kilkanaście na listwach (liczba do potwierdzenia na schemacie) | ⚠️ kilka (QWIIC, złącze 2 × 13), część zajęta przez kartę SD | ❌ 8 (D0–D7), potrzebny ekspander |
+| oprogramowanie RNode (`rnodeconf`, Reticulum `e40191b`) | ❌ brak | ✅ | ✅ | ⚠️ eksperymentalne |
+| deklaracja zgodności UE | sprawozdanie z oceny RED modułu; deklaracji płytki nie znaleziono | nie znaleziona | nie znaleziona | nie znaleziona |
 
-Wniosek: płytka nadaje się do prób przy stole (R0) i jako wzorzec RNode, a na stację pilotażową tylko z ekspanderem I/O i potwierdzonym oddzieleniem VBUS. Kandydaci z większą liczbą wolnych GPIO mają w tym przewagę. Źródła: [mapa pinów XIAO ESP32S3](https://wiki.seeedstudio.com/xiao_esp32s3_pin_multiplexing/), [zasilanie przez pin 5V](https://forum.seeedstudio.com/t/how-to-power-xiao-esp32s3-from-5v-vin-vbus-with-diode/281611), [rnodeconf](https://github.com/markqvist/Reticulum/blob/e40191b/RNS/Utilities/rnodeconf.py), [program R0](../../hardware/radio-pair/src/main.cpp).
+Wniosek: wymagania płytki spełnia w pełni tylko RAK3312, pod warunkiem potwierdzenia VBUS i wyprowadzeń na płytce bazowej. Heltec V3.2 odpada przez USB (bez USB-OTG nie ma dwóch interfejsów CDC), T3-S3 przez 4 MB flash, XIAO przez VBUS i liczbę wyprowadzeń. Heltec, T3-S3 i XIAO nadają się jako urządzenia RNode do etapu 0 i T3. Do W14 (dwa źródła zakupu) potrzebny jest drugi kandydat spełniający wymagania. Źródła: [definicje płytek Meshtastic](https://github.com/meshtastic/firmware/tree/master/variants/esp32s3), [rnodeconf](https://github.com/markqvist/Reticulum/blob/e40191b/RNS/Utilities/rnodeconf.py), [LILYGO T3-S3](https://github.com/Xinyuan-LilyGO/LilyGo-LoRa-Series/blob/master/docs/en/t3_s3_sx1262/t3_s3_sx1262_hw.md), [RAK3312](https://docs.rakwireless.com/product-categories/wisblock/rak3312/datasheet/), [Heltec V3.2](https://resource.heltec.cn/download/WiFi_LoRa_32_V3/HTIT-WB32LA_V3.2.pdf), [Heltec V3: USB i piny](https://www.espboards.dev/esp32/heltec-wifi-lora-32-v3/), [Heltec V3: piny w ESPHome](https://devices.esphome.io/devices/heltec-wifi-lora-32-v3/), [XIAO ESP32S3: piny](https://wiki.seeedstudio.com/xiao_esp32s3_pin_multiplexing/), [XIAO: zasilanie przez pin 5V](https://forum.seeedstudio.com/t/how-to-power-xiao-esp32s3-from-5v-vin-vbus-with-diode/281611), [program R0](../../hardware/radio-pair/src/main.cpp).
 
 ### Tor zasilania
 
