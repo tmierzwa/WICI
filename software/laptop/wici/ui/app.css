@@ -91,6 +91,8 @@ main { max-width: 980px; margin: 0 auto; padding: 20px 20px 40px; display: flex;
 .btn:active { transform: translateY(1px); }
 .btn-primary { background: var(--ink); color: var(--on-ink); border-color: var(--ink); }
 .btn-primary:hover { background: var(--ink); opacity: 0.88; }
+.btn-danger { background: var(--alarm); color: var(--on-ink); border-color: var(--alarm); }
+.btn-danger:hover { background: var(--alarm); opacity: 0.88; }
 .btn-ghost { border-color: transparent; background: transparent; color: var(--muted); padding-left: 8px; padding-right: 8px; }
 .btn-ghost:hover { color: var(--text); background: var(--surface-2); }
 .btn[aria-busy="true"] { opacity: 0.6; cursor: progress; }

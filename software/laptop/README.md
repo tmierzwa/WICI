@@ -1,6 +1,6 @@
 # Aplikacja laptopa WICI
 
-Panel w przeglądarce do pracy ze stacją przez USB, uruchamiany z pamięci USB zestawu na Windows, macOS i Linuksie, bez instalowania. Etap 1 obsługuje tryb przygotowania: konfigurację stacji i węzła stanowiska, odczyt konfiguracji i kartę stacji. Zakres, decyzje, rozmiar, laptop i router na miejscu oraz dalsze etapy opisuje [plan](PLAN.md); kontrakt ze stacją jest w [protokole USB](../../docs/spec/protokol-usb.md).
+Panel w przeglądarce do pracy ze stacją przez USB, uruchamiany z pamięci USB zestawu na Windows, macOS i Linuksie, bez instalowania. Obsługuje tryb przygotowania (konfigurację stacji i węzła stanowiska, odczyt konfiguracji i kartę stacji) oraz zestaw na pamięci USB: konta i hasła z kopert, logowanie, zaszyfrowaną bazę z dziennikiem, „Oddaj laptop” i ZNISZCZ DANE. Zakres, decyzje, rozmiar, laptop i router na miejscu oraz dalsze etapy opisuje [plan](PLAN.md); kontrakt ze stacją jest w [protokole USB](../../docs/spec/protokol-usb.md).
 
 ## Uruchomienie podczas pracy nad kodem
 
@@ -14,9 +14,11 @@ python3 -m wici --port /dev/ttyACM1  # wskazany port (Windows: COM5)
 Bez płytki: stacja z symulatora (obraz firmware bench-b w WebAssembly, wymaga Node.js) z portem danych na TCP.
 
 ```sh
-node dev/sim-station.mjs 7300        # w drugim terminalu; polecenie `prep` przytrzymuje przycisk przygotowania
+node dev/sim-station.mjs 7300        # w drugim terminalu; `prep` przytrzymuje przycisk przygotowania, `press OK` naciska OK
 python3 -m wici --port tcp:127.0.0.1:7300
 ```
+
+Uruchomiony ze źródeł panel trzyma konta i kopię bazy w katalogu `pamiec-usb` w katalogu stanu laptopa; `WICI_USB` wskazuje inny katalog jako pamięć zestawu, a `WICI_STATE` inny katalog stanu.
 
 ## Testy
 
@@ -24,7 +26,7 @@ python3 -m wici --port tcp:127.0.0.1:7300
 python3 -m unittest tests.test_laptop -v   # z katalogu głównego repozytorium
 ```
 
-Testy obejmują reguły dokumentu `configure` (także zgodność z regułą tekstu SA1 modelu wzorcowego), klienta protokołu, struktury kernel32, dziennik, zabezpieczenia panelu, budowę pamięci USB (z Pythonem 3.14) i pełne przygotowanie stacji na obrazie firmware (z Node.js). Workflow [Laptop](../../.github/workflows/laptop.yml) uruchamia je na Windows, macOS i Linuksie, a pamięć USB buduje i uruchamia przez START na każdym systemie.
+Testy obejmują reguły dokumentu `configure` (także zgodność z regułą tekstu SA1 modelu wzorcowego), klienta protokołu, struktury kernel32, zaszyfrowaną bazę i zestaw, listę słów, zabezpieczenia panelu, budowę pamięci USB (z Pythonem 3.14) oraz pełne przygotowanie stacji i ZNISZCZ DANE na obrazie firmware (z Node.js). Workflow [Laptop](../../.github/workflows/laptop.yml) uruchamia je na Windows, macOS i Linuksie, a pamięć USB buduje i uruchamia przez START na każdym systemie.
 
 ## Pamięć USB
 

@@ -6,7 +6,8 @@
 //   python3 -m wici --port tcp:127.0.0.1:7300        (z katalogu software/laptop)
 //
 // Zegar stacji biegnie w czasie rzeczywistym. Połączenie TCP = port otwarty przez komputer (DTR).
-// Polecenia na stdin: `prep` (przytrzymanie przycisku przygotowania 3,2 s), `screen`, `state`, `quit`.
+// Polecenia na stdin: `prep` (przytrzymanie przycisku przygotowania 3,2 s), `press OK|BACK|UP|DOWN` (120 ms),
+// `screen`, `state`, `quit`.
 // Pierwszy wiersz na stdout: `listening <port>`.
 import net from "node:net";
 import readline from "node:readline";
@@ -16,7 +17,7 @@ const QUANTUM_US = 10000;
 const device = new Device("stacja", Number(process.env.WICI_SIM_SEED || 1));
 await device.powerOn(0);
 const started = performance.now();
-let nowUs = 0, client = null, holdUntil = 0;
+let nowUs = 0, client = null, holdUntil = 0, release = null;   // release: [pin, czas puszczenia]
 
 function worldUs() { return Math.floor((performance.now() - started) * 1000); }
 
@@ -28,6 +29,10 @@ async function tick() {
     if (holdUntil && nowUs >= holdUntil) {
       device.setInput(device.pins.PREP, 1);
       holdUntil = 0;
+    }
+    if (release && nowUs >= release[1]) {
+      device.setInput(release[0], 1);
+      release = null;
     }
   }
   const out = device.usbRead(1);
@@ -58,6 +63,10 @@ readline.createInterface({ input: process.stdin }).on("line", (line) => {
     device.setInput(device.pins.PREP, 0);
     holdUntil = nowUs + 3200000;
     console.log("prep held");
+  } else if (cmd.startsWith("press ") && cmd.slice(6) in device.pins) {
+    device.setInput(device.pins[cmd.slice(6)], 0);
+    release = [device.pins[cmd.slice(6)], nowUs + 120000];
+    console.log("pressed");
   } else if (cmd === "screen") {
     console.log(device.cmd("screen"));
   } else if (cmd === "state") {

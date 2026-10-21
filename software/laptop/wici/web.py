@@ -65,7 +65,8 @@ class Panel:
                 self.cond.wait(LONG_POLL)
             version = self.version
         return {"v": version, "station": self.station.state, "session": self.session.describe(),
-                "journal": self.session.recent(), "app": self.info}
+                "journal": self.session.recent(), "destroy": self.prep.destroy_state if self.prep else None,
+                "app": self.info}
 
 
 def make_handler(panel):
@@ -212,6 +213,20 @@ def hand_back(panel, body):
     return quit_app(panel, body)
 
 
+def destroy(panel, body):
+    """ZNISZCZ DANE: the laptop destroys its data at once, then the station gets `destroy` (OK on the station).
+
+    The station is asked whenever the laptop part started, also when a file could not be deleted."""
+    if body.get("confirm") != "ZNISZCZ":
+        raise ValueError("brak potwierdzenia")
+    try:
+        result = panel.session.destroy()        # NotLoggedIn: nic się nie dzieje, także na stacji
+    except database.StorageError:
+        panel.prep.destroy_station()            # dane laptopa już niszczone, tylko nie każdy plik zniknął
+        raise
+    return {**result, "station": panel.prep.destroy_station()}
+
+
 def ticket(panel, body):
     """Second START: a new link to this panel, and the path of the stick it runs from (Session.adopt)."""
     usb = body.get("usb")
@@ -252,13 +267,14 @@ ROUTES = {
     "/api/password/new": lambda panel, body: panel.session.new_password(_text(body, "account")),
     "/api/logout": lambda panel, body: (panel.session.logout(), {"ok": True})[1],
     "/api/hand-back": hand_back,
+    "/api/destroy": destroy,
     "/api/ticket": ticket,
 }
 
 
 # Czynności na stacji piszą do dziennika w zaszyfrowanej bazie, więc wymagają zalogowania.
 NEEDS_LOGIN = {"/api/config/read", "/api/config/write", "/api/card", "/api/password/new", "/api/logout",
-               "/api/hand-back"}
+               "/api/hand-back", "/api/destroy"}
 
 
 class Server(ThreadingHTTPServer):
