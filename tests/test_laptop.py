@@ -467,21 +467,67 @@ class DatabaseTest(unittest.TestCase):
         self.assertEqual(self.details(db), ["wspólny", "tylko B", "po wyborze"])
         db.close()
 
+    def test_conflict_choice_holds_without_further_changes(self):
+        db = self.open("a")
+        self.add(db, "wspólny")
+        db.close()
+        a = self.open("a", usb=False)
+        for i in range(3):
+            self.add(a, f"A{i}")                            # A ma wyższe pokolenie niż B
+        a.close()
+        b = self.open("b")
+        self.add(b, "B")
+        b.close()
+        self.open("a", prefer="usb").close()                # wybór bez nowej zmiany
+        db = self.open("a")
+        self.assertEqual(self.details(db), ["wspólny", "B"])
+        db.close()
+
+    def test_recovery_slot_follows_the_account_file(self):
+        db = self.open("a")
+        self.add(db, "x")
+        db.close()
+        slot = database._slot(self.key, "nowe haslo odtworzenia", database.RECOVERY_AAD, 1000)
+        db = database.Database(self.key, self.laptop("a"), self.usb, slot, store.SCHEMA)
+        self.add(db, "y")
+        db.close()
+        self.assertEqual(database.key_from_recovery([self.usb], "nowe haslo odtworzenia"), self.key)
+
+    def test_removed_stick_is_not_recreated_on_the_disk(self):
+        stick = Path(self.tmp.name) / "Volumes" / "WICI"
+        stick.mkdir(parents=True)
+        db = database.Database(self.key, self.laptop("a"), stick / "kopia", None, store.SCHEMA)
+        self.add(db, "x")
+        db.flush()
+        shutil.rmtree(stick)                                # pamięć wyjęta
+        self.add(db, "y")
+        deadline = time.monotonic() + 5
+        while db.status()["usb_error"] is None and time.monotonic() < deadline:
+            time.sleep(0.05)
+        self.assertIsNotNone(db.status()["usb_error"])
+        self.assertFalse(stick.exists())
+        with self.assertRaises(database.StorageError):
+            db.flush(timeout=0.5)
+        with self.assertRaises(database.StorageError):
+            db.close(timeout=0.5)
+
     def test_torn_write_and_tampering_fall_back(self):
         db = self.open("a", usb=False)
         for i in range(3):
             self.add(db, str(i))
         db.close()
-        files = sorted(self.laptop("a").iterdir(), key=lambda f: f.stat().st_mtime_ns)
-        newest = files[-1]
+        newest = max(self.laptop("a").iterdir(), key=lambda f: database._read(f, self.key, "disk").gen)
         raw = newest.read_bytes()
         newest.write_bytes(raw[:len(raw) // 2])             # przerwany zapis
         db = self.open("a", usb=False)
         self.assertEqual(self.details(db), ["0", "1"])
         db.close()
-        newest.write_bytes(raw.replace(b'"gen": ', b'"gen": 9', 1))   # podbite pokolenie bez klucza
+        head, header, sealed = database._split(raw)
+        header["gen"] += 100                                # podbite pokolenie bez klucza: MAC się nie zgadza
+        text = json.dumps(header).encode()
+        newest.write_bytes(database.MAGIC + len(text).to_bytes(4, "big") + text + sealed)
         db = self.open("a", usb=False)
-        self.assertEqual(self.details(db)[:2], ["0", "1"])
+        self.assertEqual(self.details(db), ["0", "1"])
         db.close()
 
     def test_recovery_password_without_account_file(self):

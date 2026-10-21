@@ -256,7 +256,7 @@ class Database:
         self.conn = sqlite3.connect(":memory:", check_same_thread=False, isolation_level=None)
         if base:
             self.conn.deserialize(base.body)
-        self.recovery = (base.recovery if base else None) or recovery
+        self.recovery = recovery or (base.recovery if base else None)   # plik kont ma aktualne hasło odtworzenia
         # Pokolenia rosną ponad każdą znalezioną kopię, także odrzuconą w konflikcie, więc jej pliki nie wygrają później.
         self.gen = max((c.gen for c in found), default=0)
         self.history = (base.history if base else []) + [(secrets.token_hex(8), base.gen if base else 0)]
@@ -286,9 +286,11 @@ class Database:
         if prefer not in ("disk", "usb"):
             raise Conflict(disk, usb)
         win, lose = (disk, usb) if prefer == "disk" else (usb, disk)
-        # Odrzucona kopia zostaje na pamięci zestawu (dysk laptopa wraca do właściciela), zaszyfrowana jak była.
-        target = self.usb_dir or self.disk_dir
-        _write_durable(target / f"konflikt-{lose.place}-{lose.gen}", lose.raw)
+        # Odrzucona kopia zostaje na pamięci zestawu (dysk laptopa wraca do właściciela), zaszyfrowana jak była;
+        # jej pliki znikają z miejsca, w którym leżały, żeby przy następnym starcie nie wywołały tego samego konfliktu.
+        _write_durable(self.usb_dir / f"konflikt-{lose.place}-{lose.gen}", lose.raw)
+        for name in NAMES:
+            (self.disk_dir if lose.place == "disk" else self.usb_dir).joinpath(name).unlink(missing_ok=True)
         return win
 
     # ---- dostęp -------------------------------------------------------------------------------
@@ -305,7 +307,11 @@ class Database:
             except BaseException:
                 self.conn.execute("ROLLBACK")
                 raise
-            self.conn.execute("COMMIT")
+            try:
+                self.conn.execute("COMMIT")
+            except BaseException:
+                self.conn.execute("ROLLBACK")
+                raise
             with self.cond:
                 self.changes += 1
                 mine = self.changes
@@ -369,7 +375,7 @@ class Database:
                     return
                 upto, gen, blob = self.pending
             try:
-                self.usb_dir.mkdir(parents=True, exist_ok=True)
+                self.usb_dir.mkdir(exist_ok=True)   # bez parents: wyjęta pamięć nie staje się katalogiem na dysku
                 _write_durable(self.usb_dir / NAMES[gen % 2], blob)
             except OSError as e:
                 with self.cond:
@@ -391,9 +397,9 @@ class Database:
                     raise StorageError(self.usb_error or (self.disk_error or (0, "zapis kopii trwa za długo"))[1])
                 self.cond.wait(left)
 
-    def close(self):
+    def close(self, timeout=10.0):
         try:
-            self.flush(timeout=10.0)
+            self.flush(timeout=timeout)
         finally:
             with self.cond:
                 self.stopping = True
@@ -419,7 +425,7 @@ class Database:
         it works, which the instruction requires."""
         with self.cond:
             self.stopping = True
-            self.pending = None
+            self.changes, self.pending = self.disk_done, None   # niezapisane zmiany nie trafiają już nigdzie
             self.cond.notify_all()
         for t in self.threads:
             t.join(5.0)

@@ -68,7 +68,11 @@ class PlainFile:
             except BaseException:
                 self.conn.execute("ROLLBACK")
                 raise
-            self.conn.execute("COMMIT")
+            try:
+                self.conn.execute("COMMIT")
+            except BaseException:
+                self.conn.execute("ROLLBACK")
+                raise
             return result
 
     def close(self):
