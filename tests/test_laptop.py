@@ -743,6 +743,44 @@ class SessionTest(unittest.TestCase):
             b.create(1)
         self.assertFalse(stick.exists())                    # nie powstał katalog w miejscu pamięci
 
+    def test_stick_back_under_another_path(self):
+        a = self.session("a")
+        pw = a.create(0)["envelopes"][0]["password"]
+        stick, moved = self.root / "usb", self.root / "usb-e"
+        a.db.flush()
+        stick.rename(moved)                                 # wypadła i wróciła pod inną literą dysku
+        a.add("WICI-3FA21C", "", "configure", True, "bez pamięci")
+        self.assertFalse(a.adopt(self.root / "nie-ma"))
+        self.assertTrue(a.adopt(moved))
+        self.assertEqual(a.describe()["usb"], str(moved))
+        a.db.flush(timeout=5)                               # zmiana sprzed przełączenia jest już na pamięci
+        self.assertFalse(stick.exists())
+        a.hand_back()
+        self.assertFalse(any((self.root / "a" / "baza").iterdir()))
+        b = session.Session(moved, self.root / "b", iterations=1000)
+        self.addCleanup(b.close)
+        b.login("gospodarz", pw)
+        self.assertEqual([e["op"] for e in b.recent()][:4], ["login", "hand_back", "usb_moved", "configure"])
+
+    def test_stick_is_not_adopted_when_it_moved_on(self):
+        a = self.session("a")
+        envelopes = a.create(0)["envelopes"]
+        stick, moved = self.root / "usb", self.root / "usb-e"
+        a.db.flush()
+        stick.rename(moved)
+        b = session.Session(moved, self.root / "b", iterations=1000)   # w międzyczasie praca na innym laptopie
+        self.addCleanup(b.close)
+        b.login("gospodarz", envelopes[0]["password"])
+        b.hand_back()
+        self.assertFalse(a.adopt(moved))
+        other = self.root / "inny"
+        other.mkdir()
+        session.Session(other, self.root / "c", iterations=1000).create(0)   # inny zestaw
+        self.assertFalse(a.adopt(other))
+        self.assertEqual(a.describe()["usb"], str(stick))
+        moved.rename(stick)
+        self.assertFalse(a.adopt(moved))                    # stara ścieżka znów jest: nic do przełączania
+
     def test_second_login_and_recovery_limit(self):
         a = self.session("a")
         envelopes = a.create(0)["envelopes"]
@@ -866,7 +904,8 @@ class PanelTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             inst = Path(tmp) / "instance.json"
             wici_main.write_instance(inst, self.port, "tok-123")
-            url = wici_main.running_instance(inst)
+            url = wici_main.running_instance(inst, Path(tmp) / "pamiec")   # drugi START podaje swoją pamięć USB
+            self.assertEqual(self.session.usb, Path(self.tmp.name) / "usb")    # obecna jest na miejscu
             self.assertTrue(url.startswith(f"http://127.0.0.1:{self.port}/start?t="))
             self.assertEqual(self.request("GET", urlsplit(url)._replace(scheme="", netloc="").geturl())[0].status, 303)
             wici_main.write_instance(inst, self.port, "wrong")

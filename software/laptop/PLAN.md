@@ -15,7 +15,7 @@ Narzędzie trybu przygotowania i fundament dla następnych etapów.
 | Dokument `configure` | reguły pól jak w firmware, tekst według SA1, zgodność adresu LXMF z kluczem, różne tożsamości odbiorcy | [configdoc.py](wici/configdoc.py) |
 | Czynności przygotowania | odczyt i zapis konfiguracji, karta stacji, komunikaty po polsku | [prep.py](wici/prep.py) |
 | Dziennik | SQLite, tylko dopisywanie (wyzwalacze), bez treści i bez kodu sieci; w zaszyfrowanej bazie, więc czynności na stacji wymagają zalogowania; także logowania, nowe hasła i oddanie laptopa | [store.py](wici/store.py) |
-| Zestaw i logowanie | pamięć zestawu to ta, z której działa START (albo `WICI_USB`); nowa pamięć: konta gospodarza i 0–5 zastępców oraz hasło odtworzenia, hasła pokazane raz z numerami kopert i wydrukiem; logowanie, wybór kopii przy konflikcie, odtworzenie hasłem odtworzenia z nowymi kontami, nowe hasło po otwarciu koperty, wylogowanie, „Oddaj laptop” | [session.py](wici/session.py) |
+| Zestaw i logowanie | pamięć zestawu to ta, z której działa START (albo `WICI_USB`); nowa pamięć: konta gospodarza i 0–5 zastępców oraz hasło odtworzenia, hasła pokazane raz z numerami kopert i wydrukiem; logowanie, wybór kopii przy konflikcie, odtworzenie hasłem odtworzenia z nowymi kontami, nowe hasło po otwarciu koperty, wylogowanie, „Oddaj laptop”; ponowny START z pamięci włożonej pod inną literą dysku przenosi tam zapis kopii | [session.py](wici/session.py) |
 | Baza laptopa | konta zestawu na pamięci USB (opakowanie klucza danych dla każdego konta i hasłem odtworzenia, limit prób), SQLite w pamięci, łączone zaszyfrowane migawki na dysku i w tle na pamięci USB, wybór kopii po historii sesji, konflikt, „Oddaj laptop”, ZNISZCZ DANE | [database.py](wici/database.py) |
 | Panel | HTTP tylko na 127.0.0.1, token w ciasteczku, kontrola Host i Origin, CSP; długie odpytywanie stanu; ekrany zestawu, logowania i kopert, zakładka „Zestaw” ze stanem kopii | [web.py](wici/web.py), [ui/](wici/ui/index.html) |
 | Start | jedna instancja, przeglądarka, blokada uśpienia, `--selftest` | [\_\_main\_\_.py](wici/__main__.py), [awake.py](wici/awake.py) |
@@ -172,7 +172,8 @@ CI sprawdza budowę i start na czystych systemach, ale nie zastąpi prawdziwych 
 3. Laptop służbowy z kontem bez uprawnień administratora i z programem antywirusowym: tryb kiosku, komunikat o zaporze, uruchomienie Linuksa z USB.
 4. Najstarszy obsługiwany sprzęt: Windows 10 22H2 na laptopie z 4 GB RAM, Mac z Intelem na macOS 10.15.
 5. Ile przyniesionych laptopów pozwala uruchomić system z USB (menu startowe, Secure Boot, hasło BIOS-u): od tego zależy, jak często zadziała ścieżka 3.
-6. Strona dla telefonów z kilkoma routerami domowymi i telefonami z Androidem i iOS, w tym telefon z włączonymi danymi komórkowymi.
+6. Wyjęcie pamięci zestawu przy działającej aplikacji na Windows i Linuksie: czy aplikacja działa dalej (macOS zamyka ją od razu, próba z obrazem dysku FAT32 2026-10-21) i czy ponowny START pod inną literą dysku przenosi zapis kopii.
+7. Strona dla telefonów z kilkoma routerami domowymi i telefonami z Androidem i iOS, w tym telefon z włączonymi danymi komórkowymi.
 
 ## Rozstrzygnięcia i odrzucone warianty
 
@@ -206,7 +207,7 @@ CI sprawdza budowę i start na czystych systemach, ale nie zastąpi prawdziwych 
 
 ## Do zrobienia po rozstrzygnięciach
 
-1. Etap 2, baza i zestaw w panelu: gotowe w [database.py](wici/database.py) i [session.py](wici/session.py) z testami (2026-10-21). Zostaje: ZNISZCZ DANE razem z poleceniem `destroy` stacji i potwierdzeniem przyciskiem (w bazie jest już `Database.destroy`), eksporty, pamięć USB włożona ponownie pod inną literą dysku albo innym punktem montowania (dziś panel ostrzega, że kopia się nie zapisuje), pomiar czasu 201 na laptopie z dyskiem HDD i na pamięci USB 2.0, próba wydruku kopert na kilku przeglądarkach.
+1. Etap 2, baza i zestaw w panelu: gotowe w [database.py](wici/database.py) i [session.py](wici/session.py) z testami (2026-10-21). Zostaje: ZNISZCZ DANE razem z poleceniem `destroy` stacji i potwierdzeniem przyciskiem (w bazie jest już `Database.destroy`), eksporty, pomiar czasu 201 na laptopie z dyskiem HDD i na pamięci USB 2.0, próba wydruku kopert na kilku przeglądarkach.
 2. Próba zapory na czystym Windows 11 (sekcja [Laptop i router na miejscu](#laptop-i-router-na-miejscu)).
 3. Wnioski do SignPath i pid.codes po akceptacji (warunki w tabeli rozstrzygnięć). SignPath wymaga wcześniejszego wydania w podpisywanej postaci, więc pierwsze wydanie START-WINDOWS.exe jest bez podpisu; przed wnioskiem zasób VERSIONINFO i strona z „Code signing policy”.
 4. Przegląd licencji środowisk (OpenSSL, SQLite, libffi, zlib i inne) przed pierwszą dystrybucją; lista słów (CC BY-SA 4.0) ma już plik w `licenses/` pakietu.

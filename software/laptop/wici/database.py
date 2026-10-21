@@ -357,6 +357,22 @@ class Database:
                 self.cond.wait(left)
         return result
 
+    def move_usb(self, usb_dir):
+        """The stick came back under another path (drive letter, mount point): copies go there from now on.
+
+        Only when its newest copy is one this session continues, which also proves it is the same kit; a copy
+        written meanwhile on another laptop is a conflict for the next start (False, nothing changes)."""
+        usb_dir = Path(usb_dir)
+        copies = [c for c in (_read(usb_dir / n, self.key, "usb") for n in NAMES) if c]
+        newest = max(copies, key=lambda c: c.gen, default=None)
+        if not self.usb_dir or newest is None or not _continues(self, newest):   # ta baza ma history i gen jak kopia
+            return False
+        with self.cond:
+            self.usb_dir, self.usb_error = usb_dir, None
+            self.cond.notify_all()                   # wątek pamięci USB przerywa czekanie po błędzie
+        self.on_change()
+        return True
+
     def status(self):
         with self.cond:
             return {"gen": self.gen, "saved": self.disk_done == self.changes,

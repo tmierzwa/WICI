@@ -30,8 +30,8 @@ def info():
     return {"version": VERSION, "python": sys.version.split()[0], "platform": sys.platform}
 
 
-def running_instance(path):
-    """URL of a panel that already runs on this laptop, or None."""
+def running_instance(path, usb=None):
+    """URL of a panel that already runs on this laptop, or None; usb: the stick this START runs from."""
     try:
         inst = json.loads(path.read_text(encoding="utf-8"))
         base = f"http://127.0.0.1:{int(inst['port'])}"
@@ -39,8 +39,9 @@ def running_instance(path):
         with direct.open(f"{base}/health", timeout=1) as r:
             if json.loads(r.read().decode()).get("app") != "wici":
                 return None
-        req = urllib.request.Request(f"{base}/api/ticket", b"{}", {"Cookie": f"wici={inst['token']}",
-                                                                   "Content-Type": "application/json"})
+        body = json.dumps({"usb": str(usb)} if usb else {}).encode()
+        req = urllib.request.Request(f"{base}/api/ticket", body, {"Cookie": f"wici={inst['token']}",
+                                                                 "Content-Type": "application/json"})
         with direct.open(req, timeout=5) as r:
             return f"{base}/start?t={json.loads(r.read().decode())['ticket']}"
     except (OSError, ValueError, KeyError, TypeError):
@@ -182,7 +183,8 @@ def main(argv=None):
         return selftest()
     state = store.state_dir()
     instance = state / "instance.json"
-    url = running_instance(instance)
+    usb = usb_root()
+    url = running_instance(instance, usb)
     if url:
         if not args.no_browser:
             webbrowser.open(url)
@@ -190,7 +192,6 @@ def main(argv=None):
         return 0
     token = secrets.token_urlsafe(24)
     panel = Panel(None, None, None, token, info())
-    usb = usb_root()
     if usb is None:                              # uruchomienie ze źródeł: pamięć zestawu udaje katalog stanu
         usb = state / "pamiec-usb"
         usb.mkdir(exist_ok=True)

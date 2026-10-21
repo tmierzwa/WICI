@@ -205,7 +205,7 @@ function renderSession() {
   $("kit-path").textContent = s.usb || "–";
   const warn = $("kit-warning");
   warn.hidden = !(db.usb_error || db.disk_error);
-  if (db.usb_error) warn.textContent = "Kopia na pamięci USB się nie zapisuje. Sprawdź, czy pamięć zestawu jest włożona; bez niej nowy laptop nie przejmie najnowszych danych, a „Oddaj laptop” nie zadziała.";
+  if (db.usb_error) warn.textContent = "Kopia na pamięci USB się nie zapisuje. Sprawdź, czy pamięć zestawu jest włożona; po ponownym włożeniu uruchom z niej START, a panel zapisze kopię na niej także pod nową literą dysku. Bez pamięci nowy laptop nie przejmie najnowszych danych, a „Oddaj laptop” nie zadziała.";
   if (db.disk_error) warn.textContent = "Kopia na dysku laptopa się nie zapisuje (" + db.disk_error + "). Zmiany nie są potwierdzane; zwolnij miejsce na dysku albo użyj innego laptopa.";
 }
 
@@ -306,6 +306,7 @@ const OPS = {
   configure: "Wysłanie konfiguracji", config_get: "Odczyt konfiguracji", card: "Odczyt karty", selftest: "Autotest",
   kit_create: "Utworzenie kont zestawu", kit_recover: "Nowe konta po haśle odtworzenia", login: "Logowanie",
   logout: "Wylogowanie", password_new: "Nowe hasło do koperty", hand_back: "Oddanie laptopa", copy_choose: "Wybór kopii bazy",
+  usb_moved: "Pamięć USB pod nową ścieżką",
 };
 const ACCOUNT_OPS = new Set(["login", "logout", "password_new", "hand_back"]);
 
