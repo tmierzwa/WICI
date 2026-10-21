@@ -454,6 +454,13 @@ int channelScenario() {
     put(an, 0x01, 0, rx, 150, t0, 0x40);
     printf("announce pool %u expected %u\n", an.poolUsedMs(t0), channelMs(166));
 
+    // Zawinięcie millis(): okno liczy dalej (wcześniej zerowało się co 49,7 dnia).
+    Queue wr;
+    const uint32_t tw = 0xFFFFFFFFu - 30000;
+    put(wr, 0x01, 0, rx, 150, tw, 0x42);
+    const uint32_t wrapped = wr.poolUsedMs(tw + 60000);   // 29 999 ms po zawinięciu
+    printf("wrap used %u after %u\n", wrapped, wr.poolUsedMs(tw + 61 * 60000));
+
     // 25% na cel w K2 tylko przy czekającym K0 lub K1.
     Queue g;
     g.setReceiver(rx);
@@ -736,16 +743,17 @@ class StackUnitTests(unittest.TestCase):
         # Ogłoszenie ponad pulę czeka; po 60 min przedział z t0 wypada i ogłoszenie (166 B: 2 ramki) wychodzi.
         self.assertEqual(out[5], f"announce held at59 0 k2_pool at60 1 used {2 * 195 * 13}")
         self.assertEqual(out[6], f"announce pool {2 * 195 * 13} expected {2 * 195 * 13}")
+        self.assertEqual(out[7], f"wrap used {2 * 195 * 13} after 0")
         # Jeden cel bez rywalizacji ponad 25% (900 000 ms); przy czekającym K0 albo K1 odmowa.
-        self.assertEqual(out[7], f"dest free 80 used {80 * cost} contended k2_dest other queued k2_dest 1")
-        self.assertEqual(out[8], "k0 sending queued")   # K0 w nadawaniu już nie czeka
-        self.assertEqual(out[9], "k1 waiting k2_dest")
+        self.assertEqual(out[8], f"dest free 80 used {80 * cost} contended k2_dest other queued k2_dest 1")
+        self.assertEqual(out[9], "k0 sending queued")   # K0 w nadawaniu już nie czeka
+        self.assertEqual(out[10], "k1 waiting k2_dest")
         # 67 B + IFAC = 83 B: jedna ramka, 2 535 ms czasu kanału; 5% z 1 h = 180 000 ms.
         pr = 195 * 13
-        self.assertEqual(out[10], f"path requests queued path_request_limit queued own queued receiver queued after queued "
+        self.assertEqual(out[11], f"path requests queued path_request_limit queued own queued receiver queued after queued "
                                   f"limited 1 used {3 * pr}")
-        self.assertEqual(out[11], f"path request share {180000 // pr} used {180000 // pr * pr} own queued")
-        self.assertEqual(out[12], "order 01 10 20 a0 | 02 03 11 12 ")
+        self.assertEqual(out[12], f"path request share {180000 // pr} used {180000 // pr * pr} own queued")
+        self.assertEqual(out[13], "order 01 10 20 a0 | 02 03 11 12 ")
 
     def test_p1_interface_queue_priorities_and_announce_limit(self):
         out = self.run_harness("iface")

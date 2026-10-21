@@ -106,10 +106,13 @@ uint32_t percentOfWindow(uint32_t percent) { return WINDOW_MS / 100 * percent; }
 }  // namespace
 
 void Queue::Window::advance(uint32_t nowMs) {
-    const uint32_t now = nowMs / 60000;
-    const uint32_t elapsed = now - minute;   // także po zawinięciu millis(): całe okno od nowa
-    for (uint32_t k = 1; k <= elapsed && k <= WINDOW_MIN; ++k) ms[(minute + k) % WINDOW_MIN] = 0;
-    minute = now;
+    const uint32_t elapsed = nowMs - lastMs;   // różnica bez znaku: poprawna także przez zawinięcie millis()
+    lastMs = nowMs;
+    const uint32_t part = carryMs + elapsed % 60000;
+    const uint32_t steps = elapsed / 60000 + part / 60000;
+    carryMs = part % 60000;
+    for (uint32_t k = 1; k <= steps && k <= WINDOW_MIN; ++k) ms[(minute + k) % WINDOW_MIN] = 0;
+    minute += steps;
 }
 
 uint32_t Queue::Window::used(uint32_t nowMs) {

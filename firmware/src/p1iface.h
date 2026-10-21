@@ -152,10 +152,13 @@ public:
     Counters& counters() { return counters_; }
 
 private:
-    // Czas kanału w przesuwnym oknie: przedziały po 1 min.
+    // Czas kanału w przesuwnym oknie: przedziały po 1 min, liczone z upływu czasu, nie z nowMs / 60000,
+    // więc zawinięcie millis() (49,7 dnia) nie zeruje okna.
     struct Window {
         uint32_t ms[WINDOW_MIN] = {};
-        uint32_t minute = 0;
+        uint32_t minute = 0;    // numer bieżącego przedziału
+        uint32_t lastMs = 0;    // nowMs z poprzedniego wywołania
+        uint32_t carryMs = 0;   // czas od początku bieżącego przedziału
         void advance(uint32_t nowMs);
         uint32_t used(uint32_t nowMs);
         void add(uint32_t nowMs, uint32_t cost);
