@@ -1,10 +1,11 @@
 # SPDX-License-Identifier: MIT
 """Laptop state: where it lives on each system and the preparation journal in SQLite.
 
-Windows and macOS keep the state on the laptop disk (docs/spec/oprogramowanie.md, "Pakiet USB"), so it
-is unreadable once the USB stick is gone; Linux started from the stick sets WICI_STATE to the ext4
-partition of the stick. The journal is append-only: what was sent to which station, when and with what
-result. It holds no SA1 content and no network access code, only the SHA-256 of the configuration.
+Windows and macOS keep the state on the laptop disk (docs/spec/oprogramowanie.md, "Pakiet USB"); Linux
+started from the stick sets WICI_STATE to the ext4 partition of the stick. The journal is append-only:
+what was sent to which station, when and with what result. It holds no SA1 content and no network
+access code, only the SHA-256 of the configuration. It lives in the encrypted database
+(database.Database) once the panel has a login; until then in PlainFile, a plain SQLite file.
 """
 
 import datetime
@@ -46,25 +47,53 @@ BEGIN SELECT RAISE(ABORT, 'journal is append-only'); END;
 """
 
 
-class Journal:
-    def __init__(self, path):
+class PlainFile:
+    """A plain SQLite file with the read/write interface of database.Database."""
+
+    def __init__(self, path, schema=""):
         self.lock = threading.Lock()
-        self.db = sqlite3.connect(str(path), check_same_thread=False, isolation_level=None)
-        self.db.execute("PRAGMA synchronous=FULL")   # wpis jest trwały, zanim panel pokaże wynik
-        self.db.executescript(SCHEMA)
+        self.conn = sqlite3.connect(str(path), check_same_thread=False, isolation_level=None)
+        self.conn.execute("PRAGMA synchronous=FULL")   # wpis jest trwały, zanim panel pokaże wynik
+        self.conn.executescript(schema)
 
-    def add(self, station, lxmf, op, ok, detail=""):
-        at = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    def read(self, fn):
         with self.lock:
-            self.db.execute("INSERT INTO journal (at, station, lxmf, op, ok, detail) VALUES (?,?,?,?,?,?)",
-                            (at, station or "", lxmf or "", op, 1 if ok else 0, detail))
+            return fn(self.conn)
 
-    def recent(self, limit=50):
+    def write(self, fn):
         with self.lock:
-            rows = self.db.execute("SELECT at, station, lxmf, op, ok, detail FROM journal ORDER BY id DESC LIMIT ?",
-                                   (limit,)).fetchall()
-        return [dict(zip(("at", "station", "lxmf", "op", "ok", "detail"), r)) for r in rows]
+            self.conn.execute("BEGIN IMMEDIATE")
+            try:
+                result = fn(self.conn)
+            except BaseException:
+                self.conn.execute("ROLLBACK")
+                raise
+            self.conn.execute("COMMIT")
+            return result
 
     def close(self):
         with self.lock:
-            self.db.close()
+            self.conn.close()
+
+
+class Journal:
+    def __init__(self, db):
+        """db: database.Database or PlainFile with SCHEMA applied."""
+        self.db = db
+
+    @classmethod
+    def plain(cls, path):
+        return cls(PlainFile(path, SCHEMA))
+
+    def add(self, station, lxmf, op, ok, detail=""):
+        at = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        self.db.write(lambda c: c.execute("INSERT INTO journal (at, station, lxmf, op, ok, detail) VALUES (?,?,?,?,?,?)",
+                                          (at, station or "", lxmf or "", op, 1 if ok else 0, detail)))
+
+    def recent(self, limit=50):
+        rows = self.db.read(lambda c: c.execute("SELECT at, station, lxmf, op, ok, detail FROM journal "
+                                                "ORDER BY id DESC LIMIT ?", (limit,)).fetchall())
+        return [dict(zip(("at", "station", "lxmf", "op", "ok", "detail"), r)) for r in rows]
+
+    def close(self):
+        self.db.close()

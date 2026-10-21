@@ -58,6 +58,26 @@ def open_browser(url):
     threading.Thread(target=webbrowser.open, args=(url,), daemon=True).start()
 
 
+def database_selftest(tmp):
+    """Encrypted database of this runtime: accounts, snapshot on disk and stick, reopening on 'another laptop'."""
+    from . import database
+    kit, key = database.Kit.create(tmp / "usb" / "keys", {"gospodarz": "las rzeka most okno chleb"}, "odtworzenie",
+                                   iterations=1000)
+    assert kit.unlock("gospodarz", "Las  Rzeka most okno chleb") == key
+    db = database.Database(key, tmp / "dysk", tmp / "usb" / "kopia", kit.recovery(), store.SCHEMA)
+    store.Journal(db).add("WICI-000000", "", "selftest", True, "Szkoła nr 5")
+    db.flush()
+    db.hand_back()
+    if any(b"Szko" in p.read_bytes() for p in (tmp / "usb" / "kopia").iterdir()) or any((tmp / "dysk").iterdir()):
+        raise AssertionError("plain data or snapshots left behind")
+    other = database.Database(key, tmp / "inny", tmp / "usb" / "kopia", None, store.SCHEMA)
+    rows = store.Journal(other).recent()
+    other.close()
+    if [r["detail"] for r in rows] != ["Szkoła nr 5"]:
+        raise AssertionError(rows)
+    return "ok"
+
+
 def selftest():
     import ctypes
     import hashlib
@@ -90,13 +110,14 @@ def selftest():
     checks.append(f"crypto {syscrypto.selfcheck()}")
     assert configdoc.check({"role": "wezel", "ifac": "11" * 16, "radio": {"profile": "p1"}}) == []
     with tempfile.TemporaryDirectory() as tmp:
-        journal = store.Journal(Path(tmp) / "j.sqlite")
+        journal = store.Journal.plain(Path(tmp) / "j.sqlite")
         journal.add("WICI-000000", "", "selftest", True)
         try:
-            journal.db.execute("DELETE FROM journal")
+            journal.db.write(lambda c: c.execute("DELETE FROM journal"))
             raise AssertionError("journal accepted DELETE")
         except sqlite3.DatabaseError:
             pass
+        checks.append(f"db {database_selftest(Path(tmp))}")
         token = secrets.token_urlsafe(24)
         panel = Panel(Station(), None, journal, token, info())
         server = serve(panel, 0)
@@ -148,7 +169,7 @@ def main(argv=None):
             webbrowser.open(url)
         print(url)
         return 0
-    journal = store.Journal(state / "dziennik.sqlite")
+    journal = store.Journal.plain(state / "dziennik.sqlite")
     token = secrets.token_urlsafe(24)
     panel = Panel(None, None, journal, token, info())
     station = Station(args.port, on_change=panel.changed)
