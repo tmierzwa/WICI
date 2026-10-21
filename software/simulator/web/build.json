@@ -249,7 +249,7 @@
   "firmware/src/unicode_tables.h": "ef324616bebbcb72f111ce9453ed943d9b57fad9ae73cdc79d22a81161d88739",
   "firmware/src/usbproto.cpp": "07780916bf5b4b527c59240aa138ffaf12c6a69bb60f668489ee9d66d2aad534",
   "firmware/src/usbproto.h": "8421e73abe19735bd80f299566eed59993056b25498656445883289af6ff1a44",
-  "firmware/platformio.ini": "5dc1019d6124a9ad19977efe958b9f675019bf7a5cf677dc83206c73529cc2ec",
+  "firmware/platformio.ini": "369bf665f13c4251b3769ff6d09ca90aa216dcd8e9a4486b29c19add9ba16f7a",
   "firmware/tools/stack_deps.py": "83d4c22f7094041ef33070c9fc8058c34b46eec39060d4135d6ae161c04428e0",
   "firmware/patches/microReticulum/0001-pool-without-full-walk.patch": "8b3b99e2f8f5b326284732bf8d687cb05ba06f65580b4b364c03c55d88e17135",
   "firmware/patches/microReticulum/0002-short-packet-hashes.patch": "bc0859acdd3218f935781f1faab90ed157c6e694538c9fa2b57b60634620c0ab",
