@@ -1,0 +1,123 @@
+# Słowa wyłączone z listy haseł do kopert (build_slowa.py). Słowo albo początek słowa z gwiazdką.
+# Hasło przepisuje się przy ludziach w schronieniu i czyta na głos, więc lista nie ma słów wulgarnych,
+# obraźliwych, o śmierci, przemocy, chorobie i katastrofie, a także nazw własnych, skrótów, wyrazów
+# obcych i słów rzadkich albo dziwnych, które trudno przepisać bez błędu.
+
+# wulgaryzmy i obelgi
+kurw* chuj* huj* pierd* jeb* pizd* cip* dup* srak* sra* kutas* fiut* cwel* pedal* ciot* szmat* dziwk* suk* zdzir*
+debil* kretyn* idiot* glupek* cham* menel* frajer* lamus* palant* gnoj* gnida* bydlak* ped* kiep* pala* matol*
+murzyn* czarnuch* cygan* zyd* pedzio* lesb* homo* gej* trans*
+seks* sex* porn* orgazm* penis* wagin* sperm* masturb* erekc* prezerw* burdel* alfons* prostyt* gwalc* gwalt*
+# śmierć, przemoc, broń, choroba, katastrofa
+trup* zgon* zwlok* morder* zabi* zabij* zaboj* morduj* mord* rzez* egzek* tortur* kat* wiesz* samobo* topiel* zmarl*
+umar* umier* umrz* pogrzeb* trumn* grob* cmentar* nekro* denat* zalob* wdow* sierot* kalek* ranny* rany ran*
+bomb* granat* pocisk* karabin* pistolet* rewolwer* strzel* snajper* wojn* wojsk* atak* terror* zamach* ostrzal*
+nalot* rakiet* czolg* bron* noz* sztylet* miecz* szabl* topor* krew* krwaw* krwi*
+rak raka nowotwor* guz* ebola* dzum* chol* tyfus* gruzlic* aids* hiv* covid* wirus* zaraz* epidem* pandem*
+pozar* plon* powodz* tonie* tonac* utop* katastrof* wypad* awari* ewaku* alarm* syren* panik* strach* straszn*
+policj* areszt* wiezien* wiezie* krat* sad* prokur* zbrodn* przestep* zlodziej* kradz* rabun* napad* porwa*
+narkot* heroin* kokain* amfet* marihuan* trawka* spliff* jointa* pijak* pijus* wodka* wodki* piwsko*
+diabel* szatan* demon* piekl* czarc* upior* zombi* wampir*
+# wołanie o pomoc i rozkazy, które przeczytane na głos brzmią jak alarm
+pomocy ratunku ratunek padnij precz wynocha uciec uciekaj stop
+# wykrzykniki, slang, skróty, pisownia bez ogonków, formy dziwne poza kontekstem
+hej och okej taak aaa eee bla uch ojej rety puk siema jejku sorki kurde kurna szlag ano owak siak brachu mln emu
+jork anno boba cie juz wiec kotku synu bracie szefowo ziom czadu ubaw ohyda ryj pysk gacie majtki piersi hetero
+gierki cynk kwita lichy licha diabli boga boska bogini
+# przemoc, przestępstwo, choroba, kryzys
+przemoc gniew zemsta krzywda krzywdy martwy martwa ofiara choroba chory chora pacjent szpital karetka wyrok pozew
+skazany sprawca zdrajca oszust wariat pijany pijana prochy cios wybuch bitwa armia oficer kryzys ostrze spisek
+skandal seryjny upadek strata straty utrata ostrzec
+# druga setka przeglądu: wulgarne, slang, wykrzykniki, pisownia bez ogonków
+bajzel fuj syf hura hurra taaak cii siku siusiu mocz narka szmal szajs mhm kibla kibel wporzo klapsa durny zasrany
+yyy sio cze eks zona dac nom odbyt zalany hejka siemasz siemka mniam sorka tedy jot zadek krocze bachor sika siki
+jeju uuu mld chorej gul pojeb stringi staruch gatki sutek ekstazy pochwa ble fetysz cycka cycek jajca grubas psychol
+wypas fucha ciach kici hau miau kuku ahoj cacy dziw psuj ziomek titi lipa
+# choroba, przemoc, wojsko, przestępstwo, nieszczęście
+krwotok udar wymioty wysypka grypa kaszel ospa syfilis mutacja syndrom alergia skalpel wylew odwyk cewnik oiom
+morfina koroner patolog rakiem plaga plagi pobicie rozpacz masakra ruiny wrak widmo ciarki dreszcz siniak blizna
+huragan sztorm intruz inwazja dywizja pluton kapral gwardia zwiad sztab bunkier pancerz bojowy nokaut okup rozejm
+dynamit reaktor przemyt kartel diler spluwa bandyta otruty kajdany kaucja milicja eskorta pozwany zarzut agresja
+zgraja banda bandy odwet rozbity rasizm sekta walenie miotacz cyjanek judasz lucyfer szpony msza kazanie kac
+# nazwy własne, wyrazy obce, skróty
+cezar indie meksyk ewa hawaje berlina wenus teksas filip kuba europa budda iwan wiktor kirka kiry elka remi sereno
+kongo balboa augusta orlean kanada francuz anglik afryka niemiec dolce barbaro afro yeti graal bongo banshee barta
+roba kima karo maca mata ras osi kar reda porto hala tama arka ala koka sms dron drona maks mer kier dama jork
+# trzecia część przeglądu
+zadupie szczyny pryszcz skrzep zbok torpeda tajfun gonzo lont kopniak sza westa tem idola solano pinot typek mopa
+orgia kondom autyzm aborcja doping wytrysk polio zakrzep tampon najazd majty garniak napa dola pseudo beryl dren
+rollo saki peso hahn uff wiki kolumb saracen hindus oralny analny libido wacek macica kain amon aja siemano oho
+przecie trza mjr naj nemezis phi ino auu largo serrano sigma lambda anty getto biopsja wtopa suffolk rzygi kanalia
+melina sucz jehowy rahla sarin chodu moloch neptun szwed turek hiszpan kamp tora obciach toksyna awatara smerfy
+sutka cicero samar wilkom jejciu nazista brie grek mela arden bip mir rasista runy ruski ruska sil magneto heja
+bahama emo pac dao joni ouija raki dil grunge lochy olimp reggae brant hasta lolita sas aron jankes diwali mongo ehm
+czort suczka tuz buu knebel krypta oferma salam wonga polak shire tapas igra pierw rasta wania dias bama hehe akron
+baj kwa pomyje elfa gangsta ludlow coby ichabod aster badziew bhp rusek cizia fantom pogo szuja horst lumen pozdro
+jamajka patogen embrion miodzio pkt helmut micwa goliat augur deo ergo ninie odyseja spoiler stypa facio zjarany
+ester haj kanji wendigo slumsy tybet kala agonia helo mol orgie pekin embargo kutafon menda miko zjeb elo cyklop
+ciul jeniec niefart gnat sucre brutto gru tera kuma impra plujka corso franko gilda demi haracz kanibal kibelek wije
+basta balanga netto ociec dub ibn alim eros flor kaput espada nona parton papatki argus dziewka hasz herba kline
+lando tup bando imbecyl pitbull tabasco waleta cru nyssa pacan yhm odma szalom haszysz hopla paf toros dorn heca
+asami krupier jura pipa zadyma mormoni nochal cayenne grani ikar juhu mirza napalm pasierb yhy cytryn gumbo fen
+komuch noni pozwana stoner stryju filipin finito hiob koto skalp firefly klinik lary mendel pitta nazira capi jupi
+mru szajbus anemia bil ekstaza figaro mahatma seppuku suty banzai koma kreml tysiak tasak kwak garbus albinos zbir
+prostak cienias sanepid bobek dziany kiszki groza wrzask grabarz karawan armata bagnet maczeta szturm salwa cyngiel
+husaria rebelia rekrut legiony alianci atomowy tlenek amoniak chlor chlorek azbest arabski susza potop gruz gruzy
+zguba jatka donos obelga plugawy pogarda zmora fatum szambo chlew tyran pluskwa bimber toffi
+# czwarta część przeglądu
+trutka jaga kita kreci mekka parr piki samara touche arytmia czadowy elekt sedes zawale bleu credo impala metadon
+topper tyrania ubodzy fugu klata konopie malinka masala mora pita poco recesja wanga gmin lalunia nagus parkway
+pokemon smerf synod wolfram wotum anker bogdan karibu stolec brudas dossier jawa maczo glut ibis klima luter satoshi
+ska stoker torbiel adonis apka bejbe fujara jena karier komando kraft czystka obierz pryk sajgon tipi desant fochy
+lucjan padlina babsko badana bodhi juma kendo manele mau ruskie bazooka nasrane nastia rus som fetor kir kirke pif
+rocha trach campos detoks emiter kama macao paser rewelka rzesze biba duce garda herc marysia nadir synalek botoks
+hao kabuki mafiozo mun niewola pomiot speluna tabor idy lar ciupy jeon jonasz matias mee molto stinger ustawka
+bajpas fidela kaka koda kor kusza lament otello pinda seta buc ckliwy dyby kondo kuper lipny piazza ple szajba
+szyling ter zgaga holm krocz paskuda sashimi smark smarki smog telugu uboga wici akronim bojkot junga lec odra pupcia
+zyl chianti gbur judaizm kami kulis lido onkolog trwoga tutu wytrych czakra electro hopi husky koga mruk odsiecz
+saks siup szparki zet boj cyc flik ghul kapo kleszcz kompost pyskaty rozmaz rumpel trzewia wat zgroza czerep dafne
+dredy kler kum miks myk nerwica ronin sten zgryz zsyp hetman luli mafioso mais moszna niedola pirania sienny badan
+bohr fant mazgaj moll poganin prr smalec sou szabas taryfa tilda tojad foyer niobe rajtuzy soc szloch tuan wbicie
+kraksa okop papu wymarsz bambuko bety bezdech damulka dijon draka dymanko edykt kupidyn mem pandit pojaw przeor stil
+urdu wysocki yoni diuk hashtag knut lep lupus mdlej oreo reb sanna sik tafta tri wersal wymach znachor apacz gaja
+gajer gapa jiao kardio kikut krakers paryski presto samolub szpetny cewka dudka pach pchli piona piski sagan sago
+salina szajka szewron tobiasz witka apsik calypso flan gryf heretyk ido miazga pomorze szafot trefny cierp fanklub
+manta napitek obdarty odwlec polec scat sfora shona zbicie cyk listera ochrzan sodoma szlaja wujowie wyzysk zawlec
+alt arcy burito fet haggis kilt kleik muppet nerwus ulisses alp gwinea lamia lanca pijacki piniata plebs siusiak
+skowyt slipki strit wbiec wywlec yuzu zek ameryk burka bushido fagas febra hamer hidalgo makao moskity ogi oprych
+prefekt pueblo szpona gan jard jonowy luger mamba muu obibok rewers wikt czacha dirka flaszka forte hardkor hawana
+jaz ludus magenta oksford shiatsu ciary dokop haram kaszana narazka pepito portowe skucha szmira amrita anon biga
+campo chaco demolka jakuza jukka posrany tonga trocki wiocha bodaj bolek chlup glam golas lewicki rami sekt shaker
+spyder stent sztok znal kodiak komodor kwok legia lincz lora migacz popsuj serbski smrodek bola bryle buch cajun
+kagan kipa klecha mignon panini plata sem skunksy tir wij cysta czaj metanol nankin niechby pewka szkrab tany abo
+angol aua bidet biling burda gafa galena grog iracki jary kalifat nagar piwosz plemnik pogrom seder siara skubany
+srom szkop tanka temblak alla ambu beanie biryani chimery dzida eugenia gnocchi hops kamfora lauda narkoza pracz
+saper unos ara cmok hosanna jujitsu karpa nous obi oblech paszcza playoff rebe royals rys sprej tur tweed wtf wtrysk
+zboczek belg bolec chicano fon kurewka mahdi micha opieprz podroby radon skeet szych tomi weto wsio wszawy zorba
+amina bambino brocha chrum grr hora hycel janusz jola kuguar ohm spazmy staja wyziewy bratku breja essen gula
+hasztag kolki kuru locus pacha paka sic tatar belfer cez dotcom finka janosik klawy komuna kuliste kumite loko
+meszek sutra zonda alona chutney fora kiszka kutner kysz macanko ouzo pera pff raglan sru szlauch trak tuman upalony
+uta alkomat archi ateista cukrzyk deczko fula hackney ibo kobita ludojad mszyce plask podpity potwarz prawica banita
+gadu guano nica pruski psik suchoty bubel dilerka gara gees hobbici
+# piąta część przeglądu (okolice granicy 4096)
+ojoj ramadan rwa szakali szos tapet tren amok fiero franca goji iguany junkers sima sodomia talmud wojtek betka
+bukkake bula cajon churros elki kirin kitta koja mod odraza rho spoczko trzaska aba alko blanki conga deuter drakkar
+gites klap krzemyk ksenia lanka lolek masami nawab siec wicca wlec amfa bim candi jor lir maa napruty opa oro parkour
+patka pierwej sena szama szczyl sziwa zjeba argon bonanza cornish cynka dolby itepe latryna moai pointe porta sambo
+suahili szpicel szwab wyro aga kabrio lak marten mobil tadam tala bulimia karli makabra oksy pato piter przecz
+caddie cojones contras czyrak hiper japa kem maul mornay mungo ojeju strup tralala traska tylka zasieki ankh bul
+cardio czerw daimyo dian fuu garus malware mysza pascha teges tuk coro iwa luminol niunia pohybel polon shimmy sura
+szpara wciry wenflon flegma cielsko
+# przegląd całej listy 4096
+akr anchois beagle blanco bianco brachol cps curie danko dorotka efraim ehe eko fiu ful gnu hoc jarl jeno kuki leman
+luau lutz maar macek mamcia mefisto miso myszko nadobne nara nazad neta ogr oki omg opus peri piccolo pon pst rem
+rybko soju spiro suzu tal tek wio wuju kolego kiciu szwaby tfu tutti hobbit mesjasz sabat faszyzm fanatyk oprawca
+skazana lawina erupcja punkcja migrena astma jelito remisja refluks zbrojny eskadra poligon bitewny wojenny gaza
+jidysz shinto groupie collage reboot cabrio calzone lasagne merlot fondue furlong flipper gable lego walkman ech
+ludwik supcio
+adria akita basset beeper bida bidulka biont chablis chorizo cykuta fara huerta jajcarz karpi linga melton merch
+milka pieter stilton tonin wujcio zin wandal wojak urojony rybcia
+angina nerdy penne pica pisuar renegat rutka showman torus tubylec zlewki
+bambo czopek fizz fluidy
+galery howgh iblis
+jota junko kahuna

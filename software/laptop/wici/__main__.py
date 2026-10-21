@@ -108,6 +108,8 @@ def selftest():
     assert unicodedata.normalize("NFC", "Szkoła") == "Szkoła"
     assert hashlib.sha256(b"").hexdigest().startswith("e3b0c442")
     checks.append(f"crypto {syscrypto.selfcheck()}")
+    from . import passwords
+    assert len(passwords.generate().split()) == passwords.ACCOUNT_WORDS
     assert configdoc.check({"role": "wezel", "ifac": "11" * 16, "radio": {"profile": "p1"}}) == []
     with tempfile.TemporaryDirectory() as tmp:
         journal = store.Journal.plain(Path(tmp) / "j.sqlite")

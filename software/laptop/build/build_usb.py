@@ -350,6 +350,13 @@ def build(out, names, launcher_exe=None, archives=None):
         write(out / "START-WINDOWS.exe", exe)
     shutil.copyfile(HERE / "usb" / "INSTRUKCJA.html", out / "INSTRUKCJA.html")
     shutil.copyfile(ROOT / "LICENSES" / "MIT.txt", out / "licenses" / "WICI-MIT.txt")
+    shutil.copyfile(ROOT / "LICENSES" / "CC-BY-SA-4.0.txt", out / "licenses" / "slowa-CC-BY-SA-4.0.txt")
+    (out / "licenses" / "slowa.txt").write_text(
+        "app/wici.pyz/wici/slowa.txt (lista słów do haseł z kopert) jest na licencji CC BY-SA 4.0.\n"
+        "Źródła: Słownik SJP.PL, odmiany, wersja 2026-09-01 (https://sjp.pl, CC BY 4.0) oraz\n"
+        "Hermit Dave, FrequencyWords, OpenSubtitles 2018 (https://github.com/hermitdave/FrequencyWords,\n"
+        "CC BY-SA 4.0). Zmiany: wybór form podstawowych bez polskich liter, wykluczenia, ranking według\n"
+        "częstości; skrypt budowy w repozytorium WICI: software/laptop/build/slowa/.\n", encoding="utf-8")
     (out / "sources").mkdir()
     (out / "sources" / "README.txt").write_text(
         "Kod aplikacji WICI jest w app/wici.pyz jako czytelne pliki źródłowe (archiwum ZIP).\n"

@@ -600,6 +600,30 @@ class DatabaseTest(unittest.TestCase):
         db.close()
 
 
+class PasswordsTest(unittest.TestCase):
+    def test_word_list(self):
+        from wici import passwords
+        words = passwords.words()
+        self.assertEqual(len(words), 4096)
+        self.assertEqual(words, sorted(words))
+        self.assertTrue(all(set(w) <= set("abcdefghijklmnoprstuwyz") for w in words))   # bez polskich liter
+        for bad in ("kurwa", "trup", "pomocy", "wici", "szwaby", "omg"):
+            self.assertNotIn(bad, words)
+        pw = passwords.generate()
+        self.assertEqual(len(pw.split()), 5)
+        self.assertTrue(all(w in words for w in pw.split()))
+        self.assertEqual(len(passwords.recovery().split()), 6)
+        self.assertEqual(database.normalize_password(pw.upper()), pw.encode())
+
+    def test_exclusions_file_has_no_duplicates_of_kept_words(self):
+        from wici import passwords
+        text = (LAPTOP / "build" / "slowa" / "wykluczone.txt").read_text(encoding="utf-8")
+        items = {i for line in text.splitlines() for i in line.split("#", 1)[0].split()}
+        kept = set(passwords.words())
+        self.assertEqual([i for i in items if not i.endswith("*") and i in kept], [])
+        self.assertEqual([w for w in kept if w.startswith(tuple(i[:-1] for i in items if i.endswith("*")))], [])
+
+
 class JournalTest(unittest.TestCase):
     def test_append_only(self):
         import sqlite3
@@ -738,8 +762,10 @@ class PackageTest(unittest.TestCase):
 
     def test_code_size_budget_and_python_version(self):
         files = [p for p in self.PACKAGE.rglob("*") if p.is_file() and "__pycache__" not in p.parts]
-        total = sum(p.stat().st_size for p in files)
+        words = self.PACKAGE / "slowa.txt"                  # dane, nie kod: osobny limit
+        total = sum(p.stat().st_size for p in files if p != words)
         self.assertLess(total, 160 * 1024, f"aplikacja ma {total} B; budżet etapu 1 to 160 KiB")
+        self.assertLess(words.stat().st_size, 32 * 1024)
         for p in files:
             if p.suffix == ".py":
                 ast.parse(p.read_text(encoding="utf-8"), feature_version=(3, 12))   # najstarszy Python w CI

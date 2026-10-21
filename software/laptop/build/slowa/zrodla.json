@@ -1,0 +1,20 @@
+{
+ "odmiany": {
+  "url": "https://sjp.pl/sl/odmiany/sjp-odm-20260901.zip",
+  "sha256": "d8c2390462b81c6f4e4d80e5a379377b6099d01bd17e238ec2787a9638364bdc",
+  "license": "CC-BY-4.0 (do wyboru także GPL-2.0, LGPL-2.1, Apache-2.0)",
+  "attribution": "Słownik SJP.PL, odmiany, wersja 2026-09-01, https://sjp.pl"
+ },
+ "czestosc_pl": {
+  "url": "https://raw.githubusercontent.com/hermitdave/FrequencyWords/525f9b560de45753a5ea01069454e72e9aa541c6/content/2018/pl/pl_full.txt",
+  "sha256": "8b69a097e502a32a42db6ca37a74781f66ddc4027fe5d66b6d98b6467abae3cf",
+  "license": "CC-BY-SA-4.0",
+  "attribution": "Hermit Dave, FrequencyWords (OpenSubtitles 2018), https://github.com/hermitdave/FrequencyWords"
+ },
+ "czestosc_en": {
+  "url": "https://raw.githubusercontent.com/hermitdave/FrequencyWords/525f9b560de45753a5ea01069454e72e9aa541c6/content/2018/en/en_50k.txt",
+  "sha256": "5351ff405b1126ef555791dd4d9798a48e3e9a501a9fc481a9da957752cfb458",
+  "license": "CC-BY-SA-4.0",
+  "attribution": "Hermit Dave, FrequencyWords (OpenSubtitles 2018), https://github.com/hermitdave/FrequencyWords"
+ }
+}
