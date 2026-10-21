@@ -4,7 +4,8 @@
 Access needs the session token in an HttpOnly, SameSite=Strict cookie, and station operations a login
 with an envelope password (session.Session), because they write to the journal in the encrypted database. The launcher opens
 /start?t=<ticket>; a ticket works once, so the browser history does not reveal a working link, and a
-second START asks the running instance for a new one (POST /api/ticket with the session token). The Host header must name the loopback address (no DNS rebinding) and every
+second START asks the running instance for a new one (POST /api/ticket with the session token) and
+names the stick it runs from, which may come back under another drive letter. The Host header must name the loopback address (no DNS rebinding) and every
 POST must carry JSON with a loopback Origin, so another web page in the same browser cannot drive
 the station. Static files are read from the package, also when it runs from a zip archive.
 """
@@ -211,6 +212,17 @@ def hand_back(panel, body):
     return quit_app(panel, body)
 
 
+def ticket(panel, body):
+    """Second START: a new link to this panel, and the path of the stick it runs from (Session.adopt)."""
+    usb = body.get("usb")
+    if isinstance(usb, str) and usb and panel.session:
+        try:
+            panel.session.adopt(usb)
+        except (OSError, ValueError, database.StorageError):
+            pass                                     # panel dalej ostrzega o kopii na pamięci USB
+    return {"ticket": panel.ticket()}
+
+
 def _text(body, key):
     value = body.get(key)
     if not isinstance(value, str) or not value or len(value) > 200:
@@ -240,7 +252,7 @@ ROUTES = {
     "/api/password/new": lambda panel, body: panel.session.new_password(_text(body, "account")),
     "/api/logout": lambda panel, body: (panel.session.logout(), {"ok": True})[1],
     "/api/hand-back": hand_back,
-    "/api/ticket": lambda panel, body: {"ticket": panel.ticket()},
+    "/api/ticket": ticket,
 }
 
 

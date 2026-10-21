@@ -158,6 +158,25 @@ class Session:
         out.append({"no": len(out) + 1, "account": "odtworzenie", "label": "Hasło odtworzenia", "password": recovery})
         return out
 
+    def adopt(self, usb):
+        """Second START from the kit stick under another path (drive letter, mount point): the panel follows it.
+
+        Only while the old path holds no kit (gone, or another drive took its letter); with an open database only when the stick holds a copy this session
+        continues (database.Database.move_usb). Otherwise nothing changes and the panel keeps warning."""
+        usb = Path(usb)
+        with self.lock:
+            if usb == self.usb or self.kit.exists() or not usb.is_dir():
+                return False
+            if self.db and not self.db.move_usb(usb / "kopia"):
+                return False
+            failures = self.kit.failures             # limit prób logowania nie zeruje się przez ponowny START
+            self.usb, self.kit, self.copy_dir, self.pending = usb, database.Kit(usb / "keys"), usb / "kopia", None
+            self.kit.failures = failures
+            if self.journal:
+                self.journal.add("", "", "usb_moved", True, str(usb))
+        self.on_change()
+        return True
+
     # ---- po zalogowaniu -----------------------------------------------------------------------
 
     def _need(self):
@@ -189,7 +208,7 @@ class Session:
         """'Oddaj laptop': last copy on the stick, then nothing of the kit stays on the laptop disk."""
         with self.lock:
             self._need()
-            if not self.usb.is_dir():
+            if not self.kit.exists():                # także gdy literę dysku zajęła inna pamięć
                 raise database.StorageError("brak pamięci USB zestawu: włóż ją, bez niej dane zostałyby tylko na tym laptopie")
             self.journal.add("", "", "hand_back", True, self.user)
             self.db.hand_back()
