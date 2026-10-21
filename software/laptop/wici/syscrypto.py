@@ -108,7 +108,7 @@ class _Mac:
 
 class _Linux:
     def __init__(self):
-        for name in ("libcrypto.so.3", "libcrypto.so.1.1"):
+        for name in ("libcrypto.so.3", "libcrypto.so.1.1", "libcrypto.so.10"):
             try:
                 lib = ctypes.CDLL(name)
                 break
@@ -169,34 +169,45 @@ def pbkdf2(password, salt, rounds, size=32):
     return _system().pbkdf2(bytes(password), bytes(salt), rounds, size)
 
 
+def _keys(key):
+    # jeden klucz 32 B (np. z PBKDF2) rozwinięty na klucz szyfru i klucz MAC z etykietami
+    if len(key) != 32:
+        raise CryptoError("klucz 32 B")
+    return hmac.digest(key, b"wici enc", "sha256"), hmac.digest(key, b"wici mac", "sha256")
+
+
+def _mac(key, body, aad):
+    return hmac.digest(key, len(aad).to_bytes(8, "big") + aad + body, "sha256")
+
+
 def seal(key, data, aad=b""):
-    """VERSION | IV | AES-256-CBC(PKCS7) | HMAC-SHA256 over everything before it and aad; key is 64 B."""
-    if len(key) != 64:
-        raise CryptoError("klucz 64 B")
+    """VERSION | IV | AES-256-CBC(PKCS7) | HMAC-SHA256 over aad (length-prefixed) and everything before it."""
+    enc, mac = _keys(key)
     iv = os.urandom(16)
-    body = VERSION + iv + aes_cbc(True, key[:32], iv, data)
-    return body + hmac.digest(key[32:], body + aad, "sha256")
+    body = VERSION + iv + aes_cbc(True, enc, iv, data)
+    return body + _mac(mac, body, aad)
 
 
 def open_(key, sealed, aad=b""):
-    if len(key) != 64:
-        raise CryptoError("klucz 64 B")
+    enc, mac = _keys(key)
     if len(sealed) < 1 + 16 + 16 + 32 or sealed[:1] != VERSION:
         raise CryptoError("nieznany format")
-    body, mac = sealed[:-32], sealed[-32:]
-    if not hmac.compare_digest(mac, hmac.digest(key[32:], body + aad, "sha256")):
+    body = sealed[:-32]
+    if not hmac.compare_digest(sealed[-32:], _mac(mac, body, aad)):
         raise CryptoError("zły klucz albo uszkodzone dane")       # najpierw MAC, potem odszyfrowanie
-    return aes_cbc(False, key[:32], body[1:17], body[17:])
+    return aes_cbc(False, enc, body[1:17], body[17:])
 
 
 def selfcheck():
-    """Known answers: AES-256-CBC as OpenSSL `enc`, PBKDF2 as RFC 7914; then seal/open and tampering."""
+    """Known answers: AES-256-CBC as OpenSSL `enc`, PBKDF2-HMAC-SHA256 from RFC 7914 section 11; then seal/open."""
     ct = aes_cbc(True, bytes(range(32)), bytes(16), b"Szkola nr 5, wejscie od podworza")
     assert ct.hex() == ("5c7f4bb144d7fd5015e17c2695a236214fc5d2e6be5903aaab35a8650779c1a8"
                         "743bb88b43ad8b5e3acba0e62687c9ea"), ct.hex()
     assert aes_cbc(False, bytes(range(32)), bytes(16), ct) == b"Szkola nr 5, wejscie od podworza"
-    assert pbkdf2(b"password", b"salt", 1).hex() == "120fb6cffcf8b32c43e7225256c4f837a86548c92ccc35480805987cb70be17b"
-    key = hashlib.sha512(b"wici").digest()
+    assert pbkdf2(b"passwd", b"salt", 1, 64).hex() == (
+        "55ac046e56e3089fec1691c22544b605f94185216dde0465e68b9d57c20dacbc"
+        "49ca9cccf179b645991664b39d77ef317c71b845b1e30bd509112041d3a19783")
+    key = hashlib.sha256(b"wici").digest()
     text = "Szkoła, wejście od podwórza".encode()
     sealed = seal(key, text, b"kopia")
     assert open_(key, sealed, b"kopia") == text

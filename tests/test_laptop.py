@@ -345,7 +345,7 @@ class SysCryptoTest(unittest.TestCase):
                          hashlib.pbkdf2_hmac("sha256", b"haslo z koperty", b"sol", 1000, 32))
 
     def test_sealed_copy_is_fresh_and_bound(self):
-        key = bytes(range(64))
+        key = bytes(range(32))
         data = bytes(range(256)) * 1000
         a, b = syscrypto.seal(key, data, b"gen 7"), syscrypto.seal(key, data, b"gen 7")
         self.assertNotEqual(a, b)                                 # losowy IV przy każdym zapisie
@@ -354,7 +354,7 @@ class SysCryptoTest(unittest.TestCase):
             with self.assertRaises(syscrypto.CryptoError):
                 syscrypto.open_(key, broken, b"gen 7")
         with self.assertRaises(syscrypto.CryptoError):
-            syscrypto.open_(bytes(64), a, b"gen 7")
+            syscrypto.open_(bytes(32), a, b"gen 7")
 
 
 class JournalTest(unittest.TestCase):

@@ -101,9 +101,9 @@ Stacja pracuje dalej przez cały czas dołączania rozszerzeń.
 1. Sprawdź na wyświetlaczu stacji zasilania stan naładowania. Włącz jej wyjście 230 V według instrukcji producenta.
 2. Podłącz oryginalne zasilacze laptopa i routera oraz ładowarkę USB telefonów do wyjść stacji zasilania.
 3. Połącz laptop ze stacją przewodem USB, a na poziomie 3 także z portem LAN routera. Podłącz pamięć USB zestawu.
-4. Uruchom START w działającym systemie albo system Linux z pamięci USB na komputerze PC. Zaloguj się hasłem z koperty; konta są na pamięci USB zestawu. Panel pokazuje adres i kartę odbiorcy odczytane ze stacji.
+4. Uruchom START w działającym systemie albo, za zgodą właściciela laptopa, system Linux z pamięci USB na komputerze PC. Zaloguj się hasłem z koperty; konta są na pamięci USB zestawu. Panel pokazuje adres i kartę odbiorcy odczytane ze stacji.
 5. Wpisz w panelu nazwę i hasło sieci Wi-Fi routera. Połącz telefon z główną siecią Wi-Fi routera kodem QR sieci i otwórz stronę kodem QR adresu, wyświetlonymi na ekranie laptopa albo wydrukowanymi z panelu jako plakat.
-6. Gdy panel mówi, że telefony nie mogą się połączyć, przełącz stronę mieszkańca w tryb kiosku na ekranie laptopa albo podłącz inny laptop.
+6. Gdy panel mówi, że telefony nie mogą się połączyć, przełącz stronę mieszkańca w tryb kiosku na ekranie laptopa; jeśli to nie wystarcza, uruchom za zgodą właściciela system Linux z pamięci USB albo podłącz inny laptop.
 
 Panel sam przechodzi kolejne drogi w tej kolejności i przy każdej przeszkodzie mówi, co zrobić dalej ([oprogramowanie](oprogramowanie.md#sieć-lokalna-i-zapora)): (1) strona dla telefonów przez router obiektu, na Windows ze zgodą administratora na regułę zapory jednym oknem systemu; (2) [tryb kiosku](oprogramowanie.md#tryb-kiosku) na ekranie laptopa; (3) na komputerze PC z Windows bez uprawnień administratora system Linux z pamięci USB, tylko za zgodą właściciela laptopa; (4) inny laptop. Na działającym Linuksie dostęp do portu stacji wymaga zwykle jednorazowo `sudo` (grupa `dialout`); bez niego zostaje system Linux z pamięci USB albo inny laptop. Laptop łączy się z routerem kablem, gdy ma gniazdo sieciowe albo działający adapter USB–Ethernet; inaczej przez Wi-Fi routera, co działa, jeśli router nie izoluje urządzeń od siebie. Stacja, laptop i router nie muszą stać razem: router jest tam, gdzie zamontował go zarządca.
 
