@@ -2,7 +2,8 @@
 """Test vectors for the station Reticulum core, made by reference Reticulum (Python) at the pinned commit.
 
 Stage R0 of the core (firmware/reticulum-core.md): identity (keys, hash, signatures, including a
-non-canonical signature with S + L), encryption to an identity (token, including invalid tokens) and
+non-canonical signature with S + L), encryption to an identity (token, including damaged tokens and
+tokens with a valid HMAC over a bad ciphertext, as a node with the key could send them) and
 packets (HEADER_1 as packed by Reticulum, HEADER_2 as rewritten by its transport, packet hash). Every
 expected value is what the reference implementation computes or returns; nothing is computed here
 by other code. Randomness (ephemeral X25519 key, token IV, announce random hash) is replaced by a
@@ -21,6 +22,7 @@ from unittest import mock
 
 import RNS
 from RNS.Cryptography import X25519PrivateKey
+from RNS.Cryptography.AES import AES_256_CBC
 
 RNS_VERSION = "1.5.5"
 RNS_COMMIT = "e40191b3d193b46b7f2d8a44424a594cd758839b"
@@ -106,10 +108,15 @@ def token_vectors():
         plaintext = seeded(f"plaintext:{length}", length)
         with Deterministic(f"token:{length}"):
             token = ident.encrypt(plaintext)
+        # Kolejność losowań w Identity.encrypt: klucz efemeryczny, potem IV w Token.encrypt.
+        ephemeral = seeded(f"token:{length}:x25519:1", 32)
+        iv = seeded(f"token:{length}:urandom:2", 16)
+        if X25519PrivateKey.from_private_bytes(ephemeral).public_key().public_bytes() != token[:32] or iv != token[32:48]:
+            sys.exit(f"token {length}: recorded ephemeral key or IV differs from the token")
         out.append({
             "identity_private_key": ident.get_private_key().hex(),
-            "ephemeral_private_key": seeded(f"token:{length}:x25519:1", 32).hex(),
-            "iv": seeded(f"token:{length}:urandom:2", 16).hex(),
+            "ephemeral_private_key": ephemeral.hex(),
+            "iv": iv.hex(),
             "plaintext": plaintext.hex(),
             "token": token.hex(),
             "decrypted": receiver.decrypt(token).hex(),
@@ -117,24 +124,39 @@ def token_vectors():
     return out
 
 
-def invalid_token_vectors():
-    """Tokens the reference implementation rejects (decrypt returns None)."""
+def crafted_token_vectors():
+    """Damaged tokens and tokens with a valid HMAC; decrypted is what Identity.decrypt returns (None = rejected)."""
     ident = identity("a")
-    with Deterministic("invalid"):
+    with Deterministic("crafted"):
         valid = ident.encrypt(b"WICI")
-    eph = X25519PrivateKey.from_private_bytes(seeded("invalid:empty", 32))
+    eph = X25519PrivateKey.from_private_bytes(seeded("crafted:ephemeral", 32))
     shared = eph.exchange(ident.pub)
     derived = RNS.Cryptography.hkdf(length=RNS.Identity.DERIVED_KEY_LENGTH, derive_from=shared,
                                     salt=ident.get_salt(), context=ident.get_context())
-    iv = seeded("invalid:empty:iv", 16)
-    empty = eph.public_key().public_bytes() + iv + RNS.Cryptography.HMAC.new(derived[:32], iv).digest()
+    iv = seeded("crafted:iv", 16)
+
+    def signed(ciphertext: bytes) -> bytes:
+        # Węzeł z kluczem sieci może wysłać dowolny szyfrogram z poprawnym HMAC (klucz z ECDH z kluczem celu).
+        parts = iv + ciphertext
+        return eph.public_key().public_bytes() + parts + RNS.Cryptography.HMAC.new(derived[:32], parts).digest()
+
+    def block(last: int) -> bytes:
+        # Jeden blok AES-256-CBC, którego tekst jawny kończy się bajtem dopełnienia last.
+        return AES_256_CBC.encrypt(seeded(f"crafted:block:{last}", 15) + bytes([last]), derived[32:], iv)
+
     cases = {
-        "empty_ciphertext_valid_hmac": empty,
         "bad_hmac": valid[:-1] + bytes([valid[-1] ^ 1]),
-        "bad_ciphertext": valid[:40] + bytes([valid[40] ^ 1]) + valid[41:],
+        "bad_iv": valid[:40] + bytes([valid[40] ^ 1]) + valid[41:],
+        "bad_ciphertext": valid[:48] + bytes([valid[48] ^ 1]) + valid[49:],
         "truncated_to_ephemeral_key": valid[:32],
         "truncated_to_iv": valid[:48],
         "only_ephemeral_key_and_hmac": valid[:32] + valid[-32:],
+        "valid_hmac_empty_ciphertext": signed(b""),
+        "valid_hmac_ciphertext_not_whole_blocks": signed(block(1) + b"\x00"),
+        "valid_hmac_padding_above_block": signed(block(0x20)),
+        # Python nie sprawdza bajtów dopełnienia ani zera: tekst jawny to blok bez last bajtów.
+        "valid_hmac_padding_zero": signed(block(0)),
+        "valid_hmac_padding_inconsistent": signed(block(2)),
     }
     return [{"name": name, "identity_private_key": ident.get_private_key().hex(), "token": token.hex(),
              "decrypted": None if (p := ident.decrypt(token)) is None else p.hex()}
@@ -198,7 +220,7 @@ def main():
         "source": {"reticulum": RNS_VERSION, "commit": RNS_COMMIT, "tool": "firmware/tools/rns_vectors.py"},
         "identity": identity_vectors(),
         "token": token_vectors(),
-        "invalid_token": invalid_token_vectors(),
+        "crafted_token": crafted_token_vectors(),
         "packet": packet_vectors(),
     }
     json.dump(vectors, sys.stdout, indent=1, sort_keys=True)

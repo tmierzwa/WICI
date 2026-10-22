@@ -42,8 +42,9 @@ class VectorFileTests(unittest.TestCase):
                 self.assertEqual((s["valid"], s["tampered_valid"], s["non_canonical_valid"]), (True, False, False))
         for t in self.vectors["token"]:
             self.assertEqual(t["decrypted"], t["plaintext"])
-        for t in self.vectors["invalid_token"]:
-            self.assertIsNone(t["decrypted"], t["name"])
+        # Wzorzec przyjmuje tylko dopełnienie 0 i niespójne bajty dopełnienia (nie sprawdza ich).
+        accepted = {t["name"] for t in self.vectors["crafted_token"] if t["decrypted"] is not None}
+        self.assertEqual(accepted, {"valid_hmac_padding_zero", "valid_hmac_padding_inconsistent"})
         for p in self.vectors["packet"]:
             self.assertIn("header_1", p)
 
