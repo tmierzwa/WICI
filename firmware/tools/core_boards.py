@@ -11,8 +11,8 @@ compiled like in the image (-w -Os, tools/stack_deps.py). Nothing is linked into
 From -fstack-usage and the relocations of the objects (calls between functions) it prints the
 deepest stack of the core entry points with the call path. Calls through pointers are not in the
 relocations: the virtual calls inside Crypto (Hash interface, SHA-256 and SHA-512) come from the
-INDIRECT table, calls of the Transport hooks lead out of the core (rnsnode callbacks, whose stack
-adds to the path) and any other indirect call (`blx rN` on ARM) fails the check. Library functions
+INDIRECT table, calls of the Transport hooks and of the table storage (rnscore::TableStorage, the FRAM
+of rnsnode) lead out of the core (rnsnode callbacks, whose stack adds to the path) and any other indirect call (`blx rN` on ARM) fails the check. Library functions
 (memcpy, the ESP-IDF AES driver) are covered by LIBRARY_RESERVE and one exception or interrupt frame
 on the task stack by INTERRUPT_FRAME. Static RAM: the core files must have none (.data, .bss: no
 globals in the library); the tables live in one rnscore::Transport object owned by rnsnode.
@@ -57,8 +57,9 @@ INDIRECT = {
     "SHA256::clear": ["SHA256::reset"], "SHA512::clear": ["SHA512::reset"],
     "Ed25519::deriveKeys": ["SHA512::reset", "SHA512::update", "SHA512::finalize"],
 }
-# Wywołania przez wskaźnik w rdzeniu: tylko haki transportu (TransportHooks) do warstwy rnsnode.
-HOOKS = re.compile(r"^rnscore::Transport::")
+# Wywołania przez wskaźnik w rdzeniu: tylko haki transportu (TransportHooks) i pamięć tablicy
+# (TableStorage: FRAM w warstwie rnsnode, etap R2) do warstwy rnsnode.
+HOOKS = re.compile(r"^rnscore::(?:Transport|Table)::")
 # Funkcje bibliotek (memcpy, memset, sterownik AES ESP-IDF esp_aes_crypt_ecb) liczone jako stały zapas.
 LIBRARY_RESERVE = 256
 # Jedna ramka wyjątku albo przerwania na stosie zadania: Cortex-M4F z FPU 26 słów (104 B); ESP32-S3
