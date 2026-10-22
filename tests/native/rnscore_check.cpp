@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 
+#include "destination.h"
 #include "hash.h"
 #include "identity.h"
 #include "packet.h"
@@ -52,6 +53,12 @@ int main() {
         } else if (command == "truncated_hash") {
             uint8_t out[rnscore::TRUNCATED_HASH_SIZE];
             rnscore::truncatedHash(data.data(), data.size(), out);
+            printHex(out, sizeof(out));
+        } else if (command == "destination_hash" && data.size() >= rnscore::TRUNCATED_HASH_SIZE) {
+            // skrót tożsamości 16 B, pełna nazwa celu (UTF-8)
+            const std::string name(data.begin() + rnscore::TRUNCATED_HASH_SIZE, data.end());
+            uint8_t out[rnscore::TRUNCATED_HASH_SIZE];
+            rnscore::destinationHash(name.c_str(), data.data(), out);
             printHex(out, sizeof(out));
         } else if (command == "public_key" && data.size() == rnscore::KEY_SIZE) {
             // klucz prywatny 64 B

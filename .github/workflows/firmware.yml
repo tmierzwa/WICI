@@ -81,6 +81,9 @@ jobs:
       - name: Station stack against Reticulum in Python
         run: |
           WICI_PIO="$(command -v pio)" WICI_RNS_PYTHON="$RUNNER_TEMP/rns/bin/python" python -m unittest tests.test_rns_stack -v
+      - name: Stack choice (port or core) keeps the station identity
+        run: |
+          WICI_PIO="$(command -v pio)" python -m unittest tests.test_rns_stack_choice -v
       - name: Core test vectors match Reticulum in Python
         run: |
           WICI_RNS_PYTHON="$RUNNER_TEMP/rns/bin/python" python -m unittest tests.test_rns_vectors -v

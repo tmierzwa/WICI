@@ -649,6 +649,10 @@ Wymagają sprzętu (stanowisko A, dwie płytki albo płytka i Reticulum w Python
 - dwie stacje z transportem: przekazywanie ogłoszeń z limitem 2%, trasa A–B–stanowisko;
 - węzeł stanowiska: KISS przez interfejs CDC z Reticulum w Pythonie na komputerze (`availableForWrite()` w TinyUSB na nRF52840 i ESP32-S3, odłączenie i ponowne podłączenie komputera, wartość `bitrate` komputera z T3), RAM puli z buforem KISS przy pełnych tablicach.
 
+### Wybór stosu: port albo rdzeń
+
+Program węzła na komputerze ma dwa warianty z tym samym `src/host/node_host.cpp` i interfejsem `rns_node.h`: `host` na porcie microReticulum i `host-core` na rdzeniu Reticulum stacji (`lib/reticulum_core`, [reticulum-core.md](reticulum-core.md)), w którym `src/rns_node_core.cpp` zastępuje `src/rns_node.cpp`. W etapie R0 `host-core` ma tylko tożsamość i adres (bez interfejsu P1, ogłoszeń i pakietów). Oba czytają ten sam rekord klucza w FRAM, więc stacja zachowuje tożsamość i adres przy przejściu z portu na rdzeń i z powrotem; rdzeń zapisuje nowy klucz X25519 już przycięty (RFC 7748), bo port używa zapisanego klucza bez przycięcia. Sprawdza to `tests/test_rns_stack_choice.py` (z `WICI_PIO`).
+
 ### Pamięć RAM
 
 Pomiar dla obrazu `bench-a` (nRF52840, 256 KiB RAM) przy pojemnościach ze specyfikacji: 257 celów w tablicy tras i znanych tożsamości (256 ogłoszeń z Reticulum w Pythonie i jego własne; pomiar sprzed limitu 256 wpisów, więc z zapasem jednego celu), 4096 skrótów na liście skrótów pakietów. RAM statyczna z kompilacji (`arm-none-eabi-size`), stosy zadań z rdzenia Adafruit i `main.cpp`, pula stosu z liczników łaty 0001 (bloki z nagłówkami TLSF i struktura sterująca). Pulę zmierzono w programie węzła zbudowanym jako 32-bitowy (i386, te same rozmiary typów co ARM) przez `tools/rns_ram32.py`, który odtwarza datagramy nagrane w próbie zgodności (`rns_interop.py --fill 256 --capture`); program 64-bitowy na komputerze daje tylko górne ograniczenie (166 904 B szczytu, 154 792 B w stanie ustalonym).
