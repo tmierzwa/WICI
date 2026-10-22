@@ -3,8 +3,8 @@
 
 Stage R3 of the core (firmware/reticulum-core.md): MessagePack as LXMF uses it (u-msgpack-python 2.7.1
 vendored in Reticulum e40191b, RNS/vendor/umsgpack.py). Every expected value is what the reference code
-computes or returns: for each input, whether unpackb accepts it, how many bytes the first value takes
-(unpack from a stream; unpackb ignores the rest) and packb(unpackb(data)). Inputs the core rejects on
+computes or returns: for each input, whether unpackb accepts it and how many bytes the first value takes
+(unpack from a stream; unpackb ignores the rest), and what packb makes of the values the core writes. Inputs the core rejects on
 purpose (firmware/lib/reticulum_core/src/msgpack.h) carry the reason in "core_deviation"; the reference
 must accept them, otherwise they would not be deviations.
 
@@ -65,17 +65,6 @@ def key_types(value):
             yield from key_types(e)
 
 
-def has_timestamp(value) -> bool:
-    import datetime
-    if isinstance(value, datetime.datetime):
-        return True
-    if isinstance(value, dict):
-        return any(has_timestamp(k) or has_timestamp(v) for k, v in value.items())
-    if isinstance(value, (list, tuple)):
-        return any(has_timestamp(e) for e in value)
-    return False
-
-
 def msgpack_case(name: str, data: bytes) -> dict:
     case = {"name": name, "data": data.hex()}
     fp = io.BytesIO(data)
@@ -88,11 +77,51 @@ def msgpack_case(name: str, data: bytes) -> dict:
     deviation = None
     if depth(data) > MAX_DEPTH:
         deviation = "depth"
+    elif has_ext(data):
+        deviation = "ext"
     elif any(t not in (type(None), bool, int, str, bytes) for t in key_types(value)):
         deviation = "map_key"
     case["core_deviation"] = deviation
-    case["repacked"] = None if has_timestamp(value) else packb(value).hex()
     return case
+
+
+def has_ext(data: bytes) -> bool:
+    """Whether the first value contains an ext (also a timestamp), by walking the encoding like _unpack."""
+    fp = io.BytesIO(data)
+    pending = 1
+    while pending:
+        code = fp.read(1)[0]
+        pending -= 1
+        if 0xC7 <= code <= 0xC9 or 0xD4 <= code <= 0xD8:
+            return True
+        if 0x80 <= code <= 0x9F or code in (0xDC, 0xDD, 0xDE, 0xDF):
+            if code <= 0x9F:
+                count = code & 0x0F
+            else:
+                count = int.from_bytes(fp.read(2 if code in (0xDC, 0xDE) else 4), "big")
+            pending += count * (2 if code in (0xDE, 0xDF) or code <= 0x8F else 1)
+        else:
+            fp.seek(fp.tell() - 1)
+            umsgpack.unpack(fp)
+    return False
+
+
+def writer_vectors():
+    """What packb makes of each value the core writer handles (LXMessage.pack: array, map, float64, bin).
+    Lengths above 65 535 the core refuses (no packet holds them); packb uses the 32-bit forms."""
+    out = []
+    for count in (0, 4, 15, 16, 65535, 65536):
+        array = packb([0] * count)
+        out.append({"op": "a", "value": count, "packed": array[:len(array) - count].hex()})
+        pairs = packb({i: 0 for i in range(count)})
+        out.append({"op": "m", "value": count,
+                    "packed": pairs[:len(pairs) - sum(len(packb(i)) + 1 for i in range(count))].hex()})
+    for value in (0.0, -0.0, 1.5, 1790000000.123456, -1e300, float("inf"), 2.0**53):
+        out.append({"op": "f", "value": struct.pack(">d", value).hex(), "packed": packb(value).hex()})
+    for length in (0, 1, 255, 256, 65535, 65536):
+        data = bytes(range(256)) * (length // 256) + bytes(range(length % 256))
+        out.append({"op": "b", "value": length, "packed": packb(data)[:len(packb(data)) - length].hex()})
+    return out
 
 
 def nested(levels: int, inner: bytes = b"\xc0", map_level: int = 0) -> bytes:
@@ -189,6 +218,7 @@ def main():
                    "tool": "firmware/tools/lxmf_vectors.py"},
         "msgpack_max_depth": MAX_DEPTH,
         "msgpack": msgpack_vectors(),
+        "msgpack_writer": writer_vectors(),
     }
     json.dump(vectors, sys.stdout, indent=1, sort_keys=True)
     sys.stdout.write("\n")

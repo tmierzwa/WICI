@@ -26,7 +26,7 @@ bool validUtf8(const uint8_t* p, size_t n) {
     while (i < n) {
         const uint8_t c = p[i];
         size_t follow;
-        uint8_t low = 0x80, high = 0xBF;   // zakres pierwszego bajtu kontynuacji
+        uint8_t low = 0x80, high = 0xBF;   // dozwolony zakres pierwszego bajtu kontynuacji
         if (c < 0x80) {
             ++i;
             continue;
@@ -53,59 +53,32 @@ bool validUtf8(const uint8_t* p, size_t n) {
     return true;
 }
 
-// umsgpack.py: _unpack_ext_timestamp: 4, 8 albo 12 B, a wynik musi się zmieścić w datetime
-// (rok 1–9999; inaczej OverflowError przy _epoch + timedelta). Postaci 4 i 8 B zawsze się mieszczą.
-bool validTimestamp(const uint8_t* p, size_t n) {
-    if (n == 4 || n == 8) return true;
-    if (n != 12) return false;
-    constexpr int64_t MIN_S = -62135596800;    // 0001-01-01 00:00:00 UTC względem 1970-01-01
-    constexpr int64_t MAX_S = 253402300799;    // 9999-12-31 23:59:59 UTC
-    const int64_t seconds = static_cast<int64_t>(bigEndian(p + 4, 8));
-    const int64_t micro = static_cast<int64_t>(bigEndian(p, 4) / 1000);   // < 4,3 s
-    if (seconds < MIN_S - 5 || seconds > MAX_S) return false;
-    const int64_t total = seconds * 1000000 + micro;
-    return total >= MIN_S * 1000000 && total <= MAX_S * 1000000 + 999999;
-}
-
-// Klucz mapy dopuszczony przez rdzeń (odstępstwo w msgpack.h).
+// Klucz mapy, który rdzeń przyjmuje (odstępstwo w msgpack.h).
 bool allowedKey(const Item& key) {
-    switch (key.type) {
-        case Type::NIL:
-        case Type::BOOL:
-        case Type::UINT:
-        case Type::INT:
-        case Type::STR:
-        case Type::BIN:
-            return true;
-        default:
-            return false;
-    }
+    return key.type == Type::NIL || key.type == Type::BOOL || key.type == Type::UINT || key.type == Type::INT ||
+           key.type == Type::STR || key.type == Type::BIN;
 }
 
-// Równość kluczy jak w Pythonie (k in d): True == 1, False == 0, str i bytes różne od siebie.
+// Wartość liczbowa klucza: bool jako 0 albo 1, jak w Pythonie (True == 1, False == 0).
+bool keyNumber(const Item& x, bool& negative, uint64_t& bits) {
+    negative = x.type == Type::INT;
+    if (x.type == Type::BOOL) bits = x.boolean ? 1 : 0;
+    else if (x.type == Type::UINT) bits = x.uinteger;
+    else if (x.type == Type::INT) bits = static_cast<uint64_t>(x.integer);
+    else return false;
+    return true;
+}
+
+// Równość kluczy jak w Pythonie (k in d); str i bytes o tych samych bajtach są różne.
 bool sameKey(const Item& a, const Item& b) {
-    auto number = [](const Item& x, bool& negative, uint64_t& magnitude) {
-        if (x.type == Type::BOOL) {
-            negative = false;
-            magnitude = x.boolean ? 1 : 0;
-        } else if (x.type == Type::UINT) {
-            negative = false;
-            magnitude = x.uinteger;
-        } else if (x.type == Type::INT) {
-            negative = true;
-            magnitude = static_cast<uint64_t>(x.integer);   // wartość ujemna, porównywana bitowo
-        } else {
-            return false;
-        }
-        return true;
-    };
-    bool na = false, nb = false;
-    uint64_t ma = 0, mb = 0;
-    if (number(a, na, ma) && number(b, nb, mb)) return na == nb && ma == mb;
+    bool negativeA = false, negativeB = false;
+    uint64_t bitsA = 0, bitsB = 0;
+    const bool numberA = keyNumber(a, negativeA, bitsA);
+    const bool numberB = keyNumber(b, negativeB, bitsB);
+    if (numberA || numberB) return numberA && numberB && negativeA == negativeB && bitsA == bitsB;
     if (a.type != b.type) return false;
     if (a.type == Type::NIL) return true;
-    if (a.type == Type::STR || a.type == Type::BIN) return a.length == b.length && memcmp(a.data, b.data, a.length) == 0;
-    return false;
+    return a.length == b.length && memcmp(a.data, b.data, a.length) == 0;   // STR albo BIN
 }
 
 }  // namespace
@@ -122,8 +95,7 @@ bool Reader::read(Item& out) {
     const uint8_t* p;
     if (!take(1, p)) return false;
     const uint8_t code = p[0];
-    size_t lengthBytes = 0;   // bajty długości po kodzie (str, bin, ext, array, map)
-    size_t fixedLength = 0;   // fixext
+    size_t lengthBytes = 0;   // bajty długości po kodzie (str, bin, array, map)
     if (code <= 0x7F) {
         out.type = Type::UINT;
         out.uinteger = code;
@@ -132,10 +104,10 @@ bool Reader::read(Item& out) {
         out.type = Type::INT;
         out.integer = static_cast<int8_t>(code);
         return true;
-    } else if ((code & 0xF0) == 0x80 || (code & 0xF0) == 0x90) {
-        out.type = (code & 0xF0) == 0x80 ? Type::MAP : Type::ARRAY;
+    } else if (code <= 0x9F) {
+        out.type = code <= 0x8F ? Type::MAP : Type::ARRAY;
         out.length = code & 0x0F;
-    } else if ((code & 0xE0) == 0xA0) {
+    } else if (code <= 0xBF) {
         out.type = Type::STR;
         out.length = code & 0x1F;
     } else {
@@ -152,24 +124,20 @@ bool Reader::read(Item& out) {
                 out.type = Type::BIN;
                 lengthBytes = size_t(1) << (code - 0xC4);
                 break;
-            case 0xC7: case 0xC8: case 0xC9:
-                out.type = Type::EXT;
-                lengthBytes = size_t(1) << (code - 0xC7);
-                break;
-            case 0xCA: case 0xCB: {
-                const size_t n = code == 0xCA ? 4 : 8;
-                if (!take(n, p)) return false;
-                const uint64_t bits = bigEndian(p, n);
-                if (n == 4) {
-                    const uint32_t bits32 = static_cast<uint32_t>(bits);
-                    float f;
-                    memcpy(&f, &bits32, sizeof(f));
-                    out.type = Type::FLOAT32;
-                    out.real = f;
-                } else {
-                    memcpy(&out.real, &bits, sizeof(out.real));
-                    out.type = Type::FLOAT64;
-                }
+            case 0xCA: {
+                if (!take(4, p)) return false;
+                const uint32_t bits = static_cast<uint32_t>(bigEndian(p, 4));
+                float value;
+                memcpy(&value, &bits, sizeof(value));
+                out.type = Type::FLOAT;
+                out.real = value;
+                return true;
+            }
+            case 0xCB: {
+                if (!take(8, p)) return false;
+                const uint64_t bits = bigEndian(p, 8);
+                memcpy(&out.real, &bits, sizeof(out.real));
+                out.type = Type::FLOAT;
                 return true;
             }
             case 0xCC: case 0xCD: case 0xCE: case 0xCF: {
@@ -195,10 +163,6 @@ bool Reader::read(Item& out) {
                 }
                 return true;
             }
-            case 0xD4: case 0xD5: case 0xD6: case 0xD7: case 0xD8:
-                out.type = Type::EXT;
-                fixedLength = size_t(1) << (code - 0xD4);
-                break;
             case 0xD9: case 0xDA: case 0xDB:
                 out.type = Type::STR;
                 lengthBytes = size_t(1) << (code - 0xD9);
@@ -211,29 +175,21 @@ bool Reader::read(Item& out) {
                 out.type = Type::MAP;
                 lengthBytes = code == 0xDE ? 2 : 4;
                 break;
-            default:   // 0xC1: ReservedCodeException
+            default:   // 0xC1 (ReservedCodeException) i ext 0xC7–0xC9, 0xD4–0xD8 (odstępstwo)
                 return false;
         }
     }
     if (lengthBytes) {
         if (!take(lengthBytes, p)) return false;
         out.length = static_cast<uint32_t>(bigEndian(p, lengthBytes));
-    } else if (fixedLength) {
-        out.length = static_cast<uint32_t>(fixedLength);
     }
     switch (out.type) {
         case Type::ARRAY:
-        case Type::MAP: {
-            // Każdy element ma co najmniej 1 B: przy większej liczbie Python dochodzi do końca danych
-            // (InsufficientDataException), więc wynik jest ten sam bez przechodzenia pętli.
-            const uint64_t least = uint64_t(out.length) * (out.type == Type::MAP ? 2 : 1);
-            return least <= remaining();
-        }
-        case Type::EXT:
-            if (!take(1, p)) return false;
-            out.extType = static_cast<int8_t>(p[0]);
-            if (!take(out.length, out.data)) return false;
-            return out.extType != -1 || validTimestamp(out.data, out.length);
+            // Każdy element ma co najmniej 1 B, więc przy większej liczbie Python dochodzi do końca
+            // danych; rdzeń kończy od razu, bez pętli po 2^32 elementach.
+            return out.length <= remaining();
+        case Type::MAP:
+            return out.length <= remaining() / 2;
         case Type::STR:
             return take(out.length, out.data) && validUtf8(out.data, out.length);
         default:   // BIN
@@ -241,46 +197,59 @@ bool Reader::read(Item& out) {
     }
 }
 
+// umsgpack.py: _unpack, _unpack_array i _unpack_map bez rekurencji: levels to otwarte tablice i mapy,
+// a remaining liczy elementy (w mapie klucze i wartości) do końca każdej z nich.
 bool Reader::skip(uint8_t maxDepth) {
-    Item item;
-    if (!read(item)) return false;
-    if (item.type == Type::ARRAY) {
-        if (!maxDepth) return false;
-        for (uint32_t i = 0; i < item.length; ++i) {
-            if (!skip(maxDepth - 1)) return false;
+    struct Level {
+        size_t start;       // pozycja pierwszego klucza mapy
+        size_t total;       // elementy: w tablicy wartości, w mapie klucze i wartości
+        size_t remaining;
+        bool isMap;
+    };
+    Level levels[MAX_DEPTH];
+    if (maxDepth > MAX_DEPTH) maxDepth = MAX_DEPTH;
+    uint8_t depth = 0;
+    do {
+        Level* parent = depth ? &levels[depth - 1] : nullptr;
+        const size_t done = parent ? parent->total - parent->remaining : 0;
+        const bool isKey = parent && parent->isMap && done % 2 == 0;
+        Item item;
+        if (!read(item)) return false;
+        // _unpack_map: klucz sprawdzony z kluczami już przeczytanymi, zanim przyjdzie wartość.
+        if (isKey && (!allowedKey(item) || keySeen(parent->start, done / 2, item))) return false;
+        if (parent) --parent->remaining;
+        if (item.type == Type::ARRAY || item.type == Type::MAP) {
+            if (depth == maxDepth) return false;
+            // read zapewnia, że liczba elementów nie przekracza pozostałych bajtów, więc mieści się w size_t.
+            const size_t count = item.type == Type::MAP ? size_t(item.length) * 2 : item.length;
+            levels[depth++] = Level{position_, count, count, item.type == Type::MAP};
         }
-        return true;
-    }
-    if (item.type == Type::MAP) return maxDepth && skipMap(item.length, maxDepth - 1);
+        while (depth && levels[depth - 1].remaining == 0) --depth;
+    } while (depth);
     return true;
 }
 
-// umsgpack.py: _unpack_map: klucz, sprawdzenie z kluczami już przeczytanymi, wartość. Wcześniejsze pary
-// są czytane ponownie od początku mapy, bo nie ma gdzie ich zapamiętać; liczba par jest ograniczona
-// długością danych (read), więc praca rośnie najwyżej z kwadratem długości pakietu.
-bool Reader::skipMap(uint32_t pairs, uint8_t maxDepth) {
-    const size_t first = position_;
-    for (uint32_t i = 0; i < pairs; ++i) {
-        Item key;
-        if (!read(key) || !allowedKey(key)) return false;
-        Reader earlier(data_, length_);
-        earlier.position_ = first;
-        for (uint32_t j = 0; j < i; ++j) {
-            Item other;
-            if (!earlier.read(other) || sameKey(key, other) || !earlier.skipTrusted()) return false;
-        }
-        if (!skip(maxDepth)) return false;
+// Czy klucz był już wśród index pierwszych kluczy mapy. Wcześniejszych par nie ma gdzie zapamiętać,
+// więc są czytane ponownie od początku mapy; praca rośnie najwyżej z kwadratem długości pakietu.
+bool Reader::keySeen(size_t mapStart, size_t index, const Item& key) const {
+    Reader earlier(data_, length_);
+    earlier.position_ = mapStart;
+    for (size_t i = 0; i < index; ++i) {
+        Item other;
+        if (!earlier.read(other) || sameKey(key, other) || !earlier.skipChecked()) return true;
     }
-    return true;
+    return false;
 }
 
-// Przejście przez wartość, którą skip już sprawdził (bez ponownego sprawdzania kluczy map).
-bool Reader::skipTrusted() {
-    Item item;
-    if (!read(item)) return false;
-    const uint64_t count = item.type == Type::ARRAY ? item.length : item.type == Type::MAP ? uint64_t(item.length) * 2 : 0;
-    for (uint64_t i = 0; i < count; ++i) {
-        if (!skipTrusted()) return false;
+// Przejście przez wartość, którą skip już sprawdził: tylko licznik elementów do przeczytania.
+bool Reader::skipChecked() {
+    size_t pending = 1;
+    while (pending) {
+        Item item;
+        if (!read(item)) return false;
+        --pending;
+        if (item.type == Type::ARRAY) pending += item.length;
+        if (item.type == Type::MAP) pending += size_t(item.length) * 2;
     }
     return true;
 }
@@ -308,121 +277,28 @@ void Writer::header(uint8_t code, uint64_t value, size_t bytes) {
     put(buffer, 1 + bytes);
 }
 
-void Writer::nil() { header(0xC0, 0, 0); }
-
-void Writer::boolean(bool value) { header(value ? 0xC3 : 0xC2, 0, 0); }
-
-// umsgpack.py: _pack_integer.
-void Writer::uinteger(uint64_t value) {
-    if (value < 0x80) {
-        header(static_cast<uint8_t>(value), 0, 0);
-    } else if (value <= 0xFF) {
-        header(0xCC, value, 1);
-    } else if (value <= 0xFFFF) {
-        header(0xCD, value, 2);
-    } else if (value <= 0xFFFFFFFF) {
-        header(0xCE, value, 4);
-    } else {
-        header(0xCF, value, 8);
-    }
+void Writer::array(size_t count) {
+    if (count < 16) header(static_cast<uint8_t>(0x90 | count), 0, 0);
+    else if (count <= 0xFFFF) header(0xDC, count, 2);
+    else ok_ = false;
 }
 
-void Writer::integer(int64_t value) {
-    const uint64_t bits = static_cast<uint64_t>(value);
-    if (value >= 0) {
-        uinteger(bits);
-    } else if (value >= -32) {
-        header(static_cast<uint8_t>(bits), 0, 0);
-    } else if (value >= INT8_MIN) {
-        header(0xD0, bits, 1);
-    } else if (value >= INT16_MIN) {
-        header(0xD1, bits, 2);
-    } else if (value >= INT32_MIN) {
-        header(0xD2, bits, 4);
-    } else {
-        header(0xD3, bits, 8);
-    }
+void Writer::map(size_t pairs) {
+    if (pairs < 16) header(static_cast<uint8_t>(0x80 | pairs), 0, 0);
+    else if (pairs <= 0xFFFF) header(0xDE, pairs, 2);
+    else ok_ = false;
 }
 
-// umsgpack.py: _pack_float z precyzją "double".
 void Writer::float64(double value) {
     uint64_t bits;
     memcpy(&bits, &value, sizeof(bits));
     header(0xCB, bits, 8);
 }
 
-// umsgpack.py: _pack_string (bez trybu zgodności ze starą specyfikacją).
-void Writer::str(const uint8_t* data, size_t length) {
-    if (length < 32) {
-        header(static_cast<uint8_t>(0xA0 | length), 0, 0);
-    } else if (length <= 0xFF) {
-        header(0xD9, length, 1);
-    } else if (length <= 0xFFFF) {
-        header(0xDA, length, 2);
-    } else if (uint64_t(length) <= 0xFFFFFFFF) {
-        header(0xDB, length, 4);
-    } else {
-        ok_ = false;
-    }
-    put(data, length);
-}
-
-// umsgpack.py: _pack_binary.
 void Writer::bin(const uint8_t* data, size_t length) {
-    if (length <= 0xFF) {
-        header(0xC4, length, 1);
-    } else if (length <= 0xFFFF) {
-        header(0xC5, length, 2);
-    } else if (uint64_t(length) <= 0xFFFFFFFF) {
-        header(0xC6, length, 4);
-    } else {
-        ok_ = false;
-    }
-    put(data, length);
-}
-
-// umsgpack.py: _pack_array.
-void Writer::array(uint32_t count) {
-    if (count < 16) {
-        header(static_cast<uint8_t>(0x90 | count), 0, 0);
-    } else if (count <= 0xFFFF) {
-        header(0xDC, count, 2);
-    } else {
-        header(0xDD, count, 4);
-    }
-}
-
-// umsgpack.py: _pack_map.
-void Writer::map(uint32_t pairs) {
-    if (pairs < 16) {
-        header(static_cast<uint8_t>(0x80 | pairs), 0, 0);
-    } else if (pairs <= 0xFFFF) {
-        header(0xDE, pairs, 2);
-    } else {
-        header(0xDF, pairs, 4);
-    }
-}
-
-// umsgpack.py: _pack_ext: fixext dla 1, 2, 4, 8 i 16 B, inaczej ext 8, 16 albo 32.
-void Writer::ext(int8_t type, const uint8_t* data, size_t length) {
-    const uint8_t t = static_cast<uint8_t>(type);
-    switch (length) {
-        case 1: header(0xD4, t, 1); break;
-        case 2: header(0xD5, t, 1); break;
-        case 4: header(0xD6, t, 1); break;
-        case 8: header(0xD7, t, 1); break;
-        case 16: header(0xD8, t, 1); break;
-        default:
-            if (length <= 0xFF) {
-                header(0xC7, (uint64_t(length) << 8) | t, 2);
-            } else if (length <= 0xFFFF) {
-                header(0xC8, (uint64_t(length) << 8) | t, 3);
-            } else if (uint64_t(length) <= 0xFFFFFFFF) {
-                header(0xC9, (uint64_t(length) << 8) | t, 5);
-            } else {
-                ok_ = false;
-            }
-    }
+    if (length <= 0xFF) header(0xC4, length, 1);
+    else if (length <= 0xFFFF) header(0xC5, length, 2);
+    else ok_ = false;
     put(data, length);
 }
 

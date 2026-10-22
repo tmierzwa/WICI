@@ -33,37 +33,6 @@ void printHex(const uint8_t* data, size_t length, const char* end = "\n") {
     printf("%s", end);
 }
 
-// Ponowne kodowanie wartości sprawdzonej przez validate, jak packb(unpackb(dane)) w Pythonie. Znacznika
-// czasu (EXT -1) Python nie koduje z powrotem tymi samymi bajtami (datetime), więc tu odmowa.
-bool repack(mp::Reader& reader, mp::Writer& writer) {
-    mp::Item item;
-    if (!reader.read(item)) return false;
-    switch (item.type) {
-        case mp::Type::NIL: writer.nil(); return true;
-        case mp::Type::BOOL: writer.boolean(item.boolean); return true;
-        case mp::Type::UINT: writer.uinteger(item.uinteger); return true;
-        case mp::Type::INT: writer.integer(item.integer); return true;
-        case mp::Type::FLOAT32:
-        case mp::Type::FLOAT64: writer.float64(item.real); return true;
-        case mp::Type::STR: writer.str(item.data, item.length); return true;
-        case mp::Type::BIN: writer.bin(item.data, item.length); return true;
-        case mp::Type::EXT:
-            if (item.extType == -1) return false;
-            writer.ext(item.extType, item.data, item.length);
-            return true;
-        case mp::Type::ARRAY:
-        case mp::Type::MAP: {
-            const uint64_t count = item.type == mp::Type::ARRAY ? item.length : uint64_t(item.length) * 2;
-            if (item.type == mp::Type::ARRAY) writer.array(item.length); else writer.map(item.length);
-            for (uint64_t i = 0; i < count; ++i) {
-                if (!repack(reader, writer)) return false;
-            }
-            return true;
-        }
-    }
-    return false;
-}
-
 }  // namespace
 
 int main() {
@@ -85,17 +54,30 @@ int main() {
             } else {
                 printf("none\n");
             }
-        } else if (command == "mp_repack" && !data.empty()) {
-            // głębokość 1 B, dane; pierwsza wartość zakodowana ponownie albo "none"
-            std::vector<uint8_t> input(data.begin() + 1, data.end());
-            std::vector<uint8_t> out(2 * input.size() + 16);   // float32 → float64 wydłuża o 4 B na wartość
-            mp::Reader reader(input.data(), input.size());
+        } else if (command == "mp_write" && !data.empty()) {
+            // jedna operacja pisarza: "a" albo "m" i liczba 4 B big-endian (nagłówek tablicy albo mapy),
+            // "f" i 8 B float64 big-endian, "b" i bajty; zapis albo "none" (ok() fałsz)
+            const uint8_t* arg = data.data() + 1;
+            const size_t argLength = data.size() - 1;
+            uint64_t value = 0;
+            for (size_t i = 0; i < argLength && i < 8; ++i) value = (value << 8) | arg[i];
+            std::vector<uint8_t> out(argLength + 16);
             mp::Writer writer(out.data(), out.size());
-            if (mp::validate(input.data(), input.size(), data[0], nullptr) && repack(reader, writer) && writer.ok()) {
-                printHex(out.data(), writer.length());
+            bool known = true;
+            if (data[0] == 'a' && argLength == 4) {
+                writer.array(value);
+            } else if (data[0] == 'm' && argLength == 4) {
+                writer.map(value);
+            } else if (data[0] == 'f' && argLength == 8) {
+                double real;
+                memcpy(&real, &value, sizeof(real));
+                writer.float64(real);
+            } else if (data[0] == 'b') {
+                writer.bin(arg, argLength);
             } else {
-                printf("none\n");
+                known = false;
             }
+            if (!known) printf("error\n"); else if (writer.ok()) printHex(out.data(), writer.length()); else printf("none\n");
         } else {
             printf("error\n");
         }

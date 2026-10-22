@@ -41,8 +41,9 @@ Odstępstwa rdzenia od Reticulum w Pythonie w podzbiorze z tabeli zakresu. Każd
 | ogłoszenie przyjmowane (`validateAnnounce`) | sprawdza dane każdej długości | odrzuca dane dłuższe niż 481 B (MTU bez nagłówka HEADER_1) | stały bufor danych podpisanych; takiego ogłoszenia nie złoży `Packet.pack`, więc zgodny nadawca go nie wyśle |
 | ogłoszenie własne (`buildAnnounce`) | składa dane do 481 B | składa do 465 B | węzeł transportowy w Pythonie przekazuje ogłoszenie jako nowy pakiet HEADER_2 przez `Packet.pack`, więc dane 466–481 B nie przechodzą dalej niż o jeden skok |
 | pakiet własny (`pack`) | składa pakiet z pustymi danymi, z liczbą skoków ≥ 128 i z kontekstem LRPROOF dla dowolnego celu | odmawia | odbiorca takiego pakietu nie przyjmie (`unpack`, `send`); łącza są poza rdzeniem |
-| MessagePack przyjmowany (`msgpack::Reader::skip`) | zagnieżdża tablice i mapy do granicy rekurencji interpretera | odrzuca głębsze niż podany limit (LXMF: 8 poziomów) | stały stos bez rekurencji zależnej od wejścia; `LXMessage.pack` składa 2 poziomy (wiadomość i mapa pól) |
-| klucz mapy MessagePack (`msgpack::Reader::skip`) | przyjmuje także float, ext, znacznik czasu i tablicę (jako krotkę) | przyjmuje nil, bool, liczbę całkowitą, str i bin | równość kluczy jak w Pythonie bez porównań float z int, ext i krotek; pola LXMF mają klucze całkowite (`FIELD_*`) |
+| MessagePack przyjmowany (`msgpack::Reader::skip`) | zagnieżdża tablice i mapy do granicy rekurencji interpretera | odrzuca głębsze niż 8 poziomów | stos poziomów o stałym rozmiarze, bez rekurencji; `LXMessage.pack` składa 2 poziomy (wiadomość i mapa pól) |
+| typ ext MessagePack (`msgpack::Reader::read`) | przyjmuje ext i znacznik czasu (ext −1) | odrzuca | LXMF nie używa ext; mniej kodu do sprawdzenia (zakres dat znacznika czasu) |
+| klucz mapy MessagePack (`msgpack::Reader::skip`) | przyjmuje także float i tablicę (jako krotkę) | przyjmuje nil, bool, liczbę całkowitą, str i bin | równość kluczy jak w Pythonie bez porównań float z int i krotek; pola LXMF mają klucze całkowite (`FIELD_*`) |
 | nowy klucz tożsamości (`rns_node_core.cpp`) | zapisuje losowe bajty klucza X25519 | zapisuje klucz już przycięty (RFC 7748) | ten sam klucz dla Pythona i rdzenia; port używa zapisanego klucza bez przycięcia |
 
 ## Wymagania konstrukcyjne

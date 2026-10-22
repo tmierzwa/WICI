@@ -5,408 +5,357 @@
    "consumed": 1,
    "core_deviation": null,
    "data": "00",
-   "name": "int_0",
-   "repacked": "00"
+   "name": "int_0"
   },
   {
    "accepted": true,
    "consumed": 1,
    "core_deviation": null,
    "data": "01",
-   "name": "int_1",
-   "repacked": "01"
+   "name": "int_1"
   },
   {
    "accepted": true,
    "consumed": 1,
    "core_deviation": null,
    "data": "7f",
-   "name": "int_127",
-   "repacked": "7f"
+   "name": "int_127"
   },
   {
    "accepted": true,
    "consumed": 2,
    "core_deviation": null,
    "data": "cc80",
-   "name": "int_128",
-   "repacked": "cc80"
+   "name": "int_128"
   },
   {
    "accepted": true,
    "consumed": 2,
    "core_deviation": null,
    "data": "ccff",
-   "name": "int_255",
-   "repacked": "ccff"
+   "name": "int_255"
   },
   {
    "accepted": true,
    "consumed": 3,
    "core_deviation": null,
    "data": "cd0100",
-   "name": "int_256",
-   "repacked": "cd0100"
+   "name": "int_256"
   },
   {
    "accepted": true,
    "consumed": 3,
    "core_deviation": null,
    "data": "cdffff",
-   "name": "int_65535",
-   "repacked": "cdffff"
+   "name": "int_65535"
   },
   {
    "accepted": true,
    "consumed": 5,
    "core_deviation": null,
    "data": "ce00010000",
-   "name": "int_65536",
-   "repacked": "ce00010000"
+   "name": "int_65536"
   },
   {
    "accepted": true,
    "consumed": 5,
    "core_deviation": null,
    "data": "ceffffffff",
-   "name": "int_4294967295",
-   "repacked": "ceffffffff"
+   "name": "int_4294967295"
   },
   {
    "accepted": true,
    "consumed": 9,
    "core_deviation": null,
    "data": "cf0000000100000000",
-   "name": "int_4294967296",
-   "repacked": "cf0000000100000000"
+   "name": "int_4294967296"
   },
   {
    "accepted": true,
    "consumed": 9,
    "core_deviation": null,
    "data": "cfffffffffffffffff",
-   "name": "int_18446744073709551615",
-   "repacked": "cfffffffffffffffff"
+   "name": "int_18446744073709551615"
   },
   {
    "accepted": true,
    "consumed": 1,
    "core_deviation": null,
    "data": "ff",
-   "name": "int_-1",
-   "repacked": "ff"
+   "name": "int_-1"
   },
   {
    "accepted": true,
    "consumed": 1,
    "core_deviation": null,
    "data": "e0",
-   "name": "int_-32",
-   "repacked": "e0"
+   "name": "int_-32"
   },
   {
    "accepted": true,
    "consumed": 2,
    "core_deviation": null,
    "data": "d0df",
-   "name": "int_-33",
-   "repacked": "d0df"
+   "name": "int_-33"
   },
   {
    "accepted": true,
    "consumed": 2,
    "core_deviation": null,
    "data": "d080",
-   "name": "int_-128",
-   "repacked": "d080"
+   "name": "int_-128"
   },
   {
    "accepted": true,
    "consumed": 3,
    "core_deviation": null,
    "data": "d1ff7f",
-   "name": "int_-129",
-   "repacked": "d1ff7f"
+   "name": "int_-129"
   },
   {
    "accepted": true,
    "consumed": 3,
    "core_deviation": null,
    "data": "d18000",
-   "name": "int_-32768",
-   "repacked": "d18000"
+   "name": "int_-32768"
   },
   {
    "accepted": true,
    "consumed": 5,
    "core_deviation": null,
    "data": "d2ffff7fff",
-   "name": "int_-32769",
-   "repacked": "d2ffff7fff"
+   "name": "int_-32769"
   },
   {
    "accepted": true,
    "consumed": 5,
    "core_deviation": null,
    "data": "d280000000",
-   "name": "int_-2147483648",
-   "repacked": "d280000000"
+   "name": "int_-2147483648"
   },
   {
    "accepted": true,
    "consumed": 9,
    "core_deviation": null,
    "data": "d3ffffffff7fffffff",
-   "name": "int_-2147483649",
-   "repacked": "d3ffffffff7fffffff"
+   "name": "int_-2147483649"
   },
   {
    "accepted": true,
    "consumed": 9,
    "core_deviation": null,
    "data": "d38000000000000000",
-   "name": "int_-9223372036854775808",
-   "repacked": "d38000000000000000"
+   "name": "int_-9223372036854775808"
   },
   {
    "accepted": true,
    "consumed": 1,
    "core_deviation": null,
    "data": "c0",
-   "name": "nil",
-   "repacked": "c0"
+   "name": "nil"
   },
   {
    "accepted": true,
    "consumed": 1,
    "core_deviation": null,
    "data": "c3",
-   "name": "true",
-   "repacked": "c3"
+   "name": "true"
   },
   {
    "accepted": true,
    "consumed": 1,
    "core_deviation": null,
    "data": "c2",
-   "name": "false",
-   "repacked": "c2"
+   "name": "false"
   },
   {
    "accepted": true,
    "consumed": 2,
    "core_deviation": null,
    "data": "cc05",
-   "name": "uint8_small",
-   "repacked": "05"
+   "name": "uint8_small"
   },
   {
    "accepted": true,
    "consumed": 3,
    "core_deviation": null,
    "data": "cd0005",
-   "name": "uint16_small",
-   "repacked": "05"
+   "name": "uint16_small"
   },
   {
    "accepted": true,
    "consumed": 9,
    "core_deviation": null,
    "data": "cf0000000000000005",
-   "name": "uint64_small",
-   "repacked": "05"
+   "name": "uint64_small"
   },
   {
    "accepted": true,
    "consumed": 2,
    "core_deviation": null,
    "data": "d005",
-   "name": "int8_positive",
-   "repacked": "05"
+   "name": "int8_positive"
   },
   {
    "accepted": true,
    "consumed": 2,
    "core_deviation": null,
    "data": "d0ff",
-   "name": "int8_minus_one",
-   "repacked": "ff"
+   "name": "int8_minus_one"
   },
   {
    "accepted": true,
    "consumed": 9,
    "core_deviation": null,
    "data": "d30000000000000005",
-   "name": "int64_positive",
-   "repacked": "05"
+   "name": "int64_positive"
   },
   {
    "accepted": true,
    "consumed": 3,
    "core_deviation": null,
    "data": "d1ffff",
-   "name": "int16_minus_one",
-   "repacked": "ff"
+   "name": "int16_minus_one"
   },
   {
    "accepted": true,
    "consumed": 5,
    "core_deviation": null,
    "data": "d280000000",
-   "name": "int32_min",
-   "repacked": "d280000000"
+   "name": "int32_min"
   },
   {
    "accepted": true,
    "consumed": 9,
    "core_deviation": null,
    "data": "cb3ff8000000000000",
-   "name": "float64",
-   "repacked": "cb3ff8000000000000"
+   "name": "float64"
   },
   {
    "accepted": true,
    "consumed": 9,
    "core_deviation": null,
    "data": "cb8000000000000000",
-   "name": "float64_negative_zero",
-   "repacked": "cb8000000000000000"
+   "name": "float64_negative_zero"
   },
   {
    "accepted": true,
    "consumed": 9,
    "core_deviation": null,
    "data": "cb7ff0000000000000",
-   "name": "float64_inf",
-   "repacked": "cb7ff0000000000000"
+   "name": "float64_inf"
   },
   {
    "accepted": true,
    "consumed": 9,
    "core_deviation": null,
    "data": "cb41daac4ee007e6b4",
-   "name": "float64_time",
-   "repacked": "cb41daac4ee007e6b4"
+   "name": "float64_time"
   },
   {
    "accepted": true,
    "consumed": 5,
    "core_deviation": null,
    "data": "ca3fc00000",
-   "name": "float32",
-   "repacked": "cb3ff8000000000000"
+   "name": "float32"
   },
   {
    "accepted": true,
    "consumed": 5,
    "core_deviation": null,
    "data": "ca3dcccccd",
-   "name": "float32_inexact",
-   "repacked": "cb3fb99999a0000000"
+   "name": "float32_inexact"
   },
   {
    "accepted": true,
    "consumed": 1,
    "core_deviation": null,
    "data": "a0",
-   "name": "str_empty",
-   "repacked": "a0"
+   "name": "str_empty"
   },
   {
    "accepted": true,
    "consumed": 5,
    "core_deviation": null,
    "data": "a457494349",
-   "name": "str_wici",
-   "repacked": "a457494349"
+   "name": "str_wici"
   },
   {
    "accepted": true,
    "consumed": 32,
    "core_deviation": null,
    "data": "bf61616161616161616161616161616161616161616161616161616161616161",
-   "name": "str_31",
-   "repacked": "bf61616161616161616161616161616161616161616161616161616161616161"
+   "name": "str_31"
   },
   {
    "accepted": true,
    "consumed": 34,
    "core_deviation": null,
    "data": "d9206161616161616161616161616161616161616161616161616161616161616161",
-   "name": "str_32",
-   "repacked": "d9206161616161616161616161616161616161616161616161616161616161616161"
+   "name": "str_32"
   },
   {
    "accepted": true,
    "consumed": 257,
    "core_deviation": null,
    "data": "d9ff626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262",
-   "name": "str_255",
-   "repacked": "d9ff626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262"
+   "name": "str_255"
   },
   {
    "accepted": true,
    "consumed": 259,
    "core_deviation": null,
    "data": "da010063636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363",
-   "name": "str_256",
-   "repacked": "da010063636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363"
+   "name": "str_256"
   },
   {
    "accepted": true,
    "consumed": 27,
    "core_deviation": null,
    "data": "ba7a61c5bcc3b3c582c4872067c499c59b6cc485206a61c5bac584",
-   "name": "str_polish",
-   "repacked": "ba7a61c5bcc3b3c582c4872067c499c59b6cc485206a61c5bac584"
+   "name": "str_polish"
   },
   {
    "accepted": true,
    "consumed": 13,
    "core_deviation": null,
    "data": "acd09fd0bed0b6d0b5d0b6d0b0",
-   "name": "str_ukrainian",
-   "repacked": "acd09fd0bed0b6d0b5d0b6d0b0"
+   "name": "str_ukrainian"
   },
   {
    "accepted": true,
    "consumed": 5,
    "core_deviation": null,
    "data": "a4f09f94a5",
-   "name": "str_4_byte",
-   "repacked": "a4f09f94a5"
+   "name": "str_4_byte"
   },
   {
    "accepted": true,
    "consumed": 5,
    "core_deviation": null,
    "data": "a4f48fbfbf",
-   "name": "str_max_code_point",
-   "repacked": "a4f48fbfbf"
+   "name": "str_max_code_point"
   },
   {
    "accepted": true,
    "consumed": 6,
    "core_deviation": null,
    "data": "d90457494349",
-   "name": "str8_short",
-   "repacked": "a457494349"
+   "name": "str8_short"
   },
   {
    "accepted": true,
    "consumed": 7,
    "core_deviation": null,
    "data": "da000457494349",
-   "name": "str16_short",
-   "repacked": "a457494349"
+   "name": "str16_short"
   },
   {
    "accepted": true,
    "consumed": 9,
    "core_deviation": null,
    "data": "db0000000457494349",
-   "name": "str32_short",
-   "repacked": "a457494349"
+   "name": "str32_short"
   },
   {
    "accepted": false,
@@ -473,168 +422,147 @@
    "consumed": 2,
    "core_deviation": null,
    "data": "c400",
-   "name": "bin_empty",
-   "repacked": "c400"
+   "name": "bin_empty"
   },
   {
    "accepted": true,
    "consumed": 3,
    "core_deviation": null,
    "data": "c40100",
-   "name": "bin_1",
-   "repacked": "c40100"
+   "name": "bin_1"
   },
   {
    "accepted": true,
    "consumed": 257,
    "core_deviation": null,
    "data": "c4ff000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-   "name": "bin_255",
-   "repacked": "c4ff000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+   "name": "bin_255"
   },
   {
    "accepted": true,
    "consumed": 259,
    "core_deviation": null,
    "data": "c5010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-   "name": "bin_256",
-   "repacked": "c5010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+   "name": "bin_256"
   },
   {
    "accepted": true,
    "consumed": 5,
    "core_deviation": null,
    "data": "c500026162",
-   "name": "bin16_short",
-   "repacked": "c4026162"
+   "name": "bin16_short"
   },
   {
    "accepted": true,
    "consumed": 7,
    "core_deviation": null,
    "data": "c6000000026162",
-   "name": "bin32_short",
-   "repacked": "c4026162"
+   "name": "bin32_short"
   },
   {
    "accepted": true,
    "consumed": 4,
    "core_deviation": null,
    "data": "c402fffe",
-   "name": "bin_invalid_utf8",
-   "repacked": "c402fffe"
+   "name": "bin_invalid_utf8"
   },
   {
    "accepted": true,
    "consumed": 3,
-   "core_deviation": null,
+   "core_deviation": "ext",
    "data": "d40500",
-   "name": "fixext_1",
-   "repacked": "d40500"
+   "name": "fixext_1"
   },
   {
    "accepted": true,
    "consumed": 4,
-   "core_deviation": null,
+   "core_deviation": "ext",
    "data": "d5050001",
-   "name": "fixext_2",
-   "repacked": "d5050001"
+   "name": "fixext_2"
   },
   {
    "accepted": true,
    "consumed": 6,
-   "core_deviation": null,
+   "core_deviation": "ext",
    "data": "d60500010203",
-   "name": "fixext_4",
-   "repacked": "d60500010203"
+   "name": "fixext_4"
   },
   {
    "accepted": true,
    "consumed": 10,
-   "core_deviation": null,
+   "core_deviation": "ext",
    "data": "d7050001020304050607",
-   "name": "fixext_8",
-   "repacked": "d7050001020304050607"
+   "name": "fixext_8"
   },
   {
    "accepted": true,
    "consumed": 18,
-   "core_deviation": null,
+   "core_deviation": "ext",
    "data": "d805000102030405060708090a0b0c0d0e0f",
-   "name": "fixext_16",
-   "repacked": "d805000102030405060708090a0b0c0d0e0f"
+   "name": "fixext_16"
   },
   {
    "accepted": true,
    "consumed": 3,
-   "core_deviation": null,
+   "core_deviation": "ext",
    "data": "c700fb",
-   "name": "ext8_empty",
-   "repacked": "c700fb"
+   "name": "ext8_empty"
   },
   {
    "accepted": true,
    "consumed": 6,
-   "core_deviation": null,
+   "core_deviation": "ext",
    "data": "c7037f616263",
-   "name": "ext8_3",
-   "repacked": "c7037f616263"
+   "name": "ext8_3"
   },
   {
    "accepted": true,
    "consumed": 304,
-   "core_deviation": null,
+   "core_deviation": "ext",
    "data": "c8012c80000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-   "name": "ext16_300",
-   "repacked": "c8012c80000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+   "name": "ext16_300"
   },
   {
    "accepted": true,
    "consumed": 7,
-   "core_deviation": null,
+   "core_deviation": "ext",
    "data": "c7040561626364",
-   "name": "ext8_long_form_of_4",
-   "repacked": "d60561626364"
+   "name": "ext8_long_form_of_4"
   },
   {
    "accepted": true,
    "consumed": 6,
-   "core_deviation": null,
+   "core_deviation": "ext",
    "data": "d6ff6ab13b80",
-   "name": "timestamp32",
-   "repacked": null
+   "name": "timestamp32"
   },
   {
    "accepted": true,
    "consumed": 10,
-   "core_deviation": null,
+   "core_deviation": "ext",
    "data": "d7ff1d6f28006ab13b80",
-   "name": "timestamp64",
-   "repacked": null
+   "name": "timestamp64"
   },
   {
    "accepted": true,
    "consumed": 10,
-   "core_deviation": null,
+   "core_deviation": "ext",
    "data": "d7ffffffffffffffffff",
-   "name": "timestamp64_nanoseconds_above_second",
-   "repacked": null
+   "name": "timestamp64_nanoseconds_above_second"
   },
   {
    "accepted": true,
    "consumed": 15,
-   "core_deviation": null,
+   "core_deviation": "ext",
    "data": "c70cff3b9ac9ffffffffffffffffff",
-   "name": "timestamp96",
-   "repacked": null
+   "name": "timestamp96"
   },
   {
    "accepted": true,
    "consumed": 15,
-   "core_deviation": null,
+   "core_deviation": "ext",
    "data": "c70cff00000000fffffff1886e0900",
-   "name": "timestamp96_min",
-   "repacked": null
+   "name": "timestamp96_min"
   },
   {
    "accepted": false,
@@ -645,18 +573,16 @@
   {
    "accepted": true,
    "consumed": 15,
-   "core_deviation": null,
+   "core_deviation": "ext",
    "data": "c70cfffffffffffffffff1886e08fc",
-   "name": "timestamp96_min_by_nanoseconds",
-   "repacked": null
+   "name": "timestamp96_min_by_nanoseconds"
   },
   {
    "accepted": true,
    "consumed": 15,
-   "core_deviation": null,
+   "core_deviation": "ext",
    "data": "c70cff3b9ac9ff0000003afff4417f",
-   "name": "timestamp96_max",
-   "repacked": null
+   "name": "timestamp96_max"
   },
   {
    "accepted": false,
@@ -693,104 +619,91 @@
    "consumed": 1,
    "core_deviation": null,
    "data": "90",
-   "name": "array_empty",
-   "repacked": "90"
+   "name": "array_empty"
   },
   {
    "accepted": true,
    "consumed": 16,
    "core_deviation": null,
    "data": "9f000102030405060708090a0b0c0d0e",
-   "name": "array_15",
-   "repacked": "9f000102030405060708090a0b0c0d0e"
+   "name": "array_15"
   },
   {
    "accepted": true,
    "consumed": 19,
    "core_deviation": null,
    "data": "dc0010000102030405060708090a0b0c0d0e0f",
-   "name": "array_16",
-   "repacked": "dc0010000102030405060708090a0b0c0d0e0f"
+   "name": "array_16"
   },
   {
    "accepted": true,
    "consumed": 4,
    "core_deviation": null,
    "data": "dc000101",
-   "name": "array16_short",
-   "repacked": "9101"
+   "name": "array16_short"
   },
   {
    "accepted": true,
    "consumed": 6,
    "core_deviation": null,
    "data": "dd0000000101",
-   "name": "array32_short",
-   "repacked": "9101"
+   "name": "array32_short"
   },
   {
    "accepted": true,
    "consumed": 1,
    "core_deviation": null,
    "data": "80",
-   "name": "map_empty",
-   "repacked": "80"
+   "name": "map_empty"
   },
   {
    "accepted": true,
    "consumed": 3,
    "core_deviation": null,
    "data": "810102",
-   "name": "map_int",
-   "repacked": "810102"
+   "name": "map_int"
   },
   {
    "accepted": true,
    "consumed": 31,
    "core_deviation": null,
    "data": "8f00000101020203030404050506060707080809090a0a0b0b0c0c0d0d0e0e",
-   "name": "map_15",
-   "repacked": "8f00000101020203030404050506060707080809090a0a0b0b0c0c0d0d0e0e"
+   "name": "map_15"
   },
   {
    "accepted": true,
    "consumed": 35,
    "core_deviation": null,
    "data": "de001000000101020203030404050506060707080809090a0a0b0b0c0c0d0d0e0e0f0f",
-   "name": "map_16",
-   "repacked": "de001000000101020203030404050506060707080809090a0a0b0b0c0c0d0d0e0e0f0f"
+   "name": "map_16"
   },
   {
    "accepted": true,
    "consumed": 5,
    "core_deviation": null,
    "data": "de00010102",
-   "name": "map16_short",
-   "repacked": "810102"
+   "name": "map16_short"
   },
   {
    "accepted": true,
    "consumed": 11,
    "core_deviation": null,
    "data": "82a16101a16292c40178c0",
-   "name": "map_str_keys",
-   "repacked": "82a16101a16292c40178c0"
+   "name": "map_str_keys"
   },
   {
    "accepted": true,
    "consumed": 8,
    "core_deviation": null,
    "data": "8101810281039104",
-   "name": "map_nested",
-   "repacked": "8101810281039104"
+   "name": "map_nested"
   },
   {
    "accepted": true,
    "consumed": 14,
    "core_deviation": null,
    "data": "85c001c302c4016b03a16b04ff05",
-   "name": "map_nil_bool_keys",
-   "repacked": "85c001c302c4016b03a16b04ff05"
+   "name": "map_nil_bool_keys"
   },
   {
    "accepted": false,
@@ -857,32 +770,28 @@
    "consumed": 8,
    "core_deviation": null,
    "data": "82a16101c4016102",
-   "name": "map_str_and_bin_same_bytes",
-   "repacked": "82a16101c4016102"
+   "name": "map_str_and_bin_same_bytes"
   },
   {
    "accepted": true,
    "consumed": 5,
    "core_deviation": null,
    "data": "820101ff02",
-   "name": "map_one_and_minus_one",
-   "repacked": "820101ff02"
+   "name": "map_one_and_minus_one"
   },
   {
    "accepted": true,
    "consumed": 21,
    "core_deviation": null,
    "data": "82d3800000000000000001cfffffffffffffffff02",
-   "name": "map_int64_min_and_uint64_max",
-   "repacked": "82d3800000000000000001cfffffffffffffffff02"
+   "name": "map_int64_min_and_uint64_max"
   },
   {
    "accepted": true,
    "consumed": 11,
    "core_deviation": "map_key",
    "data": "81cb3ff800000000000001",
-   "name": "map_float_key",
-   "repacked": "81cb3ff800000000000001"
+   "name": "map_float_key"
   },
   {
    "accepted": false,
@@ -895,24 +804,21 @@
    "consumed": 4,
    "core_deviation": "map_key",
    "data": "81910102",
-   "name": "map_array_key",
-   "repacked": "81910102"
+   "name": "map_array_key"
   },
   {
    "accepted": true,
    "consumed": 5,
-   "core_deviation": "map_key",
+   "core_deviation": "ext",
    "data": "81d4050001",
-   "name": "map_ext_key",
-   "repacked": "81d4050001"
+   "name": "map_ext_key"
   },
   {
    "accepted": true,
    "consumed": 8,
-   "core_deviation": "map_key",
+   "core_deviation": "ext",
    "data": "81d6ff0000000101",
-   "name": "map_timestamp_key",
-   "repacked": null
+   "name": "map_timestamp_key"
   },
   {
    "accepted": false,
@@ -1015,64 +921,56 @@
    "consumed": 1,
    "core_deviation": null,
    "data": "010203",
-   "name": "trailing_bytes",
-   "repacked": "01"
+   "name": "trailing_bytes"
   },
   {
    "accepted": true,
    "consumed": 4,
    "core_deviation": null,
    "data": "9201a161c1ff",
-   "name": "trailing_garbage_after_array",
-   "repacked": "9201a161"
+   "name": "trailing_garbage_after_array"
   },
   {
    "accepted": true,
    "consumed": 9,
    "core_deviation": null,
    "data": "9191919191919191c0",
-   "name": "depth_8",
-   "repacked": "9191919191919191c0"
+   "name": "depth_8"
   },
   {
    "accepted": true,
    "consumed": 10,
    "core_deviation": null,
    "data": "919191919191918100c0",
-   "name": "depth_8_maps",
-   "repacked": "919191919191918100c0"
+   "name": "depth_8_maps"
   },
   {
    "accepted": true,
    "consumed": 10,
    "core_deviation": "depth",
    "data": "919191919191919191c0",
-   "name": "depth_9",
-   "repacked": "919191919191919191c0"
+   "name": "depth_9"
   },
   {
    "accepted": true,
    "consumed": 11,
    "core_deviation": "depth",
    "data": "91919191919191918100c0",
-   "name": "depth_9_map",
-   "repacked": "91919191919191918100c0"
+   "name": "depth_9_map"
   },
   {
    "accepted": true,
    "consumed": 201,
    "core_deviation": "depth",
    "data": "9191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191c0",
-   "name": "depth_200",
-   "repacked": "9191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191c0"
+   "name": "depth_200"
   },
   {
    "accepted": true,
    "consumed": 9,
    "core_deviation": "depth",
    "data": "919191919191919190",
-   "name": "depth_9_empty",
-   "repacked": "919191919191919190"
+   "name": "depth_9_empty"
   },
   {
    "accepted": false,
@@ -1563,13 +1461,139 @@
   {
    "accepted": true,
    "consumed": 80,
-   "core_deviation": null,
+   "core_deviation": "ext",
    "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c42878787878787878787878787878787878787878787878787878787878787878787878787878787878c0c3a16bd5036162",
-   "name": "prefix_80",
-   "repacked": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c42878787878787878787878787878787878787878787878787878787878787878787878787878787878c0c3a16bd5036162"
+   "name": "prefix_80"
   }
  ],
  "msgpack_max_depth": 8,
+ "msgpack_writer": [
+  {
+   "op": "a",
+   "packed": "90",
+   "value": 0
+  },
+  {
+   "op": "m",
+   "packed": "80",
+   "value": 0
+  },
+  {
+   "op": "a",
+   "packed": "94",
+   "value": 4
+  },
+  {
+   "op": "m",
+   "packed": "84",
+   "value": 4
+  },
+  {
+   "op": "a",
+   "packed": "9f",
+   "value": 15
+  },
+  {
+   "op": "m",
+   "packed": "8f",
+   "value": 15
+  },
+  {
+   "op": "a",
+   "packed": "dc0010",
+   "value": 16
+  },
+  {
+   "op": "m",
+   "packed": "de0010",
+   "value": 16
+  },
+  {
+   "op": "a",
+   "packed": "dcffff",
+   "value": 65535
+  },
+  {
+   "op": "m",
+   "packed": "deffff",
+   "value": 65535
+  },
+  {
+   "op": "a",
+   "packed": "dd00010000",
+   "value": 65536
+  },
+  {
+   "op": "m",
+   "packed": "df00010000",
+   "value": 65536
+  },
+  {
+   "op": "f",
+   "packed": "cb0000000000000000",
+   "value": "0000000000000000"
+  },
+  {
+   "op": "f",
+   "packed": "cb8000000000000000",
+   "value": "8000000000000000"
+  },
+  {
+   "op": "f",
+   "packed": "cb3ff8000000000000",
+   "value": "3ff8000000000000"
+  },
+  {
+   "op": "f",
+   "packed": "cb41daac4ee007e6b4",
+   "value": "41daac4ee007e6b4"
+  },
+  {
+   "op": "f",
+   "packed": "cbfe37e43c8800759c",
+   "value": "fe37e43c8800759c"
+  },
+  {
+   "op": "f",
+   "packed": "cb7ff0000000000000",
+   "value": "7ff0000000000000"
+  },
+  {
+   "op": "f",
+   "packed": "cb4340000000000000",
+   "value": "4340000000000000"
+  },
+  {
+   "op": "b",
+   "packed": "c400",
+   "value": 0
+  },
+  {
+   "op": "b",
+   "packed": "c401",
+   "value": 1
+  },
+  {
+   "op": "b",
+   "packed": "c4ff",
+   "value": 255
+  },
+  {
+   "op": "b",
+   "packed": "c50100",
+   "value": 256
+  },
+  {
+   "op": "b",
+   "packed": "c5ffff",
+   "value": 65535
+  },
+  {
+   "op": "b",
+   "packed": "c600010000",
+   "value": 65536
+  }
+ ],
  "source": {
   "commit": "e40191b3d193b46b7f2d8a44424a594cd758839b",
   "reticulum": "1.5.5",

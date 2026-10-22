@@ -59,7 +59,7 @@ class VectorFileTests(unittest.TestCase):
         # Odstępstwo to wejście, które Python przyjmuje, a rdzeń odrzuca; innych rodzajów nie ma.
         deviations = [c for c in VECTORS["msgpack"] if c.get("core_deviation")]
         self.assertTrue(all(c["accepted"] for c in deviations))
-        self.assertEqual({c["core_deviation"] for c in deviations}, {"depth", "map_key"})
+        self.assertEqual({c["core_deviation"] for c in deviations}, {"depth", "ext", "map_key"})
 
     @unittest.skipUnless(RNS_PYTHON, "WICI_RNS_PYTHON not set")
     def test_matches_reference_implementation(self):
@@ -111,23 +111,38 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(dict(zip((c["name"] for c in cases), got)), dict(zip((c["name"] for c in cases), expected)))
         self.assertGreater(sum(c["accepted"] and not c["core_deviation"] for c in cases), 60)
 
-    def test_msgpack_repack(self):
-        # Koder składa te same bajty co packb(unpackb(dane)): najkrótsze kodowanie, float32 jako float64.
-        cases = [c for c in VECTORS["msgpack"] if c["accepted"] and not c["core_deviation"] and c["repacked"]]
-        got = self.ask([("mp_repack", self.depth_and(bytes.fromhex(c["data"]))) for c in cases])
-        self.assertEqual(dict(zip((c["name"] for c in cases), got)), {c["name"]: c["repacked"] for c in cases})
+    def test_msgpack_writer(self):
+        # Pisarz składa te same bajty co packb (tablica, mapa, float64, bin); ponad 65 535 odmawia.
+        cases = VECTORS["msgpack_writer"]
+        commands = []
+        for c in cases:
+            if c["op"] in "am":
+                commands.append(("mp_write", c["op"].encode() + c["value"].to_bytes(4, "big")))
+            elif c["op"] == "f":
+                commands.append(("mp_write", b"f" + bytes.fromhex(c["value"])))
+            else:
+                commands.append(("mp_write", b"b" + (bytes(range(256)) * (c["value"] // 256) + bytes(range(c["value"] % 256)))))
+        got = self.ask(commands)
+        expected = []
+        for (_, arg), c in zip(commands, cases):
+            if c["op"] in "amb" and c["value"] > 65535:
+                expected.append("none")
+            else:
+                expected.append(c["packed"] + (arg[1:].hex() if c["op"] == "b" else ""))
+        self.assertEqual(got, expected)
 
     def test_msgpack_depth_limit(self):
-        # Głębokość jest parametrem: ten sam zagnieżdżony zapis przechodzi przy większym limicie.
-        nested = bytes.fromhex(next(c for c in VECTORS["msgpack"] if c["name"] == "depth_9")["data"])
-        got = self.ask([("mp_validate", bytes([d]) + nested) for d in (0, 8, 9, 255)] +
-                       [("mp_validate", bytes([0]) + b"\x01"), ("mp_validate", bytes([0]) + b"\x90")])
-        self.assertEqual(got, ["none", "none", "10", "10", "1", "none"])
+        # Limit głębokości jest parametrem, ale nie większym niż MAX_DEPTH (8): stos poziomów ma stały rozmiar.
+        by_name = {c["name"]: bytes.fromhex(c["data"]) for c in VECTORS["msgpack"]}
+        got = self.ask([("mp_validate", bytes([d]) + by_name["depth_8"]) for d in (0, 7, 8, 9, 255)] +
+                       [("mp_validate", bytes([255]) + by_name["depth_9"]),
+                        ("mp_validate", bytes([0]) + b"\x01"), ("mp_validate", bytes([0]) + b"\x90")])
+        self.assertEqual(got, ["none", "none", "9", "9", "9", "none", "1", "none"])
 
     def test_bad_input(self):
-        result = subprocess.run([str(self.binary)], input="mp_validate abc\nmp_validate zz\nmp_validate \nunknown 00\n\n",
+        result = subprocess.run([str(self.binary)], input="mp_validate abc\nmp_validate zz\nmp_validate \nmp_write 7a00\nunknown 00\n\n",
                                 capture_output=True, text=True, env=core.ENV, timeout=60)
-        self.assertEqual(result.stdout.splitlines(), ["error"] * 5)
+        self.assertEqual(result.stdout.splitlines(), ["error"] * 6)
 
 
 if __name__ == "__main__":
