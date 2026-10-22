@@ -2,11 +2,11 @@
 
 ## Podział oprogramowania
 
-**Oprogramowanie układowe stacji** zawiera port microReticulum z włączonym transportem, moduł LXMF (LXMRouter) z jedną tożsamością stacji, interfejs radiowy jako interfejs Reticulum (w pilotażu LoRa, [profil](radio.md#profil-lora-pilotażu); w wariancie zapasowym P1), rejestr zgłoszeń, kolejkę i skrzynkę odbiorczą w pamięci FRAM, interfejs ekranu i przycisków, [protokół USB](protokol-usb.md) do laptopa oraz układ nadzorujący (watchdog).
+**Oprogramowanie układowe stacji** zawiera rdzeń Reticulum stacji z włączonym transportem i LXMF z jedną tożsamością stacji ([zakres rdzenia](../../firmware/reticulum-core.md); do jego odbioru próby sprzętu działają na porcie microReticulum), interfejs radiowy jako interfejs Reticulum (w pilotażu LoRa, [profil](radio.md#profil-lora-pilotażu); w wariancie zapasowym P1), rejestr zgłoszeń, kolejkę i skrzynkę odbiorczą w pamięci FRAM, interfejs ekranu i przycisków, [protokół USB](protokol-usb.md) do laptopa oraz układ nadzorujący (watchdog).
 
 Stacja jest jedynym węzłem sieci w schronieniu i działa bez laptopa. Stacja stanowiska ma to samo oprogramowanie w konfiguracji węzła stanowiska: przekazuje ruch i łączy radio z komputerem stanowiska ([stanowisko odbiorcze](stanowisko-osp.md)).
 
-Wersje referencyjne protokołu: Reticulum `e40191b` i LXMF `c3ff2d6`. Implementację LXMF dla mikrokontrolera (z istniejących projektów albo własną, zgodną z wersją referencyjną) wybiera się w D14 po T3. [microReticulum](https://github.com/attermann/microReticulum), [LXMF](https://github.com/markqvist/LXMF).
+Wersje referencyjne protokołu: Reticulum `e40191b` i LXMF `c3ff2d6`. Stos Reticulum i LXMF na mikrokontrolerze to własny rdzeń zgodny z tymi wersjami w podzbiorze, którego WICI używa; zastępuje port w obrazach po spełnieniu [kryteriów odbioru](../../firmware/reticulum-core.md#kryteria-odbioru). [microReticulum](https://github.com/attermann/microReticulum) (próby sprzętu i druga implementacja w próbach), [LXMF](https://github.com/markqvist/LXMF).
 
 LXMF pakuje wiadomości, szyfruje je przez Reticulum, wyszukuje trasę, potwierdza dostarczenie na poziomie transportu i ponawia wysyłkę. Tych mechanizmów nie implementuje się drugi raz. Stan DELIVERED w LXMF nie oznacza zatwierdzonej transakcji w bazie stanowiska odbiorczego. Kolejka intencji jest w FRAM i stacja odtwarza ją po restarcie. Lista oczekujących wiadomości w pamięci LXMF nie jest trwałą kolejką.
 
@@ -153,7 +153,7 @@ Tablica tras i tożsamości mieści co najmniej 256 wpisów z buforowanym ogłos
 - lista skrótów pakietów w RAM przechowuje pierwsze 8 B skrótu (4096 × 8 B = 32 KiB); prawdopodobieństwo fałszywego duplikatu przy 4096 wpisach jest rzędu 10⁻¹², a lista jest lokalna i nie zmienia protokołu;
 - pełne wpisy tablicy tras, tożsamości i buforowane ogłoszenia leżą w FRAM; RAM zawiera indeks skrótów celu (256 × 16 B) i pamięć podręczną ostatnio używanych wpisów.
 
-Zapas RAM ≥30% mierzy się przy tych pojemnościach i tym podziale, z LXMF, poleceniem `RNS` na płytce. W pilotażu (ESP32-S3, 512 KiB SRAM) pomiar należy do minimum pilotażu i blokuje T3 na stacjach pilotażowych (D14). Dla wydania na nRF52840 odtworzenie ruchu w programie węzła zbudowanym jako 32-bitowy daje 4,5% wolnej RAM w szczycie i 13,5% w stanie ustalonym, jeszcze bez LXMF ([pamięć RAM](../../firmware/README.md#pamięć-ram)): indeks magazynów portu zajmuje około 233 B na cel zamiast 16 B. Warunek nie jest tam spełniony. Przed decyzją o R02 po pilotażu D14 porównuje MCU z większą pamięcią (koszt, pobór wobec W23, dostępność, port microReticulum) z głęboką przebudową portu (zwarty indeks w microStore i Transport, odchudzenie obrazu o około 20 KB, utrzymanie łat).
+Zapas RAM ≥30% mierzy się przy tych pojemnościach i tym podziale, z LXMF, poleceniem `RNS` na płytce. W pilotażu (ESP32-S3, 512 KiB SRAM) pomiar należy do minimum pilotażu i blokuje T3 na stacjach pilotażowych (D14). Dla wydania na nRF52840 odtworzenie ruchu w programie węzła zbudowanym jako 32-bitowy daje 4,5% wolnej RAM w szczycie i 13,5% w stanie ustalonym, jeszcze bez LXMF ([pamięć RAM](../../firmware/README.md#pamięć-ram)): indeks magazynów portu zajmuje około 233 B na cel zamiast 16 B. Z portem warunek nie jest tam spełniony. Rdzeń stacji ma zwarty indeks i cel ≤56 KB RAM statycznie z LXMF ([budżet](../../firmware/reticulum-core.md#wymagania-konstrukcyjne)); przed decyzją o R02 po pilotażu D14 rozstrzyga pomiar rdzenia na płytce, a gdy nie wystarczy, MCU z większą pamięcią (koszt, pobór wobec W23, dostępność).
 
 ### Pamięć FRAM
 

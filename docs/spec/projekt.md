@@ -143,7 +143,7 @@ Wynik przeglądu zapisuje się z datą i wersją wydania w ewidencji sprzętu gm
 | Samodzielna stacja; laptop i router jako rozszerzenia | Łączność i przekaźnik bez znalezionego sprzętu i bez 230 V; oprogramowanie układowe stosu, kolejki i interfejsu na MCU |
 | Stacja jedynym węzłem schronienia, laptop bez tożsamości Reticulum | Jedna tożsamość i jedna kolejka; potrzebny protokół USB laptop–stacja (D17) |
 | Tożsamość odbiorcy i stos LXMF na komputerze stanowiska, stacja stanowiska jako węzeł transportu (D19) | Dojrzały stos i pamięć bez stałych limitów w najbardziej obciążonym węźle, jedna rola stacji; komputer stanowiska obowiązkowy, z zapasem; interfejs Reticulum przez USB w stacji |
-| microReticulum i LXMF na MCU | Gotowy stos zamiast własnego; młodszy projekt, zgodność do sprawdzenia w T3 |
+| Własny rdzeń Reticulum i LXMF na MCU ([zakres](../../firmware/reticulum-core.md)) | Gotowy port jest jeszcze niedojrzały do zastosowań krytycznych i za duży na nRF52840; rdzeń obejmuje tylko podzbiór protokołu WICI, a zgodność z Reticulum w Pythonie sprawdzają wektory, próby różnicowe i T3; koszt: 2–4 miesiące pracy i utrzymanie |
 | Ogniwa AA i wejście 12 V | Start bez ładowania i lata przechowywania; koszt ogniw i kontrola w przeglądzie |
 | LXMF nad Reticulum | Gotowe dostarczanie wiadomości; stacja nadal odpowiada za trwały zapis, a stanowisko odbiorcze za decyzję |
 | Mała własna strona HTTP | Telefon używa zwykłej przeglądarki; NomadNet nie jest takim interfejsem |
