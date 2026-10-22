@@ -102,8 +102,8 @@
  ],
  "outputs": {
   "wici-station.mjs": {
-   "sha256": "368c565634793ec19bd05b299b2492701b8878e1790c8b3905ebbcdeebb449c8",
-   "bytes": 1124570,
+   "sha256": "5bc93b2209a71cc6cc829e7f3507c205fc25d703c1e5e784f626170630ab930b",
+   "bytes": 1124826,
    "sources": [
     "firmware/src/annunciator.cpp",
     "firmware/src/config.cpp",
@@ -218,8 +218,8 @@
   "firmware/src/radio_link.h": "8a4ad96520c61df86ea658e5a7dd775539802bd135715c11cf1cadab322a500d",
   "firmware/src/rns_announce.h": "245906d3eece4e3c6ec44504dd38d7de6263800b179205ce9c3d1f8d61d8d369",
   "firmware/src/rns_framfs.h": "152c08778997aa9f2a2454b4b3ec960bcd50c53707ebb0b84970f2530ab1d9e8",
-  "firmware/src/rns_node.cpp": "2f67fa1b6ae79c9d8d02dfb6e0928b4224a9b6c796975850f688bf02dd20156d",
-  "firmware/src/rns_node.h": "a8d6993d916504d6bc022354e52637861533d83bd2271c71cc5f31d9bef3866c",
+  "firmware/src/rns_node.cpp": "dc3eb7ba0544b894f28b4aba4cbf447ea8a6773a969bcdb80493e1fee93e5968",
+  "firmware/src/rns_node.h": "1091fe9287acc7ab29ac152d70fe7929a822476a9310393bc1724666c220800e",
   "firmware/src/s2lp.cpp": "7b32a9d1bbaae1cbfcd5d23f0d1f9ce0ca9baf5765c664d1ad6a6e379a7c2f42",
   "firmware/src/s2lp.h": "42e0883667177e932bd621bfbe1de3d19da17fe34e35b95bce9bb2ac1de70dd5",
   "firmware/src/s2lp_link.cpp": "c8584346920aef3876d4c463bf3bb18d798963950dbc6928ee7818bba465ed7f",

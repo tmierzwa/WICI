@@ -14,6 +14,12 @@ or a PlatformIO build of any image). Without them the tests are skipped, unless 
 the port (KNOWN_DEFECTS, review of 2026-10-21) is skipped with the defect's name; any other sanitizer
 report, hang or broken invariant fails. WICI_RNS_SEEDS=N runs N fuzzing seeds instead of 4.
 
+The harness feeds every datagram through the station's own IFAC code (rnsnode::debugIfacWrap) and
+checks that the port and microStore read the simulated clock; each passing run must have delivered
+traffic to the stack (P1 counter rx_ok). Not simulated: microStore::millis (the compaction cooldown of
+the file store) reads the host's monotonic clock, so clock jumps do not move it. POSIX only (mmap, fork
+of sanitizer runtimes).
+
   python3 -m unittest tests.test_rns_hostile -v
 """
 
@@ -119,16 +125,20 @@ def build(out_dir: Path) -> Path:
 # Usterki portu znalezione w przeglądzie 2026-10-21: (nazwa, napisy w raporcie sanitizera). Próba,
 # która trafi na jedną z nich, jest pomijana z jej nazwą, a nie zaliczana; inna awaria jest błędem
 # próby. Testy test_known_defect_* sprawdzają, że usterka wciąż występuje.
+# Napisy szukane w śladzie wadliwego dostępu (bez śladów zwolnienia i przydziału bloku).
 KNOWN_DEFECTS = [
-    ("announce-table-use-after-free", ("heap-use-after-free", "RNS::Transport::jobs()")),
-    ("token-without-ciphertext", ("PKCS7.h",)),
-    ("short-announce", ("Identity::validate_announce",)),
+    ("announce-table-use-after-free", ("heap-use-after-free", "Transport::jobs()", "Transport.cpp:665")),
+    ("token-without-ciphertext", ("PKCS7.h:67", "Token::decrypt")),
+    ("short-announce", ("Ed25519::decodePoint", "Identity::validate_announce")),
 ]
 
 
 def known_defect(report):
+    if not report:
+        return None
+    access = report.split("freed by thread")[0].split("allocated by thread")[0]
     for name, markers in KNOWN_DEFECTS:
-        if report and all(m in report for m in markers):
+        if all(m in access for m in markers):
             return name
     return None
 
@@ -163,6 +173,8 @@ class Station:
 class HostileStackTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        if os.name != "posix":
+            raise unittest.SkipTest("POSIX only (mmap)")
         if not compiler():
             raise unittest.SkipTest("no C++ compiler")
         if not all((STACK / name / ".wici-stamp").is_file() for name, *_ in stack_deps.DEPS):
@@ -186,6 +198,8 @@ class HostileStackTests(unittest.TestCase):
             self.skipTest(f"blocked by known port defect: {defect}")
         self.assertIsNone(report, report)
         self.assertIn(outcome.get("result"), ("ok",) + allowed, f"exit {code}: {outcome}\n{stderr[-2000:]}")
+        if outcome["result"] == "ok":
+            self.assertGreater(outcome["iface"]["rx_ok"], 0, f"no traffic reached the stack: {outcome}")
         return outcome
 
     def test_valid_traffic_over_weeks_and_restarts(self):
@@ -193,6 +207,7 @@ class HostileStackTests(unittest.TestCase):
         s = self.station()
         first = self.assertClean(s.run("--seed", 11, "--events", 2500, "--long-jumps"))
         self.assertTrue(first["new"])
+        self.assertEqual(first["iface"]["ifac_invalid"], 0, first)
         self.assertGreater(first["paths"], 5)
         second = self.assertClean(s.run("--seed", 12, "--events", 1500, "--long-jumps", "--gap", 86400))
         self.assertEqual(second["identity"], first["identity"])
@@ -215,8 +230,9 @@ class HostileStackTests(unittest.TestCase):
         self.assertDefect(self.station().run("--defect", "short-announce", "--events", 0), "short-announce")
 
     def test_known_defect_announce_table_use_after_free(self):
-        # Zwykły ruch: _announce_table zmieniana w pętli po niej (Transport::jobs).
-        self.assertDefect(self.station().run("--seed", 11, "--events", 2500, "--long-jumps"), "announce-table-use-after-free")
+        # Ogłoszenie i zaraz zapytanie o trasę do tego celu: Transport::jobs wstawia odłożone ogłoszenie
+        # do _announce_table w pętli po niej.
+        self.assertDefect(self.station().run("--defect", "held-announce", "--events", 0), "announce-table-use-after-free")
 
     def test_mutated_traffic_from_node_with_network_key(self):
         failures, known = [], set()
@@ -226,6 +242,8 @@ class HostileStackTests(unittest.TestCase):
                 known.add(known_defect(report))
             elif report or outcome.get("result") != "ok":
                 failures.append((seed, outcome, (report or stderr)[-3000:]))
+            elif outcome["iface"]["rx_ok"] == 0 or outcome["iface"]["ifac_invalid"] + outcome["iface"]["too_large"] == 0:
+                failures.append((seed, outcome, "valid and rejected datagrams both expected"))
         if failures:
             self.fail(f"{len(failures)} of {SEEDS} seeds failed; first: {failures[0]}")
         if known:
@@ -235,17 +253,23 @@ class HostileStackTests(unittest.TestCase):
         # Stacja po pracy; potem zanik zasilania w wybranym zapisie i start z tym, co zostało w FRAM.
         base = self.station()
         outcome = self.assertClean(base.run("--seed", 21, "--events", 1500))
+        # Punkty w pierwszych 90% zapisów próby (liczba zapisów zależy od czasu kompaktowania
+        # microStore, który biegnie zegarem gospodarza); przebieg bez cięcia też musi być czysty.
         writes = self.run_writes(base)
         rng = random.Random(7)
-        points = sorted({0, 1, writes - 1} | {rng.randrange(writes) for _ in range(10)})
+        points = sorted({0, 1, writes * 9 // 10} | {rng.randrange(max(1, writes * 9 // 10)) for _ in range(10)})
+        cuts = 0
         for point in points:
             with self.subTest(write=point):
                 s = self.copy(base)
                 code, cut, report, stderr = s.run("--seed", 22, "--events", 1500, "--cut-after-writes", point)
                 self.assertIsNone(report, report)
-                self.assertEqual(code, POWER_CUT, f"{cut}\n{stderr[-1500:]}")
+                if code != POWER_CUT:
+                    self.assertClean((code, cut, report, stderr))
+                cuts += code == POWER_CUT
                 after = self.assertClean(s.run("--seed", 23, "--events", 800, "--gap", 5))
                 self.assertEqual(after["identity"], outcome["identity"])
+        self.assertGreaterEqual(cuts, len(points) - 1, f"power cut reached in {cuts} of {len(points)} points")
 
     def test_fram_bit_flips(self):
         # Przekłamania bitów w używanej części FRAM: stacja startuje albo zgłasza błąd pamięci, bez awarii.

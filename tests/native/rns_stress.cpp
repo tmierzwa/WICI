@@ -27,6 +27,8 @@
 #include <microReticulum/Cryptography/HKDF.h>
 #include <microReticulum/Cryptography/HMAC.h>
 #include <microReticulum/Cryptography/X25519.h>
+#include <microReticulum/Utilities/OS.h>
+#include <microStore/Utility.h>
 
 #include "p1iface.h"
 #include "rns_node.h"
@@ -159,38 +161,27 @@ struct Radio : rnsnode::Radio {
 
 Radio radio;
 
-// ---- IFAC jak w P1Interface (rns_node.cpp): klucz z 32 cyfr szesnastkowych ----
+// ---- IFAC: klucz sieci stacji; kod liczy ta sama funkcja interfejsu P1 co przy nadawaniu ----
 const uint8_t IFAC_KEY[16] = {0x57, 0x49, 0x43, 0x49, 0x2d, 0x73, 0x74, 0x72, 0x65, 0x73, 0x73, 0x2d, 0x69, 0x66, 0x61, 0x63};
-const uint8_t IFAC_SALT[32] = {0xad, 0xf5, 0x4d, 0x88, 0x2c, 0x9a, 0x9b, 0x80, 0x77, 0x1e, 0xb4, 0x99, 0x5d, 0x70, 0x2d, 0x4a,
-                               0x3e, 0x73, 0x33, 0x91, 0xb2, 0xa0, 0xf5, 0x3f, 0x41, 0x6d, 0x9f, 0x90, 0x7e, 0x55, 0xcf, 0xf8};
-RNS::Bytes ifacKey;
-RNS::Identity ifacIdentity(RNS::Type::NONE);
-
-void ifacSetup() {
-    char passphrase[33];
-    for (int i = 0; i < 16; ++i) snprintf(passphrase + 2 * i, 3, "%02x", IFAC_KEY[i]);
-    const RNS::Bytes origin = RNS::Identity::full_hash(RNS::Bytes(reinterpret_cast<const uint8_t*>(passphrase), 32));
-    ifacKey = RNS::Cryptography::hkdf(64, RNS::Identity::full_hash(origin), RNS::Bytes(IFAC_SALT, sizeof(IFAC_SALT)));
-    ifacIdentity = RNS::Identity(false);
-    ifacIdentity.load_private_key(ifacKey);
-}
 
 std::vector<uint8_t> ifacWrap(const RNS::Bytes& raw) {
-    if (raw.size() < 2 || raw.size() > p1iface::HW_MTU) return {};
-    const RNS::Bytes signature = ifacIdentity.sign(raw);
-    const uint8_t* tag = signature.data() + signature.size() - p1iface::IFAC_SIZE;
-    const RNS::Bytes mask = RNS::Cryptography::hkdf(raw.size() + p1iface::IFAC_SIZE, RNS::Bytes(tag, p1iface::IFAC_SIZE), ifacKey);
-    std::vector<uint8_t> wire(raw.size() + p1iface::IFAC_SIZE);
-    p1iface::ifacMask(raw.data(), raw.size(), tag, p1iface::IFAC_SIZE, mask.data(), wire.data());
+    std::vector<uint8_t> wire(p1iface::MAX_WIRE);
+    wire.resize(rnsnode::debugIfacWrap(raw.data(), raw.size(), wire.data()));
     return wire;
 }
 
 RNS::Bytes ifacUnwrap(const std::vector<uint8_t>& wire) {
-    if (!p1iface::ifacPresent(wire.data(), wire.size(), p1iface::IFAC_SIZE)) return {};
-    const RNS::Bytes mask = RNS::Cryptography::hkdf(wire.size(), RNS::Bytes(wire.data() + 2, p1iface::IFAC_SIZE), ifacKey);
-    std::vector<uint8_t> raw(wire.size() - p1iface::IFAC_SIZE);
-    p1iface::ifacUnmask(wire.data(), wire.size(), p1iface::IFAC_SIZE, mask.data(), raw.data());
-    return RNS::Bytes(raw.data(), raw.size());
+    uint8_t raw[p1iface::MAX_WIRE];
+    const size_t n = rnsnode::debugIfacUnwrap(wire.data(), wire.size(), raw);
+    return n ? RNS::Bytes(raw, n) : RNS::Bytes();
+}
+
+// Pakiet ponad HW_MTU: datagram z flagą IFAC i dowolnym kodem, dłuższy niż MAX_WIRE (stacja go odrzuca).
+std::vector<uint8_t> oversize(const std::vector<uint8_t>& v) {
+    std::vector<uint8_t> wire{static_cast<uint8_t>(v[0] | 0x80), v[1]};
+    for (size_t i = 0; i < p1iface::IFAC_SIZE; ++i) wire.push_back(static_cast<uint8_t>(rnd()));
+    wire.insert(wire.end(), v.begin() + 2, v.end());
+    return wire;
 }
 
 // ---- węzły generatora: tożsamości wymyślonych stacji (pierwsza jest odbiorcą stacji) ----
@@ -234,7 +225,7 @@ void mutate(std::vector<uint8_t>& v, size_t keep) {
     for (int k = 0; k < ops; ++k) {
         if (v.size() <= keep + 1) { v.push_back(static_cast<uint8_t>(rnd())); continue; }
         const size_t at = keep + rnd() % (v.size() - keep);
-        switch (rnd() % 7) {
+        switch (rnd() % 8) {
             case 0: v[at] ^= static_cast<uint8_t>(1u << (rnd() % 8)); break;
             case 1: v[at] = static_cast<uint8_t>(rnd()); break;
             case 2: v.erase(v.begin() + at); break;
@@ -242,6 +233,7 @@ void mutate(std::vector<uint8_t>& v, size_t keep) {
             case 4: v[at] = (rnd() & 1) ? 0x00 : 0xFF; break;
             case 5: v.resize(at + 1); break;
             case 6: v[0] ^= static_cast<uint8_t>(1u << (rnd() % 7)); break;   // bez bitu IFAC
+            case 7: for (uint32_t n = 50 + rnd() % 250; n && v.size() < 700; --n) v.push_back(static_cast<uint8_t>(rnd())); break;
         }
     }
 }
@@ -253,7 +245,7 @@ void feed(const RNS::Bytes& raw, const char*) {
     const bool m = mutatePercent && rnd() % 100 < mutatePercent;
     const bool afterIfac = m && rnd() % 7 == 0;
     if (m && !afterIfac) mutate(v, 0);
-    std::vector<uint8_t> wire = v.size() >= 2 ? ifacWrap(RNS::Bytes(v.data(), v.size())) : v;
+    std::vector<uint8_t> wire = v.size() > p1iface::HW_MTU ? oversize(v) : v.size() >= 2 ? ifacWrap(RNS::Bytes(v.data(), v.size())) : v;
     if (afterIfac) mutate(wire, 1);
     if (m) ++mutated;
     ++fed;
@@ -419,6 +411,14 @@ void service() {
     rnsnode::loop(static_cast<uint32_t>(simMs));
 }
 
+// Port i microStore mają widzieć zegar symulowany; inaczej próby czasu niczego nie sprawdzają.
+void checkClock() {
+    const double s = static_cast<double>(simMs / 1000);
+    const double stack = RNS::Utilities::OS::time();
+    if (stack < s - 1 || stack > s + 1) fail("stack does not follow the simulated clock");
+    if (microStore::time() != static_cast<uint32_t>(simMs / 1000)) fail("microStore does not follow the simulated clock");
+}
+
 // Znane usterki portu jako jeden pakiet (przegląd 2026-10-21): token 48 B i krótkie ogłoszenie.
 void defect(const std::string& name) {
     if (name == "token48") {
@@ -442,6 +442,26 @@ void defect(const std::string& name) {
         raw.append(static_cast<uint8_t>(0x00));
         raw << randomBytes(40);                   // urwane w kluczu Ed25519: odczyt poza buforem
         feed(raw, "defect");
+    } else if (name == "held-announce") {
+        // Ogłoszenie sąsiada i zaraz zapytanie o trasę do tego celu: odpowiedź odkłada ogłoszenie do
+        // _held_announces, a Transport::jobs wstawia je z powrotem do _announce_table w pętli po niej.
+        for (int round = 0; round < 8; ++round) {
+            const size_t i = 1 + rnd() % (PEERS - 1);
+            RNS::Destination d(peers[i], RNS::Type::Destination::IN, RNS::Type::Destination::SINGLE, rnsnode::APP_NAME,
+                               rnsnode::ASPECT);
+            RNS::Packet a = d.announce(randomBytes(8), false, {RNS::Type::NONE}, {}, false);
+            RNS::Transport::deregister_destination(d);
+            a.pack();
+            feed(withHops(a.raw(), 1), "defect");
+            RNS::Destination pr({RNS::Type::NONE}, RNS::Type::Destination::OUT, RNS::Type::Destination::PLAIN, "rnstransport",
+                                "path.request");
+            RNS::Bytes data = peerDest[i];
+            data << randomBytes(16) << randomBytes(16);
+            RNS::Packet q(pr, data, RNS::Type::Packet::DATA);
+            q.pack();
+            feed(withHops(q.raw(), 0), "defect");
+            for (int k = 0; k < 30; ++k) { simMs += 1000; service(); }
+        }
     } else {
         fail("unknown defect");
     }
@@ -524,13 +544,13 @@ int main(int argc, char** argv) {
     if (savedId.empty()) writeFile(idPath, id);
     else if (savedId != id) fail("identity changed across restart");
 
-    ifacSetup();
     uint8_t pub[64];
     if (!rnsnode::publicKey(pub)) fail("no station key");
     station = RNS::Identity(false);
     station.load_public_key(RNS::Bytes(pub, 64));
     stationDest = RNS::Bytes(rnsnode::address(), 16);
     stationTransport = RNS::Bytes(rnsnode::identityHash(), 16);
+    checkClock();
 
     if (!defectName.empty()) {
         defect(defectName);
@@ -556,7 +576,10 @@ int main(int argc, char** argv) {
     }
     for (int i = 0; i < 5; ++i) { simMs += 1000; service(); }
 
+    checkClock();
     const rnsnode::Status s = rnsnode::status();
+    char iface[512];
+    rnsnode::interfaceJson(iface, sizeof(iface));
     // Niezmienniki: tablice w granicach konfiguracji, wpis odbiorcy zachowany.
     if (s.paths > RNS_PATH_TABLE_MAX + 2) fail("path table above limit");
     if (s.announceTable > RNS_ANNOUNCE_TABLE_MAX) fail("announce table above limit");
@@ -566,11 +589,11 @@ int main(int argc, char** argv) {
     saveClock();
     printf("{\"result\":\"ok\",\"identity\":\"%s\",\"new\":%s,\"fed\":%u,\"mutated\":%u,\"sent\":%u,\"paths\":%u,"
            "\"hashes\":%u,\"announce_table\":%u,\"pending\":%u,\"received\":%u,\"delivered\":%u,\"timed_out\":%u,"
-           "\"announces\":%u,\"fs_files\":%u,\"fs_used\":%u,\"fs_capacity\":%u,\"writes\":%ld,\"clock_s\":%llu}\n",
+           "\"announces\":%u,\"fs_files\":%u,\"fs_used\":%u,\"fs_capacity\":%u,\"writes\":%ld,\"clock_s\":%llu,\"iface\":{%s}}\n",
            id.c_str(), s.identityNew ? "true" : "false", fed, mutated, radio.sent, (unsigned)s.paths, (unsigned)s.packetHashes,
            (unsigned)s.announceTable, (unsigned)s.receiptsPending, s.packetsReceived, s.delivered, s.timedOut, s.announcesSeen,
            (unsigned)s.fsFiles, (unsigned)s.fsUsedBytes, (unsigned)s.fsCapacityBytes, fram.writes,
-           static_cast<unsigned long long>(simMs / 1000));
+           static_cast<unsigned long long>(simMs / 1000), iface);
     fflush(stdout);
     _exit(0);   // bez destruktorów statycznych portu (kolejność niszczenia nie jest częścią próby)
 }

@@ -131,20 +131,29 @@ public:
         if (!online_) { ++c.offline; return; }
         if (!p1iface::ifacPresent(wire, length, p1iface::IFAC_SIZE)) { ++c.ifacMissing; return; }
         if (length > p1iface::MAX_WIRE) { ++c.tooLarge; return; }
-        const RNS::Bytes tag(wire + 2, p1iface::IFAC_SIZE);
-        const RNS::Bytes mask = RNS::Cryptography::hkdf(length, tag, ifacKey_);
         uint8_t raw[p1iface::MAX_WIRE];
-        p1iface::ifacUnmask(wire, length, p1iface::IFAC_SIZE, mask.data(), raw);
-        const RNS::Bytes packet(raw, length - p1iface::IFAC_SIZE);
-        const RNS::Bytes signature = ifacIdentity_.sign(packet);
-        if (signature.size() < p1iface::IFAC_SIZE ||
-            memcmp(signature.data() + signature.size() - p1iface::IFAC_SIZE, wire + 2, p1iface::IFAC_SIZE) != 0) {
-            ++c.ifacInvalid;
-            return;
-        }
+        if (!unwrap(wire, length, raw)) { ++c.ifacInvalid; return; }
         ++c.received;
         std::shared_ptr<RNS::InterfaceImpl> self = shared_from_this();
-        RNS::Interface(self).handle_incoming(packet);
+        RNS::Interface(self).handle_incoming(RNS::Bytes(raw, length - p1iface::IFAC_SIZE));
+    }
+
+    // Kod IFAC na pakiecie Reticulum (2..HW_MTU B): wire ma raw.size() + IFAC_SIZE B.
+    void wrap(const RNS::Bytes& raw, uint8_t* wire) {
+        const RNS::Bytes signature = ifacIdentity_.sign(raw);
+        const uint8_t* tag = signature.data() + signature.size() - p1iface::IFAC_SIZE;
+        const RNS::Bytes mask = RNS::Cryptography::hkdf(raw.size() + p1iface::IFAC_SIZE, RNS::Bytes(tag, p1iface::IFAC_SIZE), ifacKey_);
+        p1iface::ifacMask(raw.data(), raw.size(), tag, p1iface::IFAC_SIZE, mask.data(), wire);
+    }
+
+    // Zdjęcie maski i sprawdzenie kodu (datagram z flagą IFAC, najwyżej MAX_WIRE B): raw ma length - IFAC_SIZE B.
+    bool unwrap(const uint8_t* wire, size_t length, uint8_t* raw) {
+        const RNS::Bytes tag(wire + 2, p1iface::IFAC_SIZE);
+        const RNS::Bytes mask = RNS::Cryptography::hkdf(length, tag, ifacKey_);
+        p1iface::ifacUnmask(wire, length, p1iface::IFAC_SIZE, mask.data(), raw);
+        const RNS::Bytes signature = ifacIdentity_.sign(RNS::Bytes(raw, length - p1iface::IFAC_SIZE));
+        return signature.size() >= p1iface::IFAC_SIZE &&
+               memcmp(signature.data() + signature.size() - p1iface::IFAC_SIZE, wire + 2, p1iface::IFAC_SIZE) == 0;
     }
 
     void loop() override {
@@ -174,11 +183,8 @@ protected:
         if (silence == Silence::FULL || (silence == Silence::EXCEPTION && !exceptionOut)) { ++c.silenced; return false; }
         // Pełna kolejka: odmowa przed podpisem IFAC (ogłoszenia przekazywane mogą jeszcze czekać na liście).
         if (kind != p1iface::Kind::ANNOUNCE && queue_.full()) { ++c.full; return false; }
-        const RNS::Bytes signature = ifacIdentity_.sign(raw);
-        const uint8_t* tag = signature.data() + signature.size() - p1iface::IFAC_SIZE;
-        const RNS::Bytes mask = RNS::Cryptography::hkdf(raw.size() + p1iface::IFAC_SIZE, RNS::Bytes(tag, p1iface::IFAC_SIZE), ifacKey_);
         uint8_t wire[p1iface::MAX_WIRE];
-        p1iface::ifacMask(raw.data(), raw.size(), tag, p1iface::IFAC_SIZE, mask.data(), wire);
+        wrap(raw, wire);
         // Węzeł stanowiska: pakiet od komputera (w trakcie przetwarzania pakietu z USB) albo do celu
         // ogłoszonego przez komputer jest w klasie K1 (radio.md, „Dostęp do kanału”).
         const p1iface::Hint hint = ownPathRequest ? p1iface::Hint::OWN
@@ -723,6 +729,17 @@ uint32_t debugFillHashes(uint32_t n) {
 }
 
 void debugClock(uint64_t (*nowMs)()) { hostClock = nowMs; }
+
+size_t debugIfacWrap(const uint8_t* raw, size_t length, uint8_t* wire) {
+    if (!p1 || !p1->ifacOnline() || length < 2 || length > p1iface::HW_MTU) return 0;
+    p1->wrap(RNS::Bytes(raw, length), wire);
+    return length + p1iface::IFAC_SIZE;
+}
+
+size_t debugIfacUnwrap(const uint8_t* wire, size_t length, uint8_t* raw) {
+    if (!p1 || !p1->ifacOnline() || length > p1iface::MAX_WIRE || !p1iface::ifacPresent(wire, length, p1iface::IFAC_SIZE)) return 0;
+    return p1->unwrap(wire, length, raw) ? length - p1iface::IFAC_SIZE : 0;
+}
 #endif
 
 }  // namespace rnsnode
