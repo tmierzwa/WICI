@@ -36,7 +36,7 @@ size_t buildAnnounce(const uint8_t privateKey[KEY_SIZE], const uint8_t publicKey
                      size_t appDataLength, uint8_t* out, size_t capacity) {
     const size_t before = KEY_SIZE + NAME_HASH_SIZE + RANDOM_HASH_SIZE + (ratchet ? RATCHET_SIZE : 0);
     const size_t length = before + SIGNATURE_SIZE + appDataLength;
-    if (length > ANNOUNCE_MAX_SIZE || length > capacity) return 0;
+    if (length > ANNOUNCE_FORWARDABLE_SIZE || length > capacity) return 0;
     uint8_t* p = out;
     memcpy(p, publicKey, KEY_SIZE);
     memcpy(p += KEY_SIZE, nameHash, NAME_HASH_SIZE);
@@ -56,23 +56,25 @@ bool validateAnnounce(const Packet& packet, Announce& out) {
     // Python: krótsze dane dają podpis krótszy niż 64 B albo zły klucz, więc validate zwraca fałsz.
     if (packet.dataLength < before + SIGNATURE_SIZE || packet.dataLength > ANNOUNCE_MAX_SIZE) return false;
     const uint8_t* data = packet.data;
-    out.publicKey = data;
-    out.nameHash = data + KEY_SIZE;
-    out.randomHash = data + KEY_SIZE + NAME_HASH_SIZE;
-    out.ratchet = hasRatchet ? data + KEY_SIZE + NAME_HASH_SIZE + RANDOM_HASH_SIZE : nullptr;
-    out.appData = data + before + SIGNATURE_SIZE;
-    out.appDataLength = packet.dataLength - before - SIGNATURE_SIZE;
+    Announce a;
+    a.publicKey = data;
+    a.nameHash = data + KEY_SIZE;
+    a.randomHash = data + KEY_SIZE + NAME_HASH_SIZE;
+    a.ratchet = hasRatchet ? data + KEY_SIZE + NAME_HASH_SIZE + RANDOM_HASH_SIZE : nullptr;
+    a.appData = data + before + SIGNATURE_SIZE;
+    a.appDataLength = packet.dataLength - before - SIGNATURE_SIZE;
 
     uint8_t message[SIGNED_MAX];
-    const size_t messageLength =
-        signedData(packet.destinationHash, data, before, out.appData, out.appDataLength, message);
-    if (!validate(out.publicKey, data + before, SIGNATURE_SIZE, message, messageLength)) return false;
+    const size_t messageLength = signedData(packet.destinationHash, data, before, a.appData, a.appDataLength, message);
+    if (!validate(a.publicKey, data + before, SIGNATURE_SIZE, message, messageLength)) return false;
 
     // Skrót celu z nazwy i tożsamości z ogłoszenia (hash_material, expected_hash).
     uint8_t identity[TRUNCATED_HASH_SIZE], expected[TRUNCATED_HASH_SIZE];
-    identityHash(out.publicKey, identity);
-    destinationHashFrom(out.nameHash, identity, expected);
-    return memcmp(expected, packet.destinationHash, TRUNCATED_HASH_SIZE) == 0;
+    identityHash(a.publicKey, identity);
+    destinationHashFrom(a.nameHash, identity, expected);
+    if (memcmp(expected, packet.destinationHash, TRUNCATED_HASH_SIZE) != 0) return false;
+    out = a;
+    return true;
 }
 
 }  // namespace rnscore

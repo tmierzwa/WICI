@@ -272,8 +272,8 @@ def announce_packet(dest, app_data, label: str, ratchets: bool = False) -> bytes
     # Zapis ratchetu w magazynie instancji pominięty: nie zmienia bajtów ogłoszenia.
     with Deterministic(label), mock.patch("time.time", return_value=ANNOUNCE_TIME + 0.5), \
             mock.patch.object(RNS.Identity, "_remember_ratchet"):
+        dest.ratchets = None
         if ratchets:
-            dest.ratchets = None
             dest.enable_ratchets(os.path.join(tempfile.mkdtemp(prefix="wici_vectors_"), "ratchets"))
         packet = dest.announce(app_data=app_data, send=False)
         packet.pack()
@@ -281,7 +281,8 @@ def announce_packet(dest, app_data, label: str, ratchets: bool = False) -> bytes
 
 
 def validated(raw: bytes):
-    """Wynik Identity.validate_announce dla pakietu z pustą tablicą znanych celów."""
+    """Wynik Identity.validate_announce dla pakietu z pustą tablicą znanych celów i bez czarnej listy:
+    ogłoszenie poprawne, a nie decyzja transportu (Transport.inbound sprawdza dalej tablice i limity)."""
     RNS.Identity.known_destinations = {}
     packet = RNS.Packet(None, raw)
     if not packet.unpack():
@@ -304,7 +305,13 @@ def announce_vectors():
     plain = announce_packet(dest, None, "announce:plain")
     with_data = announce_packet(dest, seeded("announce:app_data", 40), "announce:app_data")
     ratchet = announce_packet(dest, b"WICI", "announce:ratchet", ratchets=True)
-    for name, raw in (("plain", plain), ("app_data", with_data), ("ratchet", ratchet)):
+    ratchet_empty = announce_packet(dest, None, "announce:ratchet_empty", ratchets=True)
+    # Granice: 465 B danych przechodzi przez węzeł transportowy (HEADER_2 do MTU), 481 B to najwięcej,
+    # co składa Packet.pack (HEADER_1 do MTU).
+    forwardable = announce_packet(dest, seeded("announce:465", 465 - 148), "announce:465")
+    largest = announce_packet(dest, seeded("announce:481", 481 - 148), "announce:481")
+    for name, raw in (("plain", plain), ("app_data", with_data), ("ratchet", ratchet), ("ratchet_empty", ratchet_empty),
+                      ("data_465", forwardable), ("data_481", largest)):
         data = raw[19:]
         has_ratchet = bool(raw[0] & 0x20)
         add(name, raw, private_key=ident.get_private_key().hex(), random_hash=data[74:84].hex(),
@@ -336,6 +343,10 @@ def announce_vectors():
         "destination_mismatch": resigned(seeded("announce:other-destination", 16), ident, ident.get_public_key()),
         "signed_by_other_identity": resigned(dest.hash, other, other.get_public_key()),
         "data_packet_type": bytes([plain[0] & 0xFC]) + plain[1:],
+        # Po przepisaniu na HEADER_2 (Transport.inbound) dane i podpis bez zmian.
+        "header_2": header_two(plain, seeded("announce:transport-id", 16)),
+        # 482 B danych: więcej, niż złoży Packet.pack; Python sprawdza podpis i odrzuca.
+        "data_482": largest + b"\x00",
     }
     assert data_len == 148
     for name, raw in cases.items():

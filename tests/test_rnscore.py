@@ -122,19 +122,26 @@ class CoreTests(unittest.TestCase):
             if not c["valid"]:
                 expected[c["name"]] = "none"
                 continue
-            data = bytes.fromhex(c["raw"])[19:]
-            expected[c["name"]] = " ".join([data[:64].hex(), data[64:74].hex(), c["random_hash"], c["ratchet"] or "-",
-                                            c["app_data"] or "-"])
+            raw = bytes.fromhex(c["raw"])
+            data = raw[35:] if raw[0] & 0x40 else raw[19:]   # HEADER_2: identyfikator transportu przed celem
+            r = 32 if raw[0] & 0x20 else 0   # flaga kontekstu: klucz ratchetu po skrócie losowym
+            app = data[148 + r:]
+            expected[c["name"]] = " ".join([data[:64].hex(), data[64:74].hex(), data[74:84].hex(),
+                                            data[84:116].hex() if r else "-", app.hex() if app else "-"])
+            if "random_hash" in c:
+                self.assertEqual((c["random_hash"], c["ratchet"], c["app_data"]),
+                                 (data[74:84].hex(), data[84:116].hex() if r else None, app.hex()))
         self.assertEqual(got, expected)
 
     def test_announce_build(self):
         # Z tym samym kluczem, skrótem losowym, ratchetem i danymi aplikacji pakiet bajt w bajt jak w Pythonie.
+        # Odstępstwo: 481 B danych rdzeń odmawia (przez węzeł transportowy przechodzi najwyżej 465 B).
         built = [c for c in VECTORS["announce"] if "private_key" in c]
-        self.assertEqual(len(built), 3)
+        self.assertEqual(len(built), 6)
         got = self.ask([("build_announce", bytes.fromhex(c["private_key"] + c["random_hash"]) +
                          (b"\x01" + bytes.fromhex(c["ratchet"]) if c["ratchet"] else b"\x00") + bytes.fromhex(c["app_data"]))
                         for c in built])
-        self.assertEqual(got, [c["raw"] for c in built])
+        self.assertEqual(got, ["none" if c["name"] == "data_481" else c["raw"] for c in built])
 
     def test_announce_random_hash_time(self):
         # Czas w skrócie losowym: int(time.time()) jako 5 B big-endian (wektory: 1 790 000 000 s).
