@@ -170,28 +170,29 @@ def make_handler(panel):
             try:
                 if path in NEEDS_LOGIN and not panel.session.user:
                     raise NotLoggedIn()
-                result = route(panel, body)
+                code, value = 200, route(panel, body)
             except OperationError as e:
-                return self._json(409, {"error": e.message, "field": e.field, "code": e.code})
+                code, value = 409, {"error": e.message, "field": e.field, "code": e.code}
             except NotLoggedIn:
-                return self._json(401, {"error": "Zaloguj się hasłem z koperty.", "code": "login"})
+                code, value = 401, {"error": "Zaloguj się hasłem z koperty.", "code": "login"}
             except database.LoginError as e:
-                return self._json(401, {"error": str(e), "code": "password"})
+                code, value = 401, {"error": str(e), "code": "password"}
             except database.Conflict:
-                return self._json(409, {"error": "Kopia na dysku i kopia na pamięci USB rozeszły się. Wybierz, "
-                                                 "z którą pracować dalej.", "code": "conflict"})
+                code, value = 409, {"error": "Kopia na dysku i kopia na pamięci USB rozeszły się. Wybierz, "
+                                             "z którą pracować dalej.", "code": "conflict"}
             except database.StorageError as e:
                 text = str(e)
-                return self._json(409, {"error": text[:1].upper() + text[1:] + ".", "code": "storage"})
+                code, value = 409, {"error": text[:1].upper() + text[1:] + ".", "code": "storage"}
             except ValueError as e:
-                return self._json(400, {"error": str(e), "code": "invalid"})
+                code, value = 400, {"error": str(e), "code": "invalid"}
             except Exception as e:   # noqa: BLE001 - panel zawsze dostaje odpowiedź, nie zerwane połączenie
-                return self._json(500, {"error": "Nieoczekiwany błąd aplikacji. Spróbuj ponownie; jeśli się powtarza, "
-                                                 "uruchom START jeszcze raz.", "code": type(e).__name__})
+                code, value = 500, {"error": "Nieoczekiwany błąd aplikacji. Spróbuj ponownie; jeśli się powtarza, "
+                                             "uruchom START jeszcze raz.", "code": type(e).__name__}
             finally:
+                # Przed odpowiedzią, także po błędzie: kto dostał odpowiedź, widzi już nową wersję stanu.
                 if path not in READ_ONLY:
                     panel.changed()
-            self._json(200, result)
+            self._json(code, value)
 
     return Handler
 

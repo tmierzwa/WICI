@@ -750,12 +750,18 @@ class DatabaseTest(unittest.TestCase):
         db = self.open("a")
         db.write(lambda c: c.executemany("INSERT INTO journal (at, station, lxmf, op, ok, detail) "
                                          "VALUES ('t','WICI-1','','x',1,?)", [("x" * 300,)] * 1000))
-        writes, latency = [], []
-        real = database._write_durable
+        writes, latency, started, cycles = [], [], [], []
+        real, real_seal = database._write_durable, database.Database._seal
+
+        def sealing(self_):                                 # tylko wątek kopii na dysku pieczętuje migawki
+            started.append(time.monotonic())
+            return real_seal(self_)
 
         def counting(path, data):
             writes.append(path.parent.name)
             real(path, data)
+            if path.parent.name == "a":
+                cycles.append(time.monotonic() - started[-1])
 
         def phone(n):
             for i in range(10):
@@ -763,7 +769,8 @@ class DatabaseTest(unittest.TestCase):
                 self.add(db, f"{n}-{i}")
                 latency.append(time.monotonic() - t)
 
-        with unittest.mock.patch.object(database, "_write_durable", counting):
+        with unittest.mock.patch.object(database, "_write_durable", counting), \
+                unittest.mock.patch.object(database.Database, "_seal", sealing):
             threads = [threading.Thread(target=phone, args=(n,)) for n in range(15)]
             for t in threads:
                 t.start()
@@ -772,7 +779,11 @@ class DatabaseTest(unittest.TestCase):
             db.flush()
         self.assertEqual(len(self.details(db)), 1150)
         self.assertLess(writes.count("a"), 150)             # migawki łączone, nie jedna na zmianę
-        self.assertLess(max(latency), 1.0, f"max {max(latency):.3f} s, {writes.count('a')} zapisów")
+        # Zapis czeka najwyżej na migawkę w toku i na następną, która go obejmuje: około dwóch cykli. Próg względny
+        # do najdłuższego cyklu, bo bezwzględny 1 s przekraczał wolny fsync dysku runnera Windows (do 1,25 s
+        # przy 20 zapisach). Bez łączenia migawek zapis czekałby na kilkanaście cykli w kolejce.
+        self.assertLess(max(latency), 3 * max(cycles) + 0.02,
+                        f"max {max(latency):.3f} s, cykl {max(cycles):.3f} s, {writes.count('a')} zapisów")
         db.close()
 
     def test_disk_error_is_reported_to_the_writer(self):
@@ -1432,7 +1443,9 @@ class PanelTest(unittest.TestCase):
         self.assertEqual(self.request("POST", "/api/config/check", body, {"Content-Type": "application/json"})[0].status, 403)
         self.assertEqual(self.request("POST", "/api/config/check", body, {**ok, "Origin": "http://evil.example"})[0].status, 403)
         self.assertEqual(self.request("POST", "/api/config/check", body, {**ok, "Content-Type": "text/plain"})[0].status, 415)
-        self.assertEqual(self.request("POST", "/api/config/check", "x" * 70000, ok)[0].status, 413)
+        # Sam nagłówek bez treści: serwer odpowiada 413 bez czytania, a zamknięcie gniazda z nieodczytaną treścią
+        # wysyła RST, który przerywa wysyłanie po stronie klienta (ConnectionResetError na macOS i Windows).
+        self.assertEqual(self.request("POST", "/api/config/check", None, {**ok, "Content-Length": "70000"})[0].status, 413)
         self.assertEqual(self.request("POST", "/api/nothing", "{}", ok)[0].status, 404)
 
     def test_check_and_operations_without_station(self):
