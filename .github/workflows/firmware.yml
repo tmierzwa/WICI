@@ -8,9 +8,9 @@ name: Firmware
 on:
   push:
     branches: [main]
-    paths: ['firmware/**', 'tests/test_rns_*.py', 'tests/test_rnscore.py', 'tests/native/rns_*', 'tests/native/rnscore_*', 'tests/vectors/**', '.github/workflows/firmware.yml']
+    paths: ['firmware/**', 'tests/test_rns_*.py', 'tests/test_rnscore.py', 'tests/test_rnscore_lxmf.py', 'tests/native/rns_*', 'tests/native/rnscore_*', 'tests/vectors/**', '.github/workflows/firmware.yml']
   pull_request:
-    paths: ['firmware/**', 'tests/test_rns_*.py', 'tests/test_rnscore.py', 'tests/native/rns_*', 'tests/native/rnscore_*', 'tests/vectors/**', '.github/workflows/firmware.yml']
+    paths: ['firmware/**', 'tests/test_rns_*.py', 'tests/test_rnscore.py', 'tests/test_rnscore_lxmf.py', 'tests/native/rns_*', 'tests/native/rnscore_*', 'tests/vectors/**', '.github/workflows/firmware.yml']
 permissions:
   contents: read
 jobs:
@@ -59,6 +59,10 @@ jobs:
         env:
           WICI_RNS_SANITIZE: '1'
         run: python -m unittest tests.test_rnscore -v
+      - name: Station Reticulum core, LXMF SA1 messages against vectors from Python
+        env:
+          WICI_RNS_SANITIZE: '1'
+        run: python -m unittest tests.test_rnscore_lxmf -v
   interop:
     # Stos stacji wobec Reticulum w Pythonie (D19): tools/rns_interop.py i tools/rns_osp_node.py na porcie,
     # rns_interop.py w krokach, które rdzeń już ma (host-core, tests/test_rns_stack.py: CORE_STEPS).
@@ -75,11 +79,12 @@ jobs:
             ~/.platformio
             firmware/.pio/stack
           key: pio-host-${{ hashFiles('firmware/platformio.ini', 'firmware/tools/stack_deps.py', 'firmware/patches/**') }}
-      - name: PlatformIO Core and Reticulum (Python) at the pinned commit
+      - name: PlatformIO Core, Reticulum and LXMF (Python) at the pinned commits
         run: |
           python -m pip install platformio==6.2.0
           python -m venv "$RUNNER_TEMP/rns"
-          "$RUNNER_TEMP/rns/bin/pip" install "rns @ git+https://github.com/markqvist/Reticulum@e40191b3d193b46b7f2d8a44424a594cd758839b" pyserial==3.5
+          "$RUNNER_TEMP/rns/bin/pip" install "rns @ git+https://github.com/markqvist/Reticulum@e40191b3d193b46b7f2d8a44424a594cd758839b" \
+            "lxmf @ git+https://github.com/markqvist/LXMF@c3ff2d6dc2f256daab896dadc044dd5a913ecbb7" pyserial==3.5
       - name: Station stack (port and core) against Reticulum in Python
         run: |
           WICI_PIO="$(command -v pio)" WICI_RNS_PYTHON="$RUNNER_TEMP/rns/bin/python" python -m unittest tests.test_rns_stack -v
@@ -89,3 +94,6 @@ jobs:
       - name: Core test vectors match Reticulum in Python
         run: |
           WICI_RNS_PYTHON="$RUNNER_TEMP/rns/bin/python" python -m unittest tests.test_rns_vectors -v
+      - name: Core LXMF vectors match LXMF in Python
+        run: |
+          WICI_RNS_PYTHON="$RUNNER_TEMP/rns/bin/python" python -m unittest tests.test_rnscore_lxmf.VectorFileTests -v
