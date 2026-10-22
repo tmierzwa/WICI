@@ -676,6 +676,11 @@
     "valid": false
    },
    {
+    "name": "explicit_signature_of_other_hash",
+    "proof": "dc0c79b8e77b34f67616344fcbb4389653b3a3b4cbe6aa7c107a35efa1507da80f6aa9c167aadf927e40b03e16bceb06135b60c3caf3d54f4db202b458e06bfcb5dff7a17b622c02135c79fa1532aee1c60af0eba3148912a4fe735af5fd1502",
+    "valid": false
+   },
+   {
     "name": "length_63",
     "proof": "111824aa4ec14b1e46cef37f4cddf968d496a83691e14af64d28511e6c320a1652a86b58c3ab7a0baf68f3112b6a4b9f61731af58b48fc71cd90149a5e1f55",
     "valid": false
@@ -747,6 +752,39 @@
    "plaintext": "ff52b32cdb5256d85fbb071c8205535ddea1cacd104124c5fe543f41cfb7a9e4d700c6b542e2e325e7eb55c354e47c52b0d8bbb2072ea020c9d682a138405641abdeebc96b51f960a9e1bc8bbdc327cd6a3ee62ff0ac9508228a256aa6c272d8343f184d",
    "ratchet": "435f10f6fadc4bb09580a3c25601c274e10ac93c99a1a392652b13f5c43e855b",
    "token": "f4fa9a44f8cf4c4ba7a944c89bde8b845e55ad1064d286425b2b8a116ca3722f5da14bd3c78a2eb18e755f7178fb47e668b980a95709cdabb261fd529586fdd0266e147fb4ae93f2ef68c144e2b3a03e7026a8e6653bbec94c5fd589ca4d6fdb74a98374c3bd248d60c1c1d913cb5275e85903233c0750748f63c011b66c1e7585735185476434d94ec0daafa204f814a034c3d76d44cf7f7898fbc9f53c21510002315ec9a67d608838420252d73f7a4db3b48d7fc3c0f878372b9d459149e0"
+  },
+  {
+   "identity_public_key": "5c0505300c6a8d0115e5d0594d9ec95194bfeb8a526bb388f5f3bbc49385e21eb513b363ea5ea31d58fdc8baef4a32b869fdf63c7472c3a5a4c591647796986b",
+   "unusual_ratchets": [
+    {
+     "ephemeral_private_key": "7985f3266e90ff9eb2e08068c121d3727f88babccdee0d2f7ef230f8eb558267",
+     "iv": "63f2d1df6aff724b9b0f638cbfa8eb96",
+     "name": "zero",
+     "ratchet": "0000000000000000000000000000000000000000000000000000000000000000",
+     "token": null
+    },
+    {
+     "ephemeral_private_key": "2c697b4bfc268f70282a419e0c98b5d41f77435738bf68a6fb9d609b5201f211",
+     "iv": "225ef89a5a1be60c85bd45cf1fab1fde",
+     "name": "one",
+     "ratchet": "0100000000000000000000000000000000000000000000000000000000000000",
+     "token": null
+    },
+    {
+     "ephemeral_private_key": "145eb7534c182b4685887c42dc13c0c725aa1e0f7ddd65484be3a46da01ec1fa",
+     "iv": "d083188952313ad21120ec6148016597",
+     "name": "p_plus_1",
+     "ratchet": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+     "token": null
+    },
+    {
+     "ephemeral_private_key": "0bd1c30b186b5968e19e32eaea273fdc87ab7f849cb3f314bb690963eca1cbad",
+     "iv": "9acc7101b7e5fee5f688e8ffc69e9a6e",
+     "name": "high_bit",
+     "ratchet": "0900000000000000000000000000000000000000000000000000000000000080",
+     "token": "71ee20f1f5d4c0c11b12ffd8f8ed2b672ddbcb742f4444495f2f1723c228424f9acc7101b7e5fee5f688e8ffc69e9a6e155f54a5c586a8fbd98a7f56827aed4d910b25931791aea6787dee9731d56f4f5504a6c1308b786b1eaba80c86973b5f"
+    }
+   ]
   }
  ],
  "source": {

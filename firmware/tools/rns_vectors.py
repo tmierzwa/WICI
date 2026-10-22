@@ -381,6 +381,19 @@ def ratchet_token_vectors():
             "decrypted_with_ratchet": receiver.decrypt(token, ratchets=[ratchet_private]).hex(),
             "decrypted_without_ratchet": None if (d := receiver.decrypt(token)) is None else d.hex(),
         })
+    # Ratchet niskiego rzędu albo w kodowaniu niekanonicznym (wynik Identity.encrypt: token albo błąd).
+    rejected = []
+    for name, value in (("zero", 0), ("one", 1), ("p_plus_1", X25519_P + 1), ("high_bit", 9 + 2**255)):
+        r = value.to_bytes(32, "little")
+        with Deterministic(f"ratchet:low:{name}"):
+            try:
+                token = ident.encrypt(b"WICI", ratchet=r).hex()
+            except ValueError:
+                token = None
+        rejected.append({"name": name, "ratchet": r.hex(), "token": token,
+                         "ephemeral_private_key": seeded(f"ratchet:low:{name}:x25519:1", 32).hex(),
+                         "iv": seeded(f"ratchet:low:{name}:urandom:2", 16).hex()})
+    out.append({"identity_public_key": ident.get_public_key().hex(), "unusual_ratchets": rejected})
     return out
 
 
@@ -414,6 +427,7 @@ def proof_vectors():
         "explicit_tampered": explicit[:-1] + bytes([explicit[-1] ^ 1]),
         "implicit_non_canonical": signature[:32] + s.to_bytes(32, "little"),
         "signed_by_other": other.sign(packet.packet_hash),
+        "explicit_signature_of_other_hash": packet.packet_hash + ident.sign(seeded("proof:other-hash", 32)),
         "length_63": implicit[:63],
         "length_65": implicit + b"\x00",
         "length_95": explicit[:95],

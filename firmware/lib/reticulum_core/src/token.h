@@ -21,9 +21,10 @@ constexpr size_t tokenSize(size_t length) {
     return TOKEN_OVERHEAD + (length / TOKEN_BLOCK_SIZE + 1) * TOKEN_BLOCK_SIZE;
 }
 
-// RNS/Identity.py: Identity.encrypt; RNS/Cryptography/Token.py: Token.encrypt. ratchet nullptr: wymiana
-// kluczy z kluczem X25519 tożsamości celu, inaczej z kluczem ratchetu 32 B z ogłoszenia celu (target_public_key);
-// sól HKDF w obu przypadkach to skrót tożsamości celu (get_salt). Klucz efemeryczny (prywatny, 32 B) i IV podaje wywołujący; w Pythonie to X25519PrivateKey.generate
+// RNS/Identity.py: Identity.encrypt; RNS/Cryptography/Token.py: Token.encrypt. ratchet: nullptr albo
+// dokładnie RATCHET_SIZE B klucza ratchetu z ogłoszenia celu (target_public_key); bez niego wymiana
+// kluczy z kluczem X25519 tożsamości celu. Sól HKDF w obu przypadkach to skrót tożsamości celu
+// (get_salt). Klucz efemeryczny (prywatny, 32 B) i IV podaje wywołujący; w Pythonie to X25519PrivateKey.generate
 // i os.urandom, więc muszą być losowe i nowe dla każdego tokenu. out ma tokenSize(length) B i nie
 // może zachodzić na plaintext. Fałsz, gdy klucz celu (tożsamości albo ratchetu) jest niskiego rzędu (Python zgłasza błąd).
 bool encrypt(const uint8_t publicKey[KEY_SIZE], const uint8_t* ratchet, const uint8_t ephemeralKey[KEY_SIZE / 2],

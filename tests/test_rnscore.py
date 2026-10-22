@@ -159,7 +159,7 @@ class CoreTests(unittest.TestCase):
     def test_ratchet_token(self):
         # Identity.encrypt(ratchet=...): z tym samym kluczem efemerycznym i IV bajt w bajt jak w Pythonie.
         # Python odszyfrowuje go tylko z ratchetem, więc odszyfrowanie samym kluczem tożsamości odpada.
-        tokens = VECTORS["ratchet_token"]
+        tokens = [t for t in VECTORS["ratchet_token"] if "token" in t]
         got = self.ask([("encrypt_ratchet", bytes.fromhex(t["identity_public_key"] + t["ratchet"] + t["ephemeral_private_key"] +
                                                           t["iv"] + t["plaintext"])) for t in tokens])
         self.assertEqual(got, [t["token"] for t in tokens])
@@ -168,12 +168,14 @@ class CoreTests(unittest.TestCase):
         prv = bytes.fromhex(VECTORS["identity"][0]["private_key"])
         self.assertEqual(self.ask([("decrypt", prv + bytes.fromhex(t["token"])) for t in tokens]), ["none"] * len(tokens))
 
-    def test_encrypt_to_low_order_ratchet(self):
-        # Ratchet niskiego rzędu z ogłoszenia: wspólny sekret zerowy, Python zgłasza błąd w exchange.
-        t = VECTORS["ratchet_token"][0]
-        rest = bytes.fromhex(t["ephemeral_private_key"] + t["iv"]) + b"WICI"
-        got = self.ask([("encrypt_ratchet", bytes.fromhex(t["identity_public_key"]) + r + rest) for r in (bytes(32), (1).to_bytes(32, "little"))])
-        self.assertEqual(got, ["none", "none"])
+    def test_encrypt_to_unusual_ratchet(self):
+        # Ratchet niskiego rzędu (Python: błąd w exchange) i w kodowaniu niekanonicznym (Python redukuje).
+        entry = VECTORS["ratchet_token"][-1]
+        cases = entry["unusual_ratchets"]
+        got = self.ask([("encrypt_ratchet", bytes.fromhex(entry["identity_public_key"] + c["ratchet"] + c["ephemeral_private_key"] +
+                                                          c["iv"]) + b"WICI") for c in cases])
+        self.assertEqual(got, [c["token"] or "none" for c in cases])
+        self.assertEqual([c["token"] is None for c in cases], [True, True, True, False])
 
     def test_proof(self):
         # Identity.prove (niejawny i jawny) bajt w bajt; PacketReceipt.validate_proof: te same wyniki.

@@ -23,4 +23,9 @@ size_t prove(const uint8_t privateKey[KEY_SIZE], const uint8_t publicKey[KEY_SIZ
 bool validateProof(const uint8_t publicKey[KEY_SIZE], const uint8_t packetHash[HASH_SIZE], const uint8_t* proof,
                    size_t length);
 
+// Dopasowanie dowodu do potwierdzenia robi wywołujący, jak RNS/Transport.py (inbound, PROOF): dowód
+// jawny tylko z potwierdzeniem o tym pełnym skrócie, niejawny ze wszystkimi potwierdzeniami w stanie
+// SENT; potwierdzenie zaliczone raz. Skrót celu pakietu PROOF służy w Pythonie tylko do przekazania
+// dowodu przez tablicę odwrotną, nie do szukania potwierdzenia.
+
 }  // namespace rnscore
