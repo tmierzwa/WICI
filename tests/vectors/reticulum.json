@@ -318,6 +318,193 @@
     "valid": false
    },
    "name": "header_2_too_short"
+  },
+  {
+   "header_1": {
+    "raw": "000009f0bced45985164b8dc8b135e8e867d",
+    "valid": false
+   },
+   "name": "header_1_without_context"
+  },
+  {
+   "header_1": {
+    "raw": "000009f0bced45985164b8dc8b135e8e867d00",
+    "valid": false
+   },
+   "name": "header_1_without_data"
+  },
+  {
+   "header_1": {
+    "context": 0,
+    "context_flag": 0,
+    "data": "01",
+    "destination_hash": "09f0bced45985164b8dc8b135e8e867d",
+    "destination_type": 0,
+    "hash": "55b1a62fc29b121d4a2f9596bb67a0c761d028db9a7fa64411c6b21fd80d2218",
+    "header_type": 0,
+    "hops": 0,
+    "packet_type": 0,
+    "raw": "000009f0bced45985164b8dc8b135e8e867d0001",
+    "transport_id": null,
+    "transport_type": 0,
+    "truncated_hash": "55b1a62fc29b121d4a2f9596bb67a0c7",
+    "valid": true
+   },
+   "name": "header_1_one_byte_of_data"
+  },
+  {
+   "header_1": {
+    "raw": "5000da999bde408aa64849d724c1c8a7c3a309f0bced45985164b8dc8b135e8e867d00",
+    "valid": false
+   },
+   "name": "header_2_without_data"
+  },
+  {
+   "header_1": {
+    "context": 0,
+    "context_flag": 0,
+    "data": "01",
+    "destination_hash": "09f0bced45985164b8dc8b135e8e867d",
+    "destination_type": 0,
+    "hash": "55b1a62fc29b121d4a2f9596bb67a0c761d028db9a7fa64411c6b21fd80d2218",
+    "header_type": 1,
+    "hops": 0,
+    "packet_type": 0,
+    "raw": "5000da999bde408aa64849d724c1c8a7c3a309f0bced45985164b8dc8b135e8e867d0001",
+    "transport_id": "da999bde408aa64849d724c1c8a7c3a3",
+    "transport_type": 1,
+    "truncated_hash": "55b1a62fc29b121d4a2f9596bb67a0c7",
+    "valid": true
+   },
+   "name": "header_2_one_byte_of_data"
+  },
+  {
+   "header_1": {
+    "context": 0,
+    "context_flag": 0,
+    "data": "6ef62b04a942ee47690a0299f87a9f5b7a2505add1cc6c76d4a9dc2c0ac1af6c09aa21f43f7fead6cf56637e72f8e69aef3967ee4917f21057f5bf1b96bbb4d7f07224d69c8aaeba17bcd2270c364edc4c536287c42e33fa415829eee15c3fc8",
+    "destination_hash": "09f0bced45985164b8dc8b135e8e867d",
+    "destination_type": 0,
+    "hash": "1ee96409cb7f282a093a26ff94ca601d25492da8a2a9bd869802146107c8e211",
+    "header_type": 0,
+    "hops": 127,
+    "packet_type": 0,
+    "raw": "007f09f0bced45985164b8dc8b135e8e867d006ef62b04a942ee47690a0299f87a9f5b7a2505add1cc6c76d4a9dc2c0ac1af6c09aa21f43f7fead6cf56637e72f8e69aef3967ee4917f21057f5bf1b96bbb4d7f07224d69c8aaeba17bcd2270c364edc4c536287c42e33fa415829eee15c3fc8",
+    "transport_id": null,
+    "transport_type": 0,
+    "truncated_hash": "1ee96409cb7f282a093a26ff94ca601d",
+    "valid": true
+   },
+   "name": "hops_127"
+  },
+  {
+   "header_1": {
+    "raw": "008009f0bced45985164b8dc8b135e8e867d006ef62b04a942ee47690a0299f87a9f5b7a2505add1cc6c76d4a9dc2c0ac1af6c09aa21f43f7fead6cf56637e72f8e69aef3967ee4917f21057f5bf1b96bbb4d7f07224d69c8aaeba17bcd2270c364edc4c536287c42e33fa415829eee15c3fc8",
+    "valid": false
+   },
+   "name": "hops_128"
+  },
+  {
+   "header_1": {
+    "raw": "00ff09f0bced45985164b8dc8b135e8e867d006ef62b04a942ee47690a0299f87a9f5b7a2505add1cc6c76d4a9dc2c0ac1af6c09aa21f43f7fead6cf56637e72f8e69aef3967ee4917f21057f5bf1b96bbb4d7f07224d69c8aaeba17bcd2270c364edc4c536287c42e33fa415829eee15c3fc8",
+    "valid": false
+   },
+   "name": "hops_255"
+  },
+  {
+   "header_1": {
+    "context": 0,
+    "context_flag": 0,
+    "data": "6ef62b04a942ee47690a0299f87a9f5b7a2505add1cc6c76d4a9dc2c0ac1af6c09aa21f43f7fead6cf56637e72f8e69aef3967ee4917f21057f5bf1b96bbb4d7f07224d69c8aaeba17bcd2270c364edc4c536287c42e33fa415829eee15c3fc8",
+    "destination_hash": "09f0bced45985164b8dc8b135e8e867d",
+    "destination_type": 0,
+    "hash": "1ee96409cb7f282a093a26ff94ca601d25492da8a2a9bd869802146107c8e211",
+    "header_type": 0,
+    "hops": 0,
+    "packet_type": 0,
+    "raw": "800009f0bced45985164b8dc8b135e8e867d006ef62b04a942ee47690a0299f87a9f5b7a2505add1cc6c76d4a9dc2c0ac1af6c09aa21f43f7fead6cf56637e72f8e69aef3967ee4917f21057f5bf1b96bbb4d7f07224d69c8aaeba17bcd2270c364edc4c536287c42e33fa415829eee15c3fc8",
+    "transport_id": null,
+    "transport_type": 0,
+    "truncated_hash": "1ee96409cb7f282a093a26ff94ca601d",
+    "valid": true
+   },
+   "name": "ifac_flag_set"
+  },
+  {
+   "header_1": {
+    "context": 0,
+    "context_flag": 1,
+    "data": "6ef62b04a942ee47690a0299f87a9f5b7a2505add1cc6c76d4a9dc2c0ac1af6c09aa21f43f7fead6cf56637e72f8e69aef3967ee4917f21057f5bf1b96bbb4d7f07224d69c8aaeba17bcd2270c364edc4c536287c42e33fa415829eee15c3fc8",
+    "destination_hash": "09f0bced45985164b8dc8b135e8e867d",
+    "destination_type": 0,
+    "hash": "1ee96409cb7f282a093a26ff94ca601d25492da8a2a9bd869802146107c8e211",
+    "header_type": 0,
+    "hops": 0,
+    "packet_type": 0,
+    "raw": "200009f0bced45985164b8dc8b135e8e867d006ef62b04a942ee47690a0299f87a9f5b7a2505add1cc6c76d4a9dc2c0ac1af6c09aa21f43f7fead6cf56637e72f8e69aef3967ee4917f21057f5bf1b96bbb4d7f07224d69c8aaeba17bcd2270c364edc4c536287c42e33fa415829eee15c3fc8",
+    "transport_id": null,
+    "transport_type": 0,
+    "truncated_hash": "1ee96409cb7f282a093a26ff94ca601d",
+    "valid": true
+   },
+   "name": "context_flag_set"
+  },
+  {
+   "header_1": {
+    "context": 0,
+    "context_flag": 0,
+    "data": "6ef62b04a942ee47690a0299f87a9f5b7a2505add1cc6c76d4a9dc2c0ac1af6c09aa21f43f7fead6cf56637e72f8e69aef3967ee4917f21057f5bf1b96bbb4d7f07224d69c8aaeba17bcd2270c364edc4c536287c42e33fa415829eee15c3fc8",
+    "destination_hash": "09f0bced45985164b8dc8b135e8e867d",
+    "destination_type": 3,
+    "hash": "b9734732a7d6786234bc44814ae388762ae307ef3628b85484bce9fac1a266f1",
+    "header_type": 0,
+    "hops": 0,
+    "packet_type": 3,
+    "raw": "0f0009f0bced45985164b8dc8b135e8e867d006ef62b04a942ee47690a0299f87a9f5b7a2505add1cc6c76d4a9dc2c0ac1af6c09aa21f43f7fead6cf56637e72f8e69aef3967ee4917f21057f5bf1b96bbb4d7f07224d69c8aaeba17bcd2270c364edc4c536287c42e33fa415829eee15c3fc8",
+    "transport_id": null,
+    "transport_type": 0,
+    "truncated_hash": "b9734732a7d6786234bc44814ae38876",
+    "valid": true
+   },
+   "name": "link_proof_types"
+  },
+  {
+   "header_1": {
+    "context": 255,
+    "context_flag": 0,
+    "data": "6ef62b04a942ee47690a0299f87a9f5b7a2505add1cc6c76d4a9dc2c0ac1af6c09aa21f43f7fead6cf56637e72f8e69aef3967ee4917f21057f5bf1b96bbb4d7f07224d69c8aaeba17bcd2270c364edc4c536287c42e33fa415829eee15c3fc8",
+    "destination_hash": "09f0bced45985164b8dc8b135e8e867d",
+    "destination_type": 0,
+    "hash": "c68054d9bf0446d87567ec08e60251d50de578812f62bc4ac74a135d098c2dbe",
+    "header_type": 0,
+    "hops": 0,
+    "packet_type": 0,
+    "raw": "000009f0bced45985164b8dc8b135e8e867dff6ef62b04a942ee47690a0299f87a9f5b7a2505add1cc6c76d4a9dc2c0ac1af6c09aa21f43f7fead6cf56637e72f8e69aef3967ee4917f21057f5bf1b96bbb4d7f07224d69c8aaeba17bcd2270c364edc4c536287c42e33fa415829eee15c3fc8",
+    "transport_id": null,
+    "transport_type": 0,
+    "truncated_hash": "c68054d9bf0446d87567ec08e60251d5",
+    "valid": true
+   },
+   "name": "context_byte_ff"
+  },
+  {
+   "header_1": {
+    "context": 0,
+    "context_flag": 0,
+    "data": "25e6f8a5f6059676bdb078c5b83a0ecb6e7faee702b2eed6bc71cb4ee29c8b6b6a62badacbdf78458f1d65aa5110a1ae1637b1482eeca5800de4ccf54a4b75274aa56bbe0c529d6cfe4b8434f751c9254403f0c8859138e18d35d4202439958f9cbf4e6f8cd1319133e0b2c11c356bcd7d7917cfee3732ae4fb40fa6d9d4f3c94282d5f775ce864f6ee8f096d549e4fff94c4f3d6047f78b459d1cc4dc24d50ae5055a72c751f8b6d344caadc7d40b421e7076c0d234d071949781c52da6d53156823b27d3b1d5e8bcb12e6aefc4bd93e4dfd3c76ad1101aa01a3b777658dc79e1422d2a58c63cea704e12cb59b84d4ef622667eec7b4c4af93cd7193312752d59d46b063c3751f7e7eb7060c1c45cd74dce4fc7f7f457b17a3fcb8df8d2785f5319449ba894b29dabb353dfad70f636ab7a2dad080362c3632b078e22b5937f9be078b97a0de448cfeb5fbd3d04e7a2a0d1bd4b9d4def17450970f3bd7178eb49b9ec47f05d1d66fec658091dd10292b95414e3dbd4e5209c048579170dba1b9935c2540cb05a371d114a0e34823b918af7945b39e9e9decec047d4e7a8b43455986be6a89cc3191dd8bef7edbcade84418efe29ab034b5943d9b26afc1120fcfbf3f1f2f6b7bc246fca36c1f51e8cad313493b4e5babe847c810c732902df29695409a13481c5c32f9e68a4de50f30018178fd626c777101300cdb6a1b01d47dc923526904ce1ec619170a958e3bd33ac0092ac5c489efdb1b7a3d7c827ca31933651d66fb97000f0d05740a663fda22d43bda2ce737227b4aecee179159acd3c9b8edcb3a12d1e2a73a0b857b6a162c0e526790238aed",
+    "destination_hash": "09f0bced45985164b8dc8b135e8e867d",
+    "destination_type": 0,
+    "hash": "35ac527aaea0cbbe02de17ec9c235d3a0156ee6fade31add8fc857b345506690",
+    "header_type": 0,
+    "hops": 0,
+    "packet_type": 0,
+    "raw": "000009f0bced45985164b8dc8b135e8e867d0025e6f8a5f6059676bdb078c5b83a0ecb6e7faee702b2eed6bc71cb4ee29c8b6b6a62badacbdf78458f1d65aa5110a1ae1637b1482eeca5800de4ccf54a4b75274aa56bbe0c529d6cfe4b8434f751c9254403f0c8859138e18d35d4202439958f9cbf4e6f8cd1319133e0b2c11c356bcd7d7917cfee3732ae4fb40fa6d9d4f3c94282d5f775ce864f6ee8f096d549e4fff94c4f3d6047f78b459d1cc4dc24d50ae5055a72c751f8b6d344caadc7d40b421e7076c0d234d071949781c52da6d53156823b27d3b1d5e8bcb12e6aefc4bd93e4dfd3c76ad1101aa01a3b777658dc79e1422d2a58c63cea704e12cb59b84d4ef622667eec7b4c4af93cd7193312752d59d46b063c3751f7e7eb7060c1c45cd74dce4fc7f7f457b17a3fcb8df8d2785f5319449ba894b29dabb353dfad70f636ab7a2dad080362c3632b078e22b5937f9be078b97a0de448cfeb5fbd3d04e7a2a0d1bd4b9d4def17450970f3bd7178eb49b9ec47f05d1d66fec658091dd10292b95414e3dbd4e5209c048579170dba1b9935c2540cb05a371d114a0e34823b918af7945b39e9e9decec047d4e7a8b43455986be6a89cc3191dd8bef7edbcade84418efe29ab034b5943d9b26afc1120fcfbf3f1f2f6b7bc246fca36c1f51e8cad313493b4e5babe847c810c732902df29695409a13481c5c32f9e68a4de50f30018178fd626c777101300cdb6a1b01d47dc923526904ce1ec619170a958e3bd33ac0092ac5c489efdb1b7a3d7c827ca31933651d66fb97000f0d05740a663fda22d43bda2ce737227b4aecee179159acd3c9b8edcb3a12d1e2a73a0b857b6a162c0e526790238aed",
+    "transport_id": null,
+    "transport_type": 0,
+    "truncated_hash": "35ac527aaea0cbbe02de17ec9c235d3a",
+    "valid": true
+   },
+   "name": "above_mtu"
   }
  ],
  "source": {

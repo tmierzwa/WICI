@@ -182,6 +182,67 @@ class CoreTests(unittest.TestCase):
         got = self.ask([("encrypt", x25519 + ed25519 + rest) for x25519 in (bytes(32), (1).to_bytes(32, "little"))])
         self.assertEqual(got, ["none", "none"])
 
+    @staticmethod
+    def unpacked(h: dict) -> str:
+        # Wiersz programu prób dla pakietu z wektora (pola jak w Packet.unpack, skrót z get_hash).
+        if not h["valid"]:
+            return "none"
+        return " ".join(str(h[k]) for k in ("header_type", "context_flag", "transport_type", "destination_type",
+                                             "packet_type", "hops")) + \
+            f" {h['transport_id'] or '-'} {h['destination_hash']} {h['context']} {h['data']} {h['hash']}"
+
+    def test_packet_unpack(self):
+        # Pakiety złożone przez Reticulum (HEADER_1, HEADER_2 po transporcie) i spreparowane: te same pola
+        # i skrót co w Pythonie, odrzucone te same.
+        cases = [(f"{p['name']}:{h}", p[h]) for p in VECTORS["packet"] for h in ("header_1", "header_2") if h in p]
+        got = self.ask([("unpack", bytes.fromhex(h["raw"])) for _, h in cases])
+        self.assertEqual(dict(zip((n for n, _ in cases), got)), {n: self.unpacked(h) for n, h in cases})
+        for _, h in cases:
+            if h["valid"]:
+                self.assertEqual(h["truncated_hash"], h["hash"][:32])
+
+    def test_packet_pack(self):
+        # Z pól przyjętego pakietu pack składa te same bajty (Packet.pack w Pythonie albo przepisanie transportu).
+        commands, expected = [], []
+        for p in VECTORS["packet"]:
+            for h in (p.get("header_1"), p.get("header_2")):
+                # Bit IFAC (0x80) pack nie ustawia; flaga kontekstu, skoki i MTU: osobno niżej.
+                if not h or not h["valid"] or h["hops"] != 0 or len(h["raw"]) // 2 > 500 or int(h["raw"][:2], 16) & 0xA0:
+                    continue
+                commands.append(("pack", self.pack_args(h)))
+                expected.append(h["raw"])
+        self.assertGreaterEqual(len(commands), 7)
+        self.assertEqual(self.ask(commands), expected)
+
+    def test_packet_pack_flags_and_limits(self):
+        # Flaga kontekstu i typy w bajcie flag; odmowa przy 128 skokach, pustych danych i ponad MTU (500 B).
+        by_name = {p["name"]: p["header_1"] for p in VECTORS["packet"]}
+        context = by_name["context_flag_set"]
+        types = by_name["link_proof_types"]
+        hops = by_name["hops_127"]
+        empty = dict(hops, data="")
+        over = dict(by_name["above_mtu"])
+        at_mtu = dict(over, data=over["data"][:2 * (500 - 19)])
+        too_many = dict(hops, hops=128)
+        got = self.ask([("pack", self.pack_args(h)) for h in (context, types, hops, empty, over, at_mtu, too_many)])
+        self.assertEqual(got[:3], [context["raw"], types["raw"], hops["raw"]])
+        self.assertEqual(got[3:5], ["none", "none"])
+        self.assertEqual(len(got[5]) // 2, 500)
+        self.assertEqual(got[6], "none")
+
+    def test_packet_every_length(self):
+        # Każda długość obciętego pakietu HEADER_2: do 35 B (nagłówek bez danych) odrzucony, dalej przyjęty;
+        # ASan pilnuje odczytu poza buforem.
+        raw = bytes.fromhex(VECTORS["packet"][0]["header_2"]["raw"])
+        got = self.ask([("unpack", raw[:n]) for n in range(len(raw) + 1)])
+        self.assertEqual([line == "none" for line in got], [n <= 35 for n in range(len(raw) + 1)])
+
+    @staticmethod
+    def pack_args(h: dict) -> bytes:
+        return bytes([h["header_type"], h["context_flag"], h["transport_type"], h["destination_type"], h["packet_type"],
+                      h["hops"]]) + bytes.fromhex(h["transport_id"] or "00" * 16) + bytes.fromhex(h["destination_hash"]) + \
+            bytes([h["context"]]) + bytes.fromhex(h["data"])
+
     def test_full_hash_matches_sha256(self):
         # Pusty wejściowy ciąg, granice bloku SHA-256 (55, 56, 64 B) i długi ciąg.
         inputs = [b"", b"WICI", bytes(55), bytes(56), bytes(64), bytes(range(256)) * 20]
