@@ -151,7 +151,7 @@ Limity magazynów stacji i zasady zwalniania miejsca są w tabeli [pamięci FRAM
 Tablica tras i tożsamości mieści co najmniej 256 wpisów z buforowanym ogłoszeniem, a lista skrótów pakietów co najmniej 4096 wpisów. Wpisów tożsamości głównej i zapasowej odbiorcy nigdy się nie usuwa; w konfiguracji węzła stanowiska chronione są wpisy celów osiągalnych przez interfejs USB. Poza nimi usuwa się wpis najdawniej używany. Przy pełnych 32-bajtowych skrótach, jak w implementacji referencyjnej, sama lista skrótów zajęłaby 128 KiB, a tablica tras z ogłoszeniami około 78 KiB, czyli razem około 81% RAM nRF52840. Dlatego:
 
 - lista skrótów pakietów w RAM przechowuje pierwsze 8 B skrótu (4096 × 8 B = 32 KiB); prawdopodobieństwo fałszywego duplikatu przy 4096 wpisach jest rzędu 10⁻¹², a lista jest lokalna i nie zmienia protokołu;
-- pełne wpisy tablicy tras, tożsamości i buforowane ogłoszenia leżą w FRAM; RAM zawiera indeks skrótów celu (256 × 16 B) i pamięć podręczną ostatnio używanych wpisów.
+- pełne wpisy tablicy tras, tożsamości i buforowane ogłoszenia leżą w FRAM, w gniazdach po 640 B z jednym gniazdem zapasowym (zmiana wpisu trafia do wolnego gniazda); RAM zawiera indeks 257 × 24 B (skrót celu, czas ostatniego użycia wpisu i trasy: do wypierania i wygasania tras bez czytania FRAM) i bufor jednego gniazda, bez pamięci podręcznej wpisów ([rdzeń](../../firmware/reticulum-core.md)).
 
 Zapas RAM ≥30% mierzy się przy tych pojemnościach i tym podziale, z LXMF, poleceniem `RNS` na płytce. W pilotażu (ESP32-S3, 512 KiB SRAM) pomiar należy do minimum pilotażu i blokuje T3 na stacjach pilotażowych (D14). Dla wydania na nRF52840 odtworzenie ruchu w programie węzła zbudowanym jako 32-bitowy daje 4,5% wolnej RAM w szczycie i 13,5% w stanie ustalonym, jeszcze bez LXMF ([pamięć RAM](../../firmware/README.md#pamięć-ram)): indeks magazynów portu zajmuje około 233 B na cel zamiast 16 B. Z portem warunek nie jest tam spełniony. Rdzeń stacji ma zwarty indeks i cel ≤56 KB RAM statycznie z LXMF ([budżet](../../firmware/reticulum-core.md#wymagania-konstrukcyjne)); przed decyzją o R02 po pilotażu D14 rozstrzyga pomiar rdzenia na płytce, a gdy nie wystarczy, MCU z większą pamięcią (koszt, pobór wobec W23, dostępność).
 
@@ -171,8 +171,8 @@ Każdy magazyn ma stałą liczbę gniazd o stałym rozmiarze; nie ma dziennika d
 | licznik czasu, dług ciszy, rezerwacja nonce, `fram_format`, ustawienia ekranu | dwie kopie | 4 KiB | stały rozmiar |
 | wejścia w tryb przygotowania ([naklejka serwisowa](#tryb-przygotowania-i-naklejka-serwisowa)) | pierścień 10 rekordów × 24 B w jawnym obszarze | 240 B | najstarszy rekord; licznik wejść tylko rośnie, ZNISZCZ DANE i ZAMKNIJ ZDARZENIE go nie kasują |
 | rekord transakcji (pełne nowe bajty zmienianych gniazd) | 2 × 4 KiB | 8 KiB | stały rozmiar; największa transakcja ≤4 KiB łącznie z nagłówkiem |
-| tablice stosu: trasy, tożsamości, ogłoszenia ([pojemności](#pojemności-stosu)) | ≥256 wpisów | ≤128 KiB | najdawniej używany wpis poza chronionymi |
-| **suma** | | **≈398 KiB** | 78% z 512 KiB |
+| tablice stosu: trasy, tożsamości, ogłoszenia ([pojemności](#pojemności-stosu)) | ≥256 wpisów (257 gniazd × 640 B) | ≤161 KiB | najdawniej używany wpis poza chronionymi |
+| **suma** | | **≈431 KiB** | 84% z 512 KiB |
 
 **Rekordy uszkodzone.** Rekord z błędnym znacznikiem zatwierdzenia (albo AEAD), magazynem, gniazdem lub wersją formatu jest uszkodzony; stacja liczy go w diagnostyce (`diag`) i nigdy nie traktuje jak wolnego miejsca ani nowej stacji. Skutki według magazynu:
 

@@ -21,8 +21,8 @@ the file store) reads the host's monotonic clock, so clock jumps do not move it.
 of sanitizer runtimes).
 
 The same scenarios run on the station Reticulum core (CoreHostileStackTests: rns_node_core.cpp and
-firmware/lib/reticulum_core instead of rns_node.cpp; the port only generates the traffic), except power
-loss in a FRAM write: in stage R1 the core writes nothing to FRAM after the identity key. The core also
+firmware/lib/reticulum_core instead of rns_node.cpp; the port only generates the traffic), including
+power loss in a write of the core's table of known destinations in FRAM (stage R2). The core also
 gets a flood of hostile datagrams (--defect flood): at most one asymmetric operation per loop() pass,
 replayed valid announces take no verification tokens, and a station packet sent during the flood is
 delivered.
@@ -294,12 +294,12 @@ class HostileStackTests(unittest.TestCase):
 
 
 class CoreHostileStackTests(HostileStackTests):
-    """The scenarios above on the station Reticulum core (stage R1)."""
+    """The scenarios above on the station Reticulum core (stages R1 and R2)."""
 
     core = True
 
     def test_valid_traffic_over_weeks_and_restarts(self):
-        # Jak na porcie, ale bez tras po restarcie: tablice w FRAM są w etapie R2.
+        # Jak na porcie; tablica znanych celów z FRAM po restarcie (etap R2).
         s = self.station()
         first = self.assertClean(s.run("--seed", 11, "--events", 2500, "--long-jumps"))
         self.assertTrue(first["new"])
@@ -309,10 +309,8 @@ class CoreHostileStackTests(HostileStackTests):
         second = self.assertClean(s.run("--seed", 12, "--events", 1500, "--long-jumps", "--gap", 86400))
         self.assertEqual(second["identity"], first["identity"])
         self.assertFalse(second["new"])
+        self.assertGreater(second["fs_files"], 0, second)
         self.assertClean(s.run("--seed", 13, "--events", 1500, "--gap", 30 * 86400))
-
-    def test_power_loss_in_any_fram_write(self):
-        self.skipTest("R1: the core writes nothing to FRAM after the identity key (tables in FRAM: R2)")
 
     def test_flood_one_asymmetric_operation_per_loop(self):
         # Zalew wrogimi datagramami szybszy niż przetwarzanie: najwyżej jedna operacja asymetryczna na obieg

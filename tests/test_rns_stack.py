@@ -29,8 +29,8 @@ RNS_PYTHON = os.environ.get("WICI_RNS_PYTHON")
 PROGRAM = FIRMWARE / ".pio" / "build" / "host" / "program"
 CORE_PROGRAM = FIRMWARE / ".pio" / "build" / "host-core" / "program"
 # Kroki rns_interop.py na rdzeniu: wyjście etapu R1 (firmware/reticulum-core.md, „Etapy”), z krokiem 3r
-# (szyfrowanie do ratchetu), którego port nie przechodzi. Krok 6 (trasa i tożsamość celu z FRAM po
-# restarcie) wymaga tablic w FRAM: etap R2.
+# (szyfrowanie do ratchetu), którego port nie przechodzi, i krok 6 z etapu R2 (trasa i tożsamość celu
+# z tablicy w FRAM po restarcie).
 CORE_STEPS = {
     "1": ["station_announce_in_python"],
     "2": ["python_announce_in_station"],
@@ -39,6 +39,8 @@ CORE_STEPS = {
     "4": ["python_to_station_packet", "python_receipt_delivered"],
     "4a": ["rejected_packet_without_proof"],
     "5": ["ifac_missing_dropped", "ifac_invalid_dropped"],
+    "6": ["identity_restored", "table_limit_after_restart", "path_and_identity_restored", "send_after_restart_without_announce",
+          "receipt_after_restart"],
     "7": ["receiver_entry_kept_in_full_table"],
     "8": ["receiver_known_from_card", "announce_blocked_in_silence", "send_from_card_key_in_exception"],
 }

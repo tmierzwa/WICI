@@ -40,8 +40,30 @@ void printHex(const uint8_t* data, size_t length, const char* end = "\n") {
     printf("%s", end);
 }
 
+// Obszar tablicy znanych celów w RAM (jak FRAM: nowa pamięć to same 0xFF). cutAfter: numer zapisu,
+// w którym znika zasilanie (dochodzi tylko początek danych, potem każdy zapis zawodzi); -1 bez zaniku.
+struct MemoryTable : rnscore::TableStorage {
+    std::vector<uint8_t> bytes = std::vector<uint8_t>(rnscore::TABLE_AREA, 0xFF);
+    long writes = 0;
+    long cutAfter = -1;
+    bool read(uint32_t offset, uint8_t* data, size_t count) override {
+        if (offset + count > bytes.size()) return false;
+        memcpy(data, bytes.data() + offset, count);
+        return true;
+    }
+    bool write(uint32_t offset, const uint8_t* data, size_t count) override {
+        if (offset + count > bytes.size()) return false;
+        if (cutAfter >= 0 && writes > cutAfter) return false;
+        const size_t n = cutAfter >= 0 && writes == cutAfter ? count / 2 : count;
+        ++writes;
+        memcpy(bytes.data() + offset, data, n);
+        return n == count;
+    }
+};
+
 // Stan poleceń t_* (transport): jedna stacja z celem "wici.sa1", zapis wywołań z transportu.
 struct TransportState {
+    MemoryTable table;
     rnscore::Transport transport;
     uint8_t privateKey[rnscore::KEY_SIZE] = {};
     uint8_t publicKey[rnscore::KEY_SIZE] = {};
@@ -302,8 +324,37 @@ int main() {
             hooks.packet = onPacket;
             hooks.receipt = onReceipt;
             hooks.pinned = onPinned;
-            state->transport.begin(state->privateKey, state->publicKey, state->identity, state->address, state->nameHash, hooks);
+            state->transport.begin(state->privateKey, state->publicKey, state->identity, state->address, state->nameHash, hooks,
+                                   state->table, state->nowMs);
             printHex(state->address, sizeof(state->address));
+        } else if (state && command == "t_restart" && data.size() <= 1) {
+            // restart stacji z tą samą pamięcią (zegar dalej); opcjonalnie 1 B: limit tablicy po starcie.
+            // Wynik: liczba znanych celów i tras.
+            rnscore::TransportHooks hooks;
+            hooks.transmit = onTransmit;
+            hooks.announce = onAnnounce;
+            hooks.packet = onPacket;
+            hooks.receipt = onReceipt;
+            hooks.pinned = onPinned;
+            state->table.cutAfter = -1;
+            state->transport.clear();
+            state->transport.begin(state->privateKey, state->publicKey, state->identity, state->address, state->nameHash, hooks,
+                                   state->table, state->nowMs);
+            if (data.size() == 1) state->transport.setLimit(data[0]);
+            printf("%u %u\n", static_cast<unsigned>(state->transport.known()), static_cast<unsigned>(state->transport.paths()));
+        } else if (state && command == "t_cut" && data.size() == 4) {
+            // zanik zasilania w zapisie numer N (4 B, big-endian) licząc od teraz; wynik: zapisy do teraz
+            const long n = static_cast<long>((uint32_t(data[0]) << 24) | (uint32_t(data[1]) << 16) | (uint32_t(data[2]) << 8) | data[3]);
+            printf("%ld\n", state->table.writes);
+            state->table.cutAfter = state->table.writes + n;
+        } else if (state && command == "t_poke" && data.size() >= 4) {
+            // bajty wprost do obszaru tablicy od adresu (4 B, big-endian), bez liczenia zapisów: uszkodzenia
+            const uint32_t at = (uint32_t(data[0]) << 24) | (uint32_t(data[1]) << 16) | (uint32_t(data[2]) << 8) | data[3];
+            const bool fits = at <= state->table.bytes.size() && data.size() - 4 <= state->table.bytes.size() - at;
+            if (fits) memcpy(state->table.bytes.data() + at, data.data() + 4, data.size() - 4);
+            printf(fits ? "ok\n" : "error\n");
+        } else if (state && command == "t_writes") {
+            printf("%ld\n", state->table.writes);
         } else if (!state && command.rfind("t_", 0) == 0) {
             printf("error\n");
         } else if (command == "t_clock" && data.size() == 8) {
@@ -335,14 +386,17 @@ int main() {
                 state->transport.send(p, p + 72, data.size() - 72, p + 16, p + 48, handle, timeout, state->nowMs);
             printTransport(names[static_cast<int>(r)]);
         } else if (command == "t_known" && data.size() == 16) {
-            // cel: "none" albo skoki, ratchet (0/1), trasa (0/1), następny skok, klucz ratchetu albo "-"
-            const rnscore::KnownDestination* e = state->transport.find(data.data());
-            if (!e) {
+            // cel: "none" albo skoki, ratchet (0/1), trasa (0/1), następny skok, klucz ratchetu ("-" bez niego),
+            // klucz publiczny, ogłoszenie w pamięci podręcznej ("-" bez niego)
+            rnscore::KnownDestination e;
+            if (!state->transport.lookup(data.data(), e, state->nowMs)) {
                 printf("none\n");
             } else {
-                printf("%u %d %d ", e->hops, e->hasRatchet ? 1 : 0, e->hasPath ? 1 : 0);
-                printHex(e->nextHop, sizeof(e->nextHop), " ");
-                if (e->hasRatchet) printHex(e->ratchet, sizeof(e->ratchet)); else printf("-\n");
+                printf("%u %d %d ", e.hops, e.hasRatchet ? 1 : 0, e.hasPath ? 1 : 0);
+                printHex(e.nextHop, sizeof(e.nextHop), " ");
+                if (e.hasRatchet) printHex(e.ratchet, sizeof(e.ratchet), " "); else printf("- ");
+                printHex(e.publicKey, sizeof(e.publicKey), " ");
+                if (e.announceLength) printHex(state->transport.cachedAnnounce(), e.announceLength); else printf("-\n");
             }
         } else if (command == "unpack") {
             // pakiet; pola rozdzielone spacjami (identyfikator transportu "-" w HEADER_1) i skrót pakietu,

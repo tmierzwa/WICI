@@ -28,13 +28,20 @@ uint64_t emittedAt(const uint8_t randomHash[RANDOM_HASH_SIZE]) {
 
 void Transport::begin(const uint8_t privateKey[KEY_SIZE], const uint8_t publicKey[KEY_SIZE],
                       const uint8_t identityHash[TRUNCATED_HASH_SIZE], const uint8_t* address,
-                      const uint8_t nameHash[NAME_HASH_SIZE], const TransportHooks& hooks) {
+                      const uint8_t nameHash[NAME_HASH_SIZE], const TransportHooks& hooks, TableStorage& storage,
+                      uint64_t nowMs) {
     privateKey_ = privateKey;
     publicKey_ = publicKey;
     identityHash_ = identityHash;
     address_ = address;
     nameHash_ = nameHash;
     hooks_ = hooks;
+    table_.begin(storage, seconds(nowMs));
+}
+
+bool Transport::pinnedHook(const uint8_t destination[TRUNCATED_HASH_SIZE], void* self) {
+    const TransportHooks& h = static_cast<Transport*>(self)->hooks_;
+    return h.pinned && h.pinned(destination, h.context);
 }
 
 bool Transport::inbound(const uint8_t* raw, size_t length, uint64_t nowMs) {
@@ -83,27 +90,30 @@ bool Transport::inbound(const uint8_t* raw, size_t length, uint64_t nowMs) {
 
 // RNS/Identity.py: validate_announce i remember, _remember_ratchet; RNS/Transport.py: _inbound
 // (ANNOUNCE): tablica tras i wywołanie announce handlers z filtrem aspektu. Tanie sprawdzenia przed
-// weryfikacją podpisu (ten sam wynik co w Pythonie, inne liczniki): własny cel, kolizja klucza ze
-// znanym wpisem i kopia ogłoszenia, które już przeszło weryfikację (tabela różnic). Dopiero potem hak
-// mayVerify (limit weryfikacji stacji), żeby tanio odrzucane ogłoszenia nie zużywały limitu.
+// weryfikacją podpisu (ten sam wynik co w Pythonie, inne liczniki): własny cel, kopia ogłoszenia, które
+// już przeszło weryfikację (sam indeks, bez odczytu FRAM), i kolizja klucza ze znanym wpisem. Dopiero
+// potem hak mayVerify (limit weryfikacji stacji), żeby tanio odrzucane ogłoszenia nie zużywały limitu.
 void Transport::inboundAnnounce(const Packet& packet, const uint8_t hash[HASH_SIZE], uint64_t nowMs) {
     // Ogłoszenie własnego celu (np. odbite przez węzeł transportowy) nie trafia do tablicy.
     if (address_ && memcmp(packet.destinationHash, address_, TRUNCATED_HASH_SIZE) == 0) {
         ++counters_.ignored;
         return;
     }
-    KnownDestination* e = findMutable(packet.destinationHash);
-    // validate_announce: znany cel z innym kluczem publicznym (kolizja skrótu) odrzucony. Klucz to
-    // pierwsze 64 B danych; krótsze dane odrzuci validateAnnounce.
-    if (e && packet.dataLength >= KEY_SIZE && memcmp(e->publicKey, packet.data, KEY_SIZE) != 0) {
-        ++counters_.invalid;
-        return;
-    }
+    const uint32_t now = seconds(nowMs);
+    const int slot = table_.find(packet.destinationHash);
     // Skrót na liście: te same bajty ogłoszenia przeszły już weryfikację, a przy tym samym skrócie
     // losowym should_add jest fałszywe. Bez trasy (wyparta albo wygasła) ogłoszenie idzie całą drogą.
-    if (e && e->hasPath && hashlist_.contains(hash)) {
-        e->usedS = seconds(nowMs);
+    if (table_.hasPath(slot) && hashlist_.contains(hash)) {
+        table_.touch(slot, now, false);
         ++counters_.duplicate;
+        return;
+    }
+    KnownDestination e;
+    const bool known = slot >= 0 && table_.read(slot, e, now);
+    // validate_announce: znany cel z innym kluczem publicznym (kolizja skrótu) odrzucony. Klucz to
+    // pierwsze 64 B danych; krótsze dane odrzuci validateAnnounce.
+    if (known && packet.dataLength >= KEY_SIZE && memcmp(e.publicKey, packet.data, KEY_SIZE) != 0) {
+        ++counters_.invalid;
         return;
     }
     if (hooks_.mayVerify && !hooks_.mayVerify(hooks_.context)) return;   // licznik po stronie stacji
@@ -113,44 +123,64 @@ void Transport::inboundAnnounce(const Packet& packet, const uint8_t hash[HASH_SI
         return;
     }
     hashlist_.add(hash);
-    if (!e) e = entry(packet.destinationHash);
-    if (!e) {   // pełna tablica z samymi celami chronionymi
-        ++counters_.ignored;
-        return;
+    if (!known) {
+        memset(&e, 0, sizeof(e));
+        memcpy(e.destination, packet.destinationHash, TRUNCATED_HASH_SIZE);
+        memcpy(e.publicKey, a.publicKey, KEY_SIZE);
     }
-    memcpy(e->publicKey, a.publicKey, KEY_SIZE);
+    bool changed = !known;
+    // _remember_ratchet: ogłoszenie bez ratchetu zostawia zapamiętany; ten sam ratchet bez zmiany (czas
+    // emisji pierwszego ogłoszenia z nim wystarcza, bo nadawca nie wraca do starego ratchetu). Ratchet ze
+    // starszego ogłoszenia (odtworzonego) nie zastępuje nowszego, choć Python go zastępuje (tabela różnic).
     const uint64_t emitted = emittedAt(a.randomHash);
-    // Ogłoszenie bez ratchetu zostawia zapamiętany (known_ratchets). Ratchet ze starszego ogłoszenia
-    // (odtworzonego) nie zastępuje nowszego, choć Python go zastępuje (tabela różnic).
     const uint32_t emittedS = emitted > UINT32_MAX ? UINT32_MAX : static_cast<uint32_t>(emitted);
-    if (a.ratchet && (!e->hasRatchet || emittedS >= e->ratchetEmittedS)) {
-        memcpy(e->ratchet, a.ratchet, RATCHET_SIZE);
-        e->hasRatchet = true;
-        e->ratchetEmittedS = emittedS;
+    if (a.ratchet && (!e.hasRatchet || (emittedS >= e.ratchetEmittedS && memcmp(e.ratchet, a.ratchet, RATCHET_SIZE) != 0))) {
+        memcpy(e.ratchet, a.ratchet, RATCHET_SIZE);
+        e.hasRatchet = true;
+        e.ratchetS = now;
+        e.ratchetEmittedS = emittedS;
+        changed = true;
     }
-    e->usedS = seconds(nowMs);
+    e.usedS = now;
 
     // Transport._inbound: should_add. Z listy skrótów losowych wpis zna tylko ostatni (tabela różnic);
-    // stan „trasa bez odpowiedzi” (path_is_unresponsive) jest w R2.
-    const bool newBlob = memcmp(a.randomHash, e->randomHash, RANDOM_HASH_SIZE) != 0;
+    // stan „trasa bez odpowiedzi” (path_is_unresponsive) nie występuje bez łączy.
+    const bool newBlob = memcmp(a.randomHash, e.randomHash, RANDOM_HASH_SIZE) != 0;
     bool add;
-    if (!e->hasPath) {
+    if (!e.hasPath) {
         add = true;
-    } else if (packet.hops <= e->hops) {
-        add = newBlob && emitted > e->emitted;
-    } else if (seconds(nowMs) >= e->pathExpiresS) {
+    } else if (packet.hops <= e.hops) {
+        add = newBlob && emitted > emittedAt(e.randomHash);
+    } else if (now >= e.pathExpiresS) {
         add = newBlob;
     } else {
-        add = newBlob && emitted > e->emitted;
+        add = newBlob && emitted > emittedAt(e.randomHash);
+    }
+    if (add) {
+        e.hasPath = true;
+        e.hops = packet.hops;
+        memcpy(e.nextHop, packet.headerType == HEADER_2 ? packet.transportId : packet.destinationHash, TRUNCATED_HASH_SIZE);
+        memcpy(e.randomHash, a.randomHash, RANDOM_HASH_SIZE);
+        e.pathExpiresS = now + PATHFINDER_E_S;
+        e.pathUsedS = now;
+        // Transport.cache: ogłoszenie trasy w pamięci podręcznej (do odpowiedzi na zapytania o trasę);
+        // dane dłuższe niż ANNOUNCE_FORWARDABLE_SIZE nie przechodzą przez Packet.pack z HEADER_2.
+        e.contextFlag = packet.contextFlag;
+        changed = true;
+    }
+    // Zapis tylko przy zmianie wpisu (nowy cel, ratchet, trasa): powtórzone ogłoszenie nie zapisuje FRAM.
+    if (changed) {
+        const bool cache = add && packet.dataLength <= ANNOUNCE_FORWARDABLE_SIZE;
+        // Nowa trasa: nowe ogłoszenie (długość 0: bez ogłoszenia); bez nowej trasy zostaje dotychczasowe.
+        const uint8_t* announce = add ? packet.data : nullptr;
+        if (table_.write(known ? slot : -1, e, announce, cache ? packet.dataLength : 0, pinnedHook, this) < 0) {
+            ++counters_.tableFailed;
+            return;
+        }
+    } else {
+        table_.touch(slot, now, false);
     }
     if (!add) return;
-    e->hasPath = true;
-    e->hops = packet.hops;
-    memcpy(e->nextHop, packet.headerType == HEADER_2 ? packet.transportId : packet.destinationHash, TRUNCATED_HASH_SIZE);
-    memcpy(e->randomHash, a.randomHash, RANDOM_HASH_SIZE);
-    e->emitted = emitted;
-    e->pathExpiresS = seconds(nowMs) + PATHFINDER_E_S;
-    e->pathUsedS = seconds(nowMs);
     ++counters_.announces;
     // Filtr aspektu "wici.sa1": skrót celu z nazwy i tożsamości sprawdził validateAnnounce, więc wystarczy
     // skrót nazwy. Odpowiedzi na zapytania o trasę nie idą do warstwy aplikacji (receive_path_responses).
@@ -251,19 +281,30 @@ bool Transport::announce(const uint8_t random[5], const uint8_t* appData, size_t
 
 bool Transport::remember(const uint8_t destination[TRUNCATED_HASH_SIZE], const uint8_t publicKey[KEY_SIZE],
                          uint64_t nowMs) {
-    KnownDestination* e = findMutable(destination);
-    if (!e) e = entry(destination);
-    if (!e) return false;
-    memcpy(e->publicKey, publicKey, KEY_SIZE);
-    e->usedS = seconds(nowMs);
-    return true;
+    const uint32_t now = seconds(nowMs);
+    int slot = table_.find(destination);
+    KnownDestination e;
+    if (slot >= 0 && table_.read(slot, e, now) && memcmp(e.publicKey, publicKey, KEY_SIZE) == 0) {
+        table_.touch(slot, now, false);
+        return true;
+    }
+    // Nowy cel; znany z innym kluczem (kolizja skrótu albo uszkodzone gniazdo) zastąpiony w całości.
+    memset(&e, 0, sizeof(e));
+    memcpy(e.destination, destination, TRUNCATED_HASH_SIZE);
+    memcpy(e.publicKey, publicKey, KEY_SIZE);
+    e.usedS = now;
+    slot = table_.find(destination);
+    if (table_.write(slot, e, publicKey, 0, pinnedHook, this) >= 0) return true;
+    ++counters_.tableFailed;
+    return false;
 }
 
 SendResult Transport::send(const uint8_t destination[TRUNCATED_HASH_SIZE], const uint8_t* data, size_t length,
                            const uint8_t ephemeralKey[KEY_SIZE / 2], const uint8_t iv[16], uint32_t handle, uint64_t timeoutMs,
                            uint64_t nowMs) {
-    KnownDestination* e = findMutable(destination);
-    if (!e) return SendResult::UNKNOWN;
+    const int slot = table_.find(destination);
+    KnownDestination e;
+    if (slot < 0 || !table_.read(slot, e, seconds(nowMs))) return SendResult::UNKNOWN;
     Receipt* receipt = nullptr;
     for (Receipt& r : receipts_) {
         if (!r.used) {
@@ -274,13 +315,13 @@ SendResult Transport::send(const uint8_t destination[TRUNCATED_HASH_SIZE], const
     if (!receipt) return SendResult::RECEIPTS_FULL;
     // Transport._outbound: przy znanej trasie dłuższej niż 1 skok pakiet idzie do transportu (HEADER_2
     // z następnym skokiem); inaczej HEADER_1 rozgłaszany.
-    const bool transported = e->hasPath && e->hops > 1;   // trasa wygasła: hasPath skasował poll()
+    const bool transported = e.hasPath && e.hops > 1;   // trasa wygasła: hasPath skasował read()
     const size_t header = transported ? HEADER_2_SIZE : HEADER_1_SIZE;
     if (length > MTU || header + tokenSize(length) > MTU) return SendResult::TOO_LARGE;
 
     // RNS/Destination.py: encrypt: Identity.encrypt z ratchetem z ogłoszenia (Identity.get_ratchet).
     uint8_t token[MTU];
-    if (!encrypt(e->publicKey, e->hasRatchet ? e->ratchet : nullptr, ephemeralKey, iv, data, length, token,
+    if (!encrypt(e.publicKey, e.hasRatchet ? e.ratchet : nullptr, ephemeralKey, iv, data, length, token,
                  sizeof(token))) {
         return SendResult::REFUSED;
     }
@@ -289,21 +330,21 @@ SendResult Transport::send(const uint8_t destination[TRUNCATED_HASH_SIZE], const
     packet.transportType = transported ? TRANSPORT : BROADCAST;
     packet.destinationType = SINGLE;
     packet.packetType = DATA;
-    if (transported) memcpy(packet.transportId, e->nextHop, TRUNCATED_HASH_SIZE);
+    if (transported) memcpy(packet.transportId, e.nextHop, TRUNCATED_HASH_SIZE);
     memcpy(packet.destinationHash, destination, TRUNCATED_HASH_SIZE);
     packet.data = token;
     packet.dataLength = tokenSize(length);
     uint8_t raw[MTU];
     const size_t rawLength = pack(packet, raw, sizeof(raw));
-    if (!rawLength || !emit(raw, rawLength, !e->hasPath)) return SendResult::REFUSED;
+    if (!rawLength || !emit(raw, rawLength, !e.hasPath)) return SendResult::REFUSED;
 
     receipt->used = true;
     receipt->handle = handle;
     packetHash(raw, rawLength, receipt->hash);
-    memcpy(receipt->publicKey, e->publicKey, KEY_SIZE);
+    memcpy(receipt->publicKey, e.publicKey, KEY_SIZE);
     receipt->deadlineMs = nowMs + timeoutMs;
-    e->usedS = seconds(nowMs);
-    if (transported) e->pathUsedS = seconds(nowMs);   // _outbound: path_entry[IDX_PT_TIMESTAMP] przy HEADER_2
+    // _outbound: path_entry[IDX_PT_TIMESTAMP] odświeżany przy HEADER_2.
+    table_.touch(slot, seconds(nowMs), transported);
     ++counters_.sent;
     return SendResult::SENT;
 }
@@ -316,57 +357,20 @@ void Transport::poll(uint64_t nowMs) {
         if (hooks_.receipt) hooks_.receipt(r.handle, false, hooks_.context);
     }
     // Transport.jobs: trasa nieużywana dłużej niż DESTINATION_TIMEOUT znika z path_table; wpis znanego
-    // celu (tożsamość, ratchet) zostaje, jak known_destinations.
+    // celu (tożsamość, ratchet) zostaje, jak known_destinations. Przegląd indeksu raz na sekundę.
     const uint32_t nowS = seconds(nowMs);
     if (nowS == cullS_) return;
     cullS_ = nowS;
-    for (size_t i = 0; i < limit_; ++i) {
-        KnownDestination& k = known_[i];
-        if (k.used && k.hasPath && nowS - k.pathUsedS > DESTINATION_TIMEOUT_S) k.hasPath = false;
-    }
+    table_.expire(nowS);
 }
 
-KnownDestination* Transport::findMutable(const uint8_t destination[TRUNCATED_HASH_SIZE]) {
-    for (size_t i = 0; i < limit_; ++i) {
-        if (known_[i].used && memcmp(known_[i].destination, destination, TRUNCATED_HASH_SIZE) == 0) return &known_[i];
-    }
-    return nullptr;
+bool Transport::lookup(const uint8_t destination[TRUNCATED_HASH_SIZE], KnownDestination& out, uint64_t nowMs) {
+    return table_.read(table_.find(destination), out, seconds(nowMs));
 }
 
-const KnownDestination* Transport::find(const uint8_t destination[TRUNCATED_HASH_SIZE]) const {
-    return const_cast<Transport*>(this)->findMutable(destination);
-}
-
-// Nowy wpis: wolne miejsce albo wyparty najdawniej używany cel bez ochrony (specyfikacja, „Pojemności
-// stosu”); nullptr, gdy wszystkie wpisy są chronione.
-KnownDestination* Transport::entry(const uint8_t destination[TRUNCATED_HASH_SIZE]) {
-    KnownDestination* slot = nullptr;
-    for (size_t i = 0; i < limit_ && !slot; ++i) {
-        if (!known_[i].used) slot = &known_[i];
-    }
-    if (!slot) {
-        for (size_t i = 0; i < limit_; ++i) {
-            KnownDestination& k = known_[i];
-            if (hooks_.pinned && hooks_.pinned(k.destination, hooks_.context)) continue;
-            if (!slot || k.usedS < slot->usedS) slot = &k;
-        }
-    }
-    if (!slot) return nullptr;
-    memset(slot, 0, sizeof(*slot));
-    memcpy(slot->destination, destination, TRUNCATED_HASH_SIZE);
-    slot->used = true;
-    return slot;
-}
-
-uint8_t Transport::hopsTo(const uint8_t destination[TRUNCATED_HASH_SIZE]) const {
-    const KnownDestination* e = find(destination);
-    return e && e->hasPath ? e->hops : PATHFINDER_M;
-}
-
-size_t Transport::paths() const {
-    size_t n = 0;
-    for (size_t i = 0; i < limit_; ++i) n += known_[i].used && known_[i].hasPath;
-    return n;
+uint8_t Transport::hopsTo(const uint8_t destination[TRUNCATED_HASH_SIZE], uint64_t nowMs) {
+    KnownDestination e;
+    return lookup(destination, e, nowMs) && e.hasPath ? e.hops : PATHFINDER_M;
 }
 
 size_t Transport::receiptsPending() const {
@@ -375,14 +379,8 @@ size_t Transport::receiptsPending() const {
     return n;
 }
 
-void Transport::setLimit(size_t limit) {
-    if (limit < 1 || limit > KNOWN_MAX) return;
-    for (size_t i = limit; i < KNOWN_MAX; ++i) memset(&known_[i], 0, sizeof(known_[i]));
-    limit_ = limit;
-}
-
 void Transport::clear() {
-    clean(known_, sizeof(known_));
+    table_.clear();
     clean(receipts_, sizeof(receipts_));
     hashlist_.clear();
     privateKey_ = publicKey_ = identityHash_ = address_ = nameHash_ = nullptr;
