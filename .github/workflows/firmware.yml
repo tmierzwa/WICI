@@ -20,8 +20,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # bench-a-core i l0-core: obrazy płytek z rdzeniem zamiast portu, tylko sprawdzenie kompilacji i RAM.
-        env: [bench-a, bench-n1, bench-b, l0, host, bench-a-core, l0-core]
+        # bench-a-core, bench-n1-core i l0-core: obrazy płytek z rdzeniem zamiast portu (kompilacja, RAM, samotest).
+        env: [bench-a, bench-n1, bench-b, l0, host, bench-a-core, bench-n1-core, l0-core]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0

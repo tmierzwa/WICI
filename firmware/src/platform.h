@@ -31,8 +31,9 @@ void beginBus();  // piny i kontroler SPI (po ustawieniu CS wszystkich układów
 void chipId(uint32_t id[2]);
 // Bajty ze sprzętowego źródła entropii do ziarna generatora stacji (drbg.h): nRF52840 RNG z korekcją
 // obciążenia; ESP32-S3 esp_fill_random ze źródłem SAR ADC włączonym bootloader_random_enable() (bez
-// radia Wi-Fi/BT jedyne pełne źródło), więc przed konfiguracją ADC pomiaru VTEST (beginVtest).
-void entropy(uint8_t* out, size_t count);
+// radia Wi-Fi/BT jedyne pełne źródło), więc przed konfiguracją ADC pomiaru VTEST (beginVtest). Fałsz,
+// gdy źródło nie odpowiada w ograniczonym czasie (nRF52840: brak VALRDY); reszta out jest wtedy zerowa.
+bool entropy(uint8_t* out, size_t count);
 uint32_t resetReason();  // nRF52840: RESETREAS; ESP32-S3: esp_reset_reason()
 // Czas od startu w ms bez zawijania (millis() zawija się po około 49 dniach). Na nRF52840 liczy
 // przejścia licznika taktów FreeRTOS, więc trzeba go wołać częściej niż co 48 dni (obieg pętli).

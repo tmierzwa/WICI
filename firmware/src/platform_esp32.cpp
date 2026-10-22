@@ -49,10 +49,11 @@ void chipId(uint32_t id[2]) {
     id[1] = (static_cast<uint32_t>(mac[0]) << 16) | (static_cast<uint32_t>(mac[1]) << 8) | mac[2];
 }
 
-void entropy(uint8_t* out, size_t count) {
+bool entropy(uint8_t* out, size_t count) {
     bootloader_random_enable();
-    esp_fill_random(out, count);
+    esp_fill_random(out, count);   // rejestr RNG czytany bez czekania na gotowość
     bootloader_random_disable();
+    return true;
 }
 
 uint32_t resetReason() { return static_cast<uint32_t>(esp_reset_reason()); }

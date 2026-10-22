@@ -14,6 +14,7 @@ unless WICI_RNS_SANITIZE=1 (CI), which fetches the sources and fails instead.
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -26,6 +27,8 @@ FIRMWARE = ROOT / "firmware"
 CORE = FIRMWARE / "lib" / "reticulum_core" / "src"
 STACK = FIRMWARE / ".pio" / "stack"
 CHECK = ROOT / "tests" / "native" / "rnscore_check.cpp"
+# Samotest kryptografii rdzenia z obrazów płytek (kod WICI w firmware/src, hexstr.h).
+SELFTEST = FIRMWARE / "src" / "core_selftest.cpp"
 VECTORS = json.loads((ROOT / "tests" / "vectors" / "reticulum.json").read_text())
 REQUIRED = os.environ.get("WICI_RNS_SANITIZE") == "1"
 # Z biblioteki Crypto tylko to, czego rdzeń używa.
@@ -49,9 +52,9 @@ def compiler():
 
 def build(out_dir: Path) -> Path:
     cxx = compiler()
-    base = [cxx, "-std=c++17", *SANITIZE, f"-I{CORE}", "-isystem", str(STACK / "Crypto")]
+    base = [cxx, "-std=c++17", *SANITIZE, f"-I{CORE}", f"-I{SELFTEST.parent}", "-isystem", str(STACK / "Crypto")]
     objects = []
-    for source in sorted(CORE.glob("*.cpp")):
+    for source in [*sorted(CORE.glob("*.cpp")), SELFTEST]:
         objects.append(out_dir / f"core_{source.stem}.o")
         subprocess.run([*base, "-fno-exceptions", "-fno-rtti", "-Wall", "-Wextra", "-Werror", "-c", str(source),
                         "-o", str(objects[-1])], check=True, capture_output=True, text=True)
@@ -218,6 +221,18 @@ class CoreTests(unittest.TestCase):
                     commands.append(("validate", self.validate_args(pub, bytes.fromhex(signature), bytes.fromhex(text))))
                     expected.append("1" if valid else "0")
         self.assertEqual(self.ask(commands), expected)
+
+    def test_ed25519_edge_cases(self):
+        # Klucze i R niskiego rzędu, kodowania niekanoniczne, składowa skrętna: ta sama decyzja co
+        # Identity.validate w Pythonie (wejścia spreparowane w tools/rns_vectors.py).
+        cases = VECTORS["ed25519_edge"]
+        got = self.ask([("validate", self.validate_args(bytes.fromhex(c["public_key"]), bytes.fromhex(c["signature"]),
+                                                        bytes.fromhex(c["message"]))) for c in cases])
+        expected = {c["name"]: "1" if c["valid"] else "0" for c in cases}
+        # Odstępstwo z tabeli różnic (reticulum-core.md): klucz neutralny z bitem znaku rdzeń odrzuca.
+        self.assertEqual(expected["non_canonical_key_sign_bit"], "1")
+        expected["non_canonical_key_sign_bit"] = "0"
+        self.assertEqual(dict(zip((c["name"] for c in cases), got)), expected)
 
     def test_signature_with_wrong_length(self):
         # Python odrzuca podpis o złej długości (wyjątek w verify, validate zwraca False).
@@ -627,6 +642,34 @@ class CoreTests(unittest.TestCase):
         inputs = [b"", b"WICI", bytes(55), bytes(56), bytes(64), bytes(range(256)) * 20]
         got = self.ask([("full_hash", data) for data in inputs])
         self.assertEqual(got, [hashlib.sha256(data).hexdigest() for data in inputs])
+
+    def test_board_selftest(self):
+        # Samotest z obrazów z rdzeniem (core_selftest.cpp) przechodzi na komputerze: próby przy starcie
+        # i wszystkie (RNS SELFTEST).
+        quick = "1 token_decrypt:1 token_encrypt:1 sign:1 validate:1"
+        self.assertEqual(self.ask([("selftest", b"\x04"), ("selftest", b"\x09")]),
+                         [quick, quick + " validate_reject:1 public_key:1 announce_validate:1 announce_build:1 ifac:1"])
+
+    def test_board_selftest_vectors_from_python(self):
+        # Każda stała szesnastkowa samotestu jest całą wartością z wektorów Reticulum w Pythonie.
+        source = SELFTEST.read_text()
+        constants = {name: "".join(re.findall(r'"([0-9a-f]*)"', body))
+                     for name, body in re.findall(r"constexpr char (\w+)\[\] =\s*((?:\s*\"[0-9a-f]*\")+);", source)}
+        self.assertEqual(len(constants), 15)   # z frazą IFAC (tekst szesnastkowy jak w konfiguracji)
+        values = set()
+
+        def collect(node):
+            if isinstance(node, dict):
+                for value in node.values():
+                    collect(value)
+            elif isinstance(node, list):
+                for value in node:
+                    collect(value)
+            elif isinstance(node, str):
+                values.add(node)
+        collect(VECTORS)
+        self.assertEqual({n for n, c in constants.items() if c not in values}, set())
+        self.assertEqual(constants["IFAC_PASSPHRASE"], VECTORS["ifac"]["passphrase"])
 
     def test_bad_input(self):
         result = subprocess.run([str(self.binary)], input="full_hash abc\nfull_hash zz\nunknown 00\n\n", capture_output=True,

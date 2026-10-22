@@ -31,6 +31,20 @@ bool canonicalScalar(const uint8_t s[32]) {
     return false;
 }
 
+// R w kodowaniu kanonicznym. Python (OpenSSL) porównuje bajty R z kodowaniem punktu [S]B - [k]A, więc
+// odrzuca y ≥ p i bit znaku przy x = 0 (y = 1 albo y = p - 1); biblioteka Crypto porównuje punkty i takie
+// R przyjmuje (tests/vectors/reticulum.json, "ed25519_edge"). Podpis jest jawny, stały czas niepotrzebny.
+bool canonicalPoint(const uint8_t r[32]) {
+    bool top = (r[31] & 0x7F) == 0x7F, zero = (r[31] & 0x7F) == 0;   // bajty 1..31 jak w p - 1 albo w 1
+    for (int i = 1; i < 31; ++i) {
+        top = top && r[i] == 0xFF;
+        zero = zero && r[i] == 0x00;
+    }
+    if (top && r[0] >= 0xED) return false;   // y ≥ p = 2^255 - 19
+    const bool xZero = (top && r[0] == 0xEC) || (zero && r[0] == 0x01);   // y = p - 1 albo y = 1
+    return !(xZero && (r[31] & 0x80));
+}
+
 }  // namespace
 
 void publicKey(const uint8_t privateKey[KEY_SIZE], uint8_t out[KEY_SIZE]) {
@@ -65,7 +79,7 @@ void sign(const uint8_t privateKey[KEY_SIZE], const uint8_t publicKey[KEY_SIZE],
 
 bool validate(const uint8_t publicKey[KEY_SIZE], const uint8_t* signature, size_t signatureLength,
               const uint8_t* message, size_t length) {
-    if (signatureLength != SIGNATURE_SIZE || !canonicalScalar(signature + 32)) return false;
+    if (signatureLength != SIGNATURE_SIZE || !canonicalScalar(signature + 32) || !canonicalPoint(signature)) return false;
     ++operations;
     return Ed25519::verify(signature, publicKey + HALF, message, length);
 }
