@@ -39,7 +39,7 @@ void Transport::begin(const uint8_t privateKey[KEY_SIZE], const uint8_t publicKe
     address_ = address;
     nameHash_ = nameHash;
     hooks_ = hooks;
-    table_.begin(storage, seconds(nowMs));
+    table_.begin(storage, seconds(nowMs), interfaces_);
     // RNS/Transport.py: start: cel PLAIN "rnstransport.path.request" (Destination bez tożsamości).
     destinationHash("rnstransport.path.request", nullptr, pathRequestDestination_);
 }

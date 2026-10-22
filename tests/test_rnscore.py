@@ -1169,6 +1169,23 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(lines[4], "-")
         self.assertEqual(lines[6], "1:" + self.via(ann[:18] + bytes([0x0B]) + ann[19:], identity, 1).hex())
 
+    def test_interfaces_route_on_missing_interface(self):
+        # Gniazdo z trasą przez USB po restarcie z jednym interfejsem: brak trasy (jak wpis path_table bez
+        # interfejsu przy wczytaniu w Pythonie). Pakiet stacji idzie wszystkimi interfejsami, pakiet
+        # w transporcie do tego celu nie ma trasy; znany cel zostaje.
+        identity = self.station_identity()
+        near = self.announce_of(bytes([70]) * 64)
+        near_dest = near[2:18]
+        send = ("t_send", near_dest + self.EPHEMERAL + self.IV + (7).to_bytes(4, "big") + (60000).to_bytes(4, "big") + b"x")
+        transit = self.packet(0x50, near_dest, b"n" * 40, transport_id=identity)
+        lines = self.ask([("t_begin", self.TWO), ("t_inif", b"\x01" + near), ("t_restart", b"\x00\x01"),
+                          ("t_route", near_dest), ("t_outif", b""), send, ("t_outif", b""), ("t_in", transit),
+                          ("t_outif", b""), ("t_forward", b"")])
+        self.assertEqual(lines[3], "none")
+        self.assertEqual([x[:2] for x in lines[6].split()], ["0:"])
+        self.assertEqual(lines[8], "-")
+        self.assertEqual(lines[9].split()[:2], ["0", "1"])
+
     def test_full_hash_matches_sha256(self):
         # Pusty wejściowy ciąg, granice bloku SHA-256 (55, 56, 64 B) i długi ciąg.
         inputs = [b"", b"WICI", bytes(55), bytes(56), bytes(64), bytes(range(256)) * 20]

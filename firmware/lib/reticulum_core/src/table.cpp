@@ -22,6 +22,7 @@ constexpr size_t AT_SLOT = 2, AT_SEQUENCE = 4, AT_FLAGS = 8, AT_HOPS = 9, AT_ANN
 constexpr size_t AT_PUBLIC_KEY = AT_ANNOUNCE, AT_RANDOM = AT_ANNOUNCE + KEY_SIZE + NAME_HASH_SIZE;
 // FLAG_INTERFACE: trasa przez interfejs 1 (węzeł stanowiska: USB); w gniazdach sprzed etapu R4 zero, czyli P1.
 constexpr uint8_t FLAG_PATH = 0x01, FLAG_RATCHET = 0x02, FLAG_CONTEXT = 0x04, FLAG_INTERFACE = 0x08;
+constexpr uint8_t interfaceOf(uint8_t flags) { return (flags & FLAG_INTERFACE) ? 1 : 0; }
 static_assert(AT_ANNOUNCE + ANNOUNCE_FORWARDABLE_SIZE <= AT_CRC, "ogłoszenie przed CRC");
 static_assert(AT_CRC + 4 <= TABLE_SLOT_SIZE, "CRC w gnieździe");
 
@@ -76,11 +77,12 @@ uint32_t Table::sequenceOf(size_t slot) {
 }
 
 // RNS/Transport.py: Transport.start (wczytanie destination_table) i RNS/Identity.py: load_known_destinations.
-void Table::begin(TableStorage& storage, uint32_t nowS) {
+void Table::begin(TableStorage& storage, uint32_t nowS, uint8_t interfaces) {
     memset(stale_, 0, sizeof(stale_));
     clear();
     storage_ = &storage;
     bootS_ = nowS;
+    interfaces_ = interfaces;
     for (size_t slot = 0; slot < TABLE_SLOTS; ++slot) {
         uint8_t header[HEADER];
         if (!storage.read(offsetOf(slot), header, sizeof(header))) continue;
@@ -103,7 +105,7 @@ void Table::begin(TableStorage& storage, uint32_t nowS) {
         index_[slot].usedS = used > nowS ? nowS : used;
         index_[slot].pathUsedS = get32(header + AT_PATH_USED);
         setBit(live_, slot, true);
-        setBit(path_, slot, header[AT_FLAGS] & FLAG_PATH);
+        setBit(path_, slot, (header[AT_FLAGS] & FLAG_PATH) && interfaceOf(header[AT_FLAGS]) < interfaces_);
         ++count_;
     }
 }
@@ -148,10 +150,11 @@ bool Table::read(int slot, KnownDestination& out, uint32_t nowS) {
     out.ratchetEmittedS = get32(b + AT_RATCHET_EMITTED);
     out.announceLength = get16(b + AT_ANNOUNCE_LENGTH);
     out.hops = b[AT_HOPS];
-    out.hasPath = b[AT_FLAGS] & FLAG_PATH;
+    out.interface = interfaceOf(b[AT_FLAGS]);
+    // Transport.start: wpis path_table bez interfejsu odbioru nie wraca (trasa przez interfejs spoza liczby).
+    out.hasPath = (b[AT_FLAGS] & FLAG_PATH) && out.interface < interfaces_;
     out.hasRatchet = b[AT_FLAGS] & FLAG_RATCHET;
     out.contextFlag = b[AT_FLAGS] & FLAG_CONTEXT;
-    out.interface = (b[AT_FLAGS] & FLAG_INTERFACE) ? 1 : 0;
     // Transport.jobs: trasa nieużywana dłużej niż DESTINATION_TIMEOUT usunięta z path_table (wpis w FRAM
     // zmienia następny zapis); expire() robi to samo w indeksie.
     if (out.hasPath && nowS - out.pathUsedS > DESTINATION_TIMEOUT_S) {

@@ -71,8 +71,10 @@ public:
     // Montowanie: indeks z nagłówków gniazd; z dwóch zatwierdzonych gniazd jednego celu (zanik zasilania
     // między zapisem nowego a unieważnieniem starego) zostaje to z większym numerem zapisu, a drugie jest
     // unieważniane (1 B), żeby nie wróciło po wyparciu zwycięskiego. Poza tym bez zapisów.
-    // nowS: czas pracy przy starcie (ratchety sprzed startu wygasają jak przy wczytaniu w Pythonie).
-    void begin(TableStorage& storage, uint32_t nowS);
+    // nowS: czas pracy przy starcie (ratchety sprzed startu wygasają jak przy wczytaniu w Pythonie);
+    // interfaces: liczba interfejsów transportu. Trasa przez interfejs spoza tej liczby (gniazdo zapisane
+    // przy innej konfiguracji) to brak trasy, jak w Pythonie przy wczytaniu path_table bez interfejsu.
+    void begin(TableStorage& storage, uint32_t nowS, uint8_t interfaces = 1);
     int find(const uint8_t destination[TRUNCATED_HASH_SIZE]) const;   // gniazdo albo -1
     // Odczyt wpisu z gniazda ze sprawdzeniem znacznika, numeru gniazda, celu i CRC; przy błędnej treści
     // wpis wypada z indeksu (corrupt()), przy błędzie odczytu zostaje (false, ponowny odczyt później).
@@ -135,6 +137,7 @@ private:
     uint32_t bootS_ = 0;
     uint32_t writes_ = 0;
     uint32_t corrupt_ = 0;
+    uint8_t interfaces_ = 0;   // z begin()
 };
 
 }  // namespace rnscore
