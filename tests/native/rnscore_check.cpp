@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 
+#include "announce.h"
 #include "destination.h"
 #include "hash.h"
 #include "identity.h"
@@ -59,6 +60,57 @@ int main() {
             const std::string name(data.begin() + rnscore::TRUNCATED_HASH_SIZE, data.end());
             uint8_t out[rnscore::TRUNCATED_HASH_SIZE];
             rnscore::destinationHash(name.c_str(), data.data(), out);
+            printHex(out, sizeof(out));
+        } else if (command == "validate_announce") {
+            // pakiet; pola przyjętego ogłoszenia (klucz, skrót nazwy, skrót losowy, ratchet albo "-",
+            // dane aplikacji albo "-") albo "none" tam, gdzie Identity.validate_announce zwraca False
+            rnscore::Packet packet;
+            rnscore::Announce a;
+            if (rnscore::unpack(data.data(), data.size(), packet) && rnscore::validateAnnounce(packet, a)) {
+                printHex(a.publicKey, rnscore::KEY_SIZE, " ");
+                printHex(a.nameHash, rnscore::NAME_HASH_SIZE, " ");
+                printHex(a.randomHash, rnscore::RANDOM_HASH_SIZE, " ");
+                if (a.ratchet) printHex(a.ratchet, rnscore::RATCHET_SIZE, " "); else printf("- ");
+                if (a.appDataLength) printHex(a.appData, a.appDataLength); else printf("-\n");
+            } else {
+                printf("none\n");
+            }
+        } else if (command == "build_announce" && data.size() >= rnscore::KEY_SIZE + rnscore::RANDOM_HASH_SIZE + 1) {
+            // klucz prywatny 64 B, skrót losowy 10 B, 1 B (1: dalej ratchet 32 B), dane aplikacji;
+            // pakiet ANNOUNCE celu "wici.sa1" (HEADER_1, bez skoków) albo "none"
+            const uint8_t* p = data.data();
+            const bool hasRatchet = p[rnscore::KEY_SIZE + rnscore::RANDOM_HASH_SIZE] == 1;
+            const size_t fixed = rnscore::KEY_SIZE + rnscore::RANDOM_HASH_SIZE + 1 + (hasRatchet ? rnscore::RATCHET_SIZE : 0);
+            if (data.size() < fixed) {
+                printf("error\n");
+            } else {
+                uint8_t pub[rnscore::KEY_SIZE], identity[rnscore::TRUNCATED_HASH_SIZE], name[rnscore::NAME_HASH_SIZE];
+                rnscore::publicKey(p, pub);
+                rnscore::identityHash(pub, identity);
+                rnscore::nameHash("wici.sa1", name);
+                rnscore::Packet packet = {};
+                packet.headerType = rnscore::HEADER_1;
+                packet.contextFlag = hasRatchet ? 1 : 0;
+                packet.transportType = rnscore::BROADCAST;
+                packet.destinationType = rnscore::SINGLE;
+                packet.packetType = rnscore::ANNOUNCE;
+                rnscore::destinationHashFrom(name, identity, packet.destinationHash);
+                uint8_t announce[rnscore::ANNOUNCE_MAX_SIZE];
+                packet.dataLength = rnscore::buildAnnounce(
+                    p, pub, packet.destinationHash, name, p + rnscore::KEY_SIZE,
+                    hasRatchet ? p + rnscore::KEY_SIZE + rnscore::RANDOM_HASH_SIZE + 1 : nullptr, p + fixed,
+                    data.size() - fixed, announce, sizeof(announce));
+                packet.data = announce;
+                uint8_t out[rnscore::MTU];
+                const size_t length = packet.dataLength ? rnscore::pack(packet, out, sizeof(out)) : 0;
+                if (length) printHex(out, length); else printf("none\n");
+            }
+        } else if (command == "random_hash" && data.size() == 5 + 8) {
+            // 5 B losowych, czas w s (8 B big-endian)
+            uint64_t t = 0;
+            for (size_t i = 5; i < 13; ++i) t = (t << 8) | data[i];
+            uint8_t out[rnscore::RANDOM_HASH_SIZE];
+            rnscore::announceRandomHash(data.data(), t, out);
             printHex(out, sizeof(out));
         } else if (command == "public_key" && data.size() == rnscore::KEY_SIZE) {
             // klucz prywatny 64 B

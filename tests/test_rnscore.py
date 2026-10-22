@@ -112,6 +112,50 @@ class CoreTests(unittest.TestCase):
                        [("identity_hash", bytes.fromhex(i["public_key"])) for i in identities])
         self.assertEqual(got, [i["public_key"] for i in identities] + [i["hash"] for i in identities])
 
+    def test_announce_validate(self):
+        # Ogłoszenia z Destination.announce i spreparowane: przyjęte te same co Identity.validate_announce,
+        # z tymi samymi polami.
+        cases = VECTORS["announce"]
+        got = dict(zip((c["name"] for c in cases), self.ask([("validate_announce", bytes.fromhex(c["raw"])) for c in cases])))
+        expected = {}
+        for c in cases:
+            if not c["valid"]:
+                expected[c["name"]] = "none"
+                continue
+            raw = bytes.fromhex(c["raw"])
+            data = raw[35:] if raw[0] & 0x40 else raw[19:]   # HEADER_2: identyfikator transportu przed celem
+            r = 32 if raw[0] & 0x20 else 0   # flaga kontekstu: klucz ratchetu po skrócie losowym
+            app = data[148 + r:]
+            expected[c["name"]] = " ".join([data[:64].hex(), data[64:74].hex(), data[74:84].hex(),
+                                            data[84:116].hex() if r else "-", app.hex() if app else "-"])
+            if "random_hash" in c:
+                self.assertEqual((c["random_hash"], c["ratchet"], c["app_data"]),
+                                 (data[74:84].hex(), data[84:116].hex() if r else None, app.hex()))
+        self.assertEqual(got, expected)
+
+    def test_announce_build(self):
+        # Z tym samym kluczem, skrótem losowym, ratchetem i danymi aplikacji pakiet bajt w bajt jak w Pythonie.
+        # Odstępstwo: 481 B danych rdzeń odmawia (przez węzeł transportowy przechodzi najwyżej 465 B).
+        built = [c for c in VECTORS["announce"] if "private_key" in c]
+        self.assertEqual(len(built), 6)
+        got = self.ask([("build_announce", bytes.fromhex(c["private_key"] + c["random_hash"]) +
+                         (b"\x01" + bytes.fromhex(c["ratchet"]) if c["ratchet"] else b"\x00") + bytes.fromhex(c["app_data"]))
+                        for c in built])
+        self.assertEqual(got, ["none" if c["name"] == "data_481" else c["raw"] for c in built])
+
+    def test_announce_random_hash_time(self):
+        # Czas w skrócie losowym: int(time.time()) jako 5 B big-endian (wektory: 1 790 000 000 s).
+        c = VECTORS["announce"][0]
+        random = bytes.fromhex(c["random_hash"])
+        got = self.ask([("random_hash", random[:5] + (1_790_000_000).to_bytes(8, "big"))])
+        self.assertEqual(got, [c["random_hash"]])
+
+    def test_announce_every_length(self):
+        # Każda długość obciętego ogłoszenia z ratchetem: odrzucone bez błędu pamięci, poza pełnym.
+        raw = bytes.fromhex(next(c for c in VECTORS["announce"] if c["name"] == "ratchet")["raw"])
+        got = self.ask([("validate_announce", raw[:n]) for n in range(len(raw) + 1)])
+        self.assertEqual([g == "none" for g in got], [n < len(raw) for n in range(len(raw) + 1)])
+
     def test_destination_hash(self):
         # Destination.hash celu SINGLE "wici.sa1" każdej tożsamości z wektorów.
         identities = VECTORS["identity"]

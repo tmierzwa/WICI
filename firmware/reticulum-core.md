@@ -22,7 +22,7 @@ Wersje referencyjne bez zmian: Reticulum `e40191b` i LXMF `c3ff2d6` ([oprogramow
 | W rdzeniu | Poza rdzeniem |
 |---|---|
 | tożsamość: X25519 + Ed25519, skrót, podpis i weryfikacja (z odrzuceniem S ≥ L), szyfrowanie do tożsamości (token AES-256-CBC + HMAC-SHA256, efemeryczny X25519, HKDF) | łącza (Link), zasoby (Resource), kanały i bufory |
-| pakiet: HEADER_1 i HEADER_2, flagi, kontekst, skrót pakietu, IFAC (już w `p1iface`) | ratchety przy wysyłaniu (D01; odczyt pola w ogłoszeniu tak) |
+| pakiet: HEADER_1 i HEADER_2, flagi, kontekst, skrót pakietu, IFAC (już w `p1iface`) | własne ratchety przy odbiorze (rotacja i klucze w FRAM; D01) |
 | cele SINGLE IN i OUT (`wici.sa1`), PLAIN `rnstransport.path.request` | propagacja LXMF, znaczki pracy, DIRECT |
 | ogłoszenia: tworzenie, weryfikacja, retransmisja z PATHFINDER_R i lokalnymi powtórkami, odpowiedzi na zapytania o trasę | tunele, zdalne zarządzanie, instancja współdzielona, odkrywanie interfejsów (1.1), czarne listy |
 | transport: przekazywanie HEADER_2, tablica tras, zapytania o trasę ze znacznikami, lista skrótów pakietów (8 B, `pkthash.h`), tablica odwrotna dla dowodów | przekazywanie ruchu łączy innych węzłów (pakiety łączy odpadają z licznikiem) |
@@ -31,6 +31,17 @@ Wersje referencyjne bez zmian: Reticulum `e40191b` i LXMF `c3ff2d6` ([oprogramow
 | interfejs USB węzła stanowiska: ogłoszenia, zapytania o trasę i ruch do celów komputera ([radio](../docs/spec/radio.md#interfejs-reticulum-przez-usb-węzeł-stanowiska)) | |
 
 Pakiety łączy i zasobów nie występują w sieci WICI, bo stacje i komputer stanowiska używają tylko dostarczenia okazjonalnego. Wiersze specyfikacji, które jeszcze mówią o łączach i zasobach (`odbior.md`, T3: udział łączy i zasobów; `radio.md`: zestawianie łącza), trzeba z nią uzgodnić.
+
+### Tabela różnic
+
+Odstępstwa rdzenia od Reticulum w Pythonie w podzbiorze z tabeli zakresu. Każde dotyczy wejścia, którego zgodny nadawca nie wyśle, albo tylko własnego wyjścia stacji.
+
+| Miejsce | Python | Rdzeń | Dlaczego |
+|---|---|---|---|
+| ogłoszenie przyjmowane (`validateAnnounce`) | sprawdza dane każdej długości | odrzuca dane dłuższe niż 481 B (MTU bez nagłówka HEADER_1) | stały bufor danych podpisanych; takiego ogłoszenia nie złoży `Packet.pack`, więc zgodny nadawca go nie wyśle |
+| ogłoszenie własne (`buildAnnounce`) | składa dane do 481 B | składa do 465 B | węzeł transportowy w Pythonie przekazuje ogłoszenie jako nowy pakiet HEADER_2 przez `Packet.pack`, więc dane 466–481 B nie przechodzą dalej niż o jeden skok |
+| pakiet własny (`pack`) | składa pakiet z pustymi danymi, z liczbą skoków ≥ 128 i z kontekstem LRPROOF dla dowolnego celu | odmawia | odbiorca takiego pakietu nie przyjmie (`unpack`, `send`); łącza są poza rdzeniem |
+| nowy klucz tożsamości (`rns_node_core.cpp`) | zapisuje losowe bajty klucza X25519 | zapisuje klucz już przycięty (RFC 7748) | ten sam klucz dla Pythona i rdzenia; port używa zapisanego klucza bez przycięcia |
 
 ## Wymagania konstrukcyjne
 
@@ -59,7 +70,7 @@ Rdzeń zastępuje port w obrazach dopiero, gdy na rdzeniu przechodzą:
 | Etap | Treść | Wyjście |
 |---|---|---|
 | R0 | wektory z Pythona, szkielet rdzenia, środowisko `host` z wyborem stosu (port albo rdzeń) | wektory przechodzą dla tożsamości, pakietu i tokenu |
-| R1 | ogłoszenia, cele, przyjmowanie i dowody pakietów do stacji | `rns_interop.py` w części bez przekazywania przechodzi na rdzeniu |
+| R1 | ogłoszenia (z polem ratchetu), cele, szyfrowanie do klucza ratchetu z ogłoszenia, przyjmowanie i dowody pakietów do stacji | `rns_interop.py` w części bez przekazywania przechodzi na rdzeniu |
 | R2 | transport: przekazywanie, tablica tras w FRAM, zapytania o trasę, tablica odwrotna | próby różnicowe dla transportu; `test_rns_hostile.py` bez awarii |
 | R3 | LXMF jednym pakietem z dowodem po COMMIT | wymiana LXMF z komputerem stanowiska w obie strony |
 | R4 | interfejs USB węzła stanowiska, przypięte cele komputera | `rns_osp_node.py` przechodzi na rdzeniu |
@@ -83,6 +94,6 @@ Rdzeń powstaje przy znajomości kodu implementacji referencyjnej, więc jest ut
 
 ## Do rozstrzygnięcia
 
-- Ratchety (D01): bez nich rdzeń jest mniejszy; z nimi klucze w FRAM i dodatkowe próby. Decyzja na początku R1 (ogłoszenia niosą klucz ratchetu). LXMF włącza ratchety dla każdego celu dostarczenia (`LXMRouter.register_delivery_identity`), więc telefony je ogłaszają; odbiorca domyślnie przyjmuje też token do klucza tożsamości. Bez wysyłania do ratchetu stacja działa z telefonami, ale bez poufności wstecznej i nie z celem, który wymusza ratchety. Minimum do rozważenia: szyfrowanie do klucza ratchetu z ogłoszenia (jeden parametr `rnscore::encrypt`); odbiór z ratchetami osobno, z kosztem FRAM.
+- Ratchety (D01): rdzeń szyfruje do klucza ratchetu z ogłoszenia celu od R1 (decyzja 2026-10-22: poufność wsteczna dla wiadomości do telefonów i do komputera stanowiska z LXMF, które ogłaszają ratchety domyślnie; `LXMRouter.register_delivery_identity`). Otwarte: własne ratchety stacji przy odbiorze (rotacja, klucze w FRAM, dodatkowe próby).
 
 Rozstrzygnięte 2026-10-22: koncepcja uzgodniona z rdzeniem ([rozdział 03](../docs/concept/03-dostepne-rozwiazania.html#czego-nie-budowac-drugi-raz), F117 w [przeglądzie](../docs/review.md)); port na stanowisku i w próbach sprzętu pilotażu dostaje poprawki WICI, żeby `test_rns_hostile.py` sprawdzał na nim dalsze scenariusze.
