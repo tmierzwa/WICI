@@ -20,6 +20,10 @@ traffic to the stack (P1 counter rx_ok). Not simulated: microStore::millis (the 
 the file store) reads the host's monotonic clock, so clock jumps do not move it. POSIX only (mmap, fork
 of sanitizer runtimes).
 
+The same scenarios run on the station Reticulum core (CoreHostileStackTests: rns_node_core.cpp and
+firmware/lib/reticulum_core instead of rns_node.cpp; the port only generates the traffic), except power
+loss in a FRAM write: in stage R1 the core writes nothing to FRAM after the identity key.
+
   python3 -m unittest tests.test_rns_hostile -v
 """
 
@@ -48,6 +52,8 @@ sys.path.insert(0, str(FIRMWARE / "tools"))
 import stack_deps  # noqa: E402
 
 WICI_UNITS = ["framfs.cpp", "kiss.cpp", "p1frame.cpp", "p1iface.cpp", "rns_node.cpp"]
+CORE = FIRMWARE / "lib" / "reticulum_core" / "src"
+CORE_UNITS = ["drbg.cpp", "framfs.cpp", "kiss.cpp", "p1frame.cpp", "p1iface.cpp", "rns_node_core.cpp", "sha2.cpp"]
 SANITIZE = ["-fsanitize=address,undefined", "-fno-omit-frame-pointer", "-g", "-O1"]
 POWER_CUT = 75
 INVARIANT = 3
@@ -75,14 +81,16 @@ def compiler():
     return None
 
 
-def sources():
+def sources(core: bool):
     port = STACK / "microReticulum" / "src"
     stack = [p for p in port.rglob("*.cpp") if p.name != "main.cpp"] + list(port.rglob("*.c"))
     stack += sorted((STACK / "Crypto").glob("*.cpp"))
+    if core:
+        return stack, [SRC / name for name in CORE_UNITS] + sorted(CORE.glob("*.cpp"))
     return stack, [SRC / name for name in WICI_UNITS]
 
 
-def build(out_dir: Path) -> Path:
+def build(out_dir: Path, core: bool = False) -> Path:
     """Compile the stack, the station units and the harness; objects are cached in out_dir."""
     cxx = compiler()
     cc = "clang" if cxx == "clang++" else "cc"
@@ -90,12 +98,12 @@ def build(out_dir: Path) -> Path:
     for folder in stack_deps.INCLUDES:
         includes += ["-isystem", str(STACK / folder)]
     flags = stack_flags() + SANITIZE
-    key = hashlib.sha256(" ".join([cxx] + flags + includes).encode()).hexdigest()[:12]
+    key = hashlib.sha256(" ".join([cxx] + flags + includes + (["core"] if core else [])).encode()).hexdigest()[:12]
     objects_dir = out_dir / key
     objects_dir.mkdir(parents=True, exist_ok=True)
-    stack, wici = sources()
-    # Nagłówki WICI i stan łat stosu: zmiana któregoś przebudowuje wszystko.
-    newest = max([p.stat().st_mtime for p in SRC.glob("*.h")] +
+    stack, wici = sources(core)
+    # Nagłówki WICI i rdzenia oraz stan łat stosu: zmiana któregoś przebudowuje wszystko.
+    newest = max([p.stat().st_mtime for p in SRC.glob("*.h")] + [p.stat().st_mtime for p in CORE.glob("*.h")] +
                  [p.stat().st_mtime for p in STACK.glob("*/.wici-stamp")])
 
     def compile_one(source: Path):
@@ -104,12 +112,17 @@ def build(out_dir: Path) -> Path:
         if obj.exists() and obj.stat().st_mtime > max(newest, source.stat().st_mtime):
             return obj
         quiet = ["-w"] if STACK in source.parents else ["-Wall", "-Wextra", "-Werror"]
+        # Nagłówki rdzenia tylko dla jednostek WICI i rdzenia: na systemie plików bez rozróżniania wielkości
+        # liter "packet.h" rdzenia przesłoniłby "Packet.h" portu.
+        local = [f"-I{CORE}"] if core and STACK not in source.parents and source != HARNESS else []
         if source == HARNESS:
             quiet.append("-Wno-deprecated-declarations")   # generator buduje pakiety dawnym API portu
+            if core:
+                quiet.append("-DWICI_RNS_CORE")
         if source.suffix == ".c":
             cmd = [cc, *flags, *includes, "-w", "-c", str(source), "-o", str(obj)]
         else:
-            cmd = [cxx, "-std=gnu++17", "-fexceptions", "-frtti", *flags, *includes, *quiet, "-c", str(source), "-o", str(obj)]
+            cmd = [cxx, "-std=gnu++17", "-fexceptions", "-frtti", *flags, *local, *includes, *quiet, "-c", str(source), "-o", str(obj)]
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode != 0:
             raise RuntimeError(f"{source}:\n{result.stderr[-4000:]}")
@@ -150,6 +163,8 @@ class Station:
 
 
 class HostileStackTests(unittest.TestCase):
+    core = False
+
     @classmethod
     def setUpClass(cls):
         if os.name != "posix":
@@ -160,7 +175,7 @@ class HostileStackTests(unittest.TestCase):
             if not REQUIRED:
                 raise unittest.SkipTest("stack sources not fetched (python3 firmware/tools/stack_deps.py)")
             stack_deps.fetch(FIRMWARE)
-        cls.binary = build(FIRMWARE / ".pio" / "sanitize")
+        cls.binary = build(FIRMWARE / ".pio" / "sanitize", cls.core)
         cls.tmp = tempfile.TemporaryDirectory()
 
     @classmethod
@@ -273,6 +288,28 @@ class HostileStackTests(unittest.TestCase):
             if src.exists():
                 shutil.copy(src, Path(str(s.fram) + suffix))
         return s
+
+
+class CoreHostileStackTests(HostileStackTests):
+    """The scenarios above on the station Reticulum core (stage R1)."""
+
+    core = True
+
+    def test_valid_traffic_over_weeks_and_restarts(self):
+        # Jak na porcie, ale bez tras po restarcie: tablice w FRAM są w etapie R2.
+        s = self.station()
+        first = self.assertClean(s.run("--seed", 11, "--events", 2500, "--long-jumps"))
+        self.assertTrue(first["new"])
+        self.assertEqual(first["iface"]["ifac_invalid"], 0, first)
+        self.assertGreater(first["paths"], 5)
+        self.assertGreater(first["received"], 0, first)
+        second = self.assertClean(s.run("--seed", 12, "--events", 1500, "--long-jumps", "--gap", 86400))
+        self.assertEqual(second["identity"], first["identity"])
+        self.assertFalse(second["new"])
+        self.assertClean(s.run("--seed", 13, "--events", 1500, "--gap", 30 * 86400))
+
+    def test_power_loss_in_any_fram_write(self):
+        self.skipTest("R1: the core writes nothing to FRAM after the identity key (tables in FRAM: R2)")
 
 
 if __name__ == "__main__":

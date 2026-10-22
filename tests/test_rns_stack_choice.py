@@ -5,7 +5,7 @@ station Reticulum core ("host-core", firmware/reticulum-core.md, stage R0).
 Both programs run firmware/src/host/node_host.cpp on the same FRAM image file in turn. A station
 keeps its identity and address when it moves from the port to the core (and back): both read the
 same identity key record in FRAM. The core program has the P1 interface with IFAC and announces
-(stage R1); without a network key it is offline like the port. It does not send packets yet.
+(stage R1); without a network key it is offline like the port.
 Needs PlatformIO and network access for the pinned stack sources:
 
   WICI_PIO=/path/to/pio python3 -m unittest tests.test_rns_stack_choice
@@ -127,7 +127,7 @@ class StackChoiceTests(unittest.TestCase):
         self.assertEqual((core["identity"], core["address"]), (port["identity"], port["address"]))
 
     def test_core_offline_without_network_key(self):
-        # Bez klucza sieci (IFAC) interfejs P1 nie nadaje: stos nie ogłasza, nie wysyła i nie zna tras.
+        # Bez klucza sieci (IFAC) interfejs P1 nie nadaje: stos nie ogłasza i nie wysyła; cel nieznany.
         _, events = self.ready("host-core", ["announce", "send " + "00" * 16 + " 01", "path " + "00" * 16, "status"])
         announced, sent, path, status = events
         self.assertEqual((status["event"], status["online"], status["offline"]), ("status", False, 1))

@@ -34,7 +34,7 @@ Pakiety łączy i zasobów nie występują w sieci WICI, bo stacje i komputer st
 
 ### Tabela różnic
 
-Odstępstwa rdzenia od Reticulum w Pythonie w podzbiorze z tabeli zakresu. Każde dotyczy wejścia, którego zgodny nadawca nie wyśle, albo tylko własnego wyjścia stacji.
+Odstępstwa rdzenia od Reticulum w Pythonie w podzbiorze z tabeli zakresu. Każde dotyczy wejścia, którego zgodny nadawca nie wyśle, tylko własnego wyjścia stacji albo stałego rozmiaru tablic (budżet RAM, [pojemności stosu](../docs/spec/oprogramowanie.md#pojemności-stosu)).
 
 | Miejsce | Python | Rdzeń | Dlaczego |
 |---|---|---|---|
@@ -42,6 +42,10 @@ Odstępstwa rdzenia od Reticulum w Pythonie w podzbiorze z tabeli zakresu. Każd
 | ogłoszenie własne (`buildAnnounce`) | składa dane do 481 B | składa do 465 B | węzeł transportowy w Pythonie przekazuje ogłoszenie jako nowy pakiet HEADER_2 przez `Packet.pack`, więc dane 466–481 B nie przechodzą dalej niż o jeden skok |
 | pakiet własny (`pack`) | składa pakiet z pustymi danymi, z liczbą skoków ≥ 128 i z kontekstem LRPROOF dla dowolnego celu | odmawia | odbiorca takiego pakietu nie przyjmie (`unpack`, `send`); łącza są poza rdzeniem |
 | nowy klucz tożsamości (`rns_node_core.cpp`) | zapisuje losowe bajty klucza X25519 | zapisuje klucz już przycięty (RFC 7748) | ten sam klucz dla Pythona i rdzenia; port używa zapisanego klucza bez przycięcia |
+| znane cele i trasy (`Transport`, R1) | `known_destinations` i `path_table` bez stałego limitu, czyszczone okresowo | 256 wpisów w RAM; przy pełnej tablicy wypierany najdawniej używany cel poza odbiorcą z karty; ogłoszenie, gdy wszystkie wpisy są chronione, odpada | stała tablica ze specyfikacji; do R2 w RAM, więc po restarcie stacja zna tylko odbiorcę z karty |
+| trasa z ogłoszenia (`Transport::inbound`) | pamięta do 64 skrótów losowych ogłoszeń celu | pamięta ostatni | 10 B zamiast 640 B na cel; różnica tylko po wygaśnięciu trasy (7 dni): powtórzone starsze ogłoszenie może ją wtedy odnowić |
+| lista skrótów pakietów (`HashList`) | pełne skróty, zbiór obracany po 1 000 000 wpisów | 4096 wpisów po 8 B, pierścień | specyfikacja; fałszywy duplikat rzędu 4096 / 2^64 |
+| potwierdzenia (`Transport::send`) | bez limitu | 8 czekających; przy pełnej tablicy `send()` odmawia | stała tablica; stacja ma w drodze najwyżej kilka własnych wiadomości |
 
 ## Wymagania konstrukcyjne
 
@@ -70,8 +74,8 @@ Rdzeń zastępuje port w obrazach dopiero, gdy na rdzeniu przechodzą:
 | Etap | Treść | Wyjście |
 |---|---|---|
 | R0 | wektory z Pythona, szkielet rdzenia, środowisko `host` z wyborem stosu (port albo rdzeń) | wektory przechodzą dla tożsamości, pakietu i tokenu |
-| R1 | ogłoszenia (z polem ratchetu), cele, szyfrowanie do klucza ratchetu z ogłoszenia, przyjmowanie i dowody pakietów do stacji | `rns_interop.py` w części bez przekazywania przechodzi na rdzeniu |
-| R2 | transport: przekazywanie, tablica tras w FRAM, zapytania o trasę, tablica odwrotna | próby różnicowe dla transportu; `test_rns_hostile.py` bez awarii |
+| R1 | ogłoszenia (z polem ratchetu), cele, szyfrowanie do klucza ratchetu z ogłoszenia, przyjmowanie i dowody pakietów do stacji | `rns_interop.py` w części bez przekazywania i bez tablic w FRAM (kroki 1–5, 3r, 4a, 7, 8) przechodzi na rdzeniu |
+| R2 | transport: przekazywanie, tablica tras w FRAM, zapytania o trasę (także własne i odpowiedzi na zapytania o cel stacji), tablica odwrotna | próby różnicowe dla transportu; `test_rns_hostile.py` bez awarii; krok 6 `rns_interop.py` (trasa i tożsamość celu z FRAM po restarcie) |
 | R3 | LXMF jednym pakietem z dowodem po COMMIT | wymiana LXMF z komputerem stanowiska w obie strony |
 | R4 | interfejs USB węzła stanowiska, przypięte cele komputera | `rns_osp_node.py` przechodzi na rdzeniu |
 | R5 | odporność: limity, 60 dni, uszkodzenia FRAM, pomiar RAM na płytkach | kryteria odbioru 1–6 |

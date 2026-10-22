@@ -20,6 +20,7 @@
 #include "packet.h"
 #include "proof.h"
 #include "token.h"
+#include "transport.h"
 
 namespace {
 
@@ -37,6 +38,63 @@ bool fromHex(const std::string& hex, std::vector<uint8_t>& out) {
 void printHex(const uint8_t* data, size_t length, const char* end = "\n") {
     for (size_t i = 0; i < length; ++i) printf("%02x", data[i]);
     printf("%s", end);
+}
+
+// Stan poleceń t_* (transport): jedna stacja z celem "wici.sa1", zapis wywołań z transportu.
+struct TransportState {
+    rnscore::Transport transport;
+    uint8_t privateKey[rnscore::KEY_SIZE] = {};
+    uint8_t publicKey[rnscore::KEY_SIZE] = {};
+    uint8_t identity[rnscore::TRUNCATED_HASH_SIZE] = {};
+    uint8_t address[rnscore::TRUNCATED_HASH_SIZE] = {};
+    uint8_t nameHash[rnscore::NAME_HASH_SIZE] = {};
+    std::vector<uint8_t> pinned;   // jeden cel chroniony albo pusty
+    std::vector<uint8_t> emitted;  // ostatni pakiet do nadania
+    std::string events;            // wywołania announce, packet i receipt od ostatniego polecenia
+    bool accept = true;
+    uint64_t nowMs = 1000;
+};
+TransportState* state = nullptr;
+
+void printHexTo(std::string& out, const uint8_t* data, size_t length) {
+    char b[3];
+    for (size_t i = 0; i < length; ++i) {
+        snprintf(b, sizeof(b), "%02x", data[i]);
+        out += b;
+    }
+}
+
+bool onTransmit(const uint8_t* raw, size_t length, void*) {
+    state->emitted.assign(raw, raw + length);
+    return true;
+}
+void onAnnounce(const uint8_t destination[16], const uint8_t* appData, size_t length, void*) {
+    state->events += " announce:";
+    printHexTo(state->events, destination, 16);
+    state->events += ":";
+    printHexTo(state->events, appData, length);
+}
+bool onPacket(const uint8_t* data, size_t length, void*) {
+    state->events += " packet:";
+    printHexTo(state->events, data, length);
+    return state->accept;
+}
+void onReceipt(uint32_t handle, bool delivered, void*) {
+    state->events += " receipt:" + std::to_string(handle) + (delivered ? ":1" : ":0");
+}
+bool onPinned(const uint8_t destination[16], void*) {
+    return state->pinned.size() == 16 && memcmp(state->pinned.data(), destination, 16) == 0;
+}
+
+// Wiersz po poleceniu t_*: wynik, liczniki (duplikaty, pominięte, odrzucone, ogłoszenia, odebrane,
+// bez dowodu, wysłane, doręczone, po limicie), wywołania, pakiet do nadania albo "-".
+void printTransport(const char* result) {
+    const rnscore::TransportCounters& c = state->transport.counters();
+    printf("%s %u %u %u %u %u %u %u %u %u%s ", result, c.duplicate, c.ignored, c.invalid, c.announces, c.received, c.unproven,
+           c.sent, c.delivered, c.timedOut, state->events.c_str());
+    if (state->emitted.empty()) printf("-\n"); else printHex(state->emitted.data(), state->emitted.size());
+    state->events.clear();
+    state->emitted.clear();
 }
 
 }  // namespace
@@ -226,6 +284,62 @@ int main() {
                 else length = rnscore::ifacCheck(ifac, input.data(), input.size(), out, sizeof(out));
                 if (length) printHex(out, length); else printf("none\n");
             }
+        } else if (command == "t_begin" && data.size() == rnscore::KEY_SIZE) {
+            // klucz prywatny stacji 64 B: nowy transport z celem "wici.sa1"; adres stacji
+            delete state;
+            state = new TransportState();
+            memcpy(state->privateKey, data.data(), rnscore::KEY_SIZE);
+            rnscore::publicKey(state->privateKey, state->publicKey);
+            rnscore::identityHash(state->publicKey, state->identity);
+            rnscore::nameHash("wici.sa1", state->nameHash);
+            rnscore::destinationHashFrom(state->nameHash, state->identity, state->address);
+            rnscore::TransportHooks hooks;
+            hooks.transmit = onTransmit;
+            hooks.announce = onAnnounce;
+            hooks.packet = onPacket;
+            hooks.receipt = onReceipt;
+            hooks.pinned = onPinned;
+            state->transport.begin(state->privateKey, state->publicKey, state->identity, state->address, state->nameHash, hooks);
+            printHex(state->address, sizeof(state->address));
+        } else if (!state && command.rfind("t_", 0) == 0) {
+            printf("error\n");
+        } else if (command == "t_clock" && data.size() == 8) {
+            // czas w ms (8 B, big-endian); po nim poll() potwierdzeń
+            state->nowMs = 0;
+            for (uint8_t b : data) state->nowMs = (state->nowMs << 8) | b;
+            state->transport.poll(state->nowMs);
+            printTransport("ok");
+        } else if (command == "t_config" && (data.size() == 2 || data.size() == 18)) {
+            // limit tablicy (1 B), przyjmowanie przez warstwę aplikacji (1 B: 0/1), opcjonalnie cel chroniony 16 B
+            state->transport.setLimit(data[0]);
+            state->accept = data[1] != 0;
+            state->pinned.assign(data.begin() + 2, data.end());
+            printTransport("ok");
+        } else if (command == "t_in") {
+            // pakiet bez IFAC
+            printTransport(state->transport.inbound(data.data(), data.size(), state->nowMs) ? "ok" : "malformed");
+        } else if (command == "t_announce") {
+            // 5 B losowych, dane aplikacji
+            printTransport(data.size() >= 5 && state->transport.announce(data.data(), data.data() + 5, data.size() - 5, state->nowMs)
+                               ? "ok" : "none");
+        } else if (command == "t_send" && data.size() >= 16 + 32 + 16 + 4 + 4) {
+            // cel 16 B, klucz efemeryczny 32 B, IV 16 B, uchwyt 4 B, limit w ms 4 B, dane
+            const uint8_t* p = data.data();
+            const uint32_t handle = (uint32_t(p[64]) << 24) | (uint32_t(p[65]) << 16) | (uint32_t(p[66]) << 8) | p[67];
+            const uint32_t timeout = (uint32_t(p[68]) << 24) | (uint32_t(p[69]) << 16) | (uint32_t(p[70]) << 8) | p[71];
+            static const char* names[] = {"sent", "unknown", "too_large", "receipts_full", "refused"};
+            const rnscore::SendResult r =
+                state->transport.send(p, p + 72, data.size() - 72, p + 16, p + 48, handle, timeout, state->nowMs);
+            printTransport(names[static_cast<int>(r)]);
+        } else if (command == "t_known" && data.size() == 16) {
+            // cel: "none" albo skoki, ratchet (0/1), trasa (0/1), następny skok
+            const rnscore::KnownDestination* e = state->transport.find(data.data());
+            if (!e) {
+                printf("none\n");
+            } else {
+                printf("%u %d %d ", e->hops, e->hasRatchet ? 1 : 0, e->hasPath ? 1 : 0);
+                printHex(e->nextHop, sizeof(e->nextHop));
+            }
         } else if (command == "unpack") {
             // pakiet; pola rozdzielone spacjami (identyfikator transportu "-" w HEADER_1) i skrót pakietu,
             // albo "none" tam, gdzie Python odrzuca pakiet
@@ -275,5 +389,6 @@ int main() {
         }
         fflush(stdout);
     }
+    delete state;
     return 0;
 }

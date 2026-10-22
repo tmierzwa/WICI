@@ -7,7 +7,9 @@ microReticulum port, P1 interface, IFAC and FRAM tables as the bench-a image, wi
 Both sides use the same 16 B network key as IFAC (passphrase = 32 hex digits, ifac_size = 128 bits).
 
 Checks: station announce seen in Python; Python announce seen in the station; opportunistic packet
-in both directions with a transport proof (PacketReceipt DELIVERED on both sides); a packet the
+in both directions with a transport proof (PacketReceipt DELIVERED on both sides), also to a Python
+destination that enforces ratchets (step 3r, only with --steps: the station encrypts to the ratchet
+key from its announce, which the microReticulum port does not do); a packet the
 station application layer rejects gets no proof (PROVE_APP), so the Python receipt fails; after a restart
 of the station program with the same FRAM file the identity is the same and the path and identity of
 the Python destination come from FRAM; datagrams without IFAC or with a wrong IFAC are dropped before
@@ -106,13 +108,15 @@ def main():
     parser.add_argument("--port", type=int, default=47420)
     parser.add_argument("--fill", type=int, default=0, help="announce N more destinations and record the station memory")
     parser.add_argument("--capture", help="file for the datagrams Python sends to the station (tools/rns_ram32.py replays them)")
-    parser.add_argument("--steps", help="comma-separated steps to run (1,2,3,4,4a,5,6,7,8; default all), e.g. for a stack "
+    parser.add_argument("--steps", help="comma-separated steps to run (1,2,3,3r,4,4a,5,6,7,8; default all but 3r), e.g. for a stack "
                                         "that does not have every function yet (host-core, firmware/reticulum-core.md)")
     args = parser.parse_args()
     steps = set(args.steps.split(",")) if args.steps else None
 
     def want(step):
-        return steps is None or step in steps
+        # Krok 3r tylko na żądanie: port microReticulum nie szyfruje do ratchetu z ogłoszenia (cel Pythona
+        # z wymuszonymi ratchetami odrzuca jego pakiet), więc nie należy do domyślnej próby portu.
+        return step in steps if steps is not None else step != "3r"
 
     import RNS  # noqa: E402 (needs the reference Reticulum)
 
@@ -144,7 +148,7 @@ def main():
         f.write(config)
     RNS.Reticulum(os.path.join(work, "rns"))
 
-    results = {"reticulum": "e40191b", "debt_factor": args.debt, "steps": sorted(steps) if steps else "all", "checks": {}}
+    results = {"reticulum": "e40191b", "debt_factor": args.debt, "steps": sorted(steps) if steps else "default", "checks": {}}
     checks = results["checks"]
     seen = {"announces": [], "packets": []}
 
@@ -207,6 +211,25 @@ def main():
             checks["station_receipt_delivered"] = bool(receipt and receipt["delivered"])
             if t_packet and t_announce:
                 results["announce_to_packet_s"] = round(t_packet - t_announce, 2)
+
+        # 3r. Szyfrowanie do ratchetu z ogłoszenia: cel Pythona z ratchetami, które wymusza (enforce_ratchets),
+        #     przyjmuje tylko pakiet zaszyfrowany do klucza ratchetu z ostatniego ogłoszenia.
+        if want("3r"):
+            ratchets = RNS.Destination(RNS.Identity(), RNS.Destination.IN, RNS.Destination.SINGLE, APP_NAME, ASPECT)
+            ratchets.enable_ratchets(os.path.join(work, "ratchets"))
+            ratchets.enforce_ratchets()
+            ratchets.set_proof_strategy(RNS.Destination.PROVE_ALL)
+            ratchets.set_packet_callback(lambda data, packet: seen["packets"].append((time.time(), data)))
+            ratchets.announce(app_data=b"ratchets")
+            learned = station.wait("announce", 60, lambda e: e["dest"] == ratchets.hash.hex()) is not None
+            to_ratchet = b'["WICI",1,"interop","to a ratchet"]'
+            station.command(f"send {ratchets.hash.hex()} {to_ratchet.hex()} 120")
+            sent = station.wait("sent", 10)
+            handle = sent["handle"] if sent else 0
+            checks["ratchet_packet_decrypted"] = learned and handle > 0 and wait_for(
+                lambda: any(p[1] == to_ratchet for p in seen["packets"]), 90)
+            receipt = station.wait("receipt", 120, lambda e: e["handle"] == handle) if handle else None
+            checks["ratchet_receipt_delivered"] = bool(receipt and receipt["delivered"])
 
         # 4. Pakiet okazjonalny Python -> stacja z potwierdzeniem transportowym.
         if want("4"):

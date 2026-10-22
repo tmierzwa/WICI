@@ -372,6 +372,128 @@ class CoreTests(unittest.TestCase):
                        [("ifac_check", phrase + bytes([wire[0] & 0x7F]) + wire[1:])])
         self.assertEqual(got, ["none"] * len(wire) + [v["applied"][0]["raw"], "none"])
 
+    # Transport bez przekazywania (transport.h): jedna stacja z kluczem z wektorów, pakiety z wektorów
+    # i z poleceń sprawdzonych wyżej. Wiersz t_*: wynik, 9 liczników (duplikaty, pominięte, odrzucone,
+    # ogłoszenia, odebrane, bez dowodu, wysłane, doręczone, po limicie), wywołania, pakiet do nadania.
+    STATION = bytes.fromhex(VECTORS["identity"][0]["private_key"])
+    EPHEMERAL = bytes(range(1, 33))
+    IV = bytes(range(100, 116))
+
+    @staticmethod
+    def parsed(line: str):
+        parts = line.split()
+        return parts[0], list(map(int, parts[1:10])), parts[10:-1], parts[-1]
+
+    def packet(self, flags: int, destination: bytes, data: bytes, context: int = 0, transport_id: bytes = bytes(16)) -> bytes:
+        header = bytes([(flags >> 6) & 1, (flags >> 5) & 1, (flags >> 4) & 1, (flags >> 2) & 3, flags & 3, 0])
+        return bytes.fromhex(self.ask([("pack", header + transport_id + destination + bytes([context]) + data)])[0])
+
+    def proof_packet(self, private_key: bytes, raw: bytes, implicit: bool = True) -> bytes:
+        packet_hash = bytes.fromhex(self.ask([("unpack", raw)])[0].split()[-1])
+        proof = bytes.fromhex(self.ask([("prove", private_key + packet_hash + bytes([1 if implicit else 0]))])[0])
+        return self.packet(0x03, packet_hash[:16], proof)
+
+    def announce_of(self, private_key: bytes, app_data: bytes = b"", ratchet: bytes = None, random_hash: bytes = None) -> bytes:
+        random_hash = random_hash or bytes(5) + (1_790_000_000).to_bytes(5, "big")
+        flag = b"\x01" + ratchet if ratchet else b"\x00"
+        return bytes.fromhex(self.ask([("build_announce", private_key + random_hash + flag + app_data)])[0])
+
+    def test_transport_announce_ratchet_send_and_proof(self):
+        # Ogłoszenie z ratchetem: wpis z trasą 1 skok; to samo ogłoszenie drugi raz nie zmienia trasy.
+        # Pakiet do celu zaszyfrowany do ratchetu (jak encrypt_ratchet), dowód niejawny celu doręcza go raz.
+        a = next(c for c in VECTORS["announce"] if c["name"] == "ratchet")
+        raw = bytes.fromhex(a["raw"])
+        dest = raw[2:18]
+        key = bytes.fromhex(a["private_key"])
+        pub = bytes.fromhex(self.ask([("public_key", key)])[0])
+        payload = b"WICI to a ratchet"
+        token = self.ask([("encrypt_ratchet", pub + bytes.fromhex(a["ratchet"]) + self.EPHEMERAL + self.IV + payload)])[0]
+        lines = self.ask([("t_begin", self.STATION), ("t_in", raw), ("t_known", dest), ("t_in", raw),
+                          ("t_send", dest + self.EPHEMERAL + self.IV + (7).to_bytes(4, "big") + (60000).to_bytes(4, "big") + payload)])
+        self.assertEqual(self.parsed(lines[1]), ("ok", [0, 0, 0, 1, 0, 0, 0, 0, 0], [f"announce:{dest.hex()}:{a['app_data']}"], "-"))
+        self.assertEqual(lines[2], f"1 1 1 {dest.hex()}")
+        self.assertEqual(self.parsed(lines[3]), ("ok", [0, 0, 0, 1, 0, 0, 0, 0, 0], [], "-"))
+        result, counters, _, sent = self.parsed(lines[4])
+        self.assertEqual((result, counters[6]), ("sent", 1))
+        self.assertEqual(sent, (bytes([0x00, 0x00]) + dest + b"\x00").hex() + token)
+        proof = self.proof_packet(key, bytes.fromhex(sent))
+        lines = self.ask([("t_begin", self.STATION), ("t_in", raw),
+                          ("t_send", dest + self.EPHEMERAL + self.IV + (7).to_bytes(4, "big") + (60000).to_bytes(4, "big") + payload),
+                          ("t_in", proof), ("t_in", proof)])
+        self.assertEqual(self.parsed(lines[3])[1:3], ([0, 0, 0, 1, 0, 0, 1, 1, 0], ["receipt:7:1"]))
+        self.assertEqual(self.parsed(lines[4])[1], [1, 0, 0, 1, 0, 0, 1, 1, 0])   # ten sam dowód: duplikat
+
+    def test_transport_receipt_timeout_and_wrong_proofs(self):
+        # Dowód jawny innego pakietu i dowód innej tożsamości nie doręczają; po limicie wynik "nie".
+        a = next(c for c in VECTORS["announce"] if c["name"] == "plain")
+        raw, key = bytes.fromhex(a["raw"]), bytes.fromhex(a["private_key"])
+        dest = raw[2:18]
+        send = ("t_send", dest + self.EPHEMERAL + self.IV + (9).to_bytes(4, "big") + (5000).to_bytes(4, "big") + b"x")
+        lines = self.ask([("t_begin", self.STATION), ("t_in", raw), send])
+        sent = bytes.fromhex(self.parsed(lines[2])[3])
+        other = self.packet(0x00, dest, b"another packet")
+        wrong_hash = self.proof_packet(key, other, implicit=False)
+        wrong_key = self.proof_packet(self.STATION, sent)
+        lines = self.ask([("t_begin", self.STATION), ("t_in", raw), send, ("t_in", wrong_hash), ("t_in", wrong_key),
+                          ("t_clock", (5999).to_bytes(8, "big")), ("t_clock", (6000).to_bytes(8, "big"))])
+        self.assertEqual([self.parsed(line)[1][2] for line in lines[3:5]], [1, 2])
+        self.assertEqual(self.parsed(lines[5])[2], [])
+        self.assertEqual(self.parsed(lines[6])[1:3], ([0, 0, 2, 1, 0, 0, 1, 0, 1], ["receipt:9:0"]))
+
+    def test_transport_receipts_bounded(self):
+        # 8 czekających potwierdzeń; dziewiąty pakiet odmówiony bez wysłania.
+        a = next(c for c in VECTORS["announce"] if c["name"] == "plain")
+        raw = bytes.fromhex(a["raw"])
+        dest = raw[2:18]
+        sends = [("t_send", dest + self.EPHEMERAL + self.IV + (h).to_bytes(4, "big") + (60000).to_bytes(4, "big") + b"x")
+                 for h in range(1, 10)]
+        lines = self.ask([("t_begin", self.STATION), ("t_in", raw)] + sends)
+        self.assertEqual([self.parsed(line)[0] for line in lines[2:]], ["sent"] * 8 + ["receipts_full"])
+        self.assertEqual(self.parsed(lines[-1])[3], "-")
+
+    def test_transport_packet_to_station(self):
+        # Pakiet do stacji: odszyfrowany, dowód niejawny jak Identity.prove; duplikat odrzucony przed
+        # deszyfrowaniem; odmowa warstwy aplikacji bez dowodu; zły HMAC odrzucony.
+        address = self.ask([("t_begin", self.STATION)])[0]
+        station_pub = bytes.fromhex(self.ask([("public_key", self.STATION)])[0])
+        token = bytes.fromhex(self.ask([("encrypt", station_pub + self.EPHEMERAL + self.IV + b"report")])[0])
+        raw = self.packet(0x00, bytes.fromhex(address), token)
+        expected_proof = self.proof_packet(self.STATION, raw)
+        token2 = bytes.fromhex(self.ask([("encrypt", station_pub + self.EPHEMERAL + bytes(16) + b"refused")])[0])
+        raw2 = self.packet(0x00, bytes.fromhex(address), token2)
+        bad = self.packet(0x00, bytes.fromhex(address), token[:-1] + bytes([token[-1] ^ 1]))
+        lines = self.ask([("t_begin", self.STATION), ("t_in", raw), ("t_in", raw), ("t_config", bytes([255, 0])),
+                          ("t_in", raw2), ("t_in", bad)])
+        self.assertEqual(self.parsed(lines[1]), ("ok", [0, 0, 0, 0, 1, 0, 0, 0, 0], [f"packet:{b'report'.hex()}"],
+                                                 expected_proof.hex()))
+        self.assertEqual(self.parsed(lines[2])[1], [1, 0, 0, 0, 1, 0, 0, 0, 0])
+        self.assertEqual(self.parsed(lines[4]), ("ok", [1, 0, 0, 0, 2, 1, 0, 0, 0], [f"packet:{b'refused'.hex()}"], "-"))
+        self.assertEqual(self.parsed(lines[5])[1], [1, 0, 1, 0, 2, 1, 0, 0, 0])
+
+    def test_transport_outside_subset(self):
+        # Pakiety poza podzbiorem R1 albo nie do stacji: pominięte bez listy skrótów; za krótki: unpack.
+        address = bytes.fromhex(self.ask([("t_begin", self.STATION)])[0])
+        cases = [self.packet(0x50, address, b"x" * 64, transport_id=bytes(range(16))),   # HEADER_2 dla innego węzła
+                 self.packet(0x08, bytes(16), bytes(32)),       # PLAIN (zapytanie o trasę: R2)
+                 self.packet(0x04, address, b"x"),              # GROUP
+                 self.packet(0x02, address, bytes(64)),         # LINKREQUEST
+                 self.packet(0x00, bytes(16), bytes(64)),       # DATA do cudzego celu
+                 self.packet(0x03, bytes(16), bytes(63))]       # dowód o złej długości: odrzucony
+        lines = self.ask([("t_begin", self.STATION)] + [("t_in", raw) for raw in cases] + [("t_in", b"\x00")])
+        self.assertEqual([self.parsed(line)[1][1:3] for line in lines[1:-1]], [[1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [5, 1]])
+        self.assertEqual(self.parsed(lines[-1])[0], "malformed")
+
+    def test_transport_eviction_keeps_pinned(self):
+        # Pełna tablica (limit 2): wypierany najdawniej używany cel bez ochrony, cel chroniony zostaje.
+        keys = [bytes([i + 1]) * 64 for i in range(4)]
+        announces = [self.announce_of(k) for k in keys]
+        dests = [a[2:18] for a in announces]
+        lines = self.ask([("t_begin", self.STATION), ("t_config", bytes([2, 1]) + dests[0]),
+                          ("t_in", announces[0]), ("t_in", announces[1]), ("t_clock", (5000).to_bytes(8, "big")),
+                          ("t_in", announces[2]), ("t_clock", (9000).to_bytes(8, "big")), ("t_in", announces[3])] +
+                         [("t_known", d) for d in dests])
+        self.assertEqual([line == "none" for line in lines[-4:]], [False, True, True, False])
+
     def test_full_hash_matches_sha256(self):
         # Pusty wejściowy ciąg, granice bloku SHA-256 (55, 56, 64 B) i długi ciąg.
         inputs = [b"", b"WICI", bytes(55), bytes(56), bytes(64), bytes(range(256)) * 20]

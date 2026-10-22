@@ -28,9 +28,20 @@ RNS_PYTHON = os.environ.get("WICI_RNS_PYTHON")
 
 PROGRAM = FIRMWARE / ".pio" / "build" / "host" / "program"
 CORE_PROGRAM = FIRMWARE / ".pio" / "build" / "host-core" / "program"
-# Kroki rns_interop.py, które rdzeń już ma (etap R1): ogłoszenie stacji w Pythonie i IFAC. Każdy krok R1
-# dopisuje swoje; wyjście R1 to wszystkie kroki bez przekazywania (firmware/reticulum-core.md, „Etapy”).
-CORE_STEPS = {"1": ["station_announce_in_python"], "5": ["ifac_missing_dropped", "ifac_invalid_dropped"]}
+# Kroki rns_interop.py na rdzeniu: wyjście etapu R1 (firmware/reticulum-core.md, „Etapy”), z krokiem 3r
+# (szyfrowanie do ratchetu), którego port nie przechodzi. Krok 6 (trasa i tożsamość celu z FRAM po
+# restarcie) wymaga tablic w FRAM: etap R2.
+CORE_STEPS = {
+    "1": ["station_announce_in_python"],
+    "2": ["python_announce_in_station"],
+    "3": ["station_packet_accepted", "station_to_python_packet", "station_receipt_delivered"],
+    "3r": ["ratchet_packet_decrypted", "ratchet_receipt_delivered"],
+    "4": ["python_to_station_packet", "python_receipt_delivered"],
+    "4a": ["rejected_packet_without_proof"],
+    "5": ["ifac_missing_dropped", "ifac_invalid_dropped"],
+    "7": ["receiver_entry_kept_in_full_table"],
+    "8": ["receiver_known_from_card", "announce_blocked_in_silence", "send_from_card_key_in_exception"],
+}
 
 
 
@@ -91,7 +102,12 @@ class CoreInteropTests(unittest.TestCase):
 
     def test_ifac_drops_counted(self):
         status = self.results["station_status"]
-        self.assertEqual((status["ifac_missing"], status["ifac_invalid"], status["rx_malformed"]), (1, 1, 0))
+        self.assertEqual((status["ifac_missing"], status["ifac_invalid"], status["rx_malformed"], status["rx_invalid"]),
+                         (1, 1, 0, 0))
+
+    def test_announce_reaches_packet_through_silence_debt(self):
+        # Jak na porcie: ogłoszenie stacji, ogłoszenie Pythona i pakiet stacji przechodzą przez dług 12 x TX.
+        self.assertLess(self.results["announce_to_packet_s"], 60)
 
 
 @unittest.skipUnless(PIO and RNS_PYTHON, "WICI_PIO and WICI_RNS_PYTHON not set")
