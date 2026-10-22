@@ -476,21 +476,47 @@ class CoreHostileStackTests(HostileStackTests):
             after = self.assertClean(s.run("--seed", 74, "--events", 0, "--receiver-foreign-key"))
             self.assertTrue(after["flood"]["receiver_reads"], after)
 
-        # Rekordy klucza tożsamości: uszkodzony nowszy rekord. Z drugim poprawnym stacja startuje z tą samą
-        # tożsamością; bez niego zgłasza utratę tożsamości (nie tworzy nowej).
+        # Rekordy klucza tożsamości (framfs.h: dwa rekordy, nowszy wygrywa), oba przypadki jawnie:
+        # (a) dwa poprawne, nowszy uszkodzony: stacja startuje z tą samą tożsamością ze starszego;
+        # (b) jedyny poprawny uszkodzony: utrata tożsamości przy każdym starcie, bez nowej tożsamości
+        # i bez nowego rekordu w FRAM. Stacja po pierwszym starcie ma jeden rekord, drugi buduje test.
         keys = [identity_record(image, n) for n in range(2)]
-        newest = max(range(2), key=lambda n: keys[n] or 0)
-        with self.subTest(damage="identity_record"):
+        self.assertEqual(sorted(k is not None for k in keys), [False, True], keys)
+        only = keys.index(next(k for k in keys if k is not None))
+
+        def key_byte(data, n):
+            data[IDENTITY_BASE + n * IDENTITY_SLOT + 8 + rng.randrange(64)] ^= 0x10
+
+        with self.subTest(damage="identity_newer_record"):
             s = self.copy(base)
             data = bytearray(image)
-            data[IDENTITY_BASE + newest * IDENTITY_SLOT + 8 + rng.randrange(64)] ^= 0x10
+            other = 1 - only
+            record = bytearray(data[IDENTITY_BASE + only * IDENTITY_SLOT:IDENTITY_BASE + (only + 1) * IDENTITY_SLOT])
+            record[4:8] = (keys[only] + 1).to_bytes(4, "little")
+            record[72:74] = binascii.crc_hqx(bytes(record[:72]), 0xFFFF).to_bytes(2, "little")
+            data[IDENTITY_BASE + other * IDENTITY_SLOT:IDENTITY_BASE + (other + 1) * IDENTITY_SLOT] = record
+            self.assertEqual([identity_record(data, n) for n in (only, other)], [keys[only], keys[only] + 1])
+            key_byte(data, other)
+            self.assertEqual([identity_record(data, n) for n in (only, other)], [keys[only], None])
             s.fram.write_bytes(bytes(data))
-            after = self.assertClean(s.run("--seed", 75, "--events", 400, "--gap", 5), "identity_lost")
-            if keys[1 - newest]:
+            for seed in (75, 76):
+                after = self.assertClean(s.run("--seed", seed, "--events", 400, "--gap", 5))
                 self.assertEqual(after["identity"], outcome["identity"])
-            else:
-                self.assertEqual(after["result"], "identity_lost")
+                self.assertFalse(after["new"], after)
 
+        with self.subTest(damage="identity_only_record"):
+            s = self.copy(base)
+            data = bytearray(image)
+            other = 1 - only
+            data[IDENTITY_BASE + other * IDENTITY_SLOT:IDENTITY_BASE + (other + 1) * IDENTITY_SLOT] = b"\xff" * IDENTITY_SLOT
+            key_byte(data, only)
+            self.assertEqual([identity_record(data, n) for n in range(2)], [None, None])
+            s.fram.write_bytes(bytes(data))
+            for seed in (77, 78):
+                after = self.assertClean(s.run("--seed", seed, "--events", 400, "--gap", 5), "identity_lost")
+                self.assertEqual(after["result"], "identity_lost", after)
+                fram = s.fram.read_bytes()
+                self.assertEqual([identity_record(fram, n) for n in range(2)], [None, None])
 
 # Układ FRAM rdzenia (lib/reticulum_core/src/table.h, src/framfs.h).
 FS_BASE, TABLE_SLOT, TABLE_SLOTS = 0x048000, 568, 257
