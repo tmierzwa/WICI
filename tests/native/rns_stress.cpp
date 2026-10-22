@@ -12,10 +12,25 @@
 //
 // rns_stress <fram> [--seed N] [--events N] [--mutate PERCENT] [--start S] [--gap S]
 //            [--long-jumps] [--cut-after-writes N] [--defect token48|short-announce|held-announce|flood|damaged-receiver|forward-flood|rebroadcast-load|own-path-requests]
+//            [--hostile-days N [--window-s S] [--stop-after-s S]]
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/time.h>
 #include <unistd.h>
+
+// Hak przydziałów sterty jest tylko w budowie z ASan (tests/test_rns_hostile.py buduje zawsze z nim);
+// bez niego przebieg 60 dni podaje przydziały jako niezmierzone (null).
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer)
+#define WICI_ALLOCATION_HOOK 1
+#endif
+#endif
+#if defined(__SANITIZE_ADDRESS__)
+#define WICI_ALLOCATION_HOOK 1
+#endif
+#if defined(WICI_RNS_CORE) && defined(WICI_ALLOCATION_HOOK)
+#include <sanitizer/allocator_interface.h>
+#endif
 
 #include <cstdio>
 #include <cstdlib>
@@ -162,6 +177,9 @@ bool FileFram::write(uint32_t address, const uint8_t* data, size_t count) {
     return true;
 }
 
+// Wywołanie stosu stacji w toku (liczenie przydziałów sterty w hostileDays; radio próby się nie liczy).
+bool inStation = false;
+
 // ---- łącze radiowe: datagramy stacji trafiają do generatora (powtórki, dowody) ----
 struct Radio : rnsnode::Radio {
     bool busy = false;
@@ -172,8 +190,11 @@ struct Radio : rnsnode::Radio {
     uint32_t debtMs() override { return 0; }
     bool transmit(const uint8_t* data, size_t length) override {
         ++sent;
+        const bool counted = inStation;
+        inStation = false;
         if (recent.size() >= 32) recent.erase(recent.begin());
         recent.emplace_back(data, data + length);
+        inStation = counted;
         busy = true;
         txEnd = simMs + 50 + length;   // czas nadawania nie gra roli w tej próbie
         return true;
@@ -730,6 +751,124 @@ void ownPathRequests() {
     floodResult = out;
 }
 
+// Praca przez dni z wrogim ruchem (reticulum-core.md, kryterium odbioru 5; odbior.md, wiersz „Wrogi węzeł”,
+// przebieg 2): każdego dnia okno windowS sekund, w każdej sekundzie ogłoszenie nowego celu, zapytanie
+// o trasę do przypadkowego celu, pakiet przez stację do przypadkowego celu i pakiet przez stację do
+// jednego celu (ogłaszającego się na początku okna); potem skok zegara do następnego dnia. Na początku
+// okna odbiorca z karty ogłasza się, a stacja wysyła mu zgłoszenie, które musi zostać potwierdzone
+// w tym samym oknie. Wpis odbiorcy sprawdzany co dzień. Po starcie stacja nie przydziela pamięci: przydziały sterty w wywołaniach
+// rnsnode liczy hak sanitizera (generator ruchu korzysta ze sterty portu, więc liczony jest tylko stos
+// stacji). stopAfterS: koniec procesu w ostatnim dniu po tylu sekundach okna (restart w trakcie ruchu).
+uint32_t stationAllocations = 0;
+#ifdef WICI_ALLOCATION_HOOK
+void onMalloc(const volatile void*, size_t) { stationAllocations += inStation; }
+void onFree(const volatile void*) {}
+#endif
+
+template <typename F>
+void inStationCall(F f) {
+    inStation = true;
+    f();
+    inStation = false;
+}
+
+// Datagram i obiegi pętli przez 200 ms (kolejka odbioru ma 4 miejsca: ruch z jednej sekundy nie trafia
+// do niej naraz).
+void hostileReceive(const RNS::Bytes& raw) {
+    const std::vector<uint8_t> wire = ifacWrap(raw);
+    if (!wire.empty()) inStationCall([&] { rnsnode::received(wire.data(), wire.size()); });
+    for (int k = 0; k < 10; ++k) {
+        simMs += 20;
+        radio.poll();
+        inStationCall([] { rnsnode::loop(static_cast<uint32_t>(simMs)); });
+    }
+}
+
+RNS::Bytes dataVia(const RNS::Bytes& destination) {
+    RNS::Bytes raw;
+    raw.append(static_cast<uint8_t>(0x00));
+    raw.append(static_cast<uint8_t>(0x00));
+    raw << destination;
+    raw.append(static_cast<uint8_t>(0x00));
+    raw << randomBytes(16 + rnd() % 160);
+    return headerTwo(raw, stationTransport);
+}
+
+void hostileDays(long days, long windowS, long stopAfterS) {
+#ifdef WICI_ALLOCATION_HOOK
+    __sanitizer_install_malloc_and_free_hooks(onMalloc, onFree);
+#endif
+    uint32_t datagrams = 0, reports = 0, daysDone = 0;
+    const auto passes = [](int n) {
+        for (int k = 0; k < n; ++k) {
+            simMs += 20;
+            radio.poll();
+            inStationCall([] { rnsnode::loop(static_cast<uint32_t>(simMs)); });
+        }
+    };
+    for (long day = 0; day < days; ++day) {
+        const bool last = day == days - 1;
+        hostileReceive(withHops(announceOf(0), 1));
+        hostileReceive(withHops(announceOf(2), 2));   // cel ruchu przez stację „do jednego celu”
+        passes(100);
+        if (!rnsnode::hasPath(peerDest[0].data())) fail("hostile days: receiver announce not accepted");
+        const uint32_t delivered0 = rnsnode::status().delivered;
+        // Koperta warstwy aplikacji (station.cpp) z treścią SA1; rdzeń wysyła treść w LXMF.
+        const std::string report = "[\"WICI\",1,\"" + hex(rnsnode::address(), 16) + "\",\"" + hex(peerDest[0].data(), 16) +
+                                   "\",[1,\"daily report under hostile traffic\"]]";
+        uint32_t handle = 0;
+        inStationCall([&] {
+            handle = rnsnode::send(peerDest[0].data(), reinterpret_cast<const uint8_t*>(report.data()), report.size(),
+                                   rnsnode::RECEIPT_MIN_S);
+        });
+        if (!handle) fail("hostile days: report not accepted");
+        bool stopped = false;
+        for (long second = 0; second < windowS; ++second) {
+            if (last && stopAfterS >= 0 && second == stopAfterS) { stopped = true; break; }
+            try {
+                RNS::Destination d(peers[1 + rnd() % (PEERS - 1)], RNS::Type::Destination::IN, RNS::Type::Destination::SINGLE,
+                                   DEST_APP, hex(randomBytes(4).data(), 4).c_str());
+                RNS::Packet a = d.announce(RNS::Bytes(), false, {RNS::Type::NONE}, {}, false);
+                RNS::Transport::deregister_destination(d);
+                a.pack();
+                hostileReceive(withHops(a.raw(), 1 + rnd() % 4));
+                RNS::Destination pr({RNS::Type::NONE}, RNS::Type::Destination::OUT, RNS::Type::Destination::PLAIN, "rnstransport",
+                                    "path.request");
+                RNS::Bytes query = rnd() % 2 ? randomBytes(16) : peerDest[rnd() % PEERS];
+                query << randomBytes(16);
+                RNS::Packet q(pr, query, RNS::Type::Packet::DATA);
+                q.pack();
+                hostileReceive(q.raw());
+            } catch (const std::exception&) {
+                // wyjątek generatora, nie stosu stacji
+            }
+            hostileReceive(dataVia(randomBytes(16)));
+            hostileReceive(dataVia(peerDest[2]));
+            datagrams += 4;
+            if (rnsnode::status().delivered == delivered0 && second % 2 == 1) {
+                const RNS::Bytes proof = receiverProof();
+                if (proof) hostileReceive(proof);
+            }
+        }
+        if (!rnsnode::knows(peerDest[0].data())) fail("hostile days: receiver identity lost");
+        if (stopped) break;
+        if (rnsnode::status().delivered == delivered0) fail("hostile days: daily report not delivered");
+        ++reports;
+        ++daysDone;
+        simMs += static_cast<uint64_t>(86400 - windowS) * 1000;
+        passes(10);
+    }
+    if (stationAllocations) fail("hostile days: station allocated memory after start");
+    char allocations[16] = "null";
+#ifdef WICI_ALLOCATION_HOOK
+    snprintf(allocations, sizeof(allocations), "%u", stationAllocations);
+#endif
+    char out[192];
+    snprintf(out, sizeof(out), "\"days\":%u,\"window_s\":%ld,\"datagrams\":%u,\"reports\":%u,\"allocations\":%s",
+             daysDone, windowS, datagrams, reports, allocations);
+    floodResult = out;
+}
+
 // Uszkodzone gniazdo odbiorcy z karty w tablicy znanych celów rdzenia (FRAM od framfs::FS_BASE, gniazda
 // 568 B, cel od bajtu 16; lib/reticulum_core/src/table.h): pakiet stacji do odbiorcy wychodzi mimo to
 // (wpis z kluczy karty od nowa), a gniazdo liczy "table_corrupt".
@@ -757,6 +896,7 @@ const char* floodJson() { return ""; }
 void damagedReceiver() { fail("damaged-receiver: station core only"); }
 void transitLoad(bool) { fail("transit load: station core only"); }
 void ownPathRequests() { fail("own path requests: station core only"); }
+void hostileDays(long, long, long) { fail("hostile days: station core only"); }
 #endif
 
 // Awarie portu z przeglądu 2026-10-21 (poprawione łatami 0005-0007) jako próby regresji.
@@ -842,6 +982,7 @@ int main(int argc, char** argv) {
     uint64_t startS = 1767225600;   // 2026-01-01
     uint64_t gapS = 0, setClockS = 0;
     std::string defectName;
+    long hostileDayCount = 0, windowS = 120, stopAfterS = -1;
     rngState = 1;
     for (int i = 2; i < argc; ++i) {
         const std::string a = argv[i];
@@ -855,6 +996,9 @@ int main(int argc, char** argv) {
         else if (a == "--cut-after-writes") { fram.cutAfter = atol(v); ++i; }
         else if (a == "--long-jumps") longJumps = true;
         else if (a == "--defect") { defectName = v; ++i; }
+        else if (a == "--hostile-days") { hostileDayCount = atol(v); ++i; }
+        else if (a == "--window-s") { windowS = atol(v); ++i; }
+        else if (a == "--stop-after-s") { stopAfterS = atol(v); ++i; }
         else { fprintf(stderr, "unknown option %s\n", a.c_str()); return 2; }
     }
 
@@ -904,6 +1048,7 @@ int main(int argc, char** argv) {
         defect(defectName);
         for (int i = 0; i < 20; ++i) { simMs += 1000; service(); }
     }
+    if (hostileDayCount) hostileDays(hostileDayCount, windowS, stopAfterS);
     for (long n = 0; n < events; ++n) {
         try {
             const uint32_t e = rnd() % 100;

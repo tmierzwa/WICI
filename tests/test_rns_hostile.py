@@ -25,7 +25,9 @@ firmware/lib/reticulum_core instead of rns_node.cpp; the port only generates the
 power loss in a write of the core's table of known destinations in FRAM (stage R2). The core also
 gets a flood of hostile datagrams (--defect flood): at most one asymmetric operation per loop() pass,
 replayed valid announces take no verification tokens, and a station packet sent during the flood is
-delivered.
+delivered. Sixty simulated days of hostile traffic (--hostile-days, acceptance criterion 5 in
+firmware/reticulum-core.md): daily reports delivered, the receiver entry kept, no heap allocation by the
+station after start and the table in FRAM within 5% of its size after a week.
 
   python3 -m unittest tests.test_rns_hostile -v
 """
@@ -353,6 +355,29 @@ class CoreHostileStackTests(HostileStackTests):
         outcome = self.assertClean(self.station().run("--defect", "own-path-requests", "--events", 0))
         self.assertGreater(outcome["iface"]["pr_responses"], 1, outcome)
         self.assertIn(outcome["flood"]["double_passes"], range(1, 4), outcome)
+
+    def test_sixty_days_of_hostile_traffic(self):
+        # Kryterium odbioru 5 (reticulum-core.md): 60 dni na zegarze symulowanym, co dzień 10 minut ruchu z wiersza
+        # „Wrogi węzeł” (przebieg 2): w każdej sekundzie ogłoszenie nowego celu, zapytanie o trasę, pakiet przez
+        # stację do przypadkowego celu i do jednego celu, czyli 2 400 datagramów dziennie, 144 000 przez 60 dni;
+        # co dzień zgłoszenie do odbiorcy z karty potwierdzone w tym samym oknie. Cztery starty stacji, dwa
+        # zakończone w środku okna ruchu (dzień przerwany nie wlicza się do 60). Po starcie stacja nie przydziela pamięci (program prób), wpis odbiorcy
+        # zostaje, a zajętość tablicy w FRAM na końcu jest w granicach ±5% stanu po tygodniu.
+        s = self.station()
+        runs = [("--hostile-days", 7), ("--hostile-days", 18, "--stop-after-s", 300),
+                ("--hostile-days", 18, "--stop-after-s", 37), ("--hostile-days", 19)]
+        outcomes = [self.assertClean(s.run("--seed", 60 + n, "--events", 0, "--window-s", 600, *run)) for n, run in enumerate(runs)]
+        days = sum(o["flood"]["days"] for o in outcomes)
+        self.assertEqual(days, 60, outcomes[-1])
+        self.assertEqual(sum(o["flood"]["reports"] for o in outcomes), days)
+        datagrams = sum(o["flood"]["datagrams"] for o in outcomes)
+        self.assertEqual(datagrams, 60 * 2400 + (300 + 37) * 4)
+        self.assertEqual(len({o["identity"] for o in outcomes}), 1)
+        for o in outcomes:   # null: program prób bez ASan, przydziały niezmierzone (kryterium nie przechodzi)
+            self.assertIsNotNone(o["flood"]["allocations"], "rns_stress without ASan: allocations not measured")
+            self.assertEqual(o["flood"]["allocations"], 0, o)
+        week, end = outcomes[0]["fs_used"], outcomes[-1]["fs_used"]
+        self.assertLessEqual(abs(end - week), week * 0.05, (week, end))
 
     def test_damaged_receiver_slot(self):
         # Uszkodzone gniazdo odbiorcy z karty w FRAM (błędne CRC): zgłoszenie do odbiorcy wychodzi (wpis
