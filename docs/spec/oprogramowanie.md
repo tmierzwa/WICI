@@ -348,10 +348,10 @@ Jedyna kanoniczna lista tekstów stacji i strony mieszkańca; inne dokumenty cyt
 | `jezyk_uk` | УКРАЇНСЬКА | УКРАЇНСЬКА | УКРАЇНСЬКА | ekran wyboru języka, zawsze w tym języku |
 | `jezyk_en` | ENGLISH | ENGLISH | ENGLISH | ekran wyboru języka, zawsze w tym języku |
 | `cisza` | CISZA RADIOWA – STACJA NIE NADAJE. PILNE: GONIEC | РАДІОТИША – СТАНЦІЯ НЕ ПЕРЕДАЄ. ТЕРМІНОВО: ПОСИЛЬНИЙ | RADIO SILENCE – NOT TRANSMITTING. URGENT: RUNNER | wiersze 1–3 ekranu głównego w ciszy radiowej |
-| `ostatni_kontakt` | OSTATNI KONTAKT Z ODBIORCĄ: [czas] TEMU | ОСТАННІЙ ЗВ'ЯЗОК З ОДЕРЖУВАЧЕМ: [czas] ТОМУ | LAST CONTACT WITH RECIPIENT: [czas] AGO | STAN: czas od ostatniej uwierzytelnionej wiadomości od aktywnej tożsamości odbiorcy (RECEIVED, STATUS, REPLY lub BULLETIN); brak świeżego kontaktu nie jest awarią |
-| `ostatni_kontakt_ponad` | OSTATNI KONTAKT Z ODBIORCĄ: PONAD [czas] TEMU | ОСТАННІЙ ЗВ'ЯЗОК З ОДЕРЖУВАЧЕМ: ПОНАД [czas] ТОМУ | LAST CONTACT WITH RECIPIENT: OVER [czas] AGO | STAN po włączeniu bez RTC: dolne oszacowanie |
-| `kontakt_krotki` | KONTAKT [czas] TEMU | ЗВ'ЯЗОК [czas] ТОМУ | CONTACT [czas] AGO | ekran główny, wiersz 2 |
-| `kontakt_ponad_krotki` | KONTAKT >[czas] TEMU | ЗВ'ЯЗОК >[czas] ТОМУ | CONTACT >[czas] AGO | ekran główny, wiersz 2, po włączeniu bez RTC |
+| `ostatni_kontakt` | OSTATNI KONTAKT Z ODBIORCĄ: [czas] TEMU | ОСТАННІЙ КОНТАКТ З ОДЕРЖУВАЧЕМ: [czas] ТОМУ | LAST CONTACT WITH RECIPIENT: [czas] AGO | STAN: czas od ostatniej uwierzytelnionej wiadomości od aktywnej tożsamości odbiorcy (RECEIVED, STATUS, REPLY lub BULLETIN); brak świeżego kontaktu nie jest awarią |
+| `ostatni_kontakt_ponad` | OSTATNI KONTAKT Z ODBIORCĄ: PONAD [czas] TEMU | ОСТАННІЙ КОНТАКТ З ОДЕРЖУВАЧЕМ: ПОНАД [czas] ТОМУ | LAST CONTACT WITH RECIPIENT: OVER [czas] AGO | STAN po włączeniu bez RTC: dolne oszacowanie |
+| `kontakt_krotki` | KONTAKT [czas] TEMU | КОНТАКТ [czas] ТОМУ | CONTACT [czas] AGO | ekran główny, wiersz 2 |
+| `kontakt_ponad_krotki` | KONTAKT >[czas] TEMU | КОНТАКТ >[czas] ТОМУ | CONTACT >[czas] AGO | ekran główny, wiersz 2, po włączeniu bez RTC |
 | `zasilanie_aa` | OGNIWA: OKOŁO [x] H | БАТАРЕЇ: ЩЕ [x] ГОД | CELLS: ABOUT [x] H | ekran główny, wiersz 3, praca z ogniw |
 | `zasilanie_12v` | 12 V: [x] V | 12 В: [x] В | 12 V: [x] V | ekran główny, wiersz 3, praca z 12 V; napięcie z jednym miejscem po przecinku |
 | `ogniwa_napiecie` | OGNIWA: [x] V | БАТАРЕЇ: [x] В | CELLS: [x] V | STAN: napięcie kompletu ogniw z jednym miejscem po przecinku (filtrowana średnia z okresów odbioru); próg kompletu ćwiczebnego z [instrukcji](instrukcja.md#energia-stacji) |
