@@ -86,6 +86,13 @@ precedence = "override"
 SPDX-FileCopyrightText = ["2026 Tomek Mierzwa and WICI contributors", "2003 Bitstream, Inc. (Bitstream Vera); DejaVu changes are in public domain"]
 SPDX-License-Identifier = "MIT AND Bitstream-Vera"
 
+# Station Reticulum core: derivative of the Reticulum reference implementation, under its license.
+[[annotations]]
+path = "firmware/lib/reticulum_core/**"
+precedence = "override"
+SPDX-FileCopyrightText = ["2016-2026 Mark Qvist", "2026 Tomek Mierzwa"]
+SPDX-License-Identifier = "LicenseRef-Reticulum"
+
 # WICI patches to microReticulum keep the license of the files they change.
 [[annotations]]
 path = "firmware/patches/microReticulum/**"
