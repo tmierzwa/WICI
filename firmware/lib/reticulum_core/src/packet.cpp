@@ -37,11 +37,12 @@ bool unpack(const uint8_t* raw, size_t length, Packet& out) {
 
 size_t pack(const Packet& packet, uint8_t* out, size_t capacity) {
     const size_t header = packet.headerType == HEADER_2 ? HEADER_2_SIZE : HEADER_1_SIZE;
-    const size_t length = header + packet.dataLength;
-    if (packet.hops >= MAX_HOPS || packet.dataLength == 0 || packet.context == CONTEXT_LRPROOF || length > MTU ||
-        length > capacity) {
+    // Długość danych porównana z miejscem po nagłówku, bez sumy, która przy 32-bitowym size_t może się przewinąć.
+    if (packet.hops >= MAX_HOPS || packet.dataLength == 0 || packet.context == CONTEXT_LRPROOF ||
+        packet.dataLength > MTU - header || capacity < header || packet.dataLength > capacity - header) {
         return 0;
     }
+    const size_t length = header + packet.dataLength;
     // RNS/Packet.py: get_packed_flags.
     out[0] = static_cast<uint8_t>((packet.headerType & 0x01) << 6 | (packet.contextFlag & 0x01) << 5 |
                                   (packet.transportType & 0x01) << 4 | (packet.destinationType & 0x03) << 2 |

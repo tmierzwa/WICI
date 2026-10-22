@@ -8,6 +8,11 @@ answers one command per line; expected values come from tests/vectors/reticulum.
 Reticulum in Python, tests/test_rns_vectors.py). Skipped without a compiler or the stack sources,
 unless WICI_RNS_SANITIZE=1 (CI), which fetches the sources and fails instead.
 
+Core32Tests run the same checks on a 32-bit build (-m32): size_t of 32 bits and 32-bit limbs in
+Curve25519 and Ed25519 of the Crypto library, as on nRF52840 and ESP32-S3 (a 64-bit computer uses
+64-bit limbs, BigNumberUtil.h). Skipped when the compiler cannot build 32-bit programs (macOS, Linux
+without gcc-multilib), unless WICI_RNS_SANITIZE=1 on Linux.
+
   python3 -m unittest tests.test_rnscore -v
 """
 
@@ -43,16 +48,15 @@ sys.path.insert(0, str(FIRMWARE / "tools"))
 import stack_deps  # noqa: E402
 
 
-def compiler():
-    for name in ("clang++", "c++", "g++"):
+def compiler(names=("clang++", "c++", "g++")):
+    for name in names:
         if shutil.which(name):
             return name
     return None
 
 
-def build(out_dir: Path) -> Path:
-    cxx = compiler()
-    base = [cxx, "-std=c++17", *SANITIZE, f"-I{CORE}", f"-I{SELFTEST.parent}", "-isystem", str(STACK / "Crypto")]
+def build(out_dir: Path, cxx: str, flags=()) -> Path:
+    base = [cxx, "-std=c++17", *flags, *SANITIZE, f"-I{CORE}", f"-I{SELFTEST.parent}", "-isystem", str(STACK / "Crypto")]
     objects = []
     for source in [*sorted(CORE.glob("*.cpp")), SELFTEST]:
         objects.append(out_dir / f"core_{source.stem}.o")
@@ -66,16 +70,29 @@ def build(out_dir: Path) -> Path:
     subprocess.run([*base, "-Wall", "-Wextra", "-Werror", "-c", str(CHECK), "-o", str(objects[-1])],
                    check=True, capture_output=True, text=True)
     binary = out_dir / "rnscore_check"
-    subprocess.run([cxx, *SANITIZE, *map(str, objects), "-o", str(binary)], check=True, capture_output=True, text=True)
+    subprocess.run([cxx, *flags, *SANITIZE, *map(str, objects), "-o", str(binary)], check=True, capture_output=True,
+                   text=True)
     return binary
 
 
+def builds_32bit(cxx: str) -> bool:
+    with tempfile.TemporaryDirectory() as tmp:
+        source = Path(tmp) / "probe.cpp"
+        source.write_text("#include <iostream>\nint main() { std::cout << sizeof(void*); return sizeof(size_t) != 4; }\n")
+        built = subprocess.run([cxx, "-m32", *SANITIZE, str(source), "-o", str(Path(tmp) / "probe")], capture_output=True)
+        return built.returncode == 0 and subprocess.run([str(Path(tmp) / "probe")], capture_output=True).returncode == 0
+
+
 class CoreTests(unittest.TestCase):
+    FLAGS = ()
+    COMPILERS = ("clang++", "c++", "g++")
+
     @classmethod
     def setUpClass(cls):
         if os.name != "posix":
             raise unittest.SkipTest("POSIX only")
-        if not compiler():
+        cls.cxx = compiler(cls.COMPILERS)
+        if not cls.cxx:
             raise unittest.SkipTest("no C++ compiler")
         if not (STACK / "Crypto" / ".wici-stamp").is_file():
             if not REQUIRED:
@@ -83,7 +100,7 @@ class CoreTests(unittest.TestCase):
             stack_deps.fetch(FIRMWARE)
         cls.tmp = tempfile.TemporaryDirectory()
         try:
-            cls.binary = build(Path(cls.tmp.name))
+            cls.binary = build(Path(cls.tmp.name), cls.cxx, cls.FLAGS)
         except subprocess.CalledProcessError as e:
             cls.tmp.cleanup()
             raise RuntimeError(f"{' '.join(e.cmd)}\n{e.stderr[-4000:]}") from e
@@ -349,6 +366,12 @@ class CoreTests(unittest.TestCase):
         raw = bytes.fromhex(VECTORS["packet"][0]["header_2"]["raw"])
         got = self.ask([("unpack", raw[:n]) for n in range(len(raw) + 1)])
         self.assertEqual([line == "none" for line in got], [n <= 35 for n in range(len(raw) + 1)])
+
+    def test_huge_lengths(self):
+        # Długość danych bliska SIZE_MAX (błąd wywołującego): pack i buildAnnounce odmawiają, suma długości
+        # się nie przewija (przy 32-bitowym size_t na płytkach też, Core32Tests).
+        prv = bytes.fromhex(VECTORS["identity"][0]["private_key"])
+        self.assertEqual(self.ask([("huge_lengths", prv)]), ["0 0"])
 
     @staticmethod
     def pack_args(h: dict) -> bytes:
@@ -675,6 +698,22 @@ class CoreTests(unittest.TestCase):
         result = subprocess.run([str(self.binary)], input="full_hash abc\nfull_hash zz\nunknown 00\n\n", capture_output=True,
                                 text=True, env=ENV, timeout=60)
         self.assertEqual(result.stdout.splitlines(), ["error"] * 4)
+
+
+class Core32Tests(CoreTests):
+    """Te same próby w programie 32-bitowym: typy i limby biblioteki Crypto jak na płytkach."""
+    FLAGS = ("-m32",)
+    # Na Linuksie g++ z gcc-multilib ma 32-bitowe biblioteki sanitizerów; clang ich zwykle nie ma.
+    COMPILERS = ("g++", "clang++", "c++")
+
+    @classmethod
+    def setUpClass(cls):
+        cxx = compiler(cls.COMPILERS)
+        if os.name == "posix" and cxx and not builds_32bit(cxx):
+            if REQUIRED and sys.platform.startswith("linux"):
+                raise RuntimeError(f"{cxx} cannot build 32-bit programs (apt-get install g++-multilib)")
+            raise unittest.SkipTest("no 32-bit C++ toolchain")
+        super().setUpClass()
 
 
 if __name__ == "__main__":
