@@ -32,6 +32,7 @@
 #include <sanitizer/allocator_interface.h>
 #endif
 
+#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -80,6 +81,14 @@ extern "C" int gettimeofday(struct timeval* __restrict tv, void* __restrict) {
     tv->tv_sec = static_cast<time_t>(simMs / 1000);   // glibc deklaruje tv jako nonnull
     tv->tv_usec = static_cast<suseconds_t>((simMs % 1000) * 1000);
     return 0;
+}
+
+// steady_clock też z zegara symulowanego: na hoście microStore::millis() (odstęp ponownej kompaktacji
+// FileStore, USTORE_COMPACT_RETRY_MS) i Stream biorą z niego czas, a definicja w programie ma
+// pierwszeństwo przed biblioteką standardową (dynamiczną). Bez tego stan FRAM portu zależał od czasu
+// rzeczywistego.
+std::chrono::steady_clock::time_point std::chrono::steady_clock::now() noexcept {
+    return time_point(std::chrono::duration_cast<duration>(std::chrono::milliseconds(simMs)));
 }
 
 namespace {
@@ -484,6 +493,7 @@ void checkClock() {
     const double stack = RNS::Utilities::OS::time();
     if (stack < s - 1 || stack > s + 1) fail("stack does not follow the simulated clock");
     if (microStore::time() != static_cast<uint32_t>(simMs / 1000)) fail("microStore does not follow the simulated clock");
+    if (microStore::millis() != static_cast<uint32_t>(simMs)) fail("microStore::millis does not follow the simulated clock");
 }
 
 // Zalew wrogimi datagramami (stacja na rdzeniu): bez flagi IFAC, z kodem IFAC spoza sieci, z ważnym
