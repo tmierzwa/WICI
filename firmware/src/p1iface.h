@@ -121,6 +121,10 @@ public:
     // Czy ogłoszenie (raw bez IFAC) zostanie przyjęte: od razu albo na listę oczekujących; bez zmiany
     // liczników i listy. Pozwala odmówić przed podpisem IFAC zamiast po nim.
     bool announceAdmits(const uint8_t* raw, size_t rawLength, uint32_t nowMs);
+    // Czy ogłoszenie o długości rawLength (bez IFAC) o dowolnym celu i liczbie skoków ma miejsce: od razu
+    // albo wolne miejsce na liście oczekujących. Dla stosu przed złożeniem i podpisem ogłoszenia, gdy
+    // pakietu jeszcze nie ma; bez zastępowania oczekującego (to zależy od celu i skoków).
+    bool announceRoom(size_t rawLength, uint32_t nowMs);
     // Klasa pakietu według reguł wyżej (bez stanu kolejki).
     Lane lane(const uint8_t* raw, size_t length, Hint hint = Hint::NONE) const;
     // Ogłoszenia oczekujące przechodzą do kolejki, gdy limit 2%, pula i miejsce pozwalają.

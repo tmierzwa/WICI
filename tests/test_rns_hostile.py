@@ -342,10 +342,17 @@ class CoreHostileStackTests(HostileStackTests):
 
     def test_rebroadcast_load_one_asymmetric_operation_per_loop(self):
         # Nowe ogłoszenia węzłów (retransmisje) i zapytania o znane cele (odpowiedzi z pamięci podręcznej) szybciej,
-        # niż stacja je przetwarza: retransmisje po jednej i tylko w obiegach bez kryptografii odbioru.
+        # niż stacja je przetwarza: retransmisje po jednej i tylko w obiegach bez kroku odbioru.
         outcome = self.assertClean(self.station().run("--defect", "rebroadcast-load", "--events", 0))
         self.assertGreater(outcome["iface"]["ann_rebroadcast"], 0, outcome)
         self.assertGreater(outcome["iface"]["pr_responses"], 0, outcome)
+
+    def test_own_path_requests_two_operations_at_most_every_30_s(self):
+        # Zapytania o cel stacji z nowymi znacznikami szybciej, niż stacja je przetwarza, przez 70 s: odpowiedzi
+        # wychodzą, nowy podpis ogłoszenia (z IFAC dwie operacje w obiegu) najwyżej raz na 30 s.
+        outcome = self.assertClean(self.station().run("--defect", "own-path-requests", "--events", 0))
+        self.assertGreater(outcome["iface"]["pr_responses"], 1, outcome)
+        self.assertIn(outcome["flood"]["double_passes"], range(1, 4), outcome)
 
     def test_damaged_receiver_slot(self):
         # Uszkodzone gniazdo odbiorcy z karty w FRAM (błędne CRC): zgłoszenie do odbiorcy wychodzi (wpis

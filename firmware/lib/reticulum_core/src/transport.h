@@ -65,8 +65,10 @@ struct TransportHooks {
     bool (*mayVerify)(void* context) = nullptr;
     // Bajty losowe (RNS: os.urandom) dla odpowiedzi na zapytanie o trasę do celu stacji; fałsz: brak.
     bool (*random)(uint8_t* out, size_t length, void* context) = nullptr;
-    // Interfejs przyjmie teraz pakiet (kod IFAC, bez ciszy, miejsce w kolejce); pytany przed pracą na
-    // podpis, której wynik mógłby nie wyjść (odpowiedź własna, retransmisja). nullptr: zawsze.
+    // Interfejs przyjmie teraz ogłoszenie (kod IFAC, bez ciszy, miejsce w kolejce i miejsce na ogłoszenie:
+    // limit ogłoszeń, pula, lista oczekujących). Pytany tylko przed nadaniem ogłoszenia, przed pracą na
+    // podpis, której wynik mógłby nie wyjść (odpowiedź na zapytanie o cel stacji, retransmisja); nie dla
+    // dowodów ani pakietów danych. nullptr: zawsze.
     bool (*mayTransmit)(void* context) = nullptr;
     void* context = nullptr;
 };

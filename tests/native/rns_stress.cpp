@@ -11,7 +11,7 @@
 // Wynik: wiersz JSON na stdout; kod 3 = złamany niezmiennik, 75 = zanik zasilania w zapisie.
 //
 // rns_stress <fram> [--seed N] [--events N] [--mutate PERCENT] [--start S] [--gap S]
-//            [--long-jumps] [--cut-after-writes N] [--defect token48|short-announce|held-announce|flood|damaged-receiver|forward-flood|rebroadcast-load]
+//            [--long-jumps] [--cut-after-writes N] [--defect token48|short-announce|held-announce|flood|damaged-receiver|forward-flood|rebroadcast-load|own-path-requests]
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/time.h>
@@ -700,6 +700,36 @@ void transitLoad(bool announces) {
     floodResult = out;
 }
 
+// Zapytania o trasę do celu stacji z nowymi znacznikami, dwa datagramy na obieg loop() przez 70 s.
+// Odpowiedź z nowym podpisem ogłoszenia (podpis i IFAC: dwie operacje asymetryczne w jednym obiegu,
+// wyjątek z tabeli różnic) najwyżej raz na 30 s, w pozostałych obiegach najwyżej jedna operacja; wynik
+// w polu "flood": obiegi z dwiema operacjami.
+void ownPathRequests() {
+    uint32_t doubles = 0;
+    for (int round = 0; round < 7000; ++round) {
+        for (int k = 0; k < 2; ++k) {
+            RNS::Destination pr({RNS::Type::NONE}, RNS::Type::Destination::OUT, RNS::Type::Destination::PLAIN, "rnstransport",
+                                "path.request");
+            RNS::Bytes data = stationDest;
+            data << randomBytes(16);
+            RNS::Packet q(pr, data, RNS::Type::Packet::DATA);
+            q.pack();
+            receive(q.raw());
+        }
+        simMs += 10;
+        radio.poll();
+        const uint32_t before = rnscore::asymmetricOperations();
+        rnsnode::loop(static_cast<uint32_t>(simMs));
+        const uint32_t ops = rnscore::asymmetricOperations() - before;
+        if (ops > 2) fail("own path requests: more than two asymmetric operations in one loop pass");
+        doubles += ops == 2;
+    }
+    if (doubles > 3) fail("own path requests: new announce signature more often than once per 30 s");
+    char out[96];
+    snprintf(out, sizeof(out), "\"double_passes\":%u,\"rounds\":7000", doubles);
+    floodResult = out;
+}
+
 // Uszkodzone gniazdo odbiorcy z karty w tablicy znanych celów rdzenia (FRAM od framfs::FS_BASE, gniazda
 // 568 B, cel od bajtu 16; lib/reticulum_core/src/table.h): pakiet stacji do odbiorcy wychodzi mimo to
 // (wpis z kluczy karty od nowa), a gniazdo liczy "table_corrupt".
@@ -726,6 +756,7 @@ void flood() { fail("flood: station core only"); }
 const char* floodJson() { return ""; }
 void damagedReceiver() { fail("damaged-receiver: station core only"); }
 void transitLoad(bool) { fail("transit load: station core only"); }
+void ownPathRequests() { fail("own path requests: station core only"); }
 #endif
 
 // Awarie portu z przeglądu 2026-10-21 (poprawione łatami 0005-0007) jako próby regresji.
@@ -775,6 +806,8 @@ void defect(const std::string& name) {
         flood();
     } else if (name == "forward-flood" || name == "rebroadcast-load") {
         transitLoad(name == "rebroadcast-load");
+    } else if (name == "own-path-requests") {
+        ownPathRequests();
     } else if (name == "damaged-receiver") {
         damagedReceiver();
     } else {
