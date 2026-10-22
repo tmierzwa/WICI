@@ -3,7 +3,7 @@
 
 Stage R0 of the core (firmware/reticulum-core.md): identity (keys, hash, signatures, including a
 non-canonical signature with S + L), encryption to an identity (token, including damaged tokens and
-tokens with a valid HMAC over a bad ciphertext, as a node with the key could send them, and tokens
+tokens with a valid HMAC over a bad ciphertext, as any sender can make them, and tokens
 whose ephemeral key is a low-order or non-canonical X25519 point) and
 packets (HEADER_1 as packed by Reticulum, HEADER_2 as rewritten by its transport, packet hash). Every
 expected value is what the reference implementation computes or returns; nothing is computed here
@@ -150,7 +150,8 @@ def crafted_token_vectors():
     iv = seeded("crafted:iv", 16)
 
     def signed(ciphertext: bytes) -> bytes:
-        # Węzeł z kluczem sieci może wysłać dowolny szyfrogram z poprawnym HMAC (klucz z ECDH z kluczem celu).
+        # Każdy nadawca może wysłać dowolny szyfrogram z poprawnym HMAC: klucz HMAC wylicza z własnego klucza
+        # efemerycznego i klucza publicznego celu. HMAC chroni tylko przed zmianą w drodze.
         parts = iv + ciphertext
         return eph.public_key().public_bytes() + parts + RNS.Cryptography.HMAC.new(derived[:32], parts).digest()
 
