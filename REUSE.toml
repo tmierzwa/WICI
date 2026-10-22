@@ -93,6 +93,13 @@ precedence = "override"
 SPDX-FileCopyrightText = ["2016-2026 Mark Qvist", "2026 Tomek Mierzwa"]
 SPDX-License-Identifier = "LicenseRef-Reticulum"
 
+# MessagePack rdzenia odtwarza u-msgpack-python dołączony do Reticulum (MIT), więc ma też jego notę.
+[[annotations]]
+path = ["firmware/lib/reticulum_core/src/msgpack.h", "firmware/lib/reticulum_core/src/msgpack.cpp"]
+precedence = "override"
+SPDX-FileCopyrightText = ["2016-2026 Mark Qvist", "2013-2020 vsergeev / Ivan (Vanya) A. Sergeev", "2026 Tomek Mierzwa"]
+SPDX-License-Identifier = "LicenseRef-Reticulum AND MIT"
+
 # WICI patches to microReticulum keep the license of the files they change.
 [[annotations]]
 path = "firmware/patches/microReticulum/**"

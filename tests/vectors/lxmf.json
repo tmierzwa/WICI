@@ -1,0 +1,1579 @@
+{
+ "msgpack": [
+  {
+   "accepted": true,
+   "consumed": 1,
+   "core_deviation": null,
+   "data": "00",
+   "name": "int_0",
+   "repacked": "00"
+  },
+  {
+   "accepted": true,
+   "consumed": 1,
+   "core_deviation": null,
+   "data": "01",
+   "name": "int_1",
+   "repacked": "01"
+  },
+  {
+   "accepted": true,
+   "consumed": 1,
+   "core_deviation": null,
+   "data": "7f",
+   "name": "int_127",
+   "repacked": "7f"
+  },
+  {
+   "accepted": true,
+   "consumed": 2,
+   "core_deviation": null,
+   "data": "cc80",
+   "name": "int_128",
+   "repacked": "cc80"
+  },
+  {
+   "accepted": true,
+   "consumed": 2,
+   "core_deviation": null,
+   "data": "ccff",
+   "name": "int_255",
+   "repacked": "ccff"
+  },
+  {
+   "accepted": true,
+   "consumed": 3,
+   "core_deviation": null,
+   "data": "cd0100",
+   "name": "int_256",
+   "repacked": "cd0100"
+  },
+  {
+   "accepted": true,
+   "consumed": 3,
+   "core_deviation": null,
+   "data": "cdffff",
+   "name": "int_65535",
+   "repacked": "cdffff"
+  },
+  {
+   "accepted": true,
+   "consumed": 5,
+   "core_deviation": null,
+   "data": "ce00010000",
+   "name": "int_65536",
+   "repacked": "ce00010000"
+  },
+  {
+   "accepted": true,
+   "consumed": 5,
+   "core_deviation": null,
+   "data": "ceffffffff",
+   "name": "int_4294967295",
+   "repacked": "ceffffffff"
+  },
+  {
+   "accepted": true,
+   "consumed": 9,
+   "core_deviation": null,
+   "data": "cf0000000100000000",
+   "name": "int_4294967296",
+   "repacked": "cf0000000100000000"
+  },
+  {
+   "accepted": true,
+   "consumed": 9,
+   "core_deviation": null,
+   "data": "cfffffffffffffffff",
+   "name": "int_18446744073709551615",
+   "repacked": "cfffffffffffffffff"
+  },
+  {
+   "accepted": true,
+   "consumed": 1,
+   "core_deviation": null,
+   "data": "ff",
+   "name": "int_-1",
+   "repacked": "ff"
+  },
+  {
+   "accepted": true,
+   "consumed": 1,
+   "core_deviation": null,
+   "data": "e0",
+   "name": "int_-32",
+   "repacked": "e0"
+  },
+  {
+   "accepted": true,
+   "consumed": 2,
+   "core_deviation": null,
+   "data": "d0df",
+   "name": "int_-33",
+   "repacked": "d0df"
+  },
+  {
+   "accepted": true,
+   "consumed": 2,
+   "core_deviation": null,
+   "data": "d080",
+   "name": "int_-128",
+   "repacked": "d080"
+  },
+  {
+   "accepted": true,
+   "consumed": 3,
+   "core_deviation": null,
+   "data": "d1ff7f",
+   "name": "int_-129",
+   "repacked": "d1ff7f"
+  },
+  {
+   "accepted": true,
+   "consumed": 3,
+   "core_deviation": null,
+   "data": "d18000",
+   "name": "int_-32768",
+   "repacked": "d18000"
+  },
+  {
+   "accepted": true,
+   "consumed": 5,
+   "core_deviation": null,
+   "data": "d2ffff7fff",
+   "name": "int_-32769",
+   "repacked": "d2ffff7fff"
+  },
+  {
+   "accepted": true,
+   "consumed": 5,
+   "core_deviation": null,
+   "data": "d280000000",
+   "name": "int_-2147483648",
+   "repacked": "d280000000"
+  },
+  {
+   "accepted": true,
+   "consumed": 9,
+   "core_deviation": null,
+   "data": "d3ffffffff7fffffff",
+   "name": "int_-2147483649",
+   "repacked": "d3ffffffff7fffffff"
+  },
+  {
+   "accepted": true,
+   "consumed": 9,
+   "core_deviation": null,
+   "data": "d38000000000000000",
+   "name": "int_-9223372036854775808",
+   "repacked": "d38000000000000000"
+  },
+  {
+   "accepted": true,
+   "consumed": 1,
+   "core_deviation": null,
+   "data": "c0",
+   "name": "nil",
+   "repacked": "c0"
+  },
+  {
+   "accepted": true,
+   "consumed": 1,
+   "core_deviation": null,
+   "data": "c3",
+   "name": "true",
+   "repacked": "c3"
+  },
+  {
+   "accepted": true,
+   "consumed": 1,
+   "core_deviation": null,
+   "data": "c2",
+   "name": "false",
+   "repacked": "c2"
+  },
+  {
+   "accepted": true,
+   "consumed": 2,
+   "core_deviation": null,
+   "data": "cc05",
+   "name": "uint8_small",
+   "repacked": "05"
+  },
+  {
+   "accepted": true,
+   "consumed": 3,
+   "core_deviation": null,
+   "data": "cd0005",
+   "name": "uint16_small",
+   "repacked": "05"
+  },
+  {
+   "accepted": true,
+   "consumed": 9,
+   "core_deviation": null,
+   "data": "cf0000000000000005",
+   "name": "uint64_small",
+   "repacked": "05"
+  },
+  {
+   "accepted": true,
+   "consumed": 2,
+   "core_deviation": null,
+   "data": "d005",
+   "name": "int8_positive",
+   "repacked": "05"
+  },
+  {
+   "accepted": true,
+   "consumed": 2,
+   "core_deviation": null,
+   "data": "d0ff",
+   "name": "int8_minus_one",
+   "repacked": "ff"
+  },
+  {
+   "accepted": true,
+   "consumed": 9,
+   "core_deviation": null,
+   "data": "d30000000000000005",
+   "name": "int64_positive",
+   "repacked": "05"
+  },
+  {
+   "accepted": true,
+   "consumed": 3,
+   "core_deviation": null,
+   "data": "d1ffff",
+   "name": "int16_minus_one",
+   "repacked": "ff"
+  },
+  {
+   "accepted": true,
+   "consumed": 5,
+   "core_deviation": null,
+   "data": "d280000000",
+   "name": "int32_min",
+   "repacked": "d280000000"
+  },
+  {
+   "accepted": true,
+   "consumed": 9,
+   "core_deviation": null,
+   "data": "cb3ff8000000000000",
+   "name": "float64",
+   "repacked": "cb3ff8000000000000"
+  },
+  {
+   "accepted": true,
+   "consumed": 9,
+   "core_deviation": null,
+   "data": "cb8000000000000000",
+   "name": "float64_negative_zero",
+   "repacked": "cb8000000000000000"
+  },
+  {
+   "accepted": true,
+   "consumed": 9,
+   "core_deviation": null,
+   "data": "cb7ff0000000000000",
+   "name": "float64_inf",
+   "repacked": "cb7ff0000000000000"
+  },
+  {
+   "accepted": true,
+   "consumed": 9,
+   "core_deviation": null,
+   "data": "cb41daac4ee007e6b4",
+   "name": "float64_time",
+   "repacked": "cb41daac4ee007e6b4"
+  },
+  {
+   "accepted": true,
+   "consumed": 5,
+   "core_deviation": null,
+   "data": "ca3fc00000",
+   "name": "float32",
+   "repacked": "cb3ff8000000000000"
+  },
+  {
+   "accepted": true,
+   "consumed": 5,
+   "core_deviation": null,
+   "data": "ca3dcccccd",
+   "name": "float32_inexact",
+   "repacked": "cb3fb99999a0000000"
+  },
+  {
+   "accepted": true,
+   "consumed": 1,
+   "core_deviation": null,
+   "data": "a0",
+   "name": "str_empty",
+   "repacked": "a0"
+  },
+  {
+   "accepted": true,
+   "consumed": 5,
+   "core_deviation": null,
+   "data": "a457494349",
+   "name": "str_wici",
+   "repacked": "a457494349"
+  },
+  {
+   "accepted": true,
+   "consumed": 32,
+   "core_deviation": null,
+   "data": "bf61616161616161616161616161616161616161616161616161616161616161",
+   "name": "str_31",
+   "repacked": "bf61616161616161616161616161616161616161616161616161616161616161"
+  },
+  {
+   "accepted": true,
+   "consumed": 34,
+   "core_deviation": null,
+   "data": "d9206161616161616161616161616161616161616161616161616161616161616161",
+   "name": "str_32",
+   "repacked": "d9206161616161616161616161616161616161616161616161616161616161616161"
+  },
+  {
+   "accepted": true,
+   "consumed": 257,
+   "core_deviation": null,
+   "data": "d9ff626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262",
+   "name": "str_255",
+   "repacked": "d9ff626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262"
+  },
+  {
+   "accepted": true,
+   "consumed": 259,
+   "core_deviation": null,
+   "data": "da010063636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363",
+   "name": "str_256",
+   "repacked": "da010063636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363"
+  },
+  {
+   "accepted": true,
+   "consumed": 27,
+   "core_deviation": null,
+   "data": "ba7a61c5bcc3b3c582c4872067c499c59b6cc485206a61c5bac584",
+   "name": "str_polish",
+   "repacked": "ba7a61c5bcc3b3c582c4872067c499c59b6cc485206a61c5bac584"
+  },
+  {
+   "accepted": true,
+   "consumed": 13,
+   "core_deviation": null,
+   "data": "acd09fd0bed0b6d0b5d0b6d0b0",
+   "name": "str_ukrainian",
+   "repacked": "acd09fd0bed0b6d0b5d0b6d0b0"
+  },
+  {
+   "accepted": true,
+   "consumed": 5,
+   "core_deviation": null,
+   "data": "a4f09f94a5",
+   "name": "str_4_byte",
+   "repacked": "a4f09f94a5"
+  },
+  {
+   "accepted": true,
+   "consumed": 5,
+   "core_deviation": null,
+   "data": "a4f48fbfbf",
+   "name": "str_max_code_point",
+   "repacked": "a4f48fbfbf"
+  },
+  {
+   "accepted": true,
+   "consumed": 6,
+   "core_deviation": null,
+   "data": "d90457494349",
+   "name": "str8_short",
+   "repacked": "a457494349"
+  },
+  {
+   "accepted": true,
+   "consumed": 7,
+   "core_deviation": null,
+   "data": "da000457494349",
+   "name": "str16_short",
+   "repacked": "a457494349"
+  },
+  {
+   "accepted": true,
+   "consumed": 9,
+   "core_deviation": null,
+   "data": "db0000000457494349",
+   "name": "str32_short",
+   "repacked": "a457494349"
+  },
+  {
+   "accepted": false,
+   "data": "a2c080",
+   "error": "InvalidStringException",
+   "name": "str_overlong_nul"
+  },
+  {
+   "accepted": false,
+   "data": "a3e08080",
+   "error": "InvalidStringException",
+   "name": "str_overlong_3_byte"
+  },
+  {
+   "accepted": false,
+   "data": "a4f0808080",
+   "error": "InvalidStringException",
+   "name": "str_overlong_4_byte"
+  },
+  {
+   "accepted": false,
+   "data": "a3eda080",
+   "error": "InvalidStringException",
+   "name": "str_surrogate"
+  },
+  {
+   "accepted": false,
+   "data": "a4f4908080",
+   "error": "InvalidStringException",
+   "name": "str_above_max"
+  },
+  {
+   "accepted": false,
+   "data": "a4f5808080",
+   "error": "InvalidStringException",
+   "name": "str_f5"
+  },
+  {
+   "accepted": false,
+   "data": "a180",
+   "error": "InvalidStringException",
+   "name": "str_lone_continuation"
+  },
+  {
+   "accepted": false,
+   "data": "a2e282",
+   "error": "InvalidStringException",
+   "name": "str_truncated_sequence"
+  },
+  {
+   "accepted": false,
+   "data": "a3e228a1",
+   "error": "InvalidStringException",
+   "name": "str_bad_continuation"
+  },
+  {
+   "accepted": false,
+   "data": "a1ff",
+   "error": "InvalidStringException",
+   "name": "str_ff"
+  },
+  {
+   "accepted": true,
+   "consumed": 2,
+   "core_deviation": null,
+   "data": "c400",
+   "name": "bin_empty",
+   "repacked": "c400"
+  },
+  {
+   "accepted": true,
+   "consumed": 3,
+   "core_deviation": null,
+   "data": "c40100",
+   "name": "bin_1",
+   "repacked": "c40100"
+  },
+  {
+   "accepted": true,
+   "consumed": 257,
+   "core_deviation": null,
+   "data": "c4ff000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+   "name": "bin_255",
+   "repacked": "c4ff000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+  },
+  {
+   "accepted": true,
+   "consumed": 259,
+   "core_deviation": null,
+   "data": "c5010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+   "name": "bin_256",
+   "repacked": "c5010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+  },
+  {
+   "accepted": true,
+   "consumed": 5,
+   "core_deviation": null,
+   "data": "c500026162",
+   "name": "bin16_short",
+   "repacked": "c4026162"
+  },
+  {
+   "accepted": true,
+   "consumed": 7,
+   "core_deviation": null,
+   "data": "c6000000026162",
+   "name": "bin32_short",
+   "repacked": "c4026162"
+  },
+  {
+   "accepted": true,
+   "consumed": 4,
+   "core_deviation": null,
+   "data": "c402fffe",
+   "name": "bin_invalid_utf8",
+   "repacked": "c402fffe"
+  },
+  {
+   "accepted": true,
+   "consumed": 3,
+   "core_deviation": null,
+   "data": "d40500",
+   "name": "fixext_1",
+   "repacked": "d40500"
+  },
+  {
+   "accepted": true,
+   "consumed": 4,
+   "core_deviation": null,
+   "data": "d5050001",
+   "name": "fixext_2",
+   "repacked": "d5050001"
+  },
+  {
+   "accepted": true,
+   "consumed": 6,
+   "core_deviation": null,
+   "data": "d60500010203",
+   "name": "fixext_4",
+   "repacked": "d60500010203"
+  },
+  {
+   "accepted": true,
+   "consumed": 10,
+   "core_deviation": null,
+   "data": "d7050001020304050607",
+   "name": "fixext_8",
+   "repacked": "d7050001020304050607"
+  },
+  {
+   "accepted": true,
+   "consumed": 18,
+   "core_deviation": null,
+   "data": "d805000102030405060708090a0b0c0d0e0f",
+   "name": "fixext_16",
+   "repacked": "d805000102030405060708090a0b0c0d0e0f"
+  },
+  {
+   "accepted": true,
+   "consumed": 3,
+   "core_deviation": null,
+   "data": "c700fb",
+   "name": "ext8_empty",
+   "repacked": "c700fb"
+  },
+  {
+   "accepted": true,
+   "consumed": 6,
+   "core_deviation": null,
+   "data": "c7037f616263",
+   "name": "ext8_3",
+   "repacked": "c7037f616263"
+  },
+  {
+   "accepted": true,
+   "consumed": 304,
+   "core_deviation": null,
+   "data": "c8012c80000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+   "name": "ext16_300",
+   "repacked": "c8012c80000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+  },
+  {
+   "accepted": true,
+   "consumed": 7,
+   "core_deviation": null,
+   "data": "c7040561626364",
+   "name": "ext8_long_form_of_4",
+   "repacked": "d60561626364"
+  },
+  {
+   "accepted": true,
+   "consumed": 6,
+   "core_deviation": null,
+   "data": "d6ff6ab13b80",
+   "name": "timestamp32",
+   "repacked": null
+  },
+  {
+   "accepted": true,
+   "consumed": 10,
+   "core_deviation": null,
+   "data": "d7ff1d6f28006ab13b80",
+   "name": "timestamp64",
+   "repacked": null
+  },
+  {
+   "accepted": true,
+   "consumed": 10,
+   "core_deviation": null,
+   "data": "d7ffffffffffffffffff",
+   "name": "timestamp64_nanoseconds_above_second",
+   "repacked": null
+  },
+  {
+   "accepted": true,
+   "consumed": 15,
+   "core_deviation": null,
+   "data": "c70cff3b9ac9ffffffffffffffffff",
+   "name": "timestamp96",
+   "repacked": null
+  },
+  {
+   "accepted": true,
+   "consumed": 15,
+   "core_deviation": null,
+   "data": "c70cff00000000fffffff1886e0900",
+   "name": "timestamp96_min",
+   "repacked": null
+  },
+  {
+   "accepted": false,
+   "data": "c70cff000f423ffffffff1886e08ff",
+   "error": "OverflowError",
+   "name": "timestamp96_below_min"
+  },
+  {
+   "accepted": true,
+   "consumed": 15,
+   "core_deviation": null,
+   "data": "c70cfffffffffffffffff1886e08fc",
+   "name": "timestamp96_min_by_nanoseconds",
+   "repacked": null
+  },
+  {
+   "accepted": true,
+   "consumed": 15,
+   "core_deviation": null,
+   "data": "c70cff3b9ac9ff0000003afff4417f",
+   "name": "timestamp96_max",
+   "repacked": null
+  },
+  {
+   "accepted": false,
+   "data": "c70cff000000000000003afff44180",
+   "error": "OverflowError",
+   "name": "timestamp96_above_max"
+  },
+  {
+   "accepted": false,
+   "data": "c70cff000000008000000000000000",
+   "error": "OverflowError",
+   "name": "timestamp96_int64_min"
+  },
+  {
+   "accepted": false,
+   "data": "c70cff000000007fffffffffffffff",
+   "error": "OverflowError",
+   "name": "timestamp96_int64_max"
+  },
+  {
+   "accepted": false,
+   "data": "c703ff616263",
+   "error": "UnsupportedTimestampException",
+   "name": "timestamp_3_bytes"
+  },
+  {
+   "accepted": false,
+   "data": "d8ff00000000000000000000000000000000",
+   "error": "UnsupportedTimestampException",
+   "name": "timestamp_16_bytes"
+  },
+  {
+   "accepted": true,
+   "consumed": 1,
+   "core_deviation": null,
+   "data": "90",
+   "name": "array_empty",
+   "repacked": "90"
+  },
+  {
+   "accepted": true,
+   "consumed": 16,
+   "core_deviation": null,
+   "data": "9f000102030405060708090a0b0c0d0e",
+   "name": "array_15",
+   "repacked": "9f000102030405060708090a0b0c0d0e"
+  },
+  {
+   "accepted": true,
+   "consumed": 19,
+   "core_deviation": null,
+   "data": "dc0010000102030405060708090a0b0c0d0e0f",
+   "name": "array_16",
+   "repacked": "dc0010000102030405060708090a0b0c0d0e0f"
+  },
+  {
+   "accepted": true,
+   "consumed": 4,
+   "core_deviation": null,
+   "data": "dc000101",
+   "name": "array16_short",
+   "repacked": "9101"
+  },
+  {
+   "accepted": true,
+   "consumed": 6,
+   "core_deviation": null,
+   "data": "dd0000000101",
+   "name": "array32_short",
+   "repacked": "9101"
+  },
+  {
+   "accepted": true,
+   "consumed": 1,
+   "core_deviation": null,
+   "data": "80",
+   "name": "map_empty",
+   "repacked": "80"
+  },
+  {
+   "accepted": true,
+   "consumed": 3,
+   "core_deviation": null,
+   "data": "810102",
+   "name": "map_int",
+   "repacked": "810102"
+  },
+  {
+   "accepted": true,
+   "consumed": 31,
+   "core_deviation": null,
+   "data": "8f00000101020203030404050506060707080809090a0a0b0b0c0c0d0d0e0e",
+   "name": "map_15",
+   "repacked": "8f00000101020203030404050506060707080809090a0a0b0b0c0c0d0d0e0e"
+  },
+  {
+   "accepted": true,
+   "consumed": 35,
+   "core_deviation": null,
+   "data": "de001000000101020203030404050506060707080809090a0a0b0b0c0c0d0d0e0e0f0f",
+   "name": "map_16",
+   "repacked": "de001000000101020203030404050506060707080809090a0a0b0b0c0c0d0d0e0e0f0f"
+  },
+  {
+   "accepted": true,
+   "consumed": 5,
+   "core_deviation": null,
+   "data": "de00010102",
+   "name": "map16_short",
+   "repacked": "810102"
+  },
+  {
+   "accepted": true,
+   "consumed": 11,
+   "core_deviation": null,
+   "data": "82a16101a16292c40178c0",
+   "name": "map_str_keys",
+   "repacked": "82a16101a16292c40178c0"
+  },
+  {
+   "accepted": true,
+   "consumed": 8,
+   "core_deviation": null,
+   "data": "8101810281039104",
+   "name": "map_nested",
+   "repacked": "8101810281039104"
+  },
+  {
+   "accepted": true,
+   "consumed": 14,
+   "core_deviation": null,
+   "data": "85c001c302c4016b03a16b04ff05",
+   "name": "map_nil_bool_keys",
+   "repacked": "85c001c302c4016b03a16b04ff05"
+  },
+  {
+   "accepted": false,
+   "data": "8201010102",
+   "error": "DuplicateKeyException",
+   "name": "map_duplicate_int"
+  },
+  {
+   "accepted": false,
+   "data": "82c3010102",
+   "error": "DuplicateKeyException",
+   "name": "map_duplicate_true_one"
+  },
+  {
+   "accepted": false,
+   "data": "820001c202",
+   "error": "DuplicateKeyException",
+   "name": "map_duplicate_false_zero"
+  },
+  {
+   "accepted": false,
+   "data": "82c001c002",
+   "error": "DuplicateKeyException",
+   "name": "map_duplicate_nil"
+  },
+  {
+   "accepted": false,
+   "data": "82a16101a16102",
+   "error": "DuplicateKeyException",
+   "name": "map_duplicate_str"
+  },
+  {
+   "accepted": false,
+   "data": "82c4016101c4016102",
+   "error": "DuplicateKeyException",
+   "name": "map_duplicate_bin"
+  },
+  {
+   "accepted": false,
+   "data": "82ff01d0ff02",
+   "error": "DuplicateKeyException",
+   "name": "map_duplicate_non_canonical"
+  },
+  {
+   "accepted": false,
+   "data": "820501cf000000000000000502",
+   "error": "DuplicateKeyException",
+   "name": "map_duplicate_uint64"
+  },
+  {
+   "accepted": false,
+   "data": "83018102030292810102800104",
+   "error": "DuplicateKeyException",
+   "name": "map_duplicate_after_nested"
+  },
+  {
+   "accepted": false,
+   "data": "81018202000200",
+   "error": "DuplicateKeyException",
+   "name": "map_duplicate_in_value"
+  },
+  {
+   "accepted": true,
+   "consumed": 8,
+   "core_deviation": null,
+   "data": "82a16101c4016102",
+   "name": "map_str_and_bin_same_bytes",
+   "repacked": "82a16101c4016102"
+  },
+  {
+   "accepted": true,
+   "consumed": 5,
+   "core_deviation": null,
+   "data": "820101ff02",
+   "name": "map_one_and_minus_one",
+   "repacked": "820101ff02"
+  },
+  {
+   "accepted": true,
+   "consumed": 21,
+   "core_deviation": null,
+   "data": "82d3800000000000000001cfffffffffffffffff02",
+   "name": "map_int64_min_and_uint64_max",
+   "repacked": "82d3800000000000000001cfffffffffffffffff02"
+  },
+  {
+   "accepted": true,
+   "consumed": 11,
+   "core_deviation": "map_key",
+   "data": "81cb3ff800000000000001",
+   "name": "map_float_key",
+   "repacked": "81cb3ff800000000000001"
+  },
+  {
+   "accepted": false,
+   "data": "820101cb3ff000000000000002",
+   "error": "DuplicateKeyException",
+   "name": "map_float_key_equal_to_int"
+  },
+  {
+   "accepted": true,
+   "consumed": 4,
+   "core_deviation": "map_key",
+   "data": "81910102",
+   "name": "map_array_key",
+   "repacked": "81910102"
+  },
+  {
+   "accepted": true,
+   "consumed": 5,
+   "core_deviation": "map_key",
+   "data": "81d4050001",
+   "name": "map_ext_key",
+   "repacked": "81d4050001"
+  },
+  {
+   "accepted": true,
+   "consumed": 8,
+   "core_deviation": "map_key",
+   "data": "81d6ff0000000101",
+   "name": "map_timestamp_key",
+   "repacked": null
+  },
+  {
+   "accepted": false,
+   "data": "818001",
+   "error": "UnhashableKeyException",
+   "name": "map_map_key"
+  },
+  {
+   "accepted": false,
+   "data": "81918001",
+   "error": "UnhashableKeyException",
+   "name": "map_array_key_with_map"
+  },
+  {
+   "accepted": false,
+   "data": "c1",
+   "error": "ReservedCodeException",
+   "name": "reserved_c1"
+  },
+  {
+   "accepted": false,
+   "data": "9201c1",
+   "error": "ReservedCodeException",
+   "name": "reserved_in_array"
+  },
+  {
+   "accepted": false,
+   "data": "",
+   "error": "InsufficientDataException",
+   "name": "empty"
+  },
+  {
+   "accepted": false,
+   "data": "ddffffffff",
+   "error": "InsufficientDataException",
+   "name": "array32_huge"
+  },
+  {
+   "accepted": false,
+   "data": "dfffffffff",
+   "error": "InsufficientDataException",
+   "name": "map32_huge"
+  },
+  {
+   "accepted": false,
+   "data": "dbffffffff",
+   "error": "InsufficientDataException",
+   "name": "str32_huge"
+  },
+  {
+   "accepted": false,
+   "data": "c6ffffffff",
+   "error": "InsufficientDataException",
+   "name": "bin32_huge"
+  },
+  {
+   "accepted": false,
+   "data": "c9ffffffff01",
+   "error": "InsufficientDataException",
+   "name": "ext32_huge"
+  },
+  {
+   "accepted": false,
+   "data": "930102",
+   "error": "InsufficientDataException",
+   "name": "array_short_by_one"
+  },
+  {
+   "accepted": false,
+   "data": "8101",
+   "error": "InsufficientDataException",
+   "name": "map_missing_value"
+  },
+  {
+   "accepted": false,
+   "data": "cb0000",
+   "error": "InsufficientDataException",
+   "name": "float64_truncated"
+  },
+  {
+   "accepted": false,
+   "data": "cf00",
+   "error": "InsufficientDataException",
+   "name": "uint64_truncated"
+  },
+  {
+   "accepted": false,
+   "data": "c701",
+   "error": "InsufficientDataException",
+   "name": "ext_missing_type"
+  },
+  {
+   "accepted": false,
+   "data": "d50100",
+   "error": "InsufficientDataException",
+   "name": "fixext_missing_data"
+  },
+  {
+   "accepted": true,
+   "consumed": 1,
+   "core_deviation": null,
+   "data": "010203",
+   "name": "trailing_bytes",
+   "repacked": "01"
+  },
+  {
+   "accepted": true,
+   "consumed": 4,
+   "core_deviation": null,
+   "data": "9201a161c1ff",
+   "name": "trailing_garbage_after_array",
+   "repacked": "9201a161"
+  },
+  {
+   "accepted": true,
+   "consumed": 9,
+   "core_deviation": null,
+   "data": "9191919191919191c0",
+   "name": "depth_8",
+   "repacked": "9191919191919191c0"
+  },
+  {
+   "accepted": true,
+   "consumed": 10,
+   "core_deviation": null,
+   "data": "919191919191918100c0",
+   "name": "depth_8_maps",
+   "repacked": "919191919191918100c0"
+  },
+  {
+   "accepted": true,
+   "consumed": 10,
+   "core_deviation": "depth",
+   "data": "919191919191919191c0",
+   "name": "depth_9",
+   "repacked": "919191919191919191c0"
+  },
+  {
+   "accepted": true,
+   "consumed": 11,
+   "core_deviation": "depth",
+   "data": "91919191919191918100c0",
+   "name": "depth_9_map",
+   "repacked": "91919191919191918100c0"
+  },
+  {
+   "accepted": true,
+   "consumed": 201,
+   "core_deviation": "depth",
+   "data": "9191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191c0",
+   "name": "depth_200",
+   "repacked": "9191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191c0"
+  },
+  {
+   "accepted": true,
+   "consumed": 9,
+   "core_deviation": "depth",
+   "data": "919191919191919190",
+   "name": "depth_9_empty",
+   "repacked": "919191919191919190"
+  },
+  {
+   "accepted": false,
+   "data": "9191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191919191c0",
+   "error": "RecursionError",
+   "name": "depth_2000"
+  },
+  {
+   "accepted": false,
+   "data": "",
+   "error": "InsufficientDataException",
+   "name": "prefix_0"
+  },
+  {
+   "accepted": false,
+   "data": "94",
+   "error": "InsufficientDataException",
+   "name": "prefix_1"
+  },
+  {
+   "accepted": false,
+   "data": "94cb",
+   "error": "InsufficientDataException",
+   "name": "prefix_2"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41",
+   "error": "InsufficientDataException",
+   "name": "prefix_3"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41da",
+   "error": "InsufficientDataException",
+   "name": "prefix_4"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac",
+   "error": "InsufficientDataException",
+   "name": "prefix_5"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4e",
+   "error": "InsufficientDataException",
+   "name": "prefix_6"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0",
+   "error": "InsufficientDataException",
+   "name": "prefix_7"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee020",
+   "error": "InsufficientDataException",
+   "name": "prefix_8"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee02000",
+   "error": "InsufficientDataException",
+   "name": "prefix_9"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000",
+   "error": "InsufficientDataException",
+   "name": "prefix_10"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c4",
+   "error": "InsufficientDataException",
+   "name": "prefix_11"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403",
+   "error": "InsufficientDataException",
+   "name": "prefix_12"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c40353",
+   "error": "InsufficientDataException",
+   "name": "prefix_13"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c4035341",
+   "error": "InsufficientDataException",
+   "name": "prefix_14"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131",
+   "error": "InsufficientDataException",
+   "name": "prefix_15"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c4",
+   "error": "InsufficientDataException",
+   "name": "prefix_16"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a",
+   "error": "InsufficientDataException",
+   "name": "prefix_17"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a",
+   "error": "InsufficientDataException",
+   "name": "prefix_18"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61",
+   "error": "InsufficientDataException",
+   "name": "prefix_19"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5",
+   "error": "InsufficientDataException",
+   "name": "prefix_20"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bc",
+   "error": "InsufficientDataException",
+   "name": "prefix_21"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3",
+   "error": "InsufficientDataException",
+   "name": "prefix_22"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3",
+   "error": "InsufficientDataException",
+   "name": "prefix_23"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c5",
+   "error": "InsufficientDataException",
+   "name": "prefix_24"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582",
+   "error": "InsufficientDataException",
+   "name": "prefix_25"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c4",
+   "error": "InsufficientDataException",
+   "name": "prefix_26"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487",
+   "error": "InsufficientDataException",
+   "name": "prefix_27"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c48782",
+   "error": "InsufficientDataException",
+   "name": "prefix_28"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c4878201",
+   "error": "InsufficientDataException",
+   "name": "prefix_29"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193",
+   "error": "InsufficientDataException",
+   "name": "prefix_30"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c4",
+   "error": "InsufficientDataException",
+   "name": "prefix_31"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c428",
+   "error": "InsufficientDataException",
+   "name": "prefix_32"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c42878",
+   "error": "InsufficientDataException",
+   "name": "prefix_33"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c4287878",
+   "error": "InsufficientDataException",
+   "name": "prefix_34"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c428787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_35"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c42878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_36"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c4287878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_37"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c428787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_38"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c42878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_39"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c4287878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_40"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c428787878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_41"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c42878787878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_42"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c4287878787878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_43"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c428787878787878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_44"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c42878787878787878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_45"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c4287878787878787878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_46"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c428787878787878787878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_47"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c42878787878787878787878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_48"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c4287878787878787878787878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_49"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c428787878787878787878787878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_50"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c42878787878787878787878787878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_51"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c4287878787878787878787878787878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_52"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c428787878787878787878787878787878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_53"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c42878787878787878787878787878787878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_54"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c4287878787878787878787878787878787878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_55"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c428787878787878787878787878787878787878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_56"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c42878787878787878787878787878787878787878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_57"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c4287878787878787878787878787878787878787878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_58"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c428787878787878787878787878787878787878787878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_59"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c42878787878787878787878787878787878787878787878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_60"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c4287878787878787878787878787878787878787878787878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_61"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c428787878787878787878787878787878787878787878787878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_62"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c42878787878787878787878787878787878787878787878787878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_63"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c4287878787878787878787878787878787878787878787878787878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_64"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c428787878787878787878787878787878787878787878787878787878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_65"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c42878787878787878787878787878787878787878787878787878787878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_66"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c4287878787878787878787878787878787878787878787878787878787878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_67"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c428787878787878787878787878787878787878787878787878787878787878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_68"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c42878787878787878787878787878787878787878787878787878787878787878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_69"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c4287878787878787878787878787878787878787878787878787878787878787878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_70"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c428787878787878787878787878787878787878787878787878787878787878787878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_71"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c42878787878787878787878787878787878787878787878787878787878787878787878787878787878",
+   "error": "InsufficientDataException",
+   "name": "prefix_72"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c42878787878787878787878787878787878787878787878787878787878787878787878787878787878c0",
+   "error": "InsufficientDataException",
+   "name": "prefix_73"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c42878787878787878787878787878787878787878787878787878787878787878787878787878787878c0c3",
+   "error": "InsufficientDataException",
+   "name": "prefix_74"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c42878787878787878787878787878787878787878787878787878787878787878787878787878787878c0c3a1",
+   "error": "InsufficientDataException",
+   "name": "prefix_75"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c42878787878787878787878787878787878787878787878787878787878787878787878787878787878c0c3a16b",
+   "error": "InsufficientDataException",
+   "name": "prefix_76"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c42878787878787878787878787878787878787878787878787878787878787878787878787878787878c0c3a16bd5",
+   "error": "InsufficientDataException",
+   "name": "prefix_77"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c42878787878787878787878787878787878787878787878787878787878787878787878787878787878c0c3a16bd503",
+   "error": "InsufficientDataException",
+   "name": "prefix_78"
+  },
+  {
+   "accepted": false,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c42878787878787878787878787878787878787878787878787878787878787878787878787878787878c0c3a16bd50361",
+   "error": "InsufficientDataException",
+   "name": "prefix_79"
+  },
+  {
+   "accepted": true,
+   "consumed": 80,
+   "core_deviation": null,
+   "data": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c42878787878787878787878787878787878787878787878787878787878787878787878787878787878c0c3a16bd5036162",
+   "name": "prefix_80",
+   "repacked": "94cb41daac4ee0200000c403534131c40a7a61c5bcc3b3c582c487820193c42878787878787878787878787878787878787878787878787878787878787878787878787878787878c0c3a16bd5036162"
+  }
+ ],
+ "msgpack_max_depth": 8,
+ "source": {
+  "commit": "e40191b3d193b46b7f2d8a44424a594cd758839b",
+  "reticulum": "1.5.5",
+  "tool": "firmware/tools/lxmf_vectors.py",
+  "umsgpack": "2.7.1"
+ }
+}
