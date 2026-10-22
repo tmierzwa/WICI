@@ -27,6 +27,14 @@ RNS_PYTHON = os.environ.get("WICI_RNS_PYTHON")
 PROGRAM = FIRMWARE / ".pio" / "build" / "host" / "program"
 
 
+
+def results(run: subprocess.CompletedProcess) -> dict:
+    """Wynik skryptu (JSON na stdout); bez niego błąd z kodem wyjścia i końcem stderr skryptu."""
+    try:
+        return json.loads(run.stdout)
+    except json.JSONDecodeError:
+        raise RuntimeError(f"script exited with {run.returncode} without a JSON result; stderr:\n{run.stderr[-4000:]}") from None
+
 @unittest.skipUnless(PIO and RNS_PYTHON, "WICI_PIO and WICI_RNS_PYTHON not set")
 class StackInteropTests(unittest.TestCase):
     @classmethod
@@ -37,8 +45,7 @@ class StackInteropTests(unittest.TestCase):
         fill = os.environ.get("WICI_RNS_FILL")
         if fill:
             command += ["--fill", fill]
-        run = subprocess.run(command, capture_output=True, text=True, timeout=1800)
-        cls.results = json.loads(run.stdout)
+        cls.results = results(subprocess.run(command, capture_output=True, text=True, timeout=1800))
 
     def test_every_check_passed(self):
         failed = [name for name, ok in self.results["checks"].items() if not ok]
@@ -62,8 +69,7 @@ class OspNodeInteropTests(unittest.TestCase):
     def setUpClass(cls):
         subprocess.run([PIO, "run", "-e", "host", "-d", str(FIRMWARE)], check=True, capture_output=True)
         command = [RNS_PYTHON, str(FIRMWARE / "tools" / "rns_osp_node.py"), "--program", str(PROGRAM)]
-        run = subprocess.run(command, capture_output=True, text=True, timeout=1800)
-        cls.results = json.loads(run.stdout)
+        cls.results = results(subprocess.run(command, capture_output=True, text=True, timeout=1800))
 
     def test_every_check_passed(self):
         failed = [name for name, ok in self.results["checks"].items() if not ok]
