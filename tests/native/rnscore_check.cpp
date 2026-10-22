@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Program prób rdzenia Reticulum stacji na komputerze (tests/test_rnscore.py): czyta ze standardowego
 // wejścia wiersze "polecenie dane_hex" i dla każdego wypisuje jeden wiersz z wynikiem szesnastkowo
-// albo "error". Wartości oczekiwane (wektory z Reticulum w Pythonie) porównuje test w Pythonie.
+// albo "error". Polecenia z kilkoma argumentami biorą je sklejone w jednym ciągu, w kolejności z opisu
+// przy poleceniu (klucze i podpisy mają stałą długość, reszta to wiadomość). Wartości oczekiwane (wektory z Reticulum w Pythonie) porównuje test w Pythonie.
 #include <stdio.h>
 
 #include <iostream>
@@ -10,6 +11,7 @@
 #include <vector>
 
 #include "hash.h"
+#include "identity.h"
 
 namespace {
 
@@ -48,6 +50,33 @@ int main() {
             uint8_t out[rnscore::TRUNCATED_HASH_SIZE];
             rnscore::truncatedHash(data.data(), data.size(), out);
             printHex(out, sizeof(out));
+        } else if (command == "public_key" && data.size() == rnscore::KEY_SIZE) {
+            // klucz prywatny 64 B
+            uint8_t out[rnscore::KEY_SIZE];
+            rnscore::publicKey(data.data(), out);
+            printHex(out, sizeof(out));
+        } else if (command == "identity_hash" && data.size() == rnscore::KEY_SIZE) {
+            // klucz publiczny 64 B
+            uint8_t out[rnscore::TRUNCATED_HASH_SIZE];
+            rnscore::identityHash(data.data(), out);
+            printHex(out, sizeof(out));
+        } else if (command == "sign" && data.size() >= rnscore::KEY_SIZE) {
+            // klucz prywatny 64 B, wiadomość
+            uint8_t pub[rnscore::KEY_SIZE], out[rnscore::SIGNATURE_SIZE];
+            rnscore::publicKey(data.data(), pub);
+            rnscore::sign(data.data(), pub, data.data() + rnscore::KEY_SIZE, data.size() - rnscore::KEY_SIZE, out);
+            printHex(out, sizeof(out));
+        } else if (command == "validate" && data.size() >= rnscore::KEY_SIZE + 2) {
+            // klucz publiczny 64 B, długość podpisu (2 B, big-endian), podpis, wiadomość
+            const uint8_t* p = data.data() + rnscore::KEY_SIZE;
+            const size_t signatureLength = (size_t(p[0]) << 8) | p[1];
+            if (data.size() < rnscore::KEY_SIZE + 2 + signatureLength) {
+                printf("error\n");
+            } else {
+                const size_t offset = rnscore::KEY_SIZE + 2 + signatureLength;
+                printf("%d\n", rnscore::validate(data.data(), p + 2, signatureLength, data.data() + offset,
+                                                 data.size() - offset) ? 1 : 0);
+            }
         } else {
             printf("error\n");
         }
