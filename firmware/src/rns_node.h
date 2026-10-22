@@ -169,6 +169,13 @@ void debugTableMax(uint16_t n);
 // Pomiar pamięci na komputerze: n losowych skrótów na liście skrótów pakietów (pełną tablicę
 // tras wypełniają ogłoszenia z Reticulum w Pythonie, tools/rns_interop.py --fill).
 uint32_t debugFillHashes(uint32_t n);
+// Zegar symulowany prób na komputerze (tests/native/rns_stress.cpp): czas w ms zamiast steady_clock.
+// Stos (port i microStore) czyta na komputerze gettimeofday, który próba podmienia osobno.
+void debugClock(uint64_t (*nowMs)());
+// Kod IFAC interfejsu P1 dla prób (ta sama funkcja co przy nadawaniu i odbiorze): wynik to długość
+// datagramu (raw + 16 B) albo pakietu bez kodu; 0 = interfejs bez IFAC, zła długość albo zły kod.
+size_t debugIfacWrap(const uint8_t* raw, size_t length, uint8_t* wire);
+size_t debugIfacUnwrap(const uint8_t* wire, size_t length, uint8_t* raw);
 #endif
 
 }  // namespace rnsnode
