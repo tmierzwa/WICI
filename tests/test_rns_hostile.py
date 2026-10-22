@@ -22,7 +22,10 @@ of sanitizer runtimes).
 
 The same scenarios run on the station Reticulum core (CoreHostileStackTests: rns_node_core.cpp and
 firmware/lib/reticulum_core instead of rns_node.cpp; the port only generates the traffic), except power
-loss in a FRAM write: in stage R1 the core writes nothing to FRAM after the identity key.
+loss in a FRAM write: in stage R1 the core writes nothing to FRAM after the identity key. The core also
+gets a flood of hostile datagrams (--defect flood): at most one asymmetric operation per loop() pass,
+replayed valid announces take no verification tokens, and a station packet sent during the flood is
+delivered.
 
   python3 -m unittest tests.test_rns_hostile -v
 """
@@ -310,6 +313,23 @@ class CoreHostileStackTests(HostileStackTests):
 
     def test_power_loss_in_any_fram_write(self):
         self.skipTest("R1: the core writes nothing to FRAM after the identity key (tables in FRAM: R2)")
+
+    def test_flood_one_asymmetric_operation_per_loop(self):
+        # Zalew wrogimi datagramami szybszy niż przetwarzanie: najwyżej jedna operacja asymetryczna na obieg
+        # loop() (sprawdza program prób), nadmiar odpada w kolejce odbioru i na limicie weryfikacji ogłoszeń,
+        # a po zalewie ogłoszenie odbiorcy z karty i pakiet do stacji przechodzą. W trakcie zalewu pakiet
+        # stacji do odbiorcy dostaje potwierdzenie. Powtórzone nagranie poprawnego ogłoszenia i kolizje
+        # nie zabierają żetonów weryfikacji. Ogłoszenie odbiorcy w trakcie zalewu z fałszywymi podpisami
+        # (węzeł z kluczem sieci) może nie przejść: wynik jest w "flood" (path_round -1 to głodzenie).
+        outcome = self.assertClean(self.station().run("--defect", "flood", "--events", 0))
+        flood = outcome["flood"]
+        self.assertGreaterEqual(flood["delivered_round"], 0, flood)
+        self.assertEqual(flood["replay_limited"], 0, flood)
+        self.assertGreater(flood["replay_accepted"], 0, flood)
+        self.assertGreater(outcome["iface"]["rx_queue_full"], 0, outcome)
+        self.assertGreater(outcome["iface"]["ann_limited"], 0, outcome)
+        self.assertGreater(outcome["iface"]["ifac_invalid"], 0, outcome)
+        self.assertGreater(outcome["iface"]["ifac_missing"], 0, outcome)
 
 
 if __name__ == "__main__":

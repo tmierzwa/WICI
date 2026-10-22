@@ -37,7 +37,9 @@ void deriveKey(const uint8_t shared[HALF], const uint8_t publicKey[KEY_SIZE], ui
 }  // namespace
 
 bool encrypt(const uint8_t publicKey[KEY_SIZE], const uint8_t* ratchet, const uint8_t ephemeralKey[HALF],
-             const uint8_t iv[TOKEN_IV_SIZE], const uint8_t* plaintext, size_t length, uint8_t* out) {
+             const uint8_t iv[TOKEN_IV_SIZE], const uint8_t* plaintext, size_t length, uint8_t* out, size_t capacity) {
+    // Najpierw długość względem capacity: tokenSize(length) nie przewinie się dla length ≤ capacity.
+    if (length >= capacity || tokenSize(length) > capacity) return false;
     uint8_t shared[HALF];
     if (!exchange(ephemeralKey, ratchet ? ratchet : publicKey, shared)) {
         clean(shared, sizeof(shared));

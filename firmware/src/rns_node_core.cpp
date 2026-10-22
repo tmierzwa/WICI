@@ -10,6 +10,12 @@
 //   (własne ratchety stacji są poza rdzeniem), ogłoszenia innych celów z polem ratchetu w tablicy
 //   znanych celów w RAM (256 wpisów, odbiorca z karty chroniony), pakiety do stacji z dowodem po
 //   decyzji warstwy aplikacji, pakiet okazjonalny z szyfrowaniem do ratchetu i potwierdzeniem;
+// - praca na pakiet ograniczona dla płytek (audyt rdzenia, U2): received() tylko odkłada datagram do
+//   kolejki odbioru, a jeden obieg rnsnode::loop() wykonuje najwyżej jeden krok odbioru: sprawdzenie
+//   IFAC (podpis) albo przetworzenie pakietu w transporcie; weryfikacja podpisów ogłoszeń z limitem na
+//   sekundę. Wyjątek: pakiet do stacji z dowodem to w jednym obiegu ECDH, podpis dowodu i IFAC dowodu.
+//   Poza loop() kryptografię robią wywołania warstwy aplikacji: announce() (podpis ogłoszenia i IFAC)
+//   i send() (ECDH i IFAC);
 // - czas: licznik pracy (clockMs z begin() i zegar ms stosu); losowość z HMAC-DRBG stacji z ziarnem
 //   z begin().
 // Jeszcze nie ma: zapytań o trasę i przekazywania (R2; sendReady() nie pyta o trasę), tablic w FRAM
@@ -57,6 +63,7 @@ uint32_t nowMs() {
 }
 
 bool started = false;
+bool halted = false;   // po halt() begin() odmawia do restartu (audyt rdzenia, U10)
 bool identityNew = false;
 bool identityLost = false;
 bool nodeMode = false;
@@ -93,6 +100,47 @@ bool exceptionOut = false;
 uint32_t malformed = 0;   // pakiety z poprawnym IFAC, które odrzuca rnscore::unpack
 rnscore::Transport transport;
 uint32_t nextHandle = 0;
+
+// Kolejka odbioru: datagramy z eteru czekają na loop(). Na nRF52840 sprawdzenie IFAC (podpis Ed25519)
+// trwa około 0,26 s, a weryfikacja podpisu ogłoszenia około 0,4 s (szacunek z audytu rdzenia), więc
+// jeden obieg pętli stacji robi najwyżej jedną z tych operacji. Pełna kolejka: nowy datagram odpada.
+constexpr size_t RX_SLOTS = 4;   // do pomiaru na płytce
+struct RxSlot {
+    uint16_t length;
+    bool checked;                         // IFAC sprawdzony, w bytes pakiet bez IFAC
+    uint8_t bytes[p1iface::MAX_WIRE];
+};
+RxSlot rx[RX_SLOTS];
+size_t rxHead = 0, rxCount = 0;
+uint32_t rxDropped = 0;   // datagramy odrzucone przy pełnej kolejce odbioru
+
+// Limit weryfikacji podpisów ogłoszeń: wiadro żetonów, żeton co ANNOUNCE_VERIFY_PERIOD_MS, najwyżej
+// ANNOUNCE_VERIFY_BURST naraz. Ogłoszenie bez żetonu odpada przed kryptografią. Python ogranicza napływ
+// ogłoszeń inaczej (RNS/Interfaces/Interface.py: should_ingress_limit i hold_announce: tylko nieznane
+// cele, po weryfikacji podpisu, ogłoszenia wstrzymane i wypuszczane później); tabela różnic w
+// firmware/reticulum-core.md.
+constexpr uint32_t ANNOUNCE_VERIFY_PERIOD_MS = 1000;   // do pomiaru na płytce
+constexpr uint32_t ANNOUNCE_VERIFY_BURST = 3;          // do pomiaru na płytce
+uint32_t verifyTokens = 0;
+uint64_t verifyRefillMs = 0;
+uint32_t announcesLimited = 0;
+
+bool takeVerifyToken(uint64_t now) {
+    const uint64_t periods = (now - verifyRefillMs) / ANNOUNCE_VERIFY_PERIOD_MS;
+    if (periods) {
+        verifyRefillMs += periods * ANNOUNCE_VERIFY_PERIOD_MS;
+        verifyTokens = periods >= ANNOUNCE_VERIFY_BURST - verifyTokens ? ANNOUNCE_VERIFY_BURST
+                                                                        : verifyTokens + static_cast<uint32_t>(periods);
+    }
+    if (!verifyTokens) return false;
+    --verifyTokens;
+    return true;
+}
+
+void rxDrop() {
+    rxHead = (rxHead + 1) % RX_SLOTS;
+    --rxCount;
+}
 
 void log(const char* text) {
     if (hooks.log) hooks.log(text, hooks.context);
@@ -132,6 +180,15 @@ bool packetHook(const uint8_t* data, size_t length, void*) {
 
 void receiptHook(uint32_t handle, bool delivered, void*) {
     if (hooks.receipt) hooks.receipt(handle, delivered, hooks.context);
+}
+
+// Żeton z wiadra tuż przed weryfikacją podpisu ogłoszenia, po tanich odrzuceniach w transporcie:
+// powtórzone nagranie poprawnego ogłoszenia (IFAC przechodzi bez klucza sieci, bo kod jest
+// deterministyczny) i ogłoszenie z kolizją klucza odpadają bez żetonu i nie wyczerpują wiadra.
+bool mayVerifyHook(void*) {
+    if (takeVerifyToken(uptimeMs())) return true;
+    ++announcesLimited;
+    return false;
 }
 
 bool pinnedHook(const uint8_t destination[HASH], void*) {
@@ -174,7 +231,7 @@ void configureIfac(const uint8_t key[16]) {
 
 bool begin(journal::Storage& storage, Radio& r, const uint8_t ifacKey[16], uint64_t clockAtStartMs, bool identitySaved,
            const uint8_t seed[32], const Hooks& h) {
-    if (started || identityLost) return started;
+    if (started || identityLost || halted) return started;
     hooks = h;
     static_assert(framfs::KEY_BYTES == rnscore::KEY_SIZE, "rekord klucza w FRAM = klucz prywatny Reticulum");
     if (!framfs::loadKey(storage, privateKey)) {
@@ -216,6 +273,8 @@ bool begin(journal::Storage& storage, Radio& r, const uint8_t ifacKey[16], uint6
     generator.seed(seed, 32, reinterpret_cast<const uint8_t*>(runtimeNonce), sizeof(runtimeNonce) - 1);
     clockMs = clockAtStartMs;
     clockLastMs = nowMs();
+    verifyTokens = ANNOUNCE_VERIFY_BURST;
+    verifyRefillMs = clockMs;
     radio = &r;
     configureIfac(ifacKey);
     queue.setReceiver(pinned[receiverActive]);
@@ -225,6 +284,7 @@ bool begin(journal::Storage& storage, Radio& r, const uint8_t ifacKey[16], uint6
     th.packet = packetHook;
     th.receipt = receiptHook;
     th.pinned = pinnedHook;
+    th.mayVerify = mayVerifyHook;
     transport.begin(privateKey, publicKeyBytes, identityBytes, nodeMode ? nullptr : addressBytes, nameHashBytes, th);
     started = true;
     rememberReceivers();
@@ -271,8 +331,41 @@ size_t usbJson(char* out, size_t size) {
     return n > 0 ? static_cast<size_t>(n) : 0;
 }
 
+namespace {
+
+// Sprawdzenie IFAC datagramu w kolejce; w miejscu zostaje pakiet bez IFAC. Osobna funkcja bez wstawiania:
+// bufor raw nie leży w ramce stosu ścieżki pakietu w transporcie (najgłębszej w węźle).
+__attribute__((noinline)) void ifacStep(RxSlot& slot) {
+    p1iface::Counters& c = queue.counters();
+    uint8_t raw[p1iface::MAX_WIRE];
+    const size_t rawLength = rnscore::ifacCheck(ifac, slot.bytes, slot.length, raw, sizeof(raw));
+    if (!rawLength) { ++c.ifacInvalid; rxDrop(); return; }
+    ++c.received;
+    memcpy(slot.bytes, raw, rawLength);
+    slot.length = static_cast<uint16_t>(rawLength);
+    slot.checked = true;
+}
+
+// Jeden krok odbioru na obieg loop(): sprawdzenie IFAC najstarszego datagramu albo, w następnym obiegu,
+// pakiet w transporcie (RNS/Transport.py: inbound po odjęciu IFAC w Interface).
+void receiveStep() {
+    if (!rxCount) return;
+    RxSlot& slot = rx[rxHead];
+    if (!ifacOnline) { ++queue.counters().offline; rxDrop(); return; }
+    if (!slot.checked) {
+        ifacStep(slot);
+        return;
+    }
+    if (!transport.inbound(slot.bytes, slot.length, uptimeMs())) ++malformed;
+    exceptionOut = false;
+    rxDrop();
+}
+
+}  // namespace
+
 void loop(uint32_t) {
     if (!started || !radio) return;
+    receiveStep();
     transport.poll(uptimeMs());   // potwierdzenia po limicie; licznik pracy nie gubi zawinięcia zegara ms
     const uint32_t now = nowMs();
     if (silence == Silence::OFF) queue.poll(now);   // ogłoszenia oczekujące nie wychodzą w ciszy
@@ -284,18 +377,20 @@ void loop(uint32_t) {
     if (!radio->transmit(data, length)) queue.finish(false);
 }
 
+// Bez kryptografii: sprawdzenia długości i flagi IFAC, potem datagram czeka w kolejce odbioru na loop().
+// Wołane z tego samego zadania co loop() (kolejka odbioru nie ma blokad).
 void received(const uint8_t* wire, size_t length) {
     if (!started) return;
     p1iface::Counters& c = queue.counters();
     if (!ifacOnline) { ++c.offline; return; }
     if (!p1iface::ifacPresent(wire, length, p1iface::IFAC_SIZE)) { ++c.ifacMissing; return; }
     if (length > p1iface::MAX_WIRE) { ++c.tooLarge; return; }
-    uint8_t raw[p1iface::MAX_WIRE];
-    const size_t rawLength = rnscore::ifacCheck(ifac, wire, length, raw, sizeof(raw));
-    if (!rawLength) { ++c.ifacInvalid; return; }
-    ++c.received;
-    if (!transport.inbound(raw, rawLength, uptimeMs())) ++malformed;
-    exceptionOut = false;
+    if (rxCount == RX_SLOTS) { ++rxDropped; return; }
+    RxSlot& slot = rx[(rxHead + rxCount) % RX_SLOTS];
+    memcpy(slot.bytes, wire, length);
+    slot.length = static_cast<uint16_t>(length);
+    slot.checked = false;
+    ++rxCount;
 }
 
 void txDone(bool ok) { queue.finish(ok); }
@@ -389,7 +484,8 @@ Status status() {
 size_t interfaceJson(char* out, size_t size) {
     if (!radio) return snprintf(out, size, "\"p1_iface\":false");
     // Pola jak w porcie (rns_node.cpp) i liczniki rdzenia: pakiety odrzucone przez rnscore::unpack,
-    // duplikaty, pakiety poza podzbiorem R1 albo nie do stacji, odrzucone przy sprawdzaniu.
+    // duplikaty, pakiety poza podzbiorem R1 albo nie do stacji, odrzucone przy sprawdzaniu, datagramy
+    // odrzucone przy pełnej kolejce odbioru, ogłoszenia odrzucone przez limit weryfikacji.
     const p1iface::Counters& c = queue.counters();
     const rnscore::TransportCounters& t = transport.counters();
     const uint32_t now = nowMs();   // okna czasu kanału przesuwane przed printf (kolejność wywołań)
@@ -399,24 +495,29 @@ size_t interfaceJson(char* out, size_t size) {
                            "\"ann_drop\":%lu,\"ann_expired\":%lu,\"tx_sent\":%lu,\"tx_failed\":%lu,\"rx_ok\":%lu,"
                            "\"ifac_missing\":%lu,\"ifac_invalid\":%lu,\"offline\":%lu,\"silenced\":%lu,\"k2_slot\":%lu,\"k2_pool\":%lu,"
                            "\"k2_dest\":%lu,\"pr_limited\":%lu,\"pool_ms\":%lu,\"pr_ms\":%lu,\"rx_malformed\":%lu,\"rx_duplicate\":%lu,"
-                           "\"rx_ignored\":%lu,\"rx_invalid\":%lu",
+                           "\"rx_ignored\":%lu,\"rx_invalid\":%lu,\"rx_queue_full\":%lu,\"ann_limited\":%lu",
                            (unsigned)queue.queued(), (unsigned)queue.held(), (unsigned long)c.queued, (unsigned long)c.full,
                            (unsigned long)c.tooLarge, (unsigned long)c.announcesHeld, (unsigned long)c.announcesDropped,
                            (unsigned long)c.announcesExpired, (unsigned long)c.sent, (unsigned long)c.sendFailed,
                            (unsigned long)c.received, (unsigned long)c.ifacMissing, (unsigned long)c.ifacInvalid,
                            (unsigned long)c.offline, (unsigned long)c.silenced, (unsigned long)c.k2Slot, (unsigned long)c.k2Pool,
                            (unsigned long)c.k2Dest, (unsigned long)c.pathRequestLimited, poolMs, prMs, (unsigned long)malformed,
-                           (unsigned long)t.duplicate, (unsigned long)t.ignored, (unsigned long)t.invalid);
+                           (unsigned long)t.duplicate, (unsigned long)t.ignored, (unsigned long)t.invalid,
+                           (unsigned long)rxDropped, (unsigned long)announcesLimited);
     return n < 0 ? 0 : static_cast<size_t>(n);
 }
 
 void halt() {
     // Jak w porcie: stos staje, interfejs przestaje nadawać, adres i skrót nie wskazują kasowanej
-    // tożsamości; klucze (tożsamość, IFAC) i stan generatora znikają też z RAM.
+    // tożsamości; klucze (tożsamość, IFAC) i stan generatora znikają też z RAM. Ponowny begin() dopiero
+    // po restarcie: nie wczyta klucza z FRAM, nawet jeśli magazyn go jeszcze nie skasował.
     started = false;
+    halted = true;
     identityNew = false;
     ifacOnline = false;
     queue.drop();
+    memset(rx, 0, sizeof(rx));
+    rxCount = 0;
     transport.clear();
     clean(privateKey, sizeof(privateKey));
     clean(&ifac, sizeof(ifac));

@@ -200,13 +200,15 @@ int main() {
                 printf("%d\n", rnscore::validate(data.data(), p + 2, signatureLength, data.data() + offset,
                                                  data.size() - offset) ? 1 : 0);
             }
-        } else if (command == "encrypt" && data.size() >= rnscore::KEY_SIZE + 32 + rnscore::TOKEN_IV_SIZE) {
-            // klucz publiczny 64 B, klucz efemeryczny prywatny 32 B, IV 16 B, tekst jawny; "none" przy odmowie
+        } else if ((command == "encrypt" || command == "encrypt_short") &&
+                   data.size() >= rnscore::KEY_SIZE + 32 + rnscore::TOKEN_IV_SIZE) {
+            // klucz publiczny 64 B, klucz efemeryczny prywatny 32 B, IV 16 B, tekst jawny; "none" przy odmowie;
+            // encrypt_short: bufor wyjścia o 1 B za mały
             const uint8_t* plaintext = data.data() + rnscore::KEY_SIZE + 32 + rnscore::TOKEN_IV_SIZE;
             const size_t length = data.size() - (plaintext - data.data());
-            std::vector<uint8_t> out(rnscore::tokenSize(length));
+            std::vector<uint8_t> out(rnscore::tokenSize(length) - (command == "encrypt_short" ? 1 : 0));
             if (rnscore::encrypt(data.data(), nullptr, data.data() + rnscore::KEY_SIZE, data.data() + rnscore::KEY_SIZE + 32,
-                                 plaintext, length, out.data())) {
+                                 plaintext, length, out.data(), out.size())) {
                 printHex(out.data(), out.size());
             } else {
                 printf("none\n");
@@ -219,7 +221,8 @@ int main() {
             const size_t length = data.size() - (plaintext - p);
             std::vector<uint8_t> out(rnscore::tokenSize(length));
             if (rnscore::encrypt(p, p + rnscore::KEY_SIZE, p + rnscore::KEY_SIZE + rnscore::RATCHET_SIZE,
-                                 p + rnscore::KEY_SIZE + rnscore::RATCHET_SIZE + 32, plaintext, length, out.data())) {
+                                 p + rnscore::KEY_SIZE + rnscore::RATCHET_SIZE + 32, plaintext, length, out.data(),
+                                 out.size())) {
                 printHex(out.data(), out.size());
             } else {
                 printf("none\n");
