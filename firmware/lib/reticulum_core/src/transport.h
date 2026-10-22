@@ -136,6 +136,7 @@ public:
     uint32_t tableWrites() const { return table_.writes(); }
     size_t receiptsPending() const;
     size_t announceTable() const;
+    size_t heldAnnounces() const;   // retransmisje wstrzymane na czas odpowiedzi (held_announces)
     size_t reverseEntries(uint64_t nowMs) const;
     size_t hashes() const { return hashlist_.size(); }
     const TransportCounters& counters() const { return counters_; }

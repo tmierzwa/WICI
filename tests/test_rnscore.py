@@ -871,8 +871,9 @@ class CoreTests(unittest.TestCase):
     def test_retransmissions_one_per_poll(self):
         # Dwie odpowiedzi z pamięci podręcznej zaległe naraz: poll() nadaje najwyżej jedną (najwcześniejszą),
         # a poll() obiegu z kryptografią odbioru (bez nadawania) żadnej; interfejs zajęty też wstrzymuje.
+        # Ogłoszenia jako odpowiedzi na zapytanie (kontekst PATH_RESPONSE): bez własnej retransmisji.
         keys = [bytes([51]) * 64, bytes([52]) * 64]
-        announces = [self.announce_of(k) for k in keys]
+        announces = [x[:18] + bytes([0x0B]) + x[19:] for x in (self.announce_of(k) for k in keys)]
         lines = self.ask([("t_begin", self.STATION), ("t_in", announces[0]), ("t_in", announces[1]),
                           ("t_in", self.path_request(announces[1][2:18], b"P" * 16)),
                           ("t_in", self.path_request(announces[0][2:18], b"Q" * 16)),
@@ -883,6 +884,16 @@ class CoreTests(unittest.TestCase):
         first, second = self.fields_of(self.parsed(lines[9])[3]), self.fields_of(self.parsed(lines[10])[3])
         self.assertEqual((first[7], second[7]), (announces[1][2:18].hex(), announces[0][2:18].hex()))
         self.assertEqual(self.parsed(lines[11])[3], "-")
+
+    def test_held_announce_released_with_response(self):
+        # Wstrzymana retransmisja żyje tylko z wpisem odpowiedzi swojego celu: cel wyparty z tablicy (limit 1)
+        # przed nadaniem odpowiedzi, więc odpowiedź i wstrzymana retransmisja znikają, miejsce wraca.
+        a, b = self.announce_of(bytes([53]) * 64), self.announce_of(bytes([54]) * 64)
+        lines = self.ask([("t_begin", self.STATION), ("t_config", bytes([1, 1])), ("t_in", self.hops(a, 1)),
+                          ("t_in", self.path_request(a[2:18], b"H" * 16)), ("t_held", b""),
+                          ("t_clock", (1001).to_bytes(8, "big")), ("t_in", self.hops(b, 1))] +
+                         [("t_clock", (1100 + 200 * i).to_bytes(8, "big")) for i in range(10)] + [("t_held", b"")])
+        self.assertEqual((lines[4], lines[-1]), ("1", "0"))
 
     def test_path_request_filter(self):
         # Bez znacznika: odrzucone; PLAIN po więcej niż 1 skoku i ogłoszenie PLAIN: odpadają (packet_filter);

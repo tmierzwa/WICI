@@ -331,6 +331,22 @@ class CoreHostileStackTests(HostileStackTests):
         self.assertGreater(outcome["iface"]["ifac_invalid"], 0, outcome)
         self.assertGreater(outcome["iface"]["ifac_missing"], 0, outcome)
 
+    def test_forward_flood_one_asymmetric_operation_per_loop(self):
+        # Pakiety ze stacją jako następnym skokiem, dwa na obieg loop(): każde przekazanie to podpis IFAC, więc
+        # najwyżej jedna operacja asymetryczna na obieg (sprawdza program prób); nadmiar odpada w kolejce
+        # odbioru albo P1, przekazania wychodzą.
+        outcome = self.assertClean(self.station().run("--defect", "forward-flood", "--events", 0))
+        self.assertGreater(outcome["flood"]["routes"], 10, outcome)
+        self.assertGreater(outcome["iface"]["fwd"], 0, outcome)
+        self.assertGreater(outcome["iface"]["rx_queue_full"], 0, outcome)
+
+    def test_rebroadcast_load_one_asymmetric_operation_per_loop(self):
+        # Nowe ogłoszenia węzłów (retransmisje) i zapytania o znane cele (odpowiedzi z pamięci podręcznej) szybciej,
+        # niż stacja je przetwarza: retransmisje po jednej i tylko w obiegach bez kryptografii odbioru.
+        outcome = self.assertClean(self.station().run("--defect", "rebroadcast-load", "--events", 0))
+        self.assertGreater(outcome["iface"]["ann_rebroadcast"], 0, outcome)
+        self.assertGreater(outcome["iface"]["pr_responses"], 0, outcome)
+
     def test_damaged_receiver_slot(self):
         # Uszkodzone gniazdo odbiorcy z karty w FRAM (błędne CRC): zgłoszenie do odbiorcy wychodzi (wpis
         # z kluczy karty od nowa), gniazdo w liczniku table_corrupt.

@@ -11,7 +11,7 @@
 // Wynik: wiersz JSON na stdout; kod 3 = złamany niezmiennik, 75 = zanik zasilania w zapisie.
 //
 // rns_stress <fram> [--seed N] [--events N] [--mutate PERCENT] [--start S] [--gap S]
-//            [--long-jumps] [--cut-after-writes N] [--defect token48|short-announce|held-announce|flood|damaged-receiver]
+//            [--long-jumps] [--cut-after-writes N] [--defect token48|short-announce|held-announce|flood|damaged-receiver|forward-flood|rebroadcast-load]
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/time.h>
@@ -621,6 +621,47 @@ void flood() {
 
 const char* floodJson() { return floodResult.c_str(); }
 
+// Ruch tranzytowy szybszy niż przetwarzanie (stacja na rdzeniu): najpierw trasy o skok dalej do węzłów
+// generatora, potem dwa datagramy na obieg loop(): pakiety ze stacją jako następnym skokiem (forward,
+// każde przekazanie to podpis IFAC) albo (load) nowe ogłoszenia węzłów (każde przyjęte planuje dwie
+// retransmisje) i zapytania o znane cele (odpowiedzi z pamięci podręcznej). W każdym obiegu najwyżej
+// jedna operacja asymetryczna; wynik w polu "flood": liczba obiegów i czas.
+void transitLoad(bool announces) {
+    for (size_t i = 1; i < PEERS; ++i) {   // trasy: weryfikacja ogłoszeń najwyżej raz na sekundę
+        receive(withHops(announceOf(i), 1));
+        for (int k = 0; k < 110; ++k) { simMs += 10; serviceCounted(); }
+    }
+    const uint32_t routes = static_cast<uint32_t>(rnsnode::status().paths);
+    for (int round = 0; round < 1500; ++round) {
+        for (int k = 0; k < 2; ++k) {
+            const size_t i = 1 + rnd() % (PEERS - 1);
+            if (!announces) {
+                RNS::Destination out(peers[i], RNS::Type::Destination::OUT, RNS::Type::Destination::SINGLE, rnsnode::APP_NAME,
+                                     rnsnode::ASPECT);
+                RNS::Packet p(out, randomBytes(1 + rnd() % 200), RNS::Type::Packet::DATA);
+                p.pack();
+                receive(withHops(headerTwo(p.raw(), stationTransport), 0));
+            } else if (rnd() % 2) {
+                receive(withHops(announceOf(i), 1 + rnd() % 3));
+            } else {
+                RNS::Destination pr({RNS::Type::NONE}, RNS::Type::Destination::OUT, RNS::Type::Destination::PLAIN, "rnstransport",
+                                    "path.request");
+                RNS::Bytes data = peerDest[i];
+                data << randomBytes(16);
+                RNS::Packet q(pr, data, RNS::Type::Packet::DATA);
+                q.pack();
+                receive(q.raw());
+            }
+        }
+        simMs += 10;
+        serviceCounted();
+    }
+    for (int i = 0; i < 2000; ++i) { simMs += 10; serviceCounted(); }   // zaległe retransmisje po jednej
+    char out[96];
+    snprintf(out, sizeof(out), "\"routes\":%u,\"rounds\":1500", routes);
+    floodResult = out;
+}
+
 // Uszkodzone gniazdo odbiorcy z karty w tablicy znanych celów rdzenia (FRAM od framfs::FS_BASE, gniazda
 // 568 B, cel od bajtu 16; lib/reticulum_core/src/table.h): pakiet stacji do odbiorcy wychodzi mimo to
 // (wpis z kluczy karty od nowa), a gniazdo liczy "table_corrupt".
@@ -643,6 +684,7 @@ void damagedReceiver() {
 void flood() { fail("flood: station core only"); }
 const char* floodJson() { return ""; }
 void damagedReceiver() { fail("damaged-receiver: station core only"); }
+void transitLoad(bool) { fail("transit load: station core only"); }
 #endif
 
 // Awarie portu z przeglądu 2026-10-21 (poprawione łatami 0005-0007) jako próby regresji.
@@ -690,6 +732,8 @@ void defect(const std::string& name) {
         }
     } else if (name == "flood") {
         flood();
+    } else if (name == "forward-flood" || name == "rebroadcast-load") {
+        transitLoad(name == "rebroadcast-load");
     } else if (name == "damaged-receiver") {
         damagedReceiver();
     } else {

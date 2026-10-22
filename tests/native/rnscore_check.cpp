@@ -403,6 +403,9 @@ int main() {
             for (uint8_t b : data) state->nowMs = (state->nowMs << 8) | b;
             state->transport.poll(state->nowMs);
             printTransport("ok");
+        } else if (command == "t_held") {
+            // wstrzymane retransmisje (held_announces)
+            printf("%u\n", static_cast<unsigned>(state->transport.heldAnnounces()));
         } else if (command == "t_busy" && data.size() == 1) {
             // interfejs zajęty (1) albo wolny (0) dla mayTransmit
             state->busy = data[0] != 0;

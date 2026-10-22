@@ -632,6 +632,9 @@ void Transport::retransmit(AnnounceEntry& entry, uint64_t nowMs) {
     KnownDestination e;
     if (!lookup(entry.destination, e, nowMs) || !e.announceLength) {   // wpis wyparty w międzyczasie
         entry.used = false;
+        for (AnnounceEntry& h : held_) {   // wstrzymana retransmisja tego celu też nie ma czego nadać
+            if (h.used && memcmp(h.destination, entry.destination, TRUNCATED_HASH_SIZE) == 0) h.used = false;
+        }
         return;
     }
     Packet packet = {};
@@ -722,6 +725,11 @@ void Transport::poll(uint64_t nowMs, bool transmit) {
         }
     }
     if (due && transmit && mayTransmit()) retransmit(*due, nowMs);
+    // Wstrzymany wpis żyje tylko razem z wpisem odpowiedzi swojego celu (zastąpionym, wypartym albo
+    // zakończonym bez nadania): bez niego zwalnia miejsce.
+    for (AnnounceEntry& h : held_) {
+        if (h.used && !findAnnounce(h.destination)) h.used = false;
+    }
     // Transport.jobs: trasa nieużywana dłużej niż DESTINATION_TIMEOUT znika z path_table; wpis znanego
     // celu (tożsamość, ratchet) zostaje, jak known_destinations. Przegląd indeksu raz na sekundę.
     const uint32_t nowS = seconds(nowMs);
@@ -733,6 +741,12 @@ void Transport::poll(uint64_t nowMs, bool transmit) {
 size_t Transport::reverseEntries(uint64_t nowMs) const {
     size_t n = 0;
     for (const ReverseEntry& r : reverse_) n += r.atMs && nowMs - r.atMs <= REVERSE_TIMEOUT_MS;
+    return n;
+}
+
+size_t Transport::heldAnnounces() const {
+    size_t n = 0;
+    for (const AnnounceEntry& h : held_) n += h.used;
     return n;
 }
 
