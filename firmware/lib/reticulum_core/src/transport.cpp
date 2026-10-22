@@ -496,7 +496,8 @@ SendResult Transport::send(const uint8_t destination[TRUNCATED_HASH_SIZE], const
 }
 
 // RNS/Transport.py: preprocess_inbound (zapytanie o trasę: znacznik), _inbound (DATA do celu lokalnego
-// PLAIN) i path_request_handler. Inne cele PLAIN nie są celami stacji.
+// PLAIN) i path_request_handler. Inne cele PLAIN nie są celami stacji. Znacznik i zapytanie „w drodze”
+// tylko dla zapytania PLAIN DATA; Python rejestruje je dla każdego pakietu do tego celu (tabela różnic).
 void Transport::inboundPlain(const Packet& packet, const uint8_t* raw, size_t length, uint64_t nowMs) {
     if (packet.packetType != DATA || memcmp(packet.destinationHash, pathRequestDestination_, TRUNCATED_HASH_SIZE) != 0 ||
         packet.dataLength < TRUNCATED_HASH_SIZE) {
