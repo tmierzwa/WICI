@@ -1169,23 +1169,6 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(lines[4], "-")
         self.assertEqual(lines[6], "1:" + self.via(ann[:18] + bytes([0x0B]) + ann[19:], identity, 1).hex())
 
-    def test_interfaces_route_on_missing_interface(self):
-        # Gniazdo z trasą przez USB po restarcie z jednym interfejsem: brak trasy (jak wpis path_table bez
-        # interfejsu przy wczytaniu w Pythonie). Pakiet stacji idzie wszystkimi interfejsami, pakiet
-        # w transporcie do tego celu nie ma trasy; znany cel zostaje.
-        identity = self.station_identity()
-        near = self.announce_of(bytes([70]) * 64)
-        near_dest = near[2:18]
-        send = ("t_send", near_dest + self.EPHEMERAL + self.IV + (7).to_bytes(4, "big") + (60000).to_bytes(4, "big") + b"x")
-        transit = self.packet(0x50, near_dest, b"n" * 40, transport_id=identity)
-        lines = self.ask([("t_begin", self.TWO), ("t_inif", b"\x01" + near), ("t_restart", b"\x00\x01"),
-                          ("t_route", near_dest), ("t_outif", b""), send, ("t_outif", b""), ("t_in", transit),
-                          ("t_outif", b""), ("t_forward", b"")])
-        self.assertEqual(lines[3], "none")
-        self.assertEqual([x[:2] for x in lines[6].split()], ["0:"])
-        self.assertEqual(lines[8], "-")
-        self.assertEqual(lines[9].split()[:2], ["0", "1"])
-
     def test_interfaces_refusing_interface_does_not_block(self):
         # Interfejs, który nie przyjmie ogłoszenia (mayTransmit), nie wstrzymuje drugiego i sam nie traci
         # próby: dostaje ją, gdy przyjmie (jedno zaległe ogłoszenie na cel i interfejs, jak announce_queue).
@@ -1230,6 +1213,45 @@ class CoreTests(unittest.TestCase):
         self.assertEqual([x[:2] for x in lines[2].split()], ["1:"])
         self.assertEqual([x[:2] for x in lines[4].split()], ["0:"])
         self.assertEqual(lines[6], "-")
+
+    def test_interfaces_route_on_missing_interface(self):
+        # Gniazdo z trasą przez USB po restarcie z jednym interfejsem: brak trasy (jak wpis path_table bez
+        # interfejsu przy wczytaniu w Pythonie). Pakiet stacji idzie wszystkimi interfejsami, pakiet
+        # w transporcie do tego celu nie ma trasy; znany cel zostaje.
+        identity = self.station_identity()
+        near = self.announce_of(bytes([70]) * 64)
+        near_dest = near[2:18]
+        send = ("t_send", near_dest + self.EPHEMERAL + self.IV + (7).to_bytes(4, "big") + (60000).to_bytes(4, "big") + b"x")
+        transit = self.packet(0x50, near_dest, b"n" * 40, transport_id=identity)
+        lines = self.ask([("t_begin", self.TWO), ("t_inif", b"\x01" + near), ("t_restart", b"\x00\x01"),
+                          ("t_route", near_dest), ("t_outif", b""), send, ("t_outif", b""), ("t_in", transit),
+                          ("t_outif", b""), ("t_forward", b"")])
+        self.assertEqual(lines[3], "none")
+        self.assertEqual([x[:2] for x in lines[6].split()], ["0:"])
+        self.assertEqual(lines[8], "-")
+        self.assertEqual(lines[9].split()[:2], ["0", "1"])
+
+    def test_interfaces_forward_same_interface_and_discovery_both(self):
+        # Pakiet w transporcie z USB do celu za USB wraca tym samym interfejsem, a dowód też. Odpowiedź
+        # odkrycia, gdy pytają oba interfejsy, idzie oboma w jednym poll().
+        identity = self.station_identity()
+        near = self.announce_of(bytes([71]) * 64)
+        near_dest = near[2:18]
+        to_near = self.packet(0x50, near_dest, b"n" * 40, transport_id=identity)
+        proof = self.packet(0x03, bytes.fromhex(self.fields_of((bytes([0x00, 1]) + to_near[18:]).hex())[-1])[:16], bytes(64))
+        lines = self.ask([("t_begin", self.TWO), ("t_inif", b"\x01" + near), ("t_outif", b""), ("t_inif", b"\x01" + to_near),
+                          ("t_outif", b""), ("t_inif", b"\x01" + proof), ("t_outif", b"")])
+        self.assertEqual(lines[4], "1:" + (bytes([0x00, 1]) + to_near[18:]).hex())
+        self.assertEqual(lines[6], "1:" + self.hops(proof, 1).hex())
+        ann = self.announce_of(bytes([72]) * 64)
+        dest = ann[2:18]
+        discovery = self.via(ann[:18] + bytes([0x0B]) + ann[19:], identity, 1).hex()
+        lines = self.ask([("t_begin", self.TWO), ("t_inif", b"\x00" + self.path_request(dest, b"A" * 16)),
+                          ("t_inif", b"\x00" + self.path_request(dest, b"B" * 16)),
+                          ("t_inif", b"\x01" + self.path_request(dest, b"C" * 16)), ("t_inif", b"\x00" + ann),
+                          ("t_outif", b""), ("t_clock", (1001).to_bytes(8, "big")), ("t_outif", b"")])
+        self.assertEqual(lines[5], "-")
+        self.assertEqual(lines[7], f"0:{discovery} 1:{discovery}")
 
     def test_full_hash_matches_sha256(self):
         # Pusty wejściowy ciąg, granice bloku SHA-256 (55, 56, 64 B) i długi ciąg.
