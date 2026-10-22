@@ -8,8 +8,12 @@
 //   ogłoszeń z p1iface, cisza radiowa jak w porcie, liczniki interfejsu w tym samym JSON;
 // - transport bez przekazywania (rnscore::Transport): ogłoszenie własne celu "wici.sa1" bez ratchetu
 //   (własne ratchety stacji są poza rdzeniem), ogłoszenia innych celów z polem ratchetu w tablicy
-//   znanych celów w RAM (256 wpisów, odbiorca z karty chroniony), pakiety do stacji z dowodem po
+//   znanych celów i tras (256 wpisów, odbiorca z karty chroniony), pakiety do stacji z dowodem po
 //   decyzji warstwy aplikacji, pakiet okazjonalny z szyfrowaniem do ratchetu i potwierdzeniem;
+// - tablica znanych celów i tras w FRAM (rnscore::Table, etap R2): 257 gniazd po 568 B od adresu
+//   systemu plików portu (framfs::FS_BASE; rdzeń i port nie dzielą tego obszaru, ten sam rekord
+//   tożsamości), w RAM indeks 257 × 24 B; zapis gniazda przy każdej zmianie wpisu, bez zapisu przy
+//   powtórzonym ogłoszeniu;
 // - praca na pakiet ograniczona dla płytek (audyt rdzenia, U2): received() tylko odkłada datagram do
 //   kolejki odbioru, a jeden obieg rnsnode::loop() wykonuje najwyżej jeden krok odbioru: sprawdzenie
 //   IFAC (podpis) albo przetworzenie pakietu w transporcie; weryfikacja podpisów ogłoszeń z limitem na
@@ -18,8 +22,8 @@
 //   i send() (ECDH i IFAC);
 // - czas: licznik pracy (clockMs z begin() i zegar ms stosu); losowość z HMAC-DRBG stacji z ziarnem
 //   z begin().
-// Jeszcze nie ma: zapytań o trasę i przekazywania (R2; sendReady() nie pyta o trasę), tablic w FRAM
-// (R2: po restarcie stacja zna tylko odbiorcę z karty), LXMF (R3), interfejsu USB węzła (R4).
+// Jeszcze nie ma: zapytań o trasę i przekazywania (dalsze kroki R2; sendReady() nie pyta o trasę),
+// LXMF (R3), interfejsu USB węzła (R4).
 #include <stdio.h>
 #include <string.h>
 
@@ -141,6 +145,23 @@ void rxDrop() {
     rxHead = (rxHead + 1) % RX_SLOTS;
     --rxCount;
 }
+
+// Obszar tablicy znanych celów w FRAM: miejsce systemu plików portu (framfs.h). Stacja ma albo port,
+// albo rdzeń; przy zmianie stosu drugi widzi obszar jako nowy (port formatuje system plików, rdzeń
+// pomija gniazda bez znacznika i CRC), a tożsamość w osobnym rekordzie zostaje.
+constexpr uint32_t TABLE_BASE = framfs::FS_BASE;
+static_assert(rnscore::TABLE_AREA <= framfs::FS_SIZE, "tablica znanych celów w obszarze stosu");
+
+struct FramTable : rnscore::TableStorage {
+    journal::Storage* fram = nullptr;
+    bool read(uint32_t offset, uint8_t* data, size_t count) override {
+        return fram && offset + count <= rnscore::TABLE_AREA && fram->read(TABLE_BASE + offset, data, count);
+    }
+    bool write(uint32_t offset, const uint8_t* data, size_t count) override {
+        return fram && offset + count <= rnscore::TABLE_AREA && fram->write(TABLE_BASE + offset, data, count);
+    }
+};
+FramTable framTable;
 
 void log(const char* text) {
     if (hooks.log) hooks.log(text, hooks.context);
@@ -285,10 +306,12 @@ bool begin(journal::Storage& storage, Radio& r, const uint8_t ifacKey[16], uint6
     th.receipt = receiptHook;
     th.pinned = pinnedHook;
     th.mayVerify = mayVerifyHook;
-    transport.begin(privateKey, publicKeyBytes, identityBytes, nodeMode ? nullptr : addressBytes, nameHashBytes, th);
+    framTable.fram = &storage;
+    transport.begin(privateKey, publicKeyBytes, identityBytes, nodeMode ? nullptr : addressBytes, nameHashBytes, th, framTable,
+                    clockMs);
     started = true;
     rememberReceivers();
-    log("rns: Reticulum core (R1): P1 interface, announces, packets and proofs");
+    log("rns: Reticulum core (R2): P1 interface, announces, packets, proofs, table in FRAM");
     return true;
 }
 
@@ -414,13 +437,22 @@ bool interfaceAccepts() { return started && !nodeMode && ifacOnline && !queue.fu
 
 }  // namespace
 
+// Odbiorca z karty, którego wpis wypadł z tablicy (uszkodzone gniazdo w FRAM): wpis z kluczy karty od
+// nowa (bez trasy i ratchetu, jak po starcie), żeby zgłoszenia nie stanęły do restartu.
+bool knowsOrRemembers(const uint8_t dest[HASH]) {
+    if (transport.knows(dest)) return true;
+    if (memcmp(dest, pinned[0], HASH) != 0 && memcmp(dest, pinned[1], HASH) != 0) return false;
+    rememberReceivers();
+    return transport.knows(dest);
+}
+
 uint32_t send(const uint8_t dest[HASH], const uint8_t* data, size_t length, uint32_t timeoutS) {
-    if (!interfaceAccepts() || !transport.find(dest)) return 0;
+    if (!interfaceAccepts() || !knowsOrRemembers(dest)) return 0;
     OwnTraffic own;
     // Limit od przekazania do stosu jak w porcie (radio.md, "Interfejs P1 w stosie Reticulum"):
     // max(60 s, timeoutS, 2 × skoki × 13 × czas TX największego datagramu + dług ciszy + kolejka P1);
     // trasa nieznana liczy się jako 1 skok.
-    uint32_t hops = transport.hopsTo(dest);
+    uint32_t hops = transport.hopsTo(dest, uptimeMs());
     if (hops == 0 || hops >= rnscore::PATHFINDER_M) hops = 1;
     const uint64_t waitMs = static_cast<uint64_t>(2) * hops * (1 + p1iface::DEBT_FACTOR) *
                                 p1iface::airtimeMs(p1frame::MAX_DATAGRAM) + queueWaitMs();
@@ -431,17 +463,21 @@ uint32_t send(const uint8_t dest[HASH], const uint8_t* data, size_t length, uint
     uint8_t random[32 + 16];
     if (!generator.generate(random, sizeof(random))) return 0;
     const uint32_t handle = ++nextHandle ? nextHandle : ++nextHandle;
-    const rnscore::SendResult result = transport.send(dest, data, length, random, random + 32, handle, limit * 1000, uptimeMs());
+    rnscore::SendResult result = transport.send(dest, data, length, random, random + 32, handle, limit * 1000, uptimeMs());
+    // Wpis wypadł przy odczycie (błędne CRC; nic nie wyszło, więc te same bajty losowe): odbiorca z karty od nowa.
+    if (result == rnscore::SendResult::UNKNOWN && knowsOrRemembers(dest)) {
+        result = transport.send(dest, data, length, random, random + 32, handle, limit * 1000, uptimeMs());
+    }
     clean(random, sizeof(random));
     return result == rnscore::SendResult::SENT ? handle : 0;
 }
 
 // Bez zapytania o trasę przy nieznanym celu (R2).
-bool sendReady(const uint8_t dest[HASH]) { return interfaceAccepts() && transport.find(dest); }
-bool knows(const uint8_t dest[HASH]) { return started && transport.find(dest); }
+bool sendReady(const uint8_t dest[HASH]) { return interfaceAccepts() && knowsOrRemembers(dest); }
+bool knows(const uint8_t dest[HASH]) { return started && transport.knows(dest); }
 bool hasPath(const uint8_t dest[HASH]) {
-    const rnscore::KnownDestination* e = started ? transport.find(dest) : nullptr;
-    return e && e->hasPath;
+    rnscore::KnownDestination e;   // odczyt z FRAM: trasa po wygaśnięciu już nie jest trasą
+    return started && transport.lookup(dest, e, uptimeMs()) && e.hasPath;
 }
 void requestPath(const uint8_t[HASH]) {}   // R2
 bool queueFull() { return !radio || queue.full(); }
@@ -468,6 +504,9 @@ Status status() {
     s.paths = transport.paths();
     s.packetHashes = transport.hashes();
     s.receiptsPending = transport.receiptsPending();
+    s.fsFiles = transport.known();   // wpisy tablicy znanych celów w gniazdach FRAM
+    s.fsUsedBytes = transport.known() * rnscore::TABLE_SLOT_SIZE;
+    s.fsCapacityBytes = rnscore::TABLE_AREA;
     s.packetsSent = t.sent;
     s.packetsReceived = t.received;
     s.packetsUnproven = t.unproven;
@@ -485,7 +524,8 @@ size_t interfaceJson(char* out, size_t size) {
     if (!radio) return snprintf(out, size, "\"p1_iface\":false");
     // Pola jak w porcie (rns_node.cpp) i liczniki rdzenia: pakiety odrzucone przez rnscore::unpack,
     // duplikaty, pakiety poza podzbiorem R1 albo nie do stacji, odrzucone przy sprawdzaniu, datagramy
-    // odrzucone przy pełnej kolejce odbioru, ogłoszenia odrzucone przez limit weryfikacji.
+    // odrzucone przy pełnej kolejce odbioru, ogłoszenia odrzucone przez limit weryfikacji, gniazda tablicy
+    // znanych celów z błędną treścią (zwolnione).
     const p1iface::Counters& c = queue.counters();
     const rnscore::TransportCounters& t = transport.counters();
     const uint32_t now = nowMs();   // okna czasu kanału przesuwane przed printf (kolejność wywołań)
@@ -495,7 +535,7 @@ size_t interfaceJson(char* out, size_t size) {
                            "\"ann_drop\":%lu,\"ann_expired\":%lu,\"tx_sent\":%lu,\"tx_failed\":%lu,\"rx_ok\":%lu,"
                            "\"ifac_missing\":%lu,\"ifac_invalid\":%lu,\"offline\":%lu,\"silenced\":%lu,\"k2_slot\":%lu,\"k2_pool\":%lu,"
                            "\"k2_dest\":%lu,\"pr_limited\":%lu,\"pool_ms\":%lu,\"pr_ms\":%lu,\"rx_malformed\":%lu,\"rx_duplicate\":%lu,"
-                           "\"rx_ignored\":%lu,\"rx_invalid\":%lu,\"rx_queue_full\":%lu,\"ann_limited\":%lu",
+                           "\"rx_ignored\":%lu,\"rx_invalid\":%lu,\"rx_queue_full\":%lu,\"ann_limited\":%lu,\"table_corrupt\":%lu",
                            (unsigned)queue.queued(), (unsigned)queue.held(), (unsigned long)c.queued, (unsigned long)c.full,
                            (unsigned long)c.tooLarge, (unsigned long)c.announcesHeld, (unsigned long)c.announcesDropped,
                            (unsigned long)c.announcesExpired, (unsigned long)c.sent, (unsigned long)c.sendFailed,
@@ -503,7 +543,8 @@ size_t interfaceJson(char* out, size_t size) {
                            (unsigned long)c.offline, (unsigned long)c.silenced, (unsigned long)c.k2Slot, (unsigned long)c.k2Pool,
                            (unsigned long)c.k2Dest, (unsigned long)c.pathRequestLimited, poolMs, prMs, (unsigned long)malformed,
                            (unsigned long)t.duplicate, (unsigned long)t.ignored, (unsigned long)t.invalid,
-                           (unsigned long)rxDropped, (unsigned long)announcesLimited);
+                           (unsigned long)rxDropped, (unsigned long)announcesLimited,
+                           (unsigned long)transport.tableCorrupt());
     return n < 0 ? 0 : static_cast<size_t>(n);
 }
 
@@ -519,6 +560,7 @@ void halt() {
     memset(rx, 0, sizeof(rx));
     rxCount = 0;
     transport.clear();
+    framTable.fram = nullptr;   // bez zapisów w FRAM do restartu
     clean(privateKey, sizeof(privateKey));
     clean(&ifac, sizeof(ifac));
     clean(&generator, sizeof(generator));
@@ -527,7 +569,7 @@ void halt() {
     memset(identityBytes, 0, sizeof(identityBytes));
 }
 
-void persist() {}
+void persist() {}   // tablica znanych celów jest zapisywana przy każdej zmianie wpisu
 
 #ifndef ARDUINO
 void debugTableMax(uint16_t n) { transport.setLimit(n); }
