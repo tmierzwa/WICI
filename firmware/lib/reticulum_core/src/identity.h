@@ -26,8 +26,10 @@ void identityHash(const uint8_t publicKey[KEY_SIZE], uint8_t out[TRUNCATED_HASH_
 void sign(const uint8_t privateKey[KEY_SIZE], const uint8_t publicKey[KEY_SIZE], const uint8_t* message, size_t length,
           uint8_t out[SIGNATURE_SIZE]);
 
-// RNS/Identity.py: Identity.validate. Fałsz dla podpisu o złej długości, niekanonicznego (S ≥ L, jak
-// odrzuca go Python) i niepoprawnego; nie zgłasza błędu.
+// RNS/Identity.py: Identity.validate. Fałsz dla podpisu o złej długości, niekanonicznego (S ≥ L albo R
+// w kodowaniu niekanonicznym, jak odrzuca go Python) i niepoprawnego; nie zgłasza błędu. Klucze niskiego
+// rzędu przyjmuje jak Python; odstępstwo: klucz z punktem neutralnym zapisanym z bitem znaku (kodowanie,
+// którego biblioteka Crypto nie dekoduje) rdzeń odrzuca, Python go przyjmuje (firmware/reticulum-core.md).
 bool validate(const uint8_t publicKey[KEY_SIZE], const uint8_t* signature, size_t signatureLength,
               const uint8_t* message, size_t length);
 

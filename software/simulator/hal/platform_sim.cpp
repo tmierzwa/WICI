@@ -22,7 +22,10 @@ void chipId(uint32_t id[2]) {
     id[1] = (static_cast<uint32_t>(mac[0]) << 16) | (static_cast<uint32_t>(mac[1]) << 8) | mac[2];
 }
 
-void entropy(uint8_t* out, size_t count) { vb::entropy(out, count); }
+bool entropy(uint8_t* out, size_t count) {
+    vb::entropy(out, count);
+    return true;
+}
 
 uint32_t resetReason() { return vb::resetReason(); }
 

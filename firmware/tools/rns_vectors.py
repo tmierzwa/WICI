@@ -6,7 +6,8 @@ non-canonical signature with S + L), encryption to an identity (token, including
 tokens with a valid HMAC over a bad ciphertext, as any sender can make them, and tokens
 whose ephemeral key is a low-order or non-canonical X25519 point) and
 packets (HEADER_1 as packed by Reticulum, HEADER_2 as rewritten by its transport, packet hash); stage R1:
-announces, encryption to a ratchet, packet proofs, HKDF and the interface access code (IFAC). Every
+announces, encryption to a ratchet, packet proofs, HKDF and the interface access code (IFAC); Ed25519
+edge cases (low-order and mixed-order keys and R, non-canonical encodings) with crafted inputs. Every
 expected value is what the reference implementation computes or returns; nothing is computed here
 by other code. Randomness (ephemeral X25519 key, token IV, announce random hash) is replaced by a
 seeded generator only for the duration of each call, so the output is the same on every run.
@@ -114,6 +115,114 @@ def identity_vectors():
             "destination_wici_sa1": destination.hash.hex(),
             "signatures": signatures,
         })
+    return out
+
+
+# Arytmetyka Ed25519 z RFC 8032 (rozdz. 5.1, kod wzorcowy w Pythonie) tylko do spreparowania wejść
+# przypadków brzegowych: kluczy i podpisów, jakie może wysłać każdy nadawca. Wynik weryfikacji daje
+# Reticulum (Identity.validate), nie ten kod.
+ED_P = 2**255 - 19
+ED_D = -121665 * pow(121666, ED_P - 2, ED_P) % ED_P
+ED_I = pow(2, (ED_P - 1) // 4, ED_P)
+
+
+def ed_add(a, b):
+    (x1, y1, z1, t1), (x2, y2, z2, t2) = a, b
+    a_ = (y1 - x1) * (y2 - x2) % ED_P
+    b_ = (y1 + x1) * (y2 + x2) % ED_P
+    c = 2 * t1 * t2 * ED_D % ED_P
+    d = 2 * z1 * z2 % ED_P
+    e, f, g, h = b_ - a_, d - c, d + c, b_ + a_
+    return (e * f % ED_P, g * h % ED_P, f * g % ED_P, e * h % ED_P)
+
+
+def ed_mul(k: int, point):
+    result = (0, 1, 1, 0)
+    while k:
+        if k & 1:
+            result = ed_add(result, point)
+        point = ed_add(point, point)
+        k >>= 1
+    return result
+
+
+def ed_encode(point) -> bytes:
+    x, y, z, _ = point
+    zi = pow(z, ED_P - 2, ED_P)
+    x, y = x * zi % ED_P, y * zi % ED_P
+    return (y | (x & 1) << 255).to_bytes(32, "little")
+
+
+def ed_decode(data: bytes):
+    y = int.from_bytes(data, "little")
+    sign, y = y >> 255, y & (2**255 - 1)
+    x2 = (y * y - 1) * pow(ED_D * y * y + 1, ED_P - 2, ED_P) % ED_P
+    x = pow(x2, (ED_P + 3) // 8, ED_P)
+    if (x * x - x2) % ED_P:
+        x = x * ED_I % ED_P
+    if x & 1 != sign:
+        x = ED_P - x
+    return (x, y % ED_P, 1, x * y % ED_P)
+
+
+ED_BASE = ed_decode((4 * pow(5, ED_P - 2, ED_P) % ED_P).to_bytes(32, "little"))
+# Punkt rzędu 8 (lista punktów niskiego rzędu Ed25519, np. libsodium): składowa skrętna kluczy i R.
+ED_TORSION = ed_decode(bytes.fromhex("26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05"))
+
+
+def ed25519_edge_vectors():
+    """Klucze i podpisy, w których implementacje Ed25519 się różnią (klucz i R niskiego rzędu, kodowania
+    niekanoniczne, składowa skrętna przy weryfikacji bez i z kofaktorem): wynik Identity.validate."""
+    assert ed_encode(ed_mul(8, ED_TORSION)) == ed_encode((0, 1, 1, 0)) != ed_encode(ed_mul(4, ED_TORSION))
+    message = b"WICI"
+    x25519 = identity("a").get_public_key()[:32]
+    a = int.from_bytes(seeded("edge:a", 64), "little") % ED25519_L
+    r = int.from_bytes(seeded("edge:r", 64), "little") % ED25519_L
+    point_a = ed_mul(a, ED_BASE)
+    identity_point = (1).to_bytes(32, "little")
+
+    def k(r_bytes: bytes, a_bytes: bytes) -> int:
+        return int.from_bytes(hashlib.sha512(r_bytes + a_bytes + message).digest(), "little") % ED25519_L
+
+    def signature(r_bytes: bytes, s: int) -> bytes:
+        return r_bytes + s.to_bytes(32, "little")
+
+    cases = {}
+    # Klucz i R niskiego rzędu z S = 0: równanie spełnione dla każdej wiadomości.
+    for name, key in (("small_order_key_identity", identity_point),
+                      ("small_order_key_order_2", (ED_P - 1).to_bytes(32, "little")),
+                      ("small_order_key_order_8", ed_encode(ED_TORSION)),
+                      ("non_canonical_key_identity", (ED_P + 1).to_bytes(32, "little"))):
+        cases[name] = (key, signature(identity_point, 0))
+    # R w kodowaniu niekanonicznym (punkt neutralny jako p + 1): S = k·a, więc R' = [S]B - [k]A = 0.
+    a_bytes = ed_encode(point_a)
+    r_non_canonical = (ED_P + 1).to_bytes(32, "little")
+    cases["non_canonical_r"] = (a_bytes, signature(r_non_canonical, k(r_non_canonical, a_bytes) * a % ED25519_L))
+    cases["canonical_r_identity"] = (a_bytes, signature(identity_point, k(identity_point, a_bytes) * a % ED25519_L))
+    # Punkt neutralny z bitem znaku (x = 0, więc kodowanie niekanoniczne) i punkt rzędu 2 jako -1 + p.
+    r_sign = bytes(identity_point[:31]) + b"\x80"
+    cases["non_canonical_r_sign_bit"] = (a_bytes, signature(r_sign, k(r_sign, a_bytes) * a % ED25519_L))
+    cases["non_canonical_key_sign_bit"] = (r_sign, signature(identity_point, 0))
+    # Klucz ze składową skrętną: podpis poprawny tylko przy weryfikacji z kofaktorem.
+    mixed_a = ed_encode(ed_add(point_a, ED_TORSION))
+    r_bytes = ed_encode(ed_mul(r, ED_BASE))
+    cases["mixed_order_key"] = (mixed_a, signature(r_bytes, (r + k(r_bytes, mixed_a) * a) % ED25519_L))
+    # R ze składową skrętną przy zwykłym kluczu: to samo.
+    mixed_r = ed_encode(ed_add(ed_mul(r, ED_BASE), ED_TORSION))
+    cases["mixed_order_r"] = (a_bytes, signature(mixed_r, (r + k(mixed_r, a_bytes) * a) % ED25519_L))
+    # Kontrola: zwykły podpis tym samym kluczem przyjęty.
+    cases["plain"] = (a_bytes, signature(r_bytes, (r + k(r_bytes, a_bytes) * a) % ED25519_L))
+    out = []
+    for name, (key, sig) in cases.items():
+        public_key = x25519 + key
+        try:
+            ident = RNS.Identity(create_keys=False)
+            ident.load_public_key(public_key)
+            valid = bool(ident.validate(sig, message))
+        except Exception:   # klucz odrzucony przy wczytaniu: dla stacji to samo co podpis odrzucony
+            valid = False
+        out.append({"name": name, "public_key": public_key.hex(), "signature": sig.hex(), "message": message.hex(),
+                    "valid": valid})
     return out
 
 
@@ -506,6 +615,7 @@ def main():
     vectors = {
         "source": {"reticulum": RNS_VERSION, "commit": RNS_COMMIT, "tool": "firmware/tools/rns_vectors.py"},
         "identity": identity_vectors(),
+        "ed25519_edge": ed25519_edge_vectors(),
         "token": token_vectors(),
         "crafted_token": crafted_token_vectors(),
         "packet": packet_vectors(),

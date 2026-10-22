@@ -8,6 +8,7 @@ import base64
 import hashlib
 import hmac
 import json
+import random
 import shutil
 import subprocess
 import sys
@@ -954,6 +955,12 @@ int main(int argc, char** argv) {
     if (argc == 2 && !strcmp(argv[1], "world")) return world();
     if (argc >= 3 && !strcmp(argv[1], "sha")) return shaCommand(argc, argv);
     if (argc >= 4 && !strcmp(argv[1], "drbg")) return drbgCommand(argc, argv);
+    if (argc == 3 && !strcmp(argv[1], "health")) {
+        // health <odczyt źródła entropii>: 1, gdy przechodzi test zdrowia
+        const std::vector<uint8_t> entropy = unhex(argv[2]);
+        printf("%d\n", drbg::healthy(entropy.data(), entropy.size()));
+        return 0;
+    }
     if (argc == 3 && !strcmp(argv[1], "cfgparse")) return configParse(argv[2]);
     if (argc == 3 && !strcmp(argv[1], "crc32")) {
         printf("%08X\n", crc32::of(reinterpret_cast<const uint8_t*>(argv[2]), strlen(argv[2])));
@@ -1303,6 +1310,17 @@ class HostUnitTests(unittest.TestCase):
         # Ziarno krótsze niż 32 B nie uruchamia generatora.
         out = subprocess.run([str(self.binary), "drbg", "00" * 31, "", "4"], capture_output=True, text=True, check=True).stdout.splitlines()
         self.assertEqual(out, ["ready 0 0", "0 00000000"])
+
+    def test_entropy_health(self):
+        # Źródło zablokowane (stała, krótki wzór, długa seria) odpada; losowe odczyty przechodzą.
+        def healthy(entropy: bytes) -> str:
+            return self.run_harness("health", entropy.hex())[0]
+        blocked = [bytes(48), b"\xff" * 48, b"\x00\xff" * 24, bytes(range(42)) + b"\x07" * 6,
+                   b"\x5a" * 6 + bytes(range(1, 43)), bytes([1, 2, 3]) * 16, bytes(range(40))]
+        self.assertEqual([healthy(e) for e in blocked], ["0"] * len(blocked))
+        rng = random.Random(2026)
+        self.assertEqual({healthy(bytes(rng.randrange(256) for _ in range(48))) for _ in range(200)}, {"1"})
+        self.assertEqual(healthy(bytes(range(48))), "1")   # licznik przechodzi: granica testu (drbg.h)
 
     # --- dokument configure ---------------------------------------------------
 

@@ -32,17 +32,24 @@ void chipId(uint32_t id[2]) {
     id[1] = NRF_FICR->DEVICEID[1];
 }
 
-void entropy(uint8_t* out, size_t count) {
-    // Bez SoftDevice rejestry RNG są dostępne bezpośrednio.
+bool entropy(uint8_t* out, size_t count) {
+    // Bez SoftDevice rejestry RNG są dostępne bezpośrednio. Bajt z korekcją obciążenia to około 120 µs
+    // (karta nRF52840, RNG); czekanie ograniczone do około 100 ms na bajt (pętla przy 64 MHz), żeby
+    // zablokowane źródło nie zatrzymało startu: wtedy reszta bajtów zerowa i fałsz.
+    constexpr uint32_t POLLS = 1000000;
     NRF_RNG->CONFIG = RNG_CONFIG_DERCEN_Msk;
     NRF_RNG->EVENTS_VALRDY = 0;
     NRF_RNG->TASKS_START = 1;
+    bool ok = true;
     for (size_t i = 0; i < count; ++i) {
-        while (!NRF_RNG->EVENTS_VALRDY) {}
+        uint32_t polls = 0;
+        while (ok && !NRF_RNG->EVENTS_VALRDY && ++polls < POLLS) {}
+        ok = ok && NRF_RNG->EVENTS_VALRDY;
         NRF_RNG->EVENTS_VALRDY = 0;
-        out[i] = static_cast<uint8_t>(NRF_RNG->VALUE);
+        out[i] = ok ? static_cast<uint8_t>(NRF_RNG->VALUE) : 0;
     }
     NRF_RNG->TASKS_STOP = 1;
+    return ok;
 }
 
 uint32_t resetReason() { return readResetReason(); }

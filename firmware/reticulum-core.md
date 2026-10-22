@@ -21,7 +21,7 @@ Wersje referencyjne bez zmian: Reticulum `e40191b` i LXMF `c3ff2d6` ([oprogramow
 
 | W rdzeniu | Poza rdzeniem |
 |---|---|
-| tożsamość: X25519 + Ed25519, skrót, podpis i weryfikacja (z odrzuceniem S ≥ L), szyfrowanie do tożsamości (token AES-256-CBC + HMAC-SHA256, efemeryczny X25519, HKDF) | łącza (Link), zasoby (Resource), kanały i bufory |
+| tożsamość: X25519 + Ed25519, skrót, podpis i weryfikacja (z odrzuceniem S ≥ L i R w kodowaniu niekanonicznym, jak w Pythonie), szyfrowanie do tożsamości (token AES-256-CBC + HMAC-SHA256, efemeryczny X25519, HKDF) | łącza (Link), zasoby (Resource), kanały i bufory |
 | pakiet: HEADER_1 i HEADER_2, flagi, kontekst, skrót pakietu, IFAC (kod i maska w rdzeniu, kolejka i liczniki w `p1iface`) | własne ratchety przy odbiorze (rotacja i klucze w FRAM; D01) |
 | cele SINGLE IN i OUT: `lxmf.delivery` stacji i odbiorcy (od R3 w `rnsnode`; do tego czasu `wici.sa1` jako koperta zastępcza), PLAIN `rnstransport.path.request` | propagacja LXMF, znaczki pracy, DIRECT |
 | ogłoszenia: tworzenie, weryfikacja, retransmisja z PATHFINDER_R i lokalnymi powtórkami, odpowiedzi na zapytania o trasę | tunele, zdalne zarządzanie, instancja współdzielona, odkrywanie interfejsów (1.1), czarne listy |
@@ -38,6 +38,7 @@ Odstępstwa rdzenia od Reticulum w Pythonie w podzbiorze z tabeli zakresu. Każd
 
 | Miejsce | Python | Rdzeń | Dlaczego |
 |---|---|---|---|
+| weryfikacja podpisu (`validate`) | przyjmuje klucz Ed25519 z punktem neutralnym zapisanym z bitem znaku (kodowanie niekanoniczne), gdy równanie podpisu jest spełnione | odrzuca: biblioteka Crypto nie dekoduje tego kodowania | jedyne odstępstwo w wektorach `ed25519_edge`: dla kluczy niskiego rzędu w kodowaniu kanonicznym rdzeń jest zgodny z Pythonem (przyjmuje je jak Python); klucz niskiego rzędu pozwala podrobić podpis tylko pod własną, jednorazową tożsamością nadawcy, nie pod cudzą |
 | ogłoszenie przyjmowane (`validateAnnounce`) | sprawdza dane każdej długości | odrzuca dane dłuższe niż 481 B (MTU bez nagłówka HEADER_1) | stały bufor danych podpisanych; takiego ogłoszenia nie złoży `Packet.pack`, więc zgodny nadawca go nie wyśle |
 | ogłoszenie własne (`buildAnnounce`) | składa dane do 481 B | składa do 465 B | węzeł transportowy w Pythonie przekazuje ogłoszenie jako nowy pakiet HEADER_2 przez `Packet.pack`, więc dane 466–481 B nie przechodzą dalej niż o jeden skok |
 | pakiet własny (`pack`) | składa pakiet z pustymi danymi, z liczbą skoków ≥ 128 i z kontekstem LRPROOF dla dowolnego celu | odmawia | odbiorca takiego pakietu nie przyjmie (`unpack`, `send`); łącza są poza rdzeniem |

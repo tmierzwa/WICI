@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "announce.h"
+#include "core_selftest.h"
 #include "destination.h"
 #include "hash.h"
 #include "hkdf.h"
@@ -388,6 +389,14 @@ int main() {
             } else {
                 printf("none\n");
             }
+        } else if (command == "selftest" && data.size() == 1) {
+            // 1 B: liczba prób (QUICK albo COUNT); "1" albo "0" i nazwa:wynik każdej próby
+            coreselftest::Result results[coreselftest::COUNT];
+            const size_t count = data[0] < coreselftest::COUNT ? data[0] : coreselftest::COUNT;
+            const bool ok = coreselftest::run(results, count, [] { return uint32_t{0}; });
+            printf("%d", ok ? 1 : 0);
+            for (size_t i = 0; i < count; ++i) printf(" %s:%d", results[i].name, results[i].ok ? 1 : 0);
+            printf("\n");
         } else {
             printf("error\n");
         }

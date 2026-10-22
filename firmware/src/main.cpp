@@ -30,6 +30,9 @@
 #include "board.h"
 #include "cmdargs.h"
 #include "console.h"
+#if defined(WICI_RNS_CORE)
+#include "core_selftest.h"
+#endif
 #include "drbg.h"
 #include "fram.h"
 #include "hexstr.h"
@@ -78,6 +81,12 @@ sharp::Display display(platform::bus(), board::DISPLAY_CS, board::DISPLAY_EXTCOM
 #endif
 // Generator stacji (drbg.h): ziarno ze sprzętowego źródła entropii przy starcie (platform::entropy).
 drbg::Drbg generator;
+bool entropyHealthy = false;   // odczyt ziarna przeszedł test zdrowia (drbg::healthy); bez tego bez nowej tożsamości
+bool entropyTimeout = false;   // źródło entropii nie odpowiedziało w ograniczonym czasie (platform::entropy)
+// Stan stosu w INFO (`rns_state`): not_started, unavailable (FRAM, dziennik albo magazyn), entropy_failed (bez
+// zdrowego ziarna dla nowej tożsamości), selftest_failed (samotest rdzenia), identity_lost, start_failed,
+// running, halted (ZNISZCZ DANE). Wszystkie poza running i halted mają też wpis w dzienniku.
+const char* stackState = "not_started";
 void stationRandom(uint8_t* out, size_t count) {
     // Ziarno powstaje pierwsze w stationSetup(); odmowa to błąd programu: restart zamiast bajtów spoza generatora.
     if (!generator.generate(out, count)) platform::reboot();
@@ -384,6 +393,7 @@ void onStackLog(const char* text, void*) {
 void wipeStack() {
     if (rnsOk) rnsnode::halt();
     rnsOk = false;
+    stackState = "halted";
     setStationName();
 }
 
@@ -783,6 +793,7 @@ void printInfo() {
                   radiocon::TX_POWER_DBM, static_cast<unsigned long>(counterS()), static_cast<unsigned long>(serviceS()),
                   static_cast<unsigned long>(platform::uptimeMs() / 1000), ui::screenName(screenModel.screen()), langName(screenModel.language()),
                   stationName, static_cast<unsigned long>(platform::resetReason()));
+    Serial.printf("\"rns_state\":\"%s\",\"entropy_ok\":%s,", stackState, boolName(entropyHealthy));
     Serial.printf("\"store_ok\":%s,\"register\":%u,\"inbox\":%u,\"head\":%lu,",
                   boolName(storeOk), static_cast<unsigned>(storeOk ? stationStore.requestCount() : 0),
                   static_cast<unsigned>(storeOk ? stationStore.messageCount() : 0), static_cast<unsigned long>(storeOk ? stationStore.head() : 0));
@@ -879,6 +890,9 @@ void printHelp() {
 #if defined(WICI_BOARD_N1)
                  ",\"LED 5 <0|1>\",\"BUZZ [<ms>] [<hz>]\",\"VTEST\",\"DISPLAY <hz>\""
 #endif
+#if defined(WICI_RNS_CORE)
+                 ",\"RNS SELFTEST\""
+#endif
     );
     Serial.print(platform::helpCommands());
     Serial.println("]}");
@@ -917,6 +931,22 @@ void printApp() {
                   static_cast<unsigned>(stationStore.activeIntents()), static_cast<unsigned>(unsent), app.nextToSend(),
                   boolName(app.testPaused()), static_cast<unsigned>(items));
 }
+
+#if defined(WICI_RNS_CORE)
+uint32_t selftestMicros() { return static_cast<uint32_t>(micros()); }
+
+// RNS SELFTEST: wszystkie próby samotestu rdzenia z czasem w µs, wiersz JSON na próbę i wynik
+// (README, „Samotest rdzenia na płytce”). Trwa kilka sekund; pętla stacji w tym czasie stoi.
+void printSelftest() {
+    coreselftest::Result results[coreselftest::COUNT];
+    const bool ok = coreselftest::run(results, coreselftest::COUNT, selftestMicros);
+    for (const coreselftest::Result& r : results) {
+        Serial.printf("{\"selftest\":\"%s\",\"ok\":%s,\"us\":%lu}\n", r.name, boolName(r.ok), static_cast<unsigned long>(r.us));
+    }
+    Serial.printf("{\"selftest_ok\":%s,\"entropy_ok\":%s,\"version\":\"%s\"}\n", boolName(ok), boolName(entropyHealthy),
+                  WICI_FW_VERSION);
+}
+#endif
 
 // Stan stosu Reticulum: tablice, pula pamięci, system plików FRAM, liczniki interfejsu P1.
 void printRns() {
@@ -1165,6 +1195,9 @@ void handle(char* cmd) {
         if (!cmdargs::parseFlag(words[0], linkAuto)) printError("LINK <0|1>");
         else printApp();
     }
+#if defined(WICI_RNS_CORE)
+    else if (!strcmp(cmd, "RNS") && n == 1 && !strcmp(words[0], "SELFTEST")) printSelftest();
+#endif
     else if (!strcmp(cmd, "RNS")) printRns();
     else if (!strcmp(cmd, "ANNOUNCE")) {
         // Ogłoszenie na polecenie: wychodzi przy najbliższym obiegu, poza ciszą radiową i z kodem IFAC.
@@ -1219,7 +1252,11 @@ void pollSerial() {
 // z konfiguracji (bez niego interfejs P1 nie nadaje). Tożsamość: znacznik w rekordzie formatu
 // FRAM; brak klucza przy znaczniku zostawia stację bez stosu (blad_pamieci). Ogłoszenie startowe po 0–120 s.
 void beginStack() {
-    if (!framOk || !journalOk || !storeOk) { bench.log("rns not started: FRAM, journal or store unavailable"); return; }
+    if (!framOk || !journalOk || !storeOk) {
+        stackState = "unavailable";
+        bench.log("rns not started: FRAM, journal or store unavailable");
+        return;
+    }
     rnsnode::Hooks hooks;
     hooks.packet = onPacket;
     hooks.receipt = onReceipt;
@@ -1228,11 +1265,46 @@ void beginStack() {
     applyReceivers();   // przed startem: porządkowanie tablic przy starcie nie usuwa wpisów odbiorcy
     rnsnode::setNode(c.role == config::Role::NODE && stationStore.configured());
     applySilence();
+    // Klucz tożsamości powstaje z generatora stacji: bez zdrowego ziarna nowej tożsamości nie tworzymy
+    // (zapisana tożsamość nie zależy od ziarna). Klucz bez znacznika po zaniku zasilania też czeka.
+    // Wpis o źródle entropii przy każdym starcie z niezdrowym odczytem, także ze stacją z tożsamością.
+    if (!entropyHealthy) bench.log(entropyTimeout ? "entropy source not responding" : "entropy source failed health test");
+    if (!entropyHealthy && !stationStore.identitySaved()) {
+        stackState = "entropy_failed";
+        bench.log("rns not started: no healthy seed for a new identity");
+        return;
+    }
+#if defined(WICI_RNS_CORE)
+    // Samotest kryptografii rdzenia przed tożsamością (core_selftest.h): przy niezgodności stos nie startuje.
+    // Czas samotestu w dzienniku (tools/board_selftest.py go odczytuje): o tyle później startują stos i radio.
+    coreselftest::Result results[coreselftest::QUICK];
+    const uint64_t selftestStartMs = platform::uptimeMs();
+    if (!coreselftest::run(results, coreselftest::QUICK, selftestMicros)) {
+        stackState = "selftest_failed";
+        for (const coreselftest::Result& r : results) {
+            if (r.ok) continue;
+            char text[64];
+            snprintf(text, sizeof(text), "rns not started: core selftest %s failed", r.name);
+            bench.log(text);
+        }
+        return;
+    }
+    char selftestText[48];
+    snprintf(selftestText, sizeof(selftestText), "core selftest ok %lu ms",
+             static_cast<unsigned long>(platform::uptimeMs() - selftestStartMs));
+    bench.log(selftestText);
+#endif
     uint8_t seed[32];
     stationRandom(seed, sizeof(seed));
     rnsOk = rnsnode::begin(memory, benchRadio, c.ifac, static_cast<uint64_t>(counterS()) * 1000, stationStore.identitySaved(), seed, hooks);
-    memset(seed, 0, sizeof(seed));
-    if (!rnsOk) { bench.log(rnsnode::status().identityLost ? "rns not started: identity lost (destroy data)" : "rns start failed"); return; }
+    drbg::wipe(seed, sizeof(seed));
+    if (!rnsOk) {
+        const bool lost = rnsnode::status().identityLost;
+        stackState = lost ? "identity_lost" : "start_failed";
+        bench.log(lost ? "rns not started: identity lost (destroy data)" : "rns start failed");
+        return;
+    }
+    stackState = "running";
     // Znacznik także po starcie z kluczem bez znacznika (zanik zasilania między zapisem klucza a znacznikiem).
     if (!stationStore.setIdentitySaved()) bench.log("identity flag not saved");
     uint32_t random = 0;
@@ -1243,13 +1315,19 @@ void beginStack() {
 
 // Ziarno generatora stacji: 48 B entropii ze źródła sprzętowego i identyfikator układu jako nonce
 // (na ESP32-S3 przed konfiguracją ADC pomiaru VTEST, platform.h).
+// Odczyt bez testu zdrowia (drbg::healthy) jest powtarzany do trzech razy; generator dostaje ziarno także
+// po trzeciej odmowie (identyfikatory zgłoszeń, opóźnienia), ale stos nie tworzy wtedy tożsamości (beginStack).
 void seedGenerator() {
     uint8_t entropy[drbg::SEED_ENTROPY];
     uint32_t id[2];
-    platform::entropy(entropy, sizeof(entropy));
+    for (int attempt = 0; attempt < 3 && !entropyHealthy; ++attempt) {
+        const bool answered = platform::entropy(entropy, sizeof(entropy));
+        entropyTimeout = entropyTimeout || !answered;
+        entropyHealthy = answered && drbg::healthy(entropy, sizeof(entropy));
+    }
     platform::chipId(id);
     generator.seed(entropy, sizeof(entropy), reinterpret_cast<const uint8_t*>(id), sizeof(id));
-    memset(entropy, 0, sizeof(entropy));
+    drbg::wipe(entropy, sizeof(entropy));
 }
 
 }  // namespace
