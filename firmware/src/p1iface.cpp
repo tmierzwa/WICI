@@ -299,6 +299,14 @@ bool Queue::announceAdmits(const uint8_t* raw, size_t rawLength, uint32_t nowMs)
     return worst && worst->hops > raw[1];   // offerAnnounce: zastępuje ogłoszenie z większą liczbą skoków
 }
 
+bool Queue::announceRoom(size_t rawLength, uint32_t nowMs) {
+    if (held() == 0 && !full() && announceOpen(nowMs) && poolAllows(nowMs, rawLength + IFAC_SIZE)) return true;
+    for (const Held& h : held_) {
+        if (!h.used) return true;
+    }
+    return false;
+}
+
 void Queue::setReceiver(const uint8_t dest[16]) {
     receiverSet_ = false;
     if (!dest) return;

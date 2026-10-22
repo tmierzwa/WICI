@@ -363,7 +363,13 @@ void receiptHook(uint32_t handle, bool delivered, void*) {
 // powtórzone nagranie poprawnego ogłoszenia (IFAC przechodzi bez klucza sieci, bo kod jest
 // deterministyczny) i ogłoszenie z kolizją klucza odpadają bez żetonu i nie wyczerpują wiadra.
 // Interfejs przyjmie teraz pakiet stosu (jak transmit() przed podpisem IFAC, bez wyjątku ciszy).
-bool mayTransmitHook(void*) { return ifacOnline && silence == Silence::OFF && !queue.full(); }
+// Przed podpisem odpowiedzi na zapytanie o cel stacji i przed retransmisją ogłoszenia (oba są
+// ogłoszeniami): kod IFAC, bez ciszy, miejsce w kolejce i miejsce dla ogłoszenia najmniejszego rozmiaru
+// (limit ogłoszeń 2%, pula, lista oczekujących). Pełne sprawdzenie zostaje w transmit().
+bool mayTransmitHook(void*) {
+    return ifacOnline && silence == Silence::OFF && !queue.full() &&
+           queue.announceRoom(rnscore::HEADER_1_SIZE + rnscore::ANNOUNCE_MIN_SIZE, nowMs());
+}
 
 bool mayVerifyHook(void*) {
     if (takeVerifyToken(uptimeMs())) return true;
