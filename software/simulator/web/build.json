@@ -102,8 +102,8 @@
  ],
  "outputs": {
   "wici-station.mjs": {
-   "sha256": "34710a28ed1152dec2c927069634cdc893cb12344ae158f4975fe3c57add5a82",
-   "bytes": 1129218,
+   "sha256": "c82a87b640f10f172bf375c5b8f1f653cff1d245834404605913b039ee1d4458",
+   "bytes": 1129226,
    "sources": [
     "firmware/src/annunciator.cpp",
     "firmware/src/config.cpp",
@@ -142,8 +142,8 @@
    ]
   },
   "wici-post.mjs": {
-   "sha256": "fbe287b5a50b70c54ce510d0757c955879f9f99a1295a9c5aaac92de076e559d",
-   "bytes": 813633,
+   "sha256": "554e602a5eb40abc7905b73e0e7cbeea3d4b23df6457e595076502b10d229dda",
+   "bytes": 813637,
    "sources": [
     "firmware/src/config.cpp",
     "firmware/src/framfs.cpp",
@@ -261,6 +261,7 @@
   "firmware/patches/microReticulum/0005-held-announce-after-loop.patch": "9f4fc99edfb41f7157d2d90de89fc783bbe766504704aeadf95f02e753f9f856",
   "firmware/patches/microReticulum/0006-short-announce.patch": "3bfc611410365393231099345388f8d2031ee0ba1aafebdf34db624859343cbd",
   "firmware/patches/microReticulum/0007-unpad-empty.patch": "f28979272e1322bf1a16b642111e7f3a463e7fa5121aea43c740c28c21b6f824",
+  "firmware/patches/microReticulum/0008-link-request-small-mtu.patch": "b32c53e5eae6e8565d8524093164c51f5c36c892723b88760d2807c566878aaf",
   "firmware/patches/microStore/0001-keep-pinned-keys.patch": "4db4ed7a6b893ea56de87a6daa3c2bb74acbd6e498a08750fb465f84c049aa07",
   "software/simulator/hal/Arduino.h": "784605af32b66a5b54e73b34f82f441514ee8d1d4fdc1b9a34ce987e760a4c57",
   "software/simulator/hal/Print.h": "8506f23a05027ebdc814db0d6a32ee8a1ba9883daa368b76595a9403d94dca5b",

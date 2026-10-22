@@ -11,7 +11,7 @@
 // Wynik: wiersz JSON na stdout; kod 3 = złamany niezmiennik, 75 = zanik zasilania w zapisie.
 //
 // rns_stress <fram> [--seed N] [--events N] [--mutate PERCENT] [--start S] [--gap S]
-//            [--long-jumps] [--cut-after-writes N] [--defect token48|short-announce|held-announce|flood|damaged-receiver|forward-flood|rebroadcast-load|own-path-requests]
+//            [--long-jumps] [--cut-after-writes N] [--defect token48|short-announce|held-announce|link-mtu|flood|damaged-receiver|forward-flood|rebroadcast-load|own-path-requests]
 //            [--hostile-days N [--window-s S] [--stop-after-s S]] [--receiver-foreign-key]
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -1020,6 +1020,22 @@ void defect(const std::string& name) {
             q.pack();
             feed(withHops(q.raw(), 0), "defect");
             for (int k = 0; k < 30; ++k) { simMs += 1000; service(); }
+        }
+    } else if (name == "link-mtu") {
+        // Żądania łącza do stacji z sygnalizacją MTU tak małego, że MDU łącza wyszłoby <= 0 (dawniej
+        // konwersja ujemnej wartości na uint16_t w Link::update_mdu; wykryte ziarnem 2027 po cięciu
+        // zasilania), oraz graniczne: 83 B ostatnie bez MDU, 84 B pierwsze z MDU > 0. Tryb łącza 1.
+        for (const uint32_t mtu : {1u, 64u, 67u, 68u, 83u, 84u}) {
+            RNS::Identity ephemeral;
+            RNS::Bytes data = ephemeral.get_public_key();
+            data.append(static_cast<uint8_t>((1u << 5) | ((mtu >> 16) & 0x1F)));
+            data.append(static_cast<uint8_t>(mtu >> 8));
+            data.append(static_cast<uint8_t>(mtu));
+            RNS::Destination out(station, RNS::Type::Destination::OUT, RNS::Type::Destination::SINGLE, DEST_APP, DEST_ASPECT);
+            RNS::Packet lr(out, data, RNS::Type::Packet::LINKREQUEST);
+            lr.pack();
+            feed(withHops(lr.raw(), 0), "defect");
+            for (int k = 0; k < 10; ++k) { simMs += 100; service(); }
         }
     } else if (name == "flood") {
         flood();
