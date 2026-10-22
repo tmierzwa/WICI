@@ -103,6 +103,9 @@ Silence silence = Silence::OFF;
 bool exceptionOut = false;
 uint32_t malformed = 0;   // pakiety z poprawnym IFAC, które odrzuca rnscore::unpack
 rnscore::Transport transport;
+// Budżet RAM obiektu transportu (reticulum-core.md, „Budżet RAM”: 56 KiB z LXMF); na płytce sprawdza go
+// też tools/core_boards.py kompilatorem obrazu.
+static_assert(sizeof(rnscore::Transport) <= 56 * 1024, "rnscore::Transport ponad budżet RAM");
 uint32_t nextHandle = 0;
 
 // Kolejka odbioru: datagramy z eteru czekają na loop(). Na nRF52840 sprawdzenie IFAC (podpis Ed25519)

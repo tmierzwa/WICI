@@ -114,9 +114,8 @@ int Table::find(const uint8_t destination[TRUNCATED_HASH_SIZE]) const {
     return -1;
 }
 
-bool Table::read(int slot, KnownDestination& out, uint32_t nowS) {
-    if (slot < 0 || static_cast<size_t>(slot) >= TABLE_SLOTS || !live(static_cast<size_t>(slot))) return false;
-    const size_t s = static_cast<size_t>(slot);
+// Obraz gniazda w buforze ze sprawdzeniem znacznika, numeru gniazda, celu i CRC (bez wygasania).
+bool Table::load(size_t s) {
     bufferSlot_ = 0;
     const uint8_t* b = buffer_;
     if (!storage_->read(offsetOf(s), buffer_, sizeof(buffer_))) return false;   // np. chwilowy błąd SPI: wpis zostaje
@@ -128,6 +127,14 @@ bool Table::read(int slot, KnownDestination& out, uint32_t nowS) {
         return false;
     }
     bufferSlot_ = s + 1;
+    return true;
+}
+
+bool Table::read(int slot, KnownDestination& out, uint32_t nowS) {
+    if (slot < 0 || static_cast<size_t>(slot) >= TABLE_SLOTS || !live(static_cast<size_t>(slot))) return false;
+    const size_t s = static_cast<size_t>(slot);
+    if (!load(s)) return false;
+    const uint8_t* b = buffer_;
     memcpy(out.destination, b + AT_DESTINATION, TRUNCATED_HASH_SIZE);
     memcpy(out.publicKey, b + AT_PUBLIC_KEY, KEY_SIZE);
     memcpy(out.ratchet, b + AT_RATCHET, RATCHET_SIZE);
@@ -190,8 +197,7 @@ int Table::write(int slot, const KnownDestination& entry, Cached cached, const u
     if (slot >= 0 && (static_cast<size_t>(slot) >= TABLE_SLOTS || !live(static_cast<size_t>(slot)))) return -1;
     const bool keep = cached == Cached::KEEP && slot >= 0;
     if (keep && bufferSlot_ != static_cast<size_t>(slot) + 1) {   // ogłoszenie z gniazda: obraz musi być w buforze
-        KnownDestination old;
-        if (!read(slot, old, 0)) return -1;
+        if (!load(static_cast<size_t>(slot))) return -1;
     }
     // Nowy cel przy pełnej tablicy: wyparcie przed zapisem (zanik zasilania gubi najwyżej wypierany wpis).
     while (slot < 0 && count_ >= (limit_ ? limit_ : KNOWN_MAX)) {
