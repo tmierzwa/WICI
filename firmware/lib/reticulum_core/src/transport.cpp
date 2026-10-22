@@ -55,21 +55,21 @@ bool Transport::inbound(const uint8_t* raw, size_t length, uint64_t nowMs) {
     }
     uint8_t hash[HASH_SIZE];
     packetHash(raw, length, hash);
-    // Ogłoszenie SINGLE przechodzi także ze znanym skrótem (o trasie decydują skróty losowe).
-    if (packet.packetType != ANNOUNCE && hashlist_.contains(hash)) {
+    ++packet.hops;   // preprocess_inbound
+    // Ogłoszenie SINGLE przechodzi także ze znanym skrótem (o trasie decydują skróty losowe); jego skrót
+    // trafia na listę dopiero po weryfikacji podpisu (inboundAnnounce), jak w _inbound.
+    if (packet.packetType == ANNOUNCE) {
+        inboundAnnounce(packet, hash, nowMs);
+        return true;
+    }
+    // _inbound: skrót zapamiętany przed przetworzeniem (jeden przegląd listy z filtrem duplikatów).
+    if (!hashlist_.add(hash)) {
         ++counters_.duplicate;
         return true;
     }
-    // _inbound: skrót zapamiętany przed przetworzeniem; preprocess_inbound: skoki + 1.
-    hashlist_.add(hash);
-    ++packet.hops;
-
     switch (packet.packetType) {
-        case ANNOUNCE:
-            inboundAnnounce(packet, nowMs);
-            break;
         case DATA:
-            inboundData(packet, raw, length);
+            inboundData(packet, hash);
             break;
         case PROOF:
             inboundProof(packet);
@@ -82,39 +82,54 @@ bool Transport::inbound(const uint8_t* raw, size_t length, uint64_t nowMs) {
 }
 
 // RNS/Identity.py: validate_announce i remember, _remember_ratchet; RNS/Transport.py: _inbound
-// (ANNOUNCE): tablica tras i wywołanie announce handlers z filtrem aspektu.
-void Transport::inboundAnnounce(const Packet& packet, uint64_t nowMs) {
-    Announce a;
-    if (!validateAnnounce(packet, a)) {
-        ++counters_.invalid;
-        return;
-    }
+// (ANNOUNCE): tablica tras i wywołanie announce handlers z filtrem aspektu. Tanie sprawdzenia przed
+// weryfikacją podpisu (ten sam wynik co w Pythonie, inne liczniki): własny cel, kolizja klucza ze
+// znanym wpisem i kopia ogłoszenia, które już przeszło weryfikację (tabela różnic).
+void Transport::inboundAnnounce(const Packet& packet, const uint8_t hash[HASH_SIZE], uint64_t nowMs) {
     // Ogłoszenie własnego celu (np. odbite przez węzeł transportowy) nie trafia do tablicy.
     if (address_ && memcmp(packet.destinationHash, address_, TRUNCATED_HASH_SIZE) == 0) {
         ++counters_.ignored;
         return;
     }
     KnownDestination* e = findMutable(packet.destinationHash);
-    // validate_announce: znany cel z innym kluczem publicznym (kolizja skrótu) odrzucony.
-    if (e && memcmp(e->publicKey, a.publicKey, KEY_SIZE) != 0) {
+    // validate_announce: znany cel z innym kluczem publicznym (kolizja skrótu) odrzucony. Klucz to
+    // pierwsze 64 B danych; krótsze dane odrzuci validateAnnounce.
+    if (e && packet.dataLength >= KEY_SIZE && memcmp(e->publicKey, packet.data, KEY_SIZE) != 0) {
         ++counters_.invalid;
         return;
     }
+    // Skrót na liście: te same bajty ogłoszenia przeszły już weryfikację, a przy tym samym skrócie
+    // losowym should_add jest fałszywe. Bez trasy (wyparta albo wygasła) ogłoszenie idzie całą drogą.
+    if (e && e->hasPath && hashlist_.contains(hash)) {
+        e->usedS = seconds(nowMs);
+        ++counters_.duplicate;
+        return;
+    }
+    Announce a;
+    if (!validateAnnounce(packet, a)) {
+        ++counters_.invalid;
+        return;
+    }
+    hashlist_.add(hash);
     if (!e) e = entry(packet.destinationHash);
     if (!e) {   // pełna tablica z samymi celami chronionymi
         ++counters_.ignored;
         return;
     }
     memcpy(e->publicKey, a.publicKey, KEY_SIZE);
-    if (a.ratchet) {   // ogłoszenie bez ratchetu zostawia zapamiętany (known_ratchets)
+    const uint64_t emitted = emittedAt(a.randomHash);
+    // Ogłoszenie bez ratchetu zostawia zapamiętany (known_ratchets). Ratchet ze starszego ogłoszenia
+    // (odtworzonego) nie zastępuje nowszego, choć Python go zastępuje (tabela różnic).
+    const uint32_t emittedS = emitted > UINT32_MAX ? UINT32_MAX : static_cast<uint32_t>(emitted);
+    if (a.ratchet && (!e->hasRatchet || emittedS >= e->ratchetEmittedS)) {
         memcpy(e->ratchet, a.ratchet, RATCHET_SIZE);
         e->hasRatchet = true;
+        e->ratchetEmittedS = emittedS;
     }
     e->usedS = seconds(nowMs);
 
     // Transport._inbound: should_add. Z listy skrótów losowych wpis zna tylko ostatni (tabela różnic);
     // stan „trasa bez odpowiedzi” (path_is_unresponsive) jest w R2.
-    const uint64_t emitted = emittedAt(a.randomHash);
     const bool newBlob = memcmp(a.randomHash, e->randomHash, RANDOM_HASH_SIZE) != 0;
     bool add;
     if (!e->hasPath) {
@@ -133,6 +148,7 @@ void Transport::inboundAnnounce(const Packet& packet, uint64_t nowMs) {
     memcpy(e->randomHash, a.randomHash, RANDOM_HASH_SIZE);
     e->emitted = emitted;
     e->pathExpiresS = seconds(nowMs) + PATHFINDER_E_S;
+    e->pathUsedS = seconds(nowMs);
     ++counters_.announces;
     // Filtr aspektu "wici.sa1": skrót celu z nazwy i tożsamości sprawdził validateAnnounce, więc wystarczy
     // skrót nazwy. Odpowiedzi na zapytania o trasę nie idą do warstwy aplikacji (receive_path_responses).
@@ -143,7 +159,7 @@ void Transport::inboundAnnounce(const Packet& packet, uint64_t nowMs) {
 
 // RNS/Transport.py: _inbound (DATA do celu lokalnego), RNS/Destination.py: receive i decrypt (bez
 // własnych ratchetów), PROVE_APP; RNS/Identity.py: prove (dowód niejawny, should_use_implicit_proof).
-void Transport::inboundData(const Packet& packet, const uint8_t* raw, size_t length) {
+void Transport::inboundData(const Packet& packet, const uint8_t hash[HASH_SIZE]) {
     if (!address_ || memcmp(packet.destinationHash, address_, TRUNCATED_HASH_SIZE) != 0) {
         ++counters_.ignored;
         return;
@@ -161,8 +177,6 @@ void Transport::inboundData(const Packet& packet, const uint8_t* raw, size_t len
         ++counters_.unproven;
         return;
     }
-    uint8_t hash[HASH_SIZE];
-    packetHash(raw, length, hash);
     uint8_t proof[PROOF_EXPLICIT_SIZE];
     Packet out = {};
     out.headerType = HEADER_1;
@@ -178,15 +192,22 @@ void Transport::inboundData(const Packet& packet, const uint8_t* raw, size_t len
 }
 
 // RNS/Transport.py: _inbound (PROOF bez LRPROOF): dowód jawny tylko do potwierdzenia o tym skrócie,
-// niejawny do każdego czekającego; PacketReceipt.validate_proof.
+// niejawny tylko do potwierdzenia o skrócie z celu dowodu; PacketReceipt.validate_proof.
 void Transport::inboundProof(const Packet& packet) {
     const bool explicitProof = packet.dataLength == PROOF_EXPLICIT_SIZE;
     if (!explicitProof && packet.dataLength != PROOF_IMPLICIT_SIZE) {
         ++counters_.invalid;
         return;
     }
+    // Python sprawdza dowód niejawny wobec każdego czekającego potwierdzenia, ale zawsze adresuje go do
+    // skrótu skróconego pakietu (RNS/Packet.py: ProofDestination); tu najwyżej jedna weryfikacja na
+    // dowód (tabela różnic).
     for (Receipt& r : receipts_) {
-        if (!r.used || (explicitProof && memcmp(r.hash, packet.data, HASH_SIZE) != 0)) continue;
+        if (!r.used) continue;
+        if (explicitProof ? memcmp(r.hash, packet.data, HASH_SIZE) != 0
+                          : memcmp(r.hash, packet.destinationHash, TRUNCATED_HASH_SIZE) != 0) {
+            continue;
+        }
         if (!validateProof(r.publicKey, r.hash, packet.data, packet.dataLength)) continue;
         r.used = false;
         ++counters_.delivered;
@@ -251,7 +272,7 @@ SendResult Transport::send(const uint8_t destination[TRUNCATED_HASH_SIZE], const
     if (!receipt) return SendResult::RECEIPTS_FULL;
     // Transport._outbound: przy znanej trasie dłuższej niż 1 skok pakiet idzie do transportu (HEADER_2
     // z następnym skokiem); inaczej HEADER_1 rozgłaszany.
-    const bool transported = e->hasPath && e->hops > 1;
+    const bool transported = e->hasPath && e->hops > 1;   // trasa wygasła: hasPath skasował poll()
     const size_t header = transported ? HEADER_2_SIZE : HEADER_1_SIZE;
     if (length > MTU || header + tokenSize(length) > MTU) return SendResult::TOO_LARGE;
 
@@ -279,6 +300,7 @@ SendResult Transport::send(const uint8_t destination[TRUNCATED_HASH_SIZE], const
     memcpy(receipt->publicKey, e->publicKey, KEY_SIZE);
     receipt->deadlineMs = nowMs + timeoutMs;
     e->usedS = seconds(nowMs);
+    if (transported) e->pathUsedS = seconds(nowMs);   // _outbound: path_entry[IDX_PT_TIMESTAMP] przy HEADER_2
     ++counters_.sent;
     return SendResult::SENT;
 }
@@ -289,6 +311,15 @@ void Transport::poll(uint64_t nowMs) {
         r.used = false;
         ++counters_.timedOut;
         if (hooks_.receipt) hooks_.receipt(r.handle, false, hooks_.context);
+    }
+    // Transport.jobs: trasa nieużywana dłużej niż DESTINATION_TIMEOUT znika z path_table; wpis znanego
+    // celu (tożsamość, ratchet) zostaje, jak known_destinations.
+    const uint32_t nowS = seconds(nowMs);
+    if (nowS == cullS_) return;
+    cullS_ = nowS;
+    for (size_t i = 0; i < limit_; ++i) {
+        KnownDestination& k = known_[i];
+        if (k.used && k.hasPath && nowS - k.pathUsedS > DESTINATION_TIMEOUT_S) k.hasPath = false;
     }
 }
 

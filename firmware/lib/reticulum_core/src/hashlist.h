@@ -16,7 +16,8 @@ constexpr size_t HASHLIST_MAX = 4096;
 class HashList {
 public:
     bool contains(const uint8_t hash[HASH_SIZE]) const;
-    void add(const uint8_t hash[HASH_SIZE]);   // bez zmian, gdy skrót już jest
+    // Jeden przegląd listy: skrót dopisany i prawda albo, gdy już jest, fałsz bez zmian (duplikat).
+    bool add(const uint8_t hash[HASH_SIZE]);
     size_t size() const { return count_; }
     void clear();
 

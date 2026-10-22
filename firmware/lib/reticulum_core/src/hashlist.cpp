@@ -20,11 +20,12 @@ bool HashList::contains(const uint8_t hash[HASH_SIZE]) const {
     return false;
 }
 
-void HashList::add(const uint8_t hash[HASH_SIZE]) {
-    if (contains(hash)) return;
+bool HashList::add(const uint8_t hash[HASH_SIZE]) {
+    if (contains(hash)) return false;
     keys_[next_] = key(hash);
     next_ = (next_ + 1) % HASHLIST_MAX;
     if (count_ < HASHLIST_MAX) ++count_;
+    return true;
 }
 
 void HashList::clear() {

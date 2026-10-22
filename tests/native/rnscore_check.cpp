@@ -332,13 +332,14 @@ int main() {
                 state->transport.send(p, p + 72, data.size() - 72, p + 16, p + 48, handle, timeout, state->nowMs);
             printTransport(names[static_cast<int>(r)]);
         } else if (command == "t_known" && data.size() == 16) {
-            // cel: "none" albo skoki, ratchet (0/1), trasa (0/1), następny skok
+            // cel: "none" albo skoki, ratchet (0/1), trasa (0/1), następny skok, klucz ratchetu albo "-"
             const rnscore::KnownDestination* e = state->transport.find(data.data());
             if (!e) {
                 printf("none\n");
             } else {
                 printf("%u %d %d ", e->hops, e->hasRatchet ? 1 : 0, e->hasPath ? 1 : 0);
-                printHex(e->nextHop, sizeof(e->nextHop));
+                printHex(e->nextHop, sizeof(e->nextHop), " ");
+                if (e->hasRatchet) printHex(e->ratchet, sizeof(e->ratchet)); else printf("-\n");
             }
         } else if (command == "unpack") {
             // pakiet; pola rozdzielone spacjami (identyfikator transportu "-" w HEADER_1) i skrót pakietu,

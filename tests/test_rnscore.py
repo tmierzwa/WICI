@@ -399,7 +399,8 @@ class CoreTests(unittest.TestCase):
         return bytes.fromhex(self.ask([("build_announce", private_key + random_hash + flag + app_data)])[0])
 
     def test_transport_announce_ratchet_send_and_proof(self):
-        # Ogłoszenie z ratchetem: wpis z trasą 1 skok; to samo ogłoszenie drugi raz nie zmienia trasy.
+        # Ogłoszenie z ratchetem: wpis z trasą 1 skok; to samo ogłoszenie drugi raz to kopia już sprawdzonego
+        # (bez weryfikacji, licznik duplikatów) i nie zmienia trasy.
         # Pakiet do celu zaszyfrowany do ratchetu (jak encrypt_ratchet), dowód niejawny celu doręcza go raz.
         a = next(c for c in VECTORS["announce"] if c["name"] == "ratchet")
         raw = bytes.fromhex(a["raw"])
@@ -411,8 +412,8 @@ class CoreTests(unittest.TestCase):
         lines = self.ask([("t_begin", self.STATION), ("t_in", raw), ("t_known", dest), ("t_in", raw),
                           ("t_send", dest + self.EPHEMERAL + self.IV + (7).to_bytes(4, "big") + (60000).to_bytes(4, "big") + payload)])
         self.assertEqual(self.parsed(lines[1]), ("ok", [0, 0, 0, 1, 0, 0, 0, 0, 0], [f"announce:{dest.hex()}:{a['app_data']}"], "-"))
-        self.assertEqual(lines[2], f"1 1 1 {dest.hex()}")
-        self.assertEqual(self.parsed(lines[3]), ("ok", [0, 0, 0, 1, 0, 0, 0, 0, 0], [], "-"))
+        self.assertEqual(lines[2], f"1 1 1 {dest.hex()} {a['ratchet']}")
+        self.assertEqual(self.parsed(lines[3]), ("ok", [1, 0, 0, 1, 0, 0, 0, 0, 0], [], "-"))
         result, counters, _, sent = self.parsed(lines[4])
         self.assertEqual((result, counters[6]), ("sent", 1))
         self.assertEqual(sent, (bytes([0x00, 0x00]) + dest + b"\x00").hex() + token)
@@ -424,7 +425,8 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(self.parsed(lines[4])[1], [1, 0, 0, 1, 0, 0, 1, 1, 0])   # ten sam dowód: duplikat
 
     def test_transport_receipt_timeout_and_wrong_proofs(self):
-        # Dowód jawny innego pakietu i dowód innej tożsamości nie doręczają; po limicie wynik "nie".
+        # Dowód jawny innego pakietu, dowód innej tożsamości i poprawny dowód niejawny z celem innym niż
+        # skrót pakietu (bez weryfikacji, tabela różnic) nie doręczają; po limicie wynik "nie".
         a = next(c for c in VECTORS["announce"] if c["name"] == "plain")
         raw, key = bytes.fromhex(a["raw"]), bytes.fromhex(a["private_key"])
         dest = raw[2:18]
@@ -434,11 +436,13 @@ class CoreTests(unittest.TestCase):
         other = self.packet(0x00, dest, b"another packet")
         wrong_hash = self.proof_packet(key, other, implicit=False)
         wrong_key = self.proof_packet(self.STATION, sent)
+        wrong_destination = self.packet(0x03, bytes(16), self.proof_packet(key, sent)[19:])
         lines = self.ask([("t_begin", self.STATION), ("t_in", raw), send, ("t_in", wrong_hash), ("t_in", wrong_key),
-                          ("t_clock", (5999).to_bytes(8, "big")), ("t_clock", (6000).to_bytes(8, "big"))])
-        self.assertEqual([self.parsed(line)[1][2] for line in lines[3:5]], [1, 2])
-        self.assertEqual(self.parsed(lines[5])[2], [])
-        self.assertEqual(self.parsed(lines[6])[1:3], ([0, 0, 2, 1, 0, 0, 1, 0, 1], ["receipt:9:0"]))
+                          ("t_in", wrong_destination), ("t_clock", (5999).to_bytes(8, "big")),
+                          ("t_clock", (6000).to_bytes(8, "big"))])
+        self.assertEqual([self.parsed(line)[1][2] for line in lines[3:6]], [1, 2, 3])
+        self.assertEqual(self.parsed(lines[6])[2], [])
+        self.assertEqual(self.parsed(lines[7])[1:3], ([0, 0, 3, 1, 0, 0, 1, 0, 1], ["receipt:9:0"]))
 
     def test_transport_receipts_bounded(self):
         # 8 czekających potwierdzeń; dziewiąty pakiet odmówiony bez wysłania.
@@ -482,6 +486,126 @@ class CoreTests(unittest.TestCase):
         lines = self.ask([("t_begin", self.STATION)] + [("t_in", raw) for raw in cases] + [("t_in", b"\x00")])
         self.assertEqual([self.parsed(line)[1][1:3] for line in lines[1:-1]], [[1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [5, 1]])
         self.assertEqual(self.parsed(lines[-1])[0], "malformed")
+
+    @staticmethod
+    def blob(n: int, emitted: int) -> bytes:
+        # Skrót losowy ogłoszenia: 5 B losowych i 5 B czasu emisji (RNS/Destination.py: announce).
+        return bytes([n]) * 5 + emitted.to_bytes(5, "big")
+
+    @staticmethod
+    def hops(raw: bytes, hops: int) -> bytes:
+        return raw[:1] + bytes([hops]) + raw[2:]
+
+    def known(self, commands, dest):
+        lines = self.ask(commands + [("t_known", dest)])
+        return lines[:-1], lines[-1].split()
+
+    def test_transport_should_add(self):
+        # RNS/Transport.py: should_add. Skoki po odbiorze są o 1 większe niż w pakiecie.
+        a = next(c for c in VECTORS["announce"] if c["name"] == "plain")
+        key = bytes.fromhex(a["private_key"])
+        dest = bytes.fromhex(a["raw"])[2:18]
+        first = ("t_in", self.hops(self.announce_of(key, random_hash=self.blob(1, 1000)), 1))
+        cases = {
+            "higher hops, same emission": (self.blob(2, 1000), 3, "2"),
+            "higher hops, newer emission": (self.blob(2, 1001), 3, "4"),
+            "equal hops, older emission": (self.blob(2, 999), 1, "2"),
+            "equal hops, same blob": (self.blob(1, 1000), 1, "2"),
+            "fewer hops, newer emission": (self.blob(2, 1001), 0, "1"),
+        }
+        for name, (blob, hops, expected) in cases.items():
+            with self.subTest(name):
+                _, entry = self.known([("t_begin", self.STATION), first,
+                                       ("t_in", self.hops(self.announce_of(key, random_hash=blob), hops))], dest)
+                self.assertEqual(entry[:3], [expected, "0", "1"])
+        # Trasa po PATHFINDER_E (ta sama chwila co DESTINATION_TIMEOUT, ale bez wygaśnięcia, bo to nie
+        # „dłużej niż”): wyższe skoki ze starszą emisją, ale nowym skrótem losowym przyjęte.
+        week = 7 * 24 * 3600 * 1000
+        _, entry = self.known([("t_begin", self.STATION), first, ("t_clock", (1000 + week).to_bytes(8, "big")),
+                               ("t_in", self.hops(self.announce_of(key, random_hash=self.blob(3, 500)), 5))], dest)
+        self.assertEqual(entry[:3], ["6", "0", "1"])
+
+    def test_transport_path_expires_unused(self):
+        # RNS/Transport.py: jobs: trasa nieużywana dłużej niż DESTINATION_TIMEOUT znika (tożsamość zostaje);
+        # wysyłka HEADER_2 odświeża jej czas, HEADER_1 nie. Trasa 2 skoki: pakiet idzie do następnego skoku.
+        a = next(c for c in VECTORS["announce"] if c["name"] == "plain")
+        key = bytes.fromhex(a["private_key"])
+        pub = bytes.fromhex(self.ask([("public_key", key)])[0])
+        raw = self.hops(self.announce_of(key, random_hash=self.blob(1, 1000)), 1)
+        dest = raw[2:18]
+        relay = bytes(range(16))
+        transported = bytes([raw[0] | 0x50, raw[1]]) + relay + raw[2:]   # HEADER_2 od węzła transportowego
+        week = 7 * 24 * 3600 * 1000
+        payload = b"alarm"
+        token = self.ask([("encrypt", pub + self.EPHEMERAL + self.IV + payload)])[0]
+
+        def send(handle):
+            return ("t_send", dest + self.EPHEMERAL + self.IV + handle.to_bytes(4, "big") + (60000).to_bytes(4, "big") + payload)
+
+        lines, entry = self.known([("t_begin", self.STATION), ("t_in", transported),
+                                   ("t_clock", (1000 + week // 2).to_bytes(8, "big")), send(1),
+                                   ("t_clock", (1000 + week + 1000).to_bytes(8, "big"))], dest)
+        self.assertEqual(self.parsed(lines[3])[3], (bytes([0x50, 0x00]) + relay + dest + b"\x00").hex() + token)
+        self.assertEqual(entry[:4], ["2", "0", "1", relay.hex()])   # wysyłka HEADER_2 odświeżyła trasę
+        lines, entry = self.known([("t_begin", self.STATION), ("t_in", transported),
+                                   ("t_clock", (1000 + week).to_bytes(8, "big")), ("t_known", dest),
+                                   ("t_clock", (1000 + week + 1000).to_bytes(8, "big")), send(2)], dest)
+        self.assertEqual(lines[3].split()[2], "1")
+        self.assertEqual(entry[2], "0")   # po tygodniu bez użycia brak trasy, cel znany
+        self.assertEqual(self.parsed(lines[5])[3], (bytes([0x00, 0x00]) + dest + b"\x00").hex() + token)
+        local = self.hops(raw, 0)   # trasa 1 skok: HEADER_1 nie odświeża czasu trasy
+        lines, entry = self.known([("t_begin", self.STATION), ("t_in", local),
+                                   ("t_clock", (1000 + week).to_bytes(8, "big")), send(3),
+                                   ("t_clock", (1000 + week + 1000).to_bytes(8, "big"))], dest)
+        self.assertEqual(entry[2], "0")
+
+    def test_transport_ratchet_kept(self):
+        # Ogłoszenie bez ratchetu zostawia zapisany (known_ratchets); ratchet ze starszego ogłoszenia
+        # (odtworzonego) nie zastępuje nowszego (tabela różnic); nowszy go zastępuje.
+        a = next(c for c in VECTORS["announce"] if c["name"] == "plain")
+        key = bytes.fromhex(a["private_key"])
+        dest = bytes.fromhex(a["raw"])[2:18]
+        r1, r2, r3 = bytes([1]) * 32, bytes([2]) * 32, bytes([3]) * 32
+        steps = [(r1, 1000, r1), (None, 1001, r1), (r2, 999, r1), (r3, 1002, r3)]
+        commands = [("t_begin", self.STATION)]
+        for n, (ratchet, emitted, _) in enumerate(steps):
+            commands += [("t_in", self.announce_of(key, ratchet=ratchet, random_hash=self.blob(n + 1, emitted))), ("t_known", dest)]
+        lines = self.ask(commands)
+        self.assertEqual([lines[2 + 2 * n].split()[4] for n in range(len(steps))], [r.hex() for *_, r in steps])
+
+    def test_transport_announce_filters(self):
+        # Kolizja klucza ze znanym celem odrzucona przed weryfikacją; odpowiedź na zapytanie o trasę
+        # (kontekst PATH_RESPONSE) daje trasę bez wywołania warstwy aplikacji; echo własnego ogłoszenia
+        # pominięte.
+        a = next(c for c in VECTORS["announce"] if c["name"] == "plain")
+        key = bytes.fromhex(a["private_key"])
+        raw = self.announce_of(key, random_hash=self.blob(1, 1000))
+        dest = raw[2:18]
+        other = self.announce_of(bytes([7]) * 64, random_hash=self.blob(2, 1001))
+        collision = other[:2] + dest + other[18:]
+        response = raw[:18] + bytes([0x0B]) + raw[19:]
+        lines = self.ask([("t_begin", self.STATION), ("t_in", raw), ("t_in", collision), ("t_known", dest)])
+        self.assertEqual(self.parsed(lines[2])[1][2], 1)
+        self.assertEqual(lines[3].split()[:3], ["1", "0", "1"])
+        lines = self.ask([("t_begin", self.STATION), ("t_in", response), ("t_known", dest)])
+        self.assertEqual(self.parsed(lines[1])[1:3], ([0, 0, 0, 1, 0, 0, 0, 0, 0], []))
+        self.assertEqual(lines[2].split()[2], "1")
+        lines = self.ask([("t_begin", self.STATION), ("t_announce", bytes(5))])
+        own = bytes.fromhex(self.parsed(lines[1])[3])
+        lines = self.ask([("t_begin", self.STATION), ("t_announce", bytes(5)), ("t_in", self.hops(own, 2)),
+                          ("t_known", own[2:18])])
+        self.assertEqual((self.parsed(lines[2])[1][1], lines[3]), (1, "none"))
+
+    def test_transport_explicit_proof(self):
+        # Dowód jawny (skrót pakietu i podpis) doręcza potwierdzenie raz.
+        a = next(c for c in VECTORS["announce"] if c["name"] == "plain")
+        raw, key = bytes.fromhex(a["raw"]), bytes.fromhex(a["private_key"])
+        dest = raw[2:18]
+        send = ("t_send", dest + self.EPHEMERAL + self.IV + (5).to_bytes(4, "big") + (60000).to_bytes(4, "big") + b"x")
+        lines = self.ask([("t_begin", self.STATION), ("t_in", raw), send])
+        proof = self.proof_packet(key, bytes.fromhex(self.parsed(lines[2])[3]), implicit=False)
+        lines = self.ask([("t_begin", self.STATION), ("t_in", raw), send, ("t_in", proof)])
+        self.assertEqual(self.parsed(lines[3])[1:3], ([0, 0, 0, 1, 0, 0, 1, 1, 0], ["receipt:5:1"]))
 
     def test_transport_eviction_keeps_pinned(self):
         # Pełna tablica (limit 2): wypierany najdawniej używany cel bez ochrony, cel chroniony zostaje.

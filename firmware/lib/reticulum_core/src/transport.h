@@ -18,23 +18,27 @@ constexpr size_t KNOWN_MAX = 256;       // docs/spec/oprogramowanie.md, „Pojem
 constexpr size_t RECEIPTS_MAX = 8;      // potwierdzenia czekające na dowód (decyzja tymczasowa, PR R1)
 constexpr uint8_t PATHFINDER_M = 128;   // RNS/Transport.py: PATHFINDER_M
 constexpr uint32_t PATHFINDER_E_S = 60UL * 60 * 24 * 7;   // RNS/Transport.py: PATHFINDER_E (tydzień)
+constexpr uint32_t DESTINATION_TIMEOUT_S = 60UL * 60 * 24 * 7;   // RNS/Transport.py: DESTINATION_TIMEOUT
 constexpr uint8_t CONTEXT_PATH_RESPONSE = 0x0B;           // RNS/Packet.py: PATH_RESPONSE
 
 // Wpis znanego celu: RNS/Identity.py: known_destinations i known_ratchets, RNS/Transport.py: path_table.
 // Z listy skrótów losowych ogłoszeń (Python: do 64) wpis trzyma tylko ostatni (tabela różnic).
+// Pola w kolejności bez dopełnienia: 168 B.
 struct KnownDestination {
     uint8_t destination[TRUNCATED_HASH_SIZE];
     uint8_t publicKey[KEY_SIZE];
     uint8_t ratchet[RATCHET_SIZE];
     uint8_t randomHash[10];                     // ostatni skrót losowy ogłoszenia przyjętego do trasy
     uint8_t nextHop[TRUNCATED_HASH_SIZE];       // identyfikator transportu albo sam cel (sąsiad)
-    uint64_t emitted;                           // czas z tego skrótu losowego (Transport.announce_emitted)
-    uint32_t pathExpiresS;
-    uint32_t usedS;                             // ostatnie użycie: do wypierania
     uint8_t hops;
     bool used;
     bool hasRatchet;
     bool hasPath;
+    uint64_t emitted;                           // czas z tego skrótu losowego (Transport.announce_emitted)
+    uint32_t pathExpiresS;                      // IDX_PT_EXPIRES: should_add
+    uint32_t pathUsedS;                         // IDX_PT_TIMESTAMP: trasa nieużywana 7 dni wygasa
+    uint32_t ratchetEmittedS;                   // czas emisji ogłoszenia z zapisanym ratchetem (nasycony)
+    uint32_t usedS;                             // ostatnie użycie: do wypierania
 };
 
 struct TransportHooks {
@@ -53,9 +57,9 @@ struct TransportHooks {
 };
 
 struct TransportCounters {
-    uint32_t duplicate = 0;   // pakiet ze skrótem z listy (packet_filter)
+    uint32_t duplicate = 0;   // pakiet ze skrótem z listy (packet_filter); ogłoszenie: kopia już sprawdzonego
     uint32_t ignored = 0;     // poza podzbiorem R1 albo nie do stacji: łącza, PLAIN, GROUP, cudzy transport, cudzy cel
-    uint32_t invalid = 0;     // ogłoszenie odrzucone, pakiet nie do odszyfrowania, dowód bez potwierdzenia
+    uint32_t invalid = 0;     // ogłoszenie odrzucone, pakiet nie do odszyfrowania, dowód bez czekającego potwierdzenia
     uint32_t announces = 0;   // ogłoszenia przyjęte do trasy
     uint32_t received = 0;    // pakiety do stacji po odszyfrowaniu
     uint32_t unproven = 0;    // z nich odrzucone przez warstwę aplikacji (bez dowodu)
@@ -85,7 +89,8 @@ public:
     SendResult send(const uint8_t destination[TRUNCATED_HASH_SIZE], const uint8_t* data, size_t length,
                     const uint8_t ephemeralKey[KEY_SIZE / 2], const uint8_t iv[16], uint32_t handle, uint64_t timeoutMs,
                     uint64_t nowMs);
-    // RNS/Packet.py: PacketReceipt.check_timeout dla czekających potwierdzeń.
+    // RNS/Packet.py: PacketReceipt.check_timeout dla czekających potwierdzeń; RNS/Transport.py: jobs
+    // (trasy nieużywane przez DESTINATION_TIMEOUT wygasają, sprawdzane raz na sekundę).
     void poll(uint64_t nowMs);
 
     const KnownDestination* find(const uint8_t destination[TRUNCATED_HASH_SIZE]) const;
@@ -106,8 +111,8 @@ private:
         uint64_t deadlineMs;
     };
     bool emit(const uint8_t* raw, size_t length, bool rememberHash);
-    void inboundAnnounce(const Packet& packet, uint64_t nowMs);
-    void inboundData(const Packet& packet, const uint8_t* raw, size_t length);
+    void inboundAnnounce(const Packet& packet, const uint8_t hash[HASH_SIZE], uint64_t nowMs);
+    void inboundData(const Packet& packet, const uint8_t hash[HASH_SIZE]);
     void inboundProof(const Packet& packet);
     KnownDestination* entry(const uint8_t destination[TRUNCATED_HASH_SIZE]);
     KnownDestination* findMutable(const uint8_t destination[TRUNCATED_HASH_SIZE]);
@@ -120,6 +125,7 @@ private:
     const uint8_t* nameHash_ = nullptr;
     KnownDestination known_[KNOWN_MAX] = {};
     size_t limit_ = KNOWN_MAX;
+    uint32_t cullS_ = 0;   // ostatni przegląd wygasania tras
     Receipt receipts_[RECEIPTS_MAX] = {};
     HashList hashlist_;
     TransportCounters counters_;
