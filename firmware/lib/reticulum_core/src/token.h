@@ -3,7 +3,8 @@
 // SPDX-FileCopyrightText: 2026 Tomek Mierzwa
 // Szyfrowanie do tożsamości (token Reticulum): klucz publiczny efemeryczny X25519 32 B, IV 16 B,
 // szyfrogram AES-256-CBC z dopełnieniem PKCS7, HMAC-SHA256 32 B z IV i szyfrogramu. Klucze z HKDF
-// wspólnego sekretu ECDH. Bez zapadek (ratchets): firmware/reticulum-core.md, do rozstrzygnięcia.
+// wspólnego sekretu ECDH. Szyfrowanie także do klucza ratchetu z ogłoszenia celu; odszyfrowanie bez
+// własnych ratchetów stacji (firmware/reticulum-core.md, do rozstrzygnięcia).
 #pragma once
 
 #include "rnscore.h"
@@ -20,11 +21,13 @@ constexpr size_t tokenSize(size_t length) {
     return TOKEN_OVERHEAD + (length / TOKEN_BLOCK_SIZE + 1) * TOKEN_BLOCK_SIZE;
 }
 
-// RNS/Identity.py: Identity.encrypt bez zapadki; RNS/Cryptography/Token.py: Token.encrypt. Klucz
-// efemeryczny (prywatny, 32 B) i IV podaje wywołujący; w Pythonie to X25519PrivateKey.generate
+// RNS/Identity.py: Identity.encrypt; RNS/Cryptography/Token.py: Token.encrypt. ratchet: nullptr albo
+// dokładnie RATCHET_SIZE B klucza ratchetu z ogłoszenia celu (target_public_key); bez niego wymiana
+// kluczy z kluczem X25519 tożsamości celu. Sól HKDF w obu przypadkach to skrót tożsamości celu
+// (get_salt). Klucz efemeryczny (prywatny, 32 B) i IV podaje wywołujący; w Pythonie to X25519PrivateKey.generate
 // i os.urandom, więc muszą być losowe i nowe dla każdego tokenu. out ma tokenSize(length) B i nie
-// może zachodzić na plaintext. Fałsz, gdy klucz publiczny celu jest niskiego rzędu (Python zgłasza błąd).
-bool encrypt(const uint8_t publicKey[KEY_SIZE], const uint8_t ephemeralKey[KEY_SIZE / 2],
+// może zachodzić na plaintext. Fałsz, gdy klucz celu (tożsamości albo ratchetu) jest niskiego rzędu (Python zgłasza błąd).
+bool encrypt(const uint8_t publicKey[KEY_SIZE], const uint8_t* ratchet, const uint8_t ephemeralKey[KEY_SIZE / 2],
              const uint8_t iv[TOKEN_IV_SIZE], const uint8_t* plaintext, size_t length, uint8_t* out);
 
 // RNS/Identity.py: Identity.decrypt bez zapadek; Token.decrypt; PKCS7.unpad. publicKey musi pochodzić

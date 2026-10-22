@@ -20,6 +20,7 @@ import json
 import os
 import sys
 import tempfile
+import types
 from unittest import mock
 
 import RNS
@@ -354,6 +355,95 @@ def announce_vectors():
     return out
 
 
+def ratchet_token_vectors():
+    """Identity.encrypt do klucza ratchetu celu; odszyfrowanie Identity.decrypt z tym ratchetem."""
+    out = []
+    ident = identity("a")
+    receiver = RNS.Identity.from_bytes(ident.get_private_key())
+    ratchet_private = seeded("ratchet:private", 32)
+    ratchet = X25519PrivateKey.from_private_bytes(ratchet_private).public_key().public_bytes()
+    for length in (0, 4, 16, 100):
+        plaintext = seeded(f"ratchet:plaintext:{length}", length)
+        with Deterministic(f"ratchet:{length}"):
+            token = ident.encrypt(plaintext, ratchet=ratchet)
+        ephemeral = seeded(f"ratchet:{length}:x25519:1", 32)
+        iv = seeded(f"ratchet:{length}:urandom:2", 16)
+        if token[:32] != X25519PrivateKey.from_private_bytes(ephemeral).public_key().public_bytes() or token[32:48] != iv:
+            sys.exit(f"ratchet token {length}: recorded ephemeral key or IV differs from the token")
+        out.append({
+            "identity_public_key": ident.get_public_key().hex(),
+            "ratchet": ratchet.hex(),
+            "ephemeral_private_key": ephemeral.hex(),
+            "iv": iv.hex(),
+            "plaintext": plaintext.hex(),
+            "token": token.hex(),
+            # Odbiorca z ratchetem odszyfrowuje, sam klucz tożsamości nie.
+            "decrypted_with_ratchet": receiver.decrypt(token, ratchets=[ratchet_private]).hex(),
+            "decrypted_without_ratchet": None if (d := receiver.decrypt(token)) is None else d.hex(),
+        })
+    # Ratchet niskiego rzędu albo w kodowaniu niekanonicznym (wynik Identity.encrypt: token albo błąd).
+    rejected = []
+    for name, value in (("zero", 0), ("one", 1), ("p_plus_1", X25519_P + 1), ("high_bit", 9 + 2**255)):
+        r = value.to_bytes(32, "little")
+        with Deterministic(f"ratchet:low:{name}"):
+            try:
+                token = ident.encrypt(b"WICI", ratchet=r).hex()
+            except ValueError:
+                token = None
+        rejected.append({"name": name, "ratchet": r.hex(), "token": token,
+                         "ephemeral_private_key": seeded(f"ratchet:low:{name}:x25519:1", 32).hex(),
+                         "iv": seeded(f"ratchet:low:{name}:urandom:2", 16).hex()})
+    out.append({"identity_public_key": ident.get_public_key().hex(), "unusual_ratchets": rejected})
+    return out
+
+
+def proof_vectors():
+    """Dowody pakietu: Identity.prove (podpis skrótu pakietu; jawny ze skrótem przed podpisem) i wynik
+    PacketReceipt.validate_proof dla potwierdzenia z tożsamością celu."""
+    ident, other = identity("b"), identity("a")
+    raw = bytes.fromhex(packet_vectors()[0]["header_1"]["raw"])
+    packet = RNS.Packet(None, raw)
+    packet.unpack()
+    signature = ident.sign(packet.packet_hash)
+    implicit, explicit = signature, packet.packet_hash + signature
+    receipt = types.SimpleNamespace(hash=packet.packet_hash, destination=types.SimpleNamespace(identity=ident),
+                                    callbacks=types.SimpleNamespace(delivery=None))
+
+    def validated(proof: bytes) -> bool:
+        return bool(RNS.PacketReceipt.validate_proof(receipt, proof))
+
+    def proof_packet(data: bytes) -> bytes:
+        # Identity.prove: pakiet PROOF do ProofDestination (skrót pakietu ucięty), bez szyfrowania.
+        p = RNS.Packet(packet.generate_proof_destination(), data, RNS.Packet.PROOF)
+        p.pack()
+        return p.raw
+
+    s = int.from_bytes(signature[32:], "little") + ED25519_L
+    cases = {
+        "implicit": implicit,
+        "explicit": explicit,
+        "implicit_tampered": implicit[:-1] + bytes([implicit[-1] ^ 1]),
+        "explicit_wrong_hash": bytes([explicit[0] ^ 1]) + explicit[1:],
+        "explicit_tampered": explicit[:-1] + bytes([explicit[-1] ^ 1]),
+        "implicit_non_canonical": signature[:32] + s.to_bytes(32, "little"),
+        "signed_by_other": other.sign(packet.packet_hash),
+        "explicit_signature_of_other_hash": packet.packet_hash + ident.sign(seeded("proof:other-hash", 32)),
+        "length_63": implicit[:63],
+        "length_65": implicit + b"\x00",
+        "length_95": explicit[:95],
+        "length_97": explicit + b"\x00",
+        "empty": b"",
+    }
+    return {
+        "identity_private_key": ident.get_private_key().hex(),
+        "packet": raw.hex(),
+        "packet_hash": packet.packet_hash.hex(),
+        "implicit_packet": proof_packet(implicit).hex(),
+        "explicit_packet": proof_packet(explicit).hex(),
+        "cases": [{"name": n, "proof": d.hex(), "valid": validated(d)} for n, d in cases.items()],
+    }
+
+
 def main():
     if RNS.__version__ != RNS_VERSION:
         sys.exit(f"Reticulum {RNS.__version__}, expected {RNS_VERSION} ({RNS_COMMIT})")
@@ -364,6 +454,8 @@ def main():
         "crafted_token": crafted_token_vectors(),
         "packet": packet_vectors(),
         "announce": announce_vectors(),
+        "ratchet_token": ratchet_token_vectors(),
+        "proof": proof_vectors(),
     }
     json.dump(vectors, sys.stdout, indent=1, sort_keys=True)
     sys.stdout.write("\n")

@@ -156,6 +156,47 @@ class CoreTests(unittest.TestCase):
         got = self.ask([("validate_announce", raw[:n]) for n in range(len(raw) + 1)])
         self.assertEqual([g == "none" for g in got], [n < len(raw) for n in range(len(raw) + 1)])
 
+    def test_ratchet_token(self):
+        # Identity.encrypt(ratchet=...): z tym samym kluczem efemerycznym i IV bajt w bajt jak w Pythonie.
+        # Python odszyfrowuje go tylko z ratchetem, więc odszyfrowanie samym kluczem tożsamości odpada.
+        tokens = [t for t in VECTORS["ratchet_token"] if "token" in t]
+        got = self.ask([("encrypt_ratchet", bytes.fromhex(t["identity_public_key"] + t["ratchet"] + t["ephemeral_private_key"] +
+                                                          t["iv"] + t["plaintext"])) for t in tokens])
+        self.assertEqual(got, [t["token"] for t in tokens])
+        for t in tokens:
+            self.assertEqual((t["decrypted_with_ratchet"], t["decrypted_without_ratchet"]), (t["plaintext"], None))
+        prv = bytes.fromhex(VECTORS["identity"][0]["private_key"])
+        self.assertEqual(self.ask([("decrypt", prv + bytes.fromhex(t["token"])) for t in tokens]), ["none"] * len(tokens))
+
+    def test_encrypt_to_unusual_ratchet(self):
+        # Ratchet niskiego rzędu (Python: błąd w exchange) i w kodowaniu niekanonicznym (Python redukuje).
+        entry = VECTORS["ratchet_token"][-1]
+        cases = entry["unusual_ratchets"]
+        got = self.ask([("encrypt_ratchet", bytes.fromhex(entry["identity_public_key"] + c["ratchet"] + c["ephemeral_private_key"] +
+                                                          c["iv"]) + b"WICI") for c in cases])
+        self.assertEqual(got, [c["token"] or "none" for c in cases])
+        self.assertEqual([c["token"] is None for c in cases], [True, True, True, False])
+
+    def test_proof(self):
+        # Identity.prove (niejawny i jawny) bajt w bajt; PacketReceipt.validate_proof: te same wyniki.
+        v = VECTORS["proof"]
+        prv, packet_hash = bytes.fromhex(v["identity_private_key"]), bytes.fromhex(v["packet_hash"])
+        pub = bytes.fromhex(self.ask([("public_key", prv)])[0])
+        cases = {c["name"]: c for c in v["cases"]}
+        got = self.ask([("prove", prv + packet_hash + b"\x01"), ("prove", prv + packet_hash + b"\x00")])
+        self.assertEqual(got, [cases["implicit"]["proof"], cases["explicit"]["proof"]])
+        got = self.ask([("validate_proof", pub + packet_hash + bytes.fromhex(c["proof"])) for c in v["cases"]])
+        self.assertEqual(dict(zip(cases, got)), {n: "1" if c["valid"] else "0" for n, c in cases.items()})
+
+    def test_proof_packet(self):
+        # Pakiet PROOF z Identity.prove: cel = ucięty skrót pakietu, SINGLE, kontekst NONE, bez szyfrowania.
+        v = VECTORS["proof"]
+        cases = {c["name"]: c for c in v["cases"]}
+        dest = bytes.fromhex(v["packet_hash"])[:16]
+        got = self.ask([("pack", bytes([0, 0, 0, 0, 3, 0]) + bytes(16) + dest + b"\x00" + bytes.fromhex(cases[n]["proof"]))
+                        for n in ("implicit", "explicit")])
+        self.assertEqual(got, [v["implicit_packet"], v["explicit_packet"]])
+
     def test_destination_hash(self):
         # Destination.hash celu SINGLE "wici.sa1" każdej tożsamości z wektorów.
         identities = VECTORS["identity"]
