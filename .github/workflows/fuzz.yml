@@ -1,0 +1,43 @@
+# SPDX-License-Identifier: MIT
+# Rdzeń Reticulum stacji pod libFuzzerem przez godzinę (firmware/tools/core_fuzz.py, tests/native/rnscore_fuzz.cpp;
+# kryterium odbioru 4 w firmware/reticulum-core.md): po każdej zmianie rdzenia na main i na żądanie. W PR ten sam
+# cel działa 60 s (firmware.yml). Awaria: zadanie czerwone, wejścia w artefakcie rnscore-fuzz-crashes
+# (odtworzenie: python3 firmware/tools/core_fuzz.py --replay PLIK).
+name: Fuzz
+on:
+  push:
+    branches: [main]
+    paths: ['firmware/lib/reticulum_core/**', 'tests/native/rnscore_fuzz.cpp', 'firmware/tools/core_fuzz.py', '.github/workflows/fuzz.yml']
+  workflow_dispatch:
+    inputs:
+      seconds:
+        description: Fuzzing time in seconds
+        default: '3600'
+permissions:
+  contents: read
+concurrency:
+  group: fuzz-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: firmware/.pio/stack
+          key: stack-${{ hashFiles('firmware/tools/stack_deps.py', 'firmware/patches/**') }}
+      - name: Station Reticulum core under libFuzzer
+        env:
+          SECONDS_TO_RUN: ${{ github.event.inputs.seconds || '3600' }}
+        run: python firmware/tools/core_fuzz.py --seconds "$SECONDS_TO_RUN" --out "$RUNNER_TEMP/fuzz"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: rnscore-fuzz-crashes
+          path: ${{ runner.temp }}/fuzz/crashes
+          if-no-files-found: ignore

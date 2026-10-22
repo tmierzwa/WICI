@@ -3,7 +3,8 @@
 # oraz programu węzła na komputerze (host), na którym stoją próby zgodności z Reticulum (tests/test_rns_stack.py).
 # Rdzeń Reticulum stacji (lib/reticulum_core) jeszcze nie wchodzi do obrazów, więc dla każdej płytki osobno
 # kompiluje się go kompilatorem i flagami obrazu z -Werror, ze sprawdzeniem stosu i RAM (tools/core_boards.py).
-# Do tego stos stacji pod wrogim ruchem z sanitizerami (tests/test_rns_hostile.py) i próba zgodności
+# Do tego stos stacji pod wrogim ruchem z sanitizerami (tests/test_rns_hostile.py), rdzeń pod libFuzzerem
+# przez 60 s (tools/core_fuzz.py; godzina w fuzz.yml) i próba zgodności
 # z Reticulum w Pythonie na przypiętym commicie.
 # Wersje platform i rdzeni są przypięte w firmware/platformio.ini, stos Reticulum w tools/stack_deps.py.
 name: Firmware
@@ -71,6 +72,14 @@ jobs:
         env:
           WICI_RNS_SANITIZE: '1'
         run: python -m unittest tests.test_rnscore_lxmf -v
+      - name: Station Reticulum core under libFuzzer (60 s; 1 h in fuzz.yml)
+        run: python firmware/tools/core_fuzz.py --seconds 60 --out "$RUNNER_TEMP/fuzz"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: rnscore-fuzz-crashes
+          path: ${{ runner.temp }}/fuzz/crashes
+          if-no-files-found: ignore
   interop:
     # Stos stacji wobec Reticulum w Pythonie (D19): tools/rns_interop.py i tools/rns_osp_node.py na porcie,
     # rns_interop.py w krokach, które rdzeń już ma (host-core, tests/test_rns_stack.py: CORE_STEPS). Próby
