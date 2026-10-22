@@ -43,12 +43,17 @@ struct LxmfSa1 {
     uint8_t hash[HASH_SIZE];   // message_id
 };
 
+// Powód odrzucenia wiadomości (diagnostyka stacji, bez odpowiednika w Pythonie): kształt (nie SA1 albo
+// długość), znaczek pracy (payload 0x95, LXMessage z stamp), klucz nie należy do skrótu nadawcy, podpis.
+enum class LxmfReject : uint8_t { NONE, SHAPE, STAMP, SOURCE, SIGNATURE };
+
 // LXMF/LXMessage.py: LXMessage.unpack_from_bytes dla danych pakietu okazjonalnego (LXMRouter.delivery_packet
 // dokleja skrót celu z pakietu), razem z weryfikacją podpisu, której wynik Python zapisuje w
 // signature_validated. Prawda tylko dla wiadomości SA1 podpisanej kluczem senderPublicKey, którego cel
 // "lxmf.delivery" jest skrótem nadawcy w danych; kształt jest sprawdzany przed kryptografią. Python
 // przyjmuje więcej (tabela różnic w firmware/reticulum-core.md); niczego, co odrzuca Python, rdzeń nie przyjmuje.
+// reason (opcjonalny): powód odrzucenia albo NONE.
 bool lxmfReceiveSa1(const uint8_t destinationHash[TRUNCATED_HASH_SIZE], const uint8_t* data, size_t length,
-                    const uint8_t senderPublicKey[KEY_SIZE], LxmfSa1& out);
+                    const uint8_t senderPublicKey[KEY_SIZE], LxmfSa1& out, LxmfReject* reason = nullptr);
 
 }  // namespace rnscore

@@ -49,10 +49,14 @@ namespace microStore {
 bool pinned_key(const uint8_t*, size_t) { return false; }
 }  // namespace microStore
 
-// Licznik operacji asymetrycznych rdzenia (identity.h; nagłówków rdzenia program prób nie włącza, bo
-// packet.h rdzenia i Packet.h portu kolidują w systemie plików bez rozróżniania wielkości liter).
+// Licznik operacji asymetrycznych rdzenia (identity.h) i wiadomość LXMF SA1 (lxmf.h); nagłówków rdzenia
+// program prób nie włącza, bo packet.h rdzenia i Packet.h portu kolidują w systemie plików bez
+// rozróżniania wielkości liter.
 namespace rnscore {
 uint32_t asymmetricOperations();
+size_t lxmfPackSa1(const uint8_t privateKey[64], const uint8_t publicKey[64], const uint8_t destinationHash[16],
+                   const uint8_t sourceHash[16], double timestamp, const uint8_t* content, size_t contentLength, uint8_t* out,
+                   size_t capacity, uint8_t hash[32]);
 }  // namespace rnscore
 #endif
 
@@ -64,6 +68,14 @@ extern "C" int gettimeofday(struct timeval* __restrict tv, void* __restrict) {
 
 namespace {
 
+// Nazwa celów stacji i węzłów generatora: port "wici.sa1", rdzeń od etapu R3 "lxmf.delivery".
+#ifdef WICI_RNS_CORE
+constexpr const char* DEST_APP = "lxmf";
+constexpr const char* DEST_ASPECT = "delivery";
+#else
+constexpr const char* DEST_APP = rnsnode::APP_NAME;
+constexpr const char* DEST_ASPECT = rnsnode::ASPECT;
+#endif
 constexpr int EXIT_INVARIANT = 3;
 constexpr int EXIT_POWER_CUT = 75;
 constexpr size_t FRAM_BYTES = 512 * 1024;
@@ -277,7 +289,7 @@ RNS::Bytes packetHash(const RNS::Bytes& raw) {
 
 void announceFromPeer() {
     const size_t i = rnd() % PEERS;
-    RNS::Destination d(peers[i], RNS::Type::Destination::IN, RNS::Type::Destination::SINGLE, rnsnode::APP_NAME, rnsnode::ASPECT);
+    RNS::Destination d(peers[i], RNS::Type::Destination::IN, RNS::Type::Destination::SINGLE, DEST_APP, DEST_ASPECT);
     RNS::Packet p = d.announce(randomBytes(rnd() % 40), rnd() % 4 == 0, {RNS::Type::NONE}, {}, false);
     RNS::Transport::deregister_destination(d);   // cel generatora nie może być celem lokalnym stosu
     p.pack();
@@ -305,8 +317,8 @@ void pathRequest() {
 }
 
 void dataThroughStation() {
-    RNS::Destination out(peers[rnd() % PEERS], RNS::Type::Destination::OUT, RNS::Type::Destination::SINGLE, rnsnode::APP_NAME,
-                         rnsnode::ASPECT);
+    RNS::Destination out(peers[rnd() % PEERS], RNS::Type::Destination::OUT, RNS::Type::Destination::SINGLE, DEST_APP,
+                         DEST_ASPECT);
     RNS::Packet p(out, randomBytes(1 + rnd() % 300), RNS::Type::Packet::DATA);
     p.pack();
     const RNS::Bytes raw = headerTwo(p.raw(), rnd() % 4 ? stationTransport : randomBytes(16));
@@ -315,7 +327,7 @@ void dataThroughStation() {
 }
 
 void dataToStation() {
-    RNS::Destination out(station, RNS::Type::Destination::OUT, RNS::Type::Destination::SINGLE, rnsnode::APP_NAME, rnsnode::ASPECT);
+    RNS::Destination out(station, RNS::Type::Destination::OUT, RNS::Type::Destination::SINGLE, DEST_APP, DEST_ASPECT);
     RNS::Packet p(out, randomBytes(1 + rnd() % 300), RNS::Type::Packet::DATA);
     p.pack();
     RNS::Bytes raw = p.raw();
@@ -330,7 +342,7 @@ void linkRequest() {
     if (rnd() % 2) data << randomBytes(3);
     const bool local = rnd() % 3 == 0;
     RNS::Destination out(local ? station : peers[rnd() % PEERS], RNS::Type::Destination::OUT, RNS::Type::Destination::SINGLE,
-                         rnsnode::APP_NAME, rnsnode::ASPECT);
+                         DEST_APP, DEST_ASPECT);
     RNS::Packet lr(out, data, RNS::Type::Packet::LINKREQUEST);
     lr.pack();
     RNS::Bytes raw = local ? lr.raw() : headerTwo(lr.raw(), stationTransport);
@@ -400,9 +412,12 @@ void replay() {
 void stationActs() {
     switch (rnd() % 3) {
         case 0: rnsnode::announce(nullptr, 0); break;
-        case 1: {
+        case 1: {   // w kopercie warstwy aplikacji (station.cpp), którą rdzeń tłumaczy na LXMF
             const RNS::Bytes& d = peerDest[rnd() % PEERS];
-            const RNS::Bytes data = randomBytes(1 + rnd() % 200);
+            const std::string head = "[\"WICI\",1,\"" + hex(rnsnode::address(), 16) + "\",\"" + hex(d.data(), 16) + "\",";
+            RNS::Bytes data(reinterpret_cast<const uint8_t*>(head.data()), head.size());
+            data << randomBytes(1 + rnd() % 200);
+            data.append(static_cast<uint8_t>(']'));
             rnsnode::send(d.data(), data.data(), data.size(), rnsnode::RECEIPT_MIN_S);
             break;
         }
@@ -440,9 +455,9 @@ void checkClock() {
 // bez klucza sieci) i ogłoszenia z celem odbiorcy i obcym kluczem (kolizja). Dwa datagramy na obieg
 // loop(), czyli szybciej, niż stacja je przetwarza. W każdym obiegu najwyżej jedna operacja asymetryczna
 // (audyt rdzenia, U2). W trakcie zalewu: ogłoszenia odbiorcy z karty, pakiet stacji do odbiorcy i jego
-// dowód (wynik w polu "flood", także gdy ruch ginie w pełnej kolejce). Pakiet do stacji, na który
-// warstwa aplikacji odpowiada dowodem, kosztuje w jednym obiegu do trzech operacji (odszyfrowanie,
-// podpis dowodu, IFAC dowodu; reticulum-core.md, tabela różnic).
+// dowód (wynik w polu "flood", także gdy ruch ginie w pełnej kolejce). Pakiet do stacji z dowodem
+// kosztuje w jednym obiegu do trzech operacji (odszyfrowanie, podpis dowodu, IFAC dowodu), a wiadomość
+// SA1 znanego nadawcy cztery (z weryfikacją podpisu LXMF; reticulum-core.md, tabela różnic).
 #ifdef WICI_RNS_CORE
 std::string floodResult;
 std::vector<uint8_t> replayWire;   // nagrane poprawne ogłoszenie węzła 1 z IFAC
@@ -460,8 +475,8 @@ void receive(const RNS::Bytes& raw) {
 }
 
 RNS::Bytes announceOf(size_t peer) {
-    RNS::Destination d(peers[peer], RNS::Type::Destination::IN, RNS::Type::Destination::SINGLE, rnsnode::APP_NAME,
-                       rnsnode::ASPECT);
+    RNS::Destination d(peers[peer], RNS::Type::Destination::IN, RNS::Type::Destination::SINGLE, DEST_APP,
+                       DEST_ASPECT);
     RNS::Packet a = d.announce(RNS::Bytes(), false, {RNS::Type::NONE}, {}, false);
     RNS::Transport::deregister_destination(d);
     a.pack();
@@ -560,12 +575,15 @@ void floodPass(bool replayOnly, const RNS::Bytes& genuine) {
 void flood() {
     replayWire = ifacWrap(announceOf(1));
     const uint32_t delivered0 = rnsnode::status().delivered;
-    const uint8_t message[] = "report during the flood";
+    // Koperta warstwy aplikacji (station.cpp) z treścią SA1; rdzeń wysyła treść w LXMF.
+    const std::string message = "[\"WICI\",1,\"" + hex(rnsnode::address(), 16) + "\",\"" + hex(peerDest[0].data(), 16) +
+                                "\",[1,\"report during the flood\"]]";
     uint32_t handle = 0, announceTries = 0, proofTries = 0;
     int pathRound = -1, deliveredRound = -1;
     for (int round = 0; round < 1200; ++round) {
         RNS::Bytes genuine;
-        if (round == 100) handle = rnsnode::send(peerDest[0].data(), message, sizeof(message), rnsnode::RECEIPT_MIN_S);
+        if (round == 100) handle = rnsnode::send(peerDest[0].data(), reinterpret_cast<const uint8_t*>(message.data()), message.size(),
+                                                 rnsnode::RECEIPT_MIN_S);
         if (round >= 100 && pathRound < 0 && round % 100 == 0) {   // odbiorca ogłasza się co sekundę
             genuine = withHops(announceOf(0), 1);
             ++announceTries;
@@ -604,12 +622,33 @@ void flood() {
     for (int i = 0; i < 4; ++i) serviceCounted();
     if (!rnsnode::hasPath(peerDest[0].data())) fail("receiver announce lost after the flood");
     const uint32_t before = rnsnode::status().packetsReceived;
-    RNS::Destination out(station, RNS::Type::Destination::OUT, RNS::Type::Destination::SINGLE, rnsnode::APP_NAME, rnsnode::ASPECT);
+    RNS::Destination out(station, RNS::Type::Destination::OUT, RNS::Type::Destination::SINGLE, DEST_APP, DEST_ASPECT);
     RNS::Packet p(out, RNS::Bytes("report after the flood"), RNS::Type::Packet::DATA);
     p.pack();
     receive(p.raw());
     for (int i = 0; i < 4; ++i) serviceCounted(3);
     if (rnsnode::status().packetsReceived != before + 1) fail("packet to the station lost after the flood");
+    // Wiadomość SA1 odbiorcy z karty: w jednym obiegu ECDH, weryfikacja podpisu LXMF, podpis dowodu i IFAC dowodu.
+    const char sa1[] = "[1,\"after the flood\"]";
+    uint8_t lxmf[400], messageHash[32];
+    const size_t n = rnscore::lxmfPackSa1(peers[0].get_private_key().data(), peers[0].get_public_key().data(), stationDest.data(),
+                                          peerDest[0].data(), 0, reinterpret_cast<const uint8_t*>(sa1), sizeof(sa1) - 1, lxmf,
+                                          sizeof(lxmf), messageHash);
+    RNS::Packet m(out, RNS::Bytes(lxmf, n), RNS::Type::Packet::DATA);
+    m.pack();
+    const uint32_t rejected = interfaceCounter("lxmf_rejected");
+    receive(m.raw());
+    for (int i = 0; i < 4; ++i) serviceCounted(4);
+    if (rnsnode::status().packetsReceived != before + 2) fail("SA1 message from the receiver lost after the flood");
+    if (interfaceCounter("lxmf_rejected") != rejected) fail("SA1 message from the receiver rejected");
+    // Ten sam kształt od odbiorcy ze złym podpisem: też najwyżej cztery operacje, odrzucenie z powodem.
+    lxmf[16] ^= 0x01;
+    RNS::Packet forged(out, RNS::Bytes(lxmf, n), RNS::Type::Packet::DATA);
+    forged.pack();
+    const uint32_t badSignature = interfaceCounter("lxmf_rej_signature");
+    receive(forged.raw());
+    for (int i = 0; i < 4; ++i) serviceCounted(4);
+    if (interfaceCounter("lxmf_rej_signature") != badSignature + 1) fail("forged SA1 message from the receiver not rejected");
 
     char text[256];
     snprintf(text, sizeof(text),
@@ -636,8 +675,7 @@ void transitLoad(bool announces) {
         for (int k = 0; k < 2; ++k) {
             const size_t i = 1 + rnd() % (PEERS - 1);
             if (!announces) {
-                RNS::Destination out(peers[i], RNS::Type::Destination::OUT, RNS::Type::Destination::SINGLE, rnsnode::APP_NAME,
-                                     rnsnode::ASPECT);
+                RNS::Destination out(peers[i], RNS::Type::Destination::OUT, RNS::Type::Destination::SINGLE, DEST_APP, DEST_ASPECT);
                 RNS::Packet p(out, randomBytes(1 + rnd() % 200), RNS::Type::Packet::DATA);
                 p.pack();
                 receive(withHops(headerTwo(p.raw(), stationTransport), 0));
@@ -675,8 +713,11 @@ void damagedReceiver() {
         damaged = true;
     }
     if (!damaged) fail("damaged-receiver: no receiver slot");
-    const uint8_t message[] = "report after a damaged slot";
-    if (!rnsnode::send(peerDest[0].data(), message, sizeof(message), rnsnode::RECEIPT_MIN_S)) {
+    // Koperta warstwy aplikacji (station.cpp) z treścią SA1; rdzeń wysyła treść w LXMF.
+    const std::string message = "[\"WICI\",1,\"" + hex(rnsnode::address(), 16) + "\",\"" + hex(peerDest[0].data(), 16) +
+                                "\",[1,\"report after a damaged slot\"]]";
+    if (!rnsnode::send(peerDest[0].data(), reinterpret_cast<const uint8_t*>(message.data()), message.size(),
+                       rnsnode::RECEIPT_MIN_S)) {
         fail("damaged-receiver: report not sent");
     }
 }
@@ -715,8 +756,8 @@ void defect(const std::string& name) {
         // _held_announces, a Transport::jobs wstawia je z powrotem do _announce_table w pętli po niej.
         for (int round = 0; round < 8; ++round) {
             const size_t i = 1 + rnd() % (PEERS - 1);
-            RNS::Destination d(peers[i], RNS::Type::Destination::IN, RNS::Type::Destination::SINGLE, rnsnode::APP_NAME,
-                               rnsnode::ASPECT);
+            RNS::Destination d(peers[i], RNS::Type::Destination::IN, RNS::Type::Destination::SINGLE, DEST_APP,
+                               DEST_ASPECT);
             RNS::Packet a = d.announce(randomBytes(8), false, {RNS::Type::NONE}, {}, false);
             RNS::Transport::deregister_destination(d);
             a.pack();
@@ -795,7 +836,7 @@ int main(int argc, char** argv) {
     // Węzły generatora i odbiorca stacji (pierwszy węzeł) przed startem stosu.
     for (size_t i = 0; i < PEERS; ++i) {
         peers.emplace_back();
-        RNS::Destination d(peers.back(), RNS::Type::Destination::IN, RNS::Type::Destination::SINGLE, rnsnode::APP_NAME, rnsnode::ASPECT);
+        RNS::Destination d(peers.back(), RNS::Type::Destination::IN, RNS::Type::Destination::SINGLE, DEST_APP, DEST_ASPECT);
         peerDest.push_back(d.hash());
         RNS::Transport::deregister_destination(d);
     }

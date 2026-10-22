@@ -3,8 +3,9 @@
 station Reticulum core ("host-core", firmware/reticulum-core.md, stage R0).
 
 Both programs run firmware/src/host/node_host.cpp on the same FRAM image file in turn. A station
-keeps its identity and address when it moves from the port to the core (and back): both read the
-same identity key record in FRAM. The core program has the P1 interface with IFAC and announces
+keeps its identity when it moves from the port to the core (and back): both read the same identity
+key record in FRAM. The address follows the identity: "wici.sa1" on the port, "lxmf.delivery" on the
+core from stage R3. The core program has the P1 interface with IFAC and announces
 (stage R1); without a network key it is offline like the port.
 Needs PlatformIO and network access for the pinned stack sources:
 
@@ -71,10 +72,18 @@ def drbg(entropy: bytes, nonce: bytes, length: int) -> bytes:
 SEED = b"\x01" * 32
 
 
-def sa1_address(identity_hash: str) -> str:
-    # RNS/Destination.py: Destination.hash dla celu "wici.sa1" tożsamości stacji.
-    name_hash = hashlib.sha256(b"wici.sa1").digest()[:10]
+def address_of(identity_hash: str, name: bytes) -> str:
+    # RNS/Destination.py: Destination.hash dla celu o nazwie name tożsamości stacji.
+    name_hash = hashlib.sha256(name).digest()[:10]
     return hashlib.sha256(name_hash + bytes.fromhex(identity_hash)).digest()[:16].hex()
+
+
+def sa1_address(identity_hash: str) -> str:
+    return address_of(identity_hash, b"wici.sa1")   # cel stacji na porcie
+
+
+def lxmf_address(identity_hash: str) -> str:
+    return address_of(identity_hash, b"lxmf.delivery")   # cel stacji na rdzeniu (od R3)
 
 
 @unittest.skipUnless(PIO, "WICI_PIO not set")
@@ -99,7 +108,8 @@ class StackChoiceTests(unittest.TestCase):
         core, _ = self.ready("host-core")
         self.assertTrue(port["identity_new"])
         self.assertFalse(core["identity_new"])
-        self.assertEqual((core["identity"], core["address"]), (port["identity"], port["address"]))
+        self.assertEqual(core["identity"], port["identity"])
+        self.assertEqual((port["address"], core["address"]), (sa1_address(port["identity"]), lxmf_address(core["identity"])))
 
     def test_core_identity_kept_on_port(self):
         raw = drbg(SEED, b"WICI rnscore identity", 64)
@@ -111,12 +121,13 @@ class StackChoiceTests(unittest.TestCase):
         self.assertTrue(core["identity_new"])
         self.assertFalse(again["identity_new"])
         self.assertFalse(port["identity_new"])
-        self.assertEqual(core["address"], sa1_address(core["identity"]))
+        self.assertEqual(core["address"], lxmf_address(core["identity"]))
         # Zapisany klucz to wynik generatora z kluczem X25519 przyciętym (RFC 7748), bo port go nie przycina;
         # stałe ziarno, żeby próba nie zależała od losowego klucza, który bywa przycięty sam z siebie.
         clamped = bytes([raw[0] & 0xF8]) + raw[1:31] + bytes([(raw[31] & 0x7F) | 0x40]) + raw[32:]
         self.assertEqual(stored_key(self.fram), clamped)
-        self.assertEqual({(e["identity"], e["address"]) for e in (core, again, port)}, {(core["identity"], core["address"])})
+        self.assertEqual({e["identity"] for e in (core, again, port)}, {core["identity"]})
+        self.assertEqual((again["address"], port["address"]), (core["address"], sa1_address(core["identity"])))
 
     def test_node_without_address(self):
         # Węzeł stanowiska (--node) nie ma celu "wici.sa1": adres zerowy w obu stosach, tożsamość ta sama.

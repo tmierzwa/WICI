@@ -24,6 +24,9 @@
 //   KISS z kontrolą przepływu, kiss.h; radio.md, „Interfejs Reticulum przez USB”). Pakiet z USB
 //   przechodzi do stosu, gdy kolejka P1 ma miejsce. Cele ogłoszone przez komputer są chronione
 //   w pełnych tablicach, a pakiety z USB i do tych celów są w klasie K1 (Hint::RECEIVER).
+// Ten sam interfejs ma węzeł na rdzeniu Reticulum (rns_node_core.cpp). Od etapu R3 jego cel to
+// "lxmf.delivery" zamiast "wici.sa1", a dane send() i Hooks::packet to nadal zastępcza koperta warstwy
+// aplikacji, którą rdzeń tłumaczy na wiadomość LXMF SA1 i z powrotem (opis w rns_node_core.cpp).
 // Nagłówek nie dołącza microReticulum (jego makra ERROR, INFO, DEBUG kolidują z kodem stacji).
 #pragma once
 
@@ -49,12 +52,13 @@ struct Radio {
 };
 
 struct Hooks {
-    // Pakiet do celu "wici.sa1" stacji (dane po odszyfrowaniu); true = rozstrzygnięty, stos wysyła
-    // dowód. exception: pakiet dotyczy zgłoszenia z wyjątkiem ciszy (dowód wychodzi także w ciszy).
+    // Pakiet do celu stacji (port: "wici.sa1", dane po odszyfrowaniu; rdzeń: wiadomość SA1 z "lxmf.delivery"
+    // w kopercie warstwy aplikacji); true = rozstrzygnięty, stos wysyła dowód. exception: pakiet dotyczy zgłoszenia z wyjątkiem ciszy (dowód wychodzi także w ciszy).
     bool (*packet)(const uint8_t* data, size_t length, bool& exception, void* context) = nullptr;
     // Wynik potwierdzenia transportowego pakietu wysłanego przez send().
     void (*receipt)(uint32_t handle, bool delivered, void* context) = nullptr;
-    // Ogłoszenie celu "wici.sa1" innej stacji (cel, dane aplikacji).
+    // Ogłoszenie celu tej samej nazwy co cel stacji ("wici.sa1" albo na rdzeniu "lxmf.delivery") innej
+    // stacji (cel, dane aplikacji).
     void (*announce)(const uint8_t destination[HASH], const uint8_t* appData, size_t length, void* context) = nullptr;
     void (*log)(const char* text, void* context) = nullptr;
     void* context = nullptr;
@@ -134,10 +138,11 @@ void loop(uint32_t nowMs);
 void received(const uint8_t* wire, size_t length);   // datagram złożony z ramek P1
 void txDone(bool ok);                                // koniec nadawania datagramu z transmit()
 
-// Ogłoszenie celu "wici.sa1"; true, gdy interfejs P1 przyjął pakiet (false: stos nie działa,
-// brak IFAC albo pełna kolejka; ponowienie ustala rns_announce.h).
+// Ogłoszenie celu stacji ("wici.sa1" na porcie, "lxmf.delivery" na rdzeniu od R3); true, gdy interfejs
+// P1 przyjął pakiet (false: stos nie działa, brak IFAC albo pełna kolejka; ponowienie ustala rns_announce.h).
 bool announce(const uint8_t* appData, size_t length);
-// Pakiet okazjonalny do celu "wici.sa1" o skrócie destination z dowodem; zwraca uchwyt
+// Pakiet okazjonalny do celu "wici.sa1" o skrócie destination z dowodem (na rdzeniu od R3 wiadomość
+// LXMF SA1 z koperty warstwy aplikacji do celu "lxmf.delivery" odbiorcy z karty); zwraca uchwyt
 // potwierdzenia albo 0, gdy cel nie jest znany (wysłane zapytanie o trasę) albo interfejs
 // odmówił (pełna kolejka, brak IFAC). timeoutS: najkrótszy limit potwierdzenia; stos wydłuża go do
 // max(RECEIPT_MIN_S, 2 x skoki x 13 x czas TX datagramu 600 B + dług ciszy + kolejka P1).
@@ -153,13 +158,14 @@ bool queueFull();
 bool online();                                // stos działa i IFAC skonfigurowany (interfejs nadaje)
 uint32_t queueWaitMs();                       // dług ciszy i kolejka radiowa (dla limitów czasu)
 
-const uint8_t* address();                     // skrót celu "wici.sa1" stacji
+const uint8_t* address();                     // skrót celu stacji ("wici.sa1"; rdzeń: "lxmf.delivery")
 const uint8_t* identityHash();
 bool publicKey(uint8_t out[64]);              // klucz publiczny tożsamości stacji (karta `card`)
 Status status();
 // Liczniki interfejsu P1 jako pola JSON bez nawiasów (do wiersza diagnostyki). INTERFACE_JSON_SIZE
-// mieści wszystkie pola rdzenia (39 liczników po 10 cyfr: 894 B ze znakiem końca) i portu.
-constexpr size_t INTERFACE_JSON_SIZE = 896;
+// mieści wszystkie pola rdzenia (44 liczniki po 10 cyfr, w tym 5 liczników LXMF z R3: 1038 B ze znakiem
+// końca) i portu.
+constexpr size_t INTERFACE_JSON_SIZE = 1040;
 size_t interfaceJson(char* out, size_t size);
 // ZNISZCZ DANE: stos staje do restartu bez dalszych zapisów w FRAM (tożsamość i tablice kasuje
 // store::Store::destroy); nowa tożsamość przy następnym starcie.

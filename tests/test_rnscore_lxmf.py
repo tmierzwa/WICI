@@ -145,6 +145,23 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(actual, expected)
         self.assertGreaterEqual(sum(line != "none" for line in got), 19)
 
+    def test_reject_reason(self):
+        # Powód odrzucenia dla diagnostyki stacji: zły podpis, klucz innego nadawcy, kształt i znaczek pracy
+        # (payload jako tablica 5 elementów, 0x95); wiadomość przyjęta ma powód "none".
+        lx = VECTORS["lxmf"]
+        prefix = bytes.fromhex(lx["sender_public_key"] + lx["destination_hash"])
+        cases = lx["received"]
+        got = self.ask([("lxmf_reason", prefix + bytes.fromhex(c["data"])) for c in cases])
+        # Zmiany bajtów w przypadkach "signature" wykrywa czasem wcześniej sprawdzenie kształtu albo klucza.
+        rejected = {"shape", "stamp", "source", "signature"}
+        expected = {None: {"none"}, "signature": rejected, "sender_key": {"source"}, "not_sa1": {"shape"},
+                    "length": {"shape"}, "reference_rejects": rejected}
+        for c, reason in zip(cases, got):
+            self.assertIn(reason, {"stamp"} if c["name"] == "payload_5_elements_stamp" else expected[c["core_rejects"]], c["name"])
+        names = dict(zip((c["name"] for c in cases), got))
+        self.assertEqual([names[n] for n in ("signature_flipped_first", "signature_flipped_last", "signed_by_other_identity",
+                                             "source_hash_flipped")], ["signature", "signature", "signature", "source"])
+
     def test_receive_with_key_of_other_sender(self):
         # Ta sama wiadomość z kluczem jej nadawcy jest przyjęta, a z kluczem innej tożsamości nie.
         lx = VECTORS["lxmf"]
