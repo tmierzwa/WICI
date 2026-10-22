@@ -9,6 +9,8 @@
 // --node: konfiguracja węzła stanowiska z interfejsem Reticulum przez USB; zamiast portu CDC
 // pseudoterminal, którego nazwę podaje zdarzenie "ready" ("usb"), a KISSInterface Reticulum
 // w Pythonie otwiera go jak port szeregowy (firmware/tools/rns_osp_node.py).
+// Środowisko "host-core": ten sam program na rdzeniu Reticulum (rns_node_core.cpp) zamiast portu.
+// --seed <64 hex>: stałe ziarno begin() zamiast losowego (próby: tests/test_rns_stack_choice.py).
 //
 // Polecenia na stdin (wiersze): announce [hex danych], send <cel hex> <dane hex> [limit s],
 // path <cel hex>, request <cel hex>, accept <0|1> (warstwa aplikacji przyjmuje pakiety i stos
@@ -226,6 +228,8 @@ void printStatus() {
 
 int main(int argc, char** argv) {
     std::string framPath = "fram.bin";
+    uint8_t seed[32];
+    bool fixedSeed = false;
     FILE* capture = nullptr;   // --capture: datagramy od drugiej strony (szesnastkowo) do odtworzenia w pomiarze RAM
     int listenPort = 4242, peerPort = 4243;
     uint8_t ifac[16] = {};
@@ -246,6 +250,12 @@ int main(int argc, char** argv) {
             std::vector<uint8_t> k;
             if (!unhex(argv[++i], k) || k.size() != 16) { fprintf(stderr, "--receiver: 32 hex digits\n"); return 2; }
             memcpy(receivers[0], k.data(), 16);
+        }
+        else if (!strcmp(argv[i], "--seed") && i + 1 < argc) {
+            std::vector<uint8_t> k;
+            if (!unhex(argv[++i], k) || k.size() != sizeof(seed)) { fprintf(stderr, "--seed: 64 hex digits\n"); return 2; }
+            memcpy(seed, k.data(), sizeof(seed));
+            fixedSeed = true;
         }
         else if (!strcmp(argv[i], "--ifac") && i + 1 < argc) {
             std::vector<uint8_t> k;
@@ -283,9 +293,10 @@ int main(int argc, char** argv) {
         if (tcgetattr(usb, &t) == 0) { cfmakeraw(&t); tcsetattr(usb, TCSANOW, &t); }
         fcntl(usb, F_SETFL, fcntl(usb, F_GETFL) | O_NONBLOCK);
     }
-    uint8_t seed[32];
-    std::random_device device;
-    for (uint8_t& b : seed) b = static_cast<uint8_t>(device());
+    if (!fixedSeed) {
+        std::random_device device;
+        for (uint8_t& b : seed) b = static_cast<uint8_t>(device());
+    }
     if (!rnsnode::begin(fram, radio, ifac, 0, false, seed, hooks)) { printf("{\"event\":\"error\",\"what\":\"begin\"}\n"); return 1; }
     if (nodeMode) rnsnode::usbOpen(true);
     if (tableMax) rnsnode::debugTableMax(tableMax);

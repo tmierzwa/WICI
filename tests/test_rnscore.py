@@ -112,6 +112,12 @@ class CoreTests(unittest.TestCase):
                        [("identity_hash", bytes.fromhex(i["public_key"])) for i in identities])
         self.assertEqual(got, [i["public_key"] for i in identities] + [i["hash"] for i in identities])
 
+    def test_destination_hash(self):
+        # Destination.hash celu SINGLE "wici.sa1" każdej tożsamości z wektorów.
+        identities = VECTORS["identity"]
+        got = self.ask([("destination_hash", bytes.fromhex(i["hash"]) + b"wici.sa1") for i in identities])
+        self.assertEqual(got, [i["destination_wici_sa1"] for i in identities])
+
     def test_signatures(self):
         # Podpis Ed25519 jest deterministyczny, więc ma być bajt w bajt taki jak w Pythonie.
         commands, expected = [], []
