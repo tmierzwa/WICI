@@ -65,6 +65,66 @@
    "identity_private_key": "3d2cbb9d7dec8187b4e439e8f7b6f09ac8b340aa1c9623d7e6dcc7223ce5f496b4997c11db3ff4933cfdd0dd33aef3e7b2267791f097bdca8dd83ccd18ba248f",
    "name": "valid_hmac_padding_inconsistent",
    "token": "35490e7b6dd2ef8aac2e85d08ad667c09201ead7fb45a1f4ac7c1d940141d86a55f5164dc499131a8b7a37e5d8210567c971c9e212a0b170ad7c37fd1cb2e560e0573a27bc05e4f8695457bad0befe9a5942f3519fbe19ee549e6cda18a241db"
+  },
+  {
+   "decrypted": null,
+   "identity_private_key": "3d2cbb9d7dec8187b4e439e8f7b6f09ac8b340aa1c9623d7e6dcc7223ce5f496b4997c11db3ff4933cfdd0dd33aef3e7b2267791f097bdca8dd83ccd18ba248f",
+   "name": "ephemeral_low_order_zero",
+   "token": "000000000000000000000000000000000000000000000000000000000000000055f5164dc499131a8b7a37e5d821056775b210b4c26e113203d6c91842d613e477417cbed6b0c585aa8c79ff9684c10422a762ac8d4cb900c6317b99171225e2"
+  },
+  {
+   "decrypted": null,
+   "identity_private_key": "3d2cbb9d7dec8187b4e439e8f7b6f09ac8b340aa1c9623d7e6dcc7223ce5f496b4997c11db3ff4933cfdd0dd33aef3e7b2267791f097bdca8dd83ccd18ba248f",
+   "name": "ephemeral_low_order_one",
+   "token": "010000000000000000000000000000000000000000000000000000000000000055f5164dc499131a8b7a37e5d821056775b210b4c26e113203d6c91842d613e477417cbed6b0c585aa8c79ff9684c10422a762ac8d4cb900c6317b99171225e2"
+  },
+  {
+   "decrypted": null,
+   "identity_private_key": "3d2cbb9d7dec8187b4e439e8f7b6f09ac8b340aa1c9623d7e6dcc7223ce5f496b4997c11db3ff4933cfdd0dd33aef3e7b2267791f097bdca8dd83ccd18ba248f",
+   "name": "ephemeral_low_order_order_8_a",
+   "token": "e0eb7a7c3b41b8ae1656e3faf19fc46ada098deb9c32b1fd866205165f49b80055f5164dc499131a8b7a37e5d821056775b210b4c26e113203d6c91842d613e477417cbed6b0c585aa8c79ff9684c10422a762ac8d4cb900c6317b99171225e2"
+  },
+  {
+   "decrypted": null,
+   "identity_private_key": "3d2cbb9d7dec8187b4e439e8f7b6f09ac8b340aa1c9623d7e6dcc7223ce5f496b4997c11db3ff4933cfdd0dd33aef3e7b2267791f097bdca8dd83ccd18ba248f",
+   "name": "ephemeral_low_order_order_8_b",
+   "token": "5f9c95bca3508c24b1d0b1559c83ef5b04445cc4581c8e86d8224eddd09f115755f5164dc499131a8b7a37e5d821056775b210b4c26e113203d6c91842d613e477417cbed6b0c585aa8c79ff9684c10422a762ac8d4cb900c6317b99171225e2"
+  },
+  {
+   "decrypted": null,
+   "identity_private_key": "3d2cbb9d7dec8187b4e439e8f7b6f09ac8b340aa1c9623d7e6dcc7223ce5f496b4997c11db3ff4933cfdd0dd33aef3e7b2267791f097bdca8dd83ccd18ba248f",
+   "name": "ephemeral_low_order_p_minus_1",
+   "token": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f55f5164dc499131a8b7a37e5d821056775b210b4c26e113203d6c91842d613e477417cbed6b0c585aa8c79ff9684c10422a762ac8d4cb900c6317b99171225e2"
+  },
+  {
+   "decrypted": null,
+   "identity_private_key": "3d2cbb9d7dec8187b4e439e8f7b6f09ac8b340aa1c9623d7e6dcc7223ce5f496b4997c11db3ff4933cfdd0dd33aef3e7b2267791f097bdca8dd83ccd18ba248f",
+   "name": "ephemeral_low_order_p",
+   "token": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f55f5164dc499131a8b7a37e5d821056775b210b4c26e113203d6c91842d613e477417cbed6b0c585aa8c79ff9684c10422a762ac8d4cb900c6317b99171225e2"
+  },
+  {
+   "decrypted": null,
+   "identity_private_key": "3d2cbb9d7dec8187b4e439e8f7b6f09ac8b340aa1c9623d7e6dcc7223ce5f496b4997c11db3ff4933cfdd0dd33aef3e7b2267791f097bdca8dd83ccd18ba248f",
+   "name": "ephemeral_low_order_p_plus_1",
+   "token": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f55f5164dc499131a8b7a37e5d821056775b210b4c26e113203d6c91842d613e477417cbed6b0c585aa8c79ff9684c10422a762ac8d4cb900c6317b99171225e2"
+  },
+  {
+   "decrypted": "57494349",
+   "identity_private_key": "3d2cbb9d7dec8187b4e439e8f7b6f09ac8b340aa1c9623d7e6dcc7223ce5f496b4997c11db3ff4933cfdd0dd33aef3e7b2267791f097bdca8dd83ccd18ba248f",
+   "name": "ephemeral_non_canonical_p_plus_9",
+   "token": "f6ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f55f5164dc499131a8b7a37e5d8210567acaef3615ac77eca242a7ba8577c712b22e341c6d3b05275a171f8a7bb0d384df376c35b25f3525a3fee7adc62982722"
+  },
+  {
+   "decrypted": "57494349",
+   "identity_private_key": "3d2cbb9d7dec8187b4e439e8f7b6f09ac8b340aa1c9623d7e6dcc7223ce5f496b4997c11db3ff4933cfdd0dd33aef3e7b2267791f097bdca8dd83ccd18ba248f",
+   "name": "ephemeral_non_canonical_high_bit",
+   "token": "090000000000000000000000000000000000000000000000000000000000008055f5164dc499131a8b7a37e5d8210567acaef3615ac77eca242a7ba8577c712b22e341c6d3b05275a171f8a7bb0d384df376c35b25f3525a3fee7adc62982722"
+  },
+  {
+   "decrypted": "57494349",
+   "identity_private_key": "3d2cbb9d7dec8187b4e439e8f7b6f09ac8b340aa1c9623d7e6dcc7223ce5f496b4997c11db3ff4933cfdd0dd33aef3e7b2267791f097bdca8dd83ccd18ba248f",
+   "name": "ephemeral_non_canonical_all_ones",
+   "token": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff55f5164dc499131a8b7a37e5d821056723b5ed394ab0f2b1014e092d790661a0effda072d47b6cbc20f67650dbfcfde34cba162b4eaaa6d136080fe8666b21f3"
   }
  ],
  "identity": [

@@ -13,6 +13,12 @@ namespace rnscore {
 // RFC 7748 (decodeScalar25519), tak jak robi to biblioteka kryptograficzna Pythona.
 void publicKey(const uint8_t privateKey[KEY_SIZE], uint8_t out[KEY_SIZE]);
 
+// RNS/Cryptography/X25519.py: X25519PrivateKey.exchange (RFC 7748). Klucz prywatny 32 B jest przycinany
+// jak wyżej; peer nullptr to punkt bazowy 9 (wtedy out to klucz publiczny). Punkt peer jest brany jak
+// w Pythonie: najstarszy bit pominięty, wartość ≥ p zredukowana. Fałsz, gdy wynik jest zerowy (punkt
+// niskiego rzędu): Python zgłasza wtedy błąd. Wynik w out także przy fałszu, sprawdzenie w stałym czasie.
+bool exchange(const uint8_t privateKey[KEY_SIZE / 2], const uint8_t* peer, uint8_t out[KEY_SIZE / 2]);
+
 // RNS/Identity.py: Identity.update_hashes (truncated_hash klucza publicznego).
 void identityHash(const uint8_t publicKey[KEY_SIZE], uint8_t out[TRUNCATED_HASH_SIZE]);
 

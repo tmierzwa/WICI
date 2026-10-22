@@ -42,9 +42,13 @@ class VectorFileTests(unittest.TestCase):
                 self.assertEqual((s["valid"], s["tampered_valid"], s["non_canonical_valid"]), (True, False, False))
         for t in self.vectors["token"]:
             self.assertEqual(t["decrypted"], t["plaintext"])
-        # Wzorzec przyjmuje tylko dopełnienie 0 i niespójne bajty dopełnienia (nie sprawdza ich).
+        # Wzorzec przyjmuje tylko dopełnienie 0 i niespójne bajty dopełnienia (nie sprawdza ich) oraz
+        # niekanoniczne kodowania klucza efemerycznego (redukuje je); klucze niskiego rzędu odrzuca.
         accepted = {t["name"] for t in self.vectors["crafted_token"] if t["decrypted"] is not None}
-        self.assertEqual(accepted, {"valid_hmac_padding_zero", "valid_hmac_padding_inconsistent"})
+        self.assertEqual(accepted, {"valid_hmac_padding_zero", "valid_hmac_padding_inconsistent",
+                                    "ephemeral_non_canonical_p_plus_9", "ephemeral_non_canonical_high_bit",
+                                    "ephemeral_non_canonical_all_ones"})
+        self.assertEqual(sum(t["name"].startswith("ephemeral_low_order_") for t in self.vectors["crafted_token"]), 7)
         for p in self.vectors["packet"]:
             self.assertIn("header_1", p)
 
