@@ -1,0 +1,25 @@
+Łata WICI do microReticulum 40fa628 (Apache-2.0, jak plik, który zmienia).
+
+Identity::validate_announce odrzuca ogłoszenie krótsze niż klucz publiczny, skrót nazwy, skrót
+losowy, ratchet (gdy ustawiona flaga kontekstu) i podpis. Implementacja referencyjna zwraca wtedy
+False z wyjątku przy wczytaniu klucza; port przekazywał krótki klucz do Ed25519, który czytał poza
+buforem (tests/test_rns_hostile.py, scenariusz short-announce).
+
+--- a/src/microReticulum/Identity.cpp
++++ b/src/microReticulum/Identity.cpp
+@@ -319,6 +319,15 @@
+ 		if (packet.packet_type() == Type::Packet::ANNOUNCE) {
+ 			Bytes destination_hash = packet.destination_hash();
+ 
++			// WICI: ogłoszenie krótsze niż klucz, skróty i podpis odpada przed weryfikacją (w Pythonie
++			// wyjątek przy wczytaniu klucza daje False); inaczej Ed25519 czyta poza buforem.
++			const size_t minimum = KEYSIZE/8 + NAME_HASH_LENGTH/8 + RANDOM_HASH_LENGTH/8 + SIGLENGTH/8 +
++				(packet.context_flag() == Type::Packet::FLAG_SET ? RATCHETSIZE/8 : 0);
++			if (packet.data().size() < minimum) {
++				DEBUGF("Identity::validate_announce: announce of only %lu bytes", (unsigned long)packet.data().size());
++				return false;
++			}
++
+             // Get public key bytes from announce
+ 			Bytes public_key = packet.data().left(KEYSIZE/8);
+ 
