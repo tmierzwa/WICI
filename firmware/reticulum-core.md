@@ -1,6 +1,6 @@
 # Własny rdzeń Reticulum stacji: zakres
 
-Stan: przyjęty 2026-10-22 ([koncepcja, rozdział 03](../docs/concept/03-dostepne-rozwiazania.html#czego-nie-budowac-drugi-raz)). Rdzeń zastępuje port microReticulum pod warstwą `rnsnode` (`src/rns_node.h`) stacji. Port zostaje w repozytorium jako łaty i przypięty commit: służy stanowisku do czasu przejścia i jest drugą implementacją w próbach różnicowych.
+Stan: przyjęty 2026-10-22 ([koncepcja, rozdział 03](../docs/concept/03-dostepne-rozwiazania.html#czego-nie-budowac-drugi-raz)). Rdzeń zastępuje port microReticulum pod warstwą `rnsnode` (`src/rns_node.h`) stacji. Port zostaje w repozytorium jako łaty i przypięty commit: służy stanowisku i próbom sprzętu do czasu przejścia. Wzorcem rdzenia jest wyłącznie Reticulum w Pythonie (wektory, próby różnicowe, przegląd); port nie jest wzorcem (decyzja 2026-10-22).
 
 ## Dlaczego
 
@@ -75,7 +75,7 @@ Rdzeń zastępuje port w obrazach dopiero, gdy na rdzeniu przechodzą:
 | R3 | LXMF jednym pakietem z dowodem po COMMIT | wymiana LXMF z komputerem stanowiska w obie strony |
 | R4 | interfejs USB węzła stanowiska, przypięte cele komputera | `rns_osp_node.py` przechodzi na rdzeniu |
 | R5 | odporność: limity, 60 dni, uszkodzenia FRAM, pomiar RAM na płytkach | kryteria odbioru 1–6 |
-| R6 | przełączenie obrazów na rdzeń, port tylko w próbach różnicowych | obrazy bez portu |
+| R6 | przełączenie obrazów na rdzeń, usunięcie portu i jego łat; biblioteka Crypto przypięta osobno (dziś pobierana razem z zależnościami portu) | obrazy i repozytorium bez microReticulum |
 
 Szacunek: rdzeń 5–7 tys. wierszy C++ i testy, 2–4 miesiące jednej osoby; liczba do weryfikacji po R1.
 

@@ -16,6 +16,7 @@
 #include "hash.h"
 #include "identity.h"
 #include "packet.h"
+#include "proof.h"
 #include "token.h"
 
 namespace {
@@ -144,12 +145,37 @@ int main() {
             const uint8_t* plaintext = data.data() + rnscore::KEY_SIZE + 32 + rnscore::TOKEN_IV_SIZE;
             const size_t length = data.size() - (plaintext - data.data());
             std::vector<uint8_t> out(rnscore::tokenSize(length));
-            if (rnscore::encrypt(data.data(), data.data() + rnscore::KEY_SIZE, data.data() + rnscore::KEY_SIZE + 32,
+            if (rnscore::encrypt(data.data(), nullptr, data.data() + rnscore::KEY_SIZE, data.data() + rnscore::KEY_SIZE + 32,
                                  plaintext, length, out.data())) {
                 printHex(out.data(), out.size());
             } else {
                 printf("none\n");
             }
+        } else if (command == "encrypt_ratchet" &&
+                   data.size() >= rnscore::KEY_SIZE + rnscore::RATCHET_SIZE + 32 + rnscore::TOKEN_IV_SIZE) {
+            // klucz publiczny 64 B, klucz ratchetu 32 B, klucz efemeryczny prywatny 32 B, IV 16 B, tekst jawny
+            const uint8_t* p = data.data();
+            const uint8_t* plaintext = p + rnscore::KEY_SIZE + rnscore::RATCHET_SIZE + 32 + rnscore::TOKEN_IV_SIZE;
+            const size_t length = data.size() - (plaintext - p);
+            std::vector<uint8_t> out(rnscore::tokenSize(length));
+            if (rnscore::encrypt(p, p + rnscore::KEY_SIZE, p + rnscore::KEY_SIZE + rnscore::RATCHET_SIZE,
+                                 p + rnscore::KEY_SIZE + rnscore::RATCHET_SIZE + 32, plaintext, length, out.data())) {
+                printHex(out.data(), out.size());
+            } else {
+                printf("none\n");
+            }
+        } else if (command == "prove" && data.size() == rnscore::KEY_SIZE + rnscore::HASH_SIZE + 1) {
+            // klucz prywatny 64 B, skrót pakietu 32 B, 1 B (1: dowód niejawny)
+            uint8_t pub[rnscore::KEY_SIZE], out[rnscore::PROOF_EXPLICIT_SIZE];
+            rnscore::publicKey(data.data(), pub);
+            const size_t length = rnscore::prove(data.data(), pub, data.data() + rnscore::KEY_SIZE,
+                                                 data[rnscore::KEY_SIZE + rnscore::HASH_SIZE] == 1, out);
+            printHex(out, length);
+        } else if (command == "validate_proof" && data.size() >= rnscore::KEY_SIZE + rnscore::HASH_SIZE) {
+            // klucz publiczny 64 B, skrót pakietu 32 B, dowód
+            const size_t offset = rnscore::KEY_SIZE + rnscore::HASH_SIZE;
+            printf("%d\n", rnscore::validateProof(data.data(), data.data() + rnscore::KEY_SIZE, data.data() + offset,
+                                                   data.size() - offset) ? 1 : 0);
         } else if (command == "decrypt" && data.size() >= rnscore::KEY_SIZE) {
             // klucz prywatny 64 B, token; tekst jawny (może być pusty) albo "none" tam, gdzie Python zwraca None
             uint8_t pub[rnscore::KEY_SIZE];
