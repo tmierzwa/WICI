@@ -29,6 +29,8 @@ constexpr uint32_t PATHFINDER_RW_MS = 500;                // PATHFINDER_RW
 constexpr uint8_t LOCAL_REBROADCASTS_MAX = 2;             // LOCAL_REBROADCASTS_MAX
 constexpr uint32_t PATH_REQUEST_GRACE_MS = 400;           // PATH_REQUEST_GRACE
 constexpr uint32_t PATH_REQUEST_MI_MS = 20000;            // PATH_REQUEST_MI: odstęp własnych zapytań o ten sam cel
+constexpr uint32_t PATH_REQUEST_GATE_MS = 45000;          // PATH_REQUEST_GATE_TIMEOUT: zapytanie „w drodze”
+constexpr uint32_t PATH_REQUEST_TIMEOUT_MS = 15000;       // PATH_REQUEST_TIMEOUT: najkrótsze oczekiwanie odkrycia
 // Odpowiedź na zapytanie o cel stacji najwyżej raz na sekundę (odstępstwo: każda wymaga podpisu Ed25519;
 // odpowiedź jest rozgłaszana, więc słyszą ją wszyscy pytający).
 constexpr uint32_t OWN_RESPONSE_MIN_MS = 1000;
@@ -39,6 +41,7 @@ constexpr size_t ANNOUNCE_TABLE_MAX = 16;   // tablica retransmisji ogłoszeń (
 constexpr size_t PATH_TAGS_MAX = 128;       // znaczniki ostatnich zapytań o trasę (Python: 2 × 16 000)
 constexpr size_t OWN_REQUESTS_MAX = 8;      // cele ostatnich własnych zapytań o trasę
 constexpr size_t HELD_ANNOUNCES_MAX = 4;    // held_announces: wpisy wstrzymane na czas odpowiedzi na zapytanie
+constexpr size_t INFLIGHT_MAX = 8;          // inflight_path_requests i discovery_path_requests (cele bez odpowiedzi)
 constexpr size_t REVERSE_MAX = 32;          // tablica odwrotna (reticulum-core.md, budżet RAM)
 constexpr uint32_t REVERSE_TIMEOUT_MS = 8UL * 60 * 1000;   // RNS/Transport.py: REVERSE_TIMEOUT
 constexpr size_t PATH_REQUEST_SIZE = 3 * TRUNCATED_HASH_SIZE;   // cel, identyfikator transportu, znacznik
@@ -85,6 +88,7 @@ struct TransportCounters {
     uint32_t pathLimited = 0;     // zapytania o cel stacji bez odpowiedzi (OWN_RESPONSE_MIN_MS)
     uint32_t announceTableFull = 0;   // retransmisja odrzucona przy pełnej tablicy ogłoszeń
     uint32_t requestsSent = 0;    // własne zapytania o trasę
+    uint32_t pathGated = 0;       // zapytania o cel z zapytaniem „w drodze” (bez odpowiedzi, czekają na ogłoszenie)
     uint32_t forwarded = 0;       // pakiety HEADER_2 przekazane dalej według tablicy tras
     uint32_t noPath = 0;          // pakiety HEADER_2 do stacji jako następnego skoku bez trasy do celu (porzucone)
     uint32_t proofsForwarded = 0; // dowody przekazane według tablicy odwrotnej
@@ -118,6 +122,9 @@ public:
     // stacji i znacznikiem tag. Fałsz: zapytanie o ten cel w ostatnich PATH_REQUEST_MI_MS (odstępstwo,
     // tabela różnic) albo interfejs odmówił.
     bool requestPath(const uint8_t destination[TRUNCATED_HASH_SIZE], const uint8_t tag[TRUNCATED_HASH_SIZE], uint64_t nowMs);
+    // Przepływność interfejsu (Interface.bitrate) dla czasu oczekiwania odkrycia trasy
+    // (Transport.medium_path_timeout); 0: nieznana (15 s, PATH_REQUEST_TIMEOUT).
+    void setBitrate(uint32_t bitsPerSecond);
     // RNS/Packet.py: PacketReceipt.check_timeout dla czekających potwierdzeń; RNS/Transport.py: jobs
     // (retransmisje z tablicy ogłoszeń; trasy nieużywane przez DESTINATION_TIMEOUT wygasają, sprawdzane raz
     // na sekundę). Najwyżej jedna retransmisja na wywołanie (najwcześniejsza zaległa), żadna przy
@@ -166,10 +173,10 @@ private:
     bool sendOwnAnnounce(bool pathResponse);
     bool mayTransmit() const { return !hooks_.mayTransmit || hooks_.mayTransmit(hooks_.context); }
     void inboundPlain(const Packet& packet, const uint8_t* raw, size_t length, uint64_t nowMs);
-    void pathRequest(const uint8_t destination[TRUNCATED_HASH_SIZE], const uint8_t* requestor, uint64_t nowMs);
+    bool pathRequest(const uint8_t destination[TRUNCATED_HASH_SIZE], const uint8_t* requestor, uint64_t nowMs);
     AnnounceEntry* findAnnounce(const uint8_t destination[TRUNCATED_HASH_SIZE]);
     bool schedule(const uint8_t destination[TRUNCATED_HASH_SIZE], uint8_t hops, uint64_t atMs, uint8_t retries, bool block);
-    void retransmit(AnnounceEntry& entry, uint64_t nowMs);
+    __attribute__((noinline)) void retransmit(AnnounceEntry& entry, uint64_t nowMs);
     void heardRebroadcast(const Packet& packet, uint64_t nowMs);
     bool forward(const Packet& packet, const uint8_t* raw, size_t length, const uint8_t hash[HASH_SIZE], uint64_t nowMs);
     bool forwardProof(const Packet& packet, const uint8_t* raw, size_t length, uint64_t nowMs);
@@ -195,6 +202,21 @@ private:
         uint64_t atMs;   // 0: wolny
     };
     ReverseEntry reverse_[REVERSE_MAX] = {};
+    // RNS/Transport.py: inflight_path_requests (zapytanie bez odpowiedzi, PATH_REQUEST_GATE_MS) i
+    // discovery_path_requests (kolejne zapytanie o ten cel czeka na ogłoszenie); czasy 0: brak.
+    struct Inflight {
+        uint8_t destination[TRUNCATED_HASH_SIZE];
+        uint64_t atMs;
+        uint64_t discoveryUntilMs;
+        bool respond;          // ogłoszenie oczekiwanego celu przyszło: odpowiedź w następnym poll()
+        uint8_t respondHops;
+    };
+    Inflight inflight_[INFLIGHT_MAX] = {};
+    uint32_t discoveryTimeoutMs_ = 0;   // 0: PATH_REQUEST_TIMEOUT_MS
+    Inflight* findInflight(const uint8_t destination[TRUNCATED_HASH_SIZE], uint64_t nowMs);
+    void discoveryResponse(const Packet& packet, uint64_t nowMs);
+    // Ramki z buforem pakietu (500 B) osobno od poll(), żeby nie sumowały się na stosie.
+    __attribute__((noinline)) void sendDiscovery(Inflight& f, uint64_t nowMs);
     uint64_t pathTags_[PATH_TAGS_MAX] = {};   // 8 B skrótu (cel + znacznik), pierścień
     size_t pathTagNext_ = 0;
     struct OwnRequest {
