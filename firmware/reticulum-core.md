@@ -70,7 +70,13 @@ Szacunek: rdzeń 5–7 tys. wierszy C++ i testy, 2–4 miesiące jednej osoby; l
 
 ## Licencja i autorstwo
 
-Rdzeń powstaje przy znajomości kodu implementacji referencyjnej, więc traktuje się go ostrożnie jak utwór zależny od Reticulum, tak jak port ([F26](../docs/review.md#f26-licencja-portu-microreticulum)): obrazy dołączają tekst licencji Reticulum z notą autora. Kod rdzenia w repozytorium ma tę samą uwagę w nagłówkach. Każda funkcja rdzenia wskazuje w komentarzu funkcję implementacji referencyjnej, której zachowanie odtwarza; za każdą zmianę odpowiada osoba, która ją przegląda i umie ją obronić. Warunek licencji Reticulum o zbiorach do trenowania AI a pisanie kodu z pomocą modelu: ocena prawna przed R1, żeby kolejne etapy nie powstawały na niepewnej podstawie; R0 (wektory, szkielet, środowisko prób) może iść równolegle.
+Rdzeń powstaje przy znajomości kodu implementacji referencyjnej, więc jest utworem zależnym od Reticulum, a nie niezależną implementacją protokołu ([podręcznik Reticulum, „Brandolini's Reference”](https://reticulum.network/manual/brandolinis.html), stan 2026-10-22). Zasady:
+
+- **Licencja.** Kod rdzenia jest w `firmware/lib/reticulum_core/` na [licencji Reticulum](../LICENSES/LicenseRef-Reticulum.txt) z notą „Copyright (c) 2016-2026 Mark Qvist” i notą zmian WICI ([LICENSE.md](../LICENSE.md), `REUSE.toml`), nie na MIT. Obrazy z rdzeniem dołączają tekst tej licencji, tak jak obrazy z portem ([F26](../docs/review.md#f26-licencja-portu-microreticulum)). Warunek o systemach szkodzących ludziom nie koliduje z łącznością alarmową.
+- **Autor.** Autorem rdzenia jest Tomek Mierzwa ([@tmierzwa](https://github.com/tmierzwa)): decyduje, co powstaje, przegląda każdą zmianę przed scaleniem i odpowiada za każdy wiersz. Kod powstaje z pomocą asystenta AI (Claude), co commity zapisują wierszem `Co-Authored-By`. Zmiany są małe (jeden PR na krok etapu), żeby przegląd był rzeczywisty; decyzje projektowe i odrzucone warianty są zapisane w PR.
+- **Pochodzenie.** Każda funkcja rdzenia wskazuje w komentarzu funkcję implementacji referencyjnej (plik i funkcja na przypiętym commicie), której zachowanie odtwarza. Rdzeń nie przedstawia się jako implementacja „od zera”.
+- **Warunek o AI.** Kodu Reticulum i LXMF nie używa się do trenowania modeli: konto, z którego pracuje asystent, ma wyłączone użycie rozmów i sesji do trenowania (sprawdzone 2026-10-22, „Help improve our AI models”). Uruchamianie Reticulum w Pythonie do wektorów i prób zgodności jest zwykłym użyciem programu.
+- **Ocena prawna przed R1:** autorstwo kodu pisanego z pomocą AI w prawie polskim i UE, zakres warunku o AI przy użyciu modelu bez trenowania, połączenie utworu na licencji Reticulum z kodem MIT i Apache-2.0 w jednym obrazie. R0 (wektory, szkielet, środowisko prób) może iść równolegle.
 
 ## Do rozstrzygnięcia
 
