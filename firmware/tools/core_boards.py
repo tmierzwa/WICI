@@ -9,12 +9,18 @@ C++17 without exceptions and RTTI and with -Wall -Wextra -Werror; the Crypto uni
 compiled like in the image (-w -Os, tools/stack_deps.py). Nothing is linked into an image.
 
 From -fstack-usage and the relocations of the objects (calls between functions) it prints the
-deepest stack of the core entry points with the call path, and the static RAM of the core
-(.data and .bss). It fails when a core file warns, when a function has a dynamic stack (VLA,
-alloca), when the call graph has recursion, when a core entry point needs more than STACK_LIMIT
-bytes of stack, or when the core has static RAM. Calls through function pointers or virtual
-functions are not in the graph (the core has none; in Crypto only the Hash interface, called
-directly by the core); library functions (memcpy, memset) count as 0 B.
+deepest stack of the core entry points with the call path. Calls through pointers are not in the
+relocations: the virtual calls inside Crypto (Hash interface, SHA-256 and SHA-512) come from the
+INDIRECT table, calls of the Transport hooks lead out of the core (rnsnode callbacks, whose stack
+adds to the path) and any other indirect call (`blx rN` on ARM) fails the check. Library functions
+(memcpy, the ESP-IDF AES driver) are covered by LIBRARY_RESERVE and one exception or interrupt frame
+on the task stack by INTERRUPT_FRAME. Static RAM: the core files must have none (.data, .bss: no
+globals in the library); the tables live in one rnscore::Transport object owned by rnsnode, so when
+transport.h exists its size on the board is compared with RAM_BUDGET.
+
+It fails when a core file warns, when a function has a dynamic stack (VLA, alloca), when the call
+graph has recursion, when a core entry point needs more than STACK_LIMIT bytes of stack, when the
+core files have static RAM or when rnscore::Transport exceeds RAM_BUDGET.
 
   python3 firmware/tools/stack_deps.py
   python3 firmware/tools/core_boards.py [-e bench-a -e l0] [--json]
@@ -41,6 +47,29 @@ CORE_FLAGS = ["-std=gnu++17", "-fno-exceptions", "-fno-rtti", "-Wall", "-Wextra"
 STACK_LIMIT = 4096
 # Funkcje publiczne rdzenia (przestrzeń nazw rnscore poza anonimową), dla nich liczony jest stos.
 ENTRY = re.compile(r"^rnscore::(?!\{anonymous\})")
+# Wywołania przez wskaźnik w bibliotece Crypto (wirtualne metody Hash, SHA256 i SHA512): ręczne krawędzie
+# do funkcji o tej nazwie (każde przeciążenie i definicja), sprawdzone z kodem Crypto 984dc89.
+INDIRECT = {
+    "Hash::formatHMACKey": ["SHA256::reset", "SHA256::update", "SHA256::finalize", "SHA512::reset", "SHA512::update",
+                            "SHA512::finalize"],
+    "SHA256::finalizeHMAC": ["SHA256::update", "SHA256::finalize"],
+    "SHA512::finalizeHMAC": ["SHA512::update", "SHA512::finalize"],
+    "SHA256::finalize": [], "SHA512::finalize": [],   # hashSize(): stała, bez ramki
+    "SHA256::clear": ["SHA256::reset"], "SHA512::clear": ["SHA512::reset"],
+    "Ed25519::deriveKeys": ["SHA512::reset", "SHA512::update", "SHA512::finalize"],
+}
+# Wywołania przez wskaźnik w rdzeniu: tylko haki transportu (TransportHooks) do warstwy rnsnode.
+HOOKS = re.compile(r"^rnscore::Transport::")
+# Funkcje bibliotek (memcpy, memset, sterownik AES ESP-IDF esp_aes_crypt_ecb) liczone jako stały zapas.
+LIBRARY_RESERVE = 256
+# Jedna ramka wyjątku albo przerwania na stosie zadania: Cortex-M4F z FPU 26 słów (104 B); ESP32-S3
+# XT_STK_FRMSZ z xtensa_context.h ESP-IDF 5.5 (192 B). Obsługa przerwania biegnie potem na własnym stosie.
+INTERRUPT_FRAME = {"arm": 104, "xtensa": 192}
+# Cel dla RAM statycznej rdzenia z LXMF (reticulum-core.md, „Budżet RAM”): 56 KB, w tym lista skrótów,
+# tablice tras i tożsamości; obiekt rnscore::Transport ma się w nim zmieścić z zapasem na LXMF.
+RAM_BUDGET = 56 * 1024
+# Przyrostki klonów funkcji GCC (.constprop.0 na ARM, $constprop$0 na Xtensie), których c++filt nie rozwija.
+CLONE = re.compile(r"[.$](?:constprop|isra|part|cold|lto_priv)(?:[.$]\d+)*")
 
 
 def metadata(env: str) -> dict:
@@ -85,11 +114,15 @@ def symbol_name(name: str) -> str:
     return out.split(" ")[-1]
 
 
+def common_flags(meta: dict) -> list[str]:
+    return [*image_flags(meta), *(f"-D{d}" for d in meta["defines"]), f"-I{CORE}", f"-I{CRYPTO}",
+            *(f"-I{i}" for i in meta["includes"]["build"])]
+
+
 def compile_units(env: str, out: Path) -> tuple[dict, list[Path], str]:
     meta = metadata(env)
     cxx = meta["cxx_path"]
-    common = [*image_flags(meta), *(f"-D{d}" for d in meta["defines"]), f"-I{CORE}", f"-I{CRYPTO}",
-              *(f"-I{i}" for i in meta["includes"]["build"])]
+    common = common_flags(meta)
     objects, warnings = [], ""
     for source in sorted(CORE.glob("*.cpp")):
         objects.append(out / f"core_{source.stem}.o")
@@ -110,16 +143,17 @@ def tool(meta: dict, name: str) -> str:
 
 
 def demangle(meta: dict, names: list[str]) -> dict:
-    plain = subprocess.run([tool(meta, "c++filt")], input="\n".join(names), check=True, capture_output=True,
-                           text=True).stdout.splitlines()
+    plain = subprocess.run([tool(meta, "c++filt")], input="\n".join(CLONE.sub("", n) for n in names), check=True,
+                           capture_output=True, text=True).stdout.splitlines()
     return {m: symbol_name(p) for m, p in zip(names, plain)}
 
 
 def stack_frames(meta: dict, objects: list[Path]) -> tuple[dict, dict, list[str]]:
-    """Ramka stosu każdej funkcji po nazwie z pliku obiektowego (przeciążenia osobno).
+    """Ramka stosu każdej funkcji; klucz to (obiekt, nazwa z pliku obiektowego), bo funkcje lokalne
+    o tej samej nazwie (np. {anonymous}::hmac w hkdf.cpp i token.cpp) są w kilku obiektach.
 
     Plik .su ma funkcje w kolejności, w jakiej kompilator je wypisał, z nazwą bez typów z pliku
-    obiektowego; przy -ffunction-sections ta sama kolejność mają sekcje .text.<nazwa> w obiekcie.
+    obiektowego; przy -ffunction-sections tę samą kolejność mają sekcje .text.<nazwa> w obiekcie.
     Rozbieżność nazw w parze przerywa sprawdzenie.
     """
     frames, names, dynamic = {}, {}, []
@@ -128,7 +162,7 @@ def stack_frames(meta: dict, objects: list[Path]) -> tuple[dict, dict, list[str]
         for line in obj.with_suffix(".su").read_text().splitlines():
             where, size, kind = line.rsplit("\t", 2)
             printable = where.split(":", 3)[3]
-            su.append((symbol_name(printable), int(size)))
+            su.append((symbol_name(CLONE.sub("", printable)), int(size)))
             if "dynamic" in kind and "bounded" not in kind:
                 dynamic.append(f"{obj.stem}: {printable} ({kind})")
         headers = subprocess.run([tool(meta, "readelf"), "-SW", str(obj)], check=True, capture_output=True,
@@ -138,13 +172,36 @@ def stack_frames(meta: dict, objects: list[Path]) -> tuple[dict, dict, list[str]
         if [plain[m] for m in sections] != [name for name, _ in su]:
             raise SystemExit(f"{obj.name}: functions in .su and sections differ\n{sections}\n{su}")
         for mangled, (name, size) in zip(sections, su):
-            frames[mangled] = size
-            names[mangled] = name
+            frames[(obj.stem, mangled)] = size
+            names[(obj.stem, mangled)] = name
     return frames, names, dynamic
 
 
-def call_graph(meta: dict, objects: list[Path], known: dict) -> dict:
-    """Wywołania z relokacji: sekcja .text.F (i .literal.F na Xtensie) odwołuje się do funkcji G."""
+def indirect_calls(meta: dict, objects: list[Path], names: dict) -> list[str]:
+    """Funkcje z wywołaniem przez rejestr (ARM: blx rN), których nie ma w INDIRECT ani HOOKS."""
+    if "arm" not in Path(meta["cxx_path"]).name:
+        return []   # Xtensa z -mlongcalls woła wszystko przez rejestr (callx8): sprawdza to obraz ARM
+    found = []
+    for obj in objects:
+        text = subprocess.run([tool(meta, "objdump"), "-d", str(obj)], check=True, capture_output=True,
+                              text=True).stdout
+        function = None
+        for line in text.splitlines():
+            m = re.match(r"^[0-9a-f]+ <(\S+)>:$", line)
+            if m:
+                function = names.get((obj.stem, m.group(1)), m.group(1))
+            elif re.search(r"\tblx\s+r\d", line) and function not in INDIRECT and not HOOKS.match(function or ""):
+                found.append(f"{obj.stem}: {function}")
+    return sorted(set(found))
+
+
+def call_graph(meta: dict, objects: list[Path], frames: dict, names: dict) -> dict:
+    """Wywołania z relokacji: sekcja .text.F (i .literal.F na Xtensie) odwołuje się do funkcji G; cel
+    najpierw w tym samym obiekcie (funkcje lokalne), potem w innych. Do tego krawędzie z INDIRECT."""
+    by_mangled, by_name = {}, {}
+    for key in frames:
+        by_mangled.setdefault(key[1], []).append(key)
+        by_name.setdefault(names[key], []).append(key)
     graph = {}
     for obj in objects:
         text = subprocess.run([tool(meta, "readelf"), "-rW", str(obj)], check=True, capture_output=True,
@@ -153,32 +210,37 @@ def call_graph(meta: dict, objects: list[Path], known: dict) -> dict:
         for line in text.splitlines():
             m = re.match(r"Relocation section '\.rela?\.(?:text|literal)\.(\S+)'", line)
             if line.startswith("Relocation section"):
-                section = m.group(1) if m else None
+                section = (obj.stem, m.group(1)) if m and (obj.stem, m.group(1)) in frames else None
                 continue
             fields = line.split()
             if section and len(fields) >= 5 and re.match(r"^[0-9a-f]{8}$", fields[0]):
                 target = fields[4]
                 own = target.startswith(".")   # sekcja, np. własna pula literałów na Xtensie, nie wywołanie
                 target = re.sub(r"^\.(?:text|literal)\.", "", target)
-                if section in known and target in known and not (own and target == section):
-                    graph.setdefault(section, set()).add(target)
+                if own and target == section[1]:
+                    continue
+                callees = [(obj.stem, target)] if (obj.stem, target) in frames else by_mangled.get(target, [])
+                graph.setdefault(section, set()).update(callees)
+    for key, name in names.items():
+        for callee in INDIRECT.get(name, ()):
+            graph.setdefault(key, set()).update(by_name.get(callee, []))
     return graph
 
 
-def deepest(name: str, frames: dict, graph: dict, path: tuple = ()) -> tuple[int, list[str]]:
-    if name in path:
-        raise SystemExit(f"recursion: {' -> '.join(path + (name,))}")
+def deepest(key: tuple, frames: dict, graph: dict, path: tuple = ()) -> tuple[int, list[tuple]]:
+    if key in path:
+        raise SystemExit(f"recursion: {' -> '.join(k[1] for k in path + (key,))}")
     best, best_path = 0, []
-    for callee in sorted(graph.get(name, ())):
-        size, sub = deepest(callee, frames, graph, path + (name,))
+    for callee in sorted(graph.get(key, ())):
+        size, sub = deepest(callee, frames, graph, path + (key,))
         if size > best:
             best, best_path = size, sub
-    return frames[name] + best, [name, *best_path]
+    return frames[key] + best, [key, *best_path]
 
 
 def static_ram(meta: dict, objects: list[Path]) -> int:
-    core = [str(o) for o in objects if o.stem.startswith("core_")]
-    text = subprocess.run([tool(meta, "size"), "-A", *core], check=True, capture_output=True, text=True).stdout
+    text = subprocess.run([tool(meta, "size"), "-A", *map(str, objects)], check=True, capture_output=True,
+                          text=True).stdout
     total = 0
     for line in text.splitlines():
         fields = line.split()
@@ -187,20 +249,40 @@ def static_ram(meta: dict, objects: list[Path]) -> int:
     return total
 
 
+def transport_ram(meta: dict, out: Path) -> int | None:
+    """RAM obiektu rnscore::Transport na płytce (.bss pliku z jednym obiektem), None bez transport.h."""
+    if not (CORE / "transport.h").is_file():
+        return None
+    probe = out / "transport_ram.cpp"
+    probe.write_text('#include "transport.h"\nrnscore::Transport wiciTransportRam;\n')
+    obj = out / "transport_ram.o"
+    subprocess.run([meta["cxx_path"], *common_flags(meta), *CORE_FLAGS, "-c", str(probe), "-o", str(obj)], check=True,
+                   capture_output=True, text=True)
+    return static_ram(meta, [obj])
+
+
 def check(env: str) -> dict:
     with tempfile.TemporaryDirectory() as tmp:
         meta, objects, warnings = compile_units(env, Path(tmp))
         frames, names, dynamic = stack_frames(meta, objects)
-        graph = call_graph(meta, objects, frames)
+        graph = call_graph(meta, objects, frames, names)
+        arch = "arm" if "arm" in Path(meta["cxx_path"]).name else "xtensa"
+        reserve = LIBRARY_RESERVE + INTERRUPT_FRAME[arch]
         entries = {}
-        for mangled in sorted(frames):
-            if ENTRY.match(names[mangled]):
-                size, path = deepest(mangled, frames, graph)
-                entries[names[mangled]] = {"stack": size, "path": [f"{names[n]} {frames[n]}" for n in path]}
+        for key in sorted(frames):
+            if ENTRY.match(names[key]) and key[0].startswith("core_"):
+                size, path = deepest(key, frames, graph)
+                hooks = any(HOOKS.match(names[k]) for k in path)
+                entries.setdefault(names[key], {"stack": 0})
+                if size + reserve > entries[names[key]]["stack"]:   # przeciążenia: najgłębsze
+                    entries[names[key]] = {"stack": size + reserve, "path": [f"{names[k]} {frames[k]}" for k in path],
+                                           "hooks": hooks}
         return {"env": env, "compiler": subprocess.run([meta["cxx_path"], "--version"], capture_output=True,
                                                        text=True).stdout.splitlines()[0],
-                "warnings": warnings.strip(), "dynamic": dynamic, "static_ram": static_ram(meta, objects),
-                "entries": entries}
+                "warnings": warnings.strip(), "dynamic": dynamic, "indirect": indirect_calls(meta, objects, names),
+                "static_ram": static_ram(meta, [o for o in objects if o.stem.startswith("core_")]),
+                "transport_ram": transport_ram(meta, Path(tmp)),
+                "reserve": reserve, "entries": entries}
 
 
 def main() -> int:
@@ -218,16 +300,22 @@ def main() -> int:
         r = check(env)
         results.append(r)
         over = {n: e for n, e in r["entries"].items() if e["stack"] > STACK_LIMIT}
-        if r["warnings"] or r["dynamic"] or r["static_ram"] or over:
+        transport = r["transport_ram"]
+        if r["warnings"] or r["dynamic"] or r["indirect"] or r["static_ram"] or over or (transport or 0) > RAM_BUDGET:
             failed = True
         if args.json:
             continue
         print(f"{env}: {r['compiler']}")
-        print(f"  static RAM of the core: {r['static_ram']} B; dynamic stack: {r['dynamic'] or 'none'}")
+        print(f"  static RAM of the core files: {r['static_ram']} B; dynamic stack: {r['dynamic'] or 'none'}; "
+              f"unlisted indirect calls: {r['indirect'] or 'none'}")
+        print(f"  rnscore::Transport: {'no transport.h' if transport is None else f'{transport} B'} "
+              f"(budget {RAM_BUDGET} B{', OVER' if (transport or 0) > RAM_BUDGET else ''})")
         if r["warnings"]:
             print(f"  warnings:\n{r['warnings']}")
+        print(f"  stack incl. {r['reserve']} B reserve (library calls {LIBRARY_RESERVE} B, one interrupt frame); "
+              "+hooks: rnsnode callbacks add their stack")
         for name, e in sorted(r["entries"].items(), key=lambda item: -item[1]["stack"]):
-            print(f"  {e['stack']:6d} B  {name}: {' > '.join(e['path'])}")
+            print(f"  {e['stack']:6d} B{' +hooks' if e['hooks'] else ''}  {name}: {' > '.join(e['path'])}")
         for name in over:
             print(f"  over {STACK_LIMIT} B: {name}")
     if args.json:

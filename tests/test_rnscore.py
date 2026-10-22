@@ -8,10 +8,12 @@ answers one command per line; expected values come from tests/vectors/reticulum.
 Reticulum in Python, tests/test_rns_vectors.py). Skipped without a compiler or the stack sources,
 unless WICI_RNS_SANITIZE=1 (CI), which fetches the sources and fails instead.
 
-Core32Tests run the same checks on a 32-bit build (-m32): size_t of 32 bits and 32-bit limbs in
-Curve25519 and Ed25519 of the Crypto library, as on nRF52840 and ESP32-S3 (a 64-bit computer uses
-64-bit limbs, BigNumberUtil.h). Skipped when the compiler cannot build 32-bit programs (macOS, Linux
-without gcc-multilib), unless WICI_RNS_SANITIZE=1 on Linux.
+Core32Tests run the same checks on a 32-bit build (-m32 -funsigned-char): size_t of 32 bits, 32-bit
+limbs in Curve25519 and Ed25519 of the Crypto library and unsigned char, as on nRF52840 and ESP32-S3
+(a 64-bit computer uses 64-bit limbs, BigNumberUtil.h). x86 tolerates unaligned access, which Xtensa
+does not; UBSan reports only part of it (misaligned pointers of typed accesses). Alignment of uint64_t
+differs too (4 B on i386, 8 B on the boards). Skipped when the compiler cannot build 32-bit programs
+(macOS, Linux without gcc-multilib), unless WICI_RNS_SANITIZE=1 on Linux.
 
   python3 -m unittest tests.test_rnscore -v
 """
@@ -369,7 +371,7 @@ class CoreTests(unittest.TestCase):
 
     def test_huge_lengths(self):
         # Długość danych bliska SIZE_MAX (błąd wywołującego): pack i buildAnnounce odmawiają, suma długości
-        # się nie przewija (przy 32-bitowym size_t na płytkach też, Core32Tests).
+        # się nie zawija (przy 32-bitowym size_t na płytkach też, Core32Tests).
         prv = bytes.fromhex(VECTORS["identity"][0]["private_key"])
         self.assertEqual(self.ask([("huge_lengths", prv)]), ["0 0"])
 
@@ -702,7 +704,7 @@ class CoreTests(unittest.TestCase):
 
 class Core32Tests(CoreTests):
     """Te same próby w programie 32-bitowym: typy i limby biblioteki Crypto jak na płytkach."""
-    FLAGS = ("-m32",)
+    FLAGS = ("-m32", "-funsigned-char")
     # Na Linuksie g++ z gcc-multilib ma 32-bitowe biblioteki sanitizerów; clang ich zwykle nie ma.
     COMPILERS = ("g++", "clang++", "c++")
 

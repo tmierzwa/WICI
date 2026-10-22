@@ -37,7 +37,8 @@ bool unpack(const uint8_t* raw, size_t length, Packet& out) {
 
 size_t pack(const Packet& packet, uint8_t* out, size_t capacity) {
     const size_t header = packet.headerType == HEADER_2 ? HEADER_2_SIZE : HEADER_1_SIZE;
-    // Długość danych porównana z miejscem po nagłówku, bez sumy, która przy 32-bitowym size_t może się przewinąć.
+    // Długość danych porównana z miejscem po nagłówku, bez sumy, która przy 32-bitowym size_t może się
+    // zawinąć (przepełnienie).
     if (packet.hops >= MAX_HOPS || packet.dataLength == 0 || packet.context == CONTEXT_LRPROOF ||
         packet.dataLength > MTU - header || capacity < header || packet.dataLength > capacity - header) {
         return 0;
