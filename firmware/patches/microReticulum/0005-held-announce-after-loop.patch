@@ -1,0 +1,52 @@
+Łata WICI do microReticulum 40fa628 (Apache-2.0, jak plik, który zmienia).
+
+Odłożone ogłoszenie wraca do _announce_table po pętli retransmisji w Transport::jobs, jako podmiana
+wpisu jak w implementacji referencyjnej (Transport.announce_table[destination_hash] = held_entry).
+Port usuwał i wstawiał wpis oraz wywoływał cull_announce_table w pętli po tej tablicy, co unieważniało
+iterator pętli: odczyt zwolnionej pamięci, gdy zapytanie o trasę przyszło tuż po ogłoszeniu do tego
+celu (tests/test_rns_hostile.py, scenariusz held-announce). Podmiana nie zmienia liczby wpisów, więc
+przycinanie tablicy nie jest tu potrzebne. Wpis ma pola const, więc podmiana to usunięcie i wstawienie.
+
+--- a/src/microReticulum/Transport.cpp
++++ b/src/microReticulum/Transport.cpp
+@@ -585,6 +585,8 @@
+ 			// Process announces needing retransmission
+ 			if (OS::time() > (_announces_last_checked + _announces_check_interval)) {
+ 				std::vector<Bytes> completed_announces;
++				// WICI: odłożone ogłoszenia wracają do tablicy po pętli (niżej).
++				std::vector<std::pair<Bytes, AnnounceEntry>> reinserted;
+ 				for (auto& [destination_hash, announce_entry] : _announce_table) {
+ 					if (announce_entry._retries > 0 && announce_entry._retries >= Type::Transport::LOCAL_REBROADCASTS_MAX) {
+ 						TRACEF("Completed announce processing for %s, local rebroadcast limit reached", destination_hash.toHex().c_str());
+@@ -658,14 +660,10 @@
+ 									auto held_entry = (*iter).second;
+ 									_held_announces.erase(iter);
+ 									//p Transport.announce_table[destination_hash] = held_entry
+-									//_announce_table[destination_hash] = held_entry;
+-									//_announce_table.insert_or_assign({destination_hash, held_entry});
+-									_announce_table.erase(destination_hash);
+-									// CBA ACCUMULATES
+-									_announce_table.insert({destination_hash, held_entry});
++									// WICI: usunięcie i wstawienie wpisu (oraz cull_announce_table) w pętli po
++									// _announce_table unieważniały iterator pętli; podmiana po pętli.
++									reinserted.push_back({destination_hash, held_entry});
+ 									DEBUG("Reinserting held announce into table");
+-									// CBA IMMEDIATE CULL
+-									cull_announce_table();
+ 								}
+ 							}
+ 						}
+@@ -673,7 +671,13 @@
+ 				}
+ 
+ 				for (const auto& destination_hash : completed_announces) {
++					_announce_table.erase(destination_hash);
++				}
++				// WICI: podmiana wpisu jak Transport.announce_table[destination_hash] = held_entry w Pythonie;
++				// liczba wpisów się nie zmienia, więc bez przycinania tablicy.
++				for (const auto& [destination_hash, held_entry] : reinserted) {
+ 					_announce_table.erase(destination_hash);
++					_announce_table.insert({destination_hash, held_entry});
+ 				}
+ 
+ 				_announces_last_checked = OS::time();

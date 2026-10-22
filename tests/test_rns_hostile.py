@@ -10,9 +10,9 @@ network key (IFAC), power loss in any FRAM write, bit flips in FRAM and a clock 
 
 Needs a C++ compiler with sanitizers and the stack sources (python3 firmware/tools/stack_deps.py,
 or a PlatformIO build of any image). Without them the tests are skipped, unless WICI_RNS_SANITIZE=1
-(CI), which fetches the sources and fails instead of skipping. A scenario that hits a known defect of
-the port (KNOWN_DEFECTS, review of 2026-10-21) is skipped with the defect's name; any other sanitizer
-report, hang or broken invariant fails. WICI_RNS_SEEDS=N runs N fuzzing seeds instead of 4.
+(CI), which fetches the sources and fails instead of skipping. Any sanitizer report, hang or broken
+invariant fails; the three crashes found in the review of 2026-10-21 are fixed by port patches 0005-0007
+and stay as regression scenarios (--defect). WICI_RNS_SEEDS=N runs N fuzzing seeds instead of 4.
 
 The harness feeds every datagram through the station's own IFAC code (rnsnode::debugIfacWrap) and
 checks that the port and microStore read the simulated clock; each passing run must have delivered
@@ -122,27 +122,6 @@ def build(out_dir: Path) -> Path:
     return binary
 
 
-# Usterki portu znalezione w przeglądzie 2026-10-21: (nazwa, napisy w raporcie sanitizera). Próba,
-# która trafi na jedną z nich, jest pomijana z jej nazwą, a nie zaliczana; inna awaria jest błędem
-# próby. Testy test_known_defect_* sprawdzają, że usterka wciąż występuje.
-# Napisy szukane w śladzie wadliwego dostępu (bez śladów zwolnienia i przydziału bloku).
-KNOWN_DEFECTS = [
-    ("announce-table-use-after-free", ("heap-use-after-free", "Transport::jobs()", "Transport.cpp:665")),
-    ("token-without-ciphertext", ("PKCS7.h:67", "Token::decrypt")),
-    ("short-announce", ("Ed25519::decodePoint", "Identity::validate_announce")),
-]
-
-
-def known_defect(report):
-    if not report:
-        return None
-    access = report.split("freed by thread")[0].split("allocated by thread")[0]
-    for name, markers in KNOWN_DEFECTS:
-        if all(m in access for m in markers):
-            return name
-    return None
-
-
 def sanitizer_report(stderr: str):
     for marker in ("ERROR: AddressSanitizer", "runtime error:", "ERROR: LeakSanitizer"):
         at = stderr.find(marker)
@@ -193,9 +172,6 @@ class HostileStackTests(unittest.TestCase):
 
     def assertClean(self, run, *allowed):
         code, outcome, report, stderr = run
-        defect = known_defect(report)
-        if defect:
-            self.skipTest(f"blocked by known port defect: {defect}")
         self.assertIsNone(report, report)
         self.assertIn(outcome.get("result"), ("ok",) + allowed, f"exit {code}: {outcome}\n{stderr[-2000:]}")
         if outcome["result"] == "ok":
@@ -214,40 +190,30 @@ class HostileStackTests(unittest.TestCase):
         self.assertFalse(second["new"])
         self.assertClean(s.run("--seed", 13, "--events", 1500, "--gap", 30 * 86400))
 
-    def assertDefect(self, run, name):
-        report = run[2]
-        self.assertIsNotNone(report, f"{name} no longer reproduces: remove it from KNOWN_DEFECTS together with this test")
-        self.assertEqual(known_defect(report), name, report)
-
-    # Usterki, które wciąż występują (przegląd 2026-10-21). Poprawka w łatach portu usuwa test i wpis
-    # z KNOWN_DEFECTS; do tego czasu test przechodzi, gdy usterka występuje dokładnie w ten sposób.
-    def test_known_defect_token_without_ciphertext(self):
+    # Awarie z przeglądu 2026-10-21, poprawione łatami portu 0005-0007: jeden pakiet albo jedna sekwencja.
+    def test_regression_token_without_ciphertext(self):
         # Token z poprawnym HMAC (klucz z ECDH z kluczem publicznym stacji), ale bez szyfrogramu.
-        self.assertDefect(self.station().run("--defect", "token48", "--events", 0), "token-without-ciphertext")
+        self.assertClean(self.station().run("--defect", "token48", "--events", 0))
 
-    def test_known_defect_short_announce(self):
-        # Ogłoszenie krótsze niż klucz publiczny 64 B: odczyt poza buforem w Ed25519.
-        self.assertDefect(self.station().run("--defect", "short-announce", "--events", 0), "short-announce")
+    def test_regression_short_announce(self):
+        # Ogłoszenie krótsze niż klucz publiczny 64 B: dawniej odczyt poza buforem w Ed25519.
+        self.assertClean(self.station().run("--defect", "short-announce", "--events", 0))
 
-    def test_known_defect_announce_table_use_after_free(self):
-        # Ogłoszenie i zaraz zapytanie o trasę do tego celu: Transport::jobs wstawia odłożone ogłoszenie
-        # do _announce_table w pętli po niej.
-        self.assertDefect(self.station().run("--defect", "held-announce", "--events", 0), "announce-table-use-after-free")
+    def test_regression_held_announce(self):
+        # Ogłoszenie i zaraz zapytanie o trasę do tego celu: dawniej wstawienie odłożonego ogłoszenia
+        # do _announce_table w pętli po niej (Transport::jobs).
+        self.assertClean(self.station().run("--defect", "held-announce", "--events", 0))
 
     def test_mutated_traffic_from_node_with_network_key(self):
-        failures, known = [], set()
+        failures = []
         for seed in range(100, 100 + SEEDS):
             code, outcome, report, stderr = self.station().run("--seed", seed, "--events", 3000, "--mutate", 30, "--long-jumps")
-            if known_defect(report):
-                known.add(known_defect(report))
-            elif report or outcome.get("result") != "ok":
+            if report or outcome.get("result") != "ok":
                 failures.append((seed, outcome, (report or stderr)[-3000:]))
             elif outcome["iface"]["rx_ok"] == 0 or outcome["iface"]["ifac_invalid"] + outcome["iface"]["too_large"] == 0:
                 failures.append((seed, outcome, "valid and rejected datagrams both expected"))
         if failures:
             self.fail(f"{len(failures)} of {SEEDS} seeds failed; first: {failures[0]}")
-        if known:
-            self.skipTest(f"blocked by known port defects: {', '.join(sorted(known))}")
 
     def test_power_loss_in_any_fram_write(self):
         # Stacja po pracy; potem zanik zasilania w wybranym zapisie i start z tym, co zostało w FRAM.

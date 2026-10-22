@@ -419,7 +419,7 @@ void checkClock() {
     if (microStore::time() != static_cast<uint32_t>(simMs / 1000)) fail("microStore does not follow the simulated clock");
 }
 
-// Znane usterki portu jako jeden pakiet (przegląd 2026-10-21): token 48 B i krótkie ogłoszenie.
+// Awarie portu z przeglądu 2026-10-21 (poprawione łatami 0005-0007) jako próby regresji.
 void defect(const std::string& name) {
     if (name == "token48") {
         // Token z poprawnym HMAC (klucz z ECDH z kluczem publicznym stacji), ale bez szyfrogramu.
