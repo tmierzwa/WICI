@@ -179,7 +179,7 @@ Przed D19 specyfikacja nie gwarantowała przyjmowania zgłoszeń bez komputera: 
 | Przyjmowanie zgłoszeń bez komputera | nie | tylko przy kilku zgłoszeniach na godzinę | nie; zapas komputera i nośnik (O07) |
 | Przekazywanie ruchu bez komputera | tak | tak | tak |
 | Ryzyko zapchania | stałe limity w MCU i FRAM: `incoming` 128, kolejka ≥512 intencji, karty ≥256 | jak A, plus zgłoszenia przyjęte bez komputera | tylko czas nadawania |
-| Stos w najbardziej obciążonym węźle | microReticulum na MCU | jak A | implementacja wzorcowa |
+| Stos w najbardziej obciążonym węźle | rdzeń Reticulum stacji na MCU | jak A | implementacja wzorcowa |
 | Wpływ na stację w schronieniu | rola odbiorcy w każdym obrazie; FRAM dla roli odbiorcy (≈403 KiB); najcięższy budżet RAM, gdy obraz stacji już ma w szczycie 4,5% wolnej RAM wobec progu 30% ([pomiar](../../firmware/README.md#pamięć-ram)) | jak A, plus tryb awaryjny i uzgadnianie dwóch magazynów | jedna rola; dochodzi interfejs USB Reticulum |
 | Klucz odbiorcy przy przejęciu komputera | bezpieczny w stacji, ale przejęty laptop wysyła STATUS, REPLY i BULLETIN | jak A | ujawniony; ogranicza go tożsamość zapasowa, szyfrowanie nośnika i komputer bez sieci |
 

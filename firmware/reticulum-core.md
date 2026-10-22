@@ -1,19 +1,19 @@
 # Własny rdzeń Reticulum stacji: zakres
 
-Stan: projekt do przeglądu, 2026-10-21. Rdzeń zastępuje port microReticulum pod warstwą `rnsnode` (`src/rns_node.h`) stacji. Port zostaje w repozytorium jako łaty i przypięty commit: służy stanowisku do czasu przejścia i jest drugą implementacją w próbach różnicowych.
+Stan: przyjęty 2026-10-22 ([koncepcja, rozdział 03](../docs/concept/03-dostepne-rozwiazania.html#czego-nie-budowac-drugi-raz)). Rdzeń zastępuje port microReticulum pod warstwą `rnsnode` (`src/rns_node.h`) stacji. Port zostaje w repozytorium jako łaty i przypięty commit: służy stanowisku do czasu przejścia i jest drugą implementacją w próbach różnicowych.
 
 ## Dlaczego
 
-Przegląd portu z 2026-10-21 (dwa przejścia, fuzzing z sanitizerami) znalazł błędy, które pozwalają jednym pakietem od węzła z kluczem sieci (IFAC) wyłączyć stację, uszkodzenie pamięci przy zwykłym ruchu, czyszczenie tablic po 49,7 dniach licznika i odczyty magazynu bez sprawdzenia klucza i CRC. Klucz IFAC jest wspólny dla sieci, więc jedna przejęta stacja go zdradza ([odbiór](../docs/spec/odbior.md), wiersz „Wrogi węzeł”); stos musi sam znosić wrogi ruch.
+Przegląd portu z 2026-10-21 (dwa przejścia, fuzzing z sanitizerami) pokazał, że port jest młodym projektem, jeszcze niedojrzałym do zastosowań krytycznych. Stacja WICI musi sama znosić wrogi ruch od węzła z kluczem sieci (IFAC): klucz jest wspólny dla sieci, więc jedna przejęta stacja go zdradza ([odbiór](../docs/spec/odbior.md), wiersz „Wrogi węzeł”). Scenariusze tej próby są w `tests/test_rns_hostile.py`.
 
 Do tego:
 
-- autor portu nie odpowiada od 2026-08-02 i nie łączy zmian od 2026-07-20 (w tym zgłoszeń WICI #94–#96), a twórca Reticulum zrezygnował z publicznego wsparcia (`MIRROR.md` w repozytorium Reticulum), więc poprawki i zgodność i tak utrzymuje WICI;
-- WICI używa około jednej trzeciej portu (około 6 tys. z 19 tys. wierszy kodu), a łącza i zasoby portu są osiągalne z eteru;
-- indeks magazynów portu zajmuje około 233 B RAM na cel zamiast 16 B ze [specyfikacji](../docs/spec/oprogramowanie.md#pojemności-stosu); na nRF52840 zostaje 3,5–12,5% RAM wobec wymaganych 30% ([pamięć RAM](README.md#pamięć-ram)), a README nazywa poprawkę głęboką przebudową portu;
-- LXMF na stacji i tak trzeba napisać: port go nie ma.
+- WICI używa około jednej trzeciej portu (około 6 tys. z 19 tys. wierszy kodu), a pozostała część i tak jest osiągalna z eteru;
+- indeks magazynów portu zajmuje około 233 B RAM na cel zamiast 16 B ze [specyfikacji](../docs/spec/oprogramowanie.md#pojemności-stosu); na nRF52840 zostaje 3,5–12,5% RAM wobec wymaganych 30% ([pamięć RAM](README.md#pamięć-ram));
+- LXMF na stacji i tak trzeba napisać: port go nie ma;
+- poprawki i zgodność z przypiętymi wersjami Reticulum i LXMF utrzymuje WICI niezależnie od wyboru.
 
-Rozważone i odrzucone: utrzymywanie utwardzonego portu (ten sam koszt LXMF, brak rozwiązania RAM, nieznana reszta błędów w kodzie, którego WICI nie potrzebuje), Meshtastic (kanał bez uwierzytelnienia nadawcy i treści, potwierdzenia bez uwierzytelnienia w wersji stabilnej, brak radia FSK dla P1, nie jest biblioteką, brak zgodności z D19), MeshCore (MAC 2 B, AES-ECB, brak zgodności z D19). Inne implementacje Reticulum nie mają dojrzałej wersji na MCU z LXMF.
+Rozważone i odrzucone: utrzymywanie utwardzonego portu (ten sam koszt LXMF, brak rozwiązania RAM, utrzymanie dużej części kodu, której WICI nie potrzebuje), Meshtastic (kanał bez uwierzytelnienia nadawcy i treści, potwierdzenia bez uwierzytelnienia w wersji stabilnej, brak radia FSK dla P1, nie jest biblioteką, brak zgodności z D19), MeshCore (MAC 2 B, AES-ECB, brak zgodności z D19). Inne implementacje Reticulum nie mają dojrzałej wersji na MCU z LXMF.
 
 ## Zakres protokołu
 
@@ -70,10 +70,17 @@ Szacunek: rdzeń 5–7 tys. wierszy C++ i testy, 2–4 miesiące jednej osoby; l
 
 ## Licencja i autorstwo
 
-Rdzeń powstaje przy znajomości kodu implementacji referencyjnej, więc traktuje się go ostrożnie jak utwór zależny od Reticulum, tak jak port ([F26](../docs/review.md#f26-licencja-portu-microreticulum)): obrazy dołączają tekst licencji Reticulum z notą autora. Kod rdzenia w repozytorium ma tę samą uwagę w nagłówkach. Każda funkcja rdzenia wskazuje w komentarzu funkcję implementacji referencyjnej, której zachowanie odtwarza; za każdą zmianę odpowiada osoba, która ją przegląda i umie ją obronić. Warunek licencji Reticulum o zbiorach do trenowania AI a pisanie kodu z pomocą modelu: do oceny prawnej przed R6.
+Rdzeń powstaje przy znajomości kodu implementacji referencyjnej, więc jest utworem zależnym od Reticulum, a nie niezależną implementacją protokołu ([podręcznik Reticulum, „Brandolini's Reference”](https://reticulum.network/manual/brandolinis.html), stan 2026-10-22). Zasady:
+
+- **Licencja.** Kod rdzenia jest w `firmware/lib/reticulum_core/` na [licencji Reticulum](../LICENSES/LicenseRef-Reticulum.txt) z notą „Copyright (c) 2016-2026 Mark Qvist” i notą zmian WICI ([LICENSE.md](../LICENSE.md), `REUSE.toml`), nie na MIT. Obrazy z rdzeniem dołączają tekst tej licencji, tak jak obrazy z portem ([F26](../docs/review.md#f26-licencja-portu-microreticulum)). Warunek o systemach szkodzących ludziom nie koliduje z łącznością alarmową.
+- **Autor.** Autorem rdzenia jest Tomek Mierzwa ([@tmierzwa](https://github.com/tmierzwa)): decyduje, co powstaje, przegląda każdą zmianę przed scaleniem i odpowiada za każdy wiersz. Kod powstaje z pomocą asystenta AI (Claude), co commity zapisują wierszem `Co-Authored-By`. Zmiany są małe (jeden PR na krok etapu), żeby przegląd był rzeczywisty; decyzje projektowe i odrzucone warianty są zapisane w PR.
+- **Pochodzenie.** Każda funkcja rdzenia wskazuje w komentarzu funkcję implementacji referencyjnej (plik i funkcja na przypiętym commicie), której zachowanie odtwarza. Rdzeń nie przedstawia się jako implementacja „od zera”.
+- **Warunek o AI.** Kodu Reticulum i LXMF nie używa się do trenowania modeli: konto, z którego pracuje asystent, ma wyłączone użycie rozmów i sesji do trenowania (sprawdzone 2026-10-22, „Help improve our AI models”). Uruchamianie Reticulum w Pythonie do wektorów i prób zgodności jest zwykłym użyciem programu.
+- **Ocena prawna przed R1:** autorstwo kodu pisanego z pomocą AI w prawie polskim i UE, zakres warunku o AI przy użyciu modelu bez trenowania, połączenie utworu na licencji Reticulum z kodem MIT i Apache-2.0 w jednym obrazie. R0 (wektory, szkielet, środowisko prób) może iść równolegle.
 
 ## Do rozstrzygnięcia
 
-- Uzgodnienie koncepcji przed specyfikacją: zasada „stos i biblioteki zamiast własnych odpowiedników” ([koncepcja 03](../docs/concept/03-dostepne-rozwiazania.html)), D14 i F10 w [przeglądzie](../docs/review.md) oraz wiersze o łączach i zasobach w `odbior.md` i `radio.md`.
 - Ratchety (D01): bez nich rdzeń jest mniejszy; z nimi klucze w FRAM i dodatkowe próby.
-- Czy port na stanowisku dostaje do czasu R6 trzy poprawki awarii (token 48 B, krótkie ogłoszenie, `_announce_table` w `Transport::jobs`), żeby `test_rns_hostile.py` sprawdzał dalsze scenariusze także na porcie.
+- Ocena prawna warunku licencji o AI (przed R1, [licencja](#licencja-i-autorstwo)).
+
+Rozstrzygnięte 2026-10-22: koncepcja uzgodniona z rdzeniem ([rozdział 03](../docs/concept/03-dostepne-rozwiazania.html#czego-nie-budowac-drugi-raz), F117 w [przeglądzie](../docs/review.md)); port na stanowisku i w próbach sprzętu pilotażu dostaje poprawki WICI, żeby `test_rns_hostile.py` sprawdzał na nim dalsze scenariusze.
