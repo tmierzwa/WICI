@@ -118,6 +118,8 @@ def build(out_dir: Path, core: bool = False) -> Path:
         # Nagłówki rdzenia tylko dla jednostek WICI i rdzenia: na systemie plików bez rozróżniania wielkości
         # liter "packet.h" rdzenia przesłoniłby "Packet.h" portu.
         local = [f"-I{CORE}"] if core and STACK not in source.parents and source != HARNESS else []
+        if core and STACK not in source.parents:
+            quiet.append("-DRNSCORE_COUNT_OPERATIONS")   # licznik operacji asymetrycznych (identity.h)
         if source == HARNESS:
             quiet.append("-Wno-deprecated-declarations")   # generator buduje pakiety dawnym API portu
             if core:

@@ -1252,6 +1252,9 @@ void pollSerial() {
 // z konfiguracji (bez niego interfejs P1 nie nadaje). Tożsamość: znacznik w rekordzie formatu
 // FRAM; brak klucza przy znaczniku zostawia stację bez stosu (blad_pamieci). Ogłoszenie startowe po 0–120 s.
 void beginStack() {
+    // Wpis o źródle entropii przy każdym starcie z niezdrowym odczytem: także ze stacją z tożsamością
+    // i bez FRAM.
+    if (!entropyHealthy) bench.log(entropyTimeout ? "entropy source not responding" : "entropy source failed health test");
     if (!framOk || !journalOk || !storeOk) {
         stackState = "unavailable";
         bench.log("rns not started: FRAM, journal or store unavailable");
@@ -1267,8 +1270,6 @@ void beginStack() {
     applySilence();
     // Klucz tożsamości powstaje z generatora stacji: bez zdrowego ziarna nowej tożsamości nie tworzymy
     // (zapisana tożsamość nie zależy od ziarna). Klucz bez znacznika po zaniku zasilania też czeka.
-    // Wpis o źródle entropii przy każdym starcie z niezdrowym odczytem, także ze stacją z tożsamością.
-    if (!entropyHealthy) bench.log(entropyTimeout ? "entropy source not responding" : "entropy source failed health test");
     if (!entropyHealthy && !stationStore.identitySaved()) {
         stackState = "entropy_failed";
         bench.log("rns not started: no healthy seed for a new identity");

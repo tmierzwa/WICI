@@ -35,8 +35,11 @@ size_t buildAnnounce(const uint8_t privateKey[KEY_SIZE], const uint8_t publicKey
                      const uint8_t randomHash[RANDOM_HASH_SIZE], const uint8_t* ratchet, const uint8_t* appData,
                      size_t appDataLength, uint8_t* out, size_t capacity) {
     const size_t before = KEY_SIZE + NAME_HASH_SIZE + RANDOM_HASH_SIZE + (ratchet ? RATCHET_SIZE : 0);
+    // Najpierw długość danych aplikacji, żeby suma niżej nie zawinęła się (przepełnienie) przy 32-bitowym
+    // size_t.
+    if (appDataLength > ANNOUNCE_FORWARDABLE_SIZE - before - SIGNATURE_SIZE) return 0;
     const size_t length = before + SIGNATURE_SIZE + appDataLength;
-    if (length > ANNOUNCE_FORWARDABLE_SIZE || length > capacity) return 0;
+    if (length > capacity) return 0;
     uint8_t* p = out;
     memcpy(p, publicKey, KEY_SIZE);
     memcpy(p += KEY_SIZE, nameHash, NAME_HASH_SIZE);

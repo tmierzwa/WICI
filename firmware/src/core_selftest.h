@@ -18,7 +18,8 @@ struct Result {
 };
 
 // Próby przy starcie, przed rnsnode::begin: token (odszyfrowanie i szyfrowanie z kluczem efemerycznym
-// i IV z wektora), podpis i weryfikacja podpisu poprawnego. Obejmują wszystkie prymitywy rdzenia.
+// i IV z wektora), podpis i weryfikacja podpisu poprawnego. Obejmują wszystkie prymitywy kryptograficzne
+// (X25519, Ed25519, AES-256-CBC, SHA-256, SHA-512, HMAC, HKDF); ogłoszenie i IFAC tylko w RNS SELFTEST.
 constexpr size_t QUICK = 4;
 // Wszystkie próby (polecenie RNS SELFTEST): dodatkowo odrzucenie podpisu zmienionej wiadomości, klucz
 // publiczny z prywatnego, przyjęcie i złożenie ogłoszenia, klucz i kod IFAC.

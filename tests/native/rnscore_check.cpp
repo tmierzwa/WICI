@@ -3,6 +3,7 @@
 // wejścia wiersze "polecenie dane_hex" i dla każdego wypisuje jeden wiersz z wynikiem szesnastkowo
 // albo "error". Polecenia z kilkoma argumentami biorą je sklejone w jednym ciągu, w kolejności z opisu
 // przy poleceniu (klucze i podpisy mają stałą długość, reszta to wiadomość). Wartości oczekiwane (wektory z Reticulum w Pythonie) porównuje test w Pythonie.
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -461,6 +462,19 @@ int main() {
             printf("%d", ok ? 1 : 0);
             for (size_t i = 0; i < count; ++i) printf(" %s:%d", results[i].name, results[i].ok ? 1 : 0);
             printf("\n");
+        } else if (command == "huge_lengths" && data.size() == rnscore::KEY_SIZE) {
+            // klucz prywatny 64 B; pack i buildAnnounce z długością danych bliską SIZE_MAX (błąd wywołującego)
+            // mają odmówić bez dostępu do danych: obie długości wyniku w jednym wierszu
+            uint8_t pub[rnscore::KEY_SIZE], name[rnscore::NAME_HASH_SIZE] = {}, random[rnscore::RANDOM_HASH_SIZE] = {};
+            uint8_t dest[rnscore::TRUNCATED_HASH_SIZE] = {}, small[1] = {}, out[rnscore::MTU];
+            rnscore::publicKey(data.data(), pub);
+            rnscore::Packet packet = {};
+            packet.data = small;
+            packet.dataLength = SIZE_MAX - 10;
+            const size_t packed = rnscore::pack(packet, out, sizeof(out));
+            const size_t built = rnscore::buildAnnounce(data.data(), pub, dest, name, random, nullptr, small, SIZE_MAX - 100,
+                                                        out, sizeof(out));
+            printf("%zu %zu\n", packed, built);
         } else {
             printf("error\n");
         }
