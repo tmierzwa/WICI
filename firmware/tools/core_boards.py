@@ -76,7 +76,7 @@ def metadata(env: str) -> dict:
 
 
 def image_flags(meta: dict) -> list[str]:
-    """Flagi obrazu bez standardu języka, wyjątków, RTTI i ustawień ostrzeżeń (te daje wywołujący)."""
+    """Image flags without the language standard, exceptions, RTTI and warning settings (the caller adds those)."""
     flags = []
     skip = False
     for flag in meta["cxx_flags"]:
@@ -95,7 +95,7 @@ def image_flags(meta: dict) -> list[str]:
 
 
 def symbol_name(name: str) -> str:
-    """Nazwa funkcji bez typu wyniku, argumentów i argumentów szablonu, wspólna dla .su i c++filt."""
+    """Function name without return type, arguments and template arguments, common to .su and c++filt."""
     name = name.replace("(anonymous namespace)", "{anonymous}")
     out, depth = "", 0
     for c in name:
@@ -145,12 +145,12 @@ def demangle(meta: dict, names: list[str]) -> dict:
 
 
 def stack_frames(meta: dict, objects: list[Path]) -> tuple[dict, dict, list[str]]:
-    """Ramka stosu każdej funkcji; klucz to (obiekt, nazwa z pliku obiektowego), bo funkcje lokalne
-    o tej samej nazwie (np. {anonymous}::hmac w hkdf.cpp i token.cpp) są w kilku obiektach.
+    """Stack frame of every function, keyed by (object, name from the object file), because local
+    functions with the same name (e.g. {anonymous}::hmac in hkdf.cpp and token.cpp) are in several objects.
 
-    Plik .su ma funkcje w kolejności, w jakiej kompilator je wypisał, z nazwą bez typów z pliku
-    obiektowego; przy -ffunction-sections tę samą kolejność mają sekcje .text.<nazwa> w obiekcie.
-    Rozbieżność nazw w parze przerywa sprawdzenie.
+    The .su file lists functions in the order the compiler emitted them, with names without types; with
+    -ffunction-sections the .text.<name> sections of the object come in the same order. A name mismatch
+    in a pair stops the check.
     """
     frames, names, dynamic = {}, {}, []
     for obj in objects:
@@ -174,7 +174,7 @@ def stack_frames(meta: dict, objects: list[Path]) -> tuple[dict, dict, list[str]
 
 
 def indirect_calls(meta: dict, objects: list[Path], names: dict) -> list[str]:
-    """Funkcje z wywołaniem przez rejestr (ARM: blx rN), których nie ma w INDIRECT ani HOOKS."""
+    """Functions with a call through a register (ARM: blx rN) that are in neither INDIRECT nor HOOKS."""
     if "arm" not in Path(meta["cxx_path"]).name:
         return []   # Xtensa z -mlongcalls woła wszystko przez rejestr (callx8): sprawdza to obraz ARM
     found = []
@@ -192,8 +192,8 @@ def indirect_calls(meta: dict, objects: list[Path], names: dict) -> list[str]:
 
 
 def call_graph(meta: dict, objects: list[Path], frames: dict, names: dict) -> dict:
-    """Wywołania z relokacji: sekcja .text.F (i .literal.F na Xtensie) odwołuje się do funkcji G; cel
-    najpierw w tym samym obiekcie (funkcje lokalne), potem w innych. Do tego krawędzie z INDIRECT."""
+    """Calls from relocations: section .text.F (and .literal.F on Xtensa) refers to function G; the target
+    is looked up first in the same object (local functions), then in the others. Plus the INDIRECT edges."""
     by_mangled, by_name = {}, {}
     for key in frames:
         by_mangled.setdefault(key[1], []).append(key)
