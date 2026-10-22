@@ -35,7 +35,10 @@ bool validate(const uint8_t publicKey[KEY_SIZE], const uint8_t* signature, size_
 
 // Bez odpowiednika w Pythonie: liczba operacji asymetrycznych (exchange, sign, weryfikacja w validate)
 // od startu programu. Służy próbom ograniczenia pracy na pakiet (najwyżej jedna operacja na obieg pętli
-// stacji); zawija się po 2^32.
+// stacji); zawija się po 2^32. Tylko w budowach prób (RNSCORE_COUNT_OPERATIONS): w obrazach płytek rdzeń
+// nie ma zmiennych globalnych (tools/core_boards.py).
+#ifdef RNSCORE_COUNT_OPERATIONS
 uint32_t asymmetricOperations();
+#endif
 
 }  // namespace rnscore
