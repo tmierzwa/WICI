@@ -239,6 +239,7 @@ def packet_vectors():
         h2 = parsed(header_two(packet.raw, transport_id))
         out.append({"name": name, "header_1": h1, "header_2": h2})
     # Pakiety spreparowane: granice długości, liczba skoków, bity flag; valid to wynik Packet.unpack.
+    # Klucz header_1 jak przy pakietach odrzuconych wyżej: surowe bajty, typ nagłówka wynika z flag.
     base = bytes.fromhex(out[1]["header_1"]["raw"])   # single_data_empty: nagłówek 19 B i 64 B tokenu
     dst = single.hash
     for name, raw in (

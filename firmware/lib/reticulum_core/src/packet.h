@@ -14,6 +14,7 @@ constexpr size_t MTU = 500;
 constexpr size_t HEADER_1_SIZE = 2 + TRUNCATED_HASH_SIZE + 1;
 constexpr size_t HEADER_2_SIZE = 2 + 2 * TRUNCATED_HASH_SIZE + 1;
 constexpr uint8_t MAX_HOPS = 128;   // liczba skoków musi być mniejsza
+constexpr uint8_t CONTEXT_LRPROOF = 0xFF;   // RNS/Packet.py: LRPROOF
 
 // RNS/Packet.py: HEADER_1, HEADER_2, DATA, ANNOUNCE, LINKREQUEST, PROOF; RNS/Transport.py: BROADCAST,
 // TRANSPORT; RNS/Destination.py: SINGLE, GROUP, PLAIN, LINK.
@@ -37,13 +38,18 @@ struct Packet {
 };
 
 // RNS/Packet.py: Packet.unpack. Fałsz tam, gdzie Python odrzuca pakiet: za krótki nagłówek, brak
-// danych, liczba skoków ≥ MAX_HOPS. Jak w Pythonie bit 7 flag (IFAC, zdejmuje go interfejs) jest
-// pomijany, a długość ponad MTU nie jest sprawdzana (ogranicza ją interfejs).
+// danych, liczba skoków ≥ MAX_HOPS. Jak w Pythonie bit 7 flag (IFAC) jest tu pomijany, a długość ponad
+// MTU nie jest sprawdzana (ogranicza ją interfejs). Bit 7 rozstrzyga wcześniej Transport.preprocess_inbound:
+// odrzuca pakiet z bitem na interfejsie bez IFAC i bez bitu na interfejsie z IFAC, a IFAC zdejmuje
+// przed unpack (u nas p1iface); stąd skrót pakietu liczony jest bez IFAC.
 bool unpack(const uint8_t* raw, size_t length, Packet& out);
 
-// RNS/Packet.py: Packet.pack bez szyfrowania (dane już zaszyfrowane, jeśli trzeba) i bez kontekstu
-// LRPROOF (łącza poza rdzeniem). Zwraca długość pakietu w out albo 0, gdy przekracza MTU lub capacity,
-// gdy liczba skoków ≥ MAX_HOPS albo dane są puste (Python by ich nie przyjął). out nie może zachodzić na data.
+// RNS/Packet.py: Packet.pack bez szyfrowania (dane już zaszyfrowane, jeśli trzeba), tylko dla własnych
+// pakietów. Zwraca długość pakietu w out albo 0, gdy przekracza MTU lub capacity, gdy liczba skoków
+// ≥ MAX_HOPS, dane są puste (Python by ich nie przyjął) albo kontekst to LRPROOF (łącza poza rdzeniem;
+// Python wpisuje wtedy typ LINK i identyfikator łącza). out nie może zachodzić na data. Przekazywanie
+// cudzych pakietów (Transport.outbound i inbound) przepisuje surowe bajty jak Python, nie przez pack:
+// HEADER_1 → HEADER_2 dodaje 16 B i może przekroczyć MTU, czego Python nie sprawdza.
 size_t pack(const Packet& packet, uint8_t* out, size_t capacity);
 
 // RNS/Packet.py: get_hash i get_hashable_part: SHA-256 z (flagi & 0x0F) i pakietu od skrótu celu, czyli

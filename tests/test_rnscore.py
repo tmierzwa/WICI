@@ -206,8 +206,9 @@ class CoreTests(unittest.TestCase):
         commands, expected = [], []
         for p in VECTORS["packet"]:
             for h in (p.get("header_1"), p.get("header_2")):
-                # Bit IFAC (0x80) pack nie ustawia; flaga kontekstu, skoki i MTU: osobno niżej.
-                if not h or not h["valid"] or h["hops"] != 0 or len(h["raw"]) // 2 > 500 or int(h["raw"][:2], 16) & 0xA0:
+                # Bit IFAC (0x80) pack nie ustawia; flaga kontekstu, skoki, MTU i LRPROOF: osobno niżej.
+                if not h or not h["valid"] or h["hops"] != 0 or len(h["raw"]) // 2 > 500 or int(h["raw"][:2], 16) & 0xA0 \
+                        or h["context"] == 0xFF:
                     continue
                 commands.append(("pack", self.pack_args(h)))
                 expected.append(h["raw"])
@@ -215,7 +216,7 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(self.ask(commands), expected)
 
     def test_packet_pack_flags_and_limits(self):
-        # Flaga kontekstu i typy w bajcie flag; odmowa przy 128 skokach, pustych danych i ponad MTU (500 B).
+        # Flaga kontekstu i typy w bajcie flag; odmowa przy 128 skokach, pustych danych, ponad MTU (500 B) i dla LRPROOF.
         by_name = {p["name"]: p["header_1"] for p in VECTORS["packet"]}
         context = by_name["context_flag_set"]
         types = by_name["link_proof_types"]
@@ -224,11 +225,13 @@ class CoreTests(unittest.TestCase):
         over = dict(by_name["above_mtu"])
         at_mtu = dict(over, data=over["data"][:2 * (500 - 19)])
         too_many = dict(hops, hops=128)
-        got = self.ask([("pack", self.pack_args(h)) for h in (context, types, hops, empty, over, at_mtu, too_many)])
+        link_proof = dict(hops, context=0xFF)   # LRPROOF: łącza poza rdzeniem
+        got = self.ask([("pack", self.pack_args(h))
+                        for h in (context, types, hops, empty, over, at_mtu, too_many, link_proof)])
         self.assertEqual(got[:3], [context["raw"], types["raw"], hops["raw"]])
         self.assertEqual(got[3:5], ["none", "none"])
         self.assertEqual(len(got[5]) // 2, 500)
-        self.assertEqual(got[6], "none")
+        self.assertEqual(got[6:], ["none", "none"])
 
     def test_packet_every_length(self):
         # Każda długość obciętego pakietu HEADER_2: do 35 B (nagłówek bez danych) odrzucony, dalej przyjęty;
