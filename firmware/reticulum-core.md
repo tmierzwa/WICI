@@ -79,11 +79,11 @@ Rdzeń zastępuje port w obrazach dopiero, gdy na rdzeniu przechodzą:
 | Etap | Treść | Wyjście |
 |---|---|---|
 | R0 | wektory z Pythona, szkielet rdzenia, środowisko `host` z wyborem stosu (port albo rdzeń) | wektory przechodzą dla tożsamości, pakietu i tokenu |
-| R1 | ogłoszenia (z polem ratchetu), cele, szyfrowanie do klucza ratchetu z ogłoszenia, przyjmowanie i dowody pakietów do stacji, ograniczenie pracy na pakiet (jeden krok odbioru na obieg pętli, limit weryfikacji ogłoszeń) | `rns_interop.py` w części bez przekazywania i bez tablic w FRAM (kroki 1–5, 3r, 4a, 7, 8) przechodzi na rdzeniu |
+| R1 | ogłoszenia (z polem ratchetu), cele, szyfrowanie do klucza ratchetu z ogłoszenia, przyjmowanie i dowody pakietów do stacji, ograniczenie pracy na pakiet (kolejka datagramów z jednym krokiem odbioru na obieg pętli, limit weryfikacji ogłoszeń; decyzja nadzoru, wcześniej niż R5) | `rns_interop.py` w części bez przekazywania i bez tablic w FRAM (kroki 1–5, 3r, 4a, 7, 8) przechodzi na rdzeniu |
 | R2 | transport: przekazywanie, tablica tras w FRAM, zapytania o trasę (także własne i odpowiedzi na zapytania o cel stacji), tablica odwrotna | próby różnicowe dla transportu; `test_rns_hostile.py` bez awarii; krok 6 `rns_interop.py` (trasa i tożsamość celu z FRAM po restarcie) |
 | R3 | LXMF jednym pakietem z dowodem po COMMIT | wymiana LXMF z komputerem stanowiska w obie strony |
 | R4 | interfejs USB węzła stanowiska, przypięte cele komputera | `rns_osp_node.py` przechodzi na rdzeniu |
-| R5 | odporność: pozostałe limity, 60 dni, uszkodzenia FRAM, pomiar RAM na płytkach | kryteria odbioru 1–6 |
+| R5 | odporność: pozostałe limity, 60 dni, uszkodzenia FRAM, pomiar RAM i czasu kryptografii na płytkach przez samotest (z niego wartości limitów z R1) | kryteria odbioru 1–6 |
 | R6 | przełączenie obrazów na rdzeń, usunięcie portu i jego łat; biblioteka Crypto przypięta osobno (dziś pobierana razem z zależnościami portu) | obrazy i repozytorium bez microReticulum |
 
 Szacunek: rdzeń 5–7 tys. wierszy C++ i testy, 2–4 miesiące jednej osoby; liczba do weryfikacji po R1.
