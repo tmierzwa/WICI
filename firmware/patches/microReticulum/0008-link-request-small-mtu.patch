@@ -1,0 +1,23 @@
+Łata WICI do microReticulum 40fa628 (Apache-2.0, jak plik, który zmienia).
+
+Żądanie łącza może nieść sygnalizację MTU. Port przyjmował każdą niezerową wartość, a update_mdu()
+liczy z niej MDU łącza: przy MTU poniżej 84 B (IFAC 1 + nagłówek 19 + narzut tokenu 48 + blok AES 16)
+MDU wychodzi zero albo ujemne i jest zapisywane do uint16_t (konwersja ujemnej wartości: zachowanie
+niezdefiniowane). Takie MTU port traktuje teraz jak brak sygnalizacji (Type::Reticulum::MTU), tak jak
+przy wyjątku w tym samym miejscu (tests/test_rns_hostile.py, scenariusz link-mtu).
+
+--- a/src/microReticulum/Link.cpp
++++ b/src/microReticulum/Link.cpp
+@@ -304,7 +304,11 @@ Link::Link(const Destination& destination /*= {Type::NONE}*/, Callbacks::establi
+ 				DEBUG("Link request includes MTU signalling"); // TODO: Remove debug
+ 				try {
+ 					uint16_t mtu = mtu_from_lr_packet(packet);
+-					link.mtu((mtu != 0) ? mtu : Type::Reticulum::MTU);
++					// WICI: MTU z sygnalizacji, przy którym update_mdu() dałby MDU <= 0 (konwersja ujemnej
++					// wartości na uint16_t), traktowane jak brak sygnalizacji, tak jak przy wyjątku niżej.
++					const uint16_t mtu_min = Type::Reticulum::IFAC_MIN_SIZE + Type::Reticulum::HEADER_MINSIZE +
++						Type::Identity::TOKEN_OVERHEAD + Type::Identity::AES128_BLOCKSIZE;
++					link.mtu((mtu >= mtu_min) ? mtu : Type::Reticulum::MTU);
+ 				}
+ 				catch (const std::exception& e) {
+ 					ERRORF("An error ocurred while validating link request %s", link.link_id().toHex().c_str());

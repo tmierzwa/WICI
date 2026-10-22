@@ -236,6 +236,10 @@ class HostileStackTests(unittest.TestCase):
         # Ogłoszenie krótsze niż klucz publiczny 64 B: dawniej odczyt poza buforem w Ed25519.
         self.assertClean(self.station().run("--defect", "short-announce", "--events", 0))
 
+    def test_regression_link_request_small_mtu(self):
+        # Żądanie łącza z sygnalizacją MTU poniżej 84 B (MDU łącza <= 0) i graniczne; łata portu 0008.
+        self.assertClean(self.station().run("--defect", "link-mtu", "--events", 0))
+
     def test_regression_held_announce(self):
         # Ogłoszenie i zaraz zapytanie o trasę do tego celu: dawniej wstawienie odłożonego ogłoszenia
         # do _announce_table w pętli po niej (Transport::jobs).
