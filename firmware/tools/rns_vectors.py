@@ -238,7 +238,27 @@ def packet_vectors():
         h1 = parsed(packet.raw)
         h2 = parsed(header_two(packet.raw, transport_id))
         out.append({"name": name, "header_1": h1, "header_2": h2})
-    for name, raw in (("too_short", b"\x00"), ("header_2_too_short", bytes([0x50, 0]) + transport_id[:8])):
+    # Pakiety spreparowane: granice długości, liczba skoków, bity flag; valid to wynik Packet.unpack.
+    # Klucz header_1 jak przy pakietach odrzuconych wyżej: surowe bajty, typ nagłówka wynika z flag.
+    base = bytes.fromhex(out[1]["header_1"]["raw"])   # single_data_empty: nagłówek 19 B i 64 B tokenu
+    dst = single.hash
+    for name, raw in (
+        ("too_short", b"\x00"),
+        ("header_2_too_short", bytes([0x50, 0]) + transport_id[:8]),
+        ("header_1_without_context", bytes([0x00, 0]) + dst),
+        ("header_1_without_data", bytes([0x00, 0]) + dst + b"\x00"),
+        ("header_1_one_byte_of_data", bytes([0x00, 0]) + dst + b"\x00\x01"),
+        ("header_2_without_data", bytes([0x50, 0]) + transport_id + dst + b"\x00"),
+        ("header_2_one_byte_of_data", bytes([0x50, 0]) + transport_id + dst + b"\x00\x01"),
+        ("hops_127", base[:1] + bytes([127]) + base[2:]),
+        ("hops_128", base[:1] + bytes([128]) + base[2:]),
+        ("hops_255", base[:1] + bytes([255]) + base[2:]),
+        ("ifac_flag_set", bytes([base[0] | 0x80]) + base[1:]),
+        ("context_flag_set", bytes([base[0] | 0x20]) + base[1:]),
+        ("link_proof_types", bytes([0x0F]) + base[1:]),
+        ("context_byte_ff", base[:18] + b"\xff" + base[19:]),
+        ("above_mtu", base[:19] + seeded("above-mtu", 600)),
+    ):
         out.append({"name": name, "header_1": parsed(raw)})
     return out
 

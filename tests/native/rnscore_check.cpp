@@ -4,6 +4,7 @@
 // albo "error". Polecenia z kilkoma argumentami biorą je sklejone w jednym ciągu, w kolejności z opisu
 // przy poleceniu (klucze i podpisy mają stałą długość, reszta to wiadomość). Wartości oczekiwane (wektory z Reticulum w Pythonie) porównuje test w Pythonie.
 #include <stdio.h>
+#include <string.h>
 
 #include <iostream>
 #include <sstream>
@@ -12,6 +13,7 @@
 
 #include "hash.h"
 #include "identity.h"
+#include "packet.h"
 #include "token.h"
 
 namespace {
@@ -27,9 +29,9 @@ bool fromHex(const std::string& hex, std::vector<uint8_t>& out) {
     return true;
 }
 
-void printHex(const uint8_t* data, size_t length) {
+void printHex(const uint8_t* data, size_t length, const char* end = "\n") {
     for (size_t i = 0; i < length; ++i) printf("%02x", data[i]);
-    printf("\n");
+    printf("%s", end);
 }
 
 }  // namespace
@@ -99,6 +101,50 @@ int main() {
             size_t outLength = 0;
             if (rnscore::decrypt(data.data(), pub, token.data(), length, out.data(), out.size(), &outLength)) {
                 printHex(out.data(), outLength);
+            } else {
+                printf("none\n");
+            }
+        } else if (command == "unpack") {
+            // pakiet; pola rozdzielone spacjami (identyfikator transportu "-" w HEADER_1) i skrót pakietu,
+            // albo "none" tam, gdzie Python odrzuca pakiet
+            rnscore::Packet packet;
+            if (rnscore::unpack(data.data(), data.size(), packet)) {
+                printf("%u %u %u %u %u %u ", packet.headerType, packet.contextFlag, packet.transportType,
+                       packet.destinationType, packet.packetType, packet.hops);
+                if (packet.headerType == rnscore::HEADER_2) {
+                    printHex(packet.transportId, sizeof(packet.transportId), " ");
+                } else {
+                    printf("- ");
+                }
+                printHex(packet.destinationHash, sizeof(packet.destinationHash), " ");
+                printf("%u ", packet.context);
+                printHex(packet.data, packet.dataLength, " ");
+                uint8_t hash[rnscore::HASH_SIZE];
+                rnscore::packetHash(data.data(), data.size(), hash);
+                printHex(hash, sizeof(hash));
+            } else {
+                printf("none\n");
+            }
+        } else if (command == "pack" && data.size() >= 6 + 2 * rnscore::TRUNCATED_HASH_SIZE + 1) {
+            // typ nagłówka, flaga kontekstu, typ transportu, typ celu, typ pakietu, skoki (po 1 B),
+            // identyfikator transportu 16 B, skrót celu 16 B, kontekst 1 B, dane; pakiet albo "none"
+            const uint8_t* p = data.data();
+            rnscore::Packet packet;
+            packet.headerType = static_cast<rnscore::HeaderType>(p[0]);
+            packet.contextFlag = p[1];
+            packet.transportType = static_cast<rnscore::TransportType>(p[2]);
+            packet.destinationType = static_cast<rnscore::DestinationType>(p[3]);
+            packet.packetType = static_cast<rnscore::PacketType>(p[4]);
+            packet.hops = p[5];
+            memcpy(packet.transportId, p + 6, rnscore::TRUNCATED_HASH_SIZE);
+            memcpy(packet.destinationHash, p + 6 + rnscore::TRUNCATED_HASH_SIZE, rnscore::TRUNCATED_HASH_SIZE);
+            packet.context = p[6 + 2 * rnscore::TRUNCATED_HASH_SIZE];
+            packet.data = p + 6 + 2 * rnscore::TRUNCATED_HASH_SIZE + 1;
+            packet.dataLength = data.size() - (6 + 2 * rnscore::TRUNCATED_HASH_SIZE + 1);
+            uint8_t out[rnscore::MTU];
+            const size_t length = rnscore::pack(packet, out, sizeof(out));
+            if (length) {
+                printHex(out, length);
             } else {
                 printf("none\n");
             }
