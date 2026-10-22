@@ -13,4 +13,12 @@ namespace rnscore {
 // i skrótu tożsamości. identityHash nullptr: cel bez tożsamości (PLAIN), tylko skrót nazwy.
 void destinationHash(const char* fullName, const uint8_t identityHash[TRUNCATED_HASH_SIZE], uint8_t out[TRUNCATED_HASH_SIZE]);
 
+// Skrót nazwy: pierwsze NAME_HASH_SIZE B full_hash pełnej nazwy (Destination.hash, name_hash).
+void nameHash(const char* fullName, uint8_t out[NAME_HASH_SIZE]);
+
+// Druga część Destination.hash: truncated_hash(skrót nazwy + skrót tożsamości); identityHash nullptr: PLAIN.
+// Z niej korzysta też Identity.validate_announce (hash_material, expected_hash).
+void destinationHashFrom(const uint8_t nameHash[NAME_HASH_SIZE], const uint8_t identityHash[TRUNCATED_HASH_SIZE],
+                         uint8_t out[TRUNCATED_HASH_SIZE]);
+
 }  // namespace rnscore

@@ -22,7 +22,7 @@ Wersje referencyjne bez zmian: Reticulum `e40191b` i LXMF `c3ff2d6` ([oprogramow
 | W rdzeniu | Poza rdzeniem |
 |---|---|
 | tożsamość: X25519 + Ed25519, skrót, podpis i weryfikacja (z odrzuceniem S ≥ L), szyfrowanie do tożsamości (token AES-256-CBC + HMAC-SHA256, efemeryczny X25519, HKDF) | łącza (Link), zasoby (Resource), kanały i bufory |
-| pakiet: HEADER_1 i HEADER_2, flagi, kontekst, skrót pakietu, IFAC (już w `p1iface`) | ratchety przy wysyłaniu (D01; odczyt pola w ogłoszeniu tak) |
+| pakiet: HEADER_1 i HEADER_2, flagi, kontekst, skrót pakietu, IFAC (już w `p1iface`) | własne ratchety przy odbiorze (rotacja i klucze w FRAM; D01) |
 | cele SINGLE IN i OUT (`wici.sa1`), PLAIN `rnstransport.path.request` | propagacja LXMF, znaczki pracy, DIRECT |
 | ogłoszenia: tworzenie, weryfikacja, retransmisja z PATHFINDER_R i lokalnymi powtórkami, odpowiedzi na zapytania o trasę | tunele, zdalne zarządzanie, instancja współdzielona, odkrywanie interfejsów (1.1), czarne listy |
 | transport: przekazywanie HEADER_2, tablica tras, zapytania o trasę ze znacznikami, lista skrótów pakietów (8 B, `pkthash.h`), tablica odwrotna dla dowodów | przekazywanie ruchu łączy innych węzłów (pakiety łączy odpadają z licznikiem) |
@@ -31,6 +31,16 @@ Wersje referencyjne bez zmian: Reticulum `e40191b` i LXMF `c3ff2d6` ([oprogramow
 | interfejs USB węzła stanowiska: ogłoszenia, zapytania o trasę i ruch do celów komputera ([radio](../docs/spec/radio.md#interfejs-reticulum-przez-usb-węzeł-stanowiska)) | |
 
 Pakiety łączy i zasobów nie występują w sieci WICI, bo stacje i komputer stanowiska używają tylko dostarczenia okazjonalnego. Wiersze specyfikacji, które jeszcze mówią o łączach i zasobach (`odbior.md`, T3: udział łączy i zasobów; `radio.md`: zestawianie łącza), trzeba z nią uzgodnić.
+
+### Tabela różnic
+
+Odstępstwa rdzenia od Reticulum w Pythonie w podzbiorze z tabeli zakresu. Każde dotyczy wejścia, którego zgodny nadawca nie wyśle, albo tylko własnego wyjścia stacji.
+
+| Miejsce | Python | Rdzeń | Dlaczego |
+|---|---|---|---|
+| ogłoszenie przyjmowane (`validateAnnounce`) | sprawdza dane każdej długości | odrzuca dane dłuższe niż 481 B (MTU bez nagłówka HEADER_1) | stały bufor danych podpisanych; takiego ogłoszenia nie złoży `Packet.pack`, więc zgodny nadawca go nie wyśle |
+| pakiet własny (`pack`) | składa pakiet z pustymi danymi, z liczbą skoków ≥ 128 i z kontekstem LRPROOF dla dowolnego celu | odmawia | odbiorca takiego pakietu nie przyjmie (`unpack`, `send`); łącza są poza rdzeniem |
+| nowy klucz tożsamości (`rns_node_core.cpp`) | zapisuje losowe bajty klucza X25519 | zapisuje klucz już przycięty (RFC 7748) | ten sam klucz dla Pythona i rdzenia; port używa zapisanego klucza bez przycięcia |
 
 ## Wymagania konstrukcyjne
 
@@ -59,7 +69,7 @@ Rdzeń zastępuje port w obrazach dopiero, gdy na rdzeniu przechodzą:
 | Etap | Treść | Wyjście |
 |---|---|---|
 | R0 | wektory z Pythona, szkielet rdzenia, środowisko `host` z wyborem stosu (port albo rdzeń) | wektory przechodzą dla tożsamości, pakietu i tokenu |
-| R1 | ogłoszenia, cele, przyjmowanie i dowody pakietów do stacji | `rns_interop.py` w części bez przekazywania przechodzi na rdzeniu |
+| R1 | ogłoszenia (z polem ratchetu), cele, szyfrowanie do klucza ratchetu z ogłoszenia, przyjmowanie i dowody pakietów do stacji | `rns_interop.py` w części bez przekazywania przechodzi na rdzeniu |
 | R2 | transport: przekazywanie, tablica tras w FRAM, zapytania o trasę, tablica odwrotna | próby różnicowe dla transportu; `test_rns_hostile.py` bez awarii |
 | R3 | LXMF jednym pakietem z dowodem po COMMIT | wymiana LXMF z komputerem stanowiska w obie strony |
 | R4 | interfejs USB węzła stanowiska, przypięte cele komputera | `rns_osp_node.py` przechodzi na rdzeniu |
@@ -76,11 +86,11 @@ Rdzeń powstaje przy znajomości kodu implementacji referencyjnej, więc jest ut
 - **Autor.** Autorem rdzenia jest Tomek Mierzwa ([@tmierzwa](https://github.com/tmierzwa)): decyduje, co powstaje, przegląda każdą zmianę przed scaleniem i odpowiada za każdy wiersz. Kod powstaje z pomocą asystenta AI (Claude), co commity zapisują wierszem `Co-Authored-By`. Zmiany są małe (jeden PR na krok etapu), żeby przegląd był rzeczywisty; decyzje projektowe i odrzucone warianty są zapisane w PR.
 - **Pochodzenie.** Każda funkcja rdzenia wskazuje w komentarzu funkcję implementacji referencyjnej (plik i funkcja na przypiętym commicie), której zachowanie odtwarza. Rdzeń nie przedstawia się jako implementacja „od zera”.
 - **Warunek o AI.** Kodu Reticulum i LXMF nie używa się do trenowania modeli: konto, z którego pracuje asystent, ma wyłączone użycie rozmów i sesji do trenowania (sprawdzone 2026-10-22, „Help improve our AI models”). Uruchamianie Reticulum w Pythonie do wektorów i prób zgodności jest zwykłym użyciem programu.
-- **Ocena prawna przed R1:** autorstwo kodu pisanego z pomocą AI w prawie polskim i UE, zakres warunku o AI przy użyciu modelu bez trenowania, połączenie utworu na licencji Reticulum z kodem MIT i Apache-2.0 w jednym obrazie. R0 (wektory, szkielet, środowisko prób) może iść równolegle.
+- **Ocena prawna równolegle z R1** (decyzja 2026-10-22, przed obrazami z rdzeniem w R6): autorstwo kodu pisanego z pomocą AI w prawie polskim i UE, zakres warunku o AI przy użyciu modelu bez trenowania, połączenie utworu na licencji Reticulum z kodem MIT i Apache-2.0 w jednym obrazie. Rdzeń nie trafia do obrazów stacji przed R6, więc wynik oceny może jeszcze zmienić licencję albo kod, zanim cokolwiek zostanie rozpowszechnione.
 
 ## Do rozstrzygnięcia
 
-- Ratchety (D01): bez nich rdzeń jest mniejszy; z nimi klucze w FRAM i dodatkowe próby. Decyzja na początku R1 (ogłoszenia niosą klucz ratchetu). LXMF włącza ratchety dla każdego celu dostarczenia (`LXMRouter.register_delivery_identity`), więc telefony je ogłaszają; odbiorca domyślnie przyjmuje też token do klucza tożsamości. Bez wysyłania do ratchetu stacja działa z telefonami, ale bez poufności wstecznej i nie z celem, który wymusza ratchety. Minimum do rozważenia: szyfrowanie do klucza ratchetu z ogłoszenia (jeden parametr `rnscore::encrypt`); odbiór z ratchetami osobno, z kosztem FRAM.
-- Ocena prawna warunku licencji o AI (przed R1, [licencja](#licencja-i-autorstwo)).
+- Ratchety (D01): rdzeń szyfruje do klucza ratchetu z ogłoszenia celu od R1 (decyzja 2026-10-22: poufność wsteczna dla wiadomości do telefonów i do komputera stanowiska z LXMF, które ogłaszają ratchety domyślnie; `LXMRouter.register_delivery_identity`). Otwarte: własne ratchety stacji przy odbiorze (rotacja, klucze w FRAM, dodatkowe próby).
+- Ocena prawna warunku licencji o AI (równolegle z R1, przed R6, [licencja](#licencja-i-autorstwo)).
 
 Rozstrzygnięte 2026-10-22: koncepcja uzgodniona z rdzeniem ([rozdział 03](../docs/concept/03-dostepne-rozwiazania.html#czego-nie-budowac-drugi-raz), F117 w [przeglądzie](../docs/review.md)); port na stanowisku i w próbach sprzętu pilotażu dostaje poprawki WICI, żeby `test_rns_hostile.py` sprawdzał na nim dalsze scenariusze.
