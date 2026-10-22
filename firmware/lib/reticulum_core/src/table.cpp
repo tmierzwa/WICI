@@ -20,7 +20,8 @@ constexpr size_t AT_SLOT = 2, AT_SEQUENCE = 4, AT_FLAGS = 8, AT_HOPS = 9, AT_ANN
                  AT_NEXT_HOP = 48, AT_RATCHET = 64, AT_ANNOUNCE = 96, AT_CRC = 561;
 // W danych ogłoszenia (RNS/Identity.py: validate_announce): klucz publiczny, skrót nazwy, skrót losowy.
 constexpr size_t AT_PUBLIC_KEY = AT_ANNOUNCE, AT_RANDOM = AT_ANNOUNCE + KEY_SIZE + NAME_HASH_SIZE;
-constexpr uint8_t FLAG_PATH = 0x01, FLAG_RATCHET = 0x02, FLAG_CONTEXT = 0x04;
+// FLAG_INTERFACE: trasa przez interfejs 1 (węzeł stanowiska: USB); w gniazdach sprzed etapu R4 zero, czyli P1.
+constexpr uint8_t FLAG_PATH = 0x01, FLAG_RATCHET = 0x02, FLAG_CONTEXT = 0x04, FLAG_INTERFACE = 0x08;
 static_assert(AT_ANNOUNCE + ANNOUNCE_FORWARDABLE_SIZE <= AT_CRC, "ogłoszenie przed CRC");
 static_assert(AT_CRC + 4 <= TABLE_SLOT_SIZE, "CRC w gnieździe");
 
@@ -150,6 +151,7 @@ bool Table::read(int slot, KnownDestination& out, uint32_t nowS) {
     out.hasPath = b[AT_FLAGS] & FLAG_PATH;
     out.hasRatchet = b[AT_FLAGS] & FLAG_RATCHET;
     out.contextFlag = b[AT_FLAGS] & FLAG_CONTEXT;
+    out.interface = (b[AT_FLAGS] & FLAG_INTERFACE) ? 1 : 0;
     // Transport.jobs: trasa nieużywana dłużej niż DESTINATION_TIMEOUT usunięta z path_table (wpis w FRAM
     // zmienia następny zapis); expire() robi to samo w indeksie.
     if (out.hasPath && nowS - out.pathUsedS > DESTINATION_TIMEOUT_S) {
@@ -239,7 +241,7 @@ int Table::write(int slot, const KnownDestination& entry, Cached cached, const u
     put16(b + AT_SLOT, static_cast<uint16_t>(target));
     put32(b + AT_SEQUENCE, ++sequence_);
     b[AT_FLAGS] = static_cast<uint8_t>((entry.hasPath ? FLAG_PATH : 0) | (entry.hasRatchet ? FLAG_RATCHET : 0) |
-                                       (flag ? FLAG_CONTEXT : 0));
+                                       (flag ? FLAG_CONTEXT : 0) | (entry.interface ? FLAG_INTERFACE : 0));
     b[AT_HOPS] = entry.hops;
     put32(b + AT_USED, entry.usedS);
     memcpy(b + AT_DESTINATION, entry.destination, TRUNCATED_HASH_SIZE);

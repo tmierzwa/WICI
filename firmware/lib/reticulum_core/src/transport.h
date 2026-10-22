@@ -8,8 +8,12 @@
 // Zapytania o trasę (rnstransport.path.request): odpowiedzi dla celu stacji i celów z trasą, własne
 // zapytania. Transport włączony jak w porcie (Reticulum.transport_enabled): przekazywanie pakietów
 // HEADER_2 z identyfikatorem stacji, tablica odwrotna dla dowodów, retransmisja przyjętych ogłoszeń.
-// Jeden interfejs (P1), więc interfejs odbioru i nadania jest ten sam. Wszystkie tablice mają stały
-// rozmiar; czas w ms podaje wywołujący (licznik pracy stacji).
+// Interfejsy (etap R4): najwyżej INTERFACES_MAX, numerowane od 0 (P1); węzeł stanowiska ma drugi (USB).
+// Trasa pamięta interfejs, którym przyszło jej ogłoszenie (path_table: IDX_PT_RVCD_IF), i tam idzie ruch
+// do celu; pakiet bez trasy, ogłoszenie i własne zapytanie o trasę idą wszystkimi interfejsami
+// (Transport._outbound), a odpowiedź na zapytanie i dowód tym, którym przyszło zapytanie albo pakiet
+// (attached_interface). Wszystkie tablice mają stały rozmiar; czas w ms podaje wywołujący (licznik pracy
+// stacji).
 #pragma once
 
 #include "hashlist.h"
@@ -47,10 +51,17 @@ constexpr uint32_t REVERSE_TIMEOUT_MS = 8UL * 60 * 1000;   // RNS/Transport.py: 
 constexpr size_t PATH_REQUEST_SIZE = 3 * TRUNCATED_HASH_SIZE;   // cel, identyfikator transportu, znacznik
 // Dane aplikacji ogłoszenia własnego (bez ratchetu) do ANNOUNCE_FORWARDABLE_SIZE.
 constexpr size_t OWN_APP_DATA_MAX = ANNOUNCE_FORWARDABLE_SIZE - ANNOUNCE_MIN_SIZE;
+// Interfejsy transportu: numer interfejsu trasy zajmuje 1 bit w gnieździe tablicy (table.h), więc
+// najwyżej 2. Wewnątrz transportu wybór interfejsów to maska (bit i: interfejs i); ALL_INTERFACES: wszystkie
+// (Packet.attached_interface = None).
+constexpr uint8_t INTERFACES_MAX = 2;
+constexpr uint8_t ALL_INTERFACES = 0xFF;
+constexpr uint8_t interfaceMask(uint8_t iface) { return static_cast<uint8_t>(1u << iface); }
 
 struct TransportHooks {
-    // Pakiet do nadania przez interfejs; fałsz: interfejs odmówił (wtedy nic nie jest zapamiętane).
-    bool (*transmit)(const uint8_t* raw, size_t length, void* context) = nullptr;
+    // Pakiet do nadania przez interfejs o numerze iface (< INTERFACES_MAX); fałsz: interfejs odmówił
+    // (wtedy nic nie jest zapamiętane).
+    bool (*transmit)(const uint8_t* raw, size_t length, uint8_t iface, void* context) = nullptr;
     // Ogłoszenie innego celu "wici.sa1" przyjęte do tablicy (bez odpowiedzi na zapytania o trasę).
     void (*announce)(const uint8_t destination[TRUNCATED_HASH_SIZE], const uint8_t* appData, size_t length,
                      void* context) = nullptr;
@@ -65,11 +76,11 @@ struct TransportHooks {
     bool (*mayVerify)(void* context) = nullptr;
     // Bajty losowe (RNS: os.urandom) dla odpowiedzi na zapytanie o trasę do celu stacji; fałsz: brak.
     bool (*random)(uint8_t* out, size_t length, void* context) = nullptr;
-    // Interfejs przyjmie teraz ogłoszenie (kod IFAC, bez ciszy, miejsce w kolejce i miejsce na ogłoszenie:
-    // limit ogłoszeń, pula, lista oczekujących). Pytany tylko przed nadaniem ogłoszenia, przed pracą na
-    // podpis, której wynik mógłby nie wyjść (odpowiedź na zapytanie o cel stacji, retransmisja); nie dla
-    // dowodów ani pakietów danych. nullptr: zawsze.
-    bool (*mayTransmit)(void* context) = nullptr;
+    // Interfejs iface przyjmie teraz ogłoszenie (kod IFAC, bez ciszy, miejsce w kolejce i miejsce na
+    // ogłoszenie: limit ogłoszeń, pula, lista oczekujących). Pytany tylko przed nadaniem ogłoszenia, przed
+    // pracą na podpis, której wynik mógłby nie wyjść (odpowiedź na zapytanie o cel stacji, retransmisja,
+    // odpowiedź odkrycia); nie dla dowodów ani pakietów danych. nullptr: zawsze.
+    bool (*mayTransmit)(uint8_t iface, void* context) = nullptr;
     void* context = nullptr;
 };
 
@@ -103,13 +114,15 @@ enum class SendResult : uint8_t { SENT, UNKNOWN, TOO_LARGE, RECEIPTS_FULL, REFUS
 class Transport {
 public:
     // address nullptr: węzeł bez celu stacji (pakiety DATA i ogłoszenie własne odpadają). storage: obszar
-    // tablicy znanych celów w pamięci trwałej (montowany tu); nowMs: czas pracy przy starcie.
+    // tablicy znanych celów w pamięci trwałej (montowany tu); nowMs: czas pracy przy starcie; interfaces:
+    // liczba interfejsów (1..INTERFACES_MAX).
     void begin(const uint8_t privateKey[KEY_SIZE], const uint8_t publicKey[KEY_SIZE],
                const uint8_t identityHash[TRUNCATED_HASH_SIZE], const uint8_t* address,
-               const uint8_t nameHash[NAME_HASH_SIZE], const TransportHooks& hooks, TableStorage& storage, uint64_t nowMs);
-    // Pakiet bez IFAC przyjęty przez interfejs (RNS/Transport.py: preprocess_inbound od unpack i _inbound).
-    // Fałsz, gdy unpack go odrzuca.
-    bool inbound(const uint8_t* raw, size_t length, uint64_t nowMs);
+               const uint8_t nameHash[NAME_HASH_SIZE], const TransportHooks& hooks, TableStorage& storage, uint64_t nowMs,
+               uint8_t interfaces = 1);
+    // Pakiet bez IFAC przyjęty przez interfejs iface (RNS/Transport.py: preprocess_inbound od unpack
+    // i _inbound, packet.receiving_interface). Fałsz, gdy unpack go odrzuca albo interfejsu nie ma.
+    bool inbound(const uint8_t* raw, size_t length, uint64_t nowMs, uint8_t iface = 0);
     // RNS/Destination.py: Destination.announce bez ratchetu; random: 5 B losowych (get_random_hash).
     bool announce(const uint8_t random[5], const uint8_t* appData, size_t length, uint64_t nowMs);
     // RNS/Identity.py: Identity.remember dla tożsamości z karty (bez trasy); znany cel z tym samym kluczem
@@ -164,30 +177,36 @@ private:
     struct AnnounceEntry {
         bool used;
         bool blockRebroadcasts;   // odpowiedź na zapytanie o trasę: kontekst PATH_RESPONSE
+        uint8_t attached;         // IDX_AT_ATTCHD_IF: maska interfejsów (pytającego albo ALL_INTERFACES)
         uint8_t retries;
         uint8_t hops;
         uint8_t localRebroadcasts;
         uint8_t destination[TRUNCATED_HASH_SIZE];
         uint64_t retransmitMs;
     };
-    bool emit(const uint8_t* raw, size_t length, bool rememberHash);
-    bool ownAnnounce(const uint8_t random[5], uint64_t nowMs, bool pathResponse);
-    bool sendOwnAnnounce(bool pathResponse);
-    bool mayTransmit() const { return !hooks_.mayTransmit || hooks_.mayTransmit(hooks_.context); }
-    void inboundPlain(const Packet& packet, const uint8_t* raw, size_t length, uint64_t nowMs);
-    bool pathRequest(const uint8_t destination[TRUNCATED_HASH_SIZE], const uint8_t* requestor, uint64_t nowMs);
+    // Nadanie interfejsami z maski ifaces; prawda, gdy przyjął je któryś.
+    bool emit(const uint8_t* raw, size_t length, bool rememberHash, uint8_t ifaces);
+    bool ownAnnounce(const uint8_t random[5], uint64_t nowMs, bool pathResponse, uint8_t ifaces);
+    bool sendOwnAnnounce(bool pathResponse, uint8_t ifaces);
+    bool mayTransmit(uint8_t ifaces) const;   // któryś interfejs z maski przyjmie ogłoszenie
+    void inboundPlain(const Packet& packet, const uint8_t* raw, size_t length, uint64_t nowMs, uint8_t iface);
+    bool pathRequest(const uint8_t destination[TRUNCATED_HASH_SIZE], const uint8_t* requestor, uint64_t nowMs,
+                     uint8_t ifaces);
     AnnounceEntry* findAnnounce(const uint8_t destination[TRUNCATED_HASH_SIZE]);
-    bool schedule(const uint8_t destination[TRUNCATED_HASH_SIZE], uint8_t hops, uint64_t atMs, uint8_t retries, bool block);
+    bool schedule(const uint8_t destination[TRUNCATED_HASH_SIZE], uint8_t hops, uint64_t atMs, uint8_t retries, bool block,
+                  uint8_t ifaces);
     __attribute__((noinline)) void retransmit(AnnounceEntry& entry, uint64_t nowMs);
     void heardRebroadcast(const Packet& packet, uint64_t nowMs);
-    bool forward(const Packet& packet, const uint8_t* raw, size_t length, const uint8_t hash[HASH_SIZE], uint64_t nowMs);
-    bool forwardProof(const Packet& packet, const uint8_t* raw, size_t length, uint64_t nowMs);
-    void inboundAnnounce(const Packet& packet, const uint8_t hash[HASH_SIZE], uint64_t nowMs);
-    void inboundData(const Packet& packet, const uint8_t hash[HASH_SIZE]);
-    void inboundProof(const Packet& packet, const uint8_t* raw, size_t length, uint64_t nowMs);
+    bool forward(const Packet& packet, const uint8_t* raw, size_t length, const uint8_t hash[HASH_SIZE], uint64_t nowMs,
+                 uint8_t iface);
+    bool forwardProof(const Packet& packet, const uint8_t* raw, size_t length, uint64_t nowMs, uint8_t iface);
+    void inboundAnnounce(const Packet& packet, const uint8_t hash[HASH_SIZE], uint64_t nowMs, uint8_t iface);
+    void inboundData(const Packet& packet, const uint8_t hash[HASH_SIZE], uint8_t iface);
+    void inboundProof(const Packet& packet, const uint8_t* raw, size_t length, uint64_t nowMs, uint8_t iface);
     static bool pinnedHook(const uint8_t destination[TRUNCATED_HASH_SIZE], void* self);
 
     TransportHooks hooks_;
+    uint8_t interfaces_ = 1;
     const uint8_t* privateKey_ = nullptr;
     const uint8_t* publicKey_ = nullptr;
     const uint8_t* identityHash_ = nullptr;
@@ -198,10 +217,12 @@ private:
     Receipt receipts_[RECEIPTS_MAX] = {};
     AnnounceEntry announces_[ANNOUNCE_TABLE_MAX] = {};
     AnnounceEntry held_[HELD_ANNOUNCES_MAX] = {};
-    // RNS/Transport.py: reverse_table (skrócony skrót przekazanego pakietu i czas; interfejsy: jeden P1).
+    // RNS/Transport.py: reverse_table (skrócony skrót przekazanego pakietu, interfejs odbioru i nadania, czas).
     struct ReverseEntry {
         uint8_t hash[TRUNCATED_HASH_SIZE];
-        uint64_t atMs;   // 0: wolny
+        uint8_t received;   // IDX_RT_RCVD_IF
+        uint8_t outbound;   // IDX_RT_OUTB_IF
+        uint64_t atMs;      // 0: wolny
     };
     ReverseEntry reverse_[REVERSE_MAX] = {};
     // RNS/Transport.py: inflight_path_requests (zapytanie bez odpowiedzi, PATH_REQUEST_GATE_MS) i
@@ -212,6 +233,7 @@ private:
         uint64_t discoveryUntilMs;
         bool respond;          // ogłoszenie oczekiwanego celu przyszło: odpowiedź w następnym poll()
         uint8_t respondHops;
+        uint8_t requesting;    // requesting_interfaces: maska interfejsów
     };
     Inflight inflight_[INFLIGHT_MAX] = {};
     uint32_t discoveryTimeoutMs_ = 0;   // 0: PATH_REQUEST_TIMEOUT_MS

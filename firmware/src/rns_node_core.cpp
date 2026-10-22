@@ -281,9 +281,9 @@ bool transmit(const uint8_t* raw, size_t length, p1iface::Hint hint) {
     return admit == p1iface::Admit::QUEUED || admit == p1iface::Admit::HELD;
 }
 
-// Wywołania z transportu rdzenia.
-bool transmitHook(const uint8_t* raw, size_t length, void*) {
-    return transmit(raw, length, ownRequest ? p1iface::Hint::OWN : p1iface::Hint::NONE);
+// Wywołania z transportu rdzenia; jedyny interfejs to P1 (0), interfejs USB węzła dochodzi w R4.
+bool transmitHook(const uint8_t* raw, size_t length, uint8_t iface, void*) {
+    return iface == 0 && transmit(raw, length, ownRequest ? p1iface::Hint::OWN : p1iface::Hint::NONE);
 }
 
 bool randomHook(uint8_t* out, size_t length, void*) { return generator.generate(out, length); }
@@ -365,9 +365,10 @@ void receiptHook(uint32_t handle, bool delivered, void*) {
 // Interfejs przyjmie teraz pakiet stosu (jak transmit() przed podpisem IFAC, bez wyjątku ciszy).
 // Przed podpisem odpowiedzi na zapytanie o cel stacji i przed retransmisją ogłoszenia (oba są
 // ogłoszeniami): kod IFAC, bez ciszy, miejsce w kolejce i miejsce dla ogłoszenia najmniejszego rozmiaru
-// (limit ogłoszeń 2%, pula, lista oczekujących). Pełne sprawdzenie zostaje w transmit().
-bool mayTransmitHook(void*) {
-    return ifacOnline && silence == Silence::OFF && !queue.full() &&
+// (limit ogłoszeń 2%, pula, lista oczekujących). Pełne sprawdzenie zostaje w transmit(). Jedyny
+// interfejs to P1 (0); interfejs USB węzła dochodzi w R4b.
+bool mayTransmitHook(uint8_t iface, void*) {
+    return iface == 0 && ifacOnline && silence == Silence::OFF && !queue.full() &&
            queue.announceRoom(rnscore::HEADER_1_SIZE + rnscore::ANNOUNCE_MIN_SIZE, nowMs());
 }
 

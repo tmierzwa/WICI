@@ -38,9 +38,10 @@ class DifferentialTests(unittest.TestCase):
     def tearDownClass(cls):
         cls.core.tearDownClass()
 
-    def trial(self, seed: int, mutations: int):
+    def trial(self, seed: int, mutations: int, interfaces: int = 1):
         run = subprocess.run([RNS_PYTHON, "-I", str(TOOL), "--check", str(self.core.binary), "--seed", str(seed),
-                              "--mutations", str(mutations)], capture_output=True, text=True, timeout=900, cwd=tempfile.gettempdir())
+                              "--mutations", str(mutations), "--interfaces", str(interfaces)],
+                             capture_output=True, text=True, timeout=900, cwd=tempfile.gettempdir())
         lines = [line for line in run.stdout.splitlines() if line.startswith("{")]
         self.assertTrue(lines, run.stderr[-4000:])
         result = json.loads(lines[-1])
@@ -52,3 +53,8 @@ class DifferentialTests(unittest.TestCase):
 
     def test_mutated_traffic_other_seed(self):
         self.trial(seed=2, mutations=96)
+
+    def test_two_interfaces(self):
+        # Węzeł stanowiska (etap R4): drugi interfejs (USB) po obu stronach; pakiety z interfejsem nadania,
+        # trasy z interfejsem ogłoszenia.
+        self.trial(seed=3, mutations=96, interfaces=2)
