@@ -85,8 +85,19 @@ bool entropyHealthy = false;   // odczyt ziarna przeszedł test zdrowia (drbg::h
 bool entropyTimeout = false;   // źródło entropii nie odpowiedziało w ograniczonym czasie (platform::entropy)
 // Stan stosu w INFO (`rns_state`): not_started, unavailable (FRAM, dziennik albo magazyn), entropy_failed (bez
 // zdrowego ziarna dla nowej tożsamości), selftest_failed (samotest rdzenia), identity_lost, start_failed,
-// running, halted (ZNISZCZ DANE). Wszystkie poza running i halted mają też wpis w dzienniku.
-const char* stackState = "not_started";
+// running, halted (ZNISZCZ DANE). Wszystkie poza running i halted mają też wpis w dzienniku i dają alarm
+// brak_lacznosci; beginStack() w setup() ustawia stan przed pierwszym obiegiem, więc not_started w pracy
+// nie występuje.
+enum class StackState : uint8_t {
+    NOT_STARTED, UNAVAILABLE, ENTROPY_FAILED, SELFTEST_FAILED, IDENTITY_LOST, START_FAILED, RUNNING, HALTED
+};
+constexpr const char* STACK_STATE_NAMES[] = {"not_started", "unavailable", "entropy_failed", "selftest_failed",
+                                             "identity_lost", "start_failed", "running", "halted"};
+static_assert(sizeof(STACK_STATE_NAMES) / sizeof(STACK_STATE_NAMES[0]) == static_cast<size_t>(StackState::HALTED) + 1,
+              "nazwa każdego stanu stosu");
+StackState stackState = StackState::NOT_STARTED;
+// Stos sieciowy nie działa, choć powinien (alarm brak_lacznosci, oprogramowanie.md, ekran główny).
+bool stackFault() { return stackState != StackState::RUNNING && stackState != StackState::HALTED; }
 void stationRandom(uint8_t* out, size_t count) {
     // Ziarno powstaje pierwsze w stationSetup(); odmowa to błąd programu: restart zamiast bajtów spoza generatora.
     if (!generator.generate(out, count)) platform::reboot();
@@ -394,7 +405,7 @@ void onStackLog(const char* text, void*) {
 void wipeStack() {
     if (rnsOk) rnsnode::halt();
     rnsOk = false;
-    stackState = "halted";
+    stackState = StackState::HALTED;
     setStationName();
 }
 
@@ -605,6 +616,7 @@ ui::Status screenStatus() {
     s.prep = bench.prep;
     s.silence = silenceAny();
     s.radioOk = radioServes();
+    s.stackOk = !stackFault();
     s.storeOk = stationStore.ok();
     // Kontakt z odbiorcą: znany od ostatniej przyjętej wiadomości; bez niej dolne oszacowanie z czasu pracy.
     const store::Meta& m = stationStore.meta();
@@ -794,7 +806,7 @@ void printInfo() {
                   radiocon::TX_POWER_DBM, static_cast<unsigned long>(counterS()), static_cast<unsigned long>(serviceS()),
                   static_cast<unsigned long>(platform::uptimeMs() / 1000), ui::screenName(screenModel.screen()), langName(screenModel.language()),
                   stationName, static_cast<unsigned long>(platform::resetReason()));
-    Serial.printf("\"rns_state\":\"%s\",\"entropy_ok\":%s,", stackState, boolName(entropyHealthy));
+    Serial.printf("\"rns_state\":\"%s\",\"entropy_ok\":%s,", STACK_STATE_NAMES[static_cast<size_t>(stackState)], boolName(entropyHealthy));
     Serial.printf("\"store_ok\":%s,\"register\":%u,\"inbox\":%u,\"head\":%lu,",
                   boolName(storeOk), static_cast<unsigned>(storeOk ? stationStore.requestCount() : 0),
                   static_cast<unsigned>(storeOk ? stationStore.messageCount() : 0), static_cast<unsigned long>(storeOk ? stationStore.head() : 0));
@@ -1257,7 +1269,7 @@ void beginStack() {
     // i bez FRAM.
     if (!entropyHealthy) bench.log(entropyTimeout ? "entropy source not responding" : "entropy source failed health test");
     if (!framOk || !journalOk || !storeOk) {
-        stackState = "unavailable";
+        stackState = StackState::UNAVAILABLE;
         bench.log("rns not started: FRAM, journal or store unavailable");
         return;
     }
@@ -1272,7 +1284,7 @@ void beginStack() {
     // Klucz tożsamości powstaje z generatora stacji: bez zdrowego ziarna nowej tożsamości nie tworzymy
     // (zapisana tożsamość nie zależy od ziarna). Klucz bez znacznika po zaniku zasilania też czeka.
     if (!entropyHealthy && !stationStore.identitySaved()) {
-        stackState = "entropy_failed";
+        stackState = StackState::ENTROPY_FAILED;
         bench.log("rns not started: no healthy seed for a new identity");
         return;
     }
@@ -1282,7 +1294,7 @@ void beginStack() {
     coreselftest::Result results[coreselftest::QUICK];
     const uint64_t selftestStartMs = platform::uptimeMs();
     if (!coreselftest::run(results, coreselftest::QUICK, selftestMicros)) {
-        stackState = "selftest_failed";
+        stackState = StackState::SELFTEST_FAILED;
         for (const coreselftest::Result& r : results) {
             if (r.ok) continue;
             char text[64];
@@ -1302,11 +1314,11 @@ void beginStack() {
     drbg::wipe(seed, sizeof(seed));
     if (!rnsOk) {
         const bool lost = rnsnode::status().identityLost;
-        stackState = lost ? "identity_lost" : "start_failed";
+        stackState = lost ? StackState::IDENTITY_LOST : StackState::START_FAILED;
         bench.log(lost ? "rns not started: identity lost (destroy data)" : "rns start failed");
         return;
     }
-    stackState = "running";
+    stackState = StackState::RUNNING;
     // Znacznik także po starcie z kluczem bez znacznika (zanik zasilania między zapisem klucza a znacznikiem).
     if (!stationStore.setIdentitySaved()) bench.log("identity flag not saved");
     uint32_t random = 0;
@@ -1447,6 +1459,7 @@ void stationLoop() {
         ledWrite(board::LED_RADIO, radio);
     }
     screenHost.setRadioFault(!radioServes());   // alarm radio_awaria (oprogramowanie.md, ekran główny); także tryb EMC
+    screenHost.setStackFault(stackFault());     // alarm brak_lacznosci
     const bool usb = Serial;  // CDC otwarty przez hosta
     ledWrite(board::LED_USB, usb);
     if (usb && !reported) {  // jednorazowy raport po otwarciu portu
