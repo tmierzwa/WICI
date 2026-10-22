@@ -32,6 +32,7 @@ station after start and the table in FRAM within 5% of its size after a week.
   python3 -m unittest tests.test_rns_hostile -v
 """
 
+import binascii
 from concurrent.futures import ThreadPoolExecutor
 import configparser
 import hashlib
@@ -44,6 +45,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import zlib
 
 ROOT = Path(__file__).resolve().parents[1]
 FIRMWARE = ROOT / "firmware"
@@ -303,7 +305,7 @@ class HostileStackTests(unittest.TestCase):
 
     def copy(self, station):
         s = self.station()
-        for suffix in ("", ".clock", ".id"):
+        for suffix in ("", ".clock", ".id", ".receiver"):
             src = Path(str(station.fram) + suffix)
             if src.exists():
                 shutil.copy(src, Path(str(s.fram) + suffix))
@@ -398,6 +400,141 @@ class CoreHostileStackTests(HostileStackTests):
         outcome = self.assertClean(self.station().run("--defect", "damaged-receiver", "--events", 300))
         self.assertEqual(outcome["iface"]["table_corrupt"], 1, outcome)
 
+    def test_fram_targeted_damage(self):
+        # Kryterium odbioru 4, celowe uszkodzenia rekordów FRAM rdzenia (lib/reticulum_core/src/table.h, gniazda
+        # 568 B od framfs::FS_BASE; framfs.h, dwa rekordy klucza tożsamości): każde pole sprawdzane przy
+        # montowaniu i odczycie osobno, także z poprawnym CRC tam, gdzie liczy się sprawdzenie poza CRC.
+        # Stacja startuje i pracuje bez awarii, z tą samą tożsamością; wpis odbiorcy wraca z karty.
+        base = self.station()
+        outcome = self.assertClean(base.run("--seed", 71, "--events", 2000))
+        image = bytearray(base.fram.read_bytes())
+        live = [n for n in range(TABLE_SLOTS) if image[slot_at(n)] == 0xA5]
+        self.assertGreater(len(live), 10)
+        for n in live:   # układ gniazda zgodny z table.cpp (CRC-32 bajtów 1..560)
+            b = image[slot_at(n):slot_at(n) + TABLE_SLOT]
+            self.assertEqual(int.from_bytes(b[561:565], "little"), zlib.crc32(b[1:561]), n)
+        free = [n for n in range(TABLE_SLOTS) if n not in live]
+        rng = random.Random(9)
+
+        def resealed(data, n):
+            at = slot_at(n)
+            data[at + 561:at + 565] = zlib.crc32(bytes(data[at + 1:at + 561])).to_bytes(4, "little")
+
+        def marker(data):
+            for n in rng.sample(live, 3):
+                data[slot_at(n)] = 0x00
+
+        def version(data):
+            for n in rng.sample(live, 3):
+                data[slot_at(n) + 1] = 7
+
+        def slot_number(data):
+            for n in rng.sample(live, 3):
+                data[slot_at(n) + 2] ^= 0x01
+
+        def content(data):
+            for n in rng.sample(live, 5):
+                data[slot_at(n) + rng.randrange(40, 561)] ^= 1 << rng.randrange(8)
+
+        def announce_length(data):   # długość ogłoszenia ponad 465 B z poprawnym CRC
+            for n in rng.sample(live, 3):
+                data[slot_at(n) + 10:slot_at(n) + 12] = (0xFFFF).to_bytes(2, "little")
+                resealed(data, n)
+
+        def duplicate(data):   # dwie zatwierdzone kopie jednego celu z tym samym numerem zapisu
+            source, target = rng.choice(live), rng.choice(free)
+            data[slot_at(target):slot_at(target) + TABLE_SLOT] = data[slot_at(source):slot_at(source) + TABLE_SLOT]
+            data[slot_at(target) + 2:slot_at(target) + 4] = target.to_bytes(2, "little")
+            resealed(data, target)
+
+        def sequence_end(data):   # numer zapisu na końcu zakresu: następne zapisy zawijają numer
+            n = rng.choice(live)
+            data[slot_at(n) + 4:slot_at(n) + 8] = (0xFFFFFFFF).to_bytes(4, "little")
+            resealed(data, n)
+
+        def every_slot(data):   # wszystkie gniazda z nagłówkiem zatwierdzonym i przypadkową treścią
+            for n in range(TABLE_SLOTS):
+                at = slot_at(n)
+                data[at:at + TABLE_SLOT] = bytes([0xA5, 2]) + n.to_bytes(2, "little") + rng.randbytes(TABLE_SLOT - 4)
+
+        cases = {"marker": marker, "version": version, "slot_number": slot_number, "content": content,
+                 "announce_length": announce_length, "duplicate": duplicate, "sequence_end": sequence_end,
+                 "every_slot": every_slot}
+        for name, damage in cases.items():
+            with self.subTest(damage=name):
+                s = self.copy(base)
+                data = bytearray(image)
+                damage(data)
+                s.fram.write_bytes(bytes(data))
+                after = self.assertClean(s.run("--seed", 72, "--events", 800, "--gap", 5))
+                self.assertEqual(after["identity"], outcome["identity"])
+                again = self.assertClean(s.run("--seed", 73, "--events", 400, "--gap", 5))
+                self.assertEqual(again["identity"], outcome["identity"])
+
+        with self.subTest(damage="receiver_foreign_key"):
+            s = self.copy(base)
+            after = self.assertClean(s.run("--seed", 74, "--events", 0, "--receiver-foreign-key"))
+            self.assertTrue(after["flood"]["receiver_reads"], after)
+
+        # Rekordy klucza tożsamości (framfs.h: dwa rekordy, nowszy wygrywa), oba przypadki jawnie:
+        # (a) dwa poprawne, nowszy uszkodzony: stacja startuje z tą samą tożsamością ze starszego;
+        # (b) jedyny poprawny uszkodzony: utrata tożsamości przy każdym starcie, bez nowej tożsamości
+        # i bez nowego rekordu w FRAM. Stacja po pierwszym starcie ma jeden rekord, drugi buduje test.
+        keys = [identity_record(image, n) for n in range(2)]
+        self.assertEqual(sorted(k is not None for k in keys), [False, True], keys)
+        only = keys.index(next(k for k in keys if k is not None))
+
+        def key_byte(data, n):
+            data[IDENTITY_BASE + n * IDENTITY_SLOT + 8 + rng.randrange(64)] ^= 0x10
+
+        with self.subTest(damage="identity_newer_record"):
+            s = self.copy(base)
+            data = bytearray(image)
+            other = 1 - only
+            record = bytearray(data[IDENTITY_BASE + only * IDENTITY_SLOT:IDENTITY_BASE + (only + 1) * IDENTITY_SLOT])
+            record[4:8] = (keys[only] + 1).to_bytes(4, "little")
+            record[72:74] = binascii.crc_hqx(bytes(record[:72]), 0xFFFF).to_bytes(2, "little")
+            data[IDENTITY_BASE + other * IDENTITY_SLOT:IDENTITY_BASE + (other + 1) * IDENTITY_SLOT] = record
+            self.assertEqual([identity_record(data, n) for n in (only, other)], [keys[only], keys[only] + 1])
+            key_byte(data, other)
+            self.assertEqual([identity_record(data, n) for n in (only, other)], [keys[only], None])
+            s.fram.write_bytes(bytes(data))
+            for seed in (75, 76):
+                after = self.assertClean(s.run("--seed", seed, "--events", 400, "--gap", 5))
+                self.assertEqual(after["identity"], outcome["identity"])
+                self.assertFalse(after["new"], after)
+
+        with self.subTest(damage="identity_only_record"):
+            s = self.copy(base)
+            data = bytearray(image)
+            other = 1 - only
+            data[IDENTITY_BASE + other * IDENTITY_SLOT:IDENTITY_BASE + (other + 1) * IDENTITY_SLOT] = b"\xff" * IDENTITY_SLOT
+            key_byte(data, only)
+            self.assertEqual([identity_record(data, n) for n in range(2)], [None, None])
+            s.fram.write_bytes(bytes(data))
+            for seed in (77, 78):
+                after = self.assertClean(s.run("--seed", seed, "--events", 400, "--gap", 5), "identity_lost")
+                self.assertEqual(after["result"], "identity_lost", after)
+                fram = s.fram.read_bytes()
+                self.assertEqual([identity_record(fram, n) for n in range(2)], [None, None])
+
+# Układ FRAM rdzenia (lib/reticulum_core/src/table.h, src/framfs.h).
+FS_BASE, TABLE_SLOT, TABLE_SLOTS = 0x048000, 568, 257
+IDENTITY_BASE, IDENTITY_SLOT, KEY_MAGIC = 0x044000, 128, 0x5749444B
+
+
+def slot_at(n):
+    return FS_BASE + n * TABLE_SLOT
+
+
+def identity_record(image, n):
+    """Numer zapisu poprawnego rekordu klucza tożsamości (framfs::loadKey: znacznik, CRC-16 bajtów 0..71,
+    numer różny od 0 i 0xFFFFFFFF) albo None."""
+    b = image[IDENTITY_BASE + n * IDENTITY_SLOT:IDENTITY_BASE + n * IDENTITY_SLOT + 74]
+    seq = int.from_bytes(b[4:8], "little")
+    valid = (int.from_bytes(b[0:4], "little") == KEY_MAGIC and int.from_bytes(b[72:74], "little") == binascii.crc_hqx(bytes(b[:72]), 0xFFFF)
+             and seq not in (0, 0xFFFFFFFF))
+    return seq if valid else None
 
 if __name__ == "__main__":
     unittest.main()

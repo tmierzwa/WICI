@@ -12,7 +12,7 @@
 //
 // rns_stress <fram> [--seed N] [--events N] [--mutate PERCENT] [--start S] [--gap S]
 //            [--long-jumps] [--cut-after-writes N] [--defect token48|short-announce|held-announce|flood|damaged-receiver|forward-flood|rebroadcast-load|own-path-requests]
-//            [--hostile-days N [--window-s S] [--stop-after-s S]]
+//            [--hostile-days N [--window-s S] [--stop-after-s S]] [--receiver-foreign-key]
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/time.h>
@@ -916,6 +916,57 @@ void damagedReceiver() {
         fail("damaged-receiver: report not sent");
     }
 }
+// Gniazdo odbiorcy z karty z kluczem innego węzła i poprawnym CRC (celowe uszkodzenie FRAM przed startem;
+// tablica sprawdza CRC, a nie zgodność klucza z celem): przy starcie klucz z karty zastępuje wpis
+// (rnsnode rememberReceivers), więc zgłoszenie do odbiorcy odszyfruje odbiorca, nie obcy węzeł.
+uint32_t slotCrc(const uint8_t* b, size_t n) {
+    uint32_t crc = 0xFFFFFFFFu;
+    for (size_t i = 0; i < n; ++i) {
+        crc ^= b[i];
+        for (int k = 0; k < 8; ++k) crc = (crc >> 1) ^ (0xEDB88320u & (0u - (crc & 1u)));
+    }
+    return ~crc;
+}
+
+void receiverForeignKey() {
+    constexpr size_t SLOT = 568, SLOTS = 257, AT_KEY = 96, AT_CRC = 561;
+    bool damaged = false;
+    for (size_t slot = 0; slot < SLOTS; ++slot) {
+        uint8_t* b = fram.bytes + framfs::FS_BASE + slot * SLOT;
+        if (b[0] != 0xA5 || memcmp(b + 16, peerDest[0].data(), 16) != 0) continue;
+        memcpy(b + AT_KEY, peers[1].get_public_key().data(), 64);
+        const uint32_t crc = slotCrc(b + 1, AT_CRC - 1);
+        for (int k = 0; k < 4; ++k) b[AT_CRC + k] = static_cast<uint8_t>(crc >> (8 * k));
+        damaged = true;
+    }
+    if (!damaged) fail("receiver-foreign-key: no receiver slot");
+}
+
+void receiverReadsReport() {
+    receive(withHops(announceOf(0), 1));
+    for (int i = 0; i < 100; ++i) { simMs += 20; service(); }
+    // Koperta warstwy aplikacji (station.cpp); na antenie wiadomość LXMF z tą treścią SA1.
+    const std::string text = "report after a foreign key in FRAM";
+    const std::string message = "[\"WICI\",1,\"" + hex(rnsnode::address(), 16) + "\",\"" + hex(peerDest[0].data(), 16) +
+                                "\",[1,\"" + text + "\"]]";
+    if (!rnsnode::send(peerDest[0].data(), reinterpret_cast<const uint8_t*>(message.data()), message.size(), rnsnode::RECEIPT_MIN_S)) {
+        fail("receiver-foreign-key: not sent");
+    }
+    for (int i = 0; i < 100; ++i) { simMs += 20; service(); }
+    for (auto w = radio.recent.rbegin(); w != radio.recent.rend(); ++w) {
+        const RNS::Bytes raw = ifacUnwrap(*w);
+        RNS::Packet p(raw);
+        if (!raw || !p.unpack() || p.packet_type() != RNS::Type::Packet::DATA || p.destination_hash() != peerDest[0]) continue;
+        const RNS::Bytes plain = peers[0].decrypt(p.data());
+        const std::string body(reinterpret_cast<const char*>(plain.data()), plain.size());
+        if (body.find(text) == std::string::npos) {
+            fail("receiver-foreign-key: receiver cannot read the report");
+        }
+        floodResult = "\"receiver_reads\":true";
+        return;
+    }
+    fail("receiver-foreign-key: no report on air");
+}
 #else
 void flood() { fail("flood: station core only"); }
 const char* floodJson() { return ""; }
@@ -923,6 +974,8 @@ void damagedReceiver() { fail("damaged-receiver: station core only"); }
 void transitLoad(bool) { fail("transit load: station core only"); }
 void ownPathRequests() { fail("own path requests: station core only"); }
 void hostileDays(long, long, long) { fail("hostile days: station core only"); }
+void receiverForeignKey() { fail("receiver-foreign-key: station core only"); }
+void receiverReadsReport() {}
 #endif
 
 // Awarie portu z przeglądu 2026-10-21 (poprawione łatami 0005-0007) jako próby regresji.
@@ -1009,6 +1062,7 @@ int main(int argc, char** argv) {
     uint64_t gapS = 0, setClockS = 0;
     std::string defectName;
     long hostileDayCount = 0, windowS = 120, stopAfterS = -1;
+    bool foreignKey = false;
     rngState = 1;
     for (int i = 2; i < argc; ++i) {
         const std::string a = argv[i];
@@ -1025,6 +1079,7 @@ int main(int argc, char** argv) {
         else if (a == "--hostile-days") { hostileDayCount = atol(v); ++i; }
         else if (a == "--window-s") { windowS = atol(v); ++i; }
         else if (a == "--stop-after-s") { stopAfterS = atol(v); ++i; }
+        else if (a == "--receiver-foreign-key") foreignKey = true;
         else { fprintf(stderr, "unknown option %s\n", a.c_str()); return 2; }
     }
 
@@ -1038,9 +1093,23 @@ int main(int argc, char** argv) {
     if (!fram.open(framPath)) { fprintf(stderr, "fram %s\n", framPath.c_str()); return 2; }
     rnsnode::debugClock(simClock);
 
-    // Węzły generatora i odbiorca stacji (pierwszy węzeł) przed startem stosu.
+    // Węzły generatora i odbiorca stacji (pierwszy węzeł) przed startem stosu. Klucz odbiorcy przechodzi do
+    // następnego startu w pliku obok FRAM, jak odbiorca z karty stacji.
+    const std::string receiverPath = framPath + ".receiver";
+    const std::string savedReceiver = readFile(receiverPath);
     for (size_t i = 0; i < PEERS; ++i) {
-        peers.emplace_back();
+        if (i == 0 && savedReceiver.size() == 128) {
+            uint8_t prv[64];
+            for (size_t k = 0; k < 64; ++k) prv[k] = static_cast<uint8_t>(strtoul(savedReceiver.substr(2 * k, 2).c_str(), nullptr, 16));
+            peers.emplace_back(false);
+            if (!peers.back().load_private_key(RNS::Bytes(prv, 64))) fail("receiver key file");
+        } else {
+            peers.emplace_back();
+        }
+        if (i == 0 && savedReceiver.empty()) {
+            const RNS::Bytes prv = peers.back().get_private_key();
+            writeFile(receiverPath, hex(prv.data(), prv.size()));
+        }
         RNS::Destination d(peers.back(), RNS::Type::Destination::IN, RNS::Type::Destination::SINGLE, DEST_APP, DEST_ASPECT);
         peerDest.push_back(d.hash());
         RNS::Transport::deregister_destination(d);
@@ -1050,6 +1119,7 @@ int main(int argc, char** argv) {
     memcpy(sa1[0], peerDest[0].data(), 16);
     rnsnode::setReceivers(keys, sa1, 0);
 
+    if (foreignKey) receiverForeignKey();
     const std::string savedId = readFile(idPath);
     uint8_t seed[32];
     for (uint8_t& b : seed) b = static_cast<uint8_t>(rnd());
@@ -1077,6 +1147,7 @@ int main(int argc, char** argv) {
         for (int i = 0; i < 20; ++i) { simMs += 1000; service(); }
     }
     if (hostileDayCount) hostileDays(hostileDayCount, windowS, stopAfterS);
+    if (foreignKey) receiverReadsReport();
     for (long n = 0; n < events; ++n) {
         try {
             const uint32_t e = rnd() % 100;
