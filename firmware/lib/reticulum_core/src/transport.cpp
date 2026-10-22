@@ -399,12 +399,14 @@ bool Transport::announce(const uint8_t random[5], const uint8_t* appData, size_t
     return ownAnnounce(random, nowMs, false, ALL_INTERFACES);
 }
 
-bool Transport::mayTransmit(uint8_t ifaces) const {
-    if (!hooks_.mayTransmit) return true;
+uint8_t Transport::accepting(uint8_t ifaces) const {
+    ifaces &= present();
+    if (!hooks_.mayTransmit) return ifaces;
+    uint8_t ready = 0;
     for (uint8_t i = 0; i < interfaces_; ++i) {
-        if ((ifaces & interfaceMask(i)) && hooks_.mayTransmit(i, hooks_.context)) return true;
+        if ((ifaces & interfaceMask(i)) && hooks_.mayTransmit(i, hooks_.context)) ready |= interfaceMask(i);
     }
-    return false;
+    return ready;
 }
 
 // RNS/Destination.py: Destination.announce bez ratchetu, z danymi aplikacji z ostatniego announce();
@@ -588,7 +590,7 @@ void Transport::inboundPlain(const Packet& packet, const uint8_t* raw, size_t le
     packetHash(raw, length, hash);
     hashlist_.add(hash);
     ++counters_.pathRequests;
-    if (pathRequest(packet.data, requestor, nowMs, interfaceMask(iface))) f->atMs = 0;   // path_request: answered
+    if (pathRequest(packet.data, requestor, nowMs, iface)) f->atMs = 0;   // path_request: answered
 }
 
 // Wpis zapytania o cel z żywym zapytaniem „w drodze” albo oczekiwaniem odkrycia; przeterminowane
@@ -622,13 +624,18 @@ void Transport::discoveryResponse(const Packet& packet, uint64_t nowMs) {
 
 // RNS/Transport.py: _inbound (ANNOUNCE celu z discovery_path_requests): ogłoszenie z pamięci podręcznej jako
 // HEADER_2 z identyfikatorem stacji, kontekstem PATH_RESPONSE i liczbą skoków po odbiorze, każdym
-// interfejsem pytających (requesting_interfaces).
-void Transport::sendDiscovery(Inflight& f, uint64_t nowMs) {
-    f.respond = false;
-    const uint8_t requesting = f.requesting;
-    f.requesting = 0;
+// interfejsem pytających (requesting_interfaces); tu tymi z maski ready, a pozostali pytający dostaną ją,
+// gdy ich interfejs przyjmie.
+void Transport::sendDiscovery(Inflight& f, uint8_t ready, uint64_t nowMs) {
+    const uint8_t to = f.requesting & ready;
+    f.requesting &= static_cast<uint8_t>(~to);
+    f.respond = f.requesting != 0;
     KnownDestination e;
-    if (!lookup(f.destination, e, nowMs) || !e.announceLength) return;   // wpis wyparty w międzyczasie
+    if (!lookup(f.destination, e, nowMs) || !e.announceLength) {   // wpis wyparty w międzyczasie
+        f.respond = false;
+        f.requesting = 0;
+        return;
+    }
     Packet out = {};
     out.headerType = HEADER_2;
     out.transportType = TRANSPORT;
@@ -644,7 +651,7 @@ void Transport::sendDiscovery(Inflight& f, uint64_t nowMs) {
     uint8_t raw[MTU];
     const size_t rawLength = pack(out, raw, sizeof(raw));
     for (uint8_t i = 0; rawLength && i < interfaces_; ++i) {
-        if (emit(raw, rawLength, true, requesting & interfaceMask(i))) ++counters_.pathResponses;
+        if (emit(raw, rawLength, true, to & interfaceMask(i))) ++counters_.pathResponses;
     }
 }
 
@@ -657,23 +664,25 @@ void Transport::setBitrate(uint32_t bitsPerSecond) {
 
 // RNS/Transport.py: path_request (węzeł z transportem, bez klientów lokalnych i bez szukania celów
 // nieznanych, które dotyczy tylko trybów interfejsu innych niż pełny). Prawda: zapytanie obsłużone
-// (answered: cel stacji albo cel z trasą, także bez nadania). Odpowiedź idzie interfejsem zapytania (maska ifaces).
+// (answered: cel stacji albo cel z trasą, także bez nadania). Odpowiedź idzie interfejsem zapytania iface.
 bool Transport::pathRequest(const uint8_t destination[TRUNCATED_HASH_SIZE], const uint8_t* requestor, uint64_t nowMs,
-                            uint8_t ifaces) {
+                            uint8_t iface) {
+    const uint8_t ifaces = interfaceMask(iface);
     if (address_ && memcmp(destination, address_, TRUNCATED_HASH_SIZE) == 0) {
         // Cel stacji: Destination.announce(path_response=True) od razu, z nowym skrótem losowym i podpisem;
-        // najwyżej raz na OWN_RESPONSE_MIN_MS (odstępstwo, tabela różnic).
+        // najwyżej raz na OWN_RESPONSE_MIN_MS na interfejs (odstępstwo, tabela różnic).
         ++counters_.pathAnswered;
-        if (ownResponseMs_ && nowMs + 1 - ownResponseMs_ < OWN_RESPONSE_MIN_MS) {
+        uint64_t& last = ownResponseMs_[iface];
+        if (last && nowMs + 1 - last < OWN_RESPONSE_MIN_MS) {
             ++counters_.pathLimited;
             return true;
         }
         // Bez miejsca w interfejsie (cisza, pełna kolejka, brak IFAC) bez pracy na podpis.
-        if (!mayTransmit(ifaces)) {
+        if (!accepting(ifaces)) {
             ++counters_.pathLimited;
             return true;
         }
-        ownResponseMs_ = nowMs + 1;
+        last = nowMs + 1;
         // Ogłoszenie podpisane w ostatnich OWN_RESPONSE_REUSE_MS idzie jeszcze raz (jego skrót losowy jest
         // dla pytającego nowy, jeśli go nie słyszał), bez nowego podpisu.
         if (ownAnnounceLength_ && nowMs - ownAnnounceMs_ < OWN_RESPONSE_REUSE_MS) {
@@ -737,14 +746,22 @@ bool Transport::schedule(const uint8_t destination[TRUNCATED_HASH_SIZE], uint8_t
     slot->localRebroadcasts = 0;
     slot->blockRebroadcasts = block;
     slot->attached = ifaces;
+    slot->owed = 0;
     return true;
 }
 
 // RNS/Transport.py: jobs (announce_table): ogłoszenie z pamięci podręcznej jako nowy pakiet HEADER_2
 // z identyfikatorem transportu stacji i liczbą skoków z wpisu, interfejsem pytającego albo wszystkimi.
-void Transport::retransmit(AnnounceEntry& entry, uint64_t nowMs) {
-    entry.retransmitMs = nowMs + PATHFINDER_G_MS + PATHFINDER_RW_MS;
-    ++entry.retries;
+// Próba liczy się, gdy przyjmie ją któryś interfejs; pozostałe dostaną ją, gdy przyjmą (owed), więc
+// interfejs, który chwilowo odmawia, nie wstrzymuje prób innych i sam nie traci próby.
+void Transport::retransmit(AnnounceEntry& entry, uint8_t ready, uint64_t nowMs) {
+    if (nowMs > entry.retransmitMs && !spent(entry) && (entry.attached & ready)) {
+        entry.retransmitMs = nowMs + PATHFINDER_G_MS + PATHFINDER_RW_MS;
+        ++entry.retries;
+        entry.owed |= entry.attached & present();
+    }
+    const uint8_t to = entry.owed & ready;
+    entry.owed &= static_cast<uint8_t>(~to);
     KnownDestination e;
     if (!lookup(entry.destination, e, nowMs) || !e.announceLength) {   // wpis wyparty w międzyczasie
         entry.used = false;
@@ -767,10 +784,11 @@ void Transport::retransmit(AnnounceEntry& entry, uint64_t nowMs) {
     packet.dataLength = e.announceLength;
     uint8_t raw[MTU];
     const size_t rawLength = pack(packet, raw, sizeof(raw));
-    if (rawLength && emit(raw, rawLength, true, entry.attached)) {
+    if (rawLength && emit(raw, rawLength, true, to)) {
         ++(entry.blockRebroadcasts ? counters_.pathResponses : counters_.rebroadcasts);
     }
-    for (AnnounceEntry& h : held_) {   // held_announces: wstrzymany wpis wraca do tablicy
+    if (entry.owed) return;
+    for (AnnounceEntry& h : held_) {   // held_announces: wstrzymany wpis wraca do tablicy po odpowiedzi
         if (h.used && memcmp(h.destination, entry.destination, TRUNCATED_HASH_SIZE) == 0) {
             entry = h;
             h.used = false;
@@ -832,30 +850,40 @@ void Transport::poll(uint64_t nowMs, bool transmit) {
         ++counters_.timedOut;
         if (hooks_.receipt) hooks_.receipt(r.handle, false, hooks_.context);
     }
-    // Każda retransmisja to odczyt gniazda i podpis IFAC: najwyżej jedna na wywołanie, najwcześniejsza
-    // zaległa; reszta czeka na kolejne obiegi pętli (Python nadaje wszystkie zaległe naraz w jobs).
-    AnnounceEntry* due = nullptr;
+    bool work = false;
     for (AnnounceEntry& a : announces_) {
-        if (!a.used) continue;
-        if ((a.retries > 0 && a.retries >= LOCAL_REBROADCASTS_MAX) || a.retries > PATHFINDER_R) {
-            a.used = false;   // limit lokalnych powtórek albo ponowień osiągnięty
-        } else if (nowMs > a.retransmitMs && (!due || a.retransmitMs < due->retransmitMs)) {
-            due = &a;
-        }
+        if (a.used && spent(a) && !a.owed) a.used = false;   // ostatnia próba wyszła wszystkimi interfejsami
+        work = work || (a.used && (a.owed || nowMs > a.retransmitMs));
     }
-    // Odpowiedź odkrycia przed retransmisjami (w Pythonie wychodzi od razu z ogłoszeniem).
+    for (const Inflight& f : inflight_) work = work || f.respond;
+    // Każde nadanie to odczyt gniazda i podpis IFAC: najwyżej jedno na wywołanie, tylko interfejsami, które
+    // teraz przyjmą ogłoszenie (ready). Odpowiedź odkrycia przed retransmisjami (w Pythonie wychodzi od razu
+    // z ogłoszeniem), potem zaległe nadanie albo najwcześniejsza zaległa próba; reszta czeka na kolejne obiegi
+    // pętli (Python nadaje wszystkie zaległe naraz w jobs). Wpis, którego interfejsy teraz odmawiają, nie
+    // wstrzymuje innych.
+    const uint8_t ready = transmit && work ? accepting(ALL_INTERFACES) : 0;
     Inflight* respond = nullptr;
     for (Inflight& f : inflight_) {
-        if (f.respond) {
+        if (f.respond && (f.requesting & ready)) {
             respond = &f;
             break;
         }
     }
-    const uint8_t target = respond ? respond->requesting : due ? due->attached : ALL_INTERFACES;
-    if (transmit && (respond || due) && mayTransmit(target)) {
-        if (respond) sendDiscovery(*respond, nowMs);
-        else retransmit(*due, nowMs);
+    AnnounceEntry* due = nullptr;
+    uint64_t dueMs = 0;
+    for (AnnounceEntry& a : announces_) {
+        if (!a.used || respond || !ready) continue;
+        uint64_t atMs;
+        if (a.owed & ready) atMs = 0;   // zaległe nadanie interfejsowi
+        else if (!spent(a) && (a.attached & ready) && nowMs > a.retransmitMs) atMs = a.retransmitMs;
+        else continue;
+        if (!due || atMs < dueMs) {
+            due = &a;
+            dueMs = atMs;
+        }
     }
+    if (respond) sendDiscovery(*respond, ready, nowMs);
+    else if (due) retransmit(*due, ready, nowMs);
     // Wstrzymany wpis żyje tylko razem z wpisem odpowiedzi swojego celu (zastąpionym, wypartym albo
     // zakończonym bez nadania): bez niego zwalnia miejsce.
     for (AnnounceEntry& h : held_) {
@@ -917,7 +945,7 @@ void Transport::clear() {
     ownAnnounceLength_ = 0;
     ownAnnounceMs_ = 0;
     pathTagNext_ = ownAppDataLength_ = 0;
-    ownResponseMs_ = 0;
+    clean(ownResponseMs_, sizeof(ownResponseMs_));
     hashlist_.clear();
     privateKey_ = publicKey_ = identityHash_ = address_ = nameHash_ = nullptr;
     hooks_ = TransportHooks();

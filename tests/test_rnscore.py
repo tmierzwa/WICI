@@ -1186,6 +1186,51 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(lines[8], "-")
         self.assertEqual(lines[9].split()[:2], ["0", "1"])
 
+    def test_interfaces_refusing_interface_does_not_block(self):
+        # Interfejs, który nie przyjmie ogłoszenia (mayTransmit), nie wstrzymuje drugiego i sam nie traci
+        # próby: dostaje ją, gdy przyjmie (jedno zaległe ogłoszenie na cel i interfejs, jak announce_queue).
+        identity = self.station_identity()
+        ann = self.announce_of(bytes([69]) * 64)
+        dest = ann[2:18]
+        rebroadcast = self.via(ann, identity, 1).hex()
+        discovery = self.via(ann[:18] + bytes([0x0B]) + ann[19:], identity, 1).hex()
+        clock = lambda ms: ("t_clock", ms.to_bytes(8, "big"))
+        # USB odmawia: odpowiedź odkrycia tylko dla USB czeka, a retransmisje idą przez P1; po zwolnieniu USB
+        # odpowiedź odkrycia i jedno zaległe nadanie retransmisji.
+        lines = self.ask([("t_begin", self.TWO), ("t_inif", b"\x01" + self.path_request(dest, b"A" * 16)),
+                          ("t_inif", b"\x01" + self.path_request(dest, b"B" * 16)), ("t_busy", b"\x02"),
+                          ("t_inif", b"\x00" + ann), clock(1600), ("t_outif", b""), clock(7200), ("t_outif", b""),
+                          ("t_busy", b"\x00"), clock(7300), ("t_outif", b""), clock(7400), ("t_outif", b""),
+                          clock(7500), ("t_outif", b""), ("t_forward", b"")])
+        self.assertEqual(lines[6], "0:" + rebroadcast)
+        self.assertEqual(lines[8], "0:" + rebroadcast)
+        self.assertEqual(lines[11], "1:" + discovery)
+        self.assertEqual(lines[13], "1:" + rebroadcast)
+        self.assertEqual(lines[15], "-")
+        self.assertEqual(lines[16].split()[4:], ["3", "0", "0"])   # nadania (P1, P1, zaległe USB)
+        # P1 odmawia, USB przyjmuje: próby idą przez USB, a P1 dostaje zaległe nadanie, gdy przyjmie.
+        lines = self.ask([("t_begin", self.TWO), ("t_busy", b"\x01"), ("t_inif", b"\x01" + ann), clock(1600),
+                          ("t_outif", b""), clock(7200), ("t_outif", b""), clock(7300), ("t_outif", b""),
+                          ("t_busy", b"\x00"), clock(7400), ("t_outif", b""), clock(7500), ("t_outif", b""),
+                          ("t_forward", b"")])
+        self.assertEqual(lines[4], "1:" + rebroadcast)
+        self.assertEqual(lines[6], "1:" + rebroadcast)
+        self.assertEqual(lines[8], "-")
+        self.assertEqual(lines[11], "0:" + rebroadcast)
+        self.assertEqual(lines[13], "-")
+        self.assertEqual(lines[14].split()[4:], ["3", "0", "0"])
+
+    def test_interfaces_own_response_limit_per_interface(self):
+        # Limit odpowiedzi na zapytanie o cel stacji (OWN_RESPONSE_MIN_MS) liczy się osobno na interfejs:
+        # zapytanie z USB nie wstrzymuje odpowiedzi na zapytanie z P1; drugie z tego samego interfejsu tak.
+        address = bytes.fromhex(self.ask([("t_begin", self.TWO)])[0])
+        lines = self.ask([("t_begin", self.TWO), ("t_inif", b"\x01" + self.path_request(address, b"S" * 16)),
+                          ("t_outif", b""), ("t_inif", b"\x00" + self.path_request(address, b"T" * 16)), ("t_outif", b""),
+                          ("t_inif", b"\x00" + self.path_request(address, b"U" * 16)), ("t_outif", b"")])
+        self.assertEqual([x[:2] for x in lines[2].split()], ["1:"])
+        self.assertEqual([x[:2] for x in lines[4].split()], ["0:"])
+        self.assertEqual(lines[6], "-")
+
     def test_full_hash_matches_sha256(self):
         # Pusty wejściowy ciąg, granice bloku SHA-256 (55, 56, 64 B) i długi ciąg.
         inputs = [b"", b"WICI", bytes(55), bytes(56), bytes(64), bytes(range(256)) * 20]
