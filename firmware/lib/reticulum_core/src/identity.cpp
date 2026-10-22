@@ -33,13 +33,22 @@ bool canonicalScalar(const uint8_t s[32]) {
 }  // namespace
 
 void publicKey(const uint8_t privateKey[KEY_SIZE], uint8_t out[KEY_SIZE]) {
+    exchange(privateKey, nullptr, out);   // punkt bazowy 9: wynik nigdy nie jest zerowy
+    Ed25519::derivePublicKey(out + HALF, privateKey + HALF);
+}
+
+bool exchange(const uint8_t privateKey[HALF], const uint8_t* peer, uint8_t out[HALF]) {
     uint8_t scalar[HALF];
     memcpy(scalar, privateKey, HALF);
     scalar[0] &= 0xF8;
     scalar[31] = (scalar[31] & 0x7F) | 0x40;
-    Curve25519::eval(out, scalar, nullptr);   // punkt bazowy 9: zawsze poprawny
+    // Wynik eval pomijamy: fałsz znaczy tylko, że peer ≥ p, a liczy dalej na wartości zredukowanej,
+    // jak biblioteka Pythona. Najstarszy bit peer eval pomija sam.
+    Curve25519::eval(out, scalar, peer);
     clean(scalar, sizeof(scalar));
-    Ed25519::derivePublicKey(out + HALF, privateKey + HALF);
+    uint8_t any = 0;
+    for (size_t i = 0; i < HALF; ++i) any |= out[i];
+    return any != 0;
 }
 
 void identityHash(const uint8_t publicKey[KEY_SIZE], uint8_t out[TRUNCATED_HASH_SIZE]) {

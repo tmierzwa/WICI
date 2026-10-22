@@ -3,7 +3,8 @@
 
 Stage R0 of the core (firmware/reticulum-core.md): identity (keys, hash, signatures, including a
 non-canonical signature with S + L), encryption to an identity (token, including damaged tokens and
-tokens with a valid HMAC over a bad ciphertext, as a node with the key could send them) and
+tokens with a valid HMAC over a bad ciphertext, as any sender can make them, and tokens
+whose ephemeral key is a low-order or non-canonical X25519 point) and
 packets (HEADER_1 as packed by Reticulum, HEADER_2 as rewritten by its transport, packet hash). Every
 expected value is what the reference implementation computes or returns; nothing is computed here
 by other code. Randomness (ephemeral X25519 key, token IV, announce random hash) is replaced by a
@@ -21,7 +22,7 @@ import sys
 from unittest import mock
 
 import RNS
-from RNS.Cryptography import X25519PrivateKey
+from RNS.Cryptography import PKCS7, X25519PrivateKey, X25519PublicKey
 from RNS.Cryptography.AES import AES_256_CBC
 
 RNS_VERSION = "1.5.5"
@@ -30,6 +31,19 @@ APP_NAME = "wici"
 ASPECT = "sa1"
 # Rząd grupy Ed25519 (RFC 8032): podpis z S + L jest niekanoniczny i ma zostać odrzucony.
 ED25519_L = 2**252 + 27742317777372353535851937790883648493
+# Ciało Curve25519 i punkty niskiego rzędu (lista z libsodium, RFC 7748 rozdz. 6.1): wspólny sekret zerowy.
+X25519_P = 2**255 - 19
+X25519_LOW_ORDER = {
+    "zero": 0,
+    "one": 1,
+    "order_8_a": 325606250916557431795983626356110631294008115727848805560023387167927233504,
+    "order_8_b": 39382357235489614581723060781553021112529911719440698176882885853963445705823,
+    "p_minus_1": X25519_P - 1,
+    "p": X25519_P,
+    "p_plus_1": X25519_P + 1,
+}
+# Kodowania niekanoniczne punktu bazowego i innych: wartość ≥ p albo ustawiony najstarszy bit.
+X25519_NON_CANONICAL = {"p_plus_9": X25519_P + 9, "high_bit": 9 + 2**255, "all_ones": 2**256 - 1}
 
 
 def seeded(label: str, length: int) -> bytes:
@@ -136,13 +150,27 @@ def crafted_token_vectors():
     iv = seeded("crafted:iv", 16)
 
     def signed(ciphertext: bytes) -> bytes:
-        # Węzeł z kluczem sieci może wysłać dowolny szyfrogram z poprawnym HMAC (klucz z ECDH z kluczem celu).
+        # Każdy nadawca może wysłać dowolny szyfrogram z poprawnym HMAC: klucz HMAC wylicza z własnego klucza
+        # efemerycznego i klucza publicznego celu. HMAC chroni tylko przed zmianą w drodze.
         parts = iv + ciphertext
         return eph.public_key().public_bytes() + parts + RNS.Cryptography.HMAC.new(derived[:32], parts).digest()
 
     def block(last: int) -> bytes:
         # Jeden blok AES-256-CBC, którego tekst jawny kończy się bajtem dopełnienia last.
         return AES_256_CBC.encrypt(seeded(f"crafted:block:{last}", 15) + bytes([last]), derived[32:], iv)
+
+    def with_ephemeral(public: int) -> bytes:
+        # Token z podanym kluczem efemerycznym i HMAC z klucza, który wyliczy odbiorca. Gdy Python odrzuca
+        # punkt (wspólny sekret zerowy), HMAC jest z sekretu zerowego: odbiorca bez tego sprawdzenia przyjąłby token.
+        pub = public.to_bytes(32, "little")
+        try:
+            secret = ident.prv.exchange(X25519PublicKey.from_public_bytes(pub))
+        except ValueError:
+            secret = bytes(32)
+        key = RNS.Cryptography.hkdf(length=RNS.Identity.DERIVED_KEY_LENGTH, derive_from=secret,
+                                    salt=ident.get_salt(), context=ident.get_context())
+        parts = iv + AES_256_CBC.encrypt(PKCS7.pad(b"WICI"), key[32:], iv)
+        return pub + parts + RNS.Cryptography.HMAC.new(key[:32], parts).digest()
 
     cases = {
         "bad_hmac": valid[:-1] + bytes([valid[-1] ^ 1]),
@@ -157,6 +185,8 @@ def crafted_token_vectors():
         # Python nie sprawdza bajtów dopełnienia ani zera: tekst jawny to blok bez last bajtów.
         "valid_hmac_padding_zero": signed(block(0)),
         "valid_hmac_padding_inconsistent": signed(block(2)),
+        **{f"ephemeral_low_order_{name}": with_ephemeral(value) for name, value in X25519_LOW_ORDER.items()},
+        **{f"ephemeral_non_canonical_{name}": with_ephemeral(value) for name, value in X25519_NON_CANONICAL.items()},
     }
     return [{"name": name, "identity_private_key": ident.get_private_key().hex(), "token": token.hex(),
              "decrypted": None if (p := ident.decrypt(token)) is None else p.hex()}

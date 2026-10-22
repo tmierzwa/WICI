@@ -29,8 +29,8 @@ CHECK = ROOT / "tests" / "native" / "rnscore_check.cpp"
 VECTORS = json.loads((ROOT / "tests" / "vectors" / "reticulum.json").read_text())
 REQUIRED = os.environ.get("WICI_RNS_SANITIZE") == "1"
 # Z biblioteki Crypto tylko to, czego rdzeń używa.
-CRYPTO_UNITS = ["BigNumberUtil.cpp", "ChaCha.cpp", "Cipher.cpp", "Crypto.cpp", "Curve25519.cpp", "Ed25519.cpp", "Hash.cpp", "NoiseSource.cpp",
-                "RNG.cpp", "SHA256.cpp", "SHA512.cpp"]
+CRYPTO_UNITS = ["AES256.cpp", "AESCommon.cpp", "BigNumberUtil.cpp", "BlockCipher.cpp", "ChaCha.cpp", "Cipher.cpp", "Crypto.cpp",
+                "Curve25519.cpp", "Ed25519.cpp", "Hash.cpp", "NoiseSource.cpp", "RNG.cpp", "SHA256.cpp", "SHA512.cpp"]
 SANITIZE = ["-fsanitize=address,undefined", "-fno-omit-frame-pointer", "-g", "-O1"]
 # Rdzeń nie używa sterty, więc wyciek to błąd (LeakSanitizer działa na Linuksie, nie na macOS).
 LEAKS = "1" if sys.platform.startswith("linux") else "0"
@@ -141,6 +141,46 @@ class CoreTests(unittest.TestCase):
     @staticmethod
     def validate_args(public_key: bytes, signature: bytes, message: bytes) -> bytes:
         return public_key + len(signature).to_bytes(2, "big") + signature + message
+
+    def test_token_decrypt(self):
+        # Tokeny z Identity.encrypt w Pythonie (0, 1, 15, 16, 17 i 300 B tekstu jawnego).
+        tokens = VECTORS["token"]
+        got = self.ask([("decrypt", bytes.fromhex(t["identity_private_key"] + t["token"])) for t in tokens])
+        self.assertEqual(got, [t["decrypted"] for t in tokens])
+
+    def test_token_encrypt(self):
+        # Z tym samym kluczem efemerycznym i IV token ma być bajt w bajt taki jak w Pythonie.
+        tokens = VECTORS["token"]
+        commands = []
+        for t in tokens:
+            commands.append(("public_key", bytes.fromhex(t["identity_private_key"])))
+        public_keys = [bytes.fromhex(k) for k in self.ask(commands)]
+        got = self.ask([("encrypt", pub + bytes.fromhex(t["ephemeral_private_key"] + t["iv"] + t["plaintext"]))
+                        for pub, t in zip(public_keys, tokens)])
+        self.assertEqual(got, [t["token"] for t in tokens])
+
+    def test_crafted_tokens(self):
+        # Uszkodzone tokeny, tokeny z poprawnym HMAC i klucze efemeryczne niskiego rzędu albo spoza ciała:
+        # odpowiedź ma być ta sama co z Identity.decrypt (None = odrzucony).
+        cases = VECTORS["crafted_token"]
+        got = self.ask([("decrypt", bytes.fromhex(c["identity_private_key"] + c["token"])) for c in cases])
+        self.assertEqual(dict(zip((c["name"] for c in cases), got)),
+                         {c["name"]: "none" if c["decrypted"] is None else c["decrypted"] for c in cases})
+
+    def test_token_every_length(self):
+        # Każda długość od 0 do 2 bloków ponad narzut: odrzucenie bez błędu pamięci (ASan), poza pełną długością.
+        t = VECTORS["token"][3]
+        prv, token = bytes.fromhex(t["identity_private_key"]), bytes.fromhex(t["token"])
+        got = self.ask([("decrypt", prv + token[:n]) for n in range(len(token) + 1)])
+        self.assertEqual(got, ["none"] * len(token) + [t["decrypted"]])
+
+    def test_encrypt_to_low_order_key(self):
+        # Python zgłasza błąd w exchange, gdy klucz X25519 celu jest niskiego rzędu (wspólny sekret zerowy).
+        t = VECTORS["token"][0]
+        ed25519 = bytes.fromhex(VECTORS["identity"][0]["public_key"])[32:]
+        rest = bytes.fromhex(t["ephemeral_private_key"] + t["iv"]) + b"WICI"
+        got = self.ask([("encrypt", x25519 + ed25519 + rest) for x25519 in (bytes(32), (1).to_bytes(32, "little"))])
+        self.assertEqual(got, ["none", "none"])
 
     def test_full_hash_matches_sha256(self):
         # Pusty wejściowy ciąg, granice bloku SHA-256 (55, 56, 64 B) i długi ciąg.

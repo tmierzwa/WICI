@@ -12,6 +12,7 @@
 
 #include "hash.h"
 #include "identity.h"
+#include "token.h"
 
 namespace {
 
@@ -76,6 +77,30 @@ int main() {
                 const size_t offset = rnscore::KEY_SIZE + 2 + signatureLength;
                 printf("%d\n", rnscore::validate(data.data(), p + 2, signatureLength, data.data() + offset,
                                                  data.size() - offset) ? 1 : 0);
+            }
+        } else if (command == "encrypt" && data.size() >= rnscore::KEY_SIZE + 32 + rnscore::TOKEN_IV_SIZE) {
+            // klucz publiczny 64 B, klucz efemeryczny prywatny 32 B, IV 16 B, tekst jawny; "none" przy odmowie
+            const uint8_t* plaintext = data.data() + rnscore::KEY_SIZE + 32 + rnscore::TOKEN_IV_SIZE;
+            const size_t length = data.size() - (plaintext - data.data());
+            std::vector<uint8_t> out(rnscore::tokenSize(length));
+            if (rnscore::encrypt(data.data(), data.data() + rnscore::KEY_SIZE, data.data() + rnscore::KEY_SIZE + 32,
+                                 plaintext, length, out.data())) {
+                printHex(out.data(), out.size());
+            } else {
+                printf("none\n");
+            }
+        } else if (command == "decrypt" && data.size() >= rnscore::KEY_SIZE) {
+            // klucz prywatny 64 B, token; tekst jawny (może być pusty) albo "none" tam, gdzie Python zwraca None
+            uint8_t pub[rnscore::KEY_SIZE];
+            rnscore::publicKey(data.data(), pub);
+            const size_t length = data.size() - rnscore::KEY_SIZE;
+            std::vector<uint8_t> token(data.begin() + rnscore::KEY_SIZE, data.end());   // dokładnie length B dla ASan
+            std::vector<uint8_t> out(length > rnscore::TOKEN_OVERHEAD ? length - rnscore::TOKEN_OVERHEAD : 0);
+            size_t outLength = 0;
+            if (rnscore::decrypt(data.data(), pub, token.data(), length, out.data(), out.size(), &outLength)) {
+                printHex(out.data(), outLength);
+            } else {
+                printf("none\n");
             }
         } else {
             printf("error\n");
