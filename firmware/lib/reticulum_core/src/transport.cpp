@@ -8,6 +8,8 @@
 #include <Crypto.h>
 
 #include "announce.h"
+#include "destination.h"
+#include "hash.h"
 #include "proof.h"
 #include "token.h"
 
@@ -37,6 +39,8 @@ void Transport::begin(const uint8_t privateKey[KEY_SIZE], const uint8_t publicKe
     nameHash_ = nameHash;
     hooks_ = hooks;
     table_.begin(storage, seconds(nowMs));
+    // RNS/Transport.py: start: cel PLAIN "rnstransport.path.request" (Destination bez tożsamości).
+    destinationHash("rnstransport.path.request", nullptr, pathRequestDestination_);
 }
 
 bool Transport::pinnedHook(const uint8_t destination[TRUNCATED_HASH_SIZE], void* self) {
@@ -48,11 +52,22 @@ bool Transport::inbound(const uint8_t* raw, size_t length, uint64_t nowMs) {
     Packet packet;
     if (!unpack(raw, length, packet)) return false;
 
-    // RNS/Transport.py: packet_filter. Pakiet w transporcie dla innego węzła, cele PLAIN i GROUP
-    // (zapytania o trasę: R2) oraz łącza są poza podzbiorem R1 i nie trafiają na listę skrótów.
+    // RNS/Transport.py: packet_filter. Pakiet w transporcie dla innego węzła oraz łącza (poza podzbiorem
+    // rdzenia) nie trafiają na listę skrótów.
     if (packet.headerType == HEADER_2 && packet.packetType != ANNOUNCE &&
         memcmp(packet.transportId, identityHash_, TRUNCATED_HASH_SIZE) != 0) {
         ++counters_.ignored;
+        return true;
+    }
+    // packet_filter: ogłoszenie celu PLAIN albo GROUP odpada, a ich pakiety tylko do 1 skoku (bez listy
+    // skrótów: duplikaty zapytań o trasę odrzuca znacznik). GROUP i łącza są poza podzbiorem.
+    if ((packet.destinationType == PLAIN || packet.destinationType == GROUP) && packet.packetType == ANNOUNCE) {
+        ++counters_.invalid;
+        return true;
+    }
+    if (packet.destinationType == PLAIN && packet.hops <= 1) {
+        ++packet.hops;
+        inboundPlain(packet, raw, length, nowMs);
         return true;
     }
     if (packet.destinationType != SINGLE || packet.packetType == LINKREQUEST ||
@@ -280,19 +295,27 @@ bool Transport::emit(const uint8_t* raw, size_t length, bool rememberHash) {
 }
 
 bool Transport::announce(const uint8_t random[5], const uint8_t* appData, size_t length, uint64_t nowMs) {
-    if (!address_) return false;
+    if (!address_ || length > OWN_APP_DATA_MAX) return false;
+    if (length) memcpy(ownAppData_, appData, length);
+    ownAppDataLength_ = length;
+    return ownAnnounce(random, nowMs, false);
+}
+
+// RNS/Destination.py: Destination.announce bez ratchetu, z danymi aplikacji z ostatniego announce();
+// pathResponse: kontekst PATH_RESPONSE (odpowiedź na zapytanie o trasę, Transport.path_request).
+bool Transport::ownAnnounce(const uint8_t random[5], uint64_t nowMs, bool pathResponse) {
     uint8_t randomHash[RANDOM_HASH_SIZE];
     announceRandomHash(random, nowMs / 1000, randomHash);
-    uint8_t data[ANNOUNCE_FORWARDABLE_SIZE];
     Packet packet = {};
     packet.headerType = HEADER_1;
     packet.transportType = BROADCAST;
     packet.destinationType = SINGLE;
     packet.packetType = ANNOUNCE;
+    packet.context = pathResponse ? CONTEXT_PATH_RESPONSE : 0;
     memcpy(packet.destinationHash, address_, TRUNCATED_HASH_SIZE);
-    packet.dataLength = buildAnnounce(privateKey_, publicKey_, address_, nameHash_, randomHash, nullptr, appData, length, data,
-                                      sizeof(data));
-    packet.data = data;
+    packet.dataLength = buildAnnounce(privateKey_, publicKey_, address_, nameHash_, randomHash, nullptr, ownAppData_,
+                                      ownAppDataLength_, ownAnnounce_, sizeof(ownAnnounce_));
+    packet.data = ownAnnounce_;
     uint8_t raw[MTU];
     const size_t rawLength = packet.dataLength ? pack(packet, raw, sizeof(raw)) : 0;
     return rawLength && emit(raw, rawLength, true);
@@ -373,6 +396,166 @@ SendResult Transport::send(const uint8_t destination[TRUNCATED_HASH_SIZE], const
     return SendResult::SENT;
 }
 
+// RNS/Transport.py: preprocess_inbound (zapytanie o trasę: znacznik), _inbound (DATA do celu lokalnego
+// PLAIN) i path_request_handler. Inne cele PLAIN nie są celami stacji.
+void Transport::inboundPlain(const Packet& packet, const uint8_t* raw, size_t length, uint64_t nowMs) {
+    if (packet.packetType != DATA || memcmp(packet.destinationHash, pathRequestDestination_, TRUNCATED_HASH_SIZE) != 0 ||
+        packet.dataLength < TRUNCATED_HASH_SIZE) {
+        ++counters_.ignored;
+        return;
+    }
+    // Dane: cel, identyfikator transportu pytającego (gdy jest też znacznik), znacznik do 16 B.
+    const uint8_t* requestor = nullptr;
+    const uint8_t* tag = nullptr;
+    size_t tagLength = 0;
+    if (packet.dataLength > 2 * TRUNCATED_HASH_SIZE) {
+        requestor = packet.data + TRUNCATED_HASH_SIZE;
+        tag = packet.data + 2 * TRUNCATED_HASH_SIZE;
+        tagLength = packet.dataLength - 2 * TRUNCATED_HASH_SIZE;
+    } else if (packet.dataLength > TRUNCATED_HASH_SIZE) {
+        tag = packet.data + TRUNCATED_HASH_SIZE;
+        tagLength = packet.dataLength - TRUNCATED_HASH_SIZE;
+    }
+    if (!tag) {   // zapytanie bez znacznika: odrzucone
+        ++counters_.invalid;
+        return;
+    }
+    if (tagLength > TRUNCATED_HASH_SIZE) tagLength = TRUNCATED_HASH_SIZE;
+    // discovery_pr_tags: ten sam cel ze znacznikiem już był. Tu 8 B skrótu celu i znacznika w pierścieniu.
+    uint8_t unique[2 * TRUNCATED_HASH_SIZE];
+    memcpy(unique, packet.data, TRUNCATED_HASH_SIZE);
+    memcpy(unique + TRUNCATED_HASH_SIZE, tag, tagLength);
+    uint8_t digest[HASH_SIZE];
+    fullHash(unique, TRUNCATED_HASH_SIZE + tagLength, digest);
+    uint64_t key = 0;
+    for (size_t i = 0; i < 8; ++i) key = (key << 8) | digest[i];
+    if (!key) key = 1;
+    for (uint64_t k : pathTags_) {
+        if (k == key) {
+            ++counters_.duplicate;
+            return;
+        }
+    }
+    pathTags_[pathTagNext_] = key;
+    pathTagNext_ = (pathTagNext_ + 1) % PATH_TAGS_MAX;
+    uint8_t hash[HASH_SIZE];
+    packetHash(raw, length, hash);
+    hashlist_.add(hash);
+    ++counters_.pathRequests;
+    pathRequest(packet.data, requestor, nowMs);
+}
+
+// RNS/Transport.py: path_request (węzeł z transportem, bez klientów lokalnych i bez szukania celów
+// nieznanych, które dotyczy tylko trybów interfejsu innych niż pełny).
+void Transport::pathRequest(const uint8_t destination[TRUNCATED_HASH_SIZE], const uint8_t* requestor, uint64_t nowMs) {
+    if (address_ && memcmp(destination, address_, TRUNCATED_HASH_SIZE) == 0) {
+        // Cel stacji: Destination.announce(path_response=True) od razu, z nowym skrótem losowym i podpisem;
+        // najwyżej raz na OWN_RESPONSE_MIN_MS (odstępstwo, tabela różnic).
+        ++counters_.pathAnswered;
+        if (ownResponseMs_ && nowMs + 1 - ownResponseMs_ < OWN_RESPONSE_MIN_MS) {
+            ++counters_.pathLimited;
+            return;
+        }
+        uint8_t random[5];
+        if (!hooks_.random || !hooks_.random(random, sizeof(random), hooks_.context)) return;
+        ownResponseMs_ = nowMs + 1;
+        if (ownAnnounce(random, nowMs, true)) ++counters_.pathResponses;
+        return;
+    }
+    KnownDestination e;
+    if (!lookup(destination, e, nowMs) || !e.hasPath) return;   // trasa nieznana: bez odpowiedzi
+    ++counters_.pathAnswered;
+    if (!e.announceLength) return;                    // get_cached_packet: brak ogłoszenia w pamięci
+    if (requestor && memcmp(requestor, e.nextHop, TRUNCATED_HASH_SIZE) == 0) return;   // następny skok pyta
+    // announce_table: odpowiedź po PATH_REQUEST_GRACE z liczbą skoków trasy (PATHFINDER_R: jedno nadanie).
+    schedule(destination, e.hops, nowMs + PATH_REQUEST_GRACE_MS, PATHFINDER_R, true);
+}
+
+// Wpis tablicy ogłoszeń: wpis tego celu zastąpiony (jak słownik w Pythonie); przy pełnej tablicy nowy
+// odpada z licznikiem.
+bool Transport::schedule(const uint8_t destination[TRUNCATED_HASH_SIZE], uint8_t hops, uint64_t atMs, uint8_t retries,
+                         bool block) {
+    AnnounceEntry* slot = nullptr;
+    for (AnnounceEntry& a : announces_) {
+        if (a.used && memcmp(a.destination, destination, TRUNCATED_HASH_SIZE) == 0) {
+            slot = &a;
+            break;
+        }
+        if (!a.used && !slot) slot = &a;
+    }
+    if (!slot) {
+        ++counters_.announceTableFull;
+        return false;
+    }
+    slot->used = true;
+    memcpy(slot->destination, destination, TRUNCATED_HASH_SIZE);
+    slot->hops = hops;
+    slot->retransmitMs = atMs;
+    slot->retries = retries;
+    slot->localRebroadcasts = 0;
+    slot->blockRebroadcasts = block;
+    return true;
+}
+
+// RNS/Transport.py: jobs (announce_table): ogłoszenie z pamięci podręcznej jako nowy pakiet HEADER_2
+// z identyfikatorem transportu stacji i liczbą skoków z wpisu.
+void Transport::retransmit(AnnounceEntry& entry, uint64_t nowMs) {
+    entry.retransmitMs = nowMs + PATHFINDER_G_MS + PATHFINDER_RW_MS;
+    ++entry.retries;
+    KnownDestination e;
+    if (!lookup(entry.destination, e, nowMs) || !e.announceLength) {   // wpis wyparty w międzyczasie
+        entry.used = false;
+        return;
+    }
+    Packet packet = {};
+    packet.headerType = HEADER_2;
+    packet.transportType = TRANSPORT;
+    packet.destinationType = SINGLE;
+    packet.packetType = ANNOUNCE;
+    packet.contextFlag = e.contextFlag;
+    packet.hops = entry.hops;
+    packet.context = entry.blockRebroadcasts ? CONTEXT_PATH_RESPONSE : 0;
+    memcpy(packet.transportId, identityHash_, TRUNCATED_HASH_SIZE);
+    memcpy(packet.destinationHash, entry.destination, TRUNCATED_HASH_SIZE);
+    packet.data = table_.announce();
+    packet.dataLength = e.announceLength;
+    uint8_t raw[MTU];
+    const size_t rawLength = pack(packet, raw, sizeof(raw));
+    if (rawLength && emit(raw, rawLength, true) && entry.blockRebroadcasts) ++counters_.pathResponses;
+}
+
+bool Transport::requestPath(const uint8_t destination[TRUNCATED_HASH_SIZE], const uint8_t tag[TRUNCATED_HASH_SIZE],
+                            uint64_t nowMs) {
+    OwnRequest* slot = &ownRequests_[0];
+    for (OwnRequest& r : ownRequests_) {
+        if (r.atMs && memcmp(r.destination, destination, TRUNCATED_HASH_SIZE) == 0) {
+            if (nowMs - r.atMs < PATH_REQUEST_MI_MS) return false;
+            slot = &r;
+            break;
+        }
+        if (r.atMs < slot->atMs) slot = &r;   // najstarszy albo wolny
+    }
+    uint8_t data[PATH_REQUEST_SIZE];
+    memcpy(data, destination, TRUNCATED_HASH_SIZE);
+    memcpy(data + TRUNCATED_HASH_SIZE, identityHash_, TRUNCATED_HASH_SIZE);
+    memcpy(data + 2 * TRUNCATED_HASH_SIZE, tag, TRUNCATED_HASH_SIZE);
+    Packet packet = {};
+    packet.headerType = HEADER_1;
+    packet.transportType = BROADCAST;
+    packet.destinationType = PLAIN;
+    packet.packetType = DATA;
+    memcpy(packet.destinationHash, pathRequestDestination_, TRUNCATED_HASH_SIZE);
+    packet.data = data;
+    packet.dataLength = sizeof(data);
+    uint8_t raw[HEADER_1_SIZE + PATH_REQUEST_SIZE];
+    const size_t rawLength = pack(packet, raw, sizeof(raw));
+    if (!rawLength || !emit(raw, rawLength, true)) return false;
+    memcpy(slot->destination, destination, TRUNCATED_HASH_SIZE);
+    slot->atMs = nowMs ? nowMs : 1;
+    ++counters_.requestsSent;
+    return true;
+}
+
 void Transport::poll(uint64_t nowMs) {
     for (Receipt& r : receipts_) {
         if (!r.used || nowMs < r.deadlineMs) continue;
@@ -380,12 +563,26 @@ void Transport::poll(uint64_t nowMs) {
         ++counters_.timedOut;
         if (hooks_.receipt) hooks_.receipt(r.handle, false, hooks_.context);
     }
+    for (AnnounceEntry& a : announces_) {
+        if (!a.used) continue;
+        if ((a.retries > 0 && a.retries >= LOCAL_REBROADCASTS_MAX) || a.retries > PATHFINDER_R) {
+            a.used = false;   // limit lokalnych powtórek albo ponowień osiągnięty
+        } else if (nowMs > a.retransmitMs) {
+            retransmit(a, nowMs);
+        }
+    }
     // Transport.jobs: trasa nieużywana dłużej niż DESTINATION_TIMEOUT znika z path_table; wpis znanego
     // celu (tożsamość, ratchet) zostaje, jak known_destinations. Przegląd indeksu raz na sekundę.
     const uint32_t nowS = seconds(nowMs);
     if (nowS == cullS_) return;
     cullS_ = nowS;
     table_.expire(nowS);
+}
+
+size_t Transport::announceTable() const {
+    size_t n = 0;
+    for (const AnnounceEntry& a : announces_) n += a.used;
+    return n;
 }
 
 bool Transport::lookup(const uint8_t destination[TRUNCATED_HASH_SIZE], KnownDestination& out, uint64_t nowMs) {
@@ -406,6 +603,13 @@ size_t Transport::receiptsPending() const {
 void Transport::clear() {
     table_.clear();
     clean(receipts_, sizeof(receipts_));
+    clean(announces_, sizeof(announces_));
+    clean(pathTags_, sizeof(pathTags_));
+    clean(ownRequests_, sizeof(ownRequests_));
+    clean(ownAppData_, sizeof(ownAppData_));
+    clean(ownAnnounce_, sizeof(ownAnnounce_));
+    pathTagNext_ = ownAppDataLength_ = 0;
+    ownResponseMs_ = 0;
     hashlist_.clear();
     privateKey_ = publicKey_ = identityHash_ = address_ = nameHash_ = nullptr;
     hooks_ = TransportHooks();

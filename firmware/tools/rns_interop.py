@@ -9,7 +9,9 @@ Both sides use the same 16 B network key as IFAC (passphrase = 32 hex digits, if
 Checks: station announce seen in Python; Python announce seen in the station; opportunistic packet
 in both directions with a transport proof (PacketReceipt DELIVERED on both sides), also to a Python
 destination that enforces ratchets (step 3r, only with --steps: the station encrypts to the ratchet
-key from its announce, which the microReticulum port does not do); a packet the
+key from its announce, which the microReticulum port does not do); path requests in both directions
+(step 9, only with --steps: Python asks for the station destination and gets a path response, the
+station asks for a Python destination it has never heard and learns its path); a packet the
 station application layer rejects gets no proof (PROVE_APP), so the Python receipt fails; after a restart
 of the station program with the same FRAM file the identity is the same and the path and identity of
 the Python destination come from FRAM; datagrams without IFAC or with a wrong IFAC are dropped before
@@ -108,7 +110,7 @@ def main():
     parser.add_argument("--port", type=int, default=47420)
     parser.add_argument("--fill", type=int, default=0, help="announce N more destinations and record the station memory")
     parser.add_argument("--capture", help="file for the datagrams Python sends to the station (tools/rns_ram32.py replays them)")
-    parser.add_argument("--steps", help="comma-separated steps to run (1,2,3,3r,4,4a,5,6,7,8; default all but 3r), e.g. for a stack "
+    parser.add_argument("--steps", help="comma-separated steps to run (1,2,3,3r,4,4a,5,6,7,8,9; default all but 3r and 9), e.g. for a stack "
                                         "that does not have every function yet (host-core, firmware/reticulum-core.md)")
     args = parser.parse_args()
     steps = set(args.steps.split(",")) if args.steps else None
@@ -116,7 +118,9 @@ def main():
     def want(step):
         # Krok 3r tylko na żądanie: port microReticulum nie szyfruje do ratchetu z ogłoszenia (cel Pythona
         # z wymuszonymi ratchetami odrzuca jego pakiet), więc nie należy do domyślnej próby portu.
-        return step in steps if steps is not None else step != "3r"
+        # Krok 9 (zapytania o trasę) też na żądanie: dodany z etapem R2 rdzenia; port przechodzi go lokalnie, ale
+        # domyślna próba portu zostaje bez zmian.
+        return step in steps if steps is not None else step not in ("3r", "9")
 
     import RNS  # noqa: E402 (needs the reference Reticulum)
 
@@ -164,6 +168,17 @@ def main():
             seen["announces"].append((time.time(), destination_hash, announced_identity, app_data))
 
     RNS.Transport.register_announce_handler(Announces())
+
+    class PathResponses:
+        # Odpowiedzi na zapytania o trasę (domyślnie nie trafiają do obsługi ogłoszeń).
+        aspect_filter = f"{APP_NAME}.{ASPECT}"
+        receive_path_responses = True
+
+        def received_announce(self, destination_hash, announced_identity, app_data, announce_packet_hash, is_path_response):
+            if is_path_response:
+                seen.setdefault("path_responses", []).append((time.time(), destination_hash))
+
+    RNS.Transport.register_announce_handler(PathResponses())
 
     def wait_for(condition, timeout):
         end = time.time() + timeout
@@ -285,6 +300,29 @@ def main():
             checks["ifac_missing_dropped"] = after["ifac_missing"] == before["ifac_missing"] + 1
             checks["ifac_invalid_dropped"] = after["ifac_invalid"] == before["ifac_invalid"] + 1
             results["station_status"] = after
+
+        # 9. Zapytania o trasę: Python pyta o cel stacji i dostaje odpowiedź stacji (ogłoszenie z kontekstem
+        #    PATH_RESPONSE); stacja pyta o cel Pythona, którego ogłoszenia nie słyszała, i poznaje jego trasę
+        #    z odpowiedzi Pythona dla celu lokalnego.
+        if want("9"):
+            # Odpowiedź z czasem emisji (w sekundach) równym ogłoszeniu z kroku 1 nie zmienia trasy w Pythonie
+            # (should_add), więc zapytanie dopiero po pełnej sekundzie od niego.
+            time.sleep(2)
+            RNS.Transport.request_path(address)
+            checks["station_answers_path_request"] = wait_for(
+                lambda: any(r[1] == address for r in seen.get("path_responses", [])), 60)
+            silent = RNS.Destination(RNS.Identity(), RNS.Destination.IN, RNS.Destination.SINGLE, APP_NAME, ASPECT)
+            station.command(f"path {silent.hash.hex()}")
+            before = station.wait("path", 5) or {}
+            station.command(f"request {silent.hash.hex()}")
+            station.wait("requested", 5)
+
+            def learned():
+                station.command(f"path {silent.hash.hex()}")
+                p = station.wait("path", 5) or {}
+                return p.get("known") is True and p.get("path") is True
+
+            checks["station_path_request_answered"] = before.get("known") is False and wait_for(learned, 60)
 
         if args.fill:
             # Pomiar pamięci: N ogłoszeń nowych celów (po 2 na sekundę, bez wyzwalania ograniczeń

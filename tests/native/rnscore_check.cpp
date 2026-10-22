@@ -112,6 +112,10 @@ bool onPacket(const uint8_t* data, size_t length, void*) {
 void onReceipt(uint32_t handle, bool delivered, void*) {
     state->events += " receipt:" + std::to_string(handle) + (delivered ? ":1" : ":0");
 }
+bool onRandom(uint8_t* out, size_t length, void*) {
+    memset(out, 0x5A, length);   // stałe bajty: wynik do porównania
+    return true;
+}
 bool onPinned(const uint8_t destination[16], void*) {
     return state->pinned.size() == 16 && memcmp(state->pinned.data(), destination, 16) == 0;
 }
@@ -332,6 +336,7 @@ int main() {
             hooks.packet = onPacket;
             hooks.receipt = onReceipt;
             hooks.pinned = onPinned;
+            hooks.random = onRandom;
             state->transport.begin(state->privateKey, state->publicKey, state->identity, state->address, state->nameHash, hooks,
                                    state->table, state->nowMs);
             printHex(state->address, sizeof(state->address));
@@ -344,6 +349,7 @@ int main() {
             hooks.packet = onPacket;
             hooks.receipt = onReceipt;
             hooks.pinned = onPinned;
+            hooks.random = onRandom;
             state->table.cutAfter = -1;
             state->transport.clear();
             state->transport.begin(state->privateKey, state->publicKey, state->identity, state->address, state->nameHash, hooks,
@@ -361,6 +367,16 @@ int main() {
             const bool fits = at <= state->table.bytes.size() && data.size() - 4 <= state->table.bytes.size() - at;
             if (fits) memcpy(state->table.bytes.data() + at, data.data() + 4, data.size() - 4);
             printf(fits ? "ok\n" : "error\n");
+        } else if (state && command == "t_request" && data.size() == 32) {
+            // własne zapytanie o trasę: cel 16 B, znacznik 16 B
+            printTransport(state->transport.requestPath(data.data(), data.data() + 16, state->nowMs) ? "ok" : "none");
+        } else if (state && command == "t_paths") {
+            // liczniki zapytań o trasę: przyjęte, z odpowiedzią, odpowiedzi wysłane, bez odpowiedzi z limitu,
+            // własne, tablica ogłoszeń pełna, wpisy tablicy ogłoszeń
+            const rnscore::TransportCounters& c = state->transport.counters();
+            printf("%u %u %u %u %u %u %u\n", c.pathRequests, c.pathAnswered, c.pathResponses, c.pathLimited, c.requestsSent,
+                   c.announceTableFull,
+                   static_cast<unsigned>(state->transport.announceTable()));
         } else if (state && command == "t_writes") {
             printf("%ld\n", state->table.writes);
         } else if (state && command == "t_readfail" && data.size() == 1) {

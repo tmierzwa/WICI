@@ -5,7 +5,8 @@
 // celów i tras w pamięci trwałej (table.h: tożsamość, ratchet z ogłoszenia, trasa, ogłoszenie w pamięci
 // podręcznej), lista skrótów pakietów, ogłoszenie własne, przyjmowanie ogłoszeń, pakietów do stacji
 // z dowodem i dowodów pakietów wysłanych, wysyłanie pakietu okazjonalnego z potwierdzeniem.
-// Przekazywanie i zapytania o trasę: dalsze kroki R2. Wszystkie tablice mają stały rozmiar; czas w ms
+// Zapytania o trasę (rnstransport.path.request): odpowiedzi dla celu stacji i celów z trasą, własne
+// zapytania. Przekazywanie: dalszy krok R2. Wszystkie tablice mają stały rozmiar; czas w ms
 // podaje wywołujący (licznik pracy stacji).
 #pragma once
 
@@ -20,6 +21,21 @@ constexpr size_t RECEIPTS_MAX = 8;      // potwierdzenia czekające na dowód (d
 constexpr uint8_t PATHFINDER_M = 128;   // RNS/Transport.py: PATHFINDER_M
 constexpr uint32_t PATHFINDER_E_S = 60UL * 60 * 24 * 7;   // RNS/Transport.py: PATHFINDER_E (tydzień)
 constexpr uint8_t CONTEXT_PATH_RESPONSE = 0x0B;           // RNS/Packet.py: PATH_RESPONSE
+constexpr uint8_t PATHFINDER_R = 1;                       // RNS/Transport.py: PATHFINDER_R (ponowienia)
+constexpr uint32_t PATHFINDER_G_MS = 5000;                // PATHFINDER_G
+constexpr uint32_t PATHFINDER_RW_MS = 500;                // PATHFINDER_RW
+constexpr uint8_t LOCAL_REBROADCASTS_MAX = 2;             // LOCAL_REBROADCASTS_MAX
+constexpr uint32_t PATH_REQUEST_GRACE_MS = 400;           // PATH_REQUEST_GRACE
+constexpr uint32_t PATH_REQUEST_MI_MS = 20000;            // PATH_REQUEST_MI: odstęp własnych zapytań o ten sam cel
+// Odpowiedź na zapytanie o cel stacji najwyżej raz na sekundę (odstępstwo: każda wymaga podpisu Ed25519;
+// odpowiedź jest rozgłaszana, więc słyszą ją wszyscy pytający).
+constexpr uint32_t OWN_RESPONSE_MIN_MS = 1000;
+constexpr size_t ANNOUNCE_TABLE_MAX = 16;   // tablica retransmisji ogłoszeń (reticulum-core.md, budżet RAM)
+constexpr size_t PATH_TAGS_MAX = 128;       // znaczniki ostatnich zapytań o trasę (Python: 2 × 16 000)
+constexpr size_t OWN_REQUESTS_MAX = 8;      // cele ostatnich własnych zapytań o trasę
+constexpr size_t PATH_REQUEST_SIZE = 3 * TRUNCATED_HASH_SIZE;   // cel, identyfikator transportu, znacznik
+// Dane aplikacji ogłoszenia własnego (bez ratchetu) do ANNOUNCE_FORWARDABLE_SIZE.
+constexpr size_t OWN_APP_DATA_MAX = ANNOUNCE_FORWARDABLE_SIZE - ANNOUNCE_MIN_SIZE;
 
 struct TransportHooks {
     // Pakiet do nadania przez interfejs; fałsz: interfejs odmówił (wtedy nic nie jest zapamiętane).
@@ -36,6 +52,8 @@ struct TransportHooks {
     // Zgoda na weryfikację podpisu ogłoszenia, pytana tuż przed nią (po tanich odrzuceniach); fałsz:
     // ogłoszenie odpada bez kryptografii. Limit pracy procesora po stronie stacji, bez odpowiednika w Pythonie.
     bool (*mayVerify)(void* context) = nullptr;
+    // Bajty losowe (RNS: os.urandom) dla odpowiedzi na zapytanie o trasę do celu stacji; fałsz: brak.
+    bool (*random)(uint8_t* out, size_t length, void* context) = nullptr;
     void* context = nullptr;
 };
 
@@ -50,6 +68,12 @@ struct TransportCounters {
     uint32_t delivered = 0;
     uint32_t timedOut = 0;
     uint32_t tableFailed = 0; // zapis albo odczyt wpisu tablicy nieudany (pełna tablica celów chronionych, błąd pamięci)
+    uint32_t pathRequests = 0;    // zapytania o trasę przyjęte (bez duplikatów znacznika)
+    uint32_t pathAnswered = 0;    // z nich z odpowiedzią (cel stacji albo trasa znana)
+    uint32_t pathResponses = 0;   // wysłane odpowiedzi (ogłoszenia PATH_RESPONSE)
+    uint32_t pathLimited = 0;     // zapytania o cel stacji bez odpowiedzi (OWN_RESPONSE_MIN_MS)
+    uint32_t announceTableFull = 0;   // retransmisja odrzucona przy pełnej tablicy ogłoszeń
+    uint32_t requestsSent = 0;    // własne zapytania o trasę
 };
 
 enum class SendResult : uint8_t { SENT, UNKNOWN, TOO_LARGE, RECEIPTS_FULL, REFUSED };
@@ -74,8 +98,13 @@ public:
     SendResult send(const uint8_t destination[TRUNCATED_HASH_SIZE], const uint8_t* data, size_t length,
                     const uint8_t ephemeralKey[KEY_SIZE / 2], const uint8_t iv[16], uint32_t handle, uint64_t timeoutMs,
                     uint64_t nowMs);
+    // RNS/Transport.py: Transport.request_path węzła z transportem: zapytanie z identyfikatorem transportu
+    // stacji i znacznikiem tag. Fałsz: zapytanie o ten cel w ostatnich PATH_REQUEST_MI_MS (odstępstwo,
+    // tabela różnic) albo interfejs odmówił.
+    bool requestPath(const uint8_t destination[TRUNCATED_HASH_SIZE], const uint8_t tag[TRUNCATED_HASH_SIZE], uint64_t nowMs);
     // RNS/Packet.py: PacketReceipt.check_timeout dla czekających potwierdzeń; RNS/Transport.py: jobs
-    // (trasy nieużywane przez DESTINATION_TIMEOUT wygasają, sprawdzane raz na sekundę).
+    // (retransmisje z tablicy ogłoszeń; trasy nieużywane przez DESTINATION_TIMEOUT wygasają, sprawdzane raz
+    // na sekundę).
     void poll(uint64_t nowMs);
 
     // Wpis znanego celu (odczyt z pamięci trwałej ze sprawdzeniem); fałsz, gdy cel nieznany.
@@ -89,6 +118,7 @@ public:
     uint32_t tableCorrupt() const { return table_.corrupt(); }   // gniazda tablicy z błędną treścią od startu
     uint32_t tableWrites() const { return table_.writes(); }
     size_t receiptsPending() const;
+    size_t announceTable() const;
     size_t hashes() const { return hashlist_.size(); }
     const TransportCounters& counters() const { return counters_; }
     void setLimit(size_t limit) { table_.setLimit(limit); }   // próby: mniejsza tablica znanych celów (1..KNOWN_MAX)
@@ -102,7 +132,22 @@ private:
         uint8_t publicKey[KEY_SIZE];   // tożsamość celu z chwili wysłania (PacketReceipt.destination)
         uint64_t deadlineMs;
     };
+    // RNS/Transport.py: announce_table (bez pakietu: ogłoszenie z pamięci podręcznej tablicy celów).
+    struct AnnounceEntry {
+        bool used;
+        bool blockRebroadcasts;   // odpowiedź na zapytanie o trasę: kontekst PATH_RESPONSE
+        uint8_t retries;
+        uint8_t hops;
+        uint8_t localRebroadcasts;
+        uint8_t destination[TRUNCATED_HASH_SIZE];
+        uint64_t retransmitMs;
+    };
     bool emit(const uint8_t* raw, size_t length, bool rememberHash);
+    bool ownAnnounce(const uint8_t random[5], uint64_t nowMs, bool pathResponse);
+    void inboundPlain(const Packet& packet, const uint8_t* raw, size_t length, uint64_t nowMs);
+    void pathRequest(const uint8_t destination[TRUNCATED_HASH_SIZE], const uint8_t* requestor, uint64_t nowMs);
+    bool schedule(const uint8_t destination[TRUNCATED_HASH_SIZE], uint8_t hops, uint64_t atMs, uint8_t retries, bool block);
+    void retransmit(AnnounceEntry& entry, uint64_t nowMs);
     void inboundAnnounce(const Packet& packet, const uint8_t hash[HASH_SIZE], uint64_t nowMs);
     void inboundData(const Packet& packet, const uint8_t hash[HASH_SIZE]);
     void inboundProof(const Packet& packet);
@@ -117,6 +162,21 @@ private:
     Table table_;
     uint32_t cullS_ = 0;   // ostatni przegląd wygasania tras
     Receipt receipts_[RECEIPTS_MAX] = {};
+    AnnounceEntry announces_[ANNOUNCE_TABLE_MAX] = {};
+    uint64_t pathTags_[PATH_TAGS_MAX] = {};   // 8 B skrótu (cel + znacznik), pierścień
+    size_t pathTagNext_ = 0;
+    struct OwnRequest {
+        uint8_t destination[TRUNCATED_HASH_SIZE];
+        uint64_t atMs;
+    };
+    OwnRequest ownRequests_[OWN_REQUESTS_MAX] = {};
+    uint8_t pathRequestDestination_[TRUNCATED_HASH_SIZE] = {};   // cel PLAIN "rnstransport.path.request"
+    // Ogłoszenie własne: dane aplikacji z ostatniego announce() (Destination.default_app_data dla odpowiedzi
+    // na zapytania o trasę) i bufor danych ogłoszenia (poza stosem).
+    uint8_t ownAppData_[OWN_APP_DATA_MAX] = {};
+    size_t ownAppDataLength_ = 0;
+    uint8_t ownAnnounce_[ANNOUNCE_FORWARDABLE_SIZE] = {};
+    uint64_t ownResponseMs_ = 0;   // ostatnia odpowiedź na zapytanie o cel stacji (+1, 0: brak)
     HashList hashlist_;
     TransportCounters counters_;
 };
