@@ -24,7 +24,8 @@
 //   z begin().
 // - zapytania o trasę (etap R2): odpowiedzi dla celu stacji i celów z trasą (tablica retransmisji
 //   ogłoszeń 16 wpisów), własne zapytania z requestPath(), sendReady() i send() przy nieznanym celu
-//   (najwyżej jedno na cel na 20 s), w kolejce P1 jako ruch własny (Hint::OWN);
+//   (najwyżej jedno na cel na 20 s), w kolejce P1 jako ruch własny (Hint::OWN); kolejne zapytanie o cel
+//   bez odpowiedzi czeka na jego ogłoszenie jak w Pythonie (inflight_path_requests);
 // - przekazywanie (etap R2): pakiety HEADER_2 ze stacją jako następnym skokiem według tablicy tras,
 //   dowody według tablicy odwrotnej (32 wpisy), retransmisja przyjętych ogłoszeń; klasę w kolejce P1
 //   (K1, K2, ogłoszenia) ustala p1iface z nagłówka, jak dla portu.
@@ -332,6 +333,7 @@ bool begin(journal::Storage& storage, Radio& r, const uint8_t ifacKey[16], uint6
     framTable.fram = &storage;
     transport.begin(privateKey, publicKeyBytes, identityBytes, nodeMode ? nullptr : addressBytes, nameHashBytes, th, framTable,
                     clockMs);
+    transport.setBitrate(p1iface::declaredBitrate());   // Interface.bitrate interfejsu P1 (odkrycie trasy)
     started = true;
     rememberReceivers();
     log("rns: Reticulum core (R2): P1 interface, announces, packets, proofs, table in FRAM");
@@ -589,7 +591,7 @@ size_t interfaceJson(char* out, size_t size) {
                            "\"k2_dest\":%lu,\"pr_limited\":%lu,\"pool_ms\":%lu,\"pr_ms\":%lu,\"rx_malformed\":%lu,\"rx_duplicate\":%lu,"
                            "\"rx_ignored\":%lu,\"rx_invalid\":%lu,\"rx_queue_full\":%lu,\"ann_limited\":%lu,\"table_corrupt\":%lu,"
                            "\"pr_in\":%lu,\"pr_answered\":%lu,\"pr_responses\":%lu,\"pr_sent\":%lu,\"ann_table_full\":%lu,"
-                           "\"fwd\":%lu,\"fwd_no_path\":%lu,\"proof_fwd\":%lu,\"rev_full\":%lu,\"ann_rebroadcast\":%lu",
+                           "\"fwd\":%lu,\"fwd_no_path\":%lu,\"proof_fwd\":%lu,\"rev_full\":%lu,\"ann_rebroadcast\":%lu,\"pr_gated\":%lu",
                            (unsigned)queue.queued(), (unsigned)queue.held(), (unsigned long)c.queued, (unsigned long)c.full,
                            (unsigned long)c.tooLarge, (unsigned long)c.announcesHeld, (unsigned long)c.announcesDropped,
                            (unsigned long)c.announcesExpired, (unsigned long)c.sent, (unsigned long)c.sendFailed,
@@ -601,7 +603,7 @@ size_t interfaceJson(char* out, size_t size) {
                            (unsigned long)t.pathRequests, (unsigned long)t.pathAnswered, (unsigned long)t.pathResponses,
                            (unsigned long)t.requestsSent, (unsigned long)t.announceTableFull, (unsigned long)t.forwarded,
                            (unsigned long)t.noPath, (unsigned long)t.proofsForwarded, (unsigned long)t.reverseFull,
-                           (unsigned long)t.rebroadcasts);
+                           (unsigned long)t.rebroadcasts, (unsigned long)t.pathGated);
     return n < 0 ? 0 : static_cast<size_t>(n);
 }
 

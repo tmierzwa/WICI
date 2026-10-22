@@ -73,7 +73,8 @@ jobs:
         run: python -m unittest tests.test_rnscore_lxmf -v
   interop:
     # Stos stacji wobec Reticulum w Pythonie (D19): tools/rns_interop.py i tools/rns_osp_node.py na porcie,
-    # rns_interop.py w krokach, które rdzeń już ma (host-core, tests/test_rns_stack.py: CORE_STEPS).
+    # rns_interop.py w krokach, które rdzeń już ma (host-core, tests/test_rns_stack.py: CORE_STEPS), próby
+    # różnicowe transportu rdzenia (tools/rns_differential.py).
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
@@ -105,3 +106,8 @@ jobs:
       - name: Core LXMF vectors match LXMF in Python
         run: |
           WICI_RNS_PYTHON="$RUNNER_TEMP/rns/bin/python" python -m unittest tests.test_rnscore_lxmf.VectorFileTests -v
+      - name: Core transport against Reticulum in Python on the same traffic (differential)
+        env:
+          WICI_RNS_SANITIZE: '1'
+        run: |
+          WICI_RNS_PYTHON="$RUNNER_TEMP/rns/bin/python" python -m unittest tests.test_rns_differential -v

@@ -221,6 +221,7 @@ void Transport::inboundAnnounce(const Packet& packet, const uint8_t hash[HASH_SI
     }
     if (!add) return;
     ++counters_.announces;
+    discoveryResponse(packet, nowMs);
     // _inbound: przyjęte ogłoszenie (poza odpowiedzią na zapytanie o trasę) do tablicy ogłoszeń bez
     // ponowień, z losową zwłoką do PATHFINDER_RW (RNS.rand()).
     if (packet.context != CONTEXT_PATH_RESPONSE) {
@@ -536,46 +537,114 @@ void Transport::inboundPlain(const Packet& packet, const uint8_t* raw, size_t le
     }
     pathTags_[pathTagNext_] = key;
     pathTagNext_ = (pathTagNext_ + 1) % PATH_TAGS_MAX;
+    // preprocess_inbound: zapytanie o cel, o który poprzednie zapytanie jest jeszcze „w drodze”
+    // (bez odpowiedzi), zostaje bez odpowiedzi i czeka na ogłoszenie celu (discovery_path_requests).
+    Inflight* f = findInflight(packet.data, nowMs);
+    if (f && f->atMs) {
+        if (!f->discoveryUntilMs) f->discoveryUntilMs = nowMs + (discoveryTimeoutMs_ ? discoveryTimeoutMs_ : PATH_REQUEST_TIMEOUT_MS);
+        ++counters_.pathGated;
+        return;
+    }
+    if (!f) {   // wolny, przeterminowany albo najstarszy wpis
+        f = &inflight_[0];
+        for (Inflight& x : inflight_) {
+            if (!x.atMs && !x.discoveryUntilMs) {
+                f = &x;
+                break;
+            }
+            if (x.atMs < f->atMs) f = &x;
+        }
+        memset(f, 0, sizeof(*f));
+        memcpy(f->destination, packet.data, TRUNCATED_HASH_SIZE);
+    }
+    f->atMs = nowMs ? nowMs : 1;
     uint8_t hash[HASH_SIZE];
     packetHash(raw, length, hash);
     hashlist_.add(hash);
     ++counters_.pathRequests;
-    pathRequest(packet.data, requestor, nowMs);
+    if (pathRequest(packet.data, requestor, nowMs)) f->atMs = 0;   // path_request: answered
+}
+
+// Wpis zapytania o cel z żywym zapytaniem „w drodze” albo oczekiwaniem odkrycia; przeterminowane
+// części wpisu skasowane (Transport.jobs).
+Transport::Inflight* Transport::findInflight(const uint8_t destination[TRUNCATED_HASH_SIZE], uint64_t nowMs) {
+    for (Inflight& f : inflight_) {
+        if (f.atMs && nowMs - f.atMs > PATH_REQUEST_GATE_MS) f.atMs = 0;
+        if (f.discoveryUntilMs && nowMs > f.discoveryUntilMs) f.discoveryUntilMs = 0;
+    }
+    for (Inflight& f : inflight_) {
+        if ((f.atMs || f.discoveryUntilMs) && memcmp(f.destination, destination, TRUNCATED_HASH_SIZE) == 0) return &f;
+    }
+    return nullptr;
+}
+
+// RNS/Transport.py: _inbound (ANNOUNCE przyjęte do trasy): cel, na który czeka zapytanie
+// (discovery_path_requests), dostaje od razu odpowiedź HEADER_2 z tym ogłoszeniem; zapytanie „w drodze”
+// o ten cel się kończy.
+void Transport::discoveryResponse(const Packet& packet, uint64_t nowMs) {
+    Inflight* f = findInflight(packet.destinationHash, nowMs);
+    if (!f) return;
+    const bool waiting = f->discoveryUntilMs != 0;
+    f->atMs = f->discoveryUntilMs = 0;
+    if (!waiting) return;
+    Packet out = {};
+    out.headerType = HEADER_2;
+    out.transportType = TRANSPORT;
+    out.destinationType = SINGLE;
+    out.packetType = ANNOUNCE;
+    out.contextFlag = packet.contextFlag;
+    out.hops = packet.hops;
+    out.context = CONTEXT_PATH_RESPONSE;
+    memcpy(out.transportId, identityHash_, TRUNCATED_HASH_SIZE);
+    memcpy(out.destinationHash, packet.destinationHash, TRUNCATED_HASH_SIZE);
+    out.data = packet.data;
+    out.dataLength = packet.dataLength;
+    uint8_t raw[MTU];
+    const size_t rawLength = pack(out, raw, sizeof(raw));
+    if (rawLength && emit(raw, rawLength, true)) ++counters_.pathResponses;
+}
+
+void Transport::setBitrate(uint32_t bitsPerSecond) {
+    // medium_path_timeout: dwa przebiegi MTU przy najwolniejszym interfejsie i DEFAULT_PER_HOP_TIMEOUT (6 s).
+    const uint32_t bps = bitsPerSecond < 5 ? 5 : bitsPerSecond;   // Reticulum.MINIMUM_BITRATE
+    const uint64_t medium = bitsPerSecond ? 2ULL * MTU * 8 * 1000 / bps + 6000 : 0;
+    discoveryTimeoutMs_ = static_cast<uint32_t>(medium > PATH_REQUEST_TIMEOUT_MS ? medium : PATH_REQUEST_TIMEOUT_MS);
 }
 
 // RNS/Transport.py: path_request (węzeł z transportem, bez klientów lokalnych i bez szukania celów
-// nieznanych, które dotyczy tylko trybów interfejsu innych niż pełny).
-void Transport::pathRequest(const uint8_t destination[TRUNCATED_HASH_SIZE], const uint8_t* requestor, uint64_t nowMs) {
+// nieznanych, które dotyczy tylko trybów interfejsu innych niż pełny). Prawda: zapytanie obsłużone
+// (answered: cel stacji albo cel z trasą, także bez nadania).
+bool Transport::pathRequest(const uint8_t destination[TRUNCATED_HASH_SIZE], const uint8_t* requestor, uint64_t nowMs) {
     if (address_ && memcmp(destination, address_, TRUNCATED_HASH_SIZE) == 0) {
         // Cel stacji: Destination.announce(path_response=True) od razu, z nowym skrótem losowym i podpisem;
         // najwyżej raz na OWN_RESPONSE_MIN_MS (odstępstwo, tabela różnic).
         ++counters_.pathAnswered;
         if (ownResponseMs_ && nowMs + 1 - ownResponseMs_ < OWN_RESPONSE_MIN_MS) {
             ++counters_.pathLimited;
-            return;
+            return true;
         }
         // Bez miejsca w interfejsie (cisza, pełna kolejka, brak IFAC) bez pracy na podpis.
         if (!mayTransmit()) {
             ++counters_.pathLimited;
-            return;
+            return true;
         }
         ownResponseMs_ = nowMs + 1;
         // Ogłoszenie podpisane w ostatnich OWN_RESPONSE_REUSE_MS idzie jeszcze raz (jego skrót losowy jest
         // dla pytającego nowy, jeśli go nie słyszał), bez nowego podpisu.
         if (ownAnnounceLength_ && nowMs - ownAnnounceMs_ < OWN_RESPONSE_REUSE_MS) {
             if (sendOwnAnnounce(true)) ++counters_.pathResponses;
-            return;
+            return true;
         }
         uint8_t random[5];
-        if (!hooks_.random || !hooks_.random(random, sizeof(random), hooks_.context)) return;
+        if (!hooks_.random || !hooks_.random(random, sizeof(random), hooks_.context)) return true;
         if (ownAnnounce(random, nowMs, true)) ++counters_.pathResponses;
-        return;
+        return true;
     }
     KnownDestination e;
-    if (!lookup(destination, e, nowMs) || !e.hasPath) return;   // trasa nieznana: bez odpowiedzi
+    if (!lookup(destination, e, nowMs) || !e.hasPath) return false;   // trasa nieznana: bez odpowiedzi
     ++counters_.pathAnswered;
-    if (!e.announceLength) return;                    // get_cached_packet: brak ogłoszenia w pamięci
-    if (requestor && memcmp(requestor, e.nextHop, TRUNCATED_HASH_SIZE) == 0) return;   // następny skok pyta
+    if (!e.announceLength) return true;               // get_cached_packet: brak ogłoszenia w pamięci
+    if (requestor && memcmp(requestor, e.nextHop, TRUNCATED_HASH_SIZE) == 0) return true;   // następny skok pyta
     // held_announces: retransmisja ogłoszenia tego celu czekająca w tablicy wraca po wysłaniu odpowiedzi
     // (retransmit); przy pełnym miejscu na wstrzymane przepada (licznik).
     if (AnnounceEntry* pending = findAnnounce(destination)) {
@@ -592,6 +661,7 @@ void Transport::pathRequest(const uint8_t destination[TRUNCATED_HASH_SIZE], cons
     }
     // announce_table: odpowiedź po PATH_REQUEST_GRACE z liczbą skoków trasy (PATHFINDER_R: jedno nadanie).
     schedule(destination, e.hops, nowMs + PATH_REQUEST_GRACE_MS, PATHFINDER_R, true);
+    return true;
 }
 
 // Wpis tablicy ogłoszeń: wpis tego celu zastąpiony (jak słownik w Pythonie); przy pełnej tablicy nowy
@@ -777,6 +847,8 @@ void Transport::clear() {
     clean(announces_, sizeof(announces_));
     clean(held_, sizeof(held_));
     clean(reverse_, sizeof(reverse_));
+    clean(inflight_, sizeof(inflight_));
+    discoveryTimeoutMs_ = 0;
     clean(pathTags_, sizeof(pathTags_));
     clean(ownRequests_, sizeof(ownRequests_));
     clean(ownAppData_, sizeof(ownAppData_));

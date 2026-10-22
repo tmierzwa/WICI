@@ -895,6 +895,27 @@ class CoreTests(unittest.TestCase):
                          [("t_clock", (1100 + 200 * i).to_bytes(8, "big")) for i in range(10)] + [("t_held", b"")])
         self.assertEqual((lines[4], lines[-1]), ("1", "0"))
 
+    def test_path_request_gate(self):
+        # RNS/Transport.py: preprocess_inbound (inflight_path_requests): drugie zapytanie o cel bez trasy w ciągu
+        # 45 s zostaje bez odpowiedzi i czeka (discovery_path_requests); ogłoszenie celu idzie wtedy od razu jako
+        # odpowiedź HEADER_2 z identyfikatorem stacji. Po PATH_REQUEST_TIMEOUT (15 s bez przepływności interfejsu)
+        # oczekiwanie wygasa: ogłoszenie bez odpowiedzi.
+        identity = self.station_identity()
+        ann = self.announce_of(bytes([36]) * 64)
+        dest = ann[2:18]
+        ask = [("t_begin", self.STATION), ("t_in", self.path_request(dest, b"A" * 16)), ("t_in", self.path_request(dest, b"B" * 16)),
+               ("t_out", b"")]
+        lines = self.ask(ask + [("t_in", ann), ("t_out", b"")])
+        self.assertEqual(lines[3], "-")
+        self.assertEqual(lines[5], self.via(ann[:18] + bytes([0x0B]) + ann[19:], identity, 1).hex())
+        lines = self.ask(ask + [("t_clock", (16001).to_bytes(8, "big")), ("t_in", ann), ("t_out", b"")])
+        self.assertEqual(lines[-1], "-")
+        # Po 45 s pierwsze zapytanie już nie jest „w drodze”: następne zapytanie jest nowym pierwszym.
+        lines = self.ask([("t_begin", self.STATION), ("t_in", self.path_request(dest, b"A" * 16)),
+                          ("t_clock", (46001).to_bytes(8, "big")), ("t_in", self.path_request(dest, b"B" * 16)),
+                          ("t_in", ann), ("t_out", b"")])
+        self.assertEqual(lines[-1], "-")
+
     def test_path_request_filter(self):
         # Bez znacznika: odrzucone; PLAIN po więcej niż 1 skoku i ogłoszenie PLAIN: odpadają (packet_filter);
         # znacznik dłuższy niż 16 B liczy się po pierwszych 16 B.

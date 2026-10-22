@@ -80,6 +80,7 @@ struct TransportState {
     uint8_t nameHash[rnscore::NAME_HASH_SIZE] = {};
     std::vector<uint8_t> pinned;   // jeden cel chroniony albo pusty
     std::vector<uint8_t> emitted;  // ostatni pakiet do nadania
+    std::vector<std::vector<uint8_t>> sent;   // wszystkie pakiety do nadania od ostatniego t_out
     std::string events;            // wywołania announce, packet i receipt od ostatniego polecenia
     bool accept = true;
     bool busy = false;   // interfejs nie przyjmie pakietu (mayTransmit)
@@ -99,6 +100,7 @@ bool onMayTransmit(void*) { return !state->busy; }
 
 bool onTransmit(const uint8_t* raw, size_t length, void*) {
     state->emitted.assign(raw, raw + length);
+    state->sent.emplace_back(raw, raw + length);
     return true;
 }
 void onAnnounce(const uint8_t destination[16], const uint8_t* appData, size_t length, void*) {
@@ -382,6 +384,15 @@ int main() {
             printf("%u %u %u %u %u %u %u\n", c.pathRequests, c.pathAnswered, c.pathResponses, c.pathLimited, c.requestsSent,
                    c.announceTableFull,
                    static_cast<unsigned>(state->transport.announceTable()));
+        } else if (state && command == "t_out") {
+            // wszystkie pakiety do nadania od poprzedniego t_out, rozdzielone spacjami, albo "-"
+            std::string out;
+            for (const std::vector<uint8_t>& raw : state->sent) {
+                if (!out.empty()) out += " ";
+                printHexTo(out, raw.data(), raw.size());
+            }
+            state->sent.clear();
+            printf("%s\n", out.empty() ? "-" : out.c_str());
         } else if (state && command == "t_forward") {
             // transport: przekazane, bez trasy, dowody przekazane, tablica odwrotna pełna, retransmisje
             // ogłoszeń, wpisy tablicy odwrotnej, wpisy tablicy ogłoszeń
