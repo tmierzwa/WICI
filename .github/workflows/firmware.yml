@@ -8,9 +8,9 @@ name: Firmware
 on:
   push:
     branches: [main]
-    paths: ['firmware/**', 'tests/test_rns_*.py', 'tests/native/rns_*', '.github/workflows/firmware.yml']
+    paths: ['firmware/**', 'tests/test_rns_*.py', 'tests/native/rns_*', 'tests/vectors/**', '.github/workflows/firmware.yml']
   pull_request:
-    paths: ['firmware/**', 'tests/test_rns_*.py', 'tests/native/rns_*', '.github/workflows/firmware.yml']
+    paths: ['firmware/**', 'tests/test_rns_*.py', 'tests/native/rns_*', 'tests/vectors/**', '.github/workflows/firmware.yml']
 permissions:
   contents: read
 jobs:
@@ -77,3 +77,6 @@ jobs:
       - name: Station stack against Reticulum in Python
         run: |
           WICI_PIO="$(command -v pio)" WICI_RNS_PYTHON="$RUNNER_TEMP/rns/bin/python" python -m unittest tests.test_rns_stack -v
+      - name: Core test vectors match Reticulum in Python
+        run: |
+          WICI_RNS_PYTHON="$RUNNER_TEMP/rns/bin/python" python -m unittest tests.test_rns_vectors -v
