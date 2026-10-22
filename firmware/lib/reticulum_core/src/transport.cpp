@@ -313,9 +313,24 @@ bool Transport::ownAnnounce(const uint8_t random[5], uint64_t nowMs, bool pathRe
     packet.packetType = ANNOUNCE;
     packet.context = pathResponse ? CONTEXT_PATH_RESPONSE : 0;
     memcpy(packet.destinationHash, address_, TRUNCATED_HASH_SIZE);
-    packet.dataLength = buildAnnounce(privateKey_, publicKey_, address_, nameHash_, randomHash, nullptr, ownAppData_,
-                                      ownAppDataLength_, ownAnnounce_, sizeof(ownAnnounce_));
+    ownAnnounceLength_ = buildAnnounce(privateKey_, publicKey_, address_, nameHash_, randomHash, nullptr, ownAppData_,
+                                       ownAppDataLength_, ownAnnounce_, sizeof(ownAnnounce_));
+    ownAnnounceMs_ = nowMs;
+    return sendOwnAnnounce(pathResponse);
+}
+
+// Pakiet z danych ostatniego ogłoszenia własnego (kontekst nie jest podpisany, więc te same dane służą
+// zwykłemu ogłoszeniu i odpowiedzi na zapytanie o trasę).
+bool Transport::sendOwnAnnounce(bool pathResponse) {
+    Packet packet = {};
+    packet.headerType = HEADER_1;
+    packet.transportType = BROADCAST;
+    packet.destinationType = SINGLE;
+    packet.packetType = ANNOUNCE;
+    packet.context = pathResponse ? CONTEXT_PATH_RESPONSE : 0;
+    memcpy(packet.destinationHash, address_, TRUNCATED_HASH_SIZE);
     packet.data = ownAnnounce_;
+    packet.dataLength = ownAnnounceLength_;
     uint8_t raw[MTU];
     const size_t rawLength = packet.dataLength ? pack(packet, raw, sizeof(raw)) : 0;
     return rawLength && emit(raw, rawLength, true);
@@ -456,9 +471,20 @@ void Transport::pathRequest(const uint8_t destination[TRUNCATED_HASH_SIZE], cons
             ++counters_.pathLimited;
             return;
         }
+        // Bez miejsca w interfejsie (cisza, pełna kolejka, brak IFAC) bez pracy na podpis.
+        if (!mayTransmit()) {
+            ++counters_.pathLimited;
+            return;
+        }
+        ownResponseMs_ = nowMs + 1;
+        // Ogłoszenie podpisane w ostatnich OWN_RESPONSE_REUSE_MS idzie jeszcze raz (jego skrót losowy jest
+        // dla pytającego nowy, jeśli go nie słyszał), bez nowego podpisu.
+        if (ownAnnounceLength_ && nowMs - ownAnnounceMs_ < OWN_RESPONSE_REUSE_MS) {
+            if (sendOwnAnnounce(true)) ++counters_.pathResponses;
+            return;
+        }
         uint8_t random[5];
         if (!hooks_.random || !hooks_.random(random, sizeof(random), hooks_.context)) return;
-        ownResponseMs_ = nowMs + 1;
         if (ownAnnounce(random, nowMs, true)) ++counters_.pathResponses;
         return;
     }
@@ -556,21 +582,25 @@ bool Transport::requestPath(const uint8_t destination[TRUNCATED_HASH_SIZE], cons
     return true;
 }
 
-void Transport::poll(uint64_t nowMs) {
+void Transport::poll(uint64_t nowMs, bool transmit) {
     for (Receipt& r : receipts_) {
         if (!r.used || nowMs < r.deadlineMs) continue;
         r.used = false;
         ++counters_.timedOut;
         if (hooks_.receipt) hooks_.receipt(r.handle, false, hooks_.context);
     }
+    // Każda retransmisja to odczyt gniazda i podpis IFAC: najwyżej jedna na wywołanie, najwcześniejsza
+    // zaległa; reszta czeka na kolejne obiegi pętli (Python nadaje wszystkie zaległe naraz w jobs).
+    AnnounceEntry* due = nullptr;
     for (AnnounceEntry& a : announces_) {
         if (!a.used) continue;
         if ((a.retries > 0 && a.retries >= LOCAL_REBROADCASTS_MAX) || a.retries > PATHFINDER_R) {
             a.used = false;   // limit lokalnych powtórek albo ponowień osiągnięty
-        } else if (nowMs > a.retransmitMs) {
-            retransmit(a, nowMs);
+        } else if (nowMs > a.retransmitMs && (!due || a.retransmitMs < due->retransmitMs)) {
+            due = &a;
         }
     }
+    if (due && transmit && mayTransmit()) retransmit(*due, nowMs);
     // Transport.jobs: trasa nieużywana dłużej niż DESTINATION_TIMEOUT znika z path_table; wpis znanego
     // celu (tożsamość, ratchet) zostaje, jak known_destinations. Przegląd indeksu raz na sekundę.
     const uint32_t nowS = seconds(nowMs);
@@ -608,6 +638,8 @@ void Transport::clear() {
     clean(ownRequests_, sizeof(ownRequests_));
     clean(ownAppData_, sizeof(ownAppData_));
     clean(ownAnnounce_, sizeof(ownAnnounce_));
+    ownAnnounceLength_ = 0;
+    ownAnnounceMs_ = 0;
     pathTagNext_ = ownAppDataLength_ = 0;
     ownResponseMs_ = 0;
     hashlist_.clear();

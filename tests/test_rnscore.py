@@ -848,6 +848,36 @@ class CoreTests(unittest.TestCase):
         self.assertEqual([self.parsed(lines[i])[3] for i in (5, 6, 7, 8, 9)], ["-"] * 5)
         self.assertEqual(lines[10], "3 2 1 0 0 0 0")
 
+    def test_path_request_for_station_reuses_signature(self):
+        # Odpowiedź w ciągu 30 s od ogłoszenia własnego: te same dane (bez nowego podpisu) z kontekstem
+        # PATH_RESPONSE. Interfejs bez miejsca (mayTransmit): bez odpowiedzi i bez podpisu, licznik limitu.
+        address = bytes.fromhex(self.ask([("t_begin", self.STATION)])[0])
+        lines = self.ask([("t_begin", self.STATION), ("t_announce", bytes(5) + b"WICI"),
+                          ("t_clock", (2000).to_bytes(8, "big")), ("t_in", self.path_request(address, b"A" * 16)),
+                          ("t_busy", b"\x01"), ("t_clock", (4000).to_bytes(8, "big")),
+                          ("t_in", self.path_request(address, b"B" * 16)), ("t_paths", b"")])
+        own, reply = self.fields_of(self.parsed(lines[1])[3]), self.fields_of(self.parsed(lines[3])[3])
+        self.assertEqual(reply[9], own[9])               # te same dane ogłoszenia i podpis
+        self.assertEqual(reply[8], "11")                 # kontekst PATH_RESPONSE
+        self.assertEqual(self.parsed(lines[6])[3], "-")
+        self.assertEqual(lines[7], "2 2 1 1 0 0 0")
+
+    def test_retransmissions_one_per_poll(self):
+        # Dwie odpowiedzi z pamięci podręcznej zaległe naraz: poll() nadaje najwyżej jedną (najwcześniejszą),
+        # a poll() obiegu z kryptografią odbioru (bez nadawania) żadnej; interfejs zajęty też wstrzymuje.
+        keys = [bytes([51]) * 64, bytes([52]) * 64]
+        announces = [self.announce_of(k) for k in keys]
+        lines = self.ask([("t_begin", self.STATION), ("t_in", announces[0]), ("t_in", announces[1]),
+                          ("t_in", self.path_request(announces[1][2:18], b"P" * 16)),
+                          ("t_in", self.path_request(announces[0][2:18], b"Q" * 16)),
+                          ("t_poll", (1500).to_bytes(8, "big")), ("t_busy", b"\x01"), ("t_clock", (1501).to_bytes(8, "big")),
+                          ("t_busy", b"\x00"), ("t_clock", (1502).to_bytes(8, "big")), ("t_clock", (1503).to_bytes(8, "big")),
+                          ("t_clock", (1504).to_bytes(8, "big"))])
+        self.assertEqual([self.parsed(lines[i])[3] for i in (5, 7)], ["-", "-"])
+        first, second = self.fields_of(self.parsed(lines[9])[3]), self.fields_of(self.parsed(lines[10])[3])
+        self.assertEqual((first[7], second[7]), (announces[1][2:18].hex(), announces[0][2:18].hex()))
+        self.assertEqual(self.parsed(lines[11])[3], "-")
+
     def test_path_request_filter(self):
         # Bez znacznika: odrzucone; PLAIN po więcej niż 1 skoku i ogłoszenie PLAIN: odpadają (packet_filter);
         # znacznik dłuższy niż 16 B liczy się po pierwszych 16 B.

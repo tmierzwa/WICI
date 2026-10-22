@@ -82,6 +82,7 @@ struct TransportState {
     std::vector<uint8_t> emitted;  // ostatni pakiet do nadania
     std::string events;            // wywołania announce, packet i receipt od ostatniego polecenia
     bool accept = true;
+    bool busy = false;   // interfejs nie przyjmie pakietu (mayTransmit)
     uint64_t nowMs = 1000;
 };
 TransportState* state = nullptr;
@@ -93,6 +94,8 @@ void printHexTo(std::string& out, const uint8_t* data, size_t length) {
         out += b;
     }
 }
+
+bool onMayTransmit(void*) { return !state->busy; }
 
 bool onTransmit(const uint8_t* raw, size_t length, void*) {
     state->emitted.assign(raw, raw + length);
@@ -337,6 +340,7 @@ int main() {
             hooks.receipt = onReceipt;
             hooks.pinned = onPinned;
             hooks.random = onRandom;
+            hooks.mayTransmit = onMayTransmit;
             state->transport.begin(state->privateKey, state->publicKey, state->identity, state->address, state->nameHash, hooks,
                                    state->table, state->nowMs);
             printHex(state->address, sizeof(state->address));
@@ -350,6 +354,7 @@ int main() {
             hooks.receipt = onReceipt;
             hooks.pinned = onPinned;
             hooks.random = onRandom;
+            hooks.mayTransmit = onMayTransmit;
             state->table.cutAfter = -1;
             state->transport.clear();
             state->transport.begin(state->privateKey, state->publicKey, state->identity, state->address, state->nameHash, hooks,
@@ -390,6 +395,16 @@ int main() {
             state->nowMs = 0;
             for (uint8_t b : data) state->nowMs = (state->nowMs << 8) | b;
             state->transport.poll(state->nowMs);
+            printTransport("ok");
+        } else if (command == "t_busy" && data.size() == 1) {
+            // interfejs zajęty (1) albo wolny (0) dla mayTransmit
+            state->busy = data[0] != 0;
+            printTransport("ok");
+        } else if (command == "t_poll" && data.size() == 8) {
+            // czas w ms (8 B) i poll() bez nadawania (obieg z kryptografią odbioru)
+            state->nowMs = 0;
+            for (uint8_t b : data) state->nowMs = (state->nowMs << 8) | b;
+            state->transport.poll(state->nowMs, false);
             printTransport("ok");
         } else if (command == "t_config" && (data.size() == 2 || data.size() == 18)) {
             // limit tablicy (1 B), przyjmowanie przez warstwę aplikacji (1 B: 0/1), opcjonalnie cel chroniony 16 B

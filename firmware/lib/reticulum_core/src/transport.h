@@ -30,6 +30,9 @@ constexpr uint32_t PATH_REQUEST_MI_MS = 20000;            // PATH_REQUEST_MI: od
 // Odpowiedź na zapytanie o cel stacji najwyżej raz na sekundę (odstępstwo: każda wymaga podpisu Ed25519;
 // odpowiedź jest rozgłaszana, więc słyszą ją wszyscy pytający).
 constexpr uint32_t OWN_RESPONSE_MIN_MS = 1000;
+// Dane ostatniego ogłoszenia własnego służą odpowiedziom na zapytania o cel stacji przez 30 s (jak okno
+// znaczników zapytań): odpowiedź bez nowego podpisu, sam kod IFAC (odstępstwo, tabela różnic).
+constexpr uint32_t OWN_RESPONSE_REUSE_MS = 30000;
 constexpr size_t ANNOUNCE_TABLE_MAX = 16;   // tablica retransmisji ogłoszeń (reticulum-core.md, budżet RAM)
 constexpr size_t PATH_TAGS_MAX = 128;       // znaczniki ostatnich zapytań o trasę (Python: 2 × 16 000)
 constexpr size_t OWN_REQUESTS_MAX = 8;      // cele ostatnich własnych zapytań o trasę
@@ -54,6 +57,9 @@ struct TransportHooks {
     bool (*mayVerify)(void* context) = nullptr;
     // Bajty losowe (RNS: os.urandom) dla odpowiedzi na zapytanie o trasę do celu stacji; fałsz: brak.
     bool (*random)(uint8_t* out, size_t length, void* context) = nullptr;
+    // Interfejs przyjmie teraz pakiet (kod IFAC, bez ciszy, miejsce w kolejce); pytany przed pracą na
+    // podpis, której wynik mógłby nie wyjść (odpowiedź własna, retransmisja). nullptr: zawsze.
+    bool (*mayTransmit)(void* context) = nullptr;
     void* context = nullptr;
 };
 
@@ -104,8 +110,9 @@ public:
     bool requestPath(const uint8_t destination[TRUNCATED_HASH_SIZE], const uint8_t tag[TRUNCATED_HASH_SIZE], uint64_t nowMs);
     // RNS/Packet.py: PacketReceipt.check_timeout dla czekających potwierdzeń; RNS/Transport.py: jobs
     // (retransmisje z tablicy ogłoszeń; trasy nieużywane przez DESTINATION_TIMEOUT wygasają, sprawdzane raz
-    // na sekundę).
-    void poll(uint64_t nowMs);
+    // na sekundę). Najwyżej jedna retransmisja na wywołanie (najwcześniejsza zaległa), żadna przy
+    // transmit = fałsz (obieg pętli stacji z krokiem odbioru, który mógł robić kryptografię).
+    void poll(uint64_t nowMs, bool transmit = true);
 
     // Wpis znanego celu (odczyt z pamięci trwałej ze sprawdzeniem); fałsz, gdy cel nieznany.
     bool lookup(const uint8_t destination[TRUNCATED_HASH_SIZE], KnownDestination& out, uint64_t nowMs);
@@ -144,6 +151,8 @@ private:
     };
     bool emit(const uint8_t* raw, size_t length, bool rememberHash);
     bool ownAnnounce(const uint8_t random[5], uint64_t nowMs, bool pathResponse);
+    bool sendOwnAnnounce(bool pathResponse);
+    bool mayTransmit() const { return !hooks_.mayTransmit || hooks_.mayTransmit(hooks_.context); }
     void inboundPlain(const Packet& packet, const uint8_t* raw, size_t length, uint64_t nowMs);
     void pathRequest(const uint8_t destination[TRUNCATED_HASH_SIZE], const uint8_t* requestor, uint64_t nowMs);
     bool schedule(const uint8_t destination[TRUNCATED_HASH_SIZE], uint8_t hops, uint64_t atMs, uint8_t retries, bool block);
@@ -176,6 +185,8 @@ private:
     uint8_t ownAppData_[OWN_APP_DATA_MAX] = {};
     size_t ownAppDataLength_ = 0;
     uint8_t ownAnnounce_[ANNOUNCE_FORWARDABLE_SIZE] = {};
+    size_t ownAnnounceLength_ = 0;   // dane ostatniego ogłoszenia własnego (0: brak)
+    uint64_t ownAnnounceMs_ = 0;     // czas ich podpisu
     uint64_t ownResponseMs_ = 0;   // ostatnia odpowiedź na zapytanie o cel stacji (+1, 0: brak)
     HashList hashlist_;
     TransportCounters counters_;

@@ -182,6 +182,11 @@ bool transmit(const uint8_t* raw, size_t length, p1iface::Hint hint) {
     if (silence == Silence::FULL || (silence == Silence::EXCEPTION && !exceptionOut)) { ++c.silenced; return false; }
     // Pełna kolejka: odmowa przed podpisem IFAC (ogłoszenia mogą jeszcze czekać na liście).
     if (p1iface::classify(raw, length) != p1iface::Kind::ANNOUNCE && queue.full()) { ++c.full; return false; }
+    // Ogłoszenie bez miejsca w kolejce i na liście oczekujących: odmowa także przed podpisem IFAC.
+    if (p1iface::classify(raw, length) == p1iface::Kind::ANNOUNCE && !queue.announceAdmits(raw, length, nowMs())) {
+        ++c.announcesDropped;
+        return false;
+    }
     uint8_t wire[p1iface::MAX_WIRE];
     const size_t wireLength = rnscore::ifacApply(ifac, raw, length, wire, sizeof(wire));
     if (!wireLength) { ++c.tooLarge; return false; }
@@ -216,6 +221,9 @@ void receiptHook(uint32_t handle, bool delivered, void*) {
 // Żeton z wiadra tuż przed weryfikacją podpisu ogłoszenia, po tanich odrzuceniach w transporcie:
 // powtórzone nagranie poprawnego ogłoszenia (IFAC przechodzi bez klucza sieci, bo kod jest
 // deterministyczny) i ogłoszenie z kolizją klucza odpadają bez żetonu i nie wyczerpują wiadra.
+// Interfejs przyjmie teraz pakiet stosu (jak transmit() przed podpisem IFAC, bez wyjątku ciszy).
+bool mayTransmitHook(void*) { return ifacOnline && silence == Silence::OFF && !queue.full(); }
+
 bool mayVerifyHook(void*) {
     if (takeVerifyToken(uptimeMs())) return true;
     ++announcesLimited;
@@ -317,6 +325,7 @@ bool begin(journal::Storage& storage, Radio& r, const uint8_t ifacKey[16], uint6
     th.pinned = pinnedHook;
     th.mayVerify = mayVerifyHook;
     th.random = randomHook;
+    th.mayTransmit = mayTransmitHook;
     framTable.fram = &storage;
     transport.begin(privateKey, publicKeyBytes, identityBytes, nodeMode ? nullptr : addressBytes, nameHashBytes, th, framTable,
                     clockMs);
@@ -381,26 +390,31 @@ __attribute__((noinline)) void ifacStep(RxSlot& slot) {
 }
 
 // Jeden krok odbioru na obieg loop(): sprawdzenie IFAC najstarszego datagramu albo, w następnym obiegu,
-// pakiet w transporcie (RNS/Transport.py: inbound po odjęciu IFAC w Interface).
-void receiveStep() {
-    if (!rxCount) return;
+// pakiet w transporcie (RNS/Transport.py: inbound po odjęciu IFAC w Interface). Prawda: krok był (mógł
+// zrobić operację asymetryczną).
+bool receiveStep() {
+    if (!rxCount) return false;
     RxSlot& slot = rx[rxHead];
-    if (!ifacOnline) { ++queue.counters().offline; rxDrop(); return; }
+    if (!ifacOnline) { ++queue.counters().offline; rxDrop(); return false; }
     if (!slot.checked) {
         ifacStep(slot);
-        return;
+        return true;
     }
     if (!transport.inbound(slot.bytes, slot.length, uptimeMs())) ++malformed;
     exceptionOut = false;
     rxDrop();
+    return true;
 }
 
 }  // namespace
 
 void loop(uint32_t) {
     if (!started || !radio) return;
-    receiveStep();
-    transport.poll(uptimeMs());   // potwierdzenia po limicie; licznik pracy nie gubi zawinięcia zegara ms
+    const bool received = receiveStep();
+    // Potwierdzenia po limicie (licznik pracy nie gubi zawinięcia zegara ms); retransmisja z podpisem IFAC
+    // tylko w obiegu bez kroku odbioru (najwyżej jedna operacja asymetryczna na obieg; licznik operacji
+    // jest tylko w budowach prób).
+    transport.poll(uptimeMs(), !received);
     const uint32_t now = nowMs();
     if (silence == Silence::OFF) queue.poll(now);   // ogłoszenia oczekujące nie wychodzą w ciszy
     else queue.tick(now);
