@@ -72,6 +72,8 @@ struct Status {
     size_t poolSize = 0;            // pula TLSF stosu
     size_t poolUsed = 0;
     size_t poolPeak = 0;
+    // System plików FRAM portu (pliki, bajty zajęte, pojemność); w rdzeniu: wpisy tablicy znanych celów,
+    // bajty ich gniazd i obszar tablicy (rnscore::TABLE_AREA).
     size_t fsFiles = 0;
     size_t fsUsedBytes = 0;
     size_t fsCapacityBytes = 0;

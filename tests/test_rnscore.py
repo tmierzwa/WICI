@@ -706,6 +706,54 @@ class CoreTests(unittest.TestCase):
         lines = self.ask([("t_begin", self.STATION), ("t_poke", bytes(4) + garbage), ("t_restart", b""), ("t_writes", b"")])
         self.assertEqual(lines[2:4], ["0 0", "0"])
 
+    def test_transport_table_read_error_keeps_entry(self):
+        # Błąd odczytu FRAM (nie CRC): wpis zostaje, wysyłka zawodzi tylko ten raz. Ogłoszenie przy błędzie
+        # odczytu odpada bez drugiego wpisu tego samego celu, a jego powtórka przechodzi.
+        key = bytes([33]) * 64
+        first = self.announce_of(key)
+        newer = self.announce_of(key, random_hash=bytes(5) + (1_790_000_100).to_bytes(5, "big"))
+        dest = first[2:18]
+        send = ("t_send", dest + self.EPHEMERAL + self.IV + (5).to_bytes(4, "big") + (60000).to_bytes(4, "big") + b"x")
+        lines = self.ask([("t_begin", self.STATION), ("t_in", first), ("t_readfail", b"\x01"), send, send, ("t_known", dest),
+                          ("t_readfail", b"\x02"), ("t_in", newer), ("t_known", dest), ("t_in", newer), ("t_known", dest),
+                          ("t_restart", b""), ("t_readfail", b"\x00")])
+        self.assertEqual((self.parsed(lines[3])[0], self.parsed(lines[4])[0]), ("unknown", "sent"))
+        self.assertNotEqual(lines[5], "none")
+        self.assertEqual(lines[8].split()[-1], first[19:].hex())
+        self.assertEqual(lines[10].split()[-1], newer[19:].hex())
+        self.assertEqual((lines[11], lines[12]), ("1 1", "0"))
+
+    def test_transport_table_damaged_key_field(self):
+        # Przekłamany bajt w polu klucza gniazda: ogłoszenie z właściwym kluczem nie jest kolizją (pełny odczyt
+        # z CRC zwalnia uszkodzone gniazdo, licznik 1) i cel wraca do tablicy.
+        key = bytes([34]) * 64
+        first = self.announce_of(key)
+        newer = self.announce_of(key, random_hash=bytes(5) + (1_790_000_100).to_bytes(5, "big"))
+        dest = first[2:18]
+        poke = ("t_poke", (96).to_bytes(4, "big") + bytes([first[19] ^ 0xFF]))
+        lines = self.ask([("t_begin", self.STATION), ("t_in", first), poke, ("t_in", newer), ("t_known", dest),
+                          ("t_readfail", b"\x00")])
+        self.assertEqual(lines[4].split()[-1], newer[19:].hex())
+        self.assertEqual(lines[5], "1")
+
+    def test_transport_table_old_copy_does_not_return(self):
+        # Zanik po zatwierdzeniu nowej kopii wpisu, przed unieważnieniem starej (gniazdo 1): po restarcie
+        # zostaje nowsza (gniazdo 0), a starsza jest unieważniana, więc po wyparciu nowszej (nowy cel trafia
+        # w zwolnione gniazdo 0) i kolejnym restarcie cel nie wraca.
+        keys = [bytes([35]) * 64, bytes([36]) * 64, bytes([37]) * 64]
+        later = bytes(5) + (1_790_000_100).to_bytes(5, "big")
+        a1, d1, other = (self.announce_of(k) for k in keys)
+        a2, d2 = self.announce_of(keys[0], random_hash=later), self.announce_of(keys[1], random_hash=later)
+        dest = d1[2:18]
+        lines = self.ask([("t_begin", self.STATION), ("t_in", a1), ("t_in", d1), ("t_in", a2), ("t_cut", (3).to_bytes(4, "big")),
+                          ("t_in", d2), ("t_restart", b"\x02"), ("t_known", dest), ("t_clock", (5000).to_bytes(8, "big")),
+                          ("t_in", a2), ("t_in", other), ("t_restart", b"\x02"), ("t_known", dest), ("t_known", other[2:18])])
+        self.assertEqual(lines[6], "2 2")
+        self.assertEqual(lines[7].split()[-1], d2[19:].hex())
+        self.assertEqual(lines[11], "2 2")
+        self.assertEqual(lines[12], "none")
+        self.assertNotEqual(lines[13], "none")
+
     def test_full_hash_matches_sha256(self):
         # Pusty wejściowy ciąg, granice bloku SHA-256 (55, 56, 64 B) i długi ciąg.
         inputs = [b"", b"WICI", bytes(55), bytes(56), bytes(64), bytes(range(256)) * 20]

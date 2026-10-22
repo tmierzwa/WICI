@@ -11,7 +11,7 @@
 // Wynik: wiersz JSON na stdout; kod 3 = złamany niezmiennik, 75 = zanik zasilania w zapisie.
 //
 // rns_stress <fram> [--seed N] [--events N] [--mutate PERCENT] [--start S] [--gap S]
-//            [--long-jumps] [--cut-after-writes N] [--defect token48|short-announce|held-announce|flood]
+//            [--long-jumps] [--cut-after-writes N] [--defect token48|short-announce|held-announce|flood|damaged-receiver]
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/time.h>
@@ -30,6 +30,7 @@
 #include <microReticulum/Utilities/OS.h>
 #include <microStore/Utility.h>
 
+#include "framfs.h"
 #include "p1iface.h"
 #include "rns_node.h"
 
@@ -619,9 +620,29 @@ void flood() {
 }
 
 const char* floodJson() { return floodResult.c_str(); }
+
+// Uszkodzone gniazdo odbiorcy z karty w tablicy znanych celów rdzenia (FRAM od framfs::FS_BASE, gniazda
+// 568 B, cel od bajtu 16; lib/reticulum_core/src/table.h): pakiet stacji do odbiorcy wychodzi mimo to
+// (wpis z kluczy karty od nowa), a gniazdo liczy "table_corrupt".
+void damagedReceiver() {
+    constexpr size_t SLOT = 568, SLOTS = 257;
+    bool damaged = false;
+    for (size_t slot = 0; slot < SLOTS; ++slot) {
+        uint8_t* b = fram.bytes + framfs::FS_BASE + slot * SLOT;
+        if (b[0] != 0xA5 || memcmp(b + 16, peerDest[0].data(), 16) != 0) continue;
+        b[300] ^= 0xFF;   // poza nagłówkiem: indeks bez zmian, błędne CRC przy odczycie
+        damaged = true;
+    }
+    if (!damaged) fail("damaged-receiver: no receiver slot");
+    const uint8_t message[] = "report after a damaged slot";
+    if (!rnsnode::send(peerDest[0].data(), message, sizeof(message), rnsnode::RECEIPT_MIN_S)) {
+        fail("damaged-receiver: report not sent");
+    }
+}
 #else
 void flood() { fail("flood: station core only"); }
 const char* floodJson() { return ""; }
+void damagedReceiver() { fail("damaged-receiver: station core only"); }
 #endif
 
 // Awarie portu z przeglądu 2026-10-21 (poprawione łatami 0005-0007) jako próby regresji.
@@ -669,6 +690,8 @@ void defect(const std::string& name) {
         }
     } else if (name == "flood") {
         flood();
+    } else if (name == "damaged-receiver") {
+        damagedReceiver();
     } else {
         fail("unknown defect");
     }

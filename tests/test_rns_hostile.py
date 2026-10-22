@@ -329,6 +329,12 @@ class CoreHostileStackTests(HostileStackTests):
         self.assertGreater(outcome["iface"]["ifac_invalid"], 0, outcome)
         self.assertGreater(outcome["iface"]["ifac_missing"], 0, outcome)
 
+    def test_damaged_receiver_slot(self):
+        # Uszkodzone gniazdo odbiorcy z karty w FRAM (błędne CRC): zgłoszenie do odbiorcy wychodzi (wpis
+        # z kluczy karty od nowa), gniazdo w liczniku table_corrupt.
+        outcome = self.assertClean(self.station().run("--defect", "damaged-receiver", "--events", 300))
+        self.assertEqual(outcome["iface"]["table_corrupt"], 1, outcome)
+
 
 if __name__ == "__main__":
     unittest.main()

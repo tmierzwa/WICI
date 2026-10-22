@@ -49,7 +49,7 @@ struct TransportCounters {
     uint32_t sent = 0;
     uint32_t delivered = 0;
     uint32_t timedOut = 0;
-    uint32_t tableFailed = 0; // zapis wpisu tablicy nieudany (pełna tablica celów chronionych, błąd pamięci)
+    uint32_t tableFailed = 0; // zapis albo odczyt wpisu tablicy nieudany (pełna tablica celów chronionych, błąd pamięci)
 };
 
 enum class SendResult : uint8_t { SENT, UNKNOWN, TOO_LARGE, RECEIPTS_FULL, REFUSED };
@@ -86,6 +86,7 @@ public:
     uint8_t hopsTo(const uint8_t destination[TRUNCATED_HASH_SIZE], uint64_t nowMs);   // Transport.hops_to
     size_t known() const { return table_.size(); }
     size_t paths() const { return table_.paths(); }
+    uint32_t tableCorrupt() const { return table_.corrupt(); }   // gniazda tablicy z błędną treścią od startu
     uint32_t tableWrites() const { return table_.writes(); }
     size_t receiptsPending() const;
     size_t hashes() const { return hashlist_.size(); }

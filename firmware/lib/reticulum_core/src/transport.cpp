@@ -91,8 +91,9 @@ bool Transport::inbound(const uint8_t* raw, size_t length, uint64_t nowMs) {
 // RNS/Identity.py: validate_announce i remember, _remember_ratchet; RNS/Transport.py: _inbound
 // (ANNOUNCE): tablica tras i wywołanie announce handlers z filtrem aspektu. Tanie sprawdzenia przed
 // weryfikacją podpisu (ten sam wynik co w Pythonie, inne liczniki): własny cel, kopia ogłoszenia, które
-// już przeszło weryfikację (sam indeks, bez odczytu FRAM), i kolizja klucza ze znanym wpisem. Dopiero
-// potem hak mayVerify (limit weryfikacji stacji), żeby tanio odrzucane ogłoszenia nie zużywały limitu.
+// już przeszło weryfikację (sam indeks, bez odczytu FRAM), i kolizja klucza ze znanym wpisem (samo pole
+// klucza 64 B z FRAM). Dopiero potem hak mayVerify (limit weryfikacji stacji), żeby tanio odrzucane
+// ogłoszenia nie zużywały limitu; pełny odczyt wpisu z CRC po weryfikacji.
 void Transport::inboundAnnounce(const Packet& packet, const uint8_t hash[HASH_SIZE], uint64_t nowMs) {
     // Ogłoszenie własnego celu (np. odbite przez węzeł transportowy) nie trafia do tablicy.
     if (address_ && memcmp(packet.destinationHash, address_, TRUNCATED_HASH_SIZE) == 0) {
@@ -109,18 +110,36 @@ void Transport::inboundAnnounce(const Packet& packet, const uint8_t hash[HASH_SI
         return;
     }
     KnownDestination e;
-    const bool known = slot >= 0 && table_.read(slot, e, now);
+    bool known = false;
     // validate_announce: znany cel z innym kluczem publicznym (kolizja skrótu) odrzucony. Klucz to
-    // pierwsze 64 B danych; krótsze dane odrzuci validateAnnounce.
-    if (known && packet.dataLength >= KEY_SIZE && memcmp(e.publicKey, packet.data, KEY_SIZE) != 0) {
-        ++counters_.invalid;
-        return;
+    // pierwsze 64 B danych; krótsze dane odrzuci validateAnnounce. Inny klucz w polu gniazda potwierdza
+    // pełny odczyt z CRC, więc uszkodzone pole nie blokuje celu (wpis z błędem CRC wypada).
+    uint8_t key[KEY_SIZE];
+    if (slot >= 0 && packet.dataLength >= KEY_SIZE && table_.readKey(slot, key) && memcmp(key, packet.data, KEY_SIZE) != 0) {
+        known = table_.read(slot, e, now);
+        if (known && memcmp(e.publicKey, packet.data, KEY_SIZE) != 0) {
+            ++counters_.invalid;
+            return;
+        }
     }
     if (hooks_.mayVerify && !hooks_.mayVerify(hooks_.context)) return;   // licznik po stronie stacji
     Announce a;
     if (!validateAnnounce(packet, a)) {
         ++counters_.invalid;
         return;
+    }
+    if (!known && slot >= 0) {
+        known = table_.read(slot, e, now);
+        // Błąd odczytu (wpis został w indeksie): ogłoszenie odpada bez skrótu na liście, więc jego
+        // powtórka przejdzie; nowy wpis obok starego zdublowałby cel.
+        if (!known && table_.find(packet.destinationHash) == slot) {
+            ++counters_.tableFailed;
+            return;
+        }
+        if (known && memcmp(e.publicKey, a.publicKey, KEY_SIZE) != 0) {   // pole klucza zmieniło się po readKey
+            ++counters_.invalid;
+            return;
+        }
     }
     hashlist_.add(hash);
     if (!known) {
@@ -172,8 +191,8 @@ void Transport::inboundAnnounce(const Packet& packet, const uint8_t hash[HASH_SI
     if (changed) {
         const bool cache = add && packet.dataLength <= ANNOUNCE_FORWARDABLE_SIZE;
         // Nowa trasa: nowe ogłoszenie (długość 0: bez ogłoszenia); bez nowej trasy zostaje dotychczasowe.
-        const uint8_t* announce = add ? packet.data : nullptr;
-        if (table_.write(known ? slot : -1, e, announce, cache ? packet.dataLength : 0, pinnedHook, this) < 0) {
+        const Table::Cached cached = add ? Table::Cached::SET : Table::Cached::KEEP;
+        if (table_.write(known ? slot : -1, e, cached, packet.data, cache ? packet.dataLength : 0, pinnedHook, this) < 0) {
             ++counters_.tableFailed;
             return;
         }
@@ -284,9 +303,14 @@ bool Transport::remember(const uint8_t destination[TRUNCATED_HASH_SIZE], const u
     const uint32_t now = seconds(nowMs);
     int slot = table_.find(destination);
     KnownDestination e;
-    if (slot >= 0 && table_.read(slot, e, now) && memcmp(e.publicKey, publicKey, KEY_SIZE) == 0) {
-        table_.touch(slot, now, false);
-        return true;
+    if (slot >= 0 && table_.read(slot, e, now)) {
+        if (memcmp(e.publicKey, publicKey, KEY_SIZE) == 0) {
+            table_.touch(slot, now, false);
+            return true;
+        }
+    } else if (slot >= 0 && table_.find(destination) == slot) {   // błąd odczytu: wpis zostaje do ponowienia
+        ++counters_.tableFailed;
+        return false;
     }
     // Nowy cel; znany z innym kluczem (kolizja skrótu albo uszkodzone gniazdo) zastąpiony w całości.
     memset(&e, 0, sizeof(e));
@@ -294,7 +318,7 @@ bool Transport::remember(const uint8_t destination[TRUNCATED_HASH_SIZE], const u
     memcpy(e.publicKey, publicKey, KEY_SIZE);
     e.usedS = now;
     slot = table_.find(destination);
-    if (table_.write(slot, e, publicKey, 0, pinnedHook, this) >= 0) return true;
+    if (table_.write(slot, e, Table::Cached::SET, nullptr, 0, pinnedHook, this) >= 0) return true;
     ++counters_.tableFailed;
     return false;
 }

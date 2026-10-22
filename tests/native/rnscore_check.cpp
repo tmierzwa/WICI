@@ -42,12 +42,18 @@ void printHex(const uint8_t* data, size_t length, const char* end = "\n") {
 
 // Obszar tablicy znanych celów w RAM (jak FRAM: nowa pamięć to same 0xFF). cutAfter: numer zapisu,
 // w którym znika zasilanie (dochodzi tylko początek danych, potem każdy zapis zawodzi); -1 bez zaniku.
+// failReads: tyle następnych odczytów zawodzi (chwilowy błąd SPI, treść bez zmian).
 struct MemoryTable : rnscore::TableStorage {
     std::vector<uint8_t> bytes = std::vector<uint8_t>(rnscore::TABLE_AREA, 0xFF);
     long writes = 0;
     long cutAfter = -1;
+    long failReads = 0;
     bool read(uint32_t offset, uint8_t* data, size_t count) override {
         if (offset + count > bytes.size()) return false;
+        if (failReads > 0) {
+            --failReads;
+            return false;
+        }
         memcpy(data, bytes.data() + offset, count);
         return true;
     }
@@ -355,6 +361,10 @@ int main() {
             printf(fits ? "ok\n" : "error\n");
         } else if (state && command == "t_writes") {
             printf("%ld\n", state->table.writes);
+        } else if (state && command == "t_readfail" && data.size() == 1) {
+            // tyle następnych odczytów tablicy zawodzi (1 B); wynik: gniazda z błędną treścią od startu
+            state->table.failReads = data[0];
+            printf("%u\n", static_cast<unsigned>(state->transport.tableCorrupt()));
         } else if (!state && command.rfind("t_", 0) == 0) {
             printf("error\n");
         } else if (command == "t_clock" && data.size() == 8) {

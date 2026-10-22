@@ -12,12 +12,14 @@ namespace rnscore {
 namespace {
 
 constexpr uint8_t COMMITTED = 0xA5;
-constexpr uint8_t FORMAT = 1;
+constexpr uint8_t FORMAT = 2;   // 2: klucz i skrót losowy w danych ogłoszenia (gniazdo 568 B)
 // Czytane przy montowaniu: znacznik, wersja, gniazdo, numer, znaczniki, użycie, cel, wygaśnięcie i użycie trasy.
 constexpr size_t HEADER = 40;
 constexpr size_t AT_SLOT = 2, AT_SEQUENCE = 4, AT_FLAGS = 8, AT_HOPS = 9, AT_ANNOUNCE_LENGTH = 10, AT_USED = 12,
                  AT_DESTINATION = 16, AT_EXPIRES = 32, AT_PATH_USED = 36, AT_RATCHET_TIME = 40, AT_RATCHET_EMITTED = 44,
-                 AT_NEXT_HOP = 48, AT_RANDOM = 64, AT_PUBLIC_KEY = 74, AT_RATCHET = 138, AT_ANNOUNCE = 170, AT_CRC = 636;
+                 AT_NEXT_HOP = 48, AT_RATCHET = 64, AT_ANNOUNCE = 96, AT_CRC = 561;
+// W danych ogłoszenia (RNS/Identity.py: validate_announce): klucz publiczny, skrót nazwy, skrót losowy.
+constexpr size_t AT_PUBLIC_KEY = AT_ANNOUNCE, AT_RANDOM = AT_ANNOUNCE + KEY_SIZE + NAME_HASH_SIZE;
 constexpr uint8_t FLAG_PATH = 0x01, FLAG_RATCHET = 0x02, FLAG_CONTEXT = 0x04;
 static_assert(AT_ANNOUNCE + ANNOUNCE_FORWARDABLE_SIZE <= AT_CRC, "ogłoszenie przed CRC");
 static_assert(AT_CRC + 4 <= TABLE_SLOT_SIZE, "CRC w gnieździe");
@@ -74,6 +76,7 @@ uint32_t Table::sequenceOf(size_t slot) {
 
 // RNS/Transport.py: Transport.start (wczytanie destination_table) i RNS/Identity.py: load_known_destinations.
 void Table::begin(TableStorage& storage, uint32_t nowS) {
+    memset(stale_, 0, sizeof(stale_));
     clear();
     storage_ = &storage;
     bootS_ = nowS;
@@ -85,8 +88,13 @@ void Table::begin(TableStorage& storage, uint32_t nowS) {
         if (sequence > sequence_) sequence_ = sequence;
         const int other = find(header + AT_DESTINATION);
         if (other >= 0) {
-            if (sequenceOf(static_cast<size_t>(other)) > sequence) continue;   // nowsza kopia już w indeksie
+            // Przegrana kopia unieważniona, żeby nie wróciła po wyparciu zwycięskiej.
+            if (sequenceOf(static_cast<size_t>(other)) > sequence) {   // nowsza kopia już w indeksie
+                invalidate(slot);
+                continue;
+            }
             drop(static_cast<size_t>(other));
+            invalidate(static_cast<size_t>(other));
         }
         memcpy(index_[slot].destination, header + AT_DESTINATION, TRUNCATED_HASH_SIZE);
         // Czas z przyszłości (zegar cofnięty) nie chroni wpisu przed wyparciem.
@@ -111,10 +119,12 @@ bool Table::read(int slot, KnownDestination& out, uint32_t nowS) {
     const size_t s = static_cast<size_t>(slot);
     bufferSlot_ = 0;
     const uint8_t* b = buffer_;
-    if (!storage_->read(offsetOf(s), buffer_, sizeof(buffer_)) || b[0] != COMMITTED || b[1] != FORMAT ||
-        get16(b + AT_SLOT) != s || memcmp(b + AT_DESTINATION, index_[s].destination, TRUNCATED_HASH_SIZE) != 0 ||
+    if (!storage_->read(offsetOf(s), buffer_, sizeof(buffer_))) return false;   // np. chwilowy błąd SPI: wpis zostaje
+    if (b[0] != COMMITTED || b[1] != FORMAT || get16(b + AT_SLOT) != s ||
+        memcmp(b + AT_DESTINATION, index_[s].destination, TRUNCATED_HASH_SIZE) != 0 ||
         get32(b + AT_CRC) != crc32(b + 1, AT_CRC - 1) || get16(b + AT_ANNOUNCE_LENGTH) > ANNOUNCE_FORWARDABLE_SIZE) {
         drop(s);   // uszkodzone gniazdo: pominięte i wolne (nadpisze je następny zapis)
+        ++corrupt_;
         return false;
     }
     bufferSlot_ = s + 1;
@@ -146,12 +156,19 @@ bool Table::read(int slot, KnownDestination& out, uint32_t nowS) {
     return true;
 }
 
+bool Table::readKey(int slot, uint8_t out[KEY_SIZE]) {
+    if (slot < 0 || static_cast<size_t>(slot) >= TABLE_SLOTS || !live(static_cast<size_t>(slot))) return false;
+    return storage_->read(offsetOf(static_cast<size_t>(slot)) + AT_PUBLIC_KEY, out, KEY_SIZE);
+}
+
 const uint8_t* Table::announce() const { return buffer_ + AT_ANNOUNCE; }
 
 bool Table::invalidate(size_t slot) {
     const uint8_t zero = 0;
     ++writes_;
-    return storage_->write(offsetOf(slot), &zero, 1);
+    const bool ok = storage_->write(offsetOf(slot), &zero, 1);
+    setBit(stale_, slot, !ok);
+    return ok;
 }
 
 // Najdawniej używany cel bez ochrony (specyfikacja, „Pojemności stosu”) poza gniazdem keep; -1, gdy brak.
@@ -167,11 +184,12 @@ int Table::victim(int keep, bool (*pinned)(const uint8_t*, void*), void* context
 
 // RNS/Identity.py: remember i _remember_ratchet, RNS/Transport.py: path_table[...] = ..., cache i
 // save_path_table: tu jeden zapis gniazda przy każdej zmianie wpisu.
-int Table::write(int slot, const KnownDestination& entry, const uint8_t* announce, size_t length,
+int Table::write(int slot, const KnownDestination& entry, Cached cached, const uint8_t* announce, size_t length,
                  bool (*pinned)(const uint8_t destination[TRUNCATED_HASH_SIZE], void* context), void* context) {
-    if (!storage_ || (announce && length > ANNOUNCE_FORWARDABLE_SIZE)) return -1;
+    if (!storage_ || (cached == Cached::SET && length && (!announce || length > ANNOUNCE_FORWARDABLE_SIZE))) return -1;
     if (slot >= 0 && (static_cast<size_t>(slot) >= TABLE_SLOTS || !live(static_cast<size_t>(slot)))) return -1;
-    if (!announce && slot >= 0 && bufferSlot_ != static_cast<size_t>(slot) + 1) {   // ogłoszenie z gniazda: obraz musi być w buforze
+    const bool keep = cached == Cached::KEEP && slot >= 0;
+    if (keep && bufferSlot_ != static_cast<size_t>(slot) + 1) {   // ogłoszenie z gniazda: obraz musi być w buforze
         KnownDestination old;
         if (!read(slot, old, 0)) return -1;
     }
@@ -195,15 +213,21 @@ int Table::write(int slot, const KnownDestination& entry, const uint8_t* announc
     }
 
     uint8_t* b = buffer_;
-    const bool flag = announce ? entry.contextFlag : slot >= 0 && (b[AT_FLAGS] & FLAG_CONTEXT);
-    if (announce) {
-        memcpy(b + AT_ANNOUNCE, announce, length);
+    const bool flag = keep ? (b[AT_FLAGS] & FLAG_CONTEXT) != 0 : entry.contextFlag;
+    if (!keep) {
+        if (length) memcpy(b + AT_ANNOUNCE, announce, length);
         put16(b + AT_ANNOUNCE_LENGTH, static_cast<uint16_t>(length));
-    } else if (slot < 0) {
-        put16(b + AT_ANNOUNCE_LENGTH, 0);
     }   // inaczej ogłoszenie i jego długość zostają w buforze z read()
-    const size_t kept = get16(b + AT_ANNOUNCE_LENGTH);
+    size_t kept = get16(b + AT_ANNOUNCE_LENGTH);
+    // Klucz i skrót losowy wpisu leżą w danych ogłoszenia; ogłoszenie z innymi nie zostaje w pamięci podręcznej.
+    if (kept && (memcmp(b + AT_PUBLIC_KEY, entry.publicKey, KEY_SIZE) != 0 ||
+                 memcmp(b + AT_RANDOM, entry.randomHash, RANDOM_HASH_SIZE) != 0)) {
+        kept = 0;
+        put16(b + AT_ANNOUNCE_LENGTH, 0);
+    }
     memset(b + AT_ANNOUNCE + kept, 0, AT_CRC - AT_ANNOUNCE - kept);
+    memcpy(b + AT_PUBLIC_KEY, entry.publicKey, KEY_SIZE);
+    memcpy(b + AT_RANDOM, entry.randomHash, RANDOM_HASH_SIZE);
     b[0] = 0;
     b[1] = FORMAT;
     put16(b + AT_SLOT, static_cast<uint16_t>(target));
@@ -218,8 +242,6 @@ int Table::write(int slot, const KnownDestination& entry, const uint8_t* announc
     put32(b + AT_RATCHET_TIME, entry.ratchetS);
     put32(b + AT_RATCHET_EMITTED, entry.ratchetEmittedS);
     memcpy(b + AT_NEXT_HOP, entry.nextHop, TRUNCATED_HASH_SIZE);
-    memcpy(b + AT_RANDOM, entry.randomHash, RANDOM_HASH_SIZE);
-    memcpy(b + AT_PUBLIC_KEY, entry.publicKey, KEY_SIZE);
     memcpy(b + AT_RATCHET, entry.ratchet, RATCHET_SIZE);
     put32(b + AT_CRC, crc32(b + 1, AT_CRC - 1));
     memset(b + AT_CRC + 4, 0, TABLE_SLOT_SIZE - AT_CRC - 4);
@@ -253,10 +275,12 @@ void Table::touch(int slot, uint32_t nowS, bool path) {
     if (path) index_[slot].pathUsedS = nowS;
 }
 
-// RNS/Transport.py: jobs (przegląd path_table): tylko indeks, bez odczytu i zapisu gniazd.
+// RNS/Transport.py: jobs (przegląd path_table): tylko indeks, bez odczytu gniazd. Gniazdo poza indeksem,
+// którego unieważnienie się nie udało, dostaje kolejną próbę (bez niej wróciłoby po restarcie).
 void Table::expire(uint32_t nowS) {
     for (size_t slot = 0; slot < TABLE_SLOTS; ++slot) {
         if (hasPath(static_cast<int>(slot)) && nowS - index_[slot].pathUsedS > DESTINATION_TIMEOUT_S) setBit(path_, slot, false);
+        if (storage_ && (stale_[slot / 8] & (1u << (slot % 8))) && !live(slot)) invalidate(slot);
     }
 }
 
@@ -280,6 +304,7 @@ void Table::clear() {
     clean(buffer_, sizeof(buffer_));
     memset(live_, 0, sizeof(live_));
     memset(path_, 0, sizeof(path_));
+    memset(stale_, 0, sizeof(stale_));
     bufferSlot_ = 0;
     count_ = 0;
     sequence_ = 0;

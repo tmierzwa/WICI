@@ -10,7 +10,7 @@
 //   (własne ratchety stacji są poza rdzeniem), ogłoszenia innych celów z polem ratchetu w tablicy
 //   znanych celów i tras (256 wpisów, odbiorca z karty chroniony), pakiety do stacji z dowodem po
 //   decyzji warstwy aplikacji, pakiet okazjonalny z szyfrowaniem do ratchetu i potwierdzeniem;
-// - tablica znanych celów i tras w FRAM (rnscore::Table, etap R2): 257 gniazd po 640 B od adresu
+// - tablica znanych celów i tras w FRAM (rnscore::Table, etap R2): 257 gniazd po 568 B od adresu
 //   systemu plików portu (framfs::FS_BASE; rdzeń i port nie dzielą tego obszaru, ten sam rekord
 //   tożsamości), w RAM indeks 257 × 24 B; zapis gniazda przy każdej zmianie wpisu, bez zapisu przy
 //   powtórzonym ogłoszeniu;
@@ -437,8 +437,17 @@ bool interfaceAccepts() { return started && !nodeMode && ifacOnline && !queue.fu
 
 }  // namespace
 
+// Odbiorca z karty, którego wpis wypadł z tablicy (uszkodzone gniazdo w FRAM): wpis z kluczy karty od
+// nowa (bez trasy i ratchetu, jak po starcie), żeby zgłoszenia nie stanęły do restartu.
+bool knowsOrRemembers(const uint8_t dest[HASH]) {
+    if (transport.knows(dest)) return true;
+    if (memcmp(dest, pinned[0], HASH) != 0 && memcmp(dest, pinned[1], HASH) != 0) return false;
+    rememberReceivers();
+    return transport.knows(dest);
+}
+
 uint32_t send(const uint8_t dest[HASH], const uint8_t* data, size_t length, uint32_t timeoutS) {
-    if (!interfaceAccepts() || !transport.knows(dest)) return 0;
+    if (!interfaceAccepts() || !knowsOrRemembers(dest)) return 0;
     OwnTraffic own;
     // Limit od przekazania do stosu jak w porcie (radio.md, "Interfejs P1 w stosie Reticulum"):
     // max(60 s, timeoutS, 2 × skoki × 13 × czas TX największego datagramu + dług ciszy + kolejka P1);
@@ -454,13 +463,17 @@ uint32_t send(const uint8_t dest[HASH], const uint8_t* data, size_t length, uint
     uint8_t random[32 + 16];
     if (!generator.generate(random, sizeof(random))) return 0;
     const uint32_t handle = ++nextHandle ? nextHandle : ++nextHandle;
-    const rnscore::SendResult result = transport.send(dest, data, length, random, random + 32, handle, limit * 1000, uptimeMs());
+    rnscore::SendResult result = transport.send(dest, data, length, random, random + 32, handle, limit * 1000, uptimeMs());
+    // Wpis wypadł przy odczycie (błędne CRC; nic nie wyszło, więc te same bajty losowe): odbiorca z karty od nowa.
+    if (result == rnscore::SendResult::UNKNOWN && knowsOrRemembers(dest)) {
+        result = transport.send(dest, data, length, random, random + 32, handle, limit * 1000, uptimeMs());
+    }
     clean(random, sizeof(random));
     return result == rnscore::SendResult::SENT ? handle : 0;
 }
 
 // Bez zapytania o trasę przy nieznanym celu (R2).
-bool sendReady(const uint8_t dest[HASH]) { return interfaceAccepts() && transport.knows(dest); }
+bool sendReady(const uint8_t dest[HASH]) { return interfaceAccepts() && knowsOrRemembers(dest); }
 bool knows(const uint8_t dest[HASH]) { return started && transport.knows(dest); }
 bool hasPath(const uint8_t dest[HASH]) {
     rnscore::KnownDestination e;   // odczyt z FRAM: trasa po wygaśnięciu już nie jest trasą
@@ -511,7 +524,8 @@ size_t interfaceJson(char* out, size_t size) {
     if (!radio) return snprintf(out, size, "\"p1_iface\":false");
     // Pola jak w porcie (rns_node.cpp) i liczniki rdzenia: pakiety odrzucone przez rnscore::unpack,
     // duplikaty, pakiety poza podzbiorem R1 albo nie do stacji, odrzucone przy sprawdzaniu, datagramy
-    // odrzucone przy pełnej kolejce odbioru, ogłoszenia odrzucone przez limit weryfikacji.
+    // odrzucone przy pełnej kolejce odbioru, ogłoszenia odrzucone przez limit weryfikacji, gniazda tablicy
+    // znanych celów z błędną treścią (zwolnione).
     const p1iface::Counters& c = queue.counters();
     const rnscore::TransportCounters& t = transport.counters();
     const uint32_t now = nowMs();   // okna czasu kanału przesuwane przed printf (kolejność wywołań)
@@ -521,7 +535,7 @@ size_t interfaceJson(char* out, size_t size) {
                            "\"ann_drop\":%lu,\"ann_expired\":%lu,\"tx_sent\":%lu,\"tx_failed\":%lu,\"rx_ok\":%lu,"
                            "\"ifac_missing\":%lu,\"ifac_invalid\":%lu,\"offline\":%lu,\"silenced\":%lu,\"k2_slot\":%lu,\"k2_pool\":%lu,"
                            "\"k2_dest\":%lu,\"pr_limited\":%lu,\"pool_ms\":%lu,\"pr_ms\":%lu,\"rx_malformed\":%lu,\"rx_duplicate\":%lu,"
-                           "\"rx_ignored\":%lu,\"rx_invalid\":%lu,\"rx_queue_full\":%lu,\"ann_limited\":%lu",
+                           "\"rx_ignored\":%lu,\"rx_invalid\":%lu,\"rx_queue_full\":%lu,\"ann_limited\":%lu,\"table_corrupt\":%lu",
                            (unsigned)queue.queued(), (unsigned)queue.held(), (unsigned long)c.queued, (unsigned long)c.full,
                            (unsigned long)c.tooLarge, (unsigned long)c.announcesHeld, (unsigned long)c.announcesDropped,
                            (unsigned long)c.announcesExpired, (unsigned long)c.sent, (unsigned long)c.sendFailed,
@@ -529,7 +543,8 @@ size_t interfaceJson(char* out, size_t size) {
                            (unsigned long)c.offline, (unsigned long)c.silenced, (unsigned long)c.k2Slot, (unsigned long)c.k2Pool,
                            (unsigned long)c.k2Dest, (unsigned long)c.pathRequestLimited, poolMs, prMs, (unsigned long)malformed,
                            (unsigned long)t.duplicate, (unsigned long)t.ignored, (unsigned long)t.invalid,
-                           (unsigned long)rxDropped, (unsigned long)announcesLimited);
+                           (unsigned long)rxDropped, (unsigned long)announcesLimited,
+                           (unsigned long)transport.tableCorrupt());
     return n < 0 ? 0 : static_cast<size_t>(n);
 }
 
