@@ -102,7 +102,7 @@
  ],
  "outputs": {
   "wici-station.mjs": {
-   "sha256": "b86f2fe443f939db5735b1a4ddb71806e6467ebb6b1b5a77a067e3f8c5ce05fb",
+   "sha256": "b71980c4cfc7fe303dac7c693224164a261fb687a16ed302c04c7720a0a7aeca",
    "bytes": 1127790,
    "sources": [
     "firmware/src/annunciator.cpp",
@@ -192,7 +192,7 @@
   "firmware/src/framfs.cpp": "780fd0a68002444a2270cd8af5984a2e4df172d12f51c51d739954315ea9387e",
   "firmware/src/framfs.h": "5b793a4c88829f5d42d7370ec67d29190e21673321cc73b356178c22dccc5c03",
   "firmware/src/hexstr.h": "1ff5c828bd6ce3bb9212d3a3c8733fc9ce9c758fea386aa9f65ee2ede5458210",
-  "firmware/src/host/node_host.cpp": "be83a11e48bd11c27172afd6ee1649dde2a0701c2035fcc25ea1df0fa458c560",
+  "firmware/src/host/node_host.cpp": "a299f37e7d1de39314bcda01f9731a17433609a3d9b4e038a8c8255c2afd0547",
   "firmware/src/journal.cpp": "dfdf951e96632c3e24ad70f967d6a8519803e26a095e82c24e616966d57ccfb8",
   "firmware/src/journal.h": "9045e308be9c654712c269eff8bb8a69e374f7473baf509918803493482b97fa",
   "firmware/src/jsonlite.cpp": "7eebacaa516a78222201ce423010620955c9a82cad887d9a41bf81be07a62e5f",
@@ -201,7 +201,7 @@
   "firmware/src/kiss.cpp": "57ad351ca583dfb2aa125aacee6bcf8682ed70d9f0f6ce1b7bcf250998732f30",
   "firmware/src/kiss.h": "6b0ad94ce5fe8c2ccb8fb0cd3e36f01e87669ee22db18d192473e2da5ae072f7",
   "firmware/src/lora_profile.h": "30f3904e76b5a8af5cfb636ea2ec7f00ccbc47f00fd7f592f85bbe7781ee283f",
-  "firmware/src/main.cpp": "cd200fa0fb16365b547bd451e6a0bc90f5c73ba1ceb8537cd4422589712a1f58",
+  "firmware/src/main.cpp": "bccefdeafb5b3e62e32d7ba60b17fed8fc3c30c65f72e6d9f2f00d0c2c40ab44",
   "firmware/src/measure.cpp": "eb0ee3d9fd078eb37bc44d86e83c81f4db7e33224f9e7edac95711a7aa3a2c7b",
   "firmware/src/measure.h": "3dc43cfdde46f5e8c8449688b22d7dc18ddcfe4cf924a225dfdf6820753f5c3b",
   "firmware/src/p1_registers.h": "4cc79a7f2471477a8ae1860a331664c21664dcaee4b85f197684df97bdb5d6ad",
@@ -221,8 +221,8 @@
   "firmware/src/rns_announce.h": "245906d3eece4e3c6ec44504dd38d7de6263800b179205ce9c3d1f8d61d8d369",
   "firmware/src/rns_framfs.h": "152c08778997aa9f2a2454b4b3ec960bcd50c53707ebb0b84970f2530ab1d9e8",
   "firmware/src/rns_node.cpp": "dc3eb7ba0544b894f28b4aba4cbf447ea8a6773a969bcdb80493e1fee93e5968",
-  "firmware/src/rns_node.h": "5c362013123a7583b2ab2a4c51cf6d71063382563b68deeede5a2606be65c9ac",
-  "firmware/src/rns_node_core.cpp": "4ae595e2ef0ae31c1b558ceb0847cbddd9cbb1481485bcf062aaf034ddf2044d",
+  "firmware/src/rns_node.h": "e83ee927282f7100d1790624e53dc543a8776e021555213817ca61665d1673c9",
+  "firmware/src/rns_node_core.cpp": "ef054eb8249101bc9ee0ebb4df23005129fd7350766756ea09391cce683fd84f",
   "firmware/src/s2lp.cpp": "7b32a9d1bbaae1cbfcd5d23f0d1f9ce0ca9baf5765c664d1ad6a6e379a7c2f42",
   "firmware/src/s2lp.h": "42e0883667177e932bd621bfbe1de3d19da17fe34e35b95bce9bb2ac1de70dd5",
   "firmware/src/s2lp_link.cpp": "c8584346920aef3876d4c463bf3bb18d798963950dbc6928ee7818bba465ed7f",

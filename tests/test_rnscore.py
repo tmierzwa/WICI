@@ -831,7 +831,9 @@ class CoreTests(unittest.TestCase):
     def test_path_request_for_known_destination(self):
         # Trasa znana: odpowiedź po PATH_REQUEST_GRACE (0,4 s) jako HEADER_2 z identyfikatorem transportu stacji,
         # liczbą skoków trasy, kontekstem PATH_RESPONSE i ogłoszeniem z pamięci podręcznej; jedno nadanie
-        # (PATHFINDER_R). Pytający, który jest następnym skokiem, i cel bez trasy: bez odpowiedzi.
+        # (PATHFINDER_R). Retransmisja samego ogłoszenia (wstrzymana na czas odpowiedzi, held_announces) wraca
+        # po odpowiedzi: dwa nadania bez kontekstu, drugie po PATHFINDER_G + PATHFINDER_RW. Pytający, który jest
+        # następnym skokiem, i cel bez trasy: bez odpowiedzi.
         a = next(c for c in VECTORS["announce"] if c["name"] == "ratchet")
         raw = bytes.fromhex(a["raw"])
         dest = raw[2:18]
@@ -845,7 +847,11 @@ class CoreTests(unittest.TestCase):
         out = self.fields_of(self.parsed(lines[4])[3])
         self.assertEqual(out[:9], ["1", "1", "1", "0", "1", "1", identity, dest.hex(), "11"])
         self.assertEqual(out[9], raw[19:].hex())
-        self.assertEqual([self.parsed(lines[i])[3] for i in (5, 6, 7, 8, 9)], ["-"] * 5)
+        for i in (5, 6):
+            rebroadcast = self.fields_of(self.parsed(lines[i])[3])
+            self.assertEqual(rebroadcast[:8] + rebroadcast[9:-1], out[:8] + out[9:-1])   # bez skrótu pakietu (kontekst)
+            self.assertEqual(rebroadcast[8], "0")
+        self.assertEqual([self.parsed(lines[i])[3] for i in (7, 8, 9)], ["-"] * 3)
         self.assertEqual(lines[10], "3 2 1 0 0 0 0")
 
     def test_path_request_for_station_reuses_signature(self):
@@ -865,8 +871,9 @@ class CoreTests(unittest.TestCase):
     def test_retransmissions_one_per_poll(self):
         # Dwie odpowiedzi z pamięci podręcznej zaległe naraz: poll() nadaje najwyżej jedną (najwcześniejszą),
         # a poll() obiegu z kryptografią odbioru (bez nadawania) żadnej; interfejs zajęty też wstrzymuje.
+        # Ogłoszenia jako odpowiedzi na zapytanie (kontekst PATH_RESPONSE): bez własnej retransmisji.
         keys = [bytes([51]) * 64, bytes([52]) * 64]
-        announces = [self.announce_of(k) for k in keys]
+        announces = [x[:18] + bytes([0x0B]) + x[19:] for x in (self.announce_of(k) for k in keys)]
         lines = self.ask([("t_begin", self.STATION), ("t_in", announces[0]), ("t_in", announces[1]),
                           ("t_in", self.path_request(announces[1][2:18], b"P" * 16)),
                           ("t_in", self.path_request(announces[0][2:18], b"Q" * 16)),
@@ -877,6 +884,16 @@ class CoreTests(unittest.TestCase):
         first, second = self.fields_of(self.parsed(lines[9])[3]), self.fields_of(self.parsed(lines[10])[3])
         self.assertEqual((first[7], second[7]), (announces[1][2:18].hex(), announces[0][2:18].hex()))
         self.assertEqual(self.parsed(lines[11])[3], "-")
+
+    def test_held_announce_released_with_response(self):
+        # Wstrzymana retransmisja żyje tylko z wpisem odpowiedzi swojego celu: cel wyparty z tablicy (limit 1)
+        # przed nadaniem odpowiedzi, więc odpowiedź i wstrzymana retransmisja znikają, miejsce wraca.
+        a, b = self.announce_of(bytes([53]) * 64), self.announce_of(bytes([54]) * 64)
+        lines = self.ask([("t_begin", self.STATION), ("t_config", bytes([1, 1])), ("t_in", self.hops(a, 1)),
+                          ("t_in", self.path_request(a[2:18], b"H" * 16)), ("t_held", b""),
+                          ("t_clock", (1001).to_bytes(8, "big")), ("t_in", self.hops(b, 1))] +
+                         [("t_clock", (1100 + 200 * i).to_bytes(8, "big")) for i in range(10)] + [("t_held", b"")])
+        self.assertEqual((lines[4], lines[-1]), ("1", "0"))
 
     def test_path_request_filter(self):
         # Bez znacznika: odrzucone; PLAIN po więcej niż 1 skoku i ogłoszenie PLAIN: odpadają (packet_filter);
@@ -903,6 +920,86 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(self.parsed(lines[1])[3], self.path_request(dest, tag, requestor=identity).hex())
         self.assertEqual(self.parsed(lines[2])[0], "none")
         self.assertEqual(self.parsed(lines[4])[0], "ok")
+
+    def station_identity(self) -> bytes:
+        return bytes.fromhex(self.ask([("identity_hash", bytes.fromhex(self.ask([("public_key", self.STATION)])[0]))])[0])
+
+    @staticmethod
+    def via(raw: bytes, transport_id: bytes, hops: int) -> bytes:
+        # Ten sam pakiet w transporcie (HEADER_2, TRANSPORT) z identyfikatorem transportu i liczbą skoków.
+        return bytes([raw[0] | 0x50, hops]) + transport_id + raw[2:]
+
+    def test_forward_header2(self):
+        # RNS/Transport.py: _inbound: pakiet z identyfikatorem stacji do celu z trasą 2 skoki idzie do następnego
+        # skoku (nowy identyfikator transportu, skoki + 1); z trasą 1 skok jako HEADER_1 rozgłaszany (bez flagi
+        # kontekstu); powtórzony: duplikat; cel bez trasy: porzucony. Dowód przekazanego pakietu wraca według
+        # tablicy odwrotnej jeden raz.
+        identity = self.station_identity()
+        relay = bytes(range(16))
+        far, near = (self.announce_of(bytes([k]) * 64) for k in (31, 32))
+        far_dest, near_dest = far[2:18], near[2:18]
+        data = self.packet(0x50, far_dest, b"x" * 40, transport_id=identity, hops=3)
+        flagged = self.packet(0x70, near_dest, b"y" * 40, transport_id=identity, hops=0)
+        unknown = self.packet(0x50, bytes(16), b"z" * 40, transport_id=identity)
+        data_hash = bytes.fromhex(self.fields_of(data.hex())[-1])
+        proof = self.packet(0x03, data_hash[:16], bytes(64), hops=2)
+        lines = self.ask([("t_begin", self.STATION), ("t_in", self.via(far, relay, 1)), ("t_in", near), ("t_in", data),
+                          ("t_in", data), ("t_in", flagged), ("t_in", unknown), ("t_forward", b""), ("t_in", proof),
+                          ("t_in", self.hops(proof, 3)), ("t_forward", b"")])
+        self.assertEqual(self.parsed(lines[3])[3], (bytes([data[0], 4]) + relay + data[18:]).hex())
+        self.assertEqual(self.parsed(lines[4])[1][0], 1)
+        self.assertEqual(self.parsed(lines[4])[3], "-")
+        self.assertEqual(self.parsed(lines[5])[3], (bytes([0x00, 1]) + flagged[18:]).hex())
+        self.assertEqual(self.parsed(lines[6])[3], "-")
+        self.assertEqual(lines[7], "2 1 0 0 0 2 2")
+        self.assertEqual(self.parsed(lines[8])[3], self.hops(proof, 3).hex())
+        self.assertEqual(self.parsed(lines[9])[3], "-")   # ten sam dowód: duplikat
+        self.assertEqual(lines[10], "2 1 1 0 0 1 2")
+
+    def test_forward_reverse_timeout(self):
+        # Wpis tablicy odwrotnej po REVERSE_TIMEOUT (8 min) nie przekazuje dowodu.
+        identity = self.station_identity()
+        far = self.announce_of(bytes([33]) * 64)
+        data = self.packet(0x50, far[2:18], b"x" * 40, transport_id=identity)
+        proof = self.packet(0x03, bytes.fromhex(self.fields_of(data.hex())[-1])[:16], bytes(64))
+        lines = self.ask([("t_begin", self.STATION), ("t_in", self.via(far, bytes(range(16)), 1)), ("t_in", data),
+                          ("t_clock", (1000 + 8 * 60 * 1000 + 1).to_bytes(8, "big")), ("t_in", proof), ("t_forward", b"")])
+        self.assertEqual(self.parsed(lines[4])[3], "-")
+        self.assertEqual(lines[5].split()[:3], ["1", "0", "0"])
+
+    def test_announce_rebroadcast(self):
+        # RNS/Transport.py: _inbound i jobs: przyjęte ogłoszenie idzie dalej jako HEADER_2 z identyfikatorem
+        # stacji i skokami po odbiorze, po losowej zwłoce do PATHFINDER_RW (tu 176 ms), drugi raz po
+        # PATHFINDER_G + PATHFINDER_RW, potem wpis znika. Odpowiedź na zapytanie o trasę nie idzie dalej.
+        identity = self.station_identity()
+        ann = self.announce_of(bytes([34]) * 64)
+        lines = self.ask([("t_begin", self.STATION), ("t_in", ann), ("t_clock", (1176).to_bytes(8, "big")),
+                          ("t_clock", (1177).to_bytes(8, "big")), ("t_clock", (6677).to_bytes(8, "big")),
+                          ("t_clock", (6678).to_bytes(8, "big")), ("t_clock", (20000).to_bytes(8, "big")), ("t_forward", b"")])
+        self.assertEqual([self.parsed(lines[i])[3] for i in (2, 4, 6)], ["-"] * 3)
+        expected = self.via(ann, identity, 1).hex()
+        self.assertEqual([self.parsed(lines[i])[3] for i in (3, 5)], [expected] * 2)
+        self.assertEqual(lines[7], "0 0 0 0 2 0 0")
+        response = ann[:18] + bytes([0x0B]) + ann[19:]
+        lines = self.ask([("t_begin", self.STATION), ("t_in", response), ("t_clock", (2000).to_bytes(8, "big")), ("t_forward", b"")])
+        self.assertEqual((self.parsed(lines[2])[3], lines[3]), ("-", "0 0 0 0 0 0 0"))
+
+    def test_announce_rebroadcast_heard(self):
+        # Po pierwszym nadaniu: dwie lokalne powtórki sąsiadów (te same skoki) albo przekazanie o skok dalej
+        # przed czasem ponowienia usuwają wpis, więc drugiego nadania nie ma (LOCAL_REBROADCASTS_MAX).
+        ann = self.announce_of(bytes([35]) * 64)
+        first = [("t_begin", self.STATION), ("t_in", ann), ("t_clock", (1177).to_bytes(8, "big"))]
+        cases = {"local rebroadcasts": [("t_in", self.via(ann, bytes([1]) * 16, 1)), ("t_in", self.via(ann, bytes([2]) * 16, 1))],
+                 "passed on": [("t_in", self.via(ann, bytes([3]) * 16, 2))]}
+        for name, heard in cases.items():
+            with self.subTest(name):
+                lines = self.ask(first + heard + [("t_clock", (7000).to_bytes(8, "big")), ("t_forward", b"")])
+                self.assertNotEqual(self.parsed(lines[2])[3], "-")
+                self.assertEqual(self.parsed(lines[-2])[3], "-")
+                self.assertEqual(lines[-1], "0 0 0 0 1 0 0")
+        # Jedna lokalna powtórka nie wystarcza: drugie nadanie zostaje.
+        lines = self.ask(first + cases["local rebroadcasts"][:1] + [("t_clock", (7000).to_bytes(8, "big"))])
+        self.assertNotEqual(self.parsed(lines[-1])[3], "-")
 
     def test_full_hash_matches_sha256(self):
         # Pusty wejściowy ciąg, granice bloku SHA-256 (55, 56, 64 B) i długi ciąg.

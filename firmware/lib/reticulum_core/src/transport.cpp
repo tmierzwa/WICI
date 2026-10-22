@@ -89,12 +89,15 @@ bool Transport::inbound(const uint8_t* raw, size_t length, uint64_t nowMs) {
         ++counters_.duplicate;
         return true;
     }
+    // _inbound: pakiet w transporcie ze stacją jako następnym skokiem (pakiety dla innych węzłów odpadły
+    // wyżej, jak w packet_filter).
+    if (packet.headerType == HEADER_2 && forward(packet, raw, length, hash, nowMs)) return true;
     switch (packet.packetType) {
         case DATA:
             inboundData(packet, hash);
             break;
         case PROOF:
-            inboundProof(packet);
+            inboundProof(packet, raw, length, nowMs);
             break;
         default:
             ++counters_.ignored;
@@ -120,6 +123,7 @@ void Transport::inboundAnnounce(const Packet& packet, const uint8_t hash[HASH_SI
     // Skrót na liście: te same bajty ogłoszenia przeszły już weryfikację, a przy tym samym skrócie
     // losowym should_add jest fałszywe. Bez trasy (wyparta albo wygasła) ogłoszenie idzie całą drogą.
     if (table_.hasPath(slot) && hashlist_.contains(hash)) {
+        if (packet.headerType == HEADER_2) heardRebroadcast(packet, nowMs);
         table_.touch(slot, now, false);
         ++counters_.duplicate;
         return;
@@ -157,6 +161,7 @@ void Transport::inboundAnnounce(const Packet& packet, const uint8_t hash[HASH_SI
         }
     }
     hashlist_.add(hash);
+    if (packet.headerType == HEADER_2) heardRebroadcast(packet, nowMs);
     if (!known) {
         memset(&e, 0, sizeof(e));
         memcpy(e.destination, packet.destinationHash, TRUNCATED_HASH_SIZE);
@@ -216,6 +221,14 @@ void Transport::inboundAnnounce(const Packet& packet, const uint8_t hash[HASH_SI
     }
     if (!add) return;
     ++counters_.announces;
+    // _inbound: przyjęte ogłoszenie (poza odpowiedzią na zapytanie o trasę) do tablicy ogłoszeń bez
+    // ponowień, z losową zwłoką do PATHFINDER_RW (RNS.rand()).
+    if (packet.context != CONTEXT_PATH_RESPONSE) {
+        uint8_t r[2] = {0, 0};
+        if (hooks_.random) hooks_.random(r, sizeof(r), hooks_.context);
+        const uint32_t delayMs = ((static_cast<uint32_t>(r[0]) << 8 | r[1]) * PATHFINDER_RW_MS) >> 16;
+        schedule(packet.destinationHash, packet.hops, nowMs + delayMs, 0, false);
+    }
     // Filtr aspektu "wici.sa1": skrót celu z nazwy i tożsamości sprawdził validateAnnounce, więc wystarczy
     // skrót nazwy. Odpowiedzi na zapytania o trasę nie idą do warstwy aplikacji (receive_path_responses).
     if (hooks_.announce && packet.context != CONTEXT_PATH_RESPONSE && memcmp(a.nameHash, nameHash_, NAME_HASH_SIZE) == 0) {
@@ -257,12 +270,14 @@ void Transport::inboundData(const Packet& packet, const uint8_t hash[HASH_SIZE])
     if (outLength) emit(outRaw, outLength, true);
 }
 
-// RNS/Transport.py: _inbound (PROOF bez LRPROOF): dowód jawny tylko do potwierdzenia o tym skrócie,
-// niejawny tylko do potwierdzenia o skrócie z celu dowodu; PacketReceipt.validate_proof.
-void Transport::inboundProof(const Packet& packet) {
+// RNS/Transport.py: _inbound (PROOF bez LRPROOF): najpierw przekazanie według tablicy odwrotnej, potem
+// dowód jawny tylko do potwierdzenia o tym skrócie, niejawny tylko do potwierdzenia o skrócie z celu
+// dowodu; PacketReceipt.validate_proof.
+void Transport::inboundProof(const Packet& packet, const uint8_t* raw, size_t length, uint64_t nowMs) {
+    const bool forwarded = forwardProof(packet, raw, length, nowMs);
     const bool explicitProof = packet.dataLength == PROOF_EXPLICIT_SIZE;
     if (!explicitProof && packet.dataLength != PROOF_IMPLICIT_SIZE) {
-        ++counters_.invalid;
+        if (!forwarded) ++counters_.invalid;
         return;
     }
     // Python sprawdza dowód niejawny wobec każdego czekającego potwierdzenia, ale zawsze adresuje go do
@@ -280,7 +295,75 @@ void Transport::inboundProof(const Packet& packet) {
         if (hooks_.receipt) hooks_.receipt(r.handle, true, hooks_.context);
         return;
     }
-    ++counters_.invalid;
+    if (!forwarded) ++counters_.invalid;
+}
+
+// RNS/Transport.py: _inbound (pakiet w transporcie, stacja jako następny skok): według path_table nowy
+// następny skok (do celu zostało więcej niż 1 skok) albo nagłówek HEADER_1 rozgłaszany (ostatni skok;
+// jak w Pythonie bez flagi kontekstu), wpis tablicy odwrotnej dla dowodu i odświeżony czas trasy. Trasa
+// w tablicy ma co najmniej 1 skok (skoki ogłoszenia po odbiorze), więc gałąź „0 skoków” klientów
+// lokalnych nie występuje. Fałsz: brak trasy (Python porzuca pakiet; cel stacji idzie dalej do odbioru).
+bool Transport::forward(const Packet& packet, const uint8_t* raw, size_t length, const uint8_t hash[HASH_SIZE],
+                        uint64_t nowMs) {
+    const int slot = table_.find(packet.destinationHash);
+    KnownDestination e;
+    if (slot < 0 || !table_.read(slot, e, seconds(nowMs)) || !e.hasPath || length > MTU || length < HEADER_2_SIZE) {
+        if (!address_ || memcmp(packet.destinationHash, address_, TRUNCATED_HASH_SIZE) != 0) ++counters_.noPath;
+        return false;
+    }
+    uint8_t out[MTU];
+    const size_t tail = length - (2 + TRUNCATED_HASH_SIZE);   // od celu do końca pakietu
+    size_t outLength;
+    if (e.hops > 1) {
+        out[0] = raw[0];
+        memcpy(out + 2, e.nextHop, TRUNCATED_HASH_SIZE);
+        memcpy(out + 2 + TRUNCATED_HASH_SIZE, raw + 2 + TRUNCATED_HASH_SIZE, tail);
+        outLength = length;
+    } else {
+        out[0] = static_cast<uint8_t>(HEADER_1 << 6 | BROADCAST << 4 | (raw[0] & 0x0F));
+        memcpy(out + 2, raw + 2 + TRUNCATED_HASH_SIZE, tail);
+        outLength = 2 + tail;
+    }
+    out[1] = packet.hops;
+    // reverse_table[truncated_packet_hash]: tego samego skrótu wpis nadpisany, inaczej wolny albo
+    // przeterminowany, a przy pełnej tablicy najstarszy (licznik).
+    ReverseEntry* r = nullptr;
+    ReverseEntry* oldest = &reverse_[0];   // wolny, przeterminowany albo najstarszy
+    for (ReverseEntry& x : reverse_) {
+        if (x.atMs && memcmp(x.hash, hash, TRUNCATED_HASH_SIZE) == 0) {
+            r = &x;
+            break;
+        }
+        if (!oldest->atMs || nowMs - oldest->atMs > REVERSE_TIMEOUT_MS) continue;
+        if (!x.atMs || nowMs - x.atMs > REVERSE_TIMEOUT_MS || x.atMs < oldest->atMs) oldest = &x;
+    }
+    if (!r) {
+        r = oldest;
+        if (r->atMs && nowMs - r->atMs <= REVERSE_TIMEOUT_MS) ++counters_.reverseFull;
+    }
+    memcpy(r->hash, hash, TRUNCATED_HASH_SIZE);
+    r->atMs = nowMs ? nowMs : 1;
+    if (hooks_.transmit && hooks_.transmit(out, outLength, hooks_.context)) ++counters_.forwarded;
+    table_.touch(slot, seconds(nowMs), true);   // path_entry[IDX_PT_TIMESTAMP]
+    return true;
+}
+
+// RNS/Transport.py: _inbound (PROOF): dowód do skrótu pakietu przekazanego przez stację wraca tą samą
+// drogą (wpis tablicy odwrotnej zużyty), z liczbą skoków po odbiorze.
+bool Transport::forwardProof(const Packet& packet, const uint8_t* raw, size_t length, uint64_t nowMs) {
+    if (length > MTU) return false;
+    for (ReverseEntry& r : reverse_) {
+        if (!r.atMs || memcmp(r.hash, packet.destinationHash, TRUNCATED_HASH_SIZE) != 0) continue;
+        const bool live = nowMs - r.atMs <= REVERSE_TIMEOUT_MS;
+        r.atMs = 0;
+        if (!live) return false;   // Transport.jobs usunąłby wpis po REVERSE_TIMEOUT
+        uint8_t out[MTU];
+        memcpy(out, raw, length);
+        out[1] = packet.hops;
+        if (hooks_.transmit && hooks_.transmit(out, length, hooks_.context)) ++counters_.proofsForwarded;
+        return true;
+    }
+    return false;
 }
 
 bool Transport::emit(const uint8_t* raw, size_t length, bool rememberHash) {
@@ -493,21 +576,39 @@ void Transport::pathRequest(const uint8_t destination[TRUNCATED_HASH_SIZE], cons
     ++counters_.pathAnswered;
     if (!e.announceLength) return;                    // get_cached_packet: brak ogłoszenia w pamięci
     if (requestor && memcmp(requestor, e.nextHop, TRUNCATED_HASH_SIZE) == 0) return;   // następny skok pyta
+    // held_announces: retransmisja ogłoszenia tego celu czekająca w tablicy wraca po wysłaniu odpowiedzi
+    // (retransmit); przy pełnym miejscu na wstrzymane przepada (licznik).
+    if (AnnounceEntry* pending = findAnnounce(destination)) {
+        AnnounceEntry* held = nullptr;
+        for (AnnounceEntry& h : held_) {
+            if (h.used && memcmp(h.destination, destination, TRUNCATED_HASH_SIZE) == 0) {
+                held = &h;
+                break;
+            }
+            if (!h.used && !held) held = &h;
+        }
+        if (held) *held = *pending;
+        else ++counters_.announceTableFull;
+    }
     // announce_table: odpowiedź po PATH_REQUEST_GRACE z liczbą skoków trasy (PATHFINDER_R: jedno nadanie).
     schedule(destination, e.hops, nowMs + PATH_REQUEST_GRACE_MS, PATHFINDER_R, true);
 }
 
 // Wpis tablicy ogłoszeń: wpis tego celu zastąpiony (jak słownik w Pythonie); przy pełnej tablicy nowy
 // odpada z licznikiem.
+Transport::AnnounceEntry* Transport::findAnnounce(const uint8_t destination[TRUNCATED_HASH_SIZE]) {
+    for (AnnounceEntry& a : announces_) {
+        if (a.used && memcmp(a.destination, destination, TRUNCATED_HASH_SIZE) == 0) return &a;
+    }
+    return nullptr;
+}
+
 bool Transport::schedule(const uint8_t destination[TRUNCATED_HASH_SIZE], uint8_t hops, uint64_t atMs, uint8_t retries,
                          bool block) {
-    AnnounceEntry* slot = nullptr;
+    AnnounceEntry* slot = findAnnounce(destination);
     for (AnnounceEntry& a : announces_) {
-        if (a.used && memcmp(a.destination, destination, TRUNCATED_HASH_SIZE) == 0) {
-            slot = &a;
-            break;
-        }
-        if (!a.used && !slot) slot = &a;
+        if (slot) break;
+        if (!a.used) slot = &a;
     }
     if (!slot) {
         ++counters_.announceTableFull;
@@ -531,6 +632,9 @@ void Transport::retransmit(AnnounceEntry& entry, uint64_t nowMs) {
     KnownDestination e;
     if (!lookup(entry.destination, e, nowMs) || !e.announceLength) {   // wpis wyparty w międzyczasie
         entry.used = false;
+        for (AnnounceEntry& h : held_) {   // wstrzymana retransmisja tego celu też nie ma czego nadać
+            if (h.used && memcmp(h.destination, entry.destination, TRUNCATED_HASH_SIZE) == 0) h.used = false;
+        }
         return;
     }
     Packet packet = {};
@@ -547,7 +651,27 @@ void Transport::retransmit(AnnounceEntry& entry, uint64_t nowMs) {
     packet.dataLength = e.announceLength;
     uint8_t raw[MTU];
     const size_t rawLength = pack(packet, raw, sizeof(raw));
-    if (rawLength && emit(raw, rawLength, true) && entry.blockRebroadcasts) ++counters_.pathResponses;
+    if (rawLength && emit(raw, rawLength, true)) ++(entry.blockRebroadcasts ? counters_.pathResponses : counters_.rebroadcasts);
+    for (AnnounceEntry& h : held_) {   // held_announces: wstrzymany wpis wraca do tablicy
+        if (h.used && memcmp(h.destination, entry.destination, TRUNCATED_HASH_SIZE) == 0) {
+            entry = h;
+            h.used = false;
+            break;
+        }
+    }
+}
+
+// RNS/Transport.py: _inbound (ANNOUNCE z identyfikatorem transportu): retransmisja tego ogłoszenia
+// przez sąsiada. Ta sama liczba skoków co we wpisie: lokalna powtórka (po LOCAL_REBROADCASTS_MAX wpis
+// z ponowieniem znika); o jeden skok więcej przed czasem ponowienia: następny węzeł już je przekazał.
+void Transport::heardRebroadcast(const Packet& packet, uint64_t nowMs) {
+    AnnounceEntry* a = findAnnounce(packet.destinationHash);
+    if (!a) return;
+    if (packet.hops - 1 == a->hops) {
+        ++a->localRebroadcasts;
+        if (a->retries > 0 && a->localRebroadcasts >= LOCAL_REBROADCASTS_MAX) a->used = false;
+    }
+    if (packet.hops - 1 == a->hops + 1 && a->retries > 0 && nowMs < a->retransmitMs) a->used = false;
 }
 
 bool Transport::requestPath(const uint8_t destination[TRUNCATED_HASH_SIZE], const uint8_t tag[TRUNCATED_HASH_SIZE],
@@ -601,12 +725,29 @@ void Transport::poll(uint64_t nowMs, bool transmit) {
         }
     }
     if (due && transmit && mayTransmit()) retransmit(*due, nowMs);
+    // Wstrzymany wpis żyje tylko razem z wpisem odpowiedzi swojego celu (zastąpionym, wypartym albo
+    // zakończonym bez nadania): bez niego zwalnia miejsce.
+    for (AnnounceEntry& h : held_) {
+        if (h.used && !findAnnounce(h.destination)) h.used = false;
+    }
     // Transport.jobs: trasa nieużywana dłużej niż DESTINATION_TIMEOUT znika z path_table; wpis znanego
     // celu (tożsamość, ratchet) zostaje, jak known_destinations. Przegląd indeksu raz na sekundę.
     const uint32_t nowS = seconds(nowMs);
     if (nowS == cullS_) return;
     cullS_ = nowS;
     table_.expire(nowS);
+}
+
+size_t Transport::reverseEntries(uint64_t nowMs) const {
+    size_t n = 0;
+    for (const ReverseEntry& r : reverse_) n += r.atMs && nowMs - r.atMs <= REVERSE_TIMEOUT_MS;
+    return n;
+}
+
+size_t Transport::heldAnnounces() const {
+    size_t n = 0;
+    for (const AnnounceEntry& h : held_) n += h.used;
+    return n;
 }
 
 size_t Transport::announceTable() const {
@@ -634,6 +775,8 @@ void Transport::clear() {
     table_.clear();
     clean(receipts_, sizeof(receipts_));
     clean(announces_, sizeof(announces_));
+    clean(held_, sizeof(held_));
+    clean(reverse_, sizeof(reverse_));
     clean(pathTags_, sizeof(pathTags_));
     clean(ownRequests_, sizeof(ownRequests_));
     clean(ownAppData_, sizeof(ownAppData_));
