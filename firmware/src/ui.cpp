@@ -92,6 +92,21 @@ Id peopleForm(uint32_t n, Lang lang) {
     return Id::OSOBY_5;
 }
 
+// Wiersz 1 ekranu głównego: przy awarii radia radio_awaria, przy awarii samego stosu brak_lacznosci.
+Id linkLine(const Status& s) {
+    return !s.radioOk ? Id::RADIO_AWARIA : !s.stackOk ? Id::BRAK_LACZNOSCI : Id::RADIO_WLACZONE;
+}
+
+// Tekst ekranu alarmu awarii stacji; COUNT: alarm zgłoszenia.
+Id faultText(AlarmKind kind) {
+    switch (kind) {
+        case AlarmKind::RADIO_FAULT: return Id::RADIO_AWARIA;
+        case AlarmKind::MEMORY_FAULT: return Id::BLAD_PAMIECI;
+        case AlarmKind::STACK_FAULT: return Id::BRAK_LACZNOSCI_ALARM;
+        default: return Id::COUNT;
+    }
+}
+
 // Krótki numer zgłoszenia: cztery cyfry.
 void formatShort(char* out, size_t size, uint16_t number) { snprintf(out, size, "%04u", static_cast<unsigned>(number % 10000)); }
 
@@ -903,7 +918,7 @@ void Model::renderMain(const Status& s, char out[][LINE_BYTES], size_t count) co
             lines[3] = tmp;
             lines[4] = computer;
         } else {
-            lines[0] = text(s.radioOk ? Id::RADIO_WLACZONE : Id::RADIO_AWARIA, lang_);
+            lines[0] = text(linkLine(s), lang_);
             lines[1] = computer;
             lines[2] = tmp;
             lines[3] = muted_ ? text(Id::DZWIEK_WYCISZONY, lang_) : "";
@@ -918,7 +933,7 @@ void Model::renderMain(const Status& s, char out[][LINE_BYTES], size_t count) co
         const size_t wrapped = wrap(text(Id::CISZA, lang_), lines, 3);
         for (size_t i = 0; i < 3; ++i) copyLine(out[n++], LINE_BYTES, i < wrapped ? lines[i] : "");
     } else {
-        copyLine(out[n++], LINE_BYTES, text(s.radioOk ? Id::RADIO_WLACZONE : Id::RADIO_AWARIA, lang_));
+        copyLine(out[n++], LINE_BYTES, text(linkLine(s), lang_));
         duration(s.contactS, lang_, value, sizeof(value));
         substitute(text(s.contactKnown ? Id::KONTAKT_KROTKI : Id::KONTAKT_PONAD_KROTKI, lang_), "[czas]", value, tmp, sizeof(tmp));
         copyLine(out[n++], LINE_BYTES, tmp);
@@ -952,7 +967,7 @@ size_t Model::statusLines(const Status& s, char out[][LINE_BYTES], size_t max) c
     char value[24];
     char tmp[LINE_BYTES * 2];
     auto put = [&](const char* line) { if (n < max) copyLine(out[n++], LINE_BYTES, line); };
-    put(text(s.radioOk ? Id::RADIO_WLACZONE : Id::RADIO_AWARIA, lang_));
+    put(text(linkLine(s), lang_));
     snprintf(tmp, sizeof(tmp), "RX OK %lu", static_cast<unsigned long>(s.rxOk)); put(tmp);
     snprintf(tmp, sizeof(tmp), "RX BAD %lu", static_cast<unsigned long>(s.rxBad)); put(tmp);
     snprintf(tmp, sizeof(tmp), "TX %lu DROP %lu", static_cast<unsigned long>(s.txDatagrams), static_cast<unsigned long>(s.txDrop)); put(tmp);
@@ -1131,6 +1146,7 @@ void Model::buildHandover(const Status& status, Text& t) {
     renderMain(status, lines, LINES);
     if (status.silence) t.addLine(lines[0]);
     if (!status.radioOk) t.addLine(text(Id::RADIO_AWARIA, lang_));  // wpis alarmu do usunięcia przyczyny
+    if (!status.stackOk) t.addLine(text(Id::BRAK_LACZNOSCI, lang_));
     if (!status.storeOk) t.add(text(Id::BLAD_PAMIECI, lang_));
     if (addressMissing_) t.add(text(Id::ADRES_BRAK, lang_));   // następna zmiana wie o NIE w kontroli adresu
     copyLine(tmp, sizeof(tmp), text(Id::NOWE_KROTKI, lang_));
@@ -1456,8 +1472,8 @@ void Model::render(const Status& s, Lines& out) {
             renderText(t, window, out, first);
             break;
         case Screen::ALARM:
-            if (alarm_.kind == AlarmKind::RADIO_FAULT || alarm_.kind == AlarmKind::MEMORY_FAULT) {
-                t.add(text(alarm_.kind == AlarmKind::RADIO_FAULT ? Id::RADIO_AWARIA : Id::BLAD_PAMIECI, lang_));
+            if (faultText(alarm_.kind) != Id::COUNT) {
+                t.add(text(faultText(alarm_.kind), lang_));
                 renderText(t, window, out, first);
                 break;
             }

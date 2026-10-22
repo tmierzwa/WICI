@@ -196,17 +196,28 @@ bool Console::scheduleTest(bool startup) {
 void Console::cancelTest() { dirty_ = true; station_.cancelTest(); }
 void Console::pauseTest(bool paused) { dirty_ = true; station_.pauseTest(paused); }
 
-void Console::setRadioFault(bool fault) {
-    if (!fault) radioAcked_ = false;
-    radioFault_ = fault;
+Console::Fault* Console::fault(ui::AlarmKind kind) {
+    switch (kind) {
+        case ui::AlarmKind::RADIO_FAULT: return &radio_;
+        case ui::AlarmKind::MEMORY_FAULT: return &memory_;
+        case ui::AlarmKind::STACK_FAULT: return &stack_;
+        default: return nullptr;
+    }
 }
 
 bool Console::alarm(ui::AlarmInfo& out) {
+    memory_.set(!store_.ok());
     station::Alarm a;
     if (!station_.alarm(a)) {
+        // Awarie stacji w kolejności ekranów alarmu (oprogramowanie.md, Alarmy).
+        static constexpr ui::AlarmKind FAULTS[] = {ui::AlarmKind::RADIO_FAULT, ui::AlarmKind::MEMORY_FAULT, ui::AlarmKind::STACK_FAULT};
         out = ui::AlarmInfo();
-        if (radioFault_ && !radioAcked_) out.kind = ui::AlarmKind::RADIO_FAULT;
-        else if (!store_.ok() && !memoryAcked_) out.kind = ui::AlarmKind::MEMORY_FAULT;
+        for (ui::AlarmKind kind : FAULTS) {
+            if (fault(kind)->pending()) {
+                out.kind = kind;
+                break;
+            }
+        }
         return out.kind != ui::AlarmKind::NONE;
     }
     out.kind = a.kind == station::AlarmKind::NO_READ ? ui::AlarmKind::NO_READ : ui::AlarmKind::NO_CONFIRMATION;
@@ -217,8 +228,10 @@ bool Console::alarm(ui::AlarmInfo& out) {
 }
 
 void Console::ackAlarm(const ui::AlarmInfo& alarm) {
-    if (alarm.kind == ui::AlarmKind::RADIO_FAULT) { radioAcked_ = true; return; }
-    if (alarm.kind == ui::AlarmKind::MEMORY_FAULT) { memoryAcked_ = true; return; }
+    if (Fault* f = fault(alarm.kind)) {
+        f->acked = true;
+        return;
+    }
     station::Alarm a;
     a.kind = alarm.kind == ui::AlarmKind::NO_READ ? station::AlarmKind::NO_READ : station::AlarmKind::NO_CONFIRMATION;
     a.slot = static_cast<uint16_t>(alarm.ref & 0xFFFF);

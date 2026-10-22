@@ -50,12 +50,13 @@ public:
     bool closeEvent() override;
     bool announce() override;
     bool node() override { return actions_.node(); }
-    // Awaria układu radiowego (radio_awaria), podawana przez main.cpp przy każdym obiegu: alarm
-    // do potwierdzenia OK; po ustąpieniu przyczyny następna awaria alarmuje od nowa.
-    void setRadioFault(bool fault);
-    // Przyczyna alarmu trwa (także po potwierdzeniu): awaria radia, magazyn niedziałający albo alarm
-    // zgłoszenia. Alarmy zgłoszeń liczą się z indeksu w RAM, więc działają też po zatrzymaniu magazynu.
-    bool alarmCause() const { return radioFault_ || !store_.ok() || station_.alarmCause(); }
+    // Awaria układu radiowego (radio_awaria) i stosu sieciowego (brak_lacznosci), podawane przez main.cpp
+    // przy każdym obiegu: alarm do potwierdzenia OK; po ustąpieniu przyczyny następna awaria alarmuje od nowa.
+    void setRadioFault(bool fault) { radio_.set(fault); }
+    void setStackFault(bool fault) { stack_.set(fault); }
+    // Przyczyna alarmu trwa (także po potwierdzeniu): awaria radia albo stosu, magazyn niedziałający albo
+    // alarm zgłoszenia. Alarmy zgłoszeń liczą się z indeksu w RAM, więc działają też po zatrzymaniu magazynu.
+    bool alarmCause() const { return radio_.active || stack_.active || !store_.ok() || station_.alarmCause(); }
 
 private:
     static_assert(ui::ADDRESS_CHOICES == config::ADDRESSES, "lista obiektów ekranu i konfiguracji");
@@ -74,9 +75,20 @@ private:
     station::Station& station_;
     Actions& actions_;
     bool dirty_ = true;
-    bool radioFault_ = false;
-    bool radioAcked_ = false;
-    bool memoryAcked_ = false;   // magazyn wraca dopiero po restarcie, więc potwierdzenie trwa do niego
+    // Awaria stacji jako alarm: trwa, póki trwa przyczyna; potwierdzenie OK do ustąpienia przyczyny.
+    struct Fault {
+        bool active = false;
+        bool acked = false;
+        void set(bool on) {
+            if (!on) acked = false;
+            active = on;
+        }
+        bool pending() const { return active && !acked; }
+    };
+    Fault* fault(ui::AlarmKind kind);
+    Fault radio_;
+    Fault memory_;   // magazyn wraca dopiero po restarcie, więc potwierdzenie trwa do niego
+    Fault stack_;    // stos startuje tylko przy włączeniu, więc też do restartu
     size_t count_ = 0;
     Entry list_[MAX_ITEMS];
     // Treść ostatnio otwartej pozycji: liczba osób i fraza zmieniają się tylko z nową rewizją,

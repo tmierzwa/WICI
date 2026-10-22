@@ -818,6 +818,7 @@ int world() {
         else if (sscanf(line, "P %u", &a) == 1) status.prep = a;
         else if (sscanf(line, "Q %u", &a) == 1) { status.silence = a; w.services.forced = a; }
         else if (sscanf(line, "O %u", &a) == 1) { status.radioOk = a; w.con->setRadioFault(!a); }   // jak main.cpp: jedno źródło
+        else if (sscanf(line, "W %u", &a) == 1) { status.stackOk = a; w.con->setStackFault(!a); }   // stos sieciowy działa
         else if (sscanf(line, "U %u", &a) == 1) status.contactS = a;
         else if (sscanf(line, "N %u", &a) == 1) status.newMessages = a;
         else if (sscanf(line, "C %u %u", &a, &b) == 2) { status.queued = a; status.queueAgeS = b; }
@@ -2611,6 +2612,33 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual(self.shown(s[0]), texts["radio_awaria"][0])
         self.assertTrue(self.shown(s[1]).startswith(texts["blad_pamieci"][0][:20]))
         self.assertEqual(self.lines(s[2])[0], texts["radio_awaria"][0])
+
+    def test_stack_fault_alarm(self):
+        # oprogramowanie.md: brak_lacznosci (stos sieciowy nie działa) jak radio_awaria: ekran alarmu do OK
+        # (brak_lacznosci_alarm, najwyżej 5 wierszy w każdym języku), wiersz 1 i PRZEKAZANIE ZMIANY do usunięcia
+        # przyczyny; przy awarii radia wiersz 1 to radio_awaria, a oba alarmy przychodzą po kolei (radio, potem
+        # stos), każdy do OK.
+        texts = ui_texts.load()["texts"]
+        out = self.ui(["H", self.CONFIG, "L 0", "O 1", "W 0", "cause", "T 1000", "R", "K OK 1000", "T 2000", "R",
+                       "K OK 2050", "K DOWN 2100", "K DOWN 2200", "K DOWN 2300", "K OK 2400"] + ["K DOWN 2500"] * 15 + ["K OK 2600", "R",
+                       "K BACK 2700", "K BACK 2800", "K BACK 2900", "W 1", "cause", "T 4000", "R"])
+        s = self.screens(out)
+        self.assertEqual([x[0] for x in s], ["alarm", "main", "handover", "main"])
+        self.assertEqual(self.shown(s[0]), texts["brak_lacznosci_alarm"][0])
+        self.assertEqual(self.lines(s[1])[0], texts["brak_lacznosci"][0])
+        self.assertIn(texts["brak_lacznosci"][0], self.lines(s[2]))
+        self.assertEqual(self.lines(s[3])[0], texts["radio_wlaczone"][0])
+        self.assertEqual(self.find(out, "cause "), ["cause 1", "cause 0"])
+        out = self.ui(["H", self.CONFIG, "L 0", "O 0", "W 0", "T 1000", "R", "K OK 1000", "T 2000", "R", "K OK 2000",
+                       "T 3000", "R"])
+        s = self.screens(out)
+        self.assertEqual([x[0] for x in s], ["alarm", "alarm", "main"])
+        self.assertEqual([self.shown(x) for x in s[:2]], [texts["radio_awaria"][0], texts["brak_lacznosci_alarm"][0]])
+        self.assertEqual(self.lines(s[2])[0], texts["radio_awaria"][0])
+        for lang in range(3):
+            alarm = self.screens(self.ui(["H", self.CONFIG, "L %d" % lang, "O 1", "W 0", "T 1000", "R"]))[0]
+            self.assertEqual(self.shown(alarm), texts["brak_lacznosci_alarm"][lang])
+            self.assertLessEqual(len([x for x in self.lines(alarm) if x.strip()]), 5)
 
     def test_alarm_on_language_screen_refresh_and_new_revision(self):
         texts = ui_texts.load()["texts"]

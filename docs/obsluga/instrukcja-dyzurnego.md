@@ -21,7 +21,7 @@ Karta obsługi stacji w punkcie: [karta-stacji.html](karta-stacji.html). Napisy 
 1. Sprawdź, czy stacja stanowiska ma podłączoną antenę, zasilanie i przewód USB do komputera.
 2. Włącz stację stanowiska. Wybierz język: GÓRA/DÓŁ, OK.
 3. Odczytaj ekran stacji stanowiska:
-   - wiersz 1: „RADIO WŁĄCZONE” (do 1 min). „RADIO: AWARIA”: przejdź do [awarii](#8-awaria-stanowiska-i-powrót-bez-duplikatów);
+   - wiersz 1: „RADIO WŁĄCZONE” (do 1 min). „RADIO: AWARIA” albo „BRAK ŁĄCZNOŚCI”: przejdź do [awarii](#8-awaria-stanowiska-i-powrót-bez-duplikatów);
    - wiersz 2: „KOMPUTER [czas] TEMU”. „BRAK KOMPUTERA” znaczy, że komputer nie przesłał jeszcze żadnego pakietu;
    - wiersz 3: zasilanie „12 V: [x] V” (oprogramowanie 0.1 jeszcze nie mierzy napięcia i pokazuje „12 V: 0,0 V”).
 4. Włącz komputer stanowiska z podłączonym nośnikiem stanowiska.
