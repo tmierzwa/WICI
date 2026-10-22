@@ -28,6 +28,14 @@ Run with a Python that has Reticulum at the pinned commit (e40191b), for example
 With --steps (for example 1,5) only the listed steps run: the station core program ("host-core",
 firmware/reticulum-core.md) runs the steps its stage already has (tests/test_rns_stack.py).
 
+With --lxmf (station core from stage R3) the station destination is "lxmf.delivery": the Python
+destinations use that name, the station sends the stand-in envelope of the station application layer
+(["WICI",1,from,to,<SA1>]) and the core carries the SA1 part as an LXMF message, Python sends LXMF SA1
+messages to the station (the station application layer gets them back in the envelope), and every
+check compares the SA1 content. Steps L1 and L2 exchange SA1 messages with LXMRouter (LXMF c3ff2d6)
+in both directions with delivery proofs; L1 also checks the display name in the station announce.
+--lxmf needs LXMF at c3ff2d6 in the same Python (pip install "git+https://github.com/markqvist/LXMF@c3ff2d6").
+
 Prints one JSON object with the results; exit code 0 when every check passed.
 """
 
@@ -110,19 +118,25 @@ def main():
     parser.add_argument("--port", type=int, default=47420)
     parser.add_argument("--fill", type=int, default=0, help="announce N more destinations and record the station memory")
     parser.add_argument("--capture", help="file for the datagrams Python sends to the station (tools/rns_ram32.py replays them)")
-    parser.add_argument("--steps", help="comma-separated steps to run (1,2,3,3r,4,4a,5,6,7,8,9; default all but 3r and 9), e.g. for a stack "
-                                        "that does not have every function yet (host-core, firmware/reticulum-core.md)")
+    parser.add_argument("--steps", help="comma-separated steps to run (1,2,3,3r,4,4a,5,6,7,8,9,L1,L2; default all but 3r, 9, L1 and "
+                                        "L2), e.g. for a stack that does not have every function yet (host-core, firmware/reticulum-core.md)")
+    parser.add_argument("--lxmf", action="store_true", help="station destination lxmf.delivery with LXMF SA1 messages (core, stage R3)")
     args = parser.parse_args()
     steps = set(args.steps.split(",")) if args.steps else None
+    global APP_NAME, ASPECT
+    if args.lxmf:
+        APP_NAME, ASPECT = "lxmf", "delivery"
 
     def want(step):
         # Krok 3r tylko na żądanie: port microReticulum nie szyfruje do ratchetu z ogłoszenia (cel Pythona
         # z wymuszonymi ratchetami odrzuca jego pakiet), więc nie należy do domyślnej próby portu.
         # Krok 9 (zapytania o trasę) też na żądanie: dodany z etapem R2 rdzenia; port przechodzi go lokalnie, ale
         # domyślna próba portu zostaje bez zmian.
-        return step in steps if steps is not None else step not in ("3r", "9")
+        return step in steps if steps is not None else step not in ("3r", "9", "L1", "L2")
 
     import RNS  # noqa: E402 (needs the reference Reticulum)
+    if args.lxmf:
+        import LXMF  # noqa: E402 (LXMF at c3ff2d6)
 
     work = tempfile.mkdtemp(prefix="wici_rns_")
     fram = os.path.join(work, "fram.bin")
@@ -180,6 +194,27 @@ def main():
 
     RNS.Transport.register_announce_handler(PathResponses())
 
+    station_address = None   # cel stacji z jej zdarzenia "ready"
+
+    def outgoing(dest_hash, content):
+        # Dane polecenia send: przy --lxmf koperta warstwy aplikacji stacji (station.cpp) z treścią SA1.
+        if not args.lxmf:
+            return content
+        return b'["WICI",1,"' + station_address.hex().encode() + b'","' + dest_hash.hex().encode() + b'",' + content + b"]"
+
+    def carried(data, content):
+        # Dane odebrane w Pythonie albo w stacji niosą treść: przy --lxmf w LXMF (payload MessagePack
+        # z treścią jako bin) albo w kopercie, bez --lxmf jako całe dane pakietu.
+        return content in data if args.lxmf else data == content
+
+    def incoming(out, content):
+        # Dane pakietu Python -> stacja: przy --lxmf wiadomość LXMF SA1 od celu Pythona (LXMessage.pack).
+        if not args.lxmf:
+            return content
+        message = LXMF.LXMessage(out, destination, content.decode(), "SA1", desired_method=LXMF.LXMessage.OPPORTUNISTIC)
+        message.pack()
+        return message.packed[RNS.Identity.TRUNCATED_HASHLENGTH // 8:]
+
     def wait_for(condition, timeout):
         end = time.time() + timeout
         while time.time() < end:
@@ -193,6 +228,7 @@ def main():
         if not station.ready:
             raise RuntimeError("station program did not start")
         address = bytes.fromhex(station.ready["address"])
+        station_address = address
         results["station_address"] = station.ready["address"]
         results["station_identity"] = station.ready["identity"]
         results["declared_bitrate"] = station.ready["bitrate"]
@@ -216,12 +252,12 @@ def main():
         # 3. Pakiet okazjonalny stacja -> Python z potwierdzeniem transportowym.
         if want("3"):
             payload = b'["WICI",1,"interop","station to python"]'
-            station.command(f"send {destination.hash.hex()} {payload.hex()} 120")
+            station.command(f"send {destination.hash.hex()} {outgoing(destination.hash, payload).hex()} 120")
             sent = station.wait("sent", 10)
             handle = sent["handle"] if sent else 0
             checks["station_packet_accepted"] = handle > 0
-            checks["station_to_python_packet"] = wait_for(lambda: any(p[1] == payload for p in seen["packets"]), 90)
-            t_packet = next((p[0] for p in seen["packets"] if p[1] == payload), None)
+            checks["station_to_python_packet"] = wait_for(lambda: any(carried(p[1], payload) for p in seen["packets"]), 90)
+            t_packet = next((p[0] for p in seen["packets"] if carried(p[1], payload)), None)
             receipt = station.wait("receipt", 120, lambda e: e["handle"] == handle) if handle else None
             checks["station_receipt_delivered"] = bool(receipt and receipt["delivered"])
             if t_packet and t_announce:
@@ -238,11 +274,11 @@ def main():
             ratchets.announce(app_data=b"ratchets")
             learned = station.wait("announce", 60, lambda e: e["dest"] == ratchets.hash.hex()) is not None
             to_ratchet = b'["WICI",1,"interop","to a ratchet"]'
-            station.command(f"send {ratchets.hash.hex()} {to_ratchet.hex()} 120")
+            station.command(f"send {ratchets.hash.hex()} {outgoing(ratchets.hash, to_ratchet).hex()} 120")
             sent = station.wait("sent", 10)
             handle = sent["handle"] if sent else 0
             checks["ratchet_packet_decrypted"] = learned and handle > 0 and wait_for(
-                lambda: any(p[1] == to_ratchet for p in seen["packets"]), 90)
+                lambda: any(carried(p[1], to_ratchet) for p in seen["packets"]), 90)
             receipt = station.wait("receipt", 120, lambda e: e["handle"] == handle) if handle else None
             checks["ratchet_receipt_delivered"] = bool(receipt and receipt["delivered"])
 
@@ -252,13 +288,13 @@ def main():
                 out = RNS.Destination(station_identity, RNS.Destination.OUT, RNS.Destination.SINGLE, APP_NAME, ASPECT)
                 back = b'["WICI",1,"interop","python to station"]'
                 t0 = time.time()
-                r = RNS.Packet(out, back).send()
+                r = RNS.Packet(out, incoming(out, back)).send()
                 if r:
                     # Domyślny limit potwierdzenia Reticulum dla 1 skoku przez szybki interfejs; dług ciszy P1
                     # po datagramie 600 B (17,7 s) go przekracza (F02), więc próba ustawia 120 s.
                     results["python_default_receipt_timeout_s"] = round(r.timeout, 2)
                     r.set_timeout(120)
-                e = station.wait("packet", 90, lambda e: e["data"] == back.hex())
+                e = station.wait("packet", 90, lambda e: carried(bytes.fromhex(e["data"]), back))
                 checks["python_to_station_packet"] = e is not None
                 checks["python_receipt_delivered"] = bool(r) and wait_for(lambda: r.status == RNS.PacketReceipt.DELIVERED, 120)
                 if r and r.status == RNS.PacketReceipt.DELIVERED:
@@ -276,16 +312,28 @@ def main():
                 station.command("accept 0")
                 station.wait("accept", 5)
                 rejected = b'["WICI",1,"interop","rejected by the station"]'
-                r = RNS.Packet(out, rejected).send()
+                r = RNS.Packet(out, incoming(out, rejected)).send()
                 if r:
                     r.set_timeout(45)
-                e = station.wait("packet", 60, lambda e: e["data"] == rejected.hex())
+                e = station.wait("packet", 60, lambda e: carried(bytes.fromhex(e["data"]), rejected))
                 failed = bool(r) and wait_for(lambda: r.status == RNS.PacketReceipt.FAILED, 60)
                 checks["rejected_packet_without_proof"] = e is not None and not e["accepted"] and failed
                 station.command("accept 1")
                 station.wait("accept", 5)
+                if args.lxmf:
+                    # Dane, które nie są wiadomością SA1 (tu bez LXMF): trwałe odrzucenie z dowodem, bez warstwy
+                    # aplikacji (oprogramowanie.md, „Dowód dostarczenia po COMMIT”).
+                    before = station.status() or {}
+                    r = RNS.Packet(out, b"not an LXMF message").send()
+                    if r:
+                        r.set_timeout(120)
+                    proved = bool(r) and wait_for(lambda: r.status == RNS.PacketReceipt.DELIVERED, 120)
+                    after = station.status() or {}
+                    checks["non_sa1_rejected_with_proof"] = proved and after.get("lxmf_rejected", 0) == before.get("lxmf_rejected", 0) + 1
             else:
                 checks["rejected_packet_without_proof"] = False
+                if args.lxmf:
+                    checks["non_sa1_rejected_with_proof"] = False
 
         # 5. IFAC: datagram bez kodu i z błędnym kodem odrzucony przed stosem.
         if want("5"):
@@ -323,6 +371,51 @@ def main():
                 return p.get("known") is True and p.get("path") is True
 
             checks["station_path_request_answered"] = before.get("known") is False and wait_for(learned, 60)
+
+        # L1, L2. Wymiana z LXMRouter (LXMF c3ff2d6) w obie strony, tylko z --lxmf; tożsamość stacji z kroku 1.
+        if args.lxmf and (want("L1") or want("L2")):
+            router = LXMF.LXMRouter(storagepath=os.path.join(work, "lxmf"))
+            router_identity = RNS.Identity()
+            router_destination = router.register_delivery_identity(router_identity, display_name="stanowisko")
+            delivered = []
+            router.register_delivery_callback(lambda message: delivered.append(message))
+            router.announce(router_destination.hash)
+            router_learned = station.wait("announce", 60, lambda e: e["dest"] == router_destination.hash.hex()) is not None
+
+            # L1. Stacja -> LXMRouter: wiadomość SA1 z podpisem stacji, potwierdzenie dostarczenia w stacji;
+            #     nazwa wyświetlana z ogłoszenia stacji bez danych aplikacji (WICI-xxxxxx).
+            if want("L1"):
+                count = len(seen["announces"])
+                station.command("announce")
+                checks["station_lxmf_announce"] = wait_for(lambda: any(a[1] == address for a in seen["announces"][count:]), 60)
+                app_data = next((a[3] for a in seen["announces"][count:] if a[1] == address), None)
+                results["station_display_name"] = LXMF.display_name_from_app_data(app_data) if app_data else None
+                content = b'[2,"interop","station to LXMRouter"]'
+                station.command(f"send {router_destination.hash.hex()} {outgoing(router_destination.hash, content).hex()} 120")
+                sent = station.wait("sent", 10)
+                handle = sent["handle"] if sent else 0
+                got = wait_for(lambda: any(m.content == content for m in delivered), 90)
+                message = next((m for m in delivered if m.content == content), None)
+                checks["lxmf_station_to_router"] = (router_learned and handle > 0 and got and message.title == b"SA1"
+                                                    and message.signature_validated and message.source_hash == address)
+                receipt = station.wait("receipt", 120, lambda e: e["handle"] == handle) if handle else None
+                checks["lxmf_station_receipt_delivered"] = bool(receipt and receipt["delivered"])
+
+            # L2. LXMRouter -> stacja: warstwa aplikacji dostaje SA1 w kopercie z nadawcą, LXMRouter stan DELIVERED
+            #     po dowodzie stacji.
+            if want("L2"):
+                if station_identity is not None:
+                    out = RNS.Destination(station_identity, RNS.Destination.OUT, RNS.Destination.SINGLE, "lxmf", "delivery")
+                    content = b'[3,"interop","LXMRouter to station"]'
+                    message = LXMF.LXMessage(out, router_destination, content.decode(), "SA1",
+                                             desired_method=LXMF.LXMessage.OPPORTUNISTIC)
+                    router.handle_outbound(message)
+                    head = b'["WICI",1,"' + router_destination.hash.hex().encode() + b'","' + address.hex().encode() + b'",'
+                    e = station.wait("packet", 90, lambda e: bytes.fromhex(e["data"]) == head + content + b"]")
+                    checks["lxmf_router_to_station"] = router_learned and e is not None
+                    checks["lxmf_router_delivered"] = wait_for(lambda: message.state == LXMF.LXMessage.DELIVERED, 120)
+                else:
+                    checks["lxmf_router_to_station"] = checks["lxmf_router_delivered"] = False
 
         if args.fill:
             # Pomiar pamięci: N ogłoszeń nowych celów (po 2 na sekundę, bez wyzwalania ograniczeń
@@ -367,11 +460,11 @@ def main():
             checks["path_and_identity_restored"] = bool(p and p["known"] and p["path"])
             results["paths_after_restart"] = ready.get("paths")
             payload2 = b'["WICI",1,"interop","after restart"]'
-            station.command(f"send {destination.hash.hex()} {payload2.hex()} 120")
+            station.command(f"send {destination.hash.hex()} {outgoing(destination.hash, payload2).hex()} 120")
             sent = station.wait("sent", 10)
             handle = sent["handle"] if sent else 0
             checks["send_after_restart_without_announce"] = handle > 0 and wait_for(
-                lambda: any(p[1] == payload2 for p in seen["packets"]), 90)
+                lambda: any(carried(p[1], payload2) for p in seen["packets"]), 90)
             receipt = station.wait("receipt", 120, lambda e: e["handle"] == handle) if handle else None
             checks["receipt_after_restart"] = bool(receipt and receipt["delivered"])
         finally:
@@ -429,11 +522,11 @@ def main():
             silenced = station.wait("announced", 10) or {}
             checks["announce_blocked_in_silence"] = silenced.get("ok") is False
             payload3 = b'["WICI",1,"interop","card key in exception"]'
-            station.command(f"send {destination.hash.hex()} {payload3.hex()} 120")
+            station.command(f"send {destination.hash.hex()} {outgoing(destination.hash, payload3).hex()} 120")
             sent = station.wait("sent", 10)
             handle = sent["handle"] if sent else 0
             checks["send_from_card_key_in_exception"] = handle > 0 and wait_for(
-                lambda: any(p[1] == payload3 for p in seen["packets"]), 90)
+                lambda: any(carried(p[1], payload3) for p in seen["packets"]), 90)
         finally:
             station.stop()
 

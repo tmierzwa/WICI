@@ -5,9 +5,10 @@ Builds the "host" PlatformIO program (microReticulum port, P1 interface, IFAC, F
 P1 link) and runs firmware/tools/rns_interop.py with it, then firmware/tools/rns_osp_node.py (the OSP
 node of decision D19 with the computer of the receiving station on a KISS interface). The same
 rns_interop.py runs on the "host-core" program (station Reticulum core, firmware/reticulum-core.md) with
-the steps the core already has (CORE_STEPS, extended with each stage R1 step). Needs network
-access for the pinned stack sources and a Python with Reticulum at e40191b and pyserial, so it runs
-only when both are given:
+the steps the core already has (CORE_STEPS, extended with each stage step) and, from stage R3, with
+the station destination "lxmf.delivery" and LXMF SA1 messages (--lxmf, steps L1 and L2 with LXMRouter).
+Needs network access for the pinned stack sources and a Python with Reticulum at e40191b, LXMF at
+c3ff2d6 and pyserial, so it runs only when both are given:
 
   WICI_PIO=/path/to/pio WICI_RNS_PYTHON=/path/to/venv/bin/python python3 -m unittest tests.test_rns_stack
 
@@ -28,22 +29,25 @@ RNS_PYTHON = os.environ.get("WICI_RNS_PYTHON")
 
 PROGRAM = FIRMWARE / ".pio" / "build" / "host" / "program"
 CORE_PROGRAM = FIRMWARE / ".pio" / "build" / "host-core" / "program"
-# Kroki rns_interop.py na rdzeniu: wyjście etapu R1 (firmware/reticulum-core.md, „Etapy”), z krokiem 3r
-# (szyfrowanie do ratchetu), którego port nie przechodzi, i krok 6 z etapu R2 (trasa i tożsamość celu
-# z tablicy w FRAM po restarcie) i 9 (zapytania o trasę w obie strony).
+# Kroki rns_interop.py na rdzeniu (z --lxmf: cel stacji "lxmf.delivery" i wiadomości SA1 w LXMF): wyjście
+# etapu R1 (firmware/reticulum-core.md, „Etapy”), z krokiem 3r (szyfrowanie do ratchetu), którego port nie
+# przechodzi, krok 6 z etapu R2 (trasa i tożsamość celu z tablicy w FRAM po restarcie), 9 (zapytania o trasę
+# w obie strony) i wyjście etapu R3 (L1, L2: wymiana z LXMRouter w obie strony z dowodem dostarczenia).
 CORE_STEPS = {
     "1": ["station_announce_in_python"],
     "2": ["python_announce_in_station"],
     "3": ["station_packet_accepted", "station_to_python_packet", "station_receipt_delivered"],
     "3r": ["ratchet_packet_decrypted", "ratchet_receipt_delivered"],
     "4": ["python_to_station_packet", "python_receipt_delivered"],
-    "4a": ["rejected_packet_without_proof"],
+    "4a": ["rejected_packet_without_proof", "non_sa1_rejected_with_proof"],
     "5": ["ifac_missing_dropped", "ifac_invalid_dropped"],
     "6": ["identity_restored", "table_limit_after_restart", "path_and_identity_restored", "send_after_restart_without_announce",
           "receipt_after_restart"],
     "7": ["receiver_entry_kept_in_full_table"],
     "8": ["receiver_known_from_card", "announce_blocked_in_silence", "send_from_card_key_in_exception"],
     "9": ["station_answers_path_request", "station_path_request_answered"],
+    "L1": ["station_lxmf_announce", "lxmf_station_to_router", "lxmf_station_receipt_delivered"],
+    "L2": ["lxmf_router_to_station", "lxmf_router_delivered"],
 }
 
 
@@ -89,7 +93,7 @@ class CoreInteropTests(unittest.TestCase):
     def setUpClass(cls):
         subprocess.run([PIO, "run", "-e", "host-core", "-d", str(FIRMWARE)], check=True, capture_output=True)
         command = [RNS_PYTHON, str(FIRMWARE / "tools" / "rns_interop.py"), "--program", str(CORE_PROGRAM),
-                   "--steps", ",".join(CORE_STEPS)]
+                   "--steps", ",".join(CORE_STEPS), "--lxmf"]
         cls.results = results(subprocess.run(command, capture_output=True, text=True, timeout=1800))
 
     def test_every_step_check_passed(self):
@@ -102,6 +106,10 @@ class CoreInteropTests(unittest.TestCase):
     def test_station_announce_app_data(self):
         # Dane aplikacji ogłoszenia stacji (polecenie "announce 57494349") w Pythonie bez zmian.
         self.assertEqual(self.results["station_app_data"], "57494349")
+
+    def test_station_display_name(self):
+        # Ogłoszenie bez danych aplikacji: nazwa WICI-xxxxxx z 6 cyfr skrótu tożsamości (oprogramowanie.md).
+        self.assertEqual(self.results["station_display_name"], "WICI-" + self.results["station_identity"][:6].upper())
 
     def test_ifac_drops_counted(self):
         status = self.results["station_status"]

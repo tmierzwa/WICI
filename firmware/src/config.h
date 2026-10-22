@@ -8,8 +8,9 @@
 // Dokument kodowany jak wiersze protokołu (UTF-8, bez sekwencji ucieczki: teksty SA1 nie mają
 // cudzysłowu ani ukośnika wstecznego), każdy tekst według reguł SA1 (sa1::checkText), pole nieznane
 // albo złego typu, brak pola wymaganego i pole spoza roli dają odmowę z nazwą pola.
-// Karta odbiorcy: adres LXMF musi być celem "lxmf.delivery" podanego klucza; stacja wysyła do celu
-// "wici.sa1" tego klucza (zastępcza koperta do czasu LXMF, station.h).
+// Karta odbiorcy: adres LXMF musi być celem "lxmf.delivery" podanego klucza; warstwa aplikacji wysyła
+// do celu "wici.sa1" tego klucza (zastępcza koperta, station.h). Port wysyła tam pakiet; rdzeń
+// (rns_node_core.cpp, od R3) wysyła SA1 w LXMF do celu "lxmf.delivery" tego samego klucza.
 // Bez zależności od Arduino; sprawdzany na komputerze.
 #pragma once
 

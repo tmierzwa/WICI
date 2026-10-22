@@ -6,7 +6,7 @@
 // - interfejs P1 (etap R1): kod dostępu IFAC 16 B z rdzenia (rnscore::ifacApply, ifacCheck) z frazą
 //   jak w porcie (32 cyfry szesnastkowe klucza z konfiguracji), kolejka radiowa, klasy ruchu i limit
 //   ogłoszeń z p1iface, cisza radiowa jak w porcie, liczniki interfejsu w tym samym JSON;
-// - transport (rnscore::Transport): ogłoszenie własne celu "wici.sa1" bez ratchetu
+// - transport (rnscore::Transport): ogłoszenie własne celu "lxmf.delivery" (od R3) bez ratchetu
 //   (własne ratchety stacji są poza rdzeniem), ogłoszenia innych celów z polem ratchetu w tablicy
 //   znanych celów i tras (256 wpisów, odbiorca z karty chroniony), pakiety do stacji z dowodem po
 //   decyzji warstwy aplikacji, pakiet okazjonalny z szyfrowaniem do ratchetu i potwierdzeniem;
@@ -14,12 +14,22 @@
 //   systemu plików portu (framfs::FS_BASE; rdzeń i port nie dzielą tego obszaru, ten sam rekord
 //   tożsamości), w RAM indeks 257 × 24 B; zapis gniazda przy każdej zmianie wpisu, bez zapisu przy
 //   powtórzonym ogłoszeniu;
+// - LXMF (etap R3): cel stacji "lxmf.delivery" zamiast "wici.sa1" z portu, ogłoszenie z danymi
+//   aplikacji jak LXMRouter (nazwa WICI-xxxxxx), wiadomość SA1 w jednym pakiecie okazjonalnym
+//   (rnscore::lxmfPackSa1, lxmfReceiveSa1). Warstwa aplikacji (station.h) jest wspólna z portem
+//   i nadal podaje zastępczą kopertę ["WICI",1,od,do,<SA1>] i cele "wici.sa1" odbiorcy z karty:
+//   send() wyjmuje SA1 z koperty i wysyła je w LXMF do celu "lxmf.delivery" tego samego klucza,
+//   a wiadomość przyjęta z podpisem nadawcy idzie do warstwy aplikacji w takiej kopercie (od = cel
+//   z setReceivers dla odbiorcy z karty, inaczej cel LXMF nadawcy). Dowód po decyzji warstwy
+//   aplikacji (COMMIT albo trwałe odrzucenie); dane, które nie są wiadomością SA1 z poprawnym
+//   podpisem znanego nadawcy, to trwałe odrzucenie z dowodem (oprogramowanie.md, „Dowód
+//   dostarczenia po COMMIT”);
 // - praca na pakiet ograniczona dla płytek (audyt rdzenia, U2): received() tylko odkłada datagram do
 //   kolejki odbioru, a jeden obieg rnsnode::loop() wykonuje najwyżej jeden krok odbioru: sprawdzenie
 //   IFAC (podpis) albo przetworzenie pakietu w transporcie; weryfikacja podpisów ogłoszeń z limitem na
-//   sekundę. Wyjątek: pakiet do stacji z dowodem to w jednym obiegu ECDH, podpis dowodu i IFAC dowodu.
-//   Poza loop() kryptografię robią wywołania warstwy aplikacji: announce() (podpis ogłoszenia i IFAC)
-//   i send() (ECDH i IFAC);
+//   sekundę. Wyjątek: pakiet do stacji z dowodem to w jednym obiegu ECDH, weryfikacja podpisu LXMF,
+//   podpis dowodu i IFAC dowodu. Poza loop() kryptografię robią wywołania warstwy aplikacji: announce()
+//   (podpis ogłoszenia i IFAC) i send() (podpis LXMF, ECDH i IFAC);
 // - czas: licznik pracy (clockMs z begin() i zegar ms stosu); losowość z HMAC-DRBG stacji z ziarnem
 //   z begin().
 // - zapytania o trasę (etap R2): odpowiedzi dla celu stacji i celów z trasą (tablica retransmisji
@@ -47,6 +57,7 @@
 #include "framfs.h"
 #include "identity.h"
 #include "ifac.h"
+#include "lxmf.h"
 #include "p1frame.h"
 #include "p1iface.h"
 #include "packet.h"
@@ -101,8 +112,9 @@ uint64_t uptimeMs() {
 p1iface::Queue queue;
 rnscore::Ifac ifac;
 bool ifacOnline = false;
-uint8_t pinned[2][HASH] = {};   // cele "wici.sa1" odbiorcy z karty (główny, zapasowy)
+uint8_t pinned[2][HASH] = {};   // cele "lxmf.delivery" odbiorcy z karty (główny, zapasowy)
 uint8_t receiverKeys[2][rnscore::KEY_SIZE] = {};
+uint8_t receiverApp[2][HASH] = {};   // cele odbiorcy w warstwie aplikacji (setReceivers: "wici.sa1")
 uint8_t receiverActive = 0;
 // Cisza radiowa i znacznik ruchu dopuszczonego wyjątkiem (pakiet z send(), dowód pakietu zgłoszenia).
 Silence silence = Silence::OFF;
@@ -177,6 +189,57 @@ void log(const char* text) {
     if (hooks.log) hooks.log(text, hooks.context);
 }
 
+// Cel stacji (etap R3, docs/spec/oprogramowanie.md): "lxmf.delivery" jak LXMRouter.register_delivery_identity.
+constexpr const char* LXMF_DELIVERY = "lxmf.delivery";
+
+// Zastępcza koperta warstwy aplikacji (station.cpp, Station::transmit): ["WICI",1,"<od>","<do>",<SA1>],
+// od i do po 32 cyfry szesnastkowe, więc SA1 zaczyna się zawsze od tego samego miejsca.
+constexpr char ENVELOPE_HEAD[] = "[\"WICI\",1,\"";
+constexpr size_t ENVELOPE_FROM = sizeof(ENVELOPE_HEAD) - 1;
+constexpr size_t ENVELOPE_TO = ENVELOPE_FROM + 2 * HASH + 3;   // po "," między adresami
+constexpr size_t ENVELOPE_SA1 = ENVELOPE_TO + 2 * HASH + 2;    // po ", przed SA1
+uint8_t lxmfOut[rnscore::LXMF_SA1_MAX_DATA];                       // dane pakietu wiadomości z send()
+char envelope[ENVELOPE_SA1 + rnscore::SA1_CONTENT_MAX + 2];       // koperta wiadomości przyjętej
+uint32_t lxmfRejected = 0;   // pakiety do stacji, które nie są wiadomością SA1 znanego nadawcy
+
+// SA1 z koperty; fałsz, gdy dane nie mają jej kształtu.
+bool envelopeContent(const uint8_t* data, size_t length, const uint8_t*& content, size_t& contentLength) {
+    if (length < ENVELOPE_SA1 + 2 || memcmp(data, ENVELOPE_HEAD, ENVELOPE_FROM) != 0 ||
+        memcmp(data + ENVELOPE_TO - 3, "\",\"", 3) != 0 || memcmp(data + ENVELOPE_SA1 - 2, "\",", 2) != 0 ||
+        data[length - 1] != ']') {
+        return false;
+    }
+    content = data + ENVELOPE_SA1;
+    contentLength = length - ENVELOPE_SA1 - 1;
+    return true;
+}
+
+void hexTo(const uint8_t* bytes, size_t count, char* out) {
+    static const char digits[] = "0123456789abcdef";
+    for (size_t i = 0; i < count; ++i) {
+        out[2 * i] = digits[bytes[i] >> 4];
+        out[2 * i + 1] = digits[bytes[i] & 15];
+    }
+}
+
+// Cel LXMF dla celu z warstwy aplikacji: odbiorca z karty po celu z setReceivers, inny cel bez zmian.
+const uint8_t* lxmfTarget(const uint8_t dest[HASH]) {
+    static const uint8_t zero[HASH] = {};
+    for (size_t i = 0; i < 2; ++i) {
+        if (memcmp(receiverApp[i], zero, HASH) != 0 && memcmp(receiverApp[i], dest, HASH) == 0) return pinned[i];
+    }
+    return dest;
+}
+
+// I odwrotnie: nadawca wiadomości w kopercie dla warstwy aplikacji.
+const uint8_t* appSource(const uint8_t source[HASH]) {
+    static const uint8_t zero[HASH] = {};
+    for (size_t i = 0; i < 2; ++i) {
+        if (memcmp(pinned[i], zero, HASH) != 0 && memcmp(pinned[i], source, HASH) == 0) return receiverApp[i];
+    }
+    return source;
+}
+
 // Pakiet do nadania (RNS/Transport.py: Transport.transmit przez interfejs z IFAC), warunki jak
 // P1Interface::send_outgoing w porcie: interfejs z kodem, długość, cisza, miejsce w kolejce.
 bool transmit(const uint8_t* raw, size_t length, p1iface::Hint hint) {
@@ -209,9 +272,38 @@ void announceHook(const uint8_t destination[HASH], const uint8_t* appData, size_
     if (hooks.announce) hooks.announce(destination, appData, length, hooks.context);
 }
 
+// Wiadomość SA1 z danych pakietu do stacji (LXMRouter.delivery_packet i lxmf_delivery dla wiadomości
+// z poprawnym podpisem) w kopercie dla warstwy aplikacji; 0: nie wiadomość SA1 znanego nadawcy
+// (nieznany klucz nadawcy, zły kształt, zły podpis). Klucz nadawcy z tablicy znanych celów
+// (Identity.recall); przed kryptografią sprawdza go transport, kształt sprawdza lxmfReceiveSa1.
+size_t lxmfToEnvelope(const uint8_t* data, size_t length) {
+    if (length < rnscore::LXMF_SOURCE_OFFSET + HASH) return 0;
+    rnscore::KnownDestination sender;   // odczyt z FRAM (Transport::lookup)
+    rnscore::LxmfSa1 m;
+    if (!transport.lookup(data + rnscore::LXMF_SOURCE_OFFSET, sender, uptimeMs()) ||
+        !rnscore::lxmfReceiveSa1(addressBytes, data, length, sender.publicKey, m)) {
+        return 0;
+    }
+    memcpy(envelope, ENVELOPE_HEAD, ENVELOPE_FROM);
+    hexTo(appSource(m.sourceHash), HASH, envelope + ENVELOPE_FROM);
+    memcpy(envelope + ENVELOPE_TO - 3, "\",\"", 3);
+    hexTo(addressBytes, HASH, envelope + ENVELOPE_TO);
+    memcpy(envelope + ENVELOPE_SA1 - 2, "\",", 2);
+    memcpy(envelope + ENVELOPE_SA1, m.content, m.contentLength);
+    envelope[ENVELOPE_SA1 + m.contentLength] = ']';
+    return ENVELOPE_SA1 + m.contentLength + 1;
+}
+
 // Decyzja warstwy aplikacji (PROVE_APP); dowód pakietu zgłoszenia z wyjątkiem ciszy wychodzi także
-// w ciszy (znacznik kasuje received() po przetworzeniu pakietu), jak w porcie.
-bool packetHook(const uint8_t* data, size_t length, void*) {
+// w ciszy (znacznik kasuje received() po przetworzeniu pakietu), jak w porcie. Pakiet, który nie jest
+// wiadomością SA1 znanego nadawcy, to trwałe odrzucenie: z dowodem, bez warstwy aplikacji.
+bool packetHook(const uint8_t* raw, size_t rawLength, void*) {
+    const size_t length = lxmfToEnvelope(raw, rawLength);
+    if (!length) {
+        ++lxmfRejected;
+        return true;
+    }
+    const uint8_t* data = reinterpret_cast<const uint8_t*>(envelope);
     bool exception = false;
     const bool accepted = hooks.packet && hooks.packet(data, length, exception, hooks.context);
     exceptionOut = accepted && exception;
@@ -305,10 +397,8 @@ bool begin(journal::Storage& storage, Radio& r, const uint8_t ifacKey[16], uint6
     }
     rnscore::publicKey(privateKey, publicKeyBytes);
     rnscore::identityHash(publicKeyBytes, identityBytes);
-    char name[32];
-    snprintf(name, sizeof(name), "%s.%s", APP_NAME, ASPECT);   // cel SINGLE "wici.sa1" stacji
-    rnscore::nameHash(name, nameHashBytes);
-    // Węzeł stanowiska nie ma adresu (jak w porcie): bez celu "wici.sa1", tożsamość tylko dla transportu.
+    rnscore::nameHash(LXMF_DELIVERY, nameHashBytes);   // cel SINGLE "lxmf.delivery" stacji
+    // Węzeł stanowiska nie ma adresu (jak w porcie): bez celu LXMF, tożsamość tylko dla transportu.
     if (!nodeMode) rnscore::destinationHashFrom(nameHashBytes, identityBytes, addressBytes);
 
     // Drugi generator z tego samego ziarna z innym nonce: losowość pracy stosu (RNS: os.urandom).
@@ -336,7 +426,7 @@ bool begin(journal::Storage& storage, Radio& r, const uint8_t ifacKey[16], uint6
     transport.setBitrate(p1iface::declaredBitrate());   // Interface.bitrate interfejsu P1 (odkrycie trasy)
     started = true;
     rememberReceivers();
-    log("rns: Reticulum core (R2): P1 interface, announces, packets, proofs, table in FRAM");
+    log("rns: Reticulum core (R3): P1 interface, announces, LXMF SA1 messages, proofs, table in FRAM");
     return true;
 }
 
@@ -344,9 +434,23 @@ void setIfac(const uint8_t key[16]) {
     if (radio) configureIfac(key);
 }
 
+// Cel "lxmf.delivery" odbiorcy z klucza karty (config.cpp sprawdza, że to adres LXMF z karty); bez
+// klucza (tylko próby na komputerze: polecenie receiver bez klucza) cel z wywołania.
 void setReceivers(const uint8_t keys[2][64], const uint8_t sa1[2][HASH], uint8_t active) {
+    static const uint8_t zero[rnscore::KEY_SIZE] = {};
     memcpy(receiverKeys, keys, sizeof(receiverKeys));
-    memcpy(pinned, sa1, sizeof(pinned));
+    memcpy(receiverApp, sa1, sizeof(receiverApp));
+    uint8_t lxmfName[rnscore::NAME_HASH_SIZE];
+    rnscore::nameHash(LXMF_DELIVERY, lxmfName);
+    for (size_t i = 0; i < 2; ++i) {
+        if (!memcmp(receiverKeys[i], zero, rnscore::KEY_SIZE)) {
+            memcpy(pinned[i], sa1[i], HASH);
+            continue;
+        }
+        uint8_t identity[HASH];
+        rnscore::identityHash(receiverKeys[i], identity);
+        rnscore::destinationHashFrom(lxmfName, identity, pinned[i]);
+    }
     receiverActive = active ? 1 : 0;
     queue.setReceiver(pinned[receiverActive]);
     if (started) rememberReceivers();
@@ -448,8 +552,22 @@ void received(const uint8_t* wire, size_t length) {
 
 void txDone(bool ok) { queue.finish(ok); }
 
+// Bez danych aplikacji: dane jak LXMRouter.get_announce_app_data, msgpack [nazwa, None, [SF_COMPRESSION]]
+// z nazwą WICI-xxxxxx (oprogramowanie.md, „Ogłoszenia adresu”; 6 cyfr skrótu tożsamości jak w main.cpp),
+// bez kosztu znaczka. Dane podane przez wywołującego (próby na komputerze) idą bez zmian.
 bool announce(const uint8_t* appData, size_t length) {
     if (!started || nodeMode) return false;
+    uint8_t peerData[17] = {0x93, 0xC4, 11, 'W', 'I', 'C', 'I', '-'};
+    if (!appData) {
+        char name[7];
+        snprintf(name, sizeof(name), "%02X%02X%02X", identityBytes[0], identityBytes[1], identityBytes[2]);
+        memcpy(peerData + 8, name, 6);
+        peerData[14] = 0xC0;   // stamp_cost: None
+        peerData[15] = 0x91;   // [SF_COMPRESSION]
+        peerData[16] = 0x00;
+        appData = peerData;
+        length = sizeof(peerData);
+    }
     uint8_t random[5];
     return generator.generate(random, sizeof(random)) && transport.announce(random, appData, length, uptimeMs());
 }
@@ -493,10 +611,22 @@ bool knownOrRequest(const uint8_t dest[HASH]) {
 
 }  // namespace
 
-uint32_t send(const uint8_t dest[HASH], const uint8_t* data, size_t length, uint32_t timeoutS) {
+// Koperta warstwy aplikacji: SA1 jako wiadomość LXMF (LXMessage.pack, OPPORTUNISTIC) do celu
+// "lxmf.delivery". Znacznik czasu LXMF to licznik pracy stacji w s (odbiorca go ignoruje, oprogramowanie.md,
+// „Czas”). Dalej jak pakiet okazjonalny R1.
+uint32_t send(const uint8_t appDest[HASH], const uint8_t* message, size_t messageLength, uint32_t timeoutS) {
     if (!interfaceAccepts()) return 0;
+    const uint8_t* dest = lxmfTarget(appDest);
+    const uint8_t* content;
+    size_t contentLength;
+    if (!envelopeContent(message, messageLength, content, contentLength)) return 0;
     OwnTraffic own;
     if (!knownOrRequest(dest)) return 0;
+    uint8_t messageHash[rnscore::HASH_SIZE];
+    const size_t length = rnscore::lxmfPackSa1(privateKey, publicKeyBytes, dest, addressBytes, static_cast<double>(uptimeMs() / 1000),
+                                               content, contentLength, lxmfOut, sizeof(lxmfOut), messageHash);
+    if (!length) return 0;
+    const uint8_t* data = lxmfOut;
     // Limit od przekazania do stosu jak w porcie (radio.md, "Interfejs P1 w stosie Reticulum"):
     // max(60 s, timeoutS, 2 × skoki × 13 × czas TX największego datagramu + dług ciszy + kolejka P1);
     // trasa nieznana liczy się jako 1 skok.
@@ -523,15 +653,15 @@ uint32_t send(const uint8_t dest[HASH], const uint8_t* data, size_t length, uint
 bool sendReady(const uint8_t dest[HASH]) {
     if (!interfaceAccepts()) return false;
     OwnTraffic own;
-    return knownOrRequest(dest);
+    return knownOrRequest(lxmfTarget(dest));
 }
-bool knows(const uint8_t dest[HASH]) { return started && transport.knows(dest); }
+bool knows(const uint8_t dest[HASH]) { return started && transport.knows(lxmfTarget(dest)); }
 bool hasPath(const uint8_t dest[HASH]) {
     rnscore::KnownDestination e;   // odczyt z FRAM: trasa po wygaśnięciu już nie jest trasą
-    return started && transport.lookup(dest, e, uptimeMs()) && e.hasPath;
+    return started && transport.lookup(lxmfTarget(dest), e, uptimeMs()) && e.hasPath;
 }
 void requestPath(const uint8_t dest[HASH]) {
-    if (started) requestOwnPath(dest);
+    if (started) requestOwnPath(lxmfTarget(dest));
 }
 bool queueFull() { return !radio || queue.full(); }
 bool online() { return started && ifacOnline; }
@@ -579,7 +709,7 @@ size_t interfaceJson(char* out, size_t size) {
     // Pola jak w porcie (rns_node.cpp) i liczniki rdzenia: pakiety odrzucone przez rnscore::unpack,
     // duplikaty, pakiety poza podzbiorem R1 albo nie do stacji, odrzucone przy sprawdzaniu, datagramy
     // odrzucone przy pełnej kolejce odbioru, ogłoszenia odrzucone przez limit weryfikacji, gniazda tablicy
-    // znanych celów z błędną treścią (zwolnione).
+    // znanych celów z błędną treścią (zwolnione), pakiety do stacji, które nie są wiadomością SA1 znanego nadawcy.
     const p1iface::Counters& c = queue.counters();
     const rnscore::TransportCounters& t = transport.counters();
     const uint32_t now = nowMs();   // okna czasu kanału przesuwane przed printf (kolejność wywołań)
@@ -591,7 +721,8 @@ size_t interfaceJson(char* out, size_t size) {
                            "\"k2_dest\":%lu,\"pr_limited\":%lu,\"pool_ms\":%lu,\"pr_ms\":%lu,\"rx_malformed\":%lu,\"rx_duplicate\":%lu,"
                            "\"rx_ignored\":%lu,\"rx_invalid\":%lu,\"rx_queue_full\":%lu,\"ann_limited\":%lu,\"table_corrupt\":%lu,"
                            "\"pr_in\":%lu,\"pr_answered\":%lu,\"pr_responses\":%lu,\"pr_sent\":%lu,\"ann_table_full\":%lu,"
-                           "\"fwd\":%lu,\"fwd_no_path\":%lu,\"proof_fwd\":%lu,\"rev_full\":%lu,\"ann_rebroadcast\":%lu,\"pr_gated\":%lu",
+                           "\"fwd\":%lu,\"fwd_no_path\":%lu,\"proof_fwd\":%lu,\"rev_full\":%lu,\"ann_rebroadcast\":%lu,\"pr_gated\":%lu,"
+                           "\"lxmf_rejected\":%lu",
                            (unsigned)queue.queued(), (unsigned)queue.held(), (unsigned long)c.queued, (unsigned long)c.full,
                            (unsigned long)c.tooLarge, (unsigned long)c.announcesHeld, (unsigned long)c.announcesDropped,
                            (unsigned long)c.announcesExpired, (unsigned long)c.sent, (unsigned long)c.sendFailed,
@@ -603,7 +734,8 @@ size_t interfaceJson(char* out, size_t size) {
                            (unsigned long)t.pathRequests, (unsigned long)t.pathAnswered, (unsigned long)t.pathResponses,
                            (unsigned long)t.requestsSent, (unsigned long)t.announceTableFull, (unsigned long)t.forwarded,
                            (unsigned long)t.noPath, (unsigned long)t.proofsForwarded, (unsigned long)t.reverseFull,
-                           (unsigned long)t.rebroadcasts, (unsigned long)t.pathGated);
+                           (unsigned long)t.rebroadcasts, (unsigned long)t.pathGated,
+                           (unsigned long)lxmfRejected);
     return n < 0 ? 0 : static_cast<size_t>(n);
 }
 
@@ -618,6 +750,8 @@ void halt() {
     queue.drop();
     memset(rx, 0, sizeof(rx));
     rxCount = 0;
+    clean(lxmfOut, sizeof(lxmfOut));   // treść ostatnich wiadomości
+    clean(envelope, sizeof(envelope));
     transport.clear();
     framTable.fram = nullptr;   // bez zapisów w FRAM do restartu
     clean(privateKey, sizeof(privateKey));

@@ -24,6 +24,9 @@
 //   KISS z kontrolą przepływu, kiss.h; radio.md, „Interfejs Reticulum przez USB”). Pakiet z USB
 //   przechodzi do stosu, gdy kolejka P1 ma miejsce. Cele ogłoszone przez komputer są chronione
 //   w pełnych tablicach, a pakiety z USB i do tych celów są w klasie K1 (Hint::RECEIVER).
+// Ten sam interfejs ma węzeł na rdzeniu Reticulum (rns_node_core.cpp). Od etapu R3 jego cel to
+// "lxmf.delivery" zamiast "wici.sa1", a dane send() i Hooks::packet to nadal zastępcza koperta warstwy
+// aplikacji, którą rdzeń tłumaczy na wiadomość LXMF SA1 i z powrotem (opis w rns_node_core.cpp).
 // Nagłówek nie dołącza microReticulum (jego makra ERROR, INFO, DEBUG kolidują z kodem stacji).
 #pragma once
 
