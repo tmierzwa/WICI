@@ -56,7 +56,7 @@ Nie odświeżaj sum w odpowiedzi na nieznany błąd CI; najpierw ustal, co się 
 
 ## Pochodzenie wkładu (DCO)
 
-Każdy commit w PR kończy się wierszem `Signed-off-by: Imię Nazwisko <email>` (`git commit -s`). Oznacza on zgodę na [Developer Certificate of Origin 1.1](https://developercertificate.org/): masz prawo przesłać ten materiał na licencji właściwej dla ścieżki. Nie wymagamy CLA ani przeniesienia praw autorskich. CI sprawdza podpis w każdym commicie PR poza commitami scalającymi (`tools/check_dco.py`); brakujący podpis dodaje `git rebase --signoff <gałąź bazowa>` i ponowne wypchnięcie gałęzi.
+Każdy commit w PR kończy się wierszem `Signed-off-by: Imię Nazwisko <email>` (`git commit -s`). Oznacza on zgodę na [Developer Certificate of Origin 1.1](https://developercertificate.org/): masz prawo przesłać ten materiał na licencji właściwej dla ścieżki (w `firmware/lib/reticulum_core/` to [licencja Reticulum](LICENSES/LicenseRef-Reticulum.txt), która nie jest licencją open source w rozumieniu OSI; podpis odnosi się do niej). Nie wymagamy CLA ani przeniesienia praw autorskich. CI sprawdza podpis w każdym commicie PR poza commitami scalającymi (`tools/check_dco.py`); brakujący podpis dodaje `git rebase --signoff <gałąź bazowa>` i ponowne wypchnięcie gałęzi.
 
 Nie dodawaj kluczy, danych mieszkańców, kopii prywatnych rozmów ani materiałów producenta bez uprawnień do dystrybucji. Lokalny `reference-private/` nie należy do wydania. Dla nowej biblioteki lub footprintu zapisz źródło, wersję, modyfikacje i licencję.
 
