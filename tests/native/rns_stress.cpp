@@ -7,7 +7,7 @@
 // i skrót tożsamości przechodzą do następnego startu w plikach obok FRAM.
 //
 // Generator ruchu buduje pakiety klasami portu microReticulum (pakiety jak z Reticulum
-// w Pythonie); stos stacji widzi je wyłącznie jako datagramy z IFAC w rnsnode::received().
+// w Pythonie); stos stacji widzi je wyłącznie jako datagramy z IFAC w rnsnode::received() (toStation()).
 // Wynik: wiersz JSON na stdout; kod 3 = złamany niezmiennik, 75 = zanik zasilania w zapisie.
 //
 // rns_stress <fram> [--seed N] [--events N] [--mutate PERCENT] [--start S] [--gap S]
@@ -44,6 +44,7 @@
 #include <microReticulum/Cryptography/X25519.h>
 #include <microReticulum/Utilities/OS.h>
 #include <microStore/Utility.h>
+#include <RNG.h>
 
 #include "framfs.h"
 #include "p1iface.h"
@@ -177,6 +178,20 @@ bool FileFram::write(uint32_t address, const uint8_t* data, size_t count) {
     return true;
 }
 
+// Skrót całego ruchu przebiegu (FNV-1a 64): datagramy do stacji i od stacji w kolejności. Te same --seed
+// i zegar symulowany dają ten sam skrót (test_same_seed_same_traffic; RNG z ziarna: rng_seeded.cpp).
+uint64_t trafficHash = 0xcbf29ce484222325ull;
+void hashTraffic(uint8_t direction, const uint8_t* data, size_t length) {
+    trafficHash = (trafficHash ^ direction) * 0x100000001b3ull;
+    for (size_t i = 0; i < length; ++i) trafficHash = (trafficHash ^ data[i]) * 0x100000001b3ull;
+}
+
+// Datagram z IFAC do stacji (wszystkie wejścia ruchu przechodzą tędy).
+void toStation(const uint8_t* wire, size_t length) {
+    hashTraffic(0, wire, length);
+    rnsnode::received(wire, length);
+}
+
 // Wywołanie stosu stacji w toku (liczenie przydziałów sterty w hostileDays; radio próby się nie liczy).
 bool inStation = false;
 
@@ -190,6 +205,7 @@ struct Radio : rnsnode::Radio {
     uint32_t debtMs() override { return 0; }
     bool transmit(const uint8_t* data, size_t length) override {
         ++sent;
+        hashTraffic(1, data, length);
         const bool counted = inStation;
         inStation = false;
         if (recent.size() >= 32) recent.erase(recent.begin());
@@ -300,7 +316,7 @@ void feed(const RNS::Bytes& raw, const char*) {
     if (wire.empty()) return;
     if (recentWire.size() < 32) recentWire.push_back(wire);
     else recentWire[rnd() % recentWire.size()] = wire;
-    rnsnode::received(wire.data(), wire.size());
+    toStation(wire.data(), wire.size());
 }
 
 RNS::Bytes packetHash(const RNS::Bytes& raw) {
@@ -423,10 +439,10 @@ void proofForStationPacket() {
 void replay() {
     if (rnd() % 2 && !radio.recent.empty()) {   // datagram stacji wraca od innego przekaźnika
         const std::vector<uint8_t>& w = radio.recent[rnd() % radio.recent.size()];
-        rnsnode::received(w.data(), w.size());
+        toStation(w.data(), w.size());
     } else if (!recentWire.empty()) {
         const std::vector<uint8_t>& w = recentWire[rnd() % recentWire.size()];
-        rnsnode::received(w.data(), w.size());
+        toStation(w.data(), w.size());
     }
 }
 
@@ -492,7 +508,7 @@ void serviceCounted(uint32_t limit = 1) {
 
 void receive(const RNS::Bytes& raw) {
     const std::vector<uint8_t> wire = ifacWrap(raw);
-    if (!wire.empty()) rnsnode::received(wire.data(), wire.size());
+    if (!wire.empty()) toStation(wire.data(), wire.size());
 }
 
 RNS::Bytes announceOf(size_t peer) {
@@ -536,12 +552,12 @@ void hostileDatagram(bool replayOnly) {
         case 0:   // bez flagi IFAC
             v = {static_cast<uint8_t>(rnd() & 0x7F), static_cast<uint8_t>(rnd())};
             for (uint32_t n = 18 + rnd() % 300; n; --n) v.push_back(static_cast<uint8_t>(rnd()));
-            rnsnode::received(v.data(), v.size());
+            toStation(v.data(), v.size());
             return;
         case 1:   // flaga IFAC, kod spoza sieci
             v = {static_cast<uint8_t>(rnd() | 0x80), static_cast<uint8_t>(rnd())};
             for (uint32_t n = 40 + rnd() % 450; n; --n) v.push_back(static_cast<uint8_t>(rnd()));
-            rnsnode::received(v.data(), v.size());
+            toStation(v.data(), v.size());
             return;
         case 2: {   // ogłoszenie z błędnym podpisem (bez danych aplikacji podpis to ostatnie 64 B)
             RNS::Bytes raw = announceOf(rnd() % 2 ? 0 : 1 + rnd() % (PEERS - 1));
@@ -571,7 +587,7 @@ void hostileDatagram(bool replayOnly) {
             return;
         }
         case 5:   // to samo nagranie poprawnego ogłoszenia (bez klucza sieci: kod IFAC jest deterministyczny)
-            rnsnode::received(replayWire.data(), replayWire.size());
+            toStation(replayWire.data(), replayWire.size());
             return;
         default: {   // cel odbiorcy z karty z kluczem innego węzła (kolizja z wpisem odbiorcy)
             RNS::Bytes raw = announceOf(1 + rnd() % (PEERS - 1));
@@ -776,7 +792,7 @@ void inStationCall(F f) {
 // do niej naraz).
 void hostileReceive(const RNS::Bytes& raw) {
     const std::vector<uint8_t> wire = ifacWrap(raw);
-    if (!wire.empty()) inStationCall([&] { rnsnode::received(wire.data(), wire.size()); });
+    if (!wire.empty()) inStationCall([&] { toStation(wire.data(), wire.size()); });
     for (int k = 0; k < 10; ++k) {
         simMs += 20;
         radio.poll();
@@ -1002,6 +1018,8 @@ int main(int argc, char** argv) {
         else { fprintf(stderr, "unknown option %s\n", a.c_str()); return 2; }
     }
 
+    // Ziarno do RNG generatora i stosu (rng_seeded.cpp): klucze węzłów, skróty losowe ogłoszeń, IV tokenów.
+    RNG.stir(reinterpret_cast<const uint8_t*>(&rngState), sizeof(rngState));
     fram.clockPath = framPath + ".clock";
     const std::string idPath = framPath + ".id";
     const std::string savedClock = readFile(fram.clockPath);
@@ -1082,11 +1100,13 @@ int main(int argc, char** argv) {
     saveClock();
     printf("{\"result\":\"ok\",\"identity\":\"%s\",\"new\":%s,\"fed\":%u,\"mutated\":%u,\"sent\":%u,\"paths\":%u,"
            "\"hashes\":%u,\"announce_table\":%u,\"pending\":%u,\"received\":%u,\"delivered\":%u,\"timed_out\":%u,"
-           "\"announces\":%u,\"fs_files\":%u,\"fs_used\":%u,\"fs_capacity\":%u,\"writes\":%ld,\"clock_s\":%llu,\"iface\":{%s},\"flood\":{%s}}\n",
+           "\"announces\":%u,\"fs_files\":%u,\"fs_used\":%u,\"fs_capacity\":%u,\"writes\":%ld,\"clock_s\":%llu,\"traffic\":\"%016llx\","
+           "\"iface\":{%s},\"flood\":{%s}}\n",
            id.c_str(), s.identityNew ? "true" : "false", fed, mutated, radio.sent, (unsigned)s.paths, (unsigned)s.packetHashes,
            (unsigned)s.announceTable, (unsigned)s.receiptsPending, s.packetsReceived, s.delivered, s.timedOut, s.announcesSeen,
            (unsigned)s.fsFiles, (unsigned)s.fsUsedBytes, (unsigned)s.fsCapacityBytes, fram.writes,
-           static_cast<unsigned long long>(simMs / 1000), iface, floodJson());
+           static_cast<unsigned long long>(simMs / 1000), static_cast<unsigned long long>(trafficHash), iface,
+           floodJson());
     fflush(stdout);
     _exit(0);   // bez destruktorów statycznych portu (kolejność niszczenia nie jest częścią próby)
 }
