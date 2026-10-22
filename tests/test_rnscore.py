@@ -337,6 +337,41 @@ class CoreTests(unittest.TestCase):
                       h["hops"]]) + bytes.fromhex(h["transport_id"] or "00" * 16) + bytes.fromhex(h["destination_hash"]) + \
             bytes([h["context"]]) + bytes.fromhex(h["data"])
 
+    def test_hkdf(self):
+        # RNS.Cryptography.hkdf bez kontekstu: długości wokół bloku, sól pusta (32 B zer), krótka i 64 B.
+        cases = VECTORS["hkdf"]
+        got = self.ask([("hkdf", c["length"].to_bytes(2, "big") + bytes([len(c["salt"]) // 2]) + bytes.fromhex(c["salt"] + c["ikm"]))
+                        for c in cases])
+        self.assertEqual(got, [c["okm"] for c in cases])
+
+    def test_hkdf_refuses_like_python(self):
+        # Python zgłasza błąd dla długości 0 i pustego materiału.
+        got = self.ask([("hkdf", bytes([0, 0, 0, 1])), ("hkdf", bytes([0, 32, 0]))])
+        self.assertEqual(got, ["none", "none"])
+
+    def test_ifac(self):
+        # Klucz IFAC z frazy sieci, kod i maska bajt w bajt jak Transport.handle_outgoing_ifac, sprawdzenie
+        # jak Transport.handle_ifac (przyjęty tylko datagram poprawny, z pakietem bez flagi IFAC).
+        v = VECTORS["ifac"]
+        phrase = bytes([len(v["passphrase"])]) + v["passphrase"].encode()
+        self.assertEqual(self.ask([("ifac_key", phrase)]), [v["ifac_key"]])
+        got = self.ask([("ifac_apply", phrase + bytes.fromhex(c["raw"])) for c in v["applied"]])
+        self.assertEqual(got, [c["wire"] for c in v["applied"]])
+        got = self.ask([("ifac_check", phrase + bytes.fromhex(c["wire"])) for c in v["applied"]])
+        self.assertEqual(got, [c["raw"] for c in v["applied"]])
+        got = self.ask([("ifac_check", phrase + bytes.fromhex(c["wire"])) for c in v["checked"]])
+        self.assertEqual(dict(zip((c["name"] for c in v["checked"]), got)),
+                         {c["name"]: c["raw"] or "none" for c in v["checked"]})
+
+    def test_ifac_every_length(self):
+        # Każda długość obciętego datagramu: odrzucony bez błędu pamięci, poza pełnym; bez flagi 0x80 odrzucony.
+        v = VECTORS["ifac"]
+        phrase = bytes([len(v["passphrase"])]) + v["passphrase"].encode()
+        wire = bytes.fromhex(v["applied"][0]["wire"])
+        got = self.ask([("ifac_check", phrase + wire[:n]) for n in range(len(wire) + 1)] +
+                       [("ifac_check", phrase + bytes([wire[0] & 0x7F]) + wire[1:])])
+        self.assertEqual(got, ["none"] * len(wire) + [v["applied"][0]["raw"], "none"])
+
     def test_full_hash_matches_sha256(self):
         # Pusty wejściowy ciąg, granice bloku SHA-256 (55, 56, 64 B) i długi ciąg.
         inputs = [b"", b"WICI", bytes(55), bytes(56), bytes(64), bytes(range(256)) * 20]

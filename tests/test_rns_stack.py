@@ -3,7 +3,9 @@
 
 Builds the "host" PlatformIO program (microReticulum port, P1 interface, IFAC, FRAM tables, emulated
 P1 link) and runs firmware/tools/rns_interop.py with it, then firmware/tools/rns_osp_node.py (the OSP
-node of decision D19 with the computer of the receiving station on a KISS interface). Needs network
+node of decision D19 with the computer of the receiving station on a KISS interface). The same
+rns_interop.py runs on the "host-core" program (station Reticulum core, firmware/reticulum-core.md) with
+the steps the core already has (CORE_STEPS, extended with each stage R1 step). Needs network
 access for the pinned stack sources and a Python with Reticulum at e40191b and pyserial, so it runs
 only when both are given:
 
@@ -25,6 +27,10 @@ RNS_PYTHON = os.environ.get("WICI_RNS_PYTHON")
 
 
 PROGRAM = FIRMWARE / ".pio" / "build" / "host" / "program"
+CORE_PROGRAM = FIRMWARE / ".pio" / "build" / "host-core" / "program"
+# Kroki rns_interop.py, które rdzeń już ma (etap R1): ogłoszenie stacji w Pythonie i IFAC. Każdy krok R1
+# dopisuje swoje; wyjście R1 to wszystkie kroki bez przekazywania (firmware/reticulum-core.md, „Etapy”).
+CORE_STEPS = {"1": ["station_announce_in_python"], "5": ["ifac_missing_dropped", "ifac_invalid_dropped"]}
 
 
 
@@ -59,6 +65,33 @@ class StackInteropTests(unittest.TestCase):
         status = self.results["station_status"]
         self.assertGreaterEqual(status["ifac_missing"], 1)
         self.assertGreaterEqual(status["ifac_invalid"], 1)
+
+
+@unittest.skipUnless(PIO and RNS_PYTHON, "WICI_PIO and WICI_RNS_PYTHON not set")
+class CoreInteropTests(unittest.TestCase):
+    """rns_interop.py on the station Reticulum core, with the steps of CORE_STEPS only."""
+
+    @classmethod
+    def setUpClass(cls):
+        subprocess.run([PIO, "run", "-e", "host-core", "-d", str(FIRMWARE)], check=True, capture_output=True)
+        command = [RNS_PYTHON, str(FIRMWARE / "tools" / "rns_interop.py"), "--program", str(CORE_PROGRAM),
+                   "--steps", ",".join(CORE_STEPS)]
+        cls.results = results(subprocess.run(command, capture_output=True, text=True, timeout=1800))
+
+    def test_every_step_check_passed(self):
+        # Dokładnie te sprawdzenia, które dają wybrane kroki, i wszystkie przechodzą.
+        expected = sorted(name for names in CORE_STEPS.values() for name in names)
+        self.assertEqual(sorted(self.results["checks"]), expected)
+        failed = [name for name, ok in self.results["checks"].items() if not ok]
+        self.assertEqual(failed, [], json.dumps(self.results, indent=2))
+
+    def test_station_announce_app_data(self):
+        # Dane aplikacji ogłoszenia stacji (polecenie "announce 57494349") w Pythonie bez zmian.
+        self.assertEqual(self.results["station_app_data"], "57494349")
+
+    def test_ifac_drops_counted(self):
+        status = self.results["station_status"]
+        self.assertEqual((status["ifac_missing"], status["ifac_invalid"], status["rx_malformed"]), (1, 1, 0))
 
 
 @unittest.skipUnless(PIO and RNS_PYTHON, "WICI_PIO and WICI_RNS_PYTHON not set")

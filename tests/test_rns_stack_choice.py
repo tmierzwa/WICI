@@ -4,8 +4,9 @@ station Reticulum core ("host-core", firmware/reticulum-core.md, stage R0).
 
 Both programs run firmware/src/host/node_host.cpp on the same FRAM image file in turn. A station
 keeps its identity and address when it moves from the port to the core (and back): both read the
-same identity key record in FRAM. The core program in R0 has no interface yet, so it does not
-announce or send. Needs PlatformIO and network access for the pinned stack sources:
+same identity key record in FRAM. The core program has the P1 interface with IFAC and announces
+(stage R1); without a network key it is offline like the port. It does not send packets yet.
+Needs PlatformIO and network access for the pinned stack sources:
 
   WICI_PIO=/path/to/pio python3 -m unittest tests.test_rns_stack_choice
 """
@@ -125,14 +126,26 @@ class StackChoiceTests(unittest.TestCase):
         self.assertEqual(port["address"], "00" * 16)
         self.assertEqual((core["identity"], core["address"]), (port["identity"], port["address"]))
 
-    def test_core_without_interface_yet(self):
-        # R0: stos działa (tożsamość), ale bez interfejsu nie ogłasza, nie wysyła i nie zna tras.
-        _, events = self.ready("host-core", ["status", "announce", "send " + "00" * 16 + " 01", "path " + "00" * 16])
-        status, announced, sent, path = events
-        self.assertEqual((status["event"], status["online"], status["p1_iface"]), ("status", False, False))
+    def test_core_offline_without_network_key(self):
+        # Bez klucza sieci (IFAC) interfejs P1 nie nadaje: stos nie ogłasza, nie wysyła i nie zna tras.
+        _, events = self.ready("host-core", ["announce", "send " + "00" * 16 + " 01", "path " + "00" * 16, "status"])
+        announced, sent, path, status = events
+        self.assertEqual((status["event"], status["online"], status["offline"]), ("status", False, 1))
         self.assertEqual(announced, {"event": "announced", "ok": False})
         self.assertEqual(sent, {"event": "sent", "handle": 0})
         self.assertEqual(path, {"event": "path", "known": False, "path": False})
+
+    def test_core_announce_with_network_key(self):
+        # Z kluczem sieci ogłoszenie trafia do kolejki P1; w ciszy pełnej i z wyjątkiem stos go nie przyjmuje.
+        _, events = self.ready("host-core", ["announce", "silence full", "announce", "silence exception", "announce",
+                                             "silence off", "status"],
+                               extra=["--ifac", "5749434954335f696661635f74657374"])
+        announced = [e["ok"] for e in events if e["event"] == "announced"]
+        status = events[-1]
+        self.assertEqual(announced, [True, False, False])
+        self.assertEqual((status["online"], status["q_queued"]), (True, 1))
+        # Dwie odmowy w ciszy; ogłoszenie z kolejki odpada przy wejściu w ciszę, jeśli łącze go jeszcze nie nadaje.
+        self.assertIn(status["silenced"], (2, 3))
 
 
 if __name__ == "__main__":

@@ -21,6 +21,9 @@ peak, FRAM file system use) is recorded as the RAM measurement with full tables 
 Run with a Python that has Reticulum at the pinned commit (e40191b), for example:
   python3 -m venv .venv-rns && .venv-rns/bin/pip install "git+https://github.com/markqvist/Reticulum@e40191b"
   .venv-rns/bin/python firmware/tools/rns_interop.py --program firmware/.pio/build/host/program
+With --steps (for example 1,5) only the listed steps run: the station core program ("host-core",
+firmware/reticulum-core.md) runs the steps its stage already has (tests/test_rns_stack.py).
+
 Prints one JSON object with the results; exit code 0 when every check passed.
 """
 
@@ -103,7 +106,13 @@ def main():
     parser.add_argument("--port", type=int, default=47420)
     parser.add_argument("--fill", type=int, default=0, help="announce N more destinations and record the station memory")
     parser.add_argument("--capture", help="file for the datagrams Python sends to the station (tools/rns_ram32.py replays them)")
+    parser.add_argument("--steps", help="comma-separated steps to run (1,2,3,4,4a,5,6,7,8; default all), e.g. for a stack "
+                                        "that does not have every function yet (host-core, firmware/reticulum-core.md)")
     args = parser.parse_args()
+    steps = set(args.steps.split(",")) if args.steps else None
+
+    def want(step):
+        return steps is None or step in steps
 
     import RNS  # noqa: E402 (needs the reference Reticulum)
 
@@ -135,7 +144,7 @@ def main():
         f.write(config)
     RNS.Reticulum(os.path.join(work, "rns"))
 
-    results = {"reticulum": "e40191b", "debt_factor": args.debt, "checks": {}}
+    results = {"reticulum": "e40191b", "debt_factor": args.debt, "steps": sorted(steps) if steps else "all", "checks": {}}
     checks = results["checks"]
     seen = {"announces": [], "packets": []}
 
@@ -169,81 +178,90 @@ def main():
         results["station_identity"] = station.ready["identity"]
         results["declared_bitrate"] = station.ready["bitrate"]
 
+        station_identity = t_announce = None   # z kroku 1, gdy go wybrano (--steps)
+
         # 1. Ogłoszenie stacji widoczne w Pythonie.
-        station.command("announce 57494349")
-        t_announce = time.time()
-        checks["station_announce_in_python"] = wait_for(lambda: any(a[1] == address for a in seen["announces"]), 60)
-        station_identity = next((a[2] for a in seen["announces"] if a[1] == address), None)
-        results["station_app_data"] = next((a[3].hex() for a in seen["announces"] if a[1] == address and a[3]), "")
+        if want("1"):
+            station.command("announce 57494349")
+            t_announce = time.time()
+            checks["station_announce_in_python"] = wait_for(lambda: any(a[1] == address for a in seen["announces"]), 60)
+            station_identity = next((a[2] for a in seen["announces"] if a[1] == address), None)
+            results["station_app_data"] = next((a[3].hex() for a in seen["announces"] if a[1] == address and a[3]), "")
 
         # 2. Ogłoszenie z Pythona widoczne w stacji.
-        destination.announce(app_data=b"receiver")
-        e = station.wait("announce", 60, lambda e: e["dest"] == destination.hash.hex())
-        checks["python_announce_in_station"] = e is not None
+        if want("2"):
+            destination.announce(app_data=b"receiver")
+            e = station.wait("announce", 60, lambda e: e["dest"] == destination.hash.hex())
+            checks["python_announce_in_station"] = e is not None
 
         # 3. Pakiet okazjonalny stacja -> Python z potwierdzeniem transportowym.
-        payload = b'["WICI",1,"interop","station to python"]'
-        station.command(f"send {destination.hash.hex()} {payload.hex()} 120")
-        sent = station.wait("sent", 10)
-        handle = sent["handle"] if sent else 0
-        checks["station_packet_accepted"] = handle > 0
-        checks["station_to_python_packet"] = wait_for(lambda: any(p[1] == payload for p in seen["packets"]), 90)
-        t_packet = next((p[0] for p in seen["packets"] if p[1] == payload), None)
-        receipt = station.wait("receipt", 120, lambda e: e["handle"] == handle) if handle else None
-        checks["station_receipt_delivered"] = bool(receipt and receipt["delivered"])
-        if t_packet:
-            results["announce_to_packet_s"] = round(t_packet - t_announce, 2)
+        if want("3"):
+            payload = b'["WICI",1,"interop","station to python"]'
+            station.command(f"send {destination.hash.hex()} {payload.hex()} 120")
+            sent = station.wait("sent", 10)
+            handle = sent["handle"] if sent else 0
+            checks["station_packet_accepted"] = handle > 0
+            checks["station_to_python_packet"] = wait_for(lambda: any(p[1] == payload for p in seen["packets"]), 90)
+            t_packet = next((p[0] for p in seen["packets"] if p[1] == payload), None)
+            receipt = station.wait("receipt", 120, lambda e: e["handle"] == handle) if handle else None
+            checks["station_receipt_delivered"] = bool(receipt and receipt["delivered"])
+            if t_packet and t_announce:
+                results["announce_to_packet_s"] = round(t_packet - t_announce, 2)
 
         # 4. Pakiet okazjonalny Python -> stacja z potwierdzeniem transportowym.
-        if station_identity is not None:
-            out = RNS.Destination(station_identity, RNS.Destination.OUT, RNS.Destination.SINGLE, APP_NAME, ASPECT)
-            back = b'["WICI",1,"interop","python to station"]'
-            t0 = time.time()
-            r = RNS.Packet(out, back).send()
-            if r:
-                # Domyślny limit potwierdzenia Reticulum dla 1 skoku przez szybki interfejs; dług ciszy P1
-                # po datagramie 600 B (17,7 s) go przekracza (F02), więc próba ustawia 120 s.
-                results["python_default_receipt_timeout_s"] = round(r.timeout, 2)
-                r.set_timeout(120)
-            e = station.wait("packet", 90, lambda e: e["data"] == back.hex())
-            checks["python_to_station_packet"] = e is not None
-            checks["python_receipt_delivered"] = bool(r) and wait_for(lambda: r.status == RNS.PacketReceipt.DELIVERED, 120)
-            if r and r.status == RNS.PacketReceipt.DELIVERED:
-                results["python_proof_rtt_s"] = round(r.get_rtt(), 2)
-            results["python_to_station_s"] = round(time.time() - t0, 2)
-        else:
-            checks["python_to_station_packet"] = False
-            checks["python_receipt_delivered"] = False
+        if want("4"):
+            if station_identity is not None:
+                out = RNS.Destination(station_identity, RNS.Destination.OUT, RNS.Destination.SINGLE, APP_NAME, ASPECT)
+                back = b'["WICI",1,"interop","python to station"]'
+                t0 = time.time()
+                r = RNS.Packet(out, back).send()
+                if r:
+                    # Domyślny limit potwierdzenia Reticulum dla 1 skoku przez szybki interfejs; dług ciszy P1
+                    # po datagramie 600 B (17,7 s) go przekracza (F02), więc próba ustawia 120 s.
+                    results["python_default_receipt_timeout_s"] = round(r.timeout, 2)
+                    r.set_timeout(120)
+                e = station.wait("packet", 90, lambda e: e["data"] == back.hex())
+                checks["python_to_station_packet"] = e is not None
+                checks["python_receipt_delivered"] = bool(r) and wait_for(lambda: r.status == RNS.PacketReceipt.DELIVERED, 120)
+                if r and r.status == RNS.PacketReceipt.DELIVERED:
+                    results["python_proof_rtt_s"] = round(r.get_rtt(), 2)
+                results["python_to_station_s"] = round(time.time() - t0, 2)
+            else:
+                checks["python_to_station_packet"] = False
+                checks["python_receipt_delivered"] = False
 
         # 4a. Pakiet odrzucony przez warstwę aplikacji stacji: bez dowodu (PROVE_APP), potwierdzenie
         #     w Pythonie kończy się niepowodzeniem po limicie.
-        if station_identity is not None:
-            station.command("accept 0")
-            station.wait("accept", 5)
-            rejected = b'["WICI",1,"interop","rejected by the station"]'
-            r = RNS.Packet(out, rejected).send()
-            if r:
-                r.set_timeout(45)
-            e = station.wait("packet", 60, lambda e: e["data"] == rejected.hex())
-            failed = bool(r) and wait_for(lambda: r.status == RNS.PacketReceipt.FAILED, 60)
-            checks["rejected_packet_without_proof"] = e is not None and not e["accepted"] and failed
-            station.command("accept 1")
-            station.wait("accept", 5)
-        else:
-            checks["rejected_packet_without_proof"] = False
+        if want("4a"):
+            if station_identity is not None:
+                out = RNS.Destination(station_identity, RNS.Destination.OUT, RNS.Destination.SINGLE, APP_NAME, ASPECT)
+                station.command("accept 0")
+                station.wait("accept", 5)
+                rejected = b'["WICI",1,"interop","rejected by the station"]'
+                r = RNS.Packet(out, rejected).send()
+                if r:
+                    r.set_timeout(45)
+                e = station.wait("packet", 60, lambda e: e["data"] == rejected.hex())
+                failed = bool(r) and wait_for(lambda: r.status == RNS.PacketReceipt.FAILED, 60)
+                checks["rejected_packet_without_proof"] = e is not None and not e["accepted"] and failed
+                station.command("accept 1")
+                station.wait("accept", 5)
+            else:
+                checks["rejected_packet_without_proof"] = False
 
         # 5. IFAC: datagram bez kodu i z błędnym kodem odrzucony przed stosem.
-        before = station.status()
-        raw = bytes([0x00, 0x00]) + destination.hash + bytes([0x00]) + b"no ifac"
-        wrong = bytes([0x80, 0x00]) + bytes(16) + destination.hash + bytes([0x00]) + b"wrong ifac"
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-            s.sendto(raw, ("127.0.0.1", station_port))
-            s.sendto(wrong, ("127.0.0.1", station_port))
-        time.sleep(1.0)
-        after = station.status()
-        checks["ifac_missing_dropped"] = after["ifac_missing"] == before["ifac_missing"] + 1
-        checks["ifac_invalid_dropped"] = after["ifac_invalid"] == before["ifac_invalid"] + 1
-        results["station_status"] = after
+        if want("5"):
+            before = station.status()
+            raw = bytes([0x00, 0x00]) + destination.hash + bytes([0x00]) + b"no ifac"
+            wrong = bytes([0x80, 0x00]) + bytes(16) + destination.hash + bytes([0x00]) + b"wrong ifac"
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                s.sendto(raw, ("127.0.0.1", station_port))
+                s.sendto(wrong, ("127.0.0.1", station_port))
+            time.sleep(1.0)
+            after = station.status()
+            checks["ifac_missing_dropped"] = after["ifac_missing"] == before["ifac_missing"] + 1
+            checks["ifac_invalid_dropped"] = after["ifac_invalid"] == before["ifac_invalid"] + 1
+            results["station_status"] = after
 
         if args.fill:
             # Pomiar pamięci: N ogłoszeń nowych celów (po 2 na sekundę, bez wyzwalania ograniczeń
@@ -277,83 +295,86 @@ def main():
 
     # 6. Restart stacji z tym samym plikiem FRAM (cel Pythona jako odbiorca z karty): tożsamość
     # i trasa z FRAM, tablica tras w limicie także po wczytaniu.
-    station = Station(args.program, fram, station_port, python_port, args.debt, receiver=destination.hash.hex())
-    try:
-        ready = station.ready or {}
-        checks["identity_restored"] = ready.get("identity") == results.get("station_identity") and not ready.get("identity_new", True)
-        checks["table_limit_after_restart"] = ready.get("paths", TABLE_MAX + 1) <= TABLE_MAX
-        station.command(f"path {destination.hash.hex()}")
-        p = station.wait("path", 5)
-        checks["path_and_identity_restored"] = bool(p and p["known"] and p["path"])
-        results["paths_after_restart"] = ready.get("paths")
-        payload2 = b'["WICI",1,"interop","after restart"]'
-        station.command(f"send {destination.hash.hex()} {payload2.hex()} 120")
-        sent = station.wait("sent", 10)
-        handle = sent["handle"] if sent else 0
-        checks["send_after_restart_without_announce"] = handle > 0 and wait_for(
-            lambda: any(p[1] == payload2 for p in seen["packets"]), 90)
-        receipt = station.wait("receipt", 120, lambda e: e["handle"] == handle) if handle else None
-        checks["receipt_after_restart"] = bool(receipt and receipt["delivered"])
-    finally:
-        station.stop()
+    if want("6"):
+        station = Station(args.program, fram, station_port, python_port, args.debt, receiver=destination.hash.hex())
+        try:
+            ready = station.ready or {}
+            checks["identity_restored"] = ready.get("identity") == results.get("station_identity") and not ready.get("identity_new", True)
+            checks["table_limit_after_restart"] = ready.get("paths", TABLE_MAX + 1) <= TABLE_MAX
+            station.command(f"path {destination.hash.hex()}")
+            p = station.wait("path", 5)
+            checks["path_and_identity_restored"] = bool(p and p["known"] and p["path"])
+            results["paths_after_restart"] = ready.get("paths")
+            payload2 = b'["WICI",1,"interop","after restart"]'
+            station.command(f"send {destination.hash.hex()} {payload2.hex()} 120")
+            sent = station.wait("sent", 10)
+            handle = sent["handle"] if sent else 0
+            checks["send_after_restart_without_announce"] = handle > 0 and wait_for(
+                lambda: any(p[1] == payload2 for p in seen["packets"]), 90)
+            receipt = station.wait("receipt", 120, lambda e: e["handle"] == handle) if handle else None
+            checks["receipt_after_restart"] = bool(receipt and receipt["delivered"])
+        finally:
+            station.stop()
 
     # 7. Pełne tablice: wpis odbiorcy z karty zostaje (oprogramowanie.md, „Pojemności stosu”). Nowa
     # pamięć FRAM i limit tablic 6 zamiast 256: cel Pythona jako odbiorca, potem cel bez ochrony
     # i 8 kolejnych; usunięty ma być najstarszy cel bez ochrony, a nie odbiorca.
-    station = Station(args.program, os.path.join(work, "fram_pinned.bin"), station_port, python_port, args.debt,
-                      table_max=PINNED_TABLE)
-    try:
-        station.command(f"receiver {destination.hash.hex()}")
-        station.wait("receiver", 5)
-        destination.announce()
-        receiver_learned = station.wait("announce", 30, lambda e: e["dest"] == destination.hash.hex()) is not None
-        time.sleep(2)   # znaczniki czasu wpisów w sekundach: cel bez ochrony wyraźnie starszy od reszty
-        victim = RNS.Destination(RNS.Identity(), RNS.Destination.IN, RNS.Destination.SINGLE, APP_NAME, ASPECT)
-        victim.announce()
-        station.wait("announce", 30, lambda e: e["dest"] == victim.hash.hex())
-        time.sleep(2)
-        fillers = []
-        for _ in range(PINNED_TABLE + 2):
-            d = RNS.Destination(RNS.Identity(), RNS.Destination.IN, RNS.Destination.SINGLE, APP_NAME, ASPECT)
-            d.announce()
-            fillers.append(d)
-            station.wait("announce", 30, lambda e, h=d.hash.hex(): e["dest"] == h)
-            time.sleep(0.5)
-        status = station.status() or {}
-        station.command(f"path {destination.hash.hex()}")
-        kept = station.wait("path", 5) or {}
-        station.command(f"path {victim.hash.hex()}")
-        gone = station.wait("path", 5) or {}
-        results["pinned_table"] = {"limit": PINNED_TABLE, "paths": status.get("paths"), "receiver": kept, "unprotected": gone}
-        checks["receiver_entry_kept_in_full_table"] = (receiver_learned and status.get("paths", 99) <= PINNED_TABLE
-                                                       and kept.get("known") is True and kept.get("path") is True
-                                                       and gone.get("path") is False)
-    finally:
-        station.stop()
+    if want("7"):
+        station = Station(args.program, os.path.join(work, "fram_pinned.bin"), station_port, python_port, args.debt,
+                          table_max=PINNED_TABLE)
+        try:
+            station.command(f"receiver {destination.hash.hex()}")
+            station.wait("receiver", 5)
+            destination.announce()
+            receiver_learned = station.wait("announce", 30, lambda e: e["dest"] == destination.hash.hex()) is not None
+            time.sleep(2)   # znaczniki czasu wpisów w sekundach: cel bez ochrony wyraźnie starszy od reszty
+            victim = RNS.Destination(RNS.Identity(), RNS.Destination.IN, RNS.Destination.SINGLE, APP_NAME, ASPECT)
+            victim.announce()
+            station.wait("announce", 30, lambda e: e["dest"] == victim.hash.hex())
+            time.sleep(2)
+            fillers = []
+            for _ in range(PINNED_TABLE + 2):
+                d = RNS.Destination(RNS.Identity(), RNS.Destination.IN, RNS.Destination.SINGLE, APP_NAME, ASPECT)
+                d.announce()
+                fillers.append(d)
+                station.wait("announce", 30, lambda e, h=d.hash.hex(): e["dest"] == h)
+                time.sleep(0.5)
+            status = station.status() or {}
+            station.command(f"path {destination.hash.hex()}")
+            kept = station.wait("path", 5) or {}
+            station.command(f"path {victim.hash.hex()}")
+            gone = station.wait("path", 5) or {}
+            results["pinned_table"] = {"limit": PINNED_TABLE, "paths": status.get("paths"), "receiver": kept, "unprotected": gone}
+            checks["receiver_entry_kept_in_full_table"] = (receiver_learned and status.get("paths", 99) <= PINNED_TABLE
+                                                           and kept.get("known") is True and kept.get("path") is True
+                                                           and gone.get("path") is False)
+        finally:
+            station.stop()
 
     # 8. Tożsamość odbiorcy z klucza karty: wysyłka bez ogłoszenia odbiorcy (nowa pamięć FRAM), w ciszy
     # z wyjątkiem pakiet z send() wychodzi, a ogłoszenie stacji nie.
-    station = Station(args.program, os.path.join(work, "fram_card.bin"), station_port, python_port, args.debt)
-    try:
-        key = destination.identity.get_public_key().hex()
-        station.command(f"receiver {destination.hash.hex()} {key}")
-        station.wait("receiver", 5)
-        station.command(f"path {destination.hash.hex()}")
-        known = station.wait("path", 5) or {}
-        checks["receiver_known_from_card"] = known.get("known") is True
-        station.command("silence exception")
-        station.wait("silence", 5)
-        station.command("announce")
-        silenced = station.wait("announced", 10) or {}
-        checks["announce_blocked_in_silence"] = silenced.get("ok") is False
-        payload3 = b'["WICI",1,"interop","card key in exception"]'
-        station.command(f"send {destination.hash.hex()} {payload3.hex()} 120")
-        sent = station.wait("sent", 10)
-        handle = sent["handle"] if sent else 0
-        checks["send_from_card_key_in_exception"] = handle > 0 and wait_for(
-            lambda: any(p[1] == payload3 for p in seen["packets"]), 90)
-    finally:
-        station.stop()
+    if want("8"):
+        station = Station(args.program, os.path.join(work, "fram_card.bin"), station_port, python_port, args.debt)
+        try:
+            key = destination.identity.get_public_key().hex()
+            station.command(f"receiver {destination.hash.hex()} {key}")
+            station.wait("receiver", 5)
+            station.command(f"path {destination.hash.hex()}")
+            known = station.wait("path", 5) or {}
+            checks["receiver_known_from_card"] = known.get("known") is True
+            station.command("silence exception")
+            station.wait("silence", 5)
+            station.command("announce")
+            silenced = station.wait("announced", 10) or {}
+            checks["announce_blocked_in_silence"] = silenced.get("ok") is False
+            payload3 = b'["WICI",1,"interop","card key in exception"]'
+            station.command(f"send {destination.hash.hex()} {payload3.hex()} 120")
+            sent = station.wait("sent", 10)
+            handle = sent["handle"] if sent else 0
+            checks["send_from_card_key_in_exception"] = handle > 0 and wait_for(
+                lambda: any(p[1] == payload3 for p in seen["packets"]), 90)
+        finally:
+            station.stop()
 
     results["passed"] = all(checks.values())
     print(json.dumps(results, indent=2, default=str))
