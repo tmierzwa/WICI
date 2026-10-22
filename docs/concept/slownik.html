@@ -82,7 +82,7 @@
 <tr><td>PRZENIEŚ STACJĘ</td><td>kontrolowane przeniesienie tożsamości i kolejki ze sprawnej stacji na stację zapasową; stara stacja przestaje pracować</td></tr>
 <tr><td>TEST</td><td>typ SA1 o takiej samej budowie jak REQUEST; sprawdza drogę do odbiorcy, zapis i obecność dyżurnego; nie trafia do kolejki potrzeb</td></tr>
 <tr><td>COMMIT</td><td>zatwierdzenie zapisu w FRAM stacji albo transakcji SQLite laptopa lub aplikacji stanowiska; dopiero po nim zapis uznaje się za trwały</td></tr>
-<tr><td>Reticulum, microReticulum</td><td>stos sieciowy z tożsamościami, szyfrowaniem i trasami; microReticulum to jego wersja przeniesiona (port) na mikrokontroler stacji</td></tr>
+<tr><td>Reticulum, rdzeń stacji, microReticulum</td><td>stos sieciowy z tożsamościami, szyfrowaniem i trasami; rdzeń stacji to własna implementacja tej części protokołu, której WICI używa na mikrokontrolerze; microReticulum to zewnętrzny port Reticulum na mikrokontrolery, używany w próbach sprzętu do czasu rdzenia</td></tr>
 <tr><td>LXMF</td><td>protokół wiadomości działający nad Reticulum; potwierdza dostarczenie przez sieć (transportowe), a nie zapis w bazie odbiorcy</td></tr>
 <tr><td>pakiet okazjonalny, link, zasób</td><td>sposoby dostarczenia w LXMF: pojedynczy pakiet bez zestawiania połączenia, zestawione połączenie Reticulum (link), przesłanie większych danych w częściach (zasób) (<a href="05-projekt-koncepcyjny-komunikacji.html">05</a>)</td></tr>
 <tr><td>SA1</td><td>format treści wiadomości WICI w LXMF; sześć typów: REQUEST, RECEIVED, STATUS, REPLY, BULLETIN, TEST</td></tr>
