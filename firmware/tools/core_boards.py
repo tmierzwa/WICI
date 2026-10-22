@@ -15,11 +15,12 @@ INDIRECT table, calls of the Transport hooks and of the table storage (rnscore::
 of rnsnode) lead out of the core (rnsnode callbacks, whose stack adds to the path) and any other indirect call (`blx rN` on ARM) fails the check. Library functions
 (memcpy, the ESP-IDF AES driver) are covered by LIBRARY_RESERVE and one exception or interrupt frame
 on the task stack by INTERRUPT_FRAME. Static RAM: the core files must have none (.data, .bss: no
-globals in the library); the tables live in one rnscore::Transport object owned by rnsnode.
+globals in the library); the tables live in one rnscore::Transport object owned by rnsnode, so when
+transport.h exists its size on the board is compared with RAM_BUDGET.
 
 It fails when a core file warns, when a function has a dynamic stack (VLA, alloca), when the call
-graph has recursion, when a core entry point needs more than STACK_LIMIT bytes of stack or when the
-core files have static RAM.
+graph has recursion, when a core entry point needs more than STACK_LIMIT bytes of stack, when the
+core files have static RAM or when rnscore::Transport exceeds RAM_BUDGET.
 
   python3 firmware/tools/stack_deps.py
   python3 firmware/tools/core_boards.py [-e bench-a -e l0] [--json]
@@ -65,6 +66,9 @@ LIBRARY_RESERVE = 256
 # Jedna ramka wyjątku albo przerwania na stosie zadania: Cortex-M4F z FPU 26 słów (104 B); ESP32-S3
 # XT_STK_FRMSZ z xtensa_context.h ESP-IDF 5.5 (192 B). Obsługa przerwania biegnie potem na własnym stosie.
 INTERRUPT_FRAME = {"arm": 104, "xtensa": 192}
+# Cel dla RAM statycznej rdzenia z LXMF (reticulum-core.md, „Budżet RAM”): 56 KB, w tym lista skrótów,
+# tablice tras i tożsamości; obiekt rnscore::Transport ma się w nim zmieścić z zapasem na LXMF.
+RAM_BUDGET = 56 * 1024
 # Przyrostki klonów funkcji GCC (.constprop.0 na ARM, $constprop$0 na Xtensie), których c++filt nie rozwija.
 CLONE = re.compile(r"[.$](?:constprop|isra|part|cold|lto_priv)(?:[.$]\d+)*")
 
@@ -246,6 +250,18 @@ def static_ram(meta: dict, objects: list[Path]) -> int:
     return total
 
 
+def transport_ram(meta: dict, out: Path) -> int | None:
+    """RAM obiektu rnscore::Transport na płytce (.bss pliku z jednym obiektem), None bez transport.h."""
+    if not (CORE / "transport.h").is_file():
+        return None
+    probe = out / "transport_ram.cpp"
+    probe.write_text('#include "transport.h"\nrnscore::Transport wiciTransportRam;\n')
+    obj = out / "transport_ram.o"
+    subprocess.run([meta["cxx_path"], *common_flags(meta), *CORE_FLAGS, "-c", str(probe), "-o", str(obj)], check=True,
+                   capture_output=True, text=True)
+    return static_ram(meta, [obj])
+
+
 def check(env: str) -> dict:
     with tempfile.TemporaryDirectory() as tmp:
         meta, objects, warnings = compile_units(env, Path(tmp))
@@ -266,6 +282,7 @@ def check(env: str) -> dict:
                                                        text=True).stdout.splitlines()[0],
                 "warnings": warnings.strip(), "dynamic": dynamic, "indirect": indirect_calls(meta, objects, names),
                 "static_ram": static_ram(meta, [o for o in objects if o.stem.startswith("core_")]),
+                "transport_ram": transport_ram(meta, Path(tmp)),
                 "reserve": reserve, "entries": entries}
 
 
@@ -284,13 +301,16 @@ def main() -> int:
         r = check(env)
         results.append(r)
         over = {n: e for n, e in r["entries"].items() if e["stack"] > STACK_LIMIT}
-        if r["warnings"] or r["dynamic"] or r["indirect"] or r["static_ram"] or over:
+        transport = r["transport_ram"]
+        if r["warnings"] or r["dynamic"] or r["indirect"] or r["static_ram"] or over or (transport or 0) > RAM_BUDGET:
             failed = True
         if args.json:
             continue
         print(f"{env}: {r['compiler']}")
         print(f"  static RAM of the core files: {r['static_ram']} B; dynamic stack: {r['dynamic'] or 'none'}; "
               f"unlisted indirect calls: {r['indirect'] or 'none'}")
+        print(f"  rnscore::Transport: {'no transport.h' if transport is None else f'{transport} B'} "
+              f"(budget {RAM_BUDGET} B{', OVER' if (transport or 0) > RAM_BUDGET else ''})")
         if r["warnings"]:
             print(f"  warnings:\n{r['warnings']}")
         print(f"  stack incl. {r['reserve']} B reserve (library calls {LIBRARY_RESERVE} B, one interrupt frame); "
