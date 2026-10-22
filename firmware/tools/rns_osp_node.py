@@ -137,7 +137,8 @@ def main():
         os.makedirs(os.path.join(work, "rns"))
         with open(os.path.join(work, "rns", "config"), "w") as f:
             f.write(config)
-        RNS.Reticulum(os.path.join(work, "rns"))
+        # Dziennik Reticulum na stderr: na stdout tylko wynik JSON (test go parsuje).
+        RNS.Reticulum(os.path.join(work, "rns"), logdest=lambda line: print(line, file=sys.stderr, flush=True))
         kiss = next(i for i in RNS.Transport.interfaces if type(i).__name__ == "KISSInterface")
 
         seen = {"announces": [], "packets": []}
@@ -233,6 +234,9 @@ def main():
                 checks[name] = False
         results["node_status"] = node.status()
     finally:
+        # Koniec programu węzła zamyka pty: w Linuksie interfejs KISS dostaje EIO i przy panic_on_interface_error
+        # Reticulum kończy proces (os._exit) przed wypisaniem wyniku. Panika obejmuje tylko samą próbę.
+        RNS.Reticulum.panic_on_interface_error = False
         node.stop()
         station.stop()
 
