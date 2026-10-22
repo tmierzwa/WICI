@@ -249,6 +249,10 @@ class CoreTests(unittest.TestCase):
         got = self.ask([("encrypt", pub + bytes.fromhex(t["ephemeral_private_key"] + t["iv"] + t["plaintext"]))
                         for pub, t in zip(public_keys, tokens)])
         self.assertEqual(got, [t["token"] for t in tokens])
+        # Bufor wyjścia o 1 B za mały: odmowa przed kryptografią (ASan sprawdza, że nic nie wyszło poza bufor).
+        got = self.ask([("encrypt_short", pub + bytes.fromhex(t["ephemeral_private_key"] + t["iv"] + t["plaintext"]))
+                        for pub, t in zip(public_keys, tokens)])
+        self.assertEqual(got, ["none"] * len(tokens))
 
     def test_crafted_tokens(self):
         # Uszkodzone tokeny, tokeny z poprawnym HMAC i klucze efemeryczne niskiego rzędu albo spoza ciała:

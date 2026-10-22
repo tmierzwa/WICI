@@ -11,7 +11,7 @@
 // Wynik: wiersz JSON na stdout; kod 3 = złamany niezmiennik, 75 = zanik zasilania w zapisie.
 //
 // rns_stress <fram> [--seed N] [--events N] [--mutate PERCENT] [--start S] [--gap S]
-//            [--long-jumps] [--cut-after-writes N] [--defect token48|short-announce]
+//            [--long-jumps] [--cut-after-writes N] [--defect token48|short-announce|held-announce|flood]
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/time.h>
@@ -47,6 +47,12 @@ uint64_t simClock() { return simMs; }
 namespace microStore {
 bool pinned_key(const uint8_t*, size_t) { return false; }
 }  // namespace microStore
+
+// Licznik operacji asymetrycznych rdzenia (identity.h; nagłówków rdzenia program prób nie włącza, bo
+// packet.h rdzenia i Packet.h portu kolidują w systemie plików bez rozróżniania wielkości liter).
+namespace rnscore {
+uint32_t asymmetricOperations();
+}  // namespace rnscore
 #endif
 
 extern "C" int gettimeofday(struct timeval* __restrict tv, void* __restrict) {
@@ -427,6 +433,102 @@ void checkClock() {
     if (microStore::time() != static_cast<uint32_t>(simMs / 1000)) fail("microStore does not follow the simulated clock");
 }
 
+// Zalew wrogimi datagramami (stacja na rdzeniu): bez flagi IFAC, z kodem IFAC spoza sieci, z ważnym
+// IFAC ogłoszenia z błędnym podpisem (także z celem odbiorcy z karty), dowody do nieznanych pakietów
+// i pakiety do stacji bez ważnego tokenu. Dwa datagramy na obieg loop(), czyli szybciej, niż stacja je
+// przetwarza. W każdym obiegu najwyżej jedna operacja asymetryczna (audyt rdzenia, U2); po zalewie
+// ogłoszenie odbiorcy z karty daje trasę, a pakiet do stacji zostaje odebrany. Pakiet do stacji, na
+// który warstwa aplikacji odpowiada dowodem, kosztuje w jednym obiegu do trzech operacji (odszyfrowanie,
+// podpis dowodu, IFAC dowodu; reticulum-core.md, tabela różnic).
+#ifdef WICI_RNS_CORE
+void serviceCounted(uint32_t limit = 1) {
+    radio.poll();
+    const uint32_t before = rnscore::asymmetricOperations();
+    rnsnode::loop(static_cast<uint32_t>(simMs));
+    if (rnscore::asymmetricOperations() - before > limit) fail("too many asymmetric operations in one loop pass");
+}
+
+void receive(const RNS::Bytes& raw) {
+    const std::vector<uint8_t> wire = ifacWrap(raw);
+    if (!wire.empty()) rnsnode::received(wire.data(), wire.size());
+}
+
+RNS::Bytes announceOf(size_t peer) {
+    RNS::Destination d(peers[peer], RNS::Type::Destination::IN, RNS::Type::Destination::SINGLE, rnsnode::APP_NAME,
+                       rnsnode::ASPECT);
+    RNS::Packet a = d.announce(RNS::Bytes(), false, {RNS::Type::NONE}, {}, false);
+    RNS::Transport::deregister_destination(d);
+    a.pack();
+    return a.raw();
+}
+
+void hostileDatagram() {
+    std::vector<uint8_t> v;
+    switch (rnd() % 5) {
+        case 0:   // bez flagi IFAC
+            v = {static_cast<uint8_t>(rnd() & 0x7F), static_cast<uint8_t>(rnd())};
+            for (uint32_t n = 18 + rnd() % 300; n; --n) v.push_back(static_cast<uint8_t>(rnd()));
+            rnsnode::received(v.data(), v.size());
+            return;
+        case 1:   // flaga IFAC, kod spoza sieci
+            v = {static_cast<uint8_t>(rnd() | 0x80), static_cast<uint8_t>(rnd())};
+            for (uint32_t n = 40 + rnd() % 450; n; --n) v.push_back(static_cast<uint8_t>(rnd()));
+            rnsnode::received(v.data(), v.size());
+            return;
+        case 2: {   // ogłoszenie z błędnym podpisem (bez danych aplikacji podpis to ostatnie 64 B)
+            RNS::Bytes raw = announceOf(rnd() % 2 ? 0 : 1 + rnd() % (PEERS - 1));
+            std::vector<uint8_t> a(raw.data(), raw.data() + raw.size());
+            a[a.size() - 1 - rnd() % 64] ^= static_cast<uint8_t>(1u << (rnd() % 8));
+            receive(RNS::Bytes(a.data(), a.size()));
+            return;
+        }
+        case 3: {   // dowód niejawny do nieznanego pakietu
+            RNS::Bytes raw;
+            raw.append(static_cast<uint8_t>(0x03));
+            raw.append(static_cast<uint8_t>(0x00));
+            raw << randomBytes(16);
+            raw.append(static_cast<uint8_t>(0x00));
+            raw << randomBytes(64);
+            receive(raw);
+            return;
+        }
+        default: {   // pakiet do stacji z przypadkowym tokenem (ECDH, potem zły HMAC)
+            RNS::Bytes raw;
+            raw.append(static_cast<uint8_t>(0x00));
+            raw.append(static_cast<uint8_t>(0x00));
+            raw << stationDest;
+            raw.append(static_cast<uint8_t>(0x00));
+            raw << randomBytes(32 + 16 + 32 + 16 * (1 + rnd() % 4));
+            receive(raw);
+            return;
+        }
+    }
+}
+
+void flood() {
+    for (int round = 0; round < 600; ++round) {
+        hostileDatagram();
+        hostileDatagram();
+        serviceCounted();
+        if (round % 10 == 0) simMs += 100;
+    }
+    for (int i = 0; i < 20; ++i) { simMs += 1000; serviceCounted(); }
+    if (rnsnode::hasPath(peerDest[0].data())) fail("receiver path from a forged announce");
+    receive(withHops(announceOf(0), 1));
+    for (int i = 0; i < 4; ++i) serviceCounted();
+    if (!rnsnode::hasPath(peerDest[0].data())) fail("receiver announce lost after the flood");
+    const uint32_t before = rnsnode::status().packetsReceived;
+    RNS::Destination out(station, RNS::Type::Destination::OUT, RNS::Type::Destination::SINGLE, rnsnode::APP_NAME, rnsnode::ASPECT);
+    RNS::Packet p(out, RNS::Bytes("report after the flood"), RNS::Type::Packet::DATA);
+    p.pack();
+    receive(p.raw());
+    for (int i = 0; i < 4; ++i) serviceCounted(3);
+    if (rnsnode::status().packetsReceived != before + 1) fail("packet to the station lost after the flood");
+}
+#else
+void flood() { fail("flood: station core only"); }
+#endif
+
 // Awarie portu z przeglądu 2026-10-21 (poprawione łatami 0005-0007) jako próby regresji.
 void defect(const std::string& name) {
     if (name == "token48") {
@@ -470,6 +572,8 @@ void defect(const std::string& name) {
             feed(withHops(q.raw(), 0), "defect");
             for (int k = 0; k < 30; ++k) { simMs += 1000; service(); }
         }
+    } else if (name == "flood") {
+        flood();
     } else {
         fail("unknown defect");
     }
@@ -586,7 +690,7 @@ int main(int argc, char** argv) {
 
     checkClock();
     const rnsnode::Status s = rnsnode::status();
-    char iface[512];
+    char iface[1024];
     rnsnode::interfaceJson(iface, sizeof(iface));
     // Niezmienniki: tablice w granicach konfiguracji, wpis odbiorcy zachowany.
     if (s.paths > RNS_PATH_TABLE_MAX + 2) fail("path table above limit");

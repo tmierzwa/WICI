@@ -278,7 +278,8 @@ SendResult Transport::send(const uint8_t destination[TRUNCATED_HASH_SIZE], const
 
     // RNS/Destination.py: encrypt: Identity.encrypt z ratchetem z ogłoszenia (Identity.get_ratchet).
     uint8_t token[MTU];
-    if (!encrypt(e->publicKey, e->hasRatchet ? e->ratchet : nullptr, ephemeralKey, iv, data, length, token)) {
+    if (!encrypt(e->publicKey, e->hasRatchet ? e->ratchet : nullptr, ephemeralKey, iv, data, length, token,
+                 sizeof(token))) {
         return SendResult::REFUSED;
     }
     Packet packet = {};

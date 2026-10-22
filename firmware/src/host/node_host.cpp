@@ -17,7 +17,8 @@
 // wysyła dowód; domyślnie 1), receiver <cel hex> [klucz hex] (tożsamość odbiorcy z karty: cel
 // chroniony w tablicach i K1; z kluczem także znana tożsamość), silence <off|full|exception>
 // (exception: dowody i send() w ciszy z wyjątkiem), status, hashes <n> (n losowych skrótów na liście
-// skrótów pakietów, pomiar RAM), pinned <cel hex> (cel chroniony jako ogłoszony przez komputer), quit.
+// skrótów pakietów, pomiar RAM), pinned <cel hex> (cel chroniony jako ogłoszony przez komputer),
+// halt (jak zniszczenie tożsamości na stacji), begin (ponowny start stosu bez restartu programu), quit.
 // Zdarzenia na stdout jako wiersze JSON.
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -209,7 +210,7 @@ void onLog(const char* text, void*) {
 
 void printStatus() {
     const rnsnode::Status s = rnsnode::status();
-    char iface[512], usb[400];
+    char iface[1024], usb[400];
     rnsnode::interfaceJson(iface, sizeof(iface));
     rnsnode::usbJson(usb, sizeof(usb));
     printf("{\"event\":\"status\",\"online\":%s,\"paths\":%u,\"hashes\":%u,\"announce_table\":%u,\"pending\":%u,"
@@ -350,6 +351,14 @@ int main(int argc, char** argv) {
                 std::vector<uint8_t> x, y;
                 if (cmd == "quit") run = false;
                 else if (cmd == "status") printStatus();
+                else if (cmd == "halt") {
+                    rnsnode::halt();
+                    printf("{\"event\":\"halted\"}\n");
+                } else if (cmd == "begin") {
+                    const bool ok = rnsnode::begin(fram, radio, ifac, 0, false, seed, hooks);
+                    printf("{\"event\":\"begin\",\"ok\":%s,\"address\":\"%s\"}\n", ok ? "true" : "false",
+                           hex(rnsnode::address(), 16).c_str());
+                }
                 else if (sscanf(cmd.c_str(), "announce %1199s", a) == 1 && unhex(a, x)) {
                     printf("{\"event\":\"announced\",\"ok\":%s}\n", rnsnode::announce(x.data(), x.size()) ? "true" : "false");
                 } else if (cmd == "announce") {

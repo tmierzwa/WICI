@@ -147,6 +147,19 @@ class StackChoiceTests(unittest.TestCase):
         # Dwie odmowy w ciszy; ogłoszenie z kolejki odpada przy wejściu w ciszę, jeśli łącze go jeszcze nie nadaje.
         self.assertIn(status["silenced"], (2, 3))
 
+    def test_core_no_begin_after_halt(self):
+        # Po halt() (zniszczenie tożsamości) begin() odmawia do restartu, choć klucz jest jeszcze w FRAM:
+        # kolejność „halt, potem kasowanie FRAM” nie jest warunkiem (audyt rdzenia, U10).
+        ifac = ["--ifac", "5749434954335f696661635f74657374"]
+        first, events = self.ready("host-core", ["halt", "begin", "announce", "status"], extra=ifac)
+        halted, began, announced, status = events
+        self.assertEqual(halted, {"event": "halted"})
+        self.assertEqual(began, {"event": "begin", "ok": False, "address": "00" * 16})
+        self.assertEqual(announced, {"event": "announced", "ok": False})
+        self.assertEqual(status["online"], False)
+        again, _ = self.ready("host-core", extra=ifac)   # restart: ta sama tożsamość z FRAM
+        self.assertEqual((again["identity"], again["identity_new"]), (first["identity"], False))
+
 
 if __name__ == "__main__":
     unittest.main()

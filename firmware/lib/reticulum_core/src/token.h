@@ -25,10 +25,11 @@ constexpr size_t tokenSize(size_t length) {
 // dokładnie RATCHET_SIZE B klucza ratchetu z ogłoszenia celu (target_public_key); bez niego wymiana
 // kluczy z kluczem X25519 tożsamości celu. Sól HKDF w obu przypadkach to skrót tożsamości celu
 // (get_salt). Klucz efemeryczny (prywatny, 32 B) i IV podaje wywołujący; w Pythonie to X25519PrivateKey.generate
-// i os.urandom, więc muszą być losowe i nowe dla każdego tokenu. out ma tokenSize(length) B i nie
-// może zachodzić na plaintext. Fałsz, gdy klucz celu (tożsamości albo ratchetu) jest niskiego rzędu (Python zgłasza błąd).
+// i os.urandom, więc muszą być losowe i nowe dla każdego tokenu. out ma capacity B, co najmniej
+// tokenSize(length) (mniej: fałsz przed kryptografią), i nie może zachodzić na plaintext. Fałsz także,
+// gdy klucz celu (tożsamości albo ratchetu) jest niskiego rzędu (Python zgłasza błąd).
 bool encrypt(const uint8_t publicKey[KEY_SIZE], const uint8_t* ratchet, const uint8_t ephemeralKey[KEY_SIZE / 2],
-             const uint8_t iv[TOKEN_IV_SIZE], const uint8_t* plaintext, size_t length, uint8_t* out);
+             const uint8_t iv[TOKEN_IV_SIZE], const uint8_t* plaintext, size_t length, uint8_t* out, size_t capacity);
 
 // RNS/Identity.py: Identity.decrypt bez zapadek; Token.decrypt; PKCS7.unpad. publicKey musi pochodzić
 // z privateKey (sól HKDF to skrót tożsamości). Fałsz tam, gdzie Python zwraca None: zła długość, klucz

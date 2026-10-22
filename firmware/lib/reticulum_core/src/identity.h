@@ -31,4 +31,9 @@ void sign(const uint8_t privateKey[KEY_SIZE], const uint8_t publicKey[KEY_SIZE],
 bool validate(const uint8_t publicKey[KEY_SIZE], const uint8_t* signature, size_t signatureLength,
               const uint8_t* message, size_t length);
 
+// Bez odpowiednika w Pythonie: liczba operacji asymetrycznych (exchange, sign, weryfikacja w validate)
+// od startu programu. Służy próbom ograniczenia pracy na pakiet (najwyżej jedna operacja na obieg pętli
+// stacji); zawija się po 2^32.
+uint32_t asymmetricOperations();
+
 }  // namespace rnscore

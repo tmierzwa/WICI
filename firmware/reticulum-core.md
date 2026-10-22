@@ -34,7 +34,7 @@ Pakiety łączy i zasobów nie występują w sieci WICI, bo stacje i komputer st
 
 ### Tabela różnic
 
-Odstępstwa rdzenia od Reticulum w Pythonie w podzbiorze z tabeli zakresu. Każde dotyczy wejścia, którego zgodny nadawca nie wyśle, tylko własnego wyjścia stacji albo stałego rozmiaru tablic (budżet RAM, [pojemności stosu](../docs/spec/oprogramowanie.md#pojemności-stosu)).
+Odstępstwa rdzenia od Reticulum w Pythonie w podzbiorze z tabeli zakresu. Każde dotyczy wejścia, którego zgodny nadawca nie wyśle, tylko własnego wyjścia stacji, stałego rozmiaru tablic (budżet RAM, [pojemności stosu](../docs/spec/oprogramowanie.md#pojemności-stosu)) albo ograniczenia pracy procesora płytki na pakiet (jedna pętla stacji, weryfikacja podpisu Ed25519 na nRF52840 około 0,4 s według szacunku).
 
 | Miejsce | Python | Rdzeń | Dlaczego |
 |---|---|---|---|
@@ -49,6 +49,8 @@ Odstępstwa rdzenia od Reticulum w Pythonie w podzbiorze z tabeli zakresu. Każd
 | dowód niejawny (`Transport::inboundProof`) | sprawdza podpis wobec każdego czekającego potwierdzenia | tylko wobec potwierdzenia, którego skrót skrócony jest celem dowodu | najwyżej jedna weryfikacja na dowód zamiast do 8 (około 3 s na nRF52840 według szacunku), właśnie gdy alarm czeka na potwierdzenie; zgodny nadawca adresuje dowód do skrótu pakietu (`ProofDestination`) |
 | kopia ogłoszenia (`Transport::inboundAnnounce`) | weryfikuje podpis każdej kopii, skrót pakietu na liście po weryfikacji podpisu | skrót na liście też po weryfikacji; kopia ze skrótem z listy, gdy cel ma trasę, tylko odświeża użycie wpisu (licznik duplikatów); własny cel i kolizja klucza ze znanym wpisem odpadają przed weryfikacją | ten sam wynik bez kosztu weryfikacji: te same bajty przeszły ją wcześniej, a przy tym samym skrócie losowym `should_add` jest fałszywe; inne są tylko liczniki |
 | ratchet z ogłoszenia (`Transport::inboundAnnounce`) | `Identity._remember_ratchet` zapisuje ratchet z każdego ważnego ogłoszenia, także odtworzonego starego | zapisuje ratchet tylko z ogłoszenia o czasie emisji nie starszym niż zapisany | odtworzone stare ogłoszenie cofnęłoby ratchet, a odbiorca trzyma ratchety około 10,7 dnia, więc potem wiadomości stacji szłyby do klucza, którego odbiorca już nie ma; dotyczy tylko wyjścia stacji |
+| odbiór z interfejsu (`rns_node_core.cpp`) | każdy pakiet od razu, w wątku interfejsu | kolejka 4 datagramów; jeden obieg pętli stacji wykonuje jeden krok: sprawdzenie IFAC albo pakiet w transporcie; przy pełnej kolejce datagram odpada (`rx_queue_full`) | pętla stacji (ekran, przyciski, alarm) czeka najwyżej jedną operację asymetryczną na obieg; wyjątek: pakiet do stacji, na który warstwa aplikacji odpowiada dowodem (także trwałe odrzucenie), to w jednym obiegu odszyfrowanie, podpis dowodu i IFAC dowodu (rozdzielenie: po R2); rozmiar kolejki do pomiaru na płytce |
+| napływ ogłoszeń (`rns_node_core.cpp`) | `Interface.should_ingress_limit`: przy częstych ogłoszeniach nieznanych celów wstrzymuje je i wypuszcza później | każde ogłoszenie przed weryfikacją podpisu bierze żeton z wiadra (3 naraz, 1 na sekundę); bez żetonu odpada (`ann_limited`) | ogranicza czas procesora na weryfikację także dla ogłoszeń znanych celów i bez listy wstrzymanych; ogłoszenia się powtarzają; wartości do pomiaru na płytce |
 
 ## Wymagania konstrukcyjne
 
@@ -77,11 +79,11 @@ Rdzeń zastępuje port w obrazach dopiero, gdy na rdzeniu przechodzą:
 | Etap | Treść | Wyjście |
 |---|---|---|
 | R0 | wektory z Pythona, szkielet rdzenia, środowisko `host` z wyborem stosu (port albo rdzeń) | wektory przechodzą dla tożsamości, pakietu i tokenu |
-| R1 | ogłoszenia (z polem ratchetu), cele, szyfrowanie do klucza ratchetu z ogłoszenia, przyjmowanie i dowody pakietów do stacji | `rns_interop.py` w części bez przekazywania i bez tablic w FRAM (kroki 1–5, 3r, 4a, 7, 8) przechodzi na rdzeniu |
+| R1 | ogłoszenia (z polem ratchetu), cele, szyfrowanie do klucza ratchetu z ogłoszenia, przyjmowanie i dowody pakietów do stacji, ograniczenie pracy na pakiet (jeden krok odbioru na obieg pętli, limit weryfikacji ogłoszeń) | `rns_interop.py` w części bez przekazywania i bez tablic w FRAM (kroki 1–5, 3r, 4a, 7, 8) przechodzi na rdzeniu |
 | R2 | transport: przekazywanie, tablica tras w FRAM, zapytania o trasę (także własne i odpowiedzi na zapytania o cel stacji), tablica odwrotna | próby różnicowe dla transportu; `test_rns_hostile.py` bez awarii; krok 6 `rns_interop.py` (trasa i tożsamość celu z FRAM po restarcie) |
 | R3 | LXMF jednym pakietem z dowodem po COMMIT | wymiana LXMF z komputerem stanowiska w obie strony |
 | R4 | interfejs USB węzła stanowiska, przypięte cele komputera | `rns_osp_node.py` przechodzi na rdzeniu |
-| R5 | odporność: limity, 60 dni, uszkodzenia FRAM, pomiar RAM na płytkach | kryteria odbioru 1–6 |
+| R5 | odporność: pozostałe limity, 60 dni, uszkodzenia FRAM, pomiar RAM na płytkach | kryteria odbioru 1–6 |
 | R6 | przełączenie obrazów na rdzeń, usunięcie portu i jego łat; biblioteka Crypto przypięta osobno (dziś pobierana razem z zależnościami portu) | obrazy i repozytorium bez microReticulum |
 
 Szacunek: rdzeń 5–7 tys. wierszy C++ i testy, 2–4 miesiące jednej osoby; liczba do weryfikacji po R1.
