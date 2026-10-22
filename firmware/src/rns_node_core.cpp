@@ -11,8 +11,11 @@
 //   znanych celów w RAM (256 wpisów, odbiorca z karty chroniony), pakiety do stacji z dowodem po
 //   decyzji warstwy aplikacji, pakiet okazjonalny z szyfrowaniem do ratchetu i potwierdzeniem;
 // - praca na pakiet ograniczona dla płytek (audyt rdzenia, U2): received() tylko odkłada datagram do
-//   kolejki odbioru, a loop() wykonuje najwyżej jeden krok na obieg: sprawdzenie IFAC (podpis) albo
-//   przetworzenie pakietu w transporcie; weryfikacja podpisów ogłoszeń z limitem na sekundę;
+//   kolejki odbioru, a jeden obieg rnsnode::loop() wykonuje najwyżej jeden krok odbioru: sprawdzenie
+//   IFAC (podpis) albo przetworzenie pakietu w transporcie; weryfikacja podpisów ogłoszeń z limitem na
+//   sekundę. Wyjątek: pakiet do stacji z dowodem to w jednym obiegu ECDH, podpis dowodu i IFAC dowodu.
+//   Poza loop() kryptografię robią wywołania warstwy aplikacji: announce() (podpis ogłoszenia i IFAC)
+//   i send() (ECDH i IFAC);
 // - czas: licznik pracy (clockMs z begin() i zegar ms stosu); losowość z HMAC-DRBG stacji z ziarnem
 //   z begin().
 // Jeszcze nie ma: zapytań o trasę i przekazywania (R2; sendReady() nie pyta o trasę), tablic w FRAM
@@ -114,7 +117,8 @@ uint32_t rxDropped = 0;   // datagramy odrzucone przy pełnej kolejce odbioru
 // Limit weryfikacji podpisów ogłoszeń: wiadro żetonów, żeton co ANNOUNCE_VERIFY_PERIOD_MS, najwyżej
 // ANNOUNCE_VERIFY_BURST naraz. Ogłoszenie bez żetonu odpada przed kryptografią. Python ogranicza napływ
 // ogłoszeń inaczej (RNS/Interfaces/Interface.py: should_ingress_limit i hold_announce: tylko nieznane
-// cele, ogłoszenia wstrzymane i wypuszczane później); tabela różnic w firmware/reticulum-core.md.
+// cele, po weryfikacji podpisu, ogłoszenia wstrzymane i wypuszczane później); tabela różnic w
+// firmware/reticulum-core.md.
 constexpr uint32_t ANNOUNCE_VERIFY_PERIOD_MS = 1000;   // do pomiaru na płytce
 constexpr uint32_t ANNOUNCE_VERIFY_BURST = 3;          // do pomiaru na płytce
 uint32_t verifyTokens = 0;
@@ -176,6 +180,15 @@ bool packetHook(const uint8_t* data, size_t length, void*) {
 
 void receiptHook(uint32_t handle, bool delivered, void*) {
     if (hooks.receipt) hooks.receipt(handle, delivered, hooks.context);
+}
+
+// Żeton z wiadra tuż przed weryfikacją podpisu ogłoszenia, po tanich odrzuceniach w transporcie:
+// powtórzone nagranie poprawnego ogłoszenia (IFAC przechodzi bez klucza sieci, bo kod jest
+// deterministyczny) i ogłoszenie z kolizją klucza odpadają bez żetonu i nie wyczerpują wiadra.
+bool mayVerifyHook(void*) {
+    if (takeVerifyToken(uptimeMs())) return true;
+    ++announcesLimited;
+    return false;
 }
 
 bool pinnedHook(const uint8_t destination[HASH], void*) {
@@ -271,6 +284,7 @@ bool begin(journal::Storage& storage, Radio& r, const uint8_t ifacKey[16], uint6
     th.packet = packetHook;
     th.receipt = receiptHook;
     th.pinned = pinnedHook;
+    th.mayVerify = mayVerifyHook;
     transport.begin(privateKey, publicKeyBytes, identityBytes, nodeMode ? nullptr : addressBytes, nameHashBytes, th);
     started = true;
     rememberReceivers();
@@ -319,32 +333,31 @@ size_t usbJson(char* out, size_t size) {
 
 namespace {
 
+// Sprawdzenie IFAC datagramu w kolejce; w miejscu zostaje pakiet bez IFAC. Osobna funkcja bez wstawiania:
+// bufor raw nie leży w ramce stosu ścieżki pakietu w transporcie (najgłębszej w węźle).
+__attribute__((noinline)) void ifacStep(RxSlot& slot) {
+    p1iface::Counters& c = queue.counters();
+    uint8_t raw[p1iface::MAX_WIRE];
+    const size_t rawLength = rnscore::ifacCheck(ifac, slot.bytes, slot.length, raw, sizeof(raw));
+    if (!rawLength) { ++c.ifacInvalid; rxDrop(); return; }
+    ++c.received;
+    memcpy(slot.bytes, raw, rawLength);
+    slot.length = static_cast<uint16_t>(rawLength);
+    slot.checked = true;
+}
+
 // Jeden krok odbioru na obieg loop(): sprawdzenie IFAC najstarszego datagramu albo, w następnym obiegu,
 // pakiet w transporcie (RNS/Transport.py: inbound po odjęciu IFAC w Interface).
 void receiveStep() {
     if (!rxCount) return;
     RxSlot& slot = rx[rxHead];
-    p1iface::Counters& c = queue.counters();
-    if (!ifacOnline) { ++c.offline; rxDrop(); return; }
+    if (!ifacOnline) { ++queue.counters().offline; rxDrop(); return; }
     if (!slot.checked) {
-        uint8_t raw[p1iface::MAX_WIRE];
-        const size_t rawLength = rnscore::ifacCheck(ifac, slot.bytes, slot.length, raw, sizeof(raw));
-        if (!rawLength) { ++c.ifacInvalid; rxDrop(); return; }
-        ++c.received;
-        memcpy(slot.bytes, raw, rawLength);
-        slot.length = static_cast<uint16_t>(rawLength);
-        slot.checked = true;
+        ifacStep(slot);
         return;
     }
-    const uint64_t now = uptimeMs();
-    // Typ pakietu z pierwszego bajtu (RNS/Packet.py: unpack); krótszy pakiet odrzuci transport.
-    const bool announcement = slot.length >= 2 && (slot.bytes[0] & 0x03) == rnscore::ANNOUNCE;
-    if (announcement && !takeVerifyToken(now)) {
-        ++announcesLimited;
-    } else {
-        if (!transport.inbound(slot.bytes, slot.length, now)) ++malformed;
-        exceptionOut = false;
-    }
+    if (!transport.inbound(slot.bytes, slot.length, uptimeMs())) ++malformed;
+    exceptionOut = false;
     rxDrop();
 }
 
@@ -365,6 +378,7 @@ void loop(uint32_t) {
 }
 
 // Bez kryptografii: sprawdzenia długości i flagi IFAC, potem datagram czeka w kolejce odbioru na loop().
+// Wołane z tego samego zadania co loop() (kolejka odbioru nie ma blokad).
 void received(const uint8_t* wire, size_t length) {
     if (!started) return;
     p1iface::Counters& c = queue.counters();

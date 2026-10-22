@@ -84,7 +84,8 @@ bool Transport::inbound(const uint8_t* raw, size_t length, uint64_t nowMs) {
 // RNS/Identity.py: validate_announce i remember, _remember_ratchet; RNS/Transport.py: _inbound
 // (ANNOUNCE): tablica tras i wywołanie announce handlers z filtrem aspektu. Tanie sprawdzenia przed
 // weryfikacją podpisu (ten sam wynik co w Pythonie, inne liczniki): własny cel, kolizja klucza ze
-// znanym wpisem i kopia ogłoszenia, które już przeszło weryfikację (tabela różnic).
+// znanym wpisem i kopia ogłoszenia, które już przeszło weryfikację (tabela różnic). Dopiero potem hak
+// mayVerify (limit weryfikacji stacji), żeby tanio odrzucane ogłoszenia nie zużywały limitu.
 void Transport::inboundAnnounce(const Packet& packet, const uint8_t hash[HASH_SIZE], uint64_t nowMs) {
     // Ogłoszenie własnego celu (np. odbite przez węzeł transportowy) nie trafia do tablicy.
     if (address_ && memcmp(packet.destinationHash, address_, TRUNCATED_HASH_SIZE) == 0) {
@@ -105,6 +106,7 @@ void Transport::inboundAnnounce(const Packet& packet, const uint8_t hash[HASH_SI
         ++counters_.duplicate;
         return;
     }
+    if (hooks_.mayVerify && !hooks_.mayVerify(hooks_.context)) return;   // licznik po stronie stacji
     Announce a;
     if (!validateAnnounce(packet, a)) {
         ++counters_.invalid;

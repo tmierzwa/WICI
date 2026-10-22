@@ -53,6 +53,9 @@ struct TransportHooks {
     void (*receipt)(uint32_t handle, bool delivered, void* context) = nullptr;
     // Cel chroniony przed wyparciem z pełnej tablicy (odbiorca z karty).
     bool (*pinned)(const uint8_t destination[TRUNCATED_HASH_SIZE], void* context) = nullptr;
+    // Zgoda na weryfikację podpisu ogłoszenia, pytana tuż przed nią (po tanich odrzuceniach); fałsz:
+    // ogłoszenie odpada bez kryptografii. Limit pracy procesora po stronie stacji, bez odpowiednika w Pythonie.
+    bool (*mayVerify)(void* context) = nullptr;
     void* context = nullptr;
 };
 
