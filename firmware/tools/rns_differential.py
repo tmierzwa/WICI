@@ -16,9 +16,10 @@ unknown destinations, proofs of forwarded packets, packets for the station; fixe
 other contexts of new announces, a path response for a destination with a pending rebroadcast, path
 requests up to the capacity of the announce table); then fresh packets of each kind (new announces and
 emission times, new contents and tags), half of them mutated (hops, context, flags without the IFAC
-bit, transport id, truncation, a body byte), all built with the core check program. Time: Reticulum
-runs in real time, the core on the virtual clock of the check program with poll() every LOOP_MS as
-in the station loop; the trial waits long enough for the retransmissions of both.
+bit, transport id, truncation, a body byte; a mutation that reaches a difference listed in the table
+of firmware/reticulum-core.md is adjusted or left out), all built with the core check program.
+Time: Reticulum runs in real time, the core on the virtual clock of the check program with poll()
+every LOOP_MS as in the station loop; the trial waits long enough for the retransmissions of both.
 
 Run with a Python that has Reticulum at the pinned commit (e40191b):
   .venv-rns/bin/python firmware/tools/rns_differential.py --check /path/to/rnscore_check --seed 1
@@ -224,7 +225,11 @@ def scenario(builder: Builder, station_key: bytes, rng: random.Random, mutations
             raw[0] &= 0xFD   # LINKREQUEST: łącza są poza rdzeniem (zakres w reticulum-core.md)
         if raw[0] & 0x03 == 0x03:
             raw[0] &= 0xF3   # dowód z celem PLAIN albo GROUP: różnica w tabeli (reticulum-core.md)
-        steps.append(("in", bytes(raw)))
+        # Do celu zapytań o trasę tylko zapytanie PLAIN DATA albo ogłoszenie; inny pakiet: różnica w tabeli
+        # (reticulum-core.md).
+        header = 34 if raw[0] & 0x40 else 18
+        if bytes(raw[header - 16:header]) != PATH_REQUEST or raw[0] & 0x03 == 0x01 or raw[0] & 0x0F == 0x08:
+            steps.append(("in", bytes(raw)))
         if n % 16 == 15 or n == mutations - 1:
             steps += windows
     return steps, list(dests.values()) + [station_address], station_address

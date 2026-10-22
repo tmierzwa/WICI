@@ -929,6 +929,18 @@ class CoreTests(unittest.TestCase):
                           ("t_in", ann), ("t_out", b"")])
         self.assertEqual(lines[-1], "-")
 
+    def test_path_request_not_gated_by_other_packet(self):
+        # Pakiet innego typu niż zapytanie (SINGLE DATA, GROUP DATA, PLAIN PROOF) do celu zapytań o trasę,
+        # z celem stacji i znacznikiem, nie jest zapytaniem „w drodze”: następne zapytanie o cel stacji dostaje
+        # od razu odpowiedź (tabela różnic, preprocess_inbound).
+        address = bytes.fromhex(self.ask([("t_begin", self.STATION)])[0])
+        for flags in (0x00, 0x04, 0x0B):
+            other = self.packet(flags, self.PATH_REQUEST, address + b"S" * 16)
+            lines = self.ask([("t_begin", self.STATION), ("t_announce", bytes(5) + b"WICI"), ("t_in", other),
+                              ("t_in", self.path_request(address, b"A" * 16))])
+            self.assertEqual(self.parsed(lines[2])[3], "-", flags)
+            self.assertNotEqual(self.parsed(lines[3])[3], "-", flags)
+
     def test_path_request_filter(self):
         # Bez znacznika: odrzucone; PLAIN po więcej niż 1 skoku i ogłoszenie PLAIN: odpadają (packet_filter);
         # znacznik dłuższy niż 16 B liczy się po pierwszych 16 B.
