@@ -210,7 +210,7 @@ void onLog(const char* text, void*) {
 
 void printStatus() {
     const rnsnode::Status s = rnsnode::status();
-    char iface[1024], usb[400];
+    char iface[rnsnode::INTERFACE_JSON_SIZE], usb[400];
     rnsnode::interfaceJson(iface, sizeof(iface));
     rnsnode::usbJson(usb, sizeof(usb));
     printf("{\"event\":\"status\",\"online\":%s,\"paths\":%u,\"hashes\":%u,\"announce_table\":%u,\"pending\":%u,"

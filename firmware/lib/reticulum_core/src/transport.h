@@ -6,8 +6,10 @@
 // podręcznej), lista skrótów pakietów, ogłoszenie własne, przyjmowanie ogłoszeń, pakietów do stacji
 // z dowodem i dowodów pakietów wysłanych, wysyłanie pakietu okazjonalnego z potwierdzeniem.
 // Zapytania o trasę (rnstransport.path.request): odpowiedzi dla celu stacji i celów z trasą, własne
-// zapytania. Przekazywanie: dalszy krok R2. Wszystkie tablice mają stały rozmiar; czas w ms
-// podaje wywołujący (licznik pracy stacji).
+// zapytania. Transport włączony jak w porcie (Reticulum.transport_enabled): przekazywanie pakietów
+// HEADER_2 z identyfikatorem stacji, tablica odwrotna dla dowodów, retransmisja przyjętych ogłoszeń.
+// Jeden interfejs (P1), więc interfejs odbioru i nadania jest ten sam. Wszystkie tablice mają stały
+// rozmiar; czas w ms podaje wywołujący (licznik pracy stacji).
 #pragma once
 
 #include "hashlist.h"
@@ -36,6 +38,9 @@ constexpr uint32_t OWN_RESPONSE_REUSE_MS = 30000;
 constexpr size_t ANNOUNCE_TABLE_MAX = 16;   // tablica retransmisji ogłoszeń (reticulum-core.md, budżet RAM)
 constexpr size_t PATH_TAGS_MAX = 128;       // znaczniki ostatnich zapytań o trasę (Python: 2 × 16 000)
 constexpr size_t OWN_REQUESTS_MAX = 8;      // cele ostatnich własnych zapytań o trasę
+constexpr size_t HELD_ANNOUNCES_MAX = 4;    // held_announces: wpisy wstrzymane na czas odpowiedzi na zapytanie
+constexpr size_t REVERSE_MAX = 32;          // tablica odwrotna (reticulum-core.md, budżet RAM)
+constexpr uint32_t REVERSE_TIMEOUT_MS = 8UL * 60 * 1000;   // RNS/Transport.py: REVERSE_TIMEOUT
 constexpr size_t PATH_REQUEST_SIZE = 3 * TRUNCATED_HASH_SIZE;   // cel, identyfikator transportu, znacznik
 // Dane aplikacji ogłoszenia własnego (bez ratchetu) do ANNOUNCE_FORWARDABLE_SIZE.
 constexpr size_t OWN_APP_DATA_MAX = ANNOUNCE_FORWARDABLE_SIZE - ANNOUNCE_MIN_SIZE;
@@ -80,6 +85,11 @@ struct TransportCounters {
     uint32_t pathLimited = 0;     // zapytania o cel stacji bez odpowiedzi (OWN_RESPONSE_MIN_MS)
     uint32_t announceTableFull = 0;   // retransmisja odrzucona przy pełnej tablicy ogłoszeń
     uint32_t requestsSent = 0;    // własne zapytania o trasę
+    uint32_t forwarded = 0;       // pakiety HEADER_2 przekazane dalej według tablicy tras
+    uint32_t noPath = 0;          // pakiety HEADER_2 do stacji jako następnego skoku bez trasy do celu (porzucone)
+    uint32_t proofsForwarded = 0; // dowody przekazane według tablicy odwrotnej
+    uint32_t reverseFull = 0;     // wpis tablicy odwrotnej wyparty przed czasem (pełna tablica)
+    uint32_t rebroadcasts = 0;    // retransmisje przyjętych ogłoszeń (bez odpowiedzi na zapytania)
 };
 
 enum class SendResult : uint8_t { SENT, UNKNOWN, TOO_LARGE, RECEIPTS_FULL, REFUSED };
@@ -126,6 +136,7 @@ public:
     uint32_t tableWrites() const { return table_.writes(); }
     size_t receiptsPending() const;
     size_t announceTable() const;
+    size_t reverseEntries(uint64_t nowMs) const;
     size_t hashes() const { return hashlist_.size(); }
     const TransportCounters& counters() const { return counters_; }
     void setLimit(size_t limit) { table_.setLimit(limit); }   // próby: mniejsza tablica znanych celów (1..KNOWN_MAX)
@@ -155,11 +166,15 @@ private:
     bool mayTransmit() const { return !hooks_.mayTransmit || hooks_.mayTransmit(hooks_.context); }
     void inboundPlain(const Packet& packet, const uint8_t* raw, size_t length, uint64_t nowMs);
     void pathRequest(const uint8_t destination[TRUNCATED_HASH_SIZE], const uint8_t* requestor, uint64_t nowMs);
+    AnnounceEntry* findAnnounce(const uint8_t destination[TRUNCATED_HASH_SIZE]);
     bool schedule(const uint8_t destination[TRUNCATED_HASH_SIZE], uint8_t hops, uint64_t atMs, uint8_t retries, bool block);
     void retransmit(AnnounceEntry& entry, uint64_t nowMs);
+    void heardRebroadcast(const Packet& packet, uint64_t nowMs);
+    bool forward(const Packet& packet, const uint8_t* raw, size_t length, const uint8_t hash[HASH_SIZE], uint64_t nowMs);
+    bool forwardProof(const Packet& packet, const uint8_t* raw, size_t length, uint64_t nowMs);
     void inboundAnnounce(const Packet& packet, const uint8_t hash[HASH_SIZE], uint64_t nowMs);
     void inboundData(const Packet& packet, const uint8_t hash[HASH_SIZE]);
-    void inboundProof(const Packet& packet);
+    void inboundProof(const Packet& packet, const uint8_t* raw, size_t length, uint64_t nowMs);
     static bool pinnedHook(const uint8_t destination[TRUNCATED_HASH_SIZE], void* self);
 
     TransportHooks hooks_;
@@ -172,6 +187,13 @@ private:
     uint32_t cullS_ = 0;   // ostatni przegląd wygasania tras
     Receipt receipts_[RECEIPTS_MAX] = {};
     AnnounceEntry announces_[ANNOUNCE_TABLE_MAX] = {};
+    AnnounceEntry held_[HELD_ANNOUNCES_MAX] = {};
+    // RNS/Transport.py: reverse_table (skrócony skrót przekazanego pakietu i czas; interfejsy: jeden P1).
+    struct ReverseEntry {
+        uint8_t hash[TRUNCATED_HASH_SIZE];
+        uint64_t atMs;   // 0: wolny
+    };
+    ReverseEntry reverse_[REVERSE_MAX] = {};
     uint64_t pathTags_[PATH_TAGS_MAX] = {};   // 8 B skrótu (cel + znacznik), pierścień
     size_t pathTagNext_ = 0;
     struct OwnRequest {

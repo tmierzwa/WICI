@@ -382,6 +382,13 @@ int main() {
             printf("%u %u %u %u %u %u %u\n", c.pathRequests, c.pathAnswered, c.pathResponses, c.pathLimited, c.requestsSent,
                    c.announceTableFull,
                    static_cast<unsigned>(state->transport.announceTable()));
+        } else if (state && command == "t_forward") {
+            // transport: przekazane, bez trasy, dowody przekazane, tablica odwrotna pełna, retransmisje
+            // ogłoszeń, wpisy tablicy odwrotnej, wpisy tablicy ogłoszeń
+            const rnscore::TransportCounters& c = state->transport.counters();
+            printf("%u %u %u %u %u %u %u\n", c.forwarded, c.noPath, c.proofsForwarded, c.reverseFull, c.rebroadcasts,
+                   static_cast<unsigned>(state->transport.reverseEntries(state->nowMs)),
+                   static_cast<unsigned>(state->transport.announceTable()));
         } else if (state && command == "t_writes") {
             printf("%ld\n", state->table.writes);
         } else if (state && command == "t_readfail" && data.size() == 1) {

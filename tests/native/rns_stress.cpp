@@ -469,7 +469,7 @@ RNS::Bytes announceOf(size_t peer) {
 }
 
 uint32_t interfaceCounter(const char* name) {
-    char iface[1024];
+    char iface[rnsnode::INTERFACE_JSON_SIZE];
     rnsnode::interfaceJson(iface, sizeof(iface));
     const std::string key = std::string("\"") + name + "\":";
     const char* at = strstr(iface, key.c_str());
@@ -808,7 +808,7 @@ int main(int argc, char** argv) {
 
     checkClock();
     const rnsnode::Status s = rnsnode::status();
-    char iface[1024];
+    char iface[rnsnode::INTERFACE_JSON_SIZE];
     rnsnode::interfaceJson(iface, sizeof(iface));
     // Niezmienniki: tablice w granicach konfiguracji, wpis odbiorcy zachowany.
     if (s.paths > RNS_PATH_TABLE_MAX + 2) fail("path table above limit");

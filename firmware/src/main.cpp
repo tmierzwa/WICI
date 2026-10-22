@@ -951,7 +951,7 @@ void printSelftest() {
 // Stan stosu Reticulum: tablice, pula pamięci, system plików FRAM, liczniki interfejsu P1.
 void printRns() {
     const rnsnode::Status s = rnsnode::status();
-    char address[2 * store::HASH + 1], identity[2 * store::HASH + 1], iface[560];
+    char address[2 * store::HASH + 1], identity[2 * store::HASH + 1], iface[rnsnode::INTERFACE_JSON_SIZE];
     hexstr::encode(rnsnode::address(), store::HASH, address);
     hexstr::encode(rnsnode::identityHash(), store::HASH, identity);
     rnsnode::interfaceJson(iface, sizeof(iface));

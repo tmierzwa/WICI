@@ -6,7 +6,7 @@
 // - interfejs P1 (etap R1): kod dostępu IFAC 16 B z rdzenia (rnscore::ifacApply, ifacCheck) z frazą
 //   jak w porcie (32 cyfry szesnastkowe klucza z konfiguracji), kolejka radiowa, klasy ruchu i limit
 //   ogłoszeń z p1iface, cisza radiowa jak w porcie, liczniki interfejsu w tym samym JSON;
-// - transport bez przekazywania (rnscore::Transport): ogłoszenie własne celu "wici.sa1" bez ratchetu
+// - transport (rnscore::Transport): ogłoszenie własne celu "wici.sa1" bez ratchetu
 //   (własne ratchety stacji są poza rdzeniem), ogłoszenia innych celów z polem ratchetu w tablicy
 //   znanych celów i tras (256 wpisów, odbiorca z karty chroniony), pakiety do stacji z dowodem po
 //   decyzji warstwy aplikacji, pakiet okazjonalny z szyfrowaniem do ratchetu i potwierdzeniem;
@@ -25,7 +25,10 @@
 // - zapytania o trasę (etap R2): odpowiedzi dla celu stacji i celów z trasą (tablica retransmisji
 //   ogłoszeń 16 wpisów), własne zapytania z requestPath(), sendReady() i send() przy nieznanym celu
 //   (najwyżej jedno na cel na 20 s), w kolejce P1 jako ruch własny (Hint::OWN);
-// Jeszcze nie ma: przekazywania (dalszy krok R2), LXMF (R3), interfejsu USB węzła (R4).
+// - przekazywanie (etap R2): pakiety HEADER_2 ze stacją jako następnym skokiem według tablicy tras,
+//   dowody według tablicy odwrotnej (32 wpisy), retransmisja przyjętych ogłoszeń; klasę w kolejce P1
+//   (K1, K2, ogłoszenia) ustala p1iface z nagłówka, jak dla portu.
+// Jeszcze nie ma: LXMF (R3), interfejsu USB węzła (R4).
 #include <stdio.h>
 #include <string.h>
 
@@ -585,7 +588,8 @@ size_t interfaceJson(char* out, size_t size) {
                            "\"ifac_missing\":%lu,\"ifac_invalid\":%lu,\"offline\":%lu,\"silenced\":%lu,\"k2_slot\":%lu,\"k2_pool\":%lu,"
                            "\"k2_dest\":%lu,\"pr_limited\":%lu,\"pool_ms\":%lu,\"pr_ms\":%lu,\"rx_malformed\":%lu,\"rx_duplicate\":%lu,"
                            "\"rx_ignored\":%lu,\"rx_invalid\":%lu,\"rx_queue_full\":%lu,\"ann_limited\":%lu,\"table_corrupt\":%lu,"
-                           "\"pr_in\":%lu,\"pr_answered\":%lu,\"pr_responses\":%lu,\"pr_sent\":%lu,\"ann_table_full\":%lu",
+                           "\"pr_in\":%lu,\"pr_answered\":%lu,\"pr_responses\":%lu,\"pr_sent\":%lu,\"ann_table_full\":%lu,"
+                           "\"fwd\":%lu,\"fwd_no_path\":%lu,\"proof_fwd\":%lu,\"rev_full\":%lu,\"ann_rebroadcast\":%lu",
                            (unsigned)queue.queued(), (unsigned)queue.held(), (unsigned long)c.queued, (unsigned long)c.full,
                            (unsigned long)c.tooLarge, (unsigned long)c.announcesHeld, (unsigned long)c.announcesDropped,
                            (unsigned long)c.announcesExpired, (unsigned long)c.sent, (unsigned long)c.sendFailed,
@@ -595,7 +599,9 @@ size_t interfaceJson(char* out, size_t size) {
                            (unsigned long)t.duplicate, (unsigned long)t.ignored, (unsigned long)t.invalid,
                            (unsigned long)rxDropped, (unsigned long)announcesLimited, (unsigned long)transport.tableCorrupt(),
                            (unsigned long)t.pathRequests, (unsigned long)t.pathAnswered, (unsigned long)t.pathResponses,
-                           (unsigned long)t.requestsSent, (unsigned long)t.announceTableFull);
+                           (unsigned long)t.requestsSent, (unsigned long)t.announceTableFull, (unsigned long)t.forwarded,
+                           (unsigned long)t.noPath, (unsigned long)t.proofsForwarded, (unsigned long)t.reverseFull,
+                           (unsigned long)t.rebroadcasts);
     return n < 0 ? 0 : static_cast<size_t>(n);
 }
 
