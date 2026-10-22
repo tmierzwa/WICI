@@ -14,6 +14,7 @@
 #include "drbg.h"
 #include "framfs.h"
 #include "identity.h"
+#include "p1iface.h"
 #include "rns_node.h"
 
 namespace rnsnode {
@@ -54,6 +55,7 @@ bool begin(journal::Storage& storage, Radio&, const uint8_t[16], uint64_t, bool 
         static const char nonce[] = "WICI rnscore identity";
         generator.seed(seed, 32, reinterpret_cast<const uint8_t*>(nonce), sizeof(nonce) - 1);
         const bool generated = generator.generate(privateKey, sizeof(privateKey));
+        clean(&generator, sizeof(generator));   // stan generatora po kluczu (odporny wstecz, ale nie zostaje)
         // Klucz X25519 zapisany już przycięty (RFC 7748). Dla Reticulum w Pythonie i rdzenia to ten sam
         // klucz, ale port używa zapisanego klucza bez przycięcia (własne klucze tworzy przycięte): bez
         // tego powrót z rdzenia na port zmieniłby tożsamość stacji (tests/test_rns_stack_choice.py).
@@ -68,9 +70,12 @@ bool begin(journal::Storage& storage, Radio&, const uint8_t[16], uint64_t, bool 
     }
     rnscore::publicKey(privateKey, publicKeyBytes);
     rnscore::identityHash(publicKeyBytes, identityBytes);
-    char name[32];
-    snprintf(name, sizeof(name), "%s.%s", APP_NAME, ASPECT);   // cel SINGLE "wici.sa1" stacji
-    rnscore::destinationHash(name, identityBytes, addressBytes);
+    // Węzeł stanowiska nie ma adresu (jak w porcie): bez celu "wici.sa1", tożsamość tylko dla transportu.
+    if (!nodeMode) {
+        char name[32];
+        snprintf(name, sizeof(name), "%s.%s", APP_NAME, ASPECT);   // cel SINGLE "wici.sa1" stacji
+        rnscore::destinationHash(name, identityBytes, addressBytes);
+    }
     started = true;
     log("rns: Reticulum core (R0): identity only, no interface yet");
     return true;
@@ -78,7 +83,9 @@ bool begin(journal::Storage& storage, Radio&, const uint8_t[16], uint64_t, bool 
 
 void setIfac(const uint8_t[16]) {}
 void setReceivers(const uint8_t[2][64], const uint8_t[2][HASH], uint8_t) {}
-void setNode(bool on) { nodeMode = on; }
+void setNode(bool on) {
+    if (!started) nodeMode = on;   // jak w porcie: zmiana działa po restarcie
+}
 bool node() { return nodeMode; }
 void setSilence(Silence) {}
 void dropQueue() {}
@@ -123,6 +130,7 @@ Status status() {
     s.started = started;
     s.identityNew = identityNew;
     s.identityLost = identityLost;
+    s.bitrate = p1iface::declaredBitrate();
     return s;
 }
 
