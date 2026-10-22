@@ -12,10 +12,13 @@ hash are compared, and only whether they were sent (the core sends at most one a
 
 Traffic: announces (direct, through a transport node, path responses, rebroadcasts of neighbours), path requests (station
 destination, known destination, unknown destination asked twice), packets in transport for known and
-unknown destinations, proofs of forwarded packets, packets for the station, and mutated copies of all
-of them (byte flips without the IFAC bit, truncation, changed hops), all built with the core check
-program. Time: Reticulum runs in real time, the core on the virtual clock of the check program; the
-trial waits long enough for the retransmissions of both (path response grace, rebroadcasts).
+unknown destinations, proofs of forwarded packets, packets for the station; fixed cases (hops 126-128,
+other contexts of new announces, a path response for a destination with a pending rebroadcast, path
+requests up to the capacity of the announce table); then fresh packets of each kind (new announces and
+emission times, new contents and tags), half of them mutated (hops, context, flags without the IFAC
+bit, transport id, truncation, a body byte), all built with the core check program. Time: Reticulum
+runs in real time, the core on the virtual clock of the check program with poll() every LOOP_MS as
+in the station loop; the trial waits long enough for the retransmissions of both.
 
 Run with a Python that has Reticulum at the pinned commit (e40191b):
   .venv-rns/bin/python firmware/tools/rns_differential.py --check /path/to/rnscore_check --seed 1
@@ -37,13 +40,15 @@ import time
 
 APP_NAME, ASPECT = "wici", "sa1"
 NAME = f"{APP_NAME}.{ASPECT}"
-STATION_SEED = b"wici differential station"
 PATH_REQUEST = hashlib.sha256(hashlib.sha256(b"rnstransport.path.request").digest()[:10]).digest()[:16]
 CONTEXT_PATH_RESPONSE = 0x0B
 # Okna czasu: odpowiedź na zapytanie o trasę po 0,4 s i pierwsza retransmisja ogłoszenia do 0,5 s
-# (Python przegląda tablicę ogłoszeń co sekundę z wątku co 0,25 s: do 1,75 s, zapas na wolny komputer),
-# druga retransmisja 5,5 s po pierwszej (Python do 1,25 s później). Pakiety porównywane w odcinkach między oczekiwaniami.
-WINDOWS_MS = (2500, 7200)
+# (Python przegląda tablicę ogłoszeń co sekundę z wątku co 0,25 s: do 1,75 s, zapas na wolny komputer
+# w CI), druga retransmisja 5,5 s po pierwszej (Python do 1,25 s później). Pakiety porównywane w odcinkach
+# między oczekiwaniami.
+WINDOWS_MS = (4000, 7200)
+# Rdzeń w oczekiwaniu: poll() co LOOP_MS jak pętla stacji (najwyżej jedna retransmisja na poll()).
+LOOP_MS = 20
 
 
 def key(label: str) -> bytes:
@@ -152,23 +157,76 @@ def scenario(builder: Builder, station_key: bytes, rng: random.Random, mutations
              ("in", newer_near), ("in", builder.via(newer_near[:1] + newer_near[1:2] + newer_near[2:], relay2, 2)),
              ("in", builder.response(builder.via(builder.announce(keys["other"], 1_790_000_200), relay, 1))),
              ("wait", WINDOWS_MS[0]), ("wait", WINDOWS_MS[1])]
-    corpus = [near, far, late, other, newer_near, to_far, to_near, to_unknown, proof_far, to_station,
-              builder.path_request(dests["far"], tag(9)), builder.path_request(station_address, tag(10))]
+    windows = [("wait", WINDOWS_MS[0]), ("wait", WINDOWS_MS[1])]
+
+    # Stałe przypadki: skoki na granicy PATHFINDER_M dla nowych ogłoszeń i pakietów w transporcie, inny
+    # kontekst nowych ogłoszeń, odpowiedź na zapytanie (PATH_RESPONSE) o cel z czekającą retransmisją,
+    # seria zapytań o znane cele do pojemności tablicy ogłoszeń (16).
+    emitted = iter(range(1_790_000_300, 1_790_100_000))
+    for hops in (126, 127, 128):
+        k = key(f"wici differential hops {hops}")
+        steps.append(("in", bytes([0x01, hops]) + builder.announce(k, next(emitted))[2:]))
+        data = builder.packet(0x50, dests["far"], b"hops" * 10 + bytes([hops]), transport_id=station_identity)
+        steps.append(("in", data[:1] + bytes([hops]) + data[2:]))   # pack odmawia skoków ≥ 128
+    steps += windows
+    for context in (0x01, 0x0B, 0xFE):
+        raw = builder.announce(key(f"wici differential context {context}"), next(emitted))
+        steps.append(("in", raw[:18] + bytes([context]) + raw[19:]))
+    k = key("wici differential pending")
+    steps.append(("in", builder.announce(k, next(emitted))))
+    steps.append(("in", builder.response(builder.via(builder.announce(k, next(emitted)), relay, 1))))
+    steps += windows
+    series = [key(f"wici differential series {i}") for i in range(16)]
+    steps += [("in", builder.response(builder.announce(k, next(emitted)))) for k in series] + windows
+    steps += [("in", builder.path_request(builder.address(k), tag(100 + i))) for i, k in enumerate(series)] + windows
+
+    # Mutacje świeżych pakietów (nowe ogłoszenia, czasy emisji, treści i znaczniki), żeby docierały do
+    # decyzji transportu, a nie odpadały jako duplikaty; częściej pola nagłówka bez podpisu.
+    known = list(keys.values()) + [key(f"wici differential fresh {i}") for i in range(4)]
+    targets = list(dests.values()) + [station_address, bytes(16)]
     for n in range(mutations):
-        raw = bytearray(rng.choice(corpus))
-        kind = rng.randrange(4)
+        kind = rng.randrange(5)
         if kind == 0:
-            at = rng.randrange(len(raw))
-            raw[at] ^= 1 << rng.randrange(7 if at == 0 else 8)   # bez bitu IFAC: sprawdza go interfejs
+            raw = builder.announce(rng.choice(known), next(emitted), rng.randbytes(rng.randrange(8)))
+            if rng.randrange(2):
+                raw = builder.via(raw, rng.choice((relay, relay2)), rng.randrange(1, 5))
+            if rng.randrange(3) == 0:
+                raw = builder.response(raw)
         elif kind == 1:
-            raw = raw[:rng.randrange(1, len(raw))]
+            raw = builder.packet(0x50, rng.choice(targets), rng.randbytes(1 + rng.randrange(200)), transport_id=station_identity,
+                                 hops=rng.randrange(4))
         elif kind == 2:
-            raw[1] = rng.randrange(256)
+            raw = builder.path_request(rng.choice(targets), rng.randbytes(16), requestor=rng.choice((b"", relay, relay2)))
+        elif kind == 3:
+            forwarded = builder.packet(0x50, rng.choice((dests["far"], dests["near"])), rng.randbytes(40),
+                                       transport_id=station_identity, hops=1)
+            steps.append(("in", forwarded))
+            raw = builder.packet(0x03, builder.packet_hash(forwarded)[:16], rng.randbytes(64), hops=1)
         else:
-            raw[rng.randrange(2, len(raw))] = rng.randrange(256)
+            raw = builder.packet(0x00, station_address, builder.encrypted(station_public, rng.randbytes(20), n % 256))
+        raw = bytearray(raw)
+        if rng.randrange(2):
+            header = 34 if raw[0] & 0x40 else 18
+            m = rng.randrange(6)
+            if m == 0:
+                raw[1] = rng.randrange(256)
+            elif m == 1:
+                raw[header] = rng.randrange(256)                   # kontekst
+            elif m == 2:
+                raw[0] ^= 1 << rng.randrange(7)                    # bez bitu IFAC: sprawdza go interfejs
+            elif m == 3 and header == 34:
+                raw[2 + rng.randrange(16)] = rng.randrange(256)    # identyfikator transportu
+            elif m == 4:
+                raw = raw[:rng.randrange(1, len(raw))]
+            else:
+                raw[rng.randrange(2, len(raw))] = rng.randrange(256)
+        if raw[0] & 0x03 == 0x02:
+            raw[0] &= 0xFD   # LINKREQUEST: łącza są poza rdzeniem (zakres w reticulum-core.md)
+        if raw[0] & 0x03 == 0x03:
+            raw[0] &= 0xF3   # dowód z celem PLAIN albo GROUP: różnica w tabeli (reticulum-core.md)
         steps.append(("in", bytes(raw)))
         if n % 16 == 15 or n == mutations - 1:
-            steps += [("wait", WINDOWS_MS[0]), ("wait", WINDOWS_MS[1])]
+            steps += windows
     return steps, list(dests.values()) + [station_address], station_address
 
 
@@ -269,16 +327,21 @@ def core_paths(lines, dests):
     return out
 
 
-def normalized(raws, station_address):
+def normalized(raws, station_address, station_identity):
     """Multiset of packets; announces of the station destination without random hash and signature,
     and only once each: the core answers path requests for it at most once a second
-    (reticulum-core.md, difference table), Reticulum to every request."""
+    (reticulum-core.md, difference table), Reticulum to every request. Rebroadcasts of other announces
+    (path responses too) without random hash and signature: the core sends the newest accepted announce
+    of the destination, Reticulum the one that scheduled the rebroadcast (difference table)."""
     out, own = [], set()
     for raw in raws:
         flags = raw[0]
         at = 34 if flags & 0x40 else 18
+        head = raw[:at + 1 + 64 + 10].hex()   # nagłówek, kontekst, klucz publiczny, skrót nazwy
         if flags & 0x03 == 0x01 and raw[at - 16:at] == station_address:
-            own.add(raw[:at + 1 + 64 + 10].hex())   # nagłówek, kontekst, klucz publiczny, skrót nazwy
+            own.add(head)
+        elif flags & 0x43 == 0x41 and raw[2:18] == station_identity:
+            out.append(head)
         else:
             out.append(raw.hex())
     return sorted(out) + sorted(own)
@@ -295,25 +358,33 @@ def main():
     builder = Builder(core)
     station_key = key("wici differential station")
     steps, dests, station_address = scenario(builder, station_key, random.Random(args.seed), args.mutations)
+    station_identity = builder.identity(station_key)
 
     # Rdzeń: cała sekwencja naraz na zegarze wirtualnym; po każdym kroku pakiety i trasy.
     commands = [("t_begin", station_key)]
+    sizes = []
     now = 1000
     for kind, value in steps:
         if kind == "in":
             commands.append(("t_in", value))
+            ticks = 1
         else:
+            ticks = 0
+            for at in range(now + LOOP_MS, now + value + 1, LOOP_MS):
+                commands.append(("t_clock", at.to_bytes(8, "big")))
+                ticks += 1
             now += value
-            commands.append(("t_clock", now.to_bytes(8, "big")))
         commands.append(("t_out", b""))
         commands += [("t_known", dest) for dest in dests]
+        sizes.append(ticks + 1 + len(dests))
     lines = core.ask(commands)[1:]
-    per_step = 2 + len(dests)
     core_results = []
-    for i in range(len(steps)):
-        chunk = lines[i * per_step:(i + 1) * per_step]
-        sent = [] if chunk[1] == "-" else [bytes.fromhex(x) for x in chunk[1].split()]
-        core_results.append((sent, core_paths(chunk[2:], dests)))
+    at = 0
+    for size in sizes:
+        chunk = lines[at + size - 1 - len(dests):at + size]
+        at += size
+        sent = [] if chunk[0] == "-" else [bytes.fromhex(x) for x in chunk[0].split()]
+        core_results.append((sent, core_paths(chunk[1:], dests)))
 
     RNS, capture, destination, settle = start_python(station_key)
     if destination.hash != station_address:
@@ -334,7 +405,8 @@ def main():
         core_segment += core_sent
         step = {"step": i, "kind": kind, "input": value.hex() if kind == "in" else value}
         if kind == "wait":
-            if normalized(python_segment, station_address) != normalized(core_segment, station_address):
+            if normalized(python_segment, station_address, station_identity) != normalized(core_segment, station_address,
+                                                                                          station_identity):
                 differences.append({**step, "python_sent": [x.hex() for x in python_segment],
                                     "core_sent": [x.hex() for x in core_segment]})
             python_segment, core_segment = [], []

@@ -895,6 +895,18 @@ class CoreTests(unittest.TestCase):
                          [("t_clock", (1100 + 200 * i).to_bytes(8, "big")) for i in range(10)] + [("t_held", b"")])
         self.assertEqual((lines[4], lines[-1]), ("1", "0"))
 
+    def test_path_request_gate_keeps_waiting_entries(self):
+        # Pełna tablica zapytań „w drodze” (8): nowe zapytanie wypiera najstarszy żywy wpis bez oczekiwania,
+        # nie wpis czekający na odkrycie (najstarszy), więc ogłoszenie celu nadal idzie jako odpowiedź.
+        identity = self.station_identity()
+        ann = self.announce_of(bytes([37]) * 64)
+        dest = ann[2:18]
+        lines = self.ask([("t_begin", self.STATION), ("t_in", self.path_request(dest, b"A" * 16)),
+                          ("t_in", self.path_request(dest, b"B" * 16))] +
+                         [("t_in", self.path_request(bytes([i]) * 16, bytes([i]) * 16)) for i in range(1, 9)] +
+                         [("t_in", ann), ("t_clock", (1001).to_bytes(8, "big")), ("t_out", b"")])
+        self.assertEqual(lines[-1], self.via(ann[:18] + bytes([0x0B]) + ann[19:], identity, 1).hex())
+
     def test_path_request_gate(self):
         # RNS/Transport.py: preprocess_inbound (inflight_path_requests): drugie zapytanie o cel bez trasy w ciągu
         # 45 s zostaje bez odpowiedzi i czeka (discovery_path_requests); ogłoszenie celu idzie wtedy od razu jako
@@ -905,9 +917,10 @@ class CoreTests(unittest.TestCase):
         dest = ann[2:18]
         ask = [("t_begin", self.STATION), ("t_in", self.path_request(dest, b"A" * 16)), ("t_in", self.path_request(dest, b"B" * 16)),
                ("t_out", b"")]
-        lines = self.ask(ask + [("t_in", ann), ("t_out", b"")])
-        self.assertEqual(lines[3], "-")
-        self.assertEqual(lines[5], self.via(ann[:18] + bytes([0x0B]) + ann[19:], identity, 1).hex())
+        # Odpowiedź w następnym poll() (w obiegu ogłoszenia była weryfikacja podpisu), nie od razu.
+        lines = self.ask(ask + [("t_in", ann), ("t_out", b""), ("t_clock", (1001).to_bytes(8, "big")), ("t_out", b"")])
+        self.assertEqual((lines[3], lines[5]), ("-", "-"))
+        self.assertEqual(lines[7], self.via(ann[:18] + bytes([0x0B]) + ann[19:], identity, 1).hex())
         lines = self.ask(ask + [("t_clock", (16001).to_bytes(8, "big")), ("t_in", ann), ("t_out", b"")])
         self.assertEqual(lines[-1], "-")
         # Po 45 s pierwsze zapytanie już nie jest „w drodze”: następne zapytanie jest nowym pierwszym.
@@ -987,6 +1000,20 @@ class CoreTests(unittest.TestCase):
                           ("t_clock", (1000 + 8 * 60 * 1000 + 1).to_bytes(8, "big")), ("t_in", proof), ("t_forward", b"")])
         self.assertEqual(self.parsed(lines[4])[3], "-")
         self.assertEqual(lines[5].split()[:3], ["1", "0", "0"])
+
+    def test_forward_proof_other_destination_type(self):
+        # Dowód z typem celu PLAIN albo GROUP (Python: packet_filter przepuszcza go do 1 skoku) odpada przed
+        # tablicą odwrotną (tabela różnic), więc nie zużywa wpisu: prawdziwy dowód SINGLE nadal wraca.
+        identity = self.station_identity()
+        far = self.announce_of(bytes([36]) * 64)
+        data = self.packet(0x50, far[2:18], b"x" * 40, transport_id=identity)
+        proof = self.packet(0x03, bytes.fromhex(self.fields_of(data.hex())[-1])[:16], bytes(64))
+        lines = self.ask([("t_begin", self.STATION), ("t_in", self.via(far, bytes(range(16)), 1)), ("t_in", data),
+                          ("t_in", bytes([0x07]) + proof[1:]), ("t_in", bytes([0x0B]) + proof[1:]), ("t_in", proof),
+                          ("t_forward", b"")])
+        self.assertEqual([self.parsed(lines[i])[3] for i in (3, 4)], ["-", "-"])
+        self.assertEqual(self.parsed(lines[5])[3], self.hops(proof, 1).hex())
+        self.assertEqual(lines[6].split()[:3], ["1", "0", "1"])
 
     def test_announce_rebroadcast(self):
         # RNS/Transport.py: _inbound i jobs: przyjęte ogłoszenie idzie dalej jako HEADER_2 z identyfikatorem

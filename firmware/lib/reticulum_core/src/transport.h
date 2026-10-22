@@ -176,7 +176,7 @@ private:
     bool pathRequest(const uint8_t destination[TRUNCATED_HASH_SIZE], const uint8_t* requestor, uint64_t nowMs);
     AnnounceEntry* findAnnounce(const uint8_t destination[TRUNCATED_HASH_SIZE]);
     bool schedule(const uint8_t destination[TRUNCATED_HASH_SIZE], uint8_t hops, uint64_t atMs, uint8_t retries, bool block);
-    void retransmit(AnnounceEntry& entry, uint64_t nowMs);
+    __attribute__((noinline)) void retransmit(AnnounceEntry& entry, uint64_t nowMs);
     void heardRebroadcast(const Packet& packet, uint64_t nowMs);
     bool forward(const Packet& packet, const uint8_t* raw, size_t length, const uint8_t hash[HASH_SIZE], uint64_t nowMs);
     bool forwardProof(const Packet& packet, const uint8_t* raw, size_t length, uint64_t nowMs);
@@ -208,11 +208,15 @@ private:
         uint8_t destination[TRUNCATED_HASH_SIZE];
         uint64_t atMs;
         uint64_t discoveryUntilMs;
+        bool respond;          // ogłoszenie oczekiwanego celu przyszło: odpowiedź w następnym poll()
+        uint8_t respondHops;
     };
     Inflight inflight_[INFLIGHT_MAX] = {};
     uint32_t discoveryTimeoutMs_ = 0;   // 0: PATH_REQUEST_TIMEOUT_MS
     Inflight* findInflight(const uint8_t destination[TRUNCATED_HASH_SIZE], uint64_t nowMs);
     void discoveryResponse(const Packet& packet, uint64_t nowMs);
+    // Ramki z buforem pakietu (500 B) osobno od poll(), żeby nie sumowały się na stosie.
+    __attribute__((noinline)) void sendDiscovery(Inflight& f, uint64_t nowMs);
     uint64_t pathTags_[PATH_TAGS_MAX] = {};   // 8 B skrótu (cel + znacznik), pierścień
     size_t pathTagNext_ = 0;
     struct OwnRequest {

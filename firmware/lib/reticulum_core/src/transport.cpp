@@ -545,14 +545,14 @@ void Transport::inboundPlain(const Packet& packet, const uint8_t* raw, size_t le
         ++counters_.pathGated;
         return;
     }
-    if (!f) {   // wolny, przeterminowany albo najstarszy wpis
+    if (!f) {
+        // Wolny albo przeterminowany wpis, inaczej najstarszy żywy bez oczekiwania; wpisy czekające na
+        // odkrycie (i z odpowiedzią do nadania) wypierane na końcu, bo czekają na nie pytający.
+        auto rank = [](const Inflight& x) { return x.respond ? 3 : x.discoveryUntilMs ? 2 : x.atMs ? 1 : 0; };
+        auto age = [](const Inflight& x) { return x.discoveryUntilMs ? x.discoveryUntilMs : x.atMs; };
         f = &inflight_[0];
         for (Inflight& x : inflight_) {
-            if (!x.atMs && !x.discoveryUntilMs) {
-                f = &x;
-                break;
-            }
-            if (x.atMs < f->atMs) f = &x;
+            if (rank(x) < rank(*f) || (rank(x) == rank(*f) && age(x) < age(*f))) f = &x;
         }
         memset(f, 0, sizeof(*f));
         memcpy(f->destination, packet.data, TRUNCATED_HASH_SIZE);
@@ -586,19 +586,31 @@ void Transport::discoveryResponse(const Packet& packet, uint64_t nowMs) {
     if (!f) return;
     const bool waiting = f->discoveryUntilMs != 0;
     f->atMs = f->discoveryUntilMs = 0;
-    if (!waiting) return;
+    // Odpowiedź wychodzi w następnym poll(): w tym obiegu pętli była już weryfikacja podpisu ogłoszenia,
+    // a odpowiedź to podpis IFAC (jedna operacja asymetryczna na obieg). Python nadaje ją od razu.
+    if (!waiting || packet.dataLength > ANNOUNCE_FORWARDABLE_SIZE) return;
+    f->respond = true;
+    f->respondHops = packet.hops;
+}
+
+// RNS/Transport.py: _inbound (ANNOUNCE celu z discovery_path_requests): ogłoszenie z pamięci podręcznej jako
+// HEADER_2 z identyfikatorem stacji, kontekstem PATH_RESPONSE i liczbą skoków po odbiorze.
+void Transport::sendDiscovery(Inflight& f, uint64_t nowMs) {
+    f.respond = false;
+    KnownDestination e;
+    if (!lookup(f.destination, e, nowMs) || !e.announceLength) return;   // wpis wyparty w międzyczasie
     Packet out = {};
     out.headerType = HEADER_2;
     out.transportType = TRANSPORT;
     out.destinationType = SINGLE;
     out.packetType = ANNOUNCE;
-    out.contextFlag = packet.contextFlag;
-    out.hops = packet.hops;
+    out.contextFlag = e.contextFlag;
+    out.hops = f.respondHops;
     out.context = CONTEXT_PATH_RESPONSE;
     memcpy(out.transportId, identityHash_, TRUNCATED_HASH_SIZE);
-    memcpy(out.destinationHash, packet.destinationHash, TRUNCATED_HASH_SIZE);
-    out.data = packet.data;
-    out.dataLength = packet.dataLength;
+    memcpy(out.destinationHash, f.destination, TRUNCATED_HASH_SIZE);
+    out.data = table_.announce();
+    out.dataLength = e.announceLength;
     uint8_t raw[MTU];
     const size_t rawLength = pack(out, raw, sizeof(raw));
     if (rawLength && emit(raw, rawLength, true)) ++counters_.pathResponses;
@@ -794,7 +806,18 @@ void Transport::poll(uint64_t nowMs, bool transmit) {
             due = &a;
         }
     }
-    if (due && transmit && mayTransmit()) retransmit(*due, nowMs);
+    // Odpowiedź odkrycia przed retransmisjami (w Pythonie wychodzi od razu z ogłoszeniem).
+    Inflight* respond = nullptr;
+    for (Inflight& f : inflight_) {
+        if (f.respond) {
+            respond = &f;
+            break;
+        }
+    }
+    if (transmit && (respond || due) && mayTransmit()) {
+        if (respond) sendDiscovery(*respond, nowMs);
+        else retransmit(*due, nowMs);
+    }
     // Wstrzymany wpis żyje tylko razem z wpisem odpowiedzi swojego celu (zastąpionym, wypartym albo
     // zakończonym bez nadania): bez niego zwalnia miejsce.
     for (AnnounceEntry& h : held_) {

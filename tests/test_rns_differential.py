@@ -51,4 +51,4 @@ class DifferentialTests(unittest.TestCase):
         self.trial(seed=1, mutations=64)
 
     def test_mutated_traffic_other_seed(self):
-        self.trial(seed=2, mutations=64)
+        self.trial(seed=2, mutations=96)
