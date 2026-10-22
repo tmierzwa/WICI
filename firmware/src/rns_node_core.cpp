@@ -19,11 +19,12 @@
 //   (rnscore::lxmfPackSa1, lxmfReceiveSa1). Warstwa aplikacji (station.h) jest wspólna z portem
 //   i nadal podaje zastępczą kopertę ["WICI",1,od,do,<SA1>] i cele "wici.sa1" odbiorcy z karty:
 //   send() wyjmuje SA1 z koperty i wysyła je w LXMF do celu "lxmf.delivery" tego samego klucza,
-//   a wiadomość przyjęta z podpisem nadawcy idzie do warstwy aplikacji w takiej kopercie (od = cel
-//   z setReceivers dla odbiorcy z karty, inaczej cel LXMF nadawcy). Dowód po decyzji warstwy
-//   aplikacji (COMMIT albo trwałe odrzucenie); dane, które nie są wiadomością SA1 z poprawnym
-//   podpisem znanego nadawcy, to trwałe odrzucenie z dowodem (oprogramowanie.md, „Dowód
-//   dostarczenia po COMMIT”);
+//   a wiadomość odbiorcy z karty z poprawnym podpisem idzie do warstwy aplikacji w takiej kopercie
+//   (od = cel tego odbiorcy z setReceivers). Dowód po decyzji warstwy aplikacji (COMMIT albo trwałe
+//   odrzucenie); inne dane (nadawca spoza karty, nie SA1, znaczek pracy, zły podpis) to trwałe
+//   odrzucenie z dowodem i licznikiem powodu (oprogramowanie.md, „Dowód dostarczenia po COMMIT”).
+//   Znacznik czasu własnej wiadomości to licznik pracy w s (oprogramowanie.md, „Czas”): zwykły
+//   klient LXMF pokaże datę z 1970 roku;
 // - praca na pakiet ograniczona dla płytek (audyt rdzenia, U2): received() tylko odkłada datagram do
 //   kolejki odbioru, a jeden obieg rnsnode::loop() wykonuje najwyżej jeden krok odbioru: sprawdzenie
 //   IFAC (podpis) albo przetworzenie pakietu w transporcie; weryfikacja podpisów ogłoszeń z limitem na
@@ -200,7 +201,26 @@ constexpr size_t ENVELOPE_TO = ENVELOPE_FROM + 2 * HASH + 3;   // po "," między
 constexpr size_t ENVELOPE_SA1 = ENVELOPE_TO + 2 * HASH + 2;    // po ", przed SA1
 uint8_t lxmfOut[rnscore::LXMF_SA1_MAX_DATA];                       // dane pakietu wiadomości z send()
 char envelope[ENVELOPE_SA1 + rnscore::SA1_CONTENT_MAX + 2];       // koperta wiadomości przyjętej
-uint32_t lxmfRejected = 0;   // pakiety do stacji, które nie są wiadomością SA1 znanego nadawcy
+// Pakiety do stacji odrzucone przed warstwą aplikacji, według powodu: nadawca spoza karty (albo bez
+// klucza w tablicy), kształt (nie SA1), znaczek pracy, podpis (także klucz nie do skrótu nadawcy).
+struct LxmfRejects {
+    uint32_t sender = 0, shape = 0, stamp = 0, signature = 0;
+    uint32_t total() const { return sender + shape + stamp + signature; }
+};
+LxmfRejects lxmfRejects;
+// Wpis w dzienniku (FRAM) o odrzuceniu, które wskazuje błąd konfiguracji albo podrobienie odbiorcy:
+// najwyżej raz na godzinę dla powodu, żeby wrogi nadajnik nie zapełnił dziennika.
+constexpr uint64_t LXMF_LOG_PERIOD_MS = 3600 * 1000;
+uint64_t lxmfLoggedMs[2] = {};   // 0: zły podpis odbiorcy z karty, 1: znaczek pracy
+bool lxmfLogged[2] = {};
+
+void logLimited(size_t which, const char* text) {
+    const uint64_t now = uptimeMs();
+    if (lxmfLogged[which] && now - lxmfLoggedMs[which] < LXMF_LOG_PERIOD_MS) return;
+    lxmfLogged[which] = true;
+    lxmfLoggedMs[which] = now;
+    log(text);
+}
 
 // SA1 z koperty; fałsz, gdy dane nie mają jej kształtu.
 bool envelopeContent(const uint8_t* data, size_t length, const uint8_t*& content, size_t& contentLength) {
@@ -272,16 +292,43 @@ void announceHook(const uint8_t destination[HASH], const uint8_t* appData, size_
     if (hooks.announce) hooks.announce(destination, appData, length, hooks.context);
 }
 
+// Nadawca to cel "lxmf.delivery" odbiorcy z karty (główny albo zapasowy).
+bool cardReceiver(const uint8_t source[HASH]) {
+    static const uint8_t zero[HASH] = {};
+    for (const auto& dest : pinned) {
+        if (memcmp(dest, zero, HASH) != 0 && memcmp(dest, source, HASH) == 0) return true;
+    }
+    return false;
+}
+
 // Wiadomość SA1 z danych pakietu do stacji (LXMRouter.delivery_packet i lxmf_delivery dla wiadomości
-// z poprawnym podpisem) w kopercie dla warstwy aplikacji; 0: nie wiadomość SA1 znanego nadawcy
-// (nieznany klucz nadawcy, zły kształt, zły podpis). Klucz nadawcy z tablicy znanych celów
-// (Identity.recall); przed kryptografią sprawdza go transport, kształt sprawdza lxmfReceiveSa1.
+// z poprawnym podpisem) w kopercie dla warstwy aplikacji; 0: trwałe odrzucenie z powodem w lxmfRejects.
+// Przed kryptografią: nadawca z karty (stacja przyjmuje wiadomości tylko od odbiorcy, oprogramowanie.md,
+// „Model zaufania i kluczy”) i jego klucz w tablicy znanych celów (Identity.recall); kształt sprawdza
+// lxmfReceiveSa1 przed weryfikacją podpisu.
 size_t lxmfToEnvelope(const uint8_t* data, size_t length) {
-    if (length < rnscore::LXMF_SOURCE_OFFSET + HASH) return 0;
+    const uint8_t* source = data + rnscore::LXMF_SOURCE_OFFSET;
     rnscore::KnownDestination sender;   // odczyt z FRAM (Transport::lookup)
+    if (length < rnscore::LXMF_SOURCE_OFFSET + HASH || !cardReceiver(source) || !transport.lookup(source, sender, uptimeMs())) {
+        ++lxmfRejects.sender;
+        return 0;
+    }
     rnscore::LxmfSa1 m;
-    if (!transport.lookup(data + rnscore::LXMF_SOURCE_OFFSET, sender, uptimeMs()) ||
-        !rnscore::lxmfReceiveSa1(addressBytes, data, length, sender.publicKey, m)) {
+    rnscore::LxmfReject reason;
+    if (!rnscore::lxmfReceiveSa1(addressBytes, data, length, sender.publicKey, m, &reason)) {
+        switch (reason) {
+            case rnscore::LxmfReject::STAMP:
+                ++lxmfRejects.stamp;
+                logLimited(1, "rns: LXMF message with a stamp rejected (stamp cost set on the sender?)");
+                break;
+            case rnscore::LxmfReject::SOURCE:
+            case rnscore::LxmfReject::SIGNATURE:
+                ++lxmfRejects.signature;
+                logLimited(0, "rns: LXMF signature of the receiver invalid");
+                break;
+            default:
+                ++lxmfRejects.shape;
+        }
         return 0;
     }
     memcpy(envelope, ENVELOPE_HEAD, ENVELOPE_FROM);
@@ -296,13 +343,11 @@ size_t lxmfToEnvelope(const uint8_t* data, size_t length) {
 
 // Decyzja warstwy aplikacji (PROVE_APP); dowód pakietu zgłoszenia z wyjątkiem ciszy wychodzi także
 // w ciszy (znacznik kasuje received() po przetworzeniu pakietu), jak w porcie. Pakiet, który nie jest
-// wiadomością SA1 znanego nadawcy, to trwałe odrzucenie: z dowodem, bez warstwy aplikacji.
+// wiadomością SA1 odbiorcy z karty z poprawnym podpisem, to trwałe odrzucenie: z dowodem, bez warstwy
+// aplikacji.
 bool packetHook(const uint8_t* raw, size_t rawLength, void*) {
     const size_t length = lxmfToEnvelope(raw, rawLength);
-    if (!length) {
-        ++lxmfRejected;
-        return true;
-    }
+    if (!length) return true;
     const uint8_t* data = reinterpret_cast<const uint8_t*>(envelope);
     bool exception = false;
     const bool accepted = hooks.packet && hooks.packet(data, length, exception, hooks.context);
@@ -709,7 +754,8 @@ size_t interfaceJson(char* out, size_t size) {
     // Pola jak w porcie (rns_node.cpp) i liczniki rdzenia: pakiety odrzucone przez rnscore::unpack,
     // duplikaty, pakiety poza podzbiorem R1 albo nie do stacji, odrzucone przy sprawdzaniu, datagramy
     // odrzucone przy pełnej kolejce odbioru, ogłoszenia odrzucone przez limit weryfikacji, gniazda tablicy
-    // znanych celów z błędną treścią (zwolnione), pakiety do stacji, które nie są wiadomością SA1 znanego nadawcy.
+    // znanych celów z błędną treścią (zwolnione), pakiety do stacji, które nie są wiadomością SA1 odbiorcy
+    // z karty (razem i według powodu).
     const p1iface::Counters& c = queue.counters();
     const rnscore::TransportCounters& t = transport.counters();
     const uint32_t now = nowMs();   // okna czasu kanału przesuwane przed printf (kolejność wywołań)
@@ -722,7 +768,8 @@ size_t interfaceJson(char* out, size_t size) {
                            "\"rx_ignored\":%lu,\"rx_invalid\":%lu,\"rx_queue_full\":%lu,\"ann_limited\":%lu,\"table_corrupt\":%lu,"
                            "\"pr_in\":%lu,\"pr_answered\":%lu,\"pr_responses\":%lu,\"pr_sent\":%lu,\"ann_table_full\":%lu,"
                            "\"fwd\":%lu,\"fwd_no_path\":%lu,\"proof_fwd\":%lu,\"rev_full\":%lu,\"ann_rebroadcast\":%lu,\"pr_gated\":%lu,"
-                           "\"lxmf_rejected\":%lu",
+                           "\"lxmf_rejected\":%lu,\"lxmf_rej_sender\":%lu,\"lxmf_rej_shape\":%lu,\"lxmf_rej_stamp\":%lu,"
+                           "\"lxmf_rej_signature\":%lu",
                            (unsigned)queue.queued(), (unsigned)queue.held(), (unsigned long)c.queued, (unsigned long)c.full,
                            (unsigned long)c.tooLarge, (unsigned long)c.announcesHeld, (unsigned long)c.announcesDropped,
                            (unsigned long)c.announcesExpired, (unsigned long)c.sent, (unsigned long)c.sendFailed,
@@ -735,7 +782,9 @@ size_t interfaceJson(char* out, size_t size) {
                            (unsigned long)t.requestsSent, (unsigned long)t.announceTableFull, (unsigned long)t.forwarded,
                            (unsigned long)t.noPath, (unsigned long)t.proofsForwarded, (unsigned long)t.reverseFull,
                            (unsigned long)t.rebroadcasts, (unsigned long)t.pathGated,
-                           (unsigned long)lxmfRejected);
+                           (unsigned long)lxmfRejects.total(),
+                           (unsigned long)lxmfRejects.sender, (unsigned long)lxmfRejects.shape, (unsigned long)lxmfRejects.stamp,
+                           (unsigned long)lxmfRejects.signature);
     return n < 0 ? 0 : static_cast<size_t>(n);
 }
 

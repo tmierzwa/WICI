@@ -63,14 +63,19 @@ int main() {
             } else {
                 printf("none\n");
             }
-        } else if (command == "lxmf_receive" && data.size() >= rnscore::KEY_SIZE + rnscore::TRUNCATED_HASH_SIZE) {
+        } else if ((command == "lxmf_receive" || command == "lxmf_reason") && data.size() >= rnscore::KEY_SIZE + rnscore::TRUNCATED_HASH_SIZE) {
             // klucz publiczny nadawcy 64 B, skrót celu 16 B, dane pakietu; skrót wiadomości, czas i treść albo
             // "none" (wiadomość odrzucona)
             const uint8_t* dest = data.data() + rnscore::KEY_SIZE;
             const uint8_t* end = data.data() + data.size();
             std::vector<uint8_t> packet(dest + rnscore::TRUNCATED_HASH_SIZE, end);
             rnscore::LxmfSa1 m;
-            if (rnscore::lxmfReceiveSa1(dest, packet.data(), packet.size(), data.data(), m)) {
+            rnscore::LxmfReject reason;
+            const bool accepted = rnscore::lxmfReceiveSa1(dest, packet.data(), packet.size(), data.data(), m, &reason);
+            if (command == "lxmf_reason") {
+                static const char* const names[] = {"none", "shape", "stamp", "source", "signature"};
+                printf("%s\n", names[static_cast<int>(reason)]);
+            } else if (accepted) {
                 printHex(m.hash, sizeof(m.hash), " ");
                 printf("%.17g ", m.timestamp);
                 printHex(m.content, m.contentLength);

@@ -343,7 +343,8 @@ void BenchHost::configChanged(bool roleChanged) {
     }
     if (rnsOk) rnsnode::setIfac(stationStore.config().ifac);   // configure może zmienić kod IFAC
     applyReceivers();
-    // Zmiana roli: interfejs USB i cel "wici.sa1" zmienia dopiero start stosu, więc stacja wraca
+    // Zmiana roli: interfejs USB i cel stacji (port "wici.sa1", rdzeń "lxmf.delivery") zmienia dopiero
+    // start stosu, więc stacja wraca
     // po restarcie (po wysłaniu odpowiedzi na configure).
     if (roleChanged) restartSoon("role changed: restart");
     screenChanged();

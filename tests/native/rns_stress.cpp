@@ -641,6 +641,14 @@ void flood() {
     for (int i = 0; i < 4; ++i) serviceCounted(4);
     if (rnsnode::status().packetsReceived != before + 2) fail("SA1 message from the receiver lost after the flood");
     if (interfaceCounter("lxmf_rejected") != rejected) fail("SA1 message from the receiver rejected");
+    // Ten sam kształt od odbiorcy ze złym podpisem: też najwyżej cztery operacje, odrzucenie z powodem.
+    lxmf[16] ^= 0x01;
+    RNS::Packet forged(out, RNS::Bytes(lxmf, n), RNS::Type::Packet::DATA);
+    forged.pack();
+    const uint32_t badSignature = interfaceCounter("lxmf_rej_signature");
+    receive(forged.raw());
+    for (int i = 0; i < 4; ++i) serviceCounted(4);
+    if (interfaceCounter("lxmf_rej_signature") != badSignature + 1) fail("forged SA1 message from the receiver not rejected");
 
     char text[256];
     snprintf(text, sizeof(text),
@@ -667,8 +675,7 @@ void transitLoad(bool announces) {
         for (int k = 0; k < 2; ++k) {
             const size_t i = 1 + rnd() % (PEERS - 1);
             if (!announces) {
-                RNS::Destination out(peers[i], RNS::Type::Destination::OUT, RNS::Type::Destination::SINGLE, rnsnode::APP_NAME,
-                                     rnsnode::ASPECT);
+                RNS::Destination out(peers[i], RNS::Type::Destination::OUT, RNS::Type::Destination::SINGLE, DEST_APP, DEST_ASPECT);
                 RNS::Packet p(out, randomBytes(1 + rnd() % 200), RNS::Type::Packet::DATA);
                 p.pack();
                 receive(withHops(headerTwo(p.raw(), stationTransport), 0));
@@ -706,8 +713,11 @@ void damagedReceiver() {
         damaged = true;
     }
     if (!damaged) fail("damaged-receiver: no receiver slot");
-    const uint8_t message[] = "report after a damaged slot";
-    if (!rnsnode::send(peerDest[0].data(), message, sizeof(message), rnsnode::RECEIPT_MIN_S)) {
+    // Koperta warstwy aplikacji (station.cpp) z treścią SA1; rdzeń wysyła treść w LXMF.
+    const std::string message = "[\"WICI\",1,\"" + hex(rnsnode::address(), 16) + "\",\"" + hex(peerDest[0].data(), 16) +
+                                "\",[1,\"report after a damaged slot\"]]";
+    if (!rnsnode::send(peerDest[0].data(), reinterpret_cast<const uint8_t*>(message.data()), message.size(),
+                       rnsnode::RECEIPT_MIN_S)) {
         fail("damaged-receiver: report not sent");
     }
 }

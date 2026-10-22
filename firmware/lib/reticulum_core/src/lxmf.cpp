@@ -142,19 +142,28 @@ size_t lxmfPackSa1(const uint8_t privateKey[KEY_SIZE], const uint8_t publicKey[K
 }
 
 bool lxmfReceiveSa1(const uint8_t destinationHash[TRUNCATED_HASH_SIZE], const uint8_t* data, size_t length,
-                    const uint8_t senderPublicKey[KEY_SIZE], LxmfSa1& out) {
+                    const uint8_t senderPublicKey[KEY_SIZE], LxmfSa1& out, LxmfReject* reason) {
+    LxmfReject ignored;
+    LxmfReject& why = reason ? *reason : ignored;
+    why = LxmfReject::SHAPE;
     if (length <= PAYLOAD_OFFSET || length > LXMF_MAX_RECEIVED) return false;
     const uint8_t* payload = data + PAYLOAD_OFFSET;
     const size_t payloadLength = length - PAYLOAD_OFFSET;
 
     // Kształt SA1: [liczba, bin "SA1", bin 1–256 B, {} albo nil]; bajty za wartością Python pomija
-    // (unpackb czyta tylko pierwszą wartość), ale wchodzą do skrótu.
+    // (unpackb czyta tylko pierwszą wartość), ale wchodzą do skrótu. Tablica 5 elementów to wiadomość
+    // ze znaczkiem pracy (LXMessage.unpack_from_bytes zdejmuje go przed sprawdzeniem podpisu).
     Cursor c{payload, payloadLength};
     const uint8_t* q;
     LxmfSa1 m = {};
     const uint8_t* title;
     size_t titleLength;
-    if (!c.take(1, q) || q[0] != 0x94 || !c.number(m.timestamp)) return false;
+    if (!c.take(1, q)) return false;
+    if (q[0] == 0x95) {
+        why = LxmfReject::STAMP;
+        return false;
+    }
+    if (q[0] != 0x94 || !c.number(m.timestamp)) return false;
     if (!c.bin(title, titleLength) || titleLength != sizeof(TITLE) || memcmp(title, TITLE, sizeof(TITLE)) != 0) return false;
     if (!c.bin(m.content, m.contentLength) || m.contentLength == 0 || m.contentLength > SA1_CONTENT_MAX) return false;
     if (!c.take(1, q) || (q[0] != 0x80 && q[0] != 0xC0)) return false;
@@ -163,13 +172,16 @@ bool lxmfReceiveSa1(const uint8_t destinationHash[TRUNCATED_HASH_SIZE], const ui
     uint8_t identity[TRUNCATED_HASH_SIZE], expected[TRUNCATED_HASH_SIZE];
     identityHash(senderPublicKey, identity);
     rnscore::destinationHash("lxmf.delivery", identity, expected);
+    why = LxmfReject::SOURCE;
     if (memcmp(expected, data + LXMF_SOURCE_OFFSET, TRUNCATED_HASH_SIZE) != 0) return false;
 
     uint8_t signedData[SIGNED_MAX];
     const size_t signedLength = signedPart(destinationHash, data, payload, payloadLength, signedData, m.hash);
+    why = LxmfReject::SIGNATURE;
     if (!validate(senderPublicKey, data + TRUNCATED_HASH_SIZE, SIGNATURE_SIZE, signedData, signedLength)) return false;
     m.sourceHash = data + LXMF_SOURCE_OFFSET;
     out = m;
+    why = LxmfReject::NONE;
     return true;
 }
 
