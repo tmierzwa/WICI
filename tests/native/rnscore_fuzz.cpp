@@ -5,6 +5,9 @@
 // MAX_RECORD) i dane. Rodzaje: pakiet bez IFAC do Transport::inbound, datagram z kodem IFAC (ifacCheck,
 // potem inbound), dane wiadomości LXMF (lxmfReceiveSa1 kluczem nadawcy z wektorów), poll, zapis danych
 // w obszar tablicy i restart stacji (wroga treść FRAM), pakiet stacji (send, requestPath, announce).
+// Stacja ma dwa interfejsy (jak węzeł stanowiska: P1 i USB): bit 7 rodzaju to interfejs, przez który przyszedł
+// pakiet albo datagram, a bity 1 i 2 pierwszego bajtu poll to interfejsy 0 i 1 odmawiające w mayTransmit
+// (do następnego poll), więc fuzzing obejmuje też zaległe nadania i odmowę jednego interfejsu.
 // Rdzeń nie ma stanu globalnego, więc wynik zależy tylko od wejścia (powtarzalne awarie).
 // Z -DWICI_FUZZ_DRIVER własny main: odtwarza pliki z argumentów, a z --mutate SEKUNDY dodatkowo prosto je
 // mutuje (bez libFuzzera, np. Apple clang); awaria tak samo przerywa program sanitizerem.
@@ -73,9 +76,13 @@ struct Station {
     uint8_t nameHash[rnscore::NAME_HASH_SIZE];
     uint32_t random = 0;
     uint64_t nowMs = 1000;
+    uint8_t refusing = 0;   // maska interfejsów, które odmawiają w mayTransmit
 };
 
-bool onTransmit(const uint8_t*, size_t, void*) { return true; }
+bool onTransmit(const uint8_t*, size_t, uint8_t, void*) { return true; }
+bool onMayTransmit(uint8_t iface, void* context) {
+    return !(static_cast<Station*>(context)->refusing & rnscore::interfaceMask(iface));
+}
 bool onPacket(const uint8_t*, size_t, void*) { return true; }
 // Losowość z licznika: wynik zależy tylko od wejścia.
 bool onRandom(uint8_t* out, size_t length, void* context) {
@@ -89,7 +96,8 @@ bool onRandom(uint8_t* out, size_t length, void* context) {
 void start(Station& s) {
     s.transport.~Transport();
     new (&s.transport) rnscore::Transport();
-    s.transport.begin(STATION_KEY, s.publicKey, s.identity, s.address, s.nameHash, s.hooks, s.table, s.nowMs);
+    s.transport.begin(STATION_KEY, s.publicKey, s.identity, s.address, s.nameHash, s.hooks, s.table, s.nowMs,
+                      rnscore::INTERFACES_MAX);
 }
 
 Station& station() {
@@ -106,6 +114,7 @@ Station& station() {
         s->hooks.transmit = onTransmit;
         s->hooks.packet = onPacket;
         s->hooks.random = onRandom;
+        s->hooks.mayTransmit = onMayTransmit;
         s->hooks.context = s;
     }
     return *s;
@@ -113,14 +122,15 @@ Station& station() {
 
 
 void record(Station& s, uint8_t kind, const uint8_t* data, size_t length) {
-    switch (kind % 6) {
+    const uint8_t iface = kind >> 7;
+    switch ((kind & 0x7F) % 6) {
         case 0:
-            s.transport.inbound(data, length, s.nowMs);
+            s.transport.inbound(data, length, s.nowMs, iface);
             break;
         case 1: {
             uint8_t raw[MAX_RECORD];
             const size_t n = rnscore::ifacCheck(s.ifac, data, length, raw, sizeof(raw));
-            if (n) s.transport.inbound(raw, n, s.nowMs);
+            if (n) s.transport.inbound(raw, n, s.nowMs, iface);
             break;
         }
         case 2: {
@@ -129,7 +139,8 @@ void record(Station& s, uint8_t kind, const uint8_t* data, size_t length) {
             rnscore::lxmfReceiveSa1(LXMF_DESTINATION, data, length, SENDER_KEY, message, &reason);
             break;
         }
-        case 3:
+        case 3:   // bit 0: łącze wolne, bity 1 i 2: odmawiające interfejsy
+            s.refusing = length ? static_cast<uint8_t>((data[0] >> 1) & 3) : 0;
             s.transport.poll(s.nowMs, length == 0 || data[0] & 1);
             break;
         case 4: {   // 3 B przesunięcia w obszarze tablicy, reszta to treść; potem restart stacji
@@ -167,6 +178,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     memset(s.table.bytes, 0xFF, sizeof(s.table.bytes));   // nowa pamięć FRAM
     s.random = 0;
     s.nowMs = 1000;
+    s.refusing = 0;
     start(s);
     size_t at = 0;
     while (size - at >= 4) {
@@ -227,10 +239,12 @@ int main(int argc, char** argv) {
         if (!seconds) {   // samo odtworzenie: co rdzeń zrobił z wejściem (core_fuzz.py --replay sprawdza korpus)
             const rnscore::TransportCounters& c = station().transport.counters();
             printf("{\"file\":\"%s\",\"announces\":%u,\"invalid\":%u,\"ignored\":%u,\"received\":%u,\"sent\":%u,"
-                   "\"forwarded\":%u,\"no_path\":%u,\"path_requests\":%u,\"known\":%u}\n",
+                   "\"forwarded\":%u,\"no_path\":%u,\"path_requests\":%u,\"path_responses\":%u,\"rebroadcasts\":%u,"
+                   "\"known\":%u}\n",
                    argv[i], static_cast<unsigned>(c.announces), static_cast<unsigned>(c.invalid), static_cast<unsigned>(c.ignored),
                    static_cast<unsigned>(c.received), static_cast<unsigned>(c.sent), static_cast<unsigned>(c.forwarded),
                    static_cast<unsigned>(c.noPath), static_cast<unsigned>(c.pathRequests),
+                   static_cast<unsigned>(c.pathResponses), static_cast<unsigned>(c.rebroadcasts),
                    static_cast<unsigned>(station().transport.known()));
         }
         corpus.push_back(input);

@@ -3,7 +3,7 @@
 
 The same inbound traffic goes to the core (tests/native/rnscore_check, commands t_*) and to Reticulum
 in this process acting as the same station: the same identity as transport identity (transport
-enabled, as in the port), a "wici.sa1" destination proving every packet, one interface that records
+enabled, as in the port), a "wici.sa1" destination proving every packet, an interface that records
 what Reticulum transmits. Between two waits both sides must transmit the same packets (as a
 multiset), and after every step keep the same paths (hops and next hop) to every destination of the trial
 (firmware/reticulum-core.md, acceptance criterion 2). Path responses for the station destination
@@ -20,6 +20,11 @@ bit, transport id, truncation, a body byte; a mutation that reaches a difference
 of firmware/reticulum-core.md is adjusted or left out), all built with the core check program.
 Time: Reticulum runs in real time, the core on the virtual clock of the check program with poll()
 every LOOP_MS as in the station loop; the trial waits long enough for the retransmissions of both.
+
+With --interfaces 2 (stage R4, the OSP node) both sides have a second interface (1, USB): the fixed
+traffic puts the direct neighbour, some path requests, packets in transport and a packet for the station
+on it, and the mutated traffic arrives on a random interface; packets are compared with the interface
+they leave on, and paths with the interface of their announce.
 
 Run with a Python that has Reticulum at the pinned commit (e40191b):
   .venv-rns/bin/python firmware/tools/rns_differential.py --check /path/to/rnscore_check --seed 1
@@ -122,8 +127,8 @@ class Builder:
         return bytes.fromhex(self.core.one("encrypt", public_key + ephemeral + iv + payload))
 
 
-def scenario(builder: Builder, station_key: bytes, rng: random.Random, mutations: int):
-    """Steps ("in", raw) and ("wait", ms); destinations whose paths are compared."""
+def scenario(builder: Builder, station_key: bytes, rng: random.Random, mutations: int, interfaces: int = 1):
+    """Steps ("in", raw, interface) and ("wait", ms); destinations whose paths are compared."""
     station_identity = builder.identity(station_key)
     station_address = builder.address(station_key)
     keys = {name: key(f"wici differential {name}") for name in ("near", "far", "late", "other")}
@@ -142,9 +147,12 @@ def scenario(builder: Builder, station_key: bytes, rng: random.Random, mutations
     to_station = builder.packet(0x00, station_address, builder.encrypted(station_public, b"SA1 trial", 1))
     tag = lambda n: hashlib.sha256(b"tag" + bytes([n])).digest()[:16]  # noqa: E731
 
-    steps = [("in", near), ("in", far), ("in", other), ("wait", WINDOWS_MS[0]), ("wait", WINDOWS_MS[1]),
-             ("in", builder.path_request(station_address, tag(1))), ("wait", WINDOWS_MS[0]),
-             ("in", builder.path_request(dests["far"], tag(2), requestor=relay2)),
+    # Drugi interfejs (USB): sąsiad bezpośredni, zapytania o cel stacji i o cel za P1, pakiet w transporcie
+    # z USB do celu za P1 i pakiet do stacji. Przy jednym interfejsie wszystko na interfejsie 0.
+    usb = 1 if interfaces > 1 else 0
+    steps = [("in", near, usb), ("in", far), ("in", other), ("wait", WINDOWS_MS[0]), ("wait", WINDOWS_MS[1]),
+             ("in", builder.path_request(station_address, tag(1)), usb), ("wait", WINDOWS_MS[0]),
+             ("in", builder.path_request(dests["far"], tag(2), requestor=relay2), usb),
              ("in", builder.path_request(dests["far"], tag(2), requestor=relay2)), ("wait", WINDOWS_MS[0]),
              ("in", builder.path_request(dests["near"], tag(3), requestor=dests["near"])), ("wait", WINDOWS_MS[0]),
              ("in", builder.path_request(dests["late"], tag(4))), ("in", builder.path_request(dests["late"], tag(5))),
@@ -153,8 +161,8 @@ def scenario(builder: Builder, station_key: bytes, rng: random.Random, mutations
              ("in", builder.via(late, relay, 1)), ("in", builder.via(late, relay2, 1)), ("wait", WINDOWS_MS[1]),
              ("in", builder.announce(keys["late"], 1_790_000_050)), ("wait", WINDOWS_MS[0]),
              ("in", builder.via(builder.announce(keys["late"], 1_790_000_050), relay, 2)), ("wait", WINDOWS_MS[1]),
-             ("in", to_far), ("in", to_far), ("in", to_near), ("in", to_unknown), ("in", proof_far), ("in", proof_far),
-             ("in", to_station), ("in", to_station),
+             ("in", to_far, usb), ("in", to_far), ("in", to_near), ("in", to_unknown), ("in", proof_far), ("in", proof_far),
+             ("in", to_station, usb), ("in", to_station),
              ("in", newer_near), ("in", builder.via(newer_near[:1] + newer_near[1:2] + newer_near[2:], relay2, 2)),
              ("in", builder.response(builder.via(builder.announce(keys["other"], 1_790_000_200), relay, 1))),
              ("wait", WINDOWS_MS[0]), ("wait", WINDOWS_MS[1])]
@@ -225,26 +233,28 @@ def scenario(builder: Builder, station_key: bytes, rng: random.Random, mutations
             raw[0] &= 0xFD   # LINKREQUEST: łącza są poza rdzeniem (zakres w reticulum-core.md)
         if raw[0] & 0x03 == 0x03:
             raw[0] &= 0xF3   # dowód z celem PLAIN albo GROUP: różnica w tabeli (reticulum-core.md)
+        iface = rng.randrange(interfaces) if interfaces > 1 else 0
         # Do celu zapytań o trasę tylko zapytanie PLAIN DATA albo ogłoszenie; inny pakiet: różnica w tabeli
         # (reticulum-core.md).
         header = 34 if raw[0] & 0x40 else 18
         if bytes(raw[header - 16:header]) != PATH_REQUEST or raw[0] & 0x03 == 0x01 or raw[0] & 0x0F == 0x08:
-            steps.append(("in", bytes(raw)))
+            steps.append(("in", bytes(raw), iface))
         if n % 16 == 15 or n == mutations - 1:
             steps += windows
+    steps = [s + (0,) if s[0] == "in" and len(s) == 2 else s for s in steps]
     return steps, list(dests.values()) + [station_address], station_address
 
 
 class Capture:
-    """Reticulum interface that records what Transport transmits (no radio)."""
+    """Reticulum interfaces that record what Transport transmits (no radio): 0 P1, 1 USB."""
 
-    def __init__(self, RNS):
+    def __init__(self, RNS, interfaces: int = 1):
         base = RNS.Interfaces.Interface.Interface
 
         class Interface(base):
-            def __init__(self):
+            def __init__(self, name):
                 super().__init__()
-                self.name = "P1"
+                self.name = name
                 self.IN = self.OUT = True
                 self.online = True
                 self.bitrate = 10**9          # bez limitu ogłoszeń interfejsu: ten limit ma kolejka P1
@@ -259,17 +269,21 @@ class Capture:
                 self.txb += len(data)
 
             def __str__(self):
-                return "Capture[P1]"
+                return f"Capture[{self.name}]"
 
-        self.interface = Interface()
+        self.interfaces = [Interface(name) for name in ("P1", "USB")[:interfaces]]
 
     def take(self):
-        with self.interface.lock:
-            sent, self.interface.sent = self.interface.sent, []
-        return sent
+        """Packets transmitted since the last call as (interface, raw)."""
+        out = []
+        for n, interface in enumerate(self.interfaces):
+            with interface.lock:
+                sent, interface.sent = interface.sent, []
+            out += [(n, raw) for raw in sent]
+        return out
 
 
-def start_python(station_key: bytes):
+def start_python(station_key: bytes, interfaces: int = 1):
     import RNS  # noqa: E402 (needs the reference Reticulum)
 
     work = tempfile.mkdtemp(prefix="wici_rns_diff_")
@@ -290,9 +304,10 @@ def start_python(station_key: bytes):
     identity = RNS.Identity.from_bytes(station_key)
     identity.to_file(os.path.join(work, "storage", "transport_identity"))
     reticulum = RNS.Reticulum(work)
-    capture = Capture(RNS)
-    # Jak interfejs z konfiguracji (tryb pełny, bez IFAC: kod dostępu zdejmuje interfejs P1 przed stosem).
-    reticulum._add_interface(capture.interface)
+    capture = Capture(RNS, interfaces)
+    # Jak interfejsy z konfiguracji (tryb pełny, bez IFAC: kod dostępu zdejmuje interfejs P1 przed stosem).
+    for interface in capture.interfaces:
+        reticulum._add_interface(interface)
     destination = RNS.Destination(identity, RNS.Destination.IN, RNS.Destination.SINGLE, APP_NAME, ASPECT)
     destination.set_proof_strategy(RNS.Destination.PROVE_ALL)
     busy = [0]
@@ -316,39 +331,44 @@ def start_python(station_key: bytes):
     return RNS, capture, destination, settle
 
 
-def python_paths(RNS, dests):
+def python_paths(RNS, dests, capture):
+    """Hops, next hop and (with two interfaces) the interface of the announce (IDX_PT_RVCD_IF)."""
     out = {}
     for dest in dests:
         entry = RNS.Transport.path_table.get(dest)
         out[dest.hex()] = None if entry is None else [entry[2], entry[1].hex()]
+        if entry is not None and len(capture.interfaces) > 1:
+            out[dest.hex()].append(capture.interfaces.index(entry[5]))
     return out
 
 
-def core_paths(lines, dests):
+def core_paths(lines, dests, routes=None):
     out = {}
-    for dest, line in zip(dests, lines):
+    for i, (dest, line) in enumerate(zip(dests, lines)):
         fields = line.split()
         out[dest.hex()] = None if line == "none" or fields[2] == "0" else [int(fields[0]), fields[3]]
+        if out[dest.hex()] is not None and routes is not None:
+            out[dest.hex()].append(int(routes[i]))
     return out
 
 
-def normalized(raws, station_address, station_identity):
-    """Multiset of packets; announces of the station destination without random hash and signature,
+def normalized(sent, station_address, station_identity):
+    """Multiset of packets (with the interface they leave on); announces of the station destination without random hash and signature,
     and only once each: the core answers path requests for it at most once a second
     (reticulum-core.md, difference table), Reticulum to every request. Rebroadcasts of other announces
     (path responses too) without random hash and signature: the core sends the newest accepted announce
     of the destination, Reticulum the one that scheduled the rebroadcast (difference table)."""
     out, own = [], set()
-    for raw in raws:
+    for interface, raw in sent:
         flags = raw[0]
         at = 34 if flags & 0x40 else 18
-        head = raw[:at + 1 + 64 + 10].hex()   # nagłówek, kontekst, klucz publiczny, skrót nazwy
+        head = f"{interface}:{raw[:at + 1 + 64 + 10].hex()}"   # nagłówek, kontekst, klucz publiczny, skrót nazwy
         if flags & 0x03 == 0x01 and raw[at - 16:at] == station_address:
             own.add(head)
         elif flags & 0x43 == 0x41 and raw[2:18] == station_identity:
             out.append(head)
         else:
-            out.append(raw.hex())
+            out.append(f"{interface}:{raw.hex()}")
     return sorted(out) + sorted(own)
 
 
@@ -357,21 +377,23 @@ def main():
     parser.add_argument("--check", required=True, help="tests/native/rnscore_check built by tests/test_rnscore.py")
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--mutations", type=int, default=64)
+    parser.add_argument("--interfaces", type=int, choices=(1, 2), default=1, help="2: second interface (USB, stage R4)")
     args = parser.parse_args()
+    two = args.interfaces == 2
 
     core = Core(args.check)
     builder = Builder(core)
     station_key = key("wici differential station")
-    steps, dests, station_address = scenario(builder, station_key, random.Random(args.seed), args.mutations)
+    steps, dests, station_address = scenario(builder, station_key, random.Random(args.seed), args.mutations, args.interfaces)
     station_identity = builder.identity(station_key)
 
     # Rdzeń: cała sekwencja naraz na zegarze wirtualnym; po każdym kroku pakiety i trasy.
-    commands = [("t_begin", station_key)]
+    commands = [("t_begin", station_key + (b"\x02" if two else b""))]
     sizes = []
     now = 1000
-    for kind, value in steps:
+    for kind, value, *on in steps:
         if kind == "in":
-            commands.append(("t_in", value))
+            commands.append(("t_inif", bytes(on) + value) if two else ("t_in", value))
             ticks = 1
         else:
             ticks = 0
@@ -379,47 +401,57 @@ def main():
                 commands.append(("t_clock", at.to_bytes(8, "big")))
                 ticks += 1
             now += value
-        commands.append(("t_out", b""))
+        commands.append(("t_outif", b"") if two else ("t_out", b""))
         commands += [("t_known", dest) for dest in dests]
-        sizes.append(ticks + 1 + len(dests))
+        if two:
+            commands += [("t_route", dest) for dest in dests]
+        tail = 1 + len(dests) * (2 if two else 1)
+        sizes.append(ticks + tail)
     lines = core.ask(commands)[1:]
     core_results = []
     at = 0
     for size in sizes:
-        chunk = lines[at + size - 1 - len(dests):at + size]
+        chunk = lines[at + size - tail:at + size]
         at += size
-        sent = [] if chunk[0] == "-" else [bytes.fromhex(x) for x in chunk[0].split()]
-        core_results.append((sent, core_paths(chunk[1:], dests)))
+        if chunk[0] == "-":
+            sent = []
+        elif two:
+            sent = [(int(x.split(":")[0]), bytes.fromhex(x.split(":")[1])) for x in chunk[0].split()]
+        else:
+            sent = [(0, bytes.fromhex(x)) for x in chunk[0].split()]
+        known = chunk[1:1 + len(dests)]
+        core_results.append((sent, core_paths(known, dests, chunk[1 + len(dests):] if two else None)))
 
-    RNS, capture, destination, settle = start_python(station_key)
+    RNS, capture, destination, settle = start_python(station_key, args.interfaces)
     if destination.hash != station_address:
         raise RuntimeError("station address differs between the core and Reticulum")
     capture.take()
     differences = []
     python_segment, core_segment = [], []
-    for i, (kind, value) in enumerate(steps):
+    for i, (kind, value, *on) in enumerate(steps):
         if kind == "in":
-            RNS.Transport.inbound(value, capture.interface)
+            RNS.Transport.inbound(value, capture.interfaces[on[0]])
             settle()
         else:
             time.sleep(value / 1000)
             settle()
         python_segment += capture.take()
-        python_path = python_paths(RNS, dests)
+        python_path = python_paths(RNS, dests, capture)
         core_sent, core_path = core_results[i]
         core_segment += core_sent
-        step = {"step": i, "kind": kind, "input": value.hex() if kind == "in" else value}
+        step = {"step": i, "kind": kind, "input": f"{on[0]}:{value.hex()}" if kind == "in" else value}
         if kind == "wait":
             if normalized(python_segment, station_address, station_identity) != normalized(core_segment, station_address,
                                                                                           station_identity):
-                differences.append({**step, "python_sent": [x.hex() for x in python_segment],
-                                    "core_sent": [x.hex() for x in core_segment]})
+                differences.append({**step, "python_sent": [f"{n}:{x.hex()}" for n, x in python_segment],
+                                    "core_sent": [f"{n}:{x.hex()}" for n, x in core_segment]})
             python_segment, core_segment = [], []
         if python_path != core_path:
             differences.append({**step, "python_paths": python_path, "core_paths": core_path})
 
     # Jeden wiersz na końcu (Reticulum pisze dziennik na standardowe wyjście).
-    print(json.dumps({"reticulum": "e40191b", "seed": args.seed, "steps": len(steps), "differences": differences}))
+    print(json.dumps({"reticulum": "e40191b", "seed": args.seed, "interfaces": args.interfaces, "steps": len(steps),
+                      "differences": differences}))
     sys.stdout.flush()
     os._exit(0 if not differences else 1)
 

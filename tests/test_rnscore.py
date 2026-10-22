@@ -1061,6 +1061,198 @@ class CoreTests(unittest.TestCase):
         lines = self.ask(first + cases["local rebroadcasts"][:1] + [("t_clock", (7000).to_bytes(8, "big"))])
         self.assertNotEqual(self.parsed(lines[-1])[3], "-")
 
+    # Dwa interfejsy (etap R4, węzeł stanowiska): 0 to P1, 1 to USB. t_begin z liczbą interfejsów, t_inif
+    # z numerem interfejsu odbioru, t_outif: pakiety do nadania z numerem interfejsu.
+    TWO = STATION + b"\x02"
+
+    def test_interfaces_route_and_forward(self):
+        # RNS/Transport.py: trasa pamięta interfejs ogłoszenia (IDX_PT_RVCD_IF); pakiet w transporcie idzie
+        # interfejsem trasy: z P1 do celu za USB (ostatni skok: HEADER_1), z USB do celu za P1 (następny skok).
+        # Dowód wraca tylko, gdy przyszedł interfejsem, którym pakiet wyszedł (IDX_RT_OUTB_IF), i wychodzi tym,
+        # którym pakiet przyszedł (IDX_RT_RCVD_IF). Interfejs spoza liczby interfejsów: pakiet odrzucony.
+        identity = self.station_identity()
+        relay = bytes(range(16))
+        near, far = (self.announce_of(bytes([k]) * 64) for k in (61, 62))
+        near_dest, far_dest = near[2:18], far[2:18]
+        to_near = self.packet(0x50, near_dest, b"n" * 40, transport_id=identity)
+        to_far = self.packet(0x50, far_dest, b"f" * 40, transport_id=identity)
+        proof_of = lambda raw: self.packet(0x03, bytes.fromhex(self.fields_of(raw.hex())[-1])[:16], bytes(64))
+        lines = self.ask([("t_begin", self.TWO), ("t_inif", b"\x01" + near), ("t_inif", b"\x00" + self.via(far, relay, 1)),
+                          ("t_route", near_dest), ("t_route", far_dest), ("t_outif", b""),
+                          ("t_inif", b"\x00" + to_near), ("t_outif", b""), ("t_inif", b"\x01" + to_far), ("t_outif", b""),
+                          ("t_inif", b"\x00" + proof_of(to_near)), ("t_outif", b""), ("t_inif", b"\x00" + proof_of(to_far)),
+                          ("t_outif", b""), ("t_forward", b""), ("t_inif", b"\x02" + near)])
+        self.assertEqual((lines[3], lines[4]), ("1", "0"))
+        self.assertEqual(lines[7], "1:" + (bytes([0x00, 1]) + to_near[18:]).hex())
+        self.assertEqual(lines[9], "0:" + (bytes([to_far[0], 1]) + relay + to_far[18:]).hex())
+        self.assertEqual(lines[11], "-")   # dowód pakietu wysłanego przez USB przyszedł przez P1
+        self.assertEqual(lines[13], "1:" + self.hops(proof_of(to_far), 1).hex())
+        self.assertEqual(lines[14].split()[:3], ["2", "0", "1"])
+        self.assertEqual(self.parsed(lines[15])[0], "malformed")
+        # Transport z jednym interfejsem nie przyjmuje pakietu z interfejsu 1.
+        lines = self.ask([("t_begin", self.STATION), ("t_inif", b"\x01" + near), ("t_inif", b"\x00" + near)])
+        self.assertEqual([self.parsed(line)[0] for line in lines[1:]], ["malformed", "ok"])
+
+    def test_interfaces_announces_and_path_requests(self):
+        # Retransmisja przyjętego ogłoszenia, ogłoszenie własne i własne zapytanie o trasę idą wszystkimi
+        # interfejsami (attached_interface = None), także tym, którym ogłoszenie przyszło. Odpowiedź na
+        # zapytanie o trasę (z pamięci podręcznej i o cel stacji) idzie tylko interfejsem zapytania.
+        identity = self.station_identity()
+        address = bytes.fromhex(self.ask([("t_begin", self.TWO)])[0])
+        near, far = (self.announce_of(bytes([k]) * 64) for k in (63, 64))
+        relay = bytes(range(16))
+        dest, tag = bytes(range(16)), bytes(range(100, 116))
+        clock = lambda ms: ("t_clock", ms.to_bytes(8, "big"))
+        lines = self.ask([("t_begin", self.TWO), ("t_inif", b"\x01" + near), clock(1177), ("t_outif", b""),
+                          clock(6700), clock(6800), ("t_inif", b"\x00" + self.via(far, relay, 1)), clock(7000), clock(12600),
+                          clock(12700), ("t_outif", b""),
+                          ("t_inif", b"\x01" + self.path_request(far[2:18], b"R" * 16)), clock(20000), clock(20401),
+                          ("t_outif", b""), ("t_announce", bytes(5) + b"WICI"), ("t_outif", b""),
+                          ("t_inif", b"\x01" + self.path_request(address, b"S" * 16)), ("t_outif", b""),
+                          ("t_request", dest + tag), ("t_outif", b"")])
+        rebroadcast = self.via(near, identity, 1).hex()
+        self.assertEqual(lines[3], f"0:{rebroadcast} 1:{rebroadcast}")
+        # Drugie nadanie ogłoszenia z USB i dwa nadania ogłoszenia z P1: każde oboma interfejsami.
+        self.assertEqual([x[:2] for x in lines[10].split()], ["0:", "1:"] * 3)
+        response = lines[14].split()
+        self.assertEqual(len(response), 1)
+        self.assertTrue(response[0].startswith("1:"))
+        self.assertEqual(self.fields_of(response[0][2:])[8], "11")   # PATH_RESPONSE
+        own = lines[16].split()
+        self.assertEqual((own[0][:2], own[1][:2], own[0][2:]), ("0:", "1:", own[1][2:]))
+        reply = lines[18].split()
+        self.assertEqual(len(reply), 1)
+        self.assertTrue(reply[0].startswith("1:"))
+        self.assertEqual(self.fields_of(reply[0][2:])[8], "11")
+        request = self.path_request(dest, tag, requestor=identity).hex()
+        self.assertEqual(lines[20], f"0:{request} 1:{request}")
+
+    def test_interfaces_send_and_proof(self):
+        # Pakiet stacji do celu z trasą idzie interfejsem trasy, do celu bez trasy (wygasłej) wszystkimi;
+        # dowód pakietu do stacji idzie interfejsem, którym pakiet przyszedł (Identity.prove: attached_interface).
+        address = bytes.fromhex(self.ask([("t_begin", self.TWO)])[0])
+        near = self.announce_of(bytes([65]) * 64)
+        near_dest = near[2:18]
+        send = ("t_send", near_dest + self.EPHEMERAL + self.IV + (7).to_bytes(4, "big") + (60000).to_bytes(4, "big") + b"x")
+        station_pub = bytes.fromhex(self.ask([("public_key", self.STATION)])[0])
+        token = bytes.fromhex(self.ask([("encrypt", station_pub + self.EPHEMERAL + self.IV + b"report")])[0])
+        raw = self.packet(0x00, address, token)
+        week = 7 * 24 * 3600 * 1000
+        lines = self.ask([("t_begin", self.TWO), ("t_inif", b"\x01" + near), ("t_outif", b""), send, ("t_outif", b""),
+                          ("t_inif", b"\x01" + raw), ("t_outif", b""), ("t_clock", (1000 + week + 2000).to_bytes(8, "big")),
+                          ("t_outif", b""), send, ("t_outif", b"")])
+        self.assertEqual([x[:2] for x in lines[4].split()], ["1:"])
+        self.assertEqual(lines[6], "1:" + self.proof_packet(self.STATION, raw).hex())
+        sent = lines[10].split()
+        self.assertEqual(([x[:2] for x in sent], sent[0][2:]), (["0:", "1:"], sent[1][2:]))
+
+    def test_interfaces_table_restart(self):
+        # Interfejs trasy jest w gnieździe tablicy (bit w bajcie znaczników): po restarcie trasa przez USB dalej
+        # idzie przez USB. Gniazdo zapisane przez transport z jednym interfejsem (jak przed etapem R4, bit zero)
+        # po restarcie z dwoma interfejsami ma trasę przez P1.
+        near, other = self.announce_of(bytes([66]) * 64), self.announce_of(bytes([67]) * 64)
+        lines = self.ask([("t_begin", self.TWO), ("t_inif", b"\x01" + near), ("t_inif", b"\x00" + other),
+                          ("t_restart", b""), ("t_route", near[2:18]), ("t_route", other[2:18])])
+        self.assertEqual(lines[4:], ["1", "0"])
+        lines = self.ask([("t_begin", self.STATION), ("t_in", near), ("t_restart", b"\x00\x02"), ("t_route", near[2:18])])
+        self.assertEqual(lines[3], "0")
+
+    def test_interfaces_discovery_response(self):
+        # Zapytanie o cel z zapytaniem „w drodze” czeka na ogłoszenie (discovery_path_requests) z interfejsem
+        # pytającego (requesting_interfaces): odpowiedź idzie tylko nim.
+        identity = self.station_identity()
+        ann = self.announce_of(bytes([68]) * 64)
+        dest = ann[2:18]
+        lines = self.ask([("t_begin", self.TWO), ("t_inif", b"\x00" + self.path_request(dest, b"A" * 16)),
+                          ("t_inif", b"\x01" + self.path_request(dest, b"B" * 16)), ("t_inif", b"\x00" + ann),
+                          ("t_outif", b""), ("t_clock", (1001).to_bytes(8, "big")), ("t_outif", b"")])
+        self.assertEqual(lines[4], "-")
+        self.assertEqual(lines[6], "1:" + self.via(ann[:18] + bytes([0x0B]) + ann[19:], identity, 1).hex())
+
+    def test_interfaces_refusing_interface_does_not_block(self):
+        # Interfejs, który nie przyjmie ogłoszenia (mayTransmit), nie wstrzymuje drugiego i sam nie traci
+        # próby: dostaje ją, gdy przyjmie (jedno zaległe ogłoszenie na cel i interfejs, jak announce_queue).
+        identity = self.station_identity()
+        ann = self.announce_of(bytes([69]) * 64)
+        dest = ann[2:18]
+        rebroadcast = self.via(ann, identity, 1).hex()
+        discovery = self.via(ann[:18] + bytes([0x0B]) + ann[19:], identity, 1).hex()
+        clock = lambda ms: ("t_clock", ms.to_bytes(8, "big"))
+        # USB odmawia: odpowiedź odkrycia tylko dla USB czeka, a retransmisje idą przez P1; po zwolnieniu USB
+        # odpowiedź odkrycia i jedno zaległe nadanie retransmisji.
+        lines = self.ask([("t_begin", self.TWO), ("t_inif", b"\x01" + self.path_request(dest, b"A" * 16)),
+                          ("t_inif", b"\x01" + self.path_request(dest, b"B" * 16)), ("t_busy", b"\x02"),
+                          ("t_inif", b"\x00" + ann), clock(1600), ("t_outif", b""), clock(7200), ("t_outif", b""),
+                          ("t_busy", b"\x00"), clock(7300), ("t_outif", b""), clock(7400), ("t_outif", b""),
+                          clock(7500), ("t_outif", b""), ("t_forward", b"")])
+        self.assertEqual(lines[6], "0:" + rebroadcast)
+        self.assertEqual(lines[8], "0:" + rebroadcast)
+        self.assertEqual(lines[11], "1:" + discovery)
+        self.assertEqual(lines[13], "1:" + rebroadcast)
+        self.assertEqual(lines[15], "-")
+        self.assertEqual(lines[16].split()[4:], ["3", "0", "0"])   # nadania (P1, P1, zaległe USB)
+        # P1 odmawia, USB przyjmuje: próby idą przez USB, a P1 dostaje zaległe nadanie, gdy przyjmie.
+        lines = self.ask([("t_begin", self.TWO), ("t_busy", b"\x01"), ("t_inif", b"\x01" + ann), clock(1600),
+                          ("t_outif", b""), clock(7200), ("t_outif", b""), clock(7300), ("t_outif", b""),
+                          ("t_busy", b"\x00"), clock(7400), ("t_outif", b""), clock(7500), ("t_outif", b""),
+                          ("t_forward", b"")])
+        self.assertEqual(lines[4], "1:" + rebroadcast)
+        self.assertEqual(lines[6], "1:" + rebroadcast)
+        self.assertEqual(lines[8], "-")
+        self.assertEqual(lines[11], "0:" + rebroadcast)
+        self.assertEqual(lines[13], "-")
+        self.assertEqual(lines[14].split()[4:], ["3", "0", "0"])
+
+    def test_interfaces_own_response_limit_per_interface(self):
+        # Limit odpowiedzi na zapytanie o cel stacji (OWN_RESPONSE_MIN_MS) liczy się osobno na interfejs:
+        # zapytanie z USB nie wstrzymuje odpowiedzi na zapytanie z P1; drugie z tego samego interfejsu tak.
+        address = bytes.fromhex(self.ask([("t_begin", self.TWO)])[0])
+        lines = self.ask([("t_begin", self.TWO), ("t_inif", b"\x01" + self.path_request(address, b"S" * 16)),
+                          ("t_outif", b""), ("t_inif", b"\x00" + self.path_request(address, b"T" * 16)), ("t_outif", b""),
+                          ("t_inif", b"\x00" + self.path_request(address, b"U" * 16)), ("t_outif", b"")])
+        self.assertEqual([x[:2] for x in lines[2].split()], ["1:"])
+        self.assertEqual([x[:2] for x in lines[4].split()], ["0:"])
+        self.assertEqual(lines[6], "-")
+
+    def test_interfaces_route_on_missing_interface(self):
+        # Gniazdo z trasą przez USB po restarcie z jednym interfejsem: brak trasy (jak wpis path_table bez
+        # interfejsu przy wczytaniu w Pythonie). Pakiet stacji idzie wszystkimi interfejsami, pakiet
+        # w transporcie do tego celu nie ma trasy; znany cel zostaje.
+        identity = self.station_identity()
+        near = self.announce_of(bytes([70]) * 64)
+        near_dest = near[2:18]
+        send = ("t_send", near_dest + self.EPHEMERAL + self.IV + (7).to_bytes(4, "big") + (60000).to_bytes(4, "big") + b"x")
+        transit = self.packet(0x50, near_dest, b"n" * 40, transport_id=identity)
+        lines = self.ask([("t_begin", self.TWO), ("t_inif", b"\x01" + near), ("t_restart", b"\x00\x01"),
+                          ("t_route", near_dest), ("t_outif", b""), send, ("t_outif", b""), ("t_in", transit),
+                          ("t_outif", b""), ("t_forward", b"")])
+        self.assertEqual(lines[3], "none")
+        self.assertEqual([x[:2] for x in lines[6].split()], ["0:"])
+        self.assertEqual(lines[8], "-")
+        self.assertEqual(lines[9].split()[:2], ["0", "1"])
+
+    def test_interfaces_forward_same_interface_and_discovery_both(self):
+        # Pakiet w transporcie z USB do celu za USB wraca tym samym interfejsem, a dowód też. Odpowiedź
+        # odkrycia, gdy pytają oba interfejsy, idzie oboma w jednym poll().
+        identity = self.station_identity()
+        near = self.announce_of(bytes([71]) * 64)
+        near_dest = near[2:18]
+        to_near = self.packet(0x50, near_dest, b"n" * 40, transport_id=identity)
+        proof = self.packet(0x03, bytes.fromhex(self.fields_of((bytes([0x00, 1]) + to_near[18:]).hex())[-1])[:16], bytes(64))
+        lines = self.ask([("t_begin", self.TWO), ("t_inif", b"\x01" + near), ("t_outif", b""), ("t_inif", b"\x01" + to_near),
+                          ("t_outif", b""), ("t_inif", b"\x01" + proof), ("t_outif", b"")])
+        self.assertEqual(lines[4], "1:" + (bytes([0x00, 1]) + to_near[18:]).hex())
+        self.assertEqual(lines[6], "1:" + self.hops(proof, 1).hex())
+        ann = self.announce_of(bytes([72]) * 64)
+        dest = ann[2:18]
+        discovery = self.via(ann[:18] + bytes([0x0B]) + ann[19:], identity, 1).hex()
+        lines = self.ask([("t_begin", self.TWO), ("t_inif", b"\x00" + self.path_request(dest, b"A" * 16)),
+                          ("t_inif", b"\x00" + self.path_request(dest, b"B" * 16)),
+                          ("t_inif", b"\x01" + self.path_request(dest, b"C" * 16)), ("t_inif", b"\x00" + ann),
+                          ("t_outif", b""), ("t_clock", (1001).to_bytes(8, "big")), ("t_outif", b"")])
+        self.assertEqual(lines[5], "-")
+        self.assertEqual(lines[7], f"0:{discovery} 1:{discovery}")
+
     def test_full_hash_matches_sha256(self):
         # Pusty wejściowy ciąg, granice bloku SHA-256 (55, 56, 64 B) i długi ciąg.
         inputs = [b"", b"WICI", bytes(55), bytes(56), bytes(64), bytes(range(256)) * 20]

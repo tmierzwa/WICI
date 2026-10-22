@@ -34,6 +34,9 @@ CRYPTO_UNITS = ["AES256.cpp", "AESCommon.cpp", "BigNumberUtil.cpp", "BlockCipher
 SANITIZE = ["-fsanitize=address,undefined", "-fno-sanitize-recover=all", "-fno-omit-frame-pointer", "-g", "-O1"]
 # Rodzaje rekordów wejścia (rnscore_fuzz.cpp).
 INBOUND, IFAC, LXMF, POLL, TABLE, OWN = range(6)
+SECOND = 0x80   # bit rodzaju: przez interfejs 1 (USB)
+# Pierwszy bajt POLL: bit 0 łącze wolne, bity 1 i 2 odmowa interfejsu 0 i 1 w mayTransmit.
+FREE, FREE_REFUSING_1, FREE_REFUSING_0 = b"\x01", b"\x05", b"\x03"
 DAY = 255
 
 sys.path.insert(0, str(FIRMWARE / "tools"))
@@ -83,6 +86,13 @@ def corpus(out: Path) -> int:
     seeds.append(record(INBOUND, bytes.fromhex(known["raw"])) + packets + record(POLL, b"\x01", 50)
                  + record(OWN, b"\x00" + destination + b"report") + record(OWN, b"\x01" + destination)
                  + record(OWN, b"\x02" + bytes(16)) + record(POLL, b"\x01", DAY) + record(POLL, b"\x01", DAY))
+    # Dwa interfejsy: ogłoszenie przez P1 z odmową USB (zaległa retransmisja), potem przez USB z odmową P1,
+    # zapytania i pakiet przez stację przyjęte przez USB, wreszcie oba wolne.
+    seeds.append(record(INBOUND, bytes.fromhex(known["raw"])) + record(POLL, FREE_REFUSING_1, 50)
+                 + record(POLL, FREE_REFUSING_1, 50) + record(POLL, FREE, 10)
+                 + record(INBOUND | SECOND, bytes.fromhex(known["raw"]), 50) + record(POLL, FREE_REFUSING_0, 50)
+                 + b"".join(record(INBOUND | SECOND, raw) for raw in raws) + record(POLL, FREE, 50)
+                 + record(OWN, b"\x01" + destination) + record(POLL, FREE_REFUSING_0, 50) + record(POLL, FREE, DAY))
     # Pakiet do celu "lxmf.delivery" stacji (odszyfrowanie na wrogich danych), przekazanie przez stację
     # (HEADER_2, transport: tożsamość stacji) do znanego celu i dowód wracający przez tablicę odwrotną.
     identity = reticulum["identity"][0]

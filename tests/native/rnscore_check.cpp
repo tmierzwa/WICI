@@ -81,9 +81,11 @@ struct TransportState {
     std::vector<uint8_t> pinned;   // jeden cel chroniony albo pusty
     std::vector<uint8_t> emitted;  // ostatni pakiet do nadania
     std::vector<std::vector<uint8_t>> sent;   // wszystkie pakiety do nadania od ostatniego t_out
+    std::vector<uint8_t> sentIface;           // ich interfejsy (t_outif)
+    uint8_t interfaces = 1;                   // liczba interfejsów transportu (t_begin z 65 B)
     std::string events;            // wywołania announce, packet i receipt od ostatniego polecenia
     bool accept = true;
-    bool busy = false;   // interfejs nie przyjmie pakietu (mayTransmit)
+    uint8_t busy = 0;    // bit 1 << interfejs: interfejs nie przyjmie pakietu (mayTransmit)
     uint64_t nowMs = 1000;
 };
 TransportState* state = nullptr;
@@ -96,11 +98,12 @@ void printHexTo(std::string& out, const uint8_t* data, size_t length) {
     }
 }
 
-bool onMayTransmit(void*) { return !state->busy; }
+bool onMayTransmit(uint8_t iface, void*) { return !(state->busy & (1u << iface)); }
 
-bool onTransmit(const uint8_t* raw, size_t length, void*) {
+bool onTransmit(const uint8_t* raw, size_t length, uint8_t iface, void*) {
     state->emitted.assign(raw, raw + length);
     state->sent.emplace_back(raw, raw + length);
+    state->sentIface.push_back(iface);
     return true;
 }
 void onAnnounce(const uint8_t destination[16], const uint8_t* appData, size_t length, void*) {
@@ -326,10 +329,12 @@ int main() {
                 else length = rnscore::ifacCheck(ifac, input.data(), input.size(), out, sizeof(out));
                 if (length) printHex(out, length); else printf("none\n");
             }
-        } else if (command == "t_begin" && data.size() == rnscore::KEY_SIZE) {
-            // klucz prywatny stacji 64 B: nowy transport z celem "wici.sa1"; adres stacji
+        } else if (command == "t_begin" && (data.size() == rnscore::KEY_SIZE || data.size() == rnscore::KEY_SIZE + 1)) {
+            // klucz prywatny stacji 64 B, opcjonalnie liczba interfejsów (1 B): nowy transport z celem
+            // "wici.sa1"; adres stacji
             delete state;
             state = new TransportState();
+            if (data.size() > rnscore::KEY_SIZE) state->interfaces = data[rnscore::KEY_SIZE];
             memcpy(state->privateKey, data.data(), rnscore::KEY_SIZE);
             rnscore::publicKey(state->privateKey, state->publicKey);
             rnscore::identityHash(state->publicKey, state->identity);
@@ -344,11 +349,12 @@ int main() {
             hooks.random = onRandom;
             hooks.mayTransmit = onMayTransmit;
             state->transport.begin(state->privateKey, state->publicKey, state->identity, state->address, state->nameHash, hooks,
-                                   state->table, state->nowMs);
+                                   state->table, state->nowMs, state->interfaces);
             printHex(state->address, sizeof(state->address));
-        } else if (state && command == "t_restart" && data.size() <= 1) {
-            // restart stacji z tą samą pamięcią (zegar dalej); opcjonalnie 1 B: limit tablicy po starcie.
-            // Wynik: liczba znanych celów i tras.
+        } else if (state && command == "t_restart" && data.size() <= 2) {
+            // restart stacji z tą samą pamięcią (zegar dalej); opcjonalnie 1 B: limit tablicy po starcie (0: bez
+            // limitu) i 1 B: nowa liczba interfejsów. Wynik: liczba znanych celów i tras.
+            if (data.size() == 2) state->interfaces = data[1];
             rnscore::TransportHooks hooks;
             hooks.transmit = onTransmit;
             hooks.announce = onAnnounce;
@@ -360,8 +366,8 @@ int main() {
             state->table.cutAfter = -1;
             state->transport.clear();
             state->transport.begin(state->privateKey, state->publicKey, state->identity, state->address, state->nameHash, hooks,
-                                   state->table, state->nowMs);
-            if (data.size() == 1) state->transport.setLimit(data[0]);
+                                   state->table, state->nowMs, state->interfaces);
+            if (!data.empty() && data[0]) state->transport.setLimit(data[0]);
             printf("%u %u\n", static_cast<unsigned>(state->transport.known()), static_cast<unsigned>(state->transport.paths()));
         } else if (state && command == "t_cut" && data.size() == 4) {
             // zanik zasilania w zapisie numer N (4 B, big-endian) licząc od teraz; wynik: zapisy do teraz
@@ -392,7 +398,24 @@ int main() {
                 printHexTo(out, raw.data(), raw.size());
             }
             state->sent.clear();
+            state->sentIface.clear();
             printf("%s\n", out.empty() ? "-" : out.c_str());
+        } else if (state && command == "t_outif") {
+            // jak t_out, każdy pakiet z numerem interfejsu: "<interfejs>:<pakiet>"
+            std::string out;
+            for (size_t i = 0; i < state->sent.size(); ++i) {
+                if (!out.empty()) out += " ";
+                out += std::to_string(state->sentIface[i]) + ":";
+                printHexTo(out, state->sent[i].data(), state->sent[i].size());
+            }
+            state->sent.clear();
+            state->sentIface.clear();
+            printf("%s\n", out.empty() ? "-" : out.c_str());
+        } else if (state && command == "t_route" && data.size() == 16) {
+            // interfejs trasy do celu (IDX_PT_RVCD_IF) albo "none" bez trasy
+            rnscore::KnownDestination e;
+            if (state->transport.lookup(data.data(), e, state->nowMs) && e.hasPath) printf("%u\n", e.interface);
+            else printf("none\n");
         } else if (state && command == "t_forward") {
             // transport: przekazane, bez trasy, dowody przekazane, tablica odwrotna pełna, retransmisje
             // ogłoszeń, wpisy tablicy odwrotnej, wpisy tablicy ogłoszeń
@@ -418,8 +441,8 @@ int main() {
             // wstrzymane retransmisje (held_announces)
             printf("%u\n", static_cast<unsigned>(state->transport.heldAnnounces()));
         } else if (command == "t_busy" && data.size() == 1) {
-            // interfejs zajęty (1) albo wolny (0) dla mayTransmit
-            state->busy = data[0] != 0;
+            // interfejsy zajęte dla mayTransmit: bit 1 << numer (1: interfejs 0 zajęty, 0: wszystkie wolne)
+            state->busy = data[0];
             printTransport("ok");
         } else if (command == "t_poll" && data.size() == 8) {
             // czas w ms (8 B) i poll() bez nadawania (obieg z kryptografią odbioru)
@@ -436,6 +459,9 @@ int main() {
         } else if (command == "t_in") {
             // pakiet bez IFAC
             printTransport(state->transport.inbound(data.data(), data.size(), state->nowMs) ? "ok" : "malformed");
+        } else if (command == "t_inif" && !data.empty()) {
+            // numer interfejsu odbioru (1 B), pakiet bez IFAC
+            printTransport(state->transport.inbound(data.data() + 1, data.size() - 1, state->nowMs, data[0]) ? "ok" : "malformed");
         } else if (command == "t_announce") {
             // 5 B losowych, dane aplikacji
             printTransport(data.size() >= 5 && state->transport.announce(data.data(), data.data() + 5, data.size() - 5, state->nowMs)

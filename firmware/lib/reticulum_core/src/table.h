@@ -14,8 +14,9 @@
 // wypierany dla nowego celu jest unieważniany przed zapisem nowego, więc zanik w tym zapisie go gubi.
 //
 // Gniazdo (little-endian): 0 znacznik zatwierdzenia (0xA5), 1 wersja formatu, 2 numer gniazda (2 B),
-// 4 numer zapisu (4 B), 8 znaczniki, 9 skoki, 10 długość ogłoszenia (2 B), 12 ostatnie użycie [s],
-// 16 cel, 32 wygaśnięcie trasy [s], 36 ostatnie użycie trasy [s], 40 czas przyjęcia ratchetu [s], 44 czas
+// 4 numer zapisu (4 B), 8 znaczniki (bit 0 trasa, 1 ratchet, 2 flaga kontekstu, 3 interfejs trasy: 1 bit,
+// więc najwyżej 2 interfejsy; gniazdo sprzed etapu R4 ma 0, czyli interfejs 0, P1), 9 skoki, 10 długość
+// ogłoszenia (2 B), 12 ostatnie użycie [s], 16 cel, 32 wygaśnięcie trasy [s], 36 ostatnie użycie trasy [s], 40 czas przyjęcia ratchetu [s], 44 czas
 // emisji ogłoszenia z ratchetem [s], 48 następny skok, 64 ratchet, 96 dane ogłoszenia (do
 // ANNOUNCE_FORWARDABLE_SIZE), 561 CRC-32 bajtów 1..560. Dane ogłoszenia zaczynają się kluczem publicznym
 // (64 B) i mają skrót losowy od bajtu 74, więc gniazdo nie trzyma ich osobno: bez ogłoszenia w pamięci
@@ -62,6 +63,7 @@ struct KnownDestination {
     bool hasRatchet;
     bool hasPath;
     bool contextFlag;                           // flaga kontekstu ogłoszenia w pamięci podręcznej (ratchet)
+    uint8_t interface;                          // IDX_PT_RVCD_IF: interfejs ogłoszenia trasy (0 albo 1)
 };
 
 class Table {
@@ -69,8 +71,10 @@ public:
     // Montowanie: indeks z nagłówków gniazd; z dwóch zatwierdzonych gniazd jednego celu (zanik zasilania
     // między zapisem nowego a unieważnieniem starego) zostaje to z większym numerem zapisu, a drugie jest
     // unieważniane (1 B), żeby nie wróciło po wyparciu zwycięskiego. Poza tym bez zapisów.
-    // nowS: czas pracy przy starcie (ratchety sprzed startu wygasają jak przy wczytaniu w Pythonie).
-    void begin(TableStorage& storage, uint32_t nowS);
+    // nowS: czas pracy przy starcie (ratchety sprzed startu wygasają jak przy wczytaniu w Pythonie);
+    // interfaces: liczba interfejsów transportu. Trasa przez interfejs spoza tej liczby (gniazdo zapisane
+    // przy innej konfiguracji) to brak trasy, jak w Pythonie przy wczytaniu path_table bez interfejsu.
+    void begin(TableStorage& storage, uint32_t nowS, uint8_t interfaces = 1);
     int find(const uint8_t destination[TRUNCATED_HASH_SIZE]) const;   // gniazdo albo -1
     // Odczyt wpisu z gniazda ze sprawdzeniem znacznika, numeru gniazda, celu i CRC; przy błędnej treści
     // wpis wypada z indeksu (corrupt()), przy błędzie odczytu zostaje (false, ponowny odczyt później).
@@ -133,6 +137,7 @@ private:
     uint32_t bootS_ = 0;
     uint32_t writes_ = 0;
     uint32_t corrupt_ = 0;
+    uint8_t interfaces_ = 0;   // z begin()
 };
 
 }  // namespace rnscore
