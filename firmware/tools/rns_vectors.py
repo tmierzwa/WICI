@@ -5,7 +5,8 @@ Stage R0 of the core (firmware/reticulum-core.md): identity (keys, hash, signatu
 non-canonical signature with S + L), encryption to an identity (token, including damaged tokens and
 tokens with a valid HMAC over a bad ciphertext, as any sender can make them, and tokens
 whose ephemeral key is a low-order or non-canonical X25519 point) and
-packets (HEADER_1 as packed by Reticulum, HEADER_2 as rewritten by its transport, packet hash). Every
+packets (HEADER_1 as packed by Reticulum, HEADER_2 as rewritten by its transport, packet hash); stage R1:
+announces, encryption to a ratchet, packet proofs, HKDF and the interface access code (IFAC). Every
 expected value is what the reference implementation computes or returns; nothing is computed here
 by other code. Randomness (ephemeral X25519 key, token IV, announce random hash) is replaced by a
 seeded generator only for the duration of each call, so the output is the same on every run.
@@ -444,6 +445,61 @@ def proof_vectors():
     }
 
 
+def hkdf_vectors():
+    """RNS.Cryptography.hkdf bez kontekstu (jak w IFAC i tokenie): długości wokół bloku 32 B, sól pusta
+    (zastępowana 32 B zer), krótka i 64 B (klucz IFAC jako sól maski)."""
+    ikm = seeded("hkdf:ikm", 32)
+    salts = {"none": b"", "short": seeded("hkdf:salt", 16), "ifac_key": seeded("hkdf:ifac-key", 64)}
+    out = []
+    for name, salt in salts.items():
+        for length in (1, 31, 32, 33, 64, 516):
+            out.append({"salt": salt.hex(), "ikm": ikm.hex(), "length": length,
+                        "okm": RNS.Cryptography.hkdf(length=length, derive_from=ikm, salt=salt or None, context=None).hex()})
+    return out
+
+
+def ifac_vectors():
+    """Kod dostępu interfejsu (IFAC) dla passphrase sieci WICI (32 cyfry szesnastkowe klucza, ifac_size =
+    128 b): klucz jak RNS/Reticulum.py przy konfiguracji interfejsu, kod i maska z Transport.handle_outgoing_ifac,
+    sprawdzenie z Transport.handle_ifac, także dla datagramów zmienionych i z kodem innej sieci."""
+    def interface(passphrase: str):
+        # RNS/Reticulum.py (interfejs z passphrase, bez networkname): ifac_origin, ifac_key, ifac_identity.
+        origin_hash = RNS.Identity.full_hash(RNS.Identity.full_hash(passphrase.encode("utf-8")))
+        key = RNS.Cryptography.hkdf(length=64, derive_from=origin_hash, salt=RNS.Reticulum.IFAC_SALT, context=None)
+        return types.SimpleNamespace(ifac_size=16, ifac_key=key, ifac_identity=RNS.Identity.from_bytes(key),
+                                     ifac_violation=lambda reason: None)
+
+    passphrase = "5749434954335f696661635f74657374"
+    iface, other = interface(passphrase), interface("00" * 16)
+    packet = packet_vectors()[0]
+    # Pakiety HEADER_1 i HEADER_2 z wektorów, najkrótszy (3 B) i o długości MTU (500 B).
+    raws = [bytes.fromhex(packet["header_1"]["raw"]), bytes.fromhex(packet["header_2"]["raw"]),
+            bytes([0x00, 0x00]) + seeded("ifac:short", 1), bytes([0x01, 0x05]) + seeded("ifac:mtu", 498)]
+    applied = [{"raw": r.hex(), "wire": RNS.Transport.handle_outgoing_ifac(iface, r).hex()} for r in raws]
+
+    def checked(wire: bytes):
+        ok, raw = RNS.Transport.handle_ifac(wire, iface)
+        return raw.hex() if ok else None
+
+    wire = bytes.fromhex(applied[0]["wire"])
+    crafted = {
+        "valid": wire,
+        "tag_flipped": wire[:2] + bytes([wire[2] ^ 1]) + wire[3:],
+        "header_flipped": bytes([wire[0] ^ 0x01]) + wire[1:],
+        "payload_flipped": wire[:-1] + bytes([wire[-1] ^ 1]),
+        "other_network": RNS.Transport.handle_outgoing_ifac(other, bytes.fromhex(applied[0]["raw"])),
+        "truncated": wire[:-1],
+        "tag_only": wire[:2 + 16 + 1],
+    }
+    return {
+        "passphrase": passphrase,
+        "ifac_size": 16,
+        "ifac_key": iface.ifac_key.hex(),
+        "applied": applied,
+        "checked": [{"name": n, "wire": w.hex(), "raw": checked(w)} for n, w in crafted.items()],
+    }
+
+
 def main():
     if RNS.__version__ != RNS_VERSION:
         sys.exit(f"Reticulum {RNS.__version__}, expected {RNS_VERSION} ({RNS_COMMIT})")
@@ -456,6 +512,8 @@ def main():
         "announce": announce_vectors(),
         "ratchet_token": ratchet_token_vectors(),
         "proof": proof_vectors(),
+        "hkdf": hkdf_vectors(),
+        "ifac": ifac_vectors(),
     }
     json.dump(vectors, sys.stdout, indent=1, sort_keys=True)
     sys.stdout.write("\n")

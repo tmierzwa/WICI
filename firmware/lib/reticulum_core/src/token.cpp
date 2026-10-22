@@ -9,6 +9,7 @@
 #include <Crypto.h>
 #include <SHA256.h>
 
+#include "hkdf.h"
 #include "identity.h"
 
 namespace rnscore {
@@ -26,24 +27,11 @@ void hmac(const uint8_t* key, size_t keyLength, const uint8_t* data, size_t leng
 }
 
 // RNS/Identity.py: Identity.encrypt i __decrypt: hkdf(DERIVED_KEY_LENGTH, wspólny sekret,
-// salt=get_salt() czyli skrót tożsamości, context=get_context() czyli None, w hkdf pusty ciąg).
-// RNS/Cryptography/HKDF.py: hkdf (RFC 5869): PRK = HMAC(sól, sekret), T(i) = HMAC(PRK, T(i-1) + kontekst + i).
+// salt=get_salt() czyli skrót tożsamości, context=get_context() czyli None).
 void deriveKey(const uint8_t shared[HALF], const uint8_t publicKey[KEY_SIZE], uint8_t out[DERIVED_KEY_SIZE]) {
-    static_assert(DERIVED_KEY_SIZE % HASH_SIZE == 0, "HKDF w całych blokach");
     uint8_t salt[TRUNCATED_HASH_SIZE];
     identityHash(publicKey, salt);
-    uint8_t prk[HASH_SIZE];
-    hmac(salt, sizeof(salt), shared, HALF, prk);
-    uint8_t input[HASH_SIZE + 1];
-    size_t used = 0;
-    for (uint8_t i = 1; i <= DERIVED_KEY_SIZE / HASH_SIZE; ++i) {
-        input[used] = i;
-        hmac(prk, sizeof(prk), input, used + 1, out + (i - 1) * HASH_SIZE);
-        memcpy(input, out + (i - 1) * HASH_SIZE, HASH_SIZE);
-        used = HASH_SIZE;
-    }
-    clean(prk, sizeof(prk));
-    clean(input, sizeof(input));
+    hkdf(shared, HALF, salt, sizeof(salt), out, DERIVED_KEY_SIZE);   // długości stałe: zawsze prawda
 }
 
 }  // namespace

@@ -22,7 +22,7 @@ Wersje referencyjne bez zmian: Reticulum `e40191b` i LXMF `c3ff2d6` ([oprogramow
 | W rdzeniu | Poza rdzeniem |
 |---|---|
 | tożsamość: X25519 + Ed25519, skrót, podpis i weryfikacja (z odrzuceniem S ≥ L), szyfrowanie do tożsamości (token AES-256-CBC + HMAC-SHA256, efemeryczny X25519, HKDF) | łącza (Link), zasoby (Resource), kanały i bufory |
-| pakiet: HEADER_1 i HEADER_2, flagi, kontekst, skrót pakietu, IFAC (już w `p1iface`) | własne ratchety przy odbiorze (rotacja i klucze w FRAM; D01) |
+| pakiet: HEADER_1 i HEADER_2, flagi, kontekst, skrót pakietu, IFAC (kod i maska w rdzeniu, kolejka i liczniki w `p1iface`) | własne ratchety przy odbiorze (rotacja i klucze w FRAM; D01) |
 | cele SINGLE IN i OUT (`wici.sa1`), PLAIN `rnstransport.path.request` | propagacja LXMF, znaczki pracy, DIRECT |
 | ogłoszenia: tworzenie, weryfikacja, retransmisja z PATHFINDER_R i lokalnymi powtórkami, odpowiedzi na zapytania o trasę | tunele, zdalne zarządzanie, instancja współdzielona, odkrywanie interfejsów (1.1), czarne listy |
 | transport: przekazywanie HEADER_2, tablica tras, zapytania o trasę ze znacznikami, lista skrótów pakietów (8 B, `pkthash.h`), tablica odwrotna dla dowodów | przekazywanie ruchu łączy innych węzłów (pakiety łączy odpadają z licznikiem) |

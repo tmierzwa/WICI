@@ -14,7 +14,9 @@
 #include "announce.h"
 #include "destination.h"
 #include "hash.h"
+#include "hkdf.h"
 #include "identity.h"
+#include "ifac.h"
 #include "packet.h"
 #include "proof.h"
 #include "token.h"
@@ -188,6 +190,41 @@ int main() {
                 printHex(out.data(), outLength);
             } else {
                 printf("none\n");
+            }
+        } else if (command == "hkdf" && data.size() >= 3) {
+            // długość wyniku (2 B, big-endian), długość soli (1 B), sól, materiał; wynik albo "none"
+            const size_t length = (size_t(data[0]) << 8) | data[1];
+            const size_t saltLength = data[2];
+            if (data.size() < 3 + saltLength) {
+                printf("error\n");
+            } else {
+                std::vector<uint8_t> out(length ? length : 1);
+                const size_t offset = 3 + saltLength;
+                if (rnscore::hkdf(data.data() + offset, data.size() - offset, data.data() + 3, saltLength, out.data(), length)) {
+                    printHex(out.data(), length);
+                } else {
+                    printf("none\n");
+                }
+            }
+        } else if ((command == "ifac_key" || command == "ifac_apply" || command == "ifac_check") && data.size() >= 1 &&
+                   data.size() >= 1u + data[0]) {
+            // długość frazy sieci (1 B), fraza (ASCII), potem pakiet (ifac_apply) albo datagram (ifac_check);
+            // ifac_key: klucz IFAC 64 B; pozostałe: wynik albo "none" (kod IFAC 16 B)
+            const std::string passphrase(data.begin() + 1, data.begin() + 1 + data[0]);
+            const uint8_t* rest = data.data() + 1 + data[0];
+            const size_t restLength = data.size() - 1 - data[0];
+            rnscore::Ifac ifac;
+            uint8_t out[rnscore::MTU + rnscore::IFAC_MAX_SIZE];
+            size_t length = 0;
+            std::vector<uint8_t> input(rest, rest + restLength);   // dokładnie restLength B dla ASan
+            if (!rnscore::ifacSetup(nullptr, passphrase.c_str(), 16, ifac)) {
+                printf("error\n");
+            } else if (command == "ifac_key") {
+                printHex(ifac.key, sizeof(ifac.key));
+            } else {
+                if (command == "ifac_apply") length = rnscore::ifacApply(ifac, input.data(), input.size(), out, sizeof(out));
+                else length = rnscore::ifacCheck(ifac, input.data(), input.size(), out, sizeof(out));
+                if (length) printHex(out, length); else printf("none\n");
             }
         } else if (command == "unpack") {
             // pakiet; pola rozdzielone spacjami (identyfikator transportu "-" w HEADER_1) i skrót pakietu,
