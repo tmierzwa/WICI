@@ -89,7 +89,9 @@ def compiler():
 def sources(core: bool):
     port = STACK / "microReticulum" / "src"
     stack = [p for p in port.rglob("*.cpp") if p.name != "main.cpp"] + list(port.rglob("*.c"))
-    stack += sorted((STACK / "Crypto").glob("*.cpp"))
+    # RNG z ziarna zamiast Crypto/RNG.cpp, który na hoście miesza czas rzeczywisty (rng_seeded.cpp).
+    stack += sorted(p for p in (STACK / "Crypto").glob("*.cpp") if p.name != "RNG.cpp")
+    stack.append(ROOT / "tests" / "native" / "rng_seeded.cpp")
     if core:
         return stack, [SRC / name for name in CORE_UNITS] + sorted(CORE.glob("*.cpp"))
     return stack, [SRC / name for name in WICI_UNITS]
@@ -211,6 +213,17 @@ class HostileStackTests(unittest.TestCase):
         self.assertEqual(second["identity"], first["identity"])
         self.assertFalse(second["new"])
         self.assertClean(s.run("--seed", 13, "--events", 1500, "--gap", 30 * 86400))
+
+    def test_same_seed_same_traffic(self):
+        # Generator i stacja są deterministyczne: te same --seed i zegar symulowany dają te same bajty
+        # w obie strony (skrót "traffic") i ten sam wynik, także po restarcie. Bez tego usterka z jednego
+        # przebiegu nie dałaby się odtworzyć (RNG z ziarna: tests/native/rng_seeded.cpp).
+        runs = []
+        for _ in range(2):
+            s = self.station()
+            runs.append([self.assertClean(s.run("--seed", 21, "--events", 1500, "--mutate", 30, "--long-jumps")),
+                         self.assertClean(s.run("--seed", 22, "--events", 800, "--gap", 86400))])
+        self.assertEqual(runs[0], runs[1])
 
     # Awarie z przeglądu 2026-10-21, poprawione łatami portu 0005-0007: jeden pakiet albo jedna sekwencja.
     def test_regression_token_without_ciphertext(self):
