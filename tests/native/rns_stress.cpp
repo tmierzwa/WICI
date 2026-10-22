@@ -41,6 +41,14 @@ uint64_t simClock() { return simMs; }
 
 }  // namespace
 
+#ifdef WICI_RNS_CORE
+// Stacja na rdzeniu (tests/test_rns_hostile.py, CoreHostileStackTests): port tylko generuje ruch, a jego
+// magazyn wymaga funkcji ochrony wpisów, którą w obrazie z portem daje rns_node.cpp.
+namespace microStore {
+bool pinned_key(const uint8_t*, size_t) { return false; }
+}  // namespace microStore
+#endif
+
 extern "C" int gettimeofday(struct timeval* __restrict tv, void* __restrict) {
     tv->tv_sec = static_cast<time_t>(simMs / 1000);   // glibc deklaruje tv jako nonnull
     tv->tv_usec = static_cast<suseconds_t>((simMs % 1000) * 1000);

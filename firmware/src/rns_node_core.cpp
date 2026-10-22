@@ -6,12 +6,14 @@
 // - interfejs P1 (etap R1): kod dostępu IFAC 16 B z rdzenia (rnscore::ifacApply, ifacCheck) z frazą
 //   jak w porcie (32 cyfry szesnastkowe klucza z konfiguracji), kolejka radiowa, klasy ruchu i limit
 //   ogłoszeń z p1iface, cisza radiowa jak w porcie, liczniki interfejsu w tym samym JSON;
-// - ogłoszenie własne celu "wici.sa1" bez ratchetu (własne ratchety stacji są poza rdzeniem); czas
-//   w skrócie losowym z licznika pracy (clockMs z begin() i zegar ms stosu), losowość z HMAC-DRBG
-//   stacji z ziarnem z begin().
-// Pakiet przyjęty z P1 jest na razie tylko rozbierany (rnscore::unpack); ogłoszenia innych celów,
-// pakiety do stacji, dowody, wysyłanie i trasy przychodzą w następnych krokach R1 i w R2–R4:
-// odpowiednie funkcje odpowiadają jak stos bez celu (fałsz, 0, brak trasy).
+// - transport bez przekazywania (rnscore::Transport): ogłoszenie własne celu "wici.sa1" bez ratchetu
+//   (własne ratchety stacji są poza rdzeniem), ogłoszenia innych celów z polem ratchetu w tablicy
+//   znanych celów w RAM (256 wpisów, odbiorca z karty chroniony), pakiety do stacji z dowodem po
+//   decyzji warstwy aplikacji, pakiet okazjonalny z szyfrowaniem do ratchetu i potwierdzeniem;
+// - czas: licznik pracy (clockMs z begin() i zegar ms stosu); losowość z HMAC-DRBG stacji z ziarnem
+//   z begin().
+// Jeszcze nie ma: zapytań o trasę i przekazywania (R2; sendReady() nie pyta o trasę), tablic w FRAM
+// (R2: po restarcie stacja zna tylko odbiorcę z karty), LXMF (R3), interfejsu USB węzła (R4).
 #include <stdio.h>
 #include <string.h>
 
@@ -29,9 +31,11 @@
 #include "framfs.h"
 #include "identity.h"
 #include "ifac.h"
+#include "p1frame.h"
 #include "p1iface.h"
 #include "packet.h"
 #include "rns_node.h"
+#include "transport.h"
 
 namespace rnsnode {
 
@@ -63,7 +67,7 @@ uint8_t publicKeyBytes[rnscore::KEY_SIZE];
 uint8_t identityBytes[HASH];
 uint8_t addressBytes[HASH];
 uint8_t nameHashBytes[rnscore::NAME_HASH_SIZE];
-drbg::Drbg generator;   // skróty losowe ogłoszeń (dalej klucze efemeryczne i IV)
+drbg::Drbg generator;   // skróty losowe ogłoszeń, klucze efemeryczne i IV tokenów
 
 // Licznik pracy w ms: clockMs z begin() (czas pracy z dziennika FRAM) i przyrosty zegara stosu.
 uint64_t clockMs = 0;
@@ -81,11 +85,14 @@ p1iface::Queue queue;
 rnscore::Ifac ifac;
 bool ifacOnline = false;
 uint8_t pinned[2][HASH] = {};   // cele "wici.sa1" odbiorcy z karty (główny, zapasowy)
+uint8_t receiverKeys[2][rnscore::KEY_SIZE] = {};
 uint8_t receiverActive = 0;
 // Cisza radiowa i znacznik ruchu dopuszczonego wyjątkiem (pakiet z send(), dowód pakietu zgłoszenia).
 Silence silence = Silence::OFF;
 bool exceptionOut = false;
 uint32_t malformed = 0;   // pakiety z poprawnym IFAC, które odrzuca rnscore::unpack
+rnscore::Transport transport;
+uint32_t nextHandle = 0;
 
 void log(const char* text) {
     if (hooks.log) hooks.log(text, hooks.context);
@@ -107,14 +114,49 @@ bool transmit(const uint8_t* raw, size_t length, p1iface::Hint hint) {
     return admit == p1iface::Admit::QUEUED || admit == p1iface::Admit::HELD;
 }
 
-// Pakiet bez IFAC z interfejsu P1 (RNS/Transport.py: Transport.preprocess_inbound po kodzie dostępu).
-void inbound(const uint8_t* raw, size_t length) {
-    rnscore::Packet packet;
-    if (!rnscore::unpack(raw, length, packet)) {
-        ++malformed;
-        return;
+// Wywołania z transportu rdzenia.
+bool transmitHook(const uint8_t* raw, size_t length, void*) { return transmit(raw, length, p1iface::Hint::NONE); }
+
+void announceHook(const uint8_t destination[HASH], const uint8_t* appData, size_t length, void*) {
+    if (hooks.announce) hooks.announce(destination, appData, length, hooks.context);
+}
+
+// Decyzja warstwy aplikacji (PROVE_APP); dowód pakietu zgłoszenia z wyjątkiem ciszy wychodzi także
+// w ciszy (znacznik kasuje received() po przetworzeniu pakietu), jak w porcie.
+bool packetHook(const uint8_t* data, size_t length, void*) {
+    bool exception = false;
+    const bool accepted = hooks.packet && hooks.packet(data, length, exception, hooks.context);
+    exceptionOut = accepted && exception;
+    return accepted;
+}
+
+void receiptHook(uint32_t handle, bool delivered, void*) {
+    if (hooks.receipt) hooks.receipt(handle, delivered, hooks.context);
+}
+
+bool pinnedHook(const uint8_t destination[HASH], void*) {
+    static const uint8_t zero[HASH] = {};
+    for (const auto& dest : pinned) {
+        if (memcmp(dest, zero, HASH) != 0 && memcmp(dest, destination, HASH) == 0) return true;
     }
-    // Następne kroki R1: ogłoszenia celów "wici.sa1", pakiety do stacji z dowodem, dowody wysłanych.
+    return false;
+}
+
+// Tożsamości odbiorcy z kluczy karty w tablicy znanych celów (jak po ogłoszeniu, bez trasy). Klucz,
+// z którego nie wychodzi cel z karty, jest pomijany: szyfrowanie do niego nie dotarłoby do odbiorcy.
+void rememberReceivers() {
+    static const uint8_t zero[rnscore::KEY_SIZE] = {};
+    for (size_t i = 0; i < 2; ++i) {
+        if (!memcmp(receiverKeys[i], zero, rnscore::KEY_SIZE) || !memcmp(pinned[i], zero, HASH)) continue;
+        uint8_t identity[HASH], destination[HASH];
+        rnscore::identityHash(receiverKeys[i], identity);
+        rnscore::destinationHashFrom(nameHashBytes, identity, destination);
+        if (memcmp(destination, pinned[i], HASH) != 0) {
+            log("rns: receiver key does not match its destination");
+            continue;
+        }
+        if (!transport.remember(pinned[i], receiverKeys[i], uptimeMs())) log("rns: receiver not remembered");
+    }
 }
 
 // Kod dostępu jak Reticulum z passphrase = 32 cyfry szesnastkowe klucza z konfiguracji (jak port).
@@ -177,8 +219,16 @@ bool begin(journal::Storage& storage, Radio& r, const uint8_t ifacKey[16], uint6
     radio = &r;
     configureIfac(ifacKey);
     queue.setReceiver(pinned[receiverActive]);
+    rnscore::TransportHooks th;
+    th.transmit = transmitHook;
+    th.announce = announceHook;
+    th.packet = packetHook;
+    th.receipt = receiptHook;
+    th.pinned = pinnedHook;
+    transport.begin(privateKey, publicKeyBytes, identityBytes, nodeMode ? nullptr : addressBytes, nameHashBytes, th);
     started = true;
-    log("rns: Reticulum core (R1): P1 interface and own announces");
+    rememberReceivers();
+    log("rns: Reticulum core (R1): P1 interface, announces, packets and proofs");
     return true;
 }
 
@@ -186,10 +236,12 @@ void setIfac(const uint8_t key[16]) {
     if (radio) configureIfac(key);
 }
 
-void setReceivers(const uint8_t[2][64], const uint8_t sa1[2][HASH], uint8_t active) {
+void setReceivers(const uint8_t keys[2][64], const uint8_t sa1[2][HASH], uint8_t active) {
+    memcpy(receiverKeys, keys, sizeof(receiverKeys));
     memcpy(pinned, sa1, sizeof(pinned));
     receiverActive = active ? 1 : 0;
     queue.setReceiver(pinned[receiverActive]);
+    if (started) rememberReceivers();
 }
 
 void setNode(bool on) {
@@ -221,7 +273,7 @@ size_t usbJson(char* out, size_t size) {
 
 void loop(uint32_t) {
     if (!started || !radio) return;
-    uptimeMs();   // licznik pracy nie gubi zawinięcia zegara ms
+    transport.poll(uptimeMs());   // potwierdzenia po limicie; licznik pracy nie gubi zawinięcia zegara ms
     const uint32_t now = nowMs();
     if (silence == Silence::OFF) queue.poll(now);   // ogłoszenia oczekujące nie wychodzą w ciszy
     else queue.tick(now);
@@ -242,7 +294,7 @@ void received(const uint8_t* wire, size_t length) {
     const size_t rawLength = rnscore::ifacCheck(ifac, wire, length, raw, sizeof(raw));
     if (!rawLength) { ++c.ifacInvalid; return; }
     ++c.received;
-    inbound(raw, rawLength);
+    if (!transport.inbound(raw, rawLength, uptimeMs())) ++malformed;
     exceptionOut = false;
 }
 
@@ -250,32 +302,53 @@ void txDone(bool ok) { queue.finish(ok); }
 
 bool announce(const uint8_t* appData, size_t length) {
     if (!started || nodeMode) return false;
-    // RNS/Destination.py: Destination.announce (bez ratchetu, kontekst NONE), wysłane jak Packet.send:
-    // HEADER_1, BROADCAST, 0 skoków.
     uint8_t random[5];
-    uint8_t randomHash[rnscore::RANDOM_HASH_SIZE];
-    if (!generator.generate(random, sizeof(random))) return false;
-    rnscore::announceRandomHash(random, uptimeMs() / 1000, randomHash);
-    uint8_t data[rnscore::ANNOUNCE_FORWARDABLE_SIZE];
-    rnscore::Packet packet = {};
-    packet.headerType = rnscore::HEADER_1;
-    packet.transportType = rnscore::BROADCAST;
-    packet.destinationType = rnscore::SINGLE;
-    packet.packetType = rnscore::ANNOUNCE;
-    memcpy(packet.destinationHash, addressBytes, HASH);
-    packet.dataLength = rnscore::buildAnnounce(privateKey, publicKeyBytes, addressBytes, nameHashBytes, randomHash, nullptr,
-                                               appData, length, data, sizeof(data));
-    packet.data = data;
-    uint8_t raw[rnscore::MTU];
-    const size_t rawLength = packet.dataLength ? rnscore::pack(packet, raw, sizeof(raw)) : 0;
-    return rawLength && transmit(raw, rawLength, p1iface::Hint::NONE);
+    return generator.generate(random, sizeof(random)) && transport.announce(random, appData, length, uptimeMs());
 }
 
-uint32_t send(const uint8_t[HASH], const uint8_t*, size_t, uint32_t) { return 0; }
-bool sendReady(const uint8_t[HASH]) { return false; }
-bool knows(const uint8_t[HASH]) { return false; }
-bool hasPath(const uint8_t[HASH]) { return false; }
-void requestPath(const uint8_t[HASH]) {}
+namespace {
+
+// Pakiet z send() to ruch własny stacji; w ciszy z wyjątkiem warstwa aplikacji wysyła tylko zgłoszenie
+// objęte wyjątkiem (station::Station::silencedFor), jak w porcie.
+struct OwnTraffic {
+    OwnTraffic() { exceptionOut = silence == Silence::EXCEPTION; }
+    ~OwnTraffic() { exceptionOut = false; }
+};
+
+bool interfaceAccepts() { return started && !nodeMode && ifacOnline && !queue.full(); }
+
+}  // namespace
+
+uint32_t send(const uint8_t dest[HASH], const uint8_t* data, size_t length, uint32_t timeoutS) {
+    if (!interfaceAccepts() || !transport.find(dest)) return 0;
+    OwnTraffic own;
+    // Limit od przekazania do stosu jak w porcie (radio.md, "Interfejs P1 w stosie Reticulum"):
+    // max(60 s, timeoutS, 2 × skoki × 13 × czas TX największego datagramu + dług ciszy + kolejka P1);
+    // trasa nieznana liczy się jako 1 skok.
+    uint32_t hops = transport.hopsTo(dest);
+    if (hops == 0 || hops >= rnscore::PATHFINDER_M) hops = 1;
+    const uint64_t waitMs = static_cast<uint64_t>(2) * hops * (1 + p1iface::DEBT_FACTOR) *
+                                p1iface::airtimeMs(p1frame::MAX_DATAGRAM) + queueWaitMs();
+    uint64_t limit = (waitMs + 999) / 1000;
+    if (limit < timeoutS) limit = timeoutS;
+    if (limit < RECEIPT_MIN_S) limit = RECEIPT_MIN_S;
+    // RNS: X25519PrivateKey.generate i os.urandom dla każdego tokenu.
+    uint8_t random[32 + 16];
+    if (!generator.generate(random, sizeof(random))) return 0;
+    const uint32_t handle = ++nextHandle ? nextHandle : ++nextHandle;
+    const rnscore::SendResult result = transport.send(dest, data, length, random, random + 32, handle, limit * 1000, uptimeMs());
+    clean(random, sizeof(random));
+    return result == rnscore::SendResult::SENT ? handle : 0;
+}
+
+// Bez zapytania o trasę przy nieznanym celu (R2).
+bool sendReady(const uint8_t dest[HASH]) { return interfaceAccepts() && transport.find(dest); }
+bool knows(const uint8_t dest[HASH]) { return started && transport.find(dest); }
+bool hasPath(const uint8_t dest[HASH]) {
+    const rnscore::KnownDestination* e = started ? transport.find(dest) : nullptr;
+    return e && e->hasPath;
+}
+void requestPath(const uint8_t[HASH]) {}   // R2
 bool queueFull() { return !radio || queue.full(); }
 bool online() { return started && ifacOnline; }
 uint32_t queueWaitMs() { return radio ? queue.waitMs(radio->debtMs()) : 0; }
@@ -296,6 +369,16 @@ Status status() {
     s.bitrate = p1iface::declaredBitrate();
     if (!started) return s;
     s.online = ifacOnline;
+    const rnscore::TransportCounters& t = transport.counters();
+    s.paths = transport.paths();
+    s.packetHashes = transport.hashes();
+    s.receiptsPending = transport.receiptsPending();
+    s.packetsSent = t.sent;
+    s.packetsReceived = t.received;
+    s.packetsUnproven = t.unproven;
+    s.delivered = t.delivered;
+    s.timedOut = t.timedOut;
+    s.announcesSeen = t.announces;
     const p1iface::Counters& c = queue.counters();
     s.k2Dropped = c.k2Slot + c.k2Pool + c.k2Dest;
     s.queueWaitMs = queueWaitMs();
@@ -305,21 +388,25 @@ Status status() {
 
 size_t interfaceJson(char* out, size_t size) {
     if (!radio) return snprintf(out, size, "\"p1_iface\":false");
-    // Pola jak w porcie (rns_node.cpp) i licznik pakietów odrzuconych przez rnscore::unpack.
+    // Pola jak w porcie (rns_node.cpp) i liczniki rdzenia: pakiety odrzucone przez rnscore::unpack,
+    // duplikaty, pakiety poza podzbiorem R1 albo nie do stacji, odrzucone przy sprawdzaniu.
     const p1iface::Counters& c = queue.counters();
+    const rnscore::TransportCounters& t = transport.counters();
     const uint32_t now = nowMs();   // okna czasu kanału przesuwane przed printf (kolejność wywołań)
     const unsigned long poolMs = queue.poolUsedMs(now), prMs = queue.pathRequestUsedMs(now);
     const int n = snprintf(out, size,
                            "\"q_len\":%u,\"q_held\":%u,\"q_queued\":%lu,\"q_full\":%lu,\"too_large\":%lu,\"ann_held\":%lu,"
                            "\"ann_drop\":%lu,\"ann_expired\":%lu,\"tx_sent\":%lu,\"tx_failed\":%lu,\"rx_ok\":%lu,"
                            "\"ifac_missing\":%lu,\"ifac_invalid\":%lu,\"offline\":%lu,\"silenced\":%lu,\"k2_slot\":%lu,\"k2_pool\":%lu,"
-                           "\"k2_dest\":%lu,\"pr_limited\":%lu,\"pool_ms\":%lu,\"pr_ms\":%lu,\"rx_malformed\":%lu",
+                           "\"k2_dest\":%lu,\"pr_limited\":%lu,\"pool_ms\":%lu,\"pr_ms\":%lu,\"rx_malformed\":%lu,\"rx_duplicate\":%lu,"
+                           "\"rx_ignored\":%lu,\"rx_invalid\":%lu",
                            (unsigned)queue.queued(), (unsigned)queue.held(), (unsigned long)c.queued, (unsigned long)c.full,
                            (unsigned long)c.tooLarge, (unsigned long)c.announcesHeld, (unsigned long)c.announcesDropped,
                            (unsigned long)c.announcesExpired, (unsigned long)c.sent, (unsigned long)c.sendFailed,
                            (unsigned long)c.received, (unsigned long)c.ifacMissing, (unsigned long)c.ifacInvalid,
                            (unsigned long)c.offline, (unsigned long)c.silenced, (unsigned long)c.k2Slot, (unsigned long)c.k2Pool,
-                           (unsigned long)c.k2Dest, (unsigned long)c.pathRequestLimited, poolMs, prMs, (unsigned long)malformed);
+                           (unsigned long)c.k2Dest, (unsigned long)c.pathRequestLimited, poolMs, prMs, (unsigned long)malformed,
+                           (unsigned long)t.duplicate, (unsigned long)t.ignored, (unsigned long)t.invalid);
     return n < 0 ? 0 : static_cast<size_t>(n);
 }
 
@@ -330,6 +417,7 @@ void halt() {
     identityNew = false;
     ifacOnline = false;
     queue.drop();
+    transport.clear();
     clean(privateKey, sizeof(privateKey));
     clean(&ifac, sizeof(ifac));
     clean(&generator, sizeof(generator));
@@ -341,7 +429,7 @@ void halt() {
 void persist() {}
 
 #ifndef ARDUINO
-void debugTableMax(uint16_t) {}
+void debugTableMax(uint16_t n) { transport.setLimit(n); }
 uint32_t debugFillHashes(uint32_t) { return 0; }
 void debugClock(uint64_t (*clock)()) { hostClock = clock; }
 
