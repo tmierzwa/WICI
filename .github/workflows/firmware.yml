@@ -8,9 +8,9 @@ name: Firmware
 on:
   push:
     branches: [main]
-    paths: ['firmware/**', 'tests/test_rns_*.py', 'tests/native/rns_*', 'tests/vectors/**', '.github/workflows/firmware.yml']
+    paths: ['firmware/**', 'tests/test_rns_*.py', 'tests/test_rnscore.py', 'tests/native/rns_*', 'tests/native/rnscore_*', 'tests/vectors/**', '.github/workflows/firmware.yml']
   pull_request:
-    paths: ['firmware/**', 'tests/test_rns_*.py', 'tests/native/rns_*', 'tests/vectors/**', '.github/workflows/firmware.yml']
+    paths: ['firmware/**', 'tests/test_rns_*.py', 'tests/test_rnscore.py', 'tests/native/rns_*', 'tests/native/rnscore_*', 'tests/vectors/**', '.github/workflows/firmware.yml']
 permissions:
   contents: read
 jobs:
@@ -54,6 +54,10 @@ jobs:
         env:
           WICI_RNS_SANITIZE: '1'
         run: python -m unittest tests.test_rns_hostile -v
+      - name: Station Reticulum core against vectors from Python
+        env:
+          WICI_RNS_SANITIZE: '1'
+        run: python -m unittest tests.test_rnscore -v
   interop:
     # Stos stacji wobec Reticulum w Pythonie (D19): tools/rns_interop.py i tools/rns_osp_node.py.
     runs-on: ubuntu-latest
