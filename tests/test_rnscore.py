@@ -29,7 +29,8 @@ CHECK = ROOT / "tests" / "native" / "rnscore_check.cpp"
 VECTORS = json.loads((ROOT / "tests" / "vectors" / "reticulum.json").read_text())
 REQUIRED = os.environ.get("WICI_RNS_SANITIZE") == "1"
 # Z biblioteki Crypto tylko to, czego rdzeń używa.
-CRYPTO_UNITS = ["Crypto.cpp", "Hash.cpp", "SHA256.cpp"]
+CRYPTO_UNITS = ["BigNumberUtil.cpp", "ChaCha.cpp", "Cipher.cpp", "Crypto.cpp", "Curve25519.cpp", "Ed25519.cpp", "Hash.cpp", "NoiseSource.cpp",
+                "RNG.cpp", "SHA256.cpp", "SHA512.cpp"]
 SANITIZE = ["-fsanitize=address,undefined", "-fno-omit-frame-pointer", "-g", "-O1"]
 # Rdzeń nie używa sterty, więc wyciek to błąd (LeakSanitizer działa na Linuksie, nie na macOS).
 LEAKS = "1" if sys.platform.startswith("linux") else "0"
@@ -103,6 +104,43 @@ class CoreTests(unittest.TestCase):
         identities = VECTORS["identity"]
         got = self.ask([("truncated_hash", bytes.fromhex(i["public_key"])) for i in identities])
         self.assertEqual(got, [i["hash"] for i in identities])
+
+    def test_public_key_and_hash(self):
+        # Load_private_key: X25519 przycięty jak w RFC 7748, Ed25519 z ziarna; wartości z Pythona.
+        identities = VECTORS["identity"]
+        got = self.ask([("public_key", bytes.fromhex(i["private_key"])) for i in identities] +
+                       [("identity_hash", bytes.fromhex(i["public_key"])) for i in identities])
+        self.assertEqual(got, [i["public_key"] for i in identities] + [i["hash"] for i in identities])
+
+    def test_signatures(self):
+        # Podpis Ed25519 jest deterministyczny, więc ma być bajt w bajt taki jak w Pythonie.
+        commands, expected = [], []
+        for ident in VECTORS["identity"]:
+            prv, pub = bytes.fromhex(ident["private_key"]), bytes.fromhex(ident["public_key"])
+            for s in ident["signatures"]:
+                message = bytes.fromhex(s["message"])
+                commands.append(("sign", prv + message))
+                expected.append(s["signature"])
+                for signature, text, valid in ((s["signature"], s["message"], s["valid"]),
+                                               (s["signature"], s["tampered_message"], s["tampered_valid"]),
+                                               (s["non_canonical_signature"], s["message"], s["non_canonical_valid"])):
+                    commands.append(("validate", self.validate_args(pub, bytes.fromhex(signature), bytes.fromhex(text))))
+                    expected.append("1" if valid else "0")
+        self.assertEqual(self.ask(commands), expected)
+
+    def test_signature_with_wrong_length(self):
+        # Python odrzuca podpis o złej długości (wyjątek w verify, validate zwraca False).
+        ident = VECTORS["identity"][0]
+        pub = bytes.fromhex(ident["public_key"])
+        s = ident["signatures"][1]
+        signature, message = bytes.fromhex(s["signature"]), bytes.fromhex(s["message"])
+        got = self.ask([("validate", self.validate_args(pub, sig, message))
+                        for sig in (signature[:63], signature + b"\x00", b"")])
+        self.assertEqual(got, ["0", "0", "0"])
+
+    @staticmethod
+    def validate_args(public_key: bytes, signature: bytes, message: bytes) -> bytes:
+        return public_key + len(signature).to_bytes(2, "big") + signature + message
 
     def test_full_hash_matches_sha256(self):
         # Pusty wejściowy ciąg, granice bloku SHA-256 (55, 56, 64 B) i długi ciąg.
