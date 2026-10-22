@@ -113,6 +113,7 @@ private:
     bool live(size_t slot) const { return live_[slot / 8] & (1u << (slot % 8)); }
     void setBit(uint8_t* bits, size_t slot, bool on);
     void drop(size_t slot);
+    bool load(size_t slot);   // gniazdo do bufora: znacznik, numer, cel, CRC; przy błędnej treści drop
     bool invalidate(size_t slot);   // przy błędzie gniazdo czeka w stale_ na ponowienie
     int victim(int keep, bool (*pinned)(const uint8_t*, void*), void* context) const;
     uint32_t sequenceOf(size_t slot);

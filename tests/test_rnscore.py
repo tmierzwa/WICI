@@ -428,8 +428,9 @@ class CoreTests(unittest.TestCase):
         parts = line.split()
         return parts[0], list(map(int, parts[1:10])), parts[10:-1], parts[-1]
 
-    def packet(self, flags: int, destination: bytes, data: bytes, context: int = 0, transport_id: bytes = bytes(16)) -> bytes:
-        header = bytes([(flags >> 6) & 1, (flags >> 5) & 1, (flags >> 4) & 1, (flags >> 2) & 3, flags & 3, 0])
+    def packet(self, flags: int, destination: bytes, data: bytes, context: int = 0, transport_id: bytes = bytes(16),
+               hops: int = 0) -> bytes:
+        header = bytes([(flags >> 6) & 1, (flags >> 5) & 1, (flags >> 4) & 1, (flags >> 2) & 3, flags & 3, hops])
         return bytes.fromhex(self.ask([("pack", header + transport_id + destination + bytes([context]) + data)])[0])
 
     def proof_packet(self, private_key: bytes, raw: bytes, implicit: bool = True) -> bytes:
@@ -793,6 +794,115 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(lines[11], "2 2")
         self.assertEqual(lines[12], "none")
         self.assertNotEqual(lines[13], "none")
+
+    # Cel PLAIN "rnstransport.path.request" (Destination bez tożsamości: skrót skrótu nazwy).
+    PATH_REQUEST = hashlib.sha256(hashlib.sha256(b"rnstransport.path.request").digest()[:10]).digest()[:16]
+
+    def path_request(self, dest: bytes, tag: bytes, requestor: bytes = b"", hops: int = 0) -> bytes:
+        return self.packet(0x08, self.PATH_REQUEST, dest + requestor + tag, hops=hops)
+
+    def fields_of(self, raw_hex: str):
+        return self.ask([("unpack", bytes.fromhex(raw_hex))])[0].split()
+
+    def test_path_request_for_station(self):
+        # Zapytanie o cel stacji: od razu ogłoszenie z kontekstem PATH_RESPONSE (Destination.announce
+        # z path_response) z nowym podpisem i danymi aplikacji ostatniego ogłoszenia; ten sam znacznik drugi
+        # raz: duplikat; inny znacznik w ciągu sekundy: bez odpowiedzi (limit), później nowa odpowiedź.
+        address = bytes.fromhex(self.ask([("t_begin", self.STATION)])[0])
+        lines = self.ask([("t_begin", self.STATION), ("t_announce", bytes(5) + b"WICI"),
+                          ("t_in", self.path_request(address, b"A" * 16)), ("t_in", self.path_request(address, b"A" * 16)),
+                          ("t_in", self.path_request(address, b"B" * 16, requestor=bytes(range(16)))),
+                          ("t_clock", (31001).to_bytes(8, "big")), ("t_in", self.path_request(address, b"C" * 5)),
+                          ("t_paths", b"")])
+        own = self.fields_of(self.parsed(lines[1])[3])
+        first, third = self.parsed(lines[2])[3], self.parsed(lines[6])[3]
+        f = self.fields_of(first)
+        self.assertEqual(f[:9], ["0", "0", "0", "0", "1", "0", "-", address.hex(), "11"])
+        self.assertEqual(f[9][:148], own[9][:148])         # klucz i skrót nazwy jak w ogłoszeniu własnym
+        self.assertTrue(f[9].endswith(b"WICI".hex()))      # dane aplikacji z announce()
+        self.assertEqual(self.parsed(lines[3])[1][0], 1)   # duplikat znacznika
+        self.assertEqual([self.parsed(lines[i])[3] for i in (3, 4)], ["-", "-"])
+        t = self.fields_of(third)
+        self.assertNotEqual(t[9], f[9])                    # nowy czas emisji i podpis
+        self.assertTrue(t[9].endswith(b"WICI".hex()))
+        self.assertNotEqual(self.ask([("validate_announce", bytes.fromhex(third))])[0], "none")
+        self.assertEqual(lines[7], "3 3 2 1 0 0 0")
+
+    def test_path_request_for_known_destination(self):
+        # Trasa znana: odpowiedź po PATH_REQUEST_GRACE (0,4 s) jako HEADER_2 z identyfikatorem transportu stacji,
+        # liczbą skoków trasy, kontekstem PATH_RESPONSE i ogłoszeniem z pamięci podręcznej; jedno nadanie
+        # (PATHFINDER_R). Pytający, który jest następnym skokiem, i cel bez trasy: bez odpowiedzi.
+        a = next(c for c in VECTORS["announce"] if c["name"] == "ratchet")
+        raw = bytes.fromhex(a["raw"])
+        dest = raw[2:18]
+        identity = self.ask([("identity_hash", bytes.fromhex(self.ask([("public_key", self.STATION)])[0]))])[0]
+        lines = self.ask([("t_begin", self.STATION), ("t_in", raw), ("t_in", self.path_request(dest, b"T" * 16)),
+                          ("t_clock", (1400).to_bytes(8, "big")), ("t_clock", (1401).to_bytes(8, "big")),
+                          ("t_clock", (8000).to_bytes(8, "big")), ("t_clock", (20000).to_bytes(8, "big")),
+                          ("t_in", self.path_request(dest, b"U" * 16, requestor=dest)), ("t_clock", (30000).to_bytes(8, "big")),
+                          ("t_in", self.path_request(bytes(16), b"V" * 16)), ("t_paths", b"")])
+        self.assertEqual([self.parsed(lines[i])[3] for i in (2, 3)], ["-", "-"])
+        out = self.fields_of(self.parsed(lines[4])[3])
+        self.assertEqual(out[:9], ["1", "1", "1", "0", "1", "1", identity, dest.hex(), "11"])
+        self.assertEqual(out[9], raw[19:].hex())
+        self.assertEqual([self.parsed(lines[i])[3] for i in (5, 6, 7, 8, 9)], ["-"] * 5)
+        self.assertEqual(lines[10], "3 2 1 0 0 0 0")
+
+    def test_path_request_for_station_reuses_signature(self):
+        # Odpowiedź w ciągu 30 s od ogłoszenia własnego: te same dane (bez nowego podpisu) z kontekstem
+        # PATH_RESPONSE. Interfejs bez miejsca (mayTransmit): bez odpowiedzi i bez podpisu, licznik limitu.
+        address = bytes.fromhex(self.ask([("t_begin", self.STATION)])[0])
+        lines = self.ask([("t_begin", self.STATION), ("t_announce", bytes(5) + b"WICI"),
+                          ("t_clock", (2000).to_bytes(8, "big")), ("t_in", self.path_request(address, b"A" * 16)),
+                          ("t_busy", b"\x01"), ("t_clock", (4000).to_bytes(8, "big")),
+                          ("t_in", self.path_request(address, b"B" * 16)), ("t_paths", b"")])
+        own, reply = self.fields_of(self.parsed(lines[1])[3]), self.fields_of(self.parsed(lines[3])[3])
+        self.assertEqual(reply[9], own[9])               # te same dane ogłoszenia i podpis
+        self.assertEqual(reply[8], "11")                 # kontekst PATH_RESPONSE
+        self.assertEqual(self.parsed(lines[6])[3], "-")
+        self.assertEqual(lines[7], "2 2 1 1 0 0 0")
+
+    def test_retransmissions_one_per_poll(self):
+        # Dwie odpowiedzi z pamięci podręcznej zaległe naraz: poll() nadaje najwyżej jedną (najwcześniejszą),
+        # a poll() obiegu z kryptografią odbioru (bez nadawania) żadnej; interfejs zajęty też wstrzymuje.
+        keys = [bytes([51]) * 64, bytes([52]) * 64]
+        announces = [self.announce_of(k) for k in keys]
+        lines = self.ask([("t_begin", self.STATION), ("t_in", announces[0]), ("t_in", announces[1]),
+                          ("t_in", self.path_request(announces[1][2:18], b"P" * 16)),
+                          ("t_in", self.path_request(announces[0][2:18], b"Q" * 16)),
+                          ("t_poll", (1500).to_bytes(8, "big")), ("t_busy", b"\x01"), ("t_clock", (1501).to_bytes(8, "big")),
+                          ("t_busy", b"\x00"), ("t_clock", (1502).to_bytes(8, "big")), ("t_clock", (1503).to_bytes(8, "big")),
+                          ("t_clock", (1504).to_bytes(8, "big"))])
+        self.assertEqual([self.parsed(lines[i])[3] for i in (5, 7)], ["-", "-"])
+        first, second = self.fields_of(self.parsed(lines[9])[3]), self.fields_of(self.parsed(lines[10])[3])
+        self.assertEqual((first[7], second[7]), (announces[1][2:18].hex(), announces[0][2:18].hex()))
+        self.assertEqual(self.parsed(lines[11])[3], "-")
+
+    def test_path_request_filter(self):
+        # Bez znacznika: odrzucone; PLAIN po więcej niż 1 skoku i ogłoszenie PLAIN: odpadają (packet_filter);
+        # znacznik dłuższy niż 16 B liczy się po pierwszych 16 B.
+        address = bytes.fromhex(self.ask([("t_begin", self.STATION)])[0])
+        lines = self.ask([("t_begin", self.STATION), ("t_in", self.path_request(address, b"")),
+                          ("t_in", self.path_request(address, b"X" * 16, hops=2)),
+                          ("t_in", self.packet(0x09, self.PATH_REQUEST, bytes(200))),
+                          ("t_in", self.path_request(address, b"Y" * 16 + b"1", requestor=bytes(16))),
+                          ("t_in", self.path_request(address, b"Y" * 16 + b"2", requestor=bytes(16))), ("t_paths", b"")])
+        self.assertEqual([self.parsed(line)[1][:3] for line in lines[1:6]],
+                         [[0, 0, 1], [0, 1, 1], [0, 1, 2], [0, 1, 2], [1, 1, 2]])
+        # Przed pierwszym ogłoszeniem odpowiedź ma puste dane aplikacji (Python: default_app_data None).
+        self.assertEqual(lines[6], "1 1 1 0 0 0 0")
+
+    def test_own_path_request(self):
+        # RNS/Transport.py: request_path węzła z transportem: cel, identyfikator transportu, znacznik; PLAIN,
+        # HEADER_1, rozgłaszany; drugi raz o ten sam cel przed upływem 20 s: bez nadania.
+        self.ask([("t_begin", self.STATION)])
+        identity = bytes.fromhex(self.ask([("identity_hash", bytes.fromhex(self.ask([("public_key", self.STATION)])[0]))])[0])
+        dest, tag = bytes(range(16)), bytes(range(100, 116))
+        lines = self.ask([("t_begin", self.STATION), ("t_request", dest + tag), ("t_request", dest + tag),
+                          ("t_clock", (21001).to_bytes(8, "big")), ("t_request", dest + tag)])
+        self.assertEqual(self.parsed(lines[1])[3], self.path_request(dest, tag, requestor=identity).hex())
+        self.assertEqual(self.parsed(lines[2])[0], "none")
+        self.assertEqual(self.parsed(lines[4])[0], "ok")
 
     def test_full_hash_matches_sha256(self):
         # Pusty wejściowy ciąg, granice bloku SHA-256 (55, 56, 64 B) i długi ciąg.

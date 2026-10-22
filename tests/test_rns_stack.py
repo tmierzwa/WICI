@@ -30,7 +30,7 @@ PROGRAM = FIRMWARE / ".pio" / "build" / "host" / "program"
 CORE_PROGRAM = FIRMWARE / ".pio" / "build" / "host-core" / "program"
 # Kroki rns_interop.py na rdzeniu: wyjście etapu R1 (firmware/reticulum-core.md, „Etapy”), z krokiem 3r
 # (szyfrowanie do ratchetu), którego port nie przechodzi, i krok 6 z etapu R2 (trasa i tożsamość celu
-# z tablicy w FRAM po restarcie).
+# z tablicy w FRAM po restarcie) i 9 (zapytania o trasę w obie strony).
 CORE_STEPS = {
     "1": ["station_announce_in_python"],
     "2": ["python_announce_in_station"],
@@ -43,6 +43,7 @@ CORE_STEPS = {
           "receipt_after_restart"],
     "7": ["receiver_entry_kept_in_full_table"],
     "8": ["receiver_known_from_card", "announce_blocked_in_silence", "send_from_card_key_in_exception"],
+    "9": ["station_answers_path_request", "station_path_request_answered"],
 }
 
 

@@ -118,6 +118,9 @@ public:
     // bajty do nadania (z IFAC). hint: wskazanie stosu (Hint).
     Admit offer(const uint8_t* raw, size_t rawLength, const uint8_t* wire, size_t wireLength, uint32_t nowMs,
                 Hint hint = Hint::NONE);
+    // Czy ogłoszenie (raw bez IFAC) zostanie przyjęte: od razu albo na listę oczekujących; bez zmiany
+    // liczników i listy. Pozwala odmówić przed podpisem IFAC zamiast po nim.
+    bool announceAdmits(const uint8_t* raw, size_t rawLength, uint32_t nowMs);
     // Klasa pakietu według reguł wyżej (bez stanu kolejki).
     Lane lane(const uint8_t* raw, size_t length, Hint hint = Hint::NONE) const;
     // Ogłoszenia oczekujące przechodzą do kolejki, gdy limit 2%, pula i miejsce pozwalają.

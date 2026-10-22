@@ -287,6 +287,18 @@ Admit Queue::offerAnnounce(uint8_t hops, const uint8_t* dest, const uint8_t* wir
     return Admit::HELD;
 }
 
+bool Queue::announceAdmits(const uint8_t* raw, size_t rawLength, uint32_t nowMs) {
+    if (rawLength < 2) return false;
+    if (held() == 0 && !full() && announceOpen(nowMs) && poolAllows(nowMs, rawLength + IFAC_SIZE)) return true;
+    const uint8_t* dest = destination(raw, rawLength);
+    const Held* worst = nullptr;
+    for (const Held& h : held_) {
+        if (!h.used || (dest && !memcmp(h.dest, dest, 16))) return true;   // wolne miejsce albo ten sam cel
+        if (!worst || h.hops > worst->hops) worst = &h;
+    }
+    return worst && worst->hops > raw[1];   // offerAnnounce: zastępuje ogłoszenie z większą liczbą skoków
+}
+
 void Queue::setReceiver(const uint8_t dest[16]) {
     receiverSet_ = false;
     if (!dest) return;

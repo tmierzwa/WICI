@@ -22,8 +22,10 @@
 //   i send() (ECDH i IFAC);
 // - czas: licznik pracy (clockMs z begin() i zegar ms stosu); losowość z HMAC-DRBG stacji z ziarnem
 //   z begin().
-// Jeszcze nie ma: zapytań o trasę i przekazywania (dalsze kroki R2; sendReady() nie pyta o trasę),
-// LXMF (R3), interfejsu USB węzła (R4).
+// - zapytania o trasę (etap R2): odpowiedzi dla celu stacji i celów z trasą (tablica retransmisji
+//   ogłoszeń 16 wpisów), własne zapytania z requestPath(), sendReady() i send() przy nieznanym celu
+//   (najwyżej jedno na cel na 20 s), w kolejce P1 jako ruch własny (Hint::OWN);
+// Jeszcze nie ma: przekazywania (dalszy krok R2), LXMF (R3), interfejsu USB węzła (R4).
 #include <stdio.h>
 #include <string.h>
 
@@ -101,8 +103,12 @@ uint8_t receiverActive = 0;
 // Cisza radiowa i znacznik ruchu dopuszczonego wyjątkiem (pakiet z send(), dowód pakietu zgłoszenia).
 Silence silence = Silence::OFF;
 bool exceptionOut = false;
+bool ownRequest = false;   // zapytanie o trasę na polecenie stacji (Hint::OWN)
 uint32_t malformed = 0;   // pakiety z poprawnym IFAC, które odrzuca rnscore::unpack
 rnscore::Transport transport;
+// Budżet RAM obiektu transportu (reticulum-core.md, „Budżet RAM”: 56 KiB z LXMF); na płytce sprawdza go
+// też tools/core_boards.py kompilatorem obrazu.
+static_assert(sizeof(rnscore::Transport) <= 56 * 1024, "rnscore::Transport ponad budżet RAM");
 uint32_t nextHandle = 0;
 
 // Kolejka odbioru: datagramy z eteru czekają na loop(). Na nRF52840 sprawdzenie IFAC (podpis Ed25519)
@@ -176,6 +182,11 @@ bool transmit(const uint8_t* raw, size_t length, p1iface::Hint hint) {
     if (silence == Silence::FULL || (silence == Silence::EXCEPTION && !exceptionOut)) { ++c.silenced; return false; }
     // Pełna kolejka: odmowa przed podpisem IFAC (ogłoszenia mogą jeszcze czekać na liście).
     if (p1iface::classify(raw, length) != p1iface::Kind::ANNOUNCE && queue.full()) { ++c.full; return false; }
+    // Ogłoszenie bez miejsca w kolejce i na liście oczekujących: odmowa także przed podpisem IFAC.
+    if (p1iface::classify(raw, length) == p1iface::Kind::ANNOUNCE && !queue.announceAdmits(raw, length, nowMs())) {
+        ++c.announcesDropped;
+        return false;
+    }
     uint8_t wire[p1iface::MAX_WIRE];
     const size_t wireLength = rnscore::ifacApply(ifac, raw, length, wire, sizeof(wire));
     if (!wireLength) { ++c.tooLarge; return false; }
@@ -184,7 +195,11 @@ bool transmit(const uint8_t* raw, size_t length, p1iface::Hint hint) {
 }
 
 // Wywołania z transportu rdzenia.
-bool transmitHook(const uint8_t* raw, size_t length, void*) { return transmit(raw, length, p1iface::Hint::NONE); }
+bool transmitHook(const uint8_t* raw, size_t length, void*) {
+    return transmit(raw, length, ownRequest ? p1iface::Hint::OWN : p1iface::Hint::NONE);
+}
+
+bool randomHook(uint8_t* out, size_t length, void*) { return generator.generate(out, length); }
 
 void announceHook(const uint8_t destination[HASH], const uint8_t* appData, size_t length, void*) {
     if (hooks.announce) hooks.announce(destination, appData, length, hooks.context);
@@ -206,6 +221,9 @@ void receiptHook(uint32_t handle, bool delivered, void*) {
 // Żeton z wiadra tuż przed weryfikacją podpisu ogłoszenia, po tanich odrzuceniach w transporcie:
 // powtórzone nagranie poprawnego ogłoszenia (IFAC przechodzi bez klucza sieci, bo kod jest
 // deterministyczny) i ogłoszenie z kolizją klucza odpadają bez żetonu i nie wyczerpują wiadra.
+// Interfejs przyjmie teraz pakiet stosu (jak transmit() przed podpisem IFAC, bez wyjątku ciszy).
+bool mayTransmitHook(void*) { return ifacOnline && silence == Silence::OFF && !queue.full(); }
+
 bool mayVerifyHook(void*) {
     if (takeVerifyToken(uptimeMs())) return true;
     ++announcesLimited;
@@ -306,6 +324,8 @@ bool begin(journal::Storage& storage, Radio& r, const uint8_t ifacKey[16], uint6
     th.receipt = receiptHook;
     th.pinned = pinnedHook;
     th.mayVerify = mayVerifyHook;
+    th.random = randomHook;
+    th.mayTransmit = mayTransmitHook;
     framTable.fram = &storage;
     transport.begin(privateKey, publicKeyBytes, identityBytes, nodeMode ? nullptr : addressBytes, nameHashBytes, th, framTable,
                     clockMs);
@@ -370,26 +390,31 @@ __attribute__((noinline)) void ifacStep(RxSlot& slot) {
 }
 
 // Jeden krok odbioru na obieg loop(): sprawdzenie IFAC najstarszego datagramu albo, w następnym obiegu,
-// pakiet w transporcie (RNS/Transport.py: inbound po odjęciu IFAC w Interface).
-void receiveStep() {
-    if (!rxCount) return;
+// pakiet w transporcie (RNS/Transport.py: inbound po odjęciu IFAC w Interface). Prawda: krok był (mógł
+// zrobić operację asymetryczną).
+bool receiveStep() {
+    if (!rxCount) return false;
     RxSlot& slot = rx[rxHead];
-    if (!ifacOnline) { ++queue.counters().offline; rxDrop(); return; }
+    if (!ifacOnline) { ++queue.counters().offline; rxDrop(); return false; }
     if (!slot.checked) {
         ifacStep(slot);
-        return;
+        return true;
     }
     if (!transport.inbound(slot.bytes, slot.length, uptimeMs())) ++malformed;
     exceptionOut = false;
     rxDrop();
+    return true;
 }
 
 }  // namespace
 
 void loop(uint32_t) {
     if (!started || !radio) return;
-    receiveStep();
-    transport.poll(uptimeMs());   // potwierdzenia po limicie; licznik pracy nie gubi zawinięcia zegara ms
+    const bool received = receiveStep();
+    // Potwierdzenia po limicie (licznik pracy nie gubi zawinięcia zegara ms); retransmisja z podpisem IFAC
+    // tylko w obiegu bez kroku odbioru (najwyżej jedna operacja asymetryczna na obieg; licznik operacji
+    // jest tylko w budowach prób).
+    transport.poll(uptimeMs(), !received);
     const uint32_t now = nowMs();
     if (silence == Silence::OFF) queue.poll(now);   // ogłoszenia oczekujące nie wychodzą w ciszy
     else queue.tick(now);
@@ -426,8 +451,8 @@ bool announce(const uint8_t* appData, size_t length) {
 
 namespace {
 
-// Pakiet z send() to ruch własny stacji; w ciszy z wyjątkiem warstwa aplikacji wysyła tylko zgłoszenie
-// objęte wyjątkiem (station::Station::silencedFor), jak w porcie.
+// Pakiet i zapytanie o trasę z sendReady() i send() to ruch własny stacji; w ciszy z wyjątkiem warstwa
+// aplikacji wysyła tylko zgłoszenie objęte wyjątkiem (station::Station::silencedFor), jak w porcie.
 struct OwnTraffic {
     OwnTraffic() { exceptionOut = silence == Silence::EXCEPTION; }
     ~OwnTraffic() { exceptionOut = false; }
@@ -435,7 +460,14 @@ struct OwnTraffic {
 
 bool interfaceAccepts() { return started && !nodeMode && ifacOnline && !queue.full(); }
 
-}  // namespace
+// RNS/Transport.py: request_path ze znacznikiem losowym (Identity.get_random_hash).
+void requestOwnPath(const uint8_t dest[HASH]) {
+    uint8_t tag[HASH];
+    if (!generator.generate(tag, sizeof(tag))) return;
+    ownRequest = true;
+    transport.requestPath(dest, tag, uptimeMs());
+    ownRequest = false;
+}
 
 // Odbiorca z karty, którego wpis wypadł z tablicy (uszkodzone gniazdo w FRAM): wpis z kluczy karty od
 // nowa (bez trasy i ratchetu, jak po starcie), żeby zgłoszenia nie stanęły do restartu.
@@ -446,9 +478,20 @@ bool knowsOrRemembers(const uint8_t dest[HASH]) {
     return transport.knows(dest);
 }
 
+// Tożsamość celu znana (także odbiorca z karty odtworzony z jej kluczy); inaczej zapytanie o trasę (ruch
+// własny, K0) i fałsz (jak recallOrRequest w porcie).
+bool knownOrRequest(const uint8_t dest[HASH]) {
+    if (knowsOrRemembers(dest)) return true;
+    requestOwnPath(dest);
+    return false;
+}
+
+}  // namespace
+
 uint32_t send(const uint8_t dest[HASH], const uint8_t* data, size_t length, uint32_t timeoutS) {
-    if (!interfaceAccepts() || !knowsOrRemembers(dest)) return 0;
+    if (!interfaceAccepts()) return 0;
     OwnTraffic own;
+    if (!knownOrRequest(dest)) return 0;
     // Limit od przekazania do stosu jak w porcie (radio.md, "Interfejs P1 w stosie Reticulum"):
     // max(60 s, timeoutS, 2 × skoki × 13 × czas TX największego datagramu + dług ciszy + kolejka P1);
     // trasa nieznana liczy się jako 1 skok.
@@ -472,14 +515,19 @@ uint32_t send(const uint8_t dest[HASH], const uint8_t* data, size_t length, uint
     return result == rnscore::SendResult::SENT ? handle : 0;
 }
 
-// Bez zapytania o trasę przy nieznanym celu (R2).
-bool sendReady(const uint8_t dest[HASH]) { return interfaceAccepts() && knowsOrRemembers(dest); }
+bool sendReady(const uint8_t dest[HASH]) {
+    if (!interfaceAccepts()) return false;
+    OwnTraffic own;
+    return knownOrRequest(dest);
+}
 bool knows(const uint8_t dest[HASH]) { return started && transport.knows(dest); }
 bool hasPath(const uint8_t dest[HASH]) {
     rnscore::KnownDestination e;   // odczyt z FRAM: trasa po wygaśnięciu już nie jest trasą
     return started && transport.lookup(dest, e, uptimeMs()) && e.hasPath;
 }
-void requestPath(const uint8_t[HASH]) {}   // R2
+void requestPath(const uint8_t dest[HASH]) {
+    if (started) requestOwnPath(dest);
+}
 bool queueFull() { return !radio || queue.full(); }
 bool online() { return started && ifacOnline; }
 uint32_t queueWaitMs() { return radio ? queue.waitMs(radio->debtMs()) : 0; }
@@ -504,6 +552,7 @@ Status status() {
     s.paths = transport.paths();
     s.packetHashes = transport.hashes();
     s.receiptsPending = transport.receiptsPending();
+    s.announceTable = transport.announceTable();
     s.fsFiles = transport.known();   // wpisy tablicy znanych celów w gniazdach FRAM
     s.fsUsedBytes = transport.known() * rnscore::TABLE_SLOT_SIZE;
     s.fsCapacityBytes = rnscore::TABLE_AREA;
@@ -535,7 +584,8 @@ size_t interfaceJson(char* out, size_t size) {
                            "\"ann_drop\":%lu,\"ann_expired\":%lu,\"tx_sent\":%lu,\"tx_failed\":%lu,\"rx_ok\":%lu,"
                            "\"ifac_missing\":%lu,\"ifac_invalid\":%lu,\"offline\":%lu,\"silenced\":%lu,\"k2_slot\":%lu,\"k2_pool\":%lu,"
                            "\"k2_dest\":%lu,\"pr_limited\":%lu,\"pool_ms\":%lu,\"pr_ms\":%lu,\"rx_malformed\":%lu,\"rx_duplicate\":%lu,"
-                           "\"rx_ignored\":%lu,\"rx_invalid\":%lu,\"rx_queue_full\":%lu,\"ann_limited\":%lu,\"table_corrupt\":%lu",
+                           "\"rx_ignored\":%lu,\"rx_invalid\":%lu,\"rx_queue_full\":%lu,\"ann_limited\":%lu,\"table_corrupt\":%lu,"
+                           "\"pr_in\":%lu,\"pr_answered\":%lu,\"pr_responses\":%lu,\"pr_sent\":%lu,\"ann_table_full\":%lu",
                            (unsigned)queue.queued(), (unsigned)queue.held(), (unsigned long)c.queued, (unsigned long)c.full,
                            (unsigned long)c.tooLarge, (unsigned long)c.announcesHeld, (unsigned long)c.announcesDropped,
                            (unsigned long)c.announcesExpired, (unsigned long)c.sent, (unsigned long)c.sendFailed,
@@ -543,8 +593,9 @@ size_t interfaceJson(char* out, size_t size) {
                            (unsigned long)c.offline, (unsigned long)c.silenced, (unsigned long)c.k2Slot, (unsigned long)c.k2Pool,
                            (unsigned long)c.k2Dest, (unsigned long)c.pathRequestLimited, poolMs, prMs, (unsigned long)malformed,
                            (unsigned long)t.duplicate, (unsigned long)t.ignored, (unsigned long)t.invalid,
-                           (unsigned long)rxDropped, (unsigned long)announcesLimited,
-                           (unsigned long)transport.tableCorrupt());
+                           (unsigned long)rxDropped, (unsigned long)announcesLimited, (unsigned long)transport.tableCorrupt(),
+                           (unsigned long)t.pathRequests, (unsigned long)t.pathAnswered, (unsigned long)t.pathResponses,
+                           (unsigned long)t.requestsSent, (unsigned long)t.announceTableFull);
     return n < 0 ? 0 : static_cast<size_t>(n);
 }
 
