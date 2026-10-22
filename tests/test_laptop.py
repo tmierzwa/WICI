@@ -1432,7 +1432,9 @@ class PanelTest(unittest.TestCase):
         self.assertEqual(self.request("POST", "/api/config/check", body, {"Content-Type": "application/json"})[0].status, 403)
         self.assertEqual(self.request("POST", "/api/config/check", body, {**ok, "Origin": "http://evil.example"})[0].status, 403)
         self.assertEqual(self.request("POST", "/api/config/check", body, {**ok, "Content-Type": "text/plain"})[0].status, 415)
-        self.assertEqual(self.request("POST", "/api/config/check", "x" * 70000, ok)[0].status, 413)
+        # Sam nagłówek bez treści: serwer odpowiada 413 bez czytania, a zamknięcie gniazda z nieodczytaną treścią
+        # wysyła RST, który przerywa wysyłanie po stronie klienta (ConnectionResetError na macOS i Windows).
+        self.assertEqual(self.request("POST", "/api/config/check", None, {**ok, "Content-Length": "70000"})[0].status, 413)
         self.assertEqual(self.request("POST", "/api/nothing", "{}", ok)[0].status, 404)
 
     def test_check_and_operations_without_station(self):
