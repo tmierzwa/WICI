@@ -15,10 +15,10 @@ invariant fails; the three crashes found in the review of 2026-10-21 are fixed b
 and stay as regression scenarios (--defect). WICI_RNS_SEEDS=N runs N fuzzing seeds instead of 4.
 
 The harness feeds every datagram through the station's own IFAC code (rnsnode::debugIfacWrap) and
-checks that the port and microStore read the simulated clock; each passing run must have delivered
-traffic to the stack (P1 counter rx_ok). Not simulated: microStore::millis (the compaction cooldown of
-the file store) reads the host's monotonic clock, so clock jumps do not move it. POSIX only (mmap, fork
-of sanitizer runtimes).
+checks that the port and microStore (also microStore::millis, the compaction cooldown of the file store)
+read the simulated clock; each passing run must have delivered traffic to the stack (P1 counter rx_ok).
+The traffic depends only on --seed (tests/native/rng_seeded.cpp), so a failure repeats with its seed.
+POSIX only (mmap, fork of sanitizer runtimes).
 
 The same scenarios run on the station Reticulum core (CoreHostileStackTests: rns_node_core.cpp and
 firmware/lib/reticulum_core instead of rns_node.cpp; the port only generates the traffic), including
