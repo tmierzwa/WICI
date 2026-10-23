@@ -86,6 +86,7 @@ struct TransportState {
     std::string events;            // wywołania announce, packet i receipt od ostatniego polecenia
     bool accept = true;
     uint8_t busy = 0;    // bit 1 << interfejs: interfejs nie przyjmie pakietu (mayTransmit)
+    bool refuse = false; // brak żetonu na pakiet do stacji (mayReceive)
     uint64_t nowMs = 1000;
 };
 TransportState* state = nullptr;
@@ -99,6 +100,7 @@ void printHexTo(std::string& out, const uint8_t* data, size_t length) {
 }
 
 bool onMayTransmit(uint8_t iface, void*) { return !(state->busy & (1u << iface)); }
+bool onMayReceive(void*) { return !state->refuse; }
 
 bool onTransmit(const uint8_t* raw, size_t length, uint8_t iface, void*) {
     state->emitted.assign(raw, raw + length);
@@ -348,6 +350,7 @@ int main() {
             hooks.pinned = onPinned;
             hooks.random = onRandom;
             hooks.mayTransmit = onMayTransmit;
+            hooks.mayReceive = onMayReceive;
             state->transport.begin(state->privateKey, state->publicKey, state->identity, state->address, state->nameHash, hooks,
                                    state->table, state->nowMs, state->interfaces);
             printHex(state->address, sizeof(state->address));
@@ -363,6 +366,7 @@ int main() {
             hooks.pinned = onPinned;
             hooks.random = onRandom;
             hooks.mayTransmit = onMayTransmit;
+            hooks.mayReceive = onMayReceive;
             state->table.cutAfter = -1;
             state->transport.clear();
             state->transport.begin(state->privateKey, state->publicKey, state->identity, state->address, state->nameHash, hooks,
@@ -444,6 +448,13 @@ int main() {
             // interfejsy zajęte dla mayTransmit: bit 1 << numer (1: interfejs 0 zajęty, 0: wszystkie wolne)
             state->busy = data[0];
             printTransport("ok");
+        } else if (command == "t_refuse" && data.size() == 1) {
+            // brak żetonu (1) albo żeton (0) dla mayReceive
+            state->refuse = data[0] != 0;
+            printTransport("ok");
+        } else if (command == "t_limited") {
+            // pakiety do stacji odrzucone przed odszyfrowaniem (receiveLimited)
+            printf("%u\n", static_cast<unsigned>(state->transport.counters().receiveLimited));
         } else if (command == "t_poll" && data.size() == 8) {
             // czas w ms (8 B) i poll() bez nadawania (obieg z kryptografią odbioru)
             state->nowMs = 0;

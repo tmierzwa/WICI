@@ -352,6 +352,18 @@ class CoreHostileStackTests(HostileStackTests):
         self.assertGreater(outcome["iface"]["ifac_invalid"], 0, outcome)
         self.assertGreater(outcome["iface"]["ifac_missing"], 0, outcome)
 
+    def test_station_flood_limited_to_one_packet_per_second(self):
+        # 60 s zalewu poprawnie zaszyfrowanymi pakietami do celu stacji (dwa na obieg loop()): limit pracy
+        # (żeton co sekundę, 4 naraz, rns_node_core.cpp) przepuszcza najwyżej 4 + 60 pakietów do
+        # odszyfrowania, reszta odpada przed kryptografią ("rx_limited"); po zalewie wiadomość SA1
+        # odbiorcy z karty przechodzi z dowodem (w scenariuszu).
+        o = self.assertClean(self.station().run("--defect", "station-flood", "--events", 0))["flood"]
+        self.assertGreaterEqual(o["processed"], 55, o)
+        self.assertLessEqual(o["processed"], 4 + 60 + 1, o)
+        self.assertGreater(o["limited"], 1000, o)
+        # Operacje stacji: sprawdzenie IFAC każdego przyjętego datagramu i trzy na przetworzony pakiet.
+        self.assertLessEqual(o["operations"], o["limited"] + 4 * o["processed"] + 10, o)
+
     def test_forward_flood_one_asymmetric_operation_per_loop(self):
         # Pakiety ze stacją jako następnym skokiem, dwa na obieg loop(): każde przekazanie to podpis IFAC, więc
         # najwyżej jedna operacja asymetryczna na obieg (sprawdza program prób); nadmiar odpada w kolejce

@@ -85,6 +85,19 @@ bool Transport::inbound(const uint8_t* raw, size_t length, uint64_t nowMs, uint8
         inboundAnnounce(packet, hash, nowMs, iface);
         return true;
     }
+    // Pakiet do celu stacji: najpierw lista bez zapisu, potem żeton z haka mayReceive (limit pracy stacji).
+    // Bez żetonu skrót nie trafia na listę, więc późniejsza kopia tego samego pakietu (inną drogą, od
+    // przekaźnika) ma szansę po uzupełnieniu wiadra; takich pakietów stacja nie przekazuje (tabela różnic).
+    if (packet.packetType == DATA && address_ && memcmp(packet.destinationHash, address_, TRUNCATED_HASH_SIZE) == 0) {
+        if (hashlist_.contains(hash)) {
+            ++counters_.duplicate;
+            return true;
+        }
+        if (hooks_.mayReceive && !hooks_.mayReceive(hooks_.context)) {
+            ++counters_.receiveLimited;
+            return true;
+        }
+    }
     // _inbound: skrót zapamiętany przed przetworzeniem (jeden przegląd listy z filtrem duplikatów).
     if (!hashlist_.add(hash)) {
         ++counters_.duplicate;
