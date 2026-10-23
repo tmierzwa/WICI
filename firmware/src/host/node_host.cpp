@@ -42,7 +42,17 @@
 #include "../p1iface.h"
 #include "../rns_node.h"
 
+#ifdef RNSCORE_COUNT_OPERATIONS
+namespace rnscore {
+uint32_t asymmetricOperations();   // identity.h rdzenia (bez dołączania nagłówków rdzenia do programu)
+}
+#endif
+
 namespace {
+
+// Najwięcej operacji asymetrycznych rdzenia w jednym obiegu rnsnode::loop() (host-core; pole loop_ops_max
+// w status, próba zalewu USB w tools/rns_osp_node.py); -1 w budowie portu.
+long loopOpsMax = -1;
 
 uint32_t nowMs() {
     using namespace std::chrono;
@@ -216,12 +226,12 @@ void printStatus() {
     printf("{\"event\":\"status\",\"online\":%s,\"paths\":%u,\"hashes\":%u,\"announce_table\":%u,\"pending\":%u,"
            "\"pool\":%u,\"pool_used\":%u,\"pool_peak\":%u,\"fs_files\":%u,\"fs_used\":%u,\"fs_capacity\":%u,"
            "\"sent\":%u,\"received\":%u,\"unproven\":%u,\"delivered\":%u,\"timed_out\":%u,\"announces\":%u,\"wait_ms\":%u,"
-           "\"bitrate\":%u,\"frames_out\":%u,\"frames_in\":%u,\"datagrams_out\":%u,\"datagrams_in\":%u,%s,%s}\n",
+           "\"bitrate\":%u,\"frames_out\":%u,\"frames_in\":%u,\"datagrams_out\":%u,\"datagrams_in\":%u,\"loop_ops_max\":%ld,%s,%s}\n",
            s.online ? "true" : "false", (unsigned)s.paths, (unsigned)s.packetHashes, (unsigned)s.announceTable,
            (unsigned)s.receiptsPending, (unsigned)s.poolSize, (unsigned)s.poolUsed, (unsigned)s.poolPeak,
            (unsigned)s.fsFiles, (unsigned)s.fsUsedBytes, (unsigned)s.fsCapacityBytes, s.packetsSent, s.packetsReceived,
            s.packetsUnproven, s.delivered, s.timedOut, s.announcesSeen, s.queueWaitMs, s.bitrate, radio.framesOut, radio.framesIn,
-           radio.datagramsOut, radio.datagramsIn, iface, usb);
+           radio.datagramsOut, radio.datagramsIn, loopOpsMax, iface, usb);
     fflush(stdout);
 }
 
@@ -396,7 +406,14 @@ int main(int argc, char** argv) {
             }
         }
         radio.poll();
+#ifdef RNSCORE_COUNT_OPERATIONS
+        const uint32_t before = rnscore::asymmetricOperations();
         rnsnode::loop(nowMs());
+        const long ops = static_cast<long>(rnscore::asymmetricOperations() - before);
+        if (ops > loopOpsMax) loopOpsMax = ops;
+#else
+        rnsnode::loop(nowMs());
+#endif
         if (nowMs() - lastSave > 1000) { fram.save(); lastSave = nowMs(); }
     }
     rnsnode::persist();

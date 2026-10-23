@@ -102,8 +102,8 @@
  ],
  "outputs": {
   "wici-station.mjs": {
-   "sha256": "308ca3d9b8eafb401365a0573586c3e34b77e60d89e4c64ae047b4aff71c4a6b",
-   "bytes": 1130174,
+   "sha256": "b17dffc93760050092cff19ab10f1c64ac759192f87815bc7085063c39841280",
+   "bytes": 1130198,
    "sources": [
     "firmware/src/annunciator.cpp",
     "firmware/src/config.cpp",
@@ -192,7 +192,7 @@
   "firmware/src/framfs.cpp": "780fd0a68002444a2270cd8af5984a2e4df172d12f51c51d739954315ea9387e",
   "firmware/src/framfs.h": "5b793a4c88829f5d42d7370ec67d29190e21673321cc73b356178c22dccc5c03",
   "firmware/src/hexstr.h": "1ff5c828bd6ce3bb9212d3a3c8733fc9ce9c758fea386aa9f65ee2ede5458210",
-  "firmware/src/host/node_host.cpp": "a299f37e7d1de39314bcda01f9731a17433609a3d9b4e038a8c8255c2afd0547",
+  "firmware/src/host/node_host.cpp": "d151157c804f27a62695f60fe99343d488c7c40edfbfafdd193228c04223ac34",
   "firmware/src/journal.cpp": "dfdf951e96632c3e24ad70f967d6a8519803e26a095e82c24e616966d57ccfb8",
   "firmware/src/journal.h": "9045e308be9c654712c269eff8bb8a69e374f7473baf509918803493482b97fa",
   "firmware/src/jsonlite.cpp": "7eebacaa516a78222201ce423010620955c9a82cad887d9a41bf81be07a62e5f",
@@ -220,9 +220,10 @@
   "firmware/src/radio_link.h": "8a4ad96520c61df86ea658e5a7dd775539802bd135715c11cf1cadab322a500d",
   "firmware/src/rns_announce.h": "245906d3eece4e3c6ec44504dd38d7de6263800b179205ce9c3d1f8d61d8d369",
   "firmware/src/rns_framfs.h": "152c08778997aa9f2a2454b4b3ec960bcd50c53707ebb0b84970f2530ab1d9e8",
-  "firmware/src/rns_node.cpp": "83dff6097d90946e4c3a1db60e83a9ca50e20755de1794b60dd34df1c59e0872",
+  "firmware/src/rns_node.cpp": "5dc7ce2540f939124935bc92c8d06ed6c9b56e54046a6acd7d6993b52326b25b",
   "firmware/src/rns_node.h": "128d990802697f63376c2b023b325b6f9724a672d56a03f2979c98c72de1cdcd",
-  "firmware/src/rns_node_core.cpp": "bed0443f3c6044907f7c5daa25569304c0a99bfa965831e8d983340a9788837f",
+  "firmware/src/rns_node_core.cpp": "b4a76903163703d25a1512e571dffaf23739e13708f2ebce9ef5e453f559f4f5",
+  "firmware/src/rns_usb.h": "c8cfc28f5aeed1500d4615cf0b40c2cf98c3becd0f75b20052b18447e6acfa80",
   "firmware/src/s2lp.cpp": "7b32a9d1bbaae1cbfcd5d23f0d1f9ce0ca9baf5765c664d1ad6a6e379a7c2f42",
   "firmware/src/s2lp.h": "42e0883667177e932bd621bfbe1de3d19da17fe34e35b95bce9bb2ac1de70dd5",
   "firmware/src/s2lp_link.cpp": "c8584346920aef3876d4c463bf3bb18d798963950dbc6928ee7818bba465ed7f",

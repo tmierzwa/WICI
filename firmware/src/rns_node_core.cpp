@@ -40,9 +40,17 @@
 // - przekazywanie (etap R2): pakiety HEADER_2 ze stacją jako następnym skokiem według tablicy tras,
 //   dowody według tablicy odwrotnej (32 wpisy), retransmisja przyjętych ogłoszeń; klasę w kolejce P1
 //   (K1, K2, ogłoszenia) ustala p1iface z nagłówka, jak dla portu.
-// Jeszcze nie ma: LXMF (R3), interfejsu USB węzła (R4).
+// - interfejs USB węzła stanowiska (etap R4b, radio.md, „Interfejs Reticulum przez USB”): interfejs 1
+//   transportu, tylko w konfiguracji węzła (setNode), ramki KISS z kontrolą przepływu (kiss::Port, bufor
+//   około 5 KB przydzielany w begin(), bez sterty później), bez IFAC. Pakiet od komputera wchodzi do
+//   transportu krokiem odbioru na zmianę z P1 (jeden krok na obieg loop()), gdy kolejka P1 ma miejsce.
+//   Weryfikacja podpisów ogłoszeń z USB ma osobne wiadro żetonów (seria USB_PINNED). Do USB_PINNED celów
+//   z trasą przez USB (cele komputera) jest chronionych w pełnej tablicy i w klasie K1 kolejki P1; po
+//   restarcie wracają z indeksu tablicy (trasy przez interfejs 1, rnscore::Transport::routes).
 #include <stdio.h>
 #include <string.h>
+
+#include <new>
 
 #ifdef ARDUINO
 #include <Arduino.h>
@@ -63,6 +71,7 @@
 #include "p1iface.h"
 #include "packet.h"
 #include "rns_node.h"
+#include "rns_usb.h"
 #include "transport.h"
 
 namespace rnsnode {
@@ -163,18 +172,32 @@ struct TokenBucket {
     }
 };
 
-// Limit weryfikacji podpisów ogłoszeń: żeton co sekundę, najwyżej 3 naraz. Ogłoszenie bez żetonu odpada
-// przed kryptografią. Python ogranicza napływ ogłoszeń inaczej (RNS/Interfaces/Interface.py:
-// should_ingress_limit i hold_announce: tylko nieznane cele, po weryfikacji podpisu, ogłoszenia wstrzymane
-// i wypuszczane później); tabela różnic w firmware/reticulum-core.md.
-TokenBucket verifyBucket = {1000, 3, 0, 0};   // do pomiaru na płytce
-uint32_t announcesLimited = 0;
+// Limit weryfikacji podpisów ogłoszeń: wiadro żetonów na interfejs, żeton co sekundę,
+// najwyżej burst naraz. Ogłoszenie bez żetonu odpada przed kryptografią (bez skrótu na liście, więc
+// powtórka przejdzie). Python ogranicza napływ ogłoszeń inaczej (RNS/Interfaces/Interface.py:
+// should_ingress_limit i hold_announce: tylko nieznane cele, po weryfikacji podpisu, ogłoszenia
+// wstrzymane i wypuszczane później); tabela różnic w firmware/reticulum-core.md. USB ma osobne wiadro
+// z serią USB_PINNED (ogłoszenia komputera przy starcie): zalew z dołączonego laptopa nie zajmuje
+// weryfikacją wszystkich kroków USB, a ogłoszenia z P1 nie czekają na żetony USB.
+TokenBucket verifyBuckets[rnscore::INTERFACES_MAX] = {
+    {1000, 3, 0, 0},            // P1, do pomiaru na płytce
+    {1000, USB_PINNED, 0, 0},   // USB, do pomiaru na płytce
+};
+uint32_t announcesLimited[rnscore::INTERFACES_MAX] = {};   // ogłoszenia odrzucone bez żetonu, P1 i USB
 
 // Limit pracy nad pakietami do celu stacji: żeton co sekundę, najwyżej 4 naraz; jeden żeton na pakiet
 // (odszyfrowanie z ECDH, weryfikacja podpisu LXMF w packetHook, podpis dowodu i IFAC dowodu). Pakiet bez
 // żetonu odpada przed odszyfrowaniem i bez dowodu, jak utracony; Python odszyfrowuje każdy (tabela różnic).
 // Osobno od wiadra ogłoszeń: zalew ogłoszeń nie zabiera żetonów pakietom do stacji.
 TokenBucket receiveBucket = {1000, 4, 0, 0};   // do pomiaru na płytce
+
+// Węzeł stanowiska: interfejs USB (interfejs 1 transportu). Bufor KISS tylko w tej konfiguracji (stacja
+// w schronieniu nie płaci za niego pamięcią), przydzielany raz w begin().
+constexpr uint8_t IFACE_P1 = 0, IFACE_USB = 1;
+kiss::Port* usbPort = nullptr;
+usb::Destinations usbDests;   // cele komputera (trasa przez USB)
+bool fromUsb = false;         // transport przetwarza pakiet z USB (pakiety na P1 w klasie K1)
+bool usbNext = false;         // przeplot kroków odbioru: następny krok najpierw z USB
 
 void rxDrop() {
     rxHead = (rxHead + 1) % RX_SLOTS;
@@ -293,9 +316,11 @@ bool transmit(const uint8_t* raw, size_t length, p1iface::Hint hint) {
     return admit == p1iface::Admit::QUEUED || admit == p1iface::Admit::HELD;
 }
 
-// Wywołania z transportu rdzenia; jedyny interfejs to P1 (0), interfejs USB węzła dochodzi w R4.
+// Wywołania z transportu rdzenia: P1 (0) i USB węzła stanowiska (1, ramka KISS bez IFAC; zamknięty port
+// albo pełny bufor: pakiet przepada i jest liczony, jak interfejs offline w Pythonie).
 bool transmitHook(const uint8_t* raw, size_t length, uint8_t iface, void*) {
-    return iface == 0 && transmit(raw, length, ownRequest ? p1iface::Hint::OWN : p1iface::Hint::NONE);
+    if (iface == IFACE_USB) return usbPort && usbPort->send(raw, length);
+    return iface == IFACE_P1 && transmit(raw, length, usb::hint(ownRequest, nodeMode, fromUsb, usbDests, raw, length));
 }
 
 bool randomHook(uint8_t* out, size_t length, void*) { return generator.generate(out, length); }
@@ -377,16 +402,18 @@ void receiptHook(uint32_t handle, bool delivered, void*) {
 // Interfejs przyjmie teraz pakiet stosu (jak transmit() przed podpisem IFAC, bez wyjątku ciszy).
 // Przed podpisem odpowiedzi na zapytanie o cel stacji i przed retransmisją ogłoszenia (oba są
 // ogłoszeniami): kod IFAC, bez ciszy, miejsce w kolejce i miejsce dla ogłoszenia najmniejszego rozmiaru
-// (limit ogłoszeń 2%, pula, lista oczekujących). Pełne sprawdzenie zostaje w transmit(). Jedyny
-// interfejs to P1 (0); interfejs USB węzła dochodzi w R4b.
+// (limit ogłoszeń 2%, pula, lista oczekujących). Pełne sprawdzenie zostaje w transmit(). USB zawsze
+// tak (kontrakt mayTransmit w transport.h: zamknięty port porzuca pakiet w transmit).
 bool mayTransmitHook(uint8_t iface, void*) {
-    return iface == 0 && ifacOnline && silence == Silence::OFF && !queue.full() &&
+    if (iface == IFACE_USB) return usbPort != nullptr;
+    return iface == IFACE_P1 && ifacOnline && silence == Silence::OFF && !queue.full() &&
            queue.announceRoom(rnscore::HEADER_1_SIZE + rnscore::ANNOUNCE_MIN_SIZE, nowMs());
 }
 
-bool mayVerifyHook(uint8_t, void*) {
-    if (verifyBucket.take(uptimeMs())) return true;
-    ++announcesLimited;
+bool mayVerifyHook(uint8_t iface, void*) {
+    if (iface >= rnscore::INTERFACES_MAX) return false;
+    if (verifyBuckets[iface].take(uptimeMs())) return true;
+    ++announcesLimited[iface];
     return false;
 }
 
@@ -394,13 +421,8 @@ bool mayVerifyHook(uint8_t, void*) {
 // pakietu odpada bez żetonu.
 bool mayReceiveHook(void*) { return receiveBucket.take(uptimeMs()); }
 
-bool pinnedHook(const uint8_t destination[HASH], void*) {
-    static const uint8_t zero[HASH] = {};
-    for (const auto& dest : pinned) {
-        if (memcmp(dest, zero, HASH) != 0 && memcmp(dest, destination, HASH) == 0) return true;
-    }
-    return false;
-}
+// Chronione w pełnej tablicy: odbiorca z karty i cele komputera stanowiska.
+bool pinnedHook(const uint8_t destination[HASH], void*) { return cardReceiver(destination) || usbDests.known(destination); }
 
 // Tożsamości odbiorcy z kluczy karty w tablicy znanych celów (jak po ogłoszeniu, bez trasy). Klucz,
 // z którego nie wychodzi cel z karty, jest pomijany: szyfrowanie do niego nie dotarłoby do odbiorcy.
@@ -474,8 +496,14 @@ bool begin(journal::Storage& storage, Radio& r, const uint8_t ifacKey[16], uint6
     generator.seed(seed, 32, reinterpret_cast<const uint8_t*>(runtimeNonce), sizeof(runtimeNonce) - 1);
     clockMs = clockAtStartMs;
     clockLastMs = nowMs();
-    verifyBucket.reset(clockMs);
+    for (auto& bucket : verifyBuckets) bucket.reset(clockMs);
     receiveBucket.reset(clockMs);
+    // Węzeł stanowiska: bufor KISS raz, przy pierwszym starcie (bez sterty później); bez pamięci węzeł
+    // działa bez USB.
+    if (nodeMode && !usbPort) {
+        usbPort = new (std::nothrow) kiss::Port();
+        if (!usbPort) log("rns: no memory for the USB interface");
+    }
     radio = &r;
     configureIfac(ifacKey);
     queue.setReceiver(pinned[receiverActive]);
@@ -491,11 +519,17 @@ bool begin(journal::Storage& storage, Radio& r, const uint8_t ifacKey[16], uint6
     th.mayTransmit = mayTransmitHook;
     framTable.fram = &storage;
     transport.begin(privateKey, publicKeyBytes, identityBytes, nodeMode ? nullptr : addressBytes, nameHashBytes, th, framTable,
-                    clockMs);
+                    clockMs, usbPort ? 2 : 1);
+    // Cele komputera z tras przez USB zapisanych przed restartem (najnowsze ostatnie, więc zostają najdłużej).
+    if (usbPort) {
+        uint8_t routes[USB_PINNED][HASH];
+        for (size_t n = transport.routes(IFACE_USB, routes, USB_PINNED); n > 0; --n) usbDests.remember(routes[n - 1]);
+    }
     transport.setBitrate(p1iface::declaredBitrate());   // Interface.bitrate interfejsu P1 (odkrycie trasy)
     started = true;
     rememberReceivers();
-    log("rns: Reticulum core (R3): P1 interface, announces, LXMF SA1 messages, proofs, table in FRAM");
+    log(usbPort ? "rns: Reticulum core (R4): P1 and USB interfaces, announces, proofs, table in FRAM"
+                : "rns: Reticulum core (R3): P1 interface, announces, LXMF SA1 messages, proofs, table in FRAM");
     return true;
 }
 
@@ -538,18 +572,29 @@ void setSilence(Silence mode) {
 
 void dropQueue() { queue.drop(); }
 
-void usbOpen(bool) {}
-void usbFeed(const uint8_t*, size_t, uint32_t) {}
+void usbOpen(bool open) {
+    if (usbPort) usbPort->setOpen(open);
+}
+void usbFeed(const uint8_t* data, size_t length, uint32_t now) {
+    if (usbPort) usbPort->feed(data, length, now);
+}
 const uint8_t* usbOutput(size_t& length) {
     length = 0;
-    return nullptr;
+    return usbPort ? usbPort->output(length) : nullptr;
 }
-void usbConsume(size_t) {}
-UsbStatus usbStatus() { return UsbStatus(); }
-bool usbPinned(const uint8_t[HASH]) { return false; }
+void usbConsume(size_t length) {
+    if (usbPort) usbPort->consume(length);
+}
+UsbStatus usbStatus() { return usb::status(usbPort, usbDests); }
+bool usbPinned(const uint8_t dest[HASH]) { return usbDests.known(dest); }
+// Pola jak w porcie i ogłoszenia z USB odrzucone przez limit weryfikacji.
 size_t usbJson(char* out, size_t size) {
-    const int n = snprintf(out, size, "\"node\":%s,\"usb_iface\":false", nodeMode ? "true" : "false");
-    return n > 0 ? static_cast<size_t>(n) : 0;
+    size_t n = usb::json(usbStatus(), nodeMode, out, size);
+    if (n < size) {
+        const int m = snprintf(out + n, size - n, ",\"usb_ann_limited\":%lu", (unsigned long)announcesLimited[IFACE_USB]);
+        if (m > 0) n += static_cast<size_t>(m);
+    }
+    return n < size ? n : size - 1;
 }
 
 namespace {
@@ -578,17 +623,47 @@ bool receiveStep() {
         ifacStep(slot);
         return true;
     }
-    if (!transport.inbound(slot.bytes, slot.length, uptimeMs())) ++malformed;
+    if (!transport.inbound(slot.bytes, slot.length, uptimeMs(), IFACE_P1)) ++malformed;
     exceptionOut = false;
     rxDrop();
     return true;
+}
+
+// Krok USB: najstarszy pakiet od komputera w transporcie, gdy kolejka P1 ma miejsce (inaczej czeka
+// w buforze KISS, a komputer na gotowość; jak w porcie). Ogłoszenie, które dało trasę przez USB, to cel
+// komputera. Prawda: krok był.
+bool usbStep() {
+    if (!usbPort || queue.full()) return false;
+    const uint8_t* data;
+    size_t length;
+    if (!usbPort->peek(data, length)) return false;
+    fromUsb = true;
+    if (!transport.inbound(data, length, uptimeMs(), IFACE_USB)) ++malformed;
+    fromUsb = false;
+    if (p1iface::classify(data, length) == p1iface::Kind::ANNOUNCE) {
+        const uint8_t* dest = p1iface::destination(data, length);
+        if (dest && transport.pathInterface(dest) == IFACE_USB) usbDests.remember(dest);
+    }
+    usbPort->pop();
+    return true;
+}
+
+// Jeden krok odbioru na obieg, na zmianę P1 i USB, gdy oba mają pracę: zalew z jednego interfejsu nie
+// wstrzymuje drugiego.
+bool receiveOrUsbStep() {
+    const bool usbFirst = usbNext;
+    if (usbFirst ? usbStep() : receiveStep()) {
+        usbNext = !usbFirst;
+        return true;
+    }
+    return usbFirst ? receiveStep() : usbStep();
 }
 
 }  // namespace
 
 void loop(uint32_t) {
     if (!started || !radio) return;
-    const bool received = receiveStep();
+    const bool received = receiveOrUsbStep();
     // Potwierdzenia po limicie (licznik pracy nie gubi zawinięcia zegara ms); retransmisja z podpisem IFAC
     // tylko w obiegu bez kroku odbioru (najwyżej jedna operacja asymetryczna na obieg; licznik operacji
     // jest tylko w budowach prób).
@@ -801,7 +876,7 @@ size_t interfaceJson(char* out, size_t size) {
                            (unsigned long)c.offline, (unsigned long)c.silenced, (unsigned long)c.k2Slot, (unsigned long)c.k2Pool,
                            (unsigned long)c.k2Dest, (unsigned long)c.pathRequestLimited, (unsigned long)c.pathResponseLimited, poolMs, prMs, (unsigned long)malformed,
                            (unsigned long)t.duplicate, (unsigned long)t.ignored, (unsigned long)t.invalid,
-                           (unsigned long)rxDropped, (unsigned long)announcesLimited, (unsigned long)transport.tableCorrupt(),
+                           (unsigned long)rxDropped, (unsigned long)announcesLimited[IFACE_P1], (unsigned long)transport.tableCorrupt(),
                            (unsigned long)t.pathRequests, (unsigned long)t.pathAnswered, (unsigned long)t.pathResponses,
                            (unsigned long)t.requestsSent, (unsigned long)t.announceTableFull, (unsigned long)t.forwarded,
                            (unsigned long)t.noPath, (unsigned long)t.proofsForwarded, (unsigned long)t.reverseFull,
@@ -826,6 +901,8 @@ void halt() {
     clean(lxmfOut, sizeof(lxmfOut));   // treść ostatnich wiadomości
     clean(envelope, sizeof(envelope));
     transport.clear();
+    usbDests.clear();
+    if (usbPort) usbPort->setOpen(false);   // bufor zostaje (bez zwalniania pamięci), port nic nie wysyła
     framTable.fram = nullptr;   // bez zapisów w FRAM do restartu
     clean(privateKey, sizeof(privateKey));
     clean(&ifac, sizeof(ifac));
