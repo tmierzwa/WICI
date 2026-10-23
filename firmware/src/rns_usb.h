@@ -15,7 +15,9 @@ namespace rnsnode {
 namespace usb {
 
 // Cele komputera stanowiska (USB_PINNED): chronione w pełnych tablicach i w klasie K1 kolejki P1. Nowy cel
-// przy pełnej liście zastępuje najstarszy.
+// przy pełnej liście zastępuje najstarszy. Kiedy cel trafia na listę, ustala stos: port dopisuje cel każdego
+// ogłoszenia z USB (przed weryfikacją podpisu), a rdzeń tylko cel ogłoszenia, które dało trasę przez USB
+// o 1 skoku (cel samego komputera), i liczy go jako cel komputera tylko, dopóki trasa idzie przez USB.
 struct Destinations {
     uint8_t dest[USB_PINNED][HASH] = {};
     size_t count = 0;
@@ -39,10 +41,11 @@ struct Destinations {
 
 // Klasa pakietu stosu w kolejce P1 (radio.md, „Dostęp do kanału”): zapytanie o trasę stacji to ruch
 // własny (K0); w węźle stanowiska pakiet od komputera (stos przetwarza pakiet z USB) albo do celu
-// komputera to K1.
-inline p1iface::Hint hint(bool ownRequest, bool node, bool fromUsb, const Destinations& d, const uint8_t* raw, size_t length) {
+// komputera (computer(cel): reguła stosu) to K1.
+template <typename Computer>
+p1iface::Hint hint(bool ownRequest, bool node, bool fromUsb, const uint8_t* raw, size_t length, Computer computer) {
     if (ownRequest) return p1iface::Hint::OWN;
-    if (node && (fromUsb || d.known(p1iface::destination(raw, length)))) return p1iface::Hint::RECEIVER;
+    if (node && (fromUsb || computer(p1iface::destination(raw, length)))) return p1iface::Hint::RECEIVER;
     return p1iface::Hint::NONE;
 }
 

@@ -171,8 +171,11 @@ public:
     int pathInterface(const uint8_t destination[TRUNCATED_HASH_SIZE]) const {
         return table_.pathInterface(table_.find(destination));
     }
-    // Do max celów z trasą przez interfejs iface, najpierw ostatnio używane (Table::routes).
-    size_t routes(uint8_t iface, uint8_t (*out)[TRUNCATED_HASH_SIZE], size_t max) const { return table_.routes(iface, out, max); }
+    // Do max celów z trasą przez interfejs iface (hops ≠ 0: o tej liczbie skoków), najpierw ostatnio używane
+    // (Table::routes).
+    size_t routes(uint8_t iface, uint8_t hops, uint8_t (*out)[TRUNCATED_HASH_SIZE], size_t max) const {
+        return table_.routes(iface, hops, out, max);
+    }
     uint32_t tableCorrupt() const { return table_.corrupt(); }   // gniazda tablicy z błędną treścią od startu
     uint32_t tableWrites() const { return table_.writes(); }
     size_t receiptsPending() const;

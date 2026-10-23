@@ -59,6 +59,14 @@ uint32_t nowMs() {
     return static_cast<uint32_t>(duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count());
 }
 
+// Czas pracy przy starcie stosu: zegar monotoniczny systemu (od uruchomienia komputera), więc rośnie także między
+// restartami programu, jak licznik pracy z dziennika FRAM na stacji (oprogramowanie.md, „Czas”). Od 0 przy każdym
+// starcie trasy zapisane przed restartem miałyby czas użycia z przyszłości.
+uint64_t clockAtStartMs() {
+    using namespace std::chrono;
+    return static_cast<uint64_t>(duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count());
+}
+
 // FRAM 512 KiB w pliku (nowy plik: same 0xFF jak nowy układ). Tablica statyczna, nie z puli stosu:
 // operator new programu idzie do puli TLSF microReticulum, której zajętość jest mierzona.
 constexpr size_t FRAM_BYTES = 512 * 1024;
@@ -220,7 +228,7 @@ void onLog(const char* text, void*) {
 
 void printStatus() {
     const rnsnode::Status s = rnsnode::status();
-    char iface[rnsnode::INTERFACE_JSON_SIZE], usb[400];
+    char iface[rnsnode::INTERFACE_JSON_SIZE], usb[rnsnode::USB_JSON_SIZE];
     rnsnode::interfaceJson(iface, sizeof(iface));
     rnsnode::usbJson(usb, sizeof(usb));
     printf("{\"event\":\"status\",\"online\":%s,\"paths\":%u,\"hashes\":%u,\"announce_table\":%u,\"pending\":%u,"
@@ -308,7 +316,7 @@ int main(int argc, char** argv) {
         std::random_device device;
         for (uint8_t& b : seed) b = static_cast<uint8_t>(device());
     }
-    if (!rnsnode::begin(fram, radio, ifac, 0, false, seed, hooks)) { printf("{\"event\":\"error\",\"what\":\"begin\"}\n"); return 1; }
+    if (!rnsnode::begin(fram, radio, ifac, clockAtStartMs(), false, seed, hooks)) { printf("{\"event\":\"error\",\"what\":\"begin\"}\n"); return 1; }
     if (nodeMode) rnsnode::usbOpen(true);
     if (tableMax) rnsnode::debugTableMax(tableMax);
     fram.save();
@@ -365,7 +373,7 @@ int main(int argc, char** argv) {
                     rnsnode::halt();
                     printf("{\"event\":\"halted\"}\n");
                 } else if (cmd == "begin") {
-                    const bool ok = rnsnode::begin(fram, radio, ifac, 0, false, seed, hooks);
+                    const bool ok = rnsnode::begin(fram, radio, ifac, clockAtStartMs(), false, seed, hooks);
                     printf("{\"event\":\"begin\",\"ok\":%s,\"address\":\"%s\"}\n", ok ? "true" : "false",
                            hex(rnsnode::address(), 16).c_str());
                 }

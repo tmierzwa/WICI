@@ -307,7 +307,13 @@ int Table::pathInterface(int slot) const {
     return (second_[slot / 8] & (1u << (slot % 8))) ? 1 : 0;
 }
 
-size_t Table::routes(uint8_t iface, uint8_t (*out)[TRUNCATED_HASH_SIZE], size_t max) const {
+bool Table::routeMatches(size_t slot, uint8_t iface, uint8_t hops) const {
+    if (pathInterface(static_cast<int>(slot)) != iface) return false;
+    uint8_t stored = 0;
+    return !hops || (storage_ && storage_->read(offsetOf(slot) + AT_HOPS, &stored, 1) && stored == hops);
+}
+
+size_t Table::routes(uint8_t iface, uint8_t hops, uint8_t (*out)[TRUNCATED_HASH_SIZE], size_t max) const {
     size_t n = 0;
     uint32_t below = UINT32_MAX;   // kolejne wybory: najnowsza trasa starsza od poprzedniej (równe czasy: wszystkie naraz)
     while (n < max) {
@@ -315,14 +321,14 @@ size_t Table::routes(uint8_t iface, uint8_t (*out)[TRUNCATED_HASH_SIZE], size_t 
         bool any = false;
         for (size_t slot = 0; slot < TABLE_SLOTS; ++slot) {
             const uint32_t used = index_[slot].pathUsedS;
-            if (pathInterface(static_cast<int>(slot)) == iface && used < below && (!any || used > newest)) {
+            if (used < below && (!any || used > newest) && routeMatches(slot, iface, hops)) {
                 newest = used;
                 any = true;
             }
         }
         if (!any) break;
         for (size_t slot = 0; slot < TABLE_SLOTS && n < max; ++slot) {
-            if (pathInterface(static_cast<int>(slot)) == iface && index_[slot].pathUsedS == newest) {
+            if (index_[slot].pathUsedS == newest && routeMatches(slot, iface, hops)) {
                 memcpy(out[n++], index_[slot].destination, TRUNCATED_HASH_SIZE);
             }
         }

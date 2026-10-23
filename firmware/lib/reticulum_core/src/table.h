@@ -103,9 +103,10 @@ public:
     bool hasPath(int slot) const;
     // Interfejs trasy z indeksu (bez odczytu gniazda); bez trasy: -1.
     int pathInterface(int slot) const;
-    // Do max celów z trasą przez interfejs iface, najpierw ostatnio używane trasy (sam indeks). Węzeł
-    // stanowiska odtwarza z tego po starcie cele komputera (interfejs USB).
-    size_t routes(uint8_t iface, uint8_t (*out)[TRUNCATED_HASH_SIZE], size_t max) const;
+    // Do max celów z trasą przez interfejs iface, najpierw ostatnio używane trasy (indeks); hops ≠ 0: tylko
+    // trasy o tej liczbie skoków (bajt gniazda w FRAM, bez CRC). Węzeł stanowiska odtwarza z tego po starcie
+    // cele komputera (interfejs USB, 1 skok).
+    size_t routes(uint8_t iface, uint8_t hops, uint8_t (*out)[TRUNCATED_HASH_SIZE], size_t max) const;
     size_t size() const { return count_; }
     size_t paths() const;
     uint32_t writes() const { return writes_; }    // zapisy gniazd od startu (diagnostyka)
@@ -125,6 +126,7 @@ private:
     bool load(size_t slot);   // gniazdo do bufora: znacznik, numer, cel, CRC; przy błędnej treści drop
     bool invalidate(size_t slot);   // przy błędzie gniazdo czeka w stale_ na ponowienie
     int victim(int keep, bool (*pinned)(const uint8_t*, void*), void* context) const;
+    bool routeMatches(size_t slot, uint8_t iface, uint8_t hops) const;   // routes()
     uint32_t sequenceOf(size_t slot);
 
     TableStorage* storage_ = nullptr;

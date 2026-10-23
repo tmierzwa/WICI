@@ -567,16 +567,20 @@ def hkdf_vectors():
     return out
 
 
+def ifac_interface(passphrase: str):
+    """Interfejs z kodem dostępu IFAC 16 B dla passphrase (RNS/Reticulum.py, bez networkname: ifac_origin,
+    ifac_key, ifac_identity) do RNS.Transport.handle_outgoing_ifac i handle_ifac (także rns_osp_node.py)."""
+    origin_hash = RNS.Identity.full_hash(RNS.Identity.full_hash(passphrase.encode("utf-8")))
+    key = RNS.Cryptography.hkdf(length=64, derive_from=origin_hash, salt=RNS.Reticulum.IFAC_SALT, context=None)
+    return types.SimpleNamespace(ifac_size=16, ifac_key=key, ifac_identity=RNS.Identity.from_bytes(key),
+                                 ifac_violation=lambda reason: None)
+
+
 def ifac_vectors():
     """Kod dostępu interfejsu (IFAC) dla passphrase sieci WICI (32 cyfry szesnastkowe klucza, ifac_size =
     128 b): klucz jak RNS/Reticulum.py przy konfiguracji interfejsu, kod i maska z Transport.handle_outgoing_ifac,
     sprawdzenie z Transport.handle_ifac, także dla datagramów zmienionych i z kodem innej sieci."""
-    def interface(passphrase: str):
-        # RNS/Reticulum.py (interfejs z passphrase, bez networkname): ifac_origin, ifac_key, ifac_identity.
-        origin_hash = RNS.Identity.full_hash(RNS.Identity.full_hash(passphrase.encode("utf-8")))
-        key = RNS.Cryptography.hkdf(length=64, derive_from=origin_hash, salt=RNS.Reticulum.IFAC_SALT, context=None)
-        return types.SimpleNamespace(ifac_size=16, ifac_key=key, ifac_identity=RNS.Identity.from_bytes(key),
-                                     ifac_violation=lambda reason: None)
+    interface = ifac_interface
 
     passphrase = "5749434954335f696661635f74657374"
     iface, other = interface(passphrase), interface("00" * 16)

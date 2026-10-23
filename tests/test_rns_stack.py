@@ -158,8 +158,11 @@ class OspNodeCoreTests(OspNodeInteropTests):
         cls.results = results(subprocess.run(command, capture_output=True, text=True, timeout=1800))
 
     def test_core_checks_present(self):
-        for name in ("station_card_receiver", "computer_destination_pinned_after_restart", "flood_report_delivered",
-                     "flood_one_operation_per_loop", "flood_p1_steps_run", "flood_usb_announces_limited"):
+        for name in ("station_card_receiver", "computer_packets_k1", "flood_report_delivered", "flood_one_operation_per_loop",
+                     "flood_p1_steps_run", "flood_usb_announces_limited", "flood_bad_announces_not_pinned",
+                     "cheap_flood_rebroadcast_reaches_computer", "cheap_flood_one_operation_per_loop", "usb_ifac_flag_dropped",
+                     "route_on_p1_unpins_computer_destination", "ninth_destination_evicts_oldest",
+                     "computer_destinations_after_restart"):
             self.assertIn(name, self.results["checks"])
 
 

@@ -17,11 +17,15 @@ without the 5 s time-out of the Python interface and without drops at the node.
 
 With --lxmf (both programs on the station Reticulum core, "host-core", stage R4b) the station destination
 is "lxmf.delivery", the computer is the card receiver of the station, and the packets carry SA1 as LXMF
-messages (tools/sa1_lxmf.py), as from a plain LXMF client on the computer. One more check: the computer
-destination stays protected after a restart of the node (rebuilt from the routes through USB in FRAM),
-and a flood from the computer side (announces with a bad signature and KISS garbage, written past the
-Python interface) during a report from the station: at most one asymmetric operation in a node loop pass,
-P1 receive steps still run (interleaved with USB) and the report is delivered with its receipt.
+messages (tools/sa1_lxmf.py), as from a plain LXMF client on the computer. More checks on the core:
+packets from the computer go on P1 in class K1; a flood from the computer side (announces with a bad
+signature and KISS garbage, written past the Python interface) during a report from the station: at most
+one asymmetric operation in a node loop pass, P1 receive steps still run (interleaved with USB), no new
+computer destination, and the report is delivered with its receipt; a flood of cheap packets (unknown
+destinations) that keeps the KISS buffer full does not stop the rebroadcast of a station announce to the
+computer; a packet with the IFAC flag from USB is dropped; a route of the computer destination moved to
+P1 removes its protection; a ninth computer destination evicts the oldest, also after a restart of the
+node (rebuilt from the routes through USB with 1 hop in FRAM).
 
 Run with a Python that has Reticulum at the pinned commit (e40191b) and pyserial, for example:
   .venv-rns/bin/python firmware/tools/rns_node.py --program firmware/.pio/build/host/program
@@ -43,6 +47,19 @@ ASPECT = "sa1"
 NETWORK_KEY = "5749434954335f696661635f74657374"  # 16 B test key, not a field key
 BURST = 6
 FLOOD_INTERVAL_S = 0.02   # zalew z USB: ramka co 20 ms (ok. 50/s, ponad limit weryfikacji i bufor KISS)
+USB_PINNED = 8            # cele komputera chronione w węźle (rns_node.h)
+
+
+def kiss_frame(data, command=0x00):
+    from RNS.Interfaces.KISSInterface import KISS
+    return bytes([KISS.FEND, command]) + KISS.escape(data) + bytes([KISS.FEND])
+
+
+def announce_raw(destination):
+    """Bajty nowego ogłoszenia celu (Destination.announce bez wysłania)."""
+    packet = destination.announce(send=False)
+    packet.pack()
+    return packet.raw
 
 
 def log(text):
@@ -105,9 +122,7 @@ def flood(node, station, kiss, results, checks, outgoing, received):
     import RNS
     from RNS.Interfaces.KISSInterface import KISS
 
-    def frame(data, command=0x00):
-        return bytes([KISS.FEND, command]) + KISS.escape(data) + bytes([KISS.FEND])
-
+    frame = kiss_frame
     name_hash = RNS.Identity.full_hash(b"lxmf.delivery")[:10]
     garbage = [frame(os.urandom(600)), bytes([KISS.FEND, 0x07]) + os.urandom(20) + bytes([KISS.FEND]),
                bytes([KISS.FEND, 0x00, KISS.FESC, 0x41, KISS.FEND]), bytes([KISS.FEND, 0x00]) + os.urandom(40)]
@@ -146,14 +161,101 @@ def flood(node, station, kiss, results, checks, outgoing, received):
     after = node.status()
     delta = lambda key: after.get(key, 0) - before.get(key, 0)
     results["flood"] = {"seconds": round(time.time() - t0, 2), "announces": sent["announces"], "garbage": sent["garbage"],
-                        "usb_rns_in": delta("usb_rns_in"), "usb_rx_drop": delta("usb_rx_drop"), "usb_rx_large": delta("usb_rx_large"),
-                        "usb_ann_limited": delta("usb_ann_limited"), "rx_invalid": delta("rx_invalid"), "p1_rx_ok": delta("rx_ok"),
+                        "usb_rns_in": delta("usb_rns_in"), "usb_rx_drop": delta("usb_rx_drop"),
+                        "usb_ann_limited": delta("usb_ann_limited"), "usb_rx_invalid": delta("usb_rx_invalid"),
+                        "usb_rx_large": delta("usb_rx_large"), "usb_pinned": delta("usb_pinned"), "p1_rx_ok": delta("rx_ok"),
                         "loop_ops_max": after.get("loop_ops_max")}
     checks["flood_report_delivered"] = bool(got and receipt and receipt["delivered"])
     checks["flood_one_operation_per_loop"] = after.get("loop_ops_max") == 1
     # Kroki P1 w węźle w trakcie zalewu (zgłoszenie i dowód przez P1) i limit weryfikacji ogłoszeń z USB.
     checks["flood_p1_steps_run"] = delta("rx_ok") >= 2
-    checks["flood_usb_announces_limited"] = delta("usb_ann_limited") > 0 and delta("rx_invalid") > 0
+    checks["flood_usb_announces_limited"] = delta("usb_ann_limited") > 0 and delta("usb_rx_invalid") > 0
+    # Ogłoszenia ze złym podpisem nie dopisują celów komputera.
+    checks["flood_bad_announces_not_pinned"] = delta("usb_pinned") == 0
+
+
+def cheap_flood(node, station, kiss, results, checks, station_announces):
+    """Zalew tanimi pakietami z USB bez wolnych obiegów węzła (pakiety do nieznanych celów, bez kryptografii,
+    bufor KISS pełny przez cały czas): retransmisja ogłoszenia stacji do komputera nadal wychodzi, bo krok USB
+    bez pracy asymetrycznej nie wstrzymuje poll()."""
+    stop = threading.Event()
+    sent = {"frames": 0}
+
+    def run():
+        while not stop.is_set():
+            chunk = b"".join(kiss_frame(bytes([0x00, 0x00]) + os.urandom(16) + b"\x00" + os.urandom(24)) for _ in range(64))
+            kiss.serial.write(chunk)
+            sent["frames"] += 64
+
+    before = node.status()
+    count = station_announces()
+    thread = threading.Thread(target=run, daemon=True)
+    thread.start()
+    time.sleep(3)
+    t0 = time.time()
+    station.command("announce 57494349")
+    end = time.time() + 90
+    while station_announces() == count and time.time() < end:
+        time.sleep(0.1)
+    arrived = station_announces() > count
+    stop.set()
+    thread.join()
+    after = node.status()
+    results["cheap_flood"] = {"frames": sent["frames"], "seconds": round(time.time() - t0, 2),
+                              "usb_rns_in": after.get("usb_rns_in", 0) - before.get("usb_rns_in", 0),
+                              "usb_rx_drop": after.get("usb_rx_drop", 0) - before.get("usb_rx_drop", 0),
+                              "loop_ops_max": after.get("loop_ops_max")}
+    checks["cheap_flood_rebroadcast_reaches_computer"] = arrived
+    checks["cheap_flood_one_operation_per_loop"] = after.get("loop_ops_max") == 1
+
+
+def computer_destinations(node, kiss, destination, node_port, results, checks, wait_for):
+    """Cele komputera w węźle na rdzeniu: pakiet z flagą IFAC z USB odpada; trasa celu przeniesiona na P1 zdejmuje
+    ochronę (i wraca z nowym ogłoszeniem przez USB); dziewiąty cel komputera wypiera najstarszy."""
+    import socket
+    import RNS
+    import rns_vectors
+
+    def pinned(dest):
+        node.command(f"pinned {dest.hex()}")
+        return (node.wait("pinned", 5) or {}).get("pinned") is True
+
+    # Flaga IFAC na USB (interfejs bez IFAC): ważne ogłoszenie nowego celu z ustawionym bitem 7 odpada, jak w Pythonie.
+    other = RNS.Destination(RNS.Identity(), RNS.Destination.IN, RNS.Destination.SINGLE, "lxmf", "delivery")
+    raw = announce_raw(other)
+    before = node.status()
+    kiss.serial.write(kiss_frame(bytes([raw[0] | 0x80]) + raw[1:]))
+    dropped = wait_for(lambda: node.status().get("usb_rx_ifac", 0) == before.get("usb_rx_ifac", 0) + 1, 10)
+    checks["usb_ifac_flag_dropped"] = dropped and not pinned(other.hash) and node.status().get("usb_rx_invalid") == before.get("usb_rx_invalid")
+
+    # Trasa celu komputera przez P1: to samo ogłoszenie (nowsze, tyle samo skoków) z kodem IFAC sieci wprost do węzła.
+    wire = RNS.Transport.handle_outgoing_ifac(rns_vectors.ifac_interface(NETWORK_KEY), announce_raw(destination))
+    before = node.status()
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        sock.sendto(wire, ("127.0.0.1", node_port))
+    unpinned = wait_for(lambda: not pinned(destination.hash), 30)
+    middle = node.status()
+    # Znowu przez USB; trasa o tej samej liczbie skoków zmienia się tylko z ogłoszeniem o późniejszym czasie emisji
+    # (sekundy, should_add), więc nie w tej samej sekundzie co ogłoszenie przez P1.
+    time.sleep(1.1)
+    destination.announce()
+    repinned = wait_for(lambda: pinned(destination.hash), 30)
+    keys = ("rx_ok", "ifac_invalid", "rx_invalid", "ann_limited", "rx_duplicate", "rx_ignored", "usb_rx_invalid", "usb_ann_limited")
+    results["route_switch"] = {"unpinned": unpinned, "repinned": repinned,
+                               **{k: middle.get(k, 0) - before.get(k, 0) for k in keys}}
+    checks["route_on_p1_unpins_computer_destination"] = unpinned and repinned
+
+    # Osiem nowych celów komputera (po ok. 1 s, w limicie weryfikacji USB): najstarszy (cel komputera) wyparty.
+    # Czas użycia trasy ma rozdzielczość 1 s: pierwszy nowy cel nie w tej samej sekundzie co cel komputera.
+    time.sleep(1.2)
+    extra = [RNS.Destination(RNS.Identity(), RNS.Destination.IN, RNS.Destination.SINGLE, "lxmf", "delivery")
+             for _ in range(USB_PINNED)]
+    for d in extra:
+        d.announce()
+        time.sleep(1.2)
+    newest = wait_for(lambda: all(pinned(d.hash) for d in extra), 30)
+    checks["ninth_destination_evicts_oldest"] = newest and not pinned(destination.hash) and node.status().get("usb_pinned") == USB_PINNED
+    return extra
 
 
 def main():
@@ -323,9 +425,13 @@ def main():
             after = node.status()
             results["burst"] = {"sent": BURST, "received": len(got), "usb_rns_in": after.get("usb_rns_in", 0) - before.get("usb_rns_in", 0),
                                 "usb_ready": after.get("usb_ready", 0) - before.get("usb_ready", 0),
-                                "usb_rx_drop": after.get("usb_rx_drop"), "seconds": round(time.time() - t0, 2)}
+                                "usb_rx_drop": after.get("usb_rx_drop"), "usb_k1": after.get("usb_k1", 0) - before.get("usb_k1", 0),
+                                "seconds": round(time.time() - t0, 2)}
             checks["burst_without_flow_timeout"] = flowed and results["burst_queue_empty_s"] < 4
             checks["burst_delivered_without_drops"] = len(got) == BURST and after.get("usb_rx_drop") == 0
+            if args.lxmf:
+                # Pakiety od komputera na P1 w klasie K1 (rdzeń liczy je w usb_k1).
+                checks["computer_packets_k1"] = results["burst"]["usb_k1"] >= BURST
         else:
             for name in ("computer_to_station_packet", "computer_receipt_delivered", "burst_without_flow_timeout",
                          "burst_delivered_without_drops"):
@@ -333,13 +439,22 @@ def main():
         if args.lxmf:
             flood(node, station, kiss, results, checks, lambda content: (outgoing(content), computer_sa1),
                   lambda content: wait_for(lambda: any(carried(p, content) for p in seen["packets"]), 120))
+            cheap_flood(node, station, kiss, results, checks, lambda: sum(1 for a in seen["announces"] if a[1] == station_address))
+            extra = computer_destinations(node, kiss, destination, node_port, results, checks, wait_for)
         results["node_status"] = node.status()
         if args.lxmf:
-            # Cel komputera chroniony także po restarcie węzła: z tras przez USB w tablicy w FRAM.
+            # Cele komputera także po restarcie węzła: 8 najnowszych tras przez USB o 1 skoku z tablicy w FRAM.
             node.stop()
             node = Program(args.program, node_fram, node_port, station_port, args.debt, node=True)
-            node.command(f"pinned {destination.hash.hex()}")
-            checks["computer_destination_pinned_after_restart"] = (node.wait("pinned", 5) or {}).get("pinned") is True
+            time.sleep(2)   # po przeglądzie tras (raz na sekundę): trasy z FRAM nie wygasają po restarcie
+
+            def pinned_after(dest):
+                node.command(f"pinned {dest.hex()}")
+                return (node.wait("pinned", 5) or {}).get("pinned") is True
+            after_restart = [pinned_after(d.hash) for d in extra] + [pinned_after(destination.hash)]
+            results["pinned_after_restart"] = {"extra": after_restart[:-1], "computer": after_restart[-1],
+                                               "usb_pinned": node.status().get("usb_pinned")}
+            checks["computer_destinations_after_restart"] = all(after_restart[:-1]) and not after_restart[-1]
     finally:
         # Koniec programu węzła zamyka pty: w Linuksie interfejs KISS dostaje EIO i przy panic_on_interface_error
         # Reticulum kończy proces (os._exit) przed wypisaniem wyniku. Panika obejmuje tylko samą próbę.

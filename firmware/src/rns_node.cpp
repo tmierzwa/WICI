@@ -171,7 +171,8 @@ protected:
         if (kind != p1iface::Kind::ANNOUNCE && queue_.full()) { ++c.full; return false; }
         uint8_t wire[p1iface::MAX_WIRE];
         wrap(raw, wire);
-        const p1iface::Hint hint = usb::hint(ownPathRequest, nodeMode, fromUsb, usbDests, raw.data(), raw.size());
+        const p1iface::Hint hint = usb::hint(ownPathRequest, nodeMode, fromUsb, raw.data(), raw.size(),
+                                             [](const uint8_t* d) { return usbDests.known(d); });
         const p1iface::Admit admit = queue_.offer(raw.data(), raw.size(), wire, raw.size() + p1iface::IFAC_SIZE, nowMs(), hint);
         if (admit != p1iface::Admit::QUEUED && admit != p1iface::Admit::HELD) return false;
         handle_outgoing(raw);
