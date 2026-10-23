@@ -296,6 +296,22 @@ class HostileStackTests(unittest.TestCase):
                 if after["result"] == "ok":
                     self.assertEqual(after["identity"], outcome["identity"])
 
+    def test_path_flood_answers_within_channel_budget(self):
+        # Węzeł z kluczem sieci przez godzinę co 100 ms pyta z nowym znacznikiem o znane cele i cel stacji (R5-4b):
+        # odpowiedzi (K0) mają w kolejce P1 budżet 5% czasu kanału (program prób sprawdza pierwsze 59 min),
+        # zgłoszenie do odbiorcy z karty w połowie zalewu wychodzi i zostaje potwierdzone. Na rdzeniu podpisów
+        # IFAC jest najwyżej tyle, ile nadań, miejsc na liście oczekujących i przyjętych zapytań.
+        o = self.assertClean(self.station().run("--defect", "path-flood", "--events", 0, timeout=900))["flood"]
+        self.assertEqual(o["requests"], 36000, o)
+        # Zalew wyczerpuje budżet: odpowiedzi odrzucone i czas co najmniej połowy budżetu, inaczej próba niczego
+        # nie dowodzi.
+        self.assertGreater(o["limited"], 0, o)
+        self.assertGreaterEqual(o["response_ms"] * 2, o["budget_ms"], o)
+        self.assertLessEqual(o["response_ms"], o["budget_ms"], o)
+        self.assertLessEqual(o["delivered_s"], 60, o)
+        if self.core:
+            self.assertLessEqual(o["signatures"], o["sent"] + 4 + o["accepted"], o)
+
     def test_clock_set_back(self):
         # Zegar cofnięty o rok (np. utracony dziennik czasu) i potem dalej do przodu.
         s = self.station()

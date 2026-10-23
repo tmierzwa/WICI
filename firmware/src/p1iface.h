@@ -10,7 +10,9 @@
 // - Klasy ruchu (punkt 6):
 //   K0: własne pakiety stacji (hops = 0), dowody, zapytania o trasę i odpowiedzi na nie (ogłoszenie
 //       z kontekstem PATH_RESPONSE); przekazywane zapytania o trasę: najwyżej 1 na cel na 60 s
-//       i łącznie ≤5% czasu kanału, ponad limit odrzucane i liczone; zapytania wysłane na polecenie
+//       i łącznie ≤5% czasu kanału, ponad limit odrzucane i liczone; odpowiedzi na zapytania łącznie
+//       ≤5% czasu kanału, ponad limit odrzucane i liczone (bez odkładania: pytający ponawia), bo zalew
+//       zapytań z kluczem sieci zająłby inaczej kanał przed K1; zapytania wysłane na polecenie
 //       stacji stos wskazuje (Hint::OWN), bo nagłówek ich nie odróżnia (Reticulum nadaje przekazywane
 //       zapytanie od nowa z hops = 0).
 //   K1: dane przekazywane (hops > 0) do aktywnej tożsamości odbiorcy z karty (setReceiver);
@@ -19,7 +21,7 @@
 //   K2: pozostałe dane przekazywane. K2 razem z ogłoszeniami najwyżej 60% czasu kanału; K2 ponad
 //       pulę odrzucany przed kolejką i liczony, bez ostatniego wolnego miejsca w kolejce. Jeden cel
 //       w K2 najwyżej 25% czasu kanału, ale tylko gdy w kolejce czeka pakiet K0 lub K1.
-// - Ogłoszenia (własne i przekazywane, poza odpowiedziami na zapytania o trasę): limit 2% czasu
+// - Ogłoszenia (własne i przekazywane, poza odpowiedziami na zapytania o trasę, które mają budżet K0): limit 2% czasu
 //   zegarowego liczony z czasu nadawania (oprogramowanie.md, "Tryby kryzysowe", "Ogłoszenia
 //   adresu"), czas kanału we wspólnej puli z K2. Ogłoszenie ponad limit albo ponad pulę czeka na
 //   liście 4 ogłoszeń (nowsze ogłoszenie tego samego celu zastępuje starsze; przy pełnej liście
@@ -52,6 +54,7 @@ constexpr uint32_t POOL_PERCENT = 60;        // K2 i ogłoszenia razem
 constexpr uint32_t DEST_PERCENT = 25;        // jeden cel w K2 przy rywalizacji z K0 i K1
 constexpr uint32_t PATH_REQUEST_PERCENT = 5; // przekazywane zapytania o trasę
 constexpr uint32_t PATH_REQUEST_GAP_MS = 60000;   // przekazywane zapytanie o ten sam cel
+constexpr uint32_t PATH_RESPONSE_PERCENT = 5; // odpowiedzi na zapytania o trasę (do pomiaru na płytce)
 constexpr uint32_t ANNOUNCE_CAP_PERCENT = 2; // ogłoszenia: czas TX wobec czasu zegarowego
 constexpr size_t DEST_TRACK = 4;             // cele K2 z własnym oknem (najmniej używany wypada)
 constexpr size_t PATH_REQUEST_TRACK = 8;     // cele ostatnich przekazywanych zapytań o trasę
@@ -89,7 +92,8 @@ enum class Hint : uint8_t {
 enum class Lane : uint8_t { CONTROL, K0, K1, K2, ANNOUNCE };
 const char* laneName(Lane lane);
 
-enum class Admit : uint8_t { QUEUED, HELD, FULL, ANNOUNCE_LIMIT, TOO_LARGE, K2_SLOT, K2_POOL, K2_DEST, PATH_REQUEST_LIMIT };
+enum class Admit : uint8_t { QUEUED, HELD, FULL, ANNOUNCE_LIMIT, TOO_LARGE, K2_SLOT, K2_POOL, K2_DEST, PATH_REQUEST_LIMIT,
+                            PATH_RESPONSE_LIMIT };
 const char* admitName(Admit admit);
 
 struct Counters {
@@ -109,6 +113,7 @@ struct Counters {
     uint32_t k2Pool = 0;          // K2 odrzucony: pula 60% (K2 i ogłoszenia) wyczerpana
     uint32_t k2Dest = 0;          // K2 odrzucony: 25% na cel przy czekającym K0 lub K1
     uint32_t pathRequestLimited = 0;   // przekazywane zapytania o trasę ponad 1/cel/60 s albo 5%
+    uint32_t pathResponseLimited = 0;  // odpowiedzi na zapytania o trasę ponad 5%
     uint32_t silenced = 0;        // pakiety wstrzymane ciszą radiową (odmowa stosowi albo usunięte z kolejki)
 };
 
@@ -216,6 +221,7 @@ private:
     bool receiverSet_ = false;
     Window pool_;                 // K2 i ogłoszenia
     Window pathRequests_;         // przekazywane zapytania o trasę
+    Window pathResponses_;        // odpowiedzi na zapytania o trasę
     DestWindow dests_[DEST_TRACK];
     PathRequest recentRequests_[PATH_REQUEST_TRACK];
     Counters counters_;

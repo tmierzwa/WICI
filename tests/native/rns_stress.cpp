@@ -11,7 +11,7 @@
 // Wynik: wiersz JSON na stdout; kod 3 = złamany niezmiennik, 75 = zanik zasilania w zapisie.
 //
 // rns_stress <fram> [--seed N] [--events N] [--mutate PERCENT] [--start S] [--gap S]
-//            [--long-jumps] [--cut-after-writes N] [--defect token48|short-announce|held-announce|link-mtu|flood|station-flood|damaged-receiver|forward-flood|rebroadcast-load|own-path-requests]
+//            [--long-jumps] [--cut-after-writes N] [--defect token48|short-announce|held-announce|link-mtu|flood|station-flood|damaged-receiver|forward-flood|rebroadcast-load|own-path-requests|path-flood]
 //            [--hostile-days N [--window-s S] [--stop-after-s S]] [--receiver-foreign-key]
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -505,21 +505,7 @@ void checkClock() {
 // dowód (wynik w polu "flood", także gdy ruch ginie w pełnej kolejce). Pakiet do stacji z dowodem
 // kosztuje w jednym obiegu do trzech operacji (odszyfrowanie, podpis dowodu, IFAC dowodu), a wiadomość
 // SA1 znanego nadawcy cztery (z weryfikacją podpisu LXMF; reticulum-core.md, tabela różnic).
-#ifdef WICI_RNS_CORE
 std::string floodResult;
-std::vector<uint8_t> replayWire;   // nagrane poprawne ogłoszenie węzła 1 z IFAC
-
-// Operacje asymetryczne stacji w obiegach loop() (bez IFAC, który generator nakłada na datagramy kodem rdzenia).
-uint32_t stationOperations = 0;
-
-void serviceCounted(uint32_t limit = 1) {
-    radio.poll();
-    const uint32_t before = rnscore::asymmetricOperations();
-    rnsnode::loop(static_cast<uint32_t>(simMs));
-    const uint32_t ops = rnscore::asymmetricOperations() - before;
-    if (ops > limit) fail("too many asymmetric operations in one loop pass");
-    stationOperations += ops;
-}
 
 void receive(const RNS::Bytes& raw) {
     const std::vector<uint8_t> wire = ifacWrap(raw);
@@ -559,6 +545,21 @@ RNS::Bytes receiverProof() {
         return proof;
     }
     return RNS::Bytes();
+}
+
+#ifdef WICI_RNS_CORE
+std::vector<uint8_t> replayWire;   // nagrane poprawne ogłoszenie węzła 1 z IFAC
+
+// Operacje asymetryczne stacji w obiegach loop() (bez IFAC, który generator nakłada na datagramy kodem rdzenia).
+uint32_t stationOperations = 0;
+
+void serviceCounted(uint32_t limit = 1) {
+    radio.poll();
+    const uint32_t before = rnscore::asymmetricOperations();
+    rnsnode::loop(static_cast<uint32_t>(simMs));
+    const uint32_t ops = rnscore::asymmetricOperations() - before;
+    if (ops > limit) fail("too many asymmetric operations in one loop pass");
+    stationOperations += ops;
 }
 
 void hostileDatagram(bool replayOnly) {
@@ -768,8 +769,6 @@ void stationFlood() {
     floodResult = text;
 }
 
-const char* floodJson() { return floodResult.c_str(); }
-
 // Ruch tranzytowy szybszy niż przetwarzanie (stacja na rdzeniu): najpierw trasy o skok dalej do węzłów
 // generatora, potem dwa datagramy na obieg loop(): pakiety ze stacją jako następnym skokiem (forward,
 // każde przekazanie to podpis IFAC) albo (load) nowe ogłoszenia węzłów (każde przyjęte planuje dwie
@@ -839,6 +838,7 @@ void ownPathRequests() {
     snprintf(out, sizeof(out), "\"double_passes\":%u,\"rounds\":7000", doubles);
     floodResult = out;
 }
+
 
 // Praca przez dni z wrogim ruchem (reticulum-core.md, kryterium odbioru 5; odbior.md, wiersz „Wrogi węzeł”,
 // przebieg 2): każdego dnia okno windowS sekund, w każdej sekundzie ogłoszenie nowego celu, zapytanie
@@ -1033,7 +1033,6 @@ void receiverReadsReport() {
 #else
 void flood() { fail("flood: station core only"); }
 void stationFlood() { fail("station-flood: station core only"); }
-const char* floodJson() { return ""; }
 void damagedReceiver() { fail("damaged-receiver: station core only"); }
 void transitLoad(bool) { fail("transit load: station core only"); }
 void ownPathRequests() { fail("own path requests: station core only"); }
@@ -1041,6 +1040,103 @@ void hostileDays(long, long, long) { fail("hostile days: station core only"); }
 void receiverForeignKey() { fail("receiver-foreign-key: station core only"); }
 void receiverReadsReport() {}
 #endif
+
+// Zalew zapytaniami o trasę (port i rdzeń, R5-4b): węzeł z kluczem sieci przez godzinę co 100 ms pyta
+// z nowym znacznikiem o kolejny znany cel, co czwarte zapytanie o cel stacji. Odpowiedzi (ogłoszenia
+// z kontekstem PATH_RESPONSE, klasa K0) mają w kolejce P1 własny budżet czasu kanału (5%, p1iface.h), więc
+// zalew nie zajmie kanału przed K1. W połowie zalewu stacja wysyła zgłoszenie do odbiorcy z karty, które
+// musi wyjść i zostać potwierdzone. Na rdzeniu w każdym obiegu najwyżej jedna operacja asymetryczna, poza
+// nowym podpisem odpowiedzi o cel stacji (podpis i IFAC, najwyżej raz na 30 s; tabela różnic), a podpisów
+// IFAC stacji (operacje poza sprawdzeniem IFAC odbioru, górne oszacowanie) jest najwyżej tyle, ile nadań,
+// miejsc na liście oczekujących i przyjętych zapytań. Wynik w polu "flood": zapytania, odpowiedzi na łączu,
+// ich czas kanału w pierwszych 59 min (okno budżetu przesuwa się co minutę, więc odpowiedzi z pierwszej
+// minuty wypadają z niego przed upływem godziny) i ten budżet.
+void pathFlood() {
+    for (size_t i = 0; i < PEERS; ++i) {   // trasy: na rdzeniu weryfikacja ogłoszeń najwyżej raz na sekundę
+        receive(withHops(announceOf(i), 1));
+        for (int k = 0; k < 110; ++k) { simMs += 10; service(); }
+    }
+    if (!rnsnode::hasPath(peerDest[0].data())) fail("path-flood: receiver announce not accepted");
+    const std::string report = "[\"WICI\",1,\"" + hex(rnsnode::address(), 16) + "\",\"" + hex(peerDest[0].data(), 16) +
+                               "\",[1,\"report during the path flood\"]]";
+    const uint32_t sent0 = interfaceCounter("tx_sent"), limited0 = interfaceCounter("pr_resp_limited");
+    const uint32_t delivered0 = rnsnode::status().delivered;
+#ifdef WICI_RNS_CORE
+    const uint32_t ops0 = stationOperations, requests0 = interfaceCounter("pr_in");
+    const uint32_t checked0 = interfaceCounter("rx_ok") + interfaceCounter("ifac_invalid");
+    uint32_t doubles = 0;
+#endif
+    constexpr int TICKS = 36000, BUDGET_TICKS = 35400;   // 3600 s i 59 min po 100 ms
+    uint32_t requests = 0, responses = 0, responseMs = 0, handle = 0, seen = radio.sent;
+    int reportAt = -1, deliveredAt = -1;
+    for (int tick = 0; tick < TICKS; ++tick) {
+        RNS::Destination pr({RNS::Type::NONE}, RNS::Type::Destination::OUT, RNS::Type::Destination::PLAIN, "rnstransport",
+                            "path.request");
+        RNS::Bytes data = tick % 4 == 0 ? stationDest : peerDest[1 + (tick / 4) % (PEERS - 1)];
+        data << randomBytes(16);
+        RNS::Packet q(pr, data, RNS::Type::Packet::DATA);
+        q.pack();
+        receive(q.raw());
+        ++requests;
+        if (tick == TICKS / 2) handle = rnsnode::send(peerDest[0].data(), reinterpret_cast<const uint8_t*>(report.data()),
+                                                      report.size(), rnsnode::RECEIPT_MIN_S);
+        for (int k = 0; k < 2; ++k) {
+            simMs += 50;
+#ifdef WICI_RNS_CORE
+            const uint32_t before = stationOperations;
+            serviceCounted(2);
+            doubles += stationOperations - before == 2;
+#else
+            service();
+#endif
+        }
+        // Nowe datagramy stacji (najnowsze na końcu radio.recent); nagłówek na łączu jest zamaskowany kodem IFAC.
+        const uint32_t fresh = radio.sent - seen;
+        seen = radio.sent;
+        const size_t from = radio.recent.size() - (fresh < radio.recent.size() ? fresh : radio.recent.size());
+        for (size_t j = from; j < radio.recent.size(); ++j) {
+            const RNS::Bytes raw = ifacUnwrap(radio.recent[j]);
+            if (!raw || !p1iface::pathResponse(raw.data(), raw.size())) continue;
+            ++responses;
+            if (tick < BUDGET_TICKS) responseMs += p1iface::channelMs(radio.recent[j].size());
+        }
+        if (handle && reportAt < 0) {
+            const RNS::Bytes proof = receiverProof();
+            if (proof) {
+                reportAt = tick;
+                receive(proof);
+            }
+        }
+        if (reportAt >= 0 && deliveredAt < 0 && rnsnode::status().delivered > delivered0) deliveredAt = tick;
+    }
+    if (!handle) fail("path-flood: station could not send the report");
+    if (reportAt < 0) fail("path-flood: report not sent during the flood");
+    if (deliveredAt < 0) fail("path-flood: report not delivered during the flood");
+    const uint32_t budget = p1iface::WINDOW_MS / 100 * p1iface::PATH_RESPONSE_PERCENT;
+    if (responseMs > budget) fail("path-flood: path responses above their channel budget");
+    const uint32_t sent = interfaceCounter("tx_sent") - sent0;
+    char text[320];
+    int n = snprintf(text, sizeof(text),
+                     "\"requests\":%u,\"responses\":%u,\"response_ms\":%u,\"budget_ms\":%u,\"limited\":%u,\"sent\":%u,"
+                     "\"report_s\":%d,\"delivered_s\":%d",
+                     requests, responses, responseMs, budget, interfaceCounter("pr_resp_limited") - limited0, sent,
+                     (reportAt - TICKS / 2) / 10, (deliveredAt - TICKS / 2) / 10);
+#ifdef WICI_RNS_CORE
+    const uint32_t accepted = interfaceCounter("pr_in") - requests0;
+    const uint32_t checked = interfaceCounter("rx_ok") + interfaceCounter("ifac_invalid") - checked0;
+    const uint32_t signatures = stationOperations - ops0 - checked;
+    if (signatures > sent + p1iface::HELD_ANNOUNCES + accepted) fail("path-flood: more IFAC signatures than sends, held and requests");
+    if (doubles > TICKS / 300 + 1) fail("path-flood: new announce signature more often than once per 30 s");
+    if (n > 0 && static_cast<size_t>(n) < sizeof(text)) {
+        snprintf(text + n, sizeof(text) - n, ",\"accepted\":%u,\"signatures\":%u,\"double_passes\":%u", accepted, signatures,
+                 doubles);
+    }
+#endif
+    (void)n;
+    floodResult = text;
+}
+
+const char* floodJson() { return floodResult.c_str(); }
 
 // Awarie portu z przeglądu 2026-10-21 (poprawione łatami 0005-0007) jako próby regresji.
 void defect(const std::string& name) {
@@ -1109,6 +1205,8 @@ void defect(const std::string& name) {
         transitLoad(name == "rebroadcast-load");
     } else if (name == "own-path-requests") {
         ownPathRequests();
+    } else if (name == "path-flood") {
+        pathFlood();
     } else if (name == "damaged-receiver") {
         damagedReceiver();
     } else {

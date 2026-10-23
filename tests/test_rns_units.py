@@ -530,6 +530,21 @@ int channelScenario() {
     put(o, 0x08, 0, other, 67, t0, 0x02, Hint::OWN, 0, target);   // zapytanie o trasę
     put(o, 0x01, 1, rx, 150, t0, 0x03, Hint::NONE, 0x0B);          // odpowiedź na zapytanie
     printf("order %s| %s\n", first.c_str(), order(o).c_str());
+
+    // Odpowiedzi na zapytania o trasę (K0, własne i przekazywane): łącznie 5%, ponad budżet odrzucane bez
+    // odkładania; inne pakiety K0 i ogłoszenia budżetu nie zabierają; po 60 min przedział z t0 wypada.
+    Queue pq;
+    unsigned responses = 0;
+    while (put(pq, 0x01, responses % 2, rx, 150, t0, 0x04, Hint::NONE, 0x0B) == Admit::QUEUED) {
+        ++responses;
+        drain(pq);
+    }
+    const char* ownData = admitName(put(pq, 0x00, 0, other, 100, t0, 0x13));
+    const char* announce = admitName(put(pq, 0x01, 1, other, 150, t0, 0xA1));
+    drain(pq);
+    const char* later = admitName(put(pq, 0x01, 1, rx, 150, t0 + p1iface::WINDOW_MS, 0x05, Hint::NONE, 0x0B));
+    printf("path response share %u limited %u own %s announce %s after %s\n", responses, pq.counters().pathResponseLimited,
+           ownData, announce, later);
     return 0;
 }
 
@@ -754,6 +769,9 @@ class StackUnitTests(unittest.TestCase):
                                   f"limited 1 used {3 * pr}")
         self.assertEqual(out[12], f"path request share {180000 // pr} used {180000 // pr * pr} own queued")
         self.assertEqual(out[13], "order 01 10 20 a0 | 02 03 11 12 ")
+        # Odpowiedź 150 B + IFAC = 166 B: dwie ramki, 5 070 ms czasu kanału; w 5% (180 000 ms) mieści się 35.
+        self.assertEqual(out[14], f"path response share {180000 // (2 * 195 * 13)} limited 1 own queued announce queued "
+                                  f"after queued")
 
     def test_p1_interface_queue_priorities_and_announce_limit(self):
         out = self.run_harness("iface")

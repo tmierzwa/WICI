@@ -788,7 +788,7 @@ size_t interfaceJson(char* out, size_t size) {
                            "\"q_len\":%u,\"q_held\":%u,\"q_queued\":%lu,\"q_full\":%lu,\"too_large\":%lu,\"ann_held\":%lu,"
                            "\"ann_drop\":%lu,\"ann_expired\":%lu,\"tx_sent\":%lu,\"tx_failed\":%lu,\"rx_ok\":%lu,"
                            "\"ifac_missing\":%lu,\"ifac_invalid\":%lu,\"offline\":%lu,\"silenced\":%lu,\"k2_slot\":%lu,\"k2_pool\":%lu,"
-                           "\"k2_dest\":%lu,\"pr_limited\":%lu,\"pool_ms\":%lu,\"pr_ms\":%lu,\"rx_malformed\":%lu,\"rx_duplicate\":%lu,"
+                           "\"k2_dest\":%lu,\"pr_limited\":%lu,\"pr_resp_limited\":%lu,\"pool_ms\":%lu,\"pr_ms\":%lu,\"rx_malformed\":%lu,\"rx_duplicate\":%lu,"
                            "\"rx_ignored\":%lu,\"rx_invalid\":%lu,\"rx_queue_full\":%lu,\"ann_limited\":%lu,\"table_corrupt\":%lu,"
                            "\"pr_in\":%lu,\"pr_answered\":%lu,\"pr_responses\":%lu,\"pr_sent\":%lu,\"ann_table_full\":%lu,"
                            "\"fwd\":%lu,\"fwd_no_path\":%lu,\"proof_fwd\":%lu,\"rev_full\":%lu,\"ann_rebroadcast\":%lu,\"pr_gated\":%lu,"
@@ -799,7 +799,7 @@ size_t interfaceJson(char* out, size_t size) {
                            (unsigned long)c.announcesExpired, (unsigned long)c.sent, (unsigned long)c.sendFailed,
                            (unsigned long)c.received, (unsigned long)c.ifacMissing, (unsigned long)c.ifacInvalid,
                            (unsigned long)c.offline, (unsigned long)c.silenced, (unsigned long)c.k2Slot, (unsigned long)c.k2Pool,
-                           (unsigned long)c.k2Dest, (unsigned long)c.pathRequestLimited, poolMs, prMs, (unsigned long)malformed,
+                           (unsigned long)c.k2Dest, (unsigned long)c.pathRequestLimited, (unsigned long)c.pathResponseLimited, poolMs, prMs, (unsigned long)malformed,
                            (unsigned long)t.duplicate, (unsigned long)t.ignored, (unsigned long)t.invalid,
                            (unsigned long)rxDropped, (unsigned long)announcesLimited, (unsigned long)transport.tableCorrupt(),
                            (unsigned long)t.pathRequests, (unsigned long)t.pathAnswered, (unsigned long)t.pathResponses,
