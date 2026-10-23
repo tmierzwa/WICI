@@ -6,8 +6,10 @@
 // w dowolnym miejscu (zanik zasilania). Jeden proces to jeden start stacji; FRAM, zegar
 // i skrót tożsamości przechodzą do następnego startu w plikach obok FRAM.
 //
-// Generator ruchu buduje pakiety klasami portu microReticulum (pakiety jak z Reticulum
-// w Pythonie); stos stacji widzi je wyłącznie jako datagramy z IFAC w rnsnode::received() (toStation()).
+// Generator ruchu buduje pakiety prymitywami rdzenia (lib/reticulum_core: tożsamość, ogłoszenie, pack, token,
+// dowód; sprawdzone wektorami Reticulum w Pythonie), a klucze, skróty losowe i IV biorą się tylko z --seed
+// (rnd()). Ten sam generator działa dla stacji na porcie i na rdzeniu; stos stacji widzi ruch wyłącznie jako
+// datagramy z IFAC w rnsnode::received() (toStation()).
 // Wynik: wiersz JSON na stdout; kod 3 = złamany niezmiennik, 75 = zanik zasilania w zapisie.
 //
 // rns_stress <fram> [--seed N] [--events N] [--mutate PERCENT] [--start S] [--gap S]
@@ -44,13 +46,18 @@
 #include <string>
 #include <vector>
 
-#include <microReticulum.h>
-#include <microReticulum/Cryptography/HKDF.h>
-#include <microReticulum/Cryptography/HMAC.h>
-#include <microReticulum/Cryptography/X25519.h>
-#include <microReticulum/Utilities/OS.h>
-#include <microStore/Utility.h>
 #include <RNG.h>
+#include <SHA256.h>   // HMAC w --defect token48 (biblioteka Crypto, jak w rdzeniu)
+
+#include "announce.h"
+#include "destination.h"
+#include "hkdf.h"
+#include "identity.h"
+#include "lxmf.h"
+#include "packet.h"
+#include "proof.h"
+#include "token.h"
+#include "transport.h"
 
 #include "framfs.h"
 #include "p1iface.h"
@@ -64,22 +71,12 @@ uint64_t simClock() { return simMs; }
 
 }  // namespace
 
+// Zegar stosu stacji na porcie i microStore (rns_stress_port.cpp, tylko w budowie z portem): opis błędu albo
+// nullptr. Rdzeń bierze czas wyłącznie z rnsnode::debugClock.
 #ifdef WICI_RNS_CORE
-// Stacja na rdzeniu (tests/test_rns_hostile.py, CoreHostileStackTests): port tylko generuje ruch, a jego
-// magazyn wymaga funkcji ochrony wpisów, którą w obrazie z portem daje rns_node.cpp.
-namespace microStore {
-bool pinned_key(const uint8_t*, size_t) { return false; }
-}  // namespace microStore
-
-// Licznik operacji asymetrycznych rdzenia (identity.h) i wiadomość LXMF SA1 (lxmf.h); nagłówków rdzenia
-// program prób nie włącza, bo packet.h rdzenia i Packet.h portu kolidują w systemie plików bez
-// rozróżniania wielkości liter.
-namespace rnscore {
-uint32_t asymmetricOperations();
-size_t lxmfPackSa1(const uint8_t privateKey[64], const uint8_t publicKey[64], const uint8_t destinationHash[16],
-                   const uint8_t sourceHash[16], double timestamp, const uint8_t* content, size_t contentLength, uint8_t* out,
-                   size_t capacity, uint8_t hash[32]);
-}  // namespace rnscore
+static const char* stackClockError(uint64_t) { return nullptr; }
+#else
+const char* stackClockError(uint64_t ms);
 #endif
 
 extern "C" int gettimeofday(struct timeval* __restrict tv, void* __restrict) {
@@ -106,6 +103,7 @@ constexpr const char* DEST_ASPECT = "delivery";
 constexpr const char* DEST_APP = rnsnode::APP_NAME;
 constexpr const char* DEST_ASPECT = rnsnode::ASPECT;
 #endif
+const std::string DEST_NAME = std::string(DEST_APP) + "." + DEST_ASPECT;
 constexpr int EXIT_INVARIANT = 3;
 constexpr int EXIT_POWER_CUT = 75;
 constexpr size_t FRAM_BYTES = 512 * 1024;
@@ -117,17 +115,49 @@ uint32_t rnd() {
 }
 uint32_t rnd32() { return (rnd() << 15) ^ rnd(); }
 
-RNS::Bytes randomBytes(size_t n) {
-    RNS::Bytes b;
-    for (size_t i = 0; i < n; ++i) b.append(static_cast<uint8_t>(rnd()));
+using Bytes = std::vector<uint8_t>;
+
+Bytes randomBytes(size_t n) {
+    Bytes b(n);
+    for (uint8_t& x : b) x = static_cast<uint8_t>(rnd());
     return b;
 }
+
+Bytes& operator<<(Bytes& to, const Bytes& more) {
+    to.insert(to.end(), more.begin(), more.end());
+    return to;
+}
+
+Bytes left(const Bytes& b, size_t n) { return Bytes(b.begin(), b.begin() + static_cast<long>(n < b.size() ? n : b.size())); }
 
 std::string hex(const uint8_t* d, size_t n) {
     static const char* digits = "0123456789abcdef";
     std::string s;
     for (size_t i = 0; i < n; ++i) { s += digits[d[i] >> 4]; s += digits[d[i] & 15]; }
     return s;
+}
+
+// Tożsamość Reticulum (identity.h): klucz prywatny 64 B, publiczny i skrót tożsamości; stacja ma tu tylko
+// klucz publiczny i skrót.
+struct Identity {
+    uint8_t prv[rnscore::KEY_SIZE] = {};
+    uint8_t pub[rnscore::KEY_SIZE] = {};
+    uint8_t hash[rnscore::TRUNCATED_HASH_SIZE] = {};
+};
+
+Identity fromPrivate(const uint8_t prv[rnscore::KEY_SIZE]) {
+    Identity id;
+    memcpy(id.prv, prv, sizeof(id.prv));
+    rnscore::publicKey(id.prv, id.pub);
+    rnscore::identityHash(id.pub, id.hash);
+    return id;
+}
+
+// Nowa tożsamość z rnd() (w Pythonie Identity() z os.urandom).
+Identity newIdentity() {
+    uint8_t prv[rnscore::KEY_SIZE];
+    for (uint8_t& b : prv) b = static_cast<uint8_t>(rnd());
+    return fromPrivate(prv);
 }
 
 }  // namespace
@@ -210,7 +240,7 @@ bool FileFram::write(uint32_t address, const uint8_t* data, size_t count) {
 }
 
 // Skrót całego ruchu przebiegu (FNV-1a 64): datagramy do stacji i od stacji w kolejności. Te same --seed
-// i zegar symulowany dają ten sam skrót (test_same_seed_same_traffic; RNG z ziarna: rng_seeded.cpp).
+// i zegar symulowany dają ten sam skrót (test_same_seed_same_traffic; generator z rnd(), RNG portu z ziarna: rng_seeded.cpp).
 uint64_t trafficHash = 0xcbf29ce484222325ull;
 void hashTraffic(uint8_t direction, const uint8_t* data, size_t length) {
     trafficHash = (trafficHash ^ direction) * 0x100000001b3ull;
@@ -225,6 +255,10 @@ void toStation(const uint8_t* wire, size_t length) {
 
 // Wywołanie stosu stacji w toku (liczenie przydziałów sterty w hostileDays; radio próby się nie liczy).
 bool inStation = false;
+
+// Hak packet stacji rozstrzyga losowo trzy z czterech pakietów (rnd()); settleAll: każdy, gdy scenariusz
+// wymaga dowodu dla swojej wiadomości.
+bool settleAll = false;
 
 // ---- łącze radiowe: datagramy stacji trafiają do generatora (powtórki, dowody) ----
 struct Radio : rnsnode::Radio {
@@ -259,16 +293,16 @@ Radio radio;
 // ---- IFAC: klucz sieci stacji; kod liczy ta sama funkcja interfejsu P1 co przy nadawaniu ----
 const uint8_t IFAC_KEY[16] = {0x57, 0x49, 0x43, 0x49, 0x2d, 0x73, 0x74, 0x72, 0x65, 0x73, 0x73, 0x2d, 0x69, 0x66, 0x61, 0x63};
 
-std::vector<uint8_t> ifacWrap(const RNS::Bytes& raw) {
+std::vector<uint8_t> ifacWrap(const Bytes& raw) {
     std::vector<uint8_t> wire(p1iface::MAX_WIRE);
     wire.resize(rnsnode::debugIfacWrap(raw.data(), raw.size(), wire.data()));
     return wire;
 }
 
-RNS::Bytes ifacUnwrap(const std::vector<uint8_t>& wire) {
+Bytes ifacUnwrap(const std::vector<uint8_t>& wire) {
     uint8_t raw[p1iface::MAX_WIRE];
     const size_t n = rnsnode::debugIfacUnwrap(wire.data(), wire.size(), raw);
-    return n ? RNS::Bytes(raw, n) : RNS::Bytes();
+    return Bytes(raw, raw + n);
 }
 
 // Pakiet ponad HW_MTU: datagram z flagą IFAC i dowolnym kodem, dłuższy niż MAX_WIRE (stacja go odrzuca).
@@ -281,11 +315,11 @@ std::vector<uint8_t> oversize(const std::vector<uint8_t>& v) {
 
 // ---- węzły generatora: tożsamości wymyślonych stacji (pierwsza jest odbiorcą stacji) ----
 constexpr size_t PEERS = 24;
-std::vector<RNS::Identity> peers;
-std::vector<RNS::Bytes> peerDest;     // cele "wici.sa1" węzłów
-RNS::Identity station(RNS::Type::NONE);
-RNS::Bytes stationDest, stationTransport;
-std::vector<RNS::Bytes> recentHashes, linkIds;
+std::vector<Identity> peers;
+std::vector<Bytes> peerDest;     // cele DEST_NAME węzłów
+Identity station;                // tylko klucz publiczny i skrót tożsamości
+Bytes stationDest, stationTransport;
+std::vector<Bytes> recentHashes, linkIds;
 std::vector<std::vector<uint8_t>> recentWire;
 uint32_t mutatePercent = 0;
 uint32_t fed = 0, mutated = 0;
@@ -307,24 +341,105 @@ std::string generatedJson() {
 
 FILE* dump = nullptr;   // --dump
 
-void remember(std::vector<RNS::Bytes>& v, const RNS::Bytes& b) {
+void remember(std::vector<Bytes>& v, const Bytes& b) {
     if (v.size() < 64) v.push_back(b);
     else v[rnd() % v.size()] = b;
 }
 
-RNS::Bytes headerTwo(const RNS::Bytes& raw, const RNS::Bytes& transportId) {
-    RNS::Bytes out;
-    out.append(static_cast<uint8_t>(raw.data()[0] | 0x40 | 0x10));
-    out.append(raw.data()[1]);
-    out << transportId << raw.mid(2);
+Bytes headerTwo(const Bytes& raw, const Bytes& transportId) {
+    if (raw.size() < 2) return raw;
+    Bytes out{static_cast<uint8_t>(raw[0] | 0x40 | 0x10), raw[1]};
+    out << transportId;
+    out.insert(out.end(), raw.begin() + 2, raw.end());
     return out;
 }
 
-RNS::Bytes withHops(const RNS::Bytes& raw, uint8_t hops) {
-    if (raw.size() < 2) return raw;
-    std::vector<uint8_t> v(raw.data(), raw.data() + raw.size());
-    v[1] = hops;
-    return RNS::Bytes(v.data(), v.size());
+Bytes withHops(Bytes raw, uint8_t hops) {
+    if (raw.size() >= 2) raw[1] = hops;
+    return raw;
+}
+
+// ---- pakiety prymitywami rdzenia ----
+Bytes destinationOf(const char* name, const uint8_t* identityHash) {
+    Bytes d(rnscore::TRUNCATED_HASH_SIZE);
+    rnscore::destinationHash(name, identityHash, d.data());
+    return d;
+}
+
+// Pakiet HEADER_1 bez transportu (Packet.pack); pusty, gdy pack go nie przyjmie (puste dane, ponad MTU).
+Bytes packet(rnscore::PacketType type, rnscore::DestinationType destinationType, const Bytes& destination, const Bytes& data,
+             uint8_t context = 0) {
+    rnscore::Packet p{};
+    p.headerType = rnscore::HEADER_1;
+    p.transportType = rnscore::BROADCAST;
+    p.destinationType = destinationType;
+    p.packetType = type;
+    memcpy(p.destinationHash, destination.data(), rnscore::TRUNCATED_HASH_SIZE);
+    p.context = context;
+    p.data = data.data();
+    p.dataLength = data.size();
+    Bytes raw(rnscore::MTU);
+    raw.resize(rnscore::pack(p, raw.data(), raw.size()));
+    return raw;
+}
+
+// Pakiet DATA do celu SINGLE tożsamości to: token (Identity.encrypt bez ratchetu) z kluczem efemerycznym
+// i IV z rnd().
+Bytes dataTo(const Identity& to, const Bytes& destination, const Bytes& plaintext) {
+    uint8_t ephemeral[rnscore::KEY_SIZE / 2], iv[rnscore::TOKEN_IV_SIZE];
+    for (uint8_t& b : ephemeral) b = static_cast<uint8_t>(rnd());
+    for (uint8_t& b : iv) b = static_cast<uint8_t>(rnd());
+    Bytes token(rnscore::tokenSize(plaintext.size()));
+    if (!rnscore::encrypt(to.pub, nullptr, ephemeral, iv, plaintext.data(), plaintext.size(), token.data(), token.size())) token.clear();
+    return packet(rnscore::DATA, rnscore::SINGLE, destination, token);
+}
+
+// Ogłoszenie celu name tożsamości id (Destination.announce): skrót losowy z rnd() i czasu symulowanego;
+// pathResponse: kontekst PATH_RESPONSE.
+Bytes announce(const Identity& id, const char* name, const Bytes& appData, bool pathResponse) {
+    uint8_t nameHash[rnscore::NAME_HASH_SIZE], random[5], randomHash[rnscore::RANDOM_HASH_SIZE];
+    rnscore::nameHash(name, nameHash);
+    const Bytes destination = destinationOf(name, id.hash);
+    for (uint8_t& b : random) b = static_cast<uint8_t>(rnd());
+    rnscore::announceRandomHash(random, simMs / 1000, randomHash);
+    Bytes data(rnscore::ANNOUNCE_FORWARDABLE_SIZE);
+    data.resize(rnscore::buildAnnounce(id.prv, id.pub, destination.data(), nameHash, randomHash, nullptr, appData.data(),
+                                       appData.size(), data.data(), data.size()));
+    return packet(rnscore::ANNOUNCE, rnscore::SINGLE, destination, data, pathResponse ? rnscore::CONTEXT_PATH_RESPONSE : 0);
+}
+
+// Zapytanie o trasę (Transport.request_path): DATA do celu PLAIN "rnstransport.path.request".
+Bytes pathRequestOf(const Bytes& data) {
+    static const Bytes destination = destinationOf("rnstransport.path.request", nullptr);
+    return packet(rnscore::DATA, rnscore::PLAIN, destination, data);
+}
+
+// Pełny skrót pakietu (Packet.get_hash); pusty, gdy unpack go nie przyjmie.
+Bytes packetHash(const Bytes& raw) {
+    rnscore::Packet p;
+    if (!rnscore::unpack(raw.data(), raw.size(), p)) return {};
+    Bytes h(rnscore::HASH_SIZE);
+    rnscore::packetHash(raw.data(), raw.size(), h.data());
+    return h;
+}
+
+// Identyfikator łącza z żądania (Link.link_id_from_lr_packet): ucięty skrót pakietu bez bajtów ponad klucze
+// (sygnalizacja MTU); pusty, gdy unpack go nie przyjmie.
+Bytes linkIdOf(const Bytes& raw) {
+    rnscore::Packet p;
+    if (!rnscore::unpack(raw.data(), raw.size(), p) || p.dataLength < rnscore::KEY_SIZE) return {};
+    uint8_t h[rnscore::HASH_SIZE];
+    rnscore::packetHash(raw.data(), raw.size() - (p.dataLength - rnscore::KEY_SIZE), h);
+    return Bytes(h, h + rnscore::TRUNCATED_HASH_SIZE);
+}
+
+// Jawny dowód tożsamości id dla pakietu raw (Identity.prove, implicit False): PROOF do celu równego uciętemu
+// skrótowi pakietu.
+Bytes proofOf(const Bytes& raw, const Identity& id) {
+    uint8_t h[rnscore::HASH_SIZE], proof[rnscore::PROOF_EXPLICIT_SIZE];
+    rnscore::packetHash(raw.data(), raw.size(), h);
+    const size_t n = rnscore::prove(id.prv, id.pub, h, false, proof);
+    return packet(rnscore::PROOF, rnscore::SINGLE, Bytes(h, h + rnscore::TRUNCATED_HASH_SIZE), Bytes(proof, proof + n));
 }
 
 uint8_t randomHops() {
@@ -352,12 +467,12 @@ void mutate(std::vector<uint8_t>& v, size_t keep) {
 
 // Pakiet Reticulum (bez IFAC) do stacji: mutacja przed kodem IFAC (węzeł z kluczem sieci) albo,
 // rzadziej, po nim (węzeł bez klucza).
-void feed(const RNS::Bytes& raw, const char* kind) {
+void feed(const Bytes& raw, const char* kind) {
     std::vector<uint8_t> v(raw.data(), raw.data() + raw.size());
     const bool m = mutatePercent && rnd() % 100 < mutatePercent;
     const bool afterIfac = m && rnd() % 7 == 0;
     if (m && !afterIfac) mutate(v, 0);
-    std::vector<uint8_t> wire = v.size() > p1iface::HW_MTU ? oversize(v) : v.size() >= 2 ? ifacWrap(RNS::Bytes(v.data(), v.size())) : v;
+    std::vector<uint8_t> wire = v.size() > p1iface::HW_MTU ? oversize(v) : v.size() >= 2 ? ifacWrap(v) : v;
     if (afterIfac) mutate(wire, 1);
     if (m) ++mutated;
     ++fed;
@@ -372,23 +487,15 @@ void feed(const RNS::Bytes& raw, const char* kind) {
     toStation(wire.data(), wire.size());
 }
 
-RNS::Bytes packetHash(const RNS::Bytes& raw) {
-    RNS::Packet p(raw);
-    return p.unpack() ? p.get_hash() : RNS::Bytes();
-}
-
 void announceFromPeer() {
     const size_t i = rnd() % PEERS;
-    RNS::Destination d(peers[i], RNS::Type::Destination::IN, RNS::Type::Destination::SINGLE, DEST_APP, DEST_ASPECT);
-    RNS::Packet p = d.announce(randomBytes(rnd() % 40), rnd() % 4 == 0, {RNS::Type::NONE}, {}, false);
-    RNS::Transport::deregister_destination(d);   // cel generatora nie może być celem lokalnym stosu
-    p.pack();
-    RNS::Bytes raw = p.raw();
+    const Bytes appData = randomBytes(rnd() % 40);
+    Bytes raw = announce(peers[i], DEST_NAME.c_str(), appData, rnd() % 4 == 0);
     if (rnd() % 2) raw = headerTwo(raw, rnd() % 3 ? randomBytes(16) : stationTransport);
     feed(withHops(raw, randomHops()), "announce");
 }
 
-RNS::Bytes someDestination() {
+Bytes someDestination() {
     switch (rnd() % 4) {
         case 0: return randomBytes(16);
         case 1: return stationDest;
@@ -397,72 +504,61 @@ RNS::Bytes someDestination() {
 }
 
 void pathRequest() {
-    RNS::Destination pr({RNS::Type::NONE}, RNS::Type::Destination::OUT, RNS::Type::Destination::PLAIN, "rnstransport", "path.request");
-    RNS::Bytes data = someDestination();
+    Bytes data = someDestination();
     if (rnd() % 2) data << randomBytes(16);
     data << randomBytes(rnd() % 3 ? 16 : rnd() % 20);
-    RNS::Packet p(pr, data, RNS::Type::Packet::DATA);
-    p.pack();
-    feed(withHops(p.raw(), randomHops()), "path-request");
+    feed(withHops(pathRequestOf(data), randomHops()), "path-request");
 }
 
 void dataThroughStation() {
-    RNS::Destination out(peers[rnd() % PEERS], RNS::Type::Destination::OUT, RNS::Type::Destination::SINGLE, DEST_APP,
-                         DEST_ASPECT);
-    RNS::Packet p(out, randomBytes(1 + rnd() % 300), RNS::Type::Packet::DATA);
-    p.pack();
-    const RNS::Bytes raw = headerTwo(p.raw(), rnd() % 4 ? stationTransport : randomBytes(16));
+    const size_t i = rnd() % PEERS;
+    const Bytes raw = headerTwo(dataTo(peers[i], peerDest[i], randomBytes(1 + rnd() % 300)), rnd() % 4 ? stationTransport : randomBytes(16));
     remember(recentHashes, packetHash(raw));
     feed(withHops(raw, randomHops()), "transit");
 }
 
 void dataToStation() {
-    RNS::Destination out(station, RNS::Type::Destination::OUT, RNS::Type::Destination::SINGLE, DEST_APP, DEST_ASPECT);
-    RNS::Packet p(out, randomBytes(1 + rnd() % 300), RNS::Type::Packet::DATA);
-    p.pack();
-    RNS::Bytes raw = p.raw();
+    Bytes raw = dataTo(station, stationDest, randomBytes(1 + rnd() % 300));
     if (rnd() % 2) raw = headerTwo(raw, stationTransport);
     remember(recentHashes, packetHash(raw));
     feed(withHops(raw, randomHops()), "local");
 }
 
 void linkRequest() {
-    RNS::Identity ephemeral;
-    RNS::Bytes data = ephemeral.get_public_key();
+    const Identity ephemeral = newIdentity();
+    Bytes data(ephemeral.pub, ephemeral.pub + rnscore::KEY_SIZE);
     if (rnd() % 2) data << randomBytes(3);
     const bool local = rnd() % 3 == 0;
-    RNS::Destination out(local ? station : peers[rnd() % PEERS], RNS::Type::Destination::OUT, RNS::Type::Destination::SINGLE,
-                         DEST_APP, DEST_ASPECT);
-    RNS::Packet lr(out, data, RNS::Type::Packet::LINKREQUEST);
-    lr.pack();
-    RNS::Bytes raw = local ? lr.raw() : headerTwo(lr.raw(), stationTransport);
-    RNS::Packet q(raw);
-    if (q.unpack()) remember(linkIds, RNS::Link::link_id_from_lr_packet(q));
+    const Bytes& destination = local ? stationDest : peerDest[rnd() % PEERS];
+    const Bytes lr = packet(rnscore::LINKREQUEST, rnscore::SINGLE, destination, data);
+    const Bytes raw = local ? lr : headerTwo(lr, stationTransport);
+    const Bytes id = linkIdOf(raw);
+    if (!id.empty()) remember(linkIds, id);
     feed(withHops(raw, randomHops()), "link-request");
 }
 
 void proofOrLinkTraffic() {
-    RNS::Bytes raw;
+    Bytes raw;
     const uint32_t r = rnd() % 3;
     if (r == 0 && !linkIds.empty()) {   // LRPROOF do łącza
-        raw.append(static_cast<uint8_t>(0x0F));
-        raw.append(randomHops());
+        raw.push_back(0x0F);
+        raw.push_back(randomHops());
         raw << linkIds[rnd() % linkIds.size()];
-        raw.append(static_cast<uint8_t>(0xFF));
+        raw.push_back(0xFF);
         raw << randomBytes(rnd() % 2 ? 99 : rnd() % 140);
     } else if (r == 1 && !linkIds.empty()) {   // dane albo dowód w łączu
-        raw.append(static_cast<uint8_t>(0x0C | (rnd() % 2 ? 0x03 : 0x00)));
-        raw.append(randomHops());
+        raw.push_back(static_cast<uint8_t>(0x0C | (rnd() % 2 ? 0x03 : 0x00)));
+        raw.push_back(randomHops());
         raw << linkIds[rnd() % linkIds.size()];
-        raw.append(static_cast<uint8_t>(rnd()));
+        raw.push_back(static_cast<uint8_t>(rnd()));
         raw << randomBytes(rnd() % 200);
     } else {   // dowód pakietu (jawny albo skrócony) do niedawnego pakietu
-        const RNS::Bytes h = recentHashes.empty() ? randomBytes(32) : recentHashes[rnd() % recentHashes.size()];
+        const Bytes h = recentHashes.empty() ? randomBytes(32) : recentHashes[rnd() % recentHashes.size()];
         if (h.size() < 16) return;
-        raw.append(static_cast<uint8_t>(0x03));
-        raw.append(randomHops());
-        raw << h.left(16);
-        raw.append(static_cast<uint8_t>(0x00));
+        raw.push_back(0x03);
+        raw.push_back(randomHops());
+        raw << left(h, 16);
+        raw.push_back(0x00);
         if (rnd() % 2) raw << h;
         raw << randomBytes(64);
     }
@@ -472,19 +568,12 @@ void proofOrLinkTraffic() {
 // Ważny dowód od węzła dla pakietu, który wysłała stacja (potwierdzenie doręczenia).
 void proofForStationPacket() {
     if (radio.recent.empty()) return;
-    const RNS::Bytes raw = ifacUnwrap(radio.recent[rnd() % radio.recent.size()]);
-    RNS::Packet p(raw);
-    if (!raw || !p.unpack() || p.packet_type() != RNS::Type::Packet::DATA) return;
+    const Bytes raw = ifacUnwrap(radio.recent[rnd() % radio.recent.size()]);
+    rnscore::Packet p;
+    if (raw.empty() || !rnscore::unpack(raw.data(), raw.size(), p) || p.packetType != rnscore::DATA) return;
     for (size_t i = 0; i < PEERS; ++i) {
-        if (p.destination_hash() != peerDest[i]) continue;
-        const RNS::Bytes h = p.get_hash();
-        RNS::Bytes proof;
-        proof.append(static_cast<uint8_t>(0x03));
-        proof.append(static_cast<uint8_t>(rnd() % 3));
-        proof << h.left(16);
-        proof.append(static_cast<uint8_t>(0x00));
-        proof << h << peers[i].sign(h);
-        feed(proof, "station-proof");
+        if (memcmp(p.destinationHash, peerDest[i].data(), rnscore::TRUNCATED_HASH_SIZE) != 0) continue;
+        feed(withHops(proofOf(raw, peers[i]), static_cast<uint8_t>(rnd() % 3)), "station-proof");
         return;
     }
 }
@@ -505,11 +594,11 @@ void stationActs() {
     switch (rnd() % 3) {
         case 0: rnsnode::announce(nullptr, 0); break;
         case 1: {   // w kopercie warstwy aplikacji (station.cpp), którą rdzeń tłumaczy na LXMF
-            const RNS::Bytes& d = peerDest[rnd() % PEERS];
+            const Bytes& d = peerDest[rnd() % PEERS];
             const std::string head = "[\"WICI\",1,\"" + hex(rnsnode::address(), 16) + "\",\"" + hex(d.data(), 16) + "\",";
-            RNS::Bytes data(reinterpret_cast<const uint8_t*>(head.data()), head.size());
+            Bytes data(head.begin(), head.end());
             data << randomBytes(1 + rnd() % 200);
-            data.append(static_cast<uint8_t>(']'));
+            data.push_back(']');
             rnsnode::send(d.data(), data.data(), data.size(), rnsnode::RECEIPT_MIN_S);
             break;
         }
@@ -535,11 +624,7 @@ void service() {
 
 // Port i microStore mają widzieć zegar symulowany; inaczej próby czasu niczego nie sprawdzają.
 void checkClock() {
-    const double s = static_cast<double>(simMs / 1000);
-    const double stack = RNS::Utilities::OS::time();
-    if (stack < s - 1 || stack > s + 1) fail("stack does not follow the simulated clock");
-    if (microStore::time() != static_cast<uint32_t>(simMs / 1000)) fail("microStore does not follow the simulated clock");
-    if (microStore::millis() != static_cast<uint32_t>(simMs)) fail("microStore::millis does not follow the simulated clock");
+    if (const char* what = stackClockError(simMs)) fail(what);
 }
 
 // Zalew wrogimi datagramami (stacja na rdzeniu): bez flagi IFAC, z kodem IFAC spoza sieci, z ważnym
@@ -553,19 +638,19 @@ void checkClock() {
 // SA1 znanego nadawcy cztery (z weryfikacją podpisu LXMF; reticulum-core.md, tabela różnic).
 std::string floodResult;
 
-void receive(const RNS::Bytes& raw) {
+// Pakiet stacji (bez IFAC) typu DATA do celu destination.
+bool stationDataTo(const Bytes& raw, const Bytes& destination) {
+    rnscore::Packet p;
+    return rnscore::unpack(raw.data(), raw.size(), p) && p.packetType == rnscore::DATA &&
+           memcmp(p.destinationHash, destination.data(), rnscore::TRUNCATED_HASH_SIZE) == 0;
+}
+
+void receive(const Bytes& raw) {
     const std::vector<uint8_t> wire = ifacWrap(raw);
     if (!wire.empty()) toStation(wire.data(), wire.size());
 }
 
-RNS::Bytes announceOf(size_t peer) {
-    RNS::Destination d(peers[peer], RNS::Type::Destination::IN, RNS::Type::Destination::SINGLE, DEST_APP,
-                       DEST_ASPECT);
-    RNS::Packet a = d.announce(RNS::Bytes(), false, {RNS::Type::NONE}, {}, false);
-    RNS::Transport::deregister_destination(d);
-    a.pack();
-    return a.raw();
-}
+Bytes announceOf(size_t peer) { return announce(peers[peer], DEST_NAME.c_str(), Bytes(), false); }
 
 uint32_t interfaceCounter(const char* name) {
     char iface[rnsnode::INTERFACE_JSON_SIZE];
@@ -576,21 +661,12 @@ uint32_t interfaceCounter(const char* name) {
 }
 
 // Jawny dowód odbiorcy dla ostatniego pakietu stacji do niego; pusty, gdy stacja go jeszcze nie nadała.
-RNS::Bytes receiverProof() {
+Bytes receiverProof() {
     for (auto w = radio.recent.rbegin(); w != radio.recent.rend(); ++w) {
-        const RNS::Bytes raw = ifacUnwrap(*w);
-        RNS::Packet p(raw);
-        if (!raw || !p.unpack() || p.packet_type() != RNS::Type::Packet::DATA || p.destination_hash() != peerDest[0]) continue;
-        const RNS::Bytes h = p.get_hash();
-        RNS::Bytes proof;
-        proof.append(static_cast<uint8_t>(0x03));
-        proof.append(static_cast<uint8_t>(0x00));
-        proof << h.left(16);
-        proof.append(static_cast<uint8_t>(0x00));
-        proof << h << peers[0].sign(h);
-        return proof;
+        const Bytes raw = ifacUnwrap(*w);
+        if (stationDataTo(raw, peerDest[0])) return proofOf(raw, peers[0]);
     }
-    return RNS::Bytes();
+    return Bytes();
 }
 
 #ifdef WICI_RNS_CORE
@@ -622,28 +698,28 @@ void hostileDatagram(bool replayOnly) {
             toStation(v.data(), v.size());
             return;
         case 2: {   // ogłoszenie z błędnym podpisem (bez danych aplikacji podpis to ostatnie 64 B)
-            RNS::Bytes raw = announceOf(rnd() % 2 ? 0 : 1 + rnd() % (PEERS - 1));
+            Bytes raw = announceOf(rnd() % 2 ? 0 : 1 + rnd() % (PEERS - 1));
             std::vector<uint8_t> a(raw.data(), raw.data() + raw.size());
             a[a.size() - 1 - rnd() % 64] ^= static_cast<uint8_t>(1u << (rnd() % 8));
-            receive(RNS::Bytes(a.data(), a.size()));
+            receive(a);
             return;
         }
         case 3: {   // dowód niejawny do nieznanego pakietu
-            RNS::Bytes raw;
-            raw.append(static_cast<uint8_t>(0x03));
-            raw.append(static_cast<uint8_t>(0x00));
+            Bytes raw;
+            raw.push_back(static_cast<uint8_t>(0x03));
+            raw.push_back(static_cast<uint8_t>(0x00));
             raw << randomBytes(16);
-            raw.append(static_cast<uint8_t>(0x00));
+            raw.push_back(static_cast<uint8_t>(0x00));
             raw << randomBytes(64);
             receive(raw);
             return;
         }
         case 4: {   // pakiet do stacji z przypadkowym tokenem (ECDH, potem zły HMAC)
-            RNS::Bytes raw;
-            raw.append(static_cast<uint8_t>(0x00));
-            raw.append(static_cast<uint8_t>(0x00));
+            Bytes raw;
+            raw.push_back(static_cast<uint8_t>(0x00));
+            raw.push_back(static_cast<uint8_t>(0x00));
             raw << stationDest;
-            raw.append(static_cast<uint8_t>(0x00));
+            raw.push_back(static_cast<uint8_t>(0x00));
             raw << randomBytes(32 + 16 + 32 + 16 * (1 + rnd() % 4));
             receive(raw);
             return;
@@ -652,18 +728,18 @@ void hostileDatagram(bool replayOnly) {
             toStation(replayWire.data(), replayWire.size());
             return;
         default: {   // cel odbiorcy z karty z kluczem innego węzła (kolizja z wpisem odbiorcy)
-            RNS::Bytes raw = announceOf(1 + rnd() % (PEERS - 1));
+            Bytes raw = announceOf(1 + rnd() % (PEERS - 1));
             std::vector<uint8_t> a(raw.data(), raw.data() + raw.size());
             memcpy(a.data() + 2, peerDest[0].data(), 16);
-            receive(RNS::Bytes(a.data(), a.size()));
+            receive(a);
             return;
         }
     }
 }
 
 // Datagramy jednego obiegu: dwa wrogie i, gdy jest, jeden prawdziwy w przypadkowym miejscu między nimi.
-void floodPass(bool replayOnly, const RNS::Bytes& genuine) {
-    const uint32_t at = genuine ? rnd() % 3 : 3;
+void floodPass(bool replayOnly, const Bytes& genuine) {
+    const uint32_t at = genuine.empty() ? 3 : rnd() % 3;
     for (uint32_t k = 0; k < 3; ++k) {
         if (k == at) receive(genuine);
         if (k < 2) hostileDatagram(replayOnly);
@@ -680,7 +756,7 @@ void flood() {
     uint32_t handle = 0, announceTries = 0, proofTries = 0;
     int pathRound = -1, deliveredRound = -1;
     for (int round = 0; round < 1200; ++round) {
-        RNS::Bytes genuine;
+        Bytes genuine;
         if (round == 100) handle = rnsnode::send(peerDest[0].data(), reinterpret_cast<const uint8_t*>(message.data()), message.size(),
                                                  rnsnode::RECEIPT_MIN_S);
         if (round >= 100 && pathRound < 0 && round % 100 == 0) {   // odbiorca ogłasza się co sekundę
@@ -688,7 +764,7 @@ void flood() {
             ++announceTries;
         } else if (handle && deliveredRound < 0 && round % 50 == 25) {   // dowód odbiorcy co pół sekundy
             genuine = receiverProof();
-            if (genuine) ++proofTries;
+            if (!genuine.empty()) ++proofTries;
         }
         floodPass(false, genuine);
         if (round % 10 == 0) simMs += 100;
@@ -705,7 +781,7 @@ void flood() {
     const uint32_t limited0 = interfaceCounter("ann_limited"), accepted0 = rnsnode::status().announcesSeen;
     uint32_t replayAnnounces = 0;
     for (int round = 0; round < 400; ++round) {
-        RNS::Bytes genuine;
+        Bytes genuine;
         if (round % 100 == 0) { genuine = withHops(announceOf(0), 1); ++replayAnnounces; }
         floodPass(true, genuine);
         simMs += 10;
@@ -721,31 +797,24 @@ void flood() {
     for (int i = 0; i < 4; ++i) serviceCounted();
     if (!rnsnode::hasPath(peerDest[0].data())) fail("receiver announce lost after the flood");
     const uint32_t before = rnsnode::status().packetsReceived;
-    RNS::Destination out(station, RNS::Type::Destination::OUT, RNS::Type::Destination::SINGLE, DEST_APP, DEST_ASPECT);
-    RNS::Packet p(out, RNS::Bytes("report after the flood"), RNS::Type::Packet::DATA);
-    p.pack();
-    receive(p.raw());
+    const std::string report = "report after the flood";
+    receive(dataTo(station, stationDest, Bytes(report.begin(), report.end())));
     for (int i = 0; i < 4; ++i) serviceCounted(3);
     if (rnsnode::status().packetsReceived != before + 1) fail("packet to the station lost after the flood");
     // Wiadomość SA1 odbiorcy z karty: w jednym obiegu ECDH, weryfikacja podpisu LXMF, podpis dowodu i IFAC dowodu.
     const char sa1[] = "[1,\"after the flood\"]";
     uint8_t lxmf[400], messageHash[32];
-    const size_t n = rnscore::lxmfPackSa1(peers[0].get_private_key().data(), peers[0].get_public_key().data(), stationDest.data(),
-                                          peerDest[0].data(), 0, reinterpret_cast<const uint8_t*>(sa1), sizeof(sa1) - 1, lxmf,
-                                          sizeof(lxmf), messageHash);
-    RNS::Packet m(out, RNS::Bytes(lxmf, n), RNS::Type::Packet::DATA);
-    m.pack();
+    const size_t n = rnscore::lxmfPackSa1(peers[0].prv, peers[0].pub, stationDest.data(), peerDest[0].data(), 0,
+                                          reinterpret_cast<const uint8_t*>(sa1), sizeof(sa1) - 1, lxmf, sizeof(lxmf), messageHash);
     const uint32_t rejected = interfaceCounter("lxmf_rejected");
-    receive(m.raw());
+    receive(dataTo(station, stationDest, Bytes(lxmf, lxmf + n)));
     for (int i = 0; i < 4; ++i) serviceCounted(4);
     if (rnsnode::status().packetsReceived != before + 2) fail("SA1 message from the receiver lost after the flood");
     if (interfaceCounter("lxmf_rejected") != rejected) fail("SA1 message from the receiver rejected");
     // Ten sam kształt od odbiorcy ze złym podpisem: też najwyżej cztery operacje, odrzucenie z powodem.
     lxmf[16] ^= 0x01;
-    RNS::Packet forged(out, RNS::Bytes(lxmf, n), RNS::Type::Packet::DATA);
-    forged.pack();
     const uint32_t badSignature = interfaceCounter("lxmf_rej_signature");
-    receive(forged.raw());
+    receive(dataTo(station, stationDest, Bytes(lxmf, lxmf + n)));
     for (int i = 0; i < 4; ++i) serviceCounted(4);
     if (interfaceCounter("lxmf_rej_signature") != badSignature + 1) fail("forged SA1 message from the receiver not rejected");
 
@@ -768,15 +837,12 @@ void stationFlood() {
     receive(withHops(announceOf(0), 1));
     for (int k = 0; k < 110; ++k) { simMs += 10; serviceCounted(); }
     if (!rnsnode::hasPath(peerDest[0].data())) fail("station-flood: receiver announce not accepted");
-    RNS::Destination out(station, RNS::Type::Destination::OUT, RNS::Type::Destination::SINGLE, DEST_APP, DEST_ASPECT);
     const uint32_t received0 = rnsnode::status().packetsReceived, limited0 = interfaceCounter("rx_limited");
     const uint32_t ops0 = stationOperations;
     uint32_t datagrams = 0;
     for (int pass = 0; pass < 3000; ++pass) {   // 60 s po 20 ms
         for (int k = 0; k < 2; ++k) {
-            RNS::Packet p(out, randomBytes(1 + rnd() % 300), RNS::Type::Packet::DATA);
-            p.pack();
-            receive(p.raw());
+            receive(dataTo(station, stationDest, randomBytes(1 + rnd() % 300)));
             ++datagrams;
         }
         simMs += 20;
@@ -791,20 +857,20 @@ void stationFlood() {
     // kopia po uzupełnieniu wiadra (inną drogą, od przekaźnika) przechodzi z dowodem.
     const char sa1[] = "[1,\"after the station flood\"]";
     uint8_t lxmf[400], messageHash[32];
-    const size_t n = rnscore::lxmfPackSa1(peers[0].get_private_key().data(), peers[0].get_public_key().data(), stationDest.data(),
-                                          peerDest[0].data(), 0, reinterpret_cast<const uint8_t*>(sa1), sizeof(sa1) - 1, lxmf,
-                                          sizeof(lxmf), messageHash);
-    RNS::Packet m(out, RNS::Bytes(lxmf, n), RNS::Type::Packet::DATA);
-    m.pack();
+    const size_t n = rnscore::lxmfPackSa1(peers[0].prv, peers[0].pub, stationDest.data(), peerDest[0].data(), 0,
+                                          reinterpret_cast<const uint8_t*>(sa1), sizeof(sa1) - 1, lxmf, sizeof(lxmf), messageHash);
+    const Bytes m = dataTo(station, stationDest, Bytes(lxmf, lxmf + n));
     const uint32_t before = rnsnode::status().packetsReceived, rejected = interfaceCounter("lxmf_rejected");
     const uint32_t limitedBefore = interfaceCounter("rx_limited");
-    receive(m.raw());
+    receive(m);
     for (int k = 0; k < 4; ++k) { simMs += 20; serviceCounted(4); }
     if (interfaceCounter("rx_limited") != limitedBefore + 1) fail("station-flood: SA1 copy with an empty bucket not limited");
     for (int k = 0; k < 5; ++k) { simMs += 1000; serviceCounted(); }
     const uint32_t sent = radio.sent;
-    receive(m.raw());
+    settleAll = true;
+    receive(m);
     for (int k = 0; k < 4; ++k) { simMs += 20; serviceCounted(4); }
+    settleAll = false;
     if (rnsnode::status().packetsReceived != before + 1) fail("station-flood: SA1 message from the receiver lost");
     if (interfaceCounter("lxmf_rejected") != rejected) fail("station-flood: SA1 message from the receiver rejected");
     if (radio.sent == sent) fail("station-flood: no proof for the SA1 message");
@@ -830,20 +896,13 @@ void transitLoad(bool announces) {
         for (int k = 0; k < 2; ++k) {
             const size_t i = 1 + rnd() % (PEERS - 1);
             if (!announces) {
-                RNS::Destination out(peers[i], RNS::Type::Destination::OUT, RNS::Type::Destination::SINGLE, DEST_APP, DEST_ASPECT);
-                RNS::Packet p(out, randomBytes(1 + rnd() % 200), RNS::Type::Packet::DATA);
-                p.pack();
-                receive(withHops(headerTwo(p.raw(), stationTransport), 0));
+                receive(withHops(headerTwo(dataTo(peers[i], peerDest[i], randomBytes(1 + rnd() % 200)), stationTransport), 0));
             } else if (rnd() % 2) {
                 receive(withHops(announceOf(i), 1 + rnd() % 3));
             } else {
-                RNS::Destination pr({RNS::Type::NONE}, RNS::Type::Destination::OUT, RNS::Type::Destination::PLAIN, "rnstransport",
-                                    "path.request");
-                RNS::Bytes data = peerDest[i];
+                Bytes data = peerDest[i];
                 data << randomBytes(16);
-                RNS::Packet q(pr, data, RNS::Type::Packet::DATA);
-                q.pack();
-                receive(q.raw());
+                receive(pathRequestOf(data));
             }
         }
         simMs += 10;
@@ -863,13 +922,9 @@ void ownPathRequests() {
     uint32_t doubles = 0;
     for (int round = 0; round < 7000; ++round) {
         for (int k = 0; k < 2; ++k) {
-            RNS::Destination pr({RNS::Type::NONE}, RNS::Type::Destination::OUT, RNS::Type::Destination::PLAIN, "rnstransport",
-                                "path.request");
-            RNS::Bytes data = stationDest;
+            Bytes data = stationDest;
             data << randomBytes(16);
-            RNS::Packet q(pr, data, RNS::Type::Packet::DATA);
-            q.pack();
-            receive(q.raw());
+            receive(pathRequestOf(data));
         }
         simMs += 10;
         radio.poll();
@@ -892,7 +947,7 @@ void ownPathRequests() {
 // jednego celu (ogłaszającego się na początku okna); potem skok zegara do następnego dnia. Na początku
 // okna odbiorca z karty ogłasza się, a stacja wysyła mu zgłoszenie, które musi zostać potwierdzone
 // w tym samym oknie. Wpis odbiorcy sprawdzany co dzień. Po starcie stacja nie przydziela pamięci: przydziały sterty w wywołaniach
-// rnsnode liczy hak sanitizera (generator ruchu korzysta ze sterty portu, więc liczony jest tylko stos
+// rnsnode liczy hak sanitizera (generator ruchu korzysta ze sterty przez std::vector, więc liczony jest tylko stos
 // stacji). stopAfterS: koniec procesu w ostatnim dniu po tylu sekundach okna (restart w trakcie ruchu).
 uint32_t stationAllocations = 0;
 #ifdef WICI_ALLOCATION_HOOK
@@ -909,7 +964,7 @@ void inStationCall(F f) {
 
 // Datagram i obiegi pętli przez 200 ms (kolejka odbioru ma 4 miejsca: ruch z jednej sekundy nie trafia
 // do niej naraz).
-void hostileReceive(const RNS::Bytes& raw) {
+void hostileReceive(const Bytes& raw) {
     const std::vector<uint8_t> wire = ifacWrap(raw);
     if (!wire.empty()) inStationCall([&] { toStation(wire.data(), wire.size()); });
     for (int k = 0; k < 10; ++k) {
@@ -919,12 +974,12 @@ void hostileReceive(const RNS::Bytes& raw) {
     }
 }
 
-RNS::Bytes dataVia(const RNS::Bytes& destination) {
-    RNS::Bytes raw;
-    raw.append(static_cast<uint8_t>(0x00));
-    raw.append(static_cast<uint8_t>(0x00));
+Bytes dataVia(const Bytes& destination) {
+    Bytes raw;
+    raw.push_back(static_cast<uint8_t>(0x00));
+    raw.push_back(static_cast<uint8_t>(0x00));
     raw << destination;
-    raw.append(static_cast<uint8_t>(0x00));
+    raw.push_back(static_cast<uint8_t>(0x00));
     raw << randomBytes(16 + rnd() % 160);
     return headerTwo(raw, stationTransport);
 }
@@ -960,29 +1015,18 @@ void hostileDays(long days, long windowS, long stopAfterS) {
         bool stopped = false;
         for (long second = 0; second < windowS; ++second) {
             if (last && stopAfterS >= 0 && second == stopAfterS) { stopped = true; break; }
-            try {
-                RNS::Destination d(peers[1 + rnd() % (PEERS - 1)], RNS::Type::Destination::IN, RNS::Type::Destination::SINGLE,
-                                   DEST_APP, hex(randomBytes(4).data(), 4).c_str());
-                RNS::Packet a = d.announce(RNS::Bytes(), false, {RNS::Type::NONE}, {}, false);
-                RNS::Transport::deregister_destination(d);
-                a.pack();
-                hostileReceive(withHops(a.raw(), 1 + rnd() % 4));
-                RNS::Destination pr({RNS::Type::NONE}, RNS::Type::Destination::OUT, RNS::Type::Destination::PLAIN, "rnstransport",
-                                    "path.request");
-                RNS::Bytes query = rnd() % 2 ? randomBytes(16) : peerDest[rnd() % PEERS];
-                query << randomBytes(16);
-                RNS::Packet q(pr, query, RNS::Type::Packet::DATA);
-                q.pack();
-                hostileReceive(q.raw());
-            } catch (const std::exception&) {
-                // wyjątek generatora, nie stosu stacji
-            }
+            const Identity& node = peers[1 + rnd() % (PEERS - 1)];
+            const std::string name = std::string(DEST_APP) + "." + hex(randomBytes(4).data(), 4);
+            hostileReceive(withHops(announce(node, name.c_str(), Bytes(), false), 1 + rnd() % 4));
+            Bytes query = rnd() % 2 ? randomBytes(16) : peerDest[rnd() % PEERS];
+            query << randomBytes(16);
+            hostileReceive(pathRequestOf(query));
             hostileReceive(dataVia(randomBytes(16)));
             hostileReceive(dataVia(peerDest[2]));
             datagrams += 4;
             if (rnsnode::status().delivered == delivered0 && second % 2 == 1) {
-                const RNS::Bytes proof = receiverProof();
-                if (proof) hostileReceive(proof);
+                const Bytes proof = receiverProof();
+                if (!proof.empty()) hostileReceive(proof);
             }
         }
         if (!rnsnode::knows(peerDest[0].data())) fail("hostile days: receiver identity lost");
@@ -1043,7 +1087,7 @@ void receiverForeignKey() {
     for (size_t slot = 0; slot < SLOTS; ++slot) {
         uint8_t* b = fram.bytes + framfs::FS_BASE + slot * SLOT;
         if (b[0] != 0xA5 || memcmp(b + 16, peerDest[0].data(), 16) != 0) continue;
-        memcpy(b + AT_KEY, peers[1].get_public_key().data(), 64);
+        memcpy(b + AT_KEY, peers[1].pub, 64);
         const uint32_t crc = slotCrc(b + 1, AT_CRC - 1);
         for (int k = 0; k < 4; ++k) b[AT_CRC + k] = static_cast<uint8_t>(crc >> (8 * k));
         damaged = true;
@@ -1063,11 +1107,14 @@ void receiverReadsReport() {
     }
     for (int i = 0; i < 100; ++i) { simMs += 20; service(); }
     for (auto w = radio.recent.rbegin(); w != radio.recent.rend(); ++w) {
-        const RNS::Bytes raw = ifacUnwrap(*w);
-        RNS::Packet p(raw);
-        if (!raw || !p.unpack() || p.packet_type() != RNS::Type::Packet::DATA || p.destination_hash() != peerDest[0]) continue;
-        const RNS::Bytes plain = peers[0].decrypt(p.data());
-        const std::string body(reinterpret_cast<const char*>(plain.data()), plain.size());
+        const Bytes raw = ifacUnwrap(*w);
+        if (!stationDataTo(raw, peerDest[0])) continue;
+        rnscore::Packet p;
+        rnscore::unpack(raw.data(), raw.size(), p);
+        uint8_t plain[rnscore::MTU];
+        size_t length = 0;
+        if (!rnscore::decrypt(peers[0].prv, peers[0].pub, p.data, p.dataLength, plain, sizeof(plain), &length)) length = 0;
+        const std::string body(reinterpret_cast<const char*>(plain), length);
         if (body.find(text) == std::string::npos) {
             fail("receiver-foreign-key: receiver cannot read the report");
         }
@@ -1116,13 +1163,9 @@ void pathFlood() {
     uint32_t requests = 0, responses = 0, responseMs = 0, handle = 0, seen = radio.sent;
     int reportAt = -1, deliveredAt = -1;
     for (int tick = 0; tick < TICKS; ++tick) {
-        RNS::Destination pr({RNS::Type::NONE}, RNS::Type::Destination::OUT, RNS::Type::Destination::PLAIN, "rnstransport",
-                            "path.request");
-        RNS::Bytes data = tick % 4 == 0 ? stationDest : peerDest[1 + (tick / 4) % (PEERS - 1)];
+        Bytes data = tick % 4 == 0 ? stationDest : peerDest[1 + (tick / 4) % (PEERS - 1)];
         data << randomBytes(16);
-        RNS::Packet q(pr, data, RNS::Type::Packet::DATA);
-        q.pack();
-        receive(q.raw());
+        receive(pathRequestOf(data));
         ++requests;
         if (tick == TICKS / 2) handle = rnsnode::send(peerDest[0].data(), reinterpret_cast<const uint8_t*>(report.data()),
                                                       report.size(), rnsnode::RECEIPT_MIN_S);
@@ -1141,14 +1184,14 @@ void pathFlood() {
         seen = radio.sent;
         const size_t from = radio.recent.size() - (fresh < radio.recent.size() ? fresh : radio.recent.size());
         for (size_t j = from; j < radio.recent.size(); ++j) {
-            const RNS::Bytes raw = ifacUnwrap(radio.recent[j]);
-            if (!raw || !p1iface::pathResponse(raw.data(), raw.size())) continue;
+            const Bytes raw = ifacUnwrap(radio.recent[j]);
+            if (raw.empty() || !p1iface::pathResponse(raw.data(), raw.size())) continue;
             ++responses;
             if (tick < BUDGET_TICKS) responseMs += p1iface::channelMs(radio.recent[j].size());
         }
         if (handle && reportAt < 0) {
-            const RNS::Bytes proof = receiverProof();
-            if (proof) {
+            const Bytes proof = receiverProof();
+            if (!proof.empty()) {
                 reportAt = tick;
                 receive(proof);
             }
@@ -1188,23 +1231,31 @@ const char* floodJson() { return floodResult.c_str(); }
 void defect(const std::string& name) {
     if (name == "token48") {
         // Token z poprawnym HMAC (klucz z ECDH z kluczem publicznym stacji), ale bez szyfrogramu.
-        auto ephemeral = RNS::Cryptography::X25519PrivateKey::generate();
-        const RNS::Bytes shared = ephemeral->exchange(station.get_public_key().left(32));
-        const RNS::Bytes derived = RNS::Cryptography::hkdf(64, shared, station.hash(), {RNS::Bytes::NONE});
-        const RNS::Bytes iv = randomBytes(16);
-        RNS::Bytes raw;
-        raw.append(static_cast<uint8_t>(0x00));   // HEADER_1, SINGLE, DATA
-        raw.append(static_cast<uint8_t>(0x00));
+        // Klucz HMAC to pierwsze 32 B z HKDF (Token.py); HMAC obejmuje IV i pusty szyfrogram.
+        uint8_t ephemeral[rnscore::KEY_SIZE / 2], ephemeralPublic[rnscore::KEY_SIZE / 2], shared[rnscore::KEY_SIZE / 2];
+        uint8_t derived[rnscore::DERIVED_KEY_SIZE], mac[rnscore::HASH_SIZE];
+        for (uint8_t& b : ephemeral) b = static_cast<uint8_t>(rnd());
+        rnscore::exchange(ephemeral, nullptr, ephemeralPublic);
+        rnscore::exchange(ephemeral, station.pub, shared);
+        rnscore::hkdf(shared, sizeof(shared), station.hash, sizeof(station.hash), derived, sizeof(derived));
+        const Bytes iv = randomBytes(rnscore::TOKEN_IV_SIZE);
+        SHA256 sha;
+        sha.resetHMAC(derived, 32);
+        sha.update(iv.data(), iv.size());
+        sha.finalizeHMAC(derived, 32, mac, sizeof(mac));
+        Bytes raw{0x00, 0x00};   // HEADER_1, SINGLE, DATA
         raw << stationDest;
-        raw.append(static_cast<uint8_t>(0x00));
-        raw << ephemeral->public_key()->public_bytes() << iv << RNS::Cryptography::HMAC::generate(derived.left(32), iv)->digest();
+        raw.push_back(0x00);
+        raw.insert(raw.end(), ephemeralPublic, ephemeralPublic + sizeof(ephemeralPublic));
+        raw << iv;
+        raw.insert(raw.end(), mac, mac + sizeof(mac));
         feed(raw, "defect");
     } else if (name == "short-announce") {
-        RNS::Bytes raw;
-        raw.append(static_cast<uint8_t>(0x01));   // HEADER_1, SINGLE, ANNOUNCE
-        raw.append(static_cast<uint8_t>(0x00));
+        Bytes raw;
+        raw.push_back(static_cast<uint8_t>(0x01));   // HEADER_1, SINGLE, ANNOUNCE
+        raw.push_back(static_cast<uint8_t>(0x00));
         raw << randomBytes(16);
-        raw.append(static_cast<uint8_t>(0x00));
+        raw.push_back(static_cast<uint8_t>(0x00));
         raw << randomBytes(40);                   // urwane w kluczu Ed25519: odczyt poza buforem
         feed(raw, "defect");
     } else if (name == "held-announce") {
@@ -1212,19 +1263,11 @@ void defect(const std::string& name) {
         // _held_announces, a Transport::jobs wstawia je z powrotem do _announce_table w pętli po niej.
         for (int round = 0; round < 8; ++round) {
             const size_t i = 1 + rnd() % (PEERS - 1);
-            RNS::Destination d(peers[i], RNS::Type::Destination::IN, RNS::Type::Destination::SINGLE, DEST_APP,
-                               DEST_ASPECT);
-            RNS::Packet a = d.announce(randomBytes(8), false, {RNS::Type::NONE}, {}, false);
-            RNS::Transport::deregister_destination(d);
-            a.pack();
-            feed(withHops(a.raw(), 1), "announce");
-            RNS::Destination pr({RNS::Type::NONE}, RNS::Type::Destination::OUT, RNS::Type::Destination::PLAIN, "rnstransport",
-                                "path.request");
-            RNS::Bytes data = peerDest[i];
+            const Bytes appData = randomBytes(8);
+            feed(withHops(announce(peers[i], DEST_NAME.c_str(), appData, false), 1), "announce");
+            Bytes data = peerDest[i];
             data << randomBytes(16) << randomBytes(16);
-            RNS::Packet q(pr, data, RNS::Type::Packet::DATA);
-            q.pack();
-            feed(withHops(q.raw(), 0), "path-request");
+            feed(withHops(pathRequestOf(data), 0), "path-request");
             for (int k = 0; k < 30; ++k) { simMs += 1000; service(); }
         }
     } else if (name == "link-mtu") {
@@ -1232,15 +1275,12 @@ void defect(const std::string& name) {
         // konwersja ujemnej wartości na uint16_t w Link::update_mdu; wykryte ziarnem 2027 po cięciu
         // zasilania), oraz graniczne: 83 B ostatnie bez MDU, 84 B pierwsze z MDU > 0. Tryb łącza 1.
         for (const uint32_t mtu : {1u, 64u, 67u, 68u, 83u, 84u}) {
-            RNS::Identity ephemeral;
-            RNS::Bytes data = ephemeral.get_public_key();
-            data.append(static_cast<uint8_t>((1u << 5) | ((mtu >> 16) & 0x1F)));
-            data.append(static_cast<uint8_t>(mtu >> 8));
-            data.append(static_cast<uint8_t>(mtu));
-            RNS::Destination out(station, RNS::Type::Destination::OUT, RNS::Type::Destination::SINGLE, DEST_APP, DEST_ASPECT);
-            RNS::Packet lr(out, data, RNS::Type::Packet::LINKREQUEST);
-            lr.pack();
-            feed(withHops(lr.raw(), 0), "link-request");
+            const Identity ephemeral = newIdentity();
+            Bytes data(ephemeral.pub, ephemeral.pub + rnscore::KEY_SIZE);
+            data.push_back(static_cast<uint8_t>((1u << 5) | ((mtu >> 16) & 0x1F)));
+            data.push_back(static_cast<uint8_t>(mtu >> 8));
+            data.push_back(static_cast<uint8_t>(mtu));
+            feed(withHops(packet(rnscore::LINKREQUEST, rnscore::SINGLE, stationDest, data), 0), "link-request");
             for (int k = 0; k < 10; ++k) { simMs += 100; service(); }
         }
     } else if (name == "station-flood") {
@@ -1311,7 +1351,7 @@ int main(int argc, char** argv) {
         else { fprintf(stderr, "unknown option %s\n", a.c_str()); return 2; }
     }
 
-    // Ziarno do RNG generatora i stosu (rng_seeded.cpp): klucze węzłów, skróty losowe ogłoszeń, IV tokenów.
+    // Ziarno do RNG stacji na porcie (rng_seeded.cpp); generator bierze bajty tylko z rnd().
     RNG.stir(reinterpret_cast<const uint8_t*>(&rngState), sizeof(rngState));
     fram.clockPath = framPath + ".clock";
     const std::string idPath = framPath + ".id";
@@ -1329,21 +1369,15 @@ int main(int argc, char** argv) {
         if (i == 0 && savedReceiver.size() == 128) {
             uint8_t prv[64];
             for (size_t k = 0; k < 64; ++k) prv[k] = static_cast<uint8_t>(strtoul(savedReceiver.substr(2 * k, 2).c_str(), nullptr, 16));
-            peers.emplace_back(false);
-            if (!peers.back().load_private_key(RNS::Bytes(prv, 64))) fail("receiver key file");
+            peers.push_back(fromPrivate(prv));
         } else {
-            peers.emplace_back();
+            peers.push_back(newIdentity());
         }
-        if (i == 0 && savedReceiver.empty()) {
-            const RNS::Bytes prv = peers.back().get_private_key();
-            writeFile(receiverPath, hex(prv.data(), prv.size()));
-        }
-        RNS::Destination d(peers.back(), RNS::Type::Destination::IN, RNS::Type::Destination::SINGLE, DEST_APP, DEST_ASPECT);
-        peerDest.push_back(d.hash());
-        RNS::Transport::deregister_destination(d);
+        if (i == 0 && savedReceiver.empty()) writeFile(receiverPath, hex(peers.back().prv, sizeof(peers.back().prv)));
+        peerDest.push_back(destinationOf(DEST_NAME.c_str(), peers.back().hash));
     }
     uint8_t keys[2][64] = {}, sa1[2][16] = {};
-    memcpy(keys[0], peers[0].get_public_key().data(), 64);
+    memcpy(keys[0], peers[0].pub, 64);
     memcpy(sa1[0], peerDest[0].data(), 16);
     rnsnode::setReceivers(keys, sa1, 0);
 
@@ -1352,7 +1386,7 @@ int main(int argc, char** argv) {
     uint8_t seed[32];
     for (uint8_t& b : seed) b = static_cast<uint8_t>(rnd());
     rnsnode::Hooks hooks;
-    hooks.packet = [](const uint8_t*, size_t, bool& exception, void*) { exception = false; return rnd() % 4 != 0; };
+    hooks.packet = [](const uint8_t*, size_t, bool& exception, void*) { exception = false; return settleAll || rnd() % 4 != 0; };
     if (!rnsnode::begin(fram, radio, IFAC_KEY, simMs, !savedId.empty(), seed, hooks)) {
         const rnsnode::Status s = rnsnode::status();
         printf("{\"result\":\"%s\"}\n", s.identityLost ? "identity_lost" : "begin_failed");
@@ -1362,12 +1396,10 @@ int main(int argc, char** argv) {
     if (savedId.empty()) writeFile(idPath, id);
     else if (savedId != id) fail("identity changed across restart");
 
-    uint8_t pub[64];
-    if (!rnsnode::publicKey(pub)) fail("no station key");
-    station = RNS::Identity(false);
-    station.load_public_key(RNS::Bytes(pub, 64));
-    stationDest = RNS::Bytes(rnsnode::address(), 16);
-    stationTransport = RNS::Bytes(rnsnode::identityHash(), 16);
+    if (!rnsnode::publicKey(station.pub)) fail("no station key");
+    rnscore::identityHash(station.pub, station.hash);
+    stationDest = Bytes(rnsnode::address(), rnsnode::address() + 16);
+    stationTransport = Bytes(rnsnode::identityHash(), rnsnode::identityHash() + 16);
     checkClock();
     if (!dumpPath.empty()) {
         dump = fopen(dumpPath.c_str(), "w");
@@ -1380,8 +1412,7 @@ int main(int argc, char** argv) {
                 hex(IFAC_KEY, sizeof(IFAC_KEY)).c_str(), static_cast<unsigned>(p1iface::IFAC_SIZE), DEST_APP, DEST_ASPECT,
                 hex(prv, sizeof(prv)).c_str());
         for (size_t i = 0; i < PEERS; ++i) {
-            const RNS::Bytes prv = peers[i].get_private_key();
-            fprintf(dump, "%s\"%s\"", i ? "," : "", hex(prv.data(), prv.size()).c_str());
+            fprintf(dump, "%s\"%s\"", i ? "," : "", hex(peers[i].prv, sizeof(peers[i].prv)).c_str());
         }
         fprintf(dump, "]}\n");
     }
@@ -1393,21 +1424,17 @@ int main(int argc, char** argv) {
     if (hostileDayCount) hostileDays(hostileDayCount, windowS, stopAfterS);
     if (foreignKey) receiverReadsReport();
     for (long n = 0; n < events; ++n) {
-        try {
-            const uint32_t e = rnd() % 100;
-            if (e < 20) announceFromPeer();
-            else if (e < 30) pathRequest();
-            else if (e < 45) dataThroughStation();
-            else if (e < 55) dataToStation();
-            else if (e < 61) linkRequest();
-            else if (e < 70) proofOrLinkTraffic();
-            else if (e < 76) proofForStationPacket();
-            else if (e < 82) replay();
-            else if (e < 88) stationActs();
-            else advanceClock();
-        } catch (const std::exception&) {
-            // wyjątek generatora (np. Packet nie mieści danych), nie stosu stacji
-        }
+        const uint32_t e = rnd() % 100;
+        if (e < 20) announceFromPeer();
+        else if (e < 30) pathRequest();
+        else if (e < 45) dataThroughStation();
+        else if (e < 55) dataToStation();
+        else if (e < 61) linkRequest();
+        else if (e < 70) proofOrLinkTraffic();
+        else if (e < 76) proofForStationPacket();
+        else if (e < 82) replay();
+        else if (e < 88) stationActs();
+        else advanceClock();
         service();
     }
     for (int i = 0; i < 5; ++i) { simMs += 1000; service(); }

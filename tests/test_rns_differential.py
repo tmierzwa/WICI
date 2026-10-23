@@ -11,7 +11,7 @@ WICI_RNS_PYTHON; the stack sources are needed as for tests/test_rnscore.py (WICI
 GeneratorTrafficTests: the traffic generator of the hostile trial (tests/native/rns_stress.cpp, built as in
 tests/test_rns_hostile.py with the station core) writes its datagrams (--dump), and Reticulum in Python checks
 that the unmutated ones are valid (rns_differential.py --stress-dump): IFAC, unpacking, announce signatures,
-decryption and proofs. Every kind the tool checks in full must occur in the runs, and packets with too many hops too. The same check stays when the generator moves to the core primitives (stage R6-2).
+decryption and proofs. Every kind the tool checks in full must occur in the runs, and packets with too many hops too. Since stage R6-2 the generator builds its packets with the core primitives, so this check covers them on traffic.
 
   WICI_RNS_PYTHON=/path/to/venv/bin/python python3 -m unittest tests.test_rns_differential -v
 """
