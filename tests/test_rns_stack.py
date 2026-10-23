@@ -6,7 +6,9 @@ P1 link) and runs firmware/tools/rns_interop.py with it, then firmware/tools/rns
 node of decision D19 with the computer of the receiving station on a KISS interface). The same
 rns_interop.py runs on the "host-core" program (station Reticulum core, firmware/reticulum-core.md) with
 the steps the core already has (CORE_STEPS, extended with each stage step) and, from stage R3, with
-the station destination "lxmf.delivery" and LXMF SA1 messages (--lxmf, steps L1 and L2 with LXMRouter).
+the station destination "lxmf.delivery" and LXMF SA1 messages (--lxmf, steps L1 and L2 with LXMRouter), and
+rns_osp_node.py runs on "host-core" with --lxmf (stage R4b: USB interface of the node on the core, with a
+flood from the computer side during a report through P1).
 Needs network access for the pinned stack sources and a Python with Reticulum at e40191b, LXMF at
 c3ff2d6 and pyserial, so it runs only when both are given:
 
@@ -141,6 +143,27 @@ class OspNodeInteropTests(unittest.TestCase):
         burst = self.results["burst"]
         self.assertEqual((burst["received"], burst["usb_rns_in"], burst["usb_rx_drop"]), (burst["sent"], burst["sent"], 0))
         self.assertGreaterEqual(burst["usb_ready"], burst["sent"])
+
+
+
+@unittest.skipUnless(PIO and RNS_PYTHON, "WICI_PIO and WICI_RNS_PYTHON not set")
+class OspNodeCoreTests(OspNodeInteropTests):
+    """rns_osp_node.py on the station Reticulum core (stage R4b): LXMF SA1, computer destinations after a
+    restart of the node and a flood from USB."""
+
+    @classmethod
+    def setUpClass(cls):
+        subprocess.run([PIO, "run", "-e", "host-core", "-d", str(FIRMWARE)], check=True, capture_output=True)
+        command = [RNS_PYTHON, str(FIRMWARE / "tools" / "rns_osp_node.py"), "--program", str(CORE_PROGRAM), "--lxmf"]
+        cls.results = results(subprocess.run(command, capture_output=True, text=True, timeout=1800))
+
+    def test_core_checks_present(self):
+        for name in ("station_card_receiver", "computer_packets_k1", "flood_report_delivered", "flood_one_operation_per_loop",
+                     "flood_p1_steps_run", "flood_usb_announces_limited", "flood_bad_announces_not_pinned",
+                     "cheap_flood_rebroadcast_reaches_computer", "cheap_flood_one_operation_per_loop", "usb_ifac_flag_dropped",
+                     "route_on_p1_unpins_computer_destination", "ninth_destination_evicts_oldest",
+                     "computer_destinations_after_restart"):
+            self.assertIn(name, self.results["checks"])
 
 
 if __name__ == "__main__":

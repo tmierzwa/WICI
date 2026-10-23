@@ -115,7 +115,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--program", required=True)
     parser.add_argument("--debt", type=int, default=12, help="silence debt factor of the emulated P1 link")
-    parser.add_argument("--port", type=int, default=47420)
+    parser.add_argument("--port", type=int, help="first of two UDP ports (default: two free ports from the system)")
     parser.add_argument("--fill", type=int, default=0, help="announce N more destinations and record the station memory")
     parser.add_argument("--capture", help="file for the datagrams Python sends to the station (tools/rns_ram32.py replays them)")
     parser.add_argument("--steps", help="comma-separated steps to run (1,2,3,3r,4,4a,5,6,7,8,9,L1,L2; default all but 3r, 9, L1 and "
@@ -135,12 +135,14 @@ def main():
         return step in steps if steps is not None else step not in ("3r", "9", "L1", "L2")
 
     import RNS  # noqa: E402 (needs the reference Reticulum)
+    import udp_ports  # noqa: E402 (tools/udp_ports.py)
+    import sa1_lxmf  # noqa: E402 (tools/sa1_lxmf.py)
     if args.lxmf:
         import LXMF  # noqa: E402 (LXMF at c3ff2d6)
 
     work = tempfile.mkdtemp(prefix="wici_rns_")
     fram = os.path.join(work, "fram.bin")
-    station_port, python_port = args.port, args.port + 1
+    station_port, python_port = (args.port, args.port + 1) if args.port else udp_ports.free_udp_ports(2)
     config = f"""
 [reticulum]
   enable_transport = No
@@ -198,33 +200,21 @@ def main():
 
     def outgoing(dest_hash, content):
         # Dane polecenia send: przy --lxmf koperta warstwy aplikacji stacji (station.cpp) z treścią SA1.
-        if not args.lxmf:
-            return content
-        return b'["WICI",1,"' + station_address.hex().encode() + b'","' + dest_hash.hex().encode() + b'",' + content + b"]"
+        return sa1_lxmf.envelope(station_address, dest_hash, content) if args.lxmf else content
 
     def carried(packet, content):
         # Pakiet odebrany w Pythonie (czas, dane, cel) niesie dokładnie tę treść: przy --lxmf jako wiadomość
         # LXMF SA1 (LXMessage.unpack_from_bytes ze skrótem celu), bez --lxmf jako całe dane pakietu.
         _, data, dest_hash = packet
-        if not args.lxmf:
-            return data == content
-        try:
-            message = LXMF.LXMessage.unpack_from_bytes(dest_hash + data)
-        except Exception:
-            return False
-        return message.title == b"SA1" and message.content == content
+        return sa1_lxmf.carried(dest_hash, data, content) if args.lxmf else data == content
 
-    def sa1_of(identity):
-        # Cel "wici.sa1" tożsamości: tak warstwa aplikacji stacji adresuje odbiorcę z karty (config.cpp).
-        return RNS.Destination.hash(identity, "wici", "sa1")
+    sa1_of = sa1_lxmf.sa1_of   # cel "wici.sa1" tożsamości: tak warstwa aplikacji adresuje odbiorcę z karty
 
     def enveloped(event, sender, content):
         # Zdarzenie "packet" stacji to dokładnie koperta warstwy aplikacji od nadawcy (przy --lxmf cel
         # "wici.sa1" odbiorcy z karty) z treścią; bez --lxmf całe dane pakietu.
         data = bytes.fromhex(event["data"])
-        if not args.lxmf:
-            return data == content
-        return data == b'["WICI",1,"' + sender.hex().encode() + b'","' + station_address.hex().encode() + b'",' + content + b"]"
+        return data == (sa1_lxmf.envelope(sender, station_address, content) if args.lxmf else content)
 
     def card(identity, app_hash):
         # Karta odbiorcy w stacji: cel w warstwie aplikacji (przy --lxmf "wici.sa1") i klucz publiczny.
@@ -233,11 +223,7 @@ def main():
 
     def incoming(out, content):
         # Dane pakietu Python -> stacja: przy --lxmf wiadomość LXMF SA1 od celu Pythona (LXMessage.pack).
-        if not args.lxmf:
-            return content
-        message = LXMF.LXMessage(out, destination, content.decode(), "SA1", desired_method=LXMF.LXMessage.OPPORTUNISTIC)
-        message.pack()
-        return message.packed[RNS.Identity.TRUNCATED_HASHLENGTH // 8:]
+        return sa1_lxmf.packed(out, destination, content) if args.lxmf else content
 
     def wait_for(condition, timeout):
         end = time.time() + timeout

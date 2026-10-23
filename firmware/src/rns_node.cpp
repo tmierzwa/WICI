@@ -17,6 +17,7 @@
 #include "framfs.h"
 #include "p1iface.h"
 #include "rns_framfs.h"
+#include "rns_usb.h"
 
 namespace rnsnode {
 
@@ -72,22 +73,7 @@ bool ownPathRequest = false;       // send() pyta o trasę do odbiorcy (K0 bez l
 bool nodeMode = false;
 kiss::Port* usbPort = nullptr;
 bool fromUsb = false;              // stos przetwarza pakiet z USB (pakiety wychodzące są w klasie K1)
-uint8_t usbDest[USB_PINNED][HASH] = {};   // cele ogłoszone przez komputer (najnowsze zastępują najstarsze)
-size_t usbDestCount = 0;
-size_t usbDestNext = 0;
-
-bool usbKnown(const uint8_t* dest) {
-    if (!dest) return false;
-    for (size_t i = 0; i < usbDestCount; ++i) if (!memcmp(usbDest[i], dest, HASH)) return true;
-    return false;
-}
-
-void usbRemember(const uint8_t* dest) {
-    if (!dest || usbKnown(dest)) return;
-    memcpy(usbDest[usbDestNext], dest, HASH);
-    usbDestNext = (usbDestNext + 1) % USB_PINNED;
-    if (usbDestCount < USB_PINNED) ++usbDestCount;
-}
+usb::Destinations usbDests;       // cele ogłoszone przez komputer (najnowsze zastępują najstarsze)
 
 void log(const char* text) {
     if (hooks.log) hooks.log(text, hooks.context);
@@ -185,11 +171,8 @@ protected:
         if (kind != p1iface::Kind::ANNOUNCE && queue_.full()) { ++c.full; return false; }
         uint8_t wire[p1iface::MAX_WIRE];
         wrap(raw, wire);
-        // Węzeł stanowiska: pakiet od komputera (w trakcie przetwarzania pakietu z USB) albo do celu
-        // ogłoszonego przez komputer jest w klasie K1 (radio.md, „Dostęp do kanału”).
-        const p1iface::Hint hint = ownPathRequest ? p1iface::Hint::OWN
-                                   : nodeMode && (fromUsb || usbKnown(p1iface::destination(raw.data(), raw.size()))) ? p1iface::Hint::RECEIVER
-                                                                                                                     : p1iface::Hint::NONE;
+        const p1iface::Hint hint = usb::hint(ownPathRequest, nodeMode, fromUsb, raw.data(), raw.size(),
+                                             [](const uint8_t* d) { return usbDests.known(d); });
         const p1iface::Admit admit = queue_.offer(raw.data(), raw.size(), wire, raw.size() + p1iface::IFAC_SIZE, nowMs(), hint);
         if (admit != p1iface::Admit::QUEUED && admit != p1iface::Admit::HELD) return false;
         handle_outgoing(raw);
@@ -227,7 +210,7 @@ public:
         usbPort->pop();
         // Ogłoszenie od komputera: cel chroniony w pełnych tablicach i w klasie K1 kolejki P1.
         if (p1iface::classify(packet.data(), packet.size()) == p1iface::Kind::ANNOUNCE) {
-            usbRemember(p1iface::destination(packet.data(), packet.size()));
+            usbDests.remember(p1iface::destination(packet.data(), packet.size()));
         }
         struct Flag {
             Flag() { fromUsb = true; }
@@ -448,33 +431,11 @@ const uint8_t* usbOutput(size_t& length) {
 }
 void usbConsume(size_t length) { if (usbPort) usbPort->consume(length); }
 
-UsbStatus usbStatus() {
-    UsbStatus s;
-    s.enabled = usbPort != nullptr;
-    if (!usbPort) return s;
-    s.open = usbPort->open();
-    s.flowControl = usbPort->flowControl();
-    s.buffered = usbPort->buffered();
-    s.pinned = usbDestCount;
-    s.counters = usbPort->counters();
-    return s;
-}
+UsbStatus usbStatus() { return usb::status(usbPort, usbDests); }
 
-bool usbPinned(const uint8_t dest[HASH]) { return usbKnown(dest); }
+bool usbPinned(const uint8_t dest[HASH]) { return usbDests.known(dest); }
 
-size_t usbJson(char* out, size_t size) {
-    const UsbStatus u = usbStatus();
-    const kiss::Counters& c = u.counters;
-    const int n = snprintf(out, size,
-                           "\"node\":%s,\"usb_open\":%s,\"usb_flow\":%s,\"usb_buffered\":%u,\"usb_pinned\":%u,"
-                           "\"usb_rns_in\":%lu,\"usb_rns_out\":%lu,\"usb_rx_drop\":%lu,\"usb_rx_large\":%lu,\"usb_tx_drop\":%lu,"
-                           "\"usb_ready\":%lu,\"usb_cmds\":%lu",
-                           nodeMode ? "true" : "false", u.open ? "true" : "false", u.flowControl ? "true" : "false",
-                           (unsigned)u.buffered, (unsigned)u.pinned, (unsigned long)c.fromComputer, (unsigned long)c.toComputer,
-                           (unsigned long)c.rxDropped, (unsigned long)c.rxTooLarge, (unsigned long)c.txDropped,
-                           (unsigned long)c.ready, (unsigned long)c.commands);
-    return n < 0 ? 0 : (size_t)n;
-}
+size_t usbJson(char* out, size_t size) { return usb::json(usbStatus(), nodeMode, out, size); }
 
 void loop(uint32_t) {
     if (!started) return;
@@ -752,7 +713,7 @@ bool pinned_key(const uint8_t* key, size_t length) {
     for (const auto& dest : rnsnode::pinned) {
         if (memcmp(dest, zero, rnsnode::HASH) && !memcmp(dest, key, rnsnode::HASH)) return true;
     }
-    return rnsnode::usbKnown(key);   // węzeł stanowiska: cele ogłoszone przez komputer stanowiska
+    return rnsnode::usbDests.known(key);   // węzeł stanowiska: cele ogłoszone przez komputer stanowiska
 }
 
 }  // namespace microStore

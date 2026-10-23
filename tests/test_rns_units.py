@@ -33,6 +33,7 @@ HARNESS = r"""
 #include "p1iface.h"
 #include "pkthash.h"
 #include "rns_announce.h"
+#include "rns_usb.h"
 
 struct Ram : journal::Storage {
     std::vector<uint8_t> bytes = std::vector<uint8_t>(512 * 1024, 0xFF);
@@ -236,6 +237,35 @@ p1iface::Admit put(p1iface::Queue& q, uint8_t flags, uint8_t hops, const uint8_t
     memset(wire, 0, sizeof(wire));
     wire[0] = mark;
     return q.offer(pkt(flags, hops, dest, length, context, target), length, wire, length + p1iface::IFAC_SIZE, nowMs, hint);
+}
+
+// Węzeł stanowiska (rns_usb.h): klasa pakietu na P1 od komputera i do jego celu (K1) oraz lista celów
+// komputera, w której dziewiąty cel wypiera najstarszy.
+int usbScenario() {
+    using namespace p1iface;
+    uint8_t computer[16], other[16];
+    memset(computer, 0xC1, sizeof(computer));
+    memset(other, 0x0E, sizeof(other));
+    rnsnode::usb::Destinations d;
+    d.remember(computer);
+    const auto isComputer = [&d](const uint8_t* dest) { return d.known(dest); };
+    Queue q;
+    const auto lane = [&](bool own, bool node, bool fromUsb, const uint8_t* dest) {
+        const uint8_t* raw = pkt(0x00, 2, dest, 100);
+        return std::string(laneName(q.lane(raw, 100, rnsnode::usb::hint(own, node, fromUsb, raw, 100, isComputer)))) + " ";
+    };
+    printf("lanes %s%s%s%s%s\n", lane(false, true, true, other).c_str(), lane(false, true, false, computer).c_str(),
+           lane(false, true, false, other).c_str(), lane(false, false, true, computer).c_str(), lane(true, true, true, other).c_str());
+    uint8_t dest[9][16];
+    for (int i = 0; i < 9; ++i) {
+        memset(dest[i], 0xD0 + i, 16);
+        d.remember(dest[i]);
+    }
+    std::string known;
+    known += d.known(computer) ? "1" : "0";
+    for (int i = 0; i < 9; ++i) known += d.known(dest[i]) ? "1" : "0";
+    printf("pinned %u %s\n", static_cast<unsigned>(d.count), known.c_str());
+    return 0;
 }
 
 void drain(p1iface::Queue& q) {
@@ -657,6 +687,7 @@ int main(int argc, char** argv) {
     if (mode == "key") return keyScenario();
     if (mode == "hash") return hashScenario();
     if (mode == "iface") return ifaceScenario();
+    if (mode == "usb") return usbScenario();
     if (mode == "ifac" && argc == 6) return ifacVector(argv[2], argv[3], argv[4], argv[5]);
     return 2;
 }
@@ -833,6 +864,13 @@ class StackUnitTests(unittest.TestCase):
         self.assertEqual(out[9], "partial 1 out c00001dbdcdbdd02c0")   # zapis po 3 B: ta sama ramka
         self.assertEqual(out[10], "tx 1 1 0 pending 1006 dropped 1")
         self.assertEqual(out[11], "closed 0 flow 0 pending 0 dropped 2 to 4 from 12")
+
+    def test_osp_node_usb_classes_and_destinations(self):
+        # Od komputera i do jego celu K1, inny cel bez tego, poza węzłem bez tego, zapytanie stacji K0;
+        # 10 celów na liście 8: komputer i pierwszy z nowych wyparte.
+        out = self.run_harness("usb")
+        self.assertEqual(out[0], "lanes k1 k1 k2 k2 k0 ")
+        self.assertEqual(out[1], "pinned 8 0011111111")
 
     def test_ifac_masking_matches_reference_vector(self):
         out = self.run_harness("ifac", IFAC_RAW, IFAC_TAG, IFAC_MASK, IFAC_WIRE)

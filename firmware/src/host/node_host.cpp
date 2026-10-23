@@ -42,11 +42,29 @@
 #include "../p1iface.h"
 #include "../rns_node.h"
 
+#ifdef RNSCORE_COUNT_OPERATIONS
+namespace rnscore {
+uint32_t asymmetricOperations();   // identity.h rdzenia (bez dołączania nagłówków rdzenia do programu)
+}
+#endif
+
 namespace {
+
+// Najwięcej operacji asymetrycznych rdzenia w jednym obiegu rnsnode::loop() (host-core; pole loop_ops_max
+// w status, próba zalewu USB w tools/rns_osp_node.py); -1 w budowie portu.
+long loopOpsMax = -1;
 
 uint32_t nowMs() {
     using namespace std::chrono;
     return static_cast<uint32_t>(duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count());
+}
+
+// Czas pracy przy starcie stosu: zegar monotoniczny systemu (od uruchomienia komputera), więc rośnie także między
+// restartami programu, jak licznik pracy z dziennika FRAM na stacji (oprogramowanie.md, „Czas”). Od 0 przy każdym
+// starcie trasy zapisane przed restartem miałyby czas użycia z przyszłości.
+uint64_t clockAtStartMs() {
+    using namespace std::chrono;
+    return static_cast<uint64_t>(duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count());
 }
 
 // FRAM 512 KiB w pliku (nowy plik: same 0xFF jak nowy układ). Tablica statyczna, nie z puli stosu:
@@ -210,18 +228,18 @@ void onLog(const char* text, void*) {
 
 void printStatus() {
     const rnsnode::Status s = rnsnode::status();
-    char iface[rnsnode::INTERFACE_JSON_SIZE], usb[400];
+    char iface[rnsnode::INTERFACE_JSON_SIZE], usb[rnsnode::USB_JSON_SIZE];
     rnsnode::interfaceJson(iface, sizeof(iface));
     rnsnode::usbJson(usb, sizeof(usb));
     printf("{\"event\":\"status\",\"online\":%s,\"paths\":%u,\"hashes\":%u,\"announce_table\":%u,\"pending\":%u,"
            "\"pool\":%u,\"pool_used\":%u,\"pool_peak\":%u,\"fs_files\":%u,\"fs_used\":%u,\"fs_capacity\":%u,"
            "\"sent\":%u,\"received\":%u,\"unproven\":%u,\"delivered\":%u,\"timed_out\":%u,\"announces\":%u,\"wait_ms\":%u,"
-           "\"bitrate\":%u,\"frames_out\":%u,\"frames_in\":%u,\"datagrams_out\":%u,\"datagrams_in\":%u,%s,%s}\n",
+           "\"bitrate\":%u,\"frames_out\":%u,\"frames_in\":%u,\"datagrams_out\":%u,\"datagrams_in\":%u,\"loop_ops_max\":%ld,%s,%s}\n",
            s.online ? "true" : "false", (unsigned)s.paths, (unsigned)s.packetHashes, (unsigned)s.announceTable,
            (unsigned)s.receiptsPending, (unsigned)s.poolSize, (unsigned)s.poolUsed, (unsigned)s.poolPeak,
            (unsigned)s.fsFiles, (unsigned)s.fsUsedBytes, (unsigned)s.fsCapacityBytes, s.packetsSent, s.packetsReceived,
            s.packetsUnproven, s.delivered, s.timedOut, s.announcesSeen, s.queueWaitMs, s.bitrate, radio.framesOut, radio.framesIn,
-           radio.datagramsOut, radio.datagramsIn, iface, usb);
+           radio.datagramsOut, radio.datagramsIn, loopOpsMax, iface, usb);
     fflush(stdout);
 }
 
@@ -298,7 +316,7 @@ int main(int argc, char** argv) {
         std::random_device device;
         for (uint8_t& b : seed) b = static_cast<uint8_t>(device());
     }
-    if (!rnsnode::begin(fram, radio, ifac, 0, false, seed, hooks)) { printf("{\"event\":\"error\",\"what\":\"begin\"}\n"); return 1; }
+    if (!rnsnode::begin(fram, radio, ifac, clockAtStartMs(), false, seed, hooks)) { printf("{\"event\":\"error\",\"what\":\"begin\"}\n"); return 1; }
     if (nodeMode) rnsnode::usbOpen(true);
     if (tableMax) rnsnode::debugTableMax(tableMax);
     fram.save();
@@ -355,7 +373,7 @@ int main(int argc, char** argv) {
                     rnsnode::halt();
                     printf("{\"event\":\"halted\"}\n");
                 } else if (cmd == "begin") {
-                    const bool ok = rnsnode::begin(fram, radio, ifac, 0, false, seed, hooks);
+                    const bool ok = rnsnode::begin(fram, radio, ifac, clockAtStartMs(), false, seed, hooks);
                     printf("{\"event\":\"begin\",\"ok\":%s,\"address\":\"%s\"}\n", ok ? "true" : "false",
                            hex(rnsnode::address(), 16).c_str());
                 }
@@ -396,7 +414,14 @@ int main(int argc, char** argv) {
             }
         }
         radio.poll();
+#ifdef RNSCORE_COUNT_OPERATIONS
+        const uint32_t before = rnscore::asymmetricOperations();
         rnsnode::loop(nowMs());
+        const long ops = static_cast<long>(rnscore::asymmetricOperations() - before);
+        if (ops > loopOpsMax) loopOpsMax = ops;
+#else
+        rnsnode::loop(nowMs());
+#endif
         if (nowMs() - lastSave > 1000) { fram.save(); lastSave = nowMs(); }
     }
     rnsnode::persist();

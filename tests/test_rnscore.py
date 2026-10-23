@@ -1258,6 +1258,24 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(lines[8], "-")
         self.assertEqual(lines[9].split()[:2], ["0", "1"])
 
+    def test_interfaces_routes_by_interface(self):
+        # Cele z trasą przez USB z indeksu tablicy (węzeł stanowiska odtwarza z nich cele komputera po
+        # restarcie): najpierw ostatnio używana trasa, z limitem; trasa przez P1 osobno. Po restarcie z dwoma
+        # interfejsami te same, z jednym interfejsem żadna trasa przez USB. Filtr skoków: ogłoszenia z 0 skokami
+        # dają trasy o 1 skoku (cele samego komputera), żadnej o 2.
+        first, second, radio = (self.announce_of(bytes([n]) * 64) for n in (73, 74, 75))
+        clock = lambda s: ("t_clock", (s * 1000).to_bytes(8, "big"))
+        lines = self.ask([("t_begin", self.TWO), clock(10), ("t_inif", b"\x01" + first), clock(20),
+                          ("t_inif", b"\x01" + second), clock(30), ("t_inif", b"\x00" + radio),
+                          ("t_routes", b"\x01\x08"), ("t_routes", b"\x01\x01"), ("t_routes", b"\x00\x08"),
+                          ("t_routes", b"\x01\x08\x01"), ("t_routes", b"\x01\x08\x02"),
+                          ("t_restart", b"\x00\x02"), ("t_routes", b"\x01\x08"),
+                          ("t_restart", b"\x00\x01"), ("t_routes", b"\x01\x08"), ("t_routes", b"\x00\x08")])
+        usb = f"{second[2:18].hex()}:1 {first[2:18].hex()}:1"
+        self.assertEqual(lines[7:12], [usb, f"{second[2:18].hex()}:1", f"{radio[2:18].hex()}:0", usb, "-"])
+        self.assertEqual(lines[12:14], ["3 3", usb])
+        self.assertEqual(lines[14:17], ["3 1", "-", f"{radio[2:18].hex()}:0"])
+
     def test_interfaces_forward_same_interface_and_discovery_both(self):
         # Pakiet w transporcie z USB do celu za USB wraca tym samym interfejsem, a dowód też. Odpowiedź
         # odkrycia, gdy pytają oba interfejsy, idzie oboma w jednym poll().

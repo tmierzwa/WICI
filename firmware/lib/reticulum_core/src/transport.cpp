@@ -155,7 +155,7 @@ void Transport::inboundAnnounce(const Packet& packet, const uint8_t hash[HASH_SI
             return;
         }
     }
-    if (hooks_.mayVerify && !hooks_.mayVerify(hooks_.context)) return;   // licznik po stronie stacji
+    if (hooks_.mayVerify && !hooks_.mayVerify(iface, hooks_.context)) return;   // licznik po stronie stacji
     Announce a;
     if (!validateAnnounce(packet, a)) {
         ++counters_.invalid;

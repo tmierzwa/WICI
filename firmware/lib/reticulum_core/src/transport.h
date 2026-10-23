@@ -72,8 +72,9 @@ struct TransportHooks {
     // Cel chroniony przed wyparciem z pełnej tablicy (odbiorca z karty).
     bool (*pinned)(const uint8_t destination[TRUNCATED_HASH_SIZE], void* context) = nullptr;
     // Zgoda na weryfikację podpisu ogłoszenia, pytana tuż przed nią (po tanich odrzuceniach); fałsz:
-    // ogłoszenie odpada bez kryptografii. Limit pracy procesora po stronie stacji, bez odpowiednika w Pythonie.
-    bool (*mayVerify)(void* context) = nullptr;
+    // ogłoszenie odpada bez kryptografii i bez skrótu na liście (powtórka przejdzie). Limit pracy procesora
+    // po stronie stacji (osobny dla interfejsu iface, przez który przyszło), bez odpowiednika w Pythonie.
+    bool (*mayVerify)(uint8_t iface, void* context) = nullptr;
     // Zgoda na pracę nad pakietem DATA do celu stacji (odszyfrowanie, hak packet, dowód), pytana po
     // sprawdzeniu listy skrótów, przed zapisem skrótu i odszyfrowaniem; fałsz: pakiet odpada bez kryptografii,
     // bez dowodu i bez zapisu skrótu (dla nadawcy jak utrata pakietu, późniejsza kopia ma szansę). Dowody
@@ -166,6 +167,15 @@ public:
     uint8_t hopsTo(const uint8_t destination[TRUNCATED_HASH_SIZE], uint64_t nowMs);   // Transport.hops_to
     size_t known() const { return table_.size(); }
     size_t paths() const { return table_.paths(); }
+    // Interfejs trasy do celu z indeksu tablicy (bez odczytu FRAM); -1: brak trasy.
+    int pathInterface(const uint8_t destination[TRUNCATED_HASH_SIZE]) const {
+        return table_.pathInterface(table_.find(destination));
+    }
+    // Do max celów z trasą przez interfejs iface (hops ≠ 0: o tej liczbie skoków), najpierw ostatnio używane
+    // (Table::routes).
+    size_t routes(uint8_t iface, uint8_t hops, uint8_t (*out)[TRUNCATED_HASH_SIZE], size_t max) const {
+        return table_.routes(iface, hops, out, max);
+    }
     uint32_t tableCorrupt() const { return table_.corrupt(); }   // gniazda tablicy z błędną treścią od startu
     uint32_t tableWrites() const { return table_.writes(); }
     size_t receiptsPending() const;
@@ -227,7 +237,10 @@ private:
     static bool pinnedHook(const uint8_t destination[TRUNCATED_HASH_SIZE], void* self);
 
     TransportHooks hooks_;
-    uint8_t interfaces_ = 1;
+    // Liczba interfejsów ustawiana w begin(). Składowe bez niezerowych inicjalizatorów: obiekt żyje jako zmienna
+    // globalna warstwy rnsnode i ma zostać w .bss (inicjalizator ≠ 0 przenosi całe ~44 KB do .data, czyli do
+    // flash obrazu); pilnuje tego tools/core_boards.py.
+    uint8_t interfaces_ = 0;
     const uint8_t* privateKey_ = nullptr;
     const uint8_t* publicKey_ = nullptr;
     const uint8_t* identityHash_ = nullptr;

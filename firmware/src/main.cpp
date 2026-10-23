@@ -810,7 +810,7 @@ void printInfo() {
     Serial.printf("\"store_ok\":%s,\"register\":%u,\"inbox\":%u,\"head\":%lu,",
                   boolName(storeOk), static_cast<unsigned>(storeOk ? stationStore.requestCount() : 0),
                   static_cast<unsigned>(storeOk ? stationStore.messageCount() : 0), static_cast<unsigned long>(storeOk ? stationStore.head() : 0));
-    char usb[400];
+    char usb[rnsnode::USB_JSON_SIZE];
     rnsnode::usbJson(usb, sizeof(usb));
     Serial.print(usb);   // pola węzła stanowiska (interfejs Reticulum przez USB)
     Serial.printf(",\"computer_s\":%ld,", computerHeard ? static_cast<long>(counterS() - computerAtS) : -1L);
@@ -987,7 +987,7 @@ void printRns() {
                   announcePolicy.scheduled() ? static_cast<long>(announcePolicy.nextS() - counterS()) : -1L,
                   static_cast<unsigned long>(s.queueWaitMs), static_cast<unsigned long>(s.bitrate));
     Serial.print(iface);
-    char usb[400];
+    char usb[rnsnode::USB_JSON_SIZE];
     rnsnode::usbJson(usb, sizeof(usb));
     Serial.print(",");
     Serial.print(usb);

@@ -101,6 +101,12 @@ public:
     // które się nie udały (błąd zapisu).
     void expire(uint32_t nowS);
     bool hasPath(int slot) const;
+    // Interfejs trasy z indeksu (bez odczytu gniazda); bez trasy: -1.
+    int pathInterface(int slot) const;
+    // Do max celów z trasą przez interfejs iface, najpierw ostatnio używane trasy (indeks); hops ≠ 0: tylko
+    // trasy o tej liczbie skoków (bajt gniazda w FRAM, bez CRC). Węzeł stanowiska odtwarza z tego po starcie
+    // cele komputera (interfejs USB, 1 skok).
+    size_t routes(uint8_t iface, uint8_t hops, uint8_t (*out)[TRUNCATED_HASH_SIZE], size_t max) const;
     size_t size() const { return count_; }
     size_t paths() const;
     uint32_t writes() const { return writes_; }    // zapisy gniazd od startu (diagnostyka)
@@ -120,12 +126,14 @@ private:
     bool load(size_t slot);   // gniazdo do bufora: znacznik, numer, cel, CRC; przy błędnej treści drop
     bool invalidate(size_t slot);   // przy błędzie gniazdo czeka w stale_ na ponowienie
     int victim(int keep, bool (*pinned)(const uint8_t*, void*), void* context) const;
+    bool routeMatches(size_t slot, uint8_t iface, uint8_t hops) const;   // routes()
     uint32_t sequenceOf(size_t slot);
 
     TableStorage* storage_ = nullptr;
     Index index_[TABLE_SLOTS] = {};
     uint8_t live_[(TABLE_SLOTS + 7) / 8] = {};
     uint8_t path_[(TABLE_SLOTS + 7) / 8] = {};
+    uint8_t second_[(TABLE_SLOTS + 7) / 8] = {};   // trasa przez interfejs 1 (flaga gniazda, INTERFACES_MAX = 2)
     uint8_t stale_[(TABLE_SLOTS + 7) / 8] = {};   // gniazda poza indeksem do unieważnienia w FRAM
     uint8_t buffer_[TABLE_SLOT_SIZE] = {};   // obraz gniazda (odczyt i zapis), poza stosem
     // Same zera na starcie (obiekt w .bss, nie kopiowany z flash): gniazdo obrazu w buforze + 1 (0: brak)

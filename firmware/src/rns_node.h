@@ -132,7 +132,9 @@ struct UsbStatus {
 };
 UsbStatus usbStatus();
 bool usbPinned(const uint8_t destination[HASH]);
-// Liczniki interfejsu USB jako pola JSON bez nawiasów (INFO, RNS).
+// Liczniki interfejsu USB jako pola JSON bez nawiasów (INFO, RNS). USB_JSON_SIZE mieści wszystkie pola portu
+// i rdzenia (rdzeń: 14 liczników po 10 cyfr i 3 wartości logiczne, około 400 B ze znakiem końca).
+constexpr size_t USB_JSON_SIZE = 512;
 size_t usbJson(char* out, size_t size);
 void loop(uint32_t nowMs);
 void received(const uint8_t* wire, size_t length);   // datagram złożony z ramek P1
