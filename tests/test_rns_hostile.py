@@ -5,7 +5,8 @@ Builds tests/native/rns_stress.cpp with the station's stack layer (rns_node, p1i
 pinned stack sources from firmware/.pio/stack, with AddressSanitizer and UndefinedBehaviorSanitizer
 and the system allocator instead of the stack's TLSF pool (the pool hides heap errors from ASan).
 Each run of the program is one start of a station; FRAM, clock and identity stay in files between
-runs. Scenarios: valid traffic over weeks of simulated time, mutated traffic from a node with the
+runs. The traffic generator builds its packets with the station core primitives (firmware/lib/reticulum_core)
+for both stations; the port is compiled only for a station on the port. Scenarios: valid traffic over weeks of simulated time, mutated traffic from a node with the
 network key (IFAC), power loss in any FRAM write, bit flips in FRAM and a clock set back.
 
 Needs a C++ compiler with sanitizers and the stack sources (python3 firmware/tools/stack_deps.py,
@@ -21,7 +22,7 @@ The traffic depends only on --seed (tests/native/rng_seeded.cpp), so a failure r
 POSIX only (mmap, fork of sanitizer runtimes).
 
 The same scenarios run on the station Reticulum core (CoreHostileStackTests: rns_node_core.cpp and
-firmware/lib/reticulum_core instead of rns_node.cpp; the port only generates the traffic), including
+firmware/lib/reticulum_core instead of rns_node.cpp, without the port), including
 power loss in a write of the core's table of known destinations in FRAM (stage R2). The core also
 gets a flood of hostile datagrams (--defect flood): at most one asymmetric operation per loop() pass,
 replayed valid announces take no verification tokens, and a station packet sent during the flood is
@@ -52,6 +53,7 @@ FIRMWARE = ROOT / "firmware"
 SRC = FIRMWARE / "src"
 STACK = FIRMWARE / ".pio" / "stack"
 HARNESS = ROOT / "tests" / "native" / "rns_stress.cpp"
+PORT_HARNESS = ROOT / "tests" / "native" / "rns_stress_port.cpp"   # zegar portu i microStore (tylko stacja na porcie)
 REQUIRED = os.environ.get("WICI_RNS_SANITIZE") == "1"
 SEEDS = int(os.environ.get("WICI_RNS_SEEDS", "4"))
 
@@ -89,14 +91,17 @@ def compiler():
 
 
 def sources(core: bool):
-    port = STACK / "microReticulum" / "src"
-    stack = [p for p in port.rglob("*.cpp") if p.name != "main.cpp"] + list(port.rglob("*.c"))
+    """Stack sources and station units: Crypto always, the port only for a station on the port; the traffic
+    generator builds its packets with the core (lib/reticulum_core) for both stations."""
     # RNG z ziarna zamiast Crypto/RNG.cpp, który na hoście miesza czas rzeczywisty (rng_seeded.cpp).
-    stack += sorted(p for p in (STACK / "Crypto").glob("*.cpp") if p.name != "RNG.cpp")
+    stack = sorted(p for p in (STACK / "Crypto").glob("*.cpp") if p.name != "RNG.cpp")
     stack.append(ROOT / "tests" / "native" / "rng_seeded.cpp")
+    generator = sorted(CORE.glob("*.cpp"))
     if core:
-        return stack, [SRC / name for name in CORE_UNITS] + sorted(CORE.glob("*.cpp"))
-    return stack, [SRC / name for name in WICI_UNITS]
+        return stack, [SRC / name for name in CORE_UNITS] + generator
+    port = STACK / "microReticulum" / "src"
+    stack = [p for p in port.rglob("*.cpp") if p.name != "main.cpp"] + list(port.rglob("*.c")) + stack
+    return stack, [SRC / name for name in WICI_UNITS] + generator + [PORT_HARNESS]
 
 
 def build(out_dir: Path, core: bool = False) -> Path:
@@ -121,15 +126,13 @@ def build(out_dir: Path, core: bool = False) -> Path:
         if obj.exists() and obj.stat().st_mtime > max(newest, source.stat().st_mtime):
             return obj
         quiet = ["-w"] if STACK in source.parents else ["-Wall", "-Wextra", "-Werror"]
-        # Nagłówki rdzenia tylko dla jednostek WICI i rdzenia: na systemie plików bez rozróżniania wielkości
-        # liter "packet.h" rdzenia przesłoniłby "Packet.h" portu.
-        local = [f"-I{CORE}"] if core and STACK not in source.parents and source != HARNESS else []
+        # Nagłówki rdzenia dla generatora, rdzenia i (stacja na rdzeniu) jednostek WICI, nie dla portu i jego
+        # warstwy: na systemie plików bez rozróżniania wielkości liter "packet.h" rdzenia przesłoniłby "Packet.h" portu.
+        local = [f"-I{CORE}"] if source == HARNESS or CORE in source.parents or (core and SRC in source.parents) else []
         if core and STACK not in source.parents:
             quiet.append("-DRNSCORE_COUNT_OPERATIONS")   # licznik operacji asymetrycznych (identity.h)
-        if source == HARNESS:
-            quiet.append("-Wno-deprecated-declarations")   # generator buduje pakiety dawnym API portu
-            if core:
-                quiet.append("-DWICI_RNS_CORE")
+        if source == HARNESS and core:
+            quiet.append("-DWICI_RNS_CORE")
         if source.suffix == ".c":
             cmd = [cc, *flags, *includes, "-w", "-c", str(source), "-o", str(obj)]
         else:
