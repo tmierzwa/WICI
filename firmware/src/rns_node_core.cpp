@@ -384,7 +384,7 @@ bool mayTransmitHook(uint8_t iface, void*) {
            queue.announceRoom(rnscore::HEADER_1_SIZE + rnscore::ANNOUNCE_MIN_SIZE, nowMs());
 }
 
-bool mayVerifyHook(void*) {
+bool mayVerifyHook(uint8_t, void*) {
     if (verifyBucket.take(uptimeMs())) return true;
     ++announcesLimited;
     return false;

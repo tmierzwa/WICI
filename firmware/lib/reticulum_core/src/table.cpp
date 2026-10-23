@@ -66,6 +66,7 @@ void Table::drop(size_t slot) {
     if (!live(slot)) return;
     setBit(live_, slot, false);
     setBit(path_, slot, false);
+    setBit(second_, slot, false);
     memset(&index_[slot], 0, sizeof(index_[slot]));
     if (bufferSlot_ == slot + 1) bufferSlot_ = 0;
     --count_;
@@ -106,6 +107,7 @@ void Table::begin(TableStorage& storage, uint32_t nowS, uint8_t interfaces) {
         index_[slot].pathUsedS = get32(header + AT_PATH_USED);
         setBit(live_, slot, true);
         setBit(path_, slot, (header[AT_FLAGS] & FLAG_PATH) && interfaceOf(header[AT_FLAGS]) < interfaces_);
+        setBit(second_, slot, interfaceOf(header[AT_FLAGS]) == 1);
         ++count_;
     }
 }
@@ -276,6 +278,7 @@ int Table::write(int slot, const KnownDestination& entry, Cached cached, const u
     index_[target].pathUsedS = entry.pathUsedS;
     setBit(live_, static_cast<size_t>(target), true);
     setBit(path_, static_cast<size_t>(target), entry.hasPath);
+    setBit(second_, static_cast<size_t>(target), entry.interface == 1);
     ++count_;
     return target;
 }
@@ -299,6 +302,36 @@ bool Table::hasPath(int slot) const {
     return slot >= 0 && static_cast<size_t>(slot) < TABLE_SLOTS && (path_[slot / 8] & (1u << (slot % 8)));
 }
 
+int Table::pathInterface(int slot) const {
+    if (!hasPath(slot)) return -1;
+    return (second_[slot / 8] & (1u << (slot % 8))) ? 1 : 0;
+}
+
+size_t Table::routes(uint8_t iface, uint8_t (*out)[TRUNCATED_HASH_SIZE], size_t max) const {
+    size_t n = 0;
+    uint32_t below = UINT32_MAX;   // kolejne wybory: najnowsza trasa starsza od poprzedniej (równe czasy: wszystkie naraz)
+    while (n < max) {
+        uint32_t newest = 0;
+        bool any = false;
+        for (size_t slot = 0; slot < TABLE_SLOTS; ++slot) {
+            const uint32_t used = index_[slot].pathUsedS;
+            if (pathInterface(static_cast<int>(slot)) == iface && used < below && (!any || used > newest)) {
+                newest = used;
+                any = true;
+            }
+        }
+        if (!any) break;
+        for (size_t slot = 0; slot < TABLE_SLOTS && n < max; ++slot) {
+            if (pathInterface(static_cast<int>(slot)) == iface && index_[slot].pathUsedS == newest) {
+                memcpy(out[n++], index_[slot].destination, TRUNCATED_HASH_SIZE);
+            }
+        }
+        if (newest == 0) break;
+        below = newest;
+    }
+    return n;
+}
+
 size_t Table::paths() const {
     size_t n = 0;
     for (size_t slot = 0; slot < TABLE_SLOTS; ++slot) n += hasPath(static_cast<int>(slot));
@@ -315,6 +348,7 @@ void Table::clear() {
     clean(buffer_, sizeof(buffer_));
     memset(live_, 0, sizeof(live_));
     memset(path_, 0, sizeof(path_));
+    memset(second_, 0, sizeof(second_));
     memset(stale_, 0, sizeof(stale_));
     bufferSlot_ = 0;
     count_ = 0;

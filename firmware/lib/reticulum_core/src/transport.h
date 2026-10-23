@@ -72,8 +72,9 @@ struct TransportHooks {
     // Cel chroniony przed wyparciem z pełnej tablicy (odbiorca z karty).
     bool (*pinned)(const uint8_t destination[TRUNCATED_HASH_SIZE], void* context) = nullptr;
     // Zgoda na weryfikację podpisu ogłoszenia, pytana tuż przed nią (po tanich odrzuceniach); fałsz:
-    // ogłoszenie odpada bez kryptografii. Limit pracy procesora po stronie stacji, bez odpowiednika w Pythonie.
-    bool (*mayVerify)(void* context) = nullptr;
+    // ogłoszenie odpada bez kryptografii i bez skrótu na liście (powtórka przejdzie). Limit pracy procesora
+    // po stronie stacji (osobny dla interfejsu iface, przez który przyszło), bez odpowiednika w Pythonie.
+    bool (*mayVerify)(uint8_t iface, void* context) = nullptr;
     // Zgoda na pracę nad pakietem DATA do celu stacji (odszyfrowanie, hak packet, dowód), pytana po
     // sprawdzeniu listy skrótów, przed zapisem skrótu i odszyfrowaniem; fałsz: pakiet odpada bez kryptografii,
     // bez dowodu i bez zapisu skrótu (dla nadawcy jak utrata pakietu, późniejsza kopia ma szansę). Dowody
@@ -166,6 +167,12 @@ public:
     uint8_t hopsTo(const uint8_t destination[TRUNCATED_HASH_SIZE], uint64_t nowMs);   // Transport.hops_to
     size_t known() const { return table_.size(); }
     size_t paths() const { return table_.paths(); }
+    // Interfejs trasy do celu z indeksu tablicy (bez odczytu FRAM); -1: brak trasy.
+    int pathInterface(const uint8_t destination[TRUNCATED_HASH_SIZE]) const {
+        return table_.pathInterface(table_.find(destination));
+    }
+    // Do max celów z trasą przez interfejs iface, najpierw ostatnio używane (Table::routes).
+    size_t routes(uint8_t iface, uint8_t (*out)[TRUNCATED_HASH_SIZE], size_t max) const { return table_.routes(iface, out, max); }
     uint32_t tableCorrupt() const { return table_.corrupt(); }   // gniazda tablicy z błędną treścią od startu
     uint32_t tableWrites() const { return table_.writes(); }
     size_t receiptsPending() const;

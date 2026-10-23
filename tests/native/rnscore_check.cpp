@@ -420,6 +420,17 @@ int main() {
             rnscore::KnownDestination e;
             if (state->transport.lookup(data.data(), e, state->nowMs) && e.hasPath) printf("%u\n", e.interface);
             else printf("none\n");
+        } else if (state && command == "t_routes" && data.size() == 2) {
+            // cele z trasą przez interfejs data[0] (najwyżej data[1], najpierw ostatnio używane) z interfejsem
+            // trasy z indeksu (pathInterface) albo "-"
+            uint8_t routes[8][rnscore::TRUNCATED_HASH_SIZE];
+            const size_t n = state->transport.routes(data[0], routes, data[1] < 8 ? data[1] : 8);
+            for (size_t i = 0; i < n; ++i) {
+                if (i) printf(" ");
+                printHex(routes[i], sizeof(routes[i]), "");
+                printf(":%d", state->transport.pathInterface(routes[i]));
+            }
+            printf("%s\n", n ? "" : "-");
         } else if (state && command == "t_forward") {
             // transport: przekazane, bez trasy, dowody przekazane, tablica odwrotna pełna, retransmisje
             // ogłoszeń, wpisy tablicy odwrotnej, wpisy tablicy ogłoszeń
