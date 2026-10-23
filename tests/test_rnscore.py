@@ -631,6 +631,20 @@ class CoreTests(unittest.TestCase):
                                    ("t_clock", (1000 + week + 1000).to_bytes(8, "big"))], dest)
         self.assertEqual(entry[2], "0")
 
+    def test_transport_clock_back_after_restart(self):
+        # Zegar cofnięty przy starcie (dziennik czasu pracy zawiódł, licznik od zera): trasa zapisana przed
+        # restartem z czasem z przyszłości nie wygasa w pierwszym przeglądzie, a ratchet sprzed startu
+        # o nieznanym wieku nie zostaje na zawsze (table.cpp: czas z przyszłości nie przedłuża wpisu).
+        a = next(c for c in VECTORS["announce"] if c["name"] == "plain")
+        key = bytes.fromhex(a["private_key"])
+        dest = bytes.fromhex(a["raw"])[2:18]
+        month = 30 * 24 * 3600 * 1000
+        _, entry = self.known([("t_begin", self.STATION), ("t_clock", month.to_bytes(8, "big")),
+                               ("t_in", self.hops(self.announce_of(key, ratchet=bytes([1]) * 32, random_hash=self.blob(1, 1000)), 1)),
+                               ("t_restart", b"\x00\x01" + (1000).to_bytes(8, "big")),
+                               ("t_clock", (2000).to_bytes(8, "big"))], dest)
+        self.assertEqual(entry[:3], ["2", "0", "1"])   # trasa jest, ratchetu nie ma
+
     def test_transport_ratchet_kept(self):
         # Ogłoszenie bez ratchetu zostawia zapisany (known_ratchets); ratchet ze starszego ogłoszenia
         # (odtworzonego) nie zastępuje nowszego (tabela różnic); nowszy go zastępuje.
