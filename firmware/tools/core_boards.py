@@ -16,11 +16,13 @@ of rnsnode) lead out of the core (rnsnode callbacks, whose stack adds to the pat
 (memcpy, the ESP-IDF AES driver) are covered by LIBRARY_RESERVE and one exception or interrupt frame
 on the task stack by INTERRUPT_FRAME. Static RAM: the core files must have none (.data, .bss: no
 globals in the library); the tables live in one rnscore::Transport object owned by rnsnode, so when
-transport.h exists its size on the board is compared with RAM_BUDGET.
+transport.h exists its size on the board is compared with RAM_BUDGET. The OSP node (stage R4b) adds the KISS
+buffer of the USB interface (kiss::Port, allocated once at start only in the node configuration): its size
+on the board is compared with KISS_RESERVE, the part of the 30% free RAM computation kept for it.
 
 It fails when a core file warns, when a function has a dynamic stack (VLA, alloca), when the call
 graph has recursion, when a core entry point needs more than STACK_LIMIT bytes of stack, when the
-core files have static RAM or when rnscore::Transport exceeds RAM_BUDGET.
+core files have static RAM, when rnscore::Transport exceeds RAM_BUDGET or kiss::Port exceeds KISS_RESERVE.
 
   python3 firmware/tools/stack_deps.py
   python3 firmware/tools/core_boards.py [-e bench-a -e l0] [--json]
@@ -69,6 +71,9 @@ INTERRUPT_FRAME = {"arm": 104, "xtensa": 192}
 # Cel dla RAM statycznej rdzenia z LXMF (reticulum-core.md, „Budżet RAM”): 56 KB, w tym lista skrótów,
 # tablice tras i tożsamości; obiekt rnscore::Transport ma się w nim zmieścić z zapasem na LXMF.
 RAM_BUDGET = 56 * 1024
+# Bufor KISS węzła stanowiska (kiss::Port, src/kiss.h) w tym samym rachunku zapasu 30% (reticulum-core.md,
+# „Budżet RAM”): liczony obok budżetu rdzenia, więc węzeł z rdzeniem i buforem USB mieści się w progu.
+KISS_RESERVE = 5112
 # Przyrostki klonów funkcji GCC (.constprop.0 na ARM, $constprop$0 na Xtensie), których c++filt nie rozwija.
 CLONE = re.compile(r"[.$](?:constprop|isra|part|cold|lto_priv)(?:[.$]\d+)*")
 
@@ -250,15 +255,16 @@ def static_ram(meta: dict, objects: list[Path]) -> int:
     return total
 
 
-def transport_ram(meta: dict, out: Path) -> int | None:
-    """RAM obiektu rnscore::Transport na płytce (.bss pliku z jednym obiektem), None bez transport.h."""
-    if not (CORE / "transport.h").is_file():
+def object_ram(meta: dict, out: Path, header: Path, type_name: str) -> int | None:
+    """RAM jednego obiektu typu na płytce (.bss pliku z jednym obiektem), None bez nagłówka."""
+    if not header.is_file():
         return None
-    probe = out / "transport_ram.cpp"
-    probe.write_text('#include "transport.h"\nrnscore::Transport wiciTransportRam;\n')
-    obj = out / "transport_ram.o"
-    subprocess.run([meta["cxx_path"], *common_flags(meta), *CORE_FLAGS, "-c", str(probe), "-o", str(obj)], check=True,
-                   capture_output=True, text=True)
+    name = header.stem
+    probe = out / f"{name}_ram.cpp"
+    probe.write_text(f'#include "{header.name}"\n{type_name} wiciRam_{name};\n')
+    obj = out / f"{name}_ram.o"
+    subprocess.run([meta["cxx_path"], *common_flags(meta), *CORE_FLAGS, f"-I{header.parent}", "-c", str(probe), "-o", str(obj)],
+                   check=True, capture_output=True, text=True)
     return static_ram(meta, [obj])
 
 
@@ -282,7 +288,8 @@ def check(env: str) -> dict:
                                                        text=True).stdout.splitlines()[0],
                 "warnings": warnings.strip(), "dynamic": dynamic, "indirect": indirect_calls(meta, objects, names),
                 "static_ram": static_ram(meta, [o for o in objects if o.stem.startswith("core_")]),
-                "transport_ram": transport_ram(meta, Path(tmp)),
+                "transport_ram": object_ram(meta, Path(tmp), CORE / "transport.h", "rnscore::Transport"),
+                "kiss_ram": object_ram(meta, Path(tmp), FIRMWARE / "src" / "kiss.h", "kiss::Port"),
                 "reserve": reserve, "entries": entries}
 
 
@@ -302,7 +309,9 @@ def main() -> int:
         results.append(r)
         over = {n: e for n, e in r["entries"].items() if e["stack"] > STACK_LIMIT}
         transport = r["transport_ram"]
-        if r["warnings"] or r["dynamic"] or r["indirect"] or r["static_ram"] or over or (transport or 0) > RAM_BUDGET:
+        kiss = r["kiss_ram"]
+        if (r["warnings"] or r["dynamic"] or r["indirect"] or r["static_ram"] or over or (transport or 0) > RAM_BUDGET
+                or (kiss or 0) > KISS_RESERVE):
             failed = True
         if args.json:
             continue
@@ -311,6 +320,8 @@ def main() -> int:
               f"unlisted indirect calls: {r['indirect'] or 'none'}")
         print(f"  rnscore::Transport: {'no transport.h' if transport is None else f'{transport} B'} "
               f"(budget {RAM_BUDGET} B{', OVER' if (transport or 0) > RAM_BUDGET else ''})")
+        print(f"  kiss::Port (USB of the OSP node): {kiss} B (reserve {KISS_RESERVE} B{', OVER' if (kiss or 0) > KISS_RESERVE else ''}); "
+              f"node: {(transport or 0) + (kiss or 0)} B of {RAM_BUDGET + KISS_RESERVE} B")
         if r["warnings"]:
             print(f"  warnings:\n{r['warnings']}")
         print(f"  stack incl. {r['reserve']} B reserve (library calls {LIBRARY_RESERVE} B, one interrupt frame); "

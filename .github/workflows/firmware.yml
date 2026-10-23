@@ -114,7 +114,8 @@ jobs:
           if-no-files-found: ignore
   interop:
     # Stos stacji wobec Reticulum w Pythonie (D19): tools/rns_interop.py i tools/rns_osp_node.py na porcie,
-    # rns_interop.py w krokach, które rdzeń już ma (host-core, tests/test_rns_stack.py: CORE_STEPS). Próby
+    # rns_interop.py w krokach, które rdzeń już ma (host-core, tests/test_rns_stack.py: CORE_STEPS), i
+    # rns_osp_node.py --lxmf na rdzeniu (węzeł stanowiska z USB, zalew z USB). Próby
     # różnicowe idą osobnym zadaniem (differential), równolegle.
     runs-on: ubuntu-latest
     timeout-minutes: 40

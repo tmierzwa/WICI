@@ -15,6 +15,14 @@ directions with a transport proof, the computer receipt time-out set only by the
 in the Reticulum config (no set_timeout, no change in the stack code); a burst of packets from the computer passes the KISS flow control
 without the 5 s time-out of the Python interface and without drops at the node.
 
+With --lxmf (both programs on the station Reticulum core, "host-core", stage R4b) the station destination
+is "lxmf.delivery", the computer is the card receiver of the station, and the packets carry SA1 as LXMF
+messages (tools/sa1_lxmf.py), as from a plain LXMF client on the computer. One more check: the computer
+destination stays protected after a restart of the node (rebuilt from the routes through USB in FRAM),
+and a flood from the computer side (announces with a bad signature and KISS garbage, written past the
+Python interface) during a report from the station: at most one asymmetric operation in a node loop pass,
+P1 receive steps still run (interleaved with USB) and the report is delivered with its receipt.
+
 Run with a Python that has Reticulum at the pinned commit (e40191b) and pyserial, for example:
   .venv-rns/bin/python firmware/tools/rns_node.py --program firmware/.pio/build/host/program
 Prints one JSON object with the results; exit code 0 when every check passed.
@@ -34,6 +42,7 @@ APP_NAME = "wici"
 ASPECT = "sa1"
 NETWORK_KEY = "5749434954335f696661635f74657374"  # 16 B test key, not a field key
 BURST = 6
+FLOOD_INTERVAL_S = 0.02   # zalew z USB: ramka co 20 ms (ok. 50/s, ponad limit weryfikacji i bufor KISS)
 
 
 def log(text):
@@ -88,23 +97,88 @@ class Program:
             self.proc.kill()
 
 
+def flood(node, station, kiss, results, checks, outgoing, received):
+    """Zalew z USB (dowolny laptop podłączony w kryzysie, także zawirusowany) przy ruchu P1: ogłoszenia
+    z błędnym podpisem (różne cele, więc każde idzie do weryfikacji) i śmieci KISS (ramki ponad 500 B,
+    nieznane polecenia, błędne sekwencje, ramki bez końca) zapisywane w port szeregowy obok interfejsu
+    Reticulum. W tym czasie zgłoszenie stacji przez węzeł do komputera z potwierdzeniem."""
+    import RNS
+    from RNS.Interfaces.KISSInterface import KISS
+
+    def frame(data, command=0x00):
+        return bytes([KISS.FEND, command]) + KISS.escape(data) + bytes([KISS.FEND])
+
+    name_hash = RNS.Identity.full_hash(b"lxmf.delivery")[:10]
+    garbage = [frame(os.urandom(600)), bytes([KISS.FEND, 0x07]) + os.urandom(20) + bytes([KISS.FEND]),
+               bytes([KISS.FEND, 0x00, KISS.FESC, 0x41, KISS.FEND]), bytes([KISS.FEND, 0x00]) + os.urandom(40)]
+    stop = threading.Event()
+    sent = {"announces": 0, "garbage": 0}
+
+    def run():
+        n = 0
+        while not stop.is_set():
+            if n % 3 == 2:
+                kiss.serial.write(garbage[n % len(garbage)])
+                sent["garbage"] += 1
+            else:
+                identity = RNS.Identity()
+                dest = RNS.Destination.hash(identity, "lxmf", "delivery")
+                announce = bytes([0x01, 0x00]) + dest + bytes([0x00]) + identity.get_public_key() + name_hash + os.urandom(10) + os.urandom(64)
+                kiss.serial.write(frame(announce))
+                sent["announces"] += 1
+            n += 1
+            time.sleep(FLOOD_INTERVAL_S)
+
+    before = node.status()
+    thread = threading.Thread(target=run, daemon=True)
+    thread.start()
+    time.sleep(5)   # zalew trwa, zanim stacja wyśle zgłoszenie
+    content = b'["WICI",1,"osp node","report during a USB flood"]'
+    data, target = outgoing(content)
+    t0 = time.time()
+    station.command(f"send {target.hex()} {data.hex()} 120")
+    sent_event = station.wait("sent", 10)
+    handle = sent_event["handle"] if sent_event else 0
+    got = handle > 0 and received(content)
+    receipt = station.wait("receipt", 240, lambda e: e["handle"] == handle) if handle else None
+    stop.set()
+    thread.join()
+    after = node.status()
+    delta = lambda key: after.get(key, 0) - before.get(key, 0)
+    results["flood"] = {"seconds": round(time.time() - t0, 2), "announces": sent["announces"], "garbage": sent["garbage"],
+                        "usb_rns_in": delta("usb_rns_in"), "usb_rx_drop": delta("usb_rx_drop"), "usb_rx_large": delta("usb_rx_large"),
+                        "usb_ann_limited": delta("usb_ann_limited"), "rx_invalid": delta("rx_invalid"), "p1_rx_ok": delta("rx_ok"),
+                        "loop_ops_max": after.get("loop_ops_max")}
+    checks["flood_report_delivered"] = bool(got and receipt and receipt["delivered"])
+    checks["flood_one_operation_per_loop"] = after.get("loop_ops_max") == 1
+    # Kroki P1 w węźle w trakcie zalewu (zgłoszenie i dowód przez P1) i limit weryfikacji ogłoszeń z USB.
+    checks["flood_p1_steps_run"] = delta("rx_ok") >= 2
+    checks["flood_usb_announces_limited"] = delta("usb_ann_limited") > 0 and delta("rx_invalid") > 0
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--program", required=True)
     parser.add_argument("--debt", type=int, default=12, help="silence debt factor of the emulated P1 link")
     parser.add_argument("--port", type=int, default=47440)
+    parser.add_argument("--lxmf", action="store_true", help="station core: lxmf.delivery and LXMF SA1 messages (stage R4b)")
     parser.add_argument("--bitrate", type=int, default=24,
                         help="bitrate of the computer KISS interface in the Reticulum config (bit/s); it sets the receipt "
                              "timeouts: 500 B x 8 / bitrate + 6 s + 6 s per hop")
     args = parser.parse_args()
+    global APP_NAME, ASPECT
+    if args.lxmf:
+        APP_NAME, ASPECT = "lxmf", "delivery"
 
     import RNS  # noqa: E402 (needs the reference Reticulum)
+    import sa1_lxmf  # noqa: E402 (tools/sa1_lxmf.py)
 
     work = tempfile.mkdtemp(prefix="wici_osp_node_")
     station_port, node_port = args.port, args.port + 1
     results = {"reticulum": "e40191b", "debt_factor": args.debt, "bitrate": args.bitrate, "checks": {}}
     checks = results["checks"]
-    node = Program(args.program, os.path.join(work, "node.bin"), node_port, station_port, args.debt, node=True)
+    node_fram = os.path.join(work, "node.bin")
+    node = Program(args.program, node_fram, node_port, station_port, args.debt, node=True)
     station = Program(args.program, os.path.join(work, "station.bin"), station_port, node_port, args.debt)
     try:
         if not node.ready or not station.ready:
@@ -145,7 +219,29 @@ def main():
         identity = RNS.Identity()
         destination = RNS.Destination(identity, RNS.Destination.IN, RNS.Destination.SINGLE, APP_NAME, ASPECT)
         destination.set_proof_strategy(RNS.Destination.PROVE_ALL)
-        destination.set_packet_callback(lambda data, packet: seen["packets"].append((time.time(), data)))
+        destination.set_packet_callback(lambda data, packet: seen["packets"].append((time.time(), data, packet.destination_hash)))
+        computer_sa1 = sa1_lxmf.sa1_of(identity)
+
+        def outgoing(content):
+            # Dane polecenia send stacji: przy --lxmf koperta warstwy aplikacji do odbiorcy z karty (komputer).
+            return sa1_lxmf.envelope(station_address, computer_sa1, content) if args.lxmf else content
+
+        def carried(packet, content):
+            _, data, dest_hash = packet
+            return sa1_lxmf.carried(dest_hash, data, content) if args.lxmf else data == content
+
+        def incoming(out, content):
+            return sa1_lxmf.packed(out, destination, content) if args.lxmf else content
+
+        def delivered(event, content):
+            # Zdarzenie "packet" stacji: przy --lxmf koperta od celu "wici.sa1" komputera z kartą.
+            expected = sa1_lxmf.envelope(computer_sa1, station_address, content) if args.lxmf else content
+            return event["data"] == expected.hex()
+
+        if args.lxmf:
+            # Komputer stanowiska to odbiorca z karty stacji (stacja przyjmuje wiadomości tylko od niego).
+            station.command(f"receiver {computer_sa1.hex()} {identity.get_public_key().hex()}")
+            checks["station_card_receiver"] = station.wait("receiver", 5) is not None
 
         class Announces:
             aspect_filter = f"{APP_NAME}.{ASPECT}"
@@ -186,10 +282,11 @@ def main():
 
         # 4. Pakiet okazjonalny stacja -> komputer z potwierdzeniem transportowym.
         payload = b'["WICI",1,"osp node","station to computer"]'
-        station.command(f"send {destination.hash.hex()} {payload.hex()} 120")
+        target = computer_sa1 if args.lxmf else destination.hash
+        station.command(f"send {target.hex()} {outgoing(payload).hex()} 120")
         sent = station.wait("sent", 10)
         handle = sent["handle"] if sent else 0
-        checks["station_to_computer_packet"] = handle > 0 and wait_for(lambda: any(p[1] == payload for p in seen["packets"]), 120)
+        checks["station_to_computer_packet"] = handle > 0 and wait_for(lambda: any(carried(p, payload) for p in seen["packets"]), 120)
         receipt = station.wait("receipt", 180, lambda e: e["handle"] == handle) if handle else None
         checks["station_receipt_delivered"] = bool(receipt and receipt["delivered"])
 
@@ -197,11 +294,11 @@ def main():
         if station_identity is not None:
             out = RNS.Destination(station_identity, RNS.Destination.OUT, RNS.Destination.SINGLE, APP_NAME, ASPECT)
             back = b'["WICI",1,"osp node","computer to station"]'
-            r = RNS.Packet(out, back).send()
+            r = RNS.Packet(out, incoming(out, back)).send()
             if r:
                 # Limit z samej konfiguracji (bitrate interfejsu), bez set_timeout: warunek D19 dla T3.
                 results["computer_receipt_timeout_s"] = round(r.timeout, 2)
-            checks["computer_to_station_packet"] = station.wait("packet", 120, lambda e: e["data"] == back.hex()) is not None
+            checks["computer_to_station_packet"] = station.wait("packet", 120, lambda e: delivered(e, back)) is not None
             t0 = time.time()
             checks["computer_receipt_delivered"] = bool(r) and wait_for(lambda: r.status == RNS.PacketReceipt.DELIVERED, 240)
             if checks["computer_receipt_delivered"]:
@@ -213,15 +310,16 @@ def main():
             burst = [b'["WICI",1,"osp node","burst %d"]' % i for i in range(BURST)]
             t0 = time.time()
             for data in burst:
-                RNS.Packet(out, data).send()
+                RNS.Packet(out, incoming(out, data)).send()
             flowed = wait_for(lambda: not kiss.packet_queue and kiss.interface_ready, 30)
             results["burst_queue_empty_s"] = round(time.time() - t0, 2)
             got = set()
             end = time.time() + 300
             while len(got) < BURST and time.time() < end:
                 e = station.wait("packet", max(0.1, end - time.time()))
-                if e and bytes.fromhex(e["data"]) in burst:
-                    got.add(e["data"])
+                for data in burst:
+                    if e and delivered(e, data):
+                        got.add(data)
             after = node.status()
             results["burst"] = {"sent": BURST, "received": len(got), "usb_rns_in": after.get("usb_rns_in", 0) - before.get("usb_rns_in", 0),
                                 "usb_ready": after.get("usb_ready", 0) - before.get("usb_ready", 0),
@@ -232,7 +330,16 @@ def main():
             for name in ("computer_to_station_packet", "computer_receipt_delivered", "burst_without_flow_timeout",
                          "burst_delivered_without_drops"):
                 checks[name] = False
+        if args.lxmf:
+            flood(node, station, kiss, results, checks, lambda content: (outgoing(content), computer_sa1),
+                  lambda content: wait_for(lambda: any(carried(p, content) for p in seen["packets"]), 120))
         results["node_status"] = node.status()
+        if args.lxmf:
+            # Cel komputera chroniony także po restarcie węzła: z tras przez USB w tablicy w FRAM.
+            node.stop()
+            node = Program(args.program, node_fram, node_port, station_port, args.debt, node=True)
+            node.command(f"pinned {destination.hash.hex()}")
+            checks["computer_destination_pinned_after_restart"] = (node.wait("pinned", 5) or {}).get("pinned") is True
     finally:
         # Koniec programu węzła zamyka pty: w Linuksie interfejs KISS dostaje EIO i przy panic_on_interface_error
         # Reticulum kończy proces (os._exit) przed wypisaniem wyniku. Panika obejmuje tylko samą próbę.
