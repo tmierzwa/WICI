@@ -141,28 +141,40 @@ RxSlot rx[RX_SLOTS];
 size_t rxHead = 0, rxCount = 0;
 uint32_t rxDropped = 0;   // datagramy odrzucone przy pełnej kolejce odbioru
 
-// Limit weryfikacji podpisów ogłoszeń: wiadro żetonów, żeton co ANNOUNCE_VERIFY_PERIOD_MS, najwyżej
-// ANNOUNCE_VERIFY_BURST naraz. Ogłoszenie bez żetonu odpada przed kryptografią. Python ogranicza napływ
-// ogłoszeń inaczej (RNS/Interfaces/Interface.py: should_ingress_limit i hold_announce: tylko nieznane
-// cele, po weryfikacji podpisu, ogłoszenia wstrzymane i wypuszczane później); tabela różnic w
-// firmware/reticulum-core.md.
-constexpr uint32_t ANNOUNCE_VERIFY_PERIOD_MS = 1000;   // do pomiaru na płytce
-constexpr uint32_t ANNOUNCE_VERIFY_BURST = 3;          // do pomiaru na płytce
-uint32_t verifyTokens = 0;
-uint64_t verifyRefillMs = 0;
+// Wiadro żetonów: żeton co period ms, najwyżej burst naraz.
+struct TokenBucket {
+    uint32_t period;
+    uint32_t burst;
+    uint32_t tokens;
+    uint64_t refillMs;
+    void reset(uint64_t now) {
+        tokens = burst;
+        refillMs = now;
+    }
+    bool take(uint64_t now) {
+        const uint64_t periods = (now - refillMs) / period;
+        if (periods) {
+            refillMs += periods * period;
+            tokens = periods >= burst - tokens ? burst : tokens + static_cast<uint32_t>(periods);
+        }
+        if (!tokens) return false;
+        --tokens;
+        return true;
+    }
+};
+
+// Limit weryfikacji podpisów ogłoszeń: żeton co sekundę, najwyżej 3 naraz. Ogłoszenie bez żetonu odpada
+// przed kryptografią. Python ogranicza napływ ogłoszeń inaczej (RNS/Interfaces/Interface.py:
+// should_ingress_limit i hold_announce: tylko nieznane cele, po weryfikacji podpisu, ogłoszenia wstrzymane
+// i wypuszczane później); tabela różnic w firmware/reticulum-core.md.
+TokenBucket verifyBucket = {1000, 3, 0, 0};   // do pomiaru na płytce
 uint32_t announcesLimited = 0;
 
-bool takeVerifyToken(uint64_t now) {
-    const uint64_t periods = (now - verifyRefillMs) / ANNOUNCE_VERIFY_PERIOD_MS;
-    if (periods) {
-        verifyRefillMs += periods * ANNOUNCE_VERIFY_PERIOD_MS;
-        verifyTokens = periods >= ANNOUNCE_VERIFY_BURST - verifyTokens ? ANNOUNCE_VERIFY_BURST
-                                                                        : verifyTokens + static_cast<uint32_t>(periods);
-    }
-    if (!verifyTokens) return false;
-    --verifyTokens;
-    return true;
-}
+// Limit pracy nad pakietami do celu stacji: żeton co sekundę, najwyżej 4 naraz; jeden żeton na pakiet
+// (odszyfrowanie z ECDH, weryfikacja podpisu LXMF w packetHook, podpis dowodu i IFAC dowodu). Pakiet bez
+// żetonu odpada przed odszyfrowaniem i bez dowodu, jak utracony; Python odszyfrowuje każdy (tabela różnic).
+// Osobno od wiadra ogłoszeń: zalew ogłoszeń nie zabiera żetonów pakietom do stacji.
+TokenBucket receiveBucket = {1000, 4, 0, 0};   // do pomiaru na płytce
 
 void rxDrop() {
     rxHead = (rxHead + 1) % RX_SLOTS;
@@ -373,10 +385,14 @@ bool mayTransmitHook(uint8_t iface, void*) {
 }
 
 bool mayVerifyHook(void*) {
-    if (takeVerifyToken(uptimeMs())) return true;
+    if (verifyBucket.take(uptimeMs())) return true;
     ++announcesLimited;
     return false;
 }
+
+// Żeton tuż przed odszyfrowaniem pakietu do celu stacji, po filtrze duplikatów: powtórzone nagranie
+// pakietu odpada bez żetonu.
+bool mayReceiveHook(void*) { return receiveBucket.take(uptimeMs()); }
 
 bool pinnedHook(const uint8_t destination[HASH], void*) {
     static const uint8_t zero[HASH] = {};
@@ -458,8 +474,8 @@ bool begin(journal::Storage& storage, Radio& r, const uint8_t ifacKey[16], uint6
     generator.seed(seed, 32, reinterpret_cast<const uint8_t*>(runtimeNonce), sizeof(runtimeNonce) - 1);
     clockMs = clockAtStartMs;
     clockLastMs = nowMs();
-    verifyTokens = ANNOUNCE_VERIFY_BURST;
-    verifyRefillMs = clockMs;
+    verifyBucket.reset(clockMs);
+    receiveBucket.reset(clockMs);
     radio = &r;
     configureIfac(ifacKey);
     queue.setReceiver(pinned[receiverActive]);
@@ -470,6 +486,7 @@ bool begin(journal::Storage& storage, Radio& r, const uint8_t ifacKey[16], uint6
     th.receipt = receiptHook;
     th.pinned = pinnedHook;
     th.mayVerify = mayVerifyHook;
+    th.mayReceive = mayReceiveHook;
     th.random = randomHook;
     th.mayTransmit = mayTransmitHook;
     framTable.fram = &storage;
@@ -762,7 +779,7 @@ size_t interfaceJson(char* out, size_t size) {
     // duplikaty, pakiety poza podzbiorem R1 albo nie do stacji, odrzucone przy sprawdzaniu, datagramy
     // odrzucone przy pełnej kolejce odbioru, ogłoszenia odrzucone przez limit weryfikacji, gniazda tablicy
     // znanych celów z błędną treścią (zwolnione), pakiety do stacji, które nie są wiadomością SA1 odbiorcy
-    // z karty (razem i według powodu).
+    // z karty (razem i według powodu), pakiety do stacji odrzucone przed odszyfrowaniem przez limit pracy.
     const p1iface::Counters& c = queue.counters();
     const rnscore::TransportCounters& t = transport.counters();
     const uint32_t now = nowMs();   // okna czasu kanału przesuwane przed printf (kolejność wywołań)
@@ -776,7 +793,7 @@ size_t interfaceJson(char* out, size_t size) {
                            "\"pr_in\":%lu,\"pr_answered\":%lu,\"pr_responses\":%lu,\"pr_sent\":%lu,\"ann_table_full\":%lu,"
                            "\"fwd\":%lu,\"fwd_no_path\":%lu,\"proof_fwd\":%lu,\"rev_full\":%lu,\"ann_rebroadcast\":%lu,\"pr_gated\":%lu,"
                            "\"lxmf_rejected\":%lu,\"lxmf_rej_sender\":%lu,\"lxmf_rej_shape\":%lu,\"lxmf_rej_stamp\":%lu,"
-                           "\"lxmf_rej_signature\":%lu",
+                           "\"lxmf_rej_signature\":%lu,\"rx_limited\":%lu",
                            (unsigned)queue.queued(), (unsigned)queue.held(), (unsigned long)c.queued, (unsigned long)c.full,
                            (unsigned long)c.tooLarge, (unsigned long)c.announcesHeld, (unsigned long)c.announcesDropped,
                            (unsigned long)c.announcesExpired, (unsigned long)c.sent, (unsigned long)c.sendFailed,
@@ -791,7 +808,7 @@ size_t interfaceJson(char* out, size_t size) {
                            (unsigned long)t.rebroadcasts, (unsigned long)t.pathGated,
                            (unsigned long)lxmfRejects.total(),
                            (unsigned long)lxmfRejects.sender, (unsigned long)lxmfRejects.shape, (unsigned long)lxmfRejects.stamp,
-                           (unsigned long)lxmfRejects.signature);
+                           (unsigned long)lxmfRejects.signature, (unsigned long)t.receiveLimited);
     return n < 0 ? 0 : static_cast<size_t>(n);
 }
 

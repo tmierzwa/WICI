@@ -163,9 +163,9 @@ const uint8_t* identityHash();
 bool publicKey(uint8_t out[64]);              // klucz publiczny tożsamości stacji (karta `card`)
 Status status();
 // Liczniki interfejsu P1 jako pola JSON bez nawiasów (do wiersza diagnostyki). INTERFACE_JSON_SIZE
-// mieści wszystkie pola rdzenia (44 liczniki po 10 cyfr, w tym 5 liczników LXMF z R3: 1038 B ze znakiem
-// końca) i portu.
-constexpr size_t INTERFACE_JSON_SIZE = 1040;
+// mieści wszystkie pola rdzenia (45 liczników po 10 cyfr, w tym 5 liczników LXMF z R3 i limit pracy nad
+// pakietami do stacji z R5: 1062 B ze znakiem końca) i portu.
+constexpr size_t INTERFACE_JSON_SIZE = 1064;
 size_t interfaceJson(char* out, size_t size);
 // ZNISZCZ DANE: stos staje do restartu bez dalszych zapisów w FRAM (tożsamość i tablice kasuje
 // store::Store::destroy); nowa tożsamość przy następnym starcie.

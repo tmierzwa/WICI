@@ -468,6 +468,12 @@ class CoreTests(unittest.TestCase):
                           ("t_in", proof), ("t_in", proof)])
         self.assertEqual(self.parsed(lines[3])[1:3], ([0, 0, 0, 1, 0, 0, 1, 1, 0], ["receipt:7:1"]))
         self.assertEqual(self.parsed(lines[4])[1], [1, 0, 0, 1, 0, 0, 1, 1, 0])   # ten sam dowód: duplikat
+        # Dowód pakietu stacji nie bierze żetonu limitu pracy (mayReceive): przy pustym wiadrze nadal doręcza.
+        lines = self.ask([("t_begin", self.STATION), ("t_in", raw), ("t_refuse", b"\x01"),
+                          ("t_send", dest + self.EPHEMERAL + self.IV + (7).to_bytes(4, "big") + (60000).to_bytes(4, "big") + payload),
+                          ("t_in", proof), ("t_limited", b"")])
+        self.assertEqual(self.parsed(lines[4])[1:3], ([0, 0, 0, 1, 0, 0, 1, 1, 0], ["receipt:7:1"]))
+        self.assertEqual(lines[5], "0")
 
     def test_transport_receipt_timeout_and_wrong_proofs(self):
         # Dowód jawny innego pakietu, dowód innej tożsamości i poprawny dowód niejawny z celem innym niż
@@ -518,6 +524,27 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(self.parsed(lines[2])[1], [1, 0, 0, 0, 1, 0, 0, 0, 0])
         self.assertEqual(self.parsed(lines[4]), ("ok", [1, 0, 0, 0, 2, 1, 0, 0, 0], [f"packet:{b'refused'.hex()}"], "-"))
         self.assertEqual(self.parsed(lines[5])[1], [1, 0, 1, 0, 2, 1, 0, 0, 0])
+
+    def test_transport_packet_to_station_without_token(self):
+        # Hak mayReceive (limit pracy stacji) odmawia: pakiet odpada przed odszyfrowaniem, bez dowodu, bez
+        # warstwy aplikacji i bez zapisu skrótu, więc ta sama kopia nie jest duplikatem i po zwolnieniu
+        # żetonu przechodzi z dowodem; dopiero wtedy kolejna kopia to duplikat. Pakiet do innego celu nie
+        # pyta o żeton (pominięty wcześniej).
+        address = self.ask([("t_begin", self.STATION)])[0]
+        station_pub = bytes.fromhex(self.ask([("public_key", self.STATION)])[0])
+        token = bytes.fromhex(self.ask([("encrypt", station_pub + self.EPHEMERAL + self.IV + b"report")])[0])
+        raw = self.packet(0x00, bytes.fromhex(address), token)
+        lines = self.ask([("t_begin", self.STATION), ("t_refuse", b"\x01"), ("t_in", raw), ("t_in", raw),
+                          ("t_in", self.packet(0x00, bytes(16), token)), ("t_limited", b""),
+                          ("t_refuse", b"\x00"), ("t_in", raw), ("t_in", raw), ("t_limited", b"")])
+        self.assertEqual(self.parsed(lines[2]), ("ok", [0, 0, 0, 0, 0, 0, 0, 0, 0], [], "-"))
+        self.assertEqual(self.parsed(lines[3]), ("ok", [0, 0, 0, 0, 0, 0, 0, 0, 0], [], "-"))
+        self.assertEqual(self.parsed(lines[4])[1], [0, 1, 0, 0, 0, 0, 0, 0, 0])
+        self.assertEqual(lines[5], "2")
+        self.assertEqual(self.parsed(lines[7]), ("ok", [0, 1, 0, 0, 1, 0, 0, 0, 0], [f"packet:{b'report'.hex()}"],
+                                                 self.proof_packet(self.STATION, raw).hex()))
+        self.assertEqual(self.parsed(lines[8])[1], [1, 1, 0, 0, 1, 0, 0, 0, 0])
+        self.assertEqual(lines[9], "2")
 
     def test_transport_outside_subset(self):
         # Pakiety poza podzbiorem R1 albo nie do stacji: pominięte bez listy skrótów; za krótki: unpack.

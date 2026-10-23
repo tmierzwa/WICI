@@ -11,7 +11,7 @@
 // Wynik: wiersz JSON na stdout; kod 3 = złamany niezmiennik, 75 = zanik zasilania w zapisie.
 //
 // rns_stress <fram> [--seed N] [--events N] [--mutate PERCENT] [--start S] [--gap S]
-//            [--long-jumps] [--cut-after-writes N] [--defect token48|short-announce|held-announce|link-mtu|flood|damaged-receiver|forward-flood|rebroadcast-load|own-path-requests]
+//            [--long-jumps] [--cut-after-writes N] [--defect token48|short-announce|held-announce|link-mtu|flood|station-flood|damaged-receiver|forward-flood|rebroadcast-load|own-path-requests]
 //            [--hostile-days N [--window-s S] [--stop-after-s S]] [--receiver-foreign-key]
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -509,11 +509,16 @@ void checkClock() {
 std::string floodResult;
 std::vector<uint8_t> replayWire;   // nagrane poprawne ogłoszenie węzła 1 z IFAC
 
+// Operacje asymetryczne stacji w obiegach loop() (bez IFAC, który generator nakłada na datagramy kodem rdzenia).
+uint32_t stationOperations = 0;
+
 void serviceCounted(uint32_t limit = 1) {
     radio.poll();
     const uint32_t before = rnscore::asymmetricOperations();
     rnsnode::loop(static_cast<uint32_t>(simMs));
-    if (rnscore::asymmetricOperations() - before > limit) fail("too many asymmetric operations in one loop pass");
+    const uint32_t ops = rnscore::asymmetricOperations() - before;
+    if (ops > limit) fail("too many asymmetric operations in one loop pass");
+    stationOperations += ops;
 }
 
 void receive(const RNS::Bytes& raw) {
@@ -702,6 +707,64 @@ void flood() {
              "\"path_round\":%d,\"announce_tries\":%u,\"delivered_round\":%d,\"proof_tries\":%u,"
              "\"replay_announces\":%u,\"replay_accepted\":%u,\"replay_limited\":%u",
              pathRound, announceTries, deliveredRound, proofTries, replayAnnounces, replayAccepted, replayLimited);
+    floodResult = text;
+}
+
+// Zalew pakietami do celu stacji (stacja na rdzeniu): przez 60 s dwa datagramy na obieg loop() z poprawnie
+// zaszyfrowanymi pakietami do stacji o przypadkowej treści. Każdy przetworzony kosztuje trzy operacje
+// (odszyfrowanie, podpis dowodu trwałego odrzucenia, IFAC dowodu), więc limit pracy (wiadro w
+// rns_node_core.cpp, żeton co sekundę, 4 naraz) ogranicza je do około jednego na sekundę; reszta odpada
+// przed odszyfrowaniem ("rx_limited"). Po zalewie wiadomość SA1 odbiorcy z karty: kopia przy pustym wiadrze
+// odpada, ta sama kopia po uzupełnieniu przechodzi z dowodem.
+// Wynik w polu "flood": datagramy, przetworzone, odrzucone limitem, operacje asymetryczne.
+void stationFlood() {
+    receive(withHops(announceOf(0), 1));
+    for (int k = 0; k < 110; ++k) { simMs += 10; serviceCounted(); }
+    if (!rnsnode::hasPath(peerDest[0].data())) fail("station-flood: receiver announce not accepted");
+    RNS::Destination out(station, RNS::Type::Destination::OUT, RNS::Type::Destination::SINGLE, DEST_APP, DEST_ASPECT);
+    const uint32_t received0 = rnsnode::status().packetsReceived, limited0 = interfaceCounter("rx_limited");
+    const uint32_t ops0 = stationOperations;
+    uint32_t datagrams = 0;
+    for (int pass = 0; pass < 3000; ++pass) {   // 60 s po 20 ms
+        for (int k = 0; k < 2; ++k) {
+            RNS::Packet p(out, randomBytes(1 + rnd() % 300), RNS::Type::Packet::DATA);
+            p.pack();
+            receive(p.raw());
+            ++datagrams;
+        }
+        simMs += 20;
+        serviceCounted(3);
+    }
+    for (int k = 0; k < 8; ++k) { simMs += 20; serviceCounted(3); }
+    const uint32_t processed = rnsnode::status().packetsReceived - received0;
+    const uint32_t limited = interfaceCounter("rx_limited") - limited0;
+    const uint32_t ops = stationOperations - ops0;   // każdy datagram: IFAC; przetworzony pakiet: jeszcze trzy
+
+    // Wiadomość SA1 odbiorcy z karty tuż po zalewie (wiadro puste): odpada bez zapisu skrótu, więc ta sama
+    // kopia po uzupełnieniu wiadra (inną drogą, od przekaźnika) przechodzi z dowodem.
+    const char sa1[] = "[1,\"after the station flood\"]";
+    uint8_t lxmf[400], messageHash[32];
+    const size_t n = rnscore::lxmfPackSa1(peers[0].get_private_key().data(), peers[0].get_public_key().data(), stationDest.data(),
+                                          peerDest[0].data(), 0, reinterpret_cast<const uint8_t*>(sa1), sizeof(sa1) - 1, lxmf,
+                                          sizeof(lxmf), messageHash);
+    RNS::Packet m(out, RNS::Bytes(lxmf, n), RNS::Type::Packet::DATA);
+    m.pack();
+    const uint32_t before = rnsnode::status().packetsReceived, rejected = interfaceCounter("lxmf_rejected");
+    const uint32_t limitedBefore = interfaceCounter("rx_limited");
+    receive(m.raw());
+    for (int k = 0; k < 4; ++k) { simMs += 20; serviceCounted(4); }
+    if (interfaceCounter("rx_limited") != limitedBefore + 1) fail("station-flood: SA1 copy with an empty bucket not limited");
+    for (int k = 0; k < 5; ++k) { simMs += 1000; serviceCounted(); }
+    const uint32_t sent = radio.sent;
+    receive(m.raw());
+    for (int k = 0; k < 4; ++k) { simMs += 20; serviceCounted(4); }
+    if (rnsnode::status().packetsReceived != before + 1) fail("station-flood: SA1 message from the receiver lost");
+    if (interfaceCounter("lxmf_rejected") != rejected) fail("station-flood: SA1 message from the receiver rejected");
+    if (radio.sent == sent) fail("station-flood: no proof for the SA1 message");
+
+    char text[192];
+    snprintf(text, sizeof(text), "\"datagrams\":%u,\"processed\":%u,\"limited\":%u,\"operations\":%u", datagrams, processed,
+             limited, ops);
     floodResult = text;
 }
 
@@ -969,6 +1032,7 @@ void receiverReadsReport() {
 }
 #else
 void flood() { fail("flood: station core only"); }
+void stationFlood() { fail("station-flood: station core only"); }
 const char* floodJson() { return ""; }
 void damagedReceiver() { fail("damaged-receiver: station core only"); }
 void transitLoad(bool) { fail("transit load: station core only"); }
@@ -1037,6 +1101,8 @@ void defect(const std::string& name) {
             feed(withHops(lr.raw(), 0), "defect");
             for (int k = 0; k < 10; ++k) { simMs += 100; service(); }
         }
+    } else if (name == "station-flood") {
+        stationFlood();
     } else if (name == "flood") {
         flood();
     } else if (name == "forward-flood" || name == "rebroadcast-load") {

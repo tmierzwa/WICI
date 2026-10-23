@@ -74,6 +74,12 @@ struct TransportHooks {
     // Zgoda na weryfikację podpisu ogłoszenia, pytana tuż przed nią (po tanich odrzuceniach); fałsz:
     // ogłoszenie odpada bez kryptografii. Limit pracy procesora po stronie stacji, bez odpowiednika w Pythonie.
     bool (*mayVerify)(void* context) = nullptr;
+    // Zgoda na pracę nad pakietem DATA do celu stacji (odszyfrowanie, hak packet, dowód), pytana po
+    // sprawdzeniu listy skrótów, przed zapisem skrótu i odszyfrowaniem; fałsz: pakiet odpada bez kryptografii,
+    // bez dowodu i bez zapisu skrótu (dla nadawcy jak utrata pakietu, późniejsza kopia ma szansę). Dowody
+    // pakietów stacji go nie pytają. Limit pracy procesora po stronie stacji, bez odpowiednika w Pythonie
+    // (tabela różnic). nullptr: zawsze.
+    bool (*mayReceive)(void* context) = nullptr;
     // Bajty losowe (RNS: os.urandom) dla odpowiedzi na zapytanie o trasę do celu stacji; fałsz: brak.
     bool (*random)(uint8_t* out, size_t length, void* context) = nullptr;
     // Interfejs iface przyjmie teraz ogłoszenie (kod IFAC, bez ciszy, miejsce w kolejce i miejsce na
@@ -93,6 +99,7 @@ struct TransportCounters {
     uint32_t invalid = 0;     // ogłoszenie odrzucone, pakiet nie do odszyfrowania, dowód bez czekającego potwierdzenia
     uint32_t announces = 0;   // ogłoszenia przyjęte do trasy
     uint32_t received = 0;    // pakiety do stacji po odszyfrowaniu
+    uint32_t receiveLimited = 0;   // pakiety do stacji odrzucone przed odszyfrowaniem (hak mayReceive)
     uint32_t unproven = 0;    // z nich odrzucone przez warstwę aplikacji (bez dowodu)
     uint32_t sent = 0;
     uint32_t delivered = 0;
