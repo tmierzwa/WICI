@@ -12,7 +12,12 @@
 //
 // rns_stress <fram> [--seed N] [--events N] [--mutate PERCENT] [--start S] [--gap S]
 //            [--long-jumps] [--cut-after-writes N] [--defect token48|short-announce|held-announce|link-mtu|flood|station-flood|damaged-receiver|forward-flood|rebroadcast-load|own-path-requests|path-flood]
-//            [--hostile-days N [--window-s S] [--stop-after-s S]] [--receiver-foreign-key]
+//            [--hostile-days N [--window-s S] [--stop-after-s S]] [--receiver-foreign-key] [--dump PLIK]
+//
+// --dump: datagramy generatora z feed() (rodzaj, czy mutowany, pakiet przed IFAC i datagram na łączu) po wierszu
+// JSON, na początku klucze generatora i klucz prywatny stacji z FRAM (tylko w próbie); tools/rns_differential.py
+// --stress-dump sprawdza nimi w Reticulum w Pythonie, że niezmutowany ruch jest poprawny (tests/test_rns_differential.py). Pole "generated" wyniku: datagramy
+// generatora według rodzaju (feed() i powtórki).
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/time.h>
@@ -125,10 +130,27 @@ std::string hex(const uint8_t* d, size_t n) {
     return s;
 }
 
+}  // namespace
+
+#ifdef WICI_COVERAGE
+// Pomiar pokrycia wierszy (clang -fprofile-instr-generate): _exit() pomija zapis profilu przy wyjściu.
+extern "C" int __llvm_profile_write_file(void);
+#endif
+
+namespace {
+
+// Koniec procesu bez destruktorów statycznych portu (kolejność niszczenia nie jest częścią próby).
+[[noreturn]] void quit(int code) {
+#ifdef WICI_COVERAGE
+    __llvm_profile_write_file();
+#endif
+    _exit(code);
+}
+
 [[noreturn]] void fail(const char* what) {
     printf("{\"result\":\"invariant\",\"what\":\"%s\"}\n", what);
     fflush(stdout);
-    _exit(EXIT_INVARIANT);
+    quit(EXIT_INVARIANT);
 }
 
 // ---- FRAM w pliku (mmap), z zanikiem zasilania po N zapisach ----
@@ -181,7 +203,7 @@ bool FileFram::write(uint32_t address, const uint8_t* data, size_t count) {
         printf("{\"result\":\"power_cut\",\"write\":%ld,\"address\":%u,\"count\":%u,\"written\":%u}\n", writes - 1, address,
                static_cast<unsigned>(count), static_cast<unsigned>(part));
         fflush(stdout);
-        _exit(EXIT_POWER_CUT);
+        quit(EXIT_POWER_CUT);
     }
     memcpy(bytes + address, data, count);
     return true;
@@ -268,6 +290,23 @@ std::vector<std::vector<uint8_t>> recentWire;
 uint32_t mutatePercent = 0;
 uint32_t fed = 0, mutated = 0;
 
+// Datagramy generatora według rodzaju (pole "generated"); rodzaje w kolejności pierwszego użycia.
+std::vector<std::pair<std::string, uint32_t>> generated;
+void countGenerated(const char* kind) {
+    for (auto& g : generated) {
+        if (g.first == kind) { ++g.second; return; }
+    }
+    generated.emplace_back(kind, 1);
+}
+
+std::string generatedJson() {
+    std::string out;
+    for (const auto& g : generated) out += (out.empty() ? "\"" : ",\"") + g.first + "\":" + std::to_string(g.second);
+    return out;
+}
+
+FILE* dump = nullptr;   // --dump
+
 void remember(std::vector<RNS::Bytes>& v, const RNS::Bytes& b) {
     if (v.size() < 64) v.push_back(b);
     else v[rnd() % v.size()] = b;
@@ -313,7 +352,7 @@ void mutate(std::vector<uint8_t>& v, size_t keep) {
 
 // Pakiet Reticulum (bez IFAC) do stacji: mutacja przed kodem IFAC (węzeł z kluczem sieci) albo,
 // rzadziej, po nim (węzeł bez klucza).
-void feed(const RNS::Bytes& raw, const char*) {
+void feed(const RNS::Bytes& raw, const char* kind) {
     std::vector<uint8_t> v(raw.data(), raw.data() + raw.size());
     const bool m = mutatePercent && rnd() % 100 < mutatePercent;
     const bool afterIfac = m && rnd() % 7 == 0;
@@ -322,6 +361,11 @@ void feed(const RNS::Bytes& raw, const char*) {
     if (afterIfac) mutate(wire, 1);
     if (m) ++mutated;
     ++fed;
+    countGenerated(kind);
+    if (dump) {
+        fprintf(dump, "{\"kind\":\"%s\",\"mutated\":%s,\"raw\":\"%s\",\"wire\":\"%s\"}\n", kind, m ? "true" : "false",
+                hex(v.data(), v.size()).c_str(), hex(wire.data(), wire.size()).c_str());
+    }
     if (wire.empty()) return;
     if (recentWire.size() < 32) recentWire.push_back(wire);
     else recentWire[rnd() % recentWire.size()] = wire;
@@ -448,9 +492,11 @@ void proofForStationPacket() {
 void replay() {
     if (rnd() % 2 && !radio.recent.empty()) {   // datagram stacji wraca od innego przekaźnika
         const std::vector<uint8_t>& w = radio.recent[rnd() % radio.recent.size()];
+        countGenerated("station-replay");
         toStation(w.data(), w.size());
     } else if (!recentWire.empty()) {
         const std::vector<uint8_t>& w = recentWire[rnd() % recentWire.size()];
+        countGenerated("replay");
         toStation(w.data(), w.size());
     }
 }
@@ -1171,14 +1217,14 @@ void defect(const std::string& name) {
             RNS::Packet a = d.announce(randomBytes(8), false, {RNS::Type::NONE}, {}, false);
             RNS::Transport::deregister_destination(d);
             a.pack();
-            feed(withHops(a.raw(), 1), "defect");
+            feed(withHops(a.raw(), 1), "announce");
             RNS::Destination pr({RNS::Type::NONE}, RNS::Type::Destination::OUT, RNS::Type::Destination::PLAIN, "rnstransport",
                                 "path.request");
             RNS::Bytes data = peerDest[i];
             data << randomBytes(16) << randomBytes(16);
             RNS::Packet q(pr, data, RNS::Type::Packet::DATA);
             q.pack();
-            feed(withHops(q.raw(), 0), "defect");
+            feed(withHops(q.raw(), 0), "path-request");
             for (int k = 0; k < 30; ++k) { simMs += 1000; service(); }
         }
     } else if (name == "link-mtu") {
@@ -1194,7 +1240,7 @@ void defect(const std::string& name) {
             RNS::Destination out(station, RNS::Type::Destination::OUT, RNS::Type::Destination::SINGLE, DEST_APP, DEST_ASPECT);
             RNS::Packet lr(out, data, RNS::Type::Packet::LINKREQUEST);
             lr.pack();
-            feed(withHops(lr.raw(), 0), "defect");
+            feed(withHops(lr.raw(), 0), "link-request");
             for (int k = 0; k < 10; ++k) { simMs += 100; service(); }
         }
     } else if (name == "station-flood") {
@@ -1243,6 +1289,7 @@ int main(int argc, char** argv) {
     std::string defectName;
     long hostileDayCount = 0, windowS = 120, stopAfterS = -1;
     bool foreignKey = false;
+    std::string dumpPath;
     rngState = 1;
     for (int i = 2; i < argc; ++i) {
         const std::string a = argv[i];
@@ -1260,6 +1307,7 @@ int main(int argc, char** argv) {
         else if (a == "--window-s") { windowS = atol(v); ++i; }
         else if (a == "--stop-after-s") { stopAfterS = atol(v); ++i; }
         else if (a == "--receiver-foreign-key") foreignKey = true;
+        else if (a == "--dump") { dumpPath = v; ++i; }
         else { fprintf(stderr, "unknown option %s\n", a.c_str()); return 2; }
     }
 
@@ -1321,6 +1369,22 @@ int main(int argc, char** argv) {
     stationDest = RNS::Bytes(rnsnode::address(), 16);
     stationTransport = RNS::Bytes(rnsnode::identityHash(), 16);
     checkClock();
+    if (!dumpPath.empty()) {
+        dump = fopen(dumpPath.c_str(), "w");
+        if (!dump) { fprintf(stderr, "dump %s\n", dumpPath.c_str()); return 2; }
+        // Hasło sieci to 32 cyfry szesnastkowe klucza IFAC, bez nazwy sieci (rnsnode::begin; ifac_netkey w Pythonie).
+        // Klucz stacji z rekordu klucza w FRAM (ten sam dla portu i rdzenia): Python odszyfrowuje nim pakiety do stacji.
+        uint8_t prv[framfs::KEY_BYTES];
+        if (!framfs::loadKey(fram, prv)) fail("dump: no station key in FRAM");
+        fprintf(dump, "{\"ifac_netkey\":\"%s\",\"ifac_size\":%u,\"app\":\"%s.%s\",\"station_private_key\":\"%s\",\"peers\":[",
+                hex(IFAC_KEY, sizeof(IFAC_KEY)).c_str(), static_cast<unsigned>(p1iface::IFAC_SIZE), DEST_APP, DEST_ASPECT,
+                hex(prv, sizeof(prv)).c_str());
+        for (size_t i = 0; i < PEERS; ++i) {
+            const RNS::Bytes prv = peers[i].get_private_key();
+            fprintf(dump, "%s\"%s\"", i ? "," : "", hex(prv.data(), prv.size()).c_str());
+        }
+        fprintf(dump, "]}\n");
+    }
 
     if (!defectName.empty()) {
         defect(defectName);
@@ -1359,15 +1423,16 @@ int main(int argc, char** argv) {
     rnsnode::persist();
     msync(fram.bytes, FRAM_BYTES, MS_SYNC);
     saveClock();
+    if (dump) fclose(dump);
     printf("{\"result\":\"ok\",\"identity\":\"%s\",\"new\":%s,\"fed\":%u,\"mutated\":%u,\"sent\":%u,\"paths\":%u,"
            "\"hashes\":%u,\"announce_table\":%u,\"pending\":%u,\"received\":%u,\"delivered\":%u,\"timed_out\":%u,"
            "\"announces\":%u,\"fs_files\":%u,\"fs_used\":%u,\"fs_capacity\":%u,\"writes\":%ld,\"clock_s\":%llu,\"traffic\":\"%016llx\","
-           "\"iface\":{%s},\"flood\":{%s}}\n",
+           "\"iface\":{%s},\"flood\":{%s},\"generated\":{%s}}\n",
            id.c_str(), s.identityNew ? "true" : "false", fed, mutated, radio.sent, (unsigned)s.paths, (unsigned)s.packetHashes,
            (unsigned)s.announceTable, (unsigned)s.receiptsPending, s.packetsReceived, s.delivered, s.timedOut, s.announcesSeen,
            (unsigned)s.fsFiles, (unsigned)s.fsUsedBytes, (unsigned)s.fsCapacityBytes, fram.writes,
            static_cast<unsigned long long>(simMs / 1000), static_cast<unsigned long long>(trafficHash), iface,
-           floodJson());
+           floodJson(), generatedJson().c_str());
     fflush(stdout);
-    _exit(0);   // bez destruktorów statycznych portu (kolejność niszczenia nie jest częścią próby)
+    quit(0);
 }

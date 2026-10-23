@@ -8,6 +8,11 @@ go to the core and to Reticulum acting as the same station; both must transmit t
 keep the same paths (firmware/reticulum-core.md, acceptance criterion 2). Skipped without
 WICI_RNS_PYTHON; the stack sources are needed as for tests/test_rnscore.py (WICI_RNS_SANITIZE=1 fetches them).
 
+GeneratorTrafficTests: the traffic generator of the hostile trial (tests/native/rns_stress.cpp, built as in
+tests/test_rns_hostile.py with the station core) writes its datagrams (--dump), and Reticulum in Python checks
+that the unmutated ones are valid (rns_differential.py --stress-dump): IFAC, unpacking, announce signatures,
+decryption and proofs. Every kind the tool checks in full must occur in the runs, and packets with too many hops too. The same check stays when the generator moves to the core primitives (stage R6-2).
+
   WICI_RNS_PYTHON=/path/to/venv/bin/python python3 -m unittest tests.test_rns_differential -v
 """
 
@@ -25,6 +30,7 @@ RNS_PYTHON = os.environ.get("WICI_RNS_PYTHON")
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import test_rnscore  # noqa: E402
+import test_rns_hostile  # noqa: E402
 
 
 @unittest.skipUnless(RNS_PYTHON, "WICI_RNS_PYTHON not set")
@@ -58,3 +64,47 @@ class DifferentialTests(unittest.TestCase):
         # Węzeł stanowiska (etap R4): drugi interfejs (USB) po obu stronach; pakiety z interfejsem nadania,
         # trasy z interfejsem ogłoszenia.
         self.trial(seed=3, mutations=96, interfaces=2)
+
+
+@unittest.skipUnless(RNS_PYTHON, "WICI_RNS_PYTHON not set")
+class GeneratorTrafficTests(unittest.TestCase):
+    # Przebiegi jak w tests/test_rns_hostile.py: ruch przez tygodnie, ruch z mutacjami (sprawdzane tylko
+    # niezmutowane datagramy) i próby regresji z poprawnymi ogłoszeniami, zapytaniami i żądaniami łącza.
+    RUNS = [("--seed", 11, "--events", 2500, "--long-jumps"), ("--seed", 21, "--events", 1500, "--mutate", 30),
+            ("--defect", "held-announce", "--events", 0), ("--defect", "link-mtu", "--events", 0)]
+
+    @classmethod
+    def setUpClass(cls):
+        test_rns_hostile.CoreHostileStackTests.setUpClass()   # kompilator i źródła stosu (albo pominięcie)
+        cls.hostile = test_rns_hostile.CoreHostileStackTests
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.hostile.tearDownClass()
+
+    # Rodzaje sprawdzane w całości (rns_differential.py stress_dump): każdy musi wystąpić w przebiegach.
+    KINDS = ("announce", "transit", "local", "station-proof", "path-request", "link-request")
+
+    def test_unmutated_traffic_is_valid_reticulum(self):
+        kinds, too_many_hops = {}, 0
+        for run in self.RUNS:
+            with self.subTest(run=run), tempfile.TemporaryDirectory() as folder:
+                dump = Path(folder) / "dump.jsonl"
+                station = test_rns_hostile.Station(self.hostile.binary, Path(folder))
+                code, outcome, report, stderr = station.run(*run, "--dump", dump)
+                self.assertIsNone(report, report)
+                self.assertEqual(outcome.get("result"), "ok", stderr[-2000:])
+                check = subprocess.run([RNS_PYTHON, "-I", str(TOOL), "--stress-dump", str(dump)], capture_output=True,
+                                       text=True, timeout=600, cwd=tempfile.gettempdir())
+                lines = [line for line in check.stdout.splitlines() if line.startswith("{")]
+                self.assertTrue(lines, check.stderr[-4000:])
+                result = json.loads(lines[-1])
+                self.assertEqual(result["problems"], [], json.dumps(result["problems"][:3], indent=1))
+                self.assertGreater(result["checked"], 0, result)
+                self.assertEqual(check.returncode, 0, check.stderr[-4000:])
+                for kind, n in result["kinds"].items():
+                    kinds[kind] = kinds.get(kind, 0) + n
+                too_many_hops += result["too_many_hops"]
+        for kind in self.KINDS:
+            self.assertGreater(kinds.get(kind, 0), 0, f"{kind}: {kinds}")
+        self.assertGreater(too_many_hops, 0, kinds)

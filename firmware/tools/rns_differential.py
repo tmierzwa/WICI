@@ -31,6 +31,17 @@ Run with a Python that has Reticulum at the pinned commit (e40191b):
 (tests/test_rns_differential.py builds the check program and runs this).
 
 Prints one JSON object in the last line (steps, differences); exit code 0 when there is no difference.
+
+With --stress-dump FILE (a dump of tests/native/rns_stress --dump) the tool checks instead that the
+unmutated traffic of the hostile trial generator is valid Reticulum: the IFAC of each datagram (Transport.handle_ifac
+with the trial network key) gives the packet before IFAC, the packet unpacks, announces have a valid
+signature and the destination of their identity, packets in transport decrypt with the key of their
+generator node and packets for the station with the station key, proofs of station packets validate with a
+generator key, and path requests and link requests have the shape Reticulum expects; other proofs, link
+traffic and regression packets (kinds proof, defect) only IFAC and unpacking. A kind outside this list is a
+problem. Packets with 128 hops or more (the generator makes them on purpose) must be rejected by
+Packet.unpack (RNS/Packet.py:250 at e40191b), and datagrams over the MTU (a random IFAC from the generator)
+must fail IFAC; both are counted. Mutated datagrams are skipped.
 """
 
 import argparse
@@ -372,13 +383,110 @@ def normalized(sent, station_address, station_identity):
     return sorted(out) + sorted(own)
 
 
+def stress_dump(path: str):
+    """Records of an rns_stress dump that Reticulum does not accept as the generator meant them."""
+    import RNS  # noqa: E402 (needs the reference Reticulum)
+
+    with open(path) as f:
+        head = json.loads(f.readline())
+        records = [json.loads(line) for line in f]
+
+    class Interface:   # pola interfejsu, których używa Transport.handle_ifac
+        ifac_size = head["ifac_size"]
+
+        def ifac_violation(self, _):
+            pass
+
+    interface = Interface()
+    origin = RNS.Identity.full_hash(RNS.Identity.full_hash(head["ifac_netkey"].encode("utf-8")))
+    interface.ifac_key = RNS.Cryptography.hkdf(length=64, derive_from=origin, salt=RNS.Reticulum.IFAC_SALT, context=None)
+    interface.ifac_identity = RNS.Identity.from_bytes(interface.ifac_key)
+    app, aspect = head["app"].split(".")
+    peers = [RNS.Identity.from_bytes(bytes.fromhex(k)) for k in head["peers"]]
+    peer_destinations = {RNS.Destination.hash(peer, app, aspect): peer for peer in peers}
+    station = RNS.Identity.from_bytes(bytes.fromhex(head["station_private_key"]))
+    station_destination = RNS.Destination.hash(station, app, aspect)
+    path_request = RNS.Destination.hash_from_name_and_identity("rnstransport.path.request", None)
+
+    def problem(record, packet):
+        kind = record["kind"]
+        if kind in ("proof", "defect"):   # dowody i ruch łącza o losowej treści, próby regresji: IFAC i unpack
+            return None
+        if packet.packet_type == RNS.Packet.ANNOUNCE and kind == "announce":
+            if not RNS.Identity.validate_announce(packet, only_validate_signature=True):
+                return "announce signature"
+            announced = RNS.Identity(create_keys=False)
+            announced.load_public_key(packet.data[:RNS.Identity.KEYSIZE // 8])
+            if RNS.Destination.hash(announced, app, aspect) != packet.destination_hash:
+                return "announce destination"
+        elif kind == "announce":
+            return "announce type"
+        elif kind == "path-request":
+            if packet.destination_hash != path_request or packet.packet_type != RNS.Packet.DATA or len(packet.data) < 16:
+                return "path request shape"
+        elif kind == "transit":
+            peer = peer_destinations.get(packet.destination_hash)
+            if packet.header_type != RNS.Packet.HEADER_2 or peer is None or peer.decrypt(packet.data) is None:
+                return "packet in transport does not decrypt"
+        elif kind == "local":
+            if packet.destination_hash != station_destination or station.decrypt(packet.data) is None:
+                return "packet for the station does not decrypt"
+        elif kind == "link-request":
+            if packet.packet_type != RNS.Packet.LINKREQUEST or len(packet.data) not in (64, 67) or \
+                    len(RNS.Link.link_id_from_lr_packet(packet)) != 16:
+                return "link request shape"
+        elif kind == "station-proof":
+            proved, signature = packet.data[:32], packet.data[32:]
+            if packet.packet_type != RNS.Packet.PROOF or packet.destination_hash != proved[:16] or \
+                    not any(peer.validate(signature, proved) for peer in peers):
+                return "proof of a station packet"
+        elif kind != "announce":
+            return "unknown kind"
+        return None
+
+    checked, too_far, over_mtu, kinds, problems = 0, 0, 0, {}, []
+    for record in records:
+        if record["mutated"]:
+            continue
+        raw, wire = bytes.fromhex(record["raw"]), bytes.fromhex(record["wire"])
+        valid, unmasked = RNS.Transport.handle_ifac(wire, interface)
+        if len(raw) > RNS.Reticulum.MTU:   # ponad MTU: generator daje kod IFAC losowy, stacja ma odrzucić
+            over_mtu += 1
+            if valid:
+                problems.append({"kind": record["kind"], "problem": "datagram over the MTU passes IFAC", "raw": record["raw"]})
+            continue
+        checked += 1
+        kinds[record["kind"]] = kinds.get(record["kind"], 0) + 1
+        packet = RNS.Packet(None, raw)
+        unpacked = packet.unpack()
+        if not valid or unmasked != raw:
+            what = "IFAC"
+        elif raw[1] >= RNS.Transport.PATHFINDER_M:   # Packet.unpack: "Invalid hop count" (RNS/Packet.py:250)
+            too_far += 1
+            what = "packet with too many hops accepted" if unpacked else None
+        else:
+            what = problem(record, packet) if unpacked else "unpack"
+        if what:
+            problems.append({"kind": record["kind"], "problem": what, "raw": record["raw"]})
+    return {"records": len(records), "checked": checked, "too_many_hops": too_far, "over_mtu": over_mtu, "kinds": kinds,
+            "problems": problems}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--check", required=True, help="tests/native/rnscore_check built by tests/test_rnscore.py")
+    parser.add_argument("--check", help="tests/native/rnscore_check built by tests/test_rnscore.py")
+    parser.add_argument("--stress-dump", help="dump of tests/native/rns_stress --dump: check the generator traffic only")
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--mutations", type=int, default=64)
     parser.add_argument("--interfaces", type=int, choices=(1, 2), default=1, help="2: second interface (USB, stage R4)")
     args = parser.parse_args()
+    if args.stress_dump:
+        result = stress_dump(args.stress_dump)
+        print(json.dumps({"reticulum": "e40191b", **result}))
+        sys.stdout.flush()
+        os._exit(0 if not result["problems"] else 1)
+    if not args.check:
+        parser.error("--check or --stress-dump is required")
     two = args.interfaces == 2
 
     core = Core(args.check)
