@@ -13,7 +13,7 @@ Projekt jest na etapie projektowania prototypu. Najbliższy cel to wymiana zgło
 
 ## Od czego zacząć
 
-Oprogramowanie stacji w [firmware/](firmware/README.md) skompilowano dla stanowisk deweloperskich A i B i stacji L0 ze stosem Reticulum: od etapu R6-3 rdzeniem stacji z LXMF ([reticulum-core.md](firmware/reticulum-core.md)), na stanowisku B do etapu R6-4 portem microReticulum bez LXMF; nie uruchomiono go jeszcze na sprzęcie. Pilotaż używa gotowej płytki ESP32-S3 z układem LoRa SX1262; płytka R02 jest wstrzymana do decyzji po pilotażu.
+Oprogramowanie stacji w [firmware/](firmware/README.md) skompilowano dla stanowisk deweloperskich A i B i stacji L0 ze stosem Reticulum: od etapów R6-3 i R6-4 rdzeniem stacji z LXMF ([reticulum-core.md](firmware/reticulum-core.md)); nie uruchomiono go jeszcze na sprzęcie. Pilotaż używa gotowej płytki ESP32-S3 z układem LoRa SX1262; płytka R02 jest wstrzymana do decyzji po pilotażu.
 
 ### Małe zadania bez sprzętu
 

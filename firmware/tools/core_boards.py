@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 """Compile the station Reticulum core with the board toolchains and report stack and static RAM.
 
-The images with the core (bench-a, bench-n1, l0 and bench-b-core since stage R6-3) link it, but the
+The station images with the core (since stages R6-3 and R6-4) link it, but the
 build does not show its stack depth or a core object moved to flash. For each PlatformIO environment
 given (default bench-a for nRF52840 and l0 for ESP32-S3) this tool takes the compiler, flags, defines
 and include paths of the image from `pio project metadata` and compiles every file of

@@ -5,6 +5,7 @@
   "annunciator.cpp",
   "config.cpp",
   "console.cpp",
+  "core_selftest.cpp",
   "drbg.cpp",
   "font.cpp",
   "fram.cpp",
@@ -19,7 +20,7 @@
   "platform_esp32.cpp",
   "platform_nrf.cpp",
   "radio_console_s2lp.cpp",
-  "rns_node.cpp",
+  "rns_node_core.cpp",
   "s2lp.cpp",
   "s2lp_link.cpp",
   "sa1.cpp",
@@ -47,67 +48,26 @@
   "-DUSB_MANUFACTURER=\"WICI\"",
   "-DUSB_PRODUCT=\"WICI bench-b\"",
   "-DWICI_BENCH_B",
-  "-DWICI_FW_VERSION=\"bench-b-0.1\"",
+  "-DWICI_FW_VERSION=\"bench-b-0.2\"",
   "-Wall",
-  "-Ifirmware/src",
-  "-DMSGPACK_USE_BOOST=OFF",
-  "-DRNS_LOG_LEVEL=RNS_LOG_LEVEL_NOTICE",
-  "-DDEBUGLOG_DEFAULT_LOG_LEVEL_WARN",
-  "-DRNS_USE_FS",
-  "-DRNS_PERSIST_HASHLIST=0",
-  "-DRNS_SHORT_PACKET_HASHES",
-  "-DRNS_PATH_TABLE_MAX=256",
-  "-DRNS_PATH_TABLE_SEGMENT_SIZE=16384",
-  "-DRNS_PATH_TABLE_SEGMENT_COUNT=4",
-  "-DRNS_KNOWN_DESTINATIONS_MAX=256",
-  "-DRNS_KNOWN_DESTINATIONS_SEGMENT_SIZE=12288",
-  "-DRNS_KNOWN_DESTINATIONS_SEGMENT_COUNT=4",
-  "-DRNS_HASHLIST_MAX=4096",
-  "-DRNS_ANNOUNCE_TABLE_MAX=16",
-  "-DRNS_NEIGHBOR_PROBING=0"
+  "-std=gnu++17",
+  "-DWICI_RNS_CORE"
  ],
  "stack": [
   {
-   "name": "microReticulum",
-   "commit": "40fa628809d57140180c1c833559ab96fec992c1"
-  },
-  {
-   "name": "microStore",
-   "commit": "0f28567fe00ab8ab14624a34c2e9e0a000a44c46"
-  },
-  {
    "name": "Crypto",
    "commit": "984dc891330986c302a86c4e312d4f5abcc28359"
-  },
-  {
-   "name": "MsgPack",
-   "commit": "1f552c31b940d6e9063ee17a4b3fa10c47b27169"
-  },
-  {
-   "name": "ArxContainer",
-   "commit": "d6affcd0bc83219b863c20abf7c269214db8db2a"
-  },
-  {
-   "name": "ArxTypeTraits",
-   "commit": "702de9cc59c7e047cdc169ae3547718b289d2c02"
-  },
-  {
-   "name": "DebugLog",
-   "commit": "b581f7dde6c276c5df684e2328f406d9754d2f46"
-  },
-  {
-   "name": "ArduinoJson",
-   "commit": "733bc4ee82630c88c0a619a883cd3a206efae977"
   }
  ],
  "outputs": {
   "wici-station.mjs": {
-   "sha256": "2eb9e265ddb073edcaf69de9c2bad0bd3ecaa1af977791f3b7596c7a7d6542a8",
-   "bytes": 1130198,
+   "sha256": "2d1154e0dc1963d96300e40b07179fe4a33de9c0a136b4d1254d5c02d5585690",
+   "bytes": 642609,
    "sources": [
     "firmware/src/annunciator.cpp",
     "firmware/src/config.cpp",
     "firmware/src/console.cpp",
+    "firmware/src/core_selftest.cpp",
     "firmware/src/drbg.cpp",
     "firmware/src/font.cpp",
     "firmware/src/fram.cpp",
@@ -121,7 +81,7 @@
     "firmware/src/p1iface.cpp",
     "firmware/src/platform_nrf.cpp",
     "firmware/src/radio_console_s2lp.cpp",
-    "firmware/src/rns_node.cpp",
+    "firmware/src/rns_node_core.cpp",
     "firmware/src/s2lp.cpp",
     "firmware/src/s2lp_link.cpp",
     "firmware/src/sa1.cpp",
@@ -142,10 +102,11 @@
    ]
   },
   "wici-post.mjs": {
-   "sha256": "554e602a5eb40abc7905b73e0e7cbeea3d4b23df6457e595076502b10d229dda",
-   "bytes": 813637,
+   "sha256": "0f1b2251ec343d2911de9c823a5c5f15886d66b2758a5327c923c356934f3029",
+   "bytes": 312284,
    "sources": [
     "firmware/src/config.cpp",
+    "firmware/src/drbg.cpp",
     "firmware/src/framfs.cpp",
     "firmware/src/journal.cpp",
     "firmware/src/jsonlite.cpp",
@@ -178,7 +139,7 @@
   "firmware/src/console.cpp": "718e61e203c954600f07838d104406b9e70f1845e955e2a6fc5dbaab53a55374",
   "firmware/src/console.h": "8f46ad6a6fffc5cec05d51e9751648c45b709e53e947651cc395b880e654a971",
   "firmware/src/core_selftest.cpp": "61844d783508ec06ad05aa03f149f94189a9e8719972c92eeec289c44911342f",
-  "firmware/src/core_selftest.h": "ae84dfe19bb9701908c1d80b2b17efb9e1ed3605154a1e8121b03a9892373f1c",
+  "firmware/src/core_selftest.h": "d5d0a66bfb98a77ea0436a0addaa4c4796d6b8858ca2df44938b28fed5075570",
   "firmware/src/crc16.h": "4f9e7d888ba34bb3a37124ff0d713ef737253a048a6cdb02fcae9c7f172d64cb",
   "firmware/src/crc32.h": "a7c80e1520d81ef694142d052f916163f7d05044063fff33768566e2e009e3a5",
   "firmware/src/drbg.cpp": "94d97cf3ed9aec2456fb5b867e3c3a5533e54a56c419872d941e7bfa9d12eb1b",
@@ -253,7 +214,34 @@
   "firmware/src/unicode_tables.h": "ef324616bebbcb72f111ce9453ed943d9b57fad9ae73cdc79d22a81161d88739",
   "firmware/src/usbproto.cpp": "07780916bf5b4b527c59240aa138ffaf12c6a69bb60f668489ee9d66d2aad534",
   "firmware/src/usbproto.h": "8421e73abe19735bd80f299566eed59993056b25498656445883289af6ff1a44",
-  "firmware/platformio.ini": "c821664a6bbe5c160485a92f62646bc1341d93d1a32b14a44fac50096f4497ac",
+  "firmware/lib/reticulum_core/src/announce.cpp": "7a56f213174dcfb6c65812a07f1f64f2417b867b7f83e5fbdc6aab8831c19819",
+  "firmware/lib/reticulum_core/src/announce.h": "ca5bbef3390ca042742d06d0d0e45c010add79255709cedc58e9fc9f84d6b933",
+  "firmware/lib/reticulum_core/src/destination.cpp": "3eb9089d3b3691f85b9aee49c13f97fad5b1c7226d779579526eeb4af3c2d3a4",
+  "firmware/lib/reticulum_core/src/destination.h": "cb4fc92814f2f306b89df68329ede9a9359696e8b679b2649e4440a3b6d83942",
+  "firmware/lib/reticulum_core/src/hash.cpp": "b9addd933bb21d0f0e9b60be3d622ba9f1db9f501acb7a80128e269c4c3ff233",
+  "firmware/lib/reticulum_core/src/hash.h": "cf418b8839d77af60e6f16c986c464f62ee21f47fbbfaea7e1741f6d5e561077",
+  "firmware/lib/reticulum_core/src/hashlist.cpp": "d1adb7a650e6a42aa507b530173302acf8717ed1a348f75f66e4ae16f62dba0d",
+  "firmware/lib/reticulum_core/src/hashlist.h": "c4f615a68857fce85fca986348edb5cb6da2bcdc1a8fc438fa5b9848081280c9",
+  "firmware/lib/reticulum_core/src/hkdf.cpp": "b0a64d741472786cbca56a3aede9ee207945999d8c8a6d302514b6883f064f92",
+  "firmware/lib/reticulum_core/src/hkdf.h": "a6b6e1286309f72f640ec65f79a949b574f6fc36e1c73159f0fa5a781e5a8bd1",
+  "firmware/lib/reticulum_core/src/identity.cpp": "13362e5f3c07bb63d4f2e7fffa52f70201866469de0d1540b68b53145be91ff2",
+  "firmware/lib/reticulum_core/src/identity.h": "22493f389a8f17b670136b47013e303a8028a01c16f13191e8a580d6689e1818",
+  "firmware/lib/reticulum_core/src/ifac.cpp": "dd06a85583fbca8df505e0af63bd6392fa10c88d6de7a96cb3d6535ed81f70c5",
+  "firmware/lib/reticulum_core/src/ifac.h": "a455e439d20f7feb93c43bb44f0c50d8f47edea0a59338298ba8fac6b6e625af",
+  "firmware/lib/reticulum_core/src/lxmf.cpp": "47f5599905d531122ff43d0091b4e4439d352f277659f05653344ec22c2493d0",
+  "firmware/lib/reticulum_core/src/lxmf.h": "4f67de0c73a23be318ea79bd71b4b7d6e792a4effd7f5026ca99e2eb53f0892c",
+  "firmware/lib/reticulum_core/src/packet.cpp": "026bfc99ce67159c2649d27dcd370308ecc7357675e85db575bdcd900fa848e2",
+  "firmware/lib/reticulum_core/src/packet.h": "3a4ffba29de83190740116b76b50e058a8389b272eb44c80ea4279c295e7c51d",
+  "firmware/lib/reticulum_core/src/proof.cpp": "a8b8cd514e01812655813234827dcc1bd334f4c5e3c48e395b70ee1ba4adcf62",
+  "firmware/lib/reticulum_core/src/proof.h": "1e39b57fe4fc2ad8b047bac8c73a4c322f6c399a59e5dc3d99b4131cfce02c53",
+  "firmware/lib/reticulum_core/src/rnscore.h": "81678e115e9f9fa629bc56c6546a36ce0ee42446b5a38896a0f982afb830c15a",
+  "firmware/lib/reticulum_core/src/table.cpp": "18c4988fa6080ea4050d22fccc3bf6893f29bbe5f1a229e5fd278915167205d2",
+  "firmware/lib/reticulum_core/src/table.h": "389c467c572f1778b3fdb71d2c950444c23264cc38f58c0dab46f485ee69fff0",
+  "firmware/lib/reticulum_core/src/token.cpp": "a8fef63d124b86cffb7085a526c583c89f767f62ebd6531f80773ecc0d2d031e",
+  "firmware/lib/reticulum_core/src/token.h": "4f62899aa6eb59dc0cd9585cfbbc7508556d1e71180c7d516541ff62a0f1bfc0",
+  "firmware/lib/reticulum_core/src/transport.cpp": "82304eae7288ff6788dae7fdbf12642585ce2459e4541affe03a8401c80bbf71",
+  "firmware/lib/reticulum_core/src/transport.h": "ce1e37978dc979cdcc139da2537a7b5cee039567a8b48848ada61d25a64ad861",
+  "firmware/platformio.ini": "16f14c93bdb00b29b661e9b3a753074a2afcc603a03ab7f9b2ebc30af0e51465",
   "firmware/tools/stack_deps.py": "0618d5c2e084e6e71642dff16e6311b611a4cb38d547e78bee7efdd8480f0f2d",
   "firmware/patches/microReticulum/0001-pool-without-full-walk.patch": "8b3b99e2f8f5b326284732bf8d687cb05ba06f65580b4b364c03c55d88e17135",
   "firmware/patches/microReticulum/0002-short-packet-hashes.patch": "bc0859acdd3218f935781f1faab90ed157c6e694538c9fa2b57b60634620c0ab",
@@ -273,7 +261,7 @@
   "software/simulator/hal/WString.h": "8506f23a05027ebdc814db0d6a32ee8a1ba9883daa368b76595a9403d94dca5b",
   "software/simulator/hal/chips.h": "66bd24e77e281742178ef1d08a006e940513b6450a748ea410a05bfd32ef9c2b",
   "software/simulator/hal/esp_attr.h": "d0bd9fbfc7c3391597fbb4842a6c1fe4b6a6f96ec10d335aa7b384970e030195",
-  "software/simulator/hal/esp_rom.cpp": "21bd31d595238b11cff2a85a28c8f35641f9792aa3b9797980b5bfbdf718afa9",
+  "software/simulator/hal/esp_rom.cpp": "051edeac6f934421b39eb27e0195ccc9f8b05a710cbb40fc7bff09b7ce378be1",
   "software/simulator/hal/esp_task_wdt.h": "22bce0e08f9bf0f864682b8b19a2086b2fbf49bbb25797be26baea73a19a446e",
   "software/simulator/hal/fram_sharp_chip.cpp": "73db0cd1b39b823a7b331dbc40cf8fa65dc97dc7c8679225429addc14b21dfba",
   "software/simulator/hal/nvs.h": "b81be20b0fcff1e615f0953d04ccf9932408da08eabb5905c8bd43dc408b2a95",
@@ -283,7 +271,7 @@
   "software/simulator/hal/sharp_extcomin_sim.cpp": "d308ceaab49e57054dc67421429f4955756c28ed877ed2c0162b2cb20b7f43dd",
   "software/simulator/hal/vboard.cpp": "36d6257f17a7e3afe18e11cd44b59457ffdb94a6b4510692491a173ddf124152",
   "software/simulator/hal/vboard.h": "c9d6642034dd57ac6d3c3c38b37aba5361a88e8681266be5270b9e5006f3371b",
-  "software/simulator/post/post.cpp": "d60718bf6375c70141150dffb16bd71672690df1c444d3d62d7faa2d605d231b",
-  "software/simulator/build.py": "ef54852311d632b9216caa6e1374f1a572e62cf3cc1f8d57003f9c74361f8aa3"
+  "software/simulator/post/post.cpp": "3fd290256a5ad3babed8ac01eb8b432e3103b93662a91eb32ab9b3818977b652",
+  "software/simulator/build.py": "5eeafd92ed653a32a5b4f79de314255f2fbaad2c326c64109e81c4c69ca23b4d"
  }
 }
