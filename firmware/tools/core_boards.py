@@ -16,13 +16,14 @@ of rnsnode) lead out of the core (rnsnode callbacks, whose stack adds to the pat
 (memcpy, the ESP-IDF AES driver) are covered by LIBRARY_RESERVE and one exception or interrupt frame
 on the task stack by INTERRUPT_FRAME. Static RAM: the core files must have none (.data, .bss: no
 globals in the library); the tables live in one rnscore::Transport object owned by rnsnode, so when
-transport.h exists its size on the board is compared with RAM_BUDGET. The OSP node (stage R4b) adds the KISS
+transport.h exists its size on the board is compared with RAM_BUDGET, and a global object of it must be all
+.bss (a member with a non-zero default initializer moves the whole object to .data, a copy in flash). The OSP node (stage R4b) adds the KISS
 buffer of the USB interface (kiss::Port, allocated once at start only in the node configuration): its size
 on the board is compared with KISS_RESERVE, the part of the 30% free RAM computation kept for it.
 
 It fails when a core file warns, when a function has a dynamic stack (VLA, alloca), when the call
 graph has recursion, when a core entry point needs more than STACK_LIMIT bytes of stack, when the
-core files have static RAM, when rnscore::Transport exceeds RAM_BUDGET or kiss::Port exceeds KISS_RESERVE.
+core files have static RAM, when rnscore::Transport exceeds RAM_BUDGET or is not all .bss, or kiss::Port exceeds KISS_RESERVE.
 
   python3 firmware/tools/stack_deps.py
   python3 firmware/tools/core_boards.py [-e bench-a -e l0] [--json]
@@ -244,19 +245,24 @@ def deepest(key: tuple, frames: dict, graph: dict, path: tuple = ()) -> tuple[in
     return frames[key] + best, [key, *best_path]
 
 
-def static_ram(meta: dict, objects: list[Path]) -> int:
+def ram_sections(meta: dict, objects: list[Path]) -> dict:
+    """Bajty RAM statycznej obiektów: "bss" (zerowane przy starcie) i "data" (z kopią w flash)."""
     text = subprocess.run([tool(meta, "size"), "-A", *map(str, objects)], check=True, capture_output=True,
                           text=True).stdout
-    total = 0
+    total = {"data": 0, "bss": 0}
     for line in text.splitlines():
         fields = line.split()
         if len(fields) >= 2 and re.match(r"^\.(data|bss|sbss|sdata|dram)", fields[0]):
-            total += int(fields[1])
+            total["bss" if re.match(r"^\.s?bss", fields[0]) else "data"] += int(fields[1])
     return total
 
 
-def object_ram(meta: dict, out: Path, header: Path, type_name: str) -> int | None:
-    """RAM jednego obiektu typu na płytce (.bss pliku z jednym obiektem), None bez nagłówka."""
+def static_ram(meta: dict, objects: list[Path]) -> int:
+    return sum(ram_sections(meta, objects).values())
+
+
+def object_ram(meta: dict, out: Path, header: Path, type_name: str) -> dict | None:
+    """RAM jednego obiektu typu na płytce (sekcje pliku z jednym obiektem globalnym), None bez nagłówka."""
     if not header.is_file():
         return None
     name = header.stem
@@ -265,7 +271,7 @@ def object_ram(meta: dict, out: Path, header: Path, type_name: str) -> int | Non
     obj = out / f"{name}_ram.o"
     subprocess.run([meta["cxx_path"], *common_flags(meta), *CORE_FLAGS, f"-I{header.parent}", "-c", str(probe), "-o", str(obj)],
                    check=True, capture_output=True, text=True)
-    return static_ram(meta, [obj])
+    return ram_sections(meta, [obj])
 
 
 def check(env: str) -> dict:
@@ -288,8 +294,8 @@ def check(env: str) -> dict:
                                                        text=True).stdout.splitlines()[0],
                 "warnings": warnings.strip(), "dynamic": dynamic, "indirect": indirect_calls(meta, objects, names),
                 "static_ram": static_ram(meta, [o for o in objects if o.stem.startswith("core_")]),
-                "transport_ram": object_ram(meta, Path(tmp), CORE / "transport.h", "rnscore::Transport"),
-                "kiss_ram": object_ram(meta, Path(tmp), FIRMWARE / "src" / "kiss.h", "kiss::Port"),
+                "transport_sections": object_ram(meta, Path(tmp), CORE / "transport.h", "rnscore::Transport"),
+                "kiss_sections": object_ram(meta, Path(tmp), FIRMWARE / "src" / "kiss.h", "kiss::Port"),
                 "reserve": reserve, "entries": entries}
 
 
@@ -308,10 +314,14 @@ def main() -> int:
         r = check(env)
         results.append(r)
         over = {n: e for n, e in r["entries"].items() if e["stack"] > STACK_LIMIT}
-        transport = r["transport_ram"]
-        kiss = r["kiss_ram"]
+        sections = r["transport_sections"]
+        transport = sum(sections.values()) if sections else None
+        kiss = sum(r["kiss_sections"].values()) if r["kiss_sections"] else None
+        # Obiekt rdzenia jako zmienna globalna w .data: niezerowy inicjalizator składowej przenosi cały obiekt
+        # (~44 KB) do flash obrazu (dwa razy przeoczone: 77 KB, potem 45 KB w bench-a-core).
+        in_data = bool(sections and sections["data"])
         if (r["warnings"] or r["dynamic"] or r["indirect"] or r["static_ram"] or over or (transport or 0) > RAM_BUDGET
-                or (kiss or 0) > KISS_RESERVE):
+                or (kiss or 0) > KISS_RESERVE or in_data):
             failed = True
         if args.json:
             continue
@@ -322,6 +332,9 @@ def main() -> int:
               f"(budget {RAM_BUDGET} B{', OVER' if (transport or 0) > RAM_BUDGET else ''})")
         print(f"  kiss::Port (USB of the OSP node): {kiss} B (reserve {KISS_RESERVE} B{', OVER' if (kiss or 0) > KISS_RESERVE else ''}); "
               f"node: {(transport or 0) + (kiss or 0)} B of {RAM_BUDGET + KISS_RESERVE} B")
+        if in_data:
+            print(f"  ERROR: a global rnscore::Transport has {sections['data']} B in .data (copied from flash), not only .bss: "
+                  "a member with a non-zero default initializer; set it in begin() and keep the default zero")
         if r["warnings"]:
             print(f"  warnings:\n{r['warnings']}")
         print(f"  stack incl. {r['reserve']} B reserve (library calls {LIBRARY_RESERVE} B, one interrupt frame); "

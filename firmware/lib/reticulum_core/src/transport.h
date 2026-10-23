@@ -234,7 +234,10 @@ private:
     static bool pinnedHook(const uint8_t destination[TRUNCATED_HASH_SIZE], void* self);
 
     TransportHooks hooks_;
-    uint8_t interfaces_ = 1;
+    // Liczba interfejsów ustawiana w begin(). Składowe bez niezerowych inicjalizatorów: obiekt żyje jako zmienna
+    // globalna warstwy rnsnode i ma zostać w .bss (inicjalizator ≠ 0 przenosi całe ~44 KB do .data, czyli do
+    // flash obrazu); pilnuje tego tools/core_boards.py.
+    uint8_t interfaces_ = 0;
     const uint8_t* privateKey_ = nullptr;
     const uint8_t* publicKey_ = nullptr;
     const uint8_t* identityHash_ = nullptr;
