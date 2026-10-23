@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: MIT
 """Compatibility trial of the station stack with reference Reticulum (Python) without a radio.
 
-The station node runs as the "host" PlatformIO program (firmware/src/host/node_host.cpp): the same
-microReticulum port, P1 interface, IFAC and FRAM tables as the bench-a image, with an emulated P1 link
+The station node runs as the "host-port" PlatformIO program (firmware/src/host/node_host.cpp): the same
+microReticulum port, P1 interface, IFAC and FRAM tables as the bench-a-port image, with an emulated P1 link
 (P1 frames, air time, silence debt) bridged over UDP to a UDPInterface of Reticulum in this process.
 Both sides use the same 16 B network key as IFAC (passphrase = 32 hex digits, ifac_size = 128 bits).
 
@@ -24,8 +24,8 @@ peak, FRAM file system use) is recorded as the RAM measurement with full tables 
 
 Run with a Python that has Reticulum at the pinned commit (e40191b), for example:
   python3 -m venv .venv-rns && .venv-rns/bin/pip install "git+https://github.com/markqvist/Reticulum@e40191b"
-  .venv-rns/bin/python firmware/tools/rns_interop.py --program firmware/.pio/build/host/program
-With --steps (for example 1,5) only the listed steps run: the station core program ("host-core",
+  .venv-rns/bin/python firmware/tools/rns_interop.py --program firmware/.pio/build/host-port/program
+With --steps (for example 1,5) only the listed steps run: the station core program ("host" since stage R6-3,
 firmware/reticulum-core.md) runs the steps its stage already has (tests/test_rns_stack.py).
 
 With --lxmf (station core from stage R3) the station destination is "lxmf.delivery": the Python
@@ -119,7 +119,7 @@ def main():
     parser.add_argument("--fill", type=int, default=0, help="announce N more destinations and record the station memory")
     parser.add_argument("--capture", help="file for the datagrams Python sends to the station (tools/rns_ram32.py replays them)")
     parser.add_argument("--steps", help="comma-separated steps to run (1,2,3,3r,4,4a,5,6,7,8,9,L1,L2; default all but 3r, 9, L1 and "
-                                        "L2), e.g. for a stack that does not have every function yet (host-core, firmware/reticulum-core.md)")
+                                        "L2), e.g. for a stack that does not have every function yet (core, firmware/reticulum-core.md)")
     parser.add_argument("--lxmf", action="store_true", help="station destination lxmf.delivery with LXMF SA1 messages (core, stage R3)")
     args = parser.parse_args()
     steps = set(args.steps.split(",")) if args.steps else None

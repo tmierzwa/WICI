@@ -1,6 +1,6 @@
 # Własny rdzeń Reticulum stacji: zakres
 
-Stan: przyjęty 2026-10-22 ([koncepcja, rozdział 03](../docs/concept/03-dostepne-rozwiazania.html#czego-nie-budowac-drugi-raz)). Rdzeń zastępuje port microReticulum pod warstwą `rnsnode` (`src/rns_node.h`) stacji. Port zostaje w repozytorium jako łaty i przypięty commit: służy stanowisku i próbom sprzętu do czasu przejścia. Wzorcem rdzenia jest wyłącznie Reticulum w Pythonie (wektory, próby różnicowe, przegląd); port nie jest wzorcem (decyzja 2026-10-22).
+Stan: przyjęty 2026-10-22 ([koncepcja, rozdział 03](../docs/concept/03-dostepne-rozwiazania.html#czego-nie-budowac-drugi-raz)). Rdzeń zastępuje port microReticulum pod warstwą `rnsnode` (`src/rns_node.h`) stacji. Od etapu R6-3 rdzeń jest w obrazach `bench-a`, `bench-n1` i `l0`, od R6-4 w `bench-b`; port zostaje w repozytorium jako łaty i przypięty commit w obrazach `*-port` (powrót do portu, [README](README.md#przejście-na-rdzeń-i-powrót-do-portu)) do etapu R6-5. Wzorcem rdzenia jest wyłącznie Reticulum w Pythonie (wektory, próby różnicowe, przegląd); port nie jest wzorcem (decyzja 2026-10-22).
 
 ## Dlaczego
 

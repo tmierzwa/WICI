@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 """Self-test and timing of the station Reticulum core on a board, in one command.
 
-For an image with the core (env:bench-a-core or bench-n1-core on nRF52840, env:bench-b-core or l0-core on ESP32-S3): optionally builds
+For an image with the core (env:bench-a or bench-n1 on nRF52840, env:bench-b-core or l0 on ESP32-S3; stage R6-3): optionally builds
 and uploads it (--upload), opens the diagnostic port, reads the log (LOG) for a failed start-up
 self-test or entropy health test, runs `RNS SELFTEST` --runs times and prints per check whether it
 matched the vectors from Reticulum in Python and its time in µs (median of the runs), the stack state
@@ -9,7 +9,7 @@ and entropy health from INFO and the time of the start-up self-test from the log
 lines and the summary go to a JSON file for the report (firmware/README.md, "Samotest rdzenia na płytce").
 Needs pyserial; upload needs PlatformIO (pio on PATH or WICI_PIO).
 
-  python3 firmware/tools/board_selftest.py -e bench-a-core --port /dev/cu.usbmodem1101 --upload
+  python3 firmware/tools/board_selftest.py -e bench-a --port /dev/cu.usbmodem1101 --upload
 """
 
 import argparse
@@ -23,7 +23,7 @@ import sys
 import time
 
 FIRMWARE = Path(__file__).resolve().parents[1]
-ENVS = ("bench-a-core", "bench-n1-core", "bench-b-core", "l0-core")
+ENVS = ("bench-a", "bench-n1", "bench-b-core", "l0")
 
 
 def summarize(lines: list[str]) -> dict:

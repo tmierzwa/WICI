@@ -1,8 +1,10 @@
 # SPDX-License-Identifier: MIT
 # Kompilacja obrazów stacji (firmware/README.md): bench-a, bench-n1 (nRF52840), bench-b i l0 (ESP32-S3),
 # oraz programu węzła na komputerze (host), na którym stoją próby zgodności z Reticulum (tests/test_rns_stack.py).
-# Rdzeń Reticulum stacji (lib/reticulum_core) jeszcze nie wchodzi do obrazów, więc dla każdej płytki osobno
-# kompiluje się go kompilatorem i flagami obrazu z -Werror, ze sprawdzeniem stosu i RAM (tools/core_boards.py).
+# Od etapu R6-3 obrazy bench-a, bench-n1, l0 i host są na rdzeniu Reticulum stacji (lib/reticulum_core), bench-b
+# do etapu R6-4 na porcie (bench-b-core: ten sam obraz z rdzeniem); obrazy z portem (*-port, host-port) tylko się
+# kompilują. Dla obrazów z rdzeniem rdzeń kompiluje się też osobno kompilatorem i flagami obrazu z -Werror, ze
+# sprawdzeniem stosu i RAM (tools/core_boards.py).
 # Do tego stos stacji pod wrogim ruchem z sanitizerami (tests/test_rns_hostile.py), rdzeń pod libFuzzerem
 # przez 60 s w osobnym zadaniu (tools/core_fuzz.py; godzina w fuzz.yml) i próba zgodności
 # z Reticulum w Pythonie na przypiętym commicie.
@@ -23,8 +25,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # bench-a-core, bench-n1-core, bench-b-core i l0-core: obrazy płytek z rdzeniem zamiast portu (kompilacja, RAM, samotest).
-        env: [bench-a, bench-n1, bench-b, l0, host, bench-a-core, bench-n1-core, bench-b-core, l0-core]
+        # *-port i host-port: obrazy z portem microReticulum (powrót do portu do etapu R6-5).
+        env: [bench-a, bench-n1, bench-b-core, l0, host, bench-a-port, bench-n1-port, bench-b, l0-port, host-port]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -42,7 +44,7 @@ jobs:
         working-directory: firmware
         run: pio run -e ${{ matrix.env }}
       - name: Reticulum core with the ${{ matrix.env }} toolchain
-        if: matrix.env != 'host'
+        if: ${{ !startsWith(matrix.env, 'host') && !endsWith(matrix.env, '-port') && matrix.env != 'bench-b' }}
         working-directory: firmware
         run: python tools/core_boards.py -e ${{ matrix.env }}
   hostile-port:
@@ -114,7 +116,7 @@ jobs:
           if-no-files-found: ignore
   interop:
     # Stos stacji wobec Reticulum w Pythonie (D19): tools/rns_interop.py i tools/rns_osp_node.py na porcie,
-    # rns_interop.py w krokach, które rdzeń już ma (host-core, tests/test_rns_stack.py: CORE_STEPS), i
+    # rns_interop.py w krokach, które rdzeń już ma (host, tests/test_rns_stack.py: CORE_STEPS; port: host-port), i
     # rns_osp_node.py --lxmf na rdzeniu (węzeł stanowiska z USB, zalew z USB). Próby
     # różnicowe idą osobnym zadaniem (differential), równolegle.
     runs-on: ubuntu-latest
