@@ -36,9 +36,12 @@ With --stress-dump FILE (a dump of tests/native/rns_stress --dump) the tool chec
 unmutated traffic of the hostile trial generator is valid Reticulum: the IFAC of each datagram (Transport.handle_ifac
 with the trial network key) gives the packet before IFAC, the packet unpacks, announces have a valid
 signature and the destination of their identity, packets in transport decrypt with the key of their
-generator node, proofs of station packets validate with a generator key, and packets for the station,
-path requests and link requests have the shape Reticulum expects. Packets with 128 hops or more (the
-generator makes them on purpose) must be rejected by Packet.unpack. Mutated datagrams are skipped.
+generator node and packets for the station with the station key, proofs of station packets validate with a
+generator key, and path requests and link requests have the shape Reticulum expects; other proofs, link
+traffic and regression packets (kinds proof, defect) only IFAC and unpacking. A kind outside this list is a
+problem. Packets with 128 hops or more (the generator makes them on purpose) must be rejected by
+Packet.unpack (RNS/Packet.py:250 at e40191b), and datagrams over the MTU (a random IFAC from the generator)
+must fail IFAC; both are counted. Mutated datagrams are skipped.
 """
 
 import argparse
@@ -401,14 +404,14 @@ def stress_dump(path: str):
     app, aspect = head["app"].split(".")
     peers = [RNS.Identity.from_bytes(bytes.fromhex(k)) for k in head["peers"]]
     peer_destinations = {RNS.Destination.hash(peer, app, aspect): peer for peer in peers}
-    station = RNS.Identity(create_keys=False)
-    station.load_public_key(bytes.fromhex(head["station_public_key"]))
+    station = RNS.Identity.from_bytes(bytes.fromhex(head["station_private_key"]))
     station_destination = RNS.Destination.hash(station, app, aspect)
     path_request = RNS.Destination.hash_from_name_and_identity("rnstransport.path.request", None)
-    token_minimum = RNS.Identity.KEYSIZE // 16 + 16 + 32 + 16   # klucz efemeryczny, IV, HMAC, jeden blok
 
     def problem(record, packet):
         kind = record["kind"]
+        if kind in ("proof", "defect"):   # dowody i ruch łącza o losowej treści, próby regresji: IFAC i unpack
+            return None
         if packet.packet_type == RNS.Packet.ANNOUNCE and kind == "announce":
             if not RNS.Identity.validate_announce(packet, only_validate_signature=True):
                 return "announce signature"
@@ -426,8 +429,8 @@ def stress_dump(path: str):
             if packet.header_type != RNS.Packet.HEADER_2 or peer is None or peer.decrypt(packet.data) is None:
                 return "packet in transport does not decrypt"
         elif kind == "local":
-            if packet.destination_hash != station_destination or len(packet.data) < token_minimum or len(packet.data) % 16:
-                return "packet for the station: token shape"
+            if packet.destination_hash != station_destination or station.decrypt(packet.data) is None:
+                return "packet for the station does not decrypt"
         elif kind == "link-request":
             if packet.packet_type != RNS.Packet.LINKREQUEST or len(packet.data) not in (64, 67) or \
                     len(RNS.Link.link_id_from_lr_packet(packet)) != 16:
@@ -437,30 +440,36 @@ def stress_dump(path: str):
             if packet.packet_type != RNS.Packet.PROOF or packet.destination_hash != proved[:16] or \
                     not any(peer.validate(signature, proved) for peer in peers):
                 return "proof of a station packet"
+        elif kind != "announce":
+            return "unknown kind"
         return None
 
-    checked, too_far, kinds, problems = 0, 0, {}, []
+    checked, too_far, over_mtu, kinds, problems = 0, 0, 0, {}, []
     for record in records:
         if record["mutated"]:
             continue
         raw, wire = bytes.fromhex(record["raw"]), bytes.fromhex(record["wire"])
+        valid, unmasked = RNS.Transport.handle_ifac(wire, interface)
         if len(raw) > RNS.Reticulum.MTU:   # ponad MTU: generator daje kod IFAC losowy, stacja ma odrzucić
+            over_mtu += 1
+            if valid:
+                problems.append({"kind": record["kind"], "problem": "datagram over the MTU passes IFAC", "raw": record["raw"]})
             continue
         checked += 1
         kinds[record["kind"]] = kinds.get(record["kind"], 0) + 1
-        valid, unmasked = RNS.Transport.handle_ifac(wire, interface)
         packet = RNS.Packet(None, raw)
         unpacked = packet.unpack()
         if not valid or unmasked != raw:
             what = "IFAC"
-        elif raw[1] >= RNS.Transport.PATHFINDER_M:
+        elif raw[1] >= RNS.Transport.PATHFINDER_M:   # Packet.unpack: "Invalid hop count" (RNS/Packet.py:250)
             too_far += 1
             what = "packet with too many hops accepted" if unpacked else None
         else:
             what = problem(record, packet) if unpacked else "unpack"
         if what:
             problems.append({"kind": record["kind"], "problem": what, "raw": record["raw"]})
-    return {"records": len(records), "checked": checked, "too_many_hops": too_far, "kinds": kinds, "problems": problems}
+    return {"records": len(records), "checked": checked, "too_many_hops": too_far, "over_mtu": over_mtu, "kinds": kinds,
+            "problems": problems}
 
 
 def main():

@@ -15,8 +15,8 @@
 //            [--hostile-days N [--window-s S] [--stop-after-s S]] [--receiver-foreign-key] [--dump PLIK]
 //
 // --dump: datagramy generatora z feed() (rodzaj, czy mutowany, pakiet przed IFAC i datagram na łączu) po wierszu
-// JSON, na początku klucze generatora; tools/rns_differential.py --stress-dump sprawdza nimi w Reticulum w Pythonie,
-// że niezmutowany ruch jest poprawny (tests/test_rns_differential.py). Pole "generated" wyniku: datagramy
+// JSON, na początku klucze generatora i klucz prywatny stacji z FRAM (tylko w próbie); tools/rns_differential.py
+// --stress-dump sprawdza nimi w Reticulum w Pythonie, że niezmutowany ruch jest poprawny (tests/test_rns_differential.py). Pole "generated" wyniku: datagramy
 // generatora według rodzaju (feed() i powtórki).
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -1217,14 +1217,14 @@ void defect(const std::string& name) {
             RNS::Packet a = d.announce(randomBytes(8), false, {RNS::Type::NONE}, {}, false);
             RNS::Transport::deregister_destination(d);
             a.pack();
-            feed(withHops(a.raw(), 1), "defect");
+            feed(withHops(a.raw(), 1), "announce");
             RNS::Destination pr({RNS::Type::NONE}, RNS::Type::Destination::OUT, RNS::Type::Destination::PLAIN, "rnstransport",
                                 "path.request");
             RNS::Bytes data = peerDest[i];
             data << randomBytes(16) << randomBytes(16);
             RNS::Packet q(pr, data, RNS::Type::Packet::DATA);
             q.pack();
-            feed(withHops(q.raw(), 0), "defect");
+            feed(withHops(q.raw(), 0), "path-request");
             for (int k = 0; k < 30; ++k) { simMs += 1000; service(); }
         }
     } else if (name == "link-mtu") {
@@ -1240,7 +1240,7 @@ void defect(const std::string& name) {
             RNS::Destination out(station, RNS::Type::Destination::OUT, RNS::Type::Destination::SINGLE, DEST_APP, DEST_ASPECT);
             RNS::Packet lr(out, data, RNS::Type::Packet::LINKREQUEST);
             lr.pack();
-            feed(withHops(lr.raw(), 0), "defect");
+            feed(withHops(lr.raw(), 0), "link-request");
             for (int k = 0; k < 10; ++k) { simMs += 100; service(); }
         }
     } else if (name == "station-flood") {
@@ -1373,9 +1373,12 @@ int main(int argc, char** argv) {
         dump = fopen(dumpPath.c_str(), "w");
         if (!dump) { fprintf(stderr, "dump %s\n", dumpPath.c_str()); return 2; }
         // Hasło sieci to 32 cyfry szesnastkowe klucza IFAC, bez nazwy sieci (rnsnode::begin; ifac_netkey w Pythonie).
-        fprintf(dump, "{\"ifac_netkey\":\"%s\",\"ifac_size\":%u,\"app\":\"%s.%s\",\"station_public_key\":\"%s\",\"peers\":[",
+        // Klucz stacji z rekordu klucza w FRAM (ten sam dla portu i rdzenia): Python odszyfrowuje nim pakiety do stacji.
+        uint8_t prv[framfs::KEY_BYTES];
+        if (!framfs::loadKey(fram, prv)) fail("dump: no station key in FRAM");
+        fprintf(dump, "{\"ifac_netkey\":\"%s\",\"ifac_size\":%u,\"app\":\"%s.%s\",\"station_private_key\":\"%s\",\"peers\":[",
                 hex(IFAC_KEY, sizeof(IFAC_KEY)).c_str(), static_cast<unsigned>(p1iface::IFAC_SIZE), DEST_APP, DEST_ASPECT,
-                hex(pub, 64).c_str());
+                hex(prv, sizeof(prv)).c_str());
         for (size_t i = 0; i < PEERS; ++i) {
             const RNS::Bytes prv = peers[i].get_private_key();
             fprintf(dump, "%s\"%s\"", i ? "," : "", hex(prv.data(), prv.size()).c_str());

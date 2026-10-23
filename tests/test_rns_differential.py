@@ -11,7 +11,7 @@ WICI_RNS_PYTHON; the stack sources are needed as for tests/test_rnscore.py (WICI
 GeneratorTrafficTests: the traffic generator of the hostile trial (tests/native/rns_stress.cpp, built as in
 tests/test_rns_hostile.py with the station core) writes its datagrams (--dump), and Reticulum in Python checks
 that the unmutated ones are valid (rns_differential.py --stress-dump): IFAC, unpacking, announce signatures,
-decryption and proofs. The same check stays when the generator moves to the core primitives (stage R6-2).
+decryption and proofs. Every kind the tool checks in full must occur in the runs, and packets with too many hops too. The same check stays when the generator moves to the core primitives (stage R6-2).
 
   WICI_RNS_PYTHON=/path/to/venv/bin/python python3 -m unittest tests.test_rns_differential -v
 """
@@ -82,7 +82,11 @@ class GeneratorTrafficTests(unittest.TestCase):
     def tearDownClass(cls):
         cls.hostile.tearDownClass()
 
+    # Rodzaje sprawdzane w całości (rns_differential.py stress_dump): każdy musi wystąpić w przebiegach.
+    KINDS = ("announce", "transit", "local", "station-proof", "path-request", "link-request")
+
     def test_unmutated_traffic_is_valid_reticulum(self):
+        kinds, too_many_hops = {}, 0
         for run in self.RUNS:
             with self.subTest(run=run), tempfile.TemporaryDirectory() as folder:
                 dump = Path(folder) / "dump.jsonl"
@@ -98,3 +102,9 @@ class GeneratorTrafficTests(unittest.TestCase):
                 self.assertEqual(result["problems"], [], json.dumps(result["problems"][:3], indent=1))
                 self.assertGreater(result["checked"], 0, result)
                 self.assertEqual(check.returncode, 0, check.stderr[-4000:])
+                for kind, n in result["kinds"].items():
+                    kinds[kind] = kinds.get(kind, 0) + n
+                too_many_hops += result["too_many_hops"]
+        for kind in self.KINDS:
+            self.assertGreater(kinds.get(kind, 0), 0, f"{kind}: {kinds}")
+        self.assertGreater(too_many_hops, 0, kinds)
