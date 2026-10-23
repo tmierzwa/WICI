@@ -105,7 +105,7 @@ jobs:
         with:
           path: software/laptop/build/cache
           key: usb-all-${{ hashFiles('software/laptop/build/runtimes.json', 'software/laptop/build/slowa/zrodla.json') }}
-      # Pakiety MinGW (94 MB) z pamięci podręcznej: lustro Ubuntu w Azure podaje je czasem z prędkością
+      # Pakiety MinGW (115 MB) z pamięci podręcznej: lustro Ubuntu w Azure podaje je czasem z prędkością
       # około 45 kB/s, krok trwał wtedy 30–35 min zamiast kilkunastu sekund. apt pobiera tylko pakiety,
       # których nie ma w katalogu; nowsza wersja w Ubuntu pobiera się przy każdym przebiegu, dopóki nie
       # zmieni się klucz (pamięć podręczna pod istniejącym kluczem się nie nadpisuje).
