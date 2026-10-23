@@ -105,8 +105,21 @@ jobs:
         with:
           path: software/laptop/build/cache
           key: usb-all-${{ hashFiles('software/laptop/build/runtimes.json', 'software/laptop/build/slowa/zrodla.json') }}
+      # Pakiety MinGW (94 MB) z pamięci podręcznej: lustro Ubuntu w Azure podaje je czasem z prędkością
+      # około 45 kB/s, krok trwał wtedy 30–35 min zamiast kilkunastu sekund. apt pobiera tylko pakiety,
+      # których nie ma w katalogu; nowsza wersja w Ubuntu pobiera się przy każdym przebiegu, dopóki nie
+      # zmieni się klucz (pamięć podręczna pod istniejącym kluczem się nie nadpisuje).
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/apt-mingw
+          key: apt-mingw-ubuntu-24.04
       - name: MinGW-w64 cross compiler
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends gcc-mingw-w64-x86-64
+        run: |
+          mkdir -p ~/apt-mingw
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends -o Dir::Cache::Archives="$HOME/apt-mingw" gcc-mingw-w64-x86-64
+          sudo rm -rf ~/apt-mingw/partial ~/apt-mingw/lock
+          sudo chown -R "$USER" ~/apt-mingw
       - name: Build every runtime and check the size budget
         run: python software/laptop/build/build_usb.py --out usb
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
