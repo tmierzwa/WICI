@@ -115,7 +115,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--program", required=True)
     parser.add_argument("--debt", type=int, default=12, help="silence debt factor of the emulated P1 link")
-    parser.add_argument("--port", type=int, default=47420)
+    parser.add_argument("--port", type=int, help="first of two UDP ports (default: two free ports from the system)")
     parser.add_argument("--fill", type=int, default=0, help="announce N more destinations and record the station memory")
     parser.add_argument("--capture", help="file for the datagrams Python sends to the station (tools/rns_ram32.py replays them)")
     parser.add_argument("--steps", help="comma-separated steps to run (1,2,3,3r,4,4a,5,6,7,8,9,L1,L2; default all but 3r, 9, L1 and "
@@ -135,13 +135,14 @@ def main():
         return step in steps if steps is not None else step not in ("3r", "9", "L1", "L2")
 
     import RNS  # noqa: E402 (needs the reference Reticulum)
+    import udp_ports  # noqa: E402 (tools/udp_ports.py)
     import sa1_lxmf  # noqa: E402 (tools/sa1_lxmf.py)
     if args.lxmf:
         import LXMF  # noqa: E402 (LXMF at c3ff2d6)
 
     work = tempfile.mkdtemp(prefix="wici_rns_")
     fram = os.path.join(work, "fram.bin")
-    station_port, python_port = args.port, args.port + 1
+    station_port, python_port = (args.port, args.port + 1) if args.port else udp_ports.free_udp_ports(2)
     config = f"""
 [reticulum]
   enable_transport = No

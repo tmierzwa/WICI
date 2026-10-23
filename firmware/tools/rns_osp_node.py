@@ -262,7 +262,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--program", required=True)
     parser.add_argument("--debt", type=int, default=12, help="silence debt factor of the emulated P1 link")
-    parser.add_argument("--port", type=int, default=47440)
+    parser.add_argument("--port", type=int, help="first of two UDP ports (default: two free ports from the system)")
     parser.add_argument("--lxmf", action="store_true", help="station core: lxmf.delivery and LXMF SA1 messages (stage R4b)")
     parser.add_argument("--bitrate", type=int, default=24,
                         help="bitrate of the computer KISS interface in the Reticulum config (bit/s); it sets the receipt "
@@ -273,10 +273,11 @@ def main():
         APP_NAME, ASPECT = "lxmf", "delivery"
 
     import RNS  # noqa: E402 (needs the reference Reticulum)
+    import udp_ports  # noqa: E402 (tools/udp_ports.py)
     import sa1_lxmf  # noqa: E402 (tools/sa1_lxmf.py)
 
     work = tempfile.mkdtemp(prefix="wici_osp_node_")
-    station_port, node_port = args.port, args.port + 1
+    station_port, node_port = (args.port, args.port + 1) if args.port else udp_ports.free_udp_ports(2)
     results = {"reticulum": "e40191b", "debt_factor": args.debt, "bitrate": args.bitrate, "checks": {}}
     checks = results["checks"]
     node_fram = os.path.join(work, "node.bin")
