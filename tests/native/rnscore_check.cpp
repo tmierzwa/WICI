@@ -354,10 +354,15 @@ int main() {
             state->transport.begin(state->privateKey, state->publicKey, state->identity, state->address, state->nameHash, hooks,
                                    state->table, state->nowMs, state->interfaces);
             printHex(state->address, sizeof(state->address));
-        } else if (state && command == "t_restart" && data.size() <= 2) {
+        } else if (state && command == "t_restart" && (data.size() <= 2 || data.size() == 10)) {
             // restart stacji z tą samą pamięcią (zegar dalej); opcjonalnie 1 B: limit tablicy po starcie (0: bez
-            // limitu) i 1 B: nowa liczba interfejsów. Wynik: liczba znanych celów i tras.
-            if (data.size() == 2) state->interfaces = data[1];
+            // limitu), 1 B: nowa liczba interfejsów i 8 B: czas startu w ms (big-endian; zegar cofnięty, gdy
+            // dziennik czasu pracy zawiódł). Wynik: liczba znanych celów i tras.
+            if (data.size() >= 2) state->interfaces = data[1];
+            if (data.size() == 10) {
+                state->nowMs = 0;
+                for (size_t i = 2; i < 10; ++i) state->nowMs = (state->nowMs << 8) | data[i];
+            }
             rnscore::TransportHooks hooks;
             hooks.transmit = onTransmit;
             hooks.announce = onAnnounce;

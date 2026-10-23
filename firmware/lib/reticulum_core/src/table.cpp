@@ -54,6 +54,10 @@ uint32_t crc32(const uint8_t* data, size_t length) {
 
 uint32_t offsetOf(size_t slot) { return static_cast<uint32_t>(slot * TABLE_SLOT_SIZE); }
 
+// Czas z gniazda najwyżej nowS: czas z przyszłości (zegar cofnięty przy starcie) nie przedłuża wpisu, a różnica
+// nowS - czas się nie zawija.
+uint32_t notAfter(uint32_t timeS, uint32_t nowS) { return timeS > nowS ? nowS : timeS; }
+
 }  // namespace
 
 void Table::setBit(uint8_t* bits, size_t slot, bool on) {
@@ -101,10 +105,9 @@ void Table::begin(TableStorage& storage, uint32_t nowS, uint8_t interfaces) {
             invalidate(static_cast<size_t>(other));
         }
         memcpy(index_[slot].destination, header + AT_DESTINATION, TRUNCATED_HASH_SIZE);
-        // Czas z przyszłości (zegar cofnięty) nie chroni wpisu przed wyparciem.
-        const uint32_t used = get32(header + AT_USED);
-        index_[slot].usedS = used > nowS ? nowS : used;
-        index_[slot].pathUsedS = get32(header + AT_PATH_USED);
+        // Czas z przyszłości (zegar cofnięty) nie chroni wpisu przed wyparciem, a trasa nie wygasa od razu.
+        index_[slot].usedS = notAfter(get32(header + AT_USED), nowS);
+        index_[slot].pathUsedS = notAfter(get32(header + AT_PATH_USED), nowS);
         setBit(live_, slot, true);
         setBit(path_, slot, (header[AT_FLAGS] & FLAG_PATH) && interfaceOf(header[AT_FLAGS]) < interfaces_);
         setBit(second_, slot, interfaceOf(header[AT_FLAGS]) == 1);
@@ -163,8 +166,11 @@ bool Table::read(int slot, KnownDestination& out, uint32_t nowS) {
         out.hasPath = false;
         setBit(path_, s, false);
     }
-    // Identity.get_ratchet: ratchet wczytany z pamięci po starcie tylko przed RATCHET_EXPIRY.
-    if (out.hasRatchet && out.ratchetS < bootS_ && nowS >= out.ratchetS + static_cast<uint64_t>(RATCHET_EXPIRY_S)) {
+    // Identity.get_ratchet: ratchet wczytany z pamięci po starcie tylko przed RATCHET_EXPIRY. Czas
+    // z przyszłości to ratchet sprzed startu z cofniętym zegarem, w nieznanym wieku: bez ratchetu (stacja
+    // szyfruje do klucza tożsamości celu do jego następnego ogłoszenia).
+    if (out.hasRatchet && (out.ratchetS > nowS ||
+                           (out.ratchetS < bootS_ && nowS >= out.ratchetS + static_cast<uint64_t>(RATCHET_EXPIRY_S)))) {
         out.hasRatchet = false;
     }
     return true;
