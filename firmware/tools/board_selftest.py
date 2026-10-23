@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 """Self-test and timing of the station Reticulum core on a board, in one command.
 
-For an image with the core (env:bench-a-core or bench-n1-core on nRF52840, env:l0-core on ESP32-S3): optionally builds
+For an image with the core (env:bench-a-core or bench-n1-core on nRF52840, env:bench-b-core or l0-core on ESP32-S3): optionally builds
 and uploads it (--upload), opens the diagnostic port, reads the log (LOG) for a failed start-up
 self-test or entropy health test, runs `RNS SELFTEST` --runs times and prints per check whether it
 matched the vectors from Reticulum in Python and its time in µs (median of the runs), the stack state
@@ -23,7 +23,7 @@ import sys
 import time
 
 FIRMWARE = Path(__file__).resolve().parents[1]
-ENVS = ("bench-a-core", "bench-n1-core", "l0-core")
+ENVS = ("bench-a-core", "bench-n1-core", "bench-b-core", "l0-core")
 
 
 def summarize(lines: list[str]) -> dict:
