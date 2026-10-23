@@ -682,14 +682,14 @@ size_t interfaceJson(char* out, size_t size) {
                            "\"q_len\":%u,\"q_held\":%u,\"q_queued\":%lu,\"q_full\":%lu,\"too_large\":%lu,\"ann_held\":%lu,"
                            "\"ann_drop\":%lu,\"ann_expired\":%lu,\"tx_sent\":%lu,\"tx_failed\":%lu,\"rx_ok\":%lu,"
                            "\"ifac_missing\":%lu,\"ifac_invalid\":%lu,\"offline\":%lu,\"silenced\":%lu,\"k2_slot\":%lu,\"k2_pool\":%lu,"
-                           "\"k2_dest\":%lu,\"pr_limited\":%lu,\"pool_ms\":%lu,\"pr_ms\":%lu",
+                           "\"k2_dest\":%lu,\"pr_limited\":%lu,\"pr_resp_limited\":%lu,\"pool_ms\":%lu,\"pr_ms\":%lu",
                            (unsigned)p1->queue().queued(), (unsigned)p1->queue().held(), (unsigned long)c.queued,
                            (unsigned long)c.full, (unsigned long)c.tooLarge, (unsigned long)c.announcesHeld,
                            (unsigned long)c.announcesDropped, (unsigned long)c.announcesExpired, (unsigned long)c.sent,
                            (unsigned long)c.sendFailed, (unsigned long)c.received, (unsigned long)c.ifacMissing,
                            (unsigned long)c.ifacInvalid, (unsigned long)c.offline, (unsigned long)c.silenced, (unsigned long)c.k2Slot,
                            (unsigned long)c.k2Pool, (unsigned long)c.k2Dest, (unsigned long)c.pathRequestLimited,
-                           poolMs, prMs);
+                           (unsigned long)c.pathResponseLimited, poolMs, prMs);
     return n < 0 ? 0 : (size_t)n;
 }
 

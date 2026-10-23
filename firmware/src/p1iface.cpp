@@ -83,6 +83,7 @@ const char* admitName(Admit admit) {
         case Admit::K2_POOL: return "k2_pool";
         case Admit::K2_DEST: return "k2_dest";
         case Admit::PATH_REQUEST_LIMIT: return "path_request_limit";
+        case Admit::PATH_RESPONSE_LIMIT: return "path_response_limit";
     }
     return "?";
 }
@@ -166,6 +167,15 @@ Admit Queue::offer(const uint8_t* raw, size_t rawLength, const uint8_t* wire, si
     // Zapytanie o trasę bez wskazania stosu: przekazywane (Reticulum nadaje je od nowa z hops = 0).
     if (hint == Hint::NONE && (raw[0] & 0x0F) == 0x08)
         return offerPathRequest(pathRequestTarget(raw, rawLength), wire, wireLength, nowMs);
+    // Odpowiedź na zapytanie o trasę (K0) w budżecie 5%: ponad nim odpada, pytający ponawia.
+    if (pathResponse(raw, rawLength)) {
+        const uint32_t cost = channelMs(wireLength);
+        if (pathResponses_.used(nowMs) + cost > percentOfWindow(PATH_RESPONSE_PERCENT)) {
+            ++counters_.pathResponseLimited;
+            return Admit::PATH_RESPONSE_LIMIT;
+        }
+        pathResponses_.add(nowMs, cost);
+    }
     if (l == Lane::K2) return offerK2(destination(raw, rawLength), wire, wireLength, nowMs);
     push(l, wire, wireLength);
     return Admit::QUEUED;
