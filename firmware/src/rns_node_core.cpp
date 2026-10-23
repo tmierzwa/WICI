@@ -363,21 +363,39 @@ bool cardReceiver(const uint8_t source[HASH]) {
     return false;
 }
 
+// Klucz odbiorcy z karty, którego cel to source: z karty (konfiguracja w RAM), nie z tablicy znanych celów,
+// więc uszkodzone gniazdo w FRAM nie odrzuca wiadomości odbiorcy z dowodem bez COMMIT (oprogramowanie.md,
+// „Dowód dostarczenia po COMMIT”). Bez klucza w karcie (tylko próby na komputerze: polecenie receiver bez
+// klucza) klucz z tablicy (Identity.recall). Fałsz: nadawca spoza karty albo bez klucza.
+bool receiverKey(const uint8_t source[HASH], uint8_t out[rnscore::KEY_SIZE]) {
+    static const uint8_t zero[rnscore::KEY_SIZE] = {};
+    if (!cardReceiver(source)) return false;
+    for (size_t i = 0; i < 2; ++i) {
+        if (memcmp(pinned[i], source, HASH) != 0 || !memcmp(receiverKeys[i], zero, rnscore::KEY_SIZE)) continue;
+        memcpy(out, receiverKeys[i], rnscore::KEY_SIZE);
+        return true;
+    }
+    rnscore::KnownDestination sender;   // odczyt z FRAM (Transport::lookup)
+    if (!transport.lookup(source, sender, uptimeMs())) return false;
+    memcpy(out, sender.publicKey, rnscore::KEY_SIZE);
+    return true;
+}
+
 // Wiadomość SA1 z danych pakietu do stacji (LXMRouter.delivery_packet i lxmf_delivery dla wiadomości
 // z poprawnym podpisem) w kopercie dla warstwy aplikacji; 0: trwałe odrzucenie z powodem w lxmfRejects.
 // Przed kryptografią: nadawca z karty (stacja przyjmuje wiadomości tylko od odbiorcy, oprogramowanie.md,
-// „Model zaufania i kluczy”) i jego klucz w tablicy znanych celów (Identity.recall); kształt sprawdza
-// lxmfReceiveSa1 przed weryfikacją podpisu.
+// „Model zaufania i kluczy”) i jego klucz (receiverKey); kształt sprawdza lxmfReceiveSa1 przed weryfikacją
+// podpisu.
 size_t lxmfToEnvelope(const uint8_t* data, size_t length) {
     const uint8_t* source = data + rnscore::LXMF_SOURCE_OFFSET;
-    rnscore::KnownDestination sender;   // odczyt z FRAM (Transport::lookup)
-    if (length < rnscore::LXMF_SOURCE_OFFSET + HASH || !cardReceiver(source) || !transport.lookup(source, sender, uptimeMs())) {
+    uint8_t senderKey[rnscore::KEY_SIZE];
+    if (length < rnscore::LXMF_SOURCE_OFFSET + HASH || !receiverKey(source, senderKey)) {
         ++lxmfRejects.sender;
         return 0;
     }
     rnscore::LxmfSa1 m;
     rnscore::LxmfReject reason;
-    if (!rnscore::lxmfReceiveSa1(addressBytes, data, length, sender.publicKey, m, &reason)) {
+    if (!rnscore::lxmfReceiveSa1(addressBytes, data, length, senderKey, m, &reason)) {
         switch (reason) {
             case rnscore::LxmfReject::STAMP:
                 ++lxmfRejects.stamp;
