@@ -445,6 +445,12 @@ def main():
         results["node_status"] = node.status()
         if args.lxmf:
             # Cele komputera także po restarcie węzła: 8 najnowszych tras przez USB o 1 skoku z tablicy w FRAM.
+            # Koniec programu węzła zamyka pty (w Linuksie EIO w KISSInterface, przy panic_on_interface_error
+            # koniec procesu), więc najpierw komputer odłącza interfejs, jak Reticulum przy wyjściu (detach,
+            # bez ponownego łączenia z pty o tej samej nazwie); panika wyłączona przed detach, bo zamknięcie
+            # portu przerywa wątek odczytu wyjątkiem. Dalsze sprawdzenia pytają tylko program węzła.
+            RNS.Reticulum.panic_on_interface_error = False
+            kiss.detach()
             node.stop()
             node = Program(args.program, node_fram, node_port, station_port, args.debt, node=True)
             time.sleep(2)   # po przeglądzie tras (raz na sekundę): trasy z FRAM nie wygasają po restarcie
