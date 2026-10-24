@@ -1314,6 +1314,14 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(lines[13], "-")
         self.assertEqual(lines[14].split()[4:], ["3", "0", "0"])
 
+    def test_interfaces_emit_returns_accepting_mask(self):
+        # emit zwraca maskę interfejsów, które przyjęły ramkę; skrót trafia na listę tylko przy niezerowej masce.
+        frame = bytes(range(1, 40))
+        other = frame[::-1]
+        lines = self.ask([("t_begin", self.TWO), ("t_emit", b"\x01\x03" + frame), ("t_emit", b"\x03\x03" + other),
+                          ("t_emit", b"\x00\x03" + other)])
+        self.assertEqual(lines[1:], ["2 1", "0 1", "3 2"])
+
     def test_interfaces_own_response_limit_per_interface(self):
         # Limit odpowiedzi na zapytanie o cel stacji (OWN_RESPONSE_MIN_MS) liczy się osobno na interfejs:
         # zapytanie z USB nie wstrzymuje odpowiedzi na zapytanie z P1; drugie z tego samego interfejsu tak.
