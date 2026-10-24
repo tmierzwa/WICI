@@ -73,12 +73,16 @@ class PanelMemoryTest(base.PanelTest):
     def test_usb_state_changes_without_any_write(self):
         usb = self.session.usb
         away = usb.with_name('usb-away')
-        before = self.request('GET', '/api/state', headers={'Cookie': self.cookie()})
+        cookie = {'Cookie': self.cookie()}
+        # Earlier handler tests may still have a snapshot in flight. Windows cannot
+        # rename its directory while the writer has a file open. Start from a saved copy.
+        self.session.db.flush()
+        before = self.request('GET', '/api/state', headers=cookie)
         self.assertEqual(before[0].status, 200)
         self.assertTrue(json.loads(before[1])['session']['db']['usb_present'])
+        usb.rename(away)
         try:
-            usb.rename(away)
-            response, body = self.request('GET', '/api/state', headers={'Cookie': self.cookie()})
+            response, body = self.request('GET', '/api/state', headers=cookie)
             self.assertEqual(response.status, 200)
             status = json.loads(body)['session']['db']
             self.assertFalse(status['usb_present'])
@@ -86,7 +90,7 @@ class PanelMemoryTest(base.PanelTest):
             self.assertEqual(status['usb_problem'], base.database.NO_USB)
         finally:
             away.rename(usb)
-        self.assertTrue(json.loads(self.request('GET', '/api/state', headers={'Cookie': self.cookie()})[1])['session']['db']['usb_present'])
+        self.assertTrue(json.loads(self.request('GET', '/api/state', headers=cookie)[1])['session']['db']['usb_present'])
 
     def test_validation_returns_canonical_text_and_rejects_65_bytes(self):
         doc = base.station_doc(addresses=['Szko\u200bła  Podstawowa'])
