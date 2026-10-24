@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-10",
+  "date": "2026-10-24",
   "firmware": "l0-0.5",
   "target": "ESP32-S3-DevKitC-1-N8R8 rev1.1 + N1 L0 RFQ 2026-10-09",
   "compiled": true,
@@ -13,9 +13,11 @@
   "full_acceptance_done": false,
   "rfq_pinmap_sha256": "57298787d90aadc2c4af86b36bdd8647f11a7f6d9cb68013d254dd05c8d6bf18",
   "source_sha256": {
-    "README.md": "5dbeaed81db097c1126a04b0b6aed3c3d4e393416a5da1f2c97777b8e8845040",
-    "evidence/build-l0.txt": "673238f37c9d94bc44456d74af0878d74f2e4316e617848d1eca55ec31141be4",
-    "evidence/tests-l0.txt": "5dc81ed09fb6b0118f7a8906515b161c49b71ea50c1bf91bc13a56051042b8cb",
+    "MONTAZ-I-TESTY.md": "259991d7fefe53a4f472cb06c429d29cf43e9d32325f6bf3fc1ab4f011fe8a22",
+    "README.md": "424411b62ac104e365a4c61f16e438b6c9ef344a7961fcf69caf975289ae5d92",
+    "ZLECENIE.md": "2bc3ba21cb1f8d940ffb3b31745e405c6f2d1e04195eb55c157b8eec5c095623",
+    "evidence/build-l0.txt": "f7153f1fc978db9c69390aa63fc2d0e48e6bb798fe92e27d1ba0242b952a1658",
+    "evidence/tests-l0.txt": "06cba4ff677f2c788782bb5e2e6cceed44a302b15117ca9c5f1047e1345d847d",
     "evidence/tests-r0.txt": "778ce3cd7e029a45211fc91f9227e23607f7b4e3be85dfb8decf95167aab7563",
     "licenses/Bitstream-Vera.txt": "69391f203c35b9b67b3ef4ebf4dc1cd69f4741c2d08fad8e5b7eecb6a950eaee",
     "licenses/MIT.txt": "a9ffcb13783806e9137d98e3a99c00826c5ac332777b181d9dfa8330d3720e64",
@@ -49,11 +51,11 @@
     "tests/test_reports.py": "0d0295d9ee32291b0938805d7185edef0a442a7a1f63cc24d2091de91656541a",
     "tests/test_usb.py": "2d7185a58e115c4fd846dfe18d2c7cf7d550269b9d22a259b148833e68f86785",
     "tools/diagnose.py": "37a1803e2cda603be232941860b5f964913e514f601a7aa0a91ab51ae8c29efc",
-    "tools/package.py": "db69301894feced480fe21c939fe1e65dd623b74959a09c2dff959dc55cecb6f",
+    "tools/package.py": "cd5c6115239191f660ac2403f36af43b186c1392cd30c92eaba841848961dd1c",
     "tools/radio_test.py": "5529bf77d292caa13d730e737a6130cf69866143dae303e8cb4f526a51ac9834"
   },
-  "firmware_bin_sha256": "4fb5bd150b99bacbbd11f545c15d3a51e8cce17d4e3e2fe276b6af67d87f5a4f",
-  "last_software_verification_utc": "2026-10-10T18:14:55.757951+00:00",
+  "firmware_bin_sha256": "f582cc11b15c13ed09cc01e4024de422936a1f0f1f1dee989675504c78061e30",
+  "last_software_verification_utc": "2026-10-24T19:54:36.885348+00:00",
   "physical_remaining": [
     "E1 montaż/start/reset",
     "E2 napięcia/prąd",
