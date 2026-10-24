@@ -1,36 +1,43 @@
 // SPDX-License-Identifier: MIT
-// Komputer stanowiska odbiorczego w symulatorze. Docelowo jest to aplikacja w Pythonie z Reticulum
+// Komputer stanowiska odbiorczego w symulatorze. Docelowo jest to aplikacja w Pythonie z Reticulum i LXMF
 // (docs/spec/stanowisko-osp.md, „Komputer i aplikacja stanowiska”), której jeszcze nie ma; tutaj:
-// - stos: ten sam przypięty microReticulum co w stacji (firmware/tools/stack_deps.py), transport
-//   jeden interfejs KISS z kontrolą przepływu przez port danych USB węzła stanowiska
-//   (stacja w roli `wezel`, prawdziwy obraz bench-b), jak KISSInterface Reticulum na komputerze
-//   (różnica: transport włączony, bo microReticulum bez niego nie zapisuje znanych tożsamości);
-// - tożsamości: główna i zapasowa, każda z celem "wici.sa1"; aktywna przyjmuje i ogłasza;
-//   pliki stosu i klucze w systemie plików framfs (ten sam co w stacji) na „dysku” w pamięci;
+// - stos: rdzeń Reticulum stacji (firmware/lib/reticulum_core, od etapu R6-4 jak w stacji), transport
+//   z jednym interfejsem KISS z kontrolą przepływu przez port danych USB węzła stanowiska (stacja w roli
+//   `wezel`, prawdziwy obraz bench-b), jak KISSInterface Reticulum na komputerze. Rdzeń ma zawsze
+//   włączony transport, a Reticulum na komputerze pracuje bez niego: retransmisje cudzych ogłoszeń
+//   (HEADER_2) nie wychodzą do węzła;
+// - tożsamości: główna i zapasowa, każda z celem "lxmf.delivery" jak LXMRouter; aktywna przyjmuje
+//   i ogłasza (transport rdzenia z kluczem aktywnej). Klucze w rekordach tożsamości framfs (jak w stacji),
+//   tablica znanych celów rdzenia w miejscu systemu plików stacji, oba na „dysku” w pamięci;
+// - wiadomości: SA1 w LXMF jednym pakietem okazjonalnym (rnscore::lxmfPackSa1, lxmfReceiveSa1), z podpisem
+//   aktywnej tożsamości i weryfikacją podpisu stacji kluczem z jej ogłoszenia;
 // - aplikacja (MODEL): zgłoszenia i TEST od stacji z dowodem od razu (wczesny dowód dopuszcza
-//   oprogramowanie.md) i RECEIVED po zapisie; STATUS, REPLY i BULLETIN na polecenie dyżurnego albo
-//   automatycznie; każda wiadomość ponawiana do dowodu od stacji. Koperta jak station.cpp.
+//   oprogramowanie.md; LXMRouter dowodzi każdego pakietu, PROVE_ALL) i RECEIVED po zapisie; STATUS, REPLY
+//   i BULLETIN na polecenie dyżurnego albo automatycznie; każda wiadomość ponawiana do dowodu od stacji.
 // Sterowanie poleceniami tekstowymi (sim_command) jak urządzenia; środowisko przenosi bajty KISS.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <Arduino.h>
-#include <RNG.h>
-#include <microReticulum.h>
 
 #include <deque>
 #include <string>
 #include <vector>
 
+#include "destination.h"
+#include "drbg.h"
 #include "framfs.h"
 #include "hexstr.h"
+#include "identity.h"
 #include "journal.h"
 #include "kiss.h"
-#include "rns_framfs.h"
+#include "lxmf.h"
+#include "packet.h"
 #include "sa1.h"
-#include "sha2.h"
 #include "store.h"
+#include "table.h"
+#include "transport.h"
 
 namespace post {
 
@@ -40,7 +47,7 @@ constexpr size_t HASH = 16;
 constexpr uint32_t RETRY_MS[] = {30000, 60000, 120000, 300000};
 constexpr uint32_t READY_TIMEOUT_MS = 5000;   // Reticulum zwalnia blokadę przepływu sam po 5 s
 
-// „Dysk” komputera: pliki stosu i klucze (framfs na 512 KiB), przetrwa restart programu.
+// „Dysk” komputera: klucze i tablica znanych celów (512 KiB jak FRAM stacji), przetrwa restart programu.
 struct Disk : journal::Storage {
     std::vector<uint8_t> bytes = std::vector<uint8_t>(512 * 1024, 0xFF);
     bool read(uint32_t a, uint8_t* d, size_t n) override {
@@ -78,34 +85,8 @@ void kissEncode(uint8_t command, const uint8_t* data, size_t n, std::string& out
     out += static_cast<char>(kiss::FEND);
 }
 
-class KissInterface : public RNS::InterfaceImpl {
-public:
-    KissInterface() : RNS::InterfaceImpl("KISS") {
-        _IN = true;
-        _OUT = true;
-        _HW_MTU = kiss::MTU;
-        _bitrate = 115200;
-        _mode = RNS::Type::Interface::MODE_FULL;
-    }
-    void deliver(const std::string& packet) {
-        char b[64];
-        snprintf(b, sizeof(b), "KISS: pakiet %u B od węzła", static_cast<unsigned>(packet.size()));
-        event("kiss", b);
-        std::shared_ptr<RNS::InterfaceImpl> self = shared_from_this();
-        RNS::Interface(self).handle_incoming(RNS::Bytes(reinterpret_cast<const uint8_t*>(packet.data()), packet.size()));
-    }
-
-protected:
-    bool send_outgoing(const RNS::Bytes& raw) override {
-        std::string frame;
-        kissEncode(kiss::CMD_DATA, raw.data(), raw.size(), frame);
-        kissQueue.push_back(frame);
-        handle_outgoing(raw);
-        return true;
-    }
-};
-
-KissInterface* kissImpl = nullptr;   // własność przejmuje RNS::Interface (jak P1Interface w rns_node.cpp)
+// Pakiet od węzła do transportu (interfejs 0).
+void deliver(const std::string& packet);
 
 void kissPump() {
     const uint32_t now = millis();
@@ -132,9 +113,9 @@ void kissFeed(const std::vector<uint8_t>& bytes) {
             if (kissIn && !kissFrame.empty()) {
                 const uint8_t command = static_cast<uint8_t>(kissFrame[0]) & 0x0F;
                 if (command == kiss::CMD_READY) kissReady = true;
-                else if (command == kiss::CMD_DATA && kissImpl) {
+                else if (command == kiss::CMD_DATA) {
                     ++framesIn;
-                    kissImpl->deliver(kissFrame.substr(1));
+                    deliver(kissFrame.substr(1));
                 }
             }
             kissFrame.clear();
@@ -182,27 +163,42 @@ struct Outgoing {
     uint8_t type = 0;
     uint16_t revision = 0;
     uint8_t state = 0;
-    std::string station;     // cel "wici.sa1" stacji (hex)
+    std::string station;     // cel "lxmf.delivery" stacji (hex)
     std::string sa1, label;
     uint8_t identity = 0;
     uint64_t nextMs = 0;
     uint16_t attempts = 0;
     bool inFlight = false;
     bool done = false;
+    uint32_t handle = 0;     // potwierdzenie transportu rdzenia
 };
 
 struct Station {
-    std::string address;     // hex celu "wici.sa1"
+    std::string address;     // hex celu "lxmf.delivery" stacji
     uint64_t heardMs = 0;
 };
 
 Disk disk;
-framfs::Fs* fs = nullptr;
-alignas(framfs::Fs) uint8_t fsMemory[sizeof(framfs::Fs)];
-RNS::Reticulum reticulum(RNS::Type::NONE);
-RNS::Identity identities[2] = {RNS::Identity(RNS::Type::NONE), RNS::Identity(RNS::Type::NONE)};
-RNS::Destination destinations[2] = {RNS::Destination(RNS::Type::NONE), RNS::Destination(RNS::Type::NONE)};
-RNS::Interface iface(RNS::Type::NONE);
+// Obszar tablicy znanych celów rdzenia na dysku: miejsce systemu plików stacji (jak rns_node_core.cpp).
+struct DiskTable : rnscore::TableStorage {
+    bool read(uint32_t offset, uint8_t* data, size_t count) override {
+        return offset + count <= rnscore::TABLE_AREA && disk.read(framfs::FS_BASE + offset, data, count);
+    }
+    bool write(uint32_t offset, const uint8_t* data, size_t count) override {
+        return offset + count <= rnscore::TABLE_AREA && disk.write(framfs::FS_BASE + offset, data, count);
+    }
+};
+DiskTable table;
+rnscore::Transport transport;
+drbg::Drbg generator;   // klucze tożsamości, skróty losowe ogłoszeń, klucze efemeryczne i IV (RNS: os.urandom)
+struct Identity {
+    uint8_t privateKey[rnscore::KEY_SIZE];
+    uint8_t publicKey[rnscore::KEY_SIZE];
+    uint8_t hash[HASH];
+    uint8_t address[HASH];   // cel "lxmf.delivery"
+};
+Identity identities[2];
+uint8_t lxmfName[rnscore::NAME_HASH_SIZE];
 uint8_t active = 0;
 bool started = false;
 bool autoRead = true, announced = false;
@@ -215,6 +211,8 @@ uint32_t serials = 0, bulletinEvent = 0;
 std::vector<std::string> events;
 std::string reply;
 uint64_t lastAnnounceMs = 0;
+uint32_t nextHandle = 0;
+uint32_t rebroadcastsHeld = 0;   // retransmisje cudzych ogłoszeń, których komputer bez transportu nie nadaje
 
 void event(const char* kind, const std::string& text) {
     std::string e = "{\"t\":" + std::to_string(millis()) + ",\"kind\":\"" + kind + "\",\"text\":\"";
@@ -223,50 +221,95 @@ void event(const char* kind, const std::string& text) {
     if (events.size() > 2000) events.erase(events.begin(), events.begin() + 1000);
 }
 
-std::string hexOf(const RNS::Bytes& b) {
+std::string hexOf(const uint8_t* b, size_t n) {
     char out[2 * 64 + 1];
-    hexstr::encode(b.data(), b.size() < 64 ? b.size() : 64, out);
+    hexstr::encode(b, n < 64 ? n : 64, out);
     return out;
 }
 
-// Klucz tożsamości w obszarze tożsamości framfs: główna w gnieździe stacji, zapasowa 128 B dalej.
+// Klucz tożsamości w obszarze tożsamości framfs: główna w gnieździe stacji, zapasowa 128 B dalej. Nowy klucz
+// z generatora, X25519 przycięty jak w rns_node_core.cpp (RNS/Identity.py: Identity.create_keys).
 bool loadIdentity(int k) {
-    journal::Storage& s = disk;
-    uint8_t key[framfs::KEY_BYTES];
     struct Shifted : journal::Storage {
         journal::Storage& base;
         uint32_t offset;
         Shifted(journal::Storage& b, uint32_t o) : base(b), offset(o) {}
         bool read(uint32_t a, uint8_t* d, size_t n) override { return base.read(a + offset, d, n); }
         bool write(uint32_t a, const uint8_t* d, size_t n) override { return base.write(a + offset, d, n); }
-    } slot(s, k ? 2 * framfs::IDENTITY_SLOT : 0);
-    if (framfs::loadKey(slot, key)) {
-        identities[k] = RNS::Identity(false);
-        if (identities[k].load_private_key(RNS::Bytes(key, sizeof(key)))) return true;
+    } slot(disk, k ? 2 * framfs::IDENTITY_SLOT : 0);
+    Identity& id = identities[k];
+    if (!framfs::loadKey(slot, id.privateKey)) {
+        if (!generator.generate(id.privateKey, sizeof(id.privateKey))) return false;
+        id.privateKey[0] &= 0xF8;
+        id.privateKey[31] = (id.privateKey[31] & 0x7F) | 0x40;
+        if (!framfs::saveKey(slot, id.privateKey)) return false;
     }
-    identities[k] = RNS::Identity();
-    const RNS::Bytes prv = identities[k].get_private_key();
-    return framfs::saveKey(slot, prv.data());
+    rnscore::publicKey(id.privateKey, id.publicKey);
+    rnscore::identityHash(id.publicKey, id.hash);
+    rnscore::destinationHashFrom(lxmfName, id.hash, id.address);
+    return true;
 }
 
-void onPacket(const RNS::Bytes& data, const RNS::Packet& packet);
+void onPacket(const uint8_t* data, size_t length);
+void onReceipt(uint32_t handle, bool delivered);
 
-class Announces final : public RNS::AnnounceHandler {
-public:
-    Announces() : RNS::AnnounceHandler("wici.sa1") {}
-    void received_announce(const RNS::Bytes& hash, const RNS::Identity&, const RNS::Bytes&) override {
-        const std::string h = hexOf(hash);
-        for (int k = 0; k < 2; ++k) if (destinations[k] && hexOf(destinations[k].hash()) == h) return;
-        for (Station& s : stations) if (s.address == h) { s.heardMs = millis(); return; }
-        stations.push_back({h, millis()});
-        event("announce", "ogłoszenie stacji " + h.substr(0, 8));
+// Wywołania z transportu rdzenia (jeden interfejs: KISS do węzła).
+bool transmitHook(const uint8_t* raw, size_t length, uint8_t, void*) {
+    if (length > 1 && (raw[0] & 0x40) && (raw[0] & 0x03) == rnscore::ANNOUNCE) {
+        ++rebroadcastsHeld;   // HEADER_2: retransmisja cudzego ogłoszenia albo odpowiedź za inny cel
+        return false;
     }
-};
-RNS::HAnnounceHandler announces;
+    std::string frame;
+    kissEncode(kiss::CMD_DATA, raw, length, frame);
+    kissQueue.push_back(frame);
+    return true;
+}
+
+void announceHook(const uint8_t destination[HASH], const uint8_t*, size_t, void*) {
+    const std::string h = hexOf(destination, HASH);
+    for (const Identity& id : identities) if (memcmp(id.address, destination, HASH) == 0) return;
+    for (Station& s : stations) if (s.address == h) { s.heardMs = millis(); return; }
+    stations.push_back({h, millis()});
+    event("announce", "ogłoszenie stacji " + h.substr(0, 8));
+}
+
+bool packetHook(const uint8_t* data, size_t length, void*) {
+    onPacket(data, length);
+    return true;   // PROVE_ALL jak LXMRouter: dowód każdego pakietu do celu
+}
+
+void receiptHook(uint32_t handle, bool delivered, void*) { onReceipt(handle, delivered); }
+bool randomHook(uint8_t* out, size_t length, void*) { return generator.generate(out, length); }
+bool yesHook(uint8_t, void*) { return true; }
+
+// Transport z kluczem aktywnej tożsamości; tablica znanych celów zostaje (montowana od nowa).
+void beginTransport() {
+    rnscore::TransportHooks h;
+    h.transmit = transmitHook;
+    h.announce = announceHook;
+    h.packet = packetHook;
+    h.receipt = receiptHook;
+    h.random = randomHook;
+    h.mayVerify = yesHook;
+    const Identity& id = identities[active];
+    transport.begin(id.privateKey, id.publicKey, id.hash, id.address, lxmfName, h, table, millis(), 1);
+    transport.setBitrate(115200);
+}
+
+void deliver(const std::string& packet) {
+    char b[64];
+    snprintf(b, sizeof(b), "KISS: pakiet %u B od węzła", static_cast<unsigned>(packet.size()));
+    event("kiss", b);
+    if (!transport.inbound(reinterpret_cast<const uint8_t*>(packet.data()), packet.size(), millis())) event("rx", "pakiet nieczytelny");
+}
 
 void announce() {
     if (!started) return;
-    destinations[active].announce(RNS::Bytes(), false);   // zwykłe ogłoszenie (drugi argument: odpowiedź na zapytanie o trasę)
+    uint8_t random[5];   // ogłoszenie bez danych aplikacji, jak przed etapem R6-4
+    if (!generator.generate(random, sizeof(random)) || !transport.announce(random, nullptr, 0, millis())) {
+        event("error", "ogłoszenie odrzucone");
+        return;
+    }
     lastAnnounceMs = millis();
     announced = true;
     event("announce", std::string("ogłoszenie stanowiska (") + (active ? "zapasowa" : "główna") + ")");
@@ -274,45 +317,15 @@ void announce() {
 
 void begin() {
     if (started) return;
-    try {
-        RNS::set_log_callback([](const char* msg, RNS::LogLevel) { event("rns", msg); });
-        fs = new (fsMemory) framfs::Fs(disk);
-        if (!fs->mount()) { event("error", "dysk"); return; }
-        microStore::FileSystem filesystem{new rnsfs::FramFileSystem(*fs)};
-        RNS::Utilities::OS::register_filesystem(filesystem);
-        uint8_t seed[32];
-        vb::entropy(seed, sizeof(seed));
-        RNG.begin("WICI-post");
-        RNG.stir(seed, 32, 256);
-        if (!loadIdentity(0) || !loadIdentity(1)) { event("error", "tożsamość"); return; }
-        kissImpl = new KissInterface();
-        iface = kissImpl;
-        RNS::Transport::register_interface(iface);
-        iface.start();
-        reticulum = RNS::Reticulum();
-        // Reticulum w Pythonie na komputerze pracuje bez transportu; microReticulum zakłada magazyny znanych
-        // tożsamości i tras tylko w trybie transportu (Transport.cpp, start), więc tu transport jest
-        // włączony. Z jednym interfejsem (KISS) węzeł transportowy nie ma czego przekazywać dalej.
-        reticulum.transport_enabled(true);
-        RNS::Transport::identity(identities[0]);
-        // Jak rns_node.cpp: limity tablic przed startem (magazyny microStore na framfs).
-        RNS::Transport::path_table_maxsize(RNS_PATH_TABLE_MAX);
-        RNS::Identity::known_destinations_maxsize(RNS_KNOWN_DESTINATIONS_MAX);
-        reticulum.start();
-        RNS::Utilities::OS::setTimeOffset(0);
-        microStore::set_time_offset(0);
-        for (int k = 0; k < 2; ++k) {
-            destinations[k] = RNS::Destination(identities[k], RNS::Type::Destination::IN, RNS::Type::Destination::SINGLE, "wici", "sa1");
-            destinations[k].set_packet_callback(onPacket);
-            destinations[k].set_proof_strategy(RNS::Type::Destination::PROVE_ALL);
-        }
-        announces = RNS::HAnnounceHandler(new Announces());
-        RNS::Transport::register_announce_handler(announces);
-        started = true;
-        event("start", "stanowisko gotowe, cel " + hexOf(destinations[0].hash()).substr(0, 8));
-    } catch (const std::exception& e) {
-        event("error", e.what());
-    }
+    uint8_t seed[32];
+    vb::entropy(seed, sizeof(seed));
+    static const char nonce[] = "WICI-post";
+    generator.seed(seed, sizeof(seed), reinterpret_cast<const uint8_t*>(nonce), sizeof(nonce) - 1);
+    rnscore::nameHash("lxmf.delivery", lxmfName);
+    if (!loadIdentity(0) || !loadIdentity(1)) { event("error", "tożsamość"); return; }
+    beginTransport();
+    started = true;
+    event("start", "stanowisko gotowe, cel " + hexOf(identities[0].address, HASH).substr(0, 8));
 }
 
 Request* find(uint16_t number) {
@@ -408,72 +421,75 @@ void handleRequest(const sa1::Message& m, const std::string& station, uint8_t id
     }
 }
 
-void onPacket(const RNS::Bytes& data, const RNS::Packet& packet) {
-    const std::string text(reinterpret_cast<const char*>(data.data()), data.size());
-    // Koperta ["WICI",1,"<od>","<do>",<SA1>] (station.cpp).
-    if (text.size() < 82 || text.compare(0, 11, "[\"WICI\",1,\"") != 0) { event("rx", "pakiet bez koperty WICI"); return; }
-    const std::string from = text.substr(11, 32), to = text.substr(46, 32);
-    uint8_t identity = 0;
-    for (int k = 0; k < 2; ++k) if (destinations[k] && hexOf(destinations[k].hash()) == to) identity = static_cast<uint8_t>(k);
-    if (identity != active) { event("rx", "pakiet do nieaktywnej tożsamości"); return; }
+// Wiadomość SA1 w LXMF od stacji (LXMRouter.delivery_packet): klucz nadawcy z jego ogłoszenia w tablicy.
+void onPacket(const uint8_t* data, size_t length) {
+    const Identity& id = identities[active];
+    rnscore::KnownDestination sender;
+    rnscore::LxmfSa1 lx;
+    if (length < rnscore::LXMF_SOURCE_OFFSET + HASH || !transport.lookup(data + rnscore::LXMF_SOURCE_OFFSET, sender, millis()) ||
+        !rnscore::lxmfReceiveSa1(id.address, data, length, sender.publicKey, lx)) {
+        event("rx", "wiadomość odrzucona (nadawca nieznany, podpis albo nie SA1)");
+        return;
+    }
+    const std::string from = hexOf(lx.sourceHash, HASH);
     sa1::Message m;
-    if (sa1::decode(text.data() + 80, text.size() - 81, m) || (m.type != sa1::REQUEST && m.type != sa1::TEST)) {
+    if (sa1::decode(reinterpret_cast<const char*>(lx.content), lx.contentLength, m) || (m.type != sa1::REQUEST && m.type != sa1::TEST)) {
         event("rx", "wiadomość odrzucona (format)");
         return;
     }
     bool known = false;
     for (Station& s : stations) if (s.address == from) { known = true; s.heardMs = millis(); }
     if (!known) stations.push_back({from, millis()});
-    (void)packet;
-    handleRequest(m, from, identity);
+    handleRequest(m, from, active);
+}
+
+void onReceipt(uint32_t handle, bool delivered) {
+    for (Outgoing& q : outbox) {
+        if (q.handle != handle || !q.inFlight) continue;
+        q.inFlight = false;
+        if (!delivered) { event("timeout", "brak dowodu: " + q.label); return; }
+        q.done = true;
+        event("ack", "stacja potwierdziła: " + q.label);
+        for (Request& r : requests) {
+            if (r.id != q.id) continue;
+            if (q.type == sa1::RECEIVED && (r.receivedAcked == 0xFFFF || q.revision > r.receivedAcked)) r.receivedAcked = q.revision;
+            if (q.type == sa1::STATUS) r.stateAcked = q.state;
+            if (q.type == sa1::REPLY) r.replyAcked = true;
+        }
+        return;
+    }
 }
 
 void sendDue() {
     const uint64_t now = millis();
+    const Identity& id = identities[active];
     for (Outgoing& o : outbox) {
         if (o.done || o.inFlight || now < o.nextMs) continue;
         if (o.identity != active) { o.done = true; continue; }
         ++o.attempts;
         o.nextMs = now + RETRY_MS[o.attempts - 1 < 3 ? o.attempts - 1 : 3];
-        try {
-            uint8_t dest[HASH];
-            hexstr::decode(o.station.c_str(), dest, HASH);
-            const RNS::Bytes hash(dest, HASH);
-            const RNS::Identity remote = RNS::Identity::recall(hash);
-            if (!remote) {
-                RNS::Transport::request_path(hash);
-                event("tx", o.label + ": stacja nieznana, zapytanie o trasę");
-                continue;
-            }
-            RNS::Destination out(remote, RNS::Type::Destination::OUT, RNS::Type::Destination::SINGLE, "wici", "sa1");
-            const std::string packet = "[\"WICI\",1,\"" + hexOf(destinations[active].hash()) + "\",\"" + o.station + "\"," + o.sa1 + "]";
-            RNS::Packet p(out, RNS::Bytes(reinterpret_cast<const uint8_t*>(packet.data()), packet.size()));
-            RNS::PacketReceipt receipt = p.receipt_send();
-            if (!receipt) { event("tx", o.label + ": stos odmówił"); continue; }
-            o.inFlight = true;
-            const uint32_t serial = o.serial;
-            receipt.set_timeout(60);
-            receipt.set_delivery_handler([serial](const RNS::PacketReceipt&) {
-                for (Outgoing& q : outbox) {
-                    if (q.serial != serial) continue;
-                    q.done = true;
-                    q.inFlight = false;
-                    event("ack", "stacja potwierdziła: " + q.label);
-                    for (Request& r : requests) {
-                        if (r.id != q.id) continue;
-                        if (q.type == sa1::RECEIVED && (r.receivedAcked == 0xFFFF || q.revision > r.receivedAcked)) r.receivedAcked = q.revision;
-                        if (q.type == sa1::STATUS) r.stateAcked = q.state;
-                        if (q.type == sa1::REPLY) r.replyAcked = true;
-                    }
-                }
-            });
-            receipt.set_timeout_handler([serial](const RNS::PacketReceipt&) {
-                for (Outgoing& q : outbox) if (q.serial == serial) { q.inFlight = false; event("timeout", "brak dowodu: " + q.label); }
-            });
-            event("tx", o.label + " (próba " + std::to_string(o.attempts) + ")");
-        } catch (const std::exception& e) {
-            event("error", e.what());
+        uint8_t dest[HASH];
+        hexstr::decode(o.station.c_str(), dest, HASH);
+        if (!transport.knows(dest)) {
+            uint8_t tag[HASH];
+            if (generator.generate(tag, sizeof(tag))) transport.requestPath(dest, tag, now);
+            event("tx", o.label + ": stacja nieznana, zapytanie o trasę");
+            continue;
         }
+        // LXMessage.pack (OPPORTUNISTIC), znacznik czasu w s od startu programu (stacja go nie używa).
+        uint8_t data[rnscore::LXMF_SA1_MAX_DATA], hash[rnscore::HASH_SIZE];
+        const size_t length = rnscore::lxmfPackSa1(id.privateKey, id.publicKey, dest, id.address, static_cast<double>(now / 1000),
+                                                   reinterpret_cast<const uint8_t*>(o.sa1.data()), o.sa1.size(), data, sizeof(data), hash);
+        uint8_t random[32 + 16];
+        const uint32_t handle = ++nextHandle ? nextHandle : ++nextHandle;
+        if (!length || !generator.generate(random, sizeof(random)) ||
+            transport.send(dest, data, length, random, random + 32, handle, 60000, now) != rnscore::SendResult::SENT) {
+            event("tx", o.label + ": stos odmówił");
+            continue;
+        }
+        o.inFlight = true;
+        o.handle = handle;
+        event("tx", o.label + " (próba " + std::to_string(o.attempts) + ")");
     }
 }
 
@@ -521,12 +537,8 @@ std::string state() {
 
 std::string card(int k) {
     // Karta odbiorcy do konfiguracji stacji (protokol-usb.md, `configure`): adres LXMF i klucz publiczny.
-    const RNS::Bytes key = identities[k].get_public_key();
-    uint8_t lxmf[HASH];
-    sha2::destinationHash(key.data(), "lxmf.delivery", lxmf);
-    char lx[2 * HASH + 1];
-    hexstr::encode(lxmf, HASH, lx);
-    return std::string("{\"lxmf\":\"") + lx + "\",\"key\":\"" + hexOf(key) + "\"}";
+    return std::string("{\"lxmf\":\"") + hexOf(identities[k].address, HASH) + "\",\"key\":\"" +
+           hexOf(identities[k].publicKey, rnscore::KEY_SIZE) + "\"}";
 }
 
 std::string run(const char* line) {
@@ -583,7 +595,11 @@ std::string run(const char* line) {
         return "ok";
     }
     if (!strcmp(cmd, "identity")) {
-        active = strcmp(a1, "backup") ? 0 : 1;
+        const uint8_t next = strcmp(a1, "backup") ? 0 : 1;
+        if (next != active) {
+            active = next;
+            if (started) beginTransport();
+        }
         announce();
         return "ok";
     }
@@ -643,11 +659,7 @@ void setup() { post::begin(); }
 void loop() {
     using namespace post;
     if (started) {
-        try {
-            reticulum.loop();
-        } catch (const std::exception& e) {
-            event("error", e.what());
-        }
+        transport.poll(millis());
         kissPump();
         autoOperator();
         sendDue();
@@ -663,9 +675,3 @@ extern "C" const char* post_command(const char* line) {
 
 extern "C" uint8_t* post_disk() { return post::disk.bytes.data(); }
 extern "C" uint32_t post_disk_size() { return static_cast<uint32_t>(post::disk.bytes.size()); }
-
-// Łata microStore 0001 (firmware/patches): wpisy chronione przed usunięciem; komputer stanowiska
-// (Reticulum w Pythonie) takiej ochrony nie ma.
-namespace microStore {
-bool pinned_key(const uint8_t*, size_t) { return false; }
-}  // namespace microStore
