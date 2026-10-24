@@ -111,7 +111,7 @@ bool Transport::inbound(const uint8_t* raw, size_t length, uint64_t nowMs, uint8
             inboundData(packet, hash, iface);
             break;
         case PROOF:
-            inboundProof(packet, raw, length, nowMs, iface);
+            inboundProof(packet, raw, length, hash, nowMs, iface);
             break;
         default:
             ++counters_.ignored;
@@ -291,8 +291,9 @@ void Transport::inboundData(const Packet& packet, const uint8_t hash[HASH_SIZE],
 // RNS/Transport.py: _inbound (PROOF bez LRPROOF): najpierw przekazanie według tablicy odwrotnej, potem
 // dowód jawny tylko do potwierdzenia o tym skrócie, niejawny tylko do potwierdzenia o skrócie z celu
 // dowodu; PacketReceipt.validate_proof.
-void Transport::inboundProof(const Packet& packet, const uint8_t* raw, size_t length, uint64_t nowMs, uint8_t iface) {
-    const bool forwarded = forwardProof(packet, raw, length, nowMs, iface);
+void Transport::inboundProof(const Packet& packet, const uint8_t* raw, size_t length, const uint8_t hash[HASH_SIZE],
+                             uint64_t nowMs, uint8_t iface) {
+    const bool forwarded = forwardProof(packet, raw, length, hash, nowMs, iface);
     const bool explicitProof = packet.dataLength == PROOF_EXPLICIT_SIZE;
     if (!explicitProof && packet.dataLength != PROOF_IMPLICIT_SIZE) {
         if (!forwarded) ++counters_.invalid;
@@ -344,6 +345,11 @@ bool Transport::forward(const Packet& packet, const uint8_t* raw, size_t length,
         outLength = 2 + tail;
     }
     out[1] = packet.hops;
+    table_.touch(slot, seconds(nowMs), true);   // path_entry[IDX_PT_TIMESTAMP]
+    // Wpis tablicy odwrotnej tylko dla pakietu, który wyszedł (tabela różnic: Python zapisuje go przed
+    // transmit, które nie odmawia): po odmowie nie ma drogi, którą dowód mógłby wrócić.
+    if (!emit(out, outLength, false, interfaceMask(e.interface))) return true;
+    ++counters_.forwarded;
     // reverse_table[truncated_packet_hash]: tego samego skrótu wpis nadpisany, inaczej wolny albo
     // przeterminowany, a przy pełnej tablicy najstarszy (licznik).
     ReverseEntry* r = nullptr;
@@ -364,26 +370,37 @@ bool Transport::forward(const Packet& packet, const uint8_t* raw, size_t length,
     r->received = iface;
     r->outbound = e.interface;
     r->atMs = nowMs ? nowMs : 1;
-    if (emit(out, outLength, false, interfaceMask(e.interface))) ++counters_.forwarded;
-    table_.touch(slot, seconds(nowMs), true);   // path_entry[IDX_PT_TIMESTAMP]
     return true;
 }
 
 // RNS/Transport.py: _inbound (PROOF): dowód do skrótu pakietu przekazanego przez stację wraca tą samą
 // drogą (wpis tablicy odwrotnej zużyty), z liczbą skoków po odbiorze: tylko gdy przyszedł interfejsem,
 // którym pakiet wyszedł (IDX_RT_OUTB_IF), i wychodzi tym, którym pakiet przyszedł (IDX_RT_RCVD_IF).
-bool Transport::forwardProof(const Packet& packet, const uint8_t* raw, size_t length, uint64_t nowMs, uint8_t iface) {
+// Wpis zużywa dopiero dowód, który wyszedł (tabela różnic: Python zdejmuje go przed porównaniem
+// interfejsu). Dowód z innego interfejsu albo odrzucony przez transmit zostawia wpis i schodzi z listy
+// skrótów, więc ta sama kopia właściwą drogą przejdzie; wpis ogranicza nadal REVERSE_TIMEOUT.
+bool Transport::forwardProof(const Packet& packet, const uint8_t* raw, size_t length, const uint8_t hash[HASH_SIZE],
+                             uint64_t nowMs, uint8_t iface) {
     if (length > MTU) return false;
     for (ReverseEntry& r : reverse_) {
         if (!r.atMs || memcmp(r.hash, packet.destinationHash, TRUNCATED_HASH_SIZE) != 0) continue;
-        const bool live = nowMs - r.atMs <= REVERSE_TIMEOUT_MS;
-        r.atMs = 0;
-        if (!live) return false;   // Transport.jobs usunąłby wpis po REVERSE_TIMEOUT
-        if (iface != r.outbound) return false;   // "Proof received on wrong interface"
+        if (nowMs - r.atMs > REVERSE_TIMEOUT_MS) {   // Transport.jobs usunąłby wpis po REVERSE_TIMEOUT
+            r.atMs = 0;
+            return false;
+        }
+        if (iface != r.outbound) {   // "Proof received on wrong interface"
+            hashlist_.remove(hash);
+            return false;
+        }
         uint8_t out[MTU];
         memcpy(out, raw, length);
         out[1] = packet.hops;
-        if (emit(out, length, false, interfaceMask(r.received))) ++counters_.proofsForwarded;
+        if (!emit(out, length, false, interfaceMask(r.received))) {
+            hashlist_.remove(hash);
+            return true;
+        }
+        r.atMs = 0;
+        ++counters_.proofsForwarded;
         return true;
     }
     return false;

@@ -514,6 +514,29 @@ int main() {
             const uint8_t mask = rnscore::EmitCheck::emit(state->transport, data.data() + 2, data.size() - 2, data[1]);
             state->declined = 0;
             printf("%u %u\n", static_cast<unsigned>(mask), static_cast<unsigned>(state->transport.hashes()));
+        } else if (command == "hashlist_remove" && data.size() == 4) {
+            // lista skrótów: n (2 B) różnych skrótów dopisanych, potem zdjęty skrót nr r (2 B); wynik: jest r,
+            // jest poprzedni przed r, rozmiar, ponowne dopisanie r przyjęte
+            static rnscore::HashList list;
+            list.clear();
+            const unsigned n = (data[0] << 8) | data[1], r = (data[2] << 8) | data[3];
+            auto hashOf = [](unsigned i, uint8_t* out) {
+                memset(out, 0, rnscore::HASH_SIZE);
+                out[0] = 0x80;
+                out[6] = static_cast<uint8_t>(i >> 8);
+                out[7] = static_cast<uint8_t>(i);
+            };
+            uint8_t h[rnscore::HASH_SIZE], p[rnscore::HASH_SIZE];
+            for (unsigned i = 0; i < n; ++i) {
+                hashOf(i, h);
+                list.add(h);
+            }
+            hashOf(r, h);
+            hashOf(r ? r - 1 : 0, p);
+            list.remove(h);
+            const bool has = list.contains(h), prev = list.contains(p);
+            const size_t size = list.size();
+            printf("%d %d %u %d\n", has, prev, static_cast<unsigned>(size), list.add(h));
         } else if (command == "t_refuse" && data.size() == 1) {
             // brak żetonu (1) albo żeton (0) dla mayReceive
             state->refuse = data[0] != 0;
