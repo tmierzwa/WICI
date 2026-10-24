@@ -1020,7 +1020,7 @@ Found Store::readRequestAt(size_t slot, Request& out) {
     return Found::NO;
 }
 
-Found Store::findRequest(const uint8_t id[HASH], int& slot) {
+Found Store::findRequest(const uint8_t id[HASH], int& slot, Request* found) {
     const uint32_t prefix = idPrefix(id);
     Request r;
     slot = -1;
@@ -1028,7 +1028,11 @@ Found Store::findRequest(const uint8_t id[HASH], int& slot) {
         if (!register_[i].used() || register_[i].idPrefix != prefix) continue;
         const Found read = readRequestAt(i, r);
         if (read == Found::ERROR) return Found::ERROR;   // gniazdo mogło zawierać szukane id
-        if (read == Found::YES && !memcmp(r.id, id, HASH)) { slot = static_cast<int>(i); return Found::YES; }
+        if (read == Found::YES && !memcmp(r.id, id, HASH)) {
+            slot = static_cast<int>(i);
+            if (found) *found = r;
+            return Found::YES;
+        }
     }
     return Found::NO;
 }
