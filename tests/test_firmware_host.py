@@ -57,12 +57,15 @@ HARNESS = r"""
 
 // FRAM w RAM: 512 KiB skasowane do 0xFF jak nowy układ. budget: bajty zapisu od store::TX_BASE do
 // zaniku zasilania (zapis przerwany w połowie, potem każdy zapis magazynu zawodzi); -1 bez limitu.
+// readFailures: tyle kolejnych odczytów rejestru zwraca błąd (przejściowa odmowa FRAM).
 struct RamStorage : journal::Storage {
     std::vector<uint8_t> bytes = std::vector<uint8_t>(512 * 1024, 0xFF);
     size_t readBytes = 0;
     long budget = -1;
+    long readFailures = 0;
     bool read(uint32_t address, uint8_t* data, size_t count) override {
         if (address + count > bytes.size()) return false;
+        if (address >= store::REGISTER_BASE && address < store::INBOX_BASE && readFailures > 0) { --readFailures; return false; }
         memcpy(data, &bytes[address], count);
         readBytes += count;
         return true;
@@ -584,7 +587,8 @@ int world() {
         unsigned a = 0, b = 0, c = 0, d = 0, e = 0, f = 0;
         char word[16];
         char hex[80] = "";
-        if (!strcmp(cmd, "restart")) {
+        if (!strcmp(cmd, "readfail")) { w.ram.readFailures = atoi(arg); }
+        else if (!strcmp(cmd, "restart")) {
             const store::Begin result = w.start();
             printf("begin %s\n", store::beginName(result));
         } else if (!strcmp(cmd, "wipe")) {
@@ -1744,6 +1748,17 @@ class HostUnitTests(unittest.TestCase):
         tests = self.find(out, "test ")
         self.assertEqual(tests[0], tests[1])   # powtórzone nonce: ten sam wynik
         self.assertEqual(len(self.regs(out, "d")), 3)
+
+    def test_pause_test_read_failure(self):
+        # Nieudany odczyt czekającego TEST-u: WSTRZYMAJ nie udaje, nic się nie zmienia; po ustąpieniu błędu anuluje TEST.
+        out = self.world([self.CONFIG, "now 100", "stest 1", "reg a", "readfail 1", "pause 1", "diag", "reg b",
+                          "pause 1", "reg c", "pause 0", "now 123", "poll", "restart", "poll", "reg d"])
+        self.assertEqual(self.find(out, "pause "), ["pause 0 0", "pause 1 1", "pause 1 0"])
+        self.assertIn("paused=0", self.find(out, "diag ")[0])
+        self.assertEqual(self.regs(out, "b"), self.regs(out, "a"))   # rekord TEST bez zmian
+        self.assertEqual([r["stage"] for r in self.regs(out, "c").values()], [4])
+        self.assertEqual(self.find(out, "send "), [])                # po WZNÓW i po restarcie stary TEST nie jest nadany
+        self.assertEqual([r["stage"] for r in self.regs(out, "d").values()], [4])
 
     def test_alarms_after_power_on(self):
         # oprogramowanie.md, "Czas": bez RTC czas wyłączenia jest nieznany, więc po włączeniu zasilania
