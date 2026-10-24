@@ -259,8 +259,9 @@ class HostileStackTests(unittest.TestCase):
         if failures:
             self.fail(f"{len(failures)} of {SEEDS} seeds failed; first: {failures[0]}")
 
-    def test_power_loss_in_any_fram_write(self):
-        # Stacja po pracy; potem zanik zasilania w wybranym zapisie i start z tym, co zostało w FRAM.
+    def test_power_loss_in_sampled_fram_writes(self):
+        # Stacja po pracy; potem zanik zasilania w próbkowanych zapisach (nie we wszystkich) i start z tym, co zostało
+        # w FRAM. Łączna liczba zapisów i lista cięć idą na stderr, by wynik nie uchodził za pełne pokrycie.
         base = self.station()
         outcome = self.assertClean(base.run("--seed", 21, "--events", 1500))
         # Punkty w pierwszych 90% zapisów próby (liczba zapisów zależy od czasu kompaktowania
@@ -280,6 +281,7 @@ class HostileStackTests(unittest.TestCase):
                 after = self.assertClean(s.run("--seed", 23, "--events", 800, "--gap", 5))
                 self.assertEqual(after["identity"], outcome["identity"])
         self.assertGreaterEqual(cuts, len(points) - 1, f"power cut reached in {cuts} of {len(points)} points")
+        print(f"power loss: {len(points)} of {writes} writes cut (power cut reached {cuts}x): {points}", file=sys.stderr)
 
     def test_fram_bit_flips(self):
         # Przekłamania bitów w używanej części FRAM: stacja startuje albo zgłasza błąd pamięci, bez awarii.
