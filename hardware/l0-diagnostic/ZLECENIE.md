@@ -31,8 +31,8 @@ Szczegóły montażu, diagnozy i prób: [instrukcja montażu i prób](MONTAZ-I-T
     - antena założona przed pierwszym uruchomieniem radia.
 4. **Ekran:** taśma FPC w J7, panel ekranem do góry. Panel przykleić taśmą 3M 4032 dopiero po poprawnym teście ekranu, a nie od razu jak w kroku 7 uruchomienia N1; klej nie pozwala go potem zdjąć bez ryzyka pęknięcia szkła. Punkty pomiarowe muszą zostać dostępne.
 5. **Kontrola przed zasilaniem** (instrukcja, rozdział 3): oględziny pod lupą (zwłaszcza mostki na J7, raster 0,5 mm), zwarcia szyn, ciągłość połączeń Wio.
-6. **Wgranie programu i próby**, zasilanie wyłącznie z portu USB/OTG DevKitC, E1–E6, R1–R3 (instrukcja, rozdziały 4 i 5; polecenia w [instrukcji programu L0](README.md#kolejność-prób-po-montażu)): start i zasilanie, pełny test FRAM z retencją, ochrona FRAM przy zaniku zasilania (oscyloskop), ekran i panel, 15 minut wspólnego SPI, 100 pakietów radiowych w obie strony, blokada CISZA.
-7. **Raport:** wynik każdej próby, zmierzone napięcia i prądy (spoczynek, RX, TX), zrzuty oscyloskopu (ochrona FRAM, EXTCOMIN), logi USB i pliki JSON z `results/`, zdjęcia montażu, lista rzeczy nieukończonych.
+6. **Wgranie programu i próby**, zasilanie wyłącznie z portu USB/OTG DevKitC, E1–E6, R1–R3 (instrukcja, rozdziały 4 i 5; polecenia w [instrukcji programu L0](README.md#kolejność-prób-po-montażu)): start i zasilanie, pełny test FRAM z retencją, ochrona FRAM przy zaniku zasilania (oscyloskop), ekran i panel, 15 minut wspólnego SPI z pomiarem sygnałów magistrali przy panelu, FRAM i Wio, 100 pakietów radiowych w obie strony, blokada CISZA.
+7. **Raport:** wynik każdej próby, zmierzone napięcia i prądy (spoczynek, RX, TX), zrzuty oscyloskopu (ochrona FRAM, EXTCOMIN, sygnały magistrali), logi USB i pliki JSON z `results/`, zdjęcia montażu, lista rzeczy nieukończonych.
 
 ### Połączenia Wio
 
@@ -55,7 +55,7 @@ Szczegóły montażu, diagnozy i prób: [instrukcja montażu i prób](MONTAZ-I-T
 - Stacja lutownicza z cienkim grotem i grotem o większej pojemności cieplnej (pady masy), topnik, plecionka.
 - Lupa ≥10× albo mikroskop do oględzin J7.
 - Multimetr, amperomierz z zakresem ≥200 mA i miernik prądu USB.
-- Oscyloskop ≥3 kanały, ≥50 MHz, sondy x10 (próba zaniku zasilania: 3,3 V, CS FRAM za bramką na U1.1, GUARD).
+- Oscyloskop ≥3 kanały, ≥200 MHz, sondy x10 ze sprężynkami masy (pomiar sygnałów magistrali przy panelu, FRAM i Wio; próba zaniku zasilania: 3,3 V, CS FRAM za bramką na U1.1, GUARD).
 - Komputer z Pythonem 3 i dwoma portami USB (program L0 i partner R0 na jednym hoście; instrukcja podaje nazwy portów macOS, na Linuksie działa analogicznie), przewód micro-USB z transmisją danych.
 
 ## Poza zakresem

@@ -582,6 +582,22 @@ class CoreTests(unittest.TestCase):
                                                  self.proof_packet(self.STATION, raw).hex()))
         self.assertEqual(self.parsed(lines[9])[1], [1, 0, 0, 0, 3, 2, 0, 0, 0])
 
+    def test_transport_lost_proof_retry(self):
+        # Warstwa aplikacji przyjęła pakiet (COMMIT), ale transmit odmówił dowodu: skrót zostaje na liście
+        # (tabela różnic), więc ta sama kopia to duplikat bez dowodu. Ponowienie nadawcy to nowy pakiet
+        # (nowy klucz efemeryczny i IV, inny skrót): przechodzi do warstwy aplikacji i dostaje dowód.
+        address = bytes.fromhex(self.ask([("t_begin", self.STATION)])[0])
+        station_pub = bytes.fromhex(self.ask([("public_key", self.STATION)])[0])
+        first = self.packet(0x00, address, bytes.fromhex(self.ask([("encrypt", station_pub + self.EPHEMERAL + self.IV + b"once")])[0]))
+        again = self.packet(0x00, address, bytes.fromhex(self.ask([("encrypt", station_pub + bytes(range(33, 65)) +
+                                                                     bytes(range(200, 216)) + b"once")])[0]))
+        lines = self.ask([("t_begin", self.STATION), ("t_config", bytes([255, 1])), ("t_drop_tx", b"\x01"), ("t_in", first),
+                          ("t_in", first), ("t_in", again)])
+        self.assertEqual(self.parsed(lines[3])[2:], ([f"packet:{b'once'.hex()}"], "-"))   # przyjęty, dowód utracony
+        self.assertEqual(self.parsed(lines[4])[2:], ([], "-"))                            # ta sama kopia: duplikat
+        self.assertEqual(self.parsed(lines[4])[1][0], 1)
+        self.assertEqual(self.parsed(lines[5])[2:], ([f"packet:{b'once'.hex()}"], self.proof_packet(self.STATION, again).hex()))
+
     def test_transport_outside_subset(self):
         # Pakiety poza podzbiorem R1 albo nie do stacji: pominięte bez listy skrótów; za krótki: unpack.
         address = bytes.fromhex(self.ask([("t_begin", self.STATION)])[0])
