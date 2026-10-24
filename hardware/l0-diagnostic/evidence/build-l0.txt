@@ -1,5 +1,8 @@
 Processing l0 (platform: espressif32@6.9.0; board: esp32-s3-devkitc-1; framework: arduino)
 --------------------------------------------------------------------------------
+Library Manager: Installing jgromes/RadioLib @ 7.6.0
+Unpacking 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+Library Manager: RadioLib@7.6.0 has been installed!
 Verbose mode can be enabled via `-v, --verbose` option
 CONFIGURATION: https://docs.platformio.org/page/boards/espressif32/esp32-s3-devkitc-1.html
 PLATFORM: Espressif 32 (6.9.0) > Espressif ESP32-S3-DevKitC-1-N8 (8 MB QD, No PSRAM)
@@ -18,8 +21,147 @@ Dependency Graph
 |-- RadioLib @ 7.6.0
 |-- SPI @ 2.0.0
 Building in release mode
+Compiling .pio/build/l0/src/font.cpp.o
 Compiling .pio/build/l0/src/fram.cpp.o
 Compiling .pio/build/l0/src/main.cpp.o
+Compiling .pio/build/l0/src/sharp.cpp.o
+Compiling .pio/build/l0/src/sharp_extcomin.cpp.o
+Building .pio/build/l0/bootloader.bin
+Generating partitions .pio/build/l0/partitions.bin
+~/.platformio/packages/tool-esptoolpy/esptool/cmds.py:152: SyntaxWarning: 'return' in a 'finally' block
+  return inst
+Compiling .pio/build/l0/lib682/SPI/SPI.cpp.o
+esptool.py v4.5.1
+Creating esp32s3 image...
+Merged 1 ELF section
+Successfully created esp32s3 image.
+Compiling .pio/build/l0/lib026/RadioLib/Hal.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/Module.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/hal/Arduino/ArduinoHal.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/hal/RPiPico/PicoHal.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/CC1101/CC1101.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/LLCC68/LLCC68.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/LR11x0/LR1110.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/LR11x0/LR1120.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/LR11x0/LR1121.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/LR11x0/LR11x0.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/LR11x0/LR11x0_commands.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/LR11x0/LR11x0_crypto.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/LR11x0/LR11x0_gnss.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/LR11x0/LR11x0_wifi.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/LR11x0/LR_common.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/LR2021/LR2021.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/LR2021/LR2021_cmds_chip_control.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/LR2021/LR2021_cmds_flrc.cpp.o
+Archiving .pio/build/l0/lib682/libSPI.a
+Indexing .pio/build/l0/lib682/libSPI.a
+Compiling .pio/build/l0/lib026/RadioLib/modules/LR2021/LR2021_cmds_gfsk.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/LR2021/LR2021_cmds_lora.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/LR2021/LR2021_cmds_misc.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/LR2021/LR2021_cmds_ook.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/LR2021/LR2021_cmds_oqpsk.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/LR2021/LR2021_cmds_radio.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/LR2021/LR2021_cmds_ranging.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/LR2021/LR2021_config.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/RF69/RF69.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/SX123x/SX1231.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/SX123x/SX1233.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/SX126x/STM32WLx.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/SX126x/STM32WLx_Module.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/SX126x/SX1261.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/SX126x/SX1262.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/SX126x/SX1268.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/SX126x/SX126x.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/SX126x/SX126x_LR_FHSS.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/SX126x/SX126x_commands.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/SX126x/SX126x_config.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/SX127x/SX1272.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/SX127x/SX1273.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/SX127x/SX1276.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/SX127x/SX1277.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/SX127x/SX1278.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/SX127x/SX1279.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/SX127x/SX127x.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/SX128x/SX1280.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/SX128x/SX1281.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/SX128x/SX1282.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/SX128x/SX128x.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/Si443x/Si4430.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/Si443x/Si4431.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/Si443x/Si4432.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/Si443x/Si443x.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/modules/nRF24/nRF24.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/protocols/ADSB/ADSB.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/protocols/AFSK/AFSK.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/protocols/APRS/APRS.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/protocols/AX25/AX25.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/protocols/BellModem/BellModem.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/protocols/ExternalRadio/ExternalRadio.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/protocols/FSK4/FSK4.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/protocols/Hellschreiber/Hellschreiber.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/protocols/LoRaWAN/LoRaWAN.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/protocols/LoRaWAN/LoRaWANBands.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/protocols/Morse/Morse.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/protocols/Pager/Pager.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/protocols/PhysicalLayer/PhysicalLayer.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/protocols/Print/ITA2String.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/protocols/Print/Print.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/protocols/RTTY/RTTY.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/protocols/SSTV/SSTV.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/utils/CRC.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/utils/Cryptography.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/utils/FEC.cpp.o
+Compiling .pio/build/l0/lib026/RadioLib/utils/Utils.cpp.o
+Compiling .pio/build/l0/FrameworkArduino/Esp.cpp.o
+Compiling .pio/build/l0/FrameworkArduino/FirmwareMSC.cpp.o
+Compiling .pio/build/l0/FrameworkArduino/FunctionalInterrupt.cpp.o
+Compiling .pio/build/l0/FrameworkArduino/HWCDC.cpp.o
+Compiling .pio/build/l0/FrameworkArduino/HardwareSerial.cpp.o
+Compiling .pio/build/l0/FrameworkArduino/IPAddress.cpp.o
+Compiling .pio/build/l0/FrameworkArduino/IPv6Address.cpp.o
+Compiling .pio/build/l0/FrameworkArduino/MD5Builder.cpp.o
+Compiling .pio/build/l0/FrameworkArduino/Print.cpp.o
+Compiling .pio/build/l0/FrameworkArduino/Stream.cpp.o
+Compiling .pio/build/l0/FrameworkArduino/StreamString.cpp.o
+Compiling .pio/build/l0/FrameworkArduino/Tone.cpp.o
+Compiling .pio/build/l0/FrameworkArduino/USB.cpp.o
+Compiling .pio/build/l0/FrameworkArduino/USBCDC.cpp.o
+Compiling .pio/build/l0/FrameworkArduino/USBMSC.cpp.o
+Compiling .pio/build/l0/FrameworkArduino/WMath.cpp.o
+Compiling .pio/build/l0/FrameworkArduino/WString.cpp.o
+Compiling .pio/build/l0/FrameworkArduino/base64.cpp.o
+Compiling .pio/build/l0/FrameworkArduino/cbuf.cpp.o
+Archiving .pio/build/l0/lib026/libRadioLib.a
+Indexing .pio/build/l0/lib026/libRadioLib.a
+Compiling .pio/build/l0/FrameworkArduino/esp32-hal-adc.c.o
+Compiling .pio/build/l0/FrameworkArduino/esp32-hal-bt.c.o
+Compiling .pio/build/l0/FrameworkArduino/esp32-hal-cpu.c.o
+Compiling .pio/build/l0/FrameworkArduino/esp32-hal-dac.c.o
+Compiling .pio/build/l0/FrameworkArduino/esp32-hal-gpio.c.o
+Compiling .pio/build/l0/FrameworkArduino/esp32-hal-i2c-slave.c.o
+Compiling .pio/build/l0/FrameworkArduino/esp32-hal-i2c.c.o
+Compiling .pio/build/l0/FrameworkArduino/esp32-hal-ledc.c.o
+Compiling .pio/build/l0/FrameworkArduino/esp32-hal-matrix.c.o
+Compiling .pio/build/l0/FrameworkArduino/esp32-hal-misc.c.o
+Compiling .pio/build/l0/FrameworkArduino/esp32-hal-psram.c.o
+Compiling .pio/build/l0/FrameworkArduino/esp32-hal-rgb-led.c.o
+Compiling .pio/build/l0/FrameworkArduino/esp32-hal-rmt.c.o
+Compiling .pio/build/l0/FrameworkArduino/esp32-hal-sigmadelta.c.o
+Compiling .pio/build/l0/FrameworkArduino/esp32-hal-spi.c.o
+Compiling .pio/build/l0/FrameworkArduino/esp32-hal-time.c.o
+Compiling .pio/build/l0/FrameworkArduino/esp32-hal-timer.c.o
+Compiling .pio/build/l0/FrameworkArduino/esp32-hal-tinyusb.c.o
+Compiling .pio/build/l0/FrameworkArduino/esp32-hal-touch.c.o
+Compiling .pio/build/l0/FrameworkArduino/esp32-hal-uart.c.o
+Compiling .pio/build/l0/FrameworkArduino/firmware_msc_fat.c.o
+Compiling .pio/build/l0/FrameworkArduino/libb64/cdecode.c.o
+Compiling .pio/build/l0/FrameworkArduino/libb64/cencode.c.o
+Compiling .pio/build/l0/FrameworkArduino/main.cpp.o
+Compiling .pio/build/l0/FrameworkArduino/stdlib_noniso.c.o
+Compiling .pio/build/l0/FrameworkArduino/wiring_pulse.c.o
+Compiling .pio/build/l0/FrameworkArduino/wiring_shift.c.o
+Archiving .pio/build/l0/libFrameworkArduino.a
+Indexing .pio/build/l0/libFrameworkArduino.a
 Linking .pio/build/l0/firmware.elf
 Retrieving maximum program size .pio/build/l0/firmware.elf
 Checking size .pio/build/l0/firmware.elf
@@ -29,8 +171,10 @@ Flash: [=         ]  10.2% (used 340313 bytes from 3342336 bytes)
 Building .pio/build/l0/firmware.bin with action:
   "$PYTHONEXE" "$OBJCOPY" --chip esp32s3 elf2image --flash_mode ${__get_board_flash_mode(__env__)} --flash_freq ${__get_board_f_image(__env__)} --flash_size 8MB --elf-sha256-offset 0xb0 -o $TARGET $SOURCES
 Building .pio/build/l0/firmware.bin
+~/.platformio/packages/tool-esptoolpy/esptool/cmds.py:152: SyntaxWarning: 'return' in a 'finally' block
+  return inst
 esptool.py v4.5.1
 Creating esp32s3 image...
 Merged 2 ELF sections
 Successfully created esp32s3 image.
-========================= [SUCCESS] Took 2.42 seconds =========================
+========================= [SUCCESS] Took 15.65 seconds =========================

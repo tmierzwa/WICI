@@ -120,12 +120,25 @@ Pełny opis poleceń: [instrukcja programu L0](README.md#kolejność-prób-po-mo
 | E2 | napięcia i prądy z rozdziału 4 w spoczynku, w odbiorze i przy nadawaniu (`TX` do partnera) | wartości w zakresach, bez resetów i nagrzewania |
 | E3 | `tools/diagnose.py --port PORT --fram-write 12345678`; zasilanie odłączone ≥ 60 s; `--fram-verify 12345678` | zapis: 5 × `FRAM_PASS <n> 0 <crc> <crc>` (zero błędów, sumy CRC równe) i `FRAM_DONE … WRITE`; po zaniku zasilania `FRAM_PASS 4 0 …` i `FRAM_DONE … VERIFY` |
 | E4 | `GUARD ERASE`; oscyloskop: CH1 +3V3 (JP1.1), CH2 CS **za bramką** (U1.1), CH3 wyjście nadzorcy (U3.1); wyzwalanie zboczem opadającym CH1 przy ≈ 3,0 V, tryb pojedynczy, podstawa czasu obejmująca spadek poniżej 1,8 V (zacząć od 2 ms/dz.); odłączyć USB po stronie DevKitC | CH3 przechodzi w stan wysoki przy ≈ 2,7 V, a CH2 w stan wysoki, zanim CH1 spadnie do 1,8 V; zrzut ekranu do raportu. CS mierzyć na U1.1, nie na J11.6 (to linia przed bramką). Niezaliczenie to wynik projektowy: zapisać przebieg, płytki nie przerabiać |
-| E5 | `LCD 0` … `LCD 4`; `PAUSE 10000` z sondą na J7.4; każde wejście (`INPUT xx`, bez eliminacji drgań styków, kilka wpisów na naciśnięcie jest normalne); `LED 1/0`, `BUZZ 1/0` | plansze bez błędów pikseli; EXTCOMIN 1 Hz także w pauzie; 6 wejść, LED, brzęczyk 2048 Hz |
-| E6 | `tools/diagnose.py --port PORT_L0 --mixed --peer PORT_R0` (15 min); sondy na J11.2 (SCK), J11.5 (CS radia), J11.6 (CS FRAM przed bramką), J11.7 (CS ekranu) | `MIX_DONE` z 0 błędów, ≥ 900 cykli, liczba plansz równa liczbie cykli, największy odstęp ≤ 1000 ms; 100/100 pakietów; ekran poprawny |
+| E5 | `LCD 0` … `LCD 4`; `PAUSE 10000` z sondą na J7.4; każde wejście (`INPUT xx`, bez eliminacji drgań styków, kilka wpisów na naciśnięcie jest normalne); `LED 1/0`, `BUZZ 1/0`; [pomiar sygnałów](#pomiar-sygnałów-magistrali) przy panelu | plansze bez błędów pikseli; EXTCOMIN 1 Hz także w pauzie; 6 wejść, LED, brzęczyk 2048 Hz; sygnały J7 w granicach z tabeli pomiaru |
+| E6 | `tools/diagnose.py --port PORT_L0 --mixed --peer PORT_R0` (15 min); sondy na J11.2 (SCK), J11.5 (CS radia), J11.6 (CS FRAM przed bramką), J11.7 (CS ekranu); w trakcie [pomiar sygnałów](#pomiar-sygnałów-magistrali) przy U1 i Wio | `MIX_DONE` z 0 błędów, ≥ 900 cykli, liczba plansz równa liczbie cykli, największy odstęp ≤ 1000 ms; 100/100 pakietów; ekran poprawny; sygnały U1 i Wio w granicach z tabeli pomiaru |
 | R1/R2 | po restarcie obu urządzeń: `tools/radio_test.py --a PORT_L0 --b PORT_R0 --version-a l0-0.5 --version-b pair-0.4 --count 100` | 100/100 w obie strony, treść zgodna; RSSI i SNR w raporcie. Przy stratach sprawdzić anteny i RXEN; próby nie powtarzać do skutku, każdy przebieg trafia do raportu |
 | R3 | SW5 w położeniu CISZA: `STATUS` pokazuje `silence=1`, `TX WICI-SILENCE-01` zwraca `BLOCKED SILENCE`, partner nic nie odbiera; SW5 w położeniu PRACA: `TX` z nowym numerem dociera; odbiór przy CISZA działa | wszystkie trzy warunki |
 
 Oscyloskop nie może podtrzymywać zasilania płytki: sondy nie na szynach innego źródła, masa tylko przez sondy.
+
+### Pomiar sygnałów magistrali
+
+Wyniki skryptów i analizator na J11 pokazują treść transmisji, ale nie poziomy ani zbocza przy odbiornikach. Panel wymaga stanu wysokiego ≥ 2,7 V, niskiego ≤ 0,15 V i zboczy SCLK, SI, SCS i EXTCOMIN ≤ 50 ns (Sharp LCP-1112041, tabele 7-1 i 6-3-2), a FRAM pracuje z 8 MHz. Program ustawia najsłabszy napęd SCK i MOSI, SCK idzie przez R18 (33 Ω), a przewody adaptera Wio obciążają tę samą magistralę. Dlatego pierwsza sztuka L0 przechodzi pomiar jak stanowiska A i B ([uruchomienie N1](../dev-bench/uruchomienie.md#pomiar-magistrali-oscyloskopem)), z poleceniami tego programu: oscyloskop o paśmie ≥ 200 MHz, sonda 10× ze sprężynką masy (nie przewodem masy sondy), na padach odbiornika.
+
+| Punkt | Kiedy | Warunek |
+|---|---|---|
+| J7.1 SCLK, J7.2 SI, J7.3 SCS, J7.4 EXTCOMIN wobec J7.9; J7.5 DISP | E5: `LCD 2` i `LCD 3` na zmianę, wyzwalanie zboczem narastającym SCS; powtórzyć przy `BUZZ 1` | stan wysoki ≥ 2,7 V, niski ≤ 0,15 V, także w przerzutach i odbiciach; zbocza 10–90% ≤ 50 ns; SCLK ≥ 200 ns w każdym stanie; DISP tylko poziomy (zbocze wyznacza C7) |
+| J7.7 wobec J7.9 (+5V_LCD) | E5 | średnio 4,90–5,36 V, z tętnieniem w 4,8–5,5 V |
+| U1.6 SCK, U1.5 MOSI, U1.2 MISO, U1.1 CS wobec U1.4 | E6 (MIX zapisuje i czyta FRAM co 200 ms) | stan wysoki ≥ 0,7 × VDD, niski ≤ 0,3 × VDD; przerzut poniżej −0,3 V albo ponad VDD + 0,3 V najwyżej kilka ns; bez podwójnych zboczy SCK |
+| Wio J2.6 SCK, J2.4 MOSI, J2.5 MISO, J1.4 NSS wobec J2.2 | E6, w chwili nadawania pakietu | jak przy U1 |
+
+Zrzuty z opisem punktu i ustawień idą do raportu. Niespełniony warunek to wynik projektowy, jak w E4: zapisać przebieg, płytki ani programu nie zmieniać.
 
 Po E5 przykleić panel taśmą 3M 4032 (FPC już wpięta; taśmy FPC nie zginać w stronę ekranu).
 
