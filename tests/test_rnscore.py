@@ -564,6 +564,24 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(self.parsed(lines[8])[1], [1, 1, 0, 0, 1, 0, 0, 0, 0])
         self.assertEqual(lines[9], "2")
 
+    def test_transport_packet_to_station_refused_retry(self):
+        # Warstwa aplikacji bez COMMIT (fałsz z haka packet: brak miejsca, błąd zapisu): skrót schodzi z listy
+        # (tabela różnic), więc ta sama kopia przechodzi drugi raz; każda bierze żeton mayReceive, więc bez
+        # żetonu odpada przed odszyfrowaniem. Po przyjęciu z dowodem kolejna kopia to duplikat.
+        address = self.ask([("t_begin", self.STATION)])[0]
+        station_pub = bytes.fromhex(self.ask([("public_key", self.STATION)])[0])
+        token = bytes.fromhex(self.ask([("encrypt", station_pub + self.EPHEMERAL + self.IV + b"retry")])[0])
+        raw = self.packet(0x00, bytes.fromhex(address), token)
+        lines = self.ask([("t_begin", self.STATION), ("t_config", bytes([255, 0])), ("t_in", raw), ("t_in", raw),
+                          ("t_refuse", b"\x01"), ("t_in", raw), ("t_refuse", b"\x00"), ("t_config", bytes([255, 1])),
+                          ("t_in", raw), ("t_in", raw)])
+        self.assertEqual(self.parsed(lines[2])[1], [0, 0, 0, 0, 1, 1, 0, 0, 0])
+        self.assertEqual(self.parsed(lines[3])[1], [0, 0, 0, 0, 2, 2, 0, 0, 0])
+        self.assertEqual(self.parsed(lines[5])[1], [0, 0, 0, 0, 2, 2, 0, 0, 0])   # bez żetonu: bez odszyfrowania
+        self.assertEqual(self.parsed(lines[8]), ("ok", [0, 0, 0, 0, 3, 2, 0, 0, 0], [f"packet:{b'retry'.hex()}"],
+                                                 self.proof_packet(self.STATION, raw).hex()))
+        self.assertEqual(self.parsed(lines[9])[1], [1, 0, 0, 0, 3, 2, 0, 0, 0])
+
     def test_transport_outside_subset(self):
         # Pakiety poza podzbiorem R1 albo nie do stacji: pominięte bez listy skrótów; za krótki: unpack.
         address = bytes.fromhex(self.ask([("t_begin", self.STATION)])[0])
@@ -589,6 +607,28 @@ class CoreTests(unittest.TestCase):
     def known(self, commands, dest):
         lines = self.ask(commands + [("t_known", dest)])
         return lines[:-1], lines[-1].split()
+
+    def test_transport_announce_write_failure_retry(self):
+        # Nowsze ogłoszenie znanego celu z trasą, zapis tablicy zawodzi: skrót schodzi z listy (tabela różnic),
+        # więc ta sama kopia poprawia trasę (2 → 1 skok), a następna to kopia już sprawdzonego, bez weryfikacji.
+        # Każda ponowna kopia przechodzi przez mayVerify: przy trwałym błędzie zapisu weryfikacji jest tyle, ile
+        # zgód limitu pracy.
+        a = next(c for c in VECTORS["announce"] if c["name"] == "plain")
+        key = bytes.fromhex(a["private_key"])
+        dest = bytes.fromhex(a["raw"])[2:18]
+        first = ("t_in", self.hops(self.announce_of(key, random_hash=self.blob(1, 1000)), 1))
+        second = ("t_in", self.hops(self.announce_of(key, random_hash=self.blob(2, 1001)), 0))
+        lines = self.ask([("t_begin", self.STATION), first, ("t_failwrite", b"\x01"), second, ("t_known", dest), second,
+                          ("t_known", dest), second, ("t_verify", b"\xff")])
+        self.assertEqual(lines[4].split()[0], "2")
+        self.assertEqual(lines[6].split()[0], "1")
+        self.assertEqual(self.parsed(lines[7])[1][0], 1)   # duplikat
+        self.assertEqual(lines[8], "3")
+        lines = self.ask([("t_begin", self.STATION), first, ("t_verify", b"\x02"), ("t_failwrite", b"\x10")] +
+                         [second] * 5 + [("t_verify", b"\xff"), ("t_known", dest)])
+        self.assertEqual(lines[2], "1")
+        self.assertEqual(lines[-2], "3")
+        self.assertEqual(lines[-1].split()[0], "2")
 
     def test_transport_should_add(self):
         # RNS/Transport.py: should_add. Skoki po odbiorze są o 1 większe niż w pakiecie.
@@ -1157,6 +1197,13 @@ class CoreTests(unittest.TestCase):
                           ("t_in", data), ("t_forward", b"")])
         self.assertEqual(self.parsed(lines[3])[3], "-")
         self.assertEqual([lines[4].split()[i] for i in (0, 3, 5)], ["0", "0", "0"])
+        # Skrót pakietu schodzi z listy (tabela różnic): ta sama kopia idzie dalej, następna to duplikat.
+        lines = self.ask([("t_begin", self.STATION), ("t_in", self.via(far, bytes(range(16)), 1)), ("t_drop_tx", b"\x01"),
+                          ("t_in", data), ("t_in", data), ("t_in", data), ("t_forward", b"")])
+        self.assertEqual(self.parsed(lines[4])[3], (bytes([data[0], 1]) + bytes(range(16)) + data[18:]).hex())
+        self.assertEqual(self.parsed(lines[5])[3], "-")
+        self.assertEqual(self.parsed(lines[5])[1][0], 1)
+        self.assertEqual([lines[6].split()[i] for i in (0, 5)], ["1", "1"])
         lines = self.ask([("t_begin", self.STATION), ("t_in", self.via(far, bytes(range(16)), 1)), ("t_in", data),
                           ("t_drop_tx", b"\x01"), ("t_in", proof), ("t_forward", b""), ("t_in", proof), ("t_in", proof),
                           ("t_forward", b"")])
