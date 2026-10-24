@@ -199,6 +199,13 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(got, [c["token"] or "none" for c in cases])
         self.assertEqual([c["token"] is None for c in cases], [True, True, True, False])
 
+    def test_hashlist_remove(self):
+        # HashList::remove zdejmuje tylko ten skrót (najnowszy, ze środka, po obiegu pierścienia 4096 wpisów),
+        # rozmiar zostaje, a ponowne dopisanie przechodzi.
+        n = lambda count, removed: ("hashlist_remove", count.to_bytes(2, "big") + removed.to_bytes(2, "big"))
+        got = self.ask([n(10, 9), n(10, 5), n(5000, 4999), n(5000, 1000), n(5000, 904)])
+        self.assertEqual(got, ["0 1 10 1", "0 1 10 1", "0 1 4096 1", "0 1 4096 1", "0 0 4096 1"])
+
     def test_proof(self):
         # Identity.prove (niejawny i jawny) bajt w bajt; PacketReceipt.validate_proof: te same wyniki.
         v = VECTORS["proof"]
@@ -1138,6 +1145,28 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(self.parsed(lines[5])[3], self.hops(proof, 1).hex())
         self.assertEqual(lines[6].split()[:3], ["1", "0", "1"])
 
+    def test_forward_refused_output(self):
+        # Odmowa transmit przy przekazaniu pakietu: bez wpisu tablicy odwrotnej (tabela różnic). Odmowa przy
+        # przekazaniu dowodu: wpis zostaje i skrót dowodu schodzi z listy, więc ta sama kopia dowodu idzie
+        # dalej dokładnie raz, a następna jest duplikatem.
+        identity = self.station_identity()
+        far = self.announce_of(bytes([37]) * 64)
+        data = self.packet(0x50, far[2:18], b"x" * 40, transport_id=identity)
+        proof = self.packet(0x03, bytes.fromhex(self.fields_of(data.hex())[-1])[:16], bytes(64))
+        lines = self.ask([("t_begin", self.STATION), ("t_in", self.via(far, bytes(range(16)), 1)), ("t_drop_tx", b"\x01"),
+                          ("t_in", data), ("t_forward", b"")])
+        self.assertEqual(self.parsed(lines[3])[3], "-")
+        self.assertEqual([lines[4].split()[i] for i in (0, 3, 5)], ["0", "0", "0"])
+        lines = self.ask([("t_begin", self.STATION), ("t_in", self.via(far, bytes(range(16)), 1)), ("t_in", data),
+                          ("t_drop_tx", b"\x01"), ("t_in", proof), ("t_forward", b""), ("t_in", proof), ("t_in", proof),
+                          ("t_forward", b"")])
+        self.assertEqual(self.parsed(lines[4])[3], "-")
+        self.assertEqual([lines[5].split()[i] for i in (2, 5)], ["0", "1"])
+        self.assertEqual(self.parsed(lines[6])[3], self.hops(proof, 1).hex())
+        self.assertEqual(self.parsed(lines[7])[3], "-")
+        self.assertEqual(self.parsed(lines[7])[1][0], 1)   # duplikat
+        self.assertEqual([lines[8].split()[i] for i in (2, 5)], ["1", "0"])
+
     def test_announce_rebroadcast(self):
         # RNS/Transport.py: _inbound i jobs: przyjęte ogłoszenie idzie dalej jako HEADER_2 z identyfikatorem
         # stacji i skokami po odbiorze, po losowej zwłoce do PATHFINDER_RW (tu 176 ms), drugi raz po
@@ -1200,6 +1229,25 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(lines[13], "1:" + self.hops(proof_of(to_far), 1).hex())
         self.assertEqual(lines[14].split()[:3], ["2", "0", "1"])
         self.assertEqual(self.parsed(lines[15])[0], "malformed")
+        # Dowód z interfejsu innego niż wyjście pakietu nie zużywa wpisu tablicy odwrotnej, a jego skrót schodzi
+        # z listy (tabela różnic): ta sama kopia z właściwego interfejsu idzie dalej dokładnie raz, potem obie
+        # są duplikatami. Wpis starszy niż REVERSE_TIMEOUT nie przekazuje i tak.
+        proof = proof_of(to_near)
+        clock = lambda ms: ("t_clock", ms.to_bytes(8, "big"))
+        start = [("t_begin", self.TWO), ("t_inif", b"\x01" + near), ("t_inif", b"\x00" + to_near), ("t_outif", b"")]
+        lines = self.ask(start + [("t_inif", b"\x00" + proof), ("t_outif", b""), ("t_forward", b""),
+                                  ("t_inif", b"\x01" + proof), ("t_outif", b""), ("t_inif", b"\x01" + proof),
+                                  ("t_inif", b"\x00" + proof), ("t_outif", b""), ("t_forward", b"")])
+        self.assertEqual(lines[5], "-")
+        self.assertEqual([lines[6].split()[i] for i in (2, 5)], ["0", "1"])
+        self.assertEqual(lines[8], "0:" + self.hops(proof, 1).hex())
+        self.assertEqual([self.parsed(lines[i])[1][0] for i in (9, 10)], [1, 2])   # duplikaty
+        self.assertEqual(lines[11], "-")
+        self.assertEqual([lines[12].split()[i] for i in (2, 5)], ["1", "0"])
+        lines = self.ask(start + [("t_inif", b"\x00" + proof), clock(1000 + 8 * 60 * 1000 + 1), ("t_outif", b""),
+                                  ("t_inif", b"\x01" + proof), ("t_outif", b""), ("t_forward", b"")])
+        self.assertEqual(lines[8], "-")
+        self.assertEqual([lines[9].split()[i] for i in (2, 5)], ["0", "0"])
         # Transport z jednym interfejsem nie przyjmuje pakietu z interfejsu 1.
         lines = self.ask([("t_begin", self.STATION), ("t_inif", b"\x01" + near), ("t_inif", b"\x00" + near)])
         self.assertEqual([self.parsed(line)[0] for line in lines[1:]], ["malformed", "ok"])

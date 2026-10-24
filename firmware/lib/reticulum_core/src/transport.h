@@ -232,10 +232,12 @@ private:
     void heardRebroadcast(const Packet& packet, uint64_t nowMs);
     bool forward(const Packet& packet, const uint8_t* raw, size_t length, const uint8_t hash[HASH_SIZE], uint64_t nowMs,
                  uint8_t iface);
-    bool forwardProof(const Packet& packet, const uint8_t* raw, size_t length, uint64_t nowMs, uint8_t iface);
+    bool forwardProof(const Packet& packet, const uint8_t* raw, size_t length, const uint8_t hash[HASH_SIZE], uint64_t nowMs,
+                      uint8_t iface);
     void inboundAnnounce(const Packet& packet, const uint8_t hash[HASH_SIZE], uint64_t nowMs, uint8_t iface);
     void inboundData(const Packet& packet, const uint8_t hash[HASH_SIZE], uint8_t iface);
-    void inboundProof(const Packet& packet, const uint8_t* raw, size_t length, uint64_t nowMs, uint8_t iface);
+    void inboundProof(const Packet& packet, const uint8_t* raw, size_t length, const uint8_t hash[HASH_SIZE], uint64_t nowMs,
+                      uint8_t iface);
     static bool pinnedHook(const uint8_t destination[TRUNCATED_HASH_SIZE], void* self);
 
     TransportHooks hooks_;
