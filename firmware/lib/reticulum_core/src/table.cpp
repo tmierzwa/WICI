@@ -106,7 +106,8 @@ void Table::begin(TableStorage& storage, uint32_t nowS, uint8_t interfaces) {
         if (found >= 0) {
             // Dwie kopie celu (zanik zasilania przed unieważnieniem starej). Przegrana kopia jest unieważniana, żeby nie
             // wróciła po wyparciu zwycięskiej, ale dopiero po odczycie całej zwycięskiej z CRC. Błąd odczytu niczego nie
-            // unieważnia: obie kopie zostają w FRAM, a w indeksie ta, którą już wczytano; rozstrzyga następny start.
+            // unieważnia: obie kopie zostają w FRAM, a w indeksie zostaje zwycięska wg numerów zapisu, gdy da się je porównać,
+            // inaczej wcześniej wczytana; rozstrzyga następny start.
             const size_t other = static_cast<size_t>(found);
             uint8_t otherHeader[HEADER];
             if (!readHeader(other, otherHeader)) continue;
