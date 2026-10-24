@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: MIT
 """Builds the station firmware image of bench B (firmware/platformio.ini, env:bench-b) for the simulator's
-virtual board: the same source files, preprocessor paths and flags as the board image, with the pinned
-Reticulum stack (firmware/tools/stack_deps.py), on the virtual ESP32-S3 + N1 board from hal/. Only the
+virtual board: the same source files, preprocessor paths and flags as the board image, with the station
+Reticulum core (firmware/lib/reticulum_core) and the pinned Crypto library (firmware/tools/stack_deps.py),
+on the virtual ESP32-S3 + N1 board from hal/. Only the
 MCU-specific files are replaced (REPLACED); the S2-LP, FRAM and Sharp chips are emulated on the SPI bus,
 so their drivers run unchanged.
 
@@ -45,13 +46,16 @@ REPLACED = {
 }
 HAL_SOURCES = ["hal/vboard.cpp", "hal/s2lp_chip.cpp", "hal/fram_sharp_chip.cpp", "hal/platform_sim.cpp", "hal/sharp_extcomin_sim.cpp",
                "hal/esp_rom.cpp"]
-# Funkcje ROM ESP-IDF, których biblioteka stosu na ESP32 nie kompiluje (bo bierze je z ROM): jej własna kopia
-# kompilowana bez ESP32. TLSF w ROM ESP32-S3 i tlsf.c microReticulum to ta sama implementacja (M. Conte).
-ROM_SOURCES = {"microReticulum/src/microReticulum/Utilities/tlsf/tlsf.c": ["-UESP32"]}
+# Rdzeń Reticulum stacji (lib_deps = reticulum_core) i biblioteki z .pio/stack, które obraz z rdzeniem dołącza.
+CORE = FIRMWARE / "lib" / "reticulum_core" / "src"
+STACK_LIBS = ["Crypto"]
 # Rdzeń Arduino-ESP32 obrazu: makra platformy (ESP32, ARDUINO_ARCH_ESP32) i rdzenia (ARDUINO).
 PLATFORM_DEFINES = ["-DARDUINO=10819", "-DARDUINO_ARCH_ESP32", "-DESP32", "-DWICI_SIM"]
-# Pre-skrypt stosu (firmware/tools/stack_deps.py) dopisuje te flagi C++ w każdym środowisku.
+# Obraz jest bez wyjątków (-fno-exceptions w [core]), ale wirtualna płytka restartuje program wyjątkiem
+# (vb::Reboot w hal/vboard.cpp), który musi przejść przez ramki kodu stacji z wywołaniem destruktorów: tu
+# cały program z wyjątkami (WebAssembly: -fwasm-exceptions).
 CXX_FLAGS = ["-std=gnu++17", "-fexceptions", "-frtti"]
+SIM_UNFLAGS = {"-fno-exceptions"}
 # Pliki, które budowa PlatformIO zapisuje w firmware/src (w .gitignore); nie są wejściami obrazu.
 GENERATED = {"idf_component.yml"}
 
@@ -105,7 +109,7 @@ def build_flags(cfg):
     unflags = set(flag_list(env_get(cfg, ENV, "build_unflags")))
     flags = []
     for f in flag_list(env_get(cfg, ENV, "build_flags")):
-        if f in unflags or f.startswith("--specs"):
+        if f in unflags or f in SIM_UNFLAGS or f.startswith("--specs"):
             continue
         if f.startswith("-I") and not os.path.isabs(f[2:]):
             f = "-I" + str(FIRMWARE / f[2:])
@@ -130,10 +134,12 @@ def firmware_sources(cfg):
 
 
 def stack_sources(stack):
-    """Library sources as PlatformIO compiles them: src/ if present, else the root; library.json srcFilter;
-    examples and tests excluded."""
-    out = []
+    """Library sources as PlatformIO compiles them: the core, then for each library of STACK_LIBS src/ if
+    present, else the root; library.json srcFilter; examples and tests excluded."""
+    out = sorted(CORE.glob("*.cpp"))
     for name, *_ in stack_deps.DEPS:
+        if name not in STACK_LIBS:
+            continue
         lib = stack / name
         meta = json.loads((lib / "library.json").read_text(encoding="utf-8")) if (lib / "library.json").exists() else {}
         if "-<*>" in json.dumps(meta.get("build", {}).get("srcFilter", [])):
@@ -146,9 +152,9 @@ def stack_sources(stack):
     return out
 
 
-# Komputer stanowiska odbiorczego (post/post.cpp, model aplikacji): ten sam stos i moduły oprogramowania
-# stacji, których używa (system plików FRAM, SA1, krótki numer), na tej samej wirtualnej płytce.
-POST_FIRMWARE = ["config.cpp", "framfs.cpp", "journal.cpp", "jsonlite.cpp", "sa1.cpp", "sha2.cpp", "store.cpp"]
+# Komputer stanowiska odbiorczego (post/post.cpp, model aplikacji): ten sam rdzeń i moduły oprogramowania
+# stacji, których używa (rekord tożsamości, generator, SA1, krótki numer), na tej samej wirtualnej płytce.
+POST_FIRMWARE = ["config.cpp", "drbg.cpp", "framfs.cpp", "journal.cpp", "jsonlite.cpp", "sa1.cpp", "sha2.cpp", "store.cpp"]
 POST_SOURCES = ["post/post.cpp", "hal/vboard.cpp", "hal/s2lp_chip.cpp", "hal/fram_sharp_chip.cpp", "hal/esp_rom.cpp"]
 
 
@@ -164,7 +170,7 @@ def configuration(target="station"):
         units = [SRC / f for f in POST_FIRMWARE] + [HERE / f for f in POST_SOURCES]
     else:
         units = [SRC / f for f in fw if f not in REPLACED] + [HERE / f for f in HAL_SOURCES]
-    includes = [f"-I{HAL}", f"-I{SRC}"] + [f"-isystem{stack / i}" for i in stack_deps.INCLUDES]
+    includes = [f"-I{HAL}", f"-I{SRC}", f"-I{CORE}"] + [f"-isystem{stack / i}" for i in stack_deps.INCLUDES if i in STACK_LIBS]
     flags = PLATFORM_DEFINES + build_flags(cfg)
     return {"firmware": fw, "units": units, "stack": stack_sources(stack), "includes": includes, "flags": flags, "stack_dir": stack}
 
@@ -179,8 +185,6 @@ def compile_all(cc, cxx, conf, out_dir, extra, jobs=os.cpu_count()):
         cpp = path.suffix == ".cpp"
         flags = conf["flags"] + conf["includes"] + extra + (CXX_FLAGS if cpp else [])
         flags += ["-w", "-Os"] if dependency else ["-Wall", "-O2"]
-        if dependency:
-            flags += ROM_SOURCES.get(path.relative_to(conf["stack_dir"]).as_posix(), [])
         obj = out_dir / (hashlib.sha1(str(path).encode()).hexdigest()[:12] + "-" + path.stem + ".o")
         tasks.append(([cxx if cpp else cc, *flags, "-c", str(path), "-o", str(obj)], obj, path))
 
@@ -238,7 +242,7 @@ def build_wasm():
         print(f"{spec['output'].relative_to(ROOT)}: {outputs[spec['output'].name]['bytes']} B")
     station = configuration("station")
     stamp = {"env": ENV, "emscripten": version, "firmware": station["firmware"], "replaced": REPLACED, "flags": portable(station["flags"]),
-             "stack": [{"name": d[0], "commit": d[2]} for d in stack_deps.DEPS], "outputs": outputs, "inputs": inputs()}
+             "stack": [{"name": d[0], "commit": d[2]} for d in stack_deps.DEPS if d[0] in STACK_LIBS], "outputs": outputs, "inputs": inputs()}
     STAMP.write_text(json.dumps(stamp, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
     print(version)
 
@@ -250,8 +254,10 @@ def digest(path):
 
 
 def inputs():
-    """Every input of the build: firmware src/, platformio.ini, stack pins and patches, simulator HAL and post."""
+    """Every input of the build: firmware src/, the core, platformio.ini, stack pins and patches, simulator HAL
+    and post."""
     files = sorted(p for p in SRC.rglob("*") if p.is_file() and p.name not in GENERATED)
+    files += sorted(p for p in CORE.iterdir() if p.is_file())
     files += [INI, FIRMWARE / "tools" / "stack_deps.py"]
     files += sorted((FIRMWARE / "patches").rglob("*.patch")) + sorted(p for p in HAL.iterdir() if p.is_file())
     files += sorted((HERE / "post").iterdir()) + [Path(__file__)]

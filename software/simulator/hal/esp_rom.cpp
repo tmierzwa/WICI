@@ -3,7 +3,6 @@
 // wirtualnej płytce: akcelerator AES (esp_aes_setkey, esp_aes_crypt_ecb; używa ich biblioteka Crypto
 // stosu, AESEsp32.cpp) jako programowy AES według FIPS-197. Kontekst jak esp_aes_context ESP-IDF:
 // bajt 0 długość klucza w bajtach, bajt 1 znacznik klucza w sprzęcie, od bajtu 2 klucz.
-// Alokator TLSF z ROM zastępuje kopia z biblioteki stosu (build.py, ROM_SOURCES).
 #include <stdint.h>
 #include <string.h>
 

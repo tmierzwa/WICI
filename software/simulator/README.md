@@ -15,21 +15,21 @@ Stacja i węzeł stanowiska w symulatorze to **obraz bench-b** (`firmware/platfo
 | Co | Jak w symulatorze |
 |---|---|
 | Pliki `firmware/src` | dokładnie te, które wybiera `build_src_filter` środowiska bench-b (`build.py` czyta `platformio.ini`); bez zmian i bez `#ifdef` symulatora |
-| Flagi | `build_flags` bench-b z `platformio.ini` (z `-DWICI_BENCH_B`, wersją, flagami stosu) i flagi C++ pre-skryptu stosu; do tego makra rdzenia Arduino-ESP32 (`ARDUINO`, `ARDUINO_ARCH_ESP32`, `ESP32`) |
-| Stos Reticulum | microReticulum, microStore (z łatami WICI), Crypto, MsgPack, Arx*, DebugLog, ArduinoJson z commitów pinowanych w `firmware/tools/stack_deps.py` |
+| Flagi | `build_flags` bench-b z `platformio.ini` (z `-DWICI_BENCH_B`, wersją, `-DWICI_RNS_CORE`); do tego makra rdzenia Arduino-ESP32 (`ARDUINO`, `ARDUINO_ARCH_ESP32`, `ESP32`). Obraz na płytce jest bez wyjątków C++, a symulator kompiluje go z nimi, bo wirtualna płytka restartuje program wyjątkiem (`vb::Reboot`) |
+| Stos Reticulum | od etapu R6-4 rdzeń Reticulum stacji (`firmware/lib/reticulum_core`) i biblioteka Crypto z commitu pinowanego w `firmware/tools/stack_deps.py` |
 | Zastąpione pliki (`REPLACED`) | tylko warstwa MCU: `platform_esp32.cpp` → `hal/platform_sim.cpp` i `sharp_extcomin_esp32.cpp` → `hal/sharp_extcomin_sim.cpp`; ten sam interfejs `platform.h` (test to sprawdza) |
-| Rdzeń Arduino-ESP32 i ROM | `hal/`: `Arduino.h`, `SPI.h`, `USB.h`, NVS, watchdog zadań, `esp_attr.h` (pamięć RTC niezerowana przy restarcie), AES akceleratora (`esp_aes_*`, FIPS-197) i TLSF (kopia ze stosu) |
+| Rdzeń Arduino-ESP32 i ROM | `hal/`: `Arduino.h`, `SPI.h`, `USB.h`, NVS, watchdog zadań, `esp_attr.h` (pamięć RTC niezerowana przy restarcie), AES akceleratora (`esp_aes_*`, FIPS-197; używa go Crypto) |
 | Układy na płytce | emulowane na magistrali SPI, więc ich sterowniki działają bez zmian: S2-LP (rejestry, FIFO, przerwania na GPIO, czasy pakietu z rejestrów MOD i PCKTCTRL, RSSI, kolizje), FRAM CY15B104Q, panel Sharp LS027B7DH01A (protokół bitowy, EXTCOMIN) |
 | Czas | zegar wirtualny: każdy bajt SPI trwa 8/f, `delay` i oczekiwania zajmują czas, pętla programu stoi w czasie nadawania i rysowania ekranu jak na płytce |
 
-`web/build.json` zapisuje listę plików, flagi, commity stosu i sumy SHA-256 wszystkich wejść; `tests/test_simulator.py` odrzuca obraz niezgodny z bieżącym `firmware/src`, `platformio.ini`, pinami lub łatami stosu, więc zmiana oprogramowania bez przebudowy symulatora nie przejdzie kontroli.
+`web/build.json` zapisuje listę plików, flagi, commity stosu i sumy SHA-256 wszystkich wejść; `tests/test_simulator.py` odrzuca obraz niezgodny z bieżącym `firmware/src`, rdzeniem, `platformio.ini`, pinami lub łatami stosu, więc zmiana oprogramowania bez przebudowy symulatora nie przejdzie kontroli.
 
 Modelami pozostają:
 
 | Część | Model |
 |---|---|
 | Eter | tłumienie trasy stacja–węzeł (domyślnie 100 dB, suwak w *Warunkach*), zanik o rozkładzie normalnym σ = 4 dB na ramkę, moc z rejestrów S2-LP, czułość −112 dBm, kolizje ramek nakładających się w czasie |
-| Komputer stanowiska | `post/post.cpp`: aplikacja na tym samym stosie (microReticulum, interfejs KISS do portu danych węzła, tożsamość główna i zapasowa, dowody `PROVE_ALL`), z modułami `sa1`, `store`, `framfs` z `firmware/src`. To model aplikacji stanowiska, nie sama aplikacja: ma włączony transport (microReticulum zakłada magazyny tożsamości i tras tylko w tym trybie) |
+| Komputer stanowiska | `post/post.cpp`: aplikacja na tym samym rdzeniu Reticulum co stacja (interfejs KISS do portu danych węzła, tożsamość główna i zapasowa z celem `lxmf.delivery`, wiadomości SA1 w LXMF, dowód każdego pakietu jak `PROVE_ALL` w LXMRouter), z modułami `sa1`, `store`, `framfs`, `drbg` z `firmware/src`. To model aplikacji stanowiska (Reticulum i LXMF w Pythonie), nie sama aplikacja: transport rdzenia jest zawsze włączony, więc retransmisji cudzych ogłoszeń post nie wysyła do węzła, jak Reticulum na komputerze bez transportu |
 | Zasilanie | wyłącznik R02; obraz bench-b nie mierzy napięcia (ekran podaje „12 V: 0,0 V”) |
 | Człowiek | przycisk zmienia tylko poziom pinu; czy program go odczyta, zależy od programu |
 
@@ -90,7 +90,7 @@ Odrzucone: osobny proces na każde urządzenie (zegar i eter musiałyby się syn
 |---|---|
 | `build.py` | budowa obrazów: `web/wici-station.mjs` (stacja i węzeł), `web/wici-post.mjs` (komputer stanowiska), `web/build.json`; `--native` (program dla hosta), `--check`, `--sources` |
 | `hal/` | wirtualna płytka: rdzeń Arduino-ESP32, emulatory układów, zastępcze pliki MCU, funkcje ROM |
-| `post/post.cpp` | aplikacja komputera stanowiska na stosie Reticulum |
+| `post/post.cpp` | aplikacja komputera stanowiska na rdzeniu Reticulum stacji |
 | `cli.cpp` | jedno urządzenie jako proces (polecenia płytki ze stdin, `run <µs>`) |
 | `swiat.mjs`, `swiat.html` | świat w czasie rzeczywistym dla programów z zewnątrz: porty danych stacji na TCP, strona świata (Node) |
 | `web/device.js`, `web/world.js`, `web/sim.js` | urządzenie (instancja WebAssembly, restarty z przeniesieniem FRAM, NVS i pamięci RTC), świat (eter, USB, przygotowanie), symulacja ćwiczeń |

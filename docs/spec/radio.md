@@ -4,7 +4,7 @@
 
 ## Profil LoRa pilotażu
 
-Stacje pilotażowe używają gotowych modułów lub płytek z układem Semtech SX1262 i deklaracją zgodności UE. Interfejs LoRa jest interfejsem Reticulum w stosie stacji ([rdzeń](../../firmware/reticulum-core.md); do jego odbioru port microReticulum), tak jak interfejs P1. Format w eterze jest zgodny z RNode; zgodność potwierdza T3 (wymiana z Reticulum w Pythonie przez RNode; [odbiór](odbior.md#minimum-pilotażu), wiersz „Interfejs LoRa stacji”).
+Stacje pilotażowe używają gotowych modułów lub płytek z układem Semtech SX1262 i deklaracją zgodności UE. Interfejs LoRa jest interfejsem Reticulum w stosie stacji ([rdzeń](../../firmware/reticulum-core.md)), tak jak interfejs P1. Format w eterze jest zgodny z RNode; zgodność potwierdza T3 (wymiana z Reticulum w Pythonie przez RNode; [odbiór](odbior.md#minimum-pilotażu), wiersz „Interfejs LoRa stacji”).
 
 | Parametr | Wartość |
 |---|---|

@@ -62,8 +62,11 @@ class SimulatorTest(unittest.TestCase):
         self.assertIn("-DWICI_BENCH_B", stamp["flags"])
         compiled = {Path(p).name for p in stamp["outputs"]["wici-station.mjs"]["sources"] if p.startswith("firmware/src/")}
         self.assertEqual(compiled, set(image) - set(build.REPLACED))
+        # Obraz z rdzeniem (od etapu R6-4): z przypiętych bibliotek tylko te, które dołącza (STACK_LIBS).
         self.assertEqual(sorted(stamp["stack"], key=lambda d: d["name"]),
-                         sorted(({"name": d[0], "commit": d[2]} for d in build.stack_deps.DEPS), key=lambda d: d["name"]))
+                         sorted(({"name": d[0], "commit": d[2]} for d in build.stack_deps.DEPS if d[0] in build.STACK_LIBS),
+                                key=lambda d: d["name"]))
+        self.assertIn("-DWICI_RNS_CORE", stamp["flags"])
 
     def test_replaced_files_keep_the_interface(self):
         self.assertEqual(set(build.REPLACED), {"platform_esp32.cpp", "sharp_extcomin_esp32.cpp"})
