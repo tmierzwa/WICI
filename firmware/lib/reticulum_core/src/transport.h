@@ -188,6 +188,7 @@ public:
     void clear();                  // halt: tablice i klucze skasowane w RAM, bez zapisów
 
 private:
+    friend struct EmitCheck;   // tests/native/rnscore_check.cpp: maska zwracana przez emit
     struct Receipt {
         bool used;
         uint32_t handle;
@@ -209,8 +210,8 @@ private:
         uint8_t destination[TRUNCATED_HASH_SIZE];
         uint64_t retransmitMs;
     };
-    // Nadanie interfejsami z maski ifaces; prawda, gdy przyjął je któryś.
-    bool emit(const uint8_t* raw, size_t length, bool rememberHash, uint8_t ifaces);
+    // Nadanie interfejsami z maski ifaces; zwraca maskę tych, które przyjęły ramkę (0 = żaden).
+    uint8_t emit(const uint8_t* raw, size_t length, bool rememberHash, uint8_t ifaces);
     bool ownAnnounce(const uint8_t random[5], uint64_t nowMs, bool pathResponse, uint8_t ifaces);
     bool sendOwnAnnounce(bool pathResponse, uint8_t ifaces);
     uint8_t accepting(uint8_t ifaces) const;   // interfejsy z maski, które teraz przyjmą ogłoszenie

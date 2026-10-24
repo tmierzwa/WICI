@@ -91,10 +91,23 @@ struct TransportState {
     std::string events;            // wywołania announce, packet i receipt od ostatniego polecenia
     bool accept = true;
     uint8_t busy = 0;    // bit 1 << interfejs: interfejs nie przyjmie pakietu (mayTransmit)
+    uint8_t declined = 0;   // bit 1 << interfejs: transmit odmawia ramki (t_emit)
     bool refuse = false; // brak żetonu na pakiet do stacji (mayReceive)
     uint64_t nowMs = 1000;
 };
 TransportState* state = nullptr;
+
+}  // namespace
+
+namespace rnscore {
+struct EmitCheck {
+    static uint8_t emit(Transport& transport, const uint8_t* raw, size_t length, uint8_t ifaces) {
+        return transport.emit(raw, length, true, ifaces);
+    }
+};
+}  // namespace rnscore
+
+namespace {
 
 void printHexTo(std::string& out, const uint8_t* data, size_t length) {
     char b[3];
@@ -108,6 +121,7 @@ bool onMayTransmit(uint8_t iface, void*) { return !(state->busy & (1u << iface))
 bool onMayReceive(void*) { return !state->refuse; }
 
 bool onTransmit(const uint8_t* raw, size_t length, uint8_t iface, void*) {
+    if (state->declined & (1u << iface)) return false;
     state->emitted.assign(raw, raw + length);
     state->sent.emplace_back(raw, raw + length);
     state->sentIface.push_back(iface);
@@ -475,6 +489,13 @@ int main() {
             // interfejsy zajęte dla mayTransmit: bit 1 << numer (1: interfejs 0 zajęty, 0: wszystkie wolne)
             state->busy = data[0];
             printTransport("ok");
+        } else if (state && command == "t_emit" && data.size() > 18) {
+            // nadanie ramki (bajty od 3.) interfejsami z maski (2. B), gdy transmit odmawia interfejsom z maski
+            // odmów (1. B); wynik: maska przyjętych i liczba skrótów na liście
+            state->declined = data[0];
+            const uint8_t mask = rnscore::EmitCheck::emit(state->transport, data.data() + 2, data.size() - 2, data[1]);
+            state->declined = 0;
+            printf("%u %u\n", static_cast<unsigned>(mask), static_cast<unsigned>(state->transport.hashes()));
         } else if (command == "t_refuse" && data.size() == 1) {
             // brak żetonu (1) albo żeton (0) dla mayReceive
             state->refuse = data[0] != 0;
