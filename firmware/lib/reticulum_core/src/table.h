@@ -127,7 +127,8 @@ private:
     bool invalidate(size_t slot);   // przy błędzie gniazdo czeka w stale_ na ponowienie
     int victim(int keep, bool (*pinned)(const uint8_t*, void*), void* context) const;
     bool routeMatches(size_t slot, uint8_t iface, uint8_t hops) const;   // routes()
-    uint32_t sequenceOf(size_t slot);
+    bool readHeader(size_t slot, uint8_t* header);   // begin(): nagłówek gniazda (40 B)
+    void mount(size_t slot, const uint8_t* header, uint32_t nowS);   // begin(): gniazdo z nagłówka do indeksu
 
     TableStorage* storage_ = nullptr;
     Index index_[TABLE_SLOTS] = {};

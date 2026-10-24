@@ -188,6 +188,7 @@ public:
     void clear();                  // halt: tablice i klucze skasowane w RAM, bez zapisów
 
 private:
+    friend struct EmitCheck;   // tests/native/rnscore_check.cpp: maska zwracana przez emit
     struct Receipt {
         bool used;
         uint32_t handle;
@@ -203,14 +204,15 @@ private:
         // Interfejsy, które nie przyjęły jeszcze ostatniej próby: dostaną ją, gdy przyjmą (jedno zaległe
         // ogłoszenie na cel i interfejs, jak announce_queue interfejsu w Pythonie).
         uint8_t owed;
+        uint8_t refused;   // interfejsy, których transmit odmówił tej próby mimo ready (druga odmowa: rezygnacja)
         uint8_t retries;
         uint8_t hops;
         uint8_t localRebroadcasts;
         uint8_t destination[TRUNCATED_HASH_SIZE];
         uint64_t retransmitMs;
     };
-    // Nadanie interfejsami z maski ifaces; prawda, gdy przyjął je któryś.
-    bool emit(const uint8_t* raw, size_t length, bool rememberHash, uint8_t ifaces);
+    // Nadanie interfejsami z maski ifaces; zwraca maskę tych, które przyjęły ramkę (0 = żaden).
+    uint8_t emit(const uint8_t* raw, size_t length, bool rememberHash, uint8_t ifaces);
     bool ownAnnounce(const uint8_t random[5], uint64_t nowMs, bool pathResponse, uint8_t ifaces);
     bool sendOwnAnnounce(bool pathResponse, uint8_t ifaces);
     uint8_t accepting(uint8_t ifaces) const;   // interfejsy z maski, które teraz przyjmą ogłoszenie
@@ -230,10 +232,12 @@ private:
     void heardRebroadcast(const Packet& packet, uint64_t nowMs);
     bool forward(const Packet& packet, const uint8_t* raw, size_t length, const uint8_t hash[HASH_SIZE], uint64_t nowMs,
                  uint8_t iface);
-    bool forwardProof(const Packet& packet, const uint8_t* raw, size_t length, uint64_t nowMs, uint8_t iface);
+    bool forwardProof(const Packet& packet, const uint8_t* raw, size_t length, const uint8_t hash[HASH_SIZE], uint64_t nowMs,
+                      uint8_t iface);
     void inboundAnnounce(const Packet& packet, const uint8_t hash[HASH_SIZE], uint64_t nowMs, uint8_t iface);
     void inboundData(const Packet& packet, const uint8_t hash[HASH_SIZE], uint8_t iface);
-    void inboundProof(const Packet& packet, const uint8_t* raw, size_t length, uint64_t nowMs, uint8_t iface);
+    void inboundProof(const Packet& packet, const uint8_t* raw, size_t length, const uint8_t hash[HASH_SIZE], uint64_t nowMs,
+                      uint8_t iface);
     static bool pinnedHook(const uint8_t destination[TRUNCATED_HASH_SIZE], void* self);
 
     TransportHooks hooks_;
@@ -268,6 +272,7 @@ private:
         bool respond;          // ogłoszenie oczekiwanego celu przyszło: odpowiedź w następnych poll()
         uint8_t respondHops;
         uint8_t requesting;    // requesting_interfaces: maska interfejsów (przy respond: jeszcze bez odpowiedzi)
+        uint8_t refused;       // interfejsy, których transmit odmówił odpowiedzi mimo ready (druga odmowa: rezygnacja)
     };
     Inflight inflight_[INFLIGHT_MAX] = {};
     uint32_t discoveryTimeoutMs_ = 0;   // 0: PATH_REQUEST_TIMEOUT_MS

@@ -18,6 +18,10 @@ public:
     bool contains(const uint8_t hash[HASH_SIZE]) const;
     // Jeden przegląd listy: skrót dopisany i prawda albo, gdy już jest, fałsz bez zmian (duplikat).
     bool add(const uint8_t hash[HASH_SIZE]);
+    // Skrót zdjęty z listy (odmowa przejściowa po add: ta sama kopia dostanie ponowną szansę). Przegląd od
+    // najnowszego wpisu, więc skrót dopisany przed chwilą to jedno porównanie; zwolnione miejsce zostaje puste
+    // do następnego obiegu pierścienia (size() bez zmian).
+    void remove(const uint8_t hash[HASH_SIZE]);
     size_t size() const { return count_; }
     void clear();
 

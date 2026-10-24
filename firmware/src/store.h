@@ -126,6 +126,9 @@ struct Request {
     char sa1[sa1::MAX_CONTENT + 1] = {};
 };
 
+// Wynik szukania zgłoszenia po id: ERROR (nieudany odczyt gniazda o pasującym przedrostku) nie jest brakiem.
+enum class Found : uint8_t { YES, NO, ERROR };
+
 enum class SlotState : uint8_t { FREE, USED, CORRUPT, STALE };   // STALE: rekord starej epoki do nadpisania
 
 // Indeks wpisu w RAM; pełny wpis czyta readRequest.
@@ -354,7 +357,8 @@ public:
     // Rejestr.
     const RequestIndex& request(size_t slot) const { return register_[slot]; }
     bool readRequest(size_t slot, Request& out);
-    int findRequest(const uint8_t id[HASH]);           // gniazdo albo -1
+    Found readRequestAt(size_t slot, Request& out);   // NO: treść uszkodzona po starcie (gniazdo wyłączone), ERROR: odczyt zawiódł
+    Found findRequest(const uint8_t id[HASH], int& slot);   // slot przy YES, inaczej -1; ERROR to nie „brak”
     int freeRequestSlot() const;
     int closedRequest() const;                          // wpis zamknięty o najdawniejszej zmianie albo -1
     bool requestClosed(size_t slot) const;
