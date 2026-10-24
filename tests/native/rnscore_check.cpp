@@ -45,13 +45,15 @@ void printHex(const uint8_t* data, size_t length, const char* end = "\n") {
 // Obszar tablicy znanych celów w RAM (jak FRAM: nowa pamięć to same 0xFF). cutAfter: numer zapisu,
 // w którym znika zasilanie (dochodzi tylko początek danych, potem każdy zapis zawodzi); -1 bez zaniku.
 // failReads: tyle następnych odczytów zawodzi (chwilowy błąd SPI, treść bez zmian); failAt: tylko odczyt o tym
-// numerze (1: następny) zawodzi, reads liczy wszystkie odczyty.
+// numerze (1: następny) zawodzi, reads liczy wszystkie odczyty; failWrites: tyle następnych zapisów zawodzi
+// bez zmiany treści (chwilowy błąd zapisu).
 struct MemoryTable : rnscore::TableStorage {
     std::vector<uint8_t> bytes = std::vector<uint8_t>(rnscore::TABLE_AREA, 0xFF);
     long writes = 0;
     long cutAfter = -1;
     long failReads = 0;
     long failAt = 0;
+    long failWrites = 0;
     long reads = 0;
     bool read(uint32_t offset, uint8_t* data, size_t count) override {
         if (offset + count > bytes.size()) return false;
@@ -66,6 +68,10 @@ struct MemoryTable : rnscore::TableStorage {
     }
     bool write(uint32_t offset, const uint8_t* data, size_t count) override {
         if (offset + count > bytes.size()) return false;
+        if (failWrites > 0) {
+            --failWrites;
+            return false;
+        }
         if (cutAfter >= 0 && writes > cutAfter) return false;
         const size_t n = cutAfter >= 0 && writes == cutAfter ? count / 2 : count;
         ++writes;
@@ -95,6 +101,8 @@ struct TransportState {
     unsigned txCalls[8] = {};   // wywołania transmit na interfejs, także odrzucone (t_calls)
     uint8_t declined = 0;   // bit 1 << interfejs: transmit odmawia ramki (t_emit, t_decline)
     bool refuse = false; // brak żetonu na pakiet do stacji (mayReceive)
+    long verifyBudget = -1;   // zgody mayVerify do wyczerpania (t_verify); -1: bez limitu
+    unsigned verifies = 0;    // zgody mayVerify od początku
     uint64_t nowMs = 1000;
 };
 TransportState* state = nullptr;
@@ -121,6 +129,12 @@ void printHexTo(std::string& out, const uint8_t* data, size_t length) {
 
 bool onMayTransmit(uint8_t iface, void*) { return !(state->busy & (1u << iface)); }
 bool onMayReceive(void*) { return !state->refuse; }
+bool onMayVerify(uint8_t, void*) {
+    if (state->verifyBudget == 0) return false;
+    if (state->verifyBudget > 0) --state->verifyBudget;
+    ++state->verifies;
+    return true;
+}
 
 bool onTransmit(const uint8_t* raw, size_t length, uint8_t iface, void*) {
     ++state->txCalls[iface & 7];
@@ -377,6 +391,7 @@ int main() {
             hooks.random = onRandom;
             hooks.mayTransmit = onMayTransmit;
             hooks.mayReceive = onMayReceive;
+            hooks.mayVerify = onMayVerify;
             state->transport.begin(state->privateKey, state->publicKey, state->identity, state->address, state->nameHash, hooks,
                                    state->table, state->nowMs, state->interfaces);
             printHex(state->address, sizeof(state->address));
@@ -398,6 +413,7 @@ int main() {
             hooks.random = onRandom;
             hooks.mayTransmit = onMayTransmit;
             hooks.mayReceive = onMayReceive;
+            hooks.mayVerify = onMayVerify;
             state->table.cutAfter = -1;
             state->transport.clear();
             state->transport.begin(state->privateKey, state->publicKey, state->identity, state->address, state->nameHash, hooks,
@@ -469,6 +485,14 @@ int main() {
             printf("%u %u %u %u %u %u %u\n", c.forwarded, c.noPath, c.proofsForwarded, c.reverseFull, c.rebroadcasts,
                    static_cast<unsigned>(state->transport.reverseEntries(state->nowMs)),
                    static_cast<unsigned>(state->transport.announceTable()));
+        } else if (state && command == "t_failwrite" && data.size() == 1) {
+            // tyle następnych zapisów tablicy zawodzi (1 B)
+            state->table.failWrites = data[0];
+            printf("ok\n");
+        } else if (state && command == "t_verify" && data.size() == 1) {
+            // limit zgód mayVerify (1 B, 255: bez limitu); wynik: zgody od początku
+            state->verifyBudget = data[0] == 255 ? -1 : data[0];
+            printf("%u\n", state->verifies);
         } else if (state && command == "t_writes") {
             printf("%ld\n", state->table.writes);
         } else if (state && command == "t_reads") {

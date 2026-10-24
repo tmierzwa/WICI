@@ -98,7 +98,10 @@ bool Transport::inbound(const uint8_t* raw, size_t length, uint64_t nowMs, uint8
             return true;
         }
     }
-    // _inbound: skrót zapamiętany przed przetworzeniem (jeden przegląd listy z filtrem duplikatów).
+    // _inbound: skrót zapamiętany przed przetworzeniem (jeden przegląd listy z filtrem duplikatów). Odmowa
+    // przejściowa po stronie stacji (zapis tablicy, transmit przy przekazaniu, warstwa aplikacji bez COMMIT,
+    // dowód z innego interfejsu) zdejmuje go z listy (HashList::remove, tabela różnic): ta sama kopia ma
+    // ponowną szansę, a pracę nad nią ograniczają te same haki limitu (mayVerify, mayReceive).
     if (!hashlist_.add(hash)) {
         ++counters_.duplicate;
         return true;
@@ -229,6 +232,7 @@ void Transport::inboundAnnounce(const Packet& packet, const uint8_t hash[HASH_SI
         const Table::Cached cached = add ? Table::Cached::SET : Table::Cached::KEEP;
         if (table_.write(known ? slot : -1, e, cached, packet.data, cache ? packet.dataLength : 0, pinnedHook, this) < 0) {
             ++counters_.tableFailed;
+            hashlist_.remove(hash);   // ponowienie tej kopii zapisze wpis (inaczej do następnego ogłoszenia)
             return;
         }
     } else {
@@ -270,8 +274,9 @@ void Transport::inboundData(const Packet& packet, const uint8_t hash[HASH_SIZE],
     ++counters_.received;
     const bool prove = hooks_.packet && hooks_.packet(plaintext, plaintextLength, hooks_.context);
     clean(plaintext, sizeof(plaintext));
-    if (!prove) {
+    if (!prove) {   // bez COMMIT (brak miejsca, błąd zapisu); trwałe odrzucenie daje dowód
         ++counters_.unproven;
+        hashlist_.remove(hash);
         return;
     }
     uint8_t proof[PROOF_EXPLICIT_SIZE];
@@ -348,7 +353,10 @@ bool Transport::forward(const Packet& packet, const uint8_t* raw, size_t length,
     table_.touch(slot, seconds(nowMs), true);   // path_entry[IDX_PT_TIMESTAMP]
     // Wpis tablicy odwrotnej tylko dla pakietu, który wyszedł (tabela różnic: Python zapisuje go przed
     // transmit, które nie odmawia): po odmowie nie ma drogi, którą dowód mógłby wrócić.
-    if (!emit(out, outLength, false, interfaceMask(e.interface))) return true;
+    if (!emit(out, outLength, false, interfaceMask(e.interface))) {
+        hashlist_.remove(hash);
+        return true;
+    }
     ++counters_.forwarded;
     // reverse_table[truncated_packet_hash]: tego samego skrótu wpis nadpisany, inaczej wolny albo
     // przeterminowany, a przy pełnej tablicy najstarszy (licznik).

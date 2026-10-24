@@ -65,7 +65,9 @@ struct TransportHooks {
     // Ogłoszenie innego celu "wici.sa1" przyjęte do tablicy (bez odpowiedzi na zapytania o trasę).
     void (*announce)(const uint8_t destination[TRUNCATED_HASH_SIZE], const uint8_t* appData, size_t length,
                      void* context) = nullptr;
-    // Pakiet do celu stacji po odszyfrowaniu; prawda: stos wysyła dowód (PROVE_APP).
+    // Pakiet do celu stacji po odszyfrowaniu; prawda: stos wysyła dowód (PROVE_APP), także przy trwałym
+    // odrzuceniu. Fałsz: odmowa przejściowa (brak miejsca, błąd zapisu): bez dowodu, skrót schodzi z listy,
+    // więc ta sama kopia pakietu przejdzie znów (z żetonem mayReceive).
     bool (*packet)(const uint8_t* data, size_t length, void* context) = nullptr;
     // Wynik potwierdzenia wysłanego pakietu.
     void (*receipt)(uint32_t handle, bool delivered, void* context) = nullptr;
