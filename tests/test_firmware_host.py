@@ -1749,6 +1749,38 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual(tests[0], tests[1])   # powtórzone nonce: ten sam wynik
         self.assertEqual(len(self.regs(out, "d")), 3)
 
+    def test_reply_read_failure_gives_no_proof(self):
+        # Nieudany odczyt gniazda zgłoszenia przy odbiorze REPLY: bez dowodu i bez wpisu; ponowienie zapisuje wiadomość raz.
+        x = self.rid(1234)
+        reply = "in " + compact([1, 3, x, 0, 1, "test reply"])
+        out = self.world([self.CONFIG, self.sub(self.request(x)), "readfail 1", reply, "reg a", "inbox a", "stats a", reply, "reg b",
+                          "inbox b", "restart", "reg c", "inbox c"])
+        self.assertEqual([line.split()[1] for line in self.find(out, "rx ")], ["0", "1"])   # raz bez dowodu, potem z dowodem
+        self.assertEqual(self.records(out, "msg", "a"), [])
+        self.assertEqual(self.stats(out, "a")["skipped"], 0)
+        self.assertEqual([r["rhi"] for r in self.regs(out, "a").values()], [0])
+        self.assertEqual([r["rhi"] for r in self.regs(out, "b").values()], [1])
+        self.assertEqual(len(self.records(out, "msg", "b")), 1)
+        self.assertEqual(len(self.records(out, "msg", "c")), 1)
+        self.assertEqual([r["rhi"] for r in self.regs(out, "c").values()], [1])
+
+    def test_submit_read_failure_takes_no_new_slot(self):
+        # Powtórne `submit` po nieudanym odczycie: błąd dla laptopa, bez drugiego gniazda; po ustąpieniu błędu duplikat.
+        request = self.sub(self.request(self.rid(1234)))
+        out = self.world([self.CONFIG, request, "readfail 1", request, "reg a", request, "reg b", "restart", "reg c"])
+        self.assertEqual([line.split()[1] for line in self.find(out, "sub ")], ["stored", "memory", "duplicate"])
+        for label in "abc":
+            self.assertEqual(len(self.regs(out, label)), 1, label)
+
+    def test_find_request_marks_slot_corrupted_after_start(self):
+        # Treść gniazda uszkodzona po starcie (nie błąd odczytu): pierwsze wyszukanie wyłącza gniazdo jak skan przy starcie
+        # (diag corrupt), kolejne dają „brak”; stacja nie zwraca MEMORY w nieskończoność.
+        request = self.sub(self.request(self.rid(1234)))
+        register = 0x10000   # store::REGISTER_BASE, gniazda po 512 B
+        out = self.world([self.CONFIG, request, f"flip {register + 40}", "diag", request, "diag", request, "diag", "restart", "diag"])
+        self.assertEqual([line.split()[1] for line in self.find(out, "sub ")], ["stored", "stored", "duplicate"])
+        self.assertEqual(["corrupt=%d" % n in line for line, n in zip(self.find(out, "diag "), (0, 1, 1, 1))], [True] * 4)
+
     def test_pause_test_read_failure(self):
         # Nieudany odczyt czekającego TEST-u: WSTRZYMAJ nie udaje, nic się nie zmienia; po ustąpieniu błędu anuluje TEST.
         out = self.world([self.CONFIG, "now 100", "stest 1", "reg a", "readfail 1", "pause 1", "diag", "reg b",
