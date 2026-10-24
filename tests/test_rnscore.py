@@ -1363,6 +1363,26 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(lines[5], "-")
         self.assertNotEqual(lines[7], "-")
 
+    def test_interfaces_permanently_refusing_transmit_is_bounded(self):
+        # transmit interfejsu 0 odmawia zawsze mimo zgody mayTransmit: liczba jego wywołań jest ograniczona stałą
+        # (druga odmowa tej samej próby kończy zaległość), wpisy schodzą, a interfejs 1 dostaje swoje nadania.
+        ann = self.announce_of(bytes([68]) * 64)
+        dest = ann[2:18]
+        clock = lambda ms: ("t_clock", ms.to_bytes(8, "big"))
+        commands = [("t_begin", self.TWO), ("t_inif", b"\x00" + self.path_request(dest, b"A" * 16)),
+                    ("t_inif", b"\x01" + self.path_request(dest, b"B" * 16)), ("t_inif", b"\x00" + ann),
+                    ("t_decline", b"\x01")]
+        commands += [clock(1001 + 100 * i) for i in range(200)] + [("t_calls", b"")]
+        middle = len(commands) - 1
+        commands += [clock(21001 + 100 * i) for i in range(200)] + [("t_calls", b""), ("t_outif", b"")]
+        commands += [("t_paths", b"")]
+        lines = self.ask(commands)
+        early, late = (list(map(int, lines[i].split())) for i in (middle, -3))
+        self.assertEqual(early, late)   # po rezygnacji brak dalszych wywołań
+        self.assertLessEqual(late[0], 8)
+        self.assertGreaterEqual(late[1], 2)   # odpowiedź odkrycia i ponowienia: interfejs 1 nie jest wstrzymany
+        self.assertEqual(lines[-1].split()[6], "0")   # tablica ogłoszeń pusta
+
     def test_interfaces_own_response_limit_per_interface(self):
         # Limit odpowiedzi na zapytanie o cel stacji (OWN_RESPONSE_MIN_MS) liczy się osobno na interfejs:
         # zapytanie z USB nie wstrzymuje odpowiedzi na zapytanie z P1; drugie z tego samego interfejsu tak.
