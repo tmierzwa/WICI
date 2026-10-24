@@ -3,7 +3,7 @@
 // wektory z Reticulum w Pythonie przez funkcje rdzenia skompilowane tak jak w obrazie. Sprawdza to, czego
 // próby na komputerze nie obejmują: AES-256 sprzętowy na ESP32-S3 (biblioteka Crypto, AESEsp32.cpp),
 // arytmetykę Curve25519 i Ed25519 skompilowaną kompilatorem płytki, i podaje czas każdej operacji.
-// Tylko w obrazach z rdzeniem (env:bench-a-core, env:l0-core, WICI_RNS_CORE) i w próbach na komputerze.
+// Tylko w obrazach z rdzeniem (WICI_RNS_CORE: bench-a, bench-n1, bench-b-core, l0) i w próbach na komputerze.
 #pragma once
 
 #include <stddef.h>

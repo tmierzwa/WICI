@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
-"""Stack choice in the station program on the computer: the microReticulum port ("host") or the
-station Reticulum core ("host-core", firmware/reticulum-core.md, stage R0).
+"""Stack choice in the station program on the computer: the microReticulum port ("host-port") or the
+station Reticulum core ("host" since stage R6-3, firmware/reticulum-core.md, stage R0).
 
 Both programs run firmware/src/host/node_host.cpp on the same FRAM image file in turn. A station
 keeps its identity when it moves from the port to the core (and back): both read the same identity
@@ -25,7 +25,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 FIRMWARE = ROOT / "firmware"
 PIO = os.environ.get("WICI_PIO")
-PROGRAMS = {env: FIRMWARE / ".pio" / "build" / env / "program" for env in ("host", "host-core")}
+PROGRAMS = {env: FIRMWARE / ".pio" / "build" / env / "program" for env in ("host-port", "host")}
 
 
 def free_port() -> int:
@@ -104,8 +104,8 @@ class StackChoiceTests(unittest.TestCase):
         return events[0], events[1:]
 
     def test_port_identity_kept_on_core(self):
-        port, _ = self.ready("host")
-        core, _ = self.ready("host-core")
+        port, _ = self.ready("host-port")
+        core, _ = self.ready("host")
         self.assertTrue(port["identity_new"])
         self.assertFalse(core["identity_new"])
         self.assertEqual(core["identity"], port["identity"])
@@ -115,9 +115,9 @@ class StackChoiceTests(unittest.TestCase):
         raw = drbg(SEED, b"WICI rnscore identity", 64)
         self.assertNotEqual(raw[0] & 0x07, 0)      # ziarno wymaga obu kroków przycięcia
         self.assertNotEqual(raw[31] & 0xC0, 0x40)
-        core, _ = self.ready("host-core", extra=["--seed", SEED.hex()])
-        again, _ = self.ready("host-core")
-        port, _ = self.ready("host")
+        core, _ = self.ready("host", extra=["--seed", SEED.hex()])
+        again, _ = self.ready("host")
+        port, _ = self.ready("host-port")
         self.assertTrue(core["identity_new"])
         self.assertFalse(again["identity_new"])
         self.assertFalse(port["identity_new"])
@@ -131,15 +131,15 @@ class StackChoiceTests(unittest.TestCase):
 
     def test_node_without_address(self):
         # Węzeł stanowiska (--node) nie ma celu "wici.sa1": adres zerowy w obu stosach, tożsamość ta sama.
-        port = run("host", self.fram, extra=["--node"])[0]
-        core = run("host-core", self.fram, extra=["--node"])[0]
+        port = run("host-port", self.fram, extra=["--node"])[0]
+        core = run("host", self.fram, extra=["--node"])[0]
         self.assertEqual((port["event"], port["node"], core["event"], core["node"]), ("ready", True, "ready", True))
         self.assertEqual(port["address"], "00" * 16)
         self.assertEqual((core["identity"], core["address"]), (port["identity"], port["address"]))
 
     def test_core_offline_without_network_key(self):
         # Bez klucza sieci (IFAC) interfejs P1 nie nadaje: stos nie ogłasza i nie wysyła; cel nieznany.
-        _, events = self.ready("host-core", ["announce", "send " + "00" * 16 + " 01", "path " + "00" * 16, "status"])
+        _, events = self.ready("host", ["announce", "send " + "00" * 16 + " 01", "path " + "00" * 16, "status"])
         announced, sent, path, status = events
         self.assertEqual((status["event"], status["online"], status["offline"]), ("status", False, 1))
         self.assertEqual(announced, {"event": "announced", "ok": False})
@@ -148,7 +148,7 @@ class StackChoiceTests(unittest.TestCase):
 
     def test_core_announce_with_network_key(self):
         # Z kluczem sieci ogłoszenie trafia do kolejki P1; w ciszy pełnej i z wyjątkiem stos go nie przyjmuje.
-        _, events = self.ready("host-core", ["announce", "silence full", "announce", "silence exception", "announce",
+        _, events = self.ready("host", ["announce", "silence full", "announce", "silence exception", "announce",
                                              "silence off", "status"],
                                extra=["--ifac", "5749434954335f696661635f74657374"])
         announced = [e["ok"] for e in events if e["event"] == "announced"]
@@ -162,13 +162,13 @@ class StackChoiceTests(unittest.TestCase):
         # Po halt() (zniszczenie tożsamości) begin() odmawia do restartu, choć klucz jest jeszcze w FRAM:
         # kolejność „halt, potem kasowanie FRAM” nie jest warunkiem (audyt rdzenia, U10).
         ifac = ["--ifac", "5749434954335f696661635f74657374"]
-        first, events = self.ready("host-core", ["halt", "begin", "announce", "status"], extra=ifac)
+        first, events = self.ready("host", ["halt", "begin", "announce", "status"], extra=ifac)
         halted, began, announced, status = events
         self.assertEqual(halted, {"event": "halted"})
         self.assertEqual(began, {"event": "begin", "ok": False, "address": "00" * 16})
         self.assertEqual(announced, {"event": "announced", "ok": False})
         self.assertEqual(status["online"], False)
-        again, _ = self.ready("host-core", extra=ifac)   # restart: ta sama tożsamość z FRAM
+        again, _ = self.ready("host", extra=ifac)   # restart: ta sama tożsamość z FRAM
         self.assertEqual((again["identity"], again["identity_new"]), (first["identity"], False))
 
 

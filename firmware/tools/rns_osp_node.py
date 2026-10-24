@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 """Compatibility trial of the OSP node (decision D19) with reference Reticulum (Python), without a radio.
 
-Two station programs (the "host" PlatformIO program, firmware/src/host/node_host.cpp) are joined by the
+Two station programs (the "host-port" PlatformIO program, firmware/src/host/node_host.cpp) are joined by the
 emulated P1 link over UDP: a station and a station in the OSP node configuration (--node). The node
 has the second Reticulum interface over USB; here the USB data port is a pseudo-terminal, and this
 process runs reference Reticulum with a KISSInterface (flow control on) on it, as the computer of the
@@ -15,7 +15,7 @@ directions with a transport proof, the computer receipt time-out set only by the
 in the Reticulum config (no set_timeout, no change in the stack code); a burst of packets from the computer passes the KISS flow control
 without the 5 s time-out of the Python interface and without drops at the node.
 
-With --lxmf (both programs on the station Reticulum core, "host-core", stage R4b) the station destination
+With --lxmf (both programs on the station Reticulum core, "host" since stage R6-3, stage R4b) the station destination
 is "lxmf.delivery", the computer is the card receiver of the station, and the packets carry SA1 as LXMF
 messages (tools/sa1_lxmf.py), as from a plain LXMF client on the computer. More checks on the core:
 packets from the computer go on P1 in class K1; a flood from the computer side (announces with a bad
@@ -28,7 +28,7 @@ P1 removes its protection; a ninth computer destination evicts the oldest, also 
 node (rebuilt from the routes through USB with 1 hop in FRAM).
 
 Run with a Python that has Reticulum at the pinned commit (e40191b) and pyserial, for example:
-  .venv-rns/bin/python firmware/tools/rns_node.py --program firmware/.pio/build/host/program
+  .venv-rns/bin/python firmware/tools/rns_osp_node.py --program firmware/.pio/build/host-port/program
 Prints one JSON object with the results; exit code 0 when every check passed.
 """
 

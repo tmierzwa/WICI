@@ -38,7 +38,7 @@ Moduł CC1120 innego producenta nadaje się tylko do uruchomienia oprogramowania
 | Grupa | Na stanowisku | Dopiero na R02 |
 |---|---|---|
 | T1, T2, T8 | stos, kolejka w FRAM, ekran, przyciski, protokół USB laptop–stacja, obsługa według karty na makiecie obudowy | zachowanie przy odłączeniu VBUS i samozasilanie (stanowisko zasila się z USB) |
-| T3 | microReticulum i LXMF na obu rodzinach MCU, zapas RAM, zgodność z implementacją referencyjną, emulator P1 i prawdziwy tor P1 | nic |
+| T3 | rdzeń Reticulum stacji i LXMF na obu rodzinach MCU, zapas RAM, zgodność z implementacją referencyjną, emulator P1 i prawdziwy tor P1 | nic |
 | T4 | ramki, zgodność TI→ST i ST→TI, czułość na złączu modułu (bez toru wejściowego stacji), harmoniczne toru referencyjnego, blokowanie z zewnętrznym filtrem SAW i bez niego, dług ciszy, limit czasu nadawania, CCA, cisza radiowa, błąd częstotliwości z korektą | budżet częstotliwości z TCXO, pełny tor wejściowy (filtr, ESD, przełącznik), nadawanie przy rozwartym i zwartym złączu, emisje gotowej konfiguracji w obudowie |
 | T5 | wczesne próby zasięgu: stanowisko w pudełku zasilane z powerbanku (narzędzie prób, nie źródło stacji) | odbiór 1 km, przekaźnik na ogniwach, zimny start sieci |
 | T6, T7 | nic | energia, bezpieczeństwo, odtworzenie i dostawcy |
