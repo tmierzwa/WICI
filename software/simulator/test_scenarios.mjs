@@ -28,7 +28,8 @@ for (const scenario of SCENARIOS) {
       }
       continue;
     }
-    await sim.act(line);
+    if (line.startsWith("view ")) ex.panel = line.slice(5);
+    else await sim.act(line);
     if (line.startsWith("press")) ex.press();
     await ex.update(ex.observe());
   }

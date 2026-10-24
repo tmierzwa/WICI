@@ -852,6 +852,7 @@ bool Station::alarm(Alarm& out, bool withAcked) const {
             out.gen = r.gen;
             out.number = r.number();
             out.minutes = age / 60;
+            out.ageKnown = !(marks & (BEFORE_ON_CONFIRM | BEFORE_ON_READ));
         }
     }
     return found;

@@ -162,6 +162,7 @@ struct Outgoing {
     std::string id;          // zgłoszenie (pusty: komunikat)
     uint8_t type = 0;
     uint16_t revision = 0;
+    uint32_t event = 0;
     uint8_t state = 0;
     std::string station;     // cel "lxmf.delivery" stacji (hex)
     std::string sa1, label;
@@ -341,6 +342,7 @@ std::string queue(const sa1::Message& m, const std::string& label, const std::st
     o.id = m.type == sa1::BULLETIN ? "" : m.id;
     o.type = m.type;
     o.revision = m.revision;
+    o.event = m.event;
     o.state = m.state;
     o.station = station;
     o.sa1 = wire;
@@ -354,6 +356,8 @@ std::string queue(const sa1::Message& m, const std::string& label, const std::st
 
 std::string decide(Request& r, uint8_t state, const char* who) {
     if (state < 2 || state > 6) return "err stan 2-6";
+    if (state == 5 && (r.reply.find_first_not_of(" \t\r\n") == std::string::npos || !r.replyAcked))
+        return "err najpierw wyślij instrukcję i poczekaj na potwierdzenie jej odbioru";
     r.state = state;
     r.changed = false;
     r.statusEvent = r.statusEvent + 1 < 2 ? 2 : r.statusEvent + 1;
@@ -391,6 +395,11 @@ void handleRequest(const sa1::Message& m, const std::string& station, uint8_t id
     if (newer) {
         r->type = m.type;
         r->revision = m.revision;
+        r->reply.clear();
+        r->replyAcked = false;
+        r->stateAcked = 0;
+        // Odmowa wymaga instrukcji tej wersji; nie powtarzamy jej dla korekty.
+        if (r->state == 5) r->state = 1;
         r->category = m.category;
         r->people = m.people;
         r->urgency = m.urgency;
@@ -453,8 +462,8 @@ void onReceipt(uint32_t handle, bool delivered) {
         for (Request& r : requests) {
             if (r.id != q.id) continue;
             if (q.type == sa1::RECEIVED && (r.receivedAcked == 0xFFFF || q.revision > r.receivedAcked)) r.receivedAcked = q.revision;
-            if (q.type == sa1::STATUS) r.stateAcked = q.state;
-            if (q.type == sa1::REPLY) r.replyAcked = true;
+            if (q.type == sa1::STATUS && q.revision == r.revision && q.event == r.statusEvent) r.stateAcked = q.state;
+            if (q.type == sa1::REPLY && q.revision == r.revision && q.event == r.replyEvent) r.replyAcked = true;
         }
         return;
     }
@@ -644,7 +653,7 @@ std::string run(const char* line) {
         char b[64];
         snprintf(b, sizeof(b), "ODPOWIEDŹ dla %04u", r->number);
         const std::string result = queue(m, b, r->station, r->identity);
-        if (result == "ok") { r->replyEvent = m.event; r->reply = rest2; }
+        if (result == "ok") { r->replyEvent = m.event; r->reply = rest2; r->replyAcked = false; }
         return result;
     }
     return "err nieznane polecenie";
