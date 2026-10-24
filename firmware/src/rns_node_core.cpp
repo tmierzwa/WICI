@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Węzeł Reticulum stacji na rdzeniu (firmware/reticulum-core.md): ten sam interfejs rns_node.h co
-// port, w programie na komputerze (env:host-core). Działa:
+// port, w obrazach stacji z rdzeniem i w programie na komputerze (env:host). Działa:
 // - tożsamość: ten sam rekord klucza w FRAM co w porcie (framfs::loadKey, 64 B w kolejności Reticulum),
 //   więc stacja zachowuje tożsamość i adres przy przejściu z portu na rdzeń (decyzja z 2026-10-22);
 // - interfejs P1 (etap R1): kod dostępu IFAC 16 B z rdzenia (rnscore::ifacApply, ifacCheck) z frazą

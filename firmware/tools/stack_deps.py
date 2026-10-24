@@ -97,7 +97,10 @@ elif "SCons" in sys.modules:  # PlatformIO pre-script (import z tests/test_rns_h
         for folder in INCLUDES:
             env.Append(CCFLAGS=["-isystem", str(stack / folder)])  # noqa: F821
     # microReticulum wymaga C++17, wyjątków i RTTI; tylko dla C++, bo dla C GCC je odrzuca z ostrzeżeniem.
-    env.Append(CXXFLAGS=["-std=gnu++17", "-fexceptions", "-frtti"])  # noqa: F821
+    # Wyjątki i RTTI tylko w obrazach z portem (custom_stack = port w platformio.ini); rdzeń jest bez nich.
+    env.Append(CXXFLAGS=["-std=gnu++17"])  # noqa: F821
+    if env.GetProjectOption("custom_stack", "core") == "port":  # noqa: F821
+        env.Append(CXXFLAGS=["-fexceptions", "-frtti"])  # noqa: F821
     # Ostrzeżenia kodu zależności (nieużywane zmienne, przestarzałe API ArduinoJson w MsgPack)
     # nie są ostrzeżeniami WICI: pliki z .pio/stack kompilują się z -w, kod WICI z -Wall.
     # Rdzeń Adafruit kompiluje z -Ofast; stos z -Os, bo rozwinięte pętle Curve25519 i kontenery
