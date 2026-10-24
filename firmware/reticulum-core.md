@@ -30,7 +30,7 @@ Wersje referencyjne bez zmian: Reticulum `e40191b` i LXMF `c3ff2d6` ([oprogramow
 | LXMF: tylko wiadomość SA1 w jednym pakiecie okazjonalnym, podpis nadawcy, pola WICI, dowód po COMMIT ([dowód po COMMIT](../docs/spec/oprogramowanie.md#dowód-dostarczenia-po-commit)) | |
 | interfejs USB węzła stanowiska: ogłoszenia, zapytania o trasę i ruch do celów komputera ([radio](../docs/spec/radio.md#interfejs-reticulum-przez-usb-węzeł-stanowiska)) | |
 
-Pakiety łączy i zasobów nie występują w sieci WICI, bo stacje i komputer stanowiska używają tylko dostarczenia okazjonalnego. Wiersze specyfikacji, które jeszcze mówią o łączach i zasobach (`odbior.md`, T3: udział łączy i zasobów; `radio.md`: zestawianie łącza), trzeba z nią uzgodnić.
+Pakiety łączy i zasobów nie występują w sieci WICI, bo stacje i komputer stanowiska używają tylko dostarczenia okazjonalnego. Specyfikacja (`odbior.md`, T3; `radio.md`) i plan prób w koncepcji 08 są z tym uzgodnione.
 
 ### Zgodność z protokołem
 
