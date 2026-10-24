@@ -836,6 +836,65 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(lines[12], "none")
         self.assertNotEqual(lines[13], "none")
 
+    def dual_copy(self, newer_in_later_slot: bool, damage=()):
+        """Polecenia dające dwie kopie celu po zaniku zasilania przed unieważnieniem starej, z uszkodzeniami (t_poke).
+
+        Stara kopia w gnieździe 1; nowsza w gnieździe 0 (przed starą w indeksowaniu) albo 2 (po niej). Zwraca polecenia,
+        skrót celu i ogłoszenia: starej oraz nowszej."""
+        keys = [bytes([35]) * 64, bytes([36]) * 64]
+        later = bytes(5) + (1_790_000_100).to_bytes(5, "big")
+        a1, d1 = (self.announce_of(k) for k in keys)
+        a2, d2 = (self.announce_of(k, random_hash=later) for k in keys)
+        cut = ("t_cut", (3).to_bytes(4, "big"))
+        commands = [("t_begin", self.STATION), ("t_in", a1), ("t_in", d1)]
+        commands += [cut, ("t_in", d2)] if newer_in_later_slot else [("t_in", a2), cut, ("t_in", d2)]
+        newer_slot = 2 if newer_in_later_slot else 0
+        for slot, offset, value in damage:   # slot: "new" albo "old"; offset w gnieździe
+            commands.append(("t_poke", ((newer_slot if slot == "new" else 1) * 568 + offset).to_bytes(4, "big") + value))
+        return commands, d1[2:18], d1, d2
+
+    def test_transport_table_two_copies_keep_last_valid(self):
+        # Dwie kopie tego samego celu (zanik zasilania przed unieważnieniem starej): zostaje ostatnia w pełni poprawna.
+        # Nowsza wygrywa tylko z całym ciałem pod CRC; uszkodzone ciało albo nagłówek nowszej nie kasują starej.
+        damages = {
+            "intact": ((), "new"),
+            "new body": ((("new", 200, b"\x5a"),), "old"),
+            "new header": ((("new", 8, b"\xff"),), "old"),    # znaczniki w nagłówku, CRC je obejmuje
+            "new sequence": ((("new", 7, b"\x7f"),), "old"),   # numer zapisu większy, ciało nie pasuje do CRC
+            "old body": ((("old", 200, b"\x5a"),), "new"),
+            "both": ((("new", 200, b"\x5a"), ("old", 200, b"\x5a")), None),
+        }
+        for later_slot in (False, True):
+            for name, (damage, winner) in damages.items():
+                with self.subTest(newer_in_later_slot=later_slot, damage=name):
+                    commands, dest, old, new = self.dual_copy(later_slot, damage)
+                    expected = {"old": old, "new": new, None: None}[winner]
+                    lines = self.ask(commands + [("t_restart", b"\x02"), ("t_known", dest), ("t_restart", b"\x02"),
+                                                 ("t_known", dest)])
+                    for line in (lines[-3], lines[-1]):
+                        self.assertEqual(None if line == "none" else line.split()[-1],
+                                         None if expected is None else expected[19:].hex())
+
+    def test_transport_table_two_copies_single_read_error(self):
+        # Jednorazowy błąd odczytu w dowolnym odczycie startu (nagłówek kopii, numer zapisu, pełny odczyt zwycięzcy)
+        # niczego nie unieważnia: po następnym, czystym starcie zostaje ostatnia w pełni poprawna kopia.
+        for later_slot in (False, True):
+            for name, damage, winner in (("intact", (), "new"), ("new body", (("new", 200, b"\x5a"),), "old")):
+                commands, dest, old, new = self.dual_copy(later_slot, damage)
+                expected = {"old": old, "new": new}[winner][19:].hex()
+                counted = self.ask(commands + [("t_reads", b""), ("t_restart", b"\x02"), ("t_reads", b"")])
+                reads = int(counted[-1]) - int(counted[-3])
+                # Odczyty nagłówków wszystkich gniazd (jeden na gniazdo), potem dodatkowe przy dwóch kopiach.
+                slots = int(self.ask([("t_begin", self.STATION), ("t_reads", b""), ("t_restart", b""),
+                                      ("t_reads", b"")])[-1]) - int(self.ask([("t_begin", self.STATION),
+                                                                              ("t_reads", b"")])[-1])
+                self.assertGreater(reads, slots)
+                for nth in list(range(1, 5)) + list(range(slots + 1, reads + 1)):
+                    with self.subTest(newer_in_later_slot=later_slot, damage=name, failing_read=nth):
+                        lines = self.ask(commands + [("t_failat", nth.to_bytes(2, "big")), ("t_restart", b"\x02"),
+                                                     ("t_known", dest), ("t_restart", b"\x02"), ("t_known", dest)])
+                        self.assertEqual(lines[-1].split()[-1], expected)
+
     # Cel PLAIN "rnstransport.path.request" (Destination bez tożsamości: skrót skrótu nazwy).
     PATH_REQUEST = hashlib.sha256(hashlib.sha256(b"rnstransport.path.request").digest()[:10]).digest()[:16]
 
