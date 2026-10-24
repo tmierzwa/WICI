@@ -650,14 +650,16 @@ void Protocol::doSilence(const json::Value& msg, int64_t seq, uint32_t nowMs) {
     p.exceptionSet = json::field(msg, "exception_id", v);
     // Wyjątek tylko przy włączaniu ciszy z panelu; przełącznik CISZA ma pierwszeństwo i go wyklucza.
     // Wyjątek obejmuje wpis rejestru (para id, r_max z chwili potwierdzenia); id spoza rejestru: `invalid`.
-    if (p.exceptionSet && (!p.on || !json::hexField(msg, "exception_id", p.exception, store::HASH) || store_.findRequest(p.exception) < 0)) {
-        rejected(seq, "invalid", "exception_id");
-        return;
+    int slot = -1;
+    if (p.exceptionSet) {
+        const bool valid = p.on && json::hexField(msg, "exception_id", p.exception, store::HASH);
+        const store::Found found = valid ? store_.findRequest(p.exception, slot) : store::Found::NO;
+        if (found == store::Found::ERROR) { rejected(seq, station::resultName(station::Result::MEMORY)); return; }   // laptop ponowi
+        if (found == store::Found::NO) { rejected(seq, "invalid", "exception_id"); return; }
     }
     if (host_.silenceSwitch() && (!p.on || p.exceptionSet)) { rejected(seq, "silence_switch"); return; }
     // Klucz powtórzenia to stan docelowy: stan już osiągnięty daje `ok` bez pytania i bez zdarzenia.
     const store::Meta& m = store_.meta();
-    const int slot = p.exceptionSet ? store_.findRequest(p.exception) : -1;
     if (m.silence == p.on && m.exceptionSet == p.exceptionSet &&
         (!p.exceptionSet || (!memcmp(m.exception, p.exception, store::HASH) && m.exceptionRev == store_.request(static_cast<size_t>(slot)).rMax))) {
         char fields[160];

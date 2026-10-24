@@ -102,8 +102,8 @@
  ],
  "outputs": {
   "wici-station.mjs": {
-   "sha256": "e726e74ffdf5037b015ca2e7a5e703f9629a62b9745625cc932ad5e7e1197253",
-   "bytes": 1130194,
+   "sha256": "39c582c273e296ea91860a517999159e50dc32eb24e804dfd0bce34cdeb15f68",
+   "bytes": 1130630,
    "sources": [
     "firmware/src/annunciator.cpp",
     "firmware/src/config.cpp",
@@ -237,10 +237,10 @@
   "firmware/src/sharp.h": "a2ac3ac7b9c811f9a438b67209dc644592f348053f0cc5c987446b4fd7ff1451",
   "firmware/src/sharp_extcomin_esp32.cpp": "f151fa001c2a3f4346687fac5f581323ecbf55704124d443c5d9087a4dcb33fb",
   "firmware/src/sharp_extcomin_nrf.cpp": "b26323614a98ad9c29d7ee14191db6108439a8c476f1eb7f94148f480785b3be",
-  "firmware/src/station.cpp": "6e661e59530a9f909dec4d01104b9c5aa45ab9dcbbf5e2e3d6d5f536a60c76c6",
+  "firmware/src/station.cpp": "fffb4884b73c985e4a04f4ada47eb6d56cb94f710c1ec48721a15d9d89667f02",
   "firmware/src/station.h": "03ed337a2e25f4403008b5df9321f6f90104654842caa6933729443248e1bba6",
-  "firmware/src/store.cpp": "702ef961cd0ddc1993450688c49a29f238a57bb27330d199e8a493f550e41449",
-  "firmware/src/store.h": "25190414436334334d08074c7859b41b29744c993537e4efaa9f5328f9122159",
+  "firmware/src/store.cpp": "35425d9860c5fc954aca97cdd157ca9eb74ebbc629412580e8873bd85362569a",
+  "firmware/src/store.h": "1b74e14582e02c7dae9d50ba539150f978da60d4093bcf2dd9c1dae733e1f38b",
   "firmware/src/sx1262.cpp": "309ae0edacbb5e8178040da4054ce7814efbc2b985177a5eeb27157baa7481a1",
   "firmware/src/sx1262.h": "afb11bb2ba3bc95d2544671905ebf9e37a19decdd05702172db7deb758c3a9c2",
   "firmware/src/sx1262_link.cpp": "70b53fc25cdf7687d15272e880ca2eaea2d42f562bd415b758a268125491cfed",
@@ -251,7 +251,7 @@
   "firmware/src/ui.h": "ccf28f8bc32cd76bf34b1680e43c4e8e5ffabb621ef074b3ba4f9d2f2e6727cb",
   "firmware/src/ui_texts.h": "4be85919eff9eef041a1ca615a93fa0eba2e3fbe7b7711ae7f9035e6727fe67d",
   "firmware/src/unicode_tables.h": "ef324616bebbcb72f111ce9453ed943d9b57fad9ae73cdc79d22a81161d88739",
-  "firmware/src/usbproto.cpp": "07780916bf5b4b527c59240aa138ffaf12c6a69bb60f668489ee9d66d2aad534",
+  "firmware/src/usbproto.cpp": "51aeaed8aa185f3330ca60ec34249076380b3f52d3482ef066067633f2531c2d",
   "firmware/src/usbproto.h": "8421e73abe19735bd80f299566eed59993056b25498656445883289af6ff1a44",
   "firmware/platformio.ini": "4d7ac001a0178ce66ceaae208b0ebbede7bddeead9bba2a017e55454e3c1be68",
   "firmware/tools/stack_deps.py": "66d024c516d81982dbd061b1940d4fb80ad5069505acb6309ac1a50901c94fdb",
