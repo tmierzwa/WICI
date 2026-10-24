@@ -26,7 +26,7 @@ Uwierzytelnienie odbiorcy (przypięty klucz), lista zaufanych stacji, kwarantann
 
 **Etapy pilotażu (decyzje z 2026-10-12).** Ćwiczenie przy stole może się odbyć na obecnym oprogramowaniu, z [kartą obsługi](../obsluga/karta-stacji.html) oznaczoną ◆ tam, gdzie oprogramowanie czegoś nie obsługuje. Przed pierwszymi 3 stacjami w terenie muszą działać w oprogramowaniu stacji pilotażowej (L0, ESP32-S3 z SX1262):
 
-1. podpis wiadomości stacji i ich sprawdzenie na stanowisku (LXMF albo równoważny podpis tożsamością stacji), bo bez niego lista zaufanych stacji i kwarantanna (W10, pozycja h) nie mają podstawy; dziś treść idzie w zastępczej kopercie bez podpisu ([firmware](../../firmware/README.md));
+1. podpis wiadomości stacji i ich sprawdzenie na stanowisku (LXMF albo równoważny podpis tożsamością stacji), bo bez niego lista zaufanych stacji i kwarantanna (W10, pozycja h) nie mają podstawy; obraz `l0` z rdzeniem Reticulum wysyła treść jako podpisane wiadomości LXMF, a obraz `l0-port` (do etapu R6-5) w zastępczej kopercie bez podpisu ([firmware](../../firmware/README.md)); warunek jest spełniony dopiero po sprawdzeniu na zmontowanym L0, którego jeszcze nie było;
 2. pomiar napięcia ogniw i 12 V, czas pracy z ogniw, `wymien_ogniwa` oraz wyłączenie przytrzymaniem wyłącznika głównego z zapisem stanu (`wylaczanie`, `mozna_wyjac`); dziś ekran pokazuje stałe „12 V: 0,0 V”;
 3. ZAMKNIJ ZDARZENIE z menu stacji ([ekran](oprogramowanie.md#ekran-i-przyciski-stacji)).
 
