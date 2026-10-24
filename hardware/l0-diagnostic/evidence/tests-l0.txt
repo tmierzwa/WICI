@@ -58,6 +58,6 @@ ok
 test_wrong_image_blocks_command (test_usb.UsbChecks.test_wrong_image_blocks_command) ... ok
 
 ----------------------------------------------------------------------
-Ran 34 tests in 16.398s
+Ran 34 tests in 16.313s
 
 OK
