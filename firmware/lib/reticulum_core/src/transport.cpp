@@ -98,7 +98,10 @@ bool Transport::inbound(const uint8_t* raw, size_t length, uint64_t nowMs, uint8
             return true;
         }
     }
-    // _inbound: skrót zapamiętany przed przetworzeniem (jeden przegląd listy z filtrem duplikatów).
+    // _inbound: skrót zapamiętany przed przetworzeniem (jeden przegląd listy z filtrem duplikatów). Odmowa
+    // przejściowa po stronie stacji (zapis tablicy, transmit przy przekazaniu, warstwa aplikacji bez COMMIT,
+    // dowód z innego interfejsu) zdejmuje go z listy (HashList::remove, tabela różnic): ta sama kopia ma
+    // ponowną szansę, a pracę nad nią ograniczają te same haki limitu (mayVerify, mayReceive).
     if (!hashlist_.add(hash)) {
         ++counters_.duplicate;
         return true;
@@ -111,7 +114,7 @@ bool Transport::inbound(const uint8_t* raw, size_t length, uint64_t nowMs, uint8
             inboundData(packet, hash, iface);
             break;
         case PROOF:
-            inboundProof(packet, raw, length, nowMs, iface);
+            inboundProof(packet, raw, length, hash, nowMs, iface);
             break;
         default:
             ++counters_.ignored;
@@ -229,6 +232,7 @@ void Transport::inboundAnnounce(const Packet& packet, const uint8_t hash[HASH_SI
         const Table::Cached cached = add ? Table::Cached::SET : Table::Cached::KEEP;
         if (table_.write(known ? slot : -1, e, cached, packet.data, cache ? packet.dataLength : 0, pinnedHook, this) < 0) {
             ++counters_.tableFailed;
+            hashlist_.remove(hash);   // ponowienie tej kopii zapisze wpis (inaczej do następnego ogłoszenia)
             return;
         }
     } else {
@@ -270,8 +274,9 @@ void Transport::inboundData(const Packet& packet, const uint8_t hash[HASH_SIZE],
     ++counters_.received;
     const bool prove = hooks_.packet && hooks_.packet(plaintext, plaintextLength, hooks_.context);
     clean(plaintext, sizeof(plaintext));
-    if (!prove) {
+    if (!prove) {   // bez COMMIT (brak miejsca, błąd zapisu); trwałe odrzucenie daje dowód
         ++counters_.unproven;
+        hashlist_.remove(hash);
         return;
     }
     uint8_t proof[PROOF_EXPLICIT_SIZE];
@@ -291,8 +296,9 @@ void Transport::inboundData(const Packet& packet, const uint8_t hash[HASH_SIZE],
 // RNS/Transport.py: _inbound (PROOF bez LRPROOF): najpierw przekazanie według tablicy odwrotnej, potem
 // dowód jawny tylko do potwierdzenia o tym skrócie, niejawny tylko do potwierdzenia o skrócie z celu
 // dowodu; PacketReceipt.validate_proof.
-void Transport::inboundProof(const Packet& packet, const uint8_t* raw, size_t length, uint64_t nowMs, uint8_t iface) {
-    const bool forwarded = forwardProof(packet, raw, length, nowMs, iface);
+void Transport::inboundProof(const Packet& packet, const uint8_t* raw, size_t length, const uint8_t hash[HASH_SIZE],
+                             uint64_t nowMs, uint8_t iface) {
+    const bool forwarded = forwardProof(packet, raw, length, hash, nowMs, iface);
     const bool explicitProof = packet.dataLength == PROOF_EXPLICIT_SIZE;
     if (!explicitProof && packet.dataLength != PROOF_IMPLICIT_SIZE) {
         if (!forwarded) ++counters_.invalid;
@@ -344,6 +350,14 @@ bool Transport::forward(const Packet& packet, const uint8_t* raw, size_t length,
         outLength = 2 + tail;
     }
     out[1] = packet.hops;
+    table_.touch(slot, seconds(nowMs), true);   // path_entry[IDX_PT_TIMESTAMP]
+    // Wpis tablicy odwrotnej tylko dla pakietu, który wyszedł (tabela różnic: Python zapisuje go przed
+    // transmit, które nie odmawia): po odmowie nie ma drogi, którą dowód mógłby wrócić.
+    if (!emit(out, outLength, false, interfaceMask(e.interface))) {
+        hashlist_.remove(hash);
+        return true;
+    }
+    ++counters_.forwarded;
     // reverse_table[truncated_packet_hash]: tego samego skrótu wpis nadpisany, inaczej wolny albo
     // przeterminowany, a przy pełnej tablicy najstarszy (licznik).
     ReverseEntry* r = nullptr;
@@ -364,45 +378,56 @@ bool Transport::forward(const Packet& packet, const uint8_t* raw, size_t length,
     r->received = iface;
     r->outbound = e.interface;
     r->atMs = nowMs ? nowMs : 1;
-    if (emit(out, outLength, false, interfaceMask(e.interface))) ++counters_.forwarded;
-    table_.touch(slot, seconds(nowMs), true);   // path_entry[IDX_PT_TIMESTAMP]
     return true;
 }
 
 // RNS/Transport.py: _inbound (PROOF): dowód do skrótu pakietu przekazanego przez stację wraca tą samą
 // drogą (wpis tablicy odwrotnej zużyty), z liczbą skoków po odbiorze: tylko gdy przyszedł interfejsem,
 // którym pakiet wyszedł (IDX_RT_OUTB_IF), i wychodzi tym, którym pakiet przyszedł (IDX_RT_RCVD_IF).
-bool Transport::forwardProof(const Packet& packet, const uint8_t* raw, size_t length, uint64_t nowMs, uint8_t iface) {
+// Wpis zużywa dopiero dowód, który wyszedł (tabela różnic: Python zdejmuje go przed porównaniem
+// interfejsu). Dowód z innego interfejsu albo odrzucony przez transmit zostawia wpis i schodzi z listy
+// skrótów, więc ta sama kopia właściwą drogą przejdzie; wpis ogranicza nadal REVERSE_TIMEOUT.
+bool Transport::forwardProof(const Packet& packet, const uint8_t* raw, size_t length, const uint8_t hash[HASH_SIZE],
+                             uint64_t nowMs, uint8_t iface) {
     if (length > MTU) return false;
     for (ReverseEntry& r : reverse_) {
         if (!r.atMs || memcmp(r.hash, packet.destinationHash, TRUNCATED_HASH_SIZE) != 0) continue;
-        const bool live = nowMs - r.atMs <= REVERSE_TIMEOUT_MS;
-        r.atMs = 0;
-        if (!live) return false;   // Transport.jobs usunąłby wpis po REVERSE_TIMEOUT
-        if (iface != r.outbound) return false;   // "Proof received on wrong interface"
+        if (nowMs - r.atMs > REVERSE_TIMEOUT_MS) {   // Transport.jobs usunąłby wpis po REVERSE_TIMEOUT
+            r.atMs = 0;
+            return false;
+        }
+        if (iface != r.outbound) {   // "Proof received on wrong interface"
+            hashlist_.remove(hash);
+            return false;
+        }
         uint8_t out[MTU];
         memcpy(out, raw, length);
         out[1] = packet.hops;
-        if (emit(out, length, false, interfaceMask(r.received))) ++counters_.proofsForwarded;
+        if (!emit(out, length, false, interfaceMask(r.received))) {
+            hashlist_.remove(hash);
+            return true;
+        }
+        r.atMs = 0;
+        ++counters_.proofsForwarded;
         return true;
     }
     return false;
 }
 
-bool Transport::emit(const uint8_t* raw, size_t length, bool rememberHash, uint8_t ifaces) {
-    if (!hooks_.transmit) return false;
-    bool sent = false;
+uint8_t Transport::emit(const uint8_t* raw, size_t length, bool rememberHash, uint8_t ifaces) {
+    if (!hooks_.transmit) return 0;
+    uint8_t sent = 0;
     for (uint8_t i = 0; i < interfaces_; ++i) {
-        if (ifaces & interfaceMask(i)) sent = hooks_.transmit(raw, length, i, hooks_.context) || sent;
+        if ((ifaces & interfaceMask(i)) && hooks_.transmit(raw, length, i, hooks_.context)) sent |= interfaceMask(i);
     }
-    if (!sent) return false;
+    if (!sent) return 0;
     // Transport._outbound: skrót pakietu rozgłaszanego (bez znanej trasy) na listę skrótów.
     if (rememberHash) {
         uint8_t hash[HASH_SIZE];
         packetHash(raw, length, hash);
         hashlist_.add(hash);
     }
-    return true;
+    return sent;
 }
 
 bool Transport::announce(const uint8_t random[5], const uint8_t* appData, size_t length, uint64_t nowMs) {
@@ -632,6 +657,7 @@ void Transport::discoveryResponse(const Packet& packet, uint64_t nowMs) {
     // a odpowiedź to podpis IFAC (jedna operacja asymetryczna na obieg). Python nadaje ją od razu.
     if (!waiting || packet.dataLength > ANNOUNCE_FORWARDABLE_SIZE) return;
     f->respond = true;
+    f->refused = 0;
     f->respondHops = packet.hops;
 }
 
@@ -641,8 +667,6 @@ void Transport::discoveryResponse(const Packet& packet, uint64_t nowMs) {
 // gdy ich interfejs przyjmie.
 void Transport::sendDiscovery(Inflight& f, uint8_t ready, uint64_t nowMs) {
     const uint8_t to = f.requesting & ready;
-    f.requesting &= static_cast<uint8_t>(~to);
-    f.respond = f.requesting != 0;
     KnownDestination e;
     if (!lookup(f.destination, e, nowMs) || !e.announceLength) {   // wpis wyparty w międzyczasie
         f.respond = false;
@@ -663,9 +687,20 @@ void Transport::sendDiscovery(Inflight& f, uint8_t ready, uint64_t nowMs) {
     out.dataLength = e.announceLength;
     uint8_t raw[MTU];
     const size_t rawLength = pack(out, raw, sizeof(raw));
+    // Z oczekujących zdejmowane są interfejsy, które przyjęły odpowiedź; odmawiający (mimo ready) dostanie ją
+    // w następnym obiegu, ale po drugiej odmowie wpis rezygnuje z niego (każde nadanie to odczyt tablicy i
+    // podpis IFAC, więc trwała odmowa nie może ich powtarzać bez końca). Pakiet, którego nie da się zbudować,
+    // nie ma czego nadać nikomu.
+    uint8_t sent = rawLength ? 0 : to;
     for (uint8_t i = 0; rawLength && i < interfaces_; ++i) {
-        if (emit(raw, rawLength, true, to & interfaceMask(i))) ++counters_.pathResponses;
+        const uint8_t one = emit(raw, rawLength, true, to & interfaceMask(i));
+        if (one) ++counters_.pathResponses;
+        sent |= one;
     }
+    const uint8_t declined = to & static_cast<uint8_t>(~sent);
+    f.requesting &= static_cast<uint8_t>(~(sent | (declined & f.refused)));
+    f.refused |= declined;
+    f.respond = f.requesting != 0;
 }
 
 void Transport::setBitrate(uint32_t bitsPerSecond) {
@@ -695,16 +730,21 @@ bool Transport::pathRequest(const uint8_t destination[TRUNCATED_HASH_SIZE], cons
             ++counters_.pathLimited;
             return true;
         }
-        last = nowMs + 1;
         // Ogłoszenie podpisane w ostatnich OWN_RESPONSE_REUSE_MS idzie jeszcze raz (jego skrót losowy jest
         // dla pytającego nowy, jeśli go nie słyszał), bez nowego podpisu.
         if (ownAnnounceLength_ && nowMs - ownAnnounceMs_ < OWN_RESPONSE_REUSE_MS) {
-            if (sendOwnAnnounce(true, ifaces)) ++counters_.pathResponses;
+            if (sendOwnAnnounce(true, ifaces)) {
+                ++counters_.pathResponses;
+                last = nowMs + 1;   // limit zużywa tylko odpowiedź, którą interfejs przyjął
+            }
             return true;
         }
         uint8_t random[5];
         if (!hooks_.random || !hooks_.random(random, sizeof(random), hooks_.context)) return true;
-        if (ownAnnounce(random, nowMs, true, ifaces)) ++counters_.pathResponses;
+        if (ownAnnounce(random, nowMs, true, ifaces)) {
+            ++counters_.pathResponses;
+            last = nowMs + 1;
+        }
         return true;
     }
     KnownDestination e;
@@ -760,6 +800,7 @@ bool Transport::schedule(const uint8_t destination[TRUNCATED_HASH_SIZE], uint8_t
     slot->blockRebroadcasts = block;
     slot->attached = ifaces;
     slot->owed = 0;
+    slot->refused = 0;
     return true;
 }
 
@@ -772,9 +813,9 @@ void Transport::retransmit(AnnounceEntry& entry, uint8_t ready, uint64_t nowMs) 
         entry.retransmitMs = nowMs + PATHFINDER_G_MS + PATHFINDER_RW_MS;
         ++entry.retries;
         entry.owed |= entry.attached & present();
+        entry.refused = 0;
     }
     const uint8_t to = entry.owed & ready;
-    entry.owed &= static_cast<uint8_t>(~to);
     KnownDestination e;
     if (!lookup(entry.destination, e, nowMs) || !e.announceLength) {   // wpis wyparty w międzyczasie
         entry.used = false;
@@ -797,9 +838,15 @@ void Transport::retransmit(AnnounceEntry& entry, uint8_t ready, uint64_t nowMs) 
     packet.dataLength = e.announceLength;
     uint8_t raw[MTU];
     const size_t rawLength = pack(packet, raw, sizeof(raw));
-    if (rawLength && emit(raw, rawLength, true, to)) {
-        ++(entry.blockRebroadcasts ? counters_.pathResponses : counters_.rebroadcasts);
-    }
+    // Zaległość zdejmowana interfejsom, które przyjęły ramkę; odmawiający (mimo ready) dostanie ją w następnym
+    // obiegu, ale po drugiej odmowie tej próby wpis rezygnuje z niego (trwała odmowa nie może powtarzać
+    // odczytu tablicy i podpisu IFAC bez końca; kolejna próba zaplanowana zaczyna od nowa). Pakiet, którego nie
+    // da się zbudować, nie ma czego nadać nikomu.
+    const uint8_t sent = rawLength ? emit(raw, rawLength, true, to) : to;
+    if (rawLength && sent) ++(entry.blockRebroadcasts ? counters_.pathResponses : counters_.rebroadcasts);
+    const uint8_t declined = to & static_cast<uint8_t>(~sent);
+    entry.owed &= static_cast<uint8_t>(~(sent | (declined & entry.refused)));
+    entry.refused |= declined;
     if (entry.owed) return;
     for (AnnounceEntry& h : held_) {   // held_announces: wstrzymany wpis wraca do tablicy po odpowiedzi
         if (h.used && memcmp(h.destination, entry.destination, TRUNCATED_HASH_SIZE) == 0) {

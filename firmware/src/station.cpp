@@ -125,7 +125,7 @@ const RequestIndex* Station::exceptionEntry() const {
                         store_.request(static_cast<size_t>(exceptionSlot_)).used() && store_.request(static_cast<size_t>(exceptionSlot_)).gen == exceptionGen_;
     if (!cached) {
         memcpy(exceptionId_, m.exception, store::HASH);
-        exceptionSlot_ = store_.findRequest(m.exception);
+        store_.findRequest(m.exception, exceptionSlot_);   // ERROR: bez gniazda w pamięci podręcznej, następne wywołanie ponowi
         if (exceptionSlot_ >= 0) exceptionGen_ = store_.request(static_cast<size_t>(exceptionSlot_)).gen;
     }
     return exceptionSlot_ >= 0 ? &store_.request(static_cast<size_t>(exceptionSlot_)) : nullptr;
@@ -447,8 +447,10 @@ Result Station::submit(const sa1::Message& m, Stored& out) {
     char wire[sa1::MAX_CONTENT + 1];
     const size_t length = sa1::encode(m, wire, sizeof(wire));
     if (!length) return Result::INVALID;
-    const int slot = store_.findRequest(out.id);
-    if (slot >= 0) {
+    int slot;
+    const store::Found found = store_.findRequest(out.id, slot);
+    if (found == store::Found::ERROR) return Result::MEMORY;   // bez nowego gniazda; laptop ponowi
+    if (found == store::Found::YES) {
         Request r;
         if (!store_.readRequest(static_cast<size_t>(slot), r)) return Result::MEMORY;
         if (r.stage == Stage::CANCELLED) return Result::CLOSED;
@@ -487,8 +489,10 @@ Result Station::submit(const sa1::Message& m, Stored& out) {
 
 Result Station::cancel(const uint8_t id[store::HASH], bool& released) {
     released = false;
-    const int slot = store_.findRequest(id);
-    if (slot < 0) {
+    int slot;
+    const store::Found found = store_.findRequest(id, slot);
+    if (found == store::Found::ERROR) return Result::MEMORY;
+    if (found == store::Found::NO) {
         store::Released r;
         if (!store_.releasedFind(id, r)) return Result::NOT_FOUND;
         if (!r.cancelled) return Result::TOO_LATE;
@@ -550,7 +554,10 @@ Result Station::test(const uint8_t nonce[store::NONCE], Stored& out) {
         memcpy(out.id, t.id, store::HASH);
         out.number = store::shortNumber(t.id);
         store::Released released;
-        out.released = store_.findRequest(t.id) < 0 && store_.releasedFind(t.id, released);
+        int slot;
+        const store::Found found = store_.findRequest(t.id, slot);
+        if (found == store::Found::ERROR) return Result::MEMORY;
+        out.released = found == store::Found::NO && store_.releasedFind(t.id, released);
         return Result::STORED;
     }
     out = Stored();
@@ -572,7 +579,10 @@ bool Station::pauseTest(bool paused) {
     tx.meta().testPaused = paused;
     const int slot = paused ? pendingTest() : -1;
     Request r;
-    if (slot >= 0 && store_.readRequest(static_cast<size_t>(slot), r)) markCancelled(tx, static_cast<uint16_t>(slot), r);
+    if (slot >= 0) {
+        if (!store_.readRequest(static_cast<size_t>(slot), r)) return false;   // bez commit: ani pauzy, ani anulowania
+        markCancelled(tx, static_cast<uint16_t>(slot), r);
+    }
     if (!tx.commit()) return false;
     services_.log(paused ? "test paused" : "test resumed");
     services_.changed();
@@ -636,7 +646,8 @@ bool Station::setSilence(bool on, const uint8_t* exception, bool switchOn) {
     m.exceptionRev = 0;
     if (m.exceptionSet) {
         memcpy(m.exception, exception, store::HASH);
-        const int slot = store_.findRequest(exception);
+        int slot;
+        if (store_.findRequest(exception, slot) == store::Found::ERROR) return false;   // bez commit: nie zapisujemy rewizji 0
         if (slot >= 0) m.exceptionRev = store_.request(static_cast<size_t>(slot)).rMax;
     }
     tx.event(store_.radioEvent(m, switchOn));
@@ -709,8 +720,9 @@ int Station::inboxSlot() {
             if (pass == 1) {
                 store::Message m;
                 if (x.type != sa1::REPLY || !x.read || !store_.readMessage(i, m)) continue;
-                const int request = store_.findRequest(m.id);
-                if (request >= 0 && !store_.requestClosed(static_cast<size_t>(request))) continue;
+                int request;
+                const store::Found found = store_.findRequest(m.id, request);
+                if (found == store::Found::ERROR || (found == store::Found::YES && !store_.requestClosed(static_cast<size_t>(request)))) continue;   // ERROR: nie zwalniamy
             }
             best = static_cast<int>(i);
         }
@@ -723,10 +735,12 @@ int Station::inboxSlot() {
 }
 
 bool Station::handleOwn(const sa1::Message& m, const uint8_t id[store::HASH], const char* wire, size_t wireLength) {
-    const int found = store_.findRequest(id);
+    int found;
+    const store::Found where = store_.findRequest(id, found);
+    if (where == store::Found::ERROR) return false;   // bez dowodu: odbiorca ponowi
     Request r;
     // Spoza rejestru (także zwolnione), r > r_max, zgłoszenie anulowane (nigdy nie nadane): pominięte.
-    if (found < 0 || !store_.readRequest(static_cast<size_t>(found), r) || m.revision > r.rMax || r.stage == Stage::CANCELLED) {
+    if (where == store::Found::NO || !store_.readRequest(static_cast<size_t>(found), r) || m.revision > r.rMax || r.stage == Stage::CANCELLED) {
         ++stats_.skipped;
         return true;
     }

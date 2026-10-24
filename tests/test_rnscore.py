@@ -199,6 +199,13 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(got, [c["token"] or "none" for c in cases])
         self.assertEqual([c["token"] is None for c in cases], [True, True, True, False])
 
+    def test_hashlist_remove(self):
+        # HashList::remove zdejmuje tylko ten skrót (najnowszy, ze środka, po obiegu pierścienia 4096 wpisów),
+        # rozmiar zostaje, a ponowne dopisanie przechodzi.
+        n = lambda count, removed: ("hashlist_remove", count.to_bytes(2, "big") + removed.to_bytes(2, "big"))
+        got = self.ask([n(10, 9), n(10, 5), n(5000, 4999), n(5000, 1000), n(5000, 904)])
+        self.assertEqual(got, ["0 1 10 1", "0 1 10 1", "0 1 4096 1", "0 1 4096 1", "0 0 4096 1"])
+
     def test_proof(self):
         # Identity.prove (niejawny i jawny) bajt w bajt; PacketReceipt.validate_proof: te same wyniki.
         v = VECTORS["proof"]
@@ -361,6 +368,17 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(got[3:5], ["none", "none"])
         self.assertEqual(len(got[5]) // 2, 500)
         self.assertEqual(got[6:], ["none", "none"])
+
+    def test_packet_pack_mtu_boundary(self):
+        # Granica MTU przy buforze wyjściowym większym od MTU (harness: 2 × MTU): MTU−1 i MTU przyjęte, MTU+1 odrzucone,
+        # osobno dla HEADER_1 (19 B nagłówka) i HEADER_2 (35 B).
+        commands = []
+        for header_type, header in ((0, 19), (1, 35)):
+            for total in (499, 500, 501):
+                commands.append(("pack", bytes([header_type, 0, 0, 0, 0, 0]) + bytes(32) + bytes(1)
+                                 + bytes([0xAB]) * (total - header)))
+        got = self.ask(commands)
+        self.assertEqual([None if line == "none" else len(line) // 2 for line in got], [499, 500, None] * 2)
 
     def test_packet_every_length(self):
         # Każda długość obciętego pakietu HEADER_2: do 35 B (nagłówek bez danych) odrzucony, dalej przyjęty;
@@ -546,6 +564,24 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(self.parsed(lines[8])[1], [1, 1, 0, 0, 1, 0, 0, 0, 0])
         self.assertEqual(lines[9], "2")
 
+    def test_transport_packet_to_station_refused_retry(self):
+        # Warstwa aplikacji bez COMMIT (fałsz z haka packet: brak miejsca, błąd zapisu): skrót schodzi z listy
+        # (tabela różnic), więc ta sama kopia przechodzi drugi raz; każda bierze żeton mayReceive, więc bez
+        # żetonu odpada przed odszyfrowaniem. Po przyjęciu z dowodem kolejna kopia to duplikat.
+        address = self.ask([("t_begin", self.STATION)])[0]
+        station_pub = bytes.fromhex(self.ask([("public_key", self.STATION)])[0])
+        token = bytes.fromhex(self.ask([("encrypt", station_pub + self.EPHEMERAL + self.IV + b"retry")])[0])
+        raw = self.packet(0x00, bytes.fromhex(address), token)
+        lines = self.ask([("t_begin", self.STATION), ("t_config", bytes([255, 0])), ("t_in", raw), ("t_in", raw),
+                          ("t_refuse", b"\x01"), ("t_in", raw), ("t_refuse", b"\x00"), ("t_config", bytes([255, 1])),
+                          ("t_in", raw), ("t_in", raw)])
+        self.assertEqual(self.parsed(lines[2])[1], [0, 0, 0, 0, 1, 1, 0, 0, 0])
+        self.assertEqual(self.parsed(lines[3])[1], [0, 0, 0, 0, 2, 2, 0, 0, 0])
+        self.assertEqual(self.parsed(lines[5])[1], [0, 0, 0, 0, 2, 2, 0, 0, 0])   # bez żetonu: bez odszyfrowania
+        self.assertEqual(self.parsed(lines[8]), ("ok", [0, 0, 0, 0, 3, 2, 0, 0, 0], [f"packet:{b'retry'.hex()}"],
+                                                 self.proof_packet(self.STATION, raw).hex()))
+        self.assertEqual(self.parsed(lines[9])[1], [1, 0, 0, 0, 3, 2, 0, 0, 0])
+
     def test_transport_outside_subset(self):
         # Pakiety poza podzbiorem R1 albo nie do stacji: pominięte bez listy skrótów; za krótki: unpack.
         address = bytes.fromhex(self.ask([("t_begin", self.STATION)])[0])
@@ -571,6 +607,28 @@ class CoreTests(unittest.TestCase):
     def known(self, commands, dest):
         lines = self.ask(commands + [("t_known", dest)])
         return lines[:-1], lines[-1].split()
+
+    def test_transport_announce_write_failure_retry(self):
+        # Nowsze ogłoszenie znanego celu z trasą, zapis tablicy zawodzi: skrót schodzi z listy (tabela różnic),
+        # więc ta sama kopia poprawia trasę (2 → 1 skok), a następna to kopia już sprawdzonego, bez weryfikacji.
+        # Każda ponowna kopia przechodzi przez mayVerify: przy trwałym błędzie zapisu weryfikacji jest tyle, ile
+        # zgód limitu pracy.
+        a = next(c for c in VECTORS["announce"] if c["name"] == "plain")
+        key = bytes.fromhex(a["private_key"])
+        dest = bytes.fromhex(a["raw"])[2:18]
+        first = ("t_in", self.hops(self.announce_of(key, random_hash=self.blob(1, 1000)), 1))
+        second = ("t_in", self.hops(self.announce_of(key, random_hash=self.blob(2, 1001)), 0))
+        lines = self.ask([("t_begin", self.STATION), first, ("t_failwrite", b"\x01"), second, ("t_known", dest), second,
+                          ("t_known", dest), second, ("t_verify", b"\xff")])
+        self.assertEqual(lines[4].split()[0], "2")
+        self.assertEqual(lines[6].split()[0], "1")
+        self.assertEqual(self.parsed(lines[7])[1][0], 1)   # duplikat
+        self.assertEqual(lines[8], "3")
+        lines = self.ask([("t_begin", self.STATION), first, ("t_verify", b"\x02"), ("t_failwrite", b"\x10")] +
+                         [second] * 5 + [("t_verify", b"\xff"), ("t_known", dest)])
+        self.assertEqual(lines[2], "1")
+        self.assertEqual(lines[-2], "3")
+        self.assertEqual(lines[-1].split()[0], "2")
 
     def test_transport_should_add(self):
         # RNS/Transport.py: should_add. Skoki po odbiorze są o 1 większe niż w pakiecie.
@@ -630,6 +688,20 @@ class CoreTests(unittest.TestCase):
                                    ("t_clock", (1000 + week).to_bytes(8, "big")), send(3),
                                    ("t_clock", (1000 + week + 1000).to_bytes(8, "big"))], dest)
         self.assertEqual(entry[2], "0")
+
+    def test_transport_clock_back_after_restart(self):
+        # Zegar cofnięty przy starcie (dziennik czasu pracy zawiódł, licznik od zera): trasa zapisana przed
+        # restartem z czasem z przyszłości nie wygasa w pierwszym przeglądzie, a ratchet sprzed startu
+        # o nieznanym wieku nie zostaje na zawsze (table.cpp: czas z przyszłości nie przedłuża wpisu).
+        a = next(c for c in VECTORS["announce"] if c["name"] == "plain")
+        key = bytes.fromhex(a["private_key"])
+        dest = bytes.fromhex(a["raw"])[2:18]
+        month = 30 * 24 * 3600 * 1000
+        _, entry = self.known([("t_begin", self.STATION), ("t_clock", month.to_bytes(8, "big")),
+                               ("t_in", self.hops(self.announce_of(key, ratchet=bytes([1]) * 32, random_hash=self.blob(1, 1000)), 1)),
+                               ("t_restart", b"\x00\x01" + (1000).to_bytes(8, "big")),
+                               ("t_clock", (2000).to_bytes(8, "big"))], dest)
+        self.assertEqual(entry[:3], ["2", "0", "1"])   # trasa jest, ratchetu nie ma
 
     def test_transport_ratchet_kept(self):
         # Ogłoszenie bez ratchetu zostawia zapisany (known_ratchets); ratchet ze starszego ogłoszenia
@@ -821,6 +893,65 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(lines[11], "2 2")
         self.assertEqual(lines[12], "none")
         self.assertNotEqual(lines[13], "none")
+
+    def dual_copy(self, newer_in_later_slot: bool, damage=()):
+        """Polecenia dające dwie kopie celu po zaniku zasilania przed unieważnieniem starej, z uszkodzeniami (t_poke).
+
+        Stara kopia w gnieździe 1; nowsza w gnieździe 0 (przed starą w indeksowaniu) albo 2 (po niej). Zwraca polecenia,
+        skrót celu i ogłoszenia: starej oraz nowszej."""
+        keys = [bytes([35]) * 64, bytes([36]) * 64]
+        later = bytes(5) + (1_790_000_100).to_bytes(5, "big")
+        a1, d1 = (self.announce_of(k) for k in keys)
+        a2, d2 = (self.announce_of(k, random_hash=later) for k in keys)
+        cut = ("t_cut", (3).to_bytes(4, "big"))
+        commands = [("t_begin", self.STATION), ("t_in", a1), ("t_in", d1)]
+        commands += [cut, ("t_in", d2)] if newer_in_later_slot else [("t_in", a2), cut, ("t_in", d2)]
+        newer_slot = 2 if newer_in_later_slot else 0
+        for slot, offset, value in damage:   # slot: "new" albo "old"; offset w gnieździe
+            commands.append(("t_poke", ((newer_slot if slot == "new" else 1) * 568 + offset).to_bytes(4, "big") + value))
+        return commands, d1[2:18], d1, d2
+
+    def test_transport_table_two_copies_keep_last_valid(self):
+        # Dwie kopie tego samego celu (zanik zasilania przed unieważnieniem starej): zostaje ostatnia w pełni poprawna.
+        # Nowsza wygrywa tylko z całym ciałem pod CRC; uszkodzone ciało albo nagłówek nowszej nie kasują starej.
+        damages = {
+            "intact": ((), "new"),
+            "new body": ((("new", 200, b"\x5a"),), "old"),
+            "new header": ((("new", 8, b"\xff"),), "old"),    # znaczniki w nagłówku, CRC je obejmuje
+            "new sequence": ((("new", 7, b"\x7f"),), "old"),   # numer zapisu większy, ciało nie pasuje do CRC
+            "old body": ((("old", 200, b"\x5a"),), "new"),
+            "both": ((("new", 200, b"\x5a"), ("old", 200, b"\x5a")), None),
+        }
+        for later_slot in (False, True):
+            for name, (damage, winner) in damages.items():
+                with self.subTest(newer_in_later_slot=later_slot, damage=name):
+                    commands, dest, old, new = self.dual_copy(later_slot, damage)
+                    expected = {"old": old, "new": new, None: None}[winner]
+                    lines = self.ask(commands + [("t_restart", b"\x02"), ("t_known", dest), ("t_restart", b"\x02"),
+                                                 ("t_known", dest)])
+                    for line in (lines[-3], lines[-1]):
+                        self.assertEqual(None if line == "none" else line.split()[-1],
+                                         None if expected is None else expected[19:].hex())
+
+    def test_transport_table_two_copies_single_read_error(self):
+        # Jednorazowy błąd odczytu w dowolnym odczycie startu (nagłówek kopii, numer zapisu, pełny odczyt zwycięzcy)
+        # niczego nie unieważnia: po następnym, czystym starcie zostaje ostatnia w pełni poprawna kopia.
+        for later_slot in (False, True):
+            for name, damage, winner in (("intact", (), "new"), ("new body", (("new", 200, b"\x5a"),), "old")):
+                commands, dest, old, new = self.dual_copy(later_slot, damage)
+                expected = {"old": old, "new": new}[winner][19:].hex()
+                counted = self.ask(commands + [("t_reads", b""), ("t_restart", b"\x02"), ("t_reads", b"")])
+                reads = int(counted[-1]) - int(counted[-3])
+                # Odczyty nagłówków wszystkich gniazd (jeden na gniazdo), potem dodatkowe przy dwóch kopiach.
+                slots = int(self.ask([("t_begin", self.STATION), ("t_reads", b""), ("t_restart", b""),
+                                      ("t_reads", b"")])[-1]) - int(self.ask([("t_begin", self.STATION),
+                                                                              ("t_reads", b"")])[-1])
+                self.assertGreater(reads, slots)
+                for nth in list(range(1, 5)) + list(range(slots + 1, reads + 1)):
+                    with self.subTest(newer_in_later_slot=later_slot, damage=name, failing_read=nth):
+                        lines = self.ask(commands + [("t_failat", nth.to_bytes(2, "big")), ("t_restart", b"\x02"),
+                                                     ("t_known", dest), ("t_restart", b"\x02"), ("t_known", dest)])
+                        self.assertEqual(lines[-1].split()[-1], expected)
 
     # Cel PLAIN "rnstransport.path.request" (Destination bez tożsamości: skrót skrótu nazwy).
     PATH_REQUEST = hashlib.sha256(hashlib.sha256(b"rnstransport.path.request").digest()[:10]).digest()[:16]
@@ -1054,6 +1185,35 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(self.parsed(lines[5])[3], self.hops(proof, 1).hex())
         self.assertEqual(lines[6].split()[:3], ["1", "0", "1"])
 
+    def test_forward_refused_output(self):
+        # Odmowa transmit przy przekazaniu pakietu: bez wpisu tablicy odwrotnej (tabela różnic). Odmowa przy
+        # przekazaniu dowodu: wpis zostaje i skrót dowodu schodzi z listy, więc ta sama kopia dowodu idzie
+        # dalej dokładnie raz, a następna jest duplikatem.
+        identity = self.station_identity()
+        far = self.announce_of(bytes([37]) * 64)
+        data = self.packet(0x50, far[2:18], b"x" * 40, transport_id=identity)
+        proof = self.packet(0x03, bytes.fromhex(self.fields_of(data.hex())[-1])[:16], bytes(64))
+        lines = self.ask([("t_begin", self.STATION), ("t_in", self.via(far, bytes(range(16)), 1)), ("t_drop_tx", b"\x01"),
+                          ("t_in", data), ("t_forward", b"")])
+        self.assertEqual(self.parsed(lines[3])[3], "-")
+        self.assertEqual([lines[4].split()[i] for i in (0, 3, 5)], ["0", "0", "0"])
+        # Skrót pakietu schodzi z listy (tabela różnic): ta sama kopia idzie dalej, następna to duplikat.
+        lines = self.ask([("t_begin", self.STATION), ("t_in", self.via(far, bytes(range(16)), 1)), ("t_drop_tx", b"\x01"),
+                          ("t_in", data), ("t_in", data), ("t_in", data), ("t_forward", b"")])
+        self.assertEqual(self.parsed(lines[4])[3], (bytes([data[0], 1]) + bytes(range(16)) + data[18:]).hex())
+        self.assertEqual(self.parsed(lines[5])[3], "-")
+        self.assertEqual(self.parsed(lines[5])[1][0], 1)
+        self.assertEqual([lines[6].split()[i] for i in (0, 5)], ["1", "1"])
+        lines = self.ask([("t_begin", self.STATION), ("t_in", self.via(far, bytes(range(16)), 1)), ("t_in", data),
+                          ("t_drop_tx", b"\x01"), ("t_in", proof), ("t_forward", b""), ("t_in", proof), ("t_in", proof),
+                          ("t_forward", b"")])
+        self.assertEqual(self.parsed(lines[4])[3], "-")
+        self.assertEqual([lines[5].split()[i] for i in (2, 5)], ["0", "1"])
+        self.assertEqual(self.parsed(lines[6])[3], self.hops(proof, 1).hex())
+        self.assertEqual(self.parsed(lines[7])[3], "-")
+        self.assertEqual(self.parsed(lines[7])[1][0], 1)   # duplikat
+        self.assertEqual([lines[8].split()[i] for i in (2, 5)], ["1", "0"])
+
     def test_announce_rebroadcast(self):
         # RNS/Transport.py: _inbound i jobs: przyjęte ogłoszenie idzie dalej jako HEADER_2 z identyfikatorem
         # stacji i skokami po odbiorze, po losowej zwłoce do PATHFINDER_RW (tu 176 ms), drugi raz po
@@ -1116,6 +1276,25 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(lines[13], "1:" + self.hops(proof_of(to_far), 1).hex())
         self.assertEqual(lines[14].split()[:3], ["2", "0", "1"])
         self.assertEqual(self.parsed(lines[15])[0], "malformed")
+        # Dowód z interfejsu innego niż wyjście pakietu nie zużywa wpisu tablicy odwrotnej, a jego skrót schodzi
+        # z listy (tabela różnic): ta sama kopia z właściwego interfejsu idzie dalej dokładnie raz, potem obie
+        # są duplikatami. Wpis starszy niż REVERSE_TIMEOUT nie przekazuje i tak.
+        proof = proof_of(to_near)
+        clock = lambda ms: ("t_clock", ms.to_bytes(8, "big"))
+        start = [("t_begin", self.TWO), ("t_inif", b"\x01" + near), ("t_inif", b"\x00" + to_near), ("t_outif", b"")]
+        lines = self.ask(start + [("t_inif", b"\x00" + proof), ("t_outif", b""), ("t_forward", b""),
+                                  ("t_inif", b"\x01" + proof), ("t_outif", b""), ("t_inif", b"\x01" + proof),
+                                  ("t_inif", b"\x00" + proof), ("t_outif", b""), ("t_forward", b"")])
+        self.assertEqual(lines[5], "-")
+        self.assertEqual([lines[6].split()[i] for i in (2, 5)], ["0", "1"])
+        self.assertEqual(lines[8], "0:" + self.hops(proof, 1).hex())
+        self.assertEqual([self.parsed(lines[i])[1][0] for i in (9, 10)], [1, 2])   # duplikaty
+        self.assertEqual(lines[11], "-")
+        self.assertEqual([lines[12].split()[i] for i in (2, 5)], ["1", "0"])
+        lines = self.ask(start + [("t_inif", b"\x00" + proof), clock(1000 + 8 * 60 * 1000 + 1), ("t_outif", b""),
+                                  ("t_inif", b"\x01" + proof), ("t_outif", b""), ("t_forward", b"")])
+        self.assertEqual(lines[8], "-")
+        self.assertEqual([lines[9].split()[i] for i in (2, 5)], ["0", "0"])
         # Transport z jednym interfejsem nie przyjmuje pakietu z interfejsu 1.
         lines = self.ask([("t_begin", self.STATION), ("t_inif", b"\x01" + near), ("t_inif", b"\x00" + near)])
         self.assertEqual([self.parsed(line)[0] for line in lines[1:]], ["malformed", "ok"])
@@ -1229,6 +1408,75 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(lines[11], "0:" + rebroadcast)
         self.assertEqual(lines[13], "-")
         self.assertEqual(lines[14].split()[4:], ["3", "0", "0"])
+
+    def test_interfaces_emit_returns_accepting_mask(self):
+        # emit zwraca maskę interfejsów, które przyjęły ramkę; skrót trafia na listę tylko przy niezerowej masce.
+        frame = bytes(range(1, 40))
+        other = frame[::-1]
+        lines = self.ask([("t_begin", self.TWO), ("t_emit", b"\x01\x03" + frame), ("t_emit", b"\x03\x03" + other),
+                          ("t_emit", b"\x00\x03" + other)])
+        self.assertEqual(lines[1:], ["2 1", "0 1", "3 2"])
+
+    def test_interfaces_refused_transmit_keeps_discovery_response(self):
+        # transmit odmawia mimo zgody mayTransmit: odpowiedź odkrycia czeka dalej na ten interfejs, drugi nie jest
+        # wstrzymany, a udane nadanie nie powtarza się (zgodnie z przebiegiem bez odmowy).
+        ann = self.announce_of(bytes([68]) * 64)
+        dest = ann[2:18]
+        clock = lambda ms: ("t_clock", ms.to_bytes(8, "big"))
+        outs = {}
+        for name, drops in (("control", 0), ("refused", 1)):
+            lines = self.ask([("t_begin", self.TWO), ("t_inif", b"\x00" + self.path_request(dest, b"A" * 16)),
+                              ("t_inif", b"\x01" + self.path_request(dest, b"B" * 16)), ("t_inif", b"\x00" + ann),
+                              ("t_outif", b""), ("t_drop_tx", bytes([drops])), clock(1001), ("t_outif", b""),
+                              clock(1002), ("t_outif", b""), clock(2000), ("t_outif", b""), clock(3000), ("t_outif", b"")])
+            outs[name] = [lines[i] for i in (7, 9, 11, 13)]
+        control = [x[0] for x in outs["control"] if x != "-"]
+        refused = [x[0] for x in outs["refused"] if x != "-"]
+        self.assertEqual(sorted(control), ["0", "1"])
+        self.assertEqual(sorted(refused), ["0", "1"])   # nadane obydwa, tylko później
+
+    def test_interfaces_refused_transmit_keeps_rebroadcast_attempt(self):
+        # Jednorazowa odmowa transmit nie zużywa próby retransmisji: ogłoszenie wychodzi tyle razy co bez odmowy.
+        ann = self.announce_of(bytes([34]) * 64)
+        clock = lambda ms: ("t_clock", ms.to_bytes(8, "big"))
+        counts = {}
+        for name, drops in (("control", 0), ("refused", 1)):
+            lines = self.ask([("t_begin", self.STATION), ("t_in", ann), ("t_drop_tx", bytes([drops])), clock(1177),
+                              ("t_outif", b""), clock(1178), ("t_outif", b""), clock(6678), ("t_outif", b""),
+                              clock(6679), ("t_outif", b""), clock(20000), ("t_outif", b""), ("t_forward", b"")])
+            counts[name] = (sum(lines[i] != "-" for i in (4, 6, 8, 10, 12)), lines[-1].split()[4])
+        self.assertEqual(counts["control"], (2, "2"))
+        self.assertEqual(counts["refused"], (2, "2"))
+
+    def test_interfaces_refused_transmit_keeps_own_response_budget(self):
+        # Odmowa transmit przy odpowiedzi stacji na zapytanie o trasę nie zużywa limitu odpowiedzi interfejsu:
+        # następne zapytanie (inny znacznik) dostaje odpowiedź.
+        address = bytes.fromhex(self.ask([("t_begin", self.STATION)])[0])
+        lines = self.ask([("t_begin", self.STATION), ("t_announce", bytes(5) + b"WICI"), ("t_outif", b""),
+                          ("t_drop_tx", b"\x01"), ("t_in", self.path_request(address, b"A" * 16)), ("t_outif", b""),
+                          ("t_in", self.path_request(address, b"B" * 16)), ("t_outif", b"")])
+        self.assertEqual(lines[5], "-")
+        self.assertNotEqual(lines[7], "-")
+
+    def test_interfaces_permanently_refusing_transmit_is_bounded(self):
+        # transmit interfejsu 0 odmawia zawsze mimo zgody mayTransmit: liczba jego wywołań jest ograniczona stałą
+        # (druga odmowa tej samej próby kończy zaległość), wpisy schodzą, a interfejs 1 dostaje swoje nadania.
+        ann = self.announce_of(bytes([68]) * 64)
+        dest = ann[2:18]
+        clock = lambda ms: ("t_clock", ms.to_bytes(8, "big"))
+        commands = [("t_begin", self.TWO), ("t_inif", b"\x00" + self.path_request(dest, b"A" * 16)),
+                    ("t_inif", b"\x01" + self.path_request(dest, b"B" * 16)), ("t_inif", b"\x00" + ann),
+                    ("t_decline", b"\x01")]
+        commands += [clock(1001 + 100 * i) for i in range(200)] + [("t_calls", b"")]
+        middle = len(commands) - 1
+        commands += [clock(21001 + 100 * i) for i in range(200)] + [("t_calls", b""), ("t_outif", b"")]
+        commands += [("t_paths", b"")]
+        lines = self.ask(commands)
+        early, late = (list(map(int, lines[i].split())) for i in (middle, -3))
+        self.assertEqual(early, late)   # po rezygnacji brak dalszych wywołań
+        self.assertLessEqual(late[0], 8)
+        self.assertGreaterEqual(late[1], 2)   # odpowiedź odkrycia i ponowienia: interfejs 1 nie jest wstrzymany
+        self.assertEqual(lines[-1].split()[6], "0")   # tablica ogłoszeń pusta
 
     def test_interfaces_own_response_limit_per_interface(self):
         # Limit odpowiedzi na zapytanie o cel stacji (OWN_RESPONSE_MIN_MS) liczy się osobno na interfejs:

@@ -259,6 +259,7 @@ bool inStation = false;
 // Hak packet stacji rozstrzyga losowo trzy z czterech pakietów (rnd()); settleAll: każdy, gdy scenariusz
 // wymaga dowodu dla swojej wiadomości.
 bool settleAll = false;
+uint32_t appPackets = 0;   // wiadomości przekazane hakowi packet stacji (warstwie aplikacji)
 
 // ---- łącze radiowe: datagramy stacji trafiają do generatora (powtórki, dowody) ----
 struct Radio : rnsnode::Radio {
@@ -826,6 +827,14 @@ void flood() {
     floodResult = text;
 }
 
+// Pakiet z wiadomością SA1 (treść sa1) w LXMF od odbiorcy z karty do celu stacji.
+Bytes receiverMessage(const char* sa1) {
+    uint8_t lxmf[400], messageHash[32];
+    const size_t n = rnscore::lxmfPackSa1(peers[0].prv, peers[0].pub, stationDest.data(), peerDest[0].data(), 0,
+                                          reinterpret_cast<const uint8_t*>(sa1), strlen(sa1), lxmf, sizeof(lxmf), messageHash);
+    return dataTo(station, stationDest, Bytes(lxmf, lxmf + n));
+}
+
 // Zalew pakietami do celu stacji (stacja na rdzeniu): przez 60 s dwa datagramy na obieg loop() z poprawnie
 // zaszyfrowanymi pakietami do stacji o przypadkowej treści. Każdy przetworzony kosztuje trzy operacje
 // (odszyfrowanie, podpis dowodu trwałego odrzucenia, IFAC dowodu), więc limit pracy (wiadro w
@@ -855,11 +864,7 @@ void stationFlood() {
 
     // Wiadomość SA1 odbiorcy z karty tuż po zalewie (wiadro puste): odpada bez zapisu skrótu, więc ta sama
     // kopia po uzupełnieniu wiadra (inną drogą, od przekaźnika) przechodzi z dowodem.
-    const char sa1[] = "[1,\"after the station flood\"]";
-    uint8_t lxmf[400], messageHash[32];
-    const size_t n = rnscore::lxmfPackSa1(peers[0].prv, peers[0].pub, stationDest.data(), peerDest[0].data(), 0,
-                                          reinterpret_cast<const uint8_t*>(sa1), sizeof(sa1) - 1, lxmf, sizeof(lxmf), messageHash);
-    const Bytes m = dataTo(station, stationDest, Bytes(lxmf, lxmf + n));
+    const Bytes m = receiverMessage("[1,\"after the station flood\"]");
     const uint32_t before = rnsnode::status().packetsReceived, rejected = interfaceCounter("lxmf_rejected");
     const uint32_t limitedBefore = interfaceCounter("rx_limited");
     receive(m);
@@ -1049,8 +1054,9 @@ void hostileDays(long days, long windowS, long stopAfterS) {
 }
 
 // Uszkodzone gniazdo odbiorcy z karty w tablicy znanych celów rdzenia (FRAM od framfs::FS_BASE, gniazda
-// 568 B, cel od bajtu 16; lib/reticulum_core/src/table.h): pakiet stacji do odbiorcy wychodzi mimo to
-// (wpis z kluczy karty od nowa), a gniazdo liczy "table_corrupt".
+// 568 B, cel od bajtu 16; lib/reticulum_core/src/table.h): wiadomość SA1 odbiorcy do stacji przechodzi do
+// warstwy aplikacji (podpis sprawdzany kluczem z karty, nie z tablicy), pakiet stacji do odbiorcy wychodzi
+// mimo to (wpis z kluczy karty od nowa), a gniazdo liczy "table_corrupt".
 void damagedReceiver() {
     constexpr size_t SLOT = 568, SLOTS = 257;
     bool damaged = false;
@@ -1061,6 +1067,13 @@ void damagedReceiver() {
         damaged = true;
     }
     if (!damaged) fail("damaged-receiver: no receiver slot");
+    const uint32_t before = appPackets, rejected = interfaceCounter("lxmf_rejected");
+    settleAll = true;
+    receive(receiverMessage("[1,\"reply after a damaged slot\"]"));
+    for (int k = 0; k < 4; ++k) { simMs += 20; service(); }
+    settleAll = false;
+    if (interfaceCounter("lxmf_rejected") != rejected) fail("damaged-receiver: SA1 message from the receiver rejected");
+    if (appPackets != before + 1) fail("damaged-receiver: SA1 message from the receiver lost");
     // Koperta warstwy aplikacji (station.cpp) z treścią SA1; rdzeń wysyła treść w LXMF.
     const std::string message = "[\"WICI\",1,\"" + hex(rnsnode::address(), 16) + "\",\"" + hex(peerDest[0].data(), 16) +
                                 "\",[1,\"report after a damaged slot\"]]";
@@ -1386,7 +1399,11 @@ int main(int argc, char** argv) {
     uint8_t seed[32];
     for (uint8_t& b : seed) b = static_cast<uint8_t>(rnd());
     rnsnode::Hooks hooks;
-    hooks.packet = [](const uint8_t*, size_t, bool& exception, void*) { exception = false; return settleAll || rnd() % 4 != 0; };
+    hooks.packet = [](const uint8_t*, size_t, bool& exception, void*) {
+        ++appPackets;
+        exception = false;
+        return settleAll || rnd() % 4 != 0;
+    };
     if (!rnsnode::begin(fram, radio, IFAC_KEY, simMs, !savedId.empty(), seed, hooks)) {
         const rnsnode::Status s = rnsnode::status();
         printf("{\"result\":\"%s\"}\n", s.identityLost ? "identity_lost" : "begin_failed");

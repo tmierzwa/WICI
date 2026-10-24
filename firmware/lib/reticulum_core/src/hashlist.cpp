@@ -28,6 +28,17 @@ bool HashList::add(const uint8_t hash[HASH_SIZE]) {
     return true;
 }
 
+void HashList::remove(const uint8_t hash[HASH_SIZE]) {
+    const uint64_t k = key(hash);
+    for (size_t n = 0, i = next_; n < count_; ++n) {
+        i = (i + HASHLIST_MAX - 1) % HASHLIST_MAX;
+        if (keys_[i] == k) {
+            keys_[i] = 0;
+            return;
+        }
+    }
+}
+
 void HashList::clear() {
     for (uint64_t& k : keys_) k = 0;
     count_ = 0;
