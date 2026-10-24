@@ -76,9 +76,17 @@ void Table::drop(size_t slot) {
     --count_;
 }
 
-uint32_t Table::sequenceOf(size_t slot) {
-    uint8_t header[HEADER];
-    return storage_->read(offsetOf(slot), header, sizeof(header)) ? get32(header + AT_SEQUENCE) : 0;
+bool Table::readHeader(size_t slot, uint8_t* header) { return storage_->read(offsetOf(slot), header, HEADER); }
+
+void Table::mount(size_t slot, const uint8_t* header, uint32_t nowS) {
+    memcpy(index_[slot].destination, header + AT_DESTINATION, TRUNCATED_HASH_SIZE);
+    // Czas z przyszłości (zegar cofnięty) nie chroni wpisu przed wyparciem, a trasa nie wygasa od razu.
+    index_[slot].usedS = notAfter(get32(header + AT_USED), nowS);
+    index_[slot].pathUsedS = notAfter(get32(header + AT_PATH_USED), nowS);
+    setBit(live_, slot, true);
+    setBit(path_, slot, (header[AT_FLAGS] & FLAG_PATH) && interfaceOf(header[AT_FLAGS]) < interfaces_);
+    setBit(second_, slot, interfaceOf(header[AT_FLAGS]) == 1);
+    ++count_;
 }
 
 // RNS/Transport.py: Transport.start (wczytanie destination_table) i RNS/Identity.py: load_known_destinations.
@@ -90,28 +98,33 @@ void Table::begin(TableStorage& storage, uint32_t nowS, uint8_t interfaces) {
     interfaces_ = interfaces;
     for (size_t slot = 0; slot < TABLE_SLOTS; ++slot) {
         uint8_t header[HEADER];
-        if (!storage.read(offsetOf(slot), header, sizeof(header))) continue;
+        if (!readHeader(slot, header)) continue;
         if (header[0] != COMMITTED || header[1] != FORMAT || get16(header + AT_SLOT) != slot) continue;
         const uint32_t sequence = get32(header + AT_SEQUENCE);
         if (sequence > sequence_) sequence_ = sequence;
-        const int other = find(header + AT_DESTINATION);
-        if (other >= 0) {
-            // Przegrana kopia unieważniona, żeby nie wróciła po wyparciu zwycięskiej.
-            if (sequenceOf(static_cast<size_t>(other)) > sequence) {   // nowsza kopia już w indeksie
-                invalidate(slot);
+        const int found = find(header + AT_DESTINATION);
+        if (found >= 0) {
+            // Dwie kopie celu (zanik zasilania przed unieważnieniem starej). Przegrana kopia jest unieważniana, żeby nie
+            // wróciła po wyparciu zwycięskiej, ale dopiero po odczycie całej zwycięskiej z CRC. Błąd odczytu niczego nie
+            // unieważnia: obie kopie zostają w FRAM, a w indeksie ta, którą już wczytano; rozstrzyga następny start.
+            const size_t other = static_cast<size_t>(found);
+            uint8_t otherHeader[HEADER];
+            if (!readHeader(other, otherHeader)) continue;
+            if (get32(otherHeader + AT_SEQUENCE) > sequence) {   // nowsza kopia już w indeksie
+                if (load(other)) invalidate(slot);
+                else if (!live(other)) mount(slot, header, nowS);   // jej treść uszkodzona: ta kopia zostaje
                 continue;
             }
-            drop(static_cast<size_t>(other));
-            invalidate(static_cast<size_t>(other));
+            drop(other);
+            mount(slot, header, nowS);
+            if (load(slot)) {
+                invalidate(other);
+            } else if (!live(slot)) {   // treść nowszej uszkodzona: wraca starsza
+                mount(other, otherHeader, nowS);
+            }
+            continue;
         }
-        memcpy(index_[slot].destination, header + AT_DESTINATION, TRUNCATED_HASH_SIZE);
-        // Czas z przyszłości (zegar cofnięty) nie chroni wpisu przed wyparciem, a trasa nie wygasa od razu.
-        index_[slot].usedS = notAfter(get32(header + AT_USED), nowS);
-        index_[slot].pathUsedS = notAfter(get32(header + AT_PATH_USED), nowS);
-        setBit(live_, slot, true);
-        setBit(path_, slot, (header[AT_FLAGS] & FLAG_PATH) && interfaceOf(header[AT_FLAGS]) < interfaces_);
-        setBit(second_, slot, interfaceOf(header[AT_FLAGS]) == 1);
-        ++count_;
+        mount(slot, header, nowS);
     }
 }
 
