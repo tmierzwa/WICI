@@ -552,7 +552,8 @@ int main() {
             packet.context = p[6 + 2 * rnscore::TRUNCATED_HASH_SIZE];
             packet.data = p + 6 + 2 * rnscore::TRUNCATED_HASH_SIZE + 1;
             packet.dataLength = data.size() - (6 + 2 * rnscore::TRUNCATED_HASH_SIZE + 1);
-            uint8_t out[rnscore::MTU];
+            // Bufor większy od MTU: granicę pakietu pilnuje `pack`, nie rozmiar bufora.
+            uint8_t out[2 * rnscore::MTU];
             const size_t length = rnscore::pack(packet, out, sizeof(out));
             if (length) {
                 printHex(out, length);
