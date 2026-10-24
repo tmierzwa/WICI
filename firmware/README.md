@@ -10,6 +10,8 @@ Ruch idzie przez [stos Reticulum](#stos-reticulum) z interfejsem P1, IFAC, tożs
 
 Stacja ma jedną rolę (D19): w [konfiguracji węzła stanowiska](#węzeł-stanowiska) przekazuje ruch i łączy radio z komputerem stanowiska drugim interfejsem Reticulum przez USB.
 
+**Obrazy z rdzeniem nie przeszły jeszcze prób na płytkach.** Etapy R6-3 i R6-4 są w `main` przed [próbami 1–8](#przejście-na-rdzeń-i-powrót-do-portu); sprawdzenia na komputerze (testy, zgodność z Reticulum w Pythonie, fuzzing) nie zastępują prób kryptografii, RAM, radia, USB, zaniku zasilania i długiej pracy na płytce. Do raportu z prób `main` jest wersją rozwojową: obrazów z rdzeniem nie używa się w pilotażu ani w wydaniu, a obrazy `*-port` zostają.
+
 Środowisko `bench-n1` buduje ten sam obraz dla stanowiska A na [płytce nośnej N1](#płytka-nośna-n1-bench-n1) zamiast przewodów: inne piny SPI, radia i ekranu oraz panel płytki (przełącznik CISZA, przycisk przygotowania, dioda alarmu, brzęczyk, VTEST).
 
 Środowisko `bench-b` buduje ten sam program stacji dla [stanowiska B na N1](#stanowisko-b-na-płytce-n1-bench-b): ESP32-S3-DevKitC-1 z X-NUCLEO-S2868A2 (ST S2-LP) zamiast nRF52840 i CC1120. Wspólne są polecenia, polecenia pomiarowe, łącze P1, dziennik, magazyn, protokół USB laptop–stacja z dwoma interfejsami CDC, warstwa aplikacji, ekran i panel N1; różnią się warstwa MCU (`src/platform_*.cpp`), sterownik układu radiowego (`src/radio_console_*.cpp`, `src/*_link.cpp`) i [rejestry P1 dla S2-LP](#rejestry-profilu-p1-dla-s2-lp).
@@ -667,7 +669,7 @@ Obrazy z rdzeniem mają nowe wersje (`version` w `INFO`): `bench-a-0.2`, `bench-
 
 **Powrót do portu.** Do etapu R6-5 to obraz `*-port` z tego samego commita (`pio run -e bench-a-port -t upload`). Tożsamość zostaje, adres wraca do `wici.sa1`, a port nie znajduje nagłówka swojego systemu plików i formatuje obszar tablic, więc tablice budują się od nowa. Po etapie R6-5 w `main` nie ma obrazów z portem: obraz `*-port` buduje się z podpisanego znacznika git z adnotacją na ostatnim commicie `main` z tymi obrazami (nazwę znacznika podaje R6-5), czyli `git checkout <znacznik>`, a potem `pio run -e bench-a-port -t upload`. Budowa pobiera port i jego biblioteki z przypiętych commitów (`tools/stack_deps.py`), więc wymaga, żeby te repozytoria były dostępne.
 
-**Próby na płytkach przed scaleniem R6-3 i R6-4** (na obrazach końcowych po R6-4: `bench-a`, `bench-n1`, `bench-b` i `l0` z rdzeniem; wynik w Issue z etykietą `próba`):
+**Próby na płytkach przed wydaniem i przed R6-5** (warunek odbioru obrazów z rdzeniem; R6-3 i R6-4 scalono przed nimi; na obrazach końcowych po R6-4: `bench-a`, `bench-n1`, `bench-b` i `l0` z rdzeniem; wynik w Issue z etykietą `próba`):
 
 1. [Samotest rdzenia](#samotest-rdzenia-na-płytce) na DK, N1 i L0 (`board_selftest.py`): `selftest_ok`, `entropy_ok`, czasy `validate`, `sign` i `token_decrypt`; z nich wynika, czy limity weryfikacji (3 naraz, 1 na sekundę) i kolejka odbioru (4) zostają.
 2. RAM w czasie pracy przy pełnej tablicy (256 celów: ogłoszenia z Reticulum w Pythonie przez węzeł stanowiska na USB albo przez P1 z drugiej płytki): wolna sterta i zapas stosów zadań; zapas ≥30% na nRF52840 i ESP32-S3.
@@ -764,7 +766,7 @@ Odłożone (z szacunkiem zysku; każde wymaga osobnej zmiany i testów):
 ## Następne kroki
 
 1. Próby na sprzęcie według kroków wyżej (obraz nie był jeszcze uruchomiony na płytce), na N1 także pomiar oscyloskopem przy J7 i U1 (ekran 1 i 2 MHz, FRAM 8 MHz, poziomy i zbocza); węzeł stanowiska z komputerem stanowiska przez USB.
-2. Próby 1–8 rdzenia na płytkach z [listy](#przejście-na-rdzeń-i-powrót-do-portu) na obrazach końcowych (warunek scalenia etapów R6-3 i R6-4), potem usunięcie portu (R6-5); z nich decyzja o pamięci (D14) i reszta [etapu LXMF](#co-zostaje-na-etap-lxmf).
+2. Próby 1–8 rdzenia na płytkach z [listy](#przejście-na-rdzeń-i-powrót-do-portu) na obrazach końcowych (warunek wydania i pilotażu na rdzeniu), potem usunięcie portu (R6-5); z nich decyzja o pamięci (D14) i reszta [etapu LXMF](#co-zostaje-na-etap-lxmf).
 3. Próby stosu na sprzęcie z [listy](#próba-zgodności-z-reticulum), których nie obejmują próby 1–8: płytka z Reticulum w Pythonie przez radio, czasy kryptografii przy `-Os`.
 4. Stanowisko B (`bench-b`), w tej kolejności:
    - kroki B3–B4 na sprzęcie (w tym wyliczenie dwóch portów CDC, wgrywanie przez dotknięcie 1200 b/s i to, czy restart przez watchdog zadań daje `esp_reset_reason()` = TASK_WDT, a nie PANIC, od czego zależy wpis „restart by watchdog”), wybór napędu SCK i MOSI (`DRIVE`) i zegara ekranu analizatorem na J11;
