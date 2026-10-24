@@ -91,7 +91,9 @@ struct TransportState {
     std::string events;            // wywołania announce, packet i receipt od ostatniego polecenia
     bool accept = true;
     uint8_t busy = 0;    // bit 1 << interfejs: interfejs nie przyjmie pakietu (mayTransmit)
-    uint8_t declined = 0;   // bit 1 << interfejs: transmit odmawia ramki (t_emit)
+    long dropTx = 0;        // następne tyle nadań transmit odmówi (t_drop_tx), mimo zgody mayTransmit
+    unsigned txCalls[8] = {};   // wywołania transmit na interfejs, także odrzucone (t_calls)
+    uint8_t declined = 0;   // bit 1 << interfejs: transmit odmawia ramki (t_emit, t_decline)
     bool refuse = false; // brak żetonu na pakiet do stacji (mayReceive)
     uint64_t nowMs = 1000;
 };
@@ -121,6 +123,11 @@ bool onMayTransmit(uint8_t iface, void*) { return !(state->busy & (1u << iface))
 bool onMayReceive(void*) { return !state->refuse; }
 
 bool onTransmit(const uint8_t* raw, size_t length, uint8_t iface, void*) {
+    ++state->txCalls[iface & 7];
+    if (state->dropTx > 0) {
+        --state->dropTx;
+        return false;
+    }
     if (state->declined & (1u << iface)) return false;
     state->emitted.assign(raw, raw + length);
     state->sent.emplace_back(raw, raw + length);
@@ -485,6 +492,17 @@ int main() {
         } else if (command == "t_held") {
             // wstrzymane retransmisje (held_announces)
             printf("%u\n", static_cast<unsigned>(state->transport.heldAnnounces()));
+        } else if (state && command == "t_decline" && data.size() == 1) {
+            // interfejsy z maski (bit 1 << numer) odmawiają każdego nadania transmit, choć mayTransmit zezwala
+            state->declined = data[0];
+            printTransport("ok");
+        } else if (state && command == "t_calls") {
+            // wywołania transmit od początku: interfejs 0, interfejs 1
+            printf("%u %u\n", state->txCalls[0], state->txCalls[1]);
+        } else if (state && command == "t_drop_tx" && data.size() == 1) {
+            // następnych N (1 B) nadań transmit odmówi, choć mayTransmit zezwala
+            state->dropTx = data[0];
+            printTransport("ok");
         } else if (command == "t_busy" && data.size() == 1) {
             // interfejsy zajęte dla mayTransmit: bit 1 << numer (1: interfejs 0 zajęty, 0: wszystkie wolne)
             state->busy = data[0];
