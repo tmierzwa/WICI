@@ -57,12 +57,15 @@ HARNESS = r"""
 
 // FRAM w RAM: 512 KiB skasowane do 0xFF jak nowy układ. budget: bajty zapisu od store::TX_BASE do
 // zaniku zasilania (zapis przerwany w połowie, potem każdy zapis magazynu zawodzi); -1 bez limitu.
+// readFailures: tyle kolejnych odczytów rejestru zwraca błąd (przejściowa odmowa FRAM).
 struct RamStorage : journal::Storage {
     std::vector<uint8_t> bytes = std::vector<uint8_t>(512 * 1024, 0xFF);
     size_t readBytes = 0;
     long budget = -1;
+    long readFailures = 0;
     bool read(uint32_t address, uint8_t* data, size_t count) override {
         if (address + count > bytes.size()) return false;
+        if (address >= store::REGISTER_BASE && address < store::INBOX_BASE && readFailures > 0) { --readFailures; return false; }
         memcpy(data, &bytes[address], count);
         readBytes += count;
         return true;
@@ -584,7 +587,8 @@ int world() {
         unsigned a = 0, b = 0, c = 0, d = 0, e = 0, f = 0;
         char word[16];
         char hex[80] = "";
-        if (!strcmp(cmd, "restart")) {
+        if (!strcmp(cmd, "readfail")) { w.ram.readFailures = atoi(arg); }
+        else if (!strcmp(cmd, "restart")) {
             const store::Begin result = w.start();
             printf("begin %s\n", store::beginName(result));
         } else if (!strcmp(cmd, "wipe")) {
@@ -1744,6 +1748,29 @@ class HostUnitTests(unittest.TestCase):
         tests = self.find(out, "test ")
         self.assertEqual(tests[0], tests[1])   # powtórzone nonce: ten sam wynik
         self.assertEqual(len(self.regs(out, "d")), 3)
+
+    def test_reply_read_failure_gives_no_proof(self):
+        # Nieudany odczyt gniazda zgłoszenia przy odbiorze REPLY: bez dowodu i bez wpisu; ponowienie zapisuje wiadomość raz.
+        x = self.rid(1234)
+        reply = "in " + compact([1, 3, x, 0, 1, "test reply"])
+        out = self.world([self.CONFIG, self.sub(self.request(x)), "readfail 1", reply, "reg a", "inbox a", "stats a", reply, "reg b",
+                          "inbox b", "restart", "reg c", "inbox c"])
+        self.assertEqual([line.split()[1] for line in self.find(out, "rx ")], ["0", "1"])   # raz bez dowodu, potem z dowodem
+        self.assertEqual(self.records(out, "msg", "a"), [])
+        self.assertEqual(self.stats(out, "a")["skipped"], 0)
+        self.assertEqual([r["rhi"] for r in self.regs(out, "a").values()], [0])
+        self.assertEqual([r["rhi"] for r in self.regs(out, "b").values()], [1])
+        self.assertEqual(len(self.records(out, "msg", "b")), 1)
+        self.assertEqual(len(self.records(out, "msg", "c")), 1)
+        self.assertEqual([r["rhi"] for r in self.regs(out, "c").values()], [1])
+
+    def test_submit_read_failure_takes_no_new_slot(self):
+        # Powtórne `submit` po nieudanym odczycie: błąd dla laptopa, bez drugiego gniazda; po ustąpieniu błędu duplikat.
+        request = self.sub(self.request(self.rid(1234)))
+        out = self.world([self.CONFIG, request, "readfail 1", request, "reg a", request, "reg b", "restart", "reg c"])
+        self.assertEqual([line.split()[1] for line in self.find(out, "sub ")], ["stored", "memory", "duplicate"])
+        for label in "abc":
+            self.assertEqual(len(self.regs(out, label)), 1, label)
 
     def test_alarms_after_power_on(self):
         # oprogramowanie.md, "Czas": bez RTC czas wyłączenia jest nieznany, więc po włączeniu zasilania

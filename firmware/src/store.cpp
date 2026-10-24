@@ -1012,13 +1012,16 @@ bool Store::readRequest(size_t slot, Request& out) {
            state == SlotState::USED && decodeRequest(body, length, out);
 }
 
-int Store::findRequest(const uint8_t id[HASH]) {
+Found Store::findRequest(const uint8_t id[HASH], int& slot) {
     const uint32_t prefix = idPrefix(id);
     Request r;
+    slot = -1;
     for (size_t i = 0; i < REGISTER_SLOTS; ++i) {
-        if (register_[i].used() && register_[i].idPrefix == prefix && readRequest(i, r) && !memcmp(r.id, id, HASH)) return static_cast<int>(i);
+        if (!register_[i].used() || register_[i].idPrefix != prefix) continue;
+        if (!readRequest(i, r)) return Found::ERROR;   // gniazdo mogło zawierać szukane id
+        if (!memcmp(r.id, id, HASH)) { slot = static_cast<int>(i); return Found::YES; }
     }
-    return -1;
+    return Found::NO;
 }
 
 int Store::freeRequestSlot() const {
@@ -1188,7 +1191,8 @@ Event Store::radioEvent(const Meta& m, bool switchOn) {
     e.kind = EventKind::RADIO;
     e.a = radioBits(m, switchOn);
     if (!(e.a & RADIO_EXCEPTION)) return e;
-    const int slot = findRequest(m.exception);
+    int slot;
+    findRequest(m.exception, slot);   // zdarzenie dziennika, nie decyzja: przy ERROR bez gniazda, numer w `value`
     e.slot = slot >= 0 ? static_cast<uint16_t>(slot) : 0xFFFF;
     e.gen = slot >= 0 ? register_[slot].gen : 0;
     e.revision = m.exceptionRev;
