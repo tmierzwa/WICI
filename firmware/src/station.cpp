@@ -579,7 +579,10 @@ bool Station::pauseTest(bool paused) {
     tx.meta().testPaused = paused;
     const int slot = paused ? pendingTest() : -1;
     Request r;
-    if (slot >= 0 && store_.readRequest(static_cast<size_t>(slot), r)) markCancelled(tx, static_cast<uint16_t>(slot), r);
+    if (slot >= 0) {
+        if (!store_.readRequest(static_cast<size_t>(slot), r)) return false;   // bez commit: ani pauzy, ani anulowania
+        markCancelled(tx, static_cast<uint16_t>(slot), r);
+    }
     if (!tx.commit()) return false;
     services_.log(paused ? "test paused" : "test resumed");
     services_.changed();

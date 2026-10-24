@@ -102,8 +102,8 @@
  ],
  "outputs": {
   "wici-station.mjs": {
-   "sha256": "4622117f5fbf3aa9770f33dc5213650da5ad63ed2a937bba5d4b34e3cf0138b8",
-   "bytes": 1130498,
+   "sha256": "39c582c273e296ea91860a517999159e50dc32eb24e804dfd0bce34cdeb15f68",
+   "bytes": 1130630,
    "sources": [
     "firmware/src/annunciator.cpp",
     "firmware/src/config.cpp",
@@ -237,10 +237,10 @@
   "firmware/src/sharp.h": "a2ac3ac7b9c811f9a438b67209dc644592f348053f0cc5c987446b4fd7ff1451",
   "firmware/src/sharp_extcomin_esp32.cpp": "f151fa001c2a3f4346687fac5f581323ecbf55704124d443c5d9087a4dcb33fb",
   "firmware/src/sharp_extcomin_nrf.cpp": "b26323614a98ad9c29d7ee14191db6108439a8c476f1eb7f94148f480785b3be",
-  "firmware/src/station.cpp": "2d141b9bbd4b5d9c6a5b338ee4d3161843db4d07ec38413ce59d66a2f6cedde4",
+  "firmware/src/station.cpp": "fffb4884b73c985e4a04f4ada47eb6d56cb94f710c1ec48721a15d9d89667f02",
   "firmware/src/station.h": "03ed337a2e25f4403008b5df9321f6f90104654842caa6933729443248e1bba6",
-  "firmware/src/store.cpp": "e0d80ae39e362724f8aec930344355e821dcc0fcb92ca17196a0cb7af3dfc68b",
-  "firmware/src/store.h": "0d891eb56dcefce140024da7350c04198bc28f4b25ae0d2bd36767f1972da558",
+  "firmware/src/store.cpp": "35425d9860c5fc954aca97cdd157ca9eb74ebbc629412580e8873bd85362569a",
+  "firmware/src/store.h": "1b74e14582e02c7dae9d50ba539150f978da60d4093bcf2dd9c1dae733e1f38b",
   "firmware/src/sx1262.cpp": "309ae0edacbb5e8178040da4054ce7814efbc2b985177a5eeb27157baa7481a1",
   "firmware/src/sx1262.h": "afb11bb2ba3bc95d2544671905ebf9e37a19decdd05702172db7deb758c3a9c2",
   "firmware/src/sx1262_link.cpp": "70b53fc25cdf7687d15272e880ca2eaea2d42f562bd415b758a268125491cfed",

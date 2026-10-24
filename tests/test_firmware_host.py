@@ -1772,6 +1772,26 @@ class HostUnitTests(unittest.TestCase):
         for label in "abc":
             self.assertEqual(len(self.regs(out, label)), 1, label)
 
+    def test_find_request_marks_slot_corrupted_after_start(self):
+        # Treść gniazda uszkodzona po starcie (nie błąd odczytu): pierwsze wyszukanie wyłącza gniazdo jak skan przy starcie
+        # (diag corrupt), kolejne dają „brak”; stacja nie zwraca MEMORY w nieskończoność.
+        request = self.sub(self.request(self.rid(1234)))
+        register = 0x10000   # store::REGISTER_BASE, gniazda po 512 B
+        out = self.world([self.CONFIG, request, f"flip {register + 40}", "diag", request, "diag", request, "diag", "restart", "diag"])
+        self.assertEqual([line.split()[1] for line in self.find(out, "sub ")], ["stored", "stored", "duplicate"])
+        self.assertEqual(["corrupt=%d" % n in line for line, n in zip(self.find(out, "diag "), (0, 1, 1, 1))], [True] * 4)
+
+    def test_pause_test_read_failure(self):
+        # Nieudany odczyt czekającego TEST-u: WSTRZYMAJ nie udaje, nic się nie zmienia; po ustąpieniu błędu anuluje TEST.
+        out = self.world([self.CONFIG, "now 100", "stest 1", "reg a", "readfail 1", "pause 1", "diag", "reg b",
+                          "pause 1", "reg c", "pause 0", "now 123", "poll", "restart", "poll", "reg d"])
+        self.assertEqual(self.find(out, "pause "), ["pause 0 0", "pause 1 1", "pause 1 0"])
+        self.assertIn("paused=0", self.find(out, "diag ")[0])
+        self.assertEqual(self.regs(out, "b"), self.regs(out, "a"))   # rekord TEST bez zmian
+        self.assertEqual([r["stage"] for r in self.regs(out, "c").values()], [4])
+        self.assertEqual(self.find(out, "send "), [])                # po WZNÓW i po restarcie stary TEST nie jest nadany
+        self.assertEqual([r["stage"] for r in self.regs(out, "d").values()], [4])
+
     def test_alarms_after_power_on(self):
         # oprogramowanie.md, "Czas": bez RTC czas wyłączenia jest nieznany, więc po włączeniu zasilania
         # próg alarmu zgłoszenia odliczanego sprzed włączenia jest przekroczony; [n] to dolne oszacowanie.

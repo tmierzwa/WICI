@@ -1003,13 +1003,21 @@ const uint8_t* Store::recipient() const {
 }
 
 bool Store::readRequest(size_t slot, Request& out) {
-    if (slot >= REGISTER_SLOTS || !register_[slot].used()) return false;
+    return readRequestAt(slot, out) == Found::YES;
+}
+
+Found Store::readRequestAt(size_t slot, Request& out) {
+    if (slot >= REGISTER_SLOTS || !register_[slot].used()) return Found::NO;
     uint8_t body[BODY_MAX];
     size_t length = 0;
     SlotState state;
     uint16_t gen;
-    return readSlot(addressOf(REGISTER, static_cast<uint16_t>(slot)), REGISTER, static_cast<uint16_t>(slot), body, length, state, gen) &&
-           state == SlotState::USED && decodeRequest(body, length, out);
+    if (!readSlot(addressOf(REGISTER, static_cast<uint16_t>(slot)), REGISTER, static_cast<uint16_t>(slot), body, length, state, gen)) return Found::ERROR;
+    if (state == SlotState::USED && decodeRequest(body, length, out)) return Found::YES;
+    // Treść uszkodzona po starcie: gniazdo wyłączone jak przy skanowaniu (absorb), więc nie blokuje kolejnych wyszukań.
+    register_[slot].state = SlotState::CORRUPT;
+    ++diag_.corruptSlots;
+    return Found::NO;
 }
 
 Found Store::findRequest(const uint8_t id[HASH], int& slot) {
@@ -1018,8 +1026,9 @@ Found Store::findRequest(const uint8_t id[HASH], int& slot) {
     slot = -1;
     for (size_t i = 0; i < REGISTER_SLOTS; ++i) {
         if (!register_[i].used() || register_[i].idPrefix != prefix) continue;
-        if (!readRequest(i, r)) return Found::ERROR;   // gniazdo mogło zawierać szukane id
-        if (!memcmp(r.id, id, HASH)) { slot = static_cast<int>(i); return Found::YES; }
+        const Found read = readRequestAt(i, r);
+        if (read == Found::ERROR) return Found::ERROR;   // gniazdo mogło zawierać szukane id
+        if (read == Found::YES && !memcmp(r.id, id, HASH)) { slot = static_cast<int>(i); return Found::YES; }
     }
     return Found::NO;
 }

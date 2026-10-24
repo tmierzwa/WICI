@@ -357,6 +357,7 @@ public:
     // Rejestr.
     const RequestIndex& request(size_t slot) const { return register_[slot]; }
     bool readRequest(size_t slot, Request& out);
+    Found readRequestAt(size_t slot, Request& out);   // NO: treść uszkodzona po starcie (gniazdo wyłączone), ERROR: odczyt zawiódł
     Found findRequest(const uint8_t id[HASH], int& slot);   // slot przy YES, inaczej -1; ERROR to nie „brak”
     int freeRequestSlot() const;
     int closedRequest() const;                          // wpis zamknięty o najdawniejszej zmianie albo -1
