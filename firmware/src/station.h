@@ -72,6 +72,7 @@ struct Alarm {
     uint16_t gen = 0;
     uint16_t number = 0;
     uint32_t minutes = 0;
+    bool ageKnown = true;
 };
 
 struct Stats {

@@ -28,7 +28,7 @@ STATIC = {"/": ("index.html", "text/html; charset=utf-8"), "/app.js": ("app.js",
           "/app.css": ("app.css", "text/css; charset=utf-8"), "/logo.svg": ("logo.svg", "image/svg+xml"),
           "/logo-dark.svg": ("logo-dark.svg", "image/svg+xml")}
 BODY_MAX = 64 * 1024
-LONG_POLL = 20
+LONG_POLL = 2   # dostępność USB sprawdzamy również bez zmiany danych
 
 
 class Panel:
@@ -248,7 +248,7 @@ def ticket(panel, body):
 def _text(body, key):
     value = body.get(key)
     if not isinstance(value, str) or not value or len(value) > 200:
-        raise ValueError(f"brak pola {key}")
+        raise ValueError("Wpisz hasło z koperty." if key == "password" else f"brak pola {key}")
     return value
 
 

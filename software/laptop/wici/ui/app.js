@@ -210,16 +210,25 @@ function renderSession() {
       $(`choose-${side}`).textContent = `${side === "disk" ? "Kopia z dysku" : "Kopia z pamięci USB"} (zapis ${c.gen}, ${new Date(c.at).toLocaleString("pl-PL")})`;
     }
   }
+  const copyStatus = $("copy-status"), db = s.db || {};
+  copyStatus.hidden = !user;
+  if (user) {
+    const last = db.usb_at ? ` Ostatnia kopia: ${new Date(db.usb_at).toLocaleString("pl-PL")}.` : " Brak potwierdzonego zapisu w tej sesji.";
+    copyStatus.classList.toggle("notice-alarm", !db.usb_saved);
+    copyStatus.textContent = db.disk_error ? "Błąd zapisu na dysku laptopa. Nie ma potwierdzenia utrwalenia ostatnich zmian." :
+      db.usb_problem ? `${db.usb_problem}. Włóż właściwą pamięć zestawu.${last}` :
+      db.usb_error ? `Błąd zapisu kopii na USB. Najnowsze dane nie są gotowe do przeniesienia.${last}` :
+      db.usb_saved ? `Kopia na USB jest aktualna.${last}` : `Trwa zapis kopii na USB. Nie wyjmuj pamięci.${last}`;
+  }
   if (!user) return;
-  const db = s.db || {};
   $("kit-user").textContent = s.user_label || "–";
   $("kit-disk").textContent = db.disk_error ? "błąd: " + db.disk_error : (db.saved ? "zapisana" : "zapisuję…");
-  $("kit-usb").textContent = db.usb_error ? "błąd zapisu" : db.usb_saved ? `zapisana o ${clock(db.usb_at)}` : (db.usb_at ? `zapisuję… (ostatnia o ${clock(db.usb_at)})` : "zapisuję…");
+  $("kit-usb").textContent = db.usb_problem ? db.usb_problem : db.usb_error ? "błąd zapisu" : db.usb_saved ? `zapisana o ${clock(db.usb_at)}` : (db.usb_at ? `zapisuję… (ostatnia o ${clock(db.usb_at)})` : "zapisuję…");
   $("kit-path").textContent = s.usb || "–";
   const warn = $("kit-warning");
-  warn.hidden = !(db.usb_error || db.disk_error);
-  if (db.usb_error === "inna pamięć USB niż pamięć zestawu") warn.textContent = "Pod ścieżką pamięci zestawu jest inna pamięć USB: panel nic na niej nie zapisuje. Włóż pamięć zestawu, z której uruchomiono START.";
-  else if (db.usb_error) warn.textContent = "Kopia na pamięci USB się nie zapisuje. Sprawdź, czy pamięć zestawu jest włożona; po ponownym włożeniu uruchom z niej START, a panel zapisze kopię na niej także pod nową literą dysku. Bez pamięci nowy laptop nie przejmie najnowszych danych, a „Oddaj laptop” nie zadziała.";
+  warn.hidden = !(db.usb_problem || db.usb_error || db.disk_error);
+  if ((db.usb_problem || db.usb_error) === "inna pamięć USB niż pamięć zestawu") warn.textContent = "Pod ścieżką pamięci zestawu jest inna pamięć USB: panel nic na niej nie zapisuje. Włóż pamięć zestawu, z której uruchomiono START.";
+  else if (db.usb_problem || db.usb_error) warn.textContent = "Kopia na pamięci USB się nie zapisuje. Sprawdź, czy pamięć zestawu jest włożona; po ponownym włożeniu uruchom z niej START, a panel zapisze kopię na niej także pod nową literą dysku. Bez pamięci nowy laptop nie przejmie najnowszych danych, a „Oddaj laptop” nie zadziała.";
   if (db.disk_error) warn.textContent = "Kopia na dysku laptopa się nie zapisuje (" + db.disk_error + "). Zmiany nie są potwierdzane; zwolnij miejsce na dysku albo użyj innego laptopa.";
 }
 
@@ -315,7 +324,7 @@ const DESTROY_STATION = {
 };
 
 async function destroyData() {
-  if (!confirm("ZNISZCZYĆ DANE? Tylko przy groźbie przejęcia stacji albo laptopa. Laptop usunie dane zestawu z dysku i z pamięci USB, a podłączona stacja po potwierdzeniu przyciskiem OK przestanie działać na stałe.")) return;
+  if (!confirm("ZNISZCZYĆ DANE? Tylko przy groźbie przejęcia stacji albo laptopa. Laptop usunie dane zestawu z dysku i z pamięci USB, a podłączona stacja po potwierdzeniu przyciskiem OK usunie swoje dane i uruchomi się bez konfiguracji. Ponowne użycie wymaga przygotowania stacji.")) return;
   if (!confirm("To nieodwracalne. Na pewno zniszczyć dane?")) return;
   await busy($("destroy"), async () => {
     const r = await api("/api/destroy", { confirm: "ZNISZCZ" });
@@ -508,15 +517,17 @@ function roleChanged() {
 }
 
 function changed() {
+  $("result").hidden = true;
   clearTimeout(checkTimer);
   checkTimer = setTimeout(check, 250);
 }
 
 async function check() {
   const seq = ++checkSeq;
+  const entered = readForm();
   let r;
-  try { r = await api("/api/config/check", { doc: readForm() }); } catch (e) { return null; }
-  if (seq !== checkSeq || !r.ok) return null;
+  try { r = await api("/api/config/check", { doc: entered }); } catch (e) { return null; }
+  if (seq !== checkSeq || !r.ok || JSON.stringify(entered) !== JSON.stringify(readForm())) return null;
   showProblems(r.data.problems);
   $("doc-size").textContent = r.data.size != null
     ? `Konfiguracja: ${r.data.size.toLocaleString("pl-PL")} B z ${r.data.max.toLocaleString("pl-PL")} B`
@@ -579,14 +590,8 @@ function showResult(ok, title, lines) {
 async function send(event) {
   event.preventDefault();
   if (!needStation(true)) return;
-  showAll = true;
-  const result = await check();
-  if (!result) return toast("Nie udało się sprawdzić konfiguracji.");
-  if (result.problems.length) {
-    const first = document.querySelector(".bad");
-    if (first) first.focus();
-    return toast("Popraw zaznaczone pola.");
-  }
+  const result = await checkedConfig();
+  if (!result) return;
   const s = station(), h = s.hello || {}, st = s.status || {};
   const doc = result.doc, replaced = configured();
   if (replaced && !confirm(`Zastąpić konfigurację stacji ${h.name || ""}? Poprzednia konfiguracja nie zostanie zachowana.`)) return;
@@ -654,11 +659,46 @@ function download(name, value) {
 
 function today() { return new Date().toISOString().slice(0, 10); }
 
-async function saveFile() {
+// Eksport i wysyłka zatwierdzają tę samą konfigurację. Zmieniony tekst najpierw wraca
+// do formularza; dopiero ponowne kliknięcie zatwierdza postać widoczną dla operatora.
+async function checkedConfig() {
+  showAll = true;
+  clearTimeout(checkTimer);
   const result = await check();
-  const doc = result ? result.doc : readForm();
+  if (!result) { toast("Nie udało się sprawdzić konfiguracji. Spróbuj ponownie."); return null; }
+  const entered = readForm(), doc = result.doc, changedTexts = [];
+  if (doc && doc.role === "stacja") {
+    (doc.addresses || []).forEach((text, i) => {
+      if (text !== (entered.addresses || [])[i]) changedTexts.push(`Adres ${i + 1}: ${text}`);
+    });
+    (doc.phrases || []).forEach((phrase, i) => phrase.forEach((text, l) => {
+      if (text !== ((entered.phrases || [])[i] || [])[l]) changedTexts.push(`Fraza ${i + 1}, ${LANGS[l]}: ${text}`);
+    }));
+  }
+  if (changedTexts.length) {
+    fillForm(doc);
+    showProblems(result.problems);
+    showResult(true, "Sprawdź poprawioną postać tekstu", [
+      "Formularz pokazuje teraz tekst po ujednoliceniu odstępów i znaków. Sprawdź go, popraw ewentualne błędy i ponownie wybierz zapis do pliku albo wysłanie do stacji.",
+      ...changedTexts,
+    ]);
+    toast("Zmieniono postać tekstu. Sprawdź formularz przed zapisem.", 7000);
+    return null;
+  }
+  if (result.problems.length) {
+    const first = document.querySelector(".bad");
+    if (first) first.focus();
+    toast("Popraw zaznaczone pola.");
+    return null;
+  }
+  return result;
+}
+
+async function saveFile() {
+  const result = await checkedConfig();
+  if (!result) return;
   const name = (station().hello || {}).name || "siec";
-  download(`wici-konfiguracja-${name}-${today()}.json`, doc);
+  download(`wici-konfiguracja-${name}-${today()}.json`, result.doc);
   toast("Zapisano plik. Zawiera kod dostępu sieci: przechowuj go jak hasło.", 7000);
 }
 

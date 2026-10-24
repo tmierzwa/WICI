@@ -613,6 +613,7 @@ const minutes = (ms) => `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 600
 function selectTab(name) {
   if (!["train", "rx", "env", "console", "log"].includes(name)) name = "train";
   tab = name;
+  if (exercise) exercise.panel = name;
   pref.set("tab", name);
   for (const b of document.querySelectorAll(".tabs button")) b.setAttribute("aria-selected", String(b.dataset.tab === name));
   for (const p of document.querySelectorAll(".panel")) p.hidden = p.id !== `panel-${name}`;
@@ -671,18 +672,23 @@ function trainPanel() {
     <button type="button" class="btn" data-act="list">${exercise.finished ? t("list") : t("stop")}</button></div>`;
 }
 
+function copyLabel(n) {
+  if (lang !== "pl") return n === 1 ? "copy" : "copies";
+  return n === 1 ? "kopia" : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? "kopie" : "kopii";
+}
+
 function rxPanel() {
   const r = s.post ?? { requests: [], auto: {}, stations: [] };
   const a = r.auto ?? {};
   const decisions = [0, 3, 4, 5, 6].map((v) => `<option value="${v}"${a.decision === v ? " selected" : ""}>${v ? STATES[lang][v] : t("none")}</option>`).join("");
   const list = [...r.requests].reverse().map((q) => {
-    const actions = [2, 3, 4, 5, 6].map((v) => `<button type="button" class="btn" data-decide="${q.number}" data-state="${v}"${q.state === v ? " disabled" : ""}>${STATES[lang][v]}</button>`).join("");
+    const actions = [2, 3, 4, 5, 6].map((v) => `<button type="button" class="btn" data-decide="${q.number}" data-state="${v}"${q.state === v || (v === 5 && !q.reply_acked) ? " disabled" : ""}${v === 5 ? ` title="${lang === "pl" ? "Najpierw wyślij instrukcję i poczekaj na potwierdzenie odbioru" : "First send instructions and wait for delivery confirmation"}"` : ""}>${STATES[lang][v]}</button>`).join("");
     return `<div class="req u${q.urgency}">
       <div class="req-head"><b>${String(q.number).padStart(4, "0")}</b>${q.type === "test" ? '<span class="chip">TEST</span>' : ""}
         <span>${esc(CATEGORIES[lang][q.category] ?? "")}, ${q.people}</span><span class="chip u${q.urgency}">${URGENCY[lang][q.urgency] ?? ""}</span>
         <span class="chip s${q.state}">${STATES[lang][q.state]}</span>${q.changed ? `<span class="chip s2">${t("changed")}</span>` : ""}
         ${q.received_acked >= 0 ? `<span class="chip s3">✓ ${t("received")}</span>` : ""}${q.identity ? `<span class="chip">${t("backup")}</span>` : ""}</div>
-      <p class="muted">${esc(q.location)}${q.text ? " · " + esc(q.text) : ""} · rew. ${q.revision} · ${q.copies} ${t("copies")} · ${clock(q.first_ms)}</p>
+      <p class="muted">${esc(q.location)}${q.text ? " · " + esc(q.text) : ""} · ${lang === "pl" ? "wersja" : "revision"} ${q.revision} · ${q.copies} ${copyLabel(q.copies)} · ${clock(q.first_ms)}</p>
       ${q.type === "test" ? "" : `<div class="req-actions">${actions}</div>
       ${q.reply ? `<p>↳ ${esc(q.reply)}${q.reply_acked ? " ✓" : ""}</p>` : ""}
       <div class="row"><input type="text" id="reply-${q.number}" data-keep maxlength="96" placeholder="${t("reply")}" aria-label="${t("reply")} ${q.number}">

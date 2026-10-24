@@ -362,7 +362,8 @@ class Database:
         self.cond = threading.Condition()            # liczniki zapisu
         self.changes = self.disk_done = self.usb_done = 0
         self.disk_error = None                       # (zmiany objęte nieudaną próbą, komunikat)
-        self.usb_error = self.usb_at = None
+        self.usb_error = None
+        self.usb_at = usb.at if usb else None
         self.pending = None                          # najnowsza migawka dla pamięci USB: (zmiany, pokolenie, bajty)
         if self.usb_dir and base and (usb is None or not _continues(usb, base)):
             self.pending, self.usb_done = (0, base.gen, base.raw), -1   # pamięć nie ma jeszcze tej kopii
@@ -463,10 +464,17 @@ class Database:
         return True
 
     def status(self):
+        # Dostępność nośnika nie zależy od kolejnej operacji zapisu.
+        usb_dir = self.usb_dir
+        problem = self._stick(usb_dir) if usb_dir else NO_USB
+        if usb_dir and not usb_dir.is_dir():
+            problem = NO_USB
         with self.cond:
             return {"gen": self.gen, "saved": self.disk_done == self.changes,
                     "disk_error": self.disk_error[1] if self.disk_error else None,
-                    "usb": bool(self.usb_dir), "usb_saved": bool(self.usb_dir) and self.usb_done == self.disk_done,
+                    "usb": bool(usb_dir), "usb_present": problem is None,
+                    "usb_problem": problem, "usb_saved": bool(usb_dir) and problem is None
+                    and self.usb_error is None and self.usb_done == self.changes,
                     "usb_at": self.usb_at, "usb_error": self.usb_error}
 
     # ---- zapis migawek ------------------------------------------------------------------------
@@ -547,6 +555,10 @@ class Database:
 
     def flush(self, usb=True, timeout=30.0):
         """Wait until the disk (and the stick) hold every change; StorageError when they cannot."""
+        if usb and self.usb_dir:
+            problem = self._stick(self.usb_dir)
+            if problem or not self.usb_dir.is_dir():
+                raise StorageError(problem or NO_USB)
         with self.cond:
             deadline = time.monotonic() + timeout
             while self.disk_done != self.changes or (usb and self.usb_dir and self.usb_done != self.disk_done):
