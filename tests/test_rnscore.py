@@ -362,6 +362,17 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(len(got[5]) // 2, 500)
         self.assertEqual(got[6:], ["none", "none"])
 
+    def test_packet_pack_mtu_boundary(self):
+        # Granica MTU przy buforze wyjściowym większym od MTU (harness: 2 × MTU): MTU−1 i MTU przyjęte, MTU+1 odrzucone,
+        # osobno dla HEADER_1 (19 B nagłówka) i HEADER_2 (35 B).
+        commands = []
+        for header_type, header in ((0, 19), (1, 35)):
+            for total in (499, 500, 501):
+                commands.append(("pack", bytes([header_type, 0, 0, 0, 0, 0]) + bytes(32) + bytes(1)
+                                 + bytes([0xAB]) * (total - header)))
+        got = self.ask(commands)
+        self.assertEqual([None if line == "none" else len(line) // 2 for line in got], [499, 500, None] * 2)
+
     def test_packet_every_length(self):
         # Każda długość obciętego pakietu HEADER_2: do 35 B (nagłówek bez danych) odrzucony, dalej przyjęty;
         # ASan pilnuje odczytu poza buforem.
