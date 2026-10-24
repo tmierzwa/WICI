@@ -1322,6 +1322,67 @@ class CoreTests(unittest.TestCase):
                           ("t_emit", b"\x00\x03" + other)])
         self.assertEqual(lines[1:], ["2 1", "0 1", "3 2"])
 
+    def test_interfaces_refused_transmit_keeps_discovery_response(self):
+        # transmit odmawia mimo zgody mayTransmit: odpowiedź odkrycia czeka dalej na ten interfejs, drugi nie jest
+        # wstrzymany, a udane nadanie nie powtarza się (zgodnie z przebiegiem bez odmowy).
+        ann = self.announce_of(bytes([68]) * 64)
+        dest = ann[2:18]
+        clock = lambda ms: ("t_clock", ms.to_bytes(8, "big"))
+        outs = {}
+        for name, drops in (("control", 0), ("refused", 1)):
+            lines = self.ask([("t_begin", self.TWO), ("t_inif", b"\x00" + self.path_request(dest, b"A" * 16)),
+                              ("t_inif", b"\x01" + self.path_request(dest, b"B" * 16)), ("t_inif", b"\x00" + ann),
+                              ("t_outif", b""), ("t_drop_tx", bytes([drops])), clock(1001), ("t_outif", b""),
+                              clock(1002), ("t_outif", b""), clock(2000), ("t_outif", b""), clock(3000), ("t_outif", b"")])
+            outs[name] = [lines[i] for i in (7, 9, 11, 13)]
+        control = [x[0] for x in outs["control"] if x != "-"]
+        refused = [x[0] for x in outs["refused"] if x != "-"]
+        self.assertEqual(sorted(control), ["0", "1"])
+        self.assertEqual(sorted(refused), ["0", "1"])   # nadane obydwa, tylko później
+
+    def test_interfaces_refused_transmit_keeps_rebroadcast_attempt(self):
+        # Jednorazowa odmowa transmit nie zużywa próby retransmisji: ogłoszenie wychodzi tyle razy co bez odmowy.
+        ann = self.announce_of(bytes([34]) * 64)
+        clock = lambda ms: ("t_clock", ms.to_bytes(8, "big"))
+        counts = {}
+        for name, drops in (("control", 0), ("refused", 1)):
+            lines = self.ask([("t_begin", self.STATION), ("t_in", ann), ("t_drop_tx", bytes([drops])), clock(1177),
+                              ("t_outif", b""), clock(1178), ("t_outif", b""), clock(6678), ("t_outif", b""),
+                              clock(6679), ("t_outif", b""), clock(20000), ("t_outif", b""), ("t_forward", b"")])
+            counts[name] = (sum(lines[i] != "-" for i in (4, 6, 8, 10, 12)), lines[-1].split()[4])
+        self.assertEqual(counts["control"], (2, "2"))
+        self.assertEqual(counts["refused"], (2, "2"))
+
+    def test_interfaces_refused_transmit_keeps_own_response_budget(self):
+        # Odmowa transmit przy odpowiedzi stacji na zapytanie o trasę nie zużywa limitu odpowiedzi interfejsu:
+        # następne zapytanie (inny znacznik) dostaje odpowiedź.
+        address = bytes.fromhex(self.ask([("t_begin", self.STATION)])[0])
+        lines = self.ask([("t_begin", self.STATION), ("t_announce", bytes(5) + b"WICI"), ("t_outif", b""),
+                          ("t_drop_tx", b"\x01"), ("t_in", self.path_request(address, b"A" * 16)), ("t_outif", b""),
+                          ("t_in", self.path_request(address, b"B" * 16)), ("t_outif", b"")])
+        self.assertEqual(lines[5], "-")
+        self.assertNotEqual(lines[7], "-")
+
+    def test_interfaces_permanently_refusing_transmit_is_bounded(self):
+        # transmit interfejsu 0 odmawia zawsze mimo zgody mayTransmit: liczba jego wywołań jest ograniczona stałą
+        # (druga odmowa tej samej próby kończy zaległość), wpisy schodzą, a interfejs 1 dostaje swoje nadania.
+        ann = self.announce_of(bytes([68]) * 64)
+        dest = ann[2:18]
+        clock = lambda ms: ("t_clock", ms.to_bytes(8, "big"))
+        commands = [("t_begin", self.TWO), ("t_inif", b"\x00" + self.path_request(dest, b"A" * 16)),
+                    ("t_inif", b"\x01" + self.path_request(dest, b"B" * 16)), ("t_inif", b"\x00" + ann),
+                    ("t_decline", b"\x01")]
+        commands += [clock(1001 + 100 * i) for i in range(200)] + [("t_calls", b"")]
+        middle = len(commands) - 1
+        commands += [clock(21001 + 100 * i) for i in range(200)] + [("t_calls", b""), ("t_outif", b"")]
+        commands += [("t_paths", b"")]
+        lines = self.ask(commands)
+        early, late = (list(map(int, lines[i].split())) for i in (middle, -3))
+        self.assertEqual(early, late)   # po rezygnacji brak dalszych wywołań
+        self.assertLessEqual(late[0], 8)
+        self.assertGreaterEqual(late[1], 2)   # odpowiedź odkrycia i ponowienia: interfejs 1 nie jest wstrzymany
+        self.assertEqual(lines[-1].split()[6], "0")   # tablica ogłoszeń pusta
+
     def test_interfaces_own_response_limit_per_interface(self):
         # Limit odpowiedzi na zapytanie o cel stacji (OWN_RESPONSE_MIN_MS) liczy się osobno na interfejs:
         # zapytanie z USB nie wstrzymuje odpowiedzi na zapytanie z P1; drugie z tego samego interfejsu tak.

@@ -204,6 +204,7 @@ private:
         // Interfejsy, które nie przyjęły jeszcze ostatniej próby: dostaną ją, gdy przyjmą (jedno zaległe
         // ogłoszenie na cel i interfejs, jak announce_queue interfejsu w Pythonie).
         uint8_t owed;
+        uint8_t refused;   // interfejsy, których transmit odmówił tej próby mimo ready (druga odmowa: rezygnacja)
         uint8_t retries;
         uint8_t hops;
         uint8_t localRebroadcasts;
@@ -269,6 +270,7 @@ private:
         bool respond;          // ogłoszenie oczekiwanego celu przyszło: odpowiedź w następnych poll()
         uint8_t respondHops;
         uint8_t requesting;    // requesting_interfaces: maska interfejsów (przy respond: jeszcze bez odpowiedzi)
+        uint8_t refused;       // interfejsy, których transmit odmówił odpowiedzi mimo ready (druga odmowa: rezygnacja)
     };
     Inflight inflight_[INFLIGHT_MAX] = {};
     uint32_t discoveryTimeoutMs_ = 0;   // 0: PATH_REQUEST_TIMEOUT_MS
