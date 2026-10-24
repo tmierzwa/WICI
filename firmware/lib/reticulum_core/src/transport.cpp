@@ -641,8 +641,6 @@ void Transport::discoveryResponse(const Packet& packet, uint64_t nowMs) {
 // gdy ich interfejs przyjmie.
 void Transport::sendDiscovery(Inflight& f, uint8_t ready, uint64_t nowMs) {
     const uint8_t to = f.requesting & ready;
-    f.requesting &= static_cast<uint8_t>(~to);
-    f.respond = f.requesting != 0;
     KnownDestination e;
     if (!lookup(f.destination, e, nowMs) || !e.announceLength) {   // wpis wyparty w międzyczasie
         f.respond = false;
@@ -663,9 +661,16 @@ void Transport::sendDiscovery(Inflight& f, uint8_t ready, uint64_t nowMs) {
     out.dataLength = e.announceLength;
     uint8_t raw[MTU];
     const size_t rawLength = pack(out, raw, sizeof(raw));
+    // Z oczekujących zdejmowane są interfejsy, które przyjęły odpowiedź; odmawiający (mimo ready) dostanie ją
+    // w następnym obiegu. Pakiet, którego nie da się zbudować, nie ma czego nadać nikomu.
+    uint8_t sent = rawLength ? 0 : to;
     for (uint8_t i = 0; rawLength && i < interfaces_; ++i) {
-        if (emit(raw, rawLength, true, to & interfaceMask(i))) ++counters_.pathResponses;
+        const uint8_t one = emit(raw, rawLength, true, to & interfaceMask(i));
+        if (one) ++counters_.pathResponses;
+        sent |= one;
     }
+    f.requesting &= static_cast<uint8_t>(~sent);
+    f.respond = f.requesting != 0;
 }
 
 void Transport::setBitrate(uint32_t bitsPerSecond) {
@@ -695,16 +700,21 @@ bool Transport::pathRequest(const uint8_t destination[TRUNCATED_HASH_SIZE], cons
             ++counters_.pathLimited;
             return true;
         }
-        last = nowMs + 1;
         // Ogłoszenie podpisane w ostatnich OWN_RESPONSE_REUSE_MS idzie jeszcze raz (jego skrót losowy jest
         // dla pytającego nowy, jeśli go nie słyszał), bez nowego podpisu.
         if (ownAnnounceLength_ && nowMs - ownAnnounceMs_ < OWN_RESPONSE_REUSE_MS) {
-            if (sendOwnAnnounce(true, ifaces)) ++counters_.pathResponses;
+            if (sendOwnAnnounce(true, ifaces)) {
+                ++counters_.pathResponses;
+                last = nowMs + 1;   // limit zużywa tylko odpowiedź, którą interfejs przyjął
+            }
             return true;
         }
         uint8_t random[5];
         if (!hooks_.random || !hooks_.random(random, sizeof(random), hooks_.context)) return true;
-        if (ownAnnounce(random, nowMs, true, ifaces)) ++counters_.pathResponses;
+        if (ownAnnounce(random, nowMs, true, ifaces)) {
+            ++counters_.pathResponses;
+            last = nowMs + 1;
+        }
         return true;
     }
     KnownDestination e;
@@ -774,7 +784,6 @@ void Transport::retransmit(AnnounceEntry& entry, uint8_t ready, uint64_t nowMs) 
         entry.owed |= entry.attached & present();
     }
     const uint8_t to = entry.owed & ready;
-    entry.owed &= static_cast<uint8_t>(~to);
     KnownDestination e;
     if (!lookup(entry.destination, e, nowMs) || !e.announceLength) {   // wpis wyparty w międzyczasie
         entry.used = false;
@@ -797,9 +806,11 @@ void Transport::retransmit(AnnounceEntry& entry, uint8_t ready, uint64_t nowMs) 
     packet.dataLength = e.announceLength;
     uint8_t raw[MTU];
     const size_t rawLength = pack(packet, raw, sizeof(raw));
-    if (rawLength && emit(raw, rawLength, true, to)) {
-        ++(entry.blockRebroadcasts ? counters_.pathResponses : counters_.rebroadcasts);
-    }
+    // Zaległość zdejmowana tylko interfejsom, które przyjęły ramkę; odmawiający (mimo ready) dostanie ją w
+    // następnym obiegu. Pakiet, którego nie da się zbudować, nie ma czego nadać nikomu.
+    const uint8_t sent = rawLength ? emit(raw, rawLength, true, to) : to;
+    if (rawLength && sent) ++(entry.blockRebroadcasts ? counters_.pathResponses : counters_.rebroadcasts);
+    entry.owed &= static_cast<uint8_t>(~sent);
     if (entry.owed) return;
     for (AnnounceEntry& h : held_) {   // held_announces: wstrzymany wpis wraca do tablicy po odpowiedzi
         if (h.used && memcmp(h.destination, entry.destination, TRUNCATED_HASH_SIZE) == 0) {
