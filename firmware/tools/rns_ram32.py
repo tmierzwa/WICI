@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 """RAM of the station stack with 32-bit pointers, from traffic recorded in the compatibility trial.
 
-The "host" program (firmware/src/host/node_host.cpp) on a 64-bit computer gives only an upper bound
+The "host-port" program (firmware/src/host/node_host.cpp) on a 64-bit computer gives only an upper bound
 for the TLSF pool of the stack: pointers, std::vector and hash-map nodes are twice as large as on the
 nRF52840. This tool builds the same program as a 32-bit (i386) Linux binary in Docker, with the stack
 configuration from platformio.ini ([stack] rns_flags and pool_flags), and replays the datagrams that reference

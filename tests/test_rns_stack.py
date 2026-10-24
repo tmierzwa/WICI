@@ -1,13 +1,13 @@
 # SPDX-License-Identifier: MIT
 """Station Reticulum stack against reference Reticulum (Python), without a radio.
 
-Builds the "host" PlatformIO program (microReticulum port, P1 interface, IFAC, FRAM tables, emulated
+Builds the "host-port" PlatformIO program (microReticulum port, P1 interface, IFAC, FRAM tables, emulated
 P1 link) and runs firmware/tools/rns_interop.py with it, then firmware/tools/rns_osp_node.py (the OSP
 node of decision D19 with the computer of the receiving station on a KISS interface). The same
-rns_interop.py runs on the "host-core" program (station Reticulum core, firmware/reticulum-core.md) with
+rns_interop.py runs on the "host" program (station Reticulum core since stage R6-3, firmware/reticulum-core.md) with
 the steps the core already has (CORE_STEPS, extended with each stage step) and, from stage R3, with
 the station destination "lxmf.delivery" and LXMF SA1 messages (--lxmf, steps L1 and L2 with LXMRouter), and
-rns_osp_node.py runs on "host-core" with --lxmf (stage R4b: USB interface of the node on the core, with a
+rns_osp_node.py runs on "host" with --lxmf (stage R4b: USB interface of the node on the core, with a
 flood from the computer side during a report through P1).
 Needs network access for the pinned stack sources and a Python with Reticulum at e40191b, LXMF at
 c3ff2d6 and pyserial, so it runs only when both are given:
@@ -29,8 +29,8 @@ PIO = os.environ.get("WICI_PIO")
 RNS_PYTHON = os.environ.get("WICI_RNS_PYTHON")
 
 
-PROGRAM = FIRMWARE / ".pio" / "build" / "host" / "program"
-CORE_PROGRAM = FIRMWARE / ".pio" / "build" / "host-core" / "program"
+PORT_PROGRAM = FIRMWARE / ".pio" / "build" / "host-port" / "program"
+CORE_PROGRAM = FIRMWARE / ".pio" / "build" / "host" / "program"
 # Kroki rns_interop.py na rdzeniu (z --lxmf: cel stacji "lxmf.delivery" i wiadomości SA1 w LXMF): wyjście
 # etapu R1 (firmware/reticulum-core.md, „Etapy”), z krokiem 3r (szyfrowanie do ratchetu), którego port nie
 # przechodzi, krok 6 z etapu R2 (trasa i tożsamość celu z tablicy w FRAM po restarcie), 9 (zapytania o trasę
@@ -66,8 +66,8 @@ def results(run: subprocess.CompletedProcess) -> dict:
 class StackInteropTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        subprocess.run([PIO, "run", "-e", "host", "-d", str(FIRMWARE)], check=True, capture_output=True)
-        program = PROGRAM
+        subprocess.run([PIO, "run", "-e", "host-port", "-d", str(FIRMWARE)], check=True, capture_output=True)
+        program = PORT_PROGRAM
         command = [RNS_PYTHON, str(FIRMWARE / "tools" / "rns_interop.py"), "--program", str(program)]
         fill = os.environ.get("WICI_RNS_FILL")
         if fill:
@@ -94,7 +94,7 @@ class CoreInteropTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        subprocess.run([PIO, "run", "-e", "host-core", "-d", str(FIRMWARE)], check=True, capture_output=True)
+        subprocess.run([PIO, "run", "-e", "host", "-d", str(FIRMWARE)], check=True, capture_output=True)
         command = [RNS_PYTHON, str(FIRMWARE / "tools" / "rns_interop.py"), "--program", str(CORE_PROGRAM),
                    "--steps", ",".join(CORE_STEPS), "--lxmf"]
         cls.results = results(subprocess.run(command, capture_output=True, text=True, timeout=1800))
@@ -130,8 +130,8 @@ class OspNodeInteropTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        subprocess.run([PIO, "run", "-e", "host", "-d", str(FIRMWARE)], check=True, capture_output=True)
-        command = [RNS_PYTHON, str(FIRMWARE / "tools" / "rns_osp_node.py"), "--program", str(PROGRAM)]
+        subprocess.run([PIO, "run", "-e", "host-port", "-d", str(FIRMWARE)], check=True, capture_output=True)
+        command = [RNS_PYTHON, str(FIRMWARE / "tools" / "rns_osp_node.py"), "--program", str(PORT_PROGRAM)]
         cls.results = results(subprocess.run(command, capture_output=True, text=True, timeout=1800))
 
     def test_every_check_passed(self):
@@ -153,7 +153,7 @@ class OspNodeCoreTests(OspNodeInteropTests):
 
     @classmethod
     def setUpClass(cls):
-        subprocess.run([PIO, "run", "-e", "host-core", "-d", str(FIRMWARE)], check=True, capture_output=True)
+        subprocess.run([PIO, "run", "-e", "host", "-d", str(FIRMWARE)], check=True, capture_output=True)
         command = [RNS_PYTHON, str(FIRMWARE / "tools" / "rns_osp_node.py"), "--program", str(CORE_PROGRAM), "--lxmf"]
         cls.results = results(subprocess.run(command, capture_output=True, text=True, timeout=1800))
 

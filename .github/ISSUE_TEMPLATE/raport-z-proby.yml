@@ -13,7 +13,7 @@ body:
     id: source
     attributes:
       label: Wersja źródeł
-      description: Commit WICI (w tym docs/spec/odbior.md), przypięte commity microReticulum, LXMF i Reticulum, numer egzemplarza i osoba wykonująca
+      description: Commit WICI (w tym docs/spec/odbior.md), środowisko i wersja obrazu (version z INFO), przypięte commity Crypto, LXMF i Reticulum (przy obrazie *-port także microReticulum), numer egzemplarza i osoba wykonująca
     validations:
       required: true
   - type: textarea

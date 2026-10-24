@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: MIT
 """Compile the station Reticulum core with the board toolchains and report stack and static RAM.
 
-The station images do not link the core yet (stage R6, firmware/reticulum-core.md), so a regression
-on the boards would stay hidden until then. For each PlatformIO environment given (default bench-a
-for nRF52840 and l0 for ESP32-S3) this tool takes the compiler, flags, defines and include paths of
-the image from `pio project metadata` and compiles every file of lib/reticulum_core with them, as
-C++17 without exceptions and RTTI and with -Wall -Wextra -Werror; the Crypto units the core uses are
+The images with the core (bench-a, bench-n1, l0 and bench-b-core since stage R6-3) link it, but the
+build does not show its stack depth or a core object moved to flash. For each PlatformIO environment
+given (default bench-a for nRF52840 and l0 for ESP32-S3) this tool takes the compiler, flags, defines
+and include paths of the image from `pio project metadata` and compiles every file of
+lib/reticulum_core with them, as C++17 without exceptions and RTTI and with -Wall -Wextra -Werror; the Crypto units the core uses are
 compiled like in the image (-w -Os, tools/stack_deps.py). Nothing is linked into an image.
 
 From -fstack-usage and the relocations of the objects (calls between functions) it prints the

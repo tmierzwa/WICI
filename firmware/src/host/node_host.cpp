@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
-// Węzeł stacji na komputerze (środowisko "host" w platformio.ini): ten sam kod stosu co obraz
-// bench-a (rns_node, p1iface, framfs, port microReticulum z łatami) z emulatorem łącza P1 zamiast
+// Węzeł stacji na komputerze (środowisko "host-port" w platformio.ini): ten sam kod stosu co obraz
+// bench-a-port (rns_node, p1iface, framfs, port microReticulum z łatami) z emulatorem łącza P1 zamiast
 // CC1120. Datagram z kolejki interfejsu jest dzielony na ramki P1 (p1frame), "nadawany" przez czas
 // z modelu ramki, po nim obowiązuje dług ciszy debt x czas TX; ramki składa po drugiej stronie
 // składacz P1, a złożony datagram (bajty z IFAC) idzie datagramem UDP do interfejsu UDP Reticulum
@@ -9,7 +9,7 @@
 // --node: konfiguracja węzła stanowiska z interfejsem Reticulum przez USB; zamiast portu CDC
 // pseudoterminal, którego nazwę podaje zdarzenie "ready" ("usb"), a KISSInterface Reticulum
 // w Pythonie otwiera go jak port szeregowy (firmware/tools/rns_osp_node.py).
-// Środowisko "host-core": ten sam program na rdzeniu Reticulum (rns_node_core.cpp) zamiast portu.
+// Środowisko "host" (od etapu R6-3): ten sam program na rdzeniu Reticulum (rns_node_core.cpp) zamiast portu.
 // --seed <64 hex>: stałe ziarno begin() zamiast losowego (próby: tests/test_rns_stack_choice.py).
 //
 // Polecenia na stdin (wiersze): announce [hex danych], send <cel hex> <dane hex> [limit s],
@@ -50,7 +50,7 @@ uint32_t asymmetricOperations();   // identity.h rdzenia (bez dołączania nagł
 
 namespace {
 
-// Najwięcej operacji asymetrycznych rdzenia w jednym obiegu rnsnode::loop() (host-core; pole loop_ops_max
+// Najwięcej operacji asymetrycznych rdzenia w jednym obiegu rnsnode::loop() (host; pole loop_ops_max
 // w status, próba zalewu USB w tools/rns_osp_node.py); -1 w budowie portu.
 long loopOpsMax = -1;
 
