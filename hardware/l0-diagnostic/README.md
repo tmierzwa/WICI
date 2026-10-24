@@ -28,7 +28,7 @@ Zakres zlecenia montażu i uruchomienia dla zewnętrznego wykonawcy: [ZLECENIE.m
    Obraz akceptuje oba układy FRAM z BOM N1, CY15B104QN i MB85RS4MT (płytki z montażem
    JLCPCB z 2026-10-10 mają MB85RS4MTPF-G-BCERE1); `RDID` pokazuje, który jest wlutowany.
    Inna pamięć daje `ERR fram_id_unsupported` i blokuje próby FRAM.
-3. Zapewnić multimetr i oscyloskop ≥3 kanały, ≥50MHz, sondy x10.
+3. Zapewnić multimetr i oscyloskop ≥3 kanały, ≥200MHz, sondy x10 ze sprężynkami masy.
    Partner radiowy: jeden XIAO 102010611 z anteną i obrazem R0 `pair-0.4`.
    Klient ma zamówione dwa zestawy, termin ich udostępnienia ustalany osobno.
    Jeden Mac z dwoma USB wystarcza. Dwa komputery mogą służyć do ręcznych prób;
@@ -98,8 +98,8 @@ Ocena końcowa wymaga wszystkich prób, nie tylko komunikatu skryptu.
 | E2 — zasilanie | Pomiar 3V3, +5V_LCD i prądu; Wio przez POWER_BREAK | Napięcia mieszczą się w wymaganiach podzespołów; raport rzeczywistych wartości i prądu spoczynek/RX/TX; brak resetów i nadmiernego grzania |
 | E3 — FRAM | Pełny zapis/weryfikacja, następnie odłączyć USB i zweryfikować bez zapisu | Wszystkie 5 wzorców, zero błędów, zgodne CRC; po zaniku zgodny ostatni wzorzec |
 | E4 — ochrona przy zaniku | GUARD ERASE i kontrolowane odłączenie USB, jednoczesny pomiar 3V3/CS/GUARD | Przed zanikiem CS pamięci niski; bramka podnosi CS, zanim FRAM opuszcza dozwolone napięcie pracy; udokumentowany przebieg, bez wstecznego zasilania |
-| E5 — ekran/panel | LCD 0..4, PAUSE 10000, każde wejście, LED i BUZZ | Wszystkie plansze poprawne; EXTCOMIN 1Hz/około50% trwa także podczas pauzy; 6 wejść odpowiada; LED świeci, buzzer brzmi |
-| E6 — wspólne SPI | Automatyczny MIX, obserwacja przebiegów i ekranu | Pełne 15min, zero błędów FRAM, brak restartów/kolizji SPI, poprawny ekran i pakiety |
+| E5 — ekran/panel | LCD 0..4, PAUSE 10000, każde wejście, LED i BUZZ; poziomy i zbocza na J7 | Wszystkie plansze poprawne; EXTCOMIN 1Hz/około50% trwa także podczas pauzy; 6 wejść odpowiada; LED świeci, buzzer brzmi; sygnały panelu w granicach ([pomiar](MONTAZ-I-TESTY.md#pomiar-sygnałów-magistrali)) |
+| E6 — wspólne SPI | Automatyczny MIX, obserwacja przebiegów i ekranu; poziomy i zbocza przy FRAM i Wio | Pełne 15min, zero błędów FRAM, brak restartów/kolizji SPI, poprawny ekran i pakiety; sygnały w granicach ([pomiar](MONTAZ-I-TESTY.md#pomiar-sygnałów-magistrali)) |
 | R1/R2 — radio | Po restarcie 100 pakietów w każdą stronę bez retry | Wszystkie pakiety zgodne, raport RSSI/SNR, brak ERR/restartu |
 | R3 — CISZA | Włączyć SW5, polecić TX; następnie wyłączyć i powtórzyć | `BLOCKED SILENCE`, brak odpowiadającego pakietu u partnera; po wyłączeniu odbiór wraca |
 
