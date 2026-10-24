@@ -389,20 +389,20 @@ bool Transport::forwardProof(const Packet& packet, const uint8_t* raw, size_t le
     return false;
 }
 
-bool Transport::emit(const uint8_t* raw, size_t length, bool rememberHash, uint8_t ifaces) {
-    if (!hooks_.transmit) return false;
-    bool sent = false;
+uint8_t Transport::emit(const uint8_t* raw, size_t length, bool rememberHash, uint8_t ifaces) {
+    if (!hooks_.transmit) return 0;
+    uint8_t sent = 0;
     for (uint8_t i = 0; i < interfaces_; ++i) {
-        if (ifaces & interfaceMask(i)) sent = hooks_.transmit(raw, length, i, hooks_.context) || sent;
+        if ((ifaces & interfaceMask(i)) && hooks_.transmit(raw, length, i, hooks_.context)) sent |= interfaceMask(i);
     }
-    if (!sent) return false;
+    if (!sent) return 0;
     // Transport._outbound: skrót pakietu rozgłaszanego (bez znanej trasy) na listę skrótów.
     if (rememberHash) {
         uint8_t hash[HASH_SIZE];
         packetHash(raw, length, hash);
         hashlist_.add(hash);
     }
-    return true;
+    return sent;
 }
 
 bool Transport::announce(const uint8_t random[5], const uint8_t* appData, size_t length, uint64_t nowMs) {

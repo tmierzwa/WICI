@@ -44,14 +44,19 @@ void printHex(const uint8_t* data, size_t length, const char* end = "\n") {
 
 // Obszar tablicy znanych celów w RAM (jak FRAM: nowa pamięć to same 0xFF). cutAfter: numer zapisu,
 // w którym znika zasilanie (dochodzi tylko początek danych, potem każdy zapis zawodzi); -1 bez zaniku.
-// failReads: tyle następnych odczytów zawodzi (chwilowy błąd SPI, treść bez zmian).
+// failReads: tyle następnych odczytów zawodzi (chwilowy błąd SPI, treść bez zmian); failAt: tylko odczyt o tym
+// numerze (1: następny) zawodzi, reads liczy wszystkie odczyty.
 struct MemoryTable : rnscore::TableStorage {
     std::vector<uint8_t> bytes = std::vector<uint8_t>(rnscore::TABLE_AREA, 0xFF);
     long writes = 0;
     long cutAfter = -1;
     long failReads = 0;
+    long failAt = 0;
+    long reads = 0;
     bool read(uint32_t offset, uint8_t* data, size_t count) override {
         if (offset + count > bytes.size()) return false;
+        ++reads;
+        if (failAt > 0 && --failAt == 0) return false;
         if (failReads > 0) {
             --failReads;
             return false;
@@ -86,10 +91,23 @@ struct TransportState {
     std::string events;            // wywołania announce, packet i receipt od ostatniego polecenia
     bool accept = true;
     uint8_t busy = 0;    // bit 1 << interfejs: interfejs nie przyjmie pakietu (mayTransmit)
+    uint8_t declined = 0;   // bit 1 << interfejs: transmit odmawia ramki (t_emit)
     bool refuse = false; // brak żetonu na pakiet do stacji (mayReceive)
     uint64_t nowMs = 1000;
 };
 TransportState* state = nullptr;
+
+}  // namespace
+
+namespace rnscore {
+struct EmitCheck {
+    static uint8_t emit(Transport& transport, const uint8_t* raw, size_t length, uint8_t ifaces) {
+        return transport.emit(raw, length, true, ifaces);
+    }
+};
+}  // namespace rnscore
+
+namespace {
 
 void printHexTo(std::string& out, const uint8_t* data, size_t length) {
     char b[3];
@@ -103,6 +121,7 @@ bool onMayTransmit(uint8_t iface, void*) { return !(state->busy & (1u << iface))
 bool onMayReceive(void*) { return !state->refuse; }
 
 bool onTransmit(const uint8_t* raw, size_t length, uint8_t iface, void*) {
+    if (state->declined & (1u << iface)) return false;
     state->emitted.assign(raw, raw + length);
     state->sent.emplace_back(raw, raw + length);
     state->sentIface.push_back(iface);
@@ -445,6 +464,12 @@ int main() {
                    static_cast<unsigned>(state->transport.announceTable()));
         } else if (state && command == "t_writes") {
             printf("%ld\n", state->table.writes);
+        } else if (state && command == "t_reads") {
+            printf("%ld\n", state->table.reads);
+        } else if (state && command == "t_failat" && data.size() == 2) {
+            // zawodzi tylko n-ty następny odczyt tablicy (2 B, big-endian; 1: najbliższy)
+            state->table.failAt = (data[0] << 8) | data[1];
+            printf("ok\n");
         } else if (state && command == "t_readfail" && data.size() == 1) {
             // tyle następnych odczytów tablicy zawodzi (1 B); wynik: gniazda z błędną treścią od startu
             state->table.failReads = data[0];
@@ -464,6 +489,13 @@ int main() {
             // interfejsy zajęte dla mayTransmit: bit 1 << numer (1: interfejs 0 zajęty, 0: wszystkie wolne)
             state->busy = data[0];
             printTransport("ok");
+        } else if (state && command == "t_emit" && data.size() > 18) {
+            // nadanie ramki (bajty od 3.) interfejsami z maski (2. B), gdy transmit odmawia interfejsom z maski
+            // odmów (1. B); wynik: maska przyjętych i liczba skrótów na liście
+            state->declined = data[0];
+            const uint8_t mask = rnscore::EmitCheck::emit(state->transport, data.data() + 2, data.size() - 2, data[1]);
+            state->declined = 0;
+            printf("%u %u\n", static_cast<unsigned>(mask), static_cast<unsigned>(state->transport.hashes()));
         } else if (command == "t_refuse" && data.size() == 1) {
             // brak żetonu (1) albo żeton (0) dla mayReceive
             state->refuse = data[0] != 0;
@@ -552,7 +584,8 @@ int main() {
             packet.context = p[6 + 2 * rnscore::TRUNCATED_HASH_SIZE];
             packet.data = p + 6 + 2 * rnscore::TRUNCATED_HASH_SIZE + 1;
             packet.dataLength = data.size() - (6 + 2 * rnscore::TRUNCATED_HASH_SIZE + 1);
-            uint8_t out[rnscore::MTU];
+            // Bufor większy od MTU: granicę pakietu pilnuje `pack`, nie rozmiar bufora.
+            uint8_t out[2 * rnscore::MTU];
             const size_t length = rnscore::pack(packet, out, sizeof(out));
             if (length) {
                 printHex(out, length);
