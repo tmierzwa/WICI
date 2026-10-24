@@ -448,11 +448,10 @@ Result Station::submit(const sa1::Message& m, Stored& out) {
     const size_t length = sa1::encode(m, wire, sizeof(wire));
     if (!length) return Result::INVALID;
     int slot;
-    const store::Found found = store_.findRequest(out.id, slot);
+    Request r;
+    const store::Found found = store_.findRequest(out.id, slot, &r);
     if (found == store::Found::ERROR) return Result::MEMORY;   // bez nowego gniazda; laptop ponowi
     if (found == store::Found::YES) {
-        Request r;
-        if (!store_.readRequest(static_cast<size_t>(slot), r)) return Result::MEMORY;
         if (r.stage == Stage::CANCELLED) return Result::CLOSED;
         if (m.revision < r.rMax) return Result::STALE;
         if (m.revision == r.rMax) {
@@ -471,7 +470,6 @@ Result Station::submit(const sa1::Message& m, Stored& out) {
     }
     if (store_.numberTaken(out.number, out.id)) return Result::NUMBER_TAKEN;
     const uint32_t nowS = store_.now();
-    Request r;
     r.type = m.type;
     r.origin = store::USB;
     memcpy(r.id, out.id, store::HASH);
@@ -490,17 +488,16 @@ Result Station::submit(const sa1::Message& m, Stored& out) {
 Result Station::cancel(const uint8_t id[store::HASH], bool& released) {
     released = false;
     int slot;
-    const store::Found found = store_.findRequest(id, slot);
+    Request r;
+    const store::Found found = store_.findRequest(id, slot, &r);
     if (found == store::Found::ERROR) return Result::MEMORY;
     if (found == store::Found::NO) {
-        store::Released r;
-        if (!store_.releasedFind(id, r)) return Result::NOT_FOUND;
-        if (!r.cancelled) return Result::TOO_LATE;
+        store::Released gone;
+        if (!store_.releasedFind(id, gone)) return Result::NOT_FOUND;
+        if (!gone.cancelled) return Result::TOO_LATE;
         released = true;
         return Result::STORED;
     }
-    Request r;
-    if (!store_.readRequest(static_cast<size_t>(slot), r)) return Result::MEMORY;
     if (r.stage == Stage::CANCELLED) return Result::STORED;
     // Po pierwszym przekazaniu do stosu odbiorca mógł zgłoszenie dostać: tylko POTRZEBA USTAŁA.
     if (r.flags & store::SENT_ONCE) return Result::TOO_LATE;
@@ -736,11 +733,11 @@ int Station::inboxSlot() {
 
 bool Station::handleOwn(const sa1::Message& m, const uint8_t id[store::HASH], const char* wire, size_t wireLength) {
     int found;
-    const store::Found where = store_.findRequest(id, found);
-    if (where == store::Found::ERROR) return false;   // bez dowodu: odbiorca ponowi
     Request r;
+    const store::Found where = store_.findRequest(id, found, &r);   // jeden odczyt: błąd nie zamienia się w „pominięte”
+    if (where == store::Found::ERROR) return false;   // bez dowodu: odbiorca ponowi
     // Spoza rejestru (także zwolnione), r > r_max, zgłoszenie anulowane (nigdy nie nadane): pominięte.
-    if (where == store::Found::NO || !store_.readRequest(static_cast<size_t>(found), r) || m.revision > r.rMax || r.stage == Stage::CANCELLED) {
+    if (where == store::Found::NO || m.revision > r.rMax || r.stage == Stage::CANCELLED) {
         ++stats_.skipped;
         return true;
     }
