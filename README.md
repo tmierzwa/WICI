@@ -21,11 +21,12 @@ Sieć trzeba przygotować razem z gminą i służbami przed kryzysem: zamontowa�
 
 ## Gdzie jesteśmy
 
-Stan przygotowania testów na 21 października 2026 r.:
+Stan przygotowania testów na 24 października 2026 r.:
 
 - **R0:** dwa zestawy Seeed 102010611; próba przy stole zaliczona (100/100 w obie strony). Pierwsze próby zasięgu w budynku przy mocy 0 dBm: trasa około 20 m przez 2 ściany zaliczona 100/100, dwie trudniejsze trasy leżą na granicy zasięgu tego profilu ([wyniki](hardware/radio-pair/evidence/range-r0-2026-10-10.txt)). Następny krok: próby w terenie.
 - **L0:** płytki N1 z JLCPCB, części, panele i moduły na dwa prototypy kupiłem sam ([zamówienie](hardware/dev-bench/przed-produkcja.md#zamówienie-2026-10-10-l0)); dotarły i czekają na montaż. Montaż i uruchomienie wykonuje [pw-lab.pl](https://pw-lab.pl/) według [zlecenia](hardware/l0-diagnostic/ZLECENIE.md) i [instrukcji z diagnozą usterek](hardware/l0-diagnostic/MONTAZ-I-TESTY.md). Najpierw jeden L0 z programem diagnostycznym `l0-0.5`, drugi po udanym uruchomieniu pierwszego.
 - **Oprogramowanie stacji dla L0:** obraz `l0-0.2` ma własny sterownik SX1262 w profilu LoRa pilotażu, polecenia pomiarowe i tryb pracy do badań EMC ([opis](firmware/README.md#stacja-l0-l0), [etap 1](https://github.com/tmierzwa/WICI/issues/21)). Jest skompilowany i sprawdzony testami na komputerze z modelem układu, ale nie uruchomiono go jeszcze na płytce. Interfejs LoRa w stosie Reticulum ([etap 2](https://github.com/tmierzwa/WICI/issues/22)) i funkcje przed pierwszymi stacjami w terenie ([etap 3](https://github.com/tmierzwa/WICI/issues/23)) są do zrobienia.
+- **Rdzeń Reticulum stacji:** obrazy stacji pracują dziś na porcie microReticulum, bez LXMF. Od 22 października powstaje [własny rdzeń Reticulum stacji](firmware/reticulum-core.md) z LXMF, zamiast portu. Etapy R0–R5 (pakiety, ogłoszenia, transport, LXMF SA1 jednym pakietem, interfejs USB węzła stanowiska, odporność) przechodzą próby na komputerze wobec Reticulum i LXMF w Pythonie, a obrazy z rdzeniem (`*-core`) są na razie tylko kompilowane. Etap R6 przełącza obrazy na rdzeń i usuwa port. Rdzeni nie uruchomiono jeszcze na płytce.
 - **Płytka stacji pilotażowej:** [porównanie czterech kandydatów](docs/spec/elektronika.md#porównanie-kandydatów) wskazuje RAK3312 na płytce bazowej RAK19007 jako głównego kandydata; wyprowadzenia do stacji wymagają ekspandera. Żaden kandydat nie ma dotąd podpisanej deklaracji zgodności UE producenta ([dokumenty](docs/spec/elektronika.md#dokumenty-zgodności-kandydatów)). 21 października wysłano zapytanie do RAK o deklarację dla RAK3312 i RAK19007, raporty radiowe i stanowisko wobec EN 18031. Wybór płytki zapadnie po próbach na dwóch L0.
 
 Zakres prototypu L0 (przygotowany do wyceny, teraz podstawa zlecenia montażu) i zasady wyboru dokumentów są w [dokumentach przygotowania testów](output/README.md). Instrukcje bieżących prób opisuje [hardware](hardware/README.md).
@@ -36,10 +37,10 @@ W repozytorium są:
 - specyfikacja stacji;
 - model obliczeniowy z testami;
 - projekt płytki nośnej stanowiska deweloperskiego (N1) i rozpoczęty projekt płytki stacji R02 (wstrzymany);
-- oprogramowanie stacji skompilowane dla stanowisk deweloperskich A i B oraz dla L0, ze stosem Reticulum (bez LXMF); nie uruchomiono go jeszcze na sprzęcie;
+- oprogramowanie stacji skompilowane dla stanowisk deweloperskich A i B oraz dla L0, ze stosem Reticulum z portu microReticulum (bez LXMF), oraz własny rdzeń Reticulum stacji z LXMF sprawdzony na komputerze (etapy R0–R5); nie uruchomiono ich jeszcze na sprzęcie;
 - aplikacja laptopa uruchamiana z pamięci USB: przygotowanie stacji (etap 1) i zaszyfrowana baza (etap 2, warstwa bazy).
 
-Do wykonania pozostają montaż i próby L0, interfejs LoRa w stosie, integracja LXMF na stacji, aplikacja stanowiska odbiorczego oraz próby sprzętu i obsługi.
+Do wykonania pozostają montaż i próby L0, interfejs LoRa w stosie, przełączenie obrazów stacji na rdzeń z LXMF (R6), aplikacja stanowiska odbiorczego oraz próby sprzętu i obsługi.
 
 Po przeglądzie z 8 października 2026 r. przyjęliśmy następującą [kolejność prac](docs/concept/08-plan-weryfikacji-i-decyzje.html#kolejnosc-prac):
 
@@ -91,7 +92,7 @@ Na razie projekt prowadzi jedna osoba: [@tmierzwa](https://github.com/tmierzwa).
 
 Autor przegląda każdą zmianę. Obliczenia i założenia prawne czekają na niezależny przegląd; wyniki modelu wymagają potwierdzenia pomiarami.
 
-Projekt jest otwarty; licencje dopuszczają zastosowania komercyjne. Kod jest na licencji MIT, konstrukcja na CERN-OHL-P-2.0, a dokumentacja na CC-BY-4.0. Szczegóły są w [LICENSE.md](LICENSE.md). Podatności zgłaszaj prywatnie według [SECURITY.md](SECURITY.md). Obowiązuje [kodeks postępowania](CODE_OF_CONDUCT.md).
+Projekt jest otwarty; licencje dopuszczają zastosowania komercyjne. Kod jest na licencji MIT, konstrukcja na CERN-OHL-P-2.0, a dokumentacja na CC-BY-4.0. Wyjątkiem jest rdzeń Reticulum stacji (`firmware/lib/reticulum_core/`): jako utwór zależny od Reticulum jest na [licencji Reticulum](LICENSES/LicenseRef-Reticulum.txt). Ta licencja dodaje do warunków MIT zakaz użycia w systemach, których funkcją jest celowe szkodzenie ludziom, i zakaz użycia przy tworzeniu zbiorów do trenowania AI, więc nie jest licencją open source w rozumieniu OSI. Obraz stacji z rdzeniem podlega jej jako całość. Szczegóły są w [LICENSE.md](LICENSE.md). Podatności zgłaszaj prywatnie według [SECURITY.md](SECURITY.md). Obowiązuje [kodeks postępowania](CODE_OF_CONDUCT.md).
 
 ## In English
 

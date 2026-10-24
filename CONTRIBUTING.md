@@ -13,7 +13,7 @@ Projekt jest na etapie projektowania prototypu. Najbliższy cel to wymiana zgło
 
 ## Od czego zacząć
 
-Oprogramowanie stacji w [firmware/](firmware/README.md) skompilowano dla stanowisk deweloperskich A i B, ze stosem Reticulum z portu microReticulum, bez LXMF; nie uruchomiono go jeszcze na sprzęcie. Pilotaż używa gotowej płytki ESP32-S3 z układem LoRa SX1262; płytka R02 jest wstrzymana do decyzji po pilotażu.
+Oprogramowanie stacji w [firmware/](firmware/README.md) skompilowano dla stanowisk deweloperskich A i B oraz dla prototypu L0, ze stosem Reticulum z portu microReticulum, bez LXMF. Port zastępuje [własny rdzeń Reticulum stacji](firmware/reticulum-core.md) z LXMF: etapy R0–R5 przechodzą próby na komputerze, a etap R6 przełącza obrazy na rdzeń. Nic z tego nie uruchomiono jeszcze na sprzęcie. Pilotaż używa gotowej płytki ESP32-S3 z układem LoRa SX1262; płytka R02 jest wstrzymana do decyzji po pilotażu.
 
 ### Małe zadania bez sprzętu
 
@@ -90,7 +90,7 @@ Główna gałąź jest chroniona regułą repozytorium bez wyjątków, także dl
 
 ## Licencje
 
-Wkład pozostaje pod licencją właściwą dla ścieżki w [LICENSE.md](LICENSE.md): kod MIT, konstrukcja CERN-OHL-P-2.0, dokumentacja CC-BY-4.0. Projekt jest otwarty; licencje dopuszczają zastosowania komercyjne. Obowiązuje [kodeks postępowania](CODE_OF_CONDUCT.md); podatności zgłaszaj według [SECURITY.md](SECURITY.md).
+Wkład pozostaje pod licencją właściwą dla ścieżki w [LICENSE.md](LICENSE.md): kod MIT, konstrukcja CERN-OHL-P-2.0, dokumentacja CC-BY-4.0, a rdzeń Reticulum stacji (`firmware/lib/reticulum_core/`) [licencja Reticulum](LICENSES/LicenseRef-Reticulum.txt) z dodatkowymi warunkami (zob. [DCO](#pochodzenie-wkładu-dco)). Projekt jest otwarty; licencje dopuszczają zastosowania komercyjne. Obowiązuje [kodeks postępowania](CODE_OF_CONDUCT.md); podatności zgłaszaj według [SECURITY.md](SECURITY.md).
 
 ## In English
 
