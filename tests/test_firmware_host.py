@@ -1749,6 +1749,18 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual(tests[0], tests[1])   # powtórzone nonce: ten sam wynik
         self.assertEqual(len(self.regs(out, "d")), 3)
 
+    def test_repeated_message_gets_proof(self):
+        # Ponowienie po utraconym dowodzie (nowy pakiet, ta sama wiadomość: id, rewizja, zdarzenie): rozstrzygnięte
+        # z dowodem bez drugiego zapisu, a stan zgłoszenia jak po jednej kopii.
+        x = self.rid(1234)
+        messages = [[1, 1, x, 1, 1, 1], [1, 2, x, 1, 4, 5], [1, 3, x, 1, 5, "Zadzwoń pod 112"]]
+        once, r1, s1 = self.lifecycle(messages)
+        twice, r2, s2 = self.lifecycle([m for m in messages for _ in range(2)])
+        self.assertEqual([line.split()[1] for line in self.find(twice, "rx ")], ["1"] * 6)
+        self.assertEqual(r2, r1)
+        self.assertEqual(self.records(twice, "msg", "end"), self.records(once, "msg", "end"))
+        self.assertEqual((s2["received"], s2["skipped"]), (6, s1["skipped"] + 2))
+
     def test_reply_read_failure_gives_no_proof(self):
         # Nieudany odczyt gniazda zgłoszenia przy odbiorze REPLY: bez dowodu i bez wpisu; ponowienie zapisuje wiadomość raz.
         x = self.rid(1234)
