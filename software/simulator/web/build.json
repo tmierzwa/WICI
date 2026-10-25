@@ -61,8 +61,8 @@
  ],
  "outputs": {
   "wici-station.mjs": {
-   "sha256": "1b132cc28e3213405c566b14a1e64c47d4b75252ebc3008b0349e93279305a64",
-   "bytes": 645133,
+   "sha256": "76434392218b8ba347eebb0185ec28b11970d6a6813c0a573e8b95ca06f80528",
+   "bytes": 641805,
    "sources": [
     "firmware/src/annunciator.cpp",
     "firmware/src/config.cpp",
@@ -102,8 +102,8 @@
    ]
   },
   "wici-post.mjs": {
-   "sha256": "126b74e61caa163f1b131ce85b0364c0759ae5ebf9264d8bd21938b4916c6d6c",
-   "bytes": 313940,
+   "sha256": "dc689a5807904d2e8f956c5767d56b2249b3b1fba7bd379c8996e6ea743e8e1a",
+   "bytes": 314496,
    "sources": [
     "firmware/src/config.cpp",
     "firmware/src/drbg.cpp",
@@ -136,7 +136,7 @@
   "firmware/src/cmdargs.h": "da5b1688a4c7913a24cf4d9d4a6d6b9de750e9c010febb365cb40e6497a6a379",
   "firmware/src/config.cpp": "32656e69f7114ec58913cc4614cc0a72b80c58b90b3e65d4affae028986d03e3",
   "firmware/src/config.h": "dd52f6e0184b11dbe664951aaa83008049d0601d51c462f8491864370334fbe4",
-  "firmware/src/console.cpp": "718e61e203c954600f07838d104406b9e70f1845e955e2a6fc5dbaab53a55374",
+  "firmware/src/console.cpp": "0b4dbc984e24d6ced77ae5fe8d1d602c3e26d80f4458ae9048a6cdb8fe23704c",
   "firmware/src/console.h": "8f46ad6a6fffc5cec05d51e9751648c45b709e53e947651cc395b880e654a971",
   "firmware/src/core_selftest.cpp": "61844d783508ec06ad05aa03f149f94189a9e8719972c92eeec289c44911342f",
   "firmware/src/core_selftest.h": "d5d0a66bfb98a77ea0436a0addaa4c4796d6b8858ca2df44938b28fed5075570",
@@ -198,8 +198,8 @@
   "firmware/src/sharp.h": "a2ac3ac7b9c811f9a438b67209dc644592f348053f0cc5c987446b4fd7ff1451",
   "firmware/src/sharp_extcomin_esp32.cpp": "f151fa001c2a3f4346687fac5f581323ecbf55704124d443c5d9087a4dcb33fb",
   "firmware/src/sharp_extcomin_nrf.cpp": "b26323614a98ad9c29d7ee14191db6108439a8c476f1eb7f94148f480785b3be",
-  "firmware/src/station.cpp": "cef6c5b9b518f489894d51780f99c92ec2951af10bb314d29b2f31e027c10126",
-  "firmware/src/station.h": "03ed337a2e25f4403008b5df9321f6f90104654842caa6933729443248e1bba6",
+  "firmware/src/station.cpp": "c7158d4b6f6ae09ca9ba02d7e470d1553c6d8c5715b3cd30db7c0ce040b1b681",
+  "firmware/src/station.h": "5d6303e044b1aeb5fcc0266f3329d3696dbf79be753ce8c24fef3119cd1fc51b",
   "firmware/src/store.cpp": "7f19603e7b12ca0e9d5e4b5fdfa5cc18eba2c30bdcbf89c4e32f365968298a33",
   "firmware/src/store.h": "e537820be3cf4f05718d1dfb61537f5756cd0d9951711817b47c11937e156496",
   "firmware/src/sx1262.cpp": "309ae0edacbb5e8178040da4054ce7814efbc2b985177a5eeb27157baa7481a1",
@@ -208,9 +208,9 @@
   "firmware/src/sx1262_link.h": "59c4f7ee7277bd0bb96e8871d1d02aa17ebac6d5fd08df0b13508c1df20108d4",
   "firmware/src/testframe.cpp": "43f8f149a317f4a6c9f4c5aecf426204a88fcb98eb7f29c4f84e9845931402cf",
   "firmware/src/testframe.h": "d8a84994aebfd531fd24acbcef3c4b85eeae21865df552df290621cff24ff662",
-  "firmware/src/ui.cpp": "6573a369e428b38d1ef979dc6589231a1e5d2770b4ff696cfc692a8d44598437",
-  "firmware/src/ui.h": "ccf28f8bc32cd76bf34b1680e43c4e8e5ffabb621ef074b3ba4f9d2f2e6727cb",
-  "firmware/src/ui_texts.h": "4be85919eff9eef041a1ca615a93fa0eba2e3fbe7b7711ae7f9035e6727fe67d",
+  "firmware/src/ui.cpp": "9704701784e67d335f3b811d36e26ef81f416a2138b374dfcf428236e473def3",
+  "firmware/src/ui.h": "e92aab16ac9db5f3b6fc3973ed3863bac4d175a20be32636b94b3f85645faece",
+  "firmware/src/ui_texts.h": "e9fd38c77d867339f8331e08e21410f8079762fb9b6190b615ede75814eefcaa",
   "firmware/src/unicode_tables.h": "ef324616bebbcb72f111ce9453ed943d9b57fad9ae73cdc79d22a81161d88739",
   "firmware/src/usbproto.cpp": "51aeaed8aa185f3330ca60ec34249076380b3f52d3482ef066067633f2531c2d",
   "firmware/src/usbproto.h": "8421e73abe19735bd80f299566eed59993056b25498656445883289af6ff1a44",
@@ -271,7 +271,7 @@
   "software/simulator/hal/sharp_extcomin_sim.cpp": "d308ceaab49e57054dc67421429f4955756c28ed877ed2c0162b2cb20b7f43dd",
   "software/simulator/hal/vboard.cpp": "36d6257f17a7e3afe18e11cd44b59457ffdb94a6b4510692491a173ddf124152",
   "software/simulator/hal/vboard.h": "c9d6642034dd57ac6d3c3c38b37aba5361a88e8681266be5270b9e5006f3371b",
-  "software/simulator/post/post.cpp": "3fd290256a5ad3babed8ac01eb8b432e3103b93662a91eb32ab9b3818977b652",
+  "software/simulator/post/post.cpp": "ef461405c32dc35bf0830d26cd63e58b0946cced05933bf5825251ad4553474b",
   "software/simulator/build.py": "5eeafd92ed653a32a5b4f79de314255f2fbaad2c326c64109e81c4c69ca23b4d"
  }
 }

@@ -81,9 +81,13 @@ export const SCENARIOS = [
       { pl: "Zapisz krótki numer zgłoszenia w dzienniku. Czekaj na „ODBIORCA ZAPISAŁ”.", en: "Write the short request number in the log. Wait for “RECIPIENT SAVED”.",
         done: (o) => requests(o).some((r) => r.category === 3 && r.people === 40 && r.urgency === 1 && r.received_acked >= 0) },
       { pl: "Czekaj na decyzję dyżurnego i sprawdź ją w WIADOMOŚCI.", en: "Wait for the duty officer’s decision and check it in MESSAGES.",
-        done: (o) => requests(o).some((r) => r.category === 3 && r.state_acked === 3) },
+        done: (o, ctx) => requests(o).some((r) => {
+          if (r.category !== 3 || r.state_acked !== 3) return false;
+          if (shown(o, "POMOC SKIEROWANA")) ctx.decisionNumber = r.number;
+          return ctx.decisionNumber === r.number && shown(o, String(r.number).padStart(4, "0"));
+        }) },
     ],
-    solution: [...wizard({ category: 3, people: { value: 40 }, urgency: 1 }), "wait 400"],
+    solution: [...wizard({ category: 3, people: { value: 40 }, urgency: 1 }), "wait 400", ...MESSAGES, ...Array(12).fill("press DOWN")],
   },
   {
     id: "revise",
@@ -99,10 +103,10 @@ export const SCENARIOS = [
       { pl: "Czekaj, aż odbiorca zapisze nową wersję. Krótki numer się nie zmienia.", en: "Wait until the recipient saves the new version. The short number stays the same.",
         done: (o) => requests(o).some((r) => r.revision >= 1 && r.people === 55 && r.received_acked >= 1) },
       { pl: "Sprawdź na stanowisku (panel Dyżurny), że to wciąż jedno zgłoszenie.", en: "Check at the receiving post (Duty officer panel) that it is still one request.",
-        done: (o) => requests(o).length === 1 },
+        done: (o) => o.panel === "rx" && requests(o).length === 1 },
     ],
     solution: [...MESSAGES, "press OK", "wait 0.3", "press OK", "wait 0.3", ...Array(7).fill("press DOWN"), "press OK", "press OK", "press UP", "press OK",
-      ...Array(5).fill("press UP"), "press OK", "wait 0.3", "press OK", "wait 3", "press BACK", "wait 120"],
+      ...Array(5).fill("press UP"), "press OK", "wait 0.3", "press OK", "wait 3", "press BACK", "wait 120", "view rx"],
   },
   {
     id: "alarm",
@@ -163,13 +167,16 @@ export const SCENARIOS = [
       pl: "Zgłoszenie ewakuacji 10 osób dotarło. Dyżurny nie ma teraz transportu i odpowiada instrukcją.",
       en: "An evacuation request for 10 people arrived. The duty officer has no transport now and replies with instructions.",
     },
-    setup: ["boot", "post auto 0 0 0 0", ...wizard({ category: 2, people: 3, urgency: 1 }), "wait 60", "post decide last 5",
-      "post reply last Brak transportu do 18:00. Osoby chodzące: punkt w Szkole nr 1, jeśli droga bezpieczna.", "wait 60"],
+    setup: ["boot", "post auto 0 0 0 0", ...wizard({ category: 2, people: 3, urgency: 1 }), "wait 60",
+      "post reply last Brak transportu do 18:00. Osoby chodzące: punkt w Szkole nr 1, jeśli droga bezpieczna.", "wait 60", "post decide last 5", "wait 60"],
     steps: [
       { pl: "Sprawdź etap zgłoszenia w WIADOMOŚCI i przeczytaj odpowiedź dyżurnego.", en: "Check the request stage in MESSAGES and read the duty officer’s reply.",
-        done: (o) => shown(o, "BRAK TRANSPORTU") },
+        done: (o, ctx) => {
+          if (shown(o, "BRAK TRANSPORTU")) ctx.replyStart = true;
+          return !!ctx.replyStart && shown(o, "DROGA BEZPIECZNA");
+        } },
     ],
-    solution: [...MESSAGES],
+    solution: [...MESSAGES, ...Array(12).fill("press DOWN")],
   },
   {
     id: "backup",
@@ -213,6 +220,7 @@ export class Exercise {
     this.sim = sim;
     this.scenario = scenario;
     this.ctx = {};
+    this.panel = "train";
     this.index = 0;
     this.records = [];
     this.warnings = [];
@@ -222,7 +230,7 @@ export class Exercise {
 
   observe() {
     const sim = this.sim;
-    return { screen: sim.screen(), post: sim.postState(), power: sim.station.powered, switch: sim.switchOn(), t: sim.nowUs };
+    return { screen: sim.screen(), post: sim.postState(), power: sim.station.powered, switch: sim.switchOn(), t: sim.nowUs, panel: this.panel };
   }
 
   async start(onProgress) {

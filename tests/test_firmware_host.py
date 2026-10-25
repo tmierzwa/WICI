@@ -2463,7 +2463,7 @@ class HostUnitTests(unittest.TestCase):
             script += [key, "R"]
         s = [x for x in self.screens(self.ui(script)) if x[0] in ("summary", "item")]
         self.assertEqual([x[0] for x in s], ["item", "summary", "item", "summary", "item", "item", "item"])
-        self.assertEqual(self.lines(s[1])[3], "gate closed")      # zachowana fraza z listy stacji, po angielsku
+        self.assertIn("gate closed", self.scrolled_summary(script))  # zachowana fraza po przewinięciu
         self.assertIn("need resolved", self.lines(s[-1]))         # nie „potrzeba ustała”
 
     def test_own_text_entry_by_letter_groups(self):
@@ -2482,7 +2482,8 @@ class HostUnitTests(unittest.TestCase):
         typed = (letter(4, 1) + letter(-2, 1) + ["R"] + letter(-1, 2) + ["K OK 0", "K DOWN 0", "K DOWN 0", "R", "K BACK 0"] + letter(4, 1) + letter(-1, 3) +
                  letter(-1, 4) + ["K UP 0"] * 4 + ["K OK 0"] + letter(8, 2) + letter(0, 3) + ["K BACK 0", "R"])
         done = ["K UP 0"] * 9 + ["K OK 0", "R", "K BACK 0", "R", "K UP 0"] + ["K UP 0"] * 7 + ["K OK 0", "K OK 0", "R", "M"]
-        out = self.ui(self.HOSTED + to_phrase + ["R"] + own + typed + done)
+        script = self.HOSTED + to_phrase + ["R"] + own + typed + done
+        out = self.ui(script)
         s = self.screens(out)
         phrase, empty, two, group, typed_screen, summary, back, final = s[0], s[1], s[2], s[3], s[4], s[5], s[6], s[7]
         self.assertEqual(self.lines(phrase)[2], labels["WLASNY_TEKST"][0])
@@ -2495,7 +2496,7 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual(self.lines(typed_screen)[0], "PIĘTRO 2_")             # spacja i „2”, „3” usunięte WSTECZ
         self.assertEqual(self.lines(typed_screen)[2], texts["wpis_wolne"][0].replace("[n]", "40"))
         self.assertEqual(summary[0], "summary")
-        self.assertEqual(self.lines(summary)[3], "PIĘTRO 2")
+        self.assertIn("PIĘTRO 2", self.scrolled_summary(script))
         self.assertEqual(back[0], "text")                                       # WSTECZ z podsumowania: wpis
         self.assertEqual(final[0], "result")
         self.assertTrue(any(line.endswith("|PIĘTRO 2") for line in out if line.startswith("item ")), out)
@@ -2507,7 +2508,7 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual(self.lines(full)[:2], ["A" * 20, "A" * 8 + "_"])   # 48 znaków, wiersze od początku tekstu
         self.assertEqual(self.lines(full)[2], texts["wpis_wolne"][0].replace("[n]", "0"))
         out = self.ui(["H", self.CONFIG, "L 1", "O 1"] + to_phrase + own + ["K OK 0", "K DOWN 0", "K OK 0", "K UP 0", "K OK 0",
-                                                                             "K UP 0", "K OK 0", "R"])
+                                                                             "K UP 0", "K OK 0"] + ["K DOWN 0"] * 4 + ["R"])
         self.assertEqual(self.screens(out)[-1][0], "summary")
         self.assertIn("Б", self.lines(self.screens(out)[-1]))
         # GOTOWE przy pustym tekście wraca do listy fraz.
@@ -2526,14 +2527,15 @@ class HostUnitTests(unittest.TestCase):
                      "K DOWN 0", "K OK 0"]
         own = ["K DOWN 0", "K DOWN 0", "K OK 0"]
         # Tryb przygotowania (pasek u góry): jeden wiersz tekstu; SPACJA nie na początku i nie druga z rzędu.
-        out = self.ui(["P 1"] + self.HOSTED + to_phrase + own + ["K UP 0", "K OK 0", "K DOWN 0", "K OK 0", "K OK 0", "K UP 0",
-                                                                  "K OK 0", "K OK 0", "R", "K UP 0", "K OK 0", "R"])
+        script = ["P 1"] + self.HOSTED + to_phrase + own + ["K UP 0", "K OK 0", "K DOWN 0", "K OK 0", "K OK 0", "K UP 0",
+                                                                  "K OK 0", "K OK 0", "R", "K UP 0", "K OK 0", "R"]
+        out = self.ui(script)
         entry, summary = self.screens(out)[-2:]
         self.assertEqual(self.lines(entry)[0], texts["tryb_przygotowania"][0][:20])
         self.assertEqual(self.lines(entry)[1:3], ["A _", texts["wpis_wolne"][0].replace("[n]", "46")])
         self.assertIn((True, labels["SPACJA"][0]), entry[2][3:])
         self.assertEqual(summary[0], "summary")
-        self.assertIn("A", self.lines(summary))                         # GOTOWE usuwa spację z końca
+        self.assertIn("A", self.scrolled_summary(script).splitlines())  # GOTOWE usuwa spację z końca
         # Przytrzymanie WSTECZ usuwa kolejne znaki (po 0,5 s co 150 ms), bez pytania o porzucenie i bez wyjścia z wpisu.
         out = self.ui(self.HOSTED + to_phrase + own + ["K OK 0", "K OK 0"] * 3 + ["KD BACK 1000", "T 1400", "R", "T 1500", "T 1650",
                                                                                  "KU BACK 1700", "R", "KD BACK 2000", "T 2500", "T 4200",
@@ -2544,12 +2546,15 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual(emptied[0], "text")
         self.assertEqual(" ".join(self.lines(emptied)[:2]).strip(), texts["nie_wpisuj_nazwisk"][0])
         # Kategoria 9: lista bez „-”, własny tekst spełnia wymóg opisu.
-        out = self.ui(self.HOSTED + ["K OK 0", "K OK 0"] + ["K DOWN 0"] * 9 + ["K OK 0", "K OK 0", "K DOWN 0", "K DOWN 0", "K OK 0",
-                      "R", "K DOWN 0", "K OK 0", "K OK 0", "K OK 0", "K UP 0", "K UP 0", "K OK 0", "R"])
+        script = self.HOSTED + ["K OK 0", "K OK 0"] + ["K DOWN 0"] * 9 + ["K OK 0", "K OK 0", "K DOWN 0", "K DOWN 0", "K OK 0",
+                      "R", "K DOWN 0", "K OK 0", "K OK 0", "K OK 0", "K UP 0", "K UP 0", "K OK 0", "R"]
+        out = self.ui(script)
         phrases, summary = self.screens(out)[-2:]
         self.assertEqual(self.lines(phrases)[:2], [data["phrases"][0][0], labels["WLASNY_TEKST"][0]])
-        self.assertEqual((summary[0], self.lines(summary)[0]), ("summary", data["categories"][9][0]))
-        self.assertIn("A", self.lines(summary))
+        self.assertEqual(summary[0], "summary")
+        visible = self.scrolled_summary(script)
+        self.assertIn(data["categories"][9][0], visible)
+        self.assertIn("A", visible.splitlines())
         # Rewizja zgłoszenia z własnym tekstem zachowuje tekst i nie kasuje przerwanego szkicu nowego zgłoszenia.
         create = to_phrase + own + ["K OK 0", "K OK 0", "K OK 0", "K DOWN 0", "K DOWN 0", "K OK 0", "K UP 0", "K UP 0", "K OK 0", "K OK 0", "K OK 0"]
         draft = ["K OK 0", "K OK 0", "K OK 0", "K OK 0", "K DOWN 0", "K DOWN 0", "K OK 0", "K DOWN 0", "K DOWN 0", "K OK 0",
@@ -2558,7 +2563,8 @@ class HostUnitTests(unittest.TestCase):
         resume = ["K OK 0", "K OK 0", "K OK 0", "K OK 0", "K DOWN 0", "K DOWN 0", "K OK 0", "K DOWN 0", "K DOWN 0", "K OK 0", "R", "M"]
         out = self.ui(self.HOSTED + create + draft + revise + resume)
         rev, resumed = self.screens(out)[-2:]
-        self.assertEqual((rev[0], self.lines(rev)[3]), ("summary", "AB"))
+        self.assertEqual(rev[0], "summary")
+        self.assertIn("AB", self.scrolled_summary(self.HOSTED + create + draft + revise + resume).splitlines())
         self.assertEqual((resumed[0], self.lines(resumed)[0]), ("text", "C_"))
         own_items = [line for line in out if line.startswith("item ") and line.endswith("|AB")]
         self.assertEqual(len(own_items), 1, out)
@@ -2587,6 +2593,27 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual((alarm[0], back[0]), ("alarm", "text"))
         self.assertEqual(self.lines(back)[3:], ["D E Ę F G", "  ^"])
 
+    def scrolled_summary(self, script):
+        rendered = self.screens(self.ui(script))
+        summary_index = next(i for i, screen in enumerate(rendered) if screen[0] == "summary")
+        end = [i for i, command in enumerate(script) if command == "R"][summary_index] + 1
+        scroll = [command for _ in range(16) for command in ("K DOWN 0", "R")]
+        screens = self.screens(self.ui(script[:end] + scroll))[summary_index:]
+        return "\n".join(line for screen in screens for line in self.lines(screen))
+
+    def test_summary_shows_actions_and_scrolling_keeps_the_phrase(self):
+        script = self.HOSTED + ["K OK 0", "K OK 0", "K DOWN 0", "K DOWN 0", "K OK 0",
+                               "K DOWN 0", "K DOWN 0", "K OK 0", "K DOWN 0", "K DOWN 0", "K OK 0",
+                               "K DOWN 0", "K OK 0", "R"]
+        script += [entry for _ in range(16) for entry in ("K DOWN 0", "R")]
+        screens = self.screens(self.ui(script))
+        self.assertIn("OK = WYŚLIJ", self.shown(screens[0]))
+        self.assertIn("= POPRAW", self.shown(screens[0]))
+        self.assertIn("DÓŁ: DALSZA TREŚĆ", self.lines(screens[0]))
+        visible = " ".join(self.shown(screen) for screen in screens)
+        self.assertIn("osoba na wózku", visible)
+        self.assertIn("GODZIN", visible)
+
     def test_wizard_creates_request_and_item_shows_stage(self):
         data = ui_texts.load()
         texts, labels = data["texts"], data["labels"]
@@ -2602,7 +2629,8 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual((reg[0]["type"], reg[0]["origin"], reg[0]["stage"]), (0, 0, 0))
         s = self.screens(out)
         summary, result, item, menu, silent, sending, sending_menu = s
-        self.assertEqual(self.lines(summary)[:4], [data["categories"][2][0], "5 PILNE – KILKA", "GODZIN", data["phrases"][0][0]])
+        self.assertEqual(self.lines(summary)[:4], ["OK = WYŚLIJ, WSTECZ", "= POPRAW", data["categories"][2][0], "5 PILNE – KILKA"])
+        self.assertEqual(self.lines(summary)[4], "DÓŁ: DALSZA TREŚĆ")
         self.assertEqual(self.shown(result), texts["zapisane_w_stacji"][0] + " " + texts["zapisz_numer"][0].replace("[xxxx]", number))
         self.assertTrue(self.shown(item).startswith(texts["zapisane_w_stacji"][0]), item)
         # Przed `nadane`: ANULUJ WYSYŁKĘ dostępne.
@@ -2732,6 +2760,13 @@ class HostUnitTests(unittest.TestCase):
             alarm = self.screens(self.ui(["H", self.CONFIG, "L %d" % lang, "O 1", "W 0", "T 1000", "R"]))[0]
             self.assertEqual(self.shown(alarm), texts["brak_lacznosci_alarm"][lang])
             self.assertLessEqual(len([x for x in self.lines(alarm) if x.strip()]), 5)
+    def test_alarm_after_power_on_does_not_invent_waiting_minutes(self):
+        out = self.ui(self.HOSTED + ["create 1 2 0 x", "poll", "now 1000", "poweron", "T 1000000", "R"])
+        screen = self.screens(out)[-1]
+        self.assertEqual(screen[0], "alarm")
+        self.assertIn("CZAS OCZEKIWANIA", self.shown(screen))
+        self.assertIn("NIEZNANY", self.shown(screen))
+        self.assertNotIn("OD 0 MIN", self.shown(screen))
 
     def test_alarm_on_language_screen_refresh_and_new_revision(self):
         texts = ui_texts.load()["texts"]

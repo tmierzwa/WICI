@@ -224,6 +224,7 @@ bool Console::alarm(ui::AlarmInfo& out) {
     out.ref = ownRef(a.slot, a.gen);
     out.number = a.number;
     out.minutes = a.minutes;
+    out.ageKnown = a.ageKnown;
     return true;
 }
 

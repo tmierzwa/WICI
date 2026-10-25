@@ -1035,7 +1035,14 @@ void Model::renderList(const char* const* items, size_t count, size_t window, Li
 void Model::renderText(Text& text, size_t window, Lines& out, size_t first) {
     const char* items[TEXT_MAX_LINES];
     for (size_t i = 0; i < text.count; ++i) items[i] = text.line[i];
-    renderList(items, text.count, window, out, first, false);
+    const bool continued = (screen_ == Screen::SUMMARY || screen_ == Screen::ITEM) && text.count > window;
+    renderList(items, text.count, continued ? window - 1 : window, out, first, false);
+    if (continued) {
+        const bool more = top_ + window - 1 < text.count;
+        const char* next[] = {"DÓŁ: DALSZA TREŚĆ", "ВНИЗ: ДАЛІ", "DOWN: MORE TEXT"};
+        const char* previous[] = {"GÓRA: WCZEŚNIEJ", "ВГОРУ: НАЗАД", "UP: PREVIOUS TEXT"};
+        copyLine(out.text[first + window - 1], LINE_BYTES, (more ? next : previous)[static_cast<size_t>(lang_)]);
+    }
 }
 
 bool Model::openItem(Item& item) {
@@ -1071,6 +1078,7 @@ void Model::stageText(const Item& item, const Status& status, char* out, size_t 
 }
 
 void Model::buildSummary(Text& t) const {
+    t.add(text(Id::PODSUMOWANIE_KLAWISZE, lang_));
     const size_t L = static_cast<size_t>(lang_);
     char tmp[LINE_BYTES * 2];
     t.addLine(ui_texts::CATEGORIES[draft_.category < 10 ? draft_.category : 9][L]);
@@ -1090,7 +1098,6 @@ void Model::buildSummary(Text& t) const {
         }
     }
     if (host_) t.add(host_->address());
-    t.add(text(Id::PODSUMOWANIE_KLAWISZE, lang_));
 }
 
 void Model::buildItem(const Item& item, Text& t) const {
@@ -1478,6 +1485,7 @@ void Model::render(const Status& s, Lines& out) {
                 break;
             }
             if (alarm_.kind == AlarmKind::NO_READ) t.add(text(Id::BRAK_ODCZYTU, lang_));
+            else if (!alarm_.ageKnown) t.add(text(Id::BRAK_POTWIERDZENIA_BEZ_CZASU, lang_));
             else t.addNumber(Id::BRAK_POTWIERDZENIA, "[n]", alarm_.minutes, lang_);
             t.addShort(Id::ZAPISZ_NUMER, alarm_.number, lang_);
             renderText(t, window, out, first);

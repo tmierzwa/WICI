@@ -20,6 +20,7 @@
 </header>
 
 <main>
+  <section id="copy-status" class="card notice-alarm" role="status" hidden></section>
   <section id="offline" class="card notice-alarm" hidden>
     <h2>Panel nie ma połączenia z aplikacją</h2>
     <p id="offline-text">Aplikacja WICI została zamknięta albo przestała odpowiadać. Uruchom START ponownie.</p>
@@ -267,7 +268,7 @@
         <button type="button" class="btn btn-primary" id="hand-back">Oddaj laptop</button>
       </div>
       <h3>Zniszczenie danych</h3>
-      <p class="hint">Tylko przy groźbie przejęcia stacji albo laptopa, także na polecenie odbiorcy przekazane słownie albo przez gońca; nigdy na podstawie wiadomości radiowej. Laptop od razu usuwa dane zestawu z dysku i z pamięci USB, a podłączona stacja pyta o potwierdzenie przyciskiem OK i przestaje działać na stałe. Nieodwracalne. Bez laptopa albo bez logowania: na stacji STAN → USŁUGI → ZNISZCZ DANE.</p>
+      <p class="hint">Tylko przy groźbie przejęcia stacji albo laptopa, także na polecenie odbiorcy przekazane słownie albo przez gońca; nigdy na podstawie wiadomości radiowej. Laptop od razu usuwa dane zestawu z dysku i z pamięci USB, a podłączona stacja po potwierdzeniu przyciskiem OK usuwa swoje dane i uruchamia się bez konfiguracji. Ponowne użycie wymaga przygotowania stacji. Nieodwracalne. Bez laptopa albo bez logowania: na stacji STAN → USŁUGI → ZNISZCZ DANE.</p>
       <div class="buttons">
         <button type="button" class="btn btn-danger" id="destroy">ZNISZCZ DANE</button>
       </div>

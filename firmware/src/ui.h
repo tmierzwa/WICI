@@ -155,6 +155,7 @@ struct AlarmInfo {
     uint32_t ref = 0;        // wpis rejestru (jak Item::ref)
     uint16_t number = 0;
     uint32_t minutes = 0;
+    bool ageKnown = true;
 };
 
 // Alarmy ekranu. Stacja bez magazynu podłącza tylko je (awaria radia, oprogramowanie.md, „Alarmy”).
