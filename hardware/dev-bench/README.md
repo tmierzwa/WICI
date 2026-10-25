@@ -10,7 +10,7 @@ Obrazy oprogramowania są w [firmware/](../../firmware/README.md): `bench-a` (st
 
 Zasada: tor RF, wzorzec częstotliwości i zasilanie stanowiska pochodzą z płytek producentów; własnych płytek radiowych do prób się nie projektuje. Moduły łączy [płytka nośna N1](plytka-nosna.md) (jedna płytka dla stanowisk A i B, [F81](../../docs/review.md)). Do czasu montażu N1 stanowisko A można połączyć przewodami według [firmware/README.md](../../firmware/README.md#okablowanie-stanowiska-a) i [tabeli złączy EM](#złącza-modułu-cc1120em). Dla stanowiska B tabeli przewodów nie ma, więc B buduje się tylko na N1.
 
-Na stanowisku działa to samo oprogramowanie układowe co w stacji. Różni się tylko przypisanie wyprowadzeń (np. SPI SCK jest na D13 przy przewodach i na D3 na N1), dlatego każdy wariant ma własny plik opisu płytki. Nie ma osobnego oprogramowania stanowiska ani osobnego kontraktu modemu.
+Na stanowisku działa to samo oprogramowanie układowe co w stacji. Różni się przypisanie wyprowadzeń (np. SPI SCK jest na D13 przy przewodach i na D3 na N1), dlatego każdy wariant ma własny plik opisu płytki. Nie ma osobnego oprogramowania stanowiska ani osobnego kontraktu modemu.
 
 ## Dwa stanowiska
 
@@ -51,7 +51,7 @@ Polecenia pomiarowe interfejsu diagnostyki (`TXCW`, `TXPKT`, `RXPER`, `FOFF`) dz
 
 ## Złącza modułu CC1120EM
 
-Przy okablowaniu przewodami połączenia opisuje ta tabela, a na płytce nośnej wynikają one ze schematu. Mapa złączy P1/P2 modułu TI CC112xEM 868/915 pochodzi z projektu R01.3. Numery są elektrycznymi numerami pinów. Złącza są na spodzie modułu, więc w widoku od spodu układ pinów jest odwrócony. Przed zasilaniem trzeba sprawdzić każdą żyłę miernikiem. W pierwszej próbie przewody mają najwyżej 5 cm, a SPI pracuje z zegarem około 1 MHz. Na N1 zegar SPI wynosi 1 MHz dla radia i 8 MHz dla FRAM (wymaganie ≥8 MHz dla każdej stacji). Ekran można przełączyć na zegar do 2 MHz (polecenie `DISPLAY`) dopiero po pomiarze oscyloskopem przy J7 ([uruchomienie](uruchomienie.md#pomiar-magistrali-oscyloskopem)).
+Przy okablowaniu przewodami połączenia opisuje ta tabela, a na płytce nośnej wynikają one ze schematu. Mapa złączy P1/P2 modułu TI CC112xEM 868/915 pochodzi z projektu R01.3. Numery są elektrycznymi numerami pinów. Złącza są na spodzie modułu, więc w widoku od spodu układ pinów jest odwrócony. Przed zasilaniem trzeba sprawdzić każdą żyłę miernikiem. W pierwszej próbie przewody mają najwyżej 5 cm, a SPI pracuje z zegarem około 1 MHz. Na N1 zegar SPI wynosi 1 MHz dla radia i 8 MHz dla FRAM (wymaganie ≥8 MHz dla każdej stacji). Do pomiaru oscyloskopem przy J7 ekran przełącza się na 2 MHz poleceniem `DISPLAY`; na stałe dopiero po tym pomiarze ([uruchomienie](uruchomienie.md#pomiar-magistrali-oscyloskopem)).
 
 | Sygnał | Złącze modułu TI | Pin CC1120 |
 |---|---|---:|

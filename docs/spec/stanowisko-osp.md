@@ -105,7 +105,7 @@ Panel nasłuchuje wyłącznie na 127.0.0.1. Wymaga logowania; konta i hasła two
 - ma widok kwarantanny z wiadomościami „do weryfikacji”, a przy stacjach usuniętych z listy alarm „możliwe przejęcie stacji” z liczbą odebranych od nich wiadomości (z powtórzeniami);
 - wysyła BULLETIN osobno do każdej stacji i pokazuje postęp rozsyłania;
 - pokazuje stan węzła: połączenie ze stacją, czas od ostatniego pakietu z radia, liczbę intencji w drodze i w oczekiwaniu, wiek najstarszej;
-- przy przekazaniu zmiany pokazuje otwarte zgłoszenia, sprawy w stanie 4 bez potwierdzenia skierowania pomocy, niewysłane intencje, kwarantanna, kopia bazy;
+- przy przekazaniu zmiany pokazuje otwarte zgłoszenia, sprawy w stanie 4 bez potwierdzenia skierowania pomocy, niewysłane intencje, stan kwarantanny i kopię bazy;
 - eksportuje rejestr do CSV ([eksport rejestru](#komputer-i-aplikacja-stanowiska)); po ZAMKNIJ ZDARZENIE pokazuje zadanie „usuń kopie” do potwierdzenia odbioru archiwum.
 
 | Adres | Działanie |

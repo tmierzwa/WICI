@@ -47,14 +47,14 @@ Liczby dotyczą pinów GPIO MCU. USB D+/D−, SWD i piny kwarców mają osobne w
 | RTC (opcja) | SDA, SCL, INT | 3 | I²C | nie |
 | Razem | | 34–37 | | |
 
-**Wykonanie A (nRF52840, aQFN73):** 48 GPIO. Odpadają P0.00 i P0.01 (kwarc 32,768 kHz) oraz P0.18 (reset). Zostaje 45 pinów, czyli 8 pinów zapasu przy 37 sygnałach (z RTC) i 11 przy 34. P0.09 i P0.10 są domyślnie pinami NFC i wymagają przełączenia w UICR. Sygnały szybkie (SCK, MOSI) prowadzi się z pinów, których Nordic nie ogranicza do sygnałów wolnozmiennych. Na N1 SCK leży na P1.04, a to pin zalecany tylko do sygnałów wolnozmiennych ([firmware](../../firmware/README.md)). W R02 SCK przenosi się na pin bez tego ograniczenia według specyfikacji produktu nRF52840 (rozdział o pinach blisko radia), a przypisanie sprawdza się przy schemacie.
+**Wykonanie A (nRF52840, aQFN73):** 48 GPIO. Odpadają P0.00 i P0.01 (kwarc 32,768 kHz) oraz P0.18 (reset). Zostaje 45 pinów, czyli około 10 pinów zapasu. P0.09 i P0.10 są domyślnie pinami NFC i wymagają przełączenia w UICR. Sygnały szybkie (SCK, MOSI) prowadzi się z pinów, których Nordic nie ogranicza do sygnałów wolnozmiennych. Na N1 SCK leży na P1.04, a to pin zalecany tylko do sygnałów wolnozmiennych ([firmware](../../firmware/README.md)). W R02 SCK przenosi się na pin bez tego ograniczenia według specyfikacji produktu nRF52840 (rozdział o pinach blisko radia), a przypisanie sprawdza się przy schemacie.
 
 **Wykonanie B (ESP32-S3FN8, QFN56):** 45 GPIO (GPIO0–21 i GPIO26–48). Odpadają:
 - GPIO26–32: flash w obudowie; GPIO33–37 zostają wolne (zajęłaby je dopiero PSRAM octal w ESP32-S3R8/R16V);
 - GPIO19 i GPIO20: USB;
 - GPIO43 i GPIO44: UART0 do programowania i konsoli serwisowej.
 
-Zostają 34 piny, w tym cztery piny konfiguracji startu (GPIO0, GPIO3, GPIO45, GPIO46), które wolno użyć tylko z ustalonym stanem w czasie resetu. Przy RTC i 37 sygnałach brakuje jednego pinu. Dlatego w B odpada opcjonalny RTC albo GPIO3 radia, albo wolne sygnały (DIV_EN, UV_STAN, 5V_EN) przechodzą na ekspander I²C. Rozstrzygnie to schemat. Wykonanie B nie ma pinów zapasowych, A ma co najmniej 8.
+Zostają 34 piny, w tym cztery piny konfiguracji startu (GPIO0, GPIO3, GPIO45, GPIO46), które wolno użyć tylko z ustalonym stanem w czasie resetu. Przy RTC i 37 sygnałach brakuje jednego pinu. Dlatego w B odpada opcjonalny RTC albo GPIO3 radia, albo wolne sygnały (DIV_EN, UV_STAN, 5V_EN) przechodzą na ekspander I²C. Rozstrzygnie to schemat. Wykonanie B nie ma pinów zapasowych, A ma około 8.
 
 ## Stany zasilania
 
