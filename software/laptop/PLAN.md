@@ -125,8 +125,8 @@ Laptop i router są z obiektu albo przyniesione na miejscu (decyzje z 2026-10-14
 
 **Windows.** Zapora Windows Defender jest domyślnie włączona i blokuje połączenia przychodzące, a nowa sieć dostaje zwykle profil „Publiczna”. Zgoda na połączenia wymaga uprawnień administratora. macOS ma zaporę aplikacji domyślnie wyłączoną, typowe dystrybucje Linuksa też (Fedora ma `firewalld`, ale jego domyślna strefa przepuszcza porty 1025–65535). Dlatego aplikacja na Windows:
 
-- przed nasłuchem w sieci lokalnej sprawdza, czy jest reguła WICI; bez niej nie otwiera portu, żeby nie wywołać alertu zapory, bo anulowanie alertu przez zwykłego użytkownika zapisuje reguły blokujące dla `pythonw.exe` z pamięci USB, a reguły blokujące mają pierwszeństwo;
-- przyciskiem „Zezwól telefonom na połączenie” uruchamia przez UAC sam `netsh` (podpisany przez Microsoft) z regułą tylko dla portu, na którym słucha strona (zwykle 8080), nie programu, bo litera dysku pamięci się zmienia: `netsh advfirewall firewall add rule name="WICI strona mieszkańca" dir=in action=allow protocol=TCP localport=<port> remoteip=localsubnet profile=any`; ten sam krok usuwa reguły blokujące, które Windows utworzył dla interpretera z bieżącej ścieżki pamięci (rozpoznane po ścieżce programu, bo nie mają nazwy WICI);
+- przed nasłuchem w sieci lokalnej sprawdza, czy jest reguła WICI. Bez niej nie otwiera portu, żeby nie wywołać alertu zapory, bo anulowanie alertu przez zwykłego użytkownika zapisuje reguły blokujące dla `pythonw.exe` z pamięci USB, a reguły blokujące mają pierwszeństwo;
+- przyciskiem „Zezwól telefonom na połączenie” uruchamia przez UAC sam `netsh` (podpisany przez Microsoft) z regułą tylko dla portu, na którym słucha strona (zwykle 8080), nie programu, bo litera dysku pamięci się zmienia. Polecenie: `netsh advfirewall firewall add rule name="WICI strona mieszkańca" dir=in action=allow protocol=TCP localport=<port> remoteip=localsubnet profile=any`. Ten sam krok usuwa reguły blokujące, które Windows utworzył dla interpretera z bieżącej ścieżki pamięci. Rozpoznaje je po ścieżce programu, bo nie mają nazwy WICI;
 - przy zamknięciu proponuje usunięcie reguły (drugie okno UAC), żeby laptop wrócił do właściciela bez zmian;
 - bez administratora mówi wprost, że telefony się nie połączą, i proponuje ścieżki 2 i 3.
 
@@ -147,7 +147,21 @@ Przed wykonaniem etapu 3 potrzebna jest próba na czystym Windows 11 (maszyna wi
 
 **Diagnostyka w panelu:** brak kabla, kabel w gnieździe WAN, brak adresu IP, profil sieci „Publiczna”, brak reguły zapory, zero połączonych telefonów po kilku minutach.
 
-**Instrukcja opisuje resztę:** kolejność dróg jak w tabeli; system Linux z pamięci USB tylko za zgodą właściciela laptopa; nadzór nad laptopem w trybie kiosku; „Oddaj laptop” przed zwrotem; zmiana hasła Wi-Fi przez zarządcę po zdarzeniu; kabel do gniazda LAN routera, nie WAN; laptop bez gniazda sieciowego łączy się z Wi-Fi routera i działa, jeśli router nie izoluje urządzeń od siebie (adapter USB–Ethernet przy pamięci USB to opcja, nie wymóg); telefony w sieci, którą wskaże panel (zwykle głównej, za zgodą zarządcy); routery domowe mają zwykle limit około 32 urządzeń, więc mieszkańcy korzystają kolejno; cudzego routera nie resetuje się; router zasilany ze stacji zasilania albo UPS; Android pyta o sieć bez internetu („pozostań połączony”), a gdy strona się nie otwiera, wyłącza się dane komórkowe (do potwierdzenia na kilku telefonach); tabela klawiszy menu startowego według producenta i co zrobić przy zablokowanym menu.
+**Instrukcja opisuje resztę:**
+
+- kolejność dróg jak w tabeli;
+- system Linux z pamięci USB tylko za zgodą właściciela laptopa;
+- nadzór nad laptopem w trybie kiosku;
+- „Oddaj laptop” przed zwrotem;
+- zmiana hasła Wi-Fi przez zarządcę po zdarzeniu;
+- kabel do gniazda LAN routera, nie WAN;
+- laptop bez gniazda sieciowego łączy się z Wi-Fi routera i działa, jeśli router nie izoluje urządzeń od siebie (adapter USB–Ethernet przy pamięci USB to opcja, nie wymóg);
+- telefony w sieci, którą wskaże panel (zwykle głównej, za zgodą zarządcy);
+- routery domowe mają zwykle limit około 32 urządzeń, więc mieszkańcy korzystają kolejno;
+- cudzego routera nie resetuje się;
+- router zasilany ze stacji zasilania albo UPS;
+- Android pyta o sieć bez internetu („pozostań połączony”), a gdy strona się nie otwiera, wyłącza się dane komórkowe (do potwierdzenia na kilku telefonach);
+- tabela klawiszy menu startowego według producenta i co zrobić przy zablokowanym menu.
 
 Laptop nie uruchamia własnego serwera DHCP, DNS ani portalu przechwytującego, zgodnie ze specyfikacją: strona otwiera się z kodu QR, więc działa z każdym routerem bez zmiany jego konfiguracji.
 
