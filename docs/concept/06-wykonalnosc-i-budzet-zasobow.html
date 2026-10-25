@@ -67,7 +67,7 @@
 <tr><td>Stanowisko deweloperskie (płytki rozwojowe i moduły producentów)</td><td>lista części, podział prób między stanowisko a R02, <a href="../../hardware/dev-bench/plytka-nosna.md">płytka nośna N1</a> (ERC 0, DRC 0, pliki produkcyjne) i obrazy oprogramowania dla stanowisk A i B (zbudowane, bez prób na sprzęcie)</td><td>montaż N1, uruchomienie obrazów na sprzęcie, stos; pomiary T4 toru RF producenta tylko dla wariantu zapasowego P1; do pilotażu N1 nie jest potrzebna; kontroler R01.3 wycofany (CAD i raporty w historii Git, lekcje w <a href="../../hardware/r02/lekcje.md">projekcie R02</a>)</td></tr>
 <tr><td>Stacja R02 (po pilotażu): mikrokontroler (MCU), ekran, przyciski, ogniwa, pamięć FRAM</td><td>wymagania w specyfikacji 0.5; <a href="../../hardware/r02/README.md">rozpoczęty projekt płytki</a> z kolejnością prac</td><td>projekt płytki, oprogramowanie układowe (firmware) z rdzeniem Reticulum stacji, interfejs użytkownika, kwalifikacja drugiego wykonania (W14: inna rodzina MCU albo inny układ radiowy)</td></tr>
 <tr><td>Tory radiowe (RF) TI i ST (STMicroelectronics), wariant zapasowy P1</td><td>wspólny kontrakt, kandydaci układów</td><td>dwa projekty płytek RF, potwierdzenie tablic rejestrów i sterowników P1 obu układów (gotowe na stanowisku, bez prób), emisje, czułość na złączu z pełnym torem wejściowym; próba mieszana na stanowiskach deweloperskich A i B, potem na płytkach R02</td></tr>
-<tr><td>Stanowisko odbiorcze: aplikacja stanowiska, interfejs Reticulum przez USB, zapas komputera, zasilanie ≥72 h (D19)</td><td>specyfikacja stanowiska; szacunek energii poza modelem: laptop 20–35 W i stacja, czyli 1,5–2,5 kWh na 72 h; koszt: dwa laptopy, trzy nośniki (główny, kopia, zapasowy pusty) i dwie stacje na stanowisko, jedno stanowisko na gminę, bez wpływu na koszt stacji schronienia (W24); kontrola przepływu i limity czasu sprawdzone w kodzie przypiętych Reticulum i LXMF; logika przyjęcia w modelu wzorcowym</td><td>implementacja aplikacji i interfejsu w stacji, T3 za stacją po USB, zmiana komputera w T2 i T8, obciążenie w T5</td></tr>
+<tr><td>Stanowisko odbiorcze: aplikacja stanowiska, interfejs Reticulum przez USB, zapas komputera, zasilanie ≥72 h (D19)</td><td><ul><li>specyfikacja stanowiska;</li><li>szacunek energii poza modelem: laptop 20–35 W i stacja, czyli 1,5–2,5 kWh na 72 h;</li><li>koszt: dwa laptopy, trzy nośniki (główny, kopia, zapasowy pusty) i dwie stacje na stanowisko, jedno stanowisko na gminę, bez wpływu na koszt stacji schronienia (W24);</li><li>kontrola przepływu i limity czasu sprawdzone w kodzie przypiętych Reticulum i LXMF;</li><li>logika przyjęcia w modelu wzorcowym</li></ul></td><td>implementacja aplikacji i interfejsu w stacji, T3 za stacją po USB, zmiana komputera w T2 i T8, obciążenie w T5</td></tr>
 <tr><td>Strona, panel i pakiety START (poziomy 2–3, po pilotażu)</td><td>kontrakt API i układ pakietu</td><td>implementacja, budowa offline, macierz urządzeń i test użytkowy</td></tr>
 <tr><td>Zasilanie poziomu 3</td><td>D05 zamknięte: kupiona stacja zasilania i ładowarka USB z deklaracją zgodności UE; opisy własnej przetwornicy i ładowarki zostają jako archiwum</td><td>wybór wyrobu i pomiar 24 h po pilotażu</td></tr>
 <tr><td>Sieć i odbiorca pomocy</td><td>scenariusze i warunki odbioru</td><td>rzeczywiste miejsca, działający przekaźnik, dyżur i próba terenowa</td></tr>
@@ -215,7 +215,12 @@
   <li>szyna 5 V ekranu z pamięcią 0,5 mA; FRAM, przyciski i nadzór 0,5 mA;</li>
   <li>podświetlenie ekranu 15 mA przez 30 min na dobę;</li>
   <li>dioda alarmu 5 mA przez 1% czasu i brzęczyk 20 mA przez 0,25% czasu;</li>
-  <li>obwody wejściowe, osobno dla źródła: przy ogniwach TPS3710, LTC2955 i dzielniki ADC (razem około 0,017 mA; dioda Schottky’ego toru ogniw nie pobiera prądu, a jej spadek 0,35 V zwiększa moc z ogniw o około 6%), przy 12 V LM74800, zatrzask podnapięciowy (UV), TPS3710, LTC2955 i dzielniki (razem około 0,44 mA);</li>
+  <li>obwody wejściowe, osobno dla źródła:
+    <ul>
+      <li>przy ogniwach TPS3710, LTC2955 i dzielniki ADC, razem około 0,017 mA. Dioda Schottky’ego toru ogniw nie pobiera prądu, a jej spadek 0,35 V zwiększa moc z ogniw o około 6%;</li>
+      <li>przy 12 V LM74800, zatrzask podnapięciowy (UV), TPS3710, LTC2955 i dzielniki, razem około 0,44 mA;</li>
+    </ul>
+  </li>
   <li>mikrokontroler średnio 3 mA (nRF52840) albo 30, 45 lub 60 mA (ESP32-S3 z wyłączonym Wi-Fi; realny prąd aktywny wynosi 40–60 mA, a 30 mA wymaga lekkiego uśpienia);</li>
   <li>rezerwa 20%.</li>
 </ul>

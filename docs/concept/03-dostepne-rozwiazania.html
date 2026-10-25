@@ -74,7 +74,7 @@
 <tr><td>Reticulum</td><td>tożsamości, ochrona komunikacji, trasy i transport przez aktywne węzły</td><td>wymaga sprawnych interfejsów i fizycznych połączeń; sam nie prowadzi zgłoszeń stanowiska odbiorczego</td></tr>
 <tr><td>LXMF</td><td>wiadomości, obsługa wysyłania i opcjonalnego przechowywania pośredniego</td><td>potwierdzenie transportowe nie dowodzi zapisu w bazie WICI ani decyzji człowieka</td></tr>
 <tr><td>NomadNet</td><td>gotowy klient tekstowy operatora, wiadomości i strony w formacie Micron</td><td>odrębny interfejs; nie zastępuje lokalnej strony HTTP w przeglądarce telefonu</td></tr>
-<tr><td>microReticulum</td><td>port Reticulum w C++ na mikrokontrolery ESP32 i nRF52: tożsamości, kryptografia, tablica tras i transport bez komputera</td><td>projekt społecznościowy, młodszy od implementacji w Pythonie; według przeglądu z 2026-10-21 jeszcze niedojrzały do zastosowań krytycznych i zbyt duży na nRF52840 z zapasem pamięci; w WICI zastąpiony rdzeniem stacji (etapy R6-3 i R6-4); do etapu R6-5 zostaje w osobnych obrazach z portem jako droga powrotu (<a href="../../firmware/reticulum-core.md">zakres rdzenia</a>)</td></tr>
+<tr><td>microReticulum</td><td>port Reticulum w C++ na mikrokontrolery ESP32 i nRF52: tożsamości, kryptografia, tablica tras i transport bez komputera</td><td>projekt społecznościowy, młodszy od implementacji w Pythonie. Według przeglądu z 2026-10-21 jest jeszcze niedojrzały do zastosowań krytycznych i zbyt duży na nRF52840 z zapasem pamięci. W WICI zastąpił go rdzeń stacji (etapy R6-3 i R6-4). Do etapu R6-5 zostaje w osobnych obrazach z portem jako droga powrotu (<a href="../../firmware/reticulum-core.md">zakres rdzenia</a>)</td></tr>
 <tr><td>Samodzielne węzły na mikrokontrolerze (RTNode, RetiMesh Node, pyxis, thicket)</td><td>dowód, że węzeł transportowy Reticulum i klient LXMF z ekranem działają na mikrokontrolerze bez komputera</td><td>radio LoRa (modulacja z rozpraszaniem widma, o dużym zasięgu i małej przepływności) i oprogramowanie społecznościowe; wzorzec konstrukcji, nie gotowa stacja WICI</td></tr>
 <tr><td>RNode / LoRa z Reticulum</td><td>dojrzałe oprogramowanie radiowe Reticulum na gotowych płytkach z układem SX1262; wzorzec formatu w eterze dla interfejsu LoRa stacji pilotażowej i narzędzie prób zgodności z Reticulum w Pythonie</td><td>RNode jest modemem komputera, a nie samodzielną stacją z kolejką i ekranem; zgodność formatu interfejsu LoRa stacji z RNode trzeba potwierdzić w T3</td></tr>
 <tr><td>Meshtastic</td><td>istniejąca sieć wiadomości LoRa; urządzenia z ekranem i przyciskami, które działają bez telefonu i zawsze przekazują pakiety</td><td>odrębny protokół i znaczenie potwierdzeń; interfejs i zapis na stanowisku odbiorczym wymagają integracji</td></tr>
@@ -119,17 +119,25 @@
   <li><strong>Opcja po pilotażu:</strong> obowiązkowy komputer stanowiska może dostać węzeł MeshCore na USB i bibliotekę <a href="https://github.com/meshcore-dev/meshcore_py">meshcore_py</a>. Służyłby jako osobny kanał: przyjmowanie wiadomości z sieci publicznej, oznaczonych jako niezweryfikowane i bez gwarancji WICI, oraz rozsyłanie komunikatów gminy. Ryzykiem jest zalanie dyżurnego wiadomościami, dlatego decyzja zapada po pilotażu (<a href="08-plan-weryfikacji-i-decyzje.html">rozdział 08</a>).</li>
 </ul>
 
-<p>Przegląd forów i dokumentacji obu społeczności (2026-10-09, <a href="../review.md">F112</a>) potwierdził większość rozwiązań, które WICI już ma: twardy budżet czasu nadawania w każdej stacji, rzadkie ogłoszenia z losowym opóźnieniem, złącza N, odgromnik i strojenie anteny w miejscu montażu. Przejęto tylko uzupełnienia bez zmiany protokołu i bez nowych części:</p>
+<p>Przegląd forów i dokumentacji obu społeczności (2026-10-09, <a href="../review.md">F112</a>) potwierdził większość rozwiązań, które WICI już ma. Są to: twardy budżet czasu nadawania w każdej stacji, rzadkie ogłoszenia z losowym opóźnieniem, złącza N, odgromnik i strojenie anteny w miejscu montażu. Przejęto tylko uzupełnienia bez zmiany protokołu i bez nowych części:</p>
 
 <ul>
-  <li>pomiar zajętości kanału i tła szumowego w etapie 0 dwoma gotowymi węzłami LoRa (w profilu WICI i w lokalnym presecie Meshtastic, bo każdy widzi tylko ramki o swoim SF i szerokości pasma), także przy włączonym zasilaniu awaryjnym obiektu (UPS, przetwornice i falowniki zakłócają odbiór), z wstępnym progiem istotnego zajęcia (D11, <a href="08-plan-weryfikacji-i-decyzje.html">rozdział 08</a>);</li>
+  <li>pomiar zajętości kanału i tła szumowego w etapie 0 dwoma gotowymi węzłami LoRa: jednym w profilu WICI, drugim w lokalnym presecie Meshtastic, bo każdy widzi tylko ramki o swoim SF i szerokości pasma. Pomiar obejmuje też pracę przy włączonym zasilaniu awaryjnym obiektu (UPS, przetwornice i falowniki zakłócają odbiór). Wstępny próg istotnego zajęcia: D11, <a href="08-plan-weryfikacji-i-decyzje.html">rozdział 08</a>;</li>
   <li>odbiór SX1262 w trybie ze wzmocnieniem (boosted gain), domyślnym w MeshCore: dla tego trybu karta podaje czułość użytą w budżecie łącza, a po resecie układ pracuje w trybie oszczędnym;</li>
   <li>uszczelnienie złączy zewnętrznych i ich kontrola w przeglądzie technicznym; samoczynny start stacji po całkowitym zaniku i powrocie 12 V (znana usterka części płytek ESP32 w węzłach solarnych);</li>
   <li>płytki z zewnętrznym wzmacniaczem nadajnika (np. Heltec V4) nie są kandydatami: stacja nadaje 13 dBm, a kolejne rewizje tych płytek mają różne układy wzmacniacza i sterowanie;</li>
   <li>stacji i przekaźników WICI nie umieszcza się na publicznych mapach społeczności.</li>
 </ul>
 
-<p>Odrzucono jako zmiany protokołu albo koszt bez wartości w sieci 6–8 stacji: trasowanie po ścieżkach i wielokrotne potwierdzenia MeshCore, potwierdzenie przez usłyszaną retransmisję (Meshtastic), odbiór z próbkowaniem SX1262 (wymaga dłuższej preambuły w całej sieci), kolejność retransmisji według SNR (Transport Reticulum nie zalewa sieci pakietami danych, a własna logika nadawania wymagałaby zgodności z Reticulum w Pythonie) oraz stacje bez przekazywania (każda stacja przekazuje, co upraszcza obsługę i daje zastępstwo trasy).</p>
+<p>Odrzucono jako zmiany protokołu albo koszt bez wartości w sieci 6–8 stacji:</p>
+
+<ul>
+  <li>trasowanie po ścieżkach i wielokrotne potwierdzenia MeshCore;</li>
+  <li>potwierdzenie przez usłyszaną retransmisję (Meshtastic);</li>
+  <li>odbiór z próbkowaniem SX1262, który wymaga dłuższej preambuły w całej sieci;</li>
+  <li>kolejność retransmisji według SNR: Transport Reticulum nie zalewa sieci pakietami danych, a własna logika nadawania wymagałaby zgodności z Reticulum w Pythonie;</li>
+  <li>stacje bez przekazywania: każda stacja przekazuje, co upraszcza obsługę i daje zastępstwo trasy.</li>
+</ul>
 
 <h2 id="reticulum-i-lxmf-w-tym-projekcie">Reticulum i LXMF w tym projekcie</h2>
 
