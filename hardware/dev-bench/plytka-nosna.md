@@ -62,10 +62,17 @@ Na nRF52840-DK żadna z tych pozycji nie jest współdzielona z funkcjami płytk
 Zmiana wobec okablowania przewodami: SPI przechodzi z D13 na D3, a radio na pozycje X-NUCLEO, więc oprogramowanie dla płytki nośnej używa własnego pliku opisu płytki. Obraz okablowania przewodami na N1 zwiera wyjście SCK (D13) przez przełącznik CISZA do masy; R16 ogranicza ten prąd do 3 mA, ale obrazu nie należy tak uruchamiać ([uruchomienie](uruchomienie.md#oprogramowanie)).
 
 Wymagania dla pliku opisu płytki N1 wynikające z układu:
-- SPI na D3/D11/D12 (nRF52840: P1.04, P1.13, P1.14; Nordic zaleca P1.04 i P1.13 tylko do sygnałów wolnozmiennych ze względu na zakłócenia własnego radia 2,4 GHz, którego stanowisko nie używa; napęd H0H1 dla SCK i MOSI); ESP32-S3 SCK/MOSI z najniższym napędem, który daje czyste zbocza; zegar osobno dla każdego układu: radio 1 MHz, ekran 1 MHz (do 2 MHz po pomiarze), FRAM 8 MHz;
-- ekran Sharp: zegar ≤1 MHz (najwyżej 2 MHz: SCLK ≥200 ns w stanie wysokim i niskim), LSB first, CS aktywny stanem wysokim z czasami 3 µs przed i 1 µs po transmisji; DISP w stanie niskim do wyczyszczenia pamięci ekranu; wejścia panelu wymagają VIH ≥2,7 V i VIL ≤VSS + 0,15 V, a zbocza SCLK, SI, SCS i EXTCOMIN ≤50 ns (Sharp LCP-1112041, tabele 7-1 i 6-3-2), więc w stanowisku A logika 3,0 V płytki DK ma tylko 0,3 V zapasu VIH; poziomy i zbocza przy J7 sprawdza oscyloskop przy [uruchomieniu](uruchomienie.md#pomiar-magistrali-oscyloskopem); zbocze DISP wyznacza kondensator 100 nF zalecany przez Sharp (C7), więc nie podlega granicy 50 ns;
-- EXTCOMIN tylko z licznika MCU: EXTMODE jest na stałe w stanie wysokim, więc bit VCOM w poleceniach nic nie zmienia; gdy licznik nie ruszy, program zostawia DISP w stanie niskim i zgłasza usterkę;
-- FRAM: CY15B104QN albo MB85RS4MT na tym samym footprincie; oprogramowanie rozpoznaje oba po RDID (`src/fram_id.h`); zegar 8 MHz, bo specyfikacja wymaga ≥8 MHz w każdej stacji (seria 256 B ≤0,3 ms);
+- SPI na D3/D11/D12:
+  - nRF52840: P1.04, P1.13, P1.14, napęd H0H1 dla SCK i MOSI. Nordic zaleca P1.04 i P1.13 tylko do sygnałów wolnozmiennych ze względu na zakłócenia własnego radia 2,4 GHz, którego stanowisko nie używa.
+  - ESP32-S3: SCK/MOSI z najniższym napędem, który daje czyste zbocza.
+  - Zegar osobno dla każdego układu: radio 1 MHz, ekran 1 MHz (do 2 MHz po pomiarze), FRAM 8 MHz.
+- ekran Sharp:
+  - Zegar ≤1 MHz (najwyżej 2 MHz: SCLK ≥200 ns w stanie wysokim i niskim), LSB first, CS aktywny stanem wysokim z czasami 3 µs przed i 1 µs po transmisji.
+  - DISP w stanie niskim do wyczyszczenia pamięci ekranu.
+  - Wejścia panelu wymagają VIH ≥2,7 V i VIL ≤VSS + 0,15 V, a zbocza SCLK, SI, SCS i EXTCOMIN ≤50 ns (Sharp LCP-1112041, tabele 7-1 i 6-3-2). W stanowisku A logika 3,0 V płytki DK ma więc tylko 0,3 V zapasu VIH. Poziomy i zbocza przy J7 sprawdza oscyloskop przy [uruchomieniu](uruchomienie.md#pomiar-magistrali-oscyloskopem).
+  - Zbocze DISP wyznacza kondensator 100 nF zalecany przez Sharp (C7), więc nie podlega granicy 50 ns.
+- EXTCOMIN tylko z licznika MCU: EXTMODE jest na stałe w stanie wysokim, więc bit VCOM w poleceniach nic nie zmienia. Gdy licznik nie ruszy, program zostawia DISP w stanie niskim i zgłasza usterkę;
+- FRAM: CY15B104QN albo MB85RS4MT na tym samym footprincie. Oprogramowanie rozpoznaje oba po RDID (`src/fram_id.h`). Zegar 8 MHz, bo specyfikacja wymaga ≥8 MHz w każdej stacji (seria 256 B ≤0,3 ms);
 - CC1120: IOCFG1 zostaje w stanie wysokiej impedancji, bo SO/GPIO1 dzieli linię MISO z FRAM;
 - wejścia przycisków, CISZA i przygotowania mają podciągnięcie na płytce, wewnętrzne nie jest potrzebne.
 
@@ -141,7 +148,10 @@ Dostępność w dniu sprawdzenia:
 - Panel LS027B7DH01A ma jednego producenta (Sharp), termin fabryczny 28 tygodni; DigiKey ma ponad 2700 sztuk. Płytka Adafruit 4694 z tym panelem jest prawie niedostępna (Adafruit, Pimoroni i The Pi Hut bez stanu, DigiKey 26 sztuk), dlatego N1 używa gołego panelu.
 - Taśma 3M 4032 w małych rolkach nie jest w ofercie typowych dystrybutorów elektroniki (DigiKey: rolka 2" × 5 yd za około 76 USD); wystarczy dowolna dwustronna taśma piankowa 0,8 mm.
 - Kondensator 10 µF: CL21A106KAYNNNE (61 tygodni) zastąpiono tą samą częścią w innym opakowaniu, CL21A106KAYNNNG (DigiKey ponad 5000 sztuk); zamiennik GRM21BR61E106MA73L. Większość innych 10 µF 25 V X5R 0805 też ma zerowy stan ([notatki dla wykonawcy](fabrication/N1/FAB-NOTES.txt) dopuszczają zamienniki o tych parametrach).
-- Ochrona CS pamięci FRAM (audyt N1 wobec F106): TPS3840PH27DBVR w DigiKey około 2800 sztuk (0,93 USD); zamiennik o tych samych wyprowadzeniach i progu TPS3840PH27DBVRQ1 (wersja samochodowa, 2695 sztuk, 12 tygodni). SN74LVC1G32DBVR w DigiKey 2657 sztuk (0,12 USD, 20 tygodni); bramkę OR 74LVC1G32 w SOT-23-5 o tych samych wyprowadzeniach robi też kilku innych producentów. C13 LMK325ABJ107MM-P w DigiKey ponad 106 000 sztuk (1,54 USD); starsza wersja LMK325BJ107MM-T ma status „nie do nowych projektów”, a Murata GRM32ER60J107ME20L też i nie ma jej w magazynie; zamiennik 100 µF ≥6,3 V X5R 1210, np. Samsung CL32A107MQVNNWE (6727 sztuk, termin fabryczny 61 tygodni).
+- Ochrona CS pamięci FRAM (audyt N1 wobec F106):
+  - TPS3840PH27DBVR w DigiKey około 2800 sztuk (0,93 USD). Zamiennik o tych samych wyprowadzeniach i progu: TPS3840PH27DBVRQ1 (wersja samochodowa, 2695 sztuk, 12 tygodni).
+  - SN74LVC1G32DBVR w DigiKey 2657 sztuk (0,12 USD, 20 tygodni). Bramkę OR 74LVC1G32 w SOT-23-5 o tych samych wyprowadzeniach robi też kilku innych producentów.
+  - C13 LMK325ABJ107MM-P w DigiKey ponad 106 000 sztuk (1,54 USD). Starsza wersja LMK325BJ107MM-T ma status „nie do nowych projektów”, a Murata GRM32ER60J107ME20L też i nie ma jej w magazynie. Zamiennik: 100 µF ≥6,3 V X5R 1210, np. Samsung CL32A107MQVNNWE (6727 sztuk, termin fabryczny 61 tygodni).
 - Przyciski Omron B3F i B32 sprzedaje się teraz pod marką Aratas, z tymi samymi numerami części.
 - Listwy Samtec SSQ z wyprowadzeniami 10 mm mają jednego producenta; innego o tej długości wyprowadzeń nie znaleziono. To narzędzie stanowiska A, nie część stacji.
 
