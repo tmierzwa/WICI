@@ -1,6 +1,6 @@
 # WICI: obsługa stanowiska z płytką nośną N1
 
-Instrukcja dla osoby, która prowadzi próby T1–T4 na zmontowanym stanowisku. Dotyczy sztuki płytki N1, która przeszła [uruchomienie](uruchomienie.md); montaż, kontrola przed zasilaniem i pierwsze włączenie są tam. Opis płytki: [płytka nośna](plytka-nosna.md), polecenia oprogramowania: [firmware/README.md](../../firmware/README.md#polecenia), granice pomiarów stanowiska: [README stanowiska](README.md#co-sprawdza-stanowisko-a-co-dopiero-r02).
+Instrukcja dla osoby, która prowadzi próby T1–T4 na zmontowanym stanowisku. Dotyczy sztuki płytki N1, która przeszła [uruchomienie](uruchomienie.md); tam opisano montaż, kontrolę przed zasilaniem i pierwsze włączenie. Opis płytki: [płytka nośna](plytka-nosna.md), polecenia oprogramowania: [firmware/README.md](../../firmware/README.md#polecenia), granice pomiarów stanowiska: [README stanowiska](README.md#co-sprawdza-stanowisko-a-co-dopiero-r02).
 
 ## Zasady
 
@@ -36,7 +36,7 @@ Zmiana stanowiska z A na B (powrót do A: te same kroki w odwrotnej kolejności,
 4. Wpiąć DevKitC w J5/J6 i X-NUCLEO-S2868A2 w J1–J4.
 5. Podłączyć USB DevKitC i sprawdzić poleceniem `INFO` (`bench: "B"`) i `RADIO` (`partnumber: 0x03`).
 
-Ta sama sztuka N1 może służyć obu stanowiskom; każdą zmianę konfiguracji wpisuje się do zapisu sztuki ([uruchomienie](uruchomienie.md)).
+Ta sama sztuka N1 może służyć obu stanowiskom. Każdą zmianę konfiguracji wpisuje się do zapisu sztuki ([uruchomienie](uruchomienie.md)).
 
 ## Elementy płytki
 

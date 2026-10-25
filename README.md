@@ -4,7 +4,7 @@
 
 Gdy nie ma prądu, zasięgu komórkowego ani internetu, jak przekazać służbom, że w schronieniu brakuje wody, ktoś potrzebuje lekarza albo transportu? **WICI to otwarty projekt stacji radiowej do krótkich zgłoszeń i odpowiedzi.** Sieć ma łączyć miejsca, w których gromadzą się ludzie, ze stanowiskiem odbiorczym wyznaczonym przez gminę.
 
-Gospodarz schronienia wybiera na ekranie kategorię potrzeby i liczbę osób, a stacja wysyła zgłoszenie radiem. Ekran ma rozróżniać trwały zapis u odbiorcy, odczyt przez dyżurnego i decyzję o pomocy. Każda włączona stacja ma też przekazywać wiadomości sąsiadów, wydłużając drogę do odbiorcy.
+Gospodarz schronienia wybiera na ekranie kategorię potrzeby i liczbę osób, a stacja wysyła zgłoszenie radiem. Ekran ma rozróżniać trwały zapis u odbiorcy, odczyt przez dyżurnego i decyzję o pomocy. Każda włączona stacja ma też przekazywać wiadomości sąsiadów, dzięki czemu zgłoszenia docierają dalej.
 
 <p align="center"><img src="hardware/obudowa/render/stacja-materialy-web.jpg" alt="Wizualizacja koncepcyjna stacji WICI: obudowa naścienna z ekranem, czterema przyciskami, diodą alarmu, przełącznikiem CISZA z osłoną i wyłącznikiem; przewody 12 V i anteny wychodzą dołem" width="820"></p>
 <p align="center"><sub>Wizualizacja koncepcyjna stacji według dzisiejszych założeń; <a href="hardware/obudowa/README.md">obudowa i render</a>, <a href="hardware/obudowa/render/stacja-materialy.png">pełna rozdzielczość</a>.</sub></p>
@@ -24,12 +24,12 @@ Sieć trzeba przygotować razem z gminą i służbami przed kryzysem: zamontowa�
 Stan przygotowania testów na 24 października 2026 r.:
 
 - **R0:** dwa zestawy Seeed 102010611; próba przy stole zaliczona (100/100 w obie strony). Pierwsze próby zasięgu w budynku przy mocy 0 dBm: trasa około 20 m przez 2 ściany zaliczona 100/100, dwie trudniejsze trasy leżą na granicy zasięgu tego profilu ([wyniki](hardware/radio-pair/evidence/range-r0-2026-10-10.txt)). Następny krok: próby w terenie.
-- **L0:** płytki N1 z JLCPCB, części, panele i moduły na dwa prototypy kupiłem sam ([zamówienie](hardware/dev-bench/przed-produkcja.md#zamówienie-2026-10-10-l0)); dotarły i czekają na montaż. Montaż i uruchomienie wykonuje [pw-lab.pl](https://pw-lab.pl/) według [zlecenia](hardware/l0-diagnostic/ZLECENIE.md) i [instrukcji z diagnozą usterek](hardware/l0-diagnostic/MONTAZ-I-TESTY.md). Najpierw jeden L0 z programem diagnostycznym `l0-0.5`, drugi po udanym uruchomieniu pierwszego.
+- **L0:** płytki N1 z JLCPCB, części, panele i moduły na dwa prototypy kupiłem sam ([zamówienie](hardware/dev-bench/przed-produkcja.md#zamówienie-2026-10-10-l0)); dotarły i czekają na montaż. Montaż i uruchomienie wykonuje [pw-lab.pl](https://pw-lab.pl/) według [zlecenia](hardware/l0-diagnostic/ZLECENIE.md) i [instrukcji z diagnozą usterek](hardware/l0-diagnostic/MONTAZ-I-TESTY.md). Najpierw powstanie jeden L0 z programem diagnostycznym `l0-0.5`, a drugi dopiero po udanym uruchomieniu pierwszego.
 - **Oprogramowanie stacji dla L0:** obraz `l0` (`l0-0.3`, od etapu R6-3 z rdzeniem Reticulum stacji) ma własny sterownik SX1262 w profilu LoRa pilotażu, polecenia pomiarowe i tryb pracy do badań EMC ([opis](firmware/README.md#stacja-l0-l0), [etap 1](https://github.com/tmierzwa/WICI/issues/21)). Jest skompilowany i sprawdzony testami na komputerze z modelem układu, ale nie uruchomiono go jeszcze na płytce. Interfejs LoRa w stosie Reticulum ([etap 2](https://github.com/tmierzwa/WICI/issues/22)) i funkcje przed pierwszymi stacjami w terenie ([etap 3](https://github.com/tmierzwa/WICI/issues/23)) są do zrobienia.
-- **Rdzeń Reticulum stacji:** od 22 października powstaje [własny rdzeń Reticulum stacji](firmware/reticulum-core.md) z LXMF, zamiast portu microReticulum. Etapy R0–R5 (pakiety, ogłoszenia, transport, LXMF SA1 jednym pakietem, interfejs USB węzła stanowiska, odporność) przechodzą próby na komputerze wobec Reticulum i LXMF w Pythonie. Od etapu R6-3 obrazy `bench-a`, `bench-n1` i `l0` mają rdzeń; `bench-b` przechodzi na niego w R6-4, a R6-5 usuwa port. Obrazów z rdzeniem nie uruchomiono jeszcze na płytce.
+- **Rdzeń Reticulum stacji:** od 22 października powstaje [własny rdzeń Reticulum stacji](firmware/reticulum-core.md) z LXMF, który zastępuje port microReticulum. Etapy R0–R5 (pakiety, ogłoszenia, transport, LXMF SA1 jednym pakietem, interfejs USB węzła stanowiska, odporność) przechodzą na komputerze próby zgodności z Reticulum i LXMF w Pythonie. Od etapu R6-3 obrazy `bench-a`, `bench-n1` i `l0` mają rdzeń, a od R6-4 także `bench-b`; port zostaje w obrazach `*-port` do etapu R6-5, który go usunie. Obrazów z rdzeniem nie uruchomiono jeszcze na płytce.
 - **Płytka stacji pilotażowej:** [porównanie czterech kandydatów](docs/spec/elektronika.md#porównanie-kandydatów) wskazuje RAK3312 na płytce bazowej RAK19007 jako głównego kandydata; wyprowadzenia do stacji wymagają ekspandera. Żaden kandydat nie ma dotąd podpisanej deklaracji zgodności UE producenta ([dokumenty](docs/spec/elektronika.md#dokumenty-zgodności-kandydatów)). 21 października wysłano zapytanie do RAK o deklarację dla RAK3312 i RAK19007, raporty radiowe i stanowisko wobec EN 18031. Wybór płytki zapadnie po próbach na dwóch L0.
 
-Zakres prototypu L0 (przygotowany do wyceny, teraz podstawa zlecenia montażu) i zasady wyboru dokumentów są w [dokumentach przygotowania testów](output/README.md). Instrukcje bieżących prób opisuje [hardware](hardware/README.md).
+Zakres prototypu L0 (przygotowany do wyceny, teraz podstawa zlecenia montażu) i zasady wyboru dokumentów są w [dokumentach przygotowania testów](output/README.md). Instrukcje bieżących prób są w katalogu [hardware](hardware/README.md).
 
 W repozytorium są:
 
@@ -37,10 +37,10 @@ W repozytorium są:
 - specyfikacja stacji;
 - model obliczeniowy z testami;
 - projekt płytki nośnej stanowiska deweloperskiego (N1) i rozpoczęty projekt płytki stacji R02 (wstrzymany);
-- oprogramowanie stacji skompilowane dla stanowisk deweloperskich A i B oraz dla L0, ze stosem Reticulum: od etapu R6-3 własnym rdzeniem z LXMF, na stanowisku B do etapu R6-4 portem microReticulum bez LXMF; nie uruchomiono go jeszcze na sprzęcie;
+- oprogramowanie stacji skompilowane dla stanowisk deweloperskich A i B oraz dla L0, ze stosem Reticulum (od etapów R6-3 i R6-4 jest to własny rdzeń z LXMF), jeszcze nieuruchomione na sprzęcie;
 - aplikacja laptopa uruchamiana z pamięci USB: przygotowanie stacji (etap 1) i zaszyfrowana baza (etap 2, warstwa bazy).
 
-Do wykonania pozostają montaż i próby L0, interfejs LoRa w stosie, dokończenie przejścia na rdzeń (R6-4, R6-5), aplikacja stanowiska odbiorczego oraz próby sprzętu i obsługi.
+Do wykonania pozostają montaż i próby L0, interfejs LoRa w stosie, dokończenie przejścia na rdzeń (próby 1–8 na płytkach, R6-5), aplikacja stanowiska odbiorczego oraz próby sprzętu i obsługi.
 
 Po przeglądzie z 8 października 2026 r. przyjęliśmy następującą [kolejność prac](docs/concept/08-plan-weryfikacji-i-decyzje.html#kolejnosc-prac):
 

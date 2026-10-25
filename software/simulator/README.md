@@ -22,14 +22,14 @@ Stacja i węzeł stanowiska w symulatorze to **obraz bench-b** (`firmware/platfo
 | Układy na płytce | emulowane na magistrali SPI, więc ich sterowniki działają bez zmian: S2-LP (rejestry, FIFO, przerwania na GPIO, czasy pakietu z rejestrów MOD i PCKTCTRL, RSSI, kolizje), FRAM CY15B104Q, panel Sharp LS027B7DH01A (protokół bitowy, EXTCOMIN) |
 | Czas | zegar wirtualny: każdy bajt SPI trwa 8/f, `delay` i oczekiwania zajmują czas, pętla programu stoi w czasie nadawania i rysowania ekranu jak na płytce |
 
-`web/build.json` zapisuje listę plików, flagi, commity stosu i sumy SHA-256 wszystkich wejść; `tests/test_simulator.py` odrzuca obraz niezgodny z bieżącym `firmware/src`, rdzeniem, `platformio.ini`, pinami lub łatami stosu, więc zmiana oprogramowania bez przebudowy symulatora nie przejdzie kontroli.
+`web/build.json` zapisuje listę plików, flagi, commity stosu i sumy SHA-256 wszystkich wejść. `tests/test_simulator.py` odrzuca obraz niezgodny z bieżącym `firmware/src`, rdzeniem, `platformio.ini`, pinami lub łatami stosu, więc zmiana oprogramowania bez przebudowy symulatora nie przejdzie kontroli.
 
 Modelami pozostają:
 
 | Część | Model |
 |---|---|
 | Eter | tłumienie trasy stacja–węzeł (domyślnie 100 dB, suwak w *Warunkach*), zanik o rozkładzie normalnym σ = 4 dB na ramkę, moc z rejestrów S2-LP, czułość −112 dBm, kolizje ramek nakładających się w czasie |
-| Komputer stanowiska | `post/post.cpp`: aplikacja na tym samym rdzeniu Reticulum co stacja (interfejs KISS do portu danych węzła, tożsamość główna i zapasowa z celem `lxmf.delivery`, wiadomości SA1 w LXMF, dowód każdego pakietu jak `PROVE_ALL` w LXMRouter), z modułami `sa1`, `store`, `framfs`, `drbg` z `firmware/src`. To model aplikacji stanowiska (Reticulum i LXMF w Pythonie), nie sama aplikacja: transport rdzenia jest zawsze włączony, więc retransmisji cudzych ogłoszeń post nie wysyła do węzła, jak Reticulum na komputerze bez transportu |
+| Komputer stanowiska | `post/post.cpp`: aplikacja na tym samym rdzeniu Reticulum co stacja (interfejs KISS do portu danych węzła, tożsamość główna i zapasowa z celem `lxmf.delivery`, wiadomości SA1 w LXMF, dowód każdego pakietu jak `PROVE_ALL` w LXMRouter), z modułami `sa1`, `store`, `framfs`, `drbg` z `firmware/src`. To model aplikacji stanowiska (Reticulum i LXMF w Pythonie), a nie sama aplikacja. Transport rdzenia jest zawsze włączony, więc post nie wysyła do węzła retransmisji cudzych ogłoszeń, tak jak Reticulum na komputerze bez transportu |
 | Zasilanie | wyłącznik R02; obraz bench-b nie mierzy napięcia (ekran podaje „12 V: 0,0 V”) |
 | Człowiek | przycisk zmienia tylko poziom pinu; czy program go odczyta, zależy od programu |
 
@@ -37,7 +37,7 @@ Sieć ćwiczeniowa powstaje jak w terenie: stanowisko podaje kartę odbiorcy, w�
 
 ## Zastosowania
 
-- **Pokaz.** Praca swobodna: stacja jest włączona i ma trasę do stanowiska; *Dyżurny* odpowiada, wysyła komunikaty, podejmuje decyzje i przełącza tożsamość, *Warunki* zmieniają tłumienie, przerywają łącze, wyłączają węzeł i wprowadzają awarie (S2-LP, FRAM). Czas można przyspieszyć (×10, ×60) albo przeskoczyć (+1 min, +15 min, +1 h).
+- **Pokaz.** Praca swobodna: stacja jest włączona i ma trasę do stanowiska. *Dyżurny* odpowiada, wysyła komunikaty, podejmuje decyzje i przełącza tożsamość. *Warunki* zmieniają tłumienie, przerywają łącze, wyłączają węzeł i wprowadzają awarie (S2-LP, FRAM). Czas można przyspieszyć (×10, ×60) albo przeskoczyć (+1 min, +15 min, +1 h).
 - **Szkolenie.** Osiem ćwiczeń według [karty obsługi](../../docs/obsluga/karta-stacji.html) i [instrukcji gospodarza](../../docs/spec/instrukcja.md): uruchomienie, pierwsze zgłoszenie, zmiana liczby osób, zagrożenie życia bez łączności, cisza radiowa, odpowiedź „nie może pomóc”, klucz zapasowy, zanik zasilania. Kroki sprawdza się tak jak człowiek: tekst odczytany z pikseli panelu, aplikacja stanowiska, położenie przełącznika.
 - **Panel.** Stacja R02 w milimetrach, jak render koncepcyjny obudowy (`hardware/obudowa/render/stacja.html`): czarna Hammond 1599KBAT, folia z logo i nadrukiem w trzech językach, kolumna ALARM–CISZA RADIOWA–WYŁĄCZNIK, złącza na dolnej ściance i pole SERWIS: przycisk przygotowania pod numerowaną naklejką VOID (kliknięcie przebija naklejkę, przytrzymanie przycisku pod nią przez 3 s włącza tryb serwisowy). Skala 1:1 z kalibracją kartą płatniczą; zasady panelu z obudowa.md sprawdza test.
 - **Uruchamianie.** *Konsola* to port diagnostyki USB płytki (`HELP`, `INFO`, `RNS`, `STORE`, `JOURNAL`, `SCREEN`, `VTEST`…) stacji albo węzła; *Dziennik* pokazuje restarty, ramki w eterze i zdarzenia stanowiska.
@@ -66,20 +66,20 @@ Symulator składa się z tych samych elementów co sieć w terenie, a każdy roz
 | Aplikacja laptopa | port danych USB stacji (`"usb":2`) | `software/laptop` przez TCP |
 | Człowiek i otoczenie | przyciski, wyłącznik, przełącznik, trasa radiowa | strona świata, polecenia na stdin, ćwiczenia |
 
-Czas biegnie na dwa sposoby. W jednym procesie (strona ćwiczeń, testy, wici.net.pl/symulator) świat ma zegar wirtualny: przyspieszanie i przeskoki czasu działają, bo nic z zewnątrz na niego nie czeka. Gdy dołącza program z zewnątrz (aplikacja laptopa), świat biegnie w czasie rzeczywistym, bo ten program ma własne limity czasu: to robi `swiat.mjs`.
+Czas biegnie na dwa sposoby. W jednym procesie (strona ćwiczeń, testy, wici.net.pl/symulator) świat ma zegar wirtualny: przyspieszanie i przeskoki czasu działają, bo nic z zewnątrz na niego nie czeka. Gdy dołącza program z zewnątrz (aplikacja laptopa), świat biegnie w czasie rzeczywistym, bo ten program ma własne limity czasu. Tak działa `swiat.mjs`.
 
 ```sh
 node software/simulator/swiat.mjs --stations 2 --card karta-odbiorcy.json   # strona http://127.0.0.1:7380/
 node software/simulator/swiat.mjs --station stacja.json --stations 1         # stacja 1 skonfigurowana z pliku
 ```
 
-Stacja k ma port danych USB `tcp:127.0.0.1:<7300 + k − 1>`; połączenie TCP to przewód USB podłączony do laptopa. Stacja startuje bez konfiguracji, chyba że podano dla niej plik w formacie „Zapisz do pliku” panelu laptopa (`--station`); wtedy świat konfiguruje ją protokołem USB jak laptop. Węzeł i stanowisko są przygotowane z kluczem sieci ćwiczeniowej, którego kod dostępu jest w pierwszym wierszu wyjścia, a `--card` zapisuje kartę odbiorcy stanowiska do wczytania w panelu laptopa. Strona świata pokazuje ekrany stacji i ma ich przyciski, przycisk przygotowania, wyłącznik, CISZĘ RADIOWĄ i tłumienie trasy; działa tylko z 127.0.0.1.
+Stacja k ma port danych USB `tcp:127.0.0.1:<7300 + k − 1>`; połączenie TCP to przewód USB podłączony do laptopa. Stacja startuje bez konfiguracji, chyba że podano dla niej plik w formacie „Zapisz do pliku” panelu laptopa (`--station`). Wtedy świat konfiguruje ją protokołem USB tak jak laptop. Węzeł i stanowisko są przygotowane z kluczem sieci ćwiczeniowej, którego kod dostępu jest w pierwszym wierszu wyjścia. Opcja `--card` zapisuje kartę odbiorcy stanowiska do wczytania w panelu laptopa. Strona świata pokazuje ekrany stacji i ma ich przyciski, przycisk przygotowania, wyłącznik, CISZĘ RADIOWĄ i tłumienie trasy; działa tylko z 127.0.0.1.
 
 Kolejne kroki:
 
 1. `swiat.mjs`: świat z N stacjami, pliki konfiguracji, porty TCP, strona świata, plik karty odbiorcy. Testy aplikacji laptopa na symulatorze używają świata (wcześniej osobny `software/laptop/dev/sim-station.mjs` z jedną stacją bez węzła). **Zrobione.**
 2. Pełny panel R02 ze strony ćwiczeń dołączany do świata w czasie rzeczywistym (ten sam stan przez `/events`, działania przez `/act`).
-3. Port danych węzła na TCP dla przyszłej aplikacji stanowiska; model `post.cpp` wtedy opcjonalny.
+3. Port danych węzła na TCP dla przyszłej aplikacji stanowiska; model `post.cpp` będzie wtedy opcjonalny.
 4. Krótkie ćwiczenia poziomu 2 z aplikacją laptopa w czasie rzeczywistym (przygotowanie stacji, ZNISZCZ DANE).
 
 Odrzucone: osobny proces na każde urządzenie (zegar i eter musiałyby się synchronizować przez sieć, bez zysku dla ćwiczeń); WebSocket do strony świata (Node nie ma serwera WebSocket w bibliotece standardowej, a EventSource i POST wystarczają); wszystkie ćwiczenia w czasie rzeczywistym (ćwiczenia z przeskokami czasu trwałyby dziesiątki minut).

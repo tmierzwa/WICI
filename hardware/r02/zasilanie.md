@@ -24,7 +24,7 @@ Przegląd kart wykazał błędy i sprzeczności w obecnych wymaganiach ([F87](..
 | Z4 | **Polimerowy kondensator podtrzymania przekracza budżet stanu wyłączonego.** VSYS jest stale połączone z ogniwami (tor ogniw nie ma łącznika). Nichicon PCR 470 µF/25 V ma gwarantowany upływ ≤352 µA przy napięciu znamionowym, a budżet to ≤20 µA | Nichicon PCR, CAT.8100N | zdecydowane: aluminiowy elektrolit o małym upływie (Nichicon UKL, 0,002 CV) i ceramika; upływ przy 6 V do zmierzenia |
 | Z5 | **Pojemność podtrzymania przy najgorszym progu:** komparator może zadziałać już przy 3,325 V, więc C ≥450 µF; po tolerancji −20% i spadku w −20 °C potrzeba nominalnie 680 µF, a nie 470 µF | §[podtrzymanie](#kondensator-podtrzymania-vsys) | zdecydowane: ≥680 µF |
 | Z6 | **LM74800-Q1 nie da progu OVP 17 V ±2%.** Sam komparator OV ma ±2,9%: przy rezystorach 0,1% próg wynosi 16,40–17,45 V. Reguła 0,9 × 40 V dla LTC3115-1 i tak jest spełniona z dużym zapasem. ADI LTC4368-2 daje 16,71–17,29 V | TI SNOSD95C s. 5; ADI LTC4368 rew. C s. 4 | zdecydowane: reguła 0,9 × maksimum i dolna granica progu powyżej 16 V zamiast ±2% |
-| Z7 | **Prąd z ogniw w stanie wyłączonym:** typowo około 24 µA, najgorzej około 49 µA przy cel ≤20 µA. Składniki: LTC4412 (11/19 µA), LTC2954 (6/12 µA), LTC3115-1 w wyłączeniu (3/10 µA), LM74800 zasilany wstecznie z VSYS przez diodę podłożową (2,9/5 µA) | §[bilans](#bilans-prądu-w-stanie-wyłączonym) | zdecydowane: dioda Schottky’ego zamiast idealnej diody i LTC2955 zamiast LTC2954, około 7/19 µA ([bilans](#bilans-prądu-w-stanie-wyłączonym)) |
+| Z7 | **Prąd z ogniw w stanie wyłączonym:** typowo około 24 µA, najgorzej około 49 µA przy celu ≤20 µA. Składniki: LTC4412 (11/19 µA), LTC2954 (6/12 µA), LTC3115-1 w wyłączeniu (3/10 µA), LM74800 zasilany wstecznie z VSYS przez diodę podłożową (2,9/5 µA) | §[bilans](#bilans-prądu-w-stanie-wyłączonym) | zdecydowane: dioda Schottky’ego zamiast idealnej diody i LTC2955 zamiast LTC2954, około 7/19 µA ([bilans](#bilans-prądu-w-stanie-wyłączonym)) |
 | Z8 | **Bipolarny kondensator tłumiący 47 µF/35 V ma gwarantowany upływ 49–52 µA**, ponad budżet 12 V | Nichicon UES, Panasonic SU-A | zdecydowane: tłumik RC (ceramika 10–22 µF/50 V z rezystorem 0,5–1 Ω) |
 | Z9 | **Sprzeczność progów 12 V:** elektronika mówi „pierwsze załączenie przy ≥12,0 V”, a gdzie indziej „ponowne załączenie zawsze tylko przy V12 ≥12,4 V” | elektronika, wiersze „Wejście 12 V” i „Odłączenie 12 V” | zdecydowane: 12,4 V w obu przypadkach |
 | Z10 | **Komparator VSYS:** TPS3710 ma sam próg opadający −1,9%/+1,4%, więc ±2% wychodzi tylko typowo (najgorzej −2,2%/+2,0%). Wejście SENSE wytrzymuje 7 V, więc dzielnika nie odłącza się od dołu | TI SBVS271A, 5.1 i 5.5 | odłączanie dzielnika od góry (PMOS); wymaganie ±2,5% albo pojemność liczona przy 3,32 V (Z5) |
@@ -106,7 +106,7 @@ Drugi producent: ADI LTC2965 (3,5–100 V, 3/7/15 µA) z osobnymi progami w gór
   - C_TMR = 2,2 µF X7R: wymuszone wyłączenie po 64 ms + t_TMR, przy czym t_TMR = C_TMR / 0,19 µF/s, czyli około 11,6 s nominalnie. Karta podaje rozrzut t_TMR tylko dla 2,2 nF (5,8/11,5/17,2 ms, ±50%). Po przeniesieniu na 2,2 µF i z tolerancją kondensatora ±10% wychodzi około 5,2–19 s, więc ≥5 s jest spełnione. Rozrzut mierzy się na próbce.
   - Po wyłączeniu sterownik przez 0,6–1,4 s ignoruje przycisk.
 - **Przerwanie i KILL:** INT (otwarty dren, do 6 V) z podciągnięciem do 3V3 idzie do MCU. Przy wyłączaniu INT idzie w stan niski po 19–45 ms naciśnięcia i trwa, dopóki przycisk jest wciśnięty. Puszczenie przycisku przed końcem t_TMR przerywa wyłączanie i zwalnia INT, więc 2 s przytrzymania odmierza program, jak przy LTC2954.
-  - KILL (do 6 V, próg 0,8 V) ma podciągnięcie do 3V3, a MCU ściąga go otwartym drenem. Po włączeniu EN̄ KILL musi być w stanie wysokim najpóźniej po 304 ms (Z3); narastanie S12 (około 19 ms) i rozruch przetwornicy mieszczą się w tym czasie z zapasem, do potwierdzenia pomiarem.
+  - KILL (do 6 V, próg 0,8 V) ma podciągnięcie do 3V3, a MCU ściąga go otwartym drenem. Po włączeniu EN̄ KILL musi być w stanie wysokim najpóźniej po 304 ms (Z3). Narastanie S12 (około 19 ms) i rozruch przetwornicy mieszczą się w tym czasie z zapasem, do potwierdzenia pomiarem.
 - **Drugi producent:** nie znaleziono sterownika spoza ADI z INT i KILL na 2,7–26 V. TI na swoim forum podaje, że nie ma odpowiednika LTC2954.
   - Droga zastępcza: stale włączony LDO TPS70930 z sumy diodowej (1,3/2,05 µA) zasila ST STM6601CA2BDM6F (1,6–5,5 V, 0,6 µA w spoczynku, INT, PSHOLD w roli KILL, blokada podnapięciowa 2,6 V, C_SRD 1 µF daje około 10 s wymuszonego wyłączenia; kartę czytano z kopii u dystrybutora). Razem około 1,9 µA typowo i 3,1 µA najwyżej, czyli podobnie jak LTC2955 (1,2/3 µA). Wyjścia mają poziom 3,3 V, więc szynę ON nadal tworzy PMOS.
 
@@ -125,9 +125,9 @@ Drugi producent: ADI LTC2965 (3,5–100 V, 3/7/15 µA) z osobnymi progami w gór
 | RUN | podciągnięcie 1 MΩ do VSYS i NMOS z otwartym drenem sterowany z ON. RUN nie może przekroczyć VIN + 0,3 V, więc nie podłącza się go do szyny ON z sumy diodowej |
 | PWM/SYNC | stan niski to Burst Mode (domyślnie). MCU podaje stan wysoki na czas nadawania, bo Burst Mode obsługuje zwykle poniżej 50 mA. To dodatkowy pin MCU ([architektura](architektura.md#sygnały-mcu)) |
 
-Sprawność ≥85% przy 6 V i ≥80% przy 12,8 V (30–60 mA) wynika z wykresów dla 5 V wyjścia tylko na granicy (Z11). Iq 50 µA jest typowe, bez maksimum. Oba warunki mierzy się na płytce ewaluacyjnej, zanim przetwornica wejdzie do schematu.
+Z wykresów dla wyjścia 5 V sprawność ≥85% przy 6 V i ≥80% przy 12,8 V (30–60 mA) wychodzi tylko na granicy (Z11). Iq 50 µA jest typowe, bez maksimum. Oba warunki mierzy się na płytce ewaluacyjnej, zanim przetwornica wejdzie do schematu.
 
-TI TPS63070 odpada jako pierwszy wybór: Iq do 103 µA (wymaganie ≤50 µA) i zalecane wejście tylko do 16 V (maksimum bezwzględne 20 V, SLVSC58B), więc praca z 12 V wymaga zawężenia do 15 V i progu OVP z przerzutem ≤16 V ([elektronika](../../docs/spec/elektronika.md#zasilanie-stacji)). U TI, MPS i ST nie znaleziono przetwornicy podwyższająco-obniżającej z wejściem ≥20 V, Iq ≤50 µA i wyjściem 3,3 V (TPS552892, TPS55289 i LM5176 mają Iq rzędu 0,8–2 mA, TPS5516x nie ma wyjścia 3,3 V). Drugi producent wymaga więc innej architektury: przetwornica obniżająca o małym Iq z pracą przy 100% wypełnienia, np. TI TPS629210 (3–17 V, 4 µA). Przy ogniwach 4,0 V wystarcza dla nRF52840, ale dla ESP32-S3 jest na granicy w czasie podtrzymania (VSYS spada do 2,7 V), więc decyzja zależy od D14.
+TI TPS63070 odpada jako pierwszy wybór: Iq do 103 µA (wymaganie ≤50 µA) i zalecane wejście tylko do 16 V (maksimum bezwzględne 20 V, SLVSC58B). Praca z 12 V wymagałaby więc zawężenia do 15 V i progu OVP z przerzutem ≤16 V ([elektronika](../../docs/spec/elektronika.md#zasilanie-stacji)). U TI, MPS i ST nie znaleziono przetwornicy podwyższająco-obniżającej z wejściem ≥20 V, Iq ≤50 µA i wyjściem 3,3 V (TPS552892, TPS55289 i LM5176 mają Iq rzędu 0,8–2 mA, TPS5516x nie ma wyjścia 3,3 V). Drugi producent wymaga więc innej architektury: przetwornica obniżająca o małym Iq z pracą przy 100% wypełnienia, np. TI TPS629210 (3–17 V, 4 µA). Przy ogniwach 4,0 V taka przetwornica wystarcza dla nRF52840, ale dla ESP32-S3 jest na granicy w czasie podtrzymania (VSYS spada do 2,7 V), więc decyzja zależy od D14.
 
 ### Komparator VSYS
 
@@ -162,7 +162,7 @@ Upływ elektrolitu przy 6 V (około 25% napięcia znamionowego) jest zwykle duż
 - **Dzielnik 12 V:** 100 kΩ / 10,2 kΩ (0,1%) z kluczem górnym PMOS BSS84AK (−50 V), sterowanym przez 2N7002 z GPIO.
   - Napięcie na wejściu ADC: 1,06 V przy 11,5 V, 1,48 V przy 16 V i 2,70 V przy impulsie 29,2 V, czyli poniżej VDD.
   - Upływ klucza w stanie wyłączonym ≤1 µA.
-- **nRF52840 (A):** błąd wzmocnienia SAADC wynosi ±3%. Wymaganie 2% wymaga więc kalibracji jednopunktowej przy produkcji; po kalibracji błąd to około 0,8%.
+- **nRF52840 (A):** błąd wzmocnienia SAADC wynosi ±3%. Wymaganie 2% da się więc spełnić tylko z kalibracją jednopunktową przy produkcji. Po kalibracji błąd wynosi około 0,8%.
 - **ESP32-S3 (B):** zakres ATTEN2 (0–1,6 V) z kalibracją eFuse daje ±10 mV, czyli 0,7–0,9%.
 
 ## Bilans prądu w stanie wyłączonym
@@ -179,7 +179,7 @@ Upływ elektrolitu przy 6 V (około 25% napięcia znamionowego) jest zwykle duż
 
 Do tego dochodzi upływ kondensatora podtrzymania VSYS, którego karta nie podaje dla 6 V (Z4). Dlatego bilans potwierdza się pomiarem.
 
-Z LTC2955 cel ≤20 µA jest spełniony także w najgorszym przypadku, ale z zapasem tylko około 1 µA. Największy składnik to LTC3115-1 w wyłączeniu (10 µA najwyżej), a upływ kondensatora podtrzymania dochodzi osobno. Bez pomiaru wynik nie jest więc rozstrzygnięty.
+Z LTC2955 cel ≤20 µA jest spełniony także w najgorszym przypadku, ale z zapasem tylko około 1 µA. Największy składnik to LTC3115-1 w wyłączeniu (10 µA najwyżej), a upływ kondensatora podtrzymania dochodzi osobno.
 
 ## Reguła OVP
 
@@ -196,7 +196,7 @@ Przerzut liczono tak: OV wyłącza bramkę w ≤5,4 µs, a w tym czasie nawet 50
 
 ## Próby teraz, na płytkach ewaluacyjnych
 
-Wyniki tych prób są potrzebne do schematu zasilania, a nie wymagają T3–T5.
+Wyniki tych prób są potrzebne do schematu zasilania, a same próby nie czekają na T3–T5.
 
 | Próba | Płytka | Cena (DigiKey, 2026-10-08) | Co mierzyć |
 |---|---|---|---|

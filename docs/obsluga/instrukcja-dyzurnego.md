@@ -223,7 +223,7 @@ Sieć przekazuje ruch także bez komputera. Punkty ponawiają niepotwierdzone zg
 4. Uruchom aplikację. Wpisz hasło stanowiska.
 5. Zaloguj się.
 6. Sprawdź zegar (rozdział 1, krok 9).
-7. Czekaj na zaległe zgłoszenia. Przyjdą same; aplikacja nie przyjmie ich dwa razy.
+7. Czekaj na zaległe zgłoszenia. Przyjdą same, a aplikacja nie przyjmie ich dwa razy.
 8. Wpisz awarię i godzinę powrotu do rejestru. Cel: 15 min.
 
 ### Stacja stanowiska uszkodzona
@@ -281,17 +281,17 @@ Panel nie ma osobnego trybu ćwiczebnego. W ćwiczeniu:
 4. Nie przekazuj zgłoszeń ćwiczebnych służbom, chyba że plan ćwiczenia stanowi inaczej. Wtedy każde przekazanie zaczynaj od słowa ĆWICZENIE.
 5. Po ćwiczeniu ogłoś koniec ćwiczenia komunikatem.
 
-Ćwiczenie całej sieci ze stanowiskiem i gońcem odbywa się raz w roku. Grafik obejmuje co najmniej 4 dyżurnych; każdy przechodzi szkolenie i ćwiczenie.
+Ćwiczenie całej sieci ze stanowiskiem i gońcem odbywa się raz w roku. Grafik obejmuje co najmniej 4 dyżurnych. Każdy przechodzi szkolenie i ćwiczenie.
 
 ### Test roczny wszystkich punktów
 
-Raz w roku dyżurny i gospodarze sprawdzają wszystkie stacje w gminie. Test można połączyć z ćwiczeniem całej sieci. Używa tylko istniejących funkcji: komunikatu, TEST i PRZECZYTANE.
+Raz w roku dyżurny i gospodarze sprawdzają wszystkie stacje w gminie. Test można połączyć z ćwiczeniem całej sieci. Wystarczą istniejące funkcje: komunikatu, TEST i PRZECZYTANE.
 
 1. Gmina powiadamia gospodarzy o rozpoczęciu testu zwykłą drogą (telefon, SMS). Wpisz godzinę powiadomienia do rejestru.
 2. Wyślij komunikat „ĆWICZENIE – TEST ROCZNY”. Stacja odbierze go po włączeniu.
 3. Gospodarz albo zastępca włącza stację według karty, z kompletu ćwiczebnego albo ze źródła 12 V, i wysyła TEST. Komplet kryzysowy zostaje zamknięty.
 4. Każdy TEST potwierdź (PRZECZYTANE) i wpisz z literą Ć: punkt, godzinę odbioru, uwagi (np. adres niezrozumiały, ponowienia).
-5. Test trwa 2 h od powiadomienia, chyba że gmina ustali inaczej. Punkt bez TEST w tym czasie ma w tabeli „nie”; gmina ustala przyczynę (stacja, antena, ogniwa, brak obsady).
+5. Test trwa 2 h od powiadomienia, chyba że gmina ustali inaczej. Punkt bez TEST w tym czasie ma w tabeli „nie”. Gmina ustala przyczynę (stacja, antena, ogniwa, brak obsady).
 6. Wypełnij tabelę [wyniku testu rocznego](#wynik-testu-rocznego). Kopię dostaje gmina i komenda powiatowa PSP.
 
 ## 10. Cisza radiowa

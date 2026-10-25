@@ -45,7 +45,7 @@ Bopla BOS 801 przy szerokości 100 mm nie mieści czterech przycisków dla dłon
 | Funkcja | Kandydat 1 | Kandydat 2 | Uwagi |
 |---|---|---|---|
 | 12 V, IP67, kluczowane | Switchcraft EN3, 2 styki (EN3P2FX: DigiKey 419 sztuk, 12,34 USD; EN3P2F16X: 1636 sztuk, 13,01 USD) | gniazdo M8 albo M12 kodowane A (Binder, Amphenol LTW, Lumberg; do sprawdzenia) | EN3 ma szczelność IP68 tylko z wtykiem albo zatyczką; otwór Ø15,5 mm ze ścięciem 14,8 mm. Wtyk EN3C2M i zatyczka z tej samej rodziny. Styk 1 = +12 V, zapisany w BOM i na karcie |
-| Antena SMA-F | gniazdo krawędziowe na płytce, przechodzące przez otwór w ścianie, z nakrętką na ścianie | gniazdo przepustowe SMA z krótkim przewodem do płytki | wybór zależy od toru RF i stosu ([tor RF](tor-rf.md)); nakrętka na ścianie przejmuje moment od przewodu antenowego, inaczej obciąża lutowanie. Konkretne MPN do sprawdzenia |
+| Antena SMA-F | gniazdo krawędziowe na płytce, przechodzące przez otwór w ścianie, z nakrętką na ścianie | gniazdo przepustowe SMA z krótkim przewodem do płytki | wybór zależy od toru RF i stosu ([tor RF](tor-rf.md)); nakrętka na ścianie przejmuje moment od przewodu antenowego, który inaczej obciążałby lutowanie. Konkretne MPN do sprawdzenia |
 | USB-C | gniazdo USB 2.0 z nogami obudowy przewlekanymi (np. GCT USB4105-GF-A; do sprawdzenia) | Würth albo Amphenol ICC (do sprawdzenia) | zatyczka silikonowa na uwięzi; gniazdo ≤1 mm za otworem w ścianie, żeby wszedł wtyk z typową osłoną |
 | Koszyk 4 × AA | Hammond BH4AAW (61,25 × 57 × 14,6 mm, przewody) | Keystone albo MPD 4 × AA z osłoniętym stykiem dodatnim (do sprawdzenia) | zwykłe koszyki nie mają klucza mechanicznego. Wymaganie BOM „kluczowanie przeciw odwrotnemu włożeniu” spełnia osłonięty styk dodatni, a resztę ochrona elektroniczna w torze ogniw ([zasilanie](zasilanie.md)). Odwrócenie jednego ogniwa z czterech daje 3 V zamiast 6 V, nie odwrotną polaryzację. Zakres temperatur koszyka sprawdza się do −20 °C |
 
@@ -58,7 +58,7 @@ Panel Sharp jest odblaskowy i nie ma podświetlenia od tyłu, więc wymagane pod
 4. płytka światłowodowa 0,5–1 mm z 2–4 diodami na dłuższej krawędzi, ukrytymi pod nieprzezroczystym brzegiem folii;
 5. panel na ramce z pianki 0,5 mm.
 
-Szybka, światłowód i panel razem mają ≤4 mm, a szczeliny powietrzne ≤0,5 mm, żeby paralaksa i podwójny obraz nie pogorszyły czytelności. Matowa powierzchnia szybki ogranicza odblaski lamp sufitowych. Taśma FPC panelu schodzi do złącza na płytce bez ostrego zagięcia. Zasady zginania są w opisie N1 ([płytka nośna](../dev-bench/plytka-nosna.md)). Gotowe płytki światłowodowe do 2,7-calowego panelu Sharp trzeba dopiero znaleźć; inaczej wycina się PMMA z nadrukiem punktowym. Podświetlenie zasila sterownik prądowy z szyny 5 V ([zasilanie](zasilanie.md)).
+Szybka, światłowód i panel razem mają ≤4 mm, a szczeliny powietrzne ≤0,5 mm, żeby paralaksa i podwójny obraz nie pogorszyły czytelności. Matowa powierzchnia szybki ogranicza odblaski lamp sufitowych. Taśma FPC panelu schodzi do złącza na płytce bez ostrego zagięcia. Zasady zginania są w opisie N1 ([płytka nośna](../dev-bench/plytka-nosna.md)). Gotowych płytek światłowodowych do 2,7-calowego panelu Sharp jeszcze nie znaleziono. Jeśli ich nie będzie, wycina się płytkę z PMMA z nadrukiem punktowym. Podświetlenie zasila sterownik prądowy z szyny 5 V ([zasilanie](zasilanie.md)).
 
 ## Układ panelu
 
@@ -86,8 +86,8 @@ Współrzędne w milimetrach od zewnętrznego lewego górnego narożnika pokrywy
 - Rozstaw 32 mm przy otworach Ø16 mm zostawia ≥16 mm między przyciskami dla palców w rękawicach.
 - CISZA i wyłącznik główny stoją w osobnej kolumnie, ≥30 mm od rzędu nawigacji, żeby nie nacisnąć ich przypadkiem.
 - Dioda alarmu jest w prawym górnym rogu.
-- SMA można przenieść na górną ścianę, jeśli przewód antenowy przychodzi z góry; decyduje rysunek instalacji.
-- Klapka ogniw jest w podstawie, więc do wymiany ogniw zdejmuje się stację ze ściany albo odwraca na stole. To zgadza się z procedurą z karty (wymiana po komunikacie `mozna_wyjac`). Na klapce: piktogram „+ / −” i napis o przytrzymaniu wyłącznika przez 2 s.
+- SMA można przenieść na górną ścianę, jeśli przewód antenowy przychodzi z góry. Decyduje o tym rysunek instalacji.
+- Klapka ogniw jest w podstawie, więc do wymiany ogniw zdejmuje się stację ze ściany albo odwraca na stole. Zgadza się to z procedurą z karty (wymiana po komunikacie `mozna_wyjac`). Na klapce: piktogram „+ / −” i napis o przytrzymaniu wyłącznika przez 2 s.
 
 ## Płyta bazowa: obrys i ograniczenia
 

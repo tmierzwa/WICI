@@ -8,15 +8,15 @@ Codzienną pracę na zmontowanym stanowisku opisuje [obsługa stanowiska](obslug
 
 Obrazy oprogramowania są w [firmware/](../../firmware/README.md): `bench-a` (stanowisko A na przewodach), `bench-n1` (A na płytce nośnej N1) i `bench-b` (B na N1). Wszystkie się budują; żadnego nie uruchomiono jeszcze na sprzęcie.
 
-Zasada: tor RF, wzorzec częstotliwości i zasilanie stanowiska pochodzą z płytek producentów; własnych płytek radiowych do prób się nie projektuje. Moduły łączy [płytka nośna N1](plytka-nosna.md) (jedna płytka dla stanowisk A i B, [F81](../../docs/review.md)) albo, do czasu montażu N1, przewody: stanowisko A według [firmware/README.md](../../firmware/README.md#okablowanie-stanowiska-a) i [tabeli złączy EM](#złącza-modułu-cc1120em); dla stanowiska B tabeli przewodów nie ma, B buduje się tylko na N1.
+Zasada: tor RF, wzorzec częstotliwości i zasilanie stanowiska pochodzą z płytek producentów; własnych płytek radiowych do prób się nie projektuje. Moduły łączy [płytka nośna N1](plytka-nosna.md) (jedna płytka dla stanowisk A i B, [F81](../../docs/review.md)). Do czasu montażu N1 stanowisko A można połączyć przewodami według [firmware/README.md](../../firmware/README.md#okablowanie-stanowiska-a) i [tabeli złączy EM](#złącza-modułu-cc1120em). Dla stanowiska B tabeli przewodów nie ma, więc B buduje się tylko na N1.
 
-Stanowisko uruchamia to samo oprogramowanie układowe co stacja, z własnym plikiem opisu płytki (przypisanie wyprowadzeń). Przypisania różnią się (SPI SCK na D13 przy przewodach, na D3 na N1), więc każdy wariant ma własny plik opisu płytki. Nie ma osobnego oprogramowania stanowiska ani osobnego kontraktu modemu.
+Na stanowisku działa to samo oprogramowanie układowe co w stacji. Różni się tylko przypisanie wyprowadzeń (np. SPI SCK jest na D13 przy przewodach i na D3 na N1), dlatego każdy wariant ma własny plik opisu płytki. Nie ma osobnego oprogramowania stanowiska ani osobnego kontraktu modemu.
 
 ## Dwa stanowiska
 
-Stanowiska deweloperskie odpowiadają dwóm dotychczasowym wariantom P1 ([specyfikacja radia](../../docs/spec/radio.md#dwa-wykonania)), więc pozwalają sprawdzić MCU, radio, stos i interfejs użytkownika. Wyniki dotyczą konfiguracji stanowiska; po wyborze części R02 trzeba wskazać, które próby wymagają powtórzenia.
+Stanowiska deweloperskie odpowiadają dwóm dotychczasowym wariantom P1 ([specyfikacja radia](../../docs/spec/radio.md#dwa-wykonania)), więc można na nich sprawdzić MCU, radio, stos i interfejs użytkownika. Wyniki dotyczą konfiguracji stanowiska. Po wyborze części R02 trzeba wskazać, które próby należy powtórzyć.
 
-Do prób mieszanych TI–ST potrzeba po jednym stanowisku każdego rodzaju; do sieci A–B–stanowisko odbiorcze z zapasem potrzeba czterech (dwa A i dwa B), co odpowiada dwóm modułom w zestawie CC1120EMK.
+Do prób mieszanych TI–ST wystarczy po jednym stanowisku każdego rodzaju. Sieć A–B–stanowisko odbiorcze z zapasem wymaga czterech (dwa A i dwa B), co odpowiada dwóm modułom w zestawie CC1120EMK.
 
 | Element | Stanowisko A (TI) | Stanowisko B (ST) | Uwagi |
 |---|---|---|---|
@@ -43,15 +43,15 @@ Moduł CC1120 innego producenta nadaje się tylko do uruchomienia oprogramowania
 | T5 | wczesne próby zasięgu: stanowisko w pudełku zasilane z powerbanku (narzędzie prób, nie źródło stacji) | odbiór 1 km, przekaźnik na ogniwach, zimny start sieci |
 | T6, T7 | nic | energia, bezpieczeństwo, odtworzenie i dostawcy |
 
-Wyniki czułości i emisji ze stanowiska dotyczą toru RF producenta, nie stacji. Pokazują, czy układ radiowy i profil P1 w ogóle osiągają cel (około −113 dBm na złączu układu), zanim powstanie projekt R02 z własnym torem wejściowym.
+Wyniki czułości i emisji ze stanowiska dotyczą toru RF producenta, a nie stacji. Pokazują, czy układ radiowy i profil P1 w ogóle osiągają cel (około −113 dBm na złączu układu), zanim powstanie projekt R02 z własnym torem wejściowym.
 
 ## Pomiary
 
-Polecenia pomiarowe interfejsu diagnostyki (`TXCW`, `TXPKT`, `RXPER`, `FOFF`) działają tylko w trybie przygotowania i są opisane w [specyfikacji radia](../../docs/spec/radio.md#usb-do-laptopa). Czułość przy PER ≤1% wymaga ≥2000 ramek 103 B na punkt, czyli więcej nadawania, niż dopuszcza limit 10% w godzinie; takie serie nadaje się wyłącznie przewodowo do tłumika, po potwierdzeniu przyciskiem na stanowisku, z zapisem w dzienniku. Procedura pomiarów T4 i warunki zaliczenia są w [odbiorze](../../docs/spec/odbior.md).
+Polecenia pomiarowe interfejsu diagnostyki (`TXCW`, `TXPKT`, `RXPER`, `FOFF`) działają tylko w trybie przygotowania i są opisane w [specyfikacji radia](../../docs/spec/radio.md#usb-do-laptopa). Pomiar czułości przy PER ≤1% wymaga ≥2000 ramek 103 B na punkt, czyli więcej nadawania, niż dopuszcza limit 10% w godzinie. Takie serie nadaje się wyłącznie przewodowo do tłumika, po potwierdzeniu przyciskiem na stanowisku, i odnotowuje w dzienniku. Procedura pomiarów T4 i warunki zaliczenia są w [odbiorze](../../docs/spec/odbior.md).
 
 ## Złącza modułu CC1120EM
 
-Przy okablowaniu przewodami połączenia opisuje ta tabela; płytka nośna ma je w schemacie. Mapa złączy P1/P2 modułu TI CC112xEM 868/915 pochodzi z projektu R01.3. Numery są elektrycznymi numerami pinów; złącza są na spodzie modułu, a widok od spodu odwraca obraz. Przed zasilaniem sprawdzić każdą żyłę miernikiem. Długość przewodów do 5 cm w pierwszej próbie, SPI około 1 MHz. Na N1 radio 1 MHz, FRAM 8 MHz (wymaganie ≥8 MHz każdej stacji), a ekran do 2 MHz (polecenie `DISPLAY`) dopiero po pomiarze oscyloskopem przy J7 ([uruchomienie](uruchomienie.md#pomiar-magistrali-oscyloskopem)).
+Przy okablowaniu przewodami połączenia opisuje ta tabela, a na płytce nośnej wynikają one ze schematu. Mapa złączy P1/P2 modułu TI CC112xEM 868/915 pochodzi z projektu R01.3. Numery są elektrycznymi numerami pinów. Złącza są na spodzie modułu, więc w widoku od spodu układ pinów jest odwrócony. Przed zasilaniem trzeba sprawdzić każdą żyłę miernikiem. W pierwszej próbie przewody mają najwyżej 5 cm, a SPI pracuje z zegarem około 1 MHz. Na N1 zegar SPI wynosi 1 MHz dla radia i 8 MHz dla FRAM (wymaganie ≥8 MHz dla każdej stacji). Ekran można przełączyć na zegar do 2 MHz (polecenie `DISPLAY`) dopiero po pomiarze oscyloskopem przy J7 ([uruchomienie](uruchomienie.md#pomiar-magistrali-oscyloskopem)).
 
 | Sygnał | Złącze modułu TI | Pin CC1120 |
 |---|---|---:|

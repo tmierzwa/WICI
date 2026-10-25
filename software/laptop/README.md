@@ -11,7 +11,7 @@ python3 -m wici                      # wyszukuje stację na portach USB i otwier
 python3 -m wici --port /dev/ttyACM1  # wskazany port (Windows: COM5)
 ```
 
-Bez płytki: świat symulatora (obraz firmware bench-b w WebAssembly, wymaga Node.js) ze stacjami, węzłem i stanowiskiem; port danych USB każdej stacji jest na TCP, a strona świata ma ekrany i przyciski stacji, w tym przycisk przygotowania ([opis](../simulator/README.md#osobne-elementy)).
+Bez płytki można użyć świata symulatora (obraz firmware bench-b w WebAssembly, wymaga Node.js) ze stacjami, węzłem i stanowiskiem. Port danych USB każdej stacji jest wystawiony na TCP, a strona świata ma ekrany i przyciski stacji, w tym przycisk przygotowania ([opis](../simulator/README.md#osobne-elementy)).
 
 ```sh
 node ../simulator/swiat.mjs --card ../../dist/karta-odbiorcy.json   # w drugim terminalu; strona http://127.0.0.1:7380/
@@ -20,7 +20,7 @@ python3 -m wici --port tcp:127.0.0.1:7300
 
 Kartę odbiorcy stanowiska świata wczytuje się w panelu, a kod dostępu sieci ćwiczeniowej podaje pierwszy wiersz wyjścia. Stację skonfigurowaną z góry daje `--station plik.json` (plik z „Zapisz do pliku” panelu).
 
-Uruchomiony ze źródeł panel trzyma konta i kopię bazy w katalogu `pamiec-usb` w katalogu stanu laptopa; `WICI_USB` wskazuje inny katalog jako pamięć zestawu, a `WICI_STATE` inny katalog stanu.
+Uruchomiony ze źródeł panel trzyma konta i kopię bazy w katalogu `pamiec-usb` w katalogu stanu laptopa. Zmienna `WICI_USB` wskazuje inny katalog jako pamięć zestawu, a `WICI_STATE` inny katalog stanu.
 
 ## Testy
 
@@ -36,9 +36,9 @@ Testy obejmują reguły dokumentu `configure` (także zgodność z regułą teks
 python3.14 build/build_usb.py --out ../../dist/wici-usb
 ```
 
-Skrypt pobiera przypięte środowiska Pythona ([runtimes.json](build/runtimes.json), sprawdzane SHA-256), przycina je i składa drzewo pamięci z programami START, instrukcją i manifestem. Do `START-WINDOWS.exe` potrzebny jest MinGW-w64 (`x86_64-w64-mingw32-gcc`) albo gotowy plik podany przez `--windows-launcher`. Katalog `--out` jest zastępowany w całości, więc skrypt odmawia, gdy to nie jest poprzednia budowa (brak `build-manifest.json`) albo gdy są w nim konta lub kopia bazy (`keys/`, `kopia/`).
+Skrypt pobiera przypięte środowiska Pythona ([runtimes.json](build/runtimes.json), sprawdzane SHA-256), przycina je i składa drzewo pamięci z programami START, instrukcją i manifestem. Do `START-WINDOWS.exe` potrzebny jest MinGW-w64 (`x86_64-w64-mingw32-gcc`) albo gotowy plik podany przez `--windows-launcher`. Katalog `--out` jest zastępowany w całości, więc skrypt odmawia pracy, gdy katalog nie pochodzi z poprzedniej budowy (brak `build-manifest.json`) albo gdy są w nim konta lub kopia bazy (`keys/`, `kopia/`).
 
-Pamięć zapisuje się bez znacznika kwarantanny macOS: drzewo z archiwum pobranego przeglądarką (np. artefakt `wici-usb` z CI) oczyszcza się przed zapisem poleceniem `xattr -dr com.apple.quarantine <katalog>`, inaczej macOS uruchamia START-MAC z kopii tymczasowej bez reszty pamięci. Archiwum ZIP artefaktu nie zachowuje prawa wykonywania: na pamięci FAT32 nadaje je montowanie, a do próby z dysku APFS albo ext4 trzeba `chmod +x` na `START-MAC.app/Contents/MacOS/START` i `runtime/*/bin/python3.14` (START-LINUX.sh i tak uruchamia się przez `sh`).
+Pamięć zapisuje się bez znacznika kwarantanny macOS. Drzewo z archiwum pobranego przeglądarką (np. artefakt `wici-usb` z CI) oczyszcza się przed zapisem poleceniem `xattr -dr com.apple.quarantine <katalog>`. Inaczej macOS uruchomi START-MAC z kopii tymczasowej, bez reszty pamięci. Archiwum ZIP artefaktu nie zachowuje prawa wykonywania. Na pamięci FAT32 nadaje je montowanie, a przy próbie z dysku APFS albo ext4 trzeba wykonać `chmod +x` na `START-MAC.app/Contents/MacOS/START` i `runtime/*/bin/python3.14` (START-LINUX.sh i tak uruchamia się przez `sh`).
 
 | Katalog | Zawartość |
 |---|---|

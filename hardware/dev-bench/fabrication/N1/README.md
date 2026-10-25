@@ -1,6 +1,6 @@
 # WICI: pliki produkcyjne płytki nośnej N1
 
-**Nie zamawiać przed zamknięciem [listy przed zamówieniem](../../przed-produkcja.md).** Pliki eksportuje `tools/export_fabrication.py` z projektu po ERC 0 i DRC 0; ręcznie się ich nie poprawia.
+**Pięć płytek zamówiono 2026-10-10 dla L0 ([zamówienie](../../przed-produkcja.md#zamówienie-2026-10-10-l0)). Kolejne zamówienie dopiero po zamknięciu [listy przed zamówieniem](../../przed-produkcja.md).** Pliki eksportuje `tools/export_fabrication.py` z projektu po ERC 0 i DRC 0; ręcznie się ich nie poprawia.
 
 | Plik | Zawartość |
 |---|---|
@@ -18,4 +18,4 @@
 
 Punktem odniesienia Gerberów, wierceń i pozycji jest lewy dolny narożnik płytki.
 
-Parametry dla wykonawcy (pełna lista w `FAB-NOTES.txt`): dwie warstwy, FR-4 1,6 mm, miedź 35 µm, HASL bezołowiowy, maska obustronna, opis tylko na górze (plik opisu spodu jest pusty), ścieżka i odstęp ≥0,2 mm, otwór ≥0,4 mm, wycięcie przy prawej krawędzi z narożnikami w promieniu frezu. Płytka nie ma kontroli impedancji. Licencja plików: CERN-OHL-P-2.0 ([LICENSE.md](../../../../LICENSE.md)).
+Parametry dla wykonawcy (pełna lista w `FAB-NOTES.txt`): dwie warstwy, FR-4 1,6 mm, miedź 35 µm, HASL bezołowiowy, maska obustronna, opis tylko na górze (plik opisu spodu jest pusty), ścieżka nominalnie 0,25 mm (najmniej 0,18 mm w krótkich zwężeniach przy padach o małym rastrze), odstęp ≥0,2 mm, otwór ≥0,4 mm, wycięcie przy prawej krawędzi z narożnikami w promieniu frezu. Płytka nie ma kontroli impedancji. Licencja plików: CERN-OHL-P-2.0 ([LICENSE.md](../../../../LICENSE.md)).

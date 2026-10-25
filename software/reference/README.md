@@ -1,6 +1,6 @@
 # Model kontraktów WICI 0.5
 
-Kod wzorcowy sprawdza ramki P1, format SA1, atomowy odbiór zgłoszenia u odbiorcy z kwarantanną nieznanych nadawców, listą zaufanych stacji i zamknięciem zdarzenia oraz przyjmowanie RECEIVED, STATUS, REPLY i BULLETIN przez stację wyłącznie od przypiętej tożsamości odbiorcy. Nie jest oprogramowaniem stacji, aplikacją laptopa, sterownikiem radia ani implementacją Reticulum.
+Kod wzorcowy sprawdza ramki P1 i format SA1. Modeluje atomowy odbiór zgłoszenia u odbiorcy z kwarantanną nieznanych nadawców, listą zaufanych stacji i zamknięciem zdarzenia. Sprawdza też, że stacja przyjmuje RECEIVED, STATUS, REPLY i BULLETIN wyłącznie od przypiętej tożsamości odbiorcy. Nie jest oprogramowaniem stacji, aplikacją laptopa, sterownikiem radia ani implementacją Reticulum.
 
 Python 3.12, wyłącznie biblioteka standardowa. Z katalogu głównego:
 
@@ -13,7 +13,7 @@ Drugie polecenie zapisuje `wyniki.json` obok skryptu. Są to obliczenia z zało�
 
 Reguły modelu:
 
-- Treść SA1 po kodowaniu ≤256 B. Teksty: limit w bajtach UTF-8, wyłącznie postać NFC, bez `"` i `\` (formularz i ekran zamieniają je na „ ” i /) oraz bez znaków kategorii Cc, Cf, Cs, Co, Cn, Zl i Zp. Kodowanie kanoniczne nie zawiera więc sekwencji ucieczki, a przypadki najgorsze wynoszą: REQUEST i TEST 222 B, BULLETIN 246 B, REPLY 156 B, STATUS 59 B, RECEIVED 50 B. `configure` odrzuca adres lub frazę, jeśli najgorsze zgłoszenie z przycisków (liczba osób ≤999) przekroczy limit; przy obecnych limitach pól wynosi ono najwyżej 220 B.
+- Treść SA1 po kodowaniu ≤256 B. Teksty: limit w bajtach UTF-8, wyłącznie postać NFC, bez `"` i `\` (formularz i ekran zamieniają je na „ ” i /) oraz bez znaków kategorii Cc, Cf, Cs, Co, Cn, Zl i Zp. Kodowanie kanoniczne nie zawiera więc sekwencji ucieczki. Najgorsze przypadki wynoszą: REQUEST i TEST 222 B, BULLETIN 246 B, REPLY 156 B, STATUS 59 B, RECEIVED 50 B. `configure` odrzuca adres lub frazę, jeśli najgorsze zgłoszenie z przycisków (liczba osób ≤999) przekroczy limit; przy obecnych limitach pól wynosi ono najwyżej 220 B.
 - Odbiorca deduplikuje odbiór po (nadawca, id, revision, SHA-256 treści kanonicznej); ten sam klucz z inną treścią to konflikt. Zgłoszenie i RECEIVED zapisuje jedna transakcja.
 - Kwarantanna: ≤4 wiadomości na nadawcę i ≤256 łącznie, nadmiar odrzucany. Dyżurny zatwierdza pojedynczą wiadomość (`approve_message`); nadawca nie staje się zaufany. Zaufaną stację dodaje się tylko z karty stacji (pełny klucz publiczny 64 B) za zgodą dwóch różnych osób (`add_trusted`).
 - Usunięcie z listy (`remove_trusted`) wykonuje jedna osoba. Wiadomości usuniętej stacji trafiają do kwarantanny jak wiadomości nieznanego nadawcy; licznik `removed_messages` (alarm „możliwe przejęcie stacji”) obejmuje także powtórzenia i wiadomości odrzucone ponad limit. Stacja wraca na listę przez `add_trusted`, czyli za zgodą dwóch osób; jej wiadomości z kwarantanny są wtedy usuwane, bo stacja ponawia je do RECEIVED. Konfiguracja przy otwarciu bazy nie przywraca stacji usuniętej.
@@ -22,7 +22,7 @@ Reguły modelu:
 
 Testy obejmują wszystkie długości datagramu 1–600 B, znany wektor CRC, błędy i duplikaty, sześć typów wiadomości z przypadkami najgorszymi, odrzucanie znaków i tekstu spoza NFC, przerwanie transakcji bez ACK, kwarantannę z limitami i zatwierdzaniem pojedynczych wiadomości, karty stacji, usunięcie z listy i ponowne dodanie, zamknięcie zdarzenia, regułę stanu 5 i zaufanie stacji do odbiorcy.
 
-Model sprawdza też zmieszczenie zgłoszenia z przycisków w jednym pakiecie okazjonalnym oraz czas nadawania LoRa (znana ramka według wzoru Semtech i podział pakietu na dwie ramki jak w RNode).
+Model sprawdza też, czy zgłoszenie z przycisków mieści się w jednym pakiecie okazjonalnym, i liczy czas nadawania LoRa (znana ramka według wzoru Semtech i podział pakietu na dwie ramki jak w RNode).
 
 | Plik | Rola |
 |---|---|

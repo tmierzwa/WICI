@@ -12,7 +12,7 @@ Obecna kolejność prac: **R0 — test pary radiowej, potem L0 — test kompletn
 | [obudowa](obudowa/README.md) | Szkielet obudowy: założenia, lista pomiarów z przymiarki, generator odmawiający pracy bez pomiarów i render koncepcyjny stacji. | Pomiary po dostawie DevKitC i paneli; geometria obudowy dopiero po nich. |
 | [r02](r02/README.md) | Założenia przyszłej własnej płytki stacji: architektura, zasilanie, radio, obudowa i wnioski z poprzedniego projektu. | Projekt wstrzymany. Nie jest potrzebny do wykonania testów R0/L0; nie zamawiać płytki na jego podstawie. |
 
-Wszystkich pięć katalogów ma odrębną rolę w repozytorium. Do uruchomienia bieżących testów potrzebne są programy R0 i L0 oraz właściwy sprzęt. Zachowanie dokumentacji R02 nie oznacza rozpoczynania jej budowy.
+Każdy z pięciu katalogów ma w repozytorium inną rolę. Do uruchomienia bieżących testów potrzebne są programy R0 i L0 oraz właściwy sprzęt. To, że dokumentacja R02 jest w repozytorium, nie znaczy, że zaczęto budować tę płytkę.
 
 ## Właściwy program do właściwej płytki
 

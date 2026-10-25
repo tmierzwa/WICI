@@ -8,7 +8,7 @@
 
 Poniżej przegląd rewizji sprzed F103 (bez przetwornicy panelu).
 
-Data: 2026-10-08. Wykonał autor z pomocą AI; nie jest niezależnym audytem. Pliki: paczka `fabrication/N1/wici-plytka-nosna-N1-gerber.zip` z commita, w którym leży ten zapis (Gerbery X2 i Excellon z KiCad 10.0.6). Narzędzia: gerbonara 1.6.3 (złożenie warstw obu stron i kontrola geometrii z shapely) i pygerber 2.4.3 (render każdej warstwy osobno). Nie użyto przeglądarki wykonawcy; jej podgląd ogląda się przy zamówieniu razem z raportem DFM.
+Data: 2026-10-08. Wykonał autor z pomocą AI; to nie jest niezależny audyt. Pliki: paczka `fabrication/N1/wici-plytka-nosna-N1-gerber.zip` z commita, w którym leży ten zapis (Gerbery X2 i Excellon z KiCad 10.0.6). Narzędzia: gerbonara 1.6.3 (złożenie warstw obu stron i kontrola geometrii z shapely) i pygerber 2.4.3 (render każdej warstwy osobno). Nie użyto przeglądarki wykonawcy; jej podgląd ogląda się przy zamówieniu razem z raportem DFM.
 
 Obejrzane warstwy: miedź góra i dół, maska góra i dół, pasta, opis góra i dół, obrys, wiercenia PTH i NPTH, złożenie obu stron i powiększenia J7, U1, Q1 i D2, J9 i J10.
 
