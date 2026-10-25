@@ -2,7 +2,7 @@
 
 **Wstrzymane do decyzji po pilotażu (przegląd praktyczny 2026-10-08, F99):** pilotaż używa stacji z gotowej płytki MCU z układem LoRa SX1262 ([koncepcja 08](../../docs/concept/08-plan-weryfikacji-i-decyzje.html)).
 
-**Status: 2026-10-08, przed schematem. Nie zamawiać.** Dokument zbiera referencje producentów, wybiera stos warstw, geometrię linii 50 Ω i części toru RF obu wykonań oraz oddziela to, co da się ustalić teraz, od tego, co rozstrzyga T4 (D10). Wymagania są w [radiu](../../docs/spec/radio.md) i [BOM stacji](../../docs/spec/bom-stacji.csv), lekcje z R01.3 w [lekcjach](lekcje.md#tor-rf). Materiały producentów czytano lokalnie i nie są w repozytorium. Oznaczenie „do sprawdzenia” dotyczy danych, których nie potwierdzono w karcie producenta.
+**Status: 2026-10-08, przed schematem. Nie zamawiać.** Dokument zbiera referencje producentów, wybiera stos warstw, geometrię linii 50 Ω i części toru RF obu wykonań oraz oddziela to, co da się ustalić teraz, od tego, co rozstrzyga T4 (D10). Wymagania są w [radiu](../../docs/spec/radio.md) i [BOM stacji](../../docs/spec/bom-stacji.csv), lekcje z R01.3 w [lekcjach](lekcje.md#tor-rf). Materiały producentów czytano z kopii lokalnych, których nie ma w repozytorium. Oznaczenie „do sprawdzenia” dotyczy danych, których nie potwierdzono w karcie producenta.
 
 ## Referencje producentów
 
@@ -52,7 +52,7 @@ Jeden stos obsługuje oba wykonania. Geometria TI zależy od stosu, a BALF w wyk
 - Dk prepregów 4,4, a rdzenia według JLC;
 - tg δ z karty laminatu (TI użył 0,016), a nie domyślne 0,02 z KiCad.
 
-**Linia 50 Ω (współpłaszczyznowa z masą na L2):** szerokość 0,65 mm, szczelina 0,20 mm; wariant 0,69 / 0,25 mm też daje 50 Ω. Rząd przelotek masy po obu stronach co 1,5–2 mm, ciągła masa na L2 pod całym torem RF. Wynik pochodzi ze wzoru zamkniętego, bez grubości miedzi i bez maski. Miedź i maska obniżają impedancję o 1–3 Ω, a zwykłe tolerancje wykonania dają około ±3 Ω. Wymiary potwierdza się kalkulatorem wykonawcy i kuponem testowym na panelu (TDR).
+**Linia 50 Ω (współpłaszczyznowa z masą na L2):** szerokość 0,65 mm, szczelina 0,20 mm; wariant 0,69 / 0,25 mm też daje 50 Ω. Rząd przelotek masy po obu stronach co 1,5–2 mm, ciągła masa na L2 pod całym torem RF. Wynik pochodzi ze wzoru zamkniętego, który pomija grubość miedzi i maskę. Miedź i maska obniżają impedancję o 1–3 Ω, a zwykłe tolerancje wykonania dają około ±3 Ω. Wymiary potwierdza się kalkulatorem wykonawcy i kuponem testowym na panelu (TDR).
 
 ## Części
 
@@ -76,7 +76,7 @@ Jeden stos obsługuje oba wykonania. Geometria TI zależy od stosu, a BALF w wyk
 | ≥30 dB przy 880–915 MHz | 15–20 dB przy 880 MHz; najlepszy przy 883–915 MHz jest TFS869N z ≥45 dB |
 | wytrzymałość ≥+20 dBm we wspólnym torze | 10–15 dBm |
 
-Wspólny tor z SAW (wariant b) odpada więc przy dostępnych częściach. Zostaje filtr tylko w torze odbiorczym za przełącznikiem SPDT (wariant a). Strata takiego toru (około 4 dB filtru, 0,3 dB przełącznika i 0,2 dB ESD) oznacza, że układ radiowy musi osiągać około −114,5 dBm, żeby na złączu było −110 dBm. RF360 B4316 nie ma stanu u dystrybutorów, a minimalne zamówienie to 5000 sztuk. Wiersz BOM przepisuje się na wartości osiągalne po pomiarze w T4.
+Przy dostępnych częściach odpada więc wspólny tor z SAW (wariant b). Zostaje filtr tylko w torze odbiorczym za przełącznikiem SPDT (wariant a). Strata takiego toru (około 4 dB filtru, 0,3 dB przełącznika i 0,2 dB ESD) oznacza, że układ radiowy musi osiągać około −114,5 dBm, żeby na złączu było −110 dBm. RF360 B4316 nie ma stanu u dystrybutorów, a minimalne zamówienie to 5000 sztuk. Wiersz BOM przepisuje się na wartości osiągalne po pomiarze w T4.
 
 ## Ustalić teraz
 

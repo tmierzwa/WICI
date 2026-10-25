@@ -2,7 +2,7 @@
 
 Zacznij od [koncepcji systemu](concept/index.html): potrzeby i wymagania, scenariusze pracy, dostępne rozwiązania, analiza opcji, architektura komunikacji, wykonalność, zagrożenia i plan prób. Dokumenty są po polsku, oddzielają wymagania od dowodów i wskazują otwarte decyzje.
 
-Specyfikacja stacji 0.5 składa się z pięciu rozdziałów, protokołu USB, rozdziału o stanowisku odbiorczym, instrukcji gospodarza oraz BOM stacji; karta obsługi i instrukcja dyżurnego są w [dokumentach obsługi](obsluga/README.md). Parametry, kontrakty, warunki odbioru i kandydatów części zmienia się w tych plikach, a uzasadnienia i analizy w `docs/concept/`.
+Specyfikacja stacji 0.5 składa się z pięciu rozdziałów, protokołu USB, rozdziału o stanowisku odbiorczym, instrukcji gospodarza oraz BOM stacji. Karta obsługi i instrukcja dyżurnego są w [dokumentach obsługi](obsluga/README.md). Parametry, kontrakty, warunki odbioru i kandydatów części zmienia się w tych plikach, a uzasadnienia i analizy w `docs/concept/`.
 
 | Rozdział | Zakres |
 |---|---|
@@ -28,6 +28,6 @@ Próby stosu można też wykonać na [stanowisku deweloperskim](../hardware/dev-
 
 [Aktualne ustalenia przeglądu technicznego](review.md): poprawione rozbieżności, konkretne przeszkody i warunki ich zamknięcia.
 
-W specyfikacji skrót OSP oznacza tylko ochotniczą straż pożarną. Stanowisko odbiorcze to rola wyznaczona przez wójta (burmistrza, prezydenta miasta); zwykle pełni ją jednostka ochotniczej straży pożarnej z grafikiem dyżurów na czas kryzysu, a także gminne centrum zarządzania kryzysowego lub stanowisko gminnego zespołu zarządzania kryzysowego ([koncepcja, rozdział 02](concept/02-scenariusze-i-organizacja.html#miejsce-w-systemie-ochrony-ludnosci)).
+W specyfikacji skrót OSP oznacza tylko ochotniczą straż pożarną. Stanowisko odbiorcze to rola wyznaczona przez wójta (burmistrza, prezydenta miasta). Zwykle jest to jednostka ochotniczej straży pożarnej z grafikiem dyżurów na czas kryzysu, ale może nim być także gminne centrum zarządzania kryzysowego lub stanowisko gminnego zespołu zarządzania kryzysowego ([koncepcja, rozdział 02](concept/02-scenariusze-i-organizacja.html#miejsce-w-systemie-ochrony-ludnosci)).
 
 Status: projekt prototypu 0.5; sprzęt nie jest dopuszczony do użycia (HOLD). Instrukcje użycia opisują docelowy odebrany zestaw, a nie gotowy produkt.

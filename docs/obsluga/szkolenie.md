@@ -1,6 +1,6 @@
 # WICI: program szkolenia gospodarzy punktów i dyżurnych
 
-Szkolenie wprowadzające przed pracą stacji w terenie: 2 godziny, na prawdziwych stacjach i stanowisku odbiorczym. Do [ćwiczenia przy stole](../spec/odbior.md#minimum-pilotażu) nie jest potrzebne. Docelowe czasy szkoleń dla wydania (gospodarz 3 h z kursem pierwszej pomocy, dyżurny 4 h, coroczne odświeżenie 2 h) podaje [koncepcja, rozdział 02](../concept/02-scenariusze-i-organizacja.html#instrukcja-i-cwiczenie).
+Szkolenie wprowadzające przed pracą stacji w terenie: 2 godziny, na prawdziwych stacjach i stanowisku odbiorczym. Do [ćwiczenia przy stole](../spec/odbior.md#minimum-pilotażu) nie jest potrzebne. Docelowe czasy szkoleń w wydaniu (gospodarz 3 h z kursem pierwszej pomocy, dyżurny 4 h, coroczne odświeżenie 2 h) podaje [koncepcja, rozdział 02](../concept/02-scenariusze-i-organizacja.html#instrukcja-i-cwiczenie).
 
 Nazwy przycisków, ekranów, potrzeb i stopni pilności są takie jak w [karcie obsługi stacji](karta-stacji.html), [instrukcji dyżurnego](instrukcja-dyzurnego.md) i tabeli tekstów ekranu ([oprogramowanie](../spec/oprogramowanie.md#teksty-ekranu)). Znak ◆ oznacza czynność, której oprogramowanie albo panel jeszcze nie obsługuje; ćwiczy się ją na papierze albo pomija. Aplikacji stanowiska jeszcze nie zbudowano.
 
@@ -31,7 +31,7 @@ Wersja robocza 0.1. CC BY 4.0.
 - **Grupa:** do 14 osób: gospodarze z zastępcami (3 osoby na punkt) i co najmniej 4 dyżurnych. Prowadzą dwie osoby, po jednej na ścieżkę.
 - **Miejsce:** remiza OSP ze stanowiskiem odbiorczym. Dwie sale albo sala i garaż, żeby gospodarze nie widzieli ekranu dyżurnych.
 - **Sprzęt:** 3–4 stacje (jedna na 2–3 osoby), stanowisko odbiorcze i komputer zapasowy, baterie ćwiczebne, 2 krótkofalówki PMR, stoper.
-- **Sieć szkoleniowa:** stacje szkoleniowe mają w karcie odbiorcy stanowisko szkoleniowe, a nie stanowisko gminy. Dzięki temu zgłoszenia ćwiczebne można wysyłać z prawdziwymi rodzajami potrzeb. Na stacjach przypisanych do stanowiska gminy ćwiczy się tylko TEST i [ćwiczenie](instrukcja-dyzurnego.md#ćwiczenie-) z instrukcji dyżurnego ◆.
+- **Sieć szkoleniowa:** stacje szkoleniowe mają w karcie odbiorcy stanowisko szkoleniowe zamiast stanowiska gminy, więc zgłoszenia ćwiczebne mogą mieć prawdziwe rodzaje potrzeb. Na stacjach przypisanych do stanowiska gminy ćwiczy się tylko TEST i [ćwiczenie](instrukcja-dyzurnego.md#ćwiczenie-) z instrukcji dyżurnego ◆.
 - **Materiały:** karta obsługi (PL; UK i EN dla osób, które ich potrzebują), instrukcja dyżurnego, tabela przekazań gminy ([wzór](instrukcja-dyzurnego.md#tabela-przekazań)), formularze papierowe zgłoszenia (ostatnia strona karty), lista obecności, arkusz sprawdzianu, ankieta.
 - **Bezpieczeństwo:** każde zgłoszenie jest ćwiczebne. Nikt nie wzywa służb w ramach szkolenia. Przy prawdziwym zagrożeniu przerywamy i dzwonimy pod 112. W zgłoszeniach nie ma nazwisk.
 - **Język:** szkolenie po polsku. Osoba posługująca się ukraińskim dostaje kartę UK i tłumacza albo osobę wspierającą z grupy.
@@ -82,7 +82,7 @@ Kto nie zaliczy, powtarza ćwiczenie od razu albo na następnym spotkaniu. Czas 
 
 ## 7. Po szkoleniu
 
-- Listę obecności i arkusze sprawdzianu przechowuje organizator szkolenia; to dane osobowe uczestników. Kopię listy dostaje gmina.
+- Listę obecności i arkusze sprawdzianu przechowuje organizator szkolenia, bo zawierają dane osobowe uczestników. Kopię listy dostaje gmina.
 - Zaświadczenie na prośbę uczestnika.
-- Ankieta (3 pytania): co było niejasne na karcie; co zmienić w szkoleniu; czy czujesz się gotowy obsłużyć punkt sam (tak, raczej tak, nie). Uwagi do karty zgłasza się w repozytorium.
+- Ankieta (3 pytania): co było niejasne na karcie, co zmienić w szkoleniu, czy czujesz się gotowy obsłużyć punkt sam (tak, raczej tak, nie). Uwagi do karty zgłasza się w repozytorium.
 - Odświeżenie: 30 minut przy corocznym ćwiczeniu całej sieci ([instrukcja, 9](instrukcja-dyzurnego.md#9-tryb-ćwiczebny-i-zgłoszenia-testowe)) i po każdej zmianie oprogramowania, która zmienia obsługę. Nowy gospodarz lub zastępca dostaje 30-minutowy instruktaż i sprawdzian z sekcji 6.

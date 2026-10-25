@@ -6,13 +6,13 @@
 - [Treść zakresu L0](text/WICI-L0-zakres-prototypu.txt): tekst wyodrębniony z powyższego PDF do przeszukiwania i porównania. To transkrypcja, nie generator odtwarzający układ PDF.
 - [Zlecenie montażu i uruchomienia L0](pdf/WICI-L0-zlecenie.pdf): brief dla zewnętrznego wykonawcy, wydruk [ZLECENIE.md](../hardware/l0-diagnostic/ZLECENIE.md) przez `python3 tools/doc_pdf.py hardware/l0-diagnostic/ZLECENIE.md output/pdf/WICI-L0-zlecenie.pdf` (pakiet Python `markdown` i Chrome albo Chromium). Po zmianie źródła PDF generuje się ponownie.
 - [Montaż, uruchomienie i próby L0](pdf/WICI-L0-montaz-i-testy.pdf): instrukcja dla wykonawcy z diagnozą usterek, wydruk [MONTAZ-I-TESTY.md](../hardware/l0-diagnostic/MONTAZ-I-TESTY.md) tym samym poleceniem `tools/doc_pdf.py`.
-- [Pierwszy test LoRa na macOS](pdf/WICI-pierwszy-test-LoRa-macOS.pdf): wcześniejsza instrukcja już zapisana w repozytorium. Zawiera lokalną ścieżkę autora; dostosować ją do miejsca pobrania projektu. Bieżąca instrukcja R0 jest w [instrukcji partnera radiowego](../hardware/l0-diagnostic/reference/R0-INSTRUKCJA.txt).
+- [Pierwszy test LoRa na macOS](pdf/WICI-pierwszy-test-LoRa-macOS.pdf): wcześniejsza instrukcja już zapisana w repozytorium. Zawiera lokalną ścieżkę autora, którą trzeba dostosować do miejsca, w którym leży pobrany projekt. Bieżąca instrukcja R0 jest w [instrukcji partnera radiowego](../hardware/l0-diagnostic/reference/R0-INSTRUKCJA.txt).
 
-Aktualny zakres i procedura odbioru sprzętu są w [instrukcji L0](../hardware/l0-diagnostic/README.md). Diagnostyka L0 jest gotowa do rozpoczęcia prób; wyniki sprzętowe pozostają niepotwierdzone. Status zamówień jest w [głównym README](../README.md#gdzie-jesteśmy).
+Aktualny zakres i procedura odbioru sprzętu są w [instrukcji L0](../hardware/l0-diagnostic/README.md). Diagnostyka L0 jest gotowa do prób, ale wyniki na sprzęcie nie są jeszcze potwierdzone. Status zamówień jest w [głównym README](../README.md#gdzie-jesteśmy).
 
 ## Wcześniejsze pliki lokalne
 
-Siedem wcześniejszych PDF-ów pozostaje lokalnie i jest pominiętych w Git przez wskazanie ich nazw w `.gitignore`:
+Siedem wcześniejszych PDF-ów zostaje lokalnie. Ich nazwy są w `.gitignore`, więc Git je pomija:
 
 - `WICI-L0-zakres-i-odbior.pdf` i `WICI-L0-zakres-i-odbior-Q2.pdf`: zastąpione krótszym końcowym zakresem prototypu.
 - `WICI-L0-review-i-koszt-Q2.pdf`: raport przeglądu wcześniejszej paczki, z opisem zmian i warunkami sprzed przygotowania programu L0.
@@ -20,4 +20,4 @@ Siedem wcześniejszych PDF-ów pozostaje lokalnie i jest pominiętych w Git prze
 - `WICI-plan-zakupow-i-testow-PL-2026-10-08.pdf`: wcześniejszy plan obejmujący RNode, N1/P1 i większy budżet; nie jest aktualnym zakresem zamówienia jednej sztuki L0.
 - `WICI-nastepny-etap-oprogramowania-LoRa.pdf`: wcześniejszy plan dalszego oprogramowania; nie uwzględnia przygotowanej diagnostyki L0 i nie zastępuje bieżącej procedury testów.
 
-Nie usuwa się tych plików lokalnie. Do ofert i bieżących testów należy używać dokumentów wskazanych powyżej, aby uniknąć równoległych wersji zakresu.
+Tych plików nie usuwa się z dysku. Do ofert i bieżących testów należy używać dokumentów wskazanych powyżej, żeby nie krążyły równoległe wersje zakresu.

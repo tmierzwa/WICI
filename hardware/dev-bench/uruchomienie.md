@@ -32,7 +32,7 @@ Przyciski 12 × 12 mm dostają nasadki Omron B32. Pady masy J6.22 i J4.7 mają p
 
 ## Oprogramowanie
 
-Kroki A3–A5 i B3–B4 wymagają obrazu z plikiem opisu płytki N1 (na przykład `board_bench_n1.h`) z poleceniami diagnostycznymi: stan wejść (przyciski, CISZA, przygotowanie), dioda, brzęczyk i odczyt VTEST. Dla stanowiska A jest to obraz środowiska `bench-n1` z plikiem `board_bench_n1.h`; polecenia diagnostyczne (`BTN`, `LED 5`, `BUZZ`, `VTEST`, `DISPLAY`) i przebieg kroków A3–A4 opisuje [firmware/README.md](../../firmware/README.md#płytka-nośna-n1-bench-n1). Dla stanowiska B jest to obraz środowiska `bench-b` z plikiem `board_bench_b.h`: ten sam program stacji z tymi samymi poleceniami panelu (`BTN`, `LED 5`, `BUZZ`, `VTEST`, `DISPLAY`) oraz `RADIO` z odczytem PARTNUM i VERSION S2-LP ([firmware/README.md](../../firmware/README.md#stanowisko-b-na-płytce-n1-bench-b)). Różnice między oprogramowaniem a płytką i lista potrzebnych zmian: [zgodność z oprogramowaniem](checks/zgodnosc-firmware.md).
+Kroki A3–A5 i B3–B4 wymagają obrazu z plikiem opisu płytki N1 (na przykład `board_bench_n1.h`) z poleceniami diagnostycznymi: stan wejść (przyciski, CISZA, przygotowanie), dioda, brzęczyk i odczyt VTEST. Dla stanowiska A jest to obraz środowiska `bench-n1` z plikiem `board_bench_n1.h`. Polecenia diagnostyczne (`BTN`, `LED 5`, `BUZZ`, `VTEST`, `DISPLAY`) i przebieg kroków A3–A4 opisuje [firmware/README.md](../../firmware/README.md#płytka-nośna-n1-bench-n1). Dla stanowiska B jest to obraz środowiska `bench-b` z plikiem `board_bench_b.h`, czyli ten sam program stacji z tymi samymi poleceniami panelu (`BTN`, `LED 5`, `BUZZ`, `VTEST`, `DISPLAY`) oraz `RADIO` z odczytem PARTNUM i VERSION S2-LP ([firmware/README.md](../../firmware/README.md#stanowisko-b-na-płytce-n1-bench-b)). Różnice między oprogramowaniem a płytką i lista potrzebnych zmian: [zgodność z oprogramowaniem](checks/zgodnosc-firmware.md).
 
 **Nie wgrywać obrazu okablowania przewodami (`board_bench_a.h`) przy wpiętej płytce N1.** W tym obrazie D13 jest wyjściem SCK, a na N1 jest wejściem przełącznika CISZA, które przełącznik zwiera do masy. Do tego D10 i D8 sterują tam radiem, a na N1 diodą i linią DISP ekranu. Przed wpięciem DK w N1 wgrywa się obraz N1 albo pusty program.
 
@@ -57,7 +57,7 @@ Kroki A3–A5 i B3–B4 wymagają obrazu z plikiem opisu płytki N1 (na przykła
 
 ## Kalibracja VTEST
 
-Odczyt `VTEST` służy do prób progów napięcia ogniw (4,0 i 4,4 V) i wejścia 12 V (11,5 i 12,4 V), więc każdą sztukę porównuje się z miernikiem, zanim jej wynik posłuży do takiej próby. Dzielnik R14/R15 z rezystorów 0,1% wnosi ±0,17% błędu skali; resztę (wzmocnienie i przesunięcie ADC MCU, odniesienie 0,6 V w nRF52840, kalibracja eFuse w ESP32-S3, upływ D3) usuwa korekcja zapisana dla sztuki. Zasilacz laboratoryjny na J12, miernik o błędzie ≤0,1% na zacisku J12, przy każdym punkcie `VTEST` trzy razy:
+Odczyt `VTEST` służy do prób progów napięcia ogniw (4,0 i 4,4 V) i wejścia 12 V (11,5 i 12,4 V), więc każdą sztukę porównuje się z miernikiem, zanim jej wynik posłuży do takiej próby. Dzielnik R14/R15 z rezystorów 0,1% wnosi ±0,17% błędu skali. Pozostałe błędy (wzmocnienie i przesunięcie ADC MCU, odniesienie 0,6 V w nRF52840, kalibracja eFuse w ESP32-S3, upływ D3) usuwa korekcja zapisana dla sztuki. Zasilacz laboratoryjny podłącza się do J12, a miernik o błędzie ≤0,1% do zacisku J12. W każdym punkcie `VTEST` odczytuje się trzy razy:
 
 | Punkt (V na J12) | 1,00 | 4,00 | 4,40 | 7,30 | 11,50 | 12,40 | 14,80 |
 |---|---|---|---|---|---|---|---|
@@ -66,7 +66,7 @@ Odczyt `VTEST` służy do prób progów napięcia ogniw (4,0 i 4,4 V) i wejścia
 2. Warunek przyjęcia: po korekcji `g · odczyt + o` każdy punkt od 4,00 V w górę różni się od miernika o ≤0,5% (≤20 mV przy 4 V, ≤62 mV przy 12,4 V), a rozrzut trzech odczytów jest ≤0,2%. Punkt 1,00 V tylko się zapisuje: ESP32-S3 przy tłumieniu 11 dB i nRF52840 blisko zera mają nieliniowość, której ten zakres nie potrzebuje.
 3. Bez korekcji odczyt nie może różnić się od miernika o więcej niż 3% (granica błędu ADC z kart obu MCU); większy błąd oznacza usterkę (np. zamieniony rezystor 1%, upływ D3, brak C5).
 
-Specyfikacja wymaga dla stacji błędu pomiaru ≤2% ([elektronika](../../docs/spec/elektronika.md#zasilanie-stacji), wiersz „Pomiar”); warunek 0,5% zostawia zapas na to, że próby progów na stanowisku sprawdzają oprogramowanie, a nie tor pomiarowy stacji. Oprogramowanie nie stosuje korekcji samo: wynik z `VTEST` przelicza się wzorem z zapisu sztuki.
+Specyfikacja wymaga dla stacji błędu pomiaru ≤2% ([elektronika](../../docs/spec/elektronika.md#zasilanie-stacji), wiersz „Pomiar”). Warunek 0,5% zostawia zapas na to, że próby progów na stanowisku sprawdzają oprogramowanie, a nie tor pomiarowy stacji. Oprogramowanie nie stosuje korekcji samo: wynik z `VTEST` przelicza się wzorem z zapisu sztuki.
 
 ## Ochrona FRAM przy zaniku zasilania
 
@@ -89,7 +89,7 @@ Analizator stanów logicznych na J11 pokazuje kolejność i treść transmisji, 
 | U1 (piny 6, 5, 2, 1 wobec 4) | SCK, MOSI, MISO, CS FRAM przy 8 MHz (`FRAM` i zapis dziennika) | stan wysoki ≥0,7 × VDD, niski ≤0,3 × VDD, przerzut poniżej −0,3 V i ponad VDD + 0,3 V nie dłuższy niż kilka ns (CY15B104QN i MB85RS4MT, wartości bezwzględne); brak podwójnych zboczy na SCK; `FRAM` i dziennik bez błędów CRC przez ≥10 min |
 | złącze radia (A: J9.16, J9.18, J9.20, J9.14; B: te same sieci na J11) | SCK, MOSI, MISO, CS radia | jak przy U1; brak podwójnych zboczy SCK |
 
-Pomiar powtarza się przy jednoczesnym nadawaniu radia (`TXPKT` przewodowo do obciążenia, w trybie przygotowania), pracy brzęczyka (`BUZZ`) i odświeżaniu ekranu, bo wtedy prąd brzęczyka i nadajnika płynie przez wspólną masę. Na ESP32-S3 zaczyna się od napędu `DRIVE 0`; wyższy napęd tylko wtedy, gdy zbocza przekraczają 50 ns. Wyniki (zrzuty ekranu oscyloskopu z opisem punktu i ustawień) dołącza się do zapisu sztuki. Niespełniony warunek przy U1 albo J7 oznacza usterkę płytki do poprawy w rewizji N1, a nie obniżenie zegara FRAM, którego specyfikacja nie dopuszcza.
+Pomiar powtarza się przy jednoczesnym nadawaniu radia (`TXPKT` przewodowo do obciążenia, w trybie przygotowania), pracy brzęczyka (`BUZZ`) i odświeżaniu ekranu, bo wtedy prąd brzęczyka i nadajnika płynie przez wspólną masę. Na ESP32-S3 zaczyna się od napędu `DRIVE 0`, a wyższy ustawia się tylko wtedy, gdy zbocza przekraczają 50 ns. Wyniki (zrzuty ekranu oscyloskopu z opisem punktu i ustawień) dołącza się do zapisu sztuki. Niespełniony warunek przy U1 albo J7 oznacza usterkę płytki do poprawy w rewizji N1, a nie obniżenie zegara FRAM, którego specyfikacja nie dopuszcza.
 
 ## Wzór zapisu sztuki
 

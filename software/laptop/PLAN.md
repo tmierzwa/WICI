@@ -1,12 +1,12 @@
 # Aplikacja laptopa WICI: plan
 
-Aplikacja działa na każdym znalezionym laptopie z Windows, macOS albo Linuksem, uruchamiana z pamięci USB zestawu, bez instalowania i bez internetu (decyzja z 2026-10-13: wariant A, wszystkie systemy od początku). Zestaw nie ma laptopa, a laptopa nie przygotowuje się wcześniej: w kryzysie ktoś przynosi dowolny laptop, a gdy ten nie zadziała, sprawdza się następny (decyzja z 2026-10-14). Aplikacja robi więc sama wszystko, co da się zrobić na nieznanym, nieprzygotowanym laptopie, a resztę opisuje instrukcja. Kontrakt ze stacją jest gotowy w [protokole USB](../../docs/spec/protokol-usb.md); wymagania strony, panelu i pakietu w [specyfikacji oprogramowania](../../docs/spec/oprogramowanie.md#api-lokalnej-strony-poziomy-23).
+Aplikacja działa na każdym znalezionym laptopie z Windows, macOS albo Linuksem, uruchamiana z pamięci USB zestawu, bez instalowania i bez internetu (decyzja z 2026-10-13: wariant A, wszystkie systemy od początku). Zestaw nie ma laptopa, a laptopa nie przygotowuje się wcześniej: w kryzysie ktoś przynosi dowolny laptop, a gdy ten nie zadziała, sprawdza się następny (decyzja z 2026-10-14). Aplikacja robi więc sama wszystko, co da się zrobić na nieznanym, nieprzygotowanym laptopie, a resztę opisuje instrukcja. Kontrakt ze stacją opisuje [protokół USB](../../docs/spec/protokol-usb.md), a wymagania strony, panelu i pakietu są w [specyfikacji oprogramowania](../../docs/spec/oprogramowanie.md#api-lokalnej-strony-poziomy-23).
 
 Plan rozpisuje, co jest zrobione (etap 1), jak aplikacja radzi sobie z różnymi systemami, ile zajmuje na pamięci USB, co dalej i co trzeba jeszcze rozstrzygnąć.
 
 ## Etap 1: zrobione
 
-Narzędzie trybu przygotowania i fundament dla następnych etapów.
+Narzędzie trybu przygotowania i podstawa następnych etapów.
 
 | Część | Co robi | Plik |
 |---|---|---|
@@ -24,7 +24,7 @@ Narzędzie trybu przygotowania i fundament dla następnych etapów.
 | Testy | jednostkowe, bezpieczeństwo panelu, budowa USB, pełne przygotowanie na obrazie firmware | [tests/test_laptop.py](../../tests/test_laptop.py) |
 | CI | testy na Windows, macOS i Linuksie; pamięć USB budowana i uruchamiana przez START na każdym systemie; budżet rozmiaru | [.github/workflows/laptop.yml](../../.github/workflows/laptop.yml) |
 
-Czego etap 1 celowo nie ma: PRZENIEŚ STACJĘ i aktualizacji oprogramowania (firmware jeszcze ich nie realizuje, [przegląd F107](../../docs/review.md)) oraz strony mieszkańca (tryb kiosku w etapie 2, strona dla telefonów w etapie 3). Logowanie hasłami z kopert, kopia bazy na pamięci USB, „Oddaj laptop” i ZNISZCZ DANE z etapów 2 i 4 są już gotowe (tabela wyżej).
+Czego etap 1 celowo nie ma: PRZENIEŚ STACJĘ i aktualizacji oprogramowania (firmware jeszcze ich nie obsługuje, [przegląd F107](../../docs/review.md)) oraz strony mieszkańca (tryb kiosku w etapie 2, strona dla telefonów w etapie 3). Logowanie hasłami z kopert, kopia bazy na pamięci USB, „Oddaj laptop” i ZNISZCZ DANE z etapów 2 i 4 są już gotowe (tabela wyżej).
 
 ## Systemy docelowe
 
@@ -40,7 +40,7 @@ Poza zakresem: Windows 7 i 8.1 (Python 3.14 ich nie obsługuje), systemy 32-bito
 
 ## Architektura
 
-Jeden proces Pythona z biblioteką standardową i bez zależności zewnętrznych; szyfr i PBKDF2 pochodzą z kryptografii systemu przez ctypes ([syscrypto.py](wici/syscrypto.py)). Panel to strona w przeglądarce, która i tak jest na każdym laptopie; ta sama technika posłuży stronie mieszkańca w etapie 3, więc nie ma drugiego interfejsu.
+Jeden proces Pythona z biblioteką standardową i bez zależności zewnętrznych; szyfr i PBKDF2 pochodzą z kryptografii systemu przez ctypes ([syscrypto.py](wici/syscrypto.py)). Panel to strona w przeglądarce, a przeglądarka jest na każdym laptopie. Tej samej techniki użyje strona mieszkańca w etapie 3, więc drugi interfejs nie jest potrzebny.
 
 ```text
 przeglądarka ──HTTP 127.0.0.1──▶ web.py ──▶ prep.py ──▶ usbproto.Station ──▶ serialport ──USB CDC──▶ stacja
@@ -90,7 +90,7 @@ Archiwa czterech środowisk mają razem 102 MB (po rozpakowaniu około 300 MB). 
 | jeden START-MAC.app zamiast dwóch | jedna ikona i jedna instrukcja dla użytkownika |
 | bez zewnętrznych bibliotek JS i CSS, fonty systemowe | panel: 69 KB z logo (przed kompresją w ZIP) |
 
-Zmierzona cała pamięć poza obrazem startowym Linuksa: 83,6 MB, z czego 81,3 MB to cztery interpretery, 2,2 MB wspólna biblioteka, a reszta to aplikacja, START i licencje. Szacunek przed pierwszym pomiarem (30–45 MB) nie uwzględniał, że interpretery python-build-standalone mają wkompilowane wszystkie moduły binarne. Rozmiar 84 MB przyjęty 2026-10-14. Budżet: 90 MB (`BUDGET` w build_usb.py; zadanie `size` w CI przerywa budowę po przekroczeniu), czyli zapas na drobne zmiany, a nie na nowe środowisko. SHA-256 bez OpenSSL zapewnia wbudowany moduł `_sha2`. Kompletność przyciętej biblioteki sprawdza `--selftest` na każdym systemie. Dwie luki znalezione w ten sposób przy budowie planu: `runpy` i `pkgutil` (start z ZIP) oraz `ctypes._layout` i `stringprep` (ładowane z kodu w C).
+Zmierzona cała pamięć poza obrazem startowym Linuksa: 83,6 MB, z czego 81,3 MB to cztery interpretery, 2,2 MB wspólna biblioteka, a reszta to aplikacja, START i licencje. Szacunek przed pierwszym pomiarem (30–45 MB) nie uwzględniał, że interpretery python-build-standalone mają wkompilowane wszystkie moduły binarne. Rozmiar 84 MB przyjęty 2026-10-14. Budżet: 90 MB (`BUDGET` w build_usb.py; zadanie `size` w CI przerywa budowę po przekroczeniu). Zapas wystarcza na drobne zmiany, nie na nowe środowisko. SHA-256 bez OpenSSL zapewnia wbudowany moduł `_sha2`. Kompletność przyciętej biblioteki sprawdza `--selftest` na każdym systemie. Przy budowie planu `--selftest` wykrył dwie luki: `runpy` i `pkgutil` (start z ZIP) oraz `ctypes._layout` i `stringprep` (ładowane z kodu w C).
 
 System plików pamięci: FAT32, bo czytają go wszystkie systemy i oprogramowanie UEFI (obraz startowy w etapie 4 może leżeć na tej samej partycji). Partycja ext4 na stan Linuksa dochodzi z obrazem startowym.
 
@@ -143,7 +143,7 @@ Stan wiedzy o systemach (sprawdzone 2026-10-20; źródła poza dokumentacją pro
 | Fedora Workstation: strefa `FedoraWorkstation` otwiera porty TCP i UDP 1025–65535 | [Fedora Magazine](https://fedoramagazine.org/control-the-firewall-at-the-command-line/), forum Fedory | potwierdzone |
 | macOS 15: niepodpisanej aplikacji nie otworzy się klawiszem Control i kliknięciem; zostaje „Otwórz mimo to” w Ustawieniach systemowych, z hasłem | ogłoszenie Apple dla deweloperów (cytowane przez 9to5Mac, AppleInsider) | potwierdzone; hasło na laptopie bez uprawnień administratora do próby, co wzmacnia potrzebę notaryzacji |
 
-Próba na czystym Windows 11 (maszyna wirtualna) z kontem standardowym przed implementacją etapu 3: alert i anulowanie, odczyt reguł, okno UAC, reguła portu i jej usunięcie.
+Przed wykonaniem etapu 3 potrzebna jest próba na czystym Windows 11 (maszyna wirtualna) z kontem standardowym: alert i anulowanie, odczyt reguł, okno UAC, reguła portu i jej usunięcie.
 
 **Diagnostyka w panelu:** brak kabla, kabel w gnieździe WAN, brak adresu IP, profil sieci „Publiczna”, brak reguły zapory, zero połączonych telefonów po kilku minutach.
 
@@ -195,8 +195,8 @@ CI sprawdza budowę i start na czystych systemach, ale nie zastąpi prawdziwych 
 | odrzucone: osobna biblioteka standardowa na każdy system | +6,6 MB bez zysku dla użytkownika |
 | odrzucone: kompresja binarek (UPX) | około −40 MB, ale skompresowane pliki wykonywalne często budzą alarmy antywirusów na Windows i psują podpisy na macOS |
 | odrzucone na etap 1: własna kompilacja Pythona z mniejszą liczbą modułów | może zejść do około 50 MB, ale oznacza własny łańcuch kompilacji na trzy systemy i utratę gotowych, sprawdzanych kompilacji; na pamięci 64 GB z zestawu różnica jest dla użytkownika niewidoczna |
-| macOS od 10.15 (Intel) i od 11 (Apple Silicon) | tyle wymagają dołączone interpretery; starsze Maki z Intelem w gminach to realny przypadek; najstarszy obsługiwany system sprawdzany ręcznie przed wydaniem (2026-10-14) |
-| odłożone: Linux na ARM | laptopy w obiektach to praktycznie tylko x86_64; +30 MB i runner ARM w CI (2026-10-14) |
+| macOS od 10.15 (Intel) i od 11 (Apple Silicon) | tyle wymagają dołączone interpretery; starsze Maki z Intelem w gminach wciąż się zdarzają; najstarszy obsługiwany system sprawdzany ręcznie przed wydaniem (2026-10-14) |
+| odłożone: Linux na ARM | laptopy w obiektach to prawie wyłącznie x86_64; +30 MB i runner ARM w CI (2026-10-14) |
 | podpisy: Apple Developer ID z notaryzacją, Windows przez SignPath Foundation | na macOS 15 niepodpisanej aplikacji nie otworzy się prawym kliknięciem. Warunki SignPath ([signpath.org/terms](https://signpath.org/terms), sprawdzone 2026-10-14): licencje OSI dla wszystkich składników, bez części zamkniętych; podpis tylko z automatycznej budowy z repozytorium projektu; projekt utrzymywany i już wydany w podpisywanej postaci; wydawcą w certyfikacie jest „SignPath Foundation”; MFA i role autorów, recenzentów i zatwierdzających; sekcja „Code signing policy” na stronie pobierania; nazwa i wersja produktu w metadanych pliku (START-WINDOWS.exe potrzebuje zasobu VERSIONINFO); każde wydanie zatwierdzane ręcznie (2026-10-14) |
 | klucz podpisu manifestu w 1Password, podpis w CI przy tagu wydania | wygoda wydań; podpis tylko z chronionego środowiska GitHub (`environment` z wymaganym zatwierdzeniem) i tylko dla tagów, żeby sam dostęp do repozytorium nie wystarczał do podpisania fałszywej pamięci (2026-10-14) |
 | nazwa stacji wielkimi literami (`WICI-4CBAAD`) | tak działa firmware i ekran; czytelniej na małym ekranie i przy dyktowaniu; aplikacje porównują bez rozróżniania wielkości liter; specyfikacja poprawiona (2026-10-14) |
@@ -215,7 +215,7 @@ CI sprawdza budowę i start na czystych systemach, ale nie zastąpi prawdziwych 
 
 ## Do zrobienia po rozstrzygnięciach
 
-1. Etap 2, baza i zestaw w panelu: gotowe w [database.py](wici/database.py) i [session.py](wici/session.py) z testami (2026-10-21). Zostaje: pomiar czasu 201 na laptopie z dyskiem HDD i na pamięci USB 2.0, próba wydruku kopert na kilku przeglądarkach.
+1. Etap 2, baza i zestaw w panelu: gotowe w [database.py](wici/database.py) i [session.py](wici/session.py) z testami (2026-10-21). Zostaje: pomiar czasu do odpowiedzi 201 (zapis potwierdzony migawką na dysku) na laptopie z dyskiem HDD i na pamięci USB 2.0, próba wydruku kopert na kilku przeglądarkach.
 2. Próba zapory na czystym Windows 11 (sekcja [Laptop i router na miejscu](#laptop-i-router-na-miejscu)).
 3. Wnioski do SignPath i pid.codes po akceptacji (warunki w tabeli rozstrzygnięć). SignPath wymaga wcześniejszego wydania w podpisywanej postaci, więc pierwsze wydanie START-WINDOWS.exe jest bez podpisu; przed wnioskiem zasób VERSIONINFO i strona z „Code signing policy”.
 4. Licencje środowisk przejrzane 2026-10-21: na pamięci są licencje bibliotek wkompilowanych w interpreter python-build-standalone i kodu wbudowanego w CPython ([build/licencje/](build/licencje/zrodla.json)); bez GPL i LGPL, więc bez obowiązku udostępnienia źródeł. Zostaje przed pierwszą dystrybucją: potwierdzić, że kod startowy MinGW-w64 w `START-WINDOWS.exe` nie wymaga informacji o autorach.

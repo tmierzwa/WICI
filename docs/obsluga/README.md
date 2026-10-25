@@ -13,7 +13,7 @@ Tematy obsługi spoza karty (adres, alarmy, energia, poziomy 2–3, koniec zdarz
 
 ## Wersja
 
-Dokumenty dotyczą oprogramowania stacji WICI ze specyfikacji 0.5, obrazów `bench-n1-0.1` i `bench-b-0.1`, oraz stacji deweloperskiej na płytce nośnej N1. Napisy w cudzysłowach są tekstami ekranu z `firmware/src/ui_texts.h` (stan z 2026-10-12, z wpisem WŁASNY TEKST). Zmiana tekstów ekranu wymaga zmiany karty.
+Dokumenty dotyczą oprogramowania stacji WICI ze specyfikacji 0.5, obrazów `bench-n1-0.1` i `bench-b-0.1` oraz stacji deweloperskiej na płytce nośnej N1. Napisy w cudzysłowach są tekstami ekranu z `firmware/src/ui_texts.h` (stan z 2026-10-12, z wpisem WŁASNY TEKST). Zmiana tekstów ekranu wymaga zmiany karty.
 
 Status: wersja robocza do ćwiczenia przy stole. Znak ◆ oznacza czynność, której oprogramowanie jeszcze nie obsługuje (karta: pomiar energii i wyłączanie przyciskiem; instrukcja: także części panelu dyżurnego). Aplikacji stanowiska jeszcze nie zbudowano. Wersje ukraińska i angielska wymagają sprawdzenia przez native speakera.
 
@@ -24,4 +24,4 @@ Status: wersja robocza do ćwiczenia przy stole. Znak ◆ oznacza czynność, kt
 3. Strony 1–2: PL, 3–4: UK, 5–6: EN, 7: formularz (drukuj jednostronnie, w wielu kopiach).
 4. Po wydruku, przed laminowaniem, wpisz ręcznie na stronie 1 dane punktu: nr i nazwę, adres, stanowisko odbiorcze, zastępców, miejsce radiotelefonu PMR i cel gońca.
 
-Układ karty: krój bezszeryfowy, czarno-biały, tekst co najmniej 9 pt, stałe zasady 10,4 pt. Każda strona mieści się na A4 przy marginesach 9 mm; po zmianie treści sprawdź to wydrukiem do PDF (7 stron).
+Układ karty: krój bezszeryfowy, czarno-biały, tekst co najmniej 9 pt, stałe zasady 10,4 pt. Każda strona mieści się na A4 przy marginesach 9 mm. Po zmianie treści sprawdź to wydrukiem do PDF (7 stron).

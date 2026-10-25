@@ -17,7 +17,7 @@ Render pokazuje założenia z [obudowy R02](../r02/obudowa.md) z 2026-10-08: Ham
 
 ## Co jest znane, a co trzeba zmierzyć
 
-Znane wartości mają źródło w repozytorium: obrys N1 (170 × 100 mm), 9 otworów montażowych, położenia części, wymiary panelu Sharp i układ panelu R02. Pomiary są w `zalozenia.py` (`MEASUREMENTS`) i mają wartość `None`, dopóki nie zostaną zmierzone:
+Znane wartości mają źródło w repozytorium: obrys N1 (170 × 100 mm), 9 otworów montażowych, położenia części, wymiary panelu Sharp i układ panelu R02. Pomiary są w `zalozenia.py` (`MEASUREMENTS`) i mają wartość `None`, dopóki ktoś ich nie wykona:
 
 | Pomiar | Skąd |
 |---|---|
@@ -31,11 +31,11 @@ Znane wartości mają źródło w repozytorium: obrys N1 (170 × 100 mm), 9 otwo
 | płytka MCU stacji pilotażowej | decyzja przed pilotażem |
 | obrys i wysokość osłony GT-4R | karta i próbka |
 
-Największe ryzyko L0 to różnica wysokości: panel leży około 2,5 mm nad N1, a DevKitC w gniazdach 8,5 mm sięga znacznie wyżej. Pokrywa potrzebuje więc wgłębionego, fazowanego okna albo garbu nad DevKitC. Wybór zapada po pomiarze, nie wcześniej.
+Największe ryzyko L0 to różnica wysokości: panel leży około 2,5 mm nad N1, a DevKitC w gniazdach 8,5 mm sięga znacznie wyżej. Pokrywa potrzebuje więc wgłębionego, fazowanego okna albo garbu nad DevKitC. Wybór zapadnie dopiero po pomiarze.
 
 ## Następne kroki
 
-Stan 2026-10-11: przed testami i pomiarami nic więcej w obudowie się nie projektuje. Każdy krok ma swój wyzwalacz.
+Stan 2026-10-11: przed testami i pomiarami nic więcej w obudowie się nie projektuje. Każdy krok zaczyna się po warunku z kolumny „Kiedy”.
 
 | Kiedy | Krok |
 |---|---|
@@ -61,4 +61,4 @@ python3 hardware/obudowa/build.py              # dziś: lista brakujących pomia
 cd hardware/obudowa/render && npm install --no-save three@0.160.0 playwright && node render.js
 ```
 
-`render.js` podaje three.js z lokalnego `node_modules`, a bez niego pobiera bibliotekę z jsDelivr. Generator geometrii (build123d: STEP, STL, szablon wiercenia 1:1) dopisuje się dopiero po przymiarce. Licencje: skrypty MIT, dokumentacja i rendery CC-BY-4.0, przyszłe pliki konstrukcyjne CERN-OHL-P-2.0 ([LICENSE.md](../../LICENSE.md)).
+`render.js` podaje three.js z lokalnego `node_modules`, a bez niego pobiera bibliotekę z jsDelivr. Generator geometrii (build123d: STEP, STL, szablon wiercenia 1:1) powstanie dopiero po przymiarce. Licencje: skrypty MIT, dokumentacja i rendery CC-BY-4.0, przyszłe pliki konstrukcyjne CERN-OHL-P-2.0 ([LICENSE.md](../../LICENSE.md)).
