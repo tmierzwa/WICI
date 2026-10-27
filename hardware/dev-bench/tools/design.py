@@ -9,6 +9,8 @@ from the TI swrr091 CADSTAR archive. This data does not validate the circuit.
 """
 
 BOARD_W, BOARD_H = 170.0, 100.0
+# N1.1: J7 moved away from the panel for the measured FPC length (F118).
+REVISION = 'N1.1'
 
 # Arduino Uno outline on the carrier: x_u in 0..68.58, y_u in 0..53.34.
 UNO_X, UNO_Y0 = BOARD_W - 68.58, 76.34
@@ -38,14 +40,20 @@ DEVKIT_J1_X, DEVKIT_J3_X = DEVKIT_X + 1.27, DEVKIT_X + 24.13
 
 # Sharp LS027B7DH01A panel (62.8 x 42.82 x 1.64 mm, Sharp LCP-2110015A figure 8-1)
 # display side up on 0.8 mm foam tape; top-left glass corner. Its FPC leaves the
-# bottom edge on the panel centre line, 6.06 mm long, contacts on the back side,
-# so it lies flat in a bottom-contact connector (Sharp recommends CFP-4610 for a
-# flat FPC). Seen from the display side, terminal 1 (SCLK) is the right-hand
-# contact. The connector front face sits FPC_GAP from the glass edge, which leaves
-# about 3.8 mm of the FPC inside the connector (check at the fit print).
+# bottom edge on the panel centre line, 13.5 mm long (measured on the first L0,
+# F118; about 13.8 mm read from the vector drawing of figure 8-1, which does not
+# dimension it; its 6.06 mm is the bending area, not the FPC), contacts on the back side, so it lies flat in a bottom-contact connector
+# (Sharp recommends CFP-4610 for a flat FPC). Seen from the display side, terminal 1
+# (SCLK) is the right-hand contact. The connector front face (closed lever) sits
+# FPC_GAP from the glass edge. Hirose's mated cross-section puts the FPC end
+# (3.1) mm, a reference value, behind that face, i.e. a gap of 10.4-10.7 mm; on the L0
+# board (gap 2.3 mm) the fully inserted FPC put the glass edge 7.0-7.2 mm outside
+# the outline, i.e. a gap of 9.3-9.5 mm. FPC_GAP takes the measurement. A longer
+# real gap moves the glass towards the top board edge (PANEL_Y of room); a shorter
+# one moves it towards J7, so FPC_TOL below the panel is also kept free of parts.
 PANEL_X, PANEL_Y = 8.6, 4.0
 PANEL_W, PANEL_H = 62.8, 42.82
-FPC_GAP = 2.3
+FPC_GAP, FPC_TOL = 9.4, 1.0
 # Hirose FH12-10S-0.5SH: pads at y -1.85, front face (FPC entry) at y +4.4 in the
 # footprint; rotated 180 degrees the entry faces the panel and pad 1 is on the right.
 FPC_ORIGIN = (round(PANEL_X + PANEL_W / 2, 4), round(PANEL_Y + PANEL_H + FPC_GAP + 4.4, 4))
@@ -160,7 +168,7 @@ part('JP1', 'Connector_Generic:Conn_01x02', '3V3 DEVKITC',
      note='założona tylko w stanowisku B; pomiar prądu 3,3 V')
 part('JP2', 'Connector_Generic:Conn_01x02', '5V DEVKITC',
      'Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical',
-     {1: '+5V', 2: '+5V_DEVKIT'}, (70.6, 80.0, 0),
+     {1: '+5V', 2: '+5V_DEVKIT'}, (70.6, 81.5, 0),
      mpn='61300211121', manufacturer='Würth Elektronik', spec='listwa męska 1x2, 2,54 mm, ze zworką',
      note='założona tylko w stanowisku B; zasila brzęczyk, pomiar prądu 5 V')
 part('JP3', 'Connector_Generic:Conn_01x02', '3V3 RADIO A',
@@ -179,7 +187,7 @@ BUTTONS = [('SW1', 'GÓRA', 'BTN_UP', 14.0), ('SW2', 'DÓŁ', 'BTN_DOWN', 30.0),
            ('SW3', 'OK', 'BTN_OK', 46.0), ('SW4', 'WSTECZ', 'BTN_BACK', 62.0)]
 for ref, label, net, cx in BUTTONS:
     part(ref, 'Switch:SW_Push', label, 'Button_Switch_THT:SW_SPST_Omron_B3F-40xx',
-         {1: net, 2: 'GND'}, (cx - 6.25, 67.5, 0), mpn='B3F-4055', manufacturer='Omron',
+         {1: net, 2: 'GND'}, (cx - 6.25, 68.8, 0), mpn='B3F-4055', manufacturer='Omron',
          spec='przycisk 12x12 mm z wysuniętym popychaczem, nasadka Omron B32-1310',
          note='pady 1 wspólne (12,5 mm), pady 2 wspólne; zestyk między grupami 1 i 2')
 part('SW5', 'Switch:SW_SPDT', 'CISZA', 'WICI:Toggle_ESwitch_100SP1T1B4M2QE',
@@ -207,7 +215,7 @@ part('D2', 'Device:D', '1N4148W', 'Diode_SMD:D_SOD-123', {1: 'BZ_P', 2: 'BZ_N'},
 part('Q1', 'Transistor_BJT:MMBT3904', 'MMBT3904', 'Package_TO_SOT_SMD:SOT-23',
      {1: 'Q_B', 2: 'GND', 3: 'BZ_N'}, (58.0, 84.0, 0), mpn='MMBT3904LT1G', manufacturer='onsemi',
      spec='NPN 40 V 200 mA, SOT-23', note='klucz brzęczyka')
-part('R3', 'Device:R', '1k', R0805, {1: 'BUZZER', 2: 'Q_B'}, (58.0, 79.0, 0),
+part('R3', 'Device:R', '1k', R0805, {1: 'BUZZER', 2: 'Q_B'}, (58.0, 80.5, 0),
      mpn='RC0805FR-071KL', manufacturer='Yageo', spec='1 kΩ 1% 0805', note='rezystor bazy Q1')
 part('R4', 'Device:R', '100k', R0805, {1: 'Q_B', 2: 'GND'}, (63.0, 84.0, 90),
      mpn='RC0805FR-07100KL', manufacturer='Yageo', spec='100 kΩ 1% 0805',
@@ -232,8 +240,8 @@ part('D3', 'Diode:BAT54S', 'BAT54S', 'Package_TO_SOT_SMD:SOT-23', {1: 'GND', 2: 
      (163.5, 87.5, 0), mpn='BAT54SLT1G', manufacturer='onsemi', spec='podwójna dioda Schottky 30 V, SOT-23',
      note='ogranicza VTEST do zakresu -0,3...+3,6 V przy odwrotnej polaryzacji albo za wysokim napięciu J12')
 
-PULLUPS = [('R5', 'BTN_UP', (14.0, 61.0)), ('R6', 'BTN_DOWN', (30.0, 61.0)),
-           ('R7', 'BTN_OK', (46.0, 61.0)), ('R8', 'BTN_BACK', (62.0, 61.0)),
+PULLUPS = [('R5', 'BTN_UP', (14.0, 62.0)), ('R6', 'BTN_DOWN', (30.0, 62.0)),
+           ('R7', 'BTN_OK', (47.5, 62.0)), ('R8', 'BTN_BACK', (62.0, 62.0)),
            ('R9', 'SW_CISZA', (14.0, 81.0)), ('R10', 'BTN_PREP', (28.25, 81.0))]
 for ref, net, (x, y) in PULLUPS:
     part(ref, 'Device:R', '10k', R0805, {1: '+3V3', 2: net}, (x, y, 0),

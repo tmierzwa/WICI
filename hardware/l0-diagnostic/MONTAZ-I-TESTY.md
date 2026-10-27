@@ -8,7 +8,7 @@ Etapy są ułożone tak, żeby każdy błąd ujawnił się tam, gdzie jego usuni
 
 1. **Oględziny SMD pod mikroskopem:** mostki na J7 (raster 0,5 mm) i U2 (SOT-23-6); kropki pinu 1 U1–U4 zgodne z opisem; Q1, D3 (SOT-23), D2 (pasek katody). U1 to MB85RS4MT (montaż JLC); CY15B104QN jest dopuszczonym zamiennikiem. Wady SMD reklamować u producenta przed lutowaniem THT, ze zdjęciami.
 2. **Szyny (na padach):** JP1.1 (+3V3) – J11.1 (GND): bez zwarcia, wskazanie rośnie (C13 100 µF); C9 (+5V_LCD) – GND ≈ 1,3 MΩ (dzielnik R21 + R22).
-3. **Przymiarka 1:1 na płytce bez SMD:** DevKitC w otworach J5/J6 (pin 1 od strony anteny, gniazdo USB w stronę napisu USB na płytce), panel w obrysie z opisu, taśma FPC sięga J7 bez naprężenia przy krawędzi szkła; przyciski z nasadkami, SW5 i J12 w otworach. Wynik zapisać.
+3. **Przymiarka 1:1 na płytce bez SMD:** DevKitC w otworach J5/J6 (pin 1 od strony anteny, gniazdo USB w stronę napisu USB na płytce), panel z taśmą FPC wsuniętą do J7 do oporu: panel nie mieści się w obrysie z opisu ([F118](../../docs/review.md)), położenie według [uruchomienia N1](../dev-bench/uruchomienie.md), krok 7, bez ostrego zgięcia taśmy i bez zginania jej w stronę ekranu; przyciski z nasadkami, SW5 i J12 w otworach. Wynik zapisać.
 4. **Wgranie DevKitC poza płytką** (rozdział 4, kroki 1–3). Oddziela problemy USB i narzędzi od problemów montażu, a fabryczny program nie steruje wyprowadzeniami na N1. Bez peryferiów oczekiwane: `INFO l0-0.5 … 0 …`, `FRAM_ID unknown …`, `ERR radio_begin …`; odpowiedź na `INFO` może się opóźnić o około 10 s (program szuka radia, zob. diagnoza w rozdziale 4).
 
 ## 1. N1
@@ -25,7 +25,7 @@ Etapy są ułożone tak, żeby każdy błąd ujawnił się tam, gdzie jego usuni
 Przyporządkowanie sygnałów Wio do GPIO XIAO ESP32S3 potwierdzone na sprzęcie programem R0 (`hardware/radio-pair/src/main.cpp`): SCK GPIO7 (D8), MISO GPIO8 (D9), MOSI GPIO9 (D10), NSS GPIO41, DIO1 GPIO39, NRST GPIO42, BUSY GPIO40, RXEN GPIO38. TCXO 1,8 V zasila DIO3, tor nadawania przełącza DIO2.
 
 1. **Próba zestawów przed rozebraniem** (A: Wio do L0, B: partner). Kopia fabryczna, `pair-0.4`, `tools/pair_test.py --a PORT_A --b PORT_B --count 100` ([README R0](../radio-pair/README.md#najpierw-przy-stole)). Warunek: 100/100 w obie strony. Niepowodzenie: każdy zestaw z zestawem R0 opiekuna. B nie rozbierać.
-2. Tabela niżej jest zgodna ze schematem Seeed „Wio-SX1262 for XIAO V1.0” (KiCad 8): J1 i J2 to listwy 1 × 7, raster 2,54 mm; J1.6, J1.7 i J2.7 niepodłączone. Na module R1 10 kΩ podciąga RST do +3V3; RF_SW1 (RXEN) nie ma rezystora do masy. Płytka w innej wersji: porównać z jej schematem przed lutowaniem. Kontrola bez schematu: ciągłość J2.6, J2.5, J2.4 do D8, D9, D10 na krawędzi XIAO (przy połączonym B2B).
+2. Tabela niżej jest zgodna ze schematem Seeed „Wio-SX1262 for XIAO V1.1” (KiCad 8, repozytorium Seeed-Studio/OPL_Kicad_Library): J1 i J2 to listwy 1 × 7, raster 2,54 mm; J1.6, J1.7 i J2.7 niepodłączone. Na module R1 10 kΩ podciąga RST do +3V3; RF_SW1 (RXEN) nie ma rezystora do masy. Płytka w innej wersji: porównać z jej schematem przed lutowaniem. Kontrola bez schematu: ciągłość J2.6, J2.5, J2.4 do D8, D9, D10 na krawędzi XIAO (przy połączonym B2B).
 3. XIAO zdjąć ze złącza B2B (J3 na Wio) równomiernie, bez podważania jednego końca; XIAO zachować. J2.1 (VIN) nie podłączać. Dioda i przycisk na Wio są połączone tylko z J3, po odłączeniu XIAO nie działają.
 4. Przy Wio: 100 nF i 10 µF między 3V3 a GND, 10 kΩ z RXEN do GND. J2.3 (+3V3) z JP1.1 przez POWER_BREAK (listwa 1 × 2 ze zworką), J2.2 (GND) z J11.1.
 5. Przyłączenie do N1 od spodu płytki, na wyprowadzeniach gniazd J5/J6 i listwy JP1. Przewody ≤ 6 cm, linie SPI skręcone z przewodem masy albo taśma z masą co drugą żyłą; bez pętli i odgałęzień. SCK i MOSI biegną także do FRAM (8 MHz) i ekranu, więc długość przewodów adaptera wpływa na całą magistralę.
@@ -140,7 +140,7 @@ Wyniki skryptów i analizator na J11 pokazują treść transmisji, ale nie pozio
 
 Zrzuty z opisem punktu i ustawień idą do raportu. Niespełniony warunek to wynik projektowy, jak w E4: zapisać przebieg, płytki ani programu nie zmieniać.
 
-Po E5 przykleić panel taśmą 3M 4032 (FPC już wpięta; taśmy FPC nie zginać w stronę ekranu).
+Po E5 przykleić panel taśmą 3M 4032 w położeniu wybranym przy przymiarce (FPC już wpięta; taśmy FPC nie zginać w stronę ekranu).
 
 ## 6. Zapis sztuki
 
