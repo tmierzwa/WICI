@@ -41,11 +41,12 @@ DEVKIT_J1_X, DEVKIT_J3_X = DEVKIT_X + 1.27, DEVKIT_X + 24.13
 # Sharp LS027B7DH01A panel (62.8 x 42.82 x 1.64 mm, Sharp LCP-2110015A figure 8-1)
 # display side up on 0.8 mm foam tape; top-left glass corner. Its FPC leaves the
 # bottom edge on the panel centre line, 13.5 mm long (measured on the first L0,
-# F118), contacts on the back side, so it lies flat in a bottom-contact connector
+# F118; about 13.8 mm read from the vector drawing of figure 8-1, which does not
+# dimension it; its 6.06 mm is the bending area, not the FPC), contacts on the back side, so it lies flat in a bottom-contact connector
 # (Sharp recommends CFP-4610 for a flat FPC). Seen from the display side, terminal 1
 # (SCLK) is the right-hand contact. The connector front face (closed lever) sits
 # FPC_GAP from the glass edge. Hirose's mated cross-section puts the FPC end
-# (3.1) mm, a reference value, behind that face, i.e. a gap of 10.4 mm; on the L0
+# (3.1) mm, a reference value, behind that face, i.e. a gap of 10.4-10.7 mm; on the L0
 # board (gap 2.3 mm) the fully inserted FPC put the glass edge 7.0-7.2 mm outside
 # the outline, i.e. a gap of 9.3-9.5 mm. FPC_GAP takes the measurement. A longer
 # real gap moves the glass towards the top board edge (PANEL_Y of room); a shorter
