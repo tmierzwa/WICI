@@ -49,7 +49,7 @@ Po przeglądzie z 8 października 2026 r. przyjęto taką [kolejność prac](doc
 
 ## Partnerzy projektu
 
-- [pw-lab.pl](https://pw-lab.pl/): montaż i testy prototypu stacji L0 według [zlecenia](hardware/l0-diagnostic/ZLECENIE.md) i [instrukcji z diagnozą usterek](hardware/l0-diagnostic/MONTAZ-I-TESTY.md).
+- [pw-lab.pl](https://pw-lab.pl/): montaż, testy oraz diagnoza usterek prototypu stacji.
 
 Firmy, gminy i organizacje, które chcą pomóc sprzętem, próbami albo wiedzą, mogą pisać na [kontakt@wici.net.pl](mailto:kontakt@wici.net.pl).
 
@@ -107,4 +107,4 @@ WICI is an open project for an emergency radio station for shelters in Poland. I
 
 The project is at the **prototype design stage (0.5)**. No station has been built or field-tested. The planned pilot uses off-the-shelf ESP32-S3 boards with an SX1262 LoRa radio; the custom board and the project's own FSK profile are deferred until after the pilot. Range and battery life remain to be measured. Code, hardware and documentation are under permissive licences; the station's Reticulum core is under the Reticulum License, which is not OSI open source (see [LICENSE.md](LICENSE.md)).
 
-One person currently maintains the project with AI assistance. Project partner: [pw-lab.pl](https://pw-lab.pl/) assembles and tests the L0 station prototype. Help with radio, firmware, civil protection, field testing and independent review is welcome. Documentation is in Polish; issues and pull requests in English are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md#in-english). Contact: [kontakt@wici.net.pl](mailto:kontakt@wici.net.pl).
+One person currently maintains the project with AI assistance. Project partner: [pw-lab.pl](https://pw-lab.pl/), assembly, testing and fault diagnosis of the station prototype. Help with radio, firmware, civil protection, field testing and independent review is welcome. Documentation is in Polish; issues and pull requests in English are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md#in-english). Contact: [kontakt@wici.net.pl](mailto:kontakt@wici.net.pl).
