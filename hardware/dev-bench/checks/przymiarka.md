@@ -31,3 +31,5 @@ Wynik: pliki są zgodne z płytką i z `FAB-NOTES.txt`; nie znaleziono błędów
 ## Przymiarka 1:1
 
 **Otwarte.** Zakres w [liście przed zamówieniem](../przed-produkcja.md#warunki). Zapisuje się: osobę, datę, zmierzoną kreskę 50 mm z `fabrication/N1/mechanika-1-do-1.pdf` i wynik każdej pozycji (DK, DevKitC, CC1120EM, X-NUCLEO-S2868A2, panel Sharp z taśmą FPC w FH12, przyciski z nasadkami, przełącznik, zacisk, wysokości części DK).
+
+**Panel Sharp z taśmą FPC w FH12: niezgodny** ([F118](../../../docs/review.md)). 2026-10-27, wykonawca montażu pierwszego L0, płytka N1 z zamówienia 2026-10-10, panel LS027B7DH01A. Taśma FPC ma 13,5 mm (projekt: 6,06 mm). Przy taśmie wsuniętej do oporu krawędź szkła wypada 7–7,2 mm od linii obrysu na opisie płytki; z obliczenia około 7,4 mm (13,5 − 3,8 mm w złączu − 2,3 mm odstępu z projektu). Od obrysu do krawędzi płytki są 4,0 mm. Panel w obrysie wymusza ostre zgięcie taśmy przy złączu, w stronę ekranu. Ułożenie na płytkach tej rewizji: [uruchomienie](../uruchomienie.md), krok 7. Pozostałe pozycje bez zapisu.

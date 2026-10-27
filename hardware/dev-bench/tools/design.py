@@ -43,6 +43,9 @@ DEVKIT_J1_X, DEVKIT_J3_X = DEVKIT_X + 1.27, DEVKIT_X + 24.13
 # flat FPC). Seen from the display side, terminal 1 (SCLK) is the right-hand
 # contact. The connector front face sits FPC_GAP from the glass edge, which leaves
 # about 3.8 mm of the FPC inside the connector (check at the fit print).
+# F118: the measured FPC is 13.5 mm, not 6.06 mm, so with the FPC fully inserted
+# the glass edge sits about 7 mm outside the outline. The values below describe the
+# board ordered on 2026-10-10; the next revision moves J7 away from the panel.
 PANEL_X, PANEL_Y = 8.6, 4.0
 PANEL_W, PANEL_H = 62.8, 42.82
 FPC_GAP = 2.3

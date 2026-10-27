@@ -8,7 +8,7 @@ Etapy są ułożone tak, żeby każdy błąd ujawnił się tam, gdzie jego usuni
 
 1. **Oględziny SMD pod mikroskopem:** mostki na J7 (raster 0,5 mm) i U2 (SOT-23-6); kropki pinu 1 U1–U4 zgodne z opisem; Q1, D3 (SOT-23), D2 (pasek katody). U1 to MB85RS4MT (montaż JLC); CY15B104QN jest dopuszczonym zamiennikiem. Wady SMD reklamować u producenta przed lutowaniem THT, ze zdjęciami.
 2. **Szyny (na padach):** JP1.1 (+3V3) – J11.1 (GND): bez zwarcia, wskazanie rośnie (C13 100 µF); C9 (+5V_LCD) – GND ≈ 1,3 MΩ (dzielnik R21 + R22).
-3. **Przymiarka 1:1 na płytce bez SMD:** DevKitC w otworach J5/J6 (pin 1 od strony anteny, gniazdo USB w stronę napisu USB na płytce), panel w obrysie z opisu, taśma FPC sięga J7 bez naprężenia przy krawędzi szkła; przyciski z nasadkami, SW5 i J12 w otworach. Wynik zapisać.
+3. **Przymiarka 1:1 na płytce bez SMD:** DevKitC w otworach J5/J6 (pin 1 od strony anteny, gniazdo USB w stronę napisu USB na płytce), panel z taśmą FPC wsuniętą do J7 do oporu: panel nie mieści się w obrysie z opisu ([F118](../../docs/review.md)), położenie według [uruchomienia N1](../dev-bench/uruchomienie.md), krok 7, bez ostrego zgięcia taśmy i bez zginania jej w stronę ekranu; przyciski z nasadkami, SW5 i J12 w otworach. Wynik zapisać.
 4. **Wgranie DevKitC poza płytką** (rozdział 4, kroki 1–3). Oddziela problemy USB i narzędzi od problemów montażu, a fabryczny program nie steruje wyprowadzeniami na N1. Bez peryferiów oczekiwane: `INFO l0-0.5 … 0 …`, `FRAM_ID unknown …`, `ERR radio_begin …`; odpowiedź na `INFO` może się opóźnić o około 10 s (program szuka radia, zob. diagnoza w rozdziale 4).
 
 ## 1. N1
@@ -140,7 +140,7 @@ Wyniki skryptów i analizator na J11 pokazują treść transmisji, ale nie pozio
 
 Zrzuty z opisem punktu i ustawień idą do raportu. Niespełniony warunek to wynik projektowy, jak w E4: zapisać przebieg, płytki ani programu nie zmieniać.
 
-Po E5 przykleić panel taśmą 3M 4032 (FPC już wpięta; taśmy FPC nie zginać w stronę ekranu).
+Po E5 przykleić panel taśmą 3M 4032 w położeniu wybranym przy przymiarce (FPC już wpięta; taśmy FPC nie zginać w stronę ekranu).
 
 ## 6. Zapis sztuki
 
