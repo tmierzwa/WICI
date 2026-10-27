@@ -2,6 +2,8 @@
 
 ## Przegląd Gerberów i wierceń
 
+**Rewizja N1.1 (F118, 2026-10-27):** kontrola liczbowa paczki z eksportu: 221 otworów PTH (w tym 61 przelotek 0,4 mm) i 17 NPTH, 116 otwarć pasty (44 elementy SMD jak wyżej). Liczba otworów elementów i otwarć pasty bez zmian, przelotek o 6 mniej po nowym trasowaniu. Pełny przegląd z renderem warstw jest **otwarty**.
+
 **Rewizja po audycie wobec F106 (2026-10-08):** kontrola liczbowa paczki z gerbonara 1.6.3: obrys 170 × 100 mm, osiem warstw jak w `FAB-NOTES.txt`, 227 otworów PTH (w tym 67 przelotek 0,4 mm) i 17 NPTH (1,8 i 3,2 mm), 116 otwarć pasty, czyli dokładnie tyle, ile padów SMD ma 44 elementy (37 dwupadowych, D3 i Q1 po 3, U1 8, U2 6, U3 i U4 po 5, J7 10 + 2). Pełny przegląd z renderem warstw dla tej rewizji jest **otwarty**.
 
 **Rewizja F103 (2026-10-08):** kontrola liczbowa paczki z gerbonara 1.6.3: obrys 170 × 100 mm, osiem warstw jak w `FAB-NOTES.txt`, 222 otwory PTH (w tym 62 przelotki 0,4 mm) i 17 NPTH (1,8 i 3,2 mm), 100 otwarć pasty, czyli dokładnie tyle, ile padów SMD ma 39 elementów (34 dwupadowe, D3 i Q1 po 3, U1 8, U2 6, J7 10 + 2). Pełny przegląd z renderem warstw (jak niżej) dla tej rewizji jest **otwarty**.
@@ -33,3 +35,5 @@ Wynik: pliki są zgodne z płytką i z `FAB-NOTES.txt`; nie znaleziono błędów
 **Otwarte.** Zakres w [liście przed zamówieniem](../przed-produkcja.md#warunki). Zapisuje się: osobę, datę, zmierzoną kreskę 50 mm z `fabrication/N1/mechanika-1-do-1.pdf` i wynik każdej pozycji (DK, DevKitC, CC1120EM, X-NUCLEO-S2868A2, panel Sharp z taśmą FPC w FH12, przyciski z nasadkami, przełącznik, zacisk, wysokości części DK).
 
 **Panel Sharp z taśmą FPC w FH12: niezgodny** ([F118](../../../docs/review.md)). 2026-10-27, wykonawca montażu pierwszego L0, płytka N1 z zamówienia 2026-10-10, panel LS027B7DH01A. Taśma FPC ma 13,5 mm (projekt: 6,06 mm). Przy taśmie wsuniętej do oporu krawędź szkła wypada 7–7,2 mm od linii obrysu na opisie płytki; z obliczenia około 7,4 mm (13,5 − 3,8 mm w złączu − 2,3 mm odstępu z projektu). Od obrysu do krawędzi płytki są 4,0 mm. Panel w obrysie wymusza ostre zgięcie taśmy przy złączu, w stronę ekranu. Ułożenie na płytkach tej rewizji: [uruchomienie](../uruchomienie.md), krok 7. Pozostałe pozycje bez zapisu.
+
+**Rewizja N1.1: otwarte.** J7 odsunięte tak, że czoło złącza leży 9,4 mm od obrysu panelu (z pomiaru wyżej: 2,3 + 7,0–7,2 mm). Zapisuje się położenie krawędzi szkła wobec obrysu przy taśmie wsuniętej do oporu i leżącej płasko (oczekiwane: na linii albo do około 1 mm za nią w stronę krawędzi płytki) oraz wszystkie pozostałe pozycje z listy.

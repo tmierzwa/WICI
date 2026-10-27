@@ -1,4 +1,4 @@
-WICI carrier board N1 - fabrication and assembly notes
+WICI carrier board N1.1 - fabrication and assembly notes
 =====================================================
 Open hardware, CERN-OHL-P-2.0. Source: https://github.com/tmierzwa/WICI (hardware/dev-bench).
 Quantity: 5 boards (pilot). Prototype tool board, no RF, no impedance control.

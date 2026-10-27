@@ -8,7 +8,7 @@ Codzienną pracę na zmontowanym stanowisku opisuje [obsługa stanowiska](obslug
 
 Obrazy oprogramowania są w [firmware/](../../firmware/README.md): `bench-a` (stanowisko A na przewodach), `bench-n1` (A na płytce nośnej N1) i `bench-b` (B na N1). Wszystkie się budują; żadnego nie uruchomiono jeszcze na sprzęcie.
 
-Zasada: tor RF, wzorzec częstotliwości i zasilanie stanowiska pochodzą z płytek producentów; własnych płytek radiowych do prób się nie projektuje. Moduły łączy [płytka nośna N1](plytka-nosna.md) (jedna płytka dla stanowisk A i B, [F81](../../docs/review.md)). Do czasu montażu N1 stanowisko A można połączyć przewodami według [firmware/README.md](../../firmware/README.md#okablowanie-stanowiska-a) i [tabeli złączy EM](#złącza-modułu-cc1120em). Dla stanowiska B tabeli przewodów nie ma, więc B buduje się tylko na N1.
+Zasada: tor RF, wzorzec częstotliwości i zasilanie stanowiska pochodzą z płytek producentów; własnych płytek radiowych do prób się nie projektuje. Moduły łączy [płytka nośna N1](plytka-nosna.md) (jedna płytka dla stanowisk A i B, [F81](../../docs/review.md)). Bieżąca rewizja to N1.1 z J7 odsuniętym od panelu ([F118](../../docs/review.md)); płytki zamówione 2026-10-10 dla L0 są pierwszej rewizji N1. Do czasu montażu N1 stanowisko A można połączyć przewodami według [firmware/README.md](../../firmware/README.md#okablowanie-stanowiska-a) i [tabeli złączy EM](#złącza-modułu-cc1120em). Dla stanowiska B tabeli przewodów nie ma, więc B buduje się tylko na N1.
 
 Na stanowisku działa to samo oprogramowanie układowe co w stacji. Różni się przypisanie wyprowadzeń (np. SPI SCK jest na D13 przy przewodach i na D3 na N1), dlatego każdy wariant ma własny plik opisu płytki. Nie ma osobnego oprogramowania stanowiska ani osobnego kontraktu modemu.
 

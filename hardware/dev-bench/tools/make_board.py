@@ -14,8 +14,8 @@ import pcbnew as k
 
 from make_project import POWER
 
-from design import (PARTS, BOARD_W, BOARD_H, NOTCH_P5, SLOT_P20, EM_P1, EM_W, EM_H, EM_X_U, EM_Y_U, EM_SMA,
-                    PANEL_X, PANEL_Y, PANEL_W, PANEL_H, FPC_GAP, DEVKIT_X, DEVKIT_USB_Y, uno)
+from design import (PARTS, REVISION, BOARD_W, BOARD_H, NOTCH_P5, SLOT_P20, EM_P1, EM_W, EM_H, EM_X_U, EM_Y_U, EM_SMA,
+                    PANEL_X, PANEL_Y, PANEL_W, PANEL_H, FPC_GAP, FPC_TOL, DEVKIT_X, DEVKIT_USB_Y, uno)
 
 ROOT = Path(__file__).resolve().parents[1]
 NS = uuid.UUID('9b1f0b57-36c4-4f4e-9d0c-2f6a1c8f2a10')
@@ -86,7 +86,7 @@ def build():
     # Revision for the Gerber X2 attributes, the job file and the assembly drawing.
     tb = b.GetTitleBlock()
     tb.SetTitle('WICI carrier board N1')
-    tb.SetRevision('N1')
+    tb.SetRevision(REVISION)
     tb.SetCompany('WICI (CERN-OHL-P-2.0)')
     # Fabrication files take the lower-left board corner as origin.
     ds.SetAuxOrigin(pt(0, BOARD_H))
@@ -145,12 +145,12 @@ def build():
     assert pad('J7', 1)[0] > pad('J7', 10)[0] and round(pad('J7', 1)[0] - pad('J7', 10)[0], 3) == 4.5
     assert round((pad('J7', 1)[0] + pad('J7', 10)[0]) / 2, 3) == round(PANEL_X + PANEL_W / 2, 3)
     assert pad('J7', 1)[1] > pad('J7', 'MP')[1] > PANEL_Y + PANEL_H
-    # The panel lies flat on tape: no part under its glass.
+    # The panel lies flat on tape: no part under its glass, nor FPC_TOL below it.
     for ref, f in fps.items():
         q = f.GetBoundingBox(False)
         x0, y0, x1, y1 = (mm(v) for v in (q.GetLeft(), q.GetTop(), q.GetRight(), q.GetBottom()))
         assert not (x0 - OX < PANEL_X + PANEL_W and PANEL_X < x1 - OX and
-                    y0 - OY < PANEL_Y + PANEL_H and PANEL_Y < y1 - OY), ('part under the panel', ref)
+                    y0 - OY < PANEL_Y + PANEL_H + FPC_TOL and PANEL_Y < y1 - OY), ('part under the panel', ref)
     assert pad('J5', 22)[1] == round(DEVKIT_USB_Y - 7.96, 3)
     assert round(pad('J6', 1)[0] - pad('J5', 1)[0], 3) == 22.86
 
@@ -235,12 +235,12 @@ def build():
 def silkscreen(b, fps):
     """Assembly and variant texts; reference designators in free space."""
     texts = [
-        ('WICI płytka nośna N1', 34, 97.4, 1.2, True),
+        (f'WICI płytka nośna {REVISION}', 34, 97.4, 1.2, True),
         ('A: nRF52840-DK pod spodem, CC1120EM w J9/J10, JP3; JP1 JP2 zdjęte', 134, 5.5, 1.0, False),
         ('B: DevKitC w J5/J6, X-NUCLEO-S2868A2 w J1-J4, JP1 JP2; JP3 zdjęta', 134, 8.0, 1.0, False),
         ('NIGDY OBA MCU ANI OBA RADIA NARAZ', 134, 11.5, 1.1, True),
-        ('GÓRA', 14, 77.6, 1.0, False), ('DÓŁ', 30, 77.6, 1.0, False),
-        ('OK', 46, 77.6, 1.0, False), ('WSTECZ', 62, 77.6, 1.0, False),
+        ('GÓRA', 14, 78.9, 1.0, False), ('DÓŁ', 30, 78.9, 1.0, False),
+        ('OK', 46, 78.9, 1.0, False), ('WSTECZ', 62, 78.9, 1.0, False),
         ('CISZA: 1-2', 14, 93.5, 1.0, False), ('PRZYGOT.', 28.25, 93.5, 1.0, False),
         ('ALARM', 37.3, 93.5, 1.0, False), ('BRZĘCZYK', 49.25, 96.0, 1.0, False),
         ('VTEST 0-15 V', 139.5, 98.6, 1.0, False), ('+', 150.0, 98.6, 1.0, True), ('GND', 155.6, 98.6, 1.0, False),
@@ -253,7 +253,7 @@ def silkscreen(b, fps):
     for s, x, y, size, bold in texts:
         text(b, s, x, y, size, bold=bold)
     text(b, 'JP1 3V3 (B)', 92.8, 24.0, 1.0)
-    text(b, 'JP2 5V (B)', 68.0, 81.3, 1.0, angle=90)
+    text(b, 'JP2 5V (B)', 68.0, 82.8, 1.0, angle=90)
     text(b, 'JP3 RADIO (A)', 132.3, 84.6, 1.0)
     boxes = []
 

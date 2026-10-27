@@ -5,13 +5,13 @@
       "Application": "Pcbnew",
       "Version": "10.0.6"
     },
-    "CreationDate": "2026-10-08T17:21:12+02:00"
+    "CreationDate": "2026-10-27T15:21:41+01:00"
   },
   "GeneralSpecs": {
     "ProjectId": {
       "Name": "plytka-nosna",
       "GUID": "706c7974-6b61-42d6-9e6f-736e612e6b69",
-      "Revision": "N1"
+      "Revision": "N1.1"
     },
     "Size": {
       "X": 170.05,

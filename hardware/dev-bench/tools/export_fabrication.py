@@ -20,10 +20,10 @@ import subprocess
 import tempfile
 import zipfile
 
-from design import BOARD_W, BOARD_H, EXTRAS, NOTCH_P5, PARTS
+from design import BOARD_W, BOARD_H, EXTRAS, NOTCH_P5, PARTS, REVISION
 
 ROOT = Path(__file__).resolve().parents[1]
-REV = 'N1'
+REV = 'N1'  # board family: directory and archive name; REVISION marks the layout
 SMD_PACKAGES = ('R_', 'C_', 'L_', 'SOT-', 'D_SOD', 'SOIC-', 'Hirose_FH12')
 
 # English one-line descriptions for the assembler BOM; bom.csv keeps the Polish detail.
@@ -164,7 +164,7 @@ def write_fab_notes(path, drills):
     notch_w = round(BOARD_W - NOTCH_P5[0], 2)
     notch_h = round(NOTCH_P5[3] - NOTCH_P5[1], 2)
     smd_count = sum(1 for p in PARTS if p['bom'] and smd(p['footprint']))
-    path.write_text(f"""WICI carrier board {REV} - fabrication and assembly notes
+    path.write_text(f"""WICI carrier board {REVISION} - fabrication and assembly notes
 =====================================================
 Open hardware, CERN-OHL-P-2.0. Source: https://github.com/tmierzwa/WICI (hardware/dev-bench).
 Quantity: 5 boards (pilot). Prototype tool board, no RF, no impedance control.
