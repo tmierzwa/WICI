@@ -13,6 +13,8 @@ Etapy są ułożone tak, żeby każdy błąd ujawnił się tam, gdzie jego usuni
 
 ## 1. N1
 
+Kroki 1–2 dotyczą płytek N1 z zamówienia 2026-10-10. Na płytce zmontowanej w JLC według [wyceny pełnego montażu](wycena-jlc/README.md) R12 ma już 1 kΩ, a elementy THT są wlutowane: wykonuje się tylko kontrolę J5.15 – GND ≈ 1,0 kΩ i oględziny.
+
 1. **R12: 10 kΩ → 1 kΩ** (0805, 1%), jako pierwsza czynność, dopóki THT nie utrudnia dostępu. Kontrola na padach: J5.15 (RF_RESET) – GND ≈ 1,0 kΩ.
 2. **THT:** SW1–SW6, D1 (katoda = płaski bok i kwadratowy pad 1, do masy), BZ1 („+” na padzie 1), SW5, J11, JP1, JP2, J12, na końcu J5/J6 (na wpiętym DevKitC albo na listwie, żeby gniazda stały pionowo i w osi). Pad J6.22 ma pełne połączenie z polem masy: grot o większej pojemności cieplnej.
     - SW5 (SPDT, wyprowadzenia w linii) da się wlutować obrócony o 180°; wtedy położenie CISZA jest odwrócone wobec opisu. Kontrola: w położeniu CISZA J6.4 – GND ≈ 1 kΩ (R16), w położeniu PRACA ≫ 10 kΩ.

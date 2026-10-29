@@ -22,7 +22,7 @@ Szczegóły montażu, diagnozy i prób: [instrukcja montażu i prób](MONTAZ-I-T
     - **nie obsadzać J1–J4, J9/J10 i JP3.** N1 służy też dwóm innym stanowiskom: J1–J4 to gniazda Arduino pod nRF52840-DK i nakładkę X-NUCLEO, J9/J10 i JP3 przyjmują i zasilają moduł CC1120EM. L0 ich nie używa, a J9/J10 leżą na tych samych sieciach co Wio (RF_CS, RF_RESET, SPI), więc wpięty tam moduł kłóciłby się z Wio na magistrali;
     - podstawa: dystanse M3 × 12 mm z gwintem od spodu przez płytkę i nakrętką od góry. W otworach H6–H9 tylko nakrętki nylonowe albo bez dystansu: pady nieobsadzonych J1–J4 są połączone z sieciami, a środek H7 leży 3,6 mm od padu J4.10;
     - DevKitC bez przeróbek.
-2. **R12: wymiana 10 kΩ na 1 kΩ** (1%, 0805). Bez tego reset radia przy starcie nie schodzi do stanu niskiego.
+2. **R12: wymiana 10 kΩ na 1 kΩ** (1%, 0805). Bez tego reset radia przy starcie nie schodzi do stanu niskiego. Punkty 1–2 dotyczą płytek N1 z 2026-10-10; na płytce zmontowanej w JLC według [wyceny pełnego montażu](wycena-jlc/README.md) R12 i elementy THT są już na miejscu.
 3. **Adapter Wio** (moduł obok N1, krótkie przewody albo mała płytka uniwersalna):
     - XIAO odłączony od Wio (złącze B2B); Wio J2.1 (VIN) niepodłączone;
     - zasilanie Wio J2.3 (+3V3) z JP1 pad 1 przez rozłączany punkt pomiaru prądu (zworka albo listwa na amperomierz), Wio J2.2 (GND) z J11.1;
