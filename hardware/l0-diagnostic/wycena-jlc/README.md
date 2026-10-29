@@ -8,7 +8,7 @@
 |---|---|
 | [`../../dev-bench/fabrication/N1/wici-plytka-nosna-N1-gerber.zip`](../../dev-bench/fabrication/N1/wici-plytka-nosna-N1-gerber.zip) | Gerbery i wiercenia N1 |
 | `bom-jlc-L0.csv` | 44 SMD z montażu N1 (R12 = 1 kΩ, jak wymaga L0) i 14 THT |
-| `cpl-jlc-L0.csv` | pozycje: SMD z obrotami JLC (jak w zamówieniu 2026-10-10), THT w środku padów |
+| `cpl-jlc-L0.csv` | pozycje: SMD z obrotami JLC (jak w zamówieniu 2026-10-10), THT w środku padów; listwy i gniazda 2,54 mm obrócone o 90° względem KiCad, bo modele JLC leżą wzdłuż osi x (podgląd JLC 2026-10-29) |
 
 Źródło: `python3 hardware/l0-diagnostic/tools/jlc_quote.py`. Skrypt sprawdza, że każdy pad elementu THT leży na otworze z pliku wierceń i że każdy element płytki ma wiersz albo jest na liście nieobsadzonych.
 

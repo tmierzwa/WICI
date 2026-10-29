@@ -31,6 +31,8 @@ THT = [
     ('J12', '1715721', 'C480516'),
 ]
 # stations A/B only, not fitted in L0 (MONTAZ-I-TESTY.md, section 1)
+# JLC models of 2.54 mm headers lie along x at 0 deg, KiCad footprints along y (JLC preview 2026-10-29)
+JLC_THT_ROTATION = {'PinHeader_': 90, 'PinSocket_': 90}
 DNP = {'J1', 'J2', 'J3', 'J4', 'J9', 'J10', 'JP3'}
 
 
@@ -92,7 +94,8 @@ def main():
         w.writerows(cpl)
         for refs, _, _ in THT:
             for ref in refs.split(','):
-                _, rot, pads = fps[ref]
+                fp, rot, pads = fps[ref]
+                rot += next((v for k, v in JLC_THT_ROTATION.items() if fp.startswith(k)), 0)
                 for px, py in pads:
                     assert any(math.hypot(px - hx, py - hy) < 0.01 for hx, hy in pth), (ref, px, py)
                 xs, ys = [p[0] for p in pads], [p[1] for p in pads]
