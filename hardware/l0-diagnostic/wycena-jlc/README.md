@@ -1,12 +1,12 @@
 # Wycena JLCPCB: pełny montaż L0 (SMD i THT)
 
-**Tylko do wyceny, nie do zamówienia.** Gerbery N1 mają jeszcze złącze J7 w położeniu sprzed [F118](../../../docs/review.md): taśma FPC panelu ma 13,5 mm, a płytka zakłada 6 mm, więc panel nie mieści się w obrysie. Wycena sprawdza dostępność części, montaż przewlekany i cenę. Zamówienie dopiero z płytką z odsuniętym J7. Wtedy zmieniają się pozycje J7, R13, R19, C4, C6, C7, a w razie przesunięcia także R5–R8 i SW1–SW4, a pliki generuje się ponownie.
+**Pliki dla rewizji N1.1 (2026-10-29).** Gerbery w `fabrication/N1/` mają już złącze J7 odsunięte od panelu po [F118](../../../docs/review.md) (taśma FPC 13,5 mm, odstęp szkło–czoło złącza 9,7 mm), a BOM i CPL wygenerowano z tej płytki. Pady SMD leżą ≥2,5 mm od padów THT, jak wymaga montaż mieszany JLC. Przed zamówieniem pozostaje przymiarka 1:1 N1.1 z panelem ([lista przed zamówieniem](../../dev-bench/przed-produkcja.md#warunki)); wycena sprawdza dostępność części, montaż przewlekany i cenę.
 
 ## Pliki
 
 | Plik | Zawartość |
 |---|---|
-| [`../../dev-bench/fabrication/N1/wici-plytka-nosna-N1-gerber.zip`](../../dev-bench/fabrication/N1/wici-plytka-nosna-N1-gerber.zip) | Gerbery i wiercenia N1 |
+| [`../../dev-bench/fabrication/N1/wici-plytka-nosna-N1-gerber.zip`](../../dev-bench/fabrication/N1/wici-plytka-nosna-N1-gerber.zip) | Gerbery i wiercenia N1 (rewizja N1.1) |
 | `bom-jlc-L0.csv` | 44 SMD według `jlc-bom.csv` N1 (rezystory, kondensatory, D2 i Q1 jako równoważne części Basic JLC; R12 = 1 kΩ, jak wymaga L0) i 14 THT |
 | `cpl-jlc-L0.csv` | pozycje: SMD z obrotami JLC (jak w zamówieniu 2026-10-10), THT w środku padów; listwy i gniazda 2,54 mm obrócone o 90° względem KiCad, bo modele JLC leżą wzdłuż osi x (podgląd JLC 2026-10-29) |
 

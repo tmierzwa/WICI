@@ -17,7 +17,7 @@ Drobne materiały (R12 1 kΩ 0805, 10 kΩ, 100 nF, 10 µF, listwy goldpin, przew
 Szczegóły montażu, diagnozy i prób: [instrukcja montażu i prób](MONTAZ-I-TESTY.md).
 
 1. **Montaż przewlekany** na N1 (instrukcja, rozdziały 0 i 1):
-    - przed lutowaniem przymiarka DevKitC w J5/J6 i panelu z taśmą FPC w J7 (panel nie mieści się w obrysie na opisie płytki, położenie według instrukcji);
+    - przed lutowaniem przymiarka DevKitC w J5/J6 i panelu z taśmą FPC w J7 (na płytkach N1 z 2026-10-10 panel nie mieści się w obrysie na opisie płytki, położenie według instrukcji; na rewizji N1.1 leży w obrysie);
     - gniazda DevKitC J5/J6, przyciski SW1–SW6, przełącznik CISZA, LED, brzęczyk, J11, J12, JP1 i JP2; JP1 i JP2 zwarte;
     - **nie obsadzać J1–J4, J9/J10 i JP3.** N1 służy też dwóm innym stanowiskom: J1–J4 to gniazda Arduino pod nRF52840-DK i nakładkę X-NUCLEO, J9/J10 i JP3 przyjmują i zasilają moduł CC1120EM. L0 ich nie używa, a J9/J10 leżą na tych samych sieciach co Wio (RF_CS, RF_RESET, SPI), więc wpięty tam moduł kłóciłby się z Wio na magistrali;
     - podstawa: dystanse M3 × 12 mm z gwintem od spodu przez płytkę i nakrętką od góry. W otworach H6–H9 tylko nakrętki nylonowe albo bez dystansu: pady nieobsadzonych J1–J4 są połączone z sieciami, a środek H7 leży 3,6 mm od padu J4.10;

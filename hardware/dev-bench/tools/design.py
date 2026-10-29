@@ -9,6 +9,9 @@ from the TI swrr091 CADSTAR archive. This data does not validate the circuit.
 """
 
 BOARD_W, BOARD_H = 170.0, 100.0
+# Board revision on the title block, the silkscreen and FAB-NOTES. N1 was ordered on 2026-10-10;
+# N1.1 moves J7 and the parts below the panel for the 13.5 mm panel FPC (F118). Files stay in fabrication/N1.
+BOARD_REV = 'N1.1'
 
 # Arduino Uno outline on the carrier: x_u in 0..68.58, y_u in 0..53.34.
 UNO_X, UNO_Y0 = BOARD_W - 68.58, 76.34
@@ -38,20 +41,27 @@ DEVKIT_J1_X, DEVKIT_J3_X = DEVKIT_X + 1.27, DEVKIT_X + 24.13
 
 # Sharp LS027B7DH01A panel (62.8 x 42.82 x 1.64 mm, Sharp LCP-2110015A figure 8-1)
 # display side up on 0.8 mm foam tape; top-left glass corner. Its FPC leaves the
-# bottom edge on the panel centre line, 6.06 mm long, contacts on the back side,
-# so it lies flat in a bottom-contact connector (Sharp recommends CFP-4610 for a
-# flat FPC). Seen from the display side, terminal 1 (SCLK) is the right-hand
-# contact. The connector front face sits FPC_GAP from the glass edge, which leaves
-# about 3.8 mm of the FPC inside the connector (check at the fit print).
-# F118: the measured FPC is 13.5 mm, not 6.06 mm, so with the FPC fully inserted
-# the glass edge sits about 7 mm outside the outline. The values below describe the
-# board ordered on 2026-10-10; the next revision moves J7 away from the panel.
+# bottom edge on the panel centre line, 13.5 mm from the glass edge to the FPC end
+# (measured on the panel of the first L0, F118), contacts on the back side, so it
+# lies flat in a bottom-contact connector (Sharp recommends CFP-4610 for a flat FPC).
+# Seen from the display side, terminal 1 (SCLK) is the right-hand contact.
+# FPC_GAP (glass edge to connector front face) = 13.5 - 3.8 mm of FPC inside the
+# connector = 9.7 mm. The 3.8 mm is the depth of the FPC stop behind the front face
+# of the 5.6 mm deep FH12 body (KiCad footprint after the Hirose drawing); the fit of
+# the first L0 (glass 7.0-7.2 mm off the outline with a 2.3 mm gap) gives 4.0-4.2 mm.
+# Not checked against the Hirose FH12 drawing itself; the fit print of this revision
+# confirms it. Either way the FPC stays flat: a shorter tail inside moves the glass
+# at most 0.5 mm off the outline.
 PANEL_X, PANEL_Y = 8.6, 4.0
 PANEL_W, PANEL_H = 62.8, 42.82
-FPC_GAP = 2.3
+FPC_GAP = 9.7
 # Hirose FH12-10S-0.5SH: pads at y -1.85, front face (FPC entry) at y +4.4 in the
 # footprint; rotated 180 degrees the entry faces the panel and pad 1 is on the right.
 FPC_ORIGIN = (round(PANEL_X + PANEL_W / 2, 4), round(PANEL_Y + PANEL_H + FPC_GAP + 4.4, 4))
+# Button row below the J7 group (courtyard to y 63.96); the rows below it (switches, LED,
+# buzzer, JP2) follow by LOW_DY.
+BTN_Y = 69.5
+LOW_DY = BTN_Y - 67.5
 
 R0805 = 'Resistor_SMD:R_0805_2012Metric'
 C0805 = 'Capacitor_SMD:C_0805_2012Metric'
@@ -163,7 +173,7 @@ part('JP1', 'Connector_Generic:Conn_01x02', '3V3 DEVKITC',
      note='założona tylko w stanowisku B; pomiar prądu 3,3 V')
 part('JP2', 'Connector_Generic:Conn_01x02', '5V DEVKITC',
      'Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical',
-     {1: '+5V', 2: '+5V_DEVKIT'}, (70.6, 80.0, 0),
+     {1: '+5V', 2: '+5V_DEVKIT'}, (70.6, 80.0 + LOW_DY, 0),
      mpn='61300211121', manufacturer='Würth Elektronik', spec='listwa męska 1x2, 2,54 mm, ze zworką',
      note='założona tylko w stanowisku B; zasila brzęczyk, pomiar prądu 5 V')
 part('JP3', 'Connector_Generic:Conn_01x02', '3V3 RADIO A',
@@ -182,47 +192,48 @@ BUTTONS = [('SW1', 'GÓRA', 'BTN_UP', 14.0), ('SW2', 'DÓŁ', 'BTN_DOWN', 30.0),
            ('SW3', 'OK', 'BTN_OK', 46.0), ('SW4', 'WSTECZ', 'BTN_BACK', 62.0)]
 for ref, label, net, cx in BUTTONS:
     part(ref, 'Switch:SW_Push', label, 'Button_Switch_THT:SW_SPST_Omron_B3F-40xx',
-         {1: net, 2: 'GND'}, (cx - 6.25, 67.5, 0), mpn='B3F-4055', manufacturer='Omron',
+         {1: net, 2: 'GND'}, (cx - 6.25, BTN_Y, 0), mpn='B3F-4055', manufacturer='Omron',
          spec='przycisk 12x12 mm z wysuniętym popychaczem, nasadka Omron B32-1310',
          note='pady 1 wspólne (12,5 mm), pady 2 wspólne; zestyk między grupami 1 i 2')
 part('SW5', 'Switch:SW_SPDT', 'CISZA', 'WICI:Toggle_ESwitch_100SP1T1B4M2QE',
-     {1: 'GND', 2: 'SW_COM'}, (14.0, 89.0, 0), mpn='100SP1T1B4M2QE', manufacturer='E-Switch',
+     {1: 'GND', 2: 'SW_COM'}, (14.0, 89.0 + LOW_DY, 0), mpn='100SP1T1B4M2QE', manufacturer='E-Switch',
      spec='przełącznik dźwigienkowy SPDT ON-NONE-ON, wyprowadzenia PCB 4,70 mm',
      note='zwarte 1-2 = cisza radiowa (SW_CISZA = L); 2-3 = praca')
 part('SW6', 'Switch:SW_Push', 'PRZYGOTOWANIE', 'Button_Switch_THT:SW_TH_Tactile_Omron_B3F-100x',
-     {1: 'BTN_PREP', 2: 'GND'}, (25.0, 86.75, 0), mpn='B3F-1000', manufacturer='Omron',
+     {1: 'BTN_PREP', 2: 'GND'}, (25.0, 86.75 + LOW_DY, 0), mpn='B3F-1000', manufacturer='Omron',
      spec='przycisk 6x6 mm', note='na stacji pod naklejką serwisową')
-part('D1', 'Device:LED', 'ALARM', 'LED_THT:LED_D5.0mm', {1: 'GND', 2: 'LED_A'}, (36.0, 89.0, 0),
+part('D1', 'Device:LED', 'ALARM', 'LED_THT:LED_D5.0mm', {1: 'GND', 2: 'LED_A'}, (36.0, 89.0 + LOW_DY, 0),
      mpn='WP7113ID', manufacturer='Kingbright', spec='LED 5 mm czerwona, rozproszona',
      note='katoda (pad kwadratowy 1) do masy')
-part('R1', 'Device:R', '1k', R0805, {1: 'LED_ALARM', 2: 'LED_A'}, (37.3, 83.5, 0),
+part('R1', 'Device:R', '1k', R0805, {1: 'LED_ALARM', 2: 'LED_A'}, (37.3, 83.5 + LOW_DY, 0),
      mpn='RC0805FR-071KL', manufacturer='Yageo', spec='1 kΩ 1% 0805', note='prąd diody około 1 mA')
 part('BZ1', 'Device:Buzzer', 'CEM-1203(42)', 'Buzzer_Beeper:MagneticBuzzer_ProSignal_ABT-410-RC',
-     {1: 'BZ_P', 2: 'BZ_N'}, (46.0, 89.0, 0), mpn='CEM-1203(42)', manufacturer='Same Sky (CUI Devices)',
+     {1: 'BZ_P', 2: 'BZ_N'}, (46.0, 89.0 + LOW_DY, 0), mpn='CEM-1203(42)', manufacturer='Same Sky (CUI Devices)',
      spec='brzęczyk magnetyczny 12 mm, sterowany z zewnątrz, 2048 Hz, cewka 42 Ω',
      note='pad 1 = "+"; sprawdzić znak "+" na obudowie przy montażu')
-part('R2', 'Device:R', '22R', 'Resistor_SMD:R_1206_3216Metric', {1: '+5V', 2: 'BZ_P'}, (46.0, 81.0, 0),
+part('R2', 'Device:R', '22R', 'Resistor_SMD:R_1206_3216Metric', {1: '+5V', 2: 'BZ_P'}, (46.0, 81.0 + LOW_DY, 0),
      mpn='RC1206FR-0722RL', manufacturer='Yageo', spec='22 Ω 1% 1206, 0,25 W',
      note='brzęczyk z +5V, nie z szyny radia; około 3,3 V szczytowo na cewce, najwyżej około 75 mA przy stałym stanie wysokim BUZZER')
-part('D2', 'Device:D', '1N4148W', 'Diode_SMD:D_SOD-123', {1: 'BZ_P', 2: 'BZ_N'}, (52.0, 81.0, 180),
+part('D2', 'Device:D', '1N4148W', 'Diode_SMD:D_SOD-123', {1: 'BZ_P', 2: 'BZ_N'}, (52.0, 81.0 + LOW_DY, 180),
      mpn='1N4148W-7-F', manufacturer='Diodes Incorporated', spec='dioda 75 V, SOD-123',
      note='dioda gasząca cewki brzęczyka')
 part('Q1', 'Transistor_BJT:MMBT3904', 'MMBT3904', 'Package_TO_SOT_SMD:SOT-23',
-     {1: 'Q_B', 2: 'GND', 3: 'BZ_N'}, (58.0, 84.0, 0), mpn='MMBT3904LT1G', manufacturer='onsemi',
+     {1: 'Q_B', 2: 'GND', 3: 'BZ_N'}, (58.0, 84.0 + LOW_DY, 0), mpn='MMBT3904LT1G', manufacturer='onsemi',
      spec='NPN 40 V 200 mA, SOT-23', note='klucz brzęczyka')
-part('R3', 'Device:R', '1k', R0805, {1: 'BUZZER', 2: 'Q_B'}, (58.0, 79.0, 0),
+part('R3', 'Device:R', '1k', R0805, {1: 'BUZZER', 2: 'Q_B'}, (58.0, 79.0 + LOW_DY, 0),
      mpn='RC0805FR-071KL', manufacturer='Yageo', spec='1 kΩ 1% 0805', note='rezystor bazy Q1')
-part('R4', 'Device:R', '100k', R0805, {1: 'Q_B', 2: 'GND'}, (63.0, 84.0, 90),
+part('R4', 'Device:R', '100k', R0805, {1: 'Q_B', 2: 'GND'}, (63.0, 84.0 + LOW_DY, 90),
      mpn='RC0805FR-07100KL', manufacturer='Yageo', spec='100 kΩ 1% 0805',
      note='Q1 wyłączony, gdy MCU nie steruje linią BUZZER')
 
-part('R16', 'Device:R', '1k', R0805, {1: 'SW_COM', 2: 'SW_CISZA'}, (19.5, 81.0, 0),
+part('R16', 'Device:R', '1k', R0805, {1: 'SW_COM', 2: 'SW_CISZA'}, (19.5, 81.0 + LOW_DY, 0),
      mpn='RC0805FR-071KL', manufacturer='Yageo', spec='1 kΩ 1% 0805',
      note='SW_CISZA przez 1 kΩ: wyjście MCU na tej linii nie zwiera się do masy (0,3 V przy ciszy)')
-part('R17', 'Device:R', '33R', R0805, {1: 'SPI_SCK_DK', 2: 'SPI_SCK'}, (158.3, 29.5, 90),
+# R17 and R18 keep >= 2.5 mm pad to pad from J3 and J5 (JLC mixed SMD/THT assembly).
+part('R17', 'Device:R', '33R', R0805, {1: 'SPI_SCK_DK', 2: 'SPI_SCK'}, (158.3, 30.5, 90),
      mpn='RC0805FR-0733RL', manufacturer='Yageo', spec='33 Ω 1% 0805',
      note='szeregowy SCK przy złączu Arduino D3: łagodzi zbocza na rozgałęzionej sieci')
-part('R18', 'Device:R', '33R', R0805, {1: 'SPI_SCK_DEVKIT', 2: 'SPI_SCK'}, (79.0, 80.88, 0),
+part('R18', 'Device:R', '33R', R0805, {1: 'SPI_SCK_DEVKIT', 2: 'SPI_SCK'}, (80.5, 80.88, 0),
      mpn='RC0805FR-0733RL', manufacturer='Yageo', spec='33 Ω 1% 0805',
      note='szeregowy SCK przy GPIO12 DevKitC')
 part('R19', 'Device:R', '10k', R0805, {1: 'LCD_DISP', 2: 'GND'}, (FPC_ORIGIN[0] + 13.0, FPC_ORIGIN[1] - 2.0, 90),
@@ -235,9 +246,10 @@ part('D3', 'Diode:BAT54S', 'BAT54S', 'Package_TO_SOT_SMD:SOT-23', {1: 'GND', 2: 
      (163.5, 87.5, 0), mpn='BAT54SLT1G', manufacturer='onsemi', spec='podwójna dioda Schottky 30 V, SOT-23',
      note='ogranicza VTEST do zakresu -0,3...+3,6 V przy odwrotnej polaryzacji albo za wysokim napięciu J12')
 
-PULLUPS = [('R5', 'BTN_UP', (14.0, 61.0)), ('R6', 'BTN_DOWN', (30.0, 61.0)),
-           ('R7', 'BTN_OK', (46.0, 61.0)), ('R8', 'BTN_BACK', (62.0, 61.0)),
-           ('R9', 'SW_CISZA', (14.0, 81.0)), ('R10', 'BTN_PREP', (28.25, 81.0))]
+# R7 right of the J7 group, clear of its mounting pad.
+PULLUPS = [('R5', 'BTN_UP', (14.0, 62.5)), ('R6', 'BTN_DOWN', (30.0, 62.5)),
+           ('R7', 'BTN_OK', (48.0, 62.5)), ('R8', 'BTN_BACK', (62.0, 62.5)),
+           ('R9', 'SW_CISZA', (14.0, 81.0 + LOW_DY)), ('R10', 'BTN_PREP', (28.25, 81.0 + LOW_DY))]
 for ref, net, (x, y) in PULLUPS:
     part(ref, 'Device:R', '10k', R0805, {1: '+3V3', 2: net}, (x, y, 0),
          mpn='RC0805FR-0710KL', manufacturer='Yageo', spec='10 kΩ 1% 0805', note='podciągnięcie wejścia')

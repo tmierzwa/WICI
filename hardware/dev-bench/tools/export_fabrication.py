@@ -20,10 +20,10 @@ import subprocess
 import tempfile
 import zipfile
 
-from design import BOARD_W, BOARD_H, EXTRAS, NOTCH_P5, PARTS
+from design import BOARD_REV, BOARD_W, BOARD_H, EXTRAS, NOTCH_P5, PARTS
 
 ROOT = Path(__file__).resolve().parents[1]
-REV = 'N1'
+REV = 'N1'  # folder and ZIP name; the board revision is BOARD_REV
 SMD_PACKAGES = ('R_', 'C_', 'L_', 'SOT-', 'D_SOD', 'SOIC-', 'Hirose_FH12')
 
 # English one-line descriptions for the assembler BOM; bom.csv keeps the Polish detail.
@@ -166,9 +166,13 @@ def write_fab_notes(path, drills):
     notch_w = round(BOARD_W - NOTCH_P5[0], 2)
     notch_h = round(NOTCH_P5[3] - NOTCH_P5[1], 2)
     smd_count = sum(1 for p in PARTS if p['bom'] and smd(p['footprint']))
-    path.write_text(f"""WICI carrier board {REV} - fabrication and assembly notes
-=====================================================
+    path.write_text(f"""WICI carrier board {BOARD_REV} - fabrication and assembly notes
+=======================================================
 Open hardware, CERN-OHL-P-2.0. Source: https://github.com/tmierzwa/WICI (hardware/dev-bench).
+Revision {BOARD_REV} (2026-10-29) replaces N1 (ordered 2026-10-10): the display connector J7 with C4, C6, C7,
+R13, R19 moved 7.4 mm away from the display for its 13.5 mm FPC, the buttons and the parts below them
+1.5-2 mm down the board; R17 and R18 moved to keep 2.5 mm pad to pad from through-hole pads. Outline,
+holes and connector grid unchanged. Do not reuse N1 files or stencils.
 Quantity: 5 boards (pilot). Prototype tool board, no RF, no impedance control.
 
 PCB

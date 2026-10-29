@@ -37,7 +37,7 @@ class N1Geometry(unittest.TestCase):
         parts = z.n1_parts()
         xs = [parts[f"SW{i}"]["x"] for i in range(1, 5)]
         self.assertEqual([round(b - a, 3) for a, b in zip(xs, xs[1:])], [16.0, 16.0, 16.0])
-        self.assertTrue(all(parts[f"SW{i}"]["y"] == 32.5 for i in range(1, 5)))
+        self.assertTrue(all(parts[f"SW{i}"]["y"] == 30.5 for i in range(1, 5)))  # N1.1, F118
         for ref in ("SW5", "SW6", "D1", "BZ1", "J7", "J5", "J6"):
             self.assertIn(ref, parts)
 

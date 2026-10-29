@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """BOM and CPL for a JLCPCB PCBA quote of the whole L0 board (SMD and THT).
 
-Quote only: the N1 Gerbers still carry the J7 position from before F118, so these
-files check part availability and price, not an order. SMD rows come from the N1
-JLC files (R12 as 1 kOhm, as L0 requires). THT rows use JLC library parts chosen
+Built from the N1.1 board (J7 moved for the 13.5 mm panel FPC, F118); an order
+still waits for the 1:1 fit of N1.1. SMD rows come from the N1 JLC files (R12 as
+1 kOhm, as L0 requires). THT rows use JLC library parts chosen
 from the jlcparts snapshot of 2026-10-28; their positions are the pad-box centres
 from the board file, each pad checked against a hole in the PTH drill file.
 """

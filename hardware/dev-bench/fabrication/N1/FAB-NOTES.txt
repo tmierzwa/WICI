@@ -1,6 +1,10 @@
-WICI carrier board N1 - fabrication and assembly notes
-=====================================================
+WICI carrier board N1.1 - fabrication and assembly notes
+=======================================================
 Open hardware, CERN-OHL-P-2.0. Source: https://github.com/tmierzwa/WICI (hardware/dev-bench).
+Revision N1.1 (2026-10-29) replaces N1 (ordered 2026-10-10): the display connector J7 with C4, C6, C7,
+R13, R19 moved 7.4 mm away from the display for its 13.5 mm FPC, the buttons and the parts below them
+1.5-2 mm down the board; R17 and R18 moved to keep 2.5 mm pad to pad from through-hole pads. Outline,
+holes and connector grid unchanged. Do not reuse N1 files or stencils.
 Quantity: 5 boards (pilot). Prototype tool board, no RF, no impedance control.
 
 PCB

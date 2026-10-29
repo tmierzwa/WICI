@@ -13,7 +13,7 @@ JP1 JP2 JP3,3,3V3 DEVKITC / 5V DEVKITC / 3V3 RADIO A,Würth Elektronik,613002111
 J12,1,VTEST 0-15V,Phoenix Contact,1715721,"zacisk śrubowy 2-pin, 5,08 mm","TerminalBlock_Phoenix:TerminalBlock_Phoenix_MKDS-1,5-2-5.08_1x02_P5.08mm_Horizontal",A i B,napięcie z zasilacza laboratoryjnego do prób progów ogniw i 12 V; najwyżej 15 V
 SW1 SW2 SW3 SW4,4,GÓRA / DÓŁ / OK / WSTECZ,Omron,B3F-4055,"przycisk 12x12 mm z wysuniętym popychaczem, nasadka Omron B32-1310",Button_Switch_THT:SW_SPST_Omron_B3F-40xx,A i B,"pady 1 wspólne (12,5 mm), pady 2 wspólne; zestyk między grupami 1 i 2"
 SW5,1,CISZA,E-Switch,100SP1T1B4M2QE,"przełącznik dźwigienkowy SPDT ON-NONE-ON, wyprowadzenia PCB 4,70 mm",WICI:Toggle_ESwitch_100SP1T1B4M2QE,A i B,zwarte 1-2 = cisza radiowa (SW_CISZA = L); 2-3 = praca
-SW6,1,PRZYGOTOWANIE,Omron,B3F-1000,przycisk 6x6 mm,Button_Switch_THT:SW_TH_Tactile_Omron_B3F-100x,A i B,na stacji pod plombowaną pokrywą
+SW6,1,PRZYGOTOWANIE,Omron,B3F-1000,przycisk 6x6 mm,Button_Switch_THT:SW_TH_Tactile_Omron_B3F-100x,A i B,na stacji pod naklejką serwisową
 D1,1,ALARM,Kingbright,WP7113ID,"LED 5 mm czerwona, rozproszona",LED_THT:LED_D5.0mm,A i B,katoda (pad kwadratowy 1) do masy
 R1 R3 R16,3,1k,Yageo,RC0805FR-071KL,1 kΩ 1% 0805,Resistor_SMD:R_0805_2012Metric,A i B,"R1: prąd diody około 1 mA; R3: rezystor bazy Q1; R16: SW_CISZA przez 1 kΩ: wyjście MCU na tej linii nie zwiera się do masy (0,3 V przy ciszy)"
 BZ1,1,CEM-1203(42),Same Sky (CUI Devices),CEM-1203(42),"brzęczyk magnetyczny 12 mm, sterowany z zewnątrz, 2048 Hz, cewka 42 Ω",Buzzer_Beeper:MagneticBuzzer_ProSignal_ABT-410-RC,A i B,"pad 1 = ""+""; sprawdzić znak ""+"" na obudowie przy montażu"

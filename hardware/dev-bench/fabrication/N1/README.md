@@ -1,15 +1,17 @@
 # WICI: pliki produkcyjne płytki nośnej N1
 
-**Pięć płytek zamówiono 2026-10-10 dla L0 ([zamówienie](../../przed-produkcja.md#zamówienie-2026-10-10-l0)). Kolejne zamówienie dopiero po zamknięciu [listy przed zamówieniem](../../przed-produkcja.md).** Pliki eksportuje `tools/export_fabrication.py` z projektu po ERC 0 i DRC 0; ręcznie się ich nie poprawia.
+**Rewizja N1.1 (2026-10-29).** Względem N1 złącze ekranu J7 z R13, R19, C4, C6 i C7 leży 7,4 mm dalej od panelu, bo taśma FPC panelu ma 13,5 mm ([F118](../../../../docs/review.md)); rząd R5–R8, przyciski SW1–SW4 i elementy pod nimi przesunięto 1,5–2 mm w dół płytki, a R17 i R18 tak, żeby każdy pad SMD leżał ≥2,5 mm od padu przewlekanego (montaż mieszany JLC). Obrys, otwory i złącza modułów bez zmian. Katalog i nazwa ZIP zostają `N1`; rewizję niosą tabliczka, opis na płytce, plik zadania Gerber i `FAB-NOTES.txt`.
+
+**Pięć płytek poprzedniej rewizji N1 zamówiono 2026-10-10 dla L0 ([zamówienie](../../przed-produkcja.md#zamówienie-2026-10-10-l0)); tamte pliki są w historii repozytorium. Kolejne zamówienie dopiero po zamknięciu [listy przed zamówieniem](../../przed-produkcja.md), w tym przymiarki 1:1 rewizji N1.1.** Pliki eksportuje `tools/export_fabrication.py` z projektu po ERC 0 i DRC 0; ręcznie się ich nie poprawia.
 
 | Plik | Zawartość |
 |---|---|
 | `wici-plytka-nosna-N1-gerber.zip` | Gerbery, wiercenia i `FAB-NOTES.txt` do wysłania wykonawcy |
 | `FAB-NOTES.txt` | parametry płytki i zakres montażu dla wykonawcy, po angielsku |
-| `gerbers/` | miedź, maska, opis obu stron (spód pusty), pasta na górze (`F_Paste`, do szablonu montażu SMD), obrys (`Edge_Cuts`) i plik zadania z rewizją N1, RS-274X X2 |
+| `gerbers/` | miedź, maska, opis obu stron (spód pusty), pasta na górze (`F_Paste`, do szablonu montażu SMD), obrys (`Edge_Cuts`) i plik zadania z rewizją N1.1, RS-274X X2 |
 | `drill/` | wiercenia Excellon w mm, otwory platerowane (PTH) i nieplaterowane (NPTH) osobno, mapa wierceń w PDF |
 | `assembly/positions.csv` | pozycje części od strony elementów (wszystkie części są na stronie górnej) |
-| `assembly/montaz.pdf` | rysunek montażowy w skali 1,5 z tabliczką (rewizja N1) |
+| `assembly/montaz.pdf` | rysunek montażowy w skali 1,5 z tabliczką (rewizja N1.1) |
 | `assembly/bom.csv` | kopia [BOM](../../bom.csv) |
 | `assembly/bom-assembly.csv` | BOM dla montażowni po angielsku, tylko 44 elementy SMD: oznaczenia, ilość na płytkę, MPN; resztę lutuje właściciel według [BOM](../../bom.csv) |
 | `assembly/jlc-bom.csv` | BOM w formacie JLCPCB z numerami LCSC (stany z 2026-10-10), razem z `jlc-cpl.csv` (pozycje z obrotami JLC: SOT-23, SOT-23-5 i SOT-23-6 o 180°, SOIC-8 o 270°, sprawdzone w podglądzie JLC); w miejsce części bez stanu U1 to MB85RS4MTPF-G-BCERE1, a U2 to MCP1640CT-I/CHY (wariant C tej samej przetwornicy, EN na stałe do VIN) |
