@@ -31,8 +31,9 @@ THT = [
     ('J12', '1715721', 'C480516'),
 ]
 # stations A/B only, not fitted in L0 (MONTAZ-I-TESTY.md, section 1)
-# JLC models of 2.54 mm headers lie along x at 0 deg, KiCad footprints along y (JLC preview 2026-10-29)
-JLC_THT_ROTATION = {'PinHeader_': 90, 'PinSocket_': 90}
+# JLC preview 2026-10-29: 2.54 mm header models lie along x at 0 deg (KiCad: along y);
+# the LED model has the anode on pad 1, where KiCad has the cathode
+JLC_THT_ROTATION = {'PinHeader_': 90, 'PinSocket_': 90, 'LED_D5.0mm': 180}
 DNP = {'J1', 'J2', 'J3', 'J4', 'J9', 'J10', 'JP3'}
 
 
