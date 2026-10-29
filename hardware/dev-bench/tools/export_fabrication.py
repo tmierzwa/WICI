@@ -59,26 +59,28 @@ DESCRIPTION = {
 # LCSC part numbers for JLCPCB assembly, JLC stock checked 2026-10-10. Where the BOM part had no
 # stock, the second field names the part JLC places instead: U1 is the FRAM alternative already in
 # the BOM; U2 is the C variant of the same boost (PFM, input-to-output bypass in shutdown instead of
-# output disconnect), which the board never sees because EN is tied to VIN.
+# output disconnect), which the board never sees because EN is tied to VIN. Passives, D2 and Q1 use
+# equivalent JLC Basic parts (same value, tolerance, voltage, dielectric, size; jlcparts snapshot
+# 2026-10-28), which carry no extended-part fee; 309k, the 0.1% resistors and C13 have no Basic part.
 LCSC = {
-    'CL21A106KAYNNNG': ('C318691', None),
+    'CL21A106KAYNNNG': ('C15850', 'CL21A106KAYNNNE'),
     'CL21C101JBANNNC': ('C1790', None),
     'LMK325ABJ107MM-P': ('C386065', None),
-    'CL21B104KBCNNNC': ('C1711', None),
-    '1N4148W-7-F': ('C83528', None),
+    'CL21B104KBCNNNC': ('C49678', 'CC0805KRX7R9BB104'),
+    '1N4148W-7-F': ('C81598', '1N4148W'),
     'BAT54SLT1G': ('C19726', None),
     'FH12-10S-0.5SH(55)': ('C506791', None),
     '744031004': ('C2649331', None),
-    'MMBT3904LT1G': ('C81464', None),
-    'RC0805FR-071KL': ('C95781', None),
+    'MMBT3904LT1G': ('C20526', 'MMBT3904'),
+    'RC0805FR-071KL': ('C17513', '0805W8F1001T5E'),
     'RT0805BRD07100KL': ('C122537', None),
     'RT0805BRD0720KL': ('C469660', None),
-    'RC0805FR-0733RL': ('C126353', None),
-    'RC0805FR-0710KL': ('C84376', None),
-    'RC1206FR-0722RL': ('C114943', None),
-    'RC0805FR-071ML': ('C107700', None),
+    'RC0805FR-0733RL': ('C17634', '0805W8F330JT5E'),
+    'RC0805FR-0710KL': ('C17414', '0805W8F1002T5E'),
+    'RC1206FR-0722RL': ('C17958', '1206W4F220JT5E'),
+    'RC0805FR-071ML': ('C17514', '0805W8F1004T5E'),
     'RC0805FR-07309KL': ('C273874', None),
-    'RC0805FR-07100KL': ('C96346', None),
+    'RC0805FR-07100KL': ('C149504', '0805W8F1003T5E'),
     'CY15B104QN-50SXI': ('C42742723', 'MB85RS4MTPF-G-BCERE1'),
     'MCP1640T-I/CHY': ('C511326', 'MCP1640CT-I/CHY'),
     'TPS3840PH27DBVR': ('C2866252', None),
@@ -206,8 +208,9 @@ Assembly (optional quote)
   behaviour that differs between the variants is never used). Do not use the B or D variants
   (PWM only) or third-party MCP1640 copies.
   R14 and R15 are 0.1 % resistors; do not substitute 1 % parts.
-- JLCPCB: assembly/jlc-bom.csv carries LCSC part numbers (stock checked 2026-10-10) and places
-  U1 as MB85RS4MTPF-G-BCERE1 and U2 as MCP1640CT-I/CHY; use it with assembly/jlc-cpl.csv, which
+- JLCPCB: assembly/jlc-bom.csv carries LCSC part numbers (stock checked 2026-10-10; passives, D2 and
+  Q1 as equivalent JLC Basic parts, 2026-10-28) and places U1 as MB85RS4MTPF-G-BCERE1 and U2 as
+  MCP1640CT-I/CHY; use it with assembly/jlc-cpl.csv, which
   carries the JLC rotations (SOT-23, SOT-23-5, SOT-23-6 +180 deg, SOIC-8 +270 deg vs cpl-smd.csv).
 - All through-hole parts (including the through-hole connectors) are fitted by the owner; do not
   supply or fit them.
