@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 #include "sx1262_link.h"
 
+#include "platform.h"
+
 #include <math.h>
 
 namespace sx1262 {
@@ -450,12 +452,42 @@ RxService LinkDriver::serviceRx(radiolink::Frame& out, bool sampleRssi) {
 }
 
 radiolink::RxPoll LinkDriver::pollRx(radiolink::Frame& out) {
+    if (background_) {
+        // Ramki z pierścienia zadania odbioru (pętla nie czyta flag odbioru układu).
+        RxEntry entry;
+        if (!ring_.pop(entry)) return radiolink::RxPoll::Nothing;
+        out = entry.frame;
+        return entry.kind;
+    }
     switch (serviceRx(out, false)) {
         case RxService::Frame: return radiolink::RxPoll::Frame;
         case RxService::Bad:
         case RxService::Late: return radiolink::RxPoll::Bad;
         default: return radiolink::RxPoll::Nothing;
     }
+}
+
+void LinkDriver::taskCycle(bool dio1High) {
+    signals_.tick();
+    const uint32_t now = millis();
+    if (busyBackoffMs_ && now - busyBackoffMs_ < BUSY_BACKOFF_MS) return;
+    const bool rssiDue = now - lastRssiMs_ >= RSSI_SAMPLE_MS;
+    if (!dio1High && !rssiDue) return;
+    platform::RadioLock lock(0);  // bez czekania: pętla nadaje, konfiguruje albo obsługuje polecenie
+    if (!lock.held() || !rxActive_) return;
+    const uint32_t t0 = micros();
+    RxEntry entry;
+    const RxService result = serviceRx(entry.frame, rssiDue);
+    if (result == RxService::BusyTimeout) {
+        busyBackoffMs_ = now ? now : 1;
+        return;
+    }
+    busyBackoffMs_ = 0;
+    if (rssiDue) lastRssiMs_ = now;
+    if (result == RxService::Frame) entry.kind = radiolink::RxPoll::Frame;
+    else if (result == RxService::Bad || result == RxService::Late) entry.kind = radiolink::RxPoll::Bad;
+    if (entry.kind != radiolink::RxPoll::Nothing) ring_.push(entry);  // pełny: odpada ta ramka (overflow)
+    signals_.serviced(now, micros() - t0);
 }
 
 bool LinkDriver::receivingFrame() {

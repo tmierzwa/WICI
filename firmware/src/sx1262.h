@@ -11,6 +11,8 @@
 #include <Arduino.h>
 #include <SPI.h>
 
+#include <atomic>
+
 namespace sx1262 {
 
 // Polecenia (tabela 11-1 i następne).
@@ -140,6 +142,9 @@ public:
 
     bool busy() const;
     uint32_t busyTimeouts() const { return busyTimeouts_; }
+    // Transakcje bez blokady operacji radia przy pracującym zadaniu odbioru (sprawdzane tylko w obrazie
+    // z WICI_RADIO_LOCK_CHECK; inaczej 0). Każda większa od zera to błąd programu.
+    uint32_t lockMisses() const { return lockMisses_.load(std::memory_order_relaxed); }
 
 private:
     bool waitBusy();
@@ -153,6 +158,7 @@ private:
     SPISettings settings_;
     Status status_{};
     uint32_t busyTimeouts_ = 0;
+    std::atomic<uint32_t> lockMisses_{0};  // pętla i zadanie
 };
 
 }  // namespace sx1262

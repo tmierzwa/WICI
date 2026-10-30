@@ -57,6 +57,19 @@ void printVtest();  // odpowiedź na VTEST (tylko płytka N1)
 // Zadanie odbioru bierze ją bez czekania (timeoutMs = 0) i przy zajętej pomija obieg; pętla czeka z limitem.
 bool radioLockTake(uint32_t timeoutMs);  // true, gdy wzięta w timeoutMs (0: tylko próba)
 void radioLockGive();
+// Nieudane czekania z limitem (timeoutMs > 0, czyli po stronie pętli) od startu: błąd operacji radia,
+// który kontrola radia zamienia w radio_awaria. Próby bez czekania (zadanie) się nie liczą.
+uint32_t radioLockTimeouts();
+// Sprawdzenie blokady (WICI_RADIO_LOCK_CHECK, sx1262::Radio przed każdą transakcją): true, gdy zadanie
+// odbioru nie pracuje (blokada niepotrzebna) albo bieżące zadanie trzyma blokadę.
+bool radioLockOk();
+
+// Zadanie odbioru radia (stacja L0, plan interfejsu LoRa, L6): ESP32-S3 rdzeń 0, wysoki priorytet, obieg
+// co takt FreeRTOS (vTaskDelay(1), 1 ms); w każdym obiegu woła cycle. Stos i blok zadania w pamięci
+// statycznej; zadanie nie jest w watchdogu zadań. false, gdy MCU nie ma zadania (nRF52840, symulator)
+// albo nie powstało: wtedy pętla obsługuje układ sama.
+bool startRxTask(void (*cycle)());
+int32_t rxTaskStackFree();  // najmniejszy zapas stosu zadania od startu w bajtach; -1 bez zadania
 
 class RadioLock {
 public:

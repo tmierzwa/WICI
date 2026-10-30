@@ -12,7 +12,9 @@
 #include <esp_task_wdt.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
+#include <freertos/task.h>
 
+#include <atomic>
 #include "board.h"
 #include "cmdargs.h"
 
@@ -104,6 +106,27 @@ namespace {
 // każdym zadaniem; FreeRTOS pozwala tworzyć obiekty przed startem planisty.
 StaticSemaphore_t radioMutexStorage;
 const SemaphoreHandle_t radioMutex = xSemaphoreCreateRecursiveMutexStatic(&radioMutexStorage);
+std::atomic<uint32_t> lockTimeouts{0};
+
+// Zadanie odbioru: priorytet nad pętlą (1), zadaniem zdarzeń USB (5) i esp_timer (22). Zadanie urządzenia
+// TinyUSB ("usbd") ma w Arduino-ESP32 3.3.12 configMAX_PRIORITIES - 1 (esp32-hal-tinyusb.c), czyli
+// najwyższy priorytet, więc wyżej od niego się nie da; poniżej niego zostają też zadania IPC ESP-IDF.
+// usbd głównie czeka na zdarzenia, a obieg zadania odbioru trwa ≤5 ms.
+constexpr UBaseType_t RX_TASK_PRIORITY = configMAX_PRIORITIES - 2;
+constexpr BaseType_t RX_TASK_CORE = 0;          // pętla stacji (loopTask) i tak pracuje na rdzeniu 1
+constexpr size_t RX_TASK_STACK_BYTES = 4096;    // zapas sprawdza RNS (rx_stack_free)
+// ESP-IDF: StackType_t to uint8_t, a głębokość stosu podaje się w jednostkach StackType_t (czyli w bajtach).
+alignas(16) StackType_t rxTaskStack[RX_TASK_STACK_BYTES / sizeof(StackType_t)];
+StaticTask_t rxTaskStorage;
+TaskHandle_t rxTask = nullptr;
+void (*rxCycle)() = nullptr;
+
+void rxTaskMain(void*) {
+    for (;;) {
+        rxCycle();
+        vTaskDelay(1);  // obieg co takt (CONFIG_FREERTOS_HZ = 1000): rdzeń 0 dostaje bezczynność i inne zadania
+    }
+}
 
 }  // namespace
 
@@ -111,10 +134,29 @@ bool radioLockTake(uint32_t timeoutMs) {
     // W górę do taktów: krótki limit nie może stać się próbą bez czekania.
     TickType_t ticks = pdMS_TO_TICKS(timeoutMs);
     if (timeoutMs > 0 && ticks == 0) ticks = 1;
-    return xSemaphoreTakeRecursive(radioMutex, ticks) == pdTRUE;
+    const bool taken = xSemaphoreTakeRecursive(radioMutex, ticks) == pdTRUE;
+    if (!taken && timeoutMs > 0) lockTimeouts.fetch_add(1, std::memory_order_relaxed);
+    return taken;
 }
 
 void radioLockGive() { xSemaphoreGiveRecursive(radioMutex); }
+
+uint32_t radioLockTimeouts() { return lockTimeouts.load(std::memory_order_relaxed); }
+
+bool radioLockOk() { return !rxTask || xSemaphoreGetMutexHolder(radioMutex) == xTaskGetCurrentTaskHandle(); }
+
+bool startRxTask(void (*cycle)()) {
+    if (rxTask) return true;
+    rxCycle = cycle;
+    rxTask = xTaskCreateStaticPinnedToCore(rxTaskMain, "wici_rx", sizeof(rxTaskStack) / sizeof(StackType_t), nullptr,
+                                           RX_TASK_PRIORITY, rxTaskStack, &rxTaskStorage, RX_TASK_CORE);
+    return rxTask != nullptr;
+}
+
+int32_t rxTaskStackFree() {
+    if (!rxTask) return -1;
+    return static_cast<int32_t>(uxTaskGetStackHighWaterMark(rxTask) * sizeof(StackType_t));
+}
 
 bool handle(const char* cmd, char* words[], size_t n) {
     if (strcmp(cmd, "DRIVE") || n > 1) return false;
