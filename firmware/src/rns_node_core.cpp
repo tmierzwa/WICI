@@ -583,8 +583,8 @@ bool begin(journal::Storage& storage, Radio& r, const uint8_t ifacKey[16], uint6
     transport.setBitrate(radio->timing().declaredBitrate);   // Interface.bitrate interfejsu radiowego (odkrycie trasy)
     started = true;
     rememberReceivers();
-    log(usbPort ? "rns: Reticulum core (R4): P1 and USB interfaces, announces, proofs, table in FRAM"
-                : "rns: Reticulum core (R3): P1 interface, announces, LXMF SA1 messages, proofs, table in FRAM");
+    log(usbPort ? "rns: Reticulum core (R4): radio and USB interfaces, announces, proofs, table in FRAM"
+                : "rns: Reticulum core (R3): radio interface, announces, LXMF SA1 messages, proofs, table in FRAM");
     return true;
 }
 
@@ -944,7 +944,7 @@ size_t interfaceJson(char* out, size_t size) {
                            "\"fwd\":%lu,\"fwd_no_path\":%lu,\"proof_fwd\":%lu,\"rev_full\":%lu,\"ann_rebroadcast\":%lu,\"pr_gated\":%lu,"
                            "\"lxmf_rejected\":%lu,\"lxmf_rej_sender\":%lu,\"lxmf_rej_shape\":%lu,\"lxmf_rej_stamp\":%lu,"
                            "\"lxmf_rej_signature\":%lu,\"rx_limited\":%lu",
-                           radio->timing().framing == p1iface::LinkTiming::Framing::RNODE ? "lora" : "p1",
+                           radiolink::framingName(radio->timing().framing),
                            (unsigned)queue.queued(), (unsigned)queue.held(), (unsigned long)c.queued, (unsigned long)c.full,
                            (unsigned long)c.tooLarge, (unsigned long)c.announcesHeld, (unsigned long)c.announcesDropped,
                            (unsigned long)c.announcesExpired, (unsigned long)c.sent, (unsigned long)c.sendFailed,

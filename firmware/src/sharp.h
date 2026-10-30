@@ -48,9 +48,8 @@ public:
     void drawGlyph(uint16_t x, uint16_t y, const font::Glyph& glyph, bool inverse);
     void setPixel(uint16_t x, uint16_t y, bool black);
     // Wysyła najwyżej LINES_PER_REFRESH zmienionych wierszy (od góry) w jednej transakcji; zwraca ich liczbę.
-    // Pętla woła w każdym obiegu, aż pending() = false.
+    // Pętla stacji woła w każdym obiegu (kolejne kawałki); polecenie ekranu woła aż do zwrotu 0.
     uint16_t refresh();
-    bool pending() const;  // są zmienione wiersze do wysłania
     // Odwracanie VCOM z programu, tylko przy EMD w stanie niskim (przewody): bit VCOM co 500 ms.
     void softwareVcom(bool on);
     bool softwareVcom() const { return softwareVcom_; }

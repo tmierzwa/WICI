@@ -47,16 +47,20 @@ static_assert(loraframe::IFAC_BYTES == IFAC_SIZE, "ten sam kod IFAC na obu łąc
 }  // namespace
 
 const LinkTiming& p1Timing() {
-    static const LinkTiming timing = {LinkTiming::Framing::P1, HW_MTU, MAX_WIRE, p1frame::MAX_DATAGRAM, airtimeMs, reservedTxMs,
-                                      radiolink::P1_SERIES_MAX_MS, declaredBitrate()};
+    static const LinkTiming timing = {radiolink::Framing::P1, HW_MTU, MAX_WIRE, p1frame::MAX_DATAGRAM, airtimeMs, reservedTxMs,
+                                      radiolink::MAX_SERIES_MS_ANY_LINK, declaredBitrate()};
     return timing;
 }
 
 const LinkTiming& loraTiming() {
-    static const LinkTiming timing = {LinkTiming::Framing::RNODE, loraframe::MAX_RAW, loraframe::MAX_DATAGRAM,
+    static const LinkTiming timing = {radiolink::Framing::RNODE, loraframe::MAX_RAW, loraframe::MAX_DATAGRAM,
                                       loraframe::MAX_DATAGRAM, loraAirtime, loraReservedTx, lora::SERIES_MAX_MS,
                                       loraframe::declaredBitrate()};
     return timing;
+}
+
+const LinkTiming& timingFor(radiolink::Framing framing) {
+    return framing == radiolink::Framing::RNODE ? loraTiming() : p1Timing();
 }
 
 Kind classify(const uint8_t* raw, size_t length) {

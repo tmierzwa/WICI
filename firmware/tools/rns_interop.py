@@ -69,11 +69,11 @@ TABLE_MAX = 256    # RNS_PATH_TABLE_MAX obrazu (platformio.ini)
 PINNED_TABLE = 6   # limit tablic w próbie ochrony wpisu odbiorcy (krok 7)
 LORA_STEPS = {"1", "2", "3", "4", "5", "B", "J", "D"}   # domyślne kroki z --link lora
 LORA_HZ = 869525000   # profil LoRa pilotażu (lora_profile.h): 869,525 MHz, 125 kHz, SF7, CR 4/5, 13 dBm
-MAX_DATAGRAM = 508    # HW_MTU RNodeInterface: pakiet z IFAC 16 B
+MAX_DATAGRAM = rnode_framing.MTU    # HW_MTU RNodeInterface: pakiet z IFAC 16 B
 MAX_RAW = MAX_DATAGRAM - 16
 OWN_ANNOUNCE_APP_DATA = 316   # najwięcej danych aplikacji we własnym ogłoszeniu stacji (ogłoszenie 483 B + IFAC 16 B)
 OWN_ANNOUNCE_BYTES = 499   # to ogłoszenie w eterze: ponad FIRST_FRAME_DATA, więc w dwóch ramkach
-FIRST_FRAME_DATA = 254   # dane w pierwszej ramce RNode: ponad tyle datagram idzie w dwóch ramkach
+FIRST_FRAME_DATA = rnode_framing.SINGLE_MTU - rnode_framing.HEADER_L   # dane w pierwszej ramce RNode: ponad tyle datagram idzie w dwóch ramkach
 
 
 def log(text):
@@ -503,7 +503,9 @@ def main():
             data = bytes(i % 239 for i in range(MAX_DATAGRAM + 1))
             head = bytes([0x30 | rnode_framing.FLAG_SPLIT])   # ramki ręcznie: RNode pociąłby 509 B na trzy ramki
             inject(None, [head + data[:FIRST_FRAME_DATA], head + data[FIRST_FRAME_DATA:]])
-            time.sleep(2.0)
+            # Odrzucenie liczy się od razu, a porzucenie pierwszej części po 1 s (limit składania).
+            wait_for(lambda: all((station.status() or {}).get(key, 0) - before.get(key, 0) >= 1
+                                 for key in ("lora_bad_length", "lora_assembly_timeout")), 10)
             after = station.status()
             delta = lambda key: after.get(key, 0) - before.get(key, 0)
             results["frames_509"] = {k: delta(k) for k in ("lora_bad_length", "lora_assembly_timeout", "frames_in", "datagrams_in")}
@@ -513,12 +515,8 @@ def main():
         # D. Dług ciszy: po nadaniu 12t ciszy (t = rezerwacja czasu TX datagramu), więc drugi z dwóch pakietów stacji
         #    zaczyna się najwcześniej po czasie nadawania i długu pierwszego.
         if want("D"):
-            settled = len(station.air)
-            while True:   # poprzednie nadawania muszą się skończyć razem z długiem (najdłuższy ok. 10 s)
-                time.sleep(12)
-                if len(station.air) == settled:
-                    break
-                settled = len(station.air)
+            # Poprzednie nadawania muszą się skończyć razem z długiem (najdłuższy ok. 10 s): wait_ms stacji to dług i kolejka.
+            wait_for(lambda: (station.status() or {}).get("wait_ms", 1) == 0, 60)
             before = len([e for e in station.air if e["event"] == "tx"])
             for text in (b'["WICI",1,"interop","debt one"]', b'["WICI",1,"interop","debt two"]'):
                 station.command(f"send {destination.hash.hex()} {outgoing(destination.hash, text).hex()} 120")

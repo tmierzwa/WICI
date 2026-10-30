@@ -50,7 +50,7 @@ constexpr size_t IFAC_SIZE = 16;             // kod dostępu sieci w bajtach
 constexpr size_t MAX_WIRE = HW_MTU + IFAC_SIZE;
 constexpr size_t HELD_ANNOUNCES = 4;
 constexpr uint32_t HELD_LIFE_MS = 3UL * 3600 * 1000;    // Reticulum.QUEUED_ANNOUNCE_LIFE (e40191b)
-constexpr uint8_t DEBT_FACTOR = radiolink::P1_DEBT_FACTOR;
+constexpr uint8_t DEBT_FACTOR = radiolink::DEBT_FACTOR;
 constexpr uint32_t WINDOW_MIN = 60;          // okno czasu kanału: 60 przedziałów po 1 min
 constexpr uint32_t WINDOW_MS = WINDOW_MIN * 60000;
 constexpr uint32_t POOL_PERCENT = 60;        // K2 i ogłoszenia razem
@@ -76,8 +76,7 @@ uint32_t declaredBitrate();
 // Czas i rozmiary łącza pod interfejsem stosu (kolejka, klej stosu, port). Wartości P1 są te same co
 // funkcje wyżej; LoRa bierze je z loraframe (ramka RNode, czas dokładnych ramek).
 struct LinkTiming {
-    enum class Framing : uint8_t { P1, RNODE };
-    Framing framing;
+    radiolink::Framing framing;
     size_t maxRaw;              // największy pakiet Reticulum bez IFAC
     size_t maxWire;             // największy pakiet z IFAC
     size_t maxDatagram;         // największy datagram łącza (podstawa limitu potwierdzenia)
@@ -99,6 +98,8 @@ struct LinkTiming {
 };
 const LinkTiming& p1Timing();
 const LinkTiming& loraTiming();
+// Czas łącza o danym ramkowaniu: LoRa dla RNODE, inaczej P1.
+const LinkTiming& timingFor(radiolink::Framing framing);
 
 enum class Kind : uint8_t { CONTROL, DATA, ANNOUNCE };
 // Rodzaj pakietu z nagłówka Reticulum (bez IFAC): typ pakietu w bitach 0-1 bajtu 0, typ celu w 2-3.

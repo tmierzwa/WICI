@@ -170,6 +170,7 @@ private:
     void toStandbyRc();  // STDBY_RC: konfiguracja, uśpienie, idle()
     bool load(const uint8_t* frame, size_t length);
     void noteActivity(uint16_t irq, uint32_t now);
+    bool frameInProgress(uint32_t now) const;  // preambuła albo nagłówek bez końca, nie dłużej niż FRAME_MAX_MS
     void rxen(bool on);
     bool setPacketParams(uint8_t payloadLength);
     bool readRssi(radiolink::Rssi& out);  // false przy przekroczeniu czasu BUSY; out.valid tylko w RX

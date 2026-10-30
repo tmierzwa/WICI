@@ -215,7 +215,7 @@ bool radioServes() { return radioWorks() && !bench.emcActive(); }
 // Łącze stanowiska pod interfejsem radiowym stosu (P1 albo LoRa w ramkach RNode, Driver::framing):
 // datagram z kolejki interfejsu idzie przez Bench (dług ciszy, CCA, odroczenia, ramki); w ciszy
 // radiowej kolejka czeka. Radio służy stacji i łącze jest w odbiorze.
-bool p1Listening() { return radioServes() && bench.receiving(); }
+bool radioListening() { return radioServes() && bench.receiving(); }
 
 // Alarm radio_awaria (oprogramowanie.md, ekran główny): radio nie służy stacji albo odbiór w tle stoi
 // (stacja L0: zadanie odbioru bez postępu przez 10 s przy uzbrojonym odbiorze stosu, radiocon::rxStalled).
@@ -227,16 +227,15 @@ bool radioFault() { return !radioServes() || rxStalled; }
 int32_t rxReadyMs = -1;
 uint32_t loopMaxMs = 0;
 const char* linkName() {
-    const radiolink::Framing f = bench.linkFraming();
-    return f == radiolink::Framing::RNODE ? "lora" : f == radiolink::Framing::P1 ? "p1" : "none";
+    return radiolink::framingName(bench.linkFraming());
 }
 
 struct BenchRadio : rnsnode::Radio {
-    bool ready() override { return p1Listening() && !bench.busy() && (!bench.silence || bench.silenceException); }
+    bool ready() override { return radioListening() && !bench.busy() && (!bench.silence || bench.silenceException); }
     bool transmit(const uint8_t* data, size_t length) override { return bench.linkSend(data, length, true) == nullptr; }
     uint32_t debtMs() override { return bench.debtRemainingMs(); }
     const p1iface::LinkTiming& timing() override {
-        return bench.linkFraming() == radiolink::Framing::RNODE ? p1iface::loraTiming() : p1iface::p1Timing();
+        return p1iface::timingFor(bench.linkFraming());
     }
 };
 BenchRadio benchRadio;
@@ -260,7 +259,7 @@ bool silenceAny() { return switchSilence || (storeOk && stationStore.meta().sile
 struct BenchServices : station::Services {
     bool silence() override { return silenceAny(); }
     bool silenceSwitch() override { return switchSilence; }
-    bool radioReady() override { return rnsOk && p1Listening() && rnsnode::online(); }
+    bool radioReady() override { return rnsOk && radioListening() && rnsnode::online(); }
     bool busy() override { return rnsnode::queueFull(); }
     uint32_t send(const uint8_t to[store::HASH], const uint8_t* data, size_t length, uint32_t timeoutS) override {
         return rnsnode::send(to, data, length, timeoutS);
@@ -1490,7 +1489,7 @@ void stationLoop() {
     const bool armed = rnsOk && bench.stackRxArmed();
     radiocon::setRxArmed(armed);
     if (armed && rxReadyMs < 0) rxReadyMs = static_cast<int32_t>(platform::uptimeMs());
-    // LED2: P1 gotowe; zapis przy zmianie, więc LED 2 z portu obowiązuje do następnej zmiany.
+    // LED2: radio gotowe; zapis przy zmianie, więc LED 2 z portu obowiązuje do następnej zmiany.
     static uint32_t radioCheckMs = 0;
     if (now - radioCheckMs >= radiocon::CHECK_MS && !bench.transmitting()) {
         radioCheckMs = now;

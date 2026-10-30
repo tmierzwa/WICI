@@ -49,12 +49,6 @@ void Display::clear() {
     transaction(CMD_CLEAR, 0);
 }
 
-bool Display::pending() const {
-    for (uint8_t byte : dirty_)
-        if (byte) return true;
-    return false;
-}
-
 uint16_t Display::refresh() {
     uint16_t count = 0;
     for (uint16_t y = 0; y < HEIGHT && count < LINES_PER_REFRESH; ++y) count += (dirty_[y / 8] >> (y % 8)) & 1u;
