@@ -1263,11 +1263,32 @@ class PackageTest(unittest.TestCase):
                                 "Reticulum-abc/docs/manual.pdf": b"pdf", "Reticulum-abc/LICENSE": b"Reticulum License\n"})
         out = self.tmp / "pakiet"
         (out / "sources").mkdir(parents=True)
-        pin = {"package": "RNS", "license": "LICENSE", "file": "Reticulum-abc.tar.gz"}
+        pin = {"package": "RNS", "license": "LICENSE"}
         with unittest.mock.patch.object(build_stanowisko.usb, "fetch", return_value=archive):
             build_stanowisko.library("reticulum", pin, out)
         self.assertEqual(sorted(p.relative_to(out).as_posix() for p in out.rglob("*") if p.is_file()),
-                         ["lib/RNS/__init__.py", "licenses/reticulum.txt", "sources/Reticulum-abc.tar.gz"])
+                         ["lib/RNS/__init__.py", "licenses/reticulum.txt", "sources/zrodla.tar.gz"])
+
+    def test_library_from_git_is_checked_by_its_commit(self):
+        import subprocess
+        repo = self.tmp / "LXMF"
+        (repo / "LXMF").mkdir(parents=True)
+        (repo / "LXMF" / "__init__.py").write_text("x = 1\n")
+        (repo / "LICENSE").write_text("Reticulum License\n")
+        git = lambda *a: subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false",
+                                         *a], cwd=repo, check=True, capture_output=True, text=True).stdout.strip()
+        git("init", "-q")
+        git("add", ".")
+        git("commit", "-q", "-m", "x")
+        pin = {"repository": str(repo), "commit": git("rev-parse", "HEAD"), "package": "LXMF", "license": "LICENSE"}
+        out = self.tmp / "pakiet"
+        (out / "sources").mkdir(parents=True)
+        with unittest.mock.patch.object(build_stanowisko.usb, "CACHE", self.tmp / "cache"):
+            build_stanowisko.library("lxmf", pin, out)
+            self.assertEqual((out / "lib" / "LXMF" / "__init__.py").read_text(), "x = 1\n")
+            self.assertTrue((out / "sources" / f"lxmf-{pin['commit']}.tar.gz").is_file())
+            with self.assertRaises(subprocess.CalledProcessError):   # commitu nie ma w repozytorium
+                build_stanowisko.library("lxmf2", {**pin, "commit": "0" * 40}, out)
 
     def test_library_without_licence_stops_the_build(self):
         archive = self.archive({"LXMF-abc/LXMF/__init__.py": b""})

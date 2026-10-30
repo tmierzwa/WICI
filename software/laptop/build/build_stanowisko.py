@@ -9,10 +9,11 @@ by pip), but no START programs, keys/ or export/. It holds:
   * runtime/: the same interpreters as the USB package (runtimes.json) and the whole pure-Python standard
     library without tests, Tk and IDLE (Reticulum loads modules by name, so a static search like the USB
     package's would be fragile; the station package has no FAT32 size budget);
-  * lib/: Reticulum e40191b, LXMF c3ff2d6 and pyserial 3.5 as sources (stanowisko.json, pinned SHA-256);
+  * lib/: Reticulum e40191b and LXMF c3ff2d6 fetched with git at the pinned commit and checked by its id
+    (like firmware/tools/stack_deps.py), pyserial 3.5 from PyPI with a pinned SHA-256 (stanowisko.json);
   * app/wici/: the application as files, with the reference model next to wzorzec.py;
   * stanowisko.sh, stanowisko.cmd: `python -m wici.stanowisko` with the interpreter of the system;
-  * licenses/ and sources/ (the downloaded archives of the libraries as they were).
+  * licenses/ and sources/ (archives of the library sources: `git archive` of the commit, pyserial as downloaded).
 Downloads are cached in software/laptop/build/cache. --out is replaced only when it is empty or a previous
 build of the station package.
 """
@@ -63,9 +64,32 @@ def stdlib_files(stdlib):
     return files
 
 
+def checkout(name, pin):
+    """Working tree of the pinned commit in the cache: fetched with git and checked by its id; an archive of
+    it (`git archive`) for sources/. Returns the archive path."""
+    dest = usb.CACHE / f"{name}-{pin['commit']}"
+
+    def git(*args):
+        return subprocess.run(["git", *args], cwd=dest, check=True, capture_output=True, text=True).stdout.strip()
+    if not (dest / ".git").is_dir() or git("rev-parse", "HEAD") != pin["commit"]:
+        shutil.rmtree(dest, ignore_errors=True)
+        dest.mkdir(parents=True)
+        usb.log(f"pobieranie {pin['repository']} {pin['commit']}")
+        git("init", "-q")
+        git("fetch", "-q", "--depth", "1", pin["repository"], pin["commit"])
+        git("checkout", "-q", "FETCH_HEAD")
+    if git("rev-parse", "HEAD") != pin["commit"]:
+        sys.exit(f"{name}: pobrany commit nie jest przypiętym {pin['commit']}")
+    archive = usb.CACHE / f"{name}-{pin['commit']}.tar.gz"
+    if not archive.is_file():
+        top = Path(pin["repository"]).stem
+        git("archive", "--format=tar.gz", f"--prefix={top}-{pin['commit']}/", "-o", str(archive), "HEAD")
+    return archive
+
+
 def library(name, pin, out):
     """The package directory of a pinned source archive into lib/, its licence and the archive into sources/."""
-    archive = usb.fetch(pin, name)
+    archive = checkout(name, pin) if "commit" in pin else usb.fetch(pin, name)
     with tarfile.open(archive) as tar:
         top = tar.getmembers()[0].name.split("/")[0]
         prefix = f"{top}/{pin['package']}/"
@@ -78,7 +102,7 @@ def library(name, pin, out):
                 usb.write(out / "licenses" / f"{name}.txt", tar.extractfile(m).read())
     if not (out / "lib" / pin["package"] / "__init__.py").is_file() or not (out / "licenses" / f"{name}.txt").is_file():
         sys.exit(f"{name}: w archiwum nie ma pakietu {pin['package']} albo licencji")
-    shutil.copyfile(archive, out / "sources" / pin["file"])
+    shutil.copyfile(archive, out / "sources" / archive.name)
 
 
 def application(out):
@@ -162,7 +186,7 @@ def build(out, names, archives=None):
     (out / "sources" / "README.txt").write_text(
         "Kod aplikacji stanowiska WICI jest w app/wici jako pliki źródłowe; repozytorium projektu, commit "
         f"{commit or 'nieznany'}: software/laptop i software/reference.\n"
-        "Reticulum, LXMF i pyserial: archiwa źródeł w tym katalogu, adresy i sumy SHA-256 w build-manifest.json.\n"
+        "Reticulum, LXMF i pyserial: archiwa źródeł w tym katalogu; repozytoria i commity (Reticulum, LXMF) oraz adres i suma SHA-256 (pyserial) w build-manifest.json.\n"
         f"Środowiska Pythona {usb.VERSION}: python.org (Windows) i python-build-standalone (macOS, Linux).\n",
         encoding="utf-8")
     doc = usb.manifest(out, names, modules, commit)
