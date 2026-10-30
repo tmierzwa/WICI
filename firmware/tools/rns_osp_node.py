@@ -29,7 +29,7 @@ node (rebuilt from the routes through USB with 1 hop in FRAM).
 
 With --link lora (with --lxmf, host and host-port) the programs use the emulated LoRa link (node_host --link lora): on-air
 frames of the RNode header, one per UDP datagram, through a small shared medium (class Air) that joins the programs as
-neighbours; there is no RNode emulator here, the computer is behind USB. The bitrate of the KISS interface is 42 b/s
+neighbours; there is no RNode emulator here, the computer is behind USB. The bitrate of the KISS interface is 41 b/s
 (radio.md, "Kryterium bitrate"). Checks added to the steps above (the flood steps of the P1 run are left out): a packet of 493-500 B from USB is dropped before the
 radio and counted (too_large); a LoRa frame pair without IFAC does not reach the computer; LXMRouter in Python on the
 computer sends an LXMF SA1 message to the station and gets the delivery proof before any retry (delivery_attempts 1,
@@ -64,7 +64,7 @@ NETWORK_KEY = "5749434954335f696661635f74657374"  # 16 B test key, not a field k
 BURST = 6
 BULLETIN = 50             # --link lora: BULLETIN do 50 stacji, wiadomości LXMF jedna za drugą
 IN_FLIGHT = 4             # najwyżej tyle wiadomości w drodze naraz (stanowisko-osp.md, "Wysyłka"; bufor USB węzła ma 8 slotów)
-LORA_BITRATE = 42         # bitrate interfejsu KISS komputera w próbie LoRa (radio.md, kryterium bitrate)
+LORA_BITRATE = 41         # bitrate interfejsu KISS komputera w próbie LoRa (radio.md, kryterium bitrate)
 FLOOD_INTERVAL_S = 0.02   # zalew z USB: ramka co 20 ms (ok. 50/s, ponad limit weryfikacji i bufor KISS)
 USB_PINNED = 8            # cele komputera chronione w węźle (rns_node.h)
 
@@ -401,7 +401,7 @@ def lora_checks(args, work, air, programs, node, station, kiss, identity, destin
     checks["lxmf_router_to_station_with_proof"] = learned and ok
     checks["lxmf_no_retry_before_proof"] = message.delivery_attempts == 1 and t_proof < message.next_delivery_attempt
     checks["lxmf_three_attempts"] = message.max_delivery_attempts == 3
-    checks["lxmf_interval_from_bitrate_alone"] = interval >= 196 and t0 - 1 <= attempt_at <= t_proof + 1
+    checks["lxmf_interval_from_bitrate_alone"] = interval >= 201 and t0 - 1 <= attempt_at <= t_proof + 1
 
     # BULLETIN do 50 stacji tak, jak go rozsyła aplikacja stanowiska ("Wysyłka": po kolei, najwyżej IN_FLIGHT wiadomości
     # w drodze). Czas kanału jednego pakietu (ok. 5 s) jest dłuższy niż 5 s blokady interfejsu KISS w Pythonie, więc
@@ -490,7 +490,7 @@ def main():
     parser.add_argument("--link", choices=("p1", "lora"), default="p1", help="link between the programs: emulated P1 or LoRa (frames)")
     parser.add_argument("--bitrate", type=int, default=None,
                         help="bitrate of the computer KISS interface in the Reticulum config (bit/s); it sets the receipt "
-                             "timeouts: 500 B x 8 / bitrate + 6 s + 6 s per hop (default 24, with --link lora 42)")
+                             "timeouts: 500 B x 8 / bitrate + 6 s + 6 s per hop (default 24, with --link lora 41)")
     args = parser.parse_args()
     lora = args.link == "lora"
     if lora and not args.lxmf:
