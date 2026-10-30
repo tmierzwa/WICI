@@ -146,6 +146,8 @@ public:
     const LinkCounters& link() const { return link_; }
     // Największy dług łącza: 12 x najdłuższa seria układu (P1 16,8 s, LoRa 12 x 838 ms ≈ 10,06 s),
     // odczekiwany po starcie bez poprawnego rekordu długu.
+    // Ramkowanie łącza układu (RNODE: LoRa); stos bierze z niego czas łącza (p1iface::LinkTiming).
+    radiolink::Framing linkFraming() const { return radio_.framing(); }
     uint32_t maxDebtMs() const { return radio_.seriesMaxMs() * radiolink::P1_DEBT_FACTOR; }
     // Złożony datagram łącza i koniec nadawania (ok = seria wyszła) dla warstwy aplikacji.
     void onDatagram(void (*handler)(const uint8_t* data, size_t length, void* context), void* context) { datagramHandler_ = handler; datagramContext_ = context; }

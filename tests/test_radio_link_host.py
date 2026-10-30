@@ -1346,6 +1346,7 @@ int main() {
     bench.restoreDebt(bench.maxDebtMs());
     printf("MAXDEBT %lu %lu %lu\n", static_cast<unsigned long>(bench.maxDebtMs()), static_cast<unsigned long>(bench.debtRemainingMs()),
            static_cast<unsigned long>(measure::MAX_DEBT_MS));
+    printf("FRAMING %d\n", bench.linkFraming() == radiolink::Framing::RNODE);   // BenchRadio::timing(): czas LoRa
     // Odbiór stosu startuje sam poza trybem przygotowania, gdy układ ma profil.
     bench.p1Ready = true;
     runFor(1100);
@@ -1878,6 +1879,7 @@ class LoraBenchTests(unittest.TestCase):
     def test_start_without_a_debt_record_waits_the_lora_maximum(self):
         # 12 x 838 ms (two 255 B frames with ramp-up), not the P1 bound of 16.8 s.
         self.assertEqual(line(self.out, "MAXDEBT"), "MAXDEBT 10056 10056 16800")
+        self.assertEqual(line(self.out, "FRAMING"), "FRAMING 1")   # stacja z LoRa bierze czas łącza z loraTiming()
 
     def test_stack_receive_starts_by_itself_and_p1_commands_stay_refused(self):
         self.assertEqual(line(self.out, "AUTORX"), "AUTORX 1 1 1")
