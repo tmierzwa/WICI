@@ -7,7 +7,8 @@ status, DS11896), measure::Bench (firmware/src/measure.cpp) against a fake radio
 chip (BUSY, status byte, registers, ring buffer of continuous receive, IRQ, standby modes and fallback, CAD,
 warm sleep with the retention list): transmit in steps with CAD, the receive sample (late frames, seen flags
 only, activity marks, removed module under the radio lock), with measure::Bench on top of it (TXPKT/TXCW
-debt and series limit in LoRa air time, RX/RXPER with SNR, no P1 link)."""
+debt and series limit in LoRa air time, RX/RXPER with SNR, no P1 link), and measure::Bench with the RNode
+framing over a fake LoRa driver (stack link: TX sequence, deferrals, silence, assembly, re-arm, EMC)."""
 
 import json
 from pathlib import Path
@@ -64,7 +65,7 @@ extern FakeSerial Serial;
     "SPI.h": r"""
 #pragma once
 #include "Arduino.h"
-constexpr uint8_t MSBFIRST = 1, SPI_MODE0 = 0;
+constexpr uint8_t MSBFIRST = 1, LSBFIRST = 0, SPI_MODE0 = 0;
 struct SPISettings { SPISettings() {} SPISettings(uint32_t, uint8_t, uint8_t) {} };
 struct SPIClass {
     void beginTransaction(const SPISettings&) {}
@@ -294,12 +295,15 @@ BENCH_HARNESS = r"""
 #include <vector>
 #include "measure.h"
 #include "p1frame.h"
+#include "platform.h"
 #include "testframe.h"
 
 uint32_t fakeUs = 0;
 FakeSerial Serial;
 int digitalRead(uint8_t) { return HIGH; }
 void digitalWrite(uint8_t, uint8_t) {}
+bool platform::radioLockTake(uint32_t) { return true; }  // łącze P1: bez zadania odbioru
+void platform::radioLockGive() {}
 // Generator stacji (w obrazie: main.cpp nad drbg); tu deterministyczny licznik.
 void measure::randomBytes(uint8_t* out, size_t count) {
     static uint8_t next = 1;
@@ -366,7 +370,7 @@ struct FakeDriver : radiolink::Driver {
     double onAirMs(size_t length) const override { return length * 8 * 1000.0 / 4800; }
     size_t maxTestLength() const override { return p1frame::MAX_FRAME; }
     uint32_t seriesMaxMs() const override { return radiolink::P1_SERIES_MAX_MS; }
-    bool p1Link() const override { return true; }
+    radiolink::Framing framing() const override { return radiolink::Framing::P1; }
 };
 
 FakeDriver radio;
@@ -510,6 +514,7 @@ SX1262_HARNESS = r"""
 #include "journal.h"
 #include "platform.h"
 #include "measure.h"
+#include "radio_lock.h"
 #include "sx1262_link.h"
 #include "testframe.h"
 
@@ -523,9 +528,22 @@ void measure::randomBytes(uint8_t* out, size_t count) {
 constexpr uint8_t PIN_CS = 10, PIN_RESET = 9, PIN_BUSY = 14, PIN_RXEN = 42, PIN_OK = 39;
 
 // Blokada operacji radia: licznik zamiast mutexu FreeRTOS (sprawdza, że próbka nie zwalnia cudzej blokady).
+// lockBusy: blokadę trzyma ktoś inny (pętla przy obiegu zadania); taskRunning: zadanie odbioru pracuje, więc
+// sprawdzenie WICI_RADIO_LOCK_CHECK wymaga blokady.
 int lockDepth = 0;
-bool platform::radioLockTake(uint32_t) { ++lockDepth; return true; }
+bool lockBusy = false, taskRunning = false;
+uint32_t lockTimeouts = 0;
+bool platform::radioLockTake(uint32_t timeoutMs) {
+    if (lockBusy) {
+        if (timeoutMs) ++lockTimeouts;
+        return false;
+    }
+    ++lockDepth;
+    return true;
+}
 void platform::radioLockGive() { --lockDepth; }
+uint32_t platform::radioLockTimeouts() { return lockTimeouts; }
+bool platform::radioLockOk() { return !taskRunning || lockDepth > 0; }
 
 // Model SX1262 na poziomie poleceń: bajt statusu (tryb), rejestry 16-bitowe, bufor 256 B jako pierścień
 // (odbiór ciągły pisze każdy pakiet dalej od końca poprzedniego, karta rozdz. 7.2 i 13.2.3), IRQ kasowane
@@ -542,7 +560,7 @@ struct Chip {
     uint8_t packetParams[6] = {}, modulation[4] = {}, paConfig[4] = {}, txParams[2] = {}, tcxo[4] = {};
     uint32_t rf = 0, rxTimeout = 0;
     int txCountdown = -1, cadCountdown = -1;
-    bool holdTx = false, busyStuck = false, rxen = false, rxenAtTx = true;
+    bool holdTx = false, busyStuck = false, rxen = false, rxenAtTx = true, rxenAtCad = false;
     bool cadBusy = false, cadHang = false;  // CAD wykrywa preambułę; CAD bez końca
     uint8_t fallback = 0x20, rxPtr = 0, cadParams[7] = {}, dioIrq[8] = {};
     unsigned cadCount = 0;
@@ -596,6 +614,7 @@ void execute() {
         case sx1262::OP_SET_CAD:
             if (chip.mode == sx1262::MODE_STBY_RC || chip.mode == sx1262::MODE_STBY_XOSC) {
                 chip.mode = sx1262::MODE_RX;  // demodulator pracuje w czasie CAD
+                chip.rxenAtCad = chip.rxen;   // przełącznik antenowy w odbiorze tylko przy wysokim RXEN
                 chip.cadCountdown = 2;
             }
             break;
@@ -896,6 +915,8 @@ int main() {
     const bool cadSent = link.sendPrepared(&cadTiming);
     printf("CADTX %d %s %d %d %s %d %zu %02X %s %u\n", static_cast<int>(prep), prepMode, prepRxen, static_cast<int>(cadFree), cadMode,
            cadSent, chip.lastTx.size(), chip.lastTx.front(), link.stateName(), chip.txCount - txBeforeCad);
+    // RXEN wysoki w czasie CAD, niski przed SetTx.
+    printf("CADRXEN %d %d\n", chip.rxenAtCad, chip.rxenAtTx);
     // Kolejność: SetStandby, parametry pakietu, bufor, SetCad, SetTx; bez SetStandby między CAD a SetTx.
     printf("CADORDER %d %d %d %d %d %d\n", indexOf(sx1262::OP_SET_STANDBY), indexOf(sx1262::OP_SET_PACKET_PARAMS),
            indexOf(sx1262::OP_WRITE_BUFFER), indexOf(sx1262::OP_SET_CAD), indexOf(sx1262::OP_SET_TX),
@@ -914,11 +935,13 @@ int main() {
     const radiolink::Cad cadHung = link.cad();
     const uint32_t cadHangMs = millis() - cadT0;
     const char* hungMode = link.stateName();
+    const bool hungRxen = chip.rxen;
     chip.cadHang = false;
     link.startRx(true, 0);
     const radiolink::Cad cadInRx = link.cad();
     printf("CADBUSY %d %d %s %d %d %u %04X\n", static_cast<int>(cadBusy), static_cast<int>(cadHung), hungMode, cadHangMs >= 20,
            static_cast<int>(cadInRx), chip.cadCount, chip.irq);
+    printf("CADHUNGRXEN %d\n", hungRxen);
 
     // Przed wyjściem z odbioru: nieodczytana ramka albo ramka w toku odracza nadanie, bez kasowania flag
     // i bez zapisu bufora.
@@ -1002,6 +1025,26 @@ int main() {
     link.clearActivity();
     link.serviceRx(rxf, true);
     printf("RSSIMARK %d %d %d\n", rssiBusy, rssiAged, link.activity().quietFor(millis(), 50));
+    // Ramka w toku: po 100 ms od nagłówka znaczniki (okno 50 ms) już się zestarzały, a kanał nadal zajęty;
+    // wolny po końcu ramki (po oknie) i po czasie najdłuższej ramki bez końca.
+    link.startRx(true, 0);
+    link.clearActivity();
+    chip.rssiInst = 220;
+    airHeader(0x50, 0);
+    link.serviceRx(rxf, false);
+    fakeUs += 100000;
+    const int midFrame = static_cast<int>(link.recentActivity(50));
+    fakeUs += 400000;
+    const int pastMax = static_cast<int>(link.recentActivity(50));
+    link.startRx(true, 0);
+    link.clearActivity();
+    airHeader(0x60, 0);
+    link.serviceRx(rxf, false);
+    fakeUs += 100000;
+    airEnd(20, 0x60);
+    link.serviceRx(rxf, false);
+    fakeUs += 60000;
+    printf("INFRAME %d %d %d\n", midFrame, pastMax, static_cast<int>(link.recentActivity(50)));
     link.idle();
     const sx1262::RxService notRx = link.serviceRx(rxf, false);
     printf("NOTRX %d\n", static_cast<int>(notRx));
@@ -1153,6 +1196,755 @@ int main() {
     prepAfter.begin();
     printf("PREPTORN %d %d %d %lu\n", prepWritten, tornWritten, prepAfter.prepCorrupt(),
            static_cast<unsigned long>(prepAfter.prepEntries()));
+    // Odbiór w tle (L6): obieg zadania na osobnym sterowniku nad tym samym modelem układu.
+    radio.reset();
+    sx1262::LinkDriver tl(radio, PIN_RXEN);
+    tl.begin();
+    tl.configure();
+    tl.setBackgroundRx(true);
+    tl.startRx(true, 0);
+    const rxwatch::TaskSignals& sig = tl.taskSignals();
+    // Pierwszy obieg z próbką RSSI; następny w tym samym takcie bez DIO1 nie dotyka układu.
+    chip.ops.clear();
+    tl.taskCycle(false);
+    const size_t opsFirst = chip.ops.size();
+    tl.taskCycle(false);
+    printf("TASKSKIP %d %zu %lu %d\n", opsFirst > 0, chip.ops.size() - opsFirst, static_cast<unsigned long>(sig.ticks.load()),
+           sig.lastServiceMs.load() == millis());
+    // Pętla nie czyta flag odbioru: ramka w układzie bez obiegu zadania zostaje w układzie.
+    airFrame(40, 0x11);
+    radiolink::Frame tf;
+    const int beforeTask = static_cast<int>(tl.pollRx(tf));
+    const bool rxDoneKept = chip.irq & sx1262::IRQ_RX_DONE;
+    // DIO1 wysoki: obieg zadania odbiera ramkę do pierścienia z czasem próbki; pollRx czyta pierścień.
+    tl.taskCycle(true);
+    const uint32_t sampleMs = millis();
+    const int fromRing = static_cast<int>(tl.pollRx(tf));
+    printf("TASKFRAME %d %d %d %zu %d %d %d\n", beforeTask, rxDoneKept, fromRing, tf.length, bytesFrom(tf, 0x11), tf.receivedMs == sampleMs,
+           static_cast<int>(tl.pollRx(tf)));
+    // Ramka z błędem CRC i ramka spóźniona idą jako Bad (rx_bad w Bench), jak bez zadania.
+    injectFrame(12, 0x00, 0x10, sx1262::IRQ_CRC_ERR);
+    tl.taskCycle(true);
+    const int crc = static_cast<int>(tl.pollRx(tf));
+    printf("TASKBAD %d %zu\n", crc, tf.length);
+    // Pełny pierścień: 9 ramek bez odczytu, odpada dziewiąta (najnowsza), osiem zostaje w kolejności.
+    for (uint8_t i = 0; i < 9; ++i) {
+        fakeUs += 1000;
+        airFrame(20, static_cast<uint8_t>(0x20 + i * 0x10));
+        tl.taskCycle(true);
+    }
+    int inOrder = 0;
+    for (uint8_t i = 0; i < 8; ++i)
+        if (tl.pollRx(tf) == radiolink::RxPoll::Frame && bytesFrom(tf, static_cast<uint8_t>(0x20 + i * 0x10))) ++inOrder;
+    printf("TASKRING %d %lu %d\n", inOrder, static_cast<unsigned long>(tl.rxRingOverflow()), static_cast<int>(tl.pollRx(tf)));
+    // Blokada zajęta przez pętlę: obieg liczy się, ale bez dostępu do układu i bez obsługi; ramka czeka w układzie.
+    fakeUs += 10000;
+    airFrame(30, 0x55);
+    lockBusy = true;
+    const uint32_t ticksBefore = sig.ticks.load(), serviceBefore = sig.lastServiceMs.load();
+    chip.ops.clear();
+    tl.taskCycle(true);
+    const bool busyQuiet = chip.ops.empty() && tl.pollRx(tf) == radiolink::RxPoll::Nothing;
+    printf("TASKLOCKED %lu %d %d %lu\n", static_cast<unsigned long>(sig.ticks.load() - ticksBefore), busyQuiet,
+           sig.lastServiceMs.load() == serviceBefore, static_cast<unsigned long>(lockTimeouts));
+    lockBusy = false;
+    tl.taskCycle(true);
+    const int polledAfterLock = static_cast<int>(tl.pollRx(tf));
+    printf("TASKAFTERLOCK %d %d\n", polledAfterLock, bytesFrom(tf, 0x55));
+    // Sama próbka RSSI co 5 ms odświeża lastServiceMs.
+    fakeUs += 6000;
+    tl.taskCycle(false);
+    printf("TASKRSSI %d\n", sig.lastServiceMs.load() == millis());
+    // Wyjęty moduł (BUSY wysoki): obieg przerwany bez ramki, następna próba po 100 ms, bez czekania na BUSY w każdym takcie.
+    chip.busyStuck = true;
+    const unsigned long busyBefore = radio.busyTimeouts();
+    fakeUs += 6000;
+    tl.taskCycle(true);
+    const unsigned long busyFirst = radio.busyTimeouts() - busyBefore;
+    const uint32_t stuckService = sig.lastServiceMs.load();
+    for (int i = 0; i < 50; ++i) { fakeUs += 1000; tl.taskCycle(true); }
+    const unsigned long busyDuring = radio.busyTimeouts() - busyBefore;
+    for (int i = 0; i < 80; ++i) { fakeUs += 1000; tl.taskCycle(true); }
+    const unsigned long busyLater = radio.busyTimeouts() - busyBefore;
+    chip.busyStuck = false;
+    for (int i = 0; i < 120; ++i) { fakeUs += 1000; tl.taskCycle(false); }
+    printf("TASKBUSY %lu %lu %lu %d %d %zu\n", busyFirst, busyDuring, busyLater, stuckService < millis() - 100,
+           millis() - sig.lastServiceMs.load() < sx1262::LinkDriver::RSSI_SAMPLE_MS,  // próbka co 5 ms, faza zależy od czasu testu
+           static_cast<size_t>(tl.pollRx(tf) == radiolink::RxPoll::Nothing));
+    // Sterownik poza odbiorem (IDLE, nadawanie): obieg bez obsługi.
+    tl.idle();
+    const uint32_t idleService = sig.lastServiceMs.load();
+    fakeUs += 6000;
+    chip.ops.clear();
+    tl.taskCycle(true);
+    printf("TASKNOTRX %d %d\n", sig.lastServiceMs.load() == idleService, chip.ops.empty());
+    printf("TASKMAX %d\n", sig.serviceMaxUs.load() > 0);
+
+    // Sprawdzenie blokady (WICI_RADIO_LOCK_CHECK): przy pracującym zadaniu transakcja bez blokady się liczy,
+    // pod blokadą i w obiegu zadania nie.
+    taskRunning = true;
+    const unsigned long missesBefore = radio.lockMisses();
+    tl.stateName();
+    const unsigned long missesBare = radio.lockMisses() - missesBefore;
+    {
+        platform::RadioLock lock(500);
+        tl.stateName();
+    }
+    tl.startRx(true, 0);  // bez blokady: liczy się
+    const unsigned long missesAfterStart = radio.lockMisses() - missesBefore;
+    fakeUs += 6000;
+    tl.taskCycle(true);
+    printf("LOCKCHECK %lu %lu %lu\n", missesBare, missesAfterStart, radio.lockMisses() - missesBefore - missesAfterStart);
+    // Widok pętli pod blokadą (radio_lock.h): każda operacja bierze blokadę; bez niej wynik błędu, a idle() idzie mimo to.
+    radiolink::LockedDriver locked(tl, 500);
+    const unsigned long missesLocked = radio.lockMisses();
+    const bool lockedRx = locked.startRx(true, 0);
+    const char* lockedState = locked.stateName();
+    const bool lockedClean = radio.lockMisses() == missesLocked && lockDepth == 0;
+    lockBusy = true;
+    const uint32_t timeoutsBefore = lockTimeouts;
+    const bool rxRefused = !locked.startRx(true, 0);
+    const char* stateRefused = locked.stateName();
+    const bool pollRefused = locked.pollRx(tf) == radiolink::RxPoll::Nothing;
+    const bool cadRefused = locked.cad() == radiolink::Cad::Error;
+    locked.idle();
+    const char* afterIdle = sx1262::modeName(chip.mode);
+    printf("LOCKED %d %s %d %d %s %d %d %s %lu %lu\n", lockedRx, lockedState, lockedClean, rxRefused, stateRefused, pollRefused, cadRefused,
+           afterIdle, static_cast<unsigned long>(lockTimeouts - timeoutsBefore), locked.seriesMaxMs() == tl.seriesMaxMs() ? 1ul : 0ul);
+    lockBusy = false;
+    taskRunning = false;
+    return 0;
+}
+"""
+
+
+LORA_BENCH_HARNESS = r"""
+#include <deque>
+#include <string>
+#include <vector>
+#include "loraframe.h"
+#include "lora_profile.h"
+#include "measure.h"
+#include "platform.h"
+#include "rx_watch.h"
+
+uint32_t fakeUs = 0;
+FakeSerial Serial;
+int digitalRead(uint8_t) { return HIGH; }
+void digitalWrite(uint8_t, uint8_t) {}
+void measure::randomBytes(uint8_t* out, size_t count) {
+    static uint8_t next = 0x31;
+    for (size_t i = 0; i < count; ++i) out[i] = next += 0x37;
+}
+
+// Blokada operacji radia: pętla bierze ją zawsze (rekurencyjnie), zadanie odbioru tylko próbuje (limit 0)
+// i przy blokadzie trzymanej przez pętlę pomija obieg, jak zadanie na ESP32-S3.
+int loopDepth = 0;
+bool inTask = false;
+int taskSkipped = 0, taskServiced = 0;
+bool platform::radioLockTake(uint32_t) {
+    if (!inTask) { ++loopDepth; return true; }
+    return loopDepth == 0;
+}
+void platform::radioLockGive() {
+    if (!inTask) --loopDepth;
+}
+void rxTaskCycle() {
+    inTask = true;
+    {
+        platform::RadioLock lock(0);
+        if (lock.held()) ++taskServiced;
+        else ++taskSkipped;
+    }
+    inTask = false;
+}
+
+struct RamStorage : journal::Storage {
+    std::vector<uint8_t> bytes = std::vector<uint8_t>(512 * 1024, 0xFF);
+    bool fail = false;  // zapis do FRAM nie przechodzi
+    bool read(uint32_t address, uint8_t* data, size_t count) override {
+        memcpy(data, &bytes[address], count);
+        return true;
+    }
+    bool write(uint32_t address, const uint8_t* data, size_t count) override {
+        if (fail) return false;
+        memcpy(&bytes[address], data, count);
+        return true;
+    }
+};
+RamStorage ram;
+journal::Journal dj(ram);
+
+// Sterownik zastępczy LoRa: kroki nadawania z L4 zapisane w ops razem z długiem w dzienniku w tej chwili,
+// znaczniki aktywności z czasem, zajęty CAD przez cadBusy sprawdzeń, RSSI ponad progiem przez rssiBusy odczytów.
+struct FakeLora : radiolink::Driver {
+    std::vector<std::string> ops;
+    std::vector<std::vector<uint8_t>> sent;
+    std::deque<radiolink::Frame> rxQueue;
+    std::vector<uint8_t> loaded;
+    bool rxActive = false, rxVariable = false, rxPending = false, failDebtAtCad = false, cw = false;
+    int cadBusy = 0, rssiBusy = 0, taskCyclesPerFrame = 0;
+    radiolink::Activity mark = radiolink::Activity::None;
+    uint32_t markMs = 0;
+    void op(const char* name) { ops.push_back(std::string(name) + ":" + std::to_string(dj.debt().a)); }
+    const char* stateName() override { return cw ? "TX" : rxActive ? "RX" : "STBY_XOSC"; }
+    void idle() override { rxActive = false; cw = false; }
+    bool startCw() override { cw = true; return true; }
+    void stopCw() override { cw = false; }
+    bool send(const uint8_t* frame, size_t length) {
+        sent.emplace_back(frame, frame + length);
+        for (int i = 0; i < taskCyclesPerFrame; ++i) { rxTaskCycle(); fakeUs += 100000; }  // ramka 255 B to 419 ms
+        return true;
+    }
+    bool transmit(const uint8_t* frame, size_t length, bool, radiolink::TxTiming*) override {
+        op("tx");
+        rxActive = false;
+        return send(frame, length);
+    }
+    bool startRx(bool variable, uint8_t) override {
+        ops.push_back("rx");
+        rxActive = true;
+        rxVariable = variable;
+        return true;
+    }
+    radiolink::RxPoll pollRx(radiolink::Frame& out) override {
+        if (rxQueue.empty()) return radiolink::RxPoll::Nothing;
+        out = rxQueue.front();
+        rxQueue.pop_front();
+        return radiolink::RxPoll::Frame;
+    }
+    bool receivingFrame() override { return false; }
+    radiolink::Rssi rssi() override {
+        radiolink::Rssi r;
+        r.valid = rxActive;
+        r.dbm = rssiBusy > 0 && rssiBusy-- ? -90 : -120;
+        return r;
+    }
+    bool setFrequencyOffset(int32_t) override { return true; }
+    void reapplyFrequencyOffset() override {}
+    int32_t frequencyOffsetHz() override { return 0; }
+    int32_t frequencyOffsetRaw() override { return 0; }
+    double frequencyStepHz() const override { return 1.0; }
+    bool frequencyErrorHz(int32_t&) override { return false; }
+    uint32_t frameAirMs(size_t length) const override { return lora::frameAirMs(length); }
+    double onAirMs(size_t length) const override { return lora::frameAirUs(length) / 1000.0; }
+    size_t maxTestLength() const override { return lora::MAX_PAYLOAD; }
+    uint32_t seriesMaxMs() const override { return lora::SERIES_MAX_MS; }
+    radiolink::Framing framing() const override { return radiolink::Framing::RNODE; }
+    bool hasSnr() const override { return true; }
+    int8_t ccaThresholdDbm() const override { return lora::CCA_RSSI_THRESHOLD_DBM; }
+    radiolink::TxPrep prepareTx(const uint8_t* frame, size_t length) override {
+        op("prep");
+        if (rxPending) { rxPending = false; return radiolink::TxPrep::RxPending; }  // układ zostaje w odbiorze
+        rxActive = false;
+        loaded.assign(frame, frame + length);
+        return radiolink::TxPrep::Ready;
+    }
+    radiolink::Cad cad() override {
+        op("cad");
+        if (failDebtAtCad) ram.fail = true;
+        return cadBusy > 0 && cadBusy-- ? radiolink::Cad::Busy : radiolink::Cad::Free;
+    }
+    bool sendPrepared(radiolink::TxTiming*) override {
+        op("send");
+        return send(loaded.data(), loaded.size());
+    }
+    radiolink::Activity recentActivity(uint32_t windowMs) override {
+        ops.push_back("window");
+        return mark != radiolink::Activity::None && millis() - markMs < windowMs ? mark : radiolink::Activity::None;
+    }
+    void clearActivity() override { mark = radiolink::Activity::None; }
+    uint32_t rxLate() const override { return 2; }
+};
+
+FakeLora radio;
+measure::Bench bench(radio, 3, -1);
+std::vector<uint8_t> received;
+int txDone = -1;
+uint32_t uptime() { return millis() / 1000; }
+
+void runFor(uint32_t ms) {
+    const uint32_t end = millis() + ms;
+    while (millis() < end) {
+        fakeUs += 1000;
+        bench.poll();
+    }
+}
+// Do końca nadania (txDone) albo limitu; potem odczekanie długu, żeby następny przypadek startował bez niego.
+void untilDone(uint32_t limitMs) {
+    const uint32_t end = millis() + limitMs;
+    while (txDone < 0 && millis() < end) {
+        fakeUs += 1000;
+        bench.poll();
+    }
+}
+void settle() { runFor(bench.debtRemainingMs() + 100); }
+std::string ops() {
+    std::string out;
+    for (const auto& o : radio.ops) out += (out.empty() ? "" : " ") + o;
+    radio.ops.clear();
+    return out;
+}
+std::vector<uint8_t> datagram(size_t length, uint8_t seed) {
+    std::vector<uint8_t> d(length);
+    for (size_t i = 0; i < length; ++i) d[i] = static_cast<uint8_t>(seed + i * 13);
+    return d;
+}
+const char* text(const char* error) { return error ? error : "-"; }
+
+int main() {
+    dj.begin();
+    bench.attach(&dj, uptime);
+    bench.onDatagram([](const uint8_t* data, size_t length, void*) { received.assign(data, data + length); }, nullptr);
+    bench.onTxDone([](bool ok, void*) { txDone = ok; }, nullptr);
+    fakeUs = 1000000;
+
+    // Start bez poprawnego rekordu długu: 12 x seria LoRa (2 x 419 ms), nie stała P1 16,8 s.
+    bench.restoreDebt(bench.maxDebtMs());
+    printf("MAXDEBT %lu %lu %lu\n", static_cast<unsigned long>(bench.maxDebtMs()), static_cast<unsigned long>(bench.debtRemainingMs()),
+           static_cast<unsigned long>(measure::MAX_DEBT_MS));
+    printf("FRAMING %d\n", bench.linkFraming() == radiolink::Framing::RNODE);   // BenchRadio::timing(): czas LoRa
+    // Odbiór stosu startuje sam poza trybem przygotowania, gdy układ ma profil.
+    bench.p1Ready = true;
+    runFor(1100);
+    printf("AUTORX %d %d %d\n", bench.receiving(), radio.rxActive, radio.rxVariable);
+    const uint8_t one[1] = {0};
+    const char* p1send = bench.p1send(one, 1, true);
+    printf("NOP1 %s|%s\n", p1send, bench.p1rxStart());
+    const std::vector<uint8_t> big = datagram(509, 1);
+    printf("TOOBIG %s\n", text(bench.linkSend(big.data(), big.size(), true)));
+    settle();
+
+    // Nadanie 508 B: dług odczekany, okno bez aktywności, ramka 1 przed CAD, zapis długu po wolnym CAD,
+    // ramka 1, ramka 2, odbiór. W trakcie ramek zadanie odbioru próbuje blokady bez czekania i pomija obiegi.
+    const std::vector<uint8_t> d508 = datagram(508, 7);
+    radio.ops.clear();
+    radio.taskCyclesPerFrame = 3;
+    const char* error = bench.linkSend(d508.data(), d508.size(), true);
+    untilDone(100);
+    radio.taskCyclesPerFrame = 0;
+    printf("ORDER %s|%s\n", text(error), ops().c_str());
+    rxTaskCycle();  // po nadaniu blokada wolna
+    printf("TRYLOCK %d %d %d %d\n", taskSkipped, taskServiced, txDone, loopDepth);
+    loraframe::Assembler check;
+    size_t assembled = 0;
+    for (const auto& f : radio.sent)
+        if (check.push(f.data(), f.size(), millis()) == loraframe::Outcome::COMPLETE) assembled = check.length();
+    printf("FRAMES %zu %zu %zu %02X %d %d\n", radio.sent.size(), radio.sent[0].size(), radio.sent[1].size(),
+           radio.sent[0][0] & 0x0F, radio.sent[0][0] == radio.sent[1][0], assembled == 508 && !memcmp(check.datagram(), d508.data(), 508));
+
+    // Restart w trakcie długu: odczekany cały dług z dziennika, potem nadanie.
+    const uint32_t journalDebt = dj.debt().a;
+    bench.restoreDebt(journalDebt);
+    txDone = -1;
+    radio.sent.clear();
+    const std::vector<uint8_t> d20 = datagram(20, 3);
+    bench.linkSend(d20.data(), d20.size(), true);
+    runFor(journalDebt - 100);
+    const size_t sentDuringDebt = radio.sent.size();
+    untilDone(1000);
+    printf("RESTART %lu %zu %zu %d\n", static_cast<unsigned long>(journalDebt), sentDuringDebt, radio.sent.size(), txDone);
+    settle();
+
+    // Zajęty CAD: odroczenie bez zapisu długu, powrót do odbioru, potem nadanie.
+    txDone = -1;
+    radio.ops.clear();
+    radio.cadBusy = 1;
+    bench.linkSend(d20.data(), d20.size(), true);
+    untilDone(3000);
+    printf("CADBUSY %s|%lu %lu %d\n", ops().c_str(), static_cast<unsigned long>(bench.link().cadBusy),
+           static_cast<unsigned long>(bench.link().deferrals), txDone);
+    settle();
+
+    // Aktywność w oknie (ramka 20 ms temu) i RSSI ponad progiem przy decyzji: dwa odroczenia, bez CAD.
+    txDone = -1;
+    radio.ops.clear();
+    radio.mark = radiolink::Activity::Rx;
+    radio.markMs = millis() - 20;
+    radio.rssiBusy = 1;
+    const uint32_t deferralsBefore = bench.link().deferrals;
+    bench.linkSend(d20.data(), d20.size(), true);
+    bench.poll();
+    radio.mark = radiolink::Activity::None;
+    untilDone(3000);
+    const std::string activityOps = ops();
+    printf("ACTIVITY %lu %lu %lu %d|%s\n", static_cast<unsigned long>(bench.link().rxBusy), static_cast<unsigned long>(bench.link().rssiBusy),
+           static_cast<unsigned long>(bench.link().deferrals - deferralsBefore), txDone, activityOps.c_str());
+    settle();
+
+    // Nieodczytana ramka w układzie przy wyjściu z odbioru: odroczenie (rx_busy), układ zostaje w odbiorze.
+    txDone = -1;
+    radio.rxPending = true;
+    bench.linkSend(d20.data(), d20.size(), true);
+    bench.poll();
+    const int pendingRx = radio.rxActive;
+    untilDone(3000);
+    printf("RXPENDING %lu %d %d\n", static_cast<unsigned long>(bench.link().rxBusy), pendingRx, txDone);
+    settle();
+
+    // Postój pętli 150 ms w czasie okna: decyzja ze znaczników, więc nadanie zaraz po postoju, bez nowego okna.
+    bench.stop();
+    bench.linkRxStart();
+    txDone = -1;
+    bench.linkSend(d20.data(), d20.size(), true);
+    fakeUs += 1000;
+    bench.poll();  // okno krótsze niż 50 ms od startu odbioru: czeka
+    const int waited = txDone;
+    fakeUs += 150000;
+    bench.poll();
+    printf("STALL %d %d\n", waited, txDone);
+    settle();
+    // Ten sam postój z ramką 30 ms przed jego końcem: odroczenie.
+    bench.stop();
+    bench.linkRxStart();
+    txDone = -1;
+    const uint32_t stallDeferrals = bench.link().deferrals;
+    bench.linkSend(d20.data(), d20.size(), true);
+    fakeUs += 1000;
+    bench.poll();
+    radio.mark = radiolink::Activity::Rx;
+    radio.markMs = millis() + 120;
+    fakeUs += 150000;
+    bench.poll();
+    printf("STALLBUSY %d %lu\n", txDone, static_cast<unsigned long>(bench.link().deferrals - stallDeferrals));
+    radio.mark = radiolink::Activity::None;
+    untilDone(3000);
+    settle();
+
+    // 30 odroczeń, a przy 31. zajętym CAD odrzut; dług nie zapisany.
+    txDone = -1;
+    radio.cadBusy = 1000;
+    const measure::LinkCounters before = bench.link();
+    bench.linkSend(d20.data(), d20.size(), true);
+    untilDone(60000);
+    radio.cadBusy = 0;
+    printf("DEFER30 %d %lu %lu %lu %lu\n", txDone, static_cast<unsigned long>(bench.link().deferrals - before.deferrals),
+           static_cast<unsigned long>(bench.link().cadBusy - before.cadBusy), static_cast<unsigned long>(bench.link().txDrop - before.txDrop),
+           static_cast<unsigned long>(dj.debt().a));
+
+    // Błąd zapisu długu po wolnym CAD: bez nadania, odbiór wraca.
+    txDone = -1;
+    radio.sent.clear();
+    radio.ops.clear();
+    radio.failDebtAtCad = true;
+    bench.linkSend(d20.data(), d20.size(), true);
+    untilDone(1000);
+    radio.failDebtAtCad = false;
+    ram.fail = false;
+    printf("DEBTFAIL %d %zu %d %s\n", txDone, radio.sent.size(), radio.rxActive, ops().c_str());
+
+    // Cisza: datagram czekający na dług odpada; wyjątek ciszy przepuszcza datagram od stosu, pomiar z portu nie.
+    bench.restoreDebt(500);
+    txDone = -1;
+    bench.linkSend(d20.data(), d20.size(), true);
+    bench.silence = true;
+    runFor(10);
+    const int silenced = txDone;
+    bench.silenceException = true;
+    settle();
+    txDone = -1;
+    bench.prep = true;
+    const char* fromPort = bench.linkSend(d20.data(), d20.size(), false);
+    error = bench.linkSend(d20.data(), d20.size(), true);
+    untilDone(1000);
+    printf("SILENCE %d %s|%s %d\n", silenced, fromPort, text(error), txDone);
+    bench.silence = bench.silenceException = bench.prep = false;
+    settle();
+
+    // Odbiór: 508 B jako dwie ramki RNode z trzecią ramką z samym nagłówkiem; pętla obsługuje je 1,5 s po
+    // odbiorze, a limit 1 s liczy się z czasów odbioru ramek. Potem pierwsza część bez drugiej (po 1 s
+    // przepada) i pierwsza część przerwana ramką bez podziału.
+    loraframe::Splitter splitter;
+    loraframe::Frame parts[2];
+    splitter.split(d508.data(), d508.size(), 0xA0, parts);
+    const uint32_t t0 = millis();
+    for (int i = 0; i < 3; ++i) {
+        radiolink::Frame f;
+        f.length = i < 2 ? parts[i].length : 1;
+        memcpy(f.bytes, parts[i < 2 ? i : 0].bytes, f.length);
+        f.receivedMs = t0 + 500 * static_cast<uint32_t>(i);
+        f.rssiDbm = -95;
+        radio.rxQueue.push_back(f);
+    }
+    fakeUs += 1500000;
+    runFor(10);
+    printf("RX508 %zu %d\n", received.size(), received.size() == 508 && !memcmp(received.data(), d508.data(), 508));
+    radio.rxQueue.push_back([&] { radiolink::Frame f; f.length = parts[0].length; memcpy(f.bytes, parts[0].bytes, f.length); f.receivedMs = millis(); return f; }());
+    runFor(1100);
+    radio.rxQueue.push_back([&] { radiolink::Frame f; f.length = parts[0].length; memcpy(f.bytes, parts[0].bytes, f.length); f.receivedMs = millis(); return f; }());
+    radio.rxQueue.push_back([&] { radiolink::Frame f; f.length = 21; f.bytes[0] = 0x50; memcpy(f.bytes + 1, d20.data(), 20); f.receivedMs = millis(); return f; }());
+    runFor(10);
+    printf("RXSHORT %zu\n", received.size());
+    bench.printLink();
+
+    // Pierwsza część odebrana, druga 430 ms później, ale pętla wraca dopiero 1,1 s po pierwszej: druga czeka
+    // już w pierścieniu, więc składanie kończy się (limit 1 s z czasów odbioru). Sama pierwsza część po
+    // takim postoju przepada.
+    auto part = [&](int i, uint32_t at) { radiolink::Frame f; f.length = parts[i].length; memcpy(f.bytes, parts[i].bytes, f.length); f.receivedMs = at; return f; };
+    received.clear();
+    const uint32_t tPart = millis();
+    radio.rxQueue.push_back(part(0, tPart));
+    runFor(10);
+    radio.rxQueue.push_back(part(1, tPart + 430));
+    fakeUs += 1090000;
+    runFor(10);
+    const size_t lateLoop = received.size();
+    received.clear();
+    radio.rxQueue.push_back(part(0, millis()));
+    runFor(10);
+    fakeUs += 1090000;
+    runFor(10);
+    radio.rxQueue.push_back(part(1, millis()));
+    runFor(10);
+    printf("RXSTALL %zu %zu\n", lateLoop, received.size());
+
+    // Rekonfiguracja (radiocon: bench.stop() przed CONFIG): odbiór wraca od razu przez linkRxStart, także
+    // w trybie przygotowania, w którym sam nie wraca.
+    bench.prep = true;
+    bench.stop();
+    runFor(1500);
+    const int stopped = radio.rxActive;
+    error = bench.linkRxStart();
+    printf("REARM %d %s %d %d\n", stopped, text(error), radio.rxActive, bench.receiving());
+
+    // Tryb EMC wstrzymuje łącze stosu: odbiór ramek wzorcowych, datagramy odmówione; po EMC 0 odbiór łącza wraca.
+    const char* emc = bench.emcStart(6, 20);
+    const char* emcSend = bench.linkSend(d20.data(), d20.size(), true);
+    const char* emcRx = bench.linkRxStart();
+    runFor(100);
+    printf("EMC %s|%s|%s %d %d\n", text(emc), emcSend, emcRx, radio.rxActive, radio.rxVariable);
+    bench.emcStop();
+    bench.prep = false;
+    runFor(1100);
+    printf("EMCOFF %d %d %d\n", bench.emcActive(), radio.rxActive, radio.rxVariable);
+
+    // rxArmed (L6): odbiór stosu uzbrojony tylko w odbiorze łącza na skonfigurowanym układzie, poza trybem
+    // przygotowania i EMC. Kontrola trybu: układ poza RX to błąd tylko przy uzbrojonym odbiorze; każdy stan
+    // zwolniony daje "00" (nieuzbrojony, bez błędu), choć układ nie jest w odbiorze łącza.
+    settle();
+    std::string states;
+    auto state = [&] {
+        const bool armed = bench.stackRxArmed();
+        states += " " + std::to_string(armed) + std::to_string(rxwatch::modeLost(armed, bench.transmitting(), radio.rxActive && radio.rxVariable));
+    };
+    state();                      // uzbrojony, w RX: "10"
+    radio.rxActive = false;       // układ wypadł z RX (reset, zakłócenie): "11"
+    state();
+    bench.linkRxStart();          // kontrola radia uzbraja odbiór od nowa
+    state();
+    bench.stop();                 // IDLE poza przygotowaniem (odbiór wraca sam po 1 s)
+    state();
+    runFor(1100);
+    state();                      // odbiór wrócił: znów uzbrojony
+    bench.prep = true;            // tryb przygotowania przy odbiorze łącza
+    state();
+    bench.stop();                 // IDLE, RESET, REGW w przygotowaniu (radiocon: bench->stop())
+    state();
+    bench.p1Ready = false;        // RESET: profil skasowany
+    bench.linkRxStart();
+    bench.prep = false;
+    state();
+    bench.p1Ready = true;
+    bench.prep = true;
+    bench.txpkt(1, 20, 0, false); // seria wzorcowa (jak TXCW: nadawanie pomiarowe)
+    state();
+    runFor(100);
+    settle();
+    bench.rxStart(20);            // RX wzorcowy
+    state();
+    bench.stop();
+    bench.emcStart(6, 20);        // tryb EMC (także po wyjściu z przygotowania)
+    bench.prep = false;
+    runFor(50);
+    state();
+    bench.emcStop();
+    runFor(1100);
+    state();                      // po EMC 0 odbiór stosu znów uzbrojony
+    printf("ARMED%s\n", states.c_str());
+    return 0;
+}
+"""
+
+
+RX_RING_HARNESS = r"""
+#include <cstdio>
+#include <cstring>
+#include <thread>
+#include "rx_watch.h"
+#include "spsc_ring.h"
+
+struct Item {
+    uint32_t seq = 0;
+    uint8_t bytes[260] = {};
+};
+
+int main() {
+    // Jeden wątek: kolejność, pełny pierścień (odpada najnowszy), zawinięcie indeksów.
+    SpscRing<Item, 8> ring;
+    Item item, out;
+    int pushed = 0;
+    for (uint32_t i = 0; i < 10; ++i) { item.seq = i; pushed += ring.push(item); }
+    bool order = true;
+    for (uint32_t i = 0; i < 8; ++i) order = order && ring.pop(out) && out.seq == i;
+    printf("RING %d %lu %d %d\n", pushed, static_cast<unsigned long>(ring.overflow()), order, ring.pop(out));
+    uint32_t next = 100, expect = 100;
+    bool wrapped = true;
+    for (int round = 0; round < 1000; ++round) {
+        for (int k = 0; k < 5; ++k) { item.seq = next++; ring.push(item); }
+        for (int k = 0; k < 5; ++k) wrapped = wrapped && ring.pop(out) && out.seq == expect++;
+    }
+    printf("WRAP %d %zu\n", wrapped, ring.size());
+
+    // Dwa wątki (producent jak zadanie odbioru, konsument jak pętla): bez zgubionych, powtórzonych ani
+    // rozdartych pozycji; odebrane + odrzucone = wysłane.
+    static SpscRing<Item, 8> shared;
+    constexpr uint32_t TOTAL = 200000;
+    std::thread producer([] {
+        Item p;
+        for (uint32_t i = 1; i <= TOTAL; ++i) {
+            p.seq = i;
+            memset(p.bytes, static_cast<int>(i & 0xFF), sizeof(p.bytes));
+            shared.push(p);
+        }
+    });
+    uint32_t received = 0, last = 0;
+    bool increasing = true, intact = true;
+    Item c;
+    for (;;) {
+        if (shared.pop(c)) {
+            ++received;
+            increasing = increasing && c.seq > last;
+            last = c.seq;
+            for (uint8_t b : c.bytes) intact = intact && b == static_cast<uint8_t>(c.seq & 0xFF);
+            if (c.seq == TOTAL) break;
+        } else if (received + shared.overflow() == TOTAL) {
+            break;
+        }
+    }
+    producer.join();
+    while (shared.pop(c)) ++received;
+    printf("THREADS %d %d %d\n", increasing, intact, received + shared.overflow() == TOTAL);
+
+    // Nadzór zadania (rxwatch::Watch): każdy wiersz to stalled() przy kolejnych chwilach.
+    rxwatch::TaskSignals sig;
+    rxwatch::Watch w;
+    uint32_t now = 50000;
+    // Odbiór nieuzbrojony: sygnały stoją 20 s, bez alarmu.
+    bool any = false;
+    for (int i = 0; i < 20; ++i, now += 1000) any = any || w.stalled(sig, false, false, now);
+    printf("DISARMED %d\n", any);
+    // Uzbrojenie przy starym lastServiceMs: czas liczy się od uzbrojenia; zadanie żyje: bez alarmu.
+    any = false;
+    for (int i = 0; i < 30; ++i, now += 1000) {
+        sig.tick();
+        sig.serviced(now, 100);
+        any = any || w.stalled(sig, true, false, now);
+    }
+    printf("ALIVE %d\n", any);
+    // Licznik obiegów stoi (martwe zadanie): alarm dokładnie po 10 s.
+    const uint32_t frozen = now - 1000;
+    bool at9999 = w.stalled(sig, true, false, frozen + 9999);
+    bool at10000 = w.stalled(sig, true, false, frozen + 10000);
+    printf("DEADTASK %d %d\n", at9999, at10000);
+    // Powrót: zadanie znowu obsługuje układ.
+    now = frozen + 11000;
+    sig.tick();
+    sig.serviced(now, 100);
+    printf("RECOVER %d\n", w.stalled(sig, true, false, now));
+    // Obiegi idą, ale bez obsługi układu (blokada wciąż zajęta albo BUSY): alarm po 10 s od ostatniej obsługi.
+    const uint32_t lastService = now;
+    bool before = false, after = false;
+    for (uint32_t t = now; t <= lastService + 10000; t += 500) {
+        sig.tick();
+        const bool st = w.stalled(sig, true, false, t);
+        if (t < lastService + 10000) before = before || st;
+        else after = st;
+    }
+    printf("NOSERVICE %d %d\n", before, after);
+    // Nadawanie zwalnia, a po nim czas liczy się od końca nadawania.
+    now = lastService + 20000;
+    const bool duringTx = w.stalled(sig, true, true, now);
+    const bool afterTx = w.stalled(sig, true, false, now + 100);
+    const bool afterTxLong = w.stalled(sig, true, false, now + 10100);
+    printf("TRANSMIT %d %d %d\n", duringTx, afterTx, afterTxLong);
+    // Znacznik zapisany przez zadanie po odczycie czasu w pętli („w przyszłości”) i zawinięcie millis().
+    rxwatch::TaskSignals sig2;
+    rxwatch::Watch w2;
+    now = 0xFFFFF000u;
+    w2.stalled(sig2, true, false, now);
+    sig2.tick();
+    sig2.serviced(now + 5, 100);
+    const bool future = w2.stalled(sig2, true, false, now);
+    bool wrapAlarm = false;
+    for (uint32_t t = now; t != now + 9000u; t += 1000) { sig2.tick(); sig2.serviced(t, 100); wrapAlarm = wrapAlarm || w2.stalled(sig2, true, false, t); }
+    printf("CLOCK %d %d\n", future, wrapAlarm);
+
+    // Kontrola trybu: błąd tylko przy uzbrojonym odbiorze, poza nadawaniem, z układem poza RX.
+    printf("MODE %d %d %d %d\n", rxwatch::modeLost(true, false, false), rxwatch::modeLost(false, false, false),
+           rxwatch::modeLost(true, true, false), rxwatch::modeLost(true, false, true));
+    return 0;
+}
+"""
+
+
+DISPLAY_HARNESS = r"""
+#include <vector>
+#include "sharp.h"
+
+uint32_t fakeUs = 0;
+FakeSerial Serial;
+int digitalRead(uint8_t) { return LOW; }
+bool sharp::Display::beginExtcomin() { return true; }  // licznik EXTCOMIN MCU: poza testem
+// Transakcja ekranu: CS (aktywny stanem wysokim) od wysokiego do niskiego; bajty z magistrali.
+std::vector<std::vector<uint8_t>> transactions;
+bool selected = false;
+void digitalWrite(uint8_t pin, uint8_t level) {
+    if (pin != 7) return;
+    if (level == HIGH && !selected) transactions.emplace_back();
+    selected = level == HIGH;
+}
+uint8_t SPIClass::transfer(uint8_t out) {
+    if (selected) transactions.back().push_back(out);
+    return 0;
+}
+
+// Wiersze w transakcji zapisu: polecenie, potem (adres, 50 B, odstęp) na wiersz, na końcu bajt 0.
+std::vector<int> lines(const std::vector<uint8_t>& t) {
+    std::vector<int> out;
+    for (size_t i = 1; i + sharp::LINE_BYTES + 1 < t.size(); i += sharp::LINE_BYTES + 2) out.push_back(t[i]);
+    return out;
+}
+
+int main() {
+    SPIClass spi;
+    sharp::Display display(spi, 7, 17, 1000000);
+    // Cały ekran zmieniony (np. pełne przerysowanie): 240 wierszy w 27 transakcjach po najwyżej 9, od góry.
+    for (uint16_t y = 0; y < sharp::HEIGHT; ++y) display.setPixel(static_cast<uint16_t>(y % sharp::WIDTH), y, true);
+    int passes = 0, maxLines = 0, total = 0, expected = 1;
+    bool ordered = true;
+    while (display.pending()) {
+        transactions.clear();
+        const uint16_t n = display.refresh();
+        ++passes;
+        const std::vector<int> sent = lines(transactions.at(0));
+        if (static_cast<int>(sent.size()) != n || transactions.size() != 1) ordered = false;
+        for (int a : sent) ordered = ordered && a == expected++;
+        if (n > maxLines) maxLines = n;
+        total += n;
+    }
+    transactions.clear();
+    printf("FULL %d %d %d %d %u %zu %lu\n", passes, maxLines, total, ordered, display.refresh(), transactions.size(),
+           static_cast<unsigned long>(display.refreshes()));
+    // Jeden zmieniony wiersz tekstu (16 wierszy pikseli od 100) i pojedynczy piksel niżej: dwa obiegi.
+    for (uint16_t y = 100; y < 116; ++y) display.setPixel(5, y, true);
+    display.setPixel(9, 200, true);
+    transactions.clear();
+    const uint16_t first = display.refresh();
+    const std::vector<int> a = lines(transactions.at(0));
+    const uint16_t second = display.refresh();
+    const std::vector<int> b = lines(transactions.at(1));
+    printf("ROW %u %d %d %u %d %d %d %d\n", first, a.front(), a.back(), second, b.front(), b.back(), static_cast<int>(b.size()),
+           display.pending());
     return 0;
 }
 """
@@ -1165,13 +1957,13 @@ def host_compiler():
     return None
 
 
-def build_and_run(harness, sources):
+def build_and_run(harness, sources, flags=()):
     with tempfile.TemporaryDirectory() as temp:
         root = Path(temp)
         for name, text in STUBS.items():
             (root / name).write_text(text, encoding="utf-8")
         (root / "harness.cpp").write_text(harness, encoding="utf-8")
-        subprocess.run([host_compiler(), "-std=c++17", "-Wall", "-Wextra", "-Werror", f"-I{root}", f"-I{SRC}",
+        subprocess.run([host_compiler(), "-std=c++17", "-Wall", "-Wextra", "-Werror", *flags, f"-I{root}", f"-I{SRC}",
                         str(root / "harness.cpp")] + [str(SRC / s) for s in sources] + ["-o", str(root / "harness")],
                        check=True)
         out = subprocess.run([str(root / "harness")], capture_output=True, text=True, check=True).stdout
@@ -1245,7 +2037,7 @@ class BenchTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.out = build_and_run(BENCH_HARNESS, ["measure.cpp", "p1frame.cpp", "testframe.cpp", "journal.cpp"])
+        cls.out = build_and_run(BENCH_HARNESS, ["measure.cpp", "loraframe.cpp", "p1frame.cpp", "testframe.cpp", "journal.cpp"])
 
     def test_test_series_needs_preparation_and_writes_debt(self):
         self.assertEqual(line(self.out, "NOPREP"), "NOPREP preparation mode off: PREP 1")
@@ -1289,8 +2081,8 @@ class Sx1262LinkTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.out = build_and_run(SX1262_HARNESS, ["sx1262.cpp", "sx1262_link.cpp", "measure.cpp", "p1frame.cpp", "testframe.cpp",
-                                                 "journal.cpp"])
+        cls.out = build_and_run(SX1262_HARNESS, ["sx1262.cpp", "sx1262_link.cpp", "measure.cpp", "loraframe.cpp", "p1frame.cpp", "testframe.cpp",
+                                                 "journal.cpp"], flags=["-DWICI_RADIO_LOCK_CHECK"])
 
     def test_identity_and_profile_verified(self):
         self.assertEqual(line(self.out, "ID"), "ID 1 1 SX1261 V2D 2D02")  # the SX1262 reports this string (RadioLib checks "SX126")
@@ -1365,6 +2157,7 @@ class Sx1262LinkTests(unittest.TestCase):
         # prepareTx Ready in STDBY_XOSC with RXEN low; CAD Free leaves STDBY_RC (CAD_ONLY, table 13-73);
         # the loaded 30 B frame is sent and the chip falls back to STDBY_XOSC.
         self.assertEqual(line(self.out, "CADTX"), "CADTX 0 STBY_XOSC 0 0 STBY_RC 1 30 A0 STBY_XOSC 1")
+        self.assertEqual(line(self.out, "CADRXEN"), "CADRXEN 1 0")  # RF switch in receive during CAD, low again for TX
         standby, params, write, cad, tx, standbys = (int(v) for v in line(self.out, "CADORDER").split()[1:])
         self.assertTrue(standby < params < write < cad < tx)  # frame loaded before CAD, SetTx right after it
         self.assertEqual(standbys, 1)
@@ -1374,6 +2167,7 @@ class Sx1262LinkTests(unittest.TestCase):
         # Busy (1); no CadDone within the limit: Error (2) and STDBY_XOSC; CAD from RX refused (2);
         # two CADs finished; CAD flags cleared.
         self.assertEqual(line(self.out, "CADBUSY"), "CADBUSY 1 2 STBY_XOSC 1 2 2 0000")
+        self.assertEqual(line(self.out, "CADHUNGRXEN"), "CADHUNGRXEN 0")  # RXEN low again after the hung CAD
 
     def test_pending_reception_defers_transmit_without_clearing(self):
         # Unread RxDone: RxPending (1), still in RX, flag kept, buffer not written; the frame is then received.
@@ -1385,6 +2179,11 @@ class Sx1262LinkTests(unittest.TestCase):
         self.assertEqual(line(self.out, "SAMPLE"), "SAMPLE 0 0000 1 0")
         self.assertEqual(line(self.out, "RSSIMARK"), "RSSIMARK 1 1 1")  # -90 dBm busy, aged after 60 ms, -110 dBm quiet
         self.assertEqual(line(self.out, "NOTRX"), "NOTRX 4")
+
+    def test_frame_in_progress_keeps_the_channel_busy(self):
+        # Rx (1) 100 ms after the header though the 50 ms marks aged; None (0) after the longest frame
+        # without an end and 60 ms after a frame end.
+        self.assertEqual(line(self.out, "INFRAME"), "INFRAME 1 0 0")
 
     def test_continuous_receive_buffer_continues_and_wraps(self):
         self.assertEqual(line(self.out, "RING1"), "RING1 1 255 1 0")
@@ -1416,6 +2215,41 @@ class Sx1262LinkTests(unittest.TestCase):
         # caller, RxDone kept; after BUSY returns the lock is released and the frame is received.
         self.assertEqual(line(self.out, "STUCKRX"), "STUCKRX 5 0 1 1 1 1 0002")
         self.assertEqual(line(self.out, "STUCKAFTER"), "STUCKAFTER 0 1 1")
+
+    def test_receive_task_cycle_fills_the_ring(self):
+        # Plan L6: a cycle without DIO1 within 5 ms of the last RSSI sample does not touch the chip; the loop
+        # does not read the RX flags (the frame stays in the chip) until a task cycle moves it to the ring with
+        # the time of its sample; CRC errors come out as Bad like without the task.
+        self.assertEqual(line(self.out, "TASKSKIP"), "TASKSKIP 1 0 2 1")
+        self.assertEqual(line(self.out, "TASKFRAME"), "TASKFRAME 0 1 1 40 1 1 0")
+        self.assertEqual(line(self.out, "TASKBAD"), "TASKBAD 2 0")
+        self.assertEqual(line(self.out, "TASKMAX"), "TASKMAX 1")
+
+    def test_full_ring_drops_the_newest_frame(self):
+        self.assertEqual(line(self.out, "TASKRING"), "TASKRING 8 1 0")
+
+    def test_receive_task_never_waits_for_the_lock(self):
+        # Lock held by the loop: the cycle counts (taskTicks) but touches nothing and does not count as service;
+        # it never waits (no lock timeout); the next cycle gets the frame.
+        self.assertEqual(line(self.out, "TASKLOCKED"), "TASKLOCKED 1 1 1 0")
+        self.assertEqual(line(self.out, "TASKAFTERLOCK"), "TASKAFTERLOCK 1 1")
+        self.assertEqual(line(self.out, "TASKRSSI"), "TASKRSSI 1")   # an RSSI sample alone refreshes lastServiceMs
+        self.assertEqual(line(self.out, "TASKNOTRX"), "TASKNOTRX 1 1")
+
+    def test_removed_module_backs_off_the_receive_task(self):
+        # BUSY stuck: one timeout, then no attempt for 100 ms (no busy-wait on core 0 every tick), service stays
+        # stale (radio_awaria after 10 s); after BUSY returns the task serves the chip again.
+        self.assertEqual(line(self.out, "TASKBUSY"), "TASKBUSY 1 1 2 1 1 1")
+
+    def test_radio_lock_check_and_locked_view(self):
+        # WICI_RADIO_LOCK_CHECK: a transaction without the lock while the task runs is counted, none under the
+        # lock or in the task cycle.
+        bare, start, task = line(self.out, "LOCKCHECK").split()[1:]
+        self.assertEqual((bare, task), ("1", "0"))
+        self.assertGreater(int(start), 0)
+        # LockedDriver: operations under the lock, nothing left held; a lock timeout gives the error result and is
+        # counted, idle() still stops the chip.
+        self.assertEqual(line(self.out, "LOCKED"), "LOCKED 1 RX 1 1 LOCK_TIMEOUT 1 1 STBY_RC 5 1")
 
     def test_measurement_commands_in_lora_air_time(self):
         self.assertEqual(line(self.out, "NOP1"), "NOP1 no P1 link on this radio|no P1 link on this radio|0")
@@ -1476,6 +2310,147 @@ class Sx1262LinkTests(unittest.TestCase):
         # The mark is cleared before the slot is overwritten: a torn write leaves an uncommitted slot,
         # so the 11 entries stay readable and preparation entries are not flagged as tampered.
         self.assertEqual(line(self.out, "PREPTORN"), "PREPTORN 1 0 0 11")
+
+
+@unittest.skipUnless(host_compiler(), "no host C++ compiler")
+class RxRingTests(unittest.TestCase):
+    """Plan L6 on the host: the SPSC ring between the receive task and the station loop (spsc_ring.h), the
+    receive-task watch and the mode-check gating (rx_watch.h)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.out = build_and_run(RX_RING_HARNESS, [], flags=["-pthread"])
+
+    def test_ring_keeps_order_and_drops_the_newest_when_full(self):
+        self.assertEqual(line(self.out, "RING"), "RING 8 2 1 0")
+        self.assertEqual(line(self.out, "WRAP"), "WRAP 1 0")
+
+    def test_ring_between_two_threads(self):
+        # No lost, repeated or torn item; received + dropped = pushed.
+        self.assertEqual(line(self.out, "THREADS"), "THREADS 1 1 1")
+
+    def test_watch_alarms_only_when_armed_and_a_signal_stands_10_s(self):
+        self.assertEqual(line(self.out, "DISARMED"), "DISARMED 0")
+        self.assertEqual(line(self.out, "ALIVE"), "ALIVE 0")          # old lastServiceMs before arming: no alarm
+        self.assertEqual(line(self.out, "DEADTASK"), "DEADTASK 0 1")  # taskTicks frozen: alarm at 10 s, not before
+        self.assertEqual(line(self.out, "RECOVER"), "RECOVER 0")      # alarm clears by itself
+        self.assertEqual(line(self.out, "NOSERVICE"), "NOSERVICE 0 1")  # cycles but no chip service (lock, BUSY)
+        # Transmitting is exempt; the time counts again from the end of the transmission.
+        self.assertEqual(line(self.out, "TRANSMIT"), "TRANSMIT 0 0 1")
+        self.assertEqual(line(self.out, "CLOCK"), "CLOCK 0 0")        # mark written after the loop read the clock; millis() wrap
+
+    def test_mode_check_gating(self):
+        # Chip outside RX is an error only when armed, not transmitting.
+        self.assertEqual(line(self.out, "MODE"), "MODE 1 0 0 0")
+
+
+@unittest.skipUnless(host_compiler(), "no host C++ compiler")
+class DisplayChunkTests(unittest.TestCase):
+    """sharp.cpp: refresh() sends at most 9 pixel lines per call (bus shared with the radio on board v1, plan L6)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.out = build_and_run(DISPLAY_HARNESS, ["sharp.cpp", "font.cpp"])
+
+    def test_full_screen_in_27_chunks_of_9_lines_top_down(self):
+        # 27 calls, at most 9 lines each, 240 lines once each in order; nothing left, no empty transaction.
+        self.assertEqual(line(self.out, "FULL"), "FULL 27 9 240 1 0 0 27")
+
+    def test_changed_lines_only_and_the_rest_on_the_next_call(self):
+        # 16 lines of one text row and one line below: lines 101-109, then 110-115 and 201.
+        self.assertEqual(line(self.out, "ROW"), "ROW 9 101 109 8 110 201 8 0")
+
+
+@unittest.skipUnless(host_compiler(), "no host C++ compiler")
+class LoraBenchTests(unittest.TestCase):
+    """measure.cpp with the RNode framing (plan L5) over a fake LoRa driver: the TX sequence of the
+    stack link (debt, 50 ms window from activity marks, frame 1 loaded before CAD, debt written after a
+    free CAD, two frames, receive), deferrals, silence, assembly from frame receive times, re-arm and EMC.
+    Built with WICI_NO_P1_LINK like the l0 images (no P1 assembly)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.out = build_and_run(LORA_BENCH_HARNESS, ["measure.cpp", "loraframe.cpp", "p1frame.cpp", "testframe.cpp", "journal.cpp"],
+                                flags=["-DWICI_NO_P1_LINK"])
+
+    def test_start_without_a_debt_record_waits_the_lora_maximum(self):
+        # 12 x 838 ms (two 255 B frames with ramp-up), not the P1 bound of 16.8 s.
+        self.assertEqual(line(self.out, "MAXDEBT"), "MAXDEBT 10056 10056 16800")
+        self.assertEqual(line(self.out, "FRAMING"), "FRAMING 1")   # stacja z LoRa bierze czas łącza z loraTiming()
+
+    def test_stack_receive_starts_by_itself_and_p1_commands_stay_refused(self):
+        self.assertEqual(line(self.out, "AUTORX"), "AUTORX 1 1 1")
+        self.assertEqual(line(self.out, "NOP1"), "NOP1 no P1 link on this radio|no P1 link on this radio")
+        self.assertEqual(line(self.out, "TOOBIG"), "TOOBIG datagram 1..508 B")
+
+    def test_transmit_order_debt_window_cad_debt_write_frames_receive(self):
+        # The debt in the journal at each step: 0 up to the free CAD, 12 x (419 + 419) ms from frame 1 on.
+        self.assertEqual(line(self.out, "ORDER"), "ORDER -|window prep:0 cad:0 send:10056 tx:10056 rx")
+        # Two 255 B frames with the same split header; they reassemble to the datagram.
+        self.assertEqual(line(self.out, "FRAMES"), "FRAMES 2 255 255 01 1 1")
+
+    def test_508_b_while_the_receive_task_tries_the_lock(self):
+        # Six task cycles during the two frames skip (lock held by the loop), none waits or fails; after
+        # the transmit the task gets the lock; the datagram went out and the loop released the lock.
+        self.assertEqual(line(self.out, "TRYLOCK"), "TRYLOCK 6 1 1 0")
+
+    def test_restart_with_debt_waits_the_journal_debt(self):
+        self.assertEqual(line(self.out, "RESTART"), "RESTART 10056 0 1 1")
+
+    def test_busy_cad_defers_without_writing_debt(self):
+        ops, counts = line(self.out, "CADBUSY")[len("CADBUSY "):].split("|")
+        self.assertEqual(ops.split()[:5], ["window", "prep:0", "cad:0", "rx", "window"])
+        self.assertEqual(ops.split()[5:], ["prep:0", "cad:0", "send:912", "rx"])  # 12 x 76 ms (21 B frame: 73 ms + 3 ms ramp)
+        self.assertEqual(counts, "1 1 1")  # cad_busy, deferrals, sent
+
+    def test_activity_in_the_window_and_rssi_defer_before_cad(self):
+        counts, ops = line(self.out, "ACTIVITY")[len("ACTIVITY "):].split("|")
+        self.assertEqual(counts, "1 1 2 1")  # rx_busy, rssi_busy, two deferrals, sent
+        self.assertEqual(ops.split()[:3], ["window", "window", "window"])  # no CAD while the channel is busy
+        self.assertEqual(ops.split().count("cad:0"), 1)
+        # An unread frame in the chip at prepareTx defers too; the chip stays in RX.
+        self.assertEqual(line(self.out, "RXPENDING"), "RXPENDING 2 1 1")
+
+    def test_loop_stall_does_not_break_the_window(self):
+        # 50 ms not yet passed since RX start: waits; after a 150 ms stall the marks decide at once.
+        self.assertEqual(line(self.out, "STALL"), "STALL -1 1")
+        # The same stall with a frame 30 ms before its end: deferred.
+        self.assertEqual(line(self.out, "STALLBUSY"), "STALLBUSY -1 1")
+
+    def test_30_deferrals_then_drop_without_debt(self):
+        self.assertEqual(line(self.out, "DEFER30"), "DEFER30 0 30 31 1 0")
+
+    def test_failed_debt_write_after_free_cad_sends_nothing(self):
+        self.assertEqual(line(self.out, "DEBTFAIL"), "DEBTFAIL 0 0 1 window prep:0 cad:0 rx")
+        self.assertTrue(any(l.startswith('{"loratx":"debt journal write failed"') for l in self.out))
+
+    def test_silence_and_its_exception(self):
+        self.assertEqual(line(self.out, "SILENCE"), "SILENCE 0 radio silence|- 1")
+
+    def test_receive_assembles_508_b_from_frame_times(self):
+        self.assertEqual(line(self.out, "RX508"), "RX508 508 1")
+        self.assertEqual(line(self.out, "RXSHORT"), "RXSHORT 20")
+        lora = json.loads(next(l for l in self.out if l.startswith('{"lora":')))["lora"]
+        self.assertEqual((lora["rx_datagrams"], lora["header_only"], lora["assembly_timeout"], lora["split_lost"]), (2, 1, 1, 1))
+        self.assertEqual((lora["rx_late"], lora["rx_ring_overflow"], lora["cca_threshold_dbm"]), (2, 0, -100))
+        self.assertEqual((lora["cad_busy"], lora["rssi_busy"], lora["rx_busy"]), (32, 1, 3))
+
+    def test_assembly_limit_counts_from_frame_time_after_a_long_loop_pass(self):
+        # The second part waiting in the ring completes the datagram after a 1.1 s loop stall (508 B); a lone
+        # first part still expires, so its second part (1.1 s later) assembles nothing (0).
+        self.assertEqual(line(self.out, "RXSTALL"), "RXSTALL 508 0")
+
+    def test_receive_rearmed_after_reconfiguration(self):
+        self.assertEqual(line(self.out, "REARM"), "REARM 0 - 1 1")
+
+    def test_rx_armed_and_mode_check_exempt_states(self):
+        # armed, in RX | chip left RX: mode error | re-armed | IDLE | back after 1 s | preparation |
+        # IDLE/RESET/REGW in preparation | profile reset | TXPKT | RX test frames | EMC | after EMC 0
+        self.assertEqual(line(self.out, "ARMED"), "ARMED 10 11 10 00 10 00 00 00 00 00 00 10")
+
+    def test_emc_pauses_the_stack_link(self):
+        self.assertEqual(line(self.out, "EMC"), "EMC -|EMC mode on: EMC 0 first|EMC mode on: EMC 0 first 1 0")
+        self.assertEqual(line(self.out, "EMCOFF"), "EMCOFF 0 1 1")
 
 
 if __name__ == "__main__":

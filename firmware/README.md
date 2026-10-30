@@ -1,12 +1,12 @@
 # WICI: oprogramowanie stacji
 
-**Stan programu stacji (krok 4 planu).** Pilotaż używa stacji z ESP32-S3 i układem LoRa SX1262: prototyp na płytce v1, potem stacje pilotażowe na płytce v2 ([plan](../docs/concept/08-plan-weryfikacji-i-decyzje.html#kolejnosc-prac)). Obraz [`l0`](#stacja-l0-l0) ma już sterownik SX1262 w profilu LoRa z poleceniami pomiarowymi (bez prób na sprzęcie), więc kolejną pracą radiową jest interfejs LoRa w stosie: format w eterze zgodny z RNode, cisza 12t, IFAC ([profil LoRa](../docs/spec/radio.md#profil-lora-pilotażu)). Środowisko `l0` to nazwa PlatformIO obrazu prototypu; w `hardware/l0-diagnostic` jest osobne środowisko `l0` programu diagnostycznego (inny program, wersje `l0-0.5`).
+**Stan programu stacji (krok 4 planu).** Pilotaż używa stacji z ESP32-S3 i układem LoRa SX1262: prototyp na płytce v1, potem stacje pilotażowe na płytce v2 ([plan](../docs/concept/08-plan-weryfikacji-i-decyzje.html#kolejnosc-prac)). Obraz [`l0`](#stacja-l0-l0) ma sterownik SX1262 w profilu LoRa z poleceniami pomiarowymi i [interfejs LoRa w stosie](#interfejs-lora-stosu): format w eterze zgodny z RNode, cisza 12t, IFAC ([profil LoRa](../docs/spec/radio.md#profil-lora-pilotażu)). Na komputerze przechodzi próbę zgodności z `RNodeInterface` przez emulator radia RNode; na sprzęcie nie był uruchomiony, więc następna jest [procedura kroku 4](#krok-4-interfejs-lora-z-radiem-rnode) z RAK4631. Środowisko `l0` to nazwa PlatformIO obrazu prototypu; w `hardware/l0-diagnostic` jest osobne środowisko `l0` programu diagnostycznego (inny program, wersje `l0-0.5`).
 
 Katalog zawiera oprogramowanie układowe stacji. Opisy stanowisk A i B oraz profilu P1 niżej dotyczą obrazów `bench-*`: to obrazy wstrzymanego wariantu (własny profil P1, stanowiska deweloperskie; F99, 2026-10-08), zostają w repozytorium bez zmian i nie są ścieżką pilotażu ([archiwum](../docs/archiwum/README.md)). Opis zaczyna się od wariantu na [stanowisku deweloperskim A](../hardware/dev-bench/README.md): nRF52840-DK z modułem TI CC1120EM-868-915 i pamięcią FRAM na złączu Arduino płytki. Środowisko `bench-a` w `platformio.ini` buduje obraz, który po podłączeniu USB zgłasza się na polecenie `INFO` w formacie ze [specyfikacji radia](../docs/spec/radio.md#usb-do-laptopa) i rozpoznaje przez SPI układ radiowy i FRAM. Obraz zapisuje do CC1120 [rejestry profilu P1](#rejestry-profilu-p1) z weryfikacją odczytu i kalibracją syntezera oraz wykonuje [polecenia pomiarowe](#polecenia-pomiarowe) `TXCW`, `TXPKT`, `RXPER`, `FOFF` ze specyfikacji. Prowadzi [dziennik i magazyny w FRAM](#dziennik-i-magazyny-w-fram): dług ciszy, licznik czasu pracy i zdarzenia, a także rejestr zgłoszeń, skrzynkę, pierścień zdarzeń i konfigurację z transakcjami. Obsługuje [łącze P1](#łącze-p1) (odbiór i składanie datagramów, nadawanie z CCA, odroczeniem i długiem ciszy) i podaje zaprogramowaną częstotliwość oraz RSSI. Na przyciskach płytki działa [ekran Sharp i menu stacji](#ekran-i-przyciski): wybór języka, ekran główny, cisza, STAN; EXTCOMIN pochodzi z licznika RTC2.
 
 Obraz obsługuje diody płytki i udostępnia drugi interfejs CDC z [protokołem USB laptop–stacja](#protokół-usb-laptopstacja) (`"usb":2`) oraz [warstwę aplikacji](#warstwa-aplikacji-nad-stosem) z cyklem życia zgłoszenia, wysyłką z rejestru i wiadomościami odbiorcy do skrzynki.
 
-Ruch idzie przez [stos Reticulum](#stos-reticulum) z interfejsem P1 (w pilotażu zastąpi go interfejs LoRa), IFAC, tożsamością i tablicami w FRAM. Od etapów rdzenia 6-3 i 6-4 obrazy stacji mają rdzeń Reticulum stacji ([reticulum-core.md](reticulum-core.md)), który wysyła treść jako wiadomości LXMF z podpisem stacji. Ten sam program z portem microReticulum (pakiety okazjonalne z potwierdzeniem transportowym i zastępczą kopertą z adresem nadawcy bez podpisu) budują do etapu rdzenia 6-5 obrazy `*-port` ([wybór stosu](#wybór-stosu-port-albo-rdzeń)).
+Ruch idzie przez [stos Reticulum](#stos-reticulum) z interfejsem P1 (w `l0` i `l0-port` z interfejsem LoRa), IFAC, tożsamością i tablicami w FRAM. Od etapów rdzenia 6-3 i 6-4 obrazy stacji mają rdzeń Reticulum stacji ([reticulum-core.md](reticulum-core.md)), który wysyła treść jako wiadomości LXMF z podpisem stacji. Ten sam program z portem microReticulum (pakiety okazjonalne z potwierdzeniem transportowym i zastępczą kopertą z adresem nadawcy bez podpisu) budują do etapu rdzenia 6-5 obrazy `*-port` ([wybór stosu](#wybór-stosu-port-albo-rdzeń)).
 
 Stacja ma jedną rolę (D19): w [konfiguracji węzła stanowiska](#węzeł-stanowiska) przekazuje ruch i łączy radio z komputerem stanowiska drugim interfejsem Reticulum przez USB.
 
@@ -16,7 +16,7 @@ Stacja ma jedną rolę (D19): w [konfiguracji węzła stanowiska](#węzeł-stano
 
 Środowisko `bench-b` buduje ten sam program stacji dla [stanowiska B na N1](#stanowisko-b-na-płytce-n1-bench-b): ESP32-S3-DevKitC-1 z X-NUCLEO-S2868A2 (ST S2-LP) zamiast nRF52840 i CC1120. Wspólne są polecenia, polecenia pomiarowe, łącze P1, dziennik, magazyn, protokół USB laptop–stacja z dwoma interfejsami CDC, warstwa aplikacji, ekran i panel N1; różnią się warstwa MCU (`src/platform_*.cpp`), sterownik układu radiowego (`src/radio_console_*.cpp`, `src/*_link.cpp`) i [rejestry P1 dla S2-LP](#rejestry-profilu-p1-dla-s2-lp).
 
-Środowisko `l0` buduje ten sam program dla [prototypu](#stacja-l0-l0) (ESP32-S3 z SX1262 na płytce v1) z poleceniami pomiarowymi w profilu LoRa; łącza P1 i interfejsu LoRa stosu w nim nie ma.
+Środowisko `l0` buduje ten sam program dla [prototypu](#stacja-l0-l0) (ESP32-S3 z SX1262 na płytce v1) z poleceniami pomiarowymi w profilu LoRa i interfejsem LoRa stosu w ramkach RNode, bez łącza P1; `l0-port` to ten sam obraz z portem.
 
 Obrazy skompilowano w PlatformIO. Pomiar z 2026-10-24 (`main` 31f3f06 z etapami rdzenia 6-3 i 6-4):
 
@@ -260,7 +260,7 @@ Sterownik (`src/sx1262.cpp`: polecenia, rejestry, bufor, BUSY; `src/sx1262_link.
   - poprawki z rozdziału 15 karty (0x0889, 0x08D8, 0x0736), słowo synchronizacji,
   - Rx Boosted (0x08AC = 0x96) dopisany do listy rejestrów zachowywanych w uśpieniu (0x029F = 1, 0x02A0..0x02A1 = 0x08AC),
   - na końcu weryfikacja odczytem: typ pakietu, 10 rejestrów i brak błędów układu.
-- **Stałe do ustalenia wobec RNode (T3):** preambuła 24 symbole (reguła RNode max(18, ceil(24 ms / czas symbolu)), `Config.h`/`Utilities.h` w commicie 56775c51) i słowo synchronizacji 0x12 (rejestry 0x0740 = 0x14 i 0x0741 = 0x24 jak w RNode, `sx126x.cpp`) są stałymi w `src/lora_profile.h`; obie wartości wynikają ze źródła RNode, a T3 potwierdza je radiem. Program diagnostyczny nadaje z preambułą 8 symboli i mocą 0 dBm.
+- **Stałe z RNode:** preambuła 24 symbole (reguła RNode max(18, ceil(24 ms / czas symbolu)), `Config.h`/`Utilities.h` w commicie 56775c51) i słowo synchronizacji 0x12 (rejestry 0x0740 = 0x14 i 0x0741 = 0x24 jak w RNode, `sx126x.cpp`) są stałymi w `src/lora_profile.h`. Obie wartości pochodzą ze źródła RNode; radiem potwierdza je [krok 4](#krok-4-interfejs-lora-z-radiem-rnode). Program diagnostyczny nadaje z preambułą 8 symboli i mocą 0 dBm.
 - **Nadawanie:** ramka z bufora od adresu 0, długość w parametrach pakietu, RXEN niski, `SetTx` bez limitu czasu układu; koniec po TxDone (układ wraca sam do STDBY_XOSC), bez niego po czasie ramki + 100 ms przejście do STDBY_XOSC i błąd.
 - **Odbiór** ciągły (`SetRx 0xFFFFFF`) z RXEN wysokim: ramka po RxDone, długość i początek z `GetRxBufferStatus`, RSSI pakietu (−RssiPkt/2) i SNR (SnrPkt/4) z `GetPacketStatus`; błąd CRC lub nagłówka albo inna długość niż w `RX <len>` dają `rx_bad`, a układ zostaje w odbiorze.
 - **TXCW:** `SetTxContinuousWave`; **FOFF:** słowo RF ± kroki 32 MHz / 2²⁵ (0,954 Hz), do ±50 kHz (granica podpasma), zapis w STDBY_XOSC i powrót do odbioru.
@@ -271,7 +271,7 @@ Polecenia pomiarowe działają jak na A i B (ten sam `src/measure.cpp`, [opis](#
 - `TXPKT <n> <len>` i `RX [<len>]` przyjmują ramki wzorcowe 4–255 B; dług 12 × `n` × czas ramki trafia do dziennika FRAM przed pierwszą ramką, a seria bez `CONDUCTED` nie może przekroczyć 838 ms, czyli najdłuższego datagramu LoRa (dwie ramki 255 B z narastaniem). Przykład: `TXPKT 2 255` planuje 838 ms i zapisuje 10056 ms długu; `TXPKT 3 255` wymaga `CONDUCTED`. `expected_on_air_ms` to cała ramka LoRa od preambuły; `sync_gpio` jest `false` (bez wyjścia „pakiet w powietrzu”).
 - `TXCW` trwa co najmniej 1 s, więc w profilu LoRa wymaga zawsze `CONDUCTED` (pomiar mocy i częstotliwości przewodowo do tłumika).
 - `RXPER` podaje dodatkowo wiersz `{"snr_avg_db":…,"rx_ok":…}`; `lqi_avg` wynosi 0.
-- Łącza P1 nie ma: `P1RX` i `P1TX` zwracają `no P1 link on this radio`, odbiór P1 nie wraca sam poza trybem przygotowania, a stos nie dostaje gotowości interfejsu radiowego, więc niczego nie nadaje. Interfejs LoRa stosu w formacie RNode jest następnym etapem.
+- Łącza P1 nie ma: `P1RX` i `P1TX` zwracają `no P1 link on this radio`. Łącze stosu idzie w ramkach RNode (`src/measure.cpp`, [profil LoRa](../docs/spec/radio.md#profil-lora-pilotażu)): odbiór wraca sam poza trybem przygotowania i po rekonfiguracji układu, a nadanie idzie kolejno przez dług z dziennika, 50 ms bez aktywności, CAD, zapis długu 12 × czas ramek i dwie ramki. Opis i liczniki: [interfejs LoRa stosu](#interfejs-lora-stosu).
 - Tryb pracy do badań EMC ([opis](#tryb-pracy-do-badań-emc)): na przykład `EMC 10 255` nadaje ramkę 255 B (419 ms rezerwacji, 5028 ms długu) co 10 s i odbiera ramki 255 B między nimi; najkrótszy okres dla 255 B to 6 s, dla 20 B 1 s.
 - `INFO` podaje `profile: "LoRa"`, `radio: "SX1262"`, `bench: "L0"` i pola profilu `carrier_hz`, `bw_hz`, `sf`, `cr`, `preamble`, `sync_word` zamiast `symbol_rate`, `deviation_hz`, `rx_filter_hz`; `p1_ok` oznacza tu zapisany i zweryfikowany profil LoRa. Konfiguracja stacji (`configure`) wymaga `radio.profile` = `lora-sf7`.
 
@@ -307,6 +307,70 @@ Próba zmontowanego prototypu (**niewykonana**; raport z próby w Issue z etykie
 6. Czasy: rzeczywisty czas ramki i narastania (pole `tx_ms` wobec `expected_on_air_ms`), start TCXO, prąd odbioru w trybie Rx Boosted.
 7. Brak emisji 2,4 GHz w wybranym sposobie wyłączenia Wi-Fi i Bluetooth (D14; obraz nie uruchamia Wi-Fi ani Bluetooth, ale wybór sposobu wyłączenia jest warunkiem wstępnym etapu).
 8. Tryb EMC przed badaniami: `EMC 10 255` na dwóch prototypach przez godzinę (`sent`, `rx_ok`, `missing` po obu stronach, cykl pracy w eterze), restart zasilania i przyciskiem RESET w trakcie (`resumed: true`, pierwsza ramka po odczekaniu długu), CISZA w trakcie (`silenced`), „RADIO: AWARIA” na ekranie przez cały tryb, `EMC 0` (alarm schodzi).
+
+### Interfejs LoRa stosu
+
+Obrazy `l0` (rdzeń, wersja `l0-0.6`) i `l0-port` (port, `l0-0.7`) mają pod stosem łącze LoRa w ramkach RNode ([ramka w eterze](../docs/spec/radio.md#profil-lora-pilotażu)); ten sam kod łącza i ramkowania ma program `host` z `--link lora` ([próba zgodności](#próba-zgodności-z-reticulum)).
+
+- **Ramki** (`src/loraframe.h/.cpp`): datagram to pakiet Reticulum z IFAC 16 B, 1–508 B. Do 254 B idzie w jednej ramce, dłuższy w dwóch: nagłówek 1 B i bajty 0–253, potem ten sam nagłówek i reszta. Starsza połówka nagłówka pochodzi z generatora stacji, a w datagramie dzielonym jest inna niż w poprzednim dzielonym. Pakiet ponad 492 B (508 B z IFAC) odpada przed nadaniem i liczy się w `too_large` (`RNS`). Składanie idzie według reguł RNode z trzema zaostrzeniami: ramka z samym nagłówkiem (trzecia ramka RNode przy 508 B) jest pomijana (`header_only`), pierwsza część przepada po 1 s od odbioru jej ramki (`assembly_timeout`), a inna połówka albo ramka bez podziału kasuje oczekującą część (`split_lost`).
+- **Czas łącza** (`p1iface::loraTiming`): czas datagramu z czasu jego ramek (508 B: 838 ms z narastaniem 3 ms na ramkę), dług ciszy 12 × ten czas (508 B: 10 056 ms; tyle stacja odczekuje po starcie bez poprawnego rekordu długu), przepływność deklarowana stosowi 4846 b/s (ogłoszenie stacji z IFAC, 221 B).
+- **Nadanie** (`measure::Bench::sendLora`): dług z dziennika, potem okno 50 ms bez aktywności kanału ze znaczników odbioru (preambuła, nagłówek, ramka, RSSI ponad −100 dBm) i RSSI w chwili decyzji, ramka 1 do bufora układu (nieodczytana albo odbierana ramka odracza nadanie), CAD (wykryta preambuła odracza bez zapisu długu), zapis długu 12 × czas ramek w dzienniku FRAM, ramka 1 i od razu ramka 2, jak w RNode bez sprawdzania kanału między nimi, powrót do odbioru. Odroczenie trwa losowo 100–1000 ms, po 30 odroczeniach datagram odpada (`tx_drop`). Od decyzji do powrotu do odbioru pętla trzyma blokadę radia (do około 0,9 s).
+- **Zadanie odbioru** (`platform_esp32.cpp`, `sx1262::LinkDriver::taskCycle`): ESP32-S3, rdzeń 0, priorytet tuż pod zadaniem TinyUSB, obieg co takt FreeRTOS (1 ms), stos 4 KiB w pamięci statycznej. Obsługuje układ zawsze, gdy sterownik jest w odbiorze (stos i polecenia pomiarowe `RX` i `EMC`). Przy wysokim DIO1 (RxDone, CrcErr, HeaderErr; w MCU podciągnięcie w dół) albo co 5 ms próbuje wziąć blokadę radia bez czekania; zajęta oznacza pominięty obieg. Pod blokadą czyta przerwania, odświeża znaczniki aktywności, co 5 ms bierze próbkę RSSI i przenosi ramkę z czasem odbioru do pierścienia 8 ramek (`src/spsc_ring.h`, jeden producent i jeden konsument). Pełny pierścień gubi najnowszą ramkę (`rx_ring_overflow`). Pętla czyta ramki z pierścienia (`pollRx`). Przekroczenie czasu BUSY przerywa obieg bez zapisu, a następna próba jest po 100 ms.
+- **Spóźniona ramka** (`rx_late`): układ w odbiorze ciągłym pisze kolejną ramkę w buforze za poprzednią, więc druga ramka 255 B nadpisuje pierwszą. Ramka, przy której jest już HeaderValid następnej ramki, jest odrzucana i liczona w `rx_late` oraz `rx_bad`.
+- **Blokada radia** (`platform::RadioLock`, `src/radio_lock.h`): rekurencyjny mutex FreeRTOS z dziedziczeniem priorytetu; zawsze najpierw blokada radia, potem magistrala SPI. `Bench` dostaje sterownik przez `radiolink::LockedDriver`, więc każda jego operacja na układzie idzie pod blokadą; pętla czeka na nią najwyżej 500 ms. Przekroczenie (`lock_timeouts`) daje `radio_awaria` do następnej kontroli radia, a polecenie układu dostaje `radio lock timeout`. `WICI_RADIO_LOCK_CHECK` sprawdza blokadę przed każdą transakcją z SX1262 (`lock_misses`, oczekiwane 0). Ekran idzie w kawałkach po 9 wierszy pikseli, jeden na obieg pętli.
+- **Nadzór i alarm** (`src/rx_watch.h`, `radiocon::check`): odbiór stosu jest uzbrojony (`rx_armed`), gdy stos działa, a łącze jest w odbiorze poza trybem przygotowania i EMC. Polecenia `IDLE`, `RESET`, `REGW`, `TXCW`, `TXPKT`, `RX` i `EMC` rozbrajają go bez alarmu. `radio_awaria` pojawia się, gdy radio nie służy stacji, gdy przy uzbrojonym odbiorze i bez nadawania licznik obiegów zadania albo czas ostatniej udanej obsługi układu stoi 10 s (`rx_stalled`), albo gdy pętla nie dostała blokady. Kontrola co 10 s (pod blokadą) przywraca profil utracony przez reset układu i od razu uzbraja odbiór. Układ poza RX przy uzbrojonym odbiorze wraca do odbioru (`rx_mode_lost`). Alarm schodzi sam, gdy zadanie znów obsługuje układ.
+- **Gotowość:** odbiór stosu startuje przed ekranem; `rx_ready_ms` to czas od startu do uzbrojenia (kryterium ≤60 s).
+
+Liczniki:
+
+- `INFO`: `link` (`"lora"`), `rx_task`, `rx_armed`, `rx_ready_ms`, `loop_max_ms` (najdłuższy obieg pętli od startu), `rx_task_loops`, `rx_service_max_ms` (najdłuższa obsługa układu przez zadanie), `rx_stalled`, `rx_mode_lost`, `lock_timeouts`, `lock_misses`;
+- `P1`: `{"lora":…}` z `rx_ok`, `rx_bad`, `rx_datagrams`, `tx_datagrams`, `tx_fragments` (ramki), `tx_drop`, `deferrals`, `long_deferrals`, powodami odroczeń (`cad_busy`, `rssi_busy`, `rx_busy`), składaniem (`split_lost`, `header_only`, `assembly_timeout`), `rx_late`, `rx_ring_overflow`, `cca_threshold_dbm`, `tx_wait_ms`;
+- `RNS`: `link`, `too_large`, `bitrate`, `rx_stack_free` (zapas stosu zadania odbioru w bajtach), `heap_size`, `heap_free` i `heap_min` (sterta ESP-IDF: cała, wolna i najmniejsza wolna od startu; −1 na nRF52840, gdzie stos ma pulę TLSF w `pool*`);
+- wiersze `lorarx` (złożony datagram: `len`, `frames`, `rssi_dbm`, dane) i `loratx` (wynik, `len`, `frames`, `deferrals`, `wait_ms`, `tx_wait_ms`);
+- program `host --link lora` podaje w stanie `lora_split_lost`, `lora_header_only`, `lora_assembly_timeout` i `lora_bad_length` (ramka ponad 255 B, możliwa tylko w emulatorze; obraz na układzie tego licznika nie podaje).
+
+Testy na komputerze: `tests/test_loraframe.py` (ramki bajt po bajcie wobec wzorca z firmware RNode, składanie, czasy), `tests/test_radio_link_host.py` (`Sx1262LinkTests`, `LoraBenchTests`, `RxRingTests`, `DisplayChunkTests`: CAD, przygotowanie nadania, spóźniona ramka, pierścień, nadzór, ekran w kawałkach), `tests/test_rns_units.py` (czas łącza), próby wrogie na łączu LoRa (`LoraHostileStackTests`, `CoreLoraHostileStackTests`) i [próba zgodności](#próba-zgodności-z-reticulum) z `RNodeInterface`.
+
+### Krok 4: interfejs LoRa z radiem RNode
+
+Procedura (**niewykonana**; raport w Issue z etykietą `próba`). Sprzęt: prototyp z `l0` (potem z `l0-port`), RAK4631 z oficjalnym firmware RNode ([hardware/rnode](../hardware/rnode/README.md)), dwa komputery z Reticulum w Pythonie `e40191b`, drugi prototyp do CAD. Najpierw punkty 1–3 [próby prototypu](#stacja-l0-l0). Po stronie RNode interfejs jak w `tools/rns_interop.py`:
+
+```ini
+  [[LoRa RNode]]
+    type = RNodeInterface
+    port = /dev/…
+    frequency = 869525000
+    bandwidth = 125000
+    txpower = 13
+    spreadingfactor = 7
+    codingrate = 5
+    passphrase = <klucz sieci stacji, 32 cyfry szesnastkowe>
+    ifac_size = 128
+```
+
+`ifac_size` podaje się w bitach; 128 daje IFAC 16 B jak w stacji (domyślne 8 B stacja odrzuci jako `ifac_invalid`).
+
+1. **Wymiana:** ogłoszenia i pakiety z dowodem w obie strony (stacja w zwykłej konfiguracji, `RNS`: trasa do celu Pythona, `rx_ok`, `ifac_invalid` 0).
+2. **100 datagramów 508 B w każdą stronę przy obciążeniu kryptografią.** Z RNode do stacji: 100 ogłoszeń nowych celów z danymi aplikacji 325 B (pakiet 492 B, jak krok B `rns_interop.py`); każde stacja weryfikuje podpisem Ed25519. Ze stacji do RNode: stacja jako węzeł stanowiska, a komputer za USB ogłasza cele z danymi 309 B. Stacja retransmituje je z identyfikatorem transportu (16 B), więc w eterze idzie 492 B z IFAC 16 B; wiersze `loratx` z `"len":508,"frames":2`. Tempo wyznacza limit ogłoszeń stacji (`ann_held`), więc ta strona trwa dłużej. Zapisać przed i po (`P1`, `INFO`, `RNS`):
+   - po stronie stacji: przyrost `rx_datagrams` (≥99 ze 100), przyrost `header_only` (trzecia ramka RNode, jedna na datagram), `rx_late` = 0, `rx_ring_overflow`, `assembly_timeout`, `split_lost`, `loop_max_ms`, `rx_service_max_ms`, `rx_stack_free`;
+   - po stronie Pythona: liczba przyjętych ogłoszeń ze stacji (≥99 ze 100);
+   - odstęp między nadaniami stacji wobec długu (`tx_wait_ms` w `loratx`, około 10 s po 508 B).
+3. **CAD z sąsiednią stacją:** drugi prototyp w trybie przygotowania nadaje serie `TXPKT 2 255` (po każdej czeka na dług), a pierwsza ma w tym czasie datagramy w kolejce. Oczekiwane: przyrost `cad_busy`, `rx_busy` albo `rssi_busy` i `deferrals`, `deferrals` > 0 w wierszach `loratx`, brak nakładania się nadań (odbiornik SDR albo `RXPER` trzeciej stacji). Potem to samo z tłumikiem albo odległością, przy której RSSI sąsiada jest poniżej progu CCA (−100 dBm): wtedy odroczenia daje sam CAD i odbiór ramki w toku, więc `cad_busy` i `rx_busy` muszą rosnąć, a nadania nadal się nie nakładają.
+4. **Gotowość i nadzór:** `rx_ready_ms` ≤60 s po starcie; przez cały krok `rx_stalled` false, `lock_timeouts` 0, `lock_misses` 0, `rx_mode_lost` 0.
+5. **Port:** punkty 1–2 na `l0-port`.
+
+### Próby rdzenia na prototypie
+
+Próby 1–8 z [przejścia na rdzeń](#przejście-na-rdzeń-i-powrót-do-portu) dla pilotażu idą na prototypie z łączem LoRa:
+
+1. Samotest rdzenia na `l0` (`board_selftest.py -e l0`).
+2. RAM w czasie pracy przy pełnej tablicy tras (256 celów) i liście 4096 skrótów pakietów, w `l0` i `l0-port`: stacja jako węzeł stanowiska, ogłoszenia i pakiety z Reticulum w Pythonie przez USB (bez długu ciszy radia). `RNS` podaje `paths`, `hashes`, `rx_stack_free` oraz stertę ESP-IDF: `heap_size`, `heap_free` i `heap_min` (w `l0-port` pola `pool*` są zerowe, bo port na ESP32 bierze pamięć ze sterty bez puli TLSF); RAM statyczną daje kompilacja. Próg: `heap_min` ≥30% `heap_size`.
+3. Dwa prototypy przez LoRa: ogłoszenia, pakiet, dowód, zgłoszenie z RECEIVED, dług ciszy z dziennika między pakietami.
+4. Prototyp jako węzeł stanowiska z Reticulum i LXMF w Pythonie na komputerze (`bitrate = 41`): SA1 w obie strony, kontrola przepływu KISS, odłączenie i ponowne podłączenie USB.
+5. Przejście i powrót między `l0` a `l0-port`: stacja po pracy na porcie z wypełnioną tablicą, potem `l0`: ta sama nazwa i tożsamość, `table_corrupt`, pierwsze zgłoszenie dostarczone; potem `l0-port` i znów `l0`.
+6. Zanik zasilania i restart przez watchdog w trakcie zapisu tablicy: stacja startuje, wpis odbiorcy zostaje.
+7. Przekaźnik A–B–stanowisko przez LoRa (trzy prototypy, B jako przekaźnik) przez 24 h z okresowymi zgłoszeniami: bez restartów, RAM i liczniki stabilne (`RNS`, `INFO`: `loop_max_ms`, `rx_late`, `rx_ring_overflow`, `lock_timeouts`).
+8. Rola węzła stanowiska na ESP32-S3 z SX1262 (start stosu, interfejs USB i LoRa).
 
 ## Narzędzia
 
@@ -735,6 +799,18 @@ Wynik (2026-10-23, dług 12 × TX): wszystkie 18 sprawdzeń zaliczone. W czasie 
 - kroki P1 szły dalej,
 - zgłoszenie dotarło do komputera z potwierdzeniem.
 
+**Łącze LoRa (etap L7 planu interfejsu LoRa)**: `host` i `host-port` z `--link lora` wysyłają przez UDP ramki w eterze z nagłówkiem RNode (`loraframe`: podział datagramu, składanie), jedna ramka w jednym datagramie UDP; czas nadawania i dług ciszy 12t z czasu łącza (`LinkTiming`), jak w P1. Trzy próby w `tests/test_rns_stack.py` (zadanie `interop-lora` w CI):
+
+- `tools/rnode_emulator.py` to radio RNode dla `RNodeInterface` Reticulum w Pythonie: pseudoterminal z protokołem szeregowym RNode czytanym z `RNodeInterface.py` (wykrycie 0x46, firmware 1.86, platforma 0x90 bez ekranu, echo ustawień w 0,25 s, dane KISS w obie strony, bez kontroli przepływu). Pakiety zamienia na ramki firmware RNode i z powrotem (`tools/rnode_framing.py`, ten sam wzorzec sprawdza `tests/test_loraframe.py`), także z trzecią ramką z samym nagłówkiem przy 508 B; pakiet ponad 508 B przepada jak w RNode.
+- `tools/rns_interop.py --link lora`: `RNodeInterface` (IFAC 16 B, ten sam klucz) przez emulator do `host-port` i do `host` (z `--lxmf`). Kroki jak w P1 oraz B (największe datagramy w dwóch ramkach, ogłoszenia i pakiety z dowodem w obie strony), J (para ramek 509 B wstrzyknięta przez UDP: druga ramka ma 256 B, stacja ją odrzuca i liczy w `lora_bad_length`, a pierwsza część przepada po 1 s), D (po pakiecie cisza co najmniej 12t, czyli czas nadawania i dług z czasu łącza).
+- `tools/rns_osp_node.py --lxmf --link lora`: węzeł stanowiska i stacje na wspólnym emulowanym medium, komputer z `LXMRouter` za USB przy `bitrate = 41` (kryterium ≤41 b/s, 4000 / 95,71). Pakiet z USB 493–500 B odpada przed radiem i jest liczony (`too_large`); ramki bez IFAC nie dochodzą do komputera; wiadomość LXMF do stacji dostaje dowód przed jakimkolwiek ponowieniem (przebieg 2026-10-30: jedna próba, dowód po 5,8 s, następna próba byłaby po 201,1 s, trzy próby na ponowienie, odstęp z samego `bitrate`); wiadomości SA1 w rodzaju RECEIVED i STATUS ze stacji do komputera przez jeden i dwa skoki (stacja – przekaźnik – węzeł) i LXMF z komputera przez dwa skoki z dowodem; przy odłączonym komputerze węzeł przekazuje ogłoszenia dwóch stacji, które się nie słyszą. Program `host` nie ma warstwy aplikacji stacji, więc RECEIVED i STATUS to treści SA1 wysłane poleceniem `send`, nie wiadomości z `station.cpp`.
+
+Ograniczenia próby:
+
+- Emulator RNode i ramkowanie stacji pochodzą z tego samego odczytania źródła firmware RNode (commit `56775c51`). Próba dowodzi współpracy z `RNodeInterface` i spójności obu stron, a nie zgodności z prawdziwym firmware w eterze; tę da próba sprzętowa z RAK4631.
+- Emulator nie opóźnia pakietów czasem nadawania: ciszę 12t stosuje strona stacji, a po stronie komputera łącze jest tylko przejściówką.
+- BULLETIN do 50 stacji: 50 wiadomości LXMF do jednej stacji, wysyłanych jak aplikacja stanowiska ([Wysyłka](../docs/spec/stanowisko-osp.md): najwyżej 4 w drodze, następna po DELIVERED albo FAILED), sprawdzenie `bulletin_50_paced`: 50/50 DELIVERED i `usb_rx_drop` 0. Surowa seria 50 pakietów z komputera gubiłaby pakiety (czas kanału jednego pakietu, około 5 s, przekracza 5 s blokady interfejsu KISS w Pythonie), ale tak aplikacja nie wysyła, a przy 4 wiadomościach w drodze bufor USB węzła (8 slotów) wystarcza. Czas i liczba prób są w wynikach (`bulletin_paced`; przebieg 2026-10-30: 50/50 dostarczonych po jednej próbie, 0 odrzutów, 308,6 s); wymaganie T5 (≤12 min dla 50 stacji) rozstrzyga próba na sprzęcie, nie ten emulator.
+
 Wymagają sprzętu (stanowisko A, dwie płytki albo płytka i Reticulum w Pythonie z modemem P1):
 
 - te same sprawdzenia przez CC1120: ramki P1 w eterze zamiast emulatora, CCA i odroczenia przy ruchu stosu, dług ciszy z dziennika FRAM między pakietami;
@@ -764,13 +840,13 @@ Od etapów rdzenia 6-3 i 6-4 obrazy `bench-a`, `bench-n1`, `bench-b` i `l0` są 
 
 ### Przejście na rdzeń i powrót do portu
 
-Obrazy z rdzeniem mają nowe wersje (`version` w `INFO`): `bench-a-0.2`, `bench-n1-0.2`, `bench-b-0.2` i `l0-0.3`; obrazy z portem zostają przy `bench-a-0.1`, `bench-n1-0.1`, `bench-b-0.1` i `l0-0.2`, więc wersja mówi, który stos działa.
+Obrazy z rdzeniem mają nowe wersje (`version` w `INFO`): `bench-a-0.2`, `bench-n1-0.2`, `bench-b-0.2` i `l0-0.3`; obrazy z portem zostają przy `bench-a-0.1`, `bench-n1-0.1`, `bench-b-0.1` i `l0-0.2`, więc wersja mówi, który stos działa. Z interfejsem LoRa prototyp ma `l0-0.6` (rdzeń) i `l0-0.7` (port).
 
 **Przejście.** Wgrać obraz z rdzeniem (`pio run -e bench-a -t upload`). Tożsamość stacji zostaje, bo oba stosy czytają ten sam rekord klucza w FRAM. Adres to cel tej tożsamości, więc zmienia się z `wici.sa1` na `lxmf.delivery`, a odbiorca poznaje go z pierwszego ogłoszenia. Rdzeń widzi obszar tablic po porcie jako nowy ([tablice w FRAM](#tożsamość-i-tablice-w-fram)), więc znane cele i trasy budują się od nowa z ogłoszeń. Tożsamości odbiorców z karty stacji zostają w konfiguracji. Dziennik, magazyny i konfiguracja nie zmieniają układu. Wiadomości w drodze w chwili przełączenia stacja ponawia jako LXMF, a powtórzenie odrzuca odbiorca po identyfikatorze i rewizji. Start jest dłuższy o samotest rdzenia ([samotest](#samotest-rdzenia-na-płytce); na nRF52840 około 1,1–1,5 s przed ekranem). Na ESP32-S3 port zapisywał ziarno generatora w NVS. Rdzeń bierze losowość z generatora stacji, a wpis w NVS zostaje bez znaczenia.
 
 **Powrót do portu.** Do etapu rdzenia 6-5 to obraz `*-port` z tego samego commita (`pio run -e bench-a-port -t upload`). Tożsamość zostaje, adres wraca do `wici.sa1`, a port nie znajduje nagłówka swojego systemu plików i formatuje obszar tablic, więc tablice budują się od nowa. Po etapie rdzenia 6-5 w `main` nie ma obrazów z portem: obraz `*-port` buduje się z podpisanego znacznika git z adnotacją na ostatnim commicie `main` z tymi obrazami (nazwę znacznika podaje etap rdzenia 6-5), czyli `git checkout <znacznik>`, a potem `pio run -e bench-a-port -t upload`. Budowa pobiera port i jego biblioteki z przypiętych commitów (`tools/stack_deps.py`), więc wymaga, żeby te repozytoria były dostępne.
 
-**Próby na płytkach przed wydaniem i przed etapem rdzenia 6-5** (warunek odbioru obrazów z rdzeniem; etapy rdzenia 6-3 i 6-4 scalono przed nimi; na obrazach końcowych po etapie rdzenia 6-4: `bench-a`, `bench-n1`, `bench-b` i `l0` z rdzeniem; wynik w Issue z etykietą `próba`):
+**Próby na płytkach przed wydaniem i przed etapem rdzenia 6-5** (warunek odbioru obrazów z rdzeniem; etapy rdzenia 6-3 i 6-4 scalono przed nimi; na obrazach końcowych po etapie rdzenia 6-4: `bench-a`, `bench-n1`, `bench-b` i `l0` z rdzeniem; wynik w Issue z etykietą `próba`; dla pilotażu te same próby na prototypie przez LoRa: [próby rdzenia na prototypie](#próby-rdzenia-na-prototypie)):
 
 1. [Samotest rdzenia](#samotest-rdzenia-na-płytce) na DK, płytce v1 z obrazem `bench-n1` i prototypie (`board_selftest.py`): `selftest_ok`, `entropy_ok`, czasy `validate`, `sign` i `token_decrypt`; z nich wynika, czy limity weryfikacji (3 naraz, 1 na sekundę) i kolejka odbioru (4) zostają.
 2. RAM w czasie pracy przy pełnej tablicy (256 celów: ogłoszenia z Reticulum w Pythonie przez węzeł stanowiska na USB albo przez P1 z drugiej płytki): wolna sterta i zapas stosów zadań; zapas ≥30% na nRF52840 i ESP32-S3.
@@ -874,7 +950,7 @@ Odłożone (z szacunkiem zysku; każde wymaga osobnej zmiany i testów):
 
 1. Próby na sprzęcie według punktów wyżej (obraz nie był jeszcze uruchomiony na płytce), na płytce v1 także pomiar oscyloskopem przy J7 i U1 (ekran 1 i 2 MHz, FRAM 8 MHz, poziomy i zbocza); węzeł stanowiska z komputerem stanowiska przez USB.
 2. Próby 1–8 rdzenia na płytkach z [listy](#przejście-na-rdzeń-i-powrót-do-portu) na obrazach końcowych (warunek wydania i pilotażu na rdzeniu), potem usunięcie portu (etap rdzenia 6-5); z nich decyzja o pamięci (D14) i reszta [etapu LXMF](#co-zostaje-na-etap-lxmf).
-3. Próby stosu na sprzęcie z [listy](#próba-zgodności-z-reticulum), których nie obejmują próby 1–8: płytka z Reticulum w Pythonie przez radio, czasy kryptografii przy `-Os`.
+3. Próby stosu na sprzęcie z [listy](#próba-zgodności-z-reticulum), których nie obejmują próby 1–8: płytka z Reticulum w Pythonie przez radio, czasy kryptografii przy `-Os`. Na prototypie to [krok 4 z radiem RNode](#krok-4-interfejs-lora-z-radiem-rnode) i [próby rdzenia przez LoRa](#próby-rdzenia-na-prototypie).
 4. Stanowisko B (`bench-b`), w tej kolejności:
    - kroki B3–B4 na sprzęcie, w tym wyliczenie dwóch portów CDC, wgrywanie przez dotknięcie 1200 b/s i to, czy restart przez watchdog zadań daje `esp_reset_reason()` = TASK_WDT, a nie PANIC (od tego zależy wpis „restart by watchdog”);
    - wybór napędu SCK i MOSI (`DRIVE`) i zegara ekranu analizatorem na J11;
@@ -883,5 +959,5 @@ Odłożone (z szacunkiem zysku; każde wymaga osobnej zmiany i testów):
    - przesunięcie RSSI modułu (wpływa na próg CCA −100 dBm i `rssi_avg_dbm`), ustawienia AFC, AGC i odtwarzania zegara symboli przy pomiarze czułości (T4);
    - przegląd tablicy S2-LP w ST STSW-S2LP-DK (S2-LP DK GUI) dla P1, gdy narzędzie będzie dostępne; pomiar mocy i dobór PA_POWER oraz SMPS;
    - własne nazwy interfejsów CDC („WICI diagnostyka”, „WICI dane”) wymagają zmiany w rdzeniu Arduino-ESP32 (nazwy są stałe w `USBCDC.cpp`) albo własnych deskryptorów TinyUSB.
-5. Prototyp (`l0`): punkty próby z [opisu](#stacja-l0-l0) (punkty 1–3 obrazem stacji, moc i częstotliwość, cykl pracy, czasy, brak emisji 2,4 GHz), preambuła i słowo synchronizacji wobec RNode (T3), progi CAD i RSSI dla CCA (T4); potem interfejs LoRa w stosie.
+5. Prototyp (`l0`): punkty próby z [opisu](#stacja-l0-l0) (punkty 1–3 obrazem stacji, moc i częstotliwość, cykl pracy, czasy, brak emisji 2,4 GHz), potem [krok 4](#krok-4-interfejs-lora-z-radiem-rnode): wymiana z RAK4631 (potwierdza też preambułę i słowo synchronizacji, T3), CAD z sąsiednią stacją, progi CAD i RSSI dla CCA (T4). Przed pomiarem RAM w `l0-port`: pole wolnej sterty ESP-IDF w `RNS` (dziś żadne polecenie jej nie podaje). Wynik kroku 4 rozstrzyga, czy płytka v2 potrzebuje osobnej magistrali SPI dla radia.
 6. Dioda alarmu i brzęczyk na płytce v1: jasność błysku 50 ms przy 1 mA i głośność sygnałów do oceny na płytce; przypomnienie `wymien_ogniwa` z pomiarem ogniw (tor zasilania z ogniw ma dopiero płytka v2).

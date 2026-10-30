@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
-// Interfejs P1 w stosie Reticulum (docs/spec/radio.md, "Interfejs P1 w stosie Reticulum" i
+// Interfejs P1 i LoRa w stosie Reticulum (docs/spec/radio.md, "Interfejs P1 w stosie Reticulum" i
 // "Dostęp do kanału"): część bez zależności od stosu i od Arduino, sprawdzana na komputerze.
+// Kolejka i klasy ruchu są wspólne dla obu łączy; czas kanału, największy pakiet i przepływność
+// bierze z LinkTiming łącza (p1Timing(), loraTiming()). Nazwa p1iface zostaje z historii.
 //
 // - Kolejka radiowa na 4 datagramy: pakiet od stosu jest przyjmowany tylko przy wolnym miejscu,
 //   inaczej stos dostaje odmowę (zajętość), a odrzut trafia do liczników diagnostyki.
@@ -28,7 +30,7 @@
 //   ogłoszenie z mniejszą liczbą skoków zastępuje to z największą), po 3 h odpada.
 // - Kolejność nadawania: dowody, zapytania o trasę i odpowiedzi na nie, potem dane K0 i K1, potem
 //   dane K2, na końcu ogłoszenia (oprogramowanie.md, "Wysyłanie"); w obrębie klasy od najstarszego.
-// - Deklarowana przepływność uwzględnia ramkowanie P1 i dług ciszy 12 x czas TX.
+// - Deklarowana przepływność P1 uwzględnia ramkowanie P1 i dług ciszy 12 x czas TX (LoRa: loraframe).
 // - Kod dostępu IFAC 16 B: maskowanie i zdejmowanie maski jak Transport.handle_outgoing_ifac i
 //   handle_ifac w Reticulum e40191b; podpis i HKDF liczy warstwa ze stosem (rns_node.cpp).
 #pragma once
@@ -36,6 +38,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "loraframe.h"
 #include "p1frame.h"
 #include "radio_link.h"
 
@@ -69,6 +72,33 @@ uint32_t reservedDebtMs(size_t length);
 uint32_t channelMs(size_t length);
 // Przepływność deklarowana stosowi [bit/s]: datagram 600 B przez czas nadawania i długu ciszy.
 uint32_t declaredBitrate();
+
+// Czas i rozmiary łącza pod interfejsem stosu (kolejka, klej stosu, port). Wartości P1 są te same co
+// funkcje wyżej; LoRa bierze je z loraframe (ramka RNode, czas dokładnych ramek).
+struct LinkTiming {
+    enum class Framing : uint8_t { P1, RNODE };
+    Framing framing;
+    size_t maxRaw;              // największy pakiet Reticulum bez IFAC
+    size_t maxWire;             // największy pakiet z IFAC
+    size_t maxDatagram;         // największy datagram łącza (podstawa limitu potwierdzenia)
+    uint32_t (*airtime)(size_t);        // czas datagramu w eterze [ms]
+    uint32_t (*reservedTx)(size_t);     // czas TX rezerwowany do długu ciszy [ms]
+    uint32_t seriesMaxMs;       // najdłuższa seria datagramu (czas, z którego liczy się największy dług)
+    uint32_t declaredBitrate;   // przepływność deklarowana stosowi [b/s]
+
+    uint32_t airtimeMs(size_t length) const { return airtime(length); }
+    uint32_t reservedTxMs(size_t length) const { return reservedTx(length); }
+    uint32_t reservedDebtMs(size_t length) const { return reservedTx(length) * DEBT_FACTOR; }
+    // Czas kanału datagramu: 13t, t = reservedTxMs (radio.md, "Dostęp do kanału", punkt 6).
+    uint32_t channelMs(size_t length) const { return reservedTx(length) * (1 + DEBT_FACTOR); }
+    // Czas, który potwierdzenie transportowe ma na drogę przez hops skoków tam i z powrotem:
+    // 2 x skoki x 13 x czas TX największego datagramu łącza (radio.md); bez długu ciszy i kolejki.
+    uint64_t receiptWaitMs(uint32_t hops) const {
+        return static_cast<uint64_t>(2) * hops * (1 + DEBT_FACTOR) * airtime(maxDatagram);
+    }
+};
+const LinkTiming& p1Timing();
+const LinkTiming& loraTiming();
 
 enum class Kind : uint8_t { CONTROL, DATA, ANNOUNCE };
 // Rodzaj pakietu z nagłówka Reticulum (bez IFAC): typ pakietu w bitach 0-1 bajtu 0, typ celu w 2-3.
@@ -119,6 +149,9 @@ struct Counters {
 
 class Queue {
 public:
+    // Czas łącza kolejki; domyślnie P1. Wołać przed pierwszym pakietem.
+    void setTiming(const LinkTiming& timing) { timing_ = &timing; }
+    const LinkTiming& timing() const { return *timing_; }
     // Przyjęcie pakietu od stosu: raw to pakiet Reticulum bez IFAC (klasa, skoki, cel), wire to
     // bajty do nadania (z IFAC). hint: wskazanie stosu (Hint).
     Admit offer(const uint8_t* raw, size_t rawLength, const uint8_t* wire, size_t wireLength, uint32_t nowMs,
@@ -210,6 +243,7 @@ private:
     // Limit ogłoszeń minął: zamyka porównanie, które po 2^31 ms bez ogłoszeń zmieniłoby znak.
     bool announceOpen(uint32_t nowMs);
 
+    const LinkTiming* timing_ = &p1Timing();
     Slot slots_[QUEUE];
     Held held_[HELD_ANNOUNCES];
     size_t count_ = 0;

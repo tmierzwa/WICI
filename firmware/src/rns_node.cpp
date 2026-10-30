@@ -90,8 +90,9 @@ public:
     P1Interface() : RNS::InterfaceImpl("P1") {
         _IN = true;
         _OUT = true;
-        _HW_MTU = p1iface::HW_MTU;
-        _bitrate = p1iface::declaredBitrate();
+        queue_.setTiming(radio->timing());
+        _HW_MTU = radio->timing().maxRaw;
+        _bitrate = radio->timing().declaredBitrate;
         _mode = RNS::Type::Interface::MODE_FULL;
     }
 
@@ -116,7 +117,7 @@ public:
         p1iface::Counters& c = queue_.counters();
         if (!online_) { ++c.offline; return; }
         if (!p1iface::ifacPresent(wire, length, p1iface::IFAC_SIZE)) { ++c.ifacMissing; return; }
-        if (length > p1iface::MAX_WIRE) { ++c.tooLarge; return; }
+        if (length > radio->timing().maxWire) { ++c.tooLarge; return; }
         uint8_t raw[p1iface::MAX_WIRE];
         if (!unwrap(wire, length, raw)) { ++c.ifacInvalid; return; }
         ++c.received;
@@ -163,7 +164,7 @@ protected:
     bool send_outgoing(const RNS::Bytes& raw) override {
         p1iface::Counters& c = queue_.counters();
         if (!online_) { ++c.offline; return false; }
-        if (raw.size() < 2 || raw.size() > p1iface::HW_MTU) { ++c.tooLarge; return false; }
+        if (raw.size() < 2 || raw.size() > radio->timing().maxRaw) { ++c.tooLarge; return false; }
         const p1iface::Kind kind = p1iface::classify(raw.data(), raw.size());
         // Cisza: bez nadawania; wyjątek tylko dla wymiany jednego zgłoszenia (znacznik z send() i dowodu).
         if (silence == Silence::FULL || (silence == Silence::EXCEPTION && !exceptionOut)) { ++c.silenced; return false; }
@@ -206,6 +207,11 @@ public:
         const uint8_t* data;
         size_t length;
         if (!usbPort->peek(data, length)) return;
+        if (length > radio->timing().maxRaw) {   // ponad największy pakiet łącza: odpada przed stosem
+            ++p1->queue().counters().tooLarge;
+            usbPort->pop();
+            return;
+        }
         const RNS::Bytes packet(data, length);
         usbPort->pop();
         // Ogłoszenie od komputera: cel chroniony w pełnych tablicach i w klasie K1 kolejki P1.
@@ -558,8 +564,7 @@ uint32_t send(const uint8_t dest[HASH], const uint8_t* data, size_t length, uint
         // Trasa nieznana (pakiet rozgłaszany) liczy się jako 1 skok.
         uint32_t hops = RNS::Transport::hops_to(hash);
         if (hops == 0 || hops >= RNS::Type::Transport::PATHFINDER_M) hops = 1;
-        const uint64_t waitMs = static_cast<uint64_t>(2) * hops * (1 + p1iface::DEBT_FACTOR) *
-                                    p1iface::airtimeMs(p1frame::MAX_DATAGRAM) + queueWaitMs();
+        const uint64_t waitMs = radio->timing().receiptWaitMs(hops) + queueWaitMs();
         uint64_t limit = (waitMs + 999) / 1000;
         if (limit < timeoutS) limit = timeoutS;
         if (limit < RECEIPT_MIN_S) limit = RECEIPT_MIN_S;
@@ -604,7 +609,7 @@ Status status() {
     s.started = started;
     s.identityNew = identityNew;
     s.identityLost = identityLost;
-    s.bitrate = p1iface::declaredBitrate();
+    s.bitrate = radio ? radio->timing().declaredBitrate : p1iface::p1Timing().declaredBitrate;
     if (!started) return s;
     s.online = p1 && p1->ifacOnline();
     s.paths = RNS::Transport::new_path_table().size();
@@ -640,10 +645,11 @@ size_t interfaceJson(char* out, size_t size) {
     const uint32_t now = nowMs();   // okna czasu kanału przesuwane przed printf (kolejność wywołań)
     const unsigned long poolMs = p1->queue().poolUsedMs(now), prMs = p1->queue().pathRequestUsedMs(now);
     const int n = snprintf(out, size,
-                           "\"q_len\":%u,\"q_held\":%u,\"q_queued\":%lu,\"q_full\":%lu,\"too_large\":%lu,\"ann_held\":%lu,"
+                           "\"link\":\"%s\",\"q_len\":%u,\"q_held\":%u,\"q_queued\":%lu,\"q_full\":%lu,\"too_large\":%lu,\"ann_held\":%lu,"
                            "\"ann_drop\":%lu,\"ann_expired\":%lu,\"tx_sent\":%lu,\"tx_failed\":%lu,\"rx_ok\":%lu,"
                            "\"ifac_missing\":%lu,\"ifac_invalid\":%lu,\"offline\":%lu,\"silenced\":%lu,\"k2_slot\":%lu,\"k2_pool\":%lu,"
                            "\"k2_dest\":%lu,\"pr_limited\":%lu,\"pr_resp_limited\":%lu,\"pool_ms\":%lu,\"pr_ms\":%lu",
+                           radio->timing().framing == p1iface::LinkTiming::Framing::RNODE ? "lora" : "p1",
                            (unsigned)p1->queue().queued(), (unsigned)p1->queue().held(), (unsigned long)c.queued,
                            (unsigned long)c.full, (unsigned long)c.tooLarge, (unsigned long)c.announcesHeld,
                            (unsigned long)c.announcesDropped, (unsigned long)c.announcesExpired, (unsigned long)c.sent,
@@ -692,13 +698,13 @@ uint32_t debugFillHashes(uint32_t n) {
 void debugClock(uint64_t (*nowMs)()) { hostClock = nowMs; }
 
 size_t debugIfacWrap(const uint8_t* raw, size_t length, uint8_t* wire) {
-    if (!p1 || !p1->ifacOnline() || length < 2 || length > p1iface::HW_MTU) return 0;
+    if (!p1 || !p1->ifacOnline() || length < 2 || length > radio->timing().maxRaw) return 0;
     p1->wrap(RNS::Bytes(raw, length), wire);
     return length + p1iface::IFAC_SIZE;
 }
 
 size_t debugIfacUnwrap(const uint8_t* wire, size_t length, uint8_t* raw) {
-    if (!p1 || !p1->ifacOnline() || length > p1iface::MAX_WIRE || !p1iface::ifacPresent(wire, length, p1iface::IFAC_SIZE)) return 0;
+    if (!p1 || !p1->ifacOnline() || length > radio->timing().maxWire || !p1iface::ifacPresent(wire, length, p1iface::IFAC_SIZE)) return 0;
     return p1->unwrap(wire, length, raw) ? length - p1iface::IFAC_SIZE : 0;
 }
 #endif
