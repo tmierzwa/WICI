@@ -2,7 +2,8 @@
 """Transcription of the framing of the official RNode firmware (the reference of the LoRa frame of the station).
 
 One source for two users: tests/test_loraframe.py (against firmware/src/loraframe.cpp) and
-firmware/tools/rnode_emulator.py (the RNode that RNodeInterface of Reticulum talks to)."""
+firmware/tools/rnode_emulator.py (the RNode that RNodeInterface of Reticulum talks to). Also the RNodeInterface
+section of the Reticulum config in the pilot LoRa profile, for rns_interop.py (emulator) and rnode_trial.py (radio)."""
 
 # RNode firmware: markqvist/RNode_Firmware commit 56775c51b60a6190242e324c210997dcc7637e53
 FLAG_SPLIT = 0x01      # Framing.h:107
@@ -10,6 +11,30 @@ SEQ_UNSET = 0xFF       # Framing.h:108
 MTU = 508              # Config.h:59
 SINGLE_MTU = 255       # Config.h:60
 HEADER_L = 1           # Config.h:61
+
+# Profil LoRa pilotażu (lora_profile.h, radio.md): 869,525 MHz, 125 kHz, SF7, CR 4/5, 13 dBm.
+FREQUENCY_HZ = 869525000
+IFAC_BITS = 128        # IFAC 16 B jak w stacji; domyślne 8 B stacja odrzuci jako ifac_invalid
+
+
+def rnode_interface(port, passphrase, txpower=13):
+    """Section [[LoRa RNode]] of the Reticulum config: an RNodeInterface in the pilot LoRa profile with the station
+    network key as IFAC (16 B). Flow control off: the emulator never sends CMD_READY, and the trial needs none."""
+    if any(c in str(port) for c in "\r\n[]"):
+        raise ValueError("port: forbidden characters")
+    return f"""  [[LoRa RNode]]
+    type = RNodeInterface
+    enabled = Yes
+    port = {port}
+    frequency = {FREQUENCY_HZ}
+    bandwidth = 125000
+    txpower = {int(txpower)}
+    spreadingfactor = 7
+    codingrate = 5
+    flow_control = No
+    passphrase = {passphrase}
+    ifac_size = {IFAC_BITS}
+"""
 
 
 def rnode_transmit(data, header_nibble):

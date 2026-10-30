@@ -28,6 +28,7 @@ import os
 import random
 import select
 import socket
+import subprocess
 import sys
 import tty
 
@@ -130,6 +131,20 @@ class Emulator:
                 self.air_input(self.sock.recv(2048))
             if sys.stdin in ready and not sys.stdin.readline():
                 return
+
+
+def spawn(listen, peer):
+    """Starts the emulator as a child process (with the Python that runs the caller); returns it and its pseudo-terminal."""
+    proc = subprocess.Popen([sys.executable, os.path.abspath(__file__), "--listen", str(listen), "--peer", str(peer)],
+                            stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+    return proc, json.loads(proc.stdout.readline())["pty"]
+
+
+def stop(proc):
+    """Ends the emulator from spawn(): it stops when its stdin closes."""
+    proc.stdin.close()
+    proc.wait(5)
+    proc.stdout.close()
 
 
 def main():

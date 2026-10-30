@@ -152,10 +152,11 @@ jobs:
   interop-lora:
     # Łącze LoRa stacji (L7): RNodeInterface Reticulum w Pythonie przez emulator radia RNode (tools/rnode_emulator.py)
     # do programu host z --link lora (port i rdzeń), potem węzeł stanowiska z LXMF w Pythonie, przekaźnik i dwa skoki
-    # (tools/rns_osp_node.py --link lora). Osobno od interop, żeby oba zadania szły równolegle. Dowodzi współpracy
+    # (tools/rns_osp_node.py --link lora), na końcu narzędzie kroku 4 (tools/rnode_trial.py, po 3 ogłoszenia w każdą
+    # stronę). Osobno od interop, żeby oba zadania szły równolegle. Dowodzi współpracy
     # z RNodeInterface, nie zgodności z prawdziwym firmware RNode w eterze (próba z RAK4631).
-    # Limit zadania ponad sumę limitów prób w tests/test_rns_stack_lora.py (1800 + 1800 + 3000 s), żeby zawieszona
-    # próba kończyła się jej własnym błędem (zwykle całość trwa około 13 min).
+    # Limit zadania ponad sumę limitów prób w tests/test_rns_stack_lora.py (1800 + 1800 + 3000 + 720 s), żeby zawieszona
+    # próba kończyła się jej własnym błędem (zwykle całość trwa około 16 min).
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
