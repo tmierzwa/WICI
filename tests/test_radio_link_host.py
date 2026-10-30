@@ -369,7 +369,7 @@ struct FakeDriver : radiolink::Driver {
     uint32_t frameAirMs(size_t length) const override { return radiolink::p1FrameAirMs(length, 4800); }
     double onAirMs(size_t length) const override { return length * 8 * 1000.0 / 4800; }
     size_t maxTestLength() const override { return p1frame::MAX_FRAME; }
-    uint32_t seriesMaxMs() const override { return radiolink::P1_SERIES_MAX_MS; }
+    uint32_t seriesMaxMs() const override { return radiolink::MAX_SERIES_MS_ANY_LINK; }
     radiolink::Framing framing() const override { return radiolink::Framing::P1; }
 };
 
@@ -2036,9 +2036,10 @@ int main() {
     for (uint16_t y = 0; y < sharp::HEIGHT; ++y) display.setPixel(static_cast<uint16_t>(y % sharp::WIDTH), y, true);
     int passes = 0, maxLines = 0, total = 0, expected = 1;
     bool ordered = true;
-    while (display.pending()) {
+    for (;;) {
         transactions.clear();
         const uint16_t n = display.refresh();
+        if (n == 0) break;
         ++passes;
         const std::vector<int> sent = lines(transactions.at(0));
         if (static_cast<int>(sent.size()) != n || transactions.size() != 1) ordered = false;
@@ -2058,7 +2059,7 @@ int main() {
     const uint16_t second = display.refresh();
     const std::vector<int> b = lines(transactions.at(1));
     printf("ROW %u %d %d %u %d %d %d %d\n", first, a.front(), a.back(), second, b.front(), b.back(), static_cast<int>(b.size()),
-           display.pending());
+           display.refresh());
     return 0;
 }
 """

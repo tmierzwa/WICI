@@ -25,16 +25,17 @@ constexpr size_t MAX_FRAME = 255;  // najdłuższa ramka: LoRa 255 B (SX1262); P
 constexpr uint32_t P1_SYMBOL_RATE = 4800;
 constexpr uint32_t P1_FRAME_OVERHEAD = 12;      // preambuła 8 B i słowo synchronizacji 4 B
 constexpr uint32_t P1_RAMP_MS = 3;              // narastanie mocy
-constexpr uint8_t P1_DEBT_FACTOR = 12;          // dług ciszy = 12 x zarezerwowany czas TX (punkt 2)
+constexpr uint8_t DEBT_FACTOR = 12;             // wspólny dla łączy (P1, LoRa): dług ciszy = 12 x zarezerwowany czas TX (punkt 2)
 constexpr int8_t P1_CCA_THRESHOLD_DBM = -100;   // wartość początkowa, do ustalenia w T4
 
 // Ramka P1 w eterze: narzut i `length` B przy symbolRate Bd (zaokrąglenie w górę) plus narastanie mocy.
 constexpr uint32_t p1FrameAirMs(size_t length, uint32_t symbolRate = P1_SYMBOL_RATE) {
     return (static_cast<uint32_t>(P1_FRAME_OVERHEAD + length) * 8 * 1000 + symbolRate - 1) / symbolRate + P1_RAMP_MS;
 }
-// Najdłuższa seria pomiarowa bez CONDUCTED w P1: 7 ramek po 103 B z narastaniem (najdłuższy datagram P1).
-// Także górna granica długu, który stanowisko zapisuje (measure::MAX_DEBT_MS).
-constexpr uint32_t P1_SERIES_MAX_MS = 1400;
+// Górna granica serii (ms czasu nadawania) po wszystkich łączach: najdłuższa seria P1, 7 ramek po 103 B
+// z narastaniem (najdłuższy datagram P1); LoRa ma krótszą (lora::SERIES_MAX_MS). Podstawa górnej granicy
+// długu, który stanowisko zapisuje (measure::MAX_DEBT_MS).
+constexpr uint32_t MAX_SERIES_MS_ANY_LINK = 1400;
 
 struct Rssi {
     bool valid = false;
@@ -43,6 +44,8 @@ struct Rssi {
 
 // Ramkowanie łącza stosu na układzie: P1 (radio.md, „Profil P1”), RNode (radio.md, „Ramka w eterze”) albo brak.
 enum class Framing : uint8_t { NONE, P1, RNODE };
+// Nazwa łącza w diagnostyce i odpowiedziach: "lora" (RNODE), "p1", "none".
+constexpr const char* framingName(Framing f) { return f == Framing::RNODE ? "lora" : f == Framing::P1 ? "p1" : "none"; }
 
 struct Frame {
     uint8_t bytes[MAX_FRAME];
@@ -130,7 +133,7 @@ public:
     // słowa synchronizacji do końca pakietu, LoRa cała ramka od preambuły.
     virtual double onAirMs(size_t length) const = 0;
     virtual size_t maxTestLength() const = 0;  // najdłuższa ramka wzorcowa TXPKT i RX
-    // Najdłuższa seria bez CONDUCTED (ms czasu nadawania): najdłuższy datagram profilu, ≤ P1_SERIES_MAX_MS.
+    // Najdłuższa seria bez CONDUCTED (ms czasu nadawania): najdłuższy datagram profilu, ≤ MAX_SERIES_MS_ANY_LINK.
     virtual uint32_t seriesMaxMs() const = 0;
     virtual Framing framing() const = 0;       // ramkowanie łącza stosu na tym układzie
     bool p1Link() const { return framing() == Framing::P1; }  // łącze P1 (P1RX, P1TX)

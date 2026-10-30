@@ -42,11 +42,12 @@ namespace measure {
 
 constexpr uint32_t CW_MAX_MS = 10000;         // TXCW <= 10 s (specyfikacja)
 // Najdłuższa seria każdego profilu (P1: 7 ramek po 103 B z narastaniem; LoRa: dwie ramki 255 B, ≤ tyle).
-constexpr uint32_t SERIES_MAX_MS = radiolink::P1_SERIES_MAX_MS;
+constexpr uint32_t SERIES_MAX_MS = radiolink::MAX_SERIES_MS_ANY_LINK;
 // Największy dług, jaki stanowisko zapisuje (seria do SERIES_MAX_MS i rezerwacja datagramu P1
 // z 7 najdłuższych ramek, 1365 ms): odczekiwany po starcie bez poprawnego rekordu długu.
-// Górna granica wszystkich profili; obraz odczekuje dług swojego łącza (Bench::maxDebtMs).
-constexpr uint32_t MAX_DEBT_MS = SERIES_MAX_MS * 12;
+// Górna granica wszystkich profili, stała czasu kompilacji (static_assert w łączach); obraz odczekuje
+// dług swojego łącza (Bench::maxDebtMs).
+constexpr uint32_t MAX_DEBT_MS = SERIES_MAX_MS * radiolink::DEBT_FACTOR;
 constexpr uint32_t CONFIRM_MS = 30000;        // potwierdzenie przyciskiem OK
 // FOFF: kanał LoRa 125 kHz ze środkiem 869,525 MHz mieści się w podpaśmie 869,4–869,65 MHz tylko przy
 // przesunięciu ≤ 62,5 kHz (radio.md, "Współdzielenie kanału"); granica z zapasem także dla P1. Błąd
@@ -144,11 +145,11 @@ public:
     const char* p1send(const uint8_t* data, size_t length, bool stack = false);
     void printLink();
     const LinkCounters& link() const { return link_; }
-    // Największy dług łącza: 12 x najdłuższa seria układu (P1 16,8 s, LoRa 12 x 838 ms ≈ 10,06 s),
-    // odczekiwany po starcie bez poprawnego rekordu długu.
     // Ramkowanie łącza układu (RNODE: LoRa); stos bierze z niego czas łącza (p1iface::LinkTiming).
     radiolink::Framing linkFraming() const { return radio_.framing(); }
-    uint32_t maxDebtMs() const { return radio_.seriesMaxMs() * radiolink::P1_DEBT_FACTOR; }
+    // Największy dług łącza: 12 x najdłuższa seria układu (P1 16,8 s, LoRa 12 x 838 ms ≈ 10,06 s),
+    // odczekiwany po starcie bez poprawnego rekordu długu.
+    uint32_t maxDebtMs() const { return radio_.seriesMaxMs() * radiolink::DEBT_FACTOR; }
     // Złożony datagram łącza i koniec nadawania (ok = seria wyszła) dla warstwy aplikacji.
     void onDatagram(void (*handler)(const uint8_t* data, size_t length, void* context), void* context) { datagramHandler_ = handler; datagramContext_ = context; }
     void onTxDone(void (*handler)(bool ok, void* context), void* context) { txDoneHandler_ = handler; txDoneContext_ = context; }
@@ -205,6 +206,8 @@ private:
     bool sendFragments();
     void sendLora(uint32_t now);
     void finishLinkTx(const char* result);
+    bool reserveDebt(uint32_t txMs);
+    void startDebt(uint32_t txMs);
     const char* txStateName() const;
     void pollEmc(uint32_t now);
     void emcSend(uint32_t now);

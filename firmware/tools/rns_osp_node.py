@@ -442,7 +442,8 @@ def lora_checks(args, work, air, programs, node, station, kiss, identity, destin
     before = node.status()
     packets = len(seen["packets"])
     inject(node_port, bytes([0x00, 0x00]) + destination.hash + bytes([0x00]) + b"no ifac")
-    time.sleep(1.5)
+    wait_for(lambda: node.status().get("ifac_missing", 0) == before.get("ifac_missing", 0) + 1, 10)
+    time.sleep(0.5)   # krótki zapas: pakiet przepuszczony przez pomyłkę doszedłby do komputera zaraz po liczniku, a sprawdzenia poniżej są ujemne
     after = node.status()
     checks["lora_without_ifac_not_to_computer"] = (after.get("ifac_missing") == before.get("ifac_missing", 0) + 1
                                                    and after.get("usb_rns_out", 0) == before.get("usb_rns_out", 0) and len(seen["packets"]) == packets)

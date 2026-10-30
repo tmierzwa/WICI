@@ -139,9 +139,7 @@ jobs:
             "lxmf @ git+https://github.com/markqvist/LXMF@c3ff2d6dc2f256daab896dadc044dd5a913ecbb7" pyserial==3.5
       - name: Station stack (port and core) against Reticulum in Python
         run: |
-          WICI_PIO="$(command -v pio)" WICI_RNS_PYTHON="$RUNNER_TEMP/rns/bin/python" python -m unittest \
-            tests.test_rns_stack.StackInteropTests tests.test_rns_stack.CoreInteropTests \
-            tests.test_rns_stack.OspNodeInteropTests tests.test_rns_stack.OspNodeCoreTests -v
+          WICI_PIO="$(command -v pio)" WICI_RNS_PYTHON="$RUNNER_TEMP/rns/bin/python" python -m unittest tests.test_rns_stack -v
       - name: Stack choice (port or core) keeps the station identity
         run: |
           WICI_PIO="$(command -v pio)" python -m unittest tests.test_rns_stack_choice -v
@@ -156,7 +154,7 @@ jobs:
     # do programu host z --link lora (port i rdzeń), potem węzeł stanowiska z LXMF w Pythonie, przekaźnik i dwa skoki
     # (tools/rns_osp_node.py --link lora). Osobno od interop, żeby oba zadania szły równolegle. Dowodzi współpracy
     # z RNodeInterface, nie zgodności z prawdziwym firmware RNode w eterze (próba z RAK4631).
-    # Limit zadania ponad sumę limitów prób w tests/test_rns_stack.py (1800 + 1800 + 3000 s), żeby zawieszona
+    # Limit zadania ponad sumę limitów prób w tests/test_rns_stack_lora.py (1800 + 1800 + 3000 s), żeby zawieszona
     # próba kończyła się jej własnym błędem (zwykle całość trwa około 13 min).
     runs-on: ubuntu-latest
     timeout-minutes: 120
@@ -179,9 +177,7 @@ jobs:
             "lxmf @ git+https://github.com/markqvist/LXMF@c3ff2d6dc2f256daab896dadc044dd5a913ecbb7" pyserial==3.5
       - name: LoRa link of the station against Reticulum in Python (RNodeInterface, node, relay)
         run: |
-          WICI_PIO="$(command -v pio)" WICI_RNS_PYTHON="$RUNNER_TEMP/rns/bin/python" python -m unittest \
-            tests.test_rns_stack.LoraInteropTests tests.test_rns_stack.LoraInteropCoreTests \
-            tests.test_rns_stack.OspNodeLoraTests -v
+          WICI_PIO="$(command -v pio)" WICI_RNS_PYTHON="$RUNNER_TEMP/rns/bin/python" python -m unittest tests.test_rns_stack_lora -v
   differential:
     # Próby różnicowe transportu rdzenia wobec Reticulum w Pythonie na tym samym ruchu (tools/rns_differential.py).
     # Osobno od interop, żeby oba zadania po około 5 min szły równolegle.

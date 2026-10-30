@@ -167,7 +167,7 @@ const uint8_t* address();                     // skrót celu stacji ("wici.sa1";
 const uint8_t* identityHash();
 bool publicKey(uint8_t out[64]);              // klucz publiczny tożsamości stacji (karta `card`)
 Status status();
-// Liczniki interfejsu P1 jako pola JSON bez nawiasów (do wiersza diagnostyki). INTERFACE_JSON_SIZE
+// Liczniki interfejsu radiowego jako pola JSON bez nawiasów (do wiersza diagnostyki). INTERFACE_JSON_SIZE
 // mieści wszystkie pola rdzenia (46 liczników po 10 cyfr, w tym 5 liczników LXMF z R3, limit pracy nad
 // pakietami do stacji i limit odpowiedzi na zapytania o trasę z R5, pole link: 1105 B ze znakiem końca) i portu.
 constexpr size_t INTERFACE_JSON_SIZE = 1112;
@@ -187,7 +187,7 @@ uint32_t debugFillHashes(uint32_t n);
 // Zegar symulowany prób na komputerze (tests/native/rns_stress.cpp): czas w ms zamiast steady_clock.
 // Stos (port i microStore) czyta na komputerze gettimeofday, który próba podmienia osobno.
 void debugClock(uint64_t (*nowMs)());
-// Kod IFAC interfejsu P1 dla prób (ta sama funkcja co przy nadawaniu i odbiorze): wynik to długość
+// Kod IFAC interfejsu radiowego dla prób (ta sama funkcja co przy nadawaniu i odbiorze): wynik to długość
 // datagramu (raw + 16 B) albo pakietu bez kodu; 0 = interfejs bez IFAC, zła długość albo zły kod.
 size_t debugIfacWrap(const uint8_t* raw, size_t length, uint8_t* wire);
 size_t debugIfacUnwrap(const uint8_t* wire, size_t length, uint8_t* raw);

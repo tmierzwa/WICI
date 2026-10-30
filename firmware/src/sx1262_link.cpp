@@ -16,10 +16,11 @@ constexpr uint32_t FRAME_MAX_MS = lora::frameAirMs(lora::MAX_PAYLOAD) + 10;
 // Przerwania zapisywane w rejestrze IRQ (bez bitu w masce układ ich nie zgłasza, rozdz. 13.3.2).
 constexpr uint16_t IRQ_MASK = IRQ_TX_DONE | IRQ_RX_DONE | IRQ_PREAMBLE_DETECTED | IRQ_HEADER_VALID | IRQ_HEADER_ERR | IRQ_CRC_ERR |
                               IRQ_CAD_DONE | IRQ_CAD_DETECTED | IRQ_TIMEOUT;
-// DIO1: tylko koniec odbieranej ramki (plan L4: jeden właściciel każdej flagi).
-constexpr uint16_t IRQ_DIO1 = IRQ_RX_DONE | IRQ_CRC_ERR | IRQ_HEADER_ERR;
 // Koniec ramki w odbiorze i początek ramki (preambuła, nagłówek).
 constexpr uint16_t IRQ_RX_END = IRQ_RX_DONE | IRQ_HEADER_ERR | IRQ_CRC_ERR;
+// DIO1: tylko koniec odbieranej ramki (plan L4: jeden właściciel każdej flagi); ta sama maska co IRQ_RX_END,
+// bo to samo zdarzenie widzi pin i próbka odbioru.
+constexpr uint16_t IRQ_DIO1 = IRQ_RX_END;
 constexpr uint16_t IRQ_RX_START = IRQ_PREAMBLE_DETECTED | IRQ_HEADER_VALID;
 // Nieodczytana ramka albo ramka w toku: wyjście z odbioru nadpisałoby ją w buforze.
 constexpr uint16_t IRQ_RX_PENDING = IRQ_RX_DONE | IRQ_PREAMBLE_DETECTED | IRQ_HEADER_VALID;
@@ -58,11 +59,29 @@ static_assert(lora::TX_POWER_DBM == 13, "PA_CONFIG i TX_PARAMS_POWER z paOptTabl
 constexpr uint8_t OCP_60_MA = 0x18;  // krok 2,5 mA; SetPaConfig ustawia 140 mA (0x38), więc zapis po nim
 
 static_assert(lora::SPREADING_FACTOR == 7 && lora::BANDWIDTH_HZ == 125000 && lora::CODING_RATE == 5, "kody SetModulationParams");
-static_assert(lora::SERIES_MAX_MS <= radiolink::P1_SERIES_MAX_MS, "dług serii LoRa w granicy measure::MAX_DEBT_MS (górnej granicy profili)");
+static_assert(lora::SERIES_MAX_MS <= radiolink::MAX_SERIES_MS_ANY_LINK, "dług serii LoRa w granicy measure::MAX_DEBT_MS (górnej granicy profili)");
 
 constexpr uint32_t BASE_RF_WORD =
     static_cast<uint32_t>(((static_cast<uint64_t>(lora::CARRIER_HZ) << 25) + F_XTAL_HZ / 2) / F_XTAL_HZ);
 static_assert(BASE_RF_WORD == 911763046u, "869,525 MHz: f x 2^25 / 32 MHz");
+
+// Bity rejestrów ustawianych w configure() i sprawdzanych w CHECKS (rozdz. 15 noty układu).
+constexpr uint8_t TX_CLAMP_BITS = 0x1E;       // rozdz. 15.2: bity 4:1 przy niedopasowaniu anteny
+constexpr uint8_t TX_MODULATION_BIT = 0x04;   // rozdz. 15.1: pasmo inne niż 500 kHz
+constexpr uint8_t IQ_POLARITY_BIT = 0x04;     // rozdz. 15.4: zwykła polaryzacja IQ
+
+// RSSI układu: surowa wartość w półdecybelach poniżej 0 dBm (RssiInst, RssiPkt: -raw/2 dBm).
+constexpr int16_t rssiDbm(uint8_t raw) { return static_cast<int16_t>(-raw / 2); }
+
+// Wynik próbki odbioru jako rodzaj wpisu dla pętli (Late liczy się jak ramka zła).
+radiolink::RxPoll pollKind(RxService result) {
+    switch (result) {
+        case RxService::Frame: return radiolink::RxPoll::Frame;
+        case RxService::Bad:
+        case RxService::Late: return radiolink::RxPoll::Bad;
+        default: return radiolink::RxPoll::Nothing;
+    }
+}
 
 // Rejestry sprawdzane przy weryfikacji: wartość i maska porównania.
 struct Check {
@@ -79,9 +98,9 @@ constexpr Check CHECKS[] = {
     {REG_RETENTION_LIST, static_cast<uint8_t>(REG_RX_GAIN >> 8), 0xFF, "RETENTION_0_MSB"},
     {REG_RETENTION_LIST + 1, static_cast<uint8_t>(REG_RX_GAIN), 0xFF, "RETENTION_0_LSB"},
     {REG_OCP, OCP_60_MA, 0xFF, "OCP"},
-    {REG_IQ_POLARITY, 0x04, 0x04, "IQ_POLARITY"},
-    {REG_TX_MODULATION, 0x04, 0x04, "TX_MODULATION"},
-    {REG_TX_CLAMP, 0x1E, 0x1E, "TX_CLAMP"},
+    {REG_IQ_POLARITY, IQ_POLARITY_BIT, IQ_POLARITY_BIT, "IQ_POLARITY"},
+    {REG_TX_MODULATION, TX_MODULATION_BIT, TX_MODULATION_BIT, "TX_MODULATION"},
+    {REG_TX_CLAMP, TX_CLAMP_BITS, TX_CLAMP_BITS, "TX_CLAMP"},
 };
 
 void setBits(Radio& radio, uint16_t address, uint8_t bits) { radio.writeReg(address, static_cast<uint8_t>(radio.readReg(address) | bits)); }
@@ -150,12 +169,12 @@ VerifyResult LinkDriver::configure() {
     radio_.writeReg(REG_OCP, OCP_60_MA);
     const uint8_t txParams[2] = {TX_PARAMS_POWER, RAMP_200_US};
     radio_.command(OP_SET_TX_PARAMS, txParams, 2);
-    setBits(radio_, REG_TX_CLAMP, 0x1E);  // rozdz. 15.2 (RadioLib: fixPaClamping)
+    setBits(radio_, REG_TX_CLAMP, TX_CLAMP_BITS);  // rozdz. 15.2 (RadioLib: fixPaClamping)
     const uint8_t modulation[4] = {lora::SPREADING_FACTOR, BW_125_KHZ, CR_4_5, static_cast<uint8_t>(lora::LOW_DATA_RATE_OPTIMIZE)};
     radio_.command(OP_SET_MODULATION_PARAMS, modulation, 4);
-    setBits(radio_, REG_TX_MODULATION, 0x04);  // rozdz. 15.1: pasmo inne niż 500 kHz
+    setBits(radio_, REG_TX_MODULATION, TX_MODULATION_BIT);  // rozdz. 15.1
     setPacketParams(lora::MAX_PAYLOAD);
-    setBits(radio_, REG_IQ_POLARITY, 0x04);    // rozdz. 15.4: zwykła polaryzacja IQ
+    setBits(radio_, REG_IQ_POLARITY, IQ_POLARITY_BIT);  // rozdz. 15.4
     const uint8_t sync[2] = {lora::SYNC_WORD_MSB, lora::SYNC_WORD_LSB};
     radio_.writeRegs(REG_SYNC_WORD, sync, 2);
     const uint8_t base[2] = {0x00, 0x00};
@@ -240,9 +259,7 @@ radiolink::TxPrep LinkDriver::prepareTx(const uint8_t* frame, size_t length) {
         collectIrq(irq);
         if (irq & IRQ_RX_PENDING) return radiolink::TxPrep::RxPending;
         // Ramka w toku, której flagi skasowała już próbka odbioru: wyjście z odbioru by ją przerwało.
-        // Różnica ze znakiem jak w recentActivity (czas zapisany przez zadanie po odczycie millis()).
-        if (inFrame_ && static_cast<int32_t>(millis() - inFrameSinceMs_) < static_cast<int32_t>(FRAME_MAX_MS))
-            return radiolink::TxPrep::RxPending;
+        if (frameInProgress(millis())) return radiolink::TxPrep::RxPending;
     }
     if (!toStandby() || !load(frame, length)) return radiolink::TxPrep::Error;
     return radiolink::TxPrep::Ready;
@@ -332,10 +349,16 @@ bool LinkDriver::startRx(bool variable, uint8_t fixedLength) {
     return rxActive_;
 }
 
+bool LinkDriver::frameInProgress(uint32_t now) const {
+    // Różnica ze znakiem: czas zapisany przez zadanie po odczycie millis() przez wołającego daje wynik ujemny,
+    // czyli ramka w toku.
+    return inFrame_ && static_cast<int32_t>(now - inFrameSinceMs_) < static_cast<int32_t>(FRAME_MAX_MS);
+}
+
 void LinkDriver::noteActivity(uint16_t irq, uint32_t now) {
     // Preambuła bez ramki (jak w receivingFrame): po czasie najdłuższej ramki stan nieaktualny, więc następny
     // początek ramki liczy się od nowa (inaczej ochrona ramki w toku w recentActivity już by nie działała).
-    if (inFrame_ && now - inFrameSinceMs_ > FRAME_MAX_MS) inFrame_ = false;
+    if (inFrame_ && !frameInProgress(now)) inFrame_ = false;
     if (irq & IRQ_PREAMBLE_DETECTED) activity_.mark(Activity::PREAMBLE, now);
     if (irq & IRQ_HEADER_VALID) activity_.mark(Activity::HEADER, now);
     if (irq & IRQ_RX_END) {
@@ -355,7 +378,7 @@ bool LinkDriver::readRssi(radiolink::Rssi& out) {
     if (!radio_.read(OP_GET_RSSI_INST, &raw, 1)) return false;
     if (radio_.lastStatus().mode() != MODE_RX) return true;  // RSSI ważne tylko w odbiorze
     out.valid = true;
-    out.dbm = static_cast<int16_t>(-raw / 2);
+    out.dbm = rssiDbm(raw);
     return true;
 }
 
@@ -438,7 +461,7 @@ RxService LinkDriver::serviceRx(radiolink::Frame& out, bool sampleRssi) {
             if (!late) {
                 out.length = length;
                 out.receivedMs = now;  // czas próbki, nie obsługi w pętli (limit składania LoRa)
-                out.rssiDbm = static_cast<int16_t>(-packet[0] / 2);  // RssiPkt: -RssiPkt/2 dBm
+                out.rssiDbm = rssiDbm(packet[0]);  // RssiPkt
                 out.snrQdb = static_cast<int8_t>(packet[1]);       // SnrPkt: ze znakiem, /4 dB
                 out.quality = 0;
             }
@@ -472,12 +495,7 @@ radiolink::RxPoll LinkDriver::pollRx(radiolink::Frame& out) {
         return entry.kind;
     }
     // Bez zadania odbioru próbkuje pętla, więc także RSSI dla okna CCA.
-    switch (serviceRx(out, true)) {
-        case RxService::Frame: return radiolink::RxPoll::Frame;
-        case RxService::Bad:
-        case RxService::Late: return radiolink::RxPoll::Bad;
-        default: return radiolink::RxPoll::Nothing;
-    }
+    return pollKind(serviceRx(out, true));
 }
 
 void LinkDriver::discardRx() {
@@ -503,8 +521,7 @@ void LinkDriver::taskCycle(bool dio1High) {
     }
     busyBackoffMs_ = 0;
     if (rssiDue) lastRssiMs_ = now;
-    if (result == RxService::Frame) entry.kind = radiolink::RxPoll::Frame;
-    else if (result == RxService::Bad || result == RxService::Late) entry.kind = radiolink::RxPoll::Bad;
+    entry.kind = pollKind(result);
     if (entry.kind != radiolink::RxPoll::Nothing) ring_.push(entry);  // pełny: odpada ta ramka (overflow)
     signals_.serviced(now, micros() - t0);
 }
@@ -525,10 +542,8 @@ bool LinkDriver::receivingFrame() {
         if (irq & IRQ_HEADER_VALID) headerSeen_ = true;
         lastSampleMs_ = now;
     }
-    if (inFrame_ && now - inFrameSinceMs_ > FRAME_MAX_MS) {
-        // Preambuła bez ramki (szum albo ramka obca): po czasie najdłuższej ramki kanał znów wolny.
-        inFrame_ = false;
-    }
+    // Preambuła bez ramki (szum albo ramka obca): po czasie najdłuższej ramki kanał znów wolny (noteActivity
+    // wyżej wygasiło stan z tym samym `now`).
     return inFrame_;
 }
 
@@ -543,8 +558,7 @@ radiolink::Activity LinkDriver::recentActivity(uint32_t windowMs) {
     if (!activity_.quietFor(now, windowMs, Activity::RX_KINDS)) return radiolink::Activity::Rx;
     // Ramka w toku (nagłówek bez końca) nadal zajmuje kanał, choć znaczniki zestarzały się przed jej końcem
     // (ramka do FRAME_MAX_MS); stan ustawia zadanie odbioru, tu odczyt bez blokady.
-    // Różnica ze znakiem: czas zapisany przez zadanie po odczycie millis() wyżej daje wynik ujemny, czyli zajęty.
-    if (inFrame_ && static_cast<int32_t>(now - inFrameSinceMs_) < static_cast<int32_t>(FRAME_MAX_MS)) return radiolink::Activity::Rx;
+    if (frameInProgress(now)) return radiolink::Activity::Rx;
     if (!activity_.quietFor(now, windowMs, 1u << Activity::RSSI)) return radiolink::Activity::Rssi;
     return radiolink::Activity::None;
 }

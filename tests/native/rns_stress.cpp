@@ -731,7 +731,7 @@ void linkLimits() {
     snprintf(out, sizeof(out),
              "\"link\":\"%s\",\"max_raw\":%u,\"fits_refused\":%u,\"fits_longest\":%u,\"long_refused\":%u,"
              "\"response_refused\":%u,\"longest_sent\":%u,\"usb_refused\":%u,\"usb_buffered\":%u",
-             linkTiming->framing == p1iface::LinkTiming::Framing::RNODE ? "lora" : "p1", static_cast<unsigned>(maxRaw),
+             radiolink::framingName(linkTiming->framing), static_cast<unsigned>(maxRaw),
              refusedFits, static_cast<unsigned>(longestFits), refusedLong, refusedResponse,
              static_cast<unsigned>(radio.maxSent - p1iface::IFAC_SIZE), refusedUsb, usbDropped);
     floodResult = out;
@@ -1433,7 +1433,7 @@ int main(int argc, char** argv) {
         else if (a == "--link") {
             const std::string link = v;
             if (link != "p1" && link != "lora") { fprintf(stderr, "unknown link %s\n", v); return 2; }
-            linkTiming = link == "lora" ? &p1iface::loraTiming() : &p1iface::p1Timing();
+            linkTiming = &p1iface::timingFor(link == "lora" ? radiolink::Framing::RNODE : radiolink::Framing::P1);
             ++i;
         }
         else if (a == "--dump") { dumpPath = v; ++i; }
