@@ -2,7 +2,7 @@
 
 P1 był własnym profilem radiowym FSK WICI (2-GFSK 4800 bit/s, fragmenty do 86 B) na dwóch niezależnych wykonaniach radia, TI CC1120 i ST S2-LP, z płytką stacji R02 projektowaną przed pilotażem i stanowiskami deweloperskimi A/B do prób programu. Przegląd praktyczny wstrzymał go 2026-10-08 (F99), bo LoRa SF7 na gotowych modułach SX1262 ma w modelu lepszą czułość i krótszy czas obsługi zgłoszenia bez własnego toru RF; od 2026-10-29 treść jest tu, a nie w rozdziałach koncepcji (F119).
 
-Liczby pochodzą z modelu ([`obliczenia.py`](../../software/reference/obliczenia.py), [`wyniki.json`](../../software/reference/wyniki.json)): pozycja `radio` oraz klucz `p1_archiwalny` (`relay_w10`, `network_capacity`, `lxmf_retry`, `cold_start_announces` i `station_level1`) liczą P1 i odbiornik CC1120; pozycje o tych samych nazwach na najwyższym poziomie liczą LoRa SF7. Profil P1 opisuje [specyfikacja radia](../spec/radio.md) do czasu jej porządku. Bieżący plan: [koncepcja, rozdział 08](../concept/08-plan-weryfikacji-i-decyzje.html).
+Liczby pochodzą z modelu ([`obliczenia.py`](../../software/reference/obliczenia.py), [`wyniki.json`](../../software/reference/wyniki.json)): pozycja `radio` oraz klucz `p1_archiwalny` (`relay_w10`, `network_capacity`, `lxmf_retry`, `cold_start_announces` i `station_level1`) liczą P1 i odbiornik CC1120; pozycje o tych samych nazwach na najwyższym poziomie liczą LoRa SF7. Profil P1 opisuje [archiwum radia](p1-radio.md). Bieżący plan: [koncepcja, rozdział 08](../concept/08-plan-weryfikacji-i-decyzje.html).
 
 ## Porównanie z LoRa SF7 (dawniej rozdział 04)
 

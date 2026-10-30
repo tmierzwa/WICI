@@ -1,6 +1,6 @@
 # Dokumenty obsługi WICI
 
-Dokumenty dla ludzi, którzy obsługują system: gospodarzy punktów i dyżurnych stanowiska odbiorczego. Licencja CC BY 4.0 (reszta `docs/spec/` jest na CERN-OHL-P-2.0).
+Dokumenty dla osób, które obsługują system: gospodarzy punktów i dyżurnych stanowiska odbiorczego. Licencja CC BY 4.0 (reszta `docs/spec/` jest na CERN-OHL-P-2.0).
 
 | Plik | Dla kogo | Zawartość |
 |---|---|---|
@@ -13,9 +13,9 @@ Tematy obsługi spoza karty (adres, alarmy, energia, poziomy 2–3, koniec zdarz
 
 ## Wersja
 
-Dokumenty dotyczą oprogramowania stacji WICI ze specyfikacji 0.5, obrazów `bench-n1-0.1` i `bench-b-0.1` oraz stacji deweloperskiej na płytce nośnej N1. Napisy w cudzysłowach są tekstami ekranu z `firmware/src/ui_texts.h` (stan z 2026-10-12, z wpisem WŁASNY TEKST). Zmiana tekstów ekranu wymaga zmiany karty.
+Dokumenty dotyczą programu stacji WICI ze specyfikacji 0.5. Sprawdzono je na archiwalnych obrazach `bench-n1-0.1` i `bench-b-0.1` stanowiska deweloperskiego (dawniej płytka nośna N1, dziś w [archiwum](../../hardware/archiwum/stanowiska-a-b.md)); na obrazie prototypu trzeba je sprawdzić w kroku 4. Napisy w cudzysłowach są tekstami ekranu z `firmware/src/ui_texts.h` (stan z 2026-10-12, z wpisem WŁASNY TEKST). Zmiana tekstów ekranu wymaga zmiany karty.
 
-Status: wersja robocza do ćwiczenia przy stole. Znak ◆ oznacza czynność, której oprogramowanie jeszcze nie obsługuje (karta: pomiar energii i wyłączanie przyciskiem; instrukcja: także części panelu dyżurnego). Aplikacji stanowiska jeszcze nie zbudowano. Wersje ukraińska i angielska wymagają sprawdzenia przez native speakera.
+Status: wersja robocza do ćwiczenia przy stole. Znak ◆ oznacza czynność, której oprogramowanie jeszcze nie obsługuje (karta: pomiar energii i wyłączanie przyciskiem; instrukcja: także części panelu dyżurnego). Aplikacji stanowiska jeszcze nie zbudowano. Wersje ukraińska i angielska wymagają sprawdzenia przez osobę, dla której to język ojczysty.
 
 ## Druk
 

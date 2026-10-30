@@ -1,0 +1,64 @@
+# Stanowiska deweloperskie A i B (archiwum)
+
+Ten plik opisuje stanowiska deweloperskie A (Nordic nRF52840-DK z TI CC1120EM) i B (ESP32-S3-DevKitC z ST X-NUCLEO-S2868A2) na płytce nośnej N1 (dziś płytka v1), przeznaczone do prób profilu P1 i porównania dwóch wykonań radia. Przegląd praktyczny wstrzymał ten kierunek 2026-10-08 (F99), bo pilotaż używa LoRa na module SX1262; od porządku dokumentów 2026-10-29 (F119) opis jest tutaj, a bieżącą rolę płytki opisuje [README płytki v1](../dev-bench/README.md).
+
+Tekst przeniesiono z `hardware/dev-bench/README.md` bez zmian merytorycznych. Obrazy `bench-a`, `bench-n1` i `bench-b` zostają w [firmware](../../firmware/README.md); o ich usunięciu zdecyduje się osobno. Montaż i obsługę płytki na stanowiskach opisują nadal [uruchomienie](../dev-bench/uruchomienie.md) i [obsługa stanowiska](../dev-bench/obsluga.md).
+
+## Dwa stanowiska
+
+Stanowiska deweloperskie odpowiadają dwóm dotychczasowym wariantom P1 ([specyfikacja radia](../../docs/archiwum/p1-radio.md#dwa-wykonania)), więc można na nich sprawdzić MCU, radio, stos i interfejs użytkownika. Wyniki dotyczą konfiguracji stanowiska. Po wyborze części R02 trzeba wskazać, które próby należy powtórzyć.
+
+Do prób mieszanych TI–ST wystarczy po jednym stanowisku każdego rodzaju. Sieć A–B–stanowisko odbiorcze z zapasem wymaga czterech (dwa A i dwa B), co odpowiada dwóm modułom w zestawie CC1120EMK.
+
+| Element | Stanowisko A (TI) | Stanowisko B (ST) | Uwagi |
+|---|---|---|---|
+| Płytka MCU | Nordic nRF52840-DK (PCA10056) | Espressif ESP32-S3-DevKitC-1 z modułem ESP32-S3-WROOM-1-N8R8 (wersje N8 i N8R2 są wycofane, ale płytka N1 i obraz przyjmują wszystkie trzy) | obie zasilane i programowane przez USB; nRF52840-DK ma złącza Arduino i zworki pomiaru prądu MCU; wykonanie B R02 używa ESP32-S3FN8 (8 MB flash w obudowie, bez PSRAM; F105), DevKit ma 8 MB flash w module; obraz nie korzysta z PSRAM modułu N8R8, a zapas RAM liczy się bez niej ([radio](../../docs/archiwum/p1-radio.md#dwa-wykonania), wiersz „Pamięć RAM”) |
+| Moduł radiowy | TI CC1120EM-868-915 z zestawu [CC1120EMK-868-915](https://www.ti.com/tool/CC1120EMK-868-915) (dwa moduły, tor RF według referencji TI, złącze SMA) | ST [X-NUCLEO-S2868A2](https://www.st.com/en/evaluation-tools/x-nucleo-s2868a2.html) (S2-LP 826–958 MHz, złącze SMA; płytka N1 i obraz `bench-b` przyjmują tylko ten moduł) | połączenie A: płytka nośna N1 (gniazda 1,27 mm), do czasu jej montażu adapter [BOOST-CCEMADAPTER](https://www.ti.com/tool/BOOST-CCEMADAPTER) albo przewody przylutowane do złączy EM; połączenie B: płytka nośna N1 (X-NUCLEO w złączach Arduino, DevKitC w gniazdach); wszystkie sygnały 3,3 V |
+| Wzorzec częstotliwości radia | kwarc modułu; pola X2 na TCXO według referencji TI (przeróbka opcjonalna) | wzorzec płytki ST według jej schematu | na stanowisku błąd częstotliwości mierzy się i koryguje poleceniem `FOFF`; budżet ±2,0 ppm z TCXO sprawdza dopiero R02 |
+| Pamięć FRAM | układ U1 na płytce nośnej N1: Infineon CY15B104QN-50SXI albo RAMXEED MB85RS4MTPF (4 Mbit, SPI, SOIC-8, ten sam footprint), zegar 8 MHz | ta sama | te same układy co w stacji pilotażowej i w [BOM stacji](../../docs/spec/bom-stacji.csv); oprogramowanie rozpoznaje oba po RDID |
+| Ekran | panel Sharp LS027B7DH01A (400 × 240) w złączu FPC J7 płytki N1, zasilany z przetwornicy 5 V na N1 (MCP1640 z 3,3 V; pin 5V płytki MCU nie gwarantuje 4,8 V) | ten sam | ten sam panel co w R02, bez płytki pośredniej; EXTCOMIN z wyjścia licznika MCU, nie z programu (na nRF52840 RTC2 przez PPI i GPIOTE, na ESP32-S3 MCPWM0), a przy awarii licznika panel zostaje wyłączony; EXTMODE panelu na 5 V panelu; przy okablowaniu przewodami płytka Adafruit 4694 z pinem EMD połączonym z VDD ([firmware/README.md](../../firmware/README.md#okablowanie-stanowiska-a)) |
+| Przyciski i sygnalizacja | 4 przyciski menu, przełącznik CISZA, przycisk trybu przygotowania, dioda alarmu, brzęczyk na płytce nośnej N1 (przy przewodach: przyciski płytki DK, polecenie `SILENCE` zamiast CISZA) | te same | na N1 podciągnięcie 10 kΩ na płytce (przy przewodach wewnętrzne w MCU); eliminacja drgań w oprogramowaniu jak w stacji |
+| Zasilanie | USB z laptopa albo zasilacz laboratoryjny | to samo | zasilanie jest narzędziem; nie mierzy budżetu energii stacji (T6) ani niezależności od VBUS |
+| Antena i tor pomiarowy | dipol z [BOM stacji](../../docs/spec/bom-stacji.csv) do prób w eterze; tłumiki 30–40 dB, przewody koncentryczne i obciążenie sztuczne do prób przewodowych | to samo | pomiar czułości tylko przewodowo, w ekranowanym pudełku; płytki rozwojowe przepuszczają sygnał poza złącze |
+
+Przyrządy: analizator widma, generator sygnałowy z modulacją (czułość, blokowanie), miernik częstotliwości o dokładności ≤0,1 ppm, miernik mocy albo analizator z tłumikiem; do uruchomienia N1 oscyloskop ≥200 MHz z sondą 10×, multimetr o błędzie ≤0,1% (kalibracja VTEST) i analizator stanów logicznych. Zewnętrzny filtr SAW 868 MHz w torze koncentrycznym pozwala zmierzyć blokowanie z filtrem i bez niego przed decyzją o torze wejściowym R02.
+
+Moduł CC1120 innego producenta nadaje się tylko do uruchomienia oprogramowania i prób ramek: jego dopasowanie i wzorzec częstotliwości są nieznane, więc nie daje wyniku czułości, emisji ani błędu częstotliwości.
+
+## Co sprawdza stanowisko, a co dopiero R02
+
+| Grupa | Na stanowisku | Dopiero na R02 |
+|---|---|---|
+| T1, T2, T8 | stos, kolejka w FRAM, ekran, przyciski, protokół USB laptop–stacja, obsługa według karty na makiecie obudowy | zachowanie przy odłączeniu VBUS i samozasilanie (stanowisko zasila się z USB) |
+| T3 | rdzeń Reticulum stacji i LXMF na obu rodzinach MCU, zapas RAM, zgodność z implementacją referencyjną, emulator P1 i prawdziwy tor P1 | nic |
+| T4 | ramki, zgodność TI→ST i ST→TI, czułość na złączu modułu (bez toru wejściowego stacji), harmoniczne toru referencyjnego, blokowanie z zewnętrznym filtrem SAW i bez niego, dług ciszy, limit czasu nadawania, CCA, cisza radiowa, błąd częstotliwości z korektą | budżet częstotliwości z TCXO, pełny tor wejściowy (filtr, ESD, przełącznik), nadawanie przy rozwartym i zwartym złączu, emisje gotowej konfiguracji w obudowie |
+| T5 | wczesne próby zasięgu: stanowisko w pudełku zasilane z powerbanku (narzędzie prób, nie źródło stacji) | odbiór 1 km, przekaźnik na ogniwach, zimny start sieci |
+| T6, T7 | nic | energia, bezpieczeństwo, odtworzenie i dostawcy |
+
+Wyniki czułości i emisji ze stanowiska dotyczą toru RF producenta, a nie stacji. Pokazują, czy układ radiowy i profil P1 w ogóle osiągają cel (około −113 dBm na złączu układu), zanim powstanie projekt R02 z własnym torem wejściowym.
+
+## Pomiary
+
+Polecenia pomiarowe interfejsu diagnostyki (`TXCW`, `TXPKT`, `RXPER`, `FOFF`) działają tylko w trybie przygotowania i są opisane w [specyfikacji radia](../../docs/spec/radio.md#usb-do-laptopa). Pomiar czułości przy PER ≤1% wymaga ≥2000 ramek 103 B na punkt, czyli więcej nadawania, niż dopuszcza limit 10% w godzinie. Takie serie nadaje się wyłącznie przewodowo do tłumika, po potwierdzeniu przyciskiem na stanowisku, i odnotowuje w dzienniku. Procedura pomiarów T4 i warunki zaliczenia są w [odbiorze](../../docs/spec/odbior.md).
+
+## Złącza modułu CC1120EM
+
+Przy okablowaniu przewodami połączenia opisuje ta tabela, a na płytce nośnej wynikają one ze schematu. Mapa złączy P1/P2 modułu TI CC112xEM 868/915 pochodzi z projektu R01.3. Numery są elektrycznymi numerami pinów. Złącza są na spodzie modułu, więc w widoku od spodu układ pinów jest odwrócony. Przed zasilaniem trzeba sprawdzić każdą żyłę miernikiem. W pierwszej próbie przewody mają najwyżej 5 cm, a SPI pracuje z zegarem około 1 MHz. Na N1 zegar SPI wynosi 1 MHz dla radia i 8 MHz dla FRAM (wymaganie ≥8 MHz dla każdej stacji). Do pomiaru oscyloskopem przy J7 ekran przełącza się na 2 MHz poleceniem `DISPLAY`; na stałe dopiero po tym pomiarze ([uruchomienie](../dev-bench/uruchomienie.md#pomiar-magistrali-oscyloskopem)).
+
+| Sygnał | Złącze modułu TI | Pin CC1120 |
+|---|---|---:|
+| GND | P1.1, P1.19, P2.2 | masa modułu |
+| 3,3 V | P2.7 (P2.9 to ten sam węzeł) | zasilanie modułu |
+| SCK | P1.16 | 8 |
+| MOSI | P1.18 | 7 |
+| MISO | P1.20 | 9 |
+| CS_N | P1.14 | 11 |
+| RESET_N | P2.15 | 2 |
+| GPIO0 / IRQ0 | P1.10 | 10 |
+| GPIO2 / IRQ2 | P1.12 | 4 |
+
+Pozostałych pinów nie wolno traktować jako masy. Adapter BOOST-CCEMADAPTER wyprowadza te same sygnały na złącza BoosterPack; bez adaptera przewody lutuje się do pól złączy EM. Linię RESET_N trzyma się w stanie niskim do czasu startu MCU.
+
+## Co zostaje z R01.3
+
+Z kontrolera R01.3 przechodzą do R02 tylko wnioski toru RF i procesu: dopasowanie i stos według referencji TI, wybór TCXO i budżet błędu, pomiar harmonicznych, ochrona ESD, ocena filtru SAW, zasady layoutu i kontroli ([lekcje R02](../r02/lekcje.md)). Kontroler STM32F103, jego PCB, kontrakt KISS i dziennik w EEPROM nie są używane.

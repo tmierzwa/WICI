@@ -1,5 +1,7 @@
 # WICI: montaż i uruchomienie płytki nośnej N1
 
+**Płytka v1 (dawniej N1).** Prototyp na płytce v1 montuje i odbiera wykonawca według [instrukcji montażu i testów](../l0-diagnostic/MONTAZ-I-TESTY.md), która odsyła tu po montaż i pomiar oscyloskopem. Części „Stanowisko A”, „Stanowisko B” i „Oprogramowanie” (obrazy `bench-*`) dotyczą archiwalnych stanowisk deweloperskich A/B ([archiwum](../archiwum/stanowiska-a-b.md)); montaż, kontrola przed zasilaniem, kalibracja VTEST, ochrona FRAM i pomiar oscyloskopem dotyczą też prototypu.
+
 Kolejność montażu, pierwsze włączenie i odbiór jednej sztuki płytki nośnej. Opis płytki, przypisanie sygnałów i granice stanowiska: [płytka nośna](plytka-nosna.md). Połączenia pin po pinie: [połączenia](polaczenia.md). Części: [BOM](bom.csv).
 
 Każda sztuka dostaje zapis: numer, rewizja PCB (N1), stanowisko (A albo B), części spoza BOM, wyniki kroków poniżej, osoba i data.
@@ -44,7 +46,7 @@ Kroki A3–A5 i B3–B4 wymagają obrazu z plikiem opisu płytki N1 (na przykła
 | A2 | Zasilanie z USB DK (J2 albo J3) przez miernik USB; pomiar J1.4, J1.5 oraz J7.7 (+5V_LCD, VDD panelu) wobec J7.9 | około 3,0 V, około 5 V i 4,90–5,36 V na J7.7; prąd bez modułów zgodny z samą płytką DK (wzrost < 20 mA) |
 | A3 | Przyciski, CISZA, przycisk przygotowania, dioda i brzęczyk poleceniem diagnostycznym obrazu; przy `BUZZ 5000` ponowny pomiar J7.7 | każdy przycisk zmienia stan tylko swojej linii; brzęczyk słychać przy 2048 Hz; J7.7 nadal 4,90–5,36 V |
 | A4 | FRAM U1 i panel w J7 (wklejony w kroku montażu 7) | `FRAM` rozpoznaje układ (`CY15B104QN` albo `MB85RS4MT`) przy `spi_hz: 8000000`; ekran pokazuje obraz, a `DISPLAY` pokazuje `extcomin_ok: true`, rosnący `counter` i `level` zmieniający się co 0,5 s (EXTCOMIN z MCU, EXTMODE panelu na +5V_LCD) |
-| A5 | Wpięty CC1120EM (orientacja z kroku 4, złącze SMA nad kółkiem na opisie), amperomierz w miejscu JP3 przy pierwszym włączeniu (zakres ≥200 mA: C1 10 µF i nadawanie około 45 mA; bez zworki szyna 3,3 V zasila moduł słabo przez R11 i diody wejść). Podczas nadawania (`TXCW 2` w trybie przygotowania, przewodowo do obciążenia) drugi miernik mierzy napięcie na obu pinach JP3 wobec J11.1 (GND): JP3.1 to +3V3, JP3.2 to +3V3_RF modułu | `RADIO` daje `partnumber: 0x48`; spadek na amperomierzu (JP3.1 minus JP3.2) ≤0,1 V, a JP3.2 ≥2,85 V; przy większym spadku amperomierz zmienia się na zakres o mniejszym spadku albo pomiar prądu robi się tylko w odbiorze, a nadawanie z założoną zworką. Dalej kroki z [lekcji R02](../r02/lekcje.md#uruchomienie) i pomiary z README stanowiska |
+| A5 | Wpięty CC1120EM (orientacja z kroku 4, złącze SMA nad kółkiem na opisie), amperomierz w miejscu JP3 przy pierwszym włączeniu (zakres ≥200 mA: C1 10 µF i nadawanie około 45 mA; bez zworki szyna 3,3 V zasila moduł słabo przez R11 i diody wejść). Podczas nadawania (`TXCW 2` w trybie przygotowania, przewodowo do obciążenia) drugi miernik mierzy napięcie na obu pinach JP3 wobec J11.1 (GND): JP3.1 to +3V3, JP3.2 to +3V3_RF modułu | `RADIO` daje `partnumber: 0x48`; spadek na amperomierzu (JP3.1 minus JP3.2) ≤0,1 V, a JP3.2 ≥2,85 V; przy większym spadku amperomierz zmienia się na zakres o mniejszym spadku albo pomiar prądu robi się tylko w odbiorze, a nadawanie z założoną zworką. Dalej kroki z [lekcji R02](../r02/lekcje.md#uruchomienie) i pomiary z [archiwum stanowisk](../archiwum/stanowiska-a-b.md#pomiary) |
 
 ## Stanowisko B
 
@@ -112,4 +114,4 @@ Usterki i poprawki:
 
 ## Czego płytka nie sprawdza
 
-Płytka nośna nie zmienia toru RF, wzorca częstotliwości ani zasilania modułów producentów. Granice pomiarów stanowiska są w [README stanowiska](README.md#co-sprawdza-stanowisko-a-co-dopiero-r02).
+Płytka nośna nie zmienia toru RF, wzorca częstotliwości ani zasilania modułów producentów. Granice pomiarów stanowiska są w [archiwum stanowisk](../archiwum/stanowiska-a-b.md#co-sprawdza-stanowisko-a-co-dopiero-r02).

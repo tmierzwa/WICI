@@ -65,7 +65,7 @@
 
 <p class="callout"><strong>Wypróbuj stację w przeglądarce:</strong> <a href="https://wici.net.pl/symulator/">symulator</a> uruchamia ten sam program co prawdziwa stacja, z ćwiczeniami gospodarza i stanowiskiem odbiorczym. Uwagi zgłosisz przyciskiem „Zgłoś uwagę” (Issue na GitHubie).</p>
 
-<p><strong>To projekt prototypu 0.5. Stacji jeszcze nie sprawdzono w terenie.</strong> W repozytorium są specyfikacja, model obliczeniowy z testami, projekt płytki stacji, program stacji i programy do prób. Radia testowe przeszły w październiku 2026 r. próbę przy stole i pierwsze próby w budynku, a dwa prototypy na płytce v1 są w montażu u wykonawcy. Najbliższy cel to sprawdzenie radia RNode przy stole, pomiar zasięgu i działająca stacja na biurku (<a href="#ocena-obecnego-stanu">stan prac</a>).</p>
+<p><strong>To projekt prototypu 0.5. Stacji jeszcze nie sprawdzono w terenie.</strong> W repozytorium są specyfikacja, model obliczeniowy z testami, projekt płytki stacji, program stacji i programy do prób. Radia testowe przeszły w październiku 2026 r. próbę przy stole i pierwsze próby w budynku, a dwa prototypy na płytce v1 są w montażu u wykonawcy. Najbliższy cel to sprawdzenie radiów RNode przy stole, pomiar zasięgu i uruchomienie stacji na biurku (<a href="#ocena-obecnego-stanu">stan prac</a>).</p>
 
 <p><a href="faq.html">Najczęstsze pytania</a> · <a href="https://github.com/tmierzwa/WICI">Repozytorium i kod</a> · <a href="../../CONTRIBUTING.md#od-czego-zacząć">Zadania dla współtwórców</a> · <a href="https://github.com/tmierzwa/WICI/issues">Uwagi i błędy</a></p>
 
@@ -134,9 +134,9 @@
 
 <ul>
   <li><strong>Krok 1, radia testowe: wykonany.</strong> Dwa zestawy XIAO ESP32-S3 z Wio SX1262 wymieniły 2026-10-10 po 100 pakietów w każdą stronę przy stole i przeszły pierwsze próby w budynku przy mocy 0 dBm (<a href="../../hardware/radio-pair/README.md">radia testowe</a>). Ustawienia startu radia i poprawki USB przeszły do programu diagnostycznego i programu stacji.</li>
-  <li><strong>Krok 2, radia RNode przy stole: w toku.</strong> Dwa zestawy RAK4631 z SX1262 zamówiono 2026-10-29; po dostawie dostaną firmware RNode i posłużą do pomiarów zasięgu.</li>
-  <li><strong>Krok 3, pomiar ogólny: w toku przygotowań.</strong> Zaczyna się po kroku 2.</li>
-  <li><strong>Krok 4, prototyp na płytce v1: w toku.</strong> Z zamówienia 2026-10-10 jest pięć płytek v1. Dwa prototypy montuje i odbiera programem diagnostycznym zewnętrzny wykonawca (<a href="../../hardware/l0-diagnostic/README.md">program diagnostyczny</a>). Przy montażu wyszła niezgodność taśmy ekranu (F118), poprawiona w projekcie v1.1. Program stacji ma rdzeń zgodny z Reticulum, który wysyła zgłoszenia jako podpisane wiadomości LXMF; sprawdzono go na komputerze wobec Reticulum w Pythonie, ale jeszcze nie na płytce (<a href="../../firmware/README.md">program stacji</a>). Do wykonania pozostają interfejs LoRa w stosie i aplikacja stanowiska odbiorczego.</li>
+  <li><strong>Krok 2, radia RNode przy stole: sprzęt zamówiony.</strong> Dwa zestawy RAK4631 z SX1262 zamówiono 2026-10-29; po dostawie dostaną firmware RNode i posłużą do pomiarów zasięgu.</li>
+  <li><strong>Krok 3, pomiar ogólny: po kroku 2.</strong></li>
+  <li><strong>Krok 4, prototyp na płytce v1: w montażu.</strong> Z zamówienia 2026-10-10 jest pięć płytek v1. Dwa prototypy montuje i odbiera programem diagnostycznym zewnętrzny wykonawca (<a href="../../hardware/l0-diagnostic/README.md">program diagnostyczny</a>). Przy montażu wyszła niezgodność taśmy ekranu (F118), poprawiona w projekcie v1.1. Program stacji ma rdzeń zgodny z Reticulum, który wysyła zgłoszenia jako podpisane wiadomości LXMF; sprawdzono go na komputerze wobec Reticulum w Pythonie, ale jeszcze nie na płytce (<a href="../../firmware/README.md">program stacji</a>). Do wykonania pozostaje interfejs LoRa w stosie; aplikacja stanowiska odbiorczego powstaje w kroku 6.</li>
   <li><strong>Kroki 5–8: przed nami.</strong> Pomiar w gminie, stacje pilotażowe na płytce v2, pilotaż i wyrób.</li>
 </ul>
 
@@ -144,7 +144,7 @@
 
 <p>Próby mają odpowiedzieć na trzy pytania: czy zgłoszenie dotrze przez rzeczywistą sieć, czy stacja wytrzyma co najmniej 48 godzin na ogniwach i czy dyżurny zdoła przyjąć zgłoszenie oraz przekazać je do pomocy. <a href="08-plan-weryfikacji-i-decyzje.html">Plan weryfikacji</a> podaje metody i kryteria zaliczenia.</p>
 
-<p>Otwarte licencje i wymóg kompletnej paczki źródeł (T7) mają umożliwić kontynuację prac przez inne osoby. Docelowe urządzenia organizator sieci ma kupować od producenta z umową wsparcia. Założenia, metody prób i wyniki publikujemy, żeby każdy mógł je sprawdzić i rozwijać.</p>
+<p>Otwarte licencje i wymóg kompletnej paczki źródeł (T7) mają umożliwić kontynuację prac przez inne osoby. Docelowe urządzenia organizator sieci ma kupować od producenta z umową wsparcia.</p>
 
 <h2 id="wspolpraca">Kto pracuje nad projektem</h2>
 

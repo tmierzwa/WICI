@@ -1,6 +1,6 @@
 # WICI R02: ustalenia i lekcje z R01.3
 
-**Wstrzymane do decyzji po pilotażu (przegląd praktyczny 2026-10-08, F99):** pilotaż używa stacji z gotowej płytki MCU z układem LoRa SX1262 ([koncepcja 08](../../docs/concept/08-plan-weryfikacji-i-decyzje.html)).
+**Materiał do projektu płytki v2 i do wydania (porządek 2026-10-29, F119).** Płytki R02 nie projektuje się przed pilotażem: stacja pilotażowa ma płytkę v2 ([elektronika](../../docs/spec/elektronika.md#stacja-pilotażowa)), a o płytce wyrobu rozstrzyga krok 8 planu ([koncepcja 08](../../docs/concept/08-plan-weryfikacji-i-decyzje.html#kolejnosc-prac)). Lekcje toru RF, layoutu i procesu kontroli dotyczą każdej płytki, także v2; części o module CC1120 i kontrolerze R01.3 są archiwalne.
 
 Kontroler R01.3 (STM32F103 z modułem CC1120 według referencji TI, modem USB/KISS) powstał w wersji 0.4, gdy węzłem sieci był laptop. W 0.5 stacja jest samodzielna, więc kontroler stracił rolę: za mało RAM na stos Reticulum (D14), zasilanie z VBUS i kontrakt KISS z limitem 5 s nie pasują do stacji. Rewizje R01.2 i R01.3 doszły do zweryfikowanych plików produkcyjnych kontrolera, ale płytki nigdy nie zamówiono ani nie uruchomiono. Poniżej jest wszystko, co z tej pracy ma wartość dla R02. Pliki CAD, raporty i skrypty R01.3 są w historii Git do commitu `53a075a`.
 
@@ -81,4 +81,4 @@ Montaż QFN i elementów RF 0402 lepiej zlecić. Każdy egzemplarz dostaje zapis
 
 ## Co z R01.3 nie przechodzi
 
-Schemat i PCB kontrolera (STM32F103, USB-B, EEPROM M24C64, LDO AP2112, programator SWD, złącze IDC do modułu TI), kontrakt modemu USB/KISS z dziennikiem długu ciszy w EEPROM, paczka produkcyjna `wici-controller-R01.3.zip` oraz skrypty eksportu i kontroli związane z tym projektem. Wszystko to pozostaje w historii Git (commit `53a075a`, folder `hardware/radio-test-r01/`). Mapa połączeń modułu CC1120EM z tamtego projektu jest w opisie [stanowiska deweloperskiego](../dev-bench/README.md#złącza-modułu-cc1120em).
+Schemat i PCB kontrolera (STM32F103, USB-B, EEPROM M24C64, LDO AP2112, programator SWD, złącze IDC do modułu TI), kontrakt modemu USB/KISS z dziennikiem długu ciszy w EEPROM, paczka produkcyjna `wici-controller-R01.3.zip` oraz skrypty eksportu i kontroli związane z tym projektem. Wszystko to pozostaje w historii Git (commit `53a075a`, folder `hardware/radio-test-r01/`). Mapa połączeń modułu CC1120EM z tamtego projektu jest w opisie [stanowiska deweloperskiego](../archiwum/stanowiska-a-b.md#złącza-modułu-cc1120em).

@@ -1,72 +1,36 @@
-# WICI: stanowisko deweloperskie
+# WICI: płytka v1 prototypu
 
-**Rola po przeglądzie praktycznym (2026-10-08, F99).** Stanowiska A i B są narzędziem do prób stosu (T1–T3) i do opcjonalnego porównania z profilem P1 (wariant zapasowy). Pilotaż ich nie wymaga i nie trzeba do niego montować N1. Sprzętem pilotażu jest gotowa płytka ESP32-S3 z układem LoRa SX1262 ([koncepcja 08](../../docs/concept/08-plan-weryfikacji-i-decyzje.html), [profil LoRa](../../docs/spec/radio.md#profil-lora-pilotażu)); R02 jest wstrzymana do decyzji po pilotażu.
+Płytka v1 (dawniej płytka nośna N1) łączy kupione moduły w prototyp stacji na biurku: ESP32-S3-DevKitC-1 w gniazdach, moduł Seeed Wio SX1262 na przewodach obok płytki, panel Sharp LS027B7DH01A, pamięć FRAM z ochroną przy zaniku zasilania, przyciski, przełącznik CISZA, diodę alarmu i brzęczyk. Własnego toru RF ani zasilania z ogniw i 12 V nie ma; zasila ją USB. Prototyp jest sprzętem kroku 4 planu ([koncepcja, rozdział 08](../../docs/concept/08-plan-weryfikacji-i-decyzje.html#kolejnosc-prac)), a jego wnioski przechodzą do płytki v2 stacji pilotażowej ([elektronika](../../docs/spec/elektronika.md#stacja-pilotażowa)). Katalog i pliki zachowują dawne nazwy (`dev-bench`, `fabrication/N1`), bo wykonawca prototypu pracuje na tych ścieżkach.
 
-Stanowisko deweloperskie to zestaw kupnych płytek rozwojowych i modułów producentów, na którym powstaje oprogramowanie układowe stacji i wykonuje się próby T1–T4 przed płytką stacji. Płytką stacji jest [R02](../../docs/spec/elektronika.md#płytka-stacji-r02-wymagania); jedyną inną płytką projektu jest [płytka nośna N1](plytka-nosna.md) stanowiska, narzędzie bez własnego toru RF i zasilania. Wcześniejszy kontroler R01.3 nie jest budowany; jego ustalenia są w [lekcjach R02](../r02/lekcje.md), a pliki w historii Git.
+## Wersje
 
-Codzienną pracę na zmontowanym stanowisku opisuje [obsługa stanowiska](obsluga.md), a montaż i pierwsze włączenie płytki N1 [uruchomienie](uruchomienie.md).
+| Wersja | Stan |
+|---|---|
+| v1 | 5 płytek z JLCPCB zamówionych 2026-10-10, w tym 2 z montażem SMD ([zamówienie](przed-produkcja.md#zamówienie-2026-10-10-l0)). Dwie zmontowane płytki są w montażu u wykonawcy jako prototypy ([zlecenie](../l0-diagnostic/ZLECENIE.md)); trzy są gołe. Panel nie mieści się na v1 w obrysie z opisu płytki (F118); sposób ułożenia podaje krok 7 [uruchomienia](uruchomienie.md#montaż). R12 wymienia się przy montażu na 1 kΩ |
+| v1.1 | projekt na `main`: złącze panelu J7 odsunięte na zmierzoną długość taśmy FPC ([F118](../../docs/review.md)). Nie do zamówienia; jest bazą płytki v2. Wycenę pełnego montażu SMD i THT w JLCPCB sprawdzono w zamkniętym [PR #129](https://github.com/tmierzwa/WICI/pull/129) |
 
-Obrazy oprogramowania są w [firmware/](../../firmware/README.md): `bench-a` (stanowisko A na przewodach), `bench-n1` (A na płytce nośnej N1) i `bench-b` (B na N1). Wszystkie się budują; żadnego nie uruchomiono jeszcze na sprzęcie.
+Pliki produkcyjne w `fabrication/N1/` są rewizji v1.1; pliki v1 są w historii Git.
 
-Zasada: tor RF, wzorzec częstotliwości i zasilanie stanowiska pochodzą z płytek producentów; własnych płytek radiowych do prób się nie projektuje. Moduły łączy [płytka nośna N1](plytka-nosna.md) (jedna płytka dla stanowisk A i B, [F81](../../docs/review.md)). Bieżąca rewizja to N1.1 z J7 odsuniętym od panelu ([F118](../../docs/review.md)); płytki zamówione 2026-10-10 dla L0 są pierwszej rewizji N1. Do czasu montażu N1 stanowisko A można połączyć przewodami według [firmware/README.md](../../firmware/README.md#okablowanie-stanowiska-a) i [tabeli złączy EM](#złącza-modułu-cc1120em). Dla stanowiska B tabeli przewodów nie ma, więc B buduje się tylko na N1.
+## Prototyp
 
-Na stanowisku działa to samo oprogramowanie układowe co w stacji. Różni się przypisanie wyprowadzeń (np. SPI SCK jest na D13 przy przewodach i na D3 na N1), dlatego każdy wariant ma własny plik opisu płytki. Nie ma osobnego oprogramowania stanowiska ani osobnego kontraktu modemu.
+Odbiór zmontowanego prototypu (radio, FRAM, ekran, wejścia, dioda, brzęczyk, wspólna magistrala SPI) robi program diagnostyczny ([l0-diagnostic](../l0-diagnostic/README.md)) według [instrukcji montażu i testów](../l0-diagnostic/MONTAZ-I-TESTY.md). Połączenia MCU prototypu są w [tabeli prototypu](../l0-diagnostic/reference/polaczenia-MCU-L0.csv). Po odbiorze na prototyp wgrywa się program stacji, środowisko `l0` w [firmware](../../firmware/README.md).
 
-## Dwa stanowiska
+Płytka ma też gniazda na moduły TI, ST i Nordic (J1–J4, J9, J10, JP3) z czasów stanowisk deweloperskich A/B. Prototyp ich nie używa, a v2 ich nie dostanie. Opis stanowisk jest w [archiwum](../archiwum/stanowiska-a-b.md); obrazy `bench-*` w `firmware/` dotyczą tylko stanowisk.
 
-Stanowiska deweloperskie odpowiadają dwóm dotychczasowym wariantom P1 ([specyfikacja radia](../../docs/spec/radio.md#dwa-wykonania)), więc można na nich sprawdzić MCU, radio, stos i interfejs użytkownika. Wyniki dotyczą konfiguracji stanowiska. Po wyborze części R02 trzeba wskazać, które próby należy powtórzyć.
+## Pliki
 
-Do prób mieszanych TI–ST wystarczy po jednym stanowisku każdego rodzaju. Sieć A–B–stanowisko odbiorcze z zapasem wymaga czterech (dwa A i dwa B), co odpowiada dwóm modułom w zestawie CC1120EMK.
+| Plik | Zawartość |
+|---|---|
+| [płytka v1](plytka-nosna.md) | opis płytki: przypisanie sygnałów, mechanika, zasilanie, koszt i dostępność, źródła |
+| [połączenia](polaczenia.md) | piny każdego złącza i elementu (z generatora) |
+| [schemat](schemat.pdf) | schemat w PDF, eksport z `cad/` |
+| `cad/` | projekt KiCad 10.0.6: schemat, PCB, reguły, lokalne biblioteki |
+| `tools/` | generatory schematu i PCB, eksport, kontrole; edytowalnym źródłem jest `tools/design.py` |
+| `checks/` | raporty ERC/DRC, [zapis odtworzenia](checks/odtworzenie.md), [przymiarka](checks/przymiarka.md), [zgodność z oprogramowaniem stanowisk](checks/zgodnosc-firmware.md) |
+| [BOM](bom.csv) | części z MPN |
+| [pliki produkcyjne](fabrication/N1/README.md) | Gerber, wiercenia, pozycje, rysunek montażowy, wydruk 1:1 |
+| [uruchomienie](uruchomienie.md) | montaż, kontrola przed zasilaniem, kalibracja VTEST, ochrona FRAM, pomiar oscyloskopem, wzór zapisu sztuki |
+| [obsługa](obsluga.md) | obsługa stanowisk A/B (archiwalna; zasady dla panelu, VTEST i pomiaru prądu dotyczą też prototypu) |
+| [przed zamówieniem](przed-produkcja.md) | zamówienie v1, stan v1.1, warunki zamówienia i odtworzenie z generatorów |
 
-| Element | Stanowisko A (TI) | Stanowisko B (ST) | Uwagi |
-|---|---|---|---|
-| Płytka MCU | Nordic nRF52840-DK (PCA10056) | Espressif ESP32-S3-DevKitC-1 z modułem ESP32-S3-WROOM-1-N8R8 (wersje N8 i N8R2 są wycofane, ale płytka N1 i obraz przyjmują wszystkie trzy) | obie zasilane i programowane przez USB; nRF52840-DK ma złącza Arduino i zworki pomiaru prądu MCU; wykonanie B R02 używa ESP32-S3FN8 (8 MB flash w obudowie, bez PSRAM; F105), DevKit ma 8 MB flash w module; obraz nie korzysta z PSRAM modułu N8R8, a zapas RAM liczy się bez niej ([radio](../../docs/spec/radio.md#dwa-wykonania), wiersz „Pamięć RAM”) |
-| Moduł radiowy | TI CC1120EM-868-915 z zestawu [CC1120EMK-868-915](https://www.ti.com/tool/CC1120EMK-868-915) (dwa moduły, tor RF według referencji TI, złącze SMA) | ST [X-NUCLEO-S2868A2](https://www.st.com/en/evaluation-tools/x-nucleo-s2868a2.html) (S2-LP 826–958 MHz, złącze SMA; płytka N1 i obraz `bench-b` przyjmują tylko ten moduł) | połączenie A: płytka nośna N1 (gniazda 1,27 mm), do czasu jej montażu adapter [BOOST-CCEMADAPTER](https://www.ti.com/tool/BOOST-CCEMADAPTER) albo przewody przylutowane do złączy EM; połączenie B: płytka nośna N1 (X-NUCLEO w złączach Arduino, DevKitC w gniazdach); wszystkie sygnały 3,3 V |
-| Wzorzec częstotliwości radia | kwarc modułu; pola X2 na TCXO według referencji TI (przeróbka opcjonalna) | wzorzec płytki ST według jej schematu | na stanowisku błąd częstotliwości mierzy się i koryguje poleceniem `FOFF`; budżet ±2,0 ppm z TCXO sprawdza dopiero R02 |
-| Pamięć FRAM | układ U1 na płytce nośnej N1: Infineon CY15B104QN-50SXI albo RAMXEED MB85RS4MTPF (4 Mbit, SPI, SOIC-8, ten sam footprint), zegar 8 MHz | ta sama | te same układy co w stacji pilotażowej i w [BOM stacji](../../docs/spec/bom-stacji.csv); oprogramowanie rozpoznaje oba po RDID |
-| Ekran | panel Sharp LS027B7DH01A (400 × 240) w złączu FPC J7 płytki N1, zasilany z przetwornicy 5 V na N1 (MCP1640 z 3,3 V; pin 5V płytki MCU nie gwarantuje 4,8 V) | ten sam | ten sam panel co w R02, bez płytki pośredniej; EXTCOMIN z wyjścia licznika MCU, nie z programu (na nRF52840 RTC2 przez PPI i GPIOTE, na ESP32-S3 MCPWM0), a przy awarii licznika panel zostaje wyłączony; EXTMODE panelu na 5 V panelu; przy okablowaniu przewodami płytka Adafruit 4694 z pinem EMD połączonym z VDD ([firmware/README.md](../../firmware/README.md#okablowanie-stanowiska-a)) |
-| Przyciski i sygnalizacja | 4 przyciski menu, przełącznik CISZA, przycisk trybu przygotowania, dioda alarmu, brzęczyk na płytce nośnej N1 (przy przewodach: przyciski płytki DK, polecenie `SILENCE` zamiast CISZA) | te same | na N1 podciągnięcie 10 kΩ na płytce (przy przewodach wewnętrzne w MCU); eliminacja drgań w oprogramowaniu jak w stacji |
-| Zasilanie | USB z laptopa albo zasilacz laboratoryjny | to samo | zasilanie jest narzędziem; nie mierzy budżetu energii stacji (T6) ani niezależności od VBUS |
-| Antena i tor pomiarowy | dipol z [BOM stacji](../../docs/spec/bom-stacji.csv) do prób w eterze; tłumiki 30–40 dB, przewody koncentryczne i obciążenie sztuczne do prób przewodowych | to samo | pomiar czułości tylko przewodowo, w ekranowanym pudełku; płytki rozwojowe przepuszczają sygnał poza złącze |
-
-Przyrządy: analizator widma, generator sygnałowy z modulacją (czułość, blokowanie), miernik częstotliwości o dokładności ≤0,1 ppm, miernik mocy albo analizator z tłumikiem; do uruchomienia N1 oscyloskop ≥200 MHz z sondą 10×, multimetr o błędzie ≤0,1% (kalibracja VTEST) i analizator stanów logicznych. Zewnętrzny filtr SAW 868 MHz w torze koncentrycznym pozwala zmierzyć blokowanie z filtrem i bez niego przed decyzją o torze wejściowym R02.
-
-Moduł CC1120 innego producenta nadaje się tylko do uruchomienia oprogramowania i prób ramek: jego dopasowanie i wzorzec częstotliwości są nieznane, więc nie daje wyniku czułości, emisji ani błędu częstotliwości.
-
-## Co sprawdza stanowisko, a co dopiero R02
-
-| Grupa | Na stanowisku | Dopiero na R02 |
-|---|---|---|
-| T1, T2, T8 | stos, kolejka w FRAM, ekran, przyciski, protokół USB laptop–stacja, obsługa według karty na makiecie obudowy | zachowanie przy odłączeniu VBUS i samozasilanie (stanowisko zasila się z USB) |
-| T3 | rdzeń Reticulum stacji i LXMF na obu rodzinach MCU, zapas RAM, zgodność z implementacją referencyjną, emulator P1 i prawdziwy tor P1 | nic |
-| T4 | ramki, zgodność TI→ST i ST→TI, czułość na złączu modułu (bez toru wejściowego stacji), harmoniczne toru referencyjnego, blokowanie z zewnętrznym filtrem SAW i bez niego, dług ciszy, limit czasu nadawania, CCA, cisza radiowa, błąd częstotliwości z korektą | budżet częstotliwości z TCXO, pełny tor wejściowy (filtr, ESD, przełącznik), nadawanie przy rozwartym i zwartym złączu, emisje gotowej konfiguracji w obudowie |
-| T5 | wczesne próby zasięgu: stanowisko w pudełku zasilane z powerbanku (narzędzie prób, nie źródło stacji) | odbiór 1 km, przekaźnik na ogniwach, zimny start sieci |
-| T6, T7 | nic | energia, bezpieczeństwo, odtworzenie i dostawcy |
-
-Wyniki czułości i emisji ze stanowiska dotyczą toru RF producenta, a nie stacji. Pokazują, czy układ radiowy i profil P1 w ogóle osiągają cel (około −113 dBm na złączu układu), zanim powstanie projekt R02 z własnym torem wejściowym.
-
-## Pomiary
-
-Polecenia pomiarowe interfejsu diagnostyki (`TXCW`, `TXPKT`, `RXPER`, `FOFF`) działają tylko w trybie przygotowania i są opisane w [specyfikacji radia](../../docs/spec/radio.md#usb-do-laptopa). Pomiar czułości przy PER ≤1% wymaga ≥2000 ramek 103 B na punkt, czyli więcej nadawania, niż dopuszcza limit 10% w godzinie. Takie serie nadaje się wyłącznie przewodowo do tłumika, po potwierdzeniu przyciskiem na stanowisku, i odnotowuje w dzienniku. Procedura pomiarów T4 i warunki zaliczenia są w [odbiorze](../../docs/spec/odbior.md).
-
-## Złącza modułu CC1120EM
-
-Przy okablowaniu przewodami połączenia opisuje ta tabela, a na płytce nośnej wynikają one ze schematu. Mapa złączy P1/P2 modułu TI CC112xEM 868/915 pochodzi z projektu R01.3. Numery są elektrycznymi numerami pinów. Złącza są na spodzie modułu, więc w widoku od spodu układ pinów jest odwrócony. Przed zasilaniem trzeba sprawdzić każdą żyłę miernikiem. W pierwszej próbie przewody mają najwyżej 5 cm, a SPI pracuje z zegarem około 1 MHz. Na N1 zegar SPI wynosi 1 MHz dla radia i 8 MHz dla FRAM (wymaganie ≥8 MHz dla każdej stacji). Do pomiaru oscyloskopem przy J7 ekran przełącza się na 2 MHz poleceniem `DISPLAY`; na stałe dopiero po tym pomiarze ([uruchomienie](uruchomienie.md#pomiar-magistrali-oscyloskopem)).
-
-| Sygnał | Złącze modułu TI | Pin CC1120 |
-|---|---|---:|
-| GND | P1.1, P1.19, P2.2 | masa modułu |
-| 3,3 V | P2.7 (P2.9 to ten sam węzeł) | zasilanie modułu |
-| SCK | P1.16 | 8 |
-| MOSI | P1.18 | 7 |
-| MISO | P1.20 | 9 |
-| CS_N | P1.14 | 11 |
-| RESET_N | P2.15 | 2 |
-| GPIO0 / IRQ0 | P1.10 | 10 |
-| GPIO2 / IRQ2 | P1.12 | 4 |
-
-Pozostałych pinów nie wolno traktować jako masy. Adapter BOOST-CCEMADAPTER wyprowadza te same sygnały na złącza BoosterPack; bez adaptera przewody lutuje się do pól złączy EM. Linię RESET_N trzyma się w stanie niskim do czasu startu MCU.
-
-## Co zostaje z R01.3
-
-Z kontrolera R01.3 przechodzą do R02 tylko wnioski toru RF i procesu: dopasowanie i stos według referencji TI, wybór TCXO i budżet błędu, pomiar harmonicznych, ochrona ESD, ocena filtru SAW, zasady layoutu i kontroli ([lekcje R02](../r02/lekcje.md)). Kontroler STM32F103, jego PCB, kontrakt KISS i dziennik w EEPROM nie są używane.
+Licencje według [LICENSE.md](../../LICENSE.md): projekt płytki i pliki produkcyjne CERN-OHL-P-2.0, skrypty MIT, dokumentacja CC-BY-4.0.
