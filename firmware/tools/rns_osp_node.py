@@ -30,13 +30,14 @@ node (rebuilt from the routes through USB with 1 hop in FRAM).
 With --link lora (with --lxmf, host and host-port) the programs use the emulated LoRa link (node_host --link lora): on-air
 frames of the RNode header, one per UDP datagram, through a small shared medium (class Air) that joins the programs as
 neighbours; there is no RNode emulator here, the computer is behind USB. The bitrate of the KISS interface is 42 b/s
-(radio.md, "Kryterium bitrate"). Checks added to the steps above (the flood steps of the P1 run are left out; the
-a series of 50 packets, the size of a BULLETIN to 50 stations, follows the series of 6): a packet of 493-500 B from USB is dropped before the
+(radio.md, "Kryterium bitrate"). Checks added to the steps above (the flood steps of the P1 run are left out): a packet of 493-500 B from USB is dropped before the
 radio and counted (too_large); a LoRa frame pair without IFAC does not reach the computer; LXMRouter in Python on the
 computer sends an LXMF SA1 message to the station and gets the delivery proof before any retry (delivery_attempts 1,
 the proof earlier than next_delivery_attempt), with 3 attempts and an interval of 2 x (500 x 8 / bitrate - ...) set by the
 bitrate alone (D19); RECEIVED- and STATUS-like SA1 messages from a station reach the computer over one hop and over two
-hops (station - relay - node, three host programs); with the computer disconnected the node still forwards the announces
+hops (station - relay - node, three host programs); 50 LXMF messages of the BULLETIN size to one station, sent as the
+station application sends them (at most 4 in flight, the next after DELIVERED or FAILED), all delivered with no drop in the
+USB buffer of the node (stanowisko-osp.md, "Wysyłka"); with the computer disconnected the node still forwards the announces
 of two stations that do not hear each other. The host program has no station application layer: RECEIVED and STATUS
 are SA1 contents sent with the "send" command, not messages made by station.cpp.
 
@@ -61,7 +62,8 @@ APP_NAME = "wici"
 ASPECT = "sa1"
 NETWORK_KEY = "5749434954335f696661635f74657374"  # 16 B test key, not a field key
 BURST = 6
-BULLETIN = 50             # --link lora: seria z komputera jak BULLETIN do 50 stacji
+BULLETIN = 50             # --link lora: BULLETIN do 50 stacji, wiadomości LXMF jedna za drugą
+IN_FLIGHT = 4             # najwyżej tyle wiadomości w drodze naraz (stanowisko-osp.md, "Wysyłka"; bufor USB węzła ma 8 slotów)
 LORA_BITRATE = 42         # bitrate interfejsu KISS komputera w próbie LoRa (radio.md, kryterium bitrate)
 FLOOD_INTERVAL_S = 0.02   # zalew z USB: ramka co 20 ms (ok. 50/s, ponad limit weryfikacji i bufor KISS)
 USB_PINNED = 8            # cele komputera chronione w węźle (rns_node.h)
@@ -366,15 +368,6 @@ def lora_checks(args, work, air, programs, node, station, kiss, identity, destin
     after = node.status()
     checks["usb_493_500_dropped_and_counted"] = counted and after.get("tx_sent") == before.get("tx_sent") and after.get("usb_rx_invalid") == before.get("usb_rx_invalid")
 
-    # Ramki LoRa bez IFAC nie dochodzą do komputera: licznik ifac_missing w węźle, pakiet nie dociera do Reticulum w Pythonie.
-    before = node.status()
-    packets = len(seen["packets"])
-    inject(node_port, bytes([0x00, 0x00]) + destination.hash + bytes([0x00]) + b"no ifac")
-    time.sleep(1.5)
-    after = node.status()
-    checks["lora_without_ifac_not_to_computer"] = (after.get("ifac_missing") == before.get("ifac_missing", 0) + 1
-                                                   and after.get("usb_rns_out", 0) == before.get("usb_rns_out", 0) and len(seen["packets"]) == packets)
-
     # LXMRouter na komputerze: LXMF SA1 do stacji, dowód przed jakimkolwiek ponowieniem (D19).
     router = LXMF.LXMRouter(storagepath=os.path.join(work, "lxmf"))
     router_identity = RNS.Identity()
@@ -409,6 +402,42 @@ def lora_checks(args, work, air, programs, node, station, kiss, identity, destin
     checks["lxmf_no_retry_before_proof"] = message.delivery_attempts == 1 and t_proof < message.next_delivery_attempt
     checks["lxmf_three_attempts"] = message.max_delivery_attempts == 3
     checks["lxmf_interval_from_bitrate_alone"] = interval >= 196 and t0 - 1 <= attempt_at <= t_proof + 1
+
+    # BULLETIN do 50 stacji tak, jak go rozsyła aplikacja stanowiska ("Wysyłka": po kolei, najwyżej IN_FLIGHT wiadomości
+    # w drodze). Czas kanału jednego pakietu (ok. 5 s) jest dłuższy niż 5 s blokady interfejsu KISS w Pythonie, więc
+    # surowa seria 50 pakietów przepełniłaby bufor USB węzła; przy 4 w drodze węzeł zawsze ma wolny slot. Do jednej stacji.
+    finished = (LXMF.LXMessage.DELIVERED, LXMF.LXMessage.FAILED, LXMF.LXMessage.REJECTED, LXMF.LXMessage.CANCELLED)
+    before = node.status()
+    t0 = time.time()
+    sent, pending = [], []
+    while len(sent) < BULLETIN or pending:
+        pending = [m for m in pending if m.state not in finished]
+        while len(sent) < BULLETIN and len(pending) < IN_FLIGHT:
+            n = len(sent) + 1   # SA1 BULLETIN [1,4,id,event,text], każda treść inna
+            message = LXMF.LXMessage(out, router_destination, f'[1,4,{n},{n},"osp node bulletin {n}"]', "SA1",
+                                     desired_method=LXMF.LXMessage.OPPORTUNISTIC)
+            router.handle_outbound(message)
+            sent.append(message)
+            pending.append(message)
+        if time.time() - t0 > 3000:
+            break
+        time.sleep(0.1)
+    after = node.status()
+    delivered_count = sum(m.state == LXMF.LXMessage.DELIVERED for m in sent)
+    drops = after.get("usb_rx_drop", 0) - before.get("usb_rx_drop", 0)
+    results["bulletin_paced"] = {"messages": len(sent), "delivered": delivered_count, "failed": sum(m.state == LXMF.LXMessage.FAILED for m in sent),
+                                 "in_flight": IN_FLIGHT, "delivery_attempts": sum(m.delivery_attempts for m in sent),
+                                 "usb_rx_drop": drops, "seconds": round(time.time() - t0, 1)}
+    checks["bulletin_50_paced"] = len(sent) == BULLETIN and delivered_count == BULLETIN and drops == 0
+
+    # Ramki LoRa bez IFAC nie dochodzą do komputera (po BULLETIN, gdy dowody poprzednich kroków już wróciły): licznik ifac_missing w węźle, pakiet nie dociera do Reticulum w Pythonie.
+    before = node.status()
+    packets = len(seen["packets"])
+    inject(node_port, bytes([0x00, 0x00]) + destination.hash + bytes([0x00]) + b"no ifac")
+    time.sleep(1.5)
+    after = node.status()
+    checks["lora_without_ifac_not_to_computer"] = (after.get("ifac_missing") == before.get("ifac_missing", 0) + 1
+                                                   and after.get("usb_rns_out", 0) == before.get("usb_rns_out", 0) and len(seen["packets"]) == packets)
 
     def station_to_router(sender, text):
         """RECEIVED- i STATUS-podobna wiadomość SA1 od stacji do routera; (dotarła, dowód w stacji)."""
@@ -646,12 +675,6 @@ def main():
             if args.lxmf:
                 # Pakiety od komputera na P1 w klasie K1 (rdzeń liczy je w usb_k1).
                 checks["computer_packets_k1"] = burst_result["usb_k1"] >= BURST
-            if lora:
-                # BULLETIN do 50 stacji to 50 pakietów jeden za drugim: czas kanału jednego pakietu (13t, ok. 5 s) jest
-                # dłuższy niż 5 s blokady interfejsu KISS w Pythonie, który wtedy sam zwalnia kontrolę przepływu.
-                _, _, got, bulletin = run_burst(BULLETIN, 90)
-                results["bulletin"] = bulletin
-                checks["bulletin_50_without_loss"] = len(got) == BULLETIN and bulletin["usb_rx_drop"] == 0
         else:
             for name in ("computer_to_station_packet", "computer_receipt_delivered", "burst_without_flow_timeout",
                          "burst_delivered_without_drops"):

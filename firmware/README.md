@@ -745,7 +745,7 @@ Ograniczenia próby:
 
 - Emulator RNode i ramkowanie stacji pochodzą z tego samego odczytania źródła firmware RNode (commit `56775c51`). Próba dowodzi współpracy z `RNodeInterface` i spójności obu stron, a nie zgodności z prawdziwym firmware w eterze; tę da próba sprzętowa z RAK4631.
 - Emulator nie opóźnia pakietów czasem nadawania: ciszę 12t stosuje strona stacji, a po stronie komputera łącze jest tylko przejściówką.
-- Otwarte: seria 50 pakietów z komputera (rozmiar BULLETIN do 50 stacji) nie przechodzi bez utraty. Czas kanału jednego pakietu (13t, około 5 s) jest dłuższy niż 5 s blokady interfejsu KISS w Pythonie, który sam zwalnia kontrolę przepływu, i bufor USB węzła się przepełnia (zmierzono: 30–31 z 50 dotarło, `usb_rx_drop` 19–20). Seria 6 pakietów przechodzi. Sprawdzenie `bulletin_50_without_loss` zostaje w próbie jako znany błąd (`expectedFailure`).
+- BULLETIN do 50 stacji: 50 wiadomości LXMF do jednej stacji, wysyłanych jak aplikacja stanowiska ([Wysyłka](../docs/spec/stanowisko-osp.md): najwyżej 4 w drodze, następna po DELIVERED albo FAILED), sprawdzenie `bulletin_50_paced`: 50/50 DELIVERED i `usb_rx_drop` 0. Surowa seria 50 pakietów z komputera gubiłaby pakiety (czas kanału jednego pakietu, około 5 s, przekracza 5 s blokady interfejsu KISS w Pythonie), ale tak aplikacja nie wysyła, a przy 4 wiadomościach w drodze bufor USB węzła (8 slotów) wystarcza. Czas i liczba prób są w wynikach (`bulletin_paced`); wymaganie T5 (≤12 min dla 50 stacji) rozstrzyga próba na sprzęcie, nie ten emulator.
 
 Wymagają sprzętu (stanowisko A, dwie płytki albo płytka i Reticulum w Pythonie z modemem P1):
 

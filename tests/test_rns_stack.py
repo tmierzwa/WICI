@@ -240,14 +240,14 @@ class OspNodeLoraTests(unittest.TestCase):
         cls.results = results(subprocess.run(command, capture_output=True, text=True, timeout=3000))
 
     def test_every_check_passed(self):
-        # BULLETIN do 50 stacji (bulletin_50_without_loss) to otwarty problem: test_bulletin_50_flow_control niżej.
-        failed = [name for name, ok in self.results["checks"].items() if not ok and name != "bulletin_50_without_loss"]
+        failed = [name for name, ok in self.results["checks"].items() if not ok]
         self.assertEqual(failed, [], json.dumps(self.results, indent=2))
 
     def test_lora_checks_present(self):
         for name in ("usb_493_500_dropped_and_counted", "lora_without_ifac_not_to_computer", "lxmf_no_retry_before_proof",
                      "lxmf_three_attempts", "lxmf_interval_from_bitrate_alone", "received_status_one_hop",
-                     "received_status_two_hops", "lxmf_two_hops_with_proof_before_retry", "node_forwards_without_computer"):
+                     "received_status_two_hops", "lxmf_two_hops_with_proof_before_retry", "node_forwards_without_computer",
+                     "bulletin_50_paced"):
             self.assertIn(name, self.results["checks"])
 
     def test_lxmf_interval_set_by_bitrate(self):
@@ -259,14 +259,6 @@ class OspNodeLoraTests(unittest.TestCase):
     def test_burst_of_6_without_loss(self):
         burst = self.results["burst"]
         self.assertEqual((burst["sent"], burst["received"], burst["usb_rx_drop"]), (6, 6, 0))
-
-    @unittest.expectedFailure
-    def test_bulletin_50_flow_control(self):
-        # Otwarte: czas kanału jednego pakietu (13t, ok. 5 s) przekracza 5 s blokady interfejsu KISS w Pythonie, który
-        # sam zwalnia kontrolę przepływu, więc seria 50 pakietów przepełnia bufor USB węzła (zmierzono: 31 z 50 dotarło,
-        # 19 odrzuconych). Do rozstrzygnięcia: wielkość bufora USB węzła albo odstęp BULLETIN w aplikacji stanowiska.
-        bulletin = self.results["bulletin"]
-        self.assertEqual((bulletin["sent"], bulletin["received"], bulletin["usb_rx_drop"]), (50, 50, 0))
 
 
 if __name__ == "__main__":
