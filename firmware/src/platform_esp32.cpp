@@ -10,6 +10,8 @@
 #include <esp_system.h>
 #include <esp_timer.h>
 #include <esp_task_wdt.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
 
 #include "board.h"
 #include "cmdargs.h"
@@ -95,6 +97,24 @@ void printVtest() {
                   static_cast<unsigned long>(pinMv * board::VTEST_DIVIDER), static_cast<unsigned long>(pinMv),
                   board::VTEST_ADC_CHANNEL, board::VTEST_DIVIDER);
 }
+
+namespace {
+
+// Mutex w pamięci statycznej (bez sterty), utworzony przy inicjalizacji programu, przed setup() i przed
+// każdym zadaniem; FreeRTOS pozwala tworzyć obiekty przed startem planisty.
+StaticSemaphore_t radioMutexStorage;
+const SemaphoreHandle_t radioMutex = xSemaphoreCreateRecursiveMutexStatic(&radioMutexStorage);
+
+}  // namespace
+
+bool radioLockTake(uint32_t timeoutMs) {
+    // W górę do taktów: krótki limit nie może stać się próbą bez czekania.
+    TickType_t ticks = pdMS_TO_TICKS(timeoutMs);
+    if (timeoutMs > 0 && ticks == 0) ticks = 1;
+    return xSemaphoreTakeRecursive(radioMutex, ticks) == pdTRUE;
+}
+
+void radioLockGive() { xSemaphoreGiveRecursive(radioMutex); }
 
 bool handle(const char* cmd, char* words[], size_t n) {
     if (strcmp(cmd, "DRIVE") || n > 1) return false;

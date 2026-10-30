@@ -46,6 +46,8 @@ constexpr uint8_t OP_GET_PACKET_STATUS = 0x14;
 constexpr uint8_t OP_GET_RSSI_INST = 0x15;
 constexpr uint8_t OP_GET_DEVICE_ERRORS = 0x17;
 constexpr uint8_t OP_CLEAR_DEVICE_ERRORS = 0x07;
+constexpr uint8_t OP_SET_CAD = 0xC5;
+constexpr uint8_t OP_SET_CAD_PARAMS = 0x88;
 
 // Rejestry (tabela 12-1) i zmiany z rozdziału 15 (ograniczenia układu).
 constexpr uint16_t REG_RETENTION_COUNT = 0x029F;  // liczba rejestrów zachowywanych w uśpieniu (rozdz. 9.6)
@@ -62,6 +64,13 @@ constexpr uint16_t REG_OCP = 0x08E7;              // limit prądu PA, krok 2,5 m
 constexpr uint8_t RX_GAIN_POWER_SAVING = 0x94;
 constexpr uint8_t RX_GAIN_BOOSTED = 0x96;
 
+// Parametr SetStandby (tabela 13-4).
+constexpr uint8_t STDBY_RC = 0x00;
+constexpr uint8_t STDBY_XOSC = 0x01;
+// Tryb powrotu po TxDone i po odbiorze pojedynczym (SetRxTxFallbackMode, tabela 13-23).
+constexpr uint8_t FALLBACK_STDBY_RC = 0x20;
+constexpr uint8_t FALLBACK_STDBY_XOSC = 0x30;
+
 // Bajt statusu: [6:4] tryb układu, [3:1] stan polecenia (tabela 13-76).
 constexpr uint8_t MODE_STBY_RC = 0x2;
 constexpr uint8_t MODE_STBY_XOSC = 0x3;
@@ -76,6 +85,8 @@ constexpr uint16_t IRQ_PREAMBLE_DETECTED = 1u << 2;
 constexpr uint16_t IRQ_HEADER_VALID = 1u << 4;
 constexpr uint16_t IRQ_HEADER_ERR = 1u << 5;
 constexpr uint16_t IRQ_CRC_ERR = 1u << 6;
+constexpr uint16_t IRQ_CAD_DONE = 1u << 7;
+constexpr uint16_t IRQ_CAD_DETECTED = 1u << 8;
 constexpr uint16_t IRQ_TIMEOUT = 1u << 9;
 constexpr uint16_t IRQ_ALL = 0x03FF;
 
@@ -118,8 +129,9 @@ public:
     Status status();  // GetStatus
     Status lastStatus() const { return status_; }
     Identity identify();
-    uint16_t irqStatus();
-    void clearIrq(uint16_t mask);
+    uint16_t irqStatus();                // 0 także przy przekroczeniu czasu BUSY
+    bool readIrq(uint16_t& irq);         // jak irqStatus(), ale false przy przekroczeniu czasu BUSY
+    bool clearIrq(uint16_t mask);
     uint16_t deviceErrors();
 
     // Uśpienie z zachowaniem konfiguracji (ciepły start) i wybudzenie zboczem NSS.

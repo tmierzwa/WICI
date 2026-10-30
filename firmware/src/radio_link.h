@@ -57,6 +57,22 @@ enum class RxPoll : uint8_t {
     Overflow,  // przepełnienie kolejki RX; układ wrócił do odbioru
 };
 
+// Wynik wykrycia aktywności w kanale (CAD) tuż przed nadaniem.
+enum class Cad : uint8_t {
+    Free,         // kanał wolny: można nadawać
+    Busy,         // wykryta preambuła LoRa: odroczenie
+    Error,        // brak CadDone w czasie albo przekroczony czas BUSY; układ w stanie spoczynku
+    Unsupported,  // układ nie ma CAD (CC1120, S2-LP)
+};
+
+// Wynik przygotowania nadania (prepareTx).
+enum class TxPrep : uint8_t {
+    Ready,        // układ w stanie spoczynku, ramka i jej długość w układzie
+    RxPending,    // odbiór ma nieodczytaną ramkę albo trwa odbiór ramki: odroczenie, układ zostaje w odbiorze
+    Error,        // zła długość albo przekroczony czas BUSY
+    Unsupported,  // układ nie ma osobnego przygotowania nadania (łącze P1 używa transmit)
+};
+
 // Czasy pierwszej ramki serii z wyjścia GPIO układu (CC1120: PKT_SYNC_RXTX); valid = false,
 // gdy układ ich nie podaje.
 struct TxTiming {
@@ -107,6 +123,17 @@ public:
     virtual uint32_t seriesMaxMs() const = 0;
     virtual bool p1Link() const = 0;           // łącze P1 (P1RX, P1TX, stos) na tym układzie
     virtual bool hasSnr() const { return false; }  // ramki niosą SNR (snrQdb), RXPER podaje średnią
+
+    // Próg RSSI dostępu do kanału (dBm): układy P1 mają wspólną stałą P1, SX1262 próg profilu LoRa.
+    virtual int8_t ccaThresholdDbm() const { return P1_CCA_THRESHOLD_DBM; }
+
+    // Nadawanie LoRa w krokach (radio.md, „Dostęp do kanału”, punkt 5): prepareTx() wychodzi z odbioru
+    // i ładuje ramkę, cad() sprawdza kanał, sendPrepared() nadaje załadowaną ramkę i czeka na koniec.
+    // Między krokami układ zostaje w stanie spoczynku z włączonym oscylatorem; odbiór wraca przez startRx().
+    // Układy P1 tych kroków nie mają (nadają przez transmit()).
+    virtual TxPrep prepareTx(const uint8_t*, size_t) { return TxPrep::Unsupported; }
+    virtual Cad cad() { return Cad::Unsupported; }
+    virtual bool sendPrepared(TxTiming*) { return false; }
 };
 
 }  // namespace radiolink
