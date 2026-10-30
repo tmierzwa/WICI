@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 """Start the receiving station application (stages S1-S3: stack, reception and sending, without the panel yet).
 
-    python -m wici.stanowisko --port /dev/ttyACM0|COM5 [--stan KATALOG] [--bitrate 42]
+    python -m wici.stanowisko --port /dev/ttyACM0|COM5 [--stan KATALOG] [--bitrate 41]
 
 Prints one JSON line on stdout: "ready" with the receiver address. The database is baza.sqlite in the
 state directory. Logs (Reticulum and reception, never the content of reports) go to stderr. Ends on

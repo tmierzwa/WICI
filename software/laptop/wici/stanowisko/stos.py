@@ -23,8 +23,8 @@ from pathlib import Path
 # Reticulum i LXMF importuje dopiero Stos: konfigurację i resztę aplikacji da się sprawdzić bez stosu.
 
 # Kryterium z radio.md („Ponowienia i limity prób”): 500 B × 8 / bitrate nie krócej niż odstęp dla 2 skoków
-# (około 95 s), czyli najwyżej 42 b/s; T3 może obniżyć tę wartość po pomiarze.
-BITRATE = 42
+# (około 96 s), czyli najwyżej 41 b/s; T3 może obniżyć tę wartość po pomiarze.
+BITRATE = 41
 TITLE = "SA1"   # tytuł wiadomości LXMF z treścią SA1, jak w rdzeniu stacji (rns_node_core.cpp)
 
 
