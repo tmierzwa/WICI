@@ -8,12 +8,16 @@ the stack come from the `bitrate` of the KISS interface in the configuration alo
 `bitrate`), without changes in the stack code (condition of D19).
 
 The receiver identity lives in the state directory; from stage S4 that is the encrypted station medium.
-Messages that reach the delivery callback are passed on unfiltered: trust, quarantine and RECEIVED
-are stage S2 (software/laptop/PLAN.md).
+Only messages with a checked signature go on to reception (przyjecie.py). LXMF cannot check the signature of
+a sender whose identity it does not know yet (SOURCE_UNKNOWN); such a message waits in memory, the stack asks
+for a path, and the message goes on when the announce or path response brings the identity („Przyjęcie”).
+Waiting messages have the limits of the quarantine (4 per sender, 256 in total) and do not survive a restart,
+which is safe: without RECEIVED the station sends them again.
 """
 
 import os
 import sys
+import threading
 from pathlib import Path
 
 # Reticulum i LXMF importuje dopiero Stos: konfigurację i resztę aplikacji da się sprawdzić bez stosu.
@@ -53,14 +57,18 @@ def config(port, bitrate=BITRATE):
 class Stos:
     """Reticulum and LXMF of the receiving station. One per process (Reticulum is a process singleton).
 
-    received(source, content, signature_ok) is called from a Reticulum thread for every LXMF message with
-    the SA1 title: source is the 16 B "lxmf.delivery" hash of the sender, content the SA1 bytes."""
+    received(source, content) is called from a Reticulum thread for every LXMF message with the SA1 title
+    and a checked signature: source is the 16 B "lxmf.delivery" hash of the sender, content the SA1 bytes."""
+
+    PENDING_PER_SENDER, PENDING_TOTAL = 4, 256   # jak kwarantanna (stanowisko-osp.md, O03)
 
     def __init__(self, state, port, received, bitrate=BITRATE, log=None):
         self.state, self.port, self.bitrate = Path(state), port, bitrate
         self.received = received
         self.log = log or (lambda line: print(line, file=sys.stderr, flush=True))
         self.router = self.destination = self.identity = None
+        self.pending, self.lock = {}, threading.Lock()   # nadawca -> spakowane wiadomości LXMF do sprawdzenia
+        self.dropped = {"bad_signature": 0, "pending_full": 0}
 
     @property
     def address(self):
@@ -81,7 +89,18 @@ class Stos:
         self.router = LXMF.LXMRouter(storagepath=str(self.state / "lxmf"), autopeer=False, enforce_stamps=False)
         self.destination = self.router.register_delivery_identity(self.identity)
         self.router.register_delivery_callback(self._delivered)
+        RNS.Transport.register_announce_handler(self)
         self.announce()
+
+    # Obsługa ogłoszeń dla RNS.Transport: także odpowiedzi na zapytania o trasę, bo o nie pyta _delivered.
+    aspect_filter = "lxmf.delivery"
+    receive_path_responses = True
+
+    def received_announce(self, destination_hash, announced_identity, app_data):
+        with self.lock:
+            waiting = self.pending.pop(destination_hash, [])
+        for packed in waiting:
+            self._check(packed)
 
     @staticmethod
     def _identity(path):
@@ -112,9 +131,33 @@ class Stos:
         self.router.announce(self.destination.hash)
 
     def _delivered(self, message):
+        import LXMF
+        import RNS
         if message.title_as_string() != TITLE:
             return   # inne wiadomości LXMF nie należą do SA1
-        self.received(message.source_hash, message.content, bool(message.signature_validated))
+        if message.signature_validated:
+            self.received(message.source_hash, message.content)
+        elif message.unverified_reason == LXMF.LXMessage.SOURCE_UNKNOWN:
+            with self.lock:
+                waiting = self.pending.setdefault(message.source_hash, [])
+                if len(waiting) >= self.PENDING_PER_SENDER or sum(map(len, self.pending.values())) >= self.PENDING_TOTAL:
+                    self.dropped["pending_full"] += 1   # stacja ponowi, gdy miejsce się zwolni
+                    return
+                waiting.append(message.packed)
+            RNS.Transport.request_path(message.source_hash)
+            if RNS.Identity.recall(message.source_hash) is not None:   # ogłoszenie zdążyło przed wpisem
+                self.received_announce(message.source_hash, None, None)
+        else:
+            self.dropped["bad_signature"] += 1
+
+    def _check(self, packed):
+        """A waiting message again, now that the sender identity is known."""
+        import LXMF
+        message = LXMF.LXMessage.unpack_from_bytes(packed)
+        if message.signature_validated:
+            self.received(message.source_hash, message.content)
+        else:
+            self.dropped["bad_signature"] += 1
 
     def send(self, target, content):
         """Opportunistic LXMF message with SA1 content to the "lxmf.delivery" destination target (16 B).
