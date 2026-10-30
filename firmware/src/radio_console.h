@@ -32,8 +32,34 @@ bool p1Ok();  // tablica P1 zapisana i zweryfikowana (CC1120: także skalibrowan
 // synchronizacji P1, które po resecie albo zaniku zasilania układu wraca do wartości domyślnej.
 // Układ, który stracił konfigurację P1, dostaje ją od nowa (true: odbiór trzeba wznowić); układ,
 // który nie odpowiada, jest niesprawny do następnej udanej kontroli. Brak ruchu nie jest awarią.
+// Stacja L0 (SX1262): cała kontrola pod blokadą operacji radia; czekanie na blokadę ponad limit pętli albo
+// nowe przekroczenia platform::radioLockTimeouts() od poprzedniej kontroli to układ niesprawny do następnej
+// udanej kontroli (radio_awaria). Kontrola nie przerywa odbioru, chyba że trzeba skonfigurować układ od nowa;
+// przy uzbrojonym odbiorze stosu (setRxArmed) układ poza trybem RX też daje true (odbiór wraca).
 constexpr uint32_t CHECK_MS = 10000;
 bool check();
+
+// Odbiór w tle (plan interfejsu LoRa, L6). Stacja L0: zadanie odbioru na rdzeniu 0 (sx1262_link.h, taskCycle)
+// z pierścieniem ramek; układy P1 (stanowiska A i B) go nie mają: startRxTask() nic nie robi, rxStalled()
+// zawsze false, rxTaskInfo() puste.
+void startRxTask();        // po start(), przed odbiorem stosu
+// Odbiór stosu uzbrojony (rxArmed): pętla ustala go w każdym obiegu przed kontrolą radia (Bench::stackRxArmed
+// i stos pracuje; polecenia diagnostyczne, tryb przygotowania i halt go kasują). Steruje tylko alarmem
+// i kontrolą trybu; zadanie odbioru obsługuje układ zawsze, gdy sterownik jest w odbiorze.
+void setRxArmed(bool armed);
+// Zadanie odbioru stoi (rxwatch::Watch): przy uzbrojonym odbiorze, poza nadawaniem, licznik obiegów albo
+// ostatnia obsługa układu stoi 10 s. Wołać w każdym obiegu pętli; daje radio_awaria.
+bool rxStalled(bool transmitting, uint32_t nowMs);
+struct RxTaskInfo {
+    bool running = false;       // zadanie pracuje, pollRx czyta pierścień
+    bool armed = false;         // rxArmed
+    uint32_t loops = 0;         // obiegi zadania (rx_task_loops)
+    uint32_t serviceMaxUs = 0;  // najdłuższa obsługa układu pod blokadą (rx_service_max_ms)
+    int32_t stackFree = -1;     // zapas stosu zadania w bajtach (RNS: rx_stack_free)
+    uint32_t lockMisses = 0;    // transakcje z układem bez blokady (WICI_RADIO_LOCK_CHECK)
+    uint32_t modeLost = 0;      // kontrola trybu: układ poza RX przy uzbrojonym odbiorze
+};
+RxTaskInfo rxTaskInfo();
 
 // Wpis tablicy rejestrów o nazwie name albo nullptr.
 template <typename Register>

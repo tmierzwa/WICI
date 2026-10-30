@@ -139,7 +139,9 @@ jobs:
             "lxmf @ git+https://github.com/markqvist/LXMF@c3ff2d6dc2f256daab896dadc044dd5a913ecbb7" pyserial==3.5
       - name: Station stack (port and core) against Reticulum in Python
         run: |
-          WICI_PIO="$(command -v pio)" WICI_RNS_PYTHON="$RUNNER_TEMP/rns/bin/python" python -m unittest tests.test_rns_stack -v
+          WICI_PIO="$(command -v pio)" WICI_RNS_PYTHON="$RUNNER_TEMP/rns/bin/python" python -m unittest \
+            tests.test_rns_stack.StackInteropTests tests.test_rns_stack.CoreInteropTests \
+            tests.test_rns_stack.OspNodeInteropTests tests.test_rns_stack.OspNodeCoreTests -v
       - name: Stack choice (port or core) keeps the station identity
         run: |
           WICI_PIO="$(command -v pio)" python -m unittest tests.test_rns_stack_choice -v
@@ -149,6 +151,37 @@ jobs:
       - name: Core LXMF vectors match LXMF in Python
         run: |
           WICI_RNS_PYTHON="$RUNNER_TEMP/rns/bin/python" python -m unittest tests.test_rnscore_lxmf.VectorFileTests -v
+  interop-lora:
+    # Łącze LoRa stacji (L7): RNodeInterface Reticulum w Pythonie przez emulator radia RNode (tools/rnode_emulator.py)
+    # do programu host z --link lora (port i rdzeń), potem węzeł stanowiska z LXMF w Pythonie, przekaźnik i dwa skoki
+    # (tools/rns_osp_node.py --link lora). Osobno od interop, żeby oba zadania szły równolegle. Dowodzi współpracy
+    # z RNodeInterface, nie zgodności z prawdziwym firmware RNode w eterze (próba z RAK4631).
+    # Limit zadania ponad sumę limitów prób w tests/test_rns_stack.py (1800 + 1800 + 3000 s), żeby zawieszona
+    # próba kończyła się jej własnym błędem (zwykle całość trwa około 13 min).
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.platformio
+            firmware/.pio/stack
+          key: pio-host-${{ hashFiles('firmware/platformio.ini', 'firmware/tools/stack_deps.py', 'firmware/patches/**') }}
+      - name: PlatformIO Core, Reticulum and LXMF (Python) at the pinned commits
+        run: |
+          python -m pip install platformio==6.2.0
+          python -m venv "$RUNNER_TEMP/rns"
+          "$RUNNER_TEMP/rns/bin/pip" install "rns @ git+https://github.com/markqvist/Reticulum@e40191b3d193b46b7f2d8a44424a594cd758839b" \
+            "lxmf @ git+https://github.com/markqvist/LXMF@c3ff2d6dc2f256daab896dadc044dd5a913ecbb7" pyserial==3.5
+      - name: LoRa link of the station against Reticulum in Python (RNodeInterface, node, relay)
+        run: |
+          WICI_PIO="$(command -v pio)" WICI_RNS_PYTHON="$RUNNER_TEMP/rns/bin/python" python -m unittest \
+            tests.test_rns_stack.LoraInteropTests tests.test_rns_stack.LoraInteropCoreTests \
+            tests.test_rns_stack.OspNodeLoraTests -v
   differential:
     # Próby różnicowe transportu rdzenia wobec Reticulum w Pythonie na tym samym ruchu (tools/rns_differential.py).
     # Osobno od interop, żeby oba zadania po około 5 min szły równolegle.

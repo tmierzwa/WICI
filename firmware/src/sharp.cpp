@@ -21,19 +21,20 @@ bool Display::begin() {
 
 void Display::send(uint8_t byte) { spi_.transfer(byte); }
 
-void Display::transaction(uint8_t command, bool lines) {
+void Display::transaction(uint8_t command, uint16_t maxLines) {
     spi_.beginTransaction(SPISettings(spiHz_, LSBFIRST, SPI_MODE0));
     digitalWrite(pinCs_, HIGH);
     delayMicroseconds(3);  // tsSCS >= 3 us
     send(command | vcom_);
-    if (lines) {
-        for (uint16_t y = 0; y < HEIGHT; ++y) {
-            if (!(dirty_[y / 8] & (1u << (y % 8)))) continue;
-            send(static_cast<uint8_t>(y + 1));  // adres wiersza 1..240, bit AG0 pierwszy
-            for (size_t i = 0; i < LINE_BYTES; ++i) send(buffer_[y][i]);
-            send(0x00);  // 8 bitów odstępu po wierszu
-        }
-        memset(dirty_, 0, sizeof(dirty_));
+    uint16_t sent = 0;
+    for (uint16_t y = 0; y < HEIGHT && sent < maxLines; ++y) {
+        const uint8_t bit = static_cast<uint8_t>(1u << (y % 8));
+        if (!(dirty_[y / 8] & bit)) continue;
+        send(static_cast<uint8_t>(y + 1));  // adres wiersza 1..240, bit AG0 pierwszy
+        for (size_t i = 0; i < LINE_BYTES; ++i) send(buffer_[y][i]);
+        send(0x00);  // 8 bitów odstępu po wierszu
+        dirty_[y / 8] &= static_cast<uint8_t>(~bit);
+        ++sent;
     }
     send(0x00);  // 16 bitów na końcu transmisji (razem z odstępem ostatniego wiersza)
     delayMicroseconds(1);  // thSCS >= 1 us
@@ -45,14 +46,20 @@ void Display::transaction(uint8_t command, bool lines) {
 void Display::clear() {
     memset(buffer_, 0xFF, sizeof(buffer_));
     memset(dirty_, 0, sizeof(dirty_));
-    transaction(CMD_CLEAR, false);
+    transaction(CMD_CLEAR, 0);
+}
+
+bool Display::pending() const {
+    for (uint8_t byte : dirty_)
+        if (byte) return true;
+    return false;
 }
 
 uint16_t Display::refresh() {
     uint16_t count = 0;
-    for (uint16_t y = 0; y < HEIGHT; ++y) count += (dirty_[y / 8] >> (y % 8)) & 1u;
+    for (uint16_t y = 0; y < HEIGHT && count < LINES_PER_REFRESH; ++y) count += (dirty_[y / 8] >> (y % 8)) & 1u;
     if (count == 0) return 0;
-    transaction(CMD_WRITE, true);
+    transaction(CMD_WRITE, count);
     ++refreshes_;
     return count;
 }
@@ -66,7 +73,7 @@ void Display::maintain(uint32_t nowMs) {
     if (!softwareVcom_ || nowMs - lastVcomMs_ < EXTCOMIN_HALF_PERIOD_MS) return;
     lastVcomMs_ = nowMs;
     vcom_ ^= CMD_VCOM;
-    transaction(0x00, false);  // polecenie podtrzymania z nowym stanem VCOM
+    transaction(0x00, 0);  // polecenie podtrzymania z nowym stanem VCOM
 }
 
 void Display::setPixel(uint16_t x, uint16_t y, bool black) {

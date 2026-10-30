@@ -42,7 +42,7 @@ public:
     double onAirMs(size_t length) const override { return length * 8 * 1000.0 / radiolink::P1_SYMBOL_RATE; }
     size_t maxTestLength() const override { return p1frame::MAX_FRAME; }
     uint32_t seriesMaxMs() const override { return radiolink::P1_SERIES_MAX_MS; }
-    bool p1Link() const override { return true; }
+    radiolink::Framing framing() const override { return radiolink::Framing::P1; }
 
     uint32_t irqSeen() const { return irqSeen_; }  // wszystkie przerwania od startu, do diagnostyki
 
