@@ -57,7 +57,7 @@ Odpowiedź stacji dodaje `re`:
 
 | `type` | Pola | Rola i tryb | Odpowiedź | Klucz powtórzenia |
 |---|---|---|---|---|
-| `sync` | `boot` (wartość z ostatniego `hello`, które laptop zapisał; pusta przy nowej bazie), `epoch` (albo `""`), `cursor` | każda | `sync_ok` albo `snap_required` | sesja |
+| `sync` | `boot` (opcjonalne, informacyjne: wartość z ostatniego `hello`, które laptop zapisał; stacja go nie sprawdza i nie zmienia przez nie odpowiedzi), `epoch` (albo `""`), `cursor` | każda | `sync_ok` albo `snap_required` | sesja |
 | `ack` | `epoch`, `cursor` | każda | brak | `cursor` (zbiorczo) |
 | `snapshot` | `epoch` | każda | `snap_begin`, `snap`…, `snap_end` | sesja |
 | `submit` | `id`, `revision`, `sa1` | stacja | `stored` albo `rejected` | (`id`, `revision`) |
@@ -65,7 +65,7 @@ Odpowiedź stacji dodaje `re`:
 | `test` | `nonce` | stacja | `stored` albo `rejected` | `nonce` |
 | `announce` | brak | stacja | `ok` albo `rejected` | łączone w 30 s |
 | `silence` | `on`, opcjonalnie `exception_id` | każda | `pending`, potem `ok` albo `rejected` | stan docelowy |
-| `mark_read` | `msg` (numer zdarzenia `ev`, z którym wiadomość weszła do skrzynki; z `snap` lub `event`) | stacja | `ok` (także dla numeru, którego wiadomość wypadła już ze skrzynki); `invalid` dla 0 i numeru ponad `head` | `msg` |
+| `mark_read` | `epoch`, `msg` (numer zdarzenia `ev`, z którym wiadomość weszła do skrzynki; z `snap` lub `event`) | stacja | `ok` (także dla numeru, którego wiadomość wypadła już ze skrzynki); `invalid` dla 0 i numeru ponad `head`; `stale` dla innej epoki niż bieżąca | (`epoch`, `msg`) |
 | `status` | brak | każda | `status` | – |
 | `close` | `epoch`, `head` | stacja | `pending`, potem `ok` albo `rejected` | (`epoch`, `head`) |
 | `destroy` | brak | każda | `pending`, potem `ok` albo `rejected` | stan docelowy |
@@ -92,7 +92,7 @@ Odpowiedź `stored`: `{"id":…,"revision":…,"number":"0427","duplicate":false
 
 **`cancel`** (ANULUJ WYSYŁKĘ z panelu) działa tylko, dopóki żadna rewizja `id` nie została przekazana do LXMF ([cykl życia](oprogramowanie.md#cykl-życia-zgłoszenia)); później `too_late`, a panel proponuje rewizję „potrzeba ustała”.
 
-**`mark_read`** oznacza wiadomość skrzynki jako przeczytaną. `msg` to numer zdarzenia `ev`, z którym wiadomość weszła do skrzynki; stacja odpowiada `invalid` dla 0 i dla numeru ponad `head`, a `ok` także wtedy, gdy wiadomość wypadła już ze skrzynki (ponowienie jest bezpieczne). Polecenie nie niesie `epoch`, a `ev` zaczyna się od 1 w każdej epoce, więc po ZAMKNIJ ZDARZENIE numer z poprzedniej epoki może wskazać inną wiadomość. Laptop nie wysyła `mark_read` z numerem sprzed zamknięcia zdarzenia: po `close` i `sync` używa tylko numerów z nowej epoki.
+**`mark_read`** oznacza wiadomość skrzynki jako przeczytaną. `msg` to numer zdarzenia `ev`, z którym wiadomość weszła do skrzynki; stacja odpowiada `invalid` dla 0 i dla numeru ponad `head`, a `ok` także wtedy, gdy wiadomość wypadła już ze skrzynki (ponowienie jest bezpieczne). `ev` zaczyna się od 1 w każdej epoce, więc po ZAMKNIJ ZDARZENIE numer z poprzedniej epoki mógłby wskazać inną wiadomość. Dlatego polecenie niesie `epoch` (z `snap_begin` lub `event`, z których laptop wziął `msg`), a stacja odpowiada `stale`, gdy to nie jest bieżąca epoka; laptop nie ponawia, tylko synchronizuje się i po `sync` używa numerów z nowej epoki.
 
 **`test`** tworzy TEST jak z menu stacji. `nonce` (16 cyfr szesnastkowych losowanych przez laptop) chroni przed podwójnym TEST przy powtórzeniu polecenia: stacja pamięta ostatnie 8 wartości `nonce` z `id` utworzonego TEST i na powtórzenie odpowiada tym samym `stored`. Przy wstrzymanym TEST (WSTRZYMAJ w menu TEST) stacja odpowiada `rejected` z `invalid` i `"detail":"paused"`, jak menu, bo taki TEST nie zostałby nadany.
 
@@ -144,7 +144,7 @@ Pola `hello`: `epoch` to bieżąca epoka pierścienia zdarzeń, `head` numer ost
 | `stage` | `id`, `revision`, `stage`, `attempt`, `next_s`, `decision`, `decision_rev`, `status_event` | zmiana etapu wysyłki według [cyklu życia](oprogramowanie.md#cykl-życia-zgłoszenia): `stored` (`zapisane`), `sending` (`wysylanie`), `delivered` (`dostarczone`), `received` (`odebrane`), `cancelled` (`anulowane`); `superseded` dotyczy rewizji zastąpionej nowszą, `released` zwolnienia wpisu z rejestru |
 | `msg` | `msg`, `from`, `sa1`, `lost` | wiadomość od aktywnej tożsamości odbiorcy przyjęta do skrzynki (REPLY, BULLETIN; RECEIVED i STATUS zmieniają wpis rejestru i dają zdarzenie `stage` z polami `decision`, `decision_rev` i `status_event`); `msg` to numer zdarzenia (`ev`), z którym wiadomość weszła do skrzynki; `"lost":true` i brak `sa1`, gdy wiadomość usunięto ze skrzynki, zanim zdarzenie wyszło |
 | `radio` | `silence`, `silence_source` (`switch`, `panel`), `exception_id`, `exception_revision` (`null` bez wyjątku), `lost` | zmiana ciszy radiowej; wyjątek z chwili zdarzenia (wpis pierścienia wskazuje wpis rejestru z generacją, rewizję wyjątku i krótki numer, po zwolnieniu wpisu `id` pochodzi z pamięci zwolnionych wpisów); `"lost":true` i `"exception_id":null`, gdy wpisu nie ma już w żadnej z nich (uszkodzony blok albo wpis zwolniony już przed zdarzeniem, np. przy przełączeniu CISZA długo po zwolnieniu wpisu wyjątku) |
-| `power` | `source` (`aa`, `12v`), `mv_aa`, `mv_12v`, `alarm` (`none`, `wymien_ogniwa`, `odlaczone_12v`) | zmiana źródła albo alarm energii |
+| `power` | `source` (`aa`, `12v`), `mv_aa`, `mv_12v`, `alarm` (`none`, `wymien_ogniwa`, `odlaczone_12v`, `za_wysokie_12v`) | zmiana źródła albo alarm energii |
 | `station` | `what` (`restart`, `config`, `receiver_backup`, `prep`), `detail` | restart (z przyczyną), nowa konfiguracja, przełączenie na KLUCZ ZAPASOWY, tryb przygotowania |
 
 `at` to czas dla obsługi w sekundach ([czas](oprogramowanie.md#czas)), nie czas kalendarzowy; po restarcie może się cofnąć o ≤60 s względem zdarzeń sprzed restartu.
@@ -156,7 +156,7 @@ Pola `hello`: `epoch` to bieżąca epoka pierścienia zdarzeń, `head` numer ost
 | `full` | `kolejka_pelna` |
 | `memory` | `blad_pamieci`; intencja zostaje w SQLite laptopa |
 | `numer_zajety` | nic; laptop losuje nowe `id` i ponawia |
-| `conflict`, `stale`, `closed`, `too_late` | opis błędu z `id`; laptop nie ponawia |
+| `conflict`, `stale`, `closed`, `too_late` | opis błędu z `id` (`stale` na `mark_read`: laptop synchronizuje się); laptop nie ponawia |
 | `stale` na `snapshot` | nic; laptop powtarza `snapshot` (stan zmienił się w trakcie migawki) |
 | `prep_required`, `role`, `not_configured` | opis stanu stacji |
 | `not_confirmed`, `silence_switch` | „nie potwierdzono na stacji” albo „przełącznik CISZA na stacji” |
