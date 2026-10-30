@@ -28,7 +28,7 @@ Miejsce w budynku (piętro, sala) nie należy do adresu. Na poziomie 1 wybierz p
 
 ## Odbiorca, kontakt i zastępstwo
 
-„RADIO WŁĄCZONE” znaczy tylko, że stacja odbiera i może nadawać. Kontakt z odbiorcą pokazuje „OSTATNI KONTAKT Z ODBIORCĄ: [czas] TEMU” w STAN, a na ekranie głównym w skrócie „KONTAKT [czas] TEMU”. Długi czas bez kontaktu nie jest awarią: odbiorca odzywa się, gdy ma coś do przekazania. Po włączeniu stacji bez zegara RTC ekran pokazuje „KONTAKT >[czas] TEMU”, bo stacja nie wie, jak długo była wyłączona.
+„RADIO WŁĄCZONE” znaczy tylko, że stacja odbiera i może nadawać. Kontakt z odbiorcą pokazuje „OSTATNI KONTAKT Z ODBIORCĄ: [czas] TEMU” w STAN, a na ekranie głównym w skrócie „KONTAKT [czas] TEMU”. Długi czas bez kontaktu nie jest awarią: odbiorca odzywa się, gdy ma coś do przekazania. Po włączeniu ekran może pokazywać „KONTAKT >[czas] TEMU”: stacja nie wie, jak długo była wyłączona.
 
 Kanał zastępczy wskazuje plan sieci: goniec z formularzem, radiotelefon PMR446 na ustalonym kanale i w ustalonych godzinach nasłuchu, służby na miejscu. Zapisz kanał i trasę gońca na pierwszej stronie dziennika.
 
@@ -36,13 +36,13 @@ Kanał zastępczy wskazuje plan sieci: goniec z formularzem, radiotelefon PMR446
 
 **OGŁOŚ ADRES** (STAN → USŁUGI) rozgłasza adres stacji w sieci od razu, zamiast czekać na zwykłe ogłoszenie. Użyj go po zmianie miejsca anteny albo gdy odbiorca prosi o to przez gońca. Ekran odpowiada „ADRES ZOSTANIE OGŁOSZONY”. W ciszy radiowej ogłoszenie czeka na jej koniec. Gdy ekran pokaże „STACJA NIE NADAJE – ADRES NIE OGŁOSZONY. FORMULARZ. GONIEC, JEŚLI DROGA BEZPIECZNA”, stacja nie wyśle radiem także zgłoszeń: wysyłaj je formularzem przez gońca, jeśli droga jest bezpieczna ([goniec](#goniec)), i zgłoś błąd osobie utrzymującej system.
 
-**WYCISZ DŹWIĘK** (STAN → USŁUGI) wyłącza zwykły sygnał dźwiękowy nowej wiadomości. Alarmów (brak potwierdzenia, brak odczytu, awaria radia, wymiana ogniw) nie da się wyciszyć. Ta sama pozycja pokazuje wtedy **WŁĄCZ DŹWIĘK**. Wyciszenie przetrwa wyłączenie stacji. Gdy dźwięk jest wyciszony, pokazują to STAN, PRZEKAZANIE ZMIANY i ekran główny przy pustej kolejce. Przekazując dyżur, sprawdź, czy dźwięk jest włączony.
+**WYCISZ DŹWIĘK** (STAN → USŁUGI) wyłącza zwykły sygnał dźwiękowy nowej wiadomości. Alarmów z tabeli [Alarmy](#alarmy) nie da się wyciszyć tą pozycją. Ta sama pozycja pokazuje wtedy **WŁĄCZ DŹWIĘK**. Wyciszenie przetrwa wyłączenie stacji. Gdy dźwięk jest wyciszony, pokazują to STAN, PRZEKAZANIE ZMIANY i ekran główny przy pustej kolejce. Przekazując dyżur, sprawdź, czy dźwięk jest włączony.
 
 ## Zgłoszenie i jego stany
 
 Przed wysłaniem:
 
-1. Zbierz potrzeby od mieszkańców ustnie albo z kolejki w panelu (poziom 3). Osoby bez telefonu, niewidome i niesłyszące zgłaszają potrzebę Tobie; odczytaj im odpowiedzi.
+1. Zbierz potrzeby od mieszkańców ustnie albo z kolejki w panelu (poziom 3). Osoby bez telefonu, niewidome i niesłyszące zgłaszają potrzebę Tobie; przekaż im odpowiedzi: przeczytaj na głos albo pokaż zapisane.
 2. Połącz powtarzalne potrzeby w jedno zgłoszenie: jedno zgłoszenie „woda pitna, 40 osób” zamiast czterdziestu. Każde zgłoszenie zajmuje wspólny kanał radiowy na kilkadziesiąt sekund.
 3. Ustal pilność: „ZAGROŻENIE ŻYCIA” tylko przy bezpośrednim zagrożeniu, „PILNE – KILKA GODZIN”, „W CIĄGU DOBY”. Pilność nie przesądza o wysłaniu ludzi; decyduje podmiot dysponujący siłami, któremu dyżurny przekazuje zgłoszenie.
 4. Nie wpisuj nazwisk ani danych o zdrowiu konkretnej osoby. Wystarczą kategoria, liczba osób i krótki opis.
@@ -63,7 +63,7 @@ Stany na ekranie:
 | „ODBIORCA NIE MOŻE TERAZ POMÓC – CZYTAJ ODPOWIEDŹ” | dyżurny nie ma teraz środków | przeczytaj odpowiedź w WIADOMOŚCI i wykonaj instrukcję |
 | „ZAMKNIĘTE” | sprawa zakończona | wpisz do dziennika |
 
-Zmiana potrzeby: WIADOMOŚCI → własne zgłoszenie → „ZMIEŃ LICZBĘ OSÓB”, „ZMIEŃ PILNOŚĆ” albo „POTRZEBA USTAŁA”. Każda zmiana jest nową wersją tego samego zgłoszenia, z tym samym krótkim numerem. „ANULUJ WYSYŁKĘ” jest w menu tylko, dopóki stacja ani razu nie wysłała zgłoszenia (od utworzenia ekran pokazuje „ZAPISANE W STACJI” albo, w ciszy radiowej, „ZAPISANE – NIE WYJDZIE DO KOŃCA CISZY”). Po pierwszej wysyłce pozycja znika z menu, także po kolejnych zmianach. Wtedy użyj „POTRZEBA USTAŁA”, bo zgłoszenie mogło już dotrzeć, a odbiorca nie dowiedziałby się o anulowaniu.
+Zmiana potrzeby: WIADOMOŚCI → własne zgłoszenie → „ZMIEŃ LICZBĘ OSÓB”, „ZMIEŃ PILNOŚĆ” albo „POTRZEBA USTAŁA”. Każda zmiana jest nową wersją tego samego zgłoszenia, z tym samym krótkim numerem. „ANULUJ WYSYŁKĘ” jest w menu tylko do pierwszej wysyłki, czyli dopóki ekran pokazuje „ZAPISANE W STACJI – CZEKA NA WYSŁANIE” albo, w ciszy radiowej, „ZAPISANE – NIE WYJDZIE DO KOŃCA CISZY”. Po pierwszej wysyłce pozycja znika z menu, także po kolejnych zmianach. Wtedy użyj „POTRZEBA USTAŁA”, bo zgłoszenie mogło już dotrzeć, a odbiorca nie dowiedziałby się o anulowaniu.
 
 Krótki numer i nazwa stacji `WICI-xxxxxx` (STAN) jednoznacznie wskazują zgłoszenie. Podawaj je gońcowi i w rozmowie przez PMR446.
 
@@ -76,7 +76,7 @@ Krótki numer i nazwa stacji `WICI-xxxxxx` (STAN) jednoznacznie wskazują zgłos
 | „RADIO: AWARIA” | układ radiowy stacji nie działa (stacja sprawdza go przy starcie i co 10 s) | zgłoszenia zapisują się w stacji, ale nie wychodzą radiem: pilne formularzem i gońcem, jeśli droga jest bezpieczna ([goniec](#goniec)); zgłoś błąd osobie utrzymującej system; nie wyłączaj stacji, bo gdy układ znów zadziała, wraca do pracy sama |
 | „BRAK ŁĄCZNOŚCI” w wierszu 1 albo „BRAK ŁĄCZNOŚCI – ZGŁOSZENIA NIE WYCHODZĄ. FORMULARZ. GONIEC, JEŚLI DROGA BEZPIECZNA” na ekranie alarmu | usterka stacji: radio działa, ale oprogramowanie sieciowe stacji nie wystartowało (stacja sprawdza je przy włączeniu). To nie jest długi brak kontaktu z odbiorcą („KONTAKT [czas] TEMU”), który awarią nie jest | zgłoszenia zapisują się w stacji, ale nie wychodzą radiem: pilne formularzem i gońcem, jeśli droga jest bezpieczna ([goniec](#goniec)); zgłoś błąd osobie utrzymującej system; alarm zostaje do ponownego włączenia stacji |
 | „WYMIEŃ OGNIWA W CIĄGU 1 H” | niskie napięcie ogniw | [energia](#energia-stacji) |
-| „12 V ODŁĄCZONE – ZA NISKIE NAPIĘCIE. PODŁĄCZ NAŁADOWANE ŹRÓDŁO I PRZYTRZYMAJ OK” | źródło 12 V spadło do 11,5 V | stacja pracuje z ogniw; podłącz naładowane źródło |
+| „12 V ODŁĄCZONE – ZA NISKIE NAPIĘCIE. PODŁĄCZ NAŁADOWANE ŹRÓDŁO I PRZYTRZYMAJ OK” | źródło 12 V spadło do 11,5 V albo podłączone źródło ma za niskie napięcie | stacja pracuje z ogniw; podłącz naładowane źródło 12 V i przytrzymaj OK |
 
 OK wycisza dźwięk alarmu. Napis i dioda zostają do usunięcia przyczyny. Dźwięk wraca przy nowym alarmie. Alarmów krytycznych nie da się wyłączyć: nie wyjmuj ogniw, żeby uciszyć stację, bo przestaje wtedy przekazywać wiadomości innych schronień.
 
@@ -86,7 +86,7 @@ Goniec niesie formularz do odbiorcy albo do najbliższej jednostki PSP lub OSP, 
 
 - Nie wysyłaj gońca przy pożarze, zalaniu, zawaleniu, skażeniu, ostrzale, alarmie o zagrożeniu, zakazie wychodzenia ani w ciemności bez latarki.
 - Gońcem jest dorosła, sprawna osoba, najlepiej dwie. Idzie trasą zapisaną na pierwszej stronie dziennika. Zapisz godzinę wyjścia, krótki numer zgłoszenia i spodziewaną godzinę powrotu. Gdy goniec nie wraca w ustalonym czasie, nie wysyłaj następnego tą samą trasą bez nowej oceny.
-- **Wyjście niemożliwe.** Nikogo nie wysyłaj. Jeśli stacja potwierdziła zapis („ZAPISANE W STACJI – CZEKA NA WYSŁANIE”) i nie ma ciszy radiowej, zgłoszenie zostaje w kolejce i stacja dalej je ponawia. Nie wysyłaj go drugi raz. Po „KOLEJKA PEŁNA”, „BŁĄD PAMIĘCI STACJI” albo w ciszy radiowej zgłoszenie nie wychodzi przez radio: zachowaj formularz papierowy i przekaż jego treść przez PMR446. Wywołaj odbiorcę albo sąsiednie schronienie przez PMR446 na kanale z planu sieci. Sąsiednie schronienie może przekazać zgłoszenie dalej. Wpisz do dziennika godzinę, alarm i powód. Oceniaj drogę ponownie: przy zagrożeniu życia co 15 min, w innych sprawach przy każdej zmianie sytuacji.
+- **Wyjście niemożliwe.** Nikogo nie wysyłaj. Jeśli stacja potwierdziła zapis („ZAPISANE W STACJI – CZEKA NA WYSŁANIE”), nie ma ciszy radiowej i żadnego z alarmów wymienionych niżej, zgłoszenie zostaje w kolejce i stacja dalej je ponawia. Nie wysyłaj go drugi raz. Po „KOLEJKA PEŁNA”, „BŁĄD PAMIĘCI STACJI”, „RADIO: AWARIA”, „BRAK ŁĄCZNOŚCI”, „STACJA NIE NADAJE – ADRES NIE OGŁOSZONY” albo w ciszy radiowej zgłoszenie nie wychodzi przez radio, nawet jeśli stacja je zapisała: zachowaj formularz papierowy i przekaż jego treść przez PMR446. Wywołaj odbiorcę albo sąsiednie schronienie przez PMR446 na kanale z planu sieci. Sąsiednie schronienie może przekazać zgłoszenie dalej. Wpisz do dziennika godzinę, alarm i powód. Oceniaj drogę ponownie: przy zagrożeniu życia co 15 min, w innych sprawach przy każdej zmianie sytuacji.
 
 ## Komunikaty od odbiorcy
 
@@ -108,9 +108,10 @@ Wyjątek dla pojedynczego zgłoszenia ustawia się tylko w panelu laptopa i tylk
 
 Stacja ma dwa komplety ogniw litowych AA: kryzysowy w zamkniętym opakowaniu i ćwiczebny do TEST i przeglądów.
 
-- W kryzysie stacja pracuje z kompletu kryzysowego. Komplet ćwiczebny jest rezerwą tylko wtedy, gdy po włożeniu i minucie pracy STAN pokazuje „OGNIWA: [x] V” z wartością co najmniej 5,6 V (próg do potwierdzenia w T6).
-- Gdy masz źródło 12 V (akumulator 12 V, akumulator LiFePO4 z BMS, wyjście 12 V stacji zasilania), podłącz je przewodem z zestawu. Ogniwa zostają rezerwą. Stacja przełącza źródła bez restartu.
+- W kryzysie stacja pracuje z kompletu kryzysowego. Komplet ćwiczebny jest rezerwą tylko wtedy, gdy po włożeniu i minucie pracy STAN pokazuje „OGNIWA: [x] V” z wartością co najmniej 5,6 V (wartość robocza).
+- Gdy masz źródło 12 V (akumulator 12 V, akumulator LiFePO4 z BMS, wyjście 12 V stacji zasilania), podłącz je przewodem z zestawu. Ogniwa zostają rezerwą. Stacja przełącza źródła bez restartu. Gdy ekran pokazuje „12 V ODŁĄCZONE – ZA NISKIE NAPIĘCIE…”, podłącz naładowane źródło i przytrzymaj OK; samo podłączenie może nie wystarczyć.
 - Po „WYMIEŃ OGNIWA W CIĄGU 1 H” podłącz najpierw 12 V i wtedy wymień ogniwa. Bez 12 V przytrzymaj wyłącznik główny 2 s, poczekaj na „MOŻNA WYJĄĆ OGNIWA” i wymień cały komplet (+ do znaku +). Nie mieszaj ogniw różnych typów ani różnego stopnia rozładowania.
+- Po włączeniu stacja może od razu pokazać alarm braku potwierdzenia albo braku odczytu dla zgłoszeń, które czekały przed wyłączeniem, bo nie wie, jak długo była wyłączona. Liczba minut w alarmie jest wtedy najmniejszą możliwą. Potwierdź OK i oceń sytuację jak przy każdym takim alarmie: jeśli stacja była wyłączona tylko na czas wymiany ogniw, poczekaj na potwierdzenie odbiorcy; jeśli dłużej, postępuj według tabeli [Alarmy](#alarmy).
 - Ogniwa alkaliczne i NiMH są tylko awaryjne: na mrozie tracą większość pojemności.
 
 „OGNIWA: OKOŁO [x] H PRACY” w STAN to szacunek. Licz z zapasem, zwłaszcza w zimnym pomieszczeniu.
@@ -130,7 +131,7 @@ Dołączasz je, gdy stacja już działa; stacja pracuje dalej przez cały czas. 
 
 ### Stacja zasilania (poziom 3)
 
-- Laptop, router i ładowarkę telefonów zasila kupiona stacja zasilania. Stacja WICI ma własne ogniwa i 12 V i nie zależy od niej.
+- Laptop, router i ładowarkę telefonów zasila kupiona stacja zasilania. Stacja WICI może brać 12 V ze stacji zasilania, ale po jej wyczerpaniu pracuje dalej z ogniw.
 - Sprawdź na wyświetlaczu stacji zasilania stan naładowania, włącz wyjście 230 V według instrukcji producenta, potem podłącz zasilacze laptopa i routera oraz ładowarkę telefonów.
 - Ładuj stację zasilania albo wymieniaj ją na naładowaną, zanim pokaże stan krytyczny. Ładowanie z pojazdu albo agregatu tylko na zewnątrz, kilka metrów od wejść i wlotów powietrza.
 - Wyczerpanie stacji zasilania wyłącza laptop, router i ładowanie telefonów, ale nie łączność.
@@ -141,9 +142,9 @@ Zmiana trwa najwyżej 12 h. Przed zejściem ze zmiany otwórz STAN → PRZEKAZAN
 
 ## Koniec zdarzenia i zniszczenie danych
 
-**ZAMKNIJ ZDARZENIE** wykonuje się po odwołaniu stanu kryzysowego, tylko na polecenie gminy przekazane słownie, przez gońca albo pisemnie, nigdy na podstawie wiadomości radiowej. Na stacji wybierz STAN → USŁUGI → ZAMKNIJ ZDARZENIE. Ekran pokazuje „ZAMKNĄĆ ZDARZENIE? ZGŁOSZENIA I WIADOMOŚCI ZNIKNĄ ZE STACJI. TYLKO NA POLECENIE GMINY”. Potwierdź: GÓRA, DÓŁ, GÓRA, OK. Stacja usuwa zgłoszenia i wiadomości, także niewysłane. Z laptopem (poziomy 2–3) uruchom operację w panelu. Panel zapisuje zaszyfrowane archiwum dla administratora danych, a stacja pyta „LAPTOP: ZAMKNĄĆ ZDARZENIE? …” i czeka na OK. Po zamknięciu zdarzenia poproś zarządcę o zmianę hasła Wi-Fi routera obiektu, jeśli mieszkańcy korzystali ze strony. Tożsamość stacji, karta odbiorcy i adres zostają, więc stacja jest gotowa do następnego użycia. Wpisz polecenie i godzinę do dziennika. Dziennik papierowy przekaż gminie. Potem odłóż stację do skrzynki i zgłoś zużycie ogniw organizatorowi sieci.
+**ZAMKNIJ ZDARZENIE** wykonuje się po odwołaniu stanu kryzysowego, tylko na polecenie gminy przekazane słownie, przez gońca albo pisemnie, nigdy na podstawie wiadomości radiowej. Na stacji wybierz STAN → USŁUGI → ZAMKNIJ ZDARZENIE. Ekran pokazuje „ZAMKNĄĆ ZDARZENIE? ZGŁOSZENIA I WIADOMOŚCI ZNIKNĄ ZE STACJI. TYLKO NA POLECENIE GMINY”. Potwierdź: GÓRA, DÓŁ, GÓRA, OK. Stacja usuwa zgłoszenia i wiadomości, także niewysłane. Gdy pracujesz z laptopem (poziomy 2–3), uruchom operację w panelu zamiast w menu stacji. Panel zapisuje zaszyfrowane archiwum dla administratora danych, a stacja pyta „LAPTOP: ZAMKNĄĆ ZDARZENIE? …” i czeka na OK. Po zamknięciu zdarzenia poproś zarządcę o zmianę hasła Wi-Fi routera obiektu, jeśli mieszkańcy korzystali ze strony. Tożsamość stacji, karta odbiorcy i adres zostają, więc stacja jest gotowa do następnego użycia. Wpisz polecenie i godzinę do dziennika. Dziennik papierowy przekaż gminie. Potem odłóż stację do skrzynki i zgłoś zużycie ogniw organizatorowi sieci.
 
-**ZNISZCZ DANE** (STAN → USŁUGI) uruchamiasz tylko przy groźbie przejęcia stacji lub laptopa, także na polecenie odbiorcy przekazane słownie albo przez gońca, nigdy na podstawie wiadomości radiowej. Ekran pokazuje „NIEODWRACALNE – STACJA PRZESTANIE DZIAŁAĆ; TYLKO PRZY GROŹBIE PRZEJĘCIA”. Potwierdź: GÓRA, DÓŁ, GÓRA, OK. Z laptopem: zaloguj się w panelu, wybierz zakładkę „Zestaw” → ZNISZCZ DANE i potwierdź dwa razy. Laptop od razu usuwa dane zestawu, a stacja pyta „LAPTOP: ZNISZCZYĆ DANE? …” i czeka na OK. Jeśli nie możesz się zalogować, zniszcz dane na stacji, a pamięć USB fizycznie. Stacja przestaje działać na stałe. Pamięć USB zestawu zniszcz fizycznie, bo samo usunięcie plików jej nie chroni. Wpisz zdarzenie do dziennika.
+**ZNISZCZ DANE** (STAN → USŁUGI) uruchamiasz tylko przy groźbie przejęcia stacji lub laptopa: gdy sam ją widzisz albo gdy odbiorca powiadomi o niej słownie lub przez gońca. Nigdy na podstawie wiadomości radiowej. Ekran pokazuje „GROŹBA PRZEJĘCIA? USUNIĘCIE DANYCH NIEODWRACALNE. START BEZ KONFIGURACJI”. Potwierdź: GÓRA, DÓŁ, GÓRA, OK. Z laptopem: zaloguj się w panelu, wybierz zakładkę „Zestaw” → ZNISZCZ DANE i potwierdź dwa razy. Laptop od razu usuwa dane zestawu, a stacja pyta „LAPTOP: ZNISZCZYĆ DANE? …” i czeka na OK. Jeśli nie możesz się zalogować, zniszcz dane na stacji. Pamięć USB zestawu zniszcz fizycznie, bo samo usunięcie plików jej nie chroni. Stacja traci tożsamość i konfigurację; do pracy wraca dopiero po ponownym przygotowaniu przez osobę utrzymującą system. Do tego czasu zgłoszenia wysyłasz formularzem przez gońca, jeśli droga jest bezpieczna ([goniec](#goniec)). Wpisz zdarzenie do dziennika.
 
 ## Bezpieczeństwo w schronieniu
 
@@ -161,7 +162,7 @@ Najpierw ustal, czego dotyczy błąd: strony, laptopa, stacji, trasy radiowej, o
 | długo „WYSYŁANIE – PRÓBA [n] …” | sprawdź przewód antenowy i złącze; zapytaj sąsiednie schronienie przez PMR446, czy jego stacja działa; pilne zgłoszenie przez gońca, jeśli droga jest bezpieczna |
 | „KOLEJKA PEŁNA – ZGŁOSZENIE NIE ZAPISANE. UŻYJ FORMULARZA PAPIEROWEGO” albo „BŁĄD PAMIĘCI STACJI – ZGŁOSZENIE NIE ZAPISANE. FORMULARZ. GONIEC, JEŚLI DROGA BEZPIECZNA” | formularz i goniec ([goniec](#goniec)); zgłoś błąd osobie utrzymującej system |
 | „STACJA NIE NADAJE – ADRES NIE OGŁOSZONY. FORMULARZ. GONIEC, JEŚLI DROGA BEZPIECZNA” po OGŁOŚ ADRES | stacja nie wyśle radiem żadnego zgłoszenia: formularz i goniec ([goniec](#goniec)); zgłoś błąd osobie utrzymującej system |
-| stacja uruchomiła się ponownie | sprawdź ekran i zatwierdź proponowany TEST; kolejka zostaje w stacji |
+| stacja uruchomiła się ponownie | sprawdź ekran i zatwierdź proponowany TEST; kolejka zostaje w stacji; po wyłączeniu zasilania alarm braku potwierdzenia może przyjść od razu ([energia](#energia-stacji)) |
 | laptop się zawiesił lub odłączył | stacja pracuje dalej; po powrocie laptopa sprawdź stan zgłoszeń w panelu |
 | stacja uszkodzona | goniec ([goniec](#goniec)) i PMR446; zgłoś organizatorowi sieci potrzebę stacji zapasowej |
 

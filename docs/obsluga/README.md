@@ -6,7 +6,7 @@ Dokumenty dla ludzi, którzy obsługują system: gospodarzy punktów i dyżurnyc
 |---|---|---|
 | [karta-stacji.html](karta-stacji.html) | gospodarz punktu (sołtys, nauczyciel, strażak OSP) | karta obsługi stacji do druku dwustronnego i laminowania: wersje PL, UK i EN, każda na jednej kartce A4 (strona 1: najważniejsze, strona 2: gdy trzeba); na końcu formularz papierowy zgłoszenia w dwóch egzemplarzach |
 | [instrukcja-dyzurnego.md](instrukcja-dyzurnego.md) | dyżurny stanowiska odbiorczego (strażak OSP, pracownik gminy) | uruchomienie, potwierdzenia, odpowiedzi i komunikaty, kwarantanna, przekazywanie służbom, rejestr, awarie, ćwiczenia, cisza radiowa, zamknięcie zdarzenia; tabele do wypełnienia przez gminę |
-| [formularz-pomiaru-tras.html](formularz-pomiaru-tras.html) | zespół pomiarowy etapu 0 | formularz do druku (A4 poziomo, 2 strony) do [pomiaru tras](../spec/odbior.md#procedura-etapu-0-pomiar-tras): urządzenia, miejsca, nastawy i wyniki 12 serii |
+| [formularz-pomiaru-tras.html](formularz-pomiaru-tras.html) | osoby mierzące zasięg radiami RNode (kroki 3 i 5 planu) | formularz do druku (A4 poziomo, 2 strony) do [pomiaru tras](../spec/odbior.md#pomiar-tras-kroki-2-3-i-5): krok, urządzenia, miejsca, nastawy i wyniki serii (12 wierszy dla trzech połączeń w gminie) |
 | [szkolenie.md](szkolenie.md) | prowadzący szkolenie, gmina | program 2-godzinnego szkolenia gospodarzy i dyżurnych przed pracą stacji w terenie: cele, organizacja, przebieg, ścieżki gospodarza i dyżurnego, sprawdzian, po szkoleniu |
 
 Tematy obsługi spoza karty (adres, alarmy, energia, poziomy 2–3, koniec zdarzenia) są w [instrukcji gospodarza](../spec/instrukcja.md).
