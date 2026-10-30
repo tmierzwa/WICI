@@ -30,6 +30,18 @@ python3 -m unittest tests.test_laptop -v   # z katalogu głównego repozytorium
 
 Testy obejmują reguły dokumentu `configure` (także zgodność z regułą tekstu SA1 modelu wzorcowego), klienta protokołu, struktury kernel32, zaszyfrowaną bazę i zestaw, listę słów, zabezpieczenia panelu, budowę pamięci USB (z Pythonem 3.14) oraz pełne przygotowanie stacji i ZNISZCZ DANE na obrazie firmware (z Node.js). Workflow [Laptop](../../.github/workflows/laptop.yml) uruchamia je na Windows, macOS i Linuksie, a pamięć USB buduje i uruchamia przez START na każdym systemie.
 
+## Aplikacja stanowiska odbiorczego
+
+Podpakiet [wici/stanowisko/](wici/stanowisko/__init__.py) to aplikacja komputera stanowiska odbiorczego (dyżurni, decyzja D19): Reticulum `e40191b` i LXMF `c3ff2d6` w Pythonie z tożsamością odbiorcy, za stacją w konfiguracji węzła stanowiska. Powstaje etapami S1–S10 z [planu](PLAN.md); są stos (S1), przyjęcie zgłoszeń na schemacie i przejściach modelu wzorcowego ([software/reference](../reference/README.md), S2), wysyłka z intencjami w bazie, ponowieniami i numeracją `event` (S3) oraz nośnik stanowiska z hasłem stanowiska, kontami dyżurnych, zaszyfrowaną bazą i tożsamością, paczką zapasową i kartą odbiorcy (S4), bez panelu. Gdy zegar komputera wskazuje czas wcześniejszy niż ostatnie nadanie, aplikacja nie startuje i prosi o ustawienie zegara. Nie trafia do `wici.pyz` pamięci USB laptopa schronienia. Uruchomienie wymaga Pythona z przypiętymi Reticulum, LXMF i `pyserial` 3.5:
+
+```sh
+# z katalogu software/laptop; przygotowanie na komputerze bez sieci, paczka zapasowa poza nośnikiem
+python -m wici.stanowisko przygotuj --nosnik /media/nosnik/wici --dyzurni 4 --paczka /media/koperta/paczka.json --karta karta.json
+python -m wici.stanowisko start --nosnik /media/nosnik/wici --port /dev/ttyACM0   # pyta o hasło stanowiska
+```
+
+Test stosu za węzłem stanowiska na dwóch programach `host` firmware opisuje [tests/test_stanowisko.py](../../tests/test_stanowisko.py); w CI robi to zadanie `stanowisko` workflow Laptop.
+
 ## Pamięć USB
 
 ```sh

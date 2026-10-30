@@ -1903,6 +1903,388 @@ int main() {
 """
 
 
+LORA_BENCH_HARNESS = r"""
+#include <deque>
+#include <string>
+#include <vector>
+#include "loraframe.h"
+#include "lora_profile.h"
+#include "measure.h"
+#include "platform.h"
+
+uint32_t fakeUs = 0;
+FakeSerial Serial;
+int digitalRead(uint8_t) { return HIGH; }
+void digitalWrite(uint8_t, uint8_t) {}
+void measure::randomBytes(uint8_t* out, size_t count) {
+    static uint8_t next = 0x31;
+    for (size_t i = 0; i < count; ++i) out[i] = next += 0x37;
+}
+
+// Blokada operacji radia: pętla bierze ją zawsze (rekurencyjnie), zadanie odbioru tylko próbuje (limit 0)
+// i przy blokadzie trzymanej przez pętlę pomija obieg, jak zadanie na ESP32-S3.
+int loopDepth = 0;
+bool inTask = false;
+int taskSkipped = 0, taskServiced = 0;
+bool platform::radioLockTake(uint32_t) {
+    if (!inTask) { ++loopDepth; return true; }
+    return loopDepth == 0;
+}
+void platform::radioLockGive() {
+    if (!inTask) --loopDepth;
+}
+void rxTaskCycle() {
+    inTask = true;
+    {
+        platform::RadioLock lock(0);
+        if (lock.held()) ++taskServiced;
+        else ++taskSkipped;
+    }
+    inTask = false;
+}
+
+struct RamStorage : journal::Storage {
+    std::vector<uint8_t> bytes = std::vector<uint8_t>(512 * 1024, 0xFF);
+    bool fail = false;  // zapis do FRAM nie przechodzi
+    bool read(uint32_t address, uint8_t* data, size_t count) override {
+        memcpy(data, &bytes[address], count);
+        return true;
+    }
+    bool write(uint32_t address, const uint8_t* data, size_t count) override {
+        if (fail) return false;
+        memcpy(&bytes[address], data, count);
+        return true;
+    }
+};
+RamStorage ram;
+journal::Journal dj(ram);
+
+// Sterownik zastępczy LoRa: kroki nadawania z L4 zapisane w ops razem z długiem w dzienniku w tej chwili,
+// znaczniki aktywności z czasem, zajęty CAD przez cadBusy sprawdzeń, RSSI ponad progiem przez rssiBusy odczytów.
+struct FakeLora : radiolink::Driver {
+    std::vector<std::string> ops;
+    std::vector<std::vector<uint8_t>> sent;
+    std::deque<radiolink::Frame> rxQueue;
+    std::vector<uint8_t> loaded;
+    bool rxActive = false, rxVariable = false, rxPending = false, failDebtAtCad = false, cw = false;
+    int cadBusy = 0, rssiBusy = 0, taskCyclesPerFrame = 0;
+    radiolink::Activity mark = radiolink::Activity::None;
+    uint32_t markMs = 0;
+    void op(const char* name) { ops.push_back(std::string(name) + ":" + std::to_string(dj.debt().a)); }
+    const char* stateName() override { return cw ? "TX" : rxActive ? "RX" : "STBY_XOSC"; }
+    void idle() override { rxActive = false; cw = false; }
+    bool startCw() override { cw = true; return true; }
+    void stopCw() override { cw = false; }
+    bool send(const uint8_t* frame, size_t length) {
+        sent.emplace_back(frame, frame + length);
+        for (int i = 0; i < taskCyclesPerFrame; ++i) { rxTaskCycle(); fakeUs += 100000; }  // ramka 255 B to 419 ms
+        return true;
+    }
+    bool transmit(const uint8_t* frame, size_t length, bool, radiolink::TxTiming*) override {
+        op("tx");
+        rxActive = false;
+        return send(frame, length);
+    }
+    bool startRx(bool variable, uint8_t) override {
+        ops.push_back("rx");
+        rxActive = true;
+        rxVariable = variable;
+        return true;
+    }
+    radiolink::RxPoll pollRx(radiolink::Frame& out) override {
+        if (rxQueue.empty()) return radiolink::RxPoll::Nothing;
+        out = rxQueue.front();
+        rxQueue.pop_front();
+        return radiolink::RxPoll::Frame;
+    }
+    bool receivingFrame() override { return false; }
+    radiolink::Rssi rssi() override {
+        radiolink::Rssi r;
+        r.valid = rxActive;
+        r.dbm = rssiBusy > 0 && rssiBusy-- ? -90 : -120;
+        return r;
+    }
+    bool setFrequencyOffset(int32_t) override { return true; }
+    void reapplyFrequencyOffset() override {}
+    int32_t frequencyOffsetHz() override { return 0; }
+    int32_t frequencyOffsetRaw() override { return 0; }
+    double frequencyStepHz() const override { return 1.0; }
+    bool frequencyErrorHz(int32_t&) override { return false; }
+    uint32_t frameAirMs(size_t length) const override { return lora::frameAirMs(length); }
+    double onAirMs(size_t length) const override { return lora::frameAirUs(length) / 1000.0; }
+    size_t maxTestLength() const override { return lora::MAX_PAYLOAD; }
+    uint32_t seriesMaxMs() const override { return lora::SERIES_MAX_MS; }
+    radiolink::Framing framing() const override { return radiolink::Framing::RNODE; }
+    bool hasSnr() const override { return true; }
+    int8_t ccaThresholdDbm() const override { return lora::CCA_RSSI_THRESHOLD_DBM; }
+    radiolink::TxPrep prepareTx(const uint8_t* frame, size_t length) override {
+        op("prep");
+        if (rxPending) { rxPending = false; return radiolink::TxPrep::RxPending; }  // układ zostaje w odbiorze
+        rxActive = false;
+        loaded.assign(frame, frame + length);
+        return radiolink::TxPrep::Ready;
+    }
+    radiolink::Cad cad() override {
+        op("cad");
+        if (failDebtAtCad) ram.fail = true;
+        return cadBusy > 0 && cadBusy-- ? radiolink::Cad::Busy : radiolink::Cad::Free;
+    }
+    bool sendPrepared(radiolink::TxTiming*) override {
+        op("send");
+        return send(loaded.data(), loaded.size());
+    }
+    radiolink::Activity recentActivity(uint32_t windowMs) override {
+        ops.push_back("window");
+        return mark != radiolink::Activity::None && millis() - markMs < windowMs ? mark : radiolink::Activity::None;
+    }
+    void clearActivity() override { mark = radiolink::Activity::None; }
+    uint32_t rxLate() const override { return 2; }
+};
+
+FakeLora radio;
+measure::Bench bench(radio, 3, -1);
+std::vector<uint8_t> received;
+int txDone = -1;
+uint32_t uptime() { return millis() / 1000; }
+
+void runFor(uint32_t ms) {
+    const uint32_t end = millis() + ms;
+    while (millis() < end) {
+        fakeUs += 1000;
+        bench.poll();
+    }
+}
+// Do końca nadania (txDone) albo limitu; potem odczekanie długu, żeby następny przypadek startował bez niego.
+void untilDone(uint32_t limitMs) {
+    const uint32_t end = millis() + limitMs;
+    while (txDone < 0 && millis() < end) {
+        fakeUs += 1000;
+        bench.poll();
+    }
+}
+void settle() { runFor(bench.debtRemainingMs() + 100); }
+std::string ops() {
+    std::string out;
+    for (const auto& o : radio.ops) out += (out.empty() ? "" : " ") + o;
+    radio.ops.clear();
+    return out;
+}
+std::vector<uint8_t> datagram(size_t length, uint8_t seed) {
+    std::vector<uint8_t> d(length);
+    for (size_t i = 0; i < length; ++i) d[i] = static_cast<uint8_t>(seed + i * 13);
+    return d;
+}
+const char* text(const char* error) { return error ? error : "-"; }
+
+int main() {
+    dj.begin();
+    bench.attach(&dj, uptime);
+    bench.onDatagram([](const uint8_t* data, size_t length, void*) { received.assign(data, data + length); }, nullptr);
+    bench.onTxDone([](bool ok, void*) { txDone = ok; }, nullptr);
+    fakeUs = 1000000;
+
+    // Start bez poprawnego rekordu długu: 12 x seria LoRa (2 x 419 ms), nie stała P1 16,8 s.
+    bench.restoreDebt(bench.maxDebtMs());
+    printf("MAXDEBT %lu %lu %lu\n", static_cast<unsigned long>(bench.maxDebtMs()), static_cast<unsigned long>(bench.debtRemainingMs()),
+           static_cast<unsigned long>(measure::MAX_DEBT_MS));
+    printf("FRAMING %d\n", bench.linkFraming() == radiolink::Framing::RNODE);   // BenchRadio::timing(): czas LoRa
+    // Odbiór stosu startuje sam poza trybem przygotowania, gdy układ ma profil.
+    bench.p1Ready = true;
+    runFor(1100);
+    printf("AUTORX %d %d %d\n", bench.receiving(), radio.rxActive, radio.rxVariable);
+    const uint8_t one[1] = {0};
+    const char* p1send = bench.p1send(one, 1, true);
+    printf("NOP1 %s|%s\n", p1send, bench.p1rxStart());
+    const std::vector<uint8_t> big = datagram(509, 1);
+    printf("TOOBIG %s\n", text(bench.linkSend(big.data(), big.size(), true)));
+    settle();
+
+    // Nadanie 508 B: dług odczekany, okno bez aktywności, ramka 1 przed CAD, zapis długu po wolnym CAD,
+    // ramka 1, ramka 2, odbiór. W trakcie ramek zadanie odbioru próbuje blokady bez czekania i pomija obiegi.
+    const std::vector<uint8_t> d508 = datagram(508, 7);
+    radio.ops.clear();
+    radio.taskCyclesPerFrame = 3;
+    const char* error = bench.linkSend(d508.data(), d508.size(), true);
+    untilDone(100);
+    radio.taskCyclesPerFrame = 0;
+    printf("ORDER %s|%s\n", text(error), ops().c_str());
+    rxTaskCycle();  // po nadaniu blokada wolna
+    printf("TRYLOCK %d %d %d %d\n", taskSkipped, taskServiced, txDone, loopDepth);
+    loraframe::Assembler check;
+    size_t assembled = 0;
+    for (const auto& f : radio.sent)
+        if (check.push(f.data(), f.size(), millis()) == loraframe::Outcome::COMPLETE) assembled = check.length();
+    printf("FRAMES %zu %zu %zu %02X %d %d\n", radio.sent.size(), radio.sent[0].size(), radio.sent[1].size(),
+           radio.sent[0][0] & 0x0F, radio.sent[0][0] == radio.sent[1][0], assembled == 508 && !memcmp(check.datagram(), d508.data(), 508));
+
+    // Restart w trakcie długu: odczekany cały dług z dziennika, potem nadanie.
+    const uint32_t journalDebt = dj.debt().a;
+    bench.restoreDebt(journalDebt);
+    txDone = -1;
+    radio.sent.clear();
+    const std::vector<uint8_t> d20 = datagram(20, 3);
+    bench.linkSend(d20.data(), d20.size(), true);
+    runFor(journalDebt - 100);
+    const size_t sentDuringDebt = radio.sent.size();
+    untilDone(1000);
+    printf("RESTART %lu %zu %zu %d\n", static_cast<unsigned long>(journalDebt), sentDuringDebt, radio.sent.size(), txDone);
+    settle();
+
+    // Zajęty CAD: odroczenie bez zapisu długu, powrót do odbioru, potem nadanie.
+    txDone = -1;
+    radio.ops.clear();
+    radio.cadBusy = 1;
+    bench.linkSend(d20.data(), d20.size(), true);
+    untilDone(3000);
+    printf("CADBUSY %s|%lu %lu %d\n", ops().c_str(), static_cast<unsigned long>(bench.link().cadBusy),
+           static_cast<unsigned long>(bench.link().deferrals), txDone);
+    settle();
+
+    // Aktywność w oknie (ramka 20 ms temu) i RSSI ponad progiem przy decyzji: dwa odroczenia, bez CAD.
+    txDone = -1;
+    radio.ops.clear();
+    radio.mark = radiolink::Activity::Rx;
+    radio.markMs = millis() - 20;
+    radio.rssiBusy = 1;
+    const uint32_t deferralsBefore = bench.link().deferrals;
+    bench.linkSend(d20.data(), d20.size(), true);
+    bench.poll();
+    radio.mark = radiolink::Activity::None;
+    untilDone(3000);
+    const std::string activityOps = ops();
+    printf("ACTIVITY %lu %lu %lu %d|%s\n", static_cast<unsigned long>(bench.link().rxBusy), static_cast<unsigned long>(bench.link().rssiBusy),
+           static_cast<unsigned long>(bench.link().deferrals - deferralsBefore), txDone, activityOps.c_str());
+    settle();
+
+    // Nieodczytana ramka w układzie przy wyjściu z odbioru: odroczenie (rx_busy), układ zostaje w odbiorze.
+    txDone = -1;
+    radio.rxPending = true;
+    bench.linkSend(d20.data(), d20.size(), true);
+    bench.poll();
+    const int pendingRx = radio.rxActive;
+    untilDone(3000);
+    printf("RXPENDING %lu %d %d\n", static_cast<unsigned long>(bench.link().rxBusy), pendingRx, txDone);
+    settle();
+
+    // Postój pętli 150 ms w czasie okna: decyzja ze znaczników, więc nadanie zaraz po postoju, bez nowego okna.
+    bench.stop();
+    bench.linkRxStart();
+    txDone = -1;
+    bench.linkSend(d20.data(), d20.size(), true);
+    fakeUs += 1000;
+    bench.poll();  // okno krótsze niż 50 ms od startu odbioru: czeka
+    const int waited = txDone;
+    fakeUs += 150000;
+    bench.poll();
+    printf("STALL %d %d\n", waited, txDone);
+    settle();
+    // Ten sam postój z ramką 30 ms przed jego końcem: odroczenie.
+    bench.stop();
+    bench.linkRxStart();
+    txDone = -1;
+    const uint32_t stallDeferrals = bench.link().deferrals;
+    bench.linkSend(d20.data(), d20.size(), true);
+    fakeUs += 1000;
+    bench.poll();
+    radio.mark = radiolink::Activity::Rx;
+    radio.markMs = millis() + 120;
+    fakeUs += 150000;
+    bench.poll();
+    printf("STALLBUSY %d %lu\n", txDone, static_cast<unsigned long>(bench.link().deferrals - stallDeferrals));
+    radio.mark = radiolink::Activity::None;
+    untilDone(3000);
+    settle();
+
+    // 30 odroczeń, a przy 31. zajętym CAD odrzut; dług nie zapisany.
+    txDone = -1;
+    radio.cadBusy = 1000;
+    const measure::LinkCounters before = bench.link();
+    bench.linkSend(d20.data(), d20.size(), true);
+    untilDone(60000);
+    radio.cadBusy = 0;
+    printf("DEFER30 %d %lu %lu %lu %lu\n", txDone, static_cast<unsigned long>(bench.link().deferrals - before.deferrals),
+           static_cast<unsigned long>(bench.link().cadBusy - before.cadBusy), static_cast<unsigned long>(bench.link().txDrop - before.txDrop),
+           static_cast<unsigned long>(dj.debt().a));
+
+    // Błąd zapisu długu po wolnym CAD: bez nadania, odbiór wraca.
+    txDone = -1;
+    radio.sent.clear();
+    radio.ops.clear();
+    radio.failDebtAtCad = true;
+    bench.linkSend(d20.data(), d20.size(), true);
+    untilDone(1000);
+    radio.failDebtAtCad = false;
+    ram.fail = false;
+    printf("DEBTFAIL %d %zu %d %s\n", txDone, radio.sent.size(), radio.rxActive, ops().c_str());
+
+    // Cisza: datagram czekający na dług odpada; wyjątek ciszy przepuszcza datagram od stosu, pomiar z portu nie.
+    bench.restoreDebt(500);
+    txDone = -1;
+    bench.linkSend(d20.data(), d20.size(), true);
+    bench.silence = true;
+    runFor(10);
+    const int silenced = txDone;
+    bench.silenceException = true;
+    settle();
+    txDone = -1;
+    bench.prep = true;
+    const char* fromPort = bench.linkSend(d20.data(), d20.size(), false);
+    error = bench.linkSend(d20.data(), d20.size(), true);
+    untilDone(1000);
+    printf("SILENCE %d %s|%s %d\n", silenced, fromPort, text(error), txDone);
+    bench.silence = bench.silenceException = bench.prep = false;
+    settle();
+
+    // Odbiór: 508 B jako dwie ramki RNode z trzecią ramką z samym nagłówkiem; pętla obsługuje je 1,5 s po
+    // odbiorze, a limit 1 s liczy się z czasów odbioru ramek. Potem pierwsza część bez drugiej (po 1 s
+    // przepada) i pierwsza część przerwana ramką bez podziału.
+    loraframe::Splitter splitter;
+    loraframe::Frame parts[2];
+    splitter.split(d508.data(), d508.size(), 0xA0, parts);
+    const uint32_t t0 = millis();
+    for (int i = 0; i < 3; ++i) {
+        radiolink::Frame f;
+        f.length = i < 2 ? parts[i].length : 1;
+        memcpy(f.bytes, parts[i < 2 ? i : 0].bytes, f.length);
+        f.receivedMs = t0 + 500 * static_cast<uint32_t>(i);
+        f.rssiDbm = -95;
+        radio.rxQueue.push_back(f);
+    }
+    fakeUs += 1500000;
+    runFor(10);
+    printf("RX508 %zu %d\n", received.size(), received.size() == 508 && !memcmp(received.data(), d508.data(), 508));
+    radio.rxQueue.push_back([&] { radiolink::Frame f; f.length = parts[0].length; memcpy(f.bytes, parts[0].bytes, f.length); f.receivedMs = millis(); return f; }());
+    runFor(1100);
+    radio.rxQueue.push_back([&] { radiolink::Frame f; f.length = parts[0].length; memcpy(f.bytes, parts[0].bytes, f.length); f.receivedMs = millis(); return f; }());
+    radio.rxQueue.push_back([&] { radiolink::Frame f; f.length = 21; f.bytes[0] = 0x50; memcpy(f.bytes + 1, d20.data(), 20); f.receivedMs = millis(); return f; }());
+    runFor(10);
+    printf("RXSHORT %zu\n", received.size());
+    bench.printLink();
+
+    // Rekonfiguracja (radiocon: bench.stop() przed CONFIG): odbiór wraca od razu przez linkRxStart, także
+    // w trybie przygotowania, w którym sam nie wraca.
+    bench.prep = true;
+    bench.stop();
+    runFor(1500);
+    const int stopped = radio.rxActive;
+    error = bench.linkRxStart();
+    printf("REARM %d %s %d %d\n", stopped, text(error), radio.rxActive, bench.receiving());
+
+    // Tryb EMC wstrzymuje łącze stosu: odbiór ramek wzorcowych, datagramy odmówione; po EMC 0 odbiór łącza wraca.
+    const char* emc = bench.emcStart(6, 20);
+    const char* emcSend = bench.linkSend(d20.data(), d20.size(), true);
+    const char* emcRx = bench.linkRxStart();
+    runFor(100);
+    printf("EMC %s|%s|%s %d %d\n", text(emc), emcSend, emcRx, radio.rxActive, radio.rxVariable);
+    bench.emcStop();
+    bench.prep = false;
+    runFor(1100);
+    printf("EMCOFF %d %d %d\n", bench.emcActive(), radio.rxActive, radio.rxVariable);
+    return 0;
+}
+"""
+
+
 def host_compiler():
     for name in ("c++", "g++", "clang++"):
         if shutil.which(name):

@@ -124,7 +124,7 @@ Do punktu, który nie przysłał zgłoszenia, nie wysyłasz wiadomości radiem. 
 
 1. Wysyłaj tylko na polecenie wójta lub sztabu kryzysowego. Wpisz, kto polecił.
 2. Wpisz treść: najwyżej 192 bajty, po polsku.
-3. Wyślij. Panel wysyła komunikat osobno do każdej stacji i pokazuje postęp. Dla 50 stacji trwa to około 8,5 min (LoRa) albo 12 min (P1).
+3. Wyślij. Panel wysyła komunikat osobno do każdej stacji i pokazuje postęp. Dla 50 stacji trwa to około 8,6 min (LoRa) albo 12 min (P1).
 4. Wpisz treść, godzinę i osobę polecającą do rejestru.
 
 Nie wysyłaj komunikatów, które mogą poczekać.
