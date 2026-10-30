@@ -179,10 +179,10 @@ private:
     size_t txLength_ = 0;  // ramka załadowana do nadania (limit czasu TxDone)
     bool rxVariable_ = false;
     uint8_t rxFixedLength_ = 0;
-    bool inFrame_ = false;      // preambuła albo nagłówek wykryte, ramka jeszcze nieodebrana
+    std::atomic<bool> inFrame_{false};  // preambuła albo nagłówek wykryte, ramka jeszcze nieodebrana (CCA czyta bez blokady)
     bool headerSeen_ = false;   // próbka widziała i skasowała HeaderValid bieżącej ramki
     uint32_t lastSampleMs_ = 0; // ostatnia udana próbka odbioru (millis), do wykrycia spóźnienia
-    uint32_t inFrameSinceMs_ = 0;
+    std::atomic<uint32_t> inFrameSinceMs_{0};
     uint16_t irqSeen_ = 0;
     int32_t offsetSteps_ = 0;
     Activity activity_;
