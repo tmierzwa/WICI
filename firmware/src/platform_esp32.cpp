@@ -5,6 +5,7 @@
 
 #include <bootloader_random.h>
 #include <driver/gpio.h>
+#include <esp_heap_caps.h>
 #include <esp_mac.h>
 #include <esp_random.h>
 #include <esp_system.h>
@@ -157,6 +158,11 @@ int32_t rxTaskStackFree() {
     if (!rxTask) return -1;
     return static_cast<int32_t>(uxTaskGetStackHighWaterMark(rxTask) * sizeof(StackType_t));
 }
+
+// Sterta ESP-IDF: port microReticulum bierze z niej pamięć stosu (pula TLSF jest tylko na nRF52840).
+int32_t heapSize() { return static_cast<int32_t>(heap_caps_get_total_size(MALLOC_CAP_DEFAULT)); }
+int32_t heapFree() { return static_cast<int32_t>(esp_get_free_heap_size()); }
+int32_t heapMinFree() { return static_cast<int32_t>(esp_get_minimum_free_heap_size()); }
 
 bool handle(const char* cmd, char* words[], size_t n) {
     if (strcmp(cmd, "DRIVE") || n > 1) return false;
