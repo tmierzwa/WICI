@@ -9,7 +9,7 @@ Podane wartości służą do projektu, wykonania i pomiaru stacji pilotażowej. 
 Płytka v2 to płytka v1 prototypu ([`hardware/dev-bench`](../../hardware/dev-bench/plytka-nosna.md), projekt v1.1 z poprawioną taśmą ekranu, F118) z trzema grupami zmian:
 
 1. **wnioski z prototypu:** taśma ekranu z v1.1, rezystor R12 = 1 kΩ zamiast 10 kΩ; dalsze przyjdą z kroku 4;
-2. **zmiany pod pilotaż:** bez gniazd na moduły TI, ST i Nordic (J1–J4, J9, J10, JP3), moduł Wio osadzony na płytce zamiast przewodów, obrys i otwory pod obudowę;
+2. **zmiany pod pilotaż:** bez gniazd na moduły TI, ST i Nordic (J1–J4, J9, J10, JP3), moduł Wio osadzony na płytce zamiast przewodów, obrys i otwory pod obudowę, własne gniazdo USB do laptopa bez linii VBUS ([USB do laptopa](#gniazdo-usb-do-laptopa));
 3. **tor zasilania** z ogniw AA i z 12 V ([zasilanie stacji](#zasilanie-stacji)), którego wymaga minimum pilotażu.
 
 Płytkę v2 zamawia się w pełni zmontowaną w JLCPCB (SMD i THT, części podstawowe montażowni; wycenę pełnego montażu sprawdzono w zamkniętym [PR #129](https://github.com/tmierzwa/WICI/pull/129)). Moduły (DevKitC, Wio, panel), obudowa, antena, program i próba każdej sztuki są poza montażownią. Zamówienie obejmuje 10 płytek, z których zmontowanych jest 8: sieć pilotażu 3, zapas w gminie 1–2, egzemplarz u autora 1, badania zgodności 1–2. Zasada: v2 nie zamyka drogi do wydania, ale nie dostaje niczego na zapas. Otwarta decyzja projektowa, do podjęcia po kroku 4: moduły wpinane jak w prototypie czy przylutowany moduł ESP32-S3 i układ radiowy na płytce. Złącze analizatora (J11), wejście VTEST (J12) i zworki pomiarowe v1 zostają albo wypadają według tej samej zasady; rozstrzyga projekt v2.
@@ -36,37 +36,39 @@ Stacji pilotażowej używa się tylko w temperaturach dopuszczonych przez karty 
 Tor zasilania jest jedyną nową częścią elektroniki v2. Wymagania wynikają z minimum pilotażu ([odbiór](odbior.md#minimum-pilotażu)): ≥48 h na ogniwach AA w temperaturze pokojowej, podłączenie 12 V bez resetu, brak utraty zgłoszeń przy wyjęciu ogniw.
 
 ```text
-4 × AA Li-FeS2 ─ koszyk z kluczowaniem ─ D1 ─ przetwornica P_AA (EN) ─ D3 ─┐
-                                    EN ← (ON) i (brak 12 V)                ├─ szyna zasilania modułu MCU ─ C
-12 V ─ F T1A ─ D2 ─ odcięcie UV 11,5 V / 12,4 V ─ przetwornica P12 (EN) ─ D4 ─┘
-                                    EN ← (ON)
+4 × AA Li-FeS2 ─ koszyk z kluczowaniem ─ D1 ──────────────────────┐
+                                                                  ├─ VSYS ─ C ─ przetwornica 3,3 V (EN ← ON) ─ piny 3V3 płytki DevKitC
+12 V ─ F T1A ─ odcięcie UV 11,5 V / 12,4 V ─ łącznik 12 V (OVP) ──┘
 sterownik wyłącznika z zatrzaskiem (zasilany przez diody z AA i 12 V) ─ ON;  INT ─ MCU;  MCU ─ KILL
 dzielniki AA i 12 V (odłączane) ─ ADC
 ```
 
-Schemat pokazuje funkcje, nie układy. Architekturę wybiera projekt v2:
+Schemat pokazuje funkcje, nie układy. Architektura (decyzja z 2026-10-30): jak w [projekcie zasilania R02](../../hardware/r02/zasilanie.md), ogniwa przez diodę i 12 V przez łącznik na wspólną szynę VSYS, jedna przetwornica podwyższająco-obniżająca 3,3 V podłączona do pinów 3V3 i G płytki DevKitC. Instrukcja płytki dopuszcza zasilanie przez 3V3 i G jako jeden z trzech sposobów, które się wykluczają ([instrukcja DevKitC-1 v1.1](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-devkitc-1/user_guide_v1.1.html)). Płytki DevKitC nie przerabia się.
 
-- (a) dwie przetwornice 5 V z diodami na wejście 5 V modułu MCU, jak w dotychczasowym schemacie stacji z gotowych modułów (kandydaci tylko w postaci modułów Pololu, więc do pełnego montażu w JLC potrzebne są układy);
-- (b) jak w [projekcie zasilania R02](../../hardware/r02/zasilanie.md): ogniwa przez diodę i 12 V przez łącznik na wspólną szynę VSYS, przetwornica podwyższająco-obniżająca 3,3 V; projekt ma dobór części i bilans prądu w stanie wyłączonym, ale zasila moduł MCU od strony 3,3 V, więc trzeba sprawdzić, czy płytka DevKitC to dopuszcza.
+Odrzucony wariant: dwie przetwornice 5 V z diodami na pin 5V płytki. Regulator liniowy płytki (SGM2212-3.3) traci wtedy około jednej trzeciej energii i szacunek dla 45 mA poboru MCU spada z około 52 h do około 45 h, poniżej W23; kandydaci byli tylko modułami Pololu, których montażownia nie osadza.
 
-Wybór należy do projektu v2 i zależy też od dostępności części w JLCPCB.
+Przed schematem v2:
+
+1. **pobór przez 3V3 bez USB, pomiar na jednej płytce DevKitC.** Napięcie 3,3 V trafia przez R24 (0 Ω) także na wyjście regulatora płytki. Karta SGM2212 (rew. A.2) nie opisuje zachowania przy napięciu wyjścia wyższym od wejścia; prąd wsteczny zatrzymują dalej diody D1 i D7 ([schemat v1.1](https://dl.espressif.com/dl/schematics/SCH_ESP32-S3-DevKitC-1_V1.1_20221130.pdf)). Gdyby pobór był istotny wobec W23, R24 się usuwa;
+2. **sprawność LTC3115-1 przy 3,3 V** na płytce ewaluacyjnej (Z11 w projekcie zasilania): model liczy 85%, wykresy dają około 82–85%, co przy 82% daje około 50 h;
+3. **dostępność LTC3115-1** w LCSC sprawdzona przed schematem; przy braku inna przetwornica 3,3 V tej klasy (TPS63070 odpada z powodów opisanych w projekcie zasilania).
 
 | Element | Wymaganie | Kandydaci do projektu v2 |
 |---|---|---|
 | ogniwa | 4 × AA Li-FeS2 1,5 V (wymagane do przechowywania i do W23); alkaliczne lub NiMH tylko awaryjnie; koszyk z kluczowaniem przeciw odwrotnemu włożeniu; ogniwa ani wejście 12 V nie łączą się z VBUS ani z ładowarką modułu | Energizer L91 |
-| przetwornica z ogniw | wejście co najmniej 3–8 V (4 × Li-FeS2: do 7,3 V świeże, około 4,0 V na końcu, minus spadek diody), wyjście ≥0,5 A, prąd spoczynkowy ≤0,2 mA, wejście EN | (a) Pololu S9V11F5 (moduł, prototyp przewodowy); (b) ADI LTC3115-1 |
-| przetwornica z 12 V | wejście co najmniej 10–20 V (akumulator przy ładowaniu do 14,8 V i przepięcia), wyjście ≥0,5 A, prąd spoczynkowy ≤0,1 mA, wejście EN | (a) Pololu D36V6F5 (moduł); (b) wspólna przetwornica LTC3115-1 za łącznikiem 12 V TI LM74800-Q1 z dwoma Nexperia BUK7Y12-40E |
+| przetwornica z ogniw | wejście co najmniej 3–8 V (4 × Li-FeS2: do 7,3 V świeże, około 4,0 V na końcu, minus spadek diody), wyjście ≥0,5 A, prąd spoczynkowy ≤0,2 mA, wejście EN | ADI LTC3115-1 |
+| przetwornica z 12 V | wejście co najmniej 10–20 V (akumulator przy ładowaniu do 14,8 V i przepięcia), wyjście ≥0,5 A, prąd spoczynkowy ≤0,1 mA, wejście EN | wspólna przetwornica LTC3115-1 za łącznikiem 12 V TI LM74800-Q1 z dwoma Nexperia BUK7Y12-40E |
 | diody | Schottky ≥1 A; dioda wejścia 12 V VR ≥40 V (odwrotna polaryzacja), dioda ogniw VR ≥20 V i mały prąd wsteczny przy 16 V i 45 °C, bo płynie do pierwotnych ogniw litowych | np. SS14, SS54; suma diodowa sterownika: Nexperia BAS116H |
-| wybór źródła | przy obecnym 12 V (za odcięciem UV) ogniwa nie oddają energii i nigdy jej nie dostają | tranzystor z dzielnika za odcięciem UV albo suma diodowa (b) |
-| odcięcie UV 12 V | wyłącza zasilanie z 12 V poniżej 11,5 V, włącza powyżej 12,4 V (histereza, bez stanu zapamiętanego w MCU); oba progi mierzone na złączu, przed diodą, bo spadek na niej (około 0,3 V) przesunąłby je do 11,8/12,7 V i pełny akumulator w spoczynku (12,6 V) nie uruchomiłby stacji; pobór ≤50 µA | nadzorca napięcia z histerezą na EN; (b) TI TPS3701 albo ADI LTC2965 |
-| sterownik wyłącznika | krótkie naciśnięcie włącza, przytrzymanie 2 s zgłasza MCU żądanie wyłączenia (`wylaczanie`, potem `mozna_wyjac`, KILL), przytrzymanie ≥5 s wyłącza bez MCU; KILL w stanie wysokim najpóźniej 304 ms po włączeniu; zasilanie przez diody z obu źródeł | ADI LTC2955-1 (wyjście aktywne stanem wysokim, wprost do EN przetwornic) albo LTC2955-2 z tranzystorem PMOS jak w (b) |
-| kondensator szyny | przełączenie z 12 V na ogniwa (start przetwornicy z ogniw) bez restartu modułu; mały upływ, bo szyna wisi na ogniwach | elektrolit ≥1000 µF + ceramika (a); w (b) według [projektu zasilania](../../hardware/r02/zasilanie.md) |
+| wybór źródła | przy obecnym 12 V (za odcięciem UV) ogniwa nie oddają energii i nigdy jej nie dostają | suma diodowa jak w projekcie zasilania |
+| odcięcie UV 12 V | wyłącza zasilanie z 12 V poniżej 11,5 V, włącza powyżej 12,4 V (histereza, bez stanu zapamiętanego w MCU); oba progi mierzone na złączu, przed diodą, bo spadek na niej (około 0,3 V) przesunąłby je do 11,8/12,7 V i pełny akumulator w spoczynku (12,6 V) nie uruchomiłby stacji; pobór ≤50 µA | nadzorca napięcia z histerezą na EN; TI TPS3701 albo ADI LTC2965 |
+| sterownik wyłącznika | krótkie naciśnięcie włącza, przytrzymanie 2 s zgłasza MCU żądanie wyłączenia (`wylaczanie`, potem `mozna_wyjac`, KILL), przytrzymanie ≥5 s wyłącza bez MCU; KILL w stanie wysokim najpóźniej 304 ms po włączeniu; zasilanie przez diody z obu źródeł | ADI LTC2955-2 z tranzystorem PMOS jak w projekcie zasilania |
+| kondensator szyny | przełączenie z 12 V na ogniwa (start przetwornicy z ogniw) bez restartu modułu; mały upływ, bo szyna wisi na ogniwach | według [projektu zasilania](../../hardware/r02/zasilanie.md) |
 | wejście 12 V | 11,5–16 V w pracy; bezpiecznik zwłoczny T1A przy wtyku; odwrotne podłączenie 16 V przez 60 s bez przepalenia bezpiecznika i uszkodzeń; nie podłączać do instalacji pojazdu z pracującym silnikiem | Schurter 0001.2504; TVS SMBJ18CA (dwukierunkowy) |
 | progi ogniw | ostrzeżenie przy 4,4 V (1,1 V na ogniwo), kontrolowane wyłączenie przy 4,0 V po zakończeniu zapisu FRAM; progi na filtrowanej średniej z okresów samego odbioru, bo impulsy TX chwilowo obniżają napięcie zimnych ogniw | program stacji |
 | pomiar | ADC napięcia ogniw (przed diodą) i wejścia 12 V (przed diodą i łącznikiem) przez dzielniki odłączane między pomiarami; błąd ≤2%; wynik na ekranie i w `INFO`; wejście ADC ograniczone tak, by impuls 29 V (granica TVS) go nie uszkodził | dzielnik 0,1% jak VTEST na v1 |
 | pobór | w pracy przekaźnika tyle, by komplet ogniw dał ≥48 h (W23; model: [radio](radio.md#profil-lora-pilotażu)); w stanie wyłączonym ≤0,1 mA z każdego źródła | pomiar w RX, TX i przy pracy ekranu |
 
-Zasady: przetwornica, diody i regulator modułu tracą energię. W wariancie (a) szacunek dla 45 mA poboru MCU spada z około 52 h (model z przetwornicą 3,3 V) do około 45 h, więc W23 jest zagrożone; rozstrzyga pomiar z minimum pilotażu, a niespełnione wymaganie zmienia tor przed zamówieniem v2. Czy regulator 3,3 V modułu utrzymuje napięcie przy nadawaniu, sprawdza pomiar 3,3 V przy TX. Na czas przechowywania ogniwa wyjmuje się ze stacji. Powerbank przez USB nie jest dopuszczonym źródłem: wiele powerbanków wyłącza się przy prądzie rzędu kilkudziesięciu miliamperów, czyli przy poborze stacji.
+Zasady: o W23 rozstrzyga pomiar z minimum pilotażu, a niespełnione wymaganie zmienia tor przed zamówieniem v2. Napięcie 3,3 V przy nadawaniu sprawdza pomiar przy TX. Na czas przechowywania ogniwa wyjmuje się ze stacji. Powerbank przez USB nie jest dopuszczonym źródłem: wiele powerbanków wyłącza się przy prądzie rzędu kilkudziesięciu miliamperów, czyli przy poborze stacji.
 
 ### Stany zasilania 12 V
 
@@ -82,6 +84,11 @@ Zasady: przetwornica, diody i regulator modułu tracą energię. W wariancie (a)
 | ogniwa włożone odwrotnie | – | kluczowany koszyk, dioda blokuje |
 
 Te stany sprawdza próba „Tor zasilania stacji pilotażowej” w [minimum pilotażu](odbior.md#minimum-pilotażu): brak prądu do ogniw (pomiar prądu w gałęzi ogniw przy 12 V, ≤1 µA), odwrotne podłączenie, napięcia graniczne 11,4/11,6/12,3/12,5/14,8/16 V, przełączenia bez restartu i zanik przy zapisie.
+
+
+### Gniazdo USB do laptopa
+
+Płytka v2 ma własne gniazdo USB-C (z rezystorami 5,1 kΩ na CC1 i CC2, bez których laptop z USB-C nie wykryje urządzenia), połączone tylko z liniami danych natywnego USB modułu (GPIO19 i GPIO20, piny 19 i 20 listwy J3 płytki DevKitC) i z masą, z ochroną ESD. Linii VBUS gniazdo nie ma, więc laptop połączony dowolnym przewodem nigdy nie zasila stacji, także wyłączonej, i nie walczy z przetwornicą 3,3 V. Nic nie zależy od pamiętania o przejściówce ani o przeróbce. Złącza micro USB płytki DevKitC służą tylko do programowania przy stole, przy odłączonym zasilaniu stacji.
 
 ## Zanik zasilania i zapis
 
