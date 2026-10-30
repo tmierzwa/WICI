@@ -946,6 +946,81 @@ class PanelTest(StationTestCase):
             server.server_close()
 
 
+class AnnounceBulletinTest(StationTestCase):
+    """S8: announce every 6 h ±20% and after a reconnection; BULLETIN to each trusted station with progress."""
+
+    def setUp(self):
+        self.announced, self.online = 0, True
+        super().setUp()
+
+    def open(self):
+        return przyjecie.Przyjecie(self.medium, self.key, self.send, lambda m: m.result, clock=lambda: self.now,
+                                   log=lambda line: None, random=lambda: 0.5, announce=self.announce,
+                                   online=lambda: self.online)
+
+    def announce(self):
+        self.announced += 1
+
+    def test_every_six_hours_and_after_a_reconnection(self):
+        self.tick()
+        self.assertEqual(self.announced, 0)                    # po starcie ogłasza sam stos
+        self.now += przyjecie.Przyjecie.ANNOUNCE_S - 60
+        self.tick()
+        self.assertEqual(self.announced, 0)
+        self.now += 60
+        self.tick()
+        self.assertEqual(self.announced, 1)
+        self.online = False
+        self.tick()
+        self.online = True
+        self.tick()
+        self.assertEqual(self.announced, 2)                    # stacja wróciła
+
+    def test_six_hours_have_twenty_percent_jitter(self):
+        self.reception.stop()
+        for r, low in ((0.0, 0.8), (0.999999, 1.2)):
+            reception = przyjecie.Przyjecie(self.medium, self.key, self.send, lambda m: True, clock=lambda: self.now,
+                                            log=lambda line: None, random=lambda: r, announce=self.announce)
+            reception.call(lambda s: reception.tick())
+            self.assertAlmostEqual(reception.next_announce - self.now, przyjecie.Przyjecie.ANNOUNCE_S * low, delta=1)
+            reception.stop()
+        self.reception = self.open()
+
+    def test_bulletin_to_every_station_with_progress(self):
+        stations = [bytes([i]) * 16 for i in range(1, 4)]
+        for st in stations:
+            self.reception.call(lambda s, st=st: s.add_trusted(st, st * 4, ("dyzurny-1", "dyzurny-2")))
+        d = panel.Dyzur(self.reception, self.medium, self.key, FakeStack(), clock=lambda: self.now)
+        d.login("dyzurny-1", self.envelopes["dyzurny-1"])
+        content = request()
+        self.result = None
+        self.reception.deliver(self.STATION, content)          # RECEIVED czeka w drodze
+        mid = d.bulletin({"text": "Woda pitna: beczkowóz przy szkole od 14:00"})["id"]
+        self.tick()
+        self.assertEqual(self.kinds()[0], wysylka.RECEIVED)    # RECEIVED przed komunikatem
+        self.assertEqual(len({t for t, c in self.sent if wzorzec.decode_message(c)[1] == wysylka.BULLETIN}), 3)
+        for message, _ in list(self.reception.wysylka.flight.values()):
+            message.result = True
+        self.result = True
+        self.tick()
+        self.tick()
+        progress = d.view()["bulletins"][0]
+        self.assertEqual((progress["id"], progress["total"], progress["done"]), (mid, 4, 4))   # 3 nowe i STATION
+        self.assertIn("Woda pitna", progress["text"])
+
+    def test_sending_bookkeeping_does_not_force_a_snapshot(self):
+        saves = []
+        real = self.medium.save
+        self.medium.save = lambda key, body: (saves.append(1), real(key, body))
+        self.deliver(self.STATION, request())                  # przyjęcie: migawka przed RECEIVED
+        before = len(saves)
+        self.tick()                                            # DELIVERED: tylko ewidencja
+        self.tick()
+        self.assertEqual(len(saves), before)
+        self.reception.action("dyzurny-1", "logowanie")        # następna zmiana zapisuje też ewidencję
+        self.assertEqual(durable(self.medium, self.key, "SELECT count(*) FROM outbox WHERE done=0"), (0,))
+
+
 class StackHoldTest(unittest.TestCase):
     """S2: a message from a sender LXMF does not know yet waits, with a path request, until its identity arrives."""
 

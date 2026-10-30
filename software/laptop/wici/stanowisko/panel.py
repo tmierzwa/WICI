@@ -178,6 +178,17 @@ class Dyzur:
             return event
         return {"event": self.p.call(send)}
 
+    def bulletin(self, body):
+        """BULLETIN with a new id, one intent per trusted station; they go one after another (wysylka.py)."""
+        user = self.current()
+        text = configdoc.clean_text(_text(body, "text", 400))
+
+        def send(store):
+            mid = self.p.wysylka.bulletin(store, text, self.clock())
+            self._logged(store, user, "komunikat", f"{short_number(mid)} {text}")
+            return mid
+        return {"id": self.p.call(send)}
+
     # ---- kwarantanna i zaufanie --------------------------------------------------------------
 
     def quarantine(self, body):
@@ -349,8 +360,14 @@ class Dyzur:
             waiting, oldest = db.execute("SELECT count(*), min(first_try) FROM outbox WHERE done=0").fetchone()
             log = [{"at": a, "account": u, "op": o, "detail": d} for a, u, o, d in
                    db.execute("SELECT at, account, op, detail FROM dziennik ORDER BY id DESC LIMIT 50")]
-            return reports, tests, quarantine, removed, trusted, waiting, oldest, log
-        reports, tests, quarantine, removed, trusted, waiting, oldest, log = self.p.call(read)
+            bulletins = []
+            for mid, payload, total, done, failed in db.execute(
+                    "SELECT id, payload, count(*), sum(done), sum(attempts > 0 AND done = 0) FROM outbox "
+                    "WHERE kind=? GROUP BY id ORDER BY min(seq) DESC LIMIT 20", (wysylka.BULLETIN,)):
+                bulletins.append({"id": mid, "number": short_number(mid), "text": wzorzec.decode_message(payload)[4],
+                                  "total": total, "done": done, "retrying": failed})
+            return reports, tests, quarantine, removed, trusted, waiting, oldest, log, bulletins
+        reports, tests, quarantine, removed, trusted, waiting, oldest, log, bulletins = self.p.call(read)
         in_flight = len(self.p.wysylka.flight)
         open_reports = [r for r in reports if r["state"] not in (3, 5, 6)]
         return {
@@ -358,7 +375,7 @@ class Dyzur:
             "node": {**node, "in_flight": in_flight, "waiting": waiting - in_flight if waiting else 0,
                      "oldest_s": None if oldest is None else now - oldest},
             "recovery": self.p.recovery, "copy_age_s": None if self.p.last_copy_at is None else now - self.p.last_copy_at,
-            "saved": self.p.save_error is None, "log": log,
+            "saved": self.p.save_error is None, "log": log, "bulletins": bulletins,
             "handover": {"open": len(open_reports), "forwarded_unconfirmed": sum(r["state"] == 4 for r in reports),
                          "unsent": waiting or 0, "quarantine": len(quarantine), "removed_alarm": len(removed)},
         }
@@ -378,6 +395,7 @@ ROUTES = {
     "/api/operator/status": lambda d, b: d.status(b),
     "/api/operator/tests": lambda d, b: d.read_tests(b),
     "/api/operator/reply": lambda d, b: d.reply(b),
+    "/api/operator/bulletin": lambda d, b: d.bulletin(b),
     "/api/operator/quarantine": lambda d, b: d.quarantine(b),
     "/api/operator/trust": lambda d, b: d.trust(b),
     "/api/operator/trust/remove": lambda d, b: d.untrust(b),

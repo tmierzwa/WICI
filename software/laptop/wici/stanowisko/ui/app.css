@@ -29,3 +29,5 @@ details { display: inline-block; margin-right: 8px; vertical-align: top; }
 details[open] { display: block; }
 .password { font-size: 20px; font-family: ui-monospace, monospace; }
 #recovery { border: 2px solid var(--bad); padding: 8px 16px; margin: 8px 0; }
+input.wide { width: 100%; max-width: 640px; }
+progress { width: 100%; max-width: 640px; }

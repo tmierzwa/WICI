@@ -76,9 +76,16 @@ class Przyjecie:
 
     TICK_S = 1   # jak często wątek bazy sprawdza intencje bez nowych zadań
 
-    def __init__(self, medium, key, send, outcome, clock=None, log=None, random=random.random, copies=None):
-        """copies: kopie.Kopie on the computer disk, written every 5 min (stage S5); None without copies."""
+    ANNOUNCE_S = 6 * 3600   # ogłoszenie adresu odbiorcy co 6 h ±20% (stanowisko-osp.md, „Ogłoszenia”)
+
+    def __init__(self, medium, key, send, outcome, clock=None, log=None, random=random.random, copies=None,
+                 announce=None, online=None):
+        """copies: kopie.Kopie on the computer disk, written every 5 min (stage S5); None without copies.
+        announce, online: the stack's announce and connection state (stage S8): the receiver address is
+        announced every 6 h ±20% and after every reconnection to the station."""
         self.medium, self.key, self.clock = medium, key, clock or time.time
+        self.announce, self.online, self.random = announce, online, random
+        self.next_announce, self.was_online = None, None
         self.copies, self.next_copy, self.copy_failed = copies, 0, False
         self.last_copy_at = None   # czas najnowszej kopii na dysku komputera (panel, przekazanie zmiany)
         self.log = log or (lambda line: print(line, file=sys.stderr, flush=True))
@@ -151,12 +158,37 @@ class Przyjecie:
 
     def tick(self):
         """Pass due intents to the stack (in the database thread), only once the medium holds every change;
-        a copy on the computer disk when it is due."""
+        a copy on the computer disk and the announce when they are due. Nothing in the recovery mode."""
         if not self._save() or self.recovery:
             return   # w trybie odzyskania także bez kopii: trzy dobre kopie zostają
         if self.copies is not None and self.clock() >= self.next_copy:
             self._copy()   # przed wysyłką: po odzyskaniu nowa kopia z nowym P wychodzi pierwsza
+        changes_before = self.store.db.total_changes
         self.wysylka.tick(self.store.db, self.clock())
+        # Same zapisy ewidencji wysyłki (próba, DELIVERED, następna próba) nie wymagają osobnej migawki: po
+        # zaniku wiadomość wyjdzie ponownie, a stacja ją odrzuci jako powtórzenie. Trafią do następnej migawki.
+        if self.saved == changes_before:
+            self.saved = self.store.db.total_changes
+        self._announce()
+
+    def _announce(self):
+        if self.announce is None:
+            return
+        now = self.clock()
+        online = bool(self.online()) if self.online else True
+        # Start ogłasza stos sam (Stos.start); tu: ponowne połączenie ze stacją i co 6 h ±20%. Do pierwszego
+        # połączenia (przed startem stosu) stan zostaje nieznany, więc samo połączenie po starcie nie ogłasza.
+        again = online and self.was_online is False
+        if online or self.was_online is not None:
+            self.was_online = online
+        if self.next_announce is None:
+            self.next_announce = now + self.ANNOUNCE_S * (0.8 + 0.4 * self.random())
+        if again or now >= self.next_announce:
+            self.next_announce = now + self.ANNOUNCE_S * (0.8 + 0.4 * self.random())
+            try:
+                self.announce()
+            except Exception as e:   # noqa: BLE001 - ogłoszenie wróci przy następnej okazji
+                self.log(f"stanowisko: ogłoszenie nie powiodło się: {e!r}")
 
     def _copy(self):
         """Copy on the computer disk; a failure is retried after a minute and logged once, without an alarm."""
