@@ -111,7 +111,8 @@ function card(n) {
 
 function render(state) {
   document.getElementById("clock").textContent = `czas świata: ${state.seconds} s`;
-  document.getElementById("post").textContent = `Liczba znanych stacji: ${state.post}`;
+  document.getElementById("post").textContent = state.post === null ? "Stanowisko: aplikacja stanowiska na porcie węzła"
+    : `Liczba znanych stacji: ${state.post}`;
   for (const s of state.stations) {
     const el = card(s.n);
     el.querySelector(".port").textContent = `port danych USB: tcp:127.0.0.1:${s.port}`;

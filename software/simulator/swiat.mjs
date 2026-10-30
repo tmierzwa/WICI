@@ -7,7 +7,9 @@
 //
 //   node software/simulator/swiat.mjs [--station konfiguracja.json]... [--stations N] [--port 7300]
 //                                     [--http 7380] [--card karta.json] [--seed S]
+//                                     [--stanowisko karta-stanowiska.json [--wezel 7390]]
 //   python3 -m wici --port tcp:127.0.0.1:7300        (z katalogu software/laptop)
+//   python3 -m wici.stanowisko start --nosnik … --port tcp:127.0.0.1:7390   (z --stanowisko)
 //
 // --station: stacja skonfigurowana z pliku w formacie „Zapisz do pliku” panelu laptopa (dokument
 // `configure`); kolejne stacje, w kolejności podania. --stations N: tyle stacji bez konfiguracji, po nich
@@ -15,7 +17,11 @@
 // porty. --card zapisuje kartę odbiorcy stanowiska do wczytania w panelu laptopa; kod dostępu sieci
 // ćwiczeniowej (IFAC) jest w pierwszym wierszu wyjścia. Stacja z innym kodem albo inną kartą odbiorcy
 // nie dogada się ze stanowiskiem świata (ostrzeżenie przy starcie).
-// Wyjście: `IFAC …`, `stacja <k> tcp:127.0.0.1:<port>`, `strona http://127.0.0.1:<port>/`, potem `gotowe`.
+// --stanowisko: zamiast modelu post.cpp prawdziwa aplikacja stanowiska (software/laptop/wici/stanowisko) z kartą
+// odbiorcy z `przygotuj --karta`; stacje dostają tę kartę, a port danych węzła jest na TCP (--wezel), jak
+// przewód USB od węzła do komputera stanowiska.
+// Wyjście: `IFAC …`, `stacja <k> tcp:127.0.0.1:<port>`, z --stanowisko `węzeł tcp:127.0.0.1:<port>`,
+// `strona http://127.0.0.1:<port>/`, potem `gotowe`.
 // Polecenia na stdin (k: numer stacji, domyślnie 1): prep [k], press [k] OK|BACK|UP|DOWN, screen [k],
 // power [k] on|off, loss [k] <dB>|off, post, quit.
 import fs from "node:fs";
@@ -34,12 +40,16 @@ const fresh = Number(opt("--stations", files.length ? 0 : 1));
 const basePort = Number(opt("--port", 7300));
 const httpPort = Number(opt("--http", 7380));
 const cardPath = opt("--card", null);
+const receiverPath = opt("--stanowisko", null);
+const receiver = receiverPath ? JSON.parse(fs.readFileSync(receiverPath, "utf8")) : null;
+if (receiver && !(receiver.main?.key && receiver.backup?.key)) throw new Error(`${receiverPath}: to nie jest karta odbiorcy`);
 const PRESS_US = 120000, PREP_US = 3200000, BUTTONS = ["UP", "DOWN", "OK", "BACK"];
 
 const docs = files.map((f) => JSON.parse(fs.readFileSync(f, "utf8")));
-const world = await prepareNetwork({ seed: Number(opt("--seed", 1)), stations: docs.length + fresh, configured: false });
+const world = await prepareNetwork({ seed: Number(opt("--seed", 1)), stations: docs.length + fresh, configured: false,
+  receiver: receiver && { main: receiver.main, backup: receiver.backup } });
 const stations = world.devices.slice(1);
-const cards = JSON.parse(world.post.cmd("card"));
+const cards = receiver ? { main: receiver.main, backup: receiver.backup } : JSON.parse(world.post.cmd("card"));
 console.log(`IFAC (kod dostępu sieci ćwiczeniowej): ${IFAC}`);
 for (const [i, doc] of docs.entries()) {
   if (String(doc.ifac).toLowerCase() !== IFAC) console.log(`uwaga: ${files[i]}: inny kod dostępu sieci niż węzeł świata, stanowisko jej nie usłyszy`);
@@ -61,7 +71,9 @@ if (cardPath) {
 const startWall = performance.now(), startUs = world.nowUs;
 const releases = [];   // [czas świata µs, urządzenie, pin]
 const pending = [];    // działania ze strony i ze stdin, wykonywane między krokami świata
-const links = stations.map(() => ({ socket: null, input: [], port: 0 }));
+// Porty danych na TCP: stacje, a z --stanowisko na końcu węzeł.
+const links = stations.map((d, i) => ({ device: d, label: `stacja ${i + 1}`, want: basePort ? basePort + i : 0, socket: null, input: [], port: 0 }));
+if (receiver) links.push({ device: world.node, label: "węzeł", want: Number(opt("--wezel", 7390)), socket: null, input: [], port: 0 });
 const servers = [], watchers = new Set();
 let running = true;
 
@@ -78,9 +90,7 @@ async function tick() {
   for (const action of pending.splice(0)) await action();
   while (world.nowUs < target) {
     const step = Math.min(target - world.nowUs, 10000);
-    stations.forEach((d, i) => {
-      for (const data of links[i].input.splice(0)) d.usbWrite(1, data);
-    });
+    for (const link of links) for (const data of link.input.splice(0)) link.device.usbWrite(1, data);
     await world.advance(step);
     for (let r = releases.length - 1; r >= 0; r--) {
       if (world.nowUs >= releases[r][0]) {
@@ -89,16 +99,16 @@ async function tick() {
       }
     }
   }
-  stations.forEach((d, i) => {
-    const out = d.usbRead(1);
-    if (out.length && links[i].socket) links[i].socket.write(Buffer.from(out));
-  });
+  for (const link of links) {
+    const out = link.device.usbRead(1);
+    if (out.length && link.socket) link.socket.write(Buffer.from(out));
+  }
   setTimeout(tick, 5);
 }
 
-const listening = stations.map((d, i) => new Promise((resolve) => {
+const listening = links.map((link) => new Promise((resolve) => {
+  const d = link.device;
   const server = net.createServer((socket) => {
-    const link = links[i];
     if (link.socket) { socket.destroy(); return; }   // jeden komputer naraz, jak jeden przewód
     link.socket = socket;
     socket.setNoDelay(true);
@@ -110,9 +120,9 @@ const listening = stations.map((d, i) => new Promise((resolve) => {
     socket.on("error", close);
   });
   servers.push(server);
-  server.listen(basePort ? basePort + i : 0, "127.0.0.1", () => {
-    links[i].port = server.address().port;
-    console.log(`stacja ${i + 1} tcp:127.0.0.1:${links[i].port}`);
+  server.listen(link.want, "127.0.0.1", () => {
+    link.port = server.address().port;
+    console.log(`${link.label} tcp:127.0.0.1:${link.port}`);
     resolve();
   });
 }));
@@ -132,7 +142,7 @@ function snapshot() {
       n: i + 1, port: links[i].port, laptop: Boolean(links[i].socket), powered: d.powered,
       silence: d.inputs[d.pins.SILENCE] === 0, loss: world.lossOf(d, world.node), screen: screen(d),
     })),
-    post: world.post.state().stations.length,
+    post: world.post ? world.post.state().stations.length : null,
   };
 }
 
@@ -229,6 +239,8 @@ readline.createInterface({ input: process.stdin }).on("line", (line) => {
     console.log(`power ${rest[0]}`);
   } else if (cmd === "loss" && act({ station: n, action: "loss", value: rest[0] === "off" ? null : Number(rest[0]) })) {
     console.log(`loss ${rest[0]}`);
+  } else if (cmd === "post" && !world.post) {
+    console.log("stanowisko poza światem: aplikacja stanowiska na porcie węzła");
   } else if (cmd === "post") {
     const s = world.post.state();
     console.log(JSON.stringify({ stations: s.stations, requests: s.requests }));

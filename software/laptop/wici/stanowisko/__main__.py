@@ -157,7 +157,7 @@ def main(argv=None):
     prep.add_argument("--iteracje", type=int, default=database.ITERATIONS, help=argparse.SUPPRESS)
     run = commands.add_parser("start", help="praca stanowiska")
     run.add_argument("--nosnik", required=True, help="katalog na nośniku stanowiska")
-    run.add_argument("--port", required=True, help="port szeregowy stacji stanowiska (węzła)")
+    run.add_argument("--port", required=True, help="port szeregowy stacji stanowiska (węzła); tcp:<host>:<port> dla świata symulatora")
     run.add_argument("--bitrate", type=int, default=BITRATE, help="bitrate interfejsu KISS w konfiguracji Reticulum")
     run.add_argument("--panel", type=int, default=8090, help="port panelu dyżurnego na 127.0.0.1")
     run.add_argument("--bez-przegladarki", action="store_true", help="nie otwieraj panelu w przeglądarce")

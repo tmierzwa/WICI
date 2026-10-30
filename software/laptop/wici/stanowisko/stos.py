@@ -15,8 +15,12 @@ Waiting messages have the limits of the quarantine (4 per sender, 256 in total) 
 which is safe: without RECEIVED the station sends them again.
 """
 
+import os
+import select
+import socket
 import sys
 import threading
+import time
 from pathlib import Path
 
 # Reticulum i LXMF importuje dopiero Stos: konfigurację i resztę aplikacji da się sprawdzić bez stosu.
@@ -53,6 +57,48 @@ def config(port, bitrate=BITRATE):
 """
 
 
+class TcpPort:
+    """`tcp:<host>:<port>` for the simulator (software/simulator/swiat.mjs --stanowisko): the node data port on
+    TCP behind a pseudo-terminal, because KISSInterface opens only a serial port. Only POSIX (pty); a lost
+    connection is retried every 2 s while the pseudo-terminal stays open, like a cable put back."""
+
+    def __init__(self, address):
+        host, _, port = address.rpartition(":")
+        self.address = (host, int(port))
+        import tty
+        self.master, slave = os.openpty()
+        tty.setraw(slave)
+        self.path = os.ttyname(slave)
+        self.slave = slave   # otwarty do końca: bez niego zamknięcie przez KISSInterface daje EIO na master
+        self.running = True
+        threading.Thread(target=self._run, daemon=True, name="tcp-pty").start()
+
+    def _run(self):
+        while self.running:
+            try:
+                link = socket.create_connection(self.address, timeout=5)
+            except OSError:
+                time.sleep(2)
+                continue
+            link.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            with link:
+                while self.running:
+                    ready, _, _ = select.select([self.master, link], [], [], 0.5)
+                    try:
+                        if self.master in ready:
+                            link.sendall(os.read(self.master, 4096))
+                        if link in ready:
+                            data = link.recv(4096)
+                            if not data:
+                                break
+                            os.write(self.master, data)
+                    except OSError:
+                        break
+
+    def close(self):
+        self.running = False
+
+
 class Stos:
     """Reticulum and LXMF of the receiving station. One per process (Reticulum is a process singleton).
 
@@ -70,6 +116,7 @@ class Stos:
         self.pending, self.lock = {}, threading.Lock()   # nadawca -> spakowane wiadomości LXMF do sprawdzenia
         self.dropped = {"bad_signature": 0, "pending_full": 0}
         self.rx_seen, self.rx_at = None, None   # liczba bajtów z interfejsu i chwila, w której ostatnio wzrosła
+        self.tcp = None
 
     @property
     def address(self):
@@ -81,7 +128,11 @@ class Stos:
         import LXMF
         rns_dir = self.state / "rns"
         rns_dir.mkdir(parents=True, exist_ok=True)
-        (rns_dir / "config").write_text(config(self.port, self.bitrate), encoding="utf-8")
+        port = self.port
+        if str(port).startswith("tcp:"):
+            self.tcp = TcpPort(str(port)[4:])
+            port = self.tcp.path
+        (rns_dir / "config").write_text(config(port, self.bitrate), encoding="utf-8")
         # Funkcja jako logdest: RNS/Reticulum.py, Reticulum.__init__ w e40191b ustawia wtedy RNS.logdest =
         # RNS.LOG_CALLBACK i RNS.logcall = ta funkcja (RNS/__init__.py, log).
         RNS.Reticulum(str(rns_dir), logdest=self.log)
@@ -185,3 +236,5 @@ class Stos:
         import RNS
         for interface in list(RNS.Transport.interfaces):
             interface.detach()
+        if self.tcp is not None:
+            self.tcp.close()
