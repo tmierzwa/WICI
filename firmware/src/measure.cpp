@@ -7,6 +7,7 @@
 
 #include "cmdargs.h"
 #include "jsonprint.h"
+#include "platform.h"
 #include "testframe.h"
 
 namespace measure {
@@ -22,6 +23,10 @@ static_assert(p1frame::MAX_FRAGMENTS * radiolink::p1FrameAirMs(p1frame::MAX_LEN 
 static_assert(radiolink::MAX_FRAME >= testframe::MAX_LENGTH && testframe::MAX_LENGTH >= p1frame::MAX_FRAME, "bufory ramek");
 
 constexpr const char* NO_P1_LINK = "no P1 link on this radio";
+constexpr const char* NO_LINK = "no stack link on this radio";
+// Datagram LoRa mieści się w buforze nadawania wspólnym z P1; dług LoRa w granicy MAX_DEBT_MS.
+static_assert(loraframe::MAX_DATAGRAM <= p1frame::MAX_DATAGRAM, "bufor datagramu");
+static_assert(loraframe::reservedTxMs(loraframe::MAX_DATAGRAM) <= SERIES_MAX_MS, "rezerwacja LoRa mieści się w MAX_DEBT_MS");
 constexpr const char* EMC_ON_ERROR = "EMC mode on: EMC 0 first";
 static_assert(FOFF_MAX_HZ == 50000, "tekst błędu FOFF");
 // Okres EMC: ramka i jej dług ciszy (cykl pracy ≤ 1/13).
@@ -282,10 +287,11 @@ void Bench::finishPkt() {
 }
 
 bool Bench::enterRx(RxMode mode, uint8_t length) {
-    // Ramki wzorcowe: stała długość; ramki P1: zmienna długość z bajtem LEN do 102 (F79).
-    if (mode == RxMode::P1 && !radio_.p1Link()) return false;
+    // Ramki wzorcowe: stała długość; ramki łącza: zmienna długość (P1: bajt LEN do 102, F79; LoRa: jawny nagłówek).
+    if (mode == RxMode::LINK && radio_.framing() == radiolink::Framing::NONE) return false;
     rxLen_ = length;
-    rxMode_ = radio_.startRx(mode == RxMode::P1, length) ? mode : RxMode::NONE;
+    rxMode_ = radio_.startRx(mode == RxMode::LINK, length) ? mode : RxMode::NONE;
+    if (rxMode_ == RxMode::LINK) rxSinceMs_ = millis();
     return rxMode_ == mode;
 }
 
@@ -300,12 +306,14 @@ const char* Bench::rxStart(uint8_t length) {
     return enterRx(RxMode::TEST, length) ? nullptr : "radio did not enter RX";
 }
 
-const char* Bench::p1rxStart() {
-    if (!radio_.p1Link()) return NO_P1_LINK;
+const char* Bench::linkRxStart() {
+    if (radio_.framing() == radiolink::Framing::NONE) return NO_LINK;
     if (emcActive_) return EMC_ON_ERROR;
     if (busy()) return "busy: STOP first";
-    return enterRx(RxMode::P1, 0) ? nullptr : "radio did not enter RX";
+    return enterRx(RxMode::LINK, 0) ? nullptr : "radio did not enter RX";
 }
+
+const char* Bench::p1rxStart() { return radio_.p1Link() ? linkRxStart() : NO_P1_LINK; }
 
 void Bench::receive() {
     radiolink::Frame frame;
@@ -392,9 +400,12 @@ void Bench::printStatus() {
 void Bench::stop() {
     if (cwActive_) stopCw();
     if (pktActive_) finishPkt();
-    if (txState_ != TxState::IDLE) { ++link_.txDrop; finishP1Tx("stopped"); }
+    if (txState_ != TxState::IDLE) { ++link_.txDrop; finishLinkTx("stopped"); }
     rxMode_ = RxMode::NONE;
     radio_.idle();
+    // Rekonfiguracja i IDLE: znaczniki aktywności i oczekująca część składania przestają obowiązywać.
+    radio_.clearActivity();
+    loraAssembler_.reset();
 }
 
 void Bench::poll() {
@@ -422,16 +433,17 @@ void Bench::poll() {
         }
         return;
     }
-    if (txState_ != TxState::IDLE) pollP1Tx();
+    if (txState_ != TxState::IDLE) pollLinkTx();
     if (emcActive_) pollEmc(now);
-    if (!prep && !emcActive_ && p1Ready && radio_.p1Link() && rxMode_ == RxMode::NONE && !busy() && now - autoRxMs_ >= 1000) {
+    if (!prep && !emcActive_ && p1Ready && radio_.framing() != radiolink::Framing::NONE && rxMode_ == RxMode::NONE && !busy() &&
+        now - autoRxMs_ >= 1000) {
         autoRxMs_ = now;  // najwyżej raz na sekundę, gdy układ nie wchodzi w odbiór
-        if (enterRx(RxMode::P1, 0)) log("P1 RX resumed");
+        if (enterRx(RxMode::LINK, 0)) log("link RX resumed");
     }
     if (rxMode_ != RxMode::NONE && now - rxPollMs_ >= 5) {
         rxPollMs_ = now;
         if (rxMode_ == RxMode::TEST) receive();
-        else receiveP1();
+        else receiveLink();
     }
 }
 
@@ -572,9 +584,31 @@ void Bench::printEmc() {
                   static_cast<unsigned long>(debtRemainingMs()));
 }
 
-// --- łącze P1 -------------------------------------------------------------------
+// --- łącze stosu ------------------------------------------------------------------
+
+void Bench::receiveLink() {
+    if (radio_.framing() == radiolink::Framing::RNODE) receiveLora();
+    else receiveP1();
+}
+
+void Bench::datagramLine(const char* head, int headLength, const uint8_t* data, size_t length) {
+    // Datagram do 600 B to wiersz do około 1 300 B, a bufor CDC ma 256 B: dane wychodzą tylko w wierszu,
+    // który zmieści się cały; inaczej wiersz bez danych z "data_omitted".
+    static const char DATA[] = ",\"data\":\"", END[] = "\"}\n";
+    if (headLength > 0 && static_cast<size_t>(headLength) < DIAG_LINE &&
+        diagFits(static_cast<size_t>(headLength) + strlen(DATA) + 2 * length + strlen(END))) {
+        Serial.write(reinterpret_cast<const uint8_t*>(head), static_cast<size_t>(headLength));
+        Serial.print(DATA);
+        for (size_t i = 0; i < length; ++i) Serial.printf("%02X", data[i]);
+        Serial.print(END);
+    } else {
+        diagLine("%s,\"data_omitted\":true}\n", head);
+    }
+    if (datagramHandler_) datagramHandler_(data, length, datagramContext_);
+}
 
 void Bench::receiveP1() {
+#ifndef WICI_NO_P1_LINK
     assembler_.expire(millis());
     radiolink::Frame received;
     for (;;) {
@@ -599,29 +633,41 @@ void Bench::receiveP1() {
         const p1frame::Outcome outcome = assembler_.push(fragment, millis());
         if (outcome == p1frame::Outcome::COMPLETE) {
             ++link_.rxDatagrams;
-            // Datagram do 600 B to wiersz do około 1 300 B, a bufor CDC ma 256 B: dane wychodzą tylko w wierszu,
-            // który zmieści się cały; inaczej wiersz bez danych z "data_omitted".
             char id[2 * p1frame::ID_BYTES + 1];
             hexInto(id, assembler_.completedId(), p1frame::ID_BYTES);
-            const size_t length = assembler_.completedLength();
             char head[DIAG_LINE];
             const int n = snprintf(head, sizeof(head), "{\"p1rx\":\"datagram\",\"id\":\"%s\",\"len\":%u,\"fragments\":%u,\"rssi_dbm\":%d",
-                                   id, static_cast<unsigned>(length), fragment.count, rssiDbm);
-            static const char DATA[] = ",\"data\":\"", END[] = "\"}\n";
-            if (n > 0 && static_cast<size_t>(n) < sizeof(head) &&
-                diagFits(static_cast<size_t>(n) + strlen(DATA) + 2 * length + strlen(END))) {
-                Serial.write(reinterpret_cast<const uint8_t*>(head), static_cast<size_t>(n));
-                Serial.print(DATA);
-                for (size_t i = 0; i < length; ++i) Serial.printf("%02X", assembler_.completed()[i]);
-                Serial.print(END);
-            } else {
-                diagLine("%s,\"data_omitted\":true}\n", head);
-            }
-            if (datagramHandler_) datagramHandler_(assembler_.completed(), assembler_.completedLength(), datagramContext_);
+                                   id, static_cast<unsigned>(assembler_.completedLength()), fragment.count, rssiDbm);
+            datagramLine(head, n, assembler_.completed(), assembler_.completedLength());
         } else {
             diagLine("{\"p1rx\":\"%s\",\"index\":%u,\"count\":%u,\"total\":%u,\"rssi_dbm\":%d}\n", p1frame::outcomeName(outcome),
                      fragment.index, fragment.count, fragment.total, rssiDbm);
         }
+    }
+#endif
+}
+
+void Bench::receiveLora() {
+    // Ramki RNode z odbioru (L0: z pierścienia zadania odbioru) do składania; limit 1 s z czasów odbioru ramek.
+    platform::RadioLock lock(RADIO_LOCK_WAIT_MS);
+    if (!lock.held()) return;
+    loraAssembler_.expire(millis());
+    radiolink::Frame received;
+    for (;;) {
+        const radiolink::RxPoll result = radio_.pollRx(received);
+        if (result == radiolink::RxPoll::Overflow || result == radiolink::RxPoll::Bad) {
+            ++link_.rxBad;  // CRC, nagłówek albo ramka odczytana za późno (rx_late); układ zostaje w odbiorze
+            return;
+        }
+        if (result != radiolink::RxPoll::Frame) return;
+        ++link_.rxOk;
+        if (loraAssembler_.push(received.bytes, received.length, received.receivedMs) != loraframe::Outcome::COMPLETE) continue;
+        ++link_.rxDatagrams;
+        char head[DIAG_LINE];
+        const int n = snprintf(head, sizeof(head), "{\"lorarx\":\"datagram\",\"len\":%u,\"frames\":%u,\"rssi_dbm\":%d",
+                               static_cast<unsigned>(loraAssembler_.length()),
+                               static_cast<unsigned>(loraframe::frameCount(loraAssembler_.length())), received.rssiDbm);
+        datagramLine(head, n, loraAssembler_.datagram(), loraAssembler_.length());
     }
 }
 
@@ -637,9 +683,16 @@ uint32_t backoffMs() {
 }  // namespace
 
 const char* Bench::p1send(const uint8_t* data, size_t length, bool stack) {
-    if (!radio_.p1Link()) return NO_P1_LINK;  // nie liczy się jako tx_drop: datagram nie wszedł do łącza
+    // P1TX z portu diagnostycznego i stos na układzie P1; nie liczy się jako tx_drop: datagram nie wszedł do łącza.
+    return radio_.p1Link() ? linkSend(data, length, stack) : NO_P1_LINK;
+}
+
+const char* Bench::linkSend(const uint8_t* data, size_t length, bool stack) {
+    const radiolink::Framing framing = radio_.framing();
+    if (framing == radiolink::Framing::NONE) return NO_LINK;
     if (emcActive_) return EMC_ON_ERROR;
-    if (length < 1 || length > p1frame::MAX_DATAGRAM) return "datagram 1..600 B";
+    if (framing == radiolink::Framing::P1 && (length < 1 || length > p1frame::MAX_DATAGRAM)) return "datagram 1..600 B";
+    if (framing == radiolink::Framing::RNODE && loraframe::frameCount(length) == 0) return "datagram 1..508 B";
     if (!stack && !prep) return "preparation mode off: PREP 1";   // P1TX z portu diagnostycznego: tylko w przygotowaniu
     if (busy()) return "busy: STOP first";
     if (!p1Ready) return "radio not configured: CONFIG";
@@ -648,10 +701,12 @@ const char* Bench::p1send(const uint8_t* data, size_t length, bool stack) {
     memcpy(txData_, data, length);
     txLength_ = length;
     txStack_ = stack;
-    randomBytes(txId_, p1frame::ID_BYTES);  // identyfikator datagramu z generatora stacji
+    // Identyfikator P1 albo nagłówek RNode z generatora stacji, jeden na datagram.
+    if (framing == radiolink::Framing::P1) randomBytes(txId_, p1frame::ID_BYTES);
+    else randomBytes(&txRandom_, 1);
     txDeferrals_ = 0;
     txRequestedMs_ = millis();
-    if (rxMode_ != RxMode::P1 && !enterRx(RxMode::P1, 0)) return "radio did not enter RX";
+    if (rxMode_ != RxMode::LINK && !enterRx(RxMode::LINK, 0)) return "radio did not enter RX";
     if (debtRemainingMs()) txState_ = TxState::WAIT_DEBT;
     else startCca(txRequestedMs_, true);
     return nullptr;
@@ -666,18 +721,36 @@ void Bench::startCca(uint32_t now, bool first) {
 }
 
 bool Bench::channelBusy() {
-    // Kanał zajęty: trwa odbiór po słowie synchronizacji, ramka przyszła w czasie okna CCA albo
-    // RSSI ponad progiem CCA.
+    if (radio_.framing() == radiolink::Framing::RNODE) {
+        // Okno 50 ms ze znaczników próbek odbioru (preambuła, nagłówek, ramka, RSSI ponad progiem), które
+        // zbiera odbiór niezależnie od pętli, i RSSI w chwili decyzji.
+        switch (radio_.recentActivity(CCA_MS)) {
+            case radiolink::Activity::Rx: ++link_.rxBusy; return true;
+            case radiolink::Activity::Rssi: ++link_.rssiBusy; return true;
+            case radiolink::Activity::None: break;
+        }
+        const radiolink::Rssi r = radio_.rssi();
+        if (r.valid && r.dbm > radio_.ccaThresholdDbm()) { ++link_.rssiBusy; return true; }
+        return false;
+    }
+    // P1: trwa odbiór po słowie synchronizacji, ramka przyszła w czasie okna CCA albo RSSI ponad progiem CCA.
     if (radio_.receivingFrame()) return true;
     receiveP1();  // ramka, która zaczęła się i skończyła między próbkami, czeka w kolejce
     if (link_.rxOk + link_.rxBad != ccaFrames_) return true;
     const radiolink::Rssi r = radio_.rssi();
-    return r.valid && r.dbm > radiolink::P1_CCA_THRESHOLD_DBM;
+    return r.valid && r.dbm > radio_.ccaThresholdDbm();
 }
 
-void Bench::pollP1Tx() {
+void Bench::defer(uint32_t now) {
+    if (++txDeferrals_ > MAX_DEFERRALS) { ++link_.txDrop; finishLinkTx("too many deferrals"); return; }
+    ++link_.deferrals;
+    backoffUntilMs_ = now + backoffMs();
+    txState_ = TxState::BACKOFF;
+}
+
+void Bench::pollLinkTx() {
     const uint32_t now = millis();
-    if (silence && !(txStack_ && silenceException)) { ++link_.txDrop; finishP1Tx("silence"); return; }
+    if (silence && !(txStack_ && silenceException)) { ++link_.txDrop; finishLinkTx("silence"); return; }
     switch (txState_) {
         case TxState::WAIT_DEBT:
             if (debtRemainingMs() == 0) startCca(now, true);
@@ -686,18 +759,13 @@ void Bench::pollP1Tx() {
             if (static_cast<int32_t>(now - backoffUntilMs_) >= 0) startCca(now, false);
             return;
         case TxState::CCA: {
+            if (radio_.framing() == radiolink::Framing::RNODE) { sendLora(now); return; }
             if (now == ccaCheckMs_) return;
             // Okno 50 ms musi być obserwowane: po długiej przerwie między próbkami (pętla zajęta
             // kryptografią stosu) zaczyna się od nowa.
             const bool gap = now - ccaCheckMs_ > CCA_GAP_MS;
             ccaCheckMs_ = now;
-            if (channelBusy()) {
-                if (++txDeferrals_ > MAX_DEFERRALS) { ++link_.txDrop; finishP1Tx("too many deferrals"); return; }
-                ++link_.deferrals;
-                backoffUntilMs_ = now + backoffMs();
-                txState_ = TxState::BACKOFF;
-                return;
-            }
+            if (channelBusy()) { defer(now); return; }
             if (gap) { startCca(now, false); return; }
             if (now - ccaStartMs_ < CCA_MS) return;
             txState_ = TxState::SEND;  // nadanie w tym samym obiegu, bez przerwy po ostatniej próbce
@@ -707,12 +775,12 @@ void Bench::pollP1Tx() {
             if (now - ccaFirstMs_ > LONG_DEFERRAL_MS) ++link_.longDeferrals;
             const uint8_t count = p1frame::fragmentCount(txLength_);
             const uint32_t txMs = count * radio_.frameAirMs(p1frame::MAX_LEN + 1);  // rezerwacja: najdłuższe ramki
-            if (!journal_->writeDebt(txMs * radiolink::P1_DEBT_FACTOR, uptimeS())) { ++link_.txDrop; finishP1Tx("debt journal write failed"); return; }
+            if (!journal_->writeDebt(txMs * radiolink::P1_DEBT_FACTOR, uptimeS())) { ++link_.txDrop; finishLinkTx("debt journal write failed"); return; }
             debtPending_ = true;
             const bool ok = sendFragments();
             debtUntilMs_ = millis() + txMs * radiolink::P1_DEBT_FACTOR;  // dług od końca nadawania
             debtActive_ = true;
-            finishP1Tx(ok ? "sent" : "tx error");
+            finishLinkTx(ok ? "sent" : "tx error");
             return;
         }
         case TxState::IDLE:
@@ -732,44 +800,120 @@ bool Bench::sendFragments() {
         ++link_.txFragments;
     }
     ++link_.txDatagrams;
-    enterRx(RxMode::P1, 0);  // odbiór wyłączony tylko na czas własnego nadawania
+    enterRx(RxMode::LINK, 0);  // odbiór wyłączony tylko na czas własnego nadawania
     return ok;
 }
 
-void Bench::dropP1Tx() {
-    if (txState_ != TxState::WAIT_DEBT && txState_ != TxState::CCA && txState_ != TxState::BACKOFF) return;
-    ++link_.txDrop;
-    finishP1Tx("silence");
+void Bench::sendLora(uint32_t now) {
+    // Okno nie krótsze niż odbiór: znaczniki sprzed startu odbioru nie mówią nic o kanale.
+    if (rxMode_ != RxMode::LINK) {
+        if (!enterRx(RxMode::LINK, 0)) { ++link_.txDrop; finishLinkTx("radio did not enter RX"); }
+        return;
+    }
+    if (now - rxSinceMs_ < CCA_MS) return;
+    // Od decyzji do powrotu do odbioru pętla trzyma blokadę operacji radia (do około 0,9 s), więc zadanie
+    // odbioru pomija wtedy swoje obiegi.
+    platform::RadioLock lock(RADIO_LOCK_WAIT_MS);
+    if (!lock.held() || channelBusy()) { defer(now); return; }
+    // Ramki z nagłówkiem datagramu; połówka liczy się jako użyta dopiero, gdy ramka 1 wyszła w eter.
+    loraframe::Splitter next = splitter_;
+    loraframe::Frame frames[2];
+    const size_t count = next.split(txData_, txLength_, txRandom_, frames);
+    const radiolink::TxPrep prep = radio_.prepareTx(frames[0].bytes, frames[0].length);
+    if (prep == radiolink::TxPrep::RxPending) {  // nieodczytana albo odbierana ramka: układ zostaje w odbiorze
+        ++link_.rxBusy;
+        defer(now);
+        return;
+    }
+    rxMode_ = RxMode::NONE;  // układ wyszedł z odbioru
+    if (prep != radiolink::TxPrep::Ready) { ++link_.txDrop; finishLinkTx("tx error"); return; }
+    const radiolink::Cad cad = radio_.cad();
+    if (cad == radiolink::Cad::Busy) {
+        ++link_.cadBusy;
+        enterRx(RxMode::LINK, 0);
+        defer(now);
+        return;
+    }
+    if (cad != radiolink::Cad::Free) { ++link_.txDrop; finishLinkTx("tx error"); return; }
+    // Dług po wolnym CAD, przed pierwszą ramką; błąd zapisu: bez nadania, odbiór wraca (finishLinkTx).
+    const uint32_t txMs = loraframe::reservedTxMs(txLength_);
+    if (!journal_->writeDebt(txMs * radiolink::P1_DEBT_FACTOR, uptimeS())) { ++link_.txDrop; finishLinkTx("debt journal write failed"); return; }
+    debtPending_ = true;
+    if (now - ccaFirstMs_ > LONG_DEFERRAL_MS) ++link_.longDeferrals;
+    bool ok = radio_.sendPrepared(nullptr);
+    ++link_.txFragments;
+    splitter_ = next;
+    // Ramka 2 zaraz po ramce 1, bez sprawdzania kanału (jak RNode); ramka 1 bez TxDone kończy datagram.
+    if (ok && count == 2) {
+        ok = radio_.transmit(frames[1].bytes, frames[1].length, true, nullptr);
+        ++link_.txFragments;
+    }
+    ++link_.txDatagrams;
+    debtUntilMs_ = millis() + txMs * radiolink::P1_DEBT_FACTOR;  // dług od końca nadawania
+    debtActive_ = true;
+    enterRx(RxMode::LINK, 0);
+    finishLinkTx(ok ? "sent" : "tx error");
 }
 
-void Bench::finishP1Tx(const char* result) {
+void Bench::dropLinkTx() {
+    if (txState_ != TxState::WAIT_DEBT && txState_ != TxState::CCA && txState_ != TxState::BACKOFF) return;
+    ++link_.txDrop;
+    finishLinkTx("silence");
+}
+
+void Bench::finishLinkTx(const char* result) {
     txState_ = TxState::IDLE;
-    char id[2 * p1frame::ID_BYTES + 1];
-    hexInto(id, txId_, p1frame::ID_BYTES);
-    diagLine("{\"p1tx\":\"%s\",\"id\":\"%s\",\"len\":%u,\"fragments\":%u,\"deferrals\":%u,\"wait_ms\":%lu,\"tx_wait_ms\":%lu}\n", result, id,
-             static_cast<unsigned>(txLength_), p1frame::fragmentCount(txLength_), txDeferrals_,
-             static_cast<unsigned long>(millis() - txRequestedMs_), static_cast<unsigned long>(debtRemainingMs()));
-    if (rxMode_ != RxMode::P1) enterRx(RxMode::P1, 0);
+    if (radio_.framing() == radiolink::Framing::RNODE) {
+        diagLine("{\"loratx\":\"%s\",\"len\":%u,\"frames\":%u,\"deferrals\":%u,\"wait_ms\":%lu,\"tx_wait_ms\":%lu}\n", result,
+                 static_cast<unsigned>(txLength_), static_cast<unsigned>(loraframe::frameCount(txLength_)), txDeferrals_,
+                 static_cast<unsigned long>(millis() - txRequestedMs_), static_cast<unsigned long>(debtRemainingMs()));
+    } else {
+        char id[2 * p1frame::ID_BYTES + 1];
+        hexInto(id, txId_, p1frame::ID_BYTES);
+        diagLine("{\"p1tx\":\"%s\",\"id\":\"%s\",\"len\":%u,\"fragments\":%u,\"deferrals\":%u,\"wait_ms\":%lu,\"tx_wait_ms\":%lu}\n", result, id,
+                 static_cast<unsigned>(txLength_), p1frame::fragmentCount(txLength_), txDeferrals_,
+                 static_cast<unsigned long>(millis() - txRequestedMs_), static_cast<unsigned long>(debtRemainingMs()));
+    }
+    if (rxMode_ != RxMode::LINK) enterRx(RxMode::LINK, 0);
     if (txDoneHandler_) txDoneHandler_(!strcmp(result, "sent"), txDoneContext_);
 }
 
+const char* Bench::txStateName() const {
+    return txState_ == TxState::IDLE ? "idle" : txState_ == TxState::WAIT_DEBT ? "wait_debt" : txState_ == TxState::CCA ? "cca"
+           : txState_ == TxState::BACKOFF ? "backoff" : "send";
+}
+
 void Bench::printLink() {
-    const p1frame::Stats& s = assembler_.stats();
     // Dwie części poniżej 256 znaków: Print::printf rdzenia Adafruit nRF52 formatuje do bufora 256 B.
-    Serial.printf("{\"p1\":{\"rx\":%s,\"tx\":\"%s\",\"rx_ok\":%lu,\"rx_bad\":%lu,\"rx_datagrams\":%lu,\"tx_datagrams\":%lu,"
+    Serial.printf("{\"%s\":{\"rx\":%s,\"tx\":\"%s\",\"rx_ok\":%lu,\"rx_bad\":%lu,\"rx_datagrams\":%lu,\"tx_datagrams\":%lu,"
                   "\"tx_fragments\":%lu,\"tx_drop\":%lu,\"deferrals\":%lu,\"long_deferrals\":%lu,",
-                  boolName(rxMode_ == RxMode::P1), txState_ == TxState::IDLE ? "idle" : txState_ == TxState::WAIT_DEBT ? "wait_debt"
-                  : txState_ == TxState::CCA ? "cca" : txState_ == TxState::BACKOFF ? "backoff" : "send",
+                  radio_.framing() == radiolink::Framing::RNODE ? "lora" : "p1", boolName(rxMode_ == RxMode::LINK), txStateName(),
                   static_cast<unsigned long>(link_.rxOk), static_cast<unsigned long>(link_.rxBad),
                   static_cast<unsigned long>(link_.rxDatagrams), static_cast<unsigned long>(link_.txDatagrams),
                   static_cast<unsigned long>(link_.txFragments), static_cast<unsigned long>(link_.txDrop),
                   static_cast<unsigned long>(link_.deferrals), static_cast<unsigned long>(link_.longDeferrals));
+    if (radio_.framing() == radiolink::Framing::RNODE) {
+        const loraframe::Stats& a = loraAssembler_.stats();
+        Serial.printf("\"cad_busy\":%lu,\"rssi_busy\":%lu,\"rx_busy\":%lu,\"split_lost\":%lu,\"header_only\":%lu,\"assembly_timeout\":%lu,"
+                      "\"rx_late\":%lu,\"rx_ring_overflow\":%lu,\"cca_threshold_dbm\":%d,\"tx_wait_ms\":%lu}}\n",
+                      static_cast<unsigned long>(link_.cadBusy), static_cast<unsigned long>(link_.rssiBusy),
+                      static_cast<unsigned long>(link_.rxBusy), static_cast<unsigned long>(a.split_lost),
+                      static_cast<unsigned long>(a.header_only), static_cast<unsigned long>(a.assembly_timeout),
+                      static_cast<unsigned long>(radio_.rxLate()), static_cast<unsigned long>(radio_.rxRingOverflow()),
+                      radio_.ccaThresholdDbm(), static_cast<unsigned long>(debtRemainingMs()));
+        return;
+    }
+#ifndef WICI_NO_P1_LINK
+    const p1frame::Stats& s = assembler_.stats();
     Serial.printf("\"attempts\":%u,\"stored\":%lu,\"duplicates\":%lu,\"conflicts\":%lu,\"late\":%lu,\"evicted\":%lu,\"expired\":%lu,"
                   "\"cca_threshold_dbm\":%d,\"tx_wait_ms\":%lu}}\n",
                   static_cast<unsigned>(assembler_.active()), static_cast<unsigned long>(s.stored),
                   static_cast<unsigned long>(s.duplicates), static_cast<unsigned long>(s.conflicts),
                   static_cast<unsigned long>(s.late), static_cast<unsigned long>(s.evicted),
-                  static_cast<unsigned long>(s.expired), radiolink::P1_CCA_THRESHOLD_DBM, static_cast<unsigned long>(debtRemainingMs()));
+                  static_cast<unsigned long>(s.expired), radio_.ccaThresholdDbm(), static_cast<unsigned long>(debtRemainingMs()));
+#else
+    Serial.printf("\"cca_threshold_dbm\":%d,\"tx_wait_ms\":%lu}}\n", radio_.ccaThresholdDbm(), static_cast<unsigned long>(debtRemainingMs()));
+#endif
 }
 
 }  // namespace measure

@@ -137,6 +137,7 @@ struct EmulatedP1 : rnsnode::Radio {
     uint32_t datagramsOut = 0, datagramsIn = 0, framesOut = 0, framesIn = 0;
     bool trace = false;
 
+    const p1iface::LinkTiming& timing() override { return p1iface::p1Timing(); }   // łącze LoRa: L7
     bool ready() override {
         return !busy && static_cast<int32_t>(nowMs() - debtUntilMs) >= 0;
     }

@@ -56,7 +56,7 @@ static_assert(lora::TX_POWER_DBM == 13, "PA_CONFIG i TX_PARAMS_POWER z paOptTabl
 constexpr uint8_t OCP_60_MA = 0x18;  // krok 2,5 mA; SetPaConfig ustawia 140 mA (0x38), więc zapis po nim
 
 static_assert(lora::SPREADING_FACTOR == 7 && lora::BANDWIDTH_HZ == 125000 && lora::CODING_RATE == 5, "kody SetModulationParams");
-static_assert(lora::SERIES_MAX_MS <= radiolink::P1_SERIES_MAX_MS, "dług serii LoRa w granicy measure::MAX_DEBT_MS");
+static_assert(lora::SERIES_MAX_MS <= radiolink::P1_SERIES_MAX_MS, "dług serii LoRa w granicy measure::MAX_DEBT_MS (górnej granicy profili)");
 
 constexpr uint32_t BASE_RF_WORD =
     static_cast<uint32_t>(((static_cast<uint64_t>(lora::CARRIER_HZ) << 25) + F_XTAL_HZ / 2) / F_XTAL_HZ);
@@ -424,6 +424,7 @@ RxService LinkDriver::serviceRx(radiolink::Frame& out, bool sampleRssi) {
             seen |= after & IRQ_RX_START;  // koniec następnej ramki zostaje dla następnej próbki
             if (!late) {
                 out.length = length;
+                out.receivedMs = now;  // czas próbki, nie obsługi w pętli (limit składania LoRa)
                 out.rssiDbm = static_cast<int16_t>(-packet[0] / 2);  // RssiPkt: -RssiPkt/2 dBm
                 out.snrQdb = static_cast<int8_t>(packet[1]);       // SnrPkt: ze znakiem, /4 dB
                 out.quality = 0;
@@ -484,6 +485,13 @@ radiolink::Rssi LinkDriver::rssi() {
     radiolink::Rssi out;
     readRssi(out);
     return out;
+}
+
+radiolink::Activity LinkDriver::recentActivity(uint32_t windowMs) {
+    const uint32_t now = millis();
+    if (!activity_.quietFor(now, windowMs, Activity::RX_KINDS)) return radiolink::Activity::Rx;
+    if (!activity_.quietFor(now, windowMs, 1u << Activity::RSSI)) return radiolink::Activity::Rssi;
+    return radiolink::Activity::None;
 }
 
 int8_t LinkDriver::ccaThresholdDbm() const { return lora::CCA_RSSI_THRESHOLD_DBM; }

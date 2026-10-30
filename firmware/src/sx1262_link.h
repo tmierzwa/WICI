@@ -28,7 +28,7 @@
 // - DIO1 tylko dla RxDone, CrcErr i HeaderErr (zadanie odbioru sprawdza poziom linii); TxDone
 //   i CadDone sterownik czyta sam przez SPI;
 // - nośna CW poleceniem SetTxContinuousWave; korekta częstotliwości słowem RF (krok 0,954 Hz).
-// Łącza P1 nie ma (p1Link() = false). Wywołujący trzyma blokadę operacji radia (platform::RadioLock),
+// Łącze stosu w ramkach RNode (framing() = RNODE), bez łącza P1. Wywołujący trzyma blokadę operacji radia (platform::RadioLock),
 // gdy pracuje też zadanie odbioru; sterownik sam jej nie bierze.
 // Odwołania do karty bez numeru wersji: DS.SX1261-2.W.APP; rozdziały i tabele CAD, trybu powrotu
 // i bufora sprawdzone w rev. 1.2 (czerwiec 2019).
@@ -76,9 +76,11 @@ struct Activity {
         ms[kind].store(now, std::memory_order_relaxed);
         seen.fetch_or(static_cast<uint8_t>(1u << kind), std::memory_order_release);
     }
-    // Ostatnia aktywność dawniej niż windowMs temu (albo żadnej od clearActivity()).
-    bool quietFor(uint32_t now, uint32_t windowMs) const {
-        const uint8_t mask = seen.load(std::memory_order_acquire);
+    static constexpr uint8_t ALL = (1u << KINDS) - 1;
+    static constexpr uint8_t RX_KINDS = (1u << PREAMBLE) | (1u << HEADER) | (1u << FRAME);
+    // Ostatnia aktywność rodzajów z kinds dawniej niż windowMs temu (albo żadnej od clearActivity()).
+    bool quietFor(uint32_t now, uint32_t windowMs, uint8_t kinds = ALL) const {
+        const uint8_t mask = seen.load(std::memory_order_acquire) & kinds;
         for (uint8_t k = 0; k < KINDS; ++k)
             if ((mask & (1u << k)) && now - ms[k].load(std::memory_order_relaxed) < windowMs) return false;
         return true;
@@ -108,8 +110,9 @@ public:
     // Dla pętli (pollRx) i zadania odbioru; zawsze pod blokadą operacji radia, gdy zadanie pracuje.
     RxService serviceRx(radiolink::Frame& out, bool sampleRssi);
     const Activity& activity() const { return activity_; }
-    void clearActivity() { activity_.clear(); }  // po rekonfiguracji i IDLE (pętla, pod blokadą)
-    uint32_t rxLate() const { return rxLate_.load(std::memory_order_relaxed); }
+    void clearActivity() override { activity_.clear(); }  // po rekonfiguracji i IDLE (pętla, pod blokadą)
+    uint32_t rxLate() const override { return rxLate_.load(std::memory_order_relaxed); }
+    radiolink::Activity recentActivity(uint32_t windowMs) override;
 
     const char* stateName() override { return modeName(radio_.status().mode()); }
     void idle() override;
@@ -130,7 +133,7 @@ public:
     double onAirMs(size_t length) const override { return lora::frameAirUs(length) / 1000.0; }
     size_t maxTestLength() const override { return lora::MAX_PAYLOAD; }
     uint32_t seriesMaxMs() const override { return lora::SERIES_MAX_MS; }
-    bool p1Link() const override { return false; }
+    radiolink::Framing framing() const override { return radiolink::Framing::RNODE; }
     bool hasSnr() const override { return true; }
     int8_t ccaThresholdDbm() const override;
     radiolink::TxPrep prepareTx(const uint8_t* frame, size_t length) override;

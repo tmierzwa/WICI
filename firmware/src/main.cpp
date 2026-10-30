@@ -212,15 +212,18 @@ bool radioWorks() { return radiocon::ok() && radiocon::p1Ok(); }
 // nie wyjdzie w teren jako sprawna (firmware/README.md, tryb pracy do badań EMC).
 bool radioServes() { return radioWorks() && !bench.emcActive(); }
 
-// Łącze P1 stanowiska pod interfejsem P1 stosu: datagram z kolejki interfejsu idzie przez
-// Bench (dług ciszy, CCA, odroczenia, fragmentacja); w ciszy radiowej kolejka czeka.
-// Radio służy stacji i łącze P1 jest w odbiorze.
+// Łącze stanowiska pod interfejsem radiowym stosu (P1 albo LoRa w ramkach RNode, Driver::framing):
+// datagram z kolejki interfejsu idzie przez Bench (dług ciszy, CCA, odroczenia, ramki); w ciszy
+// radiowej kolejka czeka. Radio służy stacji i łącze jest w odbiorze.
 bool p1Listening() { return radioServes() && bench.receiving(); }
 
 struct BenchRadio : rnsnode::Radio {
     bool ready() override { return p1Listening() && !bench.busy() && (!bench.silence || bench.silenceException); }
-    bool transmit(const uint8_t* data, size_t length) override { return bench.p1send(data, length, true) == nullptr; }
+    bool transmit(const uint8_t* data, size_t length) override { return bench.linkSend(data, length, true) == nullptr; }
     uint32_t debtMs() override { return bench.debtRemainingMs(); }
+    const p1iface::LinkTiming& timing() override {
+        return bench.linkFraming() == radiolink::Framing::RNODE ? p1iface::loraTiming() : p1iface::p1Timing();
+    }
 };
 BenchRadio benchRadio;
 bool rnsOk = false;               // stos uruchomiony (FRAM i dziennik działają)
@@ -330,7 +333,7 @@ void applySilence() {
     static uint8_t lastException[store::HASH] = {};
     const uint8_t* exception = stationStore.meta().exception;
     if (mode != store::Silence::OFF && (mode != lastMode || (mode == store::Silence::EXCEPTION && memcmp(exception, lastException, store::HASH)))) {
-        bench.dropP1Tx();
+        bench.dropLinkTx();
         rnsnode::dropQueue();
     }
     lastMode = mode;
@@ -841,7 +844,7 @@ void printJournal() {
                   "\"max_debt_ms\":%lu,\"journal_resets\":%lu,",
                   static_cast<unsigned long>(bench.debtRemainingMs()), static_cast<unsigned long>(k.seq),
                   static_cast<unsigned long>(counterS()), static_cast<unsigned long>(skipS), static_cast<unsigned long>(stationJournal.starts()),
-                  static_cast<unsigned long>(stationJournal.eventSeq()), static_cast<unsigned long>(measure::MAX_DEBT_MS),
+                  static_cast<unsigned long>(stationJournal.eventSeq()), static_cast<unsigned long>(bench.maxDebtMs()),
                   static_cast<unsigned long>(journalResets));
     char prepLog[200];
     printPrepLog(prepLog, sizeof(prepLog));
@@ -861,7 +864,7 @@ void beginJournal() {
     if (stationJournal.debtFresh()) {
         // radio.md, "Dostęp do kanału": bez poprawnego rekordu odczekać największy możliwy dług,
         // założyć nowy dziennik i zliczyć zdarzenie w diagnostyce.
-        debtMs = measure::MAX_DEBT_MS;
+        debtMs = bench.maxDebtMs();  // 12 x najdłuższa seria łącza układu
         journalResets = 1;
         stationJournal.writeDebt(debtMs, counterS());
         bench.log("debt journal missing: new journal, max debt");
@@ -1412,7 +1415,7 @@ void stationSetup() {
     if (storeOk && !nodeRole()) app.stationEvent(store::RESTART, stationJournal.starts());
     bench.onDatagram(onDatagram, nullptr);
     bench.onTxDone(onTxDone, nullptr);
-    if (radioWorks()) bench.p1rxStart();  // łącze P1 w odbiorze od startu (radio niezależne od ekranu)
+    if (radioWorks()) bench.linkRxStart();  // łącze stosu w odbiorze od startu (radio niezależne od ekranu)
     const bool extcominOk = display.begin();  // CLEAR czyści pamięć ekranu
 #if defined(WICI_BOARD_N1)
     // Bez EXTCOMIN z licznika panel dostałby składową stałą (EXTMODE na stałe wysoki): zostaje wyłączony.
@@ -1450,7 +1453,7 @@ void stationLoop() {
         radioCheckMs = now;
         if (radiocon::check()) {
             bench.log("radio reconfigured after lost P1 settings");
-            bench.p1rxStart();
+            bench.linkRxStart();  // odbiór stosu wraca od razu po rekonfiguracji (P1 i LoRa)
         }
     }
     const bool radio = radioWorks();

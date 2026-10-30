@@ -3,8 +3,8 @@
 // które różnią się między CC1120 (wykonanie A, cc1120_link.cpp), S2-LP (wykonanie B,
 // s2lp_link.cpp) i SX1262 w profilu LoRa (L0, sx1262_link.cpp). Bench nie zna rejestrów układu
 // ani profilu: czas ramki w eterze, najdłuższą ramkę wzorcową i limit serii podaje sterownik.
-// Logika P1 (dług ciszy, CCA, odroczenia, fragmentacja, składanie) jest wspólna; SX1262 nie ma
-// łącza P1 (interfejs LoRa stosu to osobny etap), więc ma tylko polecenia pomiarowe.
+// Łącze stosu (dług ciszy, CCA, odroczenia, cisza, dziennik) jest wspólne, a ramkowanie zależy od układu
+// (Driver::framing): P1 na CC1120 i S2-LP (fragmentacja i składanie p1frame), RNode na SX1262 (loraframe).
 //
 // Ramki: w trybie stałej długości (ramki wzorcowe TXPKT/RX) ramka to `length` bajtów treści;
 // w trybie zmiennej długości (P1) ramka zaczyna się od bajtu LEN, a za nim LEN bajtów BODY i CRC,
@@ -41,12 +41,16 @@ struct Rssi {
     int16_t dbm = 0;
 };
 
+// Ramkowanie łącza stosu na układzie: P1 (radio.md, „Profil P1”), RNode (radio.md, „Ramka w eterze”) albo brak.
+enum class Framing : uint8_t { NONE, P1, RNODE };
+
 struct Frame {
     uint8_t bytes[MAX_FRAME];
     size_t length = 0;      // z bajtem LEN w trybie zmiennej długości
     int16_t rssiDbm = 0;    // RSSI pakietu (dBm, z przesunięciem przyjętym dla układu)
     uint8_t quality = 0;    // CC1120: LQI; S2-LP: SQI; SX1262: 0 (jakość jako SNR w snrQdb)
     int16_t snrQdb = 0;     // SX1262: SNR pakietu w ćwiartkach dB; układy P1 go nie podają
+    uint32_t receivedMs = 0;  // millis() próbki, która odebrała ramkę (limit składania LoRa)
 };
 
 enum class RxPoll : uint8_t {
@@ -63,6 +67,13 @@ enum class Cad : uint8_t {
     Busy,         // wykryta preambuła LoRa: odroczenie
     Error,        // brak CadDone w czasie albo przekroczony czas BUSY; układ w stanie spoczynku
     Unsupported,  // układ nie ma CAD (CC1120, S2-LP)
+};
+
+// Aktywność kanału w oknie CCA ze znaczników próbek odbioru (recentActivity).
+enum class Activity : uint8_t {
+    None,  // brak znaczników w oknie (albo układ ich nie zbiera)
+    Rx,    // preambuła, nagłówek albo koniec ramki (także z błędem CRC)
+    Rssi,  // tylko RSSI ponad progiem CCA
 };
 
 // Wynik przygotowania nadania (prepareTx).
@@ -121,7 +132,8 @@ public:
     virtual size_t maxTestLength() const = 0;  // najdłuższa ramka wzorcowa TXPKT i RX
     // Najdłuższa seria bez CONDUCTED (ms czasu nadawania): najdłuższy datagram profilu, ≤ P1_SERIES_MAX_MS.
     virtual uint32_t seriesMaxMs() const = 0;
-    virtual bool p1Link() const = 0;           // łącze P1 (P1RX, P1TX, stos) na tym układzie
+    virtual Framing framing() const = 0;       // ramkowanie łącza stosu na tym układzie
+    bool p1Link() const { return framing() == Framing::P1; }  // łącze P1 (P1RX, P1TX)
     virtual bool hasSnr() const { return false; }  // ramki niosą SNR (snrQdb), RXPER podaje średnią
 
     // Próg RSSI dostępu do kanału (dBm): układy P1 mają wspólną stałą P1, SX1262 próg profilu LoRa.
@@ -134,6 +146,14 @@ public:
     virtual TxPrep prepareTx(const uint8_t*, size_t) { return TxPrep::Unsupported; }
     virtual Cad cad() { return Cad::Unsupported; }
     virtual bool sendPrepared(TxTiming*) { return false; }
+
+    // Okno CCA LoRa (radio.md, „Dostęp do kanału”, punkt 5): aktywność w ostatnich windowMs ze znaczników,
+    // które zbierają próbki odbioru (zadanie odbioru albo pętla), więc postój pętli nie zrywa okna.
+    // Układy P1 znaczników nie mają (CCA P1 próbkuje kanał w pętli).
+    virtual Activity recentActivity(uint32_t) { return Activity::None; }
+    virtual void clearActivity() {}               // po rekonfiguracji i IDLE
+    virtual uint32_t rxLate() const { return 0; }  // ramki odczytane za późno i odrzucone
+    virtual uint32_t rxRingOverflow() const { return 0; }  // ramki utracone przy pełnym pierścieniu zadania odbioru
 };
 
 }  // namespace radiolink

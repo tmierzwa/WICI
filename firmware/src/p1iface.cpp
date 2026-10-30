@@ -34,6 +34,31 @@ uint32_t declaredBitrate() {
     return p1frame::MAX_DATAGRAM * 8 * 1000 / (airtimeMs(p1frame::MAX_DATAGRAM) * (1 + DEBT_FACTOR));
 }
 
+namespace {
+
+// Zawinięcia zwykłych funkcji P1 i stałych loraframe w tablicę LinkTiming.
+uint32_t loraAirtime(size_t length) { return loraframe::airtimeMs(length); }
+uint32_t loraReservedTx(size_t length) { return loraframe::reservedTxMs(length); }
+
+static_assert(MAX_WIRE <= p1frame::MAX_DATAGRAM, "datagram P1 mieści największy pakiet z IFAC");
+static_assert(loraframe::MAX_RAW + loraframe::IFAC_BYTES <= MAX_WIRE, "bufory 516 B mieszczą datagram LoRa");
+static_assert(loraframe::IFAC_BYTES == IFAC_SIZE, "ten sam kod IFAC na obu łączach");
+
+}  // namespace
+
+const LinkTiming& p1Timing() {
+    static const LinkTiming timing = {LinkTiming::Framing::P1, HW_MTU, MAX_WIRE, p1frame::MAX_DATAGRAM, airtimeMs, reservedTxMs,
+                                      radiolink::P1_SERIES_MAX_MS, declaredBitrate()};
+    return timing;
+}
+
+const LinkTiming& loraTiming() {
+    static const LinkTiming timing = {LinkTiming::Framing::RNODE, loraframe::MAX_RAW, loraframe::MAX_DATAGRAM,
+                                      loraframe::MAX_DATAGRAM, loraAirtime, loraReservedTx, lora::SERIES_MAX_MS,
+                                      loraframe::declaredBitrate()};
+    return timing;
+}
+
 Kind classify(const uint8_t* raw, size_t length) {
     if (length < 2) return Kind::DATA;
     const uint8_t packetType = raw[0] & 0x03;
@@ -156,8 +181,7 @@ bool Queue::push(Lane lane, const uint8_t* wire, size_t length) {
 }
 
 Admit Queue::offer(const uint8_t* raw, size_t rawLength, const uint8_t* wire, size_t wireLength, uint32_t nowMs, Hint hint) {
-    static_assert(MAX_WIRE <= p1frame::MAX_DATAGRAM, "datagram P1 mieści największy pakiet z IFAC");
-    if (rawLength < 2 || wireLength == 0 || wireLength > MAX_WIRE) {
+    if (rawLength < 2 || wireLength == 0 || wireLength > timing_->maxWire) {
         ++counters_.tooLarge;
         return Admit::TOO_LARGE;
     }
@@ -169,7 +193,7 @@ Admit Queue::offer(const uint8_t* raw, size_t rawLength, const uint8_t* wire, si
         return offerPathRequest(pathRequestTarget(raw, rawLength), wire, wireLength, nowMs);
     // Odpowiedź na zapytanie o trasę (K0) w budżecie 5%: ponad nim odpada, pytający ponawia.
     if (pathResponse(raw, rawLength)) {
-        const uint32_t cost = channelMs(wireLength);
+        const uint32_t cost = timing_->channelMs(wireLength);
         if (pathResponses_.used(nowMs) + cost > percentOfWindow(PATH_RESPONSE_PERCENT)) {
             ++counters_.pathResponseLimited;
             return Admit::PATH_RESPONSE_LIMIT;
@@ -182,7 +206,7 @@ Admit Queue::offer(const uint8_t* raw, size_t rawLength, const uint8_t* wire, si
 }
 
 bool Queue::poolAllows(uint32_t nowMs, size_t length) {
-    return pool_.used(nowMs) + channelMs(length) <= percentOfWindow(POOL_PERCENT);
+    return pool_.used(nowMs) + timing_->channelMs(length) <= percentOfWindow(POOL_PERCENT);
 }
 
 bool Queue::k0k1Waiting() const {
@@ -202,7 +226,7 @@ Queue::DestWindow* Queue::findDest(const uint8_t* dest) {
 Admit Queue::offerK2(const uint8_t* dest, const uint8_t* wire, size_t length, uint32_t nowMs) {
     if (count_ + 1 >= QUEUE) { ++counters_.k2Slot; return Admit::K2_SLOT; }
     if (!poolAllows(nowMs, length)) { ++counters_.k2Pool; return Admit::K2_POOL; }
-    const uint32_t cost = channelMs(length);
+    const uint32_t cost = timing_->channelMs(length);
     DestWindow* d = dest ? findDest(dest) : nullptr;
     if (d && k0k1Waiting() && d->window.used(nowMs) + cost > percentOfWindow(DEST_PERCENT)) {
         ++counters_.k2Dest;
@@ -233,7 +257,7 @@ Admit Queue::offerPathRequest(const uint8_t* target, const uint8_t* wire, size_t
             slot = &r;
         }
     }
-    const uint32_t cost = channelMs(length);
+    const uint32_t cost = timing_->channelMs(length);
     if (pathRequests_.used(nowMs) + cost > percentOfWindow(PATH_REQUEST_PERCENT)) {
         ++counters_.pathRequestLimited;
         return Admit::PATH_REQUEST_LIMIT;
@@ -260,9 +284,9 @@ Admit Queue::offerPathRequest(const uint8_t* target, const uint8_t* wire, size_t
 
 void Queue::releaseAnnounce(const uint8_t* wire, size_t length, uint32_t nowMs) {
     push(Lane::ANNOUNCE, wire, length);
-    pool_.add(nowMs, channelMs(length));
+    pool_.add(nowMs, timing_->channelMs(length));
     // Limit 2%: następne ogłoszenie po czasie TX tego ogłoszenia x 100 / 2.
-    announceAllowedAt_ = nowMs + reservedTxMs(length) * 100 / ANNOUNCE_CAP_PERCENT;
+    announceAllowedAt_ = nowMs + timing_->reservedTxMs(length) * 100 / ANNOUNCE_CAP_PERCENT;
     announceGate_ = true;
 }
 
@@ -404,7 +428,7 @@ void Queue::drop() {
 uint32_t Queue::waitMs(uint32_t debtMs) const {
     uint32_t total = debtMs;
     for (const Slot& s : slots_)
-        if (s.used) total += airtimeMs(s.length) + reservedDebtMs(s.length);
+        if (s.used) total += timing_->airtimeMs(s.length) + timing_->reservedDebtMs(s.length);
     return total;
 }
 
