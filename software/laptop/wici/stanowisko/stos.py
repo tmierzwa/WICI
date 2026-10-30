@@ -7,15 +7,14 @@ forwards); LXMF only opportunistic, without propagation and stamps. The receipt 
 the stack come from the `bitrate` of the KISS interface in the configuration alone (radio.md, criterion
 `bitrate`), without changes in the stack code (condition of D19).
 
-The receiver identity lives in the state directory; from stage S4 that is the encrypted station medium.
-Only messages with a checked signature go on to reception (przyjecie.py). LXMF cannot check the signature of
+The receiver identity comes from the station medium (nosnik.py, sealed with its data key); the state
+directory (siec/ on the medium) holds Reticulum and LXMF storage. Only messages with a checked signature go on to reception (przyjecie.py). LXMF cannot check the signature of
 a sender whose identity it does not know yet (SOURCE_UNKNOWN); such a message waits in memory, the stack asks
 for a path, and the message goes on when the announce or path response brings the identity („Przyjęcie”).
 Waiting messages have the limits of the quarantine (4 per sender, 256 in total) and do not survive a restart,
 which is safe: without RECEIVED the station sends them again.
 """
 
-import os
 import sys
 import threading
 from pathlib import Path
@@ -62,8 +61,9 @@ class Stos:
 
     PENDING_PER_SENDER, PENDING_TOTAL = 4, 256   # jak kwarantanna (stanowisko-osp.md, O03)
 
-    def __init__(self, state, port, received, bitrate=BITRATE, log=None):
+    def __init__(self, state, port, received, identity_key, bitrate=BITRATE, log=None):
         self.state, self.port, self.bitrate = Path(state), port, bitrate
+        self.identity_key = identity_key
         self.received = received
         self.log = log or (lambda line: print(line, file=sys.stderr, flush=True))
         self.router = self.destination = self.identity = None
@@ -84,7 +84,9 @@ class Stos:
         # Funkcja jako logdest: RNS/Reticulum.py, Reticulum.__init__ w e40191b ustawia wtedy RNS.logdest =
         # RNS.LOG_CALLBACK i RNS.logcall = ta funkcja (RNS/__init__.py, log).
         RNS.Reticulum(str(rns_dir), logdest=self.log)
-        self.identity = self._identity(self.state / "tozsamosc")
+        self.identity = RNS.Identity.from_bytes(self.identity_key)
+        if self.identity is None:
+            raise RuntimeError("klucz tożsamości odbiorcy jest uszkodzony")
         # Bez propagacji, bez wymiany z węzłami propagacji i bez znaczków pracy.
         self.router = LXMF.LXMRouter(storagepath=str(self.state / "lxmf"), autopeer=False, enforce_stamps=False)
         self.destination = self.router.register_delivery_identity(self.identity)
@@ -101,30 +103,6 @@ class Stos:
             waiting = self.pending.pop(destination_hash, [])
         for packed in waiting:
             self._check(packed)
-
-    @staticmethod
-    def _identity(path):
-        """The receiver identity from the file, or a new one written there (fsync before use).
-
-        Only the main identity: the backup one is made at the preparation of the station and leaves it
-        in sealed envelopes (stanowisko-osp.md, O10; PLAN.md, stage S4). The private key file is readable
-        only by the user (0600) until stage S4 moves it to the encrypted station medium."""
-        import RNS
-        if path.exists():
-            identity = RNS.Identity.from_file(str(path))
-            if identity is None:
-                raise RuntimeError(f"plik tożsamości odbiorcy jest uszkodzony: {path}")
-            return identity
-        identity = RNS.Identity()
-        tmp = path.with_suffix(".tmp")
-        tmp.unlink(missing_ok=True)   # pozostałość przerwanego zapisu
-        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0), 0o600)
-        with os.fdopen(fd, "wb") as f:
-            f.write(identity.get_private_key())
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(tmp, path)
-        return identity
 
     def announce(self):
         """Announce of the receiver address; the station applies the announce limit and radio silence."""

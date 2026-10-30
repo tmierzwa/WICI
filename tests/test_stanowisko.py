@@ -29,10 +29,27 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "software" / "laptop"))
 sys.path.insert(0, str(ROOT / "firmware" / "tools"))
 
-from wici.stanowisko import __main__ as aplikacja, przyjecie, stos, wysylka, wzorzec  # noqa: E402
+from wici import database  # noqa: E402
+from wici.stanowisko import __main__ as aplikacja, nosnik, przyjecie, stos, wysylka, wzorzec  # noqa: E402
 
 PROGRAM = os.environ.get("WICI_HOST_PROGRAM")
 HAS_STACK = all(importlib.util.find_spec(m) for m in ("RNS", "LXMF", "serial"))
+FAST = 1_000   # iteracje PBKDF2 w testach (najmniej, ile przyjmuje odczyt)
+
+
+def medium_in(root, officers=2, identity=None):
+    """A prepared medium with fast PBKDF2: (medium, data key, envelopes)."""
+    return nosnik.Nosnik.create(root, officers, identity or bytes(range(64)), FAST)
+
+
+def durable(medium, key, sql, args=()):
+    """Query the newest snapshot on the medium, as a restarted application would see it."""
+    body = nosnik.Nosnik(medium.root).load(key)
+    if body is None:
+        return None
+    with contextlib.closing(sqlite3.connect(":memory:")) as db:
+        db.deserialize(body)
+        return db.execute(sql, args).fetchone()
 
 
 class ConfigTest(unittest.TestCase):
@@ -87,7 +104,7 @@ class StationTestCase(unittest.TestCase):
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.path = Path(self.tmp.name) / "baza.sqlite"
+        self.medium, self.key, self.envelopes = medium_in(Path(self.tmp.name) / "nosnik")
         self.sent, self.committed = [], []
         self.now = 1_800_000_000.0
         self.result = True   # wynik kolejnych wysyłek; "brak trasy" to send zwracające None
@@ -95,7 +112,7 @@ class StationTestCase(unittest.TestCase):
         self.reception.call(lambda s: s.add_trusted(self.STATION, self.KEY, ("dyzurny-1", "dyzurny-2")))
 
     def open(self):
-        return przyjecie.Przyjecie(self.path, self.send, lambda m: m.result, clock=lambda: self.now,
+        return przyjecie.Przyjecie(self.medium, self.key, self.send, lambda m: m.result, clock=lambda: self.now,
                                    log=lambda line: None, random=lambda: 0.5)
 
     def restart(self):
@@ -107,12 +124,11 @@ class StationTestCase(unittest.TestCase):
         self.tmp.cleanup()
 
     def send(self, target, content):
-        # Drugie połączenie z bazą widzi tylko zatwierdzone dane: wiadomość wychodzi po COMMIT.
-        with contextlib.closing(sqlite3.connect(self.path)) as db:
-            value = wzorzec.decode_message(content)
-            if value[1] == wysylka.RECEIVED:
-                self.committed.append(db.execute("SELECT 1 FROM received WHERE source=? AND id=? AND revision=?",
-                                                 (target, value[2], value[3])).fetchone() is not None)
+        # Migawka na nośniku musi już mieć zgłoszenie: wiadomość wychodzi po COMMIT i po zapisie na nośniku.
+        value = wzorzec.decode_message(content)
+        if value[1] == wysylka.RECEIVED:
+            self.committed.append(durable(self.medium, self.key, "SELECT 1 FROM received WHERE source=? AND id=? "
+                                          "AND revision=?", (target, value[2], value[3])) is not None)
         if self.result == "no path":
             return None
         self.sent.append((target, content))
@@ -391,13 +407,152 @@ class SendingTest(StationTestCase):
     def test_application_reports_the_clock_and_does_not_start(self):
         mid, revision = self.accepted()
         self.status(mid, revision, 2)
-        state = Path(self.tmp.name)   # self.path to baza.sqlite w tym katalogu
         out = io.StringIO()
         with unittest.mock.patch.object(przyjecie.time, "time", lambda: self.now - 3600), \
+                unittest.mock.patch.object(sys, "stdin", io.StringIO(self.envelopes["stanowisko"] + "\n")), \
                 contextlib.redirect_stdout(out):
-            code = aplikacja.main(["--port", "brak", "--stan", str(state)])
+            code = aplikacja.main(["start", "--nosnik", str(self.medium.root), "--port", "brak"])
         self.assertEqual(code, 2)
         self.assertEqual(json.loads(out.getvalue())["event"], "clock_behind")
+
+
+class MediumTest(unittest.TestCase):
+    """S4: the medium with the station password, duty officer accounts, sealed snapshots and identities."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name) / "nosnik"
+        self.medium, self.key, self.envelopes = medium_in(self.root, officers=3)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def files(self):
+        return b"".join(p.read_bytes() for p in self.root.rglob("*") if p.is_file())
+
+    def test_station_password_opens_the_medium_on_another_computer(self):
+        self.assertEqual(sorted(self.envelopes), ["dyzurny-1", "dyzurny-2", "dyzurny-3", "stanowisko"])
+        self.assertEqual(len(self.envelopes["stanowisko"].split()), nosnik.STATION_WORDS)
+        other = nosnik.Nosnik(self.root)   # drugi komputer: ten sam nośnik, bez magazynu systemu
+        self.assertEqual(other.unlock("  " + self.envelopes["stanowisko"].upper() + " "), self.key)
+        with self.assertRaises(database.LoginError):
+            other.unlock("zle haslo")
+
+    def test_failed_passwords_are_limited(self):
+        for _ in range(database.LOGIN_LIMIT):
+            with self.assertRaises(database.LoginError):
+                self.medium.unlock("zle haslo")
+        with self.assertRaisesRegex(database.LoginError, "Poczekaj"):
+            self.medium.unlock(self.envelopes["stanowisko"])
+
+    def test_new_station_password_rewraps_only_the_key(self):
+        self.medium.save(self.key, b"baza")
+        new = self.medium.new_station_password(self.key)
+        self.assertEqual(nosnik.Nosnik(self.root).unlock(new), self.key)
+        with self.assertRaises(database.LoginError):
+            nosnik.Nosnik(self.root).unlock(self.envelopes["stanowisko"])
+        self.assertEqual(nosnik.Nosnik(self.root).load(self.key), b"baza")
+
+    def test_lost_account_file_does_not_lose_the_data(self):
+        self.medium.save(self.key, b"baza")
+        (self.root / "klucze" / database.ACCOUNTS).unlink()
+        self.assertEqual(nosnik.Nosnik(self.root).unlock(self.envelopes["stanowisko"]), self.key)
+
+    def test_duty_officer_accounts(self):
+        self.medium.login("dyzurny-2", self.envelopes["dyzurny-2"], self.key)
+        for name, password in (("dyzurny-2", self.envelopes["dyzurny-1"]), ("dyzurny-9", "x"),
+                               ("stanowisko", self.envelopes["stanowisko"])):
+            with self.assertRaises(database.LoginError):
+                self.medium.login(name, password, self.key)
+        new = self.medium.new_password("dyzurny-2", self.key)
+        self.medium.login("dyzurny-2", new, self.key)
+        with self.assertRaises(database.LoginError):
+            self.medium.login("dyzurny-2", self.envelopes["dyzurny-2"], self.key)
+        other, other_key, envelopes = medium_in(Path(self.tmp.name) / "inny")
+        with self.assertRaises(database.LoginError):   # konto z innego nośnika
+            self.medium.login("dyzurny-1", envelopes["dyzurny-1"], self.key)
+
+    def test_snapshots_are_sealed_and_an_interrupted_write_keeps_the_previous(self):
+        self.medium.save(self.key, b"pierwsza piwnica")
+        self.medium.save(self.key, b"druga piwnica")
+        self.assertNotIn(b"piwnica", self.files())
+        newest = self.root / "baza" / self.medium.last
+        newest.write_bytes(newest.read_bytes()[:-10])   # zanik zasilania w trakcie zapisu
+        self.assertEqual(nosnik.Nosnik(self.root).load(self.key), b"pierwsza piwnica")
+        self.assertIsNone(nosnik.Nosnik(self.root).load(os.urandom(32)))
+
+    def test_identity_is_sealed_with_the_data_key(self):
+        self.assertEqual(self.medium.identity(self.key), bytes(range(64)))
+        self.assertNotIn(bytes(range(64)), self.files())
+        with self.assertRaises(database.StorageError):
+            self.medium.identity(os.urandom(32))
+
+    def test_a_prepared_medium_is_not_prepared_again(self):
+        with self.assertRaises(database.StorageError):
+            medium_in(self.root)
+
+    def test_backup_package_opens_only_with_its_password(self):
+        private, public = os.urandom(64), os.urandom(64)
+        package = json.loads(json.dumps(nosnik.backup_package(private, public, "a b c d e f", FAST)))
+        self.assertEqual(package["lxmf"], nosnik.lxmf_address(public).hex())
+        self.assertNotIn(private.hex(), json.dumps(package))
+        self.assertEqual(nosnik.open_backup(package, "A B C D E F"), private)
+        with self.assertRaises(database.LoginError):
+            nosnik.open_backup(package, "a b c d e g")
+        with self.assertRaises(database.StorageError):
+            nosnik.open_backup({**package, "v": 2}, "a b c d e f")
+
+    def test_receiver_card_has_both_identities(self):
+        main, backup = os.urandom(64), os.urandom(64)
+        card = nosnik.receiver_card(main, backup)
+        self.assertEqual((card["wici"], card["v"]), ("karta-odbiorcy", 1))
+        self.assertEqual(card["backup"], {"lxmf": nosnik.lxmf_address(backup).hex(), "key": backup.hex()})
+        self.assertEqual(card["main"]["key"], main.hex())
+
+    def test_database_lives_on_the_medium_only_sealed(self):
+        reception = przyjecie.Przyjecie(self.medium, self.key, lambda t, c: None, lambda m: None,
+                                        log=lambda line: None)
+        try:
+            reception.call(lambda s: s.add_trusted(bytes(16), bytes(64), ("dyzurny-1", "dyzurny-2")))
+            reception.deliver(bytes(16), request(text="tajna piwnica"))
+            reception.action("dyzurny-1", "logowanie")
+            with self.assertRaises(sqlite3.IntegrityError):   # dziennik tylko do dopisywania
+                reception.call(lambda s: s.db.execute("DELETE FROM dziennik"))
+        finally:
+            reception.stop()
+        self.assertNotIn("tajna piwnica".encode(), self.files())
+        self.assertEqual(durable(self.medium, self.key, "SELECT count(*) FROM received"), (1,))
+        self.assertEqual(durable(self.medium, self.key, "SELECT account, op FROM dziennik"), ("dyzurny-1", "logowanie"))
+
+    @unittest.skipUnless(importlib.util.find_spec("RNS"), "Reticulum")
+    def test_preparation_keeps_the_backup_identity_off_the_medium(self):
+        import RNS
+        work = Path(self.tmp.name)
+        args = ["przygotuj", "--nosnik", str(work / "nowy"), "--dyzurni", "2", "--iteracje", str(FAST),
+                "--paczka", str(work / "paczka.json"), "--karta", str(work / "karta.json")]
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(aplikacja.main(args), 0)
+        envelopes = json.loads(out.getvalue())["envelopes"]
+        self.assertEqual(len(envelopes["paczka-zapasowa"].split()), nosnik.BACKUP_WORDS)
+        package = json.loads((work / "paczka.json").read_text())
+        backup = nosnik.open_backup(package, envelopes["paczka-zapasowa"])
+        on_medium = b"".join(p.read_bytes() for p in (work / "nowy").rglob("*") if p.is_file())
+        self.assertNotIn(backup, on_medium)
+        card = json.loads((work / "karta.json").read_text())
+        self.assertEqual(card["backup"]["key"], RNS.Identity.from_bytes(backup).get_public_key().hex())
+        medium = nosnik.Nosnik(work / "nowy")
+        main = RNS.Identity.from_bytes(medium.identity(medium.unlock(envelopes["stanowisko"])))
+        self.assertEqual(card["main"]["lxmf"], nosnik.lxmf_address(main.get_public_key()).hex())
+        with self.assertRaises(SystemExit):   # paczka na nośniku jest odrzucona
+            aplikacja.main(["przygotuj", "--nosnik", str(work / "trzeci"), "--dyzurni", "1",
+                            "--paczka", str(work / "trzeci" / "p.json"), "--karta", str(work / "k2.json")])
+
+    def test_wrong_station_password_ends_the_start(self):
+        out = io.StringIO()
+        with unittest.mock.patch.object(sys, "stdin", io.StringIO("zle haslo\n")), contextlib.redirect_stdout(out):
+            code = aplikacja.main(["start", "--nosnik", str(self.root), "--port", "brak"])
+        self.assertEqual((code, json.loads(out.getvalue())["event"]), (3, "login_failed"))
 
 
 class StackHoldTest(unittest.TestCase):
@@ -422,7 +577,8 @@ class StackHoldTest(unittest.TestCase):
         self.modules = unittest.mock.patch.dict(sys.modules, {"LXMF": types.SimpleNamespace(LXMessage=lxmessage), "RNS": rns})
         self.modules.start()
         self.got = []
-        self.stos = stos.Stos(tempfile.gettempdir(), "port", lambda s, c: self.got.append((s, c)), log=lambda line: None)
+        self.stos = stos.Stos(tempfile.gettempdir(), "port", lambda s, c: self.got.append((s, c)), bytes(64),
+                              log=lambda line: None)
 
     def tearDown(self):
         self.modules.stop()
@@ -482,9 +638,12 @@ class StackTest(unittest.TestCase):
         def received(source, content):
             cls.messages.append((source, content))
             cls.reception.deliver(source, content)
-        cls.stos = stos.Stos(work / "stan", cls.node.ready["usb"], received, log=lambda line: None)
-        cls.reception = przyjecie.Przyjecie(work / "stan" / "baza.sqlite", cls.stos.send, cls.stos.outcome,
-                                            log=lambda line: None)
+        import RNS
+        cls.medium, cls.key, envelopes = medium_in(work / "nosnik", identity=RNS.Identity().get_private_key())
+        cls.stos = stos.Stos(cls.medium.network, cls.node.ready["usb"], received, cls.medium.identity(cls.key),
+                             log=lambda line: None)
+        cls.station_password = envelopes["stanowisko"]
+        cls.reception = przyjecie.Przyjecie(cls.medium, cls.key, cls.stos.send, cls.stos.outcome, log=lambda line: None)
         cls.stos.start()
         cls.station.command(f"receiver {cls.sa1_destination().hex()} {cls.stos.identity.get_public_key().hex()}")
         if cls.station.wait("receiver", 5) is None:
@@ -598,13 +757,11 @@ class StackTest(unittest.TestCase):
         self.assertIsNotNone(self.station.wait("packet", 120, lambda e: e["data"] == expected))
         self.assertTrue(self.wait_for(lambda: message.state == LXMF.LXMessage.DELIVERED, 240))
 
-    def test_6_identity_survives_a_restart(self):
+    def test_6_identity_comes_from_the_medium(self):
         import RNS
-        path = Path(self.work.name) / "stan" / "tozsamosc"
-        self.assertEqual(RNS.Identity.from_file(str(path)).hash, self.stos.identity.hash)
-        self.assertEqual(stos.Stos._identity(path).hash, self.stos.identity.hash)
-        if sys.platform != "win32":
-            self.assertEqual(path.stat().st_mode & 0o777, 0o600)   # klucz prywatny tylko dla użytkownika
+        key = nosnik.Nosnik(self.medium.root).unlock(self.station_password)
+        self.assertEqual(RNS.Identity.from_bytes(self.medium.identity(key)).hash, self.stos.identity.hash)
+        self.assertNotIn(self.stos.identity.get_private_key(), (self.medium.root / "tozsamosc").read_bytes())
 
 
 if __name__ == "__main__":
