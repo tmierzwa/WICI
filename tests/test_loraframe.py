@@ -105,73 +105,9 @@ int main() {
 }
 """
 
-# --- Reference: official RNode firmware, markqvist/RNode_Firmware commit 56775c51b60a6190242e324c210997dcc7637e53 ---
-FLAG_SPLIT = 0x01      # Framing.h:107
-SEQ_UNSET = 0xFF       # Framing.h:108
-MTU = 508              # Config.h:59
-SINGLE_MTU = 255       # Config.h:60
-HEADER_L = 1           # Config.h:61
-
-
-def rnode_transmit(data, header_nibble):
-    """transmit() in RNode_Firmware.ino:716-745: the header is `random(256) & 0xF0` (here: the nibble given),
-    FLAG_SPLIT above SINGLE_MTU - HEADER_L = 254 B; after 255 written bytes of a split packet the frame ends
-    and a new one starts with the same header. A packet of exactly 508 B ends with a third, header-only frame."""
-    header = (header_nibble << 4) & 0xF0
-    if len(data) > SINGLE_MTU - HEADER_L:
-        header |= FLAG_SPLIT
-    frames = []
-    frame = bytearray([header])
-    written = 1
-    for byte in data:
-        frame.append(byte)
-        written += 1
-        if written == 255 and header & FLAG_SPLIT:
-            frames.append(bytes(frame))
-            frame = bytearray([header])
-            written = 1
-    frames.append(bytes(frame))
-    return frames
-
-
-class RNodeReceiver:
-    """receive_callback() in RNode_Firmware.ino:365-440 with getPacketData() (lines 345-357): `read_len < MTU`."""
-
-    def __init__(self):
-        self.seq = SEQ_UNSET
-        self.buffer = bytearray()
-
-    def receive(self, frame):
-        header, body = frame[0], frame[1:]
-        sequence = header >> 4
-        ready = False
-        if header & FLAG_SPLIT and self.seq == SEQ_UNSET:
-            self.buffer = bytearray()
-            self.seq = sequence
-            self.append(body)
-        elif header & FLAG_SPLIT and self.seq == sequence:
-            self.append(body)
-            self.seq = SEQ_UNSET
-            ready = True
-        elif header & FLAG_SPLIT and self.seq != sequence:
-            self.buffer = bytearray()
-            self.seq = sequence
-            self.append(body)
-        elif not header & FLAG_SPLIT:
-            if self.seq != SEQ_UNSET:
-                self.buffer = bytearray()
-                self.seq = SEQ_UNSET
-            self.append(body)
-            ready = True
-        if ready:
-            packet, self.buffer = bytes(self.buffer), bytearray()
-            return packet
-        return None
-
-    def append(self, body):
-        for byte in body:
-            if len(self.buffer) < MTU:
-                self.buffer.append(byte)
+# Reference: official RNode firmware (framing, split, assembly), shared with the RNode emulator.
+sys.path.insert(0, str(ROOT / "firmware" / "tools"))
+from rnode_framing import FLAG_SPLIT, MTU, RNodeReceiver, rnode_transmit  # noqa: E402,F401
 
 
 def compiler():
@@ -324,6 +260,9 @@ class LoraFrameTests(unittest.TestCase):
         first, second = self.frame(3, 1, b"first"), self.frame(3, 1, b"second")
         out = self.run_script([f"P {2 ** 32 - 256} {first.hex()}", f"P 300 {second.hex()}", "Q"])
         self.assertEqual(out[1], f"complete 11 {b'firstsecond'.hex()}")
+        # The limit across the wrap: 999 ms after the frame the part still waits, at 1000 ms it expires.
+        out = self.run_script([f"P {2 ** 32 - 256} {first.hex()}", f"X {2 ** 32 - 196}", "X 743", "X 744", "Q"])
+        self.assertEqual(out, ["stored", "pending 1", "pending 1", "pending 0", "stats 0 0 1 0"])
 
     def test_header_only_frame_does_not_disturb_a_pending_part(self):
         out = self.run_script([f"P 0 {self.frame(6, 1, b'a').hex()}", f"P 1 {self.frame(7, 1, b'').hex()}",

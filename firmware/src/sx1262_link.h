@@ -28,8 +28,9 @@
 // - DIO1 tylko dla RxDone, CrcErr i HeaderErr (zadanie odbioru sprawdza poziom linii); TxDone
 //   i CadDone sterownik czyta sam przez SPI;
 // - nośna CW poleceniem SetTxContinuousWave; korekta częstotliwości słowem RF (krok 0,954 Hz).
-// Łącza P1 nie ma (p1Link() = false). Wywołujący trzyma blokadę operacji radia (platform::RadioLock),
-// gdy pracuje też zadanie odbioru; sterownik sam jej nie bierze.
+// Łącze stosu w ramkach RNode (framing() = RNODE), bez łącza P1. Wywołujący trzyma blokadę operacji radia (platform::RadioLock),
+// gdy pracuje też zadanie odbioru (pętla: przez radiolink::LockedDriver, radio_lock.h); sterownik sam jej nie bierze,
+// z wyjątkiem obiegu zadania odbioru (taskCycle: próba bez czekania).
 // Odwołania do karty bez numeru wersji: DS.SX1261-2.W.APP; rozdziały i tabele CAD, trybu powrotu
 // i bufora sprawdzone w rev. 1.2 (czerwiec 2019).
 #pragma once
@@ -40,6 +41,8 @@
 
 #include "lora_profile.h"
 #include "radio_link.h"
+#include "rx_watch.h"
+#include "spsc_ring.h"
 #include "sx1262.h"
 
 namespace sx1262 {
@@ -76,11 +79,16 @@ struct Activity {
         ms[kind].store(now, std::memory_order_relaxed);
         seen.fetch_or(static_cast<uint8_t>(1u << kind), std::memory_order_release);
     }
-    // Ostatnia aktywność dawniej niż windowMs temu (albo żadnej od clearActivity()).
-    bool quietFor(uint32_t now, uint32_t windowMs) const {
-        const uint8_t mask = seen.load(std::memory_order_acquire);
+    static constexpr uint8_t ALL = (1u << KINDS) - 1;
+    static constexpr uint8_t RX_KINDS = (1u << PREAMBLE) | (1u << HEADER) | (1u << FRAME);
+    // Ostatnia aktywność rodzajów z kinds dawniej niż windowMs temu (albo żadnej od clearActivity()).
+    bool quietFor(uint32_t now, uint32_t windowMs, uint8_t kinds = ALL) const {
+        const uint8_t mask = seen.load(std::memory_order_acquire) & kinds;
         for (uint8_t k = 0; k < KINDS; ++k)
-            if ((mask & (1u << k)) && now - ms[k].load(std::memory_order_relaxed) < windowMs) return false;
+            // Ze znakiem: znacznik zapisany przez zadanie po odczycie now (wynik ujemny) to aktywność, nie cisza.
+            if ((mask & (1u << k)) &&
+                static_cast<int32_t>(now - ms[k].load(std::memory_order_relaxed)) < static_cast<int32_t>(windowMs))
+                return false;
         return true;
     }
     void clear() { seen.store(0, std::memory_order_release); }
@@ -108,8 +116,28 @@ public:
     // Dla pętli (pollRx) i zadania odbioru; zawsze pod blokadą operacji radia, gdy zadanie pracuje.
     RxService serviceRx(radiolink::Frame& out, bool sampleRssi);
     const Activity& activity() const { return activity_; }
-    void clearActivity() { activity_.clear(); }  // po rekonfiguracji i IDLE (pętla, pod blokadą)
-    uint32_t rxLate() const { return rxLate_.load(std::memory_order_relaxed); }
+    void clearActivity() override { activity_.clear(); }  // po rekonfiguracji i IDLE (pętla, pod blokadą)
+    uint32_t rxLate() const override { return rxLate_.load(std::memory_order_relaxed); }
+    radiolink::Activity recentActivity(uint32_t windowMs) override;
+
+    // Odbiór w tle (stacja L0, plan interfejsu LoRa, L6). taskCycle() to jeden obieg zadania odbioru (co takt):
+    // licznik obiegów; przy wysokim DIO1 (koniec ramki, poziom czytany przez wywołującego bez blokady) albo
+    // co RSSI_SAMPLE_MS próba blokady radia bez czekania (zajęta: obieg pominięty); w odbiorze serviceRx
+    // z próbką RSSI co RSSI_SAMPLE_MS; ramka, ramka zła i spóźniona idą do pierścienia RX_RING ramek z czasem
+    // odbioru próbki (pełny: odpada najnowsza, rx_ring_overflow). Udana próbka odświeża lastServiceMs.
+    // Pierwsze przekroczenie czasu BUSY przerywa obieg bez zapisu do pierścienia, a następna próba jest
+    // po BUSY_BACKOFF_MS (wyjęty moduł nie zajmuje rdzenia 0 czekaniem na BUSY).
+    // Przy setBackgroundRx(true) pollRx() czyta pierścień zamiast układu (zadanie jest jedynym właścicielem
+    // flag odbioru); ustawiać pod blokadą przed startem zadania.
+    static constexpr uint32_t RSSI_SAMPLE_MS = 5;
+    static constexpr uint32_t BUSY_BACKOFF_MS = 100;
+    static constexpr size_t RX_RING = 8;  // RNode wysyła kolejkę jedną serią
+    void taskCycle(bool dio1High);
+    void setBackgroundRx(bool on) { background_ = on; }
+    bool backgroundRx() const { return background_; }
+    const rxwatch::TaskSignals& taskSignals() const { return signals_; }
+    uint32_t rxRingOverflow() const override { return ring_.overflow(); }
+    void discardRx() override;  // pętla (konsument pierścienia): ramki starego trybu odbioru przepadają
 
     const char* stateName() override { return modeName(radio_.status().mode()); }
     void idle() override;
@@ -130,7 +158,7 @@ public:
     double onAirMs(size_t length) const override { return lora::frameAirUs(length) / 1000.0; }
     size_t maxTestLength() const override { return lora::MAX_PAYLOAD; }
     uint32_t seriesMaxMs() const override { return lora::SERIES_MAX_MS; }
-    bool p1Link() const override { return false; }
+    radiolink::Framing framing() const override { return radiolink::Framing::RNODE; }
     bool hasSnr() const override { return true; }
     int8_t ccaThresholdDbm() const override;
     radiolink::TxPrep prepareTx(const uint8_t* frame, size_t length) override;
@@ -155,14 +183,25 @@ private:
     size_t txLength_ = 0;  // ramka załadowana do nadania (limit czasu TxDone)
     bool rxVariable_ = false;
     uint8_t rxFixedLength_ = 0;
-    bool inFrame_ = false;      // preambuła albo nagłówek wykryte, ramka jeszcze nieodebrana
+    std::atomic<bool> inFrame_{false};  // preambuła albo nagłówek wykryte, ramka jeszcze nieodebrana (CCA czyta bez blokady)
     bool headerSeen_ = false;   // próbka widziała i skasowała HeaderValid bieżącej ramki
     uint32_t lastSampleMs_ = 0; // ostatnia udana próbka odbioru (millis), do wykrycia spóźnienia
-    uint32_t inFrameSinceMs_ = 0;
+    std::atomic<uint32_t> inFrameSinceMs_{0};
     uint16_t irqSeen_ = 0;
     int32_t offsetSteps_ = 0;
     Activity activity_;
     std::atomic<uint32_t> rxLate_{0};
+
+    // Pozycja pierścienia odbioru w tle: Frame albo Bad (zła i spóźniona ramka, jak pollRx bez zadania).
+    struct RxEntry {
+        radiolink::RxPoll kind = radiolink::RxPoll::Nothing;
+        radiolink::Frame frame;
+    };
+    bool background_ = false;
+    SpscRing<RxEntry, RX_RING> ring_;
+    rxwatch::TaskSignals signals_;
+    uint32_t lastRssiMs_ = 0;       // zadanie: ostatnia próbka z RSSI
+    uint32_t busyBackoffMs_ = 0;    // zadanie: przekroczenie czasu BUSY (0: brak)
 };
 
 }  // namespace sx1262
