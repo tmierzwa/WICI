@@ -194,6 +194,12 @@ bool handle(const char* cmd, char* words[], size_t n) {
     return true;
 }
 
+// Bez zadania odbioru (radio_console.h, „Odbiór w tle”): pętla obsługuje układ sama.
+void startRxTask() {}
+void setRxArmed(bool) {}
+bool rxStalled(bool, uint32_t) { return false; }
+RxTaskInfo rxTaskInfo() { return {}; }
+
 const char* helpCommands() { return ",\"RADIO\",\"RESET\",\"SDN <0|1>\",\"CONFIG\",\"VERIFY\",\"FREQ\",\"IDLE\",\"RSSI\",\"STATE\",\"REG <00-FE>\",\"REGW <00-FE> <00-FF>\""; }
 
 }  // namespace radiocon

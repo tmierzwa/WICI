@@ -27,6 +27,8 @@ constexpr uint32_t ASSEMBLY_TIMEOUT_MS = 1000;           // jak długo czeka pie
 constexpr uint8_t NO_NIBBLE = 0xFF;                      // brak poprzedniego datagramu dzielonego
 
 static_assert(MAX_DATAGRAM == 2 * FIRST_DATA, "508 B to dokładnie dwie pełne ramki");
+// Druga ramka zdąży po pierwszej: limit składania obejmuje dwie pełne ramki 255 B (z narastaniem mocy).
+static_assert(ASSEMBLY_TIMEOUT_MS >= 2 * lora::frameAirMs(lora::MAX_PAYLOAD), "limit składania ponad czas pełnej ramki z zapasem");
 
 // --- Czas datagramu w eterze ------------------------------------------------
 
