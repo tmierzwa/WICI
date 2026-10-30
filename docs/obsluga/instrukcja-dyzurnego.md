@@ -240,10 +240,10 @@ Sieć przekazuje ruch także bez komputera. Punkty ponawiają niepotwierdzone zg
 ### Nośnik stanowiska uszkodzony
 
 1. Wezwij osobę utrzymującą system.
-2. Odtworzenie bazy z kopii wymaga zgody dwóch zalogowanych dyżurnych.
-3. Aplikacja poprosi o potwierdzenie zegara. Porównaj z telefonem. Potwierdź przy różnicy do 1 min.
+2. Odtworzenie bazy z kopii wymaga zgody dwóch zalogowanych dyżurnych. Aplikacja bierze najnowszą kopię z dysku komputera (sprzed najwyżej 5 min). Drugi nośnik podłącz tylko wtedy, gdy komputer też jest uszkodzony.
+3. Aplikacja poprosi o potwierdzenie zegara. Porównaj z telefonem albo innym zegarem. Potwierdź przy różnicy do 1 min. Różnica pełnych godzin oznacza zwykle złą strefę czasową albo czas letni: popraw zegar.
 4. Aplikacja zapyta o liczbę odzyskań od daty kopii. Policz je w rejestrze. Wpisz to odzyskanie do rejestru.
-5. Odtwórz z rejestru papierowego zgłoszenia i decyzje z czasu po ostatniej kopii. Punkty, które dostały „ODBIORCA ZAPISAŁ”, ich nie ponowią.
+5. Odtwórz z rejestru papierowego zgłoszenia i decyzje z czasu po ostatniej kopii (przy kopii z dysku to najwyżej kilka minut). Punkty, które dostały „ODBIORCA ZAPISAŁ”, ich nie ponowią.
 6. W razie wątpliwości zapytaj punkt drugim kanałem.
 
 ### Brak zasilania

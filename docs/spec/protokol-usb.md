@@ -1,6 +1,6 @@
 # WICI: protokół USB laptop–stacja
 
-Rozdział jest samodzielnym kontraktem implementacyjnym protokołu między aplikacją laptopa (poziomy 2–3) albo laptopem osoby utrzymującej system (tryb przygotowania) a stacją. Zamyka decyzję D17 po stronie specyfikacji; próby są w [odbiorze](odbior.md) (wiersze „Protokół USB”, „Laptop i USB”, „Przeniesienie”, „Aktualizacja oprogramowania”). Kod stanowiska deweloperskiego (`firmware/src/usbproto.cpp`) realizuje wersję 2 bez przeniesienia i aktualizacji oprogramowania; różnice wymienia [przegląd](../review.md) (F107).
+Rozdział jest samodzielnym kontraktem implementacyjnym protokołu między aplikacją laptopa (poziomy 2–3) albo laptopem osoby utrzymującej system (tryb przygotowania) a stacją. Zamyka decyzję D17 po stronie specyfikacji; próby są w [odbiorze](odbior.md) (wiersze „Protokół USB”, „Laptop i USB”, „Przeniesienie”, „Aktualizacja oprogramowania”). Program stacji (`firmware/src/usbproto.cpp`) realizuje wersję 2 bez przeniesienia i bez aktualizacji oprogramowania: `migrate` daje `migration` (`unsupported`), `xfer_begin` z `op` `import` albo `export` daje `migration`, a z `op` `firmware` `invalid`. Gdzie ten rozdział i kod się różnią, rację ma kod; różnice wymienia [przegląd](../review.md) (F107).
 
 W pilotażu protokół służy tylko w trybie przygotowania: konfiguracja, karta stacji, PRZENIEŚ STACJĘ i aktualizacja oprogramowania. Aplikacja laptopa w schronieniu (poziomy 2–3) dochodzi po pilotażu i używa tego samego kontraktu.
 
@@ -24,18 +24,24 @@ W pilotażu protokół służy tylko w trybie przygotowania: konfiguracja, karta
 | Dane binarne | base64 (RFC 4648, z dopełnieniem), najwyżej 512 B po zdekodowaniu w jednym wierszu |
 | Skróty | małe cyfry szesnastkowe: `id` 32 znaki, adres LXMF 32 znaki, SHA-256 64 znaki, `boot` i `epoch` 16 znaków |
 
-Niepełny wiersz z poprzedniej sesji jest odrzucany. Stacja przetwarza wiersze po kolei i na każde polecenie wysyła dokładnie jedną odpowiedź końcową (`stored`, `ok`, `rejected`, `data`, `snap_end`); polecenia z potwierdzeniem przyciskiem mają przed nią odpowiedź pośrednią `pending`.
+Niepełny wiersz z poprzedniej sesji jest odrzucany. Stacja przetwarza wiersze po kolei i na każde polecenie poza `ack` wysyła dokładnie jedną odpowiedź końcową (`stored`, `ok`, `rejected`, `data`, `status`, `card`, `sync_ok`, `snap_required` albo `snap_end`); `ack` nie dostaje odpowiedzi, a `ack` z inną epoką niż zsynchronizowana, z kursorem ponad `head` albo bez `sync` stacja pomija bez odmowy. Polecenia z potwierdzeniem przyciskiem mają przed odpowiedzią końcową odpowiedź pośrednią `pending`.
 
-**Przepływ.** Stacja wysyła przez kolejkę na jeden pełny wiersz i oddaje portowi tyle, ile przyjmie, bez czekania w pętli pracy. Następny wiersz od laptopa czyta dopiero po wysłaniu odpowiedzi na poprzedni, a w czasie migawki tylko wysyła; zdarzenia zostawiają w kolejce miejsce na odpowiedź po pytaniu przyciskiem. Laptop, który przestał czytać port, wstrzymuje więc tylko własne polecenia i zdarzenia; radio, przyciski i zapis stacji działają dalej.
+**Przepływ.** Stacja wysyła przez kolejkę na jeden pełny wiersz i oddaje portowi tyle, ile przyjmie, bez czekania w pętli pracy. Następny wiersz od laptopa czyta dopiero po wysłaniu odpowiedzi na poprzedni, a w czasie migawki tylko wysyła; odpowiedź pośrednia `pending` nie wstrzymuje czytania, ale w czasie pytania na ekranie stacja przyjmuje tylko `ack` i `status`, a każde inne polecenie dostaje `busy`; zdarzenia zostawiają w kolejce miejsce na odpowiedź po pytaniu przyciskiem. Laptop, który przestał czytać port, wstrzymuje więc tylko własne polecenia i zdarzenia; radio, przyciski i zapis stacji działają dalej.
 
-**Numeracja wierszy.** Wiersz, z którego nie da się odczytać `seq` (za długi, nie JSON, `seq` poza zakresem), dostaje `rejected` bez pola `re`. Każdy wiersz z poprawnym `seq` zużywa ten numer, także odrzucony z powodu `contract`. Wiersz z numerem innym niż poprzedni + 1 dostaje `seq` i nie jest wykonywany, a stacja liczy dalej od numeru laptopa: następny wiersz z numerem o 1 większym jest przyjmowany. Laptop po odmowie `seq` ponawia polecenie z nowym numerem (klucz powtórzenia chroni przed podwójnym skutkiem).
+**Numeracja wierszy.** Wiersz, z którego nie da się odczytać `seq` (za długi, nie JSON, `seq` poza zakresem), dostaje `rejected` bez pola `re`. Każdy wiersz z poprawnym `seq` zużywa ten numer, także odrzucony z powodu `contract`. Wiersz z numerem innym niż poprzedni + 1 dostaje `rejected` z przyczyną `seq` i nie jest wykonywany, a stacja liczy dalej od numeru laptopa: następny wiersz z numerem o 1 większym jest przyjmowany. Laptop po odmowie `seq` ponawia polecenie z nowym numerem (klucz powtórzenia chroni przed podwójnym skutkiem).
 
 ## Koperta
 
-Każdy wiersz w obu kierunkach:
+Każdy wiersz w obu kierunkach ma `usb`, `seq` i `type`. Polecenie laptopa:
 
 ```json
-{"usb":2,"seq":17,"type":"submit","re":0, ...}
+{"usb":2,"seq":17,"type":"submit",…}
+```
+
+Odpowiedź stacji dodaje `re`:
+
+```json
+{"usb":2,"seq":42,"type":"stored","re":17,…}
 ```
 
 | Pole | Typ | Znaczenie |
@@ -45,33 +51,33 @@ Każdy wiersz w obu kierunkach:
 | `type` | ciąg | typ wiadomości z tabel niżej |
 | `re` | liczba | tylko w odpowiedzi: `seq` polecenia, na które odpowiada |
 
-**Wersje.** Każda zmiana schematu, nowe pole albo nowy typ oznacza nową wersję. Wyjątek: wersja 2 jest projektem do pierwszego wydania (stanowisko deweloperskie realizuje ją bez przeniesienia i aktualizacji), więc do tego czasu poprawki tego rozdziału jej numeru nie zmieniają. Stacja przyjmuje tylko wersje z listy w `hello`; inna wersja w poleceniu daje `rejected` z `contract`, a stacja nie zmienia stanu. Laptop, który nie zna żadnej wersji z listy, pokazuje „niezgodna wersja stacji” i nie wysyła poleceń.
+**Wersje.** Każda zmiana schematu, nowe pole albo nowy typ oznacza nową wersję. Wyjątek: wersja 2 jest projektem do pierwszego wydania (program stacji realizuje ją bez przeniesienia i aktualizacji), więc do tego czasu poprawki tego rozdziału jej numeru nie zmieniają. Stacja przyjmuje tylko wersje z listy w `hello`; inna wersja w poleceniu daje `rejected` z `contract`, a stacja nie zmienia stanu. Laptop, który nie zna żadnej wersji z listy, pokazuje „niezgodna wersja stacji” i nie wysyła poleceń.
 
 ## Polecenia laptopa
 
-| `type` | Pola | Tryb | Odpowiedź | Klucz powtórzenia |
+| `type` | Pola | Rola i tryb | Odpowiedź | Klucz powtórzenia |
 |---|---|---|---|---|
-| `sync` | `boot`, `epoch` (albo `""`), `cursor` | każdy | `sync_ok` albo `snap_required` | sesja |
-| `ack` | `epoch`, `cursor` | każdy | brak | `cursor` (zbiorczo) |
-| `snapshot` | `epoch` | każdy | `snap_begin`, `snap`…, `snap_end` | sesja |
-| `submit` | `id`, `revision`, `sa1` | zwykły | `stored` albo `rejected` | (`id`, `revision`) |
-| `cancel` | `id` | zwykły | `ok` albo `rejected`; dla zwolnionego `id` `ok` z `"released":true`, gdy wpis zwolniono jako anulowany, inaczej `too_late` | `id` |
-| `test` | `nonce` | zwykły | `stored` albo `rejected` | `nonce` |
-| `announce` | brak | zwykły | `ok` albo `rejected` | łączone w 30 s |
-| `silence` | `on`, opcjonalnie `exception_id` | zwykły | `pending`, potem `ok` albo `rejected` | stan docelowy |
-| `mark_read` | `msg` (numer wiadomości z `snap` lub `event`) | zwykły | `ok` (także dla numeru, którego wiadomość wypadła już ze skrzynki); `invalid` dla 0 i numeru ponad `head` | `msg` |
-| `status` | brak | każdy | `status` | – |
-| `close` | `epoch`, `head` | zwykły | `pending`, potem `ok` albo `rejected` | (`epoch`, `head`) |
-| `destroy` | brak | każdy | `pending`, potem `ok` albo `rejected` | stan docelowy |
-| `card` | brak | przygotowania | `card` | – |
-| `xfer_begin` | `op`, dalsze pola według `op` | przygotowania | `ok` z `xfer` albo `rejected`; `export` najpierw `pending` | (`op`, `sha256`), dla `export` (`op`, `mid`) |
-| `xfer_part` | `xfer`, `offset`, `data` | przygotowania | `ok` z `next` | (`xfer`, `offset`) |
-| `xfer_read` | `xfer`, `offset`, `length` (≤512) | przygotowania | `data` | (`xfer`, `offset`) |
-| `xfer_commit` | `xfer` | przygotowania | `ok` z wynikiem albo `rejected` | `xfer` |
-| `xfer_abort` | `xfer` | przygotowania | `ok` | `xfer` |
-| `migrate` | `step`, dalsze pola według kroku ([przeniesienie](#przeniesienie-stacji)) | przygotowania | `ok` albo `rejected`; przy krokach z przyciskiem najpierw `pending` | (`step`, `mid`) |
+| `sync` | `boot` (wartość z ostatniego `hello`, które laptop zapisał; pusta przy nowej bazie), `epoch` (albo `""`), `cursor` | każda | `sync_ok` albo `snap_required` | sesja |
+| `ack` | `epoch`, `cursor` | każda | brak | `cursor` (zbiorczo) |
+| `snapshot` | `epoch` | każda | `snap_begin`, `snap`…, `snap_end` | sesja |
+| `submit` | `id`, `revision`, `sa1` | stacja | `stored` albo `rejected` | (`id`, `revision`) |
+| `cancel` | `id` | stacja | `ok` albo `rejected`; dla zwolnionego `id` `ok` z `"released":true`, gdy wpis zwolniono jako anulowany, inaczej `too_late` | `id` |
+| `test` | `nonce` | stacja | `stored` albo `rejected` | `nonce` |
+| `announce` | brak | stacja | `ok` albo `rejected` | łączone w 30 s |
+| `silence` | `on`, opcjonalnie `exception_id` | każda | `pending`, potem `ok` albo `rejected` | stan docelowy |
+| `mark_read` | `msg` (numer zdarzenia `ev`, z którym wiadomość weszła do skrzynki; z `snap` lub `event`) | stacja | `ok` (także dla numeru, którego wiadomość wypadła już ze skrzynki); `invalid` dla 0 i numeru ponad `head` | `msg` |
+| `status` | brak | każda | `status` | – |
+| `close` | `epoch`, `head` | stacja | `pending`, potem `ok` albo `rejected` | (`epoch`, `head`) |
+| `destroy` | brak | każda | `pending`, potem `ok` albo `rejected` | stan docelowy |
+| `card` | brak | przygotowanie | `card` | – |
+| `xfer_begin` | `op`, dalsze pola według `op` | przygotowanie | `ok` z `xfer` albo `rejected`; `export` najpierw `pending` | (`op`, `sha256`), dla `export` (`op`, `mid`) |
+| `xfer_part` | `xfer`, `offset`, `data` | przygotowanie | `ok` z `next` | (`xfer`, `offset`) |
+| `xfer_read` | `xfer`, `offset`, `length` (≤512) | przygotowanie | `data` | (`xfer`, `offset`) |
+| `xfer_commit` | `xfer` | przygotowanie | `ok` z wynikiem albo `rejected` | `xfer` |
+| `xfer_abort` | `xfer` | przygotowanie | `ok` | `xfer` |
+| `migrate` | `step`, dalsze pola według kroku ([przeniesienie](#przeniesienie-stacji)) | przygotowanie | `ok` albo `rejected`; przy krokach z przyciskiem najpierw `pending` | (`step`, `mid`) |
 
-„Tryb przygotowania” włącza się przyciskiem pod naklejką serwisową, a stacja zapisuje każde wejście w FRAM, zanim włączy ten tryb ([tryb przygotowania](oprogramowanie.md#tryb-przygotowania-i-naklejka-serwisowa)); stacja pokazuje wtedy stale `tryb_przygotowania`. Polecenie z kolumny „przygotowania” poza tym trybem daje `prep_required`. Stacja w konfiguracji węzła stanowiska używa tego protokołu tylko w trybie przygotowania; poza nim interfejs danych przenosi pakiety Reticulum w ramkach KISS ([radio](radio.md#interfejs-reticulum-przez-usb-węzeł-stanowiska)), a polecenia `submit`, `cancel`, `test`, `announce`, `mark_read` i `close` dają tam `role`.
+„Tryb przygotowania” włącza się przyciskiem pod naklejką serwisową, a stacja zapisuje każde wejście w FRAM, zanim włączy ten tryb ([tryb przygotowania](oprogramowanie.md#tryb-przygotowania-i-naklejka-serwisowa)); stacja pokazuje wtedy stale `tryb_przygotowania`. Kolumna „Rola i tryb” ma trzy wartości. „Każda”: polecenie działa w każdej roli i w każdym trybie. „Stacja”: polecenie działa w trybie przygotowania i poza nim, ale tylko w roli `stacja`; stacja skonfigurowana jako węzeł stanowiska odpowiada `role`. „Przygotowanie”: polecenie działa tylko w trybie przygotowania, poza nim daje `prep_required`. Stacja w konfiguracji węzła stanowiska używa tego protokołu tylko w trybie przygotowania; poza nim interfejs danych przenosi pakiety Reticulum w ramkach KISS ([radio](radio.md#interfejs-reticulum-przez-usb-węzeł-stanowiska)). Kolejność kontroli: poprawność pól (`invalid`), `busy`, `prep_required`, `role`.
 
 **`submit`.** `sa1` to tablica REQUEST albo TEST zgodna z [SA1](oprogramowanie.md#wiadomości-sa1); `id` i `revision` muszą być równe polom tablicy. Stacja wysyła wiadomość zawsze do aktywnej tożsamości odbiorcy, więc laptop nie podaje adresu. Reguły:
 
@@ -85,6 +91,8 @@ Każdy wiersz w obu kierunkach:
 Odpowiedź `stored`: `{"id":…,"revision":…,"number":"0427","duplicate":false}`; `number` to krótki numer zgłoszenia.
 
 **`cancel`** (ANULUJ WYSYŁKĘ z panelu) działa tylko, dopóki żadna rewizja `id` nie została przekazana do LXMF ([cykl życia](oprogramowanie.md#cykl-życia-zgłoszenia)); później `too_late`, a panel proponuje rewizję „potrzeba ustała”.
+
+**`mark_read`** oznacza wiadomość skrzynki jako przeczytaną. `msg` to numer zdarzenia `ev`, z którym wiadomość weszła do skrzynki; stacja odpowiada `invalid` dla 0 i dla numeru ponad `head`, a `ok` także wtedy, gdy wiadomość wypadła już ze skrzynki (ponowienie jest bezpieczne). Polecenie nie niesie `epoch`, a `ev` zaczyna się od 1 w każdej epoce, więc po ZAMKNIJ ZDARZENIE numer z poprzedniej epoki może wskazać inną wiadomość. Laptop nie wysyła `mark_read` z numerem sprzed zamknięcia zdarzenia: po `close` i `sync` używa tylko numerów z nowej epoki.
 
 **`test`** tworzy TEST jak z menu stacji. `nonce` (16 cyfr szesnastkowych losowanych przez laptop) chroni przed podwójnym TEST przy powtórzeniu polecenia: stacja pamięta ostatnie 8 wartości `nonce` z `id` utworzonego TEST i na powtórzenie odpowiada tym samym `stored`. Przy wstrzymanym TEST (WSTRZYMAJ w menu TEST) stacja odpowiada `rejected` z `invalid` i `"detail":"paused"`, jak menu, bo taki TEST nie zostałby nadany.
 
@@ -133,8 +141,8 @@ Pola `hello`: `epoch` to bieżąca epoka pierścienia zdarzeń, `head` numer ost
 | `kind` | Pola | Znaczenie |
 |---|---|---|
 | `own` | `id`, `revision`, `sa1`, `origin` (`buttons`, `usb`) | nowa rewizja zgłoszenia albo TEST zapisana w stacji, także utworzona przyciskami; rejestr trzyma treść tylko najnowszej rewizji, więc zdarzenie rewizji już zastąpionej wychodzi z `"superseded":true` i bez `sa1` |
-| `stage` | `id`, `revision`, `stage`, `attempt`, `next_s`, `decision`, `decision_rev`, `status_event` | zmiana etapu wysyłki według [cyklu życia](oprogramowanie.md#cykl-życia-zgłoszenia): `stored`, `sending`, `delivered`, `received`, `superseded`, `cancelled`, `released` (wpis zwolniony z rejestru) |
-| `msg` | `msg`, `from`, `sa1`, `lost` | wiadomość od aktywnej tożsamości odbiorcy przyjęta do skrzynki (REPLY, BULLETIN; RECEIVED i STATUS zmieniają wpis rejestru i dają zdarzenie `stage` z polami `decision`, `decision_rev` i `status_event`); `msg` to numer w skrzynce; `"lost":true` i brak `sa1`, gdy wiadomość usunięto ze skrzynki, zanim zdarzenie wyszło |
+| `stage` | `id`, `revision`, `stage`, `attempt`, `next_s`, `decision`, `decision_rev`, `status_event` | zmiana etapu wysyłki według [cyklu życia](oprogramowanie.md#cykl-życia-zgłoszenia): `stored` (`zapisane`), `sending` (`wysylanie`), `delivered` (`dostarczone`), `received` (`odebrane`), `cancelled` (`anulowane`); `superseded` dotyczy rewizji zastąpionej nowszą, `released` zwolnienia wpisu z rejestru |
+| `msg` | `msg`, `from`, `sa1`, `lost` | wiadomość od aktywnej tożsamości odbiorcy przyjęta do skrzynki (REPLY, BULLETIN; RECEIVED i STATUS zmieniają wpis rejestru i dają zdarzenie `stage` z polami `decision`, `decision_rev` i `status_event`); `msg` to numer zdarzenia (`ev`), z którym wiadomość weszła do skrzynki; `"lost":true` i brak `sa1`, gdy wiadomość usunięto ze skrzynki, zanim zdarzenie wyszło |
 | `radio` | `silence`, `silence_source` (`switch`, `panel`), `exception_id`, `exception_revision` (`null` bez wyjątku), `lost` | zmiana ciszy radiowej; wyjątek z chwili zdarzenia (wpis pierścienia wskazuje wpis rejestru z generacją, rewizję wyjątku i krótki numer, po zwolnieniu wpisu `id` pochodzi z pamięci zwolnionych wpisów); `"lost":true` i `"exception_id":null`, gdy wpisu nie ma już w żadnej z nich (uszkodzony blok albo wpis zwolniony już przed zdarzeniem, np. przy przełączeniu CISZA długo po zwolnieniu wpisu wyjątku) |
 | `power` | `source` (`aa`, `12v`), `mv_aa`, `mv_12v`, `alarm` (`none`, `wymien_ogniwa`, `odlaczone_12v`) | zmiana źródła albo alarm energii |
 | `station` | `what` (`restart`, `config`, `receiver_backup`, `prep`), `detail` | restart (z przyczyną), nowa konfiguracja, przełączenie na KLUCZ ZAPASOWY, tryb przygotowania |
@@ -152,6 +160,7 @@ Pola `hello`: `epoch` to bieżąca epoka pierścienia zdarzeń, `head` numer ost
 | `stale` na `snapshot` | nic; laptop powtarza `snapshot` (stan zmienił się w trakcie migawki) |
 | `prep_required`, `role`, `not_configured` | opis stanu stacji |
 | `not_confirmed`, `silence_switch` | „nie potwierdzono na stacji” albo „przełącznik CISZA na stacji” |
+| `busy` | nic; laptop ponawia po odpowiedzi końcowej. Stacja odpowiada `busy`, dopóki czeka na przycisk po `pending` (przyjmuje wtedy tylko `ack` i `status`), oraz na `announce`, gdy nie może teraz zlecić ogłoszenia (stos nie działa, rola węzła) |
 
 ## Limity czasu
 
@@ -227,7 +236,7 @@ Dane większe niż jeden wiersz przechodzą przez transfer: konfiguracja (`confi
 
 Zapis: `xfer_begin` → `ok` z `xfer` (8 cyfr szesnastkowych) i `"max_part":512`; potem `xfer_part` z kolejnymi `offset` od 0; na końcu `xfer_commit`. `offset` musi być równy `next` z poprzedniej odpowiedzi. Część powtórzona z mniejszym `offset` i tą samą treścią daje `ok`, z inną treścią `invalid`. Stacja sprawdza łączny rozmiar (`size`) i SHA-256 (`hash`), potem treść. Każdy błąd daje `rejected` i zostawia poprzedni stan bez zmian. Odczyt: `xfer_begin` → `ok` z `xfer`, `size` i `sha256`; potem `xfer_read` → `data` z `offset` i `data`.
 
-**Dokument `configure`** to obiekt JSON z kompletną konfiguracją, kodowany jak wiersze protokołu (UTF-8, bez sekwencji `\u`), więc limit 7680 B mieści konfigurację największą według tabeli (około 4,5 KB):
+**Dokument `configure`** to obiekt JSON z kompletną konfiguracją, kodowany jak wiersze protokołu (UTF-8, bez sekwencji `\u`), więc limit 7680 B mieści konfigurację największą według tabeli (około 4,4 KB: 11 trójek fraz po 3 × 96 B ≈ 3,3 KB z cudzysłowami i przecinkami, 8 adresów po 64 B ≈ 0,55 KB, karta odbiorcy ≈ 0,4 KB, reszta ≈ 0,15 KB):
 
 | Pole | Typ i limit | Znaczenie |
 |---|---|---|
@@ -237,7 +246,7 @@ Zapis: `xfer_begin` → `ok` z `xfer` (8 cyfr szesnastkowych) i `"max_part":512`
 | `stations` | 1–1000 | liczba stacji w sieci (okno TEST startowego); tylko `stacja` |
 | `phrases` | lista 0–11 trójek [PL, UK, EN], każdy tekst ≤96 B | gotowe frazy; do SA1 trafia PL; tylko `stacja` |
 | `ifac` | 32 cyfry szesnastkowe | kod dostępu sieci |
-| `radio` | `{"profile":…}`: `lora-sf7` ([profil LoRa pilotażu](radio.md#profil-lora-pilotażu)) albo `p1` ([profil P1](radio.md#profil-p1-do-prototypu): stanowiska deweloperskie i wariant zapasowy) | profil radiowy; inny niż profil układu radiowego stacji daje `invalid` z `radio` |
+| `radio` | `{"profile":…}`: `lora-sf7` ([profil LoRa pilotażu](radio.md#profil-lora-pilotażu)) albo `p1` (profil wstrzymanego wariantu P1, [archiwum](../archiwum/README.md); obrazy `bench-*` go jeszcze używają) | profil radiowy; inny niż profil układu radiowego stacji daje `invalid` z `radio` |
 
 Stacja przy zatwierdzeniu sprawdza każdy tekst według reguł SA1 i odrzuca konfigurację, w której najgorsze zgłoszenie z przycisków (najdłuższy adres, najdłuższa fraza, `people` = 999) przekroczyłoby 256 B po kodowaniu (`invalid`, `detail` = `worst_request`). Przy limitach pól z tej tabeli (adres ≤64 B, fraza ≤96 B) najgorsze zgłoszenie ma 220 B, także z własnym tekstem wpisanym przyciskami, bo ten tekst ma ten sam limit 96 B co fraza. Ta odmowa chroni więc tylko przed przyszłą zmianą limitów; wcześniej działają odmowy `addresses` i `phrases`. Odpowiedź `ok` podaje `worst_request` (bajty; liczone z frazami z konfiguracji, więc przy krótkich frazach niższe niż zgłoszenie z najdłuższym własnym tekstem, najwyżej 220 B) i numer konfiguracji `config_seq`. Zmiana `role` restartuje stację po odpowiedzi, bo stos buduje interfejsy przy starcie.
 
@@ -266,7 +275,7 @@ PRZENIEŚ STACJĘ przenosi tożsamość, licznik czasu pracy, konfigurację, rej
 | `abort` | docelowa | `mid`, `eph` (pusty przed krokiem 2) | przy stanie `imported` najpierw `pending`; `ok` z `confirm` = potwierdzenie „aborted”, a przy pustym `eph` `ok` bez `confirm`. Stacja zapisuje w FRAM wynik (`mid`, `confirm`) w tej samej transakcji, w której usuwa dane importu i klucz prywatny przeniesienia, więc ponowiony `abort` z tym samym `mid` zwraca to samo potwierdzenie |
 | `abort` | źródłowa | `mid` i `confirm` albo `"forced":true` | przy `forced` najpierw `pending`; `ok`; stacja pamięta `mid` ostatniego wycofanego przeniesienia, więc ponowienie po utracie odpowiedzi daje `ok` z `"duplicate":true` |
 
-Nieznany `mid` albo krok niezgodny ze stanem daje `migration`, błędne potwierdzenie `signature`. Paczka: nagłówek (wersja, `mid`, skrót tożsamości, `eph`, skrót paczki), potem części po 512 B, każda szyfrowana AEAD (ChaCha20-Poly1305) kluczem HKDF-SHA-256(X25519(`eph`, `target_key`), „WICI migrate pkg” ‖ `mid`), oddzielonym od `k` innym ciągiem HKDF, z numerem części w nonce. Stacja źródłowa w stanie `export` nie zmienia danych, więc może wydać tę samą paczkę ponownie. Paczka nigdy nie zawiera jawnego klucza prywatnego. Licznik czasu pracy stacji docelowej przyjmuje większą z dwóch wartości ([czas](oprogramowanie.md#czas)).
+Nieznany `mid` albo krok niezgodny ze stanem daje `migration`, błędne potwierdzenie `signature`. Paczka: nagłówek (wersja, `mid`, skrót tożsamości, `eph`, skrót paczki), potem części po 512 B, każda szyfrowana AEAD (ChaCha20-Poly1305) kluczem HKDF-SHA-256(X25519(`eph`, `target_key`), „WICI migrate pkg” ‖ `mid`), oddzielonym od `k` innym ciągiem HKDF, z numerem części w nonce. Stacja źródłowa w stanie `export` nie zmienia danych, więc może wydać tę samą paczkę ponownie. Paczka nigdy nie zawiera jawnego klucza prywatnego. Licznik czasu pracy stacji docelowej przyjmuje większą z dwóch wartości + 60 s, a sumę przeskoków S przelicza tak, że czas dla obsługi przeniesionych rekordów się nie zmienia ([czas](oprogramowanie.md#czas)).
 
 **Wznowienie i wycofanie:**
 
@@ -274,13 +283,13 @@ Nieznany `mid` albo krok niezgodny ze stanem daje `migration`, błędne potwierd
 |---|---|
 | po kroku 1, przed krokiem 2 | `abort` na docelowej z `mid` i pustym `eph`: usuwa klucz przeniesienia i wraca do `none`; źródłowa nic nie zmieniła |
 | po kroku 2, przed krokiem 3 albo z niepewnym wynikiem kroku 3 | laptop odczytuje `eph` ze źródłowej (`migrate` `"step":"status"`), potem `abort` na docelowej z `mid` i `eph`: usuwa dane importu, jeśli są (w stanie `imported` po potwierdzeniu przyciskiem), usuwa klucz prywatny przeniesienia, więc paczki nie da się już odszyfrować, i zwraca potwierdzenie „aborted”. Dopiero z nim `abort` na źródłowej przywraca zwykłą pracę i unieważnia `k`. Gdy docelowa nie odpowiada albo straciła klucz przeniesienia (np. po ZNISZCZ DANE), źródłowa wraca do pracy przez `abort` z `"forced":true` dopiero po ZNISZCZ DANE na docelowej, potwierdzonym przyciskiem na źródłowej i wpisanym do dziennika; dzięki temu dwie stacje nigdy nie mają naraz aktywnej tej samej tożsamości |
-| po kroku 3, przed 4 | powtórzyć krok 4; docelowa nie nadaje, dopóki nie dostanie potwierdzenia wycofania |
+| po kroku 3, przed 4 | powtórzyć krok 4; docelowa nie nadaje, dopóki nie dostanie potwierdzenia „retired” |
 | źródłowa uległa awarii po kroku 3 | `activate` z `"forced":true` na docelowej, z potwierdzeniem przyciskiem OK na niej i wpisem w dzienniku zdarzeń; osoba utrzymująca system odłącza źródłową od anteny i zasilania, a przy ponownym uruchomieniu wykonuje na niej ZNISZCZ DANE |
-| po kroku 4, przed 5 | powtórzyć krok 5 (potwierdzenie wycofania zapisuje źródłowa); źródłowa w stanie `retired` nie przyjmuje `abort`, a laptop nie wysyła `abort` do docelowej, gdy `status` źródłowej podaje `retired` |
+| po kroku 4, przed 5 | powtórzyć krok 5 (potwierdzenie „retired” zapisuje źródłowa); źródłowa w stanie `retired` nie przyjmuje `abort`, a laptop nie wysyła `abort` do docelowej, gdy `status` źródłowej podaje `retired` |
 
 Źródłowa w stanie `export` albo `retired` i docelowa w stanie `imported` pokazują na ekranie `tryb_przygotowania` i nie wychodzą z trybu przygotowania, dopóki operacja się nie zakończy albo nie zostanie wycofana. Uszkodzonej stacji nie da się przenieść: stacja zapasowa dostaje nową tożsamość, a stanowisko odbiorcze zmienia listę zaufanych stacji ([model zaufania](oprogramowanie.md#model-zaufania-i-kluczy)).
 
-**Baza laptopa** przechodzi osobno, przez zaszyfrowaną kopię na pamięci USB zestawu, aktualizowaną najpóźniej 5 s po każdej zmianie ([pakiet USB](oprogramowanie.md#pakiet-usb)). Klucz danych jest opakowany osobno dla każdego konta (PBKDF2 z pliku na pamięci USB i hasła konta) oraz kluczem z hasła odtworzenia (co najmniej 6 słów z listy, 72 bity, PBKDF2), które leży w kopercie przy stacji razem z hasłami panelu. Na nowym komputerze aplikacja otwiera kopię logowaniem gospodarza albo zastępcy; hasło odtworzenia jest potrzebne, gdy plik kont jest utracony lub uszkodzony, a kopia jest cała. Po jego użyciu osoba utrzymująca system zmienia to hasło. Bez kopii bazy nowy laptop odtwarza stan zgłoszeń SA1 migawką ze stacji; tracone są tylko dane mieszkańców i tokeny strony.
+**Baza laptopa** przechodzi osobno, przez zaszyfrowaną kopię na pamięci USB zestawu, zapisywaną w tle po każdej migawce na dysku ([pakiet USB](oprogramowanie.md#pakiet-usb)). Klucz danych jest opakowany osobno dla każdego konta (PBKDF2 z pliku na pamięci USB i hasła konta) oraz kluczem z hasła odtworzenia (co najmniej 6 słów z listy, 72 bity, PBKDF2), które leży w kopercie przy stacji razem z hasłami panelu. Na nowym komputerze aplikacja otwiera kopię logowaniem gospodarza albo zastępcy; hasło odtworzenia jest potrzebne, gdy plik kont jest utracony lub uszkodzony, a kopia jest cała. Po jego użyciu osoba utrzymująca system zmienia to hasło. Bez kopii bazy nowy laptop odtwarza stan zgłoszeń SA1 migawką ze stacji; tracone są tylko dane mieszkańców i tokeny strony.
 
 ## Przebiegi
 
@@ -288,7 +297,7 @@ Nieznany `mid` albo krok niezgodny ze stanem daje `migration`, błędne potwierd
 
 ```text
 S→L {"usb":2,"seq":1,"type":"hello","boot":"9c…","contracts":[2],"role":"stacja","prep":false,"configured":true,"epoch":"51…","head":214,"min":1,"migration":"none",…}
-L→S {"usb":2,"seq":1,"type":"sync","boot":"a0…","epoch":"","cursor":0}
+L→S {"usb":2,"seq":1,"type":"sync","boot":"","epoch":"","cursor":0}
 S→L {"usb":2,"seq":2,"type":"snap_required","re":1,"epoch":"51…","head":214,"min":1,"reason":"epoch"}
 L→S {"usb":2,"seq":2,"type":"snapshot","epoch":"51…"}
 S→L snap_begin, 37 × snap, snap_end (head 214)
@@ -302,6 +311,6 @@ L→S {"usb":2,"seq":3,"type":"ack","epoch":"51…","cursor":214}
 
 **Laptop odłączony przez kilka dni:** stacja wygenerowała 900 zdarzeń, pierścień trzyma 256. `sync` z kursorem sprzed odłączenia → `snap_required` z `gap` → migawka.
 
-**Odrzucenie i ponowne połączenie:** `submit` przy pełnej kolejce → `rejected` `full`; panel pokazuje `kolejka_pelna`, intencja zostaje w SQLite oznaczona jako odrzucona, a gospodarz używa formularza papierowego. Laptop nie ponawia automatycznie odmowy `full`; gospodarz może wysłać ją ponownie, gdy kolejka się zwolni.
+**Pełna kolejka:** `submit` przy pełnej kolejce → `rejected` `full`; panel pokazuje `kolejka_pelna`, intencja zostaje w SQLite oznaczona jako odrzucona, a gospodarz używa formularza papierowego. Laptop nie ponawia automatycznie intencji odrzuconej z `full`; gospodarz może wysłać ją ponownie, gdy kolejka się zwolni.
 
-**Konfiguracja:** `xfer_begin` `configure` (`size` 5120, `sha256`), 10 × `xfer_part`, `xfer_commit` → `ok` z `worst_request` 220 i `config_seq` 3; zdarzenie `station` `config`.
+**Konfiguracja:** `xfer_begin` `configure` (`size` 4096, `sha256`), 8 × `xfer_part`, `xfer_commit` → `ok` z `worst_request` 220 i `config_seq` 3; zdarzenie `station` `config`.

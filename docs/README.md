@@ -7,18 +7,18 @@ Specyfikacja stacji 0.5 składa się z pięciu rozdziałów, protokołu USB, roz
 | Rozdział | Zakres |
 |---|---|
 | [Projekt](spec/projekt.md) | Poziomy zestawu, połączenia, przygotowanie i użycie odebranego zestawu |
-| [Radio](spec/radio.md) | Profil LoRa pilotażu, profil P1 (wariant zapasowy), ramki, dostęp do kanału, interfejs radiowy w stosie z ponowieniami, interfejs Reticulum przez USB (węzeł stanowiska), USB do laptopa, dwa wykonania stacji |
+| [Radio](spec/radio.md) | Profil LoRa, radia RNode do pomiarów, współdzielenie kanału, dostęp do kanału, warunki prawne, interfejs radiowy w stosie z ponowieniami, interfejs Reticulum przez USB (węzeł stanowiska), USB do laptopa, antena i budżet łącza |
 | [Oprogramowanie](spec/oprogramowanie.md) | Oprogramowanie stacji i laptopa, wiadomości SA1, cykl życia zgłoszenia, trwałość i pamięć FRAM, czas, ekran i przyciski, tryby kryzysowe, pakiety offline i aktualizacja |
 | [Protokół USB](spec/protokol-usb.md) | Kontrakt laptop–stacja (`"usb":2`): polecenia i odpowiedzi, synchronizacja, transfery w częściach, PRZENIEŚ STACJĘ |
-| [Elektronika](spec/elektronika.md) | Stacja pilotażowa z gotowych modułów i jej tor zasilania, zanik zasilania przy zapisie, wymagania płytki R02 (wstrzymanej do decyzji po pilotażu), poziom 3 z kupionej stacji zasilania; własny blok zasilania poziomu 3 jako archiwum |
+| [Elektronika](spec/elektronika.md) | Stacja pilotażowa na płytce v2, tor zasilania z ogniw AA i 12 V, zanik zasilania przy zapisie, poziom 3 z kupionej stacji zasilania |
 | [Stanowisko odbiorcze](spec/stanowisko-osp.md) | Stanowisko odbiorcze: stacja jako węzeł transportu i obowiązkowy komputer z tożsamością odbiorcy (D19), aplikacja, panel, zestaw, awarie |
 | [Odbiór](spec/odbior.md) | Próby z grupami T1–T8, minimum pilotażu, warunki zaliczenia i niezrealizowane części |
 | [Karta obsługi](obsluga/karta-stacji.html) | Karta obsługi stacji do druku: PL, UK i EN, każda na jednej kartce A4 (strona 1 najważniejsze, strona 2 gdy trzeba), i formularz papierowy; CC BY 4.0 ([dokumenty obsługi](obsluga/README.md)) |
 | [Instrukcja dyżurnego](obsluga/instrukcja-dyzurnego.md) | Czynności dyżurnego: uruchomienie, potwierdzenia, odpowiedzi i komunikaty, kwarantanna, przekazywanie służbom, rejestr, awarie, ćwiczenia, cisza, zamknięcie zdarzenia; tabele dla gminy; CC BY 4.0 |
 | [Instrukcja gospodarza](spec/instrukcja.md) | Tematy obsługi spoza karty: adres, stany zgłoszenia, alarmy, cisza, energia, poziomy 2–3, przekazanie zmiany, koniec zdarzenia, bezpieczeństwo |
-| [BOM stacji](spec/bom-stacji.csv) | Wymagania minimalne części i kandydaci od dwóch producentów, ze stanem kwalifikacji |
+| [BOM stacji](spec/bom-stacji.csv) | Części stacji pilotażowej (płytka v2, moduły, zasilanie, obudowa i antena) i zestawu, z kandydatami i stanem |
 
-Planowany pilotaż obejmuje stacje na gotowych płytkach ESP32-S3 z układem LoRa SX1262 ([profil LoRa](spec/radio.md#profil-lora-pilotażu)). Lista prób wymaganych przed pilotażem jest w sekcji [Minimum pilotażu](spec/odbior.md#minimum-pilotażu) odbioru; pozostałe wiersze dotyczą wydania.
+Planowany pilotaż obejmuje stacje na płytce v2 z modułami ESP32-S3 i SX1262 ([elektronika](spec/elektronika.md#stacja-pilotażowa), [profil LoRa](spec/radio.md#profil-lora-pilotażu)). Lista prób wymaganych przed pilotażem jest w sekcji [Minimum pilotażu](spec/odbior.md#minimum-pilotażu) odbioru; pozostałe wiersze dotyczą wydania.
 
 Wstrzymane do decyzji po pilotażu są: płytka R02 z torem RF i blokiem zasilania, profil P1 (wariant zapasowy), poziomy 2–3 (poziom 3 na kupionej stacji zasilania) oraz pakiety START. Uzasadnienia zmian i ich historię opisuje [przegląd techniczny](review.md).
 

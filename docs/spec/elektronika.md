@@ -1,162 +1,110 @@
 # WICI: elektronika
 
-Zakres po przeglądzie praktycznym (2026-10-08, F99, F100): przed pilotażem obowiązuje [stacja pilotażowa](#stacja-pilotażowa) z gotowych modułów i reguła [zaniku zasilania przy zapisie](#zanik-zasilania-i-zapis), wspólna dla wszystkich wykonań. Części [zasilanie stacji](#zasilanie-stacji) i [płytka R02](#płytka-stacji-r02-wymagania) opisują własną płytkę, wstrzymaną do decyzji po pilotażu ([koncepcja 08](../concept/08-plan-weryfikacji-i-decyzje.html)).
+Stacja pilotażowa to płytka v2 z linii prototypu, z modułami w kupionej obudowie (krok 6 planu, [koncepcja, rozdział 08](../concept/08-plan-weryfikacji-i-decyzje.html#stacje-pilotazowe)). Płytka v2 powstaje z płytki v1 prototypu i dodaje tor zasilania z ogniw AA i z 12 V; poziom 3 zasila kupiona stacja zasilania (D05). Wcześniejsze wymagania własnej płytki R02, porównanie gotowych płytek z SX1262 i własny blok zasilania poziomu 3 są w [archiwum](#archiwum-płytka-r02-i-gotowe-płytki).
 
-Poziom 3 używa [kupionej stacji zasilania](#poziom-3-kupiona-stacja-zasilania) (D05 zamknięte); własny blok zasilania poziomu 3 jest w [archiwum](#archiwum-własny-blok-zasilania-poziomu-3).
-
-Podane wartości służą do wykonania i pomiaru prototypu. Warianty różnych producentów wymagają oddzielnego sprawdzenia tolerancji i nie zawsze mają zgodne wyprowadzenia. Schemat połączeń nie zastępuje projektu płytki drukowanej (PCB) ani odbioru części 230 V.
+Podane wartości służą do projektu, wykonania i pomiaru stacji pilotażowej. Zamienniki innych producentów wymagają oddzielnego sprawdzenia tolerancji i nie zawsze mają zgodne wyprowadzenia. Schemat połączeń nie zastępuje projektu płytki drukowanej (PCB).
 
 ## Stacja pilotażowa
 
-Stacja pilotażowa składa się z gotowych modułów połączonych przewodami w kupionej obudowie. Jej konfiguracja (płytka, oprogramowanie, antena, profil LoRa, wyłączone Wi-Fi i Bluetooth) musi mieścić się w deklaracji zgodności UE producenta płytki albo mieć ustaloną podstawę prób terenowych (D20).
+Płytka v2 to płytka v1 prototypu ([`hardware/dev-bench`](../../hardware/dev-bench/plytka-nosna.md), projekt v1.1 z poprawioną taśmą ekranu, F118) z trzema grupami zmian:
 
-| Element | Wymaganie | Kandydaci (do potwierdzenia przed zamówieniem) |
+1. **wnioski z prototypu:** taśma ekranu z v1.1, rezystor R12 = 1 kΩ zamiast 10 kΩ; dalsze przyjdą z kroku 4;
+2. **zmiany pod pilotaż:** bez gniazd na moduły TI, ST i Nordic (J1–J4, J9, J10, JP3), moduł Wio osadzony na płytce zamiast przewodów, obrys i otwory pod obudowę, własne gniazdo USB do laptopa bez linii VBUS ([USB do laptopa](#gniazdo-usb-do-laptopa));
+3. **tor zasilania** z ogniw AA i z 12 V ([zasilanie stacji](#zasilanie-stacji)), którego wymaga minimum pilotażu.
+
+Płytkę v2 zamawia się w pełni zmontowaną w JLCPCB (SMD i THT, części podstawowe montażowni; wycenę pełnego montażu sprawdzono w zamkniętym [PR #129](https://github.com/tmierzwa/WICI/pull/129)). Moduły (DevKitC, Wio, panel), obudowa, antena, program i próba każdej sztuki są poza montażownią. Zamówienie obejmuje 10 płytek, z których zmontowanych jest 8: sieć pilotażu 3, zapas w gminie 1–2, egzemplarz u autora 1, badania zgodności 1–2. Zasada: v2 nie zamyka drogi do wydania, ale nie dostaje niczego na zapas. Otwarta decyzja projektowa, do podjęcia po kroku 4: moduły wpinane jak w prototypie czy przylutowany moduł ESP32-S3 i układ radiowy na płytce. Złącze analizatora (J11), wejście VTEST (J12) i zworki pomiarowe v1 zostają albo wypadają według tej samej zasady; rozstrzyga projekt v2.
+
+Konfigurację pilotażową (płytka, moduły, program stacji, antena, profil LoRa, wyłączone Wi-Fi i Bluetooth) zespół bada według norm zharmonizowanych przed pracą w terenie (D20, [radio](radio.md#warunki-prawne-i-zgodność)). Części i kandydaci są w [BOM stacji](bom-stacji.csv).
+
+| Element | Wymaganie | Część (prototyp na v1; v2) |
 |---|---|---|
-| płytka MCU z radiem | ESP32-S3 z SX1262 z TCXO; flash ≥8 MiB (dwa gniazda obrazu po 3 MiB, [aktualizacja](oprogramowanie.md#aktualizacja-oprogramowania-stacji)); USB-C podłączone do USB-OTG ESP32-S3; wyprowadzenie 5 V zasilające regulator 3,3 V płytki; złącze anteny (u.FL albo SMA) z przejściem na SMA-F w ściance obudowy; deklaracja zgodności UE producenta; ładowarka Li-ion płytki nieużywana (gniazdo akumulatora puste); VBUS oddzielony od szyny 5 V diodą na płytce | RAK3312 (H) na płytce bazowej RAK19007 (główny kandydat: [porównanie](#porównanie-kandydatów), [dokumenty zgodności](#dokumenty-zgodności-kandydatów)), Heltec WiFi LoRa 32 V3.2, LILYGO T3-S3 SX1262, Seeed XIAO ESP32S3 z Wio-SX1262 (Seeed publikuje dla zestawu tylko certyfikację chińską, 2026-10-21); dla żadnej nie znaleziono dotąd podpisanej deklaracji UE producenta. W14 dla pilotażu: płytki od dwóch źródeł zakupu |
-| FRAM | układ SPI 4 Mbit, 3,3 V, zegar SPI ≥8 MHz, na osobnym CS, na płytce przejściowej SOIC-8 z kondensatorem 100 nF; te same układy co na płytce nośnej N1 i w BOM, rozpoznawane przez `src/fram_id.h` | Infineon CY15B104QN-50SXI albo RAMXEED MB85RS4MTPF; moduł Adafruit 4719 jest niedostępny do 2027 (F86) |
-| ekran | panel Sharp LS027B7DH01A 2,7" 400 × 240 na płytce przejściowej: złącze FPC 10 pin 0,5 mm, kondensatory według karty Sharp (LCP-1112041, rysunek 9-1), własna przetwornica 5 V z 3,3 V płytki, bo panel wymaga 4,8–5,5 V na VDD i VDDA, czego szyna 5 V za diodami (około 4,6 V) nie zapewnia; EXTMODE=H, EXTCOMIN z licznika sprzętowego MCU; wejścia logiczne bez translatora (VIH od 2,7 V przy 3,3 V) | układ płytki nośnej N1: Hirose FH12-10S-0.5SH(55), Microchip MCP1640 z dzielnikiem 1 MΩ / 309 kΩ (4,90–5,36 V w najgorszym przypadku), [płytka nośna](../../hardware/dev-bench/plytka-nosna.md#zasilanie) |
-| przyciski i przełącznik | GÓRA, DÓŁ, OK, WSTECZ (duże, w rękawicach), przełącznik CISZA z osłoną, przycisk konfiguracji za otworem pod numerowaną naklejką serwisową; dioda alarmu i brzęczyk z MCU | gotowe przyciski panelowe IP65 |
-| obudowa | kupiona, IP40 lub lepsza, z przepustem anteny i 12 V, z odciążeniem przewodów; koszyk 4 × AA dostępny bez narzędzi | do wyboru z wymiarów modułów |
-| antena | zewnętrzna 868 MHz, zysk ≤6 dBi, zwarta dla prądu stałego, z odgromnikiem przy wejściu do budynku ([radio](radio.md#dwa-wykonania)) | jak w etapie 0 |
+| moduł MCU | ESP32-S3; flash 8 MiB (dwa gniazda obrazu po 3 MiB, [aktualizacja](oprogramowanie.md#aktualizacja-oprogramowania-stacji)); natywne USB-OTG ([dwa interfejsy CDC](radio.md#usb-do-laptopa)); PSRAM niepotrzebny, a zapas RAM liczy się bez niego | Espressif ESP32-S3-DevKitC-1-N8R8 rev. 1.1 w gniazdach J5/J6; obraz przyjmuje też wersje N8 i N8R2 |
+| radio | SX1262 z TCXO, [profil LoRa](radio.md#profil-lora-pilotażu); zasilanie 3,3 V z płytki z punktem pomiaru prądu; 100 nF i 10 µF przy module; RXEN 10 kΩ do masy; złącze anteny u.FL i przewód do SMA-F w ściance obudowy | Seeed Wio SX1262 (z zestawu 102010611); w prototypie na adapterze przewodowym obok płytki ([zlecenie](../../hardware/l0-diagnostic/ZLECENIE.md)), w v2 osadzony na płytce |
+| FRAM | SPI 4 Mbit (magazyny stacji zajmują około 413 KiB, [pamięć FRAM](oprogramowanie.md#pamięć-fram)), 3,3 V, zegar SPI ≥8 MHz, osobny CS, zasada [zaniku zasilania](#zanik-zasilania-i-zapis); rozpoznawana przez `src/fram_id.h` | U1: Infineon CY15B104QN-50SXI albo RAMXEED MB85RS4MTPF-G-BCERE1 (SOIC-8 208 mil, wspólny footprint; na płytkach v1 z JLC osadzono MB85RS4MTPF) |
+| nadzór zasilania FRAM | CS pamięci zwolniony, zanim zasilanie spadnie poniżej minimum FRAM | U3 TI TPS3840PH27 (próg 2,7 V) i U4 bramka OR 74LVC1G32: CS = CS z MCU lub RESET nadzorcy |
+| ekran | panel Sharp LS027B7DH01A 2,7" 400 × 240: złącze FPC 10 pin 0,5 mm, kondensatory według karty Sharp (LCP-1112041, rysunek 9-1); VDD i VDDA 4,8–5,5 V z przetwornicy 5 V zasilanej z 3,3 V; EXTMODE = H, EXTCOMIN z licznika sprzętowego MCU; wejścia logiczne bez translatora (VIH od 2,7 V przy 3,3 V) | Hirose FH12-10S-0.5SH(55); U2 Microchip MCP1640 z dzielnikiem 1 MΩ / 309 kΩ (4,90–5,36 V w najgorszym przypadku, [płytka v1](../../hardware/dev-bench/plytka-nosna.md#zasilanie)) |
+| przyciski i przełącznik | GÓRA, DÓŁ, OK, WSTECZ (duże, w rękawicach), przełącznik CISZA z osłoną, przycisk przygotowania za otworem pod numerowaną naklejką serwisową | Omron B3F-4055 z nasadkami B32-1310, E-Switch 100SP1T1B4M2QE, Omron B3F-1000 |
+| dioda alarmu i brzęczyk | sterowane z MCU; brzęczyk z szyny 5 V przez tranzystor | Kingbright WP7113ID; Same Sky CEM-1203(42) z kluczem MMBT3904 |
+| zasilanie | ogniwa 4 × AA i wejście 12 V bez restartu przy przełączaniu ([zasilanie stacji](#zasilanie-stacji)) | do projektu v2 |
+| obudowa | kupiona, IP40 lub lepsza, z przepustem anteny i 12 V, z odciążeniem przewodów; koszyk 4 × AA dostępny bez narzędzi | wymiary z przymiarki prototypu ([obudowa](../../hardware/obudowa/README.md)) |
+| antena | zewnętrzna 868 MHz, zysk ≤6 dBi, zwarta dla prądu stałego, z odgromnikiem przy wejściu do budynku | [antena i budżet łącza](radio.md#antena-i-budżet-łącza) |
 
-### Porównanie kandydatów
+Stacji pilotażowej używa się tylko w temperaturach dopuszczonych przez karty wszystkich modułów, ogniw i ekranu (zwykle od 0 °C dla modułów z elektrolitem, −20 °C dla panelu). Miejsce chłodniejsze wymaga wcześniejszej próby w tej temperaturze.
 
-Stan 2026-10-21 (z dokumentacji producentów i definicji płytek w oprogramowaniu Meshtastic i `rnodeconf`, bez pomiaru).
+## Zasilanie stacji
 
-| Wymaganie | RAK3312 (H) + płytka bazowa RAK19007 | Heltec WiFi LoRa 32 V3.2 | LILYGO T3-S3 SX1262 | Seeed XIAO ESP32S3 + Wio-SX1262 |
-|---|---|---|---|---|
-| flash ≥8 MiB | ✅ 16 MB (+ 8 MB PSRAM) | ✅ 8 MB (ESP32-S3FN8) | ❌ 4 MB (ESP32-S3FH4R2) | ✅ 8 MB |
-| USB-C do USB-OTG (dwa interfejsy CDC, [radio](radio.md#usb-do-laptopa)) | ✅ natywne USB przez złącze rdzenia do USB-C RAK19007 | ❌ na USB-C tylko mostek CP2102 (GPIO43/44); USB-OTG wyprowadzone na listwę J2 (GPIO19/20), więc potrzebne osobne gniazdo USB | ✅ natywne USB | ✅ natywne USB |
-| SX1262 z TCXO | ✅ TCXO 1,8 V z DIO3 (definicja Meshtastic; karta nie podaje); zasilanie przełącznika antenowego sterowane GPIO4 | ✅ TCXO 1,8 V z DIO3 | ✅ TCXO 1,8 V z DIO3 | ✅ TCXO 1,8 V z DIO3 |
-| wejście 5 V do regulatora 3,3 V, VBUS oddzielony diodą | ✅ RAK19007: VBUS przez diodę D2, wejście „solar” P2 (≤5,5 V) przez D4 na wspólną szynę, dalej D8 i przetwornica 3,3 V; ładowarka TP4054 bez akumulatora nieużywana; dwie diody Schottky’ego więcej w torze | ❌ pin 5V (JP2.2) to VUSB za bezpiecznikiem F1, bez diody; dioda D2 (1N5819) dopiero przed stabilizatorem LDO. Działa tylko z osobnym gniazdem USB (wiersz wyżej): gniazdo USB-C płytki zostaje wtedy niepodłączone, a VBUS nowego gniazda służy tylko do wykrycia hosta | ❓ do sprawdzenia | ⚠️ pin 5V na krawędzi to sieć VBUS (nie nadaje się); wejście VIN (3,7–5 V) za diodą D2 jest dostępne tylko przez złącze B2B, czyli na Wio J2.1; szyna 5 V stacji podłączona do VIN nie dochodzi do VBUS |
-| wolne linie poza SPI radia (stacja potrzebuje 16–17: CS FRAM i ekranu, EXTCOMIN, DISP, LED, brzęczyk, 4 przyciski, CISZA, przygotowanie, INT i KILL, 2 × ADC) | ⚠️ około 13 przez złącze rdzenia (IO1, IO3–IO6, AIN0, AIN1, SPI_CS, 2 × I2C, UART1 = UART0 ESP32-S3 na GPIO43/44, więc tylko wejścia; IO2 = GPIO14 steruje zasilaniem 3V3_S); bezpośrednio na listwach J10–J12 tylko 7, reszta przez gniazda WisBlock; brakujące przez ekspander I2C | ✅ około 16 na listwach J2/J3 (GPIO2–7, 33, 34, 38–42, 45, 47, 48; GPIO45/46 to piny strapping) | ⚠️ kilka (QWIIC, złącze 2 × 13), część zajęta przez kartę SD | ❌ 8 (D0–D7), potrzebny ekspander |
-| złącze anteny (u.FL albo SMA) | ⚠️ MHF4 (mniejsze niż u.FL), potrzebny przewód MHF4–SMA | ✅ IPEX 1.0 (u.FL) | nie sprawdzano | ✅ u.FL na Wio |
-| oprogramowanie RNode (`rnodeconf`, Reticulum `e40191b`) | ❌ brak | ✅ | ✅ | ⚠️ eksperymentalne |
-| deklaracja zgodności UE | potwierdzenie badań RED modułu (laboratorium BALUN), bez deklaracji producenta i bez EN 18031 ([dokumenty](#dokumenty-zgodności-kandydatów)) | znak CE na płytce; deklaracji nie znaleziono | nie znaleziona | tylko certyfikacja chińska |
-
-Wniosek: wymagania płytki spełnia RAK3312 na RAK19007 (zasilanie 5 V przez wejście P2, VBUS oddzielony diodą). Wyprowadzenia do stacji wymagają ekspandera albo własnej płytki pod gniazdo IO. Heltec V3.2 spełnia je tylko z osobnym gniazdem USB na GPIO19/20. Na USB-C jest CP2102, a bez USB-OTG nie ma dwóch interfejsów CDC. Pin 5V to VUSB bez diody, więc gniazdo USB-C płytki musi zostać niepodłączone. T3-S3 odpada przez 4 MB flash, a XIAO przez liczbę wyprowadzeń (zasilanie tylko przez VIN na Wio J2.1). Heltec, T3-S3 i XIAO nadają się jako urządzenia RNode do etapu 0 i T3. Do W14 (dwa źródła zakupu) potrzebny jest drugi kandydat spełniający wymagania.
-
-Źródła: [definicje płytek Meshtastic](https://github.com/meshtastic/firmware/tree/master/variants/esp32s3), [rnodeconf](https://github.com/markqvist/Reticulum/blob/e40191b/RNS/Utilities/rnodeconf.py), [LILYGO T3-S3](https://github.com/Xinyuan-LilyGO/LilyGo-LoRa-Series/blob/master/docs/en/t3_s3_sx1262/t3_s3_sx1262_hw.md), RAK3312 WisBlock LoRaWAN Module Datasheet ([strona](https://docs.rakwireless.com/product-categories/wisblock/rak3312/datasheet/); bez informacji o certyfikacji), RAK19007 WisBlock Base Board 2nd Gen Datasheet (schemat zasilania, rysunek 15), Heltec WiFi LoRa 32 Pin Map i opis płytki V3 (CP2102, LDO, IPEX 1.0), schemat HTIT-WB32LAF V3.1 (zasilanie: VUSB, F1, VDD_5V, D2, CE6260B33M; listwy JP2/JP3; dla V3.2 według analizy pinów pin 5V leży przed bezpiecznikiem), [Heltec V3.2](https://resource.heltec.cn/download/WiFi_LoRa_32_V3/HTIT-WB32LA_V3.2.pdf), [Heltec V3: USB i piny](https://www.espboards.dev/esp32/heltec-wifi-lora-32-v3/), [Heltec V3: piny w ESPHome](https://devices.esphome.io/devices/heltec-wifi-lora-32-v3/), [XIAO ESP32S3: piny](https://wiki.seeedstudio.com/xiao_esp32s3_pin_multiplexing/), [XIAO: zasilanie przez pin 5V](https://forum.seeedstudio.com/t/how-to-power-xiao-esp32s3-from-5v-vin-vbus-with-diode/281611), schemat XIAO ESP32S3 v1.4 (Seeed, 202003751, arkusz 4: VBUS przez D2 na VIN, VBAT przez tranzystor D1, przetwornica SGM6029), [program R0](../../hardware/radio-pair/src/main.cpp).
-
-### Dokumenty zgodności kandydatów
-
-Stan 2026-10-21; sprawdzone RAK i Seeed, Heltec i LILYGO bez zmian od 2026-10-08. Żaden dokument nie jest deklaracją zgodności UE producenta płytki: dokumenty RAK dotyczą modułów, a deklarację dla modułu na płytce bazowej wystawia RAK (zapytanie do RAK wysłane 2026-10-21). Tabela obejmuje też RAK4631 z urządzeń do etapu 0.
-
-| Moduł | Dokument | Zakres | Braki i uwagi |
-|---|---|---|---|
-| RAK3312 (ESP32-S3 + SX1262; razem z RAK3112) | Verification of Conformity BL-SZ25A0042D01, Shenzhen BALUN Technology (laboratorium, nie jednostka notyfikowana), 2026-02-10, [PDF](https://downloads.rakwireless.com/LoRa/RAK3112/Certification/RAK3112_CE_Certification.pdf) | RED art. 3.1a: EN IEC 62368-1:2020+A11:2020, EN IEC 62311:2020, EN 50665:2017; art. 3.1b: EN 301 489-1 V2.2.3, -3 V2.3.2, -17 V3.3.1, EN 55032, EN 55035, EN IEC 61000-3-2, EN 61000-3-3; art. 3.2: EN 300 220-2 V3.3.1 (wersja z planu badań), EN 300 328 V2.2.2 | brak załącznika z pasmami, mocą i anteną, więc nie widać, czy 869,525 MHz przy 13 dBm i jaka antena były badane; brak EN 18031 (art. 3.3 lit. d–f), choć moduł ma Wi-Fi i Bluetooth (czy wymagane przy trwale wyłączonych, pytanie do pełnomocnika ds. zgodności); dotyczy modułu, nie płytki bazowej. EU868 tylko w wersji (H); parametry techniczne w [porównaniu](#porównanie-kandydatów) |
-| RAK4631 (nRF52840 + SX1262) | EU-Type Examination Certificate B2011135, BACL, jednostka notyfikowana 1313, moduł B RED, 2020-11-23, z załącznikiem A ([pakiet CE](https://downloads.rakwireless.com/LoRa/RAK4630/Certification/RAK4630_RAK4631_CE_Certification.zip)); raporty TÜV Rheinland RoHS 168307136a i REACH 168307136b (2021-03-08, SVHC według listy z III 2020) | EN 300 220-1 V3.1.1, EN 300 220-2 V3.2.1, EN 301 489-1/-3/-17, EN 300 328, EN 62368-1, EN 62311; LoRa 125 kHz m.in. 869,5–869,55 MHz, 13,26 dBm, antena prętowa 3,0 dBi | nie jest kandydatem pilotażu (nRF52840, nie ESP32-S3); używany do testu zasięgu w etapie 0 (RAK10722: RAK19007 + RAK4631); art. 3.3 „nie dotyczy” (przed 2022/30); dotyczy modułu |
-
-Wniosek: RAK3312 ma aktualny zestaw norm RED, ale bez danych o paśmie, mocy i antenie oraz bez EN 18031. Zapytanie do RAK (2026-10-21): deklaracja UE dla RAK3312 (H) i RAK19007, raporty radiowe BL-SZ25A0042-601…603 z pasmem, mocą i anteną, stanowisko wobec EN 18031, warunki ważności przy własnym oprogramowaniu. Seeed XIAO ESP32S3 z Wio-SX1262 nie ma dokumentów na rynek UE.
-
-### Tor zasilania
+Tor zasilania jest jedyną nową częścią elektroniki v2. Wymagania wynikają z minimum pilotażu ([odbiór](odbior.md#minimum-pilotażu)): ≥48 h na ogniwach AA w temperaturze pokojowej, podłączenie 12 V bez resetu, brak utraty zgłoszeń przy wyjęciu ogniw.
 
 ```text
-4 × AA Li-FeS2 ─ koszyk z kluczowaniem ─ D1 Schottky ─ przetwornica P_AA (podw.-obniż. 5 V, EN) ─ D3 Schottky ─┐
-                                                          EN ← (ON) i (brak 12 V)                              ├─ 5 V ─ C ≥1000 µF ─ wejście 5 V płytki
-12 V ─ F T1A ─ D2 Schottky ─ odcięcie UV 11,5 V / 12,4 V ─ przetwornica P12 (obniż. 5 V, EN) ─ D4 Schottky ───┘
-                                                          EN ← (ON)
-sterownik wyłącznika z zatrzaskiem (zasilany przez diody z AA i 12 V) ─ ON;  INT ─ MCU;  MCU ─ KILL
-dzielniki AA i 12 V (odłączane) ─ ADC płytki
+4 × AA Li-FeS2 ─ koszyk z kluczowaniem ─ D1 ──────────────────────┐
+                                                                  ├─ VSYS ─ C ─ przetwornica 3,3 V (EN ← ON) ─ piny 3V3 płytki DevKitC
+12 V ─ F T1A ─ TVS 33 V ─ łącznik 12 V (UV 11,5/12,4 V, OVP 17 V) ┘
+sterownik wyłącznika (zasilany przez diody z AA i z 12 V za łącznikiem) ─ ON;  INT ─ MCU;  MCU ─ KILL
+dzielniki AA i 12 V (odłączane) ─ ADC
 ```
 
-| Element | Wymaganie | Kandydat |
-|---|---|---|
-| P_AA | wejście co najmniej 3–8 V (4 × Li-FeS2: do 7,3 V świeże, około 4,0 V na końcu, minus D1), wyjście 5 V ≥0,5 A, prąd spoczynkowy ≤0,2 mA, wejście EN | Pololu S9V11F5 (2–16 V, start od 3 V, 1,5 A, Iq <0,2 mA; bez ochrony przed odwrotną polaryzacją) |
-| P12 | wejście co najmniej 10–20 V (akumulator 12 V przy ładowaniu do 14,8 V i przepięcia), wyjście 5 V ≥0,5 A, prąd spoczynkowy ≤0,1 mA, wejście EN | Pololu D36V6F5 (5,2–50 V, 0,6 A, Iq <0,1 mA; bez ochrony przed odwrotną polaryzacją) |
-| D1–D4 | Schottky ≥1 A; D2 VR ≥40 V (odwrotna polaryzacja 12 V), D1 VR ≥20 V | np. SS14, SS54 |
-| wybór źródła | przy obecnym 12 V (za odcięciem UV) EN P_AA w stanie niskim: ogniwa nie oddają energii i nigdy jej nie dostają (D3 blokuje szynę 5 V od P_AA, D1 blokuje wejście) | tranzystor z dzielnika za odcięciem UV |
-| odcięcie UV 12 V | wyłącza P12 poniżej 11,5 V, włącza powyżej 12,4 V (histereza, bez stanu zapamiętanego w MCU), oba progi mierzone na złączu, czyli dzielnikiem przed D2, bo spadek na D2 (około 0,3 V) przesunąłby je do 11,8/12,7 V i pełny akumulator w spoczynku (12,6 V) nie uruchomiłby stacji; pobór ≤50 µA | nadzorca napięcia z histerezą na EN P12 albo gotowy moduł odcięcia podnapięciowego 12 V |
-| sterownik wyłącznika | wyjście włączenia aktywne stanem wysokim, zgodne z wejściami EN przetwornic (LTC2955-1; LTC2955-2 ma wyjście aktywne stanem niskim i wymagałby negatora); zachowanie jak w R02: krótkie naciśnięcie włącza, przytrzymanie 2 s zgłasza MCU żądanie wyłączenia (`wylaczanie`, potem `mozna_wyjac`, KILL), przytrzymanie ≥5 s wyłącza bez MCU; zasilanie przez diody z obu źródeł | LTC2955-1 na płytce uniwersalnej albo gotowy moduł o tym zachowaniu |
-| C na szynie 5 V | ≥1000 µF o małym upływie + ceramika: przełączenie z 12 V na ogniwa (start P_AA) bez restartu płytki | elektrolit 1000 µF/10 V |
+Schemat pokazuje funkcje, nie układy. Architektura (decyzja z 2026-10-30): jak w [projekcie zasilania R02](../../hardware/r02/zasilanie.md), ogniwa przez diodę i 12 V przez łącznik na wspólną szynę VSYS, jedna przetwornica podwyższająco-obniżająca 3,3 V podłączona do pinów 3V3 i G płytki DevKitC. Instrukcja płytki dopuszcza zasilanie przez 3V3 i G jako jeden z trzech sposobów, które się wykluczają ([instrukcja DevKitC-1 v1.1](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-devkitc-1/user_guide_v1.1.html)). Płytki DevKitC nie przerabia się.
 
-Zasady: ogniwa ani wejście 12 V nie łączą się z gniazdem akumulatora płytki ani z VBUS. Ładowarka płytki pozostaje nieużywana. Spadek na D3 i D4 (około 0,35 V) zostawia na wejściu 5 V płytki około 4,6 V, co wystarcza regulatorowi 3,3 V płytki przy poborze z TX. Sprawdza to pomiar napięcia 3,3 V przy nadawaniu. Przetwornica 5 V, diody i regulator 3,3 V płytki tracą więcej energii niż przetwornica R02: szacunek dla 45 mA poboru MCU spada z około 52 h do około 45 h. W23 (≥48 h) jest więc zagrożone. Rozstrzyga je pomiar z minimum pilotażu, a jeśli wymaganie nie będzie spełnione, tor zmienia się przed pilotażem (np. przetwornica 3,3 V wprost na zasilanie płytki, jeśli płytka to dopuszcza). Pobór w stanie wyłączonym ≤0,1 mA z każdego źródła. Na czas przechowywania ogniwa wyjmuje się ze stacji. Ogniwa alkaliczne i NiMH tylko awaryjnie, jak w R02. Stacji pilotażowej używa się tylko w temperaturach dopuszczonych przez karty wszystkich modułów, ogniw i ekranu (zwykle od 0 °C dla modułów z elektrolitem, −20 °C dla panelu). Miejsce chłodniejsze wymaga wcześniejszej próby w tej temperaturze.
+Odrzucony wariant: dwie przetwornice 5 V z diodami na pin 5V płytki. Regulator liniowy płytki (SGM2212-3.3) traci wtedy około jednej trzeciej energii i szacunek dla 45 mA poboru MCU spada z około 52 h do około 45 h, poniżej W23; kandydaci byli tylko modułami Pololu, których montażownia nie osadza.
+
+Przed schematem v2:
+
+1. **pobór przez 3V3 bez USB, pomiar na jednej płytce DevKitC.** Napięcie 3,3 V trafia przez R24 (0 Ω) także na wyjście regulatora płytki. Karta SGM2212 (rew. A.2) nie opisuje zachowania przy napięciu wyjścia wyższym od wejścia; prąd wsteczny zatrzymują dalej diody D1 i D7 ([schemat v1.1](https://dl.espressif.com/dl/schematics/SCH_ESP32-S3-DevKitC-1_V1.1_20221130.pdf)). Gdyby pobór był istotny wobec W23, R24 się usuwa;
+2. **sprawność LTC3115-1 przy 3,3 V** na płytce ewaluacyjnej (Z11 w projekcie zasilania): model liczy 85%, wykresy dają około 82–85%, co przy 82% daje około 50 h;
+3. **wejście 12 V odporne na 24 V.** Względem projektu R02 (TVS 18 V, części za nim do 30–40 V) v2 zmienia trzy rzeczy: TVS SMBJ33CA zamiast SMBJ18CA, łącznik LM74800-Q1 (praca 3–65 V, odwrotna polaryzacja do −65 V, [LM7480-Q1](https://www.ti.com/product/lm7480-q1)) z tranzystorami ≥60 V zamiast BUK7Y12-40E, bo przy odciętym łączniku widzą pełne napięcie wejścia z impulsem do 53,3 V, oraz zasilanie sterownika wyłącznika (LTC2955, praca do 36 V), nadzorcy UV i logiki tylko z 12 V za łącznikiem albo z ogniw. Przed łącznikiem zostają tylko bezpiecznik, TVS, łącznik i dzielnik pomiaru;
+4. **dostępność LTC3115-1** w LCSC sprawdzona przed schematem; przy braku inna przetwornica 3,3 V tej klasy (TPS63070 odpada z powodów opisanych w projekcie zasilania).
+
+| Element | Wymaganie | Kandydaci do projektu v2 |
+|---|---|---|
+| ogniwa | 4 × AA Li-FeS2 1,5 V (wymagane do przechowywania i do W23); alkaliczne lub NiMH tylko awaryjnie; koszyk z kluczowaniem przeciw odwrotnemu włożeniu; ogniwa ani wejście 12 V nie łączą się z VBUS ani z ładowarką modułu | Energizer L91 |
+| przetwornica z ogniw | wejście co najmniej 3–8 V (4 × Li-FeS2: do 7,3 V świeże, około 4,0 V na końcu, minus spadek diody), wyjście ≥0,5 A, prąd spoczynkowy ≤0,2 mA, wejście EN | ADI LTC3115-1 |
+| przetwornica z 12 V | wejście co najmniej 10–20 V (akumulator przy ładowaniu do 14,8 V i przepięcia), wyjście ≥0,5 A, prąd spoczynkowy ≤0,1 mA, wejście EN | wspólna przetwornica LTC3115-1 za łącznikiem 12 V TI LM74800-Q1 z dwoma Nexperia BUK7Y12-40E |
+| diody | Schottky ≥1 A; dioda wejścia 12 V VR ≥40 V (odwrotna polaryzacja), dioda ogniw VR ≥20 V i mały prąd wsteczny przy 16 V i 45 °C, bo płynie do pierwotnych ogniw litowych | np. SS14, SS54; suma diodowa sterownika: Nexperia BAS116H |
+| wybór źródła | przy obecnym 12 V (za odcięciem UV) ogniwa nie oddają energii i nigdy jej nie dostają | suma diodowa jak w projekcie zasilania |
+| odcięcie UV 12 V | wyłącza zasilanie z 12 V poniżej 11,5 V, włącza powyżej 12,4 V (histereza, bez stanu zapamiętanego w MCU); oba progi mierzone na złączu, przed diodą, bo spadek na niej (około 0,3 V) przesunąłby je do 11,8/12,7 V i pełny akumulator w spoczynku (12,6 V) nie uruchomiłby stacji; pobór ≤50 µA | nadzorca napięcia z histerezą na EN; TI TPS3701 albo ADI LTC2965 |
+| sterownik wyłącznika | krótkie naciśnięcie włącza, przytrzymanie 2 s zgłasza MCU żądanie wyłączenia (`wylaczanie`, potem `mozna_wyjac`, KILL), przytrzymanie ≥5 s wyłącza bez MCU; KILL w stanie wysokim najpóźniej 304 ms po włączeniu; zasilanie przez diody z obu źródeł | ADI LTC2955-2 z tranzystorem PMOS jak w projekcie zasilania |
+| kondensator szyny | przełączenie z 12 V na ogniwa (start przetwornicy z ogniw) bez restartu modułu; mały upływ, bo szyna wisi na ogniwach | według [projektu zasilania](../../hardware/r02/zasilanie.md) |
+| wejście 12 V | 11,5–16 V w pracy. Od 17 V do 33 V w sposób ciągły (instalacja 24 V wozu strażackiego albo ciężarówki, ładowanie 28,8 V, uszkodzony regulator alternatora) łącznik odcina wejście bez uszkodzeń, stacja pracuje z ogniw, a ekran pokazuje komunikat o za wysokim napięciu; po spadku poniżej progu OVP wejście wraca samo. Odwrotne podłączenie do 33 V przez 60 s bez przepalenia bezpiecznika i uszkodzeń. Impulsy z instalacji pojazdu ogranicza TVS. Ochrona nie zależy od zakazu w instrukcji: wtyk do gniazda zapalniczki jest w zestawie, a w kryzysie stacja trafi też do pojazdu 24 V | Schurter 0001.2504; TVS SMBJ33CA (dwukierunkowy: praca do 33 V, przebicie od 36,7 V, ograniczenie 53,3 V, karta Vishay 88392) |
+| progi ogniw | ostrzeżenie przy 4,4 V (1,1 V na ogniwo), kontrolowane wyłączenie przy 4,0 V po zakończeniu zapisu FRAM; progi na filtrowanej średniej z okresów samego odbioru, bo impulsy TX chwilowo obniżają napięcie zimnych ogniw | program stacji |
+| pomiar | ADC napięcia ogniw (przed diodą) i wejścia 12 V (przed diodą i łącznikiem) przez dzielniki odłączane między pomiarami; błąd ≤2%; wynik na ekranie i w `INFO`; zakres pomiaru 12 V do co najmniej 36 V, żeby odróżnić 24 V od zwykłego zaniku; wejście ADC ograniczone tak, by impuls 53,3 V (granica TVS) go nie uszkodził | dzielnik 0,1% jak VTEST na v1 |
+| pobór | w pracy przekaźnika tyle, by komplet ogniw dał ≥48 h (W23; model: [radio](radio.md#profil-lora-pilotażu)); w stanie wyłączonym ≤0,1 mA z każdego źródła | pomiar w RX, TX i przy pracy ekranu |
+
+Zasady: o W23 rozstrzyga pomiar z minimum pilotażu, a niespełnione wymaganie zmienia tor przed zamówieniem v2. Napięcie 3,3 V przy nadawaniu sprawdza pomiar przy TX. Na czas przechowywania ogniwa wyjmuje się ze stacji. Powerbank przez USB nie jest dopuszczonym źródłem: wiele powerbanków wyłącza się przy prądzie rzędu kilkudziesięciu miliamperów, czyli przy poborze stacji.
 
 ### Stany zasilania 12 V
 
 | Sytuacja | Ogniwa w stacji | Zachowanie |
 |---|---|---|
-| pierwsze podłączenie 12 V albo powrót źródła, napięcie ≥12,4 V | tak lub nie | P12 startuje; przy ogniwach przejście z ogniw na 12 V bez restartu (szyna 5 V podtrzymana przez C) |
-| podłączenie źródła 11,5–12,4 V | tak lub nie | P12 nie startuje (histereza); stacja pracuje z ogniw albo pozostaje wyłączona; ekran przy ogniwach pokazuje `odlaczone_12v` |
-| spadek 12 V poniżej 11,5 V w pracy | tak | odcięcie P12, start P_AA, praca z ogniw bez restartu, `odlaczone_12v` |
+| pierwsze podłączenie 12 V albo powrót źródła, napięcie ≥12,4 V | tak lub nie | zasilanie z 12 V startuje; przy ogniwach przejście z ogniw na 12 V bez restartu (szyna podtrzymana przez kondensator) |
+| podłączenie źródła 11,5–12,4 V | tak lub nie | zasilanie z 12 V nie startuje (histereza); stacja pracuje z ogniw albo pozostaje wyłączona; ekran przy ogniwach pokazuje `odlaczone_12v` |
+| podłączenie źródła powyżej progu OVP (np. instalacja 24 V, do 33 V ciągle) | tak lub nie | łącznik nie załącza wejścia, nic się nie uszkadza; stacja pracuje z ogniw albo pozostaje wyłączona; ekran przy ogniwach pokazuje komunikat o za wysokim napięciu 12 V (nowy tekst w programie stacji); po spadku poniżej progu wejście załącza się samo |
+| spadek 12 V poniżej 11,5 V w pracy | tak | odcięcie 12 V, start przetwornicy z ogniw, praca z ogniw bez restartu, `odlaczone_12v` |
 | spadek 12 V poniżej 11,5 V w pracy | nie | stacja traci zasilanie jak przy zaniku ([zanik zasilania](#zanik-zasilania-i-zapis)); odbudowa napięcia akumulatora bez obciążenia (zwykle do 12,0–12,3 V) nie włącza jej z powrotem; włącza się sama dopiero przy ≥12,4 V (np. po naładowaniu) |
 | restart przez watchdog | tak lub nie | tor zasilania i stan sterownika wyłącznika bez zmian |
-| wyłączenie wyłącznikiem głównym | tak lub nie | oba EN w stanie niskim; ponowne włączenie przyciskiem przy ≥12,4 V albo z ogniw |
-| odwrotna polaryzacja 12 V (do 16 V przez 60 s) | tak lub nie | D2 blokuje; bez uszkodzeń i bez przepalenia bezpiecznika |
-| ogniwa włożone odwrotnie | – | kluczowany koszyk, D1 blokuje |
+| wyłączenie wyłącznikiem głównym | tak lub nie | oba źródła odłączone; ponowne włączenie przyciskiem przy ≥12,4 V albo z ogniw |
+| odwrotna polaryzacja 12 V (do 16 V przez 60 s) | tak lub nie | dioda albo łącznik blokuje; bez uszkodzeń i bez przepalenia bezpiecznika |
+| ogniwa włożone odwrotnie | – | kluczowany koszyk, dioda blokuje |
 
 Te stany sprawdza próba „Tor zasilania stacji pilotażowej” w [minimum pilotażu](odbior.md#minimum-pilotażu): brak prądu do ogniw (pomiar prądu w gałęzi ogniw przy 12 V, ≤1 µA), odwrotne podłączenie, napięcia graniczne 11,4/11,6/12,3/12,5/14,8/16 V, przełączenia bez restartu i zanik przy zapisie.
 
+
+### Gniazdo USB do laptopa
+
+Płytka v2 ma własne gniazdo USB-C (z rezystorami 5,1 kΩ na CC1 i CC2, bez których laptop z USB-C nie wykryje urządzenia), połączone tylko z liniami danych natywnego USB modułu (GPIO19 i GPIO20, piny 19 i 20 listwy J3 płytki DevKitC) i z masą, z ochroną ESD. Linii VBUS gniazdo nie ma, więc laptop połączony dowolnym przewodem nigdy nie zasila stacji, także wyłączonej, i nie walczy z przetwornicą 3,3 V. Nic nie zależy od pamiętania o przejściówce ani o przeróbce. Złącza micro USB płytki DevKitC służą tylko do programowania przy stole, przy odłączonym zasilaniu stacji.
+
 ## Zanik zasilania i zapis
 
-Reguła wspólna dla stacji pilotażowej i R02. Poprawność zapisu nie zależy od czasu podtrzymania: każda transakcja FRAM ma znacznik zatwierdzenia zapisywany na końcu, a niezatwierdzona transakcja jest po restarcie odrzucana albo dokańczana z rekordu transakcji ([zapis w FRAM](oprogramowanie.md#trwałość-i-potwierdzenia)). Dług ciszy jest zatwierdzany przed nadaniem ([radio](radio.md#dostęp-do-kanału)). Zanik w dowolnej chwili może więc najwyżej odrzucić zapis, który nie został jeszcze potwierdzony (`zapisane_w_stacji`, `stored`, RECEIVED).
+Poprawność zapisu nie zależy od czasu podtrzymania: każda transakcja FRAM ma znacznik zatwierdzenia zapisywany na końcu, a niezatwierdzona transakcja jest po restarcie odrzucana albo dokańczana z rekordu transakcji ([zapis w FRAM](oprogramowanie.md#trwałość-i-potwierdzenia)). Dług ciszy jest zatwierdzany przed nadaniem ([radio](radio.md#dostęp-do-kanału)). Zanik w dowolnej chwili może więc najwyżej odrzucić zapis, który nie został jeszcze potwierdzony (`zapisane_w_stacji`, `stored`, RECEIVED).
 
 Sprzęt musi zapewnić tylko, że zanik nie uszkodzi zawartości pamięci poza bieżącym zapisem:
 
 1. Zapis FRAM idzie seriami SPI po ≤256 B przy zegarze ≥8 MHz (≤0,3 ms na serię). Przy 1 MHz seria 256 B trwałaby 2,05 ms, więc wolniejszy zegar jest niedopuszczalny.
-2. Układ nadzoru resetu (albo detektor zaniku zasilania MCU, BOD) zatrzymuje MCU i zwalnia linię CS pamięci (podciągnięcie CS do zasilania FRAM), zanim napięcie zasilania FRAM spadnie poniżej jej minimum (MB85RS4MT 1,8 V, CY15B104Q 2,0 V). Próg resetu MCU ≥2,5 V przy zasilaniu 3,3 V spełnia to z zapasem.
-3. W R02 komparator VSYS daje przerwanie wcześniej: MCU kończy bieżącą serię SPI, zwalnia CS, nie zaczyna nowej serii ani nadawania i gasi podświetlenie, diodę i brzęczyk. Budżet tej pracy wynosi ≤1 ms; wymagany czas podtrzymania ≥2 ms (zapas ≥2×) daje kondensator ≥680 µF z tabeli [zasilania stacji](#zasilanie-stacji).
-4. Stacja pilotażowa nie ma komparatora ani kondensatora podtrzymania na VSYS; wystarczają punkty 1–2 i kondensator szyny 5 V. Dlatego minimum pilotażu sprawdza 100 odcięć podczas zapisu i nadawania bez fałszywego `zapisane_w_stacji` i bez uszkodzonego rekordu, a odbiór wydania 1000 odcięć na R02.
-
-## Zasilanie stacji
-
-Dotyczy płytki R02, wstrzymanej do decyzji po pilotażu.
-
-```text
-4 × AA ─ R 1 Ω ─ dioda Schottky’ego DAA ──────────────────────────────────────────────────┐
-12 V ─ F T1A ─ TVS SMBJ18CA ─ tłumik RC ─ łącznik S12 ────────────────────────────────────┴─ VSYS ─ C ≥680 µF (mały upływ) ─ przetwornica podwyższająco-obniżająca ─ 3V3
-            │                                       (polaryzacja, OVP, UV 11,5 V z zatrzaskiem,      │                                    │
-            │                                        narastanie ≤1 A; EN = ON i brak zatrzasku UV)    komparator VSYS 3,4 V ─ przerwanie MCU   EN = ON
-            └─ dzielnik 12 V z kluczem ≥40 V ─ ADC        zatrzask UV 12 V (zasilany z wyjścia ON) ─ EN S12
-AA i 12 V (przed S12) ─ dwie diody Schottky’ego ─ sterownik wyłącznika LTC2955 ─ ON ─ EN S12 i EN przetwornicy
-                                                   przycisk wyłącznika głównego ─┘   INT ─ MCU;  MCU ─ KILL
-```
-
-| Element | Wymaganie prototypu |
-|---|---|
-| Ogniwa | 4 × AA: litowe Li-FeS2 1,5 V (wymagane do przechowywania i do W23), alkaliczne lub NiMH tylko awaryjnie; koszyk z kluczowaniem przeciw odwrotnemu włożeniu. W23 i praca w −10 °C dotyczą wyłącznie ogniw Li-FeS2; ogniwa alkaliczne i NiMH tracą w −10…−20 °C około 50–80% pojemności |
-| Wyłącznik główny | przycisk ze sterownikiem z zatrzaskiem (soft-latch), ADI LTC2955-2 (1,5–36 V, 1,2/3 µA; zamiast LTC2954, który pobierał 6/12 µA); drugi kandydat innego producenta do wyboru przy R02 (W14); MAX16150 się nie nadaje, bo wymaga stale obecnej szyny 1,3–5,5 V. Krótkie naciśnięcie włącza; przytrzymanie 2 s zgłasza MCU żądanie wyłączenia (INT), MCU pokazuje `wylaczanie`, kończy transakcję FRAM i nadawanie, pokazuje `mozna_wyjac` i dopiero wtedy wyłącza (KILL); bez odpowiedzi MCU wyłączenie wymusza przytrzymanie przycisku przez czas ustawiony kondensatorem na ≥5 s (LTC2955 C_TMR 2,2 µF; sterownik nie wyłącza się sam po puszczeniu przycisku, a puszczenie przerywa wyłączanie; 2 s do INT odmierza program, a KILL musi być w stanie wysokim najpóźniej 304 ms po włączeniu, [zasilanie R02](../../hardware/r02/zasilanie.md)). Wyjście EN̄ (wersja -2, aktywne stanem niskim) steruje bramką PMOS, który z sumy diodowej tworzy szynę ON; szyna ON steruje EN łącznika S12 i przetwornicy 3V3 ([zasilanie R02](../../hardware/r02/zasilanie.md)); tor ogniw nie ma łącznika, bo przy wyłączonej przetwornicy VSYS obciążają tylko prądy spoczynkowe. Łącznik mechaniczny odpada: odcina zasilanie natychmiast, a podtrzymanie (2 ms) wystarcza tylko na zakończenie jednego zapisu, więc procedura wymiany ogniw z karty nie byłaby wykonalna. LTC2955 zasila się z sumy diodowej obu źródeł przed S12 (dwie diody Schottky’ego), nie z VSYS, bo VSYS znika po wyłączeniu. Prąd pobierany w stanie wyłączonym z każdego źródła ≤20 µA, do zmierzenia |
-| VSYS | 3,4–16 V; źródło o wyższym napięciu zasila stację, przełączenie bez spadku 3V3 poniżej progu resetu |
-| Dioda DAA (ogniwa) | dioda Schottky’ego (decyzja F87): bez prądu spoczynkowego, więc prąd z ogniw w stanie wyłączonym spada z około 24 do około 12 µA typowo; idealna dioda LTC4412 pobierała 11–19 µA stale. VR ≥30 V (VSYS ogranicza OVP łącznika S12); spadek około 0,35 V przy 40–120 mA, liczony w modelu energii i w progach ogniw (ogniwa mierzy się przed diodą); prąd wsteczny przy 16 V i 45 °C płynie do pierwotnych ogniw litowych, gdy stacja pracuje z 12 V, więc dioda o małym upływie, a wartość dopuszczalną bierze się z karty ogniw (do sprawdzenia). Rezystor 1 Ω impulsowy przed diodą ogranicza udar przy wkładaniu ogniw do ≤5 A |
-| Łącznik S12 (12 V) | 12 V odłącza łącznik dwukierunkowy (dwa tranzystory MOSFET połączone przeciwstawnie, źródłami do siebie), o wytrzymałości ≥40 V; wejście EN pojedynczego sterownika idealnej diody nie odłącza źródła, bo prąd płynie dalej przez diodę podłożową. Narastanie napięcia przy załączeniu sterowane, prąd ładowania kondensatorów ≤1 A. Kandydaci: sterownik TI LM74800-Q1 z dwoma tranzystorami N-MOSFET ≥40 V (blokada prądu wstecznego, regulowany OVP; prąd spoczynkowy około 0,4 mA do modelu energii) albo eFuse z blokadą prądu wstecznego, OVP i UVLO, np. TI TPS25947, który ma maksimum 28 V i wymaga dodatkowego ogranicznika przed wejściem. LM74502 nie blokuje prądu wstecznego, więc nadaje się tylko do ochrony przed odwrotną polaryzacją. Obaj kandydaci pochodzą od TI; potrzebny kandydat innego producenta (W14) |
-| Ochrona przepięciowa | S12 odcina VSYS powyżej zakresu pracy (OVP): próg nominalnie 17 V z LTC3115-1 (praca do 16 V), 15,5 V w wariancie TPS63070 (praca do 15 V). TPS63070 ma zalecane napięcie wejścia 2–16 V i maksimum bezwzględne 20 V (TI SLVSC58B, 7.1 i 7.3): reguła poniżej daje 0,9 × 20 V = 18 V, ale ciągła praca nie może przekroczyć zalecanych 16 V, więc dla tego wariantu górna granica progu łącznie z tolerancją i przerzutem wynosi 16 V. Próg 15,5 V ±2% (15,19–15,81 V) zostawia na przerzut ≤0,19 V, co wymaga pomiaru; jeśli przerzut jest większy, wariant TPS63070 wymaga dodatkowego ogranicznika. Wcześniejsza wersja liczyła regułę od 16 V jako maksimum wejścia (0,9 × 16 V = 14,4 V), co było błędne. Wymaganiem jest reguła, nie tolerancja progu (decyzja F87): dolna granica progu powyżej maksimum pracy (16 V), a górna łącznie z przerzutem ≤0,9 × maksimum wejścia przetwornicy i ≤0,9 × maksimum zasilania komparatora zaniku. LM74800-Q1 z dzielnikiem 255 kΩ / 20,0 kΩ (0,1%) daje 16,40–17,45 V, a z przerzutem ≤18,3 V wobec 36 V dla LTC3115-1. Przy TPS3710 (maksimum 18 V) zasilanym z VSYS granica wynosi 16,2 V, co przy pracy do 16 V nie zostawia miejsca na tolerancję; komparator zasila się więc z 3V3 (wejście SENSE przez dzielnik z VSYS) albo wybiera komparator o wyższym napięciu zasilania (do oceny w R02). TVS SMBJ18CA (dwukierunkowy, bo przy odwrotnym podłączeniu jednokierunkowy przewodziłby i przepalał bezpiecznik) ogranicza impuls dopiero do około 29 V, więc nie chroni sam przetwornicy. Tłumienie na wejściu 12 V: tłumik RC, czyli ceramika 10–22 µF/50 V X7R z rezystorem 0,5–1 Ω (decyzja F87); bipolarny elektrolit 47 µF/35 V ma gwarantowany upływ 49–52 µA, ponad budżet stanu wyłączonego. Bez tłumienia przepięcie przy podłączaniu przewodu sięga około 2 × Vin; wartość R dobiera się do indukcyjności przewodu i sprawdza pomiarem |
-| Przetwornica 3V3 | podwyższająco-obniżająca, wejście 2,7–16 V w pracy, ≥500 mA, sprawność ≥85% przy 30–60 mA z ogniw (6 V) i ≥80% z 12,8 V, prąd spoczynkowy ≤50 µA. Kandydat podstawowy: ADI LTC3115-1 (do 40 V). TI TPS63070 (zalecane wejście do 16 V, maksimum bezwzględne 20 V; prąd spoczynkowy 54 µA typowo, 103 µA maksymalnie, więc ponad wymaganie ≤50 µA) tylko przy zawężeniu pracy wejścia 12 V do 11,5–15 V i progu OVP 15,5 V ±2% z przerzutem ≤0,19 V (wiersz „Ochrona przepięciowa”) |
-| Wejście 12 V | 11,5–16 V w pracy (11,5–15 V w wariancie TPS63070); pierwsze i ponowne załączenie przy ≥12,4 V (jeden próg, decyzja F87); złącze IP67 kluczowane; bezpiecznik zwłoczny T1A 32 V DC przy wtyku; TVS SMBJ18CA; ochrona przed odwrotną polaryzacją w S12; odwrotne podłączenie 16 V przez 60 s bez przepalenia bezpiecznika i uszkodzeń. Nie podłączać do instalacji pojazdu z pracującym silnikiem, dopóki próby impulsami według ISO 7637-2 nie wykażą odporności |
-| Odłączenie 12 V | wyłączenie przy 11,5 V z zatrzaskiem; ani LM74800, ani TPS25947 nie ma zatrzasku UV, więc osobny komparator z zatrzaskiem jest wymagany zawsze. Zatrzask zasilany z wyjścia ON sterownika wyłącznika głównego, więc wyłączenie stacji go kasuje; pobór ≤20 µA. Ekran pokazuje wtedy `odlaczone_12v`. Ponowne załączenie po odłączeniu i ponownym podłączeniu źródła, wyłączeniu wyłącznika głównego albo przytrzymaniu OK, zawsze tylko przy V12 ≥12,4 V; przycisk OK kasuje zatrzask przez tranzystor z izolacją poziomów 3V3↔12 V. Stacja pracuje wtedy z ogniw. Stany: pierwsze podłączenie i powrót źródła przy ≥12,4 V załączają S12 bez restartu; restart przez watchdog nie kasuje zatrzasku (zasilany z ON); wyłącznik główny go kasuje; bez ogniw odcięcie przy 11,5 V wyłącza stację, która pozostaje wyłączona po odbudowie napięcia, aż do odłączenia źródła albo użycia wyłącznika głównego i ≥12,4 V |
-| Wykrycie zaniku zasilania | komparator VSYS z wyjściem na przerwanie MCU, próg 3,4 V ±2% (np. TI TPS3710: zasilanie 1,8–18 V, próg ustawiany dzielnikiem na wejściu SENSE; TPS3840 ma maksimum 10 V i mierzy tylko własne zasilanie). Po przerwaniu MCU najpierw gasi podświetlenie, diodę alarmu i brzęczyk. Czas podtrzymania od progu 3,4 V do zatrzymania przetwornicy przy 2,7 V ≥2 ms przy maksymalnym poborze (TX, aktywny MCU) w −20 °C: C ≥ 2·P·t/(3,4² − 2,7²); model daje P ≈0,42 W i C ≥ około 393 µF, a przy najgorszym progu komparatora (3,325 V) ≥450 µF; po tolerancji −20% i spadku w −20 °C kondensator ≥680 µF/25 V o małym upływie (decyzja F87). Kondensator polimerowy odpada: VSYS jest stale połączone z ogniwami, a jego gwarantowany upływ sięga 352 µA; elektrolit o małym upływie (np. Nichicon UKL, 0,002 CV) z ceramiką równolegle, upływ przy 6 V do zmierzenia. Czas do końca serii SPI i wyłączenia TX mierzy się w T6 wyjęciem ogniw podczas zapisu i nadawania; zasada w [zaniku zasilania](#zanik-zasilania-i-zapis) |
-| Progi ogniw | ostrzeżenie przy 4,4 V (1,1 V na ogniwo), kontrolowane wyłączenie przy 4,0 V po zakończeniu zapisu FRAM; ogniwa Li-FeS2 mają płaską charakterystykę i szybki spadek pod koniec, więc T6 sprawdza, że od ostrzeżenia `wymien_ogniwa` do wyłączenia zostaje ≥1 h pracy przekaźnika w 20 °C i −10 °C, a w razie potrzeby podnosi próg ostrzeżenia; progi ocenia się na filtrowanej średniej z okresów samego odbioru, bo impulsy TX chwilowo obniżają napięcie zimnych ogniw |
-| Pomiar | ADC napięcia ogniw i wejścia 12 V przez dzielniki odłączane między pomiarami; błąd ≤2%; wynik na ekranie i w `INFO`. Dzielnik 12 V mierzy przed S12, klucz górny dzielnika ≥40 V; wejście ADC ograniczone tak, by impuls 29 V (granica TVS) go nie uszkodził |
-| Pobór | cel średni z 3V3 w pracy przekaźnika: wykonanie A ≤35 mA (model 32 mA), wykonanie B ≤60 mA (W23 dopuszcza w modelu najwyżej około 61 mA, ze spadkiem na diodzie DAA). Dla ESP32-S3 W23 zależy od lekkiego uśpienia MCU przy stale włączonym odbiorniku; prąd aktywny MCU 45–60 mA daje w modelu tylko 33–39 h na ogniwach. Model: 3,8–10,6 Wh na dobę z ogniw i 4,0–10,7 Wh z 12 V, z rezerwą 20%. Pomiar w RX, TX, przy włączonym ekranie i podświetleniu (W23) |
-| Szyna 5 V ekranu | Sharp LS027B7DH01 wymaga zasilania 4,8–5,5 V (VDD i VDDA; zakres pracy −20…+70 °C, temperatura powierzchni panelu); wejścia logiczne przyjmują 3,3 V (VIH od 2,7 V). Szyna 5 V: włączana przetwornica o małym prądzie spoczynkowym z odłączeniem wyjścia, np. TI TPS61099 w wersji regulowanej (DRV) ustawiony dzielnikiem na 5 V (TPS610995 to wersja 3,6 V, a wersja 5 V TPS610997 jest tylko w obudowie WCSP); TPS61222 w wyłączeniu przepuszcza napięcie wejścia na wyjście i wymaga dodatkowego łącznika. EXTCOMIN steruje wyjście sprzętowego licznika lub RTC, nie program. JDI LPM027M128C (8 kolorów, zasilanie 3 V) nie jest zamiennikiem bez zmian |
-| Podświetlenie ekranu | diody LED krawędziowe (front light), włączane przyciskiem i wyłączane po czasie, bo schronienia bywają ciemne; sterownik prądowy diod, najlepiej z szyny 5 V; w modelu 15 mA przez 30 min na dobę |
-| Dioda alarmu i brzęczyk | dioda LED „NOWA WIADOMOŚĆ / ALARM” i brzęczyk sterowane z MCU krótkimi impulsami; w modelu dioda 5 mA przez 1% czasu i brzęczyk 20 mA przez 0,25% czasu, łącznie około 0,1 mA |
-| USB | stacja nie zasila się z VBUS (VSYS niezależne od VBUS); brak połączenia VBUS z VSYS. Wykonanie A: VBUS bezpośrednio do wyprowadzenia VBUS nRF52840 (4,35–5,5 V), które zasila wyłącznie PHY USB; pobór z VBUS około 2,5 mA. Wykonanie B: VBUS tylko do wykrycia hosta: rezystor szeregowy ≥100 kΩ z ograniczeniem do VDD albo bufor z Ioff (np. 74LVC1G17), aby VBUS nie zasilał MCU przez wejście przy wyłączonej stacji. Ochrona ESD linii USB (np. ST USBLC6-2 lub TI TPD4E05U06) |
-
-Powerbank przez USB nie jest dopuszczonym źródłem: wiele powerbanków wyłącza się przy prądzie rzędu kilkudziesięciu miliamperów, czyli przy poborze stacji. Na czas przechowywania ogniwa wyjmuje się ze stacji, a ich stan sprawdza się w przeglądzie. Przetwornica ma pracować z obu źródłami w pełnym zakresie temperatur stacji. Liczby poboru są założeniami [modelu](../../software/reference/wyniki.json), nie pomiarem: model obejmuje TCXO radia (2 mA), szynę 5 V ekranu, podświetlenie, diodę alarmu i brzęczyk oraz osobno dla każdego źródła prądy po stronie wejścia: z ogniw TPS3710, LTC2955 i dzielniki (razem około 0,017 mA; dioda DAA nie pobiera prądu, a jej spadek 0,35 V zwiększa moc pobieraną z ogniw o około 6%), z 12 V LM74800, zatrzask UV, TPS3710, LTC2955 i dzielniki (razem około 0,44 mA). Sprawność przetwornicy 0,85 przy 6 V i 0,80 przy 12,8 V obejmuje jej prąd spoczynkowy, którego nie dolicza się drugi raz.
-
-## Płytka stacji R02: wymagania
-
-R02 łączy mikrokontroler, tor RF jednego wykonania, FRAM, ekran, przyciski i zasilanie stacji. Schemat i PCB jeszcze nie powstały; R02 jest pierwszą płytką stacji, a [folder projektu](../../hardware/r02/README.md) podaje wejścia i kolejność prac oraz [lekcje z wycofanego kontrolera R01.3](../../hardware/r02/lekcje.md). Do tego czasu oprogramowanie i próby T1–T4 prowadzi się na [stanowisku deweloperskim](../../hardware/dev-bench/README.md) z płytek rozwojowych i modułów producentów.
-
-| Funkcja | Wymaganie |
-|---|---|
-| MCU | dwa wykonania według [specyfikacji radia](radio.md#dwa-wykonania); Wi-Fi i Bluetooth wyłączone; sposób wyłączenia i argumentacja RED według [specyfikacji radia](radio.md#warunki-prawne-i-zgodność) (D14); ochrona odczytu pamięci; nRF52840 tylko w rewizji 3 (kod wykonania Fx0, np. nRF52840-QIAA-F0) z ochroną APPROTECT według Nordic IN-141, która utrudnia znaną metodę wstrzykiwania błędów (IN-133); oprogramowanie budowane z MDK ≥8.40.2 |
-| Zegar | TCXO radia według P1; kwarc 32 MHz (HFXO nRF52840) albo 40 MHz (ESP32-S3); kwarc 32,768 kHz dla licznika czasu w uśpieniu |
-| Czas | opcjonalny RTC z podtrzymaniem (np. Micro Crystal RV-3028-C7); bez niego czas stacji po zaniku zasilania jest niezaufany i tak oznaczany |
-| Pamięć | FRAM SPI 4 Mbit we wszystkich stacjach (magazyny stacji zajmują około 413 KiB, [pamięć FRAM](oprogramowanie.md#pamięć-fram)), zegar SPI ≥8 MHz, na wspólnej magistrali z ekranem albo osobnej, z zasadą [zaniku zasilania](#zanik-zasilania-i-zapis). Rekordy FRAM szyfrowane kluczem przechowywanym w chronionej pamięci MCU, bo zewnętrzną FRAM da się odczytać po wylutowaniu; ZNISZCZ DANE usuwa klucz (kryptograficzne wymazanie) i nadpisuje FRAM poza jawnym dziennikiem długu ciszy. Wykonanie B potrzebuje flash ≥8 MiB na dwa gniazda obrazu po 3 MiB ([aktualizacja](oprogramowanie.md#aktualizacja-oprogramowania-stacji)): bez zewnętrznej pamięci QSPI daje to ESP32-S3FN8 (8 MB flash w obudowie, bez PSRAM). ESP32-S3FH4R2 (4 MB flash) jest za mały. Jeśli pomiar RAM w pilotażu (D14) wykaże potrzebę PSRAM, wykonanie B używa ESP32-S3R2 (PSRAM quad w obudowie) z zewnętrzną flash QSPI 8 MiB; ESP32-S3R8 i R16V z PSRAM octal zajmują dodatkowo GPIO33–37 |
-| Ekran | graficzny, czytelny w świetle dziennym i na mrozie, z cyrylicą; złącze dla dwóch wykonań (D15); szyna 5 V i podświetlenie według tabeli zasilania. Przy −20 °C ekran pracuje na granicy zakresu, bez zapasu: czytelność w −20 °C sprawdza T6 |
-| Przyciski | GÓRA, DÓŁ, OK, WSTECZ; przełącznik CISZA z osłoną; przycisk konfiguracji (tryb przygotowania) za otworem Ø3–4 mm pod numerowaną naklejką serwisową, który daje dostęp tylko do przycisku, nie do płytki; każde wejście zapisuje stacja ([tryb przygotowania](oprogramowanie.md#tryb-przygotowania-i-naklejka-serwisowa)); przycisk podświetlenia może być jednym z nich; dioda alarmu i brzęczyk według tabeli zasilania |
-| Odporność ESD | EN 61000-4-2: ±4 kV kontaktowo i ±8 kV w powietrzu na złączu anteny, USB-C, wejściu 12 V i przyciskach; bez resetu i utraty danych |
-| Programowanie | złącze SWD (pola Tag-Connect) lub UART na płytce, niedostępne bez otwarcia obudowy |
-| Nadzór | sprzętowy watchdog; układ nadzoru resetu; komparator zaniku zasilania; licznik restartów w FRAM |
-| USB | gniazdo USB-C (rezystory 5,1 kΩ na CC) z ochroną ESD; ESP32-S3: USB-OTG z TinyUSB (dwa porty CDC), nie USB-Serial-JTAG |
-| Ochrona odgromowa | antena zwarta dla prądu stałego (dipol pętlowy albo dipol ze zwierającym odcinkiem ćwierćfalowym), odgromnik gazowy (GDT) na przewodzie antenowym przy wejściu do budynku, połączony z uziemieniem budynku; dla poziomów 2–3 opcjonalna izolacja USB (np. ADI ADuM4160 lub TI ISOUSB211). W wykonaniu A izolator wymaga izolowanego 5 V dla wyprowadzenia VBUS nRF52840 (PHY USB po stronie stacji); bez niego izolację stosuje się tylko w wykonaniu B |
-| Temperatura | cel: −20 °C do +45 °C dla gotowej stacji z ogniwami litowymi; do kwalifikacji |
-| Obudowa | do pracy w pomieszczeniu, IP40, bez wentylacji, z odciążeniem przewodu antenowego i 12 V; masa z ogniwami ≤1 kg jako cel; powłoka ochronna płytki (conformal coating) przeciw kondensacji po wyjęciu z zimnego magazynu. Złącza przewodów zewnętrznych IP67 albo uszczelnione taśmą |
+2. Układ nadzoru zwalnia linię CS pamięci, zanim napięcie zasilania FRAM spadnie poniżej jej minimum (MB85RS4MT i CY15B104QN: 1,8 V). Na płytce v1 robi to nadzorca U3 (TPS3840PH27, próg 2,66–2,74 V) przez bramkę OR na CS, niezależnie od MCU ([płytka v1](../../hardware/dev-bench/plytka-nosna.md)); v2 przejmuje ten układ.
+3. Stacja pilotażowa nie ma komparatora zaniku ani kondensatora podtrzymania przed przetwornicą; wystarczają punkty 1–2 i kondensator szyny zasilania. Dlatego minimum pilotażu sprawdza 100 odcięć podczas zapisu i nadawania bez fałszywego `zapisane_w_stacji` i bez uszkodzonego rekordu, a odbiór wydania 1000 odcięć.
 
 ## Poziom 3: kupiona stacja zasilania
 
-Poziom 3 (laptop i router dla telefonów) zasila kupiona przenośna stacja zasilania z wyjściem 230 V i portami USB oraz kupiona ładowarka USB do telefonów, każda z deklaracją zgodności UE (D05 zamknięte 2026-10-08). WICI nie projektuje własnej przetwornicy 230 V, ładowarki ani wejść A/B. Stacja WICI ma własne zasilanie (ogniwa AA i wejście 12 V) i nie zależy od stacji zasilania; może korzystać z jej wyjścia 12 V DC tylko wtedy, gdy wyjście spełnia wymagania wejścia 12 V stacji.
+Poziom 3 (laptop i router dla telefonów) zasila kupiona przenośna stacja zasilania z wyjściem 230 V i portami USB oraz kupiona ładowarka USB do telefonów, każda z deklaracją zgodności UE (D05 zamknięte 2026-10-08). WICI nie projektuje własnej przetwornicy 230 V ani ładowarki. Stacja WICI ma własne zasilanie (ogniwa AA i wejście 12 V) i nie zależy od stacji zasilania; może korzystać z jej wyjścia 12 V DC tylko wtedy, gdy wyjście spełnia wymagania wejścia 12 V stacji.
 
 | Wymaganie | Wartość |
 |---|---|
@@ -166,151 +114,10 @@ Poziom 3 (laptop i router dla telefonów) zasila kupiona przenośna stacja zasil
 | dokumenty | deklaracja zgodności UE, instrukcja w języku polskim, warunki pracy w pomieszczeniu (temperatura, wentylacja) i przechowywania akumulatora (LiFePO4 preferowany) |
 | odbiór | po pilotażu: pomiar 24 h z realnym laptopem i routerem, porównanie z wariantem DC (USB-C PD) i warunki przechowywania między przeglądami ([odbiór](odbior.md#próby), wiersz „Poziom 3: kupiona stacja zasilania”) |
 
+## Archiwum: płytka R02 i gotowe płytki
+
+Wymagania własnej płytki stacji R02 (zasilanie z komparatorem zaniku i zatrzaskiem 12 V, MCU dwóch wykonań, ekran z podświetleniem, ochrona ESD i odgromowa), dawny wariant stacji pilotażowej z gotowej płytki ESP32-S3 z SX1262 połączonej przewodami oraz porównanie kandydatów (RAK3312 na RAK19007, Heltec, LILYGO, Seeed) z dokumentami zgodności są w [archiwum elektroniki](../archiwum/elektronika-r02.md). Stary BOM R02 jest w [archiwum BOM](../archiwum/bom-r02.md).
+
 ## Archiwum: własny blok zasilania poziomu 3
 
-Poza zakresem projektu od D05 (2026-10-08). Opis zostaje jako materiał porównawczy i źródło wymagań dla wyboru kupionej stacji zasilania; nie jest wymaganiem wydania i nie przechodzi odbioru.
-
-### Wejścia A/B (poziom 3)
-
-Wejścia A/B zasilają przetwornicę laptopa i routera. Stacja ma własne zasilanie opisane wyżej.
-
-```text
-A+ ─ FA przy zacisku ─ przewód ─ JA+ ─ [DA: A→K] ─┐
-                               │               │
-                              TVSA           BUS+
-                               │               │
-                              GND              │
-B+ ─ FB przy zacisku ─ przewód ─ JB+ ─ [DB: A→K] ─┘
-                               │
-                              TVSB
-                               │
-                              GND
-A−, B−, JA−, JB− i minus Cbus połączone z GND.
-BUS+ ─ wyłącznik DC ≥30 A (znamionowany dla prądu stałego) ─ mostek przetwornicy
-```
-
-DA i DB: osobne podwójne diody Schottky’ego ze wspólną katodą; obie anody danego elementu są połączone. Katody dołączone do BUS+. Jednego elementu nie wolno używać dla dwóch wejść 20 A. Kandydaci: ST STPS3045CT lub Vishay VS-MBR3045CT-M3, dwa elementy w zestawie. [ST](https://www.st.com/en/diodes-and-rectifiers/stps3045c.html), [Vishay](https://www.vishay.com/doc/?96257=).
-
-| Element | Wymaganie prototypu |
-|---|---|
-| FA/FB, przewód do gniazda zapalniczki | bezpiecznik 10 A; praca ≤8 A i nie więcej, niż dopuszcza instalacja pojazdu |
-| FA/FB, przewód zaciskowy | bezpiecznik 25 A; praca ≤20 A |
-| Przewód do gniazda zapalniczki | do 2 m, 2 × 2,5 mm²; styk i dopuszczalna temperatura wtyku dobrane do prądu |
-| Przewód zaciskowy | do 2 m, 2 × 6 mm²; złącze uniemożliwiające odwrotne podłączenie, ≥30 A DC |
-| TVSA/TVSB | SMCJ18CA, dwukierunkowy, po bezpieczniku, przed diodą |
-| DA/DB | ≥45 V, po 20 A dla całego toru w wymaganej temperaturze |
-| Radiator DA/DB | punkt wyjścia: ≤3 K/W na tor; mocowanie izolowane elektrycznie |
-| Cbus | punkt wyjścia: 8 × 2200 µF/35 V; łączny dopuszczalny prąd tętnień ≥24 A |
-| Napięcie wejściowe | 11,5–16 V przy złączu, z uwzględnieniem spadku przewodów |
-
-Kondensatory Cbus należą do stopnia mocy; wyłącznik DC odłącza mostek, nie przewody akumulatorów. Wspólna masa oznacza brak izolacji źródeł. Metalowe obudowy diod są połączone z katodą, czyli z BUS+, więc wspólny radiator może mieć ten sam potencjał. Nie zwiera to wejść A/B, ale radiator trzeba odizolować od dostępnej obudowy i GND.
-
-Diody nie zapewniają ograniczenia udaru. Przy 17,6 mF, skoku napięcia 5,5 V i założonej rezystancji pętli 40 mΩ model daje początkowy prąd około 138 A. Rezystancja 40 mΩ jest założeniem do próby, a nie gwarantowaną wartością znalezionego akumulatora. Trzeba zmierzyć prąd udarowy oraz sprawdzić całkę Joule’a (I²t) bezpieczników i dopuszczalny impuls prądowy diod i styków. Jeśli wynik będzie negatywny, potrzebny jest układ ograniczający prąd udarowy; nie wolno dopuścić modułu do pracy samym zwiększeniem wartości bezpiecznika.
-
-Lampka wejścia potwierdza wyłącznie obecność napięcia o prawidłowej polaryzacji. Każde wejście A, B i C ma ponadto woltomierz cyfrowy o błędzie ≤1%, mierzący napięcie przed diodą; bez niego gospodarz nie zaplanuje wymiany źródeł. Ciągłość zasilania ma zapewniać jednoczesne podłączenie obu źródeł podczas wymiany, a nie energia zgromadzona w Cbus. Ochrona podczas pracy alternatora i rozruchu silnika wymaga osobnych prób motoryzacyjnych; sama dioda TVS nie dowodzi takiej odporności.
-
-Ochrona przed głębokim rozładowaniem: regulator przetwornicy mierzy napięcie obu złączy przed diodami (JA+ i JB+) i wyłącza mostek, gdy wyższe z nich spadnie poniżej 11,5 V. Pomiar za diodą obarczałby wynik zmiennym spadkiem napięcia diody, 0,3–0,55 V zależnie od prądu i temperatury. Przy 11,8 V regulator włącza ostrzeżenie (dioda świecąca i brzęczyk), aby gospodarz zdążył wymienić źródło. Wyłączenie jest zatrzaskiwane: ponowne załączenie następuje dopiero po zamknięciu wyłącznika DC albo naciśnięciu przycisku RESTART, i tylko przy napięciu co najmniej 12,4 V. Samo odbicie napięcia po zdjęciu obciążenia nie może uruchomić przetwornicy; rozładowany akumulator LiFePO4 bez obciążenia wraca do około 12,5–12,8 V i bez zatrzasku powodowałby cykliczne załączanie. Ten sam próg, ostrzeżenie, zatrzask i osobny przycisk RESTART dotyczą wejścia C ładowarki. Głęboko rozładowany akumulator kwasowo-ołowiowy traci pojemność, a akumulator rozruchowy przestaje uruchamiać pojazd. Dla niego gospodarz wymienia źródło wcześniej, przy około 12,2 V. Akumulator LiFePO4 ma własny BMS, który nie zastępuje tego progu.
-
-Akumulatory stoją na tacy odpornej na elektrolit, z dala od dróg ewakuacyjnych i od wlotów powietrza. Uszkodzony akumulator rozruchowy może wydzielać wodór, dlatego nie ładuje się go w pomieszczeniu z ludźmi, a przy stacji jest gaśnica.
-
-### Jedna sekcja ładowarki (poziom 3)
-
-Sekcję powiela się 8 razy. Każda sekcja ma własny regulator, dławik, diodę, bezpieczniki i ogranicznik portu. Obwód C nie ma wspólnej masy z A/B. Wspólny dla wszystkich sekcji jest odłącznik podnapięciowy wejścia C (11,5 V / 12,4 V); sam LM2596 pracuje do około 7 V wejścia i rozładowałby akumulator do zera.
-
-```text
-C+ ─ główny F10 A ─ magistrala ─ F1 1,5 A ─ dioda polaryzacji ─ VIN regulatora
-VIN ─ Cin ─ GND_C
-LM2596 SW ─ L1 68 µH ─ VREG około 5,12 V ─ F2 szybki 3,15 A ─ VSAFE
-GND_C ─ anoda D1; katoda D1 ─ SW
-VREG ─ Cout ─ GND_C
-VREG ─ Rtop 3,16 kΩ ─ FB ─ Rbottom 1,00 kΩ ─ GND_C
-VSAFE ─ ogranicznik prądu ─ VUSB ─ USB-A pin 1
-GND_C ─ USB-A pin 4; USB-A piny 2 i 3 zwarte
-VSAFE ─ niezależny układ przepięciowy ─ GND_C
-```
-
-| Element | Wartość początkowa lub wymagana cecha |
-|---|---|
-| Regulator | LM2596-ADJ, TI lub onsemi; radiator dobrany na podstawie pomiaru strat |
-| L1 | 68 µH, Isat ≥6 A, Irms ≥3 A, DCR ≤40 mΩ |
-| D1 i ochrona polaryzacji | dioda Schottky’ego ≥3 A/40 V, np. 1N5822 różnych producentów |
-| Cin | 470 µF/35 V oraz 100 nF |
-| Cout | 470 µF/16 V; kondensator elektrolityczny o ESR zgodnej z kartą katalogową regulatora |
-| FB | Rbottom 1,00 kΩ, Rtop początkowo 3,16 kΩ; kontrola napięcia po montażu |
-| Ogranicznik portu A | TPS2553, limit początkowo RILIM 15 kΩ, 0,1%; pełny budżet tolerancji nadal do odbioru; temperatura złącza ≤105 °C |
-| Ogranicznik portu B | niewybrany; niezależny wariant musi zamknąć gwarantowany budżet prądu i temperatury |
-| Prąd roboczy | 1,5 A na złączu, także po nagrzaniu |
-| Próg ograniczania prądu | zakwalifikowany przedział 1,6–2,1 A przed ograniczeniem zwrotnym (foldback) lub wyłączeniem termicznym; zwarcie nie wyłącza innych sekcji |
-| DCP | D+ i D− zwarte bez dodatkowego układu identyfikacji |
-
-Nominalne 5,12 V nie gwarantuje poprawnego napięcia: bez strojenia rezystorem FB tolerancja źródła odniesienia LM2596 daje do 5,27 V, tylko 30 mV poniżej najniższego progu zwieracza. Strojenie każdej sekcji jest więc obowiązkowe. Przy montażu dobiera się stały rezystor FB; potencjometr regulacyjny jest niedozwolony. Odbiór na złączu: 4,75–5,25 V przy 0–1,5 A, 11,5–16 V na wejściu, 0–40 °C w otoczeniu. Nie wolno zastąpić wymaganych kondensatorów elektrolitycznych samymi ceramicznymi bez sprawdzenia stabilności. Przeskok napięcia po nagłym odłączeniu obciążenia 1,5 A nie może zbliżyć VREG do progu zwieracza, ponieważ jego zadziałanie trwale wyłącza sekcję. [TI LM2596](https://www.ti.com/lit/ds/symlink/lm2596.pdf), [onsemi LM2596](https://www.onsemi.com/download/data-sheet/pdf/lm2596-d.pdf).
-
-TPS2553 dopuszcza 1,5 A prądu ciągłego przy temperaturze złącza do 105 °C. Dla rezystora o wartości dokładnie 15 kΩ karta katalogowa podaje próg 1,610–1,800 A, bez uwzględnienia tolerancji rezystora; rezystor 1% nie zapewnia wystarczającego zapasu powyżej 1,6 A. Punktem wyjścia jest więc rezystor 0,1%; cały budżet trzeba sprawdzić.
-
-Dla MIC2007 nie da się dobrać stałego rezystora w gwarantowanych granicach karty katalogowej: przy warunku IOUT = 2 A i CLF = 210–286 V wymagania 1,6–2,1 A dają jednocześnie RSET ≤131,25 Ω oraz RSET ≥136,19 Ω. Przedział jest pusty nawet bez tolerancji rezystora, więc MIC2007 nie jest gotowym drugim wariantem. Inny element albo indywidualna kwalifikacja całego wariantu wymaga odrębnego projektu i dowodu. Nie wolno zwiększać limitu prądu tylko po to, by zaakceptować część. [TPS2553](https://www.ti.com/lit/ds/symlink/tps2553.pdf), [MIC2007](https://www.microchip.com/content/dam/mchp/documents/APID/ProductDocuments/DataSheets/MIC20XX-Fixed-and-Adjustable-Current-Limiting-Power-Distribution-Switches-DS20006486B.pdf).
-
-#### Ochrona przed podaniem 12 V na telefon
-
-Kandydat do próby: zwieracz zabezpieczający (crowbar) TL431B + BC327 + tyrystor (SCR), przed ogranicznikiem USB. Anoda TL431 do GND_C, wejście REF przez dzielnik VSAFE–9,31 kΩ–REF–8,20 kΩ–GND_C. Katoda przez 1 kΩ do bazy tranzystora PNP; emiter PNP do VSAFE, rezystor baza–emiter 2,2 kΩ. Kolektor przez 47 Ω do bramki tyrystora; bramka przez 1 kΩ do GND_C. Anoda tyrystora do VSAFE, katoda do GND_C. Tyrystor: TYN612 albo BT151 z dopasowanym prądem bramki i I²t. Różne wykonania wymagają przeliczenia sterowania.
-
-Próg nominalny 5,328 V. Wymagany zakres po tolerancjach i temperaturze 5,30–5,45 V. TL431B i rezystory 0,1% ograniczają rozrzut, lecz nie zastępują próby dynamicznej. F1/F2 mają odłączyć uszkodzoną gałąź z zachowaniem dopuszczalnej wartości I²t tyrystora, przewodów i regulatora. Nie wolno zakładać, że F2 zadziała przed F1, bo mają różne prądy znamionowe i charakterystyki. Koordynację F1, F2 i głównego F10 A trzeba zmierzyć. Gdy sprawny regulator ogranicza prąd, bezpiecznik może się nie przepalić; tyrystor i jego chłodzenie muszą wtedy wytrzymać ten stan. Przed podłączeniem telefonów trzeba wymusić zwarcie wejścia z wyjściem przetwornicy obniżającej oraz zmierzyć szczytowe VUSB i energię impulsu. Sama dioda TVS opisana jako „5 V” nie zapewnia ochrony telefonu.
-
-### Przetwornica (poziom 3)
-
-Cel sprawności i poboru własnego: pobór bez obciążenia ≤8 W, sprawność ≥0,85 przy 35 W AC; te wartości przyjmuje [model energii](../concept/06-wykonalnosc-i-budzet-zasobow.html#energia-dwa-niezalezne-zasoby) i sprawdza odbiór. Wybrana topologia prototypu: transformator 50 Hz, mostek H po stronie dolnego napięcia, unipolarna modulacja SPWM 20 kHz, bez magistrali 350 V DC. Zasada jest znana ([TI SLAA602A](https://www.ti.com/lit/an/slaa602a/slaa602a.pdf)); wartości elementów tego stopnia wymagają osobnego projektu.
-
-```text
-BUS+ ─ dreny Q1 i Q3
-Q1 źródło = LEFT = dren Q2
-Q3 źródło = RIGHT = dren Q4
-T1 uzwojenie DN między LEFT i RIGHT
-Q2/Q4 źródła = BRIDGE_RETURN ─ Rshunt 5 mΩ ─ GND
-Cbus między BUS+ i GND; nie między BUS+ i BRIDGE_RETURN
-T1 uzwojenie GN ─ filtr LC ─ ochrona AC ─ dwa wyjścia zasilaczy
-```
-
-| Część | Dobór do prototypu |
-|---|---|
-| Q1–Q4 | 4 × ST STP220N6F7 lub Infineon IPP030N06NF2S, ≥60 V, RDS(on) ≤3,1 mΩ przy 10 V |
-| Sterowanie mostkiem | dwa UCC27211 albo dwa LTC4444; różne układy zasilania i bootstrapu |
-| Napięcie sterowników | stabilizowane, około 10 V; nie bezpośrednio z instalacji pojazdu |
-| MCU | STM32F103 z TIM1 albo dsPIC33CK z komplementarnym PWM i wejściem FAULT |
-| Czas martwy | początkowo 1 µs; pomiar obu bramek pod obciążeniem |
-| Rezystory bramek | 10 Ω, rezystor ściągający 10 kΩ; korekta na podstawie przebiegów |
-| Kondensator bootstrap | początkowo 1 µF/25 V na półmostek; dobór na podstawie Qg i prądów upływu |
-| Ograniczenie modulacji | m ≤0,9; zapewniony czas doładowania kondensatora bootstrap |
-| Bocznik | 5 mΩ, ≥10 W, połączenie Kelvin |
-| Szybkie wyłączenie | komparator sprzętowy, próg początkowo 0,375 V, czyli 75 A; zatrzask FAULT |
-| Logika blokowania | H AND NOT L, L AND NOT H; następnie AND ENABLE; bez polegania tylko na MCU |
-| Komparator | TLV3201 lub MCP6561, z uwzględnieniem błędu i opóźnienia |
-| Logika | 74HC04, 74HC08, zatrzask CD4013; dostępne u różnych producentów |
-| Temperatura | termistor NTC na radiatorze; zatrzymanie przy 85 °C, ręczny restart po ostygnięciu |
-| Profil prądu ciągłego | 8 A lub 20 A, dodatkowy pomiar uśredniony; bezpiecznik chroni przewód |
-
-Masa odniesienia sterownika musi być dołączona przy źródle dolnego tranzystora MOSFET. Podłączenie minusa Cbus do BRIDGE_RETURN, przed bocznikiem, ominęłoby pomiar prądu zwarcia mostka. Jednoczesne wysterowanie obu tranzystorów półmostka ma sprzętowo wyłączyć oba. FAULT zeruje ENABLE i wejście BREAK niezależnie od obsługi przerwania. Podczas startu i resetu MCU bramki pozostają wyłączone.
-
-Uzwojenie DN ma rezystancję około 12 mΩ, więc niesymetria wysterowania mostka rzędu 10 mV daje prąd stały blisko 1 A i podmagnesowanie rdzenia. Regulator mierzy składową stałą prądu uzwojenia DN i ją kompensuje; próba obejmuje prąd magnesowania bez oznak jednostronnego nasycenia, także po skokach obciążenia.
-
-Tranzystory MOSFET firm ST i Infineon mają odpowiednie napięcie i rezystancję katalogową; straty i chłodzenie oblicza się dla nagrzanych tranzystorów, a nie na podstawie prądu z nagłówka karty katalogowej ([ST](https://www.st.com/resource/en/datasheet/stp220n6f7.pdf), [Infineon](https://www.infineon.com/part/IPP030N06NF2S)). Sterowniki nie są zamienne bez zmian w układzie ([TI](https://www.ti.com/lit/ds/symlink/ucc27211.pdf), [ADI](https://www.analog.com/media/en/technical-documentation/data-sheets/4444fb.pdf)).
-
-#### Transformator i filtr
-
-Moc 150 W dotyczy obciążenia rezystancyjnego i nie obejmuje dowolnego zestawu zasilaczy impulsowych. Ich współczynnik mocy, szczyty prądu i rozruch wymagają osobnej kwalifikacji. Przy minimalnym napięciu model daje tylko około 0,27 V zapasu po stronie DN, bez prądu magnesowania i strat przełączania. Jeśli próba zawiedzie, trzeba zmienić transformator lub obniżyć dopuszczalną moc; nie wolno podnosić progu zwarcia.
-
-Zasilacz impulsowy bez PFC pobiera prąd szczytowy około trzykrotnie większy od wartości skutecznej. Laptop 60 W daje po stronie DN szczyty rzędu 50 A, a prąd ładowania kondensatora wejściowego zasilacza podłączanego pod napięcie wielokrotnie przekracza próg 75 A. Zasilacze podłącza się więc przed zamknięciem wyłącznika DC, a przetwornica rusza z łagodnym startem napięcia. Podłączenie pod napięciem może wyzwolić zatrzask FAULT; wymaga wtedy ręcznego restartu, ale nie może uszkodzić mostka.
-
-T1 do pierwszej próby: rdzeń stalowy 50 Hz, Ae ≥14 cm², pole okna na uzwojenia ≥1200 mm². Uzwojenie dolnego napięcia (DN): 20 zwojów, cztery równoległe druty 1,8 mm; uzwojenie górnego napięcia (GN): 840 zwojów drutem 0,50 mm. Przekładnia: 42. Izolacja i odstępy muszą zapewniać separację od sieci; konstrukcję karkasu oraz barierę izolacyjną zatwierdza wykonawca transformatora.
-
-Wymagany odbiór T1: rezystancja uzwojenia DN ≤12 mΩ, uzwojenia GN ≤25 Ω w temperaturze pracy; wytrzymałość izolacji i temperatura potwierdzone według dobranej normy. Same wymiary rdzenia nie gwarantują tych rezystancji. Przy 230 V i 150 W wartość skuteczna prądu uzwojenia DN wynosi w przypadku idealnym 27,4 A; trzeba doliczyć prąd magnesowania i prąd filtru.
-
-Filtr początkowy po stronie 230 V: L = 10 mH, ≥1 A (wartość skuteczna), nienasycający się przy szczytach prądu zasilaczy; C = 1 µF/630 V DC, kondensator foliowy dopuszczony do pracy przy napięciu przemiennym. Równoległa gałąź tłumiąca: 100 Ω/2 W szeregowo z 0,47 µF/630 V. Rezystory rozładowujące: 2 × 150 kΩ/0,5 W połączone szeregowo. L, C i tłumienie wymagają pomiaru bez obciążenia oraz z rzeczywistymi zasilaczami; rezonans LC około 1,59 kHz nie jest dowodem stabilności ani THD.
-
-Sprzężenie zwrotne napięcia: osobny transformator pomiarowy 230/6 V, ≥1 VA, za filtrem. Regulator mierzy wartość skuteczną; dzielnik ADC kalibruje się na stanowisku. Regulator podaje wstępne m = 230√2/(42×VBUS), z ograniczeniem 0,9 i powolnym startem. Mostek wyłączają: brak danych z ADC, zadziałanie układu nadzorującego (watchdog), przegrzanie, przetężenie, przepięcie po stronie AC i zbyt niskie napięcie BUS. Konkretne stałe regulatora i próg przepięciowy AC wymagają modelu oraz próby; oprogramowanie układowe sterownika jeszcze nie powstało.
-
-#### Wyjścia 230 V i PE
-
-Wariant do odbioru elektrycznego: jeden punkt N–PE po stronie źródła, przed osobnymi dwubiegunowymi wyłącznikami RCBO typu A 30 mA dla każdego gniazda. PE obu gniazd i metalowej obudowy na wspólnej szynie; zewnętrzny zacisk do sprawdzonego układu uziemienia. Przewód PE nigdy nie jest przerywany przez wyłącznik. Dobór charakterystyki nadprądowej musi uwzględniać prąd rozruchu zasilaczy i ograniczenie samej przetwornicy. Układ zasila wyłącznie swoje gniazda, bez połączenia z obwodami zasilającymi budynku.
-
-Wariant wymaga sprawdzonego PE lub zaprojektowanego lokalnego uziemienia. Jest to dodatkowy warunek dla zasilaczy klasy I, którego samo założenie „mamy samochód” nie zapewnia. Ani samo zwarcie N z PE, ani przycisk testowy wyłącznika różnicowoprądowego nie potwierdzają ochrony w schronieniu. Bez takiego uziemienia wariant dla przypadkowych zasilaczy klasy I pozostaje niezamknięty. Próby na stanowisku z zasilaczami klasy II nie dowodzą spełnienia całego wymagania. [Wytyczne HSE (nie jest to polska norma)](https://www.hse.gov.uk/pubns/priced/hsg141.pdf).
-
-Do odbioru potrzebne są pomiary izolacji, ciągłości PE, prądu dotykowego, reakcji na uszkodzenie i działania ochrony przy źródle o ograniczonej wydajności prądowej. Moduły poziomu 3 (przetwornica 230 V, ładowarka, wejścia A/B) nie są urządzeniami radiowymi: podlegają dyrektywom LVD 2014/35/UE i EMC 2014/30/UE oraz WEEE, jak wszystkie moduły zestawu. Normy ustala jednostka badawcza (np. EN IEC 62477-1 lub EN 62368-1, EN 61558, EN IEC 61000-6-1/-3, EN 55032/55035). Przetwornica nie jest obecnie modułem do samodzielnego złożenia przez niewykwalifikowaną osobę. Po ukończeniu tej części otwarty projekt pozwoli różnym warsztatom ją wytwarzać, ale nie zwolni ich z obowiązku bezpiecznego wykonania.
+Własna przetwornica 230 V, wejścia A/B i ładowarka telefonów poziomu 3 wypadły z zakresu po D05; opis jest w [archiwum zasilania poziomu 3](../archiwum/zasilanie-poziomu-3.md).
