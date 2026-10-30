@@ -31,7 +31,7 @@ import socket
 import sys
 import tty
 
-from rnode_framing import RNodeReceiver, rnode_transmit
+from rnode_framing import MTU, RNodeReceiver, rnode_transmit
 
 FEND, FESC, TFEND, TFESC = 0xC0, 0xDB, 0xDC, 0xDD
 CMD_DATA, CMD_FREQUENCY, CMD_BANDWIDTH, CMD_TXPOWER, CMD_SF, CMD_CR, CMD_RADIO_STATE = 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06
@@ -41,7 +41,6 @@ DETECT_REQ, DETECT_RESP = 0x73, 0x46
 PLATFORM_AVR = 0x90        # RNodeInterface: bez ekranu (ESP32 i nRF52 uruchamiają odczyt wyświetlacza)
 MCU_NRF52 = 0x71
 FIRMWARE = (1, 86)         # wydanie, z którym zgodny jest wzorzec (RNodeInterface wymaga co najmniej 1.52)
-MTU = 508
 # Ile bajtów danych ma polecenie: wartość odesłana jako echo bez zmian.
 ECHOED = {CMD_FREQUENCY: 4, CMD_BANDWIDTH: 4, CMD_TXPOWER: 1, CMD_SF: 1, CMD_CR: 1, CMD_RADIO_STATE: 1,
           CMD_ST_ALOCK: 2, CMD_LT_ALOCK: 2}

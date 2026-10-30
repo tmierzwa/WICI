@@ -17,7 +17,7 @@ namespace {
 using cmdargs::boolName;
 
 // Czas ramki w eterze podaje sterownik (Driver::frameAirMs); P1 tutaj tylko do sprawdzenia rezerwacji.
-static_assert(MAX_DEBT_MS == SERIES_MAX_MS * radiolink::P1_DEBT_FACTOR, "MAX_DEBT_MS");
+static_assert(MAX_DEBT_MS == SERIES_MAX_MS * radiolink::DEBT_FACTOR, "MAX_DEBT_MS");
 static_assert(p1frame::MAX_FRAGMENTS * radiolink::p1FrameAirMs(p1frame::MAX_LEN + 1) <= SERIES_MAX_MS,
               "rezerwacja P1 mieści się w MAX_DEBT_MS");
 static_assert(radiolink::MAX_FRAME >= testframe::MAX_LENGTH && testframe::MAX_LENGTH >= p1frame::MAX_FRAME, "bufory ramek");
@@ -31,7 +31,9 @@ static_assert(loraframe::reservedTxMs(loraframe::MAX_DATAGRAM) <= lora::SERIES_M
 constexpr const char* EMC_ON_ERROR = "EMC mode on: EMC 0 first";
 static_assert(FOFF_MAX_HZ == 50000, "tekst błędu FOFF");
 // Okres EMC: ramka i jej dług ciszy (cykl pracy ≤ 1/13).
-static_assert(EMC_PERIOD_FACTOR == radiolink::P1_DEBT_FACTOR + 1, "EMC_PERIOD_FACTOR");
+static_assert(EMC_PERIOD_FACTOR == radiolink::DEBT_FACTOR + 1, "EMC_PERIOD_FACTOR");
+// Dług ciszy po nadaniu przez txMs (radio.md, "Dostęp do kanału", punkt 2).
+constexpr uint32_t debtForTxMs(uint32_t txMs) { return txMs * radiolink::DEBT_FACTOR; }
 
 }  // namespace
 
@@ -183,7 +185,7 @@ const char* Bench::gate(uint32_t txMs, bool conducted) {
     if (txMs > radio_.seriesMaxMs()) return "series above limit: add conducted";
     // Dług ciszy zapisany w dzienniku przed pierwszą ramką; błąd zapisu blokuje nadawanie.
     if (!journal_ || !journal_->ok()) return "debt journal unavailable: no FRAM";
-    const uint32_t debtMs = txMs * radiolink::P1_DEBT_FACTOR;
+    const uint32_t debtMs = debtForTxMs(txMs);
     if (!journal_->writeDebt(debtMs, uptimeS())) return "debt journal write failed";
     debtUntilMs_ = millis() + txMs + debtMs;  // dług liczy się od końca serii (endSeriesDebt)
     debtActive_ = true;
@@ -222,8 +224,8 @@ void Bench::stopCw() {
     cwActive_ = false;
     const uint32_t txMs = millis() - cwStartMs_;
     // Nośna trwała dłużej niż zaplanowano (pętla stała): dług z rzeczywistego czasu, zapisany ponownie.
-    if (seriesDebtMs_ && txMs * radiolink::P1_DEBT_FACTOR > seriesDebtMs_) {
-        seriesDebtMs_ = txMs * radiolink::P1_DEBT_FACTOR;
+    if (seriesDebtMs_ && debtForTxMs(txMs) > seriesDebtMs_) {
+        seriesDebtMs_ = debtForTxMs(txMs);
         if (journal_) journal_->writeDebt(seriesDebtMs_, uptimeS());
     }
     endSeriesDebt();
@@ -553,7 +555,7 @@ void Bench::emcSend(uint32_t now) {
     if (silence) { ++emcSilenced_; return; }  // cisza blokuje każde nadanie, odbiór trwa
     if (!p1Ready) { ++emcSkipped_; return; }  // bez profilu układ nadawałby na wartościach domyślnych
     const uint32_t txMs = radio_.frameAirMs(emcLen_);
-    const uint32_t debtMs = txMs * radiolink::P1_DEBT_FACTOR;
+    const uint32_t debtMs = debtForTxMs(txMs);
     // Dług ciszy w dzienniku przed ramką, jak w TXPKT; błąd zapisu blokuje nadanie.
     if (!journal_ || !journal_->ok() || !journal_->writeDebt(debtMs, uptimeS())) {
         ++emcSkipped_;
@@ -792,17 +794,34 @@ void Bench::pollLinkTx() {
             if (now - ccaFirstMs_ > LONG_DEFERRAL_MS) ++link_.longDeferrals;
             const uint8_t count = p1frame::fragmentCount(txLength_);
             const uint32_t txMs = count * radio_.frameAirMs(p1frame::MAX_LEN + 1);  // rezerwacja: najdłuższe ramki
-            if (!journal_->writeDebt(txMs * radiolink::P1_DEBT_FACTOR, uptimeS())) { ++link_.txDrop; finishLinkTx("debt journal write failed"); return; }
-            debtPending_ = true;
+            if (!reserveDebt(txMs)) return;
             const bool ok = sendFragments();
-            debtUntilMs_ = millis() + txMs * radiolink::P1_DEBT_FACTOR;  // dług od końca nadawania
-            debtActive_ = true;
+            startDebt(txMs);
             finishLinkTx(ok ? "sent" : "tx error");
             return;
         }
         case TxState::IDLE:
             return;
     }
+}
+
+// Dług ciszy zapisany w dzienniku przed pierwszą ramką serii łącza; błąd zapisu kończy nadawanie bez
+// nadania (odbiór wraca w finishLinkTx). Licznik długich odroczeń zostaje u wołającego: P1 liczy go
+// przed zapisem, LoRa po zapisie.
+bool Bench::reserveDebt(uint32_t txMs) {
+    if (!journal_->writeDebt(debtForTxMs(txMs), uptimeS())) {
+        ++link_.txDrop;
+        finishLinkTx("debt journal write failed");
+        return false;
+    }
+    debtPending_ = true;
+    return true;
+}
+
+// Początek odliczania długu po nadaniu serii łącza: dług liczy się od końca nadawania.
+void Bench::startDebt(uint32_t txMs) {
+    debtUntilMs_ = millis() + debtForTxMs(txMs);
+    debtActive_ = true;
 }
 
 bool Bench::sendFragments() {
@@ -857,8 +876,7 @@ void Bench::sendLora(uint32_t now) {
     if (cad != radiolink::Cad::Free) { ++link_.txDrop; finishLinkTx("tx error"); return; }
     // Dług po wolnym CAD, przed pierwszą ramką; błąd zapisu: bez nadania, odbiór wraca (finishLinkTx).
     const uint32_t txMs = loraframe::reservedTxMs(txLength_);
-    if (!journal_->writeDebt(txMs * radiolink::P1_DEBT_FACTOR, uptimeS())) { ++link_.txDrop; finishLinkTx("debt journal write failed"); return; }
-    debtPending_ = true;
+    if (!reserveDebt(txMs)) return;
     if (now - ccaFirstMs_ > LONG_DEFERRAL_MS) ++link_.longDeferrals;
     bool ok = radio_.sendPrepared(nullptr);
     ++link_.txFragments;
@@ -869,8 +887,7 @@ void Bench::sendLora(uint32_t now) {
         ++link_.txFragments;
     }
     ++link_.txDatagrams;
-    debtUntilMs_ = millis() + txMs * radiolink::P1_DEBT_FACTOR;  // dług od końca nadawania
-    debtActive_ = true;
+    startDebt(txMs);
     enterRx(RxMode::LINK, 0);
     finishLinkTx(ok ? "sent" : "tx error");
 }
@@ -907,7 +924,7 @@ void Bench::printLink() {
     // Dwie części poniżej 256 znaków: Print::printf rdzenia Adafruit nRF52 formatuje do bufora 256 B.
     Serial.printf("{\"%s\":{\"rx\":%s,\"tx\":\"%s\",\"rx_ok\":%lu,\"rx_bad\":%lu,\"rx_datagrams\":%lu,\"tx_datagrams\":%lu,"
                   "\"tx_fragments\":%lu,\"tx_drop\":%lu,\"deferrals\":%lu,\"long_deferrals\":%lu,",
-                  radio_.framing() == radiolink::Framing::RNODE ? "lora" : "p1", boolName(rxMode_ == RxMode::LINK), txStateName(),
+                  radiolink::framingName(radio_.framing()), boolName(rxMode_ == RxMode::LINK), txStateName(),
                   static_cast<unsigned long>(link_.rxOk), static_cast<unsigned long>(link_.rxBad),
                   static_cast<unsigned long>(link_.rxDatagrams), static_cast<unsigned long>(link_.txDatagrams),
                   static_cast<unsigned long>(link_.txFragments), static_cast<unsigned long>(link_.txDrop),

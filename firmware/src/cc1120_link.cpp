@@ -16,7 +16,7 @@ constexpr size_t tableIndex(uint16_t address) {
 }
 constexpr bool inTable(uint16_t address) { return tableIndex(address) < p1::REGISTER_COUNT; }
 static_assert(inTable(DEVIATION_M) && inTable(MODCFG_DEV_E) && inTable(PKT_CFG2) && inTable(PKT_CFG0), "rejestry nośnej w tablicy P1");
-static_assert(p1::SYMBOL_RATE == radiolink::P1_SYMBOL_RATE && p1::DEBT_FACTOR == radiolink::P1_DEBT_FACTOR &&
+static_assert(p1::SYMBOL_RATE == radiolink::P1_SYMBOL_RATE && p1::DEBT_FACTOR == radiolink::DEBT_FACTOR &&
                   p1::CCA_THRESHOLD_DBM == radiolink::P1_CCA_THRESHOLD_DBM,
               "tablica P1 z generatora zgodna z radio_link.h");
 constexpr uint8_t tableValue(uint16_t address) { return p1::REGISTERS[tableIndex(address)].value; }

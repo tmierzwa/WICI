@@ -649,7 +649,7 @@ size_t interfaceJson(char* out, size_t size) {
                            "\"ann_drop\":%lu,\"ann_expired\":%lu,\"tx_sent\":%lu,\"tx_failed\":%lu,\"rx_ok\":%lu,"
                            "\"ifac_missing\":%lu,\"ifac_invalid\":%lu,\"offline\":%lu,\"silenced\":%lu,\"k2_slot\":%lu,\"k2_pool\":%lu,"
                            "\"k2_dest\":%lu,\"pr_limited\":%lu,\"pr_resp_limited\":%lu,\"pool_ms\":%lu,\"pr_ms\":%lu",
-                           radio->timing().framing == p1iface::LinkTiming::Framing::RNODE ? "lora" : "p1",
+                           radiolink::framingName(radio->timing().framing),
                            (unsigned)p1->queue().queued(), (unsigned)p1->queue().held(), (unsigned long)c.queued,
                            (unsigned long)c.full, (unsigned long)c.tooLarge, (unsigned long)c.announcesHeld,
                            (unsigned long)c.announcesDropped, (unsigned long)c.announcesExpired, (unsigned long)c.sent,

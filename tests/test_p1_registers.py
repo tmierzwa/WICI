@@ -69,9 +69,9 @@ class EquationTests(unittest.TestCase):
         # Limit serii P1 jest w radio_link.h (wspólny z profilem LoRa, który ma krótszą serię).
         measure = (ROOT / "firmware" / "src" / "measure.h").read_text(encoding="utf-8")
         link = (ROOT / "firmware" / "src" / "radio_link.h").read_text(encoding="utf-8")
-        series = int(re.search(r"P1_SERIES_MAX_MS = (\d+);", link).group(1))
-        self.assertIn("SERIES_MAX_MS = radiolink::P1_SERIES_MAX_MS;", measure)
-        self.assertIn("MAX_DEBT_MS = SERIES_MAX_MS * 12;", measure)
+        series = int(re.search(r"MAX_SERIES_MS_ANY_LINK = (\d+);", link).group(1))
+        self.assertIn("SERIES_MAX_MS = radiolink::MAX_SERIES_MS_ANY_LINK;", measure)
+        self.assertIn("MAX_DEBT_MS = SERIES_MAX_MS * radiolink::DEBT_FACTOR;", measure)
         self.assertGreaterEqual(series * 12, p1.max_debt_ms())
 
     def test_low_if_allows_image_compensation(self):
