@@ -7,8 +7,10 @@ var CATEGORIES = ["POMOC MEDYCZNA", "LEKI I SPRZĘT MED.", "EWAKUACJA, TRANSPORT
 var URGENCY = ["zwykła", "pilna", "NATYCHMIAST"];
 var STATES = {1: "przyjęte", 2: "przeczytane", 3: "pomoc skierowana", 4: "przekazane dalej", 5: "instrukcja wysłana", 6: "zamknięte"};
 var TABS = [["reports", "Zgłoszenia"], ["tests", "TEST"], ["quarantine", "Kwarantanna"], ["stations", "Stacje"], ["bulletins", "Komunikaty"],
-  ["node", "Węzeł i wysyłka"], ["handover", "Przekazanie zmiany"], ["accounts", "Hasła"], ["log", "Dziennik"]];
+  ["node", "Węzeł i wysyłka"], ["handover", "Przekazanie zmiany"], ["accounts", "Hasła"], ["log", "Dziennik"],
+  ["closing", "Zakończenie"]];
 var state = null, version = -1, tab = "reports", silenced = {}, lastTouch = 0, audio = null;
+var shown = null;   // hasło pokazywane raz: zostaje nad widokiem, aż dyżurny potwierdzi przepisanie
 
 function el(tag, attrs) {
   var node = document.createElement(tag);
@@ -102,6 +104,11 @@ function render() {
   if (busy() && !force) { pending = true; return; }
   pending = force = false;
   var view = clear($("view"));
+  if (shown) {
+    view.appendChild(el("div", {class: "report u2"}, el("div", {class: "head", text: shown.label}),
+      el("p", {class: "password", text: shown.text}),
+      el("button", {text: "Przepisane do koperty: ukryj", onclick: function () { shown = null; force = true; render(); }})));
+  }
   VIEWS[tab](view);
 }
 var force = false;
@@ -250,18 +257,65 @@ var VIEWS = {
     view.appendChild(error);
   },
   accounts: function (view) {
-    var out = el("p", {class: "password"}), error = el("p", {class: "error"});
+    var error = el("p", {class: "error"});
     view.appendChild(el("p", {text: "Nowe hasło po otwarciu koperty. Hasło pokazuje się raz: przepisz je do nowej koperty."}));
     state.accounts.concat(["stanowisko"]).forEach(function (a) {
       view.appendChild(el("button", {text: "Nowe hasło: " + a, onclick: function () {
         if (confirm("Nadać nowe hasło " + a + "? Stare przestanie działać.")) action("/api/operator/password", {account: a}, error).then(function (v) {
-          out.textContent = v.account + ": " + v.password; });
+          shown = {label: "Nowe hasło: " + v.account, text: v.password}; render(); });
       }}));
     });
-    view.appendChild(out); view.appendChild(error);
+    view.appendChild(error);
   },
   log: function (view) {
-    state.log.forEach(function (e) { view.appendChild(el("p", {class: "log", text: time(e.at) + " · " + (e.account || "aplikacja") + " · " + e.op + " " + e.detail})); });
+    state.log.forEach(function (e) {
+      view.appendChild(el("p", {class: "log", text: [time(e.at), e.account || "aplikacja", e.station, e.number, e.op, e.detail]
+        .filter(Boolean).join(" · ")}));
+    });
+  },
+  closing: function (view) {
+    var error = el("p", {class: "error"});
+    var path = el("input", {placeholder: "inny katalog (wymaga drugiego dyżurnego); puste: nośnik stanowiska"}), second = secondPerson();
+    view.appendChild(el("h3", {text: "Eksport rejestru (CSV)"}));
+    view.appendChild(el("p", {text: "Plik CSV nie jest szyfrowany: zawiera treść zgłoszeń. Domyślnie trafia do katalogu eksport na nośniku stanowiska."}));
+    view.appendChild(path); view.appendChild(second.node);
+    view.appendChild(el("button", {text: "Eksportuj rejestr", onclick: function () {
+      action("/api/operator/export", path.value ? Object.assign({path: path.value}, second.values()) : {}, error)
+        .then(function (v) { alert("Zapisano: " + v.file); });
+    }}));
+    view.appendChild(el("h3", {text: "ZAMKNIJ ZDARZENIE"}));
+    if (state.closed) {
+      view.appendChild(el("p", {text: "Zdarzenie zamknięte " + time(state.closed) + ". Treść zgłoszeń usunięta z bazy; archiwum w katalogu eksport."}));
+      view.appendChild(el("h3", {text: "Usuń kopie"}));
+      if (state.copies_purged) view.appendChild(el("p", {text: "Kopie usunięte " + time(state.copies_purged) + "."}));
+      else {
+        var who = el("input", {placeholder: "kto potwierdził odbiór archiwum"}), when = el("input", {placeholder: "kiedy"});
+        var other = el("input", {placeholder: "katalog drugiego nośnika, jeśli podłączony"});
+        view.appendChild(el("p", {text: "Dopiero po potwierdzeniu odbioru archiwum przez administratora danych."}));
+        view.appendChild(who); view.appendChild(when); view.appendChild(other);
+        view.appendChild(el("button", {text: "Usuń kopie", onclick: function () {
+          action("/api/operator/backup/purge", {kto: who.value, kiedy: when.value, path: other.value}, error)
+            .then(function (v) { if (v.failed.length) alert("Nie usunięto: " + v.failed.join(", ")); });
+        }}));
+      }
+    } else {
+      var close = el("input", {placeholder: "wpisz: ZAMKNIJ ZDARZENIE"});
+      view.appendChild(el("p", {text: "Archiwum z bazą i rejestrem trafia do katalogu eksport, potem treść zgłoszeń znika z bazy. Hasło archiwum pokaże się raz: przepisz je do koperty dla administratora danych."}));
+      view.appendChild(close);
+      view.appendChild(el("button", {class: "primary", text: "Zamknij zdarzenie", onclick: function () {
+        action("/api/operator/close", {confirm: close.value}, error).then(function (v) {
+          shown = {label: "Hasło archiwum " + v.file, text: v.password}; render(); });
+      }}));
+    }
+    view.appendChild(el("h3", {text: "ZNISZCZ DANE"}));
+    var destroy = el("input", {placeholder: "wpisz: ZNISZCZ DANE"}), copies = el("input", {placeholder: "katalog drugiego nośnika, jeśli podłączony"});
+    view.appendChild(el("p", {text: "Usuwa bazę, tożsamość, konta i kopie bez archiwum; aplikacja kończy pracę. Potem oba nośniki zniszcz fizycznie według instrukcji."}));
+    view.appendChild(destroy); view.appendChild(copies);
+    view.appendChild(el("button", {class: "alarm", text: "ZNISZCZ DANE", onclick: function () {
+      if (confirm("Zniszczyć dane stanowiska? Tego nie da się cofnąć.")) action("/api/operator/destroy", {confirm: destroy.value, path: copies.value}, error)
+        .then(function (v) { document.body.textContent = "Dane zniszczone." + (v.failed.length ? " Nie usunięto: " + v.failed.join(", ") : ""); });
+    }}));
+    view.appendChild(error);
   }
 };
 

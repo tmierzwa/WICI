@@ -35,13 +35,17 @@ CREATE TABLE IF NOT EXISTS received_at (
     PRIMARY KEY(source,id,revision),
     FOREIGN KEY(source,id,revision) REFERENCES received(source,id,revision)
 );
--- Dziennik działań: kto (konto dyżurnego, pusty dla samej aplikacji), co i kiedy; tylko dopisywanie.
+-- Dziennik działań: kto (konto dyżurnego, pusty dla samej aplikacji), co i kiedy, przy czym (stacja, id i
+-- rewizja zgłoszenia, gdy dotyczy); bez treści zgłoszeń i komunikatów; tylko dopisywanie.
 CREATE TABLE IF NOT EXISTS dziennik (
     id INTEGER PRIMARY KEY,
     at REAL NOT NULL,
     account TEXT NOT NULL,
     op TEXT NOT NULL,
-    detail TEXT NOT NULL
+    detail TEXT NOT NULL,
+    source BLOB,
+    mid TEXT,
+    revision INTEGER
 );
 CREATE TRIGGER IF NOT EXISTS dziennik_no_update BEFORE UPDATE ON dziennik
 BEGIN SELECT RAISE(ABORT, 'dziennik tylko do dopisywania'); END;
@@ -94,6 +98,7 @@ class Przyjecie:
         self.counts = {"received": 0, "duplicate": 0, "quarantined": 0, "rejected": 0, "quarantine_full": 0}
         self.ready = threading.Event()
         self.error = self.save_error = None
+        self.discard = False   # ZNISZCZ DANE: bez ostatniej migawki przy zatrzymaniu
         self.thread = threading.Thread(target=self._run, name="przyjecie", daemon=True)
         self.thread.start()
         self.ready.wait()
@@ -108,6 +113,10 @@ class Przyjecie:
             if body is not None:
                 self.store.db.deserialize(body)
             self.store.db.executescript(SCHEMA)
+            columns = {row[1] for row in self.store.db.execute("PRAGMA table_info(dziennik)")}
+            for column, kind in (("source", "BLOB"), ("mid", "TEXT"), ("revision", "INTEGER")):
+                if column not in columns:   # baza z etapu S4-S8
+                    self.store.db.execute(f"ALTER TABLE dziennik ADD COLUMN {column} {kind}")
             self.wysylka.open(self.store.db, self.clock())
         except Exception as e:   # noqa: BLE001 - błąd otwarcia bazy wraca do wątku, który tworzy Przyjecie
             if hasattr(self, "store"):
@@ -138,7 +147,8 @@ class Przyjecie:
                 job()
             except Exception as e:   # noqa: BLE001 - wątek bazy działa dalej; stacja ponowi wiadomość
                 self.log(f"stanowisko: błąd w wątku bazy: {e!r}")
-        self._save()
+        if not self.discard:
+            self._save()
         self.store.close()
 
     def _save(self):
@@ -161,7 +171,8 @@ class Przyjecie:
         a copy on the computer disk and the announce when they are due. Nothing in the recovery mode."""
         if not self._save() or self.recovery:
             return   # w trybie odzyskania także bez kopii: trzy dobre kopie zostają
-        if self.copies is not None and self.clock() >= self.next_copy:
+        if (self.copies is not None and self.clock() >= self.next_copy
+                and wysylka.setting(self.store.db, "kopie_usuniete", None) is None):   # po „Usuń kopie” już nie
             self._copy()   # przed wysyłką: po odzyskaniu nowa kopia z nowym P wychodzi pierwsza
         changes_before = self.store.db.total_changes
         self.wysylka.tick(self.store.db, self.clock())
@@ -237,10 +248,11 @@ class Przyjecie:
         self.call(lambda store: self.tick())
         return p
 
-    def _log_action(self, account, op, detail=""):
+    def _log_action(self, account, op, detail="", source=None, mid=None, revision=None):
+        """Entry in the action log in the database thread (inside call or tick)."""
         with self.store.db:
-            self.store.db.execute("INSERT INTO dziennik(at, account, op, detail) VALUES(?,?,?,?)",
-                                  (self.clock(), account, op, detail))
+            self.store.db.execute("INSERT INTO dziennik(at, account, op, detail, source, mid, revision) "
+                                  "VALUES(?,?,?,?,?,?,?)", (self.clock(), account, op, detail, source, mid, revision))
         self._save()
 
     def call(self, fn):
@@ -304,6 +316,8 @@ class Przyjecie:
         self.counts["received" if after > known else "duplicate"] += 1
         self.tick()   # RECEIVED od razu po COMMIT, jeśli jest miejsce w drodze
 
-    def stop(self):
+    def stop(self, save=True):
+        """End the database thread; save=False (ZNISZCZ DANE) skips the last snapshot."""
+        self.discard = self.discard or not save
         self.jobs.put(None)
         self.thread.join(10)

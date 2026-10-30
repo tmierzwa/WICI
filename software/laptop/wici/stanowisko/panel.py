@@ -21,7 +21,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 from .. import VERSION, configdoc, database, web
-from . import kopie, nosnik, wysylka, wzorzec
+from . import kopie, nosnik, wysylka, wzorzec, zamkniecie
 
 LOCK_S = 300
 STATIC = {"/": ("index.html", "text/html; charset=utf-8"), "/app.js": ("app.js", "text/javascript; charset=utf-8"),
@@ -84,6 +84,7 @@ class Dyzur:
         self.clock, self.monotonic = clock, monotonic
         self.user, self.touched = None, 0.0
         self.lock = threading.RLock()
+        self.on_quit = lambda: None   # po ZNISZCZ DANE aplikacja kończy pracę (__main__)
 
     # ---- konto -------------------------------------------------------------------------------
 
@@ -124,8 +125,8 @@ class Dyzur:
         self.medium.login(account, password, self.key)
         return user, account
 
-    def _logged(self, store, user, op, detail=""):
-        self.p._log_action(user, op, detail)
+    def _logged(self, store, user, op, detail="", source=None, mid=None, revision=None):
+        self.p._log_action(user, op, detail, source, mid, revision)
 
     # ---- decyzje ------------------------------------------------------------------------------
 
@@ -155,8 +156,7 @@ class Dyzur:
                 if detail:
                     store.db.execute("INSERT INTO decyzje(source, mid, state, detail, at, account) VALUES(?,?,?,?,?,?)",
                                      (source, mid, state, detail, now, user))
-                store.db.execute("INSERT INTO dziennik(at, account, op, detail) VALUES(?,?,?,?)",
-                                 (now, user, f"stan_{state}", f"{short_number(mid)} {detail}".strip()))
+            self._logged(store, user, f"stan_{state}", detail, source, mid, revision)
             return event
         return {"event": self.p.call(decide)}
 
@@ -174,7 +174,7 @@ class Dyzur:
 
         def send(store):
             event = self.p.wysylka.reply(store, source, mid, revision, text, self.clock())
-            self._logged(store, user, "odpowiedz", short_number(mid))
+            self._logged(store, user, "odpowiedz", "", source, mid, revision)
             return event
         return {"event": self.p.call(send)}
 
@@ -185,7 +185,7 @@ class Dyzur:
 
         def send(store):
             mid = self.p.wysylka.bulletin(store, text, self.clock())
-            self._logged(store, user, "komunikat", f"{short_number(mid)} {text}")
+            self._logged(store, user, "komunikat", "", None, mid)
             return mid
         return {"id": self.p.call(send)}
 
@@ -211,7 +211,7 @@ class Dyzur:
                     if store.db.execute("DELETE FROM quarantine WHERE source=? AND id=? AND revision=?",
                                         (source, mid, revision)).rowcount != 1:
                         raise ValueError("nie ma takiej wiadomości w kwarantannie")
-            self._logged(store, user, f"kwarantanna_{body['decision']}", f"{source.hex()[:8]} {short_number(mid)}")
+            self._logged(store, user, f"kwarantanna_{body['decision']}", "", source, mid, revision)
         self.p.call(decide)
         return {"ok": True}
 
@@ -240,7 +240,7 @@ class Dyzur:
             with store.db:
                 store.db.execute("INSERT OR REPLACE INTO karty VALUES(?,?,?,?)",
                                  (lxmf, name, json.dumps(address, ensure_ascii=False), fingerprint(key)))
-            self._logged(store, user, "zaufana_dodana", f"{name}, zgoda {user} i {other}")
+            self._logged(store, user, "zaufana_dodana", f"zgoda {user} i {other}", lxmf)
         self.p.call(add)
         return {"name": name}
 
@@ -250,7 +250,7 @@ class Dyzur:
 
         def remove(store):
             store.remove_trusted(source)
-            self._logged(store, user, "zaufana_usunieta", self._name(store, source))
+            self._logged(store, user, "zaufana_usunieta", "", source)
         self.p.call(remove)
         return {"ok": True}
 
@@ -303,6 +303,87 @@ class Dyzur:
             password = self.medium.new_password(account, self.key)
         self.p.action(user, "nowe_haslo", account)
         return {"account": account, "password": password}
+
+    # ---- zakończenie (S9) --------------------------------------------------------------------------
+
+    def export(self, body):
+        """Register to CSV: on the station medium, or to another directory with a second duty officer."""
+        user, other = self.current(), None
+        if body.get("path"):
+            user, other = self.second(body)
+            directory = Path(_text(body, "path", 1000))
+            if not directory.is_dir():
+                raise ValueError("nie ma takiego katalogu: podłącz nośnik")
+        else:
+            directory = self.medium.root / zamkniecie.EXPORT
+
+        def run(store):
+            now = self.clock()
+            data = zamkniecie.csv_bytes(zamkniecie.register(store.db))
+            path = zamkniecie.write_new(directory, f"rejestr-{zamkniecie.stamp(now)}.csv", data)
+            self._logged(store, user, "eksport", path.name + (f", zgoda {other}" if other else ""))
+            return str(path)
+        return {"file": self.p.call(run)}
+
+    def close(self, body):
+        """ZAMKNIJ ZDARZENIE: archive with the register on the medium, then the content of reports goes.
+        Returns the archive password once (until D13 sets the administrator key)."""
+        user = self.current()
+        if body.get("confirm") != "ZAMKNIJ ZDARZENIE":
+            raise ValueError("wpisz potwierdzenie: ZAMKNIJ ZDARZENIE")
+
+        def run(store):
+            if wysylka.setting(store.db, "zamkniete", None) is not None:
+                raise ValueError("zdarzenie jest już zamknięte")
+            now = self.clock()
+            self._logged(store, user, "zamkniecie")   # przed archiwum: rejestr w archiwum ma ten wpis
+            sealed, password = zamkniecie.archive(store.db, now, self.medium.iterations)
+            path = zamkniecie.write_new(self.medium.root / zamkniecie.EXPORT,
+                                        f"archiwum-{zamkniecie.stamp(now)}.wici", sealed)
+            zamkniecie.purge(store.db)
+            with store.db:
+                store.db.execute("INSERT OR REPLACE INTO settings VALUES('zamkniete', ?)", (now,))
+            return str(path), password
+        path, password = self.p.call(run)
+        return {"file": path, "password": password}
+
+    def purge_copies(self, body):
+        """„Usuń kopie” after the administrator confirmed the archive: copies on the computer disk and, when
+        connected, on the second medium."""
+        user = self.current()
+        who, when = _text(body, "kto"), _text(body, "kiedy")
+        if self.p.call(lambda store: wysylka.setting(store.db, "zamkniete", None)) is None:
+            raise ValueError("najpierw ZAMKNIJ ZDARZENIE")
+        copies = [self.p.copies] if self.p.copies is not None else []
+        if body.get("path"):
+            copies.append(kopie.Kopie(Path(_text(body, "path", 1000)) / "wici-kopie"))
+        failed = [name for copy in copies for name in copy.remove()]
+
+        def run(store):
+            with store.db:
+                store.db.execute("INSERT OR REPLACE INTO settings VALUES('kopie_usuniete', ?)", (self.clock(),))
+            self._logged(store, user, "kopie_usuniete", f"odbiór archiwum potwierdził {who}, {when}"
+                         + (f"; nie usunięto: {', '.join(failed)}" if failed else ""))
+        self.p.call(run)
+        return {"failed": failed}
+
+    def destroy(self, body):
+        """ZNISZCZ DANE: the database thread stops without a last snapshot, the stack stops, the medium files
+        and the copies go; the application ends. Physical destruction of both media decides (instruction)."""
+        self.current()
+        if body.get("confirm") != "ZNISZCZ DANE":
+            raise ValueError("wpisz potwierdzenie: ZNISZCZ DANE")
+        self.p.stop(save=False)
+        if self.stos is not None:
+            self.stos.stop()
+        copies = [self.p.copies] if self.p.copies is not None else []
+        if body.get("path"):
+            copies.append(kopie.Kopie(Path(str(body["path"])) / "wici-kopie"))
+        failed = zamkniecie.destroy(self.medium, copies)
+        with self.lock:
+            self.user, self.key = None, None
+        self.on_quit()
+        return {"failed": failed}
 
     # ---- widok --------------------------------------------------------------------------------
 
@@ -358,16 +439,20 @@ class Dyzur:
             trusted = [{"source": s.hex(), "station": names.get(s, (s.hex()[:8], []))[0],
                         "address": names.get(s, ("", []))[1]} for (s,) in db.execute("SELECT source FROM trusted")]
             waiting, oldest = db.execute("SELECT count(*), min(first_try) FROM outbox WHERE done=0").fetchone()
-            log = [{"at": a, "account": u, "op": o, "detail": d} for a, u, o, d in
-                   db.execute("SELECT at, account, op, detail FROM dziennik ORDER BY id DESC LIMIT 50")]
+            log = [{"at": a, "account": u, "op": o, "detail": d,
+                    "station": names[s][0] if s in names else "", "number": short_number(m) if m else ""}
+                   for a, u, o, d, s, m in db.execute(
+                       "SELECT at, account, op, detail, source, mid FROM dziennik ORDER BY id DESC LIMIT 50")]
             bulletins = []
             for mid, payload, total, done, failed in db.execute(
                     "SELECT id, payload, count(*), sum(done), sum(attempts > 0 AND done = 0) FROM outbox "
                     "WHERE kind=? GROUP BY id ORDER BY min(seq) DESC LIMIT 20", (wysylka.BULLETIN,)):
-                bulletins.append({"id": mid, "number": short_number(mid), "text": wzorzec.decode_message(payload)[4],
+                bulletins.append({"id": mid, "number": short_number(mid), "text": wzorzec.decode_message(payload)[4] if payload else "",
                                   "total": total, "done": done, "retrying": failed})
-            return reports, tests, quarantine, removed, trusted, waiting, oldest, log, bulletins
-        reports, tests, quarantine, removed, trusted, waiting, oldest, log, bulletins = self.p.call(read)
+            closed = {"closed": wysylka.setting(db, "zamkniete", None),
+                      "copies_purged": wysylka.setting(db, "kopie_usuniete", None)}
+            return reports, tests, quarantine, removed, trusted, waiting, oldest, log, bulletins, closed
+        reports, tests, quarantine, removed, trusted, waiting, oldest, log, bulletins, closed = self.p.call(read)
         in_flight = len(self.p.wysylka.flight)
         open_reports = [r for r in reports if r["state"] not in (3, 5, 6)]
         return {
@@ -375,7 +460,7 @@ class Dyzur:
             "node": {**node, "in_flight": in_flight, "waiting": waiting - in_flight if waiting else 0,
                      "oldest_s": None if oldest is None else now - oldest},
             "recovery": self.p.recovery, "copy_age_s": None if self.p.last_copy_at is None else now - self.p.last_copy_at,
-            "saved": self.p.save_error is None, "log": log, "bulletins": bulletins,
+            "saved": self.p.save_error is None, "log": log, "bulletins": bulletins, **closed,
             "handover": {"open": len(open_reports), "forwarded_unconfirmed": sum(r["state"] == 4 for r in reports),
                          "unsent": waiting or 0, "quarantine": len(quarantine), "removed_alarm": len(removed)},
         }
@@ -404,6 +489,10 @@ ROUTES = {
     "/api/operator/handover": lambda d, b: d.handover(b),
     "/api/operator/recovery": lambda d, b: d.recovery(b),
     "/api/operator/password": lambda d, b: d.new_password(b),
+    "/api/operator/export": lambda d, b: d.export(b),
+    "/api/operator/close": lambda d, b: d.close(b),
+    "/api/operator/backup/purge": lambda d, b: d.purge_copies(b),
+    "/api/operator/destroy": lambda d, b: d.destroy(b),
 }
 
 
