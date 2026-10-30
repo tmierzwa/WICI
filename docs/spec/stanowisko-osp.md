@@ -150,7 +150,7 @@ Panel nasłuchuje wyłącznie na 127.0.0.1. Wymaga logowania; konta i hasła two
 
 Osoba utrzymująca system, w porozumieniu z organizatorem sieci:
 
-1. Instaluje pakiet stanowiska na obu komputerach i sprawdza start aplikacji z nośnikiem na każdym z nich.
+1. Instaluje pakiet stanowiska na obu komputerach i sprawdza start aplikacji z nośnikiem na każdym z nich. Na wybranym modelu komputera stanowiska mierzy czas wyprowadzenia klucza z hasła (PBKDF2, 600 000 iteracji) przy starcie i logowaniu; przy wyniku ponad 3 s liczbę iteracji obniża się w przygotowaniu (`przygotuj --iteracje`) bez zmiany formatu.
 2. Na komputerze bez połączenia z siecią tworzy w aplikacji tożsamość główną odbiorcy na nośniku stanowiska oraz tożsamość zapasową. Paczkę zapasową zaszyfrowaną kluczem z hasła tożsamości zapasowej (co najmniej 6 słów z listy, PBKDF2-HMAC-SHA256 jak klucz nośnika) i samo hasło wkłada do dwóch zaplombowanych kopert, które organizator przechowuje w dwóch różnych miejscach, poza stanowiskiem ([klucz odbiorcy](oprogramowanie.md#model-zaufania-i-kluczy)).
 3. Eksportuje kartę odbiorcy (obie tożsamości) do konfiguracji stacji schronień.
 4. Importuje karty stacji po porównaniu odcisków, za zgodą dwóch osób.
