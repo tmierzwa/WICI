@@ -29,7 +29,8 @@
 //   i CadDone sterownik czyta sam przez SPI;
 // - nośna CW poleceniem SetTxContinuousWave; korekta częstotliwości słowem RF (krok 0,954 Hz).
 // Łącze stosu w ramkach RNode (framing() = RNODE), bez łącza P1. Wywołujący trzyma blokadę operacji radia (platform::RadioLock),
-// gdy pracuje też zadanie odbioru; sterownik sam jej nie bierze.
+// gdy pracuje też zadanie odbioru (pętla: przez radiolink::LockedDriver, radio_lock.h); sterownik sam jej nie bierze,
+// z wyjątkiem obiegu zadania odbioru (taskCycle: próba bez czekania).
 // Odwołania do karty bez numeru wersji: DS.SX1261-2.W.APP; rozdziały i tabele CAD, trybu powrotu
 // i bufora sprawdzone w rev. 1.2 (czerwiec 2019).
 #pragma once
@@ -40,6 +41,8 @@
 
 #include "lora_profile.h"
 #include "radio_link.h"
+#include "rx_watch.h"
+#include "spsc_ring.h"
 #include "sx1262.h"
 
 namespace sx1262 {
@@ -114,6 +117,24 @@ public:
     uint32_t rxLate() const override { return rxLate_.load(std::memory_order_relaxed); }
     radiolink::Activity recentActivity(uint32_t windowMs) override;
 
+    // Odbiór w tle (stacja L0, plan interfejsu LoRa, L6). taskCycle() to jeden obieg zadania odbioru (co takt):
+    // licznik obiegów; przy wysokim DIO1 (koniec ramki, poziom czytany przez wywołującego bez blokady) albo
+    // co RSSI_SAMPLE_MS próba blokady radia bez czekania (zajęta: obieg pominięty); w odbiorze serviceRx
+    // z próbką RSSI co RSSI_SAMPLE_MS; ramka, ramka zła i spóźniona idą do pierścienia RX_RING ramek z czasem
+    // odbioru próbki (pełny: odpada najnowsza, rx_ring_overflow). Udana próbka odświeża lastServiceMs.
+    // Pierwsze przekroczenie czasu BUSY przerywa obieg bez zapisu do pierścienia, a następna próba jest
+    // po BUSY_BACKOFF_MS (wyjęty moduł nie zajmuje rdzenia 0 czekaniem na BUSY).
+    // Przy setBackgroundRx(true) pollRx() czyta pierścień zamiast układu (zadanie jest jedynym właścicielem
+    // flag odbioru); ustawiać pod blokadą przed startem zadania.
+    static constexpr uint32_t RSSI_SAMPLE_MS = 5;
+    static constexpr uint32_t BUSY_BACKOFF_MS = 100;
+    static constexpr size_t RX_RING = 8;  // RNode wysyła kolejkę jedną serią
+    void taskCycle(bool dio1High);
+    void setBackgroundRx(bool on) { background_ = on; }
+    bool backgroundRx() const { return background_; }
+    const rxwatch::TaskSignals& taskSignals() const { return signals_; }
+    uint32_t rxRingOverflow() const override { return ring_.overflow(); }
+
     const char* stateName() override { return modeName(radio_.status().mode()); }
     void idle() override;
     bool startCw() override;
@@ -166,6 +187,17 @@ private:
     int32_t offsetSteps_ = 0;
     Activity activity_;
     std::atomic<uint32_t> rxLate_{0};
+
+    // Pozycja pierścienia odbioru w tle: Frame albo Bad (zła i spóźniona ramka, jak pollRx bez zadania).
+    struct RxEntry {
+        radiolink::RxPoll kind = radiolink::RxPoll::Nothing;
+        radiolink::Frame frame;
+    };
+    bool background_ = false;
+    SpscRing<RxEntry, RX_RING> ring_;
+    rxwatch::TaskSignals signals_;
+    uint32_t lastRssiMs_ = 0;       // zadanie: ostatnia próbka z RSSI
+    uint32_t busyBackoffMs_ = 0;    // zadanie: przekroczenie czasu BUSY (0: brak)
 };
 
 }  // namespace sx1262

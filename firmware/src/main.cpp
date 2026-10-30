@@ -217,6 +217,20 @@ bool radioServes() { return radioWorks() && !bench.emcActive(); }
 // radiowej kolejka czeka. Radio służy stacji i łącze jest w odbiorze.
 bool p1Listening() { return radioServes() && bench.receiving(); }
 
+// Alarm radio_awaria (oprogramowanie.md, ekran główny): radio nie służy stacji albo odbiór w tle stoi
+// (stacja L0: zadanie odbioru bez postępu przez 10 s przy uzbrojonym odbiorze stosu, radiocon::rxStalled).
+bool rxStalled = false;
+bool radioFault() { return !radioServes() || rxStalled; }
+
+// Gotowość radiowa (plan interfejsu LoRa, L6): czas od startu do uzbrojenia odbioru stosu, -1 przed nim;
+// odbiór startuje przed ekranem. Najdłuższy obieg pętli od startu (loop_max_ms).
+int32_t rxReadyMs = -1;
+uint32_t loopMaxMs = 0;
+const char* linkName() {
+    const radiolink::Framing f = bench.linkFraming();
+    return f == radiolink::Framing::RNODE ? "lora" : f == radiolink::Framing::P1 ? "p1" : "none";
+}
+
 struct BenchRadio : rnsnode::Radio {
     bool ready() override { return p1Listening() && !bench.busy() && (!bench.silence || bench.silenceException); }
     bool transmit(const uint8_t* data, size_t length) override { return bench.linkSend(data, length, true) == nullptr; }
@@ -618,7 +632,7 @@ ui::Status screenStatus() {
     const uint32_t nowS = serviceS();
     s.prep = bench.prep;
     s.silence = silenceAny();
-    s.radioOk = radioServes();
+    s.radioOk = !radioFault();
     s.stackOk = !stackFault();
     s.storeOk = stationStore.ok();
     // Kontakt z odbiorcą: znany od ostatniej przyjętej wiadomości; bez niej dolne oszacowanie z czasu pracy.
@@ -658,7 +672,7 @@ ui::Status screenStatus() {
     return s;
 }
 
-// Rysuje tylko zmienione wiersze i wysyła je na ekran.
+// Rysuje tylko zmienione wiersze w buforze ekranu.
 void updateScreen(bool force) {
     ui::Lines lines;
     screenModel.render(screenStatus(), lines);
@@ -668,7 +682,7 @@ void updateScreen(bool force) {
         }
     }
     shown = lines;
-    display.refresh();
+    // Wysyła je pętla po 9 wierszy pikseli na obieg (display.refresh() w stationLoop).
 }
 
 void printScreen() {
@@ -810,6 +824,14 @@ void printInfo() {
                   static_cast<unsigned long>(platform::uptimeMs() / 1000), ui::screenName(screenModel.screen()), langName(screenModel.language()),
                   stationName, static_cast<unsigned long>(platform::resetReason()));
     Serial.printf("\"rns_state\":\"%s\",\"entropy_ok\":%s,", STACK_STATE_NAMES[static_cast<size_t>(stackState)], boolName(entropyHealthy));
+    // Łącze stosu, odbiór w tle i pętla (plan interfejsu LoRa, L6); bez zadania odbioru liczniki zadania są zerowe.
+    const radiocon::RxTaskInfo rx = radiocon::rxTaskInfo();
+    Serial.printf("\"link\":\"%s\",\"rx_task\":%s,\"rx_armed\":%s,\"rx_ready_ms\":%ld,\"loop_max_ms\":%lu,\"rx_task_loops\":%lu,"
+                  "\"rx_service_max_ms\":%lu,\"rx_stalled\":%s,\"rx_mode_lost\":%lu,\"lock_timeouts\":%lu,\"lock_misses\":%lu,",
+                  linkName(), boolName(rx.running), boolName(rx.armed), static_cast<long>(rxReadyMs), static_cast<unsigned long>(loopMaxMs),
+                  static_cast<unsigned long>(rx.loops), static_cast<unsigned long>((rx.serviceMaxUs + 999) / 1000), boolName(rxStalled),
+                  static_cast<unsigned long>(rx.modeLost), static_cast<unsigned long>(platform::radioLockTimeouts()),
+                  static_cast<unsigned long>(rx.lockMisses));
     Serial.printf("\"store_ok\":%s,\"register\":%u,\"inbox\":%u,\"head\":%lu,",
                   boolName(storeOk), static_cast<unsigned>(storeOk ? stationStore.requestCount() : 0),
                   static_cast<unsigned>(storeOk ? stationStore.messageCount() : 0), static_cast<unsigned long>(storeOk ? stationStore.head() : 0));
@@ -994,7 +1016,9 @@ void printRns() {
     rnsnode::usbJson(usb, sizeof(usb));
     Serial.print(",");
     Serial.print(usb);
-    Serial.printf(",\"computer_s\":%ld}\n", computerHeard ? static_cast<long>(counterS() - computerAtS) : -1L);
+    // Zapas stosu zadania odbioru (stacja L0; -1 bez zadania).
+    Serial.printf(",\"computer_s\":%ld,\"rx_stack_free\":%ld}\n", computerHeard ? static_cast<long>(counterS() - computerAtS) : -1L,
+                  static_cast<long>(radiocon::rxTaskInfo().stackFree));
 }
 
 void printStore() {
@@ -1192,6 +1216,8 @@ void handle(char* cmd) {
         if (!cmdargs::parseUint(words[0], 125000, sharp::SPI_HZ, hz)) { printError("DISPLAY <125000..2000000>"); return; }
         display.spiHz(hz);
         updateScreen(true);
+        // Kawałki po 9 wierszy z przerwą: magistrala wolna dla zadania odbioru między nimi.
+        while (display.refresh()) delay(1);
         printDisplay();
     } else if (!strcmp(cmd, "BUZZ") && n <= 2) {
         uint32_t ms = 500, hz = board::BUZZER_HZ;
@@ -1392,6 +1418,7 @@ void stationSetup() {
 #endif
     delay(50);
     radiocon::start();  // LED2 świeci dopiero po zapisanym i (CC1120) skalibrowanym P1
+    radiocon::startRxTask();  // stacja L0: odbiór w tle od tej chwili; dalej pętla dotyka układu pod blokadą
     framOk = memory.identify().part != fram::Part::UNKNOWN;
     beginJournal();
     ledWrite(board::LED_FRAM, framOk && journalOk);  // LED3 świeci dopiero z działającym dziennikiem
@@ -1415,7 +1442,8 @@ void stationSetup() {
     if (storeOk && !nodeRole()) app.stationEvent(store::RESTART, stationJournal.starts());
     bench.onDatagram(onDatagram, nullptr);
     bench.onTxDone(onTxDone, nullptr);
-    if (radioWorks()) bench.linkRxStart();  // łącze stosu w odbiorze od startu (radio niezależne od ekranu)
+    // Łącze stosu w odbiorze od startu, przed ekranem (radio niezależne od ekranu, gotowość ≤60 s).
+    if (radioWorks() && !bench.linkRxStart() && rnsOk) rxReadyMs = static_cast<int32_t>(platform::uptimeMs());
     const bool extcominOk = display.begin();  // CLEAR czyści pamięć ekranu
 #if defined(WICI_BOARD_N1)
     // Bez EXTCOMIN z licznika panel dostałby składową stałą (EXTMODE na stałe wysoki): zostaje wyłączony.
@@ -1433,7 +1461,17 @@ void stationSetup() {
     platform::beginWatchdog(WDT_TIMEOUT_S);
 }
 
+// Czas obiegu pętli do loop_max_ms (INFO).
+struct PassTimer {
+    uint32_t startMs = millis();
+    ~PassTimer() {
+        const uint32_t ms = millis() - startMs;
+        if (ms > loopMaxMs) loopMaxMs = ms;
+    }
+};
+
 void stationLoop() {
+    PassTimer passTimer;
     static uint32_t lastBeat = 0;
     static bool beat = false;
     static bool reported = false;
@@ -1447,21 +1485,28 @@ void stationLoop() {
         beat = !beat;
         ledWrite(board::LED_HEARTBEAT, beat);
     }
+    // rxArmed: odbiór stosu uzbrojony; polecenia diagnostyczne, tryb przygotowania, EMC i halt (rnsOk) go kasują.
+    const bool armed = rnsOk && bench.stackRxArmed();
+    radiocon::setRxArmed(armed);
+    if (armed && rxReadyMs < 0) rxReadyMs = static_cast<int32_t>(platform::uptimeMs());
     // LED2: P1 gotowe; zapis przy zmianie, więc LED 2 z portu obowiązuje do następnej zmiany.
     static uint32_t radioCheckMs = 0;
     if (now - radioCheckMs >= radiocon::CHECK_MS && !bench.transmitting()) {
         radioCheckMs = now;
+        // Kontrola i ponowne uzbrojenie odbioru pod jedną blokadą radia (zadanie odbioru pomija wtedy obiegi).
+        platform::RadioLock lock(measure::RADIO_LOCK_WAIT_MS);
         if (radiocon::check()) {
-            bench.log("radio reconfigured after lost P1 settings");
+            bench.log("radio check: receive re-armed (reconfigured or left RX)");
             bench.linkRxStart();  // odbiór stosu wraca od razu po rekonfiguracji (P1 i LoRa)
         }
     }
+    rxStalled = radiocon::rxStalled(bench.transmitting(), now);
     const bool radio = radioWorks();
     if (radio != radioLed) {
         radioLed = radio;
         ledWrite(board::LED_RADIO, radio);
     }
-    screenHost.setRadioFault(!radioServes());   // alarm radio_awaria (oprogramowanie.md, ekran główny); także tryb EMC
+    screenHost.setRadioFault(radioFault());     // alarm radio_awaria (oprogramowanie.md, ekran główny); także tryb EMC i zadanie odbioru
     screenHost.setStackFault(stackFault());     // alarm brak_lacznosci
     const bool usb = Serial;  // CDC otwarty przez hosta
     ledWrite(board::LED_USB, usb);
@@ -1506,6 +1551,7 @@ void stationLoop() {
         lastScreen = now;
         updateScreen(false);
     }
+    display.refresh();  // dalsze kawałki po 9 wierszy (sharp::LINES_PER_REFRESH), jeden na obieg
     display.maintain(now);
     // Interfejs danych: otwarcie portu wysyła sync, zamknięcie odrzuca niepełny wiersz. Bez magazynu
     // protokół też odpowiada (zapis kończy się odmową "memory"), żeby laptop nie czekał bez odpowiedzi.

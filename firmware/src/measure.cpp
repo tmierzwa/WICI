@@ -649,12 +649,16 @@ void Bench::receiveP1() {
 
 void Bench::receiveLora() {
     // Ramki RNode z odbioru (L0: z pierścienia zadania odbioru) do składania; limit 1 s z czasów odbioru ramek.
-    platform::RadioLock lock(RADIO_LOCK_WAIT_MS);
-    if (!lock.held()) return;
+    // Blokada radia tylko na odczyt ramki: wiersz datagramu i przekazanie do stosu idą bez niej.
     loraAssembler_.expire(millis());
     radiolink::Frame received;
     for (;;) {
-        const radiolink::RxPoll result = radio_.pollRx(received);
+        radiolink::RxPoll result;
+        {
+            platform::RadioLock lock(RADIO_LOCK_WAIT_MS);
+            if (!lock.held()) return;
+            result = radio_.pollRx(received);
+        }
         if (result == radiolink::RxPoll::Overflow || result == radiolink::RxPoll::Bad) {
             ++link_.rxBad;  // CRC, nagłówek albo ramka odczytana za późno (rx_late); układ zostaje w odbiorze
             return;
