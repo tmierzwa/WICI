@@ -87,6 +87,14 @@ class LoraAirtime(unittest.TestCase):
         # SF7, 125 kHz, CR 4/5, 8-symbol preamble, explicit header, CRC, 10 B: 28 payload symbols, 41.216 ms.
         self.assertAlmostEqual(lora_frame_seconds(10, 7, preamble_symbols=8), 0.041216, places=6)
 
+    def test_rnode_preamble_rule(self):
+        from obliczenia import lora_frame_seconds, lora_preamble_symbols
+        # RNode firmware: max(18, ceil(24 ms / symbol)); SF7/125 kHz symbol 1.024 ms -> 24, SF8 2.048 ms -> 18.
+        self.assertEqual(lora_preamble_symbols(7), 24)
+        self.assertEqual(lora_preamble_symbols(8), 18)
+        # 255 B frame in SF7: 24 + 4.25 + 378 symbols = 406.25 x 1.024 ms (firmware lora::frameAirUs(255) = 416000).
+        self.assertAlmostEqual(lora_frame_seconds(255, 7), 0.416, places=9)
+
     def test_split_above_single_frame(self):
         from obliczenia import lora_frame_seconds, lora_tx_seconds
         self.assertAlmostEqual(lora_tx_seconds(254, 7), lora_frame_seconds(255, 7))
@@ -121,8 +129,17 @@ class MainProfile(unittest.TestCase):
         self.assertEqual(retry["max_datagram_bytes"], 508)
         self.assertEqual(retry["1_hop_min_interval_empty_network_s"], 60.0)
         self.assertEqual(retry["2_hop_min_interval_empty_network_s"], 60.0)
-        self.assertEqual(round(retry["1_hop_min_interval_worst_debt_full_queue_s"]), 73)
-        self.assertEqual(round(retry["2_hop_min_interval_worst_debt_full_queue_s"]), 94)
+        self.assertEqual(round(retry["1_hop_min_interval_worst_debt_full_queue_s"]), 74)
+        self.assertEqual(round(retry["2_hop_min_interval_worst_debt_full_queue_s"]), 96)
+        self.assertAlmostEqual(retry["worst_debt_s"], 12 * 0.832, places=9)
+
+    def test_declared_bitrate_from_station_announce(self):
+        # Working value until T3: 8 x L / airtime(L), L = station announce with IFAC (221 B); the firmware
+        # (loraframe::declaredBitrate) truncates the same quotient to 4846 b/s.
+        sf7 = self.r["lora_pilot"]["sf7"]
+        self.assertEqual(self.r["cold_start_announces"]["announce_bytes"], 221)
+        self.assertAlmostEqual(sf7["declared_bitrate_b_s"], 8 * 221 / sf7["announce_tx_s"])
+        self.assertEqual(int(sf7["declared_bitrate_b_s"]), 4846)
 
     def test_p1_retry_kept_in_archive(self):
         retry = self.r["p1_archiwalny"]["lxmf_retry"]

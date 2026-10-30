@@ -22,13 +22,20 @@ def p1_tx_seconds(datagram_bytes: int, bit_rate: float = 4800, ramp_ms: float = 
 
 # LoRa pilot profile (concept 04, D10): SX1262 catalogue values, 125 kHz, CR 4/5, explicit header, CRC on.
 # Reticulum over an RNode-compatible interface: one header byte per LoRa frame, packets above 254 B in two frames.
-LORA = {"bw_hz": 125_000, "coding_rate_denominator_minus_4": 1, "preamble_symbols": 18, "frame_header_bytes": 1,
-        "single_frame_payload_max": 254, "chip_sensitivity_dbm": {7: -124.0, 8: -126.0}, "rx_ma": 4.6}
+# Preamble as in the RNode firmware (56775c51, Config.h:84-87, Utilities.h:1245-1259): max(18, ceil(24 ms / symbol)).
+LORA = {"bw_hz": 125_000, "coding_rate_denominator_minus_4": 1, "preamble_symbols_min": 18, "preamble_target_ms": 24,
+        "frame_header_bytes": 1, "single_frame_payload_max": 254, "chip_sensitivity_dbm": {7: -124.0, 8: -126.0},
+        "rx_ma": 4.6}
+
+
+def lora_preamble_symbols(sf: int) -> int:
+    """RNode preamble rule: at least 18 symbols and at least 24 ms (SF7/125 kHz: 24 symbols, SF8: 18)."""
+    return max(LORA["preamble_symbols_min"], math.ceil(LORA["preamble_target_ms"] * LORA["bw_hz"] / (1000 * 2 ** sf)))
 
 
 def lora_frame_seconds(payload_bytes: int, sf: int, preamble_symbols: int | None = None) -> float:
     """Semtech time on air of one explicit-header LoRa frame with CRC (SX1261/2 data sheet, 6.1.4)."""
-    preamble = LORA["preamble_symbols"] if preamble_symbols is None else preamble_symbols
+    preamble = lora_preamble_symbols(sf) if preamble_symbols is None else preamble_symbols
     symbol_s = 2 ** sf / LORA["bw_hz"]
     low_rate = 1 if symbol_s > 0.016 else 0
     cr = LORA["coding_rate_denominator_minus_4"]
@@ -276,7 +283,12 @@ def calculate() -> dict:
             "ratio_to_p1_fifty_requests": per_req[1] / p1_per_request[1],
             "bulletin_s_per_station": 13 * lora_tx_seconds(bulletin_packet, sf),
             "bulletin_osp_tx_min_50_stations": 50 * 13 * lora_tx_seconds(bulletin_packet, sf) / 60,
+            "preamble_symbols": lora_preamble_symbols(sf),
             "announce_tx_s": lora_tx_seconds(p1_datagram(19 + 170 + transport_id), sf),
+            # Working bitrate declared to the stack until T3 (oprogramowanie.md, "Ogłoszenia adresu"): the station
+            # announce with IFAC over its own airtime, 8 x L / airtime(L); no silence debt (the queue counts it).
+            "declared_bitrate_b_s": 8 * p1_datagram(19 + 170 + transport_id)
+                                    / lora_tx_seconds(p1_datagram(19 + 170 + transport_id), sf),
             "announce_tx_ratio_to_p1": lora_tx_seconds(p1_datagram(19 + 170 + transport_id), sf)
                                        / p1_tx_seconds(p1_datagram(19 + 170 + transport_id)),
             "connector_sensitivity_dbm": connector_dbm,
@@ -486,7 +498,7 @@ def calculate() -> dict:
                    "Network capacity is per node at the debt limit; shared channel, hidden nodes and retries reduce it",
             "Cold start: one rebroadcast per announce and station, one path request per station (best and worst case), single collision domain, no losses, retries or announce suppression",
                    "Fixed installation loss of 2.5 dB per end is an assumption until the installed cable is measured",
-                   "LoRa: catalogue SX1262 sensitivity and RX current, RNode-style frame split and 18-symbol preamble are assumptions; the pilot board power path is modelled with the R02 converter assumptions", "No thermal or electrical safety verification"],
+                   "LoRa: catalogue SX1262 sensitivity and RX current, RNode frame split and preamble rule are taken from the RNode firmware source, not measured; the pilot board power path is modelled with the R02 converter assumptions", "No thermal or electrical safety verification"],
     }
     if available_low_v <= required_low_v:
         raise ValueError("Insufficient estimated transformer headroom")
