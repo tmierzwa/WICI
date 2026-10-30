@@ -70,6 +70,11 @@ bool radioLockOk();
 // albo nie powstało: wtedy pętla obsługuje układ sama.
 bool startRxTask(void (*cycle)());
 int32_t rxTaskStackFree();  // najmniejszy zapas stosu zadania od startu w bajtach; -1 bez zadania
+// Sterta MCU w bajtach: cała, wolna teraz i najmniejsza wolna od startu (RNS: heap_size, heap_free, heap_min); -1, gdy stos nie bierze
+// pamięci ze sterty systemu (nRF52840: pula TLSF w RNS jako pool*, symulator).
+int32_t heapSize();  // cała sterta (mianownik zapasu)
+int32_t heapFree();
+int32_t heapMinFree();
 
 class RadioLock {
 public:

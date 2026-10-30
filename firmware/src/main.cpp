@@ -1016,9 +1016,10 @@ void printRns() {
     rnsnode::usbJson(usb, sizeof(usb));
     Serial.print(",");
     Serial.print(usb);
-    // Zapas stosu zadania odbioru (stacja L0; -1 bez zadania).
-    Serial.printf(",\"computer_s\":%ld,\"rx_stack_free\":%ld}\n", computerHeard ? static_cast<long>(counterS() - computerAtS) : -1L,
-                  static_cast<long>(radiocon::rxTaskInfo().stackFree));
+    // Zapas stosu zadania odbioru (stacja L0; -1 bez zadania) i wolna sterta ESP32-S3 (-1 na nRF52840).
+    Serial.printf(",\"computer_s\":%ld,\"rx_stack_free\":%ld,\"heap_size\":%ld,\"heap_free\":%ld,\"heap_min\":%ld}\n",
+                  computerHeard ? static_cast<long>(counterS() - computerAtS) : -1L, static_cast<long>(radiocon::rxTaskInfo().stackFree),
+                  static_cast<long>(platform::heapSize()), static_cast<long>(platform::heapFree()), static_cast<long>(platform::heapMinFree()));
 }
 
 void printStore() {
