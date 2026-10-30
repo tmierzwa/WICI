@@ -5,7 +5,8 @@ A pseudo-terminal speaks the RNode serial protocol (KISS) exactly as RNodeInterf
 reads it: CMD_DETECT answered with 0x46, firmware version 1.86 (at least 1.52 is required), platform 0x90 (AVR:
 no display), MCU; every setting (frequency, bandwidth, TX power, spreading factor, coding rate, radio state,
 airtime limits) is echoed at once, within the 0.25 s that RNodeInterface waits before it compares them; KISS data
-frames go both ways; flow control is off (no CMD_READY needed).
+frames go both ways. The emulator never sends CMD_READY, so RNodeInterface must run with flow_control = No (as
+rns_interop.py sets it); with flow control on it would wait for CMD_READY after the first packet.
 
 A packet from the computer becomes on-air frames as the RNode firmware makes them (rnode_framing.rnode_transmit,
 the same reference that tests/test_loraframe.py checks the station frame against): a header byte, a split above

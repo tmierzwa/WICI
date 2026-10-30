@@ -154,6 +154,9 @@ public:
     virtual void clearActivity() {}               // po rekonfiguracji i IDLE
     virtual uint32_t rxLate() const { return 0; }  // ramki odczytane za późno i odrzucone
     virtual uint32_t rxRingOverflow() const { return 0; }  // ramki utracone przy pełnym pierścieniu zadania odbioru
+    // Opróżnia pierścień zadania odbioru (strona pętli): przy stop() i zmianie trybu odbioru ramki ze starego
+    // trybu nie mogą trafić do nowego. Układy bez zadania odbioru nie mają pierścienia.
+    virtual void discardRx() {}
 };
 
 }  // namespace radiolink

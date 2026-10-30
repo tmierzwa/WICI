@@ -7,7 +7,8 @@
 // Pętla czeka na blokadę najwyżej waitMs; przekroczenie liczy platform::radioLockTimeouts(), a kontrola
 // radia (radiocon::check) zamienia je w radio_awaria. Operacja bez blokady zwraca wynik błędu, z dwoma
 // wyjątkami: idle() i stopCw() idą także bez niej, bo zatrzymanie nadawania jest ważniejsze (magistrala SPI
-// i tak ma własną blokadę, a w nadawaniu zadanie nie obsługuje układu).
+// i tak ma własną blokadę, a w nadawaniu zadanie nie obsługuje układu). discardRx() też idzie bez niej:
+// nie dotyka układu, a pętla jest jedynym konsumentem pierścienia.
 // Funkcje bez dostępu do układu (czas ramek, profil, znaczniki atomowe) idą bez blokady.
 #pragma once
 
@@ -90,6 +91,10 @@ public:
     bool sendPrepared(TxTiming* timing) override {
         platform::RadioLock lock(waitMs_);
         return lock.held() && inner_.sendPrepared(timing);
+    }
+    void discardRx() override {
+        platform::RadioLock lock(waitMs_);
+        inner_.discardRx();
     }
 
     // Bez dostępu do układu.

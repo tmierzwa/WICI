@@ -27,6 +27,7 @@ constexpr const char* NO_LINK = "no stack link on this radio";
 // Datagram LoRa mieści się w buforze nadawania wspólnym z P1; dług LoRa w granicy MAX_DEBT_MS.
 static_assert(loraframe::MAX_DATAGRAM <= p1frame::MAX_DATAGRAM, "bufor datagramu");
 static_assert(loraframe::reservedTxMs(loraframe::MAX_DATAGRAM) <= SERIES_MAX_MS, "rezerwacja LoRa mieści się w MAX_DEBT_MS");
+static_assert(loraframe::reservedTxMs(loraframe::MAX_DATAGRAM) <= lora::SERIES_MAX_MS, "rezerwacja LoRa w limicie serii LoRa");
 constexpr const char* EMC_ON_ERROR = "EMC mode on: EMC 0 first";
 static_assert(FOFF_MAX_HZ == 50000, "tekst błędu FOFF");
 // Okres EMC: ramka i jej dług ciszy (cykl pracy ≤ 1/13).
@@ -290,6 +291,12 @@ bool Bench::enterRx(RxMode mode, uint8_t length) {
     // Ramki wzorcowe: stała długość; ramki łącza: zmienna długość (P1: bajt LEN do 102, F79; LoRa: jawny nagłówek).
     if (mode == RxMode::LINK && radio_.framing() == radiolink::Framing::NONE) return false;
     rxLen_ = length;
+    if (mode != ringMode_) {
+        // Ramki innego trybu z pierścienia zadania odbioru nie idą do nowego (powrót do odbioru po
+        // własnym nadaniu w tym samym trybie zostawia nieodczytane ramki).
+        radio_.discardRx();
+        ringMode_ = mode;
+    }
     rxMode_ = radio_.startRx(mode == RxMode::LINK, length) ? mode : RxMode::NONE;
     if (rxMode_ == RxMode::LINK) rxSinceMs_ = millis();
     return rxMode_ == mode;
@@ -403,8 +410,10 @@ void Bench::stop() {
     if (txState_ != TxState::IDLE) { ++link_.txDrop; finishLinkTx("stopped"); }
     rxMode_ = RxMode::NONE;
     radio_.idle();
-    // Rekonfiguracja i IDLE: znaczniki aktywności i oczekująca część składania przestają obowiązywać.
+    // Rekonfiguracja i IDLE: znaczniki aktywności, ramki w pierścieniu zadania odbioru i oczekująca część
+    // składania przestają obowiązywać.
     radio_.clearActivity();
+    radio_.discardRx();
     loraAssembler_.reset();
 }
 
@@ -822,7 +831,10 @@ void Bench::sendLora(uint32_t now) {
     // Od decyzji do powrotu do odbioru pętla trzyma blokadę operacji radia (do około 0,9 s), więc zadanie
     // odbioru pomija wtedy swoje obiegi.
     platform::RadioLock lock(RADIO_LOCK_WAIT_MS);
-    if (!lock.held() || channelBusy()) { defer(now); return; }
+    // Bez blokady kanał nie był sprawdzony: bez odroczenia, CCA powtarza się w następnym obiegu.
+    if (!lock.held()) return;
+    now = millis();  // czekanie na blokadę trwa do RADIO_LOCK_WAIT_MS
+    if (channelBusy()) { defer(now); return; }
     // Ramki z nagłówkiem datagramu; połówka liczy się jako użyta dopiero, gdy ramka 1 wyszła w eter.
     loraframe::Splitter next = splitter_;
     loraframe::Frame frames[2];

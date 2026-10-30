@@ -85,7 +85,10 @@ struct Activity {
     bool quietFor(uint32_t now, uint32_t windowMs, uint8_t kinds = ALL) const {
         const uint8_t mask = seen.load(std::memory_order_acquire) & kinds;
         for (uint8_t k = 0; k < KINDS; ++k)
-            if ((mask & (1u << k)) && now - ms[k].load(std::memory_order_relaxed) < windowMs) return false;
+            // Ze znakiem: znacznik zapisany przez zadanie po odczycie now (wynik ujemny) to aktywność, nie cisza.
+            if ((mask & (1u << k)) &&
+                static_cast<int32_t>(now - ms[k].load(std::memory_order_relaxed)) < static_cast<int32_t>(windowMs))
+                return false;
         return true;
     }
     void clear() { seen.store(0, std::memory_order_release); }
@@ -134,6 +137,7 @@ public:
     bool backgroundRx() const { return background_; }
     const rxwatch::TaskSignals& taskSignals() const { return signals_; }
     uint32_t rxRingOverflow() const override { return ring_.overflow(); }
+    void discardRx() override;  // pętla (konsument pierścienia): ramki starego trybu odbioru przepadają
 
     const char* stateName() override { return modeName(radio_.status().mode()); }
     void idle() override;
