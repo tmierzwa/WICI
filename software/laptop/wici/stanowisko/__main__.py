@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""The receiving station application (stages S1-S4: stack, reception, sending and the medium, without the panel yet).
+"""The receiving station application (stages S1-S7: stack, reception, sending, medium, copies, recovery, panel).
 
     python -m wici.stanowisko przygotuj --nosnik KATALOG --dyzurni 4 --paczka PLIK --karta PLIK
     python -m wici.stanowisko start --nosnik KATALOG --port /dev/ttyACM0|COM5 [--bitrate 41]
@@ -12,7 +12,8 @@ station, never on the medium), and the receiver card for the stations to --karta
 every password with its envelope.
 
 start: reads the station password (first line of stdin, or typed without echo at a terminal), prints one
-JSON line "ready" with the receiver address and writes a copy of the database to the computer disk every
+JSON line "ready" with the receiver address and the one-time link of the duty officer panel (opened in
+the browser; panel.py), and writes a copy of the database to the computer disk every
 5 min (kopie.py) and works until Ctrl+C or end of stdin. Logs (Reticulum and
 reception, never the content of reports or passwords) go to stderr. A wrong password prints "login_failed"
 and ends with code 3. When the computer clock is earlier than the last numbered message, prints
@@ -31,10 +32,11 @@ import json
 import sys
 import threading
 import time
+import webbrowser
 from pathlib import Path
 
 from .. import database, passwords, store
-from . import kopie, nosnik
+from . import kopie, nosnik, panel
 from .przyjecie import Przyjecie
 from .stos import BITRATE, Stos
 from .wysylka import ClockBehind
@@ -97,13 +99,20 @@ def start(args):
         return 2
     przyjecie.action("", "start")
     stos.start()
-    emit("ready", address=stos.address.hex(), recovery=przyjecie.recovery)
+    web = panel.Panel(panel.Dyzur(przyjecie, medium, key, stos))
+    server = panel.serve(web, args.panel)
+    threading.Thread(target=server.serve_forever, daemon=True, name="panel").start()
+    url = f"http://127.0.0.1:{server.server_address[1]}/start?t={web.ticket()}"
+    emit("ready", address=stos.address.hex(), recovery=przyjecie.recovery, panel=url)
+    if not args.bez_przegladarki:
+        webbrowser.open(url)
     done = threading.Event()
     threading.Thread(target=lambda: (sys.stdin.read(), done.set()), daemon=True).start()
     try:
         done.wait()
     except KeyboardInterrupt:
         pass
+    server.shutdown()
     stos.stop()
     przyjecie.stop()
     return 0
@@ -136,6 +145,8 @@ def main(argv=None):
     run.add_argument("--nosnik", required=True, help="katalog na nośniku stanowiska")
     run.add_argument("--port", required=True, help="port szeregowy stacji stanowiska (węzła)")
     run.add_argument("--bitrate", type=int, default=BITRATE, help="bitrate interfejsu KISS w konfiguracji Reticulum")
+    run.add_argument("--panel", type=int, default=8090, help="port panelu dyżurnego na 127.0.0.1")
+    run.add_argument("--bez-przegladarki", action="store_true", help="nie otwieraj panelu w przeglądarce")
     run.add_argument("--kopie", help="katalog kopii co 5 min na dysku komputera (domyślnie: katalog stanu aplikacji)")
     back = commands.add_parser("odtworz", help="odtworzenie nośnika z kopii (zgoda dwóch dyżurnych)")
     back.add_argument("--nosnik", required=True, help="pusty katalog na nowym nośniku stanowiska")

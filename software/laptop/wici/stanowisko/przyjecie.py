@@ -47,6 +47,23 @@ CREATE TRIGGER IF NOT EXISTS dziennik_no_update BEFORE UPDATE ON dziennik
 BEGIN SELECT RAISE(ABORT, 'dziennik tylko do dopisywania'); END;
 CREATE TRIGGER IF NOT EXISTS dziennik_no_delete BEFORE DELETE ON dziennik
 BEGIN SELECT RAISE(ABORT, 'dziennik tylko do dopisywania'); END;
+-- Karty zaufanych stacji (nazwa WICI-xxxxxx, adres schronienia, odcisk) do wyświetlania w panelu.
+CREATE TABLE IF NOT EXISTS karty (
+    source BLOB PRIMARY KEY,
+    name TEXT NOT NULL,
+    address TEXT NOT NULL,
+    fingerprint TEXT NOT NULL
+);
+-- Wpisy decyzji, które nie idą radiem: stan 3 ze źródłem i czasem potwierdzenia, stan 4 z adresatem i czasem.
+CREATE TABLE IF NOT EXISTS decyzje (
+    id INTEGER PRIMARY KEY,
+    source BLOB NOT NULL,
+    mid TEXT NOT NULL,
+    state INTEGER NOT NULL,
+    detail TEXT NOT NULL,
+    at REAL NOT NULL,
+    account TEXT NOT NULL
+);
 """
 SAVE_ERRORS = (OSError, sqlite3.Error, syscrypto.CryptoError, nosnik.StorageError)
 
@@ -63,6 +80,7 @@ class Przyjecie:
         """copies: kopie.Kopie on the computer disk, written every 5 min (stage S5); None without copies."""
         self.medium, self.key, self.clock = medium, key, clock or time.time
         self.copies, self.next_copy, self.copy_failed = copies, 0, False
+        self.last_copy_at = None   # czas najnowszej kopii na dysku komputera (panel, przekazanie zmiany)
         self.log = log or (lambda line: print(line, file=sys.stderr, flush=True))
         self.wysylka = wysylka.Wysylka(send, outcome, self.log, random)
         self.jobs = queue.Queue()
@@ -91,6 +109,8 @@ class Przyjecie:
             self.ready.set()
             return
         self.saved = -1 if body is None else self.store.db.total_changes   # nowy nośnik: pierwsza migawka od razu
+        if self.copies is not None:
+            self.last_copy_at = self.copies.newest(self.key)
         # Baza ze znacznikiem „kopia” (odtworzona z kopii): tryb odzyskania, bez nadawania do finish_recovery.
         self.recovery = self.store.db.execute("SELECT 1 FROM sqlite_master WHERE name='kopia'").fetchone() is not None
         self.ready.set()
@@ -149,7 +169,7 @@ class Przyjecie:
                 self.copy_failed = True
                 self._log_action("", "kopia_nieudana", f"{type(e).__name__}: {e}")
             return
-        self.next_copy = now + kopie.INTERVAL_S
+        self.next_copy, self.last_copy_at = now + kopie.INTERVAL_S, now
         if self.copy_failed:
             self.copy_failed = False
             self._log_action("", "kopia_wznowiona")

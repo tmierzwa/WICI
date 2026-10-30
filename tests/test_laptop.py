@@ -1544,7 +1544,9 @@ class PackageTest(unittest.TestCase):
         self.assertEqual((ui / "logo-dark.svg").read_bytes(), (ROOT / "media" / "logo" / "WICI-na-ciemnym.svg").read_bytes())
 
     def test_code_size_budget_and_python_version(self):
-        files = [p for p in self.PACKAGE.rglob("*") if p.is_file() and "__pycache__" not in p.parts]
+        # Aplikacja stanowiska (wici/stanowisko) nie trafia do wici.pyz (build_usb.app_file), więc nie wchodzi w budżet.
+        files = [p for p in self.PACKAGE.rglob("*") if p.is_file() and "__pycache__" not in p.parts
+                 and (self.PACKAGE / "stanowisko") not in p.parents]
         words = self.PACKAGE / "slowa.txt"                  # dane, nie kod: osobny limit
         total = sum(p.stat().st_size for p in files if p != words)
         self.assertLess(total, 256 * 1024, f"aplikacja ma {total} B; budżet etapu 2 to 256 KiB")
