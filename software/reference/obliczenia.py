@@ -117,22 +117,6 @@ def calculate() -> dict:
     smallest_cycle_s = 13 * len(fragment(b"x", b"12345678")[0]) * 8 / 4800
     eeprom_pages, eeprom_endurance = 8192 // 32, 1_000_000
     reserve, aa_set_wh, battery_wh = 1.2, 4 * 4.5 * 0.8, usable_battery_wh
-    level1 = {}
-    for name, mcu_ma in (("nrf52840", 3.0), ("esp32_s3_30ma", 30.0), ("esp32_s3_45ma", 45.0), ("esp32_s3_60ma", 60.0)):
-        power_w = station_power_w(mcu_ma)
-        day_wh = 24 * power_w * reserve
-        power_12v_w = station_power_w(mcu_ma, "12v")
-        day_12v_wh = 24 * power_12v_w * reserve
-        level1[name] = {"mcu_ma_assumed": mcu_ma, "rail_ma": station_rail_ma(mcu_ma), "input_w": power_w,
-                        "wh_24h_with_reserve": day_wh, "aa_set_hours": aa_set_wh / day_wh * 24,
-                        "input_w_12v": power_12v_w, "wh_24h_with_reserve_12v": day_12v_wh,
-                        "battery_12v_days": battery_wh / day_12v_wh,
-                        "battery_12v_hours": battery_wh / day_12v_wh * 24}
-    # Highest average 3V3 current that still meets W23 (48 h on the AA set, with reserve).
-    w23_input_w = aa_set_wh / 48 / reserve
-    w23_rail_ma = ((w23_input_w - STATION["aa_vsys_v"] * sum(INPUT_SIDE_MA["aa"].values()) / 1000)
-                   * STATION["aa_rail_efficiency"] * (1 - STATION["aa_diode_v"] / STATION["aa_vsys_v"])
-                   / STATION["rail_v"] * 1000)
     # Hold-up after the VSYS comparator (3.4 V) until the converter stops (2.7 V): C >= 2 P t / (V1^2 - V2^2).
     # Load: TX 13 dBm, active MCU (worst variant), TCXO, LCD and FRAM; light, LED and buzzer are switched off first.
     holdup_v1, holdup_v2, holdup_t_s, holdup_selected_uf = 3.4, 2.7, 0.002, 680.0
@@ -146,7 +130,49 @@ def calculate() -> dict:
         input_w = host_ac_w / efficiency + idle_w + diode_w
         host[f"{host_ac_w:g}w_ac"] = {"input_w": input_w, "wh_24h_with_reserve": 24 * input_w * reserve,
                                       "battery_equivalents": math.ceil(24 * input_w * reserve / battery_wh)}
-    laptop_relay_wh = (host["15w_ac"]["wh_24h_with_reserve"], host["60w_ac"]["wh_24h_with_reserve"])
+    holdup = {"comparator_v": holdup_v1, "converter_stop_v": holdup_v2, "hold_s": holdup_t_s,
+              "load_rail_ma": holdup_rail_ma, "load_w": holdup_w,
+              "required_uf": holdup_c_uf, "selected_uf": holdup_selected_uf,
+              "selected_to_required_ratio": holdup_selected_uf / holdup_c_uf}
+
+    def level1_for(rx_ma: float) -> dict:
+        """Station level 1 energy for one radio receiver current: variants, W23 limit, buffer battery, laptop relay."""
+        variants = {}
+        for name, mcu_ma in (("nrf52840", 3.0), ("esp32_s3_30ma", 30.0), ("esp32_s3_45ma", 45.0), ("esp32_s3_60ma", 60.0)):
+            power_w = station_power_w(mcu_ma, rx_ma=rx_ma)
+            day_wh = 24 * power_w * reserve
+            power_12v_w = station_power_w(mcu_ma, "12v", rx_ma=rx_ma)
+            day_12v_wh = 24 * power_12v_w * reserve
+            variants[name] = {"mcu_ma_assumed": mcu_ma, "rail_ma": station_rail_ma(mcu_ma, rx_ma), "input_w": power_w,
+                              "wh_24h_with_reserve": day_wh, "aa_set_hours": aa_set_wh / day_wh * 24,
+                              "input_w_12v": power_12v_w, "wh_24h_with_reserve_12v": day_12v_wh,
+                              "battery_12v_days": battery_wh / day_12v_wh,
+                              "battery_12v_hours": battery_wh / day_12v_wh * 24}
+        # Highest average 3V3 current that still meets W23 (48 h on the AA set, with reserve); independent of the radio.
+        w23_input_w = aa_set_wh / 48 / reserve
+        w23_rail_ma = ((w23_input_w - STATION["aa_vsys_v"] * sum(INPUT_SIDE_MA["aa"].values()) / 1000)
+                       * STATION["aa_rail_efficiency"] * (1 - STATION["aa_diode_v"] / STATION["aa_vsys_v"])
+                       / STATION["rail_v"] * 1000)
+        laptop_wh = (host["15w_ac"]["wh_24h_with_reserve"], host["60w_ac"]["wh_24h_with_reserve"])
+        return {"assumptions": {**STATION, "rx_ma": rx_ma, "input_side_ma": INPUT_SIDE_MA,
+                                "input_side_ma_total": {k: sum(v.values()) for k, v in INPUT_SIDE_MA.items()},
+                                "reserve_fraction": 0.20,
+                                "aa_set_usable_wh": aa_set_wh, "aa_cell_wh": 4.5, "aa_usable_fraction": 0.8},
+                "wh_24h_with_reserve_range": [min(min(v["wh_24h_with_reserve"], v["wh_24h_with_reserve_12v"])
+                                                  for v in variants.values()),
+                                              max(max(v["wh_24h_with_reserve"], v["wh_24h_with_reserve_12v"])
+                                                  for v in variants.values())],
+                "holdup": holdup, "variants": variants,
+                "fixed_relay_buffer_psu_13_8v": {
+                    "note": "Mains failure: station runs from the buffer battery through the 12 V input",
+                    "battery_v": 12, "usable_fraction_assumed": 0.5,
+                    "hours": {f"{ah}ah": {name: ah * 12 * 0.5 / variants[name]["wh_24h_with_reserve_12v"] * 24
+                                          for name in ("nrf52840", "esp32_s3_60ma")} for ah in (7, 17)}},
+                "w23_max_rail_ma_on_aa": w23_rail_ma,
+                "w23_max_mcu_ma_on_aa": w23_rail_ma - station_rail_ma(0.0, rx_ma),
+                "laptop_relay_wh_24h_with_reserve": list(laptop_wh),
+                "laptop_relay_to_station_ratio": [laptop_wh[0] / variants["esp32_s3_60ma"]["wh_24h_with_reserve"],
+                                                  laptop_wh[1] / variants["nrf52840"]["wh_24h_with_reserve"]]}
     mid = "0" * 32
     location = "ul. Kasztanowa 17A, wejście od podwórza, piwnica"
     sa1 = {
@@ -165,40 +191,65 @@ def calculate() -> dict:
     relay_packets = {"typical_request": p1_datagram(lxmf_packet_bytes(sizes["typical_request"])),
                      "max_fields_request": p1_datagram(lxmf_packet_bytes(sizes["max_fields_request"])),
                      "received": p1_datagram(lxmf_packet_bytes(sizes["received"])), "packet_proof": proof}
-    relay_cycle = {k: 13 * p1_tx_seconds(v) for k, v in relay_packets.items()}
-    per_request = [relay_cycle[r] + relay_cycle["received"] + 2 * relay_cycle["packet_proof"]
-                   for r in ("typical_request", "max_fields_request")]
+    transport_id = 16
+    status_packet = p1_datagram(lxmf_packet_bytes(sizes["max_status"]))
+    bulletin_packet = p1_datagram(lxmf_packet_bytes(sizes["max_bulletin"]) + transport_id)
     slow_per_request = [13 * (p1_tx_seconds(relay_packets[r], 1200) + p1_tx_seconds(relay_packets["received"], 1200)
                               + 2 * p1_tx_seconds(proof, 1200)) for r in ("typical_request", "max_fields_request")]
     collinear_dbi = 5.5
-    # Network capacity without losses at the P1 debt limit (cycle 13t per datagram and node). A station reaches the
-    # OSP through the relay next to it; packets sent by the OSP towards the relay carry a 16 B transport id.
-    transport_id = 16
-    status_packet = p1_datagram(lxmf_packet_bytes(sizes["max_status"]))
-    capacity = {}
-    for r in ("max_fields_request", "typical_request"):
-        osp_tx = [proof, relay_packets["received"] + transport_id] + 2 * [status_packet + transport_id]
-        relay_tx = [relay_packets[r], proof, relay_packets["received"]] + 2 * [status_packet] + 3 * [proof]
-        osp_s = sum(13 * p1_tx_seconds(b) for b in osp_tx)
-        relay_s = sum(13 * p1_tx_seconds(b) for b in relay_tx)
-        capacity[r] = {"osp_tx_packets_bytes": osp_tx, "osp_s_per_request": osp_s, "osp_requests_per_h": 3600 / osp_s,
-                       "relay_tx_packets_bytes": relay_tx, "relay_s_per_request": relay_s,
-                       "relay_requests_per_h": 3600 / relay_s}
-    bulletin_packet = p1_datagram(lxmf_packet_bytes(sizes["max_bulletin"]) + transport_id)
-    bulletin_s = 13 * p1_tx_seconds(bulletin_packet)
-    # LXMF retry spacing for opportunistic messages (A2): max(60 s, 2 x hops x 13 x TX of the largest datagram
-    # + current silence debt + P1 queue drain). Largest own datagram: SA1 limit 256 B on the first hop.
-    largest_own_datagram = p1_datagram(lxmf_packet_bytes(MAX_CONTENT) + transport_id)
-    largest_cycle_s = 13 * p1_tx_seconds(largest_own_datagram)
-    worst_debt_s = 12 * p1_tx_seconds(600)
-    full_queue_s = 4 * 13 * p1_tx_seconds(600)
-    retry = {"largest_own_datagram_bytes": largest_own_datagram, "largest_datagram_cycle_s": largest_cycle_s,
-             "floor_s": 60.0, "worst_debt_s": worst_debt_s, "full_p1_queue_4x600b_s": full_queue_s}
-    for hops in (1, 2):
-        retry[f"{hops}_hop_round_trip_s"] = 2 * hops * largest_cycle_s
-        retry[f"{hops}_hop_min_interval_empty_network_s"] = max(60.0, 2 * hops * largest_cycle_s)
-        retry[f"{hops}_hop_min_interval_worst_debt_full_queue_s"] = max(60.0, 2 * hops * largest_cycle_s
-                                                                        + worst_debt_s + full_queue_s)
+
+    def network_for(tx_seconds, max_datagram: int) -> dict:
+        """W10 relay budget, network capacity and LXMF retry spacing for one radio profile (airtime function, largest
+        datagram the interface accepts). Cycle 13t per datagram and node at the silence debt limit."""
+        relay_cycle = {k: 13 * tx_seconds(v) for k, v in relay_packets.items()}
+        per_request = [relay_cycle[r] + relay_cycle["received"] + 2 * relay_cycle["packet_proof"]
+                       for r in ("typical_request", "max_fields_request")]
+        # Network capacity without losses. A station reaches the OSP through the relay next to it; packets sent by
+        # the OSP towards the relay carry a 16 B transport id.
+        capacity = {}
+        for r in ("max_fields_request", "typical_request"):
+            osp_tx = [proof, relay_packets["received"] + transport_id] + 2 * [status_packet + transport_id]
+            relay_tx = [relay_packets[r], proof, relay_packets["received"]] + 2 * [status_packet] + 3 * [proof]
+            osp_s = sum(13 * tx_seconds(b) for b in osp_tx)
+            relay_s = sum(13 * tx_seconds(b) for b in relay_tx)
+            capacity[r] = {"osp_tx_packets_bytes": osp_tx, "osp_s_per_request": osp_s, "osp_requests_per_h": 3600 / osp_s,
+                           "relay_tx_packets_bytes": relay_tx, "relay_s_per_request": relay_s,
+                           "relay_requests_per_h": 3600 / relay_s}
+        bulletin_s = 13 * tx_seconds(bulletin_packet)
+        # LXMF retry spacing for opportunistic messages (A2): max(60 s, 2 x hops x 13 x TX of the largest datagram
+        # + current silence debt + radio queue drain). Largest own datagram: SA1 limit 256 B on the first hop.
+        largest_own_datagram = p1_datagram(lxmf_packet_bytes(MAX_CONTENT) + transport_id)
+        largest_cycle_s = 13 * tx_seconds(largest_own_datagram)
+        worst_debt_s = 12 * tx_seconds(max_datagram)
+        full_queue_s = 4 * 13 * tx_seconds(max_datagram)
+        retry = {"largest_own_datagram_bytes": largest_own_datagram, "largest_datagram_cycle_s": largest_cycle_s,
+                 "floor_s": 60.0, "max_datagram_bytes": max_datagram, "worst_debt_s": worst_debt_s,
+                 "full_queue_4x_max_datagram_s": full_queue_s}
+        for hops in (1, 2):
+            retry[f"{hops}_hop_round_trip_s"] = 2 * hops * largest_cycle_s
+            retry[f"{hops}_hop_min_interval_empty_network_s"] = max(60.0, 2 * hops * largest_cycle_s)
+            retry[f"{hops}_hop_min_interval_worst_debt_full_queue_s"] = max(60.0, 2 * hops * largest_cycle_s
+                                                                            + worst_debt_s + full_queue_s)
+        return {
+            "relay_w10": {"packets_bytes": relay_packets, "tx_plus_quiet_s": relay_cycle,
+                          "per_request_s": per_request, "fifty_requests_min": [50 * t / 60 for t in per_request],
+                          "per_retry_s": [relay_cycle["typical_request"], relay_cycle["max_fields_request"]],
+                          "status_packet_bytes": status_packet,
+                          "fifty_requests_with_two_status_min": 50 * capacity["max_fields_request"]["relay_s_per_request"] / 60,
+                          "quiet_10t_throughput_gain": 13 / 11 - 1,
+                          "tx_plus_quiet_s_by_datagram": {f"{b}b": 13 * tx_seconds(b) for b in (100, 250, 500, max_datagram)}},
+            "network_capacity": {"note": "No losses, collisions, CCA, cold routes or retries; per node at the debt limit",
+                                 "per_request": capacity,
+                                 "osp_requests_per_h": capacity["max_fields_request"]["osp_requests_per_h"],
+                                 "relay_before_osp_requests_per_h": capacity["max_fields_request"]["relay_requests_per_h"],
+                                 "bulletin_packet_bytes": bulletin_packet, "bulletin_s_per_station": bulletin_s,
+                                 "bulletin_osp_tx_min": {f"{n}_stations": n * bulletin_s / 60 for n in (10, 30, 50)},
+                                 "test_window_s_per_station": 50,
+                                 "test_window_min": {f"{n}_stations": 50 * n / 60 for n in (10, 30, 50)}},
+            "lxmf_retry": retry}
+
+    p1_network = network_for(p1_tx_seconds, 600)
+    p1_per_request = p1_network["relay_w10"]["per_request_s"]
     fixed_gain_db = tx_dbm + 2 * antenna_dbi - 2 * fixed_cable_db
     # LoRa pilot profile on the same packets, the same silence debt (cycle 13t) and the same link budget as P1.
     lora = {"assumptions": {**LORA, "chip_sensitivity_dbm": {f"sf{k}": v for k, v in LORA["chip_sensitivity_dbm"].items()},
@@ -222,7 +273,7 @@ def calculate() -> dict:
             "mixed_trial_55_revisions_min": 55 * relay_two_status_s / 60,
             "relay_before_osp_requests_per_h": 3600 / relay_two_status_s,
             "osp_requests_per_h": 3600 / osp_two_status_s,
-            "ratio_to_p1_fifty_requests": per_req[1] / per_request[1],
+            "ratio_to_p1_fifty_requests": per_req[1] / p1_per_request[1],
             "bulletin_s_per_station": 13 * lora_tx_seconds(bulletin_packet, sf),
             "bulletin_osp_tx_min_50_stations": 50 * 13 * lora_tx_seconds(bulletin_packet, sf) / 60,
             "announce_tx_s": lora_tx_seconds(p1_datagram(19 + 170 + transport_id), sf),
@@ -232,12 +283,6 @@ def calculate() -> dict:
             "gain_over_p1_target_db": sensitivity_dbm - connector_dbm,
             "hata_urban_margin_1km_db": {k: link_gain_db - v - connector_dbm for k, v in urban.items()},
             "hata_urban_margin_1km_fixed_installation_db": {k: fixed_gain_db - v - connector_dbm for k, v in urban.items()}}
-    lora_level1 = {}
-    for name, mcu_ma in (("nrf52840", 3.0), ("esp32_s3_30ma", 30.0), ("esp32_s3_45ma", 45.0), ("esp32_s3_60ma", 60.0)):
-        day_wh = 24 * station_power_w(mcu_ma, rx_ma=LORA["rx_ma"]) * reserve
-        lora_level1[name] = {"mcu_ma_assumed": mcu_ma, "rail_ma": station_rail_ma(mcu_ma, LORA["rx_ma"]),
-                             "wh_24h_with_reserve": day_wh, "aa_set_hours": aa_set_wh / day_wh * 24}
-    lora["station_level1_sx1262_rx"] = lora_level1
     # FRAM occupancy by role (oprogramowanie.md, "Pamięć FRAM według roli"); conservative fixed-size slots.
     # Every record: header 16 B (number, type, length, version) + AEAD tag 16 B. Sizes are assumptions, not a layout.
     fram_record_overhead = 16 + 16
@@ -320,8 +365,21 @@ def calculate() -> dict:
                 "announce_drain_exceeds_window": n * announce_tx_s / announce_cap > window_s}
         return out
 
-    cold_start = cold_start_for(p1_tx_seconds)
-    cold_start_lora = cold_start_for(lambda b: lora_tx_seconds(b, 7))
+    # Main profile: LoRa SF7 on the SX1262 (D10). P1 (own FSK profile, CC1120) stays under "p1_archiwalny".
+    main_sf = 7
+    lora_tx7 = lambda b: lora_tx_seconds(b, main_sf)
+    main_network = network_for(lora_tx7, 2 * LORA["single_frame_payload_max"])
+    p1_archive = {
+        "note": "Archived P1 profile (own FSK 4800 bit/s, CC1120 receiver 22 mA); superseded by LoRa SF7 (D10)",
+        "station_level1": level1_for(STATION["rx_ma"]),
+        **{k: v for k, v in p1_network.items() if k != "relay_w10"},
+        "relay_w10": {
+            **p1_network["relay_w10"],
+            "fifty_requests_min_at_1200_bit_s": [50 * t / 60 for t in slow_per_request],
+            "ramp_ms_per_fragment_assumed": ramp_ms_assumed,
+            "p1_tx_plus_quiet_s_with_ramp": {f"{b}b": 13 * p1_tx_seconds(b, ramp_ms=ramp_ms_assumed)
+                                             for b in (100, 250, 500, 600)}},
+        "cold_start_announces": cold_start_for(p1_tx_seconds)}
     result = {
         "assumptions": {"station_ac_w": ac_w, "conversion_efficiency_excluding_idle": efficiency,
                         "inverter_idle_w": idle_w, "diode_loss_w": diode_w,
@@ -330,29 +388,8 @@ def calculate() -> dict:
                         "battery_ah": 60, "usable_fraction_assumed": 0.50,
                         "reserve_fraction": 0.20, "mosfet_hot_resistance_factor": 1.7,
                         "hotplug_loop_resistance_assumed_ohm": loop_r},
-        "station_level1": {"assumptions": {**STATION, "input_side_ma": INPUT_SIDE_MA,
-                                           "input_side_ma_total": {k: sum(v.values()) for k, v in INPUT_SIDE_MA.items()},
-                                           "reserve_fraction": 0.20,
-                                           "aa_set_usable_wh": aa_set_wh, "aa_cell_wh": 4.5, "aa_usable_fraction": 0.8},
-                           "wh_24h_with_reserve_range": [min(min(v["wh_24h_with_reserve"], v["wh_24h_with_reserve_12v"])
-                                                             for v in level1.values()),
-                                                         max(max(v["wh_24h_with_reserve"], v["wh_24h_with_reserve_12v"])
-                                                             for v in level1.values())],
-                           "holdup": {"comparator_v": holdup_v1, "converter_stop_v": holdup_v2, "hold_s": holdup_t_s,
-                                      "load_rail_ma": holdup_rail_ma, "load_w": holdup_w,
-                                      "required_uf": holdup_c_uf, "selected_uf": holdup_selected_uf,
-                                      "selected_to_required_ratio": holdup_selected_uf / holdup_c_uf},
-                           "variants": level1,
-                           "fixed_relay_buffer_psu_13_8v": {
-                               "note": "Mains failure: station runs from the buffer battery through the 12 V input",
-                               "battery_v": 12, "usable_fraction_assumed": 0.5,
-                               "hours": {f"{ah}ah": {name: ah * 12 * 0.5 / level1[name]["wh_24h_with_reserve_12v"] * 24
-                                                     for name in ("nrf52840", "esp32_s3_60ma")} for ah in (7, 17)}},
-                           "w23_max_rail_ma_on_aa": w23_rail_ma,
-                           "w23_max_mcu_ma_on_aa": w23_rail_ma - station_rail_ma(0.0),
-                           "laptop_relay_wh_24h_with_reserve": list(laptop_relay_wh),
-                           "laptop_relay_to_station_ratio": [laptop_relay_wh[0] / level1["esp32_s3_60ma"]["wh_24h_with_reserve"],
-                                                             laptop_relay_wh[1] / level1["nrf52840"]["wh_24h_with_reserve"]]},
+        "main_radio_profile": f"LoRa SF{main_sf}, 125 kHz, SX1262",
+        "station_level1": level1_for(LORA["rx_ma"]),
         "level3_pools": {"laptop_router_wh_with_reserve": station_wh * reserve,
                          "laptop_router_batteries": math.ceil(station_wh * reserve / battery_wh),
                          "phones_wh_with_reserve": phones_wh * reserve,
@@ -364,33 +401,14 @@ def calculate() -> dict:
         "sa1_sizes": {"content_bytes": sizes, "opportunistic_content_estimate": opportunistic_content_estimate,
                       "link_content_estimate": link_content_estimate,
                       "fits_one_opportunistic_packet": {k: v <= opportunistic_content_estimate for k, v in sizes.items()}},
-        "relay_w10": {"packets_bytes": relay_packets, "tx_plus_quiet_s": relay_cycle,
-                      "per_request_s": per_request, "fifty_requests_min": [50 * t / 60 for t in per_request],
-                      "per_retry_s": [relay_cycle["typical_request"], relay_cycle["max_fields_request"]],
-                      "fifty_requests_min_at_1200_bit_s": [50 * t / 60 for t in slow_per_request],
-                      "status_packet_bytes": status_packet,
-                      "fifty_requests_with_two_status_min": 50 * capacity["max_fields_request"]["relay_s_per_request"] / 60,
-                      "quiet_10t_throughput_gain": 13 / 11 - 1,
-                      "p1_tx_plus_quiet_s": {f"{b}b": 13 * p1_tx_seconds(b) for b in (100, 250, 500, 600)},
-                      "ramp_ms_per_fragment_assumed": ramp_ms_assumed,
-                      "p1_tx_plus_quiet_s_with_ramp": {f"{b}b": 13 * p1_tx_seconds(b, ramp_ms=ramp_ms_assumed)
-                                                       for b in (100, 250, 500, 600)}},
-        "network_capacity": {"note": "No losses, collisions, CCA, cold routes or retries; per node at the P1 debt limit",
-                             "per_request": capacity,
-                             "osp_requests_per_h": capacity["max_fields_request"]["osp_requests_per_h"],
-                             "relay_before_osp_requests_per_h": capacity["max_fields_request"]["relay_requests_per_h"],
-                             "bulletin_packet_bytes": bulletin_packet, "bulletin_s_per_station": bulletin_s,
-                             "bulletin_osp_tx_min": {f"{n}_stations": n * bulletin_s / 60 for n in (10, 30, 50)},
-                             "test_window_s_per_station": 50,
-                             "test_window_min": {f"{n}_stations": 50 * n / 60 for n in (10, 30, 50)}},
-        "lxmf_retry": retry,
+        **main_network,
         "lora_pilot": lora,
         "fram_by_role": {"record_bytes_assumed": fram_b, "counts": fram_counts, "roles": fram_kib,
                          "fram_stacja_kib": fram_kib["station"]["total_kib"], "fram_osp_kib": fram_kib["osp"]["total_kib"],
                          "fram_size_kib": fram_size_kib},
         "station_ram_kib": ram_kib,
-        "cold_start_announces": cold_start,
-        "cold_start_announces_lora_sf7": cold_start_lora,
+        "cold_start_announces": cold_start_for(lora_tx7),
+        "p1_archiwalny": p1_archive,
         "tcxo_budget_ppm": {**tcxo_ppm, "linear_sum": sum(tcxo_ppm.values()),
                             "root_sum_square": math.sqrt(sum(v**2 for v in tcxo_ppm.values())),
                             "p1_limit": 2.5, "linear_sum_hz_at_carrier": sum(tcxo_ppm.values()) * f_mhz,

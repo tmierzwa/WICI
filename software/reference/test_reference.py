@@ -99,6 +99,48 @@ class LoraAirtime(unittest.TestCase):
             lora_tx_seconds(500 + IFAC_BYTES, 7)
 
 
+class MainProfile(unittest.TestCase):
+    """LoRa SF7 on the SX1262 is the main radio profile of the results; P1 stays under p1_archiwalny."""
+
+    @classmethod
+    def setUpClass(cls):
+        from obliczenia import calculate
+        cls.r = calculate()
+
+    def test_lora_is_main_profile(self):
+        r = self.r
+        self.assertIn("LoRa SF7", r["main_radio_profile"])
+        self.assertEqual(r["station_level1"]["assumptions"]["rx_ma"], 4.6)
+        self.assertEqual(r["p1_archiwalny"]["station_level1"]["assumptions"]["rx_ma"], 22.0)
+        self.assertAlmostEqual(r["relay_w10"]["tx_plus_quiet_s"]["max_fields_request"],
+                               13 * r["lora_pilot"]["sf7"]["tx_s"]["max_fields_request"])
+
+    def test_retry_spacing_matches_concept_06(self):
+        retry = self.r["lxmf_retry"]
+        self.assertEqual(retry["largest_own_datagram_bytes"], 499)
+        self.assertEqual(retry["max_datagram_bytes"], 508)
+        self.assertEqual(retry["1_hop_min_interval_empty_network_s"], 60.0)
+        self.assertEqual(retry["2_hop_min_interval_empty_network_s"], 60.0)
+        self.assertEqual(round(retry["1_hop_min_interval_worst_debt_full_queue_s"]), 73)
+        self.assertEqual(round(retry["2_hop_min_interval_worst_debt_full_queue_s"]), 94)
+
+    def test_p1_retry_kept_in_archive(self):
+        retry = self.r["p1_archiwalny"]["lxmf_retry"]
+        self.assertEqual(retry["max_datagram_bytes"], 600)
+        self.assertEqual(round(retry["1_hop_min_interval_worst_debt_full_queue_s"]), 115)
+        self.assertEqual(round(retry["2_hop_min_interval_worst_debt_full_queue_s"]), 144)
+
+    def test_station_energy_matches_concept_06(self):
+        level1 = self.r["station_level1"]
+        self.assertEqual(round(level1["w23_max_rail_ma_on_aa"]), 61)
+        v = level1["variants"]["esp32_s3_45ma"]
+        self.assertEqual(round(v["aa_set_hours"]), 52)
+        self.assertEqual(round(v["battery_12v_days"]), 52)
+        # P1 receiver (22 mA) leaves much less room for the MCU under W23.
+        self.assertLess(self.r["p1_archiwalny"]["station_level1"]["w23_max_mcu_ma_on_aa"],
+                        level1["w23_max_mcu_ma_on_aa"] - 15)
+
+
 class Messages(unittest.TestCase):
     """Exercise all SA1 shapes and byte limits, including Polish UTF-8."""
 

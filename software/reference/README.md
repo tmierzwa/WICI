@@ -9,7 +9,7 @@ python3 -m unittest discover -s software/reference -v
 python3 software/reference/obliczenia.py
 ```
 
-Drugie polecenie zapisuje `wyniki.json` obok skryptu. Są to obliczenia z założeń, nie pomiary. [Zapis weryfikacji](weryfikacja.json) wiąże wynik 35 testów z sumami źródeł.
+Drugie polecenie zapisuje `wyniki.json` obok skryptu. Są to obliczenia z założeń, nie pomiary. [Zapis weryfikacji](weryfikacja.json) wiąże wynik 39 testów z sumami źródeł.
 
 Reguły modelu:
 
@@ -29,7 +29,7 @@ Model sprawdza też, czy zgłoszenie z przycisków mieści się w jednym pakieci
 | [reference.py](reference.py) | Kodowanie, walidacja, model odbioru na stanowisku (kwarantanna, lista zaufanych stacji, zamknięcie zdarzenia) i zaufanie stacji |
 | [schema.sql](schema.sql) | Schemat SQLite używany przez model |
 | [test_reference.py](test_reference.py) | Przypadki akceptacyjne |
-| [obliczenia.py](obliczenia.py) | Energia stacji i poziomu 3, budżet W10 przekaźnika z kodem IFAC (także z dwoma STATUS), pojemność sieci, rozmiary SA1, zajętość FRAM 4 Mbit według roli, RAM tablic stosu, zimny start sieci (ogłoszenia, zapytania o trasę i TEST wobec okna TEST), łącze radiowe i oszacowania układów; profil LoRa pilotażu (`lora_pilot`): czas nadawania według wzoru Semtech, podział pakietu >254 B na dwie ramki jak w RNode, W10, ruch mieszany, pojemność, zapas zasięgu i energia dla SF7 i SF8 |
+| [obliczenia.py](obliczenia.py) | Energia stacji i poziomu 3, budżet W10 przekaźnika z kodem IFAC (także z dwoma STATUS), pojemność sieci, ponawianie LXMF, rozmiary SA1, zajętość FRAM 4 Mbit według roli, RAM tablic stosu, zimny start sieci (ogłoszenia, zapytania o trasę i TEST wobec okna TEST), łącze radiowe i oszacowania układów. Wariant główny to LoRa SF7, 125 kHz, SX1262 (D10): według niego liczą `station_level1`, `relay_w10`, `network_capacity`, `lxmf_retry` i `cold_start_announces`; `lora_pilot` porównuje SF7 i SF8 oraz podaje zapas zasięgu. Dawny profil P1 (własne FSK, odbiornik CC1120 22 mA) zostaje pod kluczem `p1_archiwalny` z tymi samymi pozycjami |
 | [wyniki.json](wyniki.json) | Zapis wyników z założeniami |
 
 Kontrakty: [radio](../../docs/spec/radio.md), [oprogramowanie](../../docs/spec/oprogramowanie.md). Licencja kodu i SQL: [MIT](../../LICENSES/MIT.txt); opisy i raporty: CC-BY-4.0.
