@@ -231,7 +231,7 @@ class LoraInteropCoreTests(LoraInteropTests):
 @unittest.skipUnless(PIO and RNS_PYTHON, "WICI_PIO and WICI_RNS_PYTHON not set")
 class OspNodeLoraTests(unittest.TestCase):
     """rns_osp_node.py --link lora on the core: node, relay and stations on the emulated LoRa medium, LXMRouter in Python
-    behind USB with bitrate 42 b/s (D19)."""
+    behind USB with bitrate 41 b/s (D19)."""
 
     @classmethod
     def setUpClass(cls):
@@ -251,10 +251,10 @@ class OspNodeLoraTests(unittest.TestCase):
             self.assertIn(name, self.results["checks"])
 
     def test_lxmf_interval_set_by_bitrate(self):
-        # 3 próby i odstęp ≥196 s przy bitrate 42 b/s: samo ustawienie interfejsu KISS.
-        self.assertEqual(self.results["bitrate"], 42)
+        # 3 próby i odstęp ≥201 s przy bitrate 41 b/s: samo ustawienie interfejsu KISS.
+        self.assertEqual(self.results["bitrate"], 41)
         self.assertEqual(self.results["lxmf"]["max_attempts"], 3)
-        self.assertGreaterEqual(self.results["lxmf"]["interval_s"], 196)
+        self.assertGreaterEqual(self.results["lxmf"]["interval_s"], 201)
 
     def test_burst_of_6_without_loss(self):
         burst = self.results["burst"]
