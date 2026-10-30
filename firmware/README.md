@@ -252,7 +252,7 @@ Sterownik (`src/sx1262.cpp`: polecenia, rejestry, bufor, BUSY; `src/sx1262_link.
   - tekst wersji z rejestru 0x0320 (`ok`, gdy zaczyna się od „SX126”; SX1262 podaje „SX1261 V2D 2D02”),
   - STDBY_RC, TCXO 1,8 V z DIO3 (start 5 ms), skasowanie błędów,
   - kalibracja wszystkich bloków (kalibracja po włączeniu zasilania bez TCXO kończy się błędem XOSC_START),
-  - przetwornica DC-DC, DIO2 jako przełącznik RF, typ pakietu LoRa, tryb powrotu STDBY_RC,
+  - przetwornica DC-DC, DIO2 jako przełącznik RF, typ pakietu LoRa, tryb powrotu STDBY_XOSC (TCXO pracuje między ramkami),
   - kalibracja obrazu 863–870 MHz, częstotliwość,
   - PA jak w programie diagnostycznym (RadioLib, tabela dla 13 dBm: 0x01, 0x04, SX1262, wartość 19 w SetTxParams) z rampą 200 µs,
   - limit prądu 60 mA (zapis po SetPaConfig, który ustawia 140 mA),
@@ -261,9 +261,9 @@ Sterownik (`src/sx1262.cpp`: polecenia, rejestry, bufor, BUSY; `src/sx1262_link.
   - Rx Boosted (0x08AC = 0x96) dopisany do listy rejestrów zachowywanych w uśpieniu (0x029F = 1, 0x02A0..0x02A1 = 0x08AC),
   - na końcu weryfikacja odczytem: typ pakietu, 10 rejestrów i brak błędów układu.
 - **Stałe do ustalenia wobec RNode (T3):** preambuła 24 symbole (reguła RNode max(18, ceil(24 ms / czas symbolu)), `Config.h`/`Utilities.h` w commicie 56775c51) i słowo synchronizacji 0x12 (rejestry 0x0740 = 0x14 i 0x0741 = 0x24 jak w RNode, `sx126x.cpp`) są stałymi w `src/lora_profile.h`; obie wartości wynikają ze źródła RNode, a T3 potwierdza je radiem. Program diagnostyczny nadaje z preambułą 8 symboli i mocą 0 dBm.
-- **Nadawanie:** ramka z bufora od adresu 0, długość w parametrach pakietu, RXEN niski, `SetTx` bez limitu czasu układu; koniec po TxDone (układ wraca sam do STDBY_RC), bez niego po czasie ramki + 100 ms przejście do STDBY_RC i błąd.
+- **Nadawanie:** ramka z bufora od adresu 0, długość w parametrach pakietu, RXEN niski, `SetTx` bez limitu czasu układu; koniec po TxDone (układ wraca sam do STDBY_XOSC), bez niego po czasie ramki + 100 ms przejście do STDBY_XOSC i błąd.
 - **Odbiór** ciągły (`SetRx 0xFFFFFF`) z RXEN wysokim: ramka po RxDone, długość i początek z `GetRxBufferStatus`, RSSI pakietu (−RssiPkt/2) i SNR (SnrPkt/4) z `GetPacketStatus`; błąd CRC lub nagłówka albo inna długość niż w `RX <len>` dają `rx_bad`, a układ zostaje w odbiorze.
-- **TXCW:** `SetTxContinuousWave`; **FOFF:** słowo RF ± kroki 32 MHz / 2²⁵ (0,954 Hz), do ±50 kHz (granica podpasma), zapis w STDBY_RC i powrót do odbioru.
+- **TXCW:** `SetTxContinuousWave`; **FOFF:** słowo RF ± kroki 32 MHz / 2²⁵ (0,954 Hz), do ±50 kHz (granica podpasma), zapis w STDBY_XOSC i powrót do odbioru.
 - **Czas ramki** z wzoru karty (rozdz. 6.1.4; ten sam co `lora_frame_seconds` w `software/reference/obliczenia.py`) plus 3 ms na narastanie (założenie jak w P1, do pomiaru): 255 B w SF7 to 416,0 ms w powietrzu i 419 ms rezerwacji.
 
 Polecenia pomiarowe działają jak na A i B (ten sam `src/measure.cpp`, [opis](#polecenia-pomiarowe)), z czasem ramki, najdłuższą ramką i limitem serii z profilu LoRa:

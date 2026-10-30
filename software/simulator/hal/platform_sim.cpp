@@ -50,6 +50,10 @@ void printVtest() {
                   board::VTEST_DIVIDER);
 }
 
+// Blokada operacji radia pusta: symulator ma jeden wątek (pętla), bez zadania odbioru.
+bool radioLockTake(uint32_t) { return true; }
+void radioLockGive() {}
+
 bool handle(const char*, char*[], size_t) { return false; }
 
 const char* helpCommands() { return ""; }

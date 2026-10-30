@@ -150,15 +150,22 @@ Identity Radio::identify() {
     return id;
 }
 
-uint16_t Radio::irqStatus() {
+bool Radio::readIrq(uint16_t& irq) {
     uint8_t data[2] = {};
-    if (!read(OP_GET_IRQ_STATUS, data, 2)) return 0;
-    return static_cast<uint16_t>((data[0] << 8) | data[1]);
+    const bool ok = read(OP_GET_IRQ_STATUS, data, 2);
+    irq = static_cast<uint16_t>((data[0] << 8) | data[1]);
+    return ok;
 }
 
-void Radio::clearIrq(uint16_t mask) {
+uint16_t Radio::irqStatus() {
+    uint16_t irq = 0;
+    readIrq(irq);
+    return irq;
+}
+
+bool Radio::clearIrq(uint16_t mask) {
     const uint8_t params[2] = {static_cast<uint8_t>(mask >> 8), static_cast<uint8_t>(mask)};
-    command(OP_CLEAR_IRQ_STATUS, params, 2);
+    return command(OP_CLEAR_IRQ_STATUS, params, 2);
 }
 
 uint16_t Radio::deviceErrors() {

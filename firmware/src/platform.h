@@ -47,6 +47,31 @@ void feedWatchdog();
 void beginVtest();
 void printVtest();  // odpowiedź na VTEST (tylko płytka N1)
 
+// Blokada operacji radia: jedna operacja sterownika radia (kilka transakcji SPI: BUSY, status, kasowanie
+// przerwań, bufor) naraz, gdy obok pętli stacji obsługuje układ zadanie odbioru (ESP32-S3, stacja L0).
+// ESP32-S3: rekurencyjny mutex FreeRTOS z dziedziczeniem priorytetu (pętla może wziąć go ponownie
+// wewnątrz własnej operacji). nRF52840 i symulator: pusta (nie ma tam zadania odbioru); program `host`
+// nie kompiluje warstwy MCU ani sterowników radia.
+// Kolejność zawsze: najpierw blokada radia, potem magistrala SPI (SPIClass::beginTransaction w Radio);
+// nigdy blokada radia wewnątrz transakcji SPI. Zapis do FRAM bierze tylko magistralę, więc nie ma zakleszczenia.
+// Zadanie odbioru bierze ją bez czekania (timeoutMs = 0) i przy zajętej pomija obieg; pętla czeka z limitem.
+bool radioLockTake(uint32_t timeoutMs);  // true, gdy wzięta w timeoutMs (0: tylko próba)
+void radioLockGive();
+
+class RadioLock {
+public:
+    explicit RadioLock(uint32_t timeoutMs) : held_(radioLockTake(timeoutMs)) {}
+    ~RadioLock() {
+        if (held_) radioLockGive();
+    }
+    RadioLock(const RadioLock&) = delete;
+    RadioLock& operator=(const RadioLock&) = delete;
+    bool held() const { return held_; }
+
+private:
+    bool held_;
+};
+
 // Polecenia tylko tego MCU (ESP32-S3: DRIVE); false, gdy polecenie nieznane.
 bool handle(const char* cmd, char* words[], size_t n);
 const char* helpCommands();  // dopisek do listy HELP, z przecinkiem na początku albo pusty
