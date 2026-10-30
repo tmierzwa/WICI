@@ -221,6 +221,9 @@ struct BenchRadio : rnsnode::Radio {
     bool ready() override { return p1Listening() && !bench.busy() && (!bench.silence || bench.silenceException); }
     bool transmit(const uint8_t* data, size_t length) override { return bench.linkSend(data, length, true) == nullptr; }
     uint32_t debtMs() override { return bench.debtRemainingMs(); }
+    const p1iface::LinkTiming& timing() override {
+        return bench.linkFraming() == radiolink::Framing::RNODE ? p1iface::loraTiming() : p1iface::p1Timing();
+    }
 };
 BenchRadio benchRadio;
 bool rnsOk = false;               // stos uruchomiony (FRAM i dziennik działają)

@@ -13,8 +13,8 @@
 // Wynik: wiersz JSON na stdout; kod 3 = złamany niezmiennik, 75 = zanik zasilania w zapisie.
 //
 // rns_stress <fram> [--seed N] [--events N] [--mutate PERCENT] [--start S] [--gap S]
-//            [--long-jumps] [--cut-after-writes N] [--defect token48|short-announce|held-announce|link-mtu|flood|station-flood|damaged-receiver|forward-flood|rebroadcast-load|own-path-requests|path-flood]
-//            [--hostile-days N [--window-s S] [--stop-after-s S]] [--receiver-foreign-key] [--dump PLIK]
+//            [--long-jumps] [--cut-after-writes N] [--defect token48|short-announce|held-announce|link-mtu|flood|station-flood|damaged-receiver|forward-flood|rebroadcast-load|own-path-requests|path-flood|link-limits]
+//            [--hostile-days N [--window-s S] [--stop-after-s S]] [--receiver-foreign-key] [--link p1|lora] [--node] [--dump PLIK]
 //
 // --dump: datagramy generatora z feed() (rodzaj, czy mutowany, pakiet przed IFAC i datagram na łączu) po wierszu
 // JSON, na początku klucze generatora i klucz prywatny stacji z FRAM (tylko w próbie); tools/rns_differential.py
@@ -262,15 +262,20 @@ bool settleAll = false;
 uint32_t appPackets = 0;   // wiadomości przekazane hakowi packet stacji (warstwie aplikacji)
 
 // ---- łącze radiowe: datagramy stacji trafiają do generatora (powtórki, dowody) ----
+const p1iface::LinkTiming* linkTiming = &p1iface::p1Timing();   // --link lora: łącze LoRa
+
 struct Radio : rnsnode::Radio {
     bool busy = false;
     uint64_t txEnd = 0;
     uint32_t sent = 0;
+    size_t maxSent = 0;                         // najdłuższy datagram stacji (z IFAC)
     std::vector<std::vector<uint8_t>> recent;   // ostatnie datagramy stacji (z IFAC)
     bool ready() override { return !busy; }
     uint32_t debtMs() override { return 0; }
+    const p1iface::LinkTiming& timing() override { return *linkTiming; }
     bool transmit(const uint8_t* data, size_t length) override {
         ++sent;
+        if (length > maxSent) maxSent = length;
         hashTraffic(1, data, length);
         const bool counted = inStation;
         inStation = false;
@@ -306,7 +311,7 @@ Bytes ifacUnwrap(const std::vector<uint8_t>& wire) {
     return Bytes(raw, raw + n);
 }
 
-// Pakiet ponad HW_MTU: datagram z flagą IFAC i dowolnym kodem, dłuższy niż MAX_WIRE (stacja go odrzuca).
+// Pakiet ponad największy pakiet łącza: datagram z flagą IFAC i dowolnym kodem, dłuższy niż maxWire (stacja go odrzuca).
 std::vector<uint8_t> oversize(const std::vector<uint8_t>& v) {
     std::vector<uint8_t> wire{static_cast<uint8_t>(v[0] | 0x80), v[1]};
     for (size_t i = 0; i < p1iface::IFAC_SIZE; ++i) wire.push_back(static_cast<uint8_t>(rnd()));
@@ -473,7 +478,7 @@ void feed(const Bytes& raw, const char* kind) {
     const bool m = mutatePercent && rnd() % 100 < mutatePercent;
     const bool afterIfac = m && rnd() % 7 == 0;
     if (m && !afterIfac) mutate(v, 0);
-    std::vector<uint8_t> wire = v.size() > p1iface::HW_MTU ? oversize(v) : v.size() >= 2 ? ifacWrap(v) : v;
+    std::vector<uint8_t> wire = v.size() > linkTiming->maxRaw ? oversize(v) : v.size() >= 2 ? ifacWrap(v) : v;
     if (afterIfac) mutate(wire, 1);
     if (m) ++mutated;
     ++fed;
@@ -668,6 +673,68 @@ Bytes receiverProof() {
         if (stationDataTo(raw, peerDest[0])) return proofOf(raw, peers[0]);
     }
     return Bytes();
+}
+
+// Limity łącza (L3): ogłoszenie przekazywane przez stację rośnie o 16 B (nagłówek typu 2), więc ogłoszenie
+// o maxRaw - 16 B wychodzi w całości, a o maxRaw - 15 B przekracza największy pakiet łącza: stacja odmawia
+// przed podpisem IFAC i liczy to w too_large. Zapytanie o trasę do takiego celu: odpowiedź (to samo
+// ogłoszenie z zapamiętanej trasy) też odpada, a stos ponawia ją najwyżej dwa razy. Węzeł stanowiska
+// (--node): pakiet z USB ponad maxRaw odpada przed stosem i jest liczony.
+bool nodeMode = false;
+
+Bytes sizedAnnounce(size_t peer, size_t rawLength) {
+    const Bytes base = announce(peers[peer], DEST_NAME.c_str(), Bytes(), false);
+    return announce(peers[peer], DEST_NAME.c_str(), randomBytes(rawLength - base.size()), false);
+}
+
+void settle(int seconds) {
+    for (int k = 0; k < seconds; ++k) { simMs += 1000; service(); }
+}
+
+void linkLimits() {
+    const size_t maxRaw = linkTiming->maxRaw;
+    const uint32_t tooLarge0 = interfaceCounter("too_large");
+    receive(withHops(sizedAnnounce(1, maxRaw - 16), 1));   // wychodzi jako maxRaw
+    settle(300);
+    const uint32_t refusedFits = interfaceCounter("too_large") - tooLarge0;
+    const size_t longestFits = radio.maxSent - p1iface::IFAC_SIZE;
+    const uint32_t tooLarge1 = interfaceCounter("too_large");
+    receive(withHops(sizedAnnounce(2, maxRaw - 15), 1));   // wyszłoby jako maxRaw + 1
+    settle(300);
+    const uint32_t refusedLong = interfaceCounter("too_large") - tooLarge1;
+    // Odpowiedź na zapytanie o trasę do tego celu: ten sam rozmiar, odmowa przed podpisem.
+    const uint32_t tooLarge2 = interfaceCounter("too_large");
+    Bytes request = peerDest[2];
+    request << randomBytes(16);
+    receive(pathRequestOf(request));
+    settle(300);
+    const uint32_t refusedResponse = interfaceCounter("too_large") - tooLarge2;
+    uint32_t refusedUsb = 0, usbDropped = 0;
+    if (nodeMode) {
+        const uint32_t tooLarge3 = interfaceCounter("too_large");
+        Bytes packetBytes = randomBytes(maxRaw + 1);
+        packetBytes[0] &= 0x7F;   // bez flagi IFAC
+        std::vector<uint8_t> frame{kiss::FEND, kiss::CMD_DATA};
+        for (uint8_t b : packetBytes) {
+            if (b == kiss::FEND) { frame.push_back(kiss::FESC); frame.push_back(kiss::TFEND); }
+            else if (b == kiss::FESC) { frame.push_back(kiss::FESC); frame.push_back(kiss::TFESC); }
+            else frame.push_back(b);
+        }
+        frame.push_back(kiss::FEND);
+        rnsnode::usbOpen(true);
+        rnsnode::usbFeed(frame.data(), frame.size(), static_cast<uint32_t>(simMs));
+        settle(5);
+        refusedUsb = interfaceCounter("too_large") - tooLarge3;
+        usbDropped = rnsnode::usbStatus().buffered;
+    }
+    char out[320];
+    snprintf(out, sizeof(out),
+             "\"link\":\"%s\",\"max_raw\":%u,\"fits_refused\":%u,\"fits_longest\":%u,\"long_refused\":%u,"
+             "\"response_refused\":%u,\"longest_sent\":%u,\"usb_refused\":%u,\"usb_buffered\":%u",
+             linkTiming->framing == p1iface::LinkTiming::Framing::RNODE ? "lora" : "p1", static_cast<unsigned>(maxRaw),
+             refusedFits, static_cast<unsigned>(longestFits), refusedLong, refusedResponse,
+             static_cast<unsigned>(radio.maxSent - p1iface::IFAC_SIZE), refusedUsb, usbDropped);
+    floodResult = out;
 }
 
 #ifdef WICI_RNS_CORE
@@ -1200,7 +1267,7 @@ void pathFlood() {
             const Bytes raw = ifacUnwrap(radio.recent[j]);
             if (raw.empty() || !p1iface::pathResponse(raw.data(), raw.size())) continue;
             ++responses;
-            if (tick < BUDGET_TICKS) responseMs += p1iface::channelMs(radio.recent[j].size());
+            if (tick < BUDGET_TICKS) responseMs += linkTiming->channelMs(radio.recent[j].size());
         }
         if (handle && reportAt < 0) {
             const Bytes proof = receiverProof();
@@ -1302,6 +1369,8 @@ void defect(const std::string& name) {
         flood();
     } else if (name == "forward-flood" || name == "rebroadcast-load") {
         transitLoad(name == "rebroadcast-load");
+    } else if (name == "link-limits") {
+        linkLimits();
     } else if (name == "own-path-requests") {
         ownPathRequests();
     } else if (name == "path-flood") {
@@ -1360,6 +1429,13 @@ int main(int argc, char** argv) {
         else if (a == "--window-s") { windowS = atol(v); ++i; }
         else if (a == "--stop-after-s") { stopAfterS = atol(v); ++i; }
         else if (a == "--receiver-foreign-key") foreignKey = true;
+        else if (a == "--node") nodeMode = true;
+        else if (a == "--link") {
+            const std::string link = v;
+            if (link != "p1" && link != "lora") { fprintf(stderr, "unknown link %s\n", v); return 2; }
+            linkTiming = link == "lora" ? &p1iface::loraTiming() : &p1iface::p1Timing();
+            ++i;
+        }
         else if (a == "--dump") { dumpPath = v; ++i; }
         else { fprintf(stderr, "unknown option %s\n", a.c_str()); return 2; }
     }
@@ -1389,6 +1465,7 @@ int main(int argc, char** argv) {
         if (i == 0 && savedReceiver.empty()) writeFile(receiverPath, hex(peers.back().prv, sizeof(peers.back().prv)));
         peerDest.push_back(destinationOf(DEST_NAME.c_str(), peers.back().hash));
     }
+    if (nodeMode) rnsnode::setNode(true);
     uint8_t keys[2][64] = {}, sa1[2][16] = {};
     memcpy(keys[0], peers[0].pub, 64);
     memcpy(sa1[0], peerDest[0].data(), 16);
