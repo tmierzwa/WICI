@@ -1556,10 +1556,10 @@ class PackageTest(unittest.TestCase):
                 ast.parse(p.read_text(encoding="utf-8"), feature_version=(3, 12))   # najstarszy Python w CI
 
     def test_only_the_standard_library(self):
-        # Aplikacja stanowiska (wici/stanowisko) ma własny pakiet z przypiętymi Reticulum i LXMF (PLAN.md, S10).
+        # Aplikacja stanowiska (wici/stanowisko) ma własny pakiet z przypiętymi Reticulum, LXMF i pyserial (PLAN.md, S10).
         allowed = set(sys.stdlib_module_names) | {"wici"}
         for p in self.PACKAGE.rglob("*.py"):
-            extra = {"RNS", "LXMF"} if "stanowisko" in p.relative_to(self.PACKAGE).parts else set()
+            extra = {"RNS", "LXMF", "serial"} if "stanowisko" in p.relative_to(self.PACKAGE).parts else set()
             for node in ast.walk(ast.parse(p.read_text(encoding="utf-8"))):
                 names = [a.name for a in node.names] if isinstance(node, ast.Import) else \
                     [node.module] if isinstance(node, ast.ImportFrom) and node.level == 0 else []
