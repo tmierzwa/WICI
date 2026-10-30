@@ -625,6 +625,7 @@ class CoreLoraHostileStackTests(CoreHostileStackTests):
 for _cls in (LoraHostileStackTests, CoreLoraHostileStackTests):
     for _name in _LINK_INDEPENDENT:
         setattr(_cls, _name, None)   # None nie jest wywoływalne: loader pomija test
+del _cls, _name   # klasa w zmiennej modułu: loader zebrałby jej testy drugi raz
 
 
 if __name__ == "__main__":

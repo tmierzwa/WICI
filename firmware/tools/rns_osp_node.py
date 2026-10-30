@@ -90,11 +90,12 @@ class Program:
 
     def __init__(self, program, fram, listen, peer, debt, node=False, link="p1"):
         extra = ["--node"] if node else []
-        extra += ["--link", link] if link != "p1" else []
+        extra += ["--link", link, "--trace"] if link != "p1" else []
         self.proc = subprocess.Popen([program, "--fram", fram, "--ifac", NETWORK_KEY, "--listen", str(listen),
                                       "--peer", str(peer), "--debt", str(debt)] + extra,
                                      stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
         self.events = queue.Queue()
+        self.air = []   # --link lora: zdarzenia "tx" (datagram nadany) i "rx" (ramka odebrana) ze śladu --trace
         threading.Thread(target=self._read, daemon=True).start()
         self.ready = self.wait("ready", 20)
 
@@ -103,9 +104,12 @@ class Program:
             line = line.strip()
             if line.startswith("{"):
                 try:
-                    self.events.put(json.loads(line))
+                    event = json.loads(line)
                 except json.JSONDecodeError:
-                    pass
+                    continue
+                if event.get("event") in ("tx", "rx"):
+                    self.air.append(event)
+                self.events.put(event)
 
     def command(self, text):
         self.proc.stdin.write(text + "\n")
@@ -362,11 +366,15 @@ def lora_checks(args, work, air, programs, node, station, kiss, identity, destin
     # Pakiet z USB 493-500 B (ponad 492 B, największy pakiet LoRa bez IFAC): odrzut przed radiem, licznik too_large.
     junk = bytes([0x00, 0x00]) + os.urandom(16) + b"\x00"
     before = node.status()
+    air_at = len(node.air)
     for size in (493, 500):
         kiss.serial.write(kiss_frame(junk + os.urandom(size - len(junk))))
     counted = wait_for(lambda: node.status().get("too_large", 0) == before.get("too_large", 0) + 2, 10)
     after = node.status()
-    checks["usb_493_500_dropped_and_counted"] = counted and after.get("tx_sent") == before.get("tx_sent") and after.get("usb_rx_invalid") == before.get("usb_rx_invalid")
+    # Bez porównania tx_sent: węzeł może w tym czasie retransmitować cudze ogłoszenia. Datagram z tych pakietów
+    # (bez IFAC albo z IFAC 16 B) nie pojawia się w śladzie nadawania.
+    junk_on_air = any(e["event"] == "tx" and e["length"] in (493, 500, 509, 516) for e in node.air[air_at:])
+    checks["usb_493_500_dropped_and_counted"] = counted and not junk_on_air and after.get("usb_rx_invalid") == before.get("usb_rx_invalid")
 
     # LXMRouter na komputerze: LXMF SA1 do stacji, dowód przed jakimkolwiek ponowieniem (D19).
     router = LXMF.LXMRouter(storagepath=os.path.join(work, "lxmf"))
@@ -419,7 +427,7 @@ def lora_checks(args, work, air, programs, node, station, kiss, identity, destin
             router.handle_outbound(message)
             sent.append(message)
             pending.append(message)
-        if time.time() - t0 > 3000:
+        if time.time() - t0 > 900:   # przed limitem 3000 s próby w tests/test_rns_stack.py
             break
         time.sleep(0.1)
     after = node.status()

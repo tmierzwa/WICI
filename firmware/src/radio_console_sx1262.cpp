@@ -168,7 +168,10 @@ bool check() {
         ++modeLostCount;
         bench->log("radio left RX while armed: receive re-armed");
         rxArmed.store(false);
-        bench->stop();
+        // Datagram czekający na dług albo odstęp (WAIT_DEBT, BACKOFF) zostaje: odbiór łącza wraca bez stop(),
+        // pod tą samą blokadą; bez datagramu stop() i odbiór od wywołującego (linkRxStart).
+        if (bench->busy()) driver.startRx(true, 0);
+        else bench->stop();
         return true;
     }
     return false;
@@ -207,7 +210,10 @@ RxTaskInfo rxTaskInfo() {
 
 void report() {
     platform::RadioLock lock(measure::RADIO_LOCK_WAIT_MS);
-    if (!lock.held()) return;
+    if (!lock.held()) {
+        Serial.println("{\"error\":\"radio lock timeout\"}");
+        return;
+    }
     printRadio();
     if (radioOk) {
         printVerify("verify", driver.verify());
@@ -217,6 +223,10 @@ void report() {
 
 void printState() {
     platform::RadioLock lock(measure::RADIO_LOCK_WAIT_MS);
+    if (!lock.held()) {
+        Serial.println("{\"error\":\"radio lock timeout\"}");
+        return;
+    }
     const sx1262::Status st = chip.status();
     Serial.printf("{\"state\":\"%s\",\"status\":\"0x%02X\",\"rxen\":%s,\"busy\":%s}\n", sx1262::modeName(st.mode()), st.raw,
                   boolName(driver.rxenHigh()), boolName(chip.busy()));
