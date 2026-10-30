@@ -159,6 +159,8 @@ class StackTest(unittest.TestCase):
         path = Path(self.work.name) / "stan" / "tozsamosc"
         self.assertEqual(RNS.Identity.from_file(str(path)).hash, self.stos.identity.hash)
         self.assertEqual(stos.Stos._identity(path).hash, self.stos.identity.hash)
+        if sys.platform != "win32":
+            self.assertEqual(path.stat().st_mode & 0o777, 0o600)   # klucz prywatny tylko dla użytkownika
 
 
 if __name__ == "__main__":

@@ -73,6 +73,8 @@ class Stos:
         rns_dir = self.state / "rns"
         rns_dir.mkdir(parents=True, exist_ok=True)
         (rns_dir / "config").write_text(config(self.port, self.bitrate), encoding="utf-8")
+        # Funkcja jako logdest: RNS/Reticulum.py, Reticulum.__init__ w e40191b ustawia wtedy RNS.logdest =
+        # RNS.LOG_CALLBACK i RNS.logcall = ta funkcja (RNS/__init__.py, log).
         RNS.Reticulum(str(rns_dir), logdest=self.log)
         self.identity = self._identity(self.state / "tozsamosc")
         # Bez propagacji, bez wymiany z węzłami propagacji i bez znaczków pracy.
@@ -83,7 +85,11 @@ class Stos:
 
     @staticmethod
     def _identity(path):
-        """The receiver identity from the file, or a new one written there (fsync before use)."""
+        """The receiver identity from the file, or a new one written there (fsync before use).
+
+        Only the main identity: the backup one is made at the preparation of the station and leaves it
+        in sealed envelopes (stanowisko-osp.md, O10; PLAN.md, stage S4). The private key file is readable
+        only by the user (0600) until stage S4 moves it to the encrypted station medium."""
         import RNS
         if path.exists():
             identity = RNS.Identity.from_file(str(path))
@@ -92,7 +98,9 @@ class Stos:
             return identity
         identity = RNS.Identity()
         tmp = path.with_suffix(".tmp")
-        with open(tmp, "wb") as f:
+        tmp.unlink(missing_ok=True)   # pozostałość przerwanego zapisu
+        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0), 0o600)
+        with os.fdopen(fd, "wb") as f:
             f.write(identity.get_private_key())
             f.flush()
             os.fsync(f.fileno())
