@@ -1224,7 +1224,8 @@ int main() {
            sig.lastServiceMs.load() == serviceBefore, static_cast<unsigned long>(lockTimeouts));
     lockBusy = false;
     tl.taskCycle(true);
-    printf("TASKAFTERLOCK %d %d\n", static_cast<int>(tl.pollRx(tf)), bytesFrom(tf, 0x55));
+    const int polledAfterLock = static_cast<int>(tl.pollRx(tf));
+    printf("TASKAFTERLOCK %d %d\n", polledAfterLock, bytesFrom(tf, 0x55));
     // Sama próbka RSSI co 5 ms odświeża lastServiceMs.
     fakeUs += 6000;
     tl.taskCycle(false);
