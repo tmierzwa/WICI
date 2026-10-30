@@ -827,13 +827,13 @@ int main() {
     printf("TXPKT %s %u %zu %d %lu %d\n", started ? started : "-", chip.txCount - txBefore, chip.lastTx.size(), frameOk,
            static_cast<unsigned long>(debtLogged), bench.busy());
     const uint32_t wait = bench.debtRemainingMs();
-    printf("DEBT %d %s\n", wait > 9800 && wait <= 9912, bench.txpkt(1, 20, 0, false));
-    runFor(bench, 10000);
+    printf("DEBT %d %s\n", wait > 9900 && wait <= 10056, bench.txpkt(1, 20, 0, false));
+    runFor(bench, 10200);
     printf("CLEARED %lu %lu\n", static_cast<unsigned long>(bench.debtRemainingMs()), static_cast<unsigned long>(journal.debt().a));
     bench.silence = true;
     printf("SILENCE %s\n", bench.txpkt(1, 20, 0, false));
     bench.silence = false;
-    // TXCW 1 s nie mieści się w limicie serii LoRa (826 ms) bez CONDUCTED.
+    // TXCW 1 s nie mieści się w limicie serii LoRa (838 ms) bez CONDUCTED.
     printf("TXCW %s\n", bench.txcw(1, false));
     // Odbiór ramek wzorcowych 255 B: RXPER ze średnim SNR.
     const char* rxStarted = bench.rxStart(255);
@@ -849,7 +849,7 @@ int main() {
     }
     bench.rxper();
 
-    // Tryb pracy do badań EMC: ramka 255 B co 6 s (13 x 413 ms = 5,4 s), odbiór ramek wzorcowych
+    // Tryb pracy do badań EMC: ramka 255 B co 6 s (13 x 419 ms = 5,4 s), odbiór ramek wzorcowych
     // między ramkami, tryb zapisany w dzienniku i wznawiany po restarcie bez trybu przygotowania.
     bench.prep = false;
     printf("EMCPREP %s\n", bench.emcStart(6, 255));
@@ -1075,7 +1075,7 @@ class Sx1262LinkTests(unittest.TestCase):
     def test_lora_pilot_profile_parameters(self):
         self.assertEqual(line(self.out, "RF"), "RF 36586666")  # 869.525 MHz x 2^25 / 32 MHz
         self.assertEqual(line(self.out, "MOD"), "MOD 07 04 01 00")  # SF7, 125 kHz, CR 4/5, LDRO off
-        self.assertEqual(line(self.out, "PKT"), "PKT 00 12 00 FF 01 00")  # 18 symbols, explicit header, CRC on, normal IQ
+        self.assertEqual(line(self.out, "PKT"), "PKT 00 18 00 FF 01 00")  # 24 symbols, explicit header, CRC on, normal IQ
         self.assertEqual(line(self.out, "PA"), "PA 01 04 00 01 13 04 18")  # PA as RadioLib paOptTable for 13 dBm, 200 us ramp, OCP 60 mA
 
     def test_rx_boosted_sync_word_and_errata_registers(self):
@@ -1124,19 +1124,19 @@ class Sx1262LinkTests(unittest.TestCase):
     def test_measurement_commands_in_lora_air_time(self):
         self.assertEqual(line(self.out, "NOP1"), "NOP1 no P1 link on this radio|no P1 link on this radio|0")
         self.assertEqual(line(self.out, "LEN"), "LEN len 4..255|len 4..255")
-        # 3 x 255 B = 3 x 413 ms > 826 ms (the largest datagram in two frames).
+        # 3 x 255 B = 3 x 419 ms > 838 ms (the largest datagram in two frames).
         self.assertEqual(line(self.out, "LIMIT"), "LIMIT series above limit: add conducted")
-        # 2 x 255 B: debt 12 x 826 ms in the FRAM journal before the first frame.
-        self.assertEqual(line(self.out, "TXPKT"), "TXPKT - 2 255 1 9912 0")
+        # 2 x 255 B: debt 12 x 838 ms in the FRAM journal before the first frame.
+        self.assertEqual(line(self.out, "TXPKT"), "TXPKT - 2 255 1 10056 0")
         self.assertEqual(line(self.out, "DEBT"), "DEBT 1 silence debt pending: see INFO tx_wait_ms")
         self.assertEqual(line(self.out, "CLEARED"), "CLEARED 0 0")
         self.assertEqual(line(self.out, "SILENCE"), "SILENCE radio silence")
         self.assertEqual(line(self.out, "TXCW"), "TXCW series above limit: add conducted")
         planned = next(text for text in self.out if text.startswith('{"txpkt":"started"'))
-        self.assertIn('"tx_ms_planned":826', planned)
+        self.assertIn('"tx_ms_planned":838', planned)
         done = next(text for text in self.out if text.startswith('{"txpkt":"done"'))
         self.assertIn('"sent":2,"failed":0,"len":255', done)
-        self.assertIn('"expected_on_air_ms":409.86', done)
+        self.assertIn('"expected_on_air_ms":416.00', done)
 
     def test_rxper_reports_snr(self):
         self.assertEqual(line(self.out, "RXSTART"), "RXSTART - RX 1")
@@ -1147,12 +1147,12 @@ class Sx1262LinkTests(unittest.TestCase):
 
     def test_emc_mode_needs_preparation_and_a_period_of_13_frames(self):
         self.assertEqual(line(self.out, "EMCPREP"), "EMCPREP preparation mode off: PREP 1")
-        self.assertEqual(line(self.out, "EMCPERIOD"), "EMCPERIOD period 6..3600 s")  # 13 x 413 ms = 5.4 s
+        self.assertEqual(line(self.out, "EMCPERIOD"), "EMCPERIOD period 6..3600 s")  # 13 x 419 ms = 5.4 s
         self.assertEqual(line(self.out, "EMCBUSY"), "EMCBUSY EMC mode on: EMC 0 first|EMC mode on: EMC 0 first")
 
     def test_emc_mode_sends_with_debt_and_receives_between_frames(self):
-        # First frame at once, debt 12 x 413 ms in the journal before it, then reception of test frames.
-        self.assertEqual(line(self.out, "EMCFIRST"), "EMCFIRST - 1 255 1 4956 RX 1")
+        # First frame at once, debt 12 x 419 ms in the journal before it, then reception of test frames.
+        self.assertEqual(line(self.out, "EMCFIRST"), "EMCFIRST - 1 255 1 5028 RX 1")
         self.assertEqual(line(self.out, "EMCRUN"), "EMCRUN 3")  # 0, 6 and 12 s
         self.assertEqual(line(self.out, "EMCSILENT"), "EMCSILENT 3")  # silence skips the 18 s frame
         self.assertEqual(line(self.out, "EMCRX"), "EMCRX RX 1 1")  # STOP of a task or leaving preparation keeps the mode
