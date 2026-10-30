@@ -202,31 +202,31 @@
       "packet_proof": 99
     },
     "tx_plus_quiet_s": {
-      "typical_request": 8.659456,
-      "max_fields_request": 9.591296,
-      "received": 6.196736,
-      "packet_proof": 2.399488
+      "typical_request": 8.819199999999999,
+      "max_fields_request": 9.75104,
+      "received": 6.3564799999999995,
+      "packet_proof": 2.47936
     },
     "per_request_s": [
-      19.655168,
-      20.587007999999997
+      20.1344,
+      21.06624
     ],
     "fifty_requests_min": [
-      16.379306666666665,
-      17.155839999999998
+      16.778666666666666,
+      17.555200000000003
     ],
     "per_retry_s": [
-      8.659456,
-      9.591296
+      8.819199999999999,
+      9.75104
     ],
     "status_packet_bytes": 275,
-    "fifty_requests_with_two_status_min": 31.482879999999998,
+    "fifty_requests_with_two_status_min": 32.2816,
     "quiet_10t_throughput_gain": 0.18181818181818188,
     "tx_plus_quiet_s_by_datagram": {
-      "100b": 2.399488,
-      "250b": 5.261568,
-      "500b": 10.523136,
-      "508b": 10.656255999999999
+      "100b": 2.47936,
+      "250b": 5.3414399999999995,
+      "500b": 10.682879999999999,
+      "508b": 10.815999999999999
     }
   },
   "network_capacity": {
@@ -239,8 +239,8 @@
           291,
           291
         ],
-        "osp_s_per_request": 21.988096,
-        "osp_requests_per_h": 163.72495372041308,
+        "osp_s_per_request": 22.5472,
+        "osp_requests_per_h": 159.66505818904344,
         "relay_tx_packets_bytes": [
           451,
           99,
@@ -251,8 +251,8 @@
           99,
           99
         ],
-        "relay_s_per_request": 37.779455999999996,
-        "relay_requests_per_h": 95.2898845340706
+        "relay_s_per_request": 38.737919999999995,
+        "relay_requests_per_h": 92.93219666931009
       },
       "typical_request": {
         "osp_tx_packets_bytes": [
@@ -261,8 +261,8 @@
           291,
           291
         ],
-        "osp_s_per_request": 21.988096,
-        "osp_requests_per_h": 163.72495372041308,
+        "osp_s_per_request": 22.5472,
+        "osp_requests_per_h": 159.66505818904344,
         "relay_tx_packets_bytes": [
           403,
           99,
@@ -273,18 +273,18 @@
           99,
           99
         ],
-        "relay_s_per_request": 36.847616,
-        "relay_requests_per_h": 97.69967207647844
+        "relay_s_per_request": 37.806079999999994,
+        "relay_requests_per_h": 95.22277898158181
       }
     },
-    "osp_requests_per_h": 163.72495372041308,
-    "relay_before_osp_requests_per_h": 95.2898845340706,
+    "osp_requests_per_h": 159.66505818904344,
+    "relay_before_osp_requests_per_h": 92.93219666931009,
     "bulletin_packet_bytes": 483,
-    "bulletin_s_per_station": 10.190335999999999,
+    "bulletin_s_per_station": 10.35008,
     "bulletin_osp_tx_min": {
-      "10_stations": 1.6983893333333333,
-      "30_stations": 5.095167999999999,
-      "50_stations": 8.491946666666665
+      "10_stations": 1.7250133333333333,
+      "30_stations": 5.17504,
+      "50_stations": 8.625066666666667
     },
     "test_window_s_per_station": 50,
     "test_window_min": {
@@ -295,23 +295,24 @@
   },
   "lxmf_retry": {
     "largest_own_datagram_bytes": 499,
-    "largest_datagram_cycle_s": 10.456576,
+    "largest_datagram_cycle_s": 10.61632,
     "floor_s": 60.0,
     "max_datagram_bytes": 508,
-    "worst_debt_s": 9.836544,
-    "full_queue_4x_max_datagram_s": 42.625023999999996,
-    "1_hop_round_trip_s": 20.913152,
+    "worst_debt_s": 9.984,
+    "full_queue_4x_max_datagram_s": 43.263999999999996,
+    "1_hop_round_trip_s": 21.23264,
     "1_hop_min_interval_empty_network_s": 60.0,
-    "1_hop_min_interval_worst_debt_full_queue_s": 73.37472,
-    "2_hop_round_trip_s": 41.826304,
+    "1_hop_min_interval_worst_debt_full_queue_s": 74.48064,
+    "2_hop_round_trip_s": 42.46528,
     "2_hop_min_interval_empty_network_s": 60.0,
-    "2_hop_min_interval_worst_debt_full_queue_s": 94.287872
+    "2_hop_min_interval_worst_debt_full_queue_s": 95.71328
   },
   "lora_pilot": {
     "assumptions": {
       "bw_hz": 125000,
       "coding_rate_denominator_minus_4": 1,
-      "preamble_symbols": 18,
+      "preamble_symbols_min": 18,
+      "preamble_target_ms": 24,
       "frame_header_bytes": 1,
       "single_frame_payload_max": 254,
       "chip_sensitivity_dbm": {
@@ -325,32 +326,34 @@
     },
     "sf7": {
       "tx_s": {
-        "typical_request": 0.666112,
-        "max_fields_request": 0.737792,
-        "received": 0.476672,
-        "packet_proof": 0.184576
+        "typical_request": 0.6783999999999999,
+        "max_fields_request": 0.75008,
+        "received": 0.48895999999999995,
+        "packet_proof": 0.19072
       },
       "two_frame_datagram_max_bytes": 508,
       "two_frame_packet_max_before_ifac_bytes": 492,
-      "tx_s_two_frame_max": 0.819712,
+      "tx_s_two_frame_max": 0.832,
       "relay_per_request_s": [
-        19.655168,
-        20.587007999999997
+        20.1344,
+        21.06624
       ],
       "fifty_requests_min": [
-        16.379306666666665,
-        17.155839999999998
+        16.778666666666666,
+        17.555200000000003
       ],
-      "relay_s_per_request_two_status": 37.779455999999996,
-      "fifty_requests_with_two_status_min": 31.482879999999998,
-      "mixed_trial_55_revisions_min": 34.631167999999995,
-      "relay_before_osp_requests_per_h": 95.2898845340706,
-      "osp_requests_per_h": 163.72495372041308,
-      "ratio_to_p1_fifty_requests": 0.7144132330827065,
-      "bulletin_s_per_station": 10.190335999999999,
-      "bulletin_osp_tx_min_50_stations": 8.491946666666665,
-      "announce_tx_s": 0.358656,
-      "announce_tx_ratio_to_p1": 0.6986805194805195,
+      "relay_s_per_request_two_status": 38.737919999999995,
+      "fifty_requests_with_two_status_min": 32.2816,
+      "mixed_trial_55_revisions_min": 35.50976,
+      "relay_before_osp_requests_per_h": 92.93219666931009,
+      "osp_requests_per_h": 159.66505818904344,
+      "ratio_to_p1_fifty_requests": 0.7310436090225563,
+      "bulletin_s_per_station": 10.35008,
+      "bulletin_osp_tx_min_50_stations": 8.625066666666667,
+      "preamble_symbols": 24,
+      "announce_tx_s": 0.36479999999999996,
+      "declared_bitrate_b_s": 4846.491228070176,
+      "announce_tx_ratio_to_p1": 0.7106493506493506,
       "connector_sensitivity_dbm": -121.0,
       "gain_over_p1_target_db": 11.0,
       "hata_urban_margin_1km_db": {
@@ -390,7 +393,9 @@
       "ratio_to_p1_fifty_requests": 1.2671422556390974,
       "bulletin_s_per_station": 17.984512,
       "bulletin_osp_tx_min_50_stations": 14.987093333333332,
+      "preamble_symbols": 18,
       "announce_tx_s": 0.635392,
+      "declared_bitrate_b_s": 2782.534246575343,
       "announce_tx_ratio_to_p1": 1.2377766233766234,
       "connector_sensitivity_dbm": -123.0,
       "gain_over_p1_target_db": 13.0,
@@ -487,72 +492,72 @@
   },
   "cold_start_announces": {
     "announce_bytes": 221,
-    "announce_tx_s": 0.358656,
+    "announce_tx_s": 0.36479999999999996,
     "announce_cap_share_of_wall_clock": 0.02,
     "path_request_bytes": 83,
-    "path_request_tx_s": 0.158976,
+    "path_request_tx_s": 0.16512,
     "test_packet_bytes": 339,
-    "test_exchange_tx_s": 2.885632,
+    "test_exchange_tx_s": 2.9593599999999998,
     "10_stations": {
       "network_announce_transmissions": 100,
-      "channel_airtime_min_single_collision_domain": 0.59776,
-      "per_station_tx_plus_quiet_min": 0.7770879999999999,
-      "per_hop_drain_at_cap_min": 2.9887999999999995,
+      "channel_airtime_min_single_collision_domain": 0.608,
+      "per_station_tx_plus_quiet_min": 0.7903999999999999,
+      "per_hop_drain_at_cap_min": 3.0399999999999996,
       "test_window_min": 8.333333333333334,
       "path_request_airtime_min": [
-        0.08627199999999999,
-        0.38451199999999996
+        0.08831999999999998,
+        0.3968
       ],
-      "test_airtime_min": 0.48093866666666674,
+      "test_airtime_min": 0.49322666666666665,
       "total_airtime_min": [
-        1.1649706666666666,
-        1.4632106666666667
+        1.1895466666666665,
+        1.4980266666666666
       ],
       "share_of_test_window": [
-        0.13979648,
-        0.17558528
+        0.1427456,
+        0.17976319999999998
       ],
       "announce_drain_exceeds_window": false
     },
     "30_stations": {
       "network_announce_transmissions": 900,
-      "channel_airtime_min_single_collision_domain": 5.37984,
-      "per_station_tx_plus_quiet_min": 2.3312639999999996,
-      "per_hop_drain_at_cap_min": 8.966399999999998,
+      "channel_airtime_min_single_collision_domain": 5.471999999999999,
+      "per_station_tx_plus_quiet_min": 2.3712,
+      "per_hop_drain_at_cap_min": 9.12,
       "test_window_min": 25.0,
       "path_request_airtime_min": [
-        0.258816,
-        2.743296
+        0.26496,
+        2.8415999999999997
       ],
-      "test_airtime_min": 1.442816,
+      "test_airtime_min": 1.4796799999999999,
       "total_airtime_min": [
-        7.081472,
-        9.565952000000001
+        7.216639999999999,
+        9.79328
       ],
       "share_of_test_window": [
-        0.28325888,
-        0.38263808000000005
+        0.28866559999999997,
+        0.39173119999999995
       ],
       "announce_drain_exceeds_window": false
     },
     "50_stations": {
       "network_announce_transmissions": 2500,
-      "channel_airtime_min_single_collision_domain": 14.943999999999999,
-      "per_station_tx_plus_quiet_min": 3.88544,
-      "per_hop_drain_at_cap_min": 14.943999999999999,
+      "channel_airtime_min_single_collision_domain": 15.199999999999998,
+      "per_station_tx_plus_quiet_min": 3.9519999999999995,
+      "per_hop_drain_at_cap_min": 15.199999999999998,
       "test_window_min": 41.666666666666664,
       "path_request_airtime_min": [
-        0.43135999999999997,
-        7.221760000000001
+        0.4416,
+        7.4879999999999995
       ],
-      "test_airtime_min": 2.4046933333333333,
+      "test_airtime_min": 2.466133333333333,
       "total_airtime_min": [
-        17.780053333333335,
-        24.570453333333333
+        18.107733333333332,
+        25.15413333333333
       ],
       "share_of_test_window": [
-        0.42672128000000004,
-        0.58969088
+        0.43458559999999996,
+        0.6036991999999999
       ],
       "announce_drain_exceeds_window": false
     }
@@ -1009,7 +1014,7 @@
     "Network capacity is per node at the debt limit; shared channel, hidden nodes and retries reduce it",
     "Cold start: one rebroadcast per announce and station, one path request per station (best and worst case), single collision domain, no losses, retries or announce suppression",
     "Fixed installation loss of 2.5 dB per end is an assumption until the installed cable is measured",
-    "LoRa: catalogue SX1262 sensitivity and RX current, RNode-style frame split and 18-symbol preamble are assumptions; the pilot board power path is modelled with the R02 converter assumptions",
+    "LoRa: catalogue SX1262 sensitivity and RX current, RNode frame split and preamble rule are taken from the RNode firmware source, not measured; the pilot board power path is modelled with the R02 converter assumptions",
     "No thermal or electrical safety verification"
   ]
 }
