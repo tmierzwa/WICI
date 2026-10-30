@@ -45,6 +45,13 @@ def _b64(data):
     return base64.b64encode(data).decode("ascii")
 
 
+
+def frozen_before(db):
+    """Time of ZAMKNIJ ZDARZENIE until „Usuń kopie” (settings of the database), else None: copies older than
+    that keep the closed event and do not rotate out (Kopie.write)."""
+    row = dict(db.execute("SELECT key, value FROM settings WHERE key IN ('zamkniete', 'kopie_usuniete')").fetchall())
+    return None if "kopie_usuniete" in row else row.get("zamkniete")
+
 class Kopie:
     """Copies in one directory: the computer disk (state directory) or the second medium."""
 
@@ -59,19 +66,26 @@ class Kopie:
         except FileNotFoundError:
             return []
 
-    def write(self, medium, key, body, at):
+    @staticmethod
+    def name(at):
+        return f"{PREFIX}{time.strftime('%Y%m%dT%H%M%SZ', time.gmtime(at))}{SUFFIX}"
+
+    def write(self, medium, key, body, at, frozen_before=None):
         """A new copy from the database body with the marker, the identity and the account files; the
-        oldest beyond three go. A write broken off leaves only a .tmp file and the previous copies."""
+        oldest beyond three go. A write broken off leaves only a .tmp file and the previous copies.
+        frozen_before (time of ZAMKNIJ ZDARZENIE until „Usuń kopie”): copies older than that keep the content
+        of the closed event, the only way back if the archive is unreadable, so they never rotate out."""
         payload = {"v": 1, "baza": _b64(body), "tozsamosc": _b64((medium.root / "tozsamosc").read_bytes()),
                    "konta": _b64((medium.kit.dir / database.ACCOUNTS).read_bytes()),
                    "zestaw": _b64((medium.kit.dir / database.KIT_KEY).read_bytes())}
-        name = f"{PREFIX}{time.strftime('%Y%m%dT%H%M%SZ', time.gmtime(at))}{SUFFIX}"
+        name = self.name(at)
         self.dir.mkdir(parents=True, exist_ok=True)
         tmp = self.dir / (name + ".tmp")
         database._write_durable(tmp, self._seal(key, medium.kit.recovery(), at, json.dumps(payload).encode()))
         os.replace(tmp, self.dir / name)
         database._fsync_dir(self.dir)
-        for old in self.files()[KEEP:]:
+        boundary = None if frozen_before is None else self.name(frozen_before)
+        for old in [p for p in self.files() if boundary is None or p.name >= boundary][KEEP:]:
             old.unlink(missing_ok=True)
         return self.dir / name
 

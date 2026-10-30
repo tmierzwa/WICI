@@ -73,7 +73,7 @@ node software/simulator/swiat.mjs --stations 2 --card karta-odbiorcy.json   # st
 node software/simulator/swiat.mjs --station stacja.json --stations 1         # stacja 1 skonfigurowana z pliku
 ```
 
-Z opcją `--stanowisko karta.json` świat nie ma modelu `post.cpp`. Stacje dostają kartę odbiorcy aplikacji stanowiska (plik z `python -m wici.stanowisko przygotuj --karta`), a port danych węzła jest na `tcp:127.0.0.1:7390` (`--wezel`). Aplikacja łączy się z nim jak z portem szeregowym: `python -m wici.stanowisko start --nosnik … --port tcp:127.0.0.1:7390` (z katalogu `software/laptop`; pseudoterminal, więc tylko macOS i Linux).
+Z opcją `--stanowisko karta.json` świat nie ma modelu `post.cpp`. Stacje dostają kartę odbiorcy aplikacji stanowiska (plik z `python -m wici.stanowisko przygotuj --karta`), a port danych węzła jest na `tcp:127.0.0.1:7390` (`--wezel`), a jego port diagnostyki na następnym (`7391`), z którego aplikacja czyta stan przełącznika CISZA węzła (`INFO`). Przełącznik CISZA węzła przestawia polecenie `silence wezel on|off`. Aplikacja łączy się z nim jak z portem szeregowym: `python -m wici.stanowisko start --nosnik … --port tcp:127.0.0.1:7390 --diagnostyka tcp:127.0.0.1:7391` (z katalogu `software/laptop`; pseudoterminal, więc tylko macOS i Linux).
 
 ```sh
 node software/simulator/swiat.mjs --stanowisko karta.json --station stacja.json   # stacja.json z tą kartą w `receiver`

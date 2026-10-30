@@ -91,6 +91,7 @@ function render() {
   $("who").appendChild(el("button", {text: "Wyloguj", onclick: function () { action("/api/operator/logout"); }}));
   badge(state.saved ? "zapis na nośniku: OK" : "ZAPIS NA NOŚNIKU NIE DZIAŁA", state.saved);
   badge(state.node.online ? "stacja połączona" : "BRAK STACJI", state.node.online);
+  if (state.node.info && state.node.info.silence) badge("CISZA NA WĘŹLE", false);
   if (state.silence) badge("CISZA RADIOWA (" + state.silence.organ + ", " + state.silence.kiedy + ")", false);
   if (alarms().length) {
     $("badges").appendChild(el("button", {class: "alarm", text: "Wycisz alarm (" + alarms().length + ")", onclick: function () {
@@ -263,6 +264,8 @@ var VIEWS = {
   node: function (view) {
     var n = state.node;
     [["Połączenie ze stacją", n.online ? "tak" : "NIE"], ["Od ostatniego pakietu z radia", ago(n.since_rx)],
+     ["Przełącznik CISZA węzła", !n.diagnostics ? "nieznany (brak portu diagnostyki)" : !n.info ? "czekam na odczyt" : n.info.silence ? "WŁĄCZONY" : "wyłączony"],
+     ["Radio węzła", n.info ? (n.info.radio_ok ? "sprawne" : "AWARIA") + (n.info.tx_wait_s ? ", dług ciszy " + ago(n.info.tx_wait_s) : "") : "—"],
      ["Wiadomości w drodze", n.in_flight], ["W oczekiwaniu", n.waiting], ["Najstarsza intencja", ago(n.oldest_s)]]
       .forEach(function (p) { view.appendChild(el("p", {text: p[0] + ": " + p[1]})); });
     view.appendChild(el("button", {text: "Ogłoś adres odbiorcy", onclick: function () { action("/api/operator/announce"); }}));
@@ -272,7 +275,8 @@ var VIEWS = {
     [["Otwarte zgłoszenia", h.open], ["Stan 4 bez potwierdzenia skierowania pomocy", h.forwarded_unconfirmed],
      ["Niewysłane intencje", h.unsent], ["Kwarantanna", h.quarantine], ["Alarmy przejęcia stacji", h.removed_alarm],
      ["Najnowsza kopia na dysku komputera", ago(state.copy_age_s) + " temu"],
-     ["Cisza radiowa", state.silence ? state.silence.organ + ", " + state.silence.kiedy : "nie"]]
+     ["Cisza radiowa", state.silence ? state.silence.organ + ", " + state.silence.kiedy : "nie"],
+     ["Przełącznik CISZA węzła", state.node.info ? (state.node.info.silence ? "włączony" : "wyłączony") : "nieznany"]]
       .forEach(function (p) { view.appendChild(el("p", {text: p[0] + ": " + p[1]})); });
     var path = el("input", {placeholder: "katalog drugiego nośnika, np. /media/drugi albo E:\\"});
     view.appendChild(path);
@@ -283,11 +287,16 @@ var VIEWS = {
   },
   accounts: function (view) {
     var error = el("p", {class: "error"});
-    view.appendChild(el("p", {text: "Nowe hasło po otwarciu koperty. Hasło pokazuje się raz: przepisz je do nowej koperty."}));
+    var second = secondPerson();
+    view.appendChild(el("p", {text: "Nowe hasło po otwarciu koperty. Hasło pokazuje się raz: przepisz je do nowej koperty. " +
+      "Hasło innego konta i hasło stanowiska tylko za zgodą drugiego dyżurnego."}));
+    view.appendChild(second.node);
     state.accounts.concat(["stanowisko"]).forEach(function (a) {
       view.appendChild(el("button", {text: "Nowe hasło: " + a, onclick: function () {
-        if (confirm("Nadać nowe hasło " + a + "? Stare przestanie działać.")) action("/api/operator/password", {account: a}, error).then(function (v) {
-          shown = {label: "Nowe hasło: " + v.account, text: v.password}; render(); });
+        var body = Object.assign({account: a}, a === state.user ? {} : second.values());
+        if (confirm("Nadać nowe hasło " + a + "? Stare przestanie działać.")) action("/api/operator/password", body, error).then(function (v) {
+          shown = {label: "Nowe hasło: " + v.account + (v.copies_failed ? " (kopie na dysku nieprzepakowane: " + v.copies_failed + ")" : ""),
+                   text: v.password}; render(); });
       }}));
     });
     view.appendChild(error);

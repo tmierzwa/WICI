@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS decyzje (
 SAVE_ERRORS = (OSError, sqlite3.Error, syscrypto.CryptoError, nosnik.StorageError)
 
 
+
 class Przyjecie:
     """Reception and sending in their own thread, on the database of an unlocked medium (nosnik.Nosnik and its
     data key). send and outcome are those of the stack (stos.Stos).
@@ -99,6 +100,7 @@ class Przyjecie:
         self.ready = threading.Event()
         self.error = self.save_error = None
         self.discard = False   # ZNISZCZ DANE: bez ostatniej migawki przy zatrzymaniu
+        self.stopped = False   # po stop() wywołania call() kończą się błędem zamiast czekać bez końca
         self.thread = threading.Thread(target=self._run, name="przyjecie", daemon=True)
         self.thread.start()
         self.ready.wait()
@@ -112,6 +114,9 @@ class Przyjecie:
             body = self.medium.load(self.key)
             if body is not None:
                 self.store.db.deserialize(body)
+            # Usunięta treść (ZAMKNIJ ZDARZENIE, kwarantanna) nadpisana zerami, nie zostaje w wolnych stronach
+            # migawki i kopii. Ustawienie połączenia, więc po deserialize.
+            self.store.db.execute("PRAGMA secure_delete=ON")
             self.store.db.executescript(SCHEMA)
             columns = {row[1] for row in self.store.db.execute("PRAGMA table_info(dziennik)")}
             for column, kind in (("source", "BLOB"), ("mid", "TEXT"), ("revision", "INTEGER")):
@@ -171,8 +176,7 @@ class Przyjecie:
         a copy on the computer disk and the announce when they are due. Nothing in the recovery mode."""
         if not self._save() or self.recovery:
             return   # w trybie odzyskania także bez kopii: trzy dobre kopie zostają
-        if (self.copies is not None and self.clock() >= self.next_copy
-                and wysylka.setting(self.store.db, "kopie_usuniete", None) is None):   # po „Usuń kopie” już nie
+        if self.copies is not None and self.clock() >= self.next_copy:
             self._copy()   # przed wysyłką: po odzyskaniu nowa kopia z nowym P wychodzi pierwsza
         changes_before = self.store.db.total_changes
         self.wysylka.tick(self.store.db, self.clock())
@@ -205,7 +209,8 @@ class Przyjecie:
         """Copy on the computer disk; a failure is retried after a minute and logged once, without an alarm."""
         now = self.clock()
         try:
-            self.copies.write(self.medium, self.key, kopie.with_marker(self.store.db, now), now)
+            self.copies.write(self.medium, self.key, kopie.with_marker(self.store.db, now), now,
+                              kopie.frozen_before(self.store.db))
         except SAVE_ERRORS as e:
             self.next_copy = now + kopie.RETRY_S
             if not self.copy_failed:
@@ -269,8 +274,12 @@ class Przyjecie:
             except BaseException as e:   # noqa: BLE001 - wyjątek wraca do wywołującego
                 result["error"] = e
             done.set()
+        if self.stopped:
+            raise RuntimeError("wątek bazy zatrzymany")
         self.jobs.put(job)
-        done.wait()
+        while not done.wait(1):
+            if not self.thread.is_alive():
+                raise RuntimeError("wątek bazy zatrzymany")
         if "error" in result:
             raise result["error"]
         return result["value"]
@@ -319,5 +328,6 @@ class Przyjecie:
     def stop(self, save=True):
         """End the database thread; save=False (ZNISZCZ DANE) skips the last snapshot."""
         self.discard = self.discard or not save
+        self.stopped = True
         self.jobs.put(None)
         self.thread.join(10)
