@@ -5,16 +5,38 @@
 //   RXEN z MCU (stan wysoki tylko w RX), poprawki z rozdziału 15 karty; moc, preambuła i słowo
 //   synchronizacji z lora_profile.h; Rx Boosted (0x08AC = 0x96) dopisany do listy rejestrów
 //   zachowywanych w uśpieniu (rozdz. 9.6);
+// - stany: konfiguracja, uśpienie i idle() w STDBY_RC (karta wymaga go dla Calibrate, SetPacketType
+//   i SetSleep z zachowaniem konfiguracji); między nadawaniem, odbiorem i CAD STDBY_XOSC, także jako
+//   tryb powrotu po TxDone (SetRxTxFallbackMode 0x30, tabela 13-23): TCXO pracuje, więc SetTx i SetRx
+//   nie czekają 5 ms na jego start (rozdz. 13.3.6, uwaga o opóźnieniu TCXO);
 // - nadawanie z bufora od adresu 0 z jawnym nagłówkiem (ramka wzorcowa to `length` bajtów treści),
-//   koniec po przerwaniu TxDone, bez niego po czasie ramki + 100 ms powrót do STDBY_RC;
-// - odbiór ciągły (SetRx 0xFFFFFF): ramka po RxDone, długość i początek z GetRxBufferStatus, RSSI
-//   i SNR z GetPacketStatus; błąd CRC albo nagłówka daje Bad, układ zostaje w odbiorze;
-// - przerwania czytane przez SPI (GetIrqStatus) przy każdym odpytaniu, bez linii DIO1;
+//   koniec po przerwaniu TxDone, bez niego po czasie ramki + 100 ms powrót do STDBY_XOSC i błąd;
+//   kroki dla interfejsu LoRa: prepareTx (sprawdzenie odbioru bez kasowania flag, wyjście z odbioru,
+//   ramka i długość), cad, sendPrepared;
+// - CAD (SetCadParams, SetCad, rozdz. 13.1.8 i 13.4.7) tylko ze stanu spoczynku, CAD_ONLY: po CAD układ
+//   wraca według karty do STDBY_RC niezależnie od trybu powrotu (tabela 13-73), więc SetTx po CAD
+//   płaci start TCXO (5 ms); CadDone i CadDetected z jednego odczytu GetIrqStatus;
+// - odbiór ciągły (SetRx 0xFFFFFF): bufor 256 B jest pierścieniem, a w odbiorze ciągłym każdy pakiet
+//   pisze się od miejsca, w którym skończył się poprzedni (rozdz. 7.2 i 13.2.3), więc druga ramka
+//   255 B nadpisuje pierwszą. serviceRx() to jedna próbka odbioru (z pętli albo z zadania odbioru):
+//   kasuje tylko flagi, które widziała; ramka, przy której jest już HeaderValid następnej ramki (przy
+//   RxDone, gdy nagłówek bieżącej ramki był już widziany albo od poprzedniej próbki minęło ponad 25 ms,
+//   albo po odczycie bufora), jest podejrzana (rx_late) i odrzucona; HeaderValid i RxDone tej samej
+//   krótkiej ramki w jednej próbce to ramka dobra; znaczniki aktywności
+//   kanału (preambuła, nagłówek, ramka, RSSI ponad progiem) są atomowe dla okna CCA. Pierwsze
+//   przekroczenie czasu BUSY przerywa próbkę bez ramki;
+// - DIO1 tylko dla RxDone, CrcErr i HeaderErr (zadanie odbioru sprawdza poziom linii); TxDone
+//   i CadDone sterownik czyta sam przez SPI;
 // - nośna CW poleceniem SetTxContinuousWave; korekta częstotliwości słowem RF (krok 0,954 Hz).
-// Łącza P1 nie ma (p1Link() = false): interfejs LoRa stosu w formacie RNode to osobny etap.
+// Łącza P1 nie ma (p1Link() = false). Wywołujący trzyma blokadę operacji radia (platform::RadioLock),
+// gdy pracuje też zadanie odbioru; sterownik sam jej nie bierze.
+// Odwołania do karty bez numeru wersji: DS.SX1261-2.W.APP; rozdziały i tabele CAD, trybu powrotu
+// i bufora sprawdzone w rev. 1.2 (czerwiec 2019).
 #pragma once
 
 #include <Arduino.h>
+
+#include <atomic>
 
 #include "lora_profile.h"
 #include "radio_link.h"
@@ -29,6 +51,39 @@ struct VerifyResult {
     uint16_t expected = 0;
     uint16_t actual = 0;
     const char* firstName = "";
+};
+
+// Wynik jednej próbki odbioru (serviceRx).
+enum class RxService : uint8_t {
+    Nothing,      // brak końca ramki (ewentualnie znaczniki aktywności odświeżone)
+    Frame,        // ramka w `out`
+    Bad,          // ramka z błędem CRC albo nagłówka, albo zła długość
+    Late,         // ramka odczytana za późno (HeaderValid następnej ramki): odrzucona, w rxLate()
+    NotRx,        // sterownik nie jest w odbiorze
+    BusyTimeout,  // przekroczony czas BUSY: próbka przerwana, `out` bez ramki
+};
+
+// Znaczniki aktywności kanału (millis()) dla okna CCA. Pisze je próbka odbioru (zadanie albo pętla),
+// czyta pętla bez blokady radia. Bit w masce mówi, że znacznik jest ważny (od clearActivity()).
+struct Activity {
+    enum Kind : uint8_t { PREAMBLE = 0, HEADER, FRAME, RSSI, KINDS };
+    std::atomic<uint32_t> ms[KINDS];
+    std::atomic<uint8_t> seen{0};
+    Activity() {
+        for (auto& m : ms) m.store(0, std::memory_order_relaxed);
+    }
+    void mark(Kind kind, uint32_t now) {
+        ms[kind].store(now, std::memory_order_relaxed);
+        seen.fetch_or(static_cast<uint8_t>(1u << kind), std::memory_order_release);
+    }
+    // Ostatnia aktywność dawniej niż windowMs temu (albo żadnej od clearActivity()).
+    bool quietFor(uint32_t now, uint32_t windowMs) const {
+        const uint8_t mask = seen.load(std::memory_order_acquire);
+        for (uint8_t k = 0; k < KINDS; ++k)
+            if ((mask & (1u << k)) && now - ms[k].load(std::memory_order_relaxed) < windowMs) return false;
+        return true;
+    }
+    void clear() { seen.store(0, std::memory_order_release); }
 };
 
 class LinkDriver : public radiolink::Driver {
@@ -48,6 +103,13 @@ public:
     uint32_t rfWord() const;  // słowo SetRfFrequency z korektą FOFF
     bool rxenHigh() const { return rxen_; }
     uint16_t irqSeen() const { return irqSeen_; }
+
+    // Jedna próbka odbioru: przerwania, znaczniki aktywności, RSSI (gdy sampleRssi) i ramka po RxDone.
+    // Dla pętli (pollRx) i zadania odbioru; zawsze pod blokadą operacji radia, gdy zadanie pracuje.
+    RxService serviceRx(radiolink::Frame& out, bool sampleRssi);
+    const Activity& activity() const { return activity_; }
+    void clearActivity() { activity_.clear(); }  // po rekonfiguracji i IDLE (pętla, pod blokadą)
+    uint32_t rxLate() const { return rxLate_.load(std::memory_order_relaxed); }
 
     const char* stateName() override { return modeName(radio_.status().mode()); }
     void idle() override;
@@ -70,11 +132,19 @@ public:
     uint32_t seriesMaxMs() const override { return lora::SERIES_MAX_MS; }
     bool p1Link() const override { return false; }
     bool hasSnr() const override { return true; }
+    int8_t ccaThresholdDbm() const override;
+    radiolink::TxPrep prepareTx(const uint8_t* frame, size_t length) override;
+    radiolink::Cad cad() override;
+    bool sendPrepared(radiolink::TxTiming* timing) override;
 
 private:
-    void toStandby();
+    bool toStandby();    // STDBY_XOSC: między nadawaniem, odbiorem i CAD; false przy przekroczeniu czasu BUSY
+    void toStandbyRc();  // STDBY_RC: konfiguracja, uśpienie, idle()
+    bool load(const uint8_t* frame, size_t length);
+    void noteActivity(uint16_t irq, uint32_t now);
     void rxen(bool on);
-    void setPacketParams(uint8_t payloadLength);
+    bool setPacketParams(uint8_t payloadLength);
+    bool readRssi(radiolink::Rssi& out);  // false przy przekroczeniu czasu BUSY; out.valid tylko w RX
     void writeFrequency();
     void collectIrq(uint16_t irq) { irqSeen_ |= irq; }
 
@@ -82,12 +152,17 @@ private:
     uint8_t pinRxen_;
     bool rxen_ = false;
     bool rxActive_ = false;
+    size_t txLength_ = 0;  // ramka załadowana do nadania (limit czasu TxDone)
     bool rxVariable_ = false;
     uint8_t rxFixedLength_ = 0;
     bool inFrame_ = false;      // preambuła albo nagłówek wykryte, ramka jeszcze nieodebrana
+    bool headerSeen_ = false;   // próbka widziała i skasowała HeaderValid bieżącej ramki
+    uint32_t lastSampleMs_ = 0; // ostatnia udana próbka odbioru (millis), do wykrycia spóźnienia
     uint32_t inFrameSinceMs_ = 0;
     uint16_t irqSeen_ = 0;
     int32_t offsetSteps_ = 0;
+    Activity activity_;
+    std::atomic<uint32_t> rxLate_{0};
 };
 
 }  // namespace sx1262
