@@ -104,6 +104,11 @@ void printVtest() {}
 // Blokada operacji radia pusta: na nRF52840 (stanowisko A, płytka N1) nie ma zadania odbioru.
 bool radioLockTake(uint32_t) { return true; }
 void radioLockGive() {}
+uint32_t radioLockTimeouts() { return 0; }
+bool radioLockOk() { return true; }
+// Bez zadania odbioru: pętla obsługuje układ sama.
+bool startRxTask(void (*)()) { return false; }
+int32_t rxTaskStackFree() { return -1; }
 
 bool handle(const char*, char*[], size_t) { return false; }
 

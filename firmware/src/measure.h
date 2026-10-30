@@ -180,6 +180,10 @@ public:
     // odbiorze) nie wstrzymuje kontroli radia, inaczej pod stałym ruchem nie byłoby jej wcale.
     bool transmitting() const { return cwActive_ || pktActive_ || txState_ == TxState::CCA || txState_ == TxState::SEND; }
     bool receiving() const { return rxMode_ != RxMode::NONE; }
+    // Odbiór łącza stosu uzbrojony (rxArmed bez stanu stosu, plan interfejsu LoRa, L6): łącze w odbiorze na
+    // skonfigurowanym układzie, poza trybem przygotowania i EMC. IDLE, RESET, REGW (stop), TXCW, TXPKT, RX
+    // wzorcowy i EMC zmieniają tryb odbioru, więc odbiór przestaje być uzbrojony.
+    bool stackRxArmed() const { return rxMode_ == RxMode::LINK && p1Ready && !prep && !emcActive_; }
     const Counters& counters() const { return counters_; }
 
 private:

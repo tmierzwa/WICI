@@ -27,6 +27,10 @@ constexpr uint8_t CMD_WRITE = 0x01;
 constexpr uint8_t CMD_VCOM = 0x02;
 constexpr uint8_t CMD_CLEAR = 0x04;
 constexpr uint32_t EXTCOMIN_HALF_PERIOD_MS = 500;  // przebieg 1 Hz
+// Najwięcej wierszy pikseli w jednej transakcji refresh(): wiersz to 52 B (adres, 50 B, odstęp), więc
+// 9 wierszy trzyma magistralę ≤4 ms przy 1 MHz. Na płytce v1 radio jest na tej samej magistrali, a zadanie
+// odbioru stacji L0 czyta układ co 5 ms (plan interfejsu LoRa, „Ekran”); pełny ekran idzie w 27 obiegach pętli.
+constexpr uint16_t LINES_PER_REFRESH = 9;
 constexpr uint8_t PPI_CHANNEL = 0;      // nRF52840: SoftDevice S140 zajmuje kanały 17-31
 constexpr uint8_t GPIOTE_CHANNEL = 7;   // nRF52840: attachInterrupt rdzenia pomija kanały włączone
 
@@ -43,8 +47,10 @@ public:
     void drawLine(uint8_t row, const char* utf8, bool inverse);
     void drawGlyph(uint16_t x, uint16_t y, const font::Glyph& glyph, bool inverse);
     void setPixel(uint16_t x, uint16_t y, bool black);
-    // Wysyła zmienione wiersze; zwraca ich liczbę.
+    // Wysyła najwyżej LINES_PER_REFRESH zmienionych wierszy (od góry) w jednej transakcji; zwraca ich liczbę.
+    // Pętla woła w każdym obiegu, aż pending() = false.
     uint16_t refresh();
+    bool pending() const;  // są zmienione wiersze do wysłania
     // Odwracanie VCOM z programu, tylko przy EMD w stanie niskim (przewody): bit VCOM co 500 ms.
     void softwareVcom(bool on);
     bool softwareVcom() const { return softwareVcom_; }
@@ -57,7 +63,7 @@ public:
 
 private:
     bool beginExtcomin();
-    void transaction(uint8_t command, bool allLines);
+    void transaction(uint8_t command, uint16_t maxLines);  // maxLines = 0: polecenie bez wierszy
     void send(uint8_t byte);
 
     SPIClass& spi_;
