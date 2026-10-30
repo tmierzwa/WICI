@@ -160,13 +160,14 @@ def sanitizer_report(stderr: str):
 class Station:
     """One station: FRAM, clock and identity files in a folder; each run() is one start."""
 
-    def __init__(self, binary: Path, folder: Path):
+    def __init__(self, binary: Path, folder: Path, link: str = "p1"):
         self.binary = binary
+        self.link = link
         self.fram = folder / "fram.bin"
 
     def run(self, *args, timeout=240):
         try:
-            result = subprocess.run([str(self.binary), str(self.fram), *map(str, args)], capture_output=True, text=True,
+            result = subprocess.run([str(self.binary), str(self.fram), "--link", self.link, *map(str, args)], capture_output=True, text=True,
                                     timeout=timeout, env=ENV)
         except subprocess.TimeoutExpired as e:
             raise AssertionError(f"station hangs (no result in {timeout} s): {args}") from e
@@ -178,6 +179,7 @@ class Station:
 
 class HostileStackTests(unittest.TestCase):
     core = False
+    link = "p1"   # łącze pod interfejsem stosu (--link): p1 albo lora
 
     @classmethod
     def setUpClass(cls):
@@ -197,7 +199,7 @@ class HostileStackTests(unittest.TestCase):
         cls.tmp.cleanup()
 
     def station(self):
-        return Station(self.binary, Path(tempfile.mkdtemp(dir=self.tmp.name)))
+        return Station(self.binary, Path(tempfile.mkdtemp(dir=self.tmp.name)), self.link)
 
     def assertClean(self, run, *allowed):
         code, outcome, report, stderr = run
@@ -316,6 +318,32 @@ class HostileStackTests(unittest.TestCase):
         self.assertLessEqual(o["delivered_s"], 60, o)
         if self.core:
             self.assertLessEqual(o["signatures"], o["sent"] + 4 + o["accepted"], o)
+
+    def test_link_limits_before_signing(self):
+        # Ogłoszenie przekazane przez stację rośnie o 16 B (nagłówek typu 2): o największym pakiecie łącza wychodzi,
+        # o bajt dłuższe odpada przed podpisem IFAC i jest liczone, tak samo odpowiedź na zapytanie o trasę.
+        # Największy pakiet: P1 500 B, LoRa 492 B (493-500 B przy LoRa odrzuca stacja).
+        max_raw = 492 if self.link == "lora" else 500
+        o = self.assertClean(self.station().run("--defect", "link-limits", "--events", 0))["flood"]
+        self.assertEqual(o["link"], self.link, o)
+        self.assertEqual(o["max_raw"], max_raw, o)
+        self.assertEqual(o["fits_refused"], 0, o)
+        self.assertGreaterEqual(o["fits_longest"], max_raw - 1, o)   # port P1 przekazuje 499 B
+        if self.link == "lora":   # na P1 ogłoszenie czeka w limicie 2% dłużej niż próba
+            self.assertGreaterEqual(o["long_refused"], 1, o)
+            self.assertGreaterEqual(o["response_refused"], 1, o)
+            self.assertLessEqual(o["response_refused"], 3, o)   # odpowiedź i najwyżej dwa ponowienia
+        self.assertLessEqual(o["longest_sent"], max_raw, o)
+
+    def test_usb_packet_over_link_limit_is_counted(self):
+        # Węzeł stanowiska: pakiet z USB dłuższy niż największy pakiet łącza LoRa (493-500 B) odpada przed stosem
+        # i jest liczony w too_large. P1 przyjmuje 500 B, a 501 B to już ramka KISS ponad bufor (osobny licznik).
+        o = self.assertClean(self.station().run("--defect", "link-limits", "--node", "--events", 0))["flood"]
+        if self.link == "lora":
+            self.assertEqual(o["usb_refused"], 1, o)
+        else:
+            self.assertEqual(o["usb_refused"], 0, o)
+        self.assertEqual(o["usb_buffered"], 0, o)
 
     def test_clock_set_back(self):
         # Zegar cofnięty o rok (np. utracony dziennik czasu) i potem dalej do przodu.
@@ -572,6 +600,33 @@ def identity_record(image, n):
     valid = (int.from_bytes(b[0:4], "little") == KEY_MAGIC and int.from_bytes(b[72:74], "little") == binascii.crc_hqx(bytes(b[:72]), 0xFFFF)
              and seq not in (0, 0xFFFFFFFF))
     return seq if valid else None
+
+
+# Łącze LoRa (L3): to samo co wyżej na tych samych plikach stosu, z czasem i największym pakietem z LinkTiming
+# LoRa (492 B bez IFAC). Tylko przebiegi zależne od łącza; uszkodzenia FRAM i długie dni nie zależą od niego.
+_LINK_INDEPENDENT = ("test_power_loss_in_sampled_fram_writes", "test_fram_bit_flips", "test_clock_set_back",
+                     "test_sixty_days_of_hostile_traffic", "test_damaged_receiver_slot", "test_fram_targeted_damage",
+                     "test_regression_token_without_ciphertext", "test_regression_short_announce",
+                     "test_regression_link_request_small_mtu", "test_regression_held_announce")
+
+
+class LoraHostileStackTests(HostileStackTests):
+    """Hostile runs on the port with the LoRa link."""
+
+    link = "lora"
+
+
+class CoreLoraHostileStackTests(CoreHostileStackTests):
+    """Hostile runs on the station core with the LoRa link."""
+
+    link = "lora"
+
+
+for _cls in (LoraHostileStackTests, CoreLoraHostileStackTests):
+    for _name in _LINK_INDEPENDENT:
+        setattr(_cls, _name, None)   # None nie jest wywoływalne: loader pomija test
+del _cls, _name   # klasa w zmiennej modułu: loader zebrałby jej testy drugi raz
+
 
 if __name__ == "__main__":
     unittest.main()

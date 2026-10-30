@@ -3,6 +3,10 @@
 
 #include <string.h>
 
+#if defined(WICI_RADIO_LOCK_CHECK)
+#include "platform.h"
+#endif
+
 namespace sx1262 {
 
 const char* modeName(uint8_t mode) {
@@ -50,6 +54,10 @@ bool Radio::waitBusy() {
 }
 
 void Radio::select() {
+#if defined(WICI_RADIO_LOCK_CHECK)
+    // Każda transakcja z układem, gdy pracuje zadanie odbioru, idzie pod blokadą operacji radia (plan L6).
+    if (!platform::radioLockOk()) lockMisses_.fetch_add(1, std::memory_order_relaxed);
+#endif
     spi_.beginTransaction(settings_);
     digitalWrite(pinCs_, LOW);
 }
