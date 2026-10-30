@@ -31,7 +31,7 @@ sys.path.insert(0, str(ROOT / "software" / "laptop"))
 sys.path.insert(0, str(ROOT / "firmware" / "tools"))
 
 from wici import database  # noqa: E402
-from wici.stanowisko import __main__ as aplikacja, kopie, nosnik, przyjecie, stos, wysylka, wzorzec  # noqa: E402
+from wici.stanowisko import __main__ as aplikacja, kopie, nosnik, panel, przyjecie, stos, wysylka, wzorzec  # noqa: E402
 
 PROGRAM = os.environ.get("WICI_HOST_PROGRAM")
 HAS_STACK = all(importlib.util.find_spec(m) for m in ("RNS", "LXMF", "serial"))
@@ -765,6 +765,185 @@ class RecoveryTest(WithCopies):
         medium = nosnik.Nosnik(Path(self.tmp.name) / "nowy")
         self.assertEqual(medium.unlock(self.envelopes["stanowisko"]), self.key)
         self.assertEqual(medium.identity(self.key), self.medium.identity(self.key))
+
+
+class FakeStack:
+    def __init__(self):
+        self.announced = 0
+
+    def announce(self):
+        self.announced += 1
+
+    def status(self, now):
+        return {"online": True, "since_rx": 5.0, "dropped": {"bad_signature": 0, "pending_full": 0}}
+
+
+def station_card(key):
+    """Station card as `card` over USB returns it (protokol-usb.md)."""
+    return {"name": panel.station_name(key), "lxmf": nosnik.lxmf_address(key).hex(), "key": key.hex(),
+            "address": ["ul. Długa 5, wejście od podwórza"], "fingerprint": panel.fingerprint(key)}
+
+
+class PanelTest(StationTestCase):
+    """S7: duty officer operations: login and 5 min lock, decisions with their rules, TEST, quarantine,
+    trusted list with two officers, node, handover, passwords; and the HTTP side."""
+
+    def setUp(self):
+        super().setUp()
+        self.mono = 1000.0
+        self.stack = FakeStack()
+        self.d = panel.Dyzur(self.reception, self.medium, self.key, self.stack, clock=lambda: self.now,
+                             monotonic=lambda: self.mono)
+        self.d.login("dyzurny-1", self.envelopes["dyzurny-1"])
+
+    def report(self, **fields):
+        content = request(**fields)
+        self.deliver(self.STATION, content)
+        mid, revision = wzorzec.decode_message(content)[2:4]
+        return {"source": self.STATION.hex(), "id": mid, "revision": revision}
+
+    def log(self):
+        return [(e["account"], e["op"]) for e in reversed(self.d.view()["log"])]
+
+    def test_login_and_lock_after_five_minutes(self):
+        self.d.logout()
+        with self.assertRaises(database.LoginError):
+            self.d.login("dyzurny-1", self.envelopes["dyzurny-2"])
+        with self.assertRaises(panel.NotLoggedIn):
+            self.d.status({**self.report(), "state": 2})
+        self.d.login("dyzurny-2", self.envelopes["dyzurny-2"])
+        self.mono += panel.LOCK_S - 1
+        self.d.touch()
+        self.mono += panel.LOCK_S - 1
+        self.d.current()                                   # aktywność przesuwa blokadę
+        self.mono += panel.LOCK_S + 1
+        with self.assertRaises(panel.NotLoggedIn):
+            self.d.current()
+        self.assertIn(("dyzurny-2", "blokada_5_min"), self.log())
+
+    def test_reports_sorted_by_urgency_then_time_tests_apart(self):
+        first = self.report(kind=0, text="")
+        self.now += 10
+        urgent = self.report(kind=0)
+        test = self.report(kind=5, people=1, text="test")
+        self.reception.call(lambda s: s.db.execute("UPDATE received SET payload=? WHERE id=?", (
+            wzorzec.encode_message([1, 0, urgent["id"], 1, 0, 2, "ul. Krótka 1", "duszności", 2]), urgent["id"])) and s.db.commit())
+        view = self.d.view()
+        self.assertEqual([r["id"] for r in view["reports"]], [urgent["id"], first["id"]])
+        self.assertEqual([t["id"] for t in view["tests"]], [test["id"]])
+        self.assertEqual(view["reports"][0]["number"], panel.short_number(urgent["id"]))
+
+    def test_read_and_decisions_follow_their_rules(self):
+        r = self.report()
+        self.d.status({**r, "state": 2})
+        self.tick()
+        self.assertEqual(wzorzec.decode_message(self.sent[-1][1])[5], 2)
+        with self.assertRaises(ValueError):
+            self.d.status({**r, "state": 3, "podmiot": "PSP Gdańsk"})        # bez funkcji, kanału i czasu
+        with self.assertRaises(ValueError):
+            self.d.status({**r, "state": 5})                                 # bez REPLY
+        self.d.status({**r, "state": 4, "adresat": "ZRM", "czas": "10:15"})
+        self.d.status({**r, "state": 3, "podmiot": "PSP Gdańsk", "funkcja": "dyżurny", "kanal": "telefon", "czas": "10:20"})
+        self.d.status({**r, "state": 5, "reply": "Proszę czekać przy wejściu od podwórza"})
+        self.tick()
+        kinds = [wzorzec.decode_message(c)[1] for _, c in self.sent]
+        self.assertEqual(kinds.count(wysylka.REPLY), 1)
+        item = self.d.view()["reports"][0]
+        self.assertEqual((item["state"], item["reply"]), (5, True))
+        self.assertEqual([d["state"] for d in item["decisions"]], [4, 3])
+        self.assertEqual(item["decisions"][1]["detail"]["kanal"], "telefon")
+        self.assertIn(("dyzurny-1", "stan_3"), self.log())
+
+    def test_tests_confirmed_together(self):
+        items = [self.report(kind=5, people=1, text="test") for _ in range(3)]
+        self.d.read_tests({"items": items[:2]})
+        self.assertEqual([t["state"] for t in self.d.view()["tests"]].count(2), 2)
+
+    def test_quarantine_approve_one_message_and_reject(self):
+        approved, rejected = request(), request()
+        for content in (approved, rejected):
+            self.deliver(self.OTHER, content)
+        a, b = (wzorzec.decode_message(c)[2:4] for c in (approved, rejected))
+        self.d.quarantine({"source": self.OTHER.hex(), "id": a[0], "revision": a[1], "decision": "approve"})
+        self.tick()
+        self.assertEqual(self.sent[-1], (self.OTHER, received_for(approved)))
+        self.d.quarantine({"source": self.OTHER.hex(), "id": b[0], "revision": b[1], "decision": "reject"})
+        view = self.d.view()
+        self.assertEqual((len(view["quarantine"]), len(view["reports"])), (0, 1))
+        self.assertNotIn(self.OTHER.hex(), [t["source"] for t in view["trusted"]])   # nadawca nie jest zaufany
+
+    def test_trust_needs_the_fingerprint_and_a_second_officer(self):
+        key = os.urandom(64)
+        card = station_card(key)
+        second = {"account2": "dyzurny-2", "password2": self.envelopes["dyzurny-2"]}
+        with self.assertRaises(ValueError):
+            self.d.trust({"card": card, "fingerprint": "0000 0000 0000 0000", **second})
+        with self.assertRaises(database.LoginError):
+            self.d.trust({"card": card, "fingerprint": card["fingerprint"], "account2": "dyzurny-1",
+                          "password2": self.envelopes["dyzurny-1"]})
+        with self.assertRaises(ValueError):
+            self.d.trust({"card": {**card, "lxmf": "00" * 16}, "fingerprint": card["fingerprint"], **second})
+        self.assertEqual(self.d.trust({"card": card, "fingerprint": card["fingerprint"].upper(), **second})["name"], card["name"])
+        trusted = {t["source"]: t for t in self.d.view()["trusted"]}
+        self.assertEqual(trusted[card["lxmf"]]["station"], card["name"])
+        self.d.untrust({"source": card["lxmf"]})
+        self.deliver(bytes.fromhex(card["lxmf"]), request())
+        view = self.d.view()
+        self.assertEqual(view["removed"], [{"source": card["lxmf"], "station": card["name"], "messages": 1}])
+
+    def test_node_handover_backup_and_announce(self):
+        self.report()
+        self.d.announce({})
+        self.assertEqual(self.stack.announced, 1)
+        view = self.d.view()
+        self.assertEqual((view["node"]["online"], view["handover"]["open"]), (True, 1))
+        second = Path(self.tmp.name) / "drugi"
+        second.mkdir()
+        self.d.handover({"path": str(second)})
+        self.assertEqual(len(kopie.Kopie(second / "wici-kopie").files()), 1)
+        self.assertIsNone(self.d.user)
+        self.assertEqual(self.log()[-2:], [("dyzurny-1", "przekazanie_zmiany"), ("dyzurny-1", "wylogowanie")])
+
+    def test_new_passwords(self):
+        new = self.d.new_password({"account": "dyzurny-2"})["password"]
+        self.medium.login("dyzurny-2", new, self.key)
+        station = self.d.new_password({"account": "stanowisko"})["password"]
+        self.assertEqual(nosnik.Nosnik(self.medium.root).unlock(station), self.key)
+
+    def test_http_panel_needs_the_ticket_cookie_and_loopback(self):
+        import http.client
+        web = panel.Panel(self.d)
+        server = panel.serve(web, 0)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        port = server.server_address[1]
+        try:
+            def request_(method, path, body=None, headers=None):
+                c = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                c.request(method, path, body, {"Host": f"127.0.0.1:{port}", **(headers or {})})
+                r = c.getresponse()
+                data = r.read()
+                c.close()
+                return r.status, r.getheader("Set-Cookie"), data
+            self.assertEqual(request_("GET", "/health")[0], 200)
+            self.assertEqual(request_("GET", "/api/operator/queue")[0], 403)
+            self.assertEqual(request_("GET", "/start?t=zly")[0], 403)
+            ticket = web.ticket()
+            status, cookie, _ = request_("GET", f"/start?t={ticket}")
+            self.assertEqual(status, 303)
+            self.assertEqual(request_("GET", f"/start?t={ticket}")[0], 403)   # odnośnik działa raz
+            auth = {"Cookie": cookie.split(";")[0]}
+            status, _, data = request_("GET", "/api/operator/queue", headers=auth)
+            self.assertEqual((status, json.loads(data)["user"]), (200, "dyzurny-1"))
+            json_post = {**auth, "Content-Type": "application/json"}
+            status, _, data = request_("POST", "/api/operator/login",
+                                       json.dumps({"account": "dyzurny-2", "password": "zle"}), json_post)
+            self.assertEqual(status, 401)
+            self.assertEqual(request_("POST", "/api/operator/announce", "{}", {**json_post, "Origin": "http://zly.example"})[0], 403)
+            self.assertEqual(request_("POST", "/api/operator/announce", "{}", json_post)[0], 200)
+            self.assertEqual(request_("GET", "/", headers=auth)[0], 200)
+        finally:
+            server.shutdown()
+            server.server_close()
 
 
 class StackHoldTest(unittest.TestCase):

@@ -70,47 +70,89 @@ class Panel:
                 "app": self.info}
 
 
+class SecureHandler(BaseHTTPRequestHandler):
+    """What every local panel shares (laptop and receiving station): loopback Host, the session token in a
+    cookie, JSON POST with a loopback Origin, security headers. A subclass sets `token`."""
+
+    server_version = "WICI/" + VERSION
+    sys_version = ""
+    protocol_version = "HTTP/1.1"
+    token = ""
+
+    def log_message(self, *args):
+        pass   # dziennik aplikacji nie zapisuje żądań
+
+    def _send(self, code, body=b"", ctype="application/json; charset=utf-8", headers=()):
+        self.send_response(code)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; object-src 'none'; "
+                                                    "base-uri 'none'; frame-ancestors 'none'; form-action 'none'")
+        for k, v in headers:
+            self.send_header(k, v)
+        if self.close_connection:
+            self.send_header("Connection", "close")
+        self.end_headers()
+        if self.command != "HEAD":
+            self.wfile.write(body)
+
+    def _json(self, code, value):
+        self._send(code, json.dumps(value, ensure_ascii=False).encode("utf-8"))
+
+    def _host_ok(self):
+        port = self.server.server_address[1]
+        return self.headers.get("Host", "") in (f"127.0.0.1:{port}", f"localhost:{port}")
+
+    def _authorized(self):
+        for part in self.headers.get("Cookie", "").split(";"):
+            name, _, value = part.strip().partition("=")
+            if name == "wici" and hmac.compare_digest(value.encode(), self.token.encode()):
+                return True
+        return False
+
+    def _start(self, redeem, query):
+        """/start?t=<ticket>: a one-time ticket gives the session cookie and goes to the panel."""
+        if not redeem(parse_qs(query).get("t", [""])[0]):
+            return self._send(403, "Nieważny odnośnik. Uruchom START ponownie.".encode(), "text/plain; charset=utf-8")
+        cookie = f"wici={self.token}; HttpOnly; SameSite=Strict; Path=/"
+        return self._send(303, headers=[("Location", "/"), ("Set-Cookie", cookie)])
+
+    def _post_body(self):
+        """The JSON object of an allowed POST, or None after the error answer was sent."""
+        # Odpowiedź bez odczytu treści: połączenie zamykane, żeby reszta treści nie stała się następnym żądaniem.
+        self.close_connection = True
+        if not self._host_ok() or not self._authorized():
+            return self._send(403, b"{}")
+        origin = self.headers.get("Origin")
+        port = self.server.server_address[1]
+        if origin not in (None, f"http://127.0.0.1:{port}", f"http://localhost:{port}"):
+            return self._send(403, b"{}")
+        if not self.headers.get("Content-Type", "").startswith("application/json"):
+            return self._send(415, b"{}")
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            length = BODY_MAX + 1
+        if not 0 <= length <= BODY_MAX:
+            return self._send(413, b"{}")
+        try:
+            body = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
+        except (UnicodeDecodeError, ValueError):
+            return self._send(400, b"{}")
+        self.close_connection = False
+        if not isinstance(body, dict):
+            return self._send(404, b"{}")
+        return body
+
+
 def make_handler(panel):
     static = {path: resources.files("wici").joinpath("ui", name).read_bytes() for path, (name, _) in STATIC.items()}
 
-    class Handler(BaseHTTPRequestHandler):
-        server_version = "WICI/" + VERSION
-        sys_version = ""
-        protocol_version = "HTTP/1.1"
-
-        def log_message(self, *args):
-            pass   # dziennik aplikacji nie zapisuje żądań
-
-        def _send(self, code, body=b"", ctype="application/json; charset=utf-8", headers=()):
-            self.send_response(code)
-            self.send_header("Content-Type", ctype)
-            self.send_header("Content-Length", str(len(body)))
-            self.send_header("Cache-Control", "no-store")
-            self.send_header("X-Content-Type-Options", "nosniff")
-            self.send_header("Referrer-Policy", "no-referrer")
-            self.send_header("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; object-src 'none'; "
-                                                        "base-uri 'none'; frame-ancestors 'none'; form-action 'none'")
-            for k, v in headers:
-                self.send_header(k, v)
-            if self.close_connection:
-                self.send_header("Connection", "close")
-            self.end_headers()
-            if self.command != "HEAD":
-                self.wfile.write(body)
-
-        def _json(self, code, value):
-            self._send(code, json.dumps(value, ensure_ascii=False).encode("utf-8"))
-
-        def _host_ok(self):
-            port = self.server.server_address[1]
-            return self.headers.get("Host", "") in (f"127.0.0.1:{port}", f"localhost:{port}")
-
-        def _authorized(self):
-            for part in self.headers.get("Cookie", "").split(";"):
-                name, _, value = part.strip().partition("=")
-                if name == "wici" and hmac.compare_digest(value.encode(), panel.token.encode()):
-                    return True
-            return False
+    class Handler(SecureHandler):
+        token = panel.token
 
         def do_GET(self):
             url = urlsplit(self.path)
@@ -119,10 +161,7 @@ def make_handler(panel):
             if url.path == "/health":
                 return self._json(200, {"app": "wici", "version": VERSION})
             if url.path == "/start":
-                if not panel.redeem(parse_qs(url.query).get("t", [""])[0]):
-                    return self._send(403, "Nieważny odnośnik. Uruchom START ponownie.".encode(), "text/plain; charset=utf-8")
-                cookie = f"wici={panel.token}; HttpOnly; SameSite=Strict; Path=/"
-                return self._send(303, headers=[("Location", "/"), ("Set-Cookie", cookie)])
+                return self._start(panel.redeem, url.query)
             if not self._authorized():
                 return self._send(403, "Otwórz panel przez START.".encode(), "text/plain; charset=utf-8")
             if url.path in STATIC:
@@ -142,30 +181,12 @@ def make_handler(panel):
             self._send(405, b"{}", headers=[("Allow", "GET, POST")])
 
         def do_POST(self):
-            # Odpowiedź bez odczytu treści: połączenie zamykane, żeby reszta treści nie stała się następnym żądaniem.
-            self.close_connection = True
-            if not self._host_ok() or not self._authorized():
-                return self._send(403, b"{}")
-            origin = self.headers.get("Origin")
-            port = self.server.server_address[1]
-            if origin not in (None, f"http://127.0.0.1:{port}", f"http://localhost:{port}"):
-                return self._send(403, b"{}")
-            if not self.headers.get("Content-Type", "").startswith("application/json"):
-                return self._send(415, b"{}")
-            try:
-                length = int(self.headers.get("Content-Length", "0"))
-            except ValueError:
-                length = BODY_MAX + 1
-            if not 0 <= length <= BODY_MAX:
-                return self._send(413, b"{}")
-            try:
-                body = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
-            except (UnicodeDecodeError, ValueError):
-                return self._send(400, b"{}")
-            self.close_connection = False
+            body = self._post_body()
+            if body is None:
+                return
             path = urlsplit(self.path).path
             route = ROUTES.get(path)
-            if route is None or not isinstance(body, dict):
+            if route is None:
                 return self._send(404, b"{}")
             try:
                 if path in NEEDS_LOGIN and not panel.session.user:
@@ -300,9 +321,9 @@ class Server(ThreadingHTTPServer):
     allow_reuse_address = sys.platform != "win32"
 
 
-def serve(panel, port=8080):
+def serve(panel, port=8080, handler=None):
     """Bind 127.0.0.1:port, or any free port when it is taken by another program."""
-    handler = make_handler(panel)
+    handler = handler or make_handler(panel)
     try:
         server = Server(("127.0.0.1", port), handler)
     except OSError:

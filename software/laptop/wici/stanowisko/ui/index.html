@@ -1,0 +1,40 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: MIT -->
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WICI · stanowisko odbiorcze</title>
+<link rel="stylesheet" href="app.css">
+<script src="app.js" defer></script>
+</head>
+<body>
+<header>
+  <h1>WICI · stanowisko odbiorcze</h1>
+  <div id="badges"></div>
+  <div id="who"></div>
+</header>
+<main>
+  <section id="login" hidden>
+    <h2>Logowanie dyżurnego</h2>
+    <label>Konto <select id="login-account"></select></label>
+    <label>Hasło z koperty <input id="login-password" type="password" autocomplete="off"></label>
+    <button id="login-button">Zaloguj</button>
+    <p class="error" id="login-error"></p>
+  </section>
+  <section id="recovery" hidden>
+    <h2>Tryb odzyskania: nic nie jest nadawane</h2>
+    <p>Porównaj zegar komputera z niezależnym źródłem (telefon w sieci komórkowej, zegar sterowany radiowo). Różnica pełnych godzin to zwykle zła strefa czasowa albo czas letni: popraw zegar.</p>
+    <p>Zegar komputera: <strong id="recovery-clock"></strong></p>
+    <label><input type="checkbox" id="recovery-clock-ok"> Zegar zgadza się z dokładnością do 1 min</label>
+    <label>Liczba odzyskań od daty kopii (z rejestru) <input id="recovery-n" type="number" min="0" value="0"></label>
+    <button id="recovery-button">Zakończ odzyskanie</button>
+    <p class="error" id="recovery-error"></p>
+  </section>
+  <section id="work" hidden>
+    <nav id="tabs"></nav>
+    <div id="view"></div>
+  </section>
+</main>
+</body>
+</html>

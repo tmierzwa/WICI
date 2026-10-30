@@ -1,0 +1,31 @@
+/* SPDX-License-Identifier: MIT */
+:root { --bg: #fff; --fg: #1a1a1a; --muted: #666; --line: #ddd; --ok: #1d6b2f; --bad: #b00020; --warn: #8a5a00; --accent: #0b4f9c; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #121212; --fg: #eee; --muted: #aaa; --line: #333; --ok: #6fcf86; --bad: #ff6b7f; --warn: #f0b84a; --accent: #7fb3ff; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 16px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--fg); }
+header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 8px 16px; border-bottom: 1px solid var(--line); }
+header h1 { font-size: 18px; margin: 0; flex: 1; }
+main { padding: 8px 16px; max-width: 1100px; }
+button { font: inherit; padding: 6px 12px; margin: 2px 4px 2px 0; border: 1px solid var(--line); border-radius: 4px; background: transparent; color: var(--fg); cursor: pointer; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.on { border-color: var(--accent); font-weight: 600; }
+button.alarm, .alarm { background: var(--bad); color: #fff; border-color: var(--bad); padding: 6px 12px; }
+input, select { font: inherit; padding: 4px 6px; margin: 2px 4px 2px 0; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--fg); }
+label { display: block; margin: 6px 0; }
+.ok { color: var(--ok); margin-right: 12px; }
+.bad { color: var(--bad); font-weight: 600; margin-right: 12px; }
+.error { color: var(--bad); }
+nav { display: flex; flex-wrap: wrap; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+.report { border: 1px solid var(--line); border-left: 6px solid var(--line); border-radius: 4px; padding: 8px; margin: 8px 0; }
+.report.u1 { border-left-color: var(--warn); }
+.report.u2 { border-left-color: var(--bad); }
+.report.s3, .report.s5, .report.s6 { opacity: 0.6; }
+.report .head { font-weight: 600; }
+.report .addr { font-size: 18px; }
+.report .state, .decision, .log { color: var(--muted); }
+details { display: inline-block; margin-right: 8px; vertical-align: top; }
+details[open] { display: block; }
+.password { font-size: 20px; font-family: ui-monospace, monospace; }
+#recovery { border: 2px solid var(--bad); padding: 8px 16px; margin: 8px 0; }

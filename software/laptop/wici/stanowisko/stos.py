@@ -69,6 +69,7 @@ class Stos:
         self.router = self.destination = self.identity = None
         self.pending, self.lock = {}, threading.Lock()   # nadawca -> spakowane wiadomości LXMF do sprawdzenia
         self.dropped = {"bad_signature": 0, "pending_full": 0}
+        self.rx_seen, self.rx_at = None, None   # liczba bajtów z interfejsu i chwila, w której ostatnio wzrosła
 
     @property
     def address(self):
@@ -163,6 +164,21 @@ class Stos:
         if message.state in (LXMF.LXMessage.FAILED, LXMF.LXMessage.REJECTED, LXMF.LXMessage.CANCELLED):
             return False
         return None
+
+    def status(self, now):
+        """Node state for the panel: connection to the station, seconds since the last packet from it."""
+        interface = next(iter(self._interfaces()), None)
+        if interface is None:
+            return {"online": False, "since_rx": None, "dropped": dict(self.dropped)}
+        if interface.rxb != self.rx_seen:
+            self.rx_seen, self.rx_at = interface.rxb, now
+        since = None if self.rx_at is None or not self.rx_seen else now - self.rx_at
+        return {"online": bool(interface.online), "since_rx": since, "dropped": dict(self.dropped)}
+
+    @staticmethod
+    def _interfaces():
+        import RNS
+        return [i for i in RNS.Transport.interfaces if type(i).__name__ == "KISSInterface"]
 
     def stop(self):
         """Detach the interfaces, as Reticulum does at exit (without ending the process)."""
