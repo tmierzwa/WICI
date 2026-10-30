@@ -6,7 +6,7 @@ Nastawy profilu i plik konfiguracji interfejsu są w jednym miejscu: [specyfikac
 
 ## Odbiór zestawów
 
-1. Sprawdzić na zestawie i w dokumentach dostawy, że RAK4631 jest w wersji na pasmo 868 MHz (wersja H w oznaczeniu RAK). Zestaw w innej wersji pasma nie nadaje się do pomiarów w profilu WICI.
+1. Przed wgraniem sprawdzić na fakturze albo etykiecie zestawu, że RAK4631 jest w wersji na pasmo 868/915 MHz (w oznaczeniu RAK zwykle „H”). Po wgraniu `rnodeconf --info` pokazuje model `0x12` i zakres „779 - 928 MHz” (wersja 433 MHz to model `0x11`, [`rnodeconf.py`](https://github.com/markqvist/Reticulum/blob/master/RNS/Utilities/rnodeconf.py), sprawdzone 2026-10-30). Zestaw w innej wersji pasma nie nadaje się do pomiarów w profilu WICI.
 2. Zapisać numery seryjne obu zestawów i oznaczyć je na obudowie (1 i 2).
 3. Antena 868 MHz musi być przykręcona do złącza, zanim radio dostanie zasilanie i zacznie nadawać.
 

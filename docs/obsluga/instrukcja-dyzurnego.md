@@ -2,7 +2,7 @@
 
 Dla dyżurnych stanowiska odbiorczego: strażaków OSP i pracowników gminy. Stanowisko odbiorcze wyznacza wójt (burmistrz, prezydent miasta). Na ekranie stacji w punkcie stanowisko nazywa się „odbiorcą”. Skrót OSP oznacza tu tylko ochotniczą straż pożarną.
 
-**Dotyczy.** Stacja stanowiska: oprogramowanie stacji WICI w konfiguracji węzła stanowiska, obrazy `bench-n1-0.1` i `bench-b-0.1` (specyfikacja 0.5), sprzęt: stacja deweloperska na płytce nośnej N1. Aplikacja i panel dyżurnego: według [specyfikacji stanowiska](../spec/stanowisko-osp.md). **Aplikacji stanowiska jeszcze nie zbudowano.** Nazwy w panelu (PRZECZYTANE, stany 3–6, kwarantanna, ZAMKNIJ ZDARZENIE) pochodzą ze specyfikacji, nie z kodu. Kroki oznaczone ◆ (łączenie zgłoszeń w sprawy, ćwiczenie) prowadzi się na papierze, bo panel ich nie ma. Wersja robocza do ćwiczenia przy stole.
+**Dotyczy.** Stacja stanowiska: program stacji WICI w konfiguracji węzła stanowiska (specyfikacja 0.5). Sprawdzona na archiwalnych obrazach `bench-n1-0.1` i `bench-b-0.1` (stacja deweloperska N1); na obrazie prototypu do sprawdzenia w kroku 4. Aplikacja i panel dyżurnego: według [specyfikacji stanowiska](../spec/stanowisko-osp.md). **Aplikacji stanowiska jeszcze nie zbudowano.** Nazwy w panelu (PRZECZYTANE, stany 3–6, kwarantanna, ZAMKNIJ ZDARZENIE) pochodzą ze specyfikacji, nie z kodu. Kroki oznaczone ◆ (łączenie zgłoszeń w sprawy, ćwiczenie) prowadzi się na papierze, bo panel ich nie ma. Wersja robocza do ćwiczenia przy stole.
 
 Karta obsługi stacji w punkcie: [karta-stacji.html](karta-stacji.html). Napisy w cudzysłowach są tekstami z ekranu stacji (`firmware/src/ui_texts.h`).
 

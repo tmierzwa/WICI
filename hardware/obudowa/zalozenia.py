@@ -87,8 +87,8 @@ MEASUREMENTS = {
                        "model STEP Hammonda albo próbka", None),
     "hammond_lid_screws": ("Położenie śrub pokrywy Hammond 1599KBAT (od frontu czy od spodu)",
                            "model STEP Hammonda albo próbka", None),
-    "pilot_board": ("Płytka MCU+SX1262 stacji pilotażowej: model, obrys, złącze anteny",
-                    "decyzja przed pilotażem (elektronika.md, stacja pilotażowa)", None),
+    "pilot_board": ("Płytka v2 stacji pilotażowej: obrys, otwory, położenie złącza anteny i gniazda USB-C",
+                    "projekt v2 (elektronika.md, stacja pilotażowa)", None),
     "guard_footprint": ("Obrys podstawy i wysokość klapki GT-4R z przełącznikiem GTS [mm]",
                         "karta producenta i próbka", None),
 }
