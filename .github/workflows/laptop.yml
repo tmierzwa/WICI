@@ -121,6 +121,7 @@ jobs:
           # Wyjęcie pamięci: START kończy się po 2 s, aplikacja działa z kopii, więc katalog pamięci da się przenieść.
           # -Wait czekałoby na całe drzewo procesów, także na aplikację; WaitForExit czeka tylko na START.
           $p = Start-Process -FilePath "usb ż\START-WINDOWS.exe" -ArgumentList '--no-browser','--http','0' -PassThru
+          $null = $p.Handle   # bez zapamiętanego uchwytu ExitCode bywa pusty
           if (-not $p.WaitForExit(30000)) { throw 'START-WINDOWS.exe did not end after the application started' }
           if ($p.ExitCode -ne 0) { throw "START-WINDOWS.exe: $($p.ExitCode)" }
           for ($i = 0; $i -lt 30 -and -not (Test-Path "$env:LOCALAPPDATA\WICI\instance.json"); $i++) { Start-Sleep 1 }
