@@ -320,7 +320,7 @@ const uint8_t* appSource(const uint8_t source[HASH]) {
 bool transmit(const uint8_t* raw, size_t length, p1iface::Hint hint) {
     p1iface::Counters& c = queue.counters();
     if (!ifacOnline) { ++c.offline; return false; }
-    if (length < 2 || length > p1iface::HW_MTU) { ++c.tooLarge; return false; }
+    if (length < 2 || length > radio->timing().maxRaw) { ++c.tooLarge; return false; }
     if (silence == Silence::FULL || (silence == Silence::EXCEPTION && !exceptionOut)) { ++c.silenced; return false; }
     // Pełna kolejka: odmowa przed podpisem IFAC (ogłoszenia mogą jeszcze czekać na liście).
     if (p1iface::classify(raw, length) != p1iface::Kind::ANNOUNCE && queue.full()) { ++c.full; return false; }
@@ -579,7 +579,8 @@ bool begin(journal::Storage& storage, Radio& r, const uint8_t ifacKey[16], uint6
         uint8_t routes[USB_PINNED][HASH];
         for (size_t n = transport.routes(IFACE_USB, 1, routes, USB_PINNED); n > 0; --n) usbDests.remember(routes[n - 1]);
     }
-    transport.setBitrate(p1iface::declaredBitrate());   // Interface.bitrate interfejsu P1 (odkrycie trasy)
+    queue.setTiming(radio->timing());
+    transport.setBitrate(radio->timing().declaredBitrate);   // Interface.bitrate interfejsu radiowego (odkrycie trasy)
     started = true;
     rememberReceivers();
     log(usbPort ? "rns: Reticulum core (R4): P1 and USB interfaces, announces, proofs, table in FRAM"
@@ -696,6 +697,11 @@ bool usbStep() {
     const uint8_t* data;
     size_t length;
     if (!usbPort->peek(data, length)) return false;
+    if (length > radio->timing().maxRaw) {   // ponad największy pakiet łącza: odpada przed stosem i podpisem IFAC
+        ++queue.counters().tooLarge;
+        usbPort->pop();
+        return true;
+    }
     if (length && (data[0] & 0x80)) {
         ++usbRejects.ifacFlag;
         usbPort->pop();
@@ -754,7 +760,7 @@ void received(const uint8_t* wire, size_t length) {
     p1iface::Counters& c = queue.counters();
     if (!ifacOnline) { ++c.offline; return; }
     if (!p1iface::ifacPresent(wire, length, p1iface::IFAC_SIZE)) { ++c.ifacMissing; return; }
-    if (length > p1iface::MAX_WIRE) { ++c.tooLarge; return; }
+    if (length > radio->timing().maxWire) { ++c.tooLarge; return; }
     if (rxCount == RX_SLOTS) { ++rxDropped; return; }
     RxSlot& slot = rx[(rxHead + rxCount) % RX_SLOTS];
     memcpy(slot.bytes, wire, length);
@@ -845,8 +851,7 @@ uint32_t send(const uint8_t appDest[HASH], const uint8_t* message, size_t messag
     // trasa nieznana liczy się jako 1 skok.
     uint32_t hops = transport.hopsTo(dest, uptimeMs());
     if (hops == 0 || hops >= rnscore::PATHFINDER_M) hops = 1;
-    const uint64_t waitMs = static_cast<uint64_t>(2) * hops * (1 + p1iface::DEBT_FACTOR) *
-                                p1iface::airtimeMs(p1frame::MAX_DATAGRAM) + queueWaitMs();
+    const uint64_t waitMs = radio->timing().receiptWaitMs(hops) + queueWaitMs();
     uint64_t limit = (waitMs + 999) / 1000;
     if (limit < timeoutS) limit = timeoutS;
     if (limit < RECEIPT_MIN_S) limit = RECEIPT_MIN_S;
@@ -893,7 +898,7 @@ Status status() {
     s.started = started;
     s.identityNew = identityNew;
     s.identityLost = identityLost;
-    s.bitrate = p1iface::declaredBitrate();
+    s.bitrate = radio ? radio->timing().declaredBitrate : p1iface::p1Timing().declaredBitrate;
     if (!started) return s;
     s.online = ifacOnline;
     const rnscore::TransportCounters& t = transport.counters();
@@ -930,7 +935,7 @@ size_t interfaceJson(char* out, size_t size) {
     const uint32_t now = nowMs();   // okna czasu kanału przesuwane przed printf (kolejność wywołań)
     const unsigned long poolMs = queue.poolUsedMs(now), prMs = queue.pathRequestUsedMs(now);
     const int n = snprintf(out, size,
-                           "\"q_len\":%u,\"q_held\":%u,\"q_queued\":%lu,\"q_full\":%lu,\"too_large\":%lu,\"ann_held\":%lu,"
+                           "\"link\":\"%s\",\"q_len\":%u,\"q_held\":%u,\"q_queued\":%lu,\"q_full\":%lu,\"too_large\":%lu,\"ann_held\":%lu,"
                            "\"ann_drop\":%lu,\"ann_expired\":%lu,\"tx_sent\":%lu,\"tx_failed\":%lu,\"rx_ok\":%lu,"
                            "\"ifac_missing\":%lu,\"ifac_invalid\":%lu,\"offline\":%lu,\"silenced\":%lu,\"k2_slot\":%lu,\"k2_pool\":%lu,"
                            "\"k2_dest\":%lu,\"pr_limited\":%lu,\"pr_resp_limited\":%lu,\"pool_ms\":%lu,\"pr_ms\":%lu,\"rx_malformed\":%lu,\"rx_duplicate\":%lu,"
@@ -939,6 +944,7 @@ size_t interfaceJson(char* out, size_t size) {
                            "\"fwd\":%lu,\"fwd_no_path\":%lu,\"proof_fwd\":%lu,\"rev_full\":%lu,\"ann_rebroadcast\":%lu,\"pr_gated\":%lu,"
                            "\"lxmf_rejected\":%lu,\"lxmf_rej_sender\":%lu,\"lxmf_rej_shape\":%lu,\"lxmf_rej_stamp\":%lu,"
                            "\"lxmf_rej_signature\":%lu,\"rx_limited\":%lu",
+                           radio->timing().framing == p1iface::LinkTiming::Framing::RNODE ? "lora" : "p1",
                            (unsigned)queue.queued(), (unsigned)queue.held(), (unsigned long)c.queued, (unsigned long)c.full,
                            (unsigned long)c.tooLarge, (unsigned long)c.announcesHeld, (unsigned long)c.announcesDropped,
                            (unsigned long)c.announcesExpired, (unsigned long)c.sent, (unsigned long)c.sendFailed,
@@ -992,12 +998,12 @@ uint32_t debugFillHashes(uint32_t) { return 0; }
 void debugClock(uint64_t (*clock)()) { hostClock = clock; }
 
 size_t debugIfacWrap(const uint8_t* raw, size_t length, uint8_t* wire) {
-    if (!ifacOnline || length < 2 || length > p1iface::HW_MTU) return 0;
+    if (!ifacOnline || length < 2 || length > radio->timing().maxRaw) return 0;
     return rnscore::ifacApply(ifac, raw, length, wire, p1iface::MAX_WIRE);
 }
 
 size_t debugIfacUnwrap(const uint8_t* wire, size_t length, uint8_t* raw) {
-    if (!ifacOnline || length > p1iface::MAX_WIRE) return 0;
+    if (!ifacOnline || length > radio->timing().maxWire) return 0;
     return rnscore::ifacCheck(ifac, wire, length, raw, p1iface::MAX_WIRE);
 }
 #endif

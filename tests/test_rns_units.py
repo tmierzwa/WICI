@@ -31,6 +31,8 @@ HARNESS = r"""
 #include "framfs.h"
 #include "kiss.h"
 #include "p1iface.h"
+#include "lxmf.h"
+#include "token.h"
 #include "pkthash.h"
 #include "rns_announce.h"
 #include "rns_usb.h"
@@ -676,6 +678,44 @@ int kissScenario() {
     return 0;
 }
 
+// Czas łącza (LinkTiming): wartości P1 jak z funkcji P1, LoRa z dokładnych ramek; kolejka z czasem LoRa.
+int linkScenario() {
+    using namespace p1iface;
+    const LinkTiming& p = p1Timing();
+    const LinkTiming& l = loraTiming();
+    printf("p1 %u %u %u %u %u %u %u %u\n", (unsigned)p.maxRaw, (unsigned)p.maxWire, (unsigned)p.maxDatagram, p.seriesMaxMs,
+           p.declaredBitrate, p.channelMs(516), p.airtimeMs(600), (unsigned)p.receiptWaitMs(2));
+    printf("p1 same %d\n", p.declaredBitrate == declaredBitrate() && p.channelMs(333) == channelMs(333) &&
+                           p.reservedDebtMs(333) == reservedDebtMs(333) && p.airtimeMs(333) == airtimeMs(333));
+    printf("lora %u %u %u %u %u %u\n", (unsigned)l.maxRaw, (unsigned)l.maxWire, (unsigned)l.maxDatagram, l.seriesMaxMs,
+           l.declaredBitrate, (unsigned)l.receiptWaitMs(2));
+    const size_t lengths[] = {1, 221, 254, 255, 256, 508};
+    for (const size_t n : lengths)
+        printf("air %u %u %u %u\n", (unsigned)n, l.airtimeMs(n), l.reservedTxMs(n), l.channelMs(n));
+    uint8_t dest[16], announceDest[16];
+    memset(dest, 0xD1, sizeof(dest));
+    memset(announceDest, 0xA1, sizeof(announceDest));
+    Queue q;
+    q.setTiming(l);
+    printf("fits %s", admitName(put(q, 0x00, 2, dest, 492, 1000, 0x10)));
+    printf(" over %s", admitName(put(q, 0x00, 2, dest, 493, 1000, 0x11)));
+    printf(" wait %u expected %u\n", q.waitMs(0), l.airtimeMs(508) + l.reservedDebtMs(508));
+    // Ogłoszenie 205 B + IFAC = 221 B: czas kanału w puli i odstęp limitu 2% z czasu TX tej ramki.
+    Queue a;
+    a.setTiming(l);
+    // Przyjęcie przed odczytem puli: GCC liczy argumenty printf od prawej (CI na x86_64).
+    const char* announced = admitName(put(a, 0x01, 0, announceDest, 205, 1000, 0x20));
+    printf("announce %s pool %u expected %u gap %u expected %u\n", announced,
+           a.poolUsedMs(1000), l.channelMs(221), a.announceAllowedInMs(1000), l.reservedTxMs(221) * 100 / ANNOUNCE_CAP_PERCENT);
+    // Największa własna wiadomość SA1 jako LXMF (lxmf.h): dane LXMF_SA1_MAX_DATA, token = klucz efemeryczny
+    // 32 B + IV + dane z dopełnieniem do 16 B (co najmniej 1 B) + HMAC 32 B, w pakiecie HEADER_2 (35 B nagłówka).
+    const size_t padded = (rnscore::LXMF_SA1_MAX_DATA / 16 + 1) * 16;
+    const size_t token = rnscore::TOKEN_OVERHEAD + padded;
+    printf("sa1 data %u packet %u fits %d\n", (unsigned)rnscore::LXMF_SA1_MAX_DATA, (unsigned)(35 + token),
+           35 + token <= loraTiming().maxRaw);
+    return 0;
+}
+
 int main(int argc, char** argv) {
     const std::string mode = argc > 1 ? argv[1] : "";
     if (mode == "channel") return channelScenario();
@@ -688,6 +728,7 @@ int main(int argc, char** argv) {
     if (mode == "hash") return hashScenario();
     if (mode == "iface") return ifaceScenario();
     if (mode == "usb") return usbScenario();
+    if (mode == "link") return linkScenario();
     if (mode == "ifac" && argc == 6) return ifacVector(argv[2], argv[3], argv[4], argv[5]);
     return 2;
 }
@@ -708,7 +749,7 @@ class StackUnitTests(unittest.TestCase):
         root = Path(cls.tmp.name)
         (root / "harness.cpp").write_text(HARNESS, encoding="utf-8")
         cls.binary = root / "harness"
-        subprocess.run([compiler(), "-std=c++17", "-Wall", "-Wextra", "-Werror", f"-I{SRC}", str(root / "harness.cpp"),
+        subprocess.run([compiler(), "-std=c++17", "-Wall", "-Wextra", "-Werror", f"-I{SRC}", f"-I{ROOT / 'firmware' / 'lib' / 'reticulum_core' / 'src'}", str(root / "harness.cpp"),
                         str(SRC / "framfs.cpp"), str(SRC / "kiss.cpp"), str(SRC / "p1iface.cpp"), str(SRC / "p1frame.cpp"),
                         "-o", str(cls.binary)],
                        check=True)
@@ -834,6 +875,33 @@ class StackUnitTests(unittest.TestCase):
         self.assertEqual(out[24], "expired 3 held 0")
         self.assertEqual(out[25], "too large too_large")
         self.assertEqual(out[26], "idle queued wait 1")   # po 2^31 ms przerwy ogłoszenie od razu, potem nowy odstęp
+
+    def test_link_timing_p1_unchanged_and_lora_from_exact_frames(self):
+        out = self.run_harness("link")
+        # P1: 500 B bez IFAC, 516 B z IFAC, datagram 600 B (1362 ms), seria 1400 ms, 271 b/s; 516 B to 6 ramek po 195 ms,
+        # czas kanału 13t = 15 210 ms; potwierdzenie przez 2 skoki: 2 x 2 x 13 x 1362 ms.
+        self.assertEqual(out[0], f"p1 500 516 600 1400 271 15210 1362 {2 * 2 * 13 * 1362}")
+        self.assertEqual(out[1], "p1 same 1")   # tablica LinkTiming = funkcje p1iface
+        # LoRa: 492 B bez IFAC, 508 B z IFAC, seria 838 ms (2 ramki 255 B), przepływność ogłoszenia 221 B (lora_profile.h);
+        # potwierdzenie przez 2 skoki: 2 x 2 x 13 x 838 ms.
+        self.assertEqual(out[2], f"lora 492 508 508 838 4846 {2 * 2 * 13 * 838}")
+        # Czas z dokładnych ramek (1 albo 2, narastanie mocy 3 ms na ramkę): rezerwacja = czas nadawania,
+        # czas kanału 13t. 254 B to jedna ramka 255 B (419 ms), 255 B to ramka 255 B i ramka 2 B.
+        for line, (length, air) in zip(out[3:9], [(1, 51), (221, 368), (254, 419), (255, 470), (256, 470), (508, 838)]):
+            self.assertEqual(line, f"air {length} {air} {air} {13 * air}")
+        # 492 B przyjęte, 493 B odrzucone przez kolejkę; kolejka liczy 13t z ramek LoRa.
+        self.assertEqual(out[9], f"fits queued over too_large wait {13 * 838} expected {13 * 838}")
+        self.assertEqual(out[11], "sa1 data 355 packet 483 fits 1")   # SA1 ≤256 B: pakiet ≤483 B, 9 B zapasu
+        self.assertEqual(out[10], f"announce queued pool {13 * 368} expected {13 * 368} gap {368 * 50} expected {368 * 50}")
+
+    def test_path_discovery_timeout_from_declared_bitrate(self):
+        # Transport::setBitrate (lib/reticulum_core/src/transport.cpp): 2 x 500 B x 8 / bitrate + 6 s, najmniej 15 s.
+        # P1 (271 b/s): 35,5 s jak dotąd; LoRa (4846 b/s): 7,7 s, więc 15 s jak w Pythonie z RNode (5468 b/s).
+        out = self.run_harness("link")
+        bitrate = {line.split()[0]: int(line.split()[5]) for line in (out[0], out[2])}
+        timeout = {link: max(15000, 2 * 500 * 8 * 1000 // b + 6000) for link, b in bitrate.items()}
+        self.assertEqual(timeout, {"p1": 2 * 500 * 8 * 1000 // 271 + 6000, "lora": 15000})
+        self.assertGreater(timeout["p1"], 35000)
 
     def test_announce_policy(self):
         self.assertEqual(self.run_harness("announce"), [

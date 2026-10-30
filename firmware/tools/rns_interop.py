@@ -36,10 +36,20 @@ check compares the SA1 content. Steps L1 and L2 exchange SA1 messages with LXMRo
 in both directions with delivery proofs; L1 also checks the display name in the station announce.
 --lxmf needs LXMF at c3ff2d6 in the same Python (pip install "git+https://github.com/markqvist/LXMF@c3ff2d6").
 
+With --link lora (host and host-port) the station runs its LoRa link (node_host --link lora) and Reticulum in
+Python uses an RNodeInterface (same IFAC) on the pseudo-terminal of tools/rnode_emulator.py, which turns packets
+into on-air frames of the RNode firmware and exchanges them over UDP with the station. Default steps are 1-5 and:
+B (datagrams of 508 B, two frames, announces and packets with proof in both directions), J (a 509 B frame pair
+injected over UDP is rejected and counted: an RNode does not send over 508 B), D (silence debt 12t between two
+packets of the station). Steps 1-5 inject their datagrams as on-air frames. The emulator and the station frame
+come from the same reading of the RNode source: this proves interworking with RNodeInterface, not over-the-air
+conformance with real firmware (the hardware trial).
+
 Prints one JSON object with the results; exit code 0 when every check passed.
 """
 
 import argparse
+import atexit
 import json
 import os
 import queue
@@ -50,11 +60,20 @@ import tempfile
 import threading
 import time
 
+import rnode_framing   # tools/rnode_framing.py: wzorzec ramki RNode
+
 APP_NAME = "wici"
 ASPECT = "sa1"
 NETWORK_KEY = "5749434954335f696661635f74657374"  # 16 B test key, not a field key
 TABLE_MAX = 256    # RNS_PATH_TABLE_MAX obrazu (platformio.ini)
 PINNED_TABLE = 6   # limit tablic w próbie ochrony wpisu odbiorcy (krok 7)
+LORA_STEPS = {"1", "2", "3", "4", "5", "B", "J", "D"}   # domyślne kroki z --link lora
+LORA_HZ = 869525000   # profil LoRa pilotażu (lora_profile.h): 869,525 MHz, 125 kHz, SF7, CR 4/5, 13 dBm
+MAX_DATAGRAM = 508    # HW_MTU RNodeInterface: pakiet z IFAC 16 B
+MAX_RAW = MAX_DATAGRAM - 16
+OWN_ANNOUNCE_APP_DATA = 316   # najwięcej danych aplikacji we własnym ogłoszeniu stacji (ogłoszenie 483 B + IFAC 16 B)
+OWN_ANNOUNCE_BYTES = 499   # to ogłoszenie w eterze: ponad FIRST_FRAME_DATA, więc w dwóch ramkach
+FIRST_FRAME_DATA = 254   # dane w pierwszej ramce RNode: ponad tyle datagram idzie w dwóch ramkach
 
 
 def log(text):
@@ -64,14 +83,17 @@ def log(text):
 class Station:
     """The host program with line JSON events."""
 
-    def __init__(self, program, fram, listen, peer, debt, capture=None, table_max=0, receiver=None):
-        extra = ["--capture", capture] if capture else []
+    def __init__(self, program, fram, listen, peer, debt, capture=None, table_max=0, receiver=None, link="p1"):
+        # Z --link lora także ślad: nadany datagram ("tx": długość, czas, dług) i odebrana ramka ("rx": długość).
+        extra = ["--link", "lora", "--trace"] if link == "lora" else []
+        extra += ["--capture", capture] if capture else []
         extra += ["--table-max", str(table_max)] if table_max else []
         extra += ["--receiver", receiver] if receiver else []   # jak stacja z kartą odbiorcy: przypięcie przed startem stosu
         self.proc = subprocess.Popen([program, "--fram", fram, "--ifac", NETWORK_KEY, "--listen", str(listen),
                                       "--peer", str(peer), "--debt", str(debt)] + extra,
                                      stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
         self.events = queue.Queue()
+        self.air = []   # zdarzenia "tx" (datagram nadany) i "rx" (ramka odebrana) ze śladu --trace, z czasem odbioru
         threading.Thread(target=self._read, daemon=True).start()
         self.ready = self.wait("ready", 20)
 
@@ -80,9 +102,13 @@ class Station:
             line = line.strip()
             if line.startswith("{"):
                 try:
-                    self.events.put(json.loads(line))
+                    event = json.loads(line)
                 except json.JSONDecodeError:
-                    pass
+                    continue
+                if event.get("event") in ("tx", "rx"):
+                    event["time"] = time.time()
+                    self.air.append(event)
+                self.events.put(event)
 
     def command(self, text):
         self.proc.stdin.write(text + "\n")
@@ -118,8 +144,10 @@ def main():
     parser.add_argument("--port", type=int, help="first of two UDP ports (default: two free ports from the system)")
     parser.add_argument("--fill", type=int, default=0, help="announce N more destinations and record the station memory")
     parser.add_argument("--capture", help="file for the datagrams Python sends to the station (tools/rns_ram32.py replays them)")
-    parser.add_argument("--steps", help="comma-separated steps to run (1,2,3,3r,4,4a,5,6,7,8,9,L1,L2; default all but 3r, 9, L1 and "
-                                        "L2), e.g. for a stack that does not have every function yet (core, firmware/reticulum-core.md)")
+    parser.add_argument("--steps", help="comma-separated steps to run (1,2,3,3r,4,4a,5,6,7,8,9,L1,L2, and B, J, D with --link lora; default all but 3r, 9, L1 and "
+                                        "L2 and the LoRa steps; with --link lora 1-5, B, J, D), e.g. for a stack that does not have every function yet (core, firmware/reticulum-core.md)")
+    parser.add_argument("--link", choices=("p1", "lora"), default="p1",
+                        help="link of the station: emulated P1, or LoRa through the RNode emulator and an RNodeInterface")
     parser.add_argument("--lxmf", action="store_true", help="station destination lxmf.delivery with LXMF SA1 messages (core, stage R3)")
     args = parser.parse_args()
     steps = set(args.steps.split(",")) if args.steps else None
@@ -132,7 +160,9 @@ def main():
         # z wymuszonymi ratchetami odrzuca jego pakiet), więc nie należy do domyślnej próby portu.
         # Krok 9 (zapytania o trasę) też na żądanie: dodany z etapem R2 rdzenia; port przechodzi go lokalnie, ale
         # domyślna próba portu zostaje bez zmian.
-        return step in steps if steps is not None else step not in ("3r", "9", "L1", "L2")
+        if steps is not None:
+            return step in steps
+        return step in LORA_STEPS if args.link == "lora" else step not in ("3r", "9", "L1", "L2", "B", "J", "D")
 
     import RNS  # noqa: E402 (needs the reference Reticulum)
     import udp_ports  # noqa: E402 (tools/udp_ports.py)
@@ -143,6 +173,38 @@ def main():
     work = tempfile.mkdtemp(prefix="wici_rns_")
     fram = os.path.join(work, "fram.bin")
     station_port, python_port = (args.port, args.port + 1) if args.port else udp_ports.free_udp_ports(2)
+    lora = args.link == "lora"
+    emulator = None
+    if lora:
+        # Radio RNode: pseudoterminal, który RNodeInterface otwiera jak port szeregowy; ramki w eterze idą UDP do stacji.
+        emulator = subprocess.Popen([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "rnode_emulator.py"),
+                                     "--listen", str(python_port), "--peer", str(station_port)],
+                                    stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+        # Po wyjściu z Reticulum (jego procedura wyjścia wysyła do radia polecenie "leave"): atexit idzie od końca.
+        atexit.register(lambda: (emulator.stdin.close(), emulator.wait(5)))
+        python_pty = json.loads(emulator.stdout.readline())["pty"]
+    interface = f"""  [[LoRa RNode]]
+    type = RNodeInterface
+    enabled = Yes
+    port = {python_pty if lora else ""}
+    frequency = {LORA_HZ}
+    bandwidth = 125000
+    txpower = 13
+    spreadingfactor = 7
+    codingrate = 5
+    flow_control = No
+    passphrase = {NETWORK_KEY}
+    ifac_size = 128
+""" if lora else f"""  [[P1 bridge]]
+    type = UDPInterface
+    enabled = Yes
+    listen_ip = 127.0.0.1
+    listen_port = {python_port}
+    forward_ip = 127.0.0.1
+    forward_port = {station_port}
+    passphrase = {NETWORK_KEY}
+    ifac_size = 128
+"""
     config = f"""
 [reticulum]
   enable_transport = No
@@ -153,22 +215,13 @@ def main():
   loglevel = 2
 
 [interfaces]
-  [[P1 bridge]]
-    type = UDPInterface
-    enabled = Yes
-    listen_ip = 127.0.0.1
-    listen_port = {python_port}
-    forward_ip = 127.0.0.1
-    forward_port = {station_port}
-    passphrase = {NETWORK_KEY}
-    ifac_size = 128
-"""
+{interface}"""
     os.makedirs(os.path.join(work, "rns"))
     with open(os.path.join(work, "rns", "config"), "w") as f:
         f.write(config)
-    RNS.Reticulum(os.path.join(work, "rns"))
+    RNS.Reticulum(os.path.join(work, "rns"), logdest=lambda line: print(line, file=sys.stderr, flush=True))
 
-    results = {"reticulum": "e40191b", "debt_factor": args.debt, "steps": sorted(steps) if steps else "default", "checks": {}}
+    results = {"reticulum": "e40191b", "link": args.link, "debt_factor": args.debt, "steps": sorted(steps) if steps else "default", "checks": {}}
     checks = results["checks"]
     seen = {"announces": [], "packets": []}
 
@@ -233,7 +286,16 @@ def main():
             time.sleep(0.05)
         return False
 
-    station = Station(args.program, fram, station_port, python_port, args.debt, args.capture)
+    def inject(datagram, frames=None):
+        # Datagram wprost do stacji, z pominięciem Pythona: w LoRa jako ramki RNode (nagłówek, podział), w P1 sam datagram;
+        # frames: ramki podane wprost.
+        if frames is None:
+            frames = rnode_framing.rnode_transmit(datagram, 0) if lora else [datagram]
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            for frame in frames:
+                sock.sendto(frame, ("127.0.0.1", station_port))
+
+    station = Station(args.program, fram, station_port, python_port, args.debt, args.capture, link=args.link)
     try:
         if not station.ready:
             raise RuntimeError("station program did not start")
@@ -377,14 +439,100 @@ def main():
             before = station.status()
             raw = bytes([0x00, 0x00]) + destination.hash + bytes([0x00]) + b"no ifac"
             wrong = bytes([0x80, 0x00]) + bytes(16) + destination.hash + bytes([0x00]) + b"wrong ifac"
-            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-                s.sendto(raw, ("127.0.0.1", station_port))
-                s.sendto(wrong, ("127.0.0.1", station_port))
+            inject(raw)
+            inject(wrong)
             time.sleep(1.0)
             after = station.status()
             checks["ifac_missing_dropped"] = after["ifac_missing"] == before["ifac_missing"] + 1
             checks["ifac_invalid_dropped"] = after["ifac_invalid"] == before["ifac_invalid"] + 1
             results["station_status"] = after
+
+        # B. Największe datagramy łącza w dwóch ramkach, w obie strony. Python -> stacja: ogłoszenie z danymi 325 B, czyli
+        #    pakiet 492 B i IFAC 16 B = 508 B (dwie ramki po 255 B, RNode dodaje trzecią, 1 B, którą stacja pomija).
+        #    Stacja -> Python: własne ogłoszenie stacji z największymi danymi (OWN_ANNOUNCE_APP_DATA), 499 B, i pakiet
+        #    z dowodem (ponad 254 B). Wymaga kroków 1 i 2 (trasa celu Pythona).
+        if want("B"):
+            pad = bytes(i % 251 for i in range(OWN_ANNOUNCE_APP_DATA))
+            announce_at = len(station.air)
+            station.command(f"announce {pad.hex()}")
+            # Python zapamiętuje dane aplikacji z każdego ważnego ogłoszenia (także gdy nie zmienia ono trasy).
+            checks["lora_big_announce_to_python"] = wait_for(lambda: RNS.Identity.recall_app_data(address) == pad, 90)
+            checks["lora_big_announce_two_frames"] = any(e["event"] == "tx" and e["length"] == OWN_ANNOUNCE_BYTES
+                                                          for e in station.air[announce_at:])
+            # Python -> stacja: ogłoszenie nowego celu z danymi 325 B (167 B + dane = pakiet 492 B).
+            big = RNS.Destination(RNS.Identity(), RNS.Destination.IN, RNS.Destination.SINGLE, APP_NAME, ASPECT)
+            app_data = bytes(i % 241 for i in range(MAX_RAW - 167))
+            rx = len(station.air)
+            big.announce(app_data=app_data)
+            e = station.wait("announce", 60, lambda e: e["dest"] == big.hash.hex())
+            checks["lora_big_announce_to_station"] = e is not None and e["app_data"] == app_data.hex()
+            # Trzecia ramka RNode (sam nagłówek, 1 B) idzie za dwiema pełnymi i jest pomijana w stacji.
+            checks["lora_big_announce_frames_255"] = [x["length"] for x in station.air[rx:] if x["event"] == "rx"][:3] == [255, 255, 1]
+            # Pakiety z dowodem w obie strony (po ok. 220 B treści: ponad 254 B w eterze).
+            body = b'["WICI",1,"interop","' + b"x" * 190 + b'"]'
+            if station_identity is not None:
+                out = RNS.Destination(station_identity, RNS.Destination.OUT, RNS.Destination.SINGLE, APP_NAME, ASPECT)
+                if args.lxmf:
+                    card(identity, sa1_of(identity))
+                tx = len([x for x in station.air if x["event"] == "tx"])
+                station.command(f"send {destination.hash.hex()} {outgoing(destination.hash, body).hex()} 120")
+                sent = station.wait("sent", 10)
+                handle = sent["handle"] if sent else 0
+                checks["lora_big_packet_to_python"] = handle > 0 and wait_for(lambda: any(carried(p, body) for p in seen["packets"]), 120)
+                receipt = station.wait("receipt", 120, lambda e: e["handle"] == handle) if handle else None
+                checks["lora_big_packet_receipt"] = bool(receipt and receipt["delivered"])
+                sent_lengths = [x["length"] for x in station.air if x["event"] == "tx"][tx:]
+                checks["lora_big_packet_two_frames"] = bool(sent_lengths) and sent_lengths[0] > FIRST_FRAME_DATA
+                rx = len(station.air)
+                r = RNS.Packet(out, incoming(out, body)).send()
+                if r:
+                    r.set_timeout(120)
+                checks["lora_big_packet_to_station"] = station.wait("packet", 90, lambda e: enveloped(e, sa1_of(identity), body)) is not None
+                checks["lora_big_packet_proof"] = bool(r) and wait_for(lambda: r.status == RNS.PacketReceipt.DELIVERED, 120)
+                received = [x["length"] for x in station.air[rx:] if x["event"] == "rx"]
+                checks["lora_big_packet_frames_from_python"] = len(received) >= 2 and received[0] == 255
+            else:
+                for name in ("lora_big_packet_to_python", "lora_big_packet_receipt", "lora_big_packet_two_frames",
+                             "lora_big_packet_to_station", "lora_big_packet_proof", "lora_big_packet_frames_from_python"):
+                    checks[name] = False
+
+        # J. Para ramek 509 B wstrzyknięta wprost przez UDP (emulator RNode jak RNode nie nada ponad 508 B): druga ramka
+        #    ma 256 B, stacja ją odrzuca i liczy, a pierwsza część przepada po 1 s; żaden datagram nie dochodzi do stosu.
+        if want("J"):
+            before = station.status()
+            data = bytes(i % 239 for i in range(MAX_DATAGRAM + 1))
+            head = bytes([0x30 | rnode_framing.FLAG_SPLIT])   # ramki ręcznie: RNode pociąłby 509 B na trzy ramki
+            inject(None, [head + data[:FIRST_FRAME_DATA], head + data[FIRST_FRAME_DATA:]])
+            time.sleep(2.0)
+            after = station.status()
+            delta = lambda key: after.get(key, 0) - before.get(key, 0)
+            results["frames_509"] = {k: delta(k) for k in ("lora_bad_length", "lora_assembly_timeout", "frames_in", "datagrams_in")}
+            checks["frames_509_rejected_and_counted"] = (delta("lora_bad_length") == 1 and delta("lora_assembly_timeout") == 1
+                                                         and delta("datagrams_in") == 0)
+
+        # D. Dług ciszy: po nadaniu 12t ciszy (t = rezerwacja czasu TX datagramu), więc drugi z dwóch pakietów stacji
+        #    zaczyna się najwcześniej po czasie nadawania i długu pierwszego.
+        if want("D"):
+            settled = len(station.air)
+            while True:   # poprzednie nadawania muszą się skończyć razem z długiem (najdłuższy ok. 10 s)
+                time.sleep(12)
+                if len(station.air) == settled:
+                    break
+                settled = len(station.air)
+            before = len([e for e in station.air if e["event"] == "tx"])
+            for text in (b'["WICI",1,"interop","debt one"]', b'["WICI",1,"interop","debt two"]'):
+                station.command(f"send {destination.hash.hex()} {outgoing(destination.hash, text).hex()} 120")
+                station.wait("sent", 10)
+            wait_for(lambda: len([e for e in station.air if e["event"] == "tx"]) >= before + 2, 120)
+            sent_air = [e for e in station.air if e["event"] == "tx"][before:before + 2]
+            if len(sent_air) == 2:
+                gap = sent_air[1]["time"] - sent_air[0]["time"]
+                need = (sent_air[0]["air_ms"] + sent_air[0]["debt_ms"]) / 1000
+                results["debt_gap_s"] = {"gap": round(gap, 2), "air_plus_debt": round(need, 2), "debt_ms": sent_air[0]["debt_ms"]}
+                checks["debt_12t_between_packets"] = gap >= need - 0.2 and sent_air[0]["debt_ms"] >= 12 * sent_air[0]["air_ms"]
+            else:
+                checks["debt_12t_between_packets"] = False
+
 
         # 9. Zapytania o trasę: Python pyta o cel stacji i dostaje odpowiedź stacji (ogłoszenie z kontekstem
         #    PATH_RESPONSE); stacja pyta o cel Pythona, którego ogłoszenia nie słyszała, i poznaje jego trasę
@@ -491,7 +639,7 @@ def main():
     # 6. Restart stacji z tym samym plikiem FRAM (cel Pythona jako odbiorca z karty): tożsamość
     # i trasa z FRAM, tablica tras w limicie także po wczytaniu.
     if want("6"):
-        station = Station(args.program, fram, station_port, python_port, args.debt, receiver=destination.hash.hex())
+        station = Station(args.program, fram, station_port, python_port, args.debt, receiver=destination.hash.hex(), link=args.link)
         try:
             ready = station.ready or {}
             checks["identity_restored"] = ready.get("identity") == results.get("station_identity") and not ready.get("identity_new", True)
@@ -516,7 +664,7 @@ def main():
     # i 8 kolejnych; usunięty ma być najstarszy cel bez ochrony, a nie odbiorca.
     if want("7"):
         station = Station(args.program, os.path.join(work, "fram_pinned.bin"), station_port, python_port, args.debt,
-                          table_max=PINNED_TABLE)
+                          table_max=PINNED_TABLE, link=args.link)
         try:
             station.command(f"receiver {destination.hash.hex()}")
             station.wait("receiver", 5)
@@ -549,7 +697,7 @@ def main():
     # 8. Tożsamość odbiorcy z klucza karty: wysyłka bez ogłoszenia odbiorcy (nowa pamięć FRAM), w ciszy
     # z wyjątkiem pakiet z send() wychodzi, a ogłoszenie stacji nie.
     if want("8"):
-        station = Station(args.program, os.path.join(work, "fram_card.bin"), station_port, python_port, args.debt)
+        station = Station(args.program, os.path.join(work, "fram_card.bin"), station_port, python_port, args.debt, link=args.link)
         try:
             # Przy --lxmf karta podaje cel "wici.sa1" klucza, a rdzeń wysyła do jego celu "lxmf.delivery".
             card_hash = sa1_of(identity) if args.lxmf else destination.hash
