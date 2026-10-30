@@ -228,6 +228,11 @@ class ReceptionTest(StationTestCase):
         self.deliver(self.STATION, request())
         self.assertEqual(len(self.sent), 1)
 
+    def test_calls_after_stop_fail_instead_of_waiting(self):
+        self.reception.stop(save=False)   # jak ZNISZCZ DANE: żądanie panelu albo odczyt węzła po zatrzymaniu
+        with self.assertRaises(RuntimeError):
+            self.reception.action("", "cisza_wezel", "{}")
+
     def test_database_survives_a_restart(self):
         content = request()
         self.deliver(self.STATION, content)
@@ -914,10 +919,18 @@ class PanelTest(StationTestCase):
         self.assertEqual(self.log()[-2:], [("dyzurny-1", "przekazanie_zmiany"), ("dyzurny-1", "wylogowanie")])
 
     def test_new_passwords(self):
-        new = self.d.new_password({"account": "dyzurny-2"})["password"]
+        own = self.d.new_password({"account": "dyzurny-1"})["password"]   # własne konto: jedna osoba
+        self.medium.login("dyzurny-1", own, self.key)
+        for account in ("dyzurny-2", "stanowisko"):   # cudze hasło dałoby jednej osobie „zgodę drugiego”
+            with self.assertRaises(ValueError):
+                self.d.new_password({"account": account})
+        second = {"account2": "dyzurny-2", "password2": self.envelopes["dyzurny-2"]}
+        new = self.d.new_password({"account": "dyzurny-2", **second})["password"]
         self.medium.login("dyzurny-2", new, self.key)
-        station = self.d.new_password({"account": "stanowisko"})["password"]
-        self.assertEqual(nosnik.Nosnik(self.medium.root).unlock(station), self.key)
+        result = self.d.new_password({"account": "stanowisko", "account2": "dyzurny-2", "password2": new})
+        self.assertEqual((nosnik.Nosnik(self.medium.root).unlock(result["password"]), result["copies_failed"]),
+                         (self.key, None))
+        self.assertIn(("dyzurny-1", "nowe_haslo"), self.log())
 
     def test_http_panel_needs_the_ticket_cookie_and_loopback(self):
         import http.client
@@ -1103,6 +1116,9 @@ class ClosingTest(WithCopies):
         with contextlib.closing(sqlite3.connect(target / "baza.sqlite")) as db:
             self.assertEqual(db.execute("SELECT count(*) FROM received WHERE payload IS NOT NULL").fetchone(), (1,))
         self.assertEqual(durable(self.medium, self.key, "SELECT count(*) FROM received WHERE payload IS NOT NULL"), (0,))
+        snapshot = nosnik.Nosnik(self.medium.root).load(self.key)   # także bez resztek w wolnych stronach SQLite
+        for text in ("piwnica przy szkole", "Proszę czekać przy wejściu", "Woda pitna przy szkole"):
+            self.assertNotIn(text.encode(), snapshot)
         self.assertEqual(durable(self.medium, self.key, "SELECT count(*) FROM replies WHERE text IS NOT NULL"), (0,))
         self.assertEqual(durable(self.medium, self.key, "SELECT count(*) FROM outbox WHERE length(payload) > 0 "
                                                         "AND kind IN (3, 4)"), (0,))
@@ -1153,20 +1169,35 @@ class ClosingTest(WithCopies):
             self.assertEqual((code, json.loads(out.getvalue())["event"]), expected)
         self.assertTrue((target / "rejestr.csv").exists())
 
-    def test_copies_removed_only_after_closing_and_not_made_again(self):
+    def has_content(self, copy):
+        return b"piwnica przy szkole" in kopie.Kopie.read(copy, self.key)[1]["baza"]
+
+    def test_copies_from_before_closing_stay_until_removed(self):
         second = Path(self.tmp.name) / "drugi"
         second.mkdir()
+        self.every_minute(5)   # kopia na dysku już ze zgłoszeniem
         self.d.backup({"path": str(second)})
-        self.assertTrue(self.copies.files())
+        before = self.copies.files()
+        self.assertTrue(self.has_content(before[0]))
         with self.assertRaises(ValueError):
             self.d.purge_copies({"kto": "administrator", "kiedy": "dziś"})
+        self.now += 60
         self.d.close({"confirm": "ZAMKNIJ ZDARZENIE"})
+        for _ in range(4):   # kopie co 5 min i przekazania zmiany po zamknięciu: kopie sprzed zamknięcia zostają
+            self.every_minute(10)
+            self.d.backup({"path": str(second)})
+        after = [c for c in self.copies.files() if c not in before]
+        self.assertEqual((set(before) <= set(self.copies.files()), len(after)), (True, kopie.KEEP))
+        self.assertFalse(any(self.has_content(c) for c in after))   # po zamknięciu kopie bez treści
+        on_second = kopie.Kopie(second / "wici-kopie").files()
+        self.assertEqual((len(on_second), sum(self.has_content(c) for c in on_second)), (kopie.KEEP + 1, 1))
         self.assertEqual(self.d.purge_copies({"kto": "Jan Kowalski", "kiedy": "12.10 14:00", "path": str(second)}),
                          {"failed": []})
-        self.every_minute(15)
         self.assertEqual((self.copies.files(), kopie.Kopie(second / "wici-kopie").files()), ([], []))
-        self.assertEqual(self.d.view()["copies_purged"], self.now - 15 * 60)
+        self.assertEqual(self.d.view()["copies_purged"], self.now)
         self.assertIn("kopie_usuniete", self.actions())
+        self.every_minute(10)   # dalsza praca stanowiska ma znów kopie, już bez treści zamkniętego zdarzenia
+        self.assertTrue(self.copies.files() and not any(self.has_content(c) for c in self.copies.files()))
 
     def test_destroy_leaves_no_data_and_ends_the_application(self):
         with self.assertRaises(ValueError):

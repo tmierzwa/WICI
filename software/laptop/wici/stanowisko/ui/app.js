@@ -287,11 +287,16 @@ var VIEWS = {
   },
   accounts: function (view) {
     var error = el("p", {class: "error"});
-    view.appendChild(el("p", {text: "Nowe hasło po otwarciu koperty. Hasło pokazuje się raz: przepisz je do nowej koperty."}));
+    var second = secondPerson();
+    view.appendChild(el("p", {text: "Nowe hasło po otwarciu koperty. Hasło pokazuje się raz: przepisz je do nowej koperty. " +
+      "Hasło innego konta i hasło stanowiska tylko za zgodą drugiego dyżurnego."}));
+    view.appendChild(second.node);
     state.accounts.concat(["stanowisko"]).forEach(function (a) {
       view.appendChild(el("button", {text: "Nowe hasło: " + a, onclick: function () {
-        if (confirm("Nadać nowe hasło " + a + "? Stare przestanie działać.")) action("/api/operator/password", {account: a}, error).then(function (v) {
-          shown = {label: "Nowe hasło: " + v.account, text: v.password}; render(); });
+        var body = Object.assign({account: a}, a === state.user ? {} : second.values());
+        if (confirm("Nadać nowe hasło " + a + "? Stare przestanie działać.")) action("/api/operator/password", body, error).then(function (v) {
+          shown = {label: "Nowe hasło: " + v.account + (v.copies_failed ? " (kopie na dysku nieprzepakowane: " + v.copies_failed + ")" : ""),
+                   text: v.password}; render(); });
       }}));
     });
     view.appendChild(error);

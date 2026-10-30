@@ -187,6 +187,7 @@ def purge(db):
         db.execute("UPDATE replies SET text=NULL")
         db.execute("DELETE FROM quarantine")
         db.execute("UPDATE outbox SET payload=X'', done=1 WHERE kind IN (3, 4)")
+    db.execute("VACUUM")   # bez starych stron: migawka i kopie po zamknięciu nie mają treści (też secure_delete)
 
 
 def destroy(medium, copies=(), extra=()):

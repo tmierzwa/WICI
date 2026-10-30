@@ -87,7 +87,7 @@ class Wezel:
 
     def _update(self, info):
         before = None if self.info is None else self.info.get("silence")
-        self.info, self.at = info, self.monotonic()
+        self.at, self.info = self.monotonic(), info   # najpierw czas: status() czyta info bez blokady
         silence = bool(info.get("silence"))
         if before is None and silence or before is not None and bool(before) != silence:
             self.changed(silence, before is None)

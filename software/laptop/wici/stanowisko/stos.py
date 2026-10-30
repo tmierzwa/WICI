@@ -97,6 +97,11 @@ class TcpPort:
 
     def close(self):
         self.running = False
+        for fd in (self.master, self.slave):
+            try:
+                os.close(fd)
+            except OSError:
+                pass
 
 
 class Stos:

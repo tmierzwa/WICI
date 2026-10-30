@@ -308,7 +308,8 @@ class Dyzur:
 
         def copy(store):
             now = self.clock()
-            path = kopie.Kopie(directory / "wici-kopie").write(self.medium, self.key, kopie.with_marker(store.db, now), now)
+            path = kopie.Kopie(directory / "wici-kopie").write(self.medium, self.key, kopie.with_marker(store.db, now), now,
+                                                              kopie.frozen_before(store.db))
             self._logged(store, user, "kopia_drugi_nosnik", path.name)
             return path.name
         return {"file": self.p.call(copy)}
@@ -327,17 +328,32 @@ class Dyzur:
         return {"p": self.p.finish_recovery(user, n, body.get("clock_ok") is True)}
 
     def new_password(self, body):
-        """New envelope password for an account, or the station password (rewraps the medium and the copies)."""
+        """New envelope password for an account, or the station password (rewraps the medium and the copies).
+        Own account by one officer; another account or the station password only with a second officer, or one
+        person could take the second password and give consent alone."""
         user = self.current()
         account = _text(body, "account")
-        if account == "stanowisko":
-            password = self.p.call(lambda store: self.medium.new_station_password(self.key, store.db.serialize()))
-            if self.p.copies is not None:
-                self.p.copies.rewrap(self.key, self.medium.kit.recovery())
-        else:
+        other = self.second(body)[1] if account != user else None
+        detail = account + (f", zgoda {other}" if other else "")
+        if account != "stanowisko":
             password = self.medium.new_password(account, self.key)
-        self.p.action(user, "nowe_haslo", account)
-        return {"account": account, "password": password}
+            self.p.action(user, "nowe_haslo", detail)
+            return {"account": account, "password": password}
+
+        def change(store):
+            # W wątku bazy, więc kopia co 5 min nie wchodzi w środek przepakowania. Hasło wraca zawsze, także
+            # gdy kopie się nie przepakują: nośnik ma już nowe opakowanie, a bez hasła nie otworzy się po restarcie.
+            password = self.medium.new_station_password(self.key, store.db.serialize())
+            failed = None
+            if self.p.copies is not None:
+                try:
+                    self.p.copies.rewrap(self.key, self.medium.kit.recovery())
+                except (OSError, database.StorageError) as e:
+                    failed = str(e)
+            self._logged(store, user, "nowe_haslo", detail + (f"; kopie nieprzepakowane: {failed}" if failed else ""))
+            return password, failed
+        password, failed = self.p.call(change)
+        return {"account": account, "password": password, "copies_failed": failed}
 
     # ---- zakończenie (S9) --------------------------------------------------------------------------
 
@@ -396,15 +412,16 @@ class Dyzur:
         copies = [self.p.copies] if self.p.copies is not None else []
         if body.get("path"):
             copies.append(kopie.Kopie(Path(_text(body, "path", 1000)) / "wici-kopie"))
-        failed = [name for copy in copies for name in copy.remove()]
 
         def run(store):
+            # W wątku bazy: kopia co 5 min nie powstanie między usunięciem a wpisem.
+            failed = [name for copy in copies for name in copy.remove()]
             with store.db:
                 store.db.execute("INSERT OR REPLACE INTO settings VALUES('kopie_usuniete', ?)", (self.clock(),))
             self._logged(store, user, "kopie_usuniete", f"odbiór archiwum potwierdził {who}, {when}"
                          + (f"; nie usunięto: {', '.join(failed)}" if failed else ""))
-        self.p.call(run)
-        return {"failed": failed}
+            return failed
+        return {"failed": self.p.call(run)}
 
     def destroy(self, body):
         """ZNISZCZ DANE: the database thread stops without a last snapshot, the stack stops, the medium files
