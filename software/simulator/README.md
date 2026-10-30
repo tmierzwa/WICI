@@ -62,7 +62,7 @@ Symulator składa się z tych samych elementów co sieć w terenie, a każdy roz
 |---|---|---|
 | Stacja, węzeł stanowiska | piny (przyciski, przycisk przygotowania, CISZA RADIOWA), zasilanie, USB: port danych i port diagnostyki, radio S2-LP | `web/device.js` (obraz bench-b) |
 | Eter | ramki radiowe między stacjami a węzłem, tłumienie tras | `web/world.js` |
-| Komputer stanowiska | KISS na porcie danych węzła, karta odbiorcy | model `post/post.cpp`; później prawdziwa aplikacja stanowiska przez TCP |
+| Komputer stanowiska | KISS na porcie danych węzła, karta odbiorcy | model `post/post.cpp`; w `swiat.mjs --stanowisko` prawdziwa aplikacja stanowiska przez TCP |
 | Aplikacja laptopa | port danych USB stacji (`"usb":2`) | `software/laptop` przez TCP |
 | Człowiek i otoczenie | przyciski, wyłącznik, przełącznik, trasa radiowa | strona świata, polecenia na stdin, ćwiczenia |
 
@@ -73,13 +73,19 @@ node software/simulator/swiat.mjs --stations 2 --card karta-odbiorcy.json   # st
 node software/simulator/swiat.mjs --station stacja.json --stations 1         # stacja 1 skonfigurowana z pliku
 ```
 
+Z opcją `--stanowisko karta.json` świat nie ma modelu `post.cpp`. Stacje dostają kartę odbiorcy aplikacji stanowiska (plik z `python -m wici.stanowisko przygotuj --karta`), a port danych węzła jest na `tcp:127.0.0.1:7390` (`--wezel`). Aplikacja łączy się z nim jak z portem szeregowym: `python -m wici.stanowisko start --nosnik … --port tcp:127.0.0.1:7390` (z katalogu `software/laptop`; pseudoterminal, więc tylko macOS i Linux).
+
+```sh
+node software/simulator/swiat.mjs --stanowisko karta.json --station stacja.json   # stacja.json z tą kartą w `receiver`
+```
+
 Stacja k ma port danych USB `tcp:127.0.0.1:<7300 + k − 1>`; połączenie TCP to przewód USB podłączony do laptopa. Stacja startuje bez konfiguracji, chyba że podano dla niej plik w formacie „Zapisz do pliku” panelu laptopa (`--station`). Wtedy świat konfiguruje ją protokołem USB tak jak laptop. Węzeł i stanowisko są przygotowane z kluczem sieci ćwiczeniowej, którego kod dostępu jest w pierwszym wierszu wyjścia. Opcja `--card` zapisuje kartę odbiorcy stanowiska do wczytania w panelu laptopa. Strona świata pokazuje ekrany stacji i ma ich przyciski, przycisk przygotowania, wyłącznik, CISZĘ RADIOWĄ i tłumienie trasy; działa tylko z 127.0.0.1.
 
 Kolejne kroki:
 
 1. `swiat.mjs`: świat z N stacjami, pliki konfiguracji, porty TCP, strona świata, plik karty odbiorcy. Testy aplikacji laptopa na symulatorze używają świata (wcześniej osobny `software/laptop/dev/sim-station.mjs` z jedną stacją bez węzła). **Zrobione.**
 2. Pełny panel R02 ze strony ćwiczeń dołączany do świata w czasie rzeczywistym (ten sam stan przez `/events`, działania przez `/act`).
-3. Port danych węzła na TCP dla przyszłej aplikacji stanowiska; model `post.cpp` będzie wtedy opcjonalny.
+3. Port danych węzła na TCP dla aplikacji stanowiska (`--stanowisko`); model `post.cpp` zostaje dla strony ćwiczeń i świata bez aplikacji. **Zrobione** (S10 z [planu aplikacji](../laptop/PLAN.md)).
 4. Krótkie ćwiczenia poziomu 2 z aplikacją laptopa w czasie rzeczywistym (przygotowanie stacji, ZNISZCZ DANE).
 
 Odrzucone: osobny proces na każde urządzenie (zegar i eter musiałyby się synchronizować przez sieć, bez zysku dla ćwiczeń); WebSocket do strony świata (Node nie ma serwera WebSocket w bibliotece standardowej, a EventSource i POST wystarczają); wszystkie ćwiczenia w czasie rzeczywistym (ćwiczenia z przeskokami czasu trwałyby dziesiątki minut).
@@ -92,7 +98,7 @@ Odrzucone: osobny proces na każde urządzenie (zegar i eter musiałyby się syn
 | `hal/` | wirtualna płytka: rdzeń Arduino-ESP32, emulatory układów, zastępcze pliki MCU, funkcje ROM |
 | `post/post.cpp` | aplikacja komputera stanowiska na rdzeniu Reticulum stacji |
 | `cli.cpp` | jedno urządzenie jako proces (polecenia płytki ze stdin, `run <µs>`) |
-| `swiat.mjs`, `swiat.html` | świat w czasie rzeczywistym dla programów z zewnątrz: porty danych stacji na TCP, strona świata (Node) |
+| `swiat.mjs`, `swiat.html` | świat w czasie rzeczywistym dla programów z zewnątrz: porty danych stacji i węzła na TCP, strona świata (Node) |
 | `web/device.js`, `web/world.js`, `web/sim.js` | urządzenie (instancja WebAssembly, restarty z przeniesieniem FRAM, NVS i pamięci RTC), świat (eter, USB, przygotowanie), symulacja ćwiczeń |
 | `web/index.html`, `app.js`, `app.css`, `layouts.js`, `scenarios.js` | strona, panel R02 i jego zasady, ćwiczenia |
 | `test_scenarios.mjs` | przejście każdego ćwiczenia jego przykładowym przebiegiem na zbudowanych obrazach (Node) |

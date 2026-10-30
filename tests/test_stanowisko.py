@@ -25,6 +25,7 @@ import tempfile
 import time
 import unittest
 import unittest.mock
+from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "software" / "laptop"))
@@ -1234,6 +1235,98 @@ class StackHoldTest(unittest.TestCase):
     def test_other_titles_are_not_sa1(self):
         self.stos._delivered(self.Message(b"A" * 16, b"x", True, title="chat"))
         self.assertEqual(self.got, [])
+
+
+@unittest.skipUnless(HAS_STACK and shutil.which("node") and os.name == "posix",
+                     "Reticulum, LXMF and pyserial, Node.js or a pseudo-terminal not available")
+class SimulatorTest(unittest.TestCase):
+    """S10: the application in the simulator world instead of post.cpp (swiat.mjs --stanowisko), on the node data
+    port over TCP: a TEST from a station configured with the card from `przygotuj` goes to quarantine, and after
+    approval RECEIVED reaches the station (the intent ends on DELIVERED)."""
+
+    IFAC = "5749434953494d554c41544f52305f30"   # sieć ćwiczeniowa świata (web/world.js)
+
+    def setUp(self):
+        import subprocess
+        from wici import usbproto
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, True)
+        env = {**os.environ, "PYTHONPATH": str(ROOT / "software" / "laptop"), "WICI_STATE": str(tmp / "stan")}
+        out = subprocess.run([sys.executable, "-m", "wici.stanowisko", "przygotuj", "--nosnik", str(tmp / "nosnik"),
+                              "--dyzurni", "2", "--paczka", str(tmp / "paczka.json"), "--karta", str(tmp / "karta.json"),
+                              "--iteracje", str(FAST)], capture_output=True, text=True, env=env, check=True)
+        self.envelopes = json.loads(out.stdout.splitlines()[-1])["envelopes"]
+        card = json.loads((tmp / "karta.json").read_text(encoding="utf-8"))
+        (tmp / "stacja.json").write_text(json.dumps({
+            "role": "stacja", "addresses": ["Szkoła Podstawowa nr 2, wejście B"],
+            "receiver": {"main": card["main"], "backup": card["backup"]}, "stations": 12,
+            "phrases": [["osoba na wózku", "людина на візку", "wheelchair user"]], "ifac": self.IFAC,
+            "radio": {"profile": "p1"}}), encoding="utf-8")
+        self.world = subprocess.Popen(["node", str(ROOT / "software" / "simulator" / "swiat.mjs"), "--port", "0",
+                                       "--http", "0", "--wezel", "0", "--stanowisko", str(tmp / "karta.json"),
+                                       "--station", str(tmp / "stacja.json")],
+                                      stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, encoding="utf-8")
+        self.addCleanup(self.world.wait, 10)
+        self.addCleanup(self.world.stdin.close)
+        self.addCleanup(self.world.stdout.close)
+        lines = []
+        for line in self.world.stdout:
+            if line.strip() == "gotowe":
+                break
+            lines.append(line.strip())
+        node = next(x for x in lines if x.startswith("węzeł ")).split()[1]
+        station = next(x for x in lines if x.startswith("stacja 1 ")).split()[2]
+        self.assertFalse(any(x.startswith("uwaga:") for x in lines), lines)
+        self.app = subprocess.Popen([sys.executable, "-m", "wici.stanowisko", "start", "--nosnik", str(tmp / "nosnik"),
+                                     "--port", node, "--panel", "0", "--bez-przegladarki", "--kopie", str(tmp / "kopie")],
+                                    stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                                    text=True, env=env)
+        self.addCleanup(self.app.wait, 20)
+        self.addCleanup(self.app.stdin.close)
+        self.addCleanup(self.app.stdout.close)
+        self.app.stdin.write(self.envelopes["stanowisko"] + "\n")
+        self.app.stdin.flush()
+        ready = json.loads(self.app.stdout.readline())
+        self.assertEqual(ready["event"], "ready")
+        self.panel_url = urlsplit(ready["panel"])
+        self.station = usbproto.Station(station).start()
+        self.addCleanup(self.station.stop)
+        self.wait(lambda: self.station.state["phase"] == "connected", 30)
+
+    def wait(self, test, timeout):
+        end = time.monotonic() + timeout
+        while time.monotonic() < end:
+            value = test()
+            if value:
+                return value
+            time.sleep(1)
+        self.fail("timeout")
+
+    def http(self, method, path, body=None, cookie=None):
+        import http.client
+        c = http.client.HTTPConnection(self.panel_url.hostname, self.panel_url.port, timeout=10)
+        headers = {"Host": self.panel_url.netloc, "Content-Type": "application/json"}
+        if cookie:
+            headers["Cookie"] = cookie
+        c.request(method, path, json.dumps(body) if body is not None else None, headers)
+        r = c.getresponse()
+        data, set_cookie = r.read(), r.getheader("Set-Cookie")
+        c.close()
+        return r.status, set_cookie, data
+
+    def test_test_message_through_the_world_and_received_back(self):
+        nonce = secrets.token_hex(8)
+        self.assertEqual(self.station.call(lambda link: link.request("test", nonce=nonce))["type"], "stored")
+        self.wait(lambda: json.loads(self.http("GET", "/health")[2])["counts"]["quarantined"], 240)
+        _, cookie, _ = self.http("GET", f"/start?{self.panel_url.query}")
+        cookie = cookie.split(";")[0]
+        self.assertEqual(self.http("POST", "/api/operator/login", {"account": "dyzurny-1",
+                                   "password": self.envelopes["dyzurny-1"]}, cookie)[0], 200)
+        item = json.loads(self.http("GET", "/api/operator/queue", cookie=cookie)[2])["quarantine"][0]
+        self.assertEqual(self.http("POST", "/api/operator/quarantine", {**{k: item[k] for k in ("source", "id", "revision")},
+                                   "decision": "approve"}, cookie)[0], 200)
+        node = lambda: json.loads(self.http("GET", "/api/operator/queue", cookie=cookie)[2])["node"]
+        self.wait(lambda: node()["waiting"] == 0, 240)
 
 
 @unittest.skipUnless(PROGRAM and HAS_STACK, "WICI_HOST_PROGRAM or Reticulum, LXMF and pyserial not available")

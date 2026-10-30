@@ -42,7 +42,7 @@ python -m wici.stanowisko start --nosnik /media/nosnik/wici --port /dev/ttyACM0 
 python -m wici.stanowisko archiwum --plik archiwum-20261030T120000.wici --do /sciezka/pusty-katalog
 ```
 
-Test stosu za węzłem stanowiska na dwóch programach `host` firmware opisuje [tests/test_stanowisko.py](../../tests/test_stanowisko.py); w CI robi to zadanie `stanowisko` workflow Laptop.
+W świecie symulatora aplikacja zastępuje model `post.cpp` (`node software/simulator/swiat.mjs --stanowisko karta.json`, potem `--port tcp:127.0.0.1:7390`; [symulator](../simulator/README.md)). Test stosu za węzłem stanowiska na dwóch programach `host` firmware opisuje [tests/test_stanowisko.py](../../tests/test_stanowisko.py); w CI robi to zadanie `stanowisko` workflow Laptop.
 
 ## Pamięć USB
 

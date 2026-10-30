@@ -6,7 +6,7 @@ on:
   pull_request:
     # Druga strona kontraktu też: firmware, symulator i protokół USB.
     paths: ['software/laptop/**', 'tests/test_laptop.py', 'tests/test_laptop_audit.py', 'tests/test_laptop_http_memory.py', 'tests/laptop-form.test.cjs', '.github/workflows/laptop.yml', 'firmware/src/**',
-            'software/simulator/web/**', 'docs/spec/protokol-usb.md', 'tests/test_stanowisko.py', 'firmware/lib/**', 'firmware/platformio.ini',
+            'software/simulator/web/**', 'software/simulator/swiat.mjs', 'software/simulator/swiat.html', 'docs/spec/protokol-usb.md', 'tests/test_stanowisko.py', 'firmware/lib/**', 'firmware/platformio.ini',
             'firmware/tools/rns_osp_node.py', 'firmware/tools/sa1_lxmf.py', 'firmware/tools/udp_ports.py',
             'software/reference/**']
   workflow_dispatch:
@@ -34,7 +34,8 @@ jobs:
     # Aplikacja stanowiska odbiorczego (wici/stanowisko) za węzłem stanowiska: dwa programy "host" firmware
     # (stacja i węzeł na emulowanym łączu radiowym, port danych węzła jako pseudoterminal). Reticulum i LXMF
     # w przypiętych wersjach bez pakietu cryptography, czyli z kryptografią wbudowaną w Reticulum, jak
-    # w pakiecie stanowiska; Python 3.14 jak środowisko pakietu.
+    # w pakiecie stanowiska; Python 3.14 jak środowisko pakietu. Ten sam krok uruchamia aplikację w świecie
+    # symulatora (swiat.mjs --stanowisko, port danych węzła na TCP), z Node.js obrazu runnera.
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:

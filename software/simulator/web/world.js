@@ -245,12 +245,16 @@ export class World {
 
 // Sieć ćwiczeniowa: komputer stanowiska z węzłem (stacja w roli `wezel`) i stacje schronień.
 // configured = false: stacje zostają bez konfiguracji (swiat.mjs konfiguruje je z plików albo z laptopa).
-export async function prepareNetwork({ seed = 1, stations = 1, addresses, phrases, diag = false, configured = true } = {}) {
+// receiver: karta odbiorcy aplikacji stanowiska spoza świata ({main, backup}); wtedy świat nie ma modelu
+// post.cpp, a port danych węzła otwiera ta aplikacja (swiat.mjs --stanowisko).
+export async function prepareNetwork({ seed = 1, stations = 1, addresses, phrases, diag = false, configured = true, receiver } = {}) {
   const world = new World(seed);
-  world.post = new Post(seed * 7 + 3);
-  await world.post.start(0);
-  await world.post.run(500000);
-  const cards = JSON.parse(world.post.cmd("card"));
+  if (!receiver) {
+    world.post = new Post(seed * 7 + 3);
+    await world.post.start(0);
+    await world.post.run(500000);
+  }
+  const cards = receiver ?? JSON.parse(world.post.cmd("card"));
   world.node = world.add(new Device("węzeł", seed * 7 + 11));
   await world.node.powerOn(world.nowUs);
   if (diag) world.node.setUsb(0, true);
@@ -273,8 +277,10 @@ export async function prepareNetwork({ seed = 1, stations = 1, addresses, phrase
   }
   // Węzeł: port danych otwarty przez komputer stanowiska (ramki KISS poza trybem przygotowania).
   world.node.kissMode = true;
-  world.node.setUsb(1, true);
-  world.post.cmd("port open");   // komputer otwiera port węzła: kontrola przepływu i ogłoszenie celu
+  if (world.post) {
+    world.node.setUsb(1, true);
+    world.post.cmd("port open");   // komputer otwiera port węzła: kontrola przepływu i ogłoszenie celu
+  }
   await world.advance(1e6);
   return world;
 }
