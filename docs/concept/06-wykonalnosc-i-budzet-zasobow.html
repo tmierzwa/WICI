@@ -81,7 +81,7 @@
 
 <h2 id="budzet-czasu-antenowego">Budżet czasu antenowego</h2>
 
-<p>Czas nadawania ramki LoRa liczy się wzorem z karty katalogowej SX1261/2 (rozdz. 6.1.4) dla SF7, 125 kHz, CR 4/5, nagłówka jawnego, CRC i preambuły 18 symboli (założenie). Interfejs zgodny z RNode dodaje 1 B nagłówka na ramkę, a datagram dłuższy niż 254 B wysyła w dwóch ramkach. Datagram to pakiet Reticulum z kodem dostępu IFAC (16 B), więc dwie ramki (508 B) mieszczą pakiet najwyżej 492 B przed IFAC, a nie 500 B, jak w domyślnym MTU Reticulum. Rzeczywiste MTU interfejsu i sposób zadeklarowania go stosowi ustala T3 z przypiętymi wersjami RNode i Reticulum; model odrzuca datagram dłuższy niż dwie ramki.</p>
+<p>Czas nadawania ramki LoRa liczy się wzorem z karty katalogowej SX1261/2 (rozdz. 6.1.4) dla SF7, 125 kHz, CR 4/5, nagłówka jawnego, CRC i preambuły 24 symboli. Preambułę wyznacza reguła z firmware RNode: max(18, ceil(24 ms / czas symbolu)), w SF7 to 24 symbole. Interfejs zgodny z RNode dodaje 1 B nagłówka na ramkę, a datagram dłuższy niż 254 B wysyła w dwóch ramkach. Datagram to pakiet Reticulum z kodem dostępu IFAC (16 B), więc dwie ramki (508 B) mieszczą pakiet najwyżej 492 B przed IFAC, a nie 500 B, jak w domyślnym MTU Reticulum. Rzeczywiste MTU interfejsu i sposób zadeklarowania go stosowi ustala T3 z przypiętymi wersjami RNode i Reticulum; model odrzuca datagram dłuższy niż dwie ramki.</p>
 
 <p>Po każdym nadaniu trwającym <code>t</code> obowiązuje dług ciszy <code>12t</code>, czyli cykl jednego nadajnika <code>13t</code>. To 7,7% czasu nadawania wobec limitu pasma 10%. Obliczenie nie obejmuje nasłuchu kanału przed nadawaniem (CCA), kolizji, ponowień ani ruchu Reticulum/LXMF. Dowód limitu 10% opiera się na czasie zmierzonym w T4. <a href="../../software/reference/wyniki.json">Wyniki modelu</a> (<code>lora_pilot</code>).</p>
 
@@ -93,13 +93,13 @@
 <th scope="col" class="num">TX + cisza [s]</th>
 <th scope="col" class="num">Pełne cykle w 30 min</th>
 </tr></thead><tbody>
-<tr><td class="num">99</td><td class="num">1</td><td class="num">0,185</td><td class="num">2,40</td><td class="num">750</td></tr>
-<tr><td class="num">275</td><td class="num">2</td><td class="num">0,477</td><td class="num">6,20</td><td class="num">290</td></tr>
-<tr><td class="num">403</td><td class="num">2</td><td class="num">0,666</td><td class="num">8,66</td><td class="num">207</td></tr>
-<tr><td class="num">508</td><td class="num">2</td><td class="num">0,820</td><td class="num">10,66</td><td class="num">168</td></tr>
+<tr><td class="num">99</td><td class="num">1</td><td class="num">0,191</td><td class="num">2,48</td><td class="num">725</td></tr>
+<tr><td class="num">275</td><td class="num">2</td><td class="num">0,489</td><td class="num">6,36</td><td class="num">283</td></tr>
+<tr><td class="num">403</td><td class="num">2</td><td class="num">0,678</td><td class="num">8,82</td><td class="num">204</td></tr>
+<tr><td class="num">508</td><td class="num">2</td><td class="num">0,832</td><td class="num">10,82</td><td class="num">166</td></tr>
 </tbody></table></div>
 
-<p>Tabela podaje przepustowość idealnego nadajnika liczoną w datagramach interfejsu, a nie liczbę zgłoszeń aplikacji. Dla datagramu 508 B wynosi około 48 B/s danych wejściowych interfejsu. Każdy przekaźnik zużywa własny czas TX na przekazanie zgłoszeń, odpowiedzi i ruchu sterującego. Sąsiedzi współdzielą kanał, więc ich przepustowości nie można sumować jak niezależnych przewodów.</p>
+<p>Tabela podaje przepustowość idealnego nadajnika liczoną w datagramach interfejsu, a nie liczbę zgłoszeń aplikacji. Dla datagramu 508 B wynosi około 47 B/s danych wejściowych interfejsu. Każdy przekaźnik zużywa własny czas TX na przekazanie zgłoszeń, odpowiedzi i ruchu sterującego. Sąsiedzi współdzielą kanał, więc ich przepustowości nie można sumować jak niezależnych przewodów.</p>
 
 <p>Przy większej wiadomości LXMF może przejść z pojedynczego pakietu na link (zestawione połączenie Reticulum) albo przesyłanie zasobu (transfer wielopakietowy, <em>Resource</em>). Limit treści SA1 wynosi 256 B. Największe wiadomości (REQUEST 222 B, BULLETIN 246 B, REPLY 156 B) mieszczą się w modelu w jednym pakiecie dostarczenia okazjonalnego (<code>OPPORTUNISTIC</code> w LXMF; szacunek 284 B treści), co trzeba potwierdzić w T3. Progi opisuje <a href="05-projekt-koncepcyjny-komunikacji.html">rozdział 05</a>. Do tego dochodzą zestawianie linku, ogłoszenia tras, potwierdzenia i ponowienia.</p>
 
@@ -136,40 +136,40 @@
 <th scope="col" class="num">TX [s]</th>
 <th scope="col" class="num">TX + cisza [s]</th>
 </tr></thead><tbody>
-<tr><td>REQUEST typowy, treść 174 B</td><td class="num">403</td><td class="num">2</td><td class="num">0,666</td><td class="num">8,66</td></tr>
-<tr><td>REQUEST z maksymalnymi polami, 222 B</td><td class="num">451</td><td class="num">2</td><td class="num">0,738</td><td class="num">9,59</td></tr>
-<tr><td>RECEIVED, 50 B</td><td class="num">275</td><td class="num">2</td><td class="num">0,477</td><td class="num">6,20</td></tr>
-<tr><td>potwierdzenie pakietu</td><td class="num">99</td><td class="num">1</td><td class="num">0,185</td><td class="num">2,40</td></tr>
+<tr><td>REQUEST typowy, treść 174 B</td><td class="num">403</td><td class="num">2</td><td class="num">0,678</td><td class="num">8,82</td></tr>
+<tr><td>REQUEST z maksymalnymi polami, 222 B</td><td class="num">451</td><td class="num">2</td><td class="num">0,750</td><td class="num">9,75</td></tr>
+<tr><td>RECEIVED, 50 B</td><td class="num">275</td><td class="num">2</td><td class="num">0,489</td><td class="num">6,36</td></tr>
+<tr><td>potwierdzenie pakietu</td><td class="num">99</td><td class="num">1</td><td class="num">0,191</td><td class="num">2,48</td></tr>
 </tbody></table></div>
 
-<p>Obsługa jednego zgłoszenia zajmuje przekaźnikowi 19,7–20,6 s nadawania z ciszą, a 50 zgłoszeń 16,4–17,2 min z 30 min przy zerowych stratach. Obliczenie zakłada, że dyżurny nie wysyła w tym czasie STATUS. Przy SF8 50 zgłoszeń zajmuje 29,1–30,4 min, czyli W10 się nie mieści.</p>
+<p>Obsługa jednego zgłoszenia zajmuje przekaźnikowi 20,1–21,1 s nadawania z ciszą, a 50 zgłoszeń 16,8–17,6 min z 30 min przy zerowych stratach. Obliczenie zakłada, że dyżurny nie wysyła w tym czasie STATUS. Przy SF8 50 zgłoszeń zajmuje 29,1–30,4 min, czyli W10 się nie mieści.</p>
 
-<p>Z „ODBIORCA PRZECZYTAŁ” i decyzją dla każdego zgłoszenia przekaźnik potrzebuje 37,8 s na zgłoszenie, czyli około 31,5 min na 50 zgłoszeń; W10 dotyczy więc samego przyjęcia. Pracę dyżurnego sprawdza osobna próba ruchu mieszanego (zgłoszenia o różnej pilności, rewizje, PRZECZYTANE i decyzje, komunikat) z własnym warunkiem zaliczenia: zero alarmów braku potwierdzenia i odczytu oraz wszystkie rewizje z RECEIVED, PRZECZYTANE i decyzją w 60 min (<a href="../spec/odbior.md">odbiór</a>). Dla 55 rewizji model daje około 34,6 min nadawania przekaźnika, a komunikat dokłada około 0,2 min. Zostaje więc około 40% zapasu na straty, ponowienia i czas czytania.</p>
+<p>Z „ODBIORCA PRZECZYTAŁ” i decyzją dla każdego zgłoszenia przekaźnik potrzebuje 38,7 s na zgłoszenie, czyli około 32,3 min na 50 zgłoszeń; W10 dotyczy więc samego przyjęcia. Pracę dyżurnego sprawdza osobna próba ruchu mieszanego (zgłoszenia o różnej pilności, rewizje, PRZECZYTANE i decyzje, komunikat) z własnym warunkiem zaliczenia: zero alarmów braku potwierdzenia i odczytu oraz wszystkie rewizje z RECEIVED, PRZECZYTANE i decyzją w 60 min (<a href="../spec/odbior.md">odbiór</a>). Dla 55 rewizji model daje około 35,5 min nadawania przekaźnika, a komunikat dokłada około 0,2 min. Zostaje więc około 40% zapasu na straty, ponowienia i czas czytania.</p>
 
-<p>Obliczenie pomija zimną trasę (ogłoszenia, zapytania o trasę), kolizje, CCA, ponowienia i ruch innych stacji. Każde utracone i ponowione zgłoszenie zabiera przekaźnikowi kolejne 8,7–9,6 s. Dostarczenie przez istniejący link ma podobny koszt na wiadomość, ale wymaga zestawienia linku w limitach czasu stosu. Zasób dodaje dla każdej wiadomości ogłoszenie, części i dowód. W10 jest więc wykonalne na papierze tylko przy jednym pakiecie na wiadomość i małych stratach.</p>
+<p>Obliczenie pomija zimną trasę (ogłoszenia, zapytania o trasę), kolizje, CCA, ponowienia i ruch innych stacji. Każde utracone i ponowione zgłoszenie zabiera przekaźnikowi kolejne 8,8–9,8 s. Dostarczenie przez istniejący link ma podobny koszt na wiadomość, ale wymaga zestawienia linku w limitach czasu stosu. Zasób dodaje dla każdej wiadomości ogłoszenie, części i dowód. W10 jest więc wykonalne na papierze tylko przy jednym pakiecie na wiadomość i małych stratach.</p>
 
 <p>LXMF ponawia niepotwierdzoną wiadomość okazjonalną po <code>max(10 s, RTT)</code>, najwyżej 5 prób (<code>DELIVERY_RETRY_WAIT</code>, <code>MAX_DELIVERY_ATTEMPTS</code>). Przekaźnik po przekazaniu zgłoszenia milczy dłużej niż 8 s, a jego kolejka może trzymać minuty ruchu. Jeśli szacunek czasu obiegu (RTT) nie obejmuje oczekiwania za ciszą, schronienie wysyła ponownie wiadomości jeszcze czekające u przekaźnika i zużywa jego budżet. T3 musi zmierzyć takie duplikaty i ustalić, skąd stos bierze RTT przy szybkości zgłaszanej przez interfejs LoRa. <a href="https://github.com/markqvist/LXMF/blob/c3ff2d6dc2f256daab896dadc044dd5a913ecbb7/LXMF/LXMRouter.py">LXMRouter</a>.</p>
 
-<p>Dlatego stos stacji ponawia wiadomość okazjonalną nie wcześniej niż po max(60 s, 2 × liczba skoków × 13 × czas TX największego datagramu + bieżący dług ciszy + czas opróżnienia kolejki radiowej). Na jedno ponowienie intencji przypadają najwyżej 2 próby LXMF (<a href="../spec/radio.md">kontrakt interfejsu radiowego</a>). Dla największego własnego datagramu (499 B przy treści 256 B, z IFAC, TX 0,80 s, cykl 10,5 s) daje to 60 s dla 1 i 2 skoków na pustej sieci oraz około 73 s (1 skok) i 94 s (2 skoki) przy największym długu ciszy (9,8 s) i pełnej kolejce 4 × 508 B (42,6 s).</p>
+<p>Dlatego stos stacji ponawia wiadomość okazjonalną nie wcześniej niż po max(60 s, 2 × liczba skoków × 13 × czas TX największego datagramu + bieżący dług ciszy + czas opróżnienia kolejki radiowej). Na jedno ponowienie intencji przypadają najwyżej 2 próby LXMF (<a href="../spec/radio.md">kontrakt interfejsu radiowego</a>). Dla największego własnego datagramu (499 B przy treści 256 B, z IFAC, TX 0,82 s, cykl 10,6 s) daje to 60 s dla 1 i 2 skoków na pustej sieci oraz około 74 s (1 skok) i 96 s (2 skoki) przy największym długu ciszy (10,0 s) i pełnej kolejce 4 × 508 B (43,3 s).</p>
 
 <h3 id="pojemnosc-sieci">Pojemność sieci</h3>
 
 <p>Pojemność całej sieci, a nie pojedynczego przekaźnika, ogranicza najbardziej obciążony węzeł: zwykle stacja stanowiska i przekaźnik obok niej. Model bez strat przyjmuje limit długu ciszy (cykl 13t na datagram) oraz zgłoszenie 222 B z RECEIVED i dwoma STATUS. Wynik:</p>
 
 <ul>
-  <li>stacja stanowiska nadaje na jedno zgłoszenie potwierdzenie pakietu, RECEIVED i dwa STATUS (około 22 s z ciszą), czyli obsłuży około 164 zgłoszenia/h;</li>
-  <li>przekaźnik przed stanowiskiem przekazuje zgłoszenie, RECEIVED, dwa STATUS i cztery potwierdzenia pakietów (37,8 s), czyli obsłuży około 95 zgłoszeń/h.</li>
+  <li>stacja stanowiska nadaje na jedno zgłoszenie potwierdzenie pakietu, RECEIVED i dwa STATUS (około 23 s z ciszą), czyli obsłuży około 160 zgłoszeń/h;</li>
+  <li>przekaźnik przed stanowiskiem przekazuje zgłoszenie, RECEIVED, dwa STATUS i cztery potwierdzenia pakietów (38,7 s), czyli obsłuży około 93 zgłoszenia/h.</li>
 </ul>
 
-<p>Dodanie przekaźników nie zwiększa tego limitu. Zwiększa go tylko drugi odbiorca albo podział sieci. BULLETIN wysyła się osobno do każdej stacji. Przy 50 stacjach to około 8,5 min pracy nadajnika stanowiska z obowiązkową ciszą (10,2 s na stację). Tyle samo trwa rozesłanie polecenia ciszy. Okno losowego startowego TEST skaluje się z liczbą stacji: ≥50 s × liczba stacji, czyli 25 min dla 30 i około 42 min dla 50 stacji. Okno 0–15 min wystarcza tylko małej sieci. Liczbę stacji stacja zna z przygotowania. Na to samo okno nakłada się ruch sterujący zimnego startu. Model bez strat w jednym obszarze kolizji liczy trzy składniki (dla 50 stacji):</p>
+<p>Dodanie przekaźników nie zwiększa tego limitu. Zwiększa go tylko drugi odbiorca albo podział sieci. BULLETIN wysyła się osobno do każdej stacji. Przy 50 stacjach to około 8,6 min pracy nadajnika stanowiska z obowiązkową ciszą (10,4 s na stację). Tyle samo trwa rozesłanie polecenia ciszy. Okno losowego startowego TEST skaluje się z liczbą stacji: ≥50 s × liczba stacji, czyli 25 min dla 30 i około 42 min dla 50 stacji. Okno 0–15 min wystarcza tylko małej sieci. Liczbę stacji stacja zna z przygotowania. Na to samo okno nakłada się ruch sterujący zimnego startu. Model bez strat w jednym obszarze kolizji liczy trzy składniki (dla 50 stacji):</p>
 
 <ul>
-  <li>ogłoszenia: każda stacja z transportem retransmituje ogłoszenia pozostałych, więc 50 stacji daje 2500 nadań, około 15 min czasu kanału i około 3,9 min nadawania z ciszą w każdej stacji. Ogłoszenie trasy trwa 0,36 s. Reticulum ogranicza ogłoszenia na interfejsie do 2% czasu zegarowego, liczonego z zadeklarowanej przepływności interfejsu, więc 50 ogłoszeń przechodzi przez jeden skok w około 15 min i mieści się w oknie. Przepływność zadeklarowaną dla interfejsu LoRa trzeba ustalić tak, by odpowiadała rzeczywistemu czasowi nadawania (T3);</li>
-  <li>zapytania o trasę do odbiorcy, jedno na stację: od 0,4 min, gdy odpowiada najbliższy sąsiad, do 7,2 min, gdy zapytanie zalewa całą sieć;</li>
-  <li>wymiana TEST przez przekaźnik z RECEIVED i potwierdzeniami: około 2,4 min.</li>
+  <li>ogłoszenia: każda stacja z transportem retransmituje ogłoszenia pozostałych, więc 50 stacji daje 2500 nadań, około 15 min czasu kanału i około 4,0 min nadawania z ciszą w każdej stacji. Ogłoszenie trasy trwa 0,36 s. Reticulum ogranicza ogłoszenia na interfejsie do 2% czasu zegarowego, liczonego z zadeklarowanej przepływności interfejsu, więc 50 ogłoszeń przechodzi przez jeden skok w około 15 min i mieści się w oknie. Przepływność zadeklarowaną dla interfejsu LoRa trzeba ustalić tak, by odpowiadała rzeczywistemu czasowi nadawania (T3). Wartość robocza z modelu to 8 × 221 B ogłoszenia stacji z IFAC przez jego czas nadawania, około 4,8 kb/s;</li>
+  <li>zapytania o trasę do odbiorcy, jedno na stację: od 0,4 min, gdy odpowiada najbliższy sąsiad, do 7,5 min, gdy zapytanie zalewa całą sieć;</li>
+  <li>wymiana TEST przez przekaźnik z RECEIVED i potwierdzeniami: około 2,5 min.</li>
 </ul>
 
-<p>Razem to 18–25 min, czyli 43–59% okna 42 min dla 50 stacji; dla 30 stacji 28–38%, a dla 10 stacji 14–18%. Przy wypełnieniu kanału powyżej około połowy CCA i ukryte nadajniki zaczynają gubić ramki, a ponowienia dokładają ruchu. Sieć powyżej około 30 stacji w jednym obszarze kolizji uruchamia się więc etapami według planu sieci (grupy stacji w kolejnych oknach), a T5 i próba skali mierzą rzeczywisty ruch. Model pomija kolizje, CCA i ponowienia, więc jest dolnym oszacowaniem zajętości kanału i górnym oszacowaniem zapasu (<a href="../../software/reference/wyniki.json">wyniki modelu</a>, <code>cold_start_announces_lora_sf7</code>).</p>
+<p>Razem to 18–25 min, czyli 43–60% okna 42 min dla 50 stacji; dla 30 stacji 29–39%, a dla 10 stacji 14–18%. Przy wypełnieniu kanału powyżej około połowy CCA i ukryte nadajniki zaczynają gubić ramki, a ponowienia dokładają ruchu. Sieć powyżej około 30 stacji w jednym obszarze kolizji uruchamia się więc etapami według planu sieci (grupy stacji w kolejnych oknach), a T5 i próba skali mierzą rzeczywisty ruch. Model pomija kolizje, CCA i ponowienia, więc jest dolnym oszacowaniem zajętości kanału i górnym oszacowaniem zapasu (<a href="../../software/reference/wyniki.json">wyniki modelu</a>, <code>cold_start_announces_lora_sf7</code>).</p>
 
 <p>Jeśli pomiar potwierdzi brak zapasu, możliwe zmiany to:</p>
 
