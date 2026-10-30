@@ -30,7 +30,7 @@ Model ruchu w SF7: 50 zgłoszeń przez przekaźnik B zajmuje 16,4–17,2 min nad
 
 SF8 daje 2 dB czułości więcej (−126 dBm), ale 50 zgłoszeń zajmuje 29,1–30,4 min, więc W10 nie mieści się w 30 min, a próba mieszana trwa około 61,6 min z 60. SF8 nie jest więc profilem bazowym.
 
-Odbiornik SX1262 pobiera 4,6 mA zamiast 22 mA w CC1120 (model; w trybie ze wzmocnieniem z profilu 5,3 mA, czyli o 0,7 mA więcej, poniżej 2% dopuszczalnego poboru dla W23). Przy założeniach przetwornicy R02 komplet ogniw AA Li-FeS2 daje ESP32-S3 około 70, 52 i 41 h przy 30, 45 i 60 mA poboru MCU (nRF52840 około 200 h). W23 (≥48 h) wymaga więc średnio najwyżej około 45 mA MCU. Stacja pilotażowa ma inny tor zasilania (gotowa przetwornica i regulator płytki, [elektronika](elektronika.md#stacja-pilotażowa)), więc o W23 rozstrzyga pomiar 48 h z minimum pilotażu, nie model.
+Odbiornik SX1262 pobiera 4,6 mA zamiast 22 mA w CC1120 (model; w trybie ze wzmocnieniem z profilu 5,3 mA, czyli o 0,7 mA więcej, poniżej 2% dopuszczalnego poboru dla W23). Przy założeniach przetwornicy R02 komplet ogniw AA Li-FeS2 daje ESP32-S3 około 70, 52 i 41 h przy 30, 45 i 60 mA poboru MCU (nRF52840 około 200 h). W23 (≥48 h) wymaga więc średnio najwyżej około 49 mA MCU. Stacja pilotażowa ma inny tor zasilania (gotowa przetwornica i regulator płytki, [elektronika](elektronika.md#stacja-pilotażowa)), więc o W23 rozstrzyga pomiar 48 h z minimum pilotażu, nie model.
 
 Powrót do P1 następuje tylko wtedy, gdy:
 
