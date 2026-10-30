@@ -51,6 +51,10 @@ jobs:
             ~/.platformio
             firmware/.pio/stack
           key: pio-host-${{ hashFiles('firmware/platformio.ini', 'firmware/tools/stack_deps.py', 'firmware/patches/**') }}
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: software/laptop/build/cache
+          key: stanowisko-${{ hashFiles('software/laptop/build/runtimes.json', 'software/laptop/build/stanowisko.json') }}
       - name: PlatformIO Core, Reticulum, LXMF and pyserial at the pinned versions
         run: |
           python3.12 -m pip install platformio==6.2.0
@@ -62,6 +66,10 @@ jobs:
         run: pio run -e host -d firmware
       - name: Application stack behind the OSP node
         run: WICI_HOST_PROGRAM=firmware/.pio/build/host/program "$RUNNER_TEMP/rns/bin/python" -m unittest tests.test_stanowisko -v
+      - name: Station package (pinned runtime and libraries, checked SHA-256)
+        run: python3.14 software/laptop/build/build_stanowisko.py --out "$RUNNER_TEMP/pakiet" --only linux-x86_64
+      - name: Application from the package in the simulator world
+        run: WICI_STANOWISKO_PACKAGE="$RUNNER_TEMP/pakiet" python3.14 -m unittest tests.test_stanowisko.SimulatorTest -v
 
   usb:
     # Ścieżka ze spacją i polską literą: pamięć bywa zamontowana pod dowolną nazwą.

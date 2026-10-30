@@ -143,11 +143,12 @@ def needed_modules(stdlib):
     return files
 
 
-def build_stdlib(stdlib, out_zip):
-    """Compile the needed modules with -OO and store them as one zip shared by every system."""
+def build_stdlib(stdlib, out_zip, files=None):
+    """Compile the needed modules (or `files`, name -> path) with -OO and store them as one zip shared by
+    every system."""
     if sys.version_info[:2] != tuple(map(int, MINOR.split("."))):
         sys.exit(f"bytecode must be compiled by Python {MINOR}; this is {sys.version.split()[0]}")
-    files = needed_modules(stdlib)
+    files = needed_modules(stdlib) if files is None else files
     out_zip.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as tmp, zipfile.ZipFile(out_zip, "w") as z:
         for name in sorted(files):

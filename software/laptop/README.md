@@ -42,7 +42,7 @@ python -m wici.stanowisko start --nosnik /media/nosnik/wici --port /dev/ttyACM0 
 python -m wici.stanowisko archiwum --plik archiwum-20261030T120000.wici --do /sciezka/pusty-katalog
 ```
 
-W świecie symulatora aplikacja zastępuje model `post.cpp` (`node software/simulator/swiat.mjs --stanowisko karta.json`, potem `--port tcp:127.0.0.1:7390`; [symulator](../simulator/README.md)). Test stosu za węzłem stanowiska na dwóch programach `host` firmware opisuje [tests/test_stanowisko.py](../../tests/test_stanowisko.py); w CI robi to zadanie `stanowisko` workflow Laptop.
+W świecie symulatora aplikacja zastępuje model `post.cpp` (`node software/simulator/swiat.mjs --stanowisko karta.json`, potem `--port tcp:127.0.0.1:7390`; [symulator](../simulator/README.md)). Pakiet stanowiska (interpreter, biblioteki i aplikacja, bez instalowania) buduje `python3.14 build/build_stanowisko.py --out ../../dist/wici-stanowisko [--only linux-x86_64]`; na komputerze stanowiska aplikację uruchamia `./stanowisko.sh` (macOS, Linux) albo `stanowisko.cmd` (Windows) z tymi samymi poleceniami. Test stosu za węzłem stanowiska na dwóch programach `host` firmware opisuje [tests/test_stanowisko.py](../../tests/test_stanowisko.py); w CI robi to zadanie `stanowisko` workflow Laptop.
 
 ## Pamięć USB
 
@@ -58,6 +58,6 @@ Pamięć zapisuje się bez znacznika kwarantanny macOS. Drzewo z archiwum pobran
 |---|---|
 | [wici/](wici/__init__.py) | aplikacja: port szeregowy, protokół, dokument `configure`, czynności, dziennik, zaszyfrowana baza, panel |
 | [wici/ui/](wici/ui/index.html) | panel: HTML, CSS i JS bez bibliotek |
-| [build/](build/build_usb.py) | budowa pamięci USB, programy START, instrukcja na pamięć |
+| [build/](build/build_usb.py) | budowa pamięci USB, programy START, instrukcja na pamięć; [pakiet stanowiska](build/build_stanowisko.py) z bibliotekami z [stanowisko.json](build/stanowisko.json) |
 | [build/licencje/](build/licencje/zrodla.json) | licencje bibliotek wkompilowanych w interpreter python-build-standalone i kodu wbudowanego w CPython, kopiowane do `licenses/` na pamięci; źródła i sumy w `zrodla.json` |
 | [build/slowa/](build/slowa/build_slowa.py) | budowa listy słów do haseł z kopert ([wici/slowa.txt](wici/slowa.txt)): przypięte źródła, wykluczenia, `--check` |

@@ -20,6 +20,7 @@ import secrets
 import shutil
 import sqlite3
 import sys
+import tarfile
 import threading
 import tempfile
 import time
@@ -30,11 +31,15 @@ from urllib.parse import urlsplit
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "software" / "laptop"))
 sys.path.insert(0, str(ROOT / "firmware" / "tools"))
+sys.path.insert(0, str(ROOT / "software" / "laptop" / "build"))
 
+import build_stanowisko  # noqa: E402
 from wici import database  # noqa: E402
 from wici.stanowisko import __main__ as aplikacja, kopie, nosnik, panel, przyjecie, stos, wysylka, wzorzec, zamkniecie  # noqa: E402
 
 PROGRAM = os.environ.get("WICI_HOST_PROGRAM")
+# Pakiet stanowiska (build_stanowisko.py): SimulatorTest uruchamia wtedy aplikację jego skryptem stanowisko.sh.
+PACKAGE = os.environ.get("WICI_STANOWISKO_PACKAGE")
 HAS_STACK = all(importlib.util.find_spec(m) for m in ("RNS", "LXMF", "serial"))
 FAST = 1_000   # iteracje PBKDF2 w testach (najmniej, ile przyjmuje odczyt)
 
@@ -1206,12 +1211,67 @@ class StackHoldTest(unittest.TestCase):
         self.assertEqual(self.got, [])
 
 
-@unittest.skipUnless(HAS_STACK and shutil.which("node") and os.name == "posix",
+class PackageTest(unittest.TestCase):
+    """S10b: pieces of the station package build (the whole build and the application from the package: CI)."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+
+    def archive(self, files):
+        path = self.tmp / "zrodla.tar.gz"
+        with tarfile.open(path, "w:gz") as tar:
+            for name, data in files.items():
+                info = tarfile.TarInfo(name)
+                info.size = len(data)
+                tar.addfile(info, io.BytesIO(data))
+        return path
+
+    def test_library_takes_the_package_and_its_licence(self):
+        archive = self.archive({"Reticulum-abc/RNS/__init__.py": b"x = 1\n", "Reticulum-abc/RNS/__pycache__/a.pyc": b"",
+                                "Reticulum-abc/docs/manual.pdf": b"pdf", "Reticulum-abc/LICENSE": b"Reticulum License\n"})
+        out = self.tmp / "pakiet"
+        (out / "sources").mkdir(parents=True)
+        pin = {"package": "RNS", "license": "LICENSE", "file": "Reticulum-abc.tar.gz"}
+        with unittest.mock.patch.object(build_stanowisko.usb, "fetch", return_value=archive):
+            build_stanowisko.library("reticulum", pin, out)
+        self.assertEqual(sorted(p.relative_to(out).as_posix() for p in out.rglob("*") if p.is_file()),
+                         ["lib/RNS/__init__.py", "licenses/reticulum.txt", "sources/Reticulum-abc.tar.gz"])
+
+    def test_library_without_licence_stops_the_build(self):
+        archive = self.archive({"LXMF-abc/LXMF/__init__.py": b""})
+        with unittest.mock.patch.object(build_stanowisko.usb, "fetch", return_value=archive), \
+                self.assertRaises(SystemExit):
+            build_stanowisko.library("lxmf", {"package": "LXMF", "license": "LICENSE", "file": "x"}, self.tmp)
+
+    def test_standard_library_without_tests_and_tk(self):
+        for rel in ("json/__init__.py", "asyncio/base_events.py", "test/test_json.py", "tkinter/__init__.py",
+                    "unittest/__init__.py", "idlelib/idle.py"):
+            (self.tmp / rel).parent.mkdir(parents=True, exist_ok=True)
+            (self.tmp / rel).write_text("")
+        self.assertEqual(sorted(build_stanowisko.stdlib_files(self.tmp)), ["asyncio.base_events", "json", "unittest"])
+
+    def test_reference_model_goes_next_to_the_application(self):
+        build_stanowisko.application(self.tmp)
+        app = self.tmp / "app" / "wici"
+        for rel in ("stanowisko/reference.py", "stanowisko/schema.sql", "stanowisko/ui/index.html", "slowa.txt", "web.py"):
+            self.assertTrue((app / rel).is_file(), rel)
+        self.assertEqual(list(app.rglob("__pycache__")), [])
+
+    def test_out_is_replaced_only_after_a_station_package_build(self):
+        (self.tmp / "dokumenty.txt").write_text("cudze")
+        with self.assertRaises(SystemExit):
+            build_stanowisko.build(self.tmp, [])
+        self.assertTrue((self.tmp / "dokumenty.txt").exists())
+
+
+@unittest.skipUnless((HAS_STACK or PACKAGE) and shutil.which("node") and os.name == "posix",
                      "Reticulum, LXMF and pyserial, Node.js or a pseudo-terminal not available")
 class SimulatorTest(unittest.TestCase):
     """S10: the application in the simulator world instead of post.cpp (swiat.mjs --stanowisko), on the node data
     port over TCP: a TEST from a station configured with the card from `przygotuj` goes to quarantine, and after
-    approval RECEIVED reaches the station (the intent ends on DELIVERED)."""
+    approval RECEIVED reaches the station (the intent ends on DELIVERED). With WICI_STANOWISKO_PACKAGE the
+    application runs from the built station package instead of this Python."""
 
     IFAC = "5749434953494d554c41544f52305f30"   # sieć ćwiczeniowa świata (web/world.js)
 
@@ -1221,7 +1281,8 @@ class SimulatorTest(unittest.TestCase):
         tmp = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, tmp, True)
         env = {**os.environ, "PYTHONPATH": str(ROOT / "software" / "laptop"), "WICI_STATE": str(tmp / "stan")}
-        out = subprocess.run([sys.executable, "-m", "wici.stanowisko", "przygotuj", "--nosnik", str(tmp / "nosnik"),
+        app = [str(Path(PACKAGE) / "stanowisko.sh")] if PACKAGE else [sys.executable, "-m", "wici.stanowisko"]
+        out = subprocess.run([*app, "przygotuj", "--nosnik", str(tmp / "nosnik"),
                               "--dyzurni", "2", "--paczka", str(tmp / "paczka.json"), "--karta", str(tmp / "karta.json"),
                               "--iteracje", str(FAST)], capture_output=True, text=True, env=env, check=True)
         self.envelopes = json.loads(out.stdout.splitlines()[-1])["envelopes"]
@@ -1246,7 +1307,7 @@ class SimulatorTest(unittest.TestCase):
         node = next(x for x in lines if x.startswith("węzeł ")).split()[1]
         station = next(x for x in lines if x.startswith("stacja 1 ")).split()[2]
         self.assertFalse(any(x.startswith("uwaga:") for x in lines), lines)
-        self.app = subprocess.Popen([sys.executable, "-m", "wici.stanowisko", "start", "--nosnik", str(tmp / "nosnik"),
+        self.app = subprocess.Popen([*app, "start", "--nosnik", str(tmp / "nosnik"),
                                      "--port", node, "--panel", "0", "--bez-przegladarki", "--kopie", str(tmp / "kopie")],
                                     stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
                                     text=True, env=env)
