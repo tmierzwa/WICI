@@ -556,8 +556,8 @@ class MediumTest(unittest.TestCase):
         self.assertEqual((code, json.loads(out.getvalue())["event"]), (3, "login_failed"))
 
 
-class CopiesTest(StationTestCase):
-    """S5: a copy on the computer disk every 5 min, three newest, with the marker only in the copy."""
+class WithCopies(StationTestCase):
+    """Przyjecie with copies on a temporary computer disk."""
 
     def setUp(self):
         self.copies = kopie.Kopie(Path(tempfile.mkdtemp(dir=self.tmp_root())) / "kopie")
@@ -579,6 +579,10 @@ class CopiesTest(StationTestCase):
         for _ in range(minutes):
             self.now += 60
             self.tick()
+
+
+class CopiesTest(WithCopies):
+    """S5: a copy on the computer disk every 5 min, three newest, with the marker only in the copy."""
 
     def test_copy_every_five_minutes_keeps_three(self):
         self.tick()
@@ -646,6 +650,121 @@ class CopiesTest(StationTestCase):
         self.assertEqual(second.newest(self.key), self.now)
         self.assertEqual((self.copies.remove(), second.remove()), ([], []))
         self.assertEqual(self.copies.files() + second.files(), [])
+
+
+class RecoveryTest(WithCopies):
+    """S6: restore from a copy with two duty officers, recovery mode, P = P of the copy + 86 400 s × (1 + n)."""
+
+    def approvers(self):
+        return [(n, self.envelopes[n]) for n in ("dyzurny-1", "dyzurny-2")]
+
+    def keep_copy(self):
+        """A copy made now, set aside (as if the computer disk kept it while the medium failed)."""
+        self.now += kopie.INTERVAL_S
+        self.tick()
+        aside = Path(self.disk.name) / "zachowane"
+        aside.mkdir(exist_ok=True)
+        path = self.copies.files()[0]
+        return Path(shutil.copy(path, aside / path.name))
+
+    def restored(self, copy, name):
+        """Restore copy to a new medium and run the application on it (the previous one stops)."""
+        self.reception.stop()
+        root = Path(self.tmp.name) / name
+        self.medium = kopie.restore(copy, self.key, root, self.approvers(), self.now)
+        self.reception = self.open()
+        return self.reception
+
+    def status(self, mid, revision, state):
+        return self.reception.call(lambda s: self.reception.wysylka.status(s, self.STATION, mid, revision, state, self.now))
+
+    def test_copy_at_nine_status_at_ten_spare_computer_at_ten_to_ten(self):
+        content = request()
+        self.deliver(self.STATION, content)
+        mid, revision = wzorzec.decode_message(content)[2:4]
+        copy = self.keep_copy()                    # kopia z 09:00 z przyjętym zgłoszeniem
+        start = self.now
+        self.now = start + 3600                    # 10:00, STATUS nadany po kopii
+        sent_at_ten = self.status(mid, revision, 2)
+        self.now = start + 50 * 60                 # komputer zapasowy wskazuje 09:50
+        self.restored(copy, "nowy")
+        self.assertTrue(self.reception.recovery)
+        p = self.reception.finish_recovery("dyzurny-1", 0, True)
+        self.assertEqual(p, wysylka.RECOVERY_S)
+        self.assertGreater(self.status(mid, revision, 3), sent_at_ten)
+
+    def test_two_recoveries_from_the_same_copy(self):
+        content = request()
+        self.deliver(self.STATION, content)
+        mid, revision = wzorzec.decode_message(content)[2:4]
+        copy = self.keep_copy()
+        self.now += 600
+        self.restored(copy, "pierwszy")
+        self.reception.finish_recovery("dyzurny-1", 0, True)
+        self.now += 300
+        after_first = self.status(mid, revision, 2)
+        self.now -= 3600                           # drugi komputer ma zegar o godzinę do tyłu
+        self.restored(copy, "drugi")
+        self.assertEqual(self.reception.finish_recovery("dyzurny-2", 1, True), 2 * wysylka.RECOVERY_S)
+        self.assertGreater(self.status(mid, revision, 3), after_first)
+
+    def test_restart_after_recovery_is_not_blocked(self):
+        content = request()
+        self.deliver(self.STATION, content)
+        mid, revision = wzorzec.decode_message(content)[2:4]
+        self.restored(self.keep_copy(), "nowy")
+        self.reception.finish_recovery("dyzurny-1", 0, True)
+        self.status(mid, revision, 2)              # numer odpowiada czasowi o dobę późniejszemu
+        self.now += 60
+        self.restart()
+        self.assertFalse(self.reception.recovery)
+
+    def test_no_sending_until_the_recovery_ends_then_a_new_copy_first(self):
+        copy = self.keep_copy()
+        self.restored(copy, "nowy")
+        self.copies.remove()
+        self.sent.clear()
+        content = request()
+        self.deliver(self.STATION, content)
+        self.now += 900
+        self.tick()
+        self.assertEqual((self.sent, self.copies.files()), ([], []))
+        with self.assertRaises(ValueError):
+            self.reception.finish_recovery("dyzurny-1", 0, False)   # bez potwierdzenia zegara
+        self.reception.finish_recovery("dyzurny-1", 0, True)
+        self.assertEqual(self.sent[0][1], received_for(content))
+        _, payload = kopie.Kopie.read(self.copies.files()[0], self.key)
+        with contextlib.closing(sqlite3.connect(":memory:")) as db:
+            db.deserialize(payload["baza"])
+            self.assertEqual(db.execute("SELECT value FROM settings WHERE key='p'").fetchone(), (wysylka.RECOVERY_S,))
+        self.assertEqual(self.actions()[-2:], ["odtworzenie", "odzyskanie_koniec"])
+        self.assertIsNone(durable(self.medium, self.key, "SELECT name FROM sqlite_master WHERE name='kopia'"))
+
+    def test_restore_needs_two_different_officers_and_an_empty_medium(self):
+        self.tick()
+        copy = self.copies.files()[0]
+        root = Path(self.tmp.name) / "nowy"
+        for approvers in ([("dyzurny-1", self.envelopes["dyzurny-1"])] * 2,
+                          [("dyzurny-1", self.envelopes["dyzurny-1"]), ("dyzurny-2", "zle haslo")]):
+            with self.assertRaises(database.LoginError):
+                kopie.restore(copy, self.key, root, approvers, self.now)
+            self.assertFalse(nosnik.Nosnik(root).exists())
+        with self.assertRaises(database.StorageError):
+            kopie.restore(copy, self.key, self.medium.root, self.approvers(), self.now)
+
+    def test_restore_from_the_command_line(self):
+        self.tick()
+        state = Path(self.disk.name) / "stan"
+        lines = "\n".join([self.envelopes["stanowisko"]] + [f"{n} {p}" for n, p in self.approvers()]) + "\n"
+        out = io.StringIO()
+        with unittest.mock.patch.dict(os.environ, {"WICI_STATE": str(state)}), \
+                unittest.mock.patch.object(sys, "stdin", io.StringIO(lines)), contextlib.redirect_stdout(out):
+            code = aplikacja.main(["odtworz", "--nosnik", str(Path(self.tmp.name) / "nowy"),
+                                   "--kopie", str(self.copies.dir)])
+        self.assertEqual((code, json.loads(out.getvalue())["event"]), (0, "restored"))
+        medium = nosnik.Nosnik(Path(self.tmp.name) / "nowy")
+        self.assertEqual(medium.unlock(self.envelopes["stanowisko"]), self.key)
+        self.assertEqual(medium.identity(self.key), self.medium.identity(self.key))
 
 
 class StackHoldTest(unittest.TestCase):

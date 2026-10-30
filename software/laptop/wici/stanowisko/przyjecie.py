@@ -91,6 +91,8 @@ class Przyjecie:
             self.ready.set()
             return
         self.saved = -1 if body is None else self.store.db.total_changes   # nowy nośnik: pierwsza migawka od razu
+        # Baza ze znacznikiem „kopia” (odtworzona z kopii): tryb odzyskania, bez nadawania do finish_recovery.
+        self.recovery = self.store.db.execute("SELECT 1 FROM sqlite_master WHERE name='kopia'").fetchone() is not None
         self.ready.set()
         due = time.monotonic()
         while True:
@@ -130,10 +132,11 @@ class Przyjecie:
     def tick(self):
         """Pass due intents to the stack (in the database thread), only once the medium holds every change;
         a copy on the computer disk when it is due."""
-        if self._save():
-            self.wysylka.tick(self.store.db, self.clock())
+        if not self._save() or self.recovery:
+            return   # w trybie odzyskania także bez kopii: trzy dobre kopie zostają
         if self.copies is not None and self.clock() >= self.next_copy:
-            self._copy()
+            self._copy()   # przed wysyłką: po odzyskaniu nowa kopia z nowym P wychodzi pierwsza
+        self.wysylka.tick(self.store.db, self.clock())
 
     def _copy(self):
         """Copy on the computer disk; a failure is retried after a minute and logged once, without an alarm."""
@@ -150,6 +153,37 @@ class Przyjecie:
         if self.copy_failed:
             self.copy_failed = False
             self._log_action("", "kopia_wznowiona")
+
+    def finish_recovery(self, account, recoveries, clock_confirmed):
+        """End of the recovery mode (stanowisko-osp.md, „Wysyłka”): the duty officer confirmed the clock
+        (±1 min against an independent source) and gave the number of recoveries since the date of the copy.
+        In one transaction P = P of the copy + 86 400 s × (1 + recoveries), the entry in the action log
+        and the marker gone; then a new copy with the new P, and only then sending."""
+        if type(recoveries) is not int or recoveries < 0:
+            raise ValueError("liczba odzyskań: 0 lub więcej")
+        if clock_confirmed is not True:
+            raise ValueError("najpierw potwierdź zegar komputera")
+
+        def finish(store):
+            if not self.recovery:
+                raise ValueError("baza nie jest w trybie odzyskania")
+            db = store.db
+            copy_at = db.execute("SELECT at FROM kopia").fetchone()[0]
+            p = wysylka.setting(db, "p", 0) + wysylka.RECOVERY_S * (1 + recoveries)
+            with db:
+                db.execute("INSERT OR REPLACE INTO settings VALUES('p', ?)", (p,))
+                db.execute("INSERT INTO dziennik(at, account, op, detail) VALUES(?,?,?,?)",
+                           (self.clock(), account, "odzyskanie_koniec",
+                            f"kopia z {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(copy_at))}, "
+                            f"odzyskań od daty kopii {recoveries}, P {p}"))
+                db.execute("DROP TABLE kopia")
+            self.recovery = False
+            if self.copies is not None:
+                self.next_copy = 0   # nowa kopia z nowym P przed pierwszym nadaniem (tick)
+            return p
+        p = self.call(finish)
+        self.call(lambda store: self.tick())
+        return p
 
     def _log_action(self, account, op, detail=""):
         with self.store.db:

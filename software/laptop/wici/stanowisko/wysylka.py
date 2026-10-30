@@ -28,6 +28,7 @@ RECEIVED, STATUS, REPLY, BULLETIN = 1, 2, 3, 4
 IN_FLIGHT = 4
 EPOCH_2026 = 1_767_225_600   # 2026-01-01 00:00 UTC
 MAX_EVENT = 2_147_483_647
+RECOVERY_S = 86_400   # każde odzyskanie podnosi P o dobę ponad wcześniejsze przesunięcia
 RETRY_S = (60, 120, 300, 900)              # po 1., 2., 3. i dalszych nieudanych próbach
 LATE_AFTER_S, LATE_RETRY_S = 6 * 3600, 3600
 STUCK_S = 1800   # LXMF zawsze kończy DELIVERED albo FAILED; to tylko zabezpieczenie przed zgubioną wiadomością
