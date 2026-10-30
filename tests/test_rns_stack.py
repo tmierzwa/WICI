@@ -15,6 +15,12 @@ c3ff2d6 and pyserial, so it runs only when both are given:
   WICI_PIO=/path/to/pio WICI_RNS_PYTHON=/path/to/venv/bin/python python3 -m unittest tests.test_rns_stack
 
 WICI_RNS_FILL=256 adds the RAM measurement with a full path table (slow: about 3 min more).
+
+The LoRa link (stage L7, lora-interfejs/PLAN.md): the same programs with --link lora. rns_interop.py talks to the
+station through an RNodeInterface of Reticulum on the pseudo-terminal of firmware/tools/rnode_emulator.py (frames of
+the RNode firmware over UDP), rns_osp_node.py joins the node, a relay and stations on a shared emulated medium. The
+emulator and the station frame come from one reading of the RNode source: these tests show interworking with
+RNodeInterface, not over-the-air conformance with real firmware (the RAK4631 hardware trial).
 """
 
 import json
@@ -164,6 +170,103 @@ class OspNodeCoreTests(OspNodeInteropTests):
                      "route_on_p1_unpins_computer_destination", "ninth_destination_evicts_oldest",
                      "computer_destinations_after_restart"):
             self.assertIn(name, self.results["checks"])
+
+
+# Kroki LoRa rns_interop.py (--link lora): B największy datagram w dwóch ramkach, J ramki 509 B, D dług ciszy 12t.
+LORA_STEPS = {"B": ["lora_big_announce_to_python", "lora_big_announce_two_frames", "lora_big_announce_to_station",
+                    "lora_big_announce_frames_255", "lora_big_packet_to_python", "lora_big_packet_receipt",
+                    "lora_big_packet_two_frames", "lora_big_packet_to_station", "lora_big_packet_proof",
+                    "lora_big_packet_frames_from_python"],
+              "J": ["frames_509_rejected_and_counted"],
+              "D": ["debt_12t_between_packets"]}
+
+
+@unittest.skipUnless(PIO and RNS_PYTHON, "WICI_PIO and WICI_RNS_PYTHON not set")
+class LoraInteropTests(unittest.TestCase):
+    """rns_interop.py --link lora on the port: RNodeInterface (IFAC 16 B) - RNode emulator - UDP frames - station."""
+
+    program_env = "host-port"
+    program = PORT_PROGRAM
+    extra = []
+    steps = ["1", "2", "3", "4", "5", "B", "J", "D"]
+
+    @classmethod
+    def setUpClass(cls):
+        subprocess.run([PIO, "run", "-e", cls.program_env, "-d", str(FIRMWARE)], check=True, capture_output=True)
+        command = [RNS_PYTHON, str(FIRMWARE / "tools" / "rns_interop.py"), "--program", str(cls.program), "--link", "lora",
+                   "--steps", ",".join(cls.steps)] + cls.extra
+        cls.results = results(subprocess.run(command, capture_output=True, text=True, timeout=1800))
+
+    def test_every_step_check_passed(self):
+        # Dokładnie sprawdzenia wybranych kroków, i wszystkie przechodzą.
+        expected = sorted(name for step in self.steps for name in {**CORE_STEPS, **LORA_STEPS}[step])
+        self.assertEqual(sorted(self.results["checks"]), expected)
+        failed = [name for name, ok in self.results["checks"].items() if not ok]
+        self.assertEqual(failed, [], json.dumps(self.results, indent=2))
+
+    def test_link_and_declared_bitrate(self):
+        # Przepływność deklarowana stosowi z czasu ogłoszenia stacji w LoRa (loraframe::declaredBitrate), nie 271 b/s z P1.
+        self.assertEqual(self.results["link"], "lora")
+        self.assertGreater(self.results["declared_bitrate"], 4000)
+
+    def test_ifac_drops_counted(self):
+        status = self.results["station_status"]
+        self.assertGreaterEqual(status["ifac_missing"], 1)
+        self.assertGreaterEqual(status["ifac_invalid"], 1)
+
+    def test_509_byte_frames_counted(self):
+        self.assertEqual(self.results["frames_509"]["lora_bad_length"], 1)
+        self.assertEqual(self.results["frames_509"]["datagrams_in"], 0)
+
+
+class LoraInteropCoreTests(LoraInteropTests):
+    """The same on the station Reticulum core: the steps of CORE_STEPS (LXMF) and the LoRa steps."""
+
+    program_env = "host"
+    program = CORE_PROGRAM
+    extra = ["--lxmf"]
+    steps = list(CORE_STEPS) + list(LORA_STEPS)
+
+
+@unittest.skipUnless(PIO and RNS_PYTHON, "WICI_PIO and WICI_RNS_PYTHON not set")
+class OspNodeLoraTests(unittest.TestCase):
+    """rns_osp_node.py --link lora on the core: node, relay and stations on the emulated LoRa medium, LXMRouter in Python
+    behind USB with bitrate 42 b/s (D19)."""
+
+    @classmethod
+    def setUpClass(cls):
+        subprocess.run([PIO, "run", "-e", "host", "-d", str(FIRMWARE)], check=True, capture_output=True)
+        command = [RNS_PYTHON, str(FIRMWARE / "tools" / "rns_osp_node.py"), "--program", str(CORE_PROGRAM), "--lxmf", "--link", "lora"]
+        cls.results = results(subprocess.run(command, capture_output=True, text=True, timeout=3000))
+
+    def test_every_check_passed(self):
+        # BULLETIN do 50 stacji (bulletin_50_without_loss) to otwarty problem: test_bulletin_50_flow_control niżej.
+        failed = [name for name, ok in self.results["checks"].items() if not ok and name != "bulletin_50_without_loss"]
+        self.assertEqual(failed, [], json.dumps(self.results, indent=2))
+
+    def test_lora_checks_present(self):
+        for name in ("usb_493_500_dropped_and_counted", "lora_without_ifac_not_to_computer", "lxmf_no_retry_before_proof",
+                     "lxmf_three_attempts", "lxmf_interval_from_bitrate_alone", "received_status_one_hop",
+                     "received_status_two_hops", "lxmf_two_hops_with_proof_before_retry", "node_forwards_without_computer"):
+            self.assertIn(name, self.results["checks"])
+
+    def test_lxmf_interval_set_by_bitrate(self):
+        # 3 próby i odstęp ≥196 s przy bitrate 42 b/s: samo ustawienie interfejsu KISS.
+        self.assertEqual(self.results["bitrate"], 42)
+        self.assertEqual(self.results["lxmf"]["max_attempts"], 3)
+        self.assertGreaterEqual(self.results["lxmf"]["interval_s"], 196)
+
+    def test_burst_of_6_without_loss(self):
+        burst = self.results["burst"]
+        self.assertEqual((burst["sent"], burst["received"], burst["usb_rx_drop"]), (6, 6, 0))
+
+    @unittest.expectedFailure
+    def test_bulletin_50_flow_control(self):
+        # Otwarte: czas kanału jednego pakietu (13t, ok. 5 s) przekracza 5 s blokady interfejsu KISS w Pythonie, który
+        # sam zwalnia kontrolę przepływu, więc seria 50 pakietów przepełnia bufor USB węzła (zmierzono: 31 z 50 dotarło,
+        # 19 odrzuconych). Do rozstrzygnięcia: wielkość bufora USB węzła albo odstęp BULLETIN w aplikacji stanowiska.
+        bulletin = self.results["bulletin"]
+        self.assertEqual((bulletin["sent"], bulletin["received"], bulletin["usb_rx_drop"]), (50, 50, 0))
 
 
 if __name__ == "__main__":

@@ -735,6 +735,18 @@ Wynik (2026-10-23, dług 12 × TX): wszystkie 18 sprawdzeń zaliczone. W czasie 
 - kroki P1 szły dalej,
 - zgłoszenie dotarło do komputera z potwierdzeniem.
 
+**Łącze LoRa (etap L7 planu interfejsu LoRa)**: `host` i `host-port` z `--link lora` wysyłają przez UDP ramki w eterze z nagłówkiem RNode (`loraframe`: podział datagramu, składanie), jedna ramka w jednym datagramie UDP; czas nadawania i dług ciszy 12t z czasu łącza (`LinkTiming`), jak w P1. Trzy próby w `tests/test_rns_stack.py` (zadanie `interop-lora` w CI):
+
+- `tools/rnode_emulator.py` to radio RNode dla `RNodeInterface` Reticulum w Pythonie: pseudoterminal z protokołem szeregowym RNode czytanym z `RNodeInterface.py` (wykrycie 0x46, firmware 1.86, platforma 0x90 bez ekranu, echo ustawień w 0,25 s, dane KISS w obie strony, bez kontroli przepływu). Pakiety zamienia na ramki firmware RNode i z powrotem (`tools/rnode_framing.py`, ten sam wzorzec sprawdza `tests/test_loraframe.py`), także z trzecią ramką z samym nagłówkiem przy 508 B; pakiet ponad 508 B przepada jak w RNode.
+- `tools/rns_interop.py --link lora`: `RNodeInterface` (IFAC 16 B, ten sam klucz) przez emulator do `host-port` i do `host` (z `--lxmf`). Kroki jak w P1 oraz B (największe datagramy w dwóch ramkach, ogłoszenia i pakiety z dowodem w obie strony), J (para ramek 509 B wstrzyknięta przez UDP: druga ramka ma 256 B, stacja ją odrzuca i liczy w `lora_bad_length`, a pierwsza część przepada po 1 s), D (po pakiecie cisza co najmniej 12t, czyli czas nadawania i dług z czasu łącza).
+- `tools/rns_osp_node.py --lxmf --link lora`: węzeł stanowiska i stacje na wspólnym emulowanym medium, komputer z `LXMRouter` za USB przy `bitrate = 42`. Pakiet z USB 493–500 B odpada przed radiem i jest liczony (`too_large`); ramki bez IFAC nie dochodzą do komputera; wiadomość LXMF do stacji dostaje dowód przed jakimkolwiek ponowieniem (jedna próba, dowód po kilku sekundach, następna próba po 196,5 s, trzy próby na ponowienie, odstęp z samego `bitrate`); wiadomości SA1 w rodzaju RECEIVED i STATUS ze stacji do komputera przez jeden i dwa skoki (stacja – przekaźnik – węzeł) i LXMF z komputera przez dwa skoki z dowodem; przy odłączonym komputerze węzeł przekazuje ogłoszenia dwóch stacji, które się nie słyszą. Program `host` nie ma warstwy aplikacji stacji, więc RECEIVED i STATUS to treści SA1 wysłane poleceniem `send`, nie wiadomości z `station.cpp`.
+
+Ograniczenia próby:
+
+- Emulator RNode i ramkowanie stacji pochodzą z tego samego odczytania źródła firmware RNode (commit `56775c51`). Próba dowodzi współpracy z `RNodeInterface` i spójności obu stron, a nie zgodności z prawdziwym firmware w eterze; tę da próba sprzętowa z RAK4631.
+- Emulator nie opóźnia pakietów czasem nadawania: ciszę 12t stosuje strona stacji, a po stronie komputera łącze jest tylko przejściówką.
+- Otwarte: seria 50 pakietów z komputera (rozmiar BULLETIN do 50 stacji) nie przechodzi bez utraty. Czas kanału jednego pakietu (13t, około 5 s) jest dłuższy niż 5 s blokady interfejsu KISS w Pythonie, który sam zwalnia kontrolę przepływu, i bufor USB węzła się przepełnia (zmierzono: 30–31 z 50 dotarło, `usb_rx_drop` 19–20). Seria 6 pakietów przechodzi. Sprawdzenie `bulletin_50_without_loss` zostaje w próbie jako znany błąd (`expectedFailure`).
+
 Wymagają sprzętu (stanowisko A, dwie płytki albo płytka i Reticulum w Pythonie z modemem P1):
 
 - te same sprawdzenia przez CC1120: ramki P1 w eterze zamiast emulatora, CCA i odroczenia przy ruchu stosu, dług ciszy z dziennika FRAM między pakietami;

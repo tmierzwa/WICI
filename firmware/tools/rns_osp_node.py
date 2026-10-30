@@ -27,6 +27,19 @@ computer; a packet with the IFAC flag from USB is dropped; a route of the comput
 P1 removes its protection; a ninth computer destination evicts the oldest, also after a restart of the
 node (rebuilt from the routes through USB with 1 hop in FRAM).
 
+With --link lora (with --lxmf, host and host-port) the programs use the emulated LoRa link (node_host --link lora): on-air
+frames of the RNode header, one per UDP datagram, through a small shared medium (class Air) that joins the programs as
+neighbours; there is no RNode emulator here, the computer is behind USB. The bitrate of the KISS interface is 42 b/s
+(radio.md, "Kryterium bitrate"). Checks added to the steps above (the flood steps of the P1 run are left out; the
+a series of 50 packets, the size of a BULLETIN to 50 stations, follows the series of 6): a packet of 493-500 B from USB is dropped before the
+radio and counted (too_large); a LoRa frame pair without IFAC does not reach the computer; LXMRouter in Python on the
+computer sends an LXMF SA1 message to the station and gets the delivery proof before any retry (delivery_attempts 1,
+the proof earlier than next_delivery_attempt), with 3 attempts and an interval of 2 x (500 x 8 / bitrate - ...) set by the
+bitrate alone (D19); RECEIVED- and STATUS-like SA1 messages from a station reach the computer over one hop and over two
+hops (station - relay - node, three host programs); with the computer disconnected the node still forwards the announces
+of two stations that do not hear each other. The host program has no station application layer: RECEIVED and STATUS
+are SA1 contents sent with the "send" command, not messages made by station.cpp.
+
 Run with a Python that has Reticulum at the pinned commit (e40191b) and pyserial, for example:
   .venv-rns/bin/python firmware/tools/rns_osp_node.py --program firmware/.pio/build/host-port/program
 Prints one JSON object with the results; exit code 0 when every check passed.
@@ -36,6 +49,8 @@ import argparse
 import json
 import os
 import queue
+import select
+import socket
 import subprocess
 import sys
 import tempfile
@@ -46,6 +61,8 @@ APP_NAME = "wici"
 ASPECT = "sa1"
 NETWORK_KEY = "5749434954335f696661635f74657374"  # 16 B test key, not a field key
 BURST = 6
+BULLETIN = 50             # --link lora: seria z komputera jak BULLETIN do 50 stacji
+LORA_BITRATE = 42         # bitrate interfejsu KISS komputera w próbie LoRa (radio.md, kryterium bitrate)
 FLOOD_INTERVAL_S = 0.02   # zalew z USB: ramka co 20 ms (ok. 50/s, ponad limit weryfikacji i bufor KISS)
 USB_PINNED = 8            # cele komputera chronione w węźle (rns_node.h)
 
@@ -69,8 +86,9 @@ def log(text):
 class Program:
     """The host program with line JSON events."""
 
-    def __init__(self, program, fram, listen, peer, debt, node=False):
+    def __init__(self, program, fram, listen, peer, debt, node=False, link="p1"):
         extra = ["--node"] if node else []
+        extra += ["--link", link] if link != "p1" else []
         self.proc = subprocess.Popen([program, "--fram", fram, "--ifac", NETWORK_KEY, "--listen", str(listen),
                                       "--peer", str(peer), "--debt", str(debt)] + extra,
                                      stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
@@ -112,6 +130,49 @@ class Program:
             self.proc.wait(timeout=10)
         except Exception:
             self.proc.kill()
+
+
+class Air:
+    """Wspólne medium łącza LoRa na komputerze: ramka (jeden datagram UDP) wysłana przez program trafia do jego sąsiadów.
+    Program ma port odbioru (--listen) i port medium (--peer); sąsiedztwo dodaje i zdejmuje próba w trakcie pracy."""
+
+    def __init__(self):
+        self.listen = {}    # nazwa -> port odbioru programu
+        self.sockets = {}   # gniazdo medium -> nazwa
+        self.near = set()   # pary sąsiadów
+        self.out = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.lock = threading.Lock()
+        threading.Thread(target=self._run, daemon=True).start()
+
+    def add(self, name, listen_port):
+        """Rejestruje program; zwraca port medium, który program dostaje jako --peer."""
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind(("127.0.0.1", 0))
+        with self.lock:
+            self.listen[name] = listen_port
+            self.sockets[sock] = name
+        return sock.getsockname()[1]
+
+    def link(self, a, b):
+        with self.lock:
+            self.near.add(frozenset((a, b)))
+
+    def unlink(self, a, b):
+        with self.lock:
+            self.near.discard(frozenset((a, b)))
+
+    def _run(self):
+        while True:
+            with self.lock:
+                sockets = list(self.sockets)
+            ready, _, _ = select.select(sockets, [], [], 0.2)
+            for sock in ready:
+                data = sock.recv(2048)
+                with self.lock:
+                    name = self.sockets[sock]
+                    targets = [self.listen[other] for pair in self.near if name in pair for other in pair if other != name]
+                for port in targets:
+                    self.out.sendto(data, ("127.0.0.1", port))
 
 
 def flood(node, station, kiss, results, checks, outgoing, received):
@@ -258,16 +319,155 @@ def computer_destinations(node, kiss, destination, node_port, results, checks, w
     return extra
 
 
+class Programs:
+    """Dodatkowe stacje próby LoRa (stacja dwóch skoków, dwie stacje przy węźle bez komputera): każda z własnym plikiem FRAM
+    na wspólnym medium Air, słyszy wskazanych sąsiadów."""
+
+    def __init__(self, args, work, air, link):
+        self.args, self.work, self.air, self.link = args, work, air, link
+        self.items = []
+
+    def add(self, name, near):
+        import udp_ports
+        listen = udp_ports.free_udp_ports(1)[0]
+        program = Program(self.args.program, os.path.join(self.work, name + ".bin"), listen, self.air.add(name, listen),
+                          self.args.debt, link=self.link)
+        if not program.ready:
+            raise RuntimeError(f"host program {name} did not start")
+        self.items.append(program)
+        for other in near:
+            self.air.link(name, other)
+        return program
+
+    def stop(self):
+        for program in self.items:
+            program.stop()
+
+
+def lora_checks(args, work, air, programs, node, station, kiss, identity, destination, station_identity, station_address,
+                node_port, seen, results, checks, wait_for, sa1_lxmf):
+    """Sprawdzenia łącza LoRa węzła stanowiska (radio.md, "Kryterium bitrate"; plan L7): pakiety z USB ponad
+    największy pakiet łącza, ramki bez IFAC, LXMRouter w Pythonie (D19), przekaźnik i dwa skoki, węzeł bez komputera."""
+    import LXMF
+    import RNS
+    import rnode_framing
+
+    def inject(port, datagram):
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            for frame in rnode_framing.rnode_transmit(datagram, 0):
+                sock.sendto(frame, ("127.0.0.1", port))
+
+    # Pakiet z USB 493-500 B (ponad 492 B, największy pakiet LoRa bez IFAC): odrzut przed radiem, licznik too_large.
+    junk = bytes([0x00, 0x00]) + os.urandom(16) + b"\x00"
+    before = node.status()
+    for size in (493, 500):
+        kiss.serial.write(kiss_frame(junk + os.urandom(size - len(junk))))
+    counted = wait_for(lambda: node.status().get("too_large", 0) == before.get("too_large", 0) + 2, 10)
+    after = node.status()
+    checks["usb_493_500_dropped_and_counted"] = counted and after.get("tx_sent") == before.get("tx_sent") and after.get("usb_rx_invalid") == before.get("usb_rx_invalid")
+
+    # Ramki LoRa bez IFAC nie dochodzą do komputera: licznik ifac_missing w węźle, pakiet nie dociera do Reticulum w Pythonie.
+    before = node.status()
+    packets = len(seen["packets"])
+    inject(node_port, bytes([0x00, 0x00]) + destination.hash + bytes([0x00]) + b"no ifac")
+    time.sleep(1.5)
+    after = node.status()
+    checks["lora_without_ifac_not_to_computer"] = (after.get("ifac_missing") == before.get("ifac_missing", 0) + 1
+                                                   and after.get("usb_rns_out", 0) == before.get("usb_rns_out", 0) and len(seen["packets"]) == packets)
+
+    # LXMRouter na komputerze: LXMF SA1 do stacji, dowód przed jakimkolwiek ponowieniem (D19).
+    router = LXMF.LXMRouter(storagepath=os.path.join(work, "lxmf"))
+    router_identity = RNS.Identity()
+    router_destination = router.register_delivery_identity(router_identity, display_name="stanowisko")
+    router_sa1 = sa1_lxmf.sa1_of(router_identity)
+    received = []
+    router.register_delivery_callback(lambda message: received.append(message))
+    card = f"receiver {router_sa1.hex()} {router_identity.get_public_key().hex()}"
+    station.command(card)
+    station.wait("receiver", 5)
+    router.announce(router_destination.hash)
+    learned = station.wait("announce", 120, lambda e: e["dest"] == router_destination.hash.hex()) is not None
+    out = RNS.Destination(station_identity, RNS.Destination.OUT, RNS.Destination.SINGLE, "lxmf", "delivery")
+
+    def to_station(target, receiver_events, text):
+        """Wiadomość LXMF z routera do stacji (cel out); zwraca (wiadomość, czasy, czy dotarła i czy jest dowód)."""
+        message = LXMF.LXMessage(target, router_destination, text, "SA1", desired_method=LXMF.LXMessage.OPPORTUNISTIC)
+        t0 = time.time()
+        router.handle_outbound(message)
+        arrived = receiver_events.wait("packet", 400, lambda e: e["data"] == sa1_lxmf.envelope(router_sa1, bytes.fromhex(receiver_events.ready["address"]),
+                                                                                              text.encode()).hex()) is not None
+        proved = wait_for(lambda: message.state == LXMF.LXMessage.DELIVERED, 400)
+        return message, t0, time.time(), arrived and proved
+
+    message, t0, t_proof, ok = to_station(out, station, '[3,"osp node","LXMRouter to station"]')
+    # Kryterium bitrate: limit pierwszego skoku 500 x 8 / bitrate + 6 s, odstęp prób 2 x (limit - 6 s) + 6 s.
+    interval = 2 * (500 * 8 / args.bitrate) + 6
+    attempt_at = message.next_delivery_attempt - interval
+    results["lxmf"] = {"attempts": message.delivery_attempts, "max_attempts": message.max_delivery_attempts, "interval_s": round(interval, 1),
+                       "proof_after_s": round(t_proof - t0, 1), "next_attempt_after_s": round(message.next_delivery_attempt - t0, 1)}
+    checks["lxmf_router_to_station_with_proof"] = learned and ok
+    checks["lxmf_no_retry_before_proof"] = message.delivery_attempts == 1 and t_proof < message.next_delivery_attempt
+    checks["lxmf_three_attempts"] = message.max_delivery_attempts == 3
+    checks["lxmf_interval_from_bitrate_alone"] = interval >= 196 and t0 - 1 <= attempt_at <= t_proof + 1
+
+    def station_to_router(sender, text):
+        """RECEIVED- i STATUS-podobna wiadomość SA1 od stacji do routera; (dotarła, dowód w stacji)."""
+        content = text.encode()
+        sender.command(f"send {router_sa1.hex()} {sa1_lxmf.envelope(bytes.fromhex(sender.ready['address']), router_sa1, content).hex()} 400")
+        handle = (sender.wait("sent", 10) or {}).get("handle", 0)
+        arrived = handle > 0 and wait_for(lambda: any(m.content == content and m.signature_validated for m in received), 400)
+        receipt = sender.wait("receipt", 400, lambda e: e["handle"] == handle) if handle else None
+        return arrived, bool(receipt and receipt["delivered"])
+
+    one_hop = [station_to_router(station, f'[4,"osp node","{kind} over one hop"]') for kind in ("RECEIVED", "STATUS")]
+    checks["received_status_one_hop"] = all(a and r for a, r in one_hop)
+
+    # Dwa skoki: stacja A słyszy tylko przekaźnik (stacja z poprzednich kroków), przekaźnik słyszy węzeł.
+    a = programs.add("a", near=("station",))
+    a.command(card)
+    a.wait("receiver", 5)
+    a.command("announce 57494349")
+    a_address = bytes.fromhex(a.ready["address"])
+    # Ogłoszenie przez przekaźnik ma o skok więcej niż ogłoszenie stacji słyszanej przez sam węzeł.
+    checks["two_hops_announce_at_computer"] = wait_for(lambda: RNS.Transport.hops_to(a_address) == RNS.Transport.hops_to(station_address) + 1, 180)
+    router.announce(router_destination.hash)
+    checks["two_hops_announce_at_station"] = a.wait("announce", 180, lambda e: e["dest"] == router_destination.hash.hex()) is not None
+    two_hops = [station_to_router(a, f'[4,"osp node","{kind} over two hops"]') for kind in ("RECEIVED", "STATUS")]
+    checks["received_status_two_hops"] = all(x and r for x, r in two_hops)
+    # Komputer do stacji przez dwa skoki: dowód wraca przed ponowieniem także tu.
+    out_a = RNS.Destination(RNS.Identity.recall(a_address), RNS.Destination.OUT, RNS.Destination.SINGLE, "lxmf", "delivery")
+    message, t0, t_proof, ok = to_station(out_a, a, '[3,"osp node","LXMRouter to station over two hops"]')
+    results["lxmf_two_hops"] = {"attempts": message.delivery_attempts, "proof_after_s": round(t_proof - t0, 1)}
+    checks["lxmf_two_hops_with_proof_before_retry"] = ok and message.delivery_attempts == 1 and t_proof < message.next_delivery_attempt
+
+    # Węzeł przekazuje ruch stacji przy odłączonym komputerze: dwie nowe stacje słyszą tylko węzeł.
+    RNS.Reticulum.panic_on_interface_error = False
+    kiss.detach()
+    first = programs.add("first", near=("node",))
+    second = programs.add("second", near=("node",))
+    first.command("announce 57494349")
+    second.command("announce 57494349")
+    first_address, second_address = first.ready["address"], second.ready["address"]
+    checks["node_forwards_without_computer"] = (first.wait("announce", 180, lambda e: e["dest"] == second_address) is not None
+                                                and second.wait("announce", 180, lambda e: e["dest"] == first_address) is not None)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--program", required=True)
     parser.add_argument("--debt", type=int, default=12, help="silence debt factor of the emulated P1 link")
     parser.add_argument("--port", type=int, help="first of two UDP ports (default: two free ports from the system)")
     parser.add_argument("--lxmf", action="store_true", help="station core: lxmf.delivery and LXMF SA1 messages (stage R4b)")
-    parser.add_argument("--bitrate", type=int, default=24,
+    parser.add_argument("--link", choices=("p1", "lora"), default="p1", help="link between the programs: emulated P1 or LoRa (frames)")
+    parser.add_argument("--bitrate", type=int, default=None,
                         help="bitrate of the computer KISS interface in the Reticulum config (bit/s); it sets the receipt "
-                             "timeouts: 500 B x 8 / bitrate + 6 s + 6 s per hop")
+                             "timeouts: 500 B x 8 / bitrate + 6 s + 6 s per hop (default 24, with --link lora 42)")
     args = parser.parse_args()
+    lora = args.link == "lora"
+    if lora and not args.lxmf:
+        parser.error("--link lora needs --lxmf")
+    if args.bitrate is None:
+        args.bitrate = LORA_BITRATE if lora else 24
     global APP_NAME, ASPECT
     if args.lxmf:
         APP_NAME, ASPECT = "lxmf", "delivery"
@@ -281,8 +481,14 @@ def main():
     results = {"reticulum": "e40191b", "debt_factor": args.debt, "bitrate": args.bitrate, "checks": {}}
     checks = results["checks"]
     node_fram = os.path.join(work, "node.bin")
-    node = Program(args.program, node_fram, node_port, station_port, args.debt, node=True)
-    station = Program(args.program, os.path.join(work, "station.bin"), station_port, node_port, args.debt)
+    air = Air() if lora else None
+    link = args.link
+    node_peer, station_peer = (air.add("node", node_port), air.add("station", station_port)) if lora else (station_port, node_port)
+    if lora:
+        air.link("node", "station")
+    node = Program(args.program, node_fram, node_port, node_peer, args.debt, node=True, link=link)
+    station = Program(args.program, os.path.join(work, "station.bin"), station_port, station_peer, args.debt, link=link)
+    programs = Programs(args, work, air, link) if lora else None
     try:
         if not node.ready or not station.ready:
             raise RuntimeError("host programs did not start")
@@ -409,41 +615,57 @@ def main():
 
             # 6. Seria pakietów z komputera: gotowość po każdym przyjętym pakiecie, bez czekania 5 s
             # na zwolnienie blokady w Pythonie i bez odrzutów w węźle; wszystkie docierają do stacji.
-            before = node.status()
-            burst = [b'["WICI",1,"osp node","burst %d"]' % i for i in range(BURST)]
-            t0 = time.time()
-            for data in burst:
-                RNS.Packet(out, incoming(out, data)).send()
-            flowed = wait_for(lambda: not kiss.packet_queue and kiss.interface_ready, 30)
-            results["burst_queue_empty_s"] = round(time.time() - t0, 2)
-            got = set()
-            end = time.time() + 300
-            while len(got) < BURST and time.time() < end:
-                e = station.wait("packet", max(0.1, end - time.time()))
+            def run_burst(size, quiet_s):
+                """Seria size pakietów z komputera; kończy, gdy dotarły wszystkie albo przez quiet_s nic nowego."""
+                before = node.status()
+                burst = [b'["WICI",1,"osp node","burst %d of %d"]' % (i, size) for i in range(size)]
+                t0 = time.time()
                 for data in burst:
-                    if e and delivered(e, data):
-                        got.add(data)
-            after = node.status()
-            results["burst"] = {"sent": BURST, "received": len(got), "usb_rns_in": after.get("usb_rns_in", 0) - before.get("usb_rns_in", 0),
-                                "usb_ready": after.get("usb_ready", 0) - before.get("usb_ready", 0),
-                                "usb_rx_drop": after.get("usb_rx_drop"), "usb_k1": after.get("usb_k1", 0) - before.get("usb_k1", 0),
-                                "seconds": round(time.time() - t0, 2)}
-            checks["burst_without_flow_timeout"] = flowed and results["burst_queue_empty_s"] < 4
-            checks["burst_delivered_without_drops"] = len(got) == BURST and after.get("usb_rx_drop") == 0
+                    RNS.Packet(out, incoming(out, data)).send()
+                flowed = wait_for(lambda: not kiss.packet_queue and kiss.interface_ready, 30)
+                queue_empty_s = round(time.time() - t0, 2)
+                got = set()
+                last = time.time()
+                while len(got) < size and time.time() - last < quiet_s:
+                    e = station.wait("packet", 1)
+                    for data in burst:
+                        if e and delivered(e, data) and data not in got:
+                            got.add(data)
+                            last = time.time()
+                after = node.status()
+                return flowed, queue_empty_s, got, {
+                    "sent": size, "received": len(got), "usb_rns_in": after.get("usb_rns_in", 0) - before.get("usb_rns_in", 0),
+                    "usb_ready": after.get("usb_ready", 0) - before.get("usb_ready", 0),
+                    "usb_rx_drop": after.get("usb_rx_drop", 0) - before.get("usb_rx_drop", 0),
+                    "usb_k1": after.get("usb_k1", 0) - before.get("usb_k1", 0), "seconds": round(time.time() - t0, 2)}
+
+            flowed, queue_empty_s, got, burst_result = run_burst(BURST, 300)
+            results["burst"], results["burst_queue_empty_s"] = burst_result, queue_empty_s
+            checks["burst_without_flow_timeout"] = flowed and queue_empty_s < 4
+            checks["burst_delivered_without_drops"] = len(got) == BURST and burst_result["usb_rx_drop"] == 0
             if args.lxmf:
                 # Pakiety od komputera na P1 w klasie K1 (rdzeń liczy je w usb_k1).
-                checks["computer_packets_k1"] = results["burst"]["usb_k1"] >= BURST
+                checks["computer_packets_k1"] = burst_result["usb_k1"] >= BURST
+            if lora:
+                # BULLETIN do 50 stacji to 50 pakietów jeden za drugim: czas kanału jednego pakietu (13t, ok. 5 s) jest
+                # dłuższy niż 5 s blokady interfejsu KISS w Pythonie, który wtedy sam zwalnia kontrolę przepływu.
+                _, _, got, bulletin = run_burst(BULLETIN, 90)
+                results["bulletin"] = bulletin
+                checks["bulletin_50_without_loss"] = len(got) == BULLETIN and bulletin["usb_rx_drop"] == 0
         else:
             for name in ("computer_to_station_packet", "computer_receipt_delivered", "burst_without_flow_timeout",
                          "burst_delivered_without_drops"):
                 checks[name] = False
-        if args.lxmf:
+        if lora:
+            lora_checks(args, work, air, programs, node, station, kiss, identity, destination, station_identity, station_address,
+                        node_port, seen, results, checks, wait_for, sa1_lxmf)
+        elif args.lxmf:
             flood(node, station, kiss, results, checks, lambda content: (outgoing(content), computer_sa1),
                   lambda content: wait_for(lambda: any(carried(p, content) for p in seen["packets"]), 120))
             cheap_flood(node, station, kiss, results, checks, lambda: sum(1 for a in seen["announces"] if a[1] == station_address))
             extra = computer_destinations(node, kiss, destination, node_port, results, checks, wait_for)
         results["node_status"] = node.status()
-        if args.lxmf:
+        if args.lxmf and not lora:
             # Cele komputera także po restarcie węzła: 8 najnowszych tras przez USB o 1 skoku z tablicy w FRAM.
             # Koniec programu węzła zamyka pty (w Linuksie EIO w KISSInterface, przy panic_on_interface_error
             # koniec procesu), więc najpierw komputer odłącza interfejs, jak Reticulum przy wyjściu (detach,
@@ -468,6 +690,8 @@ def main():
         RNS.Reticulum.panic_on_interface_error = False
         node.stop()
         station.stop()
+        if programs:
+            programs.stop()
 
     results["passed"] = all(checks.values())
     print(json.dumps(results, indent=2, default=str))

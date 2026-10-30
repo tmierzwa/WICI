@@ -10,6 +10,10 @@
 // pseudoterminal, którego nazwę podaje zdarzenie "ready" ("usb"), a KISSInterface Reticulum
 // w Pythonie otwiera go jak port szeregowy (firmware/tools/rns_osp_node.py).
 // Środowisko "host" (od etapu R6-3): ten sam program na rdzeniu Reticulum (rns_node_core.cpp) zamiast portu.
+// --link lora: łącze LoRa zamiast P1 (oba środowiska): przez UDP idą ramki w eterze z nagłówkiem RNode
+// (loraframe: podział datagramu na ramki, składanie po odbiorze), jedna ramka w jednym datagramie UDP;
+// drugą stroną jest emulator radia RNode (tools/rnode_emulator.py) z RNodeInterface Reticulum w Pythonie
+// albo drugi program host. Czas nadawania i dług ciszy z czasu łącza (LinkTiming) jak w P1.
 // --seed <64 hex>: stałe ziarno begin() zamiast losowego (próby: tests/test_rns_stack_choice.py).
 //
 // Polecenia na stdin (wiersze): announce [hex danych], send <cel hex> <dane hex> [limit s],
@@ -38,6 +42,7 @@
 #include <vector>
 
 #include "../journal.h"
+#include "../loraframe.h"
 #include "../p1frame.h"
 #include "../p1iface.h"
 #include "../rns_node.h"
@@ -123,21 +128,19 @@ bool unhex(const char* text, std::vector<uint8_t>& out) {
     return true;
 }
 
-// Emulowane łącze P1: ramki przez p1frame, czas nadawania z modelu, dług ciszy.
-struct EmulatedP1 : rnsnode::Radio {
+// Wspólna część emulowanego łącza: gniazdo UDP do drugiej strony, czas nadawania z LinkTiming łącza i dług
+// ciszy (12 x rezerwacja czasu TX od końca nadawania, jak w łączu stacji measure::Bench).
+struct EmulatedLink : rnsnode::Radio {
     int sock = -1;
     sockaddr_in peer{};
     uint32_t debtFactor = p1iface::DEBT_FACTOR;
     bool busy = false;
     uint32_t txEndMs = 0;
     uint32_t debtUntilMs = nowMs();   // zegar komputera nie zaczyna się od 0 jak millis()
-    p1frame::Assembler air;         // składanie po stronie odbiorcy (Python za mostem UDP)
-    p1frame::Assembler local;       // składanie ramek przychodzących do stacji
     std::mt19937 rng{12345};
     uint32_t datagramsOut = 0, datagramsIn = 0, framesOut = 0, framesIn = 0;
     bool trace = false;
 
-    const p1iface::LinkTiming& timing() override { return p1iface::p1Timing(); }   // łącze LoRa: L7
     bool ready() override {
         return !busy && static_cast<int32_t>(nowMs() - debtUntilMs) >= 0;
     }
@@ -145,6 +148,48 @@ struct EmulatedP1 : rnsnode::Radio {
         const int32_t left = static_cast<int32_t>(debtUntilMs - nowMs());
         return left > 0 ? left : 0;
     }
+    // Datagram z drugiej strony (UDP): w P1 cały datagram, w LoRa jedna ramka w eterze.
+    virtual void fromPeer(const uint8_t* data, size_t length) = 0;
+    // Dodatkowe pola zdarzenia "status" (z początkowym przecinkiem) albo pusty tekst.
+    virtual std::string statusJson() { return ""; }
+    virtual void poll() {
+        if (busy && static_cast<int32_t>(nowMs() - txEndMs) >= 0) {
+            busy = false;
+            rnsnode::txDone(true);
+        }
+    }
+
+protected:
+    void sendToPeer(const uint8_t* data, size_t length) {
+        sendto(sock, data, length, 0, reinterpret_cast<sockaddr*>(&peer), sizeof(peer));
+    }
+    // Początek nadawania datagramu: czas z modelu łącza, dług od końca nadawania.
+    void startTx(const uint8_t* data, size_t length) {
+        const p1iface::LinkTiming& t = timing();
+        const uint32_t now = nowMs();
+        const uint32_t tx = t.airtimeMs(length);
+        if (trace) {
+            printf("{\"event\":\"tx\",\"length\":%u,\"air_ms\":%u,\"debt_ms\":%u,\"head\":\"%s\"}\n", (unsigned)length, tx,
+                   t.reservedTxMs(length) * debtFactor, hex(data, length < 24 ? length : 24).c_str());
+            fflush(stdout);
+        }
+        busy = true;
+        txEndMs = now + tx;
+        debtUntilMs = now + tx + t.reservedTxMs(length) * debtFactor;
+    }
+    void traceRx(const uint8_t* data, size_t length) {
+        if (!trace) return;
+        printf("{\"event\":\"rx\",\"length\":%u,\"head\":\"%s\"}\n", (unsigned)length, hex(data, length < 24 ? length : 24).c_str());
+        fflush(stdout);
+    }
+};
+
+// Emulowane łącze P1: ramki przez p1frame, czas nadawania z modelu, dług ciszy.
+struct EmulatedP1 : EmulatedLink {
+    p1frame::Assembler air;         // składanie po stronie odbiorcy (Python za mostem UDP)
+    p1frame::Assembler local;       // składanie ramek przychodzących do stacji
+
+    const p1iface::LinkTiming& timing() override { return p1iface::p1Timing(); }
     bool transmit(const uint8_t* data, size_t length) override {
         uint8_t id[p1frame::ID_BYTES];
         for (auto& b : id) b = static_cast<uint8_t>(rng());
@@ -158,27 +203,16 @@ struct EmulatedP1 : rnsnode::Radio {
             if (p1frame::parseFrame(frame, n, f) != p1frame::Parse::OK) return false;
             ++framesOut;
             if (air.push(f, now) == p1frame::Outcome::COMPLETE) {
-                sendto(sock, air.completed(), air.completedLength(), 0, reinterpret_cast<sockaddr*>(&peer), sizeof(peer));
+                sendToPeer(air.completed(), air.completedLength());
                 ++datagramsOut;
             }
         }
-        const uint32_t tx = p1iface::airtimeMs(length);
-        if (trace) {
-            printf("{\"event\":\"tx\",\"length\":%u,\"air_ms\":%u,\"head\":\"%s\"}\n", (unsigned)length, tx, hex(data, length < 24 ? length : 24).c_str());
-            fflush(stdout);
-        }
-        busy = true;
-        txEndMs = now + tx;
-        // Dług jak w łączu stacji (measure::Bench): od końca nadawania, z rezerwacji ramek pełnej długości.
-        debtUntilMs = now + tx + p1iface::reservedTxMs(length) * debtFactor;
+        startTx(data, length);
         return true;
     }
     // Datagram z Pythona: ramki P1 i składanie jak przy odbiorze radiowym.
-    void fromPeer(const uint8_t* data, size_t length) {
-        if (trace) {
-            printf("{\"event\":\"rx\",\"length\":%u,\"head\":\"%s\"}\n", (unsigned)length, hex(data, length < 24 ? length : 24).c_str());
-            fflush(stdout);
-        }
+    void fromPeer(const uint8_t* data, size_t length) override {
+        traceRx(data, length);
         uint8_t id[p1frame::ID_BYTES];
         for (auto& b : id) b = static_cast<uint8_t>(rng());
         const uint8_t count = p1frame::fragmentCount(length);
@@ -194,15 +228,52 @@ struct EmulatedP1 : rnsnode::Radio {
             }
         }
     }
-    void poll() {
-        if (busy && static_cast<int32_t>(nowMs() - txEndMs) >= 0) {
-            busy = false;
-            rnsnode::txDone(true);
+};
+
+// Emulowane łącze LoRa: ramki w eterze z nagłówkiem RNode (loraframe), jedna ramka w jednym datagramie UDP;
+// składanie ramek przychodzących jak w stacji (loraframe::Assembler).
+struct EmulatedLoRa : EmulatedLink {
+    loraframe::Splitter splitter;
+    loraframe::Assembler assembler;
+
+    const p1iface::LinkTiming& timing() override { return p1iface::loraTiming(); }
+    bool transmit(const uint8_t* data, size_t length) override {
+        loraframe::Frame frames[2];
+        const size_t count = splitter.split(data, length, static_cast<uint8_t>(rng()), frames);
+        if (!count) return false;
+        for (size_t i = 0; i < count; ++i) {
+            sendToPeer(frames[i].bytes, frames[i].length);
+            ++framesOut;
         }
+        ++datagramsOut;
+        startTx(data, length);
+        return true;
+    }
+    void fromPeer(const uint8_t* data, size_t length) override {
+        traceRx(data, length);
+        ++framesIn;
+        if (assembler.push(data, length, nowMs()) == loraframe::Outcome::COMPLETE) {
+            ++datagramsIn;
+            rnsnode::received(assembler.datagram(), assembler.length());
+        }
+    }
+    void poll() override {
+        assembler.expire(nowMs());
+        EmulatedLink::poll();
+    }
+    std::string statusJson() override {
+        const loraframe::Stats& s = assembler.stats();
+        char text[160];
+        snprintf(text, sizeof(text), ",\"lora_split_lost\":%lu,\"lora_header_only\":%lu,\"lora_assembly_timeout\":%lu,\"lora_bad_length\":%lu",
+                 static_cast<unsigned long>(s.split_lost), static_cast<unsigned long>(s.header_only),
+                 static_cast<unsigned long>(s.assembly_timeout), static_cast<unsigned long>(s.bad_length));
+        return text;
     }
 };
 
-EmulatedP1 radio;
+EmulatedP1 p1Link;
+EmulatedLoRa loraLink;
+EmulatedLink* radio = &p1Link;   // --link lora wybiera łącze LoRa
 
 bool acceptPackets = true;
 
@@ -235,12 +306,12 @@ void printStatus() {
     printf("{\"event\":\"status\",\"online\":%s,\"paths\":%u,\"hashes\":%u,\"announce_table\":%u,\"pending\":%u,"
            "\"pool\":%u,\"pool_used\":%u,\"pool_peak\":%u,\"fs_files\":%u,\"fs_used\":%u,\"fs_capacity\":%u,"
            "\"sent\":%u,\"received\":%u,\"unproven\":%u,\"delivered\":%u,\"timed_out\":%u,\"announces\":%u,\"wait_ms\":%u,"
-           "\"bitrate\":%u,\"frames_out\":%u,\"frames_in\":%u,\"datagrams_out\":%u,\"datagrams_in\":%u,\"loop_ops_max\":%ld,%s,%s}\n",
+           "\"bitrate\":%u,\"frames_out\":%u,\"frames_in\":%u,\"datagrams_out\":%u,\"datagrams_in\":%u,\"loop_ops_max\":%ld,%s,%s%s}\n",
            s.online ? "true" : "false", (unsigned)s.paths, (unsigned)s.packetHashes, (unsigned)s.announceTable,
            (unsigned)s.receiptsPending, (unsigned)s.poolSize, (unsigned)s.poolUsed, (unsigned)s.poolPeak,
            (unsigned)s.fsFiles, (unsigned)s.fsUsedBytes, (unsigned)s.fsCapacityBytes, s.packetsSent, s.packetsReceived,
-           s.packetsUnproven, s.delivered, s.timedOut, s.announcesSeen, s.queueWaitMs, s.bitrate, radio.framesOut, radio.framesIn,
-           radio.datagramsOut, radio.datagramsIn, loopOpsMax, iface, usb);
+           s.packetsUnproven, s.delivered, s.timedOut, s.announcesSeen, s.queueWaitMs, s.bitrate, radio->framesOut, radio->framesIn,
+           radio->datagramsOut, radio->datagramsIn, loopOpsMax, iface, usb, radio->statusJson().c_str());
     fflush(stdout);
 }
 
@@ -257,14 +328,21 @@ int main(int argc, char** argv) {
     uint8_t receiverKeys[2][64] = {};
     uint8_t receivers[2][16] = {};
     bool nodeMode = false;   // --node: interfejs USB przez pseudoterminal
+    bool trace = false;      // --trace: zdarzenia "tx" i "rx" na stdout
+    uint32_t debtFactor = p1iface::DEBT_FACTOR;   // --debt
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--fram") && i + 1 < argc) framPath = argv[++i];
         else if (!strcmp(argv[i], "--listen") && i + 1 < argc) listenPort = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--peer") && i + 1 < argc) peerPort = atoi(argv[++i]);
-        else if (!strcmp(argv[i], "--trace")) radio.trace = true;
+        else if (!strcmp(argv[i], "--trace")) trace = true;
+        else if (!strcmp(argv[i], "--link") && i + 1 < argc) {
+            const char* name = argv[++i];
+            if (!strcmp(name, "lora")) radio = &loraLink;
+            else if (strcmp(name, "p1")) { fprintf(stderr, "--link: p1 or lora\n"); return 2; }
+        }
         else if (!strcmp(argv[i], "--node")) nodeMode = true;
         else if (!strcmp(argv[i], "--capture") && i + 1 < argc) capture = fopen(argv[++i], "w");
-        else if (!strcmp(argv[i], "--debt") && i + 1 < argc) radio.debtFactor = static_cast<uint32_t>(atoi(argv[++i]));
+        else if (!strcmp(argv[i], "--debt") && i + 1 < argc) debtFactor = static_cast<uint32_t>(atoi(argv[++i]));
         else if (!strcmp(argv[i], "--table-max") && i + 1 < argc) tableMax = static_cast<uint16_t>(atoi(argv[++i]));
         else if (!strcmp(argv[i], "--receiver") && i + 1 < argc) {   // cel odbiorcy przypięty przed startem stosu
             std::vector<uint8_t> k;
@@ -284,15 +362,17 @@ int main(int argc, char** argv) {
         }
     }
     FileFram fram(framPath);
-    radio.sock = socket(AF_INET, SOCK_DGRAM, 0);
+    radio->trace = trace;
+    radio->debtFactor = debtFactor;
+    radio->sock = socket(AF_INET, SOCK_DGRAM, 0);
     sockaddr_in local{};
     local.sin_family = AF_INET;
     local.sin_port = htons(listenPort);
     local.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    if (bind(radio.sock, reinterpret_cast<sockaddr*>(&local), sizeof(local)) != 0) { perror("bind"); return 2; }
-    radio.peer.sin_family = AF_INET;
-    radio.peer.sin_port = htons(peerPort);
-    radio.peer.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    if (bind(radio->sock, reinterpret_cast<sockaddr*>(&local), sizeof(local)) != 0) { perror("bind"); return 2; }
+    radio->peer.sin_family = AF_INET;
+    radio->peer.sin_port = htons(peerPort);
+    radio->peer.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
     rnsnode::Hooks hooks;
     hooks.packet = onPacket;
@@ -317,7 +397,7 @@ int main(int argc, char** argv) {
         std::random_device device;
         for (uint8_t& b : seed) b = static_cast<uint8_t>(device());
     }
-    if (!rnsnode::begin(fram, radio, ifac, clockAtStartMs(), false, seed, hooks)) { printf("{\"event\":\"error\",\"what\":\"begin\"}\n"); return 1; }
+    if (!rnsnode::begin(fram, *radio, ifac, clockAtStartMs(), false, seed, hooks)) { printf("{\"event\":\"error\",\"what\":\"begin\"}\n"); return 1; }
     if (nodeMode) rnsnode::usbOpen(true);
     if (tableMax) rnsnode::debugTableMax(tableMax);
     fram.save();
@@ -332,7 +412,7 @@ int main(int argc, char** argv) {
     bool run = true;
     uint32_t lastSave = nowMs();
     while (run) {
-        pollfd fds[3] = {{0, POLLIN, 0}, {radio.sock, POLLIN, 0}, {usb, POLLIN, 0}};
+        pollfd fds[3] = {{0, POLLIN, 0}, {radio->sock, POLLIN, 0}, {usb, POLLIN, 0}};
         ::poll(fds, usb >= 0 ? 3 : 2, 5);
         if (usb >= 0) {
             uint8_t buffer[512];
@@ -350,10 +430,10 @@ int main(int argc, char** argv) {
         }
         if (fds[1].revents & POLLIN) {
             uint8_t buffer[2048];
-            const ssize_t n = recv(radio.sock, buffer, sizeof(buffer), 0);
+            const ssize_t n = recv(radio->sock, buffer, sizeof(buffer), 0);
             if (n > 0) {
                 if (capture) { fprintf(capture, "%s\n", hex(buffer, static_cast<size_t>(n)).c_str()); fflush(capture); }
-                radio.fromPeer(buffer, static_cast<size_t>(n));
+                radio->fromPeer(buffer, static_cast<size_t>(n));
             }
         }
         if (fds[0].revents & (POLLIN | POLLHUP)) {
@@ -374,7 +454,7 @@ int main(int argc, char** argv) {
                     rnsnode::halt();
                     printf("{\"event\":\"halted\"}\n");
                 } else if (cmd == "begin") {
-                    const bool ok = rnsnode::begin(fram, radio, ifac, clockAtStartMs(), false, seed, hooks);
+                    const bool ok = rnsnode::begin(fram, *radio, ifac, clockAtStartMs(), false, seed, hooks);
                     printf("{\"event\":\"begin\",\"ok\":%s,\"address\":\"%s\"}\n", ok ? "true" : "false",
                            hex(rnsnode::address(), 16).c_str());
                 }
@@ -414,7 +494,7 @@ int main(int argc, char** argv) {
                 fflush(stdout);
             }
         }
-        radio.poll();
+        radio->poll();
 #ifdef RNSCORE_COUNT_OPERATIONS
         const uint32_t before = rnscore::asymmetricOperations();
         rnsnode::loop(nowMs());
