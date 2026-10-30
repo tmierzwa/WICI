@@ -650,7 +650,6 @@ void Bench::receiveP1() {
 void Bench::receiveLora() {
     // Ramki RNode z odbioru (L0: z pierścienia zadania odbioru) do składania; limit 1 s z czasów odbioru ramek.
     // Blokada radia tylko na odczyt ramki: wiersz datagramu i przekazanie do stosu idą bez niej.
-    loraAssembler_.expire(millis());
     radiolink::Frame received;
     for (;;) {
         radiolink::RxPoll result;
@@ -663,7 +662,12 @@ void Bench::receiveLora() {
             ++link_.rxBad;  // CRC, nagłówek albo ramka odczytana za późno (rx_late); układ zostaje w odbiorze
             return;
         }
-        if (result != radiolink::RxPoll::Frame) return;
+        if (result != radiolink::RxPoll::Frame) {
+            // Pierścień pusty: dopiero teraz limit od czasu pętli (druga część, która czeka w pierścieniu,
+            // zdąży po długim obiegu); sama pierwsza część nadal przepada po 1 s.
+            if (result == radiolink::RxPoll::Nothing) loraAssembler_.expire(millis());
+            return;
+        }
         ++link_.rxOk;
         if (loraAssembler_.push(received.bytes, received.length, received.receivedMs) != loraframe::Outcome::COMPLETE) continue;
         ++link_.rxDatagrams;

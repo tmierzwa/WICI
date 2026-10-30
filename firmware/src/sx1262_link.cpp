@@ -248,6 +248,8 @@ radiolink::Cad LinkDriver::cad() {
     // Tylko ze stanu spoczynku (po prepareTx): SetCad nie działa z odbioru. Po CAD_ONLY układ jest
     // w STDBY_RC (tabela 13-73), a ramka i parametry pakietu zostają (bufor trwa poza uśpieniem, rozdz. 7.4).
     if (rxActive_) return radiolink::Cad::Error;
+    // RXEN wysoki w CAD: przełącznik antenowy w odbiorze (jak w SetRx); wraca niski przed SetTx.
+    rxen(true);
     if (radio_.clearIrq(IRQ_CAD) && radio_.command(OP_SET_CAD)) {
         const uint32_t start = millis();
         uint16_t irq = 0;
@@ -255,6 +257,7 @@ radiolink::Cad LinkDriver::cad() {
             collectIrq(irq);
             if (irq & IRQ_CAD_DONE) {
                 // CadDetected z tego samego odczytu co CadDone: oba ustawia koniec jednego CAD (rozdz. 13.1.8).
+                rxen(false);
                 if (!radio_.clearIrq(IRQ_CAD)) break;
                 return (irq & IRQ_CAD_DETECTED) ? radiolink::Cad::Busy : radiolink::Cad::Free;
             }
@@ -262,7 +265,7 @@ radiolink::Cad LinkDriver::cad() {
             delayMicroseconds(200);
         }
     }
-    toStandby();
+    toStandby();  // także RXEN niski
     return radiolink::Cad::Error;
 }
 
@@ -334,8 +337,8 @@ void LinkDriver::noteActivity(uint16_t irq, uint32_t now) {
     }
     // Początek ramki po końcu poprzedniej w tej samej próbce to już następna ramka.
     if ((irq & IRQ_RX_START) && !inFrame_) {
-        inFrame_ = true;
         inFrameSinceMs_ = now;
+        inFrame_ = true;
     }
 }
 
@@ -441,6 +444,7 @@ RxService LinkDriver::serviceRx(radiolink::Frame& out, bool sampleRssi) {
     }
     // Ramka zakończona: dalej liczy się tylko nagłówek następnej ramki, jeśli był w tej próbce.
     headerSeen_ = nextHeader || headerAfter;
+    if (headerSeen_) inFrameSinceMs_ = now;  // następna ramka w toku liczy się od tej próbki
     inFrame_ = headerSeen_;
     lastSampleMs_ = now;
     if (late) {
@@ -522,6 +526,10 @@ radiolink::Rssi LinkDriver::rssi() {
 radiolink::Activity LinkDriver::recentActivity(uint32_t windowMs) {
     const uint32_t now = millis();
     if (!activity_.quietFor(now, windowMs, Activity::RX_KINDS)) return radiolink::Activity::Rx;
+    // Ramka w toku (nagłówek bez końca) nadal zajmuje kanał, choć znaczniki zestarzały się przed jej końcem
+    // (ramka do FRAME_MAX_MS); stan ustawia zadanie odbioru, tu odczyt bez blokady.
+    // Różnica ze znakiem: czas zapisany przez zadanie po odczycie millis() wyżej daje wynik ujemny, czyli zajęty.
+    if (inFrame_ && static_cast<int32_t>(now - inFrameSinceMs_) < static_cast<int32_t>(FRAME_MAX_MS)) return radiolink::Activity::Rx;
     if (!activity_.quietFor(now, windowMs, 1u << Activity::RSSI)) return radiolink::Activity::Rssi;
     return radiolink::Activity::None;
 }
