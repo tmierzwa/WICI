@@ -13,16 +13,20 @@ LXMF at c3ff2d6 and pyserial in this Python, and the built program:
 import importlib.util
 import os
 from pathlib import Path
+import secrets
+import sqlite3
 import sys
+import threading
 import tempfile
 import time
 import unittest
+import unittest.mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "software" / "laptop"))
 sys.path.insert(0, str(ROOT / "firmware" / "tools"))
 
-from wici.stanowisko import stos  # noqa: E402
+from wici.stanowisko import przyjecie, stos, wzorzec  # noqa: E402
 
 PROGRAM = os.environ.get("WICI_HOST_PROGRAM")
 HAS_STACK = all(importlib.util.find_spec(m) for m in ("RNS", "LXMF", "serial"))
@@ -54,9 +58,193 @@ class ConfigTest(unittest.TestCase):
                 stos.config(bad)
 
 
+def request(mid=None, revision=1, kind=0, people=3, text="piwnica"):
+    """SA1 content of a REQUEST (kind 0) or TEST (kind 5)."""
+    return wzorzec.encode_message([1, kind, mid or secrets.token_hex(16), revision, 2, people, "ul. Długa 5", text, 1])
+
+
+def received_for(content):
+    value = wzorzec.decode_message(content)
+    return wzorzec.encode_message([1, 1, value[2], value[3], 1, 1])
+
+
+class ReceptionTest(unittest.TestCase):
+    """S2: reception on the reference OSPStore in its own thread; RECEIVED only after COMMIT."""
+
+    STATION, OTHER = bytes(range(16)), bytes(range(16, 32))
+    KEY = bytes(64)
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.path = Path(self.tmp.name) / "baza.sqlite"
+        self.sent, self.committed = [], []
+        self.now = 1_800_000_000.0
+        self.reception = przyjecie.Przyjecie(self.path, self.send, clock=lambda: self.now, log=lambda line: None)
+        self.reception.call(lambda s: s.add_trusted(self.STATION, self.KEY, ("dyzurny-1", "dyzurny-2")))
+
+    def tearDown(self):
+        self.reception.stop()
+        self.tmp.cleanup()
+
+    def send(self, target, content):
+        # Drugie połączenie z bazą widzi tylko zatwierdzone dane: RECEIVED wychodzi po COMMIT.
+        with sqlite3.connect(self.path) as db:
+            value = wzorzec.decode_message(content)
+            self.committed.append(db.execute("SELECT 1 FROM received WHERE source=? AND id=? AND revision=?",
+                                             (target, value[2], value[3])).fetchone() is not None)
+        self.sent.append((target, content))
+        return object()
+
+    def deliver(self, source, content):
+        self.reception.deliver(source, content)
+        self.reception.call(lambda s: None)   # kolejka wątku bazy pusta
+
+    def test_trusted_request_gets_received_after_commit_with_reception_time(self):
+        content = request()
+        self.deliver(self.STATION, content)
+        self.assertEqual(self.sent, [(self.STATION, received_for(content))])
+        self.assertEqual(self.committed, [True])
+        value = wzorzec.decode_message(content)
+        at = self.reception.call(lambda s: s.db.execute(
+            "SELECT at FROM received_at WHERE source=? AND id=? AND revision=?", (self.STATION, value[2], value[3])).fetchone())
+        self.assertEqual(at, (self.now,))
+
+    def test_test_message_is_received_too(self):
+        content = request(kind=5, people=1, text="")
+        self.deliver(self.STATION, content)
+        self.assertEqual(self.sent, [(self.STATION, received_for(content))])
+
+    def test_repeated_request_gets_the_same_received_and_keeps_the_first_time(self):
+        content = request()
+        self.deliver(self.STATION, content)
+        first = self.now
+        self.now += 600
+        self.deliver(self.STATION, content)
+        self.assertEqual([s[1] for s in self.sent], [received_for(content)] * 2)
+        self.assertEqual(self.reception.counts["received"], 1)
+        self.assertEqual(self.reception.counts["duplicate"], 1)
+        self.assertEqual(self.reception.call(lambda s: s.db.execute("SELECT at FROM received_at").fetchall()), [(first,)])
+
+    def test_new_revision_is_a_separate_reception(self):
+        mid = secrets.token_hex(16)
+        self.deliver(self.STATION, request(mid, 1))
+        self.deliver(self.STATION, request(mid, 2, people=5))
+        self.assertEqual(self.reception.counts["received"], 2)
+        self.assertEqual(len(self.sent), 2)
+
+    def test_same_key_with_other_content_is_a_conflict_without_overwrite(self):
+        mid = secrets.token_hex(16)
+        self.deliver(self.STATION, request(mid, 1, people=3))
+        self.deliver(self.STATION, request(mid, 1, people=4))
+        self.assertEqual(len(self.sent), 1)
+        self.assertEqual(self.reception.counts["rejected"], 1)
+        payload = self.reception.call(lambda s: s.db.execute("SELECT payload FROM received").fetchone()[0])
+        self.assertEqual(wzorzec.decode_message(payload)[5], 3)
+
+    def test_unknown_station_goes_to_quarantine_without_received(self):
+        self.deliver(self.OTHER, request())
+        self.assertEqual(self.sent, [])
+        self.assertEqual(self.reception.call(lambda s: s.db.execute("SELECT count(*) FROM quarantine").fetchone()[0]), 1)
+        for _ in range(wzorzec.QUARANTINE_PER_SENDER):
+            self.deliver(self.OTHER, request())
+        self.assertEqual(self.reception.counts["quarantined"], wzorzec.QUARANTINE_PER_SENDER)
+        self.assertEqual(self.reception.counts["quarantine_full"], 1)
+
+    def test_removed_station_is_quarantined_and_counted(self):
+        self.reception.call(lambda s: s.remove_trusted(self.STATION))
+        self.deliver(self.STATION, request())
+        self.deliver(self.STATION, request())
+        self.assertEqual(self.sent, [])
+        self.assertEqual(self.reception.call(lambda s: s.removed_messages(self.STATION)), 2)
+
+    def test_invalid_content_and_other_message_types_are_rejected(self):
+        self.deliver(self.STATION, b'["nie SA1"]')
+        self.deliver(self.STATION, received_for(request()))   # RECEIVED nie jest zgłoszeniem
+        self.assertEqual(self.sent, [])
+        self.assertEqual(self.reception.counts["rejected"], 2)
+
+    def test_database_error_before_commit_sends_nothing_and_keeps_working(self):
+        self.reception.call(lambda s: s.db.execute("DROP TABLE received_at"))
+        self.deliver(self.STATION, request())
+        self.assertEqual(self.sent, [])
+        self.assertEqual(self.reception.call(lambda s: s.db.execute("SELECT count(*) FROM received").fetchone()[0]), 0)
+        self.reception.call(lambda s: s.db.executescript(przyjecie.SCHEMA))
+        self.deliver(self.STATION, request())
+        self.assertEqual(len(self.sent), 1)
+
+    def test_database_survives_a_restart(self):
+        content = request()
+        self.deliver(self.STATION, content)
+        self.reception.stop()
+        self.reception = przyjecie.Przyjecie(self.path, self.send, log=lambda line: None)
+        self.deliver(self.STATION, content)
+        self.assertEqual(self.reception.counts["duplicate"], 1)
+        self.assertEqual(self.sent[0], self.sent[1])
+
+
+class StackHoldTest(unittest.TestCase):
+    """S2: a message from a sender LXMF does not know yet waits, with a path request, until its identity arrives."""
+
+    class Message:
+        def __init__(self, source, content, validated, reason=None, title="SA1", forged=False):
+            self.source_hash, self.content, self.signature_validated = source, content, validated
+            self.unverified_reason, self.title, self.packed = reason, title, (source, content, forged)
+
+        def title_as_string(self):
+            return self.title
+
+    def setUp(self):
+        import types
+        self.requests, self.known = [], set()
+        lxmessage = types.SimpleNamespace(SOURCE_UNKNOWN=1, SIGNATURE_INVALID=2,
+                                          unpack_from_bytes=lambda packed: self.Message(
+                                              packed[0], packed[1], packed[0] in self.known and not packed[2]))
+        rns = types.SimpleNamespace(Transport=types.SimpleNamespace(request_path=self.requests.append),
+                                    Identity=types.SimpleNamespace(recall=lambda h: object() if h in self.known else None))
+        self.modules = unittest.mock.patch.dict(sys.modules, {"LXMF": types.SimpleNamespace(LXMessage=lxmessage), "RNS": rns})
+        self.modules.start()
+        self.got = []
+        self.stos = stos.Stos(tempfile.gettempdir(), "port", lambda s, c: self.got.append((s, c)), log=lambda line: None)
+
+    def tearDown(self):
+        self.modules.stop()
+
+    def test_checked_message_goes_on_at_once(self):
+        self.stos._delivered(self.Message(b"A" * 16, b"x", True))
+        self.assertEqual(self.got, [(b"A" * 16, b"x")])
+
+    def test_unknown_sender_waits_for_its_announce(self):
+        source = b"A" * 16
+        self.stos._delivered(self.Message(source, b"x", False, reason=1))
+        self.assertEqual((self.got, self.requests), ([], [source]))
+        self.known.add(source)
+        self.stos.received_announce(source, None, None)
+        self.assertEqual(self.got, [(source, b"x")])
+        self.assertEqual(self.stos.pending, {})
+
+    def test_forged_signature_after_the_announce_is_dropped(self):
+        source = b"A" * 16
+        self.stos._delivered(self.Message(source, b"x", False, reason=1, forged=True))
+        self.stos._delivered(self.Message(source, b"y", False, reason=2))   # SIGNATURE_INVALID od razu
+        self.known.add(source)
+        self.stos.received_announce(source, None, None)
+        self.assertEqual(self.got, [])
+        self.assertEqual(self.stos.dropped["bad_signature"], 2)
+
+    def test_waiting_messages_have_the_quarantine_limits(self):
+        for i in range(stos.Stos.PENDING_PER_SENDER + 1):
+            self.stos._delivered(self.Message(b"A" * 16, b"%d" % i, False, reason=1))
+        self.assertEqual(len(self.stos.pending[b"A" * 16]), stos.Stos.PENDING_PER_SENDER)
+        self.assertEqual(self.stos.dropped["pending_full"], 1)
+
+    def test_other_titles_are_not_sa1(self):
+        self.stos._delivered(self.Message(b"A" * 16, b"x", True, title="chat"))
+        self.assertEqual(self.got, [])
+
+
 @unittest.skipUnless(PROGRAM and HAS_STACK, "WICI_HOST_PROGRAM or Reticulum, LXMF and pyserial not available")
 class StackTest(unittest.TestCase):
-    """S1: the application stack behind the OSP node, with a station that has the application as card receiver."""
+    """S1 and S2: the application behind the OSP node, with a station that has the application as card receiver."""
 
     @classmethod
     def setUpClass(cls):
@@ -69,17 +257,48 @@ class StackTest(unittest.TestCase):
         cls.station = rns_osp_node.Program(PROGRAM, str(work / "station.bin"), station_port, node_port, 12)
         if not cls.node.ready or not cls.station.ready:
             raise RuntimeError("host programs did not start")
-        cls.messages = []
-        cls.stos = stos.Stos(work / "stan", cls.node.ready["usb"], lambda *m: cls.messages.append(m),
-                             log=lambda line: None)
-        cls.stos.start()
         cls.station_address = bytes.fromhex(cls.station.ready["address"])
+        cls.station_announced_before_the_application()
+        cls.messages = []
+
+        def received(source, content):
+            cls.messages.append((source, content))
+            cls.reception.deliver(source, content)
+        cls.stos = stos.Stos(work / "stan", cls.node.ready["usb"], received, log=lambda line: None)
+        cls.reception = przyjecie.Przyjecie(work / "stan" / "baza.sqlite", cls.stos.send, log=lambda line: None)
+        cls.stos.start()
+        cls.station.command(f"receiver {cls.sa1_destination().hex()} {cls.stos.identity.get_public_key().hex()}")
+        if cls.station.wait("receiver", 5) is None:
+            raise RuntimeError("station did not take the application as card receiver")
+
+    @classmethod
+    def station_announced_before_the_application(cls):
+        """The node knows the station from its announce, the application does not (a spare computer with empty
+        Reticulum storage). Until the application connects, a plain reader empties the node USB port."""
+        import serial
+        port = serial.Serial(cls.node.ready["usb"], 115200, timeout=0.1)
+        stop = threading.Event()
+        reader = threading.Thread(target=lambda: [port.read(4096) for _ in iter(stop.is_set, True)], daemon=True)
+        reader.start()
+        cls.station.command("announce 57494349")
+        known = False
+        for _ in range(60):
+            if cls.node.status().get("paths", 0) >= 1:
+                known = True
+                break
+            time.sleep(0.5)
+        stop.set()
+        reader.join()
+        port.close()
+        if not known:
+            raise RuntimeError("the node did not learn the station announce")
 
     @classmethod
     def tearDownClass(cls):
         import RNS
         RNS.Reticulum.panic_on_interface_error = False
         cls.stos.stop()
+        cls.reception.stop()
         cls.node.stop()
         cls.station.stop()
         cls.work.cleanup()
@@ -93,13 +312,26 @@ class StackTest(unittest.TestCase):
             time.sleep(0.05)
         return False
 
-    def sa1_destination(self):
+    @classmethod
+    def sa1_destination(cls):
         import sa1_lxmf
-        return sa1_lxmf.sa1_of(self.stos.identity)
+        return sa1_lxmf.sa1_of(cls.stos.identity)
 
-    def make_receiver_of_station(self):
-        self.station.command(f"receiver {self.sa1_destination().hex()} {self.stos.identity.get_public_key().hex()}")
-        self.assertIsNotNone(self.station.wait("receiver", 5))
+    def report(self, content):
+        """content from the station through the node; True when the application got it (checked signature)."""
+        import sa1_lxmf
+        data = sa1_lxmf.envelope(self.station_address, self.sa1_destination(), content)
+        self.station.command(f"send {self.sa1_destination().hex()} {data.hex()} 120")
+        sent = self.station.wait("sent", 10)
+        self.assertTrue(sent and sent["handle"] > 0)
+        receipt = self.station.wait("receipt", 180, lambda e: e["handle"] == sent["handle"])
+        self.assertTrue(receipt and receipt["delivered"])
+        return self.wait_for(lambda: (self.station_address, content) in self.messages, 120)
+
+    def received_at_station(self, content, timeout=120):
+        import sa1_lxmf
+        expected = sa1_lxmf.envelope(self.sa1_destination(), self.station_address, received_for(content)).hex()
+        return self.station.wait("packet", timeout, lambda e: e["data"] == expected) is not None
 
     def test_1_flow_control_and_bitrate_from_config(self):
         import RNS
@@ -110,49 +342,39 @@ class StackTest(unittest.TestCase):
 
     def test_2_announce_reaches_the_station(self):
         self.stos.announce()
-        e = self.station.wait("announce", 120, lambda e: e["dest"] == self.stos.address.hex())
-        self.assertIsNotNone(e)
+        self.assertIsNotNone(self.station.wait("announce", 120, lambda e: e["dest"] == self.stos.address.hex()))
 
-    def report(self, text):
-        """A report from the station through the node: (source, signature_ok) at the application; receipt checked."""
-        import sa1_lxmf
-        self.make_receiver_of_station()
-        content = b'["WICI",1,"stanowisko","' + text.encode() + b'"]'
-        data = sa1_lxmf.envelope(self.station_address, self.sa1_destination(), content)
-        self.station.command(f"send {self.sa1_destination().hex()} {data.hex()} 120")
-        sent = self.station.wait("sent", 10)
-        self.assertTrue(sent and sent["handle"] > 0)
-        self.assertTrue(self.wait_for(lambda: any(m[1] == content for m in self.messages), 120))
-        receipt = self.station.wait("receipt", 180, lambda e: e["handle"] == sent["handle"])
-        self.assertTrue(receipt and receipt["delivered"])
-        source, _, signature_ok = next(m for m in self.messages if m[1] == content)
-        self.assertEqual(source, self.station_address)
-        return signature_ok
+    def test_3_station_off_the_trusted_list_is_quarantined_without_received(self):
+        # Aplikacja startuje bez znajomości stacji; tożsamość przychodzi z ogłoszenia w pamięci węzła (po
+        # połączeniu albo w odpowiedzi na zapytanie o trasę, StackHoldTest) i dopiero wtedy podpis jest sprawdzony.
+        content = request(text="przed ogłoszeniem")
+        self.assertTrue(self.report(content))
+        self.assertEqual(self.reception.call(lambda s: s.db.execute(
+            "SELECT count(*) FROM quarantine WHERE source=?", (self.station_address,)).fetchone()[0]), 1)
+        self.assertFalse(self.received_at_station(content, timeout=5))
 
-    def test_3_report_before_the_station_announce_has_no_checked_signature(self):
-        # Nadawca jeszcze nieznany (SOURCE_UNKNOWN): podpisu nie da się sprawdzić. Zapytanie o trasę
-        # i sprawdzenie po ogłoszeniu należą do etapu S2 (stanowisko-osp.md, „Przyjęcie”).
-        self.assertFalse(self.report("S1 przed ogłoszeniem stacji"))
-
-    def test_4_application_message_reaches_the_station_and_is_delivered(self):
-        import LXMF
+    def test_4_trusted_station_gets_received_and_again_for_a_repeat(self):
         import RNS
+        identity = RNS.Identity.recall(self.station_address)
+        self.assertIsNotNone(identity)
+        self.reception.call(lambda s: s.add_trusted(self.station_address, identity.get_public_key(), ("dyzurny-1", "dyzurny-2")))
+        content = request(text="zaufana stacja")
+        self.assertTrue(self.report(content))
+        self.assertTrue(self.received_at_station(content))
+        self.messages.clear()
+        self.assertTrue(self.report(content))      # ponowione zgłoszenie (nowa wiadomość LXMF)
+        self.assertTrue(self.received_at_station(content))
+        self.assertEqual(self.reception.counts["duplicate"], 1)
+
+    def test_5_application_message_reaches_the_station_and_is_delivered(self):
+        import LXMF
         import sa1_lxmf
-        self.make_receiver_of_station()
-        self.station.command("announce 57494349")
-        self.assertTrue(self.wait_for(lambda: RNS.Identity.recall(self.station_address) is not None, 120))
-        content = b'["WICI",1,"stanowisko","S1 aplikacja do stacji"]'
+        content = b'["WICI",1,"stanowisko","aplikacja do stacji"]'
         message = self.stos.send(self.station_address, content)
         self.assertIsNotNone(message)
         expected = sa1_lxmf.envelope(self.sa1_destination(), self.station_address, content).hex()
         self.assertIsNotNone(self.station.wait("packet", 120, lambda e: e["data"] == expected))
         self.assertTrue(self.wait_for(lambda: message.state == LXMF.LXMessage.DELIVERED, 240))
-
-    def test_5_report_after_the_station_announce_has_a_checked_signature(self):
-        import RNS
-        self.station.command("announce 57494349")
-        self.assertTrue(self.wait_for(lambda: RNS.Identity.recall(self.station_address) is not None, 120))
-        self.assertTrue(self.report("S1 po ogłoszeniu stacji"))
 
     def test_6_identity_survives_a_restart(self):
         import RNS
