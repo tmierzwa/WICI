@@ -1,6 +1,6 @@
 # Współpraca przy WICI
 
-Projekt jest na etapie projektowania prototypu. Najbliższy cel to wymiana zgłoszeń na gotowych płytkach ESP32-S3 z SX1262 oraz próby w terenie. Zmiany mają upraszczać wykonanie, usuwać zależność od jednego dostawcy i zwiększać niezawodność; wygląd i dodatkowe funkcje nie są priorytetem. Najcenniejszym wkładem są zgłoszone błędy w obliczeniach, założeniach i kontraktach oraz raporty z prób fizycznych.
+Projekt jest na etapie prototypu. Najbliższe kroki to uruchomienie programu stacji na prototypie (płytka v1) i pomiar zasięgu radiami RNode ([plan, kroki 1–8](docs/concept/08-plan-weryfikacji-i-decyzje.html)). Zmiany mają upraszczać wykonanie, usuwać zależność od jednego dostawcy i zwiększać niezawodność; wygląd i dodatkowe funkcje nie są priorytetem. Najcenniejszym wkładem są zgłoszone błędy w obliczeniach, założeniach i kontraktach oraz raporty z prób fizycznych.
 
 ## Jak zgłosić zmianę
 
@@ -8,12 +8,12 @@ Projekt jest na etapie projektowania prototypu. Najbliższy cel to wymiana zgło
 2. Pracuj w swojej gałęzi. Opisz, co zmienia PR i jak go sprawdzono. Wymagane punkty są w szablonie PR.
 3. Parametry i kontrakty stacji zmieniaj w `docs/spec/`. Potrzeby, uzasadnienia, opcje i analizę wykonalności utrzymuj w [docs/concept](docs/concept/index.html). Aktualizuj powiązane wymagania i próby; odróżniaj założenie od pomiaru. Nie twórz drugiej pełnej kopii specyfikacji.
 4. Zmiana kodu kontraktów wymaga przypadku testowego, który pokazuje problem, oraz wyniku odpowiednich testów. Raport aktualizuj dopiero po ich wykonaniu.
-5. Zmiana CAD płytki R02 wymaga aktualnych raportów ERC/DRC i dowodów w `checks/` według [opisu projektu](hardware/r02/README.md) i [lekcji](hardware/r02/lekcje.md). Zmiana elektryczna wymaga nowej rewizji. Nie zmieniaj historycznych raportów na wyniki nowych prób. Zmiana płytki nośnej N1 idzie przez `hardware/dev-bench/tools/design.py` i generatory, z nowymi `checks/erc.json` i `checks/drc.json`; plików w `cad/` nie poprawia się ręcznie.
+5. Zmiana płytki stacji (v1, v1.1, przyszła v2; pliki w `hardware/dev-bench/`) idzie przez `hardware/dev-bench/tools/design.py` i generatory, z nowymi `checks/erc.json` i `checks/drc.json`; plików w `cad/` nie poprawia się ręcznie. Zmiana elektryczna wymaga nowej rewizji. Nie zmieniaj historycznych raportów na wyniki nowych prób. Materiały w `hardware/r02/` są wstrzymane do decyzji po pilotażu ([zasady procesu](hardware/r02/lekcje.md)).
 6. Raport z prób fizycznych podaje rewizję, elementy, warunki, metodę i wynik; użyj szablonu „Raport z próby”. Nie oznaczaj niewykonanych prób jako zaliczonych. Samo przejście CI nie zdejmuje statusu HOLD. Raporty zostają w Issues z etykietą `próba`. Po przyjęciu raportu opiekun repozytorium wpisuje wynik w kolumnie „Stan” [odbioru](docs/spec/odbior.md) z odnośnikiem do Issue. Propozycję rozstrzygnięcia decyzji zgłasza się szablonem „Decyzja”.
 
 ## Od czego zacząć
 
-Oprogramowanie stacji w [firmware/](firmware/README.md) jest skompilowane dla stanowisk deweloperskich A i B oraz stacji L0, ze stosem Reticulum. Od etapów R6-3 i R6-4 stos opiera się na rdzeniu stacji z LXMF ([reticulum-core.md](firmware/reticulum-core.md)). Oprogramowania nie uruchomiono jeszcze na sprzęcie. Pilotaż używa gotowej płytki ESP32-S3 z układem LoRa SX1262, a płytka R02 jest wstrzymana do decyzji po pilotażu.
+Program stacji w [firmware/](firmware/README.md) ma rdzeń Reticulum stacji z LXMF ([reticulum-core.md](firmware/reticulum-core.md)) i kompiluje się m.in. dla prototypu (środowisko `l0`). Nie ma jeszcze interfejsu LoRa w stosie i nie działał jeszcze na sprzęcie. Prototypy na płytce v1 są w montażu; stacje pilotażowe powstaną na płytce v2 ([plan](docs/concept/08-plan-weryfikacji-i-decyzje.html)).
 
 ### Małe zadania bez sprzętu
 
@@ -25,15 +25,11 @@ Każde wymaga tylko Pythona 3.12 i edytora. Recenzję wykonuje opiekun repozytor
 
 ### Zadania ze sprzętem i integracją stosu
 
-Pilotaż używa gotowej płytki ESP32-S3 z układem LoRa SX1262 ([profil LoRa](docs/spec/radio.md#profil-lora-pilotażu)). Zadania 1–2 są pierwsze w kolejności prac. Zadania 3–7 dotyczą wariantu zapasowego P1 i stanowisk deweloperskich A/B. Nadal pomagają w próbach stosu (T1–T3), ale nie blokują pilotażu.
+Zadania odpowiadają krokom 2–4 [planu](docs/concept/08-plan-weryfikacji-i-decyzje.html). Zadania wariantu P1 i stanowisk deweloperskich A/B są wstrzymane ([archiwum](docs/archiwum/README.md)).
 
-1. **Interfejs LoRa w oprogramowaniu stacji.** Dodać do `firmware/` interfejs SX1262 dla stosu: format w eterze zgodny z RNode, po każdym nadaniu cisza 12t, IFAC. Uruchomić go na gotowej płytce ESP32-S3 + SX1262 i wymienić pakiety z implementacją Reticulum w Pythonie przez RNode. To pierwsza część T3 dla pilotażu. W raporcie podaj płytkę, zapas RAM zmierzony poleceniem `RNS` i wynik wymiany.
-2. **Etap 0: pomiar tłumienia tras.** Gotowymi urządzeniami LoRa z deklaracją zgodności UE zmierzyć tłumienie na rzeczywistych parach miejsc przy SF7 i SF8, według [planu prób](docs/concept/08-plan-weryfikacji-i-decyzje.html). Nie wymaga własnego sprzętu ani oprogramowania stacji.
-3. Wariant zapasowy P1: zmontować płytkę nośną N1, uruchomić obraz `bench-n1` albo `bench-b` według [uruchomienia](hardware/dev-bench/uruchomienie.md) i zgłosić raport z kroków A1–A5 albo B1–B4. Kod oprogramowania układowego trafia do `firmware/` (licencja MIT); ramka P1 jest już w `firmware/src/p1frame.cpp`.
-4. Wariant zapasowy P1: uruchomić obraz ze stosem na płytkach rozwojowych nRF52840 i ESP32-S3 i wymienić pakiety z implementacją Reticulum w Pythonie przez łącze P1; na komputerze ta wymiana już przechodzi z emulatorem łącza ([próba zgodności](firmware/README.md#próba-zgodności-z-reticulum)). W raporcie podaj zapas RAM zmierzony poleceniem `RNS` i listę prób na sprzęcie z tej sekcji.
-5. Rozszerzyć emulator łącza P1 programu `host` (`firmware/src/host/node_host.cpp`: czas TX z modelu ramki, dług ciszy 12×; kolejka do 4 datagramów jest w interfejsie P1) o CCA, odroczenia i kolizje między kilkoma węzłami ([radio.md](docs/spec/radio.md)).
-6. Dodać do modelu protokół USB laptop–stacja (D17) i dziennik FRAM z długiem ciszy.
-7. Wariant zapasowy P1: zbudować [stanowisko deweloperskie](hardware/dev-bench/README.md) A lub B z kupnych płytek i wykonać na nim pierwsze pomiary P1 poleceniami pomiarowymi z [radio.md](docs/spec/radio.md); wynik służy do porównania z LoRa.
+1. **Interfejs LoRa w programie stacji (krok 4).** Dodać do `firmware/` interfejs SX1262 dla stosu: format w eterze zgodny z RNode, po każdym nadaniu cisza 12t, IFAC ([profil LoRa](docs/spec/radio.md#profil-lora-pilotażu)). Uruchomić go na prototypie i wymienić pakiety z Reticulum w Pythonie przez radio RNode. W raporcie podaj egzemplarz, zapas RAM zmierzony poleceniem `RNS` i wynik wymiany.
+2. **Radia RNode przy stole i pomiar ogólny (kroki 2 i 3).** Wgrać RNode na RAK4631 według [hardware/rnode](hardware/rnode/README.md), sprawdzić wymianę przy stole, potem zmierzyć zasięg na własnym terenie według [procedury](docs/spec/odbior.md#krok-3-pomiar-ogólny). Przed pomiarem poza budynkiem przeczytaj [podstawę pomiarów](docs/spec/odbior.md#podstawa-pomiarów-radiami-rnode).
+3. Dodać do modelu protokół USB laptop–stacja (D17) i dziennik FRAM z długiem ciszy.
 
 Przed pracą otwórz Issue lub skomentuj istniejące, żeby nie dublować pracy.
 
@@ -90,7 +86,7 @@ Główna gałąź jest chroniona regułą repozytorium bez wyjątków, także dl
 
 ## Licencje
 
-Wkład pozostaje pod licencją właściwą dla ścieżki w [LICENSE.md](LICENSE.md): kod MIT, konstrukcja CERN-OHL-P-2.0, dokumentacja CC-BY-4.0. Projekt jest otwarty; licencje dopuszczają zastosowania komercyjne. Obowiązuje [kodeks postępowania](CODE_OF_CONDUCT.md); podatności zgłaszaj według [SECURITY.md](SECURITY.md).
+Wkład pozostaje pod licencją właściwą dla ścieżki w [LICENSE.md](LICENSE.md): kod MIT (rdzeń stacji w `firmware/lib/reticulum_core/` na [licencji Reticulum](LICENSES/LicenseRef-Reticulum.txt)), konstrukcja CERN-OHL-P-2.0, dokumentacja CC-BY-4.0. Projekt jest otwarty; licencje dopuszczają zastosowania komercyjne. Obowiązuje [kodeks postępowania](CODE_OF_CONDUCT.md); podatności zgłaszaj według [SECURITY.md](SECURITY.md).
 
 ## In English
 

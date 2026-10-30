@@ -46,7 +46,7 @@ dzielniki AA i 12 V (odłączane) ─ ADC
 
 Schemat pokazuje funkcje, nie układy. Architekturę wybiera projekt v2:
 
-- (a) dwie przetwornice 5 V z diodami na wejście 5 V modułu MCU, jak w dotychczasowym schemacie stacji z gotowych modułów (kandydaci tylko w postaci modułów Pololu, więc do pełnego montażu w JLC potrzebne są układy);
+- (a) dwie przetwornice 5 V z diodami na wejście 5 V modułu MCU, jak w dawnym schemacie stacji z gotowej płytki ESP32-S3 ([archiwum](../archiwum/elektronika-r02.md); kandydaci tylko w postaci modułów Pololu, więc do pełnego montażu w JLC potrzebne są układy);
 - (b) jak w [projekcie zasilania R02](../../hardware/r02/zasilanie.md): ogniwa przez diodę i 12 V przez łącznik na wspólną szynę VSYS, przetwornica podwyższająco-obniżająca 3,3 V; projekt ma dobór części i bilans prądu w stanie wyłączonym, ale zasila moduł MCU od strony 3,3 V, więc trzeba sprawdzić, czy płytka DevKitC to dopuszcza.
 
 Wybór należy do projektu v2 i zależy też od dostępności części w JLCPCB.
@@ -66,7 +66,7 @@ Wybór należy do projektu v2 i zależy też od dostępności części w JLCPCB.
 | pomiar | ADC napięcia ogniw (przed diodą) i wejścia 12 V (przed diodą i łącznikiem) przez dzielniki odłączane między pomiarami; błąd ≤2%; wynik na ekranie i w `INFO`; wejście ADC ograniczone tak, by impuls 29 V (granica TVS) go nie uszkodził | dzielnik 0,1% jak VTEST na v1 |
 | pobór | w pracy przekaźnika tyle, by komplet ogniw dał ≥48 h (W23; model: [radio](radio.md#profil-lora-pilotażu)); w stanie wyłączonym ≤0,1 mA z każdego źródła | pomiar w RX, TX i przy pracy ekranu |
 
-Zasady: przetwornica, diody i regulator modułu tracą energię. W wariancie (a) szacunek dla 45 mA poboru MCU spada z około 52 h (model z przetwornicą 3,3 V) do około 45 h, więc W23 jest zagrożone; rozstrzyga pomiar z minimum pilotażu, a niespełnione wymaganie zmienia tor przed zamówieniem v2. Czy regulator 3,3 V modułu utrzymuje napięcie przy nadawaniu, sprawdza pomiar 3,3 V przy TX. Na czas przechowywania ogniwa wyjmuje się ze stacji. Powerbank przez USB nie jest dopuszczonym źródłem: wiele powerbanków wyłącza się przy prądzie rzędu kilkudziesięciu miliamperów, czyli przy poborze stacji.
+Przetwornica, diody i regulator modułu tracą energię. W wariancie (a) szacunek dla 45 mA poboru MCU spada z około 52 h (model z przetwornicą 3,3 V) do około 45 h, więc W23 jest zagrożone; rozstrzyga pomiar z minimum pilotażu, a niespełnione wymaganie zmienia tor przed zamówieniem v2. Czy regulator 3,3 V modułu utrzymuje napięcie przy nadawaniu, sprawdza pomiar 3,3 V przy TX. Na czas przechowywania ogniwa wyjmuje się ze stacji. Powerbank przez USB nie jest dopuszczonym źródłem: wiele powerbanków wyłącza się przy prądzie rzędu kilkudziesięciu miliamperów, czyli przy poborze stacji.
 
 ### Stany zasilania 12 V
 

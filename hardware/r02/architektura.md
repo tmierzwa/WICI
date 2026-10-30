@@ -1,10 +1,10 @@
 # WICI R02: architektura płytki stacji
 
-**Wstrzymane do decyzji po pilotażu (przegląd praktyczny 2026-10-08, F99):** pilotaż używa stacji z gotowej płytki MCU z układem LoRa SX1262 ([koncepcja 08](../../docs/concept/08-plan-weryfikacji-i-decyzje.html)).
+**Materiał do projektu płytki v2 i do wydania (porządek 2026-10-29, F119).** Płytki R02 nie projektuje się przed pilotażem: stacja pilotażowa ma płytkę v2 ([elektronika](../../docs/spec/elektronika.md#stacja-pilotażowa)), a o płytce wyrobu rozstrzyga krok 8 planu ([koncepcja 08](../../docs/concept/08-plan-weryfikacji-i-decyzje.html#kolejnosc-prac)). Plik jest archiwalny: opisuje bloki i budżet pinów dwóch wykonań P1 (nRF52840 + CC1120, ESP32-S3 + S2-LP) i podział na płytę bazową z wymiennym modułem MCU+RF pod drugiego dostawcę (W14, sprawa wydania). Dla v2 mogą się przydać tylko tabela stanów zasilania i sygnały ekranu, FRAM i przycisków.
 
 **Status: 2026-10-08, przed schematem. Nie zamawiać.** Dokument opisuje bloki R02, sygnały między nimi i budżet pinów obu wykonań. Porównuje też dwa możliwe podziały na płytki (krok 1 [kolejności prac](README.md#kolejność-prac)). Wszystko tutaj wynika z wymagań, więc nie czeka na wyniki prób T3–T5. To, co od nich zależy, wymieniono na końcu.
 
-Źródła: [elektronika](../../docs/spec/elektronika.md) (zasilanie i wymagania R02), [radio](../../docs/spec/radio.md#dwa-wykonania), [oprogramowanie](../../docs/spec/oprogramowanie.md#ekran-i-przyciski-stacji), przypisanie sygnałów stanowiska N1 ([płytka nośna](../dev-bench/plytka-nosna.md), `firmware/src/board_bench_n1.h` i `board_bench_b.h`). Projekt bloku zasilania jest w [zasilaniu](zasilanie.md), obudowa w [obudowie](obudowa.md), a tor RF i stos warstw w [torze RF](tor-rf.md).
+Źródła: [elektronika](../../docs/spec/elektronika.md) (zasilanie i wymagania R02), [radio](../../docs/archiwum/p1-radio.md#dwa-wykonania), [oprogramowanie](../../docs/spec/oprogramowanie.md#ekran-i-przyciski-stacji), przypisanie sygnałów stanowiska N1 ([płytka nośna](../dev-bench/plytka-nosna.md), `firmware/src/board_bench_n1.h` i `board_bench_b.h`). Projekt bloku zasilania jest w [zasilaniu](zasilanie.md), obudowa w [obudowie](obudowa.md), a tor RF i stos warstw w [torze RF](tor-rf.md).
 
 ## Bloki
 

@@ -112,7 +112,7 @@ Panel sam przechodzi kolejne drogi w tej kolejności i przy każdej przeszkodzie
 
 Na działającym Linuksie dostęp do portu stacji wymaga zwykle jednorazowo `sudo` (grupa `dialout`). Bez niego zostaje system Linux z pamięci USB albo inny laptop. Laptop łączy się z routerem kablem, gdy ma gniazdo sieciowe albo działający adapter USB–Ethernet. Inaczej łączy się przez Wi-Fi routera, co działa, jeśli router nie izoluje urządzeń od siebie. Stacja, laptop i router nie muszą stać razem: router jest tam, gdzie zamontował go zarządca.
 
-Jeżeli router ma nieznane hasło, wyłączony DHCP lub izolację Wi-Fi od LAN, a nikt nie może tego zmienić, zostaje tryb kiosku. Wiele routerów domowych obsługuje najwyżej około 32 klientów Wi-Fi lub ma mniejszą pulę DHCP; wtedy mieszkańcy korzystają ze strony kolejno. Router obiektu nie musi przejść kwalifikacji, ale z zarządcą uzgadnia się zasilanie awaryjne i brak izolacji Wi-Fi od LAN. Zablokowany router znaleziony na miejscu pozostaje niedostępny: nie resetuj go bez zgody właściciela. Mac z procesorem Apple Silicon nie uruchomi ogólnego obrazu Linuksa, więc pakiet START wymaga na nim sprawnego systemu macOS. Gdy żaden laptop na miejscu nie uruchomi aplikacji, zostaje poziom 1.
+Jeżeli router ma nieznane hasło, wyłączony DHCP lub izolację Wi-Fi od LAN, a nikt nie może tego zmienić, zostaje tryb kiosku. Wiele routerów domowych obsługuje najwyżej około 32 klientów Wi-Fi lub ma mniejszą pulę DHCP; wtedy mieszkańcy korzystają ze strony kolejno. Router obiektu nie musi przejść kwalifikacji, ale z zarządcą uzgadnia się zasilanie awaryjne i brak izolacji Wi-Fi od LAN. Zablokowany router zastany na miejscu pozostaje niedostępny: nie resetuj go bez zgody właściciela. Mac z procesorem Apple Silicon nie uruchomi ogólnego obrazu Linuksa, więc pakiet START wymaga na nim sprawnego systemu macOS. Gdy żaden laptop na miejscu nie uruchomi aplikacji, zostaje poziom 1.
 
 ## Energia stacji
 
@@ -145,7 +145,7 @@ Wynik przeglądu zapisuje się z datą i wersją wydania w ewidencji sprzętu gm
 
 | Wybór | Uzasadnienie i koszt |
 |---|---|
-| Samodzielna stacja; laptop i router jako rozszerzenia | Łączność i przekaźnik bez znalezionego sprzętu i bez 230 V; oprogramowanie układowe stosu, kolejki i interfejsu na MCU |
+| Samodzielna stacja; laptop i router jako rozszerzenia | Łączność i przekaźnik bez sprzętu przyniesionego na miejscu i bez 230 V; oprogramowanie układowe stosu, kolejki i interfejsu na MCU |
 | Stacja jedynym węzłem schronienia, laptop bez tożsamości Reticulum | Jedna tożsamość i jedna kolejka; potrzebny protokół USB laptop–stacja (D17) |
 | Tożsamość odbiorcy i stos LXMF na komputerze stanowiska, stacja stanowiska jako węzeł transportu (D19) | Dojrzały stos i pamięć bez stałych limitów w najbardziej obciążonym węźle, jedna rola stacji; komputer stanowiska obowiązkowy, z zapasem; interfejs Reticulum przez USB w stacji |
 | Własny rdzeń Reticulum i LXMF na MCU ([zakres](../../firmware/reticulum-core.md)) | Gotowy port microReticulum jest jeszcze niedojrzały do zastosowań krytycznych i zostaje wyjściem awaryjnym; rdzeń obejmuje tylko podzbiór protokołu WICI, a zgodność z Reticulum w Pythonie sprawdzają wektory, próby różnicowe i T3; koszt: 2–4 miesiące pracy i utrzymanie |

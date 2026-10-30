@@ -1,6 +1,8 @@
 # WICI: obsługa stanowiska z płytką nośną N1
 
-Instrukcja dla osoby, która prowadzi próby T1–T4 na zmontowanym stanowisku. Dotyczy sztuki płytki N1, która przeszła [uruchomienie](uruchomienie.md); tam opisano montaż, kontrolę przed zasilaniem i pierwsze włączenie. Opis płytki: [płytka nośna](plytka-nosna.md), polecenia oprogramowania: [firmware/README.md](../../firmware/README.md#polecenia), granice pomiarów stanowiska: [README stanowiska](README.md#co-sprawdza-stanowisko-a-co-dopiero-r02).
+**Archiwum (F99, 2026-10-08; porządek 2026-10-29, F119).** Plik opisuje obsługę stanowisk deweloperskich A/B na płytce v1 (dawniej N1), wstrzymanych razem z profilem P1 ([stanowiska A/B](../archiwum/stanowiska-a-b.md)); prototyp obsługuje się według [programu diagnostycznego](../l0-diagnostic/README.md). Dla prototypu nadal obowiązują zasady o panelu, zacisku VTEST, macie antystatycznej i pomiarze prądu przez JP1/JP2.
+
+Instrukcja dla osoby, która prowadzi próby T1–T4 na zmontowanym stanowisku. Dotyczy sztuki płytki N1, która przeszła [uruchomienie](uruchomienie.md); tam opisano montaż, kontrolę przed zasilaniem i pierwsze włączenie. Opis płytki: [płytka nośna](plytka-nosna.md), polecenia oprogramowania: [firmware/README.md](../../firmware/README.md#polecenia), granice pomiarów stanowiska: [archiwum stanowisk](../archiwum/stanowiska-a-b.md#co-sprawdza-stanowisko-a-co-dopiero-r02).
 
 ## Zasady
 
@@ -10,7 +12,7 @@ Instrukcja dla osoby, która prowadzi próby T1–T4 na zmontowanym stanowisku. 
 - Panel ekranu jest szklany i przyklejony do płytki. Nie naciska się go, nie podnosi za taśmę FPC i nie wyjmuje taśmy ze złącza J7 bez potrzeby (taśmę wolno zginać najwyżej trzy razy).
 - Na DK wpiętą w N1 nie wgrywa się obrazu okablowania przewodami `bench-a` ([uruchomienie](uruchomienie.md#oprogramowanie)). Stanowisko A używa obrazu `bench-n1`, stanowisko B obrazu `bench-b`.
 - Przed każdym poleceniem nadawania złącze SMA modułu musi być obciążone: antena z [BOM stacji](../../docs/spec/bom-stacji.csv) albo tłumik i obciążenie 50 Ω. Odporność na nadawanie przy rozwartym i zwartym złączu sprawdza się dopiero na R02.
-- W eterze nadaje się tylko profilem P1 na 869,525 MHz, w limicie czasu nadawania, który pilnuje oprogramowanie. Serie z argumentem `CONDUCTED` nadaje się wyłącznie przewodowo do tłumika albo obciążenia ([pomiary](README.md#pomiary)).
+- W eterze nadaje się tylko profilem P1 na 869,525 MHz, w limicie czasu nadawania, który pilnuje oprogramowanie. Serie z argumentem `CONDUCTED` nadaje się wyłącznie przewodowo do tłumika albo obciążenia ([pomiary](../archiwum/stanowiska-a-b.md#pomiary)).
 - Na zacisk VTEST podaje się najwyżej 15 V z zasilacza z ograniczeniem prądu. Minus zacisku jest masą płytki, a przez nią masą USB laptopa.
 - Płytkę obsługuje się na macie antystatycznej. W stanowisku B długie piny J1–J4 wystają od spodu: płytka stoi tylko na dystansach, nigdy na metalowym podłożu.
 

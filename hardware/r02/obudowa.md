@@ -1,10 +1,10 @@
 # WICI R02: obudowa i panel stacji
 
-**Wstrzymane do decyzji po pilotażu (przegląd praktyczny 2026-10-08, F99):** pilotaż używa stacji z gotowej płytki MCU z układem LoRa SX1262 ([koncepcja 08](../../docs/concept/08-plan-weryfikacji-i-decyzje.html)).
+**Materiał do projektu płytki v2 i do wydania (porządek 2026-10-29, F119).** Płytki R02 nie projektuje się przed pilotażem: stacja pilotażowa ma płytkę v2 ([elektronika](../../docs/spec/elektronika.md#stacja-pilotażowa)), a o płytce wyrobu rozstrzyga krok 8 planu ([koncepcja 08](../../docs/concept/08-plan-weryfikacji-i-decyzje.html#kolejnosc-prac)). Plik jest materiałem do obudowy stacji pilotażowej i wydania: wybór skrzynki, panel, okno ekranu i układ panelu przejmuje [obudowa](../obudowa/README.md) (`zalozenia.py`). Obrys płyty bazowej i odniesienia do toru RF dotyczą archiwalnej płytki R02.
 
 **Status: 2026-10-08, propozycja przed przymiarką. Nie zamawiać.** Dokument wybiera obudowę i części panelu oraz wyznacza z nich obrys płyty bazowej i ograniczenia dla layoutu. Nie zależy od prób T3–T5. Ekran (D15) przyjęto jak na N1: Sharp LS027B7DH01A (62,8 × 42,82 × 1,64 mm, pole aktywne 58,8 × 35,28 mm). Zamiennik o innym obrysie zmienia tylko okno i strefę pod ekranem.
 
-Wymagania: [elektronika](../../docs/spec/elektronika.md#płytka-stacji-r02-wymagania) (obudowa IP40 bez wentylacji, ≤1 kg z ogniwami, powłoka ochronna, odporność ESD) i [BOM stacji](../../docs/spec/bom-stacji.csv) (przyciski, koszyk, złącza). Sposób użycia: [karta obsługi](../../docs/obsluga/karta-stacji.html). Gospodarz sam wkłada ogniwa, więc dostęp do ogniw nie wymaga otwierania obudowy głównej. Ceny i stany magazynowe sprawdzono 2026-10-08 w DigiKey i TME. Pozycje oznaczone „do sprawdzenia” nie mają jeszcze potwierdzenia z karty producenta albo stanu magazynowego.
+Wymagania: [elektronika](../../docs/archiwum/elektronika-r02.md#płytka-stacji-r02-wymagania) (obudowa IP40 bez wentylacji, ≤1 kg z ogniwami, powłoka ochronna, odporność ESD) i [BOM stacji](../../docs/spec/bom-stacji.csv) (przyciski, koszyk, złącza). Sposób użycia: [karta obsługi](../../docs/obsluga/karta-stacji.html). Gospodarz sam wkłada ogniwa, więc dostęp do ogniw nie wymaga otwierania obudowy głównej. Ceny i stany magazynowe sprawdzono 2026-10-08 w DigiKey i TME. Pozycje oznaczone „do sprawdzenia” nie mają jeszcze potwierdzenia z karty producenta albo stanu magazynowego.
 
 ## Obudowa
 

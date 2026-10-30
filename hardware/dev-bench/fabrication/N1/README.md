@@ -1,6 +1,6 @@
-# WICI: pliki produkcyjne płytki nośnej N1
+# WICI: pliki produkcyjne płytki v1.1 (N1.1)
 
-**Pliki są rewizji N1.1 z J7 odsuniętym od panelu ([F118](../../../../docs/review.md)): napis „WICI płytka nośna N1.1” na płytce, rewizja N1.1 w plikach Gerber i na rysunku montażowym. Pięć płytek pierwszej rewizji N1 zamówiono 2026-10-10 dla L0 ([zamówienie](../../przed-produkcja.md#zamówienie-2026-10-10-l0)); ich pliki są w historii Git. Kolejne zamówienie dopiero po zamknięciu [listy przed zamówieniem](../../przed-produkcja.md).** Pliki eksportuje `tools/export_fabrication.py` z projektu po ERC 0 i DRC 0; ręcznie się ich nie poprawia.
+**Pliki są rewizji N1.1 z J7 odsuniętym od panelu ([F118](../../../../docs/review.md)): napis „WICI płytka nośna N1.1” na płytce, rewizja N1.1 w plikach Gerber i na rysunku montażowym. Pięć płytek pierwszej rewizji (płytka v1) zamówiono 2026-10-10 dla prototypów ([zamówienie](../../przed-produkcja.md#zamówienie-2026-10-10-l0)); ich pliki są w historii Git. Rewizja N1.1 (płytka v1.1) nie jest do zamówienia: jest bazą płytki v2 ([przed zamówieniem](../../przed-produkcja.md)).** Pliki eksportuje `tools/export_fabrication.py` z projektu po ERC 0 i DRC 0; ręcznie się ich nie poprawia.
 
 | Plik | Zawartość |
 |---|---|

@@ -1,6 +1,6 @@
 # WICI R02: tor RF i stos warstw
 
-**Wstrzymane do decyzji po pilotażu (przegląd praktyczny 2026-10-08, F99):** pilotaż używa stacji z gotowej płytki MCU z układem LoRa SX1262 ([koncepcja 08](../../docs/concept/08-plan-weryfikacji-i-decyzje.html)).
+**Materiał do projektu płytki v2 i do wydania (porządek 2026-10-29, F119).** Płytki R02 nie projektuje się przed pilotażem: stacja pilotażowa ma płytkę v2 ([elektronika](../../docs/spec/elektronika.md#stacja-pilotażowa)), a o płytce wyrobu rozstrzyga krok 8 planu ([koncepcja 08](../../docs/concept/08-plan-weryfikacji-i-decyzje.html#kolejnosc-prac)). Plik jest archiwalny: tor RF, stos warstw i części dwóch wykonań P1 (TI CC1120, ST S2-LP). Płytka v2 nie ma własnego toru RF (moduł Wio SX1262); referencje i zasady przydadzą się dopiero przy własnym torze w wyrobie.
 
 **Status: 2026-10-08, przed schematem. Nie zamawiać.** Dokument zbiera referencje producentów, wybiera stos warstw, geometrię linii 50 Ω i części toru RF obu wykonań oraz oddziela to, co da się ustalić teraz, od tego, co rozstrzyga T4 (D10). Wymagania są w [radiu](../../docs/spec/radio.md) i [BOM stacji](../../docs/spec/bom-stacji.csv), lekcje z R01.3 w [lekcjach](lekcje.md#tor-rf). Materiały producentów czytano z kopii lokalnych, których nie ma w repozytorium. Oznaczenie „do sprawdzenia” dotyczy danych, których nie potwierdzono w karcie producenta.
 

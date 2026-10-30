@@ -7,5 +7,12 @@ Pliki archiwum nie są wymaganiami. Liczby w nich pochodzą z modelu w stanie z 
 | Plik | Treść |
 |---|---|
 | [p1-koncepcja.md](p1-koncepcja.md) | P1 i warianty sprzętu z rozdziałów 04–07 koncepcji: porównanie z LoRa, budżety czasu i łącza, energia z odbiornikiem CC1120, własny blok zasilania poziomu 3, ocena wykonania stanowisk i płytki R02 |
+| [p1-radio.md](p1-radio.md) | profil P1, ramka i interfejs P1, warunki powrotu do P1, stanowiska deweloperskie A/B, dwa wykonania radia z filtrem SAW |
+| [elektronika-r02.md](elektronika-r02.md) | wymagania płytki R02 z jej zasilaniem, wariant stacji z gotowej płytki ESP32-S3 z SX1262, porównanie kandydatów i dokumenty zgodności |
+| [zasilanie-poziomu-3.md](zasilanie-poziomu-3.md) | własny blok zasilania poziomu 3 (wejścia A/B, ładowarka, przetwornica 230 V) |
+| [bom-r02.md](bom-r02.md) | dawny BOM stacji R02 i bloku zasilania poziomu 3 |
+| [odbior-p1.md](odbior-p1.md) | wiersze odbioru P1, stanowisk deweloperskich A/B i własnego bloku zasilania poziomu 3 |
+
+Sprzęt stanowisk deweloperskich A/B opisuje [archiwum sprzętu](../../hardware/archiwum/README.md).
 
 Kod firmware dla P1 i stanowisk (obrazy `bench-*`, sterowniki CC1120 i S2-LP) zostaje w [`firmware`](../../firmware/README.md); o jego usunięciu zdecyduje się osobno.
