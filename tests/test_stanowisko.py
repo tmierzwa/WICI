@@ -11,6 +11,7 @@ LXMF at c3ff2d6 and pyserial in this Python, and the built program:
 """
 
 import importlib.util
+import json
 import os
 from pathlib import Path
 import sys
@@ -42,8 +43,9 @@ class ConfigTest(unittest.TestCase):
         self.assertIn("panic_on_interface_error = No", text)
 
     def test_bitrate_meets_the_radio_criterion(self):
-        # radio.md, kryterium bitrate: 500 B × 8 / bitrate nie krócej niż odstęp dla 2 skoków (około 95 s).
-        self.assertGreaterEqual(500 * 8 / stos.BITRATE, 95)
+        # radio.md, kryterium bitrate: 500 B × 8 / bitrate nie krócej niż odstęp dla 2 skoków z modelu.
+        model = json.loads((ROOT / "software" / "reference" / "wyniki.json").read_text(encoding="utf-8"))
+        self.assertGreaterEqual(500 * 8 / stos.BITRATE, model["lxmf_retry"]["2_hop_min_interval_worst_debt_full_queue_s"])
 
     def test_rejects_values_that_would_break_the_config(self):
         for bad in (0, 1201, -5):
