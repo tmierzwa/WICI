@@ -1,0 +1,23 @@
+{
+  "note": "Biblioteki pakietu stanowiska (build_stanowisko.py): Reticulum i LXMF w wersjach przypiętych jak w stacji (docs/spec/stanowisko-osp.md, „Stos”), pobierane gitem przy commicie i sprawdzane po jego identyfikatorze, jak firmware/tools/stack_deps.py (decyzja autora 2026-10-30); pyserial 3.5 z PyPI z sumą SHA-256.",
+  "libraries": {
+    "reticulum": {
+      "repository": "https://github.com/markqvist/Reticulum.git",
+      "commit": "e40191b3d193b46b7f2d8a44424a594cd758839b",
+      "package": "RNS",
+      "license": "LICENSE"
+    },
+    "lxmf": {
+      "repository": "https://github.com/markqvist/LXMF.git",
+      "commit": "c3ff2d6dc2f256daab896dadc044dd5a913ecbb7",
+      "package": "LXMF",
+      "license": "LICENSE"
+    },
+    "pyserial": {
+      "url": "https://files.pythonhosted.org/packages/1e/7d/ae3f0a63f41e4d2f6cb66a5b57197850f919f59e558159a4dd3a818f5082/pyserial-3.5.tar.gz",
+      "sha256": "3c77e014170dfffbd816e6ffc205e9842efb10be9f58ec16d3e8675b4925cddb",
+      "package": "serial",
+      "license": "LICENSE.txt"
+    }
+  }
+}
