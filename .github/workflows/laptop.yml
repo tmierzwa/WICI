@@ -6,7 +6,8 @@ on:
   pull_request:
     # Druga strona kontraktu też: firmware, symulator i protokół USB.
     paths: ['software/laptop/**', 'tests/test_laptop.py', 'tests/test_laptop_audit.py', 'tests/test_laptop_http_memory.py', 'tests/laptop-form.test.cjs', '.github/workflows/laptop.yml', 'firmware/src/**',
-            'software/simulator/web/**', 'docs/spec/protokol-usb.md']
+            'software/simulator/web/**', 'docs/spec/protokol-usb.md', 'tests/test_stanowisko.py', 'firmware/lib/**', 'firmware/platformio.ini',
+            'firmware/tools/rns_osp_node.py', 'firmware/tools/sa1_lxmf.py', 'firmware/tools/udp_ports.py']
   workflow_dispatch:
 permissions:
   contents: read
@@ -27,6 +28,38 @@ jobs:
         run: python -m unittest discover -s tests -p "test_laptop*.py" -v
       - name: Form audit regressions
         run: node --test tests/laptop-form.test.cjs
+
+  stanowisko:
+    # Aplikacja stanowiska odbiorczego (wici/stanowisko) za węzłem stanowiska: dwa programy "host" firmware
+    # (stacja i węzeł na emulowanym łączu radiowym, port danych węzła jako pseudoterminal). Reticulum i LXMF
+    # w przypiętych wersjach bez pakietu cryptography, czyli z kryptografią wbudowaną w Reticulum, jak
+    # w pakiecie stanowiska; Python 3.14 jak środowisko pakietu.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: |
+            3.12
+            3.14
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.platformio
+            firmware/.pio/stack
+          key: pio-host-${{ hashFiles('firmware/platformio.ini', 'firmware/tools/stack_deps.py', 'firmware/patches/**') }}
+      - name: PlatformIO Core, Reticulum, LXMF and pyserial at the pinned versions
+        run: |
+          python3.12 -m pip install platformio==6.2.0
+          python3.14 -m venv "$RUNNER_TEMP/rns"
+          "$RUNNER_TEMP/rns/bin/pip" install --no-deps "rns @ git+https://github.com/markqvist/Reticulum@e40191b3d193b46b7f2d8a44424a594cd758839b" \
+            "lxmf @ git+https://github.com/markqvist/LXMF@c3ff2d6dc2f256daab896dadc044dd5a913ecbb7" pyserial==3.5
+          "$RUNNER_TEMP/rns/bin/python" -c "from RNS.Cryptography import Provider; assert Provider.backend() == 'internal'"
+      - name: Station and node host program
+        run: pio run -e host -d firmware
+      - name: Application stack behind the OSP node
+        run: WICI_HOST_PROGRAM=firmware/.pio/build/host/program "$RUNNER_TEMP/rns/bin/python" -m unittest tests.test_stanowisko -v
 
   usb:
     # Ścieżka ze spacją i polską literą: pamięć bywa zamontowana pod dowolną nazwą.

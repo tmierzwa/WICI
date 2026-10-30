@@ -1554,13 +1554,15 @@ class PackageTest(unittest.TestCase):
                 ast.parse(p.read_text(encoding="utf-8"), feature_version=(3, 12))   # najstarszy Python w CI
 
     def test_only_the_standard_library(self):
+        # Aplikacja stanowiska (wici/stanowisko) ma własny pakiet z przypiętymi Reticulum i LXMF (PLAN.md, S10).
         allowed = set(sys.stdlib_module_names) | {"wici"}
         for p in self.PACKAGE.rglob("*.py"):
+            extra = {"RNS", "LXMF"} if "stanowisko" in p.relative_to(self.PACKAGE).parts else set()
             for node in ast.walk(ast.parse(p.read_text(encoding="utf-8"))):
                 names = [a.name for a in node.names] if isinstance(node, ast.Import) else \
                     [node.module] if isinstance(node, ast.ImportFrom) and node.level == 0 else []
                 for name in names:
-                    self.assertIn(name.split(".")[0], allowed, f"{p.name}: {name}")
+                    self.assertIn(name.split(".")[0], allowed | extra, f"{p.name}: {name}")
 
     def test_selftest_runs(self):
         out = subprocess.run([sys.executable, "-m", "wici", "--selftest"], cwd=LAPTOP, capture_output=True, text=True,
@@ -1601,7 +1603,8 @@ class BuildPinsTest(unittest.TestCase):
         for rel in ("wici/__main__.py", "wici/ui/index.html", "wici/slowa.txt"):
             self.assertTrue(build_usb.app_file(rel), rel)
         for rel in ("wici/.DS_Store", "wici/web.py~", "wici/.web.py.swp", "wici/#web.py#", "wici/web.py.orig",
-                    "wici/__pycache__/web.cpython-314.pyc", "wici/.idea/x.xml"):
+                    "wici/__pycache__/web.cpython-314.pyc", "wici/.idea/x.xml",
+                    "wici/stanowisko/stos.py"):   # aplikacja stanowiska ma własny pakiet
             self.assertFalse(build_usb.app_file(rel), rel)
 
     def test_out_that_is_not_a_previous_build_is_refused(self):
