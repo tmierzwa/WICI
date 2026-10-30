@@ -1,0 +1,32 @@
+pozycja,wartość,footprint,LCSC,MPN,montaż
+U1,LTC3115EFE-1#PBF,LTC3115-1_FE20_CA,C580689,LTC3115EFE-1#PBF,JLC
+L1,15uH,L_Bourns_SRP1038A,C780183,Bourns SRP1038A-150M,JLC
+C1,10uF 50V X7R,Capacitor_SMD:C_1210_3225Metric,C596319,Yageo CC1210KKX7R9BB106,JLC
+C2,10uF 50V X7R,Capacitor_SMD:C_1210_3225Metric,C596319,Yageo CC1210KKX7R9BB106,JLC
+C3,22uF 16V X5R,Capacitor_SMD:C_1210_3225Metric,C2918506,CS3225X5R226K160NRL,JLC
+C4,22uF 16V X5R,Capacitor_SMD:C_1210_3225Metric,C2918506,CS3225X5R226K160NRL,JLC
+C5,100nF 16V,Capacitor_SMD:C_0402_1005Metric,C1525,CL05B104KO5NNNC,JLC
+C6,100nF 16V,Capacitor_SMD:C_0402_1005Metric,C1525,CL05B104KO5NNNC,JLC
+C7,100nF,Capacitor_SMD:C_0603_1608Metric,C14663,CC0603KRX7R9BB104,JLC
+C8,10uF 25V X5R,Capacitor_SMD:C_0805_2012Metric,C15850,CL21A106KAYNNNE,JLC
+R9,10M 1%,Resistor_SMD:R_0603_1608Metric,C7250,0603WAF1005T5E,JLC
+R10,100k 1%,Resistor_SMD:R_0603_1608Metric,C25803,0603WAF1003T5E,JLC
+C12,47uF 25V,Capacitor_THT:CP_Radial_D6.3mm_P2.50mm,,"elektrolityczny 47 µF 25 V, fi 6,3 mm, raster 2,5 mm",ręcznie (pw-lab)
+R1,47.5k 1%,Resistor_SMD:R_0603_1608Metric,C23061,0603WAF4752T5E,JLC
+R2,1M 1%,Resistor_SMD:R_0603_1608Metric,C22935,0603WAF1004T5E,JLC
+R3,432k 1%,Resistor_SMD:R_0603_1608Metric,C23171,0603WAF4323T5E,JLC
+C9,82pF C0G,Capacitor_SMD:C_0603_1608Metric,C1683,0603CG820J500NT,JLC
+C10,3.9nF,Capacitor_SMD:C_0603_1608Metric,C1618,0603B392K500NT,JLC
+R4,20k 1%,Resistor_SMD:R_0603_1608Metric,C4184,0603WAF2002T5E,JLC
+C11,82pF C0G,Capacitor_SMD:C_0603_1608Metric,C1683,0603CG820J500NT,JLC
+R5,20k 1%,Resistor_SMD:R_0603_1608Metric,C4184,0603WAF2002T5E,JLC
+R6,110R 1W 1%,Resistor_SMD:R_2512_6332Metric,C7467343,FRC2512F1100TS,JLC
+JP1,zworka,Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical,,"listwa 1x2 2,54 mm + zworka",ręcznie (pw-lab)
+R7,110R 1W 1%,Resistor_SMD:R_2512_6332Metric,C7467343,FRC2512F1100TS,JLC
+JP2,zworka,Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical,,"listwa 1x2 2,54 mm + zworka",ręcznie (pw-lab)
+R8,22R 1W 1%,Resistor_SMD:R_2512_6332Metric,C2999530,FRC2512F22R0TS,JLC
+JP3,zworka,Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical,,"listwa 1x2 2,54 mm + zworka",ręcznie (pw-lab)
+JP4,RUN,Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical,,"listwa 1x3 2,54 mm + zworka",ręcznie (pw-lab)
+JP5,PWM/SYNC,Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical,,"listwa 1x3 2,54 mm + zworka",ręcznie (pw-lab)
+J1,VIN,"TerminalBlock_Phoenix:TerminalBlock_Phoenix_MKDS-1,5-2-5.08_1x02_P5.08mm_Horizontal",,"Phoenix MKDS 1,5/2-5,08",ręcznie (pw-lab)
+J2,VOUT,"TerminalBlock_Phoenix:TerminalBlock_Phoenix_MKDS-1,5-2-5.08_1x02_P5.08mm_Horizontal",,"Phoenix MKDS 1,5/2-5,08",ręcznie (pw-lab)
