@@ -20,10 +20,11 @@
 // --stanowisko: zamiast modelu post.cpp prawdziwa aplikacja stanowiska (software/laptop/wici/stanowisko) z kartą
 // odbiorcy z `przygotuj --karta`; stacje dostają tę kartę, a port danych węzła jest na TCP (--wezel), jak
 // przewód USB od węzła do komputera stanowiska.
-// Wyjście: `IFAC …`, `stacja <k> tcp:127.0.0.1:<port>`, z --stanowisko `węzeł tcp:127.0.0.1:<port>`,
+// Wyjście: `IFAC …`, `stacja <k> tcp:127.0.0.1:<port>`, z --stanowisko `węzeł tcp:127.0.0.1:<port>` (dane, KISS)
+// i `węzeł-diagnostyka tcp:127.0.0.1:<port + 1>` (polecenia tekstowe, INFO),
 // `strona http://127.0.0.1:<port>/`, potem `gotowe`.
 // Polecenia na stdin (k: numer stacji, domyślnie 1): prep [k], press [k] OK|BACK|UP|DOWN, screen [k],
-// power [k] on|off, loss [k] <dB>|off, post, quit.
+// power [k] on|off, silence [k|wezel] on|off, loss [k] <dB>|off, post, quit.
 import fs from "node:fs";
 import http from "node:http";
 import net from "node:net";
@@ -72,8 +73,14 @@ const startWall = performance.now(), startUs = world.nowUs;
 const releases = [];   // [czas świata µs, urządzenie, pin]
 const pending = [];    // działania ze strony i ze stdin, wykonywane między krokami świata
 // Porty danych na TCP: stacje, a z --stanowisko na końcu węzeł.
-const links = stations.map((d, i) => ({ device: d, label: `stacja ${i + 1}`, want: basePort ? basePort + i : 0, socket: null, input: [], port: 0 }));
-if (receiver) links.push({ device: world.node, label: "węzeł", want: Number(opt("--wezel", 7390)), socket: null, input: [], port: 0 });
+// usb: interfejs USB urządzenia (1: dane, 0: diagnostyka).
+const link = (device, label, want, usb = 1) => ({ device, label, want, usb, socket: null, input: [], port: 0 });
+const links = stations.map((d, i) => link(d, `stacja ${i + 1}`, basePort ? basePort + i : 0));
+if (receiver) {
+  const nodePort = Number(opt("--wezel", 7390));
+  links.push(link(world.node, "węzeł", nodePort));
+  links.push(link(world.node, "węzeł-diagnostyka", nodePort ? nodePort + 1 : 0, 0));   // stan węzła dla aplikacji (INFO)
+}
 const servers = [], watchers = new Set();
 let running = true;
 
@@ -90,7 +97,7 @@ async function tick() {
   for (const action of pending.splice(0)) await action();
   while (world.nowUs < target) {
     const step = Math.min(target - world.nowUs, 10000);
-    for (const link of links) for (const data of link.input.splice(0)) link.device.usbWrite(1, data);
+    for (const link of links) for (const data of link.input.splice(0)) link.device.usbWrite(link.usb, data);
     await world.advance(step);
     for (let r = releases.length - 1; r >= 0; r--) {
       if (world.nowUs >= releases[r][0]) {
@@ -100,7 +107,7 @@ async function tick() {
     }
   }
   for (const link of links) {
-    const out = link.device.usbRead(1);
+    const out = link.device.usbRead(link.usb);
     if (out.length && link.socket) link.socket.write(Buffer.from(out));
   }
   setTimeout(tick, 5);
@@ -112,10 +119,10 @@ const listening = links.map((link) => new Promise((resolve) => {
     if (link.socket) { socket.destroy(); return; }   // jeden komputer naraz, jak jeden przewód
     link.socket = socket;
     socket.setNoDelay(true);
-    d.usbRead(1);                                   // zaległe bajty poprzedniej sesji przepadają
-    d.setUsb(1, true);
+    d.usbRead(link.usb);                            // zaległe bajty poprzedniej sesji przepadają
+    d.setUsb(link.usb, true);
     socket.on("data", (data) => link.input.push(new Uint8Array(data)));
-    const close = () => { if (link.socket === socket) { link.socket = null; link.input = []; d.setUsb(1, false); } };
+    const close = () => { if (link.socket === socket) { link.socket = null; link.input = []; d.setUsb(link.usb, false); } };
     socket.on("close", close);
     socket.on("error", close);
   });
@@ -149,8 +156,9 @@ function snapshot() {
 // Sprawdza działanie i odkłada je do pętli świata: włączenie zasilania czeka na nową instancję WebAssembly,
 // więc nie może wejść w środek kroku (restart stacji w trakcie world.advance).
 function act(body) {
-  const d = stations[Number(body.station) - 1];
-  if (!d) return false;
+  // "wezel": węzeł stanowiska, tylko przełącznik CISZA (stan dla aplikacji przez port diagnostyki).
+  const d = body.station === "wezel" ? world.node : stations[Number(body.station) - 1];
+  if (!d || (d === world.node && body.action !== "silence")) return false;
   const { action, value } = body;
   let run;
   if (action === "button" && BUTTONS.includes(value?.button)) run = () => d.setInput(d.pins[value.button], value.down ? 0 : 1);
@@ -217,6 +225,7 @@ function stop() {
 }
 
 function station(word) {
+  if (word === "wezel") return [world.node, true];
   const numbered = /^\d+$/.test(word ?? "");
   return [stations[(numbered ? Number(word) : 1) - 1], numbered];
 }
@@ -227,7 +236,7 @@ readline.createInterface({ input: process.stdin }).on("line", (line) => {
   const [device, numbered] = station(words[1]);
   const rest = words.slice(numbered ? 2 : 1);
   if (!device && cmd !== "post" && cmd !== "quit") return console.log("nie ma takiej stacji");
-  const n = stations.indexOf(device) + 1;
+  const n = device === world.node ? "wezel" : stations.indexOf(device) + 1;
   if (cmd === "prep" && act({ station: n, action: "prep" })) {
     console.log("prep held");
   } else if (cmd === "press" && act({ station: n, action: "press", value: rest[0] })) {
@@ -237,6 +246,8 @@ readline.createInterface({ input: process.stdin }).on("line", (line) => {
   } else if (cmd === "power" && (rest[0] === "on" || rest[0] === "off")) {
     act({ station: n, action: "power", value: rest[0] === "on" });
     console.log(`power ${rest[0]}`);
+  } else if (cmd === "silence" && (rest[0] === "on" || rest[0] === "off") && act({ station: n, action: "silence", value: rest[0] === "on" })) {
+    console.log(`silence ${rest[0]}`);
   } else if (cmd === "loss" && act({ station: n, action: "loss", value: rest[0] === "off" ? null : Number(rest[0]) })) {
     console.log(`loss ${rest[0]}`);
   } else if (cmd === "post" && !world.post) {
@@ -247,6 +258,6 @@ readline.createInterface({ input: process.stdin }).on("line", (line) => {
   } else if (cmd === "quit") {
     stop();
   } else {
-    console.log("polecenia: prep [k], press [k] OK|BACK|UP|DOWN, screen [k], power [k] on|off, loss [k] dB|off, post, quit");
+    console.log("polecenia: prep [k], press [k] OK|BACK|UP|DOWN, screen [k], power [k] on|off, silence [k|wezel] on|off, loss [k] dB|off, post, quit");
   }
 }).on("close", stop);

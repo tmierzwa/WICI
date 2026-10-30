@@ -35,7 +35,7 @@ sys.path.insert(0, str(ROOT / "software" / "laptop" / "build"))
 
 import build_stanowisko  # noqa: E402
 from wici import database  # noqa: E402
-from wici.stanowisko import __main__ as aplikacja, kopie, nosnik, panel, przyjecie, stos, wysylka, wzorzec, zamkniecie  # noqa: E402
+from wici.stanowisko import __main__ as aplikacja, kopie, nosnik, panel, przyjecie, stos, wezel, wysylka, wzorzec, zamkniecie  # noqa: E402
 
 PROGRAM = os.environ.get("WICI_HOST_PROGRAM")
 # Pakiet stanowiska (build_stanowisko.py): SimulatorTest uruchamia wtedy aplikację jego skryptem stanowisko.sh.
@@ -1242,6 +1242,92 @@ class StackHoldTest(unittest.TestCase):
         self.assertEqual(self.got, [])
 
 
+class NodeDiagnosticsTest(unittest.TestCase):
+    """S11: node state from INFO on its diagnostics port; only INFO is sent, other lines are the node log."""
+
+    class Port:
+        def __init__(self, test):
+            self.test, self.written = test, []
+
+        def write(self, data):
+            self.written.append(data)
+
+        def read(self, timeout):
+            self.test.now += timeout
+            reply, self.test.replies = self.test.replies[:1], self.test.replies[1:]
+            return reply[0] if reply else b""
+
+    def setUp(self):
+        self.now, self.replies, self.changes = 0.0, [], []
+        self.w = wezel.Wezel("port", lambda silence, first: self.changes.append((silence, first)),
+                             monotonic=lambda: self.now)
+        self.port = self.Port(self)
+
+    def info(self, silence, **fields):
+        return (json.dumps({"contract": 2, "silence": silence, "radio_ok": True, "tx_wait_ms": 0, **fields}) + "\n").encode()
+
+    def test_silence_changes_are_reported_and_the_rest_is_status(self):
+        self.assertIsNone(self.w.status())
+        self.replies = [b"[12] radio rx ok\n" + self.info(False)[:20], self.info(False)[20:]]
+        self.w.poll(self.port)
+        self.assertEqual((self.changes, self.port.written), ([], [b"INFO\n"]))
+        self.replies = [self.info(True, tx_wait_ms=42_000, radio_ok=False)]
+        self.w.poll(self.port)
+        self.replies = [self.info(True)]
+        self.w.poll(self.port)
+        self.replies = [self.info(False)]
+        self.w.poll(self.port)
+        self.assertEqual(self.changes, [(True, False), (False, False)])
+        self.replies = [self.info(True, tx_wait_ms=42_000, radio_ok=False)]
+        self.w.poll(self.port)
+        self.assertEqual({k: v for k, v in self.w.status().items() if k != "age_s"},
+                         {"silence": True, "radio_ok": False, "tx_wait_s": 42})
+
+    def test_node_already_silent_at_start_is_recorded(self):
+        self.replies = [self.info(True)]
+        self.w.poll(self.port)
+        self.assertEqual(self.changes, [(True, True)])
+
+    def test_a_port_without_info_is_not_the_node(self):
+        self.replies = [b"cos innego\n"]
+        with self.assertRaises(ValueError):
+            self.w.poll(self.port)
+        self.assertIsNone(self.w.status())
+
+    def test_diagnostics_is_the_other_interface_of_the_same_device(self):
+        import types
+        ports = [types.SimpleNamespace(device="/dev/ttyACM0", serial_number="A1"),
+                 types.SimpleNamespace(device="/dev/ttyACM1", serial_number="A1"),
+                 types.SimpleNamespace(device="/dev/ttyACM2", serial_number="B2")]
+        tools = types.SimpleNamespace(list_ports=types.SimpleNamespace(comports=lambda: ports))
+        with unittest.mock.patch.dict(sys.modules, {"serial": types.SimpleNamespace(tools=tools), "serial.tools": tools,
+                                                    "serial.tools.list_ports": tools.list_ports}):
+            self.assertEqual(wezel.find_diagnostics("/dev/ttyACM0"), "/dev/ttyACM1")
+            self.assertIsNone(wezel.find_diagnostics("/dev/ttyACM2"))   # drugiego interfejsu nie ma
+            self.assertIsNone(wezel.find_diagnostics("/dev/ttyUSB9"))
+
+    def test_register_rows_and_panel(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            medium, key, envelopes = medium_in(Path(tmp) / "nosnik")
+            reception = przyjecie.Przyjecie(medium, key, lambda t, c: None, lambda m: None, log=lambda line: None)
+            try:
+                d = panel.Dyzur(reception, medium, key, FakeStack())
+                d.wezel = self.w
+                d.login("dyzurny-1", envelopes["dyzurny-1"])
+                self.assertEqual((d.view()["node"]["diagnostics"], d.view()["node"]["info"]), (True, None))
+                self.replies = [self.info(True)]
+                self.w.poll(self.port)
+                self.assertTrue(d.view()["node"]["info"]["silence"])
+                reception.action("", "cisza_wezel", json.dumps({"silence": True, "start": True}))
+                reception.action("", "cisza_wezel", json.dumps({"silence": False, "start": False}))
+                rows = reception.call(lambda store: zamkniecie.register(store.db))
+                self.assertEqual([r["tresc"] for r in rows if r["rodzaj"] == "cisza_wezel"],
+                                 ["przełącznik CISZA węzła: włączony (przy starcie aplikacji)",
+                                  "przełącznik CISZA węzła: wyłączony"])
+            finally:
+                reception.stop()
+
+
 class PackageTest(unittest.TestCase):
     """S10b: pieces of the station package build (the whole build and the application from the package: CI)."""
 
@@ -1322,7 +1408,8 @@ class PackageTest(unittest.TestCase):
 class SimulatorTest(unittest.TestCase):
     """S10: the application in the simulator world instead of post.cpp (swiat.mjs --stanowisko), on the node data
     port over TCP: a TEST from a station configured with the card from `przygotuj` goes to quarantine, and after
-    approval RECEIVED reaches the station (the intent ends on DELIVERED). With WICI_STANOWISKO_PACKAGE the
+    approval RECEIVED reaches the station (the intent ends on DELIVERED); S11: the node CISZA switch reaches the
+    panel and the log through the node diagnostics port. With WICI_STANOWISKO_PACKAGE the
     application runs from the built station package instead of this Python."""
 
     IFAC = "5749434953494d554c41544f52305f30"   # sieć ćwiczeniowa świata (web/world.js)
@@ -1357,10 +1444,11 @@ class SimulatorTest(unittest.TestCase):
                 break
             lines.append(line.strip())
         node = next(x for x in lines if x.startswith("węzeł ")).split()[1]
+        diagnostics = next(x for x in lines if x.startswith("węzeł-diagnostyka ")).split()[1]
         station = next(x for x in lines if x.startswith("stacja 1 ")).split()[2]
         self.assertFalse(any(x.startswith("uwaga:") for x in lines), lines)
         self.app = subprocess.Popen([*app, "start", "--nosnik", str(tmp / "nosnik"),
-                                     "--port", node, "--panel", "0", "--bez-przegladarki", "--kopie", str(tmp / "kopie")],
+                                     "--port", node, "--diagnostyka", diagnostics, "--panel", "0", "--bez-przegladarki", "--kopie", str(tmp / "kopie")],
                                     stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
                                     text=True, env=env)
         self.addCleanup(self.app.wait, 20)
@@ -1408,7 +1496,15 @@ class SimulatorTest(unittest.TestCase):
         self.assertEqual(self.http("POST", "/api/operator/quarantine", {**{k: item[k] for k in ("source", "id", "revision")},
                                    "decision": "approve"}, cookie)[0], 200)
         node = lambda: json.loads(self.http("GET", "/api/operator/queue", cookie=cookie)[2])["node"]
-        self.wait(lambda: node()["waiting"] == 0, 240)
+        self.wait(lambda: node()["waiting"] == 0 and node()["in_flight"] == 0, 240)   # RECEIVED dostarczone
+
+        # S11: przełącznik CISZA węzła przez port diagnostyki, bez zmian w KISS.
+        self.assertFalse(node()["info"]["silence"])
+        self.world.stdin.write("silence wezel on\n")
+        self.world.stdin.flush()
+        self.wait(lambda: node()["info"]["silence"], 30)
+        log = json.loads(self.http("GET", "/api/operator/queue", cookie=cookie)[2])["log"]
+        self.assertEqual([e["op"] for e in log if e["op"] == "cisza_wezel"], ["cisza_wezel"])
 
 
 @unittest.skipUnless(PROGRAM and HAS_STACK, "WICI_HOST_PROGRAM or Reticulum, LXMF and pyserial not available")

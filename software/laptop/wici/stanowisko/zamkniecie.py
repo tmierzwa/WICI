@@ -29,11 +29,11 @@ from . import wzorzec
 COLUMNS = ("czas", "rodzaj", "stacja", "numer", "id", "rewizja", "kategoria", "osoby", "pilnosc", "adres", "tresc",
            "stan", "adresat", "potwierdzil", "kanal", "dyzurny")
 # Zdarzenia rejestru z dziennika działań; logowania, ogłoszenia i nowe hasła zostają tylko w dzienniku.
-REGISTER = {"stan_2", "stan_3", "stan_4", "stan_5", "stan_6", "odpowiedz", "komunikat", "cisza", "kwarantanna_approve",
+REGISTER = {"stan_2", "stan_3", "stan_4", "stan_5", "stan_6", "odpowiedz", "komunikat", "cisza", "cisza_wezel", "kwarantanna_approve",
             "kwarantanna_reject", "zaufana_dodana", "zaufana_usunieta", "kopia_drugi_nosnik", "odtworzenie",
             "odzyskanie_koniec", "przekazanie_zmiany", "eksport", "zamkniecie", "kopie_usuniete"}
-# Cisza radiowa wpisywana przez dyżurnego (stanowisko-osp.md, „Eksport rejestru”: wiersz „cisza”); stan węzła
-# odczytany z jego portu diagnostyki dojdzie osobno.
+# Cisza radiowa wpisywana przez dyżurnego (stanowisko-osp.md, „Eksport rejestru”: wiersz „cisza”); stan przełącznika
+# CISZA węzła z jego portu diagnostyki (wezel.py) daje osobne wiersze `cisza_wezel`.
 SILENCE = {"polecenie": "polecenie ciszy otrzymane", "wlaczona": "cisza włączona na węźle", "odwolana": "cisza odwołana"}
 ARCHIVE_WORDS = 6
 ARCHIVE_AAD = b"wici archiwum"
@@ -86,6 +86,10 @@ def register(db):
         elif op == "cisza":
             facts = json.loads(detail)
             r["tresc"] = f"{SILENCE[facts['stan']]}: {facts['organ']}, {facts['kiedy']}"
+        elif op == "cisza_wezel":
+            facts = json.loads(detail)
+            r["tresc"] = "przełącznik CISZA węzła: " + ("włączony" if facts["silence"] else "wyłączony") \
+                + (" (przy starcie aplikacji)" if facts.get("start") else "")
         elif op == "komunikat" and bulletins.get(mid):
             r["tresc"] = wzorzec.decode_message(bulletins[mid])[4]
         rows.append((at, r))

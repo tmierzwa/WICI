@@ -86,6 +86,7 @@ class Dyzur:
         self.user, self.touched = None, 0.0
         self.lock = threading.RLock()
         self.on_quit = lambda: None   # po ZNISZCZ DANE aplikacja kończy pracę (__main__)
+        self.wezel = None             # stan węzła z portu diagnostyki (wezel.py), gdy port jest
 
     # ---- konto -------------------------------------------------------------------------------
 
@@ -498,7 +499,8 @@ class Dyzur:
         return {
             "reports": reports, "tests": tests, "quarantine": quarantine, "removed": removed, "trusted": trusted,
             "node": {**node, "in_flight": in_flight, "waiting": waiting - in_flight if waiting else 0,
-                     "oldest_s": None if oldest is None else now - oldest},
+                     "oldest_s": None if oldest is None else now - oldest,
+                     "diagnostics": self.wezel is not None, "info": self.wezel.status() if self.wezel else None},
             "recovery": self.p.recovery, "copy_age_s": None if self.p.last_copy_at is None else now - self.p.last_copy_at,
             "saved": self.p.save_error is None, "log": log, "bulletins": bulletins, **closed,
             "handover": {"open": len(open_reports), "forwarded_unconfirmed": sum(r["state"] == 4 for r in reports),
@@ -510,7 +512,8 @@ class Dyzur:
         return {"app": "wici-stanowisko", "version": VERSION, "saved": self.p.save_error is None,
                 "recovery": self.p.recovery, "online": node["online"], "since_rx": node.get("since_rx"),
                 "copy_age_s": None if self.p.last_copy_at is None else self.clock() - self.p.last_copy_at,
-                "counts": dict(self.p.counts), "dropped": node.get("dropped", {})}
+                "counts": dict(self.p.counts), "dropped": node.get("dropped", {}),
+                "node": self.wezel.status() if self.wezel else None}
 
 
 ROUTES = {

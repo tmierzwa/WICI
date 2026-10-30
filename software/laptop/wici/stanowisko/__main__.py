@@ -36,7 +36,7 @@ import webbrowser
 from pathlib import Path
 
 from .. import database, passwords, store
-from . import kopie, nosnik, panel, zamkniecie
+from . import kopie, nosnik, panel, wezel, zamkniecie
 from .przyjecie import Przyjecie
 from .stos import BITRATE, Stos
 from .wysylka import ClockBehind
@@ -101,11 +101,16 @@ def start(args):
     przyjecie.action("", "start")
     stos.start()
     dyzur = panel.Dyzur(przyjecie, medium, key, stos)
+    diagnostics = None if args.diagnostyka == "brak" else args.diagnostyka or (
+        None if args.port.startswith("tcp:") else wezel.find_diagnostics(args.port))
+    if diagnostics:
+        dyzur.wezel = wezel.Wezel(diagnostics, lambda silence, first: przyjecie.action(
+            "", "cisza_wezel", json.dumps({"silence": silence, "start": first}))).start()
     web = panel.Panel(dyzur)
     server = panel.serve(web, args.panel)
     threading.Thread(target=server.serve_forever, daemon=True, name="panel").start()
     url = f"http://127.0.0.1:{server.server_address[1]}/start?t={web.ticket()}"
-    emit("ready", address=stos.address.hex(), recovery=przyjecie.recovery, panel=url)
+    emit("ready", address=stos.address.hex(), recovery=przyjecie.recovery, panel=url, diagnostics=diagnostics)
     if not args.bez_przegladarki:
         webbrowser.open(url)
     done = threading.Event()
@@ -116,6 +121,8 @@ def start(args):
     except KeyboardInterrupt:
         pass
     server.shutdown()
+    if dyzur.wezel is not None:
+        dyzur.wezel.stop()
     stos.stop()
     przyjecie.stop()
     return 0
@@ -161,6 +168,8 @@ def main(argv=None):
     run.add_argument("--bitrate", type=int, default=BITRATE, help="bitrate interfejsu KISS w konfiguracji Reticulum")
     run.add_argument("--panel", type=int, default=8090, help="port panelu dyżurnego na 127.0.0.1")
     run.add_argument("--bez-przegladarki", action="store_true", help="nie otwieraj panelu w przeglądarce")
+    run.add_argument("--diagnostyka", help="port diagnostyki węzła (drugi interfejs USB; domyślnie odszukany "
+                     "obok --port; „brak” wyłącza; dla świata symulatora tcp:127.0.0.1:7391)")
     run.add_argument("--kopie", help="katalog kopii co 5 min na dysku komputera (domyślnie: katalog stanu aplikacji)")
     back = commands.add_parser("odtworz", help="odtworzenie nośnika z kopii (zgoda dwóch dyżurnych)")
     back.add_argument("--nosnik", required=True, help="pusty katalog na nowym nośniku stanowiska")
