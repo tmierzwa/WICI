@@ -241,6 +241,7 @@ private:
     uint16_t pktFailed_ = 0;
 
     RxMode rxMode_ = RxMode::NONE;
+    RxMode ringMode_ = RxMode::NONE;  // tryb, w którym odbierano ostatnio (ramki w pierścieniu zadania odbioru)
     uint8_t rxLen_ = 0;
     uint32_t rxPollMs_ = 0;
     uint32_t autoRxMs_ = 0;      // ostatnia próba samoczynnego powrotu do odbioru łącza

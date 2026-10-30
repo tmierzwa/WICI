@@ -1045,6 +1045,49 @@ int main() {
     link.serviceRx(rxf, false);
     fakeUs += 60000;
     printf("INFRAME %d %d %d\n", midFrame, pastMax, static_cast<int>(link.recentActivity(50)));
+    // Preambuła bez ramki, a po czasie najdłuższej ramki nagłówek nowej ramki: ramka w toku liczy się od nowa.
+    link.startRx(true, 0);
+    link.clearActivity();
+    chip.irq |= sx1262::IRQ_PREAMBLE_DETECTED;
+    link.serviceRx(rxf, false);
+    fakeUs += 500000;
+    airHeader(0x70, 0);
+    link.serviceRx(rxf, false);
+    fakeUs += 100000;
+    const int staleThenHeader = static_cast<int>(link.recentActivity(50));
+    // Ramka w toku po próbce, która skasowała jej flagi: prepareTx odracza (układ zostaje w odbiorze);
+    // po czasie najdłuższej ramki bez końca już nie.
+    link.startRx(true, 0);
+    airHeader(0x78, 0);
+    link.serviceRx(rxf, false);
+    const int prepInFrame = static_cast<int>(link.prepareTx(frame, 30));
+    const char* prepInFrameMode = link.stateName();
+    fakeUs += 500000;
+    const int prepAfterMax = static_cast<int>(link.prepareTx(frame, 30));
+    printf("STALEFRAME %d %d %s %d\n", staleThenHeader, prepInFrame, prepInFrameMode, prepAfterMax);
+    // Znacznik nowszy niż odczyt czasu (zadanie na drugim rdzeniu) to aktywność, nie cisza.
+    sx1262::Activity future;
+    future.mark(sx1262::Activity::RSSI, 1000);
+    printf("FUTUREMARK %d %d\n", future.quietFor(995, 50), future.quietFor(1100, 50));
+    // Ramka z błędem CRC z nagłówkiem następnej ramki przy RxDone: rx_bad (Bad), nie rx_late.
+    link.startRx(true, 0);
+    airHeader(0x20, 0);
+    link.serviceRx(rxf, false);
+    const unsigned long lateBeforeCrc = link.rxLate();
+    airEnd(40, 0x20);
+    chip.irq |= sx1262::IRQ_CRC_ERR;
+    airHeader(0x90, 4);
+    const sx1262::RxService crcNext = link.serviceRx(rxf, false);
+    const unsigned long lateAfterCrc = link.rxLate();
+    printf("CRCNEXT %d %lu\n", static_cast<int>(crcNext), lateAfterCrc - lateBeforeCrc);
+    // Bez zadania odbioru pętla próbkuje także RSSI dla okna CCA.
+    link.startRx(true, 0);
+    link.clearActivity();
+    chip.rssiInst = 180;  // -90 dBm
+    link.pollRx(rxf);
+    const bool loopRssi = !link.activity().quietFor(millis(), 50, 1u << sx1262::Activity::RSSI);
+    chip.rssiInst = 220;
+    printf("LOOPRSSI %d\n", loopRssi);
     link.idle();
     const sx1262::RxService notRx = link.serviceRx(rxf, false);
     printf("NOTRX %d\n", static_cast<int>(notRx));
@@ -1220,8 +1263,10 @@ int main() {
     tl.taskCycle(true);
     const uint32_t sampleMs = millis();
     const int fromRing = static_cast<int>(tl.pollRx(tf));
-    printf("TASKFRAME %d %d %d %zu %d %d %d\n", beforeTask, rxDoneKept, fromRing, tf.length, bytesFrom(tf, 0x11), tf.receivedMs == sampleMs,
-           static_cast<int>(tl.pollRx(tf)));
+    const size_t tfLength = tf.length;
+    const bool tfBytes = bytesFrom(tf, 0x11), tfTime = tf.receivedMs == sampleMs;
+    const int ringEmpty = static_cast<int>(tl.pollRx(tf));
+    printf("TASKFRAME %d %d %d %zu %d %d %d\n", beforeTask, rxDoneKept, fromRing, tfLength, tfBytes, tfTime, ringEmpty);
     // Ramka z błędem CRC i ramka spóźniona idą jako Bad (rx_bad w Bench), jak bez zadania.
     injectFrame(12, 0x00, 0x10, sx1262::IRQ_CRC_ERR);
     tl.taskCycle(true);
@@ -1237,6 +1282,14 @@ int main() {
     for (uint8_t i = 0; i < 8; ++i)
         if (tl.pollRx(tf) == radiolink::RxPoll::Frame && bytesFrom(tf, static_cast<uint8_t>(0x20 + i * 0x10))) ++inOrder;
     printf("TASKRING %d %lu %d\n", inOrder, static_cast<unsigned long>(tl.rxRingOverflow()), static_cast<int>(tl.pollRx(tf)));
+    // discardRx (stop() i zmiana trybu odbioru): ramki w pierścieniu przepadają.
+    for (uint8_t i = 0; i < 2; ++i) {
+        fakeUs += 1000;
+        airFrame(20, static_cast<uint8_t>(0x40 + i));
+        tl.taskCycle(true);
+    }
+    tl.discardRx();
+    printf("TASKDISCARD %d\n", static_cast<int>(tl.pollRx(tf)));
     // Blokada zajęta przez pętlę: obieg liczy się, ale bez dostępu do układu i bez obsługi; ramka czeka w układzie.
     fakeUs += 10000;
     airFrame(30, 0x55);
@@ -1340,10 +1393,14 @@ void measure::randomBytes(uint8_t* out, size_t count) {
 // Blokada operacji radia: pętla bierze ją zawsze (rekurencyjnie), zadanie odbioru tylko próbuje (limit 0)
 // i przy blokadzie trzymanej przez pętlę pomija obieg, jak zadanie na ESP32-S3.
 int loopDepth = 0;
-bool inTask = false;
+bool inTask = false, loopLockFail = false;  // loopLockFail: pętla nie dostaje blokady (czekanie ponad limit)
 int taskSkipped = 0, taskServiced = 0;
 bool platform::radioLockTake(uint32_t) {
-    if (!inTask) { ++loopDepth; return true; }
+    if (!inTask) {
+        if (loopLockFail) return false;
+        ++loopDepth;
+        return true;
+    }
     return loopDepth == 0;
 }
 void platform::radioLockGive() {
@@ -1383,7 +1440,7 @@ struct FakeLora : radiolink::Driver {
     std::deque<radiolink::Frame> rxQueue;
     std::vector<uint8_t> loaded;
     bool rxActive = false, rxVariable = false, rxPending = false, failDebtAtCad = false, cw = false;
-    int cadBusy = 0, rssiBusy = 0, taskCyclesPerFrame = 0;
+    int cadBusy = 0, rssiBusy = 0, taskCyclesPerFrame = 0, discards = 0;
     radiolink::Activity mark = radiolink::Activity::None;
     uint32_t markMs = 0;
     void op(const char* name) { ops.push_back(std::string(name) + ":" + std::to_string(dj.debt().a)); }
@@ -1455,6 +1512,7 @@ struct FakeLora : radiolink::Driver {
     }
     void clearActivity() override { mark = radiolink::Activity::None; }
     uint32_t rxLate() const override { return 2; }
+    void discardRx() override { ++discards; }
 };
 
 FakeLora radio;
@@ -1761,6 +1819,39 @@ int main() {
     runFor(1100);
     state();                      // po EMC 0 odbiór stosu znów uzbrojony
     printf("ARMED%s\n", states.c_str());
+
+    // Blokada radia niedostępna przy decyzji CCA: bez odroczenia (kanał nie był sprawdzony), CCA w następnym obiegu.
+    settle();
+    txDone = -1;
+    const uint32_t lockDeferrals = bench.link().deferrals;
+    loopLockFail = true;
+    bench.linkSend(d20.data(), d20.size(), true);
+    runFor(300);
+    const uint32_t deferredWithoutLock = bench.link().deferrals - lockDeferrals;
+    const int lockCca = bench.transmitting();  // CCA (BACKOFF nie jest nadawaniem)
+    loopLockFail = false;
+    untilDone(1000);
+    printf("LOCKWAIT %lu %d %d %lu\n", static_cast<unsigned long>(deferredWithoutLock), lockCca, txDone,
+           static_cast<unsigned long>(bench.link().deferrals - lockDeferrals));
+
+    // Pierścień zadania odbioru (discardRx): stop() i zmiana trybu odbioru go opróżniają; powrót do odbioru
+    // łącza po własnym nadaniu nie (nieodczytane ramki łącza zostają).
+    settle();
+    const int discards0 = radio.discards;
+    txDone = -1;
+    bench.linkSend(d20.data(), d20.size(), true);
+    untilDone(1000);
+    const int afterTx = radio.discards - discards0;
+    bench.prep = true;
+    bench.stop();
+    const int afterStop = radio.discards - discards0;
+    bench.rxStart(20);
+    const int afterTest = radio.discards - discards0;
+    bench.stop();
+    bench.linkRxStart();
+    const int afterLink = radio.discards - discards0;
+    bench.prep = false;
+    printf("DISCARD %d %d %d %d %d\n", txDone, afterTx, afterStop, afterTest, afterLink);
     return 0;
 }
 """
@@ -1861,12 +1952,35 @@ int main() {
         else after = st;
     }
     printf("NOSERVICE %d %d\n", before, after);
-    // Nadawanie zwalnia, a po nim czas liczy się od końca nadawania.
+    // Nadawanie (12 s, obiegi idą) zwalnia z obsługi układu, a po nim jej czas liczy się od końca nadawania.
     now = lastService + 20000;
-    const bool duringTx = w.stalled(sig, true, true, now);
-    const bool afterTx = w.stalled(sig, true, false, now + 100);
-    const bool afterTxLong = w.stalled(sig, true, false, now + 10100);
+    sig.tick();
+    sig.serviced(now, 100);
+    w.stalled(sig, true, false, now);
+    bool duringTx = false;
+    for (uint32_t t = now; t <= now + 12000; t += 1000) {
+        sig.tick();
+        duringTx = duringTx || w.stalled(sig, true, true, t);
+    }
+    const uint32_t txEnd = now + 12000;
+    sig.tick();
+    const bool afterTx = w.stalled(sig, true, false, txEnd + 100);
+    sig.tick();
+    const bool afterTxLong = w.stalled(sig, true, false, txEnd + 10100);
     printf("TRANSMIT %d %d %d\n", duringTx, afterTx, afterTxLong);
+    // Martwe zadanie (obiegi stoją) przy nadawaniu co 2 s: alarm po 10 s mimo nadawania.
+    rxwatch::TaskSignals sig3;
+    rxwatch::Watch w3;
+    now = 100000;
+    sig3.tick();
+    sig3.serviced(now, 100);
+    bool deadBefore = false, deadAt12 = false;
+    for (uint32_t i = 0; i <= 12; ++i) {
+        const bool st = w3.stalled(sig3, true, i % 2 == 0, now + 1000 * i);
+        if (i < 10) deadBefore = deadBefore || st;
+        else if (i == 12) deadAt12 = st;
+    }
+    printf("TXDEAD %d %d\n", deadBefore, deadAt12);
     // Znacznik zapisany przez zadanie po odczycie czasu w pętli („w przyszłości”) i zawinięcie millis().
     rxwatch::TaskSignals sig2;
     rxwatch::Watch w2;
@@ -2184,6 +2298,20 @@ class Sx1262LinkTests(unittest.TestCase):
         # Rx (1) 100 ms after the header though the 50 ms marks aged; None (0) after the longest frame
         # without an end and 60 ms after a frame end.
         self.assertEqual(line(self.out, "INFRAME"), "INFRAME 1 0 0")
+        # Preamble without a frame, then after the longest frame a new header: Rx (1) 100 ms later, because the
+        # frame in progress counts from the new header. A frame in progress whose flags a sample cleared:
+        # prepareTx RxPending (1), chip still in RX; Ready (0) after the longest frame without an end.
+        self.assertEqual(line(self.out, "STALEFRAME"), "STALEFRAME 1 1 RX 0")
+
+    def test_activity_mark_newer_than_now_is_not_quiet(self):
+        self.assertEqual(line(self.out, "FUTUREMARK"), "FUTUREMARK 0 1")
+
+    def test_crc_error_with_next_header_is_bad_not_late(self):
+        # Bad (2), rx_late unchanged.
+        self.assertEqual(line(self.out, "CRCNEXT"), "CRCNEXT 2 0")
+
+    def test_loop_without_receive_task_samples_rssi(self):
+        self.assertEqual(line(self.out, "LOOPRSSI"), "LOOPRSSI 1")
 
     def test_continuous_receive_buffer_continues_and_wraps(self):
         self.assertEqual(line(self.out, "RING1"), "RING1 1 255 1 0")
@@ -2227,6 +2355,7 @@ class Sx1262LinkTests(unittest.TestCase):
 
     def test_full_ring_drops_the_newest_frame(self):
         self.assertEqual(line(self.out, "TASKRING"), "TASKRING 8 1 0")
+        self.assertEqual(line(self.out, "TASKDISCARD"), "TASKDISCARD 0")  # discardRx empties the ring
 
     def test_receive_task_never_waits_for_the_lock(self):
         # Lock held by the loop: the cycle counts (taskTicks) but touches nothing and does not count as service;
@@ -2335,8 +2464,10 @@ class RxRingTests(unittest.TestCase):
         self.assertEqual(line(self.out, "DEADTASK"), "DEADTASK 0 1")  # taskTicks frozen: alarm at 10 s, not before
         self.assertEqual(line(self.out, "RECOVER"), "RECOVER 0")      # alarm clears by itself
         self.assertEqual(line(self.out, "NOSERVICE"), "NOSERVICE 0 1")  # cycles but no chip service (lock, BUSY)
-        # Transmitting is exempt; the time counts again from the end of the transmission.
+        # Transmitting is exempt from the chip-service age, which counts again from the end of the transmission.
         self.assertEqual(line(self.out, "TRANSMIT"), "TRANSMIT 0 0 1")
+        # A dead task (cycles frozen) is reported even while the station transmits every 2 s.
+        self.assertEqual(line(self.out, "TXDEAD"), "TXDEAD 0 1")
         self.assertEqual(line(self.out, "CLOCK"), "CLOCK 0 0")        # mark written after the loop read the clock; millis() wrap
 
     def test_mode_check_gating(self):
@@ -2451,6 +2582,15 @@ class LoraBenchTests(unittest.TestCase):
     def test_emc_pauses_the_stack_link(self):
         self.assertEqual(line(self.out, "EMC"), "EMC -|EMC mode on: EMC 0 first|EMC mode on: EMC 0 first 1 0")
         self.assertEqual(line(self.out, "EMCOFF"), "EMCOFF 0 1 1")
+
+    def test_lock_timeout_at_the_cca_decision_does_not_defer(self):
+        # The channel was not checked: no deferral, still in CCA; sent once the lock is free.
+        self.assertEqual(line(self.out, "LOCKWAIT"), "LOCKWAIT 0 1 1 0")
+
+    def test_ring_discarded_on_stop_and_receive_mode_change(self):
+        # Back to link RX after an own transmission: kept (0); stop(): 1; link -> test RX: 2; stop() and
+        # test -> link RX: 4.
+        self.assertEqual(line(self.out, "DISCARD"), "DISCARD 1 0 1 2 4")
 
 
 if __name__ == "__main__":

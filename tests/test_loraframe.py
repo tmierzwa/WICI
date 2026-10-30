@@ -260,6 +260,9 @@ class LoraFrameTests(unittest.TestCase):
         first, second = self.frame(3, 1, b"first"), self.frame(3, 1, b"second")
         out = self.run_script([f"P {2 ** 32 - 256} {first.hex()}", f"P 300 {second.hex()}", "Q"])
         self.assertEqual(out[1], f"complete 11 {b'firstsecond'.hex()}")
+        # The limit across the wrap: 999 ms after the frame the part still waits, at 1000 ms it expires.
+        out = self.run_script([f"P {2 ** 32 - 256} {first.hex()}", f"X {2 ** 32 - 196}", "X 743", "X 744", "Q"])
+        self.assertEqual(out, ["stored", "pending 1", "pending 1", "pending 0", "stats 0 0 1 0"])
 
     def test_header_only_frame_does_not_disturb_a_pending_part(self):
         out = self.run_script([f"P 0 {self.frame(6, 1, b'a').hex()}", f"P 1 {self.frame(7, 1, b'').hex()}",

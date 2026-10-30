@@ -239,6 +239,10 @@ radiolink::TxPrep LinkDriver::prepareTx(const uint8_t* frame, size_t length) {
         if (!radio_.readIrq(irq)) return radiolink::TxPrep::Error;
         collectIrq(irq);
         if (irq & IRQ_RX_PENDING) return radiolink::TxPrep::RxPending;
+        // Ramka w toku, której flagi skasowała już próbka odbioru: wyjście z odbioru by ją przerwało.
+        // Różnica ze znakiem jak w recentActivity (czas zapisany przez zadanie po odczycie millis()).
+        if (inFrame_ && static_cast<int32_t>(millis() - inFrameSinceMs_) < static_cast<int32_t>(FRAME_MAX_MS))
+            return radiolink::TxPrep::RxPending;
     }
     if (!toStandby() || !load(frame, length)) return radiolink::TxPrep::Error;
     return radiolink::TxPrep::Ready;
@@ -329,6 +333,9 @@ bool LinkDriver::startRx(bool variable, uint8_t fixedLength) {
 }
 
 void LinkDriver::noteActivity(uint16_t irq, uint32_t now) {
+    // Preambuła bez ramki (jak w receivingFrame): po czasie najdłuższej ramki stan nieaktualny, więc następny
+    // początek ramki liczy się od nowa (inaczej ochrona ramki w toku w recentActivity już by nie działała).
+    if (inFrame_ && now - inFrameSinceMs_ > FRAME_MAX_MS) inFrame_ = false;
     if (irq & IRQ_PREAMBLE_DETECTED) activity_.mark(Activity::PREAMBLE, now);
     if (irq & IRQ_HEADER_VALID) activity_.mark(Activity::HEADER, now);
     if (irq & IRQ_RX_END) {
@@ -391,7 +398,8 @@ RxService LinkDriver::serviceRx(radiolink::Frame& out, bool sampleRssi) {
     uint16_t seen = irq & (IRQ_RX_END | IRQ_RX_START);
     const bool nextHeader =
         (irq & IRQ_HEADER_VALID) && (!(irq & IRQ_RX_DONE) || headerSeen_ || gapMs > LATE_GAP_MS);
-    bool late = (irq & IRQ_RX_DONE) && nextHeader;
+    // Ramka z błędem CRC albo nagłówka to rx_bad, nie rx_late, także z nagłówkiem następnej ramki.
+    bool late = !(irq & (IRQ_HEADER_ERR | IRQ_CRC_ERR)) && (irq & IRQ_RX_DONE) && nextHeader;
     bool headerAfter = false;  // nagłówek następnej ramki w trakcie odczytu
     RxService result = RxService::Frame;
     if (irq & (IRQ_HEADER_ERR | IRQ_CRC_ERR)) {
@@ -463,11 +471,18 @@ radiolink::RxPoll LinkDriver::pollRx(radiolink::Frame& out) {
         out = entry.frame;
         return entry.kind;
     }
-    switch (serviceRx(out, false)) {
+    // Bez zadania odbioru próbkuje pętla, więc także RSSI dla okna CCA.
+    switch (serviceRx(out, true)) {
         case RxService::Frame: return radiolink::RxPoll::Frame;
         case RxService::Bad:
         case RxService::Late: return radiolink::RxPoll::Bad;
         default: return radiolink::RxPoll::Nothing;
+    }
+}
+
+void LinkDriver::discardRx() {
+    RxEntry entry;
+    while (ring_.pop(entry)) {
     }
 }
 

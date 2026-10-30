@@ -72,6 +72,7 @@ LORA_HZ = 869525000   # profil LoRa pilotażu (lora_profile.h): 869,525 MHz, 125
 MAX_DATAGRAM = 508    # HW_MTU RNodeInterface: pakiet z IFAC 16 B
 MAX_RAW = MAX_DATAGRAM - 16
 OWN_ANNOUNCE_APP_DATA = 316   # najwięcej danych aplikacji we własnym ogłoszeniu stacji (ogłoszenie 483 B + IFAC 16 B)
+OWN_ANNOUNCE_BYTES = 499   # to ogłoszenie w eterze: ponad FIRST_FRAME_DATA, więc w dwóch ramkach
 FIRST_FRAME_DATA = 254   # dane w pierwszej ramce RNode: ponad tyle datagram idzie w dwóch ramkach
 
 
@@ -452,10 +453,12 @@ def main():
         #    z dowodem (ponad 254 B). Wymaga kroków 1 i 2 (trasa celu Pythona).
         if want("B"):
             pad = bytes(i % 251 for i in range(OWN_ANNOUNCE_APP_DATA))
+            announce_at = len(station.air)
             station.command(f"announce {pad.hex()}")
             # Python zapamiętuje dane aplikacji z każdego ważnego ogłoszenia (także gdy nie zmienia ono trasy).
             checks["lora_big_announce_to_python"] = wait_for(lambda: RNS.Identity.recall_app_data(address) == pad, 90)
-            checks["lora_big_announce_two_frames"] = any(e["event"] == "tx" and e["length"] > FIRST_FRAME_DATA for e in station.air)
+            checks["lora_big_announce_two_frames"] = any(e["event"] == "tx" and e["length"] == OWN_ANNOUNCE_BYTES
+                                                          for e in station.air[announce_at:])
             # Python -> stacja: ogłoszenie nowego celu z danymi 325 B (167 B + dane = pakiet 492 B).
             big = RNS.Destination(RNS.Identity(), RNS.Destination.IN, RNS.Destination.SINGLE, APP_NAME, ASPECT)
             app_data = bytes(i % 241 for i in range(MAX_RAW - 167))
