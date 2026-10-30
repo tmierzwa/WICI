@@ -560,7 +560,7 @@ struct Chip {
     uint8_t packetParams[6] = {}, modulation[4] = {}, paConfig[4] = {}, txParams[2] = {}, tcxo[4] = {};
     uint32_t rf = 0, rxTimeout = 0;
     int txCountdown = -1, cadCountdown = -1;
-    bool holdTx = false, busyStuck = false, rxen = false, rxenAtTx = true;
+    bool holdTx = false, busyStuck = false, rxen = false, rxenAtTx = true, rxenAtCad = false;
     bool cadBusy = false, cadHang = false;  // CAD wykrywa preambułę; CAD bez końca
     uint8_t fallback = 0x20, rxPtr = 0, cadParams[7] = {}, dioIrq[8] = {};
     unsigned cadCount = 0;
@@ -614,6 +614,7 @@ void execute() {
         case sx1262::OP_SET_CAD:
             if (chip.mode == sx1262::MODE_STBY_RC || chip.mode == sx1262::MODE_STBY_XOSC) {
                 chip.mode = sx1262::MODE_RX;  // demodulator pracuje w czasie CAD
+                chip.rxenAtCad = chip.rxen;   // przełącznik antenowy w odbiorze tylko przy wysokim RXEN
                 chip.cadCountdown = 2;
             }
             break;
@@ -914,6 +915,8 @@ int main() {
     const bool cadSent = link.sendPrepared(&cadTiming);
     printf("CADTX %d %s %d %d %s %d %zu %02X %s %u\n", static_cast<int>(prep), prepMode, prepRxen, static_cast<int>(cadFree), cadMode,
            cadSent, chip.lastTx.size(), chip.lastTx.front(), link.stateName(), chip.txCount - txBeforeCad);
+    // RXEN wysoki w czasie CAD, niski przed SetTx.
+    printf("CADRXEN %d %d\n", chip.rxenAtCad, chip.rxenAtTx);
     // Kolejność: SetStandby, parametry pakietu, bufor, SetCad, SetTx; bez SetStandby między CAD a SetTx.
     printf("CADORDER %d %d %d %d %d %d\n", indexOf(sx1262::OP_SET_STANDBY), indexOf(sx1262::OP_SET_PACKET_PARAMS),
            indexOf(sx1262::OP_WRITE_BUFFER), indexOf(sx1262::OP_SET_CAD), indexOf(sx1262::OP_SET_TX),
@@ -932,11 +935,13 @@ int main() {
     const radiolink::Cad cadHung = link.cad();
     const uint32_t cadHangMs = millis() - cadT0;
     const char* hungMode = link.stateName();
+    const bool hungRxen = chip.rxen;
     chip.cadHang = false;
     link.startRx(true, 0);
     const radiolink::Cad cadInRx = link.cad();
     printf("CADBUSY %d %d %s %d %d %u %04X\n", static_cast<int>(cadBusy), static_cast<int>(cadHung), hungMode, cadHangMs >= 20,
            static_cast<int>(cadInRx), chip.cadCount, chip.irq);
+    printf("CADHUNGRXEN %d\n", hungRxen);
 
     // Przed wyjściem z odbioru: nieodczytana ramka albo ramka w toku odracza nadanie, bez kasowania flag
     // i bez zapisu bufora.
@@ -1020,6 +1025,26 @@ int main() {
     link.clearActivity();
     link.serviceRx(rxf, true);
     printf("RSSIMARK %d %d %d\n", rssiBusy, rssiAged, link.activity().quietFor(millis(), 50));
+    // Ramka w toku: po 100 ms od nagłówka znaczniki (okno 50 ms) już się zestarzały, a kanał nadal zajęty;
+    // wolny po końcu ramki (po oknie) i po czasie najdłuższej ramki bez końca.
+    link.startRx(true, 0);
+    link.clearActivity();
+    chip.rssiInst = 220;
+    airHeader(0x50, 0);
+    link.serviceRx(rxf, false);
+    fakeUs += 100000;
+    const int midFrame = static_cast<int>(link.recentActivity(50));
+    fakeUs += 400000;
+    const int pastMax = static_cast<int>(link.recentActivity(50));
+    link.startRx(true, 0);
+    link.clearActivity();
+    airHeader(0x60, 0);
+    link.serviceRx(rxf, false);
+    fakeUs += 100000;
+    airEnd(20, 0x60);
+    link.serviceRx(rxf, false);
+    fakeUs += 60000;
+    printf("INFRAME %d %d %d\n", midFrame, pastMax, static_cast<int>(link.recentActivity(50)));
     link.idle();
     const sx1262::RxService notRx = link.serviceRx(rxf, false);
     printf("NOTRX %d\n", static_cast<int>(notRx));
@@ -1244,7 +1269,8 @@ int main() {
     chip.busyStuck = false;
     for (int i = 0; i < 120; ++i) { fakeUs += 1000; tl.taskCycle(false); }
     printf("TASKBUSY %lu %lu %lu %d %d %zu\n", busyFirst, busyDuring, busyLater, stuckService < millis() - 100,
-           sig.lastServiceMs.load() == millis(), static_cast<size_t>(tl.pollRx(tf) == radiolink::RxPoll::Nothing));
+           millis() - sig.lastServiceMs.load() < sx1262::LinkDriver::RSSI_SAMPLE_MS,  // próbka co 5 ms, faza zależy od czasu testu
+           static_cast<size_t>(tl.pollRx(tf) == radiolink::RxPoll::Nothing));
     // Sterownik poza odbiorem (IDLE, nadawanie): obieg bez obsługi.
     tl.idle();
     const uint32_t idleService = sig.lastServiceMs.load();
@@ -1650,6 +1676,27 @@ int main() {
     runFor(10);
     printf("RXSHORT %zu\n", received.size());
     bench.printLink();
+
+    // Pierwsza część odebrana, druga 430 ms później, ale pętla wraca dopiero 1,1 s po pierwszej: druga czeka
+    // już w pierścieniu, więc składanie kończy się (limit 1 s z czasów odbioru). Sama pierwsza część po
+    // takim postoju przepada.
+    auto part = [&](int i, uint32_t at) { radiolink::Frame f; f.length = parts[i].length; memcpy(f.bytes, parts[i].bytes, f.length); f.receivedMs = at; return f; };
+    received.clear();
+    const uint32_t tPart = millis();
+    radio.rxQueue.push_back(part(0, tPart));
+    runFor(10);
+    radio.rxQueue.push_back(part(1, tPart + 430));
+    fakeUs += 1090000;
+    runFor(10);
+    const size_t lateLoop = received.size();
+    received.clear();
+    radio.rxQueue.push_back(part(0, millis()));
+    runFor(10);
+    fakeUs += 1090000;
+    runFor(10);
+    radio.rxQueue.push_back(part(1, millis()));
+    runFor(10);
+    printf("RXSTALL %zu %zu\n", lateLoop, received.size());
 
     // Rekonfiguracja (radiocon: bench.stop() przed CONFIG): odbiór wraca od razu przez linkRxStart, także
     // w trybie przygotowania, w którym sam nie wraca.
@@ -2110,6 +2157,7 @@ class Sx1262LinkTests(unittest.TestCase):
         # prepareTx Ready in STDBY_XOSC with RXEN low; CAD Free leaves STDBY_RC (CAD_ONLY, table 13-73);
         # the loaded 30 B frame is sent and the chip falls back to STDBY_XOSC.
         self.assertEqual(line(self.out, "CADTX"), "CADTX 0 STBY_XOSC 0 0 STBY_RC 1 30 A0 STBY_XOSC 1")
+        self.assertEqual(line(self.out, "CADRXEN"), "CADRXEN 1 0")  # RF switch in receive during CAD, low again for TX
         standby, params, write, cad, tx, standbys = (int(v) for v in line(self.out, "CADORDER").split()[1:])
         self.assertTrue(standby < params < write < cad < tx)  # frame loaded before CAD, SetTx right after it
         self.assertEqual(standbys, 1)
@@ -2119,6 +2167,7 @@ class Sx1262LinkTests(unittest.TestCase):
         # Busy (1); no CadDone within the limit: Error (2) and STDBY_XOSC; CAD from RX refused (2);
         # two CADs finished; CAD flags cleared.
         self.assertEqual(line(self.out, "CADBUSY"), "CADBUSY 1 2 STBY_XOSC 1 2 2 0000")
+        self.assertEqual(line(self.out, "CADHUNGRXEN"), "CADHUNGRXEN 0")  # RXEN low again after the hung CAD
 
     def test_pending_reception_defers_transmit_without_clearing(self):
         # Unread RxDone: RxPending (1), still in RX, flag kept, buffer not written; the frame is then received.
@@ -2130,6 +2179,11 @@ class Sx1262LinkTests(unittest.TestCase):
         self.assertEqual(line(self.out, "SAMPLE"), "SAMPLE 0 0000 1 0")
         self.assertEqual(line(self.out, "RSSIMARK"), "RSSIMARK 1 1 1")  # -90 dBm busy, aged after 60 ms, -110 dBm quiet
         self.assertEqual(line(self.out, "NOTRX"), "NOTRX 4")
+
+    def test_frame_in_progress_keeps_the_channel_busy(self):
+        # Rx (1) 100 ms after the header though the 50 ms marks aged; None (0) after the longest frame
+        # without an end and 60 ms after a frame end.
+        self.assertEqual(line(self.out, "INFRAME"), "INFRAME 1 0 0")
 
     def test_continuous_receive_buffer_continues_and_wraps(self):
         self.assertEqual(line(self.out, "RING1"), "RING1 1 255 1 0")
@@ -2380,6 +2434,11 @@ class LoraBenchTests(unittest.TestCase):
         self.assertEqual((lora["rx_datagrams"], lora["header_only"], lora["assembly_timeout"], lora["split_lost"]), (2, 1, 1, 1))
         self.assertEqual((lora["rx_late"], lora["rx_ring_overflow"], lora["cca_threshold_dbm"]), (2, 0, -100))
         self.assertEqual((lora["cad_busy"], lora["rssi_busy"], lora["rx_busy"]), (32, 1, 3))
+
+    def test_assembly_limit_counts_from_frame_time_after_a_long_loop_pass(self):
+        # The second part waiting in the ring completes the datagram after a 1.1 s loop stall (508 B); a lone
+        # first part still expires, so its second part (1.1 s later) assembles nothing (0).
+        self.assertEqual(line(self.out, "RXSTALL"), "RXSTALL 508 0")
 
     def test_receive_rearmed_after_reconfiguration(self):
         self.assertEqual(line(self.out, "REARM"), "REARM 0 - 1 1")

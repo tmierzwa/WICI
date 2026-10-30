@@ -62,8 +62,8 @@
  ],
  "outputs": {
   "wici-station.mjs": {
-   "sha256": "9da73dd37bce9f454ea7a0e7d20089120f577a37adbf26cfe07b5a72d1ca962f",
-   "bytes": 650513,
+   "sha256": "0905a533d1961767bec427c3f284ca0553a85b4f2e7490324ae82f7f954c0dfb",
+   "bytes": 650521,
    "sources": [
     "firmware/src/annunciator.cpp",
     "firmware/src/config.cpp",
@@ -167,7 +167,7 @@
   "firmware/src/loraframe.cpp": "ac18e321947f672f7c944f49559a4bdbfd7fb616fba2ae32d7345553594ec239",
   "firmware/src/loraframe.h": "1c293cdd506a9bf4c2f4a5907a0723625940422d76e7622d965e8c0ecfa2f221",
   "firmware/src/main.cpp": "92efae62449c70746506884c2db27241884768a95854f0f1c4359132a543b7b1",
-  "firmware/src/measure.cpp": "e9764c732fcfd44d8781b247790a0737a24f00e94d90fd786e29f5b04dd39aae",
+  "firmware/src/measure.cpp": "56fd538f89b9007fbca0d7cc13e305bf174dcbfd345ebb573cadbe6c4ef0a014",
   "firmware/src/measure.h": "3db3b3c5ae9f2e2dc732e19884c3782a9108ee785daf17cde6757f998952ddf5",
   "firmware/src/p1_registers.h": "4cc79a7f2471477a8ae1860a331664c21664dcaee4b85f197684df97bdb5d6ad",
   "firmware/src/p1frame.cpp": "30ad678700847023baa0c652dfce80cd9c9c71210a69c0d91460bedd2f6258c1",
@@ -211,8 +211,8 @@
   "firmware/src/store.h": "e537820be3cf4f05718d1dfb61537f5756cd0d9951711817b47c11937e156496",
   "firmware/src/sx1262.cpp": "ebb2650ba8900ea0bc07c33b14a0ca7f72e3018c648abe6894364dd4b864dc09",
   "firmware/src/sx1262.h": "eed9b5e995841d855989b015f2b9ab1cb7c9940c461d8df961753674d6553e23",
-  "firmware/src/sx1262_link.cpp": "626fb15971af9eaf03ca2e9dce91287be1fc826ed9e91075595f007845b8a058",
-  "firmware/src/sx1262_link.h": "2635961073de2428c5ce2daaa4db73e9b247e754887e570fd14fe5d6523474da",
+  "firmware/src/sx1262_link.cpp": "42dee6a6c9d66cecea242ba00efdb8941f683242f8b87ddce681f9b6edd96b91",
+  "firmware/src/sx1262_link.h": "c13a12afcfc19e1d9b4406125baea68b6bff08b8847b76db258e867027591b2c",
   "firmware/src/testframe.cpp": "43f8f149a317f4a6c9f4c5aecf426204a88fcb98eb7f29c4f84e9845931402cf",
   "firmware/src/testframe.h": "d8a84994aebfd531fd24acbcef3c4b85eeae21865df552df290621cff24ff662",
   "firmware/src/ui.cpp": "9704701784e67d335f3b811d36e26ef81f416a2138b374dfcf428236e473def3",
