@@ -4,8 +4,10 @@
 status, DS11896), measure::Bench (firmware/src/measure.cpp) against a fake radiolink::Driver
 (test series, P1 send with CCA and debt, P1 receive and assembly, FOFF, carrier), and the SX1262 driver
 (firmware/src/sx1262.cpp, sx1262_link.cpp) in the LoRa pilot profile against a command-level model of the
-chip (BUSY, status byte, registers, buffer, IRQ, warm sleep with the retention list), with measure::Bench
-on top of it (TXPKT/TXCW debt and series limit in LoRa air time, RX/RXPER with SNR, no P1 link)."""
+chip (BUSY, status byte, registers, ring buffer of continuous receive, IRQ, standby modes and fallback, CAD,
+warm sleep with the retention list): transmit in steps with CAD, the receive sample (late frames, seen flags
+only, activity marks, removed module under the radio lock), with measure::Bench on top of it (TXPKT/TXCW
+debt and series limit in LoRa air time, RX/RXPER with SNR, no P1 link)."""
 
 import json
 from pathlib import Path
@@ -278,6 +280,11 @@ int main() {
     printf("FOFFMAX %d %d\n", link.setFrequencyOffset(1000001), link.setFrequencyOffset(-1000000));
     link.setFrequencyOffset(0);
     printf("FOFF0 %ld %02X\n", static_cast<long>(synt()) - static_cast<long>(base), chip.regs[s2lp::SYNT3]);
+
+    // Układ P1: bez CAD i bez nadawania w krokach; próg CCA wspólny P1.
+    const uint8_t one[1] = {0};
+    printf("P1DEFAULTS %d %d %d %d\n", static_cast<int>(link.cad()), static_cast<int>(link.prepareTx(one, 1)), link.sendPrepared(nullptr),
+           link.ccaThresholdDbm());
     return 0;
 }
 """
@@ -497,8 +504,11 @@ int main() {
 
 
 SX1262_HARNESS = r"""
+#include <algorithm>
+#include <functional>
 #include <vector>
 #include "journal.h"
+#include "platform.h"
 #include "measure.h"
 #include "sx1262_link.h"
 #include "testframe.h"
@@ -512,8 +522,15 @@ void measure::randomBytes(uint8_t* out, size_t count) {
 
 constexpr uint8_t PIN_CS = 10, PIN_RESET = 9, PIN_BUSY = 14, PIN_RXEN = 42, PIN_OK = 39;
 
-// Model SX1262 na poziomie poleceń: bajt statusu (tryb), rejestry 16-bitowe, bufor 256 B, IRQ kasowane
-// poleceniem, tryb powrotu STDBY_RC po TxDone, odbiór ciągły, uśpienie z ciepłym startem i listą
+// Blokada operacji radia: licznik zamiast mutexu FreeRTOS (sprawdza, że próbka nie zwalnia cudzej blokady).
+int lockDepth = 0;
+bool platform::radioLockTake(uint32_t) { ++lockDepth; return true; }
+void platform::radioLockGive() { --lockDepth; }
+
+// Model SX1262 na poziomie poleceń: bajt statusu (tryb), rejestry 16-bitowe, bufor 256 B jako pierścień
+// (odbiór ciągły pisze każdy pakiet dalej od końca poprzedniego, karta rozdz. 7.2 i 13.2.3), IRQ kasowane
+// poleceniem, SetStandby do STDBY_RC albo STDBY_XOSC, tryb powrotu po TxDone z SetRxTxFallbackMode,
+// CAD z powrotem do STDBY_RC (tabela 13-73), odbiór ciągły, uśpienie z ciepłym startem i listą
 // rejestrów zachowywanych (karta, rozdz. 9.6: bez wpisu 0x08AC wraca do 0x94), BUSY, NRESET i RXEN.
 struct Chip {
     std::vector<uint8_t> regs = std::vector<uint8_t>(0x10000, 0);
@@ -524,8 +541,13 @@ struct Chip {
     uint8_t packetType = 0;
     uint8_t packetParams[6] = {}, modulation[4] = {}, paConfig[4] = {}, txParams[2] = {}, tcxo[4] = {};
     uint32_t rf = 0, rxTimeout = 0;
-    int txCountdown = -1;
+    int txCountdown = -1, cadCountdown = -1;
     bool holdTx = false, busyStuck = false, rxen = false, rxenAtTx = true;
+    bool cadBusy = false, cadHang = false;  // CAD wykrywa preambułę; CAD bez końca
+    uint8_t fallback = 0x20, rxPtr = 0, cadParams[7] = {}, dioIrq[8] = {};
+    unsigned cadCount = 0;
+    uint8_t hookOp = 0;               // polecenie, przed którym model zmienia stan eteru (hook)
+    std::function<void()> hook;
     unsigned txCount = 0;
     std::vector<uint8_t> lastTx;
     uint8_t rxLength = 0, rxStart = 0, rssiPkt = 0, snrPkt = 0, rssiInst = 0;
@@ -546,6 +568,8 @@ void resetChip() {
     chip.errors = 0x20;  // kalibracja po włączeniu zasilania bez TCXO: XOSC_START
     std::fill(chip.tcxo, chip.tcxo + 4, 0);
     chip.txCountdown = -1;
+    chip.cadCountdown = -1;
+    chip.fallback = 0x20;
 }
 
 uint8_t status() { return static_cast<uint8_t>(chip.mode << 4); }
@@ -556,8 +580,25 @@ void execute() {
     const uint8_t* p = bytes.data() + 1;
     const size_t n = bytes.size() - 1;
     chip.ops.push_back(op);
+    if (chip.hook && op == chip.hookOp) {
+        std::function<void()> hook = chip.hook;
+        chip.hook = nullptr;
+        hook();
+    }
     switch (op) {
-        case sx1262::OP_SET_STANDBY: chip.mode = sx1262::MODE_STBY_RC; chip.txCountdown = -1; break;
+        case sx1262::OP_SET_STANDBY:
+            chip.mode = p[0] == sx1262::STDBY_XOSC ? sx1262::MODE_STBY_XOSC : sx1262::MODE_STBY_RC;
+            chip.txCountdown = chip.cadCountdown = -1;
+            break;
+        case sx1262::OP_SET_RX_TX_FALLBACK: chip.fallback = p[0]; break;
+        case sx1262::OP_SET_DIO_IRQ_PARAMS: std::copy(p, p + 8, chip.dioIrq); break;
+        case sx1262::OP_SET_CAD_PARAMS: std::copy(p, p + 7, chip.cadParams); break;
+        case sx1262::OP_SET_CAD:
+            if (chip.mode == sx1262::MODE_STBY_RC || chip.mode == sx1262::MODE_STBY_XOSC) {
+                chip.mode = sx1262::MODE_RX;  // demodulator pracuje w czasie CAD
+                chip.cadCountdown = 2;
+            }
+            break;
         case sx1262::OP_SET_TX:
             if (chip.mode == sx1262::MODE_STBY_RC || chip.mode == sx1262::MODE_STBY_XOSC) {
                 chip.mode = sx1262::MODE_TX;
@@ -565,7 +606,11 @@ void execute() {
                 chip.rxenAtTx = chip.rxen;
             }
             break;
-        case sx1262::OP_SET_RX: chip.mode = sx1262::MODE_RX; chip.rxTimeout = p[0] << 16 | p[1] << 8 | p[2]; break;
+        case sx1262::OP_SET_RX:
+            chip.mode = sx1262::MODE_RX;
+            chip.rxTimeout = p[0] << 16 | p[1] << 8 | p[2];
+            chip.rxPtr = 0;  // RxBaseAddr; w odbiorze ciągłym dalej od poprzedniego pakietu
+            break;
         case sx1262::OP_SET_TX_CW: chip.mode = sx1262::MODE_TX; chip.txCountdown = -1; chip.rxenAtTx = chip.rxen; break;
         case sx1262::OP_SET_SLEEP: {
             chip.sleeping = true;
@@ -610,9 +655,15 @@ void digitalWrite(uint8_t pin, uint8_t level) {
         if (!chip.holdTx && chip.txCountdown > 0 && --chip.txCountdown == 0) {
             chip.lastTx.assign(chip.buffer, chip.buffer + chip.packetParams[3]);
             chip.irq |= sx1262::IRQ_TX_DONE;
-            chip.mode = sx1262::MODE_STBY_RC;
+            chip.mode = chip.fallback == 0x30 ? sx1262::MODE_STBY_XOSC : chip.fallback == 0x40 ? sx1262::MODE_FS : sx1262::MODE_STBY_RC;
             chip.txCountdown = -1;
             ++chip.txCount;
+        }
+        if (!chip.cadHang && chip.cadCountdown > 0 && --chip.cadCountdown == 0) {
+            chip.irq |= sx1262::IRQ_CAD_DONE | (chip.cadBusy ? sx1262::IRQ_CAD_DETECTED : 0);
+            chip.mode = sx1262::MODE_STBY_RC;  // CAD_ONLY: zawsze STDBY_RC, niezależnie od trybu powrotu
+            chip.cadCountdown = -1;
+            ++chip.cadCount;
         }
     } else {
         execute();
@@ -637,13 +688,39 @@ uint8_t SPIClass::transfer(uint8_t out) {
     }
 }
 
+// Koniec ramki w buforze od `start`. Flagi początku ramki skasowała już wcześniejsza próbka odbioru.
 void injectFrame(size_t length, uint8_t start, uint8_t first, uint16_t extraIrq = 0) {
     for (size_t i = 0; i < length; ++i) chip.buffer[static_cast<uint8_t>(start + i)] = static_cast<uint8_t>(first + i);
     chip.rxLength = static_cast<uint8_t>(length);
     chip.rxStart = start;
     chip.rssiPkt = 160;  // -80 dBm
     chip.snrPkt = 0xE4;  // -28 ćwiartek: -7 dB
-    chip.irq |= sx1262::IRQ_PREAMBLE_DETECTED | sx1262::IRQ_HEADER_VALID | sx1262::IRQ_RX_DONE | extraIrq;
+    chip.irq |= sx1262::IRQ_RX_DONE | extraIrq;
+}
+
+// Odbiór ciągły w eterze: początek ramki (preambuła, nagłówek) i pierwsze `written` bajtów treści od
+// wskaźnika odbioru, potem koniec ramki; następny pakiet pisze się dalej, z zawinięciem bufora.
+uint8_t frameStart = 0;
+void airHeader(uint8_t first, size_t written) {
+    frameStart = chip.rxPtr;
+    for (size_t i = 0; i < written; ++i) chip.buffer[static_cast<uint8_t>(frameStart + i)] = static_cast<uint8_t>(first + i);
+    chip.irq |= sx1262::IRQ_PREAMBLE_DETECTED | sx1262::IRQ_HEADER_VALID;
+}
+void airEnd(size_t length, uint8_t first) {
+    for (size_t i = 0; i < length; ++i) chip.buffer[static_cast<uint8_t>(frameStart + i)] = static_cast<uint8_t>(first + i);
+    chip.rxStart = frameStart;
+    chip.rxLength = static_cast<uint8_t>(length);
+    chip.rxPtr = static_cast<uint8_t>(frameStart + length);
+    chip.irq |= sx1262::IRQ_RX_DONE;
+}
+void airFrame(size_t length, uint8_t first) {  // cała ramka między dwiema próbkami odbioru
+    airHeader(first, 0);
+    chip.irq &= static_cast<uint16_t>(~(sx1262::IRQ_PREAMBLE_DETECTED | sx1262::IRQ_HEADER_VALID));  // próbka w trakcie ramki
+    airEnd(length, first);
+}
+bool bytesFrom(const radiolink::Frame& f, uint8_t first) {
+    for (size_t i = 0; i < f.length; ++i) if (f.bytes[i] != static_cast<uint8_t>(first + i)) return false;
+    return f.length > 0;
 }
 
 int indexOf(uint8_t op) {
@@ -798,6 +875,156 @@ int main() {
     link.idle();
     const radiolink::Rssi idleRssi = link.rssi();
     printf("IDLE %s %d %d\n", link.stateName(), chip.rxen, idleRssi.valid);
+
+    // Konfiguracja interfejsu LoRa: tryb powrotu STDBY_XOSC, DIO1 tylko dla końca ramki, parametry CAD.
+    printf("FALLBACK %02X\n", chip.fallback);
+    printf("DIOIRQ %02X%02X %02X%02X %02X%02X %02X%02X\n", chip.dioIrq[0], chip.dioIrq[1], chip.dioIrq[2], chip.dioIrq[3],
+           chip.dioIrq[4], chip.dioIrq[5], chip.dioIrq[6], chip.dioIrq[7]);
+    printf("CADPARAMS %02X %u %u %02X %d\n", chip.cadParams[0], chip.cadParams[1], chip.cadParams[2], chip.cadParams[3],
+           link.ccaThresholdDbm());
+
+    // Nadanie w krokach z odbioru: prepareTx (STDBY_XOSC, ramka), CAD (potem STDBY_RC), SetTx, po TxDone STDBY_XOSC.
+    link.startRx(true, 0);
+    chip.ops.clear();
+    const radiolink::TxPrep prep = link.prepareTx(frame, 30);
+    const char* prepMode = link.stateName();
+    const bool prepRxen = chip.rxen;
+    const radiolink::Cad cadFree = link.cad();
+    const char* cadMode = link.stateName();
+    const unsigned txBeforeCad = chip.txCount;
+    radiolink::TxTiming cadTiming;
+    const bool cadSent = link.sendPrepared(&cadTiming);
+    printf("CADTX %d %s %d %d %s %d %zu %02X %s %u\n", static_cast<int>(prep), prepMode, prepRxen, static_cast<int>(cadFree), cadMode,
+           cadSent, chip.lastTx.size(), chip.lastTx.front(), link.stateName(), chip.txCount - txBeforeCad);
+    // Kolejność: SetStandby, parametry pakietu, bufor, SetCad, SetTx; bez SetStandby między CAD a SetTx.
+    printf("CADORDER %d %d %d %d %d %d\n", indexOf(sx1262::OP_SET_STANDBY), indexOf(sx1262::OP_SET_PACKET_PARAMS),
+           indexOf(sx1262::OP_WRITE_BUFFER), indexOf(sx1262::OP_SET_CAD), indexOf(sx1262::OP_SET_TX),
+           static_cast<int>(std::count(chip.ops.begin(), chip.ops.end(), sx1262::OP_SET_STANDBY)));
+    // Druga ramka datagramu ze stanu spoczynku, bez CAD; potem odbiór.
+    const radiolink::TxPrep prep2 = link.prepareTx(frame + 1, 20);
+    const bool sent2 = link.sendPrepared(nullptr);
+    printf("SECOND %d %d %zu %02X %s\n", static_cast<int>(prep2), sent2, chip.lastTx.size(), chip.lastTx.front(), link.stateName());
+    // CAD zajęty, CAD bez końca, CAD w odbiorze.
+    chip.cadBusy = true;
+    link.prepareTx(frame, 30);
+    const radiolink::Cad cadBusy = link.cad();
+    chip.cadBusy = false;
+    chip.cadHang = true;
+    const uint32_t cadT0 = millis();
+    const radiolink::Cad cadHung = link.cad();
+    const uint32_t cadHangMs = millis() - cadT0;
+    const char* hungMode = link.stateName();
+    chip.cadHang = false;
+    link.startRx(true, 0);
+    const radiolink::Cad cadInRx = link.cad();
+    printf("CADBUSY %d %d %s %d %d %u %04X\n", static_cast<int>(cadBusy), static_cast<int>(cadHung), hungMode, cadHangMs >= 20,
+           static_cast<int>(cadInRx), chip.cadCount, chip.irq);
+
+    // Przed wyjściem z odbioru: nieodczytana ramka albo ramka w toku odracza nadanie, bez kasowania flag
+    // i bez zapisu bufora.
+    link.startRx(true, 0);
+    airFrame(40, 0x60);
+    chip.ops.clear();
+    const radiolink::TxPrep pendingDone = link.prepareTx(frame, 30);
+    printf("PENDING %d %s %d %04X %02X %d\n", static_cast<int>(pendingDone), link.stateName(), chip.rxen, chip.irq,
+           chip.buffer[0], indexOf(sx1262::OP_WRITE_BUFFER));
+    radiolink::Frame rxf;
+    const sx1262::RxService pendingFrame = link.serviceRx(rxf, false);
+    airHeader(0x70, 0);
+    const radiolink::TxPrep pendingStart = link.prepareTx(frame, 30);
+    printf("PENDINGRX %d %d %d %d\n", static_cast<int>(pendingFrame), bytesFrom(rxf, 0x60), static_cast<int>(pendingStart),
+           chip.irq == (sx1262::IRQ_PREAMBLE_DETECTED | sx1262::IRQ_HEADER_VALID));
+
+    // Odbiór ciągły: próbka kasuje widziane flagi początku ramki i zapisuje znaczniki aktywności; ramka
+    // 255 B od 0, następna od 255 z zawinięciem bufora (nadpisuje pierwszą).
+    link.startRx(true, 0);
+    link.clearActivity();
+    const bool quietBefore = link.activity().quietFor(millis(), 50);
+    airHeader(0x00, 10);
+    const sx1262::RxService sample = link.serviceRx(rxf, false);
+    printf("SAMPLE %d %04X %d %d\n", static_cast<int>(sample), chip.irq, quietBefore, link.activity().quietFor(millis(), 50));
+    airEnd(255, 0x00);
+    const sx1262::RxService first = link.serviceRx(rxf, false);
+    printf("RING1 %d %zu %d %u\n", static_cast<int>(first), rxf.length, bytesFrom(rxf, 0x00), chip.rxStart);
+    airFrame(255, 0x80);
+    const sx1262::RxService second = link.serviceRx(rxf, false);
+    printf("RING2 %d %zu %d %u %u %02X %lu\n", static_cast<int>(second), rxf.length, bytesFrom(rxf, 0x80), chip.rxStart, chip.rxPtr,
+           chip.buffer[0], static_cast<unsigned long>(link.rxLate()));
+
+    // Krótka ramka: nagłówek i koniec tej samej ramki w jednej próbce (przerwa ≤ 25 ms) to ramka dobra.
+    airHeader(0x40, 0);
+    airEnd(5, 0x40);
+    const sx1262::RxService shortFrame = link.serviceRx(rxf, false);
+    printf("SHORTFRAME %d %zu %d %lu %04X\n", static_cast<int>(shortFrame), rxf.length, bytesFrom(rxf, 0x40),
+           static_cast<unsigned long>(link.rxLate()), chip.irq);
+    // Przerwa w próbkach ponad 25 ms z nagłówkiem przy RxDone: nie wiadomo, czyj, więc rx_late.
+    link.serviceRx(rxf, false);
+    fakeUs += 30000;
+    airHeader(0x50, 0);
+    airEnd(60, 0x50);
+    airHeader(0x58, 8);  // następna ramka; flaga HeaderValid ta sama
+    const sx1262::RxService gapLate = link.serviceRx(rxf, false);
+    printf("GAPLATE %d %zu %lu %04X\n", static_cast<int>(gapLate), rxf.length, static_cast<unsigned long>(link.rxLate()), chip.irq);
+    airEnd(40, 0x58);
+    const sx1262::RxService afterGap = link.serviceRx(rxf, false);  // nagłówek tej ramki skasowany przy GAPLATE
+    printf("AFTERGAP %d %d\n", static_cast<int>(afterGap), bytesFrom(rxf, 0x58));
+
+    // Spóźnienie: nagłówek ramki widziany wcześniej, a przy RxDone już nagłówek następnej (przed odczytem),
+    // albo nagłówek w trakcie odczytu bufora (po odczycie). Ramka odrzucona i policzona, flagi widziane skasowane.
+    airHeader(0x20, 0);
+    link.serviceRx(rxf, false);
+    airEnd(200, 0x20);
+    airHeader(0x90, 20);
+    const sx1262::RxService lateBefore = link.serviceRx(rxf, false);
+    printf("LATE1 %d %zu %lu %04X\n", static_cast<int>(lateBefore), rxf.length, static_cast<unsigned long>(link.rxLate()), chip.irq);
+    airEnd(100, 0x90);
+    chip.hookOp = sx1262::OP_READ_BUFFER;
+    chip.hook = [] { airHeader(0xB0, 4); };
+    const sx1262::RxService lateAfter = link.serviceRx(rxf, false);
+    printf("LATE2 %d %zu %lu %04X\n", static_cast<int>(lateAfter), rxf.length, static_cast<unsigned long>(link.rxLate()), chip.irq);
+    // Flaga ustawiona między odczytem przerwań a kasowaniem zostaje (kasowane tylko widziane).
+    airEnd(30, 0xB0);
+    chip.hookOp = sx1262::OP_CLEAR_IRQ_STATUS;
+    chip.hook = [] { chip.irq |= sx1262::IRQ_CRC_ERR; };
+    const sx1262::RxService kept = link.serviceRx(rxf, false);
+    printf("ONLYSEEN %d %d %04X\n", static_cast<int>(kept), bytesFrom(rxf, 0xB0), chip.irq);
+    const sx1262::RxService keptBad = link.serviceRx(rxf, false);
+    printf("ONLYSEENBAD %d %04X\n", static_cast<int>(keptBad), chip.irq);
+
+    // RSSI ponad progiem jako aktywność; okno 50 ms bez aktywności; kasowanie znaczników.
+    link.clearActivity();
+    chip.rssiInst = 180;  // -90 dBm > -100 dBm
+    link.serviceRx(rxf, true);
+    const bool rssiBusy = !link.activity().quietFor(millis(), 50);
+    fakeUs += 60000;
+    const bool rssiAged = link.activity().quietFor(millis(), 50);
+    chip.rssiInst = 220;  // -110 dBm
+    link.clearActivity();
+    link.serviceRx(rxf, true);
+    printf("RSSIMARK %d %d %d\n", rssiBusy, rssiAged, link.activity().quietFor(millis(), 50));
+    link.idle();
+    const sx1262::RxService notRx = link.serviceRx(rxf, false);
+    printf("NOTRX %d\n", static_cast<int>(notRx));
+
+    // Wyjęty moduł (BUSY wysoki) przy trzymanej blokadzie radia: próbka przerwana po pierwszym przekroczeniu
+    // czasu BUSY, bez ramki; blokada zostaje u wywołującego; po powrocie BUSY ramka czeka w układzie.
+    link.startRx(true, 0);
+    airFrame(12, 0x30);
+    {
+        platform::RadioLock lock(500);
+        chip.busyStuck = true;
+        const unsigned long timeoutsBefore = radio.busyTimeouts();
+        const uint32_t t0 = millis();
+        rxf.length = 99;
+        const sx1262::RxService stuck = link.serviceRx(rxf, true);
+        const uint32_t stuckMs = millis() - t0;
+        printf("STUCKRX %d %zu %lu %d %d %d %04X\n", static_cast<int>(stuck), rxf.length, radio.busyTimeouts() - timeoutsBefore,
+               stuckMs >= 20 && stuckMs < 25, lock.held(), lockDepth, chip.irq);
+        chip.busyStuck = false;
+    }
+    const sx1262::RxService recovered = link.serviceRx(rxf, false);
+    printf("STUCKAFTER %d %d %d\n", lockDepth, static_cast<int>(recovered), bytesFrom(rxf, 0x30));
+    link.idle();
 
     // BUSY bez zejścia: transakcja odrzucona i policzona.
     chip.busyStuck = true;
@@ -1007,6 +1234,10 @@ class S2lpLinkTests(unittest.TestCase):
         self.assertEqual(line(self.out, "FOFFMAX"), "FOFFMAX 0 1")
         self.assertEqual(line(self.out, "FOFF0"), "FOFF0 0 62")  # SYNT3 keeps CP_ISEL 3, BS 0
 
+    def test_p1_driver_has_no_cad_and_the_p1_cca_threshold(self):
+        # Cad::Unsupported (3), TxPrep::Unsupported (3), no prepared send, P1 threshold -100 dBm.
+        self.assertEqual(line(self.out, "P1DEFAULTS"), "P1DEFAULTS 3 3 0 -100")
+
 
 @unittest.skipUnless(host_compiler(), "no host C++ compiler")
 class BenchTests(unittest.TestCase):
@@ -1090,12 +1321,13 @@ class Sx1262LinkTests(unittest.TestCase):
 
     def test_carrier(self):
         self.assertEqual(line(self.out, "CW"), "CW 1 TX 0 1")
-        self.assertEqual(line(self.out, "CWSTOP"), "CWSTOP STBY_RC")
+        self.assertEqual(line(self.out, "CWSTOP"), "CWSTOP STBY_XOSC")
 
     def test_transmit_frame_and_timeout(self):
-        self.assertEqual(line(self.out, "TX"), "TX 1 20 20 A0 B3 0 STBY_RC 0 1")
+        # After TxDone the chip falls back to STDBY_XOSC by itself (fallback mode 0x30), TCXO stays on.
+        self.assertEqual(line(self.out, "TX"), "TX 1 20 20 A0 B3 0 STBY_XOSC 0 1")
         self.assertEqual(line(self.out, "TXLEN"), "TXLEN 0 0")
-        self.assertEqual(line(self.out, "TXSTUCK"), "TXSTUCK 0 STBY_RC 1 1")
+        self.assertEqual(line(self.out, "TXSTUCK"), "TXSTUCK 0 STBY_XOSC 1 1")
 
     def test_continuous_receive_with_rssi_and_snr(self):
         self.assertEqual(line(self.out, "RX"), "RX 1 RX 1 FFFFFF")
@@ -1119,7 +1351,71 @@ class Sx1262LinkTests(unittest.TestCase):
         self.assertEqual(line(self.out, "IDLE"), "IDLE STBY_RC 0 0")
 
     def test_busy_timeout_refuses_transaction(self):
-        self.assertEqual(line(self.out, "BUSY"), "BUSY 0 1")
+        self.assertEqual(line(self.out, "BUSY"), "BUSY 0 2")  # the second timeout; the first one is in STUCKRX
+
+    def test_lora_interface_configuration(self):
+        self.assertEqual(line(self.out, "FALLBACK"), "FALLBACK 30")  # STDBY_XOSC after TX (datasheet table 13-23)
+        # IRQ mask: TxDone, RxDone, PreambleDetected, HeaderValid, HeaderErr, CrcErr, CadDone, CadDetected,
+        # Timeout (0x03F7); DIO1 only RxDone, HeaderErr and CrcErr (0x0062); DIO2 and DIO3 none.
+        self.assertEqual(line(self.out, "DIOIRQ"), "DIOIRQ 03F7 0062 0000 0000")
+        # CAD on 2 symbols, cadDetPeak 22, cadDetMin 10, CAD_ONLY; CCA threshold -100 dBm.
+        self.assertEqual(line(self.out, "CADPARAMS"), "CADPARAMS 01 22 10 00 -100")
+
+    def test_transmit_in_steps_with_free_cad(self):
+        # prepareTx Ready in STDBY_XOSC with RXEN low; CAD Free leaves STDBY_RC (CAD_ONLY, table 13-73);
+        # the loaded 30 B frame is sent and the chip falls back to STDBY_XOSC.
+        self.assertEqual(line(self.out, "CADTX"), "CADTX 0 STBY_XOSC 0 0 STBY_RC 1 30 A0 STBY_XOSC 1")
+        standby, params, write, cad, tx, standbys = (int(v) for v in line(self.out, "CADORDER").split()[1:])
+        self.assertTrue(standby < params < write < cad < tx)  # frame loaded before CAD, SetTx right after it
+        self.assertEqual(standbys, 1)
+        self.assertEqual(line(self.out, "SECOND"), "SECOND 0 1 20 A1 STBY_XOSC")
+
+    def test_cad_busy_hung_and_from_receive(self):
+        # Busy (1); no CadDone within the limit: Error (2) and STDBY_XOSC; CAD from RX refused (2);
+        # two CADs finished; CAD flags cleared.
+        self.assertEqual(line(self.out, "CADBUSY"), "CADBUSY 1 2 STBY_XOSC 1 2 2 0000")
+
+    def test_pending_reception_defers_transmit_without_clearing(self):
+        # Unread RxDone: RxPending (1), still in RX, flag kept, buffer not written; the frame is then received.
+        self.assertEqual(line(self.out, "PENDING"), "PENDING 1 RX 1 0002 60 -1")
+        # A frame starting (preamble and header) defers too, flags kept.
+        self.assertEqual(line(self.out, "PENDINGRX"), "PENDINGRX 1 1 1 1")
+
+    def test_sample_clears_seen_start_flags_and_marks_activity(self):
+        self.assertEqual(line(self.out, "SAMPLE"), "SAMPLE 0 0000 1 0")
+        self.assertEqual(line(self.out, "RSSIMARK"), "RSSIMARK 1 1 1")  # -90 dBm busy, aged after 60 ms, -110 dBm quiet
+        self.assertEqual(line(self.out, "NOTRX"), "NOTRX 4")
+
+    def test_continuous_receive_buffer_continues_and_wraps(self):
+        self.assertEqual(line(self.out, "RING1"), "RING1 1 255 1 0")
+        # The second 255 B frame starts at 255 and wraps: it overwrites the first from address 0.
+        self.assertEqual(line(self.out, "RING2"), "RING2 1 255 1 255 254 81 0")
+
+    def test_short_frame_with_header_and_end_in_one_sample_is_accepted(self):
+        self.assertEqual(line(self.out, "SHORTFRAME"), "SHORTFRAME 1 5 1 0 0000")
+
+    def test_header_at_end_after_a_sampling_gap_is_late(self):
+        # Over 25 ms since the previous sample: the header cannot be attributed, the frame goes to rx_late;
+        # the next frame (whose header that was) is then received normally.
+        self.assertEqual(line(self.out, "GAPLATE"), "GAPLATE 3 0 1 0000")
+        self.assertEqual(line(self.out, "AFTERGAP"), "AFTERGAP 1 1")
+
+    def test_late_frame_dropped_and_counted(self):
+        # Header seen earlier and a new HeaderValid with RxDone (before the read); HeaderValid during the
+        # buffer read (after it).
+        self.assertEqual(line(self.out, "LATE1"), "LATE1 3 0 2 0000")
+        self.assertEqual(line(self.out, "LATE2"), "LATE2 3 0 3 0000")
+
+    def test_only_seen_flags_are_cleared(self):
+        # CrcErr set between GetIrqStatus and ClearIrqStatus survives and is reported by the next sample.
+        self.assertEqual(line(self.out, "ONLYSEEN"), "ONLYSEEN 1 1 0040")
+        self.assertEqual(line(self.out, "ONLYSEENBAD"), "ONLYSEENBAD 2 0000")
+
+    def test_removed_module_aborts_service_with_lock_held(self):
+        # BUSY stuck high: BusyTimeout (5) after the first timeout (~20 ms), no frame, lock still held by the
+        # caller, RxDone kept; after BUSY returns the lock is released and the frame is received.
+        self.assertEqual(line(self.out, "STUCKRX"), "STUCKRX 5 0 1 1 1 1 0002")
+        self.assertEqual(line(self.out, "STUCKAFTER"), "STUCKAFTER 0 1 1")
 
     def test_measurement_commands_in_lora_air_time(self):
         self.assertEqual(line(self.out, "NOP1"), "NOP1 no P1 link on this radio|no P1 link on this radio|0")

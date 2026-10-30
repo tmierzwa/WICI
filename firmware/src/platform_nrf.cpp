@@ -101,6 +101,10 @@ void beginVtest() {}
 void printVtest() {}
 #endif
 
+// Blokada operacji radia pusta: na nRF52840 (stanowisko A, płytka N1) nie ma zadania odbioru.
+bool radioLockTake(uint32_t) { return true; }
+void radioLockGive() {}
+
 bool handle(const char*, char*[], size_t) { return false; }
 
 const char* helpCommands() { return ""; }
