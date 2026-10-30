@@ -61,8 +61,8 @@
  ],
  "outputs": {
   "wici-station.mjs": {
-   "sha256": "76434392218b8ba347eebb0185ec28b11970d6a6813c0a573e8b95ca06f80528",
-   "bytes": 641805,
+   "sha256": "0d82d68af348613f624122dddf95baab37e44e6ce6d8f6bba3832b150ad771e3",
+   "bytes": 642221,
    "sources": [
     "firmware/src/annunciator.cpp",
     "firmware/src/config.cpp",
@@ -210,9 +210,9 @@
   "firmware/src/testframe.h": "d8a84994aebfd531fd24acbcef3c4b85eeae21865df552df290621cff24ff662",
   "firmware/src/ui.cpp": "9704701784e67d335f3b811d36e26ef81f416a2138b374dfcf428236e473def3",
   "firmware/src/ui.h": "e92aab16ac9db5f3b6fc3973ed3863bac4d175a20be32636b94b3f85645faece",
-  "firmware/src/ui_texts.h": "e9fd38c77d867339f8331e08e21410f8079762fb9b6190b615ede75814eefcaa",
+  "firmware/src/ui_texts.h": "2d163f28658259c8e8dd2e41ad5cf6791d7006716fba7e199a779a355dc33e7f",
   "firmware/src/unicode_tables.h": "ef324616bebbcb72f111ce9453ed943d9b57fad9ae73cdc79d22a81161d88739",
-  "firmware/src/usbproto.cpp": "51aeaed8aa185f3330ca60ec34249076380b3f52d3482ef066067633f2531c2d",
+  "firmware/src/usbproto.cpp": "626b9541793f337a6c0e8e9788cd6bf7aec10475b8589c1ecd20595ed83e7c70",
   "firmware/src/usbproto.h": "8421e73abe19735bd80f299566eed59993056b25498656445883289af6ff1a44",
   "firmware/lib/reticulum_core/src/announce.cpp": "7a56f213174dcfb6c65812a07f1f64f2417b867b7f83e5fbdc6aab8831c19819",
   "firmware/lib/reticulum_core/src/announce.h": "ca5bbef3390ca042742d06d0d0e45c010add79255709cedc58e9fc9f84d6b933",

@@ -2087,13 +2087,29 @@ class HostUnitTests(unittest.TestCase):
     def test_usb_test_paused_and_mark_read_retry(self):
         u = self.Lines()
         # TEST z laptopa przy WSTRZYMAJ: odmowa jak z menu, a nie `stored` bez nadania.
-        out = self.world([self.CONFIG, "now 100", "pause 1", "connect", u("test", nonce="0102030405060708"), u("mark_read", msg=1),
-                          u("mark_read", msg=9999)])
+        epoch = self.replies(self.world([self.CONFIG, "connect"]))[0]["epoch"]
+        out = self.world([self.CONFIG, "now 100", "pause 1", "connect", u("test", nonce="0102030405060708"), u("mark_read", epoch=epoch, msg=1),
+                          u("mark_read", epoch=epoch, msg=9999)])
         r = self.replies(out)[1:]
         self.assertEqual((r[0]["type"], r[0]["reason"], r[0]["detail"]), ("rejected", "invalid", "paused"))
         # Numer nadany, ale bez wiadomości w skrzynce (wypadła albo to inne zdarzenie): `ok` dla ponowienia.
         self.assertEqual(r[1]["type"], "ok")
         self.assertEqual((r[2]["type"], r[2]["reason"]), ("rejected", "invalid"))
+
+    def test_usb_mark_read_checks_epoch(self):
+        u = self.Lines()
+        epoch = self.replies(self.world([self.CONFIG, "connect"]))[0]["epoch"]
+        other = "0" * 16 if epoch != "0" * 16 else "1" * 16
+        out = self.world([self.CONFIG, "connect", u("mark_read", epoch=other, msg=1), u("mark_read", epoch="zz", msg=1), u("mark_read", msg=1)])
+        r = self.replies(out)[1:]
+        self.assertEqual((r[0]["type"], r[0]["reason"]), ("rejected", "stale"))
+        self.assertEqual((r[1]["type"], r[1]["reason"], r[1]["detail"]), ("rejected", "invalid", "epoch"))
+        self.assertEqual((r[2]["type"], r[2]["reason"], r[2]["detail"]), ("rejected", "invalid", "epoch"))
+
+    def test_usb_sync_without_boot(self):
+        u = self.Lines()
+        out = self.world([self.CONFIG, "connect", u("sync", epoch="", cursor=0)])
+        self.assertEqual(self.replies(out)[1]["type"], "snap_required")
 
     def test_test_revision_before_sending_does_not_alarm(self):
         # Nowa rewizja TEST po nadaniu poprzedniej: alarm liczy się od nadania nowej, nie od czasu 0.

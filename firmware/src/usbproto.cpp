@@ -44,7 +44,7 @@ struct Command {
 enum : uint8_t { ANY = 0, STATION = 1, PREP = 2 };   // STATION: nie w konfiguracji węzła
 
 const Command COMMANDS[] = {
-    {"sync", ANY, {{"boot", F::STR, true}, {"epoch", F::STR, true}, {"cursor", F::INT, true}}, 3},
+    {"sync", ANY, {{"boot", F::STR, false}, {"epoch", F::STR, true}, {"cursor", F::INT, true}}, 3},
     {"ack", ANY, {{"epoch", F::STR, true}, {"cursor", F::INT, true}}, 2},
     {"snapshot", ANY, {{"epoch", F::STR, true}}, 1},
     {"submit", STATION, {{"id", F::STR, true}, {"revision", F::INT, true}, {"sa1", F::ARRAY, true}}, 3},
@@ -52,7 +52,7 @@ const Command COMMANDS[] = {
     {"test", STATION, {{"nonce", F::STR, true}}, 1},
     {"announce", STATION, {}, 0},
     {"silence", ANY, {{"on", F::BOOL, true}, {"exception_id", F::STR, false}}, 2},
-    {"mark_read", STATION, {{"msg", F::INT, true}}, 1},
+    {"mark_read", STATION, {{"epoch", F::STR, true}, {"msg", F::INT, true}}, 2},
     {"status", ANY, {}, 0},
     {"close", STATION, {{"epoch", F::STR, true}, {"head", F::INT, true}}, 2},
     {"destroy", ANY, {}, 0},
@@ -333,9 +333,13 @@ void Protocol::dispatch(const char* type, const json::Value& msg, int64_t seq, u
         send("ok", seq, "");
     } else if (!strcmp(type, "silence")) doSilence(msg, seq, nowMs);
     else if (!strcmp(type, "mark_read")) {
-        // Numer wiadomości to numer zdarzenia; wiadomość, która wypadła już ze skrzynki, daje `ok` (ponowienie).
+        // Numer wiadomości to numer zdarzenia w epoce; numer z innej epoki (po ZAMKNIJ ZDARZENIE) mógłby wskazać
+        // inną wiadomość, więc daje `stale`. Wiadomość, która wypadła już ze skrzynki, daje `ok` (ponowienie).
+        uint8_t epoch[store::EPOCH];
+        if (!json::hexField(msg, "epoch", epoch, store::EPOCH)) { rejected(seq, "invalid", "epoch"); return; }
         const uint32_t number = intField(msg, "msg");
-        if (!number || number > store_.head()) rejected(seq, "invalid", "msg");
+        if (memcmp(epoch, store_.meta().epoch, store::EPOCH)) rejected(seq, "stale");
+        else if (!number || number > store_.head()) rejected(seq, "invalid", "msg");
         else if (store_.findMessage(number) >= 0 && !station_.markRead(number)) rejected(seq, "memory");
         else send("ok", seq, "");
     } else if (!strcmp(type, "status")) doStatus(seq);

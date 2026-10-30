@@ -84,13 +84,14 @@ function uptime(sec) {
 
 function volts(mv) { return (mv / 1000).toLocaleString("pl-PL", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " V"; }
 
+const POWER_ALARMS = { wymien_ogniwa: "wymień ogniwa", odlaczone_12v: "12 V odłączone", za_wysokie_12v: "12 V za wysokie, odłączone" };
+
 function power(p) {
   if (!p) return "–";
   let text = p.source === "aa" ? "ogniwa AA" : "źródło 12 V";
   const mv = p.source === "aa" ? p.mv_aa : p.mv_12v;
   if (typeof mv === "number" && mv > 0) text += " · " + volts(mv);
-  if (p.alarm === "wymien_ogniwa") text += " · wymień ogniwa";
-  if (p.alarm === "odlaczone_12v") text += " · 12 V odłączone";
+  if (POWER_ALARMS[p.alarm]) text += " · " + POWER_ALARMS[p.alarm];
   return text;
 }
 
