@@ -53,6 +53,14 @@ void printVtest() {
 // Blokada operacji radia pusta: symulator ma jeden wątek (pętla), bez zadania odbioru.
 bool radioLockTake(uint32_t) { return true; }
 void radioLockGive() {}
+uint32_t radioLockTimeouts() { return 0; }
+bool radioLockOk() { return true; }
+// Bez zadania odbioru: pętla obsługuje układ sama.
+bool startRxTask(void (*)()) { return false; }
+int32_t rxTaskStackFree() { return -1; }
+int32_t heapSize() { return -1; }
+int32_t heapFree() { return -1; }
+int32_t heapMinFree() { return -1; }
 
 bool handle(const char*, char*[], size_t) { return false; }
 

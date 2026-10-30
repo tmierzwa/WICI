@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 #include "sx1262_link.h"
 
+#include "platform.h"
+
 #include <math.h>
 
 namespace sx1262 {
@@ -56,7 +58,7 @@ static_assert(lora::TX_POWER_DBM == 13, "PA_CONFIG i TX_PARAMS_POWER z paOptTabl
 constexpr uint8_t OCP_60_MA = 0x18;  // krok 2,5 mA; SetPaConfig ustawia 140 mA (0x38), więc zapis po nim
 
 static_assert(lora::SPREADING_FACTOR == 7 && lora::BANDWIDTH_HZ == 125000 && lora::CODING_RATE == 5, "kody SetModulationParams");
-static_assert(lora::SERIES_MAX_MS <= radiolink::P1_SERIES_MAX_MS, "dług serii LoRa w granicy measure::MAX_DEBT_MS");
+static_assert(lora::SERIES_MAX_MS <= radiolink::P1_SERIES_MAX_MS, "dług serii LoRa w granicy measure::MAX_DEBT_MS (górnej granicy profili)");
 
 constexpr uint32_t BASE_RF_WORD =
     static_cast<uint32_t>(((static_cast<uint64_t>(lora::CARRIER_HZ) << 25) + F_XTAL_HZ / 2) / F_XTAL_HZ);
@@ -246,6 +248,8 @@ radiolink::Cad LinkDriver::cad() {
     // Tylko ze stanu spoczynku (po prepareTx): SetCad nie działa z odbioru. Po CAD_ONLY układ jest
     // w STDBY_RC (tabela 13-73), a ramka i parametry pakietu zostają (bufor trwa poza uśpieniem, rozdz. 7.4).
     if (rxActive_) return radiolink::Cad::Error;
+    // RXEN wysoki w CAD: przełącznik antenowy w odbiorze (jak w SetRx); wraca niski przed SetTx.
+    rxen(true);
     if (radio_.clearIrq(IRQ_CAD) && radio_.command(OP_SET_CAD)) {
         const uint32_t start = millis();
         uint16_t irq = 0;
@@ -253,6 +257,7 @@ radiolink::Cad LinkDriver::cad() {
             collectIrq(irq);
             if (irq & IRQ_CAD_DONE) {
                 // CadDetected z tego samego odczytu co CadDone: oba ustawia koniec jednego CAD (rozdz. 13.1.8).
+                rxen(false);
                 if (!radio_.clearIrq(IRQ_CAD)) break;
                 return (irq & IRQ_CAD_DETECTED) ? radiolink::Cad::Busy : radiolink::Cad::Free;
             }
@@ -260,7 +265,7 @@ radiolink::Cad LinkDriver::cad() {
             delayMicroseconds(200);
         }
     }
-    toStandby();
+    toStandby();  // także RXEN niski
     return radiolink::Cad::Error;
 }
 
@@ -332,8 +337,8 @@ void LinkDriver::noteActivity(uint16_t irq, uint32_t now) {
     }
     // Początek ramki po końcu poprzedniej w tej samej próbce to już następna ramka.
     if ((irq & IRQ_RX_START) && !inFrame_) {
-        inFrame_ = true;
         inFrameSinceMs_ = now;
+        inFrame_ = true;
     }
 }
 
@@ -424,6 +429,7 @@ RxService LinkDriver::serviceRx(radiolink::Frame& out, bool sampleRssi) {
             seen |= after & IRQ_RX_START;  // koniec następnej ramki zostaje dla następnej próbki
             if (!late) {
                 out.length = length;
+                out.receivedMs = now;  // czas próbki, nie obsługi w pętli (limit składania LoRa)
                 out.rssiDbm = static_cast<int16_t>(-packet[0] / 2);  // RssiPkt: -RssiPkt/2 dBm
                 out.snrQdb = static_cast<int8_t>(packet[1]);       // SnrPkt: ze znakiem, /4 dB
                 out.quality = 0;
@@ -438,6 +444,7 @@ RxService LinkDriver::serviceRx(radiolink::Frame& out, bool sampleRssi) {
     }
     // Ramka zakończona: dalej liczy się tylko nagłówek następnej ramki, jeśli był w tej próbce.
     headerSeen_ = nextHeader || headerAfter;
+    if (headerSeen_) inFrameSinceMs_ = now;  // następna ramka w toku liczy się od tej próbki
     inFrame_ = headerSeen_;
     lastSampleMs_ = now;
     if (late) {
@@ -449,12 +456,42 @@ RxService LinkDriver::serviceRx(radiolink::Frame& out, bool sampleRssi) {
 }
 
 radiolink::RxPoll LinkDriver::pollRx(radiolink::Frame& out) {
+    if (background_) {
+        // Ramki z pierścienia zadania odbioru (pętla nie czyta flag odbioru układu).
+        RxEntry entry;
+        if (!ring_.pop(entry)) return radiolink::RxPoll::Nothing;
+        out = entry.frame;
+        return entry.kind;
+    }
     switch (serviceRx(out, false)) {
         case RxService::Frame: return radiolink::RxPoll::Frame;
         case RxService::Bad:
         case RxService::Late: return radiolink::RxPoll::Bad;
         default: return radiolink::RxPoll::Nothing;
     }
+}
+
+void LinkDriver::taskCycle(bool dio1High) {
+    signals_.tick();
+    const uint32_t now = millis();
+    if (busyBackoffMs_ && now - busyBackoffMs_ < BUSY_BACKOFF_MS) return;
+    const bool rssiDue = now - lastRssiMs_ >= RSSI_SAMPLE_MS;
+    if (!dio1High && !rssiDue) return;
+    platform::RadioLock lock(0);  // bez czekania: pętla nadaje, konfiguruje albo obsługuje polecenie
+    if (!lock.held() || !rxActive_) return;
+    const uint32_t t0 = micros();
+    RxEntry entry;
+    const RxService result = serviceRx(entry.frame, rssiDue);
+    if (result == RxService::BusyTimeout) {
+        busyBackoffMs_ = now ? now : 1;
+        return;
+    }
+    busyBackoffMs_ = 0;
+    if (rssiDue) lastRssiMs_ = now;
+    if (result == RxService::Frame) entry.kind = radiolink::RxPoll::Frame;
+    else if (result == RxService::Bad || result == RxService::Late) entry.kind = radiolink::RxPoll::Bad;
+    if (entry.kind != radiolink::RxPoll::Nothing) ring_.push(entry);  // pełny: odpada ta ramka (overflow)
+    signals_.serviced(now, micros() - t0);
 }
 
 bool LinkDriver::receivingFrame() {
@@ -484,6 +521,17 @@ radiolink::Rssi LinkDriver::rssi() {
     radiolink::Rssi out;
     readRssi(out);
     return out;
+}
+
+radiolink::Activity LinkDriver::recentActivity(uint32_t windowMs) {
+    const uint32_t now = millis();
+    if (!activity_.quietFor(now, windowMs, Activity::RX_KINDS)) return radiolink::Activity::Rx;
+    // Ramka w toku (nagłówek bez końca) nadal zajmuje kanał, choć znaczniki zestarzały się przed jej końcem
+    // (ramka do FRAME_MAX_MS); stan ustawia zadanie odbioru, tu odczyt bez blokady.
+    // Różnica ze znakiem: czas zapisany przez zadanie po odczycie millis() wyżej daje wynik ujemny, czyli zajęty.
+    if (inFrame_ && static_cast<int32_t>(now - inFrameSinceMs_) < static_cast<int32_t>(FRAME_MAX_MS)) return radiolink::Activity::Rx;
+    if (!activity_.quietFor(now, windowMs, 1u << Activity::RSSI)) return radiolink::Activity::Rssi;
+    return radiolink::Activity::None;
 }
 
 int8_t LinkDriver::ccaThresholdDbm() const { return lora::CCA_RSSI_THRESHOLD_DBM; }
