@@ -17,6 +17,7 @@ import json
 import os
 from pathlib import Path
 import secrets
+import shutil
 import sqlite3
 import sys
 import threading
@@ -30,7 +31,7 @@ sys.path.insert(0, str(ROOT / "software" / "laptop"))
 sys.path.insert(0, str(ROOT / "firmware" / "tools"))
 
 from wici import database  # noqa: E402
-from wici.stanowisko import __main__ as aplikacja, nosnik, przyjecie, stos, wysylka, wzorzec  # noqa: E402
+from wici.stanowisko import __main__ as aplikacja, kopie, nosnik, przyjecie, stos, wysylka, wzorzec  # noqa: E402
 
 PROGRAM = os.environ.get("WICI_HOST_PROGRAM")
 HAS_STACK = all(importlib.util.find_spec(m) for m in ("RNS", "LXMF", "serial"))
@@ -553,6 +554,98 @@ class MediumTest(unittest.TestCase):
         with unittest.mock.patch.object(sys, "stdin", io.StringIO("zle haslo\n")), contextlib.redirect_stdout(out):
             code = aplikacja.main(["start", "--nosnik", str(self.root), "--port", "brak"])
         self.assertEqual((code, json.loads(out.getvalue())["event"]), (3, "login_failed"))
+
+
+class CopiesTest(StationTestCase):
+    """S5: a copy on the computer disk every 5 min, three newest, with the marker only in the copy."""
+
+    def setUp(self):
+        self.copies = kopie.Kopie(Path(tempfile.mkdtemp(dir=self.tmp_root())) / "kopie")
+        super().setUp()
+
+    def tmp_root(self):
+        self.disk = tempfile.TemporaryDirectory()
+        self.addCleanup(self.disk.cleanup)
+        return self.disk.name
+
+    def open(self):
+        return przyjecie.Przyjecie(self.medium, self.key, self.send, lambda m: m.result, clock=lambda: self.now,
+                                   log=lambda line: None, random=lambda: 0.5, copies=self.copies)
+
+    def actions(self):
+        return [r[0] for r in self.reception.call(lambda s: s.db.execute("SELECT op FROM dziennik ORDER BY id").fetchall())]
+
+    def every_minute(self, minutes):
+        for _ in range(minutes):
+            self.now += 60
+            self.tick()
+
+    def test_copy_every_five_minutes_keeps_three(self):
+        self.tick()
+        self.assertEqual(len(self.copies.files()), 1)
+        self.every_minute(4)
+        self.assertEqual(len(self.copies.files()), 1)
+        self.every_minute(16)
+        self.assertEqual(len(self.copies.files()), kopie.KEEP)
+        self.assertEqual(self.copies.newest(self.key), self.now)   # kopie w 0, 5, 10, 15 i 20 min
+
+    def test_copy_has_the_database_identity_and_accounts_and_the_marker_only_there(self):
+        self.deliver(self.STATION, request(text="piwnica przy szkole"))
+        self.now += kopie.INTERVAL_S
+        self.tick()
+        path = self.copies.files()[0]
+        self.assertNotIn(b"piwnica", path.read_bytes())
+        key = kopie.Kopie.unlock(path, self.envelopes["stanowisko"])   # samo hasło stanowiska otwiera kopię
+        at, payload = kopie.Kopie.read(path, key)
+        self.assertEqual(at, self.now)
+        with contextlib.closing(sqlite3.connect(":memory:")) as db:
+            db.deserialize(payload["baza"])
+            self.assertEqual(db.execute("SELECT count(*) FROM received").fetchone(), (1,))
+            self.assertEqual(db.execute("SELECT at FROM kopia").fetchone(), (self.now,))
+        self.assertEqual(payload["tozsamosc"], (self.medium.root / "tozsamosc").read_bytes())
+        self.assertEqual(payload["konta"], (self.medium.kit.dir / database.ACCOUNTS).read_bytes())
+        self.assertIsNone(durable(self.medium, self.key, "SELECT name FROM sqlite_master WHERE name='kopia'"))
+
+    def test_failed_copy_is_retried_and_logged_once_without_stopping_reception(self):
+        self.tick()   # pierwsza kopia przy starcie; następna za 5 min
+        shutil.rmtree(self.copies.dir)
+        self.copies.dir.write_text("to nie katalog")   # zapis kopii się nie uda
+        self.every_minute(8)
+        content = request()
+        self.deliver(self.STATION, content)
+        self.assertEqual(self.sent[-1][1], received_for(content))
+        self.assertEqual(self.actions().count("kopia_nieudana"), 1)
+        self.copies.dir.unlink()
+        self.every_minute(1)
+        self.assertEqual(self.actions()[-1], "kopia_wznowiona")
+        self.assertEqual(len(self.copies.files()), 1)
+
+    def test_interrupted_copy_leaves_the_previous_three(self):
+        self.every_minute(15)
+        before = self.copies.files()
+        self.assertEqual(len(before), kopie.KEEP)
+        with unittest.mock.patch.object(kopie.os, "replace", side_effect=OSError("zanik zasilania")):
+            self.every_minute(5)
+        self.assertEqual(self.copies.files(), before)
+        self.assertTrue(all(kopie.Kopie.read(p, self.key) for p in before))
+
+    def test_new_station_password_rewraps_the_copies(self):
+        self.tick()
+        new = self.medium.new_station_password(self.key)
+        self.copies.rewrap(self.key, self.medium.kit.recovery())
+        path = self.copies.files()[0]
+        self.assertEqual(kopie.Kopie.unlock(path, new), self.key)
+        with self.assertRaises(database.LoginError):
+            kopie.Kopie.unlock(path, self.envelopes["stanowisko"])
+
+    def test_copy_on_the_second_medium_and_removal(self):
+        self.tick()
+        second = kopie.Kopie(Path(self.disk.name) / "drugi-nosnik")
+        body = self.reception.call(lambda s: kopie.with_marker(s.db, self.now))
+        second.write(self.medium, self.key, body, self.now)
+        self.assertEqual(second.newest(self.key), self.now)
+        self.assertEqual((self.copies.remove(), second.remove()), ([], []))
+        self.assertEqual(self.copies.files() + second.files(), [])
 
 
 class StackHoldTest(unittest.TestCase):

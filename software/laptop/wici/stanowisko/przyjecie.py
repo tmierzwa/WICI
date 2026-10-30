@@ -23,7 +23,7 @@ import threading
 import time
 
 from .. import syscrypto
-from . import nosnik, wysylka, wzorzec
+from . import kopie, nosnik, wysylka, wzorzec
 
 # Czas odbioru według zegara komputera, osobno od schematu modelu (stanowisko-osp.md, „Przyjęcie”).
 SCHEMA = """
@@ -59,8 +59,10 @@ class Przyjecie:
 
     TICK_S = 1   # jak często wątek bazy sprawdza intencje bez nowych zadań
 
-    def __init__(self, medium, key, send, outcome, clock=None, log=None, random=random.random):
+    def __init__(self, medium, key, send, outcome, clock=None, log=None, random=random.random, copies=None):
+        """copies: kopie.Kopie on the computer disk, written every 5 min (stage S5); None without copies."""
         self.medium, self.key, self.clock = medium, key, clock or time.time
+        self.copies, self.next_copy, self.copy_failed = copies, 0, False
         self.log = log or (lambda line: print(line, file=sys.stderr, flush=True))
         self.wysylka = wysylka.Wysylka(send, outcome, self.log, random)
         self.jobs = queue.Queue()
@@ -126,9 +128,34 @@ class Przyjecie:
         return True
 
     def tick(self):
-        """Pass due intents to the stack (in the database thread), only once the medium holds every change."""
+        """Pass due intents to the stack (in the database thread), only once the medium holds every change;
+        a copy on the computer disk when it is due."""
         if self._save():
             self.wysylka.tick(self.store.db, self.clock())
+        if self.copies is not None and self.clock() >= self.next_copy:
+            self._copy()
+
+    def _copy(self):
+        """Copy on the computer disk; a failure is retried after a minute and logged once, without an alarm."""
+        now = self.clock()
+        try:
+            self.copies.write(self.medium, self.key, kopie.with_marker(self.store.db, now), now)
+        except SAVE_ERRORS as e:
+            self.next_copy = now + kopie.RETRY_S
+            if not self.copy_failed:
+                self.copy_failed = True
+                self._log_action("", "kopia_nieudana", f"{type(e).__name__}: {e}")
+            return
+        self.next_copy = now + kopie.INTERVAL_S
+        if self.copy_failed:
+            self.copy_failed = False
+            self._log_action("", "kopia_wznowiona")
+
+    def _log_action(self, account, op, detail=""):
+        with self.store.db:
+            self.store.db.execute("INSERT INTO dziennik(at, account, op, detail) VALUES(?,?,?,?)",
+                                  (self.clock(), account, op, detail))
+        self._save()
 
     def call(self, fn):
         """Run fn(store) in the database thread and return its result (or raise its exception) once the
@@ -152,11 +179,7 @@ class Przyjecie:
 
     def action(self, account, op, detail=""):
         """Entry in the action log (dziennik działań), durable when this returns."""
-        def add(store):
-            with store.db:
-                store.db.execute("INSERT INTO dziennik(at, account, op, detail) VALUES(?,?,?,?)",
-                                 (self.clock(), account, op, detail))
-        self.call(add)
+        self.call(lambda store: self._log_action(account, op, detail))
 
     def deliver(self, source, content):
         """A REQUEST or TEST with a checked signature from source (16 B "lxmf.delivery" hash)."""

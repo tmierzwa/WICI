@@ -11,7 +11,8 @@ station, never on the medium), and the receiver card for the stations to --karta
 every password with its envelope.
 
 start: reads the station password (first line of stdin, or typed without echo at a terminal), prints one
-JSON line "ready" with the receiver address and works until Ctrl+C or end of stdin. Logs (Reticulum and
+JSON line "ready" with the receiver address and writes a copy of the database to the computer disk every
+5 min (kopie.py) and works until Ctrl+C or end of stdin. Logs (Reticulum and
 reception, never the content of reports or passwords) go to stderr. A wrong password prints "login_failed"
 and ends with code 3. When the computer clock is earlier than the last numbered message, prints
 "clock_behind" and ends with code 2 without starting the stack: the duty officer sets the clock first.
@@ -25,8 +26,8 @@ import threading
 import time
 from pathlib import Path
 
-from .. import database, passwords
-from . import nosnik
+from .. import database, passwords, store
+from . import kopie, nosnik
 from .przyjecie import Przyjecie
 from .stos import BITRATE, Stos
 from .wysylka import ClockBehind
@@ -79,7 +80,8 @@ def start(args):
     stos = Stos(medium.network, args.port, lambda source, content: przyjecie.deliver(source, content), identity_key,
                 args.bitrate)
     try:
-        przyjecie = Przyjecie(medium, key, stos.send, stos.outcome)
+        copies = kopie.Kopie(Path(args.kopie) if args.kopie else kopie.disk_dir(store.state_dir() / "stanowisko", medium))
+        przyjecie = Przyjecie(medium, key, stos.send, stos.outcome, copies=copies)
     except ClockBehind as e:
         last = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(e.args[0]))
         emit("clock_behind", last_sent=last,
@@ -113,6 +115,7 @@ def main(argv=None):
     run.add_argument("--nosnik", required=True, help="katalog na nośniku stanowiska")
     run.add_argument("--port", required=True, help="port szeregowy stacji stanowiska (węzła)")
     run.add_argument("--bitrate", type=int, default=BITRATE, help="bitrate interfejsu KISS w konfiguracji Reticulum")
+    run.add_argument("--kopie", help="katalog kopii co 5 min na dysku komputera (domyślnie: katalog stanu aplikacji)")
     args = parser.parse_args(argv)
     return prepare(args) if args.command == "przygotuj" else start(args)
 
