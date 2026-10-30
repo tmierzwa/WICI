@@ -176,6 +176,16 @@ class Stos:
         self.router.handle_outbound(message)
         return message
 
+    @staticmethod
+    def outcome(message):
+        """True after DELIVERED, False after FAILED (also rejected or cancelled), None while in flight."""
+        import LXMF
+        if message.state == LXMF.LXMessage.DELIVERED:
+            return True
+        if message.state in (LXMF.LXMessage.FAILED, LXMF.LXMessage.REJECTED, LXMF.LXMessage.CANCELLED):
+            return False
+        return None
+
     def stop(self):
         """Detach the interfaces, as Reticulum does at exit (without ending the process)."""
         import RNS
