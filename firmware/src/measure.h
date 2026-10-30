@@ -8,6 +8,17 @@
 // s2lp_link.cpp, SX1262: sx1262_link.cpp), czas ramki w eterze też; reszta, w tym łącze P1, jest
 // wspólna. Łącze P1 działa tylko na układzie, który je ma (Driver::p1Link).
 //
+// Łącze stosu (linkSend, odbiór w tle): część wspólna (dług ciszy z dziennika, CCA, odroczenia, cisza
+// z wyjątkiem, zwrotne wywołania) i ramkowanie z układu (Driver::framing):
+// - P1 (CC1120, S2-LP): fragmenty p1frame, CCA próbkowane w pętli przez 50 ms, rezerwacja z najdłuższych ramek;
+// - RNode (SX1262, radio.md, „Ramka w eterze” i „Dostęp do kanału”, punkt 5): 1 albo 2 ramki loraframe,
+//   kolejno: dług z dziennika, 50 ms bez aktywności ze znaczników próbek odbioru (postój pętli nie zrywa
+//   okna), wyjście z odbioru z załadowaniem ramki 1 (nieodczytana ramka odracza), CAD (zajęty kanał odracza
+//   bez zapisu długu), zapis długu 12 x dokładny czas ramek (błąd: powrót do odbioru bez nadania), ramka 1,
+//   ramka 2, odbiór. Całość pod blokadą operacji radia (platform::RadioLock), bo obok pętli układ obsługuje
+//   zadanie odbioru (L0).
+// Obraz z flagą WICI_NO_P1_LINK (l0, l0-port) nie ma składania P1 (8 x 600 B RAM).
+//
 // Tryb pracy do badań EMC (EMC, Issue #21 punkt 5): reszta stacji pracuje normalnie, a radio co `period` s nadaje
 // jedną ramkę wzorcową `len` B z kolejnym numerem i między ramkami odbiera ramki wzorcowe tej samej
 // długości (liczniki jak RX, odczyt RXPER), np. od drugiej stacji w roli stacji pomocniczej.
@@ -22,6 +33,7 @@
 #include <Arduino.h>
 
 #include "journal.h"
+#include "loraframe.h"
 #include "p1frame.h"
 #include "radio_link.h"
 #include "testframe.h"
@@ -33,6 +45,7 @@ constexpr uint32_t CW_MAX_MS = 10000;         // TXCW <= 10 s (specyfikacja)
 constexpr uint32_t SERIES_MAX_MS = radiolink::P1_SERIES_MAX_MS;
 // Największy dług, jaki stanowisko zapisuje (seria do SERIES_MAX_MS i rezerwacja datagramu P1
 // z 7 najdłuższych ramek, 1365 ms): odczekiwany po starcie bez poprawnego rekordu długu.
+// Górna granica wszystkich profili; obraz odczekuje dług swojego łącza (Bench::maxDebtMs).
 constexpr uint32_t MAX_DEBT_MS = SERIES_MAX_MS * 12;
 constexpr uint32_t CONFIRM_MS = 30000;        // potwierdzenie przyciskiem OK
 // FOFF: kanał LoRa 125 kHz ze środkiem 869,525 MHz mieści się w podpaśmie 869,4–869,65 MHz tylko przy
@@ -47,6 +60,8 @@ constexpr uint32_t BACKOFF_MIN_MS = 100;      // odroczenie losowe 100..1000 ms
 constexpr uint32_t BACKOFF_MAX_MS = 1000;
 constexpr uint32_t LONG_DEFERRAL_MS = 1000;   // odroczenie łączne powyżej 1 s liczy się jako długie
 constexpr uint8_t MAX_DEFERRALS = 30;         // potem datagram odrzucony (wybór stanowiska, tx_drop)
+// Pętla czeka na blokadę operacji radia najwyżej tyle (zadanie odbioru trzyma ją ≤5 ms, ekran ≤5 ms).
+constexpr uint32_t RADIO_LOCK_WAIT_MS = 500;
 constexpr uint32_t EMC_PERIOD_MAX_S = 3600;
 constexpr uint32_t EMC_PERIOD_FACTOR = 13;    // okres ≥ 13 x czas ramki: ramka i jej dług ciszy 12 x
 
@@ -75,19 +90,22 @@ struct Event {
     char text[40];
 };
 
-// Liczniki łącza P1 (pola INFO ze specyfikacji: rx_ok, rx_bad, tx_drop).
+// Liczniki łącza stosu (pola INFO ze specyfikacji: rx_ok, rx_bad, tx_drop; LoRa także powody odroczeń).
 struct LinkCounters {
-    uint32_t rxOk = 0;          // ramki P1 z poprawnym CRC i nagłówkiem
-    uint32_t rxBad = 0;         // ramki odrzucone przy rozbiorze albo niekompletne w kolejce
+    uint32_t rxOk = 0;          // ramki z poprawnym CRC (P1: i nagłówkiem)
+    uint32_t rxBad = 0;         // ramki odrzucone przez układ (CRC, nagłówek, za późno) albo przy rozbiorze
     uint32_t rxDatagrams = 0;   // złożone datagramy
     uint32_t txDatagrams = 0;
-    uint32_t txFragments = 0;
+    uint32_t txFragments = 0;   // nadane ramki (P1: fragmenty, LoRa: ramki RNode)
     uint32_t txDrop = 0;        // datagramy odrzucone (cisza, STOP, dziennik, zbyt wiele odroczeń)
     uint32_t deferrals = 0;     // odroczenia CCA
     uint32_t longDeferrals = 0; // nadania odroczone przez CCA łącznie o ponad 1 s (bez czekania na dług)
+    uint32_t cadBusy = 0;       // LoRa: CAD wykrył preambułę
+    uint32_t rssiBusy = 0;      // LoRa: RSSI ponad progiem CCA w oknie albo przy decyzji
+    uint32_t rxBusy = 0;        // LoRa: preambuła, nagłówek albo ramka w oknie, albo nieodczytana ramka w układzie
 };
 
-enum class RxMode : uint8_t { NONE, TEST, P1 };
+enum class RxMode : uint8_t { NONE, TEST, LINK };
 
 // Bajty losowe z generatora stacji (drbg.h, ziarno z platform::entropy); dostarcza main.cpp.
 void randomBytes(uint8_t* out, size_t count);
@@ -117,13 +135,19 @@ public:
     const char* txpkt(uint16_t count, uint8_t length, uint32_t intervalMs, bool conducted,
                       testframe::Fill fill = testframe::Fill::PN9);
     const char* rxStart(uint8_t length);
-    // Łącze P1: odbiór ramek P1 w tle (tryb zmiennej długości) i nadanie datagramu
-    // z CCA 50 ms, odroczeniem losowym 100..1000 ms i długiem ciszy w dzienniku.
+    // Łącze stosu: odbiór w tle i nadanie datagramu z CCA 50 ms, odroczeniem losowym 100..1000 ms
+    // i długiem ciszy w dzienniku, w ramkowaniu układu. p1rxStart i p1send (polecenia P1RX, P1TX) tylko
+    // na układzie z łączem P1.
+    const char* linkRxStart();
+    const char* linkSend(const uint8_t* data, size_t length, bool stack);
     const char* p1rxStart();
     const char* p1send(const uint8_t* data, size_t length, bool stack = false);
     void printLink();
     const LinkCounters& link() const { return link_; }
-    // Złożony datagram P1 i koniec nadawania (ok = seria wyszła) dla warstwy aplikacji.
+    // Największy dług łącza: 12 x najdłuższa seria układu (P1 16,8 s, LoRa 12 x 838 ms ≈ 10,06 s),
+    // odczekiwany po starcie bez poprawnego rekordu długu.
+    uint32_t maxDebtMs() const { return radio_.seriesMaxMs() * radiolink::P1_DEBT_FACTOR; }
+    // Złożony datagram łącza i koniec nadawania (ok = seria wyszła) dla warstwy aplikacji.
     void onDatagram(void (*handler)(const uint8_t* data, size_t length, void* context), void* context) { datagramHandler_ = handler; datagramContext_ = context; }
     void onTxDone(void (*handler)(bool ok, void* context), void* context) { txDoneHandler_ = handler; txDoneContext_ = context; }
     const char* foff(int32_t hz);
@@ -139,7 +163,7 @@ public:
     void stop();         // przerwanie zadania i IDLE (tryb EMC zostaje: odbiór wraca w ciągu 1 s)
     // Datagram czekający na dług, kanał albo odstęp odpada (cisza albo inny wyjątek ciszy niż przy
     // przyjęciu); nadawany właśnie (SEND) kończy się.
-    void dropP1Tx();
+    void dropLinkTx();
     void poll();         // z loop(): nadawanie serii, odbiór ramek, koniec nośnej, kasowanie długu
     void rxper();        // drukuje i zeruje liczniki
     void printFoff();
@@ -163,13 +187,19 @@ private:
     void finishPkt();
     void endSeriesDebt();
     void receive();
+    void receiveLink();
     void receiveP1();
+    void receiveLora();
+    void datagramLine(const char* head, int headLength, const uint8_t* data, size_t length);
     bool enterRx(RxMode mode, uint8_t length);
     bool channelBusy();
     void startCca(uint32_t now, bool first);
-    void pollP1Tx();
+    void defer(uint32_t now);
+    void pollLinkTx();
     bool sendFragments();
-    void finishP1Tx(const char* result);
+    void sendLora(uint32_t now);
+    void finishLinkTx(const char* result);
+    const char* txStateName() const;
     void pollEmc(uint32_t now);
     void emcSend(uint32_t now);
     bool emcValid(uint32_t periodS, uint8_t length) const;  // długość ramki i okres ≥ 13 x czas ramki
@@ -207,20 +237,26 @@ private:
     RxMode rxMode_ = RxMode::NONE;
     uint8_t rxLen_ = 0;
     uint32_t rxPollMs_ = 0;
-    uint32_t autoRxMs_ = 0;      // ostatnia próba samoczynnego powrotu do odbioru P1
+    uint32_t autoRxMs_ = 0;      // ostatnia próba samoczynnego powrotu do odbioru łącza
+    uint32_t rxSinceMs_ = 0;     // początek odbioru łącza (okno CCA LoRa nie krótsze niż odbiór)
     uint32_t seriesDebtMs_ = 0;  // dług serii TXCW/TXPKT do odliczenia od jej końca
     Counters counters_;
 
+#ifndef WICI_NO_P1_LINK
     p1frame::Assembler assembler_;
+#endif
+    loraframe::Assembler loraAssembler_;
+    loraframe::Splitter splitter_;  // połówka nagłówka ostatniego nadanego datagramu dzielonego
     LinkCounters link_;
 
-    // Nadawanie P1: oczekiwanie na dług, CCA, odroczenie, seria fragmentów.
+    // Nadawanie łącza: oczekiwanie na dług, CCA, odroczenie, seria ramek.
     enum class TxState : uint8_t { IDLE, WAIT_DEBT, CCA, BACKOFF, SEND };
     TxState txState_ = TxState::IDLE;
     uint8_t txData_[p1frame::MAX_DATAGRAM] = {};
     size_t txLength_ = 0;
     bool txStack_ = false;      // datagram od stosu (wyjątek ciszy)
-    uint8_t txId_[p1frame::ID_BYTES] = {};
+    uint8_t txId_[p1frame::ID_BYTES] = {};  // P1: identyfikator datagramu
+    uint8_t txRandom_ = 0;      // LoRa: bajt losowy nagłówka RNode (jeden na datagram, także po odroczeniach)
     uint32_t txRequestedMs_ = 0;
     uint32_t ccaFirstMs_ = 0;    // pierwsze wejście w CCA (po odczekaniu długu): miara odroczeń
     uint32_t ccaStartMs_ = 0;
