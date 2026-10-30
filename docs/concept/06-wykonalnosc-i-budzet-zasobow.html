@@ -211,14 +211,14 @@
   <li>obwody wejściowe, osobno dla źródła:
     <ul>
       <li>przy ogniwach TPS3710, LTC2955 i dzielniki ADC, razem około 0,017 mA. Dioda Schottky’ego toru ogniw nie pobiera prądu, a jej spadek 0,35 V zwiększa moc z ogniw o około 6%;</li>
-      <li>przy 12 V LM74800, zatrzask podnapięciowy (UV), TPS3710, LTC2955 i dzielniki, razem około 0,44 mA;</li>
+      <li>przy 12 V LM74800, odcięcie podnapięciowe (UV), TPS3710, LTC2955 i dzielniki, razem około 0,44 mA;</li>
     </ul>
   </li>
   <li>mikrokontroler ESP32-S3 z wyłączonym Wi-Fi średnio 30, 45 lub 60 mA (realny prąd aktywny wynosi 40–60 mA, a 30 mA wymaga lekkiego uśpienia); dla porównania nRF52840, kandydat dla wyrobu, średnio 3 mA;</li>
   <li>rezerwa 20%.</li>
 </ul>
 
-<p>To założenia katalogowe, nie pomiar. Wartości dla SX1262 w tabeli liczy model (<code>lora_pilot</code>, kolumny 12 V funkcją <code>station_power_w</code> modelu z prądem odbioru SX1262).</p>
+<p>To założenia katalogowe, nie pomiar. Wartości w tabeli liczy model (<code>station_level1</code>, wariant główny z odbiornikiem SX1262).</p>
 
 <div class="table-wrap"><table class="wide">
 <thead><tr>
@@ -237,7 +237,7 @@
 
 <p>Komplet czterech ogniw litowych AA przyjęto jako 4 × 4,5 Wh z wykorzystaniem 80%, co uwzględnia napięcie odcięcia i niską temperaturę. Ogniwa litowe Li-FeS2 znoszą lata przechowywania i pracę do −20 °C, więc nadają się do zestawu trzymanego w magazynie organizatora sieci. Ogniwa alkaliczne i NiMH tracą w temperaturze od −10 do −20 °C około 50–80% pojemności. Dlatego W23 i próba w −10 °C dotyczą wyłącznie ogniw Li-FeS2, a pozostałe ogniwa służą tylko awaryjnie. Progi napięcia ocenia się na filtrowanej średniej z okresów samego odbioru, bo impulsy TX chwilowo obniżają napięcie zimnych ogniw.</p>
 
-<p>W23 (≥48 h na ogniwach) dopuszcza w modelu średnio najwyżej około 61 mA z szyny 3,3 V. ESP32-S3 spełnia je do średnio około 45 mA poboru MCU; nRF52840 z zapasem. Celem dla stacji pilotażowej jest średnio ≤60 mA z szyny 3,3 V w pracy przekaźnika. Stacja pilotażowa ma tor zasilania płytki v2 o jeszcze nieznanej sprawności i prądzie spoczynkowym, więc liczby z tabeli są tylko szacunkiem, a o W23 rozstrzyga pomiar toru v2 (<a href="08-plan-weryfikacji-i-decyzje.html#minimum-pilotazu">minimum pilotażu</a>: ≥48 h w temperaturze pokojowej). Warunek odbioru wydania (T6) to ≥48 h w 20 °C i ≥40 h w −10 °C na ogniwach Li-FeS2. Współczynnik 0,8 modelu sprawdza się pomiarem energii w obu temperaturach. Gdyby W23 nie zostało spełnione, możliwa jest przyszła wersja profilu radiowego z dłuższą preambułą, przy której SX1262 okresowo włącza odbiornik zamiast słuchać stale; to zmiana profilu całej sieci (<a href="../spec/radio.md">specyfikacja radia</a>).</p>
+<p>W23 (≥48 h na ogniwach) dopuszcza w modelu średnio najwyżej około 61 mA z szyny 3,3 V. ESP32-S3 spełnia je do średnio około 49 mA poboru MCU; nRF52840 z zapasem. Celem dla stacji pilotażowej jest średnio ≤60 mA z szyny 3,3 V w pracy przekaźnika. Stacja pilotażowa ma tor zasilania płytki v2 o jeszcze nieznanej sprawności i prądzie spoczynkowym, więc liczby z tabeli są tylko szacunkiem, a o W23 rozstrzyga pomiar toru v2 (<a href="08-plan-weryfikacji-i-decyzje.html#minimum-pilotazu">minimum pilotażu</a>: ≥48 h w temperaturze pokojowej). Warunek odbioru wydania (T6) to ≥48 h w 20 °C i ≥40 h w −10 °C na ogniwach Li-FeS2. Współczynnik 0,8 modelu sprawdza się pomiarem energii w obu temperaturach. Gdyby W23 nie zostało spełnione, możliwa jest przyszła wersja profilu radiowego z dłuższą preambułą, przy której SX1262 okresowo włącza odbiornik zamiast słuchać stale; to zmiana profilu całej sieci (<a href="../spec/radio.md">specyfikacja radia</a>).</p>
 
 <p>Dla porównania: przekaźnik jako laptop z <code>rnsd</code> (wariant 0.4) potrzebował 788–2312 Wh na dobę, a stacja poziomu 1 zużywa w modelu 1,7–8,7 Wh. To zmienia planowanie sieci. Przekaźnik można postawić na dachu lub wyższym piętrze na ogniwach albo jednym akumulatorze i odwiedzać co kilka dni, a nie co dobę.</p>
 
