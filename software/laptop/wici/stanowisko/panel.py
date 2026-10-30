@@ -27,6 +27,7 @@ LOCK_S = 300
 STATIC = {"/": ("index.html", "text/html; charset=utf-8"), "/app.js": ("app.js", "text/javascript; charset=utf-8"),
           "/app.css": ("app.css", "text/css; charset=utf-8")}
 TEXT_MAX = 200   # pola wpisów lokalnych (źródło, adresat): nie idą radiem
+BULLETIN_BYTES = 192   # tekst komunikatu (oprogramowanie.md, „Wiadomości SA1”)
 LABELS = {"podmiot": "podmiot dysponujący siłami", "funkcja": "funkcja osoby", "kanal": "kanał",
           "czas": "czas", "adresat": "komu przekazano", "text": "treść odpowiedzi", "path": "katalog",
           "account": "konto", "password": "hasło"}
@@ -189,6 +190,39 @@ class Dyzur:
             return mid
         return {"id": self.p.call(send)}
 
+    def silence(self, body):
+        """Radio silence as the duty officer records it: order received, silence on at the node, order lifted;
+        who ordered and when, as the officer writes them. With "bulletin" the order goes on to the stations
+        as BULLETIN with a fixed text (oprogramowanie.md, „Cisza radiowa”: the receiver passes it on)."""
+        user = self.current()
+        state = body.get("state")
+        if state not in zamkniecie.SILENCE:
+            raise ValueError("stan ciszy: polecenie, wlaczona albo odwolana")
+        facts = {"stan": state, "organ": _text(body, "organ", 60), "kiedy": _text(body, "kiedy", 40)}
+        text = None
+        if body.get("bulletin"):
+            text = (f"Cisza radiowa odwołana ({facts['organ']}, {facts['kiedy']}). Wyłącz CISZA na stacji."
+                    if state == "odwolana" else
+                    f"CISZA RADIOWA od {facts['kiedy']}, polecenie: {facts['organ']}. Włącz CISZA na stacji. "
+                    "Pilne sprawy przez gońca.")
+            if len(text.encode("utf-8")) > BULLETIN_BYTES:
+                raise ValueError("komunikat o ciszy za długi: skróć organ albo czas")
+
+        def run(store):
+            now = self.clock()
+            self._logged(store, user, "cisza", json.dumps(facts, ensure_ascii=False))
+            with store.db:
+                if state == "odwolana":
+                    store.db.execute("DELETE FROM settings WHERE key='cisza'")
+                else:
+                    store.db.execute("INSERT OR REPLACE INTO settings VALUES('cisza', ?)",
+                                     (json.dumps({**facts, "at": now, "account": user}, ensure_ascii=False),))
+            if text is not None:
+                mid = self.p.wysylka.bulletin(store, text, now)
+                self._logged(store, user, "komunikat", "", None, mid)
+                return mid
+        return {"bulletin": self.p.call(run)}
+
     # ---- kwarantanna i zaufanie --------------------------------------------------------------
 
     def quarantine(self, body):
@@ -343,6 +377,10 @@ class Dyzur:
             zamkniecie.purge(store.db)
             with store.db:
                 store.db.execute("INSERT OR REPLACE INTO settings VALUES('zamkniete', ?)", (now,))
+            # Jawne CSV z nośnika: treść zgłoszeń zostaje tylko w archiwum (decyzja autora 2026-10-30).
+            removed, left = zamkniecie.remove_exports(self.medium.root / zamkniecie.EXPORT)
+            self._logged(store, user, "eksport_usuniety", f"usunięto {len(removed)} plików CSV"
+                         + (f"; nie usunięto: {', '.join(left)}" if left else ""))
             return str(path), password
         path, password = self.p.call(run)
         return {"file": path, "password": password}
@@ -449,7 +487,9 @@ class Dyzur:
                     "WHERE kind=? GROUP BY id ORDER BY min(seq) DESC LIMIT 20", (wysylka.BULLETIN,)):
                 bulletins.append({"id": mid, "number": short_number(mid), "text": wzorzec.decode_message(payload)[4] if payload else "",
                                   "total": total, "done": done, "retrying": failed})
-            closed = {"closed": wysylka.setting(db, "zamkniete", None),
+            silence = wysylka.setting(db, "cisza", None)
+            closed = {"silence": json.loads(silence) if silence else None,
+                      "closed": wysylka.setting(db, "zamkniete", None),
                       "copies_purged": wysylka.setting(db, "kopie_usuniete", None)}
             return reports, tests, quarantine, removed, trusted, waiting, oldest, log, bulletins, closed
         reports, tests, quarantine, removed, trusted, waiting, oldest, log, bulletins, closed = self.p.call(read)
@@ -481,6 +521,7 @@ ROUTES = {
     "/api/operator/tests": lambda d, b: d.read_tests(b),
     "/api/operator/reply": lambda d, b: d.reply(b),
     "/api/operator/bulletin": lambda d, b: d.bulletin(b),
+    "/api/operator/silence": lambda d, b: d.silence(b),
     "/api/operator/quarantine": lambda d, b: d.quarantine(b),
     "/api/operator/trust": lambda d, b: d.trust(b),
     "/api/operator/trust/remove": lambda d, b: d.untrust(b),

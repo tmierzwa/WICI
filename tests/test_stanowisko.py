@@ -1107,6 +1107,37 @@ class ClosingTest(WithCopies):
         self.deliver(self.STATION, self.content)                # powtórka po zamknięciu: to samo RECEIVED
         self.assertEqual(self.sent[-1], (self.STATION, received_for(self.content)))
 
+    def test_close_removes_the_plain_register_files_from_the_medium(self):
+        first = Path(self.d.export({})["file"])
+        self.now += 60
+        Path(self.d.export({})["file"])
+        archive = Path(self.d.close({"confirm": "ZAMKNIJ ZDARZENIE"})["file"])
+        self.assertEqual(sorted(p.name for p in first.parent.iterdir()), [archive.name])
+        log = self.d.view()["log"]
+        self.assertEqual((log[0]["op"], log[0]["detail"]), ("eksport_usuniety", "usunięto 2 plików CSV"))
+
+    def test_radio_silence_entries_go_to_the_register_and_the_order_to_the_stations(self):
+        with self.assertRaises(ValueError):
+            self.d.silence({"state": "wlacz", "organ": "wójt", "kiedy": "13:50"})
+        mid = self.d.silence({"state": "polecenie", "organ": "wójt gminy Pruszcz", "kiedy": "30.10 13:50",
+                              "bulletin": True})["bulletin"]
+        self.assertEqual((self.d.view()["silence"]["organ"], self.d.view()["silence"]["account"]),
+                         ("wójt gminy Pruszcz", "dyzurny-1"))
+        self.tick()
+        order = [wzorzec.decode_message(c)[4] for _, c in self.sent if wzorzec.decode_message(c)[2] == mid]
+        self.assertEqual(order, ["CISZA RADIOWA od 30.10 13:50, polecenie: wójt gminy Pruszcz. Włącz CISZA na stacji. "
+                                 "Pilne sprawy przez gońca."])
+        self.d.silence({"state": "wlaczona", "organ": "wójt gminy Pruszcz", "kiedy": "30.10 13:55"})
+        self.assertIsNone(self.d.silence({"state": "odwolana", "organ": "wójt gminy Pruszcz", "kiedy": "31.10 08:00"})["bulletin"])
+        self.assertIsNone(self.d.view()["silence"])
+        rows = self.rows(Path(self.d.export({})["file"]).read_bytes())
+        self.assertEqual([r["tresc"] for r in rows if r["rodzaj"] == "cisza"],
+                         ["polecenie ciszy otrzymane: wójt gminy Pruszcz, 30.10 13:50",
+                          "cisza włączona na węźle: wójt gminy Pruszcz, 30.10 13:55",
+                          "cisza odwołana: wójt gminy Pruszcz, 31.10 08:00"])
+        with self.assertRaises(ValueError):   # stały tekst komunikatu nie mieści się w 192 B
+            self.d.silence({"state": "polecenie", "organ": "ż" * 60, "kiedy": "ą" * 40, "bulletin": True})
+
     def test_archive_from_the_command_line(self):
         result = self.d.close({"confirm": "ZAMKNIJ ZDARZENIE"})
         target = Path(self.tmp.name) / "administrator"
