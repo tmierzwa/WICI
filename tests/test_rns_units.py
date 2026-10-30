@@ -703,7 +703,9 @@ int linkScenario() {
     // Ogłoszenie 205 B + IFAC = 221 B: czas kanału w puli i odstęp limitu 2% z czasu TX tej ramki.
     Queue a;
     a.setTiming(l);
-    printf("announce %s pool %u expected %u gap %u expected %u\n", admitName(put(a, 0x01, 0, announceDest, 205, 1000, 0x20)),
+    // Przyjęcie przed odczytem puli: GCC liczy argumenty printf od prawej (CI na x86_64).
+    const char* announced = admitName(put(a, 0x01, 0, announceDest, 205, 1000, 0x20));
+    printf("announce %s pool %u expected %u gap %u expected %u\n", announced,
            a.poolUsedMs(1000), l.channelMs(221), a.announceAllowedInMs(1000), l.reservedTxMs(221) * 100 / ANNOUNCE_CAP_PERCENT);
     // Największa własna wiadomość SA1 jako LXMF (lxmf.h): dane LXMF_SA1_MAX_DATA, token = klucz efemeryczny
     // 32 B + IV + dane z dopełnieniem do 16 B (co najmniej 1 B) + HMAC 32 B, w pakiecie HEADER_2 (35 B nagłówka).
