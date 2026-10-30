@@ -325,7 +325,7 @@ Liczniki:
 
 - `INFO`: `link` (`"lora"`), `rx_task`, `rx_armed`, `rx_ready_ms`, `loop_max_ms` (najdłuższy obieg pętli od startu), `rx_task_loops`, `rx_service_max_ms` (najdłuższa obsługa układu przez zadanie), `rx_stalled`, `rx_mode_lost`, `lock_timeouts`, `lock_misses`;
 - `P1`: `{"lora":…}` z `rx_ok`, `rx_bad`, `rx_datagrams`, `tx_datagrams`, `tx_fragments` (ramki), `tx_drop`, `deferrals`, `long_deferrals`, powodami odroczeń (`cad_busy`, `rssi_busy`, `rx_busy`), składaniem (`split_lost`, `header_only`, `assembly_timeout`), `rx_late`, `rx_ring_overflow`, `cca_threshold_dbm`, `tx_wait_ms`;
-- `RNS`: `link`, `too_large`, `bitrate`, `rx_stack_free` (zapas stosu zadania odbioru w bajtach);
+- `RNS`: `link`, `too_large`, `bitrate`, `rx_stack_free` (zapas stosu zadania odbioru w bajtach), `heap_size`, `heap_free` i `heap_min` (sterta ESP-IDF: cała, wolna i najmniejsza wolna od startu; −1 na nRF52840, gdzie stos ma pulę TLSF w `pool*`);
 - wiersze `lorarx` (złożony datagram: `len`, `frames`, `rssi_dbm`, dane) i `loratx` (wynik, `len`, `frames`, `deferrals`, `wait_ms`, `tx_wait_ms`);
 - program `host --link lora` podaje w stanie `lora_split_lost`, `lora_header_only`, `lora_assembly_timeout` i `lora_bad_length` (ramka ponad 255 B, możliwa tylko w emulatorze; obraz na układzie tego licznika nie podaje).
 
@@ -364,7 +364,7 @@ Procedura (**niewykonana**; raport w Issue z etykietą `próba`). Sprzęt: proto
 Próby 1–8 z [przejścia na rdzeń](#przejście-na-rdzeń-i-powrót-do-portu) dla pilotażu idą na prototypie z łączem LoRa:
 
 1. Samotest rdzenia na `l0` (`board_selftest.py -e l0`).
-2. RAM w czasie pracy przy pełnej tablicy tras (256 celów) i liście 4096 skrótów pakietów, w `l0` i `l0-port`: stacja jako węzeł stanowiska, ogłoszenia i pakiety z Reticulum w Pythonie przez USB (bez długu ciszy radia). `RNS` podaje `paths`, `hashes` i `rx_stack_free`; RAM statyczną daje kompilacja. Wolnej sterty żadne polecenie dziś nie podaje (w `l0-port` pola `pool*` są zerowe, bo port na ESP32 bierze stertę ESP-IDF bez puli TLSF), więc pomiar wymaga najpierw pola z `ESP.getFreeHeap()` i `ESP.getMinFreeHeap()` w `RNS`. Próg: zapas ≥30%.
+2. RAM w czasie pracy przy pełnej tablicy tras (256 celów) i liście 4096 skrótów pakietów, w `l0` i `l0-port`: stacja jako węzeł stanowiska, ogłoszenia i pakiety z Reticulum w Pythonie przez USB (bez długu ciszy radia). `RNS` podaje `paths`, `hashes`, `rx_stack_free` oraz stertę ESP-IDF: `heap_size`, `heap_free` i `heap_min` (w `l0-port` pola `pool*` są zerowe, bo port na ESP32 bierze pamięć ze sterty bez puli TLSF); RAM statyczną daje kompilacja. Próg: `heap_min` ≥30% `heap_size`.
 3. Dwa prototypy przez LoRa: ogłoszenia, pakiet, dowód, zgłoszenie z RECEIVED, dług ciszy z dziennika między pakietami.
 4. Prototyp jako węzeł stanowiska z Reticulum i LXMF w Pythonie na komputerze (`bitrate = 41`): SA1 w obie strony, kontrola przepływu KISS, odłączenie i ponowne podłączenie USB.
 5. Przejście i powrót między `l0` a `l0-port`: stacja po pracy na porcie z wypełnioną tablicą, potem `l0`: ta sama nazwa i tożsamość, `table_corrupt`, pierwsze zgłoszenie dostarczone; potem `l0-port` i znów `l0`.
