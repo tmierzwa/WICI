@@ -609,7 +609,7 @@
     "reference.py": "30d4b56332ed336d8d1c6ca83bb786b823b318e12f541999550a532a0762f35e",
     "test_reference.py": "cacef3f21b4e9e43c8daf224f6b7ae7d5fb0ae533a55ccad3e9e83beeae2d01b",
     "schema.sql": "f93c98118c4b5cd4d5d79bd0d704cba04da7058935b86e473092e3437203df7e",
-    "obliczenia.py": "14ffa09863b8d5d035af3e6a4d7ae89ff089049671641c1c9edf154529d9c515"
+    "obliczenia.py": "0074270c79122c087b6c1f74400a83fa8e75912791b7adabb754afbb5e50f345"
   },
   "runtime": {
     "python": "3.15.2",

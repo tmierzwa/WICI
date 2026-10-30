@@ -376,7 +376,6 @@ def calculate() -> dict:
         "relay_w10": {
             **p1_network["relay_w10"],
             "fifty_requests_min_at_1200_bit_s": [50 * t / 60 for t in slow_per_request],
-            "p1_tx_plus_quiet_s": {f"{b}b": 13 * p1_tx_seconds(b) for b in (100, 250, 500, 600)},
             "ramp_ms_per_fragment_assumed": ramp_ms_assumed,
             "p1_tx_plus_quiet_s_with_ramp": {f"{b}b": 13 * p1_tx_seconds(b, ramp_ms=ramp_ms_assumed)
                                              for b in (100, 250, 500, 600)}},
