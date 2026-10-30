@@ -65,7 +65,7 @@ Bezpieczeństwo panelu: inne strony otwarte w tej samej przeglądarce nie mogą 
 | Linux: użytkownik spoza grupy `dialout` | panel rozpoznaje brak uprawnień i podaje dokładne polecenie (wymaga jednorazowo `sudo`); bez hasła administratora zostaje obraz startowy (etap 4, uprawnienia ustawione) albo inny laptop | panel |
 | zapora Windows na stronie dla telefonów | [Laptop i router na miejscu](#laptop-i-router-na-miejscu) | do próby na czystym Windows 11 |
 | Linux: ModemManager sonduje porty ACM | `TIOCEXCL` po otwarciu; obraz startowy z regułą udev | próba na Ubuntu |
-| pamięć FAT bez prawa wykonywania (Linux `showexec`, `noexec`) | START-LINUX.sh uruchamiany przez `sh` z terminala kopiuje środowisko do `~/.cache/wici/<wersja>-<suma manifestu>` (inna budowa dostaje własny katalog i nie usuwa środowiska działającej aplikacji); GNOME Files nie uruchamia plików .desktop z katalogu, więc instrukcja zaczyna od terminala | CI: `chmod -x` i ponowny start |
+| wyjęcie pamięci przy działającej aplikacji (macOS zamykał aplikację działającą z pamięci od razu) i pamięć FAT bez prawa wykonywania (Linux `showexec`, `noexec`) | każdy START kopiuje środowisko swojego systemu, wspólną bibliotekę i `wici.pyz` do katalogu podręcznego użytkownika (`~/.cache/wici`, `~/Library/Caches/WICI`, `%LOCALAPPDATA%\WICI\srodowisko`), do katalogu `<wersja>-<suma manifestu>`, i uruchamia aplikację stamtąd, z katalogiem roboczym w kopii i ścieżką pamięci w `WICI_USB`. Kopia powstaje w katalogu tymczasowym z manifestem na końcu i dostaje nazwę jednym przemianowaniem, więc przerwane kopiowanie nie zostawia niby pełnej kopii, a inna budowa nie usuwa środowiska działającej aplikacji. Wspólną część START-MAC i START-LINUX zawiera `runtime/kopia.sh`. Gdy kopiowanie się nie uda, aplikacja działa z pamięci. START-WINDOWS kończy się po 2 s działania aplikacji, żeby sam nie działał z pamięci. GNOME Files nie uruchamia plików .desktop z katalogu, więc instrukcja zaczyna od terminala | CI: START na każdym systemie z biblioteką z kopii, `chmod -x`, przeniesienie katalogu pamięci przy działającej aplikacji, na macOS wysunięcie obrazu FAT32 |
 | macOS: drugi START przez LaunchServices | START-MAC uruchamia Pythona w tle i kończy się, więc każde dwukrotne kliknięcie uruchamia nowy START (proces działający przez cały czas pracy panelu sprawiał, że następne kliknięcia nic nie robiły) | CI: `open` dwa razy |
 | macOS: Apple Silicon i Intel | jeden START-MAC.app wybiera środowisko po `uname -m` i `sysctl.proc_translated` | CI na obu procesorach |
 | Gatekeeper, SmartScreen, antywirus | pliki Windows podpisane przez PSF; przed pilotażem poziomów 2–3 START-MAC.app z Apple Developer ID i notaryzacją, START-WINDOWS.exe z podpisem przez program SignPath dla projektów otwartych; do tego czasu instrukcja na USB podaje, jak uruchomić | do próby T1/T8 |
@@ -104,6 +104,7 @@ INSTRUKCJA.html
 app/wici.pyz             aplikacja (źródła)
 runtime/python314.zip    wspólna biblioteka standardowa (bajtkod)
 runtime/<system>/        interpreter, moduły binarne, ._pth
+runtime/kopia.sh         kopia środowiska i aplikacji na dysk (START-MAC, START-LINUX)
 licenses/, sources/
 keys/                    konta i plik zestawu (tworzy panel przy przygotowaniu)
 kopia/                   zaszyfrowana kopia bazy (dwa pliki na zmianę)
@@ -192,7 +193,7 @@ CI sprawdza budowę i start na czystych systemach, ale nie zastąpi prawdziwych 
 3. Laptop służbowy z kontem bez uprawnień administratora i z programem antywirusowym: tryb kiosku, komunikat o zaporze, uruchomienie Linuksa z USB.
 4. Najstarszy obsługiwany sprzęt: Windows 10 22H2 na laptopie z 4 GB RAM, Mac z Intelem na macOS 10.15.
 5. Ile przyniesionych laptopów pozwala uruchomić system z USB (menu startowe, Secure Boot, hasło BIOS-u): od tego zależy, jak często zadziała ścieżka 3.
-6. Wyjęcie pamięci zestawu przy działającej aplikacji na Windows i Linuksie: czy aplikacja działa dalej (macOS zamyka ją od razu, próba z obrazem dysku FAT32 2026-10-21) i czy ponowny START pod inną literą dysku przenosi zapis kopii.
+6. Wyjęcie pamięci zestawu przy działającej aplikacji na prawdziwych laptopach z każdym systemem: aplikacja działa dalej z kopii na dysku (sprawdzone 2026-10-30 na macOS z obrazem dysku FAT32, w CI na każdym systemie przeniesieniem katalogu pamięci), ponowny START pod inną literą dysku przenosi zapis kopii, a pierwszy START ze zwykłej pamięci USB 2.0 trwa akceptowalnie (kopia około 20 MB).
 7. Strona dla telefonów z kilkoma routerami domowymi i telefonami z Androidem i iOS, w tym telefon z włączonymi danymi komórkowymi.
 
 ## Rozstrzygnięcia i odrzucone warianty

@@ -58,17 +58,28 @@ jobs:
       - name: Selftest through START (Linux)
         if: runner.os == 'Linux'
         run: |
+          # START kopiuje środowisko i aplikację do ~/.cache/wici i uruchamia je stamtąd; pamięć podaje w WICI_USB.
           sh "usb ż/START-LINUX.sh" --selftest | tee selftest.txt
-          grep -q "stdlib .*usb .*/runtime/python314.zip" selftest.txt
-          chmod -x "usb ż/runtime/linux-x86_64/bin/python3.14"   # pamięć bez prawa wykonywania: kopia do ~/.cache
+          grep -q "stdlib .*/.cache/wici/.*/runtime/python314.zip" selftest.txt
+          grep -q "usb .*/usb ż" selftest.txt
+          chmod -x "usb ż/runtime/linux-x86_64/bin/python3.14"   # pamięć bez prawa wykonywania: ta sama kopia
           sh "usb ż/START-LINUX.sh" --selftest | tee selftest-copy.txt
-          grep -q "stdlib .*/.cache/wici/.*/python314.zip" selftest-copy.txt
+          grep -q "stdlib .*/.cache/wici/.*/runtime/python314.zip" selftest-copy.txt
+          # Wyjęcie pamięci: aplikacja działa dalej z kopii.
+          sh "usb ż/START-LINUX.sh" --no-browser --http 0 > run.txt 2>&1 &
+          for _ in $(seq 30); do grep -q "http://127.0.0.1" run.txt && break; sleep 1; done
+          mv "usb ż" usb-wyjeta
+          sleep 1
+          curl -sf "$(grep -o 'http://127.0.0.1:[0-9]*' run.txt | head -1)/health"
+          pkill -f "wici/.*/app/wici.pyz" || true
+          mv usb-wyjeta "usb ż"
       - name: Selftest through START (macOS)
         if: runner.os == 'macOS'
         timeout-minutes: 5
         run: |
           "usb ż/START-MAC.app/Contents/MacOS/START" --selftest | tee selftest.txt
-          grep -q "stdlib .*usb .*/runtime/python314.zip" selftest.txt
+          grep -q "stdlib .*/Library/Caches/WICI/.*/runtime/python314.zip" selftest.txt
+          grep -q "usb .*/usb ż" selftest.txt
           # Jak po dwukrotnym kliknięciu: przez LaunchServices, dwa razy.
           for i in 1 2; do
             open -W --stdout "$PWD/open-$i.txt" --stderr "$PWD/open-$i.txt" "usb ż/START-MAC.app" --args --selftest
@@ -84,6 +95,16 @@ jobs:
           cat run-1.txt run-2.txt
           pkill -f "app/wici.pyz" || true
           grep -q "http://127.0.0.1" run-2.txt
+          # Pamięć FAT32 wysunięta przy działającej aplikacji: wysunięcie się udaje, a aplikacja działa dalej.
+          hdiutil create -quiet -size 80m -fs MS-DOS -volname WICIUSB fat.dmg
+          mnt=$(hdiutil attach fat.dmg | awk -F'\t' '/WICIUSB/{print $NF}')
+          cp -R "usb ż/" "$mnt/"
+          "$mnt/START-MAC.app/Contents/MacOS/START" --no-browser --http 0 > run-fat.txt 2>&1
+          for _ in $(seq 30); do grep -q "http://127.0.0.1" run-fat.txt && break; sleep 1; done
+          hdiutil detach "$mnt"
+          sleep 2
+          curl -sf "$(grep -o 'http://127.0.0.1:[0-9]*' run-fat.txt | head -1)/health"
+          pkill -f "app/wici.pyz" || true
       - name: Selftest through START (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -91,9 +112,22 @@ jobs:
         run: |
           $p = Start-Process -FilePath "usb ż\START-WINDOWS.exe" -ArgumentList '--selftest' -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "START-WINDOWS.exe --selftest: $($p.ExitCode)" }
-          $out = & "usb ż\runtime\windows\python.exe" "usb ż\app\wici.pyz" --selftest
+          $copy = Get-ChildItem "$env:LOCALAPPDATA\WICI\srodowisko" -Directory
+          $copy
+          if (@($copy).Count -ne 1 -or -not (Test-Path "$($copy.FullName)\app\wici.pyz")) { throw 'no copy of the runtime on the disk' }
+          $out = & "$($copy.FullName)\runtime\windows\python.exe" "$($copy.FullName)\app\wici.pyz" --selftest
           $out
-          if (-not ($out -match 'usb .*\\runtime\\python314\.zip')) { throw 'shared standard library not on sys.path' }
+          if (-not ($out -match 'srodowisko\\.*\\runtime\\python314\.zip')) { throw 'shared standard library not from the copy' }
+          # Wyjęcie pamięci: START kończy się po 2 s, aplikacja działa z kopii, więc katalog pamięci da się przenieść.
+          $p = Start-Process -FilePath "usb ż\START-WINDOWS.exe" -ArgumentList '--no-browser','--http','0' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "START-WINDOWS.exe: $($p.ExitCode)" }
+          for ($i = 0; $i -lt 30 -and -not (Test-Path "$env:LOCALAPPDATA\WICI\instance.json"); $i++) { Start-Sleep 1 }
+          Rename-Item "usb ż" usb-wyjeta
+          $port =(Get-Content "$env:LOCALAPPDATA\WICI\instance.json" | ConvertFrom-Json).port
+          Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:$port/health" | Select-Object -ExpandProperty StatusCode
+          Get-CimInstance Win32_Process -Filter "Name = 'pythonw.exe'" | Where-Object { $_.CommandLine -like '*srodowisko*' } |
+            ForEach-Object { Stop-Process -Id $_.ProcessId }
+          Rename-Item usb-wyjeta "usb ż"
 
   size:
     # Cała pamięć USB naraz: rozmiar każdej części i budżet z build_usb.py (BUDGET); drzewo jako artefakt.

@@ -299,6 +299,8 @@ def launchers(out, names):
         app = out / "START-MAC.app" / "Contents"
         write(app / "Info.plist", INFO_PLIST.format(version=APP_VERSION).encode())
         write(app / "MacOS" / "START", (HERE / "launcher" / "start-mac.sh").read_bytes(), executable=True)
+    if any(n.startswith(("macos", "linux")) for n in names):   # kopia środowiska na dysk, wspólna dla obu
+        write(out / "runtime" / "kopia.sh", (HERE / "launcher" / "kopia.sh").read_bytes())
     if "linux-x86_64" in names:
         write(out / "START-LINUX.sh", (HERE / "launcher" / "start-linux.sh").read_bytes(), executable=True)
         write(out / "START-LINUX.desktop", DESKTOP.encode(), executable=True)

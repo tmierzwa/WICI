@@ -172,6 +172,7 @@ def selftest():
     import webbrowser  # noqa: F401
     subprocess.run([sys.executable, "-c", "pass"], check=True, timeout=30)
     checks.append(f"stdlib {os.path.normpath(next((p for p in sys.path if p.endswith('.zip')), '-'))}")
+    checks.append(f"usb {usb_root()}")   # START uruchamia kopię z dysku i podaje pamięć w WICI_USB
     assert unicodedata.normalize("NFC", "Szkoła") == "Szkoła"
     if configdoc.unicode_warning():                 # tekst sprawdzany inną wersją Unicode niż w stacji
         print(f"WICI: {configdoc.unicode_warning()}", file=sys.stderr, flush=True)
