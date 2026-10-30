@@ -38,8 +38,8 @@ Tor zasilania jest jedyną nową częścią elektroniki v2. Wymagania wynikają 
 ```text
 4 × AA Li-FeS2 ─ koszyk z kluczowaniem ─ D1 ──────────────────────┐
                                                                   ├─ VSYS ─ C ─ przetwornica 3,3 V (EN ← ON) ─ piny 3V3 płytki DevKitC
-12 V ─ F T1A ─ odcięcie UV 11,5 V / 12,4 V ─ łącznik 12 V (OVP) ──┘
-sterownik wyłącznika z zatrzaskiem (zasilany przez diody z AA i 12 V) ─ ON;  INT ─ MCU;  MCU ─ KILL
+12 V ─ F T1A ─ TVS 33 V ─ łącznik 12 V (UV 11,5/12,4 V, OVP 17 V) ┘
+sterownik wyłącznika (zasilany przez diody z AA i z 12 V za łącznikiem) ─ ON;  INT ─ MCU;  MCU ─ KILL
 dzielniki AA i 12 V (odłączane) ─ ADC
 ```
 
@@ -51,7 +51,8 @@ Przed schematem v2:
 
 1. **pobór przez 3V3 bez USB, pomiar na jednej płytce DevKitC.** Napięcie 3,3 V trafia przez R24 (0 Ω) także na wyjście regulatora płytki. Karta SGM2212 (rew. A.2) nie opisuje zachowania przy napięciu wyjścia wyższym od wejścia; prąd wsteczny zatrzymują dalej diody D1 i D7 ([schemat v1.1](https://dl.espressif.com/dl/schematics/SCH_ESP32-S3-DevKitC-1_V1.1_20221130.pdf)). Gdyby pobór był istotny wobec W23, R24 się usuwa;
 2. **sprawność LTC3115-1 przy 3,3 V** na płytce ewaluacyjnej (Z11 w projekcie zasilania): model liczy 85%, wykresy dają około 82–85%, co przy 82% daje około 50 h;
-3. **dostępność LTC3115-1** w LCSC sprawdzona przed schematem; przy braku inna przetwornica 3,3 V tej klasy (TPS63070 odpada z powodów opisanych w projekcie zasilania).
+3. **wejście 12 V odporne na 24 V.** Względem projektu R02 (TVS 18 V, części za nim do 30–40 V) v2 zmienia trzy rzeczy: TVS SMBJ33CA zamiast SMBJ18CA, łącznik LM74800-Q1 (praca 3–65 V, odwrotna polaryzacja do −65 V, [LM7480-Q1](https://www.ti.com/product/lm7480-q1)) z tranzystorami ≥60 V zamiast BUK7Y12-40E, bo przy odciętym łączniku widzą pełne napięcie wejścia z impulsem do 53,3 V, oraz zasilanie sterownika wyłącznika (LTC2955, praca do 36 V), nadzorcy UV i logiki tylko z 12 V za łącznikiem albo z ogniw. Przed łącznikiem zostają tylko bezpiecznik, TVS, łącznik i dzielnik pomiaru;
+4. **dostępność LTC3115-1** w LCSC sprawdzona przed schematem; przy braku inna przetwornica 3,3 V tej klasy (TPS63070 odpada z powodów opisanych w projekcie zasilania).
 
 | Element | Wymaganie | Kandydaci do projektu v2 |
 |---|---|---|
@@ -63,9 +64,9 @@ Przed schematem v2:
 | odcięcie UV 12 V | wyłącza zasilanie z 12 V poniżej 11,5 V, włącza powyżej 12,4 V (histereza, bez stanu zapamiętanego w MCU); oba progi mierzone na złączu, przed diodą, bo spadek na niej (około 0,3 V) przesunąłby je do 11,8/12,7 V i pełny akumulator w spoczynku (12,6 V) nie uruchomiłby stacji; pobór ≤50 µA | nadzorca napięcia z histerezą na EN; TI TPS3701 albo ADI LTC2965 |
 | sterownik wyłącznika | krótkie naciśnięcie włącza, przytrzymanie 2 s zgłasza MCU żądanie wyłączenia (`wylaczanie`, potem `mozna_wyjac`, KILL), przytrzymanie ≥5 s wyłącza bez MCU; KILL w stanie wysokim najpóźniej 304 ms po włączeniu; zasilanie przez diody z obu źródeł | ADI LTC2955-2 z tranzystorem PMOS jak w projekcie zasilania |
 | kondensator szyny | przełączenie z 12 V na ogniwa (start przetwornicy z ogniw) bez restartu modułu; mały upływ, bo szyna wisi na ogniwach | według [projektu zasilania](../../hardware/r02/zasilanie.md) |
-| wejście 12 V | 11,5–16 V w pracy; bezpiecznik zwłoczny T1A przy wtyku; odwrotne podłączenie 16 V przez 60 s bez przepalenia bezpiecznika i uszkodzeń; nie podłączać do instalacji pojazdu z pracującym silnikiem | Schurter 0001.2504; TVS SMBJ18CA (dwukierunkowy) |
+| wejście 12 V | 11,5–16 V w pracy. Od 17 V do 33 V w sposób ciągły (instalacja 24 V wozu strażackiego albo ciężarówki, ładowanie 28,8 V, uszkodzony regulator alternatora) łącznik odcina wejście bez uszkodzeń, stacja pracuje z ogniw, a ekran pokazuje komunikat o za wysokim napięciu; po spadku poniżej progu OVP wejście wraca samo. Odwrotne podłączenie do 33 V przez 60 s bez przepalenia bezpiecznika i uszkodzeń. Impulsy z instalacji pojazdu ogranicza TVS. Ochrona nie zależy od zakazu w instrukcji: wtyk do gniazda zapalniczki jest w zestawie, a w kryzysie stacja trafi też do pojazdu 24 V | Schurter 0001.2504; TVS SMBJ33CA (dwukierunkowy: praca do 33 V, przebicie od 36,7 V, ograniczenie 53,3 V, karta Vishay 88392) |
 | progi ogniw | ostrzeżenie przy 4,4 V (1,1 V na ogniwo), kontrolowane wyłączenie przy 4,0 V po zakończeniu zapisu FRAM; progi na filtrowanej średniej z okresów samego odbioru, bo impulsy TX chwilowo obniżają napięcie zimnych ogniw | program stacji |
-| pomiar | ADC napięcia ogniw (przed diodą) i wejścia 12 V (przed diodą i łącznikiem) przez dzielniki odłączane między pomiarami; błąd ≤2%; wynik na ekranie i w `INFO`; wejście ADC ograniczone tak, by impuls 29 V (granica TVS) go nie uszkodził | dzielnik 0,1% jak VTEST na v1 |
+| pomiar | ADC napięcia ogniw (przed diodą) i wejścia 12 V (przed diodą i łącznikiem) przez dzielniki odłączane między pomiarami; błąd ≤2%; wynik na ekranie i w `INFO`; zakres pomiaru 12 V do co najmniej 36 V, żeby odróżnić 24 V od zwykłego zaniku; wejście ADC ograniczone tak, by impuls 53,3 V (granica TVS) go nie uszkodził | dzielnik 0,1% jak VTEST na v1 |
 | pobór | w pracy przekaźnika tyle, by komplet ogniw dał ≥48 h (W23; model: [radio](radio.md#profil-lora-pilotażu)); w stanie wyłączonym ≤0,1 mA z każdego źródła | pomiar w RX, TX i przy pracy ekranu |
 
 Zasady: o W23 rozstrzyga pomiar z minimum pilotażu, a niespełnione wymaganie zmienia tor przed zamówieniem v2. Napięcie 3,3 V przy nadawaniu sprawdza pomiar przy TX. Na czas przechowywania ogniwa wyjmuje się ze stacji. Powerbank przez USB nie jest dopuszczonym źródłem: wiele powerbanków wyłącza się przy prądzie rzędu kilkudziesięciu miliamperów, czyli przy poborze stacji.
@@ -76,6 +77,7 @@ Zasady: o W23 rozstrzyga pomiar z minimum pilotażu, a niespełnione wymaganie z
 |---|---|---|
 | pierwsze podłączenie 12 V albo powrót źródła, napięcie ≥12,4 V | tak lub nie | zasilanie z 12 V startuje; przy ogniwach przejście z ogniw na 12 V bez restartu (szyna podtrzymana przez kondensator) |
 | podłączenie źródła 11,5–12,4 V | tak lub nie | zasilanie z 12 V nie startuje (histereza); stacja pracuje z ogniw albo pozostaje wyłączona; ekran przy ogniwach pokazuje `odlaczone_12v` |
+| podłączenie źródła powyżej progu OVP (np. instalacja 24 V, do 33 V ciągle) | tak lub nie | łącznik nie załącza wejścia, nic się nie uszkadza; stacja pracuje z ogniw albo pozostaje wyłączona; ekran przy ogniwach pokazuje komunikat o za wysokim napięciu 12 V (nowy tekst w programie stacji); po spadku poniżej progu wejście załącza się samo |
 | spadek 12 V poniżej 11,5 V w pracy | tak | odcięcie 12 V, start przetwornicy z ogniw, praca z ogniw bez restartu, `odlaczone_12v` |
 | spadek 12 V poniżej 11,5 V w pracy | nie | stacja traci zasilanie jak przy zaniku ([zanik zasilania](#zanik-zasilania-i-zapis)); odbudowa napięcia akumulatora bez obciążenia (zwykle do 12,0–12,3 V) nie włącza jej z powrotem; włącza się sama dopiero przy ≥12,4 V (np. po naładowaniu) |
 | restart przez watchdog | tak lub nie | tor zasilania i stan sterownika wyłącznika bez zmian |

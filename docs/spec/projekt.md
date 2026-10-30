@@ -60,7 +60,7 @@ Rozszerzenia poziomów 2–3:
 9. Pamięć USB 64 GB z systemem, kompletnymi pakietami START i kluczem szyfrowania bazy laptopa; przewód USB do stacji.
 10. Kupiona przenośna stacja zasilania z wyjściem 230 V i jej ładowarką, z deklaracją zgodności UE i instrukcją po polsku (D05).
 11. Kupiona ładowarka USB do telefonów z deklaracją zgodności UE.
-12. Przewód Ethernet, adapter USB–Ethernet ze sterownikiem wbudowanym w Windows 10 i 11, macOS i Linuksa (bez instalowania sterowników, bo laptop bywa bez uprawnień administratora) i przejściówka USB-C do laptopa.
+12. Przewód Ethernet, adapter USB–Ethernet ze sterownikiem wbudowanym w Windows 10 i 11, macOS i Linuksa (bez instalowania sterowników, bo laptop bywa bez uprawnień administratora) i przejściówka USB-C do laptopa. Pamięć USB zestawu ma oba wtyki (USB-A i USB-C), więc nie potrzebuje przejściówki.
 13. Przewody ładowania telefonów oraz jednostronicowa instrukcja strony.
 14. Bateryjny czujnik tlenku węgla (CO) – obowiązkowa część zestawu poziomu 3.
 
@@ -122,7 +122,7 @@ Stacja załącza wejście 12 V po podłączeniu źródła o napięciu ≥12,4 V 
 
 Stację zasilania ładuje się albo wymienia na naładowaną, zanim jej wskaźnik pokaże stan krytyczny według instrukcji producenta. Wyczerpanie stacji zasilania wyłącza laptop, router i ładowanie telefonów, ale nie łączność: stacja WICI ma własne zasilanie. Stację zasilania ładuje się z sieci, z panelu słonecznego albo z instalacji pojazdu według instrukcji producenta, poza pomieszczeniem z ludźmi, jeśli producent tego wymaga.
 
-Nie uruchamiaj silnika pojazdu ani agregatu w schronieniu, w garażu, przy wejściu ani przy wlotach powietrza: tlenek węgla zabija bez ostrzeżenia. Pojazd lub agregat ładujący stację zasilania stoi na zewnątrz, kilka metrów od wejść i wlotów powietrza; przewód nie może utrzymywać otwartych drzwi. Bateryjny czujnik CO z zestawu poziomu 3 umieszcza się w pomieszczeniu z ludźmi. Nie łącz plusów akumulatorów bezpośrednio i nie używaj źródła 24 V do wejścia 12 V stacji WICI.
+Nie uruchamiaj silnika pojazdu ani agregatu w schronieniu, w garażu, przy wejściu ani przy wlotach powietrza: tlenek węgla zabija bez ostrzeżenia. Pojazd lub agregat ładujący stację zasilania stoi na zewnątrz, kilka metrów od wejść i wlotów powietrza; przewód nie może utrzymywać otwartych drzwi. Bateryjny czujnik CO z zestawu poziomu 3 umieszcza się w pomieszczeniu z ludźmi. Nie łącz plusów akumulatorów bezpośrednio. Źródło 24 V nie zasili stacji WICI: wejście 12 V je odcina bez uszkodzeń, a stacja pracuje dalej z ogniw ([elektronika](elektronika.md#zasilanie-stacji)).
 
 ## Przechowywanie i przeglądy
 
