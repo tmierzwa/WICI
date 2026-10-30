@@ -45,6 +45,7 @@
 <p>Na tej stronie</p>
 <ol>
   <li><a href="#kryteria-wyboru">Kryteria wyboru</a></li>
+  <li><a href="#wybrana-opcja">Wybrana opcja</a></li>
   <li><a href="#uproszczenia-przyjete-w-wariancie-bazowym">Uproszczenia przyjęte w wariancie bazowym</a></li>
   <li><a href="#decyzje-wymagajace-porownania">Decyzje wymagające porównania</a></li>
   <li><a href="#niezaleznosc-dostawcow">Niezależność dostawców</a></li>
@@ -53,7 +54,7 @@
 
 <h2 id="kryteria-wyboru">Kryteria wyboru</h2>
 
-<p>Każda opcja musi spełnić warunki konieczne: pracę offline, krótką wiadomość ze zwrotnym potwierdzeniem aplikacyjnym, obsługę bez instalacji, trwałość po restarcie, aktywny przekaźnik, działanie bez znalezionego sprzętu i jawne interfejsy. Następnie porównuje się energię, trudność uruchomienia, koszt wytworzenia, naprawę i dostępność niezależnych części. Brakuje danych pomiarowych do uczciwego rankingu liczbowego.</p>
+<p>Każda opcja musi spełnić warunki konieczne: pracę offline, krótką wiadomość ze zwrotnym potwierdzeniem aplikacyjnym, obsługę bez instalacji, trwałość po restarcie, aktywny przekaźnik, działanie bez sprzętu przyniesionego na miejscu i jawne interfejsy. Następnie porównuje się energię, trudność uruchomienia, koszt wytworzenia, naprawę i dostępność niezależnych części. Brakuje danych pomiarowych do uczciwego rankingu liczbowego.</p>
 
 <div class="table-wrap"><table class="wide">
 <thead><tr>
@@ -64,18 +65,34 @@
 </tr></thead><tbody>
 <tr><td>Laptop + router + internet</td><td>najmniej nowego sprzętu i szybki kanał</td><td>utrata sieci publicznej odcina odbiorcę</td><td>opcjonalny kanał, nie jedyna droga</td></tr>
 <tr><td>Radio głosowe + papierowy rejestr</td><td>prosta procedura i mało oprogramowania</td><td>ciągła praca operatora, błędy przepisywania, trudne statusy dla mieszkańców</td><td>uzgodniony kanał zastępczy</td></tr>
-<tr><td>Samodzielna stacja MCU + Reticulum/LXMF + LoRa SF7 na gotowej płytce z SX1262; komputer i router opcjonalne</td><td><ul><li>łączność i przekaźnik bez znalezionego sprzętu i bez 230 V;</li><li>istniejące sterowniki SX1262 (RNode, RadioLib, własny sterownik WICI sprawdzany z modelem układu);</li><li>w modelu około 11 dB lepsza czułość niż cel P1 i krótszy czas nadawania;</li><li>gotowe moduły z deklaracją zgodności UE od wielu producentów;</li><li>brak własnego toru RF</li></ul></td><td>stos, kolejka, ekran i przyciski w oprogramowaniu układowym (firmware); dojrzałość własnego rdzenia Reticulum stacji; układy LoRa pochodzą z jednej technologii, więc drugie niezależne wykonanie wydania (W14) wymaga osobnej decyzji po pilotażu</td><td>wybór bazowy pilotażu (D10, 2026-10-08)</td></tr>
-<tr><td>Samodzielna stacja MCU + Reticulum/LXMF + własny FSK P1</td><td>jawny profil i dwóch kandydatów RF od niezależnych producentów; sterowniki P1 i stanowiska deweloperskie już są</td><td>dwa projekty torów RF, dwie rodziny MCU, mieszana kwalifikacja TI–ST i badania RED każdego wykonania; gorsza czułość niż LoRa; ujemny zapas łącza w modelu przy niskich antenach</td><td>wariant zapasowy (warunki powrotu w D10)</td></tr>
-<tr><td>Laptop jako węzeł + router + modem P1 (wariant 0.4)</td><td>dojrzały stos w Pythonie na komputerze</td><td>bez laptopa brak łączności; przekaźnik zużywa 788–2312 Wh na dobę; adapter czasu dla protokołu KISS (łącza komputer–modem); przetwornica 230 V na ścieżce krytycznej</td><td>zastąpiony w 0.5; w schronieniu komputer zostaje rozszerzeniem stacji, a na stanowisku odbiorczym dojrzały stos w Pythonie wraca na obowiązkowy komputer za stacją stanowiska (D19)</td></tr>
+<tr><td>Samodzielna stacja MCU + Reticulum/LXMF + LoRa SF7 na układzie SX1262; komputer i router opcjonalne</td><td><ul><li>łączność i przekaźnik bez przyniesionego sprzętu i bez 230 V;</li><li>istniejące sterowniki SX1262 (RNode, RadioLib, własny sterownik WICI sprawdzany z modelem układu);</li><li>w modelu czułość −121 dBm na złączu i dodatni zapas łącza na 1 km także przy niskich antenach;</li><li>gotowe moduły SX1262 od wielu producentów;</li><li>brak własnego toru RF</li></ul></td><td>stos, kolejka, ekran i przyciski w oprogramowaniu układowym (firmware); dojrzałość własnego rdzenia Reticulum stacji; układy LoRa pochodzą z jednej technologii, więc drugie niezależne wykonanie wyrobu (W14) wymaga osobnej decyzji po pilotażu</td><td>wybór dla pilotażu (D10, D14; <a href="#wybrana-opcja">niżej</a>)</td></tr>
 <tr><td>Urządzenia Meshtastic lub MeshCore</td><td>istniejące oprogramowanie i urządzenia z ekranem, które działają bez telefonu</td><td>osobna integracja kontraktów WICI i trwałego potwierdzenia; ocena alternatyw części</td><td>alternatywa, gdy zmniejszy całość prac po próbie</td></tr>
 <tr><td>Stacja na komputerze jednopłytkowym z Linuksem + radio</td><td>ten sam stos w Pythonie co wzorzec protokołu; Wi-Fi na płytce</td><td>pobór rzędu 1 W, kilka razy więcej niż MCU; karta pamięci wrażliwa na zanik zasilania; start trwający kilkadziesiąt sekund; zwykle jeden producent płytki</td><td>alternatywa, gdy stos na MCU nie przejdzie T3</td></tr>
 </tbody></table></div>
 
-<p><strong>Dlaczego LoRa SF7 (D10).</strong> Wybór modulacji FSK nie daje przewagi zasięgu ani kosztu nad LoRa. Katalogowa czułość SX1262 przy SF7 i 125 kHz wynosi −124 dBm. Po odjęciu tych samych około 3 dB na tor wejściowy otrzymuje się −121 dBm na złączu, o 11 dB lepiej niż cel P1 (−110 dBm). Model łącza z rozdziału 06 daje wtedy na 1 km dodatni zapas także przy antenach 10 m i 3 m (+7,5 dB; P1: −3,5 dB).</p>
+<h2 id="wybrana-opcja">Wybrana opcja</h2>
 
-<p>Mimo mniejszej szybkości w eterze LoRa SF7 nie ma 29-bajtowego narzutu P1 na każde 86 B, więc obsługa 50 zgłoszeń przez przekaźnik zajmuje w modelu 16,4–17,2 min zamiast 22,6–24,0 min. SF8 daje kolejne 2 dB, ale 50 zgłoszeń zajmuje 29,1–30,4 min, więc nie mieści W10; zostaje tylko do porównania zasięgu w etapie 0.</p>
+<p>Stacja pilotażowa jest samodzielną stacją na mikrokontrolerze ESP32-S3 z rdzeniem Reticulum stacji i LXMF, radiem LoRa SF7 (869,525 MHz, 125 kHz, CR 4/5) na module Wio SX1262, panelem Sharp, pamięcią FRAM i przyciskami. Moduły siedzą na płytce v2 z linii prototypu (<a href="08-plan-weryfikacji-i-decyzje.html#stacje-pilotazowe">stacje pilotażowe</a>; D10, D14, decyzja z 2026-10-29). Komputer i router są rozszerzeniami, a nie warunkiem łączności.</p>
 
-<p>Najmocniejszym argumentem jest koszt pracy: gotowe moduły z deklaracją zgodności UE i istniejące sterowniki SX1262 usuwają z pilotażu dwa projekty torów RF, mieszaną kwalifikację TI–ST i badania radiowe własnego toru. Zob. <a href="03-dostepne-rozwiazania.html">właściwości rozwiązań</a> i <a href="08-plan-weryfikacji-i-decyzje.html#otwarte-decyzje-i-warunki-zamkniecia">warunki powrotu do P1</a>.</p>
+<p><strong>Radio (D10).</strong> Katalogowa czułość SX1262 przy SF7 i 125 kHz wynosi −124 dBm. Po odjęciu około 3 dB na tor wejściowy otrzymuje się −121 dBm na złączu. Model łącza z <a href="06-wykonalnosc-i-budzet-zasobow.html#zasieg">rozdziału 06</a> daje wtedy na 1 km dodatni zapas także przy antenach 10 m i 3 m (+7,5 dB). Przepływność w eterze wynosi około 5,5 kbit/s, a ramka niesie do 254 B bez dodatkowego narzutu na fragmenty, więc obsługa 50 zgłoszeń przez przekaźnik zajmuje w modelu 16,4–17,2 min z 30 min W10. SF8 daje kolejne 2 dB, ale 50 zgłoszeń zajmuje 29,1–30,4 min i nie mieści W10; zostaje do porównania zasięgu w pomiarach (kroki 3 i 5). Sterowniki SX1262 już istnieją, a zgodność ramek z RNode sprawdza radio RNode z Reticulum w Pythonie (T3).</p>
+
+<p><strong>Mikrokontroler (D14).</strong> ESP32-S3 ma dość pamięci na rdzeń stacji z LXMF: obraz stacji zajmuje statycznie 159 136 B z 327 680 B RAM (szacunek kompilatora z 2026-10-24, <a href="../../firmware/README.md#pamięć-ram">firmware</a>). Stosy zadań i sterta dochodzą w czasie pracy, więc zapas ≥30% mierzy się poleceniem <code>RNS</code> na prototypie (krok 4). Jedna rodzina MCU oznacza jeden zestaw sterowników i jedną kwalifikację.</p>
+
+<p><strong>Płytka (D14).</strong> Płytka v2 przejmuje moduły, wyprowadzenia i program stacji prototypu na płytce v1, więc wnioski z kroku 4 przechodzą na stację pilotażową bez przenoszenia programu. Dochodzą tor zasilania z ogniw AA i 12 V, Wio osadzony na płytce i obrys pod obudowę. Płytkę zamawia się w pełni zmontowaną; własnego toru RF nie ma.</p>
+
+<p id="odrzucone-opcje">Odrzucone opcje:</p>
+
+<div class="table-wrap"><table class="cols-3">
+<thead><tr>
+<th scope="col">Opcja</th>
+<th scope="col">Powód odrzucenia</th>
+<th scope="col">Materiały</th>
+</tr></thead><tbody>
+<tr><td>własny profil FSK P1 w dwóch wykonaniach radia (TI CC1120 i ST S2-LP)</td><td>dwa projekty torów RF, dwie rodziny MCU, mieszana kwalifikacja i badania RED każdego wykonania, wszystko przed dowodem, że sieć i stanowisko odbiorcze działają; w modelu cel czułości −110 dBm (11 dB gorzej niż LoRa SF7), ujemny zapas łącza przy niskich antenach i 22,6–24,0 min na 50 zgłoszeń; wstrzymany 2026-10-08 (F99)</td><td><a href="../archiwum/p1-koncepcja.md">archiwum</a>; jeśli LoRa SF7 nie spełni warunków z D10, punkt wyjścia, a nie gotowa alternatywa</td></tr>
+<tr><td>RAK3312 (ESP32-S3 z SX1262) na płytce bazowej RAK19007 z własnym ekspanderem wyprowadzeń</td><td>wymaga drugiej własnej płytki (ekspandera) i przeniesienia programu stacji na inny sprzęt; prototyp zostałby tylko narzędziem, a jego wyniki nie przeszłyby wprost na stację pilotażową</td><td><a href="../spec/elektronika.md#porównanie-kandydatów">porównanie płytek</a></td></tr>
+<tr><td>własna płytka stacji z torem RF i blokiem zasilania przed pilotażem</td><td>własny tor RF, zasilanie i kwalifikacja przed sprawdzeniem sieci; o płytce wyrobu decyduje krok 8</td><td><a href="../../hardware/r02/README.md"><code>hardware/r02</code></a> (zasilanie dla v2, materiał dla wyrobu)</td></tr>
+<tr><td>laptop jako węzeł z modemem radiowym (wariant 0.4)</td><td>bez laptopa brak łączności; przekaźnik zużywa 788–2312 Wh na dobę; przetwornica 230 V na ścieżce krytycznej. W schronieniu komputer jest rozszerzeniem stacji, a na stanowisku odbiorczym stos w Pythonie pracuje na obowiązkowym komputerze za stacją stanowiska (D19)</td><td>historia w Git</td></tr>
+</tbody></table></div>
 
 <h2 id="uproszczenia-przyjete-w-wariancie-bazowym">Uproszczenia przyjęte w wariancie bazowym</h2>
 
@@ -85,9 +102,9 @@
 <th scope="col">Co upraszcza</th>
 <th scope="col">Pozostający koszt</th>
 </tr></thead><tbody>
-<tr><td>Samodzielna stacja; komputer i router jako rozszerzenia</td><td>łączność bez znalezionego sprzętu, bez 230 V i bez konfiguracji systemu; mały pobór przekaźnika</td><td>oprogramowanie układowe na MCU; na poziomie 1 tylko zgłoszenia schronienia z gotową frazą albo krótkim opisem wpisywanym przyciskami znak po znaku, co trwa około minuty na 30 znaków (pomiar w T8)</td></tr>
-<tr><td>Stacja pilotażowa z gotowych części: płytka MCU z SX1262 z deklaracją UE, moduł FRAM, ekran na module, przyciski, kupiona obudowa</td><td>brak własnej płytki, toru RF i bloku zasilania przed pilotażem; części od wielu sprzedawców</td><td>większa obudowa i więcej połączeń przewodowych; pobór płytki do zmierzenia (W23); wyniki nie przenoszą się automatycznie na własną płytkę</td></tr>
-<tr><td>Jedna rodzina MCU w pilotażu (ESP32-S3)</td><td>jeden zestaw sterowników i jedna kwalifikacja; zapas RAM dla stosu</td><td>drugie wykonanie (W14) i ewentualny powrót do nRF52840 dopiero po pilotażu; Wi-Fi i Bluetooth wyłączone programowo; zakres deklaracji płytki przed próbami terenowymi (D20), pełna ocena RED przy wydaniu</td></tr>
+<tr><td>Samodzielna stacja; komputer i router jako rozszerzenia</td><td>łączność bez przyniesionego sprzętu, bez 230 V i bez konfiguracji systemu; mały pobór przekaźnika</td><td>oprogramowanie układowe na MCU; na poziomie 1 tylko zgłoszenia schronienia z gotową frazą albo krótkim opisem wpisywanym przyciskami znak po znaku, co trwa około minuty na 30 znaków (pomiar w T8)</td></tr>
+<tr><td>Stacja pilotażowa na płytce v2 z gotowymi modułami: ESP32-S3-DevKitC, Wio SX1262, panel Sharp, FRAM, przyciski, kupiona obudowa</td><td>brak własnego toru RF; płytka zmontowana w całości przez montażownię; te same moduły i ten sam program co w prototypie; części z co najmniej dwóch źródeł zakupu</td><td>projekt v2 z torem zasilania z ogniw i 12 V; pobór do zmierzenia (W23); wyniki nie przenoszą się automatycznie na wyrób</td></tr>
+<tr><td>Jedna rodzina MCU w pilotażu (ESP32-S3)</td><td>jeden zestaw sterowników i jedna kwalifikacja; zapas RAM dla stosu</td><td>drugie wykonanie (W14) i wybór rodziny MCU wyrobu dopiero po pilotażu; Wi-Fi i Bluetooth wyłączone programowo; badania konfiguracji pilotażowej przed pracą w terenie (D20)</td></tr>
 <tr><td>Poziomy 2–3 po pilotażu; poziom 3 na kupionej stacji zasilania</td><td>brak własnej przetwornicy 230 V, ładowarki i macierzy systemów laptopów przed sprawdzeniem samej sieci</td><td>pilotaż sprawdza tylko poziom 1 i stanowisko odbiorcze</td></tr>
 <tr><td>Wymienne ogniwa AA + wejście 12 V</td><td>start bez ładowania; ogniwa litowe znoszą lata przechowywania i mróz; brak ładowarki ogniw w stacji</td><td>koszt ogniw; kontrola ich stanu podczas przeglądu</td></tr>
 <tr><td>Osobny akumulator telefonów</td><td>awaria lub wymiana ładowarki nie przerywa łączności; brak układu priorytetów mocy</td><td>osobne przewody i osobny zapas energii</td></tr>
@@ -95,7 +112,7 @@
 <tr><td>Oryginalne zasilacze laptopa i routera zasilane z kupionej stacji zasilania (poziomy 2–3, D05)</td><td>pozwala uniknąć zestawu własnych wtyczek i napięć laptopów i routerów oraz własnej przetwornicy 230 V</td><td>straty przetwornicy stacji zasilania i jej masa; wybór wyrobu po pilotażu</td></tr>
 <tr><td>Tekst i sześć typów wiadomości</td><td>ograniczony ruch i mała powierzchnia integracji</td><td>potrzeby wymagające rozmowy obsługuje operator innym kanałem</td></tr>
 <tr><td>Własna trwała kolejka w stacji + LXMF</td><td>stacja pilnuje zapisu w pamięci FRAM; biblioteka transportu pilnuje dostarczania</td><td>integracja cyklu ponowień i potwierdzeń wymaga prób</td></tr>
-<tr><td>Antena zewnętrzna zamontowana na stałe w przygotowaniu, w miejscu wskazanym po próbie zasięgu; dipol przez okno tylko jako procedura zapasowa</td><td>„włączam stację, wystawiam antenę” bez prac na wysokości w chwili alarmu; brak wymogu dachu; działa też w piwnicy i budowli ochronnej</td><td>montaż, przepust i odgromnik w budżecie wdrożenia. Zasięg zależy od przeszkód. Model propagacji daje na 1 km mały (LoRa SF7) lub ujemny (P1) zapas przy niskich antenach, a łącze 99/100 potrzebuje jeszcze około 10 dB na zaniki. Trzeba się więc liczyć z wyższą kondygnacją, masztem lub przekaźnikiem. Stacja na ogniwach ułatwia umieszczenie przekaźnika wyżej</td></tr>
+<tr><td>Antena zewnętrzna zamontowana na stałe w przygotowaniu, w miejscu wskazanym po próbie zasięgu; dipol przez okno tylko jako procedura zapasowa</td><td>„włączam stację, wystawiam antenę” bez prac na wysokości w chwili alarmu; brak wymogu dachu; działa też w piwnicy i budowli ochronnej</td><td>montaż, przepust i odgromnik w budżecie wdrożenia. Zasięg zależy od przeszkód. Model propagacji daje na 1 km mały zapas przy niskich antenach, a łącze 99/100 potrzebuje jeszcze około 10 dB na zaniki. Trzeba się więc liczyć z wyższą kondygnacją, masztem lub przekaźnikiem. Stacja na ogniwach ułatwia umieszczenie przekaźnika wyżej</td></tr>
 </tbody></table></div>
 
 <p>Osobne ładowanie telefonów daje to samo co wspólna szyna z priorytetami mocy, a ma mniej zależności. Podobnych uproszczeń należy szukać przed dodawaniem sterowników, wspólnych szyn mocy i automatyki. Uproszczenie musi zachować sprawdzalne wymagania. Sama mniejsza liczba części go nie uzasadnia.</p>
@@ -104,7 +121,7 @@
 
 <p><strong>Zasilanie laptopa (poziomy 2–3, po pilotażu):</strong> przy wdrożeniu laptop i router zasila kupiona stacja zasilania z wyjściem 230 V i oryginalnymi zasilaczami (D05). Dla komputerów zasilanych przez USB-C PD (Power Delivery, zasilanie z negocjacją napięcia) trzeba osobno zmierzyć wariant prądu stałego (DC), który może obniżyć zużycie i koszt. Nie zastępuje on uniwersalnego wymagania bez jawnego ograniczenia listy hostów.</p>
 
-<p><strong>Zasilanie poziomu 3 przy wdrożeniu (D05, zamknięte 2026-10-08):</strong> poziom 3 używa kupionej stacji zasilania i ładowarki USB z deklaracją zgodności UE. Własna przetwornica 230 V i ładowarka wypadają z zakresu projektu; ich opisy zostają w specyfikacji jako materiał archiwalny, bez dalszych prac. Poziom 3 zużywa w modelu około 1840 Wh na dobę na schronienie (<a href="06-wykonalnosc-i-budzet-zasobow.html#energia-dwa-niezalezne-zasoby">rozdział 06</a>).</p>
+<p><strong>Zasilanie poziomu 3 przy wdrożeniu (D05, zamknięte 2026-10-08):</strong> poziom 3 używa kupionej stacji zasilania i ładowarki USB z deklaracją zgodności UE. Własna przetwornica 230 V i ładowarka wypadają z zakresu projektu; ich opisy są materiałem archiwalnym, bez dalszych prac (F119). Poziom 3 zużywa w modelu około 1840 Wh na dobę na schronienie (<a href="06-wykonalnosc-i-budzet-zasobow.html#energia-dwa-niezalezne-zasoby">rozdział 06</a>).</p>
 
 <p><strong>Uruchomienie komputera (poziomy 2–3, po pilotażu):</strong> pakiety START dla działającego systemu Windows lub macOS i obraz Linuksa dla obsługiwanych komputerów PC dzielą kod aplikacji. To wydanie nie zakłada jednego obrazu startowego dla PC i wszystkich Maców. Przypadki zablokowanego startu i niesprawnego systemu trzeba rozpoznać przed awarią.</p>
 
@@ -117,7 +134,7 @@
   <li>(4) inny laptop.</li>
 </ul>
 
-<p>Największą przeszkodą jest zapora Windows: domyślnie blokuje połączenia przychodzące, a zgoda wymaga uprawnień administratora. macOS i typowe dystrybucje Linuksa nie blokują ich domyślnie. Telefony korzystają z głównej sieci Wi-Fi budynku, bo sieć gościnna zwykle nie widzi laptopa. Dlatego zarządca zgadza się na to pisemnie przy przygotowaniu obiektu i zmienia hasło Wi-Fi po zdarzeniu, a sieć gościnną aplikacja wybiera, gdy telefony widzą w niej laptop.</p>
+<p>Największą przeszkodą jest zapora Windows: domyślnie blokuje połączenia przychodzące, a zgoda wymaga uprawnień administratora. macOS i typowe dystrybucje Linuksa nie blokują ich domyślnie. Telefony korzystają z głównej sieci Wi-Fi budynku, bo sieć gościnna zwykle nie widzi laptopa. Dlatego zarządca zgadza się na to pisemnie przy przygotowaniu obiektu i zmienia hasło Wi-Fi po zdarzeniu. Sieć gościnną wybiera się tylko wtedy, gdy telefony widzą w niej laptop; aplikacja to sprawdza.</p>
 
 <p>Otwarta baza pracuje w pamięci laptopa. Jej zaszyfrowane migawki trafiają na bieżąco na dysk laptopa (zmiana jest potwierdzona po zapisie migawki), a najpóźniej kilka sekund później na pamięć USB. Inny laptop otwiera kopię hasłem logowania konta, a przed zwrotem laptopa aplikacja usuwa migawki z dysku. Na dysku cudzego laptopa nie ma więc bazy w postaci jawnej. Szyfr pochodzi z kryptografii systemu (Windows, macOS, Linux), bez nowej zależności na pamięci. Szczegóły są w planie aplikacji laptopa (<code>software/laptop/PLAN.md</code>).</p>
 
@@ -125,32 +142,28 @@
 
 <ul>
   <li>laptop lub router w zestawie i laptop przygotowany wcześniej (koszt, brak sprzętu do przygotowania);</li>
-  <li>stacja jako punkt dostępu Wi-Fi: wykonanie A nie ma Wi-Fi; sam odbiornik Wi-Fi ESP32-S3 pobiera 88 mA, więcej niż cel średniego poboru stacji; najwyżej 15 telefonów wobec około 50 mieszkańców; W17 wymaga trwale wyłączonego Wi-Fi stacji;</li>
+  <li>stacja jako punkt dostępu Wi-Fi: sam odbiornik Wi-Fi ESP32-S3 pobiera 88 mA, więcej niż cel średniego poboru stacji; najwyżej 15 telefonów wobec około 50 mieszkańców; W17 wymaga trwale wyłączonego Wi-Fi stacji;</li>
   <li>laptop jako punkt dostępu: Windows obsługuje najwyżej 8 urządzeń, a specyfikacja wyklucza własny DHCP;</li>
   <li>obchodzenie zapory Windows albo uruchamianie innego systemu bez zgody właściciela laptopa.</li>
 </ul>
 
-<p><strong>Radio a W14:</strong> wcześniejsze odczytanie W14 (dwie rodziny układów radiowych już w pierwszym wykonaniu) wykluczało LoRa i pociągało za sobą dwa projekty torów RF, sterowniki P1 dla obu układów i mieszaną kwalifikację układów TI (Texas Instruments) i ST (STMicroelectronics). To była największa część pracy sprzętowej, wykonywana przed jakimkolwiek dowodem, że sieć i stanowisko odbiorcze działają. Dlatego W14 rozdzielono: w pilotażu wystarczą części z co najmniej dwóch źródeł zakupu (moduły SX1262 wielu producentów), a drugie niezależne wykonanie jest wymaganiem wydania. Może nim być druga rodzina MCU albo inny układ LoRa, np. ST STM32WL; decyzja zapada po pilotażu. Warunki powrotu do P1 podaje <a href="08-plan-weryfikacji-i-decyzje.html#otwarte-decyzje-i-warunki-zamkniecia">D10</a>.</p>
+<p><strong>Radio a W14:</strong> w pilotażu wystarczą części z co najmniej dwóch źródeł zakupu (moduły SX1262 i płytki ESP32-S3 wielu producentów). Drugie niezależne wykonanie jest wymaganiem wyrobu: może nim być druga rodzina MCU albo inny układ LoRa, np. ST STM32WL. Decyzja zapada w kroku 8.</p>
 
-<p><strong>Mikrokontroler stacji (D14):</strong> w pilotażu stacja ma jedną rodzinę MCU: ESP32-S3 (512 KiB SRAM, opcjonalnie PSRAM) na gotowej płytce z SX1262. Wbudowane Wi-Fi i Bluetooth są wyłączone programowo. Przed próbami terenowymi trzeba ustalić, czy deklaracja zgodności płytki obejmuje ją z własnym oprogramowaniem i tak wyłączonym radiem (D20). Pełną ocenę RED dla tego radia (opisaną niżej) przeprowadza się przy wydaniu.</p>
+<p><strong>Mikrokontroler stacji (D14):</strong> w pilotażu stacja ma jedną rodzinę MCU, ESP32-S3 (<a href="#wybrana-opcja">wyżej</a>). Wbudowane Wi-Fi i Bluetooth są wyłączone programowo. Deklaracja zgodności modułu nie obejmuje własnego oprogramowania, więc zespół jest producentem konfiguracji pilotażowej i przed pracą w terenie bada ją według norm zharmonizowanych, przy programowo wyłączonym radiu także według EN 300 328 i EN 301 489-17 (D20).</p>
 
-<p>Z odbiornikiem SX1262 (4,6 mA zamiast 22 mA dla CC1120) model z założeniami przetwornicy R02 daje ESP32-S3 około 52 h na komplecie ogniw AA przy średnio 45 mA poboru MCU i około 41 h przy 60 mA, więc W23 rozstrzyga pomiar.</p>
+<p>Z odbiornikiem SX1262 (katalogowo 4,6–5,3 mA) model z założeniami przetwornicy z <a href="../../hardware/r02/zasilanie.md">projektu zasilania</a> daje ESP32-S3 około 52 h na komplecie ogniw AA przy średnio 45 mA poboru MCU i około 41 h przy 60 mA, więc o W23 rozstrzyga pomiar toru zasilania v2.</p>
 
-<p>Opis poniżej dotyczy wyboru dla wydania. Oprogramowanie stacji ze stosem Reticulum potrzebuje kilkuset kilobajtów RAM, więc STM32F103 z wycofanego kontrolera R01.3 nie wystarcza. Kandydaci to rodziny z gotowymi bibliotekami radia i kryptografii, np. nRF52840 (Nordic) i ESP32-S3 (Espressif). Według <a href="06-wykonalnosc-i-budzet-zasobow.html#energia-stacji-poziomu-1">modelu energii</a> nRF52840 pobiera wyraźnie mniej i spełnia W23 z zapasem. ESP32-S3 ma więcej pamięci, ale z odbiornikiem CC1120 (P1) spełnia W23 tylko przy lekkim uśpieniu z odbiornikiem stale włączonym.</p>
+<p>Dla wyrobu rodzina MCU jest otwarta. Kandydaci to rodziny z gotowymi bibliotekami radia i kryptografii, np. nRF52840 (Nordic) i ESP32-S3 (Espressif). Według <a href="06-wykonalnosc-i-budzet-zasobow.html#energia-stacji-poziomu-1">modelu energii</a> nRF52840 pobiera wyraźnie mniej i spełnia W23 z zapasem. Ma 256 KiB RAM. Obraz stacji z rdzeniem i LXMF zajmuje na nim statycznie 112 276 B, co według szacunku kompilatora mieści próg zapasu 30% z nadwyżką około 20 KB; pomiaru na płytce nie ma. Przy układzie tablic z implementacji referencyjnej (pełne 32-bajtowe skróty 4096 pakietów i 256 tras z ogłoszeniami) same tablice zajęłyby około 81% tej pamięci. Dlatego specyfikacja trzyma w RAM skróty 8 B i indeks tras, a pełne wpisy w FRAM (około 14%). Jeśli zapasu zabraknie, zostaje MCU z większą pamięcią (nRF5340, RP2350, STM32U5; koszt, pobór wobec W23, dostępność).</p>
 
-<p>nRF52840 ma 256 KiB RAM, czyli mniej, niż potrzebuje stos z wymaganym zapasem. Same tablice stosu w układzie implementacji referencyjnej (pełne 32-bajtowe skróty 4096 pakietów i 256 tras z ogłoszeniami) zajęłyby w modelu około 81% tej pamięci. Dlatego specyfikacja trzyma w RAM skróty 8 B i indeks tras, a pełne wpisy w FRAM (około 14%). Warunkiem wyboru nRF52840 jest zmierzony w T3 zapas ≥30% przy takim podziale, przed projektem płytki R02.</p>
-
-<p>Odtworzenie ruchu stosu w programie 32-bitowym daje dziś 3,5% wolnej RAM w szczycie i 12,5% w stanie ustalonym, jeszcze bez LXMF (<a href="../../firmware/README.md#pamięć-ram">pomiar</a>). Indeks magazynów portu zajmuje około 233 B na cel zamiast 24 B, co ma znaczenie dla D14. Własny rdzeń zgodny z Reticulum (<a href="../../firmware/reticulum-core.md">zakres</a>) ma zwarty indeks tras i cel ≤56 KB RAM statycznie z LXMF; zapas ≥30% na nRF52840 potwierdza pomiar na płytce przed projektem wykonania A. Jeśli zapasu zabraknie, zostaje MCU z większą pamięcią (nRF5340, RP2350, STM32U5; koszt, pobór wobec W23, dostępność).</p>
-
-<p>Wbudowane nadajniki Wi-Fi i Bluetooth muszą pozostać wyłączone (W17), ale radio wyłączone tylko programowo może być nadal traktowane jako zamierzony nadajnik. D14 rozważa więc trzy drogi:</p>
+<p>Wbudowane nadajniki Wi-Fi i Bluetooth muszą pozostać wyłączone (W17), ale radio wyłączone tylko programowo może być nadal traktowane jako zamierzony nadajnik. Dla wyrobu D14 rozważa więc trzy drogi:</p>
 
 <ul>
   <li>trwałą blokadę radia z bezpiecznym rozruchem (secure boot) i pisemnym uzasadnieniem zgodności z dyrektywą radiową (RED),</li>
-  <li>budżet badań według EN 300 328 i EN 301 489-17,</li>
+  <li>badania według EN 300 328 i EN 301 489-17, jak w pilotażu,</li>
   <li>MCU bez radia (RP2350, STM32U5).</li>
 </ul>
 
-<p>Dwie rodziny MCU to dwa zestawy sterowników i osobna kwalifikacja; W14 wymaga ich dopiero dla wydania.</p>
+<p>Dwie rodziny MCU to dwa zestawy sterowników i osobna kwalifikacja; W14 wymaga ich dopiero dla wyrobu.</p>
 
 <p><strong>Ekran i przyciski (D15):</strong> ekran graficzny, a nie znakowy, bo potrzebne są cyrylica i piktogramy (W20). Wyświetlacz z pamięcią (memory LCD) pobiera mało prądu i pracuje na mrozie, choć −20 °C leży już na granicy jego zakresu pracy, bez zapasu. Sharp LS027B7DH01 wymaga osobnej szyny 5 V. Schronienia bywają ciemne, więc ekran ma podświetlenie włączane przyciskiem i wyłączane po czasie, wliczone do budżetu energii. E-papier zachowuje obraz bez zasilania, ale wolno odświeża się w niskiej temperaturze. Wystarczy kilka dużych przycisków obsługiwanych w rękawicach.</p>
 
@@ -158,7 +171,7 @@
 
 <h2 id="niezaleznosc-dostawcow">Niezależność dostawców</h2>
 
-<p>W pilotażu wymaganie ogranicza się do części z co najmniej dwóch źródeł zakupu: płytki z SX1262 kilku producentów, FRAM i ekranu na modułach. Poniższy opis dotyczy wydania. Wymaganie dotyczy możliwego do zbudowania wariantu całej funkcji. Wykonania A i B mają wspólną ramkę radiową, wspólny protokół USB do komputera i wspólne zachowanie interfejsu użytkownika, ale inny układ RF albo inną rodzinę MCU, a więc inne nastawy lub płytki. Adapter Ethernet i elementy ochrony też wymagają kwalifikowanych alternatyw; kupione wyroby poziomu 3 (D05) kwalifikuje się jako całość. Zmiana regulatora może wymagać zmiany konstrukcji, nie tylko numeru w BOM.</p>
+<p>W pilotażu wymaganie ogranicza się do części z co najmniej dwóch źródeł zakupu: płytki z SX1262 kilku producentów, FRAM i ekranu na modułach. Poniższy opis dotyczy wyrobu. Wymaganie dotyczy możliwego do zbudowania wariantu całej funkcji. Dwa wykonania wyrobu mają wspólną ramkę radiową, wspólny protokół USB do komputera i wspólne zachowanie interfejsu użytkownika, ale inny układ RF albo inną rodzinę MCU, a więc inne nastawy lub płytki. Adapter Ethernet i elementy ochrony też wymagają kwalifikowanych alternatyw; kupione wyroby poziomu 3 (D05) kwalifikuje się jako całość. Zmiana regulatora może wymagać zmiany konstrukcji, nie tylko numeru w BOM.</p>
 
 <p>Lista zamienników podaje wariant, producenta, parametry krytyczne i dowód próby. Otwarta licencja i kilka sklepów nie dowodzą niezależności produkcji. Wspólne złącza, przewody, formaty i możliwość zlecenia PCB wielu wykonawcom zmniejszają zależność, ale jej nie znoszą.</p>
 </article>

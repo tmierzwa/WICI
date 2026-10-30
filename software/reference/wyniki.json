@@ -14,10 +14,11 @@
     "mosfet_hot_resistance_factor": 1.7,
     "hotplug_loop_resistance_assumed_ohm": 0.04
   },
+  "main_radio_profile": "LoRa SF7, 125 kHz, SX1262",
   "station_level1": {
     "assumptions": {
       "rail_v": 3.3,
-      "rx_ma": 22.0,
+      "rx_ma": 4.6,
       "tcxo_ma": 2.0,
       "tx_ma_13dbm": 45.0,
       "tx_fraction": 0.07692307692307693,
@@ -58,8 +59,8 @@
       "aa_usable_fraction": 0.8
     },
     "wh_24h_with_reserve_range": [
-      3.7876367497569365,
-      10.719405177230767
+      1.721592814306651,
+      8.65228517723077
     ],
     "holdup": {
       "comparator_v": 3.4,
@@ -74,47 +75,47 @@
     "variants": {
       "nrf52840": {
         "mcu_ma_assumed": 3.0,
-        "rail_ma": 31.87403846153846,
-        "input_w": 0.13151516492211587,
-        "wh_24h_with_reserve": 3.7876367497569365,
-        "aa_set_hours": 91.24423032968463,
-        "input_w_12v": 0.13707656865384615,
-        "wh_24h_with_reserve_12v": 3.947805177230769,
-        "battery_12v_days": 91.18991030163397,
-        "battery_12v_hours": 2188.5578472392153
+        "rail_ma": 14.474038461538463,
+        "input_w": 0.059777528274536494,
+        "wh_24h_with_reserve": 1.721592814306651,
+        "aa_set_hours": 200.74433229972902,
+        "input_w_12v": 0.06530156865384615,
+        "wh_24h_with_reserve_12v": 1.880685177230769,
+        "battery_12v_days": 191.419597686246,
+        "battery_12v_hours": 4594.070344469904
       },
       "esp32_s3_30ma": {
         "mcu_ma_assumed": 30.0,
-        "rail_ma": 58.874038461538454,
-        "input_w": 0.24283218730629075,
-        "wh_24h_with_reserve": 6.993566994421173,
-        "aa_set_hours": 49.41684268924399,
-        "input_w_12v": 0.2484515686538461,
-        "wh_24h_with_reserve_12v": 7.155405177230768,
-        "battery_12v_days": 50.31161633523659,
-        "battery_12v_hours": 1207.4787920456783
+        "rail_ma": 41.474038461538456,
+        "input_w": 0.17109455065871135,
+        "wh_24h_with_reserve": 4.927523058970887,
+        "aa_set_hours": 70.13665808642173,
+        "input_w_12v": 0.1766765686538461,
+        "wh_24h_with_reserve_12v": 5.088285177230768,
+        "battery_12v_days": 70.75075147339231,
+        "battery_12v_hours": 1698.0180353614155
       },
       "esp32_s3_45ma": {
         "mcu_ma_assumed": 45.0,
-        "rail_ma": 73.87403846153846,
-        "input_w": 0.3046749775197213,
-        "wh_24h_with_reserve": 8.774639352567972,
-        "aa_set_hours": 39.38623413609099,
-        "input_w_12v": 0.31032656865384617,
-        "wh_24h_with_reserve_12v": 8.93740517723077,
-        "battery_12v_days": 40.2801476335825,
-        "battery_12v_hours": 966.72354320598
+        "rail_ma": 56.474038461538456,
+        "input_w": 0.23293734087214185,
+        "wh_24h_with_reserve": 6.708595417117686,
+        "aa_set_hours": 51.51599977517876,
+        "input_w_12v": 0.23855156865384608,
+        "wh_24h_with_reserve_12v": 6.870285177230767,
+        "battery_12v_days": 52.39957159174383,
+        "battery_12v_hours": 1257.5897182018518
       },
       "esp32_s3_60ma": {
         "mcu_ma_assumed": 60.0,
-        "rail_ma": 88.87403846153846,
-        "input_w": 0.3665177677331517,
-        "wh_24h_with_reserve": 10.55571171071477,
-        "aa_set_hours": 32.7405682791803,
-        "input_w_12v": 0.37220156865384607,
-        "wh_24h_with_reserve_12v": 10.719405177230767,
-        "battery_12v_days": 33.583953031711204,
-        "battery_12v_hours": 806.0148727610689
+        "rail_ma": 71.47403846153846,
+        "input_w": 0.2947801310855724,
+        "wh_24h_with_reserve": 8.489667775264484,
+        "aa_set_hours": 40.70830674987553,
+        "input_w_12v": 0.30042656865384615,
+        "wh_24h_with_reserve_12v": 8.65228517723077,
+        "battery_12v_days": 41.60750514180587,
+        "battery_12v_hours": 998.580123403341
       }
     },
     "fixed_relay_buffer_psu_13_8v": {
@@ -123,24 +124,24 @@
       "usable_fraction_assumed": 0.5,
       "hours": {
         "7ah": {
-          "nrf52840": 255.33174884457512,
-          "esp32_s3_60ma": 94.03506848879137
+          "nrf52840": 535.9748735214887,
+          "esp32_s3_60ma": 116.50101439705645
         },
         "17ah": {
-          "nrf52840": 620.0913900511109,
-          "esp32_s3_60ma": 228.37088061563617
+          "nrf52840": 1301.6532642664727,
+          "esp32_s3_60ma": 282.93103496427995
         }
       }
     },
     "w23_max_rail_ma_on_aa": 60.61259505050506,
-    "w23_max_mcu_ma_on_aa": 31.738556588966595,
+    "w23_max_mcu_ma_on_aa": 49.138556588966594,
     "laptop_relay_wh_24h_with_reserve": [
       787.5952941176471,
       2312.3011764705884
     ],
     "laptop_relay_to_station_ratio": [
-      74.61318722054374,
-      610.4865194950322
+      92.7710382745938,
+      1343.1173488034322
     ]
   },
   "level3_pools": {
@@ -201,46 +202,35 @@
       "packet_proof": 99
     },
     "tx_plus_quiet_s": {
-      "typical_request": 11.873333333333333,
-      "max_fields_request": 13.541666666666668,
-      "received": 8.471666666666666,
-      "packet_proof": 3.4016666666666664
+      "typical_request": 8.659456,
+      "max_fields_request": 9.591296,
+      "received": 6.196736,
+      "packet_proof": 2.399488
     },
     "per_request_s": [
-      27.148333333333333,
-      28.81666666666667
+      19.655168,
+      20.587007999999997
     ],
     "fifty_requests_min": [
-      22.623611111111114,
-      24.013888888888893
+      16.379306666666665,
+      17.155839999999998
     ],
     "per_retry_s": [
-      11.873333333333333,
-      13.541666666666668
-    ],
-    "fifty_requests_min_at_1200_bit_s": [
-      90.49444444444445,
-      96.05555555555557
+      8.659456,
+      9.591296
     ],
     "status_packet_bytes": 275,
-    "fifty_requests_with_two_status_min": 43.80277777777778,
+    "fifty_requests_with_two_status_min": 31.482879999999998,
     "quiet_10t_throughput_gain": 0.18181818181818188,
-    "p1_tx_plus_quiet_s": {
-      "100b": 3.423333333333333,
-      "250b": 7.301666666666667,
-      "500b": 14.603333333333333,
-      "600b": 17.398333333333333
-    },
-    "ramp_ms_per_fragment_assumed": 2.0,
-    "p1_tx_plus_quiet_s_with_ramp": {
-      "100b": 3.475333333333333,
-      "250b": 7.379666666666666,
-      "500b": 14.759333333333332,
-      "600b": 17.580333333333336
+    "tx_plus_quiet_s_by_datagram": {
+      "100b": 2.399488,
+      "250b": 5.261568,
+      "500b": 10.523136,
+      "508b": 10.656255999999999
     }
   },
   "network_capacity": {
-    "note": "No losses, collisions, CCA, cold routes or retries; per node at the P1 debt limit",
+    "note": "No losses, collisions, CCA, cold routes or retries; per node at the debt limit",
     "per_request": {
       "max_fields_request": {
         "osp_tx_packets_bytes": [
@@ -249,8 +239,8 @@
           291,
           291
         ],
-        "osp_s_per_request": 29.856666666666666,
-        "osp_requests_per_h": 120.57608574299431,
+        "osp_s_per_request": 21.988096,
+        "osp_requests_per_h": 163.72495372041308,
         "relay_tx_packets_bytes": [
           451,
           99,
@@ -261,8 +251,8 @@
           99,
           99
         ],
-        "relay_s_per_request": 52.56333333333333,
-        "relay_requests_per_h": 68.48880715327542
+        "relay_s_per_request": 37.779455999999996,
+        "relay_requests_per_h": 95.2898845340706
       },
       "typical_request": {
         "osp_tx_packets_bytes": [
@@ -271,8 +261,8 @@
           291,
           291
         ],
-        "osp_s_per_request": 29.856666666666666,
-        "osp_requests_per_h": 120.57608574299431,
+        "osp_s_per_request": 21.988096,
+        "osp_requests_per_h": 163.72495372041308,
         "relay_tx_packets_bytes": [
           403,
           99,
@@ -283,18 +273,18 @@
           99,
           99
         ],
-        "relay_s_per_request": 50.894999999999996,
-        "relay_requests_per_h": 70.73386383731211
+        "relay_s_per_request": 36.847616,
+        "relay_requests_per_h": 97.69967207647844
       }
     },
-    "osp_requests_per_h": 120.57608574299431,
-    "relay_before_osp_requests_per_h": 68.48880715327542,
+    "osp_requests_per_h": 163.72495372041308,
+    "relay_before_osp_requests_per_h": 95.2898845340706,
     "bulletin_packet_bytes": 483,
-    "bulletin_s_per_station": 14.235,
+    "bulletin_s_per_station": 10.190335999999999,
     "bulletin_osp_tx_min": {
-      "10_stations": 2.3725,
-      "30_stations": 7.117499999999999,
-      "50_stations": 11.8625
+      "10_stations": 1.6983893333333333,
+      "30_stations": 5.095167999999999,
+      "50_stations": 8.491946666666665
     },
     "test_window_s_per_station": 50,
     "test_window_min": {
@@ -305,16 +295,17 @@
   },
   "lxmf_retry": {
     "largest_own_datagram_bytes": 499,
-    "largest_datagram_cycle_s": 14.581666666666665,
+    "largest_datagram_cycle_s": 10.456576,
     "floor_s": 60.0,
-    "worst_debt_s": 16.060000000000002,
-    "full_p1_queue_4x600b_s": 69.59333333333333,
-    "1_hop_round_trip_s": 29.16333333333333,
+    "max_datagram_bytes": 508,
+    "worst_debt_s": 9.836544,
+    "full_queue_4x_max_datagram_s": 42.625023999999996,
+    "1_hop_round_trip_s": 20.913152,
     "1_hop_min_interval_empty_network_s": 60.0,
-    "1_hop_min_interval_worst_debt_full_queue_s": 114.81666666666666,
-    "2_hop_round_trip_s": 58.32666666666666,
+    "1_hop_min_interval_worst_debt_full_queue_s": 73.37472,
+    "2_hop_round_trip_s": 41.826304,
     "2_hop_min_interval_empty_network_s": 60.0,
-    "2_hop_min_interval_worst_debt_full_queue_s": 143.98
+    "2_hop_min_interval_worst_debt_full_queue_s": 94.287872
   },
   "lora_pilot": {
     "assumptions": {
@@ -413,32 +404,6 @@
         "base_10m_mobile_1.5m": 2.6929163552712083,
         "base_10m_mobile_3m": 6.492731775823657
       }
-    },
-    "station_level1_sx1262_rx": {
-      "nrf52840": {
-        "mcu_ma_assumed": 3.0,
-        "rail_ma": 14.474038461538463,
-        "wh_24h_with_reserve": 1.721592814306651,
-        "aa_set_hours": 200.74433229972902
-      },
-      "esp32_s3_30ma": {
-        "mcu_ma_assumed": 30.0,
-        "rail_ma": 41.474038461538456,
-        "wh_24h_with_reserve": 4.927523058970887,
-        "aa_set_hours": 70.13665808642173
-      },
-      "esp32_s3_45ma": {
-        "mcu_ma_assumed": 45.0,
-        "rail_ma": 56.474038461538456,
-        "wh_24h_with_reserve": 6.708595417117686,
-        "aa_set_hours": 51.51599977517876
-      },
-      "esp32_s3_60ma": {
-        "mcu_ma_assumed": 60.0,
-        "rail_ma": 71.47403846153846,
-        "wh_24h_with_reserve": 8.489667775264484,
-        "aa_set_hours": 40.70830674987553
-      }
     }
   },
   "fram_by_role": {
@@ -522,78 +487,6 @@
   },
   "cold_start_announces": {
     "announce_bytes": 221,
-    "announce_tx_s": 0.5133333333333333,
-    "announce_cap_share_of_wall_clock": 0.02,
-    "path_request_bytes": 83,
-    "path_request_tx_s": 0.18666666666666668,
-    "test_packet_bytes": 339,
-    "test_exchange_tx_s": 3.9683333333333333,
-    "10_stations": {
-      "network_announce_transmissions": 100,
-      "channel_airtime_min_single_collision_domain": 0.8555555555555555,
-      "per_station_tx_plus_quiet_min": 1.1122222222222222,
-      "per_hop_drain_at_cap_min": 4.277777777777777,
-      "test_window_min": 8.333333333333334,
-      "path_request_airtime_min": [
-        0.11666666666666667,
-        0.4822222222222223
-      ],
-      "test_airtime_min": 0.6613888888888888,
-      "total_airtime_min": [
-        1.633611111111111,
-        1.9991666666666665
-      ],
-      "share_of_test_window": [
-        0.1960333333333333,
-        0.23989999999999997
-      ],
-      "announce_drain_exceeds_window": false
-    },
-    "30_stations": {
-      "network_announce_transmissions": 900,
-      "channel_airtime_min_single_collision_domain": 7.7,
-      "per_station_tx_plus_quiet_min": 3.3366666666666664,
-      "per_hop_drain_at_cap_min": 12.833333333333332,
-      "test_window_min": 25.0,
-      "path_request_airtime_min": [
-        0.35,
-        3.3133333333333335
-      ],
-      "test_airtime_min": 1.9841666666666666,
-      "total_airtime_min": [
-        10.034166666666666,
-        12.997499999999999
-      ],
-      "share_of_test_window": [
-        0.40136666666666665,
-        0.5198999999999999
-      ],
-      "announce_drain_exceeds_window": false
-    },
-    "50_stations": {
-      "network_announce_transmissions": 2500,
-      "channel_airtime_min_single_collision_domain": 21.38888888888889,
-      "per_station_tx_plus_quiet_min": 5.561111111111111,
-      "per_hop_drain_at_cap_min": 21.38888888888889,
-      "test_window_min": 41.666666666666664,
-      "path_request_airtime_min": [
-        0.5833333333333334,
-        8.633333333333335
-      ],
-      "test_airtime_min": 3.3069444444444445,
-      "total_airtime_min": [
-        25.279166666666665,
-        33.32916666666667
-      ],
-      "share_of_test_window": [
-        0.6067,
-        0.7999
-      ],
-      "announce_drain_exceeds_window": false
-    }
-  },
-  "cold_start_announces_lora_sf7": {
-    "announce_bytes": 221,
     "announce_tx_s": 0.358656,
     "announce_cap_share_of_wall_clock": 0.02,
     "path_request_bytes": 83,
@@ -662,6 +555,334 @@
         0.58969088
       ],
       "announce_drain_exceeds_window": false
+    }
+  },
+  "p1_archiwalny": {
+    "note": "Archived P1 profile (own FSK 4800 bit/s, CC1120 receiver 22 mA); superseded by LoRa SF7 (D10)",
+    "station_level1": {
+      "assumptions": {
+        "rail_v": 3.3,
+        "rx_ma": 22.0,
+        "tcxo_ma": 2.0,
+        "tx_ma_13dbm": 45.0,
+        "tx_fraction": 0.07692307692307693,
+        "lcd_5v_rail_ma": 0.5,
+        "fram_buttons_supervisor_ma": 0.5,
+        "front_light_ma": 15.0,
+        "front_light_duty": 0.020833333333333332,
+        "alarm_led_ma": 5.0,
+        "alarm_led_duty": 0.01,
+        "buzzer_ma": 20.0,
+        "buzzer_duty": 0.0025,
+        "aa_vsys_v": 6.0,
+        "aa_diode_v": 0.35,
+        "aa_rail_efficiency": 0.85,
+        "battery_vsys_v": 12.8,
+        "battery_rail_efficiency": 0.8,
+        "input_side_ma": {
+          "aa": {
+            "tps3710": 0.006,
+            "ltc2955": 0.0012,
+            "dividers": 0.01
+          },
+          "12v": {
+            "lm74800": 0.4,
+            "uv_latch": 0.02,
+            "tps3710": 0.006,
+            "ltc2955": 0.0012,
+            "dividers": 0.01
+          }
+        },
+        "input_side_ma_total": {
+          "aa": 0.0172,
+          "12v": 0.43720000000000003
+        },
+        "reserve_fraction": 0.2,
+        "aa_set_usable_wh": 14.4,
+        "aa_cell_wh": 4.5,
+        "aa_usable_fraction": 0.8
+      },
+      "wh_24h_with_reserve_range": [
+        3.7876367497569365,
+        10.719405177230767
+      ],
+      "holdup": {
+        "comparator_v": 3.4,
+        "converter_stop_v": 2.7,
+        "hold_s": 0.002,
+        "load_rail_ma": 108.0,
+        "load_w": 0.4192941176470588,
+        "required_uf": 392.7813748450202,
+        "selected_uf": 680.0,
+        "selected_to_required_ratio": 1.7312429854096512
+      },
+      "variants": {
+        "nrf52840": {
+          "mcu_ma_assumed": 3.0,
+          "rail_ma": 31.87403846153846,
+          "input_w": 0.13151516492211587,
+          "wh_24h_with_reserve": 3.7876367497569365,
+          "aa_set_hours": 91.24423032968463,
+          "input_w_12v": 0.13707656865384615,
+          "wh_24h_with_reserve_12v": 3.947805177230769,
+          "battery_12v_days": 91.18991030163397,
+          "battery_12v_hours": 2188.5578472392153
+        },
+        "esp32_s3_30ma": {
+          "mcu_ma_assumed": 30.0,
+          "rail_ma": 58.874038461538454,
+          "input_w": 0.24283218730629075,
+          "wh_24h_with_reserve": 6.993566994421173,
+          "aa_set_hours": 49.41684268924399,
+          "input_w_12v": 0.2484515686538461,
+          "wh_24h_with_reserve_12v": 7.155405177230768,
+          "battery_12v_days": 50.31161633523659,
+          "battery_12v_hours": 1207.4787920456783
+        },
+        "esp32_s3_45ma": {
+          "mcu_ma_assumed": 45.0,
+          "rail_ma": 73.87403846153846,
+          "input_w": 0.3046749775197213,
+          "wh_24h_with_reserve": 8.774639352567972,
+          "aa_set_hours": 39.38623413609099,
+          "input_w_12v": 0.31032656865384617,
+          "wh_24h_with_reserve_12v": 8.93740517723077,
+          "battery_12v_days": 40.2801476335825,
+          "battery_12v_hours": 966.72354320598
+        },
+        "esp32_s3_60ma": {
+          "mcu_ma_assumed": 60.0,
+          "rail_ma": 88.87403846153846,
+          "input_w": 0.3665177677331517,
+          "wh_24h_with_reserve": 10.55571171071477,
+          "aa_set_hours": 32.7405682791803,
+          "input_w_12v": 0.37220156865384607,
+          "wh_24h_with_reserve_12v": 10.719405177230767,
+          "battery_12v_days": 33.583953031711204,
+          "battery_12v_hours": 806.0148727610689
+        }
+      },
+      "fixed_relay_buffer_psu_13_8v": {
+        "note": "Mains failure: station runs from the buffer battery through the 12 V input",
+        "battery_v": 12,
+        "usable_fraction_assumed": 0.5,
+        "hours": {
+          "7ah": {
+            "nrf52840": 255.33174884457512,
+            "esp32_s3_60ma": 94.03506848879137
+          },
+          "17ah": {
+            "nrf52840": 620.0913900511109,
+            "esp32_s3_60ma": 228.37088061563617
+          }
+        }
+      },
+      "w23_max_rail_ma_on_aa": 60.61259505050506,
+      "w23_max_mcu_ma_on_aa": 31.738556588966595,
+      "laptop_relay_wh_24h_with_reserve": [
+        787.5952941176471,
+        2312.3011764705884
+      ],
+      "laptop_relay_to_station_ratio": [
+        74.61318722054374,
+        610.4865194950322
+      ]
+    },
+    "network_capacity": {
+      "note": "No losses, collisions, CCA, cold routes or retries; per node at the debt limit",
+      "per_request": {
+        "max_fields_request": {
+          "osp_tx_packets_bytes": [
+            99,
+            291,
+            291,
+            291
+          ],
+          "osp_s_per_request": 29.856666666666666,
+          "osp_requests_per_h": 120.57608574299431,
+          "relay_tx_packets_bytes": [
+            451,
+            99,
+            275,
+            275,
+            275,
+            99,
+            99,
+            99
+          ],
+          "relay_s_per_request": 52.56333333333333,
+          "relay_requests_per_h": 68.48880715327542
+        },
+        "typical_request": {
+          "osp_tx_packets_bytes": [
+            99,
+            291,
+            291,
+            291
+          ],
+          "osp_s_per_request": 29.856666666666666,
+          "osp_requests_per_h": 120.57608574299431,
+          "relay_tx_packets_bytes": [
+            403,
+            99,
+            275,
+            275,
+            275,
+            99,
+            99,
+            99
+          ],
+          "relay_s_per_request": 50.894999999999996,
+          "relay_requests_per_h": 70.73386383731211
+        }
+      },
+      "osp_requests_per_h": 120.57608574299431,
+      "relay_before_osp_requests_per_h": 68.48880715327542,
+      "bulletin_packet_bytes": 483,
+      "bulletin_s_per_station": 14.235,
+      "bulletin_osp_tx_min": {
+        "10_stations": 2.3725,
+        "30_stations": 7.117499999999999,
+        "50_stations": 11.8625
+      },
+      "test_window_s_per_station": 50,
+      "test_window_min": {
+        "10_stations": 8.333333333333334,
+        "30_stations": 25.0,
+        "50_stations": 41.666666666666664
+      }
+    },
+    "lxmf_retry": {
+      "largest_own_datagram_bytes": 499,
+      "largest_datagram_cycle_s": 14.581666666666665,
+      "floor_s": 60.0,
+      "max_datagram_bytes": 600,
+      "worst_debt_s": 16.060000000000002,
+      "full_queue_4x_max_datagram_s": 69.59333333333333,
+      "1_hop_round_trip_s": 29.16333333333333,
+      "1_hop_min_interval_empty_network_s": 60.0,
+      "1_hop_min_interval_worst_debt_full_queue_s": 114.81666666666666,
+      "2_hop_round_trip_s": 58.32666666666666,
+      "2_hop_min_interval_empty_network_s": 60.0,
+      "2_hop_min_interval_worst_debt_full_queue_s": 143.98
+    },
+    "relay_w10": {
+      "packets_bytes": {
+        "typical_request": 403,
+        "max_fields_request": 451,
+        "received": 275,
+        "packet_proof": 99
+      },
+      "tx_plus_quiet_s": {
+        "typical_request": 11.873333333333333,
+        "max_fields_request": 13.541666666666668,
+        "received": 8.471666666666666,
+        "packet_proof": 3.4016666666666664
+      },
+      "per_request_s": [
+        27.148333333333333,
+        28.81666666666667
+      ],
+      "fifty_requests_min": [
+        22.623611111111114,
+        24.013888888888893
+      ],
+      "per_retry_s": [
+        11.873333333333333,
+        13.541666666666668
+      ],
+      "status_packet_bytes": 275,
+      "fifty_requests_with_two_status_min": 43.80277777777778,
+      "quiet_10t_throughput_gain": 0.18181818181818188,
+      "tx_plus_quiet_s_by_datagram": {
+        "100b": 3.423333333333333,
+        "250b": 7.301666666666667,
+        "500b": 14.603333333333333,
+        "600b": 17.398333333333333
+      },
+      "fifty_requests_min_at_1200_bit_s": [
+        90.49444444444445,
+        96.05555555555557
+      ],
+      "ramp_ms_per_fragment_assumed": 2.0,
+      "p1_tx_plus_quiet_s_with_ramp": {
+        "100b": 3.475333333333333,
+        "250b": 7.379666666666666,
+        "500b": 14.759333333333332,
+        "600b": 17.580333333333336
+      }
+    },
+    "cold_start_announces": {
+      "announce_bytes": 221,
+      "announce_tx_s": 0.5133333333333333,
+      "announce_cap_share_of_wall_clock": 0.02,
+      "path_request_bytes": 83,
+      "path_request_tx_s": 0.18666666666666668,
+      "test_packet_bytes": 339,
+      "test_exchange_tx_s": 3.9683333333333333,
+      "10_stations": {
+        "network_announce_transmissions": 100,
+        "channel_airtime_min_single_collision_domain": 0.8555555555555555,
+        "per_station_tx_plus_quiet_min": 1.1122222222222222,
+        "per_hop_drain_at_cap_min": 4.277777777777777,
+        "test_window_min": 8.333333333333334,
+        "path_request_airtime_min": [
+          0.11666666666666667,
+          0.4822222222222223
+        ],
+        "test_airtime_min": 0.6613888888888888,
+        "total_airtime_min": [
+          1.633611111111111,
+          1.9991666666666665
+        ],
+        "share_of_test_window": [
+          0.1960333333333333,
+          0.23989999999999997
+        ],
+        "announce_drain_exceeds_window": false
+      },
+      "30_stations": {
+        "network_announce_transmissions": 900,
+        "channel_airtime_min_single_collision_domain": 7.7,
+        "per_station_tx_plus_quiet_min": 3.3366666666666664,
+        "per_hop_drain_at_cap_min": 12.833333333333332,
+        "test_window_min": 25.0,
+        "path_request_airtime_min": [
+          0.35,
+          3.3133333333333335
+        ],
+        "test_airtime_min": 1.9841666666666666,
+        "total_airtime_min": [
+          10.034166666666666,
+          12.997499999999999
+        ],
+        "share_of_test_window": [
+          0.40136666666666665,
+          0.5198999999999999
+        ],
+        "announce_drain_exceeds_window": false
+      },
+      "50_stations": {
+        "network_announce_transmissions": 2500,
+        "channel_airtime_min_single_collision_domain": 21.38888888888889,
+        "per_station_tx_plus_quiet_min": 5.561111111111111,
+        "per_hop_drain_at_cap_min": 21.38888888888889,
+        "test_window_min": 41.666666666666664,
+        "path_request_airtime_min": [
+          0.5833333333333334,
+          8.633333333333335
+        ],
+        "test_airtime_min": 3.3069444444444445,
+        "total_airtime_min": [
+          25.279166666666665,
+          33.32916666666667
+        ],
+        "share_of_test_window": [
+          0.6067,
+          0.7999
+        ],
+        "announce_drain_exceeds_window": false
+      }
     }
   },
   "tcxo_budget_ppm": {

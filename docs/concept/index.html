@@ -65,7 +65,7 @@
 
 <p class="callout"><strong>Wypróbuj stację w przeglądarce:</strong> <a href="https://wici.net.pl/symulator/">symulator</a> uruchamia ten sam program co prawdziwa stacja, z ćwiczeniami gospodarza i stanowiskiem odbiorczym. Uwagi zgłosisz przyciskiem „Zgłoś uwagę” (Issue na GitHubie).</p>
 
-<p><strong>To projekt prototypu 0.5. Stacji jeszcze nie zbudowano ani nie sprawdzono w terenie.</strong> W repozytorium są specyfikacja, model obliczeniowy z testami, projekt płytki nośnej stanowiska deweloperskiego i kod skompilowany dla dwóch stanowisk. Najbliższy cel to pierwsza wymiana zgłoszeń między stacjami i stanowiskiem odbiorczym, a następnie próby w terenie.</p>
+<p><strong>To projekt prototypu 0.5. Stacji jeszcze nie sprawdzono w terenie.</strong> W repozytorium są specyfikacja, model obliczeniowy z testami, projekt płytki stacji, program stacji i programy do prób. Radia testowe przeszły w październiku 2026 r. próbę przy stole i pierwsze próby w budynku, a dwa prototypy na płytce v1 są w montażu u wykonawcy. Najbliższy cel to sprawdzenie radia RNode przy stole, pomiar zasięgu i działająca stacja na biurku (<a href="#ocena-obecnego-stanu">stan prac</a>).</p>
 
 <p><a href="faq.html">Najczęstsze pytania</a> · <a href="https://github.com/tmierzwa/WICI">Repozytorium i kod</a> · <a href="../../CONTRIBUTING.md#od-czego-zacząć">Zadania dla współtwórców</a> · <a href="https://github.com/tmierzwa/WICI/issues">Uwagi i błędy</a></p>
 
@@ -86,11 +86,11 @@
 
 <h2 id="pilotaz">Co sprawdzimy najpierw</h2>
 
-<p>Przed budową stacji planujemy pomiary tras gotowymi urządzeniami 868 MHz oraz ćwiczenie przy stole z gminą i odbiorcą. Pierwszy pilotaż ma objąć 6–8 stacji w trzech miejscach, przez co najmniej trzy miesiące, w tym okres zimowy.</p>
+<p>Przed pilotażem mierzymy zasięg gotowymi radiami RNode, najpierw na własnym terenie, a potem w budynkach wskazanych przez gminę. Równolegle sprawdzamy prototyp stacji na biurku. Pilotaż ma objąć 8 stacji: trzy w sieci (schronienie, przekaźnik i stanowisko odbiorcze), zapas i egzemplarze do badań. Zaczyna się od ćwiczenia przy stole z gminą i trwa co najmniej trzy miesiące, w tym zimę.</p>
 
-<p>Stacje pilotażowe powstaną z gotowych części: płytki ESP32-S3 z radiem LoRa SX1262, pamięci FRAM, ekranu i przycisków. Wybrany profil to LoRa SF7 na kanale 869,525 MHz. Zakres deklaracji zgodności UE kupionych płytek i warunki prób terenowych trzeba ustalić przed pilotażem (D20).</p>
+<p>Stacje pilotażowe powstaną na płytce v2, następczyni płytki prototypu, z gotowymi modułami: ESP32-S3, radiem LoRa SX1262, pamięcią FRAM, ekranem i przyciskami. Profil radiowy to LoRa SF7 na kanale 869,525 MHz. Praca stacji w terenie to oddanie do użytku, więc zespół, jako producent konfiguracji pilotażowej, bada ją według norm zharmonizowanych, zanim stacje wyjdą w teren. Deklaracje producentów modułów pomagają, ale nie zastępują badań (D20).</p>
 
-<p>Pilotaż obejmuje samodzielną stację i stanowisko odbiorcze. Własna płytka R02, drugie wykonanie oraz rozszerzenia z laptopem i routerem czekają na wyniki. Własny profil radiowy P1 pozostaje wariantem zapasowym. Szczegóły: <a href="08-plan-weryfikacji-i-decyzje.html#kolejnosc-prac">kolejność prac</a> i <a href="../spec/odbior.md#minimum-pilotażu">minimum pilotażu</a>.</p>
+<p>Pilotaż obejmuje samodzielną stację i stanowisko odbiorcze. Wyrób, czyli stacja WICI, drugie wykonanie oraz rozszerzenia z laptopem i routerem czekają na wyniki pilotażu. Szczegóły: <a href="08-plan-weryfikacji-i-decyzje.html#kolejnosc-prac">kolejność prac</a> i <a href="../spec/odbior.md#minimum-pilotażu">minimum pilotażu</a>.</p>
 
 <h2 id="dokumenty">Dokumenty</h2>
 
@@ -130,15 +130,21 @@
 
 <h2 id="ocena-obecnego-stanu">Ocena obecnego stanu</h2>
 
-<p>Oprogramowanie stacji ze stosem Reticulum skompilowano dla <a href="../../hardware/dev-bench/README.md">stanowisk deweloperskich A i B</a> z modułami P1. Nie uruchomiono go jeszcze na sprzęcie. Interfejs LoRa, integracja LXMF na stacji i aplikacja stanowiska odbiorczego pozostają do wykonania.</p>
+<p>Plan ma osiem kroków (<a href="08-plan-weryfikacji-i-decyzje.html#kolejnosc-prac">kolejność prac</a>). Stan na 2026-10-29:</p>
+
+<ul>
+  <li><strong>Krok 1, radia testowe: wykonany.</strong> Dwa zestawy XIAO ESP32-S3 z Wio SX1262 wymieniły 2026-10-10 po 100 pakietów w każdą stronę przy stole i przeszły pierwsze próby w budynku przy mocy 0 dBm (<a href="../../hardware/radio-pair/README.md">radia testowe</a>). Ustawienia startu radia i poprawki USB przeszły do programu diagnostycznego i programu stacji.</li>
+  <li><strong>Krok 2, radia RNode przy stole: w toku.</strong> Dwa zestawy RAK4631 z SX1262 zamówiono 2026-10-29; po dostawie dostaną firmware RNode i posłużą do pomiarów zasięgu.</li>
+  <li><strong>Krok 3, pomiar ogólny: w toku przygotowań.</strong> Zaczyna się po kroku 2.</li>
+  <li><strong>Krok 4, prototyp na płytce v1: w toku.</strong> Z zamówienia 2026-10-10 jest pięć płytek v1. Dwa prototypy montuje i odbiera programem diagnostycznym zewnętrzny wykonawca (<a href="../../hardware/l0-diagnostic/README.md">program diagnostyczny</a>). Przy montażu wyszła niezgodność taśmy ekranu (F118), poprawiona w projekcie v1.1. Program stacji ma rdzeń zgodny z Reticulum, który wysyła zgłoszenia jako podpisane wiadomości LXMF; sprawdzono go na komputerze wobec Reticulum w Pythonie, ale jeszcze nie na płytce (<a href="../../firmware/README.md">program stacji</a>). Do wykonania pozostają interfejs LoRa w stosie i aplikacja stanowiska odbiorczego.</li>
+  <li><strong>Kroki 5–8: przed nami.</strong> Pomiar w gminie, stacje pilotażowe na płytce v2, pilotaż i wyrób.</li>
+</ul>
 
 <p>Wyniki modelu i projekt CAD pozwalają planować próby. Nie potwierdzają jeszcze łączności na 1 km, działania całego stosu radiowego ani 48 godzin pracy na ogniwach. Konkretne przeszkody i warunki ich zamknięcia opisuje <a href="../review.md">przegląd techniczny</a>.</p>
 
 <p>Próby mają odpowiedzieć na trzy pytania: czy zgłoszenie dotrze przez rzeczywistą sieć, czy stacja wytrzyma co najmniej 48 godzin na ogniwach i czy dyżurny zdoła przyjąć zgłoszenie oraz przekazać je do pomocy. <a href="08-plan-weryfikacji-i-decyzje.html">Plan weryfikacji</a> podaje metody i kryteria zaliczenia.</p>
 
-<p>Otwarte licencje i wymóg kompletnej paczki źródeł (T7) mają umożliwić kontynuację prac przez inne osoby. Docelowe urządzenia organizator sieci ma kupować od producenta z umową wsparcia.</p>
-
-<p>Założenia, metody prób i wyniki publikujemy, żeby każdy mógł je sprawdzić i rozwijać.</p>
+<p>Otwarte licencje i wymóg kompletnej paczki źródeł (T7) mają umożliwić kontynuację prac przez inne osoby. Docelowe urządzenia organizator sieci ma kupować od producenta z umową wsparcia. Założenia, metody prób i wyniki publikujemy, żeby każdy mógł je sprawdzić i rozwijać.</p>
 
 <h2 id="wspolpraca">Kto pracuje nad projektem</h2>
 
@@ -152,7 +158,7 @@
 
 <p lang="en"><em>In English:</em> WICI is an open-source project for an emergency radio station for shelters in Poland, designed to send short requests for help when power, mobile networks and the internet are down. Stations would relay neighbouring stations’ messages; a receiving post with a computer and a duty officer would pass requests to emergency services.</p>
 
-<p lang="en">The project is at the prototype design stage (0.5). No station has been built or field-tested. The planned pilot uses off-the-shelf ESP32-S3 boards with an SX1262 LoRa radio. Range and battery life remain to be measured. One person maintains the project with AI assistance; independent review and contributions are welcome. <a href="https://github.com/tmierzwa/WICI">Repository</a>.</p>
+<p lang="en">The project is at the prototype design stage (0.5). The first desk prototypes are being assembled; nothing has been field-tested yet. The planned pilot uses a project carrier board with off-the-shelf ESP32-S3 and SX1262 LoRa modules. Range and battery life remain to be measured. One person maintains the project with AI assistance; independent review and contributions are welcome. <a href="https://github.com/tmierzwa/WICI">Repository</a>.</p>
 
 <p>Licencje: <a href="../../LICENSE.md">mapa projektu</a>. Analizy są dostępne na licencji CC-BY-4.0, a rozdział 05, jako opis konstrukcji komunikacji, na licencji CERN-OHL-P-2.0.</p>
 </article>
