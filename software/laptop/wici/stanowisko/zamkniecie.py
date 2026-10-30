@@ -29,9 +29,12 @@ from . import wzorzec
 COLUMNS = ("czas", "rodzaj", "stacja", "numer", "id", "rewizja", "kategoria", "osoby", "pilnosc", "adres", "tresc",
            "stan", "adresat", "potwierdzil", "kanal", "dyzurny")
 # Zdarzenia rejestru z dziennika działań; logowania, ogłoszenia i nowe hasła zostają tylko w dzienniku.
-REGISTER = {"stan_2", "stan_3", "stan_4", "stan_5", "stan_6", "odpowiedz", "komunikat", "kwarantanna_approve",
+REGISTER = {"stan_2", "stan_3", "stan_4", "stan_5", "stan_6", "odpowiedz", "komunikat", "cisza", "kwarantanna_approve",
             "kwarantanna_reject", "zaufana_dodana", "zaufana_usunieta", "kopia_drugi_nosnik", "odtworzenie",
             "odzyskanie_koniec", "przekazanie_zmiany", "eksport", "zamkniecie", "kopie_usuniete"}
+# Cisza radiowa wpisywana przez dyżurnego (stanowisko-osp.md, „Eksport rejestru”: wiersz „cisza”); stan węzła
+# odczytany z jego portu diagnostyki dojdzie osobno.
+SILENCE = {"polecenie": "polecenie ciszy otrzymane", "wlaczona": "cisza włączona na węźle", "odwolana": "cisza odwołana"}
 ARCHIVE_WORDS = 6
 ARCHIVE_AAD = b"wici archiwum"
 ARCHIVE_KIND = "archiwum-stanowiska"
@@ -80,6 +83,9 @@ def register(db):
             r["adresat"] = facts.get("adresat", "")
             r["potwierdzil"] = ", ".join(facts[k] for k in ("podmiot", "funkcja") if k in facts)
             r["kanal"] = facts.get("kanal", "")
+        elif op == "cisza":
+            facts = json.loads(detail)
+            r["tresc"] = f"{SILENCE[facts['stan']]}: {facts['organ']}, {facts['kiedy']}"
         elif op == "komunikat" and bulletins.get(mid):
             r["tresc"] = wzorzec.decode_message(bulletins[mid])[4]
         rows.append((at, r))
@@ -153,6 +159,19 @@ def open_archive(path, password, target):
     with zipfile.ZipFile(io.BytesIO(syscrypto.open_(key, sealed, head))) as z:
         for name in names:
             write_new(target, name, z.read(name))
+
+
+def remove_exports(directory):
+    """Plain register CSV files out of the export directory at ZAMKNIJ ZDARZENIE (the archive has the register):
+    (names removed, names that stayed)."""
+    removed, left = [], []
+    for path in sorted(Path(directory).glob("rejestr-*.csv")):
+        try:
+            path.unlink()
+            removed.append(path.name)
+        except OSError:
+            left.append(path.name)
+    return removed, left
 
 
 def purge(db):

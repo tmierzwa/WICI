@@ -91,6 +91,7 @@ function render() {
   $("who").appendChild(el("button", {text: "Wyloguj", onclick: function () { action("/api/operator/logout"); }}));
   badge(state.saved ? "zapis na nośniku: OK" : "ZAPIS NA NOŚNIKU NIE DZIAŁA", state.saved);
   badge(state.node.online ? "stacja połączona" : "BRAK STACJI", state.node.online);
+  if (state.silence) badge("CISZA RADIOWA (" + state.silence.organ + ", " + state.silence.kiedy + ")", false);
   if (alarms().length) {
     $("badges").appendChild(el("button", {class: "alarm", text: "Wycisz alarm (" + alarms().length + ")", onclick: function () {
       alarms().forEach(function (r) { silenced[r.id] = true; }); render(); }}));
@@ -160,6 +161,27 @@ function secondPerson() {
     values: function () { return {account2: account.value, password2: password.value}; }};
 }
 
+// Cisza radiowa wpisywana przez dyżurnego: polecenie, włączenie na węźle, odwołanie (wiersz „cisza” w rejestrze).
+function silenceForm(view) {
+  var s = state.silence, error = el("p", {class: "error"});
+  view.appendChild(el("h3", {text: "Cisza radiowa"}));
+  view.appendChild(el("p", {text: s ? "Wpisana: " + s.organ + ", " + s.kiedy + " (" + s.account + ", " + time(s.at) + "). Przełącznik CISZA na węźle przestawia się ręcznie."
+    : "Brak wpisanej ciszy. Polecenie ciszy wydaje i odwołuje wójt; przełącznik CISZA na węźle przestawia się ręcznie."}));
+  var organ = el("input", {placeholder: "kto wydał polecenie, np. wójt gminy"}), when = el("input", {placeholder: "od kiedy, np. 30.10 13:50"});
+  var send = el("input", {type: "checkbox"});
+  send.checked = true;
+  var state_ = el("select", {});
+  [["polecenie", "polecenie ciszy otrzymane"], ["wlaczona", "cisza włączona na węźle"], ["odwolana", "cisza odwołana"]]
+    .forEach(function (o) { state_.appendChild(el("option", {value: o[0], text: o[1]})); });
+  if (s) state_.value = "odwolana";
+  view.appendChild(state_); view.appendChild(organ); view.appendChild(when);
+  view.appendChild(el("label", {}, send, el("span", {text: " wyślij komunikat do wszystkich zaufanych stacji"})));
+  view.appendChild(el("button", {class: "primary", text: "Wpisz", onclick: function () {
+    action("/api/operator/silence", {state: state_.value, organ: organ.value, kiedy: when.value, bulletin: send.checked}, error);
+  }}));
+  view.appendChild(error);
+}
+
 var VIEWS = {
   reports: function (view) {
     if (!state.reports.length) view.appendChild(el("p", {text: "Brak zgłoszeń."}));
@@ -222,6 +244,8 @@ var VIEWS = {
     view.appendChild(error);
   },
   bulletins: function (view) {
+    silenceForm(view);
+    view.appendChild(el("h3", {text: "Komunikat"}));
     var text = el("input", {placeholder: "komunikat do wszystkich zaufanych stacji (do 192 bajtów)", maxlength: "192", class: "wide"});
     var error = el("p", {class: "error"});
     view.appendChild(el("p", {text: "Komunikat idzie osobno do każdej zaufanej stacji, po kolei (dla 50 stacji kilka minut)."}));
@@ -247,7 +271,8 @@ var VIEWS = {
     var h = state.handover, error = el("p", {class: "error"});
     [["Otwarte zgłoszenia", h.open], ["Stan 4 bez potwierdzenia skierowania pomocy", h.forwarded_unconfirmed],
      ["Niewysłane intencje", h.unsent], ["Kwarantanna", h.quarantine], ["Alarmy przejęcia stacji", h.removed_alarm],
-     ["Najnowsza kopia na dysku komputera", ago(state.copy_age_s) + " temu"]]
+     ["Najnowsza kopia na dysku komputera", ago(state.copy_age_s) + " temu"],
+     ["Cisza radiowa", state.silence ? state.silence.organ + ", " + state.silence.kiedy : "nie"]]
       .forEach(function (p) { view.appendChild(el("p", {text: p[0] + ": " + p[1]})); });
     var path = el("input", {placeholder: "katalog drugiego nośnika, np. /media/drugi albo E:\\"});
     view.appendChild(path);
