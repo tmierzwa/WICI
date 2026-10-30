@@ -60,6 +60,7 @@ import tempfile
 import threading
 import time
 
+import rnode_emulator  # tools/rnode_emulator.py: radio RNode na pseudoterminalu
 import rnode_framing   # tools/rnode_framing.py: wzorzec ramki RNode
 
 APP_NAME = "wici"
@@ -68,7 +69,6 @@ NETWORK_KEY = "5749434954335f696661635f74657374"  # 16 B test key, not a field k
 TABLE_MAX = 256    # RNS_PATH_TABLE_MAX obrazu (platformio.ini)
 PINNED_TABLE = 6   # limit tablic w próbie ochrony wpisu odbiorcy (krok 7)
 LORA_STEPS = {"1", "2", "3", "4", "5", "B", "J", "D"}   # domyślne kroki z --link lora
-LORA_HZ = 869525000   # profil LoRa pilotażu (lora_profile.h): 869,525 MHz, 125 kHz, SF7, CR 4/5, 13 dBm
 MAX_DATAGRAM = rnode_framing.MTU    # HW_MTU RNodeInterface: pakiet z IFAC 16 B
 MAX_RAW = MAX_DATAGRAM - 16
 OWN_ANNOUNCE_APP_DATA = 316   # najwięcej danych aplikacji we własnym ogłoszeniu stacji (ogłoszenie 483 B + IFAC 16 B)
@@ -177,25 +177,10 @@ def main():
     emulator = None
     if lora:
         # Radio RNode: pseudoterminal, który RNodeInterface otwiera jak port szeregowy; ramki w eterze idą UDP do stacji.
-        emulator = subprocess.Popen([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "rnode_emulator.py"),
-                                     "--listen", str(python_port), "--peer", str(station_port)],
-                                    stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+        emulator, python_pty = rnode_emulator.spawn(python_port, station_port)
         # Po wyjściu z Reticulum (jego procedura wyjścia wysyła do radia polecenie "leave"): atexit idzie od końca.
-        atexit.register(lambda: (emulator.stdin.close(), emulator.wait(5)))
-        python_pty = json.loads(emulator.stdout.readline())["pty"]
-    interface = f"""  [[LoRa RNode]]
-    type = RNodeInterface
-    enabled = Yes
-    port = {python_pty if lora else ""}
-    frequency = {LORA_HZ}
-    bandwidth = 125000
-    txpower = 13
-    spreadingfactor = 7
-    codingrate = 5
-    flow_control = No
-    passphrase = {NETWORK_KEY}
-    ifac_size = 128
-""" if lora else f"""  [[P1 bridge]]
+        atexit.register(lambda: rnode_emulator.stop(emulator))
+    interface = rnode_framing.rnode_interface(python_pty, NETWORK_KEY) if lora else f"""  [[P1 bridge]]
     type = UDPInterface
     enabled = Yes
     listen_ip = 127.0.0.1

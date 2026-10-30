@@ -333,7 +333,7 @@ Testy na komputerze: `tests/test_loraframe.py` (ramki bajt po bajcie wobec wzorc
 
 ### Krok 4: interfejs LoRa z radiem RNode
 
-Procedura (**niewykonana**; raport w Issue z etykietą `próba`). Sprzęt: prototyp z `l0` (potem z `l0-port`), RAK4631 z oficjalnym firmware RNode ([hardware/rnode](../hardware/rnode/README.md)), dwa komputery z Reticulum w Pythonie `e40191b`, drugi prototyp do CAD. Najpierw punkty 1–3 [próby prototypu](#stacja-l0-l0). Po stronie RNode interfejs jak w `tools/rns_interop.py`:
+Procedura (**niewykonana**; raport w Issue z etykietą `próba`). Sprzęt: prototyp z `l0` (potem z `l0-port`), RAK4631 z oficjalnym firmware RNode ([hardware/rnode](../hardware/rnode/README.md)), dwa komputery z Reticulum w Pythonie `e40191b`, drugi prototyp do CAD. Najpierw punkty 1–3 [próby prototypu](#stacja-l0-l0). Po stronie RNode interfejs jak w `tools/rns_interop.py` i `tools/rnode_trial.py` (oba biorą go z `rnode_framing.rnode_interface`):
 
 ```ini
   [[LoRa RNode]]
@@ -351,7 +351,22 @@ Procedura (**niewykonana**; raport w Issue z etykietą `próba`). Sprzęt: proto
 `ifac_size` podaje się w bitach; 128 daje IFAC 16 B jak w stacji (domyślne 8 B stacja odrzuci jako `ifac_invalid`).
 
 1. **Wymiana:** ogłoszenia i pakiety z dowodem w obie strony (stacja w zwykłej konfiguracji, `RNS`: przyrost `paths`, `rx_ok`, `ifac_invalid` 0).
-2. **100 datagramów 508 B w każdą stronę przy obciążeniu kryptografią.** Z RNode do stacji: 100 ogłoszeń nowych celów z danymi aplikacji 325 B (pakiet 492 B, jak krok B `rns_interop.py`); każde stacja weryfikuje podpisem Ed25519. Ze stacji do RNode: stacja jako węzeł stanowiska, a komputer za USB ogłasza cele z danymi 309 B. Stacja retransmituje je z identyfikatorem transportu (16 B), więc w eterze idzie 492 B z IFAC 16 B; wiersze `loratx` z `"len":508,"frames":2`. Tempo wyznacza limit ogłoszeń stacji (`ann_held`), więc ta strona trwa dłużej. Do wysłania 100 ogłoszeń 325 B przez prawdziwy `RNodeInterface` i 309 B z komputera za USB stacji potrzebny jest mały skrypt, którego jeszcze nie ma (`rns_interop.py` steruje tylko emulatorem); do napisania przed krokiem 4. Zapisać przed i po (`P1`, `INFO`, `RNS`):
+2. **100 datagramów 508 B w każdą stronę przy obciążeniu kryptografią.** Z RNode do stacji: 100 ogłoszeń nowych celów z danymi aplikacji 325 B (pakiet 492 B, jak krok B `rns_interop.py`); każde stacja weryfikuje podpisem Ed25519. Ze stacji do RNode: stacja jako węzeł stanowiska, a komputer za USB ogłasza cele z danymi 309 B. Stacja retransmituje je z identyfikatorem transportu (16 B), więc w eterze idzie 492 B z IFAC 16 B; wiersze `loratx` z `"len":508,"frames":2`. Tempo wyznacza limit ogłoszeń stacji (`ann_held`), więc ta strona trwa dłużej. Ogłoszenia wysyła i liczy `tools/rnode_trial.py` (Python z Reticulum `e40191b` i pyserial, jak `rns_interop.py`); każde ogłoszenie niesie znacznik, identyfikator przebiegu i numer, a wynik idzie do pliku JSON (`--out`) do raportu. Laptop A ma RAK4631 z RNode, laptop B stację (pierwszy port USB to konsola diagnostyczna, drugi port danych węzła stanowiska); klucz sieci stacji w pliku `klucz.txt` (32 cyfry szesnastkowe):
+
+   ```bash
+   # Z RNode do stacji. B: liczniki przed
+   .venv-rns/bin/python firmware/tools/rnode_trial.py station-counters --station-diag /dev/cu.usbmodem1101 --out przed.json
+   # A: 100 ogłoszeń co 3 s (około 5 min)
+   .venv-rns/bin/python firmware/tools/rnode_trial.py rnode-announce --port /dev/cu.usbmodem2101 --key-file klucz.txt --out rnode-announce.json
+   # B: liczniki po i kryteria z przyrostów
+   .venv-rns/bin/python firmware/tools/rnode_trial.py station-counters --station-diag /dev/cu.usbmodem1101 --before przed.json --direction rnode --out po.json
+   # Ze stacji do RNode (stacja jako węzeł stanowiska). A: nasłuch do 100 ogłoszeń
+   .venv-rns/bin/python firmware/tools/rnode_trial.py rnode-listen --port /dev/cu.usbmodem2101 --key-file klucz.txt --out rnode-listen.json
+   # B: 100 ogłoszeń przez USB co 90 s (około 2,5 h), liczniki i wiersze loratx z konsoli przez całą próbę
+   .venv-rns/bin/python firmware/tools/rnode_trial.py usb-announce --port /dev/cu.usbmodem1103 --station-diag /dev/cu.usbmodem1101 --out usb-announce.json
+   ```
+
+   Gdy RNode i stacja są przy jednym laptopie, `rnode-announce` też przyjmuje `--station-diag` i zapisuje liczniki sam. Odstępy domyślne wynikają ze stacji: z RNode żeton weryfikacji ogłoszenia co 1 s (`ann_limited`), przez USB limit ogłoszeń 2% (około 42 s na 508 B) razy dwa nadania każdego ogłoszenia (ponowienie, bo słuchacz bez transportu go nie powtarza). Na komputerze narzędzie przechodzi próbę z emulatorem RNode i programem `host` (`RnodeTrialToolTests` w `tests/test_rns_stack_lora.py`, po 3 ogłoszenia w każdą stronę); to sprawdza narzędzie, nie radio. Zapisać przed i po (`P1`, `INFO`, `RNS`; narzędzie robi to samo i oznacza każde kryterium jako spełnione, niespełnione albo brakujące):
    - po stronie stacji: przyrost `rx_datagrams` (≥99 ze 100), przyrost `header_only` (trzecia ramka RNode, jedna na datagram), `rx_late` = 0, `rx_ring_overflow`, `assembly_timeout`, `split_lost`, `loop_max_ms`, `rx_service_max_ms`, `rx_stack_free`;
    - po stronie Pythona: liczba przyjętych ogłoszeń ze stacji (≥99 ze 100);
    - odstęp między nadaniami stacji wobec długu (`tx_wait_ms` w `loratx`, około 10 s po 508 B).
