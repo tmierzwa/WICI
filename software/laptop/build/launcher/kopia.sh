@@ -32,3 +32,20 @@ wici_copy() {
   fi
   root=$dest
 }
+
+# wici_runnable <środowisko>: interpreter z kopii, a gdy się tam nie uruchamia (katalog domowy z noexec,
+# AppLocker albo antywirus blokujący programy z profilu użytkownika), z pamięci. Wołane po wici_copy;
+# ustawia python i root, a przy pracy z pamięci WICI_Z_PAMIECI=1 (aplikacja może wtedy prosić, żeby nie
+# wyjmować pamięci). Wynik 1, gdy interpreter nie uruchamia się nigdzie.
+wici_runnable() {
+  python="$root/runtime/$1/bin/python3.14"
+  if [ "$root" != "$src" ] && ! "$python" -c "" 2>/dev/null; then
+    root=$src
+    python="$root/runtime/$1/bin/python3.14"
+  fi
+  if [ "$root" = "$src" ]; then
+    export WICI_Z_PAMIECI=1
+    echo "WICI: aplikacja działa z pamięci, nie wyjmuj jej" >&2
+  fi
+  "$python" -c "" 2>/dev/null
+}

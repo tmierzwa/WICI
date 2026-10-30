@@ -34,6 +34,12 @@ from .usbproto import CONTRACT, Station
 from .web import Panel, serve
 
 
+def from_stick():
+    """True when START ran the application from the stick, because the copy on the disk did not start
+    (WICI_Z_PAMIECI, build/launcher/kopia.sh and start-windows.c): the stick must then stay in."""
+    return os.environ.get("WICI_Z_PAMIECI") == "1"
+
+
 def info():
     """What the panel shows in its footer and the limits it counts while typing (configdoc stays the authority)."""
     return {"version": VERSION, "python": sys.version.split()[0], "platform": sys.platform,
@@ -173,6 +179,7 @@ def selftest():
     subprocess.run([sys.executable, "-c", "pass"], check=True, timeout=30)
     checks.append(f"stdlib {os.path.normpath(next((p for p in sys.path if p.endswith('.zip')), '-'))}")
     checks.append(f"usb {usb_root()}")   # START uruchamia kopię z dysku i podaje pamięć w WICI_USB
+    checks.append(f"z_pamieci {int(from_stick())}")   # 1: kopia na dysku nie uruchomiła się, START użył pamięci
     assert unicodedata.normalize("NFC", "Szkoła") == "Szkoła"
     if configdoc.unicode_warning():                 # tekst sprawdzany inną wersją Unicode niż w stacji
         print(f"WICI: {configdoc.unicode_warning()}", file=sys.stderr, flush=True)

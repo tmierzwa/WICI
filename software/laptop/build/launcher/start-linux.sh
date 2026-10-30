@@ -11,10 +11,9 @@ if [ "$(uname -m)" != x86_64 ]; then
 fi
 . "$here/runtime/kopia.sh"
 wici_copy "$here" linux-x86_64 "${XDG_CACHE_HOME:-$HOME/.cache}/wici" ||
-  echo "WICI: nie udało się skopiować środowiska na dysk; aplikacja działa z pamięci, nie wyjmuj jej" >&2
-python="$root/runtime/linux-x86_64/bin/python3.14"
-if ! "$python" -c "" 2>/dev/null; then
-  echo "WICI: nie można uruchomić środowiska z $root" >&2
+  echo "WICI: nie udało się skopiować środowiska na dysk" >&2
+if ! wici_runnable linux-x86_64; then
+  echo "WICI: nie można uruchomić środowiska ani z kopii na dysku, ani z pamięci" >&2
   exit 1
 fi
 cd "$root" || exit 1   # katalog roboczy poza pamięcią: nie blokuje jej odmontowania

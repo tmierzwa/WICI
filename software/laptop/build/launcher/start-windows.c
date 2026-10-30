@@ -4,7 +4,8 @@
 // manifestu> i uruchamia aplikację z tej kopii, z WICI_USB = katalog pamięci, więc wyjęcie pamięci jej nie
 // zamyka (docs/spec/oprogramowanie.md, „Pakiet USB”). Kopia powstaje w katalogu tymczasowym z manifestem na
 // końcu i dostaje swoją nazwę jednym przemianowaniem, jak w runtime/kopia.sh dla macOS i Linuksa. Gdy
-// kopiowanie się nie uda, aplikacja działa z pamięci. Przy --selftest START czeka na koniec i zwraca kod
+// kopiowanie się nie uda albo system nie pozwoli uruchomić programu z profilu użytkownika (AppLocker,
+// antywirus), aplikacja działa z pamięci, z WICI_Z_PAMIECI=1, jak w kopia.sh. Przy --selftest START czeka na koniec i zwraca kod
 // wyjścia (tak sprawdza go CI); inaczej kończy się po 2 s działania aplikacji, żeby sam nie działał z pamięci
 // przez cały czas pracy. Błędy startu pokazuje sama aplikacja i kończy się kodem 3; START pokazuje komunikat
 // przy innym kodzie różnym od 0 (Python nie ruszył albo przerwał przed aplikacją), poza --selftest, które nie
@@ -160,6 +161,24 @@ static BOOL copyToDisk(const wchar_t* dir, wchar_t* root) {
     return TRUE;
 }
 
+// Aplikacja z katalogu base (kopia albo pamięć): runtime\windows\pythonw.exe i app\wici.pyz. Katalog roboczy to
+// base: przy kopii nie pamięć, bo otwarty katalog na pamięci blokowałby jej bezpieczne usunięcie.
+static BOOL launch(const wchar_t* base, const wchar_t* extra, PROCESS_INFORMATION* pi) {
+    wchar_t python[PATH_LEN + 40], app[PATH_LEN + 40];
+    swprintf(python, sizeof(python) / sizeof(python[0]), L"%ls\\runtime\\windows\\pythonw.exe", base);
+    swprintf(app, sizeof(app) / sizeof(app[0]), L"%ls\\app\\wici.pyz", base);
+    size_t len = wcslen(python) + wcslen(app) + wcslen(extra) + 32;
+    wchar_t* cmd = (wchar_t*)HeapAlloc(GetProcessHeap(), 0, len * sizeof(wchar_t));
+    if (!cmd) return FALSE;
+    swprintf(cmd, len, L"\"%ls\" -X utf8 \"%ls\" %ls", python, app, extra);
+    STARTUPINFOW si;
+    ZeroMemory(&si, sizeof(si));
+    si.cb = sizeof(si);
+    BOOL ok = CreateProcessW(python, cmd, NULL, NULL, FALSE, 0, NULL, base, &si, pi);
+    HeapFree(GetProcessHeap(), 0, cmd);
+    return ok;
+}
+
 int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, PWSTR args, int show) {
     (void)inst; (void)prev; (void)args; (void)show;
     wchar_t dir[PATH_LEN], root[PATH_LEN], python[PATH_LEN + 40], app[PATH_LEN + 40];
@@ -174,25 +193,18 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, PWSTR args, int show) {
         fail(L"Brak plików aplikacji obok programu START. Uruchom START z kompletnej pamięci USB WICI.");
         return 1;
     }
-    wcscpy(root, dir);
-    if (copyToDisk(dir, root)) {
-        swprintf(python, sizeof(python) / sizeof(python[0]), L"%ls\\runtime\\windows\\pythonw.exe", root);
-        swprintf(app, sizeof(app) / sizeof(app[0]), L"%ls\\app\\wici.pyz", root);
-    }
-    SetEnvironmentVariableW(L"WICI_USB", dir);   // dziedziczy proces aplikacji
     const wchar_t* extra = rest(GetCommandLineW());
     BOOL selftest = wcsstr(extra, L"--selftest") != NULL;
-    size_t len = wcslen(python) + wcslen(app) + wcslen(extra) + 32;
-    wchar_t* cmd = (wchar_t*)HeapAlloc(GetProcessHeap(), 0, len * sizeof(wchar_t));
-    if (!cmd) { fail(L"Za mało pamięci, aby uruchomić aplikację WICI."); return 1; }
-    swprintf(cmd, len, L"\"%ls\" -X utf8 \"%ls\" %ls", python, app, extra);
-    STARTUPINFOW si;
+    SetEnvironmentVariableW(L"WICI_USB", dir);   // dziedziczy proces aplikacji
     PROCESS_INFORMATION pi;
-    ZeroMemory(&si, sizeof(si));
-    si.cb = sizeof(si);
-    // Katalog roboczy to kopia, nie pamięć: otwarty katalog na pamięci blokowałby jej bezpieczne usunięcie.
-    if (!CreateProcessW(python, cmd, NULL, NULL, FALSE, 0, NULL, root, &si, &pi)) {
-        fail(L"Nie udało się uruchomić aplikacji WICI.");
+    BOOL started = FALSE;
+    if (copyToDisk(dir, root)) started = launch(root, extra, &pi);
+    if (!started) {
+        SetEnvironmentVariableW(L"WICI_Z_PAMIECI", L"1");   // aplikacja może prosić, żeby nie wyjmować pamięci
+        started = launch(dir, extra, &pi);
+    }
+    if (!started) {
+        fail(L"Nie udało się uruchomić aplikacji WICI ani z kopii na dysku, ani z pamięci USB. Użyj innego laptopa.");
         return 1;
     }
     CloseHandle(pi.hThread);

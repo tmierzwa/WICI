@@ -62,6 +62,7 @@ jobs:
           sh "usb ż/START-LINUX.sh" --selftest | tee selftest.txt
           grep -q "stdlib .*/.cache/wici/.*/runtime/python314.zip" selftest.txt
           grep -q "usb .*/usb ż" selftest.txt
+          grep -q "z_pamieci 0" selftest.txt
           chmod -x "usb ż/runtime/linux-x86_64/bin/python3.14"   # pamięć bez prawa wykonywania: ta sama kopia
           sh "usb ż/START-LINUX.sh" --selftest | tee selftest-copy.txt
           grep -q "stdlib .*/.cache/wici/.*/runtime/python314.zip" selftest-copy.txt
@@ -80,6 +81,7 @@ jobs:
           "usb ż/START-MAC.app/Contents/MacOS/START" --selftest | tee selftest.txt
           grep -q "stdlib .*/Library/Caches/WICI/.*/runtime/python314.zip" selftest.txt
           grep -q "usb .*/usb ż" selftest.txt
+          grep -q "z_pamieci 0" selftest.txt
           # Jak po dwukrotnym kliknięciu: przez LaunchServices, dwa razy.
           for i in 1 2; do
             open -W --stdout "$PWD/open-$i.txt" --stderr "$PWD/open-$i.txt" "usb ż/START-MAC.app" --args --selftest

@@ -1624,7 +1624,7 @@ class BuildPinsTest(unittest.TestCase):
         win = (LAPTOP / "build" / "launcher" / "start-windows.c").read_text(encoding="utf-8")
         minor = build_usb.MINOR
         self.assertIn(f"/bin/python{minor}", mac)
-        self.assertIn(f"runtime/linux-x86_64/bin/python{minor}", linux)
+        self.assertIn("wici_runnable linux-x86_64", linux)   # ścieżkę interpretera składa kopia.sh
         copy = (LAPTOP / "build" / "launcher" / "kopia.sh").read_text(encoding="utf-8")
         self.assertIn("runtime\\\\windows\\\\pythonw.exe", win)
         self.assertIn(f"/bin/python{minor}", copy)
@@ -1637,6 +1637,36 @@ class BuildPinsTest(unittest.TestCase):
             self.assertIn("WICI_USB", text)
         for text in (mac, linux):
             self.assertIn('. "$here/runtime/kopia.sh"', text)
+
+    @unittest.skipIf(sys.platform == "win32", "runtime/kopia.sh is for macOS and Linux")
+    def test_runs_from_the_stick_when_the_copy_does_not_start(self):
+        script = LAPTOP / "build" / "launcher" / "kopia.sh"
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            stick, cache = tmp / "pamięć", tmp / "cache"
+            for rel, text in (("runtime/rt/bin/python3.14", "#!/bin/sh\nexit 0\n"), ("runtime/python314.zip", "lib"),
+                              ("runtime/VERSION", "3.14.8\n"), ("app/wici.pyz", "app"), ("build-manifest.json", "1")):
+                (stick / rel).parent.mkdir(parents=True, exist_ok=True)
+                (stick / rel).write_text(text)
+            (stick / "runtime/rt/bin/python3.14").chmod(0o755)
+
+            def run():
+                r = subprocess.run(["sh", "-c", f'. "{script}"; wici_copy "$1" rt "$2"; wici_runnable rt; '
+                                    'echo "$? $root ${WICI_Z_PAMIECI:-0}"', "sh", str(stick), str(cache)],
+                                   capture_output=True, text=True, check=True)
+                code, rest = r.stdout.strip().split(" ", 1)
+                root, flag = rest.rsplit(" ", 1)
+                return int(code), Path(root), flag, r.stderr
+
+            code, root, flag, _ = run()
+            self.assertEqual((code, root.parent, flag), (0, cache, "0"))
+            # Kopia nie uruchamia się (katalog domowy z noexec, blokada programów z profilu): pamięć.
+            (root / "runtime/rt/bin/python3.14").write_text("#!/bin/sh\nexit 1\n")
+            code, root, flag, err = run()
+            self.assertEqual((code, root, flag), (0, stick, "1"))
+            self.assertIn("nie wyjmuj", err)
+            (stick / "runtime/rt/bin/python3.14").write_text("#!/bin/sh\nexit 1\n")   # nigdzie: błąd
+            self.assertEqual(run()[0], 1)
 
     @unittest.skipIf(sys.platform == "win32", "runtime/kopia.sh is for macOS and Linux")
     def test_copy_to_disk_reuses_and_replaces_by_build(self):

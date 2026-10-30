@@ -26,8 +26,11 @@ if [ ! -f "$here/runtime/$runtime/bin/python3.14" ] || [ ! -f "$here/runtime/kop
 fi
 . "$here/runtime/kopia.sh"
 wici_copy "$here" "$runtime" "$HOME/Library/Caches/WICI" ||
-  echo "WICI: nie udało się skopiować środowiska na dysk; aplikacja działa z pamięci" >&2
-python="$root/runtime/$runtime/bin/python3.14"
+  echo "WICI: nie udało się skopiować środowiska na dysk" >&2
+if ! wici_runnable "$runtime"; then
+  alert "Aplikacja WICI nie uruchomiła się ani z kopii na dysku, ani z pamięci USB. Użyj innego laptopa."
+  exit 1
+fi
 cd "$root" || exit 1   # katalog roboczy poza pamięcią: nie blokuje jej wysunięcia
 export WICI_USB="$here"
 for arg; do   # starszy macOS i pierwsze „Otwórz mimo to” dodają -psn_…, którego aplikacja nie zna
