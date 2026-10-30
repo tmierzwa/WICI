@@ -236,10 +236,12 @@ def stdlib_from_pbs(archive, tmp):
 # ---- aplikacja i programy START --------------------------------------------------------------
 
 def app_file(rel):
-    """Whether a file of wici/ goes into wici.pyz: no caches, dotfiles or editor and patch leftovers."""
+    """Whether a file of wici/ goes into wici.pyz: no caches, dotfiles or editor and patch leftovers, and not
+    the receiving station application (wici/stanowisko: Reticulum and LXMF, its own package, PLAN.md S10)."""
     parts = PurePosixPath(rel).parts
     name = parts[-1]
     return not (any(p.startswith(".") or p == "__pycache__" for p in parts) or name.startswith("#")
+                or parts[:2] == ("wici", "stanowisko")
                 or name.endswith(("~", ".pyc", ".swp", ".bak", ".orig", ".rej", ".tmp")))
 
 
@@ -299,6 +301,8 @@ def launchers(out, names):
         app = out / "START-MAC.app" / "Contents"
         write(app / "Info.plist", INFO_PLIST.format(version=APP_VERSION).encode())
         write(app / "MacOS" / "START", (HERE / "launcher" / "start-mac.sh").read_bytes(), executable=True)
+    if any(n.startswith(("macos", "linux")) for n in names):   # kopia środowiska na dysk, wspólna dla obu
+        write(out / "runtime" / "kopia.sh", (HERE / "launcher" / "kopia.sh").read_bytes())
     if "linux-x86_64" in names:
         write(out / "START-LINUX.sh", (HERE / "launcher" / "start-linux.sh").read_bytes(), executable=True)
         write(out / "START-LINUX.desktop", DESKTOP.encode(), executable=True)

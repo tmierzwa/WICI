@@ -30,6 +30,16 @@ python3 -m unittest tests.test_laptop -v   # z katalogu głównego repozytorium
 
 Testy obejmują reguły dokumentu `configure` (także zgodność z regułą tekstu SA1 modelu wzorcowego), klienta protokołu, struktury kernel32, zaszyfrowaną bazę i zestaw, listę słów, zabezpieczenia panelu, budowę pamięci USB (z Pythonem 3.14) oraz pełne przygotowanie stacji i ZNISZCZ DANE na obrazie firmware (z Node.js). Workflow [Laptop](../../.github/workflows/laptop.yml) uruchamia je na Windows, macOS i Linuksie, a pamięć USB buduje i uruchamia przez START na każdym systemie.
 
+## Aplikacja stanowiska odbiorczego
+
+Podpakiet [wici/stanowisko/](wici/stanowisko/__init__.py) to aplikacja komputera stanowiska odbiorczego (dyżurni, decyzja D19): Reticulum `e40191b` i LXMF `c3ff2d6` w Pythonie z tożsamością odbiorcy, za stacją w konfiguracji węzła stanowiska. Powstaje etapami S1–S10 z [planu](PLAN.md); są stos (S1) i przyjęcie zgłoszeń na schemacie i przejściach modelu wzorcowego ([software/reference](../reference/README.md), S2), bez panelu. Nie trafia do `wici.pyz` pamięci USB laptopa schronienia. Uruchomienie wymaga Pythona z przypiętymi Reticulum, LXMF i `pyserial` 3.5:
+
+```sh
+python -m wici.stanowisko --port /dev/ttyACM0 --stan /tmp/stanowisko   # z katalogu software/laptop
+```
+
+Test stosu za węzłem stanowiska na dwóch programach `host` firmware opisuje [tests/test_stanowisko.py](../../tests/test_stanowisko.py); w CI robi to zadanie `stanowisko` workflow Laptop.
+
 ## Pamięć USB
 
 ```sh

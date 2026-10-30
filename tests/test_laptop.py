@@ -1554,13 +1554,15 @@ class PackageTest(unittest.TestCase):
                 ast.parse(p.read_text(encoding="utf-8"), feature_version=(3, 12))   # najstarszy Python w CI
 
     def test_only_the_standard_library(self):
+        # Aplikacja stanowiska (wici/stanowisko) ma własny pakiet z przypiętymi Reticulum i LXMF (PLAN.md, S10).
         allowed = set(sys.stdlib_module_names) | {"wici"}
         for p in self.PACKAGE.rglob("*.py"):
+            extra = {"RNS", "LXMF"} if "stanowisko" in p.relative_to(self.PACKAGE).parts else set()
             for node in ast.walk(ast.parse(p.read_text(encoding="utf-8"))):
                 names = [a.name for a in node.names] if isinstance(node, ast.Import) else \
                     [node.module] if isinstance(node, ast.ImportFrom) and node.level == 0 else []
                 for name in names:
-                    self.assertIn(name.split(".")[0], allowed, f"{p.name}: {name}")
+                    self.assertIn(name.split(".")[0], allowed | extra, f"{p.name}: {name}")
 
     def test_selftest_runs(self):
         out = subprocess.run([sys.executable, "-m", "wici", "--selftest"], cwd=LAPTOP, capture_output=True, text=True,
@@ -1601,7 +1603,8 @@ class BuildPinsTest(unittest.TestCase):
         for rel in ("wici/__main__.py", "wici/ui/index.html", "wici/slowa.txt"):
             self.assertTrue(build_usb.app_file(rel), rel)
         for rel in ("wici/.DS_Store", "wici/web.py~", "wici/.web.py.swp", "wici/#web.py#", "wici/web.py.orig",
-                    "wici/__pycache__/web.cpython-314.pyc", "wici/.idea/x.xml"):
+                    "wici/__pycache__/web.cpython-314.pyc", "wici/.idea/x.xml",
+                    "wici/stanowisko/stos.py"):   # aplikacja stanowiska ma własny pakiet
             self.assertFalse(build_usb.app_file(rel), rel)
 
     def test_out_that_is_not_a_previous_build_is_refused(self):
@@ -1624,12 +1627,87 @@ class BuildPinsTest(unittest.TestCase):
         win = (LAPTOP / "build" / "launcher" / "start-windows.c").read_text(encoding="utf-8")
         minor = build_usb.MINOR
         self.assertIn(f"/bin/python{minor}", mac)
-        self.assertIn(f"runtime/linux-x86_64/bin/python{minor}", linux)
-        self.assertIn(build_usb.STDLIB_ZIP, linux)
+        self.assertIn("wici_runnable linux-x86_64", linux)   # ścieżkę interpretera składa kopia.sh
+        copy = (LAPTOP / "build" / "launcher" / "kopia.sh").read_text(encoding="utf-8")
         self.assertIn("runtime\\\\windows\\\\pythonw.exe", win)
+        self.assertIn(f"/bin/python{minor}", copy)
+        for text in (copy, win):            # ta sama kopia na dysk: wspólna biblioteka, aplikacja, manifest na końcu
+            self.assertIn(build_usb.STDLIB_ZIP, text)
+            self.assertIn("build-manifest.json", text)
         for text in (mac, linux, win):
             self.assertIn("app", text)
             self.assertIn("wici.pyz", text)
+            self.assertIn("WICI_USB", text)
+        for text in (mac, linux):
+            self.assertIn('. "$here/runtime/kopia.sh"', text)
+
+    @unittest.skipIf(sys.platform == "win32", "runtime/kopia.sh is for macOS and Linux")
+    def test_runs_from_the_stick_when_the_copy_does_not_start(self):
+        script = LAPTOP / "build" / "launcher" / "kopia.sh"
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            stick, cache = tmp / "pamięć", tmp / "cache"
+            for rel, text in (("runtime/rt/bin/python3.14", "#!/bin/sh\nexit 0\n"), ("runtime/python314.zip", "lib"),
+                              ("runtime/VERSION", "3.14.8\n"), ("app/wici.pyz", "app"), ("build-manifest.json", "1")):
+                (stick / rel).parent.mkdir(parents=True, exist_ok=True)
+                (stick / rel).write_text(text)
+            (stick / "runtime/rt/bin/python3.14").chmod(0o755)
+
+            def run():
+                r = subprocess.run(["sh", "-c", f'. "{script}"; wici_copy "$1" rt "$2"; wici_runnable rt; '
+                                    'echo "$? $root ${WICI_Z_PAMIECI:-0}"', "sh", str(stick), str(cache)],
+                                   capture_output=True, text=True, check=True)
+                code, rest = r.stdout.strip().split(" ", 1)
+                root, flag = rest.rsplit(" ", 1)
+                return int(code), Path(root), flag, r.stderr
+
+            code, root, flag, _ = run()
+            self.assertEqual((code, root.parent, flag), (0, cache, "0"))
+            # Kopia nie uruchamia się (katalog domowy z noexec, blokada programów z profilu): pamięć.
+            (root / "runtime/rt/bin/python3.14").write_text("#!/bin/sh\nexit 1\n")
+            code, root, flag, err = run()
+            self.assertEqual((code, root, flag), (0, stick, "1"))
+            self.assertIn("nie wyjmuj", err)
+            (stick / "runtime/rt/bin/python3.14").write_text("#!/bin/sh\nexit 1\n")   # nigdzie: błąd
+            self.assertEqual(run()[0], 1)
+
+    @unittest.skipIf(sys.platform == "win32", "runtime/kopia.sh is for macOS and Linux")
+    def test_copy_to_disk_reuses_and_replaces_by_build(self):
+        script = LAPTOP / "build" / "launcher" / "kopia.sh"
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            stick, cache = tmp / "pamięć ż", tmp / "cache"
+            for rel, text in (("runtime/rt/bin/python3.14", "py"), ("runtime/python314.zip", "lib"),
+                              ("runtime/VERSION", "3.14.8\n"), ("app/wici.pyz", "app"), ("build-manifest.json", "1")):
+                (stick / rel).parent.mkdir(parents=True, exist_ok=True)
+                (stick / rel).write_text(text)
+
+            def copy():
+                r = subprocess.run(["sh", "-c", f'. "{script}"; wici_copy "$1" rt "$2"; echo "$? $root"', "sh",
+                                    str(stick), str(cache)], capture_output=True, text=True, check=True)
+                code, root = r.stdout.strip().split(" ", 1)
+                return int(code), Path(root)
+
+            code, first = copy()
+            self.assertEqual(code, 0)
+            self.assertEqual(first.parent, cache)
+            self.assertTrue(first.name.startswith("3.14.8-"))
+            self.assertEqual((first / "app" / "wici.pyz").read_text(), "app")
+            self.assertTrue(os.access(first / "runtime/rt/bin/python3.14", os.X_OK))
+            (first / "app" / "wici.pyz").write_text("used")   # ta sama budowa: kopia zostaje, nic nie kopiuje
+            self.assertEqual(copy(), (0, first))
+            self.assertEqual((first / "app" / "wici.pyz").read_text(), "used")
+            (stick / "build-manifest.json").write_text("2")   # inna budowa: własny katalog, stary nietknięty
+            code, second = copy()
+            self.assertNotEqual(second, first)
+            self.assertTrue((first / "app" / "wici.pyz").exists())
+            self.assertEqual(sorted(p.name for p in cache.iterdir()), sorted([first.name, second.name]))
+            (second / "build-manifest.json").unlink()        # niepełna kopia tej budowy: kopiowana od nowa
+            self.assertEqual(copy(), (0, second))
+            (stick / "build-manifest.json").write_text("3")
+            (stick / "app" / "wici.pyz").unlink()            # błąd kopiowania: aplikacja działa z pamięci
+            self.assertEqual(copy(), (1, stick))
+            self.assertEqual(len(list(cache.iterdir())), 2)  # bez katalogu tymczasowego
 
 
 @unittest.skipUnless(sys.version_info[:2] == tuple(map(int, build_usb.MINOR.split("."))),
@@ -1687,6 +1765,7 @@ class BuildTreeTest(unittest.TestCase):
                              f"..\\{build_usb.STDLIB_ZIP}\r\n.\r\n".encode())
             self.assertTrue(os.access(out / "START-MAC.app/Contents/MacOS/START", os.X_OK))
             self.assertTrue(os.access(out / "START-LINUX.sh", os.X_OK))
+            self.assertIn("runtime/kopia.sh", files)
             for name in ("START-WINDOWS.exe", "INSTRUKCJA.html", "app/wici.pyz", "licenses/python-windows.txt",
                          "licenses/WICI-MIT.txt", "licenses/python-kod-wbudowany.txt", "sources/README.txt",
                          "START-MAC.app/Contents/Info.plist"):
