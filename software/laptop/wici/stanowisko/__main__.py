@@ -90,7 +90,8 @@ def start(args):
                 args.bitrate)
     try:
         copies = kopie.Kopie(Path(args.kopie) if args.kopie else kopie.disk_dir(store.state_dir() / "stanowisko", medium))
-        przyjecie = Przyjecie(medium, key, stos.send, stos.outcome, copies=copies)
+        przyjecie = Przyjecie(medium, key, stos.send, stos.outcome, copies=copies, announce=stos.announce,
+                              online=lambda: stos.status(time.time())["online"])
     except ClockBehind as e:
         last = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(e.args[0]))
         emit("clock_behind", last_sent=last,

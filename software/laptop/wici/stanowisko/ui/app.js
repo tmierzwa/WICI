@@ -6,7 +6,7 @@ var CATEGORIES = ["POMOC MEDYCZNA", "LEKI I SPRZĘT MED.", "EWAKUACJA, TRANSPORT
   "OGRZEWANIE, ENERGIA", "SANITARNE, HIGIENA", "ZAGROŻENIE BUDYNKU", "POSZUKIWANIE, INFO", "INNE"];
 var URGENCY = ["zwykła", "pilna", "NATYCHMIAST"];
 var STATES = {1: "przyjęte", 2: "przeczytane", 3: "pomoc skierowana", 4: "przekazane dalej", 5: "instrukcja wysłana", 6: "zamknięte"};
-var TABS = [["reports", "Zgłoszenia"], ["tests", "TEST"], ["quarantine", "Kwarantanna"], ["stations", "Stacje"],
+var TABS = [["reports", "Zgłoszenia"], ["tests", "TEST"], ["quarantine", "Kwarantanna"], ["stations", "Stacje"], ["bulletins", "Komunikaty"],
   ["node", "Węzeł i wysyłka"], ["handover", "Przekazanie zmiany"], ["accounts", "Hasła"], ["log", "Dziennik"]];
 var state = null, version = -1, tab = "reports", silenced = {}, lastTouch = 0, audio = null;
 
@@ -213,6 +213,21 @@ var VIEWS = {
       action("/api/operator/trust", Object.assign({card: card, fingerprint: fp.value}, second.values()), error);
     }}));
     view.appendChild(error);
+  },
+  bulletins: function (view) {
+    var text = el("input", {placeholder: "komunikat do wszystkich zaufanych stacji (do 192 bajtów)", maxlength: "192", class: "wide"});
+    var error = el("p", {class: "error"});
+    view.appendChild(el("p", {text: "Komunikat idzie osobno do każdej zaufanej stacji, po kolei (dla 50 stacji kilka minut)."}));
+    view.appendChild(text);
+    view.appendChild(el("button", {class: "primary", text: "Wyślij komunikat", onclick: function () {
+      if (confirm("Wysłać komunikat do " + state.trusted.length + " stacji?")) action("/api/operator/bulletin", {text: text.value}, error);
+    }}));
+    view.appendChild(error);
+    state.bulletins.forEach(function (b) {
+      view.appendChild(el("div", {class: "report"}, el("div", {class: "head", text: b.number + " · dostarczono " + b.done + " z " + b.total +
+        (b.retrying ? " · ponawiane: " + b.retrying : "")}), el("div", {class: "text", text: b.text}),
+        el("progress", {max: String(b.total), value: String(b.done)})));
+    });
   },
   node: function (view) {
     var n = state.node;
