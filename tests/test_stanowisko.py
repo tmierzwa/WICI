@@ -10,7 +10,9 @@ LXMF at c3ff2d6 and pyserial in this Python, and the built program:
   WICI_HOST_PROGRAM=firmware/.pio/build/host/program /path/to/venv/bin/python -m unittest tests.test_stanowisko
 """
 
+import contextlib
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
@@ -27,7 +29,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "software" / "laptop"))
 sys.path.insert(0, str(ROOT / "firmware" / "tools"))
 
-from wici.stanowisko import przyjecie, stos, wzorzec  # noqa: E402
+from wici.stanowisko import __main__ as aplikacja, przyjecie, stos, wysylka, wzorzec  # noqa: E402
 
 PROGRAM = os.environ.get("WICI_HOST_PROGRAM")
 HAS_STACK = all(importlib.util.find_spec(m) for m in ("RNS", "LXMF", "serial"))
@@ -70,8 +72,15 @@ def received_for(content):
     return wzorzec.encode_message([1, 1, value[2], value[3], 1, 1])
 
 
-class ReceptionTest(unittest.TestCase):
-    """S2: reception on the reference OSPStore in its own thread; RECEIVED only after COMMIT."""
+class Sent:
+    """A message handed to the fake stack; result is its outcome (True DELIVERED, False FAILED, None in flight)."""
+
+    def __init__(self, result):
+        self.result = result
+
+
+class StationTestCase(unittest.TestCase):
+    """Przyjecie with a fake stack, a clock set by the test and jitter 1.0 (random 0.5)."""
 
     STATION, OTHER = bytes(range(16)), bytes(range(16, 32))
     KEY = bytes(64)
@@ -81,25 +90,47 @@ class ReceptionTest(unittest.TestCase):
         self.path = Path(self.tmp.name) / "baza.sqlite"
         self.sent, self.committed = [], []
         self.now = 1_800_000_000.0
-        self.reception = przyjecie.Przyjecie(self.path, self.send, clock=lambda: self.now, log=lambda line: None)
+        self.result = True   # wynik kolejnych wysyłek; "brak trasy" to send zwracające None
+        self.reception = self.open()
         self.reception.call(lambda s: s.add_trusted(self.STATION, self.KEY, ("dyzurny-1", "dyzurny-2")))
+
+    def open(self):
+        return przyjecie.Przyjecie(self.path, self.send, lambda m: m.result, clock=lambda: self.now,
+                                   log=lambda line: None, random=lambda: 0.5)
+
+    def restart(self):
+        self.reception.stop()
+        self.reception = self.open()
 
     def tearDown(self):
         self.reception.stop()
         self.tmp.cleanup()
 
     def send(self, target, content):
-        # Drugie połączenie z bazą widzi tylko zatwierdzone dane: RECEIVED wychodzi po COMMIT.
-        with sqlite3.connect(self.path) as db:
+        # Drugie połączenie z bazą widzi tylko zatwierdzone dane: wiadomość wychodzi po COMMIT.
+        with contextlib.closing(sqlite3.connect(self.path)) as db:
             value = wzorzec.decode_message(content)
-            self.committed.append(db.execute("SELECT 1 FROM received WHERE source=? AND id=? AND revision=?",
-                                             (target, value[2], value[3])).fetchone() is not None)
+            if value[1] == wysylka.RECEIVED:
+                self.committed.append(db.execute("SELECT 1 FROM received WHERE source=? AND id=? AND revision=?",
+                                                 (target, value[2], value[3])).fetchone() is not None)
+        if self.result == "no path":
+            return None
         self.sent.append((target, content))
-        return object()
+        return Sent(self.result)
+
+    def tick(self):
+        self.reception.call(lambda s: self.reception.tick())
 
     def deliver(self, source, content):
         self.reception.deliver(source, content)
-        self.reception.call(lambda s: None)   # kolejka wątku bazy pusta
+        self.tick()   # kolejka wątku bazy pusta, wyniki wysyłek w drodze odebrane
+
+    def kinds(self):
+        return [wzorzec.decode_message(c)[1] for _, c in self.sent]
+
+
+class ReceptionTest(StationTestCase):
+    """S2: reception on the reference OSPStore in its own thread; RECEIVED only after COMMIT."""
 
     def test_trusted_request_gets_received_after_commit_with_reception_time(self):
         content = request()
@@ -177,11 +208,196 @@ class ReceptionTest(unittest.TestCase):
     def test_database_survives_a_restart(self):
         content = request()
         self.deliver(self.STATION, content)
-        self.reception.stop()
-        self.reception = przyjecie.Przyjecie(self.path, self.send, log=lambda line: None)
+        self.restart()
         self.deliver(self.STATION, content)
         self.assertEqual(self.reception.counts["duplicate"], 1)
         self.assertEqual(self.sent[0], self.sent[1])
+
+
+class SendingTest(StationTestCase):
+    """S3: intents in SQLite, order, at most 4 in flight, retries after FAILED, `event` numbers, clock check."""
+
+    def accepted(self):
+        """A REQUEST of the station with its RECEIVED delivered; returns (id, revision)."""
+        content = request()
+        self.deliver(self.STATION, content)
+        self.tick()
+        return wzorzec.decode_message(content)[2:4]
+
+    def status(self, mid, revision, state):
+        return self.reception.call(lambda s: self.reception.wysylka.status(s, self.STATION, mid, revision, state, self.now))
+
+    def waiting(self):
+        return self.reception.call(lambda s: s.db.execute("SELECT count(*) FROM outbox WHERE done=0").fetchone()[0])
+
+    def test_received_goes_out_after_commit_and_the_intent_ends_on_delivered(self):
+        self.accepted()
+        self.assertEqual(self.committed, [True])
+        self.assertEqual(self.waiting(), 0)
+
+    def test_retries_after_failed_as_the_station(self):
+        self.result = False
+        self.deliver(self.STATION, request())
+        start, times = self.now, []
+        while self.now - start < 8 * 3600:
+            self.now += 10
+            before = len(self.sent)
+            self.tick()
+            if len(self.sent) > before:
+                times.append(self.now - start)
+                self.tick()   # FAILED zaraz po nadaniu: odstęp liczy się od tej chwili
+        gaps = [b - a for a, b in zip([0] + times, times)]
+        self.assertEqual(gaps[:6], [60, 120, 300, 900, 900, 900])
+        late = [g for t, g in zip(times, gaps) if t - g >= wysylka.LATE_AFTER_S]
+        self.assertTrue(late and set(late) == {3600})
+        self.assertEqual(len(self.sent), len(times) + 1)   # każde ponowienie to nowa wiadomość
+
+    def test_retry_interval_has_twenty_percent_jitter(self):
+        self.assertEqual(wysylka.retry_delay(1, 0, lambda: 0.0), 48)
+        self.assertEqual(round(wysylka.retry_delay(3, 0, lambda: 0.999999)), 360)
+        self.assertEqual(wysylka.retry_delay(9, 7 * 3600, lambda: 0.5), 3600)
+
+    def test_no_path_counts_as_failed(self):
+        self.result = "no path"
+        self.deliver(self.STATION, request())
+        self.result = True
+        self.now += 59
+        self.tick()
+        self.assertEqual(self.sent, [])
+        self.now += 1
+        self.tick()
+        self.assertEqual(self.kinds(), [wysylka.RECEIVED])
+
+    def test_at_most_four_in_flight_and_received_before_reply(self):
+        mid, revision = self.accepted()
+        self.sent.clear()
+        self.result = "no path"   # wszystko czeka na ponowienie po 60 s
+        self.reception.call(lambda s: self.reception.wysylka.reply(s, self.STATION, mid, revision, "jedziemy", self.now))
+        for _ in range(5):
+            self.deliver(self.STATION, request())
+        self.result = None        # nic nie wraca: wysłane zostają w drodze
+        self.now += 60
+        self.tick()
+        self.assertEqual(self.kinds(), [wysylka.RECEIVED] * wysylka.IN_FLIGHT)
+        for message, _ in list(self.reception.wysylka.flight.values()):
+            message.result = True
+        self.tick()
+        self.assertEqual(self.kinds()[4:], [wysylka.RECEIVED, wysylka.REPLY])   # REPLY po RECEIVED
+
+    def test_newer_status_replaces_one_not_yet_delivered(self):
+        mid, revision = self.accepted()
+        self.result = "no path"
+        self.status(mid, revision, 2)
+        self.tick()
+        self.status(mid, revision, 3)
+        self.result = True
+        self.now += 60
+        self.tick()
+        self.tick()
+        self.assertEqual([wzorzec.decode_message(c)[5] for _, c in self.sent[1:]], [3])
+        self.assertEqual(self.waiting(), 0)
+
+    def test_repeated_request_gets_received_and_the_newest_status(self):
+        content = request()
+        self.deliver(self.STATION, content)
+        mid, revision = wzorzec.decode_message(content)[2:4]
+        self.status(mid, revision, 2)
+        self.now += 5
+        self.status(mid, revision, 4)
+        self.tick()
+        self.tick()
+        self.sent.clear()
+        self.deliver(self.STATION, content)
+        self.assertEqual(self.sent[0][1], received_for(content))
+        self.assertEqual(wzorzec.decode_message(self.sent[1][1])[4:], [int(self.now) - wysylka.EPOCH_2026, 4])
+
+    def test_repeat_sends_a_waiting_intent_at_once(self):
+        self.result = False
+        content = request()
+        self.deliver(self.STATION, content)
+        self.result = True
+        self.now += 30   # ponowienie dopiero po 60 s
+        self.deliver(self.STATION, content)
+        self.assertEqual(self.kinds(), [wysylka.RECEIVED] * 2)
+        self.assertEqual(self.waiting(), 0)
+
+    def test_intents_are_checked_while_the_panel_keeps_the_thread_busy(self):
+        self.result = None
+        self.deliver(self.STATION, request())
+        message = next(iter(self.reception.wysylka.flight.values()))[0]
+        message.result = True
+        end = time.monotonic() + 3 * przyjecie.Przyjecie.TICK_S
+        while self.waiting() and time.monotonic() < end:   # call() bez przerwy, jak panel
+            pass
+        self.assertEqual(self.waiting(), 0)
+
+    def test_restart_during_sending_sends_again(self):
+        self.result = None
+        self.deliver(self.STATION, request())
+        self.restart()
+        self.result = True
+        self.tick()
+        self.assertEqual(self.kinds(), [wysylka.RECEIVED] * 2)
+        self.tick()
+        self.assertEqual(self.waiting(), 0)
+
+    def test_event_numbers(self):
+        mid, revision = self.accepted()
+        seconds = int(self.now) - wysylka.EPOCH_2026
+        self.assertEqual(self.status(mid, revision, 2), seconds)
+        self.assertEqual(self.status(mid, revision, 3), seconds + 1)   # ta sama sekunda: licznik + 1
+        reply = lambda: self.reception.call(lambda s: self.reception.wysylka.reply(s, self.STATION, mid, revision, "x", self.now))
+        self.assertEqual(reply(), seconds)                             # osobny licznik REPLY tego id
+        bulletin = lambda: self.reception.call(lambda s: self.reception.wysylka.bulletin(s, "komunikat", self.now))
+        bulletin(), bulletin()
+        events = self.reception.call(lambda s: s.db.execute(
+            "SELECT payload FROM outbox WHERE kind=4 ORDER BY seq").fetchall())
+        self.assertEqual([wzorzec.decode_message(p)[3] for (p,) in events], [seconds, seconds + 1])
+        def offset(store):
+            with store.db:
+                store.db.execute("INSERT INTO settings VALUES('p', 86400)")   # P po odzyskaniu (etap S6)
+        self.reception.call(offset)
+        self.assertEqual(self.status(mid, revision, 4), seconds + 86400)
+
+    def test_status_starts_at_two_before_2026(self):
+        mid, revision = self.accepted()
+        self.now = wysylka.EPOCH_2026 - 3600.0
+        self.assertEqual(self.status(mid, revision, 2), 2)
+
+    def test_failed_status_leaves_no_counter_or_intent(self):
+        mid, revision = self.accepted()
+        with self.assertRaises(ValueError):
+            self.status(mid, revision, 5)   # stan 5 tylko po REPLY
+        counters = self.reception.call(lambda s: s.db.execute("SELECT count(*) FROM counters").fetchone()[0])
+        self.assertEqual((counters, self.waiting()), (0, 0))
+
+    def test_bulletin_goes_to_every_trusted_station(self):
+        self.reception.call(lambda s: s.add_trusted(self.OTHER, self.KEY, ("dyzurny-1", "dyzurny-2")))
+        mid = self.reception.call(lambda s: self.reception.wysylka.bulletin(s, "komunikat", self.now))
+        self.tick()
+        self.assertEqual(sorted(t for t, _ in self.sent), [self.STATION, self.OTHER])
+        self.assertEqual({wzorzec.decode_message(c)[2] for _, c in self.sent}, {mid})
+
+    def test_start_is_refused_when_the_clock_is_behind_the_last_message(self):
+        mid, revision = self.accepted()
+        self.status(mid, revision, 2)
+        self.reception.stop()
+        self.now -= 60
+        with self.assertRaises(wysylka.ClockBehind):
+            self.reception = self.open()
+        self.now += 60
+        self.reception = self.open()   # ten sam czas: start przechodzi
+
+    def test_application_reports_the_clock_and_does_not_start(self):
+        mid, revision = self.accepted()
+        self.status(mid, revision, 2)
+        state = Path(self.tmp.name)   # self.path to baza.sqlite w tym katalogu
+        out = io.StringIO()
+        with unittest.mock.patch.object(przyjecie.time, "time", lambda: self.now - 3600), \
+                contextlib.redirect_stdout(out):
+            code = aplikacja.main(["--port", "brak", "--stan", str(state)])
+        self.assertEqual(code, 2)
+        self.assertEqual(json.loads(out.getvalue())["event"], "clock_behind")
 
 
 class StackHoldTest(unittest.TestCase):
@@ -267,7 +483,8 @@ class StackTest(unittest.TestCase):
             cls.messages.append((source, content))
             cls.reception.deliver(source, content)
         cls.stos = stos.Stos(work / "stan", cls.node.ready["usb"], received, log=lambda line: None)
-        cls.reception = przyjecie.Przyjecie(work / "stan" / "baza.sqlite", cls.stos.send, log=lambda line: None)
+        cls.reception = przyjecie.Przyjecie(work / "stan" / "baza.sqlite", cls.stos.send, cls.stos.outcome,
+                                            log=lambda line: None)
         cls.stos.start()
         cls.station.command(f"receiver {cls.sa1_destination().hex()} {cls.stos.identity.get_public_key().hex()}")
         if cls.station.wait("receiver", 5) is None:
@@ -363,6 +580,9 @@ class StackTest(unittest.TestCase):
         content = request(text="zaufana stacja")
         self.assertTrue(self.report(content))
         self.assertTrue(self.received_at_station(content))
+        # Dopiero po DELIVERED: powtórzenie w czasie wysyłki tylko przyspiesza intencję, która jest w drodze.
+        self.assertTrue(self.wait_for(lambda: self.reception.call(lambda s: s.db.execute(
+            "SELECT count(*) FROM outbox WHERE done=0").fetchone()[0]) == 0, 300))
         self.messages.clear()
         self.assertTrue(self.report(content))      # ponowione zgłoszenie (nowa wiadomość LXMF)
         self.assertTrue(self.received_at_station(content))

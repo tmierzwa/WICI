@@ -9,18 +9,20 @@ a removed station too, counted for the alarm „możliwe przejęcie stacji”. R
 
 One worker thread owns the database: the stack calls deliver() from its own threads and does not wait for
 fsync, and the panel (stage S7) runs its operations through call(). Messages arrive here only with a checked
-signature (stos.Stos holds those from an unknown sender until its announce). Sending RECEIVED is a single
-attempt for now; the intent queue with retries is stage S3 (the ack_outbox rows stay for it).
+signature (stos.Stos holds those from an unknown sender until its announce). RECEIVED is an intent in the
+reception transaction (wysylka.py, stage S3); the same thread passes due intents to the stack, so nothing
+leaves before COMMIT.
 """
 
 import queue
+import random
 import sqlite3
 import sys
 import threading
 import time
 from pathlib import Path
 
-from . import wzorzec
+from . import wysylka, wzorzec
 
 # Czas odbioru według zegara komputera, osobno od schematu modelu (stanowisko-osp.md, „Przyjęcie”).
 SCHEMA = """
@@ -36,11 +38,16 @@ CREATE TABLE IF NOT EXISTS received_at (
 
 
 class Przyjecie:
-    """Reception in its own thread. send(target, content) is the stack's send (stos.Stos.send)."""
+    """Reception and sending in their own thread. send and outcome are those of the stack (stos.Stos).
 
-    def __init__(self, path, send, clock=time.time, log=None):
-        self.path, self.send, self.clock = path, send, clock
+    Raises wysylka.ClockBehind when the computer clock is earlier than the last numbered message."""
+
+    TICK_S = 1   # jak często wątek bazy sprawdza intencje bez nowych zadań
+
+    def __init__(self, path, send, outcome, clock=None, log=None, random=random.random):
+        self.path, self.clock = path, clock or time.time
         self.log = log or (lambda line: print(line, file=sys.stderr, flush=True))
+        self.wysylka = wysylka.Wysylka(send, outcome, self.log, random)
         self.jobs = queue.Queue()
         self.counts = {"received": 0, "duplicate": 0, "quarantined": 0, "rejected": 0, "quarantine_full": 0}
         self.ready = threading.Event()
@@ -56,13 +63,25 @@ class Przyjecie:
             Path(self.path).parent.mkdir(parents=True, exist_ok=True)
             self.store = wzorzec.OSPStore(self.path)
             self.store.db.executescript(SCHEMA)
+            self.wysylka.open(self.store.db, self.clock())
         except Exception as e:   # noqa: BLE001 - błąd otwarcia bazy wraca do wątku, który tworzy Przyjecie
+            if hasattr(self, "store"):
+                self.store.close()
             self.error = e
             self.ready.set()
             return
         self.ready.set()
+        due = time.monotonic()
         while True:
-            job = self.jobs.get()
+            # Intencje co TICK_S także przy ciągłym strumieniu zadań, nie tylko gdy kolejka stoi.
+            if time.monotonic() >= due:
+                due = time.monotonic() + self.TICK_S
+                job = self.tick
+            else:
+                try:
+                    job = self.jobs.get(timeout=max(0, due - time.monotonic()))
+                except queue.Empty:
+                    continue
             if job is None:
                 break
             try:
@@ -70,6 +89,10 @@ class Przyjecie:
             except Exception as e:   # noqa: BLE001 - wątek bazy działa dalej; stacja ponowi wiadomość
                 self.log(f"stanowisko: błąd w wątku bazy: {e!r}")
         self.store.close()
+
+    def tick(self):
+        """Pass due intents to the stack (in the database thread)."""
+        self.wysylka.tick(self.store.db, self.clock())
 
     def call(self, fn):
         """Run fn(store) in the database thread and return its result (or raise its exception)."""
@@ -100,6 +123,7 @@ class Przyjecie:
             self.store.db.execute(
                 "INSERT OR IGNORE INTO received_at SELECT source, id, revision, ? FROM received "
                 "WHERE source=? AND id=? AND revision=?", (at, source, value[2], value[3]))
+            self.wysylka.accepted(self.store.db, source, value[2], value[3])
 
         known = self.store.db.execute("SELECT count(*) FROM received WHERE source=?", (source,)).fetchone()[0]
         try:
@@ -121,9 +145,7 @@ class Przyjecie:
             return
         after = self.store.db.execute("SELECT count(*) FROM received WHERE source=?", (source,)).fetchone()[0]
         self.counts["received" if after > known else "duplicate"] += 1
-        # Po COMMIT (receive zatwierdził transakcję): RECEIVED, także powtórnie dla powtórzonego REQUEST.
-        if self.send(source, ack) is None:
-            self.log(f"stanowisko: RECEIVED do {source.hex()} czeka na trasę")
+        self.tick()   # RECEIVED od razu po COMMIT, jeśli jest miejsce w drodze
 
     def stop(self):
         self.jobs.put(None)
