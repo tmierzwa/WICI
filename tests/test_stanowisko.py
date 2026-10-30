@@ -31,7 +31,7 @@ sys.path.insert(0, str(ROOT / "software" / "laptop"))
 sys.path.insert(0, str(ROOT / "firmware" / "tools"))
 
 from wici import database  # noqa: E402
-from wici.stanowisko import __main__ as aplikacja, kopie, nosnik, panel, przyjecie, stos, wysylka, wzorzec  # noqa: E402
+from wici.stanowisko import __main__ as aplikacja, kopie, nosnik, panel, przyjecie, stos, wysylka, wzorzec, zamkniecie  # noqa: E402
 
 PROGRAM = os.environ.get("WICI_HOST_PROGRAM")
 HAS_STACK = all(importlib.util.find_spec(m) for m in ("RNS", "LXMF", "serial"))
@@ -774,6 +774,9 @@ class FakeStack:
     def announce(self):
         self.announced += 1
 
+    def stop(self):
+        self.stopped = True
+
     def status(self, now):
         return {"online": True, "since_rx": 5.0, "dropped": {"bad_signature": 0, "pending_full": 0}}
 
@@ -1019,6 +1022,157 @@ class AnnounceBulletinTest(StationTestCase):
         self.assertEqual(len(saves), before)
         self.reception.action("dyzurny-1", "logowanie")        # następna zmiana zapisuje też ewidencję
         self.assertEqual(durable(self.medium, self.key, "SELECT count(*) FROM outbox WHERE done=0"), (0,))
+
+
+
+class ClosingTest(WithCopies):
+    """S9: register export, ZAMKNIJ ZDARZENIE with the archive, removal of copies and ZNISZCZ DANE."""
+
+    def setUp(self):
+        super().setUp()
+        self.quit = []
+        self.d = panel.Dyzur(self.reception, self.medium, self.key, FakeStack(), clock=lambda: self.now)
+        self.d.on_quit = lambda: self.quit.append(1)
+        self.d.login("dyzurny-1", self.envelopes["dyzurny-1"])
+        self.content = request(text="piwnica przy szkole")
+        self.deliver(self.STATION, self.content)
+        mid, revision = wzorzec.decode_message(self.content)[2:4]
+        self.mid = mid
+        key = {"source": self.STATION.hex(), "id": mid, "revision": revision}
+        self.d.status({**key, "state": 3, "podmiot": "PSP Gdańsk", "funkcja": "dyżurny", "kanal": "telefon", "czas": "10:20"})
+        self.d.status({**key, "state": 5, "reply": "Proszę czekać przy wejściu"})
+        self.d.bulletin({"text": "Woda pitna przy szkole"})
+        self.tick()
+
+    def rows(self, data):
+        import csv
+        return list(csv.DictReader(io.StringIO(data.decode("utf-8"), newline="")))
+
+    def test_export_writes_the_register_on_the_medium(self):
+        path = Path(self.d.export({})["file"])
+        self.assertEqual(path.parent, self.medium.root / zamkniecie.EXPORT)
+        data = path.read_bytes()
+        rows = self.rows(data)
+        self.assertEqual(tuple(rows[0]), zamkniecie.COLUMNS)
+        kinds = [r["rodzaj"] for r in rows]
+        self.assertEqual(kinds[0], "odbior")
+        self.assertIn("stan_3", kinds)
+        reception = rows[0]
+        self.assertEqual((reception["numer"], reception["tresc"]), (panel.short_number(self.mid), "piwnica przy szkole"))
+        decision = next(r for r in rows if r["rodzaj"] == "stan_3")
+        self.assertEqual((decision["stan"], decision["potwierdzil"], decision["kanal"], decision["dyzurny"]),
+                         ("3", "PSP Gdańsk, dyżurny", "telefon", "dyzurny-1"))
+        self.assertEqual(next(r for r in rows if r["rodzaj"] == "komunikat")["tresc"], "Woda pitna przy szkole")
+        self.assertNotIn("logowanie", kinds)                    # logowania tylko w dzienniku
+        for secret in (self.STATION.hex(), self.KEY.hex(), self.key.hex()):
+            self.assertNotIn(secret, data.decode())
+        self.assertNotEqual(self.d.export({})["file"], str(path))   # drugi eksport nie nadpisuje pierwszego
+
+    def test_export_elsewhere_needs_a_second_officer(self):
+        other = Path(self.tmp.name) / "pendrive"
+        other.mkdir()
+        with self.assertRaises(ValueError):
+            self.d.export({"path": str(other)})
+        with self.assertRaises(ValueError):
+            self.d.export({"path": str(other / "brak"), "account2": "dyzurny-2", "password2": self.envelopes["dyzurny-2"]})
+        path = Path(self.d.export({"path": str(other), "account2": "dyzurny-2", "password2": self.envelopes["dyzurny-2"]})["file"])
+        self.assertEqual(path.parent, other)
+        self.assertIn(("dyzurny-1", "eksport"), [(e["account"], e["op"]) for e in self.d.view()["log"]])
+
+    def test_close_writes_the_archive_and_removes_the_content(self):
+        with self.assertRaises(ValueError):
+            self.d.close({"confirm": "zamknij"})
+        result = self.d.close({"confirm": "ZAMKNIJ ZDARZENIE"})
+        archive = Path(result["file"])
+        self.assertEqual(len(result["password"].split()), zamkniecie.ARCHIVE_WORDS)
+        with self.assertRaises(ValueError):
+            self.d.close({"confirm": "ZAMKNIJ ZDARZENIE"})       # raz
+        target = Path(self.tmp.name) / "administrator"
+        with self.assertRaises(database.LoginError):
+            zamkniecie.open_archive(archive, self.envelopes["stanowisko"], target)
+        zamkniecie.open_archive(archive, result["password"], target)
+        rows = self.rows((target / "rejestr.csv").read_bytes())
+        self.assertEqual(rows[0]["tresc"], "piwnica przy szkole")
+        self.assertEqual(rows[-1]["rodzaj"], "zamkniecie")
+        with contextlib.closing(sqlite3.connect(target / "baza.sqlite")) as db:
+            self.assertEqual(db.execute("SELECT count(*) FROM received WHERE payload IS NOT NULL").fetchone(), (1,))
+        self.assertEqual(durable(self.medium, self.key, "SELECT count(*) FROM received WHERE payload IS NOT NULL"), (0,))
+        self.assertEqual(durable(self.medium, self.key, "SELECT count(*) FROM replies WHERE text IS NOT NULL"), (0,))
+        self.assertEqual(durable(self.medium, self.key, "SELECT count(*) FROM outbox WHERE length(payload) > 0 "
+                                                        "AND kind IN (3, 4)"), (0,))
+        view = self.d.view()
+        self.assertEqual((view["reports"], view["closed"], view["bulletins"][0]["text"]), ([], self.now, ""))
+        self.assertEqual(durable(self.medium, self.key, "SELECT count(*) FROM received"), (1,))   # klucze zostają
+        self.deliver(self.STATION, self.content)                # powtórka po zamknięciu: to samo RECEIVED
+        self.assertEqual(self.sent[-1], (self.STATION, received_for(self.content)))
+
+    def test_close_removes_the_plain_register_files_from_the_medium(self):
+        first = Path(self.d.export({})["file"])
+        self.now += 60
+        Path(self.d.export({})["file"])
+        archive = Path(self.d.close({"confirm": "ZAMKNIJ ZDARZENIE"})["file"])
+        self.assertEqual(sorted(p.name for p in first.parent.iterdir()), [archive.name])
+        log = self.d.view()["log"]
+        self.assertEqual((log[0]["op"], log[0]["detail"]), ("eksport_usuniety", "usunięto 2 plików CSV"))
+
+    def test_radio_silence_entries_go_to_the_register_and_the_order_to_the_stations(self):
+        with self.assertRaises(ValueError):
+            self.d.silence({"state": "wlacz", "organ": "wójt", "kiedy": "13:50"})
+        mid = self.d.silence({"state": "polecenie", "organ": "wójt gminy Pruszcz", "kiedy": "30.10 13:50",
+                              "bulletin": True})["bulletin"]
+        self.assertEqual((self.d.view()["silence"]["organ"], self.d.view()["silence"]["account"]),
+                         ("wójt gminy Pruszcz", "dyzurny-1"))
+        self.tick()
+        order = [wzorzec.decode_message(c)[4] for _, c in self.sent if wzorzec.decode_message(c)[2] == mid]
+        self.assertEqual(order, ["CISZA RADIOWA od 30.10 13:50, polecenie: wójt gminy Pruszcz. Włącz CISZA na stacji. "
+                                 "Pilne sprawy przez gońca."])
+        self.d.silence({"state": "wlaczona", "organ": "wójt gminy Pruszcz", "kiedy": "30.10 13:55"})
+        self.assertIsNone(self.d.silence({"state": "odwolana", "organ": "wójt gminy Pruszcz", "kiedy": "31.10 08:00"})["bulletin"])
+        self.assertIsNone(self.d.view()["silence"])
+        rows = self.rows(Path(self.d.export({})["file"]).read_bytes())
+        self.assertEqual([r["tresc"] for r in rows if r["rodzaj"] == "cisza"],
+                         ["polecenie ciszy otrzymane: wójt gminy Pruszcz, 30.10 13:50",
+                          "cisza włączona na węźle: wójt gminy Pruszcz, 30.10 13:55",
+                          "cisza odwołana: wójt gminy Pruszcz, 31.10 08:00"])
+        with self.assertRaises(ValueError):   # stały tekst komunikatu nie mieści się w 192 B
+            self.d.silence({"state": "polecenie", "organ": "ż" * 60, "kiedy": "ą" * 40, "bulletin": True})
+
+    def test_archive_from_the_command_line(self):
+        result = self.d.close({"confirm": "ZAMKNIJ ZDARZENIE"})
+        target = Path(self.tmp.name) / "administrator"
+        for password, expected in (("zle haslo", (3, "archive_failed")), (result["password"], (0, "archive_opened"))):
+            out = io.StringIO()
+            with unittest.mock.patch.object(sys, "stdin", io.StringIO(password + "\n")), contextlib.redirect_stdout(out):
+                code = aplikacja.main(["archiwum", "--plik", result["file"], "--do", str(target)])
+            self.assertEqual((code, json.loads(out.getvalue())["event"]), expected)
+        self.assertTrue((target / "rejestr.csv").exists())
+
+    def test_copies_removed_only_after_closing_and_not_made_again(self):
+        second = Path(self.tmp.name) / "drugi"
+        second.mkdir()
+        self.d.backup({"path": str(second)})
+        self.assertTrue(self.copies.files())
+        with self.assertRaises(ValueError):
+            self.d.purge_copies({"kto": "administrator", "kiedy": "dziś"})
+        self.d.close({"confirm": "ZAMKNIJ ZDARZENIE"})
+        self.assertEqual(self.d.purge_copies({"kto": "Jan Kowalski", "kiedy": "12.10 14:00", "path": str(second)}),
+                         {"failed": []})
+        self.every_minute(15)
+        self.assertEqual((self.copies.files(), kopie.Kopie(second / "wici-kopie").files()), ([], []))
+        self.assertEqual(self.d.view()["copies_purged"], self.now - 15 * 60)
+        self.assertIn("kopie_usuniete", self.actions())
+
+    def test_destroy_leaves_no_data_and_ends_the_application(self):
+        with self.assertRaises(ValueError):
+            self.d.destroy({"confirm": "zniszcz"})
+        self.assertTrue(self.copies.files())
+        self.assertEqual(self.d.destroy({"confirm": "ZNISZCZ DANE"}), {"failed": []})
+        self.assertEqual(self.quit, [1])
+        self.assertEqual([p for p in self.medium.root.rglob("*") if p.is_file()], [])
+        self.assertEqual(self.copies.files(), [])
+        self.assertFalse(self.medium.exists())
+        with self.assertRaises(panel.NotLoggedIn):
+            self.d.current()
 
 
 class StackHoldTest(unittest.TestCase):

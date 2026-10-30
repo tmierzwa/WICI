@@ -36,7 +36,7 @@ import webbrowser
 from pathlib import Path
 
 from .. import database, passwords, store
-from . import kopie, nosnik, panel
+from . import kopie, nosnik, panel, zamkniecie
 from .przyjecie import Przyjecie
 from .stos import BITRATE, Stos
 from .wysylka import ClockBehind
@@ -100,7 +100,8 @@ def start(args):
         return 2
     przyjecie.action("", "start")
     stos.start()
-    web = panel.Panel(panel.Dyzur(przyjecie, medium, key, stos))
+    dyzur = panel.Dyzur(przyjecie, medium, key, stos)
+    web = panel.Panel(dyzur)
     server = panel.serve(web, args.panel)
     threading.Thread(target=server.serve_forever, daemon=True, name="panel").start()
     url = f"http://127.0.0.1:{server.server_address[1]}/start?t={web.ticket()}"
@@ -108,6 +109,7 @@ def start(args):
     if not args.bez_przegladarki:
         webbrowser.open(url)
     done = threading.Event()
+    dyzur.on_quit = done.set   # ZNISZCZ DANE
     threading.Thread(target=lambda: (sys.stdin.read(), done.set()), daemon=True).start()
     try:
         done.wait()
@@ -133,6 +135,17 @@ def restore(args):
     return 0
 
 
+def open_archive(args):
+    """For the data administrator: the archive of a closed event to a new directory."""
+    try:
+        zamkniecie.open_archive(args.plik, sys.stdin.readline().strip(), args.do)
+    except (database.LoginError, database.StorageError, FileExistsError) as e:
+        emit("archive_failed", message=str(e))
+        return 3
+    emit("archive_opened", directory=str(args.do))
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="wici.stanowisko", description="Aplikacja stanowiska odbiorczego WICI")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -152,8 +165,11 @@ def main(argv=None):
     back = commands.add_parser("odtworz", help="odtworzenie nośnika z kopii (zgoda dwóch dyżurnych)")
     back.add_argument("--nosnik", required=True, help="pusty katalog na nowym nośniku stanowiska")
     back.add_argument("--kopie", action="append", default=[], help="dodatkowy katalog kopii, np. drugi nośnik")
+    arch = commands.add_parser("archiwum", help="otwarcie archiwum zamkniętego zdarzenia (hasło archiwum na wejściu)")
+    arch.add_argument("--plik", required=True, help="plik archiwum .wici")
+    arch.add_argument("--do", required=True, help="katalog na baza.sqlite i rejestr.csv")
     args = parser.parse_args(argv)
-    return {"przygotuj": prepare, "start": start, "odtworz": restore}[args.command](args)
+    return {"przygotuj": prepare, "start": start, "odtworz": restore, "archiwum": open_archive}[args.command](args)
 
 
 if __name__ == "__main__":

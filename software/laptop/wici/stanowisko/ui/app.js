@@ -7,8 +7,10 @@ var CATEGORIES = ["POMOC MEDYCZNA", "LEKI I SPRZĘT MED.", "EWAKUACJA, TRANSPORT
 var URGENCY = ["zwykła", "pilna", "NATYCHMIAST"];
 var STATES = {1: "przyjęte", 2: "przeczytane", 3: "pomoc skierowana", 4: "przekazane dalej", 5: "instrukcja wysłana", 6: "zamknięte"};
 var TABS = [["reports", "Zgłoszenia"], ["tests", "TEST"], ["quarantine", "Kwarantanna"], ["stations", "Stacje"], ["bulletins", "Komunikaty"],
-  ["node", "Węzeł i wysyłka"], ["handover", "Przekazanie zmiany"], ["accounts", "Hasła"], ["log", "Dziennik"]];
+  ["node", "Węzeł i wysyłka"], ["handover", "Przekazanie zmiany"], ["accounts", "Hasła"], ["log", "Dziennik"],
+  ["closing", "Zakończenie"]];
 var state = null, version = -1, tab = "reports", silenced = {}, lastTouch = 0, audio = null;
+var shown = null;   // hasło pokazywane raz: zostaje nad widokiem, aż dyżurny potwierdzi przepisanie
 
 function el(tag, attrs) {
   var node = document.createElement(tag);
@@ -89,6 +91,7 @@ function render() {
   $("who").appendChild(el("button", {text: "Wyloguj", onclick: function () { action("/api/operator/logout"); }}));
   badge(state.saved ? "zapis na nośniku: OK" : "ZAPIS NA NOŚNIKU NIE DZIAŁA", state.saved);
   badge(state.node.online ? "stacja połączona" : "BRAK STACJI", state.node.online);
+  if (state.silence) badge("CISZA RADIOWA (" + state.silence.organ + ", " + state.silence.kiedy + ")", false);
   if (alarms().length) {
     $("badges").appendChild(el("button", {class: "alarm", text: "Wycisz alarm (" + alarms().length + ")", onclick: function () {
       alarms().forEach(function (r) { silenced[r.id] = true; }); render(); }}));
@@ -102,6 +105,11 @@ function render() {
   if (busy() && !force) { pending = true; return; }
   pending = force = false;
   var view = clear($("view"));
+  if (shown) {
+    view.appendChild(el("div", {class: "report u2"}, el("div", {class: "head", text: shown.label}),
+      el("p", {class: "password", text: shown.text}),
+      el("button", {text: "Przepisane do koperty: ukryj", onclick: function () { shown = null; force = true; render(); }})));
+  }
   VIEWS[tab](view);
 }
 var force = false;
@@ -151,6 +159,27 @@ function secondPerson() {
   var password = el("input", {type: "password", placeholder: "hasło drugiego dyżurnego", autocomplete: "off"});
   return {node: el("div", {class: "second"}, el("span", {text: "Zgoda drugiego dyżurnego: "}), account, password),
     values: function () { return {account2: account.value, password2: password.value}; }};
+}
+
+// Cisza radiowa wpisywana przez dyżurnego: polecenie, włączenie na węźle, odwołanie (wiersz „cisza” w rejestrze).
+function silenceForm(view) {
+  var s = state.silence, error = el("p", {class: "error"});
+  view.appendChild(el("h3", {text: "Cisza radiowa"}));
+  view.appendChild(el("p", {text: s ? "Wpisana: " + s.organ + ", " + s.kiedy + " (" + s.account + ", " + time(s.at) + "). Przełącznik CISZA na węźle przestawia się ręcznie."
+    : "Brak wpisanej ciszy. Polecenie ciszy wydaje i odwołuje wójt; przełącznik CISZA na węźle przestawia się ręcznie."}));
+  var organ = el("input", {placeholder: "kto wydał polecenie, np. wójt gminy"}), when = el("input", {placeholder: "od kiedy, np. 30.10 13:50"});
+  var send = el("input", {type: "checkbox"});
+  send.checked = true;
+  var state_ = el("select", {});
+  [["polecenie", "polecenie ciszy otrzymane"], ["wlaczona", "cisza włączona na węźle"], ["odwolana", "cisza odwołana"]]
+    .forEach(function (o) { state_.appendChild(el("option", {value: o[0], text: o[1]})); });
+  if (s) state_.value = "odwolana";
+  view.appendChild(state_); view.appendChild(organ); view.appendChild(when);
+  view.appendChild(el("label", {}, send, el("span", {text: " wyślij komunikat do wszystkich zaufanych stacji"})));
+  view.appendChild(el("button", {class: "primary", text: "Wpisz", onclick: function () {
+    action("/api/operator/silence", {state: state_.value, organ: organ.value, kiedy: when.value, bulletin: send.checked}, error);
+  }}));
+  view.appendChild(error);
 }
 
 var VIEWS = {
@@ -215,6 +244,8 @@ var VIEWS = {
     view.appendChild(error);
   },
   bulletins: function (view) {
+    silenceForm(view);
+    view.appendChild(el("h3", {text: "Komunikat"}));
     var text = el("input", {placeholder: "komunikat do wszystkich zaufanych stacji (do 192 bajtów)", maxlength: "192", class: "wide"});
     var error = el("p", {class: "error"});
     view.appendChild(el("p", {text: "Komunikat idzie osobno do każdej zaufanej stacji, po kolei (dla 50 stacji kilka minut)."}));
@@ -240,7 +271,8 @@ var VIEWS = {
     var h = state.handover, error = el("p", {class: "error"});
     [["Otwarte zgłoszenia", h.open], ["Stan 4 bez potwierdzenia skierowania pomocy", h.forwarded_unconfirmed],
      ["Niewysłane intencje", h.unsent], ["Kwarantanna", h.quarantine], ["Alarmy przejęcia stacji", h.removed_alarm],
-     ["Najnowsza kopia na dysku komputera", ago(state.copy_age_s) + " temu"]]
+     ["Najnowsza kopia na dysku komputera", ago(state.copy_age_s) + " temu"],
+     ["Cisza radiowa", state.silence ? state.silence.organ + ", " + state.silence.kiedy : "nie"]]
       .forEach(function (p) { view.appendChild(el("p", {text: p[0] + ": " + p[1]})); });
     var path = el("input", {placeholder: "katalog drugiego nośnika, np. /media/drugi albo E:\\"});
     view.appendChild(path);
@@ -250,18 +282,65 @@ var VIEWS = {
     view.appendChild(error);
   },
   accounts: function (view) {
-    var out = el("p", {class: "password"}), error = el("p", {class: "error"});
+    var error = el("p", {class: "error"});
     view.appendChild(el("p", {text: "Nowe hasło po otwarciu koperty. Hasło pokazuje się raz: przepisz je do nowej koperty."}));
     state.accounts.concat(["stanowisko"]).forEach(function (a) {
       view.appendChild(el("button", {text: "Nowe hasło: " + a, onclick: function () {
         if (confirm("Nadać nowe hasło " + a + "? Stare przestanie działać.")) action("/api/operator/password", {account: a}, error).then(function (v) {
-          out.textContent = v.account + ": " + v.password; });
+          shown = {label: "Nowe hasło: " + v.account, text: v.password}; render(); });
       }}));
     });
-    view.appendChild(out); view.appendChild(error);
+    view.appendChild(error);
   },
   log: function (view) {
-    state.log.forEach(function (e) { view.appendChild(el("p", {class: "log", text: time(e.at) + " · " + (e.account || "aplikacja") + " · " + e.op + " " + e.detail})); });
+    state.log.forEach(function (e) {
+      view.appendChild(el("p", {class: "log", text: [time(e.at), e.account || "aplikacja", e.station, e.number, e.op, e.detail]
+        .filter(Boolean).join(" · ")}));
+    });
+  },
+  closing: function (view) {
+    var error = el("p", {class: "error"});
+    var path = el("input", {placeholder: "inny katalog (wymaga drugiego dyżurnego); puste: nośnik stanowiska"}), second = secondPerson();
+    view.appendChild(el("h3", {text: "Eksport rejestru (CSV)"}));
+    view.appendChild(el("p", {text: "Plik CSV nie jest szyfrowany: zawiera treść zgłoszeń. Domyślnie trafia do katalogu eksport na nośniku stanowiska."}));
+    view.appendChild(path); view.appendChild(second.node);
+    view.appendChild(el("button", {text: "Eksportuj rejestr", onclick: function () {
+      action("/api/operator/export", path.value ? Object.assign({path: path.value}, second.values()) : {}, error)
+        .then(function (v) { alert("Zapisano: " + v.file); });
+    }}));
+    view.appendChild(el("h3", {text: "ZAMKNIJ ZDARZENIE"}));
+    if (state.closed) {
+      view.appendChild(el("p", {text: "Zdarzenie zamknięte " + time(state.closed) + ". Treść zgłoszeń usunięta z bazy; archiwum w katalogu eksport."}));
+      view.appendChild(el("h3", {text: "Usuń kopie"}));
+      if (state.copies_purged) view.appendChild(el("p", {text: "Kopie usunięte " + time(state.copies_purged) + "."}));
+      else {
+        var who = el("input", {placeholder: "kto potwierdził odbiór archiwum"}), when = el("input", {placeholder: "kiedy"});
+        var other = el("input", {placeholder: "katalog drugiego nośnika, jeśli podłączony"});
+        view.appendChild(el("p", {text: "Dopiero po potwierdzeniu odbioru archiwum przez administratora danych."}));
+        view.appendChild(who); view.appendChild(when); view.appendChild(other);
+        view.appendChild(el("button", {text: "Usuń kopie", onclick: function () {
+          action("/api/operator/backup/purge", {kto: who.value, kiedy: when.value, path: other.value}, error)
+            .then(function (v) { if (v.failed.length) alert("Nie usunięto: " + v.failed.join(", ")); });
+        }}));
+      }
+    } else {
+      var close = el("input", {placeholder: "wpisz: ZAMKNIJ ZDARZENIE"});
+      view.appendChild(el("p", {text: "Archiwum z bazą i rejestrem trafia do katalogu eksport, potem treść zgłoszeń znika z bazy. Hasło archiwum pokaże się raz: przepisz je do koperty dla administratora danych."}));
+      view.appendChild(close);
+      view.appendChild(el("button", {class: "primary", text: "Zamknij zdarzenie", onclick: function () {
+        action("/api/operator/close", {confirm: close.value}, error).then(function (v) {
+          shown = {label: "Hasło archiwum " + v.file, text: v.password}; render(); });
+      }}));
+    }
+    view.appendChild(el("h3", {text: "ZNISZCZ DANE"}));
+    var destroy = el("input", {placeholder: "wpisz: ZNISZCZ DANE"}), copies = el("input", {placeholder: "katalog drugiego nośnika, jeśli podłączony"});
+    view.appendChild(el("p", {text: "Usuwa bazę, tożsamość, konta i kopie bez archiwum; aplikacja kończy pracę. Potem oba nośniki zniszcz fizycznie według instrukcji."}));
+    view.appendChild(destroy); view.appendChild(copies);
+    view.appendChild(el("button", {class: "alarm", text: "ZNISZCZ DANE", onclick: function () {
+      if (confirm("Zniszczyć dane stanowiska? Tego nie da się cofnąć.")) action("/api/operator/destroy", {confirm: destroy.value, path: copies.value}, error)
+        .then(function (v) { document.body.textContent = "Dane zniszczone." + (v.failed.length ? " Nie usunięto: " + v.failed.join(", ") : ""); });
+    }}));
+    view.appendChild(error);
   }
 };
 
