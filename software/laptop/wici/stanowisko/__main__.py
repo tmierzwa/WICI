@@ -3,6 +3,7 @@
 
     python -m wici.stanowisko przygotuj --nosnik KATALOG --dyzurni 4 --paczka PLIK --karta PLIK
     python -m wici.stanowisko start --nosnik KATALOG --port /dev/ttyACM0|COM5 [--bitrate 41]
+    python -m wici.stanowisko odtworz --nosnik PUSTY_KATALOG [--kopie KATALOG ...]
 
 przygotuj (preparation of the station, on a computer without a network; stanowisko-osp.md, „Przygotowanie”):
 makes the medium (accounts of the duty officers, station password, main identity), the backup identity
@@ -16,6 +17,12 @@ JSON line "ready" with the receiver address and writes a copy of the database to
 reception, never the content of reports or passwords) go to stderr. A wrong password prints "login_failed"
 and ends with code 3. When the computer clock is earlier than the last numbered message, prints
 "clock_behind" and ends with code 2 without starting the stack: the duty officer sets the clock first.
+A medium restored from a copy starts in the recovery mode ("ready" with "recovery": true): no sending until
+the duty officer confirms the clock and the number of recoveries (panel, stage S7).
+
+odtworz (damaged medium, stanowisko-osp.md, „Nośnik i szyfrowanie”): reads from stdin the station password
+and two lines "konto hasło" of two different duty officers, takes the newest copy that the password opens
+(computer disk first, then the given directories, e.g. the second medium) and writes it to the empty medium.
 """
 
 import argparse
@@ -90,7 +97,7 @@ def start(args):
         return 2
     przyjecie.action("", "start")
     stos.start()
-    emit("ready", address=stos.address.hex())
+    emit("ready", address=stos.address.hex(), recovery=przyjecie.recovery)
     done = threading.Event()
     threading.Thread(target=lambda: (sys.stdin.read(), done.set()), daemon=True).start()
     try:
@@ -99,6 +106,20 @@ def start(args):
         pass
     stos.stop()
     przyjecie.stop()
+    return 0
+
+
+def restore(args):
+    lines = [sys.stdin.readline().strip() for _ in range(3)]
+    approvers = [tuple(line.split(" ", 1)) for line in lines[1:] if " " in line]
+    directories = [Path(store.state_dir() / "stanowisko" / "kopie")] + [Path(d) for d in args.kopie]
+    try:
+        path, key = kopie.find(directories, lines[0])
+        kopie.restore(path, key, args.nosnik, approvers, time.time())
+    except (database.LoginError, database.StorageError) as e:
+        emit("restore_failed", message=str(e))
+        return 3
+    emit("restored", copy=path.name, at=kopie.Kopie.read(path, key)[0])
     return 0
 
 
@@ -116,8 +137,11 @@ def main(argv=None):
     run.add_argument("--port", required=True, help="port szeregowy stacji stanowiska (węzła)")
     run.add_argument("--bitrate", type=int, default=BITRATE, help="bitrate interfejsu KISS w konfiguracji Reticulum")
     run.add_argument("--kopie", help="katalog kopii co 5 min na dysku komputera (domyślnie: katalog stanu aplikacji)")
+    back = commands.add_parser("odtworz", help="odtworzenie nośnika z kopii (zgoda dwóch dyżurnych)")
+    back.add_argument("--nosnik", required=True, help="pusty katalog na nowym nośniku stanowiska")
+    back.add_argument("--kopie", action="append", default=[], help="dodatkowy katalog kopii, np. drugi nośnik")
     args = parser.parse_args(argv)
-    return prepare(args) if args.command == "przygotuj" else start(args)
+    return {"przygotuj": prepare, "start": start, "odtworz": restore}[args.command](args)
 
 
 if __name__ == "__main__":

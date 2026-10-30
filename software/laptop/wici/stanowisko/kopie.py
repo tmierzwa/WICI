@@ -134,6 +134,55 @@ class Kopie:
         return left
 
 
+def find(directories, password):
+    """Newest copy in the directories (and their subdirectories) that the station password opens:
+    (path, data key). The computer disk first, the second medium only when the disk has none."""
+    for directory in directories:
+        paths = sorted((p for p in Path(directory).rglob(PREFIX + "*" + SUFFIX)), key=lambda p: p.name, reverse=True)
+        for path in paths:
+            try:
+                key = Kopie.unlock(path, password)
+                Kopie.read(path, key)
+                return path, key
+            except database.StorageError:
+                continue   # uszkodzona albo innego stanowiska
+            except database.LoginError:
+                continue
+    raise database.LoginError("Brak kopii, którą otwiera to hasło stanowiska.")
+
+
+def restore(path, key, root, approvers, at):
+    """A new medium at root from a copy: account files, identity and the database with its marker „kopia”,
+    so the application starts in the recovery mode (stage S6). approvers: two different duty officers
+    (name, password) checked against the accounts of the copy; the restore goes to the action log."""
+    from . import nosnik
+    _, payload = Kopie.read(path, key)
+    medium = nosnik.Nosnik(root)
+    if medium.exists():
+        raise database.StorageError("ten nośnik ma już dane stanowiska: odtwarza się na pusty nośnik")
+    names = [a for a, _ in approvers]
+    if len(approvers) != 2 or len(set(names)) != 2:
+        raise database.LoginError("Odtworzenie wymaga zgody dwóch różnych dyżurnych.")
+    medium.kit.dir.mkdir(parents=True)
+    database._write_durable(medium.kit.dir / database.KIT_KEY, payload["zestaw"])
+    database._write_durable(medium.kit.dir / database.ACCOUNTS, payload["konta"])
+    database._write_durable(medium.root / "tozsamosc", payload["tozsamosc"])
+    try:
+        for name, password in approvers:
+            medium.login(name, password, key)
+    except database.LoginError:
+        for f in (medium.kit.dir / database.KIT_KEY, medium.kit.dir / database.ACCOUNTS, medium.root / "tozsamosc"):
+            f.unlink()
+        raise
+    with contextlib.closing(sqlite3.connect(":memory:")) as db:
+        db.deserialize(payload["baza"])
+        with db:
+            db.execute("INSERT INTO dziennik(at, account, op, detail) VALUES(?,?,?,?)",
+                       (at, names[0], "odtworzenie", f"z kopii {path.name}, zgoda {names[0]} i {names[1]}"))
+        medium.save(key, db.serialize())
+    return medium
+
+
 def disk_dir(state, medium):
     """Copies of this medium on the computer disk: a directory per medium, named by its kit key."""
     return Path(state) / "kopie" / (database.kit_id(medium.kit.dir) or "brak")[:16]
