@@ -8,7 +8,7 @@ Dlaczego pomiar jest potrzebny:
 - model LTspice producenta zawyża sprawność o 8–25 punktów względem krzywych z karty, więc się do tego nie nadaje;
 - z krzywych dla 5 V wychodzi dla 3,3 V przy 30–60 mA w Burst Mode około 74–83%. Przy dolnej granicy model energii daje około 47 h, czyli mniej niż W23 (48 h).
 
-<img src="render-gora.png" alt="Widok płytki z góry: dławik L1 nad układem U1, po lewej kondensatory wyjściowe i zacisk VOUT, po prawej kondensatory wejściowe i zacisk VIN, w lewym dolnym rogu trzy rezystory obciążenia ze zworkami, w prawym zworki RUN i PWM" width="640">
+<img src="render-gora.png" alt="Widok płytki z góry: dławik L1 nad układem U1, po lewej kondensatory wyjściowe i zacisk VOUT, po prawej kondensatory wejściowe i zacisk VIN, w lewym dolnym rogu trzy rezystory obciążenia ze zworkami, w prawym zworki RUN i PWM; przy końcach zacisków znaki plus i minus" width="640">
 
 ## Układ
 
@@ -69,11 +69,14 @@ Generator sprawdza też odstęp co najmniej 2,5 mm między padami SMD i przewlek
 - W podglądzie rozmieszczenia sprawdza się:
   - U1: pin 1 przy znaczku na sitodruku, w lewym górnym rogu. CPL dodaje +270° względem KiCad, bo footprint JLC tej części ma rzędy padów poziomo;
   - L1: wyprowadzenia na padach po lewej i prawej stronie. Model JLC może być obrócony o 90°; wtedy poprawia się obrót w podglądzie;
+  - JP1–JP5: każda listwa stoi pionowo nad swoimi otworami. CPL obraca listwy o 90° względem KiCad, bo tak leżą modele JLC (podgląd z 2026-10-31);
   - C12: biegun + na kwadratowym padzie (VIN);
   - J1 i J2: wejście przewodu na zewnątrz, w stronę krawędzi płytki.
 - Zworki nie mają footprintu, więc nie ma ich w BOM i CPL: 5 sztuk 2,54 mm (np. BOOMELE C5305 z LCSC) kupuje się osobno albo bierze z zapasu po L0.
 
 ## Pomiar
+
+**Biegunowość zacisków** (znaki „+” i „−” na sitodruku przy końcach zacisków): J1 (VIN) ma GND u góry i + na dole, J2 (VOUT) ma + u góry i GND na dole, gdy napis „WICI 3V3” jest na dole płytki i da się go czytać. Płytka nie ma ochrony przed odwrotnym podłączeniem, więc zamiana przewodów zasilacza niszczy U1. Pierwsze włączenie robi się z ograniczeniem prądu zasilacza 100–200 mA.
 
 Przyrządy:
 
