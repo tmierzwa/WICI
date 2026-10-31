@@ -65,11 +65,13 @@ Generator sprawdza też odstęp co najmniej 2,5 mm między padami SMD i przewlek
 ## Zamówienie (JLCPCB)
 
 - PCB: 4 warstwy, 1,6 mm, plik `fabrication/przetwornica-3v3-gerber.zip`, 5 sztuk; przelotki zakryte maską (tented).
-- Montaż: tylko strona górna, SMD z `jlc-bom.csv` i `jlc-cpl.csv` (2 sztuki wystarczą). Kody LCSC i stan sprawdzono 2026-10-30; U1 (C580689) miał 25 sztuk na stanie, więc stan sprawdza się ponownie przy zamówieniu.
+- Montaż: tylko strona górna, SMD i THT z `jlc-bom.csv` i `jlc-cpl.csv` (2 sztuki wystarczą). W wycenie sprawdza się, że części przewlekane (C12, JP1–JP5, J1, J2) są w montażu, a nie pominięte. Kody LCSC i stan sprawdzono 2026-10-31: wszystkie pozycje są w magazynie JLC, ale U1 (C580689) ma tylko 25 sztuk, więc stan sprawdza się ponownie przy zamówieniu.
 - W podglądzie rozmieszczenia sprawdza się:
   - U1: pin 1 przy znaczku na sitodruku, w lewym górnym rogu. CPL dodaje +270° względem KiCad, bo footprint JLC tej części ma rzędy padów poziomo;
-  - L1: wyprowadzenia na padach po lewej i prawej stronie. Model JLC może być obrócony o 90°; wtedy poprawia się obrót w podglądzie.
-- Części przewlekane (listwy, zworki, zaciski, C12) lutuje pw-lab ręcznie; C12 biegunem + do pola z kwadratowym padem (VIN).
+  - L1: wyprowadzenia na padach po lewej i prawej stronie. Model JLC może być obrócony o 90°; wtedy poprawia się obrót w podglądzie;
+  - C12: biegun + na kwadratowym padzie (VIN);
+  - J1 i J2: wejście przewodu na zewnątrz, w stronę krawędzi płytki.
+- Zworki nie mają footprintu, więc nie ma ich w BOM i CPL: 5 sztuk 2,54 mm (np. BOOMELE C5305 z LCSC) kupuje się osobno albo bierze z zapasu po L0.
 
 ## Pomiar
 
