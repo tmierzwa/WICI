@@ -60,6 +60,8 @@ Dlatego odbiór ramek nie zależy od pętli stacji:
 
 Radia RNode są wzorcem profilu i narzędziem kroków 2, 3 i 5 ([koncepcja, rozdział 08](../concept/08-plan-weryfikacji-i-decyzje.html#kolejnosc-prac)). To dwa zestawy RAK19007 z RAK4631 (nRF52840 i SX1262) z oficjalnym firmware RNode, podłączone przez USB do laptopów z Reticulum w Pythonie. Firmware wgrywa `rnodeconf --autoinstall` (opcja RAK4631, pasmo 779–928 MHz; autor RNode oznacza tę płytkę jako eksperymentalną). Przy odbiorze zestawów sprawdza się, że to wersja na pasmo 868 MHz.
 
+Zestawy radiów testowych kroku 1 (Seeed XIAO ESP32-S3 + Wio-SX1262) nie zastępują RAK4631. Oficjalne RNode 1.86 nie steruje na nich przełącznikiem anteny RF_SW1 (GPIO38), więc odbierają o około 25 dB słabiej i nie nadają się do pomiaru zasięgu. Z łatką z [radio-pair](../../hardware/radio-pair/rfsw-probe/README.md#łatka-rnode) działają przy stole jak radia RNode i mogą służyć tylko jako radia pomocnicze ([próba 2026-10-31](../../hardware/radio-pair/evidence/rnode-xiao-2026-10-31.txt)).
+
 Interfejs w konfiguracji Reticulum (`~/.reticulum/config`) ustawia profil z tabeli wyżej i kod dostępu sieci:
 
 ```ini

@@ -1,0 +1,91 @@
+WICI / R0 / RNode na zestawach XIAO i przełącznik RF_SW1 / 2026-10-31
+
+Pytanie: czy RNode 1.86 działa na zestawie Seeed 102010611 i czy trzeba
+sterować RF_SW1 modułu Wio-SX1262 (wysoki w odbiorze, niski poza nim).
+RNode 1.86 dla tej płytki (BOARD_XIAO_S3) ma pin_rxen = -1, więc linii
+nie steruje. GPIO38 jako RF_SW1 według wariantu Meshtastic seeed_xiao_s3
+(SX126X_RXEN 38); pair-0.4 używa tego samego pinu.
+
+Sprzęt: dwa zestawy Seeed 102010611 (XIAO ESP32S3 + Wio SX1262), anteny
+zestawu, pionowo. A: MAC 44:b1:76:ad:28:a0, B: MAC 68:ee:8f:60:d1:6c.
+Obie płytki na jednym Macu, odległość 1 m, bez przeszkód, w pomieszczeniu.
+Pełne raporty JSON/JSONL i dzienniki rnprobe zostają lokalnie w results/.
+
+Programy:
+- pair-0.4 (src/main.cpp), profil 869.525 MHz, BW125 kHz, SF7, CR4/5, 0 dBm.
+- rfsw-0.3 (rfsw-probe/): ten sam profil i RadioLib 7.6.0, bez
+  setRfSwitchPins; RF_SW1 steruje sam program.
+- RNode 1.86 oficjalne: rnodeconf --autoinstall --fw-version 1.86,
+  pozycja [16]; skrót firmware cbfc0d44eee09419923cae296680ce2f8670386bc455fb91335712c321566851.
+- RNode 1.86 z łatką rnode-xiao-rf-sw1.patch (pin_rxen = 38, linia niska
+  w standby i uśpieniu), tag 1.86 = 9b39b6c, arduino-cli 1.5.1,
+  esp32:esp32@2.0.17; wgrana esptool pod 0x10000, skrót ustawiony
+  rnodeconf --firmware-hash; skrót f3b984d012ed941816ac9079f70e807f6fce85d3f27e5f8f078d44df064ab318.
+  Każdy skrót potwierdzony przez rnodeconf -L i -K na obu płytkach.
+- Reticulum e40191b (rnsd 1.5.5), dwie instancje na jednym Macu z osobnymi
+  portami instancji, tylko RNodeInterface (bez AutoInterface): 13 dBm,
+  airtime_limit_long = 10, IFAC z domyślnym rozmiarem RNodeInterface (8 B),
+  enable_transport i respond_to_probes. Hasło IFAC nie jest zapisane.
+
+1. Kopie i tożsamość: MAC obu płytek i sumy kopii fabrycznych zgodne
+   z bench-r0-2026-10-10.txt.
+
+2. Sesja e3590a228ef047dc, pair-0.4: POZYTYWNY.
+   B->A 100/100, RSSI mediana -40 dBm (-47..-39), SNR 12.5 dB (11.8..13.8);
+   A->B 100/100, RSSI mediana -40 dBm (-47..-38), SNR 12.8 dB (12.0..13.5).
+
+2b. rfsw-0.3: odbiornik zmienia stan RF_SW1 w każdym odstępie między
+   pakietami nadajnika (co 1 s): H wysoki, RH jak po resecie, L niski,
+   RL jak po resecie; 50 okien na stan, oba kierunki. Przyczyna resetu
+   z ROM 21 (USB-Serial-JTAG, daje ją samo otwarcie portu na macOS);
+   ten reset zeruje cyfrowe GPIO i IO_MUX jak włączenie zasilania.
+   GPIO38 po resecie na obu płytkach: mux=00000A00 mcu_sel=0 ie=1 pu=0
+   pd=0 oe=0; z podciąganiem w górę 1, w dół 0; bez sterowania 200 ms po
+   stanie wysokim 0 i po niskim 0.
+   Odbiera A (raport rfsw-20261031T121737Z-A028AD76B144), RSSI mediana:
+     H -47 dBm (-58..-46), RH -72 (-101..-70), L -72 (-76..-70), RL -72 (-87..-71).
+   Odbiera B (raport rfsw-20261031T122115Z-6CD1608FEE68), RSSI mediana:
+     H -50 dBm (-51..-47), RH -74 (-76..-68), L -74 (-75..-70), RL -74 (-75..-71).
+   Każdy stan 50/50, bez błędów CRC i obcych pakietów, 0 okien niezgodnych
+   z numerami pakietów. SNR 12-13 dB we wszystkich stanach (silny sygnał).
+   Wynik: GPIO38 to RF_SW1; linia bez sterowania jest niska, więc
+   oficjalne 1.86 odbiera o 24-25 dB słabiej niż przy RF_SW1 wysokim.
+   Dwa wcześniejsze przebiegi tego dnia zatrzymały zabezpieczenia skryptu
+   (przyczyna resetu 0 w rfsw-0.2; podwójne INFO po resecie przy otwarciu
+   portu); poprawki w rfsw-0.3, bez pomiaru.
+
+3. RNode 1.86 oficjalne, rnprobe rnstransport.probe -n 100 -w 4 -t 15,
+   16 B: POZYTYWNY.
+   A->B 99/100 (próba 93 bez odpowiedzi), RTT mediana 624 ms,
+   RSSI dowodu -66 dBm (-81..-61), SNR 12.25 dB (11.25..13.75);
+   B->A 100/100, RTT 620 ms, RSSI -63 dBm (-73..-54), SNR 12.5 dB (11.5..13.75).
+   Szum tła w rnstatus po starcie: -112 i -109 dBm.
+
+4. RNode 1.86 z łatką, te same rnsd, cele i próby: POZYTYWNY.
+   A->B 100/100, RTT mediana 607 ms, RSSI dowodu -43.5 dBm (-61..-31),
+   SNR 12.5 dB (11.0..13.5);
+   B->A 99/100 (próba 69 bez odpowiedzi), RTT 621 ms, RSSI -33 dBm (-58..-30),
+   SNR 12.5 dB (11.75..13.5).
+   Szum tła w rnstatus po starcie: -88 i -87 dBm.
+   RSSI wyższe niż w 3 o 22.5 i 30 dB, szum tła o około 24 dB: z łatką tor
+   odbiorczy jest włączony.
+
+5. IFAC (łatka, A wysyła próby do B, po 10 prób): inne hasło na B 0/10,
+   wszystkie bez odpowiedzi; wspólne hasło po restarcie rnsd B 10/10.
+
+6. Powrót do pair-0.4 (pio upload osobno na każdą płytkę). Sesja
+   cd187cccccb24918 przerwana po 61 ramkach w każdą stronę przez chwilowe
+   zerwanie USB z B (61/61 do przerwania). Sesja e8d7f378c2384036: POZYTYWNY.
+   B->A 100/100, RSSI mediana -42 dBm (-51..-41), SNR 12.2 dB;
+   A->B 100/100, RSSI mediana -42 dBm (-49..-42), SNR 12.5 dB.
+
+Niewykonane: kroki 3 i 4 w budynku przez ściany (oba zestawy przy jednym
+Macu); pomiar stanu linii w czasie nadawania (bez przyrządów; stan niski
+przez całe nadanie wynika z kodu łatki i deasemblacji); praca długa,
+uśpienie i inne tryby RNode.
+
+Niewyjaśnione: stan H w rfsw-0.3 daje RSSI o 7-10 dB niższe niż pair-0.4
+przy tym samym stole; w obu programach RF_SW1 wysoki daje odbiór bez strat.
+
+Wynik dotyczy odległości 1 m. Nie jest pomiarem zasięgu, pracy przez
+ściany ani działania protokołu WICI. Wzorcem radiów RNode pozostają RAK4631.
