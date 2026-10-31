@@ -280,13 +280,15 @@ def rect(x0, y0, x1, y1):
 
 # Power copper on the top layer (figure 17): switch nodes, input and output with their capacitors.
 # As in figure 17 the switch-node copper wraps outside pins 1-2 and 19-20 down to pins 3 and 18; the RUN and
-# PWM/SYNC vias sit inside it. The input and output copper leaves pins 17 and 4 below it.
+# PWM/SYNC vias sit inside it. The input and output copper leaves pins 17 and 4 below it. Input and output
+# rank above the switch nodes: next to each other at equal priority the fill order decides which zone keeps
+# the clearance strip, and exports came out different.
 zone(rect(-7.0, -13.6, -3.15, -1.35), "SW2", priority=3)
 zone(rect(3.15, -13.6, 7.0, -1.35), "SW1", priority=3)
 zone([(-3.15, -1.15), (-7.4, -1.15), (-7.4, -3.4), (-27.2, -3.4), (-27.2, 8.9), (-12.2, 8.9), (-12.2, -0.6),
-      (-3.15, -0.6)], "VOUT", priority=3)
+      (-3.15, -0.6)], "VOUT", priority=4)
 zone([(3.15, -1.15), (7.4, -1.15), (7.4, -3.4), (27.2, -3.4), (27.2, 4.6), (19.0, 4.6), (19.0, -0.6), (3.15, -0.6)],
-     "VIN", priority=3)                                         # with a lobe under J1 for C12
+     "VIN", priority=4)                                         # with a lobe under J1 for C12
 zone(rect(-17.0, -8.6, -7.4, -4.0), "GND", priority=2)
 zone(rect(7.4, -8.6, 17.0, -4.0), "GND", priority=2)
 # Ground everywhere else: top fill, In1 unbroken plane, In2 and bottom fills around the signal routes.
@@ -402,6 +404,10 @@ for y, label in ((9.5, "1"), (14.58, "0")):
     text(label, 16.0, y, 1.0)
 text("VIN", 22.5, -10.4, 1.0)
 text("VOUT", -22.5, -10.4, 1.0)
+# Terminal polarity at the ends of each terminal (the bodies cover their pads): J1 has GND on top and VIN
+# below, J2 VOUT on top and GND below. Reverse supply polarity would destroy U1.
+for x, y, label in ((19.0, -11.4, "\u2212"), (26.8, 3.0, "+"), (-22.5, -6.8, "+"), (-26.2, 7.8, "\u2212")):
+    text(label, x, y, 1.5)
 
 # Mixed assembly (JLC, also hand soldering after reflow): every SMD pad at least 2.5 mm from every
 # through-hole pad, copper edge to edge, as for the v2 board (docs/spec/elektronika.md).
@@ -425,8 +431,10 @@ with open(HERE / "bom.csv", "w", encoding="utf-8", newline="") as f:
         w.writerow([ref, value, foot, lcsc, mpn, "JLC" if jlc else "ręcznie (pw-lab)"])
 
 # JLC assembly files: BOM grouped by LCSC number, placement from the lower-left corner (y up), SMD and THT.
-# TSSOP turns 270 degrees for JLC like SOIC on the dev-bench board; check pin 1 in the JLC preview.
+# JLC library models are turned against KiCad: TSSOP by 270 degrees like SOIC on the dev-bench board, pin
+# headers by 90 degrees (the JLC preview of 2026-10-31 showed them across their holes); check in the preview.
 # Through-hole footprints have their origin on pin 1, so their CPL position is the body centre.
+JLC_TURN = {"LTC3115-1_FE20_CA": 270, "PinHeader_1x02_P2.54mm_Vertical": 90, "PinHeader_1x03_P2.54mm_Vertical": 90}
 JLC = HERE / "fabrication"
 JLC.mkdir(exist_ok=True)
 groups = {}
@@ -444,7 +452,7 @@ with open(JLC / "jlc-cpl.csv", "w", encoding="utf-8", newline="") as f:
     for fp in board.GetFootprints():
         if any(fp.GetReference() == i[0] for items in groups.values() for i in items):
             pos = fp.GetBoundingBox(False).GetCenter() if fp.GetAttributes() & pcbnew.FP_THROUGH_HOLE else fp.GetPosition()
-            rot = fp.GetOrientationDegrees() + (270 if fp.GetReference() == "U1" else 0)
+            rot = fp.GetOrientationDegrees() + JLC_TURN.get(fp.GetFPID().GetLibItemName().wx_str(), 0)
             w.writerow([fp.GetReference(), f"{pcbnew.ToMM(pos.x):.3f}", f"{BOARD_H - pcbnew.ToMM(pos.y):.3f}",
                         "Top", f"{rot % 360:.0f}"])
 print(f"{OUT}: {len(BOM)} parts, {len(NETS)} nets")
