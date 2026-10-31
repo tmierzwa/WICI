@@ -93,6 +93,14 @@ precedence = "override"
 SPDX-FileCopyrightText = ["2016-2026 Mark Qvist", "2026 Tomek Mierzwa"]
 SPDX-License-Identifier = "LicenseRef-Reticulum"
 
+# Patch to RNode Firmware 1.86 for the XIAO ESP32-S3 + Wio-SX1262 (RF_SW1 on GPIO38). It changes Boards.h
+# (GPL-3.0-or-later) and sx126x.cpp/.h (MIT), so the patch as a whole is GPL-3.0-or-later.
+[[annotations]]
+path = "hardware/radio-pair/rnode-xiao-rf-sw1.patch"
+precedence = "override"
+SPDX-FileCopyrightText = ["2026 Tomek Mierzwa", "2024 Mark Qvist (Boards.h)", "Sandeep Mistry, Mark Qvist and Jacob Eva (sx126x.cpp, sx126x.h)"]
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
 # WICI patches to microReticulum keep the license of the files they change.
 [[annotations]]
 path = "firmware/patches/microReticulum/**"
