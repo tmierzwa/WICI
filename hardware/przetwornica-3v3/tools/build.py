@@ -180,10 +180,10 @@ two("C8", "Capacitor_SMD", "C_0805_2012Metric", "10uF 25V X5R", 2.4, 4.8, 0, ((1
 # draws current only in PWM mode and holds the pin low against coupling from the SW1 copper.
 two("R9", *R0603, "10M 1%", 6.0, 12.04, 0, ((5.2, 12.04), "RUN"), ((6.8, 12.04), "GND"), "C7250", "0603WAF1005T5E")
 two("R10", *R0603, "100k 1%", 14.6, 1.5, 0, ((13.8, 1.5), "GND"), ((15.4, 1.5), "PWM"), "C25803", "0603WAF1003T5E")
-# Bulk input capacitor for the bench leads and the ammeter in series (data sheet page 11), hand soldered.
+# Bulk input capacitor for the bench leads and the ammeter in series (data sheet page 11). A general-purpose
+# electrolytic: its ESR damps the lead inductance, a low-ESR polymer would damp it less.
 place("C12", "Capacitor_THT", "CP_Radial_D6.3mm_P2.50mm", "47uF 25V", 22.0, 3.5, 270,
-      [((22.0, 3.5), "VIN"), ((22.0, 6.0), "GND")], mpn="elektrolityczny 47 µF 25 V, fi 6,3 mm, raster 2,5 mm",
-      jlc=False)
+      [((22.0, 3.5), "VIN"), ((22.0, 6.0), "GND")], "C134708", "Lelon SG-470M1EBK-0607")
 
 # Feedback and compensation below the IC, away from the switch nodes: a row of 0603 parts standing upright,
 # the feedback bus along their upper pads (y 5.725), the lower pads at y 7.275, the second row at 9.5.
@@ -206,18 +206,18 @@ for ref, jp, x, value, lcsc, mpn in LOADS:
     load = f"OBC_{jp}"
     two(ref, *R2512, value, x, 10.8, 90, ((x, 7.8), "VOUT"), ((x, 13.8), load), lcsc, mpn)
     place(jp, "Connector_PinHeader_2.54mm", "PinHeader_1x02_P2.54mm_Vertical", "zworka", x, 18.0, 0,
-          {"1": load, "2": "GND"}, mpn="listwa 1x2 2,54 mm + zworka", jlc=False)
+          {"1": load, "2": "GND"}, "C32713268", "hanxia HX PZ2.54-1x2P ZZ")
 
 # RUN and PWM/SYNC: three-pin jumpers (VIN/RUN/GND, VCC/PWM/GND); pin 2 is the IC pin.
 place("JP4", "Connector_PinHeader_2.54mm", "PinHeader_1x03_P2.54mm_Vertical", "RUN", 14.0, 9.5, 0,
-      {"1": "VIN", "2": "RUN", "3": "GND"}, mpn="listwa 1x3 2,54 mm + zworka", jlc=False)
+      {"1": "VIN", "2": "RUN", "3": "GND"}, "C32713269", "hanxia HX PZ2.54-1x3P ZZ")
 place("JP5", "Connector_PinHeader_2.54mm", "PinHeader_1x03_P2.54mm_Vertical", "PWM/SYNC", 18.0, 9.5, 0,
-      {"1": "VCC", "2": "PWM", "3": "GND"}, mpn="listwa 1x3 2,54 mm + zworka", jlc=False)
+      {"1": "VCC", "2": "PWM", "3": "GND"}, "C32713269", "hanxia HX PZ2.54-1x3P ZZ")
 
 # Power terminals: input on the right, output (external load) on the left.
 TB = ("TerminalBlock_Phoenix", "TerminalBlock_Phoenix_MKDS-1,5-2-5.08_1x02_P5.08mm_Horizontal")
-place("J1", *TB, "VIN", 22.5, -2.0, 90, {"1": "VIN", "2": "GND"}, mpn="Phoenix MKDS 1,5/2-5,08", jlc=False)
-place("J2", *TB, "VOUT", -22.5, -2.0, 270, {"1": "VOUT", "2": "GND"}, mpn="Phoenix MKDS 1,5/2-5,08", jlc=False)
+place("J1", *TB, "VIN", 22.5, -2.0, 90, {"1": "VIN", "2": "GND"}, "C480516", "Phoenix Contact 1715721")
+place("J2", *TB, "VOUT", -22.5, -2.0, 270, {"1": "VOUT", "2": "GND"}, "C480516", "Phoenix Contact 1715721")
 
 # Probe pads for the voltmeter, input and output at the capacitors (the switch nodes are probed at the
 # inductor pads, which stick out of its body by 1.3 mm).
@@ -424,8 +424,9 @@ with open(HERE / "bom.csv", "w", encoding="utf-8", newline="") as f:
     for ref, value, foot, lcsc, mpn, jlc in BOM:
         w.writerow([ref, value, foot, lcsc, mpn, "JLC" if jlc else "ręcznie (pw-lab)"])
 
-# JLC assembly files: BOM grouped by LCSC number, placement from the lower-left corner (y up), SMD only.
+# JLC assembly files: BOM grouped by LCSC number, placement from the lower-left corner (y up), SMD and THT.
 # TSSOP turns 270 degrees for JLC like SOIC on the dev-bench board; check pin 1 in the JLC preview.
+# Through-hole footprints have their origin on pin 1, so their CPL position is the body centre.
 JLC = HERE / "fabrication"
 JLC.mkdir(exist_ok=True)
 groups = {}
@@ -442,7 +443,7 @@ with open(JLC / "jlc-cpl.csv", "w", encoding="utf-8", newline="") as f:
     w.writerow(["Designator", "Mid X", "Mid Y", "Layer", "Rotation"])
     for fp in board.GetFootprints():
         if any(fp.GetReference() == i[0] for items in groups.values() for i in items):
-            pos = fp.GetPosition()
+            pos = fp.GetBoundingBox(False).GetCenter() if fp.GetAttributes() & pcbnew.FP_THROUGH_HOLE else fp.GetPosition()
             rot = fp.GetOrientationDegrees() + (270 if fp.GetReference() == "U1" else 0)
             w.writerow([fp.GetReference(), f"{pcbnew.ToMM(pos.x):.3f}", f"{BOARD_H - pcbnew.ToMM(pos.y):.3f}",
                         "Top", f"{rot % 360:.0f}"])
