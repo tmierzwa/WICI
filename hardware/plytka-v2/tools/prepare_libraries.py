@@ -8,7 +8,9 @@ hardware/dev-bench, the LTC3115-1 and SRP1038A land patterns from the JLC test b
 """
 import json
 from pathlib import Path
+import re
 import shutil
+import uuid
 
 import pcbnew
 
@@ -18,6 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 HW = ROOT.parent
 NAME = 'plytka-v2'
 OWN_FROM_TEST_BOARD = {'U1': 'LTC3115-1_FE20_CA', 'L1': 'L_Bourns_SRP1038A'}
+NS = uuid.UUID('4d0c3a2e-8b1f-4f7e-9a51-6c2b7e0d9f31')  # as in make_schematic.py
 
 
 def main():
@@ -35,6 +38,11 @@ def main():
             own.SetOrientationDegrees(0)
             own.SetReference('REF**')
             pcbnew.FootprintSave(str(wici), own)
+            # FootprintSave gives new uuids on every run; number them so the file only changes with the footprint
+            path = wici / (name + '.kicad_mod')
+            n = iter(range(10 ** 6))
+            path.write_text(re.sub(r'\(uuid "[^"]+"\)', lambda m: f'(uuid "{uuid.uuid5(NS, f"{name}.{next(n)}")}")',
+                                   path.read_text()))
     libs = sorted({p['footprint'].split(':')[0] for p in PARTS})
     rows = []
     for lib in libs:

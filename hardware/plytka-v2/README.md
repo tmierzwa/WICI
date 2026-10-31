@@ -1,17 +1,18 @@
 # WICI: płytka v2, schemat wstępny
 
-**Status 2026-10-31: schemat wstępny, bez płytki drukowanej. Nie zamawiać.** Schemat zbiera w jednym projekcie KiCad płytkę v1.1 prototypu i tor zasilania stacji pilotażowej ([elektronika](../../docs/spec/elektronika.md#stacja-pilotażowa)). Wartości elementów pochodzą z [projektu zasilania](../r02/zasilanie.md) i z [płytki testowej przetwornicy](../przetwornica-3v3/README.md). Obrys, rozmieszczenie i ścieżki czekają na obudowę, wyniki pomiarów i krok 4 (sekcja [Przed płytką drukowaną](#przed-płytką-drukowaną)).
+**Status 2026-10-31: schemat i rozmieszczenie wstępne, bez ścieżek. Nie zamawiać.** Schemat zbiera w jednym projekcie KiCad płytkę v1.1 prototypu i tor zasilania stacji pilotażowej ([elektronika](../../docs/spec/elektronika.md#stacja-pilotażowa)). Wartości elementów pochodzą z [projektu zasilania](../r02/zasilanie.md) i z [płytki testowej przetwornicy](../przetwornica-3v3/README.md). Obrys i rozmieszczenie są wstępne i opierają się na założeniach obudowy ([Rozmieszczenie wstępne](#rozmieszczenie-wstępne)). Ścieżki czekają na model Hammonda, wyniki pomiarów i krok 4 (sekcja [Przed płytką drukowaną](#przed-płytką-drukowaną)).
 
 | Plik | Zawartość |
 |---|---|
 | [schemat.pdf](schemat.pdf) | schemat (arkusz A0, połączenia przez etykiety sieci, jak w v1) |
 | [polaczenia.md](polaczenia.md) | sygnały MCU i wszystkie sieci |
 | [bom.csv](bom.csv) | lista części z producentami i numerami, tam gdzie są już wybrane |
-| `cad/plytka-v2.kicad_sch` | projekt KiCad 10.0.6 |
-| `checks/erc.json`, `checks/netlist.xml` | ERC (0 naruszeń) i lista połączeń |
+| `cad/plytka-v2.kicad_sch`, `cad/plytka-v2.kicad_pcb` | projekt KiCad 10.0.6: schemat i płytka z rozmieszczeniem wstępnym, bez ścieżek |
+| `checks/erc.json`, `checks/netlist.xml`, `checks/drc.json` | ERC (0 naruszeń), lista połączeń i DRC rozmieszczenia (tylko uwagi o sitodruku i niepołączone pady) |
 | `tools/design.py` | jedyne źródło: części, piny, sieci i sprawdzenia przydziału pinów |
+| `tools/make_pcb.py` | obrys, otwory i rozmieszczenie: założenia, położenia stałe i obszary bloków |
 
-Odtworzenie: `hardware/plytka-v2/tools/build.sh` (KiCad 10.0.6). Skrypt sprawdza przydział pinów, generuje schemat, BOM i listę połączeń, uruchamia ERC i rysuje PDF. Plików w `cad/` nie edytuje się ręcznie.
+Odtworzenie: `hardware/plytka-v2/tools/build.sh` (KiCad 10.0.6). Skrypt sprawdza przydział pinów, generuje schemat, BOM i listę połączeń, uruchamia ERC, rysuje PDF, rozmieszcza elementy na płytce i uruchamia DRC. Plików w `cad/` nie edytuje się ręcznie.
 
 ## Co zmienia się względem v1.1
 
@@ -55,9 +56,30 @@ Przypisania v1.1 zostają. Nowe sygnały są w tabeli „Sygnały MCU” w [pola
 
 Wszystkie inne piny DevKitC są zajęte, dlatego użyto pinów konfiguracji startu GPIO45 i GPIO46. Każdy ma rezystor do masy (R63, R43), który daje ich domyślny niski stan przy resecie: GPIO45 wybiera 3,3 V dla pamięci flash, a GPIO46 nie może być wysoki razem z niskim GPIO0. GPIO47 i GPIO48 mają poziom 3,3 V w module WROOM-1 (N8R8); w modułach WROOM-2 z 1,8 V by go nie miały, więc płytka wymaga DevKitC-1-N8R8 v1.1 (dioda RGB na GPIO38). `design.py` sprawdza te zasady przy każdym generowaniu. GPIO3 (USB_LAPTOP) jest pinem konfiguracji startu tylko po zapisaniu bezpiecznika STRAP_JTAG_SEL, którego stacja nie zapisuje. Wolnych pinów nie ma.
 
+## Rozmieszczenie wstępne
+
+Płytka ma obrys i rozmieszczenie wszystkich 152 elementów, bez ścieżek. Służy do sprawdzenia, czy całość mieści się w obudowie, i do renderu, a nie do zamówienia. `make_pcb.py` ustawia elementy panelu i złącza na sztywno, a małe elementy każdego bloku układa automatycznie w jego obszarze, każdy najbliżej poprzedniego. Zatrzymuje się, gdy coś nachodzi na inny element, na strefę albo na krawędź, i gdy element ochronny lub odsprzęgający leży za daleko od swojego układu (sprawdzenia `CLOSE`, odległość pad–pad):
+- ESD U8 ≤10 mm od USB-C J4, TVS D4 ≤10 mm od J2 (zasada z [obudowy R02](../r02/obudowa.md#płyta-bazowa-obrys-i-ograniczenia));
+- kondensatory wejściowe i wyjściowe przetwornicy ≤5–6 mm od U7;
+- C1 i C2 ≤8 mm od gniazda Wio, C36 ≤5 mm od U6, C11 ≤5 mm od U4.
+
+Każdy element jest powiązany ze swoim symbolem w schemacie (ścieżka z tego samego UUID co w `make_schematic.py`), więc KiCad widzi płytkę i schemat jako jeden projekt. Wynik jest powtarzalny: dwa przebiegi dają ten sam plik. DRC zgłasza tylko uwagi o sitodruku i niepołączone pady, bo ścieżek jeszcze nie ma. Bez sieci są celowo: pad termiczny U5 (karta LM74800, tabela 6-1), wolny styk 3 przełącznika SW5 i piny 4 i 5 U3, których schemat nie używa.
+
+Założenia, do sprawdzenia na modelu STEP Hammonda i na przymiarce:
+
+- **Obrys:** 200 × 120 mm z narożnikami R4 i wycięciami 12 × 12 mm na słupki śrub pokrywy. Płytka zajmuje obszar pokrywy Hammond 1599KBAT x 10–210 mm i y 10–130 mm ([obudowa R02](../r02/obudowa.md#płyta-bazowa-obrys-i-ograniczenia)), więc współrzędne płytki to współrzędne pokrywy minus 10 mm.
+- **Panel od strony pokrywy:** środek okna ekranu, rząd WSTECZ–GÓRA–DÓŁ–OK w rozstawie 32 mm, dioda alarmu, CISZA i przycisk przygotowania leżą na pozycjach z [założeń obudowy](../obudowa/zalozenia.py) (`PANEL`). Wyłącznik główny PV6 jest w pokrywie i łączy się przewodem z J3, więc pod nim płytka ma wolną strefę Ø22 mm. Złącze FPC J7 leży 13,8 mm pod krawędzią panelu, jak na v1.1.
+- **Strefy panelu od góry:** okno ekranu 64 × 45 mm; strefa 22 × 22 mm wokół każdego przycisku rzędu; osłona CISZA 30 × 40 mm (tylko SW5); bez padów w promieniu 10 mm od otworu przycisku przygotowania (tylko SW6 i otwór H4 w jej skraju).
+- **Złącza na dolnej krawędzi:** USB-C J4 pod otworem w ścianie (pokrywa x 60). EN3 (x 110) i SMA (x 170) są w ścianie: EN3 łączy się przewodem z J2, a SMA krótkim przewodem koncentrycznym z u.FL Wio.
+- **Moduły od spodu (decyzja 6):** DevKitC i Wio siedzą w gniazdach od spodu płytki. Patrząc z góry, rzędy gniazd zamieniają się stronami (J6 po lewej, J5 po prawej), żeby moduł widziany od spodu stał jak na v1.1. Rozstaw rzędów Wio przyjęto 15,24 mm, do potwierdzenia na rysunku Seeed. Zworka pomiarowa JP3 leży od góry tuż obok gniazd Wio.
+- **Tylko THT od spodu:** wszystkie elementy SMD są od góry, więc montaż SMT jest jednostronny (jeden szablon, jeden przebieg pieca). Od spodu są tylko gniazda modułów, F1 i C50, lutowane ręcznie albo na fali.
+- **Strefa koszyka ogniw:** BH4AAW leży w podstawie pod płytką (x 10–72, y 58–116), około 19 mm pod nią. Od spodu w tej strefie są tylko końcówki wyprowadzeń THT i otwór H3.
+- **Wysokości od góry:** płytka około 12 mm za frontem. Elementy górne poza panelem mają do około 9 mm (brzęczyk CEM-1203 do sprawdzenia). Wysoki kondensator C50 i oprawka bezpiecznika F1 są od spodu, poza strefą koszyka.
+- **Otwory montażowe:** H1 i H2 przy górnej krawędzi w rozstawie 80 mm. H3 leży nad koszykiem ogniw, więc łeb śruby albo tuleja od spodu mogą mieć najwyżej około 3 mm. H4 jest 12 mm od przycisku przygotowania, na skraju jego strefy. Właściwe położenia daje model STEP.
+
 ## Decyzje (2026-10-31)
 
-Schemat odchodzi od wcześniejszej specyfikacji w pięciu miejscach. Autor przyjął wszystkie, a [elektronika](../../docs/spec/elektronika.md#zasilanie-stacji), [projekt](../../docs/spec/projekt.md), [instrukcja](../../docs/spec/instrukcja.md), [odbiór](../../docs/spec/odbior.md) i [BOM stacji](../../docs/spec/bom-stacji.csv) zostały do nich dopasowane.
+Schemat i rozmieszczenie odchodzą od wcześniejszej specyfikacji i założeń w sześciu miejscach. Autor przyjął wszystkie, a [elektronika](../../docs/spec/elektronika.md#zasilanie-stacji), [projekt](../../docs/spec/projekt.md), [instrukcja](../../docs/spec/instrukcja.md), [odbiór](../../docs/spec/odbior.md) i [BOM stacji](../../docs/spec/bom-stacji.csv) zostały do nich dopasowane.
 
 1. **Odcięcie UV z komparatora LM74800, bez osobnego nadzorcy.** Elektronika wymagała wyłączenia poniżej 11,5 V i włączenia powyżej 12,4 V, a akumulator 12,6 V w spoczynku musi uruchomić stację. EN/UVLO U5 ma stałą histerezę (1,231/1,132 V, czyli 8%) i tolerancję ±2,9%, więc obu warunków naraz nie spełni. Przyjęte progi:
    - włączenie 11,94 V (11,59–12,29 V), więc pełny akumulator zawsze zasili stację;
@@ -94,6 +116,10 @@ Schemat odchodzi od wcześniejszej specyfikacji w pięciu miejscach. Autor przyj
 
    Odrzucony wariant: rozpoznawanie laptopa tylko w programie (TinyUSB). Nie wymaga części, ale uśpiony MCU może nie odpowiedzieć laptopowi przy pierwszym połączeniu, a poprawka po zamówieniu płytek jest droga.
 
+6. **DevKitC i Wio od spodu płytki.** Panel Sharp leży kilka milimetrów za pokrywą, a DevKitC w gniazdach sięga około 16 mm nad płytkę (gniazdo 8,5 mm, listwa 2,5 mm, płytka modułu i WROOM). Moduły od spodu wiszą w głębi skrzynki (33 mm wnętrza), a pokrywa zostaje płaska.
+
+   Odrzucony wariant: moduły od góry, jak na v1.1. Prostszy dostęp do modułów, ale pokrywa potrzebuje garbu nad DevKitC albo wgłębionego okna ekranu ([obudowa](../obudowa/README.md#co-jest-znane-a-co-trzeba-zmierzyć)). Kosztem wybranego wariantu jest dostęp do DevKitC i jego micro USB dopiero po wyjęciu płytki; program wgrywa się i tak przez USB-C stacji.
+
 Do tego dochodzą zmiany w zakresie, które specyfikacja zostawia projektowi v2: J11 (analizator), J12 i dzielnik VTEST oraz zworki JP1/JP2 wypadają według zasady „nic na zapas”. JP3 zostaje, bo specyfikacja wymaga punktu pomiaru prądu radia.
 
 ## Przed płytką drukowaną
@@ -115,7 +141,8 @@ Otwarte w schemacie:
 - Burst Mode U7 (typowo poniżej 50 mA) przy starcie ESP32-S3, panelu i 4 V na wejściu: sprawdzić na płytce testowej razem z progiem nadzorcy FRAM 2,7 V.
 
 Poza schematem:
-- obudowa (pomiary z przymiarki, model Hammond 1599KBAT): obrys, otwory, położenie złączy;
+- obudowa (pomiary z przymiarki, model Hammond 1599KBAT): potwierdzenie obrysu, otworów, wysokości złączy na dolnej krawędzi i odstępu do ściany (dziś płytka kończy się około 7 mm przed ścianą, a złącza mają leżeć 0–1 mm od niej); rozstaw rzędów Wio;
+- ścieżki po potwierdzeniu rozmieszczenia: tor RF krótko od Wio, przetwornica z dala od ekranu, ESD i TVS ≤10 mm od złączy;
 - pomiary z [elektroniki](../../docs/spec/elektronika.md#zasilanie-stacji): sprawność LTC3115-1 przy 3,3 V (Z11), pobór DevKitC przez 3V3, próby na płytkach ewaluacyjnych;
 - wnioski z kroku 4 i decyzja: moduły wpinane czy przylutowany ESP32-S3 i układ radiowy;
 - program stacji: piny GPIO3, GPIO4, GPIO5 i GPIO45–48, ADC ogniw i 12 V, KILL i INT, [czuwanie](../../docs/spec/oprogramowanie.md#czuwanie);
