@@ -59,7 +59,7 @@ Kroki A3–A5 i B3–B4 wymagają obrazu z plikiem opisu płytki N1 (na przykła
 
 ## Kalibracja VTEST
 
-Odczyt `VTEST` służy do prób progów napięcia ogniw (4,0 i 4,4 V) i wejścia 12 V (11,5 i 12,4 V), więc każdą sztukę porównuje się z miernikiem, zanim jej wynik posłuży do takiej próby. Dzielnik R14/R15 z rezystorów 0,1% wnosi ±0,17% błędu skali. Pozostałe błędy (wzmocnienie i przesunięcie ADC MCU, odniesienie 0,6 V w nRF52840, kalibracja eFuse w ESP32-S3, upływ D3) usuwa korekcja zapisana dla sztuki. Zasilacz laboratoryjny podłącza się do J12, a miernik o błędzie ≤0,1% do zacisku J12. W każdym punkcie `VTEST` odczytuje się trzy razy:
+Odczyt `VTEST` służy do prób progów napięcia ogniw (4,0 i 4,4 V) i wejścia 12 V (progi i punkty prób z [elektroniki](../../docs/spec/elektronika.md#stany-zasilania-12-v)), więc każdą sztukę porównuje się z miernikiem, zanim jej wynik posłuży do takiej próby. Dzielnik R14/R15 z rezystorów 0,1% wnosi ±0,17% błędu skali. Pozostałe błędy (wzmocnienie i przesunięcie ADC MCU, odniesienie 0,6 V w nRF52840, kalibracja eFuse w ESP32-S3, upływ D3) usuwa korekcja zapisana dla sztuki. Zasilacz laboratoryjny podłącza się do J12, a miernik o błędzie ≤0,1% do zacisku J12. W każdym punkcie `VTEST` odczytuje się trzy razy:
 
 | Punkt (V na J12) | 1,00 | 4,00 | 4,40 | 7,30 | 11,50 | 12,40 | 14,80 |
 |---|---|---|---|---|---|---|---|

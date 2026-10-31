@@ -1,0 +1,82 @@
+oznaczenia,ilość,wartość,producent,MPN,specyfikacja,footprint,uwagi
+J5 J6,2,DEVKITC J1 / DEVKITC J3,Sullins,PPTC221LFBN-RC,"gniazdo żeńskie 1x22, 2,54 mm, proste, THT",Connector_PinSocket_2.54mm:PinSocket_1x22_P2.54mm_Vertical,ESP32-S3-DevKitC-1 v1.1 (N8R8) wpina się od góry; pin 1 od strony anteny
+R18,1,33R,Yageo,RC0805FR-0733RL,33R 1% 0805,Resistor_SMD:R_0805_2012Metric,szeregowy SCK przy GPIO12 DevKitC
+J8 J9,2,WIO J1 / WIO J2,Sullins,PPTC071LFBN-RC,"gniazdo żeńskie 1x7, 2,54 mm, proste, THT",Connector_PinSocket_2.54mm:PinSocket_1x07_P2.54mm_Vertical,Wio SX1262 (z zestawu 102010611) na listwach 1x7; rozstaw rzędów z rysunku Seeed przed layoutem
+JP3,1,3V3 RADIO,Würth Elektronik,61300211121,"listwa męska 1x2, 2,54 mm, ze zworką",Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical,"punkt pomiaru prądu radia (elektronika.md, wiersz „radio”)"
+C1 C4 C8 C9,4,10u,Samsung Electro-Mechanics,CL21A106KAYNNNG,10 µF 25 V X5R 0805,Capacitor_SMD:C_0805_2012Metric,"C1: 3,3 V przy Wio; C4: VDD panelu; C8: wejście U2; C9: wyjście U2"
+C2 C6 C7 C3 C11 C12 C31 C33 C34 C36 C44 C45 C46,13,100n,Samsung Electro-Mechanics,CL21B104KBCNNNC,100 nF 50 V X7R 0805,Capacitor_SMD:C_0805_2012Metric,"C2: 3,3 V przy Wio; C6: VDDA panelu; C7: DISP panelu (zalecenie Sharp); C3: przy FRAM U1; C11: przy bramce U4; C12: przy nadzorcy U3; C31: pompa ładunkowa U5, CAP–VS (karta: 100 nF); C33: filtr wejścia ADC 12 V; C34: filtr wejścia ADC ogniw; C36: VIN U6; C44: bootstrap BST1; C45: bootstrap BST2; C46: pin VIN (13) U7"
+R11 R64 R13 R19 R20 R5 R6 R7 R8 R9 R10 R47,12,10k,Yageo,RC0805FR-0710KL,10k 1% 0805,Resistor_SMD:R_0805_2012Metric,R11: radio niewybrane przed startem MCU; R64: RXEN Wio w stanie niskim do startu MCU; R13: CS ekranu aktywny stanem wysokim; R19: DISP = L do startu MCU; R20: FRAM niewybrana przed startem MCU; R5: podciągnięcie wejścia; R6: podciągnięcie wejścia; R7: podciągnięcie wejścia; R8: podciągnięcie wejścia; R9: podciągnięcie wejścia; R10: podciągnięcie wejścia; R47: podciągnięcie INT (otwarty dren)
+R12 R16 R1 R3 R32,5,1k,Yageo,RC0805FR-071KL,1k 1% 0805,Resistor_SMD:R_0805_2012Metric,R12: radio w resecie do startu MCU; 1 kΩ wobec podciągnięcia na Wio (poprawka L0); R16: SW_CISZA przez 1 kΩ; R1: prąd diody około 1 mA; R3: rezystor bazy Q1; R32: R1 z rysunku 9-3 karty (szybsze wyłączenie); wartość do sprawdzenia
+J4,1,USB-C DANE,Korean Hroparts Elec,TYPE-C-31-M-12,"gniazdo USB-C 16-pin, USB 2.0, SMD",Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12,VBUS tylko na bramkę Q12: laptop nigdy nie zasila stacji
+R65 R66,2,5k1,Yageo,RC0805FR-075K1L,5k1 1% 0805,Resistor_SMD:R_0805_2012Metric,R65: CC1: urządzenie USB-C (bez tego laptop z USB-C nie wykryje stacji); R66: CC2: jak R65
+R73 R75 R4 R33 R34 R35 R41 R43 R50 R72 R53 R63,12,100k,Yageo,RC0805FR-07100KL,100k 1% 0805,Resistor_SMD:R_0805_2012Metric,"R73: VBUS laptopa na bramkę Q12; R75: stan wysoki bez laptopa; R4: Q1 wyłączony bez sterowania; R33: bramka Q4 do źródła; R34: bramka Q4 do klucza Q5; R35: ON na bramkę Q5; R41: Q6 wyłączony bez sterowania; R43: DIV_EN niski do startu MCU; GPIO46 musi być niski przy resecie; R50: EN̄ do bramki Q8: |VGS| = 91% VCTL, około 3 V przy ogniwach 4 V; R72: Q11 wyłączony przy resecie i bez zasilania MCU; R53: ON na bramkę Q10; R63: Burst Mode do startu MCU; GPIO45 musi być niski przy resecie"
+R74 R21 R36 R49 R51 R54 R61,7,1M,Yageo,RC0805FR-071ML,1M 1% 0805,Resistor_SMD:R_0805_2012Metric,"R74: Q12 wyłączony bez laptopa; R21: RTOP dzielnika U2; R36: Q5 wyłączony bez ON; 91% ON na bramce także przy ogniwach około 4 V; R49: bramka Q8 do źródła; wyłączony EN̄ i tak wisi na VIN przez 900 kΩ w U6; R51: Q9 wyłączony bez sterowania; R54: Q10 wyłączony bez ON; przy ogniwach około 4 V ON ≈ 3,3 V, więc VGS ≈ 3 V (próg 2N7002 do 2,5 V); R61: dzielnik FB: 3,31 V"
+D17 D5 D15 D12 D14,5,BZT52C15,Diodes Incorporated,BZT52C15-7-F,"Zener 15 V, SOD-123",Diode_SMD:D_SOD-123,D17: VGS Q12 ≤15 V przy VBUS do 20 V (zasilacz z PD); D5: |VGS| Q4 ≤15 V przy 33 V ciągle i impulsie; D15: VGS Q5 ≤15 V przy ON do około 35 V; D12: |VGS| Q8 ≤15 V przy VCTL do około 35 V; D14: VGS Q10 ≤15 V przy ON do około 35 V
+Q12 Q5 Q7 Q11 Q10,5,2N7002,Diodes Incorporated,2N7002-7-F,"N-MOSFET 60 V, SOT-23",Package_TO_SOT_SMD:SOT-23,"Q12: wykrywanie laptopa: stan niski przy VBUS od około 3 V (próg bramki do 2,5 V); Q5: klucz Q4 z szyny ON; Q7: klucz Q6 z MCU; Q11: MCU wyłącza stację; GPIO nie widzi napięcia KILL, więc nie zasila MCU przez diody ochronne; Q10: klucz Q9 z szyny ON"
+U8,1,USBLC6-2SC6,STMicroelectronics,USBLC6-2SC6,"ochrona ESD 2 linii danych USB, SOT-23-6",Package_TO_SOT_SMD:SOT-23-6,"pin VBUS do +3V3: VBUS gniazda idzie tylko do bramki Q12, nie do szyny"
+J7,1,SHARP LS027B7DH01A,Hirose,FH12-10S-0.5SH(55),"złącze FPC 10-pin, 0,5 mm, styki od dołu, SMD",Connector_FFC-FPC:Hirose_FH12-10S-0.5SH_1x10-1MP_P0.50mm_Horizontal,panel Sharp LS027B7DH01A ekranem do góry; styk 1 panelu (SCLK) na padzie 1
+U1,1,CY15B104QN-50SXI,Infineon,CY15B104QN-50SXI,"FRAM 4 Mbit SPI, 1,8–3,6 V, SOIC-8 208 mil",Package_SO:SOIC-8_5.3x5.3mm_P1.27mm,zamiennik: RAMXEED MB85RS4MTPF-G-BCERE1
+U3,1,TPS3840PH27,Texas Instruments,TPS3840PH27DBVR,"nadzorca napięcia 2,7 V, wyjście aktywne stanem wysokim, SOT-23-5",Package_TO_SOT_SMD:SOT-23-5,ochrona CS FRAM jak w v1.1
+U4,1,74LVC1G32,Texas Instruments,SN74LVC1G32DBVR,"bramka OR, SOT-23-5",Package_TO_SOT_SMD:SOT-23-5,CS FRAM = CS z MCU lub RESET z U3
+C13,1,100u,Taiyo Yuden,LMK325ABJ107MM-P,100 µF 10 V X5R 1210,Capacitor_SMD:C_1210_3225Metric,podtrzymanie +3V3 przez czas reakcji U3 (budżet z v1.1)
+SW1 SW2 SW3 SW4,4,GÓRA / DÓŁ / OK / WSTECZ,Omron,B3F-4055,"przycisk 12x12 mm, nasadka B32-1310",Button_Switch_THT:SW_SPST_Omron_B3F-40xx,rozmiar i rozstaw przycisków pod obudowę i rękawice: do ustalenia z obudową
+SW5,1,CISZA,E-Switch,100SP1T1B4M2QE,przełącznik dźwigienkowy SPDT ON-NONE-ON,WICI:Toggle_ESwitch_100SP1T1B4M2QE,1-2 = cisza radiowa (SW_CISZA = L)
+SW6,1,PRZYGOTOWANIE,Omron,B3F-1000,przycisk 6x6 mm,Button_Switch_THT:SW_TH_Tactile_Omron_B3F-100x,pod naklejką serwisową
+D1,1,ALARM,Kingbright,WP7113ID,"LED 5 mm czerwona, rozproszona",LED_THT:LED_D5.0mm,katoda do masy
+BZ1,1,CEM-1203(42),Same Sky (CUI Devices),CEM-1203(42),"brzęczyk magnetyczny 12 mm, 2048 Hz, cewka 42 Ω",Buzzer_Beeper:MagneticBuzzer_ProSignal_ABT-410-RC,"pad 1 = ""+"""
+R2,1,22R,Yageo,RC1206FR-0722RL,"22 Ω 1% 1206, 0,25 W",Resistor_SMD:R_1206_3216Metric,brzęczyk z szyny 5 V ekranu (U2); tętnienia VDD panelu sprawdza oscyloskop
+D2,1,1N4148W,Diodes Incorporated,1N4148W-7-F,"dioda 75 V, SOD-123",Diode_SMD:D_SOD-123,dioda gasząca cewki brzęczyka
+Q1,1,MMBT3904,onsemi,MMBT3904LT1G,"NPN 40 V 200 mA, SOT-23",Package_TO_SOT_SMD:SOT-23,klucz brzęczyka
+U2,1,MCP1640,Microchip,MCP1640T-I/CHY,"przetwornica podwyższająca, SOT-23-6",Package_TO_SOT_SMD:SOT-23-6,"5,13 V z +3V3; EN na stałe do VIN"
+L1,1,4u7,Würth Elektronik,744031004,"4,7 µH, Isat 0,9 A",Inductor_SMD:L_Wuerth_WE-TPC-3816,cewka U2
+R22,1,309k,Yageo,RC0805FR-07309KL,309k 1% 0805,Resistor_SMD:R_0805_2012Metric,RBOT dzielnika U2
+C10,1,100p,Samsung Electro-Mechanics,CL21C101JBANNNC,100 pF 50 V C0G 0805,Capacitor_SMD:C_0805_2012Metric,równolegle do R21
+J2 J1 J3,3,12V / OGNIWA 4xAA / WYLACZNIK,JST,B2B-XH-A(LF)(SN),"złącze 2-pin, 2,5 mm, THT",Connector_JST:JST_XH_B2B-XH-A_1x02_P2.50mm_Vertical,J2: przewód do gniazda 12 V w ściance obudowy; J1: przewód do koszyka 4 × AA z kluczowaniem; J3: przewód do przycisku zasilania w panelu
+F1,1,T1A,Schurter,0001.2504,"bezpiecznik zwłoczny T1A 5x20 mm, 300 V DC, w oprawce na płytce",Fuse:Fuseholder_Clip-5x20mm_Bel_FC-203-22_Lateral_P17.80x5.00mm_D1.17mm_Horizontal,oprawka (dwa zaciski 5x20) w BOM montażowni do dobrania; drugi: Littelfuse 0477001
+D4,1,SMBJ33CA,Vishay,SMBJ33CA,"TVS dwukierunkowy 33 V, ograniczenie 53,3 V, SMB",Diode_SMD:D_SMB,LCSC C19077587 (pula promocyjna); zapasowo Littelfuse C83325
+U5,1,LM74800-Q1,Texas Instruments,LM74800QDRRRQ1,"sterownik idealnej diody i łącznika 3–65 V, do −65 V, WSON-12 3 × 3 mm",Package_SON:WSON-12-1EP_3x3mm_P0.5mm_EP1.5x2.5mm,"LCSC C3215600; pad termiczny RTN zostaje niepodłączony (karta, tabela 6-1)"
+Q2 Q3,2,AO4264E,Alpha & Omega,AO4264E,"N-MOSFET 60 V, 9,8 mΩ, SOIC-8",Package_SO:SOIC-8_3.9x4.9mm_P1.27mm,"Q2: idealna dioda (DGATE); LCSC C334232 (pula basic); zapasowo BUK7Y15-60EX; Q3: łącznik do VSYS (HGATE), odcina przy OVP i UV"
+C30,1,100n,Samsung Electro-Mechanics,CL21B104KCFNNNE,100 nF 100 V X7R 0805,Capacitor_SMD:C_0805_2012Metric,VS U5 (karta: 100 nF)
+R30,1,102k,Yageo,RT0805BRD07102KL,"102 kΩ 0,1% 25 ppm/K 0805",Resistor_SMD:R_0805_2012Metric,"górny rezystor progu OVP (16,8 V)"
+R31,1,8k06,Yageo,RT0805BRD078K06L,"8,06 kΩ 0,1% 25 ppm/K 0805",Resistor_SMD:R_0805_2012Metric,dolny rezystor progu OVP
+C32,1,27n,Samsung Electro-Mechanics,CL21B273KBANNNC,27 nF 50 V X7R 0805,Capacitor_SMD:C_0805_2012Metric,C_dVdT: prąd włączania około 250 mA przy około 120 µF na VSYS
+Q4,1,SI2309CDS,Vishay,SI2309CDS-T1-GE3,"P-MOSFET −60 V, SOT-23",Package_TO_SOT_SMD:SOT-23,"podłącza dzielnik 12 V tylko przy włączonej stacji; impuls 53,3 V wymaga ≥60 V"
+R37,1,221k,Yageo,RT0805BRD07221KL,"221 kΩ 0,1% 25 ppm/K 0805",Resistor_SMD:R_0805_2012Metric,"dzielnik UV: włączenie 11,94 V (11,59–12,29 V), wyłączenie 10,98 V (10,58–11,24 V)"
+R38 R45,2,10k,Yageo,RT0805BRD0710KL,"10,0 kΩ 0,1% 25 ppm/K 0805",Resistor_SMD:R_0805_2012Metric,R38: dzielnik UV i pomiaru 12 V; R45: pomiar ogniw
+R39,1,15k4,Yageo,RT0805BRD0715K4L,"15,4 kΩ 0,1% 25 ppm/K 0805",Resistor_SMD:R_0805_2012Metric,"pomiar 12 V: 0,0625 × V12"
+D6 D11,2,BAT54S,onsemi,BAT54SLT1G,"podwójna dioda Schottky 30 V, SOT-23",Package_TO_SOT_SMD:SOT-23,"D6: ogranicza wejście ADC przy 53,3 V; D11: ogranicza wejście ADC przy ogniwach odwrotnie"
+R40,1,1R,Yageo,RC2512FK-071RL,"1 Ω 1% 2512, 1 W, impulsowy",Resistor_SMD:R_2512_6332Metric,ogranicza udar przy wkładaniu ogniw do ≤5 A (Z13); napięcie mierzone przed nim
+D7,1,Schottky 40V,,,"Schottky VR ≥30 V, spadek ≤0,4 V przy 120 mA, impuls ≥5 A, mały prąd wsteczny przy 16 V i 45 °C",Diode_SMD:D_SMA,"część do wyboru po sprawdzeniu dopuszczalnego prądu wstecznego ogniw L91 (zasilanie.md, „Otwarte”)"
+Q6 Q8 Q9,3,BSS84AK,Nexperia,BSS84AK,"P-MOSFET −50 V, SOT-23",Package_TO_SOT_SMD:SOT-23,Q6: podłącza dzielnik ogniw tylko na czas pomiaru (DIV_EN); Q8: szyna ON z sumy diodowej; Q9: RUN przetwornicy z VSYS
+R44,1,39k,Yageo,RT0805BRD0739KL,"39,0 kΩ 0,1% 25 ppm/K 0805",Resistor_SMD:R_0805_2012Metric,"pomiar ogniw: 7,3 V → 1,49 V (zakres ATTEN2)"
+D8 D9,2,BAS116H,Nexperia,BAS116H,"dioda 75 V, ≤5 nA, SOD-123F",Diode_SMD:D_SOD-123F,D8: suma diodowa od strony ogniw; D9: suma diodowa od strony 12 V
+R46,1,1k,Yageo,RC2512FK-071KL,"1 kΩ 1% 2512, 1 W",Resistor_SMD:R_2512_6332Metric,"filtr 12 V przed sumą (Z14); ze wspólnego drenu, więc działa z samego 12 V; 2512, bo przy ograniczeniu 53,3 V traci około 0,4 W"
+C35,1,1u,Samsung Electro-Mechanics,CL21B105KBFNNNE,1 µF 50 V X7R 0805,Capacitor_SMD:C_0805_2012Metric,filtr 12 V przed sumą (Z14)
+D10,1,BZT52C33,Diodes Incorporated,BZT52C33-7-F,"Zener 33 V (31–35 V), SOD-123",Diode_SMD:D_SOD-123,"VIN LTC2955 ≤35 V (praca do 36 V); przy 24–28,8 V nie przewodzi"
+U6,1,LTC2955ITS8-2,Analog Devices,LTC2955ITS8-2#TRPBF,"sterownik przycisku zasilania 1,5–36 V, TSOT-23-8",Package_TO_SOT_SMD:TSOT-23-8,"włączenie przyciskiem albo zboczem narastającym ON (powrót 12 V); pinout TS8 z karty rew. A, s. 3"
+R70,1,309k,Yageo,RT0805BRD07309KL,"309 kΩ 0,1% 25 ppm/K 0805",Resistor_SMD:R_0805_2012Metric,"samoczynne włączenie przy podłączeniu i powrocie 12 V: 8,56–9,46 V"
+R71,1,30k1,Yageo,RT0805BRD0730K1L,"30,1 kΩ 0,1% 25 ppm/K 0805",Resistor_SMD:R_0805_2012Metric,dolny rezystor dzielnika ON
+C53,1,470n,Samsung Electro-Mechanics,CL21B474KBFNNNE,470 nF 50 V X7R 0805,Capacitor_SMD:C_0805_2012Metric,filtr ON (około 13 ms) przeciw zakłóceniom z przewodu 12 V
+D13,1,BAT54H,onsemi,BAT54HT1G,"dioda Schottky 30 V, SOD-323",Diode_SMD:D_SOD-323,"ON ≥ −0,3 V przy odwrotnym 12 V (karta: −0,3 V)"
+C37,1,2u2,Samsung Electro-Mechanics,CL21B225KAFNNNE,"2,2 µF 25 V X7R 0805",Capacitor_SMD:C_0805_2012Metric,"wymuszone wyłączenie po 5,2–19 s przytrzymania"
+R48,1,470k,Yageo,RC0805FR-07470KL,470k 1% 0805,Resistor_SMD:R_0805_2012Metric,"KILL wysoki z VCTL, niezależnie od 3V3, szyny ON i MCU"
+D16,1,BZT52C5V1,Diodes Incorporated,BZT52C5V1-7-F,"Zener 5,1 V, SOD-123",Diode_SMD:D_SOD-123,KILL ≤6 V (karta) przy VCTL do około 35 V
+R55,1,220k,Yageo,RC0805FR-07220KL,220k 1% 0805,Resistor_SMD:R_0805_2012Metric,RUN niski przy wyłączonym Q9
+C52,1,1n,Samsung Electro-Mechanics,CL21B102KBANNNC,1 nF 50 V X7R 0805,Capacitor_SMD:C_0805_2012Metric,"filtr RUN (karta LTC3115-1: 1000 pF, nie więcej)"
+C50,1,100u 25V,,,elektrolit o małym upływie 100 µF 25 V (np. Nichicon UKL),Capacitor_THT:CP_Radial_D8.0mm_P3.50mm,kondensator szyny: przełączenie 12 V ↔ ogniwa bez restartu; wartość i część z próby toru ogniw
+U7,1,LTC3115-1,Analog Devices,LTC3115EFE-1#PBF,"przetwornica podwyższająco-obniżająca 2,7–40 V, TSSOP-20 EP",WICI:LTC3115-1_FE20_CA,LCSC C580689 (pula extended); footprint z generatora płytki testowej; czeka na pomiar sprawności (Z11)
+L2,1,15u,Bourns,SRP1038A-150M,"15 µH, Isat ≥2 A, 40/45 mΩ",WICI:L_Bourns_SRP1038A,LCSC C780183
+C40 C41,2,10u,Yageo,CC1210KKX7R9BB106,10 µF 50 V X7R 1210,Capacitor_SMD:C_1210_3225Metric,wejście U7
+C42 C43,2,22u,Samwha,CS3225X5R226K160NRL,22 µF 16 V X5R 1210,Capacitor_SMD:C_1210_3225Metric,wyjście U7
+C47,1,10u,Samsung Electro-Mechanics,CL21A106KAYNNNE,10 µF 25 V X5R 0805,Capacitor_SMD:C_0805_2012Metric,"VCC U7 (karta: ≥4,7 µF skutecznie)"
+R60,1,47k5,Yageo,RC0805FR-0747K5L,47k5 1% 0805,Resistor_SMD:R_0805_2012Metric,R_T: 750 kHz
+R62,1,432k,Yageo,RC0805FR-07432KL,432k 1% 0805,Resistor_SMD:R_0805_2012Metric,dzielnik FB
+C48 C51,2,82p,Samsung Electro-Mechanics,CL21C820JBANNNC,82 pF 50 V C0G 0805,Capacitor_SMD:C_0805_2012Metric,C48: kompensacja typ III: C_POLE; C51: kompensacja: C_FF
+C49,1,3n9,Samsung Electro-Mechanics,CL21B392KBANNNC,"3,9 nF 50 V X7R 0805",Capacitor_SMD:C_0805_2012Metric,kompensacja: C_FB
+R67 R68,2,20k,Yageo,RC0805FR-0720KL,20k 1% 0805,Resistor_SMD:R_0805_2012Metric,R67: kompensacja: R_FB; R68: kompensacja: R_FF
+JP3,1,,Würth Elektronik,60900213421,"zworka 2,54 mm",bez footprintu,założona w pracy; zdjęta przy pomiarze prądu radia
+SW1-SW4,4,,Omron,B32-1310,"nasadka przycisku B3F, czarna",bez footprintu,
+ekran w J7,1,,Sharp,LS027B7DH01A,"panel pamięciowy LCD 2,7 cala, 400 × 240",bez footprintu,ekranem do góry
+"J8, J9",1,,Seeed,102010611 (Wio z zestawu),moduł Wio SX1262 z listwami 1x7,bez footprintu,antena przez u.FL i przewód do SMA
+"J5, J6",1,,Espressif,ESP32-S3-DevKitC-1-N8R8,płytka MCU v1.1,bez footprintu,zasilana przez piny 3V3
+F1,1,,Schurter,0001.2504,bezpiecznik T1A 5x20 mm,bez footprintu,wkładany do oprawki F1

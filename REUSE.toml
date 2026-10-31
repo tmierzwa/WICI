@@ -67,6 +67,13 @@ precedence = "closest"
 SPDX-FileCopyrightText = "2026 Tomek Mierzwa and WICI contributors"
 SPDX-License-Identifier = "CERN-OHL-P-2.0"
 
+# Derived from the KiCad TSSOP-20 footprint (see hardware/plytka-v2/cad/KICAD-LIBRARY-LICENSE.md).
+[[annotations]]
+path = "hardware/plytka-v2/cad/footprints/WICI.pretty/LTC3115-1_FE20_CA.kicad_mod"
+precedence = "override"
+SPDX-FileCopyrightText = ["KiCad Libraries Team and contributors", "2026 Tomek Mierzwa and WICI contributors"]
+SPDX-License-Identifier = "CC-BY-SA-4.0 WITH KiCad-libraries-exception"
+
 [[annotations]]
 path = "media/logo/fonts/**"
 precedence = "override"

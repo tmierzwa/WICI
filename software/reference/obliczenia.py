@@ -145,7 +145,11 @@ def calculate() -> dict:
     def level1_for(rx_ma: float) -> dict:
         """Station level 1 energy for one radio receiver current: variants, W23 limit, buffer battery, laptop relay."""
         variants = {}
-        for name, mcu_ma in (("nrf52840", 3.0), ("esp32_s3_30ma", 30.0), ("esp32_s3_45ma", 45.0), ("esp32_s3_60ma", 60.0)):
+        # Standby relay (concept 06): ESP32-S3 in light sleep between packets, woken by DIO1 of the always-on radio.
+        # 3 mA = 0.38 mA chip with 8 MB octal PSRAM (data sheet, table 5-10), 1-2 mA DevKitC fed at 3V3 (power LED,
+        # RGB LED, CP2102N, back-fed LDO) and wake-ups for packets, timers and EXTCOMIN; to be measured.
+        for name, mcu_ma in (("nrf52840", 3.0), ("esp32_s3_czuwanie", 3.0), ("esp32_s3_30ma", 30.0),
+                             ("esp32_s3_45ma", 45.0), ("esp32_s3_60ma", 60.0)):
             power_w = station_power_w(mcu_ma, rx_ma=rx_ma)
             day_wh = 24 * power_w * reserve
             power_12v_w = station_power_w(mcu_ma, "12v", rx_ma=rx_ma)
@@ -174,7 +178,7 @@ def calculate() -> dict:
                     "note": "Mains failure: station runs from the buffer battery through the 12 V input",
                     "battery_v": 12, "usable_fraction_assumed": 0.5,
                     "hours": {f"{ah}ah": {name: ah * 12 * 0.5 / variants[name]["wh_24h_with_reserve_12v"] * 24
-                                          for name in ("nrf52840", "esp32_s3_60ma")} for ah in (7, 17)}},
+                                          for name in ("nrf52840", "esp32_s3_czuwanie", "esp32_s3_60ma")} for ah in (7, 17)}},
                 "w23_max_rail_ma_on_aa": w23_rail_ma,
                 "w23_max_mcu_ma_on_aa": w23_rail_ma - station_rail_ma(0.0, rx_ma),
                 "laptop_relay_wh_24h_with_reserve": list(laptop_wh),

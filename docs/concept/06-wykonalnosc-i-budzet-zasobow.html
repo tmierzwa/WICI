@@ -214,7 +214,7 @@
       <li>przy 12 V LM74800, odcięcie podnapięciowe (UV), TPS3710, LTC2955 i dzielniki, razem około 0,44 mA;</li>
     </ul>
   </li>
-  <li>mikrokontroler ESP32-S3 z wyłączonym Wi-Fi średnio 30, 45 lub 60 mA (realny prąd aktywny wynosi 40–60 mA, a 30 mA wymaga lekkiego uśpienia); dla porównania nRF52840, kandydat dla wyrobu, średnio 3 mA;</li>
+  <li>mikrokontroler ESP32-S3 z wyłączonym Wi-Fi średnio 30, 45 lub 60 mA (realny prąd aktywny wynosi 40–60 mA, a 30 mA wymaga lekkiego uśpienia), a w <a href="#czuwanie-przekaznika">czuwaniu</a> średnio 3 mA razem z płytką DevKitC; dla porównania nRF52840, kandydat dla wyrobu, średnio 3 mA;</li>
   <li>rezerwa 20%.</li>
 </ul>
 
@@ -229,6 +229,7 @@
 <th scope="col" class="num">4 ogniwa AA litowe, 14,4 Wh</th>
 <th scope="col" class="num">Akumulator 12 V, 360 Wh</th>
 </tr></thead><tbody>
+<tr><td>ESP32-S3 w czuwaniu, 3 mA</td><td class="num">14 mA</td><td class="num">0,060 W</td><td class="num">1,7 / 1,9 Wh</td><td class="num">201 h</td><td class="num">191 dni</td></tr>
 <tr><td>ESP32-S3, 30 mA</td><td class="num">41 mA</td><td class="num">0,171 W</td><td class="num">4,9 / 5,1 Wh</td><td class="num">70 h</td><td class="num">71 dni</td></tr>
 <tr><td>ESP32-S3, 45 mA</td><td class="num">56 mA</td><td class="num">0,233 W</td><td class="num">6,7 / 6,9 Wh</td><td class="num">52 h</td><td class="num">52 dni</td></tr>
 <tr><td>ESP32-S3, 60 mA</td><td class="num">71 mA</td><td class="num">0,295 W</td><td class="num">8,5 / 8,7 Wh</td><td class="num">41 h</td><td class="num">42 dni</td></tr>
@@ -239,7 +240,9 @@
 
 <p>W23 (≥48 h na ogniwach) dopuszcza w modelu średnio najwyżej około 61 mA z szyny 3,3 V. ESP32-S3 spełnia je do średnio około 49 mA poboru MCU; nRF52840 z zapasem. Celem dla stacji pilotażowej jest średnio ≤60 mA z szyny 3,3 V w pracy przekaźnika. Stacja pilotażowa ma tor zasilania płytki v2 o jeszcze nieznanej sprawności i prądzie spoczynkowym, więc liczby z tabeli są tylko szacunkiem, a o W23 rozstrzyga pomiar toru v2 (<a href="08-plan-weryfikacji-i-decyzje.html#minimum-pilotazu">minimum pilotażu</a>: ≥48 h w temperaturze pokojowej). Warunek odbioru wydania (T6) to ≥48 h w 20 °C i ≥40 h w −10 °C na ogniwach Li-FeS2. Współczynnik 0,8 modelu sprawdza się pomiarem energii w obu temperaturach. Gdyby W23 nie zostało spełnione, możliwa jest przyszła wersja profilu radiowego z dłuższą preambułą, przy której SX1262 okresowo włącza odbiornik zamiast słuchać stale; to zmiana profilu całej sieci (<a href="../spec/radio.md">specyfikacja radia</a>).</p>
 
-<p>Dla porównania: przekaźnik jako laptop z <code>rnsd</code> (wariant 0.4) potrzebował 788–2312 Wh na dobę, a stacja poziomu 1 zużywa w modelu 1,7–8,7 Wh. To zmienia planowanie sieci. Przekaźnik można postawić na dachu lub wyższym piętrze na ogniwach albo jednym akumulatorze i odwiedzać co kilka dni, a nie co dobę.</p>
+<p id="czuwanie-przekaznika"><strong>Czuwanie przekaźnika.</strong> Przekaźnik może przez cały czas pracować jako pełny przekaźnik z poborem bliskim stanu czuwania. Odbiornik SX1262 słucha stale, a ESP32-S3 śpi między pakietami w lekkim uśpieniu. Budzi go przerwanie radia po odebraniu pakietu albo zegar najbliższego terminu programu (ogłoszenia, ponowienia, trasy, dług ciszy, przełączanie EXTCOMIN ekranu co około 1 s). Po obsłudze zasypia ponownie. Osobnego polecenia włączenia nie ma: budzi go każdy ruch w sieci, więc profil radiowy, Reticulum i zgodność z RNode zostają bez zmian. Według karty ESP32-S3 pobiera w lekkim uśpieniu 240 µA, a z pamięcią PSRAM ośmiobitową 8 MB około 0,38 mA. Płytka DevKitC zasilana przez pin 3V3 dodaje szacunkowo 1–2 mA (dioda zasilania, dioda RGB, mostek USB–UART i stabilizator zasilany od strony wyjścia). Model przyjmuje więc średnio 3 mA z wybudzeniami. Pobór stacji spada wtedy z około 56 do około 14 mA, a czas na ogniwach z około 52 h do około 201 h, przy nadawaniu na granicy długu ciszy; przy małym ruchu jest dłuższy. Stacja z podłączonym laptopem nie śpi, bo uśpiony MCU nie obsługuje USB; płytka v2 wykrywa podłączenie laptopa. Czuwanie jest celem stacji pilotażowej ponad W23, nie zastępuje go. O wyniku rozstrzyga pomiar w kroku 4 (<a href="08-plan-weryfikacji-i-decyzje.html#kolejnosc-prac">rozdział 08</a>). Nie wybrano odbioru okresowego z dłuższą preambułą, bo zmienia profil całej sieci, ani osobnego odbiornika do zdalnego włączania wyłączonej stacji, bo zmienia płytkę i protokół bez zysku wobec czuwania.</p>
+
+<p>Dla porównania: przekaźnik jako laptop z <code>rnsd</code> (wariant 0.4) potrzebował 788–2312 Wh na dobę, a stacja poziomu 1 zużywa w modelu 1,7–8,7 Wh. To zmienia planowanie sieci. Przekaźnik można postawić na dachu lub wyższym piętrze na ogniwach albo jednym akumulatorze i odwiedzać co kilka dni, a w czuwaniu co około tydzień, a nie co dobę.</p>
 
 <h2 id="energia-dwa-niezalezne-zasoby">Energia poziomu 3</h2>
 
@@ -260,9 +263,9 @@
 
 <p>Dobór oszczędnego hosta i pomiar poboru mają większy wpływ na zapas niż sama moc radia. Nie należy gwarantować 24 h pracy dla dowolnego PC. Gdy energii brakuje, wyłącza się laptop i router, a stacja poziomu 1 pracuje dalej z ogniw lub osobnego źródła 12 V.</p>
 
-<p>Przekaźnik bez schronienia to sama stacja poziomu 1. W modelu z SX1262 zużywa 4,9–8,5 Wh na dobę z rezerwą z ogniw i 5,1–8,7 Wh z 12 V (ESP32-S3). Miejsce przekaźnika może nie mieć gospodarza. Jeśli jest jedyną drogą schronienia do stanowiska odbiorczego, ma pierwszeństwo w energii (<a href="02-scenariusze-i-organizacja.html">rozdział 02</a>). Wymaga osobnego planu wymiany ogniw lub akumulatora i osoby odpowiedzialnej, ale nie wymiany źródeł co dobę. Budżet schronienia go nie obejmuje.</p>
+<p>Przekaźnik bez schronienia to sama stacja poziomu 1. W modelu z SX1262 zużywa 4,9–8,5 Wh na dobę z rezerwą z ogniw i 5,1–8,7 Wh z 12 V (ESP32-S3), a w <a href="#czuwanie-przekaznika">czuwaniu</a> 1,7 i 1,9 Wh. Miejsce przekaźnika może nie mieć gospodarza. Jeśli jest jedyną drogą schronienia do stanowiska odbiorczego, ma pierwszeństwo w energii (<a href="02-scenariusze-i-organizacja.html">rozdział 02</a>). Wymaga osobnego planu wymiany ogniw lub akumulatora i osoby odpowiedzialnej, ale nie wymiany źródeł co dobę. Budżet schronienia go nie obejmuje.</p>
 
-<p id="przekaznik-staly">Przekaźnik stały pracuje stale z zasilacza buforowego 13,8 V z akumulatorem (wyrób z deklaracją UE, jak w systemach alarmowych), zasilanego z sieci budynku, przez wejście 12 V stacji. Po zaniku 230 V działa z akumulatora bufora. Przy założonym wykorzystaniu 50% pojemności akumulator 12 V 7 Ah wystarcza ESP32-S3 (60 mA) na około 117 h, a 17 Ah na około 283 h (to samo obliczenie co w tabeli wyżej). Wynik zależy od własnego poboru zasilacza buforowego, który trzeba doliczyć z jego karty katalogowej, i od temperatury akumulatora.</p>
+<p id="przekaznik-staly">Przekaźnik stały pracuje stale z zasilacza buforowego 13,8 V z akumulatorem (wyrób z deklaracją UE, jak w systemach alarmowych), zasilanego z sieci budynku, przez wejście 12 V stacji. Po zaniku 230 V działa z akumulatora bufora. Przy założonym wykorzystaniu 50% pojemności akumulator 12 V 7 Ah wystarcza ESP32-S3 (60 mA) na około 117 h, a 17 Ah na około 283 h; w czuwaniu odpowiednio na około 536 h i 1302 h (to samo obliczenie co w tabeli wyżej). Wynik zależy od własnego poboru zasilacza buforowego, który trzeba doliczyć z jego karty katalogowej, i od temperatury akumulatora.</p>
 
 <h2 id="wykonanie-koszt-i-wielkosc-serii">Wykonanie, koszt i wielkość serii</h2>
 

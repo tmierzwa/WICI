@@ -27,6 +27,7 @@ Procedury i warunki zaliczenia kroków są w [odbiorze](../docs/spec/odbior.md#p
 | [l0-diagnostic](l0-diagnostic/README.md) | program diagnostyczny prototypu `l0-0.5`, zlecenie i instrukcja dla wykonawcy, narzędzia, testy i zapis weryfikacji |
 | [obudowa](obudowa/README.md) | założenia obudowy, lista pomiarów z przymiarki, generator odmawiający pracy bez pomiarów i render koncepcyjny |
 | [przetwornica-3v3](przetwornica-3v3/README.md) | płytka testowa przetwornicy 3,3 V (LTC3115-1) do pomiaru sprawności przed schematem v2: generator, pliki dla JLC, procedura pomiaru |
+| [plytka-v2](plytka-v2/README.md) | schemat wstępny płytki v2 stacji pilotażowej (tor zasilania z ogniw i 12 V, Wio na płytce, USB-C bez zasilania z VBUS, czuwanie z wykrywaniem laptopa): generator, ERC, BOM, decyzje z 2026-10-31; bez płytki drukowanej |
 | [r02](r02/README.md) | materiał do projektu płytki v2 (zasilanie z ogniw i 12 V, panel) i do wydania; części o P1 i dwóch wykonaniach są archiwalne |
 | [archiwum](archiwum/README.md) | stanowiska deweloperskie A/B (TI, ST, Nordic) wstrzymane po F99 |
 

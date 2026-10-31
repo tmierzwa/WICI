@@ -226,6 +226,18 @@ Licznik i S należą do tożsamości stacji i przechodzą z nią w PRZENIEŚ STA
 
 
 
+### Czuwanie
+
+Stacja pilotażowa na płytce v2 pracuje jako pełny przekaźnik i śpi między zdarzeniami w lekkim uśpieniu ESP32-S3 ([koncepcja, rozdział 06](../concept/06-wykonalnosc-i-budzet-zasobow.html#czuwanie-przekaznika)). Radio SX1262 przez cały czas zostaje w odbiorze ciągłym z profilu, więc czuwanie nie zmienia profilu radiowego ani protokołu i nie ma osobnego polecenia włączenia.
+
+- **Wybudzenie:** DIO1 radia (odebrana ramka, koniec nadawania), przyciski i przełącznik CISZA, INT sterownika wyłącznika, napięcie na VBUS gniazda USB (GPIO3, [elektronika](elektronika.md#gniazdo-usb-do-laptopa)) oraz zegar najbliższego terminu programu: ogłoszenia, ponowienia LXMF, wygasanie tras, dług ciszy, zapis licznika czasu, alarmy i watchdog. EXTCOMIN ekranu (1 Hz jak w pracy) daje licznik działający w uśpieniu albo wybudzenie co 0,5 s, bo licznik MCPWM w uśpieniu stoi.
+- **Nadawanie:** dług ciszy jest zatwierdzony przed nadaniem, więc MCU może spać w czasie nadawania i budzi się na koniec nadawania (DIO1).
+- **Bez uśpienia:** przy laptopie połączonym przez USB (uśpiony MCU nie obsługuje USB), w stacji węzła stanowiska, podczas transakcji FRAM i serii SPI oraz w trybie przygotowania. Napięcie na VBUS bez połączenia USB w ciągu 10 s (np. ładowarka w gnieździe) nie wstrzymuje uśpienia. Przed uśpieniem stacja odłącza się od magistrali USB (bez podciągnięcia D+), żeby laptop nie zaczynał połączenia ze śpiącym MCU.
+- **Stan wyjść:** CS pamięci FRAM i ekranu, DISP, podświetlenie, dioda alarmu, brzęczyk, DIV_EN, PWM_SYNC i wyłączenie stacji (GPIO47) zachowują w uśpieniu stan sprzed uśpienia.
+- **Bez strat:** w odbiorze ciągłym SX1262 zapisuje każdą ramkę od tego samego adresu bufora, więc stacja odczytuje ramkę przed początkiem danych następnej, czyli w czasie jej preambuły i nagłówka. Wybudzenie i odczyt nie mogą czekać na długą serię SPI do FRAM na wspólnej magistrali. Dzięki temu uśpienie nie gubi pakietów i nie zmienia kolejności. Licznik czasu pracy i terminy liczą się dalej w uśpieniu.
+
+Pobór w czuwaniu mierzy się w kroku 4 na prototypie i na stacji pilotażowej ([odbiór](odbior.md#minimum-pilotażu)). Cel z modelu to średnio około 14 mA z szyny 3,3 V przy nadawaniu na granicy długu ciszy. Wymaganiem pozostaje W23 (≥48 h na ogniwach).
+
 ### Pojemności stosu
 
 Tablica tras i tożsamości mieści co najmniej 256 wpisów z buforowanym ogłoszeniem, a lista skrótów pakietów co najmniej 4096 wpisów. Wpisów tożsamości głównej i zapasowej odbiorcy nigdy się nie usuwa; w konfiguracji węzła stanowiska chronione są wpisy celów osiągalnych przez interfejs USB. Poza nimi usuwa się wpis najdawniej używany. Przy pełnych 32-bajtowych skrótach, jak w implementacji referencyjnej, sama lista skrótów zajęłaby 128 KiB, a tablica tras z ogłoszeniami około 78 KiB, czyli razem około 81% RAM nRF52840. Dlatego:

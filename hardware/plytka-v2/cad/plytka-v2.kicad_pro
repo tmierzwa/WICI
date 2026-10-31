@@ -1,0 +1,16 @@
+{
+  "boards": [],
+  "libraries": {
+    "pinned_footprint_libs": [],
+    "pinned_symbol_libs": []
+  },
+  "meta": {
+    "filename": "plytka-v2.kicad_pro",
+    "version": 3
+  },
+  "schematic": {
+    "page_layout_descr_file": ""
+  },
+  "sheets": [],
+  "text_variables": {}
+}
