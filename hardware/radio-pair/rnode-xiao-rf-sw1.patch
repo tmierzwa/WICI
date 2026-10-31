@@ -1,0 +1,75 @@
+diff --git a/Boards.h b/Boards.h
+index c059cd6..ad91f48 100644
+--- a/Boards.h
++++ b/Boards.h
+@@ -677,6 +677,7 @@
+       #define IS_ESP32S3 true
+       #define MODEM SX1262
+       #define DIO2_AS_RF_SWITCH true
++      #define HAS_RF_SWITCH_RX_TX true
+       #define HAS_BUSY true
+       #define HAS_TCXO true
+ 
+@@ -703,6 +704,9 @@
+       const int pin_tcxo_enable = -1;
+       const int pin_dio = 39;
+       const int pin_busy = 40;
++      // Wio-SX1262 RF_SW1: high enables the receive path, low otherwise
++      const int pin_rxen = 38;
++      const int pin_txen = -1;
+       
+       #if HAS_NP == false
+         #if defined(EXTERNAL_LEDS)
+diff --git a/sx126x.cpp b/sx126x.cpp
+index 97ca045..f392327 100644
+--- a/sx126x.cpp
++++ b/sx126x.cpp
+@@ -193,6 +193,13 @@ void sx126x::rxAntEnable() {
+   if (_rxen != -1) { digitalWrite(_rxen, HIGH); }
+ }
+ 
++void sx126x::rxAntDisable() {
++  #if BOARD_MODEL == BOARD_XIAO_S3
++    // Wio-SX1262 RF_SW1 is high only while receiving, low otherwise
++    if (_rxen != -1) { digitalWrite(_rxen, LOW); }
++  #endif
++}
++
+ void sx126x::loraMode() {
+   // Enable lora mode on the SX1262 chip
+   uint8_t mode = MODE_LONG_RANGE_MODE_6X;
+@@ -354,7 +361,9 @@ int sx126x::begin(long frequency) {
+     executeOpcode(OP_DIO2_RF_CTRL_6X, &byte, 1);
+   #endif
+ 
+-  rxAntEnable();
++  #if BOARD_MODEL != BOARD_XIAO_S3
++    rxAntEnable();
++  #endif
+   setFrequency(frequency);
+   setTxPower(2);
+   enableCrc();
+@@ -681,9 +690,10 @@ void sx126x::receive(int size) {
+ void sx126x::standby() {
+   uint8_t byte = MODE_STDBY_XOSC_6X; // STDBY_XOSC
+   executeOpcode(OP_STANDBY_6X, &byte, 1); 
++  rxAntDisable();
+ }
+ 
+-void sx126x::sleep() { uint8_t byte = 0x00; executeOpcode(OP_SLEEP_6X, &byte, 1); }
++void sx126x::sleep() { uint8_t byte = 0x00; executeOpcode(OP_SLEEP_6X, &byte, 1); rxAntDisable(); }
+ 
+ void sx126x::enableTCXO() {
+   #if HAS_TCXO
+diff --git a/sx126x.h b/sx126x.h
+index 068a1bb..b147890 100644
+--- a/sx126x.h
++++ b/sx126x.h
+@@ -76,6 +76,7 @@ public:
+   void disableTCXO();
+ 
+   void rxAntEnable();
++  void rxAntDisable();
+   void loraMode();
+   void waitOnBusy();
+   void executeOpcode(uint8_t opcode, uint8_t *buffer, uint8_t size);

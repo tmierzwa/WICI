@@ -6,7 +6,7 @@ Katalog zawiera sprzęt i programy do kroków planu z [rozdziału 08 koncepcji](
 
 | Krok | Sprzęt | Stan |
 |---|---|---|
-| 1. Radia testowe | 2 zestawy Seeed XIAO ESP32-S3 + Wio SX1262 z programem radiowym `pair-0.4` ([radio-pair](radio-pair/README.md)) | wykonany 2026-10-10: 100/100 w obie strony przy stole ([wyniki](radio-pair/evidence/bench-r0-2026-10-10.txt)), próby w budynku przy 0 dBm ([wyniki](radio-pair/evidence/range-r0-2026-10-10.txt)). Zestawy są wolne; nie są narzędziem dalszych kroków |
+| 1. Radia testowe | 2 zestawy Seeed XIAO ESP32-S3 + Wio SX1262 z programem radiowym `pair-0.4` ([radio-pair](radio-pair/README.md)) | wykonany 2026-10-10: 100/100 w obie strony przy stole ([wyniki](radio-pair/evidence/bench-r0-2026-10-10.txt)), próby w budynku przy 0 dBm ([wyniki](radio-pair/evidence/range-r0-2026-10-10.txt)). 2026-10-31 sprawdzone jako radia RNode: oficjalne RNode 1.86 nie steruje przełącznikiem anteny RF_SW1 i odbiera o około 25 dB słabiej, z łatką z `radio-pair` działa ([wyniki](radio-pair/evidence/rnode-xiao-2026-10-31.txt), [radia RNode](../docs/spec/radio.md#radia-rnode)). Zestawy są wolne; nie są narzędziem dalszych kroków |
 | 2. Radia RNode przy stole | 2 zestawy RAK19007 + RAK4631 z firmware RNode, laptopy z Reticulum w Pythonie ([rnode](rnode/README.md)) | zestawy zamówione 2026-10-29 |
 | 3. Pomiar ogólny | radia RNode | po kroku 2 |
 | 4. Prototyp na płytce v1 | stacja na płytce v1 ([dev-bench](dev-bench/README.md)), odbiór programem diagnostycznym ([l0-diagnostic](l0-diagnostic/README.md)), program stacji z [firmware](../firmware/README.md) | 2 prototypy w montażu u wykonawcy |
@@ -21,7 +21,7 @@ Procedury i warunki zaliczenia kroków są w [odbiorze](../docs/spec/odbior.md#p
 
 | Katalog | Zawartość |
 |---|---|
-| [radio-pair](radio-pair/README.md) | program radiowy `pair-0.4` radiów testowych, narzędzia prób i wyniki kroku 1; narzędzie testu pary jest współdzielone z programem diagnostycznym |
+| [radio-pair](radio-pair/README.md) | program radiowy `pair-0.4` radiów testowych, narzędzia prób i wyniki kroku 1; narzędzie testu pary jest współdzielone z programem diagnostycznym; [sonda RF_SW1](radio-pair/rfsw-probe/README.md) i łatka RNode dla tych zestawów |
 | [rnode](rnode/README.md) | radia RNode: wgranie firmware, konfiguracja Reticulum, próba przy stole (krok 2) |
 | [dev-bench](dev-bench/README.md) | płytka v1 prototypu: projekt CAD, generatory, BOM, pliki produkcyjne, uruchomienie; projekt v1.1 jako baza płytki v2 |
 | [l0-diagnostic](l0-diagnostic/README.md) | program diagnostyczny prototypu `l0-0.5`, zlecenie i instrukcja dla wykonawcy, narzędzia, testy i zapis weryfikacji |
