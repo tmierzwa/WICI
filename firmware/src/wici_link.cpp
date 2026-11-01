@@ -103,6 +103,17 @@ bool decode(const uint8_t key[32], uint16_t netId, const uint8_t* wire, size_t s
     return true;
 }
 
+size_t encodeHack(const uint8_t key[32], const Frame& data, uint8_t* out, size_t capacity) {
+    Frame reply;
+    reply.type = Type::HACK;
+    reply.network = data.network;
+    reply.source = data.destination;
+    reply.destination = data.source;
+    reply.sequence = data.sequence;
+    reply.ttl = 1;
+    return encode(key, reply, out, capacity);
+}
+
 size_t forward(const uint8_t key[32], uint16_t netId, uint16_t ownId, uint16_t nextId,
                uint16_t seq, const uint8_t* wire, size_t size, uint8_t* out, size_t capacity) {
     if (!id(ownId) || (!id(nextId) && nextId != BROADCAST) ||

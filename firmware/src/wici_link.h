@@ -24,6 +24,26 @@ enum class TxClass : uint8_t { OWN, TRANSIT, CONTENDED_K2, BEACON };
 constexpr uint8_t ACKREQ = 1;
 constexpr uint8_t DOWN = 2;
 
+constexpr uint32_t REPEAT_HACK_S = 5;
+
+// A HACK for a copy that was already admitted costs airtime and 12x silence
+// debt, and a keyless listener can replay captured frames verbatim. Such
+// repeated HACKs are limited to one per REPEAT_HACK_S per node.
+class RepeatHack {
+public:
+    bool allow(uint32_t nowS) {
+        if (sent_ && nowS >= lastS_ && nowS - lastS_ < REPEAT_HACK_S) return false;
+        sent_ = true;
+        lastS_ = nowS;
+        return true;
+    }
+    void reset() { sent_ = false; }
+
+private:
+    uint32_t lastS_ = 0;
+    bool sent_ = false;
+};
+
 struct Frame {
     Type type = Type::DATA;
     uint8_t flags = 0;
@@ -40,6 +60,8 @@ bool deriveKey(const uint8_t ifac[16], uint16_t netId, uint8_t out[32]);
 size_t encode(const uint8_t key[32], const Frame& frame, uint8_t* out, size_t capacity);
 // Verifies MAC in constant time before interpreting frame fields. Clears out on failure.
 bool decode(const uint8_t key[32], uint16_t netId, const uint8_t* wire, size_t size, Frame& out);
+// HACK from the frame's addressee to its link sender, echoing its sequence.
+size_t encodeHack(const uint8_t key[32], const Frame& data, uint8_t* out, size_t capacity);
 // Authenticate an incoming DATA addressed to this relay, then prepare the next
 // link frame. The ciphertext is copied unchanged. Callers must reserve `seq`
 // durably and select a loop-safe next hop before calling this function.

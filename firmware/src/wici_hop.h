@@ -66,8 +66,7 @@ private:
     bool active_ = false, sent_ = false, everSent_ = false, noAck_ = false;
     bool activePriority_ = false;
     uint32_t checkedGeneration_[wici_relay::SLOTS] = {};
-    uint32_t lastRepeatHackS_ = 0;
-    bool repeatHackSent_ = false;
+    wici_link::RepeatHack repeatHack_;
     uint8_t nextSlot_ = 0;
     uint8_t owedHacks_ = 0;  // slots stored as K1 without a HACK; the retry is owed one
 };

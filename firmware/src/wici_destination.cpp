@@ -25,6 +25,7 @@ Destination::Destination(journal::Storage& storage, Config config, const uint8_t
 
 bool Destination::begin() {
     ready_ = false;
+    repeatHack_.reset();
     if (!keysReady_) return false;
     for (uint8_t i = 0; i < 2; ++i) {
         if (!replay_[i].begin(config_.network, config_.own, config_.receiver[i], envelopeKeys_[i]) ||
@@ -57,7 +58,8 @@ Outcome Destination::receive(const uint8_t* wire, size_t length, uint32_t nowS,
     envelope::Part part;
     if (!envelope::openPart(envelopeKeys_[peer], frame.payload, frame.length, part) ||
         part.sender != sender || part.recipient != recipient || part.type != 0) return Outcome::REJECTED;
-    if (!replay_[peer].accepted(part.counter)) {
+    const bool repeat = replay_[peer].accepted(part.counter);
+    if (!repeat) {
         envelope::ReplayWindow proposed;
         if (!replay_[peer].propose(part.counter, proposed)) return Outcome::REJECTED;
         if (part.number == 0) {
@@ -81,11 +83,8 @@ Outcome Destination::receive(const uint8_t* wire, size_t length, uint32_t nowS,
         }
     }
     if (!(frame.flags & wici_link::ACKREQ)) return Outcome::ACCEPTED;
-    wici_link::Frame reply;
-    reply.type = wici_link::Type::HACK;
-    reply.network = config_.network; reply.source = config_.own;
-    reply.destination = frame.source; reply.sequence = frame.sequence; reply.ttl = 1;
-    hackLength = wici_link::encode(linkKey_, reply, hack, capacity);
+    if (repeat && !repeatHack_.allow(nowS)) return Outcome::IGNORED;
+    hackLength = wici_link::encodeHack(linkKey_, frame, hack, capacity);
     return hackLength ? Outcome::HACK_READY : Outcome::REJECTED;
 }
 

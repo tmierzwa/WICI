@@ -33,8 +33,7 @@ bool Relay::begin() {
     outgoingLength_ = 0;
     attempts_ = 0;
     nextSlot_ = owedHacks_ = 0;
-    lastRepeatHackS_ = 0;
-    repeatHackSent_ = false;
+    repeatHack_.reset();
     for (uint32_t& generation : checkedGeneration_) generation = 0;
     return keyReady_ && queue_.begin(key_, config_.network, config_.own) && routes_.begin() &&
            sequence_.begin(config_.network, config_.own) && flood_.begin(config_.network);
@@ -82,24 +81,11 @@ Receipt Relay::receiveData(const uint8_t* wire, size_t length, uint32_t nowS,
     if (stored == wici_relay::Admission::STORED) owedHacks_ &= static_cast<uint8_t>(~(1u << slot));
     if (!(frame.flags & wici_link::ACKREQ))
         return stored == wici_relay::Admission::FORWARDED ? Receipt::IGNORED : Receipt::STORED_NO_HACK;
-    const bool owed = stored == wici_relay::Admission::DUPLICATE && (owedHacks_ >> slot & 1);
-    if (owed) {
+    if (stored == wici_relay::Admission::DUPLICATE && (owedHacks_ >> slot & 1))
         owedHacks_ &= static_cast<uint8_t>(~(1u << slot));
-    } else if (stored != wici_relay::Admission::STORED) {
-        // Repeated HACKs cost silence debt; a replayed copy may earn one per 5 s.
-        if (repeatHackSent_ && nowS >= lastRepeatHackS_ && nowS - lastRepeatHackS_ < 5)
-            return Receipt::IGNORED;
-        repeatHackSent_ = true;
-        lastRepeatHackS_ = nowS;
-    }
-    wici_link::Frame reply;
-    reply.type = wici_link::Type::HACK;
-    reply.network = config_.network;
-    reply.source = config_.own;
-    reply.destination = frame.source;
-    reply.sequence = frame.sequence;
-    reply.ttl = 1;
-    hackLength = wici_link::encode(key_, reply, hack, capacity);
+    else if (stored != wici_relay::Admission::STORED && !repeatHack_.allow(nowS))
+        return Receipt::IGNORED;
+    hackLength = wici_link::encodeHack(key_, frame, hack, capacity);
     return hackLength ? Receipt::HACK_READY : Receipt::REJECTED;
 }
 

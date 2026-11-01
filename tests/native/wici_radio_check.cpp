@@ -102,8 +102,12 @@ int main() {
     assert(shelter.receive(wire, n, 1234, 10) == wici_radio::Event::HACK_SENT);
     assert(admitted == 1 && air.hackCount == 1 && air.hackLength == 19 && air.receivedMs == 1234);
     assert(shelter.receive(wire, n, 1235, 10) == wici_radio::Event::HACK_SENT && admitted == 1);
+    // A keyless replay of an admitted frame earns one HACK per 5 s, so it
+    // cannot pile silence debt on the destination.
+    assert(shelter.receive(wire, n, 1236, 14) == wici_radio::Event::IGNORED && air.hackCount == 2);
+    assert(shelter.receive(wire, n, 1237, 15) == wici_radio::Event::HACK_SENT && air.hackCount == 3);
     wire[n - 1] ^= 1;
-    assert(shelter.receive(wire, n, 1236, 10) == wici_radio::Event::REJECTED && air.hackCount == 2);
+    assert(shelter.receive(wire, n, 1238, 15) == wici_radio::Event::REJECTED && air.hackCount == 3);
 
     // A transit frame is HACKed only after durable queue admission.
     frame.source = 4; frame.sequence = 11; frame.length = 25;
@@ -113,7 +117,7 @@ int main() {
     n = encode(key, frame, wire);
     air.hackOk = false;
     assert(shelter.receive(wire, n, 1300, 11) == wici_radio::Event::ADMITTED);
-    assert(air.hackCount == 3 && air.receivedMs == 1300);
+    assert(air.hackCount == 4 && air.receivedMs == 1300);
     shelter.poll(1301, 11);
     assert(shelter.routes().down(4) == 4);
 

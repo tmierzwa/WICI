@@ -39,6 +39,7 @@ private:
     envelope::DurableParts parts_[2];
     AdmitFn admit_;
     void* context_;
+    wici_link::RepeatHack repeatHack_;
 };
 
 }  // namespace wici_destination
