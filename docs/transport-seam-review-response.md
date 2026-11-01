@@ -48,6 +48,6 @@ Native checks cover a valid pairwise tag, a shared-key rewrite with an invalid h
 ## Remaining gates
 
 1. The bench trial on RAK4631 and the prototype: W10, the hostile-node test with hop tags and K1 retry, HACK within 200 ms, power loss, energy and RAM (`docs/spec/transport.md`, "Warunek przyjęcia"). Two Wio SX1262/XIAO boards passed only a short radio check.
-2. Backup receiver activation still needs a durable counter lifecycle. Torn migration barrier writes fail closed and need a recovery procedure; the real `BenchHost` migration flow has no host harness.
+2. Backup receiver activation still needs a durable counter lifecycle, and the real `BenchHost` migration flow has no host harness. A torn barrier write now falls back to the last complete copy (second review).
 3. DCO sign-offs for the historical branch commits must come from their authors.
 4. The decision on the DATA origin signature (above).
