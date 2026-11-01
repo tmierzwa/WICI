@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
-// WICI envelope v1 codec. Caller reserves ctr in durable storage before seal(); caller commits
-// ReplayWindow together with SA1 admission, not when a fragment merely arrives.
+// WICI envelope v1 codec (docs/spec/transport.md). The production send path reserves ctr in
+// FRAM first (sealReserved); the receive path commits the replay window (envelope_replay.h)
+// together with SA1 admission, not when a fragment merely arrives.
 #pragma once
 
 #include <stddef.h>
@@ -16,6 +17,7 @@ constexpr size_t OVERHEAD = HEADER + TAG;
 constexpr size_t MAX_SA1 = 256;
 constexpr size_t MAX_FRAME = MAX_SA1 + OVERHEAD;
 constexpr size_t MIN_PAYLOAD = 153;
+static_assert(MIN_PAYLOAD == MAX_SA1 / 2 + OVERHEAD, "two parts fit every bearer");
 
 struct Frame {
     uint8_t bytes[MAX_FRAME] = {};
@@ -45,15 +47,7 @@ size_t seal(const uint8_t key[32], uint16_t sender, uint16_t recipient, uint32_t
 size_t sealReserved(Counter& counter, const uint8_t key[32], uint16_t netId, uint16_t sender,
                     uint16_t recipient, const uint8_t* plaintext, size_t length, size_t maxPayload,
                     Frame out[2], uint8_t type = 0);
-// Decrypts only after checking the tag. On failure, out is zeroed.
+// Releases plaintext only after the tag verifies. On failure, out is zeroed.
 bool openPart(const uint8_t key[32], const uint8_t* frame, size_t length, Part& out);
-
-struct ReplayWindow {
-    uint32_t highest = 0;
-    uint64_t mask = 0;
-    bool started = false;
-    // Computes proposed next state without mutating this one; persist next with the SA1 record.
-    bool accept(uint32_t counter, ReplayWindow& next) const;
-};
 
 }  // namespace envelope

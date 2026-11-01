@@ -55,6 +55,19 @@ int main() {
     memory.bytes[envelope::COUNTER_BASE + envelope::COUNTER_SLOT_BYTES + 14] ^= 1;
     envelope::Counter corrupt(memory, 0);
     assert(!corrupt.begin(100, 4, 2, key));
+    // Only 0x00 (torn before COMMIT) or COMMIT may end a non-blank copy. Any
+    // other byte on the newer copy must not fall back to the older one.
+    static Memory torn;
+    envelope::Counter writer(torn, 0);
+    assert(writer.begin(100, 4, 2, key) && writer.next(value) && value == 0);
+    assert(writer.begin(100, 4, 2, key) && writer.next(value) && value == 64);
+    uint8_t& newerCommit = torn.bytes[envelope::COUNTER_BASE + envelope::COUNTER_SLOT_BYTES + 31];
+    newerCommit = 0x5A;
+    envelope::Counter damaged(torn, 0);
+    assert(!damaged.begin(100, 4, 2, key));
+    newerCommit = 0;
+    envelope::Counter afterTear(torn, 0);
+    assert(afterTear.begin(100, 4, 2, key) && afterTear.next(value) && value == 64);
     envelope::Counter secondPeer(memory, 1);
     assert(secondPeer.begin(100, 4, 3, key));
     assert(secondPeer.next(value) && value == 0);

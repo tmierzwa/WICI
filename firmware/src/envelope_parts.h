@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
 // One durable pending fragment per receiver identity at a shelter station.
+// A fragment with another counter is rejected until the pending one expires
+// after 120 s; a damaged copy fails closed.
 // The second fragment is assembled in RAM; caller commits SA1 and replay state
 // before sending HACK, then writes a tombstone with clear().
 #pragma once
@@ -37,7 +39,7 @@ private:
     uint8_t peerSlot_;
     uint16_t network_ = 0, recipient_ = 0, sender_ = 0;
     uint32_t generation_ = 0, counter_ = 0, startedS_ = 0;
-    uint8_t copy_ = 1, number_ = 0, type_ = 0, length_ = 0;
+    uint8_t copy_ = 1, number_ = 0, length_ = 0;
     uint8_t data_[MAX_SA1 / 2] = {};
     uint8_t fingerprint_[8] = {};
     bool ready_ = false;

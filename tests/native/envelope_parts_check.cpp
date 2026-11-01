@@ -65,6 +65,11 @@ int main() {
     envelope::DurableParts afterCut(cutMemory, 1);
     assert(afterCut.begin(100, 4, 1, key) && !afterCut.pending());
     assert(afterCut.ingest(first, 1000, full, length) == envelope::FragmentResult::PARTIAL);
+    uint8_t& commit = cutMemory.bytes[envelope::PARTS_BACKUP_BASE + envelope::PARTS_COPY_BYTES - 1];
+    commit = 0x5A;
+    envelope::DurableParts damaged(cutMemory, 1);
+    assert(!damaged.begin(100, 4, 1, key));
+    commit = 0xA5;
     cutMemory.bytes[envelope::PARTS_BACKUP_BASE + 25] ^= 1;
     envelope::DurableParts corrupt(cutMemory, 1);
     assert(!corrupt.begin(100, 4, 1, key));

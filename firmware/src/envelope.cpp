@@ -7,8 +7,8 @@
 #include <Crypto.h>
 #include <Curve25519.h>
 
-#include "sha2.h"
 #include "envelope_counter.h"
+#include "envelope_record.h"
 
 namespace envelope {
 namespace {
@@ -17,17 +17,6 @@ constexpr uint8_t VERSION = 1;
 constexpr uint8_t TYPE_LINK_TEST = 1;
 constexpr uint8_t LABEL[] = {'W', 'I', 'C', 'I', ' ', 'e', 'n', 'v', ' ', 'v', '1'};
 
-bool stationId(uint16_t id) { return id != 0 && id != 0xFFFF; }
-void put16(uint8_t* p, uint16_t n) { p[0] = static_cast<uint8_t>(n >> 8); p[1] = static_cast<uint8_t>(n); }
-void put32(uint8_t* p, uint32_t n) {
-    p[0] = static_cast<uint8_t>(n >> 24); p[1] = static_cast<uint8_t>(n >> 16);
-    p[2] = static_cast<uint8_t>(n >> 8); p[3] = static_cast<uint8_t>(n);
-}
-uint16_t get16(const uint8_t* p) { return static_cast<uint16_t>((p[0] << 8) | p[1]); }
-uint32_t get32(const uint8_t* p) {
-    return (static_cast<uint32_t>(p[0]) << 24) | (static_cast<uint32_t>(p[1]) << 16) |
-           (static_cast<uint32_t>(p[2]) << 8) | p[3];
-}
 void nonce(const uint8_t header[HEADER], uint8_t out[12]) {
     memcpy(out, header + 1, 4);
     out[4] = header[0];
@@ -66,18 +55,7 @@ bool deriveKey(const uint8_t privateKey[32], const uint8_t peerPublic[32], uint1
     uint8_t salt[3];
     put16(salt, netId);
     salt[2] = 1;
-    // HKDF-SHA-256, one output block (RFC 5869): PRK = HMAC(salt, shared),
-    // OKM = HMAC(PRK, info || 0x01). sha2::Hmac is also used by the station DRBG.
-    uint8_t prk[sha2::DIGEST];
-    sha2::Hmac extract(salt, sizeof(salt));
-    extract.update(shared, sizeof(shared));
-    extract.finish(prk);
-    sha2::Hmac expand(prk, sizeof(prk));
-    expand.update(info, sizeof(info));
-    const uint8_t block = 1;
-    expand.update(&block, 1);
-    expand.finish(out);
-    clean(prk, sizeof(prk));
+    sha2::hkdf(salt, sizeof(salt), shared, sizeof(shared), info, sizeof(info), out);
     clean(publicKey, sizeof(publicKey));
     clean(shared, sizeof(shared));
     clean(info, sizeof(info));
@@ -88,10 +66,9 @@ size_t seal(const uint8_t key[32], uint16_t sender, uint16_t recipient, uint32_t
             const uint8_t* plaintext, size_t length, size_t maxPayload, Frame out[2], uint8_t type) {
     if (!key || !out || (!plaintext && length) || length > MAX_SA1 || maxPayload < MIN_PAYLOAD ||
         !stationId(sender) || !stationId(recipient) || sender == recipient || type > TYPE_LINK_TEST) return 0;
+    // MIN_PAYLOAD fits a 128-byte half, so two parts always suffice.
     const size_t count = length + OVERHEAD <= maxPayload ? 1 : 2;
     const size_t first = count == 1 ? length : (length + 1) / 2;
-    if ((count == 2 && first + OVERHEAD > maxPayload) ||
-        (count == 2 && length - first + OVERHEAD > maxPayload)) return 0;
     Frame local[2];
     for (size_t i = 0; i < count; ++i) {
         const size_t offset = i == 0 ? 0 : first;
@@ -118,7 +95,7 @@ size_t seal(const uint8_t key[32], uint16_t sender, uint16_t recipient, uint32_t
 size_t sealReserved(Counter& counter, const uint8_t key[32], uint16_t netId, uint16_t sender,
                     uint16_t recipient, const uint8_t* plaintext, size_t length, size_t maxPayload,
                     Frame out[2], uint8_t type) {
-    if (!counter.outgoing(netId, sender, recipient, key) || !key || !out || (!plaintext && length) ||
+    if (!counter.outgoing(netId, sender, recipient, key) || !out || (!plaintext && length) ||
         length > MAX_SA1 || maxPayload < MIN_PAYLOAD || type > TYPE_LINK_TEST) return 0;
     uint32_t value;
     if (!counter.next(value)) return 0;
@@ -153,26 +130,6 @@ bool openPart(const uint8_t key[32], const uint8_t* frame, size_t length, Part& 
     proposed.length = bodyLength;
     out = proposed;
     clean(proposed.plaintext, sizeof(proposed.plaintext));
-    return true;
-}
-
-bool ReplayWindow::accept(uint32_t counter, ReplayWindow& next) const {
-    next = *this;
-    if (!started) {
-        next.highest = counter;
-        next.mask = 1;
-        next.started = true;
-        return true;
-    }
-    if (counter > highest) {
-        const uint32_t shift = counter - highest;
-        next.highest = counter;
-        next.mask = ((shift >= 64 ? 0 : mask << shift) | 1);
-        return true;
-    }
-    const uint32_t distance = highest - counter;
-    if (distance >= 64 || (mask & (uint64_t{1} << distance))) return false;
-    next.mask |= uint64_t{1} << distance;
     return true;
 }
 

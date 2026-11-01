@@ -117,6 +117,11 @@ int main() {
     envelope::DurableReplay afterCut(cut, 1);
     if (!afterCut.begin(0x1234, 10, 21, ab) || afterCut.current().started ||
         !afterCut.commit(5)) return 16;
+    uint8_t& commitByte = cut.data[envelope::REPLAY_BASE + 2 * envelope::REPLAY_SLOT_BYTES + 31];
+    commitByte = 0x5A;
+    envelope::DurableReplay damaged(cut, 1);
+    if (damaged.begin(0x1234, 10, 21, ab)) return 31;
+    commitByte = 0xA5;
     cut.data[envelope::REPLAY_BASE + 2 * envelope::REPLAY_SLOT_BYTES + 14] ^= 1;
     envelope::DurableReplay corrupt(cut, 1);
     if (corrupt.begin(0x1234, 10, 21, ab)) return 17;
