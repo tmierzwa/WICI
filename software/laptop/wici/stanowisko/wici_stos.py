@@ -33,13 +33,13 @@ class WiciStos:
     is HACKed only after the database thread confirms durable admission.
     """
 
-    def __init__(self, port, network, root, ifac, address, received, log=None, clock=time.monotonic,
+    def __init__(self, port, network, root, ttl, ifac, address, received, log=None, clock=time.monotonic,
                  signing_key=None):
         from cryptography.hazmat.primitives.asymmetric import ed25519
         if signing_key is None or len(signing_key) != 64:
             raise ValueError("numbered receiver needs its signing identity")
         self.signer = ed25519.Ed25519PrivateKey.from_private_bytes(signing_key[32:])
-        self.port_name, self.network, self.root = port, network, root
+        self.port_name, self.network, self.root, self.ttl = port, network, root, ttl
         self.key = wici_link.derive_key(ifac, network)
         self.address = bytes(address)
         if len(self.address) != 16:
@@ -100,7 +100,7 @@ class WiciStos:
         part = item.frames[item.part]
         sender = int.from_bytes(part[1:3], "big")
         frame = wici_link.Frame(wici_link.DATA, wici_link.ACKREQ | wici_link.DOWN,
-                                self.network, sender, self.root, 0, 7, 0, part,
+                                self.network, sender, self.root, 0, self.ttl, 0, part,
                                 self.signer.sign(wici_link.origin_message(self.network, part)))
         self._write(frame)
         item.submissions += 1

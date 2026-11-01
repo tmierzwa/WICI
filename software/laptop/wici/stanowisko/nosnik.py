@@ -40,9 +40,16 @@ def officer(i):
 
 
 def validate_link(link):
-    """Return a canonical numbered KISS binding before creating any medium files."""
-    if (not isinstance(link, dict) or set(link) != {"net_id", "root", "ifac"} or
+    """Return a canonical numbered KISS binding before creating any medium files.
+
+    `ttl` is the hop limit of the receiver's own downlink frames, as `network.ttl`
+    on the stations; a binding stored before it existed gets the same default.
+    """
+    if isinstance(link, dict):
+        link = {"ttl": configdoc.TTL_DEFAULT, **link}
+    if (not isinstance(link, dict) or set(link) != {"net_id", "root", "ifac", "ttl"} or
             any(type(link[name]) is not int or not 1 <= link[name] <= 0xFFFE for name in ("net_id", "root")) or
+            type(link["ttl"]) is not int or not 1 <= link["ttl"] <= 15 or
             not isinstance(link["ifac"], str) or len(link["ifac"]) != 32 or
             any(c not in "0123456789abcdefABCDEF" for c in link["ifac"])):
         raise StorageError("niepoprawne ustawienia WICI-Link")

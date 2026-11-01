@@ -686,12 +686,13 @@ class MediumTest(unittest.TestCase):
     def test_numbered_link_binding_is_sealed_and_survives_reopen(self):
         link = {"net_id": 100, "root": 5, "ifac": "ab" * 16}
         self.medium.save_link(self.key, link)
-        self.assertEqual(nosnik.Nosnik(self.root).link(self.key), link)
+        self.assertEqual(nosnik.Nosnik(self.root).link(self.key), {**link, "ttl": 7})
         self.assertNotIn(b"abababab", (self.root / "wici-link").read_bytes())
         with self.assertRaises(database.StorageError):
             self.medium.link(os.urandom(32))
-        with self.assertRaises(database.StorageError):
-            self.medium.save_link(self.key, {**link, "root": 0})
+        for bad in ({"root": 0}, {"ttl": 0}, {"ttl": 16}):
+            with self.assertRaises(database.StorageError):
+                self.medium.save_link(self.key, {**link, **bad})
         with self.assertRaises(database.StorageError):
             self.medium.save_link(self.key, {**link, "ifac": "ab " * 10 + "ab"})
         untouched = Path(self.tmp.name) / "invalid-link"
@@ -834,7 +835,7 @@ class CopiesTest(WithCopies):
         self.assertIsNone(durable(self.medium, self.key, "SELECT name FROM sqlite_master WHERE name='kopia'"))
 
     def test_numbered_link_binding_is_in_the_copy_and_restored_medium(self):
-        link = {"net_id": 100, "root": 5, "ifac": "ab" * 16}
+        link = {"net_id": 100, "root": 5, "ifac": "ab" * 16, "ttl": 7}
         self.medium.save_link(self.key, link)
         self.now += kopie.INTERVAL_S
         self.tick()

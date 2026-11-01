@@ -41,7 +41,7 @@ import time
 import webbrowser
 from pathlib import Path
 
-from .. import database, passwords, store
+from .. import configdoc, database, passwords, store
 from . import bearers, kopie, nosnik, panel, wezel, zamkniecie
 from .przyjecie import Przyjecie
 from .stos import BITRATE, Stos
@@ -78,7 +78,8 @@ def prepare(args):
         if args.root_id in (args.main_id, args.backup_id):
             raise SystemExit("numer korzenia musi być różny od numerów odbiorcy")
         try:
-            link = nosnik.validate_link({"net_id": args.net_id, "root": args.root_id, "ifac": args.ifac})
+            link = nosnik.validate_link({"net_id": args.net_id, "root": args.root_id, "ifac": args.ifac,
+                                         "ttl": args.ttl})
         except database.StorageError as exc:
             raise SystemExit(str(exc)) from None
     medium, _, envelopes = nosnik.Nosnik.create(args.nosnik, args.dyzurni, main_identity.get_private_key(),
@@ -123,7 +124,7 @@ def start(args):
         if active is None or active.get("net_id") != link["net_id"] or active["id"] == link["root"]:
             emit("login_failed", message="tożsamość odbiorcy i ustawienia WICI-Link nie są zgodne")
             return 3
-        numbered = WiciStos(args.port, link["net_id"], link["root"], bytes.fromhex(link["ifac"]),
+        numbered = WiciStos(args.port, link["net_id"], link["root"], link["ttl"], bytes.fromhex(link["ifac"]),
                             bytes.fromhex(active["lxmf"]),
                             lambda frame: przyjecie.receive_envelope_frame(link["net_id"], frame,
                                                                              bearer="wici"), signing_key=identity_key)
@@ -245,6 +246,8 @@ def main(argv=None):
     prep.add_argument("--backup-id", type=int, help="numer zapasowej tożsamości odbiorcy")
     prep.add_argument("--root-id", type=int, help="numer radiowego węzła stanowiska")
     prep.add_argument("--ifac", help="16 bajtów kodu sieci WICI w zapisie hex")
+    prep.add_argument("--ttl", type=int, default=configdoc.TTL_DEFAULT,
+                      help="limit skoków ramek stanowiska w dół (1..15, jak network.ttl stacji)")
     prep.add_argument("--iteracje", type=int, default=database.ITERATIONS, help=argparse.SUPPRESS)
     run = commands.add_parser("start", help="praca stanowiska")
     run.add_argument("--nosnik", required=True, help="katalog na nośniku stanowiska")

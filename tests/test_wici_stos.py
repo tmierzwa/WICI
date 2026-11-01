@@ -36,7 +36,7 @@ class WiciBearerTest(unittest.TestCase):
         self.clock = Clock()
         self.port = Port()
         self.accepted = []
-        self.bearer = WiciStos("fake", 100, 5, bytes(range(16)), bytes(16),
+        self.bearer = WiciStos("fake", 100, 5, 3, bytes(range(16)), bytes(16),
                                self.accepted.append, clock=self.clock, signing_key=bytes(range(64)))
         self.bearer.port = self.port
         self.bearer.running = True
@@ -64,8 +64,8 @@ class WiciBearerTest(unittest.TestCase):
         self.assertIsNotNone(item)
         self.bearer._tick()
         virtual = wici_link.decode(self.key, 100, unpack(self.port.writes[-1]))
-        self.assertEqual((virtual.source, virtual.destination, virtual.flags),
-                         (1, 5, wici_link.ACKREQ | wici_link.DOWN))
+        self.assertEqual((virtual.source, virtual.destination, virtual.flags, virtual.ttl),
+                         (1, 5, wici_link.ACKREQ | wici_link.DOWN, 3))
         ed25519.Ed25519PrivateKey.from_private_bytes(bytes(range(32, 64))).public_key().verify(
             virtual.origin_signature, wici_link.origin_message(100, first))
         with self.assertRaises(InvalidSignature):
