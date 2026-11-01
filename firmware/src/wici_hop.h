@@ -15,8 +15,8 @@ using VerifyOrigin = bool (*)(uint16_t sender, uint16_t recipient, const wici_li
 
 class Relay {
 public:
-    // Flooding is opt-in only after the caller provides durable SA1 retries
-    // independent of local TX success. Current production builds keep it off.
+    // Flooding requires SA1 retries independent of local TX success (a flood
+    // is one attempt); the station coordinator enables it.
     Relay(journal::Storage& storage, wici_route::Config config, const uint8_t ifac[16],
           bool allowFlood = false, const uint16_t receiverIds[2] = nullptr,
           VerifyOrigin verify = nullptr, const void* verifyContext = nullptr);
