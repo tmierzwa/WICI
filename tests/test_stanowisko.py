@@ -928,6 +928,7 @@ class RecoveryTest(WithCopies):
         self.assertTrue(restored.recovery)
         self.assertEqual(self.medium.card(self.key), card)
 
+    @unittest.skipUnless(importlib.util.find_spec("cryptography"), "cryptography for the receiver identity")
     def test_recovered_receiver_requires_staged_fresh_identity_before_sending(self):
         old_private = self.medium.identity(self.key)
         old_public = nosnik.public_identity(old_private)
