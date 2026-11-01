@@ -244,12 +244,12 @@ struct BenchHost : usbproto::Host {
     bool migrationImportPart(uint32_t offset, const uint8_t* data, size_t length, uint32_t& next) override;
     bool migrationImportCommit(uint8_t confirm[32]) override;
     bool migrationRetire(const uint8_t mid[16], const uint8_t imported[32], uint8_t retired[32], const char*& reason) override;
-    bool migrationActivate(const uint8_t mid[16], const uint8_t* retired, bool forced,
-                           bool& duplicate, const char*& reason) override;
+    bool migrationActivate(const uint8_t mid[16], const uint8_t* retired, bool& duplicate,
+                           const char*& reason) override;
     bool migrationAbortTarget(const uint8_t mid[16], const uint8_t* eph, uint8_t confirm[32],
                               bool& hasConfirm, bool& duplicate, const char*& reason) override;
-    bool migrationAbortSource(const uint8_t mid[16], const uint8_t* confirm, bool forced,
-                              bool& duplicate, const char*& reason) override;
+    bool migrationAbortSource(const uint8_t mid[16], const uint8_t* confirm, bool& duplicate,
+                              const char*& reason) override;
     bool announce() override;
     bool destroy() override;
     void configChanged(bool roleChanged) override;
@@ -810,6 +810,23 @@ bool BenchHost::identity(uint8_t key[64], uint8_t lxmf[store::HASH]) {
     return true;
 }
 
+template <size_t N>
+bool nonzero(const uint8_t (&bytes)[N]) {
+    uint8_t any = 0;
+    for (uint8_t byte : bytes) any |= byte;
+    return any != 0;
+}
+
+// The target's "aborted" confirmation for the source's ephemeral key.
+bool signAborted(const uint8_t privateKey[32], const uint8_t eph[32], const uint8_t mid[16], uint8_t confirm[32]) {
+    uint8_t confirmKey[32], packageKey[32];
+    if (!migration_crypto::derive(privateKey, eph, mid, confirmKey, packageKey)) return false;
+    sha2::wipe(packageKey, sizeof(packageKey));
+    const bool signedOk = migration_crypto::confirmation(confirmKey, "aborted", mid, nullptr, confirm);
+    sha2::wipe(confirmKey, sizeof(confirmKey));
+    return signedOk;
+}
+
 void BenchHost::migrationDetails(char* eph, size_t ephSize, char* package, size_t packageSize) {
     if (ephSize) eph[0] = '\0';
     if (packageSize) package[0] = '\0';
@@ -821,9 +838,7 @@ void BenchHost::migrationDetails(char* eph, size_t ephSize, char* package, size_
     }
     if (record.phase == migration_state::Phase::EXPORT || record.phase == migration_state::Phase::IMPORTING ||
         record.phase == migration_state::Phase::IMPORTED || record.phase == migration_state::Phase::RETIRED) {
-        uint8_t any = 0;
-        for (uint8_t byte : record.packageHash) any |= byte;
-        if (any && packageSize >= 65) hexstr::encode(record.packageHash, 32, package);
+        if (nonzero(record.packageHash) && packageSize >= 65) hexstr::encode(record.packageHash, 32, package);
     }
 }
 
@@ -832,9 +847,7 @@ void BenchHost::migrationConfirmation(char* confirm, size_t size) {
     if (!migrationBarrier.ready() || size < 65) return;
     const migration_state::Record& record = migrationBarrier.record();
     if (record.phase == migration_state::Phase::NONE && record.flags == 2) {
-        uint8_t any = 0;
-        for (uint8_t byte : record.packageHash) any |= byte;
-        if (any) hexstr::encode(record.packageHash, 32, confirm);
+        if (nonzero(record.packageHash)) hexstr::encode(record.packageHash, 32, confirm);
         return;
     }
     const char* kind = record.phase == migration_state::Phase::IMPORTED ? "imported" :
@@ -906,9 +919,7 @@ bool BenchHost::migrationExport(const uint8_t mid[16], const uint8_t targetKey[3
     } else if (record.phase != migration_state::Phase::EXPORT ||
                memcmp(record.mid, mid, sizeof(record.mid)) ||
                memcmp(record.peerPublic, targetKey, sizeof(record.peerPublic))) return false;
-    uint8_t any = 0;
-    for (uint8_t byte : record.packageHash) any |= byte;
-    if (!any) {
+    if (!nonzero(record.packageHash)) {
         if (!migration_image::digest(memory, record.packageHash) || !migrationBarrier.save(record)) return false;
     }
     if (!migrationExporter.begin(record) || !migrationExporter.digest(sha)) return false;
@@ -989,13 +1000,10 @@ bool BenchHost::migrationRetire(const uint8_t mid[16], const uint8_t imported[32
     return erased;
 }
 
-bool BenchHost::migrationActivate(const uint8_t mid[16], const uint8_t* retired, bool forced,
-                                  bool& duplicate, const char*& reason) {
+bool BenchHost::migrationActivate(const uint8_t mid[16], const uint8_t* retired, bool& duplicate,
+                                  const char*& reason) {
     reason = "migration";
     duplicate = false;
-    // Independent forced activation and forced source restore can put the
-    // same identity on two radios with overlapping AEAD counters.
-    if (forced) return false;
     if (!migrationBarrier.ready()) return false;
     migration_state::Record record = migrationBarrier.record();
     if (memcmp(record.mid, mid, sizeof(record.mid))) return false;
@@ -1027,40 +1035,35 @@ bool BenchHost::migrationAbortTarget(const uint8_t mid[16], const uint8_t* eph, 
     if (!migrationBarrier.ready()) return false;
     const migration_state::Record record = migrationBarrier.record();
     if (memcmp(record.mid, mid, sizeof(record.mid))) return false;
-    if (record.phase == migration_state::Phase::NONE) {
-        if (record.flags != 2) return false;
+    if (record.phase == migration_state::Phase::NONE || record.phase == migration_state::Phase::ABORTED) {
+        // ABORTED with an identity digest is the source's recovery marker.
+        if (record.phase == migration_state::Phase::NONE ? record.flags != 2 : nonzero(record.identityDigest)) return false;
         duplicate = true;
         memcpy(confirm, record.packageHash, 32);
-        for (uint8_t byte : record.packageHash) hasConfirm |= byte != 0;
-        return true;
-    }
-    if (record.phase == migration_state::Phase::ABORTED) {
-        uint8_t any = 0;
-        for (uint8_t byte : record.privateKey) any |= byte;
-        if (any) return false;  // source recovery marker
-        memcpy(confirm, record.packageHash, 32);
-        for (uint8_t byte : record.packageHash) hasConfirm |= byte != 0;
-        duplicate = true;
+        hasConfirm = nonzero(record.packageHash);
+        // An earlier abort without eph kept the transfer key: a source that had
+        // already exported can still get its "aborted" confirmation.
+        if (!hasConfirm && eph && nonzero(record.privateKey)) {
+            if (!signAborted(record.privateKey, eph, mid, confirm)) { reason = "signature"; return false; }
+            hasConfirm = true;
+        }
+        if (record.phase == migration_state::Phase::NONE) return true;
     } else {
         if (record.phase != migration_state::Phase::RECEIVING && record.phase != migration_state::Phase::IMPORTING &&
             record.phase != migration_state::Phase::IMPORTED) return false;
         if (!eph && record.phase != migration_state::Phase::RECEIVING) return false;
         if (eph) {
-            uint8_t any = 0;
-            for (uint8_t byte : record.peerPublic) any |= byte;
-            if (any && memcmp(record.peerPublic, eph, 32)) { reason = "signature"; return false; }
-            uint8_t confirmKey[32], packageKey[32];
-            if (!migration_crypto::derive(record.privateKey, eph, mid, confirmKey, packageKey)) { reason = "signature"; return false; }
-            sha2::wipe(packageKey, sizeof(packageKey));
-            hasConfirm = migration_crypto::confirmation(confirmKey, "aborted", mid, record.packageHash, confirm);
-            sha2::wipe(confirmKey, sizeof(confirmKey));
-            if (!hasConfirm) return false;
+            if (nonzero(record.peerPublic) && memcmp(record.peerPublic, eph, 32)) { reason = "signature"; return false; }
+            if (!signAborted(record.privateKey, eph, mid, confirm)) { reason = "signature"; return false; }
+            hasConfirm = true;
         }
         if (!migration_image::eraseTarget(memory)) { reason = "memory"; return false; }
         migration_state::Record aborted = {};
         aborted.phase = migration_state::Phase::ABORTED;
         memcpy(aborted.mid, mid, sizeof(aborted.mid));
+        // The next receive_key replaces a kept transfer key with a fresh one.
         if (hasConfirm) memcpy(aborted.packageHash, confirm, sizeof(aborted.packageHash));
+        else memcpy(aborted.privateKey, record.privateKey, sizeof(aborted.privateKey));
         if (!migrationBarrier.save(aborted)) { reason = "memory"; return false; }
     }
     migration_state::Record done = migrationBarrier.record();
@@ -1071,11 +1074,10 @@ bool BenchHost::migrationAbortTarget(const uint8_t mid[16], const uint8_t* eph, 
     return true;
 }
 
-bool BenchHost::migrationAbortSource(const uint8_t mid[16], const uint8_t* confirm, bool forced,
-                                     bool& duplicate, const char*& reason) {
+bool BenchHost::migrationAbortSource(const uint8_t mid[16], const uint8_t* confirm, bool& duplicate,
+                                     const char*& reason) {
     reason = "migration";
     duplicate = false;
-    if (forced) return false;
     if (!migrationBarrier.ready()) return false;
     migration_state::Record record = migrationBarrier.record();
     if (memcmp(record.mid, mid, sizeof(record.mid))) return false;
@@ -1084,9 +1086,7 @@ bool BenchHost::migrationAbortSource(const uint8_t mid[16], const uint8_t* confi
         duplicate = true; return true;
     }
     if (record.phase != migration_state::Phase::EXPORT && record.phase != migration_state::Phase::ABORTED) return false;
-    uint8_t any = 0;
-    for (uint8_t byte : record.privateKey) any |= byte;
-    if (!any) return false;
+    if (!nonzero(record.privateKey)) return false;
     uint8_t confirmKey[32], packageKey[32];
     if (!confirm || !migration_crypto::derive(record.privateKey, record.peerPublic, mid, confirmKey, packageKey)) return false;
     sha2::wipe(packageKey, sizeof(packageKey));

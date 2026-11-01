@@ -75,12 +75,12 @@ struct Host {
     virtual bool migrationImportPart(uint32_t offset, const uint8_t* data, size_t length, uint32_t& next);
     virtual bool migrationImportCommit(uint8_t confirm[32]);
     virtual bool migrationRetire(const uint8_t mid[16], const uint8_t imported[32], uint8_t retired[32], const char*& reason);
-    virtual bool migrationActivate(const uint8_t mid[16], const uint8_t* retired, bool forced,
-                                   bool& duplicate, const char*& reason);
+    virtual bool migrationActivate(const uint8_t mid[16], const uint8_t* retired, bool& duplicate,
+                                   const char*& reason);
     virtual bool migrationAbortTarget(const uint8_t mid[16], const uint8_t* eph, uint8_t confirm[32],
                                       bool& hasConfirm, bool& duplicate, const char*& reason);
-    virtual bool migrationAbortSource(const uint8_t mid[16], const uint8_t* confirm, bool forced,
-                                      bool& duplicate, const char*& reason);
+    virtual bool migrationAbortSource(const uint8_t mid[16], const uint8_t* confirm, bool& duplicate,
+                                      const char*& reason);
     virtual bool announce() = 0;                           // ogłoszenie adresu; false: stos nie działa
     virtual bool destroy() = 0;                            // ZNISZCZ DANE: magazyn, dziennik, tożsamość
     virtual void configChanged(bool roleChanged) = 0;      // nowa konfiguracja (zmiana roli: restart)

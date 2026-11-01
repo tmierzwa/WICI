@@ -26,11 +26,11 @@ bool Host::migrationImportBegin(const uint8_t[16], const uint8_t[32]) { return f
 bool Host::migrationImportPart(uint32_t, const uint8_t*, size_t, uint32_t&) { return false; }
 bool Host::migrationImportCommit(uint8_t[32]) { return false; }
 bool Host::migrationRetire(const uint8_t[16], const uint8_t[32], uint8_t[32], const char*& reason) { reason = "migration"; return false; }
-bool Host::migrationActivate(const uint8_t[16], const uint8_t*, bool, bool&, const char*& reason) { reason = "migration"; return false; }
+bool Host::migrationActivate(const uint8_t[16], const uint8_t*, bool&, const char*& reason) { reason = "migration"; return false; }
 bool Host::migrationAbortTarget(const uint8_t[16], const uint8_t*, uint8_t[32], bool&, bool&, const char*& reason) {
     reason = "migration"; return false;
 }
-bool Host::migrationAbortSource(const uint8_t[16], const uint8_t*, bool, bool&, const char*& reason) {
+bool Host::migrationAbortSource(const uint8_t[16], const uint8_t*, bool&, const char*& reason) {
     reason = "migration"; return false;
 }
 
@@ -444,7 +444,7 @@ void Protocol::doMigrate(const json::Value& msg, int64_t seq, uint32_t nowMs) {
         bool duplicate = false;
         const bool ok = !strcmp(step, "retire")
             ? host_.migrationRetire(mid, candidate, result, reason)
-            : host_.migrationActivate(mid, candidate, false, duplicate, reason);
+            : host_.migrationActivate(mid, candidate, duplicate, reason);
         if (!ok) { rejected(seq, reason); return; }
         char fields[100];
         if (!strcmp(step, "retire")) {
@@ -497,7 +497,7 @@ void Protocol::doMigrate(const json::Value& msg, int64_t seq, uint32_t nowMs) {
         if (!json::hexField(msg, "confirm", candidate, sizeof(candidate))) { rejected(seq, "invalid", "confirm"); return; }
         const char* reason = "migration";
         bool duplicate = false;
-        if (!host_.migrationAbortSource(mid, candidate, false, duplicate, reason)) { rejected(seq, reason); return; }
+        if (!host_.migrationAbortSource(mid, candidate, duplicate, reason)) { rejected(seq, reason); return; }
         char fields[32];
         snprintf(fields, sizeof(fields), "\"duplicate\":%s", duplicate ? "true" : "false");
         send("ok", seq, fields);

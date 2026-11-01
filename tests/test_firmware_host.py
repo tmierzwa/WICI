@@ -484,13 +484,13 @@ struct FakeHost : usbproto::Host {
         memset(retired, 0xbb, 32);
         return true;
     }
-    bool migrationActivate(const uint8_t mid[16], const uint8_t* retired, bool forced,
-                           bool& duplicate, const char*& reason) override {
+    bool migrationActivate(const uint8_t mid[16], const uint8_t* retired, bool& duplicate,
+                           const char*& reason) override {
         uint8_t expected[16];
         for (size_t i = 0; i < 16; ++i) expected[i] = static_cast<uint8_t>(i * 0x11);
         reason = "migration";
         if ((strcmp(migrationName, "imported") && strcmp(migrationName, "none")) || memcmp(mid, expected, 16)) return false;
-        if (!forced && (!retired || retired[0] != 0xbb)) { reason = "signature"; return false; }
+        if (!retired || retired[0] != 0xbb) { reason = "signature"; return false; }
         duplicate = !strcmp(migrationName, "none");
         snprintf(migrationName, sizeof(migrationName), "none");
         return true;
@@ -505,11 +505,11 @@ struct FakeHost : usbproto::Host {
         snprintf(migrationName, sizeof(migrationName), "none");
         return true;
     }
-    bool migrationAbortSource(const uint8_t[16], const uint8_t* confirm, bool forced,
-                              bool& duplicate, const char*& reason) override {
+    bool migrationAbortSource(const uint8_t[16], const uint8_t* confirm, bool& duplicate,
+                              const char*& reason) override {
         reason = "migration";
         if (strcmp(migrationName, "export")) return false;
-        if (!forced && (!confirm || confirm[0] != 0xcc)) { reason = "signature"; return false; }
+        if (!confirm || confirm[0] != 0xcc) { reason = "signature"; return false; }
         duplicate = false;
         snprintf(migrationName, sizeof(migrationName), "none");
         return true;
