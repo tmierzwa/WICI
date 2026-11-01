@@ -443,6 +443,29 @@ struct FakeHost : usbproto::Host {
         for (size_t i = 0; i < length; ++i) out[i] = static_cast<uint8_t>((offset + i) & 255);
         return true;
     }
+    std::vector<uint8_t> imported;
+    bool migrationImportBegin(const uint8_t mid[16], const uint8_t[32]) override {
+        uint8_t expected[16];
+        for (size_t i = 0; i < 16; ++i) expected[i] = static_cast<uint8_t>(i * 0x11);
+        if ((strcmp(migrationName, "receiving") && strcmp(migrationName, "importing")) ||
+            memcmp(mid, expected, sizeof(expected))) return false;
+        snprintf(migrationName, sizeof(migrationName), "importing");
+        imported.clear();
+        return true;
+    }
+    bool migrationImportPart(uint32_t offset, const uint8_t* data, size_t length, uint32_t& next) override {
+        if (offset == imported.size()) imported.insert(imported.end(), data, data + length);
+        else if (offset > imported.size() || length > imported.size() - offset ||
+                 memcmp(imported.data() + offset, data, length)) return false;
+        next = static_cast<uint32_t>(imported.size());
+        return true;
+    }
+    bool migrationImportCommit(uint8_t confirm[32]) override {
+        if (imported.size() != 270437) return false;
+        memset(confirm, 0x6b, 32);
+        snprintf(migrationName, sizeof(migrationName), "imported");
+        return true;
+    }
     void diag(char* out, size_t size) override {
         static const std::string pad(400, 'x');
         snprintf(out, size, "\"corrupt\":0%s%.*s%s", diagPad ? ",\"pad\":\"" : "", diagPad, pad.c_str(), diagPad ? "\"" : "");
@@ -2040,6 +2063,20 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual(resumed[1]["sha256"], "5a" * 32)
         self.assertEqual((resumed[2]["type"], base64.b64decode(resumed[2]["data"])), ("data", bytes(range(4))))
 
+    def test_usb_import_accepts_ordered_parts_and_rejects_replay_change(self):
+        mid = "00112233445566778899aabbccddeeff"
+        part = base64.b64encode(b"first part").decode()
+        changed = base64.b64encode(b"other part").decode()
+        out, _ = self.usb_session(["migration receiving", "connect",
+            lambda u: u("xfer_begin", op="import", size=270437, sha256="aa" * 32, mid=mid), "XFER",
+            ("PART", 0, part), ("PART", 0, part), ("PART", 0, changed),
+            lambda u: u("xfer_begin", op="configure", size=1, sha256="00" * 32)])
+        replies = self.replies(out)
+        self.assertEqual([r["type"] for r in replies], ["hello", "ok", "ok", "ok", "rejected", "rejected"])
+        self.assertEqual((replies[2]["next"], replies[3]["next"]), (10, 10))
+        self.assertEqual([(r["reason"], r.get("detail")) for r in replies[-2:]],
+                         [("migration", "part"), ("migration", "active")])
+
     def test_usb_hello_seq_fields_and_rejections(self):
         def line(seq, type_, usb=2, **fields):
             return "usb " + json.dumps({"usb": usb, "seq": seq, "type": type_, **fields})
@@ -2122,10 +2159,11 @@ class HostUnitTests(unittest.TestCase):
                 [lambda u: u("xfer_begin", op="configure", size=len(bad), sha256=hashlib.sha256(bad).hexdigest()), "XFER",
                  *[("PART", o, base64.b64encode(bad[o:o + 300]).decode()) for o in range(0, len(bad), 300)], "COMMIT",
                  lambda u: u("xfer_begin", op="configure", size=8000, sha256="00" * 32),
-                 lambda u: u("xfer_begin", op="import"), lambda u: u("xfer_begin", op="config_get")]
+                 lambda u: u("xfer_begin", op="import", size=270437, sha256="00" * 32,
+                             mid="00" * 16), lambda u: u("xfer_begin", op="config_get")]
         out, _ = self.usb_session(steps)
         rejected = [(x["reason"], x.get("detail")) for x in self.replies(out) if x["type"] == "rejected"]
-        self.assertEqual(rejected, [("hash", None), ("invalid", "colour"), ("size", None), ("migration", "op"), ("not_configured", None)])
+        self.assertEqual(rejected, [("hash", None), ("invalid", "colour"), ("size", None), ("migration", "phase"), ("not_configured", None)])
         # Konfiguracja węzła stanowiska: polecenia stacji schronienia dają `role`.
         node = json.dumps(node_doc()).encode()
         steps = ["connect", lambda u: u("xfer_begin", op="configure", size=len(node), sha256=hashlib.sha256(node).hexdigest()), "XFER",

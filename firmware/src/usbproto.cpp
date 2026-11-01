@@ -21,6 +21,9 @@ void Host::migrationDetails(char* eph, size_t ephSize, char* package, size_t pac
 bool Host::migrationReceiveKey(uint8_t[16], uint8_t[32], uint8_t[8]) { return false; }
 bool Host::migrationExport(const uint8_t[16], const uint8_t[32], uint8_t[32]) { return false; }
 bool Host::migrationExportRead(uint32_t, uint8_t*, size_t) { return false; }
+bool Host::migrationImportBegin(const uint8_t[16], const uint8_t[32]) { return false; }
+bool Host::migrationImportPart(uint32_t, const uint8_t*, size_t, uint32_t&) { return false; }
+bool Host::migrationImportCommit(uint8_t[32]) { return false; }
 
 namespace {
 
@@ -329,7 +332,7 @@ void Protocol::dispatch(const char* type, const json::Value& msg, int64_t seq, u
     // USB commands. Explicit destruction remains available for recovery.
     if (strcmp(migration, "none") && strcmp(type, "status") && strcmp(type, "migrate") &&
         strcmp(type, "destroy") && strcmp(type, "xfer_begin") && strcmp(type, "xfer_read") &&
-        strcmp(type, "xfer_commit") && strcmp(type, "xfer_abort")) {
+        strcmp(type, "xfer_commit") && strcmp(type, "xfer_abort") && strcmp(type, "xfer_part")) {
         rejected(seq, "migration", "active");
         return;
     }
@@ -899,17 +902,42 @@ void Protocol::doXferBegin(const json::Value& msg, int64_t seq, uint32_t nowMs) 
     static const Command configure = {"xfer_begin", PREP, {{"op", F::STR, true}, {"size", F::INT, true}, {"sha256", F::STR, true}}, 3};
     static const Command configGet = {"xfer_begin", PREP, {{"op", F::STR, true}}, 1};
     static const Command exportCmd = {"xfer_begin", PREP, {{"op", F::STR, true}, {"mid", F::STR, true}, {"target_key", F::STR, true}}, 3};
+    static const Command importCmd = {"xfer_begin", PREP, {{"op", F::STR, true}, {"size", F::INT, true},
+                                                    {"sha256", F::STR, true}, {"mid", F::STR, true}}, 4};
     const bool put = !strcmp(op, "configure");
     const bool exporting = !strcmp(op, "export");
+    const bool importing = !strcmp(op, "import");
     char migration[16], migrationMid[33];
     host_.migration(migration, sizeof(migration), migrationMid, sizeof(migrationMid));
-    if (strcmp(migration, "none") && !exporting) { rejected(seq, "migration", "active"); return; }
-    if (!put && !exporting && strcmp(op, "config_get")) {
-        rejected(seq, !strcmp(op, "import") ? "migration" : "invalid", "op");
+    if (strcmp(migration, "none") && !exporting && !importing) { rejected(seq, "migration", "active"); return; }
+    if (!put && !exporting && !importing && strcmp(op, "config_get")) {
+        rejected(seq, "invalid", "op");
         return;
     }
     char bad[24];
-    if (!checkFields(msg, put ? configure : exporting ? exportCmd : configGet, bad, sizeof(bad))) { rejected(seq, "invalid", bad); return; }
+    if (!checkFields(msg, put ? configure : exporting ? exportCmd : importing ? importCmd : configGet, bad, sizeof(bad))) {
+        rejected(seq, "invalid", bad); return;
+    }
+    if (importing) {
+        const uint32_t size = intField(msg, "size");
+        if (size != MIGRATION_PACKAGE_BYTES) { rejected(seq, "size"); return; }
+        uint8_t mid[16], sha[32];
+        if (!json::hexField(msg, "mid", mid, sizeof(mid))) { rejected(seq, "invalid", "mid"); return; }
+        if (!json::hexField(msg, "sha256", sha, sizeof(sha))) { rejected(seq, "invalid", "sha256"); return; }
+        if (strcmp(migration, "receiving") && strcmp(migration, "importing")) { rejected(seq, "migration", "phase"); return; }
+        if (!host_.migrationImportBegin(mid, sha)) { rejected(seq, "migration", "import"); return; }
+        xfer_ = Xfer();
+        xfer_.op = Xfer::IMPORT;
+        xfer_.size = size;
+        memcpy(xfer_.sha, sha, sizeof(sha));
+        host_.randomBytes(reinterpret_cast<uint8_t*>(&xfer_.id), sizeof(xfer_.id));
+        xfer_.lastMs = nowMs;
+        char id[9], fields[64];
+        hexstr::encode(reinterpret_cast<const uint8_t*>(&xfer_.id), sizeof(xfer_.id), id);
+        snprintf(fields, sizeof(fields), "\"xfer\":\"%s\",\"max_part\":%u", id, static_cast<unsigned>(PART_MAX));
+        send("ok", seq, fields);
+        return;
+    }
     if (exporting) {
         uint8_t mid[16], key[32];
         if (!json::hexField(msg, "mid", mid, sizeof(mid))) { rejected(seq, "invalid", "mid"); return; }
@@ -976,7 +1004,7 @@ void Protocol::doXferBegin(const json::Value& msg, int64_t seq, uint32_t nowMs) 
 
 void Protocol::doXferPart(const json::Value& msg, int64_t seq, uint32_t nowMs) {
     if (!xferOpen(msg, seq, nowMs)) return;
-    if (xfer_.op != Xfer::CONFIGURE) { rejected(seq, "invalid", "xfer"); return; }
+    if (xfer_.op != Xfer::CONFIGURE && xfer_.op != Xfer::IMPORT) { rejected(seq, "invalid", "xfer"); return; }
     json::Value v;
     char text[4 * PART_MAX / 3 + 8];
     uint8_t data[PART_MAX];
@@ -984,7 +1012,20 @@ void Protocol::doXferPart(const json::Value& msg, int64_t seq, uint32_t nowMs) {
     const int length = json::string(v, text, sizeof(text)) ? base64Decode(text, data, sizeof(data)) : -1;
     const uint32_t offset = intField(msg, "offset");
     if (length <= 0) { rejected(seq, "invalid", "data"); return; }
-    if (offset + static_cast<uint32_t>(length) > xfer_.size) { rejected(seq, "size"); return; }
+    if (offset > xfer_.size || static_cast<uint32_t>(length) > xfer_.size - offset) { rejected(seq, "size"); return; }
+    if (xfer_.op == Xfer::IMPORT) {
+        uint32_t next = 0;
+        if (!host_.migrationImportPart(offset, data, static_cast<size_t>(length), next)) {
+            xfer_ = Xfer();
+            rejected(seq, "migration", "part");
+            return;
+        }
+        xfer_.next = next;
+        char fields[32];
+        snprintf(fields, sizeof(fields), "\"next\":%lu", static_cast<unsigned long>(next));
+        send("ok", seq, fields);
+        return;
+    }
     if (offset > xfer_.next) { rejected(seq, "invalid", "offset"); return; }
     if (offset < xfer_.next) {
         // Część powtórzona (zgubione `ok`): cała w zapisanym zakresie i z tą samą treścią.
@@ -1020,6 +1061,16 @@ void Protocol::doXferCommit(const json::Value& msg, int64_t seq) {
     if (!xferOpen(msg, seq, xfer_.lastMs)) return;
     if (xfer_.op == Xfer::CONFIG_GET || xfer_.op == Xfer::EXPORT) { xfer_ = Xfer(); send("ok", seq, ""); return; }
     if (xfer_.next != xfer_.size) { rejected(seq, "size"); return; }
+    if (xfer_.op == Xfer::IMPORT) {
+        uint8_t confirm[32];
+        if (!host_.migrationImportCommit(confirm)) { xfer_ = Xfer(); rejected(seq, "migration", "commit"); return; }
+        xfer_ = Xfer();
+        char hex[65], fields[80];
+        hexstr::encode(confirm, sizeof(confirm), hex);
+        snprintf(fields, sizeof(fields), "\"confirm\":\"%s\"", hex);
+        send("ok", seq, fields);
+        return;
+    }
     const bool wasNode = store_.configured() && !store_.station();
     const char* detail = nullptr;
     size_t worst = 0;
@@ -1045,7 +1096,7 @@ void Protocol::poll(uint32_t nowMs) {
     if (migrationActive) {
         synced_ = false;
         snap_ = Snap();
-        if (xfer_.op != Xfer::EXPORT) xfer_ = Xfer();
+        if (xfer_.op != Xfer::EXPORT && xfer_.op != Xfer::IMPORT) xfer_ = Xfer();
     }
     if (snap_.active) { continueSnapshot(); return; }   // migawka przed zdarzeniami; polecenia czekają
     // Odpowiedź przyciskiem i limit 30 s liczone zawsze, więc pytanie znika z ekranu także wtedy, gdy laptop

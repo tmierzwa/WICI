@@ -33,6 +33,7 @@
 #include "console.h"
 #if defined(WICI_RNS_CORE)
 #include "core_selftest.h"
+#include "identity.h"
 #endif
 #include "drbg.h"
 #include "fram.h"
@@ -85,6 +86,7 @@ fram::Memory memory(platform::bus(), board::FRAM_CS, board::FRAM_SPI_HZ);
 journal::Journal stationJournal(memory);
 migration_state::Barrier migrationBarrier(memory);
 migration_package::Exporter migrationExporter(memory);
+migration_package::Importer migrationImporter(memory, migrationBarrier);
 static_assert(migration_package::SIZE == usbproto::MIGRATION_PACKAGE_BYTES, "USB migration size matches package");
 measure::Bench bench(radiocon::link(), board::BTN_OK, board::LED_HEARTBEAT);
 #if defined(WICI_BOARD_N1)
@@ -232,6 +234,9 @@ struct BenchHost : usbproto::Host {
     bool migrationExportRead(uint32_t offset, uint8_t* out, size_t length) override {
         return migrationExporter.read(offset, out, length);
     }
+    bool migrationImportBegin(const uint8_t mid[16], const uint8_t sha[32]) override;
+    bool migrationImportPart(uint32_t offset, const uint8_t* data, size_t length, uint32_t& next) override;
+    bool migrationImportCommit(uint8_t confirm[32]) override;
     bool announce() override;
     bool destroy() override;
     void configChanged(bool roleChanged) override;
@@ -824,6 +829,54 @@ bool BenchHost::migrationExport(const uint8_t mid[16], const uint8_t targetKey[3
     }
     if (!migrationExporter.begin(record) || !migrationExporter.digest(sha)) return false;
     return true;
+}
+
+bool BenchHost::migrationImportBegin(const uint8_t mid[16], const uint8_t sha[32]) {
+    if (!migrationBarrier.ready()) return false;
+    migration_state::Record record = migrationBarrier.record();
+    if (memcmp(record.mid, mid, sizeof(record.mid))) return false;
+    if (record.phase == migration_state::Phase::RECEIVING) {
+        record.phase = migration_state::Phase::IMPORTING;
+        record.snapshotSize = migration_image::SIZE;
+        if (!migrationBarrier.save(record)) return false;
+    } else if (record.phase != migration_state::Phase::IMPORTING) return false;
+    return migrationImporter.begin(mid, sha);
+}
+
+bool BenchHost::migrationImportPart(uint32_t offset, const uint8_t* data, size_t length, uint32_t& next) {
+    if (!migrationImporter.feed(offset, data, length)) return false;
+    next = migrationImporter.next();
+    return true;
+}
+
+bool BenchHost::migrationImportCommit(uint8_t confirm[32]) {
+    if (!migrationImporter.finish() || !migrationBarrier.ready()) return false;
+    const migration_state::Record& current = migrationBarrier.record();
+    if (current.phase != migration_state::Phase::IMPORTING || current.importedBytes != migration_image::SIZE) return false;
+    uint8_t actual[32], privateIdentity[framfs::KEY_BYTES], publicIdentity[64];
+    if (!migration_image::digest(memory, actual) || memcmp(actual, current.packageHash, sizeof(actual)) ||
+        !framfs::loadKey(memory, privateIdentity)) return false;
+#if defined(WICI_RNS_CORE)
+    rnscore::publicKey(privateIdentity, publicIdentity);
+#else
+    drbg::wipe(privateIdentity, sizeof(privateIdentity));
+    return false;  // legacy port images cannot publish a migrated identity
+#endif
+    drbg::wipe(privateIdentity, sizeof(privateIdentity));
+    sha2::digest(publicIdentity, sizeof(publicIdentity), actual);
+    if (memcmp(actual, current.identityDigest, sizeof(current.identityDigest))) return false;
+    journal::Journal importedJournal(memory);
+    if (!importedJournal.begin() || importedJournal.formatState() != journal::FormatState::READY ||
+        !(importedJournal.formatFlags() & journal::FORMAT_IDENTITY)) return false;
+    uint8_t confirmKey[32], packageKey[32];
+    if (!migration_crypto::derive(current.privateKey, current.peerPublic, current.mid, confirmKey, packageKey)) return false;
+    drbg::wipe(packageKey, sizeof(packageKey));
+    const bool signedOk = migration_crypto::confirmation(confirmKey, "imported", current.mid, current.packageHash, confirm);
+    drbg::wipe(confirmKey, sizeof(confirmKey));
+    if (!signedOk || !migration_image::clearLocalCaches(memory)) return false;
+    migration_state::Record done = current;
+    done.phase = migration_state::Phase::IMPORTED;
+    return migrationBarrier.save(done);
 }
 
 const char* langName(ui::Lang lang) { return lang == ui::Lang::PL ? "PL" : lang == ui::Lang::UK ? "UK" : "EN"; }
