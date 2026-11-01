@@ -4,9 +4,12 @@
 
 #include <Crypto.h>
 #include <Curve25519.h>
+#include <Ed25519.h>
 
 #include "envelope.h"
 #include "wici_radio.h"
+#include "wici_epoch.h"
+#include "wici_beacon.h"
 
 namespace {
 struct Memory : journal::Storage {
@@ -46,6 +49,13 @@ bool admit(uint16_t net, uint16_t src, uint16_t dst, const uint8_t* p, size_t n,
     ++*static_cast<unsigned*>(ctx); return true;
 }
 uint32_t randomZero(void*) { return 0; }
+bool originProof(uint16_t, uint16_t, const wici_link::Frame& frame, const void*) {
+    return frame.originSignature[0] == 0xA5;
+}
+bool beaconProof(uint16_t sender, const uint8_t content[wici_beacon::CONTENT_BYTES],
+                 const uint8_t signature[wici_beacon::SIGNATURE_BYTES], const void* context) {
+    return wici_beacon::verify(static_cast<const uint8_t*>(context), 100, sender, content, signature);
+}
 struct Delivery { uint32_t handle = 0; unsigned calls = 0; bool acknowledged = false; };
 void delivered(uint32_t handle, bool acknowledged, void* context) {
     Delivery& result = *static_cast<Delivery*>(context);
@@ -72,10 +82,13 @@ int main() {
     assert(envelope::deriveKey(receiverSecret, ownPublic, 100, 1, 2, 1, envelopeKey));
     assert(wici_link::deriveKey(ifac, 100, key));
     const uint16_t receivers[2] = {1, 3};
+    uint8_t rootSecret[64] = {}, rootEd[32];
+    for (unsigned i = 0; i < 32; ++i) rootSecret[i + 32] = static_cast<uint8_t>(i + 1);
+    Ed25519::derivePublicKey(rootEd, rootSecret + 32);
     unsigned admitted = 0;
     wici_radio::Shelter shelter(memory, {100, 2, 5, 5, 0}, receivers, ifac,
                                ownSecret, receiverPublic, admit, &admitted,
-                               air, randomZero, nullptr);
+                               air, randomZero, nullptr, originProof, nullptr, rootEd, beaconProof, rootEd);
     assert(shelter.begin());
     envelope::Frame sealed[2];
     assert(envelope::seal(envelopeKey, 1, 2, 1,
@@ -96,6 +109,7 @@ int main() {
     frame.source = 4; frame.sequence = 11; frame.length = 25;
     memset(frame.payload, 0, frame.length);
     frame.payload[0] = 0x40; frame.payload[2] = 4; frame.payload[4] = 1;
+    frame.originSignature[0] = 0xA5;
     n = encode(key, frame, wire);
     air.hackOk = false;
     assert(shelter.receive(wire, n, 1300, 11) == wici_radio::Event::ADMITTED);
@@ -106,11 +120,23 @@ int main() {
     wici_link::Frame beacon;
     beacon.type = wici_link::Type::BEACON; beacon.network = 100;
     beacon.source = 5; beacon.destination = wici_link::BROADCAST;
-    beacon.ttl = 1; beacon.length = 9;
+    beacon.ttl = 1; beacon.length = 9 + wici_epoch::SIGNATURE_BYTES + wici_beacon::SIGNATURE_BYTES;
     beacon.payload[1] = 5; beacon.payload[5] = 1;
+    assert(wici_epoch::sign(rootSecret, 100, 5, 1, beacon.payload + 9));
+    assert(wici_beacon::sign(rootSecret, 100, 5, beacon.payload,
+                             beacon.payload + wici_beacon::CONTENT_BYTES));
     n = encode(key, beacon, wire);
     assert(shelter.receive(wire, n, 1400, 12, -20) == wici_radio::Event::ADMITTED);
     assert(shelter.routes().rank() == 21);  // packet SNR contributes five sixteenths
+    beacon.payload[4] = 0x7f; beacon.payload[5] = 0xff;
+    n = encode(key, beacon, wire);
+    assert(shelter.receive(wire, n, 1401, 12) == wici_radio::Event::REJECTED);
+    assert(shelter.routes().epoch() == 1);  // link-key holder cannot forge a root epoch
+    beacon.payload[4] = 0; beacon.payload[5] = 1;
+    beacon.payload[2] = 0; beacon.payload[3] = 1;
+    n = encode(key, beacon, wire);
+    assert(shelter.receive(wire, n, 1402, 12) == wici_radio::Event::REJECTED);
+    assert(shelter.routes().rank() == 21);  // rank is signed by its sender
     air.dataOk = false;
     shelter.poll(1401, 12);
     assert(air.dataCount == 1 && air.dataLength == 108);
@@ -200,7 +226,7 @@ int main() {
     Air resumedAir;
     wici_radio::Shelter resumed(memory, {100, 2, 5, 5, 0}, receivers, ifac,
                                ownSecret, receiverPublic, admit, &admitted,
-                               resumedAir, randomZero, nullptr);
+                               resumedAir, randomZero, nullptr, originProof, nullptr, rootEd, beaconProof, rootEd);
     assert(resumed.begin());
     resumed.poll(1, 15);
     assert(resumed.routes().down(4) == 4);
@@ -212,7 +238,7 @@ int main() {
     Air floodAir;
     wici_radio::Shelter flood(floodMemory, {100, 2, 5, 5, 0}, receivers, ifac,
                              ownSecret, receiverPublic, admit, &admitted,
-                             floodAir, randomZero, nullptr);
+                             floodAir, randomZero, nullptr, originProof, nullptr, rootEd, beaconProof, rootEd);
     assert(flood.begin());
     frame.flags = wici_link::DOWN;
     frame.source = 5; frame.destination = wici_link::BROADCAST;

@@ -3,7 +3,7 @@
 
 #include <string.h>
 
-#include "identity.h"
+#include <Ed25519.h>
 #include "wici_origin.h"
 
 namespace wici_radio {
@@ -17,7 +17,8 @@ Shelter::Shelter(journal::Storage& storage, wici_route::Config route,
                  const uint8_t privateKey[64], const uint8_t receiverPublic[2][32],
                  wici_destination::AdmitFn admit, void* admitContext,
                  Air& air, RandomFn random, void* randomContext,
-                 wici_hop::VerifyOrigin verifyOrigin, const void* verifyContext)
+                 wici_hop::VerifyOrigin verifyOrigin, const void* verifyContext,
+                 const uint8_t rootEd25519[32], VerifyBeacon verifyBeacon, const void* beaconContext)
     : network_(route.network), own_(route.own), root_(route.root),
       outbound_{envelope::Counter(storage, 0), envelope::Counter(storage, 1)},
       destination_(storage, {route.network, route.own,
@@ -26,9 +27,15 @@ Shelter::Shelter(journal::Storage& storage, wici_route::Config route,
                    ifac, privateKey, receiverPublic, admit, admitContext),
       relay_(storage, route, ifac, true, receiverIds, verifyOrigin, verifyContext),
       air_(air), random_(random), randomContext_(randomContext) {
+    verifyBeacon_ = verifyBeacon;
+    beaconContext_ = beaconContext;
+    if (rootEd25519) {
+        memcpy(rootEd25519_, rootEd25519, sizeof(rootEd25519_));
+        rootKeyReady_ = true;
+    }
     if (privateKey) {
         memcpy(signingPrivate_, privateKey, sizeof(signingPrivate_));
-        rnscore::publicKey(signingPrivate_, signingPublic_);
+        Ed25519::derivePublicKey(signingPublic_ + 32, signingPrivate_ + 32);
     }
     keyReady_ = ifac && random && wici_link::deriveKey(ifac, network_, linkKey_);
     if (receiverIds) {
@@ -47,9 +54,10 @@ bool Shelter::begin() {
     sentAtMs_ = retryAtMs_ = 0;
     ownActive_ = ownSubmitted_ = ownAwaiting_ = ownDelayPending_ = ownException_ = false;
     ownCount_ = ownPart_ = ownAttempts_ = 0;
-    return ready_ = keyReady_ && outboundKeysReady_ && destination_.begin() && relay_.begin() &&
-                    outbound_[0].begin(network_, own_, receivers_[0]) &&
-                    outbound_[1].begin(network_, own_, receivers_[1]);
+    return ready_ = keyReady_ && rootKeyReady_ && verifyBeacon_ && outboundKeysReady_ &&
+                    destination_.begin() && relay_.begin() &&
+                    outbound_[0].begin(network_, own_, receivers_[0], outboundKeys_[0]) &&
+                    outbound_[1].begin(network_, own_, receivers_[1], outboundKeys_[1]);
 }
 
 uint32_t Shelter::backoff() const { return RETRY_MIN_MS + random_(randomContext_) % RETRY_SPAN_MS; }
@@ -78,6 +86,9 @@ Event Shelter::receive(const uint8_t* wire, size_t length, uint32_t receivedMs, 
     if (frame.type == wici_link::Type::BEACON) {
         wici_route::Beacon beacon;
         return wici_route::parseBeacon(frame, beacon) &&
+                       wici_epoch::verify(rootEd25519_, network_, root_, beacon.epoch, beacon.epochSignature) &&
+                       verifyBeacon_(frame.source, frame.payload, frame.payload + wici_beacon::CONTENT_BYTES,
+                                     beaconContext_) &&
                        relay_.routes().beacon(frame.source, beacon,
                                               wici_route::snrCost16(snrQdb), nowS) ?
                Event::ADMITTED : Event::REJECTED;
@@ -247,7 +258,7 @@ bool Shelter::beacon() {
     frame.destination = wici_link::BROADCAST;
     frame.sequence = sequence;
     frame.ttl = 1;
-    frame.length = 9;
+    frame.length = 9 + wici_epoch::SIGNATURE_BYTES + wici_beacon::SIGNATURE_BYTES;
     const uint16_t rank = relay_.routes().rank();
     const uint16_t epoch = relay_.routes().epoch();
     const uint16_t parent = relay_.routes().parent();
@@ -259,6 +270,9 @@ bool Shelter::beacon() {
     frame.payload[5] = static_cast<uint8_t>(epoch);
     frame.payload[6] = static_cast<uint8_t>(parent >> 8);
     frame.payload[7] = static_cast<uint8_t>(parent);
+    memcpy(frame.payload + 9, relay_.routes().epochSignature(), wici_epoch::SIGNATURE_BYTES);
+    if (!wici_beacon::sign(signingPrivate_, network_, own_, frame.payload,
+                           frame.payload + wici_beacon::CONTENT_BYTES)) return false;
     uint8_t wire[wici_link::MAX_FRAME];
     const size_t length = wici_link::encode(linkKey_, frame, wire, sizeof(wire));
     return length && air_.sendData(wire, length, wici_link::TxClass::BEACON);

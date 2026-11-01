@@ -6,6 +6,7 @@
 #include "wici_destination.h"
 #include "wici_hop.h"
 #include "envelope_counter.h"
+#include "wici_beacon.h"
 
 namespace wici_radio {
 
@@ -24,6 +25,8 @@ struct Air {
 
 using RandomFn = uint32_t (*)(void* context);
 using DeliveryFn = void (*)(uint32_t handle, bool acknowledged, void* context);
+using VerifyBeacon = bool (*)(uint16_t sender, const uint8_t content[wici_beacon::CONTENT_BYTES],
+                              const uint8_t signature[wici_beacon::SIGNATURE_BYTES], const void* context);
 
 enum class Event : uint8_t { IGNORED, REJECTED, ADMITTED, HACK_SENT };
 
@@ -34,7 +37,9 @@ public:
             const uint8_t privateKey[64], const uint8_t receiverPublic[2][32],
             wici_destination::AdmitFn admit, void* admitContext,
             Air& air, RandomFn random, void* randomContext,
-            wici_hop::VerifyOrigin verifyOrigin = nullptr, const void* verifyContext = nullptr);
+            wici_hop::VerifyOrigin verifyOrigin = nullptr, const void* verifyContext = nullptr,
+            const uint8_t rootEd25519[32] = nullptr,
+            VerifyBeacon verifyBeacon = nullptr, const void* beaconContext = nullptr);
     bool begin();
     // Called from Bench's raw callback. No route learning or outbound DATA is
     // performed before the HACK attempt; all timestamps come from the radio.
@@ -61,7 +66,10 @@ private:
     uint16_t network_, own_, root_;
     uint8_t linkKey_[32] = {};
     uint8_t signingPrivate_[64] = {}, signingPublic_[64] = {};
-    bool keyReady_ = false, ready_ = false, routePending_ = false;
+    uint8_t rootEd25519_[32] = {};
+    VerifyBeacon verifyBeacon_ = nullptr;
+    const void* beaconContext_ = nullptr;
+    bool keyReady_ = false, rootKeyReady_ = false, ready_ = false, routePending_ = false;
     bool submitted_ = false, awaitingHack_ = false, delayPending_ = false;
     uint32_t sentAtMs_ = 0, retryAtMs_ = 0;
     envelope::Counter outbound_[2];

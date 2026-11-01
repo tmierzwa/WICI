@@ -23,7 +23,7 @@ enum class Event : uint8_t { REJECTED, FORWARDED, QUEUED, HACK_SENT };
 class Root {
 public:
     Root(journal::Storage& storage, kiss::Port& port, Air& air, uint16_t network,
-         uint16_t own, const uint8_t ifac[16]);
+         uint16_t own, const uint8_t ifac[16], const uint8_t identity[64]);
     bool begin(uint16_t epoch);
     bool ready() const { return ready_; }
     bool beacon();
@@ -48,6 +48,7 @@ private:
     wici_flood::Ring flood_;
     wici_seq::Counter sequence_;
     uint8_t key_[32] = {};
+    uint8_t signingPrivate_[64] = {}, epochSignature_[64] = {};
     bool keyReady_ = false, ready_ = false, pending_ = false, outboundPending_ = false;
     uint8_t outbound_[wici_link::MAX_FRAME] = {};
     size_t outboundLength_ = 0;

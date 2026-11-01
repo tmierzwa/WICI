@@ -2213,21 +2213,18 @@ class HostUnitTests(unittest.TestCase):
             'usb {"usb":2,"seq":1,"type":"migrate","step":"abort","mid":"' + mid + '","confirm":"' + "cc" * 32 + '"}']))
         self.assertEqual((source[-1]["type"], source[-1]["duplicate"]), ("ok", False))
 
-    def test_usb_forced_recovery_requires_button_and_rejects_extra_fields(self):
+    def test_usb_forced_recovery_is_rejected(self):
         mid = "00112233445566778899aabbccddeeff"
         u = self.Lines()
         target = self.replies(self.world(["migration imported", "connect",
             u("migrate", step="activate", mid=mid, forced=True, confirm="bb" * 32),
-            u("migrate", step="activate", mid=mid, forced=True), "K BACK 0", "upoll",
-            u("migrate", step="activate", mid=mid, forced=True), "K OK 0", "upoll"]))
+            u("migrate", step="activate", mid=mid, forced=True)]))
         self.assertEqual([(r["type"], r.get("reason")) for r in target[1:]],
-                         [("rejected", "invalid"), ("pending", None), ("rejected", "not_confirmed"),
-                          ("pending", None), ("ok", None)])
+                         [("rejected", "migration"), ("rejected", "migration")])
         source = self.replies(self.world(["migration export", "connect",
-            'usb {"usb":2,"seq":1,"type":"migrate","step":"abort","mid":"' + mid + '","forced":true}',
-            "K OK 0", "upoll"]))
-        self.assertEqual([(r["type"], r.get("duplicate")) for r in source[1:]],
-                         [("pending", None), ("ok", False)])
+            'usb {"usb":2,"seq":1,"type":"migrate","step":"abort","mid":"' + mid + '","forced":true}']))
+        self.assertEqual([(r["type"], r.get("reason")) for r in source[1:]],
+                         [("rejected", "migration")])
 
     def test_usb_hello_seq_fields_and_rejections(self):
         def line(seq, type_, usb=2, **fields):
@@ -3133,7 +3130,7 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual(self.screens(out)[-1][0], "alarm")
 
     def test_confirm_question_and_node_menu(self):
-        out = self.ui(["L 0", "ask 0", "R", "answer", "K OK 0", "answer", "R", "ask 3", "K BACK 0", "answer", "ask 9 ABCD", "R",
+        out = self.ui(["L 0", "ask 0", "R", "answer", "K OK 0", "answer", "R", "ask 3", "K BACK 0", "answer", "ask 7 ABCD", "R",
                        "K OK 0", "answer", "ask 1", "dismiss", "answer", "R", "ask 4 0427", "R", "dismiss"])
         s = self.screens(out)
         self.assertEqual([x[0] for x in s], ["confirm", "main", "confirm", "main", "confirm"])

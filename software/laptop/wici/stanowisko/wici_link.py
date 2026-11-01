@@ -76,7 +76,7 @@ def _valid(frame):
     if frame.kind == HACK:
         return _id(frame.destination) and frame.flags == 0 and not frame.payload
     if frame.kind == BEACON:
-        return frame.destination == BROADCAST and frame.flags == 0 and len(frame.payload) == 9
+        return frame.destination == BROADCAST and frame.flags == 0 and len(frame.payload) == 137
     return False
 
 

@@ -188,7 +188,7 @@ class Link:
         return self.request("xfer_commit", timeout=COMMIT_TIMEOUT.get(op, TIMEOUT), xfer=xfer)
 
     def read_transfer(self, op, **extra):
-        begin = self.request("xfer_begin", op=op, **extra)
+        begin = self.request("xfer_begin", timeout=60 if op == "export" else TIMEOUT, op=op, **extra)
         with _reply_format():
             xfer, size, digest = str(begin["xfer"]), int(begin["size"]), str(begin["sha256"])
         expected_limit = {"config_get": configdoc.DOC_MAX, "export": MIGRATION_PACKAGE_BYTES}.get(op)

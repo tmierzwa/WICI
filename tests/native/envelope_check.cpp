@@ -91,34 +91,35 @@ int main() {
         window.accept(19, next) || !window.accept(84, next) || next.accept(20, window)) return 8;
     Memory memory;
     envelope::Counter counter(memory, 0);
-    if (!counter.begin(0x1234, 10, 20) ||
+    if (!counter.begin(0x1234, 10, 20, ab) ||
         envelope::sealReserved(counter, ab, 0x1234, 10, 21, plain, sizeof(plain), 236, frames) != 0 ||
         envelope::sealReserved(counter, ab, 0x1234, 10, 20, plain, sizeof(plain), 236, frames) != 1 ||
         !envelope::openPart(ab, frames[0].bytes, frames[0].length, opened) || opened.counter != 0) return 9;
     envelope::DurableReplay replay(memory, 0);
-    if (!replay.begin(0x1234, 10, 20) || !replay.propose(8, next) ||
+    if (!replay.begin(0x1234, 10, 20, ab) || !replay.propose(8, next) ||
         replay.current().started || !replay.commit(8)) return 10;
     envelope::DurableReplay restored(memory, 0);
-    if (!restored.begin(0x1234, 10, 20) || !restored.current().started ||
+    if (!restored.begin(0x1234, 10, 20, ab) || !restored.current().started ||
         restored.current().highest != 8 || restored.current().mask != 1 ||
         restored.commit(8) || !restored.commit(9)) return 11;
     if (!restored.accepted(8) || !restored.accepted(9) || restored.accepted(7)) return 18;
-    if (!restored.begin(0x1234, 10, 20) || restored.propose(8, next) ||
+    if (!restored.begin(0x1234, 10, 20, ab) || restored.propose(8, next) ||
         !restored.propose(10, next) || !restored.commit(10)) return 12;
     envelope::DurableReplay wrong(memory, 0);
-    if (wrong.begin(0x1234, 10, 21)) return 13;
+    uint8_t rotated[32]; memcpy(rotated, ab, 32); rotated[0] ^= 1;
+    if (!wrong.begin(0x1234, 10, 21, rotated) || wrong.current().started) return 13;
     static Memory cut;
     envelope::DurableReplay interrupted(cut, 1);
-    if (!interrupted.begin(0x1234, 10, 21)) return 14;
+    if (!interrupted.begin(0x1234, 10, 21, ab)) return 14;
     cut.writesLeft = 2;
     if (interrupted.commit(5) || interrupted.ready()) return 15;
     cut.writesLeft = -1;
     envelope::DurableReplay afterCut(cut, 1);
-    if (!afterCut.begin(0x1234, 10, 21) || afterCut.current().started ||
+    if (!afterCut.begin(0x1234, 10, 21, ab) || afterCut.current().started ||
         !afterCut.commit(5)) return 16;
     cut.data[envelope::REPLAY_BASE + 2 * envelope::REPLAY_SLOT_BYTES + 14] ^= 1;
     envelope::DurableReplay corrupt(cut, 1);
-    if (corrupt.begin(0x1234, 10, 21)) return 17;
+    if (corrupt.begin(0x1234, 10, 21, ab)) return 17;
 
     static Memory destinationMemory;
     uint8_t c[32], cp[32], peers[2][32], ifac[16], linkKey[32];

@@ -1638,7 +1638,7 @@ class BuildPinsTest(unittest.TestCase):
     def test_ci_builds_with_the_pinned_python(self):
         pins = json.loads((LAPTOP / "build" / "runtimes.json").read_text(encoding="utf-8"))
         workflow = (ROOT / ".github" / "workflows" / "laptop.yml").read_text(encoding="utf-8")
-        self.assertEqual(workflow.count(f"python-version: '{pins['python']}'"), 2)   # usb i size
+        self.assertEqual(workflow.count(f"python-version: '{pins['python']}'"), 3)
 
     def test_app_zip_skips_junk(self):
         for rel in ("wici/__main__.py", "wici/ui/index.html", "wici/slowa.txt"):

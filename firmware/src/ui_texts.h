@@ -92,8 +92,6 @@ enum class Id : uint8_t {
     ODCISK_PRZENIESIENIA,
     PYTANIE_PRZENIES,
     PYTANIE_ANULUJ_PRZENIES,
-    PYTANIE_AKTYWUJ_BEZ_ZRODLA,
-    PYTANIE_ANULUJ_BEZ_CELU,
     COUNT
 };
 
@@ -174,10 +172,8 @@ constexpr const char* const TEXTS[static_cast<size_t>(Id::COUNT)][LANGS] = {
     {"WOLNE ZNAKI: [n]", "ВІЛЬНІ ЗНАКИ: [n]", "CHARS LEFT: [n]"},
     {"", "ВІДПОВІДІ ВІД ОДЕРЖУВАЧА НАДХОДЯТЬ ПОЛЬСЬКОЮ", "REPLIES FROM THE RECIPIENT ARRIVE IN POLISH"},
     {"ODCISK STACJI DOCELOWEJ: [x] – PORÓWNAJ PRZY PRZENOSZENIU. OK = ZAMKNIJ", "ВІДБИТОК НОВОЇ СТАНЦІЇ: [x] – ПОРІВНЯЙТЕ ПІД ЧАС ПЕРЕНЕСЕННЯ. OK = ЗАКРИТИ", "TARGET STATION FINGERPRINT: [x] – COMPARE DURING TRANSFER. OK = CLOSE"},
-    {"PRZENIES STACJE DO [xxxx]? POROWNAJ ODCISK NA CELU. OK = TAK", "ПЕРЕНЕСТИ СТАНЦІЮ ДО [xxxx]? ЗВІРТЕ ВІДБИТОК. OK = ТАК", "MOVE STATION TO [xxxx]? COMPARE TARGET FINGERPRINT. OK = YES"},
-    {"USUNAC ODEBRANA STACJE? OK = TAK", "ВИДАЛИТИ ОТРИМАНУ СТАНЦІЮ? OK = ТАК", "ERASE IMPORTED STATION? OK = YES"},
-    {"ZRODLO ODLACZONE I BEZ ANTENY? AKTYWOWAC CEL? OK = TAK", "ДЖЕРЕЛО ВІД'ЄДНАНЕ БЕЗ АНТЕНИ? УВІМКНУТИ ЦІЛЬ? OK = ТАК", "SOURCE DISCONNECTED AND ANTENNA REMOVED? ACTIVATE TARGET? OK = YES"},
-    {"CEL ZNISZCZONY? PRZYWROCIC ZRODLO? OK = TAK", "ЦІЛЬ СТЕРТА? ВІДНОВИТИ ДЖЕРЕЛО? OK = ТАК", "TARGET ERASED? RESTORE SOURCE? OK = YES"},
+    {"PRZENIEŚ STACJĘ DO [xxxx]? PORÓWNAJ ODCISK NA CELU. OK = TAK", "ПЕРЕНЕСТИ СТАНЦІЮ ДО [xxxx]? ЗВІРТЕ ВІДБИТОК. OK = ТАК", "MOVE STATION TO [xxxx]? COMPARE TARGET FINGERPRINT. OK = YES"},
+    {"USUNĄĆ ODEBRANĄ STACJĘ? OK = TAK", "ВИДАЛИТИ ОТРИМАНУ СТАНЦІЮ? OK = ТАК", "ERASE IMPORTED STATION? OK = YES"},
 };
 
 // Pozycje menu, nazwy przycisków i etykiety (tabela PL/UK/EN).

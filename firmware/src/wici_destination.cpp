@@ -26,8 +26,8 @@ bool Destination::begin() {
     ready_ = false;
     if (!keysReady_) return false;
     for (uint8_t i = 0; i < 2; ++i) {
-        if (!replay_[i].begin(config_.network, config_.own, config_.receiver[i]) ||
-            !parts_[i].begin(config_.network, config_.own, config_.receiver[i])) return false;
+        if (!replay_[i].begin(config_.network, config_.own, config_.receiver[i], envelopeKeys_[i]) ||
+            !parts_[i].begin(config_.network, config_.own, config_.receiver[i], envelopeKeys_[i])) return false;
         // SA1 was durable but the fragment tombstone was interrupted. Replay
         // state proves it can be freed without accepting the content again.
         if (parts_[i].pending() && replay_[i].accepted(parts_[i].pendingCounter()) &&

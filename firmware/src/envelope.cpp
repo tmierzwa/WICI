@@ -118,7 +118,7 @@ size_t seal(const uint8_t key[32], uint16_t sender, uint16_t recipient, uint32_t
 size_t sealReserved(Counter& counter, const uint8_t key[32], uint16_t netId, uint16_t sender,
                     uint16_t recipient, const uint8_t* plaintext, size_t length, size_t maxPayload,
                     Frame out[2], uint8_t type) {
-    if (!counter.outgoing(netId, sender, recipient) || !key || !out || (!plaintext && length) ||
+    if (!counter.outgoing(netId, sender, recipient, key) || !key || !out || (!plaintext && length) ||
         length > MAX_SA1 || maxPayload < MIN_PAYLOAD || type > TYPE_LINK_TEST) return 0;
     uint32_t value;
     if (!counter.next(value)) return 0;

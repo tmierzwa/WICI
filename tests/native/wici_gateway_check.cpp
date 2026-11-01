@@ -41,9 +41,11 @@ int main() {
     kiss::Port port;
     Air air;
     uint8_t ifac[16] = {}, key[32], wire[255];
+    uint8_t identity[64] = {};
     for (unsigned i = 0; i < 16; ++i) ifac[i] = static_cast<uint8_t>(i);
+    for (unsigned i = 0; i < 32; ++i) identity[i + 32] = static_cast<uint8_t>(i + 1);
     assert(wici_link::deriveKey(ifac, 100, key));
-    wici_gateway::Root root(memory, port, air, 100, 5, ifac);
+    wici_gateway::Root root(memory, port, air, 100, 5, ifac, identity);
     assert(root.begin(7) && root.ready());
     assert(root.beacon());
     assert(air.lastClass == wici_link::TxClass::BEACON);

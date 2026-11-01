@@ -45,7 +45,7 @@ constexpr uint32_t MIGRATION_PACKAGE_BYTES = 101 + 512 * (512 + 16);
 constexpr size_t BOOT_HEX = 16;
 
 enum class Question : uint8_t { SILENCE_ON, SILENCE_OFF, CLOSE, DESTROY, SILENCE_EXCEPTION, MIGRATION_EXPORT,
-                                MIGRATION_ABORT, MIGRATION_FORCE_ACTIVATE, MIGRATION_FORCE_ABORT };
+                                MIGRATION_ABORT };
 enum class Confirm : uint8_t { WAITING, YES, NO };
 
 // Usługi stacji dla protokołu; dostarcza je main.cpp albo program testowy.
@@ -127,8 +127,7 @@ public:
 
 private:
     struct Pending {
-        enum Type : uint8_t { NONE, SILENCE, CLOSE, DESTROY, EXPORT, ABORT_TARGET,
-                              FORCE_ACTIVATE, FORCE_ABORT_SOURCE } type = NONE;
+        enum Type : uint8_t { NONE, SILENCE, CLOSE, DESTROY, EXPORT, ABORT_TARGET } type = NONE;
         int64_t seq = 0;
         uint32_t sinceMs = 0;
         // Odpowiedź przyciskiem (albo limit 30 s) już zapadła i ekran zamknięty; wykonanie i odpowiedź

@@ -22,7 +22,7 @@ enum class FragmentResult : uint8_t { PARTIAL, COMPLETE, REJECTED, IO_ERROR };
 class DurableParts {
 public:
     DurableParts(journal::Storage& storage, uint8_t peerSlot) : storage_(storage), peerSlot_(peerSlot) {}
-    bool begin(uint16_t network, uint16_t recipient, uint16_t sender);
+    bool begin(uint16_t network, uint16_t recipient, uint16_t sender, const uint8_t key[32]);
     // Caller already authenticated `part` with the envelope AEAD. PARTIAL is
     // safe to HACK only after the write/readback performed here. COMPLETE
     // returns plaintext without changing FRAM; caller must commit SA1 first.
@@ -39,6 +39,7 @@ private:
     uint32_t generation_ = 0, counter_ = 0, startedS_ = 0;
     uint8_t copy_ = 1, number_ = 0, type_ = 0, length_ = 0;
     uint8_t data_[MAX_SA1 / 2] = {};
+    uint8_t fingerprint_[8] = {};
     bool ready_ = false;
 };
 

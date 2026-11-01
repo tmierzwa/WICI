@@ -17,7 +17,7 @@ static_assert(REPLAY_BASE + REPLAY_PEERS * 2 * REPLAY_SLOT_BYTES <= 0x045000,
 class DurableReplay {
 public:
     DurableReplay(journal::Storage& storage, uint8_t peerSlot) : storage_(storage), peerSlot_(peerSlot) {}
-    bool begin(uint16_t network, uint16_t recipient, uint16_t sender);
+    bool begin(uint16_t network, uint16_t recipient, uint16_t sender, const uint8_t key[32]);
     bool propose(uint32_t counter, ReplayWindow& next) const;
     bool accepted(uint32_t counter) const;
     // Call only after the SA1 effect is durable and idempotent in Store. A
@@ -31,6 +31,7 @@ private:
     journal::Storage& storage_;
     uint8_t peerSlot_;
     uint16_t network_ = 0, recipient_ = 0, sender_ = 0;
+    uint8_t fingerprint_[8] = {};
     uint32_t generation_ = 0;
     uint8_t copy_ = 1;
     ReplayWindow window_;

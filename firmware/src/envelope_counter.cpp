@@ -2,6 +2,7 @@
 #include "envelope_counter.h"
 
 #include <string.h>
+#include "sha2.h"
 
 namespace envelope {
 namespace {
@@ -41,21 +42,28 @@ bool blank(const uint8_t* p) {
 
 }  // namespace
 
-bool Counter::begin(uint16_t netId, uint16_t ownId, uint16_t peerId) {
+bool Counter::begin(uint16_t netId, uint16_t ownId, uint16_t peerId, const uint8_t key[32]) {
     ready_ = false;
     sequence_ = upper_ = current_ = 0;
     slot_ = 1;
-    if (peerSlot_ >= COUNTER_PEERS || !netId || netId == 0xFFFF || !ownId || !peerId ||
+    if (peerSlot_ >= COUNTER_PEERS || !key || !netId || netId == 0xFFFF || !ownId || !peerId ||
         ownId == 0xFFFF || peerId == 0xFFFF || ownId == peerId) return false;
+    uint8_t digest[sha2::DIGEST];
+    sha2::digest(key, 32, digest);
+    memcpy(fingerprint_, digest, sizeof(fingerprint_));
+    memset(digest, 0, sizeof(digest));
     netId_ = netId; ownId_ = ownId; peerId_ = peerId;
     bool found = false;
     for (uint8_t i = 0; i < 2; ++i) {
         uint8_t data[COUNTER_SLOT_BYTES];
         if (!storage_.read(address(peerSlot_, i), data, sizeof(data))) return false;
         if (blank(data) || data[31] != COMMIT) continue;  // interrupted write cannot have issued counters
-        if (memcmp(data, MAGIC, 4) || u16(data + 4) != netId || u16(data + 6) != ownId ||
-            u16(data + 8) != peerId || u16(data + 20) != crc(data, 20) ||
+        if (memcmp(data, MAGIC, 4) || u16(data + 26) != crc(data, 26) ||
             u32(data + 14) == 0 || (u32(data + 14) % COUNTER_BLOCK) != 0) return false;
+        // Reservation space stays monotonic across rekeys. Reusing an older
+        // identity later must not restart its nonce counter at zero.
+        if (!memcmp(data + 18, fingerprint_, sizeof(fingerprint_)) &&
+            (u16(data + 4) != netId || u16(data + 6) != ownId || u16(data + 8) != peerId)) return false;
         uint32_t sequence = u32(data + 10);
         if (!found || static_cast<int32_t>(sequence - sequence_) > 0) {
             sequence_ = sequence; upper_ = u32(data + 14); slot_ = i; found = true;
@@ -71,7 +79,8 @@ bool Counter::reserve(uint32_t upper) {
     memcpy(data, MAGIC, 4);
     put16(data + 4, netId_); put16(data + 6, ownId_); put16(data + 8, peerId_);
     put32(data + 10, sequence_ + 1); put32(data + 14, upper);
-    put16(data + 20, crc(data, 20));
+    memcpy(data + 18, fingerprint_, sizeof(fingerprint_));
+    put16(data + 26, crc(data, 26));
     const uint8_t target = static_cast<uint8_t>(1 - slot_);
     const uint32_t at = address(peerSlot_, target);
     const uint8_t uncommitted = 0;
@@ -81,6 +90,16 @@ bool Counter::reserve(uint32_t upper) {
     if (!storage_.read(at, verify, sizeof(verify)) || memcmp(data, verify, 31) || verify[31] != COMMIT) return false;
     slot_ = target; ++sequence_; upper_ = upper;
     return true;
+}
+
+bool Counter::outgoing(uint16_t netId, uint16_t sender, uint16_t recipient,
+                       const uint8_t key[32]) const {
+    if (!ready_ || !key || netId_ != netId || ownId_ != sender || peerId_ != recipient) return false;
+    uint8_t digest[sha2::DIGEST];
+    sha2::digest(key, 32, digest);
+    const bool match = memcmp(digest, fingerprint_, sizeof(fingerprint_)) == 0;
+    memset(digest, 0, sizeof(digest));
+    return match;
 }
 
 bool Counter::next(uint32_t& value) {

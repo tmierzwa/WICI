@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-// WICI-Link tree routing state. Link authentication is done before these methods.
+// WICI-Link tree routing state. The caller verifies the root epoch token and
+// the beacon sender's signature before calling beacon().
 // Down routes are double-buffered in FRAM; beacons and link quality are soft state.
 #pragma once
 
@@ -8,6 +9,7 @@
 
 #include "journal.h"
 #include "wici_link.h"
+#include "wici_epoch.h"
 
 namespace wici_route {
 
@@ -25,6 +27,7 @@ struct Config {
 struct Beacon {
     uint16_t root = 0, rank = 0, epoch = 0, parent = 0;
     uint8_t flags = 0;
+    uint8_t epochSignature[wici_epoch::SIGNATURE_BYTES] = {};
 };
 
 bool parseBeacon(const wici_link::Frame& frame, Beacon& out);
@@ -48,6 +51,7 @@ public:
     uint16_t parent() const { return parent_; }
     uint16_t rank() const { return rank_; }
     uint16_t epoch() const { return epoch_; }
+    const uint8_t* epochSignature() const { return epochSignature_; }
     bool setRootEpoch(uint16_t epoch);
 
 private:
@@ -67,8 +71,10 @@ private:
     Neighbor neighbors_[NEIGHBORS] = {};
     uint32_t generation_ = 0;
     uint16_t epoch_ = 0, rank_ = 0xFFFF, rankCeiling_ = 0xFFFF;
+    uint8_t epochSignature_[wici_epoch::SIGNATURE_BYTES] = {};
     uint16_t parent_ = 0, failedDynamic_ = 0;
     uint8_t currentCopy_ = 1, plannedFailures_ = 0, backupFailures_ = 0, dynamicFailures_ = 0;
+    uint16_t nextRoute_ = 0;
     bool ready_ = false, epochKnown_ = false;
 };
 

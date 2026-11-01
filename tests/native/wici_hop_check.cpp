@@ -16,7 +16,9 @@ struct Memory : journal::Storage {
     }
 };
 
+unsigned proofCalls = 0;
 bool originProof(uint16_t, uint16_t, const wici_link::Frame& frame, const void*) {
+    ++proofCalls;
     return frame.originSignature[0] == 0xA5;  // real Ed25519 verification is tested separately
 }
 
@@ -32,23 +34,27 @@ int main() {
     incoming.sequence = 41; incoming.ttl = 7; incoming.length = 25;
     incoming.payload[0] = 0x40;
     incoming.payload[2] = 4; incoming.payload[4] = 1;
+    incoming.originSignature[0] = 0xA5;
     const size_t length = wici_link::encode(key, incoming, wire, sizeof(wire));
     assert(length == 108);
-    wici_hop::Relay relay(memory, {100, 2, 1, 1, 0}, ifac);
+    const uint16_t rootReceiver[2] = {1, 90};
+    wici_hop::Relay relay(memory, {100, 2, 1, 1, 0}, ifac, false, rootReceiver, originProof);
     assert(relay.begin());
     size_t hackLength = 0;
     assert(relay.receiveData(wire, length, 100, hack, sizeof(hack), hackLength) ==
            wici_hop::Receipt::HACK_READY);
+    assert(proofCalls == 0);  // signature verification cannot delay HACK
     assert(hackLength == 19);
     wici_link::Frame parsed;
     assert(wici_link::decode(key, 100, hack, hackLength, parsed));
     assert(parsed.type == wici_link::Type::HACK && parsed.destination == 4 && parsed.sequence == 41);
 
     // Crash after HACK: the queue remains and a new link sequence is reserved.
-    wici_hop::Relay resumed(memory, {100, 2, 1, 1, 0}, ifac);
+    wici_hop::Relay resumed(memory, {100, 2, 1, 1, 0}, ifac, false, rootReceiver, originProof);
     assert(resumed.begin());
     resumed.learnPending(101);
     assert(resumed.routes().down(4) == 4);
+    assert(proofCalls == 1);
     wici_link::Frame viaOther = incoming;
     viaOther.source = 5; viaOther.sequence = 45;
     uint8_t duplicate[255];
@@ -56,7 +62,7 @@ int main() {
     assert(resumed.receiveData(duplicate, length, 101, hack, sizeof(hack), hackLength) ==
            wici_hop::Receipt::HACK_READY);
     resumed.learnPending(101);
-    assert(resumed.routes().down(4) == 5);  // a later authenticated hop refreshes the down route
+    assert(resumed.routes().down(4) == 4);  // duplicate hop header cannot redirect a learned route
     assert(resumed.routes().beacon(1, {1, 0, 1, 0, 0}, 16, 101));
     assert(resumed.prepare(101));
     size_t outLength = 0;
@@ -79,10 +85,14 @@ int main() {
     hackLength = wici_link::encode(key, reply, hack, sizeof(hack));
     assert(resumed.receiveHack(hack, hackLength, 105));
     assert(!resumed.active());
-    wici_hop::Relay after(memory, {100, 2, 1, 1, 0}, ifac);
+    wici_hop::Relay after(memory, {100, 2, 1, 1, 0}, ifac, false, rootReceiver, originProof);
     assert(after.begin());
     assert(after.receiveData(wire, length, 106, hack, sizeof(hack), hackLength) ==
            wici_hop::Receipt::HACK_READY);  // late repeat is HACKed, never queued again
+    assert(after.receiveData(duplicate, length, 107, hack, sizeof(hack), hackLength) ==
+           wici_hop::Receipt::IGNORED);  // a re-MACed replay cannot buy a HACK every second
+    assert(after.receiveData(duplicate, length, 111, hack, sizeof(hack), hackLength) ==
+           wici_hop::Receipt::HACK_READY);
     assert(!after.prepare(106));
 
     incoming.sequence = 42;
@@ -106,12 +116,12 @@ int main() {
     const size_t downLength = wici_link::encode(key, down, wire, sizeof(wire));
     assert(after.receiveData(wire, downLength, 107, hack, sizeof(hack), hackLength) ==
            wici_hop::Receipt::HACK_READY);
-    assert(after.routes().down(4) == 5 && after.prepare(107));
+    assert(after.routes().down(4) == 4 && after.prepare(107));
     out = after.outgoing(outLength);
     assert(wici_link::decode(key, 100, out, outLength, parsed));
-    assert(parsed.destination == 5 && parsed.flags == (wici_link::ACKREQ | wici_link::DOWN));
+    assert(parsed.destination == 4 && parsed.flags == (wici_link::ACKREQ | wici_link::DOWN));
     assert(after.transmitted(true, 108));
-    reply.source = 5; reply.sequence = parsed.sequence;
+    reply.source = 4; reply.sequence = parsed.sequence;
     hackLength = wici_link::encode(key, reply, hack, sizeof(hack));
     assert(after.receiveHack(hack, hackLength, 109));
 
@@ -185,8 +195,8 @@ int main() {
     assert(rebroadcast.receiveData(wire, loopLength, 123, hack, sizeof(hack), hackLength) ==
            wici_hop::Receipt::IGNORED);  // changed hop header cannot restart a flood loop
 
-    // K2 cannot consume the last relay slot; a later receiver-related frame
-    // jumps ahead of earlier K2 entries while duplicates remain HACKable.
+    // K2 admission reserves two slots for later work. Signature verification
+    // happens only after HACK and its durable result determines send priority.
     static Memory priorityMemory;
     const uint16_t receivers[2] = {90, 91};
     wici_hop::Relay priorityRelay(priorityMemory, {100, 2, 1, 1, 0}, ifac, false, receivers,
@@ -196,23 +206,20 @@ int main() {
     traffic.source = 4;
     traffic.flags = wici_link::ACKREQ;
     traffic.payload[4] = 50;
-    for (uint8_t i = 0; i < 2; ++i) {
+    for (uint8_t i = 0; i < 1; ++i) {
         traffic.sequence = static_cast<uint16_t>(70 + i);
         traffic.payload[8] = static_cast<uint8_t>(10 + i);
         const size_t n = wici_link::encode(key, traffic, wire, sizeof(wire));
         assert(priorityRelay.receiveData(wire, n, 130, hack, sizeof(hack), hackLength) ==
                wici_hop::Receipt::HACK_READY);
     }
-    traffic.sequence = 73;
-    traffic.payload[8] = 13;
-    size_t n = wici_link::encode(key, traffic, wire, sizeof(wire));
-    assert(priorityRelay.receiveData(wire, n, 130, hack, sizeof(hack), hackLength) ==
-           wici_hop::Receipt::REJECTED && hackLength == 0);
     traffic.sequence = 70;
     traffic.payload[8] = 10;
-    n = wici_link::encode(key, traffic, wire, sizeof(wire));
+    size_t n = wici_link::encode(key, traffic, wire, sizeof(wire));
+    const unsigned beforeProof = proofCalls;
     assert(priorityRelay.receiveData(wire, n, 130, hack, sizeof(hack), hackLength) ==
            wici_hop::Receipt::HACK_READY);
+    assert(proofCalls == beforeProof);  // no extra verification on the HACK path
     traffic.sequence = 74;
     traffic.payload[4] = 90;
     traffic.payload[8] = 14;
@@ -227,7 +234,7 @@ int main() {
     traffic.payload[2] = 5; traffic.source = 5; traffic.sequence = 76; traffic.payload[8] = 16;
     n = wici_link::encode(key, traffic, wire, sizeof(wire));
     assert(priorityRelay.receiveData(wire, n, 130, hack, sizeof(hack), hackLength) ==
-           wici_hop::Receipt::HACK_READY);
+           wici_hop::Receipt::REJECTED);
     assert(priorityRelay.routes().beacon(1, {1, 0, 1, 0, 0}, 16, 130));
     assert(priorityRelay.prepare(130));
     out = priorityRelay.outgoing(outLength);
@@ -277,5 +284,6 @@ int main() {
     n = wici_link::encode(key, waiting, wire, sizeof(wire));
     assert(lateContention.receiveData(wire, n, 141, hack, sizeof(hack), hackLength) ==
            wici_hop::Receipt::HACK_READY);
+    lateContention.learnPending(141);
     assert(lateContention.contendedK2(141));
 }

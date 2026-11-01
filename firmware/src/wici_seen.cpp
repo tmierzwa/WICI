@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "wici_link.h"
+#include "sha2.h"
 
 namespace wici_seen {
 namespace {
@@ -32,17 +33,24 @@ bool blank(const uint8_t* p) {
     return zero || erased;
 }
 bool valid(const uint8_t* p) {
-    return p[20] == COMMIT && u16(p) && u16(p) != 0xFFFF &&
-           u16(p + 2) && u16(p + 2) != 0xFFFF &&
-           u16(p + 18) == crc(p, 18);
+    return p[23] == COMMIT && u16(p) && u16(p) != 0xFFFF &&
+           u16(p + 3) && u16(p + 3) != 0xFFFF &&
+           u16(p + 5) && u16(p + 5) != 0xFFFF &&
+           u16(p + 21) == crc(p, 21);
 }
 bool wireValid(const uint8_t* wire, size_t length) {
     return wire && length >= wici_link::HEADER + wici_link::TAG + 25 && length <= wici_link::MAX_FRAME;
 }
 bool fresh(uint32_t at, uint32_t now) { return now < at || now - at <= WINDOW_S; }
 bool sameKey(const uint8_t* record, const uint8_t* wire) {
-    return memcmp(record, wire + 1, 2) == 0 && memcmp(record + 2, wire + 3, 2) == 0 &&
-           memcmp(record + 4, wire + 8, 2) == 0;
+    return memcmp(record, wire + 1, 2) == 0 &&
+           memcmp(record + 2, wire + wici_link::HEADER, 9) == 0;
+}
+void payloadDigest(const uint8_t* wire, size_t length, uint8_t out[6]) {
+    uint8_t digest[sha2::DIGEST];
+    sha2::digest(wire + wici_link::HEADER, length - wici_link::HEADER - wici_link::TAG, digest);
+    memcpy(out, digest, 6);
+    memset(digest, 0, sizeof(digest));
 }
 }  // namespace
 
@@ -52,8 +60,8 @@ bool Ring::begin() {
     for (uint16_t i = 0; i < SLOTS; ++i) {
         uint8_t data[SLOT_BYTES];
         if (!storage_.read(BASE + i * SLOT_BYTES, data, sizeof(data))) return false;
-        if (!blank(data) && data[20] == COMMIT && !valid(data)) return false;
-        if (data[20] == COMMIT) memcpy(records_[i], data, sizeof(data));
+        if (!blank(data) && data[23] == COMMIT && !valid(data)) return false;
+        if (data[23] == COMMIT) memcpy(records_[i], data, sizeof(data));
     }
     ready_ = true;
     return true;
@@ -61,11 +69,13 @@ bool Ring::begin() {
 
 Lookup Ring::lookup(const uint8_t* wire, size_t length, uint32_t nowS) {
     if (!ready_ || !wireValid(wire, length)) return Lookup::IO_ERROR;
+    uint8_t digest[6];
+    payloadDigest(wire, length, digest);
     for (uint16_t i = 0; i < SLOTS; ++i) {
         const uint8_t* data = records_[i];
-        if (data[20] != COMMIT) continue;
-        if (!fresh(u32(data + 14), nowS) || !sameKey(data, wire)) continue;
-        return memcmp(data + 6, wire + length - wici_link::TAG, wici_link::TAG) == 0 ?
+        if (data[23] != COMMIT) continue;
+        if (!fresh(u32(data + 17), nowS) || !sameKey(data, wire)) continue;
+        return memcmp(data + 11, digest, sizeof(digest)) == 0 ?
                Lookup::MATCH : Lookup::CONFLICT;
     }
     return Lookup::NONE;
@@ -80,25 +90,24 @@ bool Ring::remember(const uint8_t* wire, size_t length, uint32_t nowS) {
     uint32_t oldest = 0;
     for (uint16_t i = 0; i < SLOTS; ++i) {
         const uint8_t* data = records_[i];
-        if (data[20] != COMMIT || !fresh(u32(data + 14), nowS)) { target = i; break; }
-        const uint32_t age = nowS < u32(data + 14) ? 0 : nowS - u32(data + 14);
+        if (data[23] != COMMIT || !fresh(u32(data + 17), nowS)) { target = i; break; }
+        const uint32_t age = nowS < u32(data + 17) ? 0 : nowS - u32(data + 17);
         if (target == SLOTS || age > oldest) { oldest = age; target = i; }
     }
     if (target == SLOTS) return false;
     uint8_t data[SLOT_BYTES] = {};
     memcpy(data, wire + 1, 2);       // network
-    memcpy(data + 2, wire + 3, 2);   // l_src
-    memcpy(data + 4, wire + 8, 2);   // seq
-    memcpy(data + 6, wire + length - wici_link::TAG, wici_link::TAG);
-    put32(data + 14, nowS);
-    const uint16_t check = crc(data, 18);
-    data[18] = static_cast<uint8_t>(check >> 8); data[19] = static_cast<uint8_t>(check);
+    memcpy(data + 2, wire + wici_link::HEADER, 9);  // envelope version, sender, recipient, counter
+    payloadDigest(wire, length, data + 11);
+    put32(data + 17, nowS);
+    const uint16_t check = crc(data, 21);
+    data[21] = static_cast<uint8_t>(check >> 8); data[22] = static_cast<uint8_t>(check);
     const uint32_t at = BASE + target * SLOT_BYTES;
     const uint8_t clear = 0;
-    if (!storage_.write(at + 20, &clear, 1) || !storage_.write(at, data, 20) ||
-        !storage_.write(at + 20, &COMMIT, 1)) { ready_ = false; return false; }
+    if (!storage_.write(at + 23, &clear, 1) || !storage_.write(at, data, 23) ||
+        !storage_.write(at + 23, &COMMIT, 1)) { ready_ = false; return false; }
     uint8_t verify[SLOT_BYTES];
-    if (!storage_.read(at, verify, sizeof(verify)) || memcmp(data, verify, 20) || verify[20] != COMMIT) {
+    if (!storage_.read(at, verify, sizeof(verify)) || memcmp(data, verify, 23) || verify[23] != COMMIT) {
         ready_ = false;
         return false;
     }

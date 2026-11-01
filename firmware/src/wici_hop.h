@@ -45,7 +45,6 @@ public:
     wici_route::Table& routes() { return routes_; }
 
 private:
-    struct RouteHint { uint16_t sender = 0, via = 0; };
     wici_route::Config config_;
     bool allowFlood_ = false;
     uint16_t receivers_[2] = {};
@@ -64,8 +63,9 @@ private:
     uint8_t slot_ = 0, attempts_ = 0;
     bool active_ = false, sent_ = false, everSent_ = false, noAck_ = false;
     bool activePriority_ = false, contendedK2_ = false;
-    RouteHint hints_[wici_relay::SLOTS] = {};
-    uint8_t nextHint_ = 0;
+    uint32_t checkedGeneration_[wici_relay::SLOTS] = {};
+    uint32_t lastRepeatHackS_ = 0;
+    bool repeatHackSent_ = false;
     uint8_t nextSlot_ = 0;
 };
 

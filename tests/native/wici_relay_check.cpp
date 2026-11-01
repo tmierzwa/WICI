@@ -95,10 +95,36 @@ int main() {
     assert(!afterSeen.pending(0));
     wici_relay::Queue afterRemove(memory);
     assert(afterRemove.begin() && !afterRemove.pending(0));
-    assert(afterRemove.admit(key, 100, 2, saved, savedLength, 103) == wici_relay::Admission::DUPLICATE);
+    assert(afterRemove.admit(key, 100, 2, saved, savedLength, 103) == wici_relay::Admission::FORWARDED);
+    // Rewriting the hop sequence and MAC cannot make the same signed envelope new.
+    frame.sequence = 200;
+    frame.payload[8] = 0;
+    size_t replayLength = wici_link::encode(key, frame, wire, sizeof(wire));
+    assert(replayLength == savedLength);
+    assert(afterRemove.admit(key, 100, 2, wire, replayLength, 103) == wici_relay::Admission::FORWARDED);
+    frame.payload[8] = 4;
+    n = wici_link::encode(key, frame, wire, sizeof(wire));
     assert(afterRemove.admit(key, 100, 2, wire, n, 103) == wici_relay::Admission::STORED);
     assert(afterRemove.remove(0, 104));
-    assert(afterRemove.admit(key, 100, 2, saved, savedLength, 223) == wici_relay::Admission::STORED);
+    assert(afterRemove.admit(key, 100, 2, saved, savedLength, 223) == wici_relay::Admission::FORWARDED);
+    // A frame without a next-hop HACK must eventually free its durable slot.
+    static Memory expiryMemory;
+    wici_relay::Queue expiring(expiryMemory);
+    assert(expiring.begin());
+    assert(expiring.admit(key, 100, 2, saved, savedLength, 100, 0, 4) == wici_relay::Admission::STORED);
+    assert(expiring.expire(100 + wici_relay::MAX_HOLD_S - 1) && expiring.pending(0));
+    assert(expiring.expire(100 + wici_relay::MAX_HOLD_S) && !expiring.pending(0));
+    wici_relay::Queue expiredAfterRestart(expiryMemory);
+    assert(expiredAfterRestart.begin() && !expiredAfterRestart.pending(0));
+    assert(expiredAfterRestart.admit(key, 100, 2, saved, savedLength, 100 + wici_relay::MAX_HOLD_S) ==
+           wici_relay::Admission::FORWARDED);
+    static Memory verifiedMemory;
+    wici_relay::Queue verified(verifiedMemory);
+    assert(verified.begin());
+    assert(verified.admit(key, 100, 2, saved, savedLength, 100, 0, 4) == wici_relay::Admission::STORED);
+    assert(verified.verifiedOrigin(0) == 4);
+    wici_relay::Queue keyMayHaveChanged(verifiedMemory);
+    assert(keyMayHaveChanged.begin() && keyMayHaveChanged.verifiedOrigin(0) == 0);
     // A committed record with a damaged CRC must not be accepted after restart.
     memory.bytes[wici_relay::BASE + 0 * wici_relay::COPY_BYTES + 25] ^= 1;
     wici_relay::Queue corrupt(memory);

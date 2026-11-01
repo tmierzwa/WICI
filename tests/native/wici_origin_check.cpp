@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "identity.h"
+#include <Ed25519.h>
 #include "wici_origin.h"
 
 int main() {
@@ -12,7 +12,7 @@ int main() {
     envelope[0] = 0x40;
     envelope[2] = 4;
     envelope[4] = 2;
-    rnscore::publicKey(secret, publicKey);
+    Ed25519::derivePublicKey(publicKey + 32, secret + 32);
     uint8_t signature[64];
     assert(wici_origin::sign(secret, publicKey, 100, envelope, sizeof(envelope), signature));
     assert(wici_origin::verify(publicKey, 100, envelope, sizeof(envelope), signature));

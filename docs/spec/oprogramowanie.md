@@ -549,6 +549,9 @@ Jedyna kanoniczna lista tekstów stacji i strony mieszkańca; inne dokumenty cyt
 | `nie_wpisuj_nazwisk` | NIE WPISUJ NAZWISK | НЕ ВПИСУЙТЕ ПРІЗВИЩ | DO NOT ENTER SURNAMES | strona, panel i ekran wpisu stacji przy pustym tekście: ostrzeżenie przy opisie |
 | `wpis_wolne` | WOLNE ZNAKI: [n] | ВІЛЬНІ ЗНАКИ: [n] | CHARS LEFT: [n] | ekran wpisu tekstu stacji: wolne miejsce z 48 znaków |
 | `odpowiedzi_po_polsku` | – | ВІДПОВІДІ ВІД ОДЕРЖУВАЧА НАДХОДЯТЬ ПОЛЬСЬКОЮ | REPLIES FROM THE RECIPIENT ARRIVE IN POLISH | WIADOMOŚCI w wersji UK i EN, nad każdą odpowiedzią i komunikatem; zdanie karty UK i EN |
+| `odcisk_przeniesienia` | ODCISK STACJI DOCELOWEJ: [x] – PORÓWNAJ PRZY PRZENOSZENIU. OK = ZAMKNIJ | ВІДБИТОК НОВОЇ СТАНЦІЇ: [x] – ПОРІВНЯЙТЕ ПІД ЧАС ПЕРЕНЕСЕННЯ. OK = ЗАКРИТИ | TARGET STATION FINGERPRINT: [x] – COMPARE DURING TRANSFER. OK = CLOSE | odcisk stacji docelowej przed przeniesieniem |
+| `pytanie_przenies` | PRZENIEŚ STACJĘ DO [xxxx]? PORÓWNAJ ODCISK NA CELU. OK = TAK | ПЕРЕНЕСТИ СТАНЦІЮ ДО [xxxx]? ЗВІРТЕ ВІДБИТОК. OK = ТАК | MOVE STATION TO [xxxx]? COMPARE TARGET FINGERPRINT. OK = YES | fizyczne potwierdzenie eksportu |
+| `pytanie_anuluj_przenies` | USUNĄĆ ODEBRANĄ STACJĘ? OK = TAK | ВИДАЛИТИ ОТРИМАНУ СТАНЦІЮ? OK = ТАК | ERASE IMPORTED STATION? OK = YES | fizyczne potwierdzenie wycofania importu |
 
 Pozycje menu, nazwy przycisków i etykiety kategorii są częścią tej listy. Krótkie formy ekranu głównego, pozycje menu i etykiety kategorii mają ≤20 znaków po wstawieniu największych wartości w każdym języku; T1 sprawdza to dla PL, UK i EN.
 

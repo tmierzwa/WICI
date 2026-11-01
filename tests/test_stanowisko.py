@@ -128,6 +128,14 @@ class BearerSetTest(unittest.TestCase):
         self.assertEqual(wici.sent, [(source, b"reply")])
         self.assertEqual(legacy.sent, [(source, b"reply2")])
         self.assertTrue(collection.outcome(second))
+        collection.reception.last_bearer.clear()
+        collection.reception.send_wici = lambda *_: None
+        third = collection.send(source, b"fallback")
+        self.assertEqual(third.bearer, "reticulum")
+        self.assertEqual(legacy.sent[-1], (source, b"fallback"))
+        collection.reception.bearer_override[source] = "wici"
+        self.assertIsNone(collection.send(source, b"operator-choice"))
+        collection.reception.send_wici = Reception.send_wici
         collection.reception.bearer_override[source] = "wici"
         collection.reception.last_bearer[source] = "reticulum"
         self.assertEqual(collection.send(source, b"manual").bearer, "wici")
@@ -607,14 +615,16 @@ class MediumTest(unittest.TestCase):
         with self.assertRaises(database.LoginError):   # konto z innego nośnika
             self.medium.login("dyzurny-1", envelopes["dyzurny-1"], self.key)
 
-    def test_snapshots_are_sealed_and_an_interrupted_write_keeps_the_previous(self):
+    def test_snapshots_are_sealed_and_a_corrupt_newer_copy_fails_closed(self):
         self.medium.save(self.key, b"pierwsza piwnica")
         self.medium.save(self.key, b"druga piwnica")
         self.assertNotIn(b"piwnica", self.files())
         newest = self.root / "baza" / self.medium.last
         newest.write_bytes(newest.read_bytes()[:-10])   # zanik zasilania w trakcie zapisu
-        self.assertEqual(nosnik.Nosnik(self.root).load(self.key), b"pierwsza piwnica")
-        self.assertIsNone(nosnik.Nosnik(self.root).load(os.urandom(32)))
+        with self.assertRaises(database.StorageError):
+            nosnik.Nosnik(self.root).load(self.key)
+        with self.assertRaises(database.StorageError):
+            nosnik.Nosnik(self.root).load(os.urandom(32))
 
     def test_identity_is_sealed_with_the_data_key(self):
         self.assertEqual(self.medium.identity(self.key), bytes(range(64)))

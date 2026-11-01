@@ -60,6 +60,32 @@ int main() {
     assert(updated.parent() == 3 && updated.rank() == 40);
     updated.hopResult(2, true, 104);  // successful probe restores planned parent
     assert(updated.parent() == 2 && updated.rank() > 32);  // ETX still reflects recent failures
+    static Memory backupMemory;
+    wici_route::Table failover(backupMemory, config);
+    assert(failover.begin());
+    assert(failover.beacon(2, {1, 16, 5, 1, 0}, 16, 100));
+    assert(failover.beacon(3, {1, 40, 5, 1, 0}, 16, 100));
+    failover.hopResult(2, false, 101);
+    failover.hopResult(2, false, 102);
+    failover.hopResult(2, false, 103);
+    assert(failover.parent() == 3);  // configured backup may have a higher rank
+    assert(failover.beacon(2, {1, 16, 5, 1, 0}, 16, 104));
+    assert(failover.parent() == 2);  // a later planned beacon permits recovery
+
+    static Memory fullMemory;
+    wici_route::Table crowded(fullMemory, config);
+    assert(crowded.begin());
+    for (uint16_t peer = 10; peer < 10 + wici_route::NEIGHBORS; ++peer)
+        assert(crowded.beacon(peer, {1, 8, 5, 1, 0}, 16, 100));
+    assert(crowded.beacon(2, {1, 16, 5, 1, 0}, 16, 101));
+    assert(crowded.parent() == 2);  // dynamic peers cannot exclude the planned route
+    static Memory routeMemory;
+    wici_route::Table bounded(routeMemory, config);
+    assert(bounded.begin());
+    for (uint16_t i = 0; i < wici_route::ROUTES; ++i)
+        assert(bounded.learn(static_cast<uint16_t>(1000 + i), 5));
+    assert(bounded.learn(2000, 6));
+    assert(bounded.down(2000) == 6 && bounded.down(1000) == wici_link::BROADCAST);
     assert(!updated.beacon(7, {1, 8, 4, 1, 0}, 16, 105));  // old epoch
     assert(!updated.beacon(7, {1, 8, 5, 4, 0}, 16, 105));  // child points back
     assert(updated.beacon(2, {1, 16, 6, 1, 0}, 16, 105));  // new epoch resets soft state
@@ -98,7 +124,7 @@ int main() {
 
     wici_link::Frame frame;
     frame.type = wici_link::Type::BEACON;
-    frame.length = 9;
+    frame.length = 137;
     frame.payload[1] = 1; frame.payload[3] = 16;
     frame.payload[5] = 6; frame.payload[7] = 1;
     wici_route::Beacon parsed;

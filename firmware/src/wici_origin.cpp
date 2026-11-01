@@ -3,7 +3,7 @@
 
 #include <string.h>
 
-#include "identity.h"
+#include <Ed25519.h>
 
 namespace wici_origin {
 namespace {
@@ -28,7 +28,7 @@ bool sign(const uint8_t privateKey[64], const uint8_t publicKey[64], uint16_t ne
     uint8_t message[INPUT_MAX];
     size_t size = 0;
     if (!input(network, envelope, length, message, size)) return false;
-    rnscore::sign(privateKey, publicKey, message, size, out);
+    Ed25519::sign(out, privateKey + 32, publicKey + 32, message, size);
     memset(message, 0, sizeof(message));
     return true;
 }
@@ -39,7 +39,7 @@ bool verify(const uint8_t publicKey[64], uint16_t network, const uint8_t* envelo
     uint8_t message[INPUT_MAX];
     size_t size = 0;
     if (!input(network, envelope, length, message, size)) return false;
-    const bool valid = rnscore::validate(publicKey, signature, wici_link::ORIGIN_SIGNATURE, message, size);
+    const bool valid = Ed25519::verify(signature, publicKey + 32, message, size);
     memset(message, 0, sizeof(message));
     return valid;
 }

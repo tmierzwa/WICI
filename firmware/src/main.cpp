@@ -63,6 +63,7 @@
 #include "wici_airtime.h"
 #include "wici_radio.h"
 #include "wici_origin.h"
+#include "wici_beacon.h"
 
 #ifndef WICI_FW_VERSION
 #define WICI_FW_VERSION "bench-a-dev"
@@ -307,6 +308,8 @@ wici_gateway::Root* wiciRoot = nullptr;
 kiss::Port wiciUsb;
 uint32_t wiciHandle = 0;
 uint32_t wiciNextBeaconMs = 0;
+uint32_t wiciLastBeaconMs = 0;
+uint16_t wiciAdvertisedParent = 0, wiciAdvertisedRank = 0xFFFF;
 uint8_t wiciBeacons = 0;
 bool numberedConfigured() { return storeOk && stationStore.config().network.id != 0; }
 struct WiciAir : wici_radio::Air, wici_gateway::Air {
@@ -526,6 +529,16 @@ bool verifyWiciOrigin(uint16_t sender, uint16_t recipient, const wici_link::Fram
     }
     return publicKey && wici_origin::verify(publicKey, frame.network, frame.payload,
                                              frame.length, frame.originSignature);
+}
+bool verifyWiciBeacon(uint16_t sender, const uint8_t content[wici_beacon::CONTENT_BYTES],
+                      const uint8_t signature[wici_beacon::SIGNATURE_BYTES], const void* context) {
+    const config::Config* c = static_cast<const config::Config*>(context);
+    if (!c) return false;
+    for (uint8_t i = 0; i < c->priorityKeyCount; ++i)
+        if (c->priorityKeys[i].station == sender)
+            return wici_beacon::verify(c->priorityKeys[i].ed25519,
+                                        c->network.id, sender, content, signature);
+    return false;
 }
 uint32_t wiciRandom(void*) {
     uint32_t value = 0;
@@ -753,7 +766,7 @@ void pollPanel(uint32_t now) {
 bool BenchHost::silenceSwitch() { return switchSilence; }
 
 static_assert(static_cast<int>(usbproto::Question::SILENCE_EXCEPTION) == static_cast<int>(ui::Question::SILENCE_EXCEPTION), "pytania USB i ekranu");
-static_assert(static_cast<int>(usbproto::Question::MIGRATION_FORCE_ABORT) == static_cast<int>(ui::Question::MIGRATION_FORCE_ABORT),
+static_assert(static_cast<int>(usbproto::Question::MIGRATION_ABORT) == static_cast<int>(ui::Question::MIGRATION_ABORT),
               "migration questions match the screen model");
 void BenchHost::confirmBegin(usbproto::Question question, const char* detail) {
     screenModel.ask(static_cast<ui::Question>(question), detail);
@@ -972,6 +985,9 @@ bool BenchHost::migrationActivate(const uint8_t mid[16], const uint8_t* retired,
                                   bool& duplicate, const char*& reason) {
     reason = "migration";
     duplicate = false;
+    // Independent forced activation and forced source restore can put the
+    // same identity on two radios with overlapping AEAD counters.
+    if (forced) return false;
     if (!migrationBarrier.ready()) return false;
     migration_state::Record record = migrationBarrier.record();
     if (memcmp(record.mid, mid, sizeof(record.mid))) return false;
@@ -980,18 +996,13 @@ bool BenchHost::migrationActivate(const uint8_t mid[16], const uint8_t* retired,
         duplicate = true; return true;
     }
     if (record.phase != migration_state::Phase::IMPORTED) return false;
-    if (!forced) {
-        uint8_t confirmKey[32], packageKey[32];
-        if (!retired || !migration_crypto::derive(record.privateKey, record.peerPublic, record.mid, confirmKey, packageKey)) return false;
-        drbg::wipe(packageKey, sizeof(packageKey));
-        const bool valid = migration_crypto::verifyConfirmation(confirmKey, "retired", record.mid, record.packageHash, retired);
-        drbg::wipe(confirmKey, sizeof(confirmKey));
-        if (!valid) { reason = "signature"; return false; }
-    }
+    uint8_t confirmKey[32], packageKey[32];
+    if (!retired || !migration_crypto::derive(record.privateKey, record.peerPublic, record.mid, confirmKey, packageKey)) return false;
+    drbg::wipe(packageKey, sizeof(packageKey));
+    const bool valid = migration_crypto::verifyConfirmation(confirmKey, "retired", record.mid, record.packageHash, retired);
+    drbg::wipe(confirmKey, sizeof(confirmKey));
+    if (!valid) { reason = "signature"; return false; }
     if (!stationJournal.begin() || !stationJournal.adoptClock(record.flags)) { reason = "memory"; return false; }
-    if (forced && !stationJournal.writeEvent(stationJournal.clock().a, "migration forced activation")) {
-        reason = "memory"; return false;
-    }
     migration_state::Record done = {};
     done.phase = migration_state::Phase::NONE;
     memcpy(done.mid, mid, sizeof(done.mid));
@@ -1056,6 +1067,7 @@ bool BenchHost::migrationAbortSource(const uint8_t mid[16], const uint8_t* confi
                                      bool& duplicate, const char*& reason) {
     reason = "migration";
     duplicate = false;
+    if (forced) return false;
     if (!migrationBarrier.ready()) return false;
     migration_state::Record record = migrationBarrier.record();
     if (memcmp(record.mid, mid, sizeof(record.mid))) return false;
@@ -1067,22 +1079,17 @@ bool BenchHost::migrationAbortSource(const uint8_t mid[16], const uint8_t* confi
     uint8_t any = 0;
     for (uint8_t byte : record.privateKey) any |= byte;
     if (!any) return false;
-    if (!forced) {
-        uint8_t confirmKey[32], packageKey[32];
-        if (!confirm || !migration_crypto::derive(record.privateKey, record.peerPublic, mid, confirmKey, packageKey)) return false;
-        drbg::wipe(packageKey, sizeof(packageKey));
-        const bool valid = migration_crypto::verifyConfirmation(confirmKey, "aborted", mid, record.packageHash, confirm);
-        drbg::wipe(confirmKey, sizeof(confirmKey));
-        if (!valid) { reason = "signature"; return false; }
-    }
+    uint8_t confirmKey[32], packageKey[32];
+    if (!confirm || !migration_crypto::derive(record.privateKey, record.peerPublic, mid, confirmKey, packageKey)) return false;
+    drbg::wipe(packageKey, sizeof(packageKey));
+    const bool valid = migration_crypto::verifyConfirmation(confirmKey, "aborted", mid, record.packageHash, confirm);
+    drbg::wipe(confirmKey, sizeof(confirmKey));
+    if (!valid) { reason = "signature"; return false; }
     if (record.phase == migration_state::Phase::EXPORT) {
         record.phase = migration_state::Phase::ABORTED;
         if (!migrationBarrier.save(record)) { reason = "memory"; return false; }
     }
     migrationExporter.clear();
-    if (forced && !stationJournal.writeEvent(stationJournal.clock().a, "migration forced source restore")) {
-        reason = "memory"; return false;
-    }
     migration_state::Record done = {};
     done.phase = migration_state::Phase::NONE;
     done.flags = 3;  // last source abort
@@ -1854,8 +1861,15 @@ void beginWici() {
         return;
     }
     if (c.role == config::Role::NODE) {
+        uint8_t privateKey[framfs::KEY_BYTES] = {};
+        if (!framfs::loadKey(memory, privateKey)) {
+            stackState = StackState::IDENTITY_LOST;
+            bench.log("wici root identity unavailable");
+            return;
+        }
         wiciRoot = new (wiciRootSpace) wici_gateway::Root(memory, wiciUsb, wiciAir,
-                            c.network.id, c.network.station, c.ifac);
+                            c.network.id, c.network.station, c.ifac, privateKey);
+        drbg::wipe(privateKey, sizeof(privateKey));
         if (!wiciRoot->begin(static_cast<uint16_t>(stationJournal.starts()))) {
             stackState = StackState::START_FAILED;
             bench.log("wici root binding failed");
@@ -1872,11 +1886,26 @@ void beginWici() {
         uint8_t publicKeys[2][32];
         memcpy(publicKeys[0], c.receivers[0].key, 32);
         memcpy(publicKeys[1], c.receivers[1].key, 32);
+        const uint8_t* rootEd25519 = nullptr;
+        for (uint8_t i = 0; i < c.priorityKeyCount; ++i)
+            if (c.priorityKeys[i].station == c.network.root) rootEd25519 = c.priorityKeys[i].ed25519;
+        bool plannedKey = false, backupKey = !c.network.backupParent;
+        for (uint8_t i = 0; i < c.priorityKeyCount; ++i) {
+            plannedKey |= c.priorityKeys[i].station == c.network.parent;
+            backupKey |= c.priorityKeys[i].station == c.network.backupParent;
+        }
+        if (!rootEd25519 || !plannedKey || !backupKey) {
+            drbg::wipe(privateKey, sizeof(privateKey));
+            stackState = StackState::START_FAILED;
+            bench.log("wici neighbor signing key missing from station card");
+            return;
+        }
         wiciShelter = new (wiciShelterSpace) wici_radio::Shelter(memory,
                      {c.network.id, c.network.station, c.network.root,
                       c.network.parent, c.network.backupParent}, receivers, c.ifac,
                      privateKey, publicKeys, onWiciAdmit, nullptr,
-                     wiciAir, wiciRandom, nullptr, verifyWiciOrigin, &c);
+                     wiciAir, wiciRandom, nullptr, verifyWiciOrigin, &c, rootEd25519,
+                     verifyWiciBeacon, &c);
         drbg::wipe(privateKey, sizeof(privateKey));
         if (!wiciShelter->begin()) {
             stackState = StackState::START_FAILED;
@@ -1894,6 +1923,9 @@ void beginWici() {
     wiciActive = true;
     uint32_t jitter = wiciRandom(nullptr);
     wiciNextBeaconMs = millis() + 1000 + jitter % 4000;
+    wiciLastBeaconMs = 0;
+    wiciAdvertisedParent = 0;
+    wiciAdvertisedRank = 0xFFFF;
     wiciBeacons = 0;
     bench.log(wiciRoot ? "wici root ready" : "wici station ready");
 }
@@ -2083,10 +2115,21 @@ void stationLoop() {
         pollAnnounce();
     }
     if (wiciActive && wiciShelter) wiciShelter->poll(now, serviceS());
+    if (wiciActive && wiciShelter && wiciShelter->routes().parent() &&
+        (wiciShelter->routes().parent() != wiciAdvertisedParent ||
+         wiciShelter->routes().rank() != wiciAdvertisedRank)) {
+        const uint32_t earliest = wiciLastBeaconMs ? wiciLastBeaconMs + 60000u : now + 1000u;
+        if (static_cast<int32_t>(wiciNextBeaconMs - earliest) > 0) wiciNextBeaconMs = earliest;
+    }
     if (wiciActive && linkAuto && !bench.silence && !bench.transmitting() &&
         static_cast<int32_t>(now - wiciNextBeaconMs) >= 0) {
         const bool accepted = wiciRoot ? wiciRoot->beacon() : wiciShelter && wiciShelter->beacon();
         if (accepted) {
+            wiciLastBeaconMs = now;
+            if (wiciShelter) {
+                wiciAdvertisedParent = wiciShelter->routes().parent();
+                wiciAdvertisedRank = wiciShelter->routes().rank();
+            }
             ++wiciBeacons;
             uint32_t jitter = wiciRandom(nullptr);
             wiciNextBeaconMs = now + (wiciBeacons < 3 ? 120000u :

@@ -121,6 +121,8 @@ def wheel_library(name, pin, target, out):
                 if "LICENSE" in path.name.upper():
                     usb.write(out / "licenses" / f"{name}-{path.name}", wheel.read(item))
                     licensed = True
+                # Keep wheel provenance and bundled SBOM in the package.
+                usb.write(destination / path, wheel.read(item))
                 continue
             if any(part.endswith(".data") for part in path.parts):
                 sys.exit(f"{name}: unsupported wheel data directory {path}")
@@ -168,7 +170,7 @@ def unpack_windows(archive, out):
 
 
 def self_check(out, names):
-    """The interpreter of this system from the package imports the stack with Reticulum's own cryptography."""
+    """The packaged interpreter imports the stack with the pinned PyCA backend."""
     host = {"linux": "linux-x86_64", "darwin": "macos-arm64" if platform.machine() == "arm64" else "macos-x86_64",
             "win32": "windows-amd64"}.get(sys.platform)
     if host not in names:
@@ -177,7 +179,7 @@ def self_check(out, names):
     python = out / "runtime" / ("windows/python.exe" if host == "windows-amd64" else f"{host}/bin/python{usb.MINOR}")
     code = ("import RNS, LXMF, serial, cryptography, cffi, pycparser, wici.envelope, wici.stanowisko.__main__, wici.stanowisko.zamkniecie\n"
             "from RNS.Cryptography import Provider\n"
-            "assert Provider.backend() == 'internal', Provider.backend()\n"
+            "assert Provider.backend().startswith('openssl, PyCA 48.0.1'), Provider.backend()\n"
             "assert cryptography.__version__ == '48.0.1'\n"
             "print('stos', RNS.__version__ if hasattr(RNS, '__version__') else '', serial.VERSION)\n")
     subprocess.run([str(python), "-c", code], check=True)
@@ -213,6 +215,7 @@ def build(out, names, archives=None):
         usb.write(out / "stanowisko.cmd", CMD.encode())
     usb.third_party_licenses(out, names)
     shutil.copyfile(usb.ROOT / "LICENSES" / "MIT.txt", out / "licenses" / "WICI-MIT.txt")
+    shutil.copyfile(usb.ROOT / "LICENSES" / "Apache-2.0.txt", out / "licenses" / "OpenSSL-Apache-2.0.txt")
     commit = usb.git_describe()
     (out / "sources" / "README.txt").write_text(
         "Kod aplikacji stanowiska WICI jest w app/wici jako pliki źródłowe; repozytorium projektu, commit "

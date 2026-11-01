@@ -31,11 +31,8 @@ class CrossLanguageEnvelope(unittest.TestCase):
             binary = Path(directory) / "origin_check"
             command = [compiler, "-std=c++17", "-Wall", "-Wextra", "-Werror", "-Wno-error=cpp",
                        "-fsanitize=address,undefined", f"-I{SRC}",
-                       f"-I{ROOT / 'firmware' / 'lib' / 'reticulum_core' / 'src'}",
                        "-isystem", str(CRYPTO),
                        str(SRC / "wici_origin.cpp"),
-                       *(str(ROOT / "firmware" / "lib" / "reticulum_core" / "src" / name)
-                         for name in ("identity.cpp", "hash.cpp")),
                        str(ROOT / "tests" / "native" / "wici_origin_check.cpp"),
                        *(str(CRYPTO / unit) for unit in UNITS), "-o", str(binary)]
             built = subprocess.run(command, capture_output=True, text=True)
@@ -50,15 +47,16 @@ class CrossLanguageEnvelope(unittest.TestCase):
 
     def test_root_kiss_gateway_requires_matching_timely_hack(self):
         compiler = shutil.which("clang++") or shutil.which("g++")
-        if not compiler:
-            raise unittest.SkipTest("C++ compiler unavailable")
+        if not compiler or not (CRYPTO / ".wici-stamp").exists():
+            raise unittest.SkipTest("C++ compiler or pinned Crypto sources unavailable")
         with tempfile.TemporaryDirectory() as directory:
             binary = Path(directory) / "gateway_check"
-            command = [compiler, "-std=c++17", "-Wall", "-Wextra", "-Werror",
-                       "-fsanitize=address,undefined", f"-I{SRC}",
+            command = [compiler, "-std=c++17", "-Wall", "-Wextra", "-Werror", "-Wno-error=cpp",
+                       "-fsanitize=address,undefined", f"-I{SRC}", "-isystem", str(CRYPTO),
                        *(str(SRC / name) for name in ("wici_gateway.cpp", "wici_route.cpp", "wici_flood.cpp", "wici_seq.cpp",
-                                                      "wici_link.cpp", "kiss.cpp", "sha2.cpp")),
-                       str(ROOT / "tests" / "native" / "wici_gateway_check.cpp"), "-o", str(binary)]
+                                                      "wici_link.cpp", "kiss.cpp", "sha2.cpp", "wici_epoch.cpp", "wici_beacon.cpp")),
+                       str(ROOT / "tests" / "native" / "wici_gateway_check.cpp"),
+                       *(str(CRYPTO / unit) for unit in UNITS), "-o", str(binary)]
             subprocess.run(command, check=True, capture_output=True, text=True)
             subprocess.run([str(binary)], check=True, capture_output=True, text=True)
 
@@ -70,21 +68,19 @@ class CrossLanguageEnvelope(unittest.TestCase):
             binary = Path(directory) / "radio_check"
             sanitizer = ["-fsanitize=address,undefined", "-fno-omit-frame-pointer", "-g", "-O1"]
             base = [compiler, "-std=c++17", "-fno-exceptions", "-fno-rtti", *sanitizer,
-                    f"-I{SRC}", f"-I{ROOT / 'firmware' / 'lib' / 'reticulum_core' / 'src'}",
+                    f"-I{SRC}",
                     "-isystem", str(CRYPTO)]
             sources = [SRC / name for name in (
                 "wici_radio.cpp", "wici_destination.cpp", "wici_hop.cpp", "wici_flood.cpp",
                 "wici_relay.cpp", "wici_seen.cpp", "wici_route.cpp", "wici_seq.cpp",
                 "wici_link.cpp", "envelope.cpp", "envelope_counter.cpp", "envelope_parts.cpp", "envelope_replay.cpp",
-                "sha2.cpp", "wici_origin.cpp")]
-            sources += [ROOT / "firmware" / "lib" / "reticulum_core" / "src" / name
-                        for name in ("identity.cpp", "hash.cpp")]
+                "sha2.cpp", "wici_origin.cpp", "wici_epoch.cpp", "wici_beacon.cpp")]
             sources += [ROOT / "tests" / "native" / "wici_radio_check.cpp"]
             sources += [CRYPTO / unit for unit in UNITS]
             objects = []
             for index, source in enumerate(sources):
                 obj = Path(directory) / f"unit{index}.o"
-                warnings = ["-Wall", "-Wextra", "-Werror"] if index < 15 else ["-w"]
+                warnings = ["-Wall", "-Wextra", "-Werror"] if index < 17 else ["-w"]
                 built = subprocess.run([*base, *warnings, "-c", str(source), "-o", str(obj)],
                                        capture_output=True, text=True)
                 if built.returncode:
@@ -103,7 +99,7 @@ class CrossLanguageEnvelope(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             binary = Path(directory) / "parts_check"
             command = [compiler, "-std=c++17", "-Wall", "-Wextra", "-Werror", "-fsanitize=address,undefined",
-                       f"-I{SRC}", str(SRC / "envelope_parts.cpp"),
+                       f"-I{SRC}", str(SRC / "envelope_parts.cpp"), str(SRC / "sha2.cpp"),
                        str(ROOT / "tests" / "native" / "envelope_parts_check.cpp"), "-o", str(binary)]
             subprocess.run(command, check=True, capture_output=True, text=True)
             subprocess.run([str(binary)], check=True, capture_output=True, text=True)
@@ -236,7 +232,7 @@ class CrossLanguageEnvelope(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             binary = Path(directory) / "counter_check"
             command = [compiler, "-std=c++17", "-Wall", "-Wextra", "-Werror", "-fsanitize=address,undefined",
-                       f"-I{SRC}", str(SRC / "envelope_counter.cpp"),
+                       f"-I{SRC}", str(SRC / "envelope_counter.cpp"), str(SRC / "sha2.cpp"),
                        str(ROOT / "tests" / "native" / "envelope_counter_check.cpp"), "-o", str(binary)]
             subprocess.run(command, check=True, capture_output=True, text=True)
             subprocess.run([str(binary)], check=True, capture_output=True, text=True)

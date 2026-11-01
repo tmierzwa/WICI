@@ -139,7 +139,7 @@ enum class Submit : uint8_t { STORED, NO_ADDRESS, FULL, ERROR, ANNOUNCED, NOT_AN
 // Pytanie polecenia USB (OK = tak, WSTECZ = nie) albo odcisk klucza dla `card` (dowolny przycisk zamyka).
 // Pierwsze pozycje są równe usbproto::Question.
 enum class Question : uint8_t { SILENCE_ON, SILENCE_OFF, CLOSE, DESTROY, SILENCE_EXCEPTION, MIGRATION_EXPORT,
-                                MIGRATION_ABORT, MIGRATION_FORCE_ACTIVATE, MIGRATION_FORCE_ABORT, CARD, MIGRATION_TARGET };
+                                MIGRATION_ABORT, CARD, MIGRATION_TARGET };
 enum class Answer : uint8_t { WAITING, YES, NO };
 enum class TestState : uint8_t { NONE, SCHEDULED, SENT, CONFIRMED, PAUSED };
 struct TestInfo {

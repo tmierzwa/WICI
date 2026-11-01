@@ -2,11 +2,13 @@
 #include "envelope_parts.h"
 
 #include <string.h>
+#include "sha2.h"
 
 namespace envelope {
 namespace {
 constexpr uint8_t MAGIC[4] = {'W', 'F', 'P', '1'}, COMMIT = 0xA5;
-constexpr size_t DATA_AT = 25, CRC_AT = DATA_AT + MAX_SA1 / 2;
+constexpr size_t DATA_AT = 25, FINGERPRINT_AT = DATA_AT + MAX_SA1 / 2;
+constexpr size_t CRC_AT = FINGERPRINT_AT + 8;
 uint16_t u16(const uint8_t* p) { return static_cast<uint16_t>((p[0] << 8) | p[1]); }
 uint32_t u32(const uint8_t* p) {
     return (static_cast<uint32_t>(p[0]) << 24) | (static_cast<uint32_t>(p[1]) << 16) |
@@ -35,31 +37,39 @@ bool id(uint16_t n) { return n && n != 0xFFFF; }
 uint32_t address(uint8_t peer, uint8_t copy) {
     return (peer == 0 ? PARTS_MAIN_BASE : PARTS_BACKUP_BASE) + copy * PARTS_COPY_BYTES;
 }
-bool recordValid(const uint8_t* p, uint16_t network, uint16_t recipient, uint16_t sender) {
-    if (memcmp(p, MAGIC, 4) || u16(p + 8) != network || u16(p + 10) != recipient ||
-        u16(p + 12) != sender || u16(p + CRC_AT) != crc(p, CRC_AT) ||
+bool recordValid(const uint8_t* p) {
+    if (memcmp(p, MAGIC, 4) || u16(p + CRC_AT) != crc(p, CRC_AT) ||
         p[24] > MAX_SA1 / 2 || (p[24] && (p[18] != 0 || (p[19] != 1 && p[19] != 2))) ||
         (!p[24] && (p[18] || p[19] || u32(p + 14) || u32(p + 20)))) return false;
-    for (size_t i = DATA_AT + p[24]; i < PARTS_COPY_BYTES - 1; ++i)
-        if (i != CRC_AT && i != CRC_AT + 1 && p[i]) return false;
+    for (size_t i = DATA_AT + p[24]; i < FINGERPRINT_AT; ++i)
+        if (p[i]) return false;
+    for (size_t i = CRC_AT + 2; i < PARTS_COPY_BYTES - 1; ++i)
+        if (p[i]) return false;
     return true;
 }
 }  // namespace
 
-bool DurableParts::begin(uint16_t network, uint16_t recipient, uint16_t sender) {
+bool DurableParts::begin(uint16_t network, uint16_t recipient, uint16_t sender, const uint8_t key[32]) {
     ready_ = false;
     generation_ = counter_ = startedS_ = 0;
     copy_ = 1; number_ = type_ = length_ = 0;
     memset(data_, 0, sizeof(data_));
-    if (peerSlot_ >= PARTS_PEERS || !id(network) || !id(recipient) || !id(sender) ||
+    if (peerSlot_ >= PARTS_PEERS || !key || !id(network) || !id(recipient) || !id(sender) ||
         recipient == sender) return false;
+    uint8_t digest[sha2::DIGEST];
+    sha2::digest(key, 32, digest);
+    memcpy(fingerprint_, digest, sizeof(fingerprint_));
+    memset(digest, 0, sizeof(digest));
     network_ = network; recipient_ = recipient; sender_ = sender;
     bool found = false;
     for (uint8_t copy = 0; copy < 2; ++copy) {
         uint8_t record[PARTS_COPY_BYTES];
         if (!storage_.read(address(peerSlot_, copy), record, sizeof(record))) return false;
         if (blank(record) || record[PARTS_COPY_BYTES - 1] != COMMIT) continue;
-        if (!recordValid(record, network, recipient, sender)) return false;
+        if (!recordValid(record)) return false;
+        if (memcmp(record + FINGERPRINT_AT, fingerprint_, sizeof(fingerprint_))) continue;
+        if (u16(record + 8) != network || u16(record + 10) != recipient ||
+            u16(record + 12) != sender) return false;
         const uint32_t generation = u32(record + 4);
         if (!found || static_cast<int32_t>(generation - generation_) > 0) {
             generation_ = generation; copy_ = copy;
@@ -87,6 +97,7 @@ bool DurableParts::commit(const Part* part, uint32_t nowS) {
         record[24] = static_cast<uint8_t>(part->length);
         memcpy(record + DATA_AT, part->plaintext, part->length);
     }
+    memcpy(record + FINGERPRINT_AT, fingerprint_, sizeof(fingerprint_));
     put16(record + CRC_AT, crc(record, CRC_AT));
     const uint8_t target = static_cast<uint8_t>(1 - copy_);
     const uint32_t at = address(peerSlot_, target);

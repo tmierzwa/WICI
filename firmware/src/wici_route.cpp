@@ -38,12 +38,13 @@ bool blank(const uint8_t* p) {
 
 bool parseBeacon(const wici_link::Frame& frame, Beacon& out) {
     out = Beacon();
-    if (frame.type != wici_link::Type::BEACON || frame.length != 9) return false;
+    if (frame.type != wici_link::Type::BEACON || frame.length != 137) return false;
     out.root = u16(frame.payload);
     out.rank = u16(frame.payload + 2);
     out.epoch = u16(frame.payload + 4);
     out.parent = u16(frame.payload + 6);
     out.flags = frame.payload[8];
+    memcpy(out.epochSignature, frame.payload + 9, wici_epoch::SIGNATURE_BYTES);
     return id(out.root) && (out.parent == 0 || id(out.parent)) && !(out.flags & ~1);
 }
 
@@ -70,10 +71,12 @@ bool Table::begin() {
     currentCopy_ = 1;
     epoch_ = 0;
     epochKnown_ = false;
+    memset(epochSignature_, 0, sizeof(epochSignature_));
     rank_ = 0xFFFF;
     rankCeiling_ = 0xFFFF;
     parent_ = failedDynamic_ = 0;
     plannedFailures_ = backupFailures_ = dynamicFailures_ = 0;
+    nextRoute_ = 0;
     memset(neighbors_, 0, sizeof(neighbors_));
     const bool rootNode = config_.own == config_.root;
     if (!id(config_.network) || !id(config_.own) || !id(config_.root) ||
@@ -164,9 +167,10 @@ bool Table::learn(uint16_t destination, uint16_t via) {
         }
         if (!routes_[i].destination && empty == ROUTES) empty = i;
     }
-    if (empty == ROUTES) return false;
+    if (empty == ROUTES) empty = nextRoute_++ % ROUTES;
+    const Route old = routes_[empty];
     routes_[empty] = {destination, via};
-    if (!commit()) { routes_[empty] = Route(); return false; }
+    if (!commit()) { routes_[empty] = old; return false; }
     return true;
 }
 
@@ -192,7 +196,10 @@ const Table::Neighbor* Table::candidate(uint16_t id, uint32_t nowS) const {
     for (const Neighbor& n : neighbors_)
         if (n.id == id && n.epoch == epoch_ && n.parent != config_.own &&
             nowS >= n.lastSeenS && nowS - n.lastSeenS <= BEACON_STALE_S &&
-            n.rank < rankCeiling_ && n.cost && static_cast<uint32_t>(n.rank) + n.cost < 0xFFFF) return &n;
+            // A configured backup may have a worse rank than the failed
+            // planned route. The ceiling only guards unconfigured neighbors.
+            (id == config_.planned || id == config_.backup || n.rank < rankCeiling_) &&
+            n.cost && static_cast<uint32_t>(n.rank) + n.cost < 0xFFFF) return &n;
     return nullptr;
 }
 
@@ -247,14 +254,29 @@ bool Table::beacon(uint16_t neighbor, const Beacon& value, uint16_t linkCost16, 
         dynamicFailures_ = 0;
         failedDynamic_ = 0;
     }
+    memcpy(epochSignature_, value.epochSignature, sizeof(epochSignature_));
     Neighbor* chosen = nullptr;
     for (Neighbor& item : neighbors_) {
         if (item.id == neighbor) { chosen = &item; break; }
         if (!item.id && !chosen) chosen = &item;
     }
-    if (!chosen) return false;
+    if (!chosen) {
+        // The planned links must not be displaced by incidental neighbours.
+        // Dynamic entries are soft state and can be evicted when the table is full.
+        if (neighbor != config_.planned && neighbor != config_.backup) return false;
+        for (Neighbor& item : neighbors_)
+            if (item.id != config_.planned && item.id != config_.backup &&
+                (!chosen || item.lastSeenS < chosen->lastSeenS)) chosen = &item;
+        if (!chosen) return false;
+    }
     const uint8_t delivery = chosen->id == neighbor && chosen->epoch == value.epoch ?
                              chosen->delivery16 : 16;
+    // A fresh beacon is a new opportunity to probe a configured link. A
+    // failed route is reconsidered only after another beacon from that peer.
+    if (neighbor == config_.planned && plannedFailures_ >= 3 &&
+        chosen->id == neighbor && nowS > chosen->lastSeenS) plannedFailures_ = 0;
+    if (neighbor == config_.backup && backupFailures_ >= 3 &&
+        chosen->id == neighbor && nowS > chosen->lastSeenS) backupFailures_ = 0;
     *chosen = {neighbor, value.rank, measuredCost(linkCost16, delivery),
                value.epoch, value.parent, nowS, linkCost16, delivery};
     selectParent(nowS);

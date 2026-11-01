@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Durable 120-second record of forwarded WICI-Link hop frames.
+// Durable record of recently forwarded envelope identities across hop rewrites.
 #pragma once
 
 #include <stddef.h>
@@ -9,9 +9,9 @@
 
 namespace wici_seen {
 constexpr uint32_t BASE = 0x046900;
-constexpr uint32_t SLOT_BYTES = 21;
-constexpr uint16_t SLOTS = 256;
-constexpr uint32_t WINDOW_S = 120;
+constexpr uint32_t SLOT_BYTES = 24;
+constexpr uint16_t SLOTS = 224;
+constexpr uint32_t WINDOW_S = 60 * 60;
 static_assert(BASE + SLOTS * SLOT_BYTES <= 0x048000, "seen ring before FRAM FS");
 
 enum class Lookup : uint8_t { NONE, MATCH, CONFLICT, IO_ERROR };

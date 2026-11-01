@@ -18,6 +18,8 @@ jobs:
           python-version: '3.12'
       - name: Envelope reference dependency
         run: python -m pip install cryptography==48.0.1
+      - name: Pinned native cryptography sources
+        run: python firmware/tools/stack_deps.py
       - name: Reference contracts
         run: python -m unittest discover -s software/reference -v
       - name: Publication regressions

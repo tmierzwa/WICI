@@ -430,26 +430,10 @@ void Protocol::doMigrate(const json::Value& msg, int64_t seq, uint32_t nowMs) {
     }
     static const Command confirmed = {"migrate", PREP, {{"step", F::STR, true}, {"mid", F::STR, true},
                                                           {"confirm", F::STR, true}}, 3};
-    static const Command forcedCommand = {"migrate", PREP, {{"step", F::STR, true}, {"mid", F::STR, true},
-                                                              {"forced", F::BOOL, true}}, 3};
     if (!strcmp(step, "retire") || !strcmp(step, "activate")) {
         json::Value forcedValue;
         if (!strcmp(step, "activate") && json::field(msg, "forced", forcedValue)) {
-            if (!checkFields(msg, forcedCommand, bad, sizeof(bad)) || forcedValue.kind != json::Kind::TRUE_) {
-                rejected(seq, "invalid", forcedValue.kind != json::Kind::TRUE_ ? "forced" : bad); return;
-            }
-            uint8_t mid[16];
-            if (!json::hexField(msg, "mid", mid, sizeof(mid))) { rejected(seq, "invalid", "mid"); return; }
-            char phase[16], currentMid[33];
-            host_.migration(phase, sizeof(phase), currentMid, sizeof(currentMid));
-            if (strcmp(phase, "imported")) { rejected(seq, "migration", "phase"); return; }
-            pending_ = Pending();
-            pending_.type = Pending::FORCE_ACTIVATE;
-            pending_.seq = seq;
-            pending_.sinceMs = nowMs;
-            memcpy(pending_.mid, mid, sizeof(mid));
-            host_.confirmBegin(Question::MIGRATION_FORCE_ACTIVATE, "");
-            send("pending", seq, "\"confirm_s\":30");
+            rejected(seq, "migration", "forced");
             return;
         }
         if (!checkFields(msg, confirmed, bad, sizeof(bad))) { rejected(seq, "invalid", bad); return; }
@@ -478,19 +462,7 @@ void Protocol::doMigrate(const json::Value& msg, int64_t seq, uint32_t nowMs) {
         if (!json::hexField(msg, "mid", mid, sizeof(mid))) { rejected(seq, "invalid", "mid"); return; }
         json::Value forcedValue;
         if (json::field(msg, "forced", forcedValue)) {
-            if (!checkFields(msg, forcedCommand, bad, sizeof(bad)) || forcedValue.kind != json::Kind::TRUE_) {
-                rejected(seq, "invalid", forcedValue.kind != json::Kind::TRUE_ ? "forced" : bad); return;
-            }
-            char phase[16], currentMid[33];
-            host_.migration(phase, sizeof(phase), currentMid, sizeof(currentMid));
-            if (strcmp(phase, "export") && strcmp(phase, "aborted")) { rejected(seq, "migration", "phase"); return; }
-            pending_ = Pending();
-            pending_.type = Pending::FORCE_ABORT_SOURCE;
-            pending_.seq = seq;
-            pending_.sinceMs = nowMs;
-            memcpy(pending_.mid, mid, sizeof(mid));
-            host_.confirmBegin(Question::MIGRATION_FORCE_ABORT, "");
-            send("pending", seq, "\"confirm_s\":30");
+            rejected(seq, "migration", "forced");
             return;
         }
         json::Value ephValue, confirmValue;
@@ -961,18 +933,6 @@ void Protocol::finishPending(bool confirmed, uint32_t nowMs) {
                 char hex[65]; hexstr::encode(confirmation, sizeof(confirmation), hex);
                 snprintf(fields, sizeof(fields), "\"confirm\":\"%s\",\"duplicate\":%s", hex, duplicate ? "true" : "false");
             } else snprintf(fields, sizeof(fields), "\"duplicate\":%s", duplicate ? "true" : "false");
-            send("ok", p.seq, fields);
-            return;
-        }
-        case Pending::FORCE_ACTIVATE:
-        case Pending::FORCE_ABORT_SOURCE: {
-            bool duplicate = false;
-            const char* reason = "migration";
-            const bool ok = p.type == Pending::FORCE_ACTIVATE
-                ? host_.migrationActivate(p.mid, nullptr, true, duplicate, reason)
-                : host_.migrationAbortSource(p.mid, nullptr, true, duplicate, reason);
-            if (!ok) { rejected(p.seq, reason); return; }
-            snprintf(fields, sizeof(fields), "\"duplicate\":%s", duplicate ? "true" : "false");
             send("ok", p.seq, fields);
             return;
         }

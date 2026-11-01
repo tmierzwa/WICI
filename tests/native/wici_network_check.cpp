@@ -78,7 +78,7 @@ int main() {
     assert(restarted.remove(0, 102));  // root HACK
     wici_relay::Queue afterDelivery(relayMemory);
     assert(afterDelivery.begin());
-    assert(afterDelivery.admit(key, 100, 2, incoming, receivedLength, 103) == wici_relay::Admission::DUPLICATE);
+    assert(afterDelivery.admit(key, 100, 2, incoming, receivedLength, 103) == wici_relay::Admission::FORWARDED);
 
     wici_link::Frame downlink = uplink;
     downlink.flags = wici_link::ACKREQ | wici_link::DOWN;

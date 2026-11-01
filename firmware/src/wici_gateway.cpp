@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 #include "wici_gateway.h"
+#include "wici_beacon.h"
 
 #include <string.h>
 
@@ -9,17 +10,19 @@ uint16_t u16(const uint8_t* p) { return static_cast<uint16_t>((p[0] << 8) | p[1]
 }
 
 Root::Root(journal::Storage& storage, kiss::Port& port, Air& air, uint16_t network,
-           uint16_t own, const uint8_t ifac[16])
+           uint16_t own, const uint8_t ifac[16], const uint8_t identity[64])
     : port_(port), air_(air), network_(network), own_(own),
       routes_(storage, {network, own, own, 0, 0}), flood_(storage), sequence_(storage) {
     keyReady_ = own && own != wici_link::BROADCAST &&
-                wici_link::deriveKey(ifac, network, key_);
+                wici_link::deriveKey(ifac, network, key_) && identity;
+    if (identity) memcpy(signingPrivate_, identity, sizeof(signingPrivate_));
 }
 
 bool Root::begin(uint16_t epoch) {
     pending_ = outboundPending_ = downPending_ = false;
     downFailures_ = 0;
-    return ready_ = keyReady_ && routes_.begin() && flood_.begin(network_) &&
+    return ready_ = keyReady_ && wici_epoch::sign(signingPrivate_, network_, own_, epoch, epochSignature_) &&
+                    routes_.begin() && flood_.begin(network_) &&
                     sequence_.begin(network_, own_) &&
                     routes_.setRootEpoch(epoch);
 }
@@ -35,11 +38,14 @@ bool Root::beacon() {
     frame.destination = wici_link::BROADCAST;
     frame.sequence = sequence;
     frame.ttl = 1;
-    frame.length = 9;
+    frame.length = 9 + wici_epoch::SIGNATURE_BYTES + wici_beacon::SIGNATURE_BYTES;
     frame.payload[0] = static_cast<uint8_t>(own_ >> 8);
     frame.payload[1] = static_cast<uint8_t>(own_);
     frame.payload[4] = static_cast<uint8_t>(routes_.epoch() >> 8);
     frame.payload[5] = static_cast<uint8_t>(routes_.epoch());
+    memcpy(frame.payload + 9, epochSignature_, sizeof(epochSignature_));
+    if (!wici_beacon::sign(signingPrivate_, network_, own_, frame.payload,
+                           frame.payload + wici_beacon::CONTENT_BYTES)) return false;
     uint8_t wire[wici_link::MAX_FRAME];
     const size_t length = wici_link::encode(key_, frame, wire, sizeof(wire));
     return length && air_.sendData(wire, length, wici_link::TxClass::BEACON);

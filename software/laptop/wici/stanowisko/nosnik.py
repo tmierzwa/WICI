@@ -135,8 +135,16 @@ class Nosnik:
     # ---- baza -----------------------------------------------------------------------------------
 
     def load(self, key):
-        """Body of the newest snapshot that opens with key (SQLite serialize), or None for a new medium."""
-        found = [c for c in (database._read(self.base / n, key, "nosnik") for n in database.NAMES) if c]
+        """Load the latest snapshot, refusing an ambiguous counter rollback."""
+        found = []
+        for name in database.NAMES:
+            path = self.base / name
+            if not path.exists():
+                continue
+            copy = database._read(path, key, "nosnik")
+            if copy is None:
+                raise StorageError(f"snapshot {name} is unreadable; restore and reconcile the receiver identity")
+            found.append(copy)
         newest = max(found, key=lambda c: c.gen, default=None)
         self.gen = newest.gen if newest else 0
         self.last = newest.path.name if newest else None

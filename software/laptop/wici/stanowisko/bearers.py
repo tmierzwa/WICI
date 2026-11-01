@@ -61,6 +61,9 @@ class Bearers:
             return None
         if chosen == "wici":
             message = self.reception.send_wici(bearer, dest, content)
+            if message is None and dest not in self.reception.bearer_override and "reticulum" in self.bindings:
+                chosen = "reticulum"
+                message = self.bindings[chosen].send(dest, content)
         else:
             message = bearer.send(dest, content)
         return Delivery(chosen, message) if message is not None else None

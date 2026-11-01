@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Authenticated WICI-Link v1 frame codec. Routing and durable HACK admission are
+// Authenticated WICI-Link v2 frame codec. Routing and durable HACK admission are
 // separate state machines; parsing a frame alone never authorizes a HACK.
 #pragma once
 

@@ -2,11 +2,11 @@
 #include "envelope_replay.h"
 
 #include <string.h>
+#include "sha2.h"
 
 namespace envelope {
 namespace {
 constexpr uint8_t MAGIC[4] = {'W', 'R', 'P', '1'}, COMMIT = 0xA5;
-uint16_t u16(const uint8_t* p) { return static_cast<uint16_t>((p[0] << 8) | p[1]); }
 uint32_t u32(const uint8_t* p) {
     return (static_cast<uint32_t>(p[0]) << 24) | (static_cast<uint32_t>(p[1]) << 16) |
            (static_cast<uint32_t>(p[2]) << 8) | p[3];
@@ -17,6 +17,7 @@ uint64_t u64(const uint8_t* p) {
     return n;
 }
 void put16(uint8_t* p, uint16_t n) { p[0] = static_cast<uint8_t>(n >> 8); p[1] = static_cast<uint8_t>(n); }
+uint16_t u16(const uint8_t* p) { return static_cast<uint16_t>((p[0] << 8) | p[1]); }
 void put32(uint8_t* p, uint32_t n) {
     p[0] = static_cast<uint8_t>(n >> 24); p[1] = static_cast<uint8_t>(n >> 16);
     p[2] = static_cast<uint8_t>(n >> 8); p[3] = static_cast<uint8_t>(n);
@@ -46,29 +47,32 @@ uint32_t address(uint8_t peer, uint8_t copy) {
 }
 }  // namespace
 
-bool DurableReplay::begin(uint16_t network, uint16_t recipient, uint16_t sender) {
+bool DurableReplay::begin(uint16_t network, uint16_t recipient, uint16_t sender, const uint8_t key[32]) {
     ready_ = false;
     window_ = ReplayWindow();
     generation_ = 0;
     copy_ = 1;
-    if (peerSlot_ >= REPLAY_PEERS || !id(network) || !id(recipient) || !id(sender) ||
+    if (peerSlot_ >= REPLAY_PEERS || !key || !id(network) || !id(recipient) || !id(sender) ||
         recipient == sender) return false;
+    uint8_t digest[sha2::DIGEST];
+    sha2::digest(key, 32, digest);
+    memcpy(fingerprint_, digest, sizeof(fingerprint_));
+    memset(digest, 0, sizeof(digest));
     network_ = network; recipient_ = recipient; sender_ = sender;
     bool found = false;
     for (uint8_t copy = 0; copy < 2; ++copy) {
         uint8_t record[REPLAY_SLOT_BYTES];
         if (!storage_.read(address(peerSlot_, copy), record, sizeof(record))) return false;
         if (blank(record) || record[31] != COMMIT) continue;
-        if (memcmp(record, MAGIC, 4) || u16(record + 8) != network ||
-            u16(record + 10) != recipient || u16(record + 12) != sender ||
-            record[26] != 1 || record[27] || record[30] || !(record[25] & 1) ||
-            u16(record + 28) != crc(record, 28)) return false;
+        if (memcmp(record, MAGIC, 4) || record[30] != 1 ||
+            u16(record + 28) != crc(record, 28) || !(u64(record + 20) & 1)) return false;
+        if (memcmp(record + 8, fingerprint_, sizeof(fingerprint_))) continue;
         const uint32_t generation = u32(record + 4);
         if (!found || static_cast<int32_t>(generation - generation_) > 0) {
             generation_ = generation;
             copy_ = copy;
-            window_.highest = u32(record + 14);
-            window_.mask = u64(record + 18);
+            window_.highest = u32(record + 16);
+            window_.mask = u64(record + 20);
             window_.started = true;
             found = true;
         }
@@ -94,12 +98,10 @@ bool DurableReplay::commit(uint32_t counter) {
     uint8_t record[REPLAY_SLOT_BYTES] = {};
     memcpy(record, MAGIC, 4);
     put32(record + 4, generation_ + 1);
-    put16(record + 8, network_);
-    put16(record + 10, recipient_);
-    put16(record + 12, sender_);
-    put32(record + 14, next.highest);
-    put64(record + 18, next.mask);
-    record[26] = 1;
+    memcpy(record + 8, fingerprint_, sizeof(fingerprint_));
+    put32(record + 16, next.highest);
+    put64(record + 20, next.mask);
+    record[30] = 1;
     put16(record + 28, crc(record, 28));
     const uint8_t target = static_cast<uint8_t>(1 - copy_);
     const uint32_t at = address(peerSlot_, target);
