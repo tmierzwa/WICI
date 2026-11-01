@@ -31,6 +31,7 @@ struct Beacon {
 };
 
 bool parseBeacon(const wici_link::Frame& frame, Beacon& out);
+
 // Convert packet SNR (quarter dB) to a nonzero link cost in 1/16 units.
 uint16_t snrCost16(int16_t snrQdb);
 
@@ -51,6 +52,7 @@ public:
     uint16_t parent() const { return parent_; }
     uint16_t rank() const { return rank_; }
     uint16_t epoch() const { return epoch_; }
+    bool epochKnown() const { return epochKnown_; }
     const uint8_t* epochSignature() const { return epochSignature_; }
     bool setRootEpoch(uint16_t epoch);
 
@@ -75,6 +77,7 @@ private:
     uint16_t parent_ = 0, failedDynamic_ = 0;
     uint8_t currentCopy_ = 1, plannedFailures_ = 0, backupFailures_ = 0, dynamicFailures_ = 0;
     uint16_t nextRoute_ = 0;
+    uint32_t epochHeardS_ = 0;  // last accepted beacon of the current epoch
     bool ready_ = false, epochKnown_ = false;
 };
 

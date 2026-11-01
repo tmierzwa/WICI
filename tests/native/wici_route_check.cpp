@@ -129,7 +129,7 @@ int main() {
 
     wici_link::Frame frame;
     frame.type = wici_link::Type::BEACON;
-    frame.length = 137;
+    frame.length = wici_link::BEACON_PAYLOAD;
     frame.payload[1] = 1; frame.payload[3] = 16;
     frame.payload[5] = 6; frame.payload[7] = 1;
     wici_route::Beacon parsed;
@@ -139,4 +139,15 @@ int main() {
     memory.bytes[wici_route::BASE + wici_route::COPY_BYTES + 30] ^= 1;
     wici_route::Table corrupt(memory, config);
     assert(!corrupt.begin());
+    // Review finding 7: a replaced root restarts its epoch count. An older
+    // epoch is refused while the current one is heard and accepted after the
+    // current epoch has been silent for BEACON_STALE_S.
+    static Memory epochMemory;
+    wici_route::Table rootReplaced(epochMemory, config);
+    assert(rootReplaced.begin());
+    assert(rootReplaced.beacon(2, {1, 16, 500, 1, 0}, 16, 1000));
+    assert(!rootReplaced.beacon(2, {1, 16, 1, 1, 0}, 16, 1000 + wici_route::BEACON_STALE_S));
+    assert(rootReplaced.epoch() == 500);
+    assert(rootReplaced.beacon(2, {1, 16, 1, 1, 0}, 16, 1001 + wici_route::BEACON_STALE_S));
+    assert(rootReplaced.epoch() == 1 && rootReplaced.parent() == 2);
 }

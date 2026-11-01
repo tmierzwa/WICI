@@ -13,7 +13,7 @@ static_assert(CRC_AT + 2 < COPY_BYTES, "route record fits");
 
 bool parseBeacon(const wici_link::Frame& frame, Beacon& out) {
     out = Beacon();
-    if (frame.type != wici_link::Type::BEACON || frame.length != 137) return false;
+    if (frame.type != wici_link::Type::BEACON || frame.length != wici_link::BEACON_PAYLOAD) return false;
     out.root = get16(frame.payload);
     out.rank = get16(frame.payload + 2);
     out.epoch = get16(frame.payload + 4);
@@ -46,6 +46,7 @@ bool Table::begin() {
     currentCopy_ = 1;
     epoch_ = 0;
     epochKnown_ = false;
+    epochHeardS_ = 0;
     memset(epochSignature_, 0, sizeof(epochSignature_));
     rank_ = 0xFFFF;
     rankCeiling_ = 0xFFFF;
@@ -208,7 +209,10 @@ bool Table::beacon(uint16_t neighbor, const Beacon& value, uint16_t linkCost16, 
         linkCost16 < 16 || linkCost16 > 48 || value.rank == 0xFFFF || value.parent == config_.own ||
         (value.parent && !id(value.parent)) || (value.flags & ~1) ||
         (value.rank == 0) != (neighbor == config_.root)) return false;
-    if (epochKnown_ && static_cast<int16_t>(value.epoch - epoch_) < 0) return false;
+    // An older epoch is a replay, unless the current one has gone silent: a
+    // replaced or wiped root restarts its count, and its stations must follow.
+    if (epochKnown_ && static_cast<int16_t>(value.epoch - epoch_) < 0 &&
+        (nowS < epochHeardS_ || nowS - epochHeardS_ <= BEACON_STALE_S)) return false;
     if (!epochKnown_ || value.epoch != epoch_) {
         epoch_ = value.epoch;
         epochKnown_ = true;
@@ -245,6 +249,7 @@ bool Table::beacon(uint16_t neighbor, const Beacon& value, uint16_t linkCost16, 
         chosen->id == neighbor && nowS > chosen->lastSeenS) backupFailures_ = 0;
     *chosen = {neighbor, value.rank, measuredCost(linkCost16, delivery),
                value.epoch, value.parent, nowS, linkCost16, delivery};
+    epochHeardS_ = nowS;
     selectParent(nowS);
     return true;
 }
