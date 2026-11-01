@@ -78,19 +78,28 @@ void decode(const uint8_t in[COPY_BYTES], Record& record) {
 }  // namespace
 
 bool Barrier::begin() {
+    // save() clears the target copy's marker to 0, writes the body, then sets
+    // COMMIT. A marker of 0 therefore means "write started": a complete body
+    // is a valid record (its digest proves it), a torn body is ignored and the
+    // other copy holds the last committed state. Any other marker value or a
+    // committed copy with a bad digest is damage and fails closed.
     ready_ = false;
     Record selected = {};
-    bool found = false;
+    bool found = false, torn = false;
     uint32_t generation = 0;
     uint8_t chosenCopy = 1;
     for (uint8_t copy = 0; copy < 2; ++copy) {
         uint8_t bytes[COPY_BYTES];
         if (!storage_.read(BASE + copy * COPY_BYTES, bytes, sizeof(bytes))) return false;
         if (blank(bytes)) continue;
-        // A missing marker could be a torn write or a damaged previously
-        // committed lock. Neither is proof that the older state may transmit.
-        if (bytes[COPY_BYTES - 1] != COMMIT) return false;
-        if (!valid(bytes)) return false;
+        const uint8_t marker = bytes[COPY_BYTES - 1];
+        if (marker != COMMIT && marker != 0) return false;
+        if (!valid(bytes)) {
+            if (marker == COMMIT || torn) return false;
+            torn = true;
+            chosenCopy = static_cast<uint8_t>(1 - copy);  // the next save overwrites the torn copy
+            continue;
+        }
         const uint32_t value = get32(bytes + 8);
         if (!found || static_cast<int32_t>(value - generation) > 0) {
             decode(bytes, selected);

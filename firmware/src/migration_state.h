@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Durable migration barrier in the final 512 bytes of FRAM. Boot must load this
-// before enabling any radio TX; corrupt committed records fail closed.
+// before enabling any radio TX. An interrupted save resolves to the last
+// complete record; damaged records fail closed.
 #pragma once
 
 #include <stdint.h>
