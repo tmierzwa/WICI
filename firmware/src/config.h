@@ -56,6 +56,7 @@ struct Network {
 struct PriorityKey {
     uint16_t station = 0;
     uint8_t ed25519[32] = {};
+    uint8_t x25519[32] = {};
 };
 
 struct Config {

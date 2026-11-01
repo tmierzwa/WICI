@@ -234,12 +234,44 @@ int main() {
     traffic.payload[2] = 5; traffic.source = 5; traffic.sequence = 76; traffic.payload[8] = 16;
     n = wici_link::encode(key, traffic, wire, sizeof(wire));
     assert(priorityRelay.receiveData(wire, n, 130, hack, sizeof(hack), hackLength) ==
-           wici_hop::Receipt::REJECTED);
+           wici_hop::Receipt::STORED_NO_HACK);
+    assert(priorityRelay.receiveData(wire, n, 136, hack, sizeof(hack), hackLength) ==
+           wici_hop::Receipt::HACK_READY);
     assert(priorityRelay.routes().beacon(1, {1, 0, 1, 0, 0}, 16, 130));
     assert(priorityRelay.prepare(130));
     out = priorityRelay.outgoing(outLength);
     assert(out && wici_link::decode(key, 100, out, outLength, parsed));
     assert(parsed.payload[4] == 90 && parsed.payload[8] == 14);
+
+    // Two unverified K2 frames cannot deny the reserved space to signed K1.
+    static Memory starvedMemory;
+    wici_hop::Relay guarded(starvedMemory, {100, 2, 1, 1, 0}, ifac, false, receivers,
+                            originProof);
+    assert(guarded.begin());
+    traffic.payload[4] = 50; traffic.originSignature[0] = 0;
+    for (uint8_t i = 0; i < 2; ++i) {
+        traffic.sequence = static_cast<uint16_t>(90 + i);
+        traffic.payload[8] = static_cast<uint8_t>(20 + i);
+        n = wici_link::encode(key, traffic, wire, sizeof(wire));
+        assert(guarded.receiveData(wire, n, 140, hack, sizeof(hack), hackLength) ==
+               wici_hop::Receipt::HACK_READY);
+    }
+    traffic.sequence = 92; traffic.payload[4] = 90; traffic.payload[8] = 22;
+    n = wici_link::encode(key, traffic, wire, sizeof(wire));
+    assert(guarded.receiveData(wire, n, 140, hack, sizeof(hack), hackLength) ==
+           wici_hop::Receipt::REJECTED);  // an unsigned K1 claim gets no reserved slot
+    traffic.originSignature[0] = 0xA5;
+    n = wici_link::encode(key, traffic, wire, sizeof(wire));
+    assert(guarded.receiveData(wire, n, 140, hack, sizeof(hack), hackLength) ==
+           wici_hop::Receipt::STORED_NO_HACK);
+    assert(hackLength == 0);
+    assert(guarded.receiveData(wire, n, 141, hack, sizeof(hack), hackLength) ==
+           wici_hop::Receipt::HACK_READY);
+    assert(guarded.routes().beacon(1, {1, 0, 1, 0, 0}, 16, 141));
+    assert(guarded.prepare(141));
+    out = guarded.outgoing(outLength);
+    assert(out && wici_link::decode(key, 100, out, outLength, parsed));
+    assert(parsed.payload[8] == 22);
 
     static Memory contentionMemory;
     wici_hop::Relay contentionRelay(contentionMemory, {100, 2, 1, 1, 0}, ifac, false, receivers,

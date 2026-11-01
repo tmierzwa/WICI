@@ -35,7 +35,7 @@ sys.path.insert(0, str(ROOT / "software" / "laptop" / "build"))
 
 import build_stanowisko  # noqa: E402
 from wici import database  # noqa: E402
-from wici.stanowisko import __main__ as aplikacja, bearers, kopie, nosnik, panel, przyjecie, stos, wezel, wysylka, wzorzec, zamkniecie  # noqa: E402
+from wici.stanowisko import __main__ as aplikacja, bearers, kopie, nosnik, panel, przyjecie, rekey, stos, wezel, wysylka, wzorzec, zamkniecie  # noqa: E402
 
 PROGRAM = os.environ.get("WICI_HOST_PROGRAM")
 # Pakiet stanowiska (build_stanowisko.py): SimulatorTest uruchamia wtedy aplikację jego skryptem stanowisko.sh.
@@ -870,6 +870,43 @@ class RecoveryTest(WithCopies):
         restored = self.restored(copy, "numbered")
         self.assertTrue(restored.recovery)
         self.assertEqual(self.medium.card(self.key), card)
+
+    def test_recovered_receiver_requires_staged_fresh_identity_before_sending(self):
+        old_private = self.medium.identity(self.key)
+        old_public = rekey.public_identity(old_private)
+        backup_public = rekey.public_identity(bytes(range(64, 128)))
+        self.medium.save_card(self.key, nosnik.receiver_card(old_public, backup_public, 100, 2, 3))
+        self.medium.save_link(self.key, {"net_id": 100, "root": 1, "ifac": "ab" * 16})
+        self.restored(self.keep_copy(), "rekeyed")
+        self.reception.finish_recovery("dyzurny-1", 0, True)
+        self.reception.stop()
+        card_path = Path(self.tmp.name) / "new-receiver-card.json"
+        old_card_path = Path(self.tmp.name) / "old-receiver-card.json"
+        old_card_path.write_text(json.dumps(self.medium.card(self.key)))
+        with self.assertRaises(database.StorageError):
+            rekey.activate(self.medium, self.key, self.approvers(), old_card_path)
+        with unittest.mock.patch.object(self.medium, "save_card", side_effect=OSError("power cut")):
+            with self.assertRaises(OSError):
+                rekey.stage(self.medium, self.key, self.approvers(), card_path)
+        self.assertEqual(durable(self.medium, self.key, "SELECT blocked FROM env_send_guard WHERE id=1"), (1,))
+        card = rekey.stage(self.medium, self.key, self.approvers(), card_path)
+        self.assertNotEqual(self.medium.identity(self.key), old_private)
+        self.assertEqual(card["main"]["key"], rekey.public_identity(self.medium.identity(self.key)).hex())
+        self.assertEqual(durable(self.medium, self.key, "SELECT blocked FROM env_send_guard WHERE id=1"), (1,))
+        card_path.write_text(json.dumps({**card, "main": {**card["main"], "id": 99}}))
+        with self.assertRaises(database.StorageError):
+            rekey.activate(self.medium, self.key, self.approvers(), card_path)
+        card_path.write_text(json.dumps(card))
+        with unittest.mock.patch.object(self.medium, "save", side_effect=OSError("power cut")):
+            with self.assertRaises(OSError):
+                rekey.activate(self.medium, self.key, self.approvers(), card_path)
+        self.assertEqual(durable(self.medium, self.key, "SELECT blocked FROM env_send_guard WHERE id=1"), (1,))
+        rekey.activate(self.medium, self.key, self.approvers(), card_path)
+        self.assertIsNone(durable(self.medium, self.key, "SELECT blocked FROM env_send_guard WHERE id=1"))
+        with self.assertRaises(database.StorageError):
+            rekey.activate(self.medium, self.key, self.approvers(), card_path)
+        self.reception = self.open()
+        self.assertFalse(self.reception.recovery)
 
     def test_copy_at_nine_status_at_ten_spare_computer_at_ten_to_ten(self):
         content = request()

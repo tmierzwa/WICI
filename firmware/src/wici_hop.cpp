@@ -58,8 +58,20 @@ Receipt Relay::receiveData(const uint8_t* wire, size_t length, uint32_t nowS,
         return Receipt::IGNORED;
     // Ed25519 takes longer than the HACK deadline on the target MCU. Admit
     // into K2, commit, and verify later in learnPending().
-    const wici_relay::Admission stored = queue_.admit(key_, config_.network, config_.own,
+    wici_relay::Admission stored = queue_.admit(key_, config_.network, config_.own,
         wire, length, nowS, 2);
+    if (stored == wici_relay::Admission::FULL) {
+        // Mark previously admitted K1 origins before enforcing one durable
+        // slot per origin; an unverified claim cannot consume that allowance.
+        learnPending(nowS);
+    }
+    if (stored == wici_relay::Admission::FULL && priority(frame)) {
+        // Only the full-queue path pays the Ed25519 cost. It can exceed the
+        // immediate HACK deadline, so the sender must retry after the commit.
+        stored = queue_.admit(key_, config_.network, config_.own, wire, length,
+                              nowS, 0, u16(frame.payload + 1));
+        if (stored == wici_relay::Admission::STORED) return Receipt::STORED_NO_HACK;
+    }
     if (stored != wici_relay::Admission::STORED && stored != wici_relay::Admission::DUPLICATE &&
         stored != wici_relay::Admission::FORWARDED)
         return Receipt::REJECTED;

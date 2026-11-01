@@ -1186,6 +1186,8 @@ def station_doc(addresses=("Szkoła, wejście B",), phrases=None, stations=2, pr
            "stations": stations, "phrases": phrases if phrases is not None else [], "ifac": "11" * 16,
            "radio": {"profile": profile}}
     doc.update(extra)
+    if "network" in doc and "priority_keys" not in doc:
+        doc["priority_keys"] = [{"id": 5, "ed25519": "ab" * 32, "x25519": "cd" * 32}]
     return doc
 
 
@@ -1537,16 +1539,20 @@ class HostUnitTests(unittest.TestCase):
         backup.update(id=3, net_id=100, x25519=backup["key"][:64])
         doc = station_doc(network=network, receiver={"main": main, "backup": backup})
         self.assertIn("conf network 100 4 1 1 0 2 3", self.parse(doc))
-        keys = dict(doc, priority_keys=[{"id": 5, "ed25519": "ab" * 32}])
+        keys = dict(doc, priority_keys=[{"id": 5, "ed25519": "ab" * 32, "x25519": "cd" * 32}])
         self.assertIn("conf network 100 4 1 1 0 2 3", self.parse(keys))
-        self.assertEqual(self.parse(dict(doc, priority_keys=[{"id": 4, "ed25519": "ab" * 32}])),
+        self.assertEqual(self.parse(dict(doc, priority_keys=[{"id": 5, "ed25519": "ab" * 32}])),
                          ["parse err priority_keys"])
-        self.assertEqual(self.parse(dict(doc, priority_keys=[{"id": 5, "ed25519": "ab" * 32}] * 2)),
+        self.assertEqual(self.parse(dict(doc, priority_keys=[])), ["parse err priority_keys"])
+        self.assertEqual(self.parse(dict(doc, priority_keys=[{"id": 4, "ed25519": "ab" * 32, "x25519": "cd" * 32}])),
+                         ["parse err priority_keys"])
+        self.assertEqual(self.parse(dict(doc, priority_keys=[{"id": 5, "ed25519": "ab" * 32, "x25519": "cd" * 32}] * 2)),
                          ["parse err priority_keys"])
         bad = station_doc(network=network, receiver={"main": dict(main, net_id=101), "backup": backup})
         self.assertEqual(self.parse(bad), ["parse err receiver"])
         self.assertEqual(self.parse(station_doc(network=dict(network, station=1))), ["parse err network"])
-        root = dict(node_doc(), network=dict(network, station=1, parent=0))
+        root = dict(node_doc(), network=dict(network, station=1, parent=0),
+                    priority_keys=[{"id": 5, "ed25519": "ab" * 32, "x25519": "cd" * 32}])
         self.assertIn("conf network 100 1 1 0 0 2 3", self.parse(root))
 
     def test_numbered_envelope_plaintext_reaches_station_only_with_active_binding(self):

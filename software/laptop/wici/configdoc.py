@@ -86,11 +86,13 @@ def normalize(doc):
         out["receiver"] = {k: ({f: v.strip().lower() if isinstance(v, str) else v for f, v in c.items()}
                                if isinstance(c, dict) else c) for k, c in receiver.items()}
     if isinstance(out.get("priority_keys"), list):
-        out["priority_keys"] = [{**entry, "ed25519": entry["ed25519"].strip().lower()}
-                                if isinstance(entry, dict) and isinstance(entry.get("ed25519"), str) else entry
+        out["priority_keys"] = [{**entry, **{field: entry[field].strip().lower()
+                                                 for field in ("ed25519", "x25519")
+                                                 if isinstance(entry.get(field), str)}}
+                                if isinstance(entry, dict) else entry
                                 for entry in out["priority_keys"]]
     if out.get("role") == "wezel":
-        out = {k: out[k] for k in ("role", "ifac", "radio", "network") if k in out}
+        out = {k: out[k] for k in ("role", "ifac", "radio", "network", "priority_keys") if k in out}
     return out
 
 
@@ -108,7 +110,7 @@ def check(doc):
         return [("", "dokument nie jest obiektem JSON")]
     problems = []
     role = doc.get("role")
-    allowed = {"role", "ifac", "radio", "network"} | ({"addresses", "receiver", "stations", "phrases", "priority_keys"} if role == "stacja" else set())
+    allowed = {"role", "ifac", "radio", "network", "priority_keys"} | ({"addresses", "receiver", "stations", "phrases"} if role == "stacja" else set())
     for key in sorted(set(doc) - allowed):
         problems.append((key, "pole nieznane albo niepotrzebne dla tej roli"))
     if role not in ("stacja", "wezel"):
@@ -134,23 +136,26 @@ def check(doc):
                          and (n["backup_parent"] == 0 or n["backup_parent"] != n["parent"])))
             if not distinct or not route_ok:
                 problems.append(("network", "numery muszą być rozłączne, a trasa prowadzić do innego węzła"))
-    if role != "stacja":
-        return problems
     priority_keys = doc.get("priority_keys", [])
-    if priority_keys or "priority_keys" in doc:
+    if "network" in doc and not priority_keys:
+        problems.append(("priority_keys", "numbered stations need neighbor authentication keys"))
+    elif priority_keys or "priority_keys" in doc:
         seen = set()
         if network is None or not isinstance(priority_keys, list) or len(priority_keys) > PRIORITY_KEYS_MAX:
             problems.append(("priority_keys", "niepoprawna lista kluczy pochodzenia K1"))
         else:
             for i, entry in enumerate(priority_keys):
                 number = entry.get("id") if isinstance(entry, dict) else None
-                if (not isinstance(entry, dict) or set(entry) != {"id", "ed25519"} or
-                        not _number(number) or not _hex(entry.get("ed25519"), 64) or number in seen or
+                if (not isinstance(entry, dict) or set(entry) != {"id", "ed25519", "x25519"} or
+                        not _number(number) or not _hex(entry.get("ed25519"), 64) or
+                        not _hex(entry.get("x25519"), 64) or number in seen or
                         isinstance(network, dict) and number in
                         (network.get("station"), network.get("receiver_main"), network.get("receiver_backup"))):
-                    problems.append((f"priority_keys.{i}", "niepoprawny lub powtórzony numer i klucz Ed25519"))
+                    problems.append((f"priority_keys.{i}", "invalid or repeated station number or public key"))
                 else:
                     seen.add(number)
+    if role != "stacja":
+        return problems
     addresses = doc.get("addresses")
     if not isinstance(addresses, list) or not 1 <= len(addresses) <= ADDRESSES:
         problems.append(("addresses", f"od 1 do {ADDRESSES} adresów"))

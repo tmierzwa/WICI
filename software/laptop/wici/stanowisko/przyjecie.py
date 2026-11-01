@@ -270,6 +270,7 @@ class Przyjecie:
                 # counter reservation. The legacy recovery offset protects SA1 event
                 # numbers, but cannot prove a nonce upper bound for the same key.
                 db.execute("INSERT OR REPLACE INTO env_send_guard VALUES(1,1)")
+                db.execute("DROP TABLE IF EXISTS env_rekey_stage")
                 db.execute("INSERT INTO dziennik(at, account, op, detail) VALUES(?,?,?,?)",
                            (self.clock(), account, "odzyskanie_koniec",
                             f"kopia z {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(copy_at))}, "

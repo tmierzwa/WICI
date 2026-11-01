@@ -12,7 +12,7 @@ constexpr size_t HEADER = 11;
 constexpr size_t TAG = 8;
 constexpr size_t ORIGIN_SIGNATURE = 64;
 constexpr size_t MAX_FRAME = 255;
-constexpr size_t MAX_PAYLOAD = MAX_FRAME - HEADER - ORIGIN_SIGNATURE - TAG;
+constexpr size_t MAX_PAYLOAD = MAX_FRAME - HEADER - ORIGIN_SIGNATURE - TAG - 8;  // unicast hop tag
 constexpr uint16_t BROADCAST = 0xFFFF;
 
 enum class Type : uint8_t { DATA = 0, HACK = 1, BEACON = 2 };

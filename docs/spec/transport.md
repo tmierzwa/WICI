@@ -77,7 +77,7 @@ Odbiorca zapisuje pierwszą uwierzytelnioną część trwale (FRAM stacji albo S
 
 ### Rozmiary
 
-| Wiadomość SA1 | Treść | Koperta | Części przy WICI-Link (`max_payload` 172 B) |
+| Wiadomość SA1 | Treść | Koperta | Części przy WICI-Link (`max_payload` 164 B) |
 |---|---|---|---|
 | REQUEST typowe | 174 B | 199 B | 2 |
 | REQUEST największe | 222 B | 247 B | 2 |
@@ -137,7 +137,7 @@ Reguły kontraktu:
 
 | Nośnik | Rola | `max_payload` | `hop_ack` / `e2e_ack` | `airtime_classes` / `radio_silence` | Uwagi |
 |---|---|---|---|---|---|
-| [WICI-Link](wici-link.md) | domyślny w stacji (po D21) | 172 B | tak / nie | tak / tak | własny protokół łącza; licencja MIT |
+| [WICI-Link](wici-link.md) | domyślny w stacji (po D21) | 164 B | tak / nie | tak / tak | własny protokół łącza; licencja MIT |
 | Reticulum (rdzeń stacji) | obecny; zapasowy do rozstrzygnięcia D21 | 492 B | nie / tak (dowód) | tak / tak | adapter wokół `rns_node`; licencja Reticulum |
 | Meshtastic (węzeł przez USB) | tylko stanowisko, po pilotażu | 227 B (PKI) | tak / tak (DM) | nie / nie | kanał bez uwierzytelnienia; ruch oznaczany jako niezweryfikowany, chyba że koperta ma klucz z karty |
 | MeshCore (węzeł przez USB) | tylko stanowisko, po pilotażu | 184 B | nie / tak | nie / nie | `RAW_CUSTOM` dla koperty; domyślny budżet nadawania 50% wymaga ustawienia na ≤10% |

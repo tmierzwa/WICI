@@ -4,6 +4,8 @@
     python -m wici.stanowisko przygotuj --nosnik KATALOG --dyzurni 4 --paczka PLIK --karta PLIK
     python -m wici.stanowisko start --nosnik KATALOG --port /dev/ttyACM0|COM5 [--bitrate 41]
     python -m wici.stanowisko odtworz --nosnik PUSTY_KATALOG [--kopie KATALOG ...]
+    python -m wici.stanowisko rekey --medium KATALOG --card NOWY_PLIK
+    python -m wici.stanowisko activate-rekey --medium KATALOG --card NOWY_PLIK --stations-updated
 
 przygotuj (preparation of the station, on a computer without a network; stanowisko-osp.md, „Przygotowanie”):
 makes the medium (accounts of the duty officers, station password, main identity), the backup identity
@@ -197,6 +199,28 @@ def restore(args):
     return 0
 
 
+def receiver_rekey(args):
+    """Run only while the receiver application is stopped."""
+    from . import rekey
+    lines = [sys.stdin.readline().strip() for _ in range(3)]
+    approvers = [tuple(line.split(" ", 1)) for line in lines[1:] if " " in line]
+    medium = nosnik.Nosnik(args.medium)
+    try:
+        key = medium.unlock(lines[0])
+        if args.command == "rekey":
+            card = rekey.stage(medium, key, approvers, args.card)
+            emit("rekey_staged", card=str(args.card), main_id=card["main"]["id"])
+        else:
+            if not args.stations_updated:
+                raise database.StorageError("confirm that the new card is installed on the stations")
+            card = rekey.activate(medium, key, approvers, args.card)
+            emit("rekey_activated", main_id=card["main"]["id"])
+    except (database.LoginError, database.StorageError, FileExistsError, OSError) as exc:
+        emit("rekey_failed", message=str(exc))
+        return 3
+    return 0
+
+
 def open_archive(args):
     """For the data administrator: the archive of a closed event to a new directory."""
     try:
@@ -235,11 +259,19 @@ def main(argv=None):
     back = commands.add_parser("odtworz", help="odtworzenie nośnika z kopii (zgoda dwóch dyżurnych)")
     back.add_argument("--nosnik", required=True, help="pusty katalog na nowym nośniku stanowiska")
     back.add_argument("--kopie", action="append", default=[], help="dodatkowy katalog kopii, np. drugi nośnik")
+    for name in ("rekey", "activate-rekey"):
+        operation = commands.add_parser(name, help="offline receiver identity replacement after recovery")
+        operation.add_argument("--medium", required=True, help="receiver medium directory")
+        operation.add_argument("--card", required=True, help="new receiver card file")
+        if name == "activate-rekey":
+            operation.add_argument("--stations-updated", action="store_true",
+                                   help="confirm the new card is installed on all numbered stations")
     arch = commands.add_parser("archiwum", help="otwarcie archiwum zamkniętego zdarzenia (hasło archiwum na wejściu)")
     arch.add_argument("--plik", required=True, help="plik archiwum .wici")
     arch.add_argument("--do", required=True, help="katalog na baza.sqlite i rejestr.csv")
     args = parser.parse_args(argv)
-    return {"przygotuj": prepare, "start": start, "odtworz": restore, "archiwum": open_archive}[args.command](args)
+    return {"przygotuj": prepare, "start": start, "odtworz": restore, "rekey": receiver_rekey,
+            "activate-rekey": receiver_rekey, "archiwum": open_archive}[args.command](args)
 
 
 if __name__ == "__main__":

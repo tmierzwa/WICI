@@ -221,7 +221,7 @@ const char* parse(Source& source, uint32_t size, const char* profile, Config& ou
     for (size_t f : {ADDRESSES_F, RECEIVER, STATIONS, PHRASES_F}) {
         if (fields[f].set != (out.role == Role::STATION)) return NAMES[f];
     }
-    if (fields[PRIORITY_KEYS].set && out.role != Role::STATION) return NAMES[PRIORITY_KEYS];
+    if (fields[NETWORK].set != fields[PRIORITY_KEYS].set) return NAMES[PRIORITY_KEYS];
     if (!fields[IFAC].set || !fields[RADIO].set) return !fields[IFAC].set ? NAMES[IFAC] : NAMES[RADIO];
 
     if (fields[NETWORK].set) {
@@ -247,12 +247,13 @@ const char* parse(Source& source, uint32_t size, const char* profile, Config& ou
         Range entries[PRIORITY_KEYS_MAX];
         size_t count = 0;
         if (!elements(r, fields[PRIORITY_KEYS], entries, PRIORITY_KEYS_MAX, count) ||
-            count > PRIORITY_KEYS_MAX) return NAMES[PRIORITY_KEYS];
-        static const char* const keys[] = {"id", "ed25519"};
+            !count || count > PRIORITY_KEYS_MAX) return NAMES[PRIORITY_KEYS];
+        static const char* const keys[] = {"id", "ed25519", "x25519"};
         for (size_t i = 0; i < count; ++i) {
-            if (!parseValue(r, entries[i], buffer, v) || !onlyFields(v, keys, 2) ||
+            if (!parseValue(r, entries[i], buffer, v) || !onlyFields(v, keys, 3) ||
                 !number(v, "id", out.priorityKeys[i].station) ||
                 !json::hexField(v, "ed25519", out.priorityKeys[i].ed25519, 32) ||
+                !json::hexField(v, "x25519", out.priorityKeys[i].x25519, 32) ||
                 out.priorityKeys[i].station == out.network.station ||
                 out.priorityKeys[i].station == out.network.receiverMain ||
                 out.priorityKeys[i].station == out.network.receiverBackup) return NAMES[PRIORITY_KEYS];

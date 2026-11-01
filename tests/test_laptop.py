@@ -70,8 +70,13 @@ class ConfigDocTest(unittest.TestCase):
         main, backup = card(MAIN_KEY), card(BACKUP_KEY)
         main.update(id=2, net_id=100, x25519=main["key"][:64])
         backup.update(id=3, net_id=100, x25519=backup["key"][:64])
-        doc = station_doc(network=network, receiver={"main": main, "backup": backup})
+        neighbor = {"id": 5, "ed25519": "ab" * 32, "x25519": "cd" * 32}
+        doc = station_doc(network=network, receiver={"main": main, "backup": backup},
+                          priority_keys=[neighbor])
         self.assertEqual(self.fields(doc), [])
+        self.assertEqual(self.fields(dict(doc, priority_keys=[{"id": 5, "ed25519": "ab" * 32}])),
+                         ["priority_keys.0"])
+        self.assertEqual(self.fields(dict(doc, priority_keys=[])), ["priority_keys"])
         self.assertEqual(self.fields(dict(doc, network=dict(network, station=1))), ["network"])
         self.assertEqual(self.fields(dict(doc, network=dict(network, parent=True))), ["network"])
         self.assertEqual(self.fields(dict(doc, network=dict(network, receiver_backup=2))),
@@ -80,7 +85,7 @@ class ConfigDocTest(unittest.TestCase):
         bad = dict(main, net_id=101)
         self.assertEqual(self.fields(dict(doc, receiver={"main": bad, "backup": backup})), ["receiver.main.id"])
         root = {"role": "wezel", "ifac": "ab" * 16, "radio": {"profile": "p1"},
-                "network": dict(network, station=1, parent=0)}
+                "network": dict(network, station=1, parent=0), "priority_keys": [neighbor]}
         self.assertEqual(self.fields(root), [])
 
     def test_priority_origin_keys_are_bounded_and_bound_to_station_numbers(self):
@@ -89,14 +94,15 @@ class ConfigDocTest(unittest.TestCase):
         main, backup = card(MAIN_KEY), card(BACKUP_KEY)
         main.update(id=2, net_id=100, x25519=main["key"][:64])
         backup.update(id=3, net_id=100, x25519=backup["key"][:64])
+        neighbor = {"id": 5, "ed25519": "ab" * 32, "x25519": "cd" * 32}
         doc = station_doc(network=network, receiver={"main": main, "backup": backup},
-                          priority_keys=[{"id": 5, "ed25519": "ab" * 32}])
+                          priority_keys=[neighbor])
         self.assertEqual(self.fields(doc), [])
-        self.assertEqual(self.fields(dict(doc, priority_keys=[{"id": 5, "ed25519": "ab" * 32}] * 2)),
+        self.assertEqual(self.fields(dict(doc, priority_keys=[neighbor] * 2)),
                          ["priority_keys.1"])
-        self.assertEqual(self.fields(dict(doc, priority_keys=[{"id": 2, "ed25519": "ab" * 32}])),
+        self.assertEqual(self.fields(dict(doc, priority_keys=[dict(neighbor, id=2)])),
                          ["priority_keys.0"])
-        self.assertEqual(self.fields(dict(doc, priority_keys=[{"id": 5, "ed25519": "ab" * 32}] * 51)),
+        self.assertEqual(self.fields(dict(doc, priority_keys=[neighbor] * 51)),
                          ["priority_keys"])
 
     def test_limits_follow_the_firmware(self):

@@ -21,6 +21,23 @@ sys.path.insert(0, str(ROOT / "software" / "reference"))
 
 
 class CrossLanguageEnvelope(unittest.TestCase):
+    def test_pairwise_hop_auth_rejects_spoofed_or_untagged_unicast(self):
+        compiler = shutil.which("clang++") or shutil.which("g++")
+        if not compiler or not (CRYPTO / ".wici-stamp").exists():
+            raise unittest.SkipTest("C++ compiler or pinned Crypto sources unavailable")
+        with tempfile.TemporaryDirectory() as directory:
+            binary = Path(directory) / "hop_auth_check"
+            command = [compiler, "-std=c++17", "-Wall", "-Wextra", "-Werror", "-Wno-error=cpp",
+                       "-fsanitize=address,undefined", f"-I{SRC}", "-isystem", str(CRYPTO),
+                       *(str(SRC / name) for name in ("wici_hop_auth.cpp", "envelope.cpp", "wici_link.cpp",
+                                                      "sha2.cpp", "envelope_counter.cpp")),
+                       str(ROOT / "tests" / "native" / "wici_hop_auth_check.cpp"),
+                       *(str(CRYPTO / unit) for unit in UNITS), "-o", str(binary)]
+            built = subprocess.run(command, capture_output=True, text=True)
+            self.assertEqual(built.returncode, 0, built.stderr[-4000:])
+            checked = subprocess.run([str(binary)], capture_output=True, text=True)
+            self.assertEqual(checked.returncode, 0, checked.stderr)
+
     def test_origin_signature_matches_python(self):
         compiler = shutil.which("clang++") or shutil.which("g++")
         if not compiler or not (CRYPTO / ".wici-stamp").exists():

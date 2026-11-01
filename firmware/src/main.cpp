@@ -60,6 +60,7 @@
 #include "ui.h"
 #include "usbproto.h"
 #include "wici_gateway.h"
+#include "wici_hop_auth.h"
 #include "wici_airtime.h"
 #include "wici_radio.h"
 #include "wici_origin.h"
@@ -301,6 +302,7 @@ BenchRadio benchRadio;
 bool rnsOk = false;               // stos uruchomiony (FRAM i dziennik działają)
 bool wiciActive = false;
 wici_airtime::Budget wiciBudget(memory);
+wici_hop_auth::Auth wiciHopAuth;
 alignas(wici_radio::Shelter) uint8_t wiciShelterSpace[sizeof(wici_radio::Shelter)];
 alignas(wici_gateway::Root) uint8_t wiciRootSpace[sizeof(wici_gateway::Root)];
 wici_radio::Shelter* wiciShelter = nullptr;
@@ -321,17 +323,22 @@ struct WiciAir : wici_radio::Air, wici_gateway::Air {
             return false;
         if (traffic != wici_link::TxClass::OWN && traffic != wici_link::TxClass::TRANSIT &&
             traffic != wici_link::TxClass::CONTENDED_K2 && traffic != wici_link::TxClass::BEACON) return false;
+        uint8_t radio[wici_link::MAX_FRAME];
+        const size_t radioLength = wiciHopAuth.seal(wire, length, radio, sizeof(radio));
+        if (!radioLength) return false;
         const bool beacon = ((wire[0] >> 3) & 7) == static_cast<uint8_t>(wici_link::Type::BEACON);
         if (beacon != (traffic == wici_link::TxClass::BEACON) ||
             (!beacon && (((wire[0] >> 3) & 7) != static_cast<uint8_t>(wici_link::Type::DATA) ||
                          length < wici_link::HEADER + 25 + wici_link::TAG))) return false;
         if (traffic != wici_link::TxClass::OWN &&
-            !wiciBudget.reserve(beacon, lora::frameAirMs(length), counterS(),
+            !wiciBudget.reserve(beacon, lora::frameAirMs(radioLength), counterS(),
                                 traffic == wici_link::TxClass::CONTENDED_K2)) return false;
-        return bench.linkSend(wire, length, true) == nullptr;
+        return bench.linkSend(radio, radioLength, true) == nullptr;
     }
     bool sendHack(const uint8_t* wire, size_t length, uint32_t receivedMs) override {
-        return bench.linkSendHack(wire, length, receivedMs);
+        uint8_t radio[wici_link::MAX_FRAME];
+        const size_t radioLength = wiciHopAuth.seal(wire, length, radio, sizeof(radio));
+        return radioLength && bench.linkSendHack(radio, radioLength, receivedMs);
     }
 } wiciAir;
 rnsannounce::Policy announcePolicy;
@@ -502,9 +509,12 @@ void onDatagram(const uint8_t* data, size_t length, void*) {
 }
 void onWiciRaw(const radiolink::Frame& frame, void*) {
     if (!wiciActive) return;
-    if (wiciShelter) wiciShelter->receive(frame.bytes, frame.length, frame.receivedMs,
+    uint8_t bare[wici_link::MAX_FRAME];
+    size_t length = 0;
+    if (!wiciHopAuth.open(frame.bytes, frame.length, bare, sizeof(bare), length)) return;
+    if (wiciShelter) wiciShelter->receive(bare, length, frame.receivedMs,
                                         serviceS(), frame.snrQdb);
-    else if (wiciRoot) wiciRoot->radio(frame.bytes, frame.length, frame.receivedMs);
+    else if (wiciRoot) wiciRoot->radio(bare, length, frame.receivedMs);
 }
 void onWiciDelivery(uint32_t handle, bool acknowledged, void*) { app.receipt(handle, acknowledged); }
 bool onWiciAdmit(uint16_t network, uint16_t sender, uint16_t recipient,
@@ -1867,6 +1877,13 @@ void beginWici() {
             bench.log("wici root identity unavailable");
             return;
         }
+        if (!wiciHopAuth.begin(c.network.id, c.network.station, privateKey,
+                               c.priorityKeys, c.priorityKeyCount)) {
+            drbg::wipe(privateKey, sizeof(privateKey));
+            stackState = StackState::START_FAILED;
+            bench.log("wici neighbor authentication unavailable");
+            return;
+        }
         wiciRoot = new (wiciRootSpace) wici_gateway::Root(memory, wiciUsb, wiciAir,
                             c.network.id, c.network.station, c.ifac, privateKey);
         drbg::wipe(privateKey, sizeof(privateKey));
@@ -1880,6 +1897,13 @@ void beginWici() {
         if (!framfs::loadKey(memory, privateKey)) {
             stackState = StackState::IDENTITY_LOST;
             bench.log("wici station identity unavailable");
+            return;
+        }
+        if (!wiciHopAuth.begin(c.network.id, c.network.station, privateKey,
+                               c.priorityKeys, c.priorityKeyCount)) {
+            drbg::wipe(privateKey, sizeof(privateKey));
+            stackState = StackState::START_FAILED;
+            bench.log("wici neighbor authentication unavailable");
             return;
         }
         const uint16_t receivers[2] = {c.receivers[0].number, c.receivers[1].number};

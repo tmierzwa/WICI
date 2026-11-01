@@ -475,12 +475,13 @@ function readForm() {
   if (networkFields.some((k) => field(`network.${k}`).value.trim() !== "")) {
     doc.network = Object.fromEntries(networkFields.map((k) => [k, numeric(`network.${k}`)]));
   }
+  const priorityLines = field("priority_keys").value.trim().split(/\n/).map((line) => line.trim()).filter(Boolean);
+  if (priorityLines.length) doc.priority_keys = priorityLines.map((line) => {
+    const [id, ed25519, x25519, ...extra] = line.split(/\s+/);
+    return { id: /^\d+$/.test(id) ? Number(id) : null,
+      ed25519: extra.length ? "" : (ed25519 || ""), x25519: x25519 || "" };
+  });
   if (r === "stacja") {
-    const priorityLines = field("priority_keys").value.trim().split(/\n/).map((line) => line.trim()).filter(Boolean);
-    if (priorityLines.length) doc.priority_keys = priorityLines.map((line) => {
-      const [id, ed25519, ...extra] = line.split(/\s+/);
-      return { id: /^\d+$/.test(id) ? Number(id) : null, ed25519: extra.length ? "" : (ed25519 || "") };
-    });
     doc.addresses = [...$("addresses").querySelectorAll("input")].map((i) => i.value);
     const n = field("stations").value.trim();
     doc.stations = n === "" ? null : Number(n);
@@ -517,7 +518,7 @@ function fillForm(doc, only) {
   if (has("radio") && doc.radio && doc.radio.profile) field("radio").value = doc.radio.profile;
   if (!only || only.includes("priority_keys")) {
     field("priority_keys").value = Array.isArray(doc.priority_keys) ?
-      doc.priority_keys.map((entry) => `${entry.id} ${entry.ed25519}`).join("\n") : "";
+      doc.priority_keys.map((entry) => `${entry.id} ${entry.ed25519} ${entry.x25519}`).join("\n") : "";
   }
   if (!only || only.includes("network")) {
     for (const k of ["id", "station", "root", "parent", "backup_parent", "receiver_main", "receiver_backup"]) {
