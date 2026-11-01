@@ -68,4 +68,11 @@ bool clearLocalCaches(journal::Storage& memory) {
     return true;
 }
 
+bool eraseTarget(journal::Storage& memory) {
+    uint8_t zero[256] = {};
+    for (uint32_t at = 0; at < CACHE_END; at += sizeof(zero))
+        if (!memory.write(at, zero, sizeof(zero))) return false;
+    return true;
+}
+
 }  // namespace migration_image

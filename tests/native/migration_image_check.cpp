@@ -42,4 +42,7 @@ int main() {
     for (uint32_t i = migration_image::JOURNAL_BYTES; i < migration_image::DATA_BASE; ++i) assert(memory.bytes[i] == 0);
     for (uint32_t i = migration_image::CACHE_BASE; i < migration_image::CACHE_END; ++i) assert(memory.bytes[i] == 0);
     for (uint32_t i = migration_image::CACHE_END; i < 0x80000; ++i) assert(memory.bytes[i] == 0xC3);
+    assert(migration_image::eraseTarget(memory));
+    for (uint32_t i = 0; i < migration_image::CACHE_END; ++i) assert(memory.bytes[i] == 0);
+    for (uint32_t i = migration_image::CACHE_END; i < 0x80000; ++i) assert(memory.bytes[i] == 0xC3);
 }

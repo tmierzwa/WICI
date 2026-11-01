@@ -229,16 +229,23 @@ struct BenchHost : usbproto::Host {
             hexstr::encode(migrationBarrier.record().mid, 16, mid);
     }
     void migrationDetails(char* eph, size_t ephSize, char* package, size_t packageSize) override;
+    void migrationConfirmation(char* confirm, size_t size) override;
     bool migrationReceiveKey(uint8_t mid[16], uint8_t publicKey[32], uint8_t fingerprint[8]) override;
     bool migrationExport(const uint8_t mid[16], const uint8_t targetKey[32], uint8_t sha[32]) override;
     bool migrationExportRead(uint32_t offset, uint8_t* out, size_t length) override {
-        return migrationExporter.read(offset, out, length);
+        return migrationBarrier.ready() && migrationBarrier.record().phase == migration_state::Phase::EXPORT &&
+               migrationExporter.read(offset, out, length);
     }
     bool migrationImportBegin(const uint8_t mid[16], const uint8_t sha[32]) override;
     bool migrationImportPart(uint32_t offset, const uint8_t* data, size_t length, uint32_t& next) override;
     bool migrationImportCommit(uint8_t confirm[32]) override;
     bool migrationRetire(const uint8_t mid[16], const uint8_t imported[32], uint8_t retired[32], const char*& reason) override;
-    bool migrationActivate(const uint8_t mid[16], const uint8_t retired[32], bool& duplicate, const char*& reason) override;
+    bool migrationActivate(const uint8_t mid[16], const uint8_t* retired, bool forced,
+                           bool& duplicate, const char*& reason) override;
+    bool migrationAbortTarget(const uint8_t mid[16], const uint8_t* eph, uint8_t confirm[32],
+                              bool& hasConfirm, bool& duplicate, const char*& reason) override;
+    bool migrationAbortSource(const uint8_t mid[16], const uint8_t* confirm, bool forced,
+                              bool& duplicate, const char*& reason) override;
     bool announce() override;
     bool destroy() override;
     void configChanged(bool roleChanged) override;
@@ -440,7 +447,9 @@ void applySilence() {
     const bool migrationLocked = !migrationBarrier.permitsTransmit();
     bench.silence = mode != store::Silence::OFF || migrationLocked;
     bench.silenceException = mode == store::Silence::EXCEPTION && !migrationLocked;
-    rnsnode::setSilence(mode == store::Silence::EXCEPTION ? rnsnode::Silence::EXCEPTION : bench.silence ? rnsnode::Silence::FULL : rnsnode::Silence::OFF);
+    rnsnode::setSilence(migrationLocked ? rnsnode::Silence::FULL :
+                        mode == store::Silence::EXCEPTION ? rnsnode::Silence::EXCEPTION :
+                        bench.silence ? rnsnode::Silence::FULL : rnsnode::Silence::OFF);
     // Datagram przyjęty przed ciszą albo dla innego wyjątku nie wychodzi: przy wyjątku łącze przepuszcza
     // każdy datagram stosu, więc ruch sprzed zmiany (przekazywany, ogłoszenie) odpada tu, nie w łączu.
     static store::Silence lastMode = store::Silence::OFF;
@@ -555,6 +564,9 @@ void wipeStack() {
 // station follows the same frozen boot path before any store or clock writes.
 void freezeMigration() {
     applySilence();
+    bench.dropLinkTx();
+    if (wiciShelter) wiciShelter->cancelOwn();
+    rnsnode::dropQueue();
     bench.stop();
     wipeStack();
     wiciActive = false;
@@ -721,6 +733,8 @@ void pollPanel(uint32_t now) {
 bool BenchHost::silenceSwitch() { return switchSilence; }
 
 static_assert(static_cast<int>(usbproto::Question::SILENCE_EXCEPTION) == static_cast<int>(ui::Question::SILENCE_EXCEPTION), "pytania USB i ekranu");
+static_assert(static_cast<int>(usbproto::Question::MIGRATION_FORCE_ABORT) == static_cast<int>(ui::Question::MIGRATION_FORCE_ABORT),
+              "migration questions match the screen model");
 void BenchHost::confirmBegin(usbproto::Question question, const char* detail) {
     screenModel.ask(static_cast<ui::Question>(question), detail);
     screenChanged();
@@ -764,9 +778,34 @@ void BenchHost::migrationDetails(char* eph, size_t ephSize, char* package, size_
         uint8_t publicKey[32];
         if (migration_crypto::publicKey(record.privateKey, publicKey)) hexstr::encode(publicKey, 32, eph);
     }
-    uint8_t any = 0;
-    for (uint8_t byte : record.packageHash) any |= byte;
-    if (any && packageSize >= 65) hexstr::encode(record.packageHash, 32, package);
+    if (record.phase == migration_state::Phase::EXPORT || record.phase == migration_state::Phase::IMPORTING ||
+        record.phase == migration_state::Phase::IMPORTED || record.phase == migration_state::Phase::RETIRED) {
+        uint8_t any = 0;
+        for (uint8_t byte : record.packageHash) any |= byte;
+        if (any && packageSize >= 65) hexstr::encode(record.packageHash, 32, package);
+    }
+}
+
+void BenchHost::migrationConfirmation(char* confirm, size_t size) {
+    if (size) confirm[0] = '\0';
+    if (!migrationBarrier.ready() || size < 65) return;
+    const migration_state::Record& record = migrationBarrier.record();
+    if (record.phase == migration_state::Phase::NONE && record.flags == 2) {
+        uint8_t any = 0;
+        for (uint8_t byte : record.packageHash) any |= byte;
+        if (any) hexstr::encode(record.packageHash, 32, confirm);
+        return;
+    }
+    const char* kind = record.phase == migration_state::Phase::IMPORTED ? "imported" :
+                       record.phase == migration_state::Phase::RETIRED ? "retired" : nullptr;
+    if (!kind) return;
+    uint8_t confirmKey[32], packageKey[32], result[32];
+    if (!migration_crypto::derive(record.privateKey, record.peerPublic, record.mid, confirmKey, packageKey)) return;
+    drbg::wipe(packageKey, sizeof(packageKey));
+    if (migration_crypto::confirmation(confirmKey, kind, record.mid, record.packageHash, result))
+        hexstr::encode(result, sizeof(result), confirm);
+    drbg::wipe(result, sizeof(result));
+    drbg::wipe(confirmKey, sizeof(confirmKey));
 }
 
 bool BenchHost::migrationReceiveKey(uint8_t mid[16], uint8_t publicKey[32], uint8_t fingerprint[8]) {
@@ -776,14 +815,16 @@ bool BenchHost::migrationReceiveKey(uint8_t mid[16], uint8_t publicKey[32], uint
         // A fresh unconfigured identity is disposable; the imported identity
         // replaces it. Any configured station or retained application data is refused.
         if (!storeOk || stationStore.configured() || stationStore.requestCount() ||
-            stationStore.messageCount() || !entropyHealthy) return false;
+            stationStore.messageCount() || !entropyHealthy || bench.debtRemainingMs() != 0) return false;
         record.phase = migration_state::Phase::RECEIVING;
         record.flags = counterS();  // target clock before the source image overwrites the journal
         stationRandom(record.mid, sizeof(record.mid));
         stationRandom(record.privateKey, sizeof(record.privateKey));
         if (!migrationBarrier.save(record)) return false;
         freezeMigration();
-    } else if (record.phase != migration_state::Phase::RECEIVING) return false;
+    } else if (record.phase != migration_state::Phase::RECEIVING &&
+               record.phase != migration_state::Phase::IMPORTING &&
+               record.phase != migration_state::Phase::IMPORTED) return false;
     if (!migration_crypto::publicKey(record.privateKey, publicKey)) return false;
     memcpy(mid, record.mid, sizeof(record.mid));
     sha2::Hash digest;
@@ -899,6 +940,7 @@ bool BenchHost::migrationRetire(const uint8_t mid[16], const uint8_t imported[32
         record.phase = migration_state::Phase::RETIRED;
         if (!migrationBarrier.save(record)) { reason = "memory"; return false; }
     }
+    migrationExporter.clear();
     // This is safe to retry after a power cut: the RETIRED marker was committed
     // before the first byte of identity or application data is erased.
     const bool erased = stationStore.destroy(true);
@@ -906,26 +948,127 @@ bool BenchHost::migrationRetire(const uint8_t mid[16], const uint8_t imported[32
     return erased;
 }
 
-bool BenchHost::migrationActivate(const uint8_t mid[16], const uint8_t retired[32], bool& duplicate, const char*& reason) {
+bool BenchHost::migrationActivate(const uint8_t mid[16], const uint8_t* retired, bool forced,
+                                  bool& duplicate, const char*& reason) {
     reason = "migration";
     duplicate = false;
     if (!migrationBarrier.ready()) return false;
     migration_state::Record record = migrationBarrier.record();
     if (memcmp(record.mid, mid, sizeof(record.mid))) return false;
-    if (record.phase == migration_state::Phase::NONE) { duplicate = true; return true; }
+    if (record.phase == migration_state::Phase::NONE) {
+        if (record.flags != 1) return false;
+        duplicate = true; return true;
+    }
     if (record.phase != migration_state::Phase::IMPORTED) return false;
-    uint8_t confirmKey[32], packageKey[32];
-    if (!migration_crypto::derive(record.privateKey, record.peerPublic, record.mid, confirmKey, packageKey)) return false;
-    drbg::wipe(packageKey, sizeof(packageKey));
-    const bool valid = migration_crypto::verifyConfirmation(confirmKey, "retired", record.mid, record.packageHash, retired);
-    drbg::wipe(confirmKey, sizeof(confirmKey));
-    if (!valid) { reason = "signature"; return false; }
+    if (!forced) {
+        uint8_t confirmKey[32], packageKey[32];
+        if (!retired || !migration_crypto::derive(record.privateKey, record.peerPublic, record.mid, confirmKey, packageKey)) return false;
+        drbg::wipe(packageKey, sizeof(packageKey));
+        const bool valid = migration_crypto::verifyConfirmation(confirmKey, "retired", record.mid, record.packageHash, retired);
+        drbg::wipe(confirmKey, sizeof(confirmKey));
+        if (!valid) { reason = "signature"; return false; }
+    }
     if (!stationJournal.begin() || !stationJournal.adoptClock(record.flags)) { reason = "memory"; return false; }
+    if (forced && !stationJournal.writeEvent(stationJournal.clock().a, "migration forced activation")) {
+        reason = "memory"; return false;
+    }
     migration_state::Record done = {};
     done.phase = migration_state::Phase::NONE;
     memcpy(done.mid, mid, sizeof(done.mid));
+    done.flags = 1;  // last completed activation, for a repeated USB request
     if (!migrationBarrier.save(done)) { reason = "memory"; return false; }
     restartSoon("migration activated: restart");
+    return true;
+}
+
+bool BenchHost::migrationAbortTarget(const uint8_t mid[16], const uint8_t* eph, uint8_t confirm[32],
+                                    bool& hasConfirm, bool& duplicate, const char*& reason) {
+    reason = "migration";
+    hasConfirm = duplicate = false;
+    if (!migrationBarrier.ready()) return false;
+    const migration_state::Record record = migrationBarrier.record();
+    if (memcmp(record.mid, mid, sizeof(record.mid))) return false;
+    if (record.phase == migration_state::Phase::NONE) {
+        if (record.flags != 2) return false;
+        duplicate = true;
+        memcpy(confirm, record.packageHash, 32);
+        for (uint8_t byte : record.packageHash) hasConfirm |= byte != 0;
+        return true;
+    }
+    if (record.phase == migration_state::Phase::ABORTED) {
+        uint8_t any = 0;
+        for (uint8_t byte : record.privateKey) any |= byte;
+        if (any) return false;  // source recovery marker
+        memcpy(confirm, record.packageHash, 32);
+        for (uint8_t byte : record.packageHash) hasConfirm |= byte != 0;
+        duplicate = true;
+    } else {
+        if (record.phase != migration_state::Phase::RECEIVING && record.phase != migration_state::Phase::IMPORTING &&
+            record.phase != migration_state::Phase::IMPORTED) return false;
+        if (!eph && record.phase != migration_state::Phase::RECEIVING) return false;
+        if (eph) {
+            uint8_t any = 0;
+            for (uint8_t byte : record.peerPublic) any |= byte;
+            if (any && memcmp(record.peerPublic, eph, 32)) { reason = "signature"; return false; }
+            uint8_t confirmKey[32], packageKey[32];
+            if (!migration_crypto::derive(record.privateKey, eph, mid, confirmKey, packageKey)) { reason = "signature"; return false; }
+            drbg::wipe(packageKey, sizeof(packageKey));
+            hasConfirm = migration_crypto::confirmation(confirmKey, "aborted", mid, record.packageHash, confirm);
+            drbg::wipe(confirmKey, sizeof(confirmKey));
+            if (!hasConfirm) return false;
+        }
+        if (!migration_image::eraseTarget(memory)) { reason = "memory"; return false; }
+        migration_state::Record aborted = {};
+        aborted.phase = migration_state::Phase::ABORTED;
+        memcpy(aborted.mid, mid, sizeof(aborted.mid));
+        if (hasConfirm) memcpy(aborted.packageHash, confirm, sizeof(aborted.packageHash));
+        if (!migrationBarrier.save(aborted)) { reason = "memory"; return false; }
+    }
+    migration_state::Record done = migrationBarrier.record();
+    done.phase = migration_state::Phase::NONE;
+    done.flags = 2;  // last target abort; retained HMAC makes reply idempotent
+    if (!migrationBarrier.save(done)) { reason = "memory"; return false; }
+    restartSoon("migration target aborted: restart");
+    return true;
+}
+
+bool BenchHost::migrationAbortSource(const uint8_t mid[16], const uint8_t* confirm, bool forced,
+                                     bool& duplicate, const char*& reason) {
+    reason = "migration";
+    duplicate = false;
+    if (!migrationBarrier.ready()) return false;
+    migration_state::Record record = migrationBarrier.record();
+    if (memcmp(record.mid, mid, sizeof(record.mid))) return false;
+    if (record.phase == migration_state::Phase::NONE) {
+        if (record.flags != 3) return false;
+        duplicate = true; return true;
+    }
+    if (record.phase != migration_state::Phase::EXPORT && record.phase != migration_state::Phase::ABORTED) return false;
+    uint8_t any = 0;
+    for (uint8_t byte : record.privateKey) any |= byte;
+    if (!any) return false;
+    if (!forced) {
+        uint8_t confirmKey[32], packageKey[32];
+        if (!confirm || !migration_crypto::derive(record.privateKey, record.peerPublic, mid, confirmKey, packageKey)) return false;
+        drbg::wipe(packageKey, sizeof(packageKey));
+        const bool valid = migration_crypto::verifyConfirmation(confirmKey, "aborted", mid, record.packageHash, confirm);
+        drbg::wipe(confirmKey, sizeof(confirmKey));
+        if (!valid) { reason = "signature"; return false; }
+    }
+    if (record.phase == migration_state::Phase::EXPORT) {
+        record.phase = migration_state::Phase::ABORTED;
+        if (!migrationBarrier.save(record)) { reason = "memory"; return false; }
+    }
+    migrationExporter.clear();
+    if (forced && !stationJournal.writeEvent(stationJournal.clock().a, "migration forced source restore")) {
+        reason = "memory"; return false;
+    }
+    migration_state::Record done = {};
+    done.phase = migration_state::Phase::NONE;
+    done.flags = 3;  // last source abort
+    memcpy(done.mid, mid, sizeof(done.mid));
+    if (!migrationBarrier.save(done)) { reason = "memory"; return false; }
+    restartSoon("migration source aborted: restart");
     return true;
 }
 

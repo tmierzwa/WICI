@@ -19,9 +19,10 @@ from . import configdoc, serialport
 CONTRACT = 2
 LINE_MAX = 1024
 PART_MAX = 512
+MIGRATION_PACKAGE_BYTES = 101 + 512 * (512 + 16)
 TIMEOUT = 3          # odpowiedź na zwykłe polecenie
 CONFIRM_TIMEOUT = 35  # odpowiedź końcowa po `pending` (przycisk na stacji w ciągu 30 s)
-COMMIT_TIMEOUT = {"configure": 10, "import": 10, "firmware": 60}
+COMMIT_TIMEOUT = {"configure": 10, "import": 60, "firmware": 60}
 HELLO_WAIT = 2.5
 HELLO_WAIT_NEW = 8    # nowy port czeka na `hello` do 8 s od pojawienia się: stacja może jeszcze startować
 REOPEN_DELAY = 0.5    # stacja zauważa zamknięcie portu (DTR) dopiero w pętli głównej
@@ -181,7 +182,7 @@ class Link:
             reply = self.request("xfer_part", xfer=xfer, offset=offset, data=base64.b64encode(part).decode("ascii"))
             with _reply_format():
                 after = int(reply.get("next", offset + len(part)))
-            if not offset < after <= len(data):
+            if after != offset + len(part):
                 raise ProtocolError(f"transfer stalled at {offset}")   # `next` musi rosnąć, inaczej pętla bez końca
             offset = after
         return self.request("xfer_commit", timeout=COMMIT_TIMEOUT.get(op, TIMEOUT), xfer=xfer)
@@ -190,6 +191,11 @@ class Link:
         begin = self.request("xfer_begin", op=op, **extra)
         with _reply_format():
             xfer, size, digest = str(begin["xfer"]), int(begin["size"]), str(begin["sha256"])
+        expected_limit = {"config_get": configdoc.DOC_MAX, "export": MIGRATION_PACKAGE_BYTES}.get(op)
+        if (expected_limit is None or size <= 0 or size > expected_limit or (op == "export" and size != expected_limit) or \
+                len(xfer) != 8 or any(c not in "0123456789abcdef" for c in xfer) or \
+                len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest)):
+            raise ProtocolError("invalid transfer header")
         data = b""
         while len(data) < size:
             reply = self.request("xfer_read", xfer=xfer, offset=len(data), length=min(PART_MAX, size - len(data)))

@@ -9,10 +9,16 @@
 
 namespace migration_package {
 
-Exporter::~Exporter() { clean(key_, sizeof(key_)); }
+Exporter::~Exporter() { clear(); }
+
+void Exporter::clear() {
+    ready_ = false;
+    clean(key_, sizeof(key_));
+    clean(header_, sizeof(header_));
+}
 
 bool Exporter::begin(const migration_state::Record& record) {
-    ready_ = false;
+    clear();
     if (record.phase != migration_state::Phase::EXPORT || record.snapshotSize != migration_image::SIZE)
         return false;
     uint8_t actual[32], publicKey[32], confirmKey[32];

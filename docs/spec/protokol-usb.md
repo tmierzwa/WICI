@@ -271,8 +271,8 @@ PRZENIEŚ STACJĘ przenosi tożsamość, licznik czasu pracy, konfigurację, rej
 
 | `step` | Stacja | Pola | Odpowiedź |
 |---|---|---|---|
-| `receive_key` | docelowa | brak | `ok` z `mid`, `key`, `fingerprint`; powtórzenie w stanie `receiving` zwraca te same wartości |
-| `status` | każda | brak | `ok` z `migration`, `mid`, `eph` (źródłowa w stanie `export`), `package` (skrót paczki albo pusty) |
+| `receive_key` | docelowa | brak | `ok` z `mid`, `key`, `fingerprint`; powtórzenie w stanach `receiving`, `importing` i `imported` zwraca te same wartości |
+| `status` | każda | brak | `ok` z `migration`, `mid`, `eph` (źródłowa w stanie `export` lub `retired`), `package` (skrót jawnej migawki albo pusty), `confirm` (w stanach `imported` i `retired` do wznowienia po utracie odpowiedzi) |
 | `retire` | źródłowa | `mid`, `confirm` | `ok` z `confirm` |
 | `activate` | docelowa | `mid` i `confirm` albo `"forced":true` | przy `forced` najpierw `pending`; `ok`; stacja pamięta `mid` ostatniego zakończonego przeniesienia, więc powtórzenie daje `ok` z `"duplicate":true` |
 | `abort` | docelowa | `mid`, `eph` (pusty przed krokiem 2) | przy stanie `imported` najpierw `pending`; `ok` z `confirm` = potwierdzenie „aborted”, a przy pustym `eph` `ok` bez `confirm`. Stacja zapisuje w FRAM wynik (`mid`, `confirm`) w tej samej transakcji, w której usuwa dane importu i klucz prywatny przeniesienia, więc ponowiony `abort` z tym samym `mid` zwraca to samo potwierdzenie |
@@ -294,7 +294,9 @@ Jawna migawka ma dokładnie 262 144 B: pierwsze 4096 B FRAM (dług ciszy, zegar,
 | źródłowa uległa awarii po kroku 3 | `activate` z `"forced":true` na docelowej, z potwierdzeniem przyciskiem OK na niej i wpisem w dzienniku zdarzeń; osoba utrzymująca system odłącza źródłową od anteny i zasilania, a przy ponownym uruchomieniu wykonuje na niej ZNISZCZ DANE |
 | po kroku 4, przed 5 | powtórzyć krok 5 (potwierdzenie „retired” zapisuje źródłowa); źródłowa w stanie `retired` nie przyjmuje `abort`, a laptop nie wysyła `abort` do docelowej, gdy `status` źródłowej podaje `retired` |
 
-Źródłowa w stanie `export` albo `retired` i docelowa w stanie `imported` pokazują na ekranie `tryb_przygotowania` i nie wychodzą z trybu przygotowania, dopóki operacja się nie zakończy albo nie zostanie wycofana. Uszkodzonej stacji nie da się przenieść: stacja zapasowa dostaje nową tożsamość, a stanowisko odbiorcze zmienia listę zaufanych stacji ([model zaufania](oprogramowanie.md#model-zaufania-i-kluczy)).
+Źródłowa w stanie `export` albo `retired` i docelowa w stanie `imported` pokazują na ekranie `tryb_przygotowania` i nie wychodzą z trybu przygotowania, dopóki operacja się nie zakończy albo nie zostanie wycofana. Pusta docelowa może rozpocząć `receive_key` dopiero po wygaśnięciu własnego długu ciszy; wycofanie importu czyści cały jej obraz FRAM poza znacznikiem przeniesienia. Uszkodzonej stacji nie da się przenieść: stacja zapasowa dostaje nową tożsamość, a stanowisko odbiorcze zmienia listę zaufanych stacji ([model zaufania](oprogramowanie.md#model-zaufania-i-kluczy)).
+
+Laptop uruchamia zwykłe przeniesienie poleceniem `python -m wici --migrate-source-port PORT --migrate-target-port PORT` (z pakietu USB: `python app/wici.pyz` z tymi samymi opcjami). Polecenie czyta trwałe stany obu stacji i można je uruchomić ponownie po zerwaniu przewodu. Przy niepewnym stanie nie wykonuje samo wycofania ani wymuszonej aktywacji; wymuszone kroki wymagają osobnego potwierdzenia na ekranie stacji.
 
 **Baza laptopa** przechodzi osobno, przez zaszyfrowaną kopię na pamięci USB zestawu, zapisywaną w tle po każdej migawce na dysku ([pakiet USB](oprogramowanie.md#pakiet-usb)). Klucz danych jest opakowany osobno dla każdego konta (PBKDF2 z pliku na pamięci USB i hasła konta) oraz kluczem z hasła odtworzenia (co najmniej 6 słów z listy, 72 bity, PBKDF2), które leży w kopercie przy stacji razem z hasłami panelu. Na nowym komputerze aplikacja otwiera kopię logowaniem gospodarza albo zastępcy; hasło odtworzenia jest potrzebne, gdy plik kont jest utracony lub uszkodzony, a kopia jest cała. Po jego użyciu osoba utrzymująca system zmienia to hasło. Bez kopii bazy nowy laptop odtwarza stan zgłoszeń SA1 migawką ze stacji; tracone są tylko dane mieszkańców i tokeny strony.
 

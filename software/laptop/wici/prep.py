@@ -26,8 +26,8 @@ REASONS = {
     "not_confirmed": "Nie potwierdzono przyciskiem na stacji w ciągu 30 s.",
     "contract": "Stacja ma niezgodną wersję oprogramowania.",
     "unknown_type": "Ta wersja oprogramowania stacji nie zna tego polecenia.",
-    # Odmowa importu, eksportu i `migrate`: PRZENIEŚ STACJĘ ta wersja oprogramowania stacji jeszcze nie ma (F107).
-    "migration": "Ta wersja oprogramowania stacji nie obsługuje przenoszenia (PRZENIEŚ STACJĘ).",
+    "migration": "Stacja odrzuciła ten krok przeniesienia. Sprawdź stan obu stacji.",
+    "signature": "Potwierdzenie przeniesienia nie pasuje do tej stacji.",
 }
 # Pola transferu i wiersza, nie dokumentu: dane nie dotarły w całości albo w kolejności.
 TRANSPORT = {"xfer", "offset", "data", "sha256", "op", "json"}

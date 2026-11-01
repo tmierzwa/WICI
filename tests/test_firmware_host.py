@@ -423,8 +423,9 @@ struct FakeHost : usbproto::Host {
         snprintf(mid, midSize, "%s", strcmp(migrationName, "none") ? "00112233445566778899aabbccddeeff" : "");
     }
     bool migrationReceiveKey(uint8_t mid[16], uint8_t key[32], uint8_t fingerprint[8]) override {
-        if (strcmp(migrationName, "none") && strcmp(migrationName, "receiving")) return false;
-        snprintf(migrationName, sizeof(migrationName), "receiving");
+        if (strcmp(migrationName, "none") && strcmp(migrationName, "receiving") &&
+            strcmp(migrationName, "importing") && strcmp(migrationName, "imported")) return false;
+        if (!strcmp(migrationName, "none")) snprintf(migrationName, sizeof(migrationName), "receiving");
         for (size_t i = 0; i < 16; ++i) mid[i] = static_cast<uint8_t>(i * 0x11);
         for (size_t i = 0; i < 32; ++i) key[i] = static_cast<uint8_t>(i);
         for (size_t i = 0; i < 8; ++i) fingerprint[i] = static_cast<uint8_t>(i + 32);
@@ -466,6 +467,11 @@ struct FakeHost : usbproto::Host {
         snprintf(migrationName, sizeof(migrationName), "imported");
         return true;
     }
+    void migrationConfirmation(char* out, size_t size) override {
+        if (!strcmp(migrationName, "imported")) snprintf(out, size, "%064x", 0xaaaa);
+        else if (!strcmp(migrationName, "retired")) snprintf(out, size, "%064x", 0xbbbb);
+        else if (size) out[0] = '\0';
+    }
     bool migrationRetire(const uint8_t mid[16], const uint8_t imported[32], uint8_t retired[32], const char*& reason) override {
         uint8_t expected[16];
         for (size_t i = 0; i < 16; ++i) expected[i] = static_cast<uint8_t>(i * 0x11);
@@ -477,13 +483,33 @@ struct FakeHost : usbproto::Host {
         memset(retired, 0xbb, 32);
         return true;
     }
-    bool migrationActivate(const uint8_t mid[16], const uint8_t retired[32], bool& duplicate, const char*& reason) override {
+    bool migrationActivate(const uint8_t mid[16], const uint8_t* retired, bool forced,
+                           bool& duplicate, const char*& reason) override {
         uint8_t expected[16];
         for (size_t i = 0; i < 16; ++i) expected[i] = static_cast<uint8_t>(i * 0x11);
         reason = "migration";
         if ((strcmp(migrationName, "imported") && strcmp(migrationName, "none")) || memcmp(mid, expected, 16)) return false;
-        if (retired[0] != 0xbb) { reason = "signature"; return false; }
+        if (!forced && (!retired || retired[0] != 0xbb)) { reason = "signature"; return false; }
         duplicate = !strcmp(migrationName, "none");
+        snprintf(migrationName, sizeof(migrationName), "none");
+        return true;
+    }
+    bool migrationAbortTarget(const uint8_t[16], const uint8_t* eph, uint8_t confirm[32],
+                              bool& hasConfirm, bool& duplicate, const char*& reason) override {
+        reason = "migration";
+        if (strcmp(migrationName, "receiving") && strcmp(migrationName, "importing") && strcmp(migrationName, "imported")) return false;
+        hasConfirm = eph != nullptr;
+        duplicate = false;
+        if (hasConfirm) memset(confirm, 0xcc, 32);
+        snprintf(migrationName, sizeof(migrationName), "none");
+        return true;
+    }
+    bool migrationAbortSource(const uint8_t[16], const uint8_t* confirm, bool forced,
+                              bool& duplicate, const char*& reason) override {
+        reason = "migration";
+        if (strcmp(migrationName, "export")) return false;
+        if (!forced && (!confirm || confirm[0] != 0xcc)) { reason = "signature"; return false; }
+        duplicate = false;
         snprintf(migrationName, sizeof(migrationName), "none");
         return true;
     }
@@ -2099,6 +2125,13 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual((replies[2]["mid"], replies[2]["key"]), (replies[1]["mid"], replies[1]["key"]))
         self.assertEqual((replies[3]["migration"], replies[3]["mid"]), ("receiving", replies[1]["mid"]))
 
+    def test_usb_imported_target_exposes_resumable_public_key_and_confirmation(self):
+        replies = self.replies(self.world(["migration imported", "connect",
+            'usb {"usb":2,"seq":1,"type":"migrate","step":"status"}',
+            'usb {"usb":2,"seq":2,"type":"migrate","step":"receive_key"}']))
+        self.assertEqual(replies[1]["confirm"], f"{0xaaaa:064x}")
+        self.assertEqual(replies[2]["key"], bytes(range(32)).hex())
+
     def test_usb_export_requires_button_and_resumes_with_same_transfer_data(self):
         mid = "00112233445566778899aabbccddeeff"
         key = (b"\x01" * 32).hex()
@@ -2118,6 +2151,16 @@ class HostUnitTests(unittest.TestCase):
         resumed = self.replies(resumed_out)
         self.assertEqual(resumed[1]["sha256"], "5a" * 32)
         self.assertEqual((resumed[2]["type"], base64.b64decode(resumed[2]["data"])), ("data", bytes(range(4))))
+
+    def test_usb_closes_export_reader_when_source_retires(self):
+        mid = "00112233445566778899aabbccddeeff"
+        u = self.Lines()
+        first = ["migration export", "connect", u("xfer_begin", op="export", mid=mid, target_key="01" * 32)]
+        xfer = self.replies(self.world(first))[1]["xfer"]
+        out = self.world(first + ["migration retired", "upoll", u("xfer_read", xfer=xfer, offset=0, length=4)])
+        replies = self.replies(out)
+        self.assertEqual(replies[1]["type"], "ok")
+        self.assertEqual((replies[-1]["type"], replies[-1]["reason"]), ("rejected", "invalid"))
 
     def test_usb_import_accepts_ordered_parts_and_rejects_replay_change(self):
         mid = "00112233445566778899aabbccddeeff"
@@ -2149,6 +2192,36 @@ class HostUnitTests(unittest.TestCase):
             'usb {"usb":2,"seq":3,"type":"migrate","step":"activate","mid":"' + mid + '","confirm":"' + "bb" * 32 + '"}']))
         self.assertEqual([(r["type"], r.get("reason"), r.get("duplicate")) for r in target[1:]],
                          [("rejected", "signature", None), ("ok", None, False), ("ok", None, True)])
+
+    def test_usb_abort_imported_target_requires_button_before_source_recovers(self):
+        mid = "00112233445566778899aabbccddeeff"
+        eph = "01" * 32
+        u = self.Lines()
+        target = self.replies(self.world(["migration imported", "connect",
+            u("migrate", step="abort", mid=mid, eph=eph), "K BACK 0", "upoll",
+            u("migrate", step="abort", mid=mid, eph=eph), "K OK 0", "upoll"]))
+        self.assertEqual([(r["type"], r.get("reason")) for r in target[1:]],
+                         [("pending", None), ("rejected", "not_confirmed"), ("pending", None), ("ok", None)])
+        self.assertEqual(target[-1]["confirm"], "cc" * 32)
+        source = self.replies(self.world(["migration export", "connect",
+            'usb {"usb":2,"seq":1,"type":"migrate","step":"abort","mid":"' + mid + '","confirm":"' + "cc" * 32 + '"}']))
+        self.assertEqual((source[-1]["type"], source[-1]["duplicate"]), ("ok", False))
+
+    def test_usb_forced_recovery_requires_button_and_rejects_extra_fields(self):
+        mid = "00112233445566778899aabbccddeeff"
+        u = self.Lines()
+        target = self.replies(self.world(["migration imported", "connect",
+            u("migrate", step="activate", mid=mid, forced=True, confirm="bb" * 32),
+            u("migrate", step="activate", mid=mid, forced=True), "K BACK 0", "upoll",
+            u("migrate", step="activate", mid=mid, forced=True), "K OK 0", "upoll"]))
+        self.assertEqual([(r["type"], r.get("reason")) for r in target[1:]],
+                         [("rejected", "invalid"), ("pending", None), ("rejected", "not_confirmed"),
+                          ("pending", None), ("ok", None)])
+        source = self.replies(self.world(["migration export", "connect",
+            'usb {"usb":2,"seq":1,"type":"migrate","step":"abort","mid":"' + mid + '","forced":true}',
+            "K OK 0", "upoll"]))
+        self.assertEqual([(r["type"], r.get("duplicate")) for r in source[1:]],
+                         [("pending", None), ("ok", False)])
 
     def test_usb_hello_seq_fields_and_rejections(self):
         def line(seq, type_, usb=2, **fields):
@@ -3054,7 +3127,7 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual(self.screens(out)[-1][0], "alarm")
 
     def test_confirm_question_and_node_menu(self):
-        out = self.ui(["L 0", "ask 0", "R", "answer", "K OK 0", "answer", "R", "ask 3", "K BACK 0", "answer", "ask 6 ABCD", "R",
+        out = self.ui(["L 0", "ask 0", "R", "answer", "K OK 0", "answer", "R", "ask 3", "K BACK 0", "answer", "ask 9 ABCD", "R",
                        "K OK 0", "answer", "ask 1", "dismiss", "answer", "R", "ask 4 0427", "R", "dismiss"])
         s = self.screens(out)
         self.assertEqual([x[0] for x in s], ["confirm", "main", "confirm", "main", "confirm"])

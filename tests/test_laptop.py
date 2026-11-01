@@ -518,7 +518,7 @@ class PrepTest(unittest.TestCase):
             self.assertIn("Wyślij ponownie", err.message)
             self.assertEqual((err.field, err.code), (None, f"invalid {detail}"))
         self.assertEqual(rejected("invalid", "addresses").message, "Stacja odrzuciła pole: adresy.")
-        self.assertIn("nie obsługuje przenoszenia", rejected("migration", "unsupported").message)
+        self.assertIn("odrzuciła ten krok przeniesienia", rejected("migration", "unsupported").message)
         self.assertEqual(rejected("invalid", ["x"]).code, "invalid")             # dziwny `detail` nie wywraca panelu
 
 
@@ -1580,9 +1580,9 @@ class PackageTest(unittest.TestCase):
         for p in self.PACKAGE.rglob("*.py"):
             rel = p.relative_to(self.PACKAGE)
             extra = {"RNS", "LXMF", "serial", "cryptography"} if (
-                "stanowisko" in rel.parts or rel.as_posix() == "envelope.py") else set()
-            if rel.as_posix() == "envelope.py":
-                self.assertFalse(build_usb.app_file("wici/envelope.py"))
+                "stanowisko" in rel.parts or rel.as_posix() in ("envelope.py", "migration_crypto.py")) else set()
+            if rel.as_posix() in ("envelope.py", "migration_crypto.py"):
+                self.assertFalse(build_usb.app_file(f"wici/{rel.as_posix()}"))
             for node in ast.walk(ast.parse(p.read_text(encoding="utf-8"))):
                 names = [a.name for a in node.names] if isinstance(node, ast.Import) else \
                     [node.module] if isinstance(node, ast.ImportFrom) and node.level == 0 else []

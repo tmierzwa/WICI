@@ -26,6 +26,7 @@ public:
     bool begin(const migration_state::Record& record);
     bool read(uint32_t offset, uint8_t* out, size_t length);
     bool digest(uint8_t out[32]);
+    void clear();
     bool ready() const { return ready_; }
 
 private:

@@ -18,6 +18,7 @@ void Host::migrationDetails(char* eph, size_t ephSize, char* package, size_t pac
     if (ephSize) eph[0] = '\0';
     if (packageSize) package[0] = '\0';
 }
+void Host::migrationConfirmation(char* confirm, size_t size) { if (size) confirm[0] = '\0'; }
 bool Host::migrationReceiveKey(uint8_t[16], uint8_t[32], uint8_t[8]) { return false; }
 bool Host::migrationExport(const uint8_t[16], const uint8_t[32], uint8_t[32]) { return false; }
 bool Host::migrationExportRead(uint32_t, uint8_t*, size_t) { return false; }
@@ -25,7 +26,13 @@ bool Host::migrationImportBegin(const uint8_t[16], const uint8_t[32]) { return f
 bool Host::migrationImportPart(uint32_t, const uint8_t*, size_t, uint32_t&) { return false; }
 bool Host::migrationImportCommit(uint8_t[32]) { return false; }
 bool Host::migrationRetire(const uint8_t[16], const uint8_t[32], uint8_t[32], const char*& reason) { reason = "migration"; return false; }
-bool Host::migrationActivate(const uint8_t[16], const uint8_t[32], bool&, const char*& reason) { reason = "migration"; return false; }
+bool Host::migrationActivate(const uint8_t[16], const uint8_t*, bool, bool&, const char*& reason) { reason = "migration"; return false; }
+bool Host::migrationAbortTarget(const uint8_t[16], const uint8_t*, uint8_t[32], bool&, bool&, const char*& reason) {
+    reason = "migration"; return false;
+}
+bool Host::migrationAbortSource(const uint8_t[16], const uint8_t*, bool, bool&, const char*& reason) {
+    reason = "migration"; return false;
+}
 
 namespace {
 
@@ -385,11 +392,11 @@ void Protocol::dispatch(const char* type, const json::Value& msg, int64_t seq, u
     else if (!strcmp(type, "xfer_read")) doXferRead(msg, seq, nowMs);
     else if (!strcmp(type, "xfer_commit")) doXferCommit(msg, seq);
     else if (!strcmp(type, "xfer_abort")) { xfer_ = Xfer(); send("ok", seq, ""); }
-    else if (!strcmp(type, "migrate")) doMigrate(msg, seq);
+    else if (!strcmp(type, "migrate")) doMigrate(msg, seq, nowMs);
     else rejected(seq, "unknown_type");
 }
 
-void Protocol::doMigrate(const json::Value& msg, int64_t seq) {
+void Protocol::doMigrate(const json::Value& msg, int64_t seq, uint32_t nowMs) {
     static const Command basic = {"migrate", PREP, {{"step", F::STR, true}}, 1};
     char bad[24], step[24];
     json::Value value;
@@ -398,11 +405,12 @@ void Protocol::doMigrate(const json::Value& msg, int64_t seq) {
     }
     if (!strcmp(step, "status")) {
         if (!checkFields(msg, basic, bad, sizeof(bad))) { rejected(seq, "invalid", bad); return; }
-        char phase[16], mid[33], eph[65], package[65], fields[230];
+        char phase[16], mid[33], eph[65], package[65], confirmation[65], fields[320];
         host_.migration(phase, sizeof(phase), mid, sizeof(mid));
         host_.migrationDetails(eph, sizeof(eph), package, sizeof(package));
-        snprintf(fields, sizeof(fields), "\"migration\":\"%s\",\"mid\":\"%s\",\"eph\":\"%s\",\"package\":\"%s\"",
-                 phase, mid, eph, package);
+        host_.migrationConfirmation(confirmation, sizeof(confirmation));
+        snprintf(fields, sizeof(fields), "\"migration\":\"%s\",\"mid\":\"%s\",\"eph\":\"%s\",\"package\":\"%s\",\"confirm\":\"%s\"",
+                 phase, mid, eph, package, confirmation);
         send("ok", seq, fields);
         return;
     }
@@ -422,7 +430,28 @@ void Protocol::doMigrate(const json::Value& msg, int64_t seq) {
     }
     static const Command confirmed = {"migrate", PREP, {{"step", F::STR, true}, {"mid", F::STR, true},
                                                           {"confirm", F::STR, true}}, 3};
+    static const Command forcedCommand = {"migrate", PREP, {{"step", F::STR, true}, {"mid", F::STR, true},
+                                                              {"forced", F::BOOL, true}}, 3};
     if (!strcmp(step, "retire") || !strcmp(step, "activate")) {
+        json::Value forcedValue;
+        if (!strcmp(step, "activate") && json::field(msg, "forced", forcedValue)) {
+            if (!checkFields(msg, forcedCommand, bad, sizeof(bad)) || forcedValue.kind != json::Kind::TRUE_) {
+                rejected(seq, "invalid", forcedValue.kind != json::Kind::TRUE_ ? "forced" : bad); return;
+            }
+            uint8_t mid[16];
+            if (!json::hexField(msg, "mid", mid, sizeof(mid))) { rejected(seq, "invalid", "mid"); return; }
+            char phase[16], currentMid[33];
+            host_.migration(phase, sizeof(phase), currentMid, sizeof(currentMid));
+            if (strcmp(phase, "imported")) { rejected(seq, "migration", "phase"); return; }
+            pending_ = Pending();
+            pending_.type = Pending::FORCE_ACTIVATE;
+            pending_.seq = seq;
+            pending_.sinceMs = nowMs;
+            memcpy(pending_.mid, mid, sizeof(mid));
+            host_.confirmBegin(Question::MIGRATION_FORCE_ACTIVATE, "");
+            send("pending", seq, "\"confirm_s\":30");
+            return;
+        }
         if (!checkFields(msg, confirmed, bad, sizeof(bad))) { rejected(seq, "invalid", bad); return; }
         uint8_t mid[16], candidate[32], result[32];
         if (!json::hexField(msg, "mid", mid, sizeof(mid))) { rejected(seq, "invalid", "mid"); return; }
@@ -431,7 +460,7 @@ void Protocol::doMigrate(const json::Value& msg, int64_t seq) {
         bool duplicate = false;
         const bool ok = !strcmp(step, "retire")
             ? host_.migrationRetire(mid, candidate, result, reason)
-            : host_.migrationActivate(mid, candidate, duplicate, reason);
+            : host_.migrationActivate(mid, candidate, false, duplicate, reason);
         if (!ok) { rejected(seq, reason); return; }
         char fields[100];
         if (!strcmp(step, "retire")) {
@@ -439,6 +468,74 @@ void Protocol::doMigrate(const json::Value& msg, int64_t seq) {
             hexstr::encode(result, sizeof(result), hex);
             snprintf(fields, sizeof(fields), "\"confirm\":\"%s\"", hex);
         } else snprintf(fields, sizeof(fields), "\"duplicate\":%s", duplicate ? "true" : "false");
+        send("ok", seq, fields);
+        return;
+    }
+    if (!strcmp(step, "abort")) {
+        static const Command target = {"migrate", PREP, {{"step", F::STR, true}, {"mid", F::STR, true},
+                                                     {"eph", F::STR, true}}, 3};
+        uint8_t mid[16], candidate[32] = {}, response[32] = {};
+        if (!json::hexField(msg, "mid", mid, sizeof(mid))) { rejected(seq, "invalid", "mid"); return; }
+        json::Value forcedValue;
+        if (json::field(msg, "forced", forcedValue)) {
+            if (!checkFields(msg, forcedCommand, bad, sizeof(bad)) || forcedValue.kind != json::Kind::TRUE_) {
+                rejected(seq, "invalid", forcedValue.kind != json::Kind::TRUE_ ? "forced" : bad); return;
+            }
+            char phase[16], currentMid[33];
+            host_.migration(phase, sizeof(phase), currentMid, sizeof(currentMid));
+            if (strcmp(phase, "export") && strcmp(phase, "aborted")) { rejected(seq, "migration", "phase"); return; }
+            pending_ = Pending();
+            pending_.type = Pending::FORCE_ABORT_SOURCE;
+            pending_.seq = seq;
+            pending_.sinceMs = nowMs;
+            memcpy(pending_.mid, mid, sizeof(mid));
+            host_.confirmBegin(Question::MIGRATION_FORCE_ABORT, "");
+            send("pending", seq, "\"confirm_s\":30");
+            return;
+        }
+        json::Value ephValue, confirmValue;
+        const bool hasEph = json::field(msg, "eph", ephValue);
+        const bool hasCandidate = json::field(msg, "confirm", confirmValue);
+        if (hasEph == hasCandidate) { rejected(seq, "invalid", hasEph ? "confirm" : "eph"); return; }
+        const char* reason = "migration";
+        bool duplicate = false, hasConfirm = false;
+        if (hasEph) {
+            if (!checkFields(msg, target, bad, sizeof(bad))) { rejected(seq, "invalid", bad); return; }
+            char ephText[65];
+            if (!json::string(ephValue, ephText, sizeof(ephText)) ||
+                (ephText[0] && !hexstr::decode(ephText, candidate, sizeof(candidate)))) {
+                rejected(seq, "invalid", "eph"); return;
+            }
+            char phase[16], currentMid[33];
+            host_.migration(phase, sizeof(phase), currentMid, sizeof(currentMid));
+            if (!strcmp(phase, "imported")) {
+                if (!ephText[0]) { rejected(seq, "invalid", "eph"); return; }
+                pending_ = Pending();
+                pending_.type = Pending::ABORT_TARGET;
+                pending_.seq = seq;
+                pending_.sinceMs = nowMs;
+                memcpy(pending_.mid, mid, 16);
+                pending_.hasEph = ephText[0] != '\0';
+                if (pending_.hasEph) memcpy(pending_.targetKey, candidate, 32);
+                host_.confirmBegin(Question::MIGRATION_ABORT, "");
+                send("pending", seq, "\"confirm_s\":30");
+                return;
+            }
+            if (!host_.migrationAbortTarget(mid, ephText[0] ? candidate : nullptr,
+                                            response, hasConfirm, duplicate, reason)) { rejected(seq, reason); return; }
+            char fields[110];
+            if (hasConfirm) {
+                char hex[65]; hexstr::encode(response, 32, hex);
+                snprintf(fields, sizeof(fields), "\"confirm\":\"%s\",\"duplicate\":%s", hex, duplicate ? "true" : "false");
+            } else snprintf(fields, sizeof(fields), "\"duplicate\":%s", duplicate ? "true" : "false");
+            send("ok", seq, fields);
+            return;
+        }
+        if (!checkFields(msg, confirmed, bad, sizeof(bad))) { rejected(seq, "invalid", bad); return; }
+        if (!json::hexField(msg, "confirm", candidate, sizeof(candidate))) { rejected(seq, "invalid", "confirm"); return; }
+        if (!host_.migrationAbortSource(mid, candidate, false, duplicate, reason)) { rejected(seq, reason); return; }
+        char fields[32];
+        snprintf(fields, sizeof(fields), "\"duplicate\":%s", duplicate ? "true" : "false");
         send("ok", seq, fields);
         return;
     }
@@ -852,6 +949,33 @@ void Protocol::finishPending(bool confirmed, uint32_t nowMs) {
             send("ok", p.seq, fields);
             return;
         }
+        case Pending::ABORT_TARGET: {
+            uint8_t confirmation[32];
+            bool hasConfirm = false, duplicate = false;
+            const char* reason = "migration";
+            if (!host_.migrationAbortTarget(p.mid, p.hasEph ? p.targetKey : nullptr,
+                                            confirmation, hasConfirm, duplicate, reason)) {
+                rejected(p.seq, reason); return;
+            }
+            if (hasConfirm) {
+                char hex[65]; hexstr::encode(confirmation, sizeof(confirmation), hex);
+                snprintf(fields, sizeof(fields), "\"confirm\":\"%s\",\"duplicate\":%s", hex, duplicate ? "true" : "false");
+            } else snprintf(fields, sizeof(fields), "\"duplicate\":%s", duplicate ? "true" : "false");
+            send("ok", p.seq, fields);
+            return;
+        }
+        case Pending::FORCE_ACTIVATE:
+        case Pending::FORCE_ABORT_SOURCE: {
+            bool duplicate = false;
+            const char* reason = "migration";
+            const bool ok = p.type == Pending::FORCE_ACTIVATE
+                ? host_.migrationActivate(p.mid, nullptr, true, duplicate, reason)
+                : host_.migrationAbortSource(p.mid, nullptr, true, duplicate, reason);
+            if (!ok) { rejected(p.seq, reason); return; }
+            snprintf(fields, sizeof(fields), "\"duplicate\":%s", duplicate ? "true" : "false");
+            send("ok", p.seq, fields);
+            return;
+        }
         case Pending::NONE: return;
     }
 }
@@ -1120,7 +1244,8 @@ void Protocol::poll(uint32_t nowMs) {
     if (migrationActive) {
         synced_ = false;
         snap_ = Snap();
-        if (xfer_.op != Xfer::EXPORT && xfer_.op != Xfer::IMPORT) xfer_ = Xfer();
+        if ((xfer_.op != Xfer::EXPORT || strcmp(migration, "export")) &&
+            (xfer_.op != Xfer::IMPORT || strcmp(migration, "importing"))) xfer_ = Xfer();
     }
     if (snap_.active) { continueSnapshot(); return; }   // migawka przed zdarzeniami; polecenia czekają
     // Odpowiedź przyciskiem i limit 30 s liczone zawsze, więc pytanie znika z ekranu także wtedy, gdy laptop

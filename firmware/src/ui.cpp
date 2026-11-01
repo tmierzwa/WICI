@@ -26,7 +26,9 @@ constexpr Id URGENCY_TEXTS[3] = {Id::PILNOSC_0, Id::PILNOSC_1, Id::PILNOSC_2};
 constexpr uint8_t SA1_REQUEST = 0, SA1_REPLY = 3, SA1_BULLETIN = 4, SA1_TEST = 5;
 // Teksty pytań poleceń USB i odcisku `card` według ui::Question.
 constexpr Id QUESTION_TEXTS[] = {Id::PYTANIE_CISZA_WLACZ, Id::PYTANIE_CISZA_WYLACZ, Id::PYTANIE_ZAMKNIJ, Id::PYTANIE_ZNISZCZ,
-                                 Id::PYTANIE_CISZA_WYJATEK, Id::PYTANIE_PRZENIES, Id::ODCISK_KLUCZA, Id::ODCISK_PRZENIESIENIA};
+                                 Id::PYTANIE_CISZA_WYJATEK, Id::PYTANIE_PRZENIES, Id::PYTANIE_ANULUJ_PRZENIES,
+                                 Id::PYTANIE_AKTYWUJ_BEZ_ZRODLA, Id::PYTANIE_ANULUJ_BEZ_CELU,
+                                 Id::ODCISK_KLUCZA, Id::ODCISK_PRZENIESIENIA};
 
 size_t utf8Bytes(const char* text, size_t chars) {
     // Długość w bajtach pierwszych `chars` znaków.

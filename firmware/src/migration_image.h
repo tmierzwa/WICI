@@ -28,5 +28,8 @@ bool digest(journal::Storage& memory, uint8_t out[32]);
 // On the target, erase local diagnostic history and route/identity caches after
 // the authenticated snapshot is complete, before publishing IMPORTED.
 bool clearLocalCaches(journal::Storage& memory);
+// Abort on a target can encounter a partially overwritten journal. Erase all
+// imported bytes without relying on Store::begin(), preserving only the barrier.
+bool eraseTarget(journal::Storage& memory);
 
 }  // namespace migration_image

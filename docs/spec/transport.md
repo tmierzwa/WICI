@@ -65,7 +65,7 @@ Narzut koperty: 25 B (9 B nagłówka i 16 B znacznika). Numery stacji są jawne.
 - Powtórka potwierdzana na skoku musi mieć bit przyjęcia w trwałym oknie. Licznik starszy niż okno jest odrzucany bez HACK, bo brak bitu nie dowodzi wcześniejszego przyjęcia; nowa intencja SA1 potrzebuje wtedy nowego licznika.
 - Deduplikacja SA1 po (nadawca, `id`, `revision`) zostaje. Koperta odrzuca powtórzenie pakietu, SA1 odrzuca ponowienie tej samej wiadomości.
 
-**PRZENIEŚ STACJĘ.** Paczka przeniesienia tożsamości musi zawierać parę kluczy koperty, dla każdej pary nadawczej zatwierdzoną granicę rezerwacji `ctr` oraz okna powtórzeń dla odbioru. Po imporcie stacja docelowa zaczyna nadawanie od przeniesionej granicy (nawet jeśli część zarezerwowanych wartości nie została użyta); nie zeruje licznika ani okien. Źródłowa przestaje nadawać przed utworzeniem paczki, zgodnie z [krokami przeniesienia](protokol-usb.md#przeniesienie-stacji). Brak któregokolwiek z tych pól albo niepewna granica blokuje aktywację z tą samą tożsamością; wymaga nowych kluczy i kart. Przed wdrożeniem D21 kontrakt przeniesienia w protokole USB trzeba rozszerzyć o te pola oraz próbę zaniku zasilania i wycofania operacji.
+**PRZENIEŚ STACJĘ.** Zaszyfrowana migawka 256 KiB obejmuje tożsamość, klucze koperty, zatwierdzone granice rezerwacji `ctr` i okna powtórzeń dla odbioru. Po imporcie stacja docelowa zaczyna nadawanie od przeniesionej granicy (nawet jeśli część zarezerwowanych wartości nie została użyta); nie zeruje licznika ani okien. Źródłowa przestaje nadawać przed utworzeniem paczki, zgodnie z [krokami przeniesienia](protokol-usb.md#przeniesienie-stacji). Brak któregokolwiek z tych pól albo niepewna granica blokuje aktywację z tą samą tożsamością; wymaga nowych kluczy i kart. Oprogramowanie obsługuje wznowienie po przerwaniu USB, wycofanie i trwałe oznaczenie wycofanej lub wyłączonej stacji. Próba zaniku zasilania na sprzęcie docelowym pozostaje warunkiem D21.
 
 **Odtworzenie stanowiska z kopii.** Starsza kopia SQLite może mieć niższą granicę rezerwacji `ctr` niż ostatnio użyta z tą samą tożsamością odbiorcy. Dopóki źródłowy nośnik nie przekaże nowszej granicy i okien powtórzeń, odtworzone stanowisko nie nadaje kopert pod tymi kluczami. Jeżeli granicy nie da się udowodnić, przygotowanie tworzy nowe tożsamości odbiorcy i nowe karty dla stacji. Próba wycofania kopii po wysłanej kopercie musi potwierdzić tę blokadę przed włączeniem nośnika D21.
 
@@ -191,8 +191,7 @@ uprawnienia do tej klasy. Przy czekającym K1 limit 25% dotyczy zachowawczo
 całego tranzytu i BEACON-ów. Odporność kolejki K1 na podrobione numery
 wymaga jeszcze wdrożenia.
 
-Pozostałe do zamknięcia D21: kontrakt PRZENIEŚ STACJĘ z granicami liczników i
-oknami powtórzeń, lista nośników stanowiska odbiorczego, sprzętowe próby rozsyłania awaryjnego, pomiar
+Pozostałe do zamknięcia D21: lista nośników stanowiska odbiorczego, odporność kolejki K1 na podrobione numery, sprzętowe próby rozsyłania awaryjnego, pomiar
 200 ms HACK, W10, „Wrogi węzeł”, zaniki zasilania oraz budżet energii. Dwie płytki
 XIAO ESP32-S3 + Wio SX1262 przeszły [próbę toru radia przy stole](../../hardware/radio-pair/evidence/table-2026-11-01.md)
 (100/100 w każdym kierunku) na programie diagnostycznym i

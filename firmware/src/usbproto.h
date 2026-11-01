@@ -9,8 +9,8 @@
 // Wyjście idzie przez kolejkę na jeden pełny wiersz, którą main.cpp opróżnia tyle, ile przyjmie port
 // (zapis nie blokuje pętli stacji); następny wiersz wejścia jest czytany dopiero przy pustej kolejce,
 // a migawka wychodzi wierszami w miarę miejsca. Laptop, który przestał czytać, wstrzymuje tylko siebie.
-// Migracja udostępnia `receive_key`, `export`, `import`, `retire`, `activate` i status.
-// Wycofanie oraz wymuszone przejścia są jeszcze zamknięte.
+// Migracja udostępnia `receive_key`, `export`, `import`, `retire`, `activate`, `abort` i status.
+// Wymuszone przejścia czekają na fizyczne potwierdzenie i zapis do dziennika.
 // Aktualizacja oprogramowania (`firmware`) nie jest tu jeszcze dostępna (F107).
 // Węzeł stanowiska używa protokołu tylko w trybie przygotowania; poza nim interfejs danych przenosi
 // ramki KISS (rns_node.h), a polecenia stacji schronienia dają `role`.
@@ -44,7 +44,8 @@ constexpr size_t PART_MAX = 512;         // dane binarne w jednym wierszu
 constexpr uint32_t MIGRATION_PACKAGE_BYTES = 101 + 512 * (512 + 16);
 constexpr size_t BOOT_HEX = 16;
 
-enum class Question : uint8_t { SILENCE_ON, SILENCE_OFF, CLOSE, DESTROY, SILENCE_EXCEPTION, MIGRATION_EXPORT };
+enum class Question : uint8_t { SILENCE_ON, SILENCE_OFF, CLOSE, DESTROY, SILENCE_EXCEPTION, MIGRATION_EXPORT,
+                                MIGRATION_ABORT, MIGRATION_FORCE_ACTIVATE, MIGRATION_FORCE_ABORT };
 enum class Confirm : uint8_t { WAITING, YES, NO };
 
 // Usługi stacji dla protokołu; dostarcza je main.cpp albo program testowy.
@@ -66,6 +67,7 @@ struct Host {
     // Durable migration barrier, including a corrupt state which must remain visible to the laptop.
     virtual void migration(char* phase, size_t phaseSize, char* mid, size_t midSize);
     virtual void migrationDetails(char* eph, size_t ephSize, char* package, size_t packageSize);
+    virtual void migrationConfirmation(char* confirm, size_t size);
     virtual bool migrationReceiveKey(uint8_t mid[16], uint8_t publicKey[32], uint8_t fingerprint[8]);
     virtual bool migrationExport(const uint8_t mid[16], const uint8_t targetKey[32], uint8_t sha[32]);
     virtual bool migrationExportRead(uint32_t offset, uint8_t* out, size_t length);
@@ -73,7 +75,12 @@ struct Host {
     virtual bool migrationImportPart(uint32_t offset, const uint8_t* data, size_t length, uint32_t& next);
     virtual bool migrationImportCommit(uint8_t confirm[32]);
     virtual bool migrationRetire(const uint8_t mid[16], const uint8_t imported[32], uint8_t retired[32], const char*& reason);
-    virtual bool migrationActivate(const uint8_t mid[16], const uint8_t retired[32], bool& duplicate, const char*& reason);
+    virtual bool migrationActivate(const uint8_t mid[16], const uint8_t* retired, bool forced,
+                                   bool& duplicate, const char*& reason);
+    virtual bool migrationAbortTarget(const uint8_t mid[16], const uint8_t* eph, uint8_t confirm[32],
+                                      bool& hasConfirm, bool& duplicate, const char*& reason);
+    virtual bool migrationAbortSource(const uint8_t mid[16], const uint8_t* confirm, bool forced,
+                                      bool& duplicate, const char*& reason);
     virtual bool announce() = 0;                           // ogłoszenie adresu; false: stos nie działa
     virtual bool destroy() = 0;                            // ZNISZCZ DANE: magazyn, dziennik, tożsamość
     virtual void configChanged(bool roleChanged) = 0;      // nowa konfiguracja (zmiana roli: restart)
@@ -120,7 +127,8 @@ public:
 
 private:
     struct Pending {
-        enum Type : uint8_t { NONE, SILENCE, CLOSE, DESTROY, EXPORT } type = NONE;
+        enum Type : uint8_t { NONE, SILENCE, CLOSE, DESTROY, EXPORT, ABORT_TARGET,
+                              FORCE_ACTIVATE, FORCE_ABORT_SOURCE } type = NONE;
         int64_t seq = 0;
         uint32_t sinceMs = 0;
         // Odpowiedź przyciskiem (albo limit 30 s) już zapadła i ekran zamknięty; wykonanie i odpowiedź
@@ -134,6 +142,7 @@ private:
         uint32_t head = 0;
         uint8_t mid[16] = {};
         uint8_t targetKey[32] = {};
+        bool hasEph = false;
     };
     // Migawka w toku: wiersze `snap` po kolei z rejestru, pamięci zwolnionych wpisów i skrzynki.
     struct Snap {
@@ -174,7 +183,7 @@ private:
     void doClose(const json::Value& msg, int64_t seq, uint32_t nowMs);
     void doStatus(int64_t seq);
     void doCard(int64_t seq);
-    void doMigrate(const json::Value& msg, int64_t seq);
+    void doMigrate(const json::Value& msg, int64_t seq, uint32_t nowMs);
     void doXferBegin(const json::Value& msg, int64_t seq, uint32_t nowMs);
     void doXferPart(const json::Value& msg, int64_t seq, uint32_t nowMs);
     void doXferRead(const json::Value& msg, int64_t seq, uint32_t nowMs);
