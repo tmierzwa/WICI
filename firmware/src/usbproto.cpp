@@ -14,6 +14,11 @@ void Host::migration(char* phase, size_t phaseSize, char* mid, size_t midSize) {
     if (phaseSize) snprintf(phase, phaseSize, "none");
     if (midSize) mid[0] = '\0';
 }
+void Host::migrationDetails(char* eph, size_t ephSize, char* package, size_t packageSize) {
+    if (ephSize) eph[0] = '\0';
+    if (packageSize) package[0] = '\0';
+}
+bool Host::migrationReceiveKey(uint8_t[16], uint8_t[32], uint8_t[8]) { return false; }
 
 namespace {
 
@@ -372,7 +377,42 @@ void Protocol::dispatch(const char* type, const json::Value& msg, int64_t seq, u
     else if (!strcmp(type, "xfer_read")) doXferRead(msg, seq, nowMs);
     else if (!strcmp(type, "xfer_commit")) doXferCommit(msg, seq);
     else if (!strcmp(type, "xfer_abort")) { xfer_ = Xfer(); send("ok", seq, ""); }
-    else rejected(seq, "migration", "unsupported");   // PRZENIEŚ STACJĘ jeszcze nie ma (F107)
+    else if (!strcmp(type, "migrate")) doMigrate(msg, seq);
+    else rejected(seq, "unknown_type");
+}
+
+void Protocol::doMigrate(const json::Value& msg, int64_t seq) {
+    static const Command basic = {"migrate", PREP, {{"step", F::STR, true}}, 1};
+    char bad[24], step[24];
+    json::Value value;
+    if (!json::field(msg, "step", value) || !json::string(value, step, sizeof(step))) {
+        rejected(seq, "invalid", "step"); return;
+    }
+    if (!strcmp(step, "status")) {
+        if (!checkFields(msg, basic, bad, sizeof(bad))) { rejected(seq, "invalid", bad); return; }
+        char phase[16], mid[33], eph[65], package[65], fields[230];
+        host_.migration(phase, sizeof(phase), mid, sizeof(mid));
+        host_.migrationDetails(eph, sizeof(eph), package, sizeof(package));
+        snprintf(fields, sizeof(fields), "\"migration\":\"%s\",\"mid\":\"%s\",\"eph\":\"%s\",\"package\":\"%s\"",
+                 phase, mid, eph, package);
+        send("ok", seq, fields);
+        return;
+    }
+    if (!strcmp(step, "receive_key")) {
+        if (!checkFields(msg, basic, bad, sizeof(bad))) { rejected(seq, "invalid", bad); return; }
+        uint8_t mid[16], key[32], fingerprint[8];
+        if (!host_.migrationReceiveKey(mid, key, fingerprint)) { rejected(seq, "migration", "target"); return; }
+        char midHex[33], keyHex[65], fpHex[17], fields[160];
+        hexstr::encode(mid, sizeof(mid), midHex);
+        hexstr::encode(key, sizeof(key), keyHex);
+        hexstr::encode(fingerprint, sizeof(fingerprint), fpHex);
+        snprintf(fields, sizeof(fields), "\"mid\":\"%s\",\"key\":\"%s\",\"fingerprint\":\"%s\"",
+                 midHex, keyHex, fpHex);
+        send("ok", seq, fields);
+        host_.showMigrationFingerprint(fpHex);
+        return;
+    }
+    rejected(seq, "migration", "unsupported");
 }
 
 // --- Synchronizacja --------------------------------------------------------------------------

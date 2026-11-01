@@ -9,8 +9,8 @@
 // Wyjście idzie przez kolejkę na jeden pełny wiersz, którą main.cpp opróżnia tyle, ile przyjmie port
 // (zapis nie blokuje pętli stacji); następny wiersz wejścia jest czytany dopiero przy pustej kolejce,
 // a migawka wychodzi wierszami w miarę miejsca. Laptop, który przestał czytać, wstrzymuje tylko siebie.
-// Nie ma jeszcze PRZENIEŚ STACJĘ (`migrate`, `export`, `import`: odmowa `migration` albo `invalid`)
-// ani aktualizacji oprogramowania (`firmware`), co opisuje przegląd (F107).
+// Migracja udostępnia `receive_key` i status; pozostałe przejścia pozostają zamknięte.
+// Aktualizacja oprogramowania (`firmware`) nie jest tu jeszcze dostępna (F107).
 // Węzeł stanowiska używa protokołu tylko w trybie przygotowania; poza nim interfejs danych przenosi
 // ramki KISS (rns_node.h), a polecenia stacji schronienia dają `role`.
 // Bez zależności od Arduino; sprawdzany na komputerze.
@@ -63,6 +63,8 @@ struct Host {
     virtual void diag(char* out, size_t size) = 0;
     // Durable migration barrier, including a corrupt state which must remain visible to the laptop.
     virtual void migration(char* phase, size_t phaseSize, char* mid, size_t midSize);
+    virtual void migrationDetails(char* eph, size_t ephSize, char* package, size_t packageSize);
+    virtual bool migrationReceiveKey(uint8_t mid[16], uint8_t publicKey[32], uint8_t fingerprint[8]);
     virtual bool announce() = 0;                           // ogłoszenie adresu; false: stos nie działa
     virtual bool destroy() = 0;                            // ZNISZCZ DANE: magazyn, dziennik, tożsamość
     virtual void configChanged(bool roleChanged) = 0;      // nowa konfiguracja (zmiana roli: restart)
@@ -71,6 +73,7 @@ struct Host {
     virtual Confirm confirmPoll() = 0;                     // OK = YES, WSTECZ = NO
     virtual void confirmEnd() = 0;
     virtual void showCard(const char* fingerprint) = 0;   // odcisk `card` na ekranie do porównania
+    virtual void showMigrationFingerprint(const char* fingerprint) { showCard(fingerprint); }
 };
 
 struct Stats {
@@ -160,6 +163,7 @@ private:
     void doClose(const json::Value& msg, int64_t seq, uint32_t nowMs);
     void doStatus(int64_t seq);
     void doCard(int64_t seq);
+    void doMigrate(const json::Value& msg, int64_t seq);
     void doXferBegin(const json::Value& msg, int64_t seq, uint32_t nowMs);
     void doXferPart(const json::Value& msg, int64_t seq, uint32_t nowMs);
     void doXferRead(const json::Value& msg, int64_t seq, uint32_t nowMs);

@@ -89,6 +89,7 @@ enum class Id : uint8_t {
     NIE_WPISUJ_NAZWISK,
     WPIS_WOLNE,
     ODPOWIEDZI_PO_POLSKU,
+    ODCISK_PRZENIESIENIA,
     COUNT
 };
 
@@ -168,6 +169,7 @@ constexpr const char* const TEXTS[static_cast<size_t>(Id::COUNT)][LANGS] = {
     {"NIE WPISUJ NAZWISK", "НЕ ВПИСУЙТЕ ПРІЗВИЩ", "DO NOT ENTER SURNAMES"},
     {"WOLNE ZNAKI: [n]", "ВІЛЬНІ ЗНАКИ: [n]", "CHARS LEFT: [n]"},
     {"", "ВІДПОВІДІ ВІД ОДЕРЖУВАЧА НАДХОДЯТЬ ПОЛЬСЬКОЮ", "REPLIES FROM THE RECIPIENT ARRIVE IN POLISH"},
+    {"ODCISK STACJI DOCELOWEJ: [x] – PORÓWNAJ PRZY PRZENOSZENIU. OK = ZAMKNIJ", "ВІДБИТОК НОВОЇ СТАНЦІЇ: [x] – ПОРІВНЯЙТЕ ПІД ЧАС ПЕРЕНЕСЕННЯ. OK = ЗАКРИТИ", "TARGET STATION FINGERPRINT: [x] – COMPARE DURING TRANSFER. OK = CLOSE"},
 };
 
 // Pozycje menu, nazwy przycisków i etykiety (tabela PL/UK/EN).

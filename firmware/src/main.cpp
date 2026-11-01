@@ -40,6 +40,8 @@
 #include "hexstr.h"
 #include "journal.h"
 #include "migration_state.h"
+#include "migration_crypto.h"
+#include "migration_image.h"
 #include "kiss.h"
 #include "jsonprint.h"
 #include "measure.h"
@@ -184,8 +186,10 @@ uint32_t counterS() { return counterBaseS + static_cast<uint32_t>(platform::upti
 uint32_t serviceS() { return counterS() - skipS; }
 uint32_t startServiceS = 0;  // czas dla obsługi przy tym starcie (kontakt sprzed startu = dolne oszacowanie)
 void updateScreen(bool force);
+void screenChanged();
 void setStationName();
 void wipeStack();
+void freezeMigration();
 void restartSoon(const char* why);
 
 // Usługi stacji dla protokołu USB.
@@ -219,6 +223,8 @@ struct BenchHost : usbproto::Host {
         if (migrationBarrier.ready() && migrationBarrier.record().phase != migration_state::Phase::NONE && midSize >= 33)
             hexstr::encode(migrationBarrier.record().mid, 16, mid);
     }
+    void migrationDetails(char* eph, size_t ephSize, char* package, size_t packageSize) override;
+    bool migrationReceiveKey(uint8_t mid[16], uint8_t publicKey[32], uint8_t fingerprint[8]) override;
     bool announce() override;
     bool destroy() override;
     void configChanged(bool roleChanged) override;
@@ -226,6 +232,10 @@ struct BenchHost : usbproto::Host {
     usbproto::Confirm confirmPoll() override;
     void confirmEnd() override;
     void showCard(const char* fingerprint) override;
+    void showMigrationFingerprint(const char* fingerprint) override {
+        screenModel.ask(ui::Question::MIGRATION_TARGET, fingerprint);
+        screenChanged();
+    }
 };
 BenchHost host;
 
@@ -526,6 +536,20 @@ void wipeStack() {
     setStationName();
 }
 
+// Called only after a durable migration marker is committed. Halt every radio
+// producer and detach the journal before the image hash is taken. A restarted
+// station follows the same frozen boot path before any store or clock writes.
+void freezeMigration() {
+    applySilence();
+    bench.stop();
+    wipeStack();
+    wiciActive = false;
+    bench.attach(nullptr, counterS);
+    journalOk = false;
+    storeOk = false;
+    screenChanged();
+}
+
 bool BenchHost::destroy() {
     // Po skasowaniu restart: stan w RAM (próby w drodze, potwierdzone alarmy, stos bez tożsamości)
     // należy do skasowanych rekordów, a nowa tożsamość powstaje przy starcie stosu.
@@ -574,6 +598,7 @@ void setSwitchSilence(bool on, const char* source) {
 
 // Zwraca false, gdy wejście w tryb odmówiono (brak zapisu w dzienniku).
 bool applyPrep(bool on, const char* source) {
+    if (!on && migrationBarrier.ready() && !migrationBarrier.permitsTransmit()) return false;
     if (!on) bench.stop();  // wyjście z trybu przygotowania przerywa pomiary
     if (bench.prep == on) return true;
     char text[48];
@@ -713,6 +738,47 @@ void BenchHost::diag(char* out, size_t size) {
 bool BenchHost::identity(uint8_t key[64], uint8_t lxmf[store::HASH]) {
     if (!rnsOk || nodeRole() || !rnsnode::publicKey(key)) return false;
     sha2::destinationHash(key, config::LXMF_NAME, lxmf);
+    return true;
+}
+
+void BenchHost::migrationDetails(char* eph, size_t ephSize, char* package, size_t packageSize) {
+    if (ephSize) eph[0] = '\0';
+    if (packageSize) package[0] = '\0';
+    if (!migrationBarrier.ready()) return;
+    const migration_state::Record& record = migrationBarrier.record();
+    if (record.phase == migration_state::Phase::EXPORT && ephSize >= 65) {
+        uint8_t publicKey[32];
+        if (migration_crypto::publicKey(record.privateKey, publicKey)) hexstr::encode(publicKey, 32, eph);
+    }
+    uint8_t any = 0;
+    for (uint8_t byte : record.packageHash) any |= byte;
+    if (any && packageSize >= 65) hexstr::encode(record.packageHash, 32, package);
+}
+
+bool BenchHost::migrationReceiveKey(uint8_t mid[16], uint8_t publicKey[32], uint8_t fingerprint[8]) {
+    if (!migrationBarrier.ready()) return false;
+    migration_state::Record record = migrationBarrier.record();
+    if (record.phase == migration_state::Phase::NONE) {
+        // A fresh unconfigured identity is disposable; the imported identity
+        // replaces it. Any configured station or retained application data is refused.
+        if (!storeOk || stationStore.configured() || stationStore.requestCount() ||
+            stationStore.messageCount() || !entropyHealthy) return false;
+        record.phase = migration_state::Phase::RECEIVING;
+        record.flags = counterS();  // target clock before the source image overwrites the journal
+        stationRandom(record.mid, sizeof(record.mid));
+        stationRandom(record.privateKey, sizeof(record.privateKey));
+        if (!migrationBarrier.save(record)) return false;
+        freezeMigration();
+    } else if (record.phase != migration_state::Phase::RECEIVING) return false;
+    if (!migration_crypto::publicKey(record.privateKey, publicKey)) return false;
+    memcpy(mid, record.mid, sizeof(record.mid));
+    sha2::Hash digest;
+    digest.update(mid, 16);
+    digest.update(publicKey, 32);
+    uint8_t full[32];
+    digest.finish(full);
+    memcpy(fingerprint, full, 8);
+    drbg::wipe(full, sizeof(full));
     return true;
 }
 
@@ -866,7 +932,8 @@ void pollButtons(uint32_t now) {
     for (size_t i = 0; i < 4; ++i) {
         const bool is = pressed(buttons[i]);
         if (is == buttonSample[i] && is != buttonWas[i]) {
-            if (is) screenModel.down(static_cast<ui::Button>(i), now);
+            if (is && (migrationBarrier.permitsTransmit() || screenModel.screen() == ui::Screen::CONFIRM))
+                screenModel.down(static_cast<ui::Button>(i), now);
             else screenModel.up(static_cast<ui::Button>(i), now);
             buttonWas[i] = is;
         }
@@ -1589,6 +1656,7 @@ void stationSetup() {
     // Store::begin() can write to a frozen export/import snapshot.
     const bool migrationKnown = framOk && migrationBarrier.begin();
     const bool normalBoot = migrationKnown && migrationBarrier.permitsTransmit();
+    if (migrationKnown && !normalBoot) bench.prep = true;  // resume frozen transfer without a journal write
     if (normalBoot) beginJournal();
     else if (framOk) (void)stationJournal.begin();  // read-only, for explicit ZNISZCZ DANE recovery
     ledWrite(board::LED_FRAM, framOk && journalOk);  // LED3 świeci dopiero z działającym dziennikiem

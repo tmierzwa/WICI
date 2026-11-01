@@ -422,6 +422,14 @@ struct FakeHost : usbproto::Host {
         snprintf(phase, phaseSize, "%s", migrationName);
         snprintf(mid, midSize, "%s", strcmp(migrationName, "none") ? "00112233445566778899aabbccddeeff" : "");
     }
+    bool migrationReceiveKey(uint8_t mid[16], uint8_t key[32], uint8_t fingerprint[8]) override {
+        if (strcmp(migrationName, "none") && strcmp(migrationName, "receiving")) return false;
+        snprintf(migrationName, sizeof(migrationName), "receiving");
+        for (size_t i = 0; i < 16; ++i) mid[i] = static_cast<uint8_t>(i * 0x11);
+        for (size_t i = 0; i < 32; ++i) key[i] = static_cast<uint8_t>(i);
+        for (size_t i = 0; i < 8; ++i) fingerprint[i] = static_cast<uint8_t>(i + 32);
+        return true;
+    }
     void diag(char* out, size_t size) override {
         static const std::string pad(400, 'x');
         snprintf(out, size, "\"corrupt\":0%s%.*s%s", diagPad ? ",\"pad\":\"" : "", diagPad, pad.c_str(), diagPad ? "\"" : "");
@@ -1986,6 +1994,19 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual([(reply["reason"], reply["detail"]) for reply in replies[2:]],
                          [("migration", "active"), ("migration", "active")])
 
+    def test_usb_migration_receive_key_and_status_are_idempotent(self):
+        replies = self.replies(self.world([
+            "connect",
+            'usb {"usb":2,"seq":1,"type":"migrate","step":"receive_key"}',
+            'usb {"usb":2,"seq":2,"type":"migrate","step":"receive_key"}',
+            'usb {"usb":2,"seq":3,"type":"migrate","step":"status"}',
+        ]))
+        self.assertEqual(replies[1]["mid"], "00112233445566778899aabbccddeeff")
+        self.assertEqual(replies[1]["key"], bytes(range(32)).hex())
+        self.assertEqual(replies[1]["fingerprint"], bytes(range(32, 40)).hex())
+        self.assertEqual((replies[2]["mid"], replies[2]["key"]), (replies[1]["mid"], replies[1]["key"]))
+        self.assertEqual((replies[3]["migration"], replies[3]["mid"]), ("receiving", replies[1]["mid"]))
+
     def test_usb_hello_seq_fields_and_rejections(self):
         def line(seq, type_, usb=2, **fields):
             return "usb " + json.dumps({"usb": usb, "seq": seq, "type": type_, **fields})
@@ -2014,7 +2035,7 @@ class HostUnitTests(unittest.TestCase):
             (7, "invalid", "colour"), (8, "unknown_type", None), (9, "invalid", "id"), (10, "contract", None),
             (None, "invalid", "json"), (None, "seq", None), (10, "seq", None), (None, "too_long", None),
             (11, "unknown_type", None),                 # `export` to `op` transferu, nie polecenie
-            (12, "migration", "unsupported"), (13, "not_configured", None)])
+            (12, "invalid", "step"), (13, "not_configured", None)])
         self.assertEqual([x["type"] for x in r].count("hello"), 2)
         self.assertEqual([x["type"] for x in r][3], "status")   # po odmowie `seq` liczy się dalej od numeru laptopa
         self.assertEqual([x["seq"] for x in r], list(range(1, len(r) + 1)))
