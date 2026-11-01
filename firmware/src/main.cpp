@@ -315,24 +315,21 @@ uint16_t wiciAdvertisedParent = 0, wiciAdvertisedRank = 0xFFFF;
 uint8_t wiciBeacons = 0;
 bool numberedConfigured() { return storeOk && stationStore.config().network.id != 0; }
 struct WiciAir : wici_radio::Air, wici_gateway::Air {
+    // Every WICI frame leaves through the pairwise tag; unicast without a key for its neighbor is refused.
     bool sendData(const uint8_t* wire, size_t length, wici_link::TxClass traffic) override {
         const bool exception = traffic == wici_link::TxClass::OWN && bench.silenceException &&
                                wiciShelter && wiciShelter->exceptionTx();
         if ((bench.silence && !exception) || bench.busy() || !radioServes() ||
-            !wire || length < wici_link::HEADER + wici_link::TAG)
-            return false;
-        if (traffic != wici_link::TxClass::OWN && traffic != wici_link::TxClass::TRANSIT &&
-            traffic != wici_link::TxClass::CONTENDED_K2 && traffic != wici_link::TxClass::BEACON) return false;
+            !wire || length < wici_link::HEADER + wici_link::TAG) return false;
+        const bool beacon = traffic == wici_link::TxClass::BEACON;
+        const auto type = static_cast<wici_link::Type>((wire[0] >> 3) & 7);
+        if (type != (beacon ? wici_link::Type::BEACON : wici_link::Type::DATA)) return false;
         uint8_t radio[wici_link::MAX_FRAME];
         const size_t radioLength = wiciHopAuth.seal(wire, length, radio, sizeof(radio));
-        if (!radioLength) return false;
-        const bool beacon = ((wire[0] >> 3) & 7) == static_cast<uint8_t>(wici_link::Type::BEACON);
-        if (beacon != (traffic == wici_link::TxClass::BEACON) ||
-            (!beacon && (((wire[0] >> 3) & 7) != static_cast<uint8_t>(wici_link::Type::DATA) ||
-                         length < wici_link::HEADER + 25 + wici_link::TAG))) return false;
-        if (traffic != wici_link::TxClass::OWN &&
-            !wiciBudget.reserve(beacon, lora::frameAirMs(radioLength), counterS(),
-                                traffic == wici_link::TxClass::CONTENDED_K2)) return false;
+        // Transit and BEACON airtime is charged durably before the radio may start (K0 is not pooled).
+        if (!radioLength || (traffic != wici_link::TxClass::OWN &&
+                             !wiciBudget.reserve(beacon, lora::frameAirMs(radioLength), counterS(),
+                                                 traffic == wici_link::TxClass::CONTENDED_K2))) return false;
         return bench.linkSend(radio, radioLength, true) == nullptr;
     }
     bool sendHack(const uint8_t* wire, size_t length, uint32_t receivedMs) override {
@@ -513,7 +510,7 @@ void onWiciRaw(const radiolink::Frame& frame, void*) {
     size_t length = 0;
     if (!wiciHopAuth.open(frame.bytes, frame.length, bare, sizeof(bare), length)) return;
     if (wiciShelter) wiciShelter->receive(bare, length, frame.receivedMs,
-                                        serviceS(), frame.snrQdb);
+                                        counterS(), frame.snrQdb);
     else if (wiciRoot) wiciRoot->radio(bare, length, frame.receivedMs);
 }
 void onWiciDelivery(uint32_t handle, bool acknowledged, void*) { app.receipt(handle, acknowledged); }
@@ -557,7 +554,7 @@ uint32_t wiciRandom(void*) {
 }
 void onTxDone(bool ok, void*) {
     if (wiciActive) {
-        if (wiciShelter) wiciShelter->onTxDone(ok, millis(), serviceS());
+        if (wiciShelter) wiciShelter->onTxDone(ok, millis(), counterS());
         else if (wiciRoot) wiciRoot->onTxDone(ok, millis());
     } else rnsnode::txDone(ok);
 }
@@ -1870,73 +1867,50 @@ void beginWici() {
         bench.log("wici airtime ledger unavailable");
         return;
     }
-    if (c.role == config::Role::NODE) {
-        uint8_t privateKey[framfs::KEY_BYTES] = {};
-        if (!framfs::loadKey(memory, privateKey)) {
-            stackState = StackState::IDENTITY_LOST;
-            bench.log("wici root identity unavailable");
-            return;
-        }
-        if (!wiciHopAuth.begin(c.network.id, c.network.station, privateKey,
-                               c.priorityKeys, c.priorityKeyCount)) {
-            drbg::wipe(privateKey, sizeof(privateKey));
-            stackState = StackState::START_FAILED;
-            bench.log("wici neighbor authentication unavailable");
-            return;
-        }
+    uint8_t privateKey[framfs::KEY_BYTES] = {};
+    if (!framfs::loadKey(memory, privateKey)) {
+        stackState = StackState::IDENTITY_LOST;
+        bench.log("wici identity unavailable");
+        return;
+    }
+    const char* failure = nullptr;
+    if (!wiciHopAuth.begin(c.network.id, c.network.station, privateKey, c.priorityKeys, c.priorityKeyCount)) {
+        failure = "wici neighbor authentication unavailable";
+    } else if (c.role == config::Role::NODE) {
         wiciRoot = new (wiciRootSpace) wici_gateway::Root(memory, wiciUsb, wiciAir,
                             c.network.id, c.network.station, c.ifac, privateKey);
-        drbg::wipe(privateKey, sizeof(privateKey));
-        if (!wiciRoot->begin(static_cast<uint16_t>(stationJournal.starts()))) {
-            stackState = StackState::START_FAILED;
-            bench.log("wici root binding failed");
-            return;
-        }
+        // The root epoch is the durable start count.
+        if (!wiciRoot->begin(static_cast<uint16_t>(stationJournal.starts()))) failure = "wici root binding failed";
     } else {
-        uint8_t privateKey[framfs::KEY_BYTES] = {};
-        if (!framfs::loadKey(memory, privateKey)) {
-            stackState = StackState::IDENTITY_LOST;
-            bench.log("wici station identity unavailable");
-            return;
-        }
-        if (!wiciHopAuth.begin(c.network.id, c.network.station, privateKey,
-                               c.priorityKeys, c.priorityKeyCount)) {
-            drbg::wipe(privateKey, sizeof(privateKey));
-            stackState = StackState::START_FAILED;
-            bench.log("wici neighbor authentication unavailable");
-            return;
-        }
         const uint16_t receivers[2] = {c.receivers[0].number, c.receivers[1].number};
         uint8_t publicKeys[2][32];
         memcpy(publicKeys[0], c.receivers[0].key, 32);
         memcpy(publicKeys[1], c.receivers[1].key, 32);
         const uint8_t* rootEd25519 = nullptr;
-        for (uint8_t i = 0; i < c.priorityKeyCount; ++i)
-            if (c.priorityKeys[i].station == c.network.root) rootEd25519 = c.priorityKeys[i].ed25519;
         bool plannedKey = false, backupKey = !c.network.backupParent;
         for (uint8_t i = 0; i < c.priorityKeyCount; ++i) {
+            if (c.priorityKeys[i].station == c.network.root) rootEd25519 = c.priorityKeys[i].ed25519;
             plannedKey |= c.priorityKeys[i].station == c.network.parent;
             backupKey |= c.priorityKeys[i].station == c.network.backupParent;
         }
         if (!rootEd25519 || !plannedKey || !backupKey) {
-            drbg::wipe(privateKey, sizeof(privateKey));
-            stackState = StackState::START_FAILED;
-            bench.log("wici neighbor signing key missing from station card");
-            return;
+            failure = "wici neighbor signing key missing from station card";
+        } else {
+            wiciShelter = new (wiciShelterSpace) wici_radio::Shelter(memory,
+                         {c.network.id, c.network.station, c.network.root,
+                          c.network.parent, c.network.backupParent}, receivers, c.ifac,
+                         privateKey, publicKeys, onWiciAdmit, nullptr,
+                         wiciAir, wiciRandom, nullptr, verifyWiciOrigin, &c, rootEd25519,
+                         verifyWiciBeacon, &c);
+            if (!wiciShelter->begin()) failure = "wici station durable state unavailable";
+            else wiciShelter->onDelivery(onWiciDelivery, nullptr);
         }
-        wiciShelter = new (wiciShelterSpace) wici_radio::Shelter(memory,
-                     {c.network.id, c.network.station, c.network.root,
-                      c.network.parent, c.network.backupParent}, receivers, c.ifac,
-                     privateKey, publicKeys, onWiciAdmit, nullptr,
-                     wiciAir, wiciRandom, nullptr, verifyWiciOrigin, &c, rootEd25519,
-                     verifyWiciBeacon, &c);
-        drbg::wipe(privateKey, sizeof(privateKey));
-        if (!wiciShelter->begin()) {
-            stackState = StackState::START_FAILED;
-            bench.log("wici station durable state unavailable");
-            return;
-        }
-        wiciShelter->onDelivery(onWiciDelivery, nullptr);
+    }
+    drbg::wipe(privateKey, sizeof(privateKey));
+    if (failure) {
+        stackState = StackState::START_FAILED;
+        bench.log(failure);
+        return;
     }
     bench.onRawFrame(onWiciRaw, nullptr);
     if (!bench.setRawLora(true)) {
@@ -2138,7 +2112,8 @@ void stationLoop() {
         rnsnode::loop(now);
         pollAnnounce();
     }
-    if (wiciActive && wiciShelter) wiciShelter->poll(now, serviceS());
+    // WICI-Link durable timestamps use the monotonic counter: serviceS() can step back after a restart.
+    if (wiciActive && wiciShelter) wiciShelter->poll(now, counterS());
     if (wiciActive && wiciShelter && wiciShelter->routes().parent() &&
         (wiciShelter->routes().parent() != wiciAdvertisedParent ||
          wiciShelter->routes().rank() != wiciAdvertisedRank)) {
@@ -2217,7 +2192,7 @@ void stationLoop() {
                 const uint8_t* frame = nullptr;
                 size_t length = 0;
                 while (wiciUsb.peek(frame, length)) {
-                    wiciRoot->host(frame, length, now, serviceS());
+                    wiciRoot->host(frame, length, now, counterS());
                     wiciUsb.pop();
                 }
                 drain(SerialData, wiciUsb);
