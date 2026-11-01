@@ -112,6 +112,7 @@ public:
     // Zapis treści, potem znacznika, potem odczyt kontrolny; false blokuje nadawanie.
     bool writeDebt(uint32_t debtMs, uint32_t uptimeS);
     bool writeClock(uint32_t counterS);   // co 60 s; S i liczba startów bez zmian
+    bool adoptClock(uint32_t minimumS);   // import: zachowaj czas obsługi przy podniesieniu licznika
     bool writeSettings(uint32_t language, uint32_t flags);  // język + 1, znaczniki ekranu (main.cpp); tryb EMC zostaje
     // Tryb pracy do badań EMC w rekordzie ustawień (język i znaczniki zostają); 0 = wyłączony.
     bool writeEmc(uint32_t mode);

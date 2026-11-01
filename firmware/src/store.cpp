@@ -1297,12 +1297,13 @@ bool Store::maintain() {
     return true;
 }
 
-bool Store::destroy() {
+bool Store::destroy(bool preserveMigration) {
     // Znacznik w dzienniku najpierw: przerwane kasowanie wznawia begin().
     const uint32_t flags = journal_.formatFlags() & ~journal::FORMAT_IDENTITY;
     if (!journal_.writeFormat(journal::FormatState::DESTROYING, flags)) return false;
     uint8_t zero[CHUNK] = {};
-    for (uint32_t address = TX_BASE; address < FRAM_END; address += CHUNK) {
+    const uint32_t end = preserveMigration ? framfs::FS_BASE + framfs::FS_SIZE : FRAM_END;
+    for (uint32_t address = TX_BASE; address < end; address += CHUNK) {
         if (!memory_.write(address, zero, CHUNK)) return false;
     }
     if (!journal_.erase()) return false;

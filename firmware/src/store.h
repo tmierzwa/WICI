@@ -413,7 +413,7 @@ public:
     bool maintain();
     // ZNISZCZ DANE: znacznik w dzienniku, skasowanie TX_BASE..FRAM_END i dziennika (bez długu ciszy
     // i rezerwacji numerów zapisu), nowy pusty magazyn bez tożsamości stacji.
-    bool destroy();
+    bool destroy(bool preserveMigration = false);
     // Znacznik zapisanej tożsamości stacji w rekordzie formatu (rns_node).
     bool identitySaved() const;
     bool setIdentitySaved();

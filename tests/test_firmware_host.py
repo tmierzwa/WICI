@@ -466,6 +466,27 @@ struct FakeHost : usbproto::Host {
         snprintf(migrationName, sizeof(migrationName), "imported");
         return true;
     }
+    bool migrationRetire(const uint8_t mid[16], const uint8_t imported[32], uint8_t retired[32], const char*& reason) override {
+        uint8_t expected[16];
+        for (size_t i = 0; i < 16; ++i) expected[i] = static_cast<uint8_t>(i * 0x11);
+        reason = "migration";
+        if ((strcmp(migrationName, "export") && strcmp(migrationName, "retired")) ||
+            memcmp(mid, expected, 16)) return false;
+        if (imported[0] != 0xaa) { reason = "signature"; return false; }
+        snprintf(migrationName, sizeof(migrationName), "retired");
+        memset(retired, 0xbb, 32);
+        return true;
+    }
+    bool migrationActivate(const uint8_t mid[16], const uint8_t retired[32], bool& duplicate, const char*& reason) override {
+        uint8_t expected[16];
+        for (size_t i = 0; i < 16; ++i) expected[i] = static_cast<uint8_t>(i * 0x11);
+        reason = "migration";
+        if ((strcmp(migrationName, "imported") && strcmp(migrationName, "none")) || memcmp(mid, expected, 16)) return false;
+        if (retired[0] != 0xbb) { reason = "signature"; return false; }
+        duplicate = !strcmp(migrationName, "none");
+        snprintf(migrationName, sizeof(migrationName), "none");
+        return true;
+    }
     void diag(char* out, size_t size) override {
         static const std::string pad(400, 'x');
         snprintf(out, size, "\"corrupt\":0%s%.*s%s", diagPad ? ",\"pad\":\"" : "", diagPad, pad.c_str(), diagPad ? "\"" : "");
@@ -817,6 +838,14 @@ int world() {
         } else if (!strcmp(cmd, "destroy")) {
             const bool ok = w.store->destroy();
             printf("destroy %d\n", ok);
+        } else if (!strcmp(cmd, "destroykeep")) {
+            const uint32_t at = store::FRAM_END - 512;
+            const uint8_t marker[2] = {0x57, 0xa5};
+            w.ram.write(at, marker, sizeof(marker));
+            const bool ok = w.store->destroy(true);
+            uint8_t saved[2] = {};
+            w.ram.read(at, saved, sizeof(saved));
+            printf("destroykeep %d %02x%02x %d\n", ok, saved[0], saved[1], w.store->identitySaved());
         } else if (!strcmp(cmd, "ident")) {
             const bool ok = w.store->setIdentitySaved();
             printf("ident %d %d\n", ok, w.store->identitySaved());
@@ -1069,6 +1098,22 @@ int main(int argc, char** argv) {
         return 0;
     }
     if (argc == 2 && !strcmp(argv[1], "journal")) return journalScenario();
+    if (argc == 2 && !strcmp(argv[1], "journal_adopt")) {
+        RamStorage memory;
+        journal::Journal source(memory);
+        source.begin();
+        source.startClock();
+        source.writeClock(500);
+        const bool changed = source.adoptClock(900);
+        journal::Journal resumed(memory);
+        resumed.begin();
+        printf("adopt %d %u %u %u\n", changed, resumed.clock().a, resumed.clock().b,
+               resumed.clock().a - resumed.clock().b);
+        resumed.startClock();
+        printf("restart %u %u %u\n", resumed.clock().a, resumed.clock().b,
+               resumed.clock().a - resumed.clock().b);
+        return 0;
+    }
     if (argc == 2 && !strcmp(argv[1], "journal_prep")) return journalPrepScenario();
     if (argc == 2 && !strcmp(argv[1], "buildall")) return buildAll();
     if (argc == 2 && !strcmp(argv[1], "assemble")) return assembleScript();
@@ -1354,6 +1399,11 @@ class HostUnitTests(unittest.TestCase):
             "format_corrupt 3",                  # zatwierdzone z błędnym CRC bez poprawnych: CORRUPT
         ])
 
+    def test_migration_clock_adoption_preserves_service_time(self):
+        self.assertEqual(subprocess.run([str(self.binary), "journal_adopt"], capture_output=True,
+                                        text=True, check=True).stdout.splitlines(),
+                         ["adopt 1 900 460 440", "restart 960 520 440"])
+
     def test_journal_preparation_entries(self):
         lines = subprocess.run([str(self.binary), "journal_prep"], capture_output=True, text=True, check=True).stdout.splitlines()
         self.assertEqual(lines, [
@@ -1606,6 +1656,12 @@ class HostUnitTests(unittest.TestCase):
         out = self.world([self.CONFIG, "in " + compact([1, 4, b, 7, "Komunikat"]), "flip %d" % (bulletin + 40), "restart",
                           "in " + compact([1, 4, b, 7, "Komunikat"]), "in " + compact([1, 4, b, 8, "Komunikat 2"]), "diag"])
         self.assertIn("messages=2", self.find(out, "diag ")[0])
+
+    def test_retirement_erase_preserves_migration_marker(self):
+        out = self.world(["ident", "destroykeep", "destroykeep", "diag"])
+        self.assertEqual(self.find(out, "destroykeep "),
+                         ["destroykeep 1 57a5 0", "destroykeep 1 57a5 0"])
+        self.assertIn("ident=0", self.find(out, "diag ")[0])
 
     def test_store_event_ring_close_maintain_and_destroy(self):
         out = self.world([
@@ -2076,6 +2132,23 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual((replies[2]["next"], replies[3]["next"]), (10, 10))
         self.assertEqual([(r["reason"], r.get("detail")) for r in replies[-2:]],
                          [("migration", "part"), ("migration", "active")])
+
+    def test_usb_migration_retire_and_activate_verify_confirmation(self):
+        mid = "00112233445566778899aabbccddeeff"
+        u = self.Lines()
+        source = self.replies(self.world(["migration export", "connect",
+            u("migrate", step="retire", mid=mid, confirm="00" * 32),
+            u("migrate", step="retire", mid=mid, confirm="aa" * 32),
+            u("migrate", step="retire", mid=mid, confirm="aa" * 32)]))
+        self.assertEqual([(r["type"], r.get("reason")) for r in source[1:]],
+                         [("rejected", "signature"), ("ok", None), ("ok", None)])
+        self.assertEqual(source[2]["confirm"], "bb" * 32)
+        target = self.replies(self.world(["migration imported", "connect",
+            'usb {"usb":2,"seq":1,"type":"migrate","step":"activate","mid":"' + mid + '","confirm":"' + "00" * 32 + '"}',
+            'usb {"usb":2,"seq":2,"type":"migrate","step":"activate","mid":"' + mid + '","confirm":"' + "bb" * 32 + '"}',
+            'usb {"usb":2,"seq":3,"type":"migrate","step":"activate","mid":"' + mid + '","confirm":"' + "bb" * 32 + '"}']))
+        self.assertEqual([(r["type"], r.get("reason"), r.get("duplicate")) for r in target[1:]],
+                         [("rejected", "signature", None), ("ok", None, False), ("ok", None, True)])
 
     def test_usb_hello_seq_fields_and_rejections(self):
         def line(seq, type_, usb=2, **fields):

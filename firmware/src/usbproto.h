@@ -9,7 +9,8 @@
 // Wyjście idzie przez kolejkę na jeden pełny wiersz, którą main.cpp opróżnia tyle, ile przyjmie port
 // (zapis nie blokuje pętli stacji); następny wiersz wejścia jest czytany dopiero przy pustej kolejce,
 // a migawka wychodzi wierszami w miarę miejsca. Laptop, który przestał czytać, wstrzymuje tylko siebie.
-// Migracja udostępnia `receive_key`, `export`, `import` i status; przejścia końcowe są jeszcze zamknięte.
+// Migracja udostępnia `receive_key`, `export`, `import`, `retire`, `activate` i status.
+// Wycofanie oraz wymuszone przejścia są jeszcze zamknięte.
 // Aktualizacja oprogramowania (`firmware`) nie jest tu jeszcze dostępna (F107).
 // Węzeł stanowiska używa protokołu tylko w trybie przygotowania; poza nim interfejs danych przenosi
 // ramki KISS (rns_node.h), a polecenia stacji schronienia dają `role`.
@@ -71,6 +72,8 @@ struct Host {
     virtual bool migrationImportBegin(const uint8_t mid[16], const uint8_t sha[32]);
     virtual bool migrationImportPart(uint32_t offset, const uint8_t* data, size_t length, uint32_t& next);
     virtual bool migrationImportCommit(uint8_t confirm[32]);
+    virtual bool migrationRetire(const uint8_t mid[16], const uint8_t imported[32], uint8_t retired[32], const char*& reason);
+    virtual bool migrationActivate(const uint8_t mid[16], const uint8_t retired[32], bool& duplicate, const char*& reason);
     virtual bool announce() = 0;                           // ogłoszenie adresu; false: stos nie działa
     virtual bool destroy() = 0;                            // ZNISZCZ DANE: magazyn, dziennik, tożsamość
     virtual void configChanged(bool roleChanged) = 0;      // nowa konfiguracja (zmiana roli: restart)

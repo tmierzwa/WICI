@@ -24,6 +24,8 @@ bool Host::migrationExportRead(uint32_t, uint8_t*, size_t) { return false; }
 bool Host::migrationImportBegin(const uint8_t[16], const uint8_t[32]) { return false; }
 bool Host::migrationImportPart(uint32_t, const uint8_t*, size_t, uint32_t&) { return false; }
 bool Host::migrationImportCommit(uint8_t[32]) { return false; }
+bool Host::migrationRetire(const uint8_t[16], const uint8_t[32], uint8_t[32], const char*& reason) { reason = "migration"; return false; }
+bool Host::migrationActivate(const uint8_t[16], const uint8_t[32], bool&, const char*& reason) { reason = "migration"; return false; }
 
 namespace {
 
@@ -416,6 +418,28 @@ void Protocol::doMigrate(const json::Value& msg, int64_t seq) {
                  midHex, keyHex, fpHex);
         send("ok", seq, fields);
         host_.showMigrationFingerprint(fpHex);
+        return;
+    }
+    static const Command confirmed = {"migrate", PREP, {{"step", F::STR, true}, {"mid", F::STR, true},
+                                                          {"confirm", F::STR, true}}, 3};
+    if (!strcmp(step, "retire") || !strcmp(step, "activate")) {
+        if (!checkFields(msg, confirmed, bad, sizeof(bad))) { rejected(seq, "invalid", bad); return; }
+        uint8_t mid[16], candidate[32], result[32];
+        if (!json::hexField(msg, "mid", mid, sizeof(mid))) { rejected(seq, "invalid", "mid"); return; }
+        if (!json::hexField(msg, "confirm", candidate, sizeof(candidate))) { rejected(seq, "invalid", "confirm"); return; }
+        const char* reason = "migration";
+        bool duplicate = false;
+        const bool ok = !strcmp(step, "retire")
+            ? host_.migrationRetire(mid, candidate, result, reason)
+            : host_.migrationActivate(mid, candidate, duplicate, reason);
+        if (!ok) { rejected(seq, reason); return; }
+        char fields[100];
+        if (!strcmp(step, "retire")) {
+            char hex[65];
+            hexstr::encode(result, sizeof(result), hex);
+            snprintf(fields, sizeof(fields), "\"confirm\":\"%s\"", hex);
+        } else snprintf(fields, sizeof(fields), "\"duplicate\":%s", duplicate ? "true" : "false");
+        send("ok", seq, fields);
         return;
     }
     rejected(seq, "migration", "unsupported");

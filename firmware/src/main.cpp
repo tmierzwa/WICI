@@ -237,6 +237,8 @@ struct BenchHost : usbproto::Host {
     bool migrationImportBegin(const uint8_t mid[16], const uint8_t sha[32]) override;
     bool migrationImportPart(uint32_t offset, const uint8_t* data, size_t length, uint32_t& next) override;
     bool migrationImportCommit(uint8_t confirm[32]) override;
+    bool migrationRetire(const uint8_t mid[16], const uint8_t imported[32], uint8_t retired[32], const char*& reason) override;
+    bool migrationActivate(const uint8_t mid[16], const uint8_t retired[32], bool& duplicate, const char*& reason) override;
     bool announce() override;
     bool destroy() override;
     void configChanged(bool roleChanged) override;
@@ -758,7 +760,7 @@ void BenchHost::migrationDetails(char* eph, size_t ephSize, char* package, size_
     if (packageSize) package[0] = '\0';
     if (!migrationBarrier.ready()) return;
     const migration_state::Record& record = migrationBarrier.record();
-    if (record.phase == migration_state::Phase::EXPORT && ephSize >= 65) {
+    if ((record.phase == migration_state::Phase::EXPORT || record.phase == migration_state::Phase::RETIRED) && ephSize >= 65) {
         uint8_t publicKey[32];
         if (migration_crypto::publicKey(record.privateKey, publicKey)) hexstr::encode(publicKey, 32, eph);
     }
@@ -877,6 +879,54 @@ bool BenchHost::migrationImportCommit(uint8_t confirm[32]) {
     migration_state::Record done = current;
     done.phase = migration_state::Phase::IMPORTED;
     return migrationBarrier.save(done);
+}
+
+bool BenchHost::migrationRetire(const uint8_t mid[16], const uint8_t imported[32], uint8_t retired[32], const char*& reason) {
+    reason = "migration";
+    if (!migrationBarrier.ready()) return false;
+    migration_state::Record record = migrationBarrier.record();
+    if (memcmp(record.mid, mid, sizeof(record.mid)) ||
+        (record.phase != migration_state::Phase::EXPORT && record.phase != migration_state::Phase::RETIRED)) return false;
+    uint8_t confirmKey[32], packageKey[32];
+    if (!migration_crypto::derive(record.privateKey, record.peerPublic, record.mid, confirmKey, packageKey)) return false;
+    drbg::wipe(packageKey, sizeof(packageKey));
+    const bool valid = migration_crypto::verifyConfirmation(confirmKey, "imported", record.mid, record.packageHash, imported);
+    if (!valid) { drbg::wipe(confirmKey, sizeof(confirmKey)); reason = "signature"; return false; }
+    const bool signedOk = migration_crypto::confirmation(confirmKey, "retired", record.mid, record.packageHash, retired);
+    drbg::wipe(confirmKey, sizeof(confirmKey));
+    if (!signedOk) return false;
+    if (record.phase == migration_state::Phase::EXPORT) {
+        record.phase = migration_state::Phase::RETIRED;
+        if (!migrationBarrier.save(record)) { reason = "memory"; return false; }
+    }
+    // This is safe to retry after a power cut: the RETIRED marker was committed
+    // before the first byte of identity or application data is erased.
+    const bool erased = stationStore.destroy(true);
+    if (!erased) reason = "memory";
+    return erased;
+}
+
+bool BenchHost::migrationActivate(const uint8_t mid[16], const uint8_t retired[32], bool& duplicate, const char*& reason) {
+    reason = "migration";
+    duplicate = false;
+    if (!migrationBarrier.ready()) return false;
+    migration_state::Record record = migrationBarrier.record();
+    if (memcmp(record.mid, mid, sizeof(record.mid))) return false;
+    if (record.phase == migration_state::Phase::NONE) { duplicate = true; return true; }
+    if (record.phase != migration_state::Phase::IMPORTED) return false;
+    uint8_t confirmKey[32], packageKey[32];
+    if (!migration_crypto::derive(record.privateKey, record.peerPublic, record.mid, confirmKey, packageKey)) return false;
+    drbg::wipe(packageKey, sizeof(packageKey));
+    const bool valid = migration_crypto::verifyConfirmation(confirmKey, "retired", record.mid, record.packageHash, retired);
+    drbg::wipe(confirmKey, sizeof(confirmKey));
+    if (!valid) { reason = "signature"; return false; }
+    if (!stationJournal.begin() || !stationJournal.adoptClock(record.flags)) { reason = "memory"; return false; }
+    migration_state::Record done = {};
+    done.phase = migration_state::Phase::NONE;
+    memcpy(done.mid, mid, sizeof(done.mid));
+    if (!migrationBarrier.save(done)) { reason = "memory"; return false; }
+    restartSoon("migration activated: restart");
+    return true;
 }
 
 const char* langName(ui::Lang lang) { return lang == ui::Lang::PL ? "PL" : lang == ui::Lang::UK ? "UK" : "EN"; }

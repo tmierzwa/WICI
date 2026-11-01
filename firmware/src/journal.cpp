@@ -187,6 +187,13 @@ bool Journal::writeClock(uint32_t counterS) {
     return writeSmall(CLOCK_BASE, clock_, counterS, clock_.b, clock_.c);
 }
 
+bool Journal::adoptClock(uint32_t minimumS) {
+    if (minimumS <= clock_.a) return true;
+    const uint32_t delta = minimumS - clock_.a;
+    if (clock_.b > UINT32_MAX - delta) return false;
+    return writeSmall(CLOCK_BASE, clock_, minimumS, clock_.b + delta, clock_.c);
+}
+
 bool Journal::writeSettings(uint32_t language, uint32_t flags) {
     return writeSmall(SETTINGS_BASE, settings_, language, flags, settings_.c);
 }
