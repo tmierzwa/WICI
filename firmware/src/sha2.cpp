@@ -24,6 +24,7 @@ void Hash::reset() {
     static const uint32_t initial[8] = {0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
                                         0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19};
     memcpy(state_, initial, sizeof(state_));
+    memset(buffer_, 0, sizeof(buffer_));  // the last block may hold key material
     used_ = 0;
     bytes_ = 0;
 }
@@ -113,6 +114,25 @@ void Hmac::finish(uint8_t out[DIGEST]) {
     outer.update(innerDigest, DIGEST);
     outer.finish(out);
     memset(outerKey_, 0, sizeof(outerKey_));
+}
+
+Hmac::~Hmac() {
+    memset(outerKey_, 0, sizeof(outerKey_));
+    inner_.reset();
+}
+
+void hkdf(const uint8_t* salt, size_t saltLength, const uint8_t* ikm, size_t ikmLength,
+          const uint8_t* info, size_t infoLength, uint8_t out[DIGEST]) {
+    uint8_t prk[DIGEST];
+    Hmac extract(salt, saltLength);
+    extract.update(ikm, ikmLength);
+    extract.finish(prk);
+    Hmac expand(prk, sizeof(prk));
+    memset(prk, 0, sizeof(prk));
+    expand.update(info, infoLength);
+    const uint8_t block = 1;
+    expand.update(&block, 1);
+    expand.finish(out);
 }
 
 void destinationHash(const uint8_t publicKey[64], const char* name, uint8_t out[16]) {
