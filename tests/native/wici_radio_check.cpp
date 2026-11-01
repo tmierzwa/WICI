@@ -302,4 +302,25 @@ int main() {
     n = encode(key, reply, wire);
     assert(failover.receive(wire, n, at + 100, 30) == wici_radio::Event::ADMITTED);
     assert(failoverDelivery.calls == 1 && failoverDelivery.handle == 77 && failoverDelivery.acknowledged);
+
+    // A replayed first fragment earns one HACK per 5 s, like a replayed whole envelope.
+    static Memory partMemory;
+    Air partAir;
+    wici_radio::Shelter parted(partMemory, {100, 2, 5, 5, 0}, 7, receivers, ifac,
+                               ownSecret, receiverPublic, admit, &admitted,
+                               partAir, randomZero, nullptr, originProof, nullptr, rootEd, beaconProof, rootEd);
+    assert(parted.begin());
+    uint8_t longSa1[200];
+    memset(longSa1, 'L', sizeof(longSa1));
+    assert(envelope::seal(envelopeKey, 1, 2, 2, longSa1, sizeof(longSa1), envelope::MIN_PAYLOAD, sealed) == 2);
+    wici_link::Frame part;
+    part.type = wici_link::Type::DATA; part.flags = wici_link::ACKREQ;
+    part.network = 100; part.source = 5; part.destination = 2;
+    part.ttl = 7; part.sequence = 90; part.length = sealed[0].length;
+    memcpy(part.payload, sealed[0].bytes, part.length);
+    n = encode(key, part, wire);
+    assert(parted.receive(wire, n, 9000, 40) == wici_radio::Event::HACK_SENT);
+    assert(parted.receive(wire, n, 9001, 40) == wici_radio::Event::HACK_SENT);
+    assert(parted.receive(wire, n, 9002, 44) == wici_radio::Event::IGNORED);
+    assert(parted.receive(wire, n, 9003, 45) == wici_radio::Event::HACK_SENT && partAir.hackCount == 3);
 }

@@ -188,7 +188,9 @@ class CrossLanguageEnvelope(unittest.TestCase):
         # (counter, part, time s, plaintext, station result, receiver result)
         steps = (
             (7, 2, 100, b"world", "partial", "partial"),
-            (7, 2, 101, b"world", "partial", "partial"),          # identical repeat: HACK again
+            # Identical repeat. The station reports a duplicate and rate-limits its HACK
+            # (wici_destination.cpp, 5 s); the receiver HACKs it again.
+            (7, 2, 101, b"world", "duplicate", "partial"),
             (7, 2, 101, b"other", "rejected", "rejected"),        # conflicting content
             (7, 1, 102, b"hello ", "complete", "complete"),
             (7, 1, 103, b"hello ", "duplicate", "duplicate"),     # replay bit proves admission

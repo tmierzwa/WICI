@@ -109,7 +109,7 @@ FragmentResult DurableParts::ingest(const Part& part, uint32_t nowS, uint8_t ful
     if (counter_ != part.counter) return FragmentResult::REJECTED;
     if (number_ == part.number)
         return length_ == part.length && memcmp(data_, part.plaintext, length_) == 0 ?
-               FragmentResult::PARTIAL : FragmentResult::REJECTED;
+               FragmentResult::DUPLICATE : FragmentResult::REJECTED;
     const uint8_t* first = number_ == 1 ? data_ : part.plaintext;
     const uint8_t* second = number_ == 1 ? part.plaintext : data_;
     const size_t firstLength = number_ == 1 ? length_ : part.length;

@@ -35,6 +35,7 @@ const char* receive(envelope::DurableReplay& replay, envelope::DurableParts& par
     size_t length = 0;
     switch (parts.ingest(part, now, full, length)) {
         case envelope::FragmentResult::PARTIAL: return "partial";
+        case envelope::FragmentResult::DUPLICATE: return "duplicate";
         case envelope::FragmentResult::COMPLETE:
             return replay.commit(part.counter) && parts.clear() ? "complete" : "io_error";
         case envelope::FragmentResult::REJECTED: return "rejected";

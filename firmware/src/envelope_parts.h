@@ -19,7 +19,7 @@ constexpr uint32_t PARTS_TIMEOUT_S = 120;
 static_assert(PARTS_MAIN_BASE + 2 * PARTS_COPY_BYTES <= 0x046000, "parts before routes");
 static_assert(PARTS_BACKUP_BASE + 2 * PARTS_COPY_BYTES <= 0x048000, "parts before FRAM FS");
 
-enum class FragmentResult : uint8_t { PARTIAL, COMPLETE, REJECTED, IO_ERROR };
+enum class FragmentResult : uint8_t { PARTIAL, DUPLICATE, COMPLETE, REJECTED, IO_ERROR };
 
 class DurableParts {
 public:
@@ -28,6 +28,7 @@ public:
     // Caller already authenticated `part` with the envelope AEAD. PARTIAL is
     // safe to HACK only after the write/readback performed here. COMPLETE
     // returns plaintext without changing FRAM; caller must commit SA1 first.
+    // DUPLICATE: a byte-identical repeat of the stored part, already durable.
     FragmentResult ingest(const Part& part, uint32_t nowS, uint8_t full[MAX_SA1], size_t& length);
     bool clear();
     bool pending() const { return ready_ && length_ != 0; }

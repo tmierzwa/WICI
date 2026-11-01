@@ -58,7 +58,7 @@ Outcome Destination::receive(const uint8_t* wire, size_t length, uint32_t nowS,
     envelope::Part part;
     if (!envelope::openPart(envelopeKeys_[peer], frame.payload, frame.length, part) ||
         part.sender != sender || part.recipient != recipient || part.type != 0) return Outcome::REJECTED;
-    const bool repeat = replay_[peer].accepted(part.counter);
+    bool repeat = replay_[peer].accepted(part.counter);
     if (!repeat) {
         envelope::ReplayWindow proposed;
         if (!replay_[peer].propose(part.counter, proposed)) return Outcome::REJECTED;
@@ -73,6 +73,8 @@ Outcome Destination::receive(const uint8_t* wire, size_t length, uint32_t nowS,
             const envelope::FragmentResult result = parts_[peer].ingest(part, nowS, full, fullLength);
             if (result == envelope::FragmentResult::PARTIAL) {
                 // The first part is already in a verified FRAM record.
+            } else if (result == envelope::FragmentResult::DUPLICATE) {
+                repeat = true;  // a replayed stored part: rate-limited HACK, as a whole duplicate
             } else if (result == envelope::FragmentResult::COMPLETE) {
                 if (!admit_(config_.network, sender, recipient, full, fullLength, context_) ||
                     !replay_[peer].commit(part.counter)) return Outcome::REJECTED;

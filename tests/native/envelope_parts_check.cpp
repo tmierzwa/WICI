@@ -34,6 +34,7 @@ int main() {
     assert(parts.begin(100, 4, 1, key));
     assert(parts.ingest(first, 1000, full, length) == envelope::FragmentResult::PARTIAL);
     assert(parts.pending() && length == 0);
+    assert(parts.ingest(first, 1001, full, length) == envelope::FragmentResult::DUPLICATE);
     envelope::DurableParts restarted(memory, 0);
     assert(restarted.begin(100, 4, 1, key) && restarted.pending());
     assert(restarted.ingest(first, 0, full, length) == envelope::FragmentResult::PARTIAL);
