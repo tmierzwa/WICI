@@ -221,6 +221,94 @@ class CrossLanguageEnvelope(unittest.TestCase):
         self.assertEqual(station, [s for *_, s, _ in steps])
         self.assertEqual(receiver, [r for *_, r in steps])
 
+    def test_small_order_keys_are_refused_at_provisioning(self):
+        from wici import configdoc
+        weak = sorted(configdoc.SMALL_ORDER)
+        p = 2**255 - 19
+        # Every listed X25519 value gives an all-zero shared secret, also with bit 255 set.
+        scalar = self.x25519.X25519PrivateKey.from_private_bytes(bytes(range(32)))
+        for point in weak:
+            if point in _ED25519_ONLY:
+                continue
+            for value in (point, point[:31] + bytes([point[31] | 0x80])):
+                with self.subTest(x25519=value.hex()), self.assertRaises(ValueError):
+                    scalar.exchange(self.x25519.X25519PublicKey.from_public_bytes(value))
+        # The eight Ed25519 torsion points (and y = p, p + 1) are all listed.
+        for point in _torsion():
+            self.assertTrue(configdoc.small_order(point), point.hex())
+        for y in (p, p + 1):
+            self.assertTrue(configdoc.small_order(y.to_bytes(32, "little")))
+        honest = self.ed25519.Ed25519PrivateKey.from_private_bytes(bytes(32)).public_key().public_bytes_raw()
+        samples = [*weak, *(w[:31] + bytes([w[31] | 0x80]) for w in weak), honest, bytes(range(32))]
+        binary = native("envelope_keys_check", "config", "jsonlite", "sa1", "sha2")
+        flags = run(binary, "--small", stdin="".join(s.hex() + "\n" for s in samples)).split()
+        self.assertEqual(flags, ["1" if configdoc.small_order(s) else "0" for s in samples])
+        self.assertEqual(flags[-2:], ["0", "0"])
+
+        def card(x_private, ed_private, number):
+            key = (self.x25519.X25519PrivateKey.from_private_bytes(x_private).public_key().public_bytes_raw() +
+                   self.ed25519.Ed25519PrivateKey.from_private_bytes(ed_private).public_key().public_bytes_raw())
+            return {"lxmf": configdoc.destination(key, "lxmf.delivery").hex(), "key": key.hex(), "id": number,
+                    "net_id": 100, "x25519": key[:32].hex()}
+
+        network = {"id": 100, "station": 4, "root": 1, "parent": 1, "backup_parent": 0,
+                   "receiver_main": 2, "receiver_backup": 3}
+        neighbour = {"id": 1, "ed25519": honest.hex(), "x25519": "cd" * 32}
+        station = {"role": "stacja", "addresses": ["Szkoła"], "stations": 2, "phrases": [], "ifac": "11" * 16,
+                   "radio": {"profile": "p1"}, "network": network, "priority_keys": [neighbour],
+                   "receiver": {"main": card(bytes([1] * 32), bytes([2] * 32), 2),
+                                "backup": card(bytes([3] * 32), bytes([4] * 32), 3)}}
+        identity = "01" + "00" * 31
+        weak_backup = dict(station["receiver"]["backup"])
+        weak_backup["key"] = weak_backup["key"][:64] + identity     # identity point as the Ed25519 half
+        weak_backup["lxmf"] = configdoc.destination(bytes.fromhex(weak_backup["key"]), "lxmf.delivery").hex()
+        cases = (
+            (station, "ok", []),
+            (dict(station, priority_keys=[dict(neighbour, ed25519=identity)]), "priority_keys", ["priority_keys.0"]),
+            (dict(station, priority_keys=[dict(neighbour, x25519="00" * 32)]), "priority_keys", ["priority_keys.0"]),
+            (dict(station, receiver=dict(station["receiver"], backup=weak_backup)), "receiver",
+             ["receiver.backup.key"]),
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "configure.json"
+            for doc, detail, fields in cases:
+                path.write_bytes(configdoc.encode(doc))
+                with self.subTest(detail=detail):
+                    self.assertEqual(run(binary, str(path), "p1").strip(), detail)
+                    self.assertEqual([field for field, _ in configdoc.check(doc)], fields)
+
+
+# Ed25519-only entries of SMALL_ORDER: order-8 points that are ordinary X25519 values.
+_ED25519_ONLY = frozenset(bytes.fromhex(h) for h in (
+    "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a",
+    "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05"))
+
+
+def _torsion():
+    """Encodings of the eight Ed25519 points of order dividing 8, computed from scratch."""
+    p = 2**255 - 19
+    d = -121665 * pow(121666, p - 2, p) % p
+
+    def add(a, b):
+        t = d * a[0] * b[0] * a[1] * b[1] % p
+        return ((a[0] * b[1] + b[0] * a[1]) * pow(1 + t, p - 2, p) % p,
+                (a[1] * b[1] + a[0] * b[0]) * pow(1 - t, p - 2, p) % p)
+
+    # Decode the listed order-8 point (RFC 8032, 5.1.3), then check that it generates eight points.
+    i = pow(2, (p - 1) // 4, p)
+    y = int.from_bytes(bytes.fromhex("c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a"), "little")
+    x2 = (y * y - 1) * pow(d * y * y + 1, p - 2, p) % p
+    x = pow(x2, (p + 3) // 8, p)
+    if (x * x - x2) % p:
+        x = x * i % p
+    assert (x * x - x2) % p == 0
+    order8, point, points = (x, y), (0, 1), []
+    for _ in range(8):
+        points.append(point)
+        point = add(point, order8)
+    assert point == (0, 1) and len(set(points)) == 8 and add(add(order8, order8), add(order8, order8)) != (0, 1)
+    return [(y | (x & 1) << 255).to_bytes(32, "little") for x, y in points]
+
 
 if __name__ == "__main__":
     unittest.main()

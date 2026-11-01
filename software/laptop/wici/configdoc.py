@@ -22,6 +22,20 @@ PROFILES = ("lora-sf7", "p1")
 REJECTED_CATEGORIES = ("Cc", "Cf", "Cs", "Co", "Cn", "Zl", "Zp")
 UNICODE_VERSION = "16.0.0"   # tabele Unicode oprogramowania stacji (firmware/src/unicode_tables.h)
 HEX = re.compile(r"[0-9a-f]*")
+# Small-order X25519 u-coordinates and Ed25519 points, little-endian with bit 255 cleared
+# (firmware/src/config.cpp, SMALL_ORDER): a weak key gives no shared secret, and with a
+# small-order Ed25519 key a forged signature verifies for every message.
+SMALL_ORDER = frozenset(bytes.fromhex(h) for h in (
+    "00" * 32,
+    "01" + "00" * 31,
+    "e0eb7a7c3b41b8ae1656e3faf19fc46ada098deb9c32b1fd866205165f49b800",
+    "5f9c95bca3508c24b1d0b1559c83ef5b04445cc4581c8e86d8224eddd09f1157",
+    "ec" + "ff" * 30 + "7f",
+    "ed" + "ff" * 30 + "7f",
+    "ee" + "ff" * 30 + "7f",
+    "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a",
+    "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05",
+))
 SPACES = re.compile(r"\s+")
 
 
@@ -100,6 +114,16 @@ def _hex(value, length):
     return isinstance(value, str) and len(value) == length and HEX.fullmatch(value) is not None
 
 
+def small_order(key):
+    """True for a 32-byte X25519 or Ed25519 public key of small order (bit 255 ignored)."""
+    return bytes(key[:31]) + bytes([key[31] & 0x7F]) in SMALL_ORDER
+
+
+def _key(value):
+    """A 64-hex-digit public key that is not of small order."""
+    return _hex(value, 64) and not small_order(bytes.fromhex(value))
+
+
 def _number(value, zero=False):
     return type(value) is int and (0 if zero else 1) <= value <= 0xFFFE
 
@@ -147,8 +171,8 @@ def check(doc):
             for i, entry in enumerate(priority_keys):
                 number = entry.get("id") if isinstance(entry, dict) else None
                 if (not isinstance(entry, dict) or set(entry) != {"id", "ed25519", "x25519"} or
-                        not _number(number) or not _hex(entry.get("ed25519"), 64) or
-                        not _hex(entry.get("x25519"), 64) or number in seen or
+                        not _number(number) or not _key(entry.get("ed25519")) or
+                        not _key(entry.get("x25519")) or number in seen or
                         isinstance(network, dict) and number in
                         (network.get("station"), network.get("receiver_main"), network.get("receiver_backup"))):
                     problems.append((f"priority_keys.{i}", "invalid or repeated station number or public key"))
@@ -190,6 +214,8 @@ def check(doc):
                 problems.append((f"receiver.{which}", "niepoprawne pola tożsamości odbiorcy"))
             elif not _hex(card["key"], 128):
                 problems.append((f"receiver.{which}.key", "klucz publiczny to 128 cyfr szesnastkowych"))
+            elif not _key(card["key"][:64]) or not _key(card["key"][64:]):
+                problems.append((f"receiver.{which}.key", "klucz o małym rzędzie: błędny albo podstawiony"))
             elif not _hex(card["lxmf"], 32):
                 problems.append((f"receiver.{which}.lxmf", "adres LXMF to 32 cyfry szesnastkowe"))
             elif destination(bytes.fromhex(card["key"]), "lxmf.delivery").hex() != card["lxmf"]:

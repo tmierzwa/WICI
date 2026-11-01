@@ -81,6 +81,11 @@ struct Source {
     virtual bool read(uint32_t offset, char* out, size_t length) = 0;
 };
 
+// Klucz X25519 albo Ed25519 o małym rzędzie (bit 255 pomijany): taki klucz nie daje wspólnego
+// sekretu, a podpis Ed25519 z nim przechodzi dla każdej wiadomości. parse() odrzuca go w karcie
+// odbiorcy i w `priority_keys`.
+bool smallOrder(const uint8_t key[32]);
+
 // Kontrola i rozbiór dokumentu o długości size. Zwraca nullptr albo `detail` odmowy `invalid`
 // (nazwa pola, "worst_request", "json", "memory" przy błędzie odczytu). profile: profil radiowy,
 // który obsługuje układ radiowy stacji. worst: największe zgłoszenie z przycisków (B); seq w out
