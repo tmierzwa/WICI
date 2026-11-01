@@ -5,11 +5,6 @@
 
 namespace drbg {
 
-void wipe(void* data, size_t length) {
-    volatile uint8_t* p = static_cast<volatile uint8_t*>(data);
-    while (length--) *p++ = 0;
-}
-
 bool healthy(const uint8_t* entropy, size_t length) {
     // Progi z SP 800-90B, 4.4.1 i 4.4.2 dla H = 4 b na bajt i alfa = 2^-20: test powtórzeń
     // C = 1 + ceil(20 / H) = 6; test proporcji: najmniejsze C z P(X + 1 >= C) <= 2^-20 dla

@@ -44,6 +44,10 @@ private:
     uint8_t outerKey_[BLOCK];
 };
 
+// Zerowanie kluczy, sekretów i ziarna w RAM zapisem ulotnym: memset tablicy tuż przed końcem
+// jej życia kompilator może usunąć jako martwy zapis.
+void wipe(void* data, size_t length);
+
 // HKDF-SHA-256 (RFC 5869) z jednym blokiem wyjścia: OKM = HMAC(HMAC(salt, ikm), info ‖ 0x01).
 void hkdf(const uint8_t* salt, size_t saltLength, const uint8_t* ikm, size_t ikmLength,
           const uint8_t* info, size_t infoLength, uint8_t out[DIGEST]);

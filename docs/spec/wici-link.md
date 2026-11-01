@@ -29,7 +29,7 @@ Protokół używa profilu LoRa pilotażu bez zmian ([radio](radio.md#profil-lora
  opts: 0; każda inna wartość jest odrzucana (miejsce na jawnie wersjonowane rozszerzenie)
  podpis: Ed25519 pochodzenia, 64 B (tylko DATA, przenoszony bez zmian przez każdy skok)
  MAC: pierwsze 8 B HMAC-SHA-256(K_link, wszystkie wcześniejsze bajty)
- tag pary: pierwsze 8 B HMAC-SHA-256(K_hop, "WICI hop v1" ‖ wszystkie wcześniejsze bajty), tylko gdy l_dst ≠ 0xFFFF
+ tag pary: pierwsze 8 B HMAC-SHA-256(K_hop, "WICI hop tag v1" ‖ wszystkie wcześniejsze bajty), tylko gdy l_dst ≠ 0xFFFF
 ```
 
 Ramka LoRa ma najwyżej 255 B, więc koperta w DATA ma 25–164 B (`MAX_PAYLOAD` = 255 − 11 − 64 − 8 − 8).
@@ -43,7 +43,7 @@ Ramka LoRa ma najwyżej 255 B, więc koperta w DATA ma 25–164 B (`MAX_PAYLOAD`
 
 Czasy liczy `lora::frameAirMs` z narastaniem nadajnika. Odbiorca odrzuca ramkę o błędnym MAC lub tagu, nieznanej wersji, nieznanym typie, niezerowym `opts` lub bicie 2, `hops` > TTL, ACKREQ przy `l_dst` = 0xFFFF oraz DATA rozsyłaną bez DOWN.
 
-**Klucze łącza.** `K_link = HKDF-SHA-256(ikm = klucz sieci z przygotowania, salt = net_id, info = "WICI link v2", L = 32)`; jest wspólny dla sieci. Każdy numerowany węzeł ma klucze X25519 sąsiadów z `priority_keys` (najwyżej 50). Para wyprowadza wspólny sekret jak koperta (`envelope::deriveKey`, ECDH X25519 i HKDF) z numerami pary w kolejności rosnącej, a potem `K_hop = HMAC-SHA-256(sekret, "WICI hop v1")`. Węzeł sprawdza tag przed jakimkolwiek przetwarzaniem ramki jednoadresowej; ramkę od sąsiada bez klucza pary odrzuca. Sam klucz sieci nie pozwala więc podszyć się pod `l_src` sąsiada, sfałszować HACK ani dostać się do kolejki przekaźnika ramką jednoadresową. Rozsyłane DATA i BEACON-y niosą tylko MAC sieci; ich treść chronią podpisy.
+**Klucze łącza.** `K_link = HKDF-SHA-256(ikm = klucz sieci z przygotowania, salt = net_id, info = "WICI link v2", L = 32)`; jest wspólny dla sieci. Każdy numerowany węzeł ma klucze X25519 sąsiadów z `priority_keys` (najwyżej 50). Para wyprowadza `K_hop = HKDF-SHA-256(ikm = wspólny sekret X25519, salt = net_id ‖ 0x02, info = "WICI hop v1" ‖ id_low ‖ id_high ‖ pk_low ‖ pk_high, L = 32)`, gdzie `id_low` < `id_high` to numery pary (u16 BE), a `pk_low` i `pk_high` ich klucze X25519 (po 32 B). Klucz pary nie zależy od klucza koperty (sól koperty kończy się 0x01); wspólny sekret z samych zer jest odrzucany. Węzeł sprawdza tag przed jakimkolwiek przetwarzaniem ramki jednoadresowej; ramkę od sąsiada bez klucza pary odrzuca. Sam klucz sieci nie pozwala więc podszyć się pod `l_src` sąsiada, sfałszować HACK ani dostać się do kolejki przekaźnika ramką jednoadresową. Rozsyłane DATA i BEACON-y niosą tylko MAC sieci; ich treść chronią podpisy.
 
 **Podpisy Ed25519** (klucze tożsamości z kart; każda dziedzina ma własną etykietę):
 

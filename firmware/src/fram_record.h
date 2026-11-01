@@ -43,7 +43,7 @@ inline void fingerprint(const uint8_t key[32], uint8_t out[FINGERPRINT]) {
     uint8_t digest[sha2::DIGEST];
     sha2::digest(key, 32, digest);
     memcpy(out, digest, FINGERPRINT);
-    memset(digest, 0, sizeof(digest));
+    sha2::wipe(digest, sizeof(digest));
 }
 
 // ABSENT: blank, or a write torn before its COMMIT byte, which never released

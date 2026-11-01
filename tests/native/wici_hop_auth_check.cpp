@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 #include <assert.h>
+#include <stdio.h>
 #include <string.h>
 
 #include <Curve25519.h>
@@ -29,6 +30,8 @@ int main() {
     assert(bareLength == 19);
     size_t radioLength = sender.seal(bare, bareLength, radio, sizeof(radio));
     assert(radioLength == bareLength + wici_link::HOP_TAG && radioLength == wici_link::RADIO_HACK);
+    for (size_t i = 0; i < radioLength; ++i) printf("%02x", radio[i]);  // tag vector for Python
+    printf("\n");
     size_t openedLength = 0;
     assert(receiver.open(radio, radioLength, opened, sizeof(opened), openedLength));
     assert(openedLength == bareLength && !memcmp(opened, bare, bareLength));
@@ -53,4 +56,13 @@ int main() {
     assert(sender.seal(bare, radioLength, radio, sizeof(radio)) == radioLength);
     assert(receiver.open(radio, radioLength, opened, sizeof(opened), openedLength));
     assert(openedLength == radioLength);
+    // An all-zero shared secret is refused, and a failed begin keeps no key.
+    config::PriorityKey peers[2] = {aPeer, aPeer};
+    peers[1].station = 3;
+    memset(peers[1].x25519, 0, 32);
+    assert(!sender.begin(100, 1, a, peers, 2));
+    frame.type = wici_link::Type::HACK; frame.destination = 2; frame.length = 0;
+    assert(wici_link::encode(groupKey, frame, bare, sizeof(bare)) == bareLength);
+    assert(!sender.seal(bare, bareLength, radio, sizeof(radio)));
+    assert(sender.begin(100, 1, a, peers, 1) && sender.seal(bare, bareLength, radio, sizeof(radio)));
 }

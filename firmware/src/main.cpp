@@ -842,11 +842,11 @@ void BenchHost::migrationConfirmation(char* confirm, size_t size) {
     if (!kind) return;
     uint8_t confirmKey[32], packageKey[32], result[32];
     if (!migration_crypto::derive(record.privateKey, record.peerPublic, record.mid, confirmKey, packageKey)) return;
-    drbg::wipe(packageKey, sizeof(packageKey));
+    sha2::wipe(packageKey, sizeof(packageKey));
     if (migration_crypto::confirmation(confirmKey, kind, record.mid, record.packageHash, result))
         hexstr::encode(result, sizeof(result), confirm);
-    drbg::wipe(result, sizeof(result));
-    drbg::wipe(confirmKey, sizeof(confirmKey));
+    sha2::wipe(result, sizeof(result));
+    sha2::wipe(confirmKey, sizeof(confirmKey));
 }
 
 bool BenchHost::migrationReceiveKey(uint8_t mid[16], uint8_t publicKey[32], uint8_t fingerprint[8]) {
@@ -874,7 +874,7 @@ bool BenchHost::migrationReceiveKey(uint8_t mid[16], uint8_t publicKey[32], uint
     uint8_t full[32];
     digest.finish(full);
     memcpy(fingerprint, full, 8);
-    drbg::wipe(full, sizeof(full));
+    sha2::wipe(full, sizeof(full));
     return true;
 }
 
@@ -890,7 +890,7 @@ bool BenchHost::migrationExport(const uint8_t mid[16], const uint8_t targetKey[3
         uint8_t full[32];
         hash.finish(full);
         memcpy(record.identityDigest, full, sizeof(record.identityDigest));
-        drbg::wipe(full, sizeof(full));
+        sha2::wipe(full, sizeof(full));
         record.phase = migration_state::Phase::EXPORT;
         record.snapshotSize = migration_image::SIZE;
         memcpy(record.mid, mid, sizeof(record.mid));
@@ -898,8 +898,8 @@ bool BenchHost::migrationExport(const uint8_t mid[16], const uint8_t targetKey[3
         stationRandom(record.privateKey, sizeof(record.privateKey));
         uint8_t confirmKey[32], packageKey[32];
         const bool peerValid = migration_crypto::derive(record.privateKey, targetKey, mid, confirmKey, packageKey);
-        drbg::wipe(confirmKey, sizeof(confirmKey));
-        drbg::wipe(packageKey, sizeof(packageKey));
+        sha2::wipe(confirmKey, sizeof(confirmKey));
+        sha2::wipe(packageKey, sizeof(packageKey));
         if (!peerValid) return false;
         if (!migrationBarrier.save(record)) return false;
         freezeMigration();
@@ -943,10 +943,10 @@ bool BenchHost::migrationImportCommit(uint8_t confirm[32]) {
 #if defined(WICI_RNS_CORE)
     rnscore::publicKey(privateIdentity, publicIdentity);
 #else
-    drbg::wipe(privateIdentity, sizeof(privateIdentity));
+    sha2::wipe(privateIdentity, sizeof(privateIdentity));
     return false;  // legacy port images cannot publish a migrated identity
 #endif
-    drbg::wipe(privateIdentity, sizeof(privateIdentity));
+    sha2::wipe(privateIdentity, sizeof(privateIdentity));
     sha2::digest(publicIdentity, sizeof(publicIdentity), actual);
     if (memcmp(actual, current.identityDigest, sizeof(current.identityDigest))) return false;
     journal::Journal importedJournal(memory);
@@ -954,9 +954,9 @@ bool BenchHost::migrationImportCommit(uint8_t confirm[32]) {
         !(importedJournal.formatFlags() & journal::FORMAT_IDENTITY)) return false;
     uint8_t confirmKey[32], packageKey[32];
     if (!migration_crypto::derive(current.privateKey, current.peerPublic, current.mid, confirmKey, packageKey)) return false;
-    drbg::wipe(packageKey, sizeof(packageKey));
+    sha2::wipe(packageKey, sizeof(packageKey));
     const bool signedOk = migration_crypto::confirmation(confirmKey, "imported", current.mid, current.packageHash, confirm);
-    drbg::wipe(confirmKey, sizeof(confirmKey));
+    sha2::wipe(confirmKey, sizeof(confirmKey));
     if (!signedOk || !migration_image::clearLocalCaches(memory)) return false;
     migration_state::Record done = current;
     done.phase = migration_state::Phase::IMPORTED;
@@ -971,11 +971,11 @@ bool BenchHost::migrationRetire(const uint8_t mid[16], const uint8_t imported[32
         (record.phase != migration_state::Phase::EXPORT && record.phase != migration_state::Phase::RETIRED)) return false;
     uint8_t confirmKey[32], packageKey[32];
     if (!migration_crypto::derive(record.privateKey, record.peerPublic, record.mid, confirmKey, packageKey)) return false;
-    drbg::wipe(packageKey, sizeof(packageKey));
+    sha2::wipe(packageKey, sizeof(packageKey));
     const bool valid = migration_crypto::verifyConfirmation(confirmKey, "imported", record.mid, record.packageHash, imported);
-    if (!valid) { drbg::wipe(confirmKey, sizeof(confirmKey)); reason = "signature"; return false; }
+    if (!valid) { sha2::wipe(confirmKey, sizeof(confirmKey)); reason = "signature"; return false; }
     const bool signedOk = migration_crypto::confirmation(confirmKey, "retired", record.mid, record.packageHash, retired);
-    drbg::wipe(confirmKey, sizeof(confirmKey));
+    sha2::wipe(confirmKey, sizeof(confirmKey));
     if (!signedOk) return false;
     if (record.phase == migration_state::Phase::EXPORT) {
         record.phase = migration_state::Phase::RETIRED;
@@ -1006,9 +1006,9 @@ bool BenchHost::migrationActivate(const uint8_t mid[16], const uint8_t* retired,
     if (record.phase != migration_state::Phase::IMPORTED) return false;
     uint8_t confirmKey[32], packageKey[32];
     if (!retired || !migration_crypto::derive(record.privateKey, record.peerPublic, record.mid, confirmKey, packageKey)) return false;
-    drbg::wipe(packageKey, sizeof(packageKey));
+    sha2::wipe(packageKey, sizeof(packageKey));
     const bool valid = migration_crypto::verifyConfirmation(confirmKey, "retired", record.mid, record.packageHash, retired);
-    drbg::wipe(confirmKey, sizeof(confirmKey));
+    sha2::wipe(confirmKey, sizeof(confirmKey));
     if (!valid) { reason = "signature"; return false; }
     if (!stationJournal.begin() || !stationJournal.adoptClock(record.flags)) { reason = "memory"; return false; }
     migration_state::Record done = {};
@@ -1051,9 +1051,9 @@ bool BenchHost::migrationAbortTarget(const uint8_t mid[16], const uint8_t* eph, 
             if (any && memcmp(record.peerPublic, eph, 32)) { reason = "signature"; return false; }
             uint8_t confirmKey[32], packageKey[32];
             if (!migration_crypto::derive(record.privateKey, eph, mid, confirmKey, packageKey)) { reason = "signature"; return false; }
-            drbg::wipe(packageKey, sizeof(packageKey));
+            sha2::wipe(packageKey, sizeof(packageKey));
             hasConfirm = migration_crypto::confirmation(confirmKey, "aborted", mid, record.packageHash, confirm);
-            drbg::wipe(confirmKey, sizeof(confirmKey));
+            sha2::wipe(confirmKey, sizeof(confirmKey));
             if (!hasConfirm) return false;
         }
         if (!migration_image::eraseTarget(memory)) { reason = "memory"; return false; }
@@ -1089,9 +1089,9 @@ bool BenchHost::migrationAbortSource(const uint8_t mid[16], const uint8_t* confi
     if (!any) return false;
     uint8_t confirmKey[32], packageKey[32];
     if (!confirm || !migration_crypto::derive(record.privateKey, record.peerPublic, mid, confirmKey, packageKey)) return false;
-    drbg::wipe(packageKey, sizeof(packageKey));
+    sha2::wipe(packageKey, sizeof(packageKey));
     const bool valid = migration_crypto::verifyConfirmation(confirmKey, "aborted", mid, record.packageHash, confirm);
-    drbg::wipe(confirmKey, sizeof(confirmKey));
+    sha2::wipe(confirmKey, sizeof(confirmKey));
     if (!valid) { reason = "signature"; return false; }
     if (record.phase == migration_state::Phase::EXPORT) {
         record.phase = migration_state::Phase::ABORTED;
@@ -1839,7 +1839,7 @@ void beginStack() {
     uint8_t seed[32];
     stationRandom(seed, sizeof(seed));
     rnsOk = rnsnode::begin(memory, benchRadio, c.ifac, static_cast<uint64_t>(counterS()) * 1000, stationStore.identitySaved(), seed, hooks);
-    drbg::wipe(seed, sizeof(seed));
+    sha2::wipe(seed, sizeof(seed));
     if (!rnsOk) {
         const bool lost = rnsnode::status().identityLost;
         stackState = lost ? StackState::IDENTITY_LOST : StackState::START_FAILED;
@@ -1910,7 +1910,7 @@ void beginWici() {
             else wiciShelter->onDelivery(onWiciDelivery, nullptr);
         }
     }
-    drbg::wipe(privateKey, sizeof(privateKey));
+    sha2::wipe(privateKey, sizeof(privateKey));
     if (failure) {
         stackState = StackState::START_FAILED;
         bench.log(failure);
@@ -1946,7 +1946,7 @@ void seedGenerator() {
     }
     platform::chipId(id);
     generator.seed(entropy, sizeof(entropy), reinterpret_cast<const uint8_t*>(id), sizeof(id));
-    drbg::wipe(entropy, sizeof(entropy));
+    sha2::wipe(entropy, sizeof(entropy));
 }
 
 }  // namespace

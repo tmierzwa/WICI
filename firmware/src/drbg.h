@@ -25,10 +25,6 @@ constexpr size_t SEED_ENTROPY = 48;   // 384 b: entropia i bezpieczeństwo 256 b
 // na krótkim wzorze; nie wykrywa źródła, które daje zmienny, ale przewidywalny ciąg (np. licznik).
 bool healthy(const uint8_t* entropy, size_t length);
 
-// Zerowanie entropii, ziarna i kluczy w RAM zapisem ulotnym: memset tablicy lokalnej tuż przed końcem
-// jej życia kompilator może usunąć jako martwy zapis.
-void wipe(void* data, size_t length);
-
 class Drbg {
 public:
     // Instantiate: entropy ‖ nonce, bez ciągu personalizacji; ziarno krótsze niż 32 B nie uruchamia generatora.

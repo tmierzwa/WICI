@@ -26,24 +26,29 @@ void nonce(const uint8_t header[HEADER], uint8_t out[12]) {
 
 }  // namespace
 
+bool agree(const uint8_t privateKey[32], const uint8_t peerPublic[32], uint8_t ownPublic[32],
+           uint8_t shared[32]) {
+    uint8_t scalar[32];
+    memcpy(scalar, privateKey, 32);
+    scalar[0] &= 0xF8;
+    scalar[31] = (scalar[31] & 0x7F) | 0x40;
+    Curve25519::eval(ownPublic, scalar, nullptr);
+    Curve25519::eval(shared, scalar, peerPublic);
+    clean(scalar, sizeof(scalar));
+    uint8_t any = 0;
+    for (size_t i = 0; i < 32; ++i) any |= shared[i];
+    if (any) return true;
+    clean(ownPublic, 32);
+    clean(shared, 32);
+    return false;
+}
+
 bool deriveKey(const uint8_t privateKey[32], const uint8_t peerPublic[32], uint16_t netId,
                uint16_t sender, uint16_t recipient, uint16_t ownId, uint8_t out[32]) {
     if (!privateKey || !peerPublic || !out || !id(netId) || !id(sender) || !id(recipient) ||
         sender == recipient || (ownId != sender && ownId != recipient)) return false;
-    uint8_t scalar[32], publicKey[32], shared[32];
-    memcpy(scalar, privateKey, 32);
-    scalar[0] &= 0xF8;
-    scalar[31] = (scalar[31] & 0x7F) | 0x40;
-    Curve25519::eval(publicKey, scalar, nullptr);
-    Curve25519::eval(shared, scalar, peerPublic);
-    clean(scalar, sizeof(scalar));
-    uint8_t any = 0;
-    for (uint8_t byte : shared) any |= byte;
-    if (!any) {
-        clean(publicKey, sizeof(publicKey));
-        clean(shared, sizeof(shared));
-        return false;
-    }
+    uint8_t publicKey[32], shared[32];
+    if (!agree(privateKey, peerPublic, publicKey, shared)) return false;
     uint8_t info[sizeof(LABEL) + 4 + 64];
     memcpy(info, LABEL, sizeof(LABEL));
     put16(info + sizeof(LABEL), sender);

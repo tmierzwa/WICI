@@ -73,8 +73,20 @@ DURABLE = ("envelope_counter", "envelope_parts", "envelope_replay", "sha2")
 
 class NativeWiciLink(unittest.TestCase):
     def test_pairwise_hop_auth_rejects_spoofed_or_untagged_unicast(self):
-        run(native("wici_hop_auth_check", "wici_hop_auth", "envelope", "wici_link", "sha2", "envelope_counter",
-                   crypto=True))
+        radio = bytes.fromhex(run(native("wici_hop_auth_check", "wici_hop_auth", "envelope", "wici_link", "sha2",
+                                         "envelope_counter", crypto=True)).strip())
+        # K_hop = HKDF(X25519 secret, salt = net_id || 0x02, info = "WICI hop v1" || ids || public keys),
+        # tag = HMAC(K_hop, "WICI hop tag v1" || frame) (docs/spec/wici-link.md).
+        from cryptography.hazmat.primitives import hashes
+        from cryptography.hazmat.primitives.asymmetric import x25519
+        from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+        a = x25519.X25519PrivateKey.from_private_bytes(bytes([8]) + bytes(30) + bytes([0x40]))
+        b = x25519.X25519PrivateKey.from_private_bytes(bytes([16]) + bytes(30) + bytes([0x40]))
+        public = [k.public_key().public_bytes_raw() for k in (a, b)]
+        info = b"WICI hop v1" + (1).to_bytes(2, "big") + (2).to_bytes(2, "big") + public[0] + public[1]
+        shared = a.exchange(x25519.X25519PublicKey.from_public_bytes(public[1]))
+        key = HKDF(hashes.SHA256(), 32, (100).to_bytes(2, "big") + b"\x02", info).derive(shared)
+        self.assertEqual(radio[-8:], hmac.digest(key, b"WICI hop tag v1" + radio[:-8], "sha256")[:8])
 
     def test_root_kiss_gateway_requires_matching_timely_hack(self):
         run(native("wici_gateway_check", "wici_gateway", "wici_route", "wici_flood", "wici_seq", "wici_link",

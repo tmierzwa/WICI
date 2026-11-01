@@ -17,19 +17,13 @@ void clamp(uint8_t scalar[KEY]) {
     scalar[31] = static_cast<uint8_t>((scalar[31] & 127) | 64);
 }
 
-void hkdf(const uint8_t shared[KEY], const uint8_t mid[MID], const char* label,
-          uint8_t out[KEY]) {
-    uint8_t prk[KEY];
-    sha2::Hmac extract(mid, MID);
-    extract.update(shared, KEY);
-    extract.finish(prk);
-    sha2::Hmac expand(prk, KEY);
-    expand.update(reinterpret_cast<const uint8_t*>(label), strlen(label));
-    expand.update(mid, MID);
-    const uint8_t block = 1;
-    expand.update(&block, 1);
-    expand.finish(out);
-    clean(prk, sizeof(prk));
+// HKDF with salt = mid and info = label || mid.
+template <size_t N>
+void hkdf(const uint8_t shared[KEY], const uint8_t mid[MID], const char (&label)[N], uint8_t out[KEY]) {
+    uint8_t info[N - 1 + MID];
+    memcpy(info, label, N - 1);
+    memcpy(info + N - 1, mid, MID);
+    sha2::hkdf(mid, MID, shared, KEY, info, sizeof(info), out);
 }
 
 void nonce(uint32_t index, uint8_t out[12]) {

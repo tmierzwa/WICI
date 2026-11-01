@@ -37,17 +37,9 @@ void mac(const uint8_t key[32], const uint8_t* data, size_t size, uint8_t out[32
 
 bool deriveKey(const uint8_t ifac[16], uint16_t netId, uint8_t out[32]) {
     if (!ifac || !out || !id(netId)) return false;
-    uint8_t salt[2], prk[32];
+    uint8_t salt[2];
     put16(salt, netId);
-    sha2::Hmac extract(salt, sizeof(salt));
-    extract.update(ifac, 16);
-    extract.finish(prk);
-    sha2::Hmac expand(prk, sizeof(prk));
-    expand.update(LABEL, sizeof(LABEL));
-    const uint8_t block = 1;
-    expand.update(&block, 1);
-    expand.finish(out);
-    memset(prk, 0, sizeof(prk));
+    sha2::hkdf(salt, sizeof(salt), ifac, 16, LABEL, sizeof(LABEL), out);
     return true;
 }
 
@@ -68,7 +60,7 @@ size_t encode(const uint8_t key[32], const Frame& frame, uint8_t* out, size_t ca
     mac(key, local, HEADER + frame.length + signature, digest);
     memcpy(local + HEADER + frame.length + signature, digest, TAG);
     memcpy(out, local, HEADER + frame.length + signature + TAG);
-    memset(digest, 0, sizeof(digest));
+    sha2::wipe(digest, sizeof(digest));
     return HEADER + frame.length + signature + TAG;
 }
 
@@ -78,7 +70,7 @@ bool decode(const uint8_t key[32], uint16_t netId, const uint8_t* wire, size_t s
     uint8_t digest[32], mismatch = 0;
     mac(key, wire, size - TAG, digest);
     for (size_t i = 0; i < TAG; ++i) mismatch |= digest[i] ^ wire[size - TAG + i];
-    memset(digest, 0, sizeof(digest));
+    sha2::wipe(digest, sizeof(digest));
     if (mismatch) return false;
     Frame proposed;
     const uint8_t first = wire[0];

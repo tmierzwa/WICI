@@ -35,6 +35,11 @@ struct Part {
     size_t length = 0;
 };
 
+// X25519 with a raw private key (clamped here): the own public key and the shared secret with
+// peerPublic. Returns false, with both outputs wiped, for an all-zero (weak peer point) secret.
+bool agree(const uint8_t privateKey[32], const uint8_t peerPublic[32], uint8_t ownPublic[32],
+           uint8_t shared[32]);
+
 // ownId is sender or recipient in the wire direction; privateKey and peerPublic are raw X25519 keys.
 // Returns false for a reserved station number, same endpoint, or weak peer point.
 bool deriveKey(const uint8_t privateKey[32], const uint8_t peerPublic[32], uint16_t netId,
