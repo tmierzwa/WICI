@@ -38,7 +38,7 @@ Podpakiet [wici/stanowisko/](wici/stanowisko/__init__.py) to aplikacja komputera
 # z katalogu software/laptop; przygotowanie na komputerze bez sieci, paczka zapasowa poza nośnikiem
 python -m wici.stanowisko przygotuj --nosnik /media/nosnik/wici --dyzurni 4 --paczka /media/koperta/paczka.json --karta karta.json
 
-# Karta numerowana dla projektu D21: podaj wszystkie trzy numery razem.
+# Karta numerowana dla projektu D21: podaj wszystkie trzy numery razem; --ttl (1–15, domyślnie 7) jak network.ttl stacji.
 python -m wici.stanowisko przygotuj --nosnik /media/nosnik/wici --dyzurni 4 --paczka /media/koperta/paczka.json --karta karta.json --net-id 100 --main-id 2 --backup-id 3 --root-id 1 --ifac 00112233445566778899aabbccddeeff
 python -m wici.stanowisko start --nosnik /media/nosnik/wici --port /dev/ttyACM0   # pyta o hasło stanowiska, otwiera panel
 # u administratora danych: archiwum zamkniętego zdarzenia do pustego katalogu (hasło archiwum na wejściu)
