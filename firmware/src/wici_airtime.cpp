@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 #include "wici_airtime.h"
 
-#include "wici_record.h"
+#include "fram_record.h"
 
 namespace wici_airtime {
 namespace {
-using namespace wici_record;
+using namespace fram_record;
 constexpr uint8_t MAGIC[4] = {'W', 'A', 'T', '1'};
 }  // namespace
 
@@ -17,11 +17,12 @@ bool Budget::begin(uint16_t network, uint16_t own) {
     bool found = false;
     for (uint8_t i = 0; i < 2; ++i) {
         uint8_t data[COPY_BYTES];
-        if (!storage_.read(BASE + i * COPY_BYTES, data, sizeof(data))) return false;
-        if (!committed(data, sizeof(data))) continue;
+        Copy copy;
+        if (!load(storage_, BASE + i * COPY_BYTES, data, sizeof(data), 44, MAGIC, copy)) return false;
+        if (copy == Copy::ABSENT) continue;
         // Airtime belongs to the radio, not to its numbers: spent budget is
         // carried over a renumbering.
-        if (memcmp(data, MAGIC, 4) || get16(data + 44) != crc(data, 44)) return false;
+        if (copy == Copy::DAMAGED) return false;
         const uint32_t sequence = get32(data + 8);
         if (!found || newer(sequence, sequence_)) {
             found = true; sequence_ = sequence; epoch_ = get32(data + 12); copy_ = i;
@@ -69,9 +70,8 @@ bool Budget::commit() {
         put16(data + 16 + b * 2, pool_[b]);
         put16(data + 30 + b * 2, beacon_[b]);
     }
-    put16(data + 44, crc(data, 44));
     const uint8_t target = static_cast<uint8_t>(1 - copy_);
-    if (!write(storage_, BASE + target * COPY_BYTES, data, sizeof(data))) { ready_ = false; return false; }
+    if (!store(storage_, BASE + target * COPY_BYTES, data, sizeof(data), 44)) { ready_ = false; return false; }
     copy_ = target; ++sequence_;
     return true;
 }

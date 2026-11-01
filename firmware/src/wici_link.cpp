@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 #include "wici_link.h"
-#include "wici_record.h"
+#include "fram_record.h"
 
 #include <string.h>
 
@@ -8,9 +8,9 @@
 
 namespace wici_link {
 namespace {
-using wici_record::get16;
-using wici_record::put16;
-using wici_record::id;
+using fram_record::get16;
+using fram_record::put16;
+using fram_record::id;
 constexpr uint8_t LABEL[] = {'W', 'I', 'C', 'I', ' ', 'l', 'i', 'n', 'k', ' ', 'v', '2'};
 
 bool valid(const Frame& f) {

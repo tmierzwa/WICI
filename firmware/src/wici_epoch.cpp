@@ -1,21 +1,18 @@
 // SPDX-License-Identifier: MIT
 #include "wici_epoch.h"
-#include "wici_record.h"
+#include "fram_record.h"
 
 #include <Ed25519.h>
 
 namespace wici_epoch {
 namespace {
-using wici_record::id;
+using namespace fram_record;
 constexpr uint8_t LABEL[] = {'W','I','C','I',' ','r','o','o','t',' ','e','p','o','c','h',' ','v','1'};
 void message(uint16_t network, uint16_t root, uint16_t epoch, uint8_t out[sizeof(LABEL) + 6]) {
-    for (unsigned i = 0; i < sizeof(LABEL); ++i) out[i] = LABEL[i];
-    out[sizeof(LABEL)] = static_cast<uint8_t>(network >> 8);
-    out[sizeof(LABEL) + 1] = static_cast<uint8_t>(network);
-    out[sizeof(LABEL) + 2] = static_cast<uint8_t>(root >> 8);
-    out[sizeof(LABEL) + 3] = static_cast<uint8_t>(root);
-    out[sizeof(LABEL) + 4] = static_cast<uint8_t>(epoch >> 8);
-    out[sizeof(LABEL) + 5] = static_cast<uint8_t>(epoch);
+    memcpy(out, LABEL, sizeof(LABEL));
+    put16(out + sizeof(LABEL), network);
+    put16(out + sizeof(LABEL) + 2, root);
+    put16(out + sizeof(LABEL) + 4, epoch);
 }
 }  // namespace
 

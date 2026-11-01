@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 #include "wici_route.h"
 
-#include "wici_record.h"
+#include "fram_record.h"
 
 namespace wici_route {
 namespace {
-using namespace wici_record;
+using namespace fram_record;
 constexpr uint8_t MAGIC[4] = {'W', 'R', 'T', '1'};
 constexpr size_t ROUTES_AT = 24, CRC_AT = ROUTES_AT + ROUTES * 4;
 static_assert(CRC_AT + 2 < COPY_BYTES, "route record fits");
@@ -64,9 +64,10 @@ bool Table::begin() {
     bool found = false;
     for (uint8_t copy = 0; copy < 2; ++copy) {
         uint8_t data[COPY_BYTES];
-        if (!storage_.read(BASE + copy * COPY_BYTES, data, sizeof(data))) return false;
-        if (!committed(data, sizeof(data))) continue;
-        if (memcmp(data, MAGIC, 4) || get16(data + CRC_AT) != crc(data, CRC_AT)) return false;
+        Copy state;
+        if (!load(storage_, BASE + copy * COPY_BYTES, data, sizeof(data), CRC_AT, MAGIC, state)) return false;
+        if (state == Copy::ABSENT) continue;
+        if (state == Copy::DAMAGED) return false;
         // Routes learned under other numbers are void; start empty.
         if (get16(data + 8) != config_.network || get16(data + 10) != config_.own ||
             get16(data + 12) != config_.root) continue;
@@ -109,9 +110,8 @@ bool Table::commit() {
         put16(data + ROUTES_AT + i * 4, routes_[i].destination);
         put16(data + ROUTES_AT + i * 4 + 2, routes_[i].via);
     }
-    put16(data + CRC_AT, crc(data, CRC_AT));
     const uint8_t copy = static_cast<uint8_t>(1 - currentCopy_);
-    if (!write(storage_, BASE + copy * COPY_BYTES, data, sizeof(data))) {
+    if (!store(storage_, BASE + copy * COPY_BYTES, data, sizeof(data), CRC_AT)) {
         ready_ = false;
         return false;
     }

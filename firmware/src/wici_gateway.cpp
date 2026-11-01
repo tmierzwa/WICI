@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 #include "wici_gateway.h"
 #include "wici_beacon.h"
-#include "wici_record.h"
+#include "fram_record.h"
 
 #include <Ed25519.h>
 #include <string.h>
 
 namespace wici_gateway {
 namespace {
-using wici_record::get16;
+using fram_record::get16;
 }
 
 Root::Root(journal::Storage& storage, kiss::Port& port, Air& air, uint16_t network,

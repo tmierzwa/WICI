@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 #include "wici_hop_auth.h"
-#include "wici_record.h"
+#include "fram_record.h"
 
 #include <string.h>
 
@@ -9,7 +9,7 @@
 
 namespace wici_hop_auth {
 namespace {
-using wici_record::get16;
+using fram_record::get16;
 constexpr size_t TAG = wici_link::HOP_TAG;
 constexpr uint8_t LABEL[] = {'W','I','C','I',' ','h','o','p',' ','v','1'};
 void tag(const uint8_t key[32], const uint8_t* frame, size_t length, uint8_t out[32]) {

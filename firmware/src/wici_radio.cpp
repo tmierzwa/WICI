@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 #include "wici_radio.h"
-#include "wici_record.h"
+#include "fram_record.h"
 
 #include <string.h>
 
@@ -9,7 +9,7 @@
 
 namespace wici_radio {
 namespace {
-using wici_record::get16;
+using fram_record::get16;
 bool reached(uint32_t now, uint32_t deadline) { return static_cast<int32_t>(now - deadline) >= 0; }
 }  // namespace
 

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 #include "wici_flood.h"
 
-#include "wici_record.h"
+#include "fram_record.h"
 
 namespace wici_flood {
 namespace {
-using namespace wici_record;
+using namespace fram_record;
 uint32_t address(uint16_t slot) {
     return slot < SLOTS_A ? BASE_A + slot * SLOT_BYTES : BASE_B + (slot - SLOTS_A) * SLOT_BYTES;
 }
@@ -27,9 +27,10 @@ bool Ring::begin(uint16_t network) {
     if (!id(network)) return false;
     for (uint16_t i = 0; i < SLOTS; ++i) {
         uint8_t record[SLOT_BYTES];
-        if (!storage_.read(address(i), record, sizeof(record))) return false;
-        if (!committed(record, sizeof(record))) continue;
-        if (!id(get16(record)) || !header(record + 2) || get16(record + 15) != crc(record, 15)) return false;
+        Copy copy;
+        if (!load(storage_, address(i), record, sizeof(record), 15, nullptr, copy)) return false;
+        if (copy == Copy::ABSENT) continue;
+        if (copy == Copy::DAMAGED || !id(get16(record)) || !header(record + 2)) return false;
         if (get16(record) != network) continue;  // another network's identities; the slot is free
         memcpy(records_[i], record, sizeof(record));
     }
@@ -55,13 +56,11 @@ bool Ring::remember(const uint8_t envelopeHeader[9], uint32_t nowS) {
     put16(record, network_);
     memcpy(record + 2, envelopeHeader, 9);
     put32(record + 11, nowS);
-    put16(record + 15, crc(record, 15));
-    if (!write(storage_, address(target), record, sizeof(record))) {
+    if (!store(storage_, address(target), record, sizeof(record), 15)) {
         ready_ = false;
         return false;
     }
     memcpy(records_[target], record, sizeof(record));
-    records_[target][SLOT_BYTES - 1] = COMMIT;
     return true;
 }
 

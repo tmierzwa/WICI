@@ -2,17 +2,17 @@
 #include "wici_seen.h"
 
 #include "wici_link.h"
-#include "wici_record.h"
+#include "fram_record.h"
 #include "sha2.h"
 
 namespace wici_seen {
 namespace {
-using namespace wici_record;
+using namespace fram_record;
 // Record: network, envelope version/sender/recipient/counter (9 B), payload
 // digest (6 B), time (4 B), CRC, COMMIT.
 constexpr size_t DIGEST_AT = 11, TIME_AT = 17, CRC_AT = 21;
 bool valid(const uint8_t* p) {
-    return id(get16(p)) && id(get16(p + 3)) && id(get16(p + 5)) && get16(p + CRC_AT) == crc(p, CRC_AT);
+    return id(get16(p)) && id(get16(p + 3)) && id(get16(p + 5));
 }
 bool wireValid(const uint8_t* wire, size_t length) {
     return wire && length >= wici_link::HEADER + wici_link::TAG + 25 && length <= wici_link::MAX_FRAME;
@@ -37,9 +37,10 @@ bool Ring::begin() {
     memset(records_, 0, sizeof(records_));
     for (uint16_t i = 0; i < SLOTS; ++i) {
         uint8_t data[SLOT_BYTES];
-        if (!storage_.read(BASE + i * SLOT_BYTES, data, sizeof(data))) return false;
-        if (!committed(data, sizeof(data))) continue;
-        if (!valid(data)) return false;
+        Copy copy;
+        if (!load(storage_, BASE + i * SLOT_BYTES, data, sizeof(data), CRC_AT, nullptr, copy)) return false;
+        if (copy == Copy::ABSENT) continue;
+        if (copy == Copy::DAMAGED || !valid(data)) return false;
         memcpy(records_[i], data, sizeof(data));
     }
     ready_ = true;
@@ -75,12 +76,10 @@ bool Ring::remember(const uint8_t* wire, size_t length, uint32_t nowS) {
     memcpy(data + 2, wire + wici_link::HEADER, 9);  // envelope identity
     payloadDigest(wire, length, data + DIGEST_AT);
     put32(data + TIME_AT, nowS);
-    put16(data + CRC_AT, crc(data, CRC_AT));
-    if (!write(storage_, BASE + target * SLOT_BYTES, data, sizeof(data))) {
+    if (!store(storage_, BASE + target * SLOT_BYTES, data, sizeof(data), CRC_AT)) {
         ready_ = false;
         return false;
     }
-    data[SLOT_BYTES - 1] = COMMIT;
     memcpy(records_[target], data, sizeof(data));
     return true;
 }

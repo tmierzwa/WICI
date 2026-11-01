@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 #include "wici_beacon.h"
-#include "wici_record.h"
+#include "fram_record.h"
 
 #include <Ed25519.h>
 #include <string.h>
 
 namespace wici_beacon {
 namespace {
-using wici_record::id;
+using fram_record::id;
 constexpr uint8_t LABEL[] = {'W','I','C','I',' ','r','o','u','t','e',' ','b','e','a','c','o','n',' ','v','1'};
 void message(uint16_t network, uint16_t sender, const uint8_t content[CONTENT_BYTES],
              uint8_t out[sizeof(LABEL) + 4 + CONTENT_BYTES]) {
@@ -40,10 +40,10 @@ size_t encode(const uint8_t linkKey[32], const uint8_t identity[64], const uint8
     frame.sequence = sequence;
     frame.ttl = 1;
     frame.length = wici_link::BEACON_PAYLOAD;
-    wici_record::put16(frame.payload, value.root);
-    wici_record::put16(frame.payload + 2, value.rank);
-    wici_record::put16(frame.payload + 4, value.epoch);
-    wici_record::put16(frame.payload + 6, value.parent);
+    fram_record::put16(frame.payload, value.root);
+    fram_record::put16(frame.payload + 2, value.rank);
+    fram_record::put16(frame.payload + 4, value.epoch);
+    fram_record::put16(frame.payload + 6, value.parent);
     frame.payload[8] = value.flags;
     memcpy(frame.payload + 9, value.epochSignature, wici_epoch::SIGNATURE_BYTES);
     return sign(identity, publicKey, network, sender, frame.payload, frame.payload + CONTENT_BYTES) ?

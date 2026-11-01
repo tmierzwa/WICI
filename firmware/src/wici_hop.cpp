@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 #include "wici_hop.h"
-#include "wici_record.h"
+#include "fram_record.h"
 
 namespace wici_hop {
 namespace {
-using wici_record::get16;
-using wici_record::id;
+using fram_record::get16;
+using fram_record::id;
 }  // namespace
 
 Relay::Relay(journal::Storage& storage, wici_route::Config config, const uint8_t ifac[16],

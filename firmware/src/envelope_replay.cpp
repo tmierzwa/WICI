@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 #include "envelope_replay.h"
 
-#include "envelope_record.h"
+#include "fram_record.h"
 
 namespace envelope {
 namespace {
+using namespace fram_record;
 
 // MAGIC(4) generation(4) fingerprint(8) highest(4) mask(8) CRC(2) version(1) COMMIT
 constexpr uint8_t MAGIC[4] = {'W', 'R', 'P', '1'};
@@ -41,16 +42,16 @@ bool DurableReplay::begin(uint16_t network, uint16_t recipient, uint16_t sender,
     window_ = ReplayWindow();
     generation_ = 0;
     copy_ = 1;
-    if (peerSlot_ >= REPLAY_PEERS || !key || !stationId(network) || !stationId(recipient) ||
-        !stationId(sender) || recipient == sender) return false;
+    if (peerSlot_ >= REPLAY_PEERS || !key || !id(network) || !id(recipient) ||
+        !id(sender) || recipient == sender) return false;
     fingerprint(key, fingerprint_);
     bool found = false;
     for (uint8_t copy = 0; copy < 2; ++copy) {
         uint8_t data[REPLAY_SLOT_BYTES];
-        record::Copy state;
-        if (!record::load(storage_, address(peerSlot_, copy), data, CRC_AT, MAGIC, state)) return false;
-        if (state == record::Copy::ABSENT) continue;
-        if (state == record::Copy::DAMAGED || data[30] != 1 || !(get64(data + 20) & 1)) return false;
+        Copy state;
+        if (!load(storage_, address(peerSlot_, copy), data, sizeof(data), CRC_AT, MAGIC, state)) return false;
+        if (state == Copy::ABSENT) continue;
+        if (state == Copy::DAMAGED || data[30] != 1 || !(get64(data + 20) & 1)) return false;
         if (memcmp(data + 8, fingerprint_, FINGERPRINT)) continue;  // window of another key
         const uint32_t generation = get32(data + 4);
         if (!found || static_cast<int32_t>(generation - generation_) > 0) {
@@ -88,7 +89,7 @@ bool DurableReplay::commit(uint32_t counter) {
     put64(data + 20, next.mask);
     data[30] = 1;
     const uint8_t target = static_cast<uint8_t>(1 - copy_);
-    if (!record::store(storage_, address(peerSlot_, target), data, CRC_AT)) {
+    if (!store(storage_, address(peerSlot_, target), data, sizeof(data), CRC_AT)) {
         ready_ = false;
         return false;
     }

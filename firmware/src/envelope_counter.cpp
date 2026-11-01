@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 #include "envelope_counter.h"
 
-#include "envelope_record.h"
+#include "fram_record.h"
 
 namespace envelope {
 namespace {
+using namespace fram_record;
 
 // MAGIC(4) net(2) own(2) peer(2) sequence(4) upper(4) fingerprint(8) CRC(2) zero(3) COMMIT
 constexpr uint8_t MAGIC[4] = {'W', 'C', 'T', '1'};
@@ -20,17 +21,17 @@ bool Counter::begin(uint16_t netId, uint16_t ownId, uint16_t peerId, const uint8
     ready_ = false;
     sequence_ = upper_ = current_ = 0;
     slot_ = 1;
-    if (peerSlot_ >= COUNTER_PEERS || !key || !stationId(netId) || !stationId(ownId) ||
-        !stationId(peerId) || ownId == peerId) return false;
+    if (peerSlot_ >= COUNTER_PEERS || !key || !id(netId) || !id(ownId) ||
+        !id(peerId) || ownId == peerId) return false;
     fingerprint(key, fingerprint_);
     netId_ = netId; ownId_ = ownId; peerId_ = peerId;
     bool found = false;
     for (uint8_t i = 0; i < 2; ++i) {
         uint8_t data[COUNTER_SLOT_BYTES];
-        record::Copy copy;
-        if (!record::load(storage_, address(peerSlot_, i), data, CRC_AT, MAGIC, copy)) return false;
-        if (copy == record::Copy::ABSENT) continue;  // a torn write cannot have issued counters
-        if (copy == record::Copy::DAMAGED || get32(data + 14) == 0 || get32(data + 14) % COUNTER_BLOCK)
+        Copy copy;
+        if (!load(storage_, address(peerSlot_, i), data, sizeof(data), CRC_AT, MAGIC, copy)) return false;
+        if (copy == Copy::ABSENT) continue;  // a torn write cannot have issued counters
+        if (copy == Copy::DAMAGED || get32(data + 14) == 0 || get32(data + 14) % COUNTER_BLOCK)
             return false;
         // Reservation space stays monotonic across rekeys. Reusing an older
         // identity later must not restart its nonce counter at zero.
@@ -53,7 +54,7 @@ bool Counter::reserve(uint32_t upper) {
     put32(data + 10, sequence_ + 1); put32(data + 14, upper);
     memcpy(data + 18, fingerprint_, FINGERPRINT);
     const uint8_t target = static_cast<uint8_t>(1 - slot_);
-    if (!record::store(storage_, address(peerSlot_, target), data, CRC_AT)) return false;
+    if (!store(storage_, address(peerSlot_, target), data, sizeof(data), CRC_AT)) return false;
     slot_ = target; ++sequence_; upper_ = upper;
     return true;
 }

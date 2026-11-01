@@ -1,30 +1,15 @@
 // SPDX-License-Identifier: MIT
 #include "migration_state.h"
 
-#include <string.h>
-
-#include "sha2.h"
+#include "fram_record.h"
 
 namespace migration_state {
 namespace {
+using namespace fram_record;
 
 constexpr uint8_t MAGIC[4] = {'W', 'M', 'G', '1'};
-constexpr uint8_t COMMIT = 0xA5;
 constexpr size_t DIGEST_AT = 152;
 
-void put32(uint8_t* p, uint32_t n) {
-    p[0] = static_cast<uint8_t>(n >> 24); p[1] = static_cast<uint8_t>(n >> 16);
-    p[2] = static_cast<uint8_t>(n >> 8); p[3] = static_cast<uint8_t>(n);
-}
-uint32_t get32(const uint8_t* p) {
-    return (static_cast<uint32_t>(p[0]) << 24) | (static_cast<uint32_t>(p[1]) << 16) |
-           (static_cast<uint32_t>(p[2]) << 8) | p[3];
-}
-bool blank(const uint8_t* p) {
-    bool zero = true, erased = true;
-    for (size_t i = 0; i < COPY_BYTES; ++i) { zero &= p[i] == 0; erased &= p[i] == 0xFF; }
-    return zero || erased;
-}
 bool valid(const uint8_t* p) {
     if (memcmp(p, MAGIC, 4) || p[4] != 1 || p[5] > static_cast<uint8_t>(Phase::ABORTED) ||
         p[6] || p[7]) return false;
@@ -91,7 +76,7 @@ bool Barrier::begin() {
     for (uint8_t copy = 0; copy < 2; ++copy) {
         uint8_t bytes[COPY_BYTES];
         if (!storage_.read(BASE + copy * COPY_BYTES, bytes, sizeof(bytes))) return false;
-        if (blank(bytes)) continue;
+        if (blank(bytes, sizeof(bytes))) continue;
         const uint8_t marker = bytes[COPY_BYTES - 1];
         if (marker != COMMIT && marker != 0) return false;
         if (!valid(bytes)) {
@@ -101,7 +86,7 @@ bool Barrier::begin() {
             continue;
         }
         const uint32_t value = get32(bytes + 8);
-        if (!found || static_cast<int32_t>(value - generation) > 0) {
+        if (!found || newer(value, generation)) {
             decode(bytes, selected);
             generation = value;
             chosenCopy = copy;
@@ -121,17 +106,7 @@ bool Barrier::save(const Record& next) {
     uint8_t bytes[COPY_BYTES];
     encode(next, generation_ + 1, bytes);
     const uint8_t target = static_cast<uint8_t>(1 - copy_);
-    const uint32_t at = BASE + target * COPY_BYTES;
-    const uint8_t clear = 0;
-    if (!storage_.write(at + COPY_BYTES - 1, &clear, 1) ||
-        !storage_.write(at, bytes, COPY_BYTES - 1) ||
-        !storage_.write(at + COPY_BYTES - 1, &COMMIT, 1)) {
-        ready_ = false;
-        return false;
-    }
-    uint8_t verified[COPY_BYTES];
-    if (!storage_.read(at, verified, sizeof(verified)) ||
-        memcmp(bytes, verified, COPY_BYTES - 1) || verified[COPY_BYTES - 1] != COMMIT) {
+    if (!write(storage_, BASE + target * COPY_BYTES, bytes, sizeof(bytes))) {
         ready_ = false;
         return false;
     }

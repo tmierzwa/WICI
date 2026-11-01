@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 #include "wici_relay.h"
 
-#include "wici_record.h"
+#include "fram_record.h"
 
 namespace wici_relay {
 namespace {
-using namespace wici_record;
+using namespace fram_record;
 constexpr uint8_t MAGIC[4] = {'W', 'R', 'Q', '1'};
 constexpr size_t WIRE_AT = 25, CRC_AT = WIRE_AT + wici_link::MAX_FRAME;
 static_assert(CRC_AT + 2 < COPY_BYTES, "record fits in relay copy");
@@ -15,9 +15,8 @@ uint32_t address(uint8_t slot, uint8_t copy) {
 }
 bool valid(const uint8_t* p) {
     const size_t n = get16(p + 8);
-    if (memcmp(p, MAGIC, 4) || (n && (n < wici_link::HEADER + wici_link::TAG || n > wici_link::MAX_FRAME)) ||
-        (!n && get16(p + 23)) || get16(p + 23) == wici_link::BROADCAST ||
-        get16(p + CRC_AT) != crc(p, CRC_AT)) return false;
+    if ((n && (n < wici_link::HEADER + wici_link::TAG || n > wici_link::MAX_FRAME)) ||
+        (!n && get16(p + 23)) || get16(p + 23) == wici_link::BROADCAST) return false;
     for (size_t i = WIRE_AT + n; i < CRC_AT; ++i) if (p[i]) return false;
     return true;
 }
@@ -47,9 +46,10 @@ bool Queue::begin(const uint8_t key[32], uint16_t network, uint16_t own) {
         bool found = false;
         for (uint8_t copy = 0; copy < 2; ++copy) {
             uint8_t data[COPY_BYTES];
-            if (!storage_.read(address(slot, copy), data, sizeof(data))) return false;
-            if (!committed(data, sizeof(data))) continue;
-            if (!valid(data)) return false;
+            Copy state;
+            if (!load(storage_, address(slot, copy), data, sizeof(data), CRC_AT, MAGIC, state)) return false;
+            if (state == Copy::ABSENT) continue;
+            if (state == Copy::DAMAGED || !valid(data)) return false;
             uint32_t generation = get32(data + 4);
             if (!found || newer(generation, generations_[slot])) {
                 generations_[slot] = generation;
@@ -88,9 +88,8 @@ bool Queue::commit(uint8_t slot, const uint8_t* wire, size_t length,
         put32(data + 19, admittedS);
         put16(data + 23, verifiedOrigin);  // verified origin, covered by CRC and COMMIT
     }
-    put16(data + CRC_AT, crc(data, CRC_AT));
     const uint8_t target = static_cast<uint8_t>(1 - copies_[slot]);
-    if (!write(storage_, address(slot, target), data, sizeof(data))) {
+    if (!store(storage_, address(slot, target), data, sizeof(data), CRC_AT)) {
         ready_ = false;  // The target copy may have committed despite the reported error.
         return false;
     }

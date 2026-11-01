@@ -8,10 +8,11 @@
 #include <Curve25519.h>
 
 #include "envelope_counter.h"
-#include "envelope_record.h"
+#include "fram_record.h"
 
 namespace envelope {
 namespace {
+using namespace fram_record;
 
 constexpr uint8_t VERSION = 1;
 constexpr uint8_t LABEL[] = {'W', 'I', 'C', 'I', ' ', 'e', 'n', 'v', ' ', 'v', '1'};
@@ -27,7 +28,7 @@ void nonce(const uint8_t header[HEADER], uint8_t out[12]) {
 
 bool deriveKey(const uint8_t privateKey[32], const uint8_t peerPublic[32], uint16_t netId,
                uint16_t sender, uint16_t recipient, uint16_t ownId, uint8_t out[32]) {
-    if (!privateKey || !peerPublic || !out || !stationId(netId) || !stationId(sender) || !stationId(recipient) ||
+    if (!privateKey || !peerPublic || !out || !id(netId) || !id(sender) || !id(recipient) ||
         sender == recipient || (ownId != sender && ownId != recipient)) return false;
     uint8_t scalar[32], publicKey[32], shared[32];
     memcpy(scalar, privateKey, 32);
@@ -64,7 +65,7 @@ bool deriveKey(const uint8_t privateKey[32], const uint8_t peerPublic[32], uint1
 size_t seal(const uint8_t key[32], uint16_t sender, uint16_t recipient, uint32_t counter,
             const uint8_t* plaintext, size_t length, size_t maxPayload, Frame out[2]) {
     if (!key || !out || (!plaintext && length) || length > MAX_SA1 || maxPayload < MIN_PAYLOAD ||
-        !stationId(sender) || !stationId(recipient) || sender == recipient) return 0;
+        !id(sender) || !id(recipient) || sender == recipient) return 0;
     // MIN_PAYLOAD fits a 128-byte half, so two parts always suffice.
     const size_t count = length + OVERHEAD <= maxPayload ? 1 : 2;
     const size_t first = count == 1 ? length : (length + 1) / 2;
@@ -108,7 +109,7 @@ bool openPart(const uint8_t key[32], const uint8_t* frame, size_t length, Part& 
     const uint8_t part = static_cast<uint8_t>((kind >> 4) & 3);
     const uint16_t sender = get16(frame + 1), recipient = get16(frame + 3);
     if (kind >> 6 != VERSION || part == 3 || (kind & 15) != TYPE_SA1 ||
-        !stationId(sender) || !stationId(recipient) || sender == recipient) return false;
+        !id(sender) || !id(recipient) || sender == recipient) return false;
     const size_t bodyLength = length - OVERHEAD;
     if (part && bodyLength > MAX_SA1 / 2) return false;
     uint8_t iv[12];

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 #include "wici_destination.h"
-#include "wici_record.h"
+#include "fram_record.h"
 
 namespace wici_destination {
 namespace {
-using wici_record::get16;
-using wici_record::id;
+using fram_record::get16;
+using fram_record::id;
 }  // namespace
 
 Destination::Destination(journal::Storage& storage, Config config, const uint8_t ifac[16],

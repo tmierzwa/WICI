@@ -40,6 +40,15 @@ int main() {
     wici_seq::Counter renumbered(memory);
     assert(renumbered.begin(100, 3));
     assert(renumbered.next(sequence) && sequence == 256);
+    // A damaged COMMIT byte fails closed instead of falling back to the older copy;
+    // a cleared one is a write torn before COMMIT and the older copy stands.
+    uint8_t& commit = memory.bytes[wici_seq::BASE + wici_seq::SLOT_BYTES - 1];
+    commit = 0x5A;
+    wici_seq::Counter damaged(memory);
+    assert(!damaged.begin(100, 3));
+    commit = 0;
+    wici_seq::Counter torn(memory);
+    assert(torn.begin(100, 3) && torn.next(sequence) && sequence == 256);
     memory.bytes[wici_seq::BASE + wici_seq::SLOT_BYTES + 12] ^= 1;
     wici_seq::Counter corrupt(memory);
     assert(!corrupt.begin(100, 2));

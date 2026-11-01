@@ -155,7 +155,7 @@ Kod w `firmware/src/wici_*.cpp`; testy natywne z sanitizerami w `tests/native/wi
 | `wici_radio` | koordynator stacji (własne SA1, przekaźnik, BEACON, czasy 600 ms i 0,5–2 s) |
 | `wici_gateway` | korzeń: most radio–KISS USB, HACK od laptopa najwyżej 200 ms po odbiorze |
 | `wici_airtime` | dziennik czasu nadawania |
-| `wici_record` | wspólny zapis rekordów FRAM |
+| `fram_record` | wspólny zapis rekordów FRAM (także kopert i migracji); uszkodzony bajt COMMIT blokuje odczyt |
 
 **FRAM** (luka 0x044000–0x047FFF przed systemem plików; 64 B wolne):
 

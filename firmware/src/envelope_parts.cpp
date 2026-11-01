@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 #include "envelope_parts.h"
 
-#include "envelope_record.h"
+#include "fram_record.h"
 
 namespace envelope {
 namespace {
+using namespace fram_record;
 
 // MAGIC(4) generation(4) net(2) recipient(2) sender(2) counter(4) zero(1) number(1)
 // started(4) length(1) data(128) fingerprint(8) CRC(2) zero(29) COMMIT
@@ -37,17 +38,17 @@ bool DurableParts::begin(uint16_t network, uint16_t recipient, uint16_t sender, 
     generation_ = counter_ = startedS_ = 0;
     copy_ = 1; number_ = length_ = 0;
     memset(data_, 0, sizeof(data_));
-    if (peerSlot_ >= PARTS_PEERS || !key || !stationId(network) || !stationId(recipient) ||
-        !stationId(sender) || recipient == sender) return false;
+    if (peerSlot_ >= PARTS_PEERS || !key || !id(network) || !id(recipient) ||
+        !id(sender) || recipient == sender) return false;
     fingerprint(key, fingerprint_);
     network_ = network; recipient_ = recipient; sender_ = sender;
     bool found = false;
     for (uint8_t copy = 0; copy < 2; ++copy) {
         uint8_t record[PARTS_COPY_BYTES];
-        record::Copy state;
-        if (!record::load(storage_, address(peerSlot_, copy), record, CRC_AT, MAGIC, state)) return false;
-        if (state == record::Copy::ABSENT) continue;
-        if (state == record::Copy::DAMAGED || !wellFormed(record)) return false;
+        Copy state;
+        if (!load(storage_, address(peerSlot_, copy), record, sizeof(record), CRC_AT, MAGIC, state)) return false;
+        if (state == Copy::ABSENT) continue;
+        if (state == Copy::DAMAGED || !wellFormed(record)) return false;
         if (memcmp(record + FINGERPRINT_AT, fingerprint_, FINGERPRINT)) continue;  // another key
         if (get16(record + 8) != network || get16(record + 10) != recipient ||
             get16(record + 12) != sender) return false;
@@ -80,7 +81,7 @@ bool DurableParts::commit(const Part* part, uint32_t nowS) {
     }
     memcpy(record + FINGERPRINT_AT, fingerprint_, FINGERPRINT);
     const uint8_t target = static_cast<uint8_t>(1 - copy_);
-    const bool stored = record::store(storage_, address(peerSlot_, target), record, CRC_AT);
+    const bool stored = store(storage_, address(peerSlot_, target), record, sizeof(record), CRC_AT);
     memset(record, 0, sizeof(record));
     if (!stored) {
         ready_ = false;
