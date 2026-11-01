@@ -25,7 +25,9 @@ int main() {
     uint8_t key[32] = {};
     uint32_t value = 999;
     envelope::Counter first(memory, 0);
-    assert(first.begin(100, 4, 2, key));
+    // A blank area under an existing identity is lost state: no restart at 0.
+    assert(!first.begin(100, 4, 2, key) && !first.ready());
+    assert(envelope::startCounters(memory) && first.begin(100, 4, 2, key));
     assert(first.next(value) && value == 0 && first.reserved() == 64);
     for (uint32_t i = 1; i < 64; ++i) assert(first.next(value) && value == i);
     // A failed reservation never releases a nonce. After reboot the complete previous
@@ -58,10 +60,11 @@ int main() {
     // Only 0x00 (torn before COMMIT) or COMMIT may end a non-blank copy. Any
     // other byte on the newer copy must not fall back to the older one.
     static Memory torn;
+    assert(envelope::startCounters(torn));
     envelope::Counter writer(torn, 0);
     assert(writer.begin(100, 4, 2, key) && writer.next(value) && value == 0);
     assert(writer.begin(100, 4, 2, key) && writer.next(value) && value == 64);
-    uint8_t& newerCommit = torn.bytes[envelope::COUNTER_BASE + envelope::COUNTER_SLOT_BYTES + 31];
+    uint8_t& newerCommit = torn.bytes[envelope::COUNTER_BASE + 31];  // copy 0: the second reservation
     newerCommit = 0x5A;
     envelope::Counter damaged(torn, 0);
     assert(!damaged.begin(100, 4, 2, key));
@@ -73,4 +76,7 @@ int main() {
     assert(secondPeer.next(value) && value == 0);
     assert(secondPeer.begin(100, 4, 3, key));
     assert(secondPeer.next(value) && value == 64);  // same-object reload skips reserved block
+    // Starting again (identity flag lost before it was set) never resets a used slot.
+    assert(envelope::startCounters(memory));
+    assert(secondPeer.begin(100, 4, 3, key) && secondPeer.next(value) && value == 128);
 }

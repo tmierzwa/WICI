@@ -161,7 +161,8 @@ Kod w `firmware/src/wici_*.cpp`; testy natywne z sanitizerami w `tests/native/wi
 
 | Adres | Rozmiar | Zawartość |
 |---|---|---|
-| 0x044000–0x04417F | 2 × 128 B | tożsamość stacji (`framfs`) |
+| 0x044000–0x0440FF | 2 × 128 B | tożsamość stacji (`framfs`) |
+| 0x044100–0x04417F | 2 × 2 × 32 B | granice `ctr` kopert (dwóch odbiorców, [transport](transport.md#licznik-i-powtórzenia)) |
 | 0x044180–0x0441BF | 2 × 32 B | rezerwacja `seq` blokami 64 |
 | 0x0441C0–0x0441FF | 64 B | wolne |
 | 0x044200–0x044F7F | 192 × 18 B | pierścień rozsyłania, część A |

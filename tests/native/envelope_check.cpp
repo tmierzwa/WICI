@@ -93,7 +93,7 @@ int main(int argc, char** argv) {
         window.accept(19, next) || !window.accept(84, next) || next.accept(20, window)) return 8;
     Memory memory;
     envelope::Counter counter(memory, 0);
-    if (!counter.begin(0x1234, 10, 20, ab) ||
+    if (!envelope::startCounters(memory) || !counter.begin(0x1234, 10, 20, ab) ||
         envelope::sealReserved(counter, ab, 0x1234, 10, 21, plain, sizeof(plain), 236, frames) != 0 ||
         envelope::sealReserved(counter, ab, 0x1234, 10, 20, plain, sizeof(plain), 236, frames) != 1 ||
         !envelope::openPart(ab, frames[0].bytes, frames[0].length, opened) || opened.counter != 0) return 9;

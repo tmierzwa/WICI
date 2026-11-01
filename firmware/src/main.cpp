@@ -36,6 +36,7 @@
 #include "identity.h"
 #endif
 #include "drbg.h"
+#include "envelope_counter.h"
 #include "fram.h"
 #include "framfs.h"
 #include "hexstr.h"
@@ -1847,7 +1848,10 @@ void beginStack() {
     }
     stackState = StackState::RUNNING;
     // Znacznik także po starcie z kluczem bez znacznika (zanik zasilania między zapisem klucza a znacznikiem).
-    if (!stationStore.setIdentitySaved()) bench.log("identity flag not saved");
+    // Przed znacznikiem rekordy początkowe liczników kopert: przy zapisanej tożsamości pusty obszar
+    // liczników jest utratą danych i Counter::begin go odrzuca (envelope_counter.h).
+    if (!stationStore.identitySaved() && !envelope::startCounters(memory)) bench.log("envelope counters not started");
+    else if (!stationStore.setIdentitySaved()) bench.log("identity flag not saved");
     uint32_t random = 0;
     stationRandom(reinterpret_cast<uint8_t*>(&random), sizeof(random));
     announcePolicy.begin(counterS(), random);

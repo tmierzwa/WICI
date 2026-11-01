@@ -86,6 +86,7 @@ int main() {
     for (unsigned i = 0; i < 32; ++i) rootSecret[i + 32] = static_cast<uint8_t>(i + 1);
     Ed25519::derivePublicKey(rootEd, rootSecret + 32);
     unsigned admitted = 0;
+    assert(envelope::startCounters(memory));  // done when the station identity is first saved
     wici_radio::Shelter shelter(memory, {100, 2, 5, 5, 0}, 7, receivers, ifac,
                                ownSecret, receiverPublic, admit, &admitted,
                                air, randomZero, nullptr, originProof, nullptr, rootEd, beaconProof, rootEd);
@@ -242,6 +243,7 @@ int main() {
     // The active station image forwards one emergency downlink broadcast once.
     static Memory floodMemory;
     Air floodAir;
+    assert(envelope::startCounters(floodMemory));
     wici_radio::Shelter flood(floodMemory, {100, 2, 5, 5, 0}, 7, receivers, ifac,
                              ownSecret, receiverPublic, admit, &admitted,
                              floodAir, randomZero, nullptr, originProof, nullptr, rootEd, beaconProof, rootEd);
@@ -262,6 +264,7 @@ int main() {
     // three more attempts at the configured backup before Failed is reported.
     static Memory failoverMemory;
     Air failoverAir;
+    assert(envelope::startCounters(failoverMemory));
     wici_radio::Shelter failover(failoverMemory, {100, 2, 5, 5, 6}, 3, receivers, ifac,
                                  ownSecret, receiverPublic, admit, &admitted, failoverAir, randomZero,
                                  nullptr, originProof, nullptr, rootEd, beaconProof, rootEd);
@@ -306,6 +309,7 @@ int main() {
     // A replayed first fragment earns one HACK per 5 s, like a replayed whole envelope.
     static Memory partMemory;
     Air partAir;
+    assert(envelope::startCounters(partMemory));
     wici_radio::Shelter parted(partMemory, {100, 2, 5, 5, 0}, 7, receivers, ifac,
                                ownSecret, receiverPublic, admit, &admitted,
                                partAir, randomZero, nullptr, originProof, nullptr, rootEd, beaconProof, rootEd);

@@ -14,12 +14,17 @@ constexpr uint32_t COUNTER_SLOT_BYTES = 32;
 constexpr uint32_t COUNTER_PEERS = 2;
 constexpr uint32_t COUNTER_BLOCK = 64;
 
+// Writes a starting record (no binding, nothing reserved) into every peer
+// slot whose two copies are blank. Called before the station identity flag is
+// set, so a blank area under an existing identity means lost state.
+bool startCounters(journal::Storage& storage);
+
 class Counter {
 public:
     Counter(journal::Storage& storage, uint8_t peerSlot) : storage_(storage), peerSlot_(peerSlot) {}
     // The reserved upper bound is monotonic across keys. A record with the
     // current key fingerprint must also match the network and station IDs.
-    // Corrupt committed state fails closed.
+    // Corrupt committed state and a blank area (no starting record) fail closed.
     bool begin(uint16_t netId, uint16_t ownId, uint16_t peerId, const uint8_t key[32]);
     // Writes and verifies a new upper bound before handing out a counter.
     bool next(uint32_t& value);
