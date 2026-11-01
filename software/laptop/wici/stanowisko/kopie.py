@@ -45,12 +45,12 @@ def _b64(data):
     return base64.b64encode(data).decode("ascii")
 
 
-
 def frozen_before(db):
     """Time of ZAMKNIJ ZDARZENIE until „Usuń kopie” (settings of the database), else None: copies older than
     that keep the closed event and do not rotate out (Kopie.write)."""
     row = dict(db.execute("SELECT key, value FROM settings WHERE key IN ('zamkniete', 'kopie_usuniete')").fetchall())
     return None if "kopie_usuniete" in row else row.get("zamkniete")
+
 
 class Kopie:
     """Copies in one directory: the computer disk (state directory) or the second medium."""
@@ -180,10 +180,7 @@ def restore(path, key, root, approvers, at):
     medium = nosnik.Nosnik(root)
     if medium.exists():
         raise database.StorageError("ten nośnik ma już dane stanowiska: odtwarza się na pusty nośnik")
-    names = [a for a, _ in approvers]
-    if len(approvers) != 2 or len(set(names)) != 2:
-        raise database.LoginError("Odtworzenie wymaga zgody dwóch różnych dyżurnych.")
-    medium.kit.dir.mkdir(parents=True)
+    medium.kit.dir.mkdir(parents=True, exist_ok=True)   # pusty katalog po odmowie zgody
     database._write_durable(medium.kit.dir / database.KIT_KEY, payload["zestaw"])
     database._write_durable(medium.kit.dir / database.ACCOUNTS, payload["konta"])
     database._write_durable(medium.root / "tozsamosc", payload["tozsamosc"])
@@ -192,8 +189,7 @@ def restore(path, key, root, approvers, at):
     if "wici-link" in payload:
         database._write_durable(medium.root / "wici-link", payload["wici-link"])
     try:
-        for name, password in approvers:
-            medium.login(name, password, key)
+        medium.approve(key, approvers)   # konta z kopii
     except database.LoginError:
         for f in (medium.kit.dir / database.KIT_KEY, medium.kit.dir / database.ACCOUNTS,
                   medium.root / "tozsamosc", medium.root / "karta-odbiorcy", medium.root / "wici-link"):
@@ -203,7 +199,8 @@ def restore(path, key, root, approvers, at):
         db.deserialize(payload["baza"])
         with db:
             db.execute("INSERT INTO dziennik(at, account, op, detail) VALUES(?,?,?,?)",
-                       (at, names[0], "odtworzenie", f"z kopii {path.name}, zgoda {names[0]} i {names[1]}"))
+                       (at, approvers[0][0], "odtworzenie",
+                        f"z kopii {path.name}, zgoda {approvers[0][0]} i {approvers[1][0]}"))
         medium.save(key, db.serialize())
     return medium
 

@@ -31,7 +31,7 @@ COLUMNS = ("czas", "rodzaj", "stacja", "numer", "id", "rewizja", "kategoria", "o
 # Zdarzenia rejestru z dziennika działań; logowania, ogłoszenia i nowe hasła zostają tylko w dzienniku.
 REGISTER = {"stan_2", "stan_3", "stan_4", "stan_5", "stan_6", "odpowiedz", "komunikat", "cisza", "cisza_wezel", "kwarantanna_approve",
             "kwarantanna_reject", "zaufana_dodana", "zaufana_usunieta", "kopia_drugi_nosnik", "odtworzenie",
-            "odzyskanie_koniec", "przekazanie_zmiany", "eksport", "zamkniecie", "kopie_usuniete"}
+            "odzyskanie_koniec", "nowa_tozsamosc", "przekazanie_zmiany", "eksport", "zamkniecie", "kopie_usuniete"}
 # Cisza radiowa wpisywana przez dyżurnego (stanowisko-osp.md, „Eksport rejestru”: wiersz „cisza”); stan przełącznika
 # CISZA węzła z jego portu diagnostyki (wezel.py) daje osobne wiersze `cisza_wezel`.
 SILENCE = {"polecenie": "polecenie ciszy otrzymane", "wlaczona": "cisza włączona na węźle", "odwolana": "cisza odwołana"}

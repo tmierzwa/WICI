@@ -94,7 +94,6 @@ CREATE TABLE IF NOT EXISTS decyzje (
 SAVE_ERRORS = (OSError, sqlite3.Error, syscrypto.CryptoError, nosnik.StorageError)
 
 
-
 class Przyjecie:
     """Reception and sending in their own thread, on the database of an unlocked medium (nosnik.Nosnik and its
     data key). send and outcome are those of the stack (stos.Stos).
@@ -331,17 +330,14 @@ class Przyjecie:
         """
         return self.call(lambda store: self._receive_envelope_frame(net_id, wire, bearer))
 
-    def seal_envelope_message(self, net_id, station_id, content, max_payload=236):
-        """Reserve a durable counter and seal an outbound SA1 message on the DB thread.
-
-        The caller still owns bearer selection and transmission. This method refuses
-        to produce ciphertext while recovery is active or the old counter boundary is
-        uncertain, including after restoration from a computer-side copy.
-        """
-        return self.call(lambda store: self._seal_envelope_message(net_id, station_id, content, max_payload))
-
     def send_wici(self, bearer, dest, content):
-        """Called by Wysylka on the DB thread; reserve the nonce before KISS TX."""
+        """Called by Wysylka on the DB thread: reserve the nonce durably, seal and queue for KISS TX.
+
+        None when WICI-Link cannot carry this reply now (offline, station without a number, sending blocked
+        after a recovery, uncertain counters), so bearers.Bearers may try Reticulum."""
+        from .. import envelope
+        from . import wici_link
+
         if self.recovery or not bearer.status(self.clock())["online"]:
             return None
         row = self.store.db.execute(
@@ -349,27 +345,32 @@ class Przyjecie:
             "WHERE n.net_id=? AND n.source=?", (bearer.network, dest)).fetchone()
         if row is None:
             return None
-        from . import wici_link
-        frames = self._seal_envelope_message(bearer.network, row[0], content, wici_link.MAX_PAYLOAD)
+        try:
+            frames = self._seal_envelope_message(bearer.network, row[0], content, wici_link.MAX_PAYLOAD)
+        except envelope.EnvelopeError as exc:
+            self.log(f"stanowisko: koperta WICI do {dest.hex()} nie wyszła: {exc}")
+            return None
         return bearer.send_frames(frames)
 
+    def _active_identity(self, net_id):
+        """(private key, card entry) of the receiver identity bound to net_id; EnvelopeError otherwise."""
+        from .. import envelope
+
+        card = self.medium.card(self.key)
+        private = self.medium.identity(self.key)
+        active = nosnik.card_entry(card, private) if card and card.get("v") == 2 else None
+        if active is None or active.get("net_id") != net_id:
+            raise envelope.EnvelopeError("receiver identity is not bound to this network")
+        return private, active
+
     def _seal_envelope_message(self, net_id, station_id, content, max_payload):
-        from cryptography.hazmat.primitives.asymmetric import x25519
         from .. import envelope
         from . import envelope_sender
 
         if self.recovery:
             raise envelope.EnvelopeError("recovery mode cannot send WICI envelopes")
         wzorzec.decode_message(content)  # refuse malformed SA1 before consuming a nonce
-        card = self.medium.card(self.key)
-        private = self.medium.identity(self.key)
-        if not card or card.get("v") != 2 or len(private) != 64:
-            raise envelope.EnvelopeError("numbered receiver identity is unavailable")
-        own_public = x25519.X25519PrivateKey.from_private_bytes(private[:32]).public_key().public_bytes_raw().hex()
-        active = next((identity for identity in (card.get("main"), card.get("backup"))
-                       if isinstance(identity, dict) and identity.get("x25519") == own_public), None)
-        if active is None or active.get("net_id") != net_id:
-            raise envelope.EnvelopeError("receiver identity is not bound to this network")
+        private, active = self._active_identity(net_id)
         row = self.store.db.execute("SELECT n.public_key FROM numery n JOIN trusted t ON t.source=n.source "
                                     "WHERE n.net_id=? AND n.station=?",
                                     (net_id, station_id)).fetchone()
@@ -381,21 +382,10 @@ class Przyjecie:
                                          content, max_payload)
 
     def _receive_envelope_frame(self, net_id, wire, bearer=None):
-        from cryptography.hazmat.primitives.asymmetric import x25519
         from .. import envelope
         from . import envelope_inbox
 
-        card = self.medium.card(self.key)
-        if not card or card.get("v") != 2 or type(net_id) is not int or not 1 <= net_id <= 0xFFFE:
-            raise envelope.EnvelopeError("receiver medium has no numbered card for this network")
-        private = self.medium.identity(self.key)
-        if len(private) != 64:
-            raise envelope.EnvelopeError("receiver private identity has wrong length")
-        own_public = x25519.X25519PrivateKey.from_private_bytes(private[:32]).public_key().public_bytes_raw().hex()
-        active = next((identity for identity in (card.get("main"), card.get("backup"))
-                       if isinstance(identity, dict) and identity.get("x25519") == own_public), None)
-        if active is None or active.get("net_id") != net_id:
-            raise envelope.EnvelopeError("receiver identity is not bound to the network card")
+        private, active = self._active_identity(net_id)
         raw = bytes(wire)
         if len(raw) < envelope.OVERHEAD or len(raw) > envelope.MAX_FRAME:
             raise envelope.EnvelopeError("invalid envelope length")
@@ -428,30 +418,30 @@ class Przyjecie:
             self.wysylka.accepted(self.store.db, source, value[2], value[3])
 
         def remember_bearer():
+            # Fresh parts only: a replayed frame must not move the reply route.
             if bearer is not None and trusted:
                 self.store.db.execute("INSERT OR REPLACE INTO bearer_route VALUES(?,?)", (source, bearer))
+                self.last_bearer[source] = bearer
 
         # The KISS caller must be able to answer HACK inside 200 ms. The normal
         # one-second tick sends RECEIVED after the durable snapshot, without
         # putting LXMF path discovery or copy work on the hop-ACK path.
-        result = inbox.receive(part, int(self.clock()), accept, remember_bearer)
-        if bearer is not None and trusted:
-            self.last_bearer[source] = bearer
-        return result
+        return inbox.receive(part, int(self.clock()), accept, remember_bearer)
 
     def _receive(self, source, content, bearer=None):
         at = self.clock()
+        fresh = False
 
         def before_commit():
             # W tej samej transakcji co zgłoszenie i RECEIVED; nowa rewizja dostaje czas pierwszego odbioru.
+            # Tylko nowa rewizja przenosi trasę odpowiedzi: powtórzenie może być odtworzonym pakietem.
+            nonlocal fresh
             value = wzorzec.decode_message(content)
-            self.store.db.execute(
+            fresh = self.store.db.execute(
                 "INSERT OR IGNORE INTO received_at SELECT source, id, revision, ? FROM received "
-                "WHERE source=? AND id=? AND revision=?", (at, source, value[2], value[3]))
+                "WHERE source=? AND id=? AND revision=?", (at, source, value[2], value[3])).rowcount == 1
             self.wysylka.accepted(self.store.db, source, value[2], value[3])
-            if bearer is not None and self.store.db.execute(
-                    "SELECT 1 FROM received WHERE source=? AND id=? AND revision=?",
-                    (source, value[2], value[3])).fetchone():
+            if bearer is not None and fresh:
                 self.store.db.execute("INSERT OR REPLACE INTO bearer_route VALUES(?,?)", (source, bearer))
 
         known = self.store.db.execute("SELECT count(*) FROM received WHERE source=?", (source,)).fetchone()[0]
@@ -472,7 +462,7 @@ class Przyjecie:
         if ack is None:
             self.counts["quarantined"] += 1
             return
-        if bearer is not None:
+        if bearer is not None and fresh:
             self.last_bearer[source] = bearer
         after = self.store.db.execute("SELECT count(*) FROM received WHERE source=?", (source,)).fetchone()[0]
         self.counts["received" if after > known else "duplicate"] += 1

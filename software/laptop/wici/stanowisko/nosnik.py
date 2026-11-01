@@ -9,8 +9,8 @@ in every wrap, `version` 1 in the account file and a version byte in every seale
     klucze/zestaw.key, klucze/konta.json   database.Kit: `recovery` is the station password (6 words),
                                            `accounts` are the duty officers (5 words, plus zestaw.key)
     baza/kopia-a, baza/kopia-b             the database in memory, sealed after every change (two files in
-                                           turn, fsync); the header carries the station password wrap, so
-                                           a lost account file does not lose the data
+                                           turn, each replaced atomically after fsync); the header carries the
+                                           station password wrap, so a lost account file does not lose the data
     tozsamosc                              the main receiver identity, sealed with the data key
     siec/                                  Reticulum and LXMF storage (paths, ratchets of the receiver)
 
@@ -106,6 +106,13 @@ class Nosnik:
         if not hmac.compare_digest(self.kit.unlock(name, password), key):
             raise LoginError("Zła nazwa konta albo hasło.")   # konto z innego nośnika
 
+    def approve(self, key, approvers):
+        """Consent of two different duty officers: [(name, password), (name, password)]."""
+        if len(approvers) != 2 or approvers[0][0] == approvers[1][0]:
+            raise LoginError("Wymagana zgoda dwóch różnych dyżurnych.")
+        for name, password in approvers:
+            self.login(name, password, key)
+
     def new_password(self, name, key):
         """New envelope password for an account, set by a logged-in officer; returns it once."""
         password = passwords.generate()
@@ -135,7 +142,8 @@ class Nosnik:
     # ---- baza -----------------------------------------------------------------------------------
 
     def load(self, key):
-        """Load the latest snapshot, refusing an ambiguous counter rollback."""
+        """The newest snapshot. save() replaces files atomically, so an unreadable one is damage, and it may be
+        the newer one: loading the other could roll back envelope counters, so the medium is refused."""
         found = []
         for name in database.NAMES:
             path = self.base / name
@@ -143,7 +151,7 @@ class Nosnik:
                 continue
             copy = database._read(path, key, "nosnik")
             if copy is None:
-                raise StorageError(f"snapshot {name} is unreadable; restore and reconcile the receiver identity")
+                raise StorageError(f"migawka bazy {name} nieczytelna: odtwórz nośnik z kopii")
             found.append(copy)
         newest = max(found, key=lambda c: c.gen, default=None)
         self.gen = newest.gen if newest else 0
@@ -151,7 +159,7 @@ class Nosnik:
         return newest.body if newest else None
 
     def save(self, key, body):
-        """Seal body and write it with fsync over the older of the two files."""
+        """Seal body and replace the older of the two files with it (fsync, then rename)."""
         self.base.mkdir(exist_ok=True)
         try:
             recovery = self.kit.recovery()
@@ -160,7 +168,10 @@ class Nosnik:
         header = json.dumps({"gen": self.gen + 1, "history": [], "at": database._now(), "recovery": recovery})
         head = database.MAGIC + len(header.encode()).to_bytes(4, "big") + header.encode()
         target = database._other(self.last)
-        database._write_durable(self.base / target, head + syscrypto.seal(key, body, head))
+        tmp = self.base / (target + ".tmp")
+        database._write_durable(tmp, head + syscrypto.seal(key, body, head))
+        os.replace(tmp, self.base / target)
+        database._fsync_dir(self.base)
         self.gen, self.last = self.gen + 1, target
 
     # ---- tożsamość odbiorcy ----------------------------------------------------------------------
@@ -223,6 +234,22 @@ class Nosnik:
 
 
 # ---- paczka zapasowa i karta odbiorcy --------------------------------------------------------------
+
+def public_identity(private):
+    """Public key (X25519 ‖ Ed25519, 64 B) of a private receiver identity (64 B)."""
+    from cryptography.hazmat.primitives.asymmetric import ed25519, x25519
+    if len(private) != 64:
+        raise StorageError("tożsamość odbiorcy ma złą długość")
+    return (x25519.X25519PrivateKey.from_private_bytes(private[:32]).public_key().public_bytes_raw() +
+            ed25519.Ed25519PrivateKey.from_private_bytes(private[32:]).public_key().public_bytes_raw())
+
+
+def card_entry(card, private):
+    """The entry of the receiver card (main or backup) that belongs to this private identity, or None."""
+    public = public_identity(private).hex()
+    return next((entry for entry in (card.get("main"), card.get("backup"))
+                 if isinstance(entry, dict) and entry.get("key") == public), None) if card else None
+
 
 def lxmf_address(public_key):
     return configdoc.destination(public_key, "lxmf.delivery")

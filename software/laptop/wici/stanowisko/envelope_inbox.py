@@ -32,11 +32,12 @@ class Inbox:
         self.db, self.network, self.persist = db, network, persist
         db.executescript(SCHEMA)
 
-    def receive(self, part, now, admit, admitted_part=None):
+    def receive(self, part, now, admit, fresh=None):
         """Admit an authenticated Part and return a state safe to HACK only after persist().
 
-        `admit(full)` must use this SQLite connection without committing or opening
-        a nested transaction. A failed callback rolls back replay and fragment state.
+        `admit(full)` and `fresh()` must use this SQLite connection without committing or
+        opening a nested transaction; `fresh()` runs only for a part not admitted before.
+        A failed callback rolls back replay and fragment state.
         """
         if (type(now) is not int or now < 0 or part.message_type != envelope.TYPE_SA1 or
                 part.number not in (0, 1, 2) or not 0 <= part.counter <= 0xFFFFFFFF or
@@ -93,8 +94,8 @@ class Inbox:
                                      proposed.mask.to_bytes(8, "big")))
                     self.db.execute("DELETE FROM env_parts WHERE network=? AND sender=? AND recipient=? AND counter=? AND message_type=?",
                                     (self.network, part.sender, part.recipient, part.counter, part.message_type))
-            if admitted_part is not None:
-                admitted_part()
+            if fresh is not None and result != DUPLICATE:
+                fresh()
         if not self.persist():
             raise OSError("envelope state was not durably saved")
         return result

@@ -4,8 +4,8 @@
     python -m wici.stanowisko przygotuj --nosnik KATALOG --dyzurni 4 --paczka PLIK --karta PLIK
     python -m wici.stanowisko start --nosnik KATALOG --port /dev/ttyACM0|COM5 [--bitrate 41]
     python -m wici.stanowisko odtworz --nosnik PUSTY_KATALOG [--kopie KATALOG ...]
-    python -m wici.stanowisko rekey --medium KATALOG --card NOWY_PLIK
-    python -m wici.stanowisko activate-rekey --medium KATALOG --card NOWY_PLIK --stations-updated
+    python -m wici.stanowisko nowa-tozsamosc --nosnik KATALOG --karta NOWY_PLIK
+    python -m wici.stanowisko aktywuj-tozsamosc --nosnik KATALOG --karta PLIK --karta-na-stacjach
 
 przygotuj (preparation of the station, on a computer without a network; stanowisko-osp.md, „Przygotowanie”):
 makes the medium (accounts of the duty officers, station password, main identity), the backup identity
@@ -26,6 +26,10 @@ the duty officer confirms the clock and the number of recoveries (panel, stage S
 odtworz (damaged medium, stanowisko-osp.md, „Nośnik i szyfrowanie”): reads from stdin the station password
 and two lines "konto hasło" of two different duty officers, takes the newest copy that the password opens
 (computer disk first, then the given directories, e.g. the second medium) and writes it to the empty medium.
+
+nowa-tozsamosc, aktywuj-tozsamosc (stanowisko-osp.md, „Wysyłka”, recovery step 3; rekey.py): with the application
+stopped, the same three stdin lines as odtworz; a fresh receiver identity and card, then the end of the WICI-Link
+sending block once the stations have the card.
 """
 
 import argparse
@@ -115,11 +119,7 @@ def start(args):
         if args.reticulum_port == args.port:
             emit("login_failed", message="port Reticulum musi być inny niż port WICI-Link")
             return 3
-        from cryptography.hazmat.primitives.asymmetric import ed25519, x25519
-        own_public = (x25519.X25519PrivateKey.from_private_bytes(identity_key[:32]).public_key().public_bytes_raw() +
-                      ed25519.Ed25519PrivateKey.from_private_bytes(identity_key[32:]).public_key().public_bytes_raw()).hex()
-        active = next((entry for entry in (card.get("main"), card.get("backup"))
-                       if isinstance(entry, dict) and entry.get("key") == own_public), None) if card else None
+        active = nosnik.card_entry(card, identity_key)
         if active is None or active.get("net_id") != link["net_id"] or active["id"] == link["root"]:
             emit("login_failed", message="tożsamość odbiorcy i ustawienia WICI-Link nie są zgodne")
             return 3
@@ -204,19 +204,19 @@ def receiver_rekey(args):
     from . import rekey
     lines = [sys.stdin.readline().strip() for _ in range(3)]
     approvers = [tuple(line.split(" ", 1)) for line in lines[1:] if " " in line]
-    medium = nosnik.Nosnik(args.medium)
+    medium = nosnik.Nosnik(args.nosnik)
     try:
         key = medium.unlock(lines[0])
-        if args.command == "rekey":
-            card = rekey.stage(medium, key, approvers, args.card)
-            emit("rekey_staged", card=str(args.card), main_id=card["main"]["id"])
+        if args.command == "nowa-tozsamosc":
+            card = rekey.stage(medium, key, approvers, args.karta)
+            emit("identity_staged", card=str(args.karta), main_id=card["main"]["id"])
         else:
-            if not args.stations_updated:
-                raise database.StorageError("confirm that the new card is installed on the stations")
-            card = rekey.activate(medium, key, approvers, args.card)
-            emit("rekey_activated", main_id=card["main"]["id"])
-    except (database.LoginError, database.StorageError, FileExistsError, OSError) as exc:
-        emit("rekey_failed", message=str(exc))
+            if not args.karta_na_stacjach:
+                raise database.StorageError("najpierw zainstaluj nową kartę na stacjach (--karta-na-stacjach)")
+            card = rekey.activate(medium, key, approvers, args.karta)
+            emit("identity_activated", main_id=card["main"]["id"])
+    except (database.LoginError, database.StorageError, OSError) as exc:
+        emit("identity_failed", message=str(exc))
         return 3
     return 0
 
@@ -259,19 +259,20 @@ def main(argv=None):
     back = commands.add_parser("odtworz", help="odtworzenie nośnika z kopii (zgoda dwóch dyżurnych)")
     back.add_argument("--nosnik", required=True, help="pusty katalog na nowym nośniku stanowiska")
     back.add_argument("--kopie", action="append", default=[], help="dodatkowy katalog kopii, np. drugi nośnik")
-    for name in ("rekey", "activate-rekey"):
-        operation = commands.add_parser(name, help="offline receiver identity replacement after recovery")
-        operation.add_argument("--medium", required=True, help="receiver medium directory")
-        operation.add_argument("--card", required=True, help="new receiver card file")
-        if name == "activate-rekey":
-            operation.add_argument("--stations-updated", action="store_true",
-                                   help="confirm the new card is installed on all numbered stations")
+    for name, purpose in (("nowa-tozsamosc", "nowa tożsamość odbiorcy po odzyskaniu (zgoda dwóch dyżurnych)"),
+                          ("aktywuj-tozsamosc", "koniec blokady nadawania WICI-Link po instalacji nowej karty")):
+        operation = commands.add_parser(name, help=purpose)
+        operation.add_argument("--nosnik", required=True, help="katalog na nośniku stanowiska")
+        operation.add_argument("--karta", required=True, help="plik nowej karty odbiorcy")
+        if name == "aktywuj-tozsamosc":
+            operation.add_argument("--karta-na-stacjach", action="store_true",
+                                   help="potwierdzenie, że wszystkie numerowane stacje mają nową kartę")
     arch = commands.add_parser("archiwum", help="otwarcie archiwum zamkniętego zdarzenia (hasło archiwum na wejściu)")
     arch.add_argument("--plik", required=True, help="plik archiwum .wici")
     arch.add_argument("--do", required=True, help="katalog na baza.sqlite i rejestr.csv")
     args = parser.parse_args(argv)
-    return {"przygotuj": prepare, "start": start, "odtworz": restore, "rekey": receiver_rekey,
-            "activate-rekey": receiver_rekey, "archiwum": open_archive}[args.command](args)
+    return {"przygotuj": prepare, "start": start, "odtworz": restore, "nowa-tozsamosc": receiver_rekey,
+            "aktywuj-tozsamosc": receiver_rekey, "archiwum": open_archive}[args.command](args)
 
 
 if __name__ == "__main__":
