@@ -12,6 +12,8 @@ Specyfikacja stacji 0.5 składa się z pięciu rozdziałów, protokołu USB, roz
 | [Protokół USB](spec/protokol-usb.md) | Kontrakt laptop–stacja (`"usb":2`): polecenia i odpowiedzi, synchronizacja, transfery w częściach, PRZENIEŚ STACJĘ |
 | [Elektronika](spec/elektronika.md) | Stacja pilotażowa na płytce v2, tor zasilania z ogniw AA i 12 V, zanik zasilania przy zapisie, poziom 3 z kupionej stacji zasilania |
 | [Stanowisko odbiorcze](spec/stanowisko-osp.md) | Stanowisko odbiorcze: stacja jako węzeł transportu i obowiązkowy komputer z tożsamością odbiorcy (D19), aplikacja, panel, zestaw, awarie |
+| [Transport (projekt, D21)](spec/transport.md) | Szew nośnika, koperta WICI (uwierzytelnienie i szyfrowanie od końca do końca kluczami z kart), nośniki: WICI-Link, Reticulum, Meshtastic i MeshCore przez USB, IP; warunek przyjęcia |
+| [WICI-Link (projekt, D21)](spec/wici-link.md) | Własny protokół łącza: ramka, klucz sieci, drzewo tras do odbiorcy przez wiele skoków, potwierdzenie na każdym skoku, klasy czasu, cisza radiowa, budżet czasu, zagrożenia |
 | [Odbiór](spec/odbior.md) | Próby według kroków planu, pomiar tras radiami RNode, próby z grupami T1–T8, minimum pilotażu, warunki zaliczenia i braki do wydania |
 | [Karta obsługi](obsluga/karta-stacji.html) | Karta obsługi stacji do druku: PL, UK i EN, każda na jednej kartce A4 (strona 1 najważniejsze, strona 2 gdy trzeba), i formularz papierowy; CC BY 4.0 ([dokumenty obsługi](obsluga/README.md)) |
 | [Instrukcja dyżurnego](obsluga/instrukcja-dyzurnego.md) | Czynności dyżurnego: uruchomienie, potwierdzenia, odpowiedzi i komunikaty, kwarantanna, przekazywanie służbom, rejestr, awarie, ćwiczenia, cisza, zamknięcie zdarzenia; tabele dla gminy; CC BY 4.0 |
