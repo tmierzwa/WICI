@@ -17,7 +17,7 @@ Wybór stosu sieciowego ma wpływ na licencję, umowy z gminą, zgodność (D20)
 |---|---|---|
 | Aplikacja SA1 | sześć typów wiadomości, cykl życia zgłoszenia, trzy potwierdzenia (W06), kolejka i rejestr w FRAM, deduplikacja po (nadawca, `id`, `revision`) | `station.cpp`, `store`, `sa1`, `ui`; aplikacja stanowiska |
 | Koperta WICI | uwierzytelnienie i poufność od końca do końca, ochrona przed powtórzeniem, podział na części, adresy stacji z kart | nowa, w stacji (C++) i na stanowisku (Python) |
-| Szew nośnika | wysłanie, odbiór, zdarzenia doręczenia, zdolności, cisza radiowa, stan | interfejs `Bearer` |
+| Szew nośnika | wysłanie, odbiór, zdarzenia doręczenia, cisza radiowa, stan | `station::Services` w stacji, `bearers.Bearers` na stanowisku |
 | Nośnik | trasy, przekazywanie, potwierdzenia na łączu, dostęp do kanału | WICI-Link, Reticulum (obecny rdzeń), Meshtastic, MeshCore, IP |
 | Warstwa fizyczna | modulacja, sterownik radia | własny sterownik SX1262 albo oprogramowanie obcego węzła |
 
@@ -97,48 +97,20 @@ Dla porównania: typowe zgłoszenie jako pakiet okazjonalny LXMF ma dziś 403 B 
 
 ## Szew nośnika
 
-Interfejs w stacji (C++, bez alokacji w czasie pracy). Aplikacja stanowiska ma odpowiednik w Pythonie o tych samych nazwach i znaczeniach.
+Nie ma wspólnego interfejsu nośnika w C++. Każda strona ma jeden szew:
 
-`firmware/src/bearer.h` zawiera ten typowany kontrakt i osobny `LegacyBearer` dla obecnego szwu Reticulum w `station::Services`. Konfiguracja numerowana używa koperty i nośnika WICI-Link; konfiguracja bez numerów zachowuje adapter Reticulum. Typowany kontrakt jest podstawą do dalszych adapterów.
+- **Stacja** (`station::Services`, `firmware/src/station.h`). Ścieżkę wybiera konfiguracja. Bez `network` aplikacja wysyła przez Reticulum kontraktem `bearer::LegacyBearer` (`firmware/src/bearer.h`: `radioReady`, `busy`, `sendReady`, `send`, `address`; adres LXMF 16 B, dowód LXMF jako zdarzenie doręczenia). Z `network` wysyła kopertę przez `numberedReady` i `sendNumbered`, które `main.cpp` łączy z koordynatorem WICI-Link (`wici_radio::Shelter`); odebraną kopertę `wici_destination` oddaje aplikacji. Zdarzenie doręczenia oznacza HACK następnego skoku dla każdej części.
+- **Stanowisko** (`software/laptop/wici/stanowisko/bearers.py`). `Bearers` łączy nośniki `wici` (węzeł stanowiska przez KISS USB, `wici_stos.py`) i `reticulum` (`stos.py`). Każdy ma `start`, `stop`, `announce`, `status(now)` (`online`, `since_rx`, `dropped`), `send` oraz `outcome` (prawda po doręczeniu, fałsz po porażce, brak wyniku w toku). Odpowiedź idzie nośnikiem wskazanym przez dyżurnego, inaczej nośnikiem ostatniej świeżej uwierzytelnionej wiadomości od stacji (zapisanym w transakcji przyjęcia), inaczej głównym (`wici`). Po porażce na wybranym nośniku próbuje drugiego; WICI-Link, który nie może nieść odpowiedzi, od razu oddaje ją Reticulum.
 
-```cpp
-struct BearerCaps {
-  uint16_t max_payload;      // największa koperta w jednym wywołaniu send()
-  uint8_t  max_hops;         // 0 = tylko sąsiedzi
-  bool hop_ack;              // nośnik potwierdza i ponawia na każdym skoku
-  bool e2e_ack;              // nośnik ma własne potwierdzenie od końca do końca
-  bool airtime_classes;      // egzekwuje klasy K0/K1/K2, dług ciszy i limity z radio.md
-  bool radio_silence;        // gwarantuje brak jakiegokolwiek nadawania w ciszy (W19)
-  bool frame_filter;         // odrzuca obce ramki przed przetwarzaniem (klucz sieci)
-};
-
-enum class Delivery : uint8_t { Queued, Sent, HopAcked, E2EAcked, Rejected, Failed };
-enum class TrafficClass : uint8_t { K0, K1, K2 };
-
-struct LinkMeta { int16_t rssi_dbm; int8_t snr_db4; uint8_t hops; uint8_t bearer_id; };
-
-class Bearer {
- public:
-  virtual BearerCaps caps() const = 0;
-  // Przyjmuje kopertę albo zwraca Rejected (pełna kolejka, limit klasy, cisza).
-  virtual Handle send(StationId dst, ByteSpan envelope, TrafficClass k) = 0;
-  virtual void   setSilence(bool on, bool allow_one_exempt) = 0;   // W19
-  virtual Health health() const = 0;   // kolejka, budżet czasu, dług ciszy, rodzic, jakość łączy
-  virtual void   poll() = 0;           // wywoływane z pętli stacji
-  // Zgoda na potwierdzenie odebranej koperty, po transakcji w FRAM (dzisiejsze PROVE_APP).
-  virtual void   confirm(RxHandle rx) = 0;
-  void (*onReceive)(RxHandle rx, StationId src, ByteSpan envelope, const LinkMeta&, void* ctx);
-  void (*onDelivery)(Handle, Delivery, void* ctx);
-};
-```
+Kolumny tabeli [nośników](#nośniki) (`max_payload`, `hop_ack`, `e2e_ack`, `airtime_classes`, `radio_silence`) opisują właściwości nośnika, nie pola w kodzie.
 
 Reguły kontraktu:
 
-1. **Doręczenie na nośniku nie jest potwierdzeniem aplikacji.** `HopAcked` i `E2EAcked` sterują tylko ponowieniami. Zgłoszenie jest przyjęte dopiero po RECEIVED (W06), jak dziś.
-2. **Dowód po zapisie.** Nośnik z `e2e_ack` wysyła swoje potwierdzenie dopiero po wywołaniu `confirm(rx)` przez warstwę wyżej, po transakcji w FRAM (dzisiejsze PROVE_APP). Nośnik, który tego nie umie (potwierdza przy odbiorze), ma `e2e_ack = false` w tej roli.
-3. **Zdolności zmieniają zachowanie, a nie kod aplikacji.** Gdy `airtime_classes` albo `radio_silence` jest fałszywe, stacja pokazuje w diagnostyce tryb ograniczony, a odbiór (próba „Wrogi węzeł”, W19) nie może być dla tej konfiguracji zaliczony.
+1. **Doręczenie na nośniku nie jest potwierdzeniem aplikacji.** HACK i dowód LXMF sterują tylko ponowieniami. Zgłoszenie jest przyjęte dopiero po RECEIVED (W06).
+2. **Dowód po zapisie.** Cel WICI-Link wysyła HACK dopiero po trwałym zapisie skutku SA1 i okna powtórzeń (stacja: `wici_destination`; stanowisko: transakcja SQLite przed HACK). Reticulum wysyła dowód po transakcji aplikacji (PROVE_APP).
+3. **Cisza i klasy czasu w nośniku stacji.** Oba nośniki stacji egzekwują ciszę radiową (W19) i klasy czasu kanału z [radio.md](radio.md). Nośnik bez nich (Meshtastic, MeshCore) może działać tylko na stanowisku, a próba „Wrogi węzeł” nie może być dla niego zaliczona.
 4. **Odbiór niepewny.** Koperta, której nie da się odszyfrować kluczem żadnej znanej pary, jest odrzucana i liczona. Nie trafia do kwarantanny SA1, bo nie ma uwierzytelnionego nadawcy. Kwarantanna dotyczy dalej stacji z kluczem spoza listy zaufanych, ale z poprawną kopertą.
-5. **Jeden nośnik radiowy na stację.** Układ SX1262 odbiera jednocześnie tylko jeden profil, a Meshtastic i MeshCore są całymi programami, nie bibliotekami. Stacja wybiera nośnik przy budowie obrazu. Kilka nośników naraz obsługuje tylko stanowisko odbiorcze (niżej).
+5. **Jeden nośnik radiowy na stację.** Układ SX1262 odbiera jednocześnie tylko jeden profil, a Meshtastic i MeshCore są całymi programami, nie bibliotekami. Kilka nośników naraz obsługuje tylko stanowisko odbiorcze (niżej).
 
 ## Nośniki
 
@@ -207,7 +179,7 @@ XIAO ESP32-S3 + Wio SX1262 przeszły [próbę toru radia przy stole](../../hardw
 (19, 44 i 255 B bez zmiany bajtów). Formalna próba D21
 na dwóch RAK4631 i prototypie pozostaje nierozstrzygnięta.
 
-1. Szew `Bearer` i adapter wokół obecnego `rns_node`, bez zmiany zachowania; próby jak dziś. Przed przełączeniem na numery u16: rozszerzenie kart i `configure` o `net_id` i numery obu końców, z kontrolą ich zgodności.
+1. Szew nośnika (`LegacyBearer`) wokół obecnego `rns_node`, bez zmiany zachowania; próby jak dziś. Przed przełączeniem na numery u16: rozszerzenie kart i `configure` o `net_id` i numery obu końców, z kontrolą ich zgodności.
 2. Koperta w Pythonie z wektorami, potem w C++; próby różnicowe i rozszerzenie kontraktu PRZENIEŚ STACJĘ o liczniki oraz okna powtórzeń.
 3. WICI-Link w C++ ([specyfikacja](wici-link.md)) i nośnik pamięciowy z symulacją wielu skoków, trwałą kolejką po HACK, składaniem części i rozsyłaniem awaryjnym.
 4. Aplikacja stanowiska: nośnik WICI-Link przez KISS i warstwa wielu nośników.
