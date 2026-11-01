@@ -11,88 +11,86 @@ WICI-Link jest protokołem łącza i tras dla zamkniętej sieci jednej gminy (al
 - stacje stoją w stałych miejscach, a trasy można zmierzyć przed kryzysem (krok 5);
 - każda włączona stacja przekazuje ruch innych (W23).
 
-Protokół używa profilu LoRa pilotażu bez zmian ([radio](radio.md#profil-lora-pilotażu)) i wszystkich reguł [dostępu do kanału](radio.md#dostęp-do-kanału): długu ciszy 12t zapisanego w FRAM, wolnego kanału przez 50 ms i CAD przed nadaniem, limitu 10% i klas K0–K2. Koperta o długości do 164 B mieści się w jednej ramce LoRa; dłuższa wiadomość SA1 jest dzielona na dwie szyfrowane części. Protokół nie używa ramek RNode.
+Protokół używa profilu LoRa pilotażu bez zmian ([radio](radio.md#profil-lora-pilotażu)) i wszystkich reguł [dostępu do kanału](radio.md#dostęp-do-kanału): długu ciszy 12t zapisanego w FRAM, wolnego kanału przez 50 ms i CAD przed nadaniem, limitu 10% i klas K0–K2. Protokół nie używa ramek RNode. Koperta ([transport](transport.md)) o długości do 164 B mieści się w jednej ramce; dłuższa wiadomość SA1 jest dzielona na dwie szyfrowane części.
 
 ## Ramka
 
 ```
- 0       1        3        5        7       8        10      11          n-8      n
- +-------+--------+--------+--------+-------+--------+-------+-----------+--------+
- | ver/t | net_id | l_src  | l_dst  | hops  | seq    | opts  | ładunek i podpis DATA | MAC(8) |
- +-------+--------+--------+--------+-------+--------+-------+-----------+--------+
- ver/t: bity 7–6 wersja (2), bity 5–3 typ, bity 2–0 flagi (bit 0 ACKREQ, bit 1 DOWN, bit 2 zarezerwowany)
- net_id: numer sieci z przygotowania (u16)
- l_src, l_dst: numery stacji nadającej i następnego skoku (0xFFFF = wszyscy sąsiedzi)
- hops: bity 7–4 liczba wykonanych skoków, bity 3–0 limit skoków (TTL)
+ 0       1        3        5        7       8        10      11
+ +-------+--------+--------+--------+-------+--------+-------+-----------+-----------+--------+------------+
+ | ver/t | net_id | l_src  | l_dst  | hops  | seq    | opts  | ładunek   | podpis    | MAC(8) | tag pary(8) |
+ +-------+--------+--------+--------+-------+--------+-------+-----------+-----------+--------+------------+
+                                                                          tylko DATA            tylko unicast
+ ver/t: bity 7–6 wersja (2), bity 5–3 typ, bity 2–0 flagi (bit 0 ACKREQ, bit 1 DOWN, bit 2 zarezerwowany, musi być 0)
+ net_id: numer sieci z przygotowania (u16, big-endian, jak wszystkie pola)
+ l_src, l_dst: numery stacji nadającej i następnego skoku (0xFFFF = wszyscy sąsiedzi; 0 i 0xFFFF nie są numerami stacji)
+ hops: bity 7–4 liczba wykonanych skoków, bity 3–0 limit skoków (TTL, 1–15)
  seq: numer ramki nadawcy łącza (u16, rośnie o 1, zawija się)
- opts: 0 w wersji 2; każda inna wartość jest odrzucana (miejsce na jawnie wersjonowane rozszerzenie)
- MAC: HMAC-SHA-256(K_link, bajty 0..n-9) obcięty do 8 B
+ opts: 0; każda inna wartość jest odrzucana (miejsce na jawnie wersjonowane rozszerzenie)
+ podpis: Ed25519 pochodzenia, 64 B (tylko DATA, przenoszony bez zmian przez każdy skok)
+ MAC: pierwsze 8 B HMAC-SHA-256(K_link, wszystkie wcześniejsze bajty)
+ tag pary: pierwsze 8 B HMAC-SHA-256(K_hop, "WICI hop v1" ‖ wszystkie wcześniejsze bajty), tylko gdy l_dst ≠ 0xFFFF
 ```
 
-Nagłówek ma 11 B, MAC 8 B. DATA niesie także 64 B podpisu Ed25519 po zaszyfrowanej kopercie. Jednoadresowe DATA i HACK niosą dodatkowy 8 B tag sąsiedzki po MAC, więc przy limicie LoRa 255 B `max_payload` DATA wynosi 164 B. BEACON i rozsyłane DATA nie niosą tagu sąsiedzkiego; podpisy pochodzenia są sprawdzane osobno. BEACON niesie podpis epoki korzenia (64 B) i podpis pól trasy nadawcy (64 B); weryfikacja obu odbywa się poza ścieżką HACK.
+Ramka LoRa ma najwyżej 255 B, więc koperta w DATA ma 25–164 B (`MAX_PAYLOAD` = 255 − 11 − 64 − 8 − 8).
 
-**Klucz sieci i sąsiada.** `K_link = HKDF-SHA-256(ikm = klucz sieci z przygotowania, salt = net_id, info = "WICI link v2", L = 32)`. Każdy numerowany węzeł ma także klucze X25519 sąsiadów z `priority_keys`. Para wyprowadza klucz przez `envelope::deriveKey` z uporządkowanymi numerami stacji, po czym oddziela domenę przez `HMAC-SHA-256(shared, "WICI hop v1")`. Tag unicast to pierwsze 8 B `HMAC-SHA-256(K_hop, "WICI hop v1" ‖ pełna ramka z MAC sieci)`. Odbiorca sprawdza tag przed przekazaniem ramki do routingu lub USB. Klucz sieci pozostaje wspólny, lecz nie wystarcza do podszycia się pod `l_src` sąsiada ani do sfałszowania HACK.
+| Typ | Kod | Ładunek | Ramka w eterze | Czas TX (SF7) |
+|---|---|---|---|---|
+| DATA | 0 | koperta, potem podpis pochodzenia | 91 B + koperta (rozsyłana: 83 B + koperta), 116–255 B | 215–419 ms |
+| HACK | 1 | brak; potwierdza `seq` ramki DATA od `l_src` | 27 B, zawsze z tagiem pary | 87 ms |
+| BEACON | 2 | `root`, `rank`, `epoch`, `parent` (u16), flagi (1 B; bit 0 zarezerwowany, pozostałe 0), podpis epoki korzenia (64 B), podpis nadawcy (64 B) | 156 B, bez tagu pary | 276 ms |
+| 3–7 | | zarezerwowane | | |
+
+Czasy liczy `lora::frameAirMs` z narastaniem nadajnika. Odbiorca odrzuca ramkę o błędnym MAC lub tagu, nieznanej wersji, nieznanym typie, niezerowym `opts` lub bicie 2, `hops` > TTL, ACKREQ przy `l_dst` = 0xFFFF oraz DATA rozsyłaną bez DOWN.
+
+**Klucze łącza.** `K_link = HKDF-SHA-256(ikm = klucz sieci z przygotowania, salt = net_id, info = "WICI link v2", L = 32)`; jest wspólny dla sieci. Każdy numerowany węzeł ma klucze X25519 sąsiadów z `priority_keys` (najwyżej 50). Para wyprowadza wspólny sekret jak koperta (`envelope::deriveKey`, ECDH X25519 i HKDF) z numerami pary w kolejności rosnącej, a potem `K_hop = HMAC-SHA-256(sekret, "WICI hop v1")`. Węzeł sprawdza tag przed jakimkolwiek przetwarzaniem ramki jednoadresowej; ramkę od sąsiada bez klucza pary odrzuca. Sam klucz sieci nie pozwala więc podszyć się pod `l_src` sąsiada, sfałszować HACK ani dostać się do kolejki przekaźnika ramką jednoadresową. Rozsyłane DATA i BEACON-y niosą tylko MAC sieci; ich treść chronią podpisy.
+
+**Podpisy Ed25519** (klucze tożsamości z kart; każda dziedzina ma własną etykietę):
+
+| Podpis | Treść | Kto podpisuje |
+|---|---|---|
+| pochodzenia (K1) | `"WICI K1 origin v1"` ‖ `net_id` ‖ cała zaszyfrowana koperta | nadawca koperty: stacja albo tożsamość odbiorcy |
+| epoki | `"WICI root epoch v1"` ‖ `net_id` ‖ `root` ‖ `epoch` | korzeń; przekaźniki przenoszą go bez zmian |
+| BEACON | `"WICI route beacon v1"` ‖ `net_id` ‖ nadawca ‖ pierwsze 73 B ładunku BEACON | nadawca BEACON-u |
 
 **Słowo synchronizacji.** Profil pilotażu używa 0x12. Do rozważenia przed T4: własne słowo synchronizacji sieci WICI, żeby radio w ogóle nie zgłaszało ramek Meshtastic, MeshCore i LoRaWAN na tym samym kanale. Nie zmniejsza to kolizji, ale ogranicza pracę procesora i liczbę ramek do odrzucenia.
-
-### Typy ramek
-
-| Typ | Kod | Ładunek | Rozmiar ramki | Czas TX (SF7) |
-|---|---|---|---|---|
-| DATA | 0 | koperta WICI i podpis Ed25519 | 91 B + koperta przez radio | czas według rzeczywistej długości |
-| HACK | 1 | brak (potwierdza `seq` z `l_src` ramki DATA) | 27 B przez radio | według `lora::frameAirMs(27)` |
-| BEACON | 2 | `root`, `rank`, `epoch`, `parent`, flagi (9 B), podpis epoki (64 B), podpis nadawcy (64 B) | 156 B | według `lora::frameAirMs(156)` |
-| 3–7 | | zarezerwowane | | |
 
 ## Trasy
 
 ### Drzewo do odbiorcy
 
-Sieć tworzy drzewo zakorzenione w stacji stanowiska odbiorczego (`root`). Każda stacja ma **rodzica**, czyli następny skok w stronę odbiorcy.
+Sieć tworzy drzewo zakorzenione w węźle radiowym stanowiska odbiorczego (`root`). Każda stacja ma **rodzica**, czyli następny skok w stronę odbiorcy.
 
-1. **Rodzic z planu.** Przy przygotowaniu stacja dostaje w dokumencie konfiguracji rodzica z planu sieci i opcjonalnie rodzica zapasowego, wybranych na podstawie pomiaru tras (kroki 3 i 5). To podstawowy tryb pracy w pilotażu.
-2. **Rodzic wybrany samodzielnie.** Gdy rodzic z planu nie odpowiada (3 nieudane próby na kolejnych ramkach DATA), stacja przechodzi na rodzica zapasowego, a gdy go nie ma, wybiera sąsiada z najmniejszym kosztem z ostatnich ramek BEACON. Koszt = `rank` sąsiada + koszt łącza. Koszt łącza liczy się z odsetka potwierdzonych prób (ETX, w jednostkach 1/16) i z SNR; nowy rodzic musi być lepszy o co najmniej 1,5 jednostki ETX (histereza). Do rodzica z planu stacja wraca, gdy znów potwierdza ramki.
-3. **Ranga.** `rank` odbiorcy to 0. Stacja ogłasza `rank` = `rank` rodzica + koszt łącza do niego. Dynamiczny rodzic musi mieć rangę niższą od najniższej własnej rangi w tej epoce i nie wskazywać stacji jako rodzica. Skonfigurowany rodzic z planu lub zapasowy może mieć wyższą rangę po awarii, ale jego BEACON wymaga osobnego podpisu i nie może wskazywać tej stacji jako rodzica. Po nowym poprawnym BEACON od planowanego sąsiada stacja może go ponownie wybrać. Przy zmianie rodzica przelicza własną rangę.
-4. **Limit skoków.** Pole `hops` pozwala na najwyżej 15 skoków. Domyślny limit sieci to 7 i ustawia się go w planie sieci. Reguła planowania pilotażu z [rozdziału 02](../concept/02-scenariusze-i-organizacja.html) (najwyżej 2 przeskoki do stanowiska, dopóki T5 nie sprawdzi dłuższych łańcuchów) dotyczy planu, nie protokołu.
+1. **Rodzic z planu.** Dokument konfiguracji podaje rodzica z planu sieci i opcjonalnie rodzica zapasowego, wybranych na podstawie pomiaru tras (kroki 3 i 5). To podstawowy tryb pracy w pilotażu. Stacja bez wpisów `priority_keys` (Ed25519 i X25519) dla korzenia, rodzica i rodzica zapasowego nie uruchamia łącza.
+2. **Przełączenie.** Po 3 kolejnych nieudanych próbach (brak HACK) do rodzica z planu stacja przechodzi na rodzica zapasowego, a gdy go nie ma albo też zawiódł 3 razy, wybiera sąsiada o najmniejszym koszcie `rank` + koszt łącza z ważnych BEACON-ów. Nowy dynamiczny rodzic musi być lepszy od obecnego o co najmniej 1,5 jednostki ETX (24/16). Dynamiczny rodzic po 3 porażkach jest pomijany do pierwszego HACK od niego. Do rodzica z planu stacja wraca po HACK od niego; rodzica z planu i zapasowego rozważa ponownie po jego nowym BEACON-ie.
+3. **Koszt łącza** w szesnastych częściach ETX: `256 / p` + kara SNR, gdzie `p` to średnia wykładnicza skuteczności HACK (w szesnastych, waga nowej próby 1/4), a kara SNR to 1/16 na każdy dB poniżej 0 dB ramki BEACON, najwyżej 32/16.
+4. **Ranga.** `rank` korzenia to 0; stacja ogłasza `rank` rodzica + koszt łącza do niego. Dynamiczny rodzic musi mieć rangę niższą od najniższej rangi tej stacji w bieżącej epoce i nie może wskazywać tej stacji jako rodzica. Rodzic z planu i zapasowy mogą mieć wyższą rangę (np. po awarii), ale też nie mogą wskazywać tej stacji. BEACON starszy niż 90 min nie wskazuje rodzica.
+5. **Limit skoków.** Pole `hops` pozwala na najwyżej 15 skoków. Domyślny limit sieci to 7; plan sieci ma go ustawiać, a do tego czasu stacje używają 7. Reguła planowania pilotażu z [rozdziału 02](../concept/02-scenariusze-i-organizacja.html) (najwyżej 2 przeskoki do stanowiska, dopóki T5 nie sprawdzi dłuższych łańcuchów) dotyczy planu, nie protokołu.
+
+Tablica sąsiadów (16 wpisów) jest miękkim stanem w RAM. Nowy sąsiad nie wypiera rodzica z planu ani zapasowego; rodzic z planu i zapasowy wypierają najdawniej słyszanego sąsiada dynamicznego.
 
 ### BEACON
 
-Każda stacja z ustaloną rangą nadaje BEACON co 30 min ±20%, po zmianie rodzica lub rangi (najwyżej raz na 60 s) oraz trzy razy w pierwszych 5 min po starcie, z losowym opóźnieniem. Przy 50 stacjach to około 8 s czasu nadawania na godzinę w całym obszarze kolizji. BEACON-y wliczają się do limitu ogłoszeń 2% czasu zegarowego i do wspólnej puli z K2 ([dostęp do kanału](radio.md#dostęp-do-kanału)). W ciszy radiowej stacja nie nadaje BEACON-ów.
+Stacja z ustaloną rangą i rodzicem, a także korzeń, nadaje BEACON 1–5 s po starcie, potem dwa razy co 120 s, potem co 24–36 min (30 min ±20%), oraz po zmianie rodzica lub rangi (najwyżej raz na 60 s). Przy 50 stacjach to około 8 s czasu nadawania na godzinę w całym obszarze kolizji. BEACON-y wliczają się do limitu ogłoszeń 2% czasu nadawania i do wspólnej puli z K2 ([dostęp do kanału](radio.md#dostęp-do-kanału)). W ciszy radiowej stacja nie nadaje BEACON-ów.
 
-`epoch` nadaje korzeń i zwiększa go przy każdym starcie. Korzeń podpisuje (`net_id`, `root`, `epoch`); przekaźniki przenoszą ten podpis bez zmian. Każdy nadawca podpisuje ponadto swoje pola BEACON i token epoki. Stacja wymaga kluczy Ed25519 korzenia oraz sąsiadów w `priority_keys` i przyjmuje rangę tylko po weryfikacji obu podpisów. Po zmianie epoki przelicza rangę od nowa.
+`epoch` to trwały licznik startów korzenia (u16). Stacja przyjmuje BEACON dopiero po sprawdzeniu podpisu epoki kluczem korzenia i podpisu nadawcy kluczem sąsiada z `priority_keys`. Po zmianie epoki stacja czyści tablicę sąsiadów i liczy rangę od nowa. Starszą epokę odrzuca jako powtórkę, chyba że bieżącej nie słyszała od 90 min: wtedy przyjmuje ją, bo wymieniony lub wyczyszczony korzeń liczy starty od nowa.
+
+Każde sprawdzenie Ed25519 zajmuje pętlę stacji ([czas HACK](#implementacja)). BEACON nie ma tagu pary, więc posiadacz klucza sieci może je wysyłać bez ograniczeń; stacja sprawdza więc podpisy BEACON-ów najwyżej raz na 1 s czasu radia, a resztę pomija. Token epoki identyczny z już sprawdzonym nie jest sprawdzany drugi raz.
 
 ### Ruch w górę i w dół
 
-- **W górę** (do odbiorcy): stacja wysyła DATA do rodzica. Każdy przekaźnik przekazuje ją swojemu rodzicowi.
-- **W dół** (od odbiorcy): każdy przekaźnik zapamiętuje, przez którego sąsiada przyszła ostatnia ramka DATA w górę od danej stacji (numer `src` z koperty, sąsiad z `l_src`). Ramkę DATA z flagą DOWN do tej stacji przekazuje temu sąsiadowi. Tablica ma do 256 wpisów po 4 B, jest zapisywana w FRAM i odtwarzana po restarcie, tak jak dziś tablica tras. Odbiorca zna drogę do każdej stacji po jej pierwszym TEST startowym.
-- **Brak wpisu:** przekaźnik bez wpisu dla celu w dół rozsyła ramkę do wszystkich sąsiadów (`l_dst` = 0xFFFF) z limitem skoków. Każdy węzeł przekazuje daną kopertę najwyżej raz w oknie 120 s, rozpoznając ją po (`src`, `dst`, `ctr`, `kind`) koperty, a nie po `l_src` i `seq`, które zmieniają się na każdym skoku. Powtórne kopie odrzuca i liczy. Rozsyłana DATA ma wyłączony ACKREQ: wielu sąsiadów nie odpowiada HACK jednocześnie, a ponowienie całej intencji pozostaje po stronie SA1. Każde rozsyłanie podlega TTL, limitowi K2 i licznikowi diagnostycznemu; wyczerpana pula K2 odracza je do następnego okna.
+- **W górę** (do odbiorcy): stacja wysyła DATA do rodzica; każdy przekaźnik przekazuje ją swojemu rodzicowi.
+- **W dół** (od odbiorcy): przekaźnik zapamiętuje, przez którego sąsiada (`l_src`, sprawdzony tagiem pary) przyszła ramka DATA w górę od stacji `src` koperty, ale tylko gdy ma ona poprawny podpis pochodzenia tej stacji. Korzeń zapamiętuje drogę dopiero po HACK od laptopa, czyli po uwierzytelnieniu koperty na stanowisku. Odbiorca zna więc drogę do stacji po pierwszej przyjętej od niej kopercie. Ramkę z flagą DOWN do tej stacji przekaźnik wysyła temu sąsiadowi. Tablica ma 256 wpisów, jest w FRAM i wraca po restarcie; przy pełnej tablicy nowy wpis wypiera kolejne wpisy po kolei. Korzeń usuwa drogę po 3 kolejnych ramkach w dół do tej stacji bez HACK.
+- **Brak wpisu:** przekaźnik bez drogi do celu rozsyła ramkę w dół do wszystkich sąsiadów (`l_dst` = 0xFFFF) bez ACKREQ, z limitem skoków. Przed nadaniem zapisuje w FRAM tożsamość koperty (`src`, `dst`, `ctr`, rodzaj); ten sam węzeł nie rozsyła jej drugi raz w oknie 120 s, także po restarcie, a powtórne kopie odrzuca. Pełny pierścień świeżych tożsamości blokuje kolejne rozsyłanie. Rozsyłanie jest jednorazową próbą: zanik zasilania między zapisem a nadaniem może ją stracić, a ponowienie należy do intencji SA1 z nowym licznikiem koperty. Przekaźnik nigdy nie oddaje ramki sąsiadowi, od którego ją dostał.
 
 ### Potwierdzenie na każdym skoku
 
-1. Jednoadresowa ramka DATA ma flagę ACKREQ. Przekaźnik odpowiada HACK z tym samym `seq`, adresowanym do `l_src`, dopiero po trwałym zapisie ramki w kolejce przekazywania w FRAM. Celem jest trwały odbiór poprawnej koperty: po jej uwierzytelnieniu zapisuje ją lub jej część w FRAM stacji albo SQLite stanowiska i dopiero wtedy odpowiada HACK. Brak miejsca lub błąd zapisu oznacza brak HACK. HACK potwierdza przejęcie odpowiedzialności za bajty na jednym skoku, nie przyjęcie SA1; dla WICI-Link `e2e_ack = false`, więc `Bearer::confirm()` nie steruje HACK.
-2. HACK wychodzi najpóźniej 200 ms po końcu ramki DATA, po samym CAD, bez okna 50 ms. Może wyjść w trakcie długu ciszy stacji; jej czas nadawania z dwunastokrotnością dolicza się do długu. Udział nadawania w długim czasie pozostaje więc 1/13 (około 7,7%).
-3. Nadawca czeka na HACK 600 ms. Bez HACK ponawia ramkę po swoim długu ciszy i losowym 0,5–2 s, najwyżej 3 razy na rodzica, potem próbuje rodzica zapasowego (najwyżej 3 razy). Dla własnej ramki zgłasza wtedy `Failed` do szwu; ramka przyjęta wcześniej od innego węzła pozostaje w trwałej kolejce do ponowienia po odzyskaniu trasy.
-4. Stacja rozpoznaje powtórzoną kopertę także po zmianie `l_src`, `seq` i MAC. Jeśli ramka jest nadal w trwałej kolejce albo została przekazana w ostatniej godzinie, może ponowić HACK najwyżej raz na 5 s; nie przekazuje koperty drugi raz. Cel rozpoznaje powtórzenie części koperty po (`src`, `dst`, `ctr`, `kind`) i potwierdza zapisany już fragment bez podwójnego przyjęcia SA1.
+1. Jednoadresowa ramka DATA ma flagę ACKREQ. Odbiorca skoku odpowiada HACK z tym samym `seq`, adresowanym do `l_src`, dopiero po trwałym przyjęciu: przekaźnik po zapisie i odczycie kontrolnym ramki w kolejce w FRAM, cel po zapisie części koperty albo po trwałym, idempotentnym przyjęciu SA1 i oknie powtórzeń, korzeń po HACK od laptopa (po zapisie w SQLite). Brak miejsca lub błąd zapisu oznacza brak HACK. HACK potwierdza przejęcie odpowiedzialności za bajty na jednym skoku, nie przyjęcie SA1; dla WICI-Link `e2e_ack = false`, więc `Bearer::confirm()` nie steruje HACK.
+2. HACK musi skończyć się najpóźniej 200 ms po końcu ramki DATA. Wychodzi po samym CAD, bez okna 50 ms, także w trakcie długu ciszy i przed czekającą DATA; jego czas nadawania z dwunastokrotnością dolicza się do długu i jest zapisany w FRAM przed nadaniem (bez zapisu nie ma HACK). Udział nadawania w długim czasie pozostaje więc 1/13 (około 7,7%). HACK nie wychodzi, gdy dług z nim przekroczyłby dług odczekiwany po utracie rekordu (10 056 ms) albo gdy nie zdąży przed terminem.
+3. Nadawca czeka na HACK 600 ms od końca swojego nadania. Bez HACK ponawia tę samą ramkę (ten sam `seq`) po długu ciszy i losowym 0,5–2 s, najwyżej 3 razy na rodzica. Własną ramkę stacja kieruje potem do rodzica wybranego przez tablicę tras (zapasowego) na kolejne 3 próby, a gdy to nie pomoże, zgłasza `Failed` do szwu. Ramka przekazywana zostaje w trwałej kolejce i wychodzi do bieżącego rodzica.
+4. Węzeł rozpoznaje powtórzoną kopertę po (`net_id`, `src`, `dst`, `ctr`, rodzaj) i skrócie ładunku z podpisem, także po zmianie `l_src`, `seq` i MAC. Koperta wciąż w kolejce albo przekazana w ostatniej godzinie dostaje ponowny HACK, ale nie jest przekazywana drugi raz; inny ładunek o tej samej tożsamości jest odrzucany. Cel rozpoznaje powtórzenie po oknie powtórzeń i nie przyjmuje SA1 drugi raz. Ponowne HACK-i za już przyjęte kopie są ograniczone do jednego na 5 s na węzeł, bo każdy kosztuje dług ciszy, a nagraną ramkę może powtórzyć każdy słuchacz. Wyjątek: pierwsza powtórka ramki K1 przyjętej bez HACK (niżej) dostaje HACK bez tego ograniczenia.
 
-Kolejka przekazywania ma najwyżej 4 ramki. Po HACK przekaźnik zachowuje ramkę do HACK z następnego skoku; po restarcie wznawia nadawanie z FRAM. Wyczerpanie prób lub brak trasy odracza ją; po 30 minutach bez doręczenia gniazdo wygasa, a nadawca musi wznowić intencję SA1. Gdy nie może przyjąć kolejnej ramki trwale, nie wysyła HACK do poprzedniego skoku. Dla rozsyłania awaryjnego bez ACKREQ przekazanie jest jednorazową próbą, a ponowienie zapewnia intencja SA1.
-
-Moduł kolejki D21 (`firmware/src/wici_relay.cpp`) rezerwuje 0x045000–0x0459FF FRAM: cztery gniazda po dwie kopie 320 B, CRC i końcowy znacznik COMMIT. `STORED` albo `DUPLICATE` oznacza, że bajty są po zapisie i odczycie kontrolnym; pozostałe wyniki zabraniają HACK. Usunięcie zapisuje trwały rekord pusty, więc po zaniku zasilania nie wraca starsza kopia ramki. Niepewny zapis blokuje kolejne przyjęcia do ponownego odczytu FRAM. Koordynator łączy moduł z radiem; limit 200 ms wymaga pomiaru na prototypie.
-
-Moduł tras D21 (`firmware/src/wici_route.cpp`) rezerwuje 0x046000–0x0468FF FRAM dla dwóch kopii tablicy 256 dróg w dół, z CRC, COMMIT i związaniem z siecią, numerem stacji oraz korzeniem. Niepewny zapis blokuje korzystanie z tablicy do ponownego odczytu FRAM. Beacony i koszty są miękkim stanem w RAM, resetowanym po zmianie epoki. Koszt łącza łączy SNR ramki BEACON (po jednym szesnastym za dB poniżej 0 dB, najwyżej 32/16) z przybliżeniem ETX z kolejnych wyników HACK (średnia wykładnicza sukcesu w szesnastych). Testy natywne sprawdzają zanik zapisu, odtworzenie, zgodność sieci, ścisłą rangę, koszt i zmianę rodzica. Harmonogram beaconów i połączenie z radiem są aktywne; progi kosztu wymagają pomiaru na sprzęcie D21.
-
-Pierścień `firmware/src/wici_seen.cpp` w 0x046900–0x047DFF zachowuje 224 ostatnio przekazanych tożsamości kopert przez 3600 s według (`net_id`, identyfikator koperty, skrót pełnego ładunku). Przy starcie odczytuje i sprawdza 5376 B do RAM, aby nie wykonywać 256 odczytów FRAM przed każdym HACK. Przed zwolnieniem gniazda przekaźnik zapisuje w nim wynik przekazania; po restarcie `read()` nie wydaje ponownie ramki, której wpis już trwa. Zanik zapisu pierścienia pozostawia gniazdo zajęte, a zanik zapisu pustego gniazda pozostawia trwały wpis „przekazane”. Ponowienie tej samej koperty z innym adresem skoku, sekwencją i MAC pozostaje rozpoznaną powtórką; ponowny HACK jest ograniczony do jednego na 5 s. Inny ładunek o tej samej tożsamości koperty jest odrzucany. `wici_link::forward` sprawdza MAC wejścia, adres tego skoku i TTL, a następnie przepisuje tylko nagłówek łącza, zachowując szyfrogram; numer `seq` dostaje z trwałego licznika. Pierścień jest ograniczony: po 224 nowszych wpisach najstarsza pozycja może zostać wyparta przed 3600 s; limity czasu kanału mają utrzymać rzeczywistą liczbę poniżej tego progu, co wymaga próby przeciążeniowej.
-
-`firmware/src/wici_destination.cpp` łączy uwierzytelnienie ramki łącza, AEAD koperty, dwa trwałe bufory części i dwa okna powtórzeń po stronie schronienia. Dla całości albo drugiej części wydaje HACK dopiero po trwałym i idempotentnym przyjęciu SA1 przez wywołującego oraz zapisie okna; dla pierwszej części po zapisie FRAM. Po restarcie kończy przerwane opróżnienie bufora, jeśli okno dowodzi przyjęcia. Test natywny obejmuje dwuczęściową kopertę z drugą częścią najpierw, restart, powtórkę, zmianę sposobu podziału pod tym samym licznikiem i ramkę z błędnym MAC. Aplikacja stanowiska nie wykonuje już wysyłki LXMF ani kopii na synchronicznej ścieżce `receive_envelope_frame`, by nie opóźniać HACK; termin 200 ms i tak wymaga pomiaru na sprzęcie. Numerowany obraz wywołuje adapter z surowego odbioru radia.
-
-`measure::Bench` ma osobny tryb jednej surowej ramki SX1262, który wymaga zarejestrowanego odbiorcy ramki. Wywołuje go z czasem końca odbioru, RSSI i SNR przed diagnostyką USB. Zwykła DATA zachowuje okno 50 ms, CAD i trwały dług. Metoda `linkSendHack` omija oczekiwanie na dług i okno, ale wymaga wolnego CAD, sprawdza znacznik końca odbioru względem limitu 200 ms i przed TX zapisuje w dzienniku dotychczasowy pozostały dług oraz czas HACK z narastaniem i jego dwunastokrotnością. Po TX pozostawia dotychczasowy dług i nowy dług HACK, nawet gdy w kolejce czeka DATA. Gdy suma przekroczyłaby największy dług odczekiwany po utracie rekordu (10 056 ms dla LoRa), HACK nie wychodzi; dzięki temu niepewny start nadal odczekuje wystarczająco długo. Przy odmowie zapisu nie nadaje. Test hosta sprawdza surowe 255 B bez ramki RNode, pojedyncze 19 B HACK, dwa HACK podczas długu, odłożoną DATA, ciszę, spóźniony HACK, wolny zapis FRAM i wyczerpany budżet długu. Numerowany obraz włącza ten tryb; limit HACK pozostaje do pomiaru na sprzęcie.
-
-`firmware/src/wici_radio.cpp` łączy odbiorcę i przekaźnik stacji z wyjściem `Air`: po sprawdzeniu MAC próbuje HACK tylko po trwałym przyjęciu, dopiero potem uczy tras i planuje przekazanie. Czas 600 ms liczy od zakończenia faktycznego TX; po braku HACK, odmowie radia albo nieudanym TX odczekuje losowo 0,5–2 s. Po restarcie odczytuje kolejkę i odtwarza trasy w dół. Test natywny z sanitizerem obejmuje odrębny numer odbiorcy i korzenia, odmowę HACK/DATA, ponowienie identycznej ramki, potwierdzenie i restart. Numerowany obraz łączy `Air` z `Bench`; kontrakt migracji tożsamości i licznika kopert jest zaimplementowany, a zaniki zasilania wymagają próby na docelowym sprzęcie.
-
-`firmware/src/wici_gateway.cpp` przygotowuje korzeń do portu KISS: przekazuje do USB tylko ramki po poprawnym MAC, a HACK z laptopa przyjmuje wyłącznie dla ostatniej ramki DATA, którą port KISS przyjął do wysłania, ze zgodnym źródłem i `seq` oraz przed upływem 200 ms od końca odbioru radiowego. Odłączenie USB kasuje oczekiwanie. Moduł nie odpowiada sam za SQLite; aplikacja stanowiska musi zapisać kopertę trwale przed odesłaniem HACK. Test natywny sprawdza brak USB, błędny MAC, obcy i spóźniony HACK, odmowę radia i wyzerowanie po odłączeniu. Numerowany obraz łączy go z aktywnym portem USB i zadaniem radiowym. Echo wychodzącej ramki do laptopa następuje po faktycznym TX.
-
-`firmware/src/wici_seq.cpp` rezerwuje numery `seq` blokami 64 w dwóch rekordach 32 B FRAM przy 0x044180. Po restarcie pomija niewykorzystaną resztę bloku; błąd lub niepewny zapis wyłącza dalsze nadawanie do ponownego odczytu FRAM. Numer na łączu jest u16 i zawija się po 65536 ramkach; potwierdzony limit czasu kanału musi zapewnić, że jedno źródło nie wykona pełnego obrotu w oknie powtórzeń 3600 s. Nadawca ponawiający tę samą ramkę na skoku zachowuje jej `seq`.
-
-`firmware/src/wici_hop.cpp` łączy kolejkę, tablicę tras i licznik sekwencji dla ruchu tranzytowego. Wydaje HACK dopiero po trwałym przyjęciu, zachowuje tę samą ramkę i `seq` przy ponowieniu, sprawdza uwierzytelniony HACK od właściwego następnego węzła, a po restarcie kończy zapis pustego gniazda przerwany po znaczniku „przekazane”. Trasę w dół uczy poza terminem HACK tylko z ramki z poprawnym podpisem pochodzenia; klucz łącza sam nie nadaje uprawnienia do aktualizacji trasy. Bez trasy rozsyła najwyżej raz według trwałego pierścienia tożsamości kopert. Pierścień `firmware/src/wici_flood.cpp` ma 256 rekordów po 18 B, w dwóch wolnych lukach FRAM: 0x044200–0x044F7F i 0x045A00–0x045E7F. Rekord zawiera sieć, dziewięciobajtową tożsamość koperty, czas, CRC i końcowy COMMIT. Zapis i odczyt kontrolny następują przed próbą nadania, a świeży pierścień pełny blokuje kolejne rozsyłanie. Jeśli zasilanie zaniknie po znaczniku, lecz przed TX, ta konkretna koperta może nie wyjść. Numerowany nośnik stanowiska traktuje echo rozsyłania bez HACK jako nieudane doręczenie, więc następna próba SA1 używa nowego licznika koperty. Koordynator stacji włącza rozsyłanie dla numerowanej sieci. To reguła najwyżej jednej próby, a nie gwarancja dostarczenia pojedynczej rozsyłanej ramki. Test pamięciowy obejmuje restart po HACK, późną powtórkę, zmianę sąsiada, ruch w dół, rozsyłanie i zanik między znacznikiem a TX. Numerowany obraz wywołuje moduł z odbioru radia i łączy go z harmonogramem 600 ms, CAD oraz trwałym długiem.
+Kolejka przekaźnika ma 4 ramki. Po HACK przekaźnik trzyma ramkę do HACK z następnego skoku, a po restarcie wznawia nadawanie z FRAM z nowym `seq`. Ramka bez doręczenia przez 30 min wygasa i zostaje zapisana jako przekazana; nadawca musi wznowić intencję SA1. Ramka DATA bez ACKREQ (zgłoszenie z wyjątku ciszy, rozsyłanie) jest przekazywana jedną próbą bez HACK.
 
 Ponowienie na skoku ogranicza ponowienia przez cały łańcuch: przy 95% skuteczności jednego nadania i trzech próbach jeden skok przechodzi z prawdopodobieństwem 99,99%. Ponowienia intencji SA1 (10 min po doręczeniu, potem co 30–60 min) zostają bez zmian i działają nad nośnikiem.
 
@@ -101,49 +99,93 @@ Ponowienie na skoku ogranicza ponowienia przez cały łańcuch: przy 95% skutecz
 Reguły podziału czasu z [radio](radio.md#dostęp-do-kanału) zostają, z jedną zmianą znaczenia klas, możliwą dzięki jawnym numerom stacji w kopercie:
 
 - **K0:** własne ramki DATA stacji, HACK.
-- **K1:** przekazywane ramki DATA skierowane do odbiorcy albo od odbiorcy, z poprawnym podpisem pochodzenia. Nadawca podpisuje `"WICI K1 origin v1" ‖ net_id (u16 BE) ‖ pełna zaszyfrowana koperta`. Dla ruchu w górę przekaźnik sprawdza klucz Ed25519 numeru źródła z przygotowania; dla ruchu w dół klucz aktywnego odbiorcy z karty. Podpis obejmuje kopertę, więc zmiana jawnego nadawcy lub odbiorcy unieważnia dowód. Przekaźnik zachowuje podpis przy każdym skoku i odnawia tylko MAC łącza.
-- **K2:** pozostałe przekazywane ramki, w tym rozsyłanie awaryjne bez wpisu w tablicy; BEACON-y w puli ogłoszeń.
+- **K1:** przekazywane jednoadresowe ramki DATA do odbiorcy albo od odbiorcy z poprawnym podpisem pochodzenia. Dla ruchu w górę przekaźnik sprawdza klucz Ed25519 numeru `src` z `priority_keys`, dla ruchu w dół klucz tożsamości odbiorcy z karty. Podpis obejmuje całą kopertę, więc zmiana jawnego nadawcy lub odbiorcy unieważnia dowód.
+- **K2:** pozostałe przekazywane ramki, w tym rozsyłanie bez wpisu w tablicy (nawet podpisane); BEACON-y w puli ogłoszeń.
 
-Numerowany przekaźnik odkłada przychodzącą ramkę do K2 bez weryfikacji Ed25519 w terminie HACK i zostawia dwa z czterech trwałych gniazd wolne dla K1. Gdy dwa gniazda K2 są zajęte, weryfikuje podpis poza szybkim terminem HACK i zapisuje ważne K1 w zarezerwowanym gnieździe bez natychmiastowego HACK; ponowienie nadawcy dostaje HACK po trwałym zapisie. Dopuszczona jest najwyżej jedna oczekująca ramka K1 od jednego zweryfikowanego nadawcy. Metadane nadawcy są zapisane z CRC i znacznikiem COMMIT. K1 jest wybierane przed K2, a wybór gniazda rotuje; powtórkę już przyjętej ramki potwierdza również przy pełnej kolejce. Brak klucza albo zły podpis kwalifikuje ramkę do K2. Dziennik `wici_airtime` zapisuje przed przekazaniem do radia koszt wszystkich przekazywanych DATA oraz BEACON-ów w dwóch kopiach FRAM (0x047F80–0x047FFF). Klasę „własna”, „tranzyt”, „K2 przy czekającym K1” albo „BEACON” przekazuje koordynator stacji. Siedem dziesięciominutowych przedziałów zachowuje wszystkie nadania z ostatnich 3600 s, czasem dłużej, a koszt zaokrągla w górę do 100 ms. Ruch tranzytowy razem z BEACON-ami nie przekracza 60% czasu kanału, a BEACON-y 2% czasu nadawania w tym oknie. K1 ma pierwszeństwo w kolejce, lecz także podlega wspólnemu limitowi. Gdy K1 czeka bez dostępnej trasy, K2 może wyjść tylko do 25% *łącznego* kosztu tranzytu i BEACON-ów. Nieudane przyjęcie przez radio zostawia zarezerwowany koszt. Pełna próba „Wrogi węzeł” pozostaje do pomiaru.
+**Przyjęcie do kolejki.** Ed25519 trwa dłużej niż termin HACK, więc przekaźnik przyjmuje ramkę najpierw jako K2, bez weryfikacji, tylko gdy pozostaną wolne co najmniej dwa z czterech gniazd, i od razu odpowiada HACK. Podpis sprawdza później; ważny podpis zapisuje przy ramce w FRAM (z CRC i COMMIT) i podnosi ją do K1. Gdy dwa gniazda K2 są zajęte, jednoadresowa ramka z ACKREQ może zająć zarezerwowane gniazdo tylko po sprawdzeniu podpisu, i to najwyżej jedno gniazdo na zweryfikowanego nadawcę. Ta ramka nie dostaje HACK od razu; dostaje go powtórka nadawcy. Brak klucza albo zły podpis oznacza K2. K1 wychodzi przed K2, a wybór gniazda w klasie rotuje. Po restarcie każdy podpis jest sprawdzany ponownie (klucz mógł się zmienić). Przejęta stacja z własnym kluczem podpisu może więc zająć najwyżej dwa gniazda (dwa przyjęte jako K2 i podniesione do K1), a dwa pozostają dla innych zweryfikowanych nadawców.
 
-Wspólny `K_link` sam nie wystarcza do zajęcia gniazda K1: podrobiony numer bez podpisu jest K2. Przejęta stacja z własnym kluczem podpisu może zająć jedno gniazdo K1 oraz dwa K2, pozostawiając co najmniej jedno gniazdo dla innego zweryfikowanego nadawcy. Próba „Wrogi węzeł” i W10 na docelowym sprzęcie pozostają warunkami odbioru D21.
+**Dziennik czasu nadawania.** Przed przekazaniem ramki do radia stacja zapisuje w FRAM koszt każdej przekazywanej DATA i każdego BEACON-u: 13 × czas TX w puli i czas TX BEACON-u w limicie ogłoszeń, zaokrąglone w górę do 100 ms. Siedem przedziałów po 10 min obejmuje co najmniej ostatnie 3600 s. Tranzyt razem z BEACON-ami nie przekracza 60% czasu kanału, a BEACON-y 2% czasu nadawania w tym oknie. K1 ma pierwszeństwo w kolejce, lecz podlega wspólnemu limitowi. Gdy w kolejce czeka K1, ramka K2 może wyjść tylko, jeśli *łączny* koszt tranzytu i BEACON-ów nie przekroczy 25%. Odmowa lub nieudane nadanie po zapisie zostawia koszt, a cofnięcie zegara nie przywraca zużytego czasu. Klasę („własna”, „tranzyt”, „K2 przy czekającym K1”, „BEACON”) podaje koordynator stacji.
+
+Wspólny `K_link` sam nie wystarcza do zajęcia gniazda K1 ani do zajęcia kolejki ramką jednoadresową. Próba „Wrogi węzeł” i W10 na docelowym sprzęcie pozostają warunkami odbioru D21.
 
 ## Cisza radiowa
 
-W ciszy radiowej (W19) stacja nie nadaje żadnej ramki: DATA, HACK ani BEACON, także przekazywanej. Kolejka SA1 zostaje. Jedno zgłoszenie wyjęte spod ciszy wychodzi jako DATA bez oczekiwania na HACK (ACKREQ wyłączony), najwyżej 3 razy co 60 s, bo potwierdzenie i tak przyjdzie od odbiorcy po zniesieniu ciszy albo gońcem.
+W ciszy radiowej (W19) stacja nie nadaje żadnej ramki: DATA, HACK ani BEACON, także przekazywanej. Kolejka SA1 zostaje, a przekaźnik nadal przyjmuje ramki do trwałej kolejki (bez HACK). Jedno zgłoszenie wyjęte spod ciszy wychodzi jako DATA bez ACKREQ, bez oczekiwania na HACK, najwyżej 3 razy co 60 s, bo potwierdzenie i tak przyjdzie od odbiorcy po zniesieniu ciszy albo gońcem; przekaźniki przekazują je jedną próbą.
 
 ## Budżet czasu
 
-Model jak w [rozdziale 06](../concept/06-wykonalnosc-i-budzet-zasobow.html): SF7, 125 kHz, CR 4/5, preambuła 24 symbole, nagłówek jawny, CRC; czas kanału = 13 × czas TX. Poniższy model powstał przed dodaniem tagu sąsiedzkiego; jego wartości WICI-Link wymagają przeliczenia i pomiaru D21.
+Model jak w [rozdziale 06](../concept/06-wykonalnosc-i-budzet-zasobow.html): SF7, 125 kHz, CR 4/5, preambuła 24 symbole, nagłówek jawny, CRC; czas kanału = 13 × czas TX. Na jeden skok jednej części koperty przypada DATA (215–419 ms) i HACK (87 ms). Wartości W10 poniżej powstały przed dodaniem tagu pary (8 B na DATA i HACK) i wymagają przeliczenia w `software/reference/obliczenia.py` oraz pomiaru D21.
 
 | Przekaźnik przed stanowiskiem | Reticulum/LXMF (dziś) | WICI-Link |
 |---|---|---|
-| czas kanału na jedno zgłoszenie z RECEIVED | 20,1–21,1 s | wymaga przeliczenia po dodaniu 8 B tagu unicast |
-| 50 zgłoszeń (W10, bez strat) | 16,8–17,6 min | wymaga przeliczenia po dodaniu 8 B tagu unicast |
+| czas kanału na jedno zgłoszenie z RECEIVED | 20,1–21,1 s | wymaga przeliczenia z tagiem pary |
+| 50 zgłoszeń (W10, bez strat) | 16,8–17,6 min | wymaga przeliczenia z tagiem pary |
 | 50 zgłoszeń z PRZECZYTANE i decyzją | około 32,3 min | wymaga osobnego przeliczenia dla v2 |
 
-Wąskim gardłem pozostaje przekaźnik obok stanowiska, którego obciążenie nie zależy od długości łańcucha za nim. Opóźnienie rośnie o około 0,5–5 s na skok, zależnie od długu ciszy przekaźnika. Wartości W10 są modelem bez kolizji i odroczeń, policzonym w `software/reference/obliczenia.py`; do potwierdzenia na sprzęcie.
-
-## Pamięć
-
-Nowe struktury w RAM stacji: tablica sąsiadów (16 × około 10 B), tablica dróg w dół (256 × 4 B, kopia w FRAM), pierścień przekazanych kopert (224 × 24 B = 5376 B, kopia w FRAM), cztery buforowane ramki (4 × 255 B), pierścień rozsyłania (256 × 18 B = 4608 B, kopia w FRAM), do 50 kluczy sąsiedzkich po 32 B i dwa okna powtórzeń kopert po 32 B w RAM, z dwiema kopiami po 32 B na odbiorcę w FRAM. Stacja schronienia odbiera koperty tylko od głównego i zapasowego numeru odbiorcy; okna dla wielu stacji po stronie stanowiska są w SQLite. `firmware/src/envelope_replay.cpp` zajmuje 0x044F80–0x044FFF (128 B), z CRC, COMMIT i odciskiem wyprowadzonego klucza koperty. Po połączeniu modułów będzie to około 18 KiB plus metadane i bufor składania do 256 B na stosie. `firmware/src/envelope_parts.cpp` ma po jednej trwałej części na każdego z dwóch odbiorców, po dwie kopie 192 B w 0x045E80–0x045FFF i 0x047E00–0x047F7F. Pierwsza część dostaje HACK dopiero po zapisie i odczycie kontrolnym; przy drugiej moduł tylko składa treść, a wywołujący musi utrwalić efekt SA1 i okno powtórzeń przed HACK, potem zapisać trwały pusty rekord. Po tych strukturach w luce FRAM 0x044000–0x047FFF zajęte jest 16 320 z 16 384 B; pozostaje 64 B. Numerowany obraz wywołuje te moduły i łączy odbiór SA1 ze `Store`. Próbę zaniku między SA1 i oknem powtórzeń, stos zadania oraz czas HACK trzeba zmierzyć na sprzęcie D21.
+Wąskim gardłem pozostaje przekaźnik obok stanowiska, którego obciążenie nie zależy od długości łańcucha za nim. Opóźnienie rośnie o około 0,5–5 s na skok, zależnie od długu ciszy przekaźnika. Wartości W10 są modelem bez kolizji i odroczeń; do potwierdzenia na sprzęcie.
 
 ## Zagrożenia
 
 | Zagrożenie | Skutek | Ochrona |
 |---|---|---|
 | Węzeł bez klucza sieci | zakłócanie kanału | ramki odrzucane przed przetwarzaniem; kolizje bez ochrony (pasmo bez ochrony, D11) |
-| Powtórzenie nagranej ramki | podwójne przekazanie | pamięć (`l_src`, `seq`) na skoku i (`src`, `dst`, `ctr`, `kind`) przy rozsyłaniu; okno licznika koperty; deduplikacja SA1 |
-| Posiadacz samego klucza sieci podrabia `l_src` lub HACK | błędna trasa w dół albo fałszywy sukces skoku | tag X25519 pary sąsiadów na unicast, sprawdzany przed routingiem; grupa nie ma klucza pary |
+| Powtórzenie nagranej ramki (bez klucza) | podwójne przekazanie, dług ciszy z HACK | pierścień przekazanych kopert (1 h), okna powtórzeń celu, jeden ponowny HACK na 5 s; ponowne rozsyłanie blokuje pierścień 120 s. Pierścień ma 224 wpisy, a pula 60% pozwala na więcej przekazań na godzinę, więc starsza koperta może zostać przekazana drugi raz (do próby przeciążeniowej); cel nie przyjmie jej drugi raz |
+| Posiadacz samego klucza sieci podrabia `l_src`, HACK albo ramkę jednoadresową | błędna trasa, fałszywy sukces skoku, zajęcie kolejki | tag pary sprawdzany przed routingiem; grupa nie ma klucza pary |
+| Posiadacz klucza sieci wysyła rozsyłane DATA lub BEACON-y | zajęcie gniazd K2 rozsyłaniem, praca procesora | rozsyłanie tylko w dół, bez ACKREQ, K2 i bez weryfikacji podpisu; BEACON bez ważnych podpisów odrzucony, sprawdzanie najwyżej raz na 1 s |
 | Przejęta stacja podrabia zgłoszenie lub potwierdzenie SA1 | brak: nie ma klucza pary odbiorca–nadawca | koperta z kluczem pary z kart |
+| Przejęta stacja wysyła kopertę z przewidzianym cudzym licznikiem | odrzucenie prawdziwej koperty na przekaźnikach do 1 h | ponowienie SA1 nowym licznikiem; ryzyko szczątkowe |
 | Węzeł z kluczem sieci zalewa kanał | wypieranie ruchu WICI | klasy K0–K2, pula 60%, limit ogłoszeń; próba „Wrogi węzeł” |
 | Przejęta stacja z własnym kluczem podpisu ogłasza fałszywie niską rangę (przyciąga ruch i go porzuca) | utrata ruchu przez ten węzeł | rodzic z planu ma pierwszeństwo; zmiana rodzica tylko po nieudanych próbach; brak RECEIVED wywołuje ponowienie intencji i alarm; dyżurny widzi w diagnostyce zmiany rodziców; ryzyko szczątkowe, tej samej klasy co przekaźnik Reticulum, który porzuca pakiety |
+| Powtórzenie starego BEACON-u tej samej epoki | nieaktualna ranga sąsiada | podpis nie ma znacznika czasu; plan ma pierwszeństwo, porażki wyłączają rodzica; ryzyko szczątkowe |
 | Przejęcie klucza prywatnego odbiorcy | odczyt zapisanego ruchu, podrabianie odpowiedzi | klucz zapasowy z kart (D08); brak poufności przyszłej w pilotażu |
+
+## Implementacja
+
+Kod w `firmware/src/wici_*.cpp`; testy natywne z sanitizerami w `tests/native/wici_*_check.cpp`, uruchamiane przez `tests/test_envelope_cross_language.py`, oraz `tests/test_radio_link_host.py` dla toru radia.
+
+| Moduł | Zadanie |
+|---|---|
+| `wici_link` | kodek ramki, MAC sieci, HACK, przepisanie nagłówka przy przekazaniu |
+| `wici_hop_auth` | tag pary na wyjściu i wejściu radia |
+| `wici_origin`, `wici_epoch`, `wici_beacon` | podpisy pochodzenia, epoki i BEACON-u |
+| `wici_relay`, `wici_seen` | trwała kolejka przekaźnika i pierścień przekazanych kopert |
+| `wici_hop` | przyjęcie do kolejki, HACK, K1, wybór następnego skoku, ponowienia |
+| `wici_route`, `wici_flood`, `wici_seq` | trasy i BEACON-y, pierścień rozsyłania, `seq` łącza |
+| `wici_destination` | odbiór koperty na stacji docelowej |
+| `wici_radio` | koordynator stacji (własne SA1, przekaźnik, BEACON, czasy 600 ms i 0,5–2 s) |
+| `wici_gateway` | korzeń: most radio–KISS USB, HACK od laptopa najwyżej 200 ms po odbiorze |
+| `wici_airtime` | dziennik czasu nadawania |
+| `wici_record` | wspólny zapis rekordów FRAM |
+
+**FRAM** (luka 0x044000–0x047FFF przed systemem plików; 64 B wolne):
+
+| Adres | Rozmiar | Zawartość |
+|---|---|---|
+| 0x044000–0x04417F | 2 × 128 B | tożsamość stacji (`framfs`) |
+| 0x044180–0x0441BF | 2 × 32 B | rezerwacja `seq` blokami 64 |
+| 0x0441C0–0x0441FF | 64 B | wolne |
+| 0x044200–0x044F7F | 192 × 18 B | pierścień rozsyłania, część A |
+| 0x044F80–0x044FFF | 4 × 32 B | okna powtórzeń kopert (dwóch odbiorców) |
+| 0x045000–0x0459FF | 4 × 2 × 320 B | kolejka przekaźnika |
+| 0x045A00–0x045E7F | 64 × 18 B | pierścień rozsyłania, część B |
+| 0x045E80–0x045FFF | 2 × 192 B | część koperty od głównego odbiorcy |
+| 0x046000–0x0468FF | 2 × 1152 B | drogi w dół |
+| 0x046900–0x047DFF | 224 × 24 B | pierścień przekazanych kopert |
+| 0x047E00–0x047F7F | 2 × 192 B | część koperty od zapasowego odbiorcy |
+| 0x047F80–0x047FFF | 2 × 64 B | dziennik czasu nadawania |
+
+Każdy rekord ma CRC-16 i końcowy bajt COMMIT zapisywany na końcu, po wyzerowaniu go, oraz odczyt kontrolny. Rekordy dwukopiowe mają numer pokolenia; przerwany zapis zostawia poprzednią kopię. Uszkodzony zatwierdzony rekord blokuje start łącza (bezpieczna odmowa); każdy niepewny zapis wyłącza moduł do ponownego odczytu FRAM i nie daje HACK. Rekordy zapisane pod innymi numerami po zmianie przygotowania nie blokują startu: rezerwacja `seq` i zużyty czas nadawania przechodzą dalej, stare drogi w dół i obce wpisy rozsyłania są pomijane, a ramki w kolejce, których nie da się uwierzytelnić bieżącym kluczem i numerami, są usuwane. Usunięcie z kolejki zapisuje najpierw wpis „przekazane” w pierścieniu, potem trwały rekord pusty; zanik między nimi kończy się przy następnym przeglądzie kolejki, bez drugiego nadania. Rezerwacja `seq` pomija po restarcie niewykorzystaną resztę bloku; błędny zapis wyłącza nadawanie. Czasy trwałe biorą monotoniczny licznik pracy stacji.
+
+**Cel i korzeń.** Stacja schronienia przyjmuje koperty tylko od głównego i zapasowego numeru odbiorcy, po jednej oczekującej części na każdego. Po restarcie kończy przerwane czyszczenie części, gdy okno powtórzeń dowodzi przyjęcia SA1. Korzeń przekazuje do USB (KISS) tylko ramki po sprawdzeniu tagu i MAC; HACK od laptopa nadaje tylko dla ostatniej przekazanej ramki DATA, ze zgodnym `l_src` i `seq`, przed upływem 200 ms od końca odbioru. Odłączenie USB kasuje oczekiwanie. Stanowisko zapisuje kopertę w SQLite przed odesłaniem HACK i nie wysyła na tej ścieżce LXMF ani kopii. Ramkę w dół od laptopa korzeń odsyła laptopowi jako echo dopiero po faktycznym nadaniu; echo rozsyłania bez HACK stanowisko traktuje jako nieudane doręczenie.
+
+**Czas HACK (szacunek do pomiaru D21).** Między końcem odbioru a nadaniem HACK przekaźnik wykonuje około pięciu HMAC/SHA-256 po ramce (tag pary, trzy sprawdzenia MAC, skrót koperty), zapis i odczyt kontrolny 320 B FRAM, budowę HACK z tagiem i CAD. To około 2–5 ms na nRF52840 (64 MHz) i około 1–2 ms na ESP32-S3 (240 MHz) przy SPI FRAM 8 MHz; cel dodaje AEAD i zapis SA1 w `Store`. Przy 87 ms nadawania zostaje zapas względem 200 ms (tor radia odmawia HACK, gdy od końca odbioru minęło więcej niż 200 − 87 − 20 ms). Termin zależy więc od opóźnienia pętli: weryfikacja Ed25519 (około 10 mln instrukcji, około 0,15–0,3 s na nRF52840 i 0,04–0,1 s na ESP32-S3) i podpis (około połowy tego) blokują pętlę przy podniesieniu ramki do K1, odbiorze BEACON-u, nadaniu BEACON-u i przyjęciu własnego SA1. Ramka zakończona w tym czasie nie dostaje HACK i jest ponawiana przez nadawcę.
+
+**RAM** (stacja): kolejka 4 × 255 B, pierścień przekazanych kopert 5376 B, pierścień rozsyłania 4608 B, drogi w dół 1 KiB, sąsiedzi 16 × 20 B, klucze par do 50 × 32 B, dwie własne ramki 2 × 255 B, okna powtórzeń i części kopert; razem około 14 KiB plus bufor składania do 256 B na stosie. Okna powtórzeń dla wielu stacji po stronie stanowiska są w SQLite.
 
 ## Otwarte pytania
 
 1. Czy HACK można zastąpić potwierdzeniem biernym (nadawca słyszy, jak rodzic przekazuje ramkę dalej), jak w protokołach zbierania danych w sieciach czujników? Oszczędza to jedną ramkę na skok, ale nie działa na ostatnim skoku i przy rodzicu w długu ciszy.
-2. Czy zapis FRAM i odpowiedź HACK mieszczą się w 200 ms na docelowym prototypie? Rozmieszczenie kolejki i buforów jest już zaimplementowane; termin wymaga pomiaru.
+2. Czy zapis FRAM i odpowiedź HACK mieszczą się w 200 ms na docelowym prototypie, także gdy pętla wykonuje Ed25519? Termin wymaga pomiaru na każdym MCU.
 3. Własne słowo synchronizacji sieci WICI (wyżej).
-4. Czy obecne progi SNR i średniej sukcesu HACK dają stabilne trasy w pomiarze T5; wartości progów ustala T5.
-5. Czy pomiar W10 potwierdzi model v2 z `software/reference/obliczenia.py`, zwłaszcza zapas 1,94 min przy największym REQUEST?
+4. Czy obecne progi SNR i średniej skuteczności HACK dają stabilne trasy w pomiarze T5; wartości progów ustala T5.
+5. Czy pomiar W10 potwierdzi model v2 z `software/reference/obliczenia.py` po przeliczeniu z tagiem pary?
