@@ -184,9 +184,14 @@ przyjęciu do harmonogramu. Aplikacja stanowiska ma numerowany nośnik KISS,
 trwałe przyjęcie fragmentów w SQLite, rezerwację liczników przed wysyłką i
 blokadę wysyłki po odtworzeniu starszej kopii. Wyjątek od ciszy nadaje
 niepotwierdzaną ramkę najwyżej trzy razy z trwałym licznikiem prób.
+Numerowany przekaźnik ma trwały limit 60% dla całego ruchu tranzytowego i
+BEACON-ów oraz 2% czasu nadawania dla BEACON-ów, z priorytetem K1 w kolejce.
+Wspólny limit obejmuje również K1, bo sam jawny numer odbiorcy nie dowodzi
+uprawnienia do tej klasy. Limit 25% K2 na cel i odporność kolejki K1 na
+podrobione numery wymagają jeszcze wdrożenia.
 
 Pozostałe do zamknięcia D21: kontrakt PRZENIEŚ STACJĘ z granicami liczników i
-oknami powtórzeń, sprzętowe próby rozsyłania awaryjnego, pomiar
+oknami powtórzeń, lista nośników stanowiska odbiorczego, sprzętowe próby rozsyłania awaryjnego, pomiar
 200 ms HACK, W10, „Wrogi węzeł”, zaniki zasilania oraz budżet energii. Dwie płytki
 XIAO ESP32-S3 + Wio SX1262 przeszły [próbę toru radia przy stole](../../hardware/radio-pair/evidence/table-2026-11-01.md)
 (100/100 w każdym kierunku) na programie diagnostycznym i
