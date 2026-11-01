@@ -71,7 +71,7 @@ Tablica sąsiadów (16 wpisów) jest miękkim stanem w RAM. Nowy sąsiad nie wyp
 
 ### BEACON
 
-Stacja z ustaloną rangą i rodzicem, a także korzeń, nadaje BEACON 1–5 s po starcie, potem dwa razy co 120 s, potem co 24–36 min (30 min ±20%), oraz po zmianie rodzica lub rangi (najwyżej raz na 60 s). Przy 50 stacjach to około 8 s czasu nadawania na godzinę w całym obszarze kolizji. BEACON-y wliczają się do limitu ogłoszeń 2% czasu nadawania i do wspólnej puli z K2 ([dostęp do kanału](radio.md#dostęp-do-kanału)). W ciszy radiowej stacja nie nadaje BEACON-ów.
+Stacja z ustaloną rangą i rodzicem, a także korzeń, nadaje BEACON 1–5 s po starcie, potem dwa razy co 120 s, potem co 24–36 min (30 min ±20%), oraz po zmianie rodzica lub rangi (najwyżej raz na 60 s). Przy 50 stacjach i dwóch BEACON-ach po 156 B (276 ms) na godzinę to około 28 s czasu nadawania na godzinę w całym obszarze kolizji. BEACON-y wliczają się do limitu ogłoszeń 2% czasu nadawania i do wspólnej puli z K2 ([dostęp do kanału](radio.md#dostęp-do-kanału)). W ciszy radiowej stacja nie nadaje BEACON-ów.
 
 `epoch` to trwały licznik startów korzenia (u16). Stacja przyjmuje BEACON dopiero po sprawdzeniu podpisu epoki kluczem korzenia i podpisu nadawcy kluczem sąsiada z `priority_keys`. Po zmianie epoki stacja czyści tablicę sąsiadów i liczy rangę od nowa. Starszą epokę odrzuca jako powtórkę, chyba że bieżącej nie słyszała od 90 min: wtedy przyjmuje ją, bo wymieniony lub wyczyszczony korzeń liczy starty od nowa.
 
@@ -114,15 +114,16 @@ W ciszy radiowej (W19) stacja nie nadaje żadnej ramki: DATA, HACK ani BEACON, t
 
 ## Budżet czasu
 
-Model jak w [rozdziale 06](../concept/06-wykonalnosc-i-budzet-zasobow.html): SF7, 125 kHz, CR 4/5, preambuła 24 symbole, nagłówek jawny, CRC; czas kanału = 13 × czas TX. Na jeden skok jednej części koperty przypada DATA (215–419 ms) i HACK (87 ms). Wartości W10 poniżej powstały przed dodaniem tagu pary (8 B na DATA i HACK) i wymagają przeliczenia w `software/reference/obliczenia.py` oraz pomiaru D21.
+Model jak w [rozdziale 06](../concept/06-wykonalnosc-i-budzet-zasobow.html): SF7, 125 kHz, CR 4/5, preambuła 24 symbole, nagłówek jawny, CRC; czas kanału = 13 × czas TX. Na jeden skok jednej części koperty przypada DATA (215–419 ms) i HACK (87 ms). Wartości policzono w `software/reference/obliczenia.py` (`wici_link`, z 3 ms narastania mocy na ramkę); typowe zgłoszenie zajmuje dwie ramki DATA po 203 B.
 
 | Przekaźnik przed stanowiskiem | Reticulum/LXMF (dziś) | WICI-Link |
 |---|---|---|
-| czas kanału na jedno zgłoszenie z RECEIVED | 20,1–21,1 s | wymaga przeliczenia z tagiem pary |
-| 50 zgłoszeń (W10, bez strat) | 16,8–17,6 min | wymaga przeliczenia z tagiem pary |
-| 50 zgłoszeń z PRZECZYTANE i decyzją | około 32,3 min | wymaga osobnego przeliczenia dla v2 |
+| czas kanału na jedno zgłoszenie z RECEIVED | 20,1–21,1 s | 16,0 s typowe; 17,0 s przy największym REQUEST |
+| 50 zgłoszeń (W10, bez strat) | 16,8–17,6 min | 13,4 min typowe; 14,1 min przy największym REQUEST |
+| 50 zgłoszeń przy 95% skuteczności skoku | — | 14,1 min typowe; 14,9 min przy największym REQUEST |
+| 50 zgłoszeń z PRZECZYTANE i decyzją | około 32,3 min | 21,8–22,6 min |
 
-Wąskim gardłem pozostaje przekaźnik obok stanowiska, którego obciążenie nie zależy od długości łańcucha za nim. Opóźnienie rośnie o około 0,5–5 s na skok, zależnie od długu ciszy przekaźnika. Wartości W10 są modelem bez kolizji i odroczeń; do potwierdzenia na sprzęcie.
+Wąskim gardłem pozostaje przekaźnik obok stanowiska, którego obciążenie nie zależy od długości łańcucha za nim. Opóźnienie rośnie o około 0,5–5 s na skok, zależnie od długu ciszy przekaźnika. Wartości W10 są modelem bez kolizji i odroczeń; do potwierdzenia na sprzęcie. Przy największym REQUEST i 95% skuteczności skoku zapas do progu 15 min wynosi 0,12 min, więc podpis pochodzenia w każdej DATA pozostaje otwartą sprawą D21 ([rozdział 08](../concept/08-plan-weryfikacji-i-decyzje.html)).
 
 ## Zagrożenia
 
@@ -157,25 +158,7 @@ Kod w `firmware/src/wici_*.cpp`; testy natywne z sanitizerami w `tests/native/wi
 | `wici_airtime` | dziennik czasu nadawania |
 | `fram_record` | wspólny zapis rekordów FRAM (także kopert i migracji); uszkodzony bajt COMMIT blokuje odczyt |
 
-**FRAM** (luka 0x044000–0x047FFF przed systemem plików; 64 B wolne):
-
-| Adres | Rozmiar | Zawartość |
-|---|---|---|
-| 0x044000–0x0440FF | 2 × 128 B | tożsamość stacji (`framfs`) |
-| 0x044100–0x04417F | 2 × 2 × 32 B | granice `ctr` kopert (dwóch odbiorców, [transport](transport.md#licznik-i-powtórzenia)) |
-| 0x044180–0x0441BF | 2 × 32 B | rezerwacja `seq` blokami 64 |
-| 0x0441C0–0x0441FF | 64 B | wolne |
-| 0x044200–0x044F7F | 192 × 18 B | pierścień rozsyłania, część A |
-| 0x044F80–0x044FFF | 4 × 32 B | okna powtórzeń kopert (dwóch odbiorców) |
-| 0x045000–0x0459FF | 4 × 2 × 320 B | kolejka przekaźnika |
-| 0x045A00–0x045E7F | 64 × 18 B | pierścień rozsyłania, część B |
-| 0x045E80–0x045FFF | 2 × 192 B | część koperty od głównego odbiorcy |
-| 0x046000–0x0468FF | 2 × 1152 B | drogi w dół |
-| 0x046900–0x047DFF | 224 × 24 B | pierścień przekazanych kopert |
-| 0x047E00–0x047F7F | 2 × 192 B | część koperty od zapasowego odbiorcy |
-| 0x047F80–0x047FFF | 2 × 64 B | dziennik czasu nadawania |
-
-Każdy rekord ma CRC-16 i końcowy bajt COMMIT zapisywany na końcu, po wyzerowaniu go, oraz odczyt kontrolny. Rekordy dwukopiowe mają numer pokolenia; przerwany zapis zostawia poprzednią kopię. Uszkodzony zatwierdzony rekord blokuje start łącza (bezpieczna odmowa); każdy niepewny zapis wyłącza moduł do ponownego odczytu FRAM i nie daje HACK. Rekordy zapisane pod innymi numerami po zmianie przygotowania nie blokują startu: rezerwacja `seq` i zużyty czas nadawania przechodzą dalej, stare drogi w dół i obce wpisy rozsyłania są pomijane, a ramki w kolejce, których nie da się uwierzytelnić bieżącym kluczem i numerami, są usuwane. Usunięcie z kolejki zapisuje najpierw wpis „przekazane” w pierścieniu, potem trwały rekord pusty; zanik między nimi kończy się przy następnym przeglądzie kolejki, bez drugiego nadania. Rezerwacja `seq` pomija po restarcie niewykorzystaną resztę bloku; błędny zapis wyłącza nadawanie. Czasy trwałe biorą monotoniczny licznik pracy stacji.
+**FRAM.** Struktury WICI-Link i kopert leżą w luce 0x044000–0x047FFF przed systemem plików; adresy i rozmiary podaje [mapa FRAM oprogramowania](../../firmware/README.md#dziennik-i-magazyny-w-fram). Każdy rekord ma CRC-16 i końcowy bajt COMMIT zapisywany na końcu, po wyzerowaniu go, oraz odczyt kontrolny. Rekordy dwukopiowe mają numer pokolenia; przerwany zapis zostawia poprzednią kopię. Uszkodzony zatwierdzony rekord blokuje start łącza (bezpieczna odmowa); każdy niepewny zapis wyłącza moduł do ponownego odczytu FRAM i nie daje HACK. Rekordy zapisane pod innymi numerami po zmianie przygotowania nie blokują startu: rezerwacja `seq` i zużyty czas nadawania przechodzą dalej, stare drogi w dół i obce wpisy rozsyłania są pomijane, a ramki w kolejce, których nie da się uwierzytelnić bieżącym kluczem i numerami, są usuwane. Usunięcie z kolejki zapisuje najpierw wpis „przekazane” w pierścieniu, potem trwały rekord pusty; zanik między nimi kończy się przy następnym przeglądzie kolejki, bez drugiego nadania. Rezerwacja `seq` pomija po restarcie niewykorzystaną resztę bloku; błędny zapis wyłącza nadawanie. Czasy trwałe biorą monotoniczny licznik pracy stacji.
 
 **Cel i korzeń.** Stacja schronienia przyjmuje koperty tylko od głównego i zapasowego numeru odbiorcy, po jednej oczekującej części na każdego. Po restarcie kończy przerwane czyszczenie części, gdy okno powtórzeń dowodzi przyjęcia SA1. Korzeń przekazuje do USB (KISS) tylko ramki po sprawdzeniu tagu i MAC; HACK od laptopa nadaje tylko dla ostatniej przekazanej ramki DATA, ze zgodnym `l_src` i `seq`, przed upływem 200 ms od końca odbioru. Odłączenie USB kasuje oczekiwanie. Stanowisko zapisuje kopertę w SQLite przed odesłaniem HACK i nie wysyła na tej ścieżce LXMF ani kopii. Ramkę w dół od laptopa korzeń odsyła laptopowi jako echo dopiero po faktycznym nadaniu; echo rozsyłania bez HACK stanowisko traktuje jako nieudane doręczenie.
 
