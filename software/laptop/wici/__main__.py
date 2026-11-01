@@ -245,20 +245,21 @@ def main(argv=None):
     parser.add_argument("--http", type=int, default=8080, help="port panelu na 127.0.0.1")
     parser.add_argument("--no-browser", action="store_true", help="nie otwieraj przeglądarki")
     parser.add_argument("--selftest", action="store_true", help="sprawdź środowisko i zakończ")
-    parser.add_argument("--migrate-source-port", help="USB data port of the source station")
-    parser.add_argument("--migrate-target-port", help="USB data port of the replacement station")
+    parser.add_argument("--migrate-source-port", help="port danych USB stacji źródłowej przy przeniesieniu")
+    parser.add_argument("--migrate-target-port", help="port danych USB stacji zapasowej przy przeniesieniu")
+    parser.add_argument("--migrate-abort", action="store_true", help="wycofaj niedokończone przeniesienie")
     for stream in (sys.stdout, sys.stderr):      # pythonw: brak konsoli; Windows: cp1252
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(errors="backslashreplace")
     args = parser.parse_args(argv)
     if args.selftest:
         return selftest()
-    if args.migrate_source_port or args.migrate_target_port:
+    if args.migrate_source_port or args.migrate_target_port or args.migrate_abort:
         if not args.migrate_source_port or not args.migrate_target_port:
             parser.error("both migration ports are required")
         from .migration import main as migration_main
-        migration_main(["--source-port", args.migrate_source_port, "--target-port", args.migrate_target_port])
-        return 0
+        return migration_main(["--source-port", args.migrate_source_port, "--target-port", args.migrate_target_port,
+                               *(["--abort"] if args.migrate_abort else [])])
     try:
         return run(args)
     except Exception as e:   # noqa: BLE001 - bez konsoli błąd startu byłby niewidoczny

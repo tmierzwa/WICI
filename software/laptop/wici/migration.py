@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Resumable two-station USB migration coordinator.
+"""Resumable two-station USB migration coordinator (docs/spec/usb-protocol.md, „Przeniesienie stacji”).
 
 The stations enforce the radio lock and confirmations. This client never
 unlocks a station on an error; rerunning it reads both durable states first.
@@ -8,9 +8,10 @@ unlocks a station on an error; rerunning it reads both durable states first.
 import argparse
 import hashlib
 import json
+import sys
 
 from . import serialport
-from .usbproto import Link, ProtocolError
+from .usbproto import Link, ProtocolError, Rejected
 
 PACKAGE_SIZE = 101 + 512 * (512 + 16)
 SNAPSHOT_SIZE = 256 * 1024
@@ -45,8 +46,8 @@ def _header(package, mid):
 def migrate(source, target):
     """Complete or resume normal migration; return identifiers and digests.
 
-    Forced recovery and abort are separate operator actions. A failed step
-    leaves the source locked, the target locked, or both; rerun this function.
+    A failed step leaves the source locked, the target locked, or both; rerun
+    this function or abort().
     """
     source_state, target_state = _status(source), _status(target)
     source_phase, target_phase = source_state["migration"], target_state["migration"]
@@ -93,17 +94,40 @@ def migrate(source, target):
     else:
         imported_confirm = _confirmation(target_state, "imported confirmation")
 
-    if source_phase != "retired":
-        retired = source.request("migrate", timeout=60, step="retire", mid=mid_hex, confirm=imported_confirm)
-        retired_confirm = _hex(retired.get("confirm"), 32, "retired confirmation").hex()
-    else:
-        retired_confirm = _confirmation(source_state, "retired confirmation")
-    activated = target.request("migrate", step="activate", mid=mid_hex, confirm=retired_confirm)
-    if activated.get("type") != "ok":
-        raise ProtocolError("target activation failed")
+    # Repeated in `retired`: the source finishes an erase cut short by a power loss.
+    retired = source.request("migrate", timeout=60, step="retire", mid=mid_hex, confirm=imported_confirm)
+    retired_confirm = _hex(retired.get("confirm"), 32, "retired confirmation").hex()
+    target.request("migrate", step="activate", mid=mid_hex, confirm=retired_confirm)
     return {"mid": mid_hex, "fingerprint": fingerprint.hex(),
             "package_sha256": hashlib.sha256(package).hexdigest() if package is not None else None,
             "activated": True}
+
+
+def abort(source, target):
+    """Withdraw an unfinished migration: the target erases the import, then the source resumes.
+
+    The source resumes only with the target's "aborted" confirmation, so at most
+    one station keeps the identity. A retired source cannot be withdrawn.
+    """
+    source_state, target_state = _status(source), _status(target)
+    source_phase, target_phase = source_state["migration"], target_state["migration"]
+    if source_phase == "retired":
+        raise ProtocolError("source already retired; finish the migration")
+    if source_phase not in ("none", "export"):
+        raise ProtocolError(f"source migration phase {source_phase}")
+    mid = source_state.get("mid") if source_phase == "export" else target_state.get("mid")
+    if not mid:
+        raise ProtocolError("no migration to abort")
+    if target_phase != "none" and target_state.get("mid") != mid:
+        raise ProtocolError("source and target are locked to different migrations")
+    # An exporting source supplies `eph`; a repeated abort on a target already
+    # back in `none` returns its stored confirmation.
+    eph = source_state.get("eph", "") if source_phase == "export" else ""
+    aborted = target.request("migrate", step="abort", mid=mid, eph=eph)
+    if source_phase == "export":
+        confirm = _hex(aborted.get("confirm"), 32, "aborted confirmation").hex()
+        source.request("migrate", step="abort", mid=mid, confirm=confirm)
+    return {"mid": mid, "aborted": True}
 
 
 def _open(name):
@@ -115,22 +139,28 @@ def _open(name):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="Move one WICI station to a prepared empty station")
-    parser.add_argument("--source-port", required=True, help="source station USB data port")
-    parser.add_argument("--target-port", required=True, help="target station USB data port")
+    parser = argparse.ArgumentParser(description="Przeniesienie stacji WICI na przygotowaną pustą stację")
+    parser.add_argument("--source-port", required=True, help="port danych USB stacji źródłowej")
+    parser.add_argument("--target-port", required=True, help="port danych USB stacji zapasowej")
+    parser.add_argument("--abort", action="store_true", help="wycofaj niedokończone przeniesienie")
     args = parser.parse_args(argv)
     if args.source_port == args.target_port:
         parser.error("source and target ports must differ")
-    source = _open(args.source_port)
     try:
-        target = _open(args.target_port)
+        source = _open(args.source_port)
         try:
-            print(json.dumps(migrate(source, target), sort_keys=True))
+            target = _open(args.target_port)
+            try:
+                print(json.dumps((abort if args.abort else migrate)(source, target), sort_keys=True))
+            finally:
+                target.close()
         finally:
-            target.close()
-    finally:
-        source.close()
+            source.close()
+    except (OSError, ProtocolError, Rejected) as exc:
+        print(json.dumps({"error": str(exc)}), file=sys.stderr)
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
