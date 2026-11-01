@@ -46,8 +46,8 @@ int main() {
     memory.failWrite = false;
     wici_airtime::Budget afterFailure(memory);
     assert(afterFailure.begin(100, 2) && afterFailure.beaconUsed() == 800);
-    wici_airtime::Budget wrongBinding(memory);
-    assert(!wrongBinding.begin(100, 3));
+    wici_airtime::Budget renumbered(memory);  // spent airtime survives renumbering
+    assert(renumbered.begin(100, 3) && renumbered.beaconUsed() == 800);
 
     static Memory beaconMemory;
     wici_airtime::Budget beacons(beaconMemory);

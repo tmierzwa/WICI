@@ -20,8 +20,10 @@ bool Counter::begin(uint16_t network, uint16_t own) {
         uint8_t data[SLOT_BYTES];
         if (!storage_.read(BASE + copy * SLOT_BYTES, data, sizeof(data))) return false;
         if (!committed(data, sizeof(data))) continue;
-        if (memcmp(data, MAGIC, 4) || get16(data + 4) != network || get16(data + 6) != own ||
-            get16(data + 16) != crc(data, 16) || !get32(data + 12) || get32(data + 12) % BLOCK) return false;
+        // The reservation stays monotonic across renumbering; the record
+        // takes the new binding with its next block.
+        if (memcmp(data, MAGIC, 4) || get16(data + 16) != crc(data, 16) ||
+            !get32(data + 12) || get32(data + 12) % BLOCK) return false;
         const uint32_t generation = get32(data + 8);
         if (!found || newer(generation, generation_)) {
             generation_ = generation; upper_ = get32(data + 12); copy_ = copy; found = true;

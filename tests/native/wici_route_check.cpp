@@ -41,8 +41,13 @@ int main() {
     assert(restarted.learn(10, 6));
     wici_route::Table updated(memory, config);
     assert(updated.begin() && updated.down(10) == 6);
-    wici_route::Table wrong(memory, {101, 4, 1, 2, 3});
-    assert(!wrong.begin());
+    static Memory renumberMemory;
+    memcpy(renumberMemory.bytes, memory.bytes, sizeof(memory.bytes));
+    wici_route::Table renumbered(renumberMemory, {101, 4, 1, 2, 3});
+    assert(renumbered.begin() && renumbered.down(10) == wici_link::BROADCAST);  // old routes void
+    assert(renumbered.learn(10, 7));
+    wici_route::Table renumberedAgain(renumberMemory, {101, 4, 1, 2, 3});
+    assert(renumberedAgain.begin() && renumberedAgain.down(10) == 7);
     static Memory rootMemory;
     wici_route::Table root(rootMemory, {100, 1, 1, 0, 0});
     assert(root.begin() && root.rank() == 0 && root.parent() == 0);

@@ -36,7 +36,10 @@ int main() {
     wici_flood::Ring restarted(memory);
     assert(restarted.begin(100));
     assert(restarted.lookup(header, 222) == wici_flood::Lookup::MATCH);
-    assert(!restarted.begin(101));  // old network binding cannot be reinterpreted
+    wici_flood::Ring renumbered(memory);
+    assert(renumbered.begin(101));  // another network's records neither match nor wedge
+    assert(renumbered.lookup(header, 222) == wici_flood::Lookup::NONE);
+    assert(renumbered.remember(header, 222));
 
     static Memory cutMemory;
     wici_flood::Ring beforeCut(cutMemory);

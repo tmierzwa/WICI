@@ -65,9 +65,10 @@ bool Table::begin() {
         uint8_t data[COPY_BYTES];
         if (!storage_.read(BASE + copy * COPY_BYTES, data, sizeof(data))) return false;
         if (!committed(data, sizeof(data))) continue;
-        if (memcmp(data, MAGIC, 4) || get16(data + 8) != config_.network ||
-            get16(data + 10) != config_.own || get16(data + 12) != config_.root ||
-            get16(data + CRC_AT) != crc(data, CRC_AT)) return false;
+        if (memcmp(data, MAGIC, 4) || get16(data + CRC_AT) != crc(data, CRC_AT)) return false;
+        // Routes learned under other numbers are void; start empty.
+        if (get16(data + 8) != config_.network || get16(data + 10) != config_.own ||
+            get16(data + 12) != config_.root) continue;
         for (size_t i = 0; i < ROUTES; ++i) {
             const uint16_t dst = get16(data + ROUTES_AT + i * 4);
             const uint16_t via = get16(data + ROUTES_AT + i * 4 + 2);

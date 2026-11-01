@@ -19,8 +19,9 @@ bool Budget::begin(uint16_t network, uint16_t own) {
         uint8_t data[COPY_BYTES];
         if (!storage_.read(BASE + i * COPY_BYTES, data, sizeof(data))) return false;
         if (!committed(data, sizeof(data))) continue;
-        if (memcmp(data, MAGIC, 4) || get16(data + 4) != network || get16(data + 6) != own ||
-            get16(data + 44) != crc(data, 44)) return false;
+        // Airtime belongs to the radio, not to its numbers: spent budget is
+        // carried over a renumbering.
+        if (memcmp(data, MAGIC, 4) || get16(data + 44) != crc(data, 44)) return false;
         const uint32_t sequence = get32(data + 8);
         if (!found || newer(sequence, sequence_)) {
             found = true; sequence_ = sequence; epoch_ = get32(data + 12); copy_ = i;

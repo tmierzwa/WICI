@@ -36,8 +36,10 @@ int main() {
     wici_seq::Counter afterCut(memory);
     assert(afterCut.begin(100, 2));
     assert(afterCut.next(sequence) && sequence == 192);
-    wici_seq::Counter wrong(memory);
-    assert(!wrong.begin(100, 3));
+    // Renumbering continues the reservation instead of wedging the link.
+    wici_seq::Counter renumbered(memory);
+    assert(renumbered.begin(100, 3));
+    assert(renumbered.next(sequence) && sequence == 256);
     memory.bytes[wici_seq::BASE + wici_seq::SLOT_BYTES + 12] ^= 1;
     wici_seq::Counter corrupt(memory);
     assert(!corrupt.begin(100, 2));

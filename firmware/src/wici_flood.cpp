@@ -29,8 +29,8 @@ bool Ring::begin(uint16_t network) {
         uint8_t record[SLOT_BYTES];
         if (!storage_.read(address(i), record, sizeof(record))) return false;
         if (!committed(record, sizeof(record))) continue;
-        if (get16(record) != network || !header(record + 2) ||
-            get16(record + 15) != crc(record, 15)) return false;
+        if (!id(get16(record)) || !header(record + 2) || get16(record + 15) != crc(record, 15)) return false;
+        if (get16(record) != network) continue;  // another network's identities; the slot is free
         memcpy(records_[i], record, sizeof(record));
     }
     network_ = network;
