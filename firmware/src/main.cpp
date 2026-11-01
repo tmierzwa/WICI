@@ -55,6 +55,7 @@
 #include "ui.h"
 #include "usbproto.h"
 #include "wici_gateway.h"
+#include "wici_airtime.h"
 #include "wici_radio.h"
 
 #ifndef WICI_FW_VERSION
@@ -246,6 +247,7 @@ struct BenchRadio : rnsnode::Radio {
 BenchRadio benchRadio;
 bool rnsOk = false;               // stos uruchomiony (FRAM i dziennik działają)
 bool wiciActive = false;
+wici_airtime::Budget wiciBudget(memory);
 alignas(wici_radio::Shelter) uint8_t wiciShelterSpace[sizeof(wici_radio::Shelter)];
 alignas(wici_gateway::Root) uint8_t wiciRootSpace[sizeof(wici_gateway::Root)];
 wici_radio::Shelter* wiciShelter = nullptr;
@@ -258,7 +260,25 @@ bool numberedConfigured() { return storeOk && stationStore.config().network.id !
 struct WiciAir : wici_radio::Air, wici_gateway::Air {
     bool sendData(const uint8_t* wire, size_t length) override {
         const bool exception = bench.silenceException && wiciShelter && wiciShelter->exceptionTx();
-        return (!bench.silence || exception) && bench.linkSend(wire, length, true) == nullptr;
+        if ((bench.silence && !exception) || bench.busy() || !radioServes() ||
+            !wire || length < wici_link::HEADER + wici_link::TAG)
+            return false;
+        const config::Config& c = stationStore.config();
+        const bool beacon = ((wire[0] >> 3) & 7) == static_cast<uint8_t>(wici_link::Type::BEACON);
+        if (!beacon && (((wire[0] >> 3) & 7) != static_cast<uint8_t>(wici_link::Type::DATA) ||
+                        length < wici_link::HEADER + 25 + wici_link::TAG)) return false;
+        bool pool = beacon;
+        if (!beacon && !wiciRoot) {
+            const uint8_t* envelope = wire + wici_link::HEADER;
+            const uint16_t sender = static_cast<uint16_t>((envelope[1] << 8) | envelope[2]);
+            const uint16_t recipient = static_cast<uint16_t>((envelope[3] << 8) | envelope[4]);
+            const bool own = sender == c.network.station;
+            const bool receiver = sender == c.receivers[0].number || sender == c.receivers[1].number ||
+                                  recipient == c.receivers[0].number || recipient == c.receivers[1].number;
+            pool = !own && !receiver;
+        }
+        if (pool && !wiciBudget.reserve(beacon, lora::frameAirMs(length), counterS())) return false;
+        return bench.linkSend(wire, length, true) == nullptr;
     }
     bool sendHack(const uint8_t* wire, size_t length, uint32_t receivedMs) override {
         return bench.linkSendHack(wire, length, receivedMs);
@@ -1429,6 +1449,11 @@ void beginWici() {
         return;
     }
     const config::Config& c = stationStore.config();
+    if (!wiciBudget.begin(c.network.id, c.network.station)) {
+        stackState = StackState::START_FAILED;
+        bench.log("wici airtime ledger unavailable");
+        return;
+    }
     if (c.role == config::Role::NODE) {
         wiciRoot = new (wiciRootSpace) wici_gateway::Root(memory, wiciUsb, wiciAir,
                             c.network.id, c.network.station, c.ifac);

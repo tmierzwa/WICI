@@ -17,7 +17,7 @@ public:
     // Flooding is opt-in only after the caller provides durable SA1 retries
     // independent of local TX success. Current production builds keep it off.
     Relay(journal::Storage& storage, wici_route::Config config, const uint8_t ifac[16],
-          bool allowFlood = false);
+          bool allowFlood = false, const uint16_t receiverIds[2] = nullptr);
     bool begin();
     // HACK_READY only after the incoming frame is durably held or was already
     // forwarded. `hack` is a complete radio frame; the caller applies silence.
@@ -45,6 +45,8 @@ private:
     struct RouteHint { uint16_t sender = 0, via = 0; };
     wici_route::Config config_;
     bool allowFlood_ = false;
+    uint16_t receivers_[2] = {};
+    bool priority(const wici_link::Frame& frame) const;
     uint8_t key_[32] = {};
     bool keyReady_ = false;
     wici_relay::Queue queue_;

@@ -180,4 +180,43 @@ int main() {
     assert(loopLength == broadcastLength);
     assert(rebroadcast.receiveData(wire, loopLength, 123, hack, sizeof(hack), hackLength) ==
            wici_hop::Receipt::IGNORED);  // changed hop header cannot restart a flood loop
+
+    // K2 cannot consume the last relay slot; a later receiver-related frame
+    // jumps ahead of earlier K2 entries while duplicates remain HACKable.
+    static Memory priorityMemory;
+    const uint16_t receivers[2] = {90, 91};
+    wici_hop::Relay priorityRelay(priorityMemory, {100, 2, 1, 1, 0}, ifac, false, receivers);
+    assert(priorityRelay.begin());
+    wici_link::Frame traffic = incoming;
+    traffic.source = 4;
+    traffic.flags = wici_link::ACKREQ;
+    traffic.payload[4] = 50;
+    for (uint8_t i = 0; i < 3; ++i) {
+        traffic.sequence = static_cast<uint16_t>(70 + i);
+        traffic.payload[8] = static_cast<uint8_t>(10 + i);
+        const size_t n = wici_link::encode(key, traffic, wire, sizeof(wire));
+        assert(priorityRelay.receiveData(wire, n, 130, hack, sizeof(hack), hackLength) ==
+               wici_hop::Receipt::HACK_READY);
+    }
+    traffic.sequence = 73;
+    traffic.payload[8] = 13;
+    size_t n = wici_link::encode(key, traffic, wire, sizeof(wire));
+    assert(priorityRelay.receiveData(wire, n, 130, hack, sizeof(hack), hackLength) ==
+           wici_hop::Receipt::REJECTED && hackLength == 0);
+    traffic.sequence = 70;
+    traffic.payload[8] = 10;
+    n = wici_link::encode(key, traffic, wire, sizeof(wire));
+    assert(priorityRelay.receiveData(wire, n, 130, hack, sizeof(hack), hackLength) ==
+           wici_hop::Receipt::HACK_READY);
+    traffic.sequence = 74;
+    traffic.payload[4] = 90;
+    traffic.payload[8] = 14;
+    n = wici_link::encode(key, traffic, wire, sizeof(wire));
+    assert(priorityRelay.receiveData(wire, n, 130, hack, sizeof(hack), hackLength) ==
+           wici_hop::Receipt::HACK_READY);
+    assert(priorityRelay.routes().beacon(1, {1, 0, 1, 0, 0}, 16, 130));
+    assert(priorityRelay.prepare(130));
+    out = priorityRelay.outgoing(outLength);
+    assert(out && wici_link::decode(key, 100, out, outLength, parsed));
+    assert(parsed.payload[4] == 90 && parsed.payload[8] == 14);
 }

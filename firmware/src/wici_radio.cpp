@@ -20,7 +20,7 @@ Shelter::Shelter(journal::Storage& storage, wici_route::Config route,
                             {static_cast<uint16_t>(receiverIds ? receiverIds[0] : 0),
                              static_cast<uint16_t>(receiverIds ? receiverIds[1] : 0)}},
                    ifac, privateKey, receiverPublic, admit, admitContext),
-      relay_(storage, route, ifac, true), air_(air), random_(random), randomContext_(randomContext) {
+      relay_(storage, route, ifac, true, receiverIds), air_(air), random_(random), randomContext_(randomContext) {
     keyReady_ = ifac && random && wici_link::deriveKey(ifac, network_, linkKey_);
     if (receiverIds) {
         receivers_[0] = receiverIds[0];

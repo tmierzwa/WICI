@@ -119,7 +119,8 @@ bool Queue::commit(uint8_t slot, const uint8_t* wire, size_t length) {
 }
 
 Admission Queue::admit(const uint8_t key[32], uint16_t network, uint16_t ownId,
-                       const uint8_t* wire, size_t length, uint32_t nowS) {
+                       const uint8_t* wire, size_t length, uint32_t nowS,
+                       uint8_t freeSlotsReserved) {
     if (!ready_ || !key || !wire || !ownId || ownId == wici_link::BROADCAST) return Admission::REJECTED;
     wici_link::Frame frame;
     if (!wici_link::decode(key, network, wire, length, frame) || frame.type != wici_link::Type::DATA ||
@@ -146,8 +147,13 @@ Admission Queue::admit(const uint8_t key[32], uint16_t network, uint16_t ownId,
             return Admission::REJECTED;
         }
     }
-    for (uint8_t i = 0; i < SLOTS; ++i)
-        if (!lengths_[i]) return commit(i, wire, length) ? Admission::STORED : Admission::IO_ERROR;
+    uint8_t free = 0, first = SLOTS;
+    for (uint8_t i = 0; i < SLOTS; ++i) {
+        if (lengths_[i]) continue;
+        if (first == SLOTS) first = i;
+        ++free;
+    }
+    if (free > freeSlotsReserved) return commit(first, wire, length) ? Admission::STORED : Admission::IO_ERROR;
     return Admission::FULL;
 }
 

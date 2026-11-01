@@ -104,6 +104,10 @@ Reguły podziału czasu z [radio](radio.md#dostęp-do-kanału) zostają, z jedn�
 - **K1:** przekazywane ramki DATA, których koperta ma `dst` albo `src` równe aktywnej tożsamości odbiorcy z karty. W Reticulum przekaźnik nie odróżniał ruchu od odbiorcy do schronień od ruchu obcego, więc ten ruch był w K2. Teraz cały ruch sieci WICI do odbiorcy i od niego jest w K1.
 - **K2:** pozostałe przekazywane ramki, w tym rozsyłanie awaryjne bez wpisu w tablicy; BEACON-y w puli ogłoszeń.
 
+Numerowany przekaźnik rezerwuje ostatnie z czterech trwałych gniazd dla K1 i wybiera K1 przed K2; powtórkę już przyjętej ramki potwierdza również przy pełnej kolejce. Dziennik `wici_airtime` zapisuje przed przekazaniem do radia koszt K2 i BEACON-ów w dwóch kopiach FRAM (0x047F80–0x047FFF). Siedem dziesięciominutowych przedziałów zachowuje wszystkie nadania z ostatnich 3600 s, czasem dłużej, a koszt zaokrągla w górę do 100 ms, więc odliczanie jest zachowawcze także po restarcie. K2 razem z BEACON-ami nie przekracza 60% czasu kanału, a BEACON-y 2% czasu nadawania w tym oknie. Nieudane przyjęcie przez radio zostawia zarezerwowany koszt, co może ograniczyć przepustowość, lecz nie osłabia limitu. Limit 25% na pojedynczy cel K2 i pełna próba „Wrogi węzeł” pozostają do wdrożenia i pomiaru.
+
+Klasyfikacja K1 z jawnych `src`/`dst` jest tylko klasyfikacją operacyjną: posiadacz wspólnego `K_link` może podrobić nagłówek koperty bez jej poprawnego szyfrogramu. Taki węzeł może ominąć pulę K2, więc obecna klasyfikacja nie stanowi jeszcze gwarancji 40% dla K0/K1 przeciw wrogiemu węzłowi. Odbiór tej próby wymaga osobnego dowodu uprawnienia do K1 albo ograniczenia całego ruchu tranzytowego.
+
 ## Cisza radiowa
 
 W ciszy radiowej (W19) stacja nie nadaje żadnej ramki: DATA, HACK ani BEACON, także przekazywanej. Kolejka SA1 zostaje. Jedno zgłoszenie wyjęte spod ciszy wychodzi jako DATA bez oczekiwania na HACK (ACKREQ wyłączony), najwyżej 3 razy co 60 s, bo potwierdzenie i tak przyjdzie od odbiorcy po zniesieniu ciszy albo gońcem.

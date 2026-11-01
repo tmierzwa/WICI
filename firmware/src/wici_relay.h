@@ -27,7 +27,8 @@ public:
     // other copy; a removed item is a committed tombstone, not erased memory.
     bool begin();
     Admission admit(const uint8_t key[32], uint16_t network, uint16_t ownId,
-                    const uint8_t* wire, size_t length, uint32_t nowS);
+                    const uint8_t* wire, size_t length, uint32_t nowS,
+                    uint8_t freeSlotsReserved = 0);
     bool pending(uint8_t slot) const;
     // Recheck the current network binding after reboot/configuration changes;
     // an old queue record must not be forwarded under a new link key. A frame
