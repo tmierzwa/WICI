@@ -542,7 +542,18 @@ Kod jest w czterech plikach. `src/journal.cpp` obsługuje jawny obszar: dług ci
 | pamięć zwolnionych wpisów | 0x40000 | 16 × 512 B | 256 wpisów (id, `r_max`, numer zdarzenia `released`, krótki numer, znacznik anulowania) |
 | pierścień zdarzeń | 0x42000 | 16 × 512 B | 256 zdarzeń 24 B dla laptopa (bez treści SA1, którą `event` bierze z rejestru albo skrzynki) |
 | tożsamość Reticulum (`src/framfs.cpp`) | 0x44000 | 2 × 128 B | klucz prywatny 64 B, numer, CRC-16; nowszy z dwóch slotów ([stos](#tożsamość-i-tablice-w-fram)) |
-| stan WICI-Link | 0x44100–0x47FFF | 15,75 KiB | rezerwacje liczników kopert i `seq`, pierścienie rozsyłania i przekazanych kopert, okna powtórzeń, kolejka czterech ramek, części kopert, tablica dróg w dół i budżet czasu kanału; dokładne granice w [specyfikacji łącza](../docs/spec/wici-link.md#pamięć) |
+| liczniki kopert (`src/envelope_counter.cpp`) | 0x44100 | 2 × 2 × 32 B | granica rezerwacji `ctr` dla głównego i zapasowego odbiorcy, dwie kopie, CRC, COMMIT, odcisk klucza koperty |
+| `seq` łącza (`src/wici_seq.cpp`) | 0x44180 | 2 × 32 B | granica bloku 64 numerów `seq` |
+| wolne | 0x441C0 | 64 B | jedyna wolna luka w 0x44000–0x47FFF (16 320 z 16 384 B zajęte) |
+| pierścień rozsyłania, część A (`src/wici_flood.cpp`) | 0x44200 | 192 × 18 B | sieć, tożsamość koperty, czas, CRC, COMMIT |
+| okna powtórzeń kopert (`src/envelope_replay.cpp`) | 0x44F80 | 2 × 2 × 32 B | największy `ctr` i maska 64 bitów na odbiorcę, CRC, COMMIT, odcisk klucza |
+| kolejka przekaźnika (`src/wici_relay.cpp`) | 0x45000 | 4 × 2 × 320 B | cztery gniazda: ramka do 255 B, klasa, nadawca K1, czas przyjęcia, stan „przekazane”, CRC, COMMIT |
+| pierścień rozsyłania, część B | 0x45A00 | 64 × 18 B | dalsze rekordy pierścienia z 0x44200 |
+| części kopert, główny odbiorca (`src/envelope_parts.cpp`) | 0x45E80 | 2 × 192 B | pierwsza część czekająca na drugą (120 s) |
+| drogi w dół (`src/wici_route.cpp`) | 0x46000 | 2 × 1152 B | 256 dróg po 4 B z siecią, numerem stacji i korzeniem, CRC, COMMIT |
+| pierścień przekazanych kopert (`src/wici_seen.cpp`) | 0x46900 | 224 × 24 B | sieć, tożsamość koperty, skrót ładunku, czas; okno 3600 s |
+| części kopert, zapasowy odbiorca | 0x47E00 | 2 × 192 B | jak dla głównego |
+| budżet czasu kanału (`src/wici_airtime.cpp`) | 0x47F80 | 2 × 64 B | siedem przedziałów 10 min puli tranzytu i BEACON-ów |
 | tablice stosu | 0x48000 | 223,5 KiB | na rdzeniu tablica znanych celów i tras w gniazdach; w obrazach z portem system plików z magazynami microStore (tablica tras, znane tożsamości, buforowane ogłoszenia) ([tablice w FRAM](#tożsamość-i-tablice-w-fram)) |
 | stan przeniesienia | 0x7FE00 | 512 B | dwa trwałe rekordy bariery przeniesienia; niepewny stan blokuje nadawanie |
 
