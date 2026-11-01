@@ -391,4 +391,32 @@ int main() {
     assert(loopBack.nextSequence(seqBefore));
     for (unsigned i = 0; i < 100; ++i) assert(!loopBack.prepare(230));
     assert(loopBack.nextSequence(seqAfter) && seqAfter == static_cast<uint16_t>(seqBefore + 1));
+    // Review finding 7: an unsigned uplink frame, even with a valid hop tag
+    // and network MAC, cannot move a down route.
+    static Memory unsignedMemory;
+    wici_hop::Relay unsignedRoute(unsignedMemory, {100, 2, 1, 1, 0}, ifac, false, rootReceiver, originProof);
+    assert(unsignedRoute.begin());
+    wici_link::Frame forged = incoming;
+    forged.source = 7; forged.sequence = 240; forged.payload[2] = 4; forged.payload[8] = 70;
+    forged.originSignature[0] = 0;
+    n = wici_link::encode(key, forged, wire, sizeof(wire));
+    assert(unsignedRoute.receiveData(wire, n, 240, hack, sizeof(hack), hackLength) ==
+           wici_hop::Receipt::HACK_READY);
+    assert(unsignedRoute.learnPending(240) && unsignedRoute.routes().down(4) == wici_link::BROADCAST);
+
+    // Review medium item: downlink from one receiver is not serialised; each
+    // frame takes a K2 slot and gets its HACK at once.
+    static Memory downlinkMemory;
+    wici_hop::Relay downlinks(downlinkMemory, {100, 2, 1, 1, 0}, ifac, false, receivers, originProof);
+    assert(downlinks.begin());
+    wici_link::Frame fromReceiver = incoming;
+    fromReceiver.flags = wici_link::ACKREQ | wici_link::DOWN; fromReceiver.source = 1;
+    fromReceiver.payload[2] = 90; fromReceiver.payload[4] = 4; fromReceiver.originSignature[0] = 0xA5;
+    for (uint8_t i = 0; i < 2; ++i) {
+        fromReceiver.sequence = static_cast<uint16_t>(250 + i);
+        fromReceiver.payload[8] = static_cast<uint8_t>(80 + i);
+        n = wici_link::encode(key, fromReceiver, wire, sizeof(wire));
+        assert(downlinks.receiveData(wire, n, 250, hack, sizeof(hack), hackLength) ==
+               wici_hop::Receipt::HACK_READY);
+    }
 }
