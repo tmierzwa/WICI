@@ -48,7 +48,7 @@ private:
     wici_flood::Ring flood_;
     wici_seq::Counter sequence_;
     uint8_t key_[32] = {};
-    uint8_t signingPrivate_[64] = {}, epochSignature_[64] = {};
+    uint8_t signingPrivate_[64] = {}, signingPublic_[32] = {}, epochSignature_[64] = {};
     bool keyReady_ = false, ready_ = false, pending_ = false, outboundPending_ = false;
     uint8_t outbound_[wici_link::MAX_FRAME] = {};
     size_t outboundLength_ = 0;

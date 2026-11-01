@@ -13,6 +13,7 @@ namespace wici_radio {
 constexpr uint32_t HACK_WAIT_MS = 600;
 constexpr uint32_t RETRY_MIN_MS = 500;
 constexpr uint32_t RETRY_SPAN_MS = 1501;
+constexpr uint32_t BEACON_CHECK_MS = 1000;  // minimum spacing of BEACON signature checks
 
 struct Air {
     virtual ~Air() = default;
@@ -82,10 +83,13 @@ private:
     uint16_t ownNext_ = 0, ownSeq_[2] = {};
     uint32_t ownHandle_ = 0, ownSentAtMs_ = 0, ownRetryAtMs_ = 0;
     bool ownActive_ = false, ownSubmitted_ = false, ownAwaiting_ = false, ownDelayPending_ = false;
-    bool ownException_ = false;
+    bool ownException_ = false, ownFailedOver_ = false;
+    bool beaconChecked_ = false;
+    uint32_t beaconCheckedMs_ = 0;
     DeliveryFn delivery_ = nullptr;
     void* deliveryContext_ = nullptr;
     void finishOwn(bool acknowledged);
+    bool failoverOwn();
     wici_destination::Destination destination_;
     wici_hop::Relay relay_;
     Air& air_;

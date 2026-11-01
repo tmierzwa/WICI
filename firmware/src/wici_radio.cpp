@@ -55,6 +55,7 @@ bool Shelter::begin() {
     sentAtMs_ = retryAtMs_ = 0;
     ownActive_ = ownSubmitted_ = ownAwaiting_ = ownDelayPending_ = ownException_ = false;
     ownCount_ = ownPart_ = ownAttempts_ = 0;
+    beaconChecked_ = false;
     return ready_ = keyReady_ && rootKeyReady_ && verifyBeacon_ && outboundKeysReady_ &&
                     destination_.begin() && relay_.begin() &&
                     outbound_[0].begin(network_, own_, receivers_[0], outboundKeys_[0]) &&
@@ -85,13 +86,22 @@ Event Shelter::receive(const uint8_t* wire, size_t length, uint32_t receivedMs, 
         return Event::ADMITTED;
     }
     if (frame.type == wici_link::Type::BEACON) {
+        // BEACONs carry no hop tag, and each Ed25519 check blocks the loop,
+        // and so every HACK deadline, for about 0.2-0.4 s on nRF52840. Checks
+        // are therefore spaced, and a verified epoch token is not rechecked.
         wici_route::Beacon beacon;
-        return wici_route::parseBeacon(frame, beacon) &&
-                       wici_epoch::verify(rootEd25519_, network_, root_, beacon.epoch, beacon.epochSignature) &&
+        wici_route::Table& routes = relay_.routes();
+        if (!wici_route::parseBeacon(frame, beacon)) return Event::REJECTED;
+        if (beaconChecked_ && receivedMs - beaconCheckedMs_ < BEACON_CHECK_MS) return Event::IGNORED;
+        beaconChecked_ = true;
+        beaconCheckedMs_ = receivedMs;
+        const bool knownEpoch = routes.epochKnown() && beacon.epoch == routes.epoch() &&
+                                !memcmp(beacon.epochSignature, routes.epochSignature(), sizeof(beacon.epochSignature));
+        return (knownEpoch ||
+                wici_epoch::verify(rootEd25519_, network_, root_, beacon.epoch, beacon.epochSignature)) &&
                        verifyBeacon_(frame.source, frame.payload, frame.payload + wici_beacon::CONTENT_BYTES,
                                      beaconContext_) &&
-                       relay_.routes().beacon(frame.source, beacon,
-                                              wici_route::snrCost16(snrQdb), nowS) ?
+                       routes.beacon(frame.source, beacon, wici_route::snrCost16(snrQdb), nowS) ?
                Event::ADMITTED : Event::REJECTED;
     }
     if (frame.type != wici_link::Type::DATA || frame.length < envelope::OVERHEAD)
@@ -158,7 +168,7 @@ void Shelter::poll(uint32_t nowMs, uint32_t nowS) {
             if (!reached(nowMs, ownSentAtMs_ + HACK_WAIT_MS)) return;
             ownAwaiting_ = false;
             relay_.routes().hopResult(ownNext_, false, nowS);
-            if (ownAttempts_ >= 3) { finishOwn(false); return; }
+            if (ownAttempts_ >= 3 && !failoverOwn()) { finishOwn(false); return; }
             ownRetryAtMs_ = nowMs + backoff();
             ownDelayPending_ = true;
         }
@@ -215,7 +225,7 @@ bool Shelter::queueOwn(uint16_t recipient, const uint8_t* sa1, size_t length, ui
         frame.network = network_;
         frame.source = own_;
         frame.destination = next;
-        frame.ttl = 7;
+        frame.ttl = wici_link::DEFAULT_TTL;
         frame.sequence = sequences[i];
         frame.length = parts[i].length;
         memcpy(frame.payload, parts[i].bytes, frame.length);
@@ -235,7 +245,25 @@ bool Shelter::queueOwn(uint16_t recipient, const uint8_t* sa1, size_t length, ui
     ownHandle_ = handle;
     ownActive_ = true;
     ownException_ = exception;
-    ownSubmitted_ = ownAwaiting_ = ownDelayPending_ = false;
+    ownSubmitted_ = ownAwaiting_ = ownDelayPending_ = ownFailedOver_ = false;
+    return true;
+}
+
+bool Shelter::failoverOwn() {
+    // After three failures the route table has moved to the backup or another
+    // parent; the remaining parts get one more round of three attempts there.
+    const uint16_t next = relay_.routes().parent();
+    if (ownFailedOver_ || !next || next == ownNext_) return false;
+    for (uint8_t i = ownPart_; i < ownCount_; ++i) {
+        wici_link::Frame frame;
+        if (!wici_link::decode(linkKey_, network_, ownFrames_[i], ownLengths_[i], frame)) return false;
+        frame.destination = next;
+        ownLengths_[i] = wici_link::encode(linkKey_, frame, ownFrames_[i], sizeof(ownFrames_[i]));
+        if (!ownLengths_[i]) return false;
+    }
+    ownNext_ = next;
+    ownAttempts_ = 0;
+    ownFailedOver_ = true;
     return true;
 }
 
@@ -248,34 +276,19 @@ void Shelter::finishOwn(bool acknowledged) {
 }
 
 bool Shelter::beacon() {
-    if (!ready_ || submitted_ || ownSubmitted_ || relay_.routes().rank() == 0xFFFF ||
-        !relay_.routes().parent()) return false;
+    wici_route::Table& routes = relay_.routes();
+    if (!ready_ || submitted_ || ownSubmitted_ || routes.rank() == 0xFFFF || !routes.parent()) return false;
     uint16_t sequence;
     if (!relay_.nextSequence(sequence)) { ready_ = false; return false; }
-    wici_link::Frame frame;
-    frame.type = wici_link::Type::BEACON;
-    frame.network = network_;
-    frame.source = own_;
-    frame.destination = wici_link::BROADCAST;
-    frame.sequence = sequence;
-    frame.ttl = 1;
-    frame.length = 9 + wici_epoch::SIGNATURE_BYTES + wici_beacon::SIGNATURE_BYTES;
-    const uint16_t rank = relay_.routes().rank();
-    const uint16_t epoch = relay_.routes().epoch();
-    const uint16_t parent = relay_.routes().parent();
-    frame.payload[0] = static_cast<uint8_t>(root_ >> 8);
-    frame.payload[1] = static_cast<uint8_t>(root_);
-    frame.payload[2] = static_cast<uint8_t>(rank >> 8);
-    frame.payload[3] = static_cast<uint8_t>(rank);
-    frame.payload[4] = static_cast<uint8_t>(epoch >> 8);
-    frame.payload[5] = static_cast<uint8_t>(epoch);
-    frame.payload[6] = static_cast<uint8_t>(parent >> 8);
-    frame.payload[7] = static_cast<uint8_t>(parent);
-    memcpy(frame.payload + 9, relay_.routes().epochSignature(), wici_epoch::SIGNATURE_BYTES);
-    if (!wici_beacon::sign(signingPrivate_, network_, own_, frame.payload,
-                           frame.payload + wici_beacon::CONTENT_BYTES)) return false;
+    wici_route::Beacon value;
+    value.root = root_;
+    value.rank = routes.rank();
+    value.epoch = routes.epoch();
+    value.parent = routes.parent();
+    memcpy(value.epochSignature, routes.epochSignature(), sizeof(value.epochSignature));
     uint8_t wire[wici_link::MAX_FRAME];
-    const size_t length = wici_link::encode(linkKey_, frame, wire, sizeof(wire));
+    const size_t length = wici_beacon::encode(linkKey_, signingPrivate_, signingPublic_ + 32, network_, own_, sequence,
+                                              value, wire, sizeof(wire));
     return length && air_.sendData(wire, length, wici_link::TxClass::BEACON);
 }
 

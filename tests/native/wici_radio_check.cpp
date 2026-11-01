@@ -124,22 +124,24 @@ int main() {
     wici_link::Frame beacon;
     beacon.type = wici_link::Type::BEACON; beacon.network = 100;
     beacon.source = 5; beacon.destination = wici_link::BROADCAST;
-    beacon.ttl = 1; beacon.length = 9 + wici_epoch::SIGNATURE_BYTES + wici_beacon::SIGNATURE_BYTES;
+    beacon.ttl = 1; beacon.length = wici_link::BEACON_PAYLOAD;
     beacon.payload[1] = 5; beacon.payload[5] = 1;
-    assert(wici_epoch::sign(rootSecret, 100, 5, 1, beacon.payload + 9));
-    assert(wici_beacon::sign(rootSecret, 100, 5, beacon.payload,
+    assert(wici_epoch::sign(rootSecret, rootEd, 100, 5, 1, beacon.payload + 9));
+    assert(wici_beacon::sign(rootSecret, rootEd, 100, 5, beacon.payload,
                              beacon.payload + wici_beacon::CONTENT_BYTES));
     n = encode(key, beacon, wire);
     assert(shelter.receive(wire, n, 1400, 12, -20) == wici_radio::Event::ADMITTED);
     assert(shelter.routes().rank() == 21);  // packet SNR contributes five sixteenths
     beacon.payload[4] = 0x7f; beacon.payload[5] = 0xff;
     n = encode(key, beacon, wire);
-    assert(shelter.receive(wire, n, 1401, 12) == wici_radio::Event::REJECTED);
+    // Signature checks are spaced so BEACON floods cannot stall the loop.
+    assert(shelter.receive(wire, n, 1401, 12) == wici_radio::Event::IGNORED);
+    assert(shelter.receive(wire, n, 2400, 12) == wici_radio::Event::REJECTED);
     assert(shelter.routes().epoch() == 1);  // link-key holder cannot forge a root epoch
     beacon.payload[4] = 0; beacon.payload[5] = 1;
     beacon.payload[2] = 0; beacon.payload[3] = 1;
     n = encode(key, beacon, wire);
-    assert(shelter.receive(wire, n, 1402, 12) == wici_radio::Event::REJECTED);
+    assert(shelter.receive(wire, n, 3400, 12) == wici_radio::Event::REJECTED);
     assert(shelter.routes().rank() == 21);  // rank is signed by its sender
     air.dataOk = false;
     shelter.poll(1401, 12);
@@ -256,4 +258,48 @@ int main() {
     assert(sent.destination == wici_link::BROADCAST && sent.flags == wici_link::DOWN);
     flood.onTxDone(true, 8100, 20);
     assert(flood.receive(wire, n, 8200, 20) == wici_radio::Event::IGNORED);
+    // Review finding 8: an own frame that the planned parent never HACKs gets
+    // three more attempts at the configured backup before Failed is reported.
+    static Memory failoverMemory;
+    Air failoverAir;
+    wici_radio::Shelter failover(failoverMemory, {100, 2, 5, 5, 6}, receivers, ifac,
+                                 ownSecret, receiverPublic, admit, &admitted, failoverAir, randomZero,
+                                 nullptr, originProof, nullptr, rootEd, beaconProof, rootEd);
+    assert(failover.begin());
+    Delivery failoverDelivery;
+    failover.onDelivery(delivered, &failoverDelivery);
+    wici_link::Frame announce;
+    announce.type = wici_link::Type::BEACON; announce.network = 100;
+    announce.destination = wici_link::BROADCAST; announce.ttl = 1;
+    announce.length = wici_link::BEACON_PAYLOAD;
+    announce.payload[1] = 5; announce.payload[5] = 1;
+    assert(wici_epoch::sign(rootSecret, rootEd, 100, 5, 1, announce.payload + 9));
+    const uint16_t senders[2] = {5, 6};
+    for (uint8_t i = 0; i < 2; ++i) {
+        announce.source = senders[i];
+        announce.payload[3] = static_cast<uint8_t>(i * 16);  // rank 0 for the root, 16 for the backup
+        announce.payload[7] = static_cast<uint8_t>(i * 5);   // the backup's parent is the root
+        assert(wici_beacon::sign(rootSecret, rootEd, 100, senders[i], announce.payload,
+                                 announce.payload + wici_beacon::CONTENT_BYTES));
+        n = encode(key, announce, wire);
+        assert(failover.receive(wire, n, 10000 + i * 1000, 30) == wici_radio::Event::ADMITTED);
+    }
+    assert(failover.routes().parent() == 5);
+    assert(failover.queueOwn(1, reinterpret_cast<const uint8_t*>("SA1"), 3, 77));
+    uint32_t at = 12000;
+    failover.poll(at, 30);
+    for (unsigned attempt = 0; attempt < 6; ++attempt) {
+        assert(failoverAir.dataCount == attempt + 1);
+        assert(wici_link::decode(key, 100, failoverAir.data, failoverAir.dataLength, sent));
+        assert(sent.destination == (attempt < 3 ? 5 : 6));
+        if (attempt == 5) break;
+        failover.onTxDone(true, at, 30);
+        at += 600; failover.poll(at, 30);   // no HACK
+        at += 500; failover.poll(at, 30);   // retry after backoff
+    }
+    failover.onTxDone(true, at, 30);
+    reply.source = 6; reply.sequence = sent.sequence;
+    n = encode(key, reply, wire);
+    assert(failover.receive(wire, n, at + 100, 30) == wici_radio::Event::ADMITTED);
+    assert(failoverDelivery.calls == 1 && failoverDelivery.handle == 77 && failoverDelivery.acknowledged);
 }

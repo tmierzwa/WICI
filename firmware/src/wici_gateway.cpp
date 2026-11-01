@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 #include "wici_gateway.h"
-#include "wici_record.h"
 #include "wici_beacon.h"
+#include "wici_record.h"
 
+#include <Ed25519.h>
 #include <string.h>
 
 namespace wici_gateway {
@@ -16,13 +17,16 @@ Root::Root(journal::Storage& storage, kiss::Port& port, Air& air, uint16_t netwo
       routes_(storage, {network, own, own, 0, 0}), flood_(storage), sequence_(storage) {
     keyReady_ = own && own != wici_link::BROADCAST &&
                 wici_link::deriveKey(ifac, network, key_) && identity;
-    if (identity) memcpy(signingPrivate_, identity, sizeof(signingPrivate_));
+    if (identity) {
+        memcpy(signingPrivate_, identity, sizeof(signingPrivate_));
+        Ed25519::derivePublicKey(signingPublic_, signingPrivate_ + 32);
+    }
 }
 
 bool Root::begin(uint16_t epoch) {
     pending_ = outboundPending_ = downPending_ = false;
     downFailures_ = 0;
-    return ready_ = keyReady_ && wici_epoch::sign(signingPrivate_, network_, own_, epoch, epochSignature_) &&
+    return ready_ = keyReady_ && wici_epoch::sign(signingPrivate_, signingPublic_, network_, own_, epoch, epochSignature_) &&
                     routes_.begin() && flood_.begin(network_) &&
                     sequence_.begin(network_, own_) &&
                     routes_.setRootEpoch(epoch);
@@ -32,23 +36,14 @@ bool Root::beacon() {
     if (!ready_) return false;
     uint16_t sequence;
     if (!sequence_.next(sequence)) { ready_ = false; return false; }
-    wici_link::Frame frame;
-    frame.type = wici_link::Type::BEACON;
-    frame.network = network_;
-    frame.source = own_;
-    frame.destination = wici_link::BROADCAST;
-    frame.sequence = sequence;
-    frame.ttl = 1;
-    frame.length = 9 + wici_epoch::SIGNATURE_BYTES + wici_beacon::SIGNATURE_BYTES;
-    frame.payload[0] = static_cast<uint8_t>(own_ >> 8);
-    frame.payload[1] = static_cast<uint8_t>(own_);
-    frame.payload[4] = static_cast<uint8_t>(routes_.epoch() >> 8);
-    frame.payload[5] = static_cast<uint8_t>(routes_.epoch());
-    memcpy(frame.payload + 9, epochSignature_, sizeof(epochSignature_));
-    if (!wici_beacon::sign(signingPrivate_, network_, own_, frame.payload,
-                           frame.payload + wici_beacon::CONTENT_BYTES)) return false;
+    wici_route::Beacon value;
+    value.root = own_;
+    value.rank = 0;
+    value.epoch = routes_.epoch();
+    memcpy(value.epochSignature, epochSignature_, sizeof(epochSignature_));
     uint8_t wire[wici_link::MAX_FRAME];
-    const size_t length = wici_link::encode(key_, frame, wire, sizeof(wire));
+    const size_t length = wici_beacon::encode(key_, signingPrivate_, signingPublic_, network_, own_, sequence,
+                                              value, wire, sizeof(wire));
     return length && air_.sendData(wire, length, wici_link::TxClass::BEACON);
 }
 

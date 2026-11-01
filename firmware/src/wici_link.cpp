@@ -22,7 +22,7 @@ bool valid(const Frame& f) {
         case Type::HACK:
             return id(f.destination) && f.flags == 0 && f.length == 0;
         case Type::BEACON:
-            return f.destination == BROADCAST && f.flags == 0 && f.length == 137;
+            return f.destination == BROADCAST && f.flags == 0 && f.length == BEACON_PAYLOAD;
     }
     return false;
 }

@@ -16,7 +16,12 @@ constexpr size_t ORIGIN_SIGNATURE = 64;
 constexpr size_t MAX_FRAME = 255;
 constexpr size_t MAX_PAYLOAD = MAX_FRAME - HEADER - ORIGIN_SIGNATURE - TAG - HOP_TAG;
 constexpr size_t RADIO_HACK = HEADER + TAG + HOP_TAG;  // HACK as transmitted
+// BEACON payload: root, rank, epoch, parent (u16 each), flags, the root's
+// epoch signature, then the sender's signature over the preceding bytes.
+constexpr size_t BEACON_SIGNED = 9 + 64;
+constexpr size_t BEACON_PAYLOAD = BEACON_SIGNED + 64;
 constexpr uint16_t BROADCAST = 0xFFFF;
+constexpr uint8_t DEFAULT_TTL = 7;  // network plan default; the plan does not carry it yet
 
 enum class Type : uint8_t { DATA = 0, HACK = 1, BEACON = 2 };
 // Local scheduler intent, never read from a radio frame's untrusted envelope header.

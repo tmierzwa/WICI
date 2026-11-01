@@ -20,14 +20,34 @@ void message(uint16_t network, uint16_t sender, const uint8_t content[CONTENT_BY
 }
 }  // namespace
 
-bool sign(const uint8_t identity[64], uint16_t network, uint16_t sender,
+bool sign(const uint8_t identity[64], const uint8_t publicKey[32], uint16_t network, uint16_t sender,
           const uint8_t content[CONTENT_BYTES], uint8_t signature[SIGNATURE_BYTES]) {
-    if (!identity || !content || !signature || !id(network) || !id(sender)) return false;
-    uint8_t publicKey[32], input[sizeof(LABEL) + 4 + CONTENT_BYTES];
-    Ed25519::derivePublicKey(publicKey, identity + 32);
+    if (!identity || !publicKey || !content || !signature || !id(network) || !id(sender)) return false;
+    uint8_t input[sizeof(LABEL) + 4 + CONTENT_BYTES];
     message(network, sender, content, input);
     Ed25519::sign(signature, identity + 32, publicKey, input, sizeof(input));
     return true;
+}
+
+size_t encode(const uint8_t linkKey[32], const uint8_t identity[64], const uint8_t publicKey[32],
+              uint16_t network, uint16_t sender, uint16_t sequence, const wici_route::Beacon& value,
+              uint8_t* out, size_t capacity) {
+    wici_link::Frame frame;
+    frame.type = wici_link::Type::BEACON;
+    frame.network = network;
+    frame.source = sender;
+    frame.destination = wici_link::BROADCAST;
+    frame.sequence = sequence;
+    frame.ttl = 1;
+    frame.length = wici_link::BEACON_PAYLOAD;
+    wici_record::put16(frame.payload, value.root);
+    wici_record::put16(frame.payload + 2, value.rank);
+    wici_record::put16(frame.payload + 4, value.epoch);
+    wici_record::put16(frame.payload + 6, value.parent);
+    frame.payload[8] = value.flags;
+    memcpy(frame.payload + 9, value.epochSignature, wici_epoch::SIGNATURE_BYTES);
+    return sign(identity, publicKey, network, sender, frame.payload, frame.payload + CONTENT_BYTES) ?
+           wici_link::encode(linkKey, frame, out, capacity) : 0;
 }
 
 bool verify(const uint8_t senderEd25519[32], uint16_t network, uint16_t sender,

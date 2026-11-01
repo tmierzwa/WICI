@@ -19,11 +19,10 @@ void message(uint16_t network, uint16_t root, uint16_t epoch, uint8_t out[sizeof
 }
 }  // namespace
 
-bool sign(const uint8_t privateKey[64], uint16_t network, uint16_t root,
+bool sign(const uint8_t privateKey[64], const uint8_t publicKey[32], uint16_t network, uint16_t root,
           uint16_t epoch, uint8_t signature[SIGNATURE_BYTES]) {
-    if (!privateKey || !signature || !id(network) || !id(root)) return false;
-    uint8_t publicKey[32], input[sizeof(LABEL) + 6];
-    Ed25519::derivePublicKey(publicKey, privateKey + 32);
+    if (!privateKey || !publicKey || !signature || !id(network) || !id(root)) return false;
+    uint8_t input[sizeof(LABEL) + 6];
     message(network, root, epoch, input);
     Ed25519::sign(signature, privateKey + 32, publicKey, input, sizeof(input));
     return true;

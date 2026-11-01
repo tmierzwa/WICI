@@ -47,7 +47,7 @@ int main() {
     radio[4] = 1;
     assert(!receiver.open(bare, bareLength, opened, sizeof(opened), openedLength));
     frame.destination = wici_link::BROADCAST;
-    frame.type = wici_link::Type::BEACON; frame.length = 137;
+    frame.type = wici_link::Type::BEACON; frame.length = wici_link::BEACON_PAYLOAD;
     radioLength = wici_link::encode(groupKey, frame, bare, sizeof(bare));
     assert(radioLength);
     assert(sender.seal(bare, radioLength, radio, sizeof(radio)) == radioLength);
