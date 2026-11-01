@@ -47,6 +47,23 @@ bool parseBeacon(const wici_link::Frame& frame, Beacon& out) {
     return id(out.root) && (out.parent == 0 || id(out.parent)) && !(out.flags & ~1);
 }
 
+uint16_t snrCost16(int16_t snrQdb) {
+    // A positive SNR keeps the ideal one-transmission cost. Negative SNR
+    // adds one sixteenth per dB, capped so malformed radio metadata cannot
+    // dominate a route indefinitely.
+    if (snrQdb >= 0) return 16;
+    const uint16_t penalty = static_cast<uint16_t>((-static_cast<int32_t>(snrQdb) + 3) / 4);
+    return static_cast<uint16_t>(16 + (penalty > 32 ? 32 : penalty));
+}
+
+namespace {
+uint16_t measuredCost(uint16_t snrCost, uint8_t delivery16) {
+    // delivery16 is an EWMA success probability in sixteenths. 256/p is
+    // ETX in sixteenths; the SNR penalty is added only once.
+    return static_cast<uint16_t>(256 / delivery16 + snrCost - 16);
+}
+}  // namespace
+
 bool Table::begin() {
     ready_ = false;
     generation_ = 0;
@@ -54,6 +71,7 @@ bool Table::begin() {
     epoch_ = 0;
     epochKnown_ = false;
     rank_ = 0xFFFF;
+    rankCeiling_ = 0xFFFF;
     parent_ = failedDynamic_ = 0;
     plannedFailures_ = backupFailures_ = dynamicFailures_ = 0;
     memset(neighbors_, 0, sizeof(neighbors_));
@@ -174,7 +192,7 @@ const Table::Neighbor* Table::candidate(uint16_t id, uint32_t nowS) const {
     for (const Neighbor& n : neighbors_)
         if (n.id == id && n.epoch == epoch_ && n.parent != config_.own &&
             nowS >= n.lastSeenS && nowS - n.lastSeenS <= BEACON_STALE_S &&
-            n.rank < rank_ && n.cost && static_cast<uint32_t>(n.rank) + n.cost < 0xFFFF) return &n;
+            n.rank < rankCeiling_ && n.cost && static_cast<uint32_t>(n.rank) + n.cost < 0xFFFF) return &n;
     return nullptr;
 }
 
@@ -209,11 +227,12 @@ void Table::selectParent(uint32_t nowS) {
     if (parent_ != chosen->id) dynamicFailures_ = 0;
     parent_ = chosen->id;
     rank_ = static_cast<uint16_t>(chosen->rank + chosen->cost);
+    if (rank_ < rankCeiling_) rankCeiling_ = rank_;
 }
 
 bool Table::beacon(uint16_t neighbor, const Beacon& value, uint16_t linkCost16, uint32_t nowS) {
     if (!ready_ || config_.own == config_.root || !id(neighbor) || neighbor == config_.own || value.root != config_.root ||
-        !linkCost16 || value.rank == 0xFFFF || value.parent == config_.own ||
+        linkCost16 < 16 || linkCost16 > 48 || value.rank == 0xFFFF || value.parent == config_.own ||
         (value.parent && !id(value.parent)) || (value.flags & ~1) ||
         (value.rank == 0) != (neighbor == config_.root)) return false;
     if (epochKnown_ && static_cast<int16_t>(value.epoch - epoch_) < 0) return false;
@@ -221,6 +240,7 @@ bool Table::beacon(uint16_t neighbor, const Beacon& value, uint16_t linkCost16, 
         epoch_ = value.epoch;
         epochKnown_ = true;
         rank_ = 0xFFFF;
+        rankCeiling_ = 0xFFFF;
         parent_ = 0;
         memset(neighbors_, 0, sizeof(neighbors_));
         plannedFailures_ = backupFailures_ = 0;
@@ -233,13 +253,27 @@ bool Table::beacon(uint16_t neighbor, const Beacon& value, uint16_t linkCost16, 
         if (!item.id && !chosen) chosen = &item;
     }
     if (!chosen) return false;
-    *chosen = {neighbor, value.rank, linkCost16, value.epoch, value.parent, nowS};
+    const uint8_t delivery = chosen->id == neighbor && chosen->epoch == value.epoch ?
+                             chosen->delivery16 : 16;
+    *chosen = {neighbor, value.rank, measuredCost(linkCost16, delivery),
+               value.epoch, value.parent, nowS, linkCost16, delivery};
     selectParent(nowS);
     return true;
 }
 
 void Table::hopResult(uint16_t neighbor, bool acknowledged, uint32_t nowS) {
     if (!ready_) return;
+    for (Neighbor& item : neighbors_) {
+        if (item.id != neighbor || item.epoch != epoch_) continue;
+        // A HACK is one successful attempt; a timeout is one failed attempt.
+        // The score remains soft state and resets on a new root epoch.
+        item.delivery16 = acknowledged ?
+            static_cast<uint8_t>((3u * item.delivery16 + 16u + 3u) / 4u) :
+            static_cast<uint8_t>((3u * item.delivery16 + 3u) / 4u);
+        if (!item.delivery16) item.delivery16 = 1;
+        item.cost = measuredCost(item.snrCost, item.delivery16);
+        break;
+    }
     // A deliberate probe of the planned parent can restore the planned route.
     if (acknowledged && neighbor == config_.planned && neighbor != parent_) {
         plannedFailures_ = 0;
@@ -257,8 +291,7 @@ void Table::hopResult(uint16_t neighbor, bool acknowledged, uint32_t nowS) {
                         neighbor == config_.backup ? &backupFailures_ : &dynamicFailures_;
     if (failures) *failures = acknowledged ? 0 : static_cast<uint8_t>(*failures < 3 ? *failures + 1 : 3);
     if (!acknowledged && failures == &dynamicFailures_ && dynamicFailures_ >= 3) failedDynamic_ = neighbor;
-    if (!acknowledged) selectParent(nowS);
-    else if (neighbor != config_.planned && candidate(config_.planned, nowS)) selectParent(nowS);
+    selectParent(nowS);
 }
 
 }  // namespace wici_route

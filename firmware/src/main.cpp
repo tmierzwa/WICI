@@ -429,7 +429,8 @@ void onDatagram(const uint8_t* data, size_t length, void*) {
 }
 void onWiciRaw(const radiolink::Frame& frame, void*) {
     if (!wiciActive) return;
-    if (wiciShelter) wiciShelter->receive(frame.bytes, frame.length, frame.receivedMs, serviceS());
+    if (wiciShelter) wiciShelter->receive(frame.bytes, frame.length, frame.receivedMs,
+                                        serviceS(), frame.snrQdb);
     else if (wiciRoot) wiciRoot->radio(frame.bytes, frame.length, frame.receivedMs);
 }
 void onWiciDelivery(uint32_t handle, bool acknowledged, void*) { app.receipt(handle, acknowledged); }

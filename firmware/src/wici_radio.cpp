@@ -45,7 +45,8 @@ bool Shelter::begin() {
 
 uint32_t Shelter::backoff() const { return RETRY_MIN_MS + random_(randomContext_) % RETRY_SPAN_MS; }
 
-Event Shelter::receive(const uint8_t* wire, size_t length, uint32_t receivedMs, uint32_t nowS) {
+Event Shelter::receive(const uint8_t* wire, size_t length, uint32_t receivedMs, uint32_t nowS,
+                       int16_t snrQdb) {
     if (!ready_) return Event::REJECTED;
     wici_link::Frame frame;
     if (!wici_link::decode(linkKey_, network_, wire, length, frame)) return Event::REJECTED;
@@ -54,6 +55,7 @@ Event Shelter::receive(const uint8_t* wire, size_t length, uint32_t receivedMs, 
         if (ownActive_ && ownAwaiting_ && frame.source == ownNext_ &&
             frame.destination == own_ && frame.sequence == ownSeq_[ownPart_]) {
             ownAwaiting_ = ownDelayPending_ = false;
+            relay_.routes().hopResult(ownNext_, true, nowS);
             if (++ownPart_ == ownCount_) finishOwn(true);
             else ownAttempts_ = 0;
             return Event::ADMITTED;
@@ -67,7 +69,8 @@ Event Shelter::receive(const uint8_t* wire, size_t length, uint32_t receivedMs, 
     if (frame.type == wici_link::Type::BEACON) {
         wici_route::Beacon beacon;
         return wici_route::parseBeacon(frame, beacon) &&
-                       relay_.routes().beacon(frame.source, beacon, 16, nowS) ?
+                       relay_.routes().beacon(frame.source, beacon,
+                                              wici_route::snrCost16(snrQdb), nowS) ?
                Event::ADMITTED : Event::REJECTED;
     }
     if (frame.type != wici_link::Type::DATA || frame.length < envelope::OVERHEAD)
@@ -133,6 +136,7 @@ void Shelter::poll(uint32_t nowMs, uint32_t nowS) {
         if (ownAwaiting_) {
             if (!reached(nowMs, ownSentAtMs_ + HACK_WAIT_MS)) return;
             ownAwaiting_ = false;
+            relay_.routes().hopResult(ownNext_, false, nowS);
             if (ownAttempts_ >= 3) { finishOwn(false); return; }
             ownRetryAtMs_ = nowMs + backoff();
             ownDelayPending_ = true;

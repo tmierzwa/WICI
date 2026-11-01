@@ -106,7 +106,8 @@ int main() {
     beacon.ttl = 1; beacon.length = 9;
     beacon.payload[1] = 5; beacon.payload[5] = 1;
     n = encode(key, beacon, wire);
-    assert(shelter.receive(wire, n, 1400, 12) == wici_radio::Event::ADMITTED);
+    assert(shelter.receive(wire, n, 1400, 12, -20) == wici_radio::Event::ADMITTED);
+    assert(shelter.routes().rank() == 21);  // packet SNR contributes five sixteenths
     air.dataOk = false;
     shelter.poll(1401, 12);
     assert(air.dataCount == 1 && air.dataLength == 44);
@@ -149,10 +150,12 @@ int main() {
     assert(wici_link::decode(key, 100, air.data, air.dataLength, first));
     assert(first.source == 2 && first.destination == 5 && first.length == 140);
     const uint16_t firstSeq = first.sequence;
+    const uint16_t rankBeforeOwnTimeout = shelter.routes().rank();
     shelter.onTxDone(true, 4050, 13);
     shelter.poll(4649, 13);
     assert(air.dataCount == 4);
     shelter.poll(4650, 13);
+    assert(shelter.routes().rank() > rankBeforeOwnTimeout);
     shelter.poll(5149, 13);
     assert(air.dataCount == 4);
     shelter.poll(5150, 13);

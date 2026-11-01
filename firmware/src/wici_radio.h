@@ -37,7 +37,8 @@ public:
     bool begin();
     // Called from Bench's raw callback. No route learning or outbound DATA is
     // performed before the HACK attempt; all timestamps come from the radio.
-    Event receive(const uint8_t* frame, size_t length, uint32_t receivedMs, uint32_t nowS);
+    Event receive(const uint8_t* frame, size_t length, uint32_t receivedMs, uint32_t nowS,
+                  int16_t snrQdb = 0);
     // Called after the radio's DATA completion callback, never for HACK.
     void onTxDone(bool success, uint32_t nowMs, uint32_t nowS);
     void poll(uint32_t nowMs, uint32_t nowS);

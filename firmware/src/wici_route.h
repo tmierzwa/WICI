@@ -28,6 +28,8 @@ struct Beacon {
 };
 
 bool parseBeacon(const wici_link::Frame& frame, Beacon& out);
+// Convert packet SNR (quarter dB) to a nonzero link cost in 1/16 units.
+uint16_t snrCost16(int16_t snrQdb);
 
 class Table {
 public:
@@ -50,7 +52,12 @@ public:
 
 private:
     struct Route { uint16_t destination = 0, via = 0; };
-    struct Neighbor { uint16_t id = 0, rank = 0, cost = 0, epoch = 0, parent = 0; uint32_t lastSeenS = 0; };
+    struct Neighbor {
+        uint16_t id = 0, rank = 0, cost = 0, epoch = 0, parent = 0;
+        uint32_t lastSeenS = 0;
+        uint16_t snrCost = 16;
+        uint8_t delivery16 = 16;
+    };
     bool commit();
     void selectParent(uint32_t nowS);
     const Neighbor* candidate(uint16_t id, uint32_t nowS) const;
@@ -59,7 +66,8 @@ private:
     Route routes_[ROUTES] = {};
     Neighbor neighbors_[NEIGHBORS] = {};
     uint32_t generation_ = 0;
-    uint16_t epoch_ = 0, rank_ = 0xFFFF, parent_ = 0, failedDynamic_ = 0;
+    uint16_t epoch_ = 0, rank_ = 0xFFFF, rankCeiling_ = 0xFFFF;
+    uint16_t parent_ = 0, failedDynamic_ = 0;
     uint8_t currentCopy_ = 1, plannedFailures_ = 0, backupFailures_ = 0, dynamicFailures_ = 0;
     bool ready_ = false, epochKnown_ = false;
 };

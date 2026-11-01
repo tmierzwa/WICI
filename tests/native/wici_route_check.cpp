@@ -59,7 +59,7 @@ int main() {
     updated.hopResult(2, false, 103);
     assert(updated.parent() == 3 && updated.rank() == 40);
     updated.hopResult(2, true, 104);  // successful probe restores planned parent
-    assert(updated.parent() == 2 && updated.rank() == 32);
+    assert(updated.parent() == 2 && updated.rank() > 32);  // ETX still reflects recent failures
     assert(!updated.beacon(7, {1, 8, 4, 1, 0}, 16, 105));  // old epoch
     assert(!updated.beacon(7, {1, 8, 5, 4, 0}, 16, 105));  // child points back
     assert(updated.beacon(2, {1, 16, 6, 1, 0}, 16, 105));  // new epoch resets soft state
@@ -78,6 +78,23 @@ int main() {
     assert(updated.parent() == 0);  // failed dynamic parent is withheld
     updated.hopResult(8, true, recoveredAt + 4);
     assert(updated.parent() == 8);  // positive probe restores it
+
+    assert(wici_route::snrCost16(12) == 16);
+    assert(wici_route::snrCost16(-20) == 21);
+    assert(wici_route::snrCost16(-400) == 48);
+
+    static Memory loopMemory;
+    wici_route::Table loopGuard(loopMemory, {100, 4, 1, 2, 0});
+    assert(loopGuard.begin());
+    assert(loopGuard.beacon(2, {1, 16, 5, 1, 0}, 16, 100));
+    assert(loopGuard.rank() == 32);
+    // A degraded ETX may increase our advertised rank. A former descendant
+    // must still be barred by the lowest rank held in this epoch.
+    assert(loopGuard.beacon(7, {1, 35, 5, 8, 0}, 16, 100));
+    loopGuard.hopResult(2, false, 101);
+    loopGuard.hopResult(2, false, 102);
+    loopGuard.hopResult(2, false, 103);
+    assert(loopGuard.parent() == 0);
 
     wici_link::Frame frame;
     frame.type = wici_link::Type::BEACON;
