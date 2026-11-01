@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""The `configure` document (docs/spec/protokol-usb.md, "Dokument configure"): normalising and checking.
+"""The `configure` document (docs/spec/usb-protocol.md, "Dokument configure"): normalising and checking.
 
 The station checks the document again and has the last word; this check gives the person preparing
 the station a precise message per field before anything is sent. Limits follow firmware/src/config.h,

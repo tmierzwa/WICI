@@ -1,6 +1,6 @@
 # Aplikacja laptopa WICI: plan
 
-Aplikacja działa na każdym znalezionym laptopie z Windows, macOS albo Linuksem, uruchamiana z pamięci USB zestawu, bez instalowania i bez internetu (decyzja z 2026-10-13: wariant A, wszystkie systemy od początku). Zestaw nie ma laptopa, a laptopa nie przygotowuje się wcześniej: w kryzysie ktoś przynosi dowolny laptop, a gdy ten nie zadziała, sprawdza się następny (decyzja z 2026-10-14). Aplikacja robi więc sama wszystko, co da się zrobić na nieznanym, nieprzygotowanym laptopie, a resztę opisuje instrukcja. Kontrakt ze stacją opisuje [protokół USB](../../docs/spec/protokol-usb.md), a wymagania strony, panelu i pakietu są w [specyfikacji oprogramowania](../../docs/spec/oprogramowanie.md#api-lokalnej-strony-poziomy-23).
+Aplikacja działa na każdym znalezionym laptopie z Windows, macOS albo Linuksem, uruchamiana z pamięci USB zestawu, bez instalowania i bez internetu (decyzja z 2026-10-13: wariant A, wszystkie systemy od początku). Zestaw nie ma laptopa, a laptopa nie przygotowuje się wcześniej: w kryzysie ktoś przynosi dowolny laptop, a gdy ten nie zadziała, sprawdza się następny (decyzja z 2026-10-14). Aplikacja robi więc sama wszystko, co da się zrobić na nieznanym, nieprzygotowanym laptopie, a resztę opisuje instrukcja. Kontrakt ze stacją opisuje [protokół USB](../../docs/spec/usb-protocol.md), a wymagania strony, panelu i pakietu są w [specyfikacji oprogramowania](../../docs/spec/oprogramowanie.md#api-lokalnej-strony-poziomy-23).
 
 Plan rozpisuje, co jest zrobione (etap 1), jak aplikacja radzi sobie z różnymi systemami, ile zajmuje na pamięci USB, co dalej i co trzeba jeszcze rozstrzygnąć. Ostatnie części opisują luki wobec specyfikacji z 2026-10-30 i plan aplikacji stanowiska odbiorczego (komputer dyżurnych), której jeszcze nie ma ([Luki wobec specyfikacji](#luki-wobec-specyfikacji-z-2026-10-30), [Aplikacja stanowiska odbiorczego](#aplikacja-stanowiska-odbiorczego-plan-etapów)).
 
@@ -188,7 +188,7 @@ Etap 2 stosuje kontrakt `"usb":2` w wersji z 2026-10-30: `sync` bez pola `boot` 
 
 ## Luki wobec specyfikacji z 2026-10-30
 
-Porównanie kodu z [oprogramowaniem](../../docs/spec/oprogramowanie.md), [protokołem USB](../../docs/spec/protokol-usb.md), [stanowiskiem odbiorczym](../../docs/spec/stanowisko-osp.md) i [instrukcją dyżurnego](../../docs/obsluga/instrukcja-dyzurnego.md) (stan `main` z 2026-10-30).
+Porównanie kodu z [oprogramowaniem](../../docs/spec/oprogramowanie.md), [protokołem USB](../../docs/spec/usb-protocol.md), [stanowiskiem odbiorczym](../../docs/spec/stanowisko-osp.md) i [instrukcją dyżurnego](../../docs/obsluga/instrukcja-dyzurnego.md) (stan `main` z 2026-10-30).
 
 | Wymaganie | Aplikacja | Stan kodu | Etap |
 |---|---|---|---|

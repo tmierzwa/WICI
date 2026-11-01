@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Konfiguracja stacji z dokumentu `configure` (docs/spec/protokol-usb.md, "Transfery dzielone na
+// Konfiguracja stacji z dokumentu `configure` (docs/spec/usb-protocol.md, "Transfery dzielone na
 // części", tabela „Dokument configure”): rola (`stacja` albo `wezel`), lista adresów, karta odbiorcy
 // z pełnymi kluczami publicznymi tożsamości głównej i zapasowej, liczba stacji, frazy, kod IFAC
 // i profil radiowy. Dokument (do 7680 B) leży w kopii konfiguracji w FRAM (store.h) i jest czytany

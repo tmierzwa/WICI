@@ -906,7 +906,7 @@ class FakeStack:
 
 
 def station_card(key):
-    """Station card as `card` over USB returns it (protokol-usb.md)."""
+    """Station card as `card` over USB returns it (usb-protocol.md)."""
     return {"name": panel.station_name(key), "lxmf": nosnik.lxmf_address(key).hex(), "key": key.hex(),
             "address": ["ul. Długa 5, wejście od podwórza"], "fingerprint": panel.fingerprint(key)}
 

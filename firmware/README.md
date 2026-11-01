@@ -640,7 +640,7 @@ Usunięto martwy i powielony kod (`statusAfter`, kasowanie klucza w `framfs`, ge
 
 ## Protokół USB laptop–stacja
 
-Kontrakt: [protokół USB](../docs/spec/protokol-usb.md) (`"usb":2`). Kod w `src/usbproto.cpp` (bez zależności od Arduino; scenariusze w `tests/test_firmware_host.py`), wiadomości SA1 w `src/sa1.cpp` (rozbiór, kontrola i kodowanie kanoniczne jak `reference.py`, z NFC i znakami nieprzydzielonymi), skaner JSON w `src/jsonlite.cpp`, magazyny w `src/store.cpp`.
+Kontrakt: [protokół USB](../docs/spec/usb-protocol.md) (`"usb":2`). Kod w `src/usbproto.cpp` (bez zależności od Arduino; scenariusze w `tests/test_firmware_host.py`), wiadomości SA1 w `src/sa1.cpp` (rozbiór, kontrola i kodowanie kanoniczne jak `reference.py`, z NFC i znakami nieprzydzielonymi), skaner JSON w `src/jsonlite.cpp`, magazyny w `src/store.cpp`.
 
 - **Koperta i sesja.** Wiersze JSON do 1024 B z `seq` (odpowiedź z `re`), `hello` stacji po otwarciu portu z `boot`, kontraktem, rolą i stanem; tabela pól każdego polecenia: pole nieznane albo złego typu daje `invalid` z nazwą pola. Polecenie spoza roli daje `role`, polecenie trybu przygotowania poza nim `prep_required`.
 - **Przepływ.** Wiersze wychodzą przez kolejkę mieszczącą jeden pełny wiersz (1 025 B). Pętla stacji oddaje z niej portowi tyle, ile port przyjmie (`availableForWrite()`, wynik `write()` przy zapisie częściowym). Następny wiersz wejścia jest czytany dopiero przy pustej kolejce, a migawka i zdarzenia wychodzą w miarę wolnego miejsca. Laptop, który przestał czytać, nie zatrzymuje radia, przycisków ani watchdoga.

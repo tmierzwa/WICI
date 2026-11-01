@@ -9,7 +9,7 @@ Specyfikacja stacji 0.5 składa się z pięciu rozdziałów, protokołu USB, roz
 | [Projekt](spec/projekt.md) | Poziomy zestawu, połączenia, przygotowanie i użycie odebranego zestawu |
 | [Radio](spec/radio.md) | Profil LoRa, radia RNode do pomiarów, współdzielenie kanału, dostęp do kanału, warunki prawne, interfejs radiowy w stosie z ponowieniami, interfejs Reticulum przez USB (węzeł stanowiska), USB do laptopa, antena i budżet łącza |
 | [Oprogramowanie](spec/oprogramowanie.md) | Oprogramowanie stacji i laptopa, wiadomości SA1, cykl życia zgłoszenia, trwałość i pamięć FRAM, czas, ekran i przyciski, tryby kryzysowe, pakiety offline i aktualizacja |
-| [Protokół USB](spec/protokol-usb.md) | Kontrakt laptop–stacja (`"usb":2`): polecenia i odpowiedzi, synchronizacja, transfery w częściach, PRZENIEŚ STACJĘ |
+| [Protokół USB](spec/usb-protocol.md) | Kontrakt laptop–stacja (`"usb":2`): polecenia i odpowiedzi, synchronizacja, transfery w częściach, PRZENIEŚ STACJĘ |
 | [Elektronika](spec/elektronika.md) | Stacja pilotażowa na płytce v2, tor zasilania z ogniw AA i 12 V, zanik zasilania przy zapisie, poziom 3 z kupionej stacji zasilania |
 | [Stanowisko odbiorcze](spec/stanowisko-osp.md) | Stanowisko odbiorcze: stacja jako węzeł transportu i obowiązkowy komputer z tożsamością odbiorcy (D19), aplikacja, panel, zestaw, awarie |
 | [Transport (projekt, D21)](spec/transport.md) | Szew nośnika, koperta WICI (uwierzytelnienie i szyfrowanie od końca do końca kluczami z kart), nośniki: WICI-Link, Reticulum, Meshtastic i MeshCore przez USB, IP; warunek przyjęcia |

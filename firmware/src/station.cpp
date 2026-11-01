@@ -468,7 +468,7 @@ Result Station::revision(uint16_t slot, Request& r, const sa1::Message& m, const
 }
 
 Result Station::submit(const sa1::Message& m, Stored& out) {
-    // Reguły `submit` (protokol-usb.md): nowe id, nowa rewizja, duplikat albo konflikt, stale, closed,
+    // Reguły `submit` (usb-protocol.md): nowe id, nowa rewizja, duplikat albo konflikt, stale, closed,
     // id zwolnione (bez kontroli treści).
     if (!store_.station()) return Result::NO_CONFIG;
     if (m.type != sa1::REQUEST && m.type != sa1::TEST) return Result::INVALID;

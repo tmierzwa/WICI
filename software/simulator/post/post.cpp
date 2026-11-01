@@ -545,7 +545,7 @@ std::string state() {
 }
 
 std::string card(int k) {
-    // Karta odbiorcy do konfiguracji stacji (protokol-usb.md, `configure`): adres LXMF i klucz publiczny.
+    // Karta odbiorcy do konfiguracji stacji (usb-protocol.md, `configure`): adres LXMF i klucz publiczny.
     return std::string("{\"lxmf\":\"") + hexOf(identities[k].address, HASH) + "\",\"key\":\"" +
            hexOf(identities[k].publicKey, rnscore::KEY_SIZE) + "\"}";
 }

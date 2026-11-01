@@ -1247,7 +1247,7 @@ bool Store::close(uint32_t head) {
 bool Store::recoverBlocks() {
     // Uszkodzone bloki małych wpisów (oprogramowanie.md, "Pamięć FRAM"): ich wpisy przepadły, więc
     // stacja nie udaje pełnej wiedzy, a maintain() zapisuje bloki od nowa.
-    // - pierścień (protokol-usb.md, "Epoka"): numery z bloku laptop mógł już widzieć; nowa epoka wymusza
+    // - pierścień (usb-protocol.md, "Epoka"): numery z bloku laptop mógł już widzieć; nowa epoka wymusza
     //   migawkę, a numeracja biegnie dalej za najwyższym numerem, jaki mógł zostać nadany, bo numery
     //   zdarzeń wskazują też wiadomości skrzynki (`msg`) i pamięć zwolnionych wpisów (kolejność po `ev`).
     //   Zdarzenia po najwyższym zachowanym numerze leżą w kolejnych blokach za jego blokiem i każdy

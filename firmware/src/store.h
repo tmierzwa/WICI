@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Magazyny stacji w FRAM (docs/spec/oprogramowanie.md, "Pamięć FRAM", "Trwałość i potwierdzenia",
-// "Zapisy większe niż transakcja", "Cykl życia zgłoszenia"; protokol-usb.md, "Synchronizacja").
+// "Zapisy większe niż transakcja", "Cykl życia zgłoszenia"; usb-protocol.md, "Synchronizacja").
 //
 // Każdy magazyn ma stałe gniazda, bez dziennika dopisywanego i kompaktowania. Rekord gniazda (512 B)
 // ma nagłówek 24 B (magazyn 1, gniazdo 2, wersja formatu 1, generacja klucza 4, numer zapisu 8,
@@ -185,7 +185,7 @@ struct MessageIndex {
     bool used() const { return state == SlotState::USED; }
 };
 
-// Zwolniony wpis rejestru (protokol-usb.md, "Niepewny wynik polecenia").
+// Zwolniony wpis rejestru (usb-protocol.md, "Niepewny wynik polecenia").
 struct Released {
     uint8_t id[HASH] = {};
     uint16_t revision = 0;
@@ -194,7 +194,7 @@ struct Released {
     bool cancelled = false;
 };
 
-// Zdarzenie dla laptopa: wpis 24 B pierścienia bez treści SA1 (protokol-usb.md, "Synchronizacja").
+// Zdarzenie dla laptopa: wpis 24 B pierścienia bez treści SA1 (usb-protocol.md, "Synchronizacja").
 enum class EventKind : uint8_t { OWN = 1, STAGE = 2, MSG = 3, RADIO = 4, STATION = 6 };
 // Pierwsze wartości są równe etapom (Stage), więc zmiana etapu daje kod wprost.
 enum class StageCode : uint8_t { STORED, SENDING, DELIVERED, RECEIVED, CANCELLED, SUPERSEDED, RELEASED };

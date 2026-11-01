@@ -49,7 +49,7 @@ Limity radiowe (czas nadawania, dług ciszy, limit ogłoszeń, IFAC, cisza radio
 
 ## Stacja stanowiska
 
-Stacja stanowiska ma to samo oprogramowanie i to samo wykonanie co stacja w schronieniu. Konfigurację węzła stanowiska ustawia dokument `configure` z `"role":"wezel"` w trybie przygotowania ([protokół USB](protokol-usb.md#transfery-dzielone-na-części)); pola `addresses`, `receiver`, `stations` i `phrases` są wtedy pominięte. W tej konfiguracji stacja:
+Stacja stanowiska ma to samo oprogramowanie i to samo wykonanie co stacja w schronieniu. Konfigurację węzła stanowiska ustawia dokument `configure` z `"role":"wezel"` w trybie przygotowania ([protokół USB](usb-protocol.md#transfery-dzielone-na-części)); pola `addresses`, `receiver`, `stations` i `phrases` są wtedy pominięte. W tej konfiguracji stacja:
 
 - pracuje jako węzeł transportu Reticulum z interfejsem radiowym LoRa ([profil](radio.md#profil-lora-pilotażu)) i drugim interfejsem przez USB ([interfejs Reticulum przez USB](radio.md#interfejs-reticulum-przez-usb-węzeł-stanowiska));
 - nie ma adresu LXMF, adresu schronienia, karty odbiorcy ani fraz; nie tworzy zgłoszeń, nie wysyła TEST i nie ogłasza własnego adresu;

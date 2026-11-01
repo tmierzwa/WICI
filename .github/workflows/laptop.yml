@@ -6,7 +6,7 @@ on:
   pull_request:
     # Druga strona kontraktu też: firmware, symulator i protokół USB.
     paths: ['software/laptop/**', 'tests/test_laptop.py', 'tests/test_laptop_audit.py', 'tests/test_laptop_http_memory.py', 'tests/laptop-form.test.cjs', '.github/workflows/laptop.yml', 'firmware/src/**',
-            'software/simulator/web/**', 'software/simulator/swiat.mjs', 'software/simulator/swiat.html', 'docs/spec/protokol-usb.md', 'tests/test_stanowisko.py', 'firmware/lib/**', 'firmware/platformio.ini',
+            'software/simulator/web/**', 'software/simulator/swiat.mjs', 'software/simulator/swiat.html', 'docs/spec/usb-protocol.md', 'tests/test_stanowisko.py', 'firmware/lib/**', 'firmware/platformio.ini',
             'firmware/tools/rns_osp_node.py', 'firmware/tools/sa1_lxmf.py', 'firmware/tools/udp_ports.py',
             'software/reference/**']
   workflow_dispatch:

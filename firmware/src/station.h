@@ -116,7 +116,7 @@ public:
     Result create(uint8_t category, uint16_t people, uint8_t urgency, const char* text, uint16_t& number);
     // Nowa rewizja (ZMIEŃ LICZBĘ OSÓB, ZMIEŃ PILNOŚĆ, POTRZEBA USTAŁA; text = nullptr: bez zmiany).
     Result revise(uint16_t slot, uint16_t people, uint8_t urgency, const char* text);
-    // `submit` z laptopa: tablica REQUEST albo TEST po kontroli SA1 (protokol-usb.md, reguły submit).
+    // `submit` z laptopa: tablica REQUEST albo TEST po kontroli SA1 (usb-protocol.md, reguły submit).
     Result submit(const sa1::Message& m, Stored& out);
     // ANULUJ WYSYŁKĘ (menu i `cancel`): tylko przed `nadane`. released: id ze zwolnionego wpisu anulowanego.
     Result cancel(const uint8_t id[store::HASH], bool& released);

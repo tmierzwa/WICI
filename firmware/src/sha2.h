@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // SHA-256 (FIPS 180-4) i HMAC-SHA-256 (RFC 2104) dla części stacji bez stosu Reticulum:
-// skrót dokumentu `configure` (docs/spec/protokol-usb.md, "Transfery dzielone na części"),
+// skrót dokumentu `configure` (docs/spec/usb-protocol.md, "Transfery dzielone na części"),
 // adresy celów z kluczy publicznych z karty odbiorcy (Reticulum: skrót tożsamości = pierwsze
 // 16 B SHA-256 klucza, adres celu = pierwsze 16 B SHA-256(skrót nazwy 10 B ‖ skrót tożsamości)),
 // odcisk karty stacji i generator HMAC-DRBG (drbg.h). Bez zależności od Arduino; sprawdzany na

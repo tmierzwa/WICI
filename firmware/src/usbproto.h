@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Protokół USB laptop–stacja, kontrakt "usb":2 (docs/spec/protokol-usb.md): koperta z `seq` i `re`,
+// Protokół USB laptop–stacja, kontrakt "usb":2 (docs/spec/usb-protocol.md): koperta z `seq` i `re`,
 // `hello` po otwarciu portu, `sync`/`ack`/`snapshot` nad pierścieniem zdarzeń w FRAM (store.h) z epoką,
 // najwyżej 8 zdarzeń w drodze i ponowieniem po 5 s od `cursor` + 1, polecenia `submit`, `cancel`,
 // `test`, `announce`, `silence`, `mark_read`, `status`, `close`, `destroy`, `card` i transfery

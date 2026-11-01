@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Laptop side of the USB contract "usb":2 (docs/spec/protokol-usb.md).
+"""Laptop side of the USB contract "usb":2 (docs/spec/usb-protocol.md).
 
 `Link` is one session on one open port: a reader thread splits JSON lines, a request waits for the
 final answer to its `seq` (after `pending` it waits for the button on the station). `Station` finds the

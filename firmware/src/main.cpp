@@ -118,9 +118,9 @@ void stationRandom(uint8_t* out, size_t count) {
     if (!generator.generate(out, count)) platform::reboot();
 }
 #if defined(WICI_L0)
-constexpr const char* RADIO_PROFILE = "lora-sf7";  // profil radiowy stacji L0 (`radio.profile` w configure, protokol-usb.md)
+constexpr const char* RADIO_PROFILE = "lora-sf7";  // profil radiowy stacji L0 (`radio.profile` w configure, usb-protocol.md)
 #else
-constexpr const char* RADIO_PROFILE = "p1";   // profil radiowy stanowisk A i B (`radio.profile` w configure, protokol-usb.md)
+constexpr const char* RADIO_PROFILE = "p1";   // profil radiowy stanowisk A i B (`radio.profile` w configure, usb-protocol.md)
 #endif
 store::Store stationStore(memory, stationJournal, stationRandom, RADIO_PROFILE);
 // Drugi interfejs CDC: dane (protokół laptop–stacja); Serial = diagnostyka.
