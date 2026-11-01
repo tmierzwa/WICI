@@ -10,6 +10,8 @@
 #include <Crypto.h>
 #include <Curve25519.h>
 
+#include "hexstr.h"
+
 namespace {
 
 struct Memory : journal::Storage {
@@ -52,7 +54,7 @@ bool admit(uint16_t network, uint16_t sender, uint16_t recipient,
 
 }  // namespace
 
-int main() {
+int main(int argc, char** argv) {
     uint8_t a[32], b[32], bp[32], ap[32], ab[32], derivedAtB[32];
     for (size_t i = 0; i < 32; ++i) { a[i] = static_cast<uint8_t>(i); b[i] = static_cast<uint8_t>(i + 32); }
     publicKey(a, ap);
@@ -182,5 +184,14 @@ int main() {
     radio[radioLength - 1] ^= 1;
     if (afterPart.receive(radio, radioLength, 105, hack, sizeof(hack), hackLength) !=
         wici_destination::Outcome::IGNORED || admitted != 2) return 27;
+
+    // Correctly encrypted envelopes with a reserved kind type, from the Python side.
+    for (int i = 1; i < argc; ++i) {
+        uint8_t reserved[envelope::MAX_FRAME];
+        const size_t reservedLength = strlen(argv[i]) / 2;
+        if (reservedLength > sizeof(reserved) || !hexstr::decode(argv[i], reserved, reservedLength) ||
+            envelope::openPart(ab, reserved, reservedLength, opened)) return 32;
+    }
+    if (argc > 1) puts("reserved=rejected");
     return 0;
 }

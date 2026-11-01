@@ -162,17 +162,25 @@ class CrossLanguageEnvelope(unittest.TestCase):
     def test_counter_reservation_survives_restart_and_write_failure(self):
         run(native("envelope_counter_check", "envelope_counter", "sha2"))
 
-    def test_vectors_and_authentication(self):
+    def test_vectors_authentication_and_reserved_kinds(self):
         envelope = self.envelope
         a, b = bytes(range(32)), bytes(range(32, 64))
         bp = self.x25519.X25519PrivateKey.from_private_bytes(b).public_key().public_bytes_raw()
         key = envelope.derive_key(a, bp, 0x1234, 10, 20, own_id=10)
         whole, = envelope.seal(key, 10, 20, 7, b"[1,1,2]", 236)
         first, second = envelope.seal(key, 10, 20, 0xFFFFFFFF, bytes(range(256)), 153)
+        # Kind type 1 (formerly "TEST łącza") and 15 are reserved: correctly encrypted, still rejected.
+        from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
+        reserved = []
+        for kind in (0x41, 0x4F):
+            header = bytes([kind]) + whole[1:9]
+            reserved.append(header + ChaCha20Poly1305(key).encrypt(envelope._nonce(header), b"[1,1,2]", header))
+            with self.assertRaises(envelope.EnvelopeError):
+                envelope.open_part(key, reserved[-1])
         binary = native("envelope_check", "envelope", "wici_link", "wici_destination", *DURABLE, crypto=True)
-        actual = dict(line.split("=", 1) for line in run(binary).splitlines())
+        actual = dict(line.split("=", 1) for line in run(binary, *(f.hex() for f in reserved)).splitlines())
         self.assertEqual(actual, {"key": key.hex(), "whole": whole.hex(), "first": first.hex(),
-                                  "second": second.hex()})
+                                  "second": second.hex(), "reserved": "rejected"})
 
     def test_fragment_admission_matches_receiver_inbox(self):
         import sqlite3

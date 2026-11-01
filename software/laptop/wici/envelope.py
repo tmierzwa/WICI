@@ -23,8 +23,7 @@ MAX_FRAME = MAX_SA1 + OVERHEAD
 MIN_PAYLOAD = 153
 WINDOW = 64
 VERSION = 1
-TYPE_SA1 = 0
-TYPE_LINK_TEST = 1
+TYPE_SA1 = 0  # the only kind type in v1; 1..15 are reserved and rejected
 
 
 class EnvelopeError(ValueError):
@@ -44,7 +43,7 @@ def _u32(value):
 
 
 def _kind(part, message_type):
-    if part not in (0, 1, 2) or message_type not in (TYPE_SA1, TYPE_LINK_TEST):
+    if part not in (0, 1, 2) or message_type != TYPE_SA1:
         raise EnvelopeError("invalid envelope kind")
     return (VERSION << 6) | (part << 4) | message_type
 
@@ -61,7 +60,10 @@ def derive_key(private_key, peer_public_key, net_id, sender, recipient, own_id):
     peer_public = bytes(peer_public_key)
     if len(peer_public) != 32:
         raise EnvelopeError("peer X25519 key must be 32 bytes")
-    shared = private.exchange(x25519.X25519PublicKey.from_public_bytes(peer_public))
+    try:
+        shared = private.exchange(x25519.X25519PublicKey.from_public_bytes(peer_public))
+    except ValueError as exc:  # all-zero shared secret: small-order peer point
+        raise EnvelopeError("weak peer X25519 key") from exc
     # The caller may be either side. The public keys in info always follow wire direction.
     sender_public, recipient_public = (own_public, peer_public) if sender == own_id else (peer_public, own_public)
     info = b"WICI env v1" + sender_id + recipient_id + sender_public + recipient_public
@@ -80,15 +82,13 @@ def seal(key, sender, recipient, counter, plaintext, max_payload, message_type=T
     src, dst, ctr = _u16(sender), _u16(recipient), _u32(counter)
     if sender == recipient or len(key) != 32:
         raise EnvelopeError("invalid key or direction")
-    parts = (raw,) if len(raw) + OVERHEAD <= max_payload else (raw[:(len(raw) + 1) // 2], raw[(len(raw) + 1) // 2:])
+    # MIN_PAYLOAD fits a 128-byte half, so two parts always suffice.
+    half = (len(raw) + 1) // 2
+    parts = (raw,) if len(raw) + OVERHEAD <= max_payload else (raw[:half], raw[half:])
     result = []
     for index, body in enumerate(parts):
-        kind = _kind(0 if len(parts) == 1 else index + 1, message_type)
-        header = bytes([kind]) + src + dst + ctr
-        frame = header + ChaCha20Poly1305(bytes(key)).encrypt(_nonce(header), body, header)
-        if len(frame) > max_payload:
-            raise EnvelopeError("part exceeds bearer max_payload")
-        result.append(frame)
+        header = bytes([_kind(0 if len(parts) == 1 else index + 1, message_type)]) + src + dst + ctr
+        result.append(header + ChaCha20Poly1305(bytes(key)).encrypt(_nonce(header), body, header))
     return tuple(result)
 
 
@@ -107,7 +107,7 @@ def open_part(key, frame):
     if len(key) != 32 or not OVERHEAD <= len(wire) <= MAX_SA1 + OVERHEAD:
         raise EnvelopeError("invalid key or envelope length")
     header, kind = wire[:HEADER], wire[0]
-    if kind >> 6 != VERSION or kind & 0x0F not in (TYPE_SA1, TYPE_LINK_TEST) or (kind >> 4) & 3 == 3:
+    if kind >> 6 != VERSION or kind & 0x0F != TYPE_SA1 or (kind >> 4) & 3 == 3:
         raise EnvelopeError("unsupported envelope kind")
     sender, recipient = int.from_bytes(header[1:3], "big"), int.from_bytes(header[3:5], "big")
     _u16(sender)
