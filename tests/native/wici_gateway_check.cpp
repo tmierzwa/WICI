@@ -11,7 +11,9 @@ struct Air : wici_gateway::Air {
     bool hackOk = true;
     uint8_t last[255] = {};
     size_t lastLength = 0;
-    bool sendData(const uint8_t* wire, size_t n) override {
+    wici_link::TxClass lastClass = wici_link::TxClass::TRANSIT;
+    bool sendData(const uint8_t* wire, size_t n, wici_link::TxClass traffic) override {
+        lastClass = traffic;
         assert(n >= 19 && n <= 255); memcpy(last, wire, n); lastLength = n; ++data; return true;
     }
     bool sendHack(const uint8_t*, size_t n, uint32_t ms) override {
@@ -44,6 +46,7 @@ int main() {
     wici_gateway::Root root(memory, port, air, 100, 5, ifac);
     assert(root.begin(7) && root.ready());
     assert(root.beacon());
+    assert(air.lastClass == wici_link::TxClass::BEACON);
     wici_link::Frame observed;
     assert(wici_link::decode(key, 100, air.last, air.lastLength, observed));
     assert(observed.type == wici_link::Type::BEACON && observed.source == 5 &&
@@ -62,6 +65,7 @@ int main() {
     emergency.sequence = 39;
     size_t emergencyLength = encode(key, emergency, wire);
     assert(root.host(wire, emergencyLength, 900, 1) == wici_gateway::Event::QUEUED);
+    assert(air.lastClass == wici_link::TxClass::TRANSIT);
     assert(wici_link::decode(key, 100, air.last, air.lastLength, observed));
     assert(observed.destination == wici_link::BROADCAST && observed.flags == wici_link::DOWN);
     assert(port.pendingBytes() == 0);

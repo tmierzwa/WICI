@@ -24,9 +24,11 @@ struct Air : wici_radio::Air {
     uint8_t data[255] = {}, hack[255] = {};
     size_t dataLength = 0, hackLength = 0;
     unsigned dataCount = 0, hackCount = 0;
+    wici_link::TxClass lastClass = wici_link::TxClass::OWN;
     bool hackOk = true, dataOk = true;
     uint32_t receivedMs = 0;
-    bool sendData(const uint8_t* p, size_t n) override {
+    bool sendData(const uint8_t* p, size_t n, wici_link::TxClass traffic) override {
+        lastClass = traffic;
         assert(n <= sizeof(data)); memcpy(data, p, n); dataLength = n; ++dataCount; return dataOk;
     }
     bool sendHack(const uint8_t* p, size_t n, uint32_t ms) override {
@@ -111,6 +113,7 @@ int main() {
     air.dataOk = false;
     shelter.poll(1401, 12);
     assert(air.dataCount == 1 && air.dataLength == 44);
+    assert(air.lastClass == wici_link::TxClass::TRANSIT);
     shelter.poll(1900, 12);
     assert(air.dataCount == 1);
     air.dataOk = true;
@@ -146,6 +149,7 @@ int main() {
     assert(!shelter.queueOwn(1, ownSa1, sizeof(ownSa1), 89));
     shelter.poll(4010, 13);
     assert(air.dataCount == 4);
+    assert(air.lastClass == wici_link::TxClass::OWN);
     wici_link::Frame first;
     assert(wici_link::decode(key, 100, air.data, air.dataLength, first));
     assert(first.source == 2 && first.destination == 5 && first.length == 140);
@@ -216,6 +220,7 @@ int main() {
     assert(flood.receive(wire, n, 8000, 20) == wici_radio::Event::ADMITTED);
     flood.poll(8001, 20);
     assert(floodAir.dataCount == 1);
+    assert(floodAir.lastClass == wici_link::TxClass::TRANSIT);
     assert(wici_link::decode(key, 100, floodAir.data, floodAir.dataLength, sent));
     assert(sent.destination == wici_link::BROADCAST && sent.flags == wici_link::DOWN);
     flood.onTxDone(true, 8100, 20);

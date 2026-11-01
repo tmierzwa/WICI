@@ -42,7 +42,7 @@ bool Root::beacon() {
     frame.payload[5] = static_cast<uint8_t>(routes_.epoch());
     uint8_t wire[wici_link::MAX_FRAME];
     const size_t length = wici_link::encode(key_, frame, wire, sizeof(wire));
-    return length && air_.sendData(wire, length);
+    return length && air_.sendData(wire, length, wici_link::TxClass::BEACON);
 }
 
 void Root::onTxDone(bool success, uint32_t nowMs) {
@@ -132,7 +132,7 @@ Event Root::host(const uint8_t* wire, size_t length, uint32_t nowMs, uint32_t no
                                                       wire, length, forwarded, sizeof(forwarded));
     if (!forwardedLength || !port_.canSend(forwarded, forwardedLength) ||
         (broadcast && !flood_.remember(frame.payload, nowS)) ||
-        !air_.sendData(forwarded, forwardedLength)) return Event::REJECTED;
+        !air_.sendData(forwarded, forwardedLength, wici_link::TxClass::TRANSIT)) return Event::REJECTED;
     memcpy(outbound_, forwarded, forwardedLength);
     outboundLength_ = forwardedLength;
     outboundPending_ = true;

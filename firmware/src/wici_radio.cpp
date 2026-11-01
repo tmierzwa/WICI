@@ -143,7 +143,7 @@ void Shelter::poll(uint32_t nowMs, uint32_t nowS) {
         }
         if (submitted_ || ownSubmitted_ ||
             (ownDelayPending_ && !reached(nowMs, ownRetryAtMs_))) return;
-        if (air_.sendData(ownFrames_[ownPart_], ownLengths_[ownPart_])) {
+        if (air_.sendData(ownFrames_[ownPart_], ownLengths_[ownPart_], wici_link::TxClass::OWN)) {
             ownSubmitted_ = true;
             ownDelayPending_ = false;
             ++ownAttempts_;
@@ -158,7 +158,7 @@ void Shelter::poll(uint32_t nowMs, uint32_t nowS) {
     size_t length = 0;
     const uint8_t* frame = relay_.outgoing(length);
     if (frame && length) {
-        if (air_.sendData(frame, length)) {
+        if (air_.sendData(frame, length, wici_link::TxClass::TRANSIT)) {
             submitted_ = true;
             delayPending_ = false;
         } else {
@@ -248,7 +248,7 @@ bool Shelter::beacon() {
     frame.payload[7] = static_cast<uint8_t>(parent);
     uint8_t wire[wici_link::MAX_FRAME];
     const size_t length = wici_link::encode(linkKey_, frame, wire, sizeof(wire));
-    return length && air_.sendData(wire, length);
+    return length && air_.sendData(wire, length, wici_link::TxClass::BEACON);
 }
 
 }  // namespace wici_radio

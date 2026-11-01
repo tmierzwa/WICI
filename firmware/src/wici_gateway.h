@@ -14,7 +14,7 @@ namespace wici_gateway {
 
 struct Air {
     virtual ~Air() = default;
-    virtual bool sendData(const uint8_t* wire, size_t length) = 0;
+    virtual bool sendData(const uint8_t* wire, size_t length, wici_link::TxClass traffic) = 0;
     virtual bool sendHack(const uint8_t* wire, size_t length, uint32_t receivedMs) = 0;
 };
 

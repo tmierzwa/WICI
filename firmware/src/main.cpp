@@ -258,26 +258,20 @@ uint32_t wiciNextBeaconMs = 0;
 uint8_t wiciBeacons = 0;
 bool numberedConfigured() { return storeOk && stationStore.config().network.id != 0; }
 struct WiciAir : wici_radio::Air, wici_gateway::Air {
-    bool sendData(const uint8_t* wire, size_t length) override {
-        const bool exception = bench.silenceException && wiciShelter && wiciShelter->exceptionTx();
+    bool sendData(const uint8_t* wire, size_t length, wici_link::TxClass traffic) override {
+        const bool exception = traffic == wici_link::TxClass::OWN && bench.silenceException &&
+                               wiciShelter && wiciShelter->exceptionTx();
         if ((bench.silence && !exception) || bench.busy() || !radioServes() ||
             !wire || length < wici_link::HEADER + wici_link::TAG)
             return false;
-        const config::Config& c = stationStore.config();
+        if (traffic != wici_link::TxClass::OWN && traffic != wici_link::TxClass::TRANSIT &&
+            traffic != wici_link::TxClass::BEACON) return false;
         const bool beacon = ((wire[0] >> 3) & 7) == static_cast<uint8_t>(wici_link::Type::BEACON);
-        if (!beacon && (((wire[0] >> 3) & 7) != static_cast<uint8_t>(wici_link::Type::DATA) ||
-                        length < wici_link::HEADER + 25 + wici_link::TAG)) return false;
-        bool pool = beacon;
-        if (!beacon && !wiciRoot) {
-            const uint8_t* envelope = wire + wici_link::HEADER;
-            const uint16_t sender = static_cast<uint16_t>((envelope[1] << 8) | envelope[2]);
-            const uint16_t recipient = static_cast<uint16_t>((envelope[3] << 8) | envelope[4]);
-            const bool own = sender == c.network.station;
-            const bool receiver = sender == c.receivers[0].number || sender == c.receivers[1].number ||
-                                  recipient == c.receivers[0].number || recipient == c.receivers[1].number;
-            pool = !own && !receiver;
-        }
-        if (pool && !wiciBudget.reserve(beacon, lora::frameAirMs(length), counterS())) return false;
+        if (beacon != (traffic == wici_link::TxClass::BEACON) ||
+            (!beacon && (((wire[0] >> 3) & 7) != static_cast<uint8_t>(wici_link::Type::DATA) ||
+                         length < wici_link::HEADER + 25 + wici_link::TAG))) return false;
+        if (traffic != wici_link::TxClass::OWN &&
+            !wiciBudget.reserve(beacon, lora::frameAirMs(length), counterS())) return false;
         return bench.linkSend(wire, length, true) == nullptr;
     }
     bool sendHack(const uint8_t* wire, size_t length, uint32_t receivedMs) override {

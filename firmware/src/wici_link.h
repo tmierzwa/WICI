@@ -15,6 +15,8 @@ constexpr size_t MAX_PAYLOAD = MAX_FRAME - HEADER - TAG;
 constexpr uint16_t BROADCAST = 0xFFFF;
 
 enum class Type : uint8_t { DATA = 0, HACK = 1, BEACON = 2 };
+// Local scheduler intent, never read from a radio frame's untrusted envelope header.
+enum class TxClass : uint8_t { OWN, TRANSIT, BEACON };
 constexpr uint8_t ACKREQ = 1;
 constexpr uint8_t DOWN = 2;
 
