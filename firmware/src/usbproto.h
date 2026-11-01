@@ -140,8 +140,7 @@ private:
         uint8_t epoch[store::EPOCH] = {};
         uint32_t head = 0;
         uint8_t mid[16] = {};
-        uint8_t targetKey[32] = {};
-        bool hasEph = false;
+        uint8_t key[32] = {};   // EXPORT: target transfer key; ABORT_TARGET: source `eph`
     };
     // Migawka w toku: wiersze `snap` po kolei z rejestru, pamięci zwolnionych wpisów i skrzynki.
     struct Snap {
@@ -183,6 +182,7 @@ private:
     void doStatus(int64_t seq);
     void doCard(int64_t seq);
     void doMigrate(const json::Value& msg, int64_t seq, uint32_t nowMs);
+    void abortTarget(int64_t seq, const uint8_t mid[16], const uint8_t* eph);
     void doXferBegin(const json::Value& msg, int64_t seq, uint32_t nowMs);
     void doXferPart(const json::Value& msg, int64_t seq, uint32_t nowMs);
     void doXferRead(const json::Value& msg, int64_t seq, uint32_t nowMs);

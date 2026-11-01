@@ -458,7 +458,7 @@ void Protocol::doMigrate(const json::Value& msg, int64_t seq, uint32_t nowMs) {
     if (!strcmp(step, "abort")) {
         static const Command target = {"migrate", PREP, {{"step", F::STR, true}, {"mid", F::STR, true},
                                                      {"eph", F::STR, true}}, 3};
-        uint8_t mid[16], candidate[32] = {}, response[32] = {};
+        uint8_t mid[16], candidate[32] = {};
         if (!json::hexField(msg, "mid", mid, sizeof(mid))) { rejected(seq, "invalid", "mid"); return; }
         json::Value forcedValue;
         if (json::field(msg, "forced", forcedValue)) {
@@ -469,8 +469,6 @@ void Protocol::doMigrate(const json::Value& msg, int64_t seq, uint32_t nowMs) {
         const bool hasEph = json::field(msg, "eph", ephValue);
         const bool hasCandidate = json::field(msg, "confirm", confirmValue);
         if (hasEph == hasCandidate) { rejected(seq, "invalid", hasEph ? "confirm" : "eph"); return; }
-        const char* reason = "migration";
-        bool duplicate = false, hasConfirm = false;
         if (hasEph) {
             if (!checkFields(msg, target, bad, sizeof(bad))) { rejected(seq, "invalid", bad); return; }
             char ephText[65];
@@ -487,24 +485,18 @@ void Protocol::doMigrate(const json::Value& msg, int64_t seq, uint32_t nowMs) {
                 pending_.seq = seq;
                 pending_.sinceMs = nowMs;
                 memcpy(pending_.mid, mid, 16);
-                pending_.hasEph = ephText[0] != '\0';
-                if (pending_.hasEph) memcpy(pending_.targetKey, candidate, 32);
+                memcpy(pending_.key, candidate, 32);
                 host_.confirmBegin(Question::MIGRATION_ABORT, "");
                 send("pending", seq, "\"confirm_s\":30");
                 return;
             }
-            if (!host_.migrationAbortTarget(mid, ephText[0] ? candidate : nullptr,
-                                            response, hasConfirm, duplicate, reason)) { rejected(seq, reason); return; }
-            char fields[110];
-            if (hasConfirm) {
-                char hex[65]; hexstr::encode(response, 32, hex);
-                snprintf(fields, sizeof(fields), "\"confirm\":\"%s\",\"duplicate\":%s", hex, duplicate ? "true" : "false");
-            } else snprintf(fields, sizeof(fields), "\"duplicate\":%s", duplicate ? "true" : "false");
-            send("ok", seq, fields);
+            abortTarget(seq, mid, ephText[0] ? candidate : nullptr);
             return;
         }
         if (!checkFields(msg, confirmed, bad, sizeof(bad))) { rejected(seq, "invalid", bad); return; }
         if (!json::hexField(msg, "confirm", candidate, sizeof(candidate))) { rejected(seq, "invalid", "confirm"); return; }
+        const char* reason = "migration";
+        bool duplicate = false;
         if (!host_.migrationAbortSource(mid, candidate, false, duplicate, reason)) { rejected(seq, reason); return; }
         char fields[32];
         snprintf(fields, sizeof(fields), "\"duplicate\":%s", duplicate ? "true" : "false");
@@ -512,6 +504,23 @@ void Protocol::doMigrate(const json::Value& msg, int64_t seq, uint32_t nowMs) {
         return;
     }
     rejected(seq, "migration", "unsupported");
+}
+
+void Protocol::abortTarget(int64_t seq, const uint8_t mid[16], const uint8_t* eph) {
+    uint8_t confirmation[32];
+    bool hasConfirm = false, duplicate = false;
+    const char* reason = "migration";
+    if (!host_.migrationAbortTarget(mid, eph, confirmation, hasConfirm, duplicate, reason)) {
+        rejected(seq, reason);
+        return;
+    }
+    char fields[110];
+    if (hasConfirm) {
+        char hex[65];
+        hexstr::encode(confirmation, sizeof(confirmation), hex);
+        snprintf(fields, sizeof(fields), "\"confirm\":\"%s\",\"duplicate\":%s", hex, duplicate ? "true" : "false");
+    } else snprintf(fields, sizeof(fields), "\"duplicate\":%s", duplicate ? "true" : "false");
+    send("ok", seq, fields);
 }
 
 // --- Synchronizacja --------------------------------------------------------------------------
@@ -906,7 +915,7 @@ void Protocol::finishPending(bool confirmed, uint32_t nowMs) {
             return;
         case Pending::EXPORT: {
             uint8_t sha[32];
-            if (!host_.migrationExport(p.mid, p.targetKey, sha)) { rejected(p.seq, "migration", "export"); return; }
+            if (!host_.migrationExport(p.mid, p.key, sha)) { rejected(p.seq, "migration", "export"); return; }
             xfer_ = Xfer();
             xfer_.op = Xfer::EXPORT;
             xfer_.size = MIGRATION_PACKAGE_BYTES;
@@ -921,21 +930,9 @@ void Protocol::finishPending(bool confirmed, uint32_t nowMs) {
             send("ok", p.seq, fields);
             return;
         }
-        case Pending::ABORT_TARGET: {
-            uint8_t confirmation[32];
-            bool hasConfirm = false, duplicate = false;
-            const char* reason = "migration";
-            if (!host_.migrationAbortTarget(p.mid, p.hasEph ? p.targetKey : nullptr,
-                                            confirmation, hasConfirm, duplicate, reason)) {
-                rejected(p.seq, reason); return;
-            }
-            if (hasConfirm) {
-                char hex[65]; hexstr::encode(confirmation, sizeof(confirmation), hex);
-                snprintf(fields, sizeof(fields), "\"confirm\":\"%s\",\"duplicate\":%s", hex, duplicate ? "true" : "false");
-            } else snprintf(fields, sizeof(fields), "\"duplicate\":%s", duplicate ? "true" : "false");
-            send("ok", p.seq, fields);
+        case Pending::ABORT_TARGET:
+            abortTarget(p.seq, p.mid, p.key);
             return;
-        }
         case Pending::NONE: return;
     }
 }
@@ -1065,7 +1062,7 @@ void Protocol::doXferBegin(const json::Value& msg, int64_t seq, uint32_t nowMs) 
             pending_.seq = seq;
             pending_.sinceMs = nowMs;
             memcpy(pending_.mid, mid, sizeof(mid));
-            memcpy(pending_.targetKey, key, sizeof(key));
+            memcpy(pending_.key, key, sizeof(key));
             host_.confirmBegin(Question::MIGRATION_EXPORT, fp);
             send("pending", seq, "\"confirm_s\":30");
             return;
