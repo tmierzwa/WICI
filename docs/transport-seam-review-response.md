@@ -1,27 +1,53 @@
 # Transport seam review response
 
-Status: software follow-up to `docs/transport-seam-review.md`, 2026-11-01. D21 acceptance is still pending.
+Status: follow-up to `docs/transport-seam-review.md`, 2026-11-01. D21 is not accepted; the bench trial on RAK4631 and the prototype decides it.
 
-| Review finding | Change |
+## Findings
+
+| Finding | Change |
 |---|---|
-| 1, relay liveness | Durable queue entries now expire after 30 minutes and leave a seen marker. A failed next hop no longer holds an origin slot forever. |
-| 2, HACK deadline and K1 admission | A relay commits ordinary frames as K2 before HACK. Ed25519 verification normally runs later and is rechecked after restart. If two K2 slots are occupied, it verifies a signed K1 candidate, commits it into reserved space, and waits for a retry before HACK. It enforces one durable K1 slot per verified origin. |
-| 3, receiver package | The package self-check accepts the pinned OpenSSL backend. A macOS arm64 package was built and imported. CI now builds Windows and both macOS targets. |
-| 4, forced migration | Forced activate and abort commands are rejected. The two independent operator actions that could put the same sender identity on air were removed. |
-| 6, replay amplification | The durable seen ring keys on the envelope identity and payload digest across hop sequence and MAC rewrites. It retains 224 entries for up to one hour. Repeated HACKs for queued or forwarded copies are limited to one per five seconds. The ring is bounded, so this is a traffic bound, not permanent replay prevention at relays. |
-| 7, routing and hop source | Root epochs and each sender's BEACON fields are signed. Down routes are learned only after a valid origin signature. Numbered unicast DATA and HACK now require an 8-byte pairwise hop tag derived from the two neighbors' X25519 identities. The radio boundary verifies this before the relay or USB sees the frame, so a holder of only the shared link key cannot rewrite `l_src` or forge a neighbor HACK. Full route tables evict entries. |
-| 8, parent recovery | A fresh signed BEACON reopens a failed planned or backup parent; the backup may have a worse rank than the previous route. Dynamic neighbor entries no longer displace configured parents. |
-| 9, CI | UI text is generated from the canonical spec, simulator output is rebuilt, crypto sources are fetched for checks, migration vectors are included, and firmware path filters cover the native transport tests. |
+| 1, relay liveness | Queue slots expire after 30 minutes and leave a seen marker; a failed next hop no longer holds an origin slot. |
+| 2, HACK deadline | Frames are committed as K2 before HACK; Ed25519 verification runs later and again after restart. With two K2 slots occupied, a signed K1 candidate is verified, stored in a reserved slot and acknowledged on the sender's retry. One durable K1 slot per verified origin. |
+| 3, receiver package | The self-check accepts the pinned OpenSSL backend. CI builds and imports the package on Linux, Windows and both macOS targets. |
+| 4, forced migration | Forced activate and forced abort are removed. |
+| 5, receiver recovery | Offline rekey: after an old copy is restored the outbound guard stays set until two duty officers stage a new identity and receiver card; activation checks the card against the sealed identity and requires confirmation that stations have it. Interrupted writes keep the guard. |
+| 6, replay amplification | The seen ring keys on envelope identity and payload digest, keeps 224 entries for up to one hour, and limits repeated HACKs to one per 5 s per envelope. It is bounded, so it limits traffic but is not permanent replay protection. |
+| 7, routing and hop source | Root epochs and BEACON route fields are signed. Down-routes are learned only after a valid origin signature. Unicast DATA and HACK carry an 8 B pairwise hop tag from the neighbours' X25519 keys, checked before routing or USB. Full route tables evict entries. |
+| 8, parent recovery | A fresh signed BEACON reopens a failed planned or backup parent, regardless of rank; dynamic neighbours no longer displace configured parents. |
+| 9, CI | UI texts are generated from the spec; the simulator image is rebuilt; `checks.yml` fetches the pinned stack, so native envelope, WICI-Link and migration checks run in every PR. |
+| 10, DCO | Not fixable here: a new sign-off cannot attest to other authors' commits. |
 
-Additional follow-up: durable counter, replay and fragment records now bind to a derived-key fingerprint; unreadable receiver snapshots fail closed; the USB export begin timeout covers the firmware's full image passes; Reticulum is tried when WICI returns no delivery and no operator override requires WICI; origin signatures use the MIT Crypto implementation directly; the package retains wheel metadata and SBOMs and includes OpenSSL's license text.
+Also: counter, replay and fragment records bind to a key fingerprint; unreadable receiver snapshots fail closed; the export-begin timeout covers both image passes; Reticulum is tried when WICI reports no delivery and no operator override requires WICI; origin signatures call the MIT Crypto library directly; the package keeps wheel metadata, SBOMs and the OpenSSL licence.
 
-This follow-up also adds an offline receiver rekey procedure. After an old copy is restored, the outbound guard stays set while two duty officers stage a fresh private identity and receiver card. Activation verifies the staged card against the sealed identity and durable database marker; it requires operator confirmation that stations have the new card. Interrupted writes leave the guard set. Counter reuse under the old identity is therefore not authorized by recovery.
+## Airtime after the fixes
 
-Verification: native hop-auth and relay checks cover a valid pairwise tag, a shared-key frame rewrite with an invalid hop tag, two occupied K2 slots, signed K1 admission, and HACK on retry. Receiver tests cover interrupted staging and activation. The stable full run passed 761 tests (59 skipped), and the reference suite passed 48 tests. Both `l0` and `bench-a` firmware images build; the simulator artifact was rebuilt and its freshness check passes. A macOS arm64 receiver package builds and imports the new rekey module. Two connected Wio SX1262/XIAO boards running the separate `pair-0.4` diagnostic exchanged 3/3 packets in each direction; this is a short radio check, not a WICI-Link protocol acceptance test.
+Unicast DATA = 11 B header + envelope + 64 B origin signature + 8 B network MAC + 8 B hop tag, so 91 B plus the envelope (25 B overhead) and at most 164 B of envelope (`firmware/src/wici_link.h`). HACK is 27 B, BEACON 156 B. Model: `wici_link` in `software/reference/obliczenia.py`, SF7/125 kHz, CR 4/5, preamble 24, 3 ms ramp per frame, relay channel time 13 × TX including HACKs; 95% hop success means 1.0525 transmissions per frame.
 
-Remaining gates:
+| 50 requests through one relay, minutes | buttons only (106 B) | typical (174 B) | largest (222 B) | largest, 95% hop success | largest, with read and decision |
+|---|---|---|---|---|---|
+| signature on every DATA (implemented) | 8.97 | 13.36 | 14.14 | 14.88 | 22.57 |
+| signature once per SA1 message | 8.97 | 12.86 | 13.62 | 14.33 | 22.05 |
+| hop tag only, K1 quota per neighbour | 6.98 | 8.09 | 11.13 | 11.71 | 17.56 |
 
-1. A live multi-station receiver-card provisioning drill and the hostile-node test must exercise the new hop tags and K1 retry behavior on target hardware.
-2. Backup receiver activation still needs a durable counter lifecycle. Torn migration barrier writes deliberately fail closed and need a recovery procedure; the real `BenchHost` migration flow still lacks a host harness.
-3. The historical branch commits lack DCO signoffs. A new signoff cannot attest to another author's past commits; the original contributors must resolve the history.
-4. D21 timing, W10 delivery, and power-loss acceptance still require the target RAK4631 and prototype hardware. Two Wio SX1262/XIAO boards alone do not cover those gates.
+The implemented design meets the W10 gate (<15 min) only with 0.12 min margin at 95% hop success, before collisions, CCA deferrals and a busy root. That is not a credible margin. Other budgets hold: mixed trial (55 revisions) 24.8 min of 60; hostile node (20 largest requests, one 255 B K2 frame before each relayed K1 frame) 11.1 min, 11.7 min at 95% and 19.4 min at 50% of 30; cold start of 50 stations 2.1 min of airtime, 5% of the TEST window, with 22% of it for the relay before the receiver.
+
+## Origin signature or hop tag
+
+Keys come from USB-provisioned cards, and every station holds the shared network key, so one captured station leaks it.
+
+- The hop tag stops a network-key holder from forging a neighbour's `l_src` or a HACK. A forged HACK makes the sender drop a frame it believes delivered, and SA1 retries only after 10 minutes. The origin signature cannot stop this; it covers neither HACK nor hop fields.
+- The origin signature additionally stops a captured station from claiming K1 or redirecting down-routes under another station's number at relays two or more hops away. At its own parent, one K1 slot per authenticated neighbour gives the same bound as one slot per verified origin today.
+- In the pilot plan (at most two hops to the receiver) every relay sees origins as direct neighbours, so the signature adds nothing that a per-neighbour K1 quota and down-routes learned only for the neighbour itself or stations the network plan places behind it do not give. Signing only K1 frames changes nothing, because all W10 traffic is K1.
+
+Recommendation: keep the hop tag and the BEACON signatures, remove the origin signature from DATA, and add the per-neighbour K1 quota and plan-bound down-route learning. This restores 3.3 min (22%) of W10 margin at 95% hop success and removes Ed25519 verification from the relay. The protocol is unchanged in this branch; the D21 row in chapter 08 records the question as open for the coordinator.
+
+## Verification
+
+Native checks cover a valid pairwise tag, a shared-key rewrite with an invalid hop tag, two occupied K2 slots, signed K1 admission with HACK on retry, and interrupted receiver staging and activation. On 2026-11-01: the reference suite passes 49 tests; `python3 -m unittest discover -s tests` with the whole pinned stack passes 761 tests (60 skipped, each covered by a dedicated CI job); the publication job's run on Python 3.14 with only Crypto fetched has no skip for a missing compiler, cryptography or Unicode version; `tools/verify_repository.py --pull-request` and `reuse lint` pass. Earlier in this follow-up `l0` and `bench-a` built and a macOS arm64 receiver package built and imported the rekey module. Two Wio SX1262/XIAO boards exchanged 3/3 packets each way on the `pair-0.4` diagnostic; that is a radio check, not a WICI-Link acceptance test.
+
+## Remaining gates
+
+1. The bench trial on RAK4631 and the prototype: W10, the hostile-node test with hop tags and K1 retry, HACK within 200 ms, power loss, energy and RAM (`docs/spec/transport.md`, "Warunek przyjęcia"). Two Wio SX1262/XIAO boards passed only a short radio check.
+2. Backup receiver activation still needs a durable counter lifecycle. Torn migration barrier writes fail closed and need a recovery procedure; the real `BenchHost` migration flow has no host harness.
+3. DCO sign-offs for the historical branch commits must come from their authors.
+4. The decision on the DATA origin signature (above).
