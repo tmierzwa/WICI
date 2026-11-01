@@ -10,9 +10,6 @@
 
 namespace wici_hop_auth {
 
-constexpr size_t TAG = 8;
-constexpr size_t MAX_BARE = wici_link::MAX_FRAME - TAG;
-
 class Auth {
 public:
     bool begin(uint16_t network, uint16_t own, const uint8_t privateKey[32],

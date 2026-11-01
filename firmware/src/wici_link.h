@@ -8,11 +8,14 @@
 
 namespace wici_link {
 
+constexpr uint8_t VERSION = 2;
 constexpr size_t HEADER = 11;
-constexpr size_t TAG = 8;
+constexpr size_t TAG = 8;               // network MAC
+constexpr size_t HOP_TAG = 8;           // pairwise neighbor tag on unicast radio frames
 constexpr size_t ORIGIN_SIGNATURE = 64;
 constexpr size_t MAX_FRAME = 255;
-constexpr size_t MAX_PAYLOAD = MAX_FRAME - HEADER - ORIGIN_SIGNATURE - TAG - 8;  // unicast hop tag
+constexpr size_t MAX_PAYLOAD = MAX_FRAME - HEADER - ORIGIN_SIGNATURE - TAG - HOP_TAG;
+constexpr size_t RADIO_HACK = HEADER + TAG + HOP_TAG;  // HACK as transmitted
 constexpr uint16_t BROADCAST = 0xFFFF;
 
 enum class Type : uint8_t { DATA = 0, HACK = 1, BEACON = 2 };

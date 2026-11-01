@@ -28,7 +28,7 @@ int main() {
     const size_t bareLength = wici_link::encode(groupKey, frame, bare, sizeof(bare));
     assert(bareLength == 19);
     size_t radioLength = sender.seal(bare, bareLength, radio, sizeof(radio));
-    assert(radioLength == bareLength + wici_hop_auth::TAG);
+    assert(radioLength == bareLength + wici_link::HOP_TAG && radioLength == wici_link::RADIO_HACK);
     size_t openedLength = 0;
     assert(receiver.open(radio, radioLength, opened, sizeof(opened), openedLength));
     assert(openedLength == bareLength && !memcmp(opened, bare, bareLength));

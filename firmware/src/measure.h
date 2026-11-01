@@ -145,7 +145,7 @@ public:
     // caller authenticates frames; CAD, silence and durable airtime debt stay here.
     bool setRawLora(bool enabled);
     bool rawLora() const { return rawLora_; }
-    // An already authenticated 19 B HACK may interrupt a queued DATA. It uses
+    // An already authenticated 27 B HACK may interrupt a queued DATA. It uses
     // CAD without the 50 ms window and adds its airtime to outstanding debt.
     // Caller provides the radio receive-end timestamp for the 200 ms limit.
     bool linkSendHack(const uint8_t* frame, size_t length, uint32_t receivedMs);

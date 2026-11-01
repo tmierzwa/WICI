@@ -1904,7 +1904,8 @@ int main() {
            static_cast<unsigned long>(bench.link().rxBad - badBefore));
     // HACK bypasses the ordinary 50 ms window and outstanding debt, but
     // reserves its own airtime plus debt before the radio starts transmitting.
-    uint8_t hack[19] = {0x48, 0, 100, 0, 2, 0, 4, 1};
+    // A WICI-Link v2 HACK as transmitted: 11 B header, network MAC and pairwise tag.
+    uint8_t hack[27] = {0x88, 0, 100, 0, 2, 0, 4, 1};
     radio.ops.clear();
     radio.sent.clear();
     const bool hackFirst = bench.linkSendHack(hack, sizeof(hack), millis());
@@ -1924,9 +1925,11 @@ int main() {
     const bool silentHack = bench.linkSendHack(hack, sizeof(hack), millis());
     bench.silence = false;
     const bool lateHack = bench.linkSendHack(hack, sizeof(hack), millis() - 201);
-    const uint8_t malformedHack[19] = {};
+    const uint8_t malformedHack[27] = {};
     const bool malformedSent = bench.linkSendHack(malformedHack, sizeof(malformedHack), millis());
-    printf("HACK_REFUSE %d %d %d %d\n", silentHack, lateHack, malformedSent,
+    const uint8_t untaggedHack[19] = {0x88, 0, 100, 0, 2, 0, 4, 1};
+    const bool untaggedSent = bench.linkSendHack(untaggedHack, sizeof(untaggedHack), millis());
+    printf("HACK_REFUSE %d %d %d %d %d\n", silentHack, lateHack, malformedSent, untaggedSent,
            radio.sent.size() == beforeRefusal);
     radio.cadBusy = 1;
     const bool busyHack = bench.linkSendHack(hack, sizeof(hack), millis());
@@ -2612,9 +2615,11 @@ class LoraBenchTests(unittest.TestCase):
         self.assertEqual(line(self.out, "RAW_SHORT"), "RAW_SHORT 0 1")
 
     def test_raw_hack_preempts_queued_data_and_stacks_durable_debt(self):
-        self.assertEqual(line(self.out, "HACK_FIRST"), "HACK_FIRST 1 prep:0 cad:0 send:923 rx 923 852")
-        self.assertEqual(line(self.out, "HACK_QUEUE"), "HACK_QUEUE - 1 1775 2 1 3")
-        self.assertEqual(line(self.out, "HACK_REFUSE"), "HACK_REFUSE 0 0 0 1")
+        # The radio HACK is 27 B (header, network MAC, pairwise tag): 87 ms, 13 x 87 ms in the journal.
+        # The untagged 19 B form is refused, so a HACK cannot leave without the neighbor tag.
+        self.assertEqual(line(self.out, "HACK_FIRST"), "HACK_FIRST 1 prep:0 cad:0 send:1131 rx 1131 1044")
+        self.assertEqual(line(self.out, "HACK_QUEUE"), "HACK_QUEUE - 1 2175 2 1 3")
+        self.assertEqual(line(self.out, "HACK_REFUSE"), "HACK_REFUSE 0 0 0 0 1")
         self.assertEqual(line(self.out, "HACK_FAIL"), "HACK_FAIL 0 0 1 1")
         self.assertEqual(line(self.out, "HACK_SLOW"), "HACK_SLOW 0 1 1")
         self.assertEqual(line(self.out, "HACK_FULL_DEBT"), "HACK_FULL_DEBT 0 1")

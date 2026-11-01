@@ -8,6 +8,7 @@
 
 namespace wici_hop_auth {
 namespace {
+constexpr size_t TAG = wici_link::HOP_TAG;
 constexpr uint8_t LABEL[] = {'W','I','C','I',' ','h','o','p',' ','v','1'};
 uint16_t u16(const uint8_t* p) { return static_cast<uint16_t>((p[0] << 8) | p[1]); }
 void tag(const uint8_t key[32], const uint8_t* frame, size_t length, uint8_t out[32]) {

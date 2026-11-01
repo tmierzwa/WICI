@@ -37,8 +37,9 @@ static_assert(EMC_PERIOD_FACTOR == radiolink::DEBT_FACTOR + 1, "EMC_PERIOD_FACTO
 constexpr uint32_t debtForTxMs(uint32_t txMs) { return txMs * radiolink::DEBT_FACTOR; }
 
 bool validRawHack(const uint8_t* frame, size_t length) {
-    constexpr uint8_t HACK_HEADER = (1u << 6) | (static_cast<uint8_t>(wici_link::Type::HACK) << 3);
-    if (!frame || length != wici_link::HEADER + wici_link::TAG ||
+    // A pairwise-tagged WICI-Link v2 HACK; the tags themselves are checked by the caller.
+    constexpr uint8_t HACK_HEADER = (wici_link::VERSION << 6) | (static_cast<uint8_t>(wici_link::Type::HACK) << 3);
+    if (!frame || length != wici_link::RADIO_HACK ||
         frame[0] != HACK_HEADER || frame[7] != 1 || frame[10] != 0) return false;
     uint16_t ids[3];
     for (size_t at = 1; at <= 5; at += 2) {

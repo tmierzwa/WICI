@@ -55,7 +55,7 @@ size_t encode(const uint8_t key[32], const Frame& frame, uint8_t* out, size_t ca
     const size_t signature = frame.type == Type::DATA ? ORIGIN_SIGNATURE : 0;
     if (!key || !out || !valid(frame) || capacity < HEADER + frame.length + signature + TAG) return 0;
     uint8_t local[MAX_FRAME] = {};
-    local[0] = static_cast<uint8_t>((2 << 6) | (static_cast<uint8_t>(frame.type) << 3) | frame.flags);
+    local[0] = static_cast<uint8_t>((VERSION << 6) | (static_cast<uint8_t>(frame.type) << 3) | frame.flags);
     put16(local + 1, frame.network);
     put16(local + 3, frame.source);
     put16(local + 5, frame.destination);
@@ -82,7 +82,7 @@ bool decode(const uint8_t key[32], uint16_t netId, const uint8_t* wire, size_t s
     if (mismatch) return false;
     Frame proposed;
     const uint8_t first = wire[0];
-    if ((first >> 6) != 2 || (first & 4) || wire[10] != 0 || get16(wire + 1) != netId ||
+    if ((first >> 6) != VERSION || (first & 4) || wire[10] != 0 || get16(wire + 1) != netId ||
         ((first >> 3) & 7) > static_cast<uint8_t>(Type::BEACON)) return false;
     proposed.type = static_cast<Type>((first >> 3) & 7);
     proposed.flags = first & 3;
