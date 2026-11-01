@@ -10,6 +10,11 @@
 
 namespace usbproto {
 
+void Host::migration(char* phase, size_t phaseSize, char* mid, size_t midSize) {
+    if (phaseSize) snprintf(phase, phaseSize, "none");
+    if (midSize) mid[0] = '\0';
+}
+
 namespace {
 
 // Dopisanie do wiersza; false, gdy wiersz przekroczyłby bufor.
@@ -272,13 +277,14 @@ void Protocol::hello() {
     char lxmfHex[2 * store::HASH + 1] = "", epoch[2 * store::EPOCH + 1];
     if (store_.station() && host_.identity(key, lxmf)) hexstr::encode(lxmf, store::HASH, lxmfHex);
     hexstr::encode(store_.meta().epoch, store::EPOCH, epoch);
-    char fields[400];
+    char fields[400], migration[16], mid[33];
+    host_.migration(migration, sizeof(migration), mid, sizeof(mid));
     snprintf(fields, sizeof(fields),
              "\"boot\":\"%s\",\"contracts\":[%u],\"name\":\"%s\",\"lxmf\":\"%s\",\"fw\":\"%s\",\"role\":\"%s\",\"prep\":%s,"
-             "\"configured\":%s,\"epoch\":\"%s\",\"head\":%lu,\"min\":%lu,\"migration\":\"none\"",
+             "\"configured\":%s,\"epoch\":\"%s\",\"head\":%lu,\"min\":%lu,\"migration\":\"%s\"",
              boot_, static_cast<unsigned>(CONTRACT), host_.stationName(), lxmfHex, host_.version(),
              store_.configured() && !store_.station() ? "wezel" : "stacja", boolName(host_.prep()), boolName(store_.configured()), epoch,
-             static_cast<unsigned long>(store_.head()), static_cast<unsigned long>(store_.minEvent()));
+             static_cast<unsigned long>(store_.head()), static_cast<unsigned long>(store_.minEvent()), migration);
     send("hello", -1, fields);
 }
 
@@ -756,7 +762,8 @@ void Protocol::finishPending(bool confirmed) {
 
 void Protocol::doStatus(int64_t seq) {
     const store::Meta& m = store_.meta();
-    char fields[MAX_LINE - 64], radio[160], power[160], diag[200];
+    char fields[MAX_LINE - 64], radio[160], power[160], diag[200], migration[16], mid[33];
+    host_.migration(migration, sizeof(migration), mid, sizeof(mid));
     currentRadioFields(radio, sizeof(radio));
     host_.power(power, sizeof(power));
     host_.diag(diag, sizeof(diag));
@@ -768,12 +775,12 @@ void Protocol::doStatus(int64_t seq) {
     snprintf(fields, sizeof(fields),
              "\"role\":\"%s\",\"prep\":%s,\"configured\":%s,\"config_seq\":%lu,\"fw\":\"%s\",\"secure_version\":0,\"fram_format\":%lu,"
              "\"uptime\":%lu,\"register\":%u,\"intents\":%u,\"inbox\":%u,\"unread\":%u,\"receiver\":\"%s\",\"last_contact\":%s,"
-             "\"last_contact_lower\":%s,%s,\"power\":{%s},\"migration\":\"none\",\"mid\":\"\",\"diag\":{%s}",
+             "\"last_contact_lower\":%s,%s,\"power\":{%s},\"migration\":\"%s\",\"mid\":\"%s\",\"diag\":{%s}",
              store_.configured() && !store_.station() ? "wezel" : "stacja", boolName(host_.prep()), boolName(store_.configured()),
              static_cast<unsigned long>(store_.config().seq), host_.version(), static_cast<unsigned long>(journal::FRAM_FORMAT),
              static_cast<unsigned long>(host_.counterS()), static_cast<unsigned>(store_.requestCount()), static_cast<unsigned>(store_.activeIntents()),
              static_cast<unsigned>(store_.messageCount()), static_cast<unsigned>(store_.unread()), m.receiver == config::BACKUP ? "backup" : "main",
-             contact, boolName(m.contactKnown && host_.contactBeforeStart()), radio, power, diag);
+             contact, boolName(m.contactKnown && host_.contactBeforeStart()), radio, power, migration, mid, diag);
     send("status", seq, fields);
 }
 

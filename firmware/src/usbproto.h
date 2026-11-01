@@ -61,6 +61,8 @@ struct Host {
     // Pola `power` i `diag` odpowiedzi `status` (obiekty JSON bez nawiasów zewnętrznych).
     virtual void power(char* out, size_t size) = 0;
     virtual void diag(char* out, size_t size) = 0;
+    // Durable migration barrier, including a corrupt state which must remain visible to the laptop.
+    virtual void migration(char* phase, size_t phaseSize, char* mid, size_t midSize);
     virtual bool announce() = 0;                           // ogłoszenie adresu; false: stos nie działa
     virtual bool destroy() = 0;                            // ZNISZCZ DANE: magazyn, dziennik, tożsamość
     virtual void configChanged(bool roleChanged) = 0;      // nowa konfiguracja (zmiana roli: restart)

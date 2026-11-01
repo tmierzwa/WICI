@@ -417,6 +417,11 @@ struct FakeHost : usbproto::Host {
                  diagPad ? "\"" : "");
     }
     int diagPad = 0;   // dłuższe `diag` i `power` w `status` (stacja ma tam więcej pól niż program testowy)
+    char migrationName[16] = "none";
+    void migration(char* phase, size_t phaseSize, char* mid, size_t midSize) override {
+        snprintf(phase, phaseSize, "%s", migrationName);
+        snprintf(mid, midSize, "%s", strcmp(migrationName, "none") ? "00112233445566778899aabbccddeeff" : "");
+    }
     void diag(char* out, size_t size) override {
         static const std::string pad(400, 'x');
         snprintf(out, size, "\"corrupt\":0%s%.*s%s", diagPad ? ",\"pad\":\"" : "", diagPad, pad.c_str(), diagPad ? "\"" : "");
@@ -817,6 +822,7 @@ int world() {
             w.proto->feed("\n", 1, w.ms);
         } else if (!strcmp(cmd, "upoll")) w.proto->poll(w.ms);
         else if (!strcmp(cmd, "prep")) w.host.prepFlag = atoi(arg) != 0;
+        else if (!strcmp(cmd, "migration")) snprintf(w.host.migrationName, sizeof(w.host.migrationName), "%s", arg);
         else if (!strcmp(cmd, "announce")) w.host.announceOk = atoi(arg) != 0;
         else if (!strcmp(cmd, "diagpad")) w.host.diagPad = atoi(arg);
         else if (!strcmp(cmd, "cause")) printf("cause %d\n", w.con->alarmCause());
@@ -1966,6 +1972,15 @@ class HostUnitTests(unittest.TestCase):
             else:
                 script.append(step)
         return self.world(script), u
+
+    def test_usb_reports_durable_migration_barrier(self):
+        replies = self.replies(self.world([
+            "migration export", "connect",
+            'usb {"usb":2,"seq":1,"type":"status"}',
+        ]))
+        self.assertEqual(replies[0]["migration"], "export")
+        self.assertEqual(replies[1]["migration"], "export")
+        self.assertEqual(replies[1]["mid"], "00112233445566778899aabbccddeeff")
 
     def test_usb_hello_seq_fields_and_rejections(self):
         def line(seq, type_, usb=2, **fields):

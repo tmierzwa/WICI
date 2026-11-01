@@ -1,6 +1,6 @@
 # WICI: protokół USB laptop–stacja
 
-Rozdział jest samodzielnym kontraktem implementacyjnym protokołu między aplikacją laptopa (poziomy 2–3) albo laptopem osoby utrzymującej system (tryb przygotowania) a stacją. Zamyka decyzję D17 po stronie specyfikacji; próby są w [odbiorze](odbior.md) (wiersze „Protokół USB”, „Laptop i USB”, „Przeniesienie”, „Aktualizacja oprogramowania”). Program stacji (`firmware/src/usbproto.cpp`) realizuje wersję 2 bez przeniesienia i bez aktualizacji oprogramowania: `migrate` daje `migration` (`unsupported`), `xfer_begin` z `op` `import` albo `export` daje `migration`, a z `op` `firmware` `invalid`. Gdzie ten rozdział i kod się różnią, rację ma kod; różnice wymienia [przegląd](../review.md) (F107).
+Rozdział jest samodzielnym kontraktem implementacyjnym protokołu między aplikacją laptopa (poziomy 2–3) albo laptopem osoby utrzymującej system (tryb przygotowania) a stacją. Zamyka decyzję D17 po stronie specyfikacji; próby są w [odbiorze](odbior.md) (wiersze „Protokół USB”, „Laptop i USB”, „Przeniesienie”, „Aktualizacja oprogramowania”). Program stacji (`firmware/src/usbproto.cpp`) realizuje wersję 2 bez przeniesienia i bez aktualizacji oprogramowania: `migrate` daje `migration` (`unsupported`), `xfer_begin` z `op` `import` albo `export` daje `migration`, a z `op` `firmware` `invalid`. Prymitywy kryptograficzne i bariera FRAM są zaimplementowane osobno; nie stanowią jeszcze obsługi tych poleceń. Gdzie ten rozdział i kod się różnią, rację ma kod; różnice wymienia [przegląd](../review.md) (F107).
 
 W pilotażu protokół służy tylko w trybie przygotowania: konfiguracja, karta stacji, PRZENIEŚ STACJĘ i aktualizacja oprogramowania. Aplikacja laptopa w schronieniu (poziomy 2–3) dochodzi po pilotażu i używa tego samego kontraktu.
 
@@ -119,7 +119,7 @@ Inaczej stacja odpowiada `stale`, a laptop synchronizuje się i archiwizuje pono
 | `stored`, `ok`, `pending`, `data`, `status`, `card` | według polecenia | odpowiedź |
 | `rejected` | `re`, `reason`, opcjonalnie `detail` | odmowa; stan stacji bez zmian |
 
-Pola `hello`: `epoch` to bieżąca epoka pierścienia zdarzeń, `head` numer ostatniego zdarzenia, `min` najstarszego zachowanego, `migration` stan [przeniesienia](#przeniesienie-stacji) (`none`, `receiving`, `export`, `imported`, `retired`).
+Pola `hello`: `epoch` to bieżąca epoka pierścienia zdarzeń, `head` numer ostatniego zdarzenia, `min` najstarszego zachowanego, `migration` stan [przeniesienia](#przeniesienie-stacji) (`none`, `receiving`, `export`, `importing`, `imported`, `retired`, `aborted` albo `corrupt`). `corrupt` oznacza niespójny trwały znacznik i blokuje emisję; nie wolno interpretować go jako `none`.
 
 **Pola decyzji** (w `stage` i w wierszu `snap` zgłoszenia): `decision` to liczba 0 (brak decyzji) albo stan 2–6 z ostatniego przyjętego STATUS, `decision_rev` rewizja tego STATUS (0, gdy `decision` = 0), `status_event` najwyższy przyjęty `event` STATUS (0, gdy brak).
 

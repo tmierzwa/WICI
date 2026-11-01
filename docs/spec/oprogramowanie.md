@@ -264,6 +264,7 @@ Każdy magazyn ma stałą liczbę gniazd o stałym rozmiarze; nie ma dziennika d
 | wejścia w tryb przygotowania ([naklejka serwisowa](#tryb-przygotowania-i-naklejka-serwisowa)) | pierścień 10 rekordów × 24 B w jawnym obszarze | 240 B | najstarszy rekord; licznik wejść tylko rośnie, ZNISZCZ DANE i ZAMKNIJ ZDARZENIE go nie kasują |
 | rekord transakcji (pełne nowe bajty zmienianych gniazd) | 2 × 4 KiB | 8 KiB | stały rozmiar; największa transakcja ≤4 KiB łącznie z nagłówkiem |
 | tablice stosu: trasy, tożsamości, ogłoszenia ([pojemności](#pojemności-stosu)) | ≥256 wpisów (257 gniazd × 568 B) | ≤143 KiB | najdawniej używany wpis poza chronionymi |
+| bariera przeniesienia stacji | 2 × 256 B | 512 B | uszkodzenie albo stan przejściowy blokuje nadawanie do rozstrzygnięcia przeniesienia |
 | **suma** | | **≈413 KiB** | 81% z 512 KiB |
 
 **Tablice stosu: wyjątki.** Tablice stosu są pamięcią podręczną protokołu Reticulum (Python zapisuje je co kilka godzin i przy wyjściu), nie stanem zgłoszeń, więc mają trzy jawne wyjątki od zasad tego podrozdziału:

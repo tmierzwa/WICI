@@ -34,7 +34,7 @@
 namespace store {
 
 // Układ FRAM (512 KiB): dziennik 0x00000–0x08FFF (journal.h), magazyny 0x09000–0x43FFF,
-// tożsamość i system plików stosu 0x44000–0x7FFFF (framfs.h).
+// tożsamość, system plików stosu i bariera przeniesienia 0x44000–0x7FFFF.
 constexpr uint32_t TX_BASE = 0x009000;
 constexpr uint32_t TX_AREA = 4096;
 constexpr uint32_t CONFIG_BASE = 0x00B000;            // kopie A i B

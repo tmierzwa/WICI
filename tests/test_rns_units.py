@@ -764,7 +764,7 @@ class StackUnitTests(unittest.TestCase):
 
     def test_file_system_operations_and_remount(self):
         out = self.run_harness("fs")
-        self.assertEqual(out[0], "mount 1 formats 1 blocks 1527")
+        self.assertEqual(out[0], "mount 1 formats 1 blocks 1523")
         self.assertIn("write 1000", out)
         self.assertIn("append 300", out)
         self.assertIn("read 1300 size 1300", out)

@@ -39,6 +39,7 @@
 #include "framfs.h"
 #include "hexstr.h"
 #include "journal.h"
+#include "migration_state.h"
 #include "kiss.h"
 #include "jsonprint.h"
 #include "measure.h"
@@ -79,6 +80,7 @@ constexpr const char* BENCH = "A";
 
 fram::Memory memory(platform::bus(), board::FRAM_CS, board::FRAM_SPI_HZ);
 journal::Journal stationJournal(memory);
+migration_state::Barrier migrationBarrier(memory);
 measure::Bench bench(radiocon::link(), board::BTN_OK, board::LED_HEARTBEAT);
 #if defined(WICI_BOARD_N1)
 sharp::Display display(platform::bus(), board::DISPLAY_CS, board::DISPLAY_EXTCOMIN, board::DISPLAY_SPI_HZ);
@@ -199,6 +201,24 @@ struct BenchHost : usbproto::Host {
     bool contactBeforeStart() override { return stationStore.meta().contactS < startServiceS; }
     void power(char* out, size_t size) override;
     void diag(char* out, size_t size) override;
+    void migration(char* phase, size_t phaseSize, char* mid, size_t midSize) override {
+        const char* name = "corrupt";
+        if (migrationBarrier.ready()) {
+            switch (migrationBarrier.record().phase) {
+                case migration_state::Phase::NONE: name = "none"; break;
+                case migration_state::Phase::RECEIVING: name = "receiving"; break;
+                case migration_state::Phase::EXPORT: name = "export"; break;
+                case migration_state::Phase::IMPORTING: name = "importing"; break;
+                case migration_state::Phase::IMPORTED: name = "imported"; break;
+                case migration_state::Phase::RETIRED: name = "retired"; break;
+                case migration_state::Phase::ABORTED: name = "aborted"; break;
+            }
+        }
+        if (phaseSize) snprintf(phase, phaseSize, "%s", name);
+        if (midSize) mid[0] = '\0';
+        if (migrationBarrier.ready() && migrationBarrier.record().phase != migration_state::Phase::NONE && midSize >= 33)
+            hexstr::encode(migrationBarrier.record().mid, 16, mid);
+    }
     bool announce() override;
     bool destroy() override;
     void configChanged(bool roleChanged) override;
@@ -393,8 +413,9 @@ void applyReceivers() {
 // datagramy od stosu, który przepuszcza wymianę jednego zgłoszenia (rns_node.h).
 void applySilence() {
     const store::Silence mode = storeOk ? store::silenceMode(stationStore.meta(), switchSilence) : switchSilence ? store::Silence::FULL : store::Silence::OFF;
-    bench.silence = mode != store::Silence::OFF;
-    bench.silenceException = mode == store::Silence::EXCEPTION;
+    const bool migrationLocked = !migrationBarrier.permitsTransmit();
+    bench.silence = mode != store::Silence::OFF || migrationLocked;
+    bench.silenceException = mode == store::Silence::EXCEPTION && !migrationLocked;
     rnsnode::setSilence(mode == store::Silence::EXCEPTION ? rnsnode::Silence::EXCEPTION : bench.silence ? rnsnode::Silence::FULL : rnsnode::Silence::OFF);
     // Datagram przyjęty przed ciszą albo dla innego wyjątku nie wychodzi: przy wyjątku łącze przepuszcza
     // każdy datagram stosu, więc ruch sprzed zmiany (przekazywany, ogłoszenie) odpada tu, nie w łączu.
@@ -1382,6 +1403,12 @@ void beginStack() {
         bench.log("rns not started: FRAM, journal or store unavailable");
         return;
     }
+    if (!migrationBarrier.permitsTransmit()) {
+        stackState = migrationBarrier.ready() ? StackState::HALTED : StackState::UNAVAILABLE;
+        applySilence();
+        bench.log("rns not started: migration barrier active or unavailable");
+        return;
+    }
     rnsnode::Hooks hooks;
     hooks.packet = onPacket;
     hooks.receipt = onReceipt;
@@ -1575,6 +1602,8 @@ void stationSetup() {
         snprintf(text, sizeof(text), "store: %s", store::beginName(begun));
         bench.log(text);
     }
+    if (framOk && !migrationBarrier.begin()) bench.log("migration barrier corrupt or unavailable");
+    applySilence();
     protocol.begin();
     beginStack();
     beginWici();

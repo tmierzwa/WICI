@@ -542,7 +542,8 @@ Kod jest w czterech plikach. `src/journal.cpp` obsługuje jawny obszar: dług ci
 | pamięć zwolnionych wpisów | 0x40000 | 16 × 512 B | 256 wpisów (id, `r_max`, numer zdarzenia `released`, krótki numer, znacznik anulowania) |
 | pierścień zdarzeń | 0x42000 | 16 × 512 B | 256 zdarzeń 24 B dla laptopa (bez treści SA1, którą `event` bierze z rejestru albo skrzynki) |
 | tożsamość Reticulum (`src/framfs.cpp`) | 0x44000 | 2 × 128 B | klucz prywatny 64 B, numer, CRC-16; nowszy z dwóch slotów ([stos](#tożsamość-i-tablice-w-fram)) |
-| tablice stosu | 0x48000 | 224 KiB | na rdzeniu tablica znanych celów i tras w gniazdach; w obrazach z portem system plików z magazynami microStore (tablica tras, znane tożsamości, buforowane ogłoszenia) ([tablice w FRAM](#tożsamość-i-tablice-w-fram)) |
+| tablice stosu | 0x48000 | 223,5 KiB | na rdzeniu tablica znanych celów i tras w gniazdach; w obrazach z portem system plików z magazynami microStore (tablica tras, znane tożsamości, buforowane ogłoszenia) ([tablice w FRAM](#tożsamość-i-tablice-w-fram)) |
+| stan przeniesienia | 0x7FE00 | 512 B | dwa trwałe rekordy bariery przeniesienia; niepewny stan blokuje nadawanie |
 
 Zasady:
 
@@ -734,7 +735,8 @@ Program na komputerze z `--node` zastępuje port CDC pseudoterminalem (nazwa w z
 | Obszar | Adres | Treść |
 |---|---|---|
 | rekord tożsamości | 0x44000 | 2 sloty × 128 B: znacznik, numer, klucz prywatny 64 B (X25519 + Ed25519), CRC-16; zapis do starszego slotu z odczytem kontrolnym |
-| system plików stosu (port) | 0x48000–0x7FFFF | nagłówek, 320 węzłów × 96 B, tablica przydziału 2 B na blok, 1 527 bloków × 128 B (195 456 B danych) |
+| system plików stosu (port) | 0x48000–0x7FDFF | nagłówek, 320 węzłów × 96 B, tablica przydziału 2 B na blok, 1 523 bloki × 128 B (194 944 B danych) |
+| bariera przeniesienia | 0x7FE00–0x7FFFF | dwa rekordy po 256 B; niepewny lub aktywny stan przeniesienia blokuje nadawanie przed startem stosu |
 
 Rdzeń Reticulum (obrazy z rdzeniem i `host`; [reticulum-core.md](reticulum-core.md)) nie używa systemu plików. W tym samym obszarze od 0x48000 ma tablicę znanych celów i tras (`lib/reticulum_core/src/table.h`): 257 gniazd po 568 B (145 976 B). Gniazdo zawiera znacznik zatwierdzenia, numer gniazda i zapisu, cel, ratchet z czasem przyjęcia i emisji, trasę (skoki, następny skok, wygaśnięcie, ostatnie użycie), czas ostatniego użycia wpisu, ogłoszenie trasy do 465 B i CRC-32. Klucz publiczny i skrót losowy są częścią ogłoszenia, a bez ogłoszenia leżą w tym samym miejscu same. W RAM jest indeks 257 × 24 B (cel, czas ostatniego użycia wpisu i trasy) i bufor jednego gniazda.
 
