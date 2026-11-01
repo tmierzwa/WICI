@@ -10,8 +10,9 @@ namespace wici_link {
 
 constexpr size_t HEADER = 11;
 constexpr size_t TAG = 8;
+constexpr size_t ORIGIN_SIGNATURE = 64;
 constexpr size_t MAX_FRAME = 255;
-constexpr size_t MAX_PAYLOAD = MAX_FRAME - HEADER - TAG;
+constexpr size_t MAX_PAYLOAD = MAX_FRAME - HEADER - ORIGIN_SIGNATURE - TAG;
 constexpr uint16_t BROADCAST = 0xFFFF;
 
 enum class Type : uint8_t { DATA = 0, HACK = 1, BEACON = 2 };
@@ -27,6 +28,7 @@ struct Frame {
     uint8_t hops = 0, ttl = 0;
     uint8_t payload[MAX_PAYLOAD] = {};
     size_t length = 0;
+    uint8_t originSignature[ORIGIN_SIGNATURE] = {};  // DATA only; preserved across hops
 };
 
 // Derive a link-only key from the 16-byte IFAC. The envelope has an unrelated key.

@@ -248,6 +248,7 @@ Zapis: `xfer_begin` → `ok` z `xfer` (8 cyfr szesnastkowych) i `"max_part":512`
 | `ifac` | 32 cyfry szesnastkowe | kod dostępu sieci |
 | `radio` | `{"profile":…}`: `lora-sf7` ([profil LoRa pilotażu](radio.md#profil-lora-pilotażu)) albo `p1` (profil wstrzymanego wariantu P1, [archiwum](../archiwum/README.md); obrazy `bench-*` go jeszcze używają) | profil radiowy; inny niż profil układu radiowego stacji daje `invalid` z `radio` |
 | `network` | opcjonalny obiekt z numerami u16 1–65534: `id`, `station`, `root`, `receiver_main`, `receiver_backup`; `parent` i `backup_parent` dopuszczają też 0 | konfiguracja numerowana dla D21; węzeł ma `station=root` i obu rodziców 0, stacja schronienia ma inny numer i rodzica niezerowego; numery stacji, węzła i obu odbiorców są rozłączne |
+| `priority_keys` | opcjonalna lista do 50 obiektów `{"id": numer stacji, "ed25519": 64 małe cyfry szesnastkowe}` | tylko numerowana stacja schronienia; klucze podpisu pochodzenia K1 z kart innych stacji; numery są unikatowe, różne od numeru własnego i odbiorców |
 
 Przy `network` każda tożsamość w `receiver` zawiera też `id`, `net_id` i `x25519` (64 cyfry szesnastkowe). `id` musi zgadzać się z `receiver_main` albo `receiver_backup`, `net_id` z `network.id`, a `x25519` z pierwszymi 32 B pełnego klucza `key`. Stare dokumenty bez `network` zachowują dwupolowe karty odbiorcy. Karta stacji wydana dla konfiguracji numerowanej podaje `net_id`, `id` i `x25519`; rejestr stanowiska odrzuca ponowne związanie tego samego numeru z innym kluczem.
 

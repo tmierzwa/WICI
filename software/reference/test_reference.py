@@ -125,12 +125,13 @@ class MainProfile(unittest.TestCase):
 
     def test_wici_link_w10_budget_counts_hacks_and_fragmentation(self):
         model = self.r["wici_link"]
-        self.assertEqual(model["assumptions"]["max_payload_bytes"], 236)
+        self.assertEqual(model["assumptions"]["max_payload_bytes"], 172)
+        self.assertEqual(model["assumptions"]["origin_signature_bytes"], 64)
         typical = model["cases"]["typical_request"]
         worst = model["cases"]["max_fields_request"]
-        self.assertEqual(typical["request_frames_bytes"], [218])
-        self.assertEqual(worst["request_frames_bytes"], [155, 155])
-        self.assertAlmostEqual(typical["50_requests_minutes"], 7.3216)
+        self.assertEqual(typical["request_frames_bytes"], [195, 195])
+        self.assertEqual(worst["request_frames_bytes"], [219, 219])
+        self.assertAlmostEqual(typical["50_requests_minutes"], 12.285866666666664)
         self.assertLess(worst["50_requests_minutes"], 15)
 
     def test_retry_spacing_matches_concept_06(self):

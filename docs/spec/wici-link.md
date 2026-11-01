@@ -18,20 +18,20 @@ Protokół używa profilu LoRa pilotażu bez zmian ([radio](radio.md#profil-lora
 ```
  0       1        3        5        7       8        10      11          n-8      n
  +-------+--------+--------+--------+-------+--------+-------+-----------+--------+
- | ver/t | net_id | l_src  | l_dst  | hops  | seq    | opts  | ładunek   | MAC(8) |
+ | ver/t | net_id | l_src  | l_dst  | hops  | seq    | opts  | ładunek i podpis DATA | MAC(8) |
  +-------+--------+--------+--------+-------+--------+-------+-----------+--------+
- ver/t: bity 7–6 wersja (1), bity 5–3 typ, bity 2–0 flagi (bit 0 ACKREQ, bit 1 DOWN, bit 2 zarezerwowany)
+ ver/t: bity 7–6 wersja (2), bity 5–3 typ, bity 2–0 flagi (bit 0 ACKREQ, bit 1 DOWN, bit 2 zarezerwowany)
  net_id: numer sieci z przygotowania (u16)
  l_src, l_dst: numery stacji nadającej i następnego skoku (0xFFFF = wszyscy sąsiedzi)
  hops: bity 7–4 liczba wykonanych skoków, bity 3–0 limit skoków (TTL)
  seq: numer ramki nadawcy łącza (u16, rośnie o 1, zawija się)
- opts: 0 w wersji 1; każda inna wartość jest odrzucana (miejsce na jawnie wersjonowane rozszerzenie)
+ opts: 0 w wersji 2; każda inna wartość jest odrzucana (miejsce na jawnie wersjonowane rozszerzenie)
  MAC: HMAC-SHA-256(K_link, bajty 0..n-9) obcięty do 8 B
 ```
 
-Nagłówek ma 11 B, MAC 8 B, razem 19 B narzutu. Największa ramka LoRa ma 255 B, więc `max_payload` nośnika wynosi 236 B.
+Nagłówek ma 11 B, MAC 8 B. DATA niesie także 64 B podpisu Ed25519 po zaszyfrowanej kopercie. Największa ramka LoRa ma 255 B, więc `max_payload` nośnika DATA wynosi 172 B. HACK i BEACON nie mają podpisu.
 
-**Klucz sieci.** `K_link = HKDF-SHA-256(ikm = klucz sieci z przygotowania, salt = net_id, info = "WICI link v1", L = 32)`. Pełni tę samą rolę co dziś kod dostępu sieci (IFAC 16 B): stacja odrzuca ramkę bez poprawnego MAC przed jakimkolwiek dalszym przetwarzaniem, a stacja bez klucza sieci nie nadaje i nie przekazuje. MAC 8 B daje prawdopodobieństwo przyjęcia podrobionej ramki 2⁻⁶⁴ na próbę. Klucz sieci jest wspólny, więc przejęta stacja go zdradza; dlatego autentyczność treści zapewnia koperta, a nie łącze ([zagrożenia](#zagrożenia)).
+**Klucz sieci.** `K_link = HKDF-SHA-256(ikm = klucz sieci z przygotowania, salt = net_id, info = "WICI link v2", L = 32)`. Stacja odrzuca ramkę bez poprawnego MAC przed dalszym przetwarzaniem. MAC 8 B daje prawdopodobieństwo przyjęcia podrobionej ramki 2⁻⁶⁴ na próbę. Klucz sieci jest wspólny, więc autentyczność treści zapewnia koperta, a uprawnienie do K1 podpis pochodzenia ([zagrożenia](#zagrożenia)).
 
 **Słowo synchronizacji.** Profil pilotażu używa 0x12. Do rozważenia przed T4: własne słowo synchronizacji sieci WICI, żeby radio w ogóle nie zgłaszało ramek Meshtastic, MeshCore i LoRaWAN na tym samym kanale. Nie zmniejsza to kolizji, ale ogranicza pracę procesora i liczbę ramek do odrzucenia.
 
@@ -39,7 +39,7 @@ Nagłówek ma 11 B, MAC 8 B, razem 19 B narzutu. Największa ramka LoRa ma 255 B
 
 | Typ | Kod | Ładunek | Rozmiar ramki | Czas TX (SF7) |
 |---|---|---|---|---|
-| DATA | 0 | koperta WICI | 19 B + koperta | 218 B (typowe zgłoszenie): 360 ms |
+| DATA | 0 | koperta WICI i podpis Ed25519 | 83 B + koperta | 195 B (część typowego zgłoszenia): model 329 ms |
 | HACK | 1 | brak (potwierdza `seq` z `l_src` ramki DATA) | 19 B | 71 ms (z 3 ms narastania) |
 | BEACON | 2 | `root` (u16), `rank` (u16), `epoch` (u16), `parent` (u16), flagi (u8) | 28 B | 83 ms |
 | 3–7 | | zarezerwowane | | |
@@ -101,12 +101,12 @@ Ponowienie na skoku ogranicza ponowienia przez cały łańcuch: przy 95% skutecz
 Reguły podziału czasu z [radio](radio.md#dostęp-do-kanału) zostają, z jedną zmianą znaczenia klas, możliwą dzięki jawnym numerom stacji w kopercie:
 
 - **K0:** własne ramki DATA stacji, HACK.
-- **K1:** przekazywane ramki DATA, których koperta ma `dst` albo `src` równe aktywnej tożsamości odbiorcy z karty. W Reticulum przekaźnik nie odróżniał ruchu od odbiorcy do schronień od ruchu obcego, więc ten ruch był w K2. Teraz cały ruch sieci WICI do odbiorcy i od niego jest w K1.
+- **K1:** przekazywane ramki DATA skierowane do odbiorcy albo od odbiorcy, z poprawnym podpisem pochodzenia. Nadawca podpisuje `"WICI K1 origin v1" ‖ net_id (u16 BE) ‖ pełna zaszyfrowana koperta`. Dla ruchu w górę przekaźnik sprawdza klucz Ed25519 numeru źródła z przygotowania; dla ruchu w dół klucz aktywnego odbiorcy z karty. Podpis obejmuje kopertę, więc zmiana jawnego nadawcy lub odbiorcy unieważnia dowód. Przekaźnik zachowuje podpis przy każdym skoku i odnawia tylko MAC łącza.
 - **K2:** pozostałe przekazywane ramki, w tym rozsyłanie awaryjne bez wpisu w tablicy; BEACON-y w puli ogłoszeń.
 
-Numerowany przekaźnik rezerwuje ostatnie z czterech trwałych gniazd dla K1 i wybiera K1 przed K2; powtórkę już przyjętej ramki potwierdza również przy pełnej kolejce. Dziennik `wici_airtime` zapisuje przed przekazaniem do radia koszt wszystkich przekazywanych DATA oraz BEACON-ów w dwóch kopiach FRAM (0x047F80–0x047FFF). Klasę „własna”, „tranzyt”, „K2 przy czekającym K1” albo „BEACON” przekazuje koordynator stacji, bez odczytywania jej z jawnego nagłówka koperty. Siedem dziesięciominutowych przedziałów zachowuje wszystkie nadania z ostatnich 3600 s, czasem dłużej, a koszt zaokrągla w górę do 100 ms, więc odliczanie jest zachowawcze także po restarcie. Ruch tranzytowy razem z BEACON-ami nie przekracza 60% czasu kanału, a BEACON-y 2% czasu nadawania w tym oknie. K1 ma pierwszeństwo w kolejce, lecz także podlega wspólnemu limitowi; ta ostrzejsza reguła chroni rezerwę K0 przed podrobionym nagłówkiem K1. Gdy K1 czeka bez dostępnej trasy, K2 może wyjść tylko do 25% *łącznego* kosztu tranzytu i BEACON-ów. To zachowawcze ograniczenie spełnia limit 25% dla każdego celu K2 również po restarcie, ale może ograniczyć ruch do innych celów bardziej niż reguła na jeden cel. Nieudane przyjęcie przez radio zostawia zarezerwowany koszt, co może ograniczyć przepustowość, lecz nie osłabia limitu. Pełna próba „Wrogi węzeł” pozostaje do pomiaru.
+Numerowany przekaźnik rezerwuje dwa z czterech trwałych gniazd dla K1 i dopuszcza najwyżej jedną oczekującą ramkę K1 od jednego zweryfikowanego nadawcy. Metadane nadawcy są zapisane z CRC i znacznikiem COMMIT. K1 jest wybierane przed K2, a wybór gniazda rotuje; powtórkę już przyjętej ramki potwierdza również przy pełnej kolejce. Brak klucza albo zły podpis kwalifikuje ramkę do K2. Dziennik `wici_airtime` zapisuje przed przekazaniem do radia koszt wszystkich przekazywanych DATA oraz BEACON-ów w dwóch kopiach FRAM (0x047F80–0x047FFF). Klasę „własna”, „tranzyt”, „K2 przy czekającym K1” albo „BEACON” przekazuje koordynator stacji. Siedem dziesięciominutowych przedziałów zachowuje wszystkie nadania z ostatnich 3600 s, czasem dłużej, a koszt zaokrągla w górę do 100 ms. Ruch tranzytowy razem z BEACON-ami nie przekracza 60% czasu kanału, a BEACON-y 2% czasu nadawania w tym oknie. K1 ma pierwszeństwo w kolejce, lecz także podlega wspólnemu limitowi. Gdy K1 czeka bez dostępnej trasy, K2 może wyjść tylko do 25% *łącznego* kosztu tranzytu i BEACON-ów. Nieudane przyjęcie przez radio zostawia zarezerwowany koszt. Pełna próba „Wrogi węzeł” pozostaje do pomiaru.
 
-Klasyfikacja K1 z jawnych `src`/`dst` jest tylko klasyfikacją operacyjną: posiadacz wspólnego `K_link` może podrobić nagłówek koperty bez jej poprawnego szyfrogramu. Wspólny limit tranzytu nie pozwala mu zużyć rezerwy K0, ale fałszywe K1 może wciąż wyprzeć prawdziwe K1 z czterech gniazd. Odbiór próby „Wrogi węzeł” wymaga osobnego dowodu uprawnienia do K1 lub sprawdzonej sprawiedliwości między źródłami i pomiaru W10 przy ostrzejszym limicie.
+Wspólny `K_link` sam nie wystarcza do zajęcia gniazda K1: podrobiony numer bez podpisu jest K2. Przejęta stacja z własnym kluczem podpisu może zająć jedno gniazdo K1 oraz dwa K2, pozostawiając co najmniej jedno gniazdo dla innego zweryfikowanego nadawcy. Próba „Wrogi węzeł” i W10 na docelowym sprzęcie pozostają warunkami odbioru D21.
 
 ## Cisza radiowa
 
@@ -114,15 +114,15 @@ W ciszy radiowej (W19) stacja nie nadaje żadnej ramki: DATA, HACK ani BEACON, t
 
 ## Budżet czasu
 
-Model jak w [rozdziale 06](../concept/06-wykonalnosc-i-budzet-zasobow.html): SF7, 125 kHz, CR 4/5, preambuła 24 symbole, nagłówek jawny, CRC; czas kanału = 13 × czas TX. Ramki: zgłoszenie typowe 218 B, RECEIVED 94 B, STATUS 103 B, HACK 19 B.
+Model jak w [rozdziale 06](../concept/06-wykonalnosc-i-budzet-zasobow.html): SF7, 125 kHz, CR 4/5, preambuła 24 symbole, nagłówek jawny, CRC; czas kanału = 13 × czas TX. Podpis powoduje podział typowego zgłoszenia na dwie ramki po 195 B; RECEIVED zajmuje 158 B, HACK 19 B.
 
 | Przekaźnik przed stanowiskiem | Reticulum/LXMF (dziś) | WICI-Link |
 |---|---|---|
-| czas kanału na jedno zgłoszenie z RECEIVED | 20,1–21,1 s | około 8,8 s |
-| 50 zgłoszeń (W10, bez strat) | 16,8–17,6 min | 7,32 min typowe; 9,96 min przy największym REQUEST (2 części) |
-| 50 zgłoszeń z PRZECZYTANE i decyzją | około 32,3 min | około 12,9 min |
+| czas kanału na jedno zgłoszenie z RECEIVED | 20,1–21,1 s | 14,74 s typowe; 15,67 s przy największym REQUEST |
+| 50 zgłoszeń (W10, bez strat) | 16,8–17,6 min | 12,29 min typowe; 13,06 min przy największym REQUEST |
+| 50 zgłoszeń z PRZECZYTANE i decyzją | około 32,3 min | wymaga osobnego przeliczenia dla v2 |
 
-Przy łańcuchu 5 skoków w jednym obszarze kolizji 50 zgłoszeń z RECEIVED zajmuje łącznie około 2,8 min czasu nadawania wszystkich stacji. Wąskim gardłem pozostaje przekaźnik obok stanowiska, którego obciążenie nie zależy od długości łańcucha za nim. Opóźnienie rośnie o około 0,5–5 s na skok, zależnie od długu ciszy przekaźnika. Wartości są modelem bez kolizji i odroczeń, policzonym w `software/reference/obliczenia.py`; do potwierdzenia na sprzęcie.
+Wąskim gardłem pozostaje przekaźnik obok stanowiska, którego obciążenie nie zależy od długości łańcucha za nim. Opóźnienie rośnie o około 0,5–5 s na skok, zależnie od długu ciszy przekaźnika. Wartości W10 są modelem bez kolizji i odroczeń, policzonym w `software/reference/obliczenia.py`; do potwierdzenia na sprzęcie.
 
 ## Pamięć
 
@@ -142,7 +142,7 @@ Nowe struktury w RAM stacji: tablica sąsiadów (16 × około 10 B), tablica dr�
 ## Otwarte pytania
 
 1. Czy HACK można zastąpić potwierdzeniem biernym (nadawca słyszy, jak rodzic przekazuje ramkę dalej), jak w protokołach zbierania danych w sieciach czujników? Oszczędza to jedną ramkę na skok, ale nie działa na ostatnim skoku i przy rodzicu w długu ciszy.
-2. Jak rozmieścić w FRAM trwałą kolejkę czterech ramek i bufor dwóch części, aby HACK po zapisie spełniał limit 200 ms?
+2. Czy zapis FRAM i odpowiedź HACK mieszczą się w 200 ms na docelowym prototypie? Rozmieszczenie kolejki i buforów jest już zaimplementowane; termin wymaga pomiaru.
 3. Własne słowo synchronizacji sieci WICI (wyżej).
 4. Czy obecne progi SNR i średniej sukcesu HACK dają stabilne trasy w pomiarze T5; wartości progów ustala T5.
-5. Zapis w `software/reference/obliczenia.py` i przeliczenie W10, zimnego startu i pojemności z rozdziału 06.
+5. Czy pomiar W10 potwierdzi model v2 z `software/reference/obliczenia.py`, zwłaszcza zapas 1,94 min przy największym REQUEST?

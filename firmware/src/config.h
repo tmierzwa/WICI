@@ -29,6 +29,7 @@ constexpr size_t LANGS = 3;                // PL (do SA1), UK, EN
 constexpr size_t PROFILE_MAX = 15;
 constexpr uint32_t DOC_MAX = 7680;
 constexpr uint16_t STATIONS_MAX = 1000;
+constexpr size_t PRIORITY_KEYS_MAX = 50;
 constexpr const char* LXMF_NAME = "lxmf.delivery";
 constexpr const char* SA1_NAME = "wici.sa1";
 
@@ -52,6 +53,11 @@ struct Network {
     uint16_t receiverBackup = 0;
 };
 
+struct PriorityKey {
+    uint16_t station = 0;
+    uint8_t ed25519[32] = {};
+};
+
 struct Config {
     uint32_t seq = 0;                      // config_seq; 0 = stacja bez konfiguracji
     Role role = Role::STATION;
@@ -62,6 +68,8 @@ struct Config {
     char phrases[PHRASES][LANGS][PHRASE_MAX + 1] = {};
     Receiver receivers[2];
     Network network;
+    uint8_t priorityKeyCount = 0;
+    PriorityKey priorityKeys[PRIORITY_KEYS_MAX] = {};
     uint8_t ifac[HASH] = {};
     char profile[PROFILE_MAX + 1] = {};
 };

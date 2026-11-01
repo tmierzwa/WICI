@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""WICI-Link v1 wire and bounded KISS framing for the receiving station node.
+"""WICI-Link v2 wire and bounded KISS framing for the receiving station node.
 
 This module only authenticates and parses link frames. The caller must durably admit
 DATA before it asks the node to send HACK; a valid MAC alone is never an admission.
@@ -9,12 +9,13 @@ from dataclasses import dataclass
 import hmac
 import sqlite3
 
-HEADER, TAG, MAX_FRAME = 11, 8, 255
-MAX_PAYLOAD = MAX_FRAME - HEADER - TAG
+HEADER, TAG, ORIGIN_SIGNATURE, MAX_FRAME = 11, 8, 64, 255
+MAX_PAYLOAD = MAX_FRAME - HEADER - ORIGIN_SIGNATURE - TAG
 BROADCAST = 0xFFFF
 DATA, HACK, BEACON = 0, 1, 2
 ACKREQ, DOWN = 1, 2
 FEND, FESC, TFEND, TFESC = 0xC0, 0xDB, 0xDC, 0xDD
+ORIGIN_LABEL = b"WICI K1 origin v1"
 
 
 class LinkError(ValueError):
@@ -37,7 +38,14 @@ def derive_key(ifac, net_id):
     if len(key) != 16:
         raise LinkError("IFAC must be 16 bytes")
     prk = hmac.digest(_u16(net_id), key, "sha256")
-    return hmac.digest(prk, b"WICI link v1\x01", "sha256")
+    return hmac.digest(prk, b"WICI link v2\x01", "sha256")
+
+
+def origin_message(net_id, envelope):
+    data = bytes(envelope)
+    if not 25 <= len(data) <= MAX_PAYLOAD:
+        raise LinkError("origin proof needs one bounded envelope")
+    return ORIGIN_LABEL + _u16(net_id) + data
 
 
 @dataclass(frozen=True)
@@ -51,6 +59,7 @@ class Frame:
     ttl: int
     sequence: int
     payload: bytes = b""
+    origin_signature: bytes = bytes(ORIGIN_SIGNATURE)
 
 
 def _valid(frame):
@@ -60,7 +69,7 @@ def _valid(frame):
             type(frame.hops) is not int or type(frame.ttl) is not int or
             not 0 <= frame.hops <= frame.ttl <= 15 or frame.ttl == 0 or
             type(frame.sequence) is not int or not 0 <= frame.sequence <= 0xFFFF or
-            len(frame.payload) > MAX_PAYLOAD):
+            len(frame.payload) > MAX_PAYLOAD or len(frame.origin_signature) != ORIGIN_SIGNATURE):
         return False
     if frame.kind == DATA:
         return len(frame.payload) >= 25 and (frame.destination != BROADCAST or not frame.flags & ACKREQ)
@@ -74,10 +83,10 @@ def _valid(frame):
 def encode(key, frame):
     if len(key) != 32 or not _valid(frame):
         raise LinkError("invalid WICI-Link frame")
-    head = (bytes([(1 << 6) | (frame.kind << 3) | frame.flags]) +
+    head = (bytes([(2 << 6) | (frame.kind << 3) | frame.flags]) +
             _u16(frame.network) + _u16(frame.source) + frame.destination.to_bytes(2, "big") +
             bytes([(frame.hops << 4) | frame.ttl]) + frame.sequence.to_bytes(2, "big") + b"\0")
-    body = head + bytes(frame.payload)
+    body = head + bytes(frame.payload) + (bytes(frame.origin_signature) if frame.kind == DATA else b"")
     return body + hmac.digest(bytes(key), body, "sha256")[:TAG]
 
 
@@ -89,11 +98,17 @@ def decode(key, net_id, wire):
     if not hmac.compare_digest(raw[-TAG:], hmac.digest(bytes(key), raw[:-TAG], "sha256")[:TAG]):
         raise LinkError("WICI-Link MAC failed")
     first = raw[0]
-    if first >> 6 != 1 or first & 4 or raw[10] != 0 or int.from_bytes(raw[1:3], "big") != net_id:
+    if first >> 6 != 2 or first & 4 or raw[10] != 0 or int.from_bytes(raw[1:3], "big") != net_id:
         raise LinkError("unsupported frame header or wrong network")
+    kind = (first >> 3) & 7
+    signature_size = ORIGIN_SIGNATURE if kind == DATA else 0
+    if len(raw) < HEADER + TAG + signature_size:
+        raise LinkError("invalid authenticated frame length")
     frame = Frame((first >> 3) & 7, first & 3, net_id, int.from_bytes(raw[3:5], "big"),
                   int.from_bytes(raw[5:7], "big"), raw[7] >> 4, raw[7] & 15,
-                  int.from_bytes(raw[8:10], "big"), raw[HEADER:-TAG])
+                  int.from_bytes(raw[8:10], "big"),
+                  raw[HEADER:-TAG - signature_size],
+                  raw[-TAG - signature_size:-TAG] if signature_size else bytes(ORIGIN_SIGNATURE))
     if not _valid(frame):
         raise LinkError("invalid authenticated frame")
     return frame

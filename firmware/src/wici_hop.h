@@ -11,13 +11,15 @@
 namespace wici_hop {
 
 enum class Receipt : uint8_t { IGNORED, HACK_READY, STORED_NO_HACK, REJECTED };
+using VerifyOrigin = bool (*)(uint16_t sender, uint16_t recipient, const wici_link::Frame&, const void*);
 
 class Relay {
 public:
     // Flooding is opt-in only after the caller provides durable SA1 retries
     // independent of local TX success. Current production builds keep it off.
     Relay(journal::Storage& storage, wici_route::Config config, const uint8_t ifac[16],
-          bool allowFlood = false, const uint16_t receiverIds[2] = nullptr);
+          bool allowFlood = false, const uint16_t receiverIds[2] = nullptr,
+          VerifyOrigin verify = nullptr, const void* verifyContext = nullptr);
     bool begin();
     // HACK_READY only after the incoming frame is durably held or was already
     // forwarded. `hack` is a complete radio frame; the caller applies silence.
@@ -47,6 +49,8 @@ private:
     wici_route::Config config_;
     bool allowFlood_ = false;
     uint16_t receivers_[2] = {};
+    VerifyOrigin verify_ = nullptr;
+    const void* verifyContext_ = nullptr;
     bool priority(const wici_link::Frame& frame) const;
     uint8_t key_[32] = {};
     bool keyReady_ = false;
@@ -62,6 +66,7 @@ private:
     bool activePriority_ = false, contendedK2_ = false;
     RouteHint hints_[wici_relay::SLOTS] = {};
     uint8_t nextHint_ = 0;
+    uint8_t nextSlot_ = 0;
 };
 
 }  // namespace wici_hop

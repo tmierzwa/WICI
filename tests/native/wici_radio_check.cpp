@@ -59,10 +59,11 @@ size_t encode(const uint8_t key[32], const wici_link::Frame& frame, uint8_t wire
 int main() {
     static Memory memory;
     Air air;
-    uint8_t ifac[16] = {}, key[32], ownSecret[32] = {}, receiverSecret[32] = {};
+    uint8_t ifac[16] = {}, key[32], ownSecret[64] = {}, receiverSecret[32] = {};
     for (unsigned i = 0; i < 16; ++i) ifac[i] = static_cast<uint8_t>(i);
     for (unsigned i = 0; i < 32; ++i) {
         ownSecret[i] = static_cast<uint8_t>(i + 32);
+        ownSecret[i + 32] = static_cast<uint8_t>(i + 96);
         receiverSecret[i] = static_cast<uint8_t>(i + 64);
     }
     uint8_t ownPublic[32], receiverPublic[2][32], envelopeKey[32];
@@ -112,7 +113,7 @@ int main() {
     assert(shelter.routes().rank() == 21);  // packet SNR contributes five sixteenths
     air.dataOk = false;
     shelter.poll(1401, 12);
-    assert(air.dataCount == 1 && air.dataLength == 44);
+    assert(air.dataCount == 1 && air.dataLength == 108);
     assert(air.lastClass == wici_link::TxClass::TRANSIT);
     shelter.poll(1900, 12);
     assert(air.dataCount == 1);

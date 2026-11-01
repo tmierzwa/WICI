@@ -476,6 +476,11 @@ function readForm() {
     doc.network = Object.fromEntries(networkFields.map((k) => [k, numeric(`network.${k}`)]));
   }
   if (r === "stacja") {
+    const priorityLines = field("priority_keys").value.trim().split(/\n/).map((line) => line.trim()).filter(Boolean);
+    if (priorityLines.length) doc.priority_keys = priorityLines.map((line) => {
+      const [id, ed25519, ...extra] = line.split(/\s+/);
+      return { id: /^\d+$/.test(id) ? Number(id) : null, ed25519: extra.length ? "" : (ed25519 || "") };
+    });
     doc.addresses = [...$("addresses").querySelectorAll("input")].map((i) => i.value);
     const n = field("stations").value.trim();
     doc.stations = n === "" ? null : Number(n);
@@ -510,6 +515,10 @@ function fillForm(doc, only) {
   if (has("stations")) field("stations").value = doc.stations == null ? "" : doc.stations;
   if (has("ifac")) field("ifac").value = doc.ifac || "";
   if (has("radio") && doc.radio && doc.radio.profile) field("radio").value = doc.radio.profile;
+  if (!only || only.includes("priority_keys")) {
+    field("priority_keys").value = Array.isArray(doc.priority_keys) ?
+      doc.priority_keys.map((entry) => `${entry.id} ${entry.ed25519}`).join("\n") : "";
+  }
   if (!only || only.includes("network")) {
     for (const k of ["id", "station", "root", "parent", "backup_parent", "receiver_main", "receiver_backup"]) {
       field(`network.${k}`).value = doc.network && doc.network[k] != null ? doc.network[k] : "";
@@ -659,7 +668,7 @@ async function fileChosen() {
     fillForm(doc, ["receiver"]);
     return toast("Wczytano kartę odbiorcy.");
   }
-  const known = ["role", "addresses", "receiver", "stations", "phrases", "ifac", "radio", "network"].filter((k) => k in doc);
+  const known = ["role", "addresses", "receiver", "stations", "phrases", "ifac", "radio", "network", "priority_keys"].filter((k) => k in doc);
   if (!known.length) return toast("Plik nie zawiera pól konfiguracji WICI.");
   fillForm(doc, known);
   toast(`Wczytano z pliku: ${f.name}`);

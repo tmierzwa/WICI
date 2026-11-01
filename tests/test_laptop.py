@@ -83,6 +83,22 @@ class ConfigDocTest(unittest.TestCase):
                 "network": dict(network, station=1, parent=0)}
         self.assertEqual(self.fields(root), [])
 
+    def test_priority_origin_keys_are_bounded_and_bound_to_station_numbers(self):
+        network = {"id": 100, "station": 4, "root": 1, "parent": 1, "backup_parent": 0,
+                   "receiver_main": 2, "receiver_backup": 3}
+        main, backup = card(MAIN_KEY), card(BACKUP_KEY)
+        main.update(id=2, net_id=100, x25519=main["key"][:64])
+        backup.update(id=3, net_id=100, x25519=backup["key"][:64])
+        doc = station_doc(network=network, receiver={"main": main, "backup": backup},
+                          priority_keys=[{"id": 5, "ed25519": "ab" * 32}])
+        self.assertEqual(self.fields(doc), [])
+        self.assertEqual(self.fields(dict(doc, priority_keys=[{"id": 5, "ed25519": "ab" * 32}] * 2)),
+                         ["priority_keys.1"])
+        self.assertEqual(self.fields(dict(doc, priority_keys=[{"id": 2, "ed25519": "ab" * 32}])),
+                         ["priority_keys.0"])
+        self.assertEqual(self.fields(dict(doc, priority_keys=[{"id": 5, "ed25519": "ab" * 32}] * 51)),
+                         ["priority_keys"])
+
     def test_limits_follow_the_firmware(self):
         self.assertEqual(self.fields(station_doc(addresses=[])), ["addresses"])
         self.assertEqual(self.fields(station_doc(addresses=["a"] * 9)), ["addresses"])

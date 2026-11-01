@@ -28,7 +28,7 @@ public:
     bool begin();
     Admission admit(const uint8_t key[32], uint16_t network, uint16_t ownId,
                     const uint8_t* wire, size_t length, uint32_t nowS,
-                    uint8_t freeSlotsReserved = 0);
+                    uint8_t freeSlotsReserved = 0, uint16_t verifiedOrigin = 0);
     bool pending(uint8_t slot) const;
     // Recheck the current network binding after reboot/configuration changes;
     // an old queue record must not be forwarded under a new link key. A frame
@@ -42,13 +42,14 @@ public:
     bool remove(uint8_t slot, uint32_t nowS);
 
 private:
-    bool commit(uint8_t slot, const uint8_t* wire, size_t length);
+    bool commit(uint8_t slot, const uint8_t* wire, size_t length, uint16_t verifiedOrigin = 0);
     journal::Storage& storage_;
     wici_seen::Ring seen_;
     uint8_t frames_[SLOTS][wici_link::MAX_FRAME] = {};
     uint16_t lengths_[SLOTS] = {};
     uint32_t generations_[SLOTS] = {};
     uint8_t copies_[SLOTS] = {};
+    uint16_t origins_[SLOTS] = {};  // nonzero only after an origin signature was verified
     bool ready_ = false;
 };
 

@@ -113,17 +113,18 @@ def start(args):
         if args.reticulum_port == args.port:
             emit("login_failed", message="port Reticulum musi być inny niż port WICI-Link")
             return 3
-        from cryptography.hazmat.primitives.asymmetric import x25519
-        own_public = x25519.X25519PrivateKey.from_private_bytes(identity_key[:32]).public_key().public_bytes_raw().hex()
+        from cryptography.hazmat.primitives.asymmetric import ed25519, x25519
+        own_public = (x25519.X25519PrivateKey.from_private_bytes(identity_key[:32]).public_key().public_bytes_raw() +
+                      ed25519.Ed25519PrivateKey.from_private_bytes(identity_key[32:]).public_key().public_bytes_raw()).hex()
         active = next((entry for entry in (card.get("main"), card.get("backup"))
-                       if isinstance(entry, dict) and entry.get("x25519") == own_public), None) if card else None
+                       if isinstance(entry, dict) and entry.get("key") == own_public), None) if card else None
         if active is None or active.get("net_id") != link["net_id"] or active["id"] == link["root"]:
             emit("login_failed", message="tożsamość odbiorcy i ustawienia WICI-Link nie są zgodne")
             return 3
         numbered = WiciStos(args.port, link["net_id"], link["root"], bytes.fromhex(link["ifac"]),
                             bytes.fromhex(active["lxmf"]),
                             lambda frame: przyjecie.receive_envelope_frame(link["net_id"], frame,
-                                                                             bearer="wici"))
+                                                                             bearer="wici"), signing_key=identity_key)
         if args.reticulum_port:
             legacy = Stos(medium.network, args.reticulum_port,
                           lambda source, content: przyjecie.deliver(source, content, bearer="reticulum"),

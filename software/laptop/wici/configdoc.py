@@ -17,6 +17,7 @@ SA1_MAX = 256          # treść SA1 po kodowaniu (docs/spec/oprogramowanie.md);
 ADDRESSES, ADDRESS_MAX = 8, 64
 PHRASES, PHRASE_MAX = 11, 96
 STATIONS_MAX = 1000
+PRIORITY_KEYS_MAX = 50
 PROFILES = ("lora-sf7", "p1")
 REJECTED_CATEGORIES = ("Cc", "Cf", "Cs", "Co", "Cn", "Zl", "Zp")
 UNICODE_VERSION = "16.0.0"   # tabele Unicode oprogramowania stacji (firmware/src/unicode_tables.h)
@@ -84,6 +85,10 @@ def normalize(doc):
     if isinstance(receiver, dict):
         out["receiver"] = {k: ({f: v.strip().lower() if isinstance(v, str) else v for f, v in c.items()}
                                if isinstance(c, dict) else c) for k, c in receiver.items()}
+    if isinstance(out.get("priority_keys"), list):
+        out["priority_keys"] = [{**entry, "ed25519": entry["ed25519"].strip().lower()}
+                                if isinstance(entry, dict) and isinstance(entry.get("ed25519"), str) else entry
+                                for entry in out["priority_keys"]]
     if out.get("role") == "wezel":
         out = {k: out[k] for k in ("role", "ifac", "radio", "network") if k in out}
     return out
@@ -103,7 +108,7 @@ def check(doc):
         return [("", "dokument nie jest obiektem JSON")]
     problems = []
     role = doc.get("role")
-    allowed = {"role", "ifac", "radio", "network"} | ({"addresses", "receiver", "stations", "phrases"} if role == "stacja" else set())
+    allowed = {"role", "ifac", "radio", "network"} | ({"addresses", "receiver", "stations", "phrases", "priority_keys"} if role == "stacja" else set())
     for key in sorted(set(doc) - allowed):
         problems.append((key, "pole nieznane albo niepotrzebne dla tej roli"))
     if role not in ("stacja", "wezel"):
@@ -131,6 +136,21 @@ def check(doc):
                 problems.append(("network", "numery muszą być rozłączne, a trasa prowadzić do innego węzła"))
     if role != "stacja":
         return problems
+    priority_keys = doc.get("priority_keys", [])
+    if priority_keys or "priority_keys" in doc:
+        seen = set()
+        if network is None or not isinstance(priority_keys, list) or len(priority_keys) > PRIORITY_KEYS_MAX:
+            problems.append(("priority_keys", "niepoprawna lista kluczy pochodzenia K1"))
+        else:
+            for i, entry in enumerate(priority_keys):
+                number = entry.get("id") if isinstance(entry, dict) else None
+                if (not isinstance(entry, dict) or set(entry) != {"id", "ed25519"} or
+                        not _number(number) or not _hex(entry.get("ed25519"), 64) or number in seen or
+                        isinstance(network, dict) and number in
+                        (network.get("station"), network.get("receiver_main"), network.get("receiver_backup"))):
+                    problems.append((f"priority_keys.{i}", "niepoprawny lub powtórzony numer i klucz Ed25519"))
+                else:
+                    seen.add(number)
     addresses = doc.get("addresses")
     if not isinstance(addresses, list) or not 1 <= len(addresses) <= ADDRESSES:
         problems.append(("addresses", f"od 1 do {ADDRESSES} adresów"))

@@ -2,6 +2,8 @@
 """The numbered laptop bearer preserves hop admission and outbound ordering."""
 
 import unittest
+from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from software.laptop.wici.stanowisko import wici_link
 from software.laptop.wici.stanowisko.wici_stos import WiciStos
@@ -35,7 +37,7 @@ class WiciBearerTest(unittest.TestCase):
         self.port = Port()
         self.accepted = []
         self.bearer = WiciStos("fake", 100, 5, bytes(range(16)), bytes(16),
-                               self.accepted.append, clock=self.clock)
+                               self.accepted.append, clock=self.clock, signing_key=bytes(range(64)))
         self.bearer.port = self.port
         self.bearer.running = True
         self.key = wici_link.derive_key(bytes(range(16)), 100)
@@ -64,6 +66,11 @@ class WiciBearerTest(unittest.TestCase):
         virtual = wici_link.decode(self.key, 100, unpack(self.port.writes[-1]))
         self.assertEqual((virtual.source, virtual.destination, virtual.flags),
                          (1, 5, wici_link.ACKREQ | wici_link.DOWN))
+        ed25519.Ed25519PrivateKey.from_private_bytes(bytes(range(32, 64))).public_key().verify(
+            virtual.origin_signature, wici_link.origin_message(100, first))
+        with self.assertRaises(InvalidSignature):
+            ed25519.Ed25519PrivateKey.from_private_bytes(bytes(range(32, 64))).public_key().verify(
+                virtual.origin_signature, wici_link.origin_message(101, first))
         echo = wici_link.Frame(wici_link.DATA, virtual.flags, 100, 5, 4, 1, 7, 91, first)
         self.feed(echo)
         wrong = wici_link.Frame(wici_link.HACK, 0, 100, 3, 5, 0, 1, 91)

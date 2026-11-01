@@ -41,6 +41,7 @@ bool blank(const uint8_t* p) {
 bool valid(const uint8_t* p) {
     const size_t n = u16(p + 8);
     if (memcmp(p, MAGIC, 4) || (n && (n < wici_link::HEADER + wici_link::TAG || n > wici_link::MAX_FRAME)) ||
+        (!n && u16(p + 23)) || u16(p + 23) == wici_link::BROADCAST ||
         u16(p + CRC_AT) != crc(p, CRC_AT)) return false;
     for (size_t i = WIRE_AT + n; i < CRC_AT; ++i) if (p[i]) return false;
     return true;
@@ -60,6 +61,7 @@ bool Queue::begin() {
     memset(lengths_, 0, sizeof(lengths_));
     memset(generations_, 0, sizeof(generations_));
     memset(copies_, 0, sizeof(copies_));
+    memset(origins_, 0, sizeof(origins_));
     for (uint8_t slot = 0; slot < SLOTS; ++slot) {
         bool found = false;
         for (uint8_t copy = 0; copy < 2; ++copy) {
@@ -72,6 +74,7 @@ bool Queue::begin() {
                 generations_[slot] = generation;
                 copies_[slot] = copy;
                 lengths_[slot] = u16(data + 8);
+                origins_[slot] = u16(data + 23);
                 memcpy(frames_[slot], data + WIRE_AT, lengths_[slot]);
                 found = true;
             }
@@ -81,7 +84,7 @@ bool Queue::begin() {
     return true;
 }
 
-bool Queue::commit(uint8_t slot, const uint8_t* wire, size_t length) {
+bool Queue::commit(uint8_t slot, const uint8_t* wire, size_t length, uint16_t verifiedOrigin) {
     uint8_t data[COPY_BYTES] = {};
     memcpy(data, MAGIC, 4);
     put32(data + 4, generations_[slot] + 1);
@@ -92,7 +95,8 @@ bool Queue::commit(uint8_t slot, const uint8_t* wire, size_t length) {
         memcpy(data + 10, wire + 1, 2);  // network
         memcpy(data + 12, wire + 3, 2);  // link source
         memcpy(data + 14, wire + 8, 2);  // link sequence
-        memcpy(data + 16, wire + wici_link::HEADER, 9);  // envelope header
+        memcpy(data + 16, wire + wici_link::HEADER, 7);  // envelope header prefix
+        put16(data + 23, verifiedOrigin);  // verified origin, covered by CRC and COMMIT
     }
     put16(data + CRC_AT, crc(data, CRC_AT));
     const uint8_t target = static_cast<uint8_t>(1 - copies_[slot]);
@@ -113,6 +117,7 @@ bool Queue::commit(uint8_t slot, const uint8_t* wire, size_t length) {
     ++generations_[slot];
     copies_[slot] = target;
     lengths_[slot] = static_cast<uint16_t>(length);
+    origins_[slot] = length ? verifiedOrigin : 0;
     memset(frames_[slot], 0, sizeof(frames_[slot]));
     if (length) memcpy(frames_[slot], wire, length);
     return true;
@@ -120,11 +125,14 @@ bool Queue::commit(uint8_t slot, const uint8_t* wire, size_t length) {
 
 Admission Queue::admit(const uint8_t key[32], uint16_t network, uint16_t ownId,
                        const uint8_t* wire, size_t length, uint32_t nowS,
-                       uint8_t freeSlotsReserved) {
+                       uint8_t freeSlotsReserved, uint16_t verifiedOrigin) {
     if (!ready_ || !key || !wire || !ownId || ownId == wici_link::BROADCAST) return Admission::REJECTED;
     wici_link::Frame frame;
     if (!wici_link::decode(key, network, wire, length, frame) || frame.type != wici_link::Type::DATA ||
-        !transitDestination(frame, ownId) || frame.hops >= frame.ttl) return Admission::REJECTED;
+        !transitDestination(frame, ownId) || frame.hops >= frame.ttl ||
+        freeSlotsReserved > SLOTS ||
+        (verifiedOrigin && (verifiedOrigin == wici_link::BROADCAST ||
+                            verifiedOrigin != u16(frame.payload + 1)))) return Admission::REJECTED;
     const wici_seen::Lookup prior = seen_.lookup(wire, length, nowS);
     if (prior == wici_seen::Lookup::MATCH) return Admission::DUPLICATE;
     if (prior == wici_seen::Lookup::CONFLICT) return Admission::REJECTED;
@@ -147,13 +155,18 @@ Admission Queue::admit(const uint8_t key[32], uint16_t network, uint16_t ownId,
             return Admission::REJECTED;
         }
     }
+    if (verifiedOrigin) {
+        for (uint8_t i = 0; i < SLOTS; ++i)
+            if (lengths_[i] && origins_[i] == verifiedOrigin) return Admission::FULL;
+    }
     uint8_t free = 0, first = SLOTS;
     for (uint8_t i = 0; i < SLOTS; ++i) {
         if (lengths_[i]) continue;
         if (first == SLOTS) first = i;
         ++free;
     }
-    if (free > freeSlotsReserved) return commit(first, wire, length) ? Admission::STORED : Admission::IO_ERROR;
+    if (free > freeSlotsReserved)
+        return commit(first, wire, length, verifiedOrigin) ? Admission::STORED : Admission::IO_ERROR;
     return Admission::FULL;
 }
 

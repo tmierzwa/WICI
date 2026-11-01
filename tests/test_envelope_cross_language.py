@@ -15,12 +15,39 @@ ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "firmware" / "src"
 CRYPTO = ROOT / "firmware" / ".pio" / "stack" / "Crypto"
 UNITS = ("AuthenticatedCipher.cpp", "BigNumberUtil.cpp", "ChaCha.cpp", "ChaChaPoly.cpp", "Cipher.cpp",
-         "Crypto.cpp", "Curve25519.cpp", "Hash.cpp", "NoiseSource.cpp", "Poly1305.cpp",
-         "RNG.cpp", "SHA256.cpp")
+         "Crypto.cpp", "Curve25519.cpp", "Ed25519.cpp", "Hash.cpp", "NoiseSource.cpp", "Poly1305.cpp",
+         "RNG.cpp", "SHA256.cpp", "SHA512.cpp")
 sys.path.insert(0, str(ROOT / "software" / "reference"))
 
 
 class CrossLanguageEnvelope(unittest.TestCase):
+    def test_origin_signature_matches_python(self):
+        compiler = shutil.which("clang++") or shutil.which("g++")
+        if not compiler or not (CRYPTO / ".wici-stamp").exists():
+            raise unittest.SkipTest("C++ compiler or pinned Crypto sources unavailable")
+        from cryptography.hazmat.primitives.asymmetric import ed25519
+        from software.laptop.wici.stanowisko.wici_link import origin_message
+        with tempfile.TemporaryDirectory() as directory:
+            binary = Path(directory) / "origin_check"
+            command = [compiler, "-std=c++17", "-Wall", "-Wextra", "-Werror", "-Wno-error=cpp",
+                       "-fsanitize=address,undefined", f"-I{SRC}",
+                       f"-I{ROOT / 'firmware' / 'lib' / 'reticulum_core' / 'src'}",
+                       "-isystem", str(CRYPTO),
+                       str(SRC / "wici_origin.cpp"),
+                       *(str(ROOT / "firmware" / "lib" / "reticulum_core" / "src" / name)
+                         for name in ("identity.cpp", "hash.cpp")),
+                       str(ROOT / "tests" / "native" / "wici_origin_check.cpp"),
+                       *(str(CRYPTO / unit) for unit in UNITS), "-o", str(binary)]
+            built = subprocess.run(command, capture_output=True, text=True)
+            self.assertEqual(built.returncode, 0, built.stderr[-4000:])
+            checked = subprocess.run([str(binary)], capture_output=True, text=True)
+            self.assertEqual(checked.returncode, 0, checked.stderr)
+            signature = checked.stdout.strip()
+        envelope = bytes([0x40, 0, 4, 0, 2]) + bytes(20)
+        expected = ed25519.Ed25519PrivateKey.from_private_bytes(bytes(range(32, 64))).sign(
+            origin_message(100, envelope))
+        self.assertEqual(signature, expected.hex())
+
     def test_root_kiss_gateway_requires_matching_timely_hack(self):
         compiler = shutil.which("clang++") or shutil.which("g++")
         if not compiler:
@@ -43,12 +70,15 @@ class CrossLanguageEnvelope(unittest.TestCase):
             binary = Path(directory) / "radio_check"
             sanitizer = ["-fsanitize=address,undefined", "-fno-omit-frame-pointer", "-g", "-O1"]
             base = [compiler, "-std=c++17", "-fno-exceptions", "-fno-rtti", *sanitizer,
-                    f"-I{SRC}", "-isystem", str(CRYPTO)]
+                    f"-I{SRC}", f"-I{ROOT / 'firmware' / 'lib' / 'reticulum_core' / 'src'}",
+                    "-isystem", str(CRYPTO)]
             sources = [SRC / name for name in (
                 "wici_radio.cpp", "wici_destination.cpp", "wici_hop.cpp", "wici_flood.cpp",
                 "wici_relay.cpp", "wici_seen.cpp", "wici_route.cpp", "wici_seq.cpp",
                 "wici_link.cpp", "envelope.cpp", "envelope_counter.cpp", "envelope_parts.cpp", "envelope_replay.cpp",
-                "sha2.cpp")]
+                "sha2.cpp", "wici_origin.cpp")]
+            sources += [ROOT / "firmware" / "lib" / "reticulum_core" / "src" / name
+                        for name in ("identity.cpp", "hash.cpp")]
             sources += [ROOT / "tests" / "native" / "wici_radio_check.cpp"]
             sources += [CRYPTO / unit for unit in UNITS]
             objects = []
@@ -168,10 +198,11 @@ class CrossLanguageEnvelope(unittest.TestCase):
         ifac = bytes(range(16))
         salt = (100).to_bytes(2, "big")
         prk = hmac.digest(salt, ifac, "sha256")
-        key = hmac.digest(prk, b"WICI link v1\x01", "sha256")
-        header = bytes.fromhex("4100640004") + bytes.fromhex("000107123400")
+        key = hmac.digest(prk, b"WICI link v2\x01", "sha256")
+        header = bytes.fromhex("8100640004") + bytes.fromhex("000107123400")
         body = bytes(range(25))
-        expected = header + body + hmac.digest(key, header + body, "sha256")[:8]
+        unsigned = header + body + bytes(64)
+        expected = unsigned + hmac.digest(key, unsigned, "sha256")[:8]
         self.assertEqual(lines, [key.hex(), expected.hex()])
         sys.path.insert(0, str(ROOT / "software" / "laptop"))
         from wici.stanowisko import wici_link

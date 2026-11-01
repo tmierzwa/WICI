@@ -193,6 +193,13 @@
       </fieldset>
 
       <fieldset class="group only-station">
+        <legend>Klucze pochodzenia K1</legend>
+        <p class="hint">Dla sieci numerowanej wpisz do 50 stacji, po jednej w wierszu: numer stacji i ostatnie 64 cyfry szesnastkowe pola „key” z jej karty. Przekaźnik używa tych kluczy do przyznania pierwszeństwa K1.</p>
+        <label class="field"><span>Numer i klucz Ed25519</span><textarea class="mono" name="priority_keys" rows="4" spellcheck="false"></textarea></label>
+        <p class="field-error" data-error="priority_keys"></p>
+      </fieldset>
+
+      <fieldset class="group only-station">
         <legend>Sieć</legend>
         <label class="field narrow"><span>Liczba stacji w sieci</span>
           <input type="number" name="stations" data-field="stations" min="1" max="1000" step="1" inputmode="numeric"></label>

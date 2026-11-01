@@ -348,7 +348,8 @@ class Przyjecie:
             "WHERE n.net_id=? AND n.source=?", (bearer.network, dest)).fetchone()
         if row is None:
             return None
-        frames = self._seal_envelope_message(bearer.network, row[0], content, 236)
+        from . import wici_link
+        frames = self._seal_envelope_message(bearer.network, row[0], content, wici_link.MAX_PAYLOAD)
         return bearer.send_frames(frames)
 
     def _seal_envelope_message(self, net_id, station_id, content, max_payload):

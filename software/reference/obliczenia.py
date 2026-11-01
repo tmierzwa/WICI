@@ -62,17 +62,17 @@ def lxmf_packet_bytes(content_bytes: int) -> int:
 def wici_link_model(sa1_sizes: dict[str, int], sf: int = 7) -> dict:
     """One relay's best-case WICI-Link airtime, including two HACK transmissions per
     successful REQUEST/RECEIVED pair. This is a design estimate, not a radio result."""
-    link_header, link_mac, env_overhead, max_frame = 11, 8, 25, 255
-    max_payload = max_frame - link_header - link_mac
+    link_header, link_mac, origin_signature, env_overhead, max_frame = 11, 8, 64, 25, 255
+    max_payload = max_frame - link_header - link_mac - origin_signature
     hack = link_header + link_mac
 
     def frames(content: int) -> list[int]:
         envelope = content + env_overhead
         if envelope <= max_payload:
-            return [envelope + link_header + link_mac]
+            return [envelope + link_header + link_mac + origin_signature]
         first = (content + 1) // 2
-        return [first + env_overhead + link_header + link_mac,
-                content - first + env_overhead + link_header + link_mac]
+        return [first + env_overhead + link_header + link_mac + origin_signature,
+                content - first + env_overhead + link_header + link_mac + origin_signature]
 
     def cycle(frame: int) -> float:
         return 13 * lora_frame_seconds(frame, sf, preamble_symbols=24)
@@ -87,6 +87,7 @@ def wici_link_model(sa1_sizes: dict[str, int], sf: int = 7) -> dict:
                        "50_requests_minutes": 50 * relay / 60}
     return {"assumptions": {"sf": sf, "preamble_symbols": 24, "max_frame_bytes": max_frame,
                              "link_header_bytes": link_header, "link_mac_bytes": link_mac,
+                             "origin_signature_bytes": origin_signature,
                              "envelope_overhead_bytes": env_overhead, "max_payload_bytes": max_payload,
                              "hop_success_no_collisions": True, "debt_multiplier": 13},
             "cases": cases, "hack_tx_s": lora_frame_seconds(hack, sf, preamble_symbols=24)}

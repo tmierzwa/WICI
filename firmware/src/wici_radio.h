@@ -31,9 +31,10 @@ class Shelter {
 public:
     Shelter(journal::Storage& storage, wici_route::Config route,
             const uint16_t receiverIds[2], const uint8_t ifac[16],
-            const uint8_t privateKey[32], const uint8_t receiverPublic[2][32],
+            const uint8_t privateKey[64], const uint8_t receiverPublic[2][32],
             wici_destination::AdmitFn admit, void* admitContext,
-            Air& air, RandomFn random, void* randomContext);
+            Air& air, RandomFn random, void* randomContext,
+            wici_hop::VerifyOrigin verifyOrigin = nullptr, const void* verifyContext = nullptr);
     bool begin();
     // Called from Bench's raw callback. No route learning or outbound DATA is
     // performed before the HACK attempt; all timestamps come from the radio.
@@ -59,6 +60,7 @@ private:
     uint32_t backoff() const;
     uint16_t network_, own_, root_;
     uint8_t linkKey_[32] = {};
+    uint8_t signingPrivate_[64] = {}, signingPublic_[64] = {};
     bool keyReady_ = false, ready_ = false, routePending_ = false;
     bool submitted_ = false, awaitingHack_ = false, delayPending_ = false;
     uint32_t sentAtMs_ = 0, retryAtMs_ = 0;

@@ -3,6 +3,9 @@
 
 #include <string.h>
 
+#include "identity.h"
+#include "wici_origin.h"
+
 namespace wici_radio {
 namespace {
 uint16_t u16(const uint8_t* p) { return static_cast<uint16_t>((p[0] << 8) | p[1]); }
@@ -11,16 +14,22 @@ bool reached(uint32_t now, uint32_t deadline) { return static_cast<int32_t>(now 
 
 Shelter::Shelter(journal::Storage& storage, wici_route::Config route,
                  const uint16_t receiverIds[2], const uint8_t ifac[16],
-                 const uint8_t privateKey[32], const uint8_t receiverPublic[2][32],
+                 const uint8_t privateKey[64], const uint8_t receiverPublic[2][32],
                  wici_destination::AdmitFn admit, void* admitContext,
-                 Air& air, RandomFn random, void* randomContext)
+                 Air& air, RandomFn random, void* randomContext,
+                 wici_hop::VerifyOrigin verifyOrigin, const void* verifyContext)
     : network_(route.network), own_(route.own), root_(route.root),
       outbound_{envelope::Counter(storage, 0), envelope::Counter(storage, 1)},
       destination_(storage, {route.network, route.own,
                             {static_cast<uint16_t>(receiverIds ? receiverIds[0] : 0),
                              static_cast<uint16_t>(receiverIds ? receiverIds[1] : 0)}},
                    ifac, privateKey, receiverPublic, admit, admitContext),
-      relay_(storage, route, ifac, true, receiverIds), air_(air), random_(random), randomContext_(randomContext) {
+      relay_(storage, route, ifac, true, receiverIds, verifyOrigin, verifyContext),
+      air_(air), random_(random), randomContext_(randomContext) {
+    if (privateKey) {
+        memcpy(signingPrivate_, privateKey, sizeof(signingPrivate_));
+        rnscore::publicKey(signingPrivate_, signingPublic_);
+    }
     keyReady_ = ifac && random && wici_link::deriveKey(ifac, network_, linkKey_);
     if (receiverIds) {
         receivers_[0] = receiverIds[0];
@@ -198,6 +207,8 @@ bool Shelter::queueOwn(uint16_t recipient, const uint8_t* sa1, size_t length, ui
         frame.sequence = sequences[i];
         frame.length = parts[i].length;
         memcpy(frame.payload, parts[i].bytes, frame.length);
+        if (!wici_origin::sign(signingPrivate_, signingPublic_, network_, frame.payload,
+                               frame.length, frame.originSignature)) return false;
         lengths[i] = wici_link::encode(linkKey_, frame, frames[i], sizeof(frames[i]));
         if (!lengths[i]) return false;
     }

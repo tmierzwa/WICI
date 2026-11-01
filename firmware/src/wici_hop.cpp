@@ -8,17 +8,21 @@ bool id(uint16_t n) { return n && n != wici_link::BROADCAST; }
 }  // namespace
 
 Relay::Relay(journal::Storage& storage, wici_route::Config config, const uint8_t ifac[16],
-             bool allowFlood, const uint16_t receiverIds[2])
+             bool allowFlood, const uint16_t receiverIds[2], VerifyOrigin verify, const void* verifyContext)
     : config_(config), allowFlood_(allowFlood), queue_(storage), routes_(storage, config),
       sequence_(storage), flood_(storage) {
     if (receiverIds) { receivers_[0] = receiverIds[0]; receivers_[1] = receiverIds[1]; }
+    verify_ = verify;
+    verifyContext_ = verifyContext;
     keyReady_ = wici_link::deriveKey(ifac, config.network, key_);
 }
 
 bool Relay::priority(const wici_link::Frame& frame) const {
+    if (!verify_) return false;
     const uint16_t sender = u16(frame.payload + 1), recipient = u16(frame.payload + 3);
-    return (receivers_[0] && (sender == receivers_[0] || recipient == receivers_[0])) ||
-           (receivers_[1] && (sender == receivers_[1] || recipient == receivers_[1]));
+    const uint16_t receiver = frame.flags & wici_link::DOWN ? sender : recipient;
+    if (receiver != receivers_[0] && receiver != receivers_[1]) return false;
+    return verify_(sender, recipient, frame, verifyContext_);
 }
 
 bool Relay::begin() {
@@ -27,6 +31,7 @@ bool Relay::begin() {
     outgoingLength_ = 0;
     attempts_ = 0;
     nextHint_ = 0;
+    nextSlot_ = 0;
     for (RouteHint& hint : hints_) hint = RouteHint();
     return keyReady_ && queue_.begin() && routes_.begin() && sequence_.begin(config_.network, config_.own) &&
            flood_.begin(config_.network);
@@ -50,8 +55,9 @@ Receipt Relay::receiveData(const uint8_t* wire, size_t length, uint32_t nowS,
         return Receipt::REJECTED;
     if (broadcast && flood_.lookup(frame.payload, nowS) != wici_flood::Lookup::NONE)
         return Receipt::IGNORED;
+    const bool verified = priority(frame);
     const wici_relay::Admission stored = queue_.admit(key_, config_.network, config_.own,
-        wire, length, nowS, priority(frame) ? 0 : 1);
+        wire, length, nowS, verified ? 0 : 2, verified ? u16(frame.payload + 1) : 0);
     if (stored != wici_relay::Admission::STORED && stored != wici_relay::Admission::DUPLICATE)
         return Receipt::REJECTED;
     if (!(frame.flags & wici_link::DOWN)) {
@@ -103,7 +109,7 @@ bool Relay::prepare(uint32_t nowS) {
     uint8_t wire[wici_link::MAX_FRAME];
     bool priorityWaiting = false;
     for (uint8_t order = 0; order < 2 * wici_relay::SLOTS; ++order) {
-        const uint8_t slot = order % wici_relay::SLOTS;
+        const uint8_t slot = static_cast<uint8_t>((nextSlot_ + order) % wici_relay::SLOTS);
         size_t length = 0;
         if (!queue_.read(key_, config_.network, config_.own, slot, nowS, wire, sizeof(wire), length)) continue;
         wici_link::Frame frame;
@@ -129,6 +135,7 @@ bool Relay::prepare(uint32_t nowS) {
         if (!n) continue;  // The reserved sequence is burned on an invalid route.
         if (next == wici_link::BROADCAST && !flood_.remember(frame.payload, nowS)) return false;
         next_ = next; outgoingSeq_ = sequence; slot_ = slot;
+        nextSlot_ = static_cast<uint8_t>((slot + 1) % wici_relay::SLOTS);
         noAck_ = next == wici_link::BROADCAST || !(frame.flags & wici_link::ACKREQ);
         activePriority_ = priority(frame);
         contendedK2_ = priorityWaiting && !activePriority_;

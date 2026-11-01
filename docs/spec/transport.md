@@ -56,7 +56,7 @@ Pilotaż nie ma poufności przyszłej (forward secrecy): przejęty klucz prywatn
  AAD = kind ‖ src ‖ dst ‖ ctr
 ```
 
-Narzut koperty: 25 B (9 B nagłówka i 16 B znacznika). Numery stacji są jawne. Przekaźnik widzi więc nadawcę i odbiorcę od końca do końca, co pozwala mu przypisać pakiet do klasy K1 także w kierunku od odbiorcy ([klasy czasu](wici-link.md#klasy-czasu-kanału)). Analiza ruchu jest i tak przyjęta w [rozdziale 07](../concept/07-zagrozenia-i-odpornosc.html): dziś nagłówek Reticulum też ujawnia cel, a rozmiar ujawnia typ SA1.
+Narzut koperty: 25 B (9 B nagłówka i 16 B znacznika). Numery stacji są jawne. Przekaźnik widzi nadawcę i odbiorcę od końca do końca; przydziela klasę K1 po sprawdzeniu podpisu pochodzenia, także w kierunku od odbiorcy ([klasy czasu](wici-link.md#klasy-czasu-kanału)). Analiza ruchu jest przyjęta w [rozdziale 07](../concept/07-zagrozenia-i-odpornosc.html): nagłówek Reticulum także ujawnia cel, a rozmiar ujawnia typ SA1.
 
 ### Licznik i powtórzenia
 
@@ -77,12 +77,12 @@ Odbiorca zapisuje pierwszą uwierzytelnioną część trwale (FRAM stacji albo S
 
 ### Rozmiary
 
-| Wiadomość SA1 | Treść | Koperta | Części przy WICI-Link (`max_payload` 236 B) |
+| Wiadomość SA1 | Treść | Koperta | Części przy WICI-Link (`max_payload` 172 B) |
 |---|---|---|---|
-| REQUEST typowe | 174 B | 199 B | 1 |
+| REQUEST typowe | 174 B | 199 B | 2 |
 | REQUEST największe | 222 B | 247 B | 2 |
 | BULLETIN największy | 246 B | 271 B | 2 |
-| REPLY największe | 156 B | 181 B | 1 |
+| REPLY największe | 156 B | 181 B | 2 |
 | STATUS | 59 B | 84 B | 1 |
 | RECEIVED | 50 B | 75 B | 1 |
 
@@ -137,7 +137,7 @@ Reguły kontraktu:
 
 | Nośnik | Rola | `max_payload` | `hop_ack` / `e2e_ack` | `airtime_classes` / `radio_silence` | Uwagi |
 |---|---|---|---|---|---|
-| [WICI-Link](wici-link.md) | domyślny w stacji (po D21) | 236 B | tak / nie | tak / tak | własny protokół łącza; licencja MIT |
+| [WICI-Link](wici-link.md) | domyślny w stacji (po D21) | 172 B | tak / nie | tak / tak | własny protokół łącza; licencja MIT |
 | Reticulum (rdzeń stacji) | obecny; zapasowy do rozstrzygnięcia D21 | 492 B | nie / tak (dowód) | tak / tak | adapter wokół `rns_node`; licencja Reticulum |
 | Meshtastic (węzeł przez USB) | tylko stanowisko, po pilotażu | 227 B (PKI) | tak / tak (DM) | nie / nie | kanał bez uwierzytelnienia; ruch oznaczany jako niezweryfikowany, chyba że koperta ma klucz z karty |
 | MeshCore (węzeł przez USB) | tylko stanowisko, po pilotażu | 184 B | nie / tak | nie / nie | `RAW_CUSTOM` dla koperty; domyślny budżet nadawania 50% wymaga ustawienia na ≤10% |
@@ -186,12 +186,13 @@ blokadę wysyłki po odtworzeniu starszej kopii. Wyjątek od ciszy nadaje
 niepotwierdzaną ramkę najwyżej trzy razy z trwałym licznikiem prób.
 Numerowany przekaźnik ma trwały limit 60% dla całego ruchu tranzytowego i
 BEACON-ów oraz 2% czasu nadawania dla BEACON-ów, z priorytetem K1 w kolejce.
-Wspólny limit obejmuje również K1, bo sam jawny numer odbiorcy nie dowodzi
-uprawnienia do tej klasy. Przy czekającym K1 limit 25% dotyczy zachowawczo
-całego tranzytu i BEACON-ów. Odporność kolejki K1 na podrobione numery
-wymaga jeszcze wdrożenia.
+Wspólny limit obejmuje również K1. Do K1 uprawnia podpis Ed25519 nad pełną
+kopertą i numerem sieci, sprawdzany kluczem stacji albo odbiorcy znanym
+z przygotowania. Dwa miejsca są zarezerwowane dla K1, a jedna tożsamość
+może zająć najwyżej jedno miejsce K1. Przy czekającym K1 limit 25% dotyczy
+zachowawczo całego tranzytu i BEACON-ów.
 
-Pozostałe do zamknięcia D21: odporność kolejki K1 na podrobione numery, sprzętowe próby rozsyłania awaryjnego, pomiar
+Pozostałe do zamknięcia D21: sprzętowe próby rozsyłania awaryjnego, pomiar
 200 ms HACK, W10, „Wrogi węzeł”, zaniki zasilania oraz budżet energii. Dwie płytki
 XIAO ESP32-S3 + Wio SX1262 przeszły [próbę toru radia przy stole](../../hardware/radio-pair/evidence/table-2026-11-01.md)
 (100/100 w każdym kierunku) na programie diagnostycznym i

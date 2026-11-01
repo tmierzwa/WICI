@@ -214,46 +214,48 @@
       "max_frame_bytes": 255,
       "link_header_bytes": 11,
       "link_mac_bytes": 8,
+      "origin_signature_bytes": 64,
       "envelope_overhead_bytes": 25,
-      "max_payload_bytes": 236,
+      "max_payload_bytes": 172,
       "hop_success_no_collisions": true,
       "debt_multiplier": 13
     },
     "cases": {
       "typical_request": {
         "request_frames_bytes": [
-          218
+          195,
+          195
         ],
         "received_frames_bytes": [
-          94
+          158
         ],
         "hack_frame_bytes": 19,
-        "relay_tx_plus_quiet_s": 8.785919999999999,
-        "50_requests_minutes": 7.321599999999999
+        "relay_tx_plus_quiet_s": 14.743039999999997,
+        "50_requests_minutes": 12.285866666666664
       },
       "max_fields_request": {
         "request_frames_bytes": [
-          155,
-          155
+          219,
+          219
         ],
         "received_frames_bytes": [
-          94
+          158
         ],
         "hack_frame_bytes": 19,
-        "relay_tx_plus_quiet_s": 11.947519999999999,
-        "50_requests_minutes": 9.956266666666666
+        "relay_tx_plus_quiet_s": 15.674879999999998,
+        "50_requests_minutes": 13.062399999999998
       },
       "worst_button_request": {
         "request_frames_bytes": [
-          154,
-          154
+          218,
+          218
         ],
         "received_frames_bytes": [
-          94
+          158
         ],
         "hack_frame_bytes": 19,
-        "relay_tx_plus_quiet_s": 11.947519999999999,
-        "50_requests_minutes": 9.956266666666666
+        "relay_tx_plus_quiet_s": 15.54176,
+        "50_requests_minutes": 12.951466666666667
       }
     },
     "hack_tx_s": 0.06784

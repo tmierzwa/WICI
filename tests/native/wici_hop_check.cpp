@@ -16,6 +16,10 @@ struct Memory : journal::Storage {
     }
 };
 
+bool originProof(uint16_t, uint16_t, const wici_link::Frame& frame, const void*) {
+    return frame.originSignature[0] == 0xA5;  // real Ed25519 verification is tested separately
+}
+
 int main() {
     static Memory memory;
     uint8_t ifac[16] = {}, key[32], wire[255], hack[255];
@@ -29,7 +33,7 @@ int main() {
     incoming.payload[0] = 0x40;
     incoming.payload[2] = 4; incoming.payload[4] = 1;
     const size_t length = wici_link::encode(key, incoming, wire, sizeof(wire));
-    assert(length == 44);
+    assert(length == 108);
     wici_hop::Relay relay(memory, {100, 2, 1, 1, 0}, ifac);
     assert(relay.begin());
     size_t hackLength = 0;
@@ -185,13 +189,14 @@ int main() {
     // jumps ahead of earlier K2 entries while duplicates remain HACKable.
     static Memory priorityMemory;
     const uint16_t receivers[2] = {90, 91};
-    wici_hop::Relay priorityRelay(priorityMemory, {100, 2, 1, 1, 0}, ifac, false, receivers);
+    wici_hop::Relay priorityRelay(priorityMemory, {100, 2, 1, 1, 0}, ifac, false, receivers,
+                                   originProof);
     assert(priorityRelay.begin());
     wici_link::Frame traffic = incoming;
     traffic.source = 4;
     traffic.flags = wici_link::ACKREQ;
     traffic.payload[4] = 50;
-    for (uint8_t i = 0; i < 3; ++i) {
+    for (uint8_t i = 0; i < 2; ++i) {
         traffic.sequence = static_cast<uint16_t>(70 + i);
         traffic.payload[8] = static_cast<uint8_t>(10 + i);
         const size_t n = wici_link::encode(key, traffic, wire, sizeof(wire));
@@ -211,6 +216,15 @@ int main() {
     traffic.sequence = 74;
     traffic.payload[4] = 90;
     traffic.payload[8] = 14;
+    traffic.originSignature[0] = 0xA5;
+    n = wici_link::encode(key, traffic, wire, sizeof(wire));
+    assert(priorityRelay.receiveData(wire, n, 130, hack, sizeof(hack), hackLength) ==
+           wici_hop::Receipt::HACK_READY);
+    traffic.sequence = 75; traffic.payload[8] = 15;
+    n = wici_link::encode(key, traffic, wire, sizeof(wire));
+    assert(priorityRelay.receiveData(wire, n, 130, hack, sizeof(hack), hackLength) ==
+           wici_hop::Receipt::REJECTED);  // one durable K1 slot per verified origin
+    traffic.payload[2] = 5; traffic.source = 5; traffic.sequence = 76; traffic.payload[8] = 16;
     n = wici_link::encode(key, traffic, wire, sizeof(wire));
     assert(priorityRelay.receiveData(wire, n, 130, hack, sizeof(hack), hackLength) ==
            wici_hop::Receipt::HACK_READY);
@@ -221,18 +235,21 @@ int main() {
     assert(parsed.payload[4] == 90 && parsed.payload[8] == 14);
 
     static Memory contentionMemory;
-    wici_hop::Relay contentionRelay(contentionMemory, {100, 2, 1, 1, 0}, ifac, false, receivers);
+    wici_hop::Relay contentionRelay(contentionMemory, {100, 2, 1, 1, 0}, ifac, false, receivers,
+                                     originProof);
     assert(contentionRelay.begin());
     wici_link::Frame waiting = traffic;
     waiting.flags = wici_link::ACKREQ | wici_link::DOWN;
     waiting.source = 1; waiting.sequence = 80;
-    waiting.payload[2] = 1; waiting.payload[4] = 90; waiting.payload[8] = 20;
+    waiting.payload[2] = 90; waiting.payload[4] = 50; waiting.payload[8] = 20;
+    waiting.originSignature[0] = 0xA5;
     n = wici_link::encode(key, waiting, wire, sizeof(wire));
     assert(contentionRelay.receiveData(wire, n, 140, hack, sizeof(hack), hackLength) ==
            wici_hop::Receipt::HACK_READY);
     waiting.flags = wici_link::ACKREQ;
     waiting.source = 4; waiting.sequence = 81;
     waiting.payload[2] = 4; waiting.payload[4] = 50; waiting.payload[8] = 21;
+    waiting.originSignature[0] = 0;
     n = wici_link::encode(key, waiting, wire, sizeof(wire));
     assert(contentionRelay.receiveData(wire, n, 140, hack, sizeof(hack), hackLength) ==
            wici_hop::Receipt::HACK_READY);
@@ -243,7 +260,8 @@ int main() {
     assert(parsed.payload[4] == 50);
 
     static Memory lateContentionMemory;
-    wici_hop::Relay lateContention(lateContentionMemory, {100, 2, 1, 1, 0}, ifac, false, receivers);
+    wici_hop::Relay lateContention(lateContentionMemory, {100, 2, 1, 1, 0}, ifac, false, receivers,
+                                    originProof);
     assert(lateContention.begin());
     waiting.flags = wici_link::ACKREQ; waiting.source = 4; waiting.sequence = 82;
     waiting.payload[2] = 4; waiting.payload[4] = 50; waiting.payload[8] = 22;
@@ -254,7 +272,8 @@ int main() {
     assert(lateContention.prepare(141) && !lateContention.contendedK2(141));
     waiting.flags = wici_link::ACKREQ | wici_link::DOWN;
     waiting.source = 1; waiting.sequence = 83;
-    waiting.payload[2] = 1; waiting.payload[4] = 90; waiting.payload[8] = 23;
+    waiting.payload[2] = 90; waiting.payload[4] = 50; waiting.payload[8] = 23;
+    waiting.originSignature[0] = 0xA5;
     n = wici_link::encode(key, waiting, wire, sizeof(wire));
     assert(lateContention.receiveData(wire, n, 141, hack, sizeof(hack), hackLength) ==
            wici_hop::Receipt::HACK_READY);

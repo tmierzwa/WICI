@@ -38,7 +38,7 @@ int main() {
     frame.payload[3] = 0; frame.payload[4] = 1;
     uint8_t wire[wici_link::MAX_FRAME], saved[wici_link::MAX_FRAME];
     size_t n = wici_link::encode(key, frame, wire, sizeof(wire)), length = 0;
-    assert(n == 44);
+    assert(n == 108);
     wici_relay::Queue queue(memory);
     assert(queue.begin());
     assert(queue.admit(key, 100, 2, wire, n, 100) == wici_relay::Admission::STORED);
