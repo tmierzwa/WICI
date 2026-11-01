@@ -1,11 +1,8 @@
 # SPDX-License-Identifier: MIT
-"""Wire format and cryptographic operations for station migration v1.
-
-The package hash covers the plaintext snapshot. The header authenticates its
-size and digest; callers must verify the digest after decrypting every part.
+"""Python reference of firmware/src/migration_crypto.* (station migration v1) for the cross-language
+vectors in tests/test_migration_crypto.py. Neither package ships it: the laptop only relays the package.
 """
 
-from hashlib import sha256
 import hmac
 
 from cryptography.exceptions import InvalidTag
@@ -102,14 +99,3 @@ def confirmation(confirm_key, kind, mid, package_hash=None):
         message += _fixed(package_hash, 32)
     return hmac.digest(_fixed(confirm_key, 32), message, "sha256")
 
-
-def verify_confirmation(confirm_key, kind, mid, package_hash, candidate):
-    return hmac.compare_digest(confirmation(confirm_key, kind, mid, package_hash), _fixed(candidate, 32))
-
-
-def verify_snapshot(header, mid, plaintext, max_size):
-    parsed = parse_header(header, mid, max_size)
-    raw = bytes(plaintext)
-    if len(raw) != parsed["plaintext_size"] or sha256(raw).digest() != parsed["package_hash"]:
-        raise ValueError("package hash or size mismatch")
-    return parsed
