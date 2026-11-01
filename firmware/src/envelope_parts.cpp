@@ -53,7 +53,7 @@ bool DurableParts::begin(uint16_t network, uint16_t recipient, uint16_t sender, 
         if (get16(record + 8) != network || get16(record + 10) != recipient ||
             get16(record + 12) != sender) return false;
         const uint32_t generation = get32(record + 4);
-        if (!found || static_cast<int32_t>(generation - generation_) > 0) {
+        if (!found || newer(generation, generation_)) {
             generation_ = generation; copy_ = copy;
             counter_ = get32(record + 14); number_ = record[19];
             startedS_ = get32(record + 20); length_ = record[24];

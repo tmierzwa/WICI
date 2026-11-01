@@ -219,7 +219,7 @@ bool Table::beacon(uint16_t neighbor, const Beacon& value, uint16_t linkCost16, 
         rank_ = 0xFFFF;
         rankCeiling_ = 0xFFFF;
         parent_ = 0;
-        for (Neighbor& neighbor : neighbors_) neighbor = Neighbor();
+        for (Neighbor& entry : neighbors_) entry = Neighbor();
         plannedFailures_ = backupFailures_ = 0;
         dynamicFailures_ = 0;
         failedDynamic_ = 0;

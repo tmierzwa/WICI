@@ -54,7 +54,7 @@ bool DurableReplay::begin(uint16_t network, uint16_t recipient, uint16_t sender,
         if (state == Copy::DAMAGED || data[30] != 1 || !(get64(data + 20) & 1)) return false;
         if (memcmp(data + 8, fingerprint_, FINGERPRINT)) continue;  // window of another key
         const uint32_t generation = get32(data + 4);
-        if (!found || static_cast<int32_t>(generation - generation_) > 0) {
+        if (!found || newer(generation, generation_)) {
             generation_ = generation;
             copy_ = copy;
             window_.highest = get32(data + 16);
