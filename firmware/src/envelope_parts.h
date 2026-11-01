@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // One durable pending fragment per receiver identity at a shelter station.
 // A fragment with another counter is rejected until the pending one expires
-// after 120 s; a damaged copy fails closed.
+// (120 s, or a clock that went backwards); a damaged copy fails closed.
 // The second fragment is assembled in RAM; caller commits SA1 and replay state
 // before sending HACK, then writes a tombstone with clear().
 #pragma once

@@ -49,6 +49,10 @@ int main() {
     first.counter = 8;
     assert(conflict.ingest(first, 1002, full, length) == envelope::FragmentResult::REJECTED);
     assert(conflict.ingest(first, 1122, full, length) == envelope::FragmentResult::PARTIAL);
+    // A clock that went backwards expires the pending part, as the receiver's SQLite inbox does.
+    first.counter = 9;
+    assert(conflict.ingest(first, 1000, full, length) == envelope::FragmentResult::PARTIAL);
+    first.counter = 8;
     envelope::DurableParts wrong(memory, 0);
     assert(!wrong.begin(100, 4, 2, key));
     uint8_t rotatedKey[32] = {};

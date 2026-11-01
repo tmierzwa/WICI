@@ -174,6 +174,45 @@ class CrossLanguageEnvelope(unittest.TestCase):
         self.assertEqual(actual, {"key": key.hex(), "whole": whole.hex(), "first": first.hex(),
                                   "second": second.hex()})
 
+    def test_fragment_admission_matches_receiver_inbox(self):
+        import sqlite3
+        from wici.stanowisko import envelope_inbox
+        # (counter, part, time s, plaintext, station result, receiver result)
+        steps = (
+            (7, 2, 100, b"world", "partial", "partial"),
+            (7, 2, 101, b"world", "partial", "partial"),          # identical repeat: HACK again
+            (7, 2, 101, b"other", "rejected", "rejected"),        # conflicting content
+            (7, 1, 102, b"hello ", "complete", "complete"),
+            (7, 1, 103, b"hello ", "duplicate", "duplicate"),     # replay bit proves admission
+            (8, 1, 200, b"a", "partial", "partial"),
+            (8, 2, 321, b"b", "partial", "partial"),              # 121 s: the first part expired
+            (8, 1, 441, b"a", "complete", "complete"),            # 120 s is still in time
+            (9, 1, 500, b"x", "partial", "partial"),
+            (9, 2, 400, b"y", "partial", "partial"),              # clock went back: pending part expired
+            (9, 1, 401, b"x", "complete", "complete"),
+            (80, 1, 402, b"z", "partial", "partial"),
+            (80, 2, 403, b"w", "complete", "complete"),
+            (16, 1, 404, b"q", "rejected", "rejected"),           # 64 below the highest: outside the window
+            (17, 1, 405, b"q", "partial", "partial"),
+            # Documented capacity difference (transport.md): the station keeps one pending
+            # message per receiver identity, the receiver up to four per station.
+            (18, 1, 406, b"r", "rejected", "partial"),
+        )
+        station = run(native("envelope_fragments_check", *DURABLE[1:]),
+                      stdin="".join(f"{c} {n} {t} {d.hex()}\n" for c, n, t, d, _, _ in steps)).split()
+        db = sqlite3.connect(":memory:")
+        self.addCleanup(db.close)
+        inbox = envelope_inbox.Inbox(db, 100, lambda: True)
+        receiver = []
+        for counter, number, now, data, _, _ in steps:
+            try:
+                receiver.append(inbox.receive(self.envelope.Part(2, 4, counter, 0, number, data), now,
+                                              lambda full: None))
+            except self.envelope.EnvelopeError:
+                receiver.append("rejected")
+        self.assertEqual(station, [s for *_, s, _ in steps])
+        self.assertEqual(receiver, [r for *_, r in steps])
+
 
 if __name__ == "__main__":
     unittest.main()

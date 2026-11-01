@@ -102,7 +102,8 @@ FragmentResult DurableParts::ingest(const Part& part, uint32_t nowS, uint8_t ful
     if (part.sender != sender_ || part.recipient != recipient_ || part.type != 0 ||
         (part.number != 1 && part.number != 2) || !part.length || part.length > MAX_SA1 / 2)
         return FragmentResult::REJECTED;
-    if (!length_ || (nowS >= startedS_ && nowS - startedS_ > PARTS_TIMEOUT_S))
+    // A clock that went backwards expires the pending part, as on the receiver.
+    if (!length_ || nowS < startedS_ || nowS - startedS_ > PARTS_TIMEOUT_S)
         return commit(&part, nowS) ? FragmentResult::PARTIAL : FragmentResult::IO_ERROR;
     if (counter_ != part.counter) return FragmentResult::REJECTED;
     if (number_ == part.number)
