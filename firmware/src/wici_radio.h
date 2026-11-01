@@ -15,14 +15,7 @@ constexpr uint32_t RETRY_MIN_MS = 500;
 constexpr uint32_t RETRY_SPAN_MS = 1501;
 constexpr uint32_t BEACON_CHECK_MS = 1000;  // minimum spacing of BEACON signature checks
 
-struct Air {
-    virtual ~Air() = default;
-    // true means the frame was accepted for radio transmission. onTxDone()
-    // later reports whether it actually went out.
-    virtual bool sendData(const uint8_t* frame, size_t length, wici_link::TxClass traffic) = 0;
-    // Synchronous: true only if the authenticated HACK was transmitted.
-    virtual bool sendHack(const uint8_t* frame, size_t length, uint32_t receivedMs) = 0;
-};
+using Air = wici_link::Air;
 
 using RandomFn = uint32_t (*)(void* context);
 using DeliveryFn = void (*)(uint32_t handle, bool acknowledged, void* context);

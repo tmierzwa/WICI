@@ -26,6 +26,15 @@ constexpr uint8_t DEFAULT_TTL = 7;  // network plan default; the plan does not c
 enum class Type : uint8_t { DATA = 0, HACK = 1, BEACON = 2 };
 // Local scheduler intent, never read from a radio frame's untrusted envelope header.
 enum class TxClass : uint8_t { OWN, TRANSIT, CONTENDED_K2, BEACON };
+// Radio side of a WICI node; the caller applies silence, CAD and airtime debt.
+struct Air {
+    virtual ~Air() = default;
+    // true means the bare frame was accepted for transmission; the caller's
+    // onTxDone() later reports whether it actually went out.
+    virtual bool sendData(const uint8_t* frame, size_t length, TxClass traffic) = 0;
+    // Synchronous: true only if the HACK was transmitted within its deadline.
+    virtual bool sendHack(const uint8_t* frame, size_t length, uint32_t receivedMs) = 0;
+};
 constexpr uint8_t ACKREQ = 1;
 constexpr uint8_t DOWN = 2;
 

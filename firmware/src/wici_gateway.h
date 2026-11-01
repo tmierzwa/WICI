@@ -12,11 +12,7 @@
 
 namespace wici_gateway {
 
-struct Air {
-    virtual ~Air() = default;
-    virtual bool sendData(const uint8_t* wire, size_t length, wici_link::TxClass traffic) = 0;
-    virtual bool sendHack(const uint8_t* wire, size_t length, uint32_t receivedMs) = 0;
-};
+using Air = wici_link::Air;
 
 enum class Event : uint8_t { REJECTED, FORWARDED, QUEUED, HACK_SENT };
 
@@ -38,7 +34,6 @@ public:
     // Called for a decoded KISS data packet from the laptop. A HACK must match
     // the last forwarded unicast DATA and fit the 200 ms radio deadline.
     Event host(const uint8_t* wire, size_t length, uint32_t nowMs, uint32_t nowS);
-    void resetPending() { pending_ = outboundPending_ = downPending_ = false; }  // transport reset
 
 private:
     kiss::Port& port_;

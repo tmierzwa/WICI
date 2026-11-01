@@ -314,7 +314,7 @@ uint32_t wiciLastBeaconMs = 0;
 uint16_t wiciAdvertisedParent = 0, wiciAdvertisedRank = 0xFFFF;
 uint8_t wiciBeacons = 0;
 bool numberedConfigured() { return storeOk && stationStore.config().network.id != 0; }
-struct WiciAir : wici_radio::Air, wici_gateway::Air {
+struct WiciAir : wici_link::Air {
     // Every WICI frame leaves through the pairwise tag; unicast without a key for its neighbor is refused.
     bool sendData(const uint8_t* wire, size_t length, wici_link::TxClass traffic) override {
         const bool exception = traffic == wici_link::TxClass::OWN && bench.silenceException &&
