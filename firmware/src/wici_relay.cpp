@@ -21,17 +21,22 @@ bool valid(const uint8_t* p) {
     for (size_t i = WIRE_AT + n; i < CRC_AT; ++i) if (p[i]) return false;
     return true;
 }
-bool transitDestination(const wici_link::Frame& frame, uint16_t ownId) {
-    return frame.destination == ownId ||
-           (frame.destination == wici_link::BROADCAST &&
-            (frame.flags & wici_link::DOWN) && !(frame.flags & wici_link::ACKREQ));
-}
-
 }  // namespace
 
-bool Queue::begin() {
+bool Queue::transit(const uint8_t* wire, size_t length, wici_link::Frame& frame) const {
+    return wici_link::decode(key_, network_, wire, length, frame) && frame.type == wici_link::Type::DATA &&
+           frame.hops < frame.ttl &&
+           (frame.destination == own_ ||
+            (frame.destination == wici_link::BROADCAST &&
+             (frame.flags & wici_link::DOWN) && !(frame.flags & wici_link::ACKREQ)));
+}
+
+bool Queue::begin(const uint8_t key[32], uint16_t network, uint16_t own) {
     ready_ = false;
-    if (!seen_.begin()) return false;
+    key_ = key;
+    network_ = network;
+    own_ = own;
+    if (!key || !id(network) || !id(own) || !seen_.begin()) return false;
     memset(frames_, 0, sizeof(frames_));
     memset(lengths_, 0, sizeof(lengths_));
     memset(generations_, 0, sizeof(generations_));
@@ -60,6 +65,10 @@ bool Queue::begin() {
         }
     }
     ready_ = true;
+    wici_link::Frame frame;
+    for (uint8_t slot = 0; slot < SLOTS; ++slot)
+        if (lengths_[slot] && !transit(frames_[slot], lengths_[slot], frame) && !commit(slot, nullptr, 0))
+            return false;
     return true;
 }
 
@@ -95,57 +104,45 @@ bool Queue::commit(uint8_t slot, const uint8_t* wire, size_t length,
     return true;
 }
 
-Admission Queue::admit(const uint8_t key[32], uint16_t network, uint16_t ownId,
-                       const uint8_t* wire, size_t length, uint32_t nowS,
-                       uint8_t freeSlotsReserved, uint16_t verifiedOrigin) {
-    if (!ready_ || !key || !wire || !ownId || ownId == wici_link::BROADCAST) return Admission::REJECTED;
+Admission Queue::admit(const uint8_t* wire, size_t length, uint32_t nowS,
+                       uint8_t freeSlotsReserved, uint16_t verifiedOrigin, uint8_t* slot) {
     wici_link::Frame frame;
-    if (!wici_link::decode(key, network, wire, length, frame) || frame.type != wici_link::Type::DATA ||
-        !transitDestination(frame, ownId) || frame.hops >= frame.ttl ||
-        freeSlotsReserved > SLOTS ||
-        (verifiedOrigin && (verifiedOrigin == wici_link::BROADCAST ||
-                            verifiedOrigin != get16(frame.payload + 1)))) return Admission::REJECTED;
+    if (!ready_ || !wire || !transit(wire, length, frame) || freeSlotsReserved > SLOTS ||
+        (verifiedOrigin && (!id(verifiedOrigin) || verifiedOrigin != get16(frame.payload + 1))))
+        return Admission::REJECTED;
     const wici_seen::Lookup prior = seen_.lookup(wire, length, nowS);
     if (prior == wici_seen::Lookup::MATCH) return Admission::FORWARDED;
     if (prior == wici_seen::Lookup::CONFLICT) return Admission::REJECTED;
     if (prior == wici_seen::Lookup::IO_ERROR) return Admission::IO_ERROR;
     for (uint8_t i = 0; i < SLOTS; ++i) {
-        if (!lengths_[i]) continue;
-        wici_link::Frame oldFrame;
-        if (!wici_link::decode(key, network, frames_[i], lengths_[i], oldFrame) ||
-            oldFrame.type != wici_link::Type::DATA || !transitDestination(oldFrame, ownId))
-            return Admission::REJECTED;  // An old key/configuration cannot authorize a new HACK.
         // Link sender/sequence can change after a parent switch. The end-to-end
         // envelope header identifies the same intent; only identical ciphertext
-        // earns another HACK. A conflicting payload cannot overwrite it.
+        // and signature earn another HACK. A conflicting payload cannot overwrite it.
         const uint8_t* old = frames_[i] + wici_link::HEADER;
         const uint8_t* incoming = wire + wici_link::HEADER;
-        if (memcmp(old, incoming, 9) == 0) {
-            if (lengths_[i] == length &&
-                memcmp(old, incoming, length - wici_link::HEADER - wici_link::TAG) == 0)
-                return Admission::DUPLICATE;
+        if (!lengths_[i] || memcmp(old, incoming, 9)) continue;
+        if (lengths_[i] != length || memcmp(old, incoming, length - wici_link::HEADER - wici_link::TAG))
             return Admission::REJECTED;
-        }
-    }
-    if (verifiedOrigin) {
-        for (uint8_t i = 0; i < SLOTS; ++i)
-            if (lengths_[i] && origins_[i] == verifiedOrigin) return Admission::FULL;
+        if (slot) *slot = i;
+        return Admission::DUPLICATE;
     }
     uint8_t free = 0, first = SLOTS;
     for (uint8_t i = 0; i < SLOTS; ++i) {
+        if (lengths_[i] && verifiedOrigin && origins_[i] == verifiedOrigin) return Admission::FULL;
         if (lengths_[i]) continue;
         if (first == SLOTS) first = i;
         ++free;
     }
-    if (free > freeSlotsReserved)
-        return commit(first, wire, length, verifiedOrigin, nowS) ? Admission::STORED : Admission::IO_ERROR;
-    return Admission::FULL;
+    if (free <= freeSlotsReserved) return Admission::FULL;
+    if (!commit(first, wire, length, verifiedOrigin, nowS)) return Admission::IO_ERROR;
+    if (slot) *slot = first;
+    return Admission::STORED;
 }
 
 bool Queue::pending(uint8_t slot) const { return ready_ && slot < SLOTS && lengths_[slot]; }
 
 bool Queue::markVerified(uint8_t slot, uint16_t origin) {
-    if (!pending(slot) || !origin || origin == wici_link::BROADCAST) return false;
+    if (!pending(slot) || !id(origin)) return false;
     if (origins_[slot] == origin) return true;
     if (origins_[slot]) return false;
     uint8_t wire[wici_link::MAX_FRAME];
@@ -153,48 +150,31 @@ bool Queue::markVerified(uint8_t slot, uint16_t origin) {
     return commit(slot, wire, lengths_[slot], origin, admittedS_[slot]);
 }
 
-bool Queue::expire(uint32_t nowS) {
+bool Queue::settle(uint32_t nowS) {
     if (!ready_) return false;
     for (uint8_t slot = 0; slot < SLOTS; ++slot) {
-        if (!lengths_[slot] || nowS < admittedS_[slot] ||
-            nowS - admittedS_[slot] < MAX_HOLD_S) continue;
+        if (!lengths_[slot]) continue;
         const wici_seen::Lookup state = seen_.lookup(frames_[slot], lengths_[slot], nowS);
         if (state == wici_seen::Lookup::IO_ERROR) return false;
-        // A different payload with the same envelope identity may already be
-        // in the seen ring. Retire this item without replacing that record.
-        if (state == wici_seen::Lookup::CONFLICT) {
-            if (!commit(slot, nullptr, 0)) return false;
-        } else if (!remove(slot, nowS)) return false;
+        const bool expired = nowS >= admittedS_[slot] && nowS - admittedS_[slot] >= MAX_HOLD_S;
+        if (state == wici_seen::Lookup::MATCH) {
+            if (!commit(slot, nullptr, 0)) return false;  // forwarded before a crash
+        } else if (expired) {
+            // A conflicting identity is retired without replacing the seen
+            // record of the frame that was forwarded under it.
+            if (state == wici_seen::Lookup::CONFLICT ? !commit(slot, nullptr, 0) : !remove(slot, nowS))
+                return false;
+        }
     }
     return true;
 }
 
-bool Queue::read(const uint8_t key[32], uint16_t network, uint16_t ownId, uint8_t slot,
-                 uint32_t nowS, uint8_t* out, size_t capacity, size_t& length) {
+bool Queue::read(uint8_t slot, uint32_t nowS, uint8_t* out, size_t capacity, size_t& length) {
     length = 0;
-    if (!key || !out || !pending(slot) || capacity < lengths_[slot]) return false;
-    wici_link::Frame frame;
-    if (!wici_link::decode(key, network, frames_[slot], lengths_[slot], frame) ||
-        frame.type != wici_link::Type::DATA || !transitDestination(frame, ownId)) return false;
-    if (seen_.lookup(frames_[slot], lengths_[slot], nowS) != wici_seen::Lookup::NONE) return false;
+    if (!out || !pending(slot) || capacity < lengths_[slot] ||
+        seen_.lookup(frames_[slot], lengths_[slot], nowS) != wici_seen::Lookup::NONE) return false;
     length = lengths_[slot];
     memcpy(out, frames_[slot], length);
-    return true;
-}
-
-bool Queue::finishForwarded(const uint8_t key[32], uint16_t network, uint16_t ownId, uint32_t nowS) {
-    if (!ready_ || !key) return false;
-    for (uint8_t slot = 0; slot < SLOTS; ++slot) {
-        if (!lengths_[slot]) continue;
-        wici_link::Frame frame;
-        if (!wici_link::decode(key, network, frames_[slot], lengths_[slot], frame) ||
-            frame.type != wici_link::Type::DATA || !transitDestination(frame, ownId)) return false;
-        const wici_seen::Lookup state = seen_.lookup(frames_[slot], lengths_[slot], nowS);
-        if (state == wici_seen::Lookup::IO_ERROR) return false;
-        // A conflicting envelope identity must not freeze unrelated slots.
-        if (state == wici_seen::Lookup::CONFLICT) continue;
-        if (state == wici_seen::Lookup::MATCH && !commit(slot, nullptr, 0)) return false;
-    }
     return true;
 }
 

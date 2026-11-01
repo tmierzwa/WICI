@@ -40,93 +40,108 @@ int main() {
     size_t n = wici_link::encode(key, frame, wire, sizeof(wire)), length = 0;
     assert(n == 108);
     wici_relay::Queue queue(memory);
-    assert(queue.begin());
-    assert(queue.admit(key, 100, 2, wire, n, 100) == wici_relay::Admission::STORED);
-    assert(queue.admit(key, 100, 2, wire, n, 100) == wici_relay::Admission::DUPLICATE);
+    assert(queue.begin(key, 100, 2));
+    assert(queue.admit(wire, n, 100) == wici_relay::Admission::STORED);
+    assert(queue.admit(wire, n, 100) == wici_relay::Admission::DUPLICATE);
     uint8_t otherIfac[16], otherKey[32], otherWire[wici_link::MAX_FRAME];
     memset(otherIfac, 0xA5, sizeof(otherIfac));
     assert(wici_link::deriveKey(otherIfac, 100, otherKey));
     frame.sequence = 8;
     assert(wici_link::encode(otherKey, frame, otherWire, sizeof(otherWire)) == n);
-    assert(queue.admit(otherKey, 100, 2, otherWire, n, 100) == wici_relay::Admission::REJECTED);
+    assert(queue.admit(otherWire, n, 100) == wici_relay::Admission::REJECTED);
     frame.sequence = 0;
-    assert(queue.read(key, 100, 2, 0, 100, saved, sizeof(saved), length) && length == n && memcmp(saved, wire, n) == 0);
+    assert(queue.read(0, 100, saved, sizeof(saved), length) && length == n && memcmp(saved, wire, n) == 0);
     const size_t savedLength = length;
-    assert(!queue.read(key, 101, 2, 0, 100, saved, sizeof(saved), length));
-    frame.sequence = 9;
+        frame.sequence = 9;
     n = wici_link::encode(key, frame, wire, sizeof(wire));
-    assert(queue.admit(key, 100, 2, wire, n, 100) == wici_relay::Admission::DUPLICATE);
+    assert(queue.admit(wire, n, 100) == wici_relay::Admission::DUPLICATE);
     frame.payload[24] ^= 1;
     n = wici_link::encode(key, frame, wire, sizeof(wire));
-    assert(queue.admit(key, 100, 2, wire, n, 100) == wici_relay::Admission::REJECTED);
+    assert(queue.admit(wire, n, 100) == wici_relay::Admission::REJECTED);
     frame.payload[24] ^= 1;
     n = wici_link::encode(key, frame, wire, sizeof(wire));
     wire[n - 1] ^= 1;
-    assert(queue.admit(key, 100, 2, wire, n, 100) == wici_relay::Admission::REJECTED);
+    assert(queue.admit(wire, n, 100) == wici_relay::Admission::REJECTED);
     wire[n - 1] ^= 1;
 
     wici_relay::Queue restarted(memory);
-    assert(restarted.begin() && restarted.pending(0));
-    assert(restarted.admit(key, 100, 2, wire, n, 100) == wici_relay::Admission::DUPLICATE);
+    assert(restarted.begin(key, 100, 2) && restarted.pending(0));
+    assert(restarted.admit(wire, n, 100) == wici_relay::Admission::DUPLICATE);
     for (uint8_t i = 1; i < 4; ++i) {
         frame.sequence = i;
         frame.payload[8] = i;
         n = wici_link::encode(key, frame, wire, sizeof(wire));
-        assert(restarted.admit(key, 100, 2, wire, n, 100) == wici_relay::Admission::STORED);
+        assert(restarted.admit(wire, n, 100) == wici_relay::Admission::STORED);
     }
     frame.sequence = 4;
     frame.payload[8] = 4;
     n = wici_link::encode(key, frame, wire, sizeof(wire));
-    assert(restarted.admit(key, 100, 2, wire, n, 100) == wici_relay::Admission::FULL);
+    assert(restarted.admit(wire, n, 100) == wici_relay::Admission::FULL);
     memory.writesLeft = 1;
     assert(!restarted.remove(0, 101));
     assert(!restarted.pending(0));  // No more admissions until the FRAM copies are reloaded.
-    assert(restarted.admit(key, 100, 2, wire, n, 101) == wici_relay::Admission::REJECTED);
+    assert(restarted.admit(wire, n, 101) == wici_relay::Admission::REJECTED);
     memory.writesLeft = -1;
     wici_relay::Queue afterCut(memory);
-    assert(afterCut.begin() && afterCut.pending(0));
+    assert(afterCut.begin(key, 100, 2) && afterCut.pending(0));
     memory.writesLeft = 3;
     assert(!afterCut.remove(0, 102));  // seen committed, tombstone interrupted
     memory.writesLeft = -1;
     wici_relay::Queue afterSeen(memory);
-    assert(afterSeen.begin() && afterSeen.pending(0));
-    assert(!afterSeen.read(key, 100, 2, 0, 103, wire, sizeof(wire), length));
-    assert(afterSeen.finishForwarded(key, 100, 2, 103));
+    assert(afterSeen.begin(key, 100, 2) && afterSeen.pending(0));
+    assert(!afterSeen.read(0, 103, wire, sizeof(wire), length));
+    assert(afterSeen.settle(103));
     assert(!afterSeen.pending(0));
     wici_relay::Queue afterRemove(memory);
-    assert(afterRemove.begin() && !afterRemove.pending(0));
-    assert(afterRemove.admit(key, 100, 2, saved, savedLength, 103) == wici_relay::Admission::FORWARDED);
+    assert(afterRemove.begin(key, 100, 2) && !afterRemove.pending(0));
+    assert(afterRemove.admit(saved, savedLength, 103) == wici_relay::Admission::FORWARDED);
     // Rewriting the hop sequence and MAC cannot make the same signed envelope new.
     frame.sequence = 200;
     frame.payload[8] = 0;
     size_t replayLength = wici_link::encode(key, frame, wire, sizeof(wire));
     assert(replayLength == savedLength);
-    assert(afterRemove.admit(key, 100, 2, wire, replayLength, 103) == wici_relay::Admission::FORWARDED);
+    assert(afterRemove.admit(wire, replayLength, 103) == wici_relay::Admission::FORWARDED);
     frame.payload[8] = 4;
     n = wici_link::encode(key, frame, wire, sizeof(wire));
-    assert(afterRemove.admit(key, 100, 2, wire, n, 103) == wici_relay::Admission::STORED);
+    assert(afterRemove.admit(wire, n, 103) == wici_relay::Admission::STORED);
     assert(afterRemove.remove(0, 104));
-    assert(afterRemove.admit(key, 100, 2, saved, savedLength, 223) == wici_relay::Admission::FORWARDED);
+    assert(afterRemove.admit(saved, savedLength, 223) == wici_relay::Admission::FORWARDED);
     // A frame without a next-hop HACK must eventually free its durable slot.
     static Memory expiryMemory;
     wici_relay::Queue expiring(expiryMemory);
-    assert(expiring.begin());
-    assert(expiring.admit(key, 100, 2, saved, savedLength, 100, 0, 4) == wici_relay::Admission::STORED);
-    assert(expiring.expire(100 + wici_relay::MAX_HOLD_S - 1) && expiring.pending(0));
-    assert(expiring.expire(100 + wici_relay::MAX_HOLD_S) && !expiring.pending(0));
+    assert(expiring.begin(key, 100, 2));
+    assert(expiring.admit(saved, savedLength, 100, 0, 4) == wici_relay::Admission::STORED);
+    assert(expiring.settle(100 + wici_relay::MAX_HOLD_S - 1) && expiring.pending(0));
+    assert(expiring.settle(100 + wici_relay::MAX_HOLD_S) && !expiring.pending(0));
     wici_relay::Queue expiredAfterRestart(expiryMemory);
-    assert(expiredAfterRestart.begin() && !expiredAfterRestart.pending(0));
-    assert(expiredAfterRestart.admit(key, 100, 2, saved, savedLength, 100 + wici_relay::MAX_HOLD_S) ==
+    assert(expiredAfterRestart.begin(key, 100, 2) && !expiredAfterRestart.pending(0));
+    assert(expiredAfterRestart.admit(saved, savedLength, 100 + wici_relay::MAX_HOLD_S) ==
            wici_relay::Admission::FORWARDED);
     static Memory verifiedMemory;
     wici_relay::Queue verified(verifiedMemory);
-    assert(verified.begin());
-    assert(verified.admit(key, 100, 2, saved, savedLength, 100, 0, 4) == wici_relay::Admission::STORED);
+    assert(verified.begin(key, 100, 2));
+    assert(verified.admit(saved, savedLength, 100, 0, 4) == wici_relay::Admission::STORED);
     assert(verified.verifiedOrigin(0) == 4);
     wici_relay::Queue keyMayHaveChanged(verifiedMemory);
-    assert(keyMayHaveChanged.begin() && keyMayHaveChanged.verifiedOrigin(0) == 0);
+    assert(keyMayHaveChanged.begin(key, 100, 2) && keyMayHaveChanged.verifiedOrigin(0) == 0);
+    // Reprovisioning (new link key or station number) drops items that can
+    // never be sent again instead of wedging the relay.
+    uint8_t newIfac[16], newKey[32];
+    memset(newIfac, 0x5A, sizeof(newIfac));
+    assert(wici_link::deriveKey(newIfac, 100, newKey));
+    wici_relay::Queue renumbered(verifiedMemory);
+    assert(renumbered.begin(key, 100, 3) && !renumbered.pending(0));
+    static Memory rekeyMemory;
+    wici_relay::Queue oldKey(rekeyMemory);
+    assert(oldKey.begin(key, 100, 2));
+    assert(oldKey.admit(saved, savedLength, 100) == wici_relay::Admission::STORED);
+    wici_relay::Queue rekeyed(rekeyMemory);
+    assert(rekeyed.begin(newKey, 100, 2) && !rekeyed.pending(0));
+    frame.sequence = 300;
+    n = wici_link::encode(newKey, frame, wire, sizeof(wire));
+    assert(rekeyed.admit(wire, n, 200) == wici_relay::Admission::STORED);
     // A committed record with a damaged CRC must not be accepted after restart.
     memory.bytes[wici_relay::BASE + 0 * wici_relay::COPY_BYTES + 25] ^= 1;
     wici_relay::Queue corrupt(memory);
-    assert(!corrupt.begin());
+    assert(!corrupt.begin(key, 100, 2));
 }

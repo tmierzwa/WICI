@@ -19,7 +19,8 @@ Relay::Relay(journal::Storage& storage, wici_route::Config config, const uint8_t
 }
 
 bool Relay::priority(const wici_link::Frame& frame) const {
-    if (!verify_) return false;
+    // Floods are K2 whatever their signature.
+    if (!verify_ || frame.destination == wici_link::BROADCAST) return false;
     const uint16_t sender = get16(frame.payload + 1), recipient = get16(frame.payload + 3);
     const uint16_t receiver = frame.flags & wici_link::DOWN ? sender : recipient;
     if (receiver != receivers_[0] && receiver != receivers_[1]) return false;
@@ -28,15 +29,15 @@ bool Relay::priority(const wici_link::Frame& frame) const {
 
 bool Relay::begin() {
     active_ = sent_ = everSent_ = false;
-    activePriority_ = contendedK2_ = false;
+    activePriority_ = false;
     outgoingLength_ = 0;
     attempts_ = 0;
-    nextSlot_ = 0;
+    nextSlot_ = owedHacks_ = 0;
     lastRepeatHackS_ = 0;
     repeatHackSent_ = false;
     for (uint32_t& generation : checkedGeneration_) generation = 0;
-    return keyReady_ && queue_.begin() && routes_.begin() && sequence_.begin(config_.network, config_.own) &&
-           flood_.begin(config_.network);
+    return keyReady_ && queue_.begin(key_, config_.network, config_.own) && routes_.begin() &&
+           sequence_.begin(config_.network, config_.own) && flood_.begin(config_.network);
 }
 
 Receipt Relay::receiveData(const uint8_t* wire, size_t length, uint32_t nowS,
@@ -59,26 +60,33 @@ Receipt Relay::receiveData(const uint8_t* wire, size_t length, uint32_t nowS,
         return Receipt::IGNORED;
     // Ed25519 takes longer than the HACK deadline on the target MCU. Admit
     // into K2, commit, and verify later in learnPending().
-    wici_relay::Admission stored = queue_.admit(key_, config_.network, config_.own,
-        wire, length, nowS, 2);
-    if (stored == wici_relay::Admission::FULL) {
-        // Mark previously admitted K1 origins before enforcing one durable
-        // slot per origin; an unverified claim cannot consume that allowance.
-        learnPending(nowS);
-    }
-    if (stored == wici_relay::Admission::FULL && priority(frame)) {
-        // Only the full-queue path pays the Ed25519 cost. It can exceed the
-        // immediate HACK deadline, so the sender must retry after the commit.
-        stored = queue_.admit(key_, config_.network, config_.own, wire, length,
-                              nowS, 0, get16(frame.payload + 1));
-        if (stored == wici_relay::Admission::STORED) return Receipt::STORED_NO_HACK;
+    uint8_t slot = wici_relay::SLOTS;
+    wici_relay::Admission stored = queue_.admit(wire, length, nowS, 2, 0, &slot);
+    if (stored == wici_relay::Admission::FULL && !broadcast && (frame.flags & wici_link::ACKREQ)) {
+        // Only a full queue pays the Ed25519 cost, which can exceed the HACK
+        // deadline, so a K1 frame is committed now and HACKed on the sender's
+        // retry. Earlier K1 origins are marked first: an unverified claim
+        // cannot consume the one durable K1 slot per origin.
+        if (!learnPending(nowS)) return Receipt::REJECTED;
+        if (priority(frame)) {
+            stored = queue_.admit(wire, length, nowS, 0, get16(frame.payload + 1), &slot);
+            if (stored == wici_relay::Admission::STORED) {
+                owedHacks_ |= static_cast<uint8_t>(1u << slot);
+                return Receipt::STORED_NO_HACK;
+            }
+        }
     }
     if (stored != wici_relay::Admission::STORED && stored != wici_relay::Admission::DUPLICATE &&
         stored != wici_relay::Admission::FORWARDED)
         return Receipt::REJECTED;
+    if (stored == wici_relay::Admission::STORED) owedHacks_ &= static_cast<uint8_t>(~(1u << slot));
     if (!(frame.flags & wici_link::ACKREQ))
         return stored == wici_relay::Admission::FORWARDED ? Receipt::IGNORED : Receipt::STORED_NO_HACK;
-    if (stored != wici_relay::Admission::STORED) {
+    const bool owed = stored == wici_relay::Admission::DUPLICATE && (owedHacks_ >> slot & 1);
+    if (owed) {
+        owedHacks_ &= static_cast<uint8_t>(~(1u << slot));
+    } else if (stored != wici_relay::Admission::STORED) {
+        // Repeated HACKs cost silence debt; a replayed copy may earn one per 5 s.
         if (repeatHackSent_ && nowS >= lastRepeatHackS_ && nowS - lastRepeatHackS_ < 5)
             return Receipt::IGNORED;
         repeatHackSent_ = true;
@@ -95,51 +103,49 @@ Receipt Relay::receiveData(const uint8_t* wire, size_t length, uint32_t nowS,
     return hackLength ? Receipt::HACK_READY : Receipt::REJECTED;
 }
 
-void Relay::learnPending(uint32_t nowS) {
-    if (!routes_.ready() || !queue_.finishForwarded(key_, config_.network, config_.own, nowS) ||
-        !queue_.expire(nowS)) return;
+bool Relay::learnPending(uint32_t nowS) {
+    if (!routes_.ready() || !queue_.settle(nowS)) return false;
     uint8_t wire[wici_link::MAX_FRAME];
     for (uint8_t slot = 0; slot < wici_relay::SLOTS; ++slot) {
         size_t length = 0;
-        if (!queue_.read(key_, config_.network, config_.own, slot, nowS, wire, sizeof(wire), length)) continue;
         wici_link::Frame frame;
-        if (!wici_link::decode(key_, config_.network, wire, length, frame)) continue;
+        if (!queue_.read(slot, nowS, wire, sizeof(wire), length) ||
+            !wici_link::decode(key_, config_.network, wire, length, frame)) continue;
         uint16_t origin = queue_.verifiedOrigin(slot);
         if (!origin && checkedGeneration_[slot] != queue_.generation(slot)) {
             checkedGeneration_[slot] = queue_.generation(slot);
             if (priority(frame)) {
                 origin = get16(frame.payload + 1);
-                if (!queue_.markVerified(slot, origin)) return;
+                if (!queue_.markVerified(slot, origin)) return false;
                 checkedGeneration_[slot] = queue_.generation(slot);
             }
         }
-        if (origin && !(frame.flags & wici_link::DOWN)) {
-            const uint16_t sender = get16(frame.payload + 1);
-            if (sender != config_.own) routes_.learn(sender, frame.source);
-        }
+        // Only a verified origin may move a down route; l_src was checked by
+        // the pairwise hop tag when the frame was received.
+        if (origin && !(frame.flags & wici_link::DOWN) && origin != config_.own &&
+            !routes_.learn(origin, frame.source) && !routes_.ready()) return false;
     }
+    return true;
 }
 
 bool Relay::prepare(uint32_t nowS) {
-    if (active_ || !keyReady_ || !routes_.ready() || !sequence_.ready()) return false;
-    learnPending(nowS);
-    if (!queue_.finishForwarded(key_, config_.network, config_.own, nowS)) return false;
+    if (active_ || !keyReady_ || !sequence_.ready() || !learnPending(nowS)) return false;
     uint8_t wire[wici_link::MAX_FRAME];
-    bool priorityWaiting = false;
+    // First pass: verified K1 frames; second pass: K2. Each pass rotates.
     for (uint8_t order = 0; order < 2 * wici_relay::SLOTS; ++order) {
         const uint8_t slot = static_cast<uint8_t>((nextSlot_ + order) % wici_relay::SLOTS);
-        size_t length = 0;
-        if (!queue_.read(key_, config_.network, config_.own, slot, nowS, wire, sizeof(wire), length)) continue;
-        wici_link::Frame frame;
-        if (!wici_link::decode(key_, config_.network, wire, length, frame)) continue;
         const bool verified = queue_.verifiedOrigin(slot) != 0;
-        if (order < wici_relay::SLOTS && verified) priorityWaiting = true;
-        if (verified != (order < wici_relay::SLOTS)) continue;
+        size_t length = 0;
+        wici_link::Frame frame;
+        if (verified != (order < wici_relay::SLOTS) ||
+            !queue_.read(slot, nowS, wire, sizeof(wire), length) ||
+            !wici_link::decode(key_, config_.network, wire, length, frame)) continue;
         const uint16_t next = frame.flags & wici_link::DOWN ?
                               routes_.down(get16(frame.payload + 3)) : routes_.parent();
-        if (!id(next) && next != wici_link::BROADCAST) continue;
-        if (next == wici_link::BROADCAST && !allowFlood_) continue;
+        // Never hand a frame back to the neighbor it came from.
+        if ((!id(next) && next != wici_link::BROADCAST) || next == frame.source) continue;
         if (next == wici_link::BROADCAST) {
+            if (!allowFlood_) continue;
             const wici_flood::Lookup state = flood_.lookup(frame.payload, nowS);
             if (state == wici_flood::Lookup::IO_ERROR) return false;
             if (state == wici_flood::Lookup::MATCH) {
@@ -156,8 +162,7 @@ bool Relay::prepare(uint32_t nowS) {
         next_ = next; outgoingSeq_ = sequence; slot_ = slot;
         nextSlot_ = static_cast<uint8_t>((slot + 1) % wici_relay::SLOTS);
         noAck_ = next == wici_link::BROADCAST || !(frame.flags & wici_link::ACKREQ);
-        activePriority_ = verified;
-        contendedK2_ = priorityWaiting && !activePriority_;
+        activePriority_ = verified && next != wici_link::BROADCAST;
         outgoingLength_ = n; attempts_ = 1;
         sent_ = everSent_ = false; active_ = true;
         return true;
@@ -170,24 +175,10 @@ const uint8_t* Relay::outgoing(size_t& length) const {
     return active_ ? outgoing_ : nullptr;
 }
 
-bool Relay::contendedK2(uint32_t nowS) {
+bool Relay::contendedK2() const {
     if (!active_ || activePriority_) return false;
-    if (contendedK2_) return true;
-    uint8_t wire[wici_link::MAX_FRAME];
-    for (uint8_t slot = 0; slot < wici_relay::SLOTS; ++slot) {
-        if (!queue_.pending(slot)) continue;
-        size_t length = 0;
-        if (!queue_.read(key_, config_.network, config_.own, slot, nowS, wire, sizeof(wire), length)) {
-            contendedK2_ = true;  // uncertain queue state cannot loosen the K2 budget
-            return true;
-        }
-        wici_link::Frame frame;
-        if (wici_link::decode(key_, config_.network, wire, length, frame) &&
-            queue_.verifiedOrigin(slot)) {
-            contendedK2_ = true;  // a later K1 remains relevant through this transfer's retries
-            return true;
-        }
-    }
+    for (uint8_t slot = 0; slot < wici_relay::SLOTS; ++slot)
+        if (slot != slot_ && queue_.verifiedOrigin(slot)) return true;
     return false;
 }
 

@@ -293,7 +293,7 @@ int main() {
     assert(contentionRelay.receiveData(wire, n, 140, hack, sizeof(hack), hackLength) ==
            wici_hop::Receipt::HACK_READY);
     assert(contentionRelay.routes().beacon(1, {1, 0, 1, 0, 0}, 16, 140));
-    assert(contentionRelay.prepare(140) && contentionRelay.contendedK2(140));
+    assert(contentionRelay.prepare(140) && contentionRelay.contendedK2());
     out = contentionRelay.outgoing(outLength);
     assert(out && wici_link::decode(key, 100, out, outLength, parsed));
     assert(parsed.payload[4] == 50);
@@ -308,7 +308,7 @@ int main() {
     assert(lateContention.receiveData(wire, n, 141, hack, sizeof(hack), hackLength) ==
            wici_hop::Receipt::HACK_READY);
     assert(lateContention.routes().beacon(1, {1, 0, 1, 0, 0}, 16, 141));
-    assert(lateContention.prepare(141) && !lateContention.contendedK2(141));
+    assert(lateContention.prepare(141) && !lateContention.contendedK2());
     waiting.flags = wici_link::ACKREQ | wici_link::DOWN;
     waiting.source = 1; waiting.sequence = 83;
     waiting.payload[2] = 90; waiting.payload[4] = 50; waiting.payload[8] = 23;
@@ -317,5 +317,78 @@ int main() {
     assert(lateContention.receiveData(wire, n, 141, hack, sizeof(hack), hackLength) ==
            wici_hop::Receipt::HACK_READY);
     lateContention.learnPending(141);
-    assert(lateContention.contendedK2(141));
+    assert(lateContention.contendedK2());
+    // Review finding 2/6: the retry of a K1 frame committed without HACK is
+    // owed one HACK even when a replayed copy just used the repeat allowance.
+    static Memory owedMemory;
+    wici_hop::Relay owed(owedMemory, {100, 2, 1, 1, 0}, ifac, false, receivers, originProof);
+    assert(owed.begin());
+    wici_link::Frame k2 = incoming;
+    k2.payload[2] = 4; k2.payload[4] = 50; k2.originSignature[0] = 0;
+    uint8_t k2Wire[255];
+    size_t k2Length = 0;
+    for (uint8_t i = 0; i < 2; ++i) {
+        k2.sequence = static_cast<uint16_t>(200 + i); k2.payload[8] = static_cast<uint8_t>(30 + i);
+        k2Length = wici_link::encode(key, k2, k2Wire, sizeof(k2Wire));
+        assert(owed.receiveData(k2Wire, k2Length, 200, hack, sizeof(hack), hackLength) ==
+               wici_hop::Receipt::HACK_READY);
+    }
+    assert(owed.receiveData(k2Wire, k2Length, 200, hack, sizeof(hack), hackLength) ==
+           wici_hop::Receipt::HACK_READY);  // repeat allowance used at t=200
+    wici_link::Frame k1 = k2;
+    k1.sequence = 210; k1.payload[4] = 90; k1.payload[8] = 40; k1.originSignature[0] = 0xA5;
+    n = wici_link::encode(key, k1, wire, sizeof(wire));
+    assert(owed.receiveData(wire, n, 200, hack, sizeof(hack), hackLength) ==
+           wici_hop::Receipt::STORED_NO_HACK);
+    assert(owed.receiveData(wire, n, 201, hack, sizeof(hack), hackLength) ==
+           wici_hop::Receipt::HACK_READY);  // owed HACK is not rate limited
+    assert(owed.receiveData(wire, n, 202, hack, sizeof(hack), hackLength) ==
+           wici_hop::Receipt::IGNORED);     // but owed only once
+
+    // Review medium item: floods are K2. A signed flood never takes the
+    // Ed25519 path at a full queue and never becomes K1.
+    static Memory floodK2Memory;
+    wici_hop::Relay floodK2(floodK2Memory, {100, 2, 1, 1, 0}, ifac, true, receivers, originProof);
+    assert(floodK2.begin());
+    wici_link::Frame flood = incoming;
+    flood.flags = wici_link::DOWN; flood.source = 1; flood.destination = wici_link::BROADCAST;
+    flood.sequence = 220; flood.payload[2] = 90; flood.payload[4] = 4; flood.payload[8] = 50;
+    flood.originSignature[0] = 0xA5;
+    const size_t floodLength = wici_link::encode(key, flood, wire, sizeof(wire));
+    unsigned proofsBefore = proofCalls;
+    assert(floodK2.receiveData(wire, floodLength, 220, hack, sizeof(hack), hackLength) ==
+           wici_hop::Receipt::STORED_NO_HACK);
+    for (uint8_t i = 0; i < 2; ++i) {
+        k2.sequence = static_cast<uint16_t>(221 + i); k2.payload[8] = static_cast<uint8_t>(51 + i);
+        k2Length = wici_link::encode(key, k2, k2Wire, sizeof(k2Wire));
+        assert(floodK2.receiveData(k2Wire, k2Length, 220, hack, sizeof(hack), hackLength) ==
+               (i ? wici_hop::Receipt::REJECTED : wici_hop::Receipt::HACK_READY));
+    }
+    flood.payload[8] = 53; flood.sequence = 223;
+    n = wici_link::encode(key, flood, wire, sizeof(wire));
+    assert(floodK2.receiveData(wire, n, 220, hack, sizeof(hack), hackLength) ==
+           wici_hop::Receipt::REJECTED);
+    assert(floodK2.learnPending(220));
+    assert(proofCalls == proofsBefore);  // no signature work for floods or non-receiver K2
+    assert(floodK2.routes().beacon(1, {1, 0, 1, 0, 0}, 16, 220));
+    assert(floodK2.prepare(220) && !floodK2.contendedK2());
+    out = floodK2.outgoing(outLength);
+    assert(out && wici_link::decode(key, 100, out, outLength, parsed));
+    assert(parsed.destination == wici_link::BROADCAST);
+
+    // A frame whose only next hop is the neighbor it came from waits without
+    // burning a durable link sequence on every loop pass.
+    static Memory loopBackMemory;
+    wici_hop::Relay loopBack(loopBackMemory, {100, 2, 1, 1, 0}, ifac);
+    assert(loopBack.begin());
+    wici_link::Frame fromParent = incoming;
+    fromParent.source = 1; fromParent.sequence = 230; fromParent.payload[8] = 60;
+    n = wici_link::encode(key, fromParent, wire, sizeof(wire));
+    assert(loopBack.receiveData(wire, n, 230, hack, sizeof(hack), hackLength) ==
+           wici_hop::Receipt::HACK_READY);
+    assert(loopBack.routes().beacon(1, {1, 0, 1, 0, 0}, 16, 230));
+    uint16_t seqBefore = 0, seqAfter = 0;
+    assert(loopBack.nextSequence(seqBefore));
+    for (unsigned i = 0; i < 100; ++i) assert(!loopBack.prepare(230));
+    assert(loopBack.nextSequence(seqAfter) && seqAfter == static_cast<uint16_t>(seqBefore + 1));
 }

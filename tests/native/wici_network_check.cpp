@@ -26,7 +26,7 @@ int main() {
     assert(wici_link::deriveKey(ifac, 100, key));
     wici_relay::Queue first(relayMemory);
     wici_route::Table route(relayMemory, {100, 2, 1, 1, 0});
-    assert(first.begin() && route.begin());
+    assert(first.begin(key, 100, 2) && route.begin());
 
     wici_link::Frame uplink;
     uplink.type = wici_link::Type::DATA;
@@ -43,7 +43,7 @@ int main() {
     uplink.payload[8] = 7;
     const size_t receivedLength = wici_link::encode(key, uplink, incoming, sizeof(incoming));
     assert(receivedLength == 108);
-    assert(first.admit(key, 100, 2, incoming, receivedLength, 100) == wici_relay::Admission::STORED);
+    assert(first.admit(incoming, receivedLength, 100) == wici_relay::Admission::STORED);
     assert(route.learn(4, 4));  // down route survives the same crash
     // HACK may be sent only now, after the relay queue and down route commit.
     wici_link::Frame hack;
@@ -57,13 +57,13 @@ int main() {
     // Power cut after HACK and before forwarding. Both states are recovered.
     wici_relay::Queue restarted(relayMemory);
     wici_route::Table routeAfter(relayMemory, {100, 2, 1, 1, 0});
-    assert(restarted.begin() && routeAfter.begin() && restarted.pending(0));
+    assert(restarted.begin(key, 100, 2) && routeAfter.begin() && restarted.pending(0));
     assert(routeAfter.down(4) == 4);
     assert(routeAfter.beacon(1, {1, 0, 1, 0, 0}, 16, 101));
     assert(routeAfter.parent() == 1);
     uint8_t queued[wici_link::MAX_FRAME] = {};
     size_t queuedLength = 0;
-    assert(restarted.read(key, 100, 2, 0, 101, queued, sizeof(queued), queuedLength));
+    assert(restarted.read(0, 101, queued, sizeof(queued), queuedLength));
     assert(queuedLength == receivedLength && memcmp(queued, incoming, queuedLength) == 0);
     uint8_t forwardWire[wici_link::MAX_FRAME] = {};
     const size_t forwardLength = wici_link::forward(key, 100, 2, routeAfter.parent(), 42,
@@ -77,8 +77,8 @@ int main() {
     assert(root.learn(4, 2) && root.down(4) == 2);
     assert(restarted.remove(0, 102));  // root HACK
     wici_relay::Queue afterDelivery(relayMemory);
-    assert(afterDelivery.begin());
-    assert(afterDelivery.admit(key, 100, 2, incoming, receivedLength, 103) == wici_relay::Admission::FORWARDED);
+    assert(afterDelivery.begin(key, 100, 2));
+    assert(afterDelivery.admit(incoming, receivedLength, 103) == wici_relay::Admission::FORWARDED);
 
     wici_link::Frame downlink = uplink;
     downlink.flags = wici_link::ACKREQ | wici_link::DOWN;
