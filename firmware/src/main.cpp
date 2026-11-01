@@ -42,6 +42,7 @@
 #include "migration_state.h"
 #include "migration_crypto.h"
 #include "migration_image.h"
+#include "migration_package.h"
 #include "kiss.h"
 #include "jsonprint.h"
 #include "measure.h"
@@ -83,6 +84,8 @@ constexpr const char* BENCH = "A";
 fram::Memory memory(platform::bus(), board::FRAM_CS, board::FRAM_SPI_HZ);
 journal::Journal stationJournal(memory);
 migration_state::Barrier migrationBarrier(memory);
+migration_package::Exporter migrationExporter(memory);
+static_assert(migration_package::SIZE == usbproto::MIGRATION_PACKAGE_BYTES, "USB migration size matches package");
 measure::Bench bench(radiocon::link(), board::BTN_OK, board::LED_HEARTBEAT);
 #if defined(WICI_BOARD_N1)
 sharp::Display display(platform::bus(), board::DISPLAY_CS, board::DISPLAY_EXTCOMIN, board::DISPLAY_SPI_HZ);
@@ -225,6 +228,10 @@ struct BenchHost : usbproto::Host {
     }
     void migrationDetails(char* eph, size_t ephSize, char* package, size_t packageSize) override;
     bool migrationReceiveKey(uint8_t mid[16], uint8_t publicKey[32], uint8_t fingerprint[8]) override;
+    bool migrationExport(const uint8_t mid[16], const uint8_t targetKey[32], uint8_t sha[32]) override;
+    bool migrationExportRead(uint32_t offset, uint8_t* out, size_t length) override {
+        return migrationExporter.read(offset, out, length);
+    }
     bool announce() override;
     bool destroy() override;
     void configChanged(bool roleChanged) override;
@@ -779,6 +786,43 @@ bool BenchHost::migrationReceiveKey(uint8_t mid[16], uint8_t publicKey[32], uint
     digest.finish(full);
     memcpy(fingerprint, full, 8);
     drbg::wipe(full, sizeof(full));
+    return true;
+}
+
+bool BenchHost::migrationExport(const uint8_t mid[16], const uint8_t targetKey[32], uint8_t sha[32]) {
+    if (!migrationBarrier.ready()) return false;
+    migration_state::Record record = migrationBarrier.record();
+    if (record.phase == migration_state::Phase::NONE) {
+        uint8_t identity[64];
+        if (!storeOk || !stationStore.configured() || !stationStore.station() ||
+            !bench.prep || !entropyHealthy || !rnsOk || !rnsnode::publicKey(identity)) return false;
+        sha2::Hash hash;
+        hash.update(identity, sizeof(identity));
+        uint8_t full[32];
+        hash.finish(full);
+        memcpy(record.identityDigest, full, sizeof(record.identityDigest));
+        drbg::wipe(full, sizeof(full));
+        record.phase = migration_state::Phase::EXPORT;
+        record.snapshotSize = migration_image::SIZE;
+        memcpy(record.mid, mid, sizeof(record.mid));
+        memcpy(record.peerPublic, targetKey, sizeof(record.peerPublic));
+        stationRandom(record.privateKey, sizeof(record.privateKey));
+        uint8_t confirmKey[32], packageKey[32];
+        const bool peerValid = migration_crypto::derive(record.privateKey, targetKey, mid, confirmKey, packageKey);
+        drbg::wipe(confirmKey, sizeof(confirmKey));
+        drbg::wipe(packageKey, sizeof(packageKey));
+        if (!peerValid) return false;
+        if (!migrationBarrier.save(record)) return false;
+        freezeMigration();
+    } else if (record.phase != migration_state::Phase::EXPORT ||
+               memcmp(record.mid, mid, sizeof(record.mid)) ||
+               memcmp(record.peerPublic, targetKey, sizeof(record.peerPublic))) return false;
+    uint8_t any = 0;
+    for (uint8_t byte : record.packageHash) any |= byte;
+    if (!any) {
+        if (!migration_image::digest(memory, record.packageHash) || !migrationBarrier.save(record)) return false;
+    }
+    if (!migrationExporter.begin(record) || !migrationExporter.digest(sha)) return false;
     return true;
 }
 

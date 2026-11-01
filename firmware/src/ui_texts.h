@@ -90,6 +90,7 @@ enum class Id : uint8_t {
     WPIS_WOLNE,
     ODPOWIEDZI_PO_POLSKU,
     ODCISK_PRZENIESIENIA,
+    PYTANIE_PRZENIES,
     COUNT
 };
 
@@ -170,6 +171,7 @@ constexpr const char* const TEXTS[static_cast<size_t>(Id::COUNT)][LANGS] = {
     {"WOLNE ZNAKI: [n]", "ВІЛЬНІ ЗНАКИ: [n]", "CHARS LEFT: [n]"},
     {"", "ВІДПОВІДІ ВІД ОДЕРЖУВАЧА НАДХОДЯТЬ ПОЛЬСЬКОЮ", "REPLIES FROM THE RECIPIENT ARRIVE IN POLISH"},
     {"ODCISK STACJI DOCELOWEJ: [x] – PORÓWNAJ PRZY PRZENOSZENIU. OK = ZAMKNIJ", "ВІДБИТОК НОВОЇ СТАНЦІЇ: [x] – ПОРІВНЯЙТЕ ПІД ЧАС ПЕРЕНЕСЕННЯ. OK = ЗАКРИТИ", "TARGET STATION FINGERPRINT: [x] – COMPARE DURING TRANSFER. OK = CLOSE"},
+    {"PRZENIES STACJE DO [xxxx]? POROWNAJ ODCISK NA CELU. OK = TAK", "ПЕРЕНЕСТИ СТАНЦІЮ ДО [xxxx]? ЗВІРТЕ ВІДБИТОК. OK = ТАК", "MOVE STATION TO [xxxx]? COMPARE TARGET FINGERPRINT. OK = YES"},
 };
 
 // Pozycje menu, nazwy przycisków i etykiety (tabela PL/UK/EN).

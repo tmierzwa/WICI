@@ -40,9 +40,10 @@ constexpr uint32_t CONFIRM_MS = 30000;   // potwierdzenie przyciskiem OK
 constexpr uint32_t XFER_IDLE_MS = 60000; // transfer bez części porzucany
 constexpr uint32_t ANNOUNCE_MERGE_MS = 30000;
 constexpr size_t PART_MAX = 512;         // dane binarne w jednym wierszu
+constexpr uint32_t MIGRATION_PACKAGE_BYTES = 101 + 512 * (512 + 16);
 constexpr size_t BOOT_HEX = 16;
 
-enum class Question : uint8_t { SILENCE_ON, SILENCE_OFF, CLOSE, DESTROY, SILENCE_EXCEPTION };
+enum class Question : uint8_t { SILENCE_ON, SILENCE_OFF, CLOSE, DESTROY, SILENCE_EXCEPTION, MIGRATION_EXPORT };
 enum class Confirm : uint8_t { WAITING, YES, NO };
 
 // Usługi stacji dla protokołu; dostarcza je main.cpp albo program testowy.
@@ -65,6 +66,8 @@ struct Host {
     virtual void migration(char* phase, size_t phaseSize, char* mid, size_t midSize);
     virtual void migrationDetails(char* eph, size_t ephSize, char* package, size_t packageSize);
     virtual bool migrationReceiveKey(uint8_t mid[16], uint8_t publicKey[32], uint8_t fingerprint[8]);
+    virtual bool migrationExport(const uint8_t mid[16], const uint8_t targetKey[32], uint8_t sha[32]);
+    virtual bool migrationExportRead(uint32_t offset, uint8_t* out, size_t length);
     virtual bool announce() = 0;                           // ogłoszenie adresu; false: stos nie działa
     virtual bool destroy() = 0;                            // ZNISZCZ DANE: magazyn, dziennik, tożsamość
     virtual void configChanged(bool roleChanged) = 0;      // nowa konfiguracja (zmiana roli: restart)
@@ -111,7 +114,7 @@ public:
 
 private:
     struct Pending {
-        enum Type : uint8_t { NONE, SILENCE, CLOSE, DESTROY } type = NONE;
+        enum Type : uint8_t { NONE, SILENCE, CLOSE, DESTROY, EXPORT } type = NONE;
         int64_t seq = 0;
         uint32_t sinceMs = 0;
         // Odpowiedź przyciskiem (albo limit 30 s) już zapadła i ekran zamknięty; wykonanie i odpowiedź
@@ -123,6 +126,8 @@ private:
         uint8_t exception[store::HASH] = {};
         uint8_t epoch[store::EPOCH] = {};
         uint32_t head = 0;
+        uint8_t mid[16] = {};
+        uint8_t targetKey[32] = {};
     };
     // Migawka w toku: wiersze `snap` po kolei z rejestru, pamięci zwolnionych wpisów i skrzynki.
     struct Snap {
@@ -135,7 +140,7 @@ private:
         uint8_t epoch[store::EPOCH] = {};
     };
     struct Xfer {
-        enum Op : uint8_t { NONE, CONFIGURE, CONFIG_GET } op = NONE;
+        enum Op : uint8_t { NONE, CONFIGURE, CONFIG_GET, EXPORT } op = NONE;
         uint32_t id = 0;
         uint32_t size = 0;
         uint32_t next = 0;
@@ -168,7 +173,7 @@ private:
     void doXferPart(const json::Value& msg, int64_t seq, uint32_t nowMs);
     void doXferRead(const json::Value& msg, int64_t seq, uint32_t nowMs);
     void doXferCommit(const json::Value& msg, int64_t seq);
-    void finishPending(bool confirmed);
+    void finishPending(bool confirmed, uint32_t nowMs);
     void stored(int64_t seq, const station::Stored& s);
     size_t requestFields(const store::Request& r, char* out, size_t size);
     size_t radioFields(char* out, size_t size, uint8_t bits, const uint8_t* exception, uint16_t revision, bool lost = false);

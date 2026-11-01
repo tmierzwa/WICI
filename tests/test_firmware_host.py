@@ -430,6 +430,19 @@ struct FakeHost : usbproto::Host {
         for (size_t i = 0; i < 8; ++i) fingerprint[i] = static_cast<uint8_t>(i + 32);
         return true;
     }
+    bool migrationExport(const uint8_t mid[16], const uint8_t target[32], uint8_t sha[32]) override {
+        uint8_t expected[16];
+        for (size_t i = 0; i < 16; ++i) expected[i] = static_cast<uint8_t>(i * 0x11);
+        if ((strcmp(migrationName, "none") && strcmp(migrationName, "export")) ||
+            memcmp(mid, expected, sizeof(expected)) || target[0] != 1) return false;
+        snprintf(migrationName, sizeof(migrationName), "export");
+        memset(sha, 0x5a, 32);
+        return true;
+    }
+    bool migrationExportRead(uint32_t offset, uint8_t* out, size_t length) override {
+        for (size_t i = 0; i < length; ++i) out[i] = static_cast<uint8_t>((offset + i) & 255);
+        return true;
+    }
     void diag(char* out, size_t size) override {
         static const std::string pad(400, 'x');
         snprintf(out, size, "\"corrupt\":0%s%.*s%s", diagPad ? ",\"pad\":\"" : "", diagPad, pad.c_str(), diagPad ? "\"" : "");
@@ -2007,6 +2020,26 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual((replies[2]["mid"], replies[2]["key"]), (replies[1]["mid"], replies[1]["key"]))
         self.assertEqual((replies[3]["migration"], replies[3]["mid"]), ("receiving", replies[1]["mid"]))
 
+    def test_usb_export_requires_button_and_resumes_with_same_transfer_data(self):
+        mid = "00112233445566778899aabbccddeeff"
+        key = (b"\x01" * 32).hex()
+        u = self.Lines()
+        begin = u("xfer_begin", op="export", mid=mid, target_key=key)
+        out = self.world(["H", self.CONFIG, "connect", begin, "K BACK 0", "upoll", begin.replace('"seq": 1', '"seq": 2'),
+                          "K OK 0", "upoll"])
+        replies = self.replies(out)
+        self.assertEqual([r["type"] for r in replies], ["hello", "pending", "rejected", "pending", "ok"])
+        self.assertEqual(replies[2]["reason"], "not_confirmed")
+        self.assertEqual((replies[4]["size"], replies[4]["sha256"]), (270437, "5a" * 32))
+        self.assertIn("ask 5", out)
+        xfer = replies[4]["xfer"]
+        resumed_out, _ = self.usb_session(["H", self.CONFIG, "migration export", "connect",
+            lambda lines: lines("xfer_begin", op="export", mid=mid, target_key=key), "XFER",
+            lambda lines: lines("xfer_read", xfer=xfer, offset=0, length=4)])
+        resumed = self.replies(resumed_out)
+        self.assertEqual(resumed[1]["sha256"], "5a" * 32)
+        self.assertEqual((resumed[2]["type"], base64.b64decode(resumed[2]["data"])), ("data", bytes(range(4))))
+
     def test_usb_hello_seq_fields_and_rejections(self):
         def line(seq, type_, usb=2, **fields):
             return "usb " + json.dumps({"usb": usb, "seq": seq, "type": type_, **fields})
@@ -2910,7 +2943,7 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual(self.screens(out)[-1][0], "alarm")
 
     def test_confirm_question_and_node_menu(self):
-        out = self.ui(["L 0", "ask 0", "R", "answer", "K OK 0", "answer", "R", "ask 3", "K BACK 0", "answer", "ask 5 ABCD", "R",
+        out = self.ui(["L 0", "ask 0", "R", "answer", "K OK 0", "answer", "R", "ask 3", "K BACK 0", "answer", "ask 6 ABCD", "R",
                        "K OK 0", "answer", "ask 1", "dismiss", "answer", "R", "ask 4 0427", "R", "dismiss"])
         s = self.screens(out)
         self.assertEqual([x[0] for x in s], ["confirm", "main", "confirm", "main", "confirm"])
