@@ -192,7 +192,8 @@
       "received": 50,
       "max_status": 59,
       "max_bulletin": 246,
-      "worst_reply": 156
+      "worst_reply": 156,
+      "test": 122
     },
     "opportunistic_content_estimate": 284,
     "link_content_estimate": 316,
@@ -204,61 +205,288 @@
       "received": true,
       "max_status": true,
       "max_bulletin": true,
-      "worst_reply": true
+      "worst_reply": true,
+      "test": true
     }
   },
   "wici_link": {
     "assumptions": {
-      "sf": 7,
-      "preamble_symbols": 24,
       "max_frame_bytes": 255,
       "link_header_bytes": 11,
       "link_mac_bytes": 8,
+      "hop_tag_bytes": 8,
       "origin_signature_bytes": 64,
       "envelope_overhead_bytes": 25,
-      "max_payload_bytes": 172,
-      "hop_success_no_collisions": true,
-      "debt_multiplier": 13
+      "beacon_content_bytes": 73,
+      "beacon_signature_bytes": 64,
+      "ramp_ms": 3,
+      "debt_multiplier": 13,
+      "hop_attempts": 3,
+      "contended_k2_cap_s": 900.0,
+      "hack_frame_bytes": 27,
+      "beacon_frame_bytes": 156,
+      "signature_variants_single_first_second_bytes": {
+        "signature_every_frame": [
+          64,
+          64,
+          64
+        ],
+        "signature_once_per_message": [
+          64,
+          96,
+          0
+        ],
+        "hop_tag_only": [
+          0,
+          0,
+          0
+        ]
+      },
+      "hop_success": 0.95,
+      "w10_limit_min": 15,
+      "sf": 7,
+      "preamble_symbols": 24
     },
-    "cases": {
-      "typical_request": {
-        "request_frames_bytes": [
-          195,
-          195
-        ],
-        "received_frames_bytes": [
-          158
-        ],
-        "hack_frame_bytes": 19,
-        "relay_tx_plus_quiet_s": 14.743039999999997,
-        "50_requests_minutes": 12.285866666666664
+    "hack_tx_s": 0.087,
+    "attempts_at_hop_success": 1.0525,
+    "variants": {
+      "signature_every_frame": {
+        "max_payload_bytes": 164,
+        "frames_bytes": {
+          "button_request": [
+            222
+          ],
+          "typical_request": [
+            203,
+            203
+          ],
+          "max_fields_request": [
+            227,
+            227
+          ],
+          "worst_button_request": [
+            226,
+            226
+          ],
+          "received": [
+            166
+          ],
+          "max_status": [
+            175
+          ],
+          "test": [
+            238
+          ]
+        },
+        "cases": {
+          "button_request": {
+            "relay_s": 10.763999999999998,
+            "fifty_requests_min": 8.969999999999999,
+            "fifty_requests_min_hop_success": 9.440924999999998,
+            "margin_min_hop_success": 5.559075000000002,
+            "relay_s_with_read_and_decision": 20.878,
+            "fifty_requests_with_read_and_decision_min": 17.398333333333333,
+            "mixed_trial_55_revisions_min": 19.138166666666667
+          },
+          "typical_request": {
+            "relay_s": 16.029,
+            "fifty_requests_min": 13.3575,
+            "fifty_requests_min_hop_success": 14.058768750000002,
+            "margin_min_hop_success": 0.9412312499999977,
+            "relay_s_with_read_and_decision": 26.143,
+            "fifty_requests_with_read_and_decision_min": 21.785833333333336,
+            "mixed_trial_55_revisions_min": 23.96441666666667
+          },
+          "max_fields_request": {
+            "relay_s": 16.965000000000003,
+            "fifty_requests_min": 14.137500000000005,
+            "fifty_requests_min_hop_success": 14.879718750000004,
+            "margin_min_hop_success": 0.12028124999999612,
+            "relay_s_with_read_and_decision": 27.078999999999997,
+            "fifty_requests_with_read_and_decision_min": 22.56583333333333,
+            "mixed_trial_55_revisions_min": 24.822416666666662
+          },
+          "worst_button_request": {
+            "relay_s": 16.965000000000003,
+            "fifty_requests_min": 14.137500000000005,
+            "fifty_requests_min_hop_success": 14.879718750000004,
+            "margin_min_hop_success": 0.12028124999999612,
+            "relay_s_with_read_and_decision": 27.078999999999997,
+            "fifty_requests_with_read_and_decision_min": 22.56583333333333,
+            "mixed_trial_55_revisions_min": 24.822416666666662
+          }
+        }
       },
-      "max_fields_request": {
-        "request_frames_bytes": [
-          219,
-          219
-        ],
-        "received_frames_bytes": [
-          158
-        ],
-        "hack_frame_bytes": 19,
-        "relay_tx_plus_quiet_s": 15.674879999999998,
-        "50_requests_minutes": 13.062399999999998
+      "signature_once_per_message": {
+        "max_payload_bytes": 164,
+        "frames_bytes": {
+          "button_request": [
+            222
+          ],
+          "typical_request": [
+            235,
+            139
+          ],
+          "max_fields_request": [
+            255,
+            167
+          ],
+          "worst_button_request": [
+            255,
+            165
+          ],
+          "received": [
+            166
+          ],
+          "max_status": [
+            175
+          ],
+          "test": [
+            238
+          ]
+        },
+        "cases": {
+          "button_request": {
+            "relay_s": 10.763999999999998,
+            "fifty_requests_min": 8.969999999999999,
+            "fifty_requests_min_hop_success": 9.440924999999998,
+            "margin_min_hop_success": 5.559075000000002,
+            "relay_s_with_read_and_decision": 20.878,
+            "fifty_requests_with_read_and_decision_min": 17.398333333333333,
+            "mixed_trial_55_revisions_min": 19.138166666666667
+          },
+          "typical_request": {
+            "relay_s": 15.430999999999997,
+            "fifty_requests_min": 12.859166666666663,
+            "fifty_requests_min_hop_success": 13.534272916666662,
+            "margin_min_hop_success": 1.4657270833333378,
+            "relay_s_with_read_and_decision": 25.544999999999998,
+            "fifty_requests_with_read_and_decision_min": 21.2875,
+            "mixed_trial_55_revisions_min": 23.416249999999998
+          },
+          "max_fields_request": {
+            "relay_s": 16.341,
+            "fifty_requests_min": 13.617500000000001,
+            "fifty_requests_min_hop_success": 14.33241875,
+            "margin_min_hop_success": 0.6675812499999996,
+            "relay_s_with_read_and_decision": 26.454999999999995,
+            "fifty_requests_with_read_and_decision_min": 22.04583333333333,
+            "mixed_trial_55_revisions_min": 24.25041666666666
+          },
+          "worst_button_request": {
+            "relay_s": 16.275999999999996,
+            "fifty_requests_min": 13.56333333333333,
+            "fifty_requests_min_hop_success": 14.275408333333331,
+            "margin_min_hop_success": 0.7245916666666687,
+            "relay_s_with_read_and_decision": 26.389999999999997,
+            "fifty_requests_with_read_and_decision_min": 21.991666666666664,
+            "mixed_trial_55_revisions_min": 24.19083333333333
+          }
+        }
       },
-      "worst_button_request": {
-        "request_frames_bytes": [
-          218,
-          218
-        ],
-        "received_frames_bytes": [
-          158
-        ],
-        "hack_frame_bytes": 19,
-        "relay_tx_plus_quiet_s": 15.54176,
-        "50_requests_minutes": 12.951466666666667
+      "hop_tag_only": {
+        "max_payload_bytes": 228,
+        "frames_bytes": {
+          "button_request": [
+            158
+          ],
+          "typical_request": [
+            226
+          ],
+          "max_fields_request": [
+            163,
+            163
+          ],
+          "worst_button_request": [
+            162,
+            162
+          ],
+          "received": [
+            102
+          ],
+          "max_status": [
+            111
+          ],
+          "test": [
+            174
+          ]
+        },
+        "cases": {
+          "button_request": {
+            "relay_s": 8.372,
+            "fifty_requests_min": 6.9766666666666675,
+            "fifty_requests_min_hop_success": 7.3429416666666665,
+            "margin_min_hop_success": 7.6570583333333335,
+            "relay_s_with_read_and_decision": 16.094,
+            "fifty_requests_with_read_and_decision_min": 13.411666666666667,
+            "mixed_trial_55_revisions_min": 14.752833333333335
+          },
+          "typical_request": {
+            "relay_s": 9.710999999999999,
+            "fifty_requests_min": 8.0925,
+            "fifty_requests_min_hop_success": 8.517356249999999,
+            "margin_min_hop_success": 6.482643750000001,
+            "relay_s_with_read_and_decision": 17.433,
+            "fifty_requests_with_read_and_decision_min": 14.5275,
+            "mixed_trial_55_revisions_min": 15.98025
+          },
+          "max_fields_request": {
+            "relay_s": 13.351000000000003,
+            "fifty_requests_min": 11.125833333333336,
+            "fifty_requests_min_hop_success": 11.709939583333336,
+            "margin_min_hop_success": 3.2900604166666643,
+            "relay_s_with_read_and_decision": 21.073,
+            "fifty_requests_with_read_and_decision_min": 17.560833333333335,
+            "mixed_trial_55_revisions_min": 19.316916666666668
+          },
+          "worst_button_request": {
+            "relay_s": 13.220999999999998,
+            "fifty_requests_min": 11.0175,
+            "fifty_requests_min_hop_success": 11.59591875,
+            "margin_min_hop_success": 3.404081250000001,
+            "relay_s_with_read_and_decision": 20.943,
+            "fifty_requests_with_read_and_decision_min": 17.4525,
+            "mixed_trial_55_revisions_min": 19.19775
+          }
+        }
       }
     },
-    "hack_tx_s": 0.06784
+    "hostile_node": {
+      "requests": 20,
+      "limit_min": 30,
+      "k1_relay_s": 339.30000000000007,
+      "k2_interleave_s": 326.82,
+      "minutes_by_hop_success": {
+        "1": 11.102000000000002,
+        "0.95": 11.684855000000002,
+        "0.5": 19.428500000000003
+      }
+    },
+    "cold_start": {
+      "beacon_frame_bytes": 156,
+      "beacon_tx_s": 0.276,
+      "test_frames_bytes": [
+        238
+      ],
+      "test_exchange_tx_s": 1.7079999999999997,
+      "relay_s_per_test": 11.101999999999999,
+      "relay_share_of_test_window": 0.22203999999999996,
+      "10_stations": {
+        "beacon_airtime_first_5_min_s": 8.280000000000001,
+        "total_airtime_min": 0.4226666666666666,
+        "share_of_test_window": 0.050719999999999994
+      },
+      "30_stations": {
+        "beacon_airtime_first_5_min_s": 24.840000000000003,
+        "total_airtime_min": 1.2679999999999998,
+        "share_of_test_window": 0.05071999999999999
+      },
+      "50_stations": {
+        "beacon_airtime_first_5_min_s": 41.400000000000006,
+        "total_airtime_min": 2.113333333333333,
+        "share_of_test_window": 0.050719999999999994
+      }
+    }
   },
   "relay_w10": {
     "packets_bytes": {
