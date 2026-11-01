@@ -72,6 +72,14 @@ CREATE TABLE IF NOT EXISTS env_send_guard (
     id INTEGER PRIMARY KEY CHECK(id=1),
     blocked INTEGER NOT NULL CHECK(blocked=1)
 );
+CREATE TABLE IF NOT EXISTS bearer_route (
+    source BLOB PRIMARY KEY,
+    bearer TEXT NOT NULL CHECK(bearer IN ('wici', 'reticulum'))
+);
+CREATE TABLE IF NOT EXISTS bearer_override (
+    source BLOB PRIMARY KEY,
+    bearer TEXT NOT NULL CHECK(bearer IN ('wici', 'reticulum'))
+);
 -- Wpisy decyzji, które nie idą radiem: stan 3 ze źródłem i czasem potwierdzenia, stan 4 z adresatem i czasem.
 CREATE TABLE IF NOT EXISTS decyzje (
     id INTEGER PRIMARY KEY,
@@ -110,6 +118,8 @@ class Przyjecie:
         self.log = log or (lambda line: print(line, file=sys.stderr, flush=True))
         self.wysylka = wysylka.Wysylka(send, outcome, self.log, random)
         self.jobs = queue.Queue()
+        self.last_bearer = {}  # source -> last authenticated receive path; DB thread only
+        self.bearer_override = {}  # operator choice takes precedence until explicitly cleared
         self.counts = {"received": 0, "duplicate": 0, "quarantined": 0, "rejected": 0, "quarantine_full": 0}
         self.ready = threading.Event()
         self.error = self.save_error = None
@@ -132,6 +142,8 @@ class Przyjecie:
             # migawki i kopii. Ustawienie połączenia, więc po deserialize.
             self.store.db.execute("PRAGMA secure_delete=ON")
             self.store.db.executescript(SCHEMA)
+            self.last_bearer = dict(self.store.db.execute("SELECT source, bearer FROM bearer_route"))
+            self.bearer_override = dict(self.store.db.execute("SELECT source, bearer FROM bearer_override"))
             columns = {row[1] for row in self.store.db.execute("PRAGMA table_info(dziennik)")}
             for column, kind in (("source", "BLOB"), ("mid", "TEXT"), ("revision", "INTEGER")):
                 if column not in columns:   # baza z etapu S4-S8
@@ -306,17 +318,17 @@ class Przyjecie:
         """Entry in the action log (dziennik działań), durable when this returns."""
         self.call(lambda store: self._log_action(account, op, detail))
 
-    def deliver(self, source, content):
+    def deliver(self, source, content, bearer=None):
         """A REQUEST or TEST with a checked signature from source (16 B "lxmf.delivery" hash)."""
-        self.jobs.put(lambda: self._receive(source, content))
+        self.jobs.put(lambda: self._receive(source, content, bearer))
 
-    def receive_envelope_frame(self, net_id, wire):
+    def receive_envelope_frame(self, net_id, wire, bearer=None):
         """Authenticate a numbered WICI frame and durably admit it before the caller may HACK.
 
         Runs on the database thread; a wrong network, unregistered key, tag, SA1 content,
         or failed snapshot raises and must leave the link frame unacknowledged.
         """
-        return self.call(lambda store: self._receive_envelope_frame(net_id, wire))
+        return self.call(lambda store: self._receive_envelope_frame(net_id, wire, bearer))
 
     def seal_envelope_message(self, net_id, station_id, content, max_payload=236):
         """Reserve a durable counter and seal an outbound SA1 message on the DB thread.
@@ -366,7 +378,7 @@ class Przyjecie:
         return self.envelope_sender.seal(private[:32], row[0][:32], net_id, active["id"], station_id,
                                          content, max_payload)
 
-    def _receive_envelope_frame(self, net_id, wire):
+    def _receive_envelope_frame(self, net_id, wire, bearer=None):
         from cryptography.hazmat.primitives.asymmetric import x25519
         from .. import envelope
         from . import envelope_inbox
@@ -393,6 +405,7 @@ class Przyjecie:
         if station is None or len(station[1]) != 64:
             raise envelope.EnvelopeError("unknown station number")
         source, station_key = station
+        trusted = self.store.db.execute("SELECT 1 FROM trusted WHERE source=?", (source,)).fetchone() is not None
         key = envelope.derive_key(private[:32], station_key[:32], net_id, sender, recipient, own_id=recipient)
         part = envelope.open_part(key, raw)
         if part.message_type != envelope.TYPE_SA1:
@@ -412,12 +425,19 @@ class Przyjecie:
                 "WHERE source=? AND id=? AND revision=?", (self.clock(), source, value[2], value[3]))
             self.wysylka.accepted(self.store.db, source, value[2], value[3])
 
+        def remember_bearer():
+            if bearer is not None and trusted:
+                self.store.db.execute("INSERT OR REPLACE INTO bearer_route VALUES(?,?)", (source, bearer))
+
         # The KISS caller must be able to answer HACK inside 200 ms. The normal
         # one-second tick sends RECEIVED after the durable snapshot, without
         # putting LXMF path discovery or copy work on the hop-ACK path.
-        return inbox.receive(part, int(self.clock()), accept)
+        result = inbox.receive(part, int(self.clock()), accept, remember_bearer)
+        if bearer is not None and trusted:
+            self.last_bearer[source] = bearer
+        return result
 
-    def _receive(self, source, content):
+    def _receive(self, source, content, bearer=None):
         at = self.clock()
 
         def before_commit():
@@ -427,6 +447,10 @@ class Przyjecie:
                 "INSERT OR IGNORE INTO received_at SELECT source, id, revision, ? FROM received "
                 "WHERE source=? AND id=? AND revision=?", (at, source, value[2], value[3]))
             self.wysylka.accepted(self.store.db, source, value[2], value[3])
+            if bearer is not None and self.store.db.execute(
+                    "SELECT 1 FROM received WHERE source=? AND id=? AND revision=?",
+                    (source, value[2], value[3])).fetchone():
+                self.store.db.execute("INSERT OR REPLACE INTO bearer_route VALUES(?,?)", (source, bearer))
 
         known = self.store.db.execute("SELECT count(*) FROM received WHERE source=?", (source,)).fetchone()[0]
         try:
@@ -446,6 +470,8 @@ class Przyjecie:
         if ack is None:
             self.counts["quarantined"] += 1
             return
+        if bearer is not None:
+            self.last_bearer[source] = bearer
         after = self.store.db.execute("SELECT count(*) FROM received WHERE source=?", (source,)).fetchone()[0]
         self.counts["received" if after > known else "duplicate"] += 1
         self.tick()   # RECEIVED od razu po COMMIT, jeśli jest miejsce w drodze

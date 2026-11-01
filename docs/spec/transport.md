@@ -148,7 +148,7 @@ Wartości `max_payload` dla Meshtastic i MeshCore pochodzą ze źródeł tych pr
 
 ### Stanowisko odbiorcze z kilkoma nośnikami
 
-Aplikacja stanowiska ma jeden rejestr i jedną kolejkę odpowiedzi, a pod nimi listę nośników. Odpowiedź do stacji wraca tym nośnikiem, którym przyszła ostatnia uwierzytelniona koperta od tej stacji, chyba że dyżurny wskaże inny. Ruch z nośnika obcego bez koperty WICI (np. wiadomość tekstowa z sieci Meshtastic) trafia do osobnej skrzynki „niezweryfikowane”, bez RECEIVED i bez wpisu do rejestru zgłoszeń. Tę skrzynkę i jej obsługę opisze aplikacja stanowiska po pilotażu.
+Aplikacja stanowiska ma jeden rejestr i jedną kolejkę odpowiedzi, a pod nimi listę nośników. W pilotażu numerowane stanowisko może uruchomić WICI-Link i równoległy port Reticulum (`--reticulum-port`); wybór ostatniego uwierzytelnionego nośnika dla każdej stacji zapisuje w tej samej migawce bazy co przyjęcie wiadomości. Odpowiedź wraca tym nośnikiem, chyba że dyżurny wskaże inny w panelu. Ruch z nośnika obcego bez koperty WICI (np. wiadomość tekstowa z sieci Meshtastic) trafi do osobnej skrzynki „niezweryfikowane”, bez RECEIVED i bez wpisu do rejestru zgłoszeń. Tę skrzynkę i jej obsługę opisze aplikacja stanowiska po pilotażu.
 
 ### Integracja w górę
 
@@ -191,7 +191,7 @@ uprawnienia do tej klasy. Przy czekającym K1 limit 25% dotyczy zachowawczo
 całego tranzytu i BEACON-ów. Odporność kolejki K1 na podrobione numery
 wymaga jeszcze wdrożenia.
 
-Pozostałe do zamknięcia D21: lista nośników stanowiska odbiorczego, odporność kolejki K1 na podrobione numery, sprzętowe próby rozsyłania awaryjnego, pomiar
+Pozostałe do zamknięcia D21: odporność kolejki K1 na podrobione numery, sprzętowe próby rozsyłania awaryjnego, pomiar
 200 ms HACK, W10, „Wrogi węzeł”, zaniki zasilania oraz budżet energii. Dwie płytki
 XIAO ESP32-S3 + Wio SX1262 przeszły [próbę toru radia przy stole](../../hardware/radio-pair/evidence/table-2026-11-01.md)
 (100/100 w każdym kierunku) na programie diagnostycznym i

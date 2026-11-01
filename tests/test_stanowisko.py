@@ -35,7 +35,7 @@ sys.path.insert(0, str(ROOT / "software" / "laptop" / "build"))
 
 import build_stanowisko  # noqa: E402
 from wici import database  # noqa: E402
-from wici.stanowisko import __main__ as aplikacja, kopie, nosnik, panel, przyjecie, stos, wezel, wysylka, wzorzec, zamkniecie  # noqa: E402
+from wici.stanowisko import __main__ as aplikacja, bearers, kopie, nosnik, panel, przyjecie, stos, wezel, wysylka, wzorzec, zamkniecie  # noqa: E402
 
 PROGRAM = os.environ.get("WICI_HOST_PROGRAM")
 # Pakiet stanowiska (build_stanowisko.py): SimulatorTest uruchamia wtedy aplikację jego skryptem stanowisko.sh.
@@ -84,6 +84,53 @@ class ConfigTest(unittest.TestCase):
         for bad in ("COM5\n[[x]]", "a]b"):
             with self.assertRaises(ValueError):
                 stos.config(bad)
+
+
+class BearerSetTest(unittest.TestCase):
+    def test_reply_follows_last_authenticated_bearer_and_preserves_outcome(self):
+        class Fake:
+            address = bytes(16)
+
+            def __init__(self):
+                self.sent = []
+
+            def send(self, dest, content):
+                self.sent.append((dest, content))
+                return Sent(True)
+
+            def outcome(self, item):
+                return item.result
+
+            def start(self): pass
+            def stop(self): pass
+            def announce(self): pass
+            def status(self, now):
+                return {"online": True, "since_rx": 0, "dropped": {}}
+
+        wici, legacy = Fake(), Fake()
+        collection = bearers.Bearers({"wici": wici, "reticulum": legacy}, "wici")
+        source = bytes(range(16))
+        class Reception:
+            last_bearer = {}
+            bearer_override = {}
+
+            @staticmethod
+            def send_wici(bearer, dest, content):
+                return bearer.send(dest, content)
+
+        collection.reception = Reception()
+        first = collection.send(source, b"reply")
+        self.assertEqual(first.bearer, "wici")
+        self.assertTrue(collection.outcome(first))
+        collection.reception.last_bearer[source] = "reticulum"
+        second = collection.send(source, b"reply2")
+        self.assertEqual(second.bearer, "reticulum")
+        self.assertEqual(wici.sent, [(source, b"reply")])
+        self.assertEqual(legacy.sent, [(source, b"reply2")])
+        self.assertTrue(collection.outcome(second))
+        collection.reception.bearer_override[source] = "wici"
+        collection.reception.last_bearer[source] = "reticulum"
+        self.assertEqual(collection.send(source, b"manual").bearer, "wici")
 
 
 def request(mid=None, revision=1, kind=0, people=3, text="piwnica"):
@@ -155,6 +202,16 @@ class StationTestCase(unittest.TestCase):
 class ReceptionTest(StationTestCase):
     """S2: reception on the reference OSPStore in its own thread; RECEIVED only after COMMIT."""
 
+    def test_reticulum_route_updates_only_after_trusted_admission(self):
+        self.reception.deliver(self.STATION, b"invalid", bearer="reticulum")
+        self.tick()
+        self.assertIsNone(self.reception.call(lambda s: self.reception.last_bearer.get(self.STATION)))
+        self.reception.deliver(self.STATION, request(), bearer="reticulum")
+        self.tick()
+        self.assertEqual(self.reception.call(lambda s: self.reception.last_bearer.get(self.STATION)), "reticulum")
+        self.restart()
+        self.assertEqual(self.reception.call(lambda s: self.reception.last_bearer.get(self.STATION)), "reticulum")
+
     @unittest.skipUnless(importlib.util.find_spec("cryptography"), "cryptography for D21 envelope")
     def test_numbered_envelope_fragments_commit_with_sa1_and_replay(self):
         from cryptography.hazmat.primitives.asymmetric import x25519
@@ -180,10 +237,12 @@ class ReceptionTest(StationTestCase):
         key = envelope.derive_key(station_private, receiver_public, 100, 4, 2, own_id=4)
         frames = envelope.seal(key, 4, 2, 7, content, 153)
         self.assertEqual(len(frames), 2)
-        self.assertEqual(self.reception.receive_envelope_frame(100, frames[1]), "partial")
+        self.assertEqual(self.reception.receive_envelope_frame(100, frames[1], bearer="wici"), "partial")
+        self.assertEqual(self.reception.call(lambda s: self.reception.last_bearer.get(source)), "wici")
         self.assertEqual(durable(self.medium, self.key, "SELECT count(*) FROM env_parts"), (1,))
         self.restart()
-        self.assertEqual(self.reception.receive_envelope_frame(100, frames[0]), "complete")
+        self.assertEqual(self.reception.call(lambda s: self.reception.last_bearer.get(source)), "wici")
+        self.assertEqual(self.reception.receive_envelope_frame(100, frames[0], bearer="wici"), "complete")
         self.assertEqual(durable(self.medium, self.key, "SELECT count(*) FROM received"), (1,))
         self.assertEqual(durable(self.medium, self.key, "SELECT highest FROM env_replay"), (7,))
         self.assertEqual(self.reception.receive_envelope_frame(100, frames[0]), "duplicate")
@@ -191,7 +250,8 @@ class ReceptionTest(StationTestCase):
             self.reception.receive_envelope_frame(101, frames[0])
         forged = bytearray(frames[0]); forged[-1] ^= 1
         with self.assertRaises(envelope.EnvelopeError):
-            self.reception.receive_envelope_frame(100, forged)
+            self.reception.receive_envelope_frame(100, forged, bearer="reticulum")
+        self.assertEqual(self.reception.call(lambda s: self.reception.last_bearer.get(source)), "wici")
 
     @unittest.skipUnless(importlib.util.find_spec("cryptography"), "cryptography for D21 envelope")
     def test_numbered_outbound_reserves_counter_before_sealing(self):
@@ -931,6 +991,27 @@ class PanelTest(StationTestCase):
 
     def log(self):
         return [(e["account"], e["op"]) for e in reversed(self.d.view()["log"])]
+
+    def test_operator_can_override_only_a_trusted_station_reply_bearer(self):
+        class Link(FakeStack):
+            address = bytes(16)
+            network = 100
+
+        self.d.stos = bearers.Bearers({"wici": Link(), "reticulum": Link()}, "wici")
+        self.d.bearer({"source": self.STATION.hex(), "bearer": "reticulum"})
+        self.assertEqual(durable(self.medium, self.key, "SELECT bearer FROM bearer_override WHERE source=?",
+                                 (self.STATION,)), ("reticulum",))
+        self.restart()
+        self.d.p = self.reception
+        self.assertEqual(self.reception.call(lambda s: self.reception.bearer_override.get(self.STATION)), "reticulum")
+        with self.assertRaises(ValueError):
+            self.d.bearer({"source": self.STATION.hex(), "bearer": "wici"})
+        with self.assertRaises(ValueError):
+            self.d.bearer({"source": self.OTHER.hex(), "bearer": "reticulum"})
+        self.d.bearer({"source": self.STATION.hex(), "bearer": "auto"})
+        self.assertIsNone(durable(self.medium, self.key, "SELECT bearer FROM bearer_override WHERE source=?",
+                                  (self.STATION,)))
+        self.assertIn(("dyzurny-1", "nosnik_odpowiedzi"), self.log())
 
     def test_login_and_lock_after_five_minutes(self):
         self.d.logout()

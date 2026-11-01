@@ -36,7 +36,7 @@ import webbrowser
 from pathlib import Path
 
 from .. import database, passwords, store
-from . import kopie, nosnik, panel, wezel, zamkniecie
+from . import bearers, kopie, nosnik, panel, wezel, zamkniecie
 from .przyjecie import Przyjecie
 from .stos import BITRATE, Stos
 from .wici_stos import WiciStos
@@ -106,7 +106,13 @@ def start(args):
     except database.StorageError as exc:
         emit("login_failed", message=str(exc))
         return 3
+    if args.reticulum_port and link is None:
+        emit("login_failed", message="dodatkowy port wymaga numerowanego nośnika WICI-Link")
+        return 3
     if link is not None:
+        if args.reticulum_port == args.port:
+            emit("login_failed", message="port Reticulum musi być inny niż port WICI-Link")
+            return 3
         from cryptography.hazmat.primitives.asymmetric import x25519
         own_public = x25519.X25519PrivateKey.from_private_bytes(identity_key[:32]).public_key().public_bytes_raw().hex()
         active = next((entry for entry in (card.get("main"), card.get("backup"))
@@ -114,10 +120,19 @@ def start(args):
         if active is None or active.get("net_id") != link["net_id"] or active["id"] == link["root"]:
             emit("login_failed", message="tożsamość odbiorcy i ustawienia WICI-Link nie są zgodne")
             return 3
-        stos = WiciStos(args.port, link["net_id"], link["root"], bytes.fromhex(link["ifac"]),
-                        bytes.fromhex(active["lxmf"]),
-                        lambda frame: przyjecie.receive_envelope_frame(link["net_id"], frame))
-        send = lambda dest, content: przyjecie.send_wici(stos, dest, content)
+        numbered = WiciStos(args.port, link["net_id"], link["root"], bytes.fromhex(link["ifac"]),
+                            bytes.fromhex(active["lxmf"]),
+                            lambda frame: przyjecie.receive_envelope_frame(link["net_id"], frame,
+                                                                             bearer="wici"))
+        if args.reticulum_port:
+            legacy = Stos(medium.network, args.reticulum_port,
+                          lambda source, content: przyjecie.deliver(source, content, bearer="reticulum"),
+                          identity_key, args.bitrate)
+            stos = bearers.Bearers({"wici": numbered, "reticulum": legacy}, "wici")
+            send = stos.send
+        else:
+            stos = numbered
+            send = lambda dest, content: przyjecie.send_wici(stos, dest, content)
     elif card and card.get("v") == 2:
         emit("login_failed", message="brak klucza WICI-Link na numerowanym nośniku")
         return 3
@@ -129,6 +144,8 @@ def start(args):
         copies = kopie.Kopie(Path(args.kopie) if args.kopie else kopie.disk_dir(store.state_dir() / "stanowisko", medium))
         przyjecie = Przyjecie(medium, key, send, stos.outcome, copies=copies, announce=stos.announce,
                               online=lambda: stos.status(time.time())["online"])
+        if isinstance(stos, bearers.Bearers):
+            stos.reception = przyjecie
     except ClockBehind as e:
         last = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(e.args[0]))
         emit("clock_behind", last_sent=last,
@@ -208,6 +225,7 @@ def main(argv=None):
     run.add_argument("--nosnik", required=True, help="katalog na nośniku stanowiska")
     run.add_argument("--port", required=True, help="port szeregowy stacji stanowiska (węzła); tcp:<host>:<port> dla świata symulatora")
     run.add_argument("--bitrate", type=int, default=BITRATE, help="bitrate interfejsu KISS w konfiguracji Reticulum")
+    run.add_argument("--reticulum-port", help="opcjonalny drugi port KISS Reticulum obok numerowanego WICI-Link")
     run.add_argument("--panel", type=int, default=8090, help="port panelu dyżurnego na 127.0.0.1")
     run.add_argument("--bez-przegladarki", action="store_true", help="nie otwieraj panelu w przeglądarce")
     run.add_argument("--diagnostyka", help="port diagnostyki węzła (drugi interfejs USB; domyślnie odszukany "

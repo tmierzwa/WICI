@@ -32,7 +32,7 @@ class Inbox:
         self.db, self.network, self.persist = db, network, persist
         db.executescript(SCHEMA)
 
-    def receive(self, part, now, admit):
+    def receive(self, part, now, admit, admitted_part=None):
         """Admit an authenticated Part and return a state safe to HACK only after persist().
 
         `admit(full)` must use this SQLite connection without committing or opening
@@ -93,6 +93,8 @@ class Inbox:
                                      proposed.mask.to_bytes(8, "big")))
                     self.db.execute("DELETE FROM env_parts WHERE network=? AND sender=? AND recipient=? AND counter=? AND message_type=?",
                                     (self.network, part.sender, part.recipient, part.counter, part.message_type))
+            if admitted_part is not None:
+                admitted_part()
         if not self.persist():
             raise OSError("envelope state was not durably saved")
         return result

@@ -1,6 +1,6 @@
 # Aplikacja laptopa WICI
 
-Panel w przeglądarce do pracy ze stacją przez USB, uruchamiany z pamięci USB zestawu na Windows, macOS i Linuksie, bez instalowania. Obsługuje tryb przygotowania (konfigurację stacji i węzła stanowiska, odczyt konfiguracji i kartę stacji) oraz zestaw na pamięci USB: konta i hasła z kopert, logowanie, zaszyfrowaną bazę z dziennikiem, „Oddaj laptop” i ZNISZCZ DANE. Zakres, decyzje, rozmiar, laptop i router na miejscu oraz dalsze etapy opisuje [plan](PLAN.md); kontrakt ze stacją jest w [protokole USB](../../docs/spec/usb-protocol.md).
+Panel w przeglądarce do pracy ze stacją przez USB, uruchamiany z pamięci USB zestawu na Windows, macOS i Linuksie, bez instalowania. Obsługuje tryb przygotowania (konfigurację stacji i węzła stanowiska, odczyt konfiguracji i kartę stacji) oraz zestaw na pamięci USB: konta i hasła z kopert, logowanie, zaszyfrowaną bazę z dziennikiem, „Oddaj laptop” i ZNISZCZ DANE. Numerowane stanowisko odbiorcze może uruchomić równocześnie WICI-Link i Reticulum przez `python -m wici.stanowisko start --nosnik KATALOG --port PORT_WICI --reticulum-port PORT_RETICULUM`; panel zapisuje wybór nośnika odpowiedzi dla każdej zaufanej stacji. Zakres, decyzje, rozmiar, laptop i router na miejscu oraz dalsze etapy opisuje [plan](PLAN.md); kontrakt ze stacją jest w [protokole USB](../../docs/spec/usb-protocol.md).
 
 ## Uruchomienie podczas pracy nad kodem
 
