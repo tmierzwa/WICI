@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 #include "wici_epoch.h"
+#include "wici_record.h"
 
 #include <Ed25519.h>
 
 namespace wici_epoch {
 namespace {
+using wici_record::id;
 constexpr uint8_t LABEL[] = {'W','I','C','I',' ','r','o','o','t',' ','e','p','o','c','h',' ','v','1'};
 void message(uint16_t network, uint16_t root, uint16_t epoch, uint8_t out[sizeof(LABEL) + 6]) {
     for (unsigned i = 0; i < sizeof(LABEL); ++i) out[i] = LABEL[i];
@@ -15,7 +17,6 @@ void message(uint16_t network, uint16_t root, uint16_t epoch, uint8_t out[sizeof
     out[sizeof(LABEL) + 4] = static_cast<uint8_t>(epoch >> 8);
     out[sizeof(LABEL) + 5] = static_cast<uint8_t>(epoch);
 }
-bool id(uint16_t value) { return value && value != 0xFFFF; }
 }  // namespace
 
 bool sign(const uint8_t privateKey[64], uint16_t network, uint16_t root,

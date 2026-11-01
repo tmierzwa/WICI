@@ -1,48 +1,23 @@
 // SPDX-License-Identifier: MIT
 #include "wici_relay.h"
 
-#include <string.h>
+#include "wici_record.h"
 
 namespace wici_relay {
 namespace {
-
+using namespace wici_record;
 constexpr uint8_t MAGIC[4] = {'W', 'R', 'Q', '1'};
-constexpr uint8_t COMMIT = 0xA5;
 constexpr size_t WIRE_AT = 25, CRC_AT = WIRE_AT + wici_link::MAX_FRAME;
 static_assert(CRC_AT + 2 < COPY_BYTES, "record fits in relay copy");
 
 uint32_t address(uint8_t slot, uint8_t copy) {
     return BASE + (static_cast<uint32_t>(slot) * 2 + copy) * COPY_BYTES;
 }
-uint16_t u16(const uint8_t* p) { return static_cast<uint16_t>((p[0] << 8) | p[1]); }
-uint32_t u32(const uint8_t* p) {
-    return (static_cast<uint32_t>(p[0]) << 24) | (static_cast<uint32_t>(p[1]) << 16) |
-           (static_cast<uint32_t>(p[2]) << 8) | p[3];
-}
-void put16(uint8_t* p, uint16_t n) { p[0] = static_cast<uint8_t>(n >> 8); p[1] = static_cast<uint8_t>(n); }
-void put32(uint8_t* p, uint32_t n) {
-    p[0] = static_cast<uint8_t>(n >> 24); p[1] = static_cast<uint8_t>(n >> 16);
-    p[2] = static_cast<uint8_t>(n >> 8); p[3] = static_cast<uint8_t>(n);
-}
-uint16_t crc(const uint8_t* p, size_t count) {
-    uint16_t c = 0xFFFF;
-    for (size_t i = 0; i < count; ++i) {
-        c ^= static_cast<uint16_t>(p[i]) << 8;
-        for (uint8_t j = 0; j < 8; ++j)
-            c = c & 0x8000 ? static_cast<uint16_t>((c << 1) ^ 0x1021) : static_cast<uint16_t>(c << 1);
-    }
-    return c;
-}
-bool blank(const uint8_t* p) {
-    bool zero = true, erased = true;
-    for (size_t i = 0; i < COPY_BYTES; ++i) { zero &= p[i] == 0; erased &= p[i] == 0xFF; }
-    return zero || erased;
-}
 bool valid(const uint8_t* p) {
-    const size_t n = u16(p + 8);
+    const size_t n = get16(p + 8);
     if (memcmp(p, MAGIC, 4) || (n && (n < wici_link::HEADER + wici_link::TAG || n > wici_link::MAX_FRAME)) ||
-        (!n && u16(p + 23)) || u16(p + 23) == wici_link::BROADCAST ||
-        u16(p + CRC_AT) != crc(p, CRC_AT)) return false;
+        (!n && get16(p + 23)) || get16(p + 23) == wici_link::BROADCAST ||
+        get16(p + CRC_AT) != crc(p, CRC_AT)) return false;
     for (size_t i = WIRE_AT + n; i < CRC_AT; ++i) if (p[i]) return false;
     return true;
 }
@@ -68,17 +43,17 @@ bool Queue::begin() {
         for (uint8_t copy = 0; copy < 2; ++copy) {
             uint8_t data[COPY_BYTES];
             if (!storage_.read(address(slot, copy), data, sizeof(data))) return false;
-            if (blank(data) || data[COPY_BYTES - 1] != COMMIT) continue;
+            if (!committed(data, sizeof(data))) continue;
             if (!valid(data)) return false;
-            uint32_t generation = u32(data + 4);
-            if (!found || static_cast<int32_t>(generation - generations_[slot]) > 0) {
+            uint32_t generation = get32(data + 4);
+            if (!found || newer(generation, generations_[slot])) {
                 generations_[slot] = generation;
                 copies_[slot] = copy;
-                lengths_[slot] = u16(data + 8);
+                lengths_[slot] = get16(data + 8);
                 // A provisioned signing key may have changed since this
                 // record was written. Reverify the origin after every boot.
                 origins_[slot] = 0;
-                admittedS_[slot] = u32(data + 19);
+                admittedS_[slot] = get32(data + 19);
                 memcpy(frames_[slot], data + WIRE_AT, lengths_[slot]);
                 found = true;
             }
@@ -106,18 +81,8 @@ bool Queue::commit(uint8_t slot, const uint8_t* wire, size_t length,
     }
     put16(data + CRC_AT, crc(data, CRC_AT));
     const uint8_t target = static_cast<uint8_t>(1 - copies_[slot]);
-    const uint32_t at = address(slot, target);
-    const uint8_t clear = 0;
-    if (!storage_.write(at + COPY_BYTES - 1, &clear, 1) ||
-        !storage_.write(at, data, COPY_BYTES - 1) ||
-        !storage_.write(at + COPY_BYTES - 1, &COMMIT, 1)) {
+    if (!write(storage_, address(slot, target), data, sizeof(data))) {
         ready_ = false;  // The target copy may have committed despite the reported error.
-        return false;
-    }
-    uint8_t verify[COPY_BYTES];
-    if (!storage_.read(at, verify, sizeof(verify)) || memcmp(data, verify, COPY_BYTES - 1) ||
-        verify[COPY_BYTES - 1] != COMMIT) {
-        ready_ = false;
         return false;
     }
     ++generations_[slot];
@@ -139,7 +104,7 @@ Admission Queue::admit(const uint8_t key[32], uint16_t network, uint16_t ownId,
         !transitDestination(frame, ownId) || frame.hops >= frame.ttl ||
         freeSlotsReserved > SLOTS ||
         (verifiedOrigin && (verifiedOrigin == wici_link::BROADCAST ||
-                            verifiedOrigin != u16(frame.payload + 1)))) return Admission::REJECTED;
+                            verifiedOrigin != get16(frame.payload + 1)))) return Admission::REJECTED;
     const wici_seen::Lookup prior = seen_.lookup(wire, length, nowS);
     if (prior == wici_seen::Lookup::MATCH) return Admission::FORWARDED;
     if (prior == wici_seen::Lookup::CONFLICT) return Admission::REJECTED;

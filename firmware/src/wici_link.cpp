@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 #include "wici_link.h"
+#include "wici_record.h"
 
 #include <string.h>
 
@@ -7,11 +8,10 @@
 
 namespace wici_link {
 namespace {
-
+using wici_record::get16;
+using wici_record::put16;
+using wici_record::id;
 constexpr uint8_t LABEL[] = {'W', 'I', 'C', 'I', ' ', 'l', 'i', 'n', 'k', ' ', 'v', '2'};
-bool id(uint16_t value) { return value != 0 && value != BROADCAST; }
-void put16(uint8_t* p, uint16_t n) { p[0] = static_cast<uint8_t>(n >> 8); p[1] = static_cast<uint8_t>(n); }
-uint16_t get16(const uint8_t* p) { return static_cast<uint16_t>((p[0] << 8) | p[1]); }
 
 bool valid(const Frame& f) {
     if (!id(f.network) || !id(f.source) || (!id(f.destination) && f.destination != BROADCAST) ||

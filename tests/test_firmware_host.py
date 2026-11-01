@@ -8,6 +8,7 @@ import base64
 import hashlib
 import hmac
 import json
+import os
 import random
 import shutil
 import subprocess
@@ -3285,6 +3286,24 @@ class HostUnitTests(unittest.TestCase):
                          ["ok", str(check_button_configuration("ś" * 32, ("Potrzeba ustała", "ł" * 48)))])
         self.assertEqual(self.run_harness("config", "Testowa 10", "ł" * 49)[0], "err")
         self.assertEqual(self.run_harness("config", 'Testowa "10"')[0], "err")
+
+
+CRYPTO = ROOT / "firmware" / ".pio" / "stack" / "Crypto"
+WICI_UNITS = sorted(path.name for path in SRC.glob("wici_*.cpp"))
+
+
+@unittest.skipUnless(shutil.which("g++") and (CRYPTO / ".wici-stamp").exists(),
+                     "g++ or pinned Crypto sources unavailable")
+class WiciLinkUnits(unittest.TestCase):
+    """WICI-Link units: warning-free under g++ like the MCU toolchains."""
+
+    def test_units_compile_without_gcc_warnings(self):
+        # g++ adds -Wclass-memaccess to -Wall; clang has no equivalent.
+        for unit in WICI_UNITS:
+            built = subprocess.run(["g++", "-std=c++17", "-Wall", "-Wextra", "-Werror", f"-I{SRC}",
+                                    "-isystem", str(CRYPTO), "-c", str(SRC / unit), "-o", os.devnull],
+                                   capture_output=True, text=True)
+            self.assertEqual(built.returncode, 0, f"{unit}: {built.stderr[-2000:]}")
 
 
 if __name__ == "__main__":

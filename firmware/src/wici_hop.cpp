@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 #include "wici_hop.h"
+#include "wici_record.h"
 
 namespace wici_hop {
 namespace {
-uint16_t u16(const uint8_t* p) { return static_cast<uint16_t>((p[0] << 8) | p[1]); }
-bool id(uint16_t n) { return n && n != wici_link::BROADCAST; }
+using wici_record::get16;
+using wici_record::id;
 }  // namespace
 
 Relay::Relay(journal::Storage& storage, wici_route::Config config, const uint8_t ifac[16],
@@ -19,7 +20,7 @@ Relay::Relay(journal::Storage& storage, wici_route::Config config, const uint8_t
 
 bool Relay::priority(const wici_link::Frame& frame) const {
     if (!verify_) return false;
-    const uint16_t sender = u16(frame.payload + 1), recipient = u16(frame.payload + 3);
+    const uint16_t sender = get16(frame.payload + 1), recipient = get16(frame.payload + 3);
     const uint16_t receiver = frame.flags & wici_link::DOWN ? sender : recipient;
     if (receiver != receivers_[0] && receiver != receivers_[1]) return false;
     return verify_(sender, recipient, frame, verifyContext_);
@@ -48,8 +49,8 @@ Receipt Relay::receiveData(const uint8_t* wire, size_t length, uint32_t nowS,
         (frame.destination != config_.own && frame.destination != wici_link::BROADCAST)) return Receipt::IGNORED;
     // This component is for transit traffic. A final recipient must durably
     // admit the decrypted envelope in its own inbox before answering HACK.
-    if (u16(frame.payload + 3) == config_.own || !id(u16(frame.payload + 1)) ||
-        !id(u16(frame.payload + 3))) return Receipt::REJECTED;
+    if (get16(frame.payload + 3) == config_.own || !id(get16(frame.payload + 1)) ||
+        !id(get16(frame.payload + 3))) return Receipt::REJECTED;
     const bool broadcast = frame.destination == wici_link::BROADCAST;
     if (broadcast && !allowFlood_) return Receipt::IGNORED;
     if (broadcast && (!(frame.flags & wici_link::DOWN) || frame.flags & wici_link::ACKREQ))
@@ -69,7 +70,7 @@ Receipt Relay::receiveData(const uint8_t* wire, size_t length, uint32_t nowS,
         // Only the full-queue path pays the Ed25519 cost. It can exceed the
         // immediate HACK deadline, so the sender must retry after the commit.
         stored = queue_.admit(key_, config_.network, config_.own, wire, length,
-                              nowS, 0, u16(frame.payload + 1));
+                              nowS, 0, get16(frame.payload + 1));
         if (stored == wici_relay::Admission::STORED) return Receipt::STORED_NO_HACK;
     }
     if (stored != wici_relay::Admission::STORED && stored != wici_relay::Admission::DUPLICATE &&
@@ -107,13 +108,13 @@ void Relay::learnPending(uint32_t nowS) {
         if (!origin && checkedGeneration_[slot] != queue_.generation(slot)) {
             checkedGeneration_[slot] = queue_.generation(slot);
             if (priority(frame)) {
-                origin = u16(frame.payload + 1);
+                origin = get16(frame.payload + 1);
                 if (!queue_.markVerified(slot, origin)) return;
                 checkedGeneration_[slot] = queue_.generation(slot);
             }
         }
         if (origin && !(frame.flags & wici_link::DOWN)) {
-            const uint16_t sender = u16(frame.payload + 1);
+            const uint16_t sender = get16(frame.payload + 1);
             if (sender != config_.own) routes_.learn(sender, frame.source);
         }
     }
@@ -135,7 +136,7 @@ bool Relay::prepare(uint32_t nowS) {
         if (order < wici_relay::SLOTS && verified) priorityWaiting = true;
         if (verified != (order < wici_relay::SLOTS)) continue;
         const uint16_t next = frame.flags & wici_link::DOWN ?
-                              routes_.down(u16(frame.payload + 3)) : routes_.parent();
+                              routes_.down(get16(frame.payload + 3)) : routes_.parent();
         if (!id(next) && next != wici_link::BROADCAST) continue;
         if (next == wici_link::BROADCAST && !allowFlood_) continue;
         if (next == wici_link::BROADCAST) {

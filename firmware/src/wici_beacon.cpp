@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
 #include "wici_beacon.h"
+#include "wici_record.h"
 
 #include <Ed25519.h>
 #include <string.h>
 
 namespace wici_beacon {
 namespace {
+using wici_record::id;
 constexpr uint8_t LABEL[] = {'W','I','C','I',' ','r','o','u','t','e',' ','b','e','a','c','o','n',' ','v','1'};
 void message(uint16_t network, uint16_t sender, const uint8_t content[CONTENT_BYTES],
              uint8_t out[sizeof(LABEL) + 4 + CONTENT_BYTES]) {
@@ -16,7 +18,6 @@ void message(uint16_t network, uint16_t sender, const uint8_t content[CONTENT_BY
     out[sizeof(LABEL) + 3] = static_cast<uint8_t>(sender);
     memcpy(out + sizeof(LABEL) + 4, content, CONTENT_BYTES);
 }
-bool id(uint16_t value) { return value && value != 0xFFFF; }
 }  // namespace
 
 bool sign(const uint8_t identity[64], uint16_t network, uint16_t sender,

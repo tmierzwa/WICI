@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 #include "wici_hop_auth.h"
+#include "wici_record.h"
 
 #include <string.h>
 
@@ -8,9 +9,9 @@
 
 namespace wici_hop_auth {
 namespace {
+using wici_record::get16;
 constexpr size_t TAG = wici_link::HOP_TAG;
 constexpr uint8_t LABEL[] = {'W','I','C','I',' ','h','o','p',' ','v','1'};
-uint16_t u16(const uint8_t* p) { return static_cast<uint16_t>((p[0] << 8) | p[1]); }
 void tag(const uint8_t key[32], const uint8_t* frame, size_t length, uint8_t out[32]) {
     sha2::Hmac mac(key, 32);
     mac.update(LABEL, sizeof(LABEL));
@@ -54,9 +55,9 @@ const uint8_t* Auth::key(uint16_t peer) const {
 
 size_t Auth::seal(const uint8_t* bare, size_t length, uint8_t* out, size_t capacity) const {
     if (!own_ || !bare || !out || length < wici_link::HEADER + wici_link::TAG ||
-        length > wici_link::MAX_FRAME || u16(bare + 1) != network_ ||
-        u16(bare + 3) != own_) return 0;
-    const uint16_t dest = u16(bare + 5);
+        length > wici_link::MAX_FRAME || get16(bare + 1) != network_ ||
+        get16(bare + 3) != own_) return 0;
+    const uint16_t dest = get16(bare + 5);
     const size_t extra = dest == wici_link::BROADCAST ? 0 : TAG;
     if (length + extra > capacity || length + extra > wici_link::MAX_FRAME) return 0;
     const uint8_t* peerKey = extra ? key(dest) : nullptr;
@@ -75,8 +76,8 @@ bool Auth::open(const uint8_t* radio, size_t length, uint8_t* bare,
                 size_t capacity, size_t& bareLength) const {
     bareLength = 0;
     if (!own_ || !radio || !bare || length < wici_link::HEADER + wici_link::TAG ||
-        length > wici_link::MAX_FRAME || u16(radio + 1) != network_) return false;
-    const uint16_t source = u16(radio + 3), dest = u16(radio + 5);
+        length > wici_link::MAX_FRAME || get16(radio + 1) != network_) return false;
+    const uint16_t source = get16(radio + 3), dest = get16(radio + 5);
     if (source == own_ || (dest != own_ && dest != wici_link::BROADCAST)) return false;
     const size_t extra = dest == wici_link::BROADCAST ? 0 : TAG;
     if (length < wici_link::HEADER + wici_link::TAG + extra || length - extra > capacity) return false;

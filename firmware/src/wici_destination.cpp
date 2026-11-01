@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 #include "wici_destination.h"
+#include "wici_record.h"
 
 namespace wici_destination {
 namespace {
-uint16_t u16(const uint8_t* p) { return static_cast<uint16_t>((p[0] << 8) | p[1]); }
-bool id(uint16_t n) { return n && n != wici_link::BROADCAST; }
+using wici_record::get16;
+using wici_record::id;
 }  // namespace
 
 Destination::Destination(journal::Storage& storage, Config config, const uint8_t ifac[16],
@@ -48,7 +49,7 @@ Outcome Destination::receive(const uint8_t* wire, size_t length, uint32_t nowS,
     if (frame.source == config_.own) return Outcome::REJECTED;
     if (frame.destination == wici_link::BROADCAST &&
         (!(frame.flags & wici_link::DOWN) || frame.flags & wici_link::ACKREQ)) return Outcome::REJECTED;
-    const uint16_t sender = u16(frame.payload + 1), recipient = u16(frame.payload + 3);
+    const uint16_t sender = get16(frame.payload + 1), recipient = get16(frame.payload + 3);
     if (recipient != config_.own) return Outcome::REJECTED;
     uint8_t peer = 2;
     for (uint8_t i = 0; i < 2; ++i) if (sender == config_.receiver[i]) peer = i;

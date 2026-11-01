@@ -1,48 +1,23 @@
 // SPDX-License-Identifier: MIT
 #include "wici_route.h"
 
-#include <string.h>
+#include "wici_record.h"
 
 namespace wici_route {
 namespace {
+using namespace wici_record;
 constexpr uint8_t MAGIC[4] = {'W', 'R', 'T', '1'};
-constexpr uint8_t COMMIT = 0xA5;
 constexpr size_t ROUTES_AT = 24, CRC_AT = ROUTES_AT + ROUTES * 4;
 static_assert(CRC_AT + 2 < COPY_BYTES, "route record fits");
-bool id(uint16_t n) { return n && n != wici_link::BROADCAST; }
-uint16_t u16(const uint8_t* p) { return static_cast<uint16_t>((p[0] << 8) | p[1]); }
-uint32_t u32(const uint8_t* p) {
-    return (static_cast<uint32_t>(p[0]) << 24) | (static_cast<uint32_t>(p[1]) << 16) |
-           (static_cast<uint32_t>(p[2]) << 8) | p[3];
-}
-void put16(uint8_t* p, uint16_t n) { p[0] = static_cast<uint8_t>(n >> 8); p[1] = static_cast<uint8_t>(n); }
-void put32(uint8_t* p, uint32_t n) {
-    p[0] = static_cast<uint8_t>(n >> 24); p[1] = static_cast<uint8_t>(n >> 16);
-    p[2] = static_cast<uint8_t>(n >> 8); p[3] = static_cast<uint8_t>(n);
-}
-uint16_t crc(const uint8_t* p, size_t count) {
-    uint16_t c = 0xFFFF;
-    for (size_t i = 0; i < count; ++i) {
-        c ^= static_cast<uint16_t>(p[i]) << 8;
-        for (uint8_t j = 0; j < 8; ++j)
-            c = c & 0x8000 ? static_cast<uint16_t>((c << 1) ^ 0x1021) : static_cast<uint16_t>(c << 1);
-    }
-    return c;
-}
-bool blank(const uint8_t* p) {
-    bool zero = true, erased = true;
-    for (size_t i = 0; i < COPY_BYTES; ++i) { zero &= p[i] == 0; erased &= p[i] == 0xFF; }
-    return zero || erased;
-}
 }  // namespace
 
 bool parseBeacon(const wici_link::Frame& frame, Beacon& out) {
     out = Beacon();
     if (frame.type != wici_link::Type::BEACON || frame.length != 137) return false;
-    out.root = u16(frame.payload);
-    out.rank = u16(frame.payload + 2);
-    out.epoch = u16(frame.payload + 4);
-    out.parent = u16(frame.payload + 6);
+    out.root = get16(frame.payload);
+    out.rank = get16(frame.payload + 2);
+    out.epoch = get16(frame.payload + 4);
+    out.parent = get16(frame.payload + 6);
     out.flags = frame.payload[8];
     memcpy(out.epochSignature, frame.payload + 9, wici_epoch::SIGNATURE_BYTES);
     return id(out.root) && (out.parent == 0 || id(out.parent)) && !(out.flags & ~1);
@@ -77,34 +52,34 @@ bool Table::begin() {
     parent_ = failedDynamic_ = 0;
     plannedFailures_ = backupFailures_ = dynamicFailures_ = 0;
     nextRoute_ = 0;
-    memset(neighbors_, 0, sizeof(neighbors_));
+    for (Neighbor& neighbor : neighbors_) neighbor = Neighbor();
     const bool rootNode = config_.own == config_.root;
     if (!id(config_.network) || !id(config_.own) || !id(config_.root) ||
         (config_.planned && !id(config_.planned)) || (config_.backup && !id(config_.backup)) ||
         (rootNode ? (config_.planned || config_.backup) :
                     (!config_.planned || config_.planned == config_.own ||
                      config_.backup == config_.own || config_.backup == config_.planned))) return false;
-    memset(routes_, 0, sizeof(routes_));
+    for (Route& route : routes_) route = Route();
     bool found = false;
     for (uint8_t copy = 0; copy < 2; ++copy) {
         uint8_t data[COPY_BYTES];
         if (!storage_.read(BASE + copy * COPY_BYTES, data, sizeof(data))) return false;
-        if (blank(data) || data[COPY_BYTES - 1] != COMMIT) continue;
-        if (memcmp(data, MAGIC, 4) || u16(data + 8) != config_.network ||
-            u16(data + 10) != config_.own || u16(data + 12) != config_.root ||
-            u16(data + CRC_AT) != crc(data, CRC_AT)) return false;
+        if (!committed(data, sizeof(data))) continue;
+        if (memcmp(data, MAGIC, 4) || get16(data + 8) != config_.network ||
+            get16(data + 10) != config_.own || get16(data + 12) != config_.root ||
+            get16(data + CRC_AT) != crc(data, CRC_AT)) return false;
         for (size_t i = 0; i < ROUTES; ++i) {
-            const uint16_t dst = u16(data + ROUTES_AT + i * 4);
-            const uint16_t via = u16(data + ROUTES_AT + i * 4 + 2);
+            const uint16_t dst = get16(data + ROUTES_AT + i * 4);
+            const uint16_t via = get16(data + ROUTES_AT + i * 4 + 2);
             if ((dst || via) && (!id(dst) || !id(via) || dst == config_.own || via == config_.own)) return false;
         }
-        const uint32_t generation = u32(data + 4);
-        if (!found || static_cast<int32_t>(generation - generation_) > 0) {
+        const uint32_t generation = get32(data + 4);
+        if (!found || newer(generation, generation_)) {
             generation_ = generation;
             currentCopy_ = copy;
             for (size_t i = 0; i < ROUTES; ++i) {
-                routes_[i].destination = u16(data + ROUTES_AT + i * 4);
-                routes_[i].via = u16(data + ROUTES_AT + i * 4 + 2);
+                routes_[i].destination = get16(data + ROUTES_AT + i * 4);
+                routes_[i].via = get16(data + ROUTES_AT + i * 4 + 2);
             }
             found = true;
         }
@@ -134,17 +109,7 @@ bool Table::commit() {
     }
     put16(data + CRC_AT, crc(data, CRC_AT));
     const uint8_t copy = static_cast<uint8_t>(1 - currentCopy_);
-    const uint32_t at = BASE + copy * COPY_BYTES;
-    const uint8_t clear = 0;
-    if (!storage_.write(at + COPY_BYTES - 1, &clear, 1) ||
-        !storage_.write(at, data, COPY_BYTES - 1) ||
-        !storage_.write(at + COPY_BYTES - 1, &COMMIT, 1)) {
-        ready_ = false;
-        return false;
-    }
-    uint8_t verify[COPY_BYTES];
-    if (!storage_.read(at, verify, sizeof(verify)) || memcmp(data, verify, COPY_BYTES - 1) ||
-        verify[COPY_BYTES - 1] != COMMIT) {
+    if (!write(storage_, BASE + copy * COPY_BYTES, data, sizeof(data))) {
         ready_ = false;
         return false;
     }
@@ -249,7 +214,7 @@ bool Table::beacon(uint16_t neighbor, const Beacon& value, uint16_t linkCost16, 
         rank_ = 0xFFFF;
         rankCeiling_ = 0xFFFF;
         parent_ = 0;
-        memset(neighbors_, 0, sizeof(neighbors_));
+        for (Neighbor& neighbor : neighbors_) neighbor = Neighbor();
         plannedFailures_ = backupFailures_ = 0;
         dynamicFailures_ = 0;
         failedDynamic_ = 0;

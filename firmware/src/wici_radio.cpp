@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 #include "wici_radio.h"
+#include "wici_record.h"
 
 #include <string.h>
 
@@ -8,7 +9,7 @@
 
 namespace wici_radio {
 namespace {
-uint16_t u16(const uint8_t* p) { return static_cast<uint16_t>((p[0] << 8) | p[1]); }
+using wici_record::get16;
 bool reached(uint32_t now, uint32_t deadline) { return static_cast<int32_t>(now - deadline) >= 0; }
 }  // namespace
 
@@ -97,7 +98,7 @@ Event Shelter::receive(const uint8_t* wire, size_t length, uint32_t receivedMs, 
         return Event::REJECTED;
     uint8_t hack[wici_link::MAX_FRAME];
     size_t hackLength = 0;
-    if (u16(frame.payload + 3) == own_) {
+    if (get16(frame.payload + 3) == own_) {
         const auto result = destination_.receive(wire, length, nowS, hack, sizeof(hack), hackLength);
         if (result == wici_destination::Outcome::HACK_READY)
             return air_.sendHack(hack, hackLength, receivedMs) ? Event::HACK_SENT : Event::ADMITTED;

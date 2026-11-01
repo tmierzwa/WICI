@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 #include "wici_gateway.h"
+#include "wici_record.h"
 #include "wici_beacon.h"
 
 #include <string.h>
 
 namespace wici_gateway {
 namespace {
-uint16_t u16(const uint8_t* p) { return static_cast<uint16_t>((p[0] << 8) | p[1]); }
+using wici_record::get16;
 }
 
 Root::Root(journal::Storage& storage, kiss::Port& port, Air& air, uint16_t network,
@@ -91,7 +92,7 @@ Event Root::radio(const uint8_t* wire, size_t length, uint32_t receivedMs) {
         pending_ = true;
         pendingSource_ = frame.source;
         pendingSequence_ = frame.sequence;
-        pendingSender_ = u16(frame.payload + 1);
+        pendingSender_ = get16(frame.payload + 1);
         pendingVia_ = frame.source;
         receivedMs_ = receivedMs;
     }
@@ -113,7 +114,7 @@ Event Root::host(const uint8_t* wire, size_t length, uint32_t nowMs, uint32_t no
     }
     if (outboundPending_ || frame.type != wici_link::Type::DATA || frame.destination != own_ ||
         frame.source == own_ || frame.flags != (wici_link::ACKREQ | wici_link::DOWN) ||
-        u16(frame.payload + 1) != frame.source) return Event::REJECTED;
+        get16(frame.payload + 1) != frame.source) return Event::REJECTED;
     if (downPending_ && nowMs - downSentMs_ >= 600) {
         downPending_ = false;
         if (failureRecipient_ != downRecipient_) {
@@ -125,7 +126,7 @@ Event Root::host(const uint8_t* wire, size_t length, uint32_t nowMs, uint32_t no
             downFailures_ = 0;
         }
     }
-    const uint16_t recipient = u16(frame.payload + 3);
+    const uint16_t recipient = get16(frame.payload + 3);
     const uint16_t next = routes_.down(recipient);
     if (!next) return Event::REJECTED;
     const bool broadcast = next == wici_link::BROADCAST;
