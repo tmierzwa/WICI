@@ -214,7 +214,7 @@ class CrossLanguageEnvelope(unittest.TestCase):
         receiver = []
         for counter, number, now, data, _, _ in steps:
             try:
-                receiver.append(inbox.receive(self.envelope.Part(2, 4, counter, 0, number, data), now,
+                receiver.append(inbox.receive(self.envelope.Part(2, 4, counter, 0, number, data), bytes(32), now,
                                               lambda full: None))
             except self.envelope.EnvelopeError:
                 receiver.append("rejected")

@@ -400,8 +400,6 @@ class Przyjecie:
         trusted = self.store.db.execute("SELECT 1 FROM trusted WHERE source=?", (source,)).fetchone() is not None
         key = envelope.derive_key(private[:32], station_key[:32], net_id, sender, recipient, own_id=recipient)
         part = envelope.open_part(key, raw)
-        if part.message_type != envelope.TYPE_SA1:
-            raise envelope.EnvelopeError("expected SA1 envelope")
         if not hasattr(self, "envelope_inboxes"):
             self.envelope_inboxes = {}
         inbox = self.envelope_inboxes.get(net_id)
@@ -426,7 +424,7 @@ class Przyjecie:
         # The KISS caller must be able to answer HACK inside 200 ms. The normal
         # one-second tick sends RECEIVED after the durable snapshot, without
         # putting LXMF path discovery or copy work on the hop-ACK path.
-        return inbox.receive(part, int(self.clock()), accept, remember_bearer)
+        return inbox.receive(part, key, int(self.clock()), accept, remember_bearer)
 
     def _receive(self, source, content, bearer=None):
         at = self.clock()

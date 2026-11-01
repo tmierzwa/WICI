@@ -3,7 +3,11 @@
 
 The caller supplies `admit` to write SA1 effects on the same SQLite connection and
 `persist` to durably snapshot the database before a hop acknowledgement is allowed.
+Replay and fragment state is bound to the pair key, like the station's FRAM records,
+so a station re-provisioned under the same number starts a fresh window.
 """
+
+import hashlib
 
 from .. import envelope
 
@@ -12,15 +16,14 @@ MAX_PENDING, PER_SENDER, FRAGMENT_S = 256, 4, 120
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS env_replay (
-    network INTEGER NOT NULL, sender INTEGER NOT NULL, recipient INTEGER NOT NULL,
+    network INTEGER NOT NULL, sender INTEGER NOT NULL, recipient INTEGER NOT NULL, key_id BLOB NOT NULL,
     highest INTEGER NOT NULL, mask BLOB NOT NULL,
-    PRIMARY KEY(network, sender, recipient)
+    PRIMARY KEY(network, sender, recipient, key_id)
 );
 CREATE TABLE IF NOT EXISTS env_parts (
-    network INTEGER NOT NULL, sender INTEGER NOT NULL, recipient INTEGER NOT NULL, counter INTEGER NOT NULL,
-    message_type INTEGER NOT NULL, started INTEGER NOT NULL,
-    first BLOB, second BLOB,
-    PRIMARY KEY(network, sender, recipient, counter, message_type)
+    network INTEGER NOT NULL, sender INTEGER NOT NULL, recipient INTEGER NOT NULL, key_id BLOB NOT NULL,
+    counter INTEGER NOT NULL, started INTEGER NOT NULL, first BLOB, second BLOB,
+    PRIMARY KEY(network, sender, recipient, key_id, counter)
 );
 """
 
@@ -32,23 +35,24 @@ class Inbox:
         self.db, self.network, self.persist = db, network, persist
         db.executescript(SCHEMA)
 
-    def receive(self, part, now, admit, fresh=None):
-        """Admit an authenticated Part and return a state safe to HACK only after persist().
+    def receive(self, part, key, now, admit, fresh=None):
+        """Admit a Part authenticated with `key` and return a state safe to HACK only after persist().
 
         `admit(full)` and `fresh()` must use this SQLite connection without committing or
         opening a nested transaction; `fresh()` runs only for a part not admitted before.
         A failed callback rolls back replay and fragment state.
         """
-        if (type(now) is not int or now < 0 or part.message_type != envelope.TYPE_SA1 or
-                part.number not in (0, 1, 2) or not 0 <= part.counter <= 0xFFFFFFFF or
+        if (type(now) is not int or now < 0 or len(key) != 32 or part.number not in (0, 1, 2) or not 0 <= part.counter <= 0xFFFFFFFF or
                 not 1 <= part.sender <= 0xFFFE or not 1 <= part.recipient <= 0xFFFE or
                 part.sender == part.recipient or
                 len(part.plaintext) > (envelope.MAX_SA1 if part.number == 0 else envelope.MAX_SA1 // 2) or
                 (part.number != 0 and not part.plaintext)):
             raise envelope.EnvelopeError("invalid part for SA1 inbox")
+        pair = (self.network, part.sender, part.recipient, hashlib.sha256(bytes(key)).digest())
+        message = (*pair, part.counter)
         with self.db:
-            row = self.db.execute("SELECT highest, mask FROM env_replay WHERE network=? AND sender=? AND recipient=?",
-                                  (self.network, part.sender, part.recipient)).fetchone()
+            row = self.db.execute("SELECT highest, mask FROM env_replay WHERE network=? AND sender=? AND recipient=? "
+                                  "AND key_id=?", pair).fetchone()
             window = envelope.ReplayWindow(row[0], int.from_bytes(row[1], "big")) if row else envelope.ReplayWindow()
             if window.highest >= 0 and window.highest - part.counter >= envelope.WINDOW:
                 # Outside the bitmap we cannot prove this counter was ever admitted.
@@ -61,13 +65,15 @@ class Inbox:
             else:
                 self.db.execute("DELETE FROM env_parts WHERE started < ? OR started > ?",
                                 (now - FRAGMENT_S, now))
+                previous = self.db.execute(
+                    "SELECT started, first, second FROM env_parts WHERE network=? AND sender=? AND recipient=? "
+                    "AND key_id=? AND counter=?", message).fetchone()
                 if part.number == 0:
+                    if previous is not None:
+                        # As on the station: one counter cannot carry both a whole message and a fragment.
+                        raise envelope.EnvelopeError("whole envelope over a pending fragment")
                     full, result = part.plaintext, COMPLETE
                 else:
-                    key = (self.network, part.sender, part.recipient, part.counter, part.message_type)
-                    previous = self.db.execute(
-                        "SELECT started, first, second FROM env_parts WHERE network=? AND sender=? AND recipient=? AND counter=? AND message_type=?",
-                        key).fetchone()
                     if previous is None:
                         count = self.db.execute("SELECT count(*) FROM env_parts").fetchone()[0]
                         per_sender = self.db.execute("SELECT count(*) FROM env_parts WHERE network=? AND sender=?",
@@ -76,24 +82,23 @@ class Inbox:
                             raise envelope.EnvelopeError("fragment inbox full")
                         assembly = envelope.Assembly.start(part, now)
                     else:
-                        assembly = envelope.Assembly(part.sender, part.recipient, part.counter, part.message_type,
+                        assembly = envelope.Assembly(part.sender, part.recipient, part.counter, envelope.TYPE_SA1,
                                                      previous[0], previous[1], previous[2])
                         assembly, full = assembly.add(part, now)
                     if previous is None:
                         full = None
                     if full is None:
                         self.db.execute("INSERT OR REPLACE INTO env_parts VALUES(?,?,?,?,?,?,?,?)",
-                                        (*key, assembly.started_at, assembly.first, assembly.second))
+                                        (*message, assembly.started_at, assembly.first, assembly.second))
                         result = PARTIAL
                     else:
                         result = COMPLETE
                 if result == COMPLETE:
                     admit(full)
-                    self.db.execute("INSERT OR REPLACE INTO env_replay VALUES(?,?,?,?,?)",
-                                    (self.network, part.sender, part.recipient, proposed.highest,
-                                     proposed.mask.to_bytes(8, "big")))
-                    self.db.execute("DELETE FROM env_parts WHERE network=? AND sender=? AND recipient=? AND counter=? AND message_type=?",
-                                    (self.network, part.sender, part.recipient, part.counter, part.message_type))
+                    self.db.execute("INSERT OR REPLACE INTO env_replay VALUES(?,?,?,?,?,?)",
+                                    (*pair, proposed.highest, proposed.mask.to_bytes(8, "big")))
+                    self.db.execute("DELETE FROM env_parts WHERE network=? AND sender=? AND recipient=? "
+                                    "AND key_id=? AND counter=?", message)
             if fresh is not None and result != DUPLICATE:
                 fresh()
         if not self.persist():

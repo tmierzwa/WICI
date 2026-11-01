@@ -29,8 +29,7 @@ class Sender:
         self.failed = False
         db.executescript(SCHEMA)
 
-    def seal(self, private_key, peer_public_key, network, sender, recipient, plaintext,
-             max_payload, message_type=envelope.TYPE_SA1):
+    def seal(self, private_key, peer_public_key, network, sender, recipient, plaintext, max_payload):
         """Reserve and seal one SA1 intent; never reuse a (key, nonce) after failure."""
         if self.failed:
             raise envelope.EnvelopeError("outbound counter state is uncertain")
@@ -65,4 +64,4 @@ class Sender:
             counter = start
         # A seal error still burns this counter; it may never be reused for another plaintext.
         self.next[binding] = counter + 1
-        return envelope.seal(key, sender, recipient, counter, plaintext, max_payload, message_type)
+        return envelope.seal(key, sender, recipient, counter, plaintext, max_payload)
