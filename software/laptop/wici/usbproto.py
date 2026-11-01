@@ -155,7 +155,10 @@ class Link:
                         pending, self.pending = self.pending, None
                         confirm = pending.get("confirm_s", 30)
                         confirm = confirm if type(confirm) is int else 30
-                        deadline = time.monotonic() + max(CONFIRM_TIMEOUT, confirm + 5)
+                        # Po przycisku stacja dopiero wykonuje polecenie: dłuższy limit polecenia (eksport
+                        # przeniesienia: dwa przejścia obrazu) dochodzi do czasu na przycisk.
+                        deadline = time.monotonic() + max(CONFIRM_TIMEOUT, confirm + 5) + \
+                            (timeout if timeout > TIMEOUT else 0)
                         break
                     if seq in self.replies:
                         return self.replies.pop(seq)

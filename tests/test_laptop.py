@@ -284,6 +284,19 @@ class LinkTest(unittest.TestCase):
             link.request("unknown", timeout=0.3)
         link.close()
 
+    def test_long_command_keeps_its_limit_after_the_button(self):
+        # Eksport przeniesienia: przycisk w ostatniej chwili, potem dwa przejścia obrazu w limicie polecenia.
+        port = None
+
+        def respond(m):
+            threading.Timer(0.4, port.push, [{"usb": 2, "seq": 2, "re": m["seq"], "type": "ok"}]).start()
+            return [{"usb": 2, "seq": 1, "re": m["seq"], "type": "pending", "confirm_s": -5}]
+        port = FakePort(respond)
+        link = usbproto.Link(port)
+        with unittest.mock.patch.object(usbproto, "CONFIRM_TIMEOUT", 0):
+            self.assertEqual(link.request("xfer_begin", timeout=5, op="export")["type"], "ok")
+        link.close()
+
     def test_seq_rejection_is_retried_once_with_the_next_number(self):
         calls = []
 

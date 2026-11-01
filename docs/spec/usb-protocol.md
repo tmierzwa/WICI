@@ -167,9 +167,10 @@ Pola `hello`: `epoch` to bieżąca epoka pierścienia zdarzeń, `head` numer ost
 | Sytuacja | Wartość |
 |---|---|
 | Odpowiedź stacji na polecenie bez potwierdzenia przyciskiem | ≤1 s (zapis FRAM trwa milisekundy); laptop czeka 3 s |
-| Odpowiedź końcowa po `pending` | laptop czeka 35 s |
-| `xfer_commit` dla `configure` i `import` | laptop czeka 10 s |
-| `xfer_commit` dla `firmware` (sprawdzenie podpisu obrazu) | laptop czeka 60 s |
+| Odpowiedź końcowa po `pending` | laptop czeka 35 s, a przy poleceniu z dłuższym limitem 35 s + ten limit |
+| `xfer_begin` dla `export` (dwa przejścia obrazu przeniesienia) i `retire` | laptop czeka 60 s |
+| `xfer_commit` dla `configure` | laptop czeka 10 s |
+| `xfer_commit` dla `import` i `firmware` (sprawdzenie skrótu albo podpisu obrazu) | laptop czeka 60 s |
 | Ponowienie zdarzeń przez stację bez `ack` | po 5 s od ostatniego wysłania, od `cursor` + 1 |
 | Najwyżej zdarzeń w drodze bez `ack` | 8 |
 | Kolejka wyjściowa stacji | 1025 B (wiersz z LF); następny wiersz wejścia po jej opróżnieniu |
