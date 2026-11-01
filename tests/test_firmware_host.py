@@ -307,9 +307,9 @@ struct TextSource : config::Source {
 
 void dumpConfig(const config::Config& c) {
     printf("conf role=%u stations=%u profile=%s\n", static_cast<unsigned>(c.role), c.stations, c.profile);
-    if (c.network.id) printf("conf network %u %u %u %u %u %u %u\n", c.network.id,
+    if (c.network.id) printf("conf network %u %u %u %u %u %u %u ttl=%u\n", c.network.id,
                              c.network.station, c.network.root, c.network.parent, c.network.backupParent,
-                             c.network.receiverMain, c.network.receiverBackup);
+                             c.network.receiverMain, c.network.receiverBackup, c.network.ttl);
     for (size_t i = 0; i < c.addressCount; ++i) printf("conf address %s\n", c.addresses[i]);
     for (size_t i = 0; i < c.phraseCount; ++i) printf("conf phrase %s|%s|%s\n", c.phrases[i][0], c.phrases[i][1], c.phrases[i][2]);
     printf("conf ifac ");
@@ -1539,9 +1539,12 @@ class HostUnitTests(unittest.TestCase):
         main.update(id=2, net_id=100, x25519=main["key"][:64])
         backup.update(id=3, net_id=100, x25519=backup["key"][:64])
         doc = station_doc(network=network, receiver={"main": main, "backup": backup})
-        self.assertIn("conf network 100 4 1 1 0 2 3", self.parse(doc))
+        self.assertIn("conf network 100 4 1 1 0 2 3 ttl=7", self.parse(doc))
         keys = dict(doc, priority_keys=[{"id": 5, "ed25519": "ab" * 32, "x25519": "cd" * 32}])
-        self.assertIn("conf network 100 4 1 1 0 2 3", self.parse(keys))
+        self.assertIn("conf network 100 4 1 1 0 2 3 ttl=7", self.parse(keys))
+        self.assertIn("conf network 100 4 1 1 0 2 3 ttl=15", self.parse(dict(keys, network=dict(network, ttl=15))))
+        for ttl in (0, 16, True, "7"):
+            self.assertEqual(self.parse(dict(keys, network=dict(network, ttl=ttl))), ["parse err network"])
         self.assertEqual(self.parse(dict(doc, priority_keys=[{"id": 5, "ed25519": "ab" * 32}])),
                          ["parse err priority_keys"])
         self.assertEqual(self.parse(dict(doc, priority_keys=[])), ["parse err priority_keys"])
@@ -1554,7 +1557,7 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual(self.parse(station_doc(network=dict(network, station=1))), ["parse err network"])
         root = dict(node_doc(), network=dict(network, station=1, parent=0),
                     priority_keys=[{"id": 5, "ed25519": "ab" * 32, "x25519": "cd" * 32}])
-        self.assertIn("conf network 100 1 1 0 0 2 3", self.parse(root))
+        self.assertIn("conf network 100 1 1 0 0 2 3 ttl=7", self.parse(root))
 
     def test_numbered_envelope_plaintext_reaches_station_only_with_active_binding(self):
         network = {"id": 100, "station": 4, "root": 1, "parent": 1, "backup_parent": 0,

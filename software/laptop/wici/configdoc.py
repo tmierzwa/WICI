@@ -18,6 +18,7 @@ ADDRESSES, ADDRESS_MAX = 8, 64
 PHRASES, PHRASE_MAX = 11, 96
 STATIONS_MAX = 1000
 PRIORITY_KEYS_MAX = 50
+TTL_DEFAULT = 7     # `network.ttl`: limit skoków własnych ramek WICI-Link, 1–15 (firmware/src/config.h)
 PROFILES = ("lora-sf7", "p1")
 REJECTED_CATEGORIES = ("Cc", "Cf", "Cs", "Co", "Cn", "Zl", "Zp")
 UNICODE_VERSION = "16.0.0"   # tabele Unicode oprogramowania stacji (firmware/src/unicode_tables.h)
@@ -105,6 +106,8 @@ def normalize(doc):
                                                  if isinstance(entry.get(field), str)}}
                                 if isinstance(entry, dict) else entry
                                 for entry in out["priority_keys"]]
+    if isinstance(out.get("network"), dict):
+        out["network"] = {**out["network"], "ttl": out["network"].get("ttl", TTL_DEFAULT)}
     if out.get("role") == "wezel":
         out = {k: out[k] for k in ("role", "ifac", "radio", "network", "priority_keys") if k in out}
     return out
@@ -147,8 +150,10 @@ def check(doc):
     network = doc.get("network")
     if network is not None:
         required = {"id", "station", "root", "parent", "backup_parent", "receiver_main", "receiver_backup"}
-        if not isinstance(network, dict) or set(network) != required or any(
-                not _number(network.get(field), field in ("parent", "backup_parent")) for field in required):
+        ttl = network.get("ttl", TTL_DEFAULT) if isinstance(network, dict) else None
+        if not isinstance(network, dict) or set(network) - {"ttl"} != required or any(
+                not _number(network.get(field), field in ("parent", "backup_parent")) for field in required) or (
+                type(ttl) is not int or not 1 <= ttl <= 15):
             problems.append(("network", "niepoprawne numery sieci, stacji, odbiorców lub tras"))
         else:
             n = network

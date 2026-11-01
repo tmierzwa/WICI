@@ -254,13 +254,20 @@ const char* parse(Source& source, uint32_t size, const char* profile, Config& ou
     if (!fields[IFAC].set || !fields[RADIO].set) return !fields[IFAC].set ? NAMES[IFAC] : NAMES[RADIO];
 
     if (fields[NETWORK].set) {
-        static const char* const networkKeys[] = {"id", "station", "root", "parent", "backup_parent", "receiver_main", "receiver_backup"};
-        if (!parseValue(r, fields[NETWORK], buffer, v) || !onlyFields(v, networkKeys, 7) ||
+        static const char* const networkKeys[] = {"id", "station", "root", "parent", "backup_parent", "receiver_main",
+                                                  "receiver_backup", "ttl"};
+        if (!parseValue(r, fields[NETWORK], buffer, v)) return NAMES[NETWORK];
+        json::Value ttl;
+        int64_t hops = TTL_DEFAULT;
+        const bool hasTtl = json::field(v, "ttl", ttl);  // optional, last in networkKeys
+        if (!onlyFields(v, networkKeys, hasTtl ? 8 : 7) ||
+            (hasTtl && (!json::integer(ttl, hops) || hops < 1 || hops > 15)) ||
             !number(v, "id", out.network.id) || !number(v, "station", out.network.station) ||
             !number(v, "root", out.network.root) || !number(v, "parent", out.network.parent, true) ||
             !number(v, "backup_parent", out.network.backupParent, true) ||
             !number(v, "receiver_main", out.network.receiverMain) ||
             !number(v, "receiver_backup", out.network.receiverBackup)) return NAMES[NETWORK];
+        out.network.ttl = static_cast<uint8_t>(hops);
         const Network& n = out.network;
         if (n.receiverMain == n.receiverBackup || n.receiverMain == n.station || n.receiverBackup == n.station ||
             n.receiverMain == n.root || n.receiverBackup == n.root ||

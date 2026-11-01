@@ -26,7 +26,8 @@ enum class Event : uint8_t { IGNORED, REJECTED, ADMITTED, HACK_SENT };
 
 class Shelter {
 public:
-    Shelter(journal::Storage& storage, wici_route::Config route,
+    // ttl: hop limit of own DATA frames (network plan, 1-15).
+    Shelter(journal::Storage& storage, wici_route::Config route, uint8_t ttl,
             const uint16_t receiverIds[2], const uint8_t ifac[16],
             const uint8_t privateKey[64], const uint8_t receiverPublic[2][32],
             wici_destination::AdmitFn admit, void* admitContext,
@@ -58,6 +59,7 @@ public:
 private:
     uint32_t backoff() const;
     uint16_t network_, own_, root_;
+    uint8_t ttl_;
     uint8_t linkKey_[32] = {};
     uint8_t signingPrivate_[64] = {}, signingPublic_[64] = {};
     uint8_t rootEd25519_[32] = {};

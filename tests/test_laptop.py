@@ -79,6 +79,11 @@ class ConfigDocTest(unittest.TestCase):
         self.assertEqual(self.fields(dict(doc, priority_keys=[])), ["priority_keys"])
         self.assertEqual(self.fields(dict(doc, network=dict(network, station=1))), ["network"])
         self.assertEqual(self.fields(dict(doc, network=dict(network, parent=True))), ["network"])
+        # Hop limit: optional, 1-15, default 7 filled in by normalize (firmware/src/config.cpp).
+        self.assertEqual(configdoc.normalize(doc)["network"]["ttl"], configdoc.TTL_DEFAULT)
+        self.assertEqual(self.fields(dict(doc, network=dict(network, ttl=15))), [])
+        for ttl in (0, 16, True, "7", 7.0):
+            self.assertEqual(self.fields(dict(doc, network=dict(network, ttl=ttl))), ["network"])
         self.assertEqual(self.fields(dict(doc, network=dict(network, receiver_backup=2))),
                          ["network", "receiver.backup.id"])
         self.assertEqual(self.fields(dict(doc, network=1)), ["network", "receiver.main.id", "receiver.backup.id"])

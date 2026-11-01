@@ -30,6 +30,7 @@ constexpr size_t PROFILE_MAX = 15;
 constexpr uint32_t DOC_MAX = 7680;
 constexpr uint16_t STATIONS_MAX = 1000;
 constexpr size_t PRIORITY_KEYS_MAX = 50;
+constexpr uint8_t TTL_DEFAULT = 7;         // `network.ttl`, gdy dokument go nie podaje
 constexpr const char* LXMF_NAME = "lxmf.delivery";
 constexpr const char* SA1_NAME = "wici.sa1";
 
@@ -51,6 +52,7 @@ struct Network {
     uint16_t backupParent = 0;             // 0 = brak
     uint16_t receiverMain = 0;            // tożsamości koperty, różne od numeru root
     uint16_t receiverBackup = 0;
+    uint8_t ttl = TTL_DEFAULT;             // limit skoków własnych ramek DATA, 1–15
 };
 
 struct PriorityKey {

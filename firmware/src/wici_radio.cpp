@@ -13,14 +13,14 @@ using fram_record::get16;
 bool reached(uint32_t now, uint32_t deadline) { return static_cast<int32_t>(now - deadline) >= 0; }
 }  // namespace
 
-Shelter::Shelter(journal::Storage& storage, wici_route::Config route,
+Shelter::Shelter(journal::Storage& storage, wici_route::Config route, uint8_t ttl,
                  const uint16_t receiverIds[2], const uint8_t ifac[16],
                  const uint8_t privateKey[64], const uint8_t receiverPublic[2][32],
                  wici_destination::AdmitFn admit, void* admitContext,
                  Air& air, RandomFn random, void* randomContext,
                  wici_hop::VerifyOrigin verifyOrigin, const void* verifyContext,
                  const uint8_t rootEd25519[32], VerifyBeacon verifyBeacon, const void* beaconContext)
-    : network_(route.network), own_(route.own), root_(route.root),
+    : network_(route.network), own_(route.own), root_(route.root), ttl_(ttl),
       outbound_{envelope::Counter(storage, 0), envelope::Counter(storage, 1)},
       destination_(storage, {route.network, route.own,
                             {static_cast<uint16_t>(receiverIds ? receiverIds[0] : 0),
@@ -225,7 +225,7 @@ bool Shelter::queueOwn(uint16_t recipient, const uint8_t* sa1, size_t length, ui
         frame.network = network_;
         frame.source = own_;
         frame.destination = next;
-        frame.ttl = wici_link::DEFAULT_TTL;
+        frame.ttl = ttl_;
         frame.sequence = sequences[i];
         frame.length = parts[i].length;
         memcpy(frame.payload, parts[i].bytes, frame.length);

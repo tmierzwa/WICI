@@ -86,7 +86,7 @@ int main() {
     for (unsigned i = 0; i < 32; ++i) rootSecret[i + 32] = static_cast<uint8_t>(i + 1);
     Ed25519::derivePublicKey(rootEd, rootSecret + 32);
     unsigned admitted = 0;
-    wici_radio::Shelter shelter(memory, {100, 2, 5, 5, 0}, receivers, ifac,
+    wici_radio::Shelter shelter(memory, {100, 2, 5, 5, 0}, 7, receivers, ifac,
                                ownSecret, receiverPublic, admit, &admitted,
                                air, randomZero, nullptr, originProof, nullptr, rootEd, beaconProof, rootEd);
     assert(shelter.begin());
@@ -185,7 +185,7 @@ int main() {
     assert(air.lastClass == wici_link::TxClass::OWN);
     wici_link::Frame first;
     assert(wici_link::decode(key, 100, air.data, air.dataLength, first));
-    assert(first.source == 2 && first.destination == 5 && first.length == 140);
+    assert(first.source == 2 && first.destination == 5 && first.length == 140 && first.ttl == 7);
     const uint16_t firstSeq = first.sequence;
     const uint16_t rankBeforeOwnTimeout = shelter.routes().rank();
     shelter.onTxDone(true, 4050, 13);
@@ -230,7 +230,7 @@ int main() {
     n = encode(key, frame, wire);
     assert(shelter.receive(wire, n, 6100, 14) == wici_radio::Event::ADMITTED);
     Air resumedAir;
-    wici_radio::Shelter resumed(memory, {100, 2, 5, 5, 0}, receivers, ifac,
+    wici_radio::Shelter resumed(memory, {100, 2, 5, 5, 0}, 7, receivers, ifac,
                                ownSecret, receiverPublic, admit, &admitted,
                                resumedAir, randomZero, nullptr, originProof, nullptr, rootEd, beaconProof, rootEd);
     assert(resumed.begin());
@@ -242,7 +242,7 @@ int main() {
     // The active station image forwards one emergency downlink broadcast once.
     static Memory floodMemory;
     Air floodAir;
-    wici_radio::Shelter flood(floodMemory, {100, 2, 5, 5, 0}, receivers, ifac,
+    wici_radio::Shelter flood(floodMemory, {100, 2, 5, 5, 0}, 7, receivers, ifac,
                              ownSecret, receiverPublic, admit, &admitted,
                              floodAir, randomZero, nullptr, originProof, nullptr, rootEd, beaconProof, rootEd);
     assert(flood.begin());
@@ -262,7 +262,7 @@ int main() {
     // three more attempts at the configured backup before Failed is reported.
     static Memory failoverMemory;
     Air failoverAir;
-    wici_radio::Shelter failover(failoverMemory, {100, 2, 5, 5, 6}, receivers, ifac,
+    wici_radio::Shelter failover(failoverMemory, {100, 2, 5, 5, 6}, 3, receivers, ifac,
                                  ownSecret, receiverPublic, admit, &admitted, failoverAir, randomZero,
                                  nullptr, originProof, nullptr, rootEd, beaconProof, rootEd);
     assert(failover.begin());
@@ -291,7 +291,7 @@ int main() {
     for (unsigned attempt = 0; attempt < 6; ++attempt) {
         assert(failoverAir.dataCount == attempt + 1);
         assert(wici_link::decode(key, 100, failoverAir.data, failoverAir.dataLength, sent));
-        assert(sent.destination == (attempt < 3 ? 5 : 6));
+        assert(sent.destination == (attempt < 3 ? 5 : 6) && sent.ttl == 3);  // network.ttl
         if (attempt == 5) break;
         failover.onTxDone(true, at, 30);
         at += 600; failover.poll(at, 30);   // no HACK

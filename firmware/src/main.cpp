@@ -1898,7 +1898,7 @@ void beginWici() {
         } else {
             wiciShelter = new (wiciShelterSpace) wici_radio::Shelter(memory,
                          {c.network.id, c.network.station, c.network.root,
-                          c.network.parent, c.network.backupParent}, receivers, c.ifac,
+                          c.network.parent, c.network.backupParent}, c.network.ttl, receivers, c.ifac,
                          privateKey, publicKeys, onWiciAdmit, nullptr,
                          wiciAir, wiciRandom, nullptr, verifyWiciOrigin, &c, rootEd25519,
                          verifyWiciBeacon, &c);
