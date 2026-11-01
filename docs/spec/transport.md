@@ -27,19 +27,19 @@ Zasada: **nośnik niczego nie gwarantuje aplikacji poza próbą dostarczenia baj
 
 ### Klucze
 
-Każda stacja i każda tożsamość odbiorcy (główna i zapasowa) ma statyczną parę kluczy X25519 wygenerowaną w urządzeniu przy przygotowaniu. Koperta używa pierwszych 32 B istniejącego klucza prywatnego i publicznego tożsamości Reticulum; HKDF z osobną etykietą „WICI env v1” oddziela klucz koperty od kluczy stosu. Klucz publiczny trafia na kartę stacji albo kartę odbiorcy, tak jak dziś ([protokół USB](usb-protocol.md)); w karcie numerowanej jest też jawnie podany jako `x25519`, zgodny z pierwszymi 32 B pełnego klucza `key`. Kluczy nie przyjmuje się przez radio (bez zmian względem D08).
+Każda stacja i każda tożsamość odbiorcy (główna i zapasowa) ma statyczną parę kluczy wygenerowaną w urządzeniu przy przygotowaniu. Koperta używa pierwszych 32 B (X25519) istniejącego klucza prywatnego i publicznego tożsamości Reticulum; HKDF z etykietą „WICI env v1” oddziela klucz koperty od kluczy stosu. Klucz publiczny trafia na kartę stacji albo kartę odbiorcy ([protokół USB](usb-protocol.md)); w karcie numerowanej jest też jawnie podany jako `x25519`, równy pierwszym 32 B pełnego klucza `key`. Kluczy nie przyjmuje się przez radio (bez zmian względem D08).
 
-Przed włączeniem koperty przygotowanie nadaje `net_id` sieci i niepowtarzalny numer u16 każdej stacji oraz obu tożsamości odbiorcy. Karty wiążą numer, `net_id` i pełny klucz publiczny; `configure` sprawdza lokalną spójność numerów i sieci, a rejestr kart na stanowisku odrzuca duplikat numeru z innym kluczem. Obecny kontrakt `configure` i kart nie zawiera tych pól: trzeba go rozszerzyć oraz sprawdzić przeniesienie stacji, KLUCZ ZAPASOWY i odtworzenie stanowiska przed przełączeniem ruchu na kopertę. Adapter Reticulum w pierwszym kroku zachowuje obecne 16-bajtowe adresy i zachowanie SA1; mapowanie na numery uruchamia się dopiero po przygotowaniu kart.
+Numerowany dokument `configure` nadaje `net_id` sieci i niepowtarzalny numer u16 stacji oraz obu tożsamości odbiorcy (`network`); karta odbiorcy wiąże numer, `net_id` i pełny klucz, a `priority_keys` podaje klucze Ed25519 i X25519 sąsiadów. Stacja i przygotowanie na laptopie (`configdoc.py`) odrzucają dokument, w którym którykolwiek klucz X25519 albo Ed25519 karty odbiorcy lub `priority_keys` ma mały rząd (lista w `config.cpp`, `SMALL_ORDER`; bit 255 pomijany): taki klucz X25519 daje zerowy wspólny sekret, a z takim kluczem Ed25519 podrobiony podpis przechodzi dla każdej wiadomości. Rejestr kart na stanowisku odrzuca duplikat numeru z innym kluczem. Konfiguracja bez `network` zachowuje 16-bajtowe adresy Reticulum i nie używa koperty.
 
 Klucz pary nadawca A → odbiorca B:
 
 ```
-ss      = X25519(sk_A, pk_B)
+ss      = X25519(sk_A, pk_B)                    (ss = 0 → odmowa)
 K_A→B   = HKDF-SHA-256(ikm = ss, salt = net_id ‖ 0x01,
                        info = "WICI env v1" ‖ id_A ‖ id_B ‖ pk_A ‖ pk_B, L = 32)
 ```
 
-Kierunek B → A ma osobny klucz (zamienione `id` i `pk` w `info`), więc liczniki obu stron nigdy nie dzielą nonce. `net_id`, `id_A` i `id_B` koduje się jako u16 BE; `pk_A` i `pk_B` to surowe klucze X25519 po 32 B. Stacja ma te prymitywy w przypiętej bibliotece Crypto. Implementacja Python używa przypiętego pakietu `cryptography` (48.0.1); pakiet stanowiska musi go dołączyć i sprawdzić na obsługiwanych systemach przed D21.
+Kierunek B → A ma osobny klucz (zamienione `id` i `pk` w `info`), więc liczniki obu stron nigdy nie dzielą nonce. `net_id`, `id_A` i `id_B` koduje się jako u16 BE; `pk_A` i `pk_B` to surowe klucze X25519 po 32 B; numery 0x0000 i 0xFFFF są odrzucane. Stacja używa przypiętej biblioteki Crypto, stanowisko przypiętego pakietu `cryptography` (48.0.1).
 
 Pilotaż nie ma poufności przyszłej (forward secrecy): przejęty klucz prywatny odbiorcy odsłania zapisany wcześniej ruch, tak jak dziś przy pakietach okazjonalnych LXMF. Wymiana kluczy następuje przez USB przy przeglądzie (D08). Rotacja przez radio jest poza pilotażem.
 
@@ -50,30 +50,37 @@ Pilotaż nie ma poufności przyszłej (forward secrecy): przejęty klucz prywatn
  +------+------+------+-------------+-------------------------+---------+
  | kind | src  | dst  | ctr (u32 BE)| szyfrogram (ChaCha20)    | tag(16) |
  +------+------+------+-------------+-------------------------+---------+
- kind: bity 7–6 wersja (1), bity 5–4 część (0 = całość, 1 = 1/2, 2 = 2/2), bity 3–0 rodzaj (0 = SA1, 1 = TEST łącza, reszta zarezerwowana)
- src, dst: numery stacji z planu sieci (u16, 0x0000 i 0xFFFF zarezerwowane)
+ kind: bity 7–6 wersja (1), bity 5–4 część (0 = całość, 1 = 1/2, 2 = 2/2, 3 odrzucane), bity 3–0 rodzaj (0 = SA1; 1–15 zarezerwowane i odrzucane)
+ src, dst: numery stacji z planu sieci (u16, 0x0000 i 0xFFFF odrzucane, src ≠ dst)
  nonce (12 B) = src ‖ dst ‖ kind ‖ 0x000000 ‖ ctr
  AAD = kind ‖ src ‖ dst ‖ ctr
 ```
 
-Narzut koperty: 25 B (9 B nagłówka i 16 B znacznika). Numery stacji są jawne. Przekaźnik widzi nadawcę i odbiorcę od końca do końca; przydziela klasę K1 po sprawdzeniu podpisu pochodzenia, także w kierunku od odbiorcy ([klasy czasu](wici-link.md#klasy-czasu-kanału)). Analiza ruchu jest przyjęta w [rozdziale 07](../concept/07-zagrozenia-i-odpornosc.html): nagłówek Reticulum także ujawnia cel, a rozmiar ujawnia typ SA1.
+Narzut koperty: 25 B (9 B nagłówka i 16 B znacznika); koperta ma 25–281 B, część najwyżej 128 B treści. Odbiorca ujawnia treść dopiero po sprawdzeniu znacznika. Numery stacji są jawne. Przekaźnik widzi nadawcę i odbiorcę od końca do końca; przydziela klasę K1 po sprawdzeniu podpisu pochodzenia, także w kierunku od odbiorcy ([klasy czasu](wici-link.md#klasy-czasu-kanału)). TEST startowy jest wiadomością SA1 (rodzaj 0). Analiza ruchu jest przyjęta w [rozdziale 07](../concept/07-zagrozenia-i-odpornosc.html): nagłówek Reticulum także ujawnia cel, a rozmiar ujawnia typ SA1.
 
 ### Licznik i powtórzenia
 
-- Nadawca prowadzi licznik `ctr` osobno dla każdej pary (A, B) i zapisuje go w FRAM z wyprzedzeniem bloku 64 wartości: przed użyciem wartości `c` zapisany jest co najmniej `c + 1`. Po restarcie licznik startuje od zapisanej wartości. Wartość licznika nigdy się nie powtarza; po 2³² − 1 para wymaga nowych kluczy (przy 1 wiadomości na sekundę to ponad 136 lat).
+- Nadawca rezerwuje `ctr` blokami po 64 wartości: przed użyciem wartości `c` trwale zapisana granica wynosi co najmniej `c + 1`. Po restarcie zaczyna od zapisanej granicy i pomija resztę bloku. Wartość nigdy się nie powtarza; po 2³² − 1 para wymaga nowych kluczy. Nieudany zapis granicy wyłącza szyfrowanie do ponownego odczytu.
+- Stacja trzyma granicę w FRAM dla każdej z dwóch tożsamości odbiorcy; granica nie maleje także po zmianie klucza lub numeru. Stanowisko trzyma osobną granicę dla każdego klucza (`env_send`, SHA-256 klucza) w SQLite.
 - Odbiorca przyjmuje kopertę tylko wtedy, gdy `ctr` jest większy od największego przyjętego albo mieści się w oknie 64 ostatnich wartości i nie był przyjęty. Stan okna (największy `ctr` i maska) zapisuje w FRAM stacji albo SQLite stanowiska w tej samej transakcji co przyjęcie wiadomości SA1.
-- Powtórka potwierdzana na skoku musi mieć bit przyjęcia w trwałym oknie. Licznik starszy niż okno jest odrzucany bez HACK, bo brak bitu nie dowodzi wcześniejszego przyjęcia; nowa intencja SA1 potrzebuje wtedy nowego licznika.
+- Powtórka z bitem przyjęcia w trwałym oknie dostaje ponowny HACK bez ponownego przyjęcia. Licznik starszy niż okno jest odrzucany bez HACK, bo brak bitu nie dowodzi wcześniejszego przyjęcia; nowa intencja SA1 potrzebuje nowego licznika.
 - Deduplikacja SA1 po (nadawca, `id`, `revision`) zostaje. Koperta odrzuca powtórzenie pakietu, SA1 odrzuca ponowienie tej samej wiadomości.
+
+**Rekordy FRAM stacji.** Granica (0x044100), okno (0x044F80) i czekająca część (0x045E80, 0x047E00) mają po dwie kopie: magia, numer pokolenia, odcisk klucza (pierwsze 8 B SHA-256 klucza koperty pary), CRC-16/CCITT-FALSE i końcowy bajt COMMIT. Zapis zeruje COMMIT, zapisuje treść, ustawia COMMIT = 0xA5 i czyta całość kontrolnie. Przy starcie kopia pusta (same 0x00 albo 0xFF) albo z COMMIT = 0x00 (przerwany zapis) jest pomijana; każdy inny COMMIT, zła magia, CRC albo treść blokują start, zamiast cofnąć się do starszej kopii. Okno i część z innym odciskiem należą do innego klucza i są pomijane. Obie kopie granicy puste oznaczają brak rezerwacji, dlatego ten obszar kasuje tylko ZNISZCZ DANE razem z tożsamością.
+
+**Okna stanowiska.** `env_replay` i `env_parts` w SQLite są kluczowane przez (sieć, nadawca, odbiorca), bez odcisku klucza.
 
 **PRZENIEŚ STACJĘ.** Zaszyfrowana migawka 256 KiB obejmuje tożsamość, klucze koperty, zatwierdzone granice rezerwacji `ctr` i okna powtórzeń dla odbioru. Po imporcie stacja docelowa zaczyna nadawanie od przeniesionej granicy (nawet jeśli część zarezerwowanych wartości nie została użyta); nie zeruje licznika ani okien. Źródłowa przestaje nadawać przed utworzeniem paczki, zgodnie z [krokami przeniesienia](usb-protocol.md#przeniesienie-stacji). Brak któregokolwiek z tych pól albo niepewna granica blokuje aktywację z tą samą tożsamością; wymaga nowych kluczy i kart. Oprogramowanie obsługuje wznowienie po przerwaniu USB, wycofanie i trwałe oznaczenie wycofanej lub wyłączonej stacji. Próba zaniku zasilania na sprzęcie docelowym pozostaje warunkiem D21.
 
-**Odtworzenie stanowiska z kopii.** Starsza kopia SQLite może mieć niższą granicę rezerwacji `ctr` niż ostatnio użyta z tą samą tożsamością odbiorcy. Dopóki źródłowy nośnik nie przekaże nowszej granicy i okien powtórzeń, odtworzone stanowisko nie nadaje kopert pod tymi kluczami. Jeżeli granicy nie da się udowodnić, przygotowanie tworzy nowe tożsamości odbiorcy i nowe karty dla stacji. Próba wycofania kopii po wysłanej kopercie musi potwierdzić tę blokadę przed włączeniem nośnika D21.
+**Odtworzenie stanowiska z kopii.** Starsza kopia SQLite może mieć niższą granicę rezerwacji `ctr` niż ostatnio użyta z tą samą tożsamością odbiorcy. Odtworzone stanowisko nie nadaje kopert pod tymi kluczami (`env_send_guard`), dopóki przygotowanie nie aktywuje nowej tożsamości odbiorcy i nowych kart. Zapasowa tożsamość odbiorcy nie ma jeszcze trwałej granicy poza bazą stanowiska, które ją aktywuje; dwie aktywacje z różnych baz mogłyby powtórzyć nonce.
 
 ### Podział na części
 
-Gdy koperta przekracza `max_payload` nośnika, nadawca dzieli jawny tekst SA1 na dwie części i każdą szyfruje jako osobną kopertę z tym samym `ctr` oraz polem `część` 1 albo 2 (bity części w `kind` zmieniają nonce). Odbiorca składa tekst po uwierzytelnieniu obu części w ciągu 120 s; niepełne składanie po tym czasie odrzuca. Wiadomość SA1 ma najwyżej 256 B ([SA1](oprogramowanie.md)), więc dwie części wystarczają dla każdego nośnika z `max_payload` ≥ 153 B (połowa 256 B tekstu i 25 B narzutu). Nośnik z mniejszym `max_payload` nie spełnia tego kontraktu.
+Gdy koperta przekracza `max_payload` nośnika, nadawca dzieli jawny tekst SA1 na dwie części (pierwsza ma ⌈n/2⌉ B) i każdą szyfruje jako osobną kopertę z tym samym `ctr` oraz polem `część` 1 albo 2 (bity części w `kind` zmieniają nonce). Wiadomość SA1 ma najwyżej 256 B ([SA1](oprogramowanie.md)), więc dwie części wystarczają dla każdego nośnika z `max_payload` ≥ 153 B (128 B treści i 25 B narzutu); nośnik z mniejszym `max_payload` nie spełnia kontraktu.
 
-Odbiorca zapisuje pierwszą uwierzytelnioną część trwale (FRAM stacji albo SQLite stanowiska) przed potwierdzeniem jej odbioru na łączu. Druga część może nadejść w dowolnej kolejności; po złożeniu odbiorca zatwierdza SA1 i okno `ctr` w jednej transakcji. Do tego czasu `ctr` pozostaje nieprzyjęty, a pamięć składania rozróżnia części po (`src`, `dst`, `ctr`, `kind` bez bitów części). Powtórzenie zapisanej części dostaje ponowne potwierdzenie łącza bez ponownego zapisu; sprzeczna treść części jest odrzucana. Po restarcie odbiorca wznawia składanie albo odrzuca je po 120 s i pozwala na ponowienie całej wiadomości z tym samym `ctr`. Potwierdzenie części nie oznacza przyjęcia SA1 ani zakończenia intencji nadawcy.
+Odbiorca zapisuje pierwszą uwierzytelnioną część trwale (FRAM stacji albo SQLite stanowiska) przed potwierdzeniem jej odbioru na łączu. Druga część może nadejść w dowolnej kolejności; po złożeniu odbiorca zatwierdza SA1 i okno `ctr` w jednej transakcji, a potem usuwa czekającą część. Do tego czasu `ctr` pozostaje nieprzyjęty. Powtórzenie zapisanej części dostaje ponowne potwierdzenie łącza bez ponownego zapisu; sprzeczna treść części jest odrzucana. Czekająca część wygasa, gdy od jej zapisu minęło ponad 120 s albo zegar odbiorcy cofnął się przed chwilę zapisu; następna część zaczyna wtedy składanie od nowa. Po restarcie odbiorca wznawia składanie. Potwierdzenie części nie oznacza przyjęcia SA1 ani zakończenia intencji nadawcy.
+
+Pojemność: stacja ma jedną czekającą wiadomość na tożsamość odbiorcy i odrzuca część z innym `ctr`, dopóki czekająca nie wygaśnie; stanowisko trzyma do czterech czekających wiadomości na stację i 256 łącznie. Całość pod licznikiem, który ma czekającą część, stacja odrzuca, a stanowisko przyjmuje. Wektory `tests/test_envelope_cross_language.py` sprawdzają oba przebiegi.
 
 ### Rozmiary
 
