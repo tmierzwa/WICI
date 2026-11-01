@@ -1398,15 +1398,15 @@ void beginStack() {
     // Wpis o źródle entropii przy każdym starcie z niezdrowym odczytem: także ze stacją z tożsamością
     // i bez FRAM.
     if (!entropyHealthy) bench.log(entropyTimeout ? "entropy source not responding" : "entropy source failed health test");
-    if (!framOk || !journalOk || !storeOk) {
-        stackState = StackState::UNAVAILABLE;
-        bench.log("rns not started: FRAM, journal or store unavailable");
-        return;
-    }
     if (!migrationBarrier.permitsTransmit()) {
         stackState = migrationBarrier.ready() ? StackState::HALTED : StackState::UNAVAILABLE;
         applySilence();
         bench.log("rns not started: migration barrier active or unavailable");
+        return;
+    }
+    if (!framOk || !journalOk || !storeOk) {
+        stackState = StackState::UNAVAILABLE;
+        bench.log("rns not started: FRAM, journal or store unavailable");
         return;
     }
     rnsnode::Hooks hooks;
@@ -1585,9 +1585,14 @@ void stationSetup() {
     radiocon::start();  // LED2 świeci dopiero po zapisanym i (CC1120) skalibrowanym P1
     radiocon::startRxTask();  // stacja L0: odbiór w tle od tej chwili; dalej pętla dotyka układu pod blokadą
     framOk = memory.identify().part != fram::Part::UNKNOWN;
-    beginJournal();
+    // The marker must be read before the journal clock, debt, event log or
+    // Store::begin() can write to a frozen export/import snapshot.
+    const bool migrationKnown = framOk && migrationBarrier.begin();
+    const bool normalBoot = migrationKnown && migrationBarrier.permitsTransmit();
+    if (normalBoot) beginJournal();
+    else if (framOk) (void)stationJournal.begin();  // read-only, for explicit ZNISZCZ DANE recovery
     ledWrite(board::LED_FRAM, framOk && journalOk);  // LED3 świeci dopiero z działającym dziennikiem
-    if (journalOk) {
+    if (normalBoot && journalOk) {
         stationStore.now(serviceS());
         const store::Begin begun = stationStore.begin();
         storeOk = begun == store::Begin::OK || begun == store::Begin::NEW;
@@ -1602,7 +1607,7 @@ void stationSetup() {
         snprintf(text, sizeof(text), "store: %s", store::beginName(begun));
         bench.log(text);
     }
-    if (framOk && !migrationBarrier.begin()) bench.log("migration barrier corrupt or unavailable");
+    if (framOk && !migrationKnown) bench.log("migration barrier corrupt or unavailable");
     applySilence();
     protocol.begin();
     beginStack();

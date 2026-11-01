@@ -316,6 +316,15 @@ void Protocol::handleLine(const char* line, uint32_t nowMs) {
 }
 
 void Protocol::dispatch(const char* type, const json::Value& msg, int64_t seq, uint32_t nowMs) {
+    char migration[16], mid[33];
+    host_.migration(migration, sizeof(migration), mid, sizeof(mid));
+    // A frozen or uncertain station must not mutate a snapshot through normal
+    // USB commands. Explicit destruction remains available for recovery.
+    if (strcmp(migration, "none") && strcmp(type, "status") && strcmp(type, "migrate") &&
+        strcmp(type, "destroy")) {
+        rejected(seq, "migration", "active");
+        return;
+    }
     const Command* c = nullptr;
     for (const Command& command : COMMANDS) if (!strcmp(type, command.type)) c = &command;
     if (!c) { rejected(seq, "unknown_type"); return; }
@@ -924,6 +933,14 @@ void Protocol::doXferCommit(const json::Value& msg, int64_t seq) {
 }
 
 void Protocol::poll(uint32_t nowMs) {
+    char migration[16], mid[33];
+    host_.migration(migration, sizeof(migration), mid, sizeof(mid));
+    const bool migrationActive = strcmp(migration, "none") != 0;
+    if (migrationActive) {
+        synced_ = false;
+        snap_ = Snap();
+        xfer_ = Xfer();
+    }
     if (snap_.active) { continueSnapshot(); return; }   // migawka przed zdarzeniami; polecenia czekają
     // Odpowiedź przyciskiem i limit 30 s liczone zawsze, więc pytanie znika z ekranu także wtedy, gdy laptop
     // nie czyta; wykonanie i odpowiedź dopiero z miejscem w kolejce (`status` w czasie pytania mógł ją zająć).
@@ -938,6 +955,7 @@ void Protocol::poll(uint32_t nowMs) {
     }
     if (pending() && pending_.decided && room() >= PENDING_RESERVE) finishPending(pending_.confirmed);
     if (xfer_.op != Xfer::NONE && nowMs - xfer_.lastMs >= XFER_IDLE_MS) xfer_ = Xfer();
+    if (migrationActive) return;
     if (connected_ && lostSync_ && sendSnapRequired(-1, lostSync_, pending() ? PENDING_RESERVE : 0)) lostSync_ = nullptr;
     if (!connected_ || !synced_) return;
     if (memcmp(syncedEpoch_, store_.meta().epoch, store::EPOCH)) { loseSync("epoch"); return; }

@@ -1977,10 +1977,14 @@ class HostUnitTests(unittest.TestCase):
         replies = self.replies(self.world([
             "migration export", "connect",
             'usb {"usb":2,"seq":1,"type":"status"}',
+            'usb {"usb":2,"seq":2,"type":"sync","epoch":"","cursor":0}',
+            'usb {"usb":2,"seq":3,"type":"xfer_begin","op":"configure","size":1,"sha256":"00"}',
         ]))
         self.assertEqual(replies[0]["migration"], "export")
         self.assertEqual(replies[1]["migration"], "export")
         self.assertEqual(replies[1]["mid"], "00112233445566778899aabbccddeeff")
+        self.assertEqual([(reply["reason"], reply["detail"]) for reply in replies[2:]],
+                         [("migration", "active"), ("migration", "active")])
 
     def test_usb_hello_seq_fields_and_rejections(self):
         def line(seq, type_, usb=2, **fields):
