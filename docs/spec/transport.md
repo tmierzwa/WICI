@@ -1,6 +1,6 @@
 # Warstwa transportu: szew, koperta i nośniki
 
-**Stan: projekt do przeglądu (D21), 2026-11-01.** Ten dokument nie zmienia jeszcze kontraktów obowiązujących w [radio](radio.md) i [oprogramowaniu](oprogramowanie.md). Stają się one obowiązujące dopiero wtedy, gdy D21 zostanie rozstrzygnięta po próbie przy stole ([warunek](#warunek-przyjęcia)). Do tego czasu obrazy stacji używają rdzenia Reticulum ([opis](../../firmware/reticulum-core.md)).
+**Stan: implementacja przed próbą D21, 2026-11-01.** Numerowana konfiguracja uruchamia WICI-Link na surowym SX1262; konfiguracja bez numerów uruchamia Reticulum. Warunek przyjęcia D21 nadal wymaga próby przy stole na docelowym sprzęcie ([kryteria](#warunek-przyjęcia)).
 
 ## Po co
 
@@ -27,7 +27,9 @@ Zasada: **nośnik niczego nie gwarantuje aplikacji poza próbą dostarczenia baj
 
 ### Klucze
 
-Każda stacja i każda tożsamość odbiorcy (główna i zapasowa) ma statyczną parę kluczy X25519 wygenerowaną w urządzeniu przy przygotowaniu. Klucz publiczny trafia na kartę stacji albo kartę odbiorcy, tak jak dziś ([protokół USB](protokol-usb.md)). Kluczy nie przyjmuje się przez radio (bez zmian względem D08).
+Każda stacja i każda tożsamość odbiorcy (główna i zapasowa) ma statyczną parę kluczy X25519 wygenerowaną w urządzeniu przy przygotowaniu. Koperta używa pierwszych 32 B istniejącego klucza prywatnego i publicznego tożsamości Reticulum; HKDF z osobną etykietą „WICI env v1” oddziela klucz koperty od kluczy stosu. Klucz publiczny trafia na kartę stacji albo kartę odbiorcy, tak jak dziś ([protokół USB](protokol-usb.md)); w karcie numerowanej jest też jawnie podany jako `x25519`, zgodny z pierwszymi 32 B pełnego klucza `key`. Kluczy nie przyjmuje się przez radio (bez zmian względem D08).
+
+Przed włączeniem koperty przygotowanie nadaje `net_id` sieci i niepowtarzalny numer u16 każdej stacji oraz obu tożsamości odbiorcy. Karty wiążą numer, `net_id` i pełny klucz publiczny; `configure` sprawdza lokalną spójność numerów i sieci, a rejestr kart na stanowisku odrzuca duplikat numeru z innym kluczem. Obecny kontrakt `configure` i kart nie zawiera tych pól: trzeba go rozszerzyć oraz sprawdzić przeniesienie stacji, KLUCZ ZAPASOWY i odtworzenie stanowiska przed przełączeniem ruchu na kopertę. Adapter Reticulum w pierwszym kroku zachowuje obecne 16-bajtowe adresy i zachowanie SA1; mapowanie na numery uruchamia się dopiero po przygotowaniu kart.
 
 Klucz pary nadawca A → odbiorca B:
 
@@ -37,7 +39,7 @@ K_A→B   = HKDF-SHA-256(ikm = ss, salt = net_id ‖ 0x01,
                        info = "WICI env v1" ‖ id_A ‖ id_B ‖ pk_A ‖ pk_B, L = 32)
 ```
 
-Kierunek B → A ma osobny klucz (zamienione `id` i `pk` w `info`), więc liczniki obu stron nigdy nie dzielą nonce. To ten sam wzór co `crypto_box` z libsodium i ten sam zestaw prymitywów, którego już używa PRZENIEŚ STACJĘ (X25519, HKDF-SHA-256, ChaCha20-Poly1305). Nie dochodzi nowa biblioteka.
+Kierunek B → A ma osobny klucz (zamienione `id` i `pk` w `info`), więc liczniki obu stron nigdy nie dzielą nonce. `net_id`, `id_A` i `id_B` koduje się jako u16 BE; `pk_A` i `pk_B` to surowe klucze X25519 po 32 B. Stacja ma te prymitywy w przypiętej bibliotece Crypto. Implementacja Python używa przypiętego pakietu `cryptography` (48.0.1); pakiet stanowiska musi go dołączyć i sprawdzić na obsługiwanych systemach przed D21.
 
 Pilotaż nie ma poufności przyszłej (forward secrecy): przejęty klucz prywatny odbiorcy odsłania zapisany wcześniej ruch, tak jak dziś przy pakietach okazjonalnych LXMF. Wymiana kluczy następuje przez USB przy przeglądzie (D08). Rotacja przez radio jest poza pilotażem.
 
@@ -59,12 +61,19 @@ Narzut koperty: 25 B (9 B nagłówka i 16 B znacznika). Numery stacji są jawne.
 ### Licznik i powtórzenia
 
 - Nadawca prowadzi licznik `ctr` osobno dla każdej pary (A, B) i zapisuje go w FRAM z wyprzedzeniem bloku 64 wartości: przed użyciem wartości `c` zapisany jest co najmniej `c + 1`. Po restarcie licznik startuje od zapisanej wartości. Wartość licznika nigdy się nie powtarza; po 2³² − 1 para wymaga nowych kluczy (przy 1 wiadomości na sekundę to ponad 136 lat).
-- Odbiorca przyjmuje kopertę tylko wtedy, gdy `ctr` jest większy od największego przyjętego albo mieści się w oknie 64 ostatnich wartości i nie był przyjęty. Stan okna (największy `ctr` i maska) zapisuje w FRAM w tej samej transakcji co przyjęcie wiadomości SA1.
+- Odbiorca przyjmuje kopertę tylko wtedy, gdy `ctr` jest większy od największego przyjętego albo mieści się w oknie 64 ostatnich wartości i nie był przyjęty. Stan okna (największy `ctr` i maska) zapisuje w FRAM stacji albo SQLite stanowiska w tej samej transakcji co przyjęcie wiadomości SA1.
+- Powtórka potwierdzana na skoku musi mieć bit przyjęcia w trwałym oknie. Licznik starszy niż okno jest odrzucany bez HACK, bo brak bitu nie dowodzi wcześniejszego przyjęcia; nowa intencja SA1 potrzebuje wtedy nowego licznika.
 - Deduplikacja SA1 po (nadawca, `id`, `revision`) zostaje. Koperta odrzuca powtórzenie pakietu, SA1 odrzuca ponowienie tej samej wiadomości.
+
+**PRZENIEŚ STACJĘ.** Paczka przeniesienia tożsamości musi zawierać parę kluczy koperty, dla każdej pary nadawczej zatwierdzoną granicę rezerwacji `ctr` oraz okna powtórzeń dla odbioru. Po imporcie stacja docelowa zaczyna nadawanie od przeniesionej granicy (nawet jeśli część zarezerwowanych wartości nie została użyta); nie zeruje licznika ani okien. Źródłowa przestaje nadawać przed utworzeniem paczki, zgodnie z [krokami przeniesienia](protokol-usb.md#przeniesienie-stacji). Brak któregokolwiek z tych pól albo niepewna granica blokuje aktywację z tą samą tożsamością; wymaga nowych kluczy i kart. Przed wdrożeniem D21 kontrakt przeniesienia w protokole USB trzeba rozszerzyć o te pola oraz próbę zaniku zasilania i wycofania operacji.
+
+**Odtworzenie stanowiska z kopii.** Starsza kopia SQLite może mieć niższą granicę rezerwacji `ctr` niż ostatnio użyta z tą samą tożsamością odbiorcy. Dopóki źródłowy nośnik nie przekaże nowszej granicy i okien powtórzeń, odtworzone stanowisko nie nadaje kopert pod tymi kluczami. Jeżeli granicy nie da się udowodnić, przygotowanie tworzy nowe tożsamości odbiorcy i nowe karty dla stacji. Próba wycofania kopii po wysłanej kopercie musi potwierdzić tę blokadę przed włączeniem nośnika D21.
 
 ### Podział na części
 
-Gdy koperta przekracza `max_payload` nośnika, nadawca dzieli szyfrogram na dwie części. Każda część jest osobną kopertą z tym samym `ctr` i polem `część` 1 albo 2, uwierzytelnioną osobno (bity części w `kind` zmieniają nonce). Odbiorca składa całość po otrzymaniu obu części w ciągu 120 s; niepełne składanie po tym czasie odrzuca. Wiadomość SA1 ma najwyżej 256 B ([SA1](oprogramowanie.md)), więc dwie części wystarczają dla każdego nośnika z `max_payload` ≥ 153 B (połowa 256 B szyfrogramu i 25 B narzutu). Nośnik z mniejszym `max_payload` nie spełnia tego kontraktu.
+Gdy koperta przekracza `max_payload` nośnika, nadawca dzieli jawny tekst SA1 na dwie części i każdą szyfruje jako osobną kopertę z tym samym `ctr` oraz polem `część` 1 albo 2 (bity części w `kind` zmieniają nonce). Odbiorca składa tekst po uwierzytelnieniu obu części w ciągu 120 s; niepełne składanie po tym czasie odrzuca. Wiadomość SA1 ma najwyżej 256 B ([SA1](oprogramowanie.md)), więc dwie części wystarczają dla każdego nośnika z `max_payload` ≥ 153 B (połowa 256 B tekstu i 25 B narzutu). Nośnik z mniejszym `max_payload` nie spełnia tego kontraktu.
+
+Odbiorca zapisuje pierwszą uwierzytelnioną część trwale (FRAM stacji albo SQLite stanowiska) przed potwierdzeniem jej odbioru na łączu. Druga część może nadejść w dowolnej kolejności; po złożeniu odbiorca zatwierdza SA1 i okno `ctr` w jednej transakcji. Do tego czasu `ctr` pozostaje nieprzyjęty, a pamięć składania rozróżnia części po (`src`, `dst`, `ctr`, `kind` bez bitów części). Powtórzenie zapisanej części dostaje ponowne potwierdzenie łącza bez ponownego zapisu; sprzeczna treść części jest odrzucana. Po restarcie odbiorca wznawia składanie albo odrzuca je po 120 s i pozwala na ponowienie całej wiadomości z tym samym `ctr`. Potwierdzenie części nie oznacza przyjęcia SA1 ani zakończenia intencji nadawcy.
 
 ### Rozmiary
 
@@ -82,6 +91,8 @@ Dla porównania: typowe zgłoszenie jako pakiet okazjonalny LXMF ma dziś 403 B 
 ## Szew nośnika
 
 Interfejs w stacji (C++, bez alokacji w czasie pracy). Aplikacja stanowiska ma odpowiednik w Pythonie o tych samych nazwach i znaczeniach.
+
+`firmware/src/bearer.h` zawiera ten typowany kontrakt i osobny `LegacyBearer` dla obecnego szwu Reticulum w `station::Services`. Konfiguracja numerowana używa koperty i nośnika WICI-Link; konfiguracja bez numerów zachowuje adapter Reticulum. Typowany kontrakt jest podstawą do dalszych adapterów.
 
 ```cpp
 struct BearerCaps {
@@ -146,6 +157,7 @@ Wymiana ze służbami i systemami gminy nie należy do szwu nośnika. To osobne 
 ## Zgodność i próby
 
 - Każdy nośnik przechodzi te same próby z [odbioru](odbior.md): W10, deduplikacja i powtórzenia, zimny start, zanik zasilania przy zapisie, „Wrogi węzeł” (tylko nośniki z `airtime_classes`), cisza radiowa (tylko z `radio_silence`). Próby uruchamia się na nośniku pamięciowym w CI i na sprzęcie przy stole.
+- Próby zaniku obejmują przeniesienie tożsamości z zarezerwowanym `ctr`, restart po potwierdzeniu pierwszej części, restart przekaźnika po HACK i przed przekazaniem oraz ponowienie po wygaśnięciu składania. Wektory sprawdzają, że żaden z tych przebiegów nie powtarza pary (klucz, nonce) ani nie daje podwójnego przyjęcia SA1.
 - Wektory koperty (klucze, nonce, szyfrogramy, części) generuje implementacja w Pythonie i sprawdza implementacja w C++, tak jak dziś wektory Reticulum (`tests/vectors/`).
 - Każdy wariant obrazu stacji z innym nośnikiem radiowym jest osobną konfiguracją w rozumieniu D20 i wymaga własnych badań. Wariantów utrzymuje się jak najmniej.
 
@@ -156,14 +168,34 @@ D21 rozstrzyga się po próbie przy stole na dwóch zestawach RAK4631 i prototyp
 1. W10: 50/50 RECEIVED przez jeden przekaźnik w czasie poniżej 15 min;
 2. „Wrogi węzeł”: 20/20 zgłoszeń z RECEIVED w 30 min, utrzymane udziały klas;
 3. pobór w budżecie W23 i zapas RAM ≥30% (D14);
-4. zimny start i zanik zasilania bez utraty i bez podwójnego przyjęcia.
+4. zimny start i zanik zasilania bez utraty i bez podwójnego przyjęcia, także między HACK a przekazaniem oraz po potwierdzeniu pierwszej części;
+5. przeniesienie stacji bez ponownego użycia (klucz, nonce), a rozsyłanie awaryjne bez pętli i przekroczenia limitu K2.
 
 Jeżeli WICI-Link nie spełni warunku, zostaje rdzeń Reticulum, a ten dokument wraca do archiwum. Rozważane wcześniej oparcie stacji na rozwidleniu Meshtastic nie jest drogą zapasową, bo wymaga największych zmian i przenosi na zespół odpowiedzialność za cały obcy program (D20, CRA).
 
 ## Kolejność prac
 
-1. Szew `Bearer` i adapter wokół obecnego `rns_node`, bez zmiany zachowania; próby jak dziś.
-2. Koperta w Pythonie z wektorami, potem w C++; próby różnicowe.
-3. WICI-Link w C++ ([specyfikacja](wici-link.md)) i nośnik pamięciowy z symulacją wielu skoków.
+**Stan wykonania, 2026-11-01.** Numerowane obrazy stacji łączą kopertę C++,
+trwałe liczniki i okna powtórzeń, kolejkę przekaźnika, trasowanie, koordynator
+skoku oraz surowe ramki SX1262 z CAD i trwałym długiem. Korzeń przekazuje
+uwierzytelnione ramki do KISS i dopuszcza HACK z laptopa tylko po trwałym
+przyjęciu koperty; echo ramki wychodzącej powstaje po faktycznym TX, nie po
+przyjęciu do harmonogramu. Aplikacja stanowiska ma numerowany nośnik KISS,
+trwałe przyjęcie fragmentów w SQLite, rezerwację liczników przed wysyłką i
+blokadę wysyłki po odtworzeniu starszej kopii. Wyjątek od ciszy nadaje
+niepotwierdzaną ramkę najwyżej trzy razy z trwałym licznikiem prób.
+
+Pozostałe do zamknięcia D21: kontrakt PRZENIEŚ STACJĘ z granicami liczników i
+oknami powtórzeń, sprzętowe próby rozsyłania awaryjnego, pomiar
+200 ms HACK, W10, „Wrogi węzeł”, zaniki zasilania oraz budżet energii. Dwie płytki
+XIAO ESP32-S3 + Wio SX1262 przeszły [próbę toru radia przy stole](../../hardware/radio-pair/evidence/table-2026-11-01.md)
+(100/100 w każdym kierunku) na programie diagnostycznym i
+[próbę surowych ramek WICI](../../hardware/radio-pair/evidence/wici-raw-2026-11-01.md)
+(19, 44 i 255 B bez zmiany bajtów). Formalna próba D21
+na dwóch RAK4631 i prototypie pozostaje nierozstrzygnięta.
+
+1. Szew `Bearer` i adapter wokół obecnego `rns_node`, bez zmiany zachowania; próby jak dziś. Przed przełączeniem na numery u16: rozszerzenie kart i `configure` o `net_id` i numery obu końców, z kontrolą ich zgodności.
+2. Koperta w Pythonie z wektorami, potem w C++; próby różnicowe i rozszerzenie kontraktu PRZENIEŚ STACJĘ o liczniki oraz okna powtórzeń.
+3. WICI-Link w C++ ([specyfikacja](wici-link.md)) i nośnik pamięciowy z symulacją wielu skoków, trwałą kolejką po HACK, składaniem części i rozsyłaniem awaryjnym.
 4. Aplikacja stanowiska: nośnik WICI-Link przez KISS i warstwa wielu nośników.
 5. Przeliczenie rozdziału 06 i próba przy stole według warunku przyjęcia.

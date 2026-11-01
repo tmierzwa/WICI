@@ -20,6 +20,7 @@
 // w platform_*.cpp, zależne od układu radiowego w radio_console_*.cpp i *_link.cpp.
 #include <Arduino.h>
 #include <SPI.h>
+#include <new>
 #if defined(ARDUINO_ARCH_NRF52)
 #include <Adafruit_TinyUSB.h>
 #elif defined(ARDUINO_ARCH_ESP32)
@@ -35,8 +36,10 @@
 #endif
 #include "drbg.h"
 #include "fram.h"
+#include "framfs.h"
 #include "hexstr.h"
 #include "journal.h"
+#include "kiss.h"
 #include "jsonprint.h"
 #include "measure.h"
 #include "p1_registers.h"
@@ -51,6 +54,8 @@
 #include "store.h"
 #include "ui.h"
 #include "usbproto.h"
+#include "wici_gateway.h"
+#include "wici_radio.h"
 
 #ifndef WICI_FW_VERSION
 #define WICI_FW_VERSION "bench-a-dev"
@@ -240,11 +245,30 @@ struct BenchRadio : rnsnode::Radio {
 };
 BenchRadio benchRadio;
 bool rnsOk = false;               // stos uruchomiony (FRAM i dziennik działają)
+bool wiciActive = false;
+alignas(wici_radio::Shelter) uint8_t wiciShelterSpace[sizeof(wici_radio::Shelter)];
+alignas(wici_gateway::Root) uint8_t wiciRootSpace[sizeof(wici_gateway::Root)];
+wici_radio::Shelter* wiciShelter = nullptr;
+wici_gateway::Root* wiciRoot = nullptr;
+kiss::Port wiciUsb;
+uint32_t wiciHandle = 0;
+uint32_t wiciNextBeaconMs = 0;
+uint8_t wiciBeacons = 0;
+bool numberedConfigured() { return storeOk && stationStore.config().network.id != 0; }
+struct WiciAir : wici_radio::Air, wici_gateway::Air {
+    bool sendData(const uint8_t* wire, size_t length) override {
+        const bool exception = bench.silenceException && wiciShelter && wiciShelter->exceptionTx();
+        return (!bench.silence || exception) && bench.linkSend(wire, length, true) == nullptr;
+    }
+    bool sendHack(const uint8_t* wire, size_t length, uint32_t receivedMs) override {
+        return bench.linkSendHack(wire, length, receivedMs);
+    }
+} wiciAir;
 rnsannounce::Policy announcePolicy;
 // Węzeł stanowiska: stos z interfejsem USB (od startu stosu; zmiana roli działa po restarcie).
 // Poza trybem przygotowania interfejs danych przenosi ramki KISS, nie protokół laptop–stacja.
 bool nodeRole() { return rnsOk && rnsnode::node(); }
-bool kissMode() { return nodeRole() && !bench.prep; }
+bool kissMode() { return nodeRole() && !bench.prep && (!numberedConfigured() || wiciActive); }
 uint32_t rebootAtMs = 0;          // restart po zmianie roli (0 = brak)
 bool computerHeard = false;       // pakiet od komputera stanowiska od startu
 uint32_t computerAtS = 0;         // czas pracy przy ostatnim pakiecie od komputera
@@ -259,12 +283,29 @@ bool silenceAny() { return switchSilence || (storeOk && stationStore.meta().sile
 struct BenchServices : station::Services {
     bool silence() override { return silenceAny(); }
     bool silenceSwitch() override { return switchSilence; }
-    bool radioReady() override { return rnsOk && radioListening() && rnsnode::online(); }
-    bool busy() override { return rnsnode::queueFull(); }
+    bool radioReady() override {
+        return numberedConfigured() ? wiciActive && wiciShelter && radioListening() :
+                                      rnsOk && radioListening() && rnsnode::online();
+    }
+    bool busy() override { return numberedConfigured() ? wiciShelter && wiciShelter->ownBusy() : rnsnode::queueFull(); }
     uint32_t send(const uint8_t to[store::HASH], const uint8_t* data, size_t length, uint32_t timeoutS) override {
         return rnsnode::send(to, data, length, timeoutS);
     }
     bool sendReady(const uint8_t to[store::HASH]) override { return rnsnode::sendReady(to); }
+    bool numberedReady(uint16_t network, uint16_t recipient) override {
+        return wiciActive && wiciShelter && !wiciShelter->ownBusy() && radioListening() &&
+               stationStore.config().network.id == network &&
+               (recipient == stationStore.config().receivers[0].number ||
+                recipient == stationStore.config().receivers[1].number) &&
+               wiciShelter->routes().parent() != 0;
+    }
+    uint32_t sendNumbered(uint16_t network, uint16_t recipient, const uint8_t* data,
+                          size_t length, uint32_t, bool exception) override {
+        if (!numberedReady(network, recipient)) return 0;
+        ++wiciHandle;
+        if (!wiciHandle) ++wiciHandle;
+        return wiciShelter->queueOwn(recipient, data, length, wiciHandle, exception) ? wiciHandle : 0;
+    }
     void randomBytes(uint8_t* out, size_t count) override { stationRandom(out, count); }
     void log(const char* text) override { bench.log(text); }
     void address(uint8_t out[store::HASH]) override { memcpy(out, rnsnode::address(), store::HASH); }
@@ -347,6 +388,7 @@ void applySilence() {
     const uint8_t* exception = stationStore.meta().exception;
     if (mode != store::Silence::OFF && (mode != lastMode || (mode == store::Silence::EXCEPTION && memcmp(exception, lastException, store::HASH)))) {
         bench.dropLinkTx();
+        if (wiciShelter) wiciShelter->cancelOwn();
         rnsnode::dropQueue();
     }
     lastMode = mode;
@@ -382,8 +424,30 @@ void BenchServices::changed() {
     screenChanged();
 }
 
-void onDatagram(const uint8_t* data, size_t length, void*) { if (rnsOk) rnsnode::received(data, length); }
-void onTxDone(bool ok, void*) { rnsnode::txDone(ok); }
+void onDatagram(const uint8_t* data, size_t length, void*) {
+    if (rnsOk && !numberedConfigured()) rnsnode::received(data, length);
+}
+void onWiciRaw(const radiolink::Frame& frame, void*) {
+    if (!wiciActive) return;
+    if (wiciShelter) wiciShelter->receive(frame.bytes, frame.length, frame.receivedMs, serviceS());
+    else if (wiciRoot) wiciRoot->radio(frame.bytes, frame.length, frame.receivedMs);
+}
+void onWiciDelivery(uint32_t handle, bool acknowledged, void*) { app.receipt(handle, acknowledged); }
+bool onWiciAdmit(uint16_t network, uint16_t sender, uint16_t recipient,
+                 const uint8_t* sa1, size_t length, void*) {
+    return app.receivedEnvelope(network, sender, recipient, sa1, length);
+}
+uint32_t wiciRandom(void*) {
+    uint32_t value = 0;
+    stationRandom(reinterpret_cast<uint8_t*>(&value), sizeof(value));
+    return value;
+}
+void onTxDone(bool ok, void*) {
+    if (wiciActive) {
+        if (wiciShelter) wiciShelter->onTxDone(ok, millis(), serviceS());
+        else if (wiciRoot) wiciRoot->onTxDone(ok, millis());
+    } else rnsnode::txDone(ok);
+}
 
 bool onPacket(const uint8_t* data, size_t length, bool& exception, void*) {
     if (!storeOk) return false;
@@ -1356,6 +1420,59 @@ void beginStack() {
     bench.log(rnsnode::node() ? "rns started as receiving station node" : rnsnode::status().identityNew ? "rns started, new identity" : "rns started");
 }
 
+void beginWici() {
+    if (!numberedConfigured()) return;
+    if (!rnsOk || bench.linkFraming() != radiolink::Framing::RNODE) {
+        stackState = StackState::START_FAILED;
+        bench.log("wici link unavailable: identity or SX1262 radio");
+        return;
+    }
+    const config::Config& c = stationStore.config();
+    if (c.role == config::Role::NODE) {
+        wiciRoot = new (wiciRootSpace) wici_gateway::Root(memory, wiciUsb, wiciAir,
+                            c.network.id, c.network.station, c.ifac);
+        if (!wiciRoot->begin(static_cast<uint16_t>(stationJournal.starts()))) {
+            stackState = StackState::START_FAILED;
+            bench.log("wici root binding failed");
+            return;
+        }
+    } else {
+        uint8_t privateKey[framfs::KEY_BYTES] = {};
+        if (!framfs::loadKey(memory, privateKey)) {
+            stackState = StackState::IDENTITY_LOST;
+            bench.log("wici station identity unavailable");
+            return;
+        }
+        const uint16_t receivers[2] = {c.receivers[0].number, c.receivers[1].number};
+        uint8_t publicKeys[2][32];
+        memcpy(publicKeys[0], c.receivers[0].key, 32);
+        memcpy(publicKeys[1], c.receivers[1].key, 32);
+        wiciShelter = new (wiciShelterSpace) wici_radio::Shelter(memory,
+                     {c.network.id, c.network.station, c.network.root,
+                      c.network.parent, c.network.backupParent}, receivers, c.ifac,
+                     privateKey, publicKeys, onWiciAdmit, nullptr,
+                     wiciAir, wiciRandom, nullptr);
+        drbg::wipe(privateKey, sizeof(privateKey));
+        if (!wiciShelter->begin()) {
+            stackState = StackState::START_FAILED;
+            bench.log("wici station durable state unavailable");
+            return;
+        }
+        wiciShelter->onDelivery(onWiciDelivery, nullptr);
+    }
+    bench.onRawFrame(onWiciRaw, nullptr);
+    if (!bench.setRawLora(true)) {
+        stackState = StackState::START_FAILED;
+        bench.log("wici raw radio mode unavailable");
+        return;
+    }
+    wiciActive = true;
+    uint32_t jitter = wiciRandom(nullptr);
+    wiciNextBeaconMs = millis() + 1000 + jitter % 4000;
+    wiciBeacons = 0;
+    bench.log(wiciRoot ? "wici root ready" : "wici station ready");
+}
+
 // Ziarno generatora stacji: 48 B entropii ze źródła sprzętowego i identyfikator układu jako nonce
 // (na ESP32-S3 przed konfiguracją ADC pomiaru VTEST, platform.h).
 // Odczyt bez testu zdrowia (drbg::healthy) jest powtarzany do trzech razy; generator dostaje ziarno także
@@ -1439,6 +1556,7 @@ void stationSetup() {
     }
     protocol.begin();
     beginStack();
+    beginWici();
     if (storeOk && !nodeRole()) app.stationEvent(store::RESTART, stationJournal.starts());
     bench.onDatagram(onDatagram, nullptr);
     bench.onTxDone(onTxDone, nullptr);
@@ -1527,10 +1645,23 @@ void stationLoop() {
     // Także przy układzie uznanym za niesprawny w trakcie nośnej albo serii (np. polecenie RADIO):
     // koniec TXCW i TXPKT po czasie nie może czekać na odpowiedź układu.
     if (radiocon::ok() || bench.transmitting()) bench.poll();
-    if (rnsOk) {
+    if (rnsOk && !numberedConfigured()) {
         rnsnode::loop(now);
         pollAnnounce();
     }
+    if (wiciActive && wiciShelter) wiciShelter->poll(now, serviceS());
+    if (wiciActive && linkAuto && !bench.silence && !bench.transmitting() &&
+        static_cast<int32_t>(now - wiciNextBeaconMs) >= 0) {
+        const bool accepted = wiciRoot ? wiciRoot->beacon() : wiciShelter && wiciShelter->beacon();
+        if (accepted) {
+            ++wiciBeacons;
+            uint32_t jitter = wiciRandom(nullptr);
+            wiciNextBeaconMs = now + (wiciBeacons < 3 ? 120000u :
+                                         1440000u + jitter % 720001u);
+        } else wiciNextBeaconMs = now + 5000;
+    }
+    if (wiciActive && ((wiciRoot && !wiciRoot->ready()) ||
+                       (wiciShelter && !wiciShelter->ready()))) stackState = StackState::START_FAILED;
     static uint32_t lastApp = 0;
     if (storeOk && now - lastApp >= APP_POLL_MS) {  // przegląd rejestru co 100 ms, nie w każdym obiegu
         lastApp = now;
@@ -1560,9 +1691,15 @@ void stationLoop() {
     const bool dataOpen = SerialData;
     const bool kiss = kissMode();
     if (dataOpen != dataWas || kiss != kissWas) {
-        if (kissWas) rnsnode::usbOpen(false);
+        if (kissWas) {
+            if (wiciRoot) wiciRoot->setUsbOpen(false);
+            else rnsnode::usbOpen(false);
+        }
         else if (dataWas) protocol.disconnected();
-        if (kiss) rnsnode::usbOpen(dataOpen);
+        if (kiss) {
+            if (wiciRoot) wiciRoot->setUsbOpen(dataOpen);
+            else rnsnode::usbOpen(dataOpen);
+        }
         else if (dataOpen) protocol.connected(now);
         dataWas = dataOpen;
         kissWas = kiss;
@@ -1573,9 +1710,18 @@ void stationLoop() {
             while (SerialData.available()) {
                 size_t n = 0;
                 while (n < sizeof(chunk) && SerialData.available()) chunk[n++] = static_cast<char>(SerialData.read());
-                rnsnode::usbFeed(reinterpret_cast<const uint8_t*>(chunk), n, now);
+                if (wiciRoot) wiciUsb.feed(reinterpret_cast<const uint8_t*>(chunk), n, now);
+                else rnsnode::usbFeed(reinterpret_cast<const uint8_t*>(chunk), n, now);
             }
-            drain(SerialData, kissOutput);
+            if (wiciRoot) {
+                const uint8_t* frame = nullptr;
+                size_t length = 0;
+                while (wiciUsb.peek(frame, length)) {
+                    wiciRoot->host(frame, length, now, serviceS());
+                    wiciUsb.pop();
+                }
+                drain(SerialData, wiciUsb);
+            } else drain(SerialData, kissOutput);
         } else {
             // Bajt po bajcie, dopóki odpowiedź zmieści się w kolejce: koniec wiersza może dać do dwóch wierszy.
             while (protocol.acceptsInput() && SerialData.available()) {
@@ -1590,7 +1736,8 @@ void stationLoop() {
     if (dataOpen && !kiss) drain(SerialData, protocol);
     else drain(Serial, protocol);
     if (nodeRole()) {
-        const uint32_t packets = rnsnode::usbStatus().counters.fromComputer;
+        const uint32_t packets = wiciRoot ? wiciUsb.counters().fromComputer :
+                                             rnsnode::usbStatus().counters.fromComputer;
         if (packets != computerPackets) {
             computerPackets = packets;
             computerHeard = true;

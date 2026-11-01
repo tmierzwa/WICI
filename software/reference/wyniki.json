@@ -207,6 +207,57 @@
       "worst_reply": true
     }
   },
+  "wici_link": {
+    "assumptions": {
+      "sf": 7,
+      "preamble_symbols": 24,
+      "max_frame_bytes": 255,
+      "link_header_bytes": 11,
+      "link_mac_bytes": 8,
+      "envelope_overhead_bytes": 25,
+      "max_payload_bytes": 236,
+      "hop_success_no_collisions": true,
+      "debt_multiplier": 13
+    },
+    "cases": {
+      "typical_request": {
+        "request_frames_bytes": [
+          218
+        ],
+        "received_frames_bytes": [
+          94
+        ],
+        "hack_frame_bytes": 19,
+        "relay_tx_plus_quiet_s": 8.785919999999999,
+        "50_requests_minutes": 7.321599999999999
+      },
+      "max_fields_request": {
+        "request_frames_bytes": [
+          155,
+          155
+        ],
+        "received_frames_bytes": [
+          94
+        ],
+        "hack_frame_bytes": 19,
+        "relay_tx_plus_quiet_s": 11.947519999999999,
+        "50_requests_minutes": 9.956266666666666
+      },
+      "worst_button_request": {
+        "request_frames_bytes": [
+          154,
+          154
+        ],
+        "received_frames_bytes": [
+          94
+        ],
+        "hack_frame_bytes": 19,
+        "relay_tx_plus_quiet_s": 11.947519999999999,
+        "50_requests_minutes": 9.956266666666666
+      }
+    },
+    "hack_tx_s": 0.06784
+  },
   "relay_w10": {
     "packets_bytes": {
       "typical_request": 403,

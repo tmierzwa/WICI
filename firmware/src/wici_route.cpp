@@ -1,0 +1,264 @@
+// SPDX-License-Identifier: MIT
+#include "wici_route.h"
+
+#include <string.h>
+
+namespace wici_route {
+namespace {
+constexpr uint8_t MAGIC[4] = {'W', 'R', 'T', '1'};
+constexpr uint8_t COMMIT = 0xA5;
+constexpr size_t ROUTES_AT = 24, CRC_AT = ROUTES_AT + ROUTES * 4;
+static_assert(CRC_AT + 2 < COPY_BYTES, "route record fits");
+bool id(uint16_t n) { return n && n != wici_link::BROADCAST; }
+uint16_t u16(const uint8_t* p) { return static_cast<uint16_t>((p[0] << 8) | p[1]); }
+uint32_t u32(const uint8_t* p) {
+    return (static_cast<uint32_t>(p[0]) << 24) | (static_cast<uint32_t>(p[1]) << 16) |
+           (static_cast<uint32_t>(p[2]) << 8) | p[3];
+}
+void put16(uint8_t* p, uint16_t n) { p[0] = static_cast<uint8_t>(n >> 8); p[1] = static_cast<uint8_t>(n); }
+void put32(uint8_t* p, uint32_t n) {
+    p[0] = static_cast<uint8_t>(n >> 24); p[1] = static_cast<uint8_t>(n >> 16);
+    p[2] = static_cast<uint8_t>(n >> 8); p[3] = static_cast<uint8_t>(n);
+}
+uint16_t crc(const uint8_t* p, size_t count) {
+    uint16_t c = 0xFFFF;
+    for (size_t i = 0; i < count; ++i) {
+        c ^= static_cast<uint16_t>(p[i]) << 8;
+        for (uint8_t j = 0; j < 8; ++j)
+            c = c & 0x8000 ? static_cast<uint16_t>((c << 1) ^ 0x1021) : static_cast<uint16_t>(c << 1);
+    }
+    return c;
+}
+bool blank(const uint8_t* p) {
+    bool zero = true, erased = true;
+    for (size_t i = 0; i < COPY_BYTES; ++i) { zero &= p[i] == 0; erased &= p[i] == 0xFF; }
+    return zero || erased;
+}
+}  // namespace
+
+bool parseBeacon(const wici_link::Frame& frame, Beacon& out) {
+    out = Beacon();
+    if (frame.type != wici_link::Type::BEACON || frame.length != 9) return false;
+    out.root = u16(frame.payload);
+    out.rank = u16(frame.payload + 2);
+    out.epoch = u16(frame.payload + 4);
+    out.parent = u16(frame.payload + 6);
+    out.flags = frame.payload[8];
+    return id(out.root) && (out.parent == 0 || id(out.parent)) && !(out.flags & ~1);
+}
+
+bool Table::begin() {
+    ready_ = false;
+    generation_ = 0;
+    currentCopy_ = 1;
+    epoch_ = 0;
+    epochKnown_ = false;
+    rank_ = 0xFFFF;
+    parent_ = failedDynamic_ = 0;
+    plannedFailures_ = backupFailures_ = dynamicFailures_ = 0;
+    memset(neighbors_, 0, sizeof(neighbors_));
+    const bool rootNode = config_.own == config_.root;
+    if (!id(config_.network) || !id(config_.own) || !id(config_.root) ||
+        (config_.planned && !id(config_.planned)) || (config_.backup && !id(config_.backup)) ||
+        (rootNode ? (config_.planned || config_.backup) :
+                    (!config_.planned || config_.planned == config_.own ||
+                     config_.backup == config_.own || config_.backup == config_.planned))) return false;
+    memset(routes_, 0, sizeof(routes_));
+    bool found = false;
+    for (uint8_t copy = 0; copy < 2; ++copy) {
+        uint8_t data[COPY_BYTES];
+        if (!storage_.read(BASE + copy * COPY_BYTES, data, sizeof(data))) return false;
+        if (blank(data) || data[COPY_BYTES - 1] != COMMIT) continue;
+        if (memcmp(data, MAGIC, 4) || u16(data + 8) != config_.network ||
+            u16(data + 10) != config_.own || u16(data + 12) != config_.root ||
+            u16(data + CRC_AT) != crc(data, CRC_AT)) return false;
+        for (size_t i = 0; i < ROUTES; ++i) {
+            const uint16_t dst = u16(data + ROUTES_AT + i * 4);
+            const uint16_t via = u16(data + ROUTES_AT + i * 4 + 2);
+            if ((dst || via) && (!id(dst) || !id(via) || dst == config_.own || via == config_.own)) return false;
+        }
+        const uint32_t generation = u32(data + 4);
+        if (!found || static_cast<int32_t>(generation - generation_) > 0) {
+            generation_ = generation;
+            currentCopy_ = copy;
+            for (size_t i = 0; i < ROUTES; ++i) {
+                routes_[i].destination = u16(data + ROUTES_AT + i * 4);
+                routes_[i].via = u16(data + ROUTES_AT + i * 4 + 2);
+            }
+            found = true;
+        }
+    }
+    ready_ = true;
+    if (rootNode) rank_ = 0;
+    return true;
+}
+
+bool Table::setRootEpoch(uint16_t epoch) {
+    if (!ready_ || config_.own != config_.root) return false;
+    epoch_ = epoch;
+    epochKnown_ = true;
+    return true;
+}
+
+bool Table::commit() {
+    uint8_t data[COPY_BYTES] = {};
+    memcpy(data, MAGIC, 4);
+    put32(data + 4, generation_ + 1);
+    put16(data + 8, config_.network);
+    put16(data + 10, config_.own);
+    put16(data + 12, config_.root);
+    for (size_t i = 0; i < ROUTES; ++i) {
+        put16(data + ROUTES_AT + i * 4, routes_[i].destination);
+        put16(data + ROUTES_AT + i * 4 + 2, routes_[i].via);
+    }
+    put16(data + CRC_AT, crc(data, CRC_AT));
+    const uint8_t copy = static_cast<uint8_t>(1 - currentCopy_);
+    const uint32_t at = BASE + copy * COPY_BYTES;
+    const uint8_t clear = 0;
+    if (!storage_.write(at + COPY_BYTES - 1, &clear, 1) ||
+        !storage_.write(at, data, COPY_BYTES - 1) ||
+        !storage_.write(at + COPY_BYTES - 1, &COMMIT, 1)) {
+        ready_ = false;
+        return false;
+    }
+    uint8_t verify[COPY_BYTES];
+    if (!storage_.read(at, verify, sizeof(verify)) || memcmp(data, verify, COPY_BYTES - 1) ||
+        verify[COPY_BYTES - 1] != COMMIT) {
+        ready_ = false;
+        return false;
+    }
+    ++generation_;
+    currentCopy_ = copy;
+    return true;
+}
+
+bool Table::learn(uint16_t destination, uint16_t via) {
+    if (!ready_ || !id(destination) || !id(via) || destination == config_.own ||
+        via == config_.own || destination == config_.root) return false;
+    size_t empty = ROUTES;
+    for (size_t i = 0; i < ROUTES; ++i) {
+        if (routes_[i].destination == destination) {
+            if (routes_[i].via == via) return true;
+            const Route old = routes_[i];
+            routes_[i].via = via;
+            if (!commit()) { routes_[i] = old; return false; }
+            return true;
+        }
+        if (!routes_[i].destination && empty == ROUTES) empty = i;
+    }
+    if (empty == ROUTES) return false;
+    routes_[empty] = {destination, via};
+    if (!commit()) { routes_[empty] = Route(); return false; }
+    return true;
+}
+
+bool Table::forget(uint16_t destination, uint16_t via) {
+    if (!ready_ || !id(destination) || !id(via)) return false;
+    for (Route& route : routes_) {
+        if (route.destination != destination || route.via != via) continue;
+        const Route old = route;
+        route = Route();
+        if (!commit()) { route = old; return false; }
+        return true;
+    }
+    return true;
+}
+
+uint16_t Table::down(uint16_t destination) const {
+    if (!ready_ || !id(destination)) return wici_link::BROADCAST;
+    for (const Route& route : routes_) if (route.destination == destination) return route.via;
+    return wici_link::BROADCAST;
+}
+
+const Table::Neighbor* Table::candidate(uint16_t id, uint32_t nowS) const {
+    for (const Neighbor& n : neighbors_)
+        if (n.id == id && n.epoch == epoch_ && n.parent != config_.own &&
+            nowS >= n.lastSeenS && nowS - n.lastSeenS <= BEACON_STALE_S &&
+            n.rank < rank_ && n.cost && static_cast<uint32_t>(n.rank) + n.cost < 0xFFFF) return &n;
+    return nullptr;
+}
+
+void Table::selectParent(uint32_t nowS) {
+    const Neighbor* chosen = nullptr;
+    if (plannedFailures_ < 3) chosen = candidate(config_.planned, nowS);
+    if (!chosen && backupFailures_ < 3) chosen = candidate(config_.backup, nowS);
+    if (!chosen) {
+        for (const Neighbor& neighbor : neighbors_) {
+            if ((neighbor.id == config_.planned && plannedFailures_ >= 3) ||
+                (neighbor.id == config_.backup && backupFailures_ >= 3) ||
+                neighbor.id == failedDynamic_) continue;
+            const Neighbor* candidateValue = candidate(neighbor.id, nowS);
+            if (candidateValue && (!chosen || static_cast<uint32_t>(candidateValue->rank) + candidateValue->cost <
+                                    static_cast<uint32_t>(chosen->rank) + chosen->cost)) chosen = candidateValue;
+        }
+    }
+    if (!chosen) {
+        parent_ = 0;
+        // Keep the last finite rank as a ceiling within this epoch. Resetting
+        // it to infinity here could make a former descendant look eligible and
+        // create a multi-node loop after one parent times out.
+        return;
+    }
+    // A dynamic switch needs 1.5 ETX (24/16) improvement; planned/backup
+    // failover is exempt because its current link already failed three times.
+    if (parent_ && parent_ != chosen->id && parent_ != config_.planned && parent_ != config_.backup) {
+        const Neighbor* current = candidate(parent_, nowS);
+        if (current && static_cast<uint32_t>(current->rank) + current->cost <=
+                       static_cast<uint32_t>(chosen->rank) + chosen->cost + 24) return;
+    }
+    if (parent_ != chosen->id) dynamicFailures_ = 0;
+    parent_ = chosen->id;
+    rank_ = static_cast<uint16_t>(chosen->rank + chosen->cost);
+}
+
+bool Table::beacon(uint16_t neighbor, const Beacon& value, uint16_t linkCost16, uint32_t nowS) {
+    if (!ready_ || config_.own == config_.root || !id(neighbor) || neighbor == config_.own || value.root != config_.root ||
+        !linkCost16 || value.rank == 0xFFFF || value.parent == config_.own ||
+        (value.parent && !id(value.parent)) || (value.flags & ~1) ||
+        (value.rank == 0) != (neighbor == config_.root)) return false;
+    if (epochKnown_ && static_cast<int16_t>(value.epoch - epoch_) < 0) return false;
+    if (!epochKnown_ || value.epoch != epoch_) {
+        epoch_ = value.epoch;
+        epochKnown_ = true;
+        rank_ = 0xFFFF;
+        parent_ = 0;
+        memset(neighbors_, 0, sizeof(neighbors_));
+        plannedFailures_ = backupFailures_ = 0;
+        dynamicFailures_ = 0;
+        failedDynamic_ = 0;
+    }
+    Neighbor* chosen = nullptr;
+    for (Neighbor& item : neighbors_) {
+        if (item.id == neighbor) { chosen = &item; break; }
+        if (!item.id && !chosen) chosen = &item;
+    }
+    if (!chosen) return false;
+    *chosen = {neighbor, value.rank, linkCost16, value.epoch, value.parent, nowS};
+    selectParent(nowS);
+    return true;
+}
+
+void Table::hopResult(uint16_t neighbor, bool acknowledged, uint32_t nowS) {
+    if (!ready_) return;
+    // A deliberate probe of the planned parent can restore the planned route.
+    if (acknowledged && neighbor == config_.planned && neighbor != parent_) {
+        plannedFailures_ = 0;
+        selectParent(nowS);
+        return;
+    }
+    if (acknowledged && neighbor == failedDynamic_ && neighbor != parent_) {
+        failedDynamic_ = 0;
+        dynamicFailures_ = 0;
+        selectParent(nowS);
+        return;
+    }
+    if (neighbor != parent_) return;
+    uint8_t* failures = neighbor == config_.planned ? &plannedFailures_ :
+                        neighbor == config_.backup ? &backupFailures_ : &dynamicFailures_;
+    if (failures) *failures = acknowledged ? 0 : static_cast<uint8_t>(*failures < 3 ? *failures + 1 : 3);
+    if (!acknowledged && failures == &dynamicFailures_ && dynamicFailures_ >= 3) failedDynamic_ = neighbor;
+    if (!acknowledged) selectParent(nowS);
+    else if (neighbor != config_.planned && candidate(config_.planned, nowS)) selectParent(nowS);
+}
+
+}  // namespace wici_route

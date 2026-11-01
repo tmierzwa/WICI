@@ -109,7 +109,7 @@ class Prep:
         if role == "wezel":   # węzeł nie ma karty; stacja odpowiedziałaby not_configured
             raise OperationError(REASONS["role"], None, "role")
         reply = self._run("card", lambda link: link.request("card"), lambda r: "fingerprint " + r.get("fingerprint", ""))
-        return {"card": {k: reply[k] for k in ("name", "lxmf", "key", "address", "fingerprint") if k in reply}}
+        return {"card": {k: reply[k] for k in ("name", "lxmf", "key", "address", "fingerprint", "net_id", "id", "x25519") if k in reply}}
 
     def destroy_station(self):
         """ZNISZCZ DANE on the station: `destroy`, then the OK button on the station within 30 s.

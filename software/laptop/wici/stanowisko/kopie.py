@@ -78,6 +78,12 @@ class Kopie:
         payload = {"v": 1, "baza": _b64(body), "tozsamosc": _b64((medium.root / "tozsamosc").read_bytes()),
                    "konta": _b64((medium.kit.dir / database.ACCOUNTS).read_bytes()),
                    "zestaw": _b64((medium.kit.dir / database.KIT_KEY).read_bytes())}
+        card = medium.root / "karta-odbiorcy"
+        if card.exists():
+            payload["karta-odbiorcy"] = _b64(card.read_bytes())
+        link = medium.root / "wici-link"
+        if link.exists():
+            payload["wici-link"] = _b64(link.read_bytes())
         name = self.name(at)
         self.dir.mkdir(parents=True, exist_ok=True)
         tmp = self.dir / (name + ".tmp")
@@ -181,12 +187,17 @@ def restore(path, key, root, approvers, at):
     database._write_durable(medium.kit.dir / database.KIT_KEY, payload["zestaw"])
     database._write_durable(medium.kit.dir / database.ACCOUNTS, payload["konta"])
     database._write_durable(medium.root / "tozsamosc", payload["tozsamosc"])
+    if "karta-odbiorcy" in payload:
+        database._write_durable(medium.root / "karta-odbiorcy", payload["karta-odbiorcy"])
+    if "wici-link" in payload:
+        database._write_durable(medium.root / "wici-link", payload["wici-link"])
     try:
         for name, password in approvers:
             medium.login(name, password, key)
     except database.LoginError:
-        for f in (medium.kit.dir / database.KIT_KEY, medium.kit.dir / database.ACCOUNTS, medium.root / "tozsamosc"):
-            f.unlink()
+        for f in (medium.kit.dir / database.KIT_KEY, medium.kit.dir / database.ACCOUNTS,
+                  medium.root / "tozsamosc", medium.root / "karta-odbiorcy", medium.root / "wici-link"):
+            f.unlink(missing_ok=True)
         raise
     with contextlib.closing(sqlite3.connect(":memory:")) as db:
         db.deserialize(payload["baza"])

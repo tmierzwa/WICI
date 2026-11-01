@@ -59,6 +59,39 @@ def lxmf_packet_bytes(content_bytes: int) -> int:
     return 19 + 32 + 16 + 16 * math.ceil((plaintext + 1) / 16) + 32
 
 
+def wici_link_model(sa1_sizes: dict[str, int], sf: int = 7) -> dict:
+    """One relay's best-case WICI-Link airtime, including two HACK transmissions per
+    successful REQUEST/RECEIVED pair. This is a design estimate, not a radio result."""
+    link_header, link_mac, env_overhead, max_frame = 11, 8, 25, 255
+    max_payload = max_frame - link_header - link_mac
+    hack = link_header + link_mac
+
+    def frames(content: int) -> list[int]:
+        envelope = content + env_overhead
+        if envelope <= max_payload:
+            return [envelope + link_header + link_mac]
+        first = (content + 1) // 2
+        return [first + env_overhead + link_header + link_mac,
+                content - first + env_overhead + link_header + link_mac]
+
+    def cycle(frame: int) -> float:
+        return 13 * lora_frame_seconds(frame, sf, preamble_symbols=24)
+
+    received = frames(sa1_sizes["received"])
+    cases = {}
+    for name in ("typical_request", "max_fields_request", "worst_button_request"):
+        request = frames(sa1_sizes[name])
+        relay = sum(map(cycle, request + received)) + (len(request) + len(received)) * cycle(hack)
+        cases[name] = {"request_frames_bytes": request, "received_frames_bytes": received,
+                       "hack_frame_bytes": hack, "relay_tx_plus_quiet_s": relay,
+                       "50_requests_minutes": 50 * relay / 60}
+    return {"assumptions": {"sf": sf, "preamble_symbols": 24, "max_frame_bytes": max_frame,
+                             "link_header_bytes": link_header, "link_mac_bytes": link_mac,
+                             "envelope_overhead_bytes": env_overhead, "max_payload_bytes": max_payload,
+                             "hop_success_no_collisions": True, "debt_multiplier": 13},
+            "cases": cases, "hack_tx_s": lora_frame_seconds(hack, sf, preamble_symbols=24)}
+
+
 # Reticulum interface access code on every P1 packet (radio.md, "Interfejs P1 w stosie Reticulum").
 IFAC_BYTES = 16
 PROOF_BYTES = 83  # implicit packet proof, Reticulum packet without IFAC
@@ -417,6 +450,7 @@ def calculate() -> dict:
         "sa1_sizes": {"content_bytes": sizes, "opportunistic_content_estimate": opportunistic_content_estimate,
                       "link_content_estimate": link_content_estimate,
                       "fits_one_opportunistic_packet": {k: v <= opportunistic_content_estimate for k, v in sizes.items()}},
+        "wici_link": wici_link_model(sizes),
         **main_network,
         "lora_pilot": lora,
         "fram_by_role": {"record_bytes_assumed": fram_b, "counts": fram_counts, "roles": fram_kib,

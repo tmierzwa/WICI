@@ -306,6 +306,9 @@ struct TextSource : config::Source {
 
 void dumpConfig(const config::Config& c) {
     printf("conf role=%u stations=%u profile=%s\n", static_cast<unsigned>(c.role), c.stations, c.profile);
+    if (c.network.id) printf("conf network %u %u %u %u %u %u %u\n", c.network.id,
+                             c.network.station, c.network.root, c.network.parent, c.network.backupParent,
+                             c.network.receiverMain, c.network.receiverBackup);
     for (size_t i = 0; i < c.addressCount; ++i) printf("conf address %s\n", c.addresses[i]);
     for (size_t i = 0; i < c.phraseCount; ++i) printf("conf phrase %s|%s|%s\n", c.phrases[i][0], c.phrases[i][1], c.phrases[i][2]);
     printf("conf ifac ");
@@ -367,6 +370,15 @@ struct FakeServices : station::Services {
     bool sendReady(const uint8_t*) override {
         if (unknown) printf("path request\n");   // cel bez trasy: stos pyta o trasę, pakiet nie wychodzi
         return !unknown;
+    }
+    bool numberedReady(uint16_t, uint16_t) override { return !unknown; }
+    uint32_t sendNumbered(uint16_t net, uint16_t recipient, const uint8_t* data,
+                          size_t length, uint32_t, bool exception) override {
+        if (refuse) return 0;
+        ++handle;
+        printf("numbered %u %u %u %d %.*s\n", handle, net, recipient, exception,
+               static_cast<int>(length), reinterpret_cast<const char*>(data));
+        return handle;
     }
     uint32_t send(const uint8_t to[store::HASH], const uint8_t* data, size_t length, uint32_t) override {
         if (refuse) { printf("send refused\n"); return 0; }
@@ -690,6 +702,13 @@ int world() {
         } else if (!strcmp(cmd, "inraw")) {
             const bool resolved = w.app->received(reinterpret_cast<const uint8_t*>(arg), strlen(arg));
             printf("rx %d 0\n", resolved);
+        } else if (!strcmp(cmd, "inenv")) {
+            int offset = 0;
+            const int fields = sscanf(arg, "%u %u %u %n", &a, &b, &c, &offset);
+            const bool resolved = fields == 3 && w.app->receivedEnvelope(
+                static_cast<uint16_t>(a), static_cast<uint16_t>(b), static_cast<uint16_t>(c),
+                reinterpret_cast<const uint8_t*>(arg + offset), strlen(arg + offset));
+            printf("envrx %d\n", resolved);
         } else if (!strcmp(cmd, "reg")) dumpRegister(w, arg);
         else if (!strcmp(cmd, "inbox")) dumpInbox(w, arg);
         else if (!strcmp(cmd, "stats")) {
@@ -1383,6 +1402,53 @@ class HostUnitTests(unittest.TestCase):
         for value, detail in cases:
             self.assertEqual(self.parse(value), [f"parse err {detail}"], value)
         self.assertEqual(self.parse(station_doc(), profile="p2"), ["parse err radio"])
+
+    def test_numbered_network_card_binding(self):
+        network = {"id": 100, "station": 4, "root": 1, "parent": 1, "backup_parent": 0,
+                   "receiver_main": 2, "receiver_backup": 3}
+        main, backup = card(MAIN_KEY), card(BACKUP_KEY)
+        main.update(id=2, net_id=100, x25519=main["key"][:64])
+        backup.update(id=3, net_id=100, x25519=backup["key"][:64])
+        doc = station_doc(network=network, receiver={"main": main, "backup": backup})
+        self.assertIn("conf network 100 4 1 1 0 2 3", self.parse(doc))
+        bad = station_doc(network=network, receiver={"main": dict(main, net_id=101), "backup": backup})
+        self.assertEqual(self.parse(bad), ["parse err receiver"])
+        self.assertEqual(self.parse(station_doc(network=dict(network, station=1))), ["parse err network"])
+        root = dict(node_doc(), network=dict(network, station=1, parent=0))
+        self.assertIn("conf network 100 1 1 0 0 2 3", self.parse(root))
+
+    def test_numbered_envelope_plaintext_reaches_station_only_with_active_binding(self):
+        network = {"id": 100, "station": 4, "root": 1, "parent": 1, "backup_parent": 0,
+                   "receiver_main": 2, "receiver_backup": 3}
+        main, backup = card(MAIN_KEY), card(BACKUP_KEY)
+        main.update(id=2, net_id=100, x25519=main["key"][:64])
+        backup.update(id=3, net_id=100, x25519=backup["key"][:64])
+        doc = station_doc(network=network, receiver={"main": main, "backup": backup})
+        content = compact([1, 1, self.rid(79), 1, 1, 1])
+        out = self.world(["cfg " + json.dumps(doc, ensure_ascii=False),
+                          f"inenv 100 2 4 {content}", f"inenv 101 2 4 {content}",
+                          f"inenv 100 3 4 {content}", f"inenv 100 2 5 {content}",
+                          "inenv 100 2 4 nonsense", "stats numbered"])
+        self.assertEqual(self.find(out, "envrx "), ["envrx 1", "envrx 0", "envrx 0", "envrx 0", "envrx 0"])
+        self.assertIn("received=1 rejected=4", self.find(out, "stats numbered")[0])
+
+    def test_numbered_silence_exception_burns_three_durable_unacked_attempts(self):
+        network = {"id": 100, "station": 4, "root": 1, "parent": 1, "backup_parent": 0,
+                   "receiver_main": 2, "receiver_backup": 3}
+        main, backup = card(MAIN_KEY), card(BACKUP_KEY)
+        main.update(id=2, net_id=100, x25519=main["key"][:64])
+        backup.update(id=3, net_id=100, x25519=backup["key"][:64])
+        doc = station_doc(network=network, receiver={"main": main, "backup": backup})
+        rid = self.rid(91)
+        out = self.world(["cfg " + json.dumps(doc, ensure_ascii=False), "now 100", self.sub(self.request(rid)),
+                          "silence 1 " + rid, "poll", "rcpt 1 1", "now 160", "poll", "rcpt 2 1",
+                          "now 220", "poll", "rcpt 3 1", "now 280", "poll", "restart", "poll",
+                          "reg after", "stats after"])
+        sends = self.find(out, "numbered ")
+        self.assertEqual(len(sends), 3)
+        self.assertTrue(all(line.split()[4] == "1" for line in sends))
+        self.assertIn("delivered=0", self.find(out, "stats after")[0])
+        self.assertEqual(self.regs(out, "after")[rid]["att"], 3)
 
     # --- stacja: magazyn, warstwa aplikacji, USB, ekran ------------------------
 

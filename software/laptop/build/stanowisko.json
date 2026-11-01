@@ -1,5 +1,5 @@
 {
-  "note": "Biblioteki pakietu stanowiska (build_stanowisko.py): Reticulum i LXMF w wersjach przypiętych jak w stacji (docs/spec/stanowisko-osp.md, „Stos”), pobierane gitem przy commicie i sprawdzane po jego identyfikatorze, jak firmware/tools/stack_deps.py (decyzja autora 2026-10-30); pyserial 3.5 z PyPI z sumą SHA-256.",
+  "note": "Biblioteki pakietu stanowiska (build_stanowisko.py): Reticulum i LXMF w wersjach przypiętych jak w stacji (docs/spec/stanowisko-osp.md, „Stos”), pobierane gitem przy commicie i sprawdzane po jego identyfikatorze, jak firmware/tools/stack_deps.py (decyzja autora 2026-10-30); pyserial 3.5 z PyPI z sumą SHA-256. cryptography 48.0.1, cffi 2.0.0 i pycparser 2.23: koła dla Python 3.14 z przypiętymi sumami PyPI.",
   "libraries": {
     "reticulum": {
       "repository": "https://github.com/markqvist/Reticulum.git",
@@ -18,6 +18,59 @@
       "sha256": "3c77e014170dfffbd816e6ffc205e9842efb10be9f58ec16d3e8675b4925cddb",
       "package": "serial",
       "license": "LICENSE.txt"
+    }
+  },
+  "wheels": {
+    "cryptography": {
+      "version": "48.0.1",
+      "targets": {
+        "linux-x86_64": {
+          "url": "https://files.pythonhosted.org/packages/d2/bb/cc4b78784f97efc8c5874c2a9743708d172be6663024b34a0467885ae0c8/cryptography-48.0.1-cp311-abi3-manylinux_2_28_x86_64.whl",
+          "sha256": "3752f2dbc8f07a30aad2932c986cea495b03bb554887828225da104f732852b6"
+        },
+        "macos-arm64": {
+          "url": "https://files.pythonhosted.org/packages/1b/bc/ee4137cbbe105652c0ee4252792b78fc8e7afa4b8e61d9d5dc05a7f45731/cryptography-48.0.1-cp311-abi3-macosx_10_9_universal2.whl",
+          "sha256": "3e4a1a3232eef2e6c732827d5722db29a0cc8b27af2a4d865b094cf954be9ca1"
+        },
+        "macos-x86_64": {
+          "url": "https://files.pythonhosted.org/packages/1b/bc/ee4137cbbe105652c0ee4252792b78fc8e7afa4b8e61d9d5dc05a7f45731/cryptography-48.0.1-cp311-abi3-macosx_10_9_universal2.whl",
+          "sha256": "3e4a1a3232eef2e6c732827d5722db29a0cc8b27af2a4d865b094cf954be9ca1"
+        },
+        "windows-amd64": {
+          "url": "https://files.pythonhosted.org/packages/c5/69/0572c77dbace6fef72f33755bd52ea399c71367250d366237f8691826b9e/cryptography-48.0.1-cp311-abi3-win_amd64.whl",
+          "sha256": "39489bfca54c7a1f6b297efcd8bc608ab92d16c4ca631b0cad4da46724588b24"
+        }
+      }
+    },
+    "cffi": {
+      "version": "2.0.0",
+      "targets": {
+        "linux-x86_64": {
+          "url": "https://files.pythonhosted.org/packages/47/d9/d83e293854571c877a92da46fdec39158f8d7e68da75bf73581225d28e90/cffi-2.0.0-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+          "sha256": "afb8db5439b81cf9c9d0c80404b60c3cc9c3add93e114dcae767f1477cb53775"
+        },
+        "macos-arm64": {
+          "url": "https://files.pythonhosted.org/packages/59/dd/27e9fa567a23931c838c6b02d0764611c62290062a6d4e8ff7863daf9730/cffi-2.0.0-cp314-cp314-macosx_11_0_arm64.whl",
+          "sha256": "c654de545946e0db659b3400168c9ad31b5d29593291482c43e3564effbcee13"
+        },
+        "macos-x86_64": {
+          "url": "https://files.pythonhosted.org/packages/92/c4/3ce07396253a83250ee98564f8d7e9789fab8e58858f35d07a9a2c78de9f/cffi-2.0.0-cp314-cp314-macosx_10_13_x86_64.whl",
+          "sha256": "fc33c5141b55ed366cfaad382df24fe7dcbc686de5be719b207bb248e3053dc5"
+        },
+        "windows-amd64": {
+          "url": "https://files.pythonhosted.org/packages/bb/92/882c2d30831744296ce713f0feb4c1cd30f346ef747b530b5318715cc367/cffi-2.0.0-cp314-cp314-win_amd64.whl",
+          "sha256": "203a48d1fb583fc7d78a4c6655692963b860a417c0528492a6bc21f1aaefab25"
+        }
+      }
+    },
+    "pycparser": {
+      "version": "2.23",
+      "targets": {
+        "all": {
+          "url": "https://files.pythonhosted.org/packages/a0/e3/59cd50310fc9b59512193629e1984c1f95e5c8ae6e5d8c69532ccc65a7fe/pycparser-2.23-py3-none-any.whl",
+          "sha256": "e5c6e8d3fbad53479cab09ac03729e0a9faf2bee3db8208a550daf5af81a5934"
+        }
+      }
     }
   }
 }

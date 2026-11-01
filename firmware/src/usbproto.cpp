@@ -793,6 +793,9 @@ void Protocol::doCard(int64_t seq) {
     appendf(fields, sizeof(fields), n, "\"name\":\"%s\",\"lxmf\":\"%s\",\"key\":\"%s\",\"address\":[", host_.stationName(), lxmfHex, keyHex);
     for (size_t i = 0; i < store_.addressCount(); ++i) appendf(fields, sizeof(fields), n, "%s\"%s\"", i ? "," : "", store_.addressAt(i));
     if (!appendf(fields, sizeof(fields), n, "],\"fingerprint\":\"%s\"", fingerprint)) { rejected(seq, "size"); return; }
+    const config::Network& network = store_.config().network;
+    if (network.id && !appendf(fields, sizeof(fields), n, ",\"net_id\":%u,\"id\":%u,\"x25519\":\"%.*s\"",
+                               network.id, network.station, 64, keyHex)) { rejected(seq, "size"); return; }
     host_.showCard(fingerprint);
     send("card", seq, fields);
 }

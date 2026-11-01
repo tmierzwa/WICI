@@ -39,6 +39,7 @@ from .. import database, passwords, store
 from . import kopie, nosnik, panel, wezel, zamkniecie
 from .przyjecie import Przyjecie
 from .stos import BITRATE, Stos
+from .wici_stos import WiciStos
 from .wysylka import ClockBehind
 
 
@@ -53,6 +54,8 @@ def write_new(path, doc):
 
 
 def prepare(args):
+    if args.net_id is None and (args.root_id is not None or args.ifac is not None):
+        raise SystemExit("--root-id i --ifac wymagają --net-id")
     import RNS
     main_identity, backup_identity = RNS.Identity(), RNS.Identity()
     for path in (args.paczka, args.karta):
@@ -60,12 +63,23 @@ def prepare(args):
             raise SystemExit(f"plik już istnieje: {path}")
     if Path(args.paczka).resolve().is_relative_to(Path(args.nosnik).resolve()):
         raise SystemExit("paczka zapasowa nie może leżeć na nośniku stanowiska")
+    card = nosnik.receiver_card(main_identity.get_public_key(), backup_identity.get_public_key(),
+                                args.net_id, args.main_id, args.backup_id)
+    link = None
+    if args.net_id is not None:
+        if args.root_id is None or args.ifac is None:
+            raise SystemExit("numerowana sieć wymaga --root-id i --ifac")
+        if args.root_id in (args.main_id, args.backup_id):
+            raise SystemExit("numer korzenia musi być różny od numerów odbiorcy")
+        try:
+            link = nosnik.validate_link({"net_id": args.net_id, "root": args.root_id, "ifac": args.ifac})
+        except database.StorageError as exc:
+            raise SystemExit(str(exc)) from None
     medium, _, envelopes = nosnik.Nosnik.create(args.nosnik, args.dyzurni, main_identity.get_private_key(),
-                                                args.iteracje)
+                                                args.iteracje, card=card, link=link)
     backup_password = passwords.generate(nosnik.BACKUP_WORDS)
     write_new(args.paczka, nosnik.backup_package(backup_identity.get_private_key(), backup_identity.get_public_key(),
                                                  backup_password, args.iteracje))
-    card = nosnik.receiver_card(main_identity.get_public_key(), backup_identity.get_public_key())
     write_new(args.karta, card)
     emit("envelopes", envelopes={**envelopes, "paczka-zapasowa": backup_password}, card=card)
     return 0
@@ -86,11 +100,34 @@ def start(args):
         emit("login_failed", message=str(e))
         return 3
     przyjecie = None
-    stos = Stos(medium.network, args.port, lambda source, content: przyjecie.deliver(source, content), identity_key,
-                args.bitrate)
+    try:
+        link = medium.link(key)
+        card = medium.card(key)
+    except database.StorageError as exc:
+        emit("login_failed", message=str(exc))
+        return 3
+    if link is not None:
+        from cryptography.hazmat.primitives.asymmetric import x25519
+        own_public = x25519.X25519PrivateKey.from_private_bytes(identity_key[:32]).public_key().public_bytes_raw().hex()
+        active = next((entry for entry in (card.get("main"), card.get("backup"))
+                       if isinstance(entry, dict) and entry.get("x25519") == own_public), None) if card else None
+        if active is None or active.get("net_id") != link["net_id"] or active["id"] == link["root"]:
+            emit("login_failed", message="tożsamość odbiorcy i ustawienia WICI-Link nie są zgodne")
+            return 3
+        stos = WiciStos(args.port, link["net_id"], link["root"], bytes.fromhex(link["ifac"]),
+                        bytes.fromhex(active["lxmf"]),
+                        lambda frame: przyjecie.receive_envelope_frame(link["net_id"], frame))
+        send = lambda dest, content: przyjecie.send_wici(stos, dest, content)
+    elif card and card.get("v") == 2:
+        emit("login_failed", message="brak klucza WICI-Link na numerowanym nośniku")
+        return 3
+    else:
+        stos = Stos(medium.network, args.port, lambda source, content: przyjecie.deliver(source, content),
+                    identity_key, args.bitrate)
+        send = stos.send
     try:
         copies = kopie.Kopie(Path(args.kopie) if args.kopie else kopie.disk_dir(store.state_dir() / "stanowisko", medium))
-        przyjecie = Przyjecie(medium, key, stos.send, stos.outcome, copies=copies, announce=stos.announce,
+        przyjecie = Przyjecie(medium, key, send, stos.outcome, copies=copies, announce=stos.announce,
                               online=lambda: stos.status(time.time())["online"])
     except ClockBehind as e:
         last = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(e.args[0]))
@@ -161,6 +198,11 @@ def main(argv=None):
     prep.add_argument("--dyzurni", type=int, required=True, help="liczba kont dyżurnych")
     prep.add_argument("--paczka", required=True, help="nowy plik paczki tożsamości zapasowej (poza nośnikiem)")
     prep.add_argument("--karta", required=True, help="nowy plik karty odbiorcy dla stacji")
+    prep.add_argument("--net-id", type=int, help="numer sieci WICI (1..65534)")
+    prep.add_argument("--main-id", type=int, help="numer głównej tożsamości odbiorcy")
+    prep.add_argument("--backup-id", type=int, help="numer zapasowej tożsamości odbiorcy")
+    prep.add_argument("--root-id", type=int, help="numer radiowego węzła stanowiska")
+    prep.add_argument("--ifac", help="16 bajtów kodu sieci WICI w zapisie hex")
     prep.add_argument("--iteracje", type=int, default=database.ITERATIONS, help=argparse.SUPPRESS)
     run = commands.add_parser("start", help="praca stanowiska")
     run.add_argument("--nosnik", required=True, help="katalog na nośniku stanowiska")

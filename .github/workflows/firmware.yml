@@ -92,6 +92,10 @@ jobs:
         env:
           WICI_RNS_SANITIZE: '1'
         run: python -m unittest tests.test_rnscore_lxmf -v
+      - name: WICI envelope against Python and sanitizers
+        run: |
+          python -m pip install cryptography==48.0.1
+          python -m unittest tests.test_envelope_cross_language -v
   fuzz:
     # Rdzeń pod libFuzzerem przez 60 s (tools/core_fuzz.py; godzina w fuzz.yml), równolegle z resztą.
     runs-on: ubuntu-latest

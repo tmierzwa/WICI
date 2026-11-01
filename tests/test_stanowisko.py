@@ -155,6 +155,69 @@ class StationTestCase(unittest.TestCase):
 class ReceptionTest(StationTestCase):
     """S2: reception on the reference OSPStore in its own thread; RECEIVED only after COMMIT."""
 
+    @unittest.skipUnless(importlib.util.find_spec("cryptography"), "cryptography for D21 envelope")
+    def test_numbered_envelope_fragments_commit_with_sa1_and_replay(self):
+        from cryptography.hazmat.primitives.asymmetric import x25519
+        from wici import envelope
+
+        receiver_private = bytes(range(32))
+        station_private = bytes(range(32, 64))
+        receiver_public = x25519.X25519PrivateKey.from_private_bytes(receiver_private).public_key().public_bytes_raw()
+        station_public = x25519.X25519PrivateKey.from_private_bytes(station_private).public_key().public_bytes_raw()
+        main = receiver_public + bytes(range(32))
+        backup = bytes(range(64, 128))
+        station_key = station_public + bytes(range(32, 64))
+        source = nosnik.lxmf_address(station_key)
+        self.medium.save_identity(self.key, receiver_private + bytes(range(32)))
+        self.medium.save_card(self.key, nosnik.receiver_card(main, backup, 100, 2, 3))
+
+        def register(store):
+            store.add_trusted(source, station_key, ("dyzurny-1", "dyzurny-2"))
+            store.db.execute("INSERT INTO numery VALUES(?,?,?,?)", (100, 4, source, station_key))
+
+        self.reception.call(register)
+        content = request(text="x" * 96)
+        key = envelope.derive_key(station_private, receiver_public, 100, 4, 2, own_id=4)
+        frames = envelope.seal(key, 4, 2, 7, content, 153)
+        self.assertEqual(len(frames), 2)
+        self.assertEqual(self.reception.receive_envelope_frame(100, frames[1]), "partial")
+        self.assertEqual(durable(self.medium, self.key, "SELECT count(*) FROM env_parts"), (1,))
+        self.restart()
+        self.assertEqual(self.reception.receive_envelope_frame(100, frames[0]), "complete")
+        self.assertEqual(durable(self.medium, self.key, "SELECT count(*) FROM received"), (1,))
+        self.assertEqual(durable(self.medium, self.key, "SELECT highest FROM env_replay"), (7,))
+        self.assertEqual(self.reception.receive_envelope_frame(100, frames[0]), "duplicate")
+        with self.assertRaises(envelope.EnvelopeError):
+            self.reception.receive_envelope_frame(101, frames[0])
+        forged = bytearray(frames[0]); forged[-1] ^= 1
+        with self.assertRaises(envelope.EnvelopeError):
+            self.reception.receive_envelope_frame(100, forged)
+
+    @unittest.skipUnless(importlib.util.find_spec("cryptography"), "cryptography for D21 envelope")
+    def test_numbered_outbound_reserves_counter_before_sealing(self):
+        from cryptography.hazmat.primitives.asymmetric import x25519
+        from wici import envelope
+
+        receiver_private, station_private = bytes(range(32)), bytes(range(32, 64))
+        receiver_public = x25519.X25519PrivateKey.from_private_bytes(receiver_private).public_key().public_bytes_raw()
+        station_public = x25519.X25519PrivateKey.from_private_bytes(station_private).public_key().public_bytes_raw()
+        station_key = station_public + bytes(range(32, 64))
+        self.medium.save_identity(self.key, receiver_private + bytes(range(32)))
+        self.medium.save_card(self.key, nosnik.receiver_card(receiver_public + bytes(32), bytes(range(64, 128)), 100, 2, 3))
+        def register(store):
+            source = nosnik.lxmf_address(station_key)
+            store.add_trusted(source, station_key, ("dyzurny-1", "dyzurny-2"))
+            store.db.execute("INSERT INTO numery VALUES(?,?,?,?)", (100, 4, source, station_key))
+        self.reception.call(register)
+        content = received_for(request())
+        first = self.reception.seal_envelope_message(100, 4, content)[0]
+        self.assertEqual(durable(self.medium, self.key, "SELECT reserved_until FROM env_send"), (64,))
+        self.restart()
+        second = self.reception.seal_envelope_message(100, 4, content)[0]
+        self.assertEqual((int.from_bytes(first[5:9], "big"), int.from_bytes(second[5:9], "big")), (0, 64))
+        key = envelope.derive_key(station_private, receiver_public, 100, 2, 4, 4)
+        self.assertEqual(envelope.open_part(key, second).plaintext, content)
+
     def test_trusted_request_gets_received_after_commit_with_reception_time(self):
         content = request()
         self.deliver(self.STATION, content)
@@ -499,6 +562,27 @@ class MediumTest(unittest.TestCase):
         with self.assertRaises(database.StorageError):
             self.medium.identity(os.urandom(32))
 
+    def test_numbered_link_binding_is_sealed_and_survives_reopen(self):
+        link = {"net_id": 100, "root": 5, "ifac": "ab" * 16}
+        self.medium.save_link(self.key, link)
+        self.assertEqual(nosnik.Nosnik(self.root).link(self.key), link)
+        self.assertNotIn(b"abababab", (self.root / "wici-link").read_bytes())
+        with self.assertRaises(database.StorageError):
+            self.medium.link(os.urandom(32))
+        with self.assertRaises(database.StorageError):
+            self.medium.save_link(self.key, {**link, "root": 0})
+        with self.assertRaises(database.StorageError):
+            self.medium.save_link(self.key, {**link, "ifac": "ab " * 10 + "ab"})
+        untouched = Path(self.tmp.name) / "invalid-link"
+        with self.assertRaises(database.StorageError):
+            nosnik.Nosnik.create(untouched, 2, bytes(range(64)), FAST,
+                                 link={**link, "ifac": "not-a-network-code"})
+        self.assertFalse(untouched.exists())
+
+    def test_root_binding_cannot_silently_prepare_an_unnumbered_medium(self):
+        with self.assertRaisesRegex(SystemExit, "--net-id"):
+            aplikacja.prepare(unittest.mock.Mock(net_id=None, root_id=5, ifac=None))
+
     def test_a_prepared_medium_is_not_prepared_again(self):
         with self.assertRaises(database.StorageError):
             medium_in(self.root)
@@ -520,6 +604,12 @@ class MediumTest(unittest.TestCase):
         self.assertEqual((card["wici"], card["v"]), ("karta-odbiorcy", 1))
         self.assertEqual(card["backup"], {"lxmf": nosnik.lxmf_address(backup).hex(), "key": backup.hex()})
         self.assertEqual(card["main"]["key"], main.hex())
+        numbered = nosnik.receiver_card(main, backup, 100, 2, 3)
+        self.assertEqual(numbered["v"], 2)
+        self.assertEqual(numbered["main"], {"lxmf": nosnik.lxmf_address(main).hex(), "key": main.hex(),
+                                             "id": 2, "net_id": 100, "x25519": main[:32].hex()})
+        with self.assertRaises(ValueError):
+            nosnik.receiver_card(main, backup, 100, 2, 2)
 
     def test_database_lives_on_the_medium_only_sealed(self):
         reception = przyjecie.Przyjecie(self.medium, self.key, lambda t, c: None, lambda m: None,
@@ -556,6 +646,7 @@ class MediumTest(unittest.TestCase):
         medium = nosnik.Nosnik(work / "nowy")
         main = RNS.Identity.from_bytes(medium.identity(medium.unlock(envelopes["stanowisko"])))
         self.assertEqual(card["main"]["lxmf"], nosnik.lxmf_address(main.get_public_key()).hex())
+        self.assertEqual(medium.card(medium.unlock(envelopes["stanowisko"])), card)
         with self.assertRaises(SystemExit):   # paczka na nośniku jest odrzucona
             aplikacja.main(["przygotuj", "--nosnik", str(work / "trzeci"), "--dyzurni", "1",
                             "--paczka", str(work / "trzeci" / "p.json"), "--karta", str(work / "k2.json")])
@@ -620,6 +711,19 @@ class CopiesTest(WithCopies):
         self.assertEqual(payload["tozsamosc"], (self.medium.root / "tozsamosc").read_bytes())
         self.assertEqual(payload["konta"], (self.medium.kit.dir / database.ACCOUNTS).read_bytes())
         self.assertIsNone(durable(self.medium, self.key, "SELECT name FROM sqlite_master WHERE name='kopia'"))
+
+    def test_numbered_link_binding_is_in_the_copy_and_restored_medium(self):
+        link = {"net_id": 100, "root": 5, "ifac": "ab" * 16}
+        self.medium.save_link(self.key, link)
+        self.now += kopie.INTERVAL_S
+        self.tick()
+        path = self.copies.files()[0]
+        _, payload = kopie.Kopie.read(path, self.key)
+        self.assertEqual(payload["wici-link"], (self.medium.root / "wici-link").read_bytes())
+        restored = kopie.restore(path, self.key, Path(self.disk.name) / "restored",
+                                [("dyzurny-1", self.envelopes["dyzurny-1"]),
+                                 ("dyzurny-2", self.envelopes["dyzurny-2"])], self.now)
+        self.assertEqual(restored.link(self.key), link)
 
     def test_failed_copy_is_retried_and_logged_once_without_stopping_reception(self):
         self.tick()   # pierwsza kopia przy starcie; następna za 5 min
@@ -689,6 +793,14 @@ class RecoveryTest(WithCopies):
     def status(self, mid, revision, state):
         return self.reception.call(lambda s: self.reception.wysylka.status(s, self.STATION, mid, revision, state, self.now))
 
+    def test_numbered_receiver_card_survives_copy_restore(self):
+        card = nosnik.receiver_card(bytes(range(64)), bytes(range(64, 128)), 100, 2, 3)
+        self.medium.save_card(self.key, card)
+        copy = self.keep_copy()
+        restored = self.restored(copy, "numbered")
+        self.assertTrue(restored.recovery)
+        self.assertEqual(self.medium.card(self.key), card)
+
     def test_copy_at_nine_status_at_ten_spare_computer_at_ten_to_ten(self):
         content = request()
         self.deliver(self.STATION, content)
@@ -750,6 +862,7 @@ class RecoveryTest(WithCopies):
             self.assertEqual(db.execute("SELECT value FROM settings WHERE key='p'").fetchone(), (wysylka.RECOVERY_S,))
         self.assertEqual(self.actions()[-2:], ["odtworzenie", "odzyskanie_koniec"])
         self.assertIsNone(durable(self.medium, self.key, "SELECT name FROM sqlite_master WHERE name='kopia'"))
+        self.assertEqual(durable(self.medium, self.key, "SELECT blocked FROM env_send_guard WHERE id=1"), (1,))
 
     def test_restore_needs_two_different_officers_and_an_empty_medium(self):
         self.tick()
@@ -904,6 +1017,33 @@ class PanelTest(StationTestCase):
         self.deliver(bytes.fromhex(card["lxmf"]), request())
         view = self.d.view()
         self.assertEqual(view["removed"], [{"source": card["lxmf"], "station": card["name"], "messages": 1}])
+
+    def test_numbered_card_cannot_rebind_station_number(self):
+        second = {"account2": "dyzurny-2", "password2": self.envelopes["dyzurny-2"]}
+        first = station_card(os.urandom(64))
+        first.update(net_id=100, id=4, x25519=first["key"][:64])
+        self.d.trust({"card": first, "fingerprint": first["fingerprint"], **second})
+        other = station_card(os.urandom(64))
+        other.update(net_id=100, id=4, x25519=other["key"][:64])
+        with self.assertRaisesRegex(ValueError, "numer stacji"):
+            self.d.trust({"card": other, "fingerprint": other["fingerprint"], **second})
+        self.d.untrust({"source": first["lxmf"]})
+        with self.assertRaisesRegex(ValueError, "numer stacji"):
+            self.d.trust({"card": other, "fingerprint": other["fingerprint"], **second})
+        with self.assertRaisesRegex(ValueError, "klucz koperty"):
+            self.d.trust({"card": dict(other, id=5, x25519="00" * 32),
+                          "fingerprint": other["fingerprint"], **second})
+
+    def test_numbered_card_and_trust_roll_back_together(self):
+        card = station_card(os.urandom(64))
+        card.update(net_id=100, id=4, x25519=card["key"][:64])
+        self.reception.call(lambda store: store.db.execute(
+            "CREATE TRIGGER refuse_number BEFORE INSERT ON numery BEGIN SELECT RAISE(ABORT, 'fault'); END"))
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.d.trust({"card": card, "fingerprint": card["fingerprint"],
+                          "account2": "dyzurny-2", "password2": self.envelopes["dyzurny-2"]})
+        self.assertEqual(self.reception.call(lambda store: store.db.execute(
+            "SELECT count(*) FROM trusted WHERE source=?", (bytes.fromhex(card["lxmf"]),)).fetchone()), (0,))
 
     def test_node_handover_backup_and_announce(self):
         self.report()
@@ -1385,6 +1525,22 @@ class PackageTest(unittest.TestCase):
             build_stanowisko.library("reticulum", pin, out)
         self.assertEqual(sorted(p.relative_to(out).as_posix() for p in out.rglob("*") if p.is_file()),
                          ["lib/RNS/__init__.py", "licenses/reticulum.txt", "sources/zrodla.tar.gz"])
+
+    def test_native_wheel_stays_with_its_runtime_and_keeps_license(self):
+        import zipfile
+        archive = self.tmp / "cryptography-test.whl"
+        with zipfile.ZipFile(archive, "w") as wheel:
+            wheel.writestr("cryptography/__init__.py", "__version__ = '48.0.1'\n")
+            wheel.writestr("cryptography/hazmat/bindings/_rust.abi3.so", b"native")
+            wheel.writestr("cryptography-48.0.1.dist-info/licenses/LICENSE", b"licence")
+        out = self.tmp / "pakiet"
+        (out / "sources").mkdir(parents=True)
+        with unittest.mock.patch.object(build_stanowisko.usb, "fetch", return_value=archive):
+            build_stanowisko.wheel_library("cryptography", {}, "macos-arm64", out)
+        self.assertEqual((out / "lib-platform/macos-arm64/cryptography/hazmat/bindings/_rust.abi3.so").read_bytes(),
+                         b"native")
+        self.assertEqual((out / "licenses/cryptography-LICENSE").read_bytes(), b"licence")
+        self.assertEqual((out / "sources/cryptography-test.whl").read_bytes(), archive.read_bytes())
 
     def test_library_from_git_is_checked_by_its_commit(self):
         import subprocess

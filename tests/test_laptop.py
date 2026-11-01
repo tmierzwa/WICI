@@ -64,6 +64,25 @@ class ConfigDocTest(unittest.TestCase):
         self.assertEqual(configdoc.check(station_doc()), [])
         self.assertEqual(configdoc.check({"role": "wezel", "ifac": "ab" * 16, "radio": {"profile": "lora-sf7"}}), [])
 
+    def test_numbered_network_binds_receiver_cards(self):
+        network = {"id": 100, "station": 4, "root": 1, "parent": 1, "backup_parent": 0,
+                   "receiver_main": 2, "receiver_backup": 3}
+        main, backup = card(MAIN_KEY), card(BACKUP_KEY)
+        main.update(id=2, net_id=100, x25519=main["key"][:64])
+        backup.update(id=3, net_id=100, x25519=backup["key"][:64])
+        doc = station_doc(network=network, receiver={"main": main, "backup": backup})
+        self.assertEqual(self.fields(doc), [])
+        self.assertEqual(self.fields(dict(doc, network=dict(network, station=1))), ["network"])
+        self.assertEqual(self.fields(dict(doc, network=dict(network, parent=True))), ["network"])
+        self.assertEqual(self.fields(dict(doc, network=dict(network, receiver_backup=2))),
+                         ["network", "receiver.backup.id"])
+        self.assertEqual(self.fields(dict(doc, network=1)), ["network", "receiver.main.id", "receiver.backup.id"])
+        bad = dict(main, net_id=101)
+        self.assertEqual(self.fields(dict(doc, receiver={"main": bad, "backup": backup})), ["receiver.main.id"])
+        root = {"role": "wezel", "ifac": "ab" * 16, "radio": {"profile": "p1"},
+                "network": dict(network, station=1, parent=0)}
+        self.assertEqual(self.fields(root), [])
+
     def test_limits_follow_the_firmware(self):
         self.assertEqual(self.fields(station_doc(addresses=[])), ["addresses"])
         self.assertEqual(self.fields(station_doc(addresses=["a"] * 9)), ["addresses"])
@@ -1559,7 +1578,11 @@ class PackageTest(unittest.TestCase):
         # Aplikacja stanowiska (wici/stanowisko) ma własny pakiet z przypiętymi Reticulum, LXMF i pyserial (PLAN.md, S10).
         allowed = set(sys.stdlib_module_names) | {"wici"}
         for p in self.PACKAGE.rglob("*.py"):
-            extra = {"RNS", "LXMF", "serial"} if "stanowisko" in p.relative_to(self.PACKAGE).parts else set()
+            rel = p.relative_to(self.PACKAGE)
+            extra = {"RNS", "LXMF", "serial", "cryptography"} if (
+                "stanowisko" in rel.parts or rel.as_posix() == "envelope.py") else set()
+            if rel.as_posix() == "envelope.py":
+                self.assertFalse(build_usb.app_file("wici/envelope.py"))
             for node in ast.walk(ast.parse(p.read_text(encoding="utf-8"))):
                 names = [a.name for a in node.names] if isinstance(node, ast.Import) else \
                     [node.module] if isinstance(node, ast.ImportFrom) and node.level == 0 else []

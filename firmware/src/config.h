@@ -39,6 +39,17 @@ struct Receiver {
     uint8_t lxmf[HASH] = {};
     uint8_t key[KEY] = {};
     uint8_t sa1[HASH] = {};                // cel "wici.sa1" z klucza
+    uint16_t number = 0;                   // numer tożsamości w sieci D21; 0 w kontrakcie Reticulum
+};
+
+struct Network {
+    uint16_t id = 0;                       // 0 = kontrakt Reticulum bez numerów D21
+    uint16_t station = 0;                  // numer tego urządzenia na łączu
+    uint16_t root = 0;                     // numer radiowego węzła stanowiska
+    uint16_t parent = 0;                   // 0 tylko dla root
+    uint16_t backupParent = 0;             // 0 = brak
+    uint16_t receiverMain = 0;            // tożsamości koperty, różne od numeru root
+    uint16_t receiverBackup = 0;
 };
 
 struct Config {
@@ -50,6 +61,7 @@ struct Config {
     uint8_t phraseCount = 0;
     char phrases[PHRASES][LANGS][PHRASE_MAX + 1] = {};
     Receiver receivers[2];
+    Network network;
     uint8_t ifac[HASH] = {};
     char profile[PROFILE_MAX + 1] = {};
 };

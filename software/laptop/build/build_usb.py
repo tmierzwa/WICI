@@ -238,11 +238,12 @@ def stdlib_from_pbs(archive, tmp):
 
 def app_file(rel):
     """Whether a file of wici/ goes into wici.pyz: no caches, dotfiles or editor and patch leftovers, and not
-    the receiving station application (wici/stanowisko: Reticulum and LXMF, its own package, PLAN.md S10)."""
+    the receiving station application and its cryptography-backed envelope (own package, PLAN.md S10)."""
     parts = PurePosixPath(rel).parts
     name = parts[-1]
     return not (any(p.startswith(".") or p == "__pycache__" for p in parts) or name.startswith("#")
                 or parts[:2] == ("wici", "stanowisko")
+                or parts == ("wici", "envelope.py")
                 or name.endswith(("~", ".pyc", ".swp", ".bak", ".orig", ".rej", ".tmp")))
 
 

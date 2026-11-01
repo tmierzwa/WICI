@@ -55,6 +55,7 @@ public:
     size_t buffered() const { return count_; }
     // Pakiet do komputera; false: port zamknięty, pakiet za długi albo brak miejsca (liczone).
     bool send(const uint8_t* data, size_t length);
+    bool canSend(const uint8_t* data, size_t length) const;
     // Bajty do zapisu w CDC: ciągły fragment bufora (najpierw zaległa ramka gotowości) i consume()
     // z liczbą bajtów, które port przyjął.
     const uint8_t* output(size_t& length);

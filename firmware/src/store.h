@@ -87,7 +87,10 @@ enum class Stage : uint8_t { SAVED, SENDING, DELIVERED, RECEIVED, CANCELLED };
 enum Origin : uint8_t { BUTTONS = 0, USB = 1 };
 // SENT_ONCE: `nadane` (zapis jednokrotny przed pierwszym przekazaniem do stosu); READ_MAX: STATUS
 // rewizji r_max przyjęty (alarm brak_odczytu); BACKUP: liczniki i wysyłka dotyczą tożsamości zapasowej.
-enum RequestFlag : uint8_t { SENT_ONCE = 0x01, READ_MAX = 0x02, BACKUP = 0x04 };
+enum RequestFlag : uint8_t {
+    SENT_ONCE = 0x01, READ_MAX = 0x02, BACKUP = 0x04,
+    EXCEPTION_STEP = 0x08, EXCEPTION_MASK = 0x18  // 0..3 silent-exception transmissions
+};
 
 struct RevisionTime {
     uint16_t revision = 0;

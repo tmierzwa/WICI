@@ -1419,12 +1419,14 @@ void rxTaskCycle() {
 struct RamStorage : journal::Storage {
     std::vector<uint8_t> bytes = std::vector<uint8_t>(512 * 1024, 0xFF);
     bool fail = false;  // zapis do FRAM nie przechodzi
+    uint32_t writeDelayUs = 0;
     bool read(uint32_t address, uint8_t* data, size_t count) override {
         memcpy(data, &bytes[address], count);
         return true;
     }
     bool write(uint32_t address, const uint8_t* data, size_t count) override {
         if (fail) return false;
+        fakeUs += writeDelayUs;
         memcpy(&bytes[address], data, count);
         return true;
     }
@@ -1518,6 +1520,7 @@ struct FakeLora : radiolink::Driver {
 FakeLora radio;
 measure::Bench bench(radio, 3, -1);
 std::vector<uint8_t> received;
+int legacyRx = 0;
 int txDone = -1;
 uint32_t uptime() { return millis() / 1000; }
 
@@ -1553,7 +1556,10 @@ const char* text(const char* error) { return error ? error : "-"; }
 int main() {
     dj.begin();
     bench.attach(&dj, uptime);
-    bench.onDatagram([](const uint8_t* data, size_t length, void*) { received.assign(data, data + length); }, nullptr);
+    bench.onDatagram([](const uint8_t* data, size_t length, void*) {
+        received.assign(data, data + length);
+        ++legacyRx;
+    }, nullptr);
     bench.onTxDone([](bool ok, void*) { txDone = ok; }, nullptr);
     fakeUs = 1000000;
 
@@ -1852,6 +1858,90 @@ int main() {
     const int afterLink = radio.discards - discards0;
     bench.prep = false;
     printf("DISCARD %d %d %d %d %d\n", txDone, afterTx, afterStop, afterTest, afterLink);
+
+    // WICI-Link uses one unwrapped LoRa frame. It still passes through CAD and
+    // durable airtime debt; receiving passes the exact bytes to the authenticator.
+    bench.stop();
+    const bool noRawHandler = bench.setRawLora(true);
+    uint32_t rawReceivedMs = 0;
+    bench.onRawFrame([](const radiolink::Frame& frame, void* ctx) {
+        received.assign(frame.bytes, frame.bytes + frame.length);
+        *static_cast<uint32_t*>(ctx) = frame.receivedMs;
+    }, &rawReceivedMs);
+    const bool rawEnabled = bench.setRawLora(true);
+    const char* rawRx = bench.linkRxStart();
+    const bool lateSwitch = bench.setRawLora(false);
+    const std::vector<uint8_t> raw = datagram(255, 0x41);
+    const std::vector<uint8_t> shortRaw = datagram(18, 0x42);
+    const char* shortError = bench.linkSend(shortRaw.data(), shortRaw.size(), true);
+    const char* longError = bench.linkSend(d508.data(), d508.size(), true);
+    radio.sent.clear();
+    radio.ops.clear();
+    txDone = -1;
+    const char* rawError = bench.linkSend(raw.data(), raw.size(), true);
+    untilDone(1000);
+    printf("RAW_TX %d %d %s %d %s|%s|%s %zu %d %lu\n", noRawHandler, rawEnabled, text(rawRx), lateSwitch,
+           shortError, longError, text(rawError), radio.sent.size(),
+           radio.sent.size() == 1 && radio.sent[0] == raw,
+           static_cast<unsigned long>(dj.debt().a));
+    settle();
+    received.clear();
+    radiolink::Frame rawFrame;
+    rawFrame.length = raw.size();
+    memcpy(rawFrame.bytes, raw.data(), raw.size());
+    rawFrame.receivedMs = millis();
+    const int legacyBeforeRaw = legacyRx;
+    radio.rxQueue.push_back(rawFrame);
+    runFor(10);
+    printf("RAW_RX %d %zu %d %d %d\n", bench.rawLora(), received.size(), received == raw,
+           rawReceivedMs == rawFrame.receivedMs, legacyRx == legacyBeforeRaw);
+    received.clear();
+    const uint32_t badBefore = bench.link().rxBad;
+    rawFrame.length = 18;
+    radio.rxQueue.push_back(rawFrame);
+    runFor(10);
+    printf("RAW_SHORT %zu %lu\n", received.size(),
+           static_cast<unsigned long>(bench.link().rxBad - badBefore));
+    // HACK bypasses the ordinary 50 ms window and outstanding debt, but
+    // reserves its own airtime plus debt before the radio starts transmitting.
+    uint8_t hack[19] = {0x48, 0, 100, 0, 2, 0, 4, 1};
+    radio.ops.clear();
+    radio.sent.clear();
+    const bool hackFirst = bench.linkSendHack(hack, sizeof(hack), millis());
+    printf("HACK_FIRST %d %s %lu %lu\n", hackFirst, ops().c_str(),
+           static_cast<unsigned long>(dj.debt().a),
+           static_cast<unsigned long>(bench.debtRemainingMs()));
+    txDone = -1;
+    const char* waitingData = bench.linkSend(raw.data(), raw.size(), true);
+    const bool hackSecond = bench.linkSendHack(hack, sizeof(hack), millis());
+    const uint32_t debtWithQueue = dj.debt().a;
+    const size_t beforeQueuedData = radio.sent.size();
+    untilDone(3000);
+    printf("HACK_QUEUE %s %d %lu %zu %d %zu\n", text(waitingData), hackSecond,
+           static_cast<unsigned long>(debtWithQueue), beforeQueuedData, txDone, radio.sent.size());
+    bench.silence = true;
+    const size_t beforeRefusal = radio.sent.size();
+    const bool silentHack = bench.linkSendHack(hack, sizeof(hack), millis());
+    bench.silence = false;
+    const bool lateHack = bench.linkSendHack(hack, sizeof(hack), millis() - 201);
+    const uint8_t malformedHack[19] = {};
+    const bool malformedSent = bench.linkSendHack(malformedHack, sizeof(malformedHack), millis());
+    printf("HACK_REFUSE %d %d %d %d\n", silentHack, lateHack, malformedSent,
+           radio.sent.size() == beforeRefusal);
+    radio.cadBusy = 1;
+    const bool busyHack = bench.linkSendHack(hack, sizeof(hack), millis());
+    ram.fail = true;
+    const bool noDebtHack = bench.linkSendHack(hack, sizeof(hack), millis());
+    ram.fail = false;
+    printf("HACK_FAIL %d %d %d %d\n", busyHack, noDebtHack,
+           radio.sent.size() == beforeRefusal, radio.rxActive);
+    ram.writeDelayUs = 100000;
+    const bool slowHack = bench.linkSendHack(hack, sizeof(hack), millis());
+    ram.writeDelayUs = 0;
+    printf("HACK_SLOW %d %d %d\n", slowHack, radio.sent.size() == beforeRefusal, radio.rxActive);
+    bench.restoreDebt(bench.maxDebtMs());
+    const bool fullDebtHack = bench.linkSendHack(hack, sizeof(hack), millis());
+    printf("HACK_FULL_DEBT %d %d\n", fullDebtHack, radio.sent.size() == beforeRefusal);
     return 0;
 }
 """
@@ -2514,6 +2604,20 @@ class LoraBenchTests(unittest.TestCase):
         self.assertEqual(line(self.out, "AUTORX"), "AUTORX 1 1 1")
         self.assertEqual(line(self.out, "NOP1"), "NOP1 no P1 link on this radio|no P1 link on this radio")
         self.assertEqual(line(self.out, "TOOBIG"), "TOOBIG datagram 1..508 B")
+
+    def test_raw_wici_frame_uses_one_radio_packet_and_durable_debt(self):
+        self.assertEqual(line(self.out, "RAW_TX"),
+                         "RAW_TX 0 1 - 0 raw frame 19..255 B|raw frame 19..255 B|- 1 1 5028")
+        self.assertEqual(line(self.out, "RAW_RX"), "RAW_RX 1 255 1 1 1")
+        self.assertEqual(line(self.out, "RAW_SHORT"), "RAW_SHORT 0 1")
+
+    def test_raw_hack_preempts_queued_data_and_stacks_durable_debt(self):
+        self.assertEqual(line(self.out, "HACK_FIRST"), "HACK_FIRST 1 prep:0 cad:0 send:923 rx 923 852")
+        self.assertEqual(line(self.out, "HACK_QUEUE"), "HACK_QUEUE - 1 1775 2 1 3")
+        self.assertEqual(line(self.out, "HACK_REFUSE"), "HACK_REFUSE 0 0 0 1")
+        self.assertEqual(line(self.out, "HACK_FAIL"), "HACK_FAIL 0 0 1 1")
+        self.assertEqual(line(self.out, "HACK_SLOW"), "HACK_SLOW 0 1 1")
+        self.assertEqual(line(self.out, "HACK_FULL_DEBT"), "HACK_FULL_DEBT 0 1")
 
     def test_transmit_order_debt_window_cad_debt_write_frames_receive(self):
         # The debt in the journal at each step: 0 up to the free CAD, 12 x (419 + 419) ms from frame 1 on.

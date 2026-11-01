@@ -85,12 +85,16 @@ def normalize(doc):
         out["receiver"] = {k: ({f: v.strip().lower() if isinstance(v, str) else v for f, v in c.items()}
                                if isinstance(c, dict) else c) for k, c in receiver.items()}
     if out.get("role") == "wezel":
-        out = {k: out[k] for k in ("role", "ifac", "radio") if k in out}
+        out = {k: out[k] for k in ("role", "ifac", "radio", "network") if k in out}
     return out
 
 
 def _hex(value, length):
     return isinstance(value, str) and len(value) == length and HEX.fullmatch(value) is not None
+
+
+def _number(value, zero=False):
+    return type(value) is int and (0 if zero else 1) <= value <= 0xFFFE
 
 
 def check(doc):
@@ -99,7 +103,7 @@ def check(doc):
         return [("", "dokument nie jest obiektem JSON")]
     problems = []
     role = doc.get("role")
-    allowed = {"role", "ifac", "radio"} | ({"addresses", "receiver", "stations", "phrases"} if role == "stacja" else set())
+    allowed = {"role", "ifac", "radio", "network"} | ({"addresses", "receiver", "stations", "phrases"} if role == "stacja" else set())
     for key in sorted(set(doc) - allowed):
         problems.append((key, "pole nieznane albo niepotrzebne dla tej roli"))
     if role not in ("stacja", "wezel"):
@@ -109,6 +113,22 @@ def check(doc):
     radio = doc.get("radio")
     if not (isinstance(radio, dict) and set(radio) == {"profile"} and radio["profile"] in PROFILES):
         problems.append(("radio", "wybierz profil radiowy"))
+    network = doc.get("network")
+    if network is not None:
+        required = {"id", "station", "root", "parent", "backup_parent", "receiver_main", "receiver_backup"}
+        if not isinstance(network, dict) or set(network) != required or any(
+                not _number(network.get(field), field in ("parent", "backup_parent")) for field in required):
+            problems.append(("network", "niepoprawne numery sieci, stacji, odbiorców lub tras"))
+        else:
+            n = network
+            distinct = len({n["station"], n["root"], n["receiver_main"], n["receiver_backup"]}) == 4 if role == "stacja" else len({n["root"], n["receiver_main"], n["receiver_backup"]}) == 3
+            route_ok = ((n["station"] == n["root"] and n["parent"] == n["backup_parent"] == 0)
+                        if role == "wezel" else
+                        (n["station"] != n["root"] and n["parent"] not in (0, n["station"], n["receiver_main"], n["receiver_backup"])
+                         and n["backup_parent"] not in (n["station"], n["receiver_main"], n["receiver_backup"])
+                         and (n["backup_parent"] == 0 or n["backup_parent"] != n["parent"])))
+            if not distinct or not route_ok:
+                problems.append(("network", "numery muszą być rozłączne, a trasa prowadzić do innego węzła"))
     if role != "stacja":
         return problems
     addresses = doc.get("addresses")
@@ -140,14 +160,22 @@ def check(doc):
     else:
         for which in ("main", "backup"):
             card = receiver[which]
-            if not (isinstance(card, dict) and set(card) == {"lxmf", "key"}):
-                problems.append((f"receiver.{which}", "tożsamość ma pola lxmf i key"))
+            expected = {"lxmf", "key", "id", "net_id", "x25519"} if network is not None else {"lxmf", "key"}
+            if not (isinstance(card, dict) and set(card) == expected):
+                problems.append((f"receiver.{which}", "niepoprawne pola tożsamości odbiorcy"))
             elif not _hex(card["key"], 128):
                 problems.append((f"receiver.{which}.key", "klucz publiczny to 128 cyfr szesnastkowych"))
             elif not _hex(card["lxmf"], 32):
                 problems.append((f"receiver.{which}.lxmf", "adres LXMF to 32 cyfry szesnastkowe"))
             elif destination(bytes.fromhex(card["key"]), "lxmf.delivery").hex() != card["lxmf"]:
                 problems.append((f"receiver.{which}.lxmf", "adres LXMF nie należy do tego klucza (błąd przepisania?)"))
+            elif network is not None and (not _hex(card["x25519"], 64) or card["x25519"] != card["key"][:64]):
+                problems.append((f"receiver.{which}.x25519", "klucz koperty nie należy do tożsamości odbiorcy"))
+            elif network is not None and (not _number(card["id"]) or not _number(card["net_id"]) or
+                                          not isinstance(network, dict) or
+                                          card["net_id"] != network.get("id") or
+                                          card["id"] != network.get("receiver_" + which)):
+                problems.append((f"receiver.{which}.id", "numer i sieć muszą zgadzać się z planem"))
         if not any(f.startswith("receiver") for f, _ in problems) and receiver["main"]["lxmf"] == receiver["backup"]["lxmf"]:
             problems.append(("receiver.backup", "tożsamość zapasowa musi być inna niż główna"))
     return problems

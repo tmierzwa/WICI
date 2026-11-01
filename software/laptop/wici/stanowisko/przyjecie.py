@@ -58,6 +58,20 @@ CREATE TABLE IF NOT EXISTS karty (
     address TEXT NOT NULL,
     fingerprint TEXT NOT NULL
 );
+-- Numbered WICI envelope identities; retained after removing trust so a number cannot
+-- silently be assigned to a different key on the same medium.
+CREATE TABLE IF NOT EXISTS numery (
+    net_id INTEGER NOT NULL,
+    station INTEGER NOT NULL,
+    source BLOB NOT NULL,
+    public_key BLOB NOT NULL,
+    PRIMARY KEY (net_id, station),
+    UNIQUE (net_id, source)
+);
+CREATE TABLE IF NOT EXISTS env_send_guard (
+    id INTEGER PRIMARY KEY CHECK(id=1),
+    blocked INTEGER NOT NULL CHECK(blocked=1)
+);
 -- Wpisy decyzji, które nie idą radiem: stan 3 ze źródłem i czasem potwierdzenia, stan 4 z adresatem i czasem.
 CREATE TABLE IF NOT EXISTS decyzje (
     id INTEGER PRIMARY KEY,
@@ -240,6 +254,10 @@ class Przyjecie:
             p = wysylka.setting(db, "p", 0) + wysylka.RECOVERY_S * (1 + recoveries)
             with db:
                 db.execute("INSERT OR REPLACE INTO settings VALUES('p', ?)", (p,))
+                # A restored SQLite snapshot can be older than a transmitted WICI
+                # counter reservation. The legacy recovery offset protects SA1 event
+                # numbers, but cannot prove a nonce upper bound for the same key.
+                db.execute("INSERT OR REPLACE INTO env_send_guard VALUES(1,1)")
                 db.execute("INSERT INTO dziennik(at, account, op, detail) VALUES(?,?,?,?)",
                            (self.clock(), account, "odzyskanie_koniec",
                             f"kopia z {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(copy_at))}, "
@@ -291,6 +309,113 @@ class Przyjecie:
     def deliver(self, source, content):
         """A REQUEST or TEST with a checked signature from source (16 B "lxmf.delivery" hash)."""
         self.jobs.put(lambda: self._receive(source, content))
+
+    def receive_envelope_frame(self, net_id, wire):
+        """Authenticate a numbered WICI frame and durably admit it before the caller may HACK.
+
+        Runs on the database thread; a wrong network, unregistered key, tag, SA1 content,
+        or failed snapshot raises and must leave the link frame unacknowledged.
+        """
+        return self.call(lambda store: self._receive_envelope_frame(net_id, wire))
+
+    def seal_envelope_message(self, net_id, station_id, content, max_payload=236):
+        """Reserve a durable counter and seal an outbound SA1 message on the DB thread.
+
+        The caller still owns bearer selection and transmission. This method refuses
+        to produce ciphertext while recovery is active or the old counter boundary is
+        uncertain, including after restoration from a computer-side copy.
+        """
+        return self.call(lambda store: self._seal_envelope_message(net_id, station_id, content, max_payload))
+
+    def send_wici(self, bearer, dest, content):
+        """Called by Wysylka on the DB thread; reserve the nonce before KISS TX."""
+        if self.recovery or not bearer.status(self.clock())["online"]:
+            return None
+        row = self.store.db.execute(
+            "SELECT n.station FROM numery n JOIN trusted t ON t.source=n.source "
+            "WHERE n.net_id=? AND n.source=?", (bearer.network, dest)).fetchone()
+        if row is None:
+            return None
+        frames = self._seal_envelope_message(bearer.network, row[0], content, 236)
+        return bearer.send_frames(frames)
+
+    def _seal_envelope_message(self, net_id, station_id, content, max_payload):
+        from cryptography.hazmat.primitives.asymmetric import x25519
+        from .. import envelope
+        from . import envelope_sender
+
+        if self.recovery:
+            raise envelope.EnvelopeError("recovery mode cannot send WICI envelopes")
+        wzorzec.decode_message(content)  # refuse malformed SA1 before consuming a nonce
+        card = self.medium.card(self.key)
+        private = self.medium.identity(self.key)
+        if not card or card.get("v") != 2 or len(private) != 64:
+            raise envelope.EnvelopeError("numbered receiver identity is unavailable")
+        own_public = x25519.X25519PrivateKey.from_private_bytes(private[:32]).public_key().public_bytes_raw().hex()
+        active = next((identity for identity in (card.get("main"), card.get("backup"))
+                       if isinstance(identity, dict) and identity.get("x25519") == own_public), None)
+        if active is None or active.get("net_id") != net_id:
+            raise envelope.EnvelopeError("receiver identity is not bound to this network")
+        row = self.store.db.execute("SELECT n.public_key FROM numery n JOIN trusted t ON t.source=n.source "
+                                    "WHERE n.net_id=? AND n.station=?",
+                                    (net_id, station_id)).fetchone()
+        if row is None or len(row[0]) != 64:
+            raise envelope.EnvelopeError("unknown numbered station")
+        if not hasattr(self, "envelope_sender"):
+            self.envelope_sender = envelope_sender.Sender(self.store.db, self._save)
+        return self.envelope_sender.seal(private[:32], row[0][:32], net_id, active["id"], station_id,
+                                         content, max_payload)
+
+    def _receive_envelope_frame(self, net_id, wire):
+        from cryptography.hazmat.primitives.asymmetric import x25519
+        from .. import envelope
+        from . import envelope_inbox
+
+        card = self.medium.card(self.key)
+        if not card or card.get("v") != 2 or type(net_id) is not int or not 1 <= net_id <= 0xFFFE:
+            raise envelope.EnvelopeError("receiver medium has no numbered card for this network")
+        private = self.medium.identity(self.key)
+        if len(private) != 64:
+            raise envelope.EnvelopeError("receiver private identity has wrong length")
+        own_public = x25519.X25519PrivateKey.from_private_bytes(private[:32]).public_key().public_bytes_raw().hex()
+        active = next((identity for identity in (card.get("main"), card.get("backup"))
+                       if isinstance(identity, dict) and identity.get("x25519") == own_public), None)
+        if active is None or active.get("net_id") != net_id:
+            raise envelope.EnvelopeError("receiver identity is not bound to the network card")
+        raw = bytes(wire)
+        if len(raw) < envelope.OVERHEAD or len(raw) > envelope.MAX_FRAME:
+            raise envelope.EnvelopeError("invalid envelope length")
+        sender, recipient = int.from_bytes(raw[1:3], "big"), int.from_bytes(raw[3:5], "big")
+        if recipient != active.get("id"):
+            raise envelope.EnvelopeError("wrong receiver number")
+        station = self.store.db.execute("SELECT source, public_key FROM numery WHERE net_id=? AND station=?",
+                                        (net_id, sender)).fetchone()
+        if station is None or len(station[1]) != 64:
+            raise envelope.EnvelopeError("unknown station number")
+        source, station_key = station
+        key = envelope.derive_key(private[:32], station_key[:32], net_id, sender, recipient, own_id=recipient)
+        part = envelope.open_part(key, raw)
+        if part.message_type != envelope.TYPE_SA1:
+            raise envelope.EnvelopeError("expected SA1 envelope")
+        if not hasattr(self, "envelope_inboxes"):
+            self.envelope_inboxes = {}
+        inbox = self.envelope_inboxes.get(net_id)
+        if inbox is None:
+            inbox = envelope_inbox.Inbox(self.store.db, net_id, self._save)
+            self.envelope_inboxes[net_id] = inbox
+        def accept(content):
+            value = wzorzec.decode_message(content)
+            self.store.db.execute("UPDATE removed SET messages = messages + 1 WHERE source=?", (source,))
+            self.store.receive_in_transaction(source, content, True)
+            self.store.db.execute(
+                "INSERT OR IGNORE INTO received_at SELECT source, id, revision, ? FROM received "
+                "WHERE source=? AND id=? AND revision=?", (self.clock(), source, value[2], value[3]))
+            self.wysylka.accepted(self.store.db, source, value[2], value[3])
+
+        # The KISS caller must be able to answer HACK inside 200 ms. The normal
+        # one-second tick sends RECEIVED after the durable snapshot, without
+        # putting LXMF path discovery or copy work on the hop-ACK path.
+        return inbox.receive(part, int(self.clock()), accept)
 
     def _receive(self, source, content):
         at = self.clock()

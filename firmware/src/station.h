@@ -20,9 +20,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "bearer.h"
 #include "store.h"
 
 namespace station {
+
+static_assert(store::HASH == bearer::LEGACY_ADDRESS, "Reticulum bearer address must match the station store");
 
 constexpr size_t IN_FLIGHT = 2;                 // własne wiadomości przekazane naraz do stosu
 constexpr uint32_t ACK_TIMEOUT_S = 60;          // limit potwierdzenia transportowego (bez kolejki radiowej)
@@ -42,21 +45,14 @@ constexpr uint32_t CONFIRM_ALARM_S[3] = {6 * 3600, 3600, 900};  // brak_potwierd
 constexpr const char* RESOLVED_TEXT = "potrzeba ustała";        // POTRZEBA USTAŁA (fraza domyślna)
 
 // Usługi stacji dla warstwy aplikacji (main.cpp albo program testowy).
-struct Services {
+struct Services : bearer::LegacyBearer {
     virtual ~Services() = default;
     virtual bool silence() = 0;                           // cisza radiowa (przełącznik albo panel)
     virtual bool silenceSwitch() = 0;                     // przełącznik CISZA w położeniu „cisza”
-    virtual bool radioReady() = 0;                        // stos i interfejs radiowy nadają
-    virtual bool busy() = 0;                              // kolejka radiowa pełna
-    // Pakiet do celu `to` z potwierdzeniem transportowym; uchwyt potwierdzenia albo 0 (cel nieznany,
-    // interfejs odmówił). Wynik przychodzi do Station::receipt.
-    virtual uint32_t send(const uint8_t to[store::HASH], const uint8_t* data, size_t length, uint32_t timeoutS) = 0;
-    // Stos przyjmie teraz pakiet do celu `to` (cel znany, miejsce w kolejce, IFAC); przy nieznanym celu
-    // wysyła zapytanie o trasę. Pytanie przed zapisem `nadane`: odmowa nie blokuje ANULUJ WYSYŁKĘ.
-    virtual bool sendReady(const uint8_t to[store::HASH]) = 0;
     virtual void randomBytes(uint8_t* out, size_t count) = 0;
     virtual void log(const char* text) = 0;
-    virtual void address(uint8_t out[store::HASH]) = 0;   // własny cel "wici.sa1"
+    virtual bool numberedReady(uint16_t, uint16_t) { return false; }
+    virtual uint32_t sendNumbered(uint16_t, uint16_t, const uint8_t*, size_t, uint32_t, bool) { return 0; }
     virtual void changed() {}                             // odświeżenie ekranu
 };
 
@@ -103,6 +99,11 @@ public:
     void receipt(uint32_t handle, bool delivered);
     // Pakiet do celu "wici.sa1" stacji: true = rozstrzygnięty (stos wysyła dowód).
     bool received(const uint8_t* data, size_t length);
+    // SA1 plaintext from an authenticated numbered envelope. `sender` and
+    // `recipient` are checked against the active numbered receiver and this
+    // station before any state change. false forbids the link-layer HACK.
+    bool receivedEnvelope(uint16_t network, uint16_t sender, uint16_t recipient,
+                          const uint8_t* content, size_t length);
     // Ostatni pakiet z received() dotyczył zgłoszenia z wyjątkiem ciszy (jego dowód może wyjść w ciszy).
     bool exceptionTraffic() const { return exceptionTraffic_; }
     const Stats& stats() const { return stats_; }
@@ -150,6 +151,7 @@ private:
         uint16_t revision = 0;
         uint32_t handle = 0;
         uint32_t sentS = 0;
+        bool exception = false;
     };
     bool transmit(uint16_t slot);
     void finishFlight(Flight& f, bool delivered);
@@ -157,6 +159,7 @@ private:
     const store::RequestIndex* exceptionEntry() const;   // wpis rejestru z wyjątkiem ciszy albo nullptr
     bool due(const store::RequestIndex& r) const;
     bool handleOwn(const sa1::Message& m, const uint8_t id[store::HASH], const char* wire, size_t wireLength);
+    bool acceptMessage(const sa1::Message& m, const char* wire, size_t wireLength);
     bool handleBulletin(const sa1::Message& m, const uint8_t id[store::HASH], const char* wire, size_t wireLength);
     int inboxSlot();
     bool addMessage(store::Tx& tx, const sa1::Message& m, const uint8_t id[store::HASH], const char* wire, size_t wireLength);

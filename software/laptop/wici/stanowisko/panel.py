@@ -264,6 +264,13 @@ class Dyzur:
             key = lxmf = b""
         if len(key) != 64 or nosnik.lxmf_address(key) != lxmf:
             raise ValueError("karta stacji uszkodzona: adres nie należy do klucza")
+        numbered = any(name in card for name in ("net_id", "id", "x25519"))
+        if numbered:
+            net_id, station_id = card.get("net_id"), card.get("id")
+            if (type(net_id) is not int or type(station_id) is not int or
+                    not 1 <= net_id <= 0xFFFE or not 1 <= station_id <= 0xFFFE or
+                    card.get("x25519") != key[:32].hex()):
+                raise ValueError("karta stacji ma niespójny numer sieci albo klucz koperty")
         typed = "".join(str(body.get("fingerprint", "")).split()).lower()
         if typed != fingerprint(key).replace(" ", ""):
             raise ValueError("odcisk nie zgadza się z kartą: porównaj z ekranem stacji")
@@ -271,8 +278,17 @@ class Dyzur:
         name = station_name(key)
 
         def add(store):
-            store.add_trusted(lxmf, key, (user, other))
+            if numbered:
+                existing = store.db.execute("SELECT source, public_key FROM numery WHERE net_id=? AND station=?",
+                                            (net_id, station_id)).fetchone()
+                other_binding = store.db.execute("SELECT station, public_key FROM numery WHERE net_id=? AND source=?",
+                                                 (net_id, lxmf)).fetchone()
+                if (existing and existing != (lxmf, key)) or (other_binding and other_binding != (station_id, key)):
+                    raise ValueError("numer stacji jest już związany z innym kluczem lub adresem")
             with store.db:
+                store.add_trusted_in_transaction(lxmf, key, (user, other))
+                if numbered:
+                    store.db.execute("INSERT OR IGNORE INTO numery VALUES(?,?,?,?)", (net_id, station_id, lxmf, key))
                 store.db.execute("INSERT OR REPLACE INTO karty VALUES(?,?,?,?)",
                                  (lxmf, name, json.dumps(address, ensure_ascii=False), fingerprint(key)))
             self._logged(store, user, "zaufana_dodana", f"zgoda {user} i {other}", lxmf)

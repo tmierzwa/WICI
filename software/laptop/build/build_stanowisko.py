@@ -10,7 +10,8 @@ by pip), but no START programs, keys/ or export/. It holds:
     library without tests, Tk and IDLE (Reticulum loads modules by name, so a static search like the USB
     package's would be fragile; the station package has no FAT32 size budget);
   * lib/: Reticulum e40191b and LXMF c3ff2d6 fetched with git at the pinned commit and checked by its id
-    (like firmware/tools/stack_deps.py), pyserial 3.5 from PyPI with a pinned SHA-256 (stanowisko.json);
+    (like firmware/tools/stack_deps.py), pyserial 3.5 and pure-Python pycparser from PyPI;
+  * lib-platform/: hash-pinned cryptography 48.0.1 and cffi 2.0.0 wheels for each Python 3.14 runtime;
   * app/wici/: the application as files, with the reference model next to wzorzec.py;
   * stanowisko.sh, stanowisko.cmd: `python -m wici.stanowisko` with the interpreter of the system;
   * licenses/ and sources/ (archives of the library sources: `git archive` of the commit, pyserial as downloaded).
@@ -27,12 +28,13 @@ import sys
 import tarfile
 import tempfile
 import zipfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import build_usb as usb
 
 HERE = usb.HERE
 LIBS = json.loads((HERE / "stanowisko.json").read_text(encoding="utf-8"))["libraries"]
+WHEELS = json.loads((HERE / "stanowisko.json").read_text(encoding="utf-8"))["wheels"]
 KIND = "wici-stanowisko"
 # Części biblioteki standardowej bez znaczenia dla aplikacji stanowiska: testy, Tk, IDLE i narzędzia instalacji.
 SKIP = {"test", "tests", "idle_test", "idlelib", "tkinter", "turtledemo", "ensurepip", "lib2to3", "__phello__",
@@ -105,6 +107,29 @@ def library(name, pin, out):
     shutil.copyfile(archive, out / "sources" / archive.name)
 
 
+def wheel_library(name, pin, target, out):
+    """Unpack a hash-pinned wheel under the matching runtime path; retain licence and wheel source."""
+    archive = usb.fetch(pin, f"{name}-{target}")
+    destination = out / "lib" if target == "all" else out / "lib-platform" / target
+    licensed = False
+    with zipfile.ZipFile(archive) as wheel:
+        for item in wheel.infolist():
+            path = PurePosixPath(item.filename)
+            if item.is_dir() or path.is_absolute() or ".." in path.parts:
+                continue
+            if any(part.endswith(".dist-info") for part in path.parts):
+                if "LICENSE" in path.name.upper():
+                    usb.write(out / "licenses" / f"{name}-{path.name}", wheel.read(item))
+                    licensed = True
+                continue
+            if any(part.endswith(".data") for part in path.parts):
+                sys.exit(f"{name}: unsupported wheel data directory {path}")
+            usb.write(destination / path, wheel.read(item))
+    if not licensed:
+        sys.exit(f"{name}: wheel has no licence")
+    shutil.copyfile(archive, out / "sources" / archive.name)
+
+
 def application(out):
     """wici/ as files (the station package also runs the laptop modules it imports), and the reference model."""
     for p in sorted((usb.LAPTOP / "wici").rglob("*")):
@@ -124,7 +149,8 @@ def runtimes(out, names, paths):
         else:
             usb.unpack_pbs(n, paths[n], out)
             pth = out / "runtime" / n / "bin" / f"python{usb.MINOR}._pth"
-            pth.write_text(pth.read_text(encoding="utf-8") + "../../../app\n../../../lib\n", encoding="utf-8")
+            pth.write_text(pth.read_text(encoding="utf-8") + f"../../../lib-platform/{n}\n../../../app\n../../../lib\n",
+                           encoding="utf-8")
 
 
 def unpack_windows(archive, out):
@@ -137,7 +163,8 @@ def unpack_windows(archive, out):
                 usb.write(out / "licenses" / "python-windows.txt", z.read(info))
             elif not info.filename.endswith(("._pth", f"python{usb.TAG}.zip")) and not info.is_dir():
                 usb.write(dest / info.filename, z.read(info))
-    usb.write(dest / f"python{usb.TAG}._pth", f"..\\{usb.STDLIB_ZIP}\r\n.\r\n..\\..\\app\r\n..\\..\\lib\r\n".encode())
+    usb.write(dest / f"python{usb.TAG}._pth", (f"..\\{usb.STDLIB_ZIP}\r\n.\r\n..\\..\\lib-platform\\windows-amd64\r\n"
+                                                 "..\\..\\app\r\n..\\..\\lib\r\n").encode())
 
 
 def self_check(out, names):
@@ -148,9 +175,10 @@ def self_check(out, names):
         usb.log("sprawdzenie pominięte: pakiet nie ma środowiska tego systemu")
         return
     python = out / "runtime" / ("windows/python.exe" if host == "windows-amd64" else f"{host}/bin/python{usb.MINOR}")
-    code = ("import RNS, LXMF, serial, wici.stanowisko.__main__, wici.stanowisko.zamkniecie\n"
+    code = ("import RNS, LXMF, serial, cryptography, cffi, pycparser, wici.envelope, wici.stanowisko.__main__, wici.stanowisko.zamkniecie\n"
             "from RNS.Cryptography import Provider\n"
             "assert Provider.backend() == 'internal', Provider.backend()\n"
+            "assert cryptography.__version__ == '48.0.1'\n"
             "print('stos', RNS.__version__ if hasattr(RNS, '__version__') else '', serial.VERSION)\n")
     subprocess.run([str(python), "-c", code], check=True)
 
@@ -163,7 +191,7 @@ def build(out, names, archives=None):
         if not previous.is_file() or json.loads(previous.read_text(encoding="utf-8")).get("kind") != KIND:
             sys.exit(f"{out}: to nie jest poprzednia budowa pakietu stanowiska; podaj pusty albo nowy katalog --out")
         shutil.rmtree(out)
-    for d in ("runtime", "lib", "app", "licenses", "sources"):
+    for d in ("runtime", "lib", "lib-platform", "app", "licenses", "sources"):
         (out / d).mkdir(parents=True, exist_ok=True)
     paths = {n: Path(archives[n]) if n in archives else usb.fetch(usb.PINS["runtimes"][n], n) for n in names}
     source = next((n for n in ("linux-x86_64", "macos-arm64", "macos-x86_64") if n in paths), "linux-x86_64")
@@ -175,6 +203,9 @@ def build(out, names, archives=None):
     (out / "runtime" / "VERSION").write_text(usb.VERSION + "\n", encoding="utf-8")
     for name, pin in LIBS.items():
         library(name, pin, out)
+    for name, release in WHEELS.items():
+        for target in names if "all" not in release["targets"] else ("all",):
+            wheel_library(name, release["targets"][target], target, out)
     application(out)
     if any(not n.startswith("windows") for n in names):
         usb.write(out / "stanowisko.sh", SH.format(minor=usb.MINOR).encode(), executable=True)
@@ -186,11 +217,11 @@ def build(out, names, archives=None):
     (out / "sources" / "README.txt").write_text(
         "Kod aplikacji stanowiska WICI jest w app/wici jako pliki źródłowe; repozytorium projektu, commit "
         f"{commit or 'nieznany'}: software/laptop i software/reference.\n"
-        "Reticulum, LXMF i pyserial: archiwa źródeł w tym katalogu; repozytoria i commity (Reticulum, LXMF) oraz adres i suma SHA-256 (pyserial) w build-manifest.json.\n"
+        "Reticulum i LXMF: archiwa źródeł w tym katalogu. Koła cryptography, cffi, pycparser i archiwum pyserial są także zachowane; dokładne adresy i sumy SHA-256 w build-manifest.json.\n"
         f"Środowiska Pythona {usb.VERSION}: python.org (Windows) i python-build-standalone (macOS, Linux).\n",
         encoding="utf-8")
     doc = usb.manifest(out, names, modules, commit)
-    doc.update(kind=KIND, libraries=LIBS)
+    doc.update(kind=KIND, libraries=LIBS, wheels=WHEELS)
     (out / "build-manifest.json").write_text(json.dumps(doc, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
     for group, size in sorted(doc["groups"].items()):
         usb.log(f"{size / 1e6:8.2f} MB  {group}")

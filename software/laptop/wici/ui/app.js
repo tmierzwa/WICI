@@ -470,6 +470,11 @@ function role() { return document.querySelector('input[name="role"]:checked').va
 function readForm() {
   const r = role();
   const doc = { role: r, ifac: field("ifac").value, radio: { profile: field("radio").value } };
+  const networkFields = ["id", "station", "root", "parent", "backup_parent", "receiver_main", "receiver_backup"];
+  const numeric = (name) => field(name).value.trim() === "" ? null : Number(field(name).value);
+  if (networkFields.some((k) => field(`network.${k}`).value.trim() !== "")) {
+    doc.network = Object.fromEntries(networkFields.map((k) => [k, numeric(`network.${k}`)]));
+  }
   if (r === "stacja") {
     doc.addresses = [...$("addresses").querySelectorAll("input")].map((i) => i.value);
     const n = field("stations").value.trim();
@@ -478,6 +483,12 @@ function readForm() {
     doc.receiver = {};
     for (const w of ["main", "backup"]) {
       doc.receiver[w] = { lxmf: field(`receiver.${w}.lxmf`).value, key: field(`receiver.${w}.key`).value };
+      if (doc.network || field(`receiver.${w}.id`).value.trim() || field(`receiver.${w}.net_id`).value.trim() ||
+          field(`receiver.${w}.x25519`).value.trim()) {
+        doc.receiver[w].id = numeric(`receiver.${w}.id`);
+        doc.receiver[w].net_id = numeric(`receiver.${w}.net_id`);
+        doc.receiver[w].x25519 = field(`receiver.${w}.x25519`).value;
+      }
     }
   }
   return doc;
@@ -499,11 +510,17 @@ function fillForm(doc, only) {
   if (has("stations")) field("stations").value = doc.stations == null ? "" : doc.stations;
   if (has("ifac")) field("ifac").value = doc.ifac || "";
   if (has("radio") && doc.radio && doc.radio.profile) field("radio").value = doc.radio.profile;
+  if (!only || only.includes("network")) {
+    for (const k of ["id", "station", "root", "parent", "backup_parent", "receiver_main", "receiver_backup"]) {
+      field(`network.${k}`).value = doc.network && doc.network[k] != null ? doc.network[k] : "";
+    }
+  }
   if (has("receiver") && doc.receiver) {
     for (const w of ["main", "backup"]) {
       const c = doc.receiver[w] || {};
       field(`receiver.${w}.lxmf`).value = c.lxmf || "";
       field(`receiver.${w}.key`).value = c.key || "";
+      for (const k of ["id", "net_id", "x25519"]) field(`receiver.${w}.${k}`).value = c[k] == null ? "" : c[k];
     }
   }
   roleChanged();
@@ -642,7 +659,7 @@ async function fileChosen() {
     fillForm(doc, ["receiver"]);
     return toast("Wczytano kartę odbiorcy.");
   }
-  const known = ["role", "addresses", "receiver", "stations", "phrases", "ifac", "radio"].filter((k) => k in doc);
+  const known = ["role", "addresses", "receiver", "stations", "phrases", "ifac", "radio", "network"].filter((k) => k in doc);
   if (!known.length) return toast("Plik nie zawiera pól konfiguracji WICI.");
   fillForm(doc, known);
   toast(`Wczytano z pliku: ${f.name}`);
