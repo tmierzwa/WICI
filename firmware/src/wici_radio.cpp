@@ -158,7 +158,9 @@ void Shelter::poll(uint32_t nowMs, uint32_t nowS) {
     size_t length = 0;
     const uint8_t* frame = relay_.outgoing(length);
     if (frame && length) {
-        if (air_.sendData(frame, length, wici_link::TxClass::TRANSIT)) {
+        const auto traffic = relay_.contendedK2(nowS) ? wici_link::TxClass::CONTENDED_K2 :
+                                                     wici_link::TxClass::TRANSIT;
+        if (air_.sendData(frame, length, traffic)) {
             submitted_ = true;
             delayPending_ = false;
         } else {

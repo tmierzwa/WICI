@@ -219,4 +219,44 @@ int main() {
     out = priorityRelay.outgoing(outLength);
     assert(out && wici_link::decode(key, 100, out, outLength, parsed));
     assert(parsed.payload[4] == 90 && parsed.payload[8] == 14);
+
+    static Memory contentionMemory;
+    wici_hop::Relay contentionRelay(contentionMemory, {100, 2, 1, 1, 0}, ifac, false, receivers);
+    assert(contentionRelay.begin());
+    wici_link::Frame waiting = traffic;
+    waiting.flags = wici_link::ACKREQ | wici_link::DOWN;
+    waiting.source = 1; waiting.sequence = 80;
+    waiting.payload[2] = 1; waiting.payload[4] = 90; waiting.payload[8] = 20;
+    n = wici_link::encode(key, waiting, wire, sizeof(wire));
+    assert(contentionRelay.receiveData(wire, n, 140, hack, sizeof(hack), hackLength) ==
+           wici_hop::Receipt::HACK_READY);
+    waiting.flags = wici_link::ACKREQ;
+    waiting.source = 4; waiting.sequence = 81;
+    waiting.payload[2] = 4; waiting.payload[4] = 50; waiting.payload[8] = 21;
+    n = wici_link::encode(key, waiting, wire, sizeof(wire));
+    assert(contentionRelay.receiveData(wire, n, 140, hack, sizeof(hack), hackLength) ==
+           wici_hop::Receipt::HACK_READY);
+    assert(contentionRelay.routes().beacon(1, {1, 0, 1, 0, 0}, 16, 140));
+    assert(contentionRelay.prepare(140) && contentionRelay.contendedK2(140));
+    out = contentionRelay.outgoing(outLength);
+    assert(out && wici_link::decode(key, 100, out, outLength, parsed));
+    assert(parsed.payload[4] == 50);
+
+    static Memory lateContentionMemory;
+    wici_hop::Relay lateContention(lateContentionMemory, {100, 2, 1, 1, 0}, ifac, false, receivers);
+    assert(lateContention.begin());
+    waiting.flags = wici_link::ACKREQ; waiting.source = 4; waiting.sequence = 82;
+    waiting.payload[2] = 4; waiting.payload[4] = 50; waiting.payload[8] = 22;
+    n = wici_link::encode(key, waiting, wire, sizeof(wire));
+    assert(lateContention.receiveData(wire, n, 141, hack, sizeof(hack), hackLength) ==
+           wici_hop::Receipt::HACK_READY);
+    assert(lateContention.routes().beacon(1, {1, 0, 1, 0, 0}, 16, 141));
+    assert(lateContention.prepare(141) && !lateContention.contendedK2(141));
+    waiting.flags = wici_link::ACKREQ | wici_link::DOWN;
+    waiting.source = 1; waiting.sequence = 83;
+    waiting.payload[2] = 1; waiting.payload[4] = 90; waiting.payload[8] = 23;
+    n = wici_link::encode(key, waiting, wire, sizeof(wire));
+    assert(lateContention.receiveData(wire, n, 141, hack, sizeof(hack), hackLength) ==
+           wici_hop::Receipt::HACK_READY);
+    assert(lateContention.contendedK2(141));
 }

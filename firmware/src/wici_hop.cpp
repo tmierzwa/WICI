@@ -23,6 +23,7 @@ bool Relay::priority(const wici_link::Frame& frame) const {
 
 bool Relay::begin() {
     active_ = sent_ = everSent_ = false;
+    activePriority_ = contendedK2_ = false;
     outgoingLength_ = 0;
     attempts_ = 0;
     nextHint_ = 0;
@@ -100,12 +101,14 @@ bool Relay::prepare(uint32_t nowS) {
     if (active_ || !keyReady_ || !routes_.ready() || !sequence_.ready()) return false;
     if (!queue_.finishForwarded(key_, config_.network, config_.own, nowS)) return false;
     uint8_t wire[wici_link::MAX_FRAME];
+    bool priorityWaiting = false;
     for (uint8_t order = 0; order < 2 * wici_relay::SLOTS; ++order) {
         const uint8_t slot = order % wici_relay::SLOTS;
         size_t length = 0;
         if (!queue_.read(key_, config_.network, config_.own, slot, nowS, wire, sizeof(wire), length)) continue;
         wici_link::Frame frame;
         if (!wici_link::decode(key_, config_.network, wire, length, frame)) continue;
+        if (order < wici_relay::SLOTS && priority(frame)) priorityWaiting = true;
         if (priority(frame) != (order < wici_relay::SLOTS)) continue;
         const uint16_t next = frame.flags & wici_link::DOWN ?
                               routes_.down(u16(frame.payload + 3)) : routes_.parent();
@@ -127,6 +130,8 @@ bool Relay::prepare(uint32_t nowS) {
         if (next == wici_link::BROADCAST && !flood_.remember(frame.payload, nowS)) return false;
         next_ = next; outgoingSeq_ = sequence; slot_ = slot;
         noAck_ = next == wici_link::BROADCAST || !(frame.flags & wici_link::ACKREQ);
+        activePriority_ = priority(frame);
+        contendedK2_ = priorityWaiting && !activePriority_;
         outgoingLength_ = n; attempts_ = 1;
         sent_ = everSent_ = false; active_ = true;
         return true;
@@ -137,6 +142,26 @@ bool Relay::prepare(uint32_t nowS) {
 const uint8_t* Relay::outgoing(size_t& length) const {
     length = active_ ? outgoingLength_ : 0;
     return active_ ? outgoing_ : nullptr;
+}
+
+bool Relay::contendedK2(uint32_t nowS) {
+    if (!active_ || activePriority_) return false;
+    if (contendedK2_) return true;
+    uint8_t wire[wici_link::MAX_FRAME];
+    for (uint8_t slot = 0; slot < wici_relay::SLOTS; ++slot) {
+        if (!queue_.pending(slot)) continue;
+        size_t length = 0;
+        if (!queue_.read(key_, config_.network, config_.own, slot, nowS, wire, sizeof(wire), length)) {
+            contendedK2_ = true;  // uncertain queue state cannot loosen the K2 budget
+            return true;
+        }
+        wici_link::Frame frame;
+        if (wici_link::decode(key_, config_.network, wire, length, frame) && priority(frame)) {
+            contendedK2_ = true;  // a later K1 remains relevant through this transfer's retries
+            return true;
+        }
+    }
+    return false;
 }
 
 bool Relay::transmitted(bool success, uint32_t nowS) {

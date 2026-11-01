@@ -187,8 +187,9 @@ niepotwierdzaną ramkę najwyżej trzy razy z trwałym licznikiem prób.
 Numerowany przekaźnik ma trwały limit 60% dla całego ruchu tranzytowego i
 BEACON-ów oraz 2% czasu nadawania dla BEACON-ów, z priorytetem K1 w kolejce.
 Wspólny limit obejmuje również K1, bo sam jawny numer odbiorcy nie dowodzi
-uprawnienia do tej klasy. Limit 25% K2 na cel i odporność kolejki K1 na
-podrobione numery wymagają jeszcze wdrożenia.
+uprawnienia do tej klasy. Przy czekającym K1 limit 25% dotyczy zachowawczo
+całego tranzytu i BEACON-ów. Odporność kolejki K1 na podrobione numery
+wymaga jeszcze wdrożenia.
 
 Pozostałe do zamknięcia D21: kontrakt PRZENIEŚ STACJĘ z granicami liczników i
 oknami powtórzeń, lista nośników stanowiska odbiorczego, sprzętowe próby rozsyłania awaryjnego, pomiar

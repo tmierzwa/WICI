@@ -16,6 +16,7 @@ constexpr uint32_t COPY_BYTES = 64;
 constexpr uint32_t BUCKET_S = 600;
 constexpr uint8_t BUCKETS = 7;  // current plus 6 older buckets: conservative 3600 s window
 constexpr uint32_t POOL_CAP_MS = 3600u * 1000u * 60u / 100u;
+constexpr uint32_t CONTENDED_K2_CAP_MS = 3600u * 1000u * 25u / 100u;
 constexpr uint32_t BEACON_CAP_MS = 3600u * 1000u * 2u / 100u;
 static_assert(BASE >= envelope::PARTS_BACKUP_BASE + 2 * envelope::PARTS_COPY_BYTES,
               "airtime ledger after envelope parts");
@@ -27,7 +28,7 @@ public:
     bool begin(uint16_t network, uint16_t own);
     // Beacon cost is TX time; transit cost includes the 12x silence debt.
     // A successful reserve is intentionally charged even if later CAD/TX fails.
-    bool reserve(bool beacon, uint32_t txMs, uint32_t nowS);
+    bool reserve(bool beacon, uint32_t txMs, uint32_t nowS, bool contendedK2 = false);
     bool ready() const { return ready_; }
     uint32_t poolUsed() const;
     uint32_t beaconUsed() const;

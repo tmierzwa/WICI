@@ -265,13 +265,14 @@ struct WiciAir : wici_radio::Air, wici_gateway::Air {
             !wire || length < wici_link::HEADER + wici_link::TAG)
             return false;
         if (traffic != wici_link::TxClass::OWN && traffic != wici_link::TxClass::TRANSIT &&
-            traffic != wici_link::TxClass::BEACON) return false;
+            traffic != wici_link::TxClass::CONTENDED_K2 && traffic != wici_link::TxClass::BEACON) return false;
         const bool beacon = ((wire[0] >> 3) & 7) == static_cast<uint8_t>(wici_link::Type::BEACON);
         if (beacon != (traffic == wici_link::TxClass::BEACON) ||
             (!beacon && (((wire[0] >> 3) & 7) != static_cast<uint8_t>(wici_link::Type::DATA) ||
                          length < wici_link::HEADER + 25 + wici_link::TAG))) return false;
         if (traffic != wici_link::TxClass::OWN &&
-            !wiciBudget.reserve(beacon, lora::frameAirMs(length), counterS())) return false;
+            !wiciBudget.reserve(beacon, lora::frameAirMs(length), counterS(),
+                                traffic == wici_link::TxClass::CONTENDED_K2)) return false;
         return bench.linkSend(wire, length, true) == nullptr;
     }
     bool sendHack(const uint8_t* wire, size_t length, uint32_t receivedMs) override {

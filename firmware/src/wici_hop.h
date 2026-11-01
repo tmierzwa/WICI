@@ -29,6 +29,7 @@ public:
     // each retry; on reboot a new reserved seq is used for the old queue item.
     bool prepare(uint32_t nowS);
     const uint8_t* outgoing(size_t& length) const;
+    bool contendedK2(uint32_t nowS);
     // Call only after a real TX attempt. A broadcast is retired after success;
     // unicast waits for a matching authenticated HACK.
     bool transmitted(bool success, uint32_t nowS);
@@ -58,6 +59,7 @@ private:
     uint16_t next_ = 0, outgoingSeq_ = 0;
     uint8_t slot_ = 0, attempts_ = 0;
     bool active_ = false, sent_ = false, everSent_ = false, noAck_ = false;
+    bool activePriority_ = false, contendedK2_ = false;
     RouteHint hints_[wici_relay::SLOTS] = {};
     uint8_t nextHint_ = 0;
 };

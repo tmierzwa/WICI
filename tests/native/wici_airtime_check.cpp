@@ -57,6 +57,16 @@ int main() {
     assert(!beacons.reserve(true, 800, 100));
     assert(beacons.poolUsed() == 90u * 800u * 13u);
 
+    static Memory contentionMemory;
+    wici_airtime::Budget contention(contentionMemory);
+    assert(contention.begin(100, 2));
+    for (unsigned i = 0; i < 86; ++i) assert(contention.reserve(false, 800, 100, true));
+    assert(!contention.reserve(false, 800, 100, true));
+    assert(contention.reserve(false, 800, 100));  // no K1 waiting: the 60% pool still applies
+    wici_airtime::Budget contentionRestart(contentionMemory);
+    assert(contentionRestart.begin(100, 2));
+    assert(!contentionRestart.reserve(false, 800, 100, true));
+
     static Memory corruptMemory;
     wici_airtime::Budget corrupt(corruptMemory);
     assert(corrupt.begin(100, 2) && corrupt.reserve(false, 800, 100));
