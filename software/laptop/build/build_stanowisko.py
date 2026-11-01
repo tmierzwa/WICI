@@ -177,7 +177,8 @@ def self_check(out, names):
         usb.log("sprawdzenie pominięte: pakiet nie ma środowiska tego systemu")
         return
     python = out / "runtime" / ("windows/python.exe" if host == "windows-amd64" else f"{host}/bin/python{usb.MINOR}")
-    code = ("import RNS, LXMF, serial, cryptography, cffi, pycparser, wici.envelope, wici.stanowisko.__main__, wici.stanowisko.zamkniecie\n"
+    code = ("import RNS, LXMF, serial, cryptography, cffi, pycparser, wici.envelope\n"
+            "import wici.stanowisko.__main__, wici.stanowisko.rekey, wici.stanowisko.zamkniecie\n"
             "from RNS.Cryptography import Provider\n"
             "assert Provider.backend().startswith('openssl, PyCA 48.0.1'), Provider.backend()\n"
             "assert cryptography.__version__ == '48.0.1'\n"
