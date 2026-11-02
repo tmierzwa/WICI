@@ -408,7 +408,7 @@ Piny pochodzą z programu `pair-0.4` i jego źródeł ([ZRODLA-I-WERYFIKACJA.txt
 
 **Przygotowanie i obsługa tylko przez USB.** Port „diagnostyka” i port „dane” jak w `l0`. Przygotowanie: `PREP 1` i przycisk BOOT w ciągu 30 s (dioda miga), potem aplikacja laptopa na porcie danych (`configure`, `card`) albo `USB <wiersz JSON>` z portu diagnostyki; pytania z potwierdzeniem (`silence`, `close`, `destroy`, karta) zamyka `KEY OK`, a `SCREEN` pokazuje pytanie. Zgłoszenia: `REQ <n> [<bajty tekstu>]` albo `submit` protokołu USB; TEST: `test` protokołu albo menu przez `KEY`. Stan: `INFO`, `APP` (`intents` = zgłoszenia przed RECEIVED), `STORE`, `RNS`, `HACK`, `LOG`, `JOURNAL`.
 
-**Role.** Stacja schronienia z rodzicem (`network.parent`) jest przekaźnikiem dla stacji, które plan sieci stawia za nią, i źródłem własnych zgłoszeń; korzeń (`role: "wezel"`, `network.station` = `network.root`, rodzice 0) przenosi ramki WICI-Link w KISS na porcie danych do aplikacji stanowiska (`python -m wici.stanowisko start --port PORT_DANYCH`); zmiana roli restartuje zestaw, a obraz w PSRAM to przeżywa. Bez `network` zestaw pracuje w Reticulum jak `l0`.
+**Role.** Stacja schronienia z rodzicem (`network.parent`) jest przekaźnikiem dla stacji, które plan sieci stawia za nią, i źródłem własnych zgłoszeń; root (`role: "wezel"`, `network.station` = `network.root`, rodzice 0) przenosi ramki WICI-Link w KISS na porcie danych do aplikacji stanowiska (`python -m wici.stanowisko start --port PORT_DANYCH`); zmiana roli restartuje zestaw, a obraz w PSRAM to przeżywa. Bez `network` zestaw pracuje w Reticulum jak `l0`.
 
 ```bash
 cd firmware && ../.venv-pio/bin/pio run -e xiao            # budowa
@@ -582,7 +582,7 @@ Kod jest w czterech plikach. `src/journal.cpp` obsługuje jawny obszar: dług ci
 | kolejka przekaźnika (`src/wici_relay.cpp`) | 0x45000 | 4 × 2 × 320 B | cztery gniazda: ramka do 255 B, sąsiad K1 (0 dla K2), czas przyjęcia, stan „przekazane”, CRC, COMMIT |
 | pierścień rozsyłania, część B | 0x45A00 | 64 × 18 B | dalsze rekordy pierścienia z 0x44200 |
 | części kopert, główny odbiorca (`src/envelope_parts.cpp`) | 0x45E80 | 2 × 192 B | pierwsza część czekająca na drugą (120 s) |
-| drogi w dół (`src/wici_route.cpp`) | 0x46000 | 2 × 1152 B | 256 dróg po 4 B z siecią, numerem stacji i korzeniem, CRC, COMMIT |
+| drogi w dół (`src/wici_route.cpp`) | 0x46000 | 2 × 1152 B | 256 dróg po 4 B z siecią, numerem stacji i rootem, CRC, COMMIT |
 | pierścień przekazanych kopert (`src/wici_seen.cpp`) | 0x46900 | 224 × 24 B | sieć, tożsamość koperty, skrót ładunku, czas; okno 3600 s |
 | części kopert, zapasowy odbiorca | 0x47E00 | 2 × 192 B | jak dla głównego |
 | budżet czasu kanału (`src/wici_airtime.cpp`) | 0x47F80 | 2 × 64 B | siedem przedziałów 10 min puli tranzytu i BEACON-ów |

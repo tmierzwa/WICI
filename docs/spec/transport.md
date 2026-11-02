@@ -158,7 +158,7 @@ Jeżeli WICI-Link nie spełni warunku, zostaje rdzeń Reticulum, a ten dokument 
 
 **Stan wykonania, 2026-11-02.** Numerowane obrazy stacji łączą kopertę C++,
 trwałe liczniki i okna powtórzeń, kolejkę przekaźnika, trasowanie, koordynator
-skoku oraz surowe ramki SX1262 z CAD i trwałym długiem. Korzeń przekazuje
+skoku oraz surowe ramki SX1262 z CAD i trwałym długiem. Root przekazuje
 uwierzytelnione ramki do KISS i dopuszcza HACK z laptopa tylko po trwałym
 przyjęciu koperty; echo ramki wychodzącej powstaje po faktycznym TX, nie po
 przyjęciu do harmonogramu. Aplikacja stanowiska ma numerowany nośnik KISS,

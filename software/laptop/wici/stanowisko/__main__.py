@@ -81,7 +81,7 @@ def prepare(args):
         if args.root_id is None or args.ifac is None:
             raise SystemExit("numerowana sieć wymaga --root-id i --ifac")
         if args.root_id in (args.main_id, args.backup_id):
-            raise SystemExit("numer korzenia musi być różny od numerów odbiorcy")
+            raise SystemExit("numer roota musi być różny od numerów odbiorcy")
         try:
             link = nosnik.validate_link({"net_id": args.net_id, "root": args.root_id, "ifac": args.ifac,
                                          "ttl": args.ttl})
