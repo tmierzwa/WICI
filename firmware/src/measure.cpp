@@ -353,24 +353,29 @@ bool Bench::linkSendHack(const uint8_t* frame, size_t length, uint32_t receivedM
     // This path bypasses ordinary channel scheduling only for the fixed HACK
     // shape. The caller must have generated its MAC with the network key.
     if (!rawLora_ || !validRawHack(frame, length) || !p1Ready || !journal_ || !journal_->ok() ||
-        silence || emcActive_ || prep || cwActive_ || pktActive_ || rxMode_ != RxMode::LINK)
+        silence || emcActive_ || prep || cwActive_ || pktActive_ || rxMode_ != RxMode::LINK) {
+        ++hack_.refused;
         return false;
+    }
     const uint32_t txMs = radio_.frameAirMs(length);
     // Include room for CAD, SPI and RX re-arm; a late callback must not start
     // a HACK that cannot meet the deadline. Hardware timing still needs D21.
-    if (txMs >= 200 || millis() - receivedMs > 200 - txMs - 20) return false;
+    if (txMs >= 200 || millis() - receivedMs > 200 - txMs - 20) { ++hack_.late; return false; }
     platform::RadioLock lock(RADIO_LOCK_WAIT_MS);
-    if (!lock.held() || millis() - receivedMs > 200 - txMs - 20) return false;
+    if (!lock.held()) { ++hack_.refused; return false; }
+    if (millis() - receivedMs > 200 - txMs - 20) { ++hack_.late; return false; }
     const uint32_t remaining = debtRemainingMs();
     const radiolink::TxPrep prepared = radio_.prepareTx(frame, length);
     if (prepared != radiolink::TxPrep::Ready) {
         if (prepared != radiolink::TxPrep::RxPending) enterRx(RxMode::LINK, 0);
+        ++hack_.refused;
         return false;
     }
     rxMode_ = RxMode::NONE;
     const radiolink::Cad cad = radio_.cad();
     if (cad != radiolink::Cad::Free || millis() - receivedMs > 200 - txMs) {
         enterRx(RxMode::LINK, 0);
+        ++(cad != radiolink::Cad::Free ? hack_.refused : hack_.late);
         return false;
     }
     const uint32_t extra = txMs * (radiolink::DEBT_FACTOR + 1);
@@ -379,6 +384,7 @@ bool Bench::linkSendHack(const uint8_t* frame, size_t length, uint32_t receivedM
     if (extra > maxDebtMs() || remaining > maxDebtMs() - extra ||
         !journal_->writeDebt(remaining + extra, uptimeS())) {
         enterRx(RxMode::LINK, 0);
+        ++hack_.refused;
         return false;
     }
     debtPending_ = true;
@@ -386,9 +392,20 @@ bool Bench::linkSendHack(const uint8_t* frame, size_t length, uint32_t receivedM
         // The conservative journal reservation can remain; no radio time was
         // used, so the pre-existing RAM debt remains the actual lower bound.
         enterRx(RxMode::LINK, 0);
+        ++hack_.late;
         return false;
     }
     const bool sent = radio_.sendPrepared(nullptr);
+    const uint32_t endMs = millis() - receivedMs;   // sendPrepared returns at TxDone
+    if (sent) {
+        ++hack_.sent;
+        hack_.lastMs = endMs;
+        if (endMs > hack_.maxMs) hack_.maxMs = endMs;
+        hack_.sumMs += endMs;
+        if (endMs > 200) ++hack_.over;
+    } else ++hack_.refused;
+    diagLine("{\"hack\":\"%s\",\"len\":%u,\"end_ms\":%lu}\n", sent ? "sent" : "tx error",
+             static_cast<unsigned>(length), static_cast<unsigned long>(endMs));
     ++link_.txFragments;
     ++link_.txDatagrams;
     // Conservatively retain all prior debt, even though it decayed during TX.
@@ -1009,6 +1026,15 @@ void Bench::finishLinkTx(const char* result) {
 const char* Bench::txStateName() const {
     return txState_ == TxState::IDLE ? "idle" : txState_ == TxState::WAIT_DEBT ? "wait_debt" : txState_ == TxState::CCA ? "cca"
            : txState_ == TxState::BACKOFF ? "backoff" : "send";
+}
+
+void Bench::printHack() {
+    Serial.printf("{\"hack_sent\":%lu,\"hack_late\":%lu,\"hack_refused\":%lu,\"hack_over_200ms\":%lu,"
+                  "\"end_ms_last\":%lu,\"end_ms_max\":%lu,\"end_ms_mean\":%lu}\n",
+                  static_cast<unsigned long>(hack_.sent), static_cast<unsigned long>(hack_.late),
+                  static_cast<unsigned long>(hack_.refused), static_cast<unsigned long>(hack_.over),
+                  static_cast<unsigned long>(hack_.lastMs), static_cast<unsigned long>(hack_.maxMs),
+                  static_cast<unsigned long>(hack_.sent ? hack_.sumMs / hack_.sent : 0));
 }
 
 void Bench::printLink() {

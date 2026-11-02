@@ -1947,6 +1947,8 @@ int main() {
     bench.restoreDebt(bench.maxDebtMs());
     const bool fullDebtHack = bench.linkSendHack(hack, sizeof(hack), millis());
     printf("HACK_FULL_DEBT %d %d\n", fullDebtHack, radio.sent.size() == beforeRefusal);
+    printf("HACK_STATS ");
+    bench.printHack();
     return 0;
 }
 """
@@ -2625,6 +2627,11 @@ class LoraBenchTests(unittest.TestCase):
         self.assertEqual(line(self.out, "HACK_FAIL"), "HACK_FAIL 0 0 1 1")
         self.assertEqual(line(self.out, "HACK_SLOW"), "HACK_SLOW 0 1 1")
         self.assertEqual(line(self.out, "HACK_FULL_DEBT"), "HACK_FULL_DEBT 0 1")
+        # HACK statistics (console HACK): two sent, the 201 ms and the slow-journal HACK late, the rest
+        # refused (silence, malformed, untagged, v2, busy CAD, failed and too slow debt write, full debt).
+        # The model's TxDone comes at once, so the end times are 0 ms here; on the board they include the airtime.
+        self.assertEqual(line(self.out, "HACK_STATS"), 'HACK_STATS {"hack_sent":2,"hack_late":2,"hack_refused":7,'
+                         '"hack_over_200ms":0,"end_ms_last":0,"end_ms_max":0,"end_ms_mean":0}')
 
     def test_transmit_order_debt_window_cad_debt_write_frames_receive(self):
         # The debt in the journal at each step: 0 up to the free CAD, 12 x (419 + 419) ms from frame 1 on.
