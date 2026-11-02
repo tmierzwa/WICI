@@ -84,8 +84,8 @@
  ],
  "outputs": {
   "wici-station.mjs": {
-   "sha256": "0732b9502c6e37e0e7561ae8c975870dc28e191b0b92f1bf088c0b3d7f389bdd",
-   "bytes": 758233,
+   "sha256": "59bf1b6c58b617ba326d1fe964f3437e5ec968fd4a2228ee290a75bcf5cc2dc5",
+   "bytes": 759101,
    "sources": [
     "firmware/src/annunciator.cpp",
     "firmware/src/config.cpp",
@@ -148,8 +148,8 @@
    ]
   },
   "wici-post.mjs": {
-   "sha256": "33d318ebf3f64dc43a4781ab50a51a9b26db7a5f7d9cd8bb802c95d96f8c24f4",
-   "bytes": 319884,
+   "sha256": "86a78780309eb95ee1ef54b3bca53d3926d90060ea6cdefc6f1b6c9d14b3c201",
+   "bytes": 320232,
    "sources": [
     "firmware/src/config.cpp",
     "firmware/src/drbg.cpp",
@@ -356,17 +356,17 @@
   "software/simulator/hal/Stream.h": "8506f23a05027ebdc814db0d6a32ee8a1ba9883daa368b76595a9403d94dca5b",
   "software/simulator/hal/USB.h": "06c7042a52c78550699d1e890a97aaef8e21d5231d7f39000c5a7677200d93a8",
   "software/simulator/hal/WString.h": "8506f23a05027ebdc814db0d6a32ee8a1ba9883daa368b76595a9403d94dca5b",
-  "software/simulator/hal/chips.h": "66bd24e77e281742178ef1d08a006e940513b6450a748ea410a05bfd32ef9c2b",
+  "software/simulator/hal/chips.h": "5b4a278505a4bbd1cbf1564190877f88cb39aae48be4b234e5d167bc9f69f7c1",
   "software/simulator/hal/esp_attr.h": "d0bd9fbfc7c3391597fbb4842a6c1fe4b6a6f96ec10d335aa7b384970e030195",
   "software/simulator/hal/esp_rom.cpp": "051edeac6f934421b39eb27e0195ccc9f8b05a710cbb40fc7bff09b7ce378be1",
   "software/simulator/hal/esp_task_wdt.h": "22bce0e08f9bf0f864682b8b19a2086b2fbf49bbb25797be26baea73a19a446e",
-  "software/simulator/hal/fram_sharp_chip.cpp": "73db0cd1b39b823a7b331dbc40cf8fa65dc97dc7c8679225429addc14b21dfba",
+  "software/simulator/hal/fram_sharp_chip.cpp": "e607e8a3a23bdb669b53476fe0c911310a2f94c156ecdd9db3247cabe95c7c22",
   "software/simulator/hal/nvs.h": "b81be20b0fcff1e615f0953d04ccf9932408da08eabb5905c8bd43dc408b2a95",
   "software/simulator/hal/pgmspace.h": "b20b1a3d829fc78de978ba0cbff4c23dd6cdc17ddf1eb582b8e8e4885be52c36",
   "software/simulator/hal/platform_sim.cpp": "563db415e3fb94e32b9ba736338e0ae37024c1e564c67224223a1ab2fdfc7ef4",
   "software/simulator/hal/s2lp_chip.cpp": "43bbf8e1bf30e436de86046da591d2255672dc161e58f978869025d3468593ff",
   "software/simulator/hal/sharp_extcomin_sim.cpp": "d308ceaab49e57054dc67421429f4955756c28ed877ed2c0162b2cb20b7f43dd",
-  "software/simulator/hal/vboard.cpp": "36d6257f17a7e3afe18e11cd44b59457ffdb94a6b4510692491a173ddf124152",
+  "software/simulator/hal/vboard.cpp": "968124ebd9f54e9487cc6eb4ce5e89b5225cf007ba81a279f2f78c7b31e6b748",
   "software/simulator/hal/vboard.h": "c9d6642034dd57ac6d3c3c38b37aba5361a88e8681266be5270b9e5006f3371b",
   "software/simulator/post/post.cpp": "91d47b5c5d2162e6506d666eb58cb7ad1d849ec0e18f7dc2fdf932a37956ef05",
   "software/simulator/build.py": "5eeafd92ed653a32a5b4f79de314255f2fbaad2c326c64109e81c4c69ca23b4d"
