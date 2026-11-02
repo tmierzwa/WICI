@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 /* Panel dyżurnego. Kolory, pasek, karty, przyciski, pola i zakładki są wspólne z panelem przygotowania stacji
-   (wspolne.css = wici/ui/app.css); tu tylko to, czego tamten panel nie ma. */
+   (wici/ui/app.css); tu tylko to, czego tamten panel nie ma. */
 
 main { max-width: 1100px; }
 #work { display: flex; flex-direction: column; gap: 16px; }

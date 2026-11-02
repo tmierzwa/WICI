@@ -27,8 +27,9 @@ LOCK_S = 300
 STATIC = {"/": ("index.html", "text/html; charset=utf-8"), "/app.js": ("app.js", "text/javascript; charset=utf-8"),
           "/app.css": ("app.css", "text/css; charset=utf-8")}
 # Wygląd wspólny z panelem przygotowania stacji (wici/ui): kolory, pasek, karty, przyciski, pola.
-SHARED = {"/wspolne.css": ("app.css", "text/css; charset=utf-8"), "/logo.svg": ("logo.svg", "image/svg+xml"),
-          "/logo-dark.svg": ("logo-dark.svg", "image/svg+xml")}
+# index.html odwołuje się do ../../ui/, czyli do tych plików w repo; przeglądarka skraca to do /ui/.
+SHARED = {"/ui/app.css": ("app.css", "text/css; charset=utf-8"), "/ui/logo.svg": ("logo.svg", "image/svg+xml"),
+          "/ui/logo-dark.svg": ("logo-dark.svg", "image/svg+xml")}
 TEXT_MAX = 200   # pola wpisów lokalnych (źródło, adresat): nie idą radiem
 BULLETIN_BYTES = 192   # tekst komunikatu (oprogramowanie.md, „Wiadomości SA1”)
 LABELS = {"podmiot": "podmiot dysponujący siłami", "funkcja": "funkcja osoby", "kanal": "kanał",
