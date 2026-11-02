@@ -2,8 +2,6 @@
 """The numbered laptop bearer preserves hop admission and outbound ordering."""
 
 import unittest
-from cryptography.exceptions import InvalidSignature
-from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from software.laptop.wici.stanowisko import wici_link
 from software.laptop.wici.stanowisko.wici_stos import WiciStos
@@ -37,7 +35,7 @@ class WiciBearerTest(unittest.TestCase):
         self.port = Port()
         self.accepted = []
         self.bearer = WiciStos("fake", 100, 5, 3, bytes(range(16)), bytes(16),
-                               self.accepted.append, clock=self.clock, signing_key=bytes(range(64)))
+                               self.accepted.append, clock=self.clock)
         self.bearer.port = self.port
         self.bearer.running = True
         self.key = wici_link.derive_key(bytes(range(16)), 100)
@@ -66,11 +64,9 @@ class WiciBearerTest(unittest.TestCase):
         virtual = wici_link.decode(self.key, 100, unpack(self.port.writes[-1]))
         self.assertEqual((virtual.source, virtual.destination, virtual.flags, virtual.ttl),
                          (1, 5, wici_link.ACKREQ | wici_link.DOWN, 3))
-        ed25519.Ed25519PrivateKey.from_private_bytes(bytes(range(32, 64))).public_key().verify(
-            virtual.origin_signature, wici_link.origin_message(100, first))
-        with self.assertRaises(InvalidSignature):
-            ed25519.Ed25519PrivateKey.from_private_bytes(bytes(range(32, 64))).public_key().verify(
-                virtual.origin_signature, wici_link.origin_message(101, first))
+        # v3: the envelope is the whole DATA payload, no origin signature follows it.
+        self.assertEqual(virtual.payload, first)
+        self.assertEqual(len(unpack(self.port.writes[-1])), wici_link.HEADER + len(first) + wici_link.TAG)
         echo = wici_link.Frame(wici_link.DATA, virtual.flags, 100, 5, 4, 1, 7, 91, first)
         self.feed(echo)
         wrong = wici_link.Frame(wici_link.HACK, 0, 100, 3, 5, 0, 1, 91)
@@ -86,6 +82,20 @@ class WiciBearerTest(unittest.TestCase):
         self.assertIsNone(item.result)
         self.feed(wici_link.Frame(wici_link.HACK, 0, 100, 4, 5, 0, 1, 92))
         self.assertTrue(item.result)
+
+    def test_typical_request_fits_one_frame(self):
+        from software.laptop.wici import envelope
+        # A typical REQUEST is 174 B of SA1; its 199 B envelope fits the 228 B DATA limit.
+        parts = envelope.seal(bytes(32), 1, 4, 7, bytes(174), wici_link.MAX_PAYLOAD)
+        self.assertEqual([len(p) for p in parts], [199])
+        self.assertEqual([len(p) for p in envelope.seal(bytes(32), 1, 4, 8, bytes(222), wici_link.MAX_PAYLOAD)],
+                         [136, 136])  # the largest REQUEST (247 B envelope) still takes two
+        item = self.bearer.send_frames(parts)
+        self.bearer._tick()
+        wire = unpack(self.port.writes[-1])
+        self.assertEqual(len(wire) + 8, 226)  # on air with the hop tag the root adds
+        self.assertEqual(wici_link.decode(self.key, 100, wire).payload, parts[0])
+        self.assertIsNone(item.result)
 
     def test_no_root_echo_causes_retry_without_claiming_delivery(self):
         part = bytes([0x40, 0, 1, 0, 4]) + bytes(20)

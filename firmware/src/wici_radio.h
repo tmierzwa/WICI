@@ -32,7 +32,7 @@ public:
             const uint8_t privateKey[64], const uint8_t receiverPublic[2][32],
             wici_destination::AdmitFn admit, void* admitContext,
             Air& air, RandomFn random, void* randomContext,
-            wici_hop::VerifyOrigin verifyOrigin = nullptr, const void* verifyContext = nullptr,
+            const config::Behind* behind = nullptr, uint16_t behindCount = 0,
             const uint8_t rootEd25519[32] = nullptr,
             VerifyBeacon verifyBeacon = nullptr, const void* beaconContext = nullptr);
     bool begin();
@@ -61,7 +61,7 @@ private:
     uint16_t network_, own_, root_;
     uint8_t ttl_;
     uint8_t linkKey_[32] = {};
-    uint8_t signingPrivate_[64] = {}, signingPublic_[64] = {};
+    uint8_t signingPrivate_[64] = {}, signingPublic_[32] = {};
     uint8_t rootEd25519_[32] = {};
     VerifyBeacon verifyBeacon_ = nullptr;
     const void* beaconContext_ = nullptr;

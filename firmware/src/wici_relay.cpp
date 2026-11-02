@@ -40,7 +40,7 @@ bool Queue::begin(const uint8_t key[32], uint16_t network, uint16_t own) {
     memset(lengths_, 0, sizeof(lengths_));
     memset(generations_, 0, sizeof(generations_));
     memset(copies_, 0, sizeof(copies_));
-    memset(origins_, 0, sizeof(origins_));
+    memset(k1_, 0, sizeof(k1_));
     memset(admittedS_, 0, sizeof(admittedS_));
     for (uint8_t slot = 0; slot < SLOTS; ++slot) {
         bool found = false;
@@ -55,9 +55,7 @@ bool Queue::begin(const uint8_t key[32], uint16_t network, uint16_t own) {
                 generations_[slot] = generation;
                 copies_[slot] = copy;
                 lengths_[slot] = get16(data + 8);
-                // A provisioned signing key may have changed since this
-                // record was written. Reverify the origin after every boot.
-                origins_[slot] = 0;
+                k1_[slot] = get16(data + 23);
                 admittedS_[slot] = get32(data + 19);
                 memcpy(frames_[slot], data + WIRE_AT, lengths_[slot]);
                 found = true;
@@ -66,14 +64,19 @@ bool Queue::begin(const uint8_t key[32], uint16_t network, uint16_t own) {
     }
     ready_ = true;
     wici_link::Frame frame;
-    for (uint8_t slot = 0; slot < SLOTS; ++slot)
-        if (lengths_[slot] && !transit(frames_[slot], lengths_[slot], frame) && !commit(slot, nullptr, 0))
-            return false;
+    for (uint8_t slot = 0; slot < SLOTS; ++slot) {
+        if (!lengths_[slot]) continue;
+        if (!transit(frames_[slot], lengths_[slot], frame)) {
+            if (!commit(slot, nullptr, 0)) return false;
+        } else if (k1_[slot] != frame.source) {
+            k1_[slot] = 0;  // K1 belongs to the authenticated link source only
+        }
+    }
     return true;
 }
 
 bool Queue::commit(uint8_t slot, const uint8_t* wire, size_t length,
-                   uint16_t verifiedOrigin, uint32_t admittedS) {
+                   uint16_t k1Neighbor, uint32_t admittedS) {
     uint8_t data[COPY_BYTES] = {};
     memcpy(data, MAGIC, 4);
     put32(data + 4, generations_[slot] + 1);
@@ -86,7 +89,7 @@ bool Queue::commit(uint8_t slot, const uint8_t* wire, size_t length,
         memcpy(data + 14, wire + 8, 2);  // link sequence
         memcpy(data + 16, wire + wici_link::HEADER, 3);  // envelope version and source
         put32(data + 19, admittedS);
-        put16(data + 23, verifiedOrigin);  // verified origin, covered by CRC and COMMIT
+        put16(data + 23, k1Neighbor);  // K1 neighbour, covered by CRC and COMMIT
     }
     const uint8_t target = static_cast<uint8_t>(1 - copies_[slot]);
     if (!store(storage_, address(slot, target), data, sizeof(data), CRC_AT)) {
@@ -96,7 +99,7 @@ bool Queue::commit(uint8_t slot, const uint8_t* wire, size_t length,
     ++generations_[slot];
     copies_[slot] = target;
     lengths_[slot] = static_cast<uint16_t>(length);
-    origins_[slot] = length ? verifiedOrigin : 0;
+    k1_[slot] = length ? k1Neighbor : 0;
     admittedS_[slot] = length ? admittedS : 0;
     memset(frames_[slot], 0, sizeof(frames_[slot]));
     if (length) memcpy(frames_[slot], wire, length);
@@ -104,10 +107,10 @@ bool Queue::commit(uint8_t slot, const uint8_t* wire, size_t length,
 }
 
 Admission Queue::admit(const uint8_t* wire, size_t length, uint32_t nowS,
-                       uint8_t freeSlotsReserved, uint16_t verifiedOrigin, uint8_t* slot) {
+                       uint16_t k1Neighbor, uint8_t* slot) {
     wici_link::Frame frame;
-    if (!ready_ || !wire || !transit(wire, length, frame) || freeSlotsReserved > SLOTS ||
-        (verifiedOrigin && (!id(verifiedOrigin) || verifiedOrigin != get16(frame.payload + 1))))
+    if (!ready_ || !wire || !transit(wire, length, frame) ||
+        (k1Neighbor && (k1Neighbor != frame.source || frame.destination != own_)))
         return Admission::REJECTED;
     const wici_seen::Lookup prior = seen_.lookup(wire, length, nowS);
     if (prior == wici_seen::Lookup::MATCH) return Admission::FORWARDED;
@@ -115,8 +118,8 @@ Admission Queue::admit(const uint8_t* wire, size_t length, uint32_t nowS,
     if (prior == wici_seen::Lookup::IO_ERROR) return Admission::IO_ERROR;
     for (uint8_t i = 0; i < SLOTS; ++i) {
         // Link sender/sequence can change after a parent switch. The end-to-end
-        // envelope header identifies the same intent; only identical ciphertext
-        // and signature earn another HACK. A conflicting payload cannot overwrite it.
+        // envelope header identifies the same intent; only an identical
+        // ciphertext earns another HACK. A conflicting payload cannot overwrite it.
         const uint8_t* old = frames_[i] + wici_link::HEADER;
         const uint8_t* incoming = wire + wici_link::HEADER;
         if (!lengths_[i] || memcmp(old, incoming, 9)) continue;
@@ -125,29 +128,19 @@ Admission Queue::admit(const uint8_t* wire, size_t length, uint32_t nowS,
         if (slot) *slot = i;
         return Admission::DUPLICATE;
     }
-    uint8_t free = 0, first = SLOTS;
+    uint8_t k2 = 0, first = SLOTS;
     for (uint8_t i = 0; i < SLOTS; ++i) {
-        if (lengths_[i] && verifiedOrigin && origins_[i] == verifiedOrigin) return Admission::FULL;
-        if (lengths_[i]) continue;
-        if (first == SLOTS) first = i;
-        ++free;
+        if (lengths_[i] && k1Neighbor && k1_[i] == k1Neighbor) return Admission::FULL;
+        if (lengths_[i]) k2 += !k1_[i];
+        else if (first == SLOTS) first = i;
     }
-    if (free <= freeSlotsReserved) return Admission::FULL;
-    if (!commit(first, wire, length, verifiedOrigin, nowS)) return Admission::IO_ERROR;
+    if (first == SLOTS || (!k1Neighbor && k2 >= SLOTS - K1_RESERVED)) return Admission::FULL;
+    if (!commit(first, wire, length, k1Neighbor, nowS)) return Admission::IO_ERROR;
     if (slot) *slot = first;
     return Admission::STORED;
 }
 
 bool Queue::pending(uint8_t slot) const { return ready_ && slot < SLOTS && lengths_[slot]; }
-
-bool Queue::markVerified(uint8_t slot, uint16_t origin) {
-    if (!pending(slot) || !id(origin)) return false;
-    if (origins_[slot] == origin) return true;
-    if (origins_[slot]) return false;
-    uint8_t wire[wici_link::MAX_FRAME];
-    memcpy(wire, frames_[slot], lengths_[slot]);
-    return commit(slot, wire, lengths_[slot], origin, admittedS_[slot]);
-}
 
 bool Queue::settle(uint32_t nowS) {
     if (!ready_) return false;

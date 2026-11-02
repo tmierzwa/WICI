@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Authenticated WICI-Link v2 frame codec. Routing and durable HACK admission are
+// Authenticated WICI-Link v3 frame codec. Routing and durable HACK admission are
 // separate state machines; parsing a frame alone never authorizes a HACK.
 #pragma once
 
@@ -8,13 +8,12 @@
 
 namespace wici_link {
 
-constexpr uint8_t VERSION = 2;
+constexpr uint8_t VERSION = 3;  // v3: DATA without the v2 origin signature
 constexpr size_t HEADER = 11;
 constexpr size_t TAG = 8;               // network MAC
 constexpr size_t HOP_TAG = 8;           // pairwise neighbor tag on unicast radio frames
-constexpr size_t ORIGIN_SIGNATURE = 64;
 constexpr size_t MAX_FRAME = 255;
-constexpr size_t MAX_PAYLOAD = MAX_FRAME - HEADER - ORIGIN_SIGNATURE - TAG - HOP_TAG;
+constexpr size_t MAX_PAYLOAD = MAX_FRAME - HEADER - TAG - HOP_TAG;  // 228 B envelope
 constexpr size_t RADIO_HACK = HEADER + TAG + HOP_TAG;  // HACK as transmitted
 // BEACON payload: root, rank, epoch, parent (u16 each), flags, the root's
 // epoch signature, then the sender's signature over the preceding bytes.
@@ -64,7 +63,6 @@ struct Frame {
     uint8_t hops = 0, ttl = 0;
     uint8_t payload[MAX_PAYLOAD] = {};
     size_t length = 0;
-    uint8_t originSignature[ORIGIN_SIGNATURE] = {};  // DATA only; preserved across hops
 };
 
 // Derive a link-only key from the 16-byte IFAC. The envelope has an unrelated key.

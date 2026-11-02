@@ -64,7 +64,6 @@
 #include "wici_hop_auth.h"
 #include "wici_airtime.h"
 #include "wici_radio.h"
-#include "wici_origin.h"
 #include "wici_beacon.h"
 
 #ifndef WICI_FW_VERSION
@@ -518,25 +517,6 @@ void onWiciDelivery(uint32_t handle, bool acknowledged, void*) { app.receipt(han
 bool onWiciAdmit(uint16_t network, uint16_t sender, uint16_t recipient,
                  const uint8_t* sa1, size_t length, void*) {
     return app.receivedEnvelope(network, sender, recipient, sa1, length);
-}
-bool verifyWiciOrigin(uint16_t sender, uint16_t recipient, const wici_link::Frame& frame, const void* context) {
-    const config::Config* c = static_cast<const config::Config*>(context);
-    if (!c || frame.network != c->network.id || frame.type != wici_link::Type::DATA) return false;
-    uint8_t stationKey[64] = {};
-    const uint8_t* publicKey = nullptr;
-    if (frame.flags & wici_link::DOWN) {
-        for (const config::Receiver& receiver : c->receivers)
-            if (sender == receiver.number) { publicKey = receiver.key; break; }
-    } else if (recipient == c->network.receiverMain || recipient == c->network.receiverBackup) {
-        for (uint8_t i = 0; i < c->priorityKeyCount; ++i)
-            if (sender == c->priorityKeys[i].station) {
-                memcpy(stationKey + 32, c->priorityKeys[i].ed25519, 32);
-                publicKey = stationKey;
-                break;
-            }
-    }
-    return publicKey && wici_origin::verify(publicKey, frame.network, frame.payload,
-                                             frame.length, frame.originSignature);
 }
 bool verifyWiciBeacon(uint16_t sender, const uint8_t content[wici_beacon::CONTENT_BYTES],
                       const uint8_t signature[wici_beacon::SIGNATURE_BYTES], const void* context) {
@@ -1904,7 +1884,7 @@ void beginWici() {
                          {c.network.id, c.network.station, c.network.root,
                           c.network.parent, c.network.backupParent}, c.network.ttl, receivers, c.ifac,
                          privateKey, publicKeys, onWiciAdmit, nullptr,
-                         wiciAir, wiciRandom, nullptr, verifyWiciOrigin, &c, rootEd25519,
+                         wiciAir, wiciRandom, nullptr, c.behind, c.behindCount, rootEd25519,
                          verifyWiciBeacon, &c);
             if (!wiciShelter->begin()) failure = "wici station durable state unavailable";
             else wiciShelter->onDelivery(onWiciDelivery, nullptr);

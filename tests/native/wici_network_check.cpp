@@ -42,7 +42,7 @@ int main() {
     uplink.payload[3] = 0; uplink.payload[4] = 9;
     uplink.payload[8] = 7;
     const size_t receivedLength = wici_link::encode(key, uplink, incoming, sizeof(incoming));
-    assert(receivedLength == 108);
+    assert(receivedLength == 44);
     assert(first.admit(incoming, receivedLength, 100) == wici_relay::Admission::STORED);
     assert(route.learn(4, 4));  // down route survives the same crash
     // HACK may be sent only now, after the relay queue and down route commit.

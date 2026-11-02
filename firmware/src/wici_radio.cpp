@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include <Ed25519.h>
-#include "wici_origin.h"
 
 namespace wici_radio {
 namespace {
@@ -18,7 +17,7 @@ Shelter::Shelter(journal::Storage& storage, wici_route::Config route, uint8_t tt
                  const uint8_t privateKey[64], const uint8_t receiverPublic[2][32],
                  wici_destination::AdmitFn admit, void* admitContext,
                  Air& air, RandomFn random, void* randomContext,
-                 wici_hop::VerifyOrigin verifyOrigin, const void* verifyContext,
+                 const config::Behind* behind, uint16_t behindCount,
                  const uint8_t rootEd25519[32], VerifyBeacon verifyBeacon, const void* beaconContext)
     : network_(route.network), own_(route.own), root_(route.root), ttl_(ttl),
       outbound_{envelope::Counter(storage, 0), envelope::Counter(storage, 1)},
@@ -26,7 +25,7 @@ Shelter::Shelter(journal::Storage& storage, wici_route::Config route, uint8_t tt
                             {static_cast<uint16_t>(receiverIds ? receiverIds[0] : 0),
                              static_cast<uint16_t>(receiverIds ? receiverIds[1] : 0)}},
                    ifac, privateKey, receiverPublic, admit, admitContext),
-      relay_(storage, route, ifac, true, receiverIds, verifyOrigin, verifyContext),
+      relay_(storage, route, ifac, true, receiverIds, behind, behindCount),
       air_(air), random_(random), randomContext_(randomContext) {
     verifyBeacon_ = verifyBeacon;
     beaconContext_ = beaconContext;
@@ -36,7 +35,7 @@ Shelter::Shelter(journal::Storage& storage, wici_route::Config route, uint8_t tt
     }
     if (privateKey) {
         memcpy(signingPrivate_, privateKey, sizeof(signingPrivate_));
-        Ed25519::derivePublicKey(signingPublic_ + 32, signingPrivate_ + 32);
+        Ed25519::derivePublicKey(signingPublic_, signingPrivate_ + 32);
     }
     keyReady_ = ifac && random && wici_link::deriveKey(ifac, network_, linkKey_);
     if (receiverIds) {
@@ -229,8 +228,6 @@ bool Shelter::queueOwn(uint16_t recipient, const uint8_t* sa1, size_t length, ui
         frame.sequence = sequences[i];
         frame.length = parts[i].length;
         memcpy(frame.payload, parts[i].bytes, frame.length);
-        if (!wici_origin::sign(signingPrivate_, signingPublic_, network_, frame.payload,
-                               frame.length, frame.originSignature)) return false;
         lengths[i] = wici_link::encode(linkKey_, frame, frames[i], sizeof(frames[i]));
         if (!lengths[i]) return false;
     }
@@ -287,7 +284,7 @@ bool Shelter::beacon() {
     value.parent = routes.parent();
     memcpy(value.epochSignature, routes.epochSignature(), sizeof(value.epochSignature));
     uint8_t wire[wici_link::MAX_FRAME];
-    const size_t length = wici_beacon::encode(linkKey_, signingPrivate_, signingPublic_ + 32, network_, own_, sequence,
+    const size_t length = wici_beacon::encode(linkKey_, signingPrivate_, signingPublic_, network_, own_, sequence,
                                               value, wire, sizeof(wire));
     return length && air_.sendData(wire, length, wici_link::TxClass::BEACON);
 }

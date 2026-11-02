@@ -3,6 +3,7 @@
 // The radio caller owns CAD, silence, airtime debt and the 600 ms HACK timer.
 #pragma once
 
+#include "config.h"
 #include "wici_relay.h"
 #include "wici_route.h"
 #include "wici_seq.h"
@@ -11,28 +12,34 @@
 namespace wici_hop {
 
 enum class Receipt : uint8_t { IGNORED, HACK_READY, STORED_NO_HACK, REJECTED };
-using VerifyOrigin = bool (*)(uint16_t sender, uint16_t recipient, const wici_link::Frame&, const void*);
 
+// Every unicast DATA reaching receiveData() has passed the pairwise hop tag,
+// so its link source is an authenticated neighbour. K1 is unicast transit to
+// or from an active receiver identity, at most one queue slot per neighbour.
+// A down route to a station is learned via a neighbour only when the network
+// plan puts the station behind it (`behind`, from priority_keys) or the
+// station is that neighbour.
 class Relay {
 public:
     // Flooding requires SA1 retries independent of local TX success (a flood
-    // is one attempt); the station coordinator enables it.
+    // is one attempt); the station coordinator enables it. `behind` must
+    // outlive the relay.
     Relay(journal::Storage& storage, wici_route::Config config, const uint8_t ifac[16],
           bool allowFlood = false, const uint16_t receiverIds[2] = nullptr,
-          VerifyOrigin verify = nullptr, const void* verifyContext = nullptr);
+          const config::Behind* behind = nullptr, uint16_t behindCount = 0);
     bool begin();
     // HACK_READY only after the incoming frame is durably held or was already
     // forwarded. `hack` is a complete radio frame; the caller applies silence.
     Receipt receiveData(const uint8_t* wire, size_t length, uint32_t nowS,
                         uint8_t* hack, size_t capacity, size_t& hackLength);
-    // Called outside the HACK deadline: settles the queue, verifies origin
-    // signatures and learns down routes. False on a storage failure.
+    // Called outside the HACK deadline: settles the queue and learns down
+    // routes allowed by the plan. False on a storage failure.
     bool learnPending(uint32_t nowS);
     // Start one queued transfer. The same bytes are returned by outgoing() for
     // each retry; on reboot a new reserved seq is used for the old queue item.
     bool prepare(uint32_t nowS);
     const uint8_t* outgoing(size_t& length) const;
-    // The active transfer is K2 while a verified K1 frame waits in the queue.
+    // The active transfer is K2 while a K1 frame waits in the queue.
     bool contendedK2() const;
     // Call only after a real TX attempt. A broadcast is retired after success;
     // unicast waits for a matching authenticated HACK.
@@ -50,9 +57,10 @@ private:
     wici_route::Config config_;
     bool allowFlood_ = false;
     uint16_t receivers_[2] = {};
-    VerifyOrigin verify_ = nullptr;
-    const void* verifyContext_ = nullptr;
+    const config::Behind* behind_ = nullptr;
+    uint16_t behindCount_ = 0;
     bool priority(const wici_link::Frame& frame) const;
+    bool planned(uint16_t station, uint16_t via) const;
     uint8_t key_[32] = {};
     bool keyReady_ = false;
     wici_relay::Queue queue_;
@@ -65,10 +73,9 @@ private:
     uint8_t slot_ = 0, attempts_ = 0;
     bool active_ = false, sent_ = false, everSent_ = false, noAck_ = false;
     bool activePriority_ = false;
-    uint32_t checkedGeneration_[wici_relay::SLOTS] = {};
     wici_link::RepeatHack repeatHack_;
     uint8_t nextSlot_ = 0;
-    uint8_t owedHacks_ = 0;  // slots stored as K1 without a HACK; the retry is owed one
+    uint8_t owedHacks_ = 0;  // K1 slots whose first sender retry gets a HACK regardless of RepeatHack
 };
 
 }  // namespace wici_hop

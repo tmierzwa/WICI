@@ -38,7 +38,7 @@ int main() {
     frame.payload[3] = 0; frame.payload[4] = 1;
     uint8_t wire[wici_link::MAX_FRAME], saved[wici_link::MAX_FRAME];
     size_t n = wici_link::encode(key, frame, wire, sizeof(wire)), length = 0;
-    assert(n == 108);
+    assert(n == 44);
     wici_relay::Queue queue(memory);
     assert(queue.begin(key, 100, 2));
     assert(queue.admit(wire, n, 100) == wici_relay::Admission::STORED);
@@ -67,12 +67,23 @@ int main() {
     wici_relay::Queue restarted(memory);
     assert(restarted.begin(key, 100, 2) && restarted.pending(0));
     assert(restarted.admit(wire, n, 100) == wici_relay::Admission::DUPLICATE);
-    for (uint8_t i = 1; i < 4; ++i) {
-        frame.sequence = i;
-        frame.payload[8] = i;
-        n = wici_link::encode(key, frame, wire, sizeof(wire));
-        assert(restarted.admit(wire, n, 100) == wici_relay::Admission::STORED);
-    }
+    // K2 holds at most two slots; the other two are K1 only, one per neighbour.
+    frame.sequence = 1; frame.payload[8] = 1;
+    n = wici_link::encode(key, frame, wire, sizeof(wire));
+    assert(restarted.admit(wire, n, 100) == wici_relay::Admission::STORED);
+    frame.sequence = 2; frame.payload[8] = 2;
+    n = wici_link::encode(key, frame, wire, sizeof(wire));
+    assert(restarted.admit(wire, n, 100) == wici_relay::Admission::FULL);
+    assert(restarted.admit(wire, n, 100, 5) == wici_relay::Admission::REJECTED);  // K1 only for l_src
+    assert(restarted.admit(wire, n, 100, 4) == wici_relay::Admission::STORED);
+    assert(restarted.k1Neighbor(2) == 4);
+    frame.sequence = 3; frame.payload[8] = 3;
+    n = wici_link::encode(key, frame, wire, sizeof(wire));
+    assert(restarted.admit(wire, n, 100, 4) == wici_relay::Admission::FULL);  // one K1 slot per neighbour
+    frame.source = 6;
+    n = wici_link::encode(key, frame, wire, sizeof(wire));
+    assert(restarted.admit(wire, n, 100, 6) == wici_relay::Admission::STORED);
+    frame.source = 4;
     frame.sequence = 4;
     frame.payload[8] = 4;
     n = wici_link::encode(key, frame, wire, sizeof(wire));
@@ -95,7 +106,7 @@ int main() {
     wici_relay::Queue afterRemove(memory);
     assert(afterRemove.begin(key, 100, 2) && !afterRemove.pending(0));
     assert(afterRemove.admit(saved, savedLength, 103) == wici_relay::Admission::FORWARDED);
-    // Rewriting the hop sequence and MAC cannot make the same signed envelope new.
+    // Rewriting the hop sequence and MAC cannot make the same envelope new.
     frame.sequence = 200;
     frame.payload[8] = 0;
     size_t replayLength = wici_link::encode(key, frame, wire, sizeof(wire));
@@ -110,20 +121,21 @@ int main() {
     static Memory expiryMemory;
     wici_relay::Queue expiring(expiryMemory);
     assert(expiring.begin(key, 100, 2));
-    assert(expiring.admit(saved, savedLength, 100, 0, 4) == wici_relay::Admission::STORED);
+    assert(expiring.admit(saved, savedLength, 100, 4) == wici_relay::Admission::STORED);
     assert(expiring.settle(100 + wici_relay::MAX_HOLD_S - 1) && expiring.pending(0));
     assert(expiring.settle(100 + wici_relay::MAX_HOLD_S) && !expiring.pending(0));
     wici_relay::Queue expiredAfterRestart(expiryMemory);
     assert(expiredAfterRestart.begin(key, 100, 2) && !expiredAfterRestart.pending(0));
     assert(expiredAfterRestart.admit(saved, savedLength, 100 + wici_relay::MAX_HOLD_S) ==
            wici_relay::Admission::FORWARDED);
+    // The K1 neighbour is durable: no re-verification after restart.
     static Memory verifiedMemory;
     wici_relay::Queue verified(verifiedMemory);
     assert(verified.begin(key, 100, 2));
-    assert(verified.admit(saved, savedLength, 100, 0, 4) == wici_relay::Admission::STORED);
-    assert(verified.verifiedOrigin(0) == 4);
-    wici_relay::Queue keyMayHaveChanged(verifiedMemory);
-    assert(keyMayHaveChanged.begin(key, 100, 2) && keyMayHaveChanged.verifiedOrigin(0) == 0);
+    assert(verified.admit(saved, savedLength, 100, 4) == wici_relay::Admission::STORED);
+    assert(verified.k1Neighbor(0) == 4);
+    wici_relay::Queue afterBoot(verifiedMemory);
+    assert(afterBoot.begin(key, 100, 2) && afterBoot.k1Neighbor(0) == 4);
     // Reprovisioning (new link key or station number) drops items that can
     // never be sent again instead of wedging the relay.
     uint8_t newIfac[16], newKey[32];

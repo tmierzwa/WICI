@@ -24,7 +24,7 @@ int main() {
     frame.length = 25;
     for (uint8_t i = 0; i < frame.length; ++i) frame.payload[i] = i;
     const size_t size = wici_link::encode(key, frame, wire, sizeof(wire));
-    assert(size == 108);
+    assert(size == 44);
     print(wire, size);
     wici_link::Frame decoded;
     assert(wici_link::decode(key, 100, wire, size, decoded));
@@ -44,8 +44,9 @@ int main() {
         assert(decoded.network == 0 && decoded.length == 0);
     };
     authenticatedBadHeader(0, 0x41);  // unknown version
-    authenticatedBadHeader(0, 0x85);  // reserved flag
-    authenticatedBadHeader(0, 0x89);  // HACK with DATA payload
+    authenticatedBadHeader(0, 0x81);  // v2 frame (origin signature era), even with a valid MAC
+    authenticatedBadHeader(0, 0xC5);  // reserved flag
+    authenticatedBadHeader(0, 0xC9);  // HACK with DATA payload
     authenticatedBadHeader(4, 0);     // reserved link source
     authenticatedBadHeader(7, 0);     // zero TTL
     authenticatedBadHeader(10, 1);    // reserved opts
@@ -66,14 +67,19 @@ int main() {
     assert(wici_link::decode(key, 100, forwarded, size, decoded));
     assert(decoded.source == 2 && decoded.destination == 1 && decoded.sequence == 9 &&
            decoded.hops == 1 && decoded.ttl == 7 && decoded.flags == wici_link::ACKREQ &&
-           memcmp(decoded.payload, frame.payload, frame.length) == 0 &&
-           memcmp(decoded.originSignature, frame.originSignature, wici_link::ORIGIN_SIGNATURE) == 0);
+           memcmp(decoded.payload, frame.payload, frame.length) == 0);
     assert(!wici_link::forward(key, 100, 2, 4, 9, wire, size, forwarded, sizeof(forwarded)));
     assert(!wici_link::forward(key, 100, 2, 1, 9, wire, size, forwarded, size - 1));
     frame.hops = 6; frame.ttl = 6;
     assert(wici_link::encode(key, frame, wire, sizeof(wire)) == size);
     assert(!wici_link::forward(key, 100, 2, 1, 9, wire, size, forwarded, sizeof(forwarded)));
     frame.hops = 0; frame.ttl = 7;
+    // A 228 B envelope fills one unicast frame: 255 B on air with the 8 B hop tag.
+    static_assert(wici_link::MAX_PAYLOAD == 228, "255 - 11 header - 8 MAC - 8 hop tag");
+    frame.length = wici_link::MAX_PAYLOAD;
+    assert(wici_link::encode(key, frame, wire, sizeof(wire)) == 247);
+    assert(wici_link::decode(key, 100, wire, 247, decoded) && decoded.length == wici_link::MAX_PAYLOAD);
+    frame.length = 25;
     frame.flags = wici_link::DOWN;
     frame.destination = wici_link::BROADCAST;
     assert(wici_link::encode(key, frame, wire, sizeof(wire)) == size);

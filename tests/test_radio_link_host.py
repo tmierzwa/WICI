@@ -1904,8 +1904,8 @@ int main() {
            static_cast<unsigned long>(bench.link().rxBad - badBefore));
     // HACK bypasses the ordinary 50 ms window and outstanding debt, but
     // reserves its own airtime plus debt before the radio starts transmitting.
-    // A WICI-Link v2 HACK as transmitted: 11 B header, network MAC and pairwise tag.
-    uint8_t hack[27] = {0x88, 0, 100, 0, 2, 0, 4, 1};
+    // A WICI-Link v3 HACK as transmitted: 11 B header, network MAC and pairwise tag.
+    uint8_t hack[27] = {0xC8, 0, 100, 0, 2, 0, 4, 1};
     radio.ops.clear();
     radio.sent.clear();
     const bool hackFirst = bench.linkSendHack(hack, sizeof(hack), millis());
@@ -1927,9 +1927,11 @@ int main() {
     const bool lateHack = bench.linkSendHack(hack, sizeof(hack), millis() - 201);
     const uint8_t malformedHack[27] = {};
     const bool malformedSent = bench.linkSendHack(malformedHack, sizeof(malformedHack), millis());
-    const uint8_t untaggedHack[19] = {0x88, 0, 100, 0, 2, 0, 4, 1};
+    const uint8_t untaggedHack[19] = {0xC8, 0, 100, 0, 2, 0, 4, 1};
     const bool untaggedSent = bench.linkSendHack(untaggedHack, sizeof(untaggedHack), millis());
-    printf("HACK_REFUSE %d %d %d %d %d\n", silentHack, lateHack, malformedSent, untaggedSent,
+    const uint8_t v2Hack[27] = {0x88, 0, 100, 0, 2, 0, 4, 1};
+    const bool v2Sent = bench.linkSendHack(v2Hack, sizeof(v2Hack), millis());
+    printf("HACK_REFUSE %d %d %d %d %d %d\n", silentHack, lateHack, malformedSent, untaggedSent, v2Sent,
            radio.sent.size() == beforeRefusal);
     radio.cadBusy = 1;
     const bool busyHack = bench.linkSendHack(hack, sizeof(hack), millis());
@@ -2619,7 +2621,7 @@ class LoraBenchTests(unittest.TestCase):
         # The untagged 19 B form is refused, so a HACK cannot leave without the neighbor tag.
         self.assertEqual(line(self.out, "HACK_FIRST"), "HACK_FIRST 1 prep:0 cad:0 send:1131 rx 1131 1044")
         self.assertEqual(line(self.out, "HACK_QUEUE"), "HACK_QUEUE - 1 2175 2 1 3")
-        self.assertEqual(line(self.out, "HACK_REFUSE"), "HACK_REFUSE 0 0 0 0 1")
+        self.assertEqual(line(self.out, "HACK_REFUSE"), "HACK_REFUSE 0 0 0 0 0 1")
         self.assertEqual(line(self.out, "HACK_FAIL"), "HACK_FAIL 0 0 1 1")
         self.assertEqual(line(self.out, "HACK_SLOW"), "HACK_SLOW 0 1 1")
         self.assertEqual(line(self.out, "HACK_FULL_DEBT"), "HACK_FULL_DEBT 0 1")

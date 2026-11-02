@@ -49,9 +49,6 @@ bool admit(uint16_t net, uint16_t src, uint16_t dst, const uint8_t* p, size_t n,
     ++*static_cast<unsigned*>(ctx); return true;
 }
 uint32_t randomZero(void*) { return 0; }
-bool originProof(uint16_t, uint16_t, const wici_link::Frame& frame, const void*) {
-    return frame.originSignature[0] == 0xA5;
-}
 bool beaconProof(uint16_t sender, const uint8_t content[wici_beacon::CONTENT_BYTES],
                  const uint8_t signature[wici_beacon::SIGNATURE_BYTES], const void* context) {
     return wici_beacon::verify(static_cast<const uint8_t*>(context), 100, sender, content, signature);
@@ -89,7 +86,7 @@ int main() {
     assert(envelope::startCounters(memory));  // done when the station identity is first saved
     wici_radio::Shelter shelter(memory, {100, 2, 5, 5, 0}, 7, receivers, ifac,
                                ownSecret, receiverPublic, admit, &admitted,
-                               air, randomZero, nullptr, originProof, nullptr, rootEd, beaconProof, rootEd);
+                               air, randomZero, nullptr, nullptr, 0, rootEd, beaconProof, rootEd);
     assert(shelter.begin());
     envelope::Frame sealed[2];
     assert(envelope::seal(envelopeKey, 1, 2, 1,
@@ -114,7 +111,6 @@ int main() {
     frame.source = 4; frame.sequence = 11; frame.length = 25;
     memset(frame.payload, 0, frame.length);
     frame.payload[0] = 0x40; frame.payload[2] = 4; frame.payload[4] = 1;
-    frame.originSignature[0] = 0xA5;
     n = encode(key, frame, wire);
     air.hackOk = false;
     assert(shelter.receive(wire, n, 1300, 11) == wici_radio::Event::ADMITTED);
@@ -146,7 +142,7 @@ int main() {
     assert(shelter.routes().rank() == 21);  // rank is signed by its sender
     air.dataOk = false;
     shelter.poll(1401, 12);
-    assert(air.dataCount == 1 && air.dataLength == 108);
+    assert(air.dataCount == 1 && air.dataLength == 44);
     assert(air.lastClass == wici_link::TxClass::TRANSIT);
     shelter.poll(1900, 12);
     assert(air.dataCount == 1);
@@ -217,14 +213,26 @@ int main() {
     assert(shelter.receive(wire, n, 5351, 13) == wici_radio::Event::ADMITTED);
     assert(!shelter.ownBusy() && delivery.calls == 1 && delivery.handle == 88 && delivery.acknowledged);
 
+    // A typical REQUEST (174 B SA1, 199 B envelope) leaves as one DATA frame.
+    uint8_t typical[174]; memset(typical, 't', sizeof(typical));
+    assert(shelter.queueOwn(1, typical, sizeof(typical), 89));
+    shelter.poll(5360, 13);
+    assert(air.dataCount == 7 && wici_link::decode(key, 100, air.data, air.dataLength, sent));
+    assert(sent.length == 199 && air.dataLength == 218);  // 226 B on air with the hop tag
+    shelter.onTxDone(true, 5370, 13);
+    reply.sequence = sent.sequence;
+    n = encode(key, reply, wire);
+    assert(shelter.receive(wire, n, 5380, 13) == wici_radio::Event::ADMITTED);
+    assert(!shelter.ownBusy() && delivery.calls == 2 && delivery.handle == 89 && delivery.acknowledged);
+
     // Silence exception is an unacknowledged one-shot DATA transmission. The
     // station layer owns the durable three-attempt/60-second limit.
     assert(shelter.queueOwn(1, reinterpret_cast<const uint8_t*>("SA1"), 3, 90, true));
     shelter.poll(5400, 13);
-    assert(air.dataCount == 7 && wici_link::decode(key, 100, air.data, air.dataLength, sent));
+    assert(air.dataCount == 8 && wici_link::decode(key, 100, air.data, air.dataLength, sent));
     assert(sent.flags == 0 && shelter.exceptionTx());
     shelter.onTxDone(true, 5450, 13);
-    assert(!shelter.ownBusy() && delivery.calls == 2 && delivery.handle == 90 && delivery.acknowledged);
+    assert(!shelter.ownBusy() && delivery.calls == 3 && delivery.handle == 90 && delivery.acknowledged);
 
     // Restart recovers a queued frame and learned down route without another RX.
     frame.sequence = 12; frame.payload[8] = 1;
@@ -233,7 +241,7 @@ int main() {
     Air resumedAir;
     wici_radio::Shelter resumed(memory, {100, 2, 5, 5, 0}, 7, receivers, ifac,
                                ownSecret, receiverPublic, admit, &admitted,
-                               resumedAir, randomZero, nullptr, originProof, nullptr, rootEd, beaconProof, rootEd);
+                               resumedAir, randomZero, nullptr, nullptr, 0, rootEd, beaconProof, rootEd);
     assert(resumed.begin());
     resumed.poll(1, 15);
     assert(resumed.routes().down(4) == 4);
@@ -246,7 +254,7 @@ int main() {
     assert(envelope::startCounters(floodMemory));
     wici_radio::Shelter flood(floodMemory, {100, 2, 5, 5, 0}, 7, receivers, ifac,
                              ownSecret, receiverPublic, admit, &admitted,
-                             floodAir, randomZero, nullptr, originProof, nullptr, rootEd, beaconProof, rootEd);
+                             floodAir, randomZero, nullptr, nullptr, 0, rootEd, beaconProof, rootEd);
     assert(flood.begin());
     frame.flags = wici_link::DOWN;
     frame.source = 5; frame.destination = wici_link::BROADCAST;
@@ -267,7 +275,7 @@ int main() {
     assert(envelope::startCounters(failoverMemory));
     wici_radio::Shelter failover(failoverMemory, {100, 2, 5, 5, 6}, 3, receivers, ifac,
                                  ownSecret, receiverPublic, admit, &admitted, failoverAir, randomZero,
-                                 nullptr, originProof, nullptr, rootEd, beaconProof, rootEd);
+                                 nullptr, nullptr, 0, rootEd, beaconProof, rootEd);
     assert(failover.begin());
     Delivery failoverDelivery;
     failover.onDelivery(delivered, &failoverDelivery);
@@ -312,7 +320,7 @@ int main() {
     assert(envelope::startCounters(partMemory));
     wici_radio::Shelter parted(partMemory, {100, 2, 5, 5, 0}, 7, receivers, ifac,
                                ownSecret, receiverPublic, admit, &admitted,
-                               partAir, randomZero, nullptr, originProof, nullptr, rootEd, beaconProof, rootEd);
+                               partAir, randomZero, nullptr, nullptr, 0, rootEd, beaconProof, rootEd);
     assert(parted.begin());
     uint8_t longSa1[200];
     memset(longSa1, 'L', sizeof(longSa1));

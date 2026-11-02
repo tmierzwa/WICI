@@ -127,7 +127,7 @@ def start(args):
         numbered = WiciStos(args.port, link["net_id"], link["root"], link["ttl"], bytes.fromhex(link["ifac"]),
                             bytes.fromhex(active["lxmf"]),
                             lambda frame: przyjecie.receive_envelope_frame(link["net_id"], frame,
-                                                                             bearer="wici"), signing_key=identity_key)
+                                                                             bearer="wici"))
         if args.reticulum_port:
             legacy = Stos(medium.network, args.reticulum_port,
                           lambda source, content: przyjecie.deliver(source, content, bearer="reticulum"),

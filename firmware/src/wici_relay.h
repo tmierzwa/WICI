@@ -16,6 +16,7 @@ namespace wici_relay {
 constexpr uint32_t BASE = 0x045000;
 constexpr uint32_t COPY_BYTES = 320;
 constexpr uint8_t SLOTS = 4;
+constexpr uint8_t K1_RESERVED = 2;  // slots K2 can never take
 constexpr uint32_t MAX_HOLD_S = 30 * 60;
 static_assert(BASE + 2 * SLOTS * COPY_BYTES <= 0x048000, "relay queue before FRAM FS");
 
@@ -30,13 +31,15 @@ public:
     // An item that no longer authenticates as transit traffic for this
     // configuration (new key or numbers) is dropped: it can never be sent.
     bool begin(const uint8_t key[32], uint16_t network, uint16_t own);
-    // On STORED or DUPLICATE, `slot` names the queue item.
+    // k1Neighbor = 0 admits K2, which may hold at most SLOTS - K1_RESERVED
+    // slots. A nonzero k1Neighbor must be the frame's link source (checked by
+    // the pairwise hop tag): K1 may take any free slot, but each neighbour
+    // holds at most one; FULL then lets the caller try K2. On STORED or
+    // DUPLICATE, `slot` names the queue item.
     Admission admit(const uint8_t* wire, size_t length, uint32_t nowS,
-                    uint8_t freeSlotsReserved = 0, uint16_t verifiedOrigin = 0, uint8_t* slot = nullptr);
+                    uint16_t k1Neighbor = 0, uint8_t* slot = nullptr);
     bool pending(uint8_t slot) const;
-    uint16_t verifiedOrigin(uint8_t slot) const { return pending(slot) ? origins_[slot] : 0; }
-    uint32_t generation(uint8_t slot) const { return slot < SLOTS ? generations_[slot] : 0; }
-    bool markVerified(uint8_t slot, uint16_t origin);
+    uint16_t k1Neighbor(uint8_t slot) const { return pending(slot) ? k1_[slot] : 0; }
     // Finishes a tombstone interrupted after the durable forwarded marker and
     // retires items held for MAX_HOLD_S. False only on a storage failure.
     bool settle(uint32_t nowS);
@@ -48,7 +51,7 @@ public:
 
 private:
     bool commit(uint8_t slot, const uint8_t* wire, size_t length,
-                uint16_t verifiedOrigin = 0, uint32_t admittedS = 0);
+                uint16_t k1Neighbor = 0, uint32_t admittedS = 0);
     bool transit(const uint8_t* wire, size_t length, wici_link::Frame& frame) const;
     journal::Storage& storage_;
     wici_seen::Ring seen_;
@@ -58,7 +61,7 @@ private:
     uint16_t lengths_[SLOTS] = {};
     uint32_t generations_[SLOTS] = {};
     uint8_t copies_[SLOTS] = {};
-    uint16_t origins_[SLOTS] = {};  // nonzero only after an origin signature was verified
+    uint16_t k1_[SLOTS] = {};  // K1 neighbour (link source) of the item; 0 for K2
     uint32_t admittedS_[SLOTS] = {};
     bool ready_ = false;
 };

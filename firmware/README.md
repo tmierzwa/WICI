@@ -547,7 +547,7 @@ Kod jest w czterech plikach. `src/journal.cpp` obsługuje jawny obszar: dług ci
 | wolne | 0x441C0 | 64 B | jedyna wolna luka w 0x44000–0x47FFF (16 320 z 16 384 B zajęte) |
 | pierścień rozsyłania, część A (`src/wici_flood.cpp`) | 0x44200 | 192 × 18 B | sieć, tożsamość koperty, czas, CRC, COMMIT |
 | okna powtórzeń kopert (`src/envelope_replay.cpp`) | 0x44F80 | 2 × 2 × 32 B | największy `ctr` i maska 64 bitów na odbiorcę, CRC, COMMIT, odcisk klucza |
-| kolejka przekaźnika (`src/wici_relay.cpp`) | 0x45000 | 4 × 2 × 320 B | cztery gniazda: ramka do 255 B, klasa, nadawca K1, czas przyjęcia, stan „przekazane”, CRC, COMMIT |
+| kolejka przekaźnika (`src/wici_relay.cpp`) | 0x45000 | 4 × 2 × 320 B | cztery gniazda: ramka do 255 B, sąsiad K1 (0 dla K2), czas przyjęcia, stan „przekazane”, CRC, COMMIT |
 | pierścień rozsyłania, część B | 0x45A00 | 64 × 18 B | dalsze rekordy pierścienia z 0x44200 |
 | części kopert, główny odbiorca (`src/envelope_parts.cpp`) | 0x45E80 | 2 × 192 B | pierwsza część czekająca na drugą (120 s) |
 | drogi w dół (`src/wici_route.cpp`) | 0x46000 | 2 × 1152 B | 256 dróg po 4 B z siecią, numerem stacji i korzeniem, CRC, COMMIT |

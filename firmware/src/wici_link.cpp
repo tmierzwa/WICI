@@ -11,7 +11,7 @@ namespace {
 using fram_record::get16;
 using fram_record::put16;
 using fram_record::id;
-constexpr uint8_t LABEL[] = {'W', 'I', 'C', 'I', ' ', 'l', 'i', 'n', 'k', ' ', 'v', '2'};
+constexpr uint8_t LABEL[] = {'W', 'I', 'C', 'I', ' ', 'l', 'i', 'n', 'k', ' ', 'v', '3'};
 
 bool valid(const Frame& f) {
     if (!id(f.network) || !id(f.source) || (!id(f.destination) && f.destination != BROADCAST) ||
@@ -44,8 +44,7 @@ bool deriveKey(const uint8_t ifac[16], uint16_t netId, uint8_t out[32]) {
 }
 
 size_t encode(const uint8_t key[32], const Frame& frame, uint8_t* out, size_t capacity) {
-    const size_t signature = frame.type == Type::DATA ? ORIGIN_SIGNATURE : 0;
-    if (!key || !out || !valid(frame) || capacity < HEADER + frame.length + signature + TAG) return 0;
+    if (!key || !out || !valid(frame) || capacity < HEADER + frame.length + TAG) return 0;
     uint8_t local[MAX_FRAME] = {};
     local[0] = static_cast<uint8_t>((VERSION << 6) | (static_cast<uint8_t>(frame.type) << 3) | frame.flags);
     put16(local + 1, frame.network);
@@ -55,13 +54,12 @@ size_t encode(const uint8_t key[32], const Frame& frame, uint8_t* out, size_t ca
     put16(local + 8, frame.sequence);
     local[10] = 0;
     memcpy(local + HEADER, frame.payload, frame.length);
-    if (signature) memcpy(local + HEADER + frame.length, frame.originSignature, signature);
     uint8_t digest[32];
-    mac(key, local, HEADER + frame.length + signature, digest);
-    memcpy(local + HEADER + frame.length + signature, digest, TAG);
-    memcpy(out, local, HEADER + frame.length + signature + TAG);
+    mac(key, local, HEADER + frame.length, digest);
+    memcpy(local + HEADER + frame.length, digest, TAG);
+    memcpy(out, local, HEADER + frame.length + TAG);
     sha2::wipe(digest, sizeof(digest));
-    return HEADER + frame.length + signature + TAG;
+    return HEADER + frame.length + TAG;
 }
 
 bool decode(const uint8_t key[32], uint16_t netId, const uint8_t* wire, size_t size, Frame& out) {
@@ -84,12 +82,9 @@ bool decode(const uint8_t key[32], uint16_t netId, const uint8_t* wire, size_t s
     proposed.hops = wire[7] >> 4;
     proposed.ttl = wire[7] & 15;
     proposed.sequence = get16(wire + 8);
-    const size_t signature = proposed.type == Type::DATA ? ORIGIN_SIGNATURE : 0;
-    if (size < HEADER + signature + TAG) return false;
-    proposed.length = size - HEADER - signature - TAG;
+    proposed.length = size - HEADER - TAG;
     if (proposed.length > MAX_PAYLOAD) return false;
     memcpy(proposed.payload, wire + HEADER, proposed.length);
-    if (signature) memcpy(proposed.originSignature, wire + HEADER + proposed.length, signature);
     if (!valid(proposed)) return false;
     out = proposed;
     return true;

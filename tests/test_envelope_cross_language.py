@@ -94,7 +94,7 @@ class NativeWiciLink(unittest.TestCase):
 
     def test_shelter_radio_coordinator_hack_retry_and_restart(self):
         run(native("wici_radio_check", "wici_radio", "wici_destination", "wici_hop", "wici_flood", "wici_route",
-                   "wici_seq", "wici_origin", "wici_epoch", "wici_beacon", "envelope", *RELAY, *DURABLE[:3],
+                   "wici_seq", "wici_epoch", "wici_beacon", "envelope", *RELAY, *DURABLE[:3],
                    crypto=True))
 
     def test_durable_envelope_flood_ring(self):
@@ -119,11 +119,10 @@ class NativeWiciLink(unittest.TestCase):
         lines = run(native("wici_link_check", "wici_link", "sha2")).splitlines()
         ifac = bytes(range(16))
         prk = hmac.digest((100).to_bytes(2, "big"), ifac, "sha256")
-        key = hmac.digest(prk, b"WICI link v2\x01", "sha256")
-        header = bytes.fromhex("8100640004") + bytes.fromhex("000107123400")
+        key = hmac.digest(prk, b"WICI link v3\x01", "sha256")
+        header = bytes.fromhex("c100640004") + bytes.fromhex("000107123400")
         body = bytes(range(25))
-        unsigned = header + body + bytes(64)
-        expected = unsigned + hmac.digest(key, unsigned, "sha256")[:8]
+        expected = header + body + hmac.digest(key, header + body, "sha256")[:8]
         self.assertEqual(lines, [key.hex(), expected.hex()])
         from wici.stanowisko import wici_link
         frame = wici_link.Frame(wici_link.DATA, wici_link.ACKREQ, 100, 4, 1, 0, 7, 0x1234, body)
@@ -136,6 +135,16 @@ class NativeWiciLink(unittest.TestCase):
         self.assertEqual(stream.feed(packed[13:]), [expected])
         with self.assertRaises(wici_link.LinkError):
             wici_link.decode(key, 100, expected[:13] + bytes([expected[13] ^ 1]) + expected[14:])
+        # A v2 frame (with the origin signature) is refused even under a valid MAC.
+        v2 = bytes([0x81]) + header[1:] + body + bytes(64)
+        with self.assertRaises(wici_link.LinkError):
+            wici_link.decode(key, 100, v2 + hmac.digest(key, v2, "sha256")[:8])
+        # 228 B is the largest envelope: one unicast frame of 255 B with the 8 B hop tag.
+        self.assertEqual(wici_link.MAX_PAYLOAD, 228)
+        largest = wici_link.Frame(wici_link.DATA, wici_link.ACKREQ, 100, 4, 1, 0, 7, 1, bytes(228))
+        self.assertEqual(len(wici_link.encode(key, largest)) + 8, 255)
+        with self.assertRaises(wici_link.LinkError):
+            wici_link.encode(key, wici_link.Frame(wici_link.DATA, wici_link.ACKREQ, 100, 4, 1, 0, 7, 1, bytes(229)))
         self.assertEqual(wici_link.KissStream().feed(bytes([0xC0, 0, 0xDB, 0x00, 0xC0])), [])
         sent, admitted = [], []
         receiver = wici_link.Receiver(100, 1, key, sent.append, admitted.append)
@@ -159,14 +168,6 @@ class CrossLanguageEnvelope(unittest.TestCase):
         except ImportError as exc:
             raise unittest.SkipTest(f"cryptography dependency unavailable: {exc}") from exc
         cls.envelope, cls.ed25519, cls.x25519 = envelope, ed25519, x25519
-
-    def test_origin_signature_matches_python(self):
-        signature = run(native("wici_origin_check", "wici_origin", crypto=True)).strip()
-        from wici.stanowisko.wici_link import origin_message
-        payload = bytes([0x40, 0, 4, 0, 2]) + bytes(20)
-        expected = self.ed25519.Ed25519PrivateKey.from_private_bytes(bytes(range(32, 64))).sign(
-            origin_message(100, payload))
-        self.assertEqual(signature, expected.hex())
 
     def test_durable_station_fragment_slot(self):
         run(native("envelope_parts_check", "envelope_parts", "sha2"))
