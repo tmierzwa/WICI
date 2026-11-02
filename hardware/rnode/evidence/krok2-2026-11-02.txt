@@ -9,7 +9,7 @@ Urządzenia
   rnodeconf --info obu: "RAK4631 779 - 928 MHz (10:12:51)", podpis zweryfikowany, SX1262, 779-928 MHz
   Wgranie wymagało obejść z hardware/rnode/README.md ("Gdy kreator nie wgra firmware")
   Reticulum 1.5.5, commit e40191b3d193b46b7f2d8a44424a594cd758839b, Python 3.15, macOS
-  Anteny z zestawów, radia około 1 m od siebie (wpisać rzeczywistą odległość)
+  Anteny z zestawów, radia 1 m od siebie
 
 Odstępstwo od procedury
   Jeden laptop zamiast dwóch: dwie instancje Reticulum z osobnymi katalogami konfiguracji
