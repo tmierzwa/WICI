@@ -1074,6 +1074,156 @@ class RecoveryTest(WithCopies):
         self.assertEqual(medium.identity(self.key), self.medium.identity(self.key))
 
 
+
+class OnlineLink:
+    """A WICI-Link bearer for send_wici that keeps the frames it was given."""
+
+    network = 100
+
+    def status(self, now):
+        return {"online": True}
+
+    def send_frames(self, frames):
+        return frames
+
+
+@unittest.skipUnless(importlib.util.find_spec("cryptography"), "cryptography for the receiver identity")
+class BackupActivationTest(unittest.TestCase):
+    """The backup identity package yields one lineage that seals envelopes; every other activation is guarded."""
+
+    PASSWORD = "paczka zapasowa szesc slow testu"
+
+    def setUp(self):
+        from cryptography.hazmat.primitives.asymmetric import x25519
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.dir = Path(tmp.name)
+        self.backup = secrets.token_bytes(64)
+        backup_public = nosnik.public_identity(self.backup)
+        self.card = nosnik.receiver_card(nosnik.public_identity(secrets.token_bytes(64)), backup_public, 100, 2, 3)
+        self.package = self.dir / "paczka.json"
+        self.package.write_text(json.dumps(nosnik.backup_package(self.backup, backup_public, self.PASSWORD, FAST)))
+        self.link = {"net_id": 100, "root": 1, "ifac": "ab" * 16}
+        station_private = x25519.X25519PrivateKey.generate()
+        self.station_key = station_private.public_key().public_bytes_raw() + secrets.token_bytes(32)
+        self.now = 1_800_000_000.0
+
+    def activate(self, name):
+        return rekey.activate_backup(self.package, self.PASSWORD, self.dir / name, 2, self.card, self.link, FAST)
+
+    def run_station(self, medium, key, sends=1, finish=None):
+        """Open the application on medium, register station 4, and send; the envelope counters (None: refused)."""
+        reception = przyjecie.Przyjecie(medium, key, lambda *_: None, lambda m: None, clock=lambda: self.now,
+                                        log=lambda line: None, random=lambda: 0.5)
+        try:
+            if finish:
+                finish(reception)
+            source = nosnik.lxmf_address(self.station_key)
+
+            def register(store):
+                if store.db.execute("SELECT 1 FROM numery WHERE station=4").fetchone() is None:
+                    store.add_trusted(source, self.station_key, ("dyzurny-1", "dyzurny-2"))
+                    store.db.execute("INSERT INTO numery VALUES(?,?,?,?)", (100, 4, source, self.station_key))
+            reception.call(register)
+            content = received_for(request())
+            frames = [reception.call(lambda s: reception.send_wici(OnlineLink(), source, content))
+                      for _ in range(sends)]
+            return [None if f is None else int.from_bytes(f[0][5:9], "big") for f in frames]
+        finally:
+            reception.stop()
+
+    def test_second_activation_is_guarded_until_a_new_identity(self):
+        first, key, envelopes, guarded = self.activate("pierwszy")
+        self.assertFalse(guarded)
+        self.assertEqual(first.identity(key), self.backup)
+        self.assertIn(rekey.USED, json.loads(self.package.read_text()))
+        self.assertEqual(self.run_station(first, key, 2), [0, 1])
+        self.assertEqual(durable(first, key, "SELECT op, account FROM dziennik ORDER BY id"), ("aktywacja_zapasowej", ""))
+
+        second, key2, envelopes2, guarded = self.activate("drugi")   # e.g. the first medium was lost
+        self.assertTrue(guarded)
+        self.assertEqual(self.run_station(second, key2), [None])
+        self.assertIsNone(durable(second, key2, "SELECT 1 FROM sqlite_master WHERE name='env_send'"))
+        approvers = [(n, envelopes2[n]) for n in ("dyzurny-1", "dyzurny-2")]
+        card_path = self.dir / "nowa-karta.json"
+        card = rekey.stage(second, key2, approvers, card_path)
+        self.assertEqual(card["backup"], self.card["backup"])
+        rekey.activate(second, key2, approvers, card_path)
+        self.assertNotEqual(second.identity(key2), self.backup)
+        self.assertEqual(self.run_station(second, key2), [0])   # a fresh identity, so a fresh key
+
+        third, key3, _, guarded = self.activate("trzeci")   # the used backup stays used
+        self.assertTrue(guarded)
+        self.assertEqual(self.run_station(third, key3), [None])
+
+    def test_restored_backup_medium_is_guarded(self):
+        medium, key, envelopes, _ = self.activate("pierwszy")
+        self.assertEqual(self.run_station(medium, key), [0])
+        copies = kopie.Kopie(self.dir / "kopie")
+        with contextlib.closing(sqlite3.connect(":memory:")) as db:
+            db.deserialize(medium.load(key))
+            copies.write(medium, key, kopie.with_marker(db, self.now), self.now)
+        self.assertEqual(self.run_station(medium, key), [64])   # sent after the copy
+        approvers = [(n, envelopes[n]) for n in ("dyzurny-1", "dyzurny-2")]
+        restored = kopie.restore(copies.files()[0], key, self.dir / "odtworzony", approvers, self.now)
+        self.assertEqual(restored.identity(key), self.backup)
+        self.assertEqual(self.run_station(restored, key, finish=lambda r: r.finish_recovery("dyzurny-1", 0, True)),
+                         [None])
+
+    def test_interrupted_activation_never_yields_a_second_unguarded_medium(self):
+        replace = os.replace
+
+        def cut(source, target):   # power loss before the package is marked
+            if Path(target) == self.package:
+                raise OSError("zanik zasilania")
+            return replace(source, target)
+        with unittest.mock.patch.object(rekey.os, "replace", side_effect=cut), self.assertRaises(OSError):
+            self.activate("przerwany-paczka")
+        self.assertNotIn(rekey.USED, json.loads(self.package.read_text()))
+        self.assertFalse(nosnik.Nosnik(self.dir / "przerwany-paczka").exists())
+
+        with unittest.mock.patch.object(nosnik.Nosnik, "save_identity", side_effect=OSError("zanik zasilania")), \
+                self.assertRaises(OSError):
+            self.activate("przerwany-nosnik")
+        self.assertIn(rekey.USED, json.loads(self.package.read_text()))
+        partial = nosnik.Nosnik(self.dir / "przerwany-nosnik")
+        with self.assertRaises(database.StorageError):   # an interrupted medium is not prepared again ...
+            self.activate("przerwany-nosnik")
+        self.assertTrue(partial.exists())
+        self.assertFalse((partial.root / "tozsamosc").exists())   # ... and does not start
+        medium, key, _, guarded = self.activate("ponowiony")
+        self.assertTrue(guarded)
+        self.assertEqual(self.run_station(medium, key), [None])
+
+    def test_wrong_password_or_card_leaves_the_package_unused(self):
+        before = self.package.read_bytes()
+        with self.assertRaises(database.LoginError):
+            rekey.activate_backup(self.package, "zle haslo", self.dir / "a", 2, self.card, self.link, FAST)
+        other = {**self.card, "backup": self.card["main"]}
+        for card, link in ((other, self.link), (self.card, None), (self.card, {**self.link, "root": 3}),
+                           (self.card, {**self.link, "net_id": 101})):
+            with self.assertRaises(database.StorageError):
+                rekey.activate_backup(self.package, self.PASSWORD, self.dir / "a", 2, card, link, FAST)
+        self.assertEqual(self.package.read_bytes(), before)
+        self.assertFalse(nosnik.Nosnik(self.dir / "a").exists())
+
+    def test_activation_from_the_command_line(self):
+        card_path = self.dir / "karta.json"
+        card_path.write_text(json.dumps(self.card))
+        events = []
+        for name in ("pierwszy", "drugi"):
+            out = io.StringIO()
+            with unittest.mock.patch.object(sys, "stdin", io.StringIO(self.PASSWORD + "\n")), \
+                    contextlib.redirect_stdout(out):
+                code = aplikacja.main(["aktywuj-zapasowa", "--nosnik", str(self.dir / name), "--dyzurni", "2",
+                                       "--paczka", str(self.package), "--karta", str(card_path), "--root-id", "1",
+                                       "--ifac", "ab" * 16, "--iteracje", str(FAST)])
+            event = json.loads(out.getvalue())
+            events.append((code, event["event"], event["guarded"], sorted(event["envelopes"])))
+        self.assertEqual(events, [(0, "envelopes", False, ["dyzurny-1", "dyzurny-2", "stanowisko"]),
+                                  (0, "envelopes", True, ["dyzurny-1", "dyzurny-2", "stanowisko"])])
+
+
 class FakeStack:
     def __init__(self):
         self.announced = 0
