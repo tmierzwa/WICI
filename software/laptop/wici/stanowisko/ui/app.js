@@ -85,7 +85,7 @@ function post(path, body) {
 }
 function action(path, body, errorNode) {
   if (errorNode) errorNode.textContent = "";
-  return post(path, body).then(function (v) { force = true; return v; }).catch(function (e) { if (errorNode) errorNode.textContent = e.message; else alert(e.message); throw e; });
+  return post(path, body).then(function (v) { force = true; return v; }).catch(function (e) { if (errorNode) errorNode.textContent = e.message; else tell(e.message); throw e; });
 }
 
 // Aktywność przesuwa blokadę po 5 min; serwer i tak liczy czas od ostatniego żądania.
@@ -126,10 +126,10 @@ function poll() {
 
 // Widok nie przerysowuje się pod ręką: pole w trakcie wpisywania, wpisana a niewysłana treść, zaznaczone pole,
 // otwarty formularz albo wciśnięty przycisk myszy (klik nie może trafić w przerysowany widok) czekają na koniec.
-var pending = false, pressed = 0;   // pressed: kiedy wciśnięto przycisk myszy; po 2 s puszczenie poza oknem nie blokuje widoku
+var pending = false, pressed = 0, picking = false;   // picking: okno wyboru pliku otwarte   // pressed: kiedy wciśnięto przycisk myszy; po 2 s puszczenie poza oknem nie blokuje widoku
 function busy() {
   var a = document.activeElement, view = $("view");
-  return Date.now() - pressed < 2000 || view.contains(a) && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName) || !!view.querySelector("details[open]") ||
+  return picking || Date.now() - pressed < 2000 || view.contains(a) && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName) || !!view.querySelector("details[open]") ||
     [].some.call(view.querySelectorAll("input"), function (i) { return i.type === "checkbox" ? i.checked !== i.defaultChecked : i.value !== i.defaultValue; });
 }
 function resume() { setTimeout(function () { if (pending && !busy()) render(); }, 0); }
@@ -247,7 +247,7 @@ function decisionForm(r) {
     field("Instrukcja dla schronienia (do 96 bajtów; polska litera liczy się za 2)", text),
     row(button("Wyślij odpowiedź", "", function () { action("/api/operator/reply", Object.assign({text: text.value}, key), error); }),
       button("Wyślij odpowiedź i ustaw stan 5", "primary", function () { send({state: 5, reply: text.value}); }))));
-  box.appendChild(button("Stan 6: zamknięte", "", function () { if (confirm("Zamknąć zgłoszenie " + r.number + "?")) send({state: 6}); }));
+  box.appendChild(button("Stan 6: zamknięte", "", function () { ask("Zamknąć zgłoszenie " + r.number + "?", "Zamknij zgłoszenie").then(function (yes) { if (yes) send({state: 6}); }); }));
   box.appendChild(error);
   return box;
 }
@@ -357,13 +357,20 @@ var VIEWS = {
           select, button("Ustaw", "", function () { action("/api/operator/bearer", {source: t.source, bearer: select.value}); })));
       }
       line.appendChild(button("Usuń z zaufanych", "quiet-danger", function () {
-        if (confirm("Usunąć " + t.station + " z listy zaufanych? Jej wiadomości trafią do kwarantanny.")) action("/api/operator/trust/remove", {source: t.source});
+        ask("Usunąć " + t.station + " z listy zaufanych? Jej wiadomości trafią do kwarantanny.", "Usuń z zaufanych", "danger")
+          .then(function (yes) { if (yes) action("/api/operator/trust/remove", {source: t.source}); });
       }));
       list.appendChild(line);
     });
     view.appendChild(card("Zaufane stacje", "", state.trusted.length ? list : hint("Brak zaufanych stacji.")));
     var card_ = null, error = errorBox(), info = hint("");
-    var file = el("input", {type: "file", accept: ".json,application/json", onchange: function () {
+    // Pole pliku przeglądarki ukryte: jego napisy („Choose File”) są w języku przeglądarki, nie panelu.
+    var chosen = el("span", {class: "hint", text: "nie wybrano pliku"});
+    var file = el("input", {type: "file", accept: ".json,application/json", hidden: "", oncancel: function () { picking = false; resume(); },
+      onchange: function () {
+      picking = false;
+      if (!file.files.length) return resume();
+      chosen.textContent = file.files[0].name;
       var reader = new FileReader();
       reader.onload = function () {
         try { card_ = JSON.parse(reader.result); info.textContent = "Karta: " + (card_.name || "?") + " · " + (card_.address || []).join("; "); }
@@ -374,7 +381,9 @@ var VIEWS = {
     var fp = el("input", {inputmode: "numeric"});
     var second = secondPerson();
     view.appendChild(card("Dodaj stację z karty", "",
-      grid(field("Plik karty stacji", file), field("Odcisk z ekranu stacji (16 cyfr)", fp)), info, second.node,
+      grid(el("div", {class: "field"}, el("span", {text: "Plik karty stacji"}),
+        el("div", {class: "file-pick"}, button("Wybierz plik", "", function () { picking = true; file.click(); }), chosen, file)),
+        field("Odcisk z ekranu stacji (16 cyfr)", fp)), info, second.node,
       row(button("Dodaj do zaufanych", "primary", function () {
         action("/api/operator/trust", Object.assign({card: card_, fingerprint: fp.value}, second.values()), error);
       })),
@@ -388,7 +397,8 @@ var VIEWS = {
       hint("Komunikat idzie osobno do każdej zaufanej stacji, po kolei (dla 50 stacji kilka minut)."),
       field("Treść do wszystkich zaufanych stacji (do 192 bajtów)", text),
       row(button("Wyślij komunikat", "primary", function () {
-        if (confirm("Wysłać komunikat do " + state.trusted.length + " stacji?")) action("/api/operator/bulletin", {text: text.value}, error);
+        ask("Wysłać komunikat do " + state.trusted.length + " stacji?", "Wyślij komunikat")
+          .then(function (yes) { if (yes) action("/api/operator/bulletin", {text: text.value}, error); });
       })),
       error));
     if (!state.bulletins.length) return;
@@ -435,7 +445,9 @@ var VIEWS = {
     state.accounts.concat(["stanowisko"]).forEach(function (a) {
       buttons.appendChild(button("Nowe hasło: " + a, "", function () {
         var body = Object.assign({account: a}, a === state.user ? {} : second.values());
-        if (confirm((a === "stanowisko" ? "Nadać nowe hasło stanowiska?" : "Nadać nowe hasło kontu " + a + "?") + " Stare przestanie działać.")) action("/api/operator/password", body, error).then(function (v) {
+        ask((a === "stanowisko" ? "Nadać nowe hasło stanowiska?" : "Nadać nowe hasło kontu " + a + "?") + " Stare przestanie działać.", "Nadaj nowe hasło")
+          .then(function (yes) { return yes && action("/api/operator/password", body, error); }).then(function (v) {
+          if (!v) return;
           shown = {label: "Nowe hasło: " + v.account + (v.copies_failed ? " (kopie na dysku, których nie zaszyfrowano nowym hasłem: " + v.copies_failed + ")" : ""),
                    text: v.password}; render(); });
       }));
@@ -465,7 +477,7 @@ var VIEWS = {
       el("div", {class: "field narrow"}, field("Inny katalog (tylko za zgodą drugiego dyżurnego)", path)), second.node,
       row(button("Eksportuj rejestr", "", function () {
         action("/api/operator/export", path.value ? Object.assign({path: path.value}, second.values()) : {}, error)
-          .then(function (v) { alert("Zapisano: " + v.file); });
+          .then(function (v) { tell("Zapisano: " + v.file); });
       })), error));
     error = errorBox();
     if (state.closed) {
@@ -479,7 +491,7 @@ var VIEWS = {
           grid(field("Kto potwierdził odbiór archiwum", who), field("Kiedy", when), field("Katalog drugiego nośnika", other)),
           row(button("Usuń kopie", "danger", function () {
             action("/api/operator/backup/purge", {kto: who.value, kiedy: when.value, path: other.value}, error)
-              .then(function (v) { if (v.failed.length) alert("Nie usunięto: " + v.failed.join(", ")); });
+              .then(function (v) { if (v.failed.length) tell("Nie usunięto: " + v.failed.join(", ")); });
           })), error));
       }
     } else {
@@ -498,8 +510,9 @@ var VIEWS = {
       hint("Usuwa bazę, tożsamość, konta i kopie bez archiwum; aplikacja kończy pracę. Potem oba nośniki zniszcz fizycznie według instrukcji."),
       grid(field("Na potwierdzenie wpisz: ZNISZCZ DANE", destroy), field("Katalog drugiego nośnika", copies)),
       row(button("ZNISZCZ DANE", "danger", function () {
-        if (confirm("Zniszczyć dane stanowiska? Tego nie da się cofnąć.")) action("/api/operator/destroy", {confirm: destroy.value, path: copies.value}, error)
-          .then(function (v) { document.body.textContent = "Dane zniszczone." + (v.failed.length ? " Nie usunięto: " + v.failed.join(", ") : ""); });
+        ask("Zniszczyć dane stanowiska? Tego nie da się cofnąć.", "Zniszcz dane", "danger")
+          .then(function (yes) { return yes && action("/api/operator/destroy", {confirm: destroy.value, path: copies.value}, error); })
+          .then(function (v) { if (v) document.body.textContent = "Dane zniszczone." + (v.failed.length ? " Nie usunięto: " + v.failed.join(", ") : ""); });
       })), error));
   }
 };
