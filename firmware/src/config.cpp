@@ -205,7 +205,7 @@ bool smallOrder(const uint8_t key[32]) {
 }
 
 const char* parse(Source& source, uint32_t size, const char* profile, Config& out, size_t& worst) {
-    out = Config();
+    clear(out);
     worst = 0;
     if (size == 0 || size > DOC_MAX) return "json";
     Reader r(source, size);
