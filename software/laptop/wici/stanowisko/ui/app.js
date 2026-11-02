@@ -109,18 +109,14 @@ function alarms() {
 }
 
 // Serwer odpowiada najpóźniej po web.LONG_POLL (2 s); 15 s ciszy to zawieszona aplikacja, nie wolne łącze.
-// Wersja rośnie tylko po czynności w panelu; nowe zgłoszenie z radia jej nie zmienia, więc widok porównuje
-// same dane. Liczniki sekund (wiek kopii, ostatni pakiet) pominięte: inaczej widok przerysowywałby się co 2 s
-// i gubił zaznaczony tekst. Zakładki, które je pokazują, odświeżają się przy każdej odpowiedzi.
-var TICKING = {v: 1, since_rx: 1, copy_age_s: 1, oldest_s: 1, age_s: 1};
-var seen = "";
+// Wersja rośnie przy każdej zmianie danych (Panel.queue), bez liczników sekund; zakładki Węzeł i Przekazanie
+// zmiany, które je pokazują, przerysowują się przy każdej odpowiedzi.
 function poll() {
   var stop = new AbortController(), timer = setTimeout(function () { stop.abort(); }, 15000);
   fetch("/api/operator/queue?v=" + version, {signal: stop.signal}).then(function (r) {
     clearTimeout(timer); if (!r.ok) throw new Error(r.status); return r.json(); }).then(function (v) {
-    var data = JSON.stringify(v, function (k, x) { return TICKING[k] ? undefined : x; });
-    var changed = data !== seen || lost || tab === "node" || tab === "handover";
-    state = v; version = v.v; lost = false; seen = data;
+    var changed = v.v !== version || lost || tab === "node" || tab === "handover";
+    state = v; version = v.v; lost = false;
     if (changed || pending) render();
     poll();
   }).catch(function () {
