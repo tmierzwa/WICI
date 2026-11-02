@@ -1,6 +1,6 @@
 # Warstwa transportu: szew, koperta i nośniki
 
-**Stan: implementacja przed próbą D21, 2026-11-01.** Numerowana konfiguracja uruchamia WICI-Link na surowym SX1262; konfiguracja bez numerów uruchamia Reticulum. Warunek przyjęcia D21 nadal wymaga próby przy stole na docelowym sprzęcie ([kryteria](#warunek-przyjęcia)).
+**Stan: implementacja przed próbą D21, 2026-11-02.** Numerowana konfiguracja uruchamia WICI-Link v3 na surowym SX1262; konfiguracja bez numerów uruchamia Reticulum. Warunek przyjęcia D21 nadal wymaga próby przy stole na docelowym sprzęcie ([kryteria](#warunek-przyjęcia)).
 
 ## Po co
 
@@ -29,7 +29,7 @@ Zasada: **nośnik niczego nie gwarantuje aplikacji poza próbą dostarczenia baj
 
 Każda stacja i każda tożsamość odbiorcy (główna i zapasowa) ma statyczną parę kluczy wygenerowaną w urządzeniu przy przygotowaniu. Koperta używa pierwszych 32 B (X25519) istniejącego klucza prywatnego i publicznego tożsamości Reticulum; HKDF z etykietą „WICI env v1” oddziela klucz koperty od kluczy stosu. Klucz publiczny trafia na kartę stacji albo kartę odbiorcy ([protokół USB](usb-protocol.md)); w karcie numerowanej jest też jawnie podany jako `x25519`, równy pierwszym 32 B pełnego klucza `key`. Kluczy nie przyjmuje się przez radio (bez zmian względem D08).
 
-Numerowany dokument `configure` nadaje `net_id` sieci i niepowtarzalny numer u16 stacji oraz obu tożsamości odbiorcy (`network`); karta odbiorcy wiąże numer, `net_id` i pełny klucz, a `priority_keys` podaje klucze Ed25519 i X25519 sąsiadów. Stacja i przygotowanie na laptopie (`configdoc.py`) odrzucają dokument, w którym którykolwiek klucz X25519 albo Ed25519 karty odbiorcy lub `priority_keys` ma mały rząd (lista w `config.cpp`, `SMALL_ORDER`; bit 255 pomijany): taki klucz X25519 daje zerowy wspólny sekret, a z takim kluczem Ed25519 podrobiony podpis przechodzi dla każdej wiadomości. Rejestr kart na stanowisku odrzuca duplikat numeru z innym kluczem. Konfiguracja bez `network` zachowuje 16-bajtowe adresy Reticulum i nie używa koperty.
+Numerowany dokument `configure` nadaje `net_id` sieci i niepowtarzalny numer u16 stacji oraz obu tożsamości odbiorcy (`network`); karta odbiorcy wiąże numer, `net_id` i pełny klucz, a `priority_keys` podaje klucze Ed25519 i X25519 sąsiadów oraz, opcjonalnie, stacje, które plan sieci stawia za każdym z nich (`behind`, [drogi w dół](wici-link.md#ruch-w-górę-i-w-dół)). Stacja i przygotowanie na laptopie (`configdoc.py`) odrzucają dokument, w którym którykolwiek klucz X25519 albo Ed25519 karty odbiorcy lub `priority_keys` ma mały rząd (lista w `config.cpp`, `SMALL_ORDER`; bit 255 pomijany): taki klucz X25519 daje zerowy wspólny sekret, a z takim kluczem Ed25519 podrobiony podpis przechodzi dla każdej wiadomości. Rejestr kart na stanowisku odrzuca duplikat numeru z innym kluczem. Konfiguracja bez `network` zachowuje 16-bajtowe adresy Reticulum i nie używa koperty.
 
 Klucz pary nadawca A → odbiorca B:
 
@@ -56,7 +56,7 @@ Pilotaż nie ma poufności przyszłej (forward secrecy): przejęty klucz prywatn
  AAD = kind ‖ src ‖ dst ‖ ctr
 ```
 
-Narzut koperty: 25 B (9 B nagłówka i 16 B znacznika); koperta ma 25–281 B, część najwyżej 128 B treści. Odbiorca ujawnia treść dopiero po sprawdzeniu znacznika. Numery stacji są jawne. Przekaźnik widzi nadawcę i odbiorcę od końca do końca; przydziela klasę K1 po sprawdzeniu podpisu pochodzenia, także w kierunku od odbiorcy ([klasy czasu](wici-link.md#klasy-czasu-kanału)). TEST startowy jest wiadomością SA1 (rodzaj 0). Analiza ruchu jest przyjęta w [rozdziale 07](../concept/07-zagrozenia-i-odpornosc.html): nagłówek Reticulum także ujawnia cel, a rozmiar ujawnia typ SA1.
+Narzut koperty: 25 B (9 B nagłówka i 16 B znacznika); koperta ma 25–281 B, część najwyżej 128 B treści. Odbiorca ujawnia treść dopiero po sprawdzeniu znacznika. Numery stacji są jawne. Przekaźnik widzi nadawcę i odbiorcę od końca do końca, ale ich nie uwierzytelnia; klasę K1 przydziela ramce do odbiorcy albo od niego, najwyżej jedno gniazdo na sąsiada uwierzytelnionego tagiem pary ([klasy czasu](wici-link.md#klasy-czasu-kanału)). TEST startowy jest wiadomością SA1 (rodzaj 0). Analiza ruchu jest przyjęta w [rozdziale 07](../concept/07-zagrozenia-i-odpornosc.html): nagłówek Reticulum także ujawnia cel, a rozmiar ujawnia typ SA1.
 
 ### Licznik i powtórzenia
 
@@ -84,12 +84,12 @@ Pojemność: stacja ma jedną czekającą wiadomość na tożsamość odbiorcy i
 
 ### Rozmiary
 
-| Wiadomość SA1 | Treść | Koperta | Części przy WICI-Link (`max_payload` 164 B) |
+| Wiadomość SA1 | Treść | Koperta | Części przy WICI-Link (`max_payload` 228 B) |
 |---|---|---|---|
-| REQUEST typowe | 174 B | 199 B | 2 |
+| REQUEST typowe | 174 B | 199 B | 1 |
 | REQUEST największe | 222 B | 247 B | 2 |
 | BULLETIN największy | 246 B | 271 B | 2 |
-| REPLY największe | 156 B | 181 B | 2 |
+| REPLY największe | 156 B | 181 B | 1 |
 | STATUS | 59 B | 84 B | 1 |
 | RECEIVED | 50 B | 75 B | 1 |
 
@@ -116,7 +116,7 @@ Reguły kontraktu:
 
 | Nośnik | Rola | `max_payload` | `hop_ack` / `e2e_ack` | `airtime_classes` / `radio_silence` | Uwagi |
 |---|---|---|---|---|---|
-| [WICI-Link](wici-link.md) | domyślny w stacji (po D21) | 164 B | tak / nie | tak / tak | własny protokół łącza; licencja MIT |
+| [WICI-Link](wici-link.md) | domyślny w stacji (po D21) | 228 B | tak / nie | tak / tak | własny protokół łącza; licencja MIT |
 | Reticulum (rdzeń stacji) | obecny; zapasowy do rozstrzygnięcia D21 | 492 B | nie / tak (dowód) | tak / tak | adapter wokół `rns_node`; licencja Reticulum |
 | Meshtastic (węzeł przez USB) | tylko stanowisko, po pilotażu | 227 B (PKI) | tak / tak (DM) | nie / nie | kanał bez uwierzytelnienia; ruch oznaczany jako niezweryfikowany, chyba że koperta ma klucz z karty |
 | MeshCore (węzeł przez USB) | tylko stanowisko, po pilotażu | 184 B | nie / tak | nie / nie | `RAW_CUSTOM` dla koperty; domyślny budżet nadawania 50% wymaga ustawienia na ≤10% |
@@ -154,7 +154,7 @@ Jeżeli WICI-Link nie spełni warunku, zostaje rdzeń Reticulum, a ten dokument 
 
 ## Kolejność prac
 
-**Stan wykonania, 2026-11-01.** Numerowane obrazy stacji łączą kopertę C++,
+**Stan wykonania, 2026-11-02.** Numerowane obrazy stacji łączą kopertę C++,
 trwałe liczniki i okna powtórzeń, kolejkę przekaźnika, trasowanie, koordynator
 skoku oraz surowe ramki SX1262 z CAD i trwałym długiem. Korzeń przekazuje
 uwierzytelnione ramki do KISS i dopuszcza HACK z laptopa tylko po trwałym
@@ -165,11 +165,12 @@ blokadę wysyłki po odtworzeniu starszej kopii. Wyjątek od ciszy nadaje
 niepotwierdzaną ramkę najwyżej trzy razy z trwałym licznikiem prób.
 Numerowany przekaźnik ma trwały limit 60% dla całego ruchu tranzytowego i
 BEACON-ów oraz 2% czasu nadawania dla BEACON-ów, z priorytetem K1 w kolejce.
-Wspólny limit obejmuje również K1. Do K1 uprawnia podpis Ed25519 nad pełną
-kopertą i numerem sieci, sprawdzany kluczem stacji albo odbiorcy znanym
-z przygotowania. Dwa miejsca są zarezerwowane dla K1, a jedna tożsamość
-może zająć najwyżej jedno miejsce K1. Przy czekającym K1 limit 25% dotyczy
-zachowawczo całego tranzytu i BEACON-ów.
+Wspólny limit obejmuje również K1. K1 dostaje jednoadresowa ramka z kopertą
+do odbiorcy albo od niego, od sąsiada uwierzytelnionego tagiem pary (WICI-Link
+v3 nie ma podpisu pochodzenia na DATA, D21 wariant D). Dwa miejsca są
+zarezerwowane dla K1, a jeden sąsiad może zająć najwyżej jedno miejsce K1.
+Drogi w dół przekaźnik uczy się tylko według planu sieci (`behind`). Przy
+czekającym K1 limit 25% dotyczy zachowawczo całego tranzytu i BEACON-ów.
 
 Pozostałe do zamknięcia D21: sprzętowe próby rozsyłania awaryjnego, pomiar
 200 ms HACK, W10, „Wrogi węzeł”, zaniki zasilania oraz budżet energii. Dwie płytki
