@@ -106,6 +106,20 @@ struct LinkCounters {
     uint32_t rxBusy = 0;        // LoRa: preambuła, nagłówek albo ramka w oknie, albo nieodczytana ramka w układzie
 };
 
+// HACK path (Bench::linkSendHack) for the D21 200 ms trial: HACKs sent, refused at the deadline, refused
+// otherwise (state, busy channel, debt limit, journal) and the time from the end of the received DATA (the
+// receive task's timestamp) to TxDone of the HACK, in ms of the MCU clock: last, largest, sum (mean = sum /
+// sent) and the number of HACKs that ended after 200 ms.
+struct HackStats {
+    uint32_t sent = 0;
+    uint32_t late = 0;
+    uint32_t refused = 0;
+    uint32_t over = 0;
+    uint32_t lastMs = 0;
+    uint32_t maxMs = 0;
+    uint32_t sumMs = 0;
+};
+
 enum class RxMode : uint8_t { NONE, TEST, LINK };
 
 // Bajty losowe z generatora stacji (drbg.h, ziarno z platform::entropy); dostarcza main.cpp.
@@ -152,6 +166,8 @@ public:
     const char* p1rxStart();
     const char* p1send(const uint8_t* data, size_t length, bool stack = false);
     void printLink();
+    void printHack();   // HACK: HackStats as JSON
+    void resetHackStats() { hack_ = HackStats(); }
     const LinkCounters& link() const { return link_; }
     // Ramkowanie łącza układu (RNODE: LoRa); stos bierze z niego czas łącza (p1iface::LinkTiming).
     radiolink::Framing linkFraming() const { return radio_.framing(); }
@@ -272,6 +288,7 @@ private:
     loraframe::Splitter splitter_;  // połówka nagłówka ostatniego nadanego datagramu dzielonego
     bool rawLora_ = false;
     LinkCounters link_;
+    HackStats hack_;
 
     // Nadawanie łącza: oczekiwanie na dług, CCA, odroczenie, seria ramek.
     enum class TxState : uint8_t { IDLE, WAIT_DEBT, CCA, BACKOFF, SEND };
