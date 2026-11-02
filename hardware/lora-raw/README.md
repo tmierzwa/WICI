@@ -1,6 +1,8 @@
 # WICI: narzędzie surowego LoRa na RAK4631 (`lora-raw`)
 
-Program `lora-raw-0.1` dla RAK4631 (nRF52840 i SX1262 w module RAK4630) na płytce RAK19007. Zamienia zestaw radia RNode w podsłuch kanału i nadajnik dowolnych ramek w profilu LoRa pilotażu do [prób D21 przy stole](../xiao-wici/README.md#podsłuch-i-węzeł-wrogi-lora-raw). Nie ma w nim logiki WICI, RNode ani Reticulum: nie dodaje nagłówka, nie sprawdza kanału, nie ma długu ciszy ani limitu czasu nadawania. Bajty z polecenia `tx` idą w eter bez zmian, a każda odebrana ramka (także z błędem CRC) trafia do USB. **Kompiluje się; nie był uruchomiony na sprzęcie.**
+Program `lora-raw-0.1` dla RAK4631 (nRF52840 i SX1262 w module RAK4630) na płytce RAK19007. Zamienia zestaw radia RNode w podsłuch kanału i nadajnik dowolnych ramek w profilu LoRa pilotażu do [prób D21 przy stole](../xiao-wici/README.md#podsłuch-i-węzeł-wrogi-lora-raw). Nie ma w nim logiki WICI, RNode ani Reticulum: nie dodaje nagłówka, nie sprawdza kanału, nie ma długu ciszy ani limitu czasu nadawania. Bajty z polecenia `tx` idą w eter bez zmian, a każda odebrana ramka (także z błędem CRC) trafia do USB.
+
+**Na sprzęcie (2026-11-02):** dwa RAK4631 przy −9 dBm, 1 m od siebie: `info` z `"ready":true` i `"begin":0` na obu, 12/12 ramek (po 3 ramki 21 B i 255 B w każdą stronę) z poprawnym CRC, RSSI −50…−54 dBm, SNR 12,25…13,75 dB. Zmierzony `air_us` przewyższa `toa_us` o około 0,23 ms: 73,20 ms wobec 72,96 ms dla 21 B, 416,22 ms wobec 416,00 ms dla 255 B. Podsłuch i węzeł wrogi w próbach D21 nie były jeszcze uruchomione.
 
 ## Dlaczego nie RNode
 
@@ -37,11 +39,17 @@ Płytka w PlatformIO to nRF52840-DK z rdzenia Adafruit (ten sam układ, SoftDevi
 
 ```sh
 cd hardware/lora-raw
-pio run                                   # obraz: Flash 87 296 B (10,7%), RAM 10 760 B (4,3%), 2026-11-02
+pio run                                   # obraz: Flash 87 648 B (10,8%), RAM 10 760 B (4,3%), 2026-11-02
 pio run -t upload --upload-port PORT      # PORT: /dev/ttyACM0 albo /dev/cu.usbmodem…
 ```
 
-Wgranie zastępuje firmware RNode. Gdy port nie odpowiada, dwa szybkie naciśnięcia RESET uruchamiają bootloader; wtedy wgrywa się na port bootloadera. Powrót do RNode: `rnodeconf --autoinstall` według [radiów RNode](../rnode/README.md), potem `rnodeconf --info` i wpis w raporcie. Antena albo tor z tłumikami musi być podłączony przed zasilaniem.
+Wgranie zastępuje firmware RNode. Na zestawach z 2026-11-02 dotknięcie 1200 b/s tylko restartuje płytkę do aplikacji (z programem fabrycznym RAK, z RNode i z `lora-raw`), więc `pio … -t upload` się nie udaje, a mimo to kończy się napisem „SUCCESS”; o wyniku świadczy dopiero `info`. Działa wejście ręczne: dwa szybkie naciśnięcia RESET (dioda wolno pulsuje, port zgłasza się jako „WisBlock RAK4631”, nazwa portu się nie zmienia), potem wgranie zbudowanego obrazu bez dotknięcia:
+
+```sh
+adafruit-nrfutil dfu serial --package .pio/build/rak4631/firmware.zip -p PORT -b 115200
+```
+
+Po wgraniu port zgłasza się jako „WICI lora-raw”. Powrót do RNode: `rnodeconf --autoinstall` według [radiów RNode](../rnode/README.md), potem `rnodeconf --info` i wpis w raporcie. Antena albo tor z tłumikami musi być podłączony przed zasilaniem.
 
 ## Protokół USB
 

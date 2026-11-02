@@ -96,6 +96,22 @@ uint64_t extend(uint32_t stamp) {
   return now - static_cast<uint32_t>(last32 - stamp);
 }
 
+// newlib-nano in the Adafruit core has no %llu (it prints "lu" and shifts the later arguments),
+// so 64-bit times go into the JSON as decimal text with %s.
+struct Dec {
+  char text[21];
+  explicit Dec(uint64_t value) {
+    char reversed[20];
+    size_t n = 0;
+    do {
+      reversed[n++] = static_cast<char>('0' + value % 10);
+      value /= 10;
+    } while (value);
+    for (size_t i = 0; i < n; ++i) text[i] = reversed[n - 1 - i];
+    text[n] = 0;
+  }
+};
+
 void onDio1() {
   NRF_TIMER4->TASKS_CAPTURE[1] = 1;
   dio1At = NRF_TIMER4->CC[1];
@@ -132,10 +148,10 @@ void info() {
   snprintf(out, sizeof(out),
            "{\"info\":\"%s\",\"board\":\"rak4631\",\"ready\":%s,\"begin\":%d,\"mhz\":869.525,\"bw_khz\":125,"
            "\"sf\":%u,\"cr\":%u,\"preamble\":%u,\"sync_word\":%u,\"crc\":true,\"explicit_header\":true,"
-           "\"tcxo_v\":3.3,\"power_dbm\":%d,\"rx_stream\":%s,\"tx_count\":%lu,\"t_us\":%llu}",
+           "\"tcxo_v\":3.3,\"power_dbm\":%d,\"rx_stream\":%s,\"tx_count\":%lu,\"t_us\":%s}",
            VERSION, ready ? "true" : "false", beginCode, SPREADING_FACTOR, CODING_RATE, PREAMBLE_SYMBOLS,
            SYNC_WORD, powerDbm, rxStream ? "true" : "false", static_cast<unsigned long>(txCount),
-           static_cast<unsigned long long>(clockNow()));
+           Dec(clockNow()).text);
   emit(out);
 }
 
@@ -176,11 +192,10 @@ void transmitted(uint64_t doneUs) {
   radio.finishTransmit();
   ++txCount;
   snprintf(out, sizeof(out),
-           "{\"tx\":\"done\",\"n\":%lu,\"len\":%u,\"start_us\":%llu,\"done_us\":%llu,\"air_us\":%llu,"
+           "{\"tx\":\"done\",\"n\":%lu,\"len\":%u,\"start_us\":%s,\"done_us\":%s,\"air_us\":%s,"
            "\"toa_us\":%lu,\"power_dbm\":%d}",
-           static_cast<unsigned long>(txCount), static_cast<unsigned>(txLength),
-           static_cast<unsigned long long>(txStartUs), static_cast<unsigned long long>(doneUs),
-           static_cast<unsigned long long>(doneUs - txStartUs), static_cast<unsigned long>(txToaUs), powerDbm);
+           static_cast<unsigned long>(txCount), static_cast<unsigned>(txLength), Dec(txStartUs).text,
+           Dec(doneUs).text, Dec(doneUs - txStartUs).text, static_cast<unsigned long>(txToaUs), powerDbm);
   emit(out);
   listen();
 }
@@ -208,9 +223,9 @@ void received(uint64_t doneUs) {
     hex[2 * i + 1] = digits[frame[i] & 15];
   }
   hex[2 * length] = 0;
-  snprintf(out, sizeof(out), "{\"rx\":\"%s\",\"len\":%u,\"rssi\":%.1f,\"snr\":%.2f,\"crc\":%s,\"t_us\":%llu}", hex,
+  snprintf(out, sizeof(out), "{\"rx\":\"%s\",\"len\":%u,\"rssi\":%.1f,\"snr\":%.2f,\"crc\":%s,\"t_us\":%s}", hex,
            static_cast<unsigned>(length), rssi, snr, code == RADIOLIB_ERR_NONE ? "true" : "false",
-           static_cast<unsigned long long>(doneUs));
+           Dec(doneUs).text);
   emit(out);
   listen();
 }
