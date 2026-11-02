@@ -8,6 +8,18 @@ var URGENCY = ["zwykła", "pilna", "NATYCHMIAST"];
 var URGENCY_PILL = ["", "pill-warn", "pill-alarm pill-solid"];
 var STATES = {1: "przyjęte", 2: "przeczytane", 3: "pomoc skierowana", 4: "przekazane dalej", 5: "instrukcja wysłana", 6: "zamknięte"};
 var STATE_PILL = {1: "pill-new", 3: "pill-ok", 5: "pill-ok", 6: "pill-ok"};
+// Pola decyzji (stan 3 i 4), wpisy ciszy i czynności dziennika: kody z bazy, na ekranie po polsku.
+var FIELDS = {podmiot: "podmiot", funkcja: "funkcja", kanal: "kanał", czas: "czas", adresat: "komu"};
+var SILENCE = {polecenie: "polecenie ciszy otrzymane", wlaczona: "cisza włączona na węźle", odwolana: "cisza odwołana"};
+var OPS = {start: "start aplikacji", logowanie: "logowanie", wylogowanie: "wylogowanie", blokada_5_min: "wylogowanie po 5 min bez ruchu",
+  odpowiedz: "odpowiedź do schronienia", komunikat: "komunikat", cisza: "cisza radiowa", cisza_wezel: "przełącznik CISZA węzła",
+  kwarantanna_approve: "kwarantanna: zatwierdzona", kwarantanna_reject: "kwarantanna: odrzucona",
+  zaufana_dodana: "stacja dodana do zaufanych", zaufana_usunieta: "stacja usunięta z zaufanych", nosnik_odpowiedzi: "droga odpowiedzi",
+  kopia_drugi_nosnik: "kopia na drugi nośnik", kopia_nieudana: "kopia na dysk nieudana", kopia_wznowiona: "kopia na dysk znów działa",
+  nowe_haslo: "nowe hasło", eksport: "eksport rejestru", eksport_usuniety: "eksport usunięty", zamkniecie: "zamknięcie zdarzenia",
+  kopie_usuniete: "kopie usunięte", ogloszenie: "ogłoszenie adresu", przekazanie_zmiany: "przekazanie zmiany",
+  odzyskanie_koniec: "koniec odzyskania", odtworzenie: "odtworzenie z kopii", nowa_tozsamosc: "nowa tożsamość",
+  aktywacja_zapasowej: "aktywacja tożsamości zapasowej"};
 var DONE = [3, 5, 6];   // załatwione; jak „open” w przekazaniu zmiany (panel.py)
 var TITLE = document.title;
 var TABS = [["reports", "Zgłoszenia"], ["tests", "TEST"], ["quarantine", "Kwarantanna"], ["stations", "Stacje"], ["bulletins", "Komunikaty"],
@@ -91,7 +103,7 @@ function beep() {
     o.start(); o.stop(audio.currentTime + 0.4);
   } catch (e) { /* bez dźwięku przeglądarka nadal pokazuje alarm */ }
 }
-setInterval(function () { if (alarms().length) beep(); }, 2000);
+setInterval(function () { if (alarms().length && state.sound !== false) beep(); }, 2000);   // --bez-dzwieku: tylko ekran
 function alarms() {
   return state && state.reports ? state.reports.filter(function (r) { return r.urgency === 2 && r.state === 1 && !silenced[r.id]; }) : [];
 }
@@ -159,8 +171,9 @@ function render() {
   if (lost) badge("BRAK POŁĄCZENIA Z APLIKACJĄ", false);   // stan nośnika i stacji nieznany, nie ostatni znany
   else {
     badge(state.saved ? "Zapis na nośniku" : "ZAPIS NA NOŚNIKU NIE DZIAŁA", state.saved);
-    badge(state.node.online ? "Stacja połączona" : "BRAK STACJI", state.node.online);
+    badge(state.node.online ? "Węzeł połączony" : "BRAK WĘZŁA", state.node.online);
   }
+  if (state.sound === false) $("badges").appendChild(pill("DŹWIĘK ALARMU WYŁĄCZONY", "pill-warn"));
   if (state.node.info && state.node.info.silence) badge("CISZA NA WĘŹLE", false);
   if (state.silence) badge("CISZA RADIOWA (" + state.silence.organ + ", " + state.silence.kiedy + ")", false);
   if (alarms().length) {
@@ -181,7 +194,7 @@ function render() {
   if (shown) {
     view.appendChild(el("section", {class: "card shown"}, el("p", {class: "eyebrow", text: shown.label}),
       el("p", {class: "password", text: shown.text}),
-      button("Przepisane do koperty: ukryj", "primary", function () { shown = null; force = true; render(); })));
+      button("Przepisane do koperty, ukryj hasło", "primary", function () { shown = null; force = true; render(); })));
   }
   VIEWS[tab](view);
 }
@@ -199,8 +212,8 @@ function reportRow(r, withActions) {
   if (r.decisions.length) {
     var list = el("ul", {class: "decisions"});
     r.decisions.forEach(function (d) {
-      list.appendChild(el("li", {}, el("strong", {text: "Stan " + d.state + ": "}),
-        el("span", {text: Object.keys(d.detail).map(function (k) { return k + " " + d.detail[k]; }).join(", ") + " (" + d.account + ")"})));
+      list.appendChild(el("li", {}, el("strong", {text: "Stan " + d.state + ", " + STATES[d.state] + ": "}),
+        el("span", {text: describe(d.detail) + " (" + d.account + ")"})));
     });
     row_.appendChild(list);
   }
@@ -224,16 +237,16 @@ function decisionForm(r) {
   function input(name, label) { fields[name] = el("input", {}); return field(label, fields[name]); }
   function values(names) { var v = {}; names.forEach(function (n) { v[n] = fields[n].value; }); return v; }
   box.appendChild(fold("Stan 3: pomoc skierowana",
-    grid(input("podmiot", "Podmiot dysponujący siłami"), input("funkcja", "Funkcja osoby"), input("kanal", "Kanał"), input("czas", "Czas potwierdzenia")),
+    grid(input("podmiot", "Podmiot dysponujący siłami"), input("funkcja", "Funkcja osoby potwierdzającej"), input("kanal", "Kanał potwierdzenia"), input("czas", "Czas potwierdzenia")),
     row(button("Wyślij stan 3", "primary", function () { send(Object.assign({state: 3}, values(["podmiot", "funkcja", "kanal", "czas"]))); }))));
   box.appendChild(fold("Stan 4: przekazane dalej",
-    grid(input("adresat", "Komu przekazano"), input("czas4", "Kiedy")),
+    grid(input("adresat", "Komu przekazano"), input("czas4", "Kiedy przekazano")),
     row(button("Wyślij stan 4", "primary", function () { send({state: 4, adresat: fields.adresat.value, czas: fields.czas4.value}); }))));
   var text = el("input", {maxlength: "96"});
-  box.appendChild(fold("Odpowiedź REPLY / stan 5",
-    field("Instrukcja dla schronienia (do 96 bajtów)", text),
+  box.appendChild(fold("Odpowiedź / stan 5",
+    field("Instrukcja dla schronienia (do 96 bajtów; polska litera liczy się za 2)", text),
     row(button("Wyślij odpowiedź", "", function () { action("/api/operator/reply", Object.assign({text: text.value}, key), error); }),
-      button("Odpowiedź i stan 5", "primary", function () { send({state: 5, reply: text.value}); }))));
+      button("Wyślij odpowiedź i ustaw stan 5", "primary", function () { send({state: 5, reply: text.value}); }))));
   box.appendChild(button("Stan 6: zamknięte", "", function () { if (confirm("Zamknąć zgłoszenie " + r.number + "?")) send({state: 6}); }));
   box.appendChild(error);
   return box;
@@ -243,7 +256,7 @@ function secondPerson() {
   var account = el("select", {});
   state.accounts.filter(function (a) { return a !== state.user; }).forEach(function (a) { account.appendChild(el("option", {value: a, text: a})); });
   var password = el("input", {type: "password", autocomplete: "off"});
-  return {node: grid(field("Zgoda drugiego dyżurnego: konto", account), field("Hasło drugiego dyżurnego", password)),
+  return {node: grid(field("Drugi dyżurny: konto", account), field("Drugi dyżurny: hasło", password)),
     values: function () { return {account2: account.value, password2: password.value}; }};
 }
 
@@ -253,21 +266,33 @@ function silenceForm(view) {
   var organ = el("input", {placeholder: "np. wójt gminy"}), when = el("input", {placeholder: "np. 30.10 13:50"});
   var send = el("input", {type: "checkbox", checked: ""});
   var state_ = el("select", {});
-  [["polecenie", "polecenie ciszy otrzymane"], ["wlaczona", "cisza włączona na węźle"], ["odwolana", "cisza odwołana"]]
-    .forEach(function (o) { state_.appendChild(el("option", {value: o[0], text: o[1]})); });
+  Object.keys(SILENCE).forEach(function (k) { state_.appendChild(el("option", {value: k, text: SILENCE[k]})); });
   if (s) state_.value = "odwolana";
   view.appendChild(card("Cisza radiowa", s ? "notice-alarm" : "",
     hint(s ? "Wpisana: " + s.organ + ", " + s.kiedy + " (" + s.account + ", " + time(s.at) + "). Przełącznik CISZA na węźle przestawia się ręcznie."
       : "Brak wpisanej ciszy. Polecenie ciszy wydaje i odwołuje wójt; przełącznik CISZA na węźle przestawia się ręcznie."),
-    grid(field("Wpis", state_), field("Kto wydał polecenie", organ), field("Od kiedy", when)),
+    grid(field("Rodzaj wpisu", state_), field("Kto wydał polecenie", organ), field("Kiedy", when)),
     el("label", {class: "check"}, send, el("span", {text: "Wyślij komunikat do wszystkich zaufanych stacji"})),
-    row(button("Wpisz", "primary", function () {
+    row(button("Wpisz do rejestru", "primary", function () {
       action("/api/operator/silence", {state: state_.value, organ: organ.value, kiedy: when.value, bulletin: send.checked}, error);
     })),
     error));
 }
 
 var BEARERS = {wici: "WICI-Link", reticulum: "Reticulum"};
+
+function describe(detail) { return Object.keys(detail).map(function (k) { return (FIELDS[k] || k) + " " + detail[k]; }).join(", "); }
+function opName(op) { return op.slice(0, 5) === "stan_" ? "stan " + op.slice(5) + ", " + STATES[op.slice(5)] : OPS[op] || op.replace(/_/g, " "); }
+// Szczegóły zapisane jako JSON (stan 3 i 4, cisza, przełącznik węzła) czytelnie; resztę jak w bazie.
+function opDetail(op, detail) {
+  var d = null;
+  try { d = detail && detail.charAt(0) === "{" ? JSON.parse(detail) : null; } catch (e) { d = null; }
+  if (op === "nosnik_odpowiedzi") return detail === "auto" ? "automatycznie" : BEARERS[detail] || detail;
+  if (!d) return detail || "";
+  if (op === "cisza") return (SILENCE[d.stan] || d.stan) + ": " + d.organ + ", " + d.kiedy;
+  if (op === "cisza_wezel") return (d.silence ? "włączony" : "wyłączony") + (d.start ? " (przy starcie aplikacji)" : "");
+  return describe(d);
+}
 
 var VIEWS = {
   // Najpierw sprawy otwarte: pilność, nieprzeczytane, najstarsze; załatwione niżej, osobno.
@@ -291,9 +316,9 @@ var VIEWS = {
           el("span", {class: "hint", text: clock(t.at), title: time(t.at)}), pill(STATES[t.state], STATE_PILL[t.state]))));
     });
     view.appendChild(card("Wiadomości TEST", "",
-      hint("TEST nie są potrzebami. Sprawdź adres każdego, zaznacz i potwierdź PRZECZYTANE."),
+      hint("Wiadomość TEST tylko sprawdza łączność, nie zgłasza potrzeby. Sprawdź adres każdej, zaznacz i potwierdź jako przeczytane."),
       state.tests.length ? list : hint("Brak wiadomości TEST."),
-      row(button("Potwierdź zaznaczone", "primary", function () {
+      row(button("Potwierdź zaznaczone jako przeczytane", "primary", function () {
         var items = marks.filter(function (m) { return m[0].checked; }).map(function (m) { return {source: m[1].source, id: m[1].id, revision: m[1].revision}; });
         action("/api/operator/tests", {items: items}, error);
       })),
@@ -301,9 +326,9 @@ var VIEWS = {
   },
   quarantine: function (view) {
     state.removed.forEach(function (s) {
-      view.appendChild(el("p", {class: "banner banner-alarm", text: "MOŻLIWE PRZEJĘCIE STACJI " + s.station + ": " + s.messages + " wiadomości od usuniętej stacji"}));
+      view.appendChild(el("p", {class: "banner banner-alarm", text: "MOŻLIWE PRZEJĘCIE STACJI " + s.station + ". Stacja usunięta z zaufanych, a nadal nadaje; liczba wiadomości od niej: " + s.messages + "."}));
     });
-    if (!state.quarantine.length) view.appendChild(card(null, "", hint("Kwarantanna pusta.")));
+    if (!state.quarantine.length) view.appendChild(card(null, "", hint("Kwarantanna jest pusta.")));
     state.quarantine.forEach(function (q) {
       var c = q.content, error = errorBox();
       var key = {source: q.source, id: q.id, revision: q.revision};
@@ -324,11 +349,11 @@ var VIEWS = {
       var info = el("div", {class: "item-head"}, el("strong", {text: t.station}), el("span", {text: t.address.join("; ")}));
       var line = el("div", {class: "station"}, info);
       if (state.bearers && state.bearers.length > 1) {
-        var select = el("select", {"aria-label": "Nośnik odpowiedzi dla " + t.station});
+        var select = el("select", {"aria-label": "Droga odpowiedzi dla " + t.station});
         select.appendChild(el("option", {value: "auto", text: "automatycznie"}));
         state.bearers.forEach(function (name) { select.appendChild(el("option", {value: name, text: BEARERS[name] || name})); });
         select.value = t.override || "auto";
-        line.appendChild(el("div", {class: "bearer"}, el("span", {text: "Ostatni nośnik: " + (BEARERS[t.bearer] || "nieznany") + ". Odpowiedzi:"}),
+        line.appendChild(el("div", {class: "bearer"}, el("span", {text: "Ostatnio przez: " + (BEARERS[t.bearer] || "—") + ". Odpowiedzi przez:"}),
           select, button("Ustaw", "", function () { action("/api/operator/bearer", {source: t.source, bearer: select.value}); })));
       }
       line.appendChild(button("Usuń z zaufanych", "quiet-danger", function () {
@@ -380,12 +405,12 @@ var VIEWS = {
   node: function (view) {
     var n = state.node, info = n.info;
     view.appendChild(card("Węzeł i wysyłka", "",
-      facts([["Połączenie ze stacją", n.online ? "tak" : "NIE", n.online ? "good" : "bad"], ["Od ostatniego pakietu z radia", ago(n.since_rx)],
-        ["Przełącznik CISZA węzła", !n.diagnostics ? "nieznany (brak portu diagnostyki)" : !info ? "czekam na odczyt" : info.silence ? "WŁĄCZONY" : "wyłączony",
+      facts([["Połączenie z węzłem", n.online ? "tak" : "NIE", n.online ? "good" : "bad"], ["Od ostatniego pakietu z radia", ago(n.since_rx)],
+        ["Przełącznik CISZA węzła", !n.diagnostics ? "nieznany (brak portu diagnostycznego)" : !info ? "czekam na odczyt" : info.silence ? "WŁĄCZONY" : "wyłączony",
           info && info.silence ? "bad" : ""],
-        ["Radio węzła", info ? (info.radio_ok ? "sprawne" : "AWARIA") + (info.tx_wait_s ? ", dług ciszy " + ago(info.tx_wait_s) : "") : "—",
+        ["Radio węzła", info ? (info.radio_ok ? "sprawne" : "AWARIA") + (info.tx_wait_s ? ", nadawanie wstrzymane jeszcze " + ago(info.tx_wait_s) : "") : "—",
           info ? (info.radio_ok ? "good" : "bad") : ""],
-        ["Wiadomości w drodze", n.in_flight], ["W oczekiwaniu", n.waiting], ["Najstarsza intencja", ago(n.oldest_s)]]),
+        ["Wiadomości w drodze", n.in_flight], ["Wiadomości czekające na wysłanie", n.waiting], ["Najdłużej czekająca", ago(n.oldest_s)]]),
       row(button("Ogłoś adres odbiorcy", "", function () { action("/api/operator/announce"); }))));
   },
   handover: function (view) {
@@ -394,8 +419,8 @@ var VIEWS = {
     var path = el("input", {placeholder: "np. /media/drugi albo E:\\"});
     view.appendChild(card("Przekazanie zmiany", "",
       facts([["Otwarte zgłoszenia", h.open], ["Stan 4 bez potwierdzenia skierowania pomocy"].concat(count(h.forwarded_unconfirmed)),
-        ["Niewysłane intencje", h.unsent], ["Kwarantanna"].concat(count(h.quarantine)), ["Alarmy przejęcia stacji"].concat(count(h.removed_alarm)),
-        ["Najnowsza kopia na dysku komputera", ago(state.copy_age_s) + " temu"],
+        ["Niewysłane wiadomości", h.unsent], ["Kwarantanna"].concat(count(h.quarantine)), ["Alarmy przejęcia stacji"].concat(count(h.removed_alarm)),
+        ["Najnowsza kopia na dysku komputera", state.copy_age_s == null ? "brak" : ago(state.copy_age_s) + " temu", state.copy_age_s == null ? "bad" : ""],
         ["Cisza radiowa", state.silence ? state.silence.organ + ", " + state.silence.kiedy : "nie"],
         ["Przełącznik CISZA węzła", state.node.info ? (state.node.info.silence ? "włączony" : "wyłączony") : "nieznany"]]),
       field("Katalog drugiego nośnika", path, "narrow"),
@@ -410,8 +435,8 @@ var VIEWS = {
     state.accounts.concat(["stanowisko"]).forEach(function (a) {
       buttons.appendChild(button("Nowe hasło: " + a, "", function () {
         var body = Object.assign({account: a}, a === state.user ? {} : second.values());
-        if (confirm("Nadać nowe hasło " + a + "? Stare przestanie działać.")) action("/api/operator/password", body, error).then(function (v) {
-          shown = {label: "Nowe hasło: " + v.account + (v.copies_failed ? " (kopie na dysku nieprzepakowane: " + v.copies_failed + ")" : ""),
+        if (confirm((a === "stanowisko" ? "Nadać nowe hasło stanowiska?" : "Nadać nowe hasło kontu " + a + "?") + " Stare przestanie działać.")) action("/api/operator/password", body, error).then(function (v) {
+          shown = {label: "Nowe hasło: " + v.account + (v.copies_failed ? " (kopie na dysku, których nie zaszyfrowano nowym hasłem: " + v.copies_failed + ")" : ""),
                    text: v.password}; render(); });
       }));
     });
@@ -424,7 +449,7 @@ var VIEWS = {
     var body = el("tbody", {});
     state.log.forEach(function (e) {
       body.appendChild(el("tr", {}, el("td", {class: "when", text: time(e.at)}), el("td", {text: e.account || "aplikacja"}),
-        el("td", {class: "mono", text: e.station}), el("td", {class: "mono", text: e.number}), el("td", {text: e.op}), el("td", {text: e.detail || ""})));
+        el("td", {class: "mono", text: e.station}), el("td", {class: "mono", text: e.number}), el("td", {text: opName(e.op)}), el("td", {text: opDetail(e.op, e.detail)})));
     });
     var head = el("tr", {});
     ["Czas", "Konto", "Stacja", "Numer", "Czynność", "Szczegóły"].forEach(function (h) { head.appendChild(el("th", {text: h})); });
@@ -437,7 +462,7 @@ var VIEWS = {
     var path = el("input", {placeholder: "puste: nośnik stanowiska"}), second = secondPerson();
     view.appendChild(card("Eksport rejestru (CSV)", "",
       hint("Plik CSV nie jest szyfrowany: zawiera treść zgłoszeń. Domyślnie trafia do katalogu eksport na nośniku stanowiska."),
-      el("div", {class: "field narrow"}, field("Inny katalog (wymaga drugiego dyżurnego)", path)), second.node,
+      el("div", {class: "field narrow"}, field("Inny katalog (tylko za zgodą drugiego dyżurnego)", path)), second.node,
       row(button("Eksportuj rejestr", "", function () {
         action("/api/operator/export", path.value ? Object.assign({path: path.value}, second.values()) : {}, error)
           .then(function (v) { alert("Zapisano: " + v.file); });

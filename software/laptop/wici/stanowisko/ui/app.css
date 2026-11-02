@@ -25,6 +25,7 @@ main { max-width: 1100px; }
 .btn-alarm:hover { background: var(--alarm); opacity: 0.88; }
 
 /* Zakładki: liczba spraw do załatwienia przy nazwie */
+.tabs { flex-wrap: wrap; overflow-x: visible; }   /* każda zakładka z licznikiem widoczna bez przewijania */
 .tabs button { white-space: nowrap; font-size: 14px; padding-left: 10px; padding-right: 10px; }
 .tab-count { display: inline-block; min-width: 20px; margin-left: 6px; padding: 0 6px; border-radius: 999px; font-size: 12px;
   line-height: 20px; text-align: center; background: var(--alarm); color: var(--on-ink); font-variant-numeric: tabular-nums; }
@@ -41,6 +42,8 @@ main { max-width: 1100px; }
 .report.s1.u2 { border-color: var(--alarm); background: var(--alarm-soft); }
 .report.s3, .report.s5, .report.s6 { background: var(--bg); border-left-color: var(--border); }
 .report.s3 .addr, .report.s5 .addr, .report.s6 .addr { color: var(--muted); }
+/* Treść od stacji (adres, opis, komunikat) bywa bez spacji: łamie się, zamiast wychodzić poza kartę */
+.report, .list, .decisions, .banner, .shown { overflow-wrap: anywhere; }
 .report-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
 .report-top .category { font-weight: 700; letter-spacing: 0.02em; }
 .report-top .pill:last-child { margin-left: auto; }
@@ -50,7 +53,7 @@ main { max-width: 1100px; }
 .report .addr { font-size: 19px; font-weight: 600; line-height: 1.3; }
 .report .text { font-size: 15.5px; }
 .meta { color: var(--muted); font-size: 13.5px; display: flex; flex-wrap: wrap; gap: 4px 14px; font-variant-numeric: tabular-nums; }
-.meta .mono { color: var(--text); font-weight: 600; }
+.meta .mono { color: var(--text); font-weight: 600; white-space: nowrap; }
 .decisions { margin: 0; padding: 8px 12px; list-style: none; border-radius: 8px; background: var(--surface-2); font-size: 13.5px; }
 .decisions li + li { margin-top: 2px; }
 .decisions strong { font-weight: 600; }
@@ -80,8 +83,9 @@ main { max-width: 1100px; }
 .list .check { align-items: flex-start; }
 .list .check input { margin-top: 4px; }
 .item-head { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
-.item-head strong { font-family: var(--mono); }
-.station { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px 16px; align-items: center; }
+.item-head strong { font-family: var(--mono); white-space: nowrap; }
+.station { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.station > .item-head { flex: 1 1 260px; min-width: 0; }   /* za mało miejsca: nośnik i przycisk schodzą pod nazwę */
 .station .bearer { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 13.5px; color: var(--muted); }
 .station .bearer select { width: auto; }
 .btn-quiet-danger { border-color: transparent; background: transparent; color: var(--alarm); }
@@ -95,6 +99,8 @@ progress { width: 100%; height: 8px; accent-color: var(--ok); }
 
 /* Dziennik */
 .table-wrap { margin-top: 0; }
+td.mono { white-space: nowrap; }
+td:last-child { overflow-wrap: anywhere; min-width: 200px; }   /* stacja i numer w całości, nie łamane na dywizie */
 td.when { white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--muted); }
 
 #view > .banner, #work > .banner { margin-top: 0; }
@@ -103,10 +109,14 @@ td.when { white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--
 @media (prefers-reduced-motion: reduce) { .btn-alarm { animation: none; } }
 #view .card > .hint:first-of-type { margin-bottom: 4px; }
 
-@media (max-width: 640px) {
+/* Węższy ekran: stan stanowiska w osobnym wierszu paska, zamiast kolumny ściśniętej obok tytułu */
+@media (max-width: 960px) {
+  .bar { flex-wrap: wrap; row-gap: 8px; }
   #badges { margin-left: 0; justify-content: flex-start; order: 3; flex-basis: 100%; }
   #who { margin-left: auto; }
+}
+@media (max-width: 1100px) { .tabs .tab-end { margin-left: 0; } }   /* zakładki w dwóch wierszach: bez dziury */
+@media (max-width: 640px) {
   .report { padding: 14px; }
   .report-top .pill:last-child { margin-left: 0; }
-  .station { grid-template-columns: 1fr; justify-items: start; }
 }
