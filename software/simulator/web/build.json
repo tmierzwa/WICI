@@ -84,8 +84,8 @@
  ],
  "outputs": {
   "wici-station.mjs": {
-   "sha256": "38750ed55db4fb71bc03695a1bdecc2013d13b8fe837c3674e7d65eacd0d0fd3",
-   "bytes": 762037,
+   "sha256": "9a533d8bd6c7f007c8fac455cef3add03fc3aec9e1c311975e509a7cd873378e",
+   "bytes": 761905,
    "sources": [
     "firmware/src/annunciator.cpp",
     "firmware/src/config.cpp",
@@ -182,8 +182,8 @@
   "firmware/src/cc1120_link.cpp": "52c066da1ab28f750b2971dbd4fcc8193d980118734fc8776d400726ec3adb64",
   "firmware/src/cc1120_link.h": "55a3047fb106101754dacb1a3b5dbfb4756b5d4aac0048ff6ac630beebd0a6f9",
   "firmware/src/cmdargs.h": "672b5a9dbf4aee0e75d15c30bc92d5ab52c28d05946fd7f31b9fbfacd8b11611",
-  "firmware/src/config.cpp": "f35fb6936eb4deb5f2e6c821fecc93cc03cfc768d6b782cadaa1a02802c7a859",
-  "firmware/src/config.h": "0f3bf9339e863f289b5e282d912f23a2170b0cd4df4131a7452e810364bfd7a2",
+  "firmware/src/config.cpp": "c141d7be9ccbd44cee5bc155d2f8e4823b49f1d9c517a7e0595b7538883d8b8c",
+  "firmware/src/config.h": "b77cbc3afe5a7e4786b7a2a7c7925f8b92d9670b0bbdbb7d55f4668f70642c2d",
   "firmware/src/console.cpp": "0b4dbc984e24d6ced77ae5fe8d1d602c3e26d80f4458ae9048a6cdb8fe23704c",
   "firmware/src/console.h": "8f46ad6a6fffc5cec05d51e9751648c45b709e53e947651cc395b880e654a971",
   "firmware/src/core_selftest.cpp": "61844d783508ec06ad05aa03f149f94189a9e8719972c92eeec289c44911342f",
@@ -271,7 +271,7 @@
   "firmware/src/spsc_ring.h": "36b4fc8c72a7a3e9917dad612dbb5c4128b773489827f4d04160f2162cccfd09",
   "firmware/src/station.cpp": "87f6fb83d3a1da54e578a713011853438cf97e1d90b5e178a76b0ae50e10545c",
   "firmware/src/station.h": "01837af041b795ef2f954dd1a5397055871b9dfc0f80bfd90125a6eb1ecdc7a2",
-  "firmware/src/store.cpp": "0da33c5685fb70ab0c4c1d4d0390a163e9dd99fee2f79f175f77174f7ea50b4e",
+  "firmware/src/store.cpp": "9a1cbe3905ba955b3883884a408453479a7c3689693bb4b087eb82ae37ef6e7e",
   "firmware/src/store.h": "30a2ffd09936c6b3ccbb5f3805752203778378fbb654ba61ca57774ae52b8104",
   "firmware/src/sx1262.cpp": "ebb2650ba8900ea0bc07c33b14a0ca7f72e3018c648abe6894364dd4b864dc09",
   "firmware/src/sx1262.h": "eed9b5e995841d855989b015f2b9ab1cb7c9940c461d8df961753674d6553e23",

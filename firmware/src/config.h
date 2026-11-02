@@ -14,6 +14,7 @@
 // Bez zależności od Arduino; sprawdzany na komputerze.
 #pragma once
 
+#include <new>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -86,6 +87,14 @@ struct Config {
     uint8_t ifac[HASH] = {};
     char profile[PROFILE_MAX + 1] = {};
 };
+
+// Zeruje konfigurację w miejscu. Przypisanie `c = Config()` buduje na stosie kopię 7,8 KB; w głębi
+// setup() przekraczała ona stos pętli ESP32 (16 KiB) i stacja restartowała się w kółko (zrzut awarii
+// zestawu XIAO, 2026-11-02).
+inline void clear(Config& c) {
+    c.~Config();
+    new (&c) Config();
+}
 
 // Dokument w FRAM (albo w RAM w próbach).
 struct Source {

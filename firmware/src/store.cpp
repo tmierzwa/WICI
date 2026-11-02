@@ -799,7 +799,7 @@ Begin Store::begin() {
     ok_ = false;
     diag_ = Diagnostics();
     meta_ = Meta();
-    config_ = config::Config();
+    config::clear(config_);
     configSize_ = 0;
     for (RequestIndex& r : register_) r = RequestIndex();
     for (MessageIndex& m : inbox_) m = MessageIndex();
@@ -881,7 +881,7 @@ struct CopySource : config::Source {
 bool Store::loadConfig() {
     // Aktywna kopia: znacznik, nagłówek, SHA-256 dokumentu i pełna kontrola treści; kopia
     // nieczytelna zostawia stację bez konfiguracji (diagnostyka), nigdy z częściową.
-    config_ = config::Config();
+    config::clear(config_);
     configSize_ = 0;
     if (meta_.configCopy < 0) return true;
     const uint32_t base = CONFIG_BASE + meta_.configCopy * CONFIG_COPY;
@@ -898,7 +898,7 @@ bool Store::loadConfig() {
     if (get32(marker) != crc || memcmp(marker + 4, RECORD_MARK, 4) || head[0] != CONFIG || get16(head + 1) != meta_.configCopy ||
         head[3] != journal::FRAM_FORMAT || size > config::DOC_MAX || !hashCopy(meta_.configCopy, size, sha) ||
         memcmp(sha, head + RECORD_HEADER + 2, 32) || config::parse(source, size, profile_, config_, worst)) {
-        config_ = config::Config();
+        config::clear(config_);
         diag_.configCorrupt = true;
         return true;
     }
