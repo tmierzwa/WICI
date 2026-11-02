@@ -2347,7 +2347,10 @@ class HostUnitTests(unittest.TestCase):
             (7, "invalid", "colour"), (8, "unknown_type", None), (9, "invalid", "id"), (10, "contract", None),
             (None, "invalid", "json"), (None, "seq", None), (10, "seq", None), (None, "too_long", None),
             (11, "unknown_type", None),                 # `export` to `op` transferu, nie polecenie
-            (12, "invalid", "step"), (13, "not_configured", None)])
+            (12, "invalid", "step")])
+        # Karta przed pierwszą konfiguracją: klucze stacji do planu sieci są potrzebne przed configure.
+        card = next(x for x in r if x["type"] == "card" and x.get("re") == 13)
+        self.assertEqual((len(card["key"]), card["address"], "net_id" in card), (128, [], False))
         self.assertEqual([x["type"] for x in r].count("hello"), 2)
         self.assertEqual([x["type"] for x in r][3], "status")   # po odmowie `seq` liczy się dalej od numeru laptopa
         self.assertEqual([x["seq"] for x in r], list(range(1, len(r) + 1)))

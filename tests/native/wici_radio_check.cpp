@@ -14,12 +14,14 @@
 namespace {
 struct Memory : journal::Storage {
     uint8_t bytes[0x048000] = {};
+    int writesLeft = -1;
     bool read(uint32_t at, uint8_t* out, size_t n) override {
         if (at > sizeof(bytes) || n > sizeof(bytes) - at) return false;
         memcpy(out, bytes + at, n); return true;
     }
     bool write(uint32_t at, const uint8_t* in, size_t n) override {
-        if (at > sizeof(bytes) || n > sizeof(bytes) - at) return false;
+        if (writesLeft == 0 || at > sizeof(bytes) || n > sizeof(bytes) - at) return false;
+        if (writesLeft > 0) --writesLeft;
         memcpy(bytes + at, in, n); return true;
     }
 };
@@ -38,6 +40,8 @@ struct Air : wici_radio::Air {
         assert(n <= sizeof(hack)); memcpy(hack, p, n); hackLength = n;
         receivedMs = ms; ++hackCount; return hackOk;
     }
+    bool acceptOk = true;
+    bool accepts(wici_link::TxClass, size_t) override { return acceptOk; }
 };
 void publicKey(const uint8_t secret[32], uint8_t out[32]) {
     uint8_t scalar[32]; memcpy(scalar, secret, 32);
@@ -115,8 +119,16 @@ int main() {
     air.hackOk = false;
     assert(shelter.receive(wire, n, 1300, 11) == wici_radio::Event::ADMITTED);
     assert(air.hackCount == 4 && air.receivedMs == 1300);
+    // Review D1: the planned parent carries DATA from boot, before any BEACON;
+    // without its BEACON the station has no rank and sends no BEACON.
+    assert(shelter.routes().parent() == 5 && shelter.routes().rank(11) == 0xFFFF && !shelter.beacon(11));
+    air.dataOk = false;
     shelter.poll(1301, 11);
     assert(shelter.routes().down(4) == 4);
+    assert(air.dataCount == 1 && air.dataLength == 44);
+    assert(air.lastClass == wici_link::TxClass::TRANSIT);
+    wici_link::Frame refused;
+    assert(wici_link::decode(key, 100, air.data, air.dataLength, refused));
 
     wici_link::Frame beacon;
     beacon.type = wici_link::Type::BEACON; beacon.network = 100;
@@ -128,7 +140,7 @@ int main() {
                              beacon.payload + wici_beacon::CONTENT_BYTES));
     n = encode(key, beacon, wire);
     assert(shelter.receive(wire, n, 1400, 12, -20) == wici_radio::Event::ADMITTED);
-    assert(shelter.routes().rank() == 21);  // packet SNR contributes five sixteenths
+    assert(shelter.routes().rank(12) == 21);  // packet SNR contributes five sixteenths
     beacon.payload[4] = 0x7f; beacon.payload[5] = 0xff;
     n = encode(key, beacon, wire);
     // Signature checks are spaced so BEACON floods cannot stall the loop.
@@ -137,21 +149,34 @@ int main() {
     assert(shelter.routes().epoch() == 1);  // link-key holder cannot forge a root epoch
     beacon.payload[4] = 0; beacon.payload[5] = 1;
     beacon.payload[2] = 0; beacon.payload[3] = 1;
+    beacon.sequence = 1;  // new, so only the signature can refuse it
     n = encode(key, beacon, wire);
     assert(shelter.receive(wire, n, 3400, 12) == wici_radio::Event::REJECTED);
-    assert(shelter.routes().rank() == 21);  // rank is signed by its sender
-    air.dataOk = false;
-    shelter.poll(1401, 12);
-    assert(air.dataCount == 1 && air.dataLength == 44);
-    assert(air.lastClass == wici_link::TxClass::TRANSIT);
-    shelter.poll(1900, 12);
+    assert(shelter.routes().rank(12) == 21);  // rank is signed by its sender
+    // Finding 4: a replayed BEACON (seq not newer) is refused before the
+    // 1 s signature spacing, so recorded copies cannot use up the checks of
+    // real BEACONs.
+    beacon.payload[2] = 0; beacon.payload[3] = 0;
+    assert(wici_beacon::sign(rootSecret, rootEd, 100, 5, beacon.payload,
+                             beacon.payload + wici_beacon::CONTENT_BYTES));
+    beacon.sequence = 0;
+    n = encode(key, beacon, wire);
+    assert(shelter.receive(wire, n, 4400, 12, -20) == wici_radio::Event::REJECTED);  // the admitted one, again
+    beacon.sequence = 2;
+    n = encode(key, beacon, wire);
+    assert(shelter.receive(wire, n, 4500, 12, -20) == wici_radio::Event::ADMITTED);
+    assert(shelter.routes().rank(12) == 21);
+    shelter.poll(1800, 12);
     assert(air.dataCount == 1);
     air.dataOk = true;
-    shelter.poll(1901, 12);
+    shelter.poll(1801, 12);
     assert(air.dataCount == 2);
     wici_link::Frame sent;
     assert(wici_link::decode(key, 100, air.data, air.dataLength, sent));
     assert(sent.source == 2 && sent.destination == 5 && sent.hops == 1);
+    // Review D7, finding 3: the refused transfer was yielded and prepared
+    // again for the same next hop; it keeps its seq (a refusal burns none).
+    assert(sent.sequence == refused.sequence);
     const uint16_t outgoingSeq = sent.sequence;
     shelter.onTxDone(true, 1950, 12);
     shelter.poll(2549, 12);
@@ -184,12 +209,12 @@ int main() {
     assert(wici_link::decode(key, 100, air.data, air.dataLength, first));
     assert(first.source == 2 && first.destination == 5 && first.length == 140 && first.ttl == 7);
     const uint16_t firstSeq = first.sequence;
-    const uint16_t rankBeforeOwnTimeout = shelter.routes().rank();
+    const uint16_t rankBeforeOwnTimeout = shelter.routes().rank(13);
     shelter.onTxDone(true, 4050, 13);
     shelter.poll(4649, 13);
     assert(air.dataCount == 4);
     shelter.poll(4650, 13);
-    assert(shelter.routes().rank() > rankBeforeOwnTimeout);
+    assert(shelter.routes().rank(13) > rankBeforeOwnTimeout);
     shelter.poll(5149, 13);
     assert(air.dataCount == 4);
     shelter.poll(5150, 13);
@@ -245,7 +270,9 @@ int main() {
     assert(resumed.begin());
     resumed.poll(1, 15);
     assert(resumed.routes().down(4) == 4);
-    assert(resumedAir.dataCount == 0);  // parent beacon is soft state after restart
+    // The planned parent survives the restart without its BEACON (D1).
+    assert(resumedAir.dataCount == 1 && wici_link::decode(key, 100, resumedAir.data, resumedAir.dataLength, sent));
+    assert(sent.destination == 5);
     assert(resumed.receive(wire, n, 4101, 15) == wici_radio::Event::HACK_SENT);
 
     // The active station image forwards one emergency downlink broadcast once.
@@ -313,6 +340,19 @@ int main() {
     n = encode(key, reply, wire);
     assert(failover.receive(wire, n, at + 100, 30) == wici_radio::Event::ADMITTED);
     assert(failoverDelivery.calls == 1 && failoverDelivery.handle == 77 && failoverDelivery.acknowledged);
+    // Finding 9: a BEACON the radio would refuse (silence, budget, busy)
+    // spends neither a seq nor an Ed25519 signature.
+    assert(failover.routes().rank(30) != 0xFFFF && failover.beacon(30));
+    assert(wici_link::decode(key, 100, failoverAir.data, failoverAir.dataLength, sent) &&
+           sent.type == wici_link::Type::BEACON);
+    const uint16_t beaconSeq = sent.sequence;
+    const unsigned offered = failoverAir.dataCount;
+    failoverAir.acceptOk = false;
+    for (unsigned i = 0; i < 5; ++i) assert(!failover.beacon(30));
+    assert(failoverAir.dataCount == offered);
+    failoverAir.acceptOk = true;
+    assert(failover.beacon(30) && wici_link::decode(key, 100, failoverAir.data, failoverAir.dataLength, sent));
+    assert(sent.sequence == static_cast<uint16_t>(beaconSeq + 1));
 
     // A replayed first fragment earns one HACK per 5 s, like a replayed whole envelope.
     static Memory partMemory;
@@ -335,4 +375,50 @@ int main() {
     assert(parted.receive(wire, n, 9001, 40) == wici_radio::Event::HACK_SENT);
     assert(parted.receive(wire, n, 9002, 44) == wici_radio::Event::IGNORED);
     assert(parted.receive(wire, n, 9003, 45) == wici_radio::Event::HACK_SENT && partAir.hackCount == 3);
+
+    // Review D1/D8: an own SA1 leaves at once to the planned parent (no
+    // BEACON yet). A radio TX failure counts like a HACK timeout: three
+    // attempts, one more round of three at the parent the table holds now
+    // (here the same one: TX failures do not blame the parent), then Failed.
+    static Memory txMemory;
+    Air txAir;
+    assert(envelope::startCounters(txMemory));
+    wici_radio::Shelter txFail(txMemory, {100, 2, 5, 5, 6}, 7, receivers, ifac,
+                               ownSecret, receiverPublic, admit, &admitted, txAir, randomZero,
+                               nullptr, nullptr, 0, rootEd, beaconProof, rootEd);
+    assert(txFail.begin());
+    Delivery txDelivery;
+    txFail.onDelivery(delivered, &txDelivery);
+    assert(txFail.queueOwn(1, reinterpret_cast<const uint8_t*>("SA1"), 3, 55));
+    at = 20000;
+    for (unsigned attempt = 0; attempt < 6; ++attempt) {
+        txFail.poll(at, 50);
+        assert(txAir.dataCount == attempt + 1 && txDelivery.calls == 0);
+        assert(wici_link::decode(key, 100, txAir.data, txAir.dataLength, sent) && sent.destination == 5);
+        txFail.onTxDone(false, at, 50);
+        at += 500;
+    }
+    assert(txDelivery.calls == 1 && txDelivery.handle == 55 && !txDelivery.acknowledged && !txFail.ownBusy());
+    assert(txFail.routes().parent() == 5);
+
+    // Review D6: an uncertain FRAM write takes Shelter::ready() down: no
+    // admission, no HACK, no own SA1, until begin() reads FRAM again.
+    static Memory lostMemory;
+    Air lostAir;
+    assert(envelope::startCounters(lostMemory));
+    wici_radio::Shelter lost(lostMemory, {100, 2, 5, 5, 0}, 7, receivers, ifac,
+                             ownSecret, receiverPublic, admit, &admitted, lostAir, randomZero,
+                             nullptr, nullptr, 0, rootEd, beaconProof, rootEd);
+    assert(lost.begin() && lost.ready());
+    frame.flags = wici_link::ACKREQ; frame.source = 4; frame.destination = 2;
+    frame.sequence = 300; frame.payload[2] = 4; frame.payload[4] = 1; frame.payload[8] = 9;
+    n = encode(key, frame, wire);
+    lostMemory.writesLeft = 0;
+    assert(lost.receive(wire, n, 30000, 60) == wici_radio::Event::REJECTED);
+    assert(!lost.ready() && lostAir.hackCount == 0);
+    lostMemory.writesLeft = -1;
+    assert(lost.receive(wire, n, 30001, 60) == wici_radio::Event::REJECTED && lostAir.hackCount == 0);
+    assert(!lost.queueOwn(1, reinterpret_cast<const uint8_t*>("SA1"), 3, 56));
+    assert(lost.begin() && lost.ready());
+    assert(lost.receive(wire, n, 30002, 60) == wici_radio::Event::HACK_SENT);
 }

@@ -122,9 +122,9 @@ bool Port::canSend(const uint8_t* data, size_t length) const {
     return TX_BYTES - txCount_ >= encoded;
 }
 
-bool Port::send(const uint8_t* data, size_t length) {
+bool Port::send(const uint8_t* data, size_t length, uint8_t command) {
     if (!canSend(data, length)) { ++counters_.txDropped; return false; }
-    const uint8_t start[2] = {FEND, CMD_DATA};
+    const uint8_t start[2] = {FEND, command};
     put(start, sizeof(start));
     for (size_t i = 0; i < length; ++i) {
         if (data[i] == FEND) { const uint8_t e[2] = {FESC, TFEND}; put(e, 2); }

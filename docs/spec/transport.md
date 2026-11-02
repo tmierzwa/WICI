@@ -171,7 +171,7 @@ Wspólny limit obejmuje również K1. K1 dostaje jednoadresowa ramka z kopertą
 do odbiorcy albo od niego, od sąsiada uwierzytelnionego tagiem pary (WICI-Link
 v3 nie ma podpisu pochodzenia na DATA, D21 wariant D). Dwa miejsca są
 zarezerwowane dla K1, a jeden sąsiad może zająć najwyżej jedno miejsce K1.
-Drogi w dół przekaźnik uczy się tylko według planu sieci (`behind`). Przy
+Drogi w dół przekaźnik i root uczą się tylko według planu sieci (`behind`). Przy
 czekającym K1 limit 25% dotyczy zachowawczo całego tranzytu i BEACON-ów.
 
 Pozostałe do zamknięcia D21: sprzętowe próby rozsyłania awaryjnego, pomiar

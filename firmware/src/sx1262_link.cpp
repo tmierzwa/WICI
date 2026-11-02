@@ -402,6 +402,7 @@ RxService LinkDriver::serviceRx(radiolink::Frame& out, bool sampleRssi) {
         if (sampleRssi) {
             radiolink::Rssi r;
             if (!readRssi(r)) return RxService::BusyTimeout;
+            if (r.valid && !inFrame_) noise_.sample(r.dbm, now);  // tło tylko poza ramką
             if (r.valid && r.dbm > ccaThresholdDbm()) activity_.mark(Activity::RSSI, now);
         }
         lastSampleMs_ = now;
@@ -563,7 +564,7 @@ radiolink::Activity LinkDriver::recentActivity(uint32_t windowMs) {
     return radiolink::Activity::None;
 }
 
-int8_t LinkDriver::ccaThresholdDbm() const { return lora::CCA_RSSI_THRESHOLD_DBM; }
+int8_t LinkDriver::ccaThresholdDbm() const { return static_cast<int8_t>(noise_.threshold()); }
 
 double LinkDriver::frequencyStepHz() const { return static_cast<double>(F_XTAL_HZ) / 33554432.0; }  // f_xtal / 2^25
 

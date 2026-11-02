@@ -72,7 +72,8 @@ int main() {
     assert(wici_link::decode(key, 100, forwardWire, forwardLength, checked));
     assert(checked.destination == 1 && checked.payload[8] == 7);
 
-    wici_route::Table root(rootMemory, {100, 1, 1, 0, 0});
+    const config::Behind rootPlan[] = {{4, 2}};  // the root's plan: station 4 behind relay 2
+    wici_route::Table root(rootMemory, {100, 1, 1, 0, 0}, nullptr, 0, rootPlan, 1);
     assert(root.begin() && root.setRootEpoch(1));
     assert(root.learn(4, 2) && root.down(4) == 2);
     assert(restarted.remove(0, 102));  // root HACK

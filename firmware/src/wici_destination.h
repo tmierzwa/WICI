@@ -24,7 +24,10 @@ public:
     Destination(journal::Storage& storage, Config config, const uint8_t ifac[16],
                 const uint8_t privateKey[32], const uint8_t peerPublic[2][32],
                 AdmitFn admit, void* context);
+    // Re-reads replay windows and parts; also the recovery after ready() fell.
     bool begin();
+    // False after an uncertain FRAM write of a replay window or part.
+    bool ready() const { return ready_ && replay_[0].ready() && replay_[1].ready(); }
     // HACK_READY only after part storage or the SA1 effect and replay window
     // are durable. Broadcast frames are accepted without a HACK.
     Outcome receive(const uint8_t* wire, size_t length, uint32_t nowS,

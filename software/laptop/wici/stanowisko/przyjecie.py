@@ -72,6 +72,28 @@ CREATE TABLE IF NOT EXISTS env_send_guard (
     id INTEGER PRIMARY KEY CHECK(id=1),
     blocked INTEGER NOT NULL CHECK(blocked=1)
 );
+-- Ramki WICI-Link z kopertą uwierzytelnioną przez znaną stację, których nie da się przyjąć nigdy (licznik poza
+-- oknem, sprzeczna część, błędne SA1): surowe bajty do wglądu dyżurnego i alarmu. Po zapisie idzie HACK, jak
+-- z przekaźnika. Najwyżej REJECTED_PER_SENDER wierszy na nadawcę i REJECTED_MAX łącznie; dalsze ramki tylko
+-- liczy env_rejected_overflow, a zapisane zostają (pierwsze dowody są najcenniejsze).
+CREATE TABLE IF NOT EXISTS env_rejected (
+    id INTEGER PRIMARY KEY,
+    net_id INTEGER NOT NULL,
+    sender INTEGER NOT NULL,
+    reason TEXT NOT NULL,
+    first_at REAL NOT NULL,
+    at REAL NOT NULL,
+    frame BLOB NOT NULL,
+    count INTEGER NOT NULL,
+    UNIQUE (net_id, frame)
+);
+CREATE TABLE IF NOT EXISTS env_rejected_overflow (
+    net_id INTEGER NOT NULL,
+    sender INTEGER NOT NULL,
+    count INTEGER NOT NULL,
+    at REAL NOT NULL,
+    PRIMARY KEY (net_id, sender)
+);
 CREATE TABLE IF NOT EXISTS bearer_route (
     source BLOB PRIMARY KEY,
     bearer TEXT NOT NULL CHECK(bearer IN ('wici', 'reticulum'))
@@ -92,6 +114,47 @@ CREATE TABLE IF NOT EXISTS decyzje (
 );
 """
 SAVE_ERRORS = (OSError, sqlite3.Error, syscrypto.CryptoError, nosnik.StorageError)
+REJECTED_MAX = 256         # wierszy env_rejected (po najwyżej 255 B ramki)
+REJECTED_PER_SENDER = 16   # wierszy env_rejected na numer nadawcy: przejęta stacja nie zużywa nośnika
+
+
+class Late(TimeoutError):
+    """call() did not finish in time. The job still runs, and its change still becomes durable."""
+
+
+class NotAuthenticated(Exception):
+    """A frame with a valid network MAC whose envelope this receiver does not authenticate to a known station:
+    identity not bound to the network, envelope length, receiver number, unknown station, envelope MAC.
+
+    The network key alone does not identify the sender, so the bytes are no evidence and nothing is stored;
+    the frame is only counted. It still gets its HACK (admit_wici_frame): the relays took the frame without
+    checking the envelope, and withholding the HACK would only turn them away from the root. The message
+    arrives by the station's SA1 retry (new counter, until RECEIVED) once the duty officer adds the station
+    or the receiver identity matches. `reason` is one of a few fixed texts."""
+
+    def __init__(self, reason):
+        super().__init__(reason)
+        self.reason = reason
+
+
+def rejected_summary(db):
+    """{"frames": stored frames, "total": every receipt incl. repeats and over the per-sender cap, "newest": time}."""
+    frames, total, newest = db.execute("SELECT count(*), coalesce(sum(count), 0), max(at) FROM env_rejected").fetchone()
+    over, over_at = db.execute("SELECT coalesce(sum(count), 0), max(at) FROM env_rejected_overflow").fetchone()
+    return {"frames": frames, "total": total + over,
+            "newest": max((t for t in (newest, over_at) if t is not None), default=None)}
+
+
+def envelope_rejections(db, limit=50):
+    """Alarm data for the panel (inside call): WICI-Link frames set aside as never admissible, newest first,
+    and per sender the frames counted without storing them over REJECTED_PER_SENDER."""
+    rows = [{"net_id": n, "sender": s, "reason": r, "first_at": f, "at": a, "count": c, "frame": frame.hex()}
+            for n, s, r, f, a, c, frame in db.execute(
+                "SELECT net_id, sender, reason, first_at, at, count, frame FROM env_rejected "
+                "ORDER BY id DESC LIMIT ?", (limit,))]
+    overflow = [{"net_id": n, "sender": s, "count": c, "at": a} for n, s, c, a in db.execute(
+        "SELECT net_id, sender, count, at FROM env_rejected_overflow ORDER BY at DESC")]
+    return {**rejected_summary(db), "rows": rows, "overflow": overflow}
 
 
 class Przyjecie:
@@ -119,7 +182,13 @@ class Przyjecie:
         self.jobs = queue.Queue()
         self.last_bearer = {}  # source -> last authenticated receive path; DB thread only
         self.bearer_override = {}  # operator choice takes precedence until explicitly cleared
-        self.counts = {"received": 0, "duplicate": 0, "quarantined": 0, "rejected": 0, "quarantine_full": 0}
+        self.counts = {"received": 0, "duplicate": 0, "quarantined": 0, "rejected": 0, "quarantine_full": 0,
+                       "envelope_rejected": 0}
+        self.identity_cache = None   # (klucz prywatny, wpis karty) raz na sesję; wątek bazy
+        self.rejected = {"frames": 0, "total": 0, "newest": None}   # alarm ramek odłożonych (rejected_summary)
+        # Ramki bez uwierzytelnienia koperty: tylko w pamięci, przyczyna -> {count, at, net_id, sender}; nadawca
+        # to deklaracja z nagłówka, nie fakt. Kluczami są stałe przyczyny NotAuthenticated, więc słownik jest mały.
+        self.unauthenticated = {}
         self.ready = threading.Event()
         self.error = self.save_error = None
         self.discard = False   # ZNISZCZ DANE: bez ostatniej migawki przy zatrzymaniu
@@ -199,6 +268,7 @@ class Przyjecie:
     def tick(self):
         """Pass due intents to the stack (in the database thread), only once the medium holds every change;
         a copy on the computer disk and the announce when they are due. Nothing in the recovery mode."""
+        self.rejected = rejected_summary(self.store.db)   # także po ZAMKNIJ ZDARZENIE (zamkniecie.purge)
         if not self._save() or self.recovery:
             return   # w trybie odzyskania także bez kopii: trzy dobre kopie zostają
         if self.copies is not None and self.clock() >= self.next_copy:
@@ -290,10 +360,11 @@ class Przyjecie:
                                   "VALUES(?,?,?,?,?,?,?)", (self.clock(), account, op, detail, source, mid, revision))
         self._save()
 
-    def call(self, fn):
+    def call(self, fn, timeout=None):
         """Run fn(store) in the database thread and return its result (or raise its exception) once the
         change is on the medium. StorageError after the change means "not yet durable", not "rejected":
-        the change stays in the database and the next snapshot that succeeds writes it."""
+        the change stays in the database and the next snapshot that succeeds writes it. With timeout
+        (seconds) Late is raised when the job has not finished by then; the job still completes."""
         done, result = threading.Event(), {}
 
         def job():
@@ -307,9 +378,12 @@ class Przyjecie:
         if self.stopped:
             raise RuntimeError("wątek bazy zatrzymany")
         self.jobs.put(job)
-        while not done.wait(1):
+        end = None if timeout is None else time.monotonic() + timeout
+        while not done.wait(1 if end is None else max(0, min(1, end - time.monotonic()))):
             if not self.thread.is_alive():
                 raise RuntimeError("wątek bazy zatrzymany")
+            if end is not None and time.monotonic() >= end:
+                raise Late(f"przyjęcie trwa dłużej niż {timeout * 1000:.0f} ms")
         if "error" in result:
             raise result["error"]
         return result["value"]
@@ -322,13 +396,96 @@ class Przyjecie:
         """A REQUEST or TEST with a checked signature from source (16 B "lxmf.delivery" hash)."""
         self.jobs.put(lambda: self._receive(source, content, bearer))
 
-    def receive_envelope_frame(self, net_id, wire, bearer=None):
-        """Authenticate a numbered WICI frame and durably admit it before the caller may HACK.
+    def receive_envelope_frame(self, net_id, wire, bearer=None, timeout=None):
+        """Authenticate a numbered WICI frame and durably admit it; "partial", "complete" or "duplicate".
 
-        Runs on the database thread; a wrong network, unregistered key, tag, SA1 content,
-        or failed snapshot raises and must leave the link frame unacknowledged.
+        Runs on the database thread. NotAuthenticated: the envelope does not authenticate a known
+        station (nothing stored, counted in memory). envelope_inbox.PermanentRejection (an authenticated
+        part that can never be admitted: replay window, fragment conflict, SA1 content) is raised only
+        after its bytes are durably set aside in env_rejected. Any other exception (inbox full,
+        quarantine full, failed snapshot, Late after `timeout`) is transient.
         """
-        return self.call(lambda store: self._receive_envelope_frame(net_id, wire, bearer))
+        from . import envelope_inbox
+
+        queued = time.monotonic()
+
+        def admit(store):
+            started = time.monotonic()
+            try:
+                outcome = self._receive_envelope_frame(net_id, wire, bearer)
+            except NotAuthenticated as exc:
+                outcome = f"bez uwierzytelnienia ({exc.reason})"
+                self._count_unauthenticated(net_id, wire, exc.reason)
+                raise
+            except envelope_inbox.PermanentRejection as exc:
+                outcome = f"odłożona ({exc})"
+                try:
+                    self._set_aside(net_id, wire, str(exc))
+                except Exception as error:
+                    outcome = f"bez przyjęcia ({error!r})"
+                    raise
+                raise
+            except Exception as exc:
+                outcome = f"bez przyjęcia ({exc!r})"
+                raise
+            finally:
+                self.log(f"stanowisko: koperta WICI {outcome}: kolejka {(started - queued) * 1000:.1f} ms, "
+                         f"przyjęcie {(time.monotonic() - started) * 1000:.1f} ms")
+            return outcome
+        return self.call(admit, timeout)
+
+    def admit_wici_frame(self, net_id, wire, timeout):
+        """WiciStos callback: return once the root may send HACK, raise otherwise (Late after timeout).
+
+        The HACK means "settled here", not "admitted": a frame set aside as never admissible is
+        acknowledged like a relay acknowledges (the bytes are durable and the alarm is up), and a frame
+        whose envelope is not authenticated is acknowledged after counting it ("unauthenticated"); a
+        hop retry would change neither."""
+        from . import envelope_inbox
+
+        try:
+            return self.receive_envelope_frame(net_id, wire, bearer="wici", timeout=timeout)
+        except envelope_inbox.PermanentRejection:
+            return "rejected"
+        except NotAuthenticated:
+            return "unauthenticated"
+
+    def _count_unauthenticated(self, net_id, wire, reason):
+        """Count a frame without an authenticated envelope for the alarm; in memory only, nothing on the medium."""
+        raw = bytes(wire)
+        entry = self.unauthenticated.setdefault(reason, {"count": 0})
+        entry.update(count=entry["count"] + 1, at=self.clock(), net_id=net_id,
+                     sender=int.from_bytes(raw[1:3], "big") if len(raw) >= 3 else None)
+
+    def _set_aside(self, net_id, wire, reason):
+        """Keep an authenticated, never admissible frame for the duty officer before its HACK; StorageError when it
+        is not durable.
+
+        A new frame is snapshotted at once. A repeat of stored bytes only counts, and so does a frame over the
+        sender's cap or the table's cap (its bytes are not kept: they can never be admitted anyway, and the first
+        evidence stays); those counts reach the medium with the next regular snapshot, at most one per TICK_S.
+        The sender number is authenticated here, so a captured station uses at most its own share of the medium."""
+        raw, now, db = bytes(wire), self.clock(), self.store.db
+        sender = int.from_bytes(raw[1:3], "big")
+        durable = db.total_changes == self.saved   # wszystko, także wcześniej odłożone bajty, jest na nośniku
+        with db:
+            if db.execute("UPDATE env_rejected SET count = count + 1, at=? WHERE net_id=? AND frame=?",
+                          (now, net_id, raw)).rowcount:
+                new = False
+            elif (db.execute("SELECT count(*) FROM env_rejected WHERE net_id=? AND sender=?",
+                             (net_id, sender)).fetchone()[0] >= REJECTED_PER_SENDER
+                  or db.execute("SELECT count(*) FROM env_rejected").fetchone()[0] >= REJECTED_MAX):
+                db.execute("INSERT INTO env_rejected_overflow VALUES(?,?,1,?) ON CONFLICT(net_id, sender) "
+                           "DO UPDATE SET count = count + 1, at = excluded.at", (net_id, sender, now))
+                new, durable = False, True   # nic do zachowania poza licznikiem
+            else:
+                db.execute("INSERT INTO env_rejected(net_id, sender, reason, first_at, at, frame, count) "
+                           "VALUES(?,?,?,?,?,?,1)", (net_id, sender, reason, now, now, raw))
+                new = True
+        self.counts["envelope_rejected"] += 1
+        self.rejected = rejected_summary(db)
+        if (new or not durable) and not self._save():
+            raise nosnik.StorageError(f"odłożona ramka WICI nie jest jeszcze na nośniku: {self.save_error}")
 
     def send_wici(self, bearer, dest, content):
         """Called by Wysylka on the DB thread: reserve the nonce durably, seal and queue for KISS TX.
@@ -338,8 +495,9 @@ class Przyjecie:
         from .. import envelope
         from . import wici_link
 
-        if self.recovery or not bearer.status(self.clock())["online"]:
-            return None
+        link = bearer.status(self.clock())
+        if self.recovery or not link["online"] or not link["room"]:
+            return None   # bez miejsca w drodze nie zamyka koperty: licznik zostaje na następną próbę
         row = self.store.db.execute(
             "SELECT n.station FROM numery n JOIN trusted t ON t.source=n.source "
             "WHERE n.net_id=? AND n.source=?", (bearer.network, dest)).fetchone()
@@ -353,12 +511,19 @@ class Przyjecie:
         return bearer.send_frames(frames)
 
     def _active_identity(self, net_id):
-        """(private key, card entry) of the receiver identity bound to net_id; EnvelopeError otherwise."""
+        """(private key, card entry) of the receiver identity bound to net_id; EnvelopeError otherwise.
+
+        Read once per unlocked session, at first use, so the HACK path decrypts nothing: the identity and
+        card change only through nowa-tozsamosc, aktywuj-tozsamosc, aktywuj-zapasowa and odtworz, which
+        run while the application is stopped (__main__.py)."""
         from .. import envelope
 
-        card = self.medium.card(self.key)
-        private = self.medium.identity(self.key)
-        active = nosnik.card_entry(card, private) if card and card.get("v") == 2 else None
+        if self.identity_cache is None:
+            card = self.medium.card(self.key)
+            private = self.medium.identity(self.key)
+            active = nosnik.card_entry(card, private) if card and card.get("v") == 2 else None
+            self.identity_cache = (private, active)
+        private, active = self.identity_cache
         if active is None or active.get("net_id") != net_id:
             raise envelope.EnvelopeError("receiver identity is not bound to this network")
         return private, active
@@ -385,21 +550,28 @@ class Przyjecie:
         from .. import envelope
         from . import envelope_inbox
 
-        private, active = self._active_identity(net_id)
+        # The link MAC passed, but the network key does not name the sender: only the envelope MAC does.
+        try:
+            private, active = self._active_identity(net_id)
+        except envelope.EnvelopeError as exc:
+            raise NotAuthenticated("receiver identity not bound to this network") from exc
         raw = bytes(wire)
         if len(raw) < envelope.OVERHEAD or len(raw) > envelope.MAX_FRAME:
-            raise envelope.EnvelopeError("invalid envelope length")
+            raise NotAuthenticated("invalid envelope length")
         sender, recipient = int.from_bytes(raw[1:3], "big"), int.from_bytes(raw[3:5], "big")
         if recipient != active.get("id"):
-            raise envelope.EnvelopeError("wrong receiver number")
+            raise NotAuthenticated("wrong receiver number")
         station = self.store.db.execute("SELECT source, public_key FROM numery WHERE net_id=? AND station=?",
                                         (net_id, sender)).fetchone()
         if station is None or len(station[1]) != 64:
-            raise envelope.EnvelopeError("unknown station number")
+            raise NotAuthenticated("unknown station number")
         source, station_key = station
+        try:
+            key = envelope.derive_key(private[:32], station_key[:32], net_id, sender, recipient, own_id=recipient)
+            part = envelope.open_part(key, raw)
+        except envelope.EnvelopeError as exc:
+            raise NotAuthenticated("envelope authentication failed") from exc
         trusted = self.store.db.execute("SELECT 1 FROM trusted WHERE source=?", (source,)).fetchone() is not None
-        key = envelope.derive_key(private[:32], station_key[:32], net_id, sender, recipient, own_id=recipient)
-        part = envelope.open_part(key, raw)
         if not hasattr(self, "envelope_inboxes"):
             self.envelope_inboxes = {}
         inbox = self.envelope_inboxes.get(net_id)
@@ -407,9 +579,14 @@ class Przyjecie:
             inbox = envelope_inbox.Inbox(self.store.db, net_id, self._save)
             self.envelope_inboxes[net_id] = inbox
         def accept(content):
-            value = wzorzec.decode_message(content)
-            self.store.db.execute("UPDATE removed SET messages = messages + 1 WHERE source=?", (source,))
-            self.store.receive_in_transaction(source, content, True)
+            try:
+                value = wzorzec.decode_message(content)
+                self.store.db.execute("UPDATE removed SET messages = messages + 1 WHERE source=?", (source,))
+                self.store.receive_in_transaction(source, content, True)
+            except wzorzec.QuarantineFull:
+                raise   # miejsce może się zwolnić: bez HACK, stacja ponowi
+            except ValueError as exc:   # SA1 nie do przyjęcia: treść, typ albo konflikt klucza odbioru
+                raise envelope_inbox.PermanentRejection(f"SA1: {exc}") from exc
             self.store.db.execute(
                 "INSERT OR IGNORE INTO received_at SELECT source, id, revision, ? FROM received "
                 "WHERE source=? AND id=? AND revision=?", (self.clock(), source, value[2], value[3]))

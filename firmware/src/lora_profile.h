@@ -40,7 +40,13 @@ constexpr size_t MAX_PAYLOAD = 255;
 constexpr uint32_t SYMBOL_US = (1u << SPREADING_FACTOR) * 1000000u / BANDWIDTH_HZ;  // 1024 µs
 
 // Dostęp do kanału (docs/spec/radio.md, "Dostęp do kanału"): wartości startowe, ustala je T4.
-constexpr int16_t CCA_RSSI_THRESHOLD_DBM = -100;  // RSSI powyżej progu to aktywność kanału
+// RSSI powyżej progu to aktywność kanału. Próg to tło szumu z odbioru + CCA_FLOOR_MARGIN_DB
+// (cca_floor.h), nie niżej niż CCA_RSSI_THRESHOLD_DBM (także przed pierwszym pomiarem tła) i nie
+// wyżej niż CCA_RSSI_THRESHOLD_MAX_DBM. Stały próg −100 dBm blokował zestaw XIAO: tor odbiorczy
+// Wio-SX1262 ma tło −88…−75 dBm (hardware/radio-pair/evidence/rnode-xiao-2026-10-31.txt, 2026-11-02).
+constexpr int16_t CCA_RSSI_THRESHOLD_DBM = -100;
+constexpr int16_t CCA_RSSI_THRESHOLD_MAX_DBM = -60;  // silniejsza stała nośna nadal zajmuje kanał
+constexpr int16_t CCA_FLOOR_MARGIN_DB = 10;
 // CAD: 2 symbole, cadDetPeak 22 i cadDetMin 10 według Semtech AN1200.48 dla SF7/125 kHz
 // (RadioLib przyjmuje cadDetPeak = SF + 13 = 20). Wartości do sprawdzenia w T4.
 constexpr uint8_t CAD_SYMBOLS = 2;

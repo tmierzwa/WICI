@@ -12,9 +12,12 @@ using fram_record::get16;
 }
 
 Root::Root(journal::Storage& storage, kiss::Port& port, Air& air, uint16_t network,
-           uint16_t own, const uint8_t ifac[16], const uint8_t identity[64])
+           uint16_t own, const uint8_t ifac[16], const uint8_t identity[64],
+           const config::PriorityKey* peers, uint8_t peerCount,
+           const config::Behind* behind, uint16_t behindCount)
     : port_(port), air_(air), network_(network), own_(own),
-      routes_(storage, {network, own, own, 0, 0}), flood_(storage), sequence_(storage) {
+      routes_(storage, {network, own, own, 0, 0}, peers, peerCount, behind, behindCount),
+      flood_(storage), sequence_(storage) {
     keyReady_ = own && own != wici_link::BROADCAST &&
                 wici_link::deriveKey(ifac, network, key_) && identity;
     if (identity) {
@@ -24,7 +27,11 @@ Root::Root(journal::Storage& storage, kiss::Port& port, Air& air, uint16_t netwo
 }
 
 bool Root::begin(uint16_t epoch) {
-    pending_ = outboundPending_ = downPending_ = false;
+    // A downlink already handed to the radio stays pending: the radio may
+    // still be sending it, and its TX result (onTxDone, which the radio
+    // always reports) gives the laptop the echo or the refusal. Refusing it
+    // here would let the laptop send the same envelope twice.
+    pending_ = downPending_ = unsentFloodValid_ = false;
     downFailures_ = 0;
     return ready_ = keyReady_ && wici_epoch::sign(signingPrivate_, signingPublic_, network_, own_, epoch, epochSignature_) &&
                     routes_.begin() && flood_.begin(network_) &&
@@ -32,10 +39,15 @@ bool Root::begin(uint16_t epoch) {
                     routes_.setRootEpoch(epoch);
 }
 
+bool Root::ready() const { return ready_ && routes_.ready() && flood_.ready() && sequence_.ready(); }
+
 bool Root::beacon() {
-    if (!ready_) return false;
+    if (!ready() || !port_.open() ||
+        !air_.accepts(wici_link::TxClass::BEACON, wici_link::BEACON_FRAME)) return false;
+    // Receivers take a BEACON only with a newer seq than the last one; a seq
+    // burned by a rare refusal after this point only leaves a gap.
     uint16_t sequence;
-    if (!sequence_.next(sequence)) { ready_ = false; return false; }
+    if (!sequence_.next(sequence)) return false;
     wici_route::Beacon value;
     value.root = own_;
     value.rank = 0;
@@ -56,15 +68,24 @@ void Root::onTxDone(bool success, uint32_t nowMs) {
             downSentMs_ = nowMs;
         }
         if (port_.open()) port_.send(outbound_, outboundLength_);
+    } else {
+        // A failed TX is no attempt: nothing complete went on air. A flood's
+        // durable marker stays the root's own, so the laptop may resend it.
+        if (outboundBroadcast_) {
+            memcpy(unsentFlood_, original_ + wici_link::HEADER, sizeof(unsentFlood_));
+            unsentFloodValid_ = true;
+        }
+        if (port_.open()) port_.send(original_, originalLength_, CMD_REFUSED);  // the laptop retries
     }
-    outboundLength_ = 0;
+    outboundLength_ = originalLength_ = 0;
 }
 
 void Root::setUsbOpen(bool open) {
     if (!open) {
-        pending_ = outboundPending_ = downPending_ = false;
+        // A downlink already handed to the radio stays pending until its TX
+        // result; the laptop hears it only if the port is open again by then.
+        pending_ = downPending_ = false;
         downFailures_ = 0;
-        outboundLength_ = 0;
         const uint8_t* ignored = nullptr;
         size_t length = 0;
         while (port_.peek(ignored, length)) port_.pop();
@@ -74,7 +95,7 @@ void Root::setUsbOpen(bool open) {
 
 Event Root::radio(const uint8_t* wire, size_t length, uint32_t receivedMs) {
     wici_link::Frame frame;
-    if (!ready_ || !port_.open() || !wici_link::decode(key_, network_, wire, length, frame) ||
+    if (!ready() || !port_.open() || !wici_link::decode(key_, network_, wire, length, frame) ||
         (frame.destination != own_ && frame.destination != wici_link::BROADCAST) ||
         frame.source == own_ || !port_.send(wire, length)) return Event::REJECTED;
     if (downPending_ && frame.type == wici_link::Type::HACK &&
@@ -96,28 +117,49 @@ Event Root::radio(const uint8_t* wire, size_t length, uint32_t receivedMs) {
 
 Event Root::host(const uint8_t* wire, size_t length, uint32_t nowMs, uint32_t nowS) {
     wici_link::Frame frame;
-    if (!ready_ || !port_.open() || !wici_link::decode(key_, network_, wire, length, frame))
+    if (!keyReady_ || !port_.open() || !wici_link::decode(key_, network_, wire, length, frame))
         return Event::REJECTED;
     if (frame.type == wici_link::Type::HACK) {
-        if (frame.source != own_ || !pending_ || frame.destination != pendingSource_ ||
+        if (!ready() || frame.source != own_ || !pending_ || frame.destination != pendingSource_ ||
             frame.sequence != pendingSequence_ || nowMs - receivedMs_ >= 200)
             return Event::REJECTED;
         if (!air_.sendHack(wire, length, receivedMs_)) return Event::REJECTED;
         pending_ = false;
+        // A neighbour is always a route to itself; this also restores it after
+        // `forget`. The envelope sender is learned behind it only as the plan
+        // allows: the laptop also HACKs a recorded copy of an old envelope (a
+        // duplicate), which a captured neighbour can relay under its own
+        // l_src. A failed write takes ready() down.
         if (pendingSender_ != own_) routes_.learn(pendingSender_, pendingVia_);
+        if (pendingVia_ != pendingSender_) routes_.learn(pendingVia_, pendingVia_);
         return Event::HACK_SENT;
     }
-    if (outboundPending_ || frame.type != wici_link::Type::DATA || frame.destination != own_ ||
+    // A malformed frame is a laptop fault, not a transient refusal.
+    if (frame.type != wici_link::Type::DATA || frame.destination != own_ ||
         frame.source == own_ || frame.flags != (wici_link::ACKREQ | wici_link::DOWN) ||
         get16(frame.payload + 1) != frame.source) return Event::REJECTED;
-    if (downPending_ && nowMs - downSentMs_ >= 600) {
+    const Event result = transmit(wire, length, frame, nowMs, nowS);
+    if (result == Event::QUEUED) return result;
+    // Silence, a busy transmitter, a seal or FRAM failure: the laptop learns
+    // at once that the item was not sent (bytes unchanged, CMD_REFUSED).
+    port_.send(wire, length, CMD_REFUSED);
+    return Event::REFUSED;
+}
+
+Event Root::transmit(const uint8_t* wire, size_t length, const wici_link::Frame& frame,
+                     uint32_t nowMs, uint32_t nowS) {
+    if (!ready() || outboundPending_) return Event::REJECTED;
+    // The previous downward frame still waits for its HACK: one at a time, so
+    // each HACK or timeout is counted for its own station (route `forget`).
+    if (downPending_ && nowMs - downSentMs_ < wici_link::HACK_WAIT_MS) return Event::REJECTED;
+    if (downPending_) {
         downPending_ = false;
         if (failureRecipient_ != downRecipient_) {
             failureRecipient_ = downRecipient_;
             downFailures_ = 0;
         }
         if (++downFailures_ >= 3) {
-            if (!routes_.forget(downRecipient_, downNext_)) { ready_ = false; return Event::REJECTED; }
+            if (!routes_.forget(downRecipient_, downNext_)) return Event::REJECTED;
             downFailures_ = 0;
         }
     }
@@ -125,18 +167,35 @@ Event Root::host(const uint8_t* wire, size_t length, uint32_t nowMs, uint32_t no
     const uint16_t next = routes_.down(recipient);
     if (!next) return Event::REJECTED;
     const bool broadcast = next == wici_link::BROADCAST;
-    if (broadcast && flood_.lookup(frame.payload, nowS) != wici_flood::Lookup::NONE)
+    const wici_flood::Lookup flood = broadcast ? flood_.lookup(frame.payload, nowS) : wici_flood::Lookup::NONE;
+    // A marker of a flood the radio refused (never on air) stays the root's
+    // own; any other one means flooded in the last 120 s.
+    const bool ownFlood = unsentFloodValid_ && !memcmp(unsentFlood_, frame.payload, sizeof(unsentFlood_));
+    if (flood == wici_flood::Lookup::IO_ERROR || (flood == wici_flood::Lookup::MATCH && !ownFlood))
+        return Event::REJECTED;
+    // No seq and no flood marker for a frame the radio would refuse.
+    if (!air_.accepts(wici_link::TxClass::TRANSIT, length + (broadcast ? 0 : wici_link::HOP_TAG)))
         return Event::REJECTED;
     uint16_t sequence;
-    if (!sequence_.next(sequence)) { ready_ = false; return Event::REJECTED; }
+    if (!sequence_.next(sequence)) return Event::REJECTED;
     uint8_t forwarded[wici_link::MAX_FRAME];
     const size_t forwardedLength = wici_link::forward(key_, network_, own_, next, sequence,
                                                       wire, length, forwarded, sizeof(forwarded));
     if (!forwardedLength || !port_.canSend(forwarded, forwardedLength) ||
-        (broadcast && !flood_.remember(frame.payload, nowS)) ||
-        !air_.sendData(forwarded, forwardedLength, wici_link::TxClass::TRANSIT)) return Event::REJECTED;
+        (flood == wici_flood::Lookup::NONE && broadcast && !flood_.remember(frame.payload, nowS)))
+        return Event::REJECTED;
+    if (!air_.sendData(forwarded, forwardedLength, wici_link::TxClass::TRANSIT)) {
+        if (broadcast) {
+            memcpy(unsentFlood_, frame.payload, sizeof(unsentFlood_));
+            unsentFloodValid_ = true;
+        }
+        return Event::REJECTED;
+    }
+    if (ownFlood) unsentFloodValid_ = false;
     memcpy(outbound_, forwarded, forwardedLength);
     outboundLength_ = forwardedLength;
+    memcpy(original_, wire, length);
+    originalLength_ = length;
     outboundPending_ = true;
     outboundBroadcast_ = broadcast;
     if (!broadcast) {

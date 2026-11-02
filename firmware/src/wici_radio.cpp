@@ -18,14 +18,15 @@ Shelter::Shelter(journal::Storage& storage, wici_route::Config route, uint8_t tt
                  wici_destination::AdmitFn admit, void* admitContext,
                  Air& air, RandomFn random, void* randomContext,
                  const config::Behind* behind, uint16_t behindCount,
-                 const uint8_t rootEd25519[32], VerifyBeacon verifyBeacon, const void* beaconContext)
+                 const uint8_t rootEd25519[32], VerifyBeacon verifyBeacon, const void* beaconContext,
+                 const config::PriorityKey* peers, uint8_t peerCount)
     : network_(route.network), own_(route.own), root_(route.root), ttl_(ttl),
       outbound_{envelope::Counter(storage, 0), envelope::Counter(storage, 1)},
       destination_(storage, {route.network, route.own,
                             {static_cast<uint16_t>(receiverIds ? receiverIds[0] : 0),
                              static_cast<uint16_t>(receiverIds ? receiverIds[1] : 0)}},
                    ifac, privateKey, receiverPublic, admit, admitContext),
-      relay_(storage, route, ifac, true, receiverIds, behind, behindCount),
+      relay_(storage, route, ifac, true, receiverIds, behind, behindCount, peers, peerCount),
       air_(air), random_(random), randomContext_(randomContext) {
     verifyBeacon_ = verifyBeacon;
     beaconContext_ = beaconContext;
@@ -55,17 +56,22 @@ bool Shelter::begin() {
     ownActive_ = ownSubmitted_ = ownAwaiting_ = ownDelayPending_ = ownException_ = false;
     ownCount_ = ownPart_ = ownAttempts_ = 0;
     beaconChecked_ = false;
+    settledS_ = 0;
     return ready_ = keyReady_ && rootKeyReady_ && verifyBeacon_ && outboundKeysReady_ &&
                     destination_.begin() && relay_.begin() &&
                     outbound_[0].begin(network_, own_, receivers_[0], outboundKeys_[0]) &&
                     outbound_[1].begin(network_, own_, receivers_[1], outboundKeys_[1]);
 }
 
+bool Shelter::ready() const {
+    return ready_ && destination_.ready() && relay_.ready() && outbound_[0].ready() && outbound_[1].ready();
+}
+
 uint32_t Shelter::backoff() const { return RETRY_MIN_MS + random_(randomContext_) % RETRY_SPAN_MS; }
 
 Event Shelter::receive(const uint8_t* wire, size_t length, uint32_t receivedMs, uint32_t nowS,
                        int16_t snrQdb) {
-    if (!ready_) return Event::REJECTED;
+    if (!ready()) return Event::REJECTED;
     wici_link::Frame frame;
     if (!wici_link::decode(linkKey_, network_, wire, length, frame)) return Event::REJECTED;
     if (frame.destination != own_ && frame.destination != wici_link::BROADCAST) return Event::IGNORED;
@@ -79,18 +85,23 @@ Event Shelter::receive(const uint8_t* wire, size_t length, uint32_t receivedMs, 
             return Event::ADMITTED;
         }
         if (!relay_.receiveHack(wire, length, nowS)) return Event::IGNORED;
-        submitted_ = awaitingHack_ = false;
-        delayPending_ = false;
-        retryAtMs_ = 0;
+        if (!relay_.active()) {  // a late HACK of a yielded attempt leaves another transfer running
+            submitted_ = awaitingHack_ = false;
+            delayPending_ = false;
+            retryAtMs_ = 0;
+        }
         return Event::ADMITTED;
     }
     if (frame.type == wici_link::Type::BEACON) {
         // BEACONs carry no hop tag, and each Ed25519 check blocks the loop,
         // and so every HACK deadline, for about 0.2-0.4 s on nRF52840. Checks
         // are therefore spaced, and a verified epoch token is not rechecked.
+        // A replayed or malformed BEACON is refused before the spacing, so a
+        // recorded copy cannot use up the checks of real ones.
         wici_route::Beacon beacon;
         wici_route::Table& routes = relay_.routes();
-        if (!wici_route::parseBeacon(frame, beacon)) return Event::REJECTED;
+        if (!wici_route::parseBeacon(frame, beacon) || !routes.acceptable(frame.source, beacon, nowS))
+            return Event::REJECTED;
         if (beaconChecked_ && receivedMs - beaconCheckedMs_ < BEACON_CHECK_MS) return Event::IGNORED;
         beaconChecked_ = true;
         beaconCheckedMs_ = receivedMs;
@@ -124,23 +135,19 @@ Event Shelter::receive(const uint8_t* wire, size_t length, uint32_t receivedMs, 
 }
 
 void Shelter::onTxDone(bool success, uint32_t nowMs, uint32_t nowS) {
-    if (ready_ && ownSubmitted_) {
+    if (ownSubmitted_) {
         ownSubmitted_ = false;
-        if (success) {
-            if (ownException_) {
-                if (++ownPart_ == ownCount_) finishOwn(true);
-            } else {
-                ownAwaiting_ = true;
-                ownSentAtMs_ = nowMs;
-            }
-        } else if (ownAttempts_ >= 3) finishOwn(false);
-        else {
-            ownRetryAtMs_ = nowMs + backoff();
-            ownDelayPending_ = true;
+        if (!ready()) return;
+        if (!success) ownAttemptFailed(nowMs);  // same rule as a HACK timeout, without blaming the parent
+        else if (ownException_) {
+            if (++ownPart_ == ownCount_) finishOwn(true);
+        } else {
+            ownAwaiting_ = true;
+            ownSentAtMs_ = nowMs;
         }
         return;
     }
-    if (!ready_ || !submitted_) return;
+    if (!ready() || !submitted_) return;
     submitted_ = false;
     if (!relay_.transmitted(success, nowS)) {
         awaitingHack_ = false;
@@ -152,11 +159,26 @@ void Shelter::onTxDone(bool success, uint32_t nowMs, uint32_t nowS) {
     sentAtMs_ = nowMs;
 }
 
+void Shelter::ownAttemptFailed(uint32_t nowMs) {
+    // Three attempts per parent, then one more round of three at the parent
+    // the route table holds now, then Failed to the bearer seam.
+    if (ownAttempts_ >= 3 && !failoverOwn()) { finishOwn(false); return; }
+    ownRetryAtMs_ = nowMs + backoff();
+    ownDelayPending_ = true;
+}
+
 void Shelter::poll(uint32_t nowMs, uint32_t nowS) {
-    if (!ready_) return;
-    if (routePending_) { relay_.learnPending(nowS); routePending_ = false; }
+    if (!ready()) return;
+    // Queue settlement (30-min expiry, crash leftovers) runs once a second,
+    // whether or not a transfer is active; the down-route hint of a newly
+    // stored frame is learned once, right after its HACK.
+    if (routePending_ || nowS != settledS_) {
+        relay_.learnPending(nowS);
+        routePending_ = false;
+        settledS_ = nowS;
+    }
     if (awaitingHack_) {
-        if (!reached(nowMs, sentAtMs_ + HACK_WAIT_MS)) return;
+        if (!reached(nowMs, sentAtMs_ + wici_link::HACK_WAIT_MS)) return;
         relay_.timeout(nowS);
         awaitingHack_ = false;
         retryAtMs_ = nowMs + backoff();
@@ -164,12 +186,11 @@ void Shelter::poll(uint32_t nowMs, uint32_t nowS) {
     }
     if (ownActive_) {
         if (ownAwaiting_) {
-            if (!reached(nowMs, ownSentAtMs_ + HACK_WAIT_MS)) return;
+            if (!reached(nowMs, ownSentAtMs_ + wici_link::HACK_WAIT_MS)) return;
             ownAwaiting_ = false;
             relay_.routes().hopResult(ownNext_, false, nowS);
-            if (ownAttempts_ >= 3 && !failoverOwn()) { finishOwn(false); return; }
-            ownRetryAtMs_ = nowMs + backoff();
-            ownDelayPending_ = true;
+            ownAttemptFailed(nowMs);
+            if (!ownActive_) return;
         }
         if (submitted_ || ownSubmitted_ ||
             (ownDelayPending_ && !reached(nowMs, ownRetryAtMs_))) return;
@@ -194,6 +215,9 @@ void Shelter::poll(uint32_t nowMs, uint32_t nowS) {
             submitted_ = true;
             delayPending_ = false;
         } else {
+            // Refused (silence, budget, no pair key): the item stays queued and
+            // the next prepare() ranks the queue and picks the next hop again.
+            relay_.yield();
             retryAtMs_ = nowMs + backoff();
             delayPending_ = true;
         }
@@ -202,7 +226,7 @@ void Shelter::poll(uint32_t nowMs, uint32_t nowS) {
 
 bool Shelter::queueOwn(uint16_t recipient, const uint8_t* sa1, size_t length, uint32_t handle,
                        bool exception) {
-    if (!ready_ || ownActive_ || !sa1 || !length || length > envelope::MAX_SA1 || !handle ||
+    if (!ready() || ownActive_ || !sa1 || !length || length > envelope::MAX_SA1 || !handle ||
         !delivery_) return false;
     uint8_t peer = 2;
     for (uint8_t i = 0; i < 2; ++i) if (recipient == receivers_[i]) peer = i;
@@ -247,10 +271,11 @@ bool Shelter::queueOwn(uint16_t recipient, const uint8_t* sa1, size_t length, ui
 }
 
 bool Shelter::failoverOwn() {
-    // After three failures the route table has moved to the backup or another
-    // parent; the remaining parts get one more round of three attempts there.
+    // After three failures the route table has rotated (planned -> backup ->
+    // best dynamic -> planned); the remaining parts get one more round of
+    // three attempts at its parent, also when the rotation wrapped to the same one.
     const uint16_t next = relay_.routes().parent();
-    if (ownFailedOver_ || !next || next == ownNext_) return false;
+    if (ownFailedOver_ || !next || next == own_) return false;
     for (uint8_t i = ownPart_; i < ownCount_; ++i) {
         wici_link::Frame frame;
         if (!wici_link::decode(linkKey_, network_, ownFrames_[i], ownLengths_[i], frame)) return false;
@@ -272,14 +297,20 @@ void Shelter::finishOwn(bool acknowledged) {
     if (delivery_) delivery_(handle, acknowledged, deliveryContext_);
 }
 
-bool Shelter::beacon() {
+bool Shelter::beacon(uint32_t nowS) {
     wici_route::Table& routes = relay_.routes();
-    if (!ready_ || submitted_ || ownSubmitted_ || routes.rank() == 0xFFFF || !routes.parent()) return false;
+    const uint16_t rank = routes.rank(nowS);
+    // No rank (no fresh BEACON of the current parent): do not attract
+    // children. A BEACON the radio would refuse spends no seq and no signature.
+    if (!ready() || submitted_ || ownSubmitted_ || rank == 0xFFFF || !routes.parent() ||
+        !air_.accepts(wici_link::TxClass::BEACON, wici_link::BEACON_FRAME)) return false;
+    // Receivers take a BEACON only with a newer seq than the last one; a seq
+    // burned by a rare refusal after this point only leaves a gap.
     uint16_t sequence;
-    if (!relay_.nextSequence(sequence)) { ready_ = false; return false; }
+    if (!relay_.nextSequence(sequence)) return false;
     wici_route::Beacon value;
     value.root = root_;
-    value.rank = routes.rank();
+    value.rank = rank;
     value.epoch = routes.epoch();
     value.parent = routes.parent();
     memcpy(value.epochSignature, routes.epochSignature(), sizeof(value.epochSignature));

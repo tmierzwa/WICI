@@ -9,9 +9,11 @@ using fram_record::id;
 }  // namespace
 
 Relay::Relay(journal::Storage& storage, wici_route::Config config, const uint8_t ifac[16],
-             bool allowFlood, const uint16_t receiverIds[2], const config::Behind* behind, uint16_t behindCount)
-    : config_(config), allowFlood_(allowFlood), behind_(behind), behindCount_(behind ? behindCount : 0),
-      queue_(storage), routes_(storage, config), sequence_(storage), flood_(storage) {
+             bool allowFlood, const uint16_t receiverIds[2], const config::Behind* behind, uint16_t behindCount,
+             const config::PriorityKey* peers, uint8_t peerCount)
+    : config_(config), allowFlood_(allowFlood),
+      queue_(storage), routes_(storage, config, peers, peerCount, behind, behindCount),
+      sequence_(storage), flood_(storage) {
     if (receiverIds) { receivers_[0] = receiverIds[0]; receivers_[1] = receiverIds[1]; }
     keyReady_ = wici_link::deriveKey(ifac, config.network, key_);
 }
@@ -23,22 +25,21 @@ bool Relay::priority(const wici_link::Frame& frame) const {
     return receiver == receivers_[0] || receiver == receivers_[1];
 }
 
-bool Relay::planned(uint16_t station, uint16_t via) const {
-    if (station == via) return true;
-    for (uint16_t i = 0; i < behindCount_; ++i)
-        if (behind_[i].station == station && behind_[i].via == via) return true;
-    return false;
-}
-
 bool Relay::begin() {
-    active_ = sent_ = everSent_ = false;
+    active_ = sent_ = false;
     activePriority_ = false;
     outgoingLength_ = 0;
     attempts_ = 0;
     nextSlot_ = owedHacks_ = 0;
+    for (Attempt& attempt : prepared_) attempt = Attempt();
+    learn_ = (1u << wici_relay::SLOTS) - 1;  // recover hints of frames queued before a restart
     repeatHack_.reset();
     return keyReady_ && queue_.begin(key_, config_.network, config_.own) && routes_.begin() &&
            sequence_.begin(config_.network, config_.own) && flood_.begin(config_.network);
+}
+
+bool Relay::ready() const {
+    return keyReady_ && queue_.ready() && routes_.ready() && sequence_.ready() && flood_.ready();
 }
 
 Receipt Relay::receiveData(const uint8_t* wire, size_t length, uint32_t nowS,
@@ -68,9 +69,18 @@ Receipt Relay::receiveData(const uint8_t* wire, size_t length, uint32_t nowS,
     if (stored != wici_relay::Admission::STORED && stored != wici_relay::Admission::DUPLICATE &&
         stored != wici_relay::Admission::FORWARDED)
         return Receipt::REJECTED;
+    const uint8_t bit = static_cast<uint8_t>(slot < wici_relay::SLOTS ? 1u << slot : 0);
+    if (stored == wici_relay::Admission::STORED && !(frame.flags & wici_link::DOWN)) {
+        // Its down-route hint is learned once, after the HACK (learnPending).
+        learn_ |= bit;
+        // Loop signal: a new upward envelope from this station's own parent,
+        // or its own envelope coming back up. The parent rotates at once; the
+        // frame leaves through the new parent. A retry or replayed copy of an
+        // envelope already held is no second signal.
+        if (frame.source == routes_.parent() || get16(frame.payload + 1) == config_.own) routes_.loop(nowS);
+    }
     if (!(frame.flags & wici_link::ACKREQ))
         return stored == wici_relay::Admission::FORWARDED ? Receipt::IGNORED : Receipt::STORED_NO_HACK;
-    const uint8_t bit = static_cast<uint8_t>(slot < wici_relay::SLOTS ? 1u << slot : 0);
     if (stored == wici_relay::Admission::STORED) {
         // The HACK of a K1 admission can be lost. The sender's first retry
         // then gets its HACK even if a replayed copy just used the repeat
@@ -88,17 +98,26 @@ Receipt Relay::receiveData(const uint8_t* wire, size_t length, uint32_t nowS,
 
 bool Relay::learnPending(uint32_t nowS) {
     if (!routes_.ready() || !queue_.settle(nowS)) return false;
+    if (active_ && !queue_.pending(slot_)) active_ = false;  // expired or forwarded before a crash
     uint8_t wire[wici_link::MAX_FRAME];
-    for (uint8_t slot = 0; slot < wici_relay::SLOTS; ++slot) {
+    // Hints in admission order, oldest first: the newest frame of a station
+    // sets its route last, also after a restart (slot order says nothing).
+    // Frames admitted in the same second keep slot order.
+    while (learn_) {
+        uint8_t slot = wici_relay::SLOTS;
+        for (uint8_t i = 0; i < wici_relay::SLOTS; ++i)
+            if ((learn_ & (1u << i)) && (slot == wici_relay::SLOTS || queue_.admittedS(i) < queue_.admittedS(slot)))
+                slot = i;
+        learn_ &= static_cast<uint8_t>(~(1u << slot));
         size_t length = 0;
         wici_link::Frame frame;
         if (!queue_.read(slot, nowS, wire, sizeof(wire), length) ||
-            !wici_link::decode(key_, config_.network, wire, length, frame)) continue;
+            !wici_link::decode(key_, config_.network, wire, length, frame) ||
+            (frame.flags & wici_link::DOWN)) continue;
         // l_src of a queued uplink frame was checked by the pairwise hop tag;
-        // the plan decides which envelope senders it may stand for.
-        const uint16_t station = get16(frame.payload + 1);
-        if (!(frame.flags & wici_link::DOWN) && station != config_.own && planned(station, frame.source) &&
-            !routes_.learn(station, frame.source) && !routes_.ready()) return false;
+        // the plan decides which envelope senders it may stand for (learn()
+        // refuses the others without a write).
+        if (!routes_.learn(get16(frame.payload + 1), frame.source) && !routes_.ready()) return false;
     }
     return true;
 }
@@ -119,27 +138,56 @@ bool Relay::prepare(uint32_t nowS) {
                               routes_.down(get16(frame.payload + 3)) : routes_.parent();
         // Never hand a frame back to the neighbor it came from.
         if ((!id(next) && next != wici_link::BROADCAST) || next == frame.source) continue;
+        // The last allowed hop must end at the root (up) or at the envelope
+        // destination (down): a relay there refuses it. The frame waits for a
+        // next hop that ends there (e.g. the planned parent back after a
+        // detour to the backup); the 30-min expiry bounds the wait.
+        if (next != wici_link::BROADCAST && frame.hops + 1 >= frame.ttl &&
+            next != (frame.flags & wici_link::DOWN ? get16(frame.payload + 3) : config_.root)) continue;
+        Attempt& last = prepared_[slot];
+        // The same item for the same next hop is the same frame: it keeps its
+        // seq, so a radio refusal burns none.
+        const bool again = last.valid && last.generation == queue_.generation(slot) && last.next == next;
+        wici_flood::Lookup flood = wici_flood::Lookup::NONE;
         if (next == wici_link::BROADCAST) {
             if (!allowFlood_) continue;
-            const wici_flood::Lookup state = flood_.lookup(frame.payload, nowS);
-            if (state == wici_flood::Lookup::IO_ERROR) return false;
-            if (state == wici_flood::Lookup::MATCH) {
+            flood = flood_.lookup(frame.payload, nowS);
+            if (flood == wici_flood::Lookup::IO_ERROR) return false;
+            // A marker this relay wrote for a flood the radio then refused
+            // stays its own (`again`): that flood was never on air. Any other
+            // marker was committed before a crash: never broadcast twice.
+            if (flood == wici_flood::Lookup::MATCH && !again) {
                 if (!queue_.remove(slot, nowS)) return false;
-                continue;  // committed before a crash; never broadcast twice
+                continue;
             }
         }
-        uint16_t sequence;
-        if (!sequence_.next(sequence)) return false;
+        uint16_t sequence = last.sequence;
+        if (!again && !sequence_.next(sequence)) return false;
         const size_t n = wici_link::forward(key_, config_.network, config_.own, next, sequence,
                                             wire, length, outgoing_, sizeof(outgoing_));
-        if (!n) continue;  // The reserved sequence is burned on an invalid route.
-        if (next == wici_link::BROADCAST && !flood_.remember(frame.payload, nowS)) return false;
-        next_ = next; outgoingSeq_ = sequence; slot_ = slot;
+        if (!n) continue;  // A newly reserved sequence is burned on an invalid route.
+        // The marker is durable before the radio may start (flood_ contract).
+        if (next == wici_link::BROADCAST && flood == wici_flood::Lookup::NONE &&
+            !flood_.remember(frame.payload, nowS)) return false;
+        if (!again) {
+            Attempt fresh;
+            fresh.generation = queue_.generation(slot);
+            fresh.next = next; fresh.sequence = sequence; fresh.valid = true;
+            // An attempt on air for another next hop still completes the item.
+            const bool sameItem = last.valid && last.generation == fresh.generation;
+            if (sameItem && last.onAir) {
+                fresh.late = true; fresh.lateNext = last.next; fresh.lateSequence = last.sequence;
+            } else if (sameItem && last.late) {
+                fresh.late = true; fresh.lateNext = last.lateNext; fresh.lateSequence = last.lateSequence;
+            }
+            last = fresh;
+        }
+        next_ = next; slot_ = slot;
         nextSlot_ = static_cast<uint8_t>((slot + 1) % wici_relay::SLOTS);
         noAck_ = next == wici_link::BROADCAST || !(frame.flags & wici_link::ACKREQ);
         activePriority_ = k1 && next != wici_link::BROADCAST;
         outgoingLength_ = n; attempts_ = 1;
-        sent_ = everSent_ = false; active_ = true;
+        sent_ = false; active_ = true;
         return true;
     }
     return false;
@@ -159,26 +207,43 @@ bool Relay::contendedK2() const {
 
 bool Relay::transmitted(bool success, uint32_t nowS) {
     if (!active_) return false;
-    if (noAck_) {
-        const bool removed = queue_.remove(slot_, nowS);
-        active_ = false;  // one attempt only, even after a failed TX
-        return removed && success;
-    }
+    // A failed TX put nothing complete on air: the item stays queued (a
+    // flood keeps its own marker, `again` in prepare()) and goes again.
     if (!success) { active_ = false; return false; }  // Queue remains durable.
-    sent_ = everSent_ = true;
+    if (noAck_) {
+        active_ = false;  // one attempt on air, no HACK to wait for
+        return queue_.remove(slot_, nowS);
+    }
+    sent_ = true;
+    prepared_[slot_].onAir = true;
     return true;
 }
 
+void Relay::yield() {
+    // The item and its attempt record stay; prepare() decides again.
+    active_ = sent_ = false;
+}
+
 bool Relay::receiveHack(const uint8_t* wire, size_t length, uint32_t nowS) {
-    if (!active_ || !everSent_ || next_ == wici_link::BROADCAST) return false;
     wici_link::Frame frame;
     if (!wici_link::decode(key_, config_.network, wire, length, frame) ||
-        frame.type != wici_link::Type::HACK || frame.source != next_ ||
-        frame.destination != config_.own || frame.sequence != outgoingSeq_) return false;
-    if (!queue_.remove(slot_, nowS)) return false;
-    routes_.hopResult(next_, true, nowS);
-    active_ = false;
-    return true;
+        frame.type != wici_link::Type::HACK || frame.destination != config_.own) return false;
+    // Any attempt that was on air for a queued item counts: the active one,
+    // also after its timeout, or one given up by yield() or a reroute.
+    for (uint8_t slot = 0; slot < wici_relay::SLOTS; ++slot) {
+        const Attempt& attempt = prepared_[slot];
+        if (!attempt.valid || attempt.generation != queue_.generation(slot) || !queue_.pending(slot)) continue;
+        uint16_t next;
+        if (attempt.onAir && frame.source == attempt.next && frame.sequence == attempt.sequence) next = attempt.next;
+        else if (attempt.late && frame.source == attempt.lateNext && frame.sequence == attempt.lateSequence)
+            next = attempt.lateNext;
+        else continue;
+        if (!queue_.remove(slot, nowS)) return false;  // a new generation voids the record
+        if (active_ && slot_ == slot) active_ = false;
+        routes_.hopResult(next, true, nowS);
+        return true;
+    }
+    return false;
 }
 
 bool Relay::timeout(uint32_t nowS) {

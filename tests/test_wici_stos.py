@@ -1,18 +1,35 @@
 # SPDX-License-Identifier: MIT
 """The numbered laptop bearer preserves hop admission and outbound ordering."""
 
+import threading
+import time
 import unittest
+import unittest.mock
 
-from software.laptop.wici.stanowisko import wici_link
+from software.laptop.wici.stanowisko import wici_link, wici_stos
 from software.laptop.wici.stanowisko.wici_stos import WiciStos
 
 
 class Port:
-    def __init__(self):
+    def __init__(self, reads=()):
         self.writes = []
+        self.reads = list(reads)
+        self.closed = False
 
     def write(self, data):
         self.writes.append(data)
+
+    def read(self, timeout):
+        if self.reads:
+            data = self.reads.pop(0)
+            if isinstance(data, Exception):
+                raise data
+            return data
+        time.sleep(timeout)
+        return b""
+
+    def close(self):
+        self.closed = True
 
 
 class Clock:
@@ -34,14 +51,35 @@ class WiciBearerTest(unittest.TestCase):
         self.clock = Clock()
         self.port = Port()
         self.accepted = []
+        self.limits = []
+        self.logs = []
         self.bearer = WiciStos("fake", 100, 5, 3, bytes(range(16)), bytes(16),
-                               self.accepted.append, clock=self.clock)
+                               self.admit, log=self.logs.append, clock=self.clock)
         self.bearer.port = self.port
         self.bearer.running = True
         self.key = wici_link.derive_key(bytes(range(16)), 100)
 
+    def admit(self, payload, timeout):
+        self.limits.append(timeout)
+        self.accepted.append(payload)
+
     def feed(self, frame):
         self.bearer._receive(wici_link.encode(self.key, frame))
+
+    def refuse(self, data):
+        """The root returns the bytes it could not transmit with KISS command 1."""
+        refused = bytearray(data)
+        refused[1] = wici_link.KISS_REFUSED
+        for command, wire in wici_link.KissStream().feed_commands(bytes(refused)):
+            self.assertEqual(command, wici_link.KISS_REFUSED)
+            self.bearer._refused(wire)
+
+    def sent(self):
+        return wici_link.decode(self.key, 100, unpack(self.port.writes[-1]))
+
+    @staticmethod
+    def part(recipient, fill=0):
+        return bytes([0x40, 0, 1]) + recipient.to_bytes(2, "big") + bytes([fill] * 20)
 
     def test_inbound_hack_follows_durable_callback(self):
         data = wici_link.Frame(wici_link.DATA, wici_link.ACKREQ, 100, 4, 5, 0, 7, 41, bytes(25))
@@ -50,11 +88,49 @@ class WiciBearerTest(unittest.TestCase):
         reply = wici_link.decode(self.key, 100, unpack(self.port.writes[-1]))
         self.assertEqual((reply.kind, reply.source, reply.destination, reply.sequence),
                          (wici_link.HACK, 5, 4, 41))
+        # The admission gets what is left of the HACK budget after the serial read.
+        self.assertTrue(0 < self.limits[0] <= wici_stos.HACK_BUDGET_S)
         writes = len(self.port.writes)
-        self.bearer.received = lambda _: (_ for _ in ()).throw(OSError("snapshot failed"))
+        self.bearer.received = lambda *_: (_ for _ in ()).throw(OSError("snapshot failed"))
         self.feed(data)
         self.assertEqual(len(self.port.writes), writes)
         self.assertEqual(self.bearer.dropped["admission"], 1)
+
+    def test_late_admission_gets_no_hack(self):
+        # Past the deadline the admission still completes on the database thread; the
+        # station's retry is then a duplicate and gets its HACK at once.
+        self.bearer.received = lambda *_: (_ for _ in ()).throw(TimeoutError("late"))
+        self.feed(wici_link.Frame(wici_link.DATA, wici_link.ACKREQ, 100, 4, 5, 0, 7, 43, bytes(25)))
+        self.assertEqual(self.port.writes, [])
+        self.assertEqual(self.bearer.dropped["late"], 1)
+        self.assertEqual(self.bearer.dropped["admission"], 0)
+        # A frame read long ago is still admitted, with no time left for a HACK decision.
+        self.bearer.received = self.admit
+        self.bearer._receive(wici_link.encode(self.key, wici_link.Frame(
+            wici_link.DATA, wici_link.ACKREQ, 100, 4, 5, 0, 7, 44, bytes(25))), time.monotonic() - 1)
+        self.assertEqual(self.limits, [0])
+
+    def test_buffered_frame_budget_counts_from_the_previous_read(self):
+        # The second frame waits in the USB buffer while the first is admitted; its read returns at once,
+        # so its HACK budget must not start afresh at that read.
+        frames = [wici_link.kiss_encode(wici_link.encode(self.key, wici_link.Frame(
+            wici_link.DATA, wici_link.ACKREQ, 100, 4, 5, 0, 7, seq, bytes(25)))) for seq in (51, 52)]
+        self.port.reads = list(frames)
+        done = threading.Event()
+
+        def slow(payload, timeout):
+            self.limits.append(timeout)
+            if len(self.limits) == 1:
+                time.sleep(0.06)
+            else:
+                done.set()
+        self.bearer.received = slow
+        thread = threading.Thread(target=self.bearer._run, daemon=True)
+        thread.start()
+        self.assertTrue(done.wait(5))
+        self.bearer.running = False
+        thread.join(2)
+        self.assertLessEqual(self.limits[1], wici_stos.HACK_BUDGET_S - 0.06)
 
     def test_two_parts_require_two_distinct_hacks(self):
         first, second = bytes([0x40, 0, 1, 0, 4]) + bytes(20), bytes([0x40, 0, 1, 0, 4]) + bytes([1] * 20)
@@ -120,7 +196,145 @@ class WiciBearerTest(unittest.TestCase):
         self.feed(wici_link.Frame(wici_link.DATA, wici_link.DOWN, 100, 5,
                                   wici_link.BROADCAST, 1, 7, 92, part))
         self.assertFalse(item.result)
-        self.assertIsNone(self.bearer.active)
+        self.assertEqual(self.bearer.flight, {})
+        self.assertIsNone(self.bearer.outstanding)
+
+    def destinations(self):
+        return [wici_link.decode(self.key, 100, unpack(w)).payload[4] for w in self.port.writes]
+
+    def echo(self, station, sequence, payload):
+        self.feed(wici_link.Frame(wici_link.DATA, wici_link.ACKREQ | wici_link.DOWN, 100, 5, station, 1, 7,
+                                  sequence, payload))
+
+    def test_root_slot_holds_one_submission_until_echo_or_refusal(self):
+        first = self.bearer.send_frames((self.part(4),))
+        second = self.bearer.send_frames((self.part(9),))
+        self.bearer._tick()
+        self.bearer._tick()
+        self.assertEqual(self.destinations(), [4])   # the root has one downward slot
+        self.echo(4, 70, self.part(4))
+        self.bearer._tick()
+        # Echoed: the root keeps 4 until its HACK or 600 ms and would refuse 9 meanwhile (Root::transmit).
+        self.assertEqual(self.destinations(), [4])
+        self.clock.value += 0.7   # no HACK in time: 4 waits for its retry, 9 goes out
+        self.bearer._tick()
+        self.assertEqual(self.destinations(), [4, 9])
+        self.echo(9, 71, self.part(9))
+        self.feed(wici_link.Frame(wici_link.HACK, 0, 100, 9, 5, 0, 1, 71))
+        self.clock.value += 13   # 4's retry after its HACK timeout is due
+        self.bearer._tick()
+        self.assertEqual(self.destinations(), [4, 9, 4])
+        self.echo(4, 72, self.part(4))
+        self.feed(wici_link.Frame(wici_link.HACK, 0, 100, 4, 5, 0, 1, 72))
+        self.assertTrue(first.result)
+        self.assertTrue(second.result)
+
+    def test_undeliverable_station_does_not_hold_back_others(self):
+        stuck = self.bearer.send_frames((self.part(4),))
+        other = self.bearer.send_frames((self.part(9),))
+        self.bearer._tick()
+        self.clock.value += 2.1   # no echo and no refusal by its retry time: the slot is free again
+        self.bearer._tick()
+        self.assertEqual(self.destinations(), [4, 9])
+        self.echo(9, 70, self.part(9))
+        self.feed(wici_link.Frame(wici_link.HACK, 0, 100, 9, 5, 0, 1, 70))
+        self.assertTrue(other.result)
+        self.assertIsNone(stuck.result)
+        for _ in range(29):   # station 4 never echoes: 30 submissions with backoff, then failure
+            self.clock.value += 31
+            self.bearer._tick()
+        self.assertEqual(stuck.submissions, 30)
+        self.clock.value += 31
+        self.bearer._tick()
+        self.assertFalse(stuck.result)
+        self.assertEqual(self.bearer.dropped["outbound"], 1)
+
+    def test_same_station_keeps_one_item_in_flight(self):
+        first = self.bearer.send_frames((self.part(4, 1),))
+        second = self.bearer.send_frames((self.part(4, 2),))
+        self.bearer._tick()
+        self.assertEqual(len(self.port.writes), 1)
+        self.assertEqual(self.sent().payload, self.part(4, 1))
+        self.echo(4, 71, self.part(4, 1))
+        self.feed(wici_link.Frame(wici_link.HACK, 0, 100, 4, 5, 0, 1, 71))
+        self.assertTrue(first.result)
+        self.assertIsNone(second.result)
+        self.bearer._tick()
+        self.assertEqual(self.sent().payload, self.part(4, 2))
+
+    def test_stations_take_turns(self):
+        for station in (4, 9, 12):
+            self.bearer.send_frames((self.part(station),))
+        for _ in range(3):
+            self.bearer._tick()
+            self.refuse(self.port.writes[-1])
+        self.clock.value += 3   # all three due again: the turn goes on after 12
+        self.bearer._tick()
+        self.assertEqual(self.destinations(), [4, 9, 12, 4])
+
+    def test_refused_frame_is_not_sent_and_retried_on_schedule(self):
+        item = self.bearer.send_frames((self.part(4),))
+        self.bearer._tick()
+        retry_at = item.retry_at
+        self.refuse(self.port.writes[-1])
+        self.assertIsNone(self.bearer.outstanding)
+        self.assertEqual(self.bearer.dropped["refused"], 1)
+        self.assertIsNone(item.result)
+        self.bearer._tick()
+        self.assertEqual(item.submissions, 1)   # the per-item backoff still applies
+        self.clock.value = retry_at
+        self.bearer._tick()
+        self.assertEqual(item.submissions, 2)
+        self.echo(4, 72, self.part(4))
+        self.feed(wici_link.Frame(wici_link.HACK, 0, 100, 4, 5, 0, 1, 72))
+        self.assertTrue(item.result)
+
+    def test_at_most_four_unfinished_items_so_bearers_can_fall_back(self):
+        items = [self.bearer.send_frames((self.part(station),)) for station in (4, 4, 9, 12)]
+        self.assertTrue(all(items))
+        self.bearer._tick()   # drained into the link thread, still unfinished
+        self.assertFalse(self.bearer.status(0)["room"])   # Wysylka checks this before sealing a counter
+        self.assertIsNone(self.bearer.send_frames((self.part(13),)))
+        self.echo(4, 73, self.part(4))
+        self.feed(wici_link.Frame(wici_link.HACK, 0, 100, 4, 5, 0, 1, 73))
+        self.assertTrue(items[0].result)
+        self.assertTrue(self.bearer.status(0)["room"])
+        self.assertIsNotNone(self.bearer.send_frames((self.part(13),)))
+
+    def test_disconnect_fails_every_unfinished_item(self):
+        items = [self.bearer.send_frames((self.part(4, n),)) for n in range(3)]
+        self.bearer._tick()
+        late = self.bearer.send_frames((self.part(9),))   # still in the hand-off queue
+        self.bearer._disconnect()
+        self.assertEqual([item.result for item in [*items, late]], [False] * 4)
+        self.assertEqual(self.bearer.unfinished, 0)
+        self.assertTrue(self.port.closed)
+
+    def test_link_thread_survives_unexpected_errors(self):
+        ports = [Port([RuntimeError("bug")]), Port()]
+        opened = []
+
+        def open_port(name):
+            opened.append(ports[len(opened)])
+            return opened[-1]
+
+        item = self.bearer.send_frames((self.part(4),))
+        self.bearer._tick()
+        self.bearer.port = None
+        self.bearer.FAULT_PAUSE_S = 0
+        with unittest.mock.patch.object(wici_stos.serialport, "open_port", open_port):
+            thread = threading.Thread(target=self.bearer._run, daemon=True)
+            thread.start()
+            deadline = time.monotonic() + 5
+            while len(opened) < 2 and time.monotonic() < deadline:
+                time.sleep(0.01)
+            self.bearer.thread = thread
+            self.bearer.stop()
+        self.assertEqual(len(opened), 2)
+        self.assertTrue(ports[0].closed)
+        self.assertTrue(ports[1].closed)   # the link thread closes its own port when stopped
+        self.assertFalse(item.result)   # the item in flight is reported failed, as on a disconnect
+        self.assertTrue(any("RuntimeError" in line for line in self.logs), self.logs)
 
 
 if __name__ == "__main__":

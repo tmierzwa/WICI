@@ -279,10 +279,10 @@ class ReceptionTest(StationTestCase):
         # A replayed frame is acknowledged again but does not move the reply route.
         self.assertEqual(self.reception.receive_envelope_frame(100, frames[0], bearer="reticulum"), "duplicate")
         self.assertIsNone(durable(self.medium, self.key, "SELECT 1 FROM bearer_route WHERE bearer='reticulum'"))
-        with self.assertRaises(envelope.EnvelopeError):
+        with self.assertRaises(przyjecie.NotAuthenticated):
             self.reception.receive_envelope_frame(101, frames[0])
         forged = bytearray(frames[0]); forged[-1] ^= 1
-        with self.assertRaises(envelope.EnvelopeError):
+        with self.assertRaises(przyjecie.NotAuthenticated):
             self.reception.receive_envelope_frame(100, forged, bearer="reticulum")
         self.assertEqual(self.reception.call(lambda s: self.reception.last_bearer.get(source)), "wici")
 
@@ -310,7 +310,7 @@ class ReceptionTest(StationTestCase):
             frames = None
 
             def status(self, now):
-                return {"online": True}
+                return {"online": True, "room": True}
 
             def send_frames(self, frames):
                 self.frames = frames
@@ -1081,7 +1081,7 @@ class OnlineLink:
     network = 100
 
     def status(self, now):
-        return {"online": True}
+        return {"online": True, "room": True}
 
     def send_frames(self, frames):
         return frames
@@ -1989,7 +1989,7 @@ class SimulatorTest(unittest.TestCase):
         station = next(x for x in lines if x.startswith("stacja 1 ")).split()[2]
         self.assertFalse(any(x.startswith("uwaga:") for x in lines), lines)
         self.app = subprocess.Popen([*app, "start", "--nosnik", str(tmp / "nosnik"),
-                                     "--port", node, "--diagnostyka", diagnostics, "--panel", "0", "--bez-przegladarki", "--kopie", str(tmp / "kopie")],
+                                     "--port", node, "--diagnostyka", diagnostics, "--panel", "0", "--bez-przegladarki", "--kopie", str(tmp / "kopie"), "--koniec-wejscia"],
                                     stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
                                     text=True, env=env)
         self.addCleanup(self.app.wait, 20)

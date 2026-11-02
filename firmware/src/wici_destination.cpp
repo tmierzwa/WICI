@@ -79,9 +79,12 @@ Outcome Destination::receive(const uint8_t* wire, size_t length, uint32_t nowS,
                 if (!admit_(config_.network, sender, recipient, full, fullLength, context_) ||
                     !replay_[peer].commit(part.counter)) return Outcome::REJECTED;
                 // A failed tombstone does not revoke durable SA1/replay state;
-                // begin() will finish it after restart.
-                parts_[peer].clear();
-            } else return Outcome::REJECTED;
+                // begin() finishes it when the module is read again.
+                if (!parts_[peer].clear()) ready_ = false;
+            } else {
+                if (result == envelope::FragmentResult::IO_ERROR) ready_ = false;
+                return Outcome::REJECTED;
+            }
         }
     }
     if (!(frame.flags & wici_link::ACKREQ)) return Outcome::ACCEPTED;

@@ -19,6 +19,7 @@ bool parseBeacon(const wici_link::Frame& frame, Beacon& out) {
     out.epoch = get16(frame.payload + 4);
     out.parent = get16(frame.payload + 6);
     out.flags = frame.payload[8];
+    out.sequence = frame.sequence;
     memcpy(out.epochSignature, frame.payload + 9, wici_epoch::SIGNATURE_BYTES);
     return id(out.root) && (out.parent == 0 || id(out.parent)) && !(out.flags & ~1);
 }
@@ -40,6 +41,12 @@ uint16_t measuredCost(uint16_t snrCost, uint8_t delivery16) {
 }
 }  // namespace
 
+bool Table::paired(uint16_t id) const {
+    if (!peers_) return true;
+    for (uint8_t i = 0; i < peerCount_; ++i) if (peers_[i].station == id) return true;
+    return false;
+}
+
 bool Table::begin() {
     ready_ = false;
     generation_ = 0;
@@ -48,10 +55,9 @@ bool Table::begin() {
     epochKnown_ = false;
     epochHeardS_ = 0;
     memset(epochSignature_, 0, sizeof(epochSignature_));
-    rank_ = 0xFFFF;
     rankCeiling_ = 0xFFFF;
-    parent_ = failedDynamic_ = 0;
-    plannedFailures_ = backupFailures_ = dynamicFailures_ = 0;
+    parent_ = 0;
+    failures_ = 0;
     nextRoute_ = 0;
     for (Neighbor& neighbor : neighbors_) neighbor = Neighbor();
     const bool rootNode = config_.own == config_.root;
@@ -87,8 +93,13 @@ bool Table::begin() {
             found = true;
         }
     }
+    // A neighbour without a pairwise key can never receive a unicast frame,
+    // and a route outside the current plan (learned under an older `behind`)
+    // may not be used. Both are dropped here; FRAM sheds them with the next commit.
+    for (Route& route : routes_)
+        if (route.via && (!paired(route.via) || !planned(route.destination, route.via))) route = Route();
     ready_ = true;
-    if (rootNode) rank_ = 0;
+    if (!rootNode) parent_ = config_.planned;  // the floor: usable without any BEACON
     return true;
 }
 
@@ -120,9 +131,17 @@ bool Table::commit() {
     return true;
 }
 
+bool Table::planned(uint16_t destination, uint16_t via) const {
+    if (destination == via) return true;
+    for (uint16_t i = 0; i < behindCount_; ++i)
+        if (behind_[i].station == destination && behind_[i].via == via) return true;
+    return false;
+}
+
 bool Table::learn(uint16_t destination, uint16_t via) {
     if (!ready_ || !id(destination) || !id(via) || destination == config_.own ||
-        via == config_.own || destination == config_.root) return false;
+        via == config_.own || destination == config_.root || !paired(via) ||
+        !planned(destination, via)) return false;
     size_t empty = ROUTES;
     for (size_t i = 0; i < ROUTES; ++i) {
         if (routes_[i].destination == destination) {
@@ -159,103 +178,179 @@ uint16_t Table::down(uint16_t destination) const {
     return wici_link::BROADCAST;
 }
 
-const Table::Neighbor* Table::candidate(uint16_t id, uint32_t nowS) const {
-    for (const Neighbor& n : neighbors_)
-        if (n.id == id && n.epoch == epoch_ && n.parent != config_.own &&
-            nowS >= n.lastSeenS && nowS - n.lastSeenS <= BEACON_STALE_S &&
-            // A configured backup may have a worse rank than the failed
-            // planned route. The ceiling only guards unconfigured neighbors.
-            (id == config_.planned || id == config_.backup || n.rank < rankCeiling_) &&
-            n.cost && static_cast<uint32_t>(n.rank) + n.cost < 0xFFFF) return &n;
+const Table::Neighbor* Table::find(uint16_t id) const {
+    for (const Neighbor& n : neighbors_) if (id && n.id == id) return &n;
     return nullptr;
 }
 
-void Table::selectParent(uint32_t nowS) {
-    const Neighbor* chosen = nullptr;
-    if (plannedFailures_ < 3) chosen = candidate(config_.planned, nowS);
-    if (!chosen && backupFailures_ < 3) chosen = candidate(config_.backup, nowS);
-    if (!chosen) {
-        for (const Neighbor& neighbor : neighbors_) {
-            if ((neighbor.id == config_.planned && plannedFailures_ >= 3) ||
-                (neighbor.id == config_.backup && backupFailures_ >= 3) ||
-                neighbor.id == failedDynamic_) continue;
-            const Neighbor* candidateValue = candidate(neighbor.id, nowS);
-            if (candidateValue && (!chosen || static_cast<uint32_t>(candidateValue->rank) + candidateValue->cost <
-                                    static_cast<uint32_t>(chosen->rank) + chosen->cost)) chosen = candidateValue;
-        }
-    }
-    if (!chosen) {
-        parent_ = 0;
-        // Keep the last finite rank as a ceiling within this epoch. Resetting
-        // it to infinity here could make a former descendant look eligible and
-        // create a multi-node loop after one parent times out.
-        return;
-    }
-    // A dynamic switch needs 1.5 ETX (24/16) improvement; planned/backup
-    // failover is exempt because its current link already failed three times.
-    if (parent_ && parent_ != chosen->id && parent_ != config_.planned && parent_ != config_.backup) {
-        const Neighbor* current = candidate(parent_, nowS);
-        if (current && static_cast<uint32_t>(current->rank) + current->cost <=
-                       static_cast<uint32_t>(chosen->rank) + chosen->cost + 24) return;
-    }
-    if (parent_ != chosen->id) dynamicFailures_ = 0;
-    parent_ = chosen->id;
-    rank_ = static_cast<uint16_t>(chosen->rank + chosen->cost);
-    if (rank_ < rankCeiling_) rankCeiling_ = rank_;
+bool Table::fresh(const Neighbor& n, uint32_t nowS) const {
+    return n.epoch == epoch_ && nowS >= n.lastSeenS && nowS - n.lastSeenS <= BEACON_STALE_S;
 }
 
-bool Table::beacon(uint16_t neighbor, const Beacon& value, uint16_t linkCost16, uint32_t nowS) {
-    if (!ready_ || config_.own == config_.root || !id(neighbor) || neighbor == config_.own || value.root != config_.root ||
-        linkCost16 < 16 || linkCost16 > 48 || value.rank == 0xFFFF || value.parent == config_.own ||
+bool Table::usable(uint16_t id, uint32_t nowS) const {
+    if (!id) return false;
+    const Neighbor* n = find(id);
+    // The planned and backup parents need no BEACON; a fresh one that names
+    // this station as its parent excludes them (a loop) until it goes stale.
+    if (id == config_.planned || id == config_.backup)
+        return !n || !fresh(*n, nowS) || n->parent != config_.own;
+    // A dynamic neighbour needs a fresh BEACON, may not point back at this
+    // station and must rank below the lowest rank this station held in the
+    // epoch, so a former descendant is never chosen.
+    return n && fresh(*n, nowS) && n->parent != config_.own && n->rank < rankCeiling_ &&
+           n->cost && static_cast<uint32_t>(n->rank) + n->cost < 0xFFFF;
+}
+
+uint16_t Table::bestDynamic(uint32_t nowS) const {
+    const Neighbor* best = nullptr;
+    for (const Neighbor& n : neighbors_) {
+        if (n.id == config_.planned || n.id == config_.backup || !usable(n.id, nowS)) continue;
+        if (!best || static_cast<uint32_t>(n.rank) + n.cost < static_cast<uint32_t>(best->rank) + best->cost)
+            best = &n;
+    }
+    return best ? best->id : 0;
+}
+
+// Rotation steps: 0 planned, 1 backup, 2 best dynamic neighbour.
+uint8_t Table::step(uint16_t id) const {
+    return id == config_.planned ? 0 : id == config_.backup ? 1 : 2;
+}
+
+uint16_t Table::rotation(uint8_t from, uint32_t nowS) const {
+    for (uint8_t i = 0; i < 3; ++i) {
+        const uint8_t at = static_cast<uint8_t>((from + i) % 3);
+        const uint16_t id = at == 0 ? config_.planned : at == 1 ? config_.backup : bestDynamic(nowS);
+        if (usable(id, nowS)) return id;
+    }
+    return config_.planned;  // no candidate: the planned parent stays the floor
+}
+
+void Table::setParent(uint16_t id, uint32_t nowS) {
+    if (id != parent_) failures_ = 0;
+    parent_ = id;
+    lowerCeiling(nowS);
+}
+
+uint16_t Table::rank(uint32_t nowS) const {
+    if (!ready_) return 0xFFFF;
+    if (config_.own == config_.root) return 0;
+    // The rank follows only from a fresh BEACON of the current parent, so it
+    // lapses by itself 90 min after that BEACON, without any other event.
+    const Neighbor* n = find(parent_);
+    if (!n || !fresh(*n, nowS) || n->parent == config_.own ||
+        static_cast<uint32_t>(n->rank) + n->cost >= 0xFFFF) return 0xFFFF;
+    return static_cast<uint16_t>(n->rank + n->cost);
+}
+
+void Table::lowerCeiling(uint32_t nowS) {
+    const uint16_t now = rank(nowS);
+    if (now < rankCeiling_) rankCeiling_ = now;
+}
+
+void Table::reconsider(uint16_t neighbor, bool heard, uint32_t nowS) {
+    // A parent that became unusable (loop, stale, new epoch) is replaced as
+    // after three failures.
+    if (!usable(parent_, nowS)) {
+        setParent(rotation(static_cast<uint8_t>(step(parent_) + 1), nowS), nowS);
+        return;
+    }
+    // A HACK or new BEACON from the planned or backup parent brings it back
+    // at once, without hysteresis.
+    if (heard && neighbor == config_.planned && parent_ != config_.planned && usable(neighbor, nowS)) {
+        setParent(neighbor, nowS);
+        return;
+    }
+    if (heard && neighbor && neighbor == config_.backup && step(parent_) == 2 && usable(neighbor, nowS)) {
+        setParent(neighbor, nowS);
+        return;
+    }
+    // Between dynamic neighbours a switch needs 1.5 ETX (24/16) improvement.
+    if (step(parent_) == 2) {
+        const Neighbor* current = find(parent_);
+        const Neighbor* best = find(bestDynamic(nowS));
+        if (current && best && best != current &&
+            static_cast<uint32_t>(current->rank) + current->cost >
+            static_cast<uint32_t>(best->rank) + best->cost + 24) {
+            setParent(best->id, nowS);
+            return;
+        }
+    }
+    lowerCeiling(nowS);
+}
+
+bool Table::acceptable(uint16_t neighbor, const Beacon& value, uint32_t nowS) const {
+    if (!ready_ || config_.own == config_.root || !id(neighbor) || neighbor == config_.own ||
+        value.root != config_.root || value.rank == 0xFFFF ||
         (value.parent && !id(value.parent)) || (value.flags & ~1) ||
         (value.rank == 0) != (neighbor == config_.root)) return false;
     // An older epoch is a replay, unless the current one has gone silent: a
     // replaced or wiped root restarts its count, and its stations must follow.
+    // Only BEACONs of the current parent keep the epoch alive, so siblings
+    // still repeating the old epoch cannot hold off a restarted root.
     if (epochKnown_ && static_cast<int16_t>(value.epoch - epoch_) < 0 &&
         (nowS < epochHeardS_ || nowS - epochHeardS_ <= BEACON_STALE_S)) return false;
+    // A BEACON is new only if its link seq (under the network MAC) is newer
+    // than the last one from this neighbour: a recorded copy can neither keep
+    // a dead neighbour fresh nor pull this station back to it. The stored seq
+    // counts only while the entry is fresh (90 min): a neighbour cannot move
+    // its seq by half the u16 space in that time, but after hours of silence
+    // a newer seq could look older, so a stale entry's seq is forgotten, as
+    // that of an evicted entry is.
+    if (epochKnown_ && value.epoch == epoch_) {
+        const Neighbor* known = find(neighbor);
+        if (known && fresh(*known, nowS) && static_cast<int16_t>(value.sequence - known->sequence) <= 0)
+            return false;
+    }
+    return true;
+}
+
+bool Table::beacon(uint16_t neighbor, const Beacon& value, uint16_t linkCost16, uint32_t nowS) {
+    if (linkCost16 < 16 || linkCost16 > 48 || !acceptable(neighbor, value, nowS)) return false;
     if (!epochKnown_ || value.epoch != epoch_) {
         epoch_ = value.epoch;
         epochKnown_ = true;
-        rank_ = 0xFFFF;
+        epochHeardS_ = nowS;
         rankCeiling_ = 0xFFFF;
-        parent_ = 0;
         for (Neighbor& entry : neighbors_) entry = Neighbor();
-        plannedFailures_ = backupFailures_ = 0;
-        dynamicFailures_ = 0;
-        failedDynamic_ = 0;
     }
     memcpy(epochSignature_, value.epochSignature, sizeof(epochSignature_));
+    const bool configured = neighbor == config_.planned || neighbor == config_.backup;
     Neighbor* chosen = nullptr;
     for (Neighbor& item : neighbors_) {
         if (item.id == neighbor) { chosen = &item; break; }
         if (!item.id && !chosen) chosen = &item;
     }
+    // Only a configured parent pointing back is kept (it must stay excluded
+    // without a BEACON); any other such neighbour is simply no candidate.
+    if (value.parent == config_.own && !configured) {
+        if (chosen && chosen->id == neighbor) *chosen = Neighbor();
+        if (neighbor == parent_) reconsider(neighbor, false, nowS);
+        return true;
+    }
     if (!chosen) {
-        // The planned links must not be displaced by incidental neighbours.
-        // Dynamic entries are soft state and can be evicted when the table is full.
-        if (neighbor != config_.planned && neighbor != config_.backup) return false;
+        // A full table gives up its oldest stale dynamic entry. The planned
+        // links are never evicted, and they may also evict the oldest live
+        // dynamic entry; other neighbours may not.
         for (Neighbor& item : neighbors_)
-            if (item.id != config_.planned && item.id != config_.backup &&
+            if (item.id != config_.planned && item.id != config_.backup && !fresh(item, nowS) &&
                 (!chosen || item.lastSeenS < chosen->lastSeenS)) chosen = &item;
+        if (!chosen && configured)
+            for (Neighbor& item : neighbors_)
+                if (item.id != config_.planned && item.id != config_.backup &&
+                    (!chosen || item.lastSeenS < chosen->lastSeenS)) chosen = &item;
         if (!chosen) return false;
     }
     const uint8_t delivery = chosen->id == neighbor && chosen->epoch == value.epoch ?
                              chosen->delivery16 : 16;
-    // A fresh beacon is a new opportunity to probe a configured link. A
-    // failed route is reconsidered only after another beacon from that peer.
-    if (neighbor == config_.planned && plannedFailures_ >= 3 &&
-        chosen->id == neighbor && nowS > chosen->lastSeenS) plannedFailures_ = 0;
-    if (neighbor == config_.backup && backupFailures_ >= 3 &&
-        chosen->id == neighbor && nowS > chosen->lastSeenS) backupFailures_ = 0;
     *chosen = {neighbor, value.rank, measuredCost(linkCost16, delivery),
-               value.epoch, value.parent, nowS, linkCost16, delivery};
-    epochHeardS_ = nowS;
-    selectParent(nowS);
+               value.epoch, value.parent, nowS, linkCost16, delivery, value.sequence};
+    reconsider(neighbor, true, nowS);
+    if (neighbor == parent_) epochHeardS_ = nowS;
     return true;
 }
 
 void Table::hopResult(uint16_t neighbor, bool acknowledged, uint32_t nowS) {
-    if (!ready_) return;
+    if (!ready_ || config_.own == config_.root) return;
     for (Neighbor& item : neighbors_) {
         if (item.id != neighbor || item.epoch != epoch_) continue;
         // A HACK is one successful attempt; a timeout is one failed attempt.
@@ -267,24 +362,20 @@ void Table::hopResult(uint16_t neighbor, bool acknowledged, uint32_t nowS) {
         item.cost = measuredCost(item.snrCost, item.delivery16);
         break;
     }
-    // A deliberate probe of the planned parent can restore the planned route.
-    if (acknowledged && neighbor == config_.planned && neighbor != parent_) {
-        plannedFailures_ = 0;
-        selectParent(nowS);
+    if (neighbor == parent_ && !acknowledged && ++failures_ >= 3) {
+        // planned -> backup -> best dynamic -> planned; the counter restarts
+        // with every parent, also when the rotation wraps to the same one.
+        loop(nowS);
         return;
     }
-    if (acknowledged && neighbor == failedDynamic_ && neighbor != parent_) {
-        failedDynamic_ = 0;
-        dynamicFailures_ = 0;
-        selectParent(nowS);
-        return;
-    }
-    if (neighbor != parent_) return;
-    uint8_t* failures = neighbor == config_.planned ? &plannedFailures_ :
-                        neighbor == config_.backup ? &backupFailures_ : &dynamicFailures_;
-    if (failures) *failures = acknowledged ? 0 : static_cast<uint8_t>(*failures < 3 ? *failures + 1 : 3);
-    if (!acknowledged && failures == &dynamicFailures_ && dynamicFailures_ >= 3) failedDynamic_ = neighbor;
-    selectParent(nowS);
+    if (neighbor == parent_ && acknowledged) failures_ = 0;
+    reconsider(neighbor, acknowledged, nowS);
+}
+
+void Table::loop(uint32_t nowS) {
+    if (!ready_ || config_.own == config_.root) return;
+    failures_ = 0;
+    setParent(rotation(static_cast<uint8_t>(step(parent_) + 1), nowS), nowS);
 }
 
 }  // namespace wici_route

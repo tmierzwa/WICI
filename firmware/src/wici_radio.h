@@ -10,7 +10,6 @@
 
 namespace wici_radio {
 
-constexpr uint32_t HACK_WAIT_MS = 600;
 constexpr uint32_t RETRY_MIN_MS = 500;
 constexpr uint32_t RETRY_SPAN_MS = 1501;
 constexpr uint32_t BEACON_CHECK_MS = 1000;  // minimum spacing of BEACON signature checks
@@ -34,7 +33,10 @@ public:
             Air& air, RandomFn random, void* randomContext,
             const config::Behind* behind = nullptr, uint16_t behindCount = 0,
             const uint8_t rootEd25519[32] = nullptr,
-            VerifyBeacon verifyBeacon = nullptr, const void* beaconContext = nullptr);
+            VerifyBeacon verifyBeacon = nullptr, const void* beaconContext = nullptr,
+            const config::PriorityKey* peers = nullptr, uint8_t peerCount = 0);
+    // Reads all durable state from FRAM. Also the recovery after ready() fell:
+    // the caller cancels the own transfer first (cancelOwn).
     bool begin();
     // Called from Bench's raw callback. No route learning or outbound DATA is
     // performed before the HACK attempt; all timestamps come from the radio.
@@ -48,12 +50,16 @@ public:
     // every fragment received a next-hop HACK; SA1 confirmation is separate.
     bool queueOwn(uint16_t recipient, const uint8_t* sa1, size_t length, uint32_t handle,
                   bool exception = false);
-    bool beacon();
+    // Signs and offers one BEACON with the rank at nowS (wici_route::Table::rank).
+    bool beacon(uint32_t nowS);
     void cancelOwn() { if (ownActive_) finishOwn(false); }
     void onDelivery(DeliveryFn callback, void* context) { delivery_ = callback; deliveryContext_ = context; }
     bool ownBusy() const { return ownActive_; }
     bool exceptionTx() const { return ownActive_ && ownException_; }
-    bool ready() const { return ready_; }
+    // False after any uncertain FRAM write in a durable part (queue, rings,
+    // routes, link sequence, envelope counters, replay windows) until begin().
+    bool ready() const;
+    uint16_t clearedRecords() const { return relay_.clearedRecords(); }
     wici_route::Table& routes() { return relay_.routes(); }
 
 private:
@@ -80,10 +86,11 @@ private:
     bool ownActive_ = false, ownSubmitted_ = false, ownAwaiting_ = false, ownDelayPending_ = false;
     bool ownException_ = false, ownFailedOver_ = false;
     bool beaconChecked_ = false;
-    uint32_t beaconCheckedMs_ = 0;
+    uint32_t beaconCheckedMs_ = 0, settledS_ = 0;
     DeliveryFn delivery_ = nullptr;
     void* deliveryContext_ = nullptr;
     void finishOwn(bool acknowledged);
+    void ownAttemptFailed(uint32_t nowMs);
     bool failoverOwn();
     wici_destination::Destination destination_;
     wici_hop::Relay relay_;

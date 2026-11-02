@@ -2,37 +2,58 @@
 #include <assert.h>
 #include <string.h>
 
+#include "wici_beacon.h"
 #include "wici_gateway.h"
 
 namespace {
 struct Air : wici_gateway::Air {
     unsigned data = 0, hacks = 0;
     uint32_t stamp = 0;
-    bool hackOk = true;
+    bool hackOk = true, dataOk = true;
     uint8_t last[255] = {};
     size_t lastLength = 0;
     wici_link::TxClass lastClass = wici_link::TxClass::TRANSIT;
     bool sendData(const uint8_t* wire, size_t n, wici_link::TxClass traffic) override {
         lastClass = traffic;
-        assert(n >= 19 && n <= 255); memcpy(last, wire, n); lastLength = n; ++data; return true;
+        assert(n >= 19 && n <= 255); memcpy(last, wire, n); lastLength = n; ++data; return dataOk;
     }
     bool sendHack(const uint8_t*, size_t n, uint32_t ms) override {
         assert(n == 19); ++hacks; stamp = ms; return hackOk;
     }
+    bool acceptOk = true;
+    size_t asked = 0;  // radio length of the last accepts() question
+    bool accepts(wici_link::TxClass, size_t radioLength) override { asked = radioLength; return acceptOk; }
 };
 struct Memory : journal::Storage {
     uint8_t bytes[0x048000] = {};
+    int writesLeft = -1;
     bool read(uint32_t at, uint8_t* out, size_t n) override {
         if (at > sizeof(bytes) || n > sizeof(bytes) - at) return false;
         memcpy(out, bytes + at, n); return true;
     }
     bool write(uint32_t at, const uint8_t* in, size_t n) override {
-        if (at > sizeof(bytes) || n > sizeof(bytes) - at) return false;
+        if (writesLeft == 0 || at > sizeof(bytes) || n > sizeof(bytes) - at) return false;
+        if (writesLeft > 0) --writesLeft;
         memcpy(bytes + at, in, n); return true;
     }
 };
 size_t encode(const uint8_t key[32], const wici_link::Frame& frame, uint8_t wire[255]) {
     const size_t n = wici_link::encode(key, frame, wire, 255); assert(n); return n;
+}
+// The next KISS frame to the laptop: its command byte and unescaped bytes.
+size_t take(kiss::Port& port, uint8_t& command, uint8_t out[255]) {
+    size_t length = 0, n = 0;
+    const uint8_t* bytes = port.output(length);
+    assert(length >= 3 && bytes[0] == kiss::FEND);
+    command = bytes[1];
+    size_t i = 2;
+    for (; bytes[i] != kiss::FEND; ++i) {
+        uint8_t b = bytes[i];
+        if (b == kiss::FESC) b = bytes[++i] == kiss::TFEND ? kiss::FEND : kiss::FESC;
+        out[n++] = b;
+    }
+    port.consume(i + 1);
+    return n;
 }
 }  // namespace
 
@@ -45,14 +66,31 @@ int main() {
     for (unsigned i = 0; i < 16; ++i) ifac[i] = static_cast<uint8_t>(i);
     for (unsigned i = 0; i < 32; ++i) identity[i + 32] = static_cast<uint8_t>(i + 1);
     assert(wici_link::deriveKey(ifac, 100, key));
-    wici_gateway::Root root(memory, port, air, 100, 5, ifac, identity);
+    const config::Behind plan[] = {{7, 4}};  // the root's network plan: station 7 behind neighbour 4
+    wici_gateway::Root root(memory, port, air, 100, 5, ifac, identity, nullptr, 0, plan, 1);
     assert(root.begin(7) && root.ready());
+    // Review D4: no BEACON while the laptop's port is closed (no HACK possible).
+    assert(!root.beacon() && air.data == 0);
+    root.setUsbOpen(true);
     assert(root.beacon());
+    root.setUsbOpen(false);
     assert(air.lastClass == wici_link::TxClass::BEACON);
     wici_link::Frame observed;
     assert(wici_link::decode(key, 100, air.last, air.lastLength, observed));
     assert(observed.type == wici_link::Type::BEACON && observed.source == 5 &&
            observed.payload[1] == 5 && observed.payload[5] == 7);
+    // Finding 9: a BEACON the radio would refuse (silence, budget) spends
+    // neither a seq nor a signature; the next accepted one follows at once.
+    const uint16_t beaconSeq = observed.sequence;
+    root.setUsbOpen(true);
+    air.acceptOk = false;
+    for (unsigned i = 0; i < 5; ++i) assert(!root.beacon());
+    assert(air.data == 1 && air.asked == wici_link::BEACON_FRAME);
+    air.acceptOk = true;
+    assert(root.beacon() && wici_link::decode(key, 100, air.last, air.lastLength, observed));
+    assert(observed.sequence == static_cast<uint16_t>(beaconSeq + 1));
+    root.setUsbOpen(false);
+    uint8_t command = 0, returned[255];
     wici_link::Frame frame;
     frame.type = wici_link::Type::DATA; frame.flags = wici_link::ACKREQ;
     frame.network = 100; frame.source = 4; frame.destination = 5;
@@ -75,7 +113,11 @@ int main() {
     size_t sentLength = 0;
     port.output(sentLength);
     port.consume(sentLength);
-    assert(root.host(wire, emergencyLength, 901, 1) == wici_gateway::Event::REJECTED);
+    // Review D11: a downward frame the root cannot send (here: flooded inside
+    // 120 s) goes back to the laptop at once, bytes unchanged, command 0x01.
+    assert(root.host(wire, emergencyLength, 901, 1) == wici_gateway::Event::REFUSED);
+    assert(take(port, command, returned) == emergencyLength && command == wici_gateway::CMD_REFUSED &&
+           memcmp(returned, wire, emergencyLength) == 0);
     n = encode(key, frame, wire);
     wire[n - 1] ^= 1;
     assert(root.radio(wire, n, 1000) == wici_gateway::Event::REJECTED);  // bad MAC
@@ -110,9 +152,10 @@ int main() {
     frame.source = 1; frame.destination = 5; frame.flags = wici_link::ACKREQ | wici_link::DOWN;
     frame.payload[2] = 1; frame.payload[4] = 4; frame.sequence = 77;
     n = encode(key, frame, wire);
-    assert(root.host(wire, n, 1400, 1400 / 1000) == wici_gateway::Event::QUEUED && air.data == 3);
+    assert(root.host(wire, n, 1400, 1400 / 1000) == wici_gateway::Event::QUEUED && air.data == 4);
     assert(port.pendingBytes() == 0);  // scheduler admission is not radio TX
-    assert(root.host(wire, n, 1401, 1401 / 1000) == wici_gateway::Event::REJECTED);
+    assert(root.host(wire, n, 1401, 1401 / 1000) == wici_gateway::Event::REFUSED);  // transmitter busy
+    assert(take(port, command, returned) == n && command == wici_gateway::CMD_REFUSED);
     assert(wici_link::decode(key, 100, air.last, air.lastLength, observed));
     assert(observed.source == 5 && observed.destination == 4 && observed.sequence != 77 &&
            observed.hops == 1 && memcmp(observed.payload, frame.payload, frame.length) == 0);
@@ -122,8 +165,13 @@ int main() {
     port.consume(encodedLength);
     assert(port.pendingBytes() == 0);
     assert(root.host(wire, n, 1401, 1401 / 1000) == wici_gateway::Event::QUEUED);
-    root.onTxDone(false, 1470);
-    assert(port.pendingBytes() == 0);  // failed TX has no echo
+    root.onTxDone(false, 1470);  // failed TX: no echo, the original bytes are refused
+    assert(take(port, command, returned) == n && command == wici_gateway::CMD_REFUSED &&
+           memcmp(returned, wire, n) == 0 && port.pendingBytes() == 0);
+    air.dataOk = false;  // silence or a missing pair key
+    assert(root.host(wire, n, 1480, 1) == wici_gateway::Event::REFUSED);
+    assert(take(port, command, returned) == n && command == wici_gateway::CMD_REFUSED);
+    air.dataOk = true;
     const uint8_t queued[] = {kiss::FEND, kiss::CMD_DATA, 1, kiss::FEND};
     port.feed(queued, sizeof(queued), 1400);
     assert(port.buffered() == 1);
@@ -153,4 +201,144 @@ int main() {
     assert(root.down(4) == wici_link::BROADCAST);
     assert(wici_link::decode(key, 100, air.last, air.lastLength, observed));
     assert(observed.destination == wici_link::BROADCAST && observed.flags == wici_link::DOWN);
+    root.onTxDone(true, 5050);
+    // Review 3/4: the radio frame alone proves nothing (it may be replayed);
+    // after `forget`, the laptop HACK of a frame relayed by neighbour 4
+    // restores the route to 4 itself, here for another envelope sender (7).
+    while (port.pendingBytes()) take(port, command, returned);
+    frame.source = 4; frame.destination = 5; frame.flags = wici_link::ACKREQ;
+    frame.payload[2] = 7; frame.payload[4] = 1; frame.sequence = 60;
+    n = encode(key, frame, wire);
+    assert(root.radio(wire, n, 5100) == wici_gateway::Event::FORWARDED);
+    assert(root.down(4) == wici_link::BROADCAST);
+    hack.source = 5; hack.destination = 4; hack.sequence = 60;
+    n = encode(key, hack, wire);
+    assert(root.host(wire, n, 5150, 5) == wici_gateway::Event::HACK_SENT);
+    assert(root.down(4) == 4 && root.down(7) == 4);
+    // Finding 1: the laptop HACK also comes for a recorded copy of an old
+    // envelope (a duplicate), which a captured neighbour can relay under its
+    // own l_src. The root learns the sender behind that neighbour only as the
+    // plan allows, like every relay: station 8 is not behind 4.
+    frame.payload[2] = 8; frame.sequence = 64;
+    n = encode(key, frame, wire);
+    assert(root.radio(wire, n, 5160) == wici_gateway::Event::FORWARDED);
+    hack.sequence = 64;
+    n = encode(key, hack, wire);
+    assert(root.host(wire, n, 5170, 5) == wici_gateway::Event::HACK_SENT);
+    assert(root.down(8) == wici_link::BROADCAST && root.down(4) == 4 && root.ready());
+
+    // Review 10, round 3 (6): a downlink already handed to the radio stays
+    // pending through begin() (the radio may still be sending it) and
+    // through closing the port; only its TX result reaches the laptop, so the
+    // laptop never resends a frame that went on air.
+    while (port.pendingBytes()) take(port, command, returned);
+    frame.source = 1; frame.destination = 5; frame.flags = wici_link::ACKREQ | wici_link::DOWN;
+    frame.payload[2] = 1; frame.payload[4] = 4; frame.sequence = 61;
+    n = encode(key, frame, wire);
+    assert(root.host(wire, n, 5200, 5) == wici_gateway::Event::QUEUED);
+    assert(root.begin(7) && port.pendingBytes() == 0);
+    assert(root.host(wire, n, 5201, 5) == wici_gateway::Event::REFUSED);  // the transmitter is still busy
+    take(port, command, returned);
+    root.onTxDone(true, 5250);
+    assert(take(port, command, returned) > 0 && command == kiss::CMD_DATA);  // the echo
+    frame.sequence = 69; frame.payload[8] = 6;
+    n = encode(key, frame, wire);
+    assert(root.host(wire, n, 5900, 5) == wici_gateway::Event::QUEUED);
+    root.setUsbOpen(false);
+    root.setUsbOpen(true);
+    root.onTxDone(false, 5950);
+    assert(take(port, command, returned) == n && command == wici_gateway::CMD_REFUSED);
+
+    // Review D6: an uncertain FRAM write takes ready() down (no forwarding,
+    // no BEACON, downlink refused) until begin() reads FRAM again.
+    frame.source = 6; frame.destination = 5; frame.flags = wici_link::ACKREQ;
+    frame.payload[2] = 6; frame.payload[4] = 1; frame.sequence = 62;
+    n = encode(key, frame, wire);
+    assert(root.radio(wire, n, 6000) == wici_gateway::Event::FORWARDED);
+    take(port, command, returned);
+    hack.destination = 6; hack.sequence = 62;
+    n = encode(key, hack, wire);
+    memory.writesLeft = 0;
+    assert(root.host(wire, n, 6050, 6) == wici_gateway::Event::HACK_SENT);  // route write fails after the HACK
+    assert(!root.ready() && !root.beacon());
+    assert(root.radio(wire, n, 6060) == wici_gateway::Event::REJECTED);
+    frame.source = 1; frame.flags = wici_link::ACKREQ | wici_link::DOWN;
+    frame.payload[2] = 1; frame.payload[4] = 4; frame.sequence = 63;
+    n = encode(key, frame, wire);
+    assert(root.host(wire, n, 6100, 6) == wici_gateway::Event::REFUSED);
+    assert(take(port, command, returned) == n && command == wici_gateway::CMD_REFUSED);
+    memory.writesLeft = -1;
+    assert(root.begin(7) && root.ready() && root.down(4) == 4);
+    assert(root.host(wire, n, 6200, 6) == wici_gateway::Event::QUEUED);
+
+    // Finding 11: while the previous downward frame waits for its HACK (600 ms
+    // from its TX), the next one is refused to the laptop; then it goes.
+    root.onTxDone(true, 6250);
+    while (port.pendingBytes()) take(port, command, returned);
+    frame.sequence = 65; frame.payload[8] = 5;
+    n = encode(key, frame, wire);
+    assert(root.host(wire, n, 6849, 6) == wici_gateway::Event::REFUSED);
+    assert(take(port, command, returned) == n && command == wici_gateway::CMD_REFUSED);
+    assert(root.host(wire, n, 6850, 6) == wici_gateway::Event::QUEUED);
+    root.onTxDone(true, 6900);
+    while (port.pendingBytes()) take(port, command, returned);
+
+    // Finding 2: a flood refused by the radio after its durable marker was
+    // never on air, so the laptop's next attempt of that envelope goes out.
+    // A radio that would refuse at once (accepts) costs no marker and no seq.
+    frame.payload[4] = 30; frame.sequence = 66;  // no route to 30: flood
+    n = encode(key, frame, wire);
+    air.acceptOk = false;
+    assert(root.host(wire, n, 8000, 8) == wici_gateway::Event::REFUSED);
+    assert(air.asked == n);  // a flood carries no pairwise tag
+    take(port, command, returned);
+    air.acceptOk = true; air.dataOk = false;
+    assert(root.host(wire, n, 8001, 8) == wici_gateway::Event::REFUSED);
+    take(port, command, returned);
+    air.dataOk = true;
+    assert(root.host(wire, n, 8002, 8) == wici_gateway::Event::QUEUED);
+    assert(wici_link::decode(key, 100, air.last, air.lastLength, observed) &&
+           observed.destination == wici_link::BROADCAST);
+    root.onTxDone(true, 8050);
+    take(port, command, returned);
+    assert(root.host(wire, n, 8100, 8) == wici_gateway::Event::REFUSED);  // flooded: once in 120 s
+    take(port, command, returned);
+    // Round 3 (4): a flood TX the radio accepted but failed put nothing
+    // complete on air; the laptop's next attempt of it goes out.
+    frame.payload[4] = 32; frame.sequence = 68;
+    n = encode(key, frame, wire);
+    assert(root.host(wire, n, 8150, 8) == wici_gateway::Event::QUEUED);
+    root.onTxDone(false, 8160);
+    assert(take(port, command, returned) == n && command == wici_gateway::CMD_REFUSED);
+    assert(root.host(wire, n, 8170, 8) == wici_gateway::Event::QUEUED);
+    root.onTxDone(true, 8180);
+    take(port, command, returned);
+    // After a restart a marker is never the root's own: power loss between
+    // the marker and TX may lose a flood, never send it twice.
+    frame.payload[4] = 31; frame.sequence = 67;
+    n = encode(key, frame, wire);
+    air.dataOk = false;
+    assert(root.host(wire, n, 8200, 8) == wici_gateway::Event::REFUSED);
+    take(port, command, returned);
+    air.dataOk = true;
+    assert(root.begin(7));
+    assert(root.host(wire, n, 8201, 8) == wici_gateway::Event::REFUSED);
+    take(port, command, returned);
+
+    // Review 1/11a: BEACON schedule. A change or retry is pushed to 60 s
+    // after the last BEACON only when that is later, then jittered 0-4 s;
+    // a long-silent station is not scheduled in the past.
+    assert(wici_beacon::jittered(500000, 0, false, 4000) == 504000);
+    assert(wici_beacon::jittered(500000, 100000, true, 4001) == 500000);   // 400 s after the last one
+    assert(wici_beacon::jittered(500000, 470000, true, 1234) == 531234);   // within 60 s
+    assert(wici_beacon::jittered(505000, 470000, true, 7) == 530007);      // a retry 5 s later
+    assert(wici_beacon::burstAllowed(1000, 0, false));
+    assert(!wici_beacon::burstAllowed(100000, 50000, true));
+    assert(wici_beacon::burstAllowed(110000, 50000, true));
+    // Finding 10: a rank change earns an extra BEACON only from one ETX on,
+    // or when the rank appears or lapses.
+    assert(!wici_beacon::rankMoved(40, 32) && !wici_beacon::rankMoved(32, 47));
+    assert(wici_beacon::rankMoved(48, 32) && wici_beacon::rankMoved(32, 48));
+    assert(wici_beacon::rankMoved(0xFFFF, 32) && wici_beacon::rankMoved(32, 0xFFFF));
+    assert(!wici_beacon::rankMoved(0xFFFF, 0xFFFF));
 }

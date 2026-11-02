@@ -54,7 +54,8 @@ public:
     void pop();                        // pakiet przekazany do stosu: wolne miejsce, zaległa gotowość
     size_t buffered() const { return count_; }
     // Pakiet do komputera; false: port zamknięty, pakiet za długi albo brak miejsca (liczone).
-    bool send(const uint8_t* data, size_t length);
+    // `command` inny niż CMD_DATA: ramka z tym bajtem polecenia (root WICI-Link: 0x01, odmowa nadania).
+    bool send(const uint8_t* data, size_t length, uint8_t command = CMD_DATA);
     bool canSend(const uint8_t* data, size_t length) const;
     // Bajty do zapisu w CDC: ciągły fragment bufora (najpierw zaległa ramka gotowości) i consume()
     // z liczbą bajtów, które port przyjął.

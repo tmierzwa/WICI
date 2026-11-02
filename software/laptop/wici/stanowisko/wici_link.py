@@ -16,6 +16,7 @@ BROADCAST = 0xFFFF
 DATA, HACK, BEACON = 0, 1, 2
 ACKREQ, DOWN = 1, 2
 FEND, FESC, TFEND, TFESC = 0xC0, 0xDB, 0xDC, 0xDD
+KISS_DATA, KISS_REFUSED = 0, 1  # the root returns a frame it cannot transmit with command 1
 
 
 class LinkError(ValueError):
@@ -117,7 +118,11 @@ def kiss_encode(raw):
 
 
 class KissStream:
-    """Incremental decoder. Invalid escapes and oversized frames are discarded until FEND."""
+    """Incremental decoder. Invalid escapes and oversized frames are discarded until FEND.
+
+    feed() returns data frames (command 0); feed_commands() also returns frames the root
+    refused to transmit (command 1, the same bytes the laptop wrote), as (command, bytes).
+    """
 
     def __init__(self):
         self.buffer = bytearray()
@@ -126,11 +131,15 @@ class KissStream:
         self.dropped = False
 
     def feed(self, data):
+        return [frame for command, frame in self.feed_commands(data) if command == KISS_DATA]
+
+    def feed_commands(self, data):
         frames = []
         for byte in data:
             if byte == FEND:
-                if self.in_frame and not self.dropped and not self.escaped and len(self.buffer) >= 2 and self.buffer[0] == 0:
-                    frames.append(bytes(self.buffer[1:]))
+                if (self.in_frame and not self.dropped and not self.escaped and len(self.buffer) >= 2 and
+                        self.buffer[0] in (KISS_DATA, KISS_REFUSED)):
+                    frames.append((self.buffer[0], bytes(self.buffer[1:])))
                 self.buffer.clear()
                 self.in_frame, self.escaped, self.dropped = True, False, False
                 continue

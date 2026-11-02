@@ -29,6 +29,8 @@ public:
     // Beacon cost is TX time; transit cost includes the 12x silence debt.
     // A successful reserve is intentionally charged even if later CAD/TX fails.
     bool reserve(bool beacon, uint32_t txMs, uint32_t nowS, bool contendedK2 = false);
+    // Without a write: would reserve() with these arguments fit the caps now?
+    bool allows(bool beacon, uint32_t txMs, uint32_t nowS, bool contendedK2 = false) const;
     bool ready() const { return ready_; }
     uint32_t poolUsed() const;
     uint32_t beaconUsed() const;
@@ -36,6 +38,7 @@ public:
 private:
     bool commit();
     void advance(uint32_t epoch);
+    bool fits(bool beacon, uint32_t txMs, bool contendedK2) const;
     journal::Storage& storage_;
     uint16_t pool_[BUCKETS] = {}, beacon_[BUCKETS] = {};  // 100 ms units, rounded up
     uint32_t sequence_ = 0, epoch_ = 0;

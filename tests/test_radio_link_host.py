@@ -2573,6 +2573,70 @@ class RxRingTests(unittest.TestCase):
         self.assertEqual(line(self.out, "MODE"), "MODE 1 0 0 0")
 
 
+
+NOISE_FLOOR_HARNESS = r"""
+#include <stdio.h>
+#include "cca_floor.h"
+#include "lora_profile.h"
+
+int main() {
+    using cca::NoiseFloor;
+    NoiseFloor q(lora::CCA_RSSI_THRESHOLD_DBM, lora::CCA_RSSI_THRESHOLD_MAX_DBM, lora::CCA_FLOOR_MARGIN_DB);
+    printf("FRESH %d %d\n", q.threshold(), q.floor() == NoiseFloor::UNKNOWN);
+    uint32_t t = 0;
+    for (int b = 0; b < 3; ++b, t += NoiseFloor::BUCKET_MS) q.sample(-115, t);
+    printf("THREE %d %d\n", q.threshold(), q.floor() == NoiseFloor::UNKNOWN);
+    q.sample(-115, t);
+    t += NoiseFloor::BUCKET_MS;
+    printf("QUIET %d %d\n", q.threshold(), q.floor());   // tło -115: próg nie schodzi poniżej -100
+
+    // Tło XIAO -78..-76 z ramkami -40 w co drugim kubełku: minimum kubełka pomija ramkę.
+    NoiseFloor x(lora::CCA_RSSI_THRESHOLD_DBM, lora::CCA_RSSI_THRESHOLD_MAX_DBM, lora::CCA_FLOOR_MARGIN_DB);
+    for (int b = 0; b < 8; ++b, t += NoiseFloor::BUCKET_MS) {
+        x.sample(static_cast<int16_t>(-76 - b % 3), t);
+        if (b % 2) x.sample(-40, t + 100);
+    }
+    printf("NOISY %d %d\n", x.threshold(), x.floor());
+
+    // Stała silna nośna wypełnia całe okno: próg najwyżej -60, więc nośna -50 nadal zajmuje kanał.
+    for (int b = 0; b < 8; ++b, t += NoiseFloor::BUCKET_MS) x.sample(-50, t);
+    printf("CARRIER %d %d\n", x.threshold(), x.floor());
+
+    // Przerwa w próbkach dłuższa niż okno: stare kubełki wygasają, próg zostaje do nowych 4 kubełków.
+    t += 20 * NoiseFloor::BUCKET_MS;
+    for (int b = 0; b < 3; ++b, t += NoiseFloor::BUCKET_MS) x.sample(-90, t);
+    printf("GAP %d\n", x.threshold());
+    x.sample(-90, t);
+    printf("REFILL %d %d\n", x.threshold(), x.floor());
+    return 0;
+}
+"""
+
+
+@unittest.skipUnless(host_compiler(), "no host C++ compiler")
+class NoiseFloorTests(unittest.TestCase):
+    """The CCA threshold above the measured noise floor (cca_floor.h, radio.md „Dostęp do kanału”)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.out = build_and_run(NOISE_FLOOR_HARNESS, [])
+
+    def test_threshold_starts_at_the_profile_value_until_four_buckets(self):
+        self.assertEqual(line(self.out, "FRESH"), "FRESH -100 1")
+        self.assertEqual(line(self.out, "THREE"), "THREE -100 1")
+        self.assertEqual(line(self.out, "QUIET"), "QUIET -100 -115")
+
+    def test_floor_ignores_frames_and_follows_a_noisy_receiver(self):
+        self.assertEqual(line(self.out, "NOISY"), "NOISY -67 -77")
+
+    def test_strong_carrier_still_busy(self):
+        self.assertEqual(line(self.out, "CARRIER"), "CARRIER -60 -50")
+
+    def test_stale_buckets_keep_the_last_threshold(self):
+        self.assertEqual(line(self.out, "GAP"), "GAP -60")
+        self.assertEqual(line(self.out, "REFILL"), "REFILL -80 -90")
+
+
 @unittest.skipUnless(host_compiler(), "no host C++ compiler")
 class DisplayChunkTests(unittest.TestCase):
     """sharp.cpp: refresh() sends at most 9 pixel lines per call (bus shared with the radio on board v1, plan L6)."""

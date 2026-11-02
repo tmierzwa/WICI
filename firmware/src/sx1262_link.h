@@ -39,6 +39,7 @@
 
 #include <atomic>
 
+#include "cca_floor.h"
 #include "lora_profile.h"
 #include "radio_link.h"
 #include "rx_watch.h"
@@ -161,6 +162,7 @@ public:
     radiolink::Framing framing() const override { return radiolink::Framing::RNODE; }
     bool hasSnr() const override { return true; }
     int8_t ccaThresholdDbm() const override;
+    int16_t noiseFloorDbm() const { return noise_.floor(); }  // cca::NoiseFloor::UNKNOWN przed pomiarem
     radiolink::TxPrep prepareTx(const uint8_t* frame, size_t length) override;
     radiolink::Cad cad() override;
     bool sendPrepared(radiolink::TxTiming* timing) override;
@@ -191,6 +193,8 @@ private:
     uint16_t irqSeen_ = 0;
     int32_t offsetSteps_ = 0;
     Activity activity_;
+    // Tło szumu z próbek RSSI poza ramką i próg CCA nad nim (lora_profile.h).
+    cca::NoiseFloor noise_{lora::CCA_RSSI_THRESHOLD_DBM, lora::CCA_RSSI_THRESHOLD_MAX_DBM, lora::CCA_FLOOR_MARGIN_DB};
     std::atomic<uint32_t> rxLate_{0};
 
     // Pozycja pierścienia odbioru w tle: Frame albo Bad (zła i spóźniona ramka, jak pollRx bez zadania).

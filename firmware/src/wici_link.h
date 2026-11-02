@@ -19,7 +19,9 @@ constexpr size_t RADIO_HACK = HEADER + TAG + HOP_TAG;  // HACK as transmitted
 // epoch signature, then the sender's signature over the preceding bytes.
 constexpr size_t BEACON_SIGNED = 9 + 64;
 constexpr size_t BEACON_PAYLOAD = BEACON_SIGNED + 64;
+constexpr size_t BEACON_FRAME = HEADER + BEACON_PAYLOAD + TAG;  // 156 B on air, no pairwise tag
 constexpr uint16_t BROADCAST = 0xFFFF;
+constexpr uint32_t HACK_WAIT_MS = 600;  // a sender waits this long for the HACK after its TX
 
 enum class Type : uint8_t { DATA = 0, HACK = 1, BEACON = 2 };
 // Local scheduler intent, never read from a radio frame's untrusted envelope header.
@@ -30,6 +32,12 @@ struct Air {
     // true means the bare frame was accepted for transmission; the caller's
     // onTxDone() later reports whether it actually went out.
     virtual bool sendData(const uint8_t* frame, size_t length, TxClass traffic) = 0;
+    // Without side effects: would sendData() now accept a frame of this class
+    // that has `radioLength` bytes on air (with the pairwise tag on unicast)?
+    // Silence, a busy radio and the airtime budget are checked. A caller asks
+    // before it reserves a seq or signs a BEACON the radio would refuse;
+    // sendData() still decides.
+    virtual bool accepts(TxClass traffic, size_t radioLength) = 0;
     // Synchronous: true only if the HACK was transmitted within its deadline.
     virtual bool sendHack(const uint8_t* frame, size_t length, uint32_t receivedMs) = 0;
 };

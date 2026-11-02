@@ -963,7 +963,9 @@ void Protocol::doStatus(int64_t seq) {
 
 void Protocol::doCard(int64_t seq) {
     uint8_t key[64], lxmf[store::HASH], digest[32];
-    if (!store_.station() || !host_.identity(key, lxmf)) { rejected(seq, "not_configured"); return; }
+    // Karta stacji jest też przed pierwszą konfiguracją: tożsamość powstaje przy pierwszym starcie stosu,
+    // a klucze sąsiadów do planu sieci (priority_keys) trzeba znać przed configure. Węzeł nie ma karty.
+    if ((store_.configured() && !store_.station()) || !host_.identity(key, lxmf)) { rejected(seq, "not_configured"); return; }
     char keyHex[129], lxmfHex[2 * store::HASH + 1], fingerprint[24];
     hexstr::encode(key, sizeof(key), keyHex);
     hexstr::encode(lxmf, store::HASH, lxmfHex);
