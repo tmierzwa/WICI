@@ -172,7 +172,7 @@
  "inputs": {
   "firmware/src/annunciator.cpp": "886a97ecff74191543d3a79e503854ee1877d94c47390ff45effd1b72ee15535",
   "firmware/src/annunciator.h": "073e7057442b2c050b1394decc2b7bc26246e3ebaa6d32e6beb46b5f8b9292a9",
-  "firmware/src/beacon_check.h": "2ec751ecb64afa78fff22738fd49f160a9315ca02e47a1b471c4cb92f5eaceba",
+  "firmware/src/beacon_check.h": "2d35540fdd889aa427ffadc866b2bf4270d2ac53695b17d09a92ea9c3559890d",
   "firmware/src/beacon_check_esp32.cpp": "29fef9704c325abe465b9c88f8e52ad0b1900fc6ed7100faaaf04c32c98bc47c",
   "firmware/src/bearer.h": "5c56c6a9202c1c43ccc8968fa1f1025954c881d3b5496fe1d1bc01af786e9ad7",
   "firmware/src/board.h": "012bd0f065777331e6dff3c848d7c71a2955081810f78480136652c6edf26ac2",
@@ -227,7 +227,7 @@
   "firmware/src/lora_profile.h": "19a09123ed8d5d3ea0105aac983c484094a0880845d99ce5dce840fcdb4109b3",
   "firmware/src/loraframe.cpp": "ac18e321947f672f7c944f49559a4bdbfd7fb616fba2ae32d7345553594ec239",
   "firmware/src/loraframe.h": "8947d0c3c68f2bae3f9afdbc7fe5b165d89a341048a04b18ff40198c2200403a",
-  "firmware/src/main.cpp": "19d795f2350dd96e0bbba3cb39c6b504994772eda190a27dd74c8dbe5fe44173",
+  "firmware/src/main.cpp": "d26763a77eac07c8cf98f9294f81952b6035ca096c07013eaa078d4589315790",
   "firmware/src/measure.cpp": "d5e7bfcd8e5c0fc6ef3db1260d87cf7d426b654eaf2525cfd153f4e2a1aa3e5d",
   "firmware/src/measure.h": "01f226e1cda1ebfc3b3e89a14f725b0545ac47638014a4afa779f7900d226f67",
   "firmware/src/migration_crypto.cpp": "550133971722d578b72bc4eb279d0c2cd52268002c0a73228a5bf03507a1361d",

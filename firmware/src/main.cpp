@@ -2019,6 +2019,8 @@ void beginWici() {
         }
         if (!rootEd25519 || !plannedKey || !backupKey) {
             failure = "wici neighbor signing key missing from station card";
+        } else if (beaconcheck::REQUIRED && !beaconcheck::worker()) {
+            failure = "wici beacon check task unavailable";
         } else {
             wiciShelter = new (wiciShelterSpace) wici_radio::Shelter(memory,
                          {c.network.id, c.network.station, c.network.root,
@@ -2029,7 +2031,8 @@ void beginWici() {
             if (!wiciShelter->begin()) failure = "wici station durable state unavailable";
             else {
                 wiciShelter->onDelivery(onWiciDelivery, nullptr);
-                // Podpisy BEACON-ów sprawdza zadanie na drugim rdzeniu; bez zadania Shelter sprawdza na miejscu.
+                // Podpisy BEACON-ów sprawdza zadanie na drugim rdzeniu (wymagane w obrazach z radiem WICI-Link,
+                // wyżej); w obrazach bez zadania (symulator, testy) Shelter sprawdza na miejscu.
                 wiciShelter->useBeaconCheck(beaconcheck::worker(), wiciClockMs);
             }
         }

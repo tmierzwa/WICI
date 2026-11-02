@@ -11,10 +11,14 @@
 namespace beaconcheck {
 
 #if defined(ARDUINO_ARCH_ESP32) && defined(WICI_NO_P1_LINK)
+// Obraz z radiem WICI-Link wymaga zadania: bez niego WICI-Link nie startuje (main.cpp, beginWici), zamiast
+// sprawdzać podpisy w pętli i spóźniać HACK. Ponowny start co 10 s próbuje utworzyć zadanie jeszcze raz.
+constexpr bool REQUIRED = true;
 // Zadanie powstaje przy pierwszym wywołaniu (z pętli); nullptr, gdy nie powstało.
 wici_radio::BeaconCheck* worker();
 int32_t stackFree();  // najmniejszy zapas stosu zadania od startu w bajtach; -1 bez zadania
 #else
+constexpr bool REQUIRED = false;
 inline wici_radio::BeaconCheck* worker() { return nullptr; }
 inline int32_t stackFree() { return -1; }
 #endif
