@@ -641,6 +641,28 @@ int main() {
     upward(3, 446, 446);
     assert(moved.routes().down(7) == 3);  // learned again, via the new neighbour
 
+    // Review P1: station 7 has its planned path via 3 and a backup one via
+    // 4. A captured 4 claims 7 first and would pin the route (it HACKs and
+    // drops downlinks, so the 3-failure forget never fires); 7's genuine
+    // uplink via 3 dislodges it, and a later claim via 4 moves nothing.
+    static Memory classMemory;
+    const config::Behind classes[] = {{7, 3}, {7, 4, true}};
+    wici_hop::Relay classed(classMemory, {100, 2, 1, 1, 0}, ifac, false, rootReceiver, classes, 2);
+    assert(classed.begin());
+    uplink = incoming; uplink.payload[2] = 7;
+    const uint16_t via[] = {4, 3, 4};  // captured backup claim, genuine planned uplink, claim again
+    const uint16_t expected[] = {4, 3, 3};
+    for (uint8_t i = 0; i < 3; ++i) {
+        uplink.source = via[i];
+        uplink.sequence = static_cast<uint16_t>(450 + i); uplink.payload[8] = static_cast<uint8_t>(110 + i);
+        n = wici_link::encode(key, uplink, wire, sizeof(wire));
+        assert(classed.receiveData(wire, n, 450, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
+        assert(classed.learnPending(450) && classed.routes().down(7) == expected[i]);
+    }
+    wici_hop::Relay classedAgain(classMemory, {100, 2, 1, 1, 0}, ifac, false, rootReceiver, classes, 2);
+    assert(classedAgain.begin() && classedAgain.learnPending(451));  // after a restart: newest first, same result
+    assert(classedAgain.routes().down(7) == 3);
+
     // Round 3 (3): after a restart the hints are learned in admission order,
     // not slot order: an older frame of station 9 via 4 in slot 1 does not
     // override the newer one via 5 in slot 0.

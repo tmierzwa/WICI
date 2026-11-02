@@ -113,5 +113,13 @@ test('neighbour rows carry the stations behind each neighbour and round-trip', (
   ]);
   assert.equal(p.run(`formatPriorityKeys(${JSON.stringify(entries.slice(0, 2))})`),
     `12 ${ed} ${x} 7,8\n13 ${ed} ${x}`);
-  assert.equal(p.run(`parsePriorityKeys(${JSON.stringify(`12 ${ed} ${x} 7 extra`)})[0].ed25519`), '');
+  assert.equal(p.run(`parsePriorityKeys(${JSON.stringify(`12 ${ed} ${x} 7 9 extra`)})[0].ed25519`), '');
+  // Then the stations for which the neighbour is only a backup path (`behind_backup`), "-" = empty.
+  const backup = p.run(`parsePriorityKeys(${JSON.stringify(`12 ${ed} ${x} 7,8 9\n13 ${ed} ${x} - 7`)})`);
+  assert.deepEqual(JSON.parse(JSON.stringify(backup)), [
+    { id: 12, ed25519: ed, x25519: x, behind: [7, 8], behind_backup: [9] },
+    { id: 13, ed25519: ed, x25519: x, behind_backup: [7] },
+  ]);
+  assert.equal(p.run(`formatPriorityKeys(${JSON.stringify(backup)})`),
+    `12 ${ed} ${x} 7,8 9\n13 ${ed} ${x} - 7`);
 });

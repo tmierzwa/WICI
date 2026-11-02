@@ -114,6 +114,17 @@ class ConfigDocTest(unittest.TestCase):
         for bad in ([5], [4], [2], [6, 6], [0], ["6"], 6):
             self.assertEqual(self.fields(dict(doc, priority_keys=[dict(neighbor, behind=bad)])),
                              ["priority_keys.0.behind"], bad)
+            self.assertEqual(self.fields(dict(doc, priority_keys=[dict(neighbor, behind_backup=bad)])),
+                             ["priority_keys.0.behind_backup"], bad)
+        # `behind_backup`: stations for which the neighbour lies only on a backup path; the lists of one
+        # neighbour do not overlap and a station's planned path runs through one neighbour.
+        second = dict(neighbor, id=7)
+        self.assertEqual(self.fields(dict(doc, priority_keys=[dict(neighbor, behind=[6], behind_backup=[8]),
+                                                              dict(second, behind_backup=[6])])), [])
+        self.assertEqual(self.fields(dict(doc, priority_keys=[dict(neighbor, behind=[6], behind_backup=[6])])),
+                         ["priority_keys.0.behind_backup"])
+        self.assertEqual(self.fields(dict(doc, priority_keys=[dict(neighbor, behind=[6]), dict(second, behind=[6])])),
+                         ["priority_keys.1.behind"])
 
     def test_limits_follow_the_firmware(self):
         self.assertEqual(self.fields(station_doc(addresses=[])), ["addresses"])

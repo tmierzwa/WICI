@@ -284,11 +284,28 @@ class CrossLanguageEnvelope(unittest.TestCase):
             (dict(station, receiver=dict(station["receiver"], backup=weak_backup)), "receiver",
              ["receiver.backup.key"]),
         )
-        # Plan-bound down routes: optional `behind` list per neighbour, validated identically.
+        # Plan-bound down routes: optional `behind` (planned path) and `behind_backup` (backup path only)
+        # lists per neighbour, validated identically.
         behind = "priority_keys", ["priority_keys.0.behind"]
         second = {"id": 5, "ed25519": honest.hex(), "x25519": "ef" * 32}
         cases += (
-            (dict(station, priority_keys=[dict(neighbour, behind=[5, 6, 7]), dict(second, behind=[6])]), "ok", []),
+            (dict(station, priority_keys=[dict(neighbour, behind=[5, 6, 7]), dict(second, behind_backup=[6])]), "ok", []),
+            (dict(station, priority_keys=[dict(neighbour, behind_backup=[6]), dict(second, behind=[6])]), "ok", []),
+            (dict(station, priority_keys=[dict(neighbour, behind=[6], behind_backup=[7, 8])]), "ok", []),
+            # The planned path of a station runs through one neighbour; the two lists do not overlap.
+            (dict(station, priority_keys=[dict(neighbour, behind=[6]), dict(second, behind=[6])]),
+             "priority_keys", ["priority_keys.1.behind"]),
+            (dict(station, priority_keys=[dict(neighbour, behind=[6], behind_backup=[6])]),
+             "priority_keys", ["priority_keys.0.behind_backup"]),
+            (dict(station, priority_keys=[dict(neighbour, behind_backup=[7, 7])]),
+             "priority_keys", ["priority_keys.0.behind_backup"]),
+            (dict(station, priority_keys=[dict(neighbour, behind_backup=[1])]),
+             "priority_keys", ["priority_keys.0.behind_backup"]),
+            (dict(station, priority_keys=[dict(neighbour, behind_backup=6)]),
+             "priority_keys", ["priority_keys.0.behind_backup"]),
+            (dict(station, priority_keys=[dict(neighbour, behind=list(range(5, 69)),
+                                               behind_backup=list(range(100, 165)))]),
+             "priority_keys", ["priority_keys"]),                                    # 129 > BEHIND_MAX, both lists
             (dict(station, priority_keys=[dict(neighbour, behind=[])]), "ok", []),
             (dict(station, priority_keys=[dict(neighbour, behind=list(range(5, 125)))]), "ok", []),
             (dict(station, priority_keys=[dict(neighbour, behind=[1])]), *behind),        # the neighbour itself

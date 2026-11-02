@@ -284,12 +284,16 @@ const char* parse(Source& source, uint32_t size, const char* profile, Config& ou
         size_t count = 0;
         if (!elements(r, fields[PRIORITY_KEYS], entries, PRIORITY_KEYS_MAX, count) ||
             !count || count > PRIORITY_KEYS_MAX) return NAMES[PRIORITY_KEYS];
-        static const char* const keys[] = {"id", "ed25519", "x25519", "behind"};
         for (size_t i = 0; i < count; ++i) {
-            json::Value behind;
+            json::Value lists[2];   // `behind` (droga planowa), `behind_backup` (tylko zapasowa); opcjonalne
+            static const char* const names[2] = {"behind", "behind_backup"};
+            const char* keys[5] = {"id", "ed25519", "x25519"};
+            size_t keyCount = 3;
             if (!parseValue(r, entries[i], buffer, v)) return NAMES[PRIORITY_KEYS];
-            const bool hasBehind = json::field(v, "behind", behind);  // opcjonalne, ostatnie w keys
-            if (!onlyFields(v, keys, hasBehind ? 4 : 3) ||
+            bool has[2];
+            for (size_t l = 0; l < 2; ++l)
+                if ((has[l] = json::field(v, names[l], lists[l]))) keys[keyCount++] = names[l];
+            if (!onlyFields(v, keys, keyCount) ||
                 !number(v, "id", out.priorityKeys[i].station) ||
                 !json::hexField(v, "ed25519", out.priorityKeys[i].ed25519, 32) ||
                 !json::hexField(v, "x25519", out.priorityKeys[i].x25519, 32) ||
@@ -299,23 +303,28 @@ const char* parse(Source& source, uint32_t size, const char* profile, Config& ou
                 out.priorityKeys[i].station == out.network.receiverBackup) return NAMES[PRIORITY_KEYS];
             for (size_t j = 0; j < i; ++j)
                 if (out.priorityKeys[j].station == out.priorityKeys[i].station) return NAMES[PRIORITY_KEYS];
-            // `behind`: stacje, które plan sieci stawia za tym sąsiadem (drogi w dół, wici_hop.h).
-            const size_t stations = hasBehind ? json::count(behind) : 0;
-            if (hasBehind && (behind.kind != json::Kind::ARRAY || out.behindCount + stations > BEHIND_MAX))
-                return NAMES[PRIORITY_KEYS];
+            // Stacje, które plan sieci stawia za tym sąsiadem (drogi w dół, wici_hop.h): `behind`, gdy
+            // sąsiad leży na planowej drodze stacji, `behind_backup`, gdy tylko na zapasowej. Obie listy
+            // razem bez powtórzeń, a planowa droga stacji prowadzi przez jednego sąsiada.
             const size_t first = out.behindCount;
-            for (size_t k = 0; k < stations; ++k) {
-                json::Value item;
-                int64_t n;
-                if (!json::item(behind, k, item) || !json::integer(item, n) || n < 1 || n > 0xFFFE)
+            for (size_t l = 0; l < 2; ++l) {
+                const size_t stations = has[l] ? json::count(lists[l]) : 0;
+                if (has[l] && (lists[l].kind != json::Kind::ARRAY || out.behindCount + stations > BEHIND_MAX))
                     return NAMES[PRIORITY_KEYS];
-                const uint16_t station = static_cast<uint16_t>(n);
-                if (station == out.priorityKeys[i].station || station == out.network.station ||
-                    station == out.network.receiverMain || station == out.network.receiverBackup)
-                    return NAMES[PRIORITY_KEYS];
-                for (size_t j = first; j < out.behindCount; ++j)
-                    if (out.behind[j].station == station) return NAMES[PRIORITY_KEYS];
-                out.behind[out.behindCount++] = {station, out.priorityKeys[i].station};
+                for (size_t k = 0; k < stations; ++k) {
+                    json::Value item;
+                    int64_t n;
+                    if (!json::item(lists[l], k, item) || !json::integer(item, n) || n < 1 || n > 0xFFFE)
+                        return NAMES[PRIORITY_KEYS];
+                    const uint16_t station = static_cast<uint16_t>(n);
+                    if (station == out.priorityKeys[i].station || station == out.network.station ||
+                        station == out.network.receiverMain || station == out.network.receiverBackup)
+                        return NAMES[PRIORITY_KEYS];
+                    for (size_t j = 0; j < out.behindCount; ++j)
+                        if (out.behind[j].station == station && (j >= first || (!l && !out.behind[j].backup)))
+                            return NAMES[PRIORITY_KEYS];
+                    out.behind[out.behindCount++] = {station, out.priorityKeys[i].station, l == 1};
+                }
             }
         }
         out.priorityKeyCount = static_cast<uint8_t>(count);

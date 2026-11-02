@@ -263,6 +263,31 @@ int main() {
     wici_route::Table replanned(replanMemory, config, nullptr, 0, newPlan, 1);
     assert(replanned.begin() && replanned.down(10) == wici_link::BROADCAST && replanned.down(5) == 5);
 
+    // Review P1: station 20 has its planned path via 5 and a backup one via
+    // 6. A captured 6 that claims 20 first gives way to the planned path;
+    // a backup claim never moves a planned route; equal classes never
+    // replace each other (21 is backup-only behind both 6 and 7).
+    static Memory classMemory;
+    const config::Behind classes[] = {{20, 5}, {20, 6, true}, {21, 6, true}, {21, 7, true}};
+    wici_route::Table classed(classMemory, config, nullptr, 0, classes, 4);
+    assert(classed.begin());
+    assert(classed.plan(20, 5) == wici_route::Table::Plan::PLANNED &&
+           classed.plan(20, 6) == wici_route::Table::Plan::BACKUP &&
+           classed.plan(20, 7) == wici_route::Table::Plan::NONE && classed.planned(20, 6) &&
+           classed.plan(6, 6) == wici_route::Table::Plan::PLANNED);
+    assert(classed.learn(20, 6) && classed.down(20) == 6);   // the backup claim came first
+    assert(classed.learn(20, 5) && classed.down(20) == 5);   // the planned path dislodges it
+    classMemory.writesLeft = 0;
+    assert(!classed.learn(20, 6) && classed.ready() && classed.down(20) == 5);  // never back, no write
+    assert(!classed.learn(20, 7) && classed.ready());                           // outside the plan
+    classMemory.writesLeft = -1;
+    assert(classed.learn(21, 6) && !classed.learn(21, 7) && classed.down(21) == 6);  // equal: no replace
+    wici_route::Table classedAgain(classMemory, config, nullptr, 0, classes, 4);
+    assert(classedAgain.begin() && classedAgain.down(20) == 5 && classedAgain.down(21) == 6);
+    assert(classedAgain.forget(20, 5) && classedAgain.learn(20, 6) && classedAgain.down(20) == 6);  // after forget
+    assert(classedAgain.learn(20, 6, true) && classedAgain.learn(20, 5) && classedAgain.down(20) == 5);
+    assert(classedAgain.learn(20, 6, true) && classedAgain.down(20) == 6);  // the root replaces regardless
+
     // Review 5: a replayed BEACON (same or older seq) is refused: it can
     // neither pull the station back to a dead planned parent nor keep it fresh.
     static Memory replayMemory;

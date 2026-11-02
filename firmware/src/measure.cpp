@@ -354,7 +354,7 @@ bool Bench::linkSendHack(const uint8_t* frame, size_t length, uint32_t receivedM
     // shape. The caller must have generated its MAC with the network key.
     if (!rawLora_ || !validRawHack(frame, length) || !p1Ready || !journal_ || !journal_->ok() ||
         silence || emcActive_ || prep || cwActive_ || pktActive_ || rxMode_ != RxMode::LINK) {
-        ++hack_.refused;
+        refuseHack(HACK_STATE);
         return false;
     }
     const uint32_t txMs = radio_.frameAirMs(length);
@@ -362,20 +362,21 @@ bool Bench::linkSendHack(const uint8_t* frame, size_t length, uint32_t receivedM
     // a HACK that cannot meet the deadline. Hardware timing still needs D21.
     if (txMs >= 200 || millis() - receivedMs > 200 - txMs - 20) { ++hack_.late; return false; }
     platform::RadioLock lock(RADIO_LOCK_WAIT_MS);
-    if (!lock.held()) { ++hack_.refused; return false; }
+    if (!lock.held()) { refuseHack(HACK_LOCK); return false; }
     if (millis() - receivedMs > 200 - txMs - 20) { ++hack_.late; return false; }
     const uint32_t remaining = debtRemainingMs();
     const radiolink::TxPrep prepared = radio_.prepareTx(frame, length);
     if (prepared != radiolink::TxPrep::Ready) {
         if (prepared != radiolink::TxPrep::RxPending) enterRx(RxMode::LINK, 0);
-        ++hack_.refused;
+        refuseHack(prepared == radiolink::TxPrep::RxPending ? HACK_RX_PENDING : HACK_PREP);
         return false;
     }
     rxMode_ = RxMode::NONE;
     const radiolink::Cad cad = radio_.cad();
     if (cad != radiolink::Cad::Free || millis() - receivedMs > 200 - txMs) {
         enterRx(RxMode::LINK, 0);
-        ++(cad != radiolink::Cad::Free ? hack_.refused : hack_.late);
+        if (cad != radiolink::Cad::Free) refuseHack(HACK_CAD);
+        else ++hack_.late;
         return false;
     }
     const uint32_t extra = txMs * (radiolink::DEBT_FACTOR + 1);
@@ -384,7 +385,7 @@ bool Bench::linkSendHack(const uint8_t* frame, size_t length, uint32_t receivedM
     if (extra > maxDebtMs() || remaining > maxDebtMs() - extra ||
         !journal_->writeDebt(remaining + extra, uptimeS())) {
         enterRx(RxMode::LINK, 0);
-        ++hack_.refused;
+        refuseHack(HACK_DEBT);
         return false;
     }
     debtPending_ = true;
@@ -403,7 +404,7 @@ bool Bench::linkSendHack(const uint8_t* frame, size_t length, uint32_t receivedM
         if (endMs > hack_.maxMs) hack_.maxMs = endMs;
         hack_.sumMs += endMs;
         if (endMs > 200) ++hack_.over;
-    } else ++hack_.refused;
+    } else refuseHack(HACK_TX);
     diagLine("{\"hack\":\"%s\",\"len\":%u,\"end_ms\":%lu}\n", sent ? "sent" : "tx error",
              static_cast<unsigned>(length), static_cast<unsigned long>(endMs));
     ++link_.txFragments;
@@ -1030,11 +1031,20 @@ const char* Bench::txStateName() const {
 
 void Bench::printHack(const char* tail) {
     Serial.printf("{\"hack_sent\":%lu,\"hack_late\":%lu,\"hack_refused\":%lu,\"hack_over_200ms\":%lu,"
-                  "\"end_ms_last\":%lu,\"end_ms_max\":%lu,\"end_ms_mean\":%lu%s}\n",
+                  "\"end_ms_last\":%lu,\"end_ms_max\":%lu,\"end_ms_mean\":%lu",
                   static_cast<unsigned long>(hack_.sent), static_cast<unsigned long>(hack_.late),
                   static_cast<unsigned long>(hack_.refused), static_cast<unsigned long>(hack_.over),
                   static_cast<unsigned long>(hack_.lastMs), static_cast<unsigned long>(hack_.maxMs),
-                  static_cast<unsigned long>(hack_.sent ? hack_.sumMs / hack_.sent : 0), tail ? tail : "");
+                  static_cast<unsigned long>(hack_.sent ? hack_.sumMs / hack_.sent : 0));
+    // Osobne wywołania: Print::printf rdzenia nRF52 formatuje do bufora 256 B (zob. printRns w main.cpp).
+    const uint32_t* r = hack_.refusedBy;
+    Serial.printf(",\"refused_by\":{\"state\":%lu,\"lock\":%lu,\"rx_pending\":%lu,\"prep\":%lu,\"cad\":%lu,"
+                  "\"debt\":%lu,\"tx\":%lu}",
+                  static_cast<unsigned long>(r[HACK_STATE]), static_cast<unsigned long>(r[HACK_LOCK]),
+                  static_cast<unsigned long>(r[HACK_RX_PENDING]), static_cast<unsigned long>(r[HACK_PREP]),
+                  static_cast<unsigned long>(r[HACK_CAD]), static_cast<unsigned long>(r[HACK_DEBT]),
+                  static_cast<unsigned long>(r[HACK_TX]));
+    Serial.printf("%s}\n", tail ? tail : "");
 }
 
 void Bench::printLink() {

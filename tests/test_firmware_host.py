@@ -314,7 +314,8 @@ void dumpConfig(const config::Config& c) {
     if (c.network.id) printf("conf network %u %u %u %u %u %u %u ttl=%u\n", c.network.id,
                              c.network.station, c.network.root, c.network.parent, c.network.backupParent,
                              c.network.receiverMain, c.network.receiverBackup, c.network.ttl);
-    for (size_t i = 0; i < c.behindCount; ++i) printf("conf behind %u via %u\n", c.behind[i].station, c.behind[i].via);
+    for (size_t i = 0; i < c.behindCount; ++i)
+        printf("conf behind %u via %u%s\n", c.behind[i].station, c.behind[i].via, c.behind[i].backup ? " backup" : "");
     for (size_t i = 0; i < c.addressCount; ++i) printf("conf address %s\n", c.addresses[i]);
     for (size_t i = 0; i < c.phraseCount; ++i) printf("conf phrase %s|%s|%s\n", c.phrases[i][0], c.phrases[i][1], c.phrases[i][2]);
     printf("conf ifac ");
@@ -1630,13 +1631,22 @@ class HostUnitTests(unittest.TestCase):
         for ttl in (0, 16, True, "7"):
             self.assertEqual(self.parse(dict(keys, network=dict(network, ttl=ttl))), ["parse err network"])
         planned = self.parse(dict(doc, priority_keys=[{"id": 5, "ed25519": "ab" * 32, "x25519": "cd" * 32,
-                                                       "behind": [7, 8]}]))
+                                                       "behind": [7, 8], "behind_backup": [9]},
+                                                      {"id": 6, "ed25519": "ab" * 32, "x25519": "cd" * 32,
+                                                       "behind_backup": [7], "behind": [9]}]))
         self.assertEqual([line for line in planned if line.startswith("conf behind")],
-                         ["conf behind 7 via 5", "conf behind 8 via 5"])
-        for behind in ([5], [4], [7, 7], "7"):
-            self.assertEqual(self.parse(dict(doc, priority_keys=[{"id": 5, "ed25519": "ab" * 32, "x25519": "cd" * 32,
-                                                                  "behind": behind}])),
-                             ["parse err priority_keys"], behind)
+                         ["conf behind 7 via 5", "conf behind 8 via 5", "conf behind 9 via 5 backup",
+                          "conf behind 9 via 6", "conf behind 7 via 6 backup"])
+        for name in ("behind", "behind_backup"):
+            for behind in ([5], [4], [7, 7], "7"):
+                self.assertEqual(self.parse(dict(doc, priority_keys=[{"id": 5, "ed25519": "ab" * 32,
+                                                                      "x25519": "cd" * 32, name: behind}])),
+                                 ["parse err priority_keys"], (name, behind))
+        # The two lists of one neighbour do not overlap; a station's planned path runs through one neighbour.
+        for entries in ([{"behind": [7], "behind_backup": [7]}],
+                        [{"behind": [7]}, {"behind": [7]}]):
+            pk = [dict({"id": 5 + i, "ed25519": "ab" * 32, "x25519": "cd" * 32}, **e) for i, e in enumerate(entries)]
+            self.assertEqual(self.parse(dict(doc, priority_keys=pk)), ["parse err priority_keys"], entries)
         self.assertEqual(self.parse(dict(doc, priority_keys=[{"id": 5, "ed25519": "ab" * 32}])),
                          ["parse err priority_keys"])
         self.assertEqual(self.parse(dict(doc, priority_keys=[])), ["parse err priority_keys"])

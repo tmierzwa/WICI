@@ -18,7 +18,9 @@ ADDRESSES, ADDRESS_MAX = 8, 64
 PHRASES, PHRASE_MAX = 11, 96
 STATIONS_MAX = 1000
 PRIORITY_KEYS_MAX = 50
-BEHIND_MAX = 128    # wpisy `behind` we wszystkich `priority_keys` razem (firmware/src/config.h)
+BEHIND_MAX = 128    # wpisy `behind` i `behind_backup` we wszystkich `priority_keys` razem (firmware/src/config.h)
+# Stacje za sąsiadem: na ich planowej drodze (`behind`) albo tylko na zapasowej (`behind_backup`).
+BEHIND_LISTS = ("behind", "behind_backup")
 VALUE_MAX = 640     # pole albo element listy w RAM stacji, z zapasem na koniec napisu (firmware/src/config.cpp)
 TTL_DEFAULT = 7     # `network.ttl`: limit skoków własnych ramek WICI-Link, 1–15 (firmware/src/config.h)
 PROFILES = ("lora-sf7", "p1")
@@ -176,24 +178,35 @@ def check(doc):
             problems.append(("priority_keys", "niepoprawna lista kluczy sąsiadów"))
         else:
             behind_total = 0
+            planned = set()     # stacje z planową drogą przez wcześniejszego sąsiada
             for i, entry in enumerate(priority_keys):
                 number = entry.get("id") if isinstance(entry, dict) else None
                 own = (network.get("station"), network.get("receiver_main"), network.get("receiver_backup")) \
                     if isinstance(network, dict) else ()
-                behind = entry.get("behind", []) if isinstance(entry, dict) else None
-                if (not isinstance(entry, dict) or set(entry) - {"behind"} != {"id", "ed25519", "x25519"} or
+                lists = {name: entry.get(name, []) for name in BEHIND_LISTS} if isinstance(entry, dict) else {}
+                if (not isinstance(entry, dict) or set(entry) - set(BEHIND_LISTS) != {"id", "ed25519", "x25519"} or
                         not _number(number) or not _key(entry.get("ed25519")) or
                         not _key(entry.get("x25519")) or number in seen or number in own):
                     problems.append((f"priority_keys.{i}", "invalid or repeated station number or public key"))
-                elif (not isinstance(behind, list) or
-                      any(not _number(s) or s == number or s in own for s in behind) or
-                      len(set(behind)) != len(behind) or
-                      len(json.dumps(entry, separators=(",", ":")).encode()) >= VALUE_MAX):
-                    problems.append((f"priority_keys.{i}.behind",
-                                     "stacje za sąsiadem: różne numery, inne niż sąsiad, ta stacja i odbiorcy"))
-                else:
-                    seen.add(number)
-                    behind_total += len(behind)
+                    continue
+                seen.add(number)
+                bad = [name for name, stations in lists.items()
+                       if not isinstance(stations, list) or
+                       any(not _number(s) or s == number or s in own for s in stations) or
+                       len(set(stations)) != len(stations)]
+                if not bad and set(lists["behind"]) & set(lists["behind_backup"]):
+                    bad = ["behind_backup"]
+                if not bad and set(lists["behind"]) & planned:
+                    bad = ["behind"]
+                if not bad and len(json.dumps(entry, separators=(",", ":")).encode()) >= VALUE_MAX:
+                    bad = [next(name for name in BEHIND_LISTS if name in entry)]
+                for name in bad:
+                    problems.append((f"priority_keys.{i}.{name}",
+                                     "stacje za sąsiadem: różne numery w obu listach, inne niż sąsiad, ta stacja "
+                                     "i odbiorcy; planowa droga stacji przez jednego sąsiada"))
+                if not bad:
+                    planned |= set(lists["behind"])
+                    behind_total += len(lists["behind"]) + len(lists["behind_backup"])
             if behind_total > BEHIND_MAX:
                 problems.append(("priority_keys", f"najwyżej {BEHIND_MAX} stacji za sąsiadami razem"))
     if role != "stacja":

@@ -29,7 +29,7 @@ Zasada: **nośnik niczego nie gwarantuje aplikacji poza próbą dostarczenia baj
 
 Każda stacja i każda tożsamość odbiorcy (główna i zapasowa) ma statyczną parę kluczy wygenerowaną w urządzeniu przy przygotowaniu. Koperta używa pierwszych 32 B (X25519) istniejącego klucza prywatnego i publicznego tożsamości Reticulum; HKDF z etykietą „WICI env v1” oddziela klucz koperty od kluczy stosu. Klucz publiczny trafia na kartę stacji albo kartę odbiorcy ([protokół USB](usb-protocol.md)); w karcie numerowanej jest też jawnie podany jako `x25519`, równy pierwszym 32 B pełnego klucza `key`. Kluczy nie przyjmuje się przez radio (bez zmian względem D08).
 
-Numerowany dokument `configure` nadaje `net_id` sieci i niepowtarzalny numer u16 stacji oraz obu tożsamości odbiorcy (`network`); karta odbiorcy wiąże numer, `net_id` i pełny klucz, a `priority_keys` podaje klucze Ed25519 i X25519 sąsiadów oraz, opcjonalnie, stacje, które plan sieci stawia za każdym z nich (`behind`, [drogi w dół](wici-link.md#ruch-w-górę-i-w-dół)). Stacja i przygotowanie na laptopie (`configdoc.py`) odrzucają dokument, w którym którykolwiek klucz X25519 albo Ed25519 karty odbiorcy lub `priority_keys` ma mały rząd (lista w `config.cpp`, `SMALL_ORDER`; bit 255 pomijany): taki klucz X25519 daje zerowy wspólny sekret, a z takim kluczem Ed25519 podrobiony podpis przechodzi dla każdej wiadomości. Rejestr kart na stanowisku odrzuca duplikat numeru z innym kluczem. Konfiguracja bez `network` zachowuje 16-bajtowe adresy Reticulum i nie używa koperty.
+Numerowany dokument `configure` nadaje `net_id` sieci i niepowtarzalny numer u16 stacji oraz obu tożsamości odbiorcy (`network`); karta odbiorcy wiąże numer, `net_id` i pełny klucz, a `priority_keys` podaje klucze Ed25519 i X25519 sąsiadów oraz, opcjonalnie, stacje, które plan sieci stawia za każdym z nich: na ich planowej drodze (`behind`) albo tylko na zapasowej (`behind_backup`, [drogi w dół](wici-link.md#ruch-w-górę-i-w-dół)). Stacja i przygotowanie na laptopie (`configdoc.py`) odrzucają dokument, w którym którykolwiek klucz X25519 albo Ed25519 karty odbiorcy lub `priority_keys` ma mały rząd (lista w `config.cpp`, `SMALL_ORDER`; bit 255 pomijany): taki klucz X25519 daje zerowy wspólny sekret, a z takim kluczem Ed25519 podrobiony podpis przechodzi dla każdej wiadomości. Rejestr kart na stanowisku odrzuca duplikat numeru z innym kluczem. Konfiguracja bez `network` zachowuje 16-bajtowe adresy Reticulum i nie używa koperty.
 
 Klucz pary nadawca A → odbiorca B:
 
@@ -171,7 +171,8 @@ Wspólny limit obejmuje również K1. K1 dostaje jednoadresowa ramka z kopertą
 do odbiorcy albo od niego, od sąsiada uwierzytelnionego tagiem pary (WICI-Link
 v3 nie ma podpisu pochodzenia na DATA, D21 wariant D). Dwa miejsca są
 zarezerwowane dla K1, a jeden sąsiad może zająć najwyżej jedno miejsce K1.
-Drogi w dół przekaźnik i root uczą się tylko według planu sieci (`behind`). Przy
+Drogi w dół przekaźnik i root uczą się tylko według planu sieci (`behind`,
+`behind_backup`), a u przekaźnika droga planowa wypiera zapasową. Przy
 czekającym K1 limit 25% dotyczy zachowawczo całego tranzytu i BEACON-ów.
 
 Pozostałe do zamknięcia D21: sprzętowe próby rozsyłania awaryjnego, pomiar

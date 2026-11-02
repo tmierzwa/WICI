@@ -109,11 +109,17 @@ struct LinkCounters {
 // HACK path (Bench::linkSendHack) for the D21 200 ms trial: HACKs sent, refused at the deadline, refused
 // otherwise (state, busy channel, debt limit, journal) and the time from the end of the received DATA (the
 // receive task's timestamp) to TxDone of the HACK, in ms of the MCU clock: last, largest, sum (mean = sum /
-// sent) and the number of HACKs that ended after 200 ms.
+// sent) and the number of HACKs that ended after 200 ms. `refusedBy` splits `refused` by reason:
+// STATE frame shape or bench state (link, journal, silence, preparation, EMC, test TX, not in link RX),
+// LOCK radio lock not taken in time, RX_PENDING a frame being received or unread in the chip, PREP other
+// prepareTx failure, CAD busy channel, DEBT debt limit or failed debt journal write, TX failed send.
+enum HackRefusal : uint8_t { HACK_STATE, HACK_LOCK, HACK_RX_PENDING, HACK_PREP, HACK_CAD, HACK_DEBT, HACK_TX,
+                             HACK_REFUSALS };
 struct HackStats {
     uint32_t sent = 0;
     uint32_t late = 0;
     uint32_t refused = 0;
+    uint32_t refusedBy[HACK_REFUSALS] = {};
     uint32_t over = 0;
     uint32_t lastMs = 0;
     uint32_t maxMs = 0;
@@ -289,6 +295,7 @@ private:
     bool rawLora_ = false;
     LinkCounters link_;
     HackStats hack_;
+    void refuseHack(HackRefusal reason) { ++hack_.refused; ++hack_.refusedBy[reason]; }
 
     // Nadawanie łącza: oczekiwanie na dług, CCA, odroczenie, seria ramek.
     enum class TxState : uint8_t { IDLE, WAIT_DEBT, CCA, BACKOFF, SEND };

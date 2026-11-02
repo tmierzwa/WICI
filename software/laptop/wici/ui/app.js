@@ -468,21 +468,30 @@ const field = (name) => document.querySelector(`[name="${name}"]`);
 function role() { return document.querySelector('input[name="role"]:checked').value; }
 
 // One neighbour per line: number, Ed25519, X25519 and optionally the stations the network
-// plan places behind it, comma-separated ("12 <ed25519> <x25519> 7,8"). Malformed parts
+// plan places behind it, comma-separated: first those whose planned path runs through it
+// (`behind`), then those for which it is only a backup path (`behind_backup`), "-" for an
+// empty list ("12 <ed25519> <x25519> 7,8 9", "13 <ed25519> <x25519> - 7"). Malformed parts
 // become empty or null so the station-side check reports them on that line.
 function parsePriorityKeys(text) {
   const number = (s) => /^\d+$/.test(s) ? Number(s) : null;
+  const list = (s) => s === "-" ? [] : s.split(",").map(number);
   return text.trim().split(/\n/).map((line) => line.trim()).filter(Boolean).map((line) => {
-    const [id, ed25519, x25519, behind, ...extra] = line.split(/\s+/);
+    const [id, ed25519, x25519, behind, backup, ...extra] = line.split(/\s+/);
     const entry = { id: number(id), ed25519: extra.length ? "" : (ed25519 || ""), x25519: x25519 || "" };
-    if (behind !== undefined) entry.behind = behind.split(",").map(number);
+    if (behind !== undefined && behind !== "-") entry.behind = list(behind);
+    if (backup !== undefined && backup !== "-") entry.behind_backup = list(backup);
     return entry;
   });
 }
 
 function formatPriorityKeys(entries) {
-  return entries.map((entry) => [entry.id, entry.ed25519, entry.x25519,
-    ...(entry.behind && entry.behind.length ? [entry.behind.join(",")] : [])].join(" ")).join("\n");
+  const list = (stations) => stations && stations.length ? stations.join(",") : "-";
+  return entries.map((entry) => {
+    const backup = entry.behind_backup && entry.behind_backup.length;
+    const lists = backup ? [list(entry.behind), list(entry.behind_backup)] :
+      entry.behind && entry.behind.length ? [list(entry.behind)] : [];
+    return [entry.id, entry.ed25519, entry.x25519, ...lists].join(" ");
+  }).join("\n");
 }
 
 function readForm() {

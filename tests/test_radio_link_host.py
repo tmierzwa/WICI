@@ -2694,8 +2694,10 @@ class LoraBenchTests(unittest.TestCase):
         # HACK statistics (console HACK): two sent, the 201 ms and the slow-journal HACK late, the rest
         # refused (silence, malformed, untagged, v2, busy CAD, failed and too slow debt write, full debt).
         # The model's TxDone comes at once, so the end times are 0 ms here; on the board they include the airtime.
+        # refused_by splits them: 4 state (silence, malformed, untagged, v2), 1 busy CAD, 2 debt (failed write, full).
         self.assertEqual(line(self.out, "HACK_STATS"), 'HACK_STATS {"hack_sent":2,"hack_late":2,"hack_refused":7,'
-                         '"hack_over_200ms":0,"end_ms_last":0,"end_ms_max":0,"end_ms_mean":0}')
+                         '"hack_over_200ms":0,"end_ms_last":0,"end_ms_max":0,"end_ms_mean":0,'
+                         '"refused_by":{"state":4,"lock":0,"rx_pending":0,"prep":0,"cad":1,"debt":2,"tx":0}}')
 
     def test_transmit_order_debt_window_cad_debt_write_frames_receive(self):
         # The debt in the journal at each step: 0 up to the free CAD, 12 x (419 + 419) ms from frame 1 on.
