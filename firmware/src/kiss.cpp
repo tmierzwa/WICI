@@ -74,8 +74,7 @@ void Port::endFrame() {
         if (tooLarge_) { ++counters_.rxTooLarge; return; }
         if (!length_) return;
         if (target_ < 0) { ++counters_.rxDropped; return; }
-        lengths_[target_] = static_cast<uint16_t>(length_);
-        commands_[target_] = static_cast<uint8_t>(command_);
+        lengths_[target_] = static_cast<uint16_t>(length_ | (static_cast<size_t>(command_) << COMMAND_SHIFT));
         ++count_;
         ++counters_.fromComputer;
         if (flowControl_) {
@@ -97,8 +96,8 @@ bool Port::peek(const uint8_t*& data, size_t& length) const {
 bool Port::peek(const uint8_t*& data, size_t& length, uint8_t& command) const {
     if (!count_) return false;
     data = slots_[head_];
-    length = lengths_[head_];
-    command = commands_[head_];
+    length = lengths_[head_] & LENGTH_MASK;
+    command = static_cast<uint8_t>(lengths_[head_] >> COMMAND_SHIFT);
     return true;
 }
 

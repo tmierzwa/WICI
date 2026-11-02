@@ -90,8 +90,12 @@ private:
     bool hasValue_ = false;
     // Bufor pakietów od komputera.
     uint8_t slots_[RX_SLOTS][MTU] = {};
+    // Długość pakietu w 12 dolnych bitach, bajt polecenia (najwyżej 0x0F) w 4 górnych: bez osobnej tablicy,
+    // bo port USB węzła OSP ma stałą rezerwę RAM (firmware/tools/core_boards.py).
+    static constexpr unsigned COMMAND_SHIFT = 12;
+    static constexpr uint16_t LENGTH_MASK = (1u << COMMAND_SHIFT) - 1;
+    static_assert(MTU <= LENGTH_MASK, "długość pakietu w 12 bitach");
     uint16_t lengths_[RX_SLOTS] = {};
-    uint8_t commands_[RX_SLOTS] = {};
     size_t head_ = 0;
     size_t count_ = 0;
     // Bufor bajtów do komputera.

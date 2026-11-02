@@ -85,8 +85,8 @@
  ],
  "outputs": {
   "wici-station.mjs": {
-   "sha256": "5f804864be3a1d8486ce132eedd1eaa78d7099e2d57118315a73a6bb9f0fcc52",
-   "bytes": 775377,
+   "sha256": "88cf6e21d930851c2a1e930552815d97b45d7677a4dac943f82a1d4676f7b169",
+   "bytes": 775385,
    "sources": [
     "firmware/src/annunciator.cpp",
     "firmware/src/beacon_check_esp32.cpp",
@@ -222,8 +222,8 @@
   "firmware/src/jsonlite.cpp": "7eebacaa516a78222201ce423010620955c9a82cad887d9a41bf81be07a62e5f",
   "firmware/src/jsonlite.h": "5a5386aba27732b6862b1ac433caaffbcf461e3511113be16f755598a8476192",
   "firmware/src/jsonprint.h": "592f08bb1368e14acec106279274d1d29402c751846f4b1de3be74a32fd5de35",
-  "firmware/src/kiss.cpp": "f93f2c28b8607cb885ece1a74b97e23de325699ef8c3f3a2d8ace02b4176501a",
-  "firmware/src/kiss.h": "aa28847c1c8c5acd373ef47840db7282b37402939a93d6bdb1508997a0d093a7",
+  "firmware/src/kiss.cpp": "119329a9d931f8ee21eb355e495242af0cdb5d311aa354f88b0a6ea59f33e6d4",
+  "firmware/src/kiss.h": "b950f140ddad0d6d6e94b42f1f2617e76f2eb1fe3f4fa897acbd25e7404a9ece",
   "firmware/src/lora_profile.h": "19a09123ed8d5d3ea0105aac983c484094a0880845d99ce5dce840fcdb4109b3",
   "firmware/src/loraframe.cpp": "ac18e321947f672f7c944f49559a4bdbfd7fb616fba2ae32d7345553594ec239",
   "firmware/src/loraframe.h": "8947d0c3c68f2bae3f9afdbc7fe5b165d89a341048a04b18ff40198c2200403a",
