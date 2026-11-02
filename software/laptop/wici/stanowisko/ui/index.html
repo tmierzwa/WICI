@@ -19,6 +19,7 @@
   <div id="who"></div>
 </header>
 <main>
+  <p id="lost" class="banner banner-alarm" role="alert" hidden>BRAK POŁĄCZENIA Z APLIKACJĄ STANOWISKA. To, co widać niżej, może być nieaktualne. Sprawdź, czy aplikacja stanowiska nadal działa; panel wznowi się sam.</p>
   <section id="login" class="card narrow-card" hidden>
     <h2>Logowanie dyżurnego</h2>
     <label class="field"><span>Konto</span><select id="login-account"></select></label>
@@ -37,6 +38,7 @@
   </section>
   <section id="work" hidden>
     <nav id="tabs" class="tabs" role="tablist"></nav>
+    <p id="pending" class="banner" role="status" hidden>Są nowe dane. Widok odświeży się, gdy wyślesz albo wyczyścisz formularz.</p>
     <div id="view"></div>
   </section>
 </main>

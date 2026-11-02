@@ -5,13 +5,16 @@
 var CATEGORIES = ["POMOC MEDYCZNA", "LEKI I SPRZĘT MED.", "EWAKUACJA, TRANSPORT", "WODA PITNA", "ŻYWNOŚĆ",
   "OGRZEWANIE, ENERGIA", "SANITARNE, HIGIENA", "ZAGROŻENIE BUDYNKU", "POSZUKIWANIE, INFO", "INNE"];
 var URGENCY = ["zwykła", "pilna", "NATYCHMIAST"];
-var URGENCY_PILL = ["", "pill-warn", "pill-alarm"];
+var URGENCY_PILL = ["", "pill-warn", "pill-alarm pill-solid"];
 var STATES = {1: "przyjęte", 2: "przeczytane", 3: "pomoc skierowana", 4: "przekazane dalej", 5: "instrukcja wysłana", 6: "zamknięte"};
-var STATE_PILL = {1: "pill-warn", 3: "pill-ok", 5: "pill-ok", 6: "pill-ok"};
+var STATE_PILL = {1: "pill-new", 3: "pill-ok", 5: "pill-ok", 6: "pill-ok"};
+var DONE = [3, 5, 6];   // załatwione; jak „open” w przekazaniu zmiany (panel.py)
+var TITLE = document.title;
 var TABS = [["reports", "Zgłoszenia"], ["tests", "TEST"], ["quarantine", "Kwarantanna"], ["stations", "Stacje"], ["bulletins", "Komunikaty"],
   ["node", "Węzeł i wysyłka"], ["handover", "Przekazanie zmiany"], ["accounts", "Hasła"], ["log", "Dziennik"],
   ["closing", "Zakończenie"]];
 var state = null, version = -1, tab = "reports", silenced = {}, lastTouch = 0, audio = null;
+var lost = false;   // aplikacja nie odpowiada: wszystko na ekranie może być nieaktualne
 var shown = null;   // hasło pokazywane raz: zostaje nad widokiem, aż dyżurny potwierdzi przepisanie
 
 function el(tag, attrs) {
@@ -27,6 +30,11 @@ function el(tag, attrs) {
 function $(id) { return document.getElementById(id); }
 function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); return node; }
 function time(s) { return s ? new Date(s * 1000).toLocaleString("pl-PL") : "—"; }
+// Godzina; data tylko gdy nie dziś.
+function clock(s) {
+  var d = new Date(s * 1000), hm = d.toLocaleTimeString("pl-PL", {hour: "2-digit", minute: "2-digit"});
+  return d.toDateString() === new Date().toDateString() ? hm : d.toLocaleDateString("pl-PL", {day: "numeric", month: "2-digit"}) + " " + hm;
+}
 function ago(s) { return s == null ? "—" : s < 120 ? Math.round(s) + " s" : Math.round(s / 60) + " min"; }
 
 // Klocki widoku: klasy z wspólnego arkusza (wici/ui/app.css) i z app.css stanowiska.
@@ -88,23 +96,36 @@ function alarms() {
   return state && state.reports ? state.reports.filter(function (r) { return r.urgency === 2 && r.state === 1 && !silenced[r.id]; }) : [];
 }
 
+// Serwer odpowiada najpóźniej po web.LONG_POLL (2 s); 15 s ciszy to zawieszona aplikacja, nie wolne łącze.
 function poll() {
-  fetch("/api/operator/queue?v=" + version).then(function (r) { return r.json(); }).then(function (v) {
-    var changed = v.v !== version;
-    state = v; version = v.v;
+  var stop = new AbortController(), timer = setTimeout(function () { stop.abort(); }, 15000);
+  fetch("/api/operator/queue?v=" + version, {signal: stop.signal}).then(function (r) {
+    clearTimeout(timer); if (!r.ok) throw new Error(r.status); return r.json(); }).then(function (v) {
+    var changed = v.v !== version || lost;
+    state = v; version = v.v; lost = false;
     if (changed || pending) render();
     poll();
-  }).catch(function () { setTimeout(poll, 2000); });
+  }).catch(function () {
+    lost = true;
+    if (state) render(); else $("lost").hidden = false;
+    setTimeout(poll, 2000);
+  });
 }
 
-// Widok nie przerysowuje się pod ręką: pole w trakcie wpisywania albo otwarty formularz czekają na koniec.
-var pending = false;
+// Widok nie przerysowuje się pod ręką: pole w trakcie wpisywania, wpisana a niewysłana treść, zaznaczone pole,
+// otwarty formularz albo wciśnięty przycisk myszy (klik nie może trafić w przerysowany widok) czekają na koniec.
+var pending = false, pressed = 0;   // pressed: kiedy wciśnięto przycisk myszy; po 2 s puszczenie poza oknem nie blokuje widoku
 function busy() {
   var a = document.activeElement, view = $("view");
-  return view.contains(a) && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName) || !!view.querySelector("details[open]");
+  return Date.now() - pressed < 2000 || view.contains(a) && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName) || !!view.querySelector("details[open]") ||
+    [].some.call(view.querySelectorAll("input"), function (i) { return i.type === "checkbox" ? i.checked !== i.defaultChecked : i.value !== i.defaultValue; });
 }
-document.addEventListener("focusout", function () { setTimeout(function () { if (pending && !busy()) render(); }, 0); });
-document.addEventListener("toggle", function () { if (pending && !busy()) render(); }, true);
+function resume() { setTimeout(function () { if (pending && !busy()) render(); }, 0); }
+document.addEventListener("focusout", resume);
+document.addEventListener("toggle", resume, true);
+document.addEventListener("input", resume);
+document.addEventListener("mousedown", function () { pressed = Date.now(); });
+document.addEventListener("mouseup", function () { pressed = 0; resume(); });
 
 // Liczba przy zakładce: sprawy czekające na dyżurnego.
 function tabCount(name) {
@@ -115,6 +136,9 @@ function tabCount(name) {
 }
 
 function render() {
+  $("lost").hidden = !lost;
+  var unread = state.reports ? state.reports.filter(function (r) { return r.state === 1; }).length : 0;
+  document.title = (lost ? "BRAK POŁĄCZENIA · " : alarms().length ? "ALARM · " : "") + (unread ? "(" + unread + ") " : "") + TITLE;
   $("login").hidden = !!state.user;
   $("work").hidden = !state.user;
   $("recovery").hidden = !(state.user && state.recovery);
@@ -126,11 +150,17 @@ function render() {
   }
   clear($("who"));
   clear($("badges"));
-  if (!state.user) return;
+  if (!state.user) {
+    if (!lost && document.activeElement === document.body) $("login-password").focus();
+    return;
+  }
   $("who").appendChild(el("span", {class: "user", text: state.user}));
   $("who").appendChild(button("Wyloguj", "ghost", function () { action("/api/operator/logout"); }));
-  badge(state.saved ? "Zapis na nośniku" : "ZAPIS NA NOŚNIKU NIE DZIAŁA", state.saved);
-  badge(state.node.online ? "Stacja połączona" : "BRAK STACJI", state.node.online);
+  if (lost) badge("BRAK POŁĄCZENIA Z APLIKACJĄ", false);   // stan nośnika i stacji nieznany, nie ostatni znany
+  else {
+    badge(state.saved ? "Zapis na nośniku" : "ZAPIS NA NOŚNIKU NIE DZIAŁA", state.saved);
+    badge(state.node.online ? "Stacja połączona" : "BRAK STACJI", state.node.online);
+  }
   if (state.node.info && state.node.info.silence) badge("CISZA NA WĘŹLE", false);
   if (state.silence) badge("CISZA RADIOWA (" + state.silence.organ + ", " + state.silence.kiedy + ")", false);
   if (alarms().length) {
@@ -144,8 +174,9 @@ function render() {
       onclick: function () { tab = t[0]; force = true; render(); }},
       document.createTextNode(t[1]), count ? el("span", {class: "tab-count" + (t[0] === "tests" ? " quiet" : ""), text: String(count)}) : null));
   });
-  if (busy() && !force) { pending = true; return; }
+  if (busy() && !force) { pending = true; $("pending").hidden = false; return; }
   pending = force = false;
+  $("pending").hidden = true;
   var view = clear($("view"));
   if (shown) {
     view.appendChild(el("section", {class: "card shown"}, el("p", {class: "eyebrow", text: shown.label}),
@@ -164,7 +195,7 @@ function reportRow(r, withActions) {
     el("div", {class: "addr", text: r.address}),
     r.text ? el("div", {class: "text", text: r.text}) : null,
     el("div", {class: "meta"}, el("span", {class: "mono", text: r.number}), el("span", {text: r.station}), el("span", {text: "osób: " + r.people}),
-      el("span", {text: time(r.at)}), el("span", {text: "rew. " + r.revision})));
+      el("span", {text: "przyjęte " + clock(r.at), title: time(r.at)}), el("span", {text: "rew. " + r.revision})));
   if (r.decisions.length) {
     var list = el("ul", {class: "decisions"});
     r.decisions.forEach(function (d) {
@@ -173,7 +204,8 @@ function reportRow(r, withActions) {
     });
     row_.appendChild(list);
   }
-  if (withActions) row_.appendChild(decisionForm(r));
+  // Zamknięte: czynności schowane, ale stan da się jeszcze zmienić (pomyłka, sprawa wraca).
+  if (withActions) row_.appendChild(r.state === 6 ? el("div", {class: "report-actions"}, fold("Zmień stan", decisionForm(r))) : decisionForm(r));
   return row_;
 }
 
@@ -219,8 +251,7 @@ function secondPerson() {
 function silenceForm(view) {
   var s = state.silence, error = errorBox();
   var organ = el("input", {placeholder: "np. wójt gminy"}), when = el("input", {placeholder: "np. 30.10 13:50"});
-  var send = el("input", {type: "checkbox"});
-  send.checked = true;
+  var send = el("input", {type: "checkbox", checked: ""});
   var state_ = el("select", {});
   [["polecenie", "polecenie ciszy otrzymane"], ["wlaczona", "cisza włączona na węźle"], ["odwolana", "cisza odwołana"]]
     .forEach(function (o) { state_.appendChild(el("option", {value: o[0], text: o[1]})); });
@@ -239,9 +270,16 @@ function silenceForm(view) {
 var BEARERS = {wici: "WICI-Link", reticulum: "Reticulum"};
 
 var VIEWS = {
+  // Najpierw sprawy otwarte: pilność, nieprzeczytane, najstarsze; załatwione niżej, osobno.
   reports: function (view) {
-    if (!state.reports.length) view.appendChild(card(null, "", hint("Brak zgłoszeń.")));
-    state.reports.forEach(function (r) { view.appendChild(reportRow(r, true)); });
+    var open = state.reports.filter(function (r) { return DONE.indexOf(r.state) < 0; })
+      .sort(function (a, b) { return b.urgency - a.urgency || (a.state !== 1) - (b.state !== 1) || a.at - b.at; });
+    var done = state.reports.filter(function (r) { return DONE.indexOf(r.state) >= 0; });
+    if (!open.length) view.appendChild(card(null, "", hint(done.length ? "Brak otwartych zgłoszeń." : "Brak zgłoszeń.")));
+    open.forEach(function (r) { view.appendChild(reportRow(r, true)); });
+    if (!done.length) return;
+    view.appendChild(el("h2", {class: "section-title", text: "Załatwione (" + done.length + ")"}));
+    done.forEach(function (r) { view.appendChild(reportRow(r, true)); });
   },
   tests: function (view) {
     var marks = [], error = errorBox(), list = el("div", {class: "list"});
@@ -250,7 +288,7 @@ var VIEWS = {
       if (t.state === 1) marks.push([box, t]);
       list.appendChild(el("label", {class: "check"}, t.state === 1 ? box : null,
         el("span", {class: "item-head"}, el("strong", {text: t.station}), el("span", {text: t.address}),
-          el("span", {class: "hint", text: time(t.at)}), pill(STATES[t.state], STATE_PILL[t.state]))));
+          el("span", {class: "hint", text: clock(t.at), title: time(t.at)}), pill(STATES[t.state], STATE_PILL[t.state]))));
     });
     view.appendChild(card("Wiadomości TEST", "",
       hint("TEST nie są potrzebami. Sprawdź adres każdego, zaznacz i potwierdź PRZECZYTANE."),
@@ -393,6 +431,7 @@ var VIEWS = {
     view.appendChild(card("Dziennik", "", hint("Ostatnie 50 wpisów, najnowsze na górze."),
       el("div", {class: "table-wrap"}, el("table", {}, el("thead", {}, head), body))));
   },
+  // Każda karta ma własne miejsce na błąd: błąd eksportu nie może wyglądać jak błąd niszczenia danych.
   closing: function (view) {
     var error = errorBox();
     var path = el("input", {placeholder: "puste: nośnik stanowiska"}), second = secondPerson();
@@ -402,7 +441,8 @@ var VIEWS = {
       row(button("Eksportuj rejestr", "", function () {
         action("/api/operator/export", path.value ? Object.assign({path: path.value}, second.values()) : {}, error)
           .then(function (v) { alert("Zapisano: " + v.file); });
-      }))));
+      })), error));
+    error = errorBox();
     if (state.closed) {
       view.appendChild(card("Zamknij zdarzenie", "", hint("Zdarzenie zamknięte " + time(state.closed) + ". Treść zgłoszeń usunięta z bazy; archiwum w katalogu eksport.")));
       if (state.copies_purged) view.appendChild(card("Usuń kopie", "", hint("Kopie usunięte " + time(state.copies_purged) + ".")));
@@ -415,18 +455,19 @@ var VIEWS = {
           row(button("Usuń kopie", "danger", function () {
             action("/api/operator/backup/purge", {kto: who.value, kiedy: when.value, path: other.value}, error)
               .then(function (v) { if (v.failed.length) alert("Nie usunięto: " + v.failed.join(", ")); });
-          }))));
+          })), error));
       }
     } else {
       var close = el("input", {autocomplete: "off"});
       view.appendChild(card("Zamknij zdarzenie", "",
         hint("Archiwum z bazą i rejestrem trafia do katalogu eksport, potem treść zgłoszeń znika z bazy. Hasło archiwum pokaże się raz: przepisz je do koperty dla administratora danych."),
         field("Na potwierdzenie wpisz: ZAMKNIJ ZDARZENIE", close, "narrow"),
-        row(button("Zamknij zdarzenie", "primary", function () {
+        row(button("Zamknij zdarzenie", "danger", function () {
           action("/api/operator/close", {confirm: close.value}, error).then(function (v) {
             shown = {label: "Hasło archiwum " + v.file, text: v.password}; render(); });
-        }))));
+        })), error));
     }
+    error = errorBox();
     var destroy = el("input", {autocomplete: "off"}), copies = el("input", {placeholder: "jeśli podłączony"});
     view.appendChild(card("Zniszcz dane", "notice-alarm",
       hint("Usuwa bazę, tożsamość, konta i kopie bez archiwum; aplikacja kończy pracę. Potem oba nośniki zniszcz fizycznie według instrukcji."),
@@ -434,8 +475,7 @@ var VIEWS = {
       row(button("ZNISZCZ DANE", "danger", function () {
         if (confirm("Zniszczyć dane stanowiska? Tego nie da się cofnąć.")) action("/api/operator/destroy", {confirm: destroy.value, path: copies.value}, error)
           .then(function (v) { document.body.textContent = "Dane zniszczone." + (v.failed.length ? " Nie usunięto: " + v.failed.join(", ") : ""); });
-      }))));
-    view.appendChild(error);
+      })), error));
   }
 };
 
