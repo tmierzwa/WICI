@@ -72,7 +72,7 @@ Narzut koperty: 25 B (9 B nagłówka i 16 B znacznika); koperta ma 25–281 B, c
 
 **PRZENIEŚ STACJĘ.** Zaszyfrowana migawka 256 KiB obejmuje tożsamość, klucze koperty, zatwierdzone granice rezerwacji `ctr` i okna powtórzeń dla odbioru. Po imporcie stacja docelowa zaczyna nadawanie od przeniesionej granicy (nawet jeśli część zarezerwowanych wartości nie została użyta); nie zeruje licznika ani okien. Źródłowa przestaje nadawać przed utworzeniem paczki, zgodnie z [krokami przeniesienia](usb-protocol.md#przeniesienie-stacji). Brak któregokolwiek z tych pól albo niepewna granica blokuje aktywację z tą samą tożsamością; wymaga nowych kluczy i kart. Oprogramowanie obsługuje wznowienie po przerwaniu USB, wycofanie i trwałe oznaczenie wycofanej lub wyłączonej stacji. Próba zaniku zasilania na sprzęcie docelowym pozostaje warunkiem D21.
 
-**Odtworzenie stanowiska z kopii.** Starsza kopia SQLite może mieć niższą granicę rezerwacji `ctr` niż ostatnio użyta z tą samą tożsamością odbiorcy. Odtworzone stanowisko nie nadaje kopert pod tymi kluczami (`env_send_guard`), dopóki przygotowanie nie aktywuje nowej tożsamości odbiorcy i nowych kart. Zapasowa tożsamość odbiorcy nie ma jeszcze trwałej granicy poza bazą stanowiska, które ją aktywuje; dwie aktywacje z różnych baz mogłyby powtórzyć nonce.
+**Odtworzenie stanowiska z kopii.** Starsza kopia SQLite może mieć niższą granicę rezerwacji `ctr` niż ostatnio użyta z tą samą tożsamością odbiorcy. Odtworzone stanowisko nie nadaje kopert pod tymi kluczami (`env_send_guard`), dopóki przygotowanie nie aktywuje nowej tożsamości odbiorcy i nowych kart. Zapasowa tożsamość odbiorcy nie ma granicy poza bazą stanowiska, które ją aktywuje, więc paczka zapasowa jest jednorazowa: pierwsza aktywacja oznacza paczkę jako użytą przed założeniem nośnika, a każda następna zaczyna z `env_send_guard` ([tożsamość zapasowa](stanowisko-osp.md#komputer-i-aplikacja-stanowiska)).
 
 ### Podział na części
 
@@ -149,6 +149,8 @@ D21 rozstrzyga się po próbie przy stole na dwóch zestawach RAK4631 i prototyp
 3. pobór w budżecie W23 i zapas RAM ≥30% (D14);
 4. zimny start i zanik zasilania bez utraty i bez podwójnego przyjęcia, także między HACK a przekazaniem oraz po potwierdzeniu pierwszej części;
 5. przeniesienie stacji bez ponownego użycia (klucz, nonce), a rozsyłanie awaryjne bez pętli i przekroczenia limitu K2.
+
+Dodatkowymi stacjami w kryteriach 1 i 2 oraz w pomiarze czasu HACK mogą być dwa zestawy XIAO ESP32-S3 z Wio-SX1262 z obrazem `xiao` ([procedura przy stole](../../hardware/xiao-wici/README.md)), a RAK4631 z narzędziem surowego LoRa [`lora-raw`](../../hardware/lora-raw/README.md) (nie z firmware RNode, które dokłada do ramek własny nagłówek) służą wtedy jako podsłuch kanału i węzeł wrogi. Zestaw XIAO trzyma obraz FRAM w PSRAM, więc nie zastępuje prototypu w kryteriach 3 i 4 ani stacji na płytce v2 w energii, zapasie RAM i zaniku zasilania; przekaźnik w próbach zaniku zasilania jest prototypem.
 
 Jeżeli WICI-Link nie spełni warunku, zostaje rdzeń Reticulum, a ten dokument wraca do archiwum. Rozważane wcześniej oparcie stacji na rozwidleniu Meshtastic nie jest drogą zapasową, bo wymaga największych zmian i przenosi na zespół odpowiedzialność za cały obcy program (D20, CRA).
 

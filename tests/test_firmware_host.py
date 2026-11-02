@@ -36,6 +36,7 @@ HARNESS = r"""
 #include <string>
 #include <vector>
 #include "annunciator.h"
+#include "cmdargs.h"
 #include "config.h"
 #include "console.h"
 #include "crc16.h"
@@ -43,6 +44,7 @@ HARNESS = r"""
 #include "drbg.h"
 #include "font.h"
 #include "fram_id.h"
+#include "fram_ram.h"
 #include "hexstr.h"
 #include "journal.h"
 #include "p1frame.h"
@@ -1083,6 +1085,56 @@ int main(int argc, char** argv) {
         }
         return 0;
     }
+    if (argc == 2 && !strcmp(argv[1], "ramfram")) {
+        // FRAM image in PSRAM (fram_ram.h, board_xiao.h): power-on content, software restart, bounds.
+        static size_t synced = 0;
+        auto sync = [](const void*, size_t count) { synced += count; };
+        fram::RamMemory none(sync);
+        none.begin(nullptr);
+        uint8_t byte = 0;
+        printf("none %s %d %d\n", fram::partName(none.identify().part), none.read(0, &byte, 1), none.write(0, &byte, 1));
+        std::vector<uint8_t> block(fram::RamMemory::BLOCK, 0xA5);   // PSRAM content after power-on
+        fram::RamMemory first(sync);
+        first.begin(block.data());
+        const bool zeroed = std::all_of(block.begin() + fram::RamMemory::MARKER, block.end(), [](uint8_t b) { return b == 0; });
+        printf("poweron %s %d %d %zu\n", fram::partName(first.identify().part), first.kept(), zeroed, synced);
+        journal::Journal j(first);
+        const bool begun = j.begin();
+        const int blank = j.formatState() == journal::FormatState::BLANK;
+        const bool clock = j.startClock() && j.writeClock(500);
+        store::Store st(first, j, storeRandom, "lora-sf7");
+        st.now(10);
+        const store::Begin b1 = st.begin();
+        printf("new %d %d %d %s\n", begun, blank, clock, store::beginName(b1));
+        fram::RamMemory again(sync);   // software restart: the same block with its marker
+        again.begin(block.data());
+        journal::Journal j2(again);
+        j2.begin();
+        j2.startClock();
+        store::Store st2(again, j2, storeRandom, "lora-sf7");
+        st2.now(20);
+        const store::Begin b2 = st2.begin();
+        printf("restart %d %u %u %s\n", again.kept(), j2.counterAtStart(), j2.starts(), store::beginName(b2));
+        uint8_t two[2] = {1, 2};
+        printf("bounds %d %d %d %d\n", again.write(fram::SIZE - 2, two, 2), again.write(fram::SIZE - 1, two, 2),
+               again.read(fram::SIZE, two, 1), again.write(0xFFFFFFFFu, two, 2));
+        block[3] ^= 1;   // marker damaged (another block, other content): cleared again
+        fram::RamMemory moved(sync);
+        moved.begin(block.data());
+        journal::Journal j3(moved);
+        j3.begin();
+        printf("moved %d %d\n", moved.kept(), j3.formatState() == journal::FormatState::BLANK);
+        return 0;
+    }
+    if (argc >= 2 && !strcmp(argv[1], "reqargs")) {
+        uint32_t count = 0;
+        int32_t textBytes = 0;
+        if (!cmdargs::parseRequest(argv + 2, static_cast<size_t>(argc - 2), sa1::TEXT_MAX, count, textBytes)) { printf("err\n"); return 0; }
+        char text[sa1::TEXT_MAX + 1];
+        cmdargs::requestText(count, textBytes, text, sizeof(text));
+        printf("ok %u %d %zu [%s]\n", count, textBytes, strlen(text), text);
+        return 0;
+    }
     if (argc == 3 && !strcmp(argv[1], "framid")) {
         uint8_t id[fram::ID_BYTES] = {};
         for (size_t i = 0; i < fram::ID_BYTES && argv[2][2 * i] && argv[2][2 * i + 1]; ++i) {
@@ -1297,6 +1349,28 @@ class HostUnitTests(unittest.TestCase):
                  "7F7F7F7F7FC22608": "unknown", "FFFFFFFFFFFFFFFFFF": "unknown", "000000000000000000": "unknown"}
         for hexid, part in cases.items():
             self.assertEqual(self.run_harness("framid", hexid), [part], hexid)
+
+    def test_fram_image_in_psram(self):
+        # fram_ram.h (zestaw XIAO): treść PSRAM po włączeniu zasilania kasowana do zer (nowa stacja), obraz z
+        # znacznikiem zostaje po restarcie programowym, każdy zapis idzie do sync (zapis pamięci podręcznej).
+        size = 512 * 1024
+        lines = subprocess.run([str(self.binary), "ramfram"], capture_output=True, text=True, check=True).stdout.splitlines()
+        self.assertEqual(lines[0], "none unknown 0 0")
+        self.assertEqual(lines[1], f"poweron emulated-psram 0 1 {size + 16}")
+        self.assertEqual(lines[2], "new 1 1 1 new")
+        self.assertEqual(lines[3], "restart 1 560 2 ok")   # licznik 500 + przeskok 60 s jak w FRAM, drugi start
+        self.assertEqual(lines[4], "bounds 1 0 0 0")
+        self.assertEqual(lines[5], "moved 0 1")
+
+    def test_request_command_arguments(self):
+        # REQ <n> [<bajty tekstu>] (main.cpp): n 1..100, tekst dokładnie tej długości albo sama etykieta.
+        self.assertEqual(self.run_harness("reqargs", "50"), ["ok", "50", "-1", "6", "[REQ", "50]"])
+        self.assertEqual(self.run_harness("reqargs", "1", "12"), ["ok", "1", "12", "12", "[REQ", "1.......]"])
+        self.assertEqual(self.run_harness("reqargs", "7", "3"), ["ok", "7", "3", "3", "[REQ]"])
+        self.assertEqual(self.run_harness("reqargs", "2", "96")[3], "96")
+        self.assertEqual(self.run_harness("reqargs", "2", "0")[:4], ["ok", "2", "0", "0"])
+        for bad in ((), ("0",), ("101",), ("1", "97"), ("1", "-1"), ("x",), ("1", "2", "3")):
+            self.assertEqual(self.run_harness("reqargs", *bad), ["err"], bad)
 
     def test_crc_matches_spec_vector_and_model(self):
         self.assertEqual(self.run_harness("crc", "123456789"), ["29B1"])

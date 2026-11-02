@@ -86,6 +86,7 @@ void reboot() {
     esp_restart();
 }
 
+#if defined(WICI_BOARD_N1)
 void beginVtest() {
     analogReadResolution(12);
     analogSetPinAttenuation(board::VTEST, ADC_11db);
@@ -100,6 +101,10 @@ void printVtest() {
                   static_cast<unsigned long>(pinMv * board::VTEST_DIVIDER), static_cast<unsigned long>(pinMv),
                   board::VTEST_ADC_CHANNEL, board::VTEST_DIVIDER);
 }
+#else
+void beginVtest() {}
+void printVtest() {}
+#endif
 
 namespace {
 

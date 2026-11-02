@@ -1,0 +1,80 @@
+# WICI: próby D21 przy stole z zestawami XIAO
+
+Procedura prób przy stole dla decyzji D21 ([warunek przyjęcia](../../docs/spec/transport.md#warunek-przyjęcia), [WICI-Link v3](../../docs/spec/wici-link.md)): dwa prototypy na płytce v1 z obrazem [`l0`](../../firmware/README.md#stacja-l0-l0), dwa zestawy Seeed 102010611 (XIAO ESP32-S3 + Wio-SX1262) z obrazem [`xiao`](../../firmware/README.md#zestaw-xiao-xiao) i dwa RAK4631 z zestawów [radiów RNode](../rnode/README.md), na czas prób z narzędziem surowego LoRa [`lora-raw`](../lora-raw/README.md) zamiast firmware RNode ([dlaczego](#podsłuch-i-węzeł-wrogi-lora-raw)). **Żadna próba z tej listy nie była wykonana.** Obraz `xiao` się kompiluje, ale nie był uruchomiony na sprzęcie.
+
+Zestaw XIAO nie ma FRAM: obraz FRAM jest w PSRAM i ginie po odłączeniu zasilania ([opis](../../firmware/README.md#zestaw-xiao-xiao)). Dlatego zestawy XIAO nie biorą udziału w próbach zaniku zasilania, a wyniki z nich nie zastępują prób prototypu ani stacji na płytce v2 w energii (W23), zapasie RAM (D14), zaniku zasilania i czułości. Poza zakresem: W23 (wymaga toru zasilania v2) i zasięg.
+
+## Role
+
+| Urządzenie | Rola | Numer w planie (przykład) |
+|---|---|---|
+| l0 nr 1 | stacja schronienia A (ekran, przyciski) | 20, rodzic 10 |
+| l0 nr 2 | przekaźnik B z prawdziwą FRAM (próby zaniku zasilania trwałej kolejki) | 10, rodzic 1 |
+| XIAO nr 1 | korzeń: KISS przez port danych USB do aplikacji stanowiska na laptopie | 1 (`role: "wezel"`) |
+| XIAO nr 2 | druga stacja schronienia C (dwa źródła przez jeden przekaźnik, K1 na sąsiada) albo drugi przekaźnik (łańcuch 3 skoków) | 30, rodzic 10 albo 20 |
+| RAK4631 nr 1 | `lora-raw` jako podsłuch kanału: surowe ramki, czasy RxDone, RSSI, SNR (`tools/monitor.py`) | – |
+| RAK4631 nr 2 | `lora-raw` jako węzeł wrogi sterowany skryptem `tools/hostile.py` | – |
+
+Przy jednym prototypie l0 bierze on rolę przekaźnika B, a stacją A jest XIAO nr 2. Tożsamości odbiorcy (główna 2, zapasowa 3) i sieć (np. `net_id` 100, kod IFAC) tworzy aplikacja stanowiska: `python -m wici.stanowisko przygotuj … --net-id 100 --main-id 2 --backup-id 3 --root-id 1 --ifac <32 cyfry hex>` ([aplikacja stanowiska](../../software/laptop/README.md#aplikacja-stanowiska-odbiorczego)). Wieloskokowość wymusza plan sieci (`network.parent`, `priority_keys[].behind`), nie odległość: wszystkie urządzenia stoją na jednym stole.
+
+## Stół i radio
+
+- Anteny przykręcone przed zasilaniem albo obciążenia 50 Ω zamiast anten; urządzenia 1–3 m od siebie. Obrazy stacji nadają stałą mocą 13 dBm (nie ma polecenia zmiany mocy), RAK4631 z `lora-raw` z mocą −9 dBm (najmniejsza; polecenie `power`). Próba 9 wymaga toru przewodowego albo komory ekranowanej ([niżej](#próba-9-tylko-w-torze-przewodowym-albo-w-komorze)).
+- Zestawy XIAO zasilać z USB komputera bez przerw przez całą serię prób; po odłączeniu zasilania zestaw trzeba przygotować od nowa (niżej).
+- Na każdym porcie diagnostyki zapis do pliku przez cały czas próby, np. `pio device monitor -p PORT -b 115200 -f log2file` (pliki `platformio-device-monitor-*.log`). Zegary laptopów zsynchronizowane (NTP) przed próbą.
+- Dowody: katalog `hardware/xiao-wici/evidence/` w PR z raportem, plik `<próba>-RRRR-MM-DD.md` (wersje obrazów z `INFO`, numery egzemplarzy, plan sieci bez kluczy prywatnych, przebieg, wynik, odchylenia) i surowe logi obok niego. Raport z próby jako Issue z etykietą `próba` ([CONTRIBUTING](../../CONTRIBUTING.md#jak-zgłosić-zmianę)); kolumnę „Stan” w [odbiorze](../../docs/spec/odbior.md) wypełnia opiekun repozytorium.
+
+## Wgranie i przygotowanie
+
+1. Zestaw XIAO: przed pierwszym wgraniem kopia fabrycznej pamięci według [radio-pair](../radio-pair/ZRODLA-I-WERYFIKACJA.txt). Wgranie: `cd firmware && pio run -e xiao -t upload` (port USB-C XIAO; bez odpowiedzi BOOT przytrzymany przy RESET). Prototyp: `pio run -e l0 -t upload`. Nie wgrywać `l0` do XIAO ani `xiao` do prototypu.
+2. Każde urządzenie: `INFO` (`radio_ok`, `p1_ok`, `fram_ok`, `journal_ok` = `true`, `fw` `xiao-0.1` albo `l0-0.6`, w XIAO `fram_volatile: true`), `RADIO` (`version` „SX1261 V2D 2D02”, `device_errors` 0x0000), `FRAM` (XIAO: `emulated-psram`, `kept: false` po włączeniu zasilania), `RNS SELFTEST`.
+3. Tryb przygotowania: na prototypie przycisk przygotowania (3 s) albo `PREP 1` z OK; na XIAO `PREP 1` i przycisk BOOT w ciągu 30 s (żółta dioda miga szybko).
+4. Karta każdej stacji: aplikacja laptopa w trybie przygotowania (`card`, odcisk na ekranie prototypu albo w `SCREEN` XIAO, zamknięcie `KEY OK`). Z kart powstaje plan sieci: dla każdej stacji `network` (numer, korzeń, rodzic, rodzic zapasowy 0 albo numer) i `priority_keys` sąsiadów (`ed25519`, `x25519`, `behind` według planu), dla stacji schronienia karta odbiorcy z nośnika stanowiska; dla korzenia `role: "wezel"`.
+5. `configure` z aplikacji laptopa na każdej stacji (`ok` z `config_seq`). Korzeń restartuje się po zmianie roli; w XIAO `FRAM` daje potem `kept: true`, a `STORE` `role: "wezel"`. `PREP 0`. Na korzeniu port danych przejmuje `python -m wici.stanowisko start --nosnik … --port PORT_DANYCH_XIAO1`.
+6. Gotowość: w `LOG` „wici station ready” (stacje) albo „wici root ready” (korzeń); BEACON-y korzenia i przekaźników widać w podsłuchu (RAK4631 nr 1, klasa `BEACON`, ramki 156 B).
+
+**Po odłączeniu zasilania zestawu XIAO** (także przypadkowym): `LOG` ma „FRAM image in PSRAM cleared”, stacja ma nową tożsamość i nie ma konfiguracji. Odczytać nową kartę, wpisać jej klucze w `priority_keys` sąsiadów i skonfigurować sąsiadów ponownie; zestaw dostaje nowy numer stacji (rejestr stanowiska nie wiąże starego numeru z nowym kluczem) albo próba zaczyna się od nowego nośnika stanowiska. Bieżącą próbę zapisać jako przerwaną.
+
+## Podsłuch i węzeł wrogi (lora-raw)
+
+Plan zakładał RAK4631 z oficjalnym firmware RNode w obu rolach. To nie działa z WICI-Link v3. Firmware RNode (`56775c51`) w zwykłym trybie dokłada do każdej ramki LoRa nagłówek 1 B (starsza połówka: numer, bit 0: flaga podziału `FLAG_SPLIT`) i przy odbiorze zawsze zdejmuje pierwszy bajt jako ten nagłówek. Ramka v3 nie ma nagłówka RNode, a bit 0 jej pierwszego bajtu to ACKREQ. RNode jako podsłuch oddaje więc ramki bez bajtu `ver/t`, a jednoadresową DATA z ACKREQ traktuje jak pierwszą połowę datagramu dzielonego: skleja ją z następną DATA z ACKREQ albo gubi przy następnej ramce bez bitu 0 (HACK, BEACON). Jako nadajnik RNode dokłada przed ramką z hosta bajt z losowymi bitami, więc stacja odrzuca ją (MAC). Tryb nasłuchu wszystkiego (`CMD_PROMISC`) na nRF52 w tym commicie nie oddaje odebranych ramek do hosta; RNode nie podaje też czasów RxDone i TxDone, nie zgłasza ramek z błędem CRC, odracza nadanie przy zajętym kanale (CSMA) i nie schodzi z mocą poniżej 0 dBm. Szczegóły ze źródłami: [lora-raw, „Dlaczego nie RNode”](../lora-raw/README.md#dlaczego-nie-rnode).
+
+Dlatego oba RAK4631 dostają na czas prób program [`lora-raw`](../lora-raw/README.md): profil pilotażu, surowe bajty w obie strony, czasy z zegara urządzenia (µs), moc od −9 dBm. Wgranie: `cd hardware/lora-raw && pio run -t upload --upload-port PORT`; sprawdzenie: w terminalu portu `info` daje `"ready":true` i profil (`preamble` 24, `sync_word` 18). **Po próbach** oba zestawy wracają do firmware RNode (`rnodeconf --autoinstall`, [radia RNode](../rnode/README.md)) przed pomiarami zasięgu; wersję z `rnodeconf --info` zapisuje się w raporcie.
+
+Skrypty są w `hardware/xiao-wici/tools/` i uruchamia się je z katalogu `hardware/xiao-wici` (Python 3 i `pyserial`; ramki z kluczem z `software/laptop/wici/stanowisko/wici_link.py`, czas ramki ze wzoru modelu `software/reference/obliczenia.py`):
+
+- **Podsłuch (RAK4631 nr 1):** `python3 tools/monitor.py PORT --out evidence/podsluch-RRRR-MM-DD.jsonl [--ifac <32 cyfry hex> --net-id 100] [--duration S]`. Każda ramka to wiersz JSONL: czas laptopa (`host_ts`), czas RxDone urządzenia (`t_us`) i wyliczony początek (`start_us`), surowe bajty (`hex`), długość, RSSI, SNR, CRC, czas w eterze i, gdy bity wersji to 3, pola nagłówka v3 (`version`, `type`, `flags`, `net_id`, `l_src`, `l_dst`, `hops`, `ttl`, `seq`); z kodem sieci także `mac_ok`. Na końcu (Ctrl+C albo `--duration`) podsumowanie: ramki i czas w eterze na klasę (`DATA`, `HACK`, `BEACON`, `crc_error`, `other`), czas w eterze na `l_src` i zajętość kanału w %. W próbie 4 czas HACK z podsłuchu to `t_us` HACK minus `t_us` jego DATA (ten sam zegar; HACK ma `seq` tej DATA i zamienione `l_src`, `l_dst`).
+- **Węzeł wrogi (RAK4631 nr 2):** (a) bez klucza: `python3 tools/hostile.py PORT --mode junk --conducted --out evidence/wrogi-a-RRRR-MM-DD.jsonl` — losowe bajty 20–255 B w profilu (pierwszy bajt bez bitów wersji 3); (b) z kluczem sieci jak przejęta stacja: `python3 tools/hostile.py PORT --mode keyed --conducted --ifac <32 cyfry hex> --net-id 100 --dst 10 --out evidence/wrogi-b-RRRR-MM-DD.jsonl` — rozsyłane DATA z losowymi kopertami, BEACON-y ze śmieciowymi podpisami, jednoadresowe DATA z ACKREQ i HACK z losowym tagiem pary, od losowych `l_src` (`--src` zawęża), w proporcjach `--mix data=2,beacon=1,unicast=1,hack=1`. Domyślnie 50% czasu kanału (`--occupancy 0.5`), 2 h (`--duration 7200`), −9 dBm (`--power`), bez CAD i bez długu ciszy. Zajętość trzyma się z czasów TxDone zmierzonych przez urządzenie: kolejne nadanie zaczyna się, gdy suma czasów nadawania od pierwszej ramki podzielona przez czas od jej początku spadnie do celu, więc opóźnienie USB tylko skraca następną przerwę. Każde nadanie (bajty, `start_us`, `done_us`, `air_us`, rodzaj, `l_src`, `l_dst`, `seq`) i podsumowanie z osiągniętą zajętością idą do JSONL. `--seed` zapisuje się w raporcie. Bez `--conducted` skrypt odmawia celu powyżej 10%.
+
+Testy skryptów bez sprzętu: `python3 -m unittest tests.test_bench_tools` (z katalogu głównego; symulowane urządzenie z opóźnieniem USB).
+
+### Próba 9 tylko w torze przewodowym albo w komorze
+
+Węzeł wrogi przy 50% zajętości przekracza w eterze limit cyklu pracy 10% podzakresu 869,4–869,65 MHz, w którym leży kanał 869,525 MHz. Przebiegi (a) i (b) wykonuje się więc **bez promieniowania**: albo w torze przewodowym, albo w komorze ekranowanej.
+
+- **Tor przewodowy:** zamiast anten przewody 50 Ω przez tłumiki SMA i dzielnik mocy (przejściówki z U.FL tam, gdzie radio nie ma gniazda SMA) łączą RAK4631 nr 2, podsłuch i stacje próby (B, A, korzeń); wszystkie urządzenia próby muszą być w torze, inaczej nie słyszą węzła wrogiego. Tłumienie każdej drogi między dwoma urządzeniami 30–60 dB, dobrane tak, żeby moc na wejściu każdego SX1262 była daleko poniżej wartości granicznej wejścia RF z karty SX1261/2 (+10 dBm), a w praktyce w zakresie około −90…−40 dBm: stacja 13 dBm przez 60 dB daje −47 dBm, węzeł wrogi −9 dBm przez 30 dB daje −39 dBm. Nigdy nie łączyć dwóch nadajników bez tłumika. Niewykorzystane porty dzielnika zakończyć obciążeniem 50 Ω. Tłumiki, dzielnik i ich tłumienie (zmierzone albo z karty) wpisuje się w raporcie.
+- **Komora ekranowana:** wszystkie urządzenia próby z antenami w komorze o tłumieniu ekranowania co najmniej 70 dB. Projekt rozporządzenia wydawanego na podstawie art. 145 ust. 4 ustawy Prawo komunikacji elektronicznej (§ 3 ust. 1 pkt 14) zwalnia z wymagań urządzenia używane do badań w konstrukcji ekranującej o tłumieniu ≥70 dB; to projekt, więc przed próbą trzeba sprawdzić obowiązujący tekst i zapisać go w raporcie.
+
+W eterze (antena) węzeł wrogi może pracować tylko z celem ≤10% (`--occupancy 0.1` bez `--conducted`), co nie spełnia warunku próby 9.
+
+## Próby
+
+Kolejność jak w tabeli; próba późniejsza zakłada zaliczenie wcześniejszych. Polecenia z portu diagnostyki.
+
+| Nr | Próba | Przebieg | Warunek zaliczenia | Zapis |
+|---|---|---|---|---|
+| 1 | Radia RNode (krok 2) | według [odbioru, krok 2](../../docs/spec/odbior.md#krok-2-radia-rnode-przy-stole), z firmware RNode, przed wgraniem `lora-raw` | jak w kroku 2 | `rnode-RRRR-MM-DD.md` |
+| 2 | Ramki v3 | A: `REQ 1 0` daje `sa1_bytes` S; potem `REQ 1 <174 − S>` (SA1 174 B, typowe zgłoszenie); w trybie przygotowania na dwóch urządzeniach `RX 255` i `TXPKT 1 255`, `RXPER` | A: `{"loratx":"sent","len":226,…}`; B: `{"lorarx":"raw","len":226,…}` i `{"hack":"sent","len":27,…}`; podsłuch: ramki 226 B i 27 B; `RXPER` 1/1 ramek 255 B; podsłuch: 255 B | logi A, B, podsłuchu; `v3-ramki-RRRR-MM-DD.md` |
+| 3 | Jedno zgłoszenie do końca | zgłoszenie przyciskami na A; dyżurny w panelu stanowiska: PRZECZYTANE i decyzja | na ekranie A RECEIVED, PRZECZYTANE i decyzja; `APP` na A `intents` 0; jedno zgłoszenie w bazie stanowiska | `SCREEN`, `APP`, eksport CSV stanowiska |
+| 4 | Czas HACK | `HACK 0` na B i korzeniu, 20 zgłoszeń (`REQ 20`), potem `HACK` | `hack_over_200ms` 0, `end_ms_max` ≤200 na B i korzeniu; w podsłuchu każdy HACK kończy się ≤200 ms po końcu swojej DATA; `hack_late` i ponowienia zapisane | `HACK` przed i po, JSONL podsłuchu (różnice czasów), `hack-RRRR-MM-DD.md` |
+| 5 | W10 | `HACK 0`; na A `REQ 10` co minutę przez 5 minut (50 zgłoszeń); `APP` na A co 30 s do `intents` 0 | 50/50 RECEIVED w bazie stanowiska w <15 min od pierwszego COMMIT (warunek D21), w każdym razie ≤30 min (W10); brak podwójnego przyjęcia | czasy `REQ`, `APP` w czasie, czasy przyjęcia w bazie stanowiska, `HACK`, `P1` (odroczenia, `cad_busy`) na A i B, `INFO` (`loop_max_ms`, `tx_wait_ms`); `w10-RRRR-MM-DD.md` |
+| 6 | Zapas RAM l0 | w trakcie prób 5 i 9 `RNS` co minutę na B (l0 nr 2) | najmniejsze `heap_min` / `heap_size` ≥30% (D14); statycznie obraz `l0` zajmuje 59% RAM | wiersze `RNS`, `INFO` |
+| 7 | Zanik zasilania przekaźnika | ruch jak w W10 (np. `REQ 10`); odcięcie zasilania l0 nr 2 na ≥5 s w trzech chwilach, po 5 razy każda: zaraz po `lorarx` DATA (przed HACK), zaraz po `hack` sent, w trakcie przekazywania (`loratx` w toku); po każdym starcie `LOG` i `JOURNAL` | wszystkie zgłoszenia RECEIVED dokładnie raz w bazie stanowiska; po starcie B odczekuje dług z dziennika (`tx_wait_ms`) i wznawia kolejkę; brak uszkodzonych rekordów (`STORE` `corrupt_slots` 0) | chwila każdego odcięcia (wiersz logu), `LOG`, `JOURNAL`, baza stanowiska; `zanik-B-RRRR-MM-DD.md` |
+| 8 | Dwie stacje schronienia | XIAO nr 2 jako C z rodzicem B; A i C po `REQ 25` w tej samej minucie | 50/50 RECEIVED; żadna stacja nie blokuje drugiej (każdy sąsiad ma swoje gniazdo K1); czasy obu źródeł zapisane osobno | `APP` A i C, `HACK` B, podsłuch |
+| 9 | Węzeł wrogi | tylko w torze przewodowym albo w komorze ([wyżej](#próba-9-tylko-w-torze-przewodowym-albo-w-komorze)); RAK4631 nr 2 z `hostile.py` na drodze do B, każdy przebieg 2 h: (a) bez klucza, (b) z kluczem sieci; w tym czasie A wysyła 20 zgłoszeń (`REQ 20`) | 20/20 RECEIVED na A w ≤30 min od COMMIT w każdym przebiegu; udziały klas według [odbioru, „Wrogi węzeł”](../../docs/spec/odbior.md#próby) z podsłuchu; brak restartu B; RAM jak w próbie 6 | JSONL podsłuchu i skryptu wrogiego, `APP`, `RNS`, `INFO` na B; `wrogi-RRRR-MM-DD.md` |
+| 10 | Trzy skoki | plan: A → XIAO nr 2 (przekaźnik) → B → korzeń; `REQ 10` na A | 10/10 RECEIVED; w podsłuchu każda koperta przechodzi trzy skoki z HACK na każdym | plan sieci, podsłuch, `HACK` na przekaźnikach |
+| 11 | Cisza radiowa | na B `SILENCE 1` (albo przełącznik CISZA) na 30 min przy ruchu z A (`REQ 5`); potem `SILENCE 0` | w podsłuchu brak ramek B w ciszy (DATA, HACK, BEACON); kolejka B przyjmuje ramki bez HACK; po zdjęciu ciszy 5/5 RECEIVED | podsłuch, `LOG` B, `APP` A |
+
+Liczniki z `HACK` mierzą czas zegarem MCU od znacznika odbioru DATA w zadaniu odbioru do TxDone HACK; rozstrzyga pomiar z podsłuchu. W próbach 4, 5 i 9 wyniki z XIAO jako przekaźnika (próba 10) zapisuje się osobno od wyników prototypu.
+
+Licencja tego pliku: CC-BY-4.0 ([LICENSE.md](../../LICENSE.md)).

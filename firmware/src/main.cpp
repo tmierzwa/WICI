@@ -16,7 +16,8 @@
 // w ramkach KISS (rns_node.h, kiss.h), a ekran pokazuje kontakt z komputerem.
 // Wykonania: bench-a (nRF52840-DK + CC1120EM na przewodach), bench-n1 (to samo na płytce N1),
 // bench-b (ESP32-S3-DevKitC-1 + X-NUCLEO-S2868A2 z S2-LP na N1), l0 (ESP32-S3-DevKitC-1 + Wio-SX1262
-// na N1, profil LoRa: polecenia pomiarowe bez łącza P1, README, "Stacja L0"). Zależne od MCU części są
+// na N1, profil LoRa: polecenia pomiarowe bez łącza P1, README, "Stacja L0"), xiao (Seeed XIAO ESP32-S3 +
+// Wio-SX1262 bez ekranu, przycisków i FRAM: obraz FRAM w PSRAM, README, "Zestaw XIAO"). Zależne od MCU części są
 // w platform_*.cpp, zależne od układu radiowego w radio_console_*.cpp i *_link.cpp.
 #include <Arduino.h>
 #include <SPI.h>
@@ -37,7 +38,12 @@
 #endif
 #include "drbg.h"
 #include "envelope_counter.h"
+#if defined(WICI_FRAM_PSRAM)
+#include <esp_cache.h>
+#include "fram_ram.h"
+#else
 #include "fram.h"
+#endif
 #include "framfs.h"
 #include "hexstr.h"
 #include "journal.h"
@@ -55,7 +61,9 @@
 #include "rns_announce.h"
 #include "rns_node.h"
 #include "sha2.h"
+#if !defined(WICI_HEADLESS)
 #include "sharp.h"
+#endif
 #include "station.h"
 #include "store.h"
 #include "ui.h"
@@ -72,12 +80,14 @@
 
 namespace {
 
-#if defined(WICI_BOARD_N1)
-constexpr const char* BOARD_NAME = board::NAME;
-#else
+#if defined(WICI_BENCH_A)
 constexpr const char* BOARD_NAME = "wires";
+#else
+constexpr const char* BOARD_NAME = board::NAME;
 #endif
-#if defined(WICI_L0)
+#if defined(WICI_XIAO)
+constexpr const char* BENCH = "XIAO";
+#elif defined(WICI_L0)
 constexpr const char* BENCH = "L0";
 #elif defined(WICI_BENCH_B)
 constexpr const char* BENCH = "B";
@@ -85,14 +95,24 @@ constexpr const char* BENCH = "B";
 constexpr const char* BENCH = "A";
 #endif
 
+#if defined(WICI_FRAM_PSRAM)
+// Write-back of the PSRAM cache after every write: a software restart keeps PSRAM, not the cache.
+void psramSync(const void* data, size_t count) {
+    esp_cache_msync(const_cast<void*>(data), count, ESP_CACHE_MSYNC_FLAG_DIR_C2M | ESP_CACHE_MSYNC_FLAG_UNALIGNED);
+}
+fram::RamMemory memory(psramSync);
+#else
 fram::Memory memory(platform::bus(), board::FRAM_CS, board::FRAM_SPI_HZ);
+#endif
 journal::Journal stationJournal(memory);
 migration_state::Barrier migrationBarrier(memory);
 migration_package::Exporter migrationExporter(memory);
 migration_package::Importer migrationImporter(memory, migrationBarrier);
 static_assert(migration_package::SIZE == usbproto::MIGRATION_PACKAGE_BYTES, "USB migration size matches package");
 measure::Bench bench(radiocon::link(), board::BTN_OK, board::LED_HEARTBEAT);
-#if defined(WICI_BOARD_N1)
+#if defined(WICI_HEADLESS)
+// No display: the screen model still runs (SCREEN, KEY, questions of USB commands).
+#elif defined(WICI_BOARD_N1)
 sharp::Display display(platform::bus(), board::DISPLAY_CS, board::DISPLAY_EXTCOMIN, board::DISPLAY_SPI_HZ);
 #else
 sharp::Display display(platform::bus(), board::DISPLAY_CS, board::DISPLAY_EXTCOMIN);
@@ -120,7 +140,7 @@ void stationRandom(uint8_t* out, size_t count) {
     // Ziarno powstaje pierwsze w stationSetup(); odmowa to błąd programu: restart zamiast bajtów spoza generatora.
     if (!generator.generate(out, count)) platform::reboot();
 }
-#if defined(WICI_L0)
+#if defined(WICI_L0) || defined(WICI_XIAO)
 constexpr const char* RADIO_PROFILE = "lora-sf7";  // profil radiowy stacji L0 (`radio.profile` w configure, usb-protocol.md)
 #else
 constexpr const char* RADIO_PROFILE = "p1";   // profil radiowy stanowisk A i B (`radio.profile` w configure, usb-protocol.md)
@@ -166,7 +186,7 @@ constexpr uint32_t CLOCK_WRITE_MS = 60000;  // zapis zegara co 60 s (oprogramowa
 char line[1400];  // P1TX przyjmuje do 600 B datagramu zapisanego szesnastkowo
 size_t lineLength = 0;
 
-const uint8_t buttons[] = {board::BTN_UP, board::BTN_DOWN, board::BTN_OK, board::BTN_BACK};
+const int16_t buttons[] = {board::BTN_UP, board::BTN_DOWN, board::BTN_OK, board::BTN_BACK};   // -1: no button
 const char* const buttonNames[] = {"up", "down", "ok", "back"};
 const int16_t leds[] = {board::LED_HEARTBEAT, board::LED_RADIO, board::LED_FRAM, board::LED_USB};
 
@@ -183,7 +203,7 @@ void ledWrite(int16_t pin, bool on) {
     if (pin >= 0) digitalWrite(static_cast<uint8_t>(pin), on ? LOW : HIGH);
 }
 
-bool pressed(uint8_t pin) { return digitalRead(pin) == LOW; }
+bool pressed(int16_t pin) { return pin >= 0 && digitalRead(static_cast<uint8_t>(pin)) == LOW; }
 
 using cmdargs::boolName;
 
@@ -1147,11 +1167,15 @@ ui::Status screenStatus() {
 void updateScreen(bool force) {
     ui::Lines lines;
     screenModel.render(screenStatus(), lines);
+#if !defined(WICI_HEADLESS)
     for (size_t i = 0; i < ui::LINES; ++i) {
         if (force || strcmp(lines.text[i], shown.text[i]) || lines.inverted[i] != shown.inverted[i]) {
             display.drawLine(static_cast<uint8_t>(i), lines.text[i], lines.inverted[i]);
         }
     }
+#else
+    (void)force;
+#endif
     shown = lines;
     // Wysyła je pętla po 9 wierszy pikseli na obieg (display.refresh() w stationLoop).
 }
@@ -1165,6 +1189,10 @@ void printScreen() {
     }
     Serial.print("],\"inverted\":[");
     for (size_t i = 0; i < ui::LINES; ++i) Serial.printf("%s%s", boolName(shown.inverted[i]), i + 1 < ui::LINES ? "," : "");
+#if defined(WICI_HEADLESS)
+    Serial.print("]}\n");
+}
+#else
     Serial.printf("],\"refreshes\":%lu}\n", static_cast<unsigned long>(display.refreshes()));
 }
 
@@ -1175,6 +1203,7 @@ void printDisplay() {
                   boolName(display.extcominLevel()), boolName(display.softwareVcom()), static_cast<unsigned long>(display.refreshes()), board::DISPLAY_CS,
                   board::DISPLAY_EXTCOMIN, static_cast<unsigned long>(display.spiHz()));
 }
+#endif
 
 const char* BenchHost::stationName() { return ::stationName; }
 
@@ -1270,8 +1299,14 @@ void printFram() {
     ledWrite(board::LED_FRAM, framOk && journalOk);  // jak przy starcie: FRAM i działający dziennik
     char hex[2 * fram::ID_BYTES + 1];
     for (size_t i = 0; i < fram::ID_BYTES; ++i) snprintf(hex + 2 * i, 3, "%02X", id.bytes[i]);
-    Serial.printf("{\"fram\":\"%s\",\"id\":\"%s\",\"status\":\"0x%02X\",\"ok\":%s,\"spi_hz\":%lu}\n",
-                  fram::partName(id.part), hex, id.status, boolName(framOk), static_cast<unsigned long>(board::FRAM_SPI_HZ));
+    Serial.printf("{\"fram\":\"%s\",\"id\":\"%s\",\"status\":\"0x%02X\",\"ok\":%s,\"volatile\":%s,",
+                  fram::partName(id.part), hex, id.status, boolName(framOk), boolName(memory.VOLATILE));
+#if defined(WICI_FRAM_PSRAM)
+    // kept: the PSRAM image survived from before this start (software restart); false after power-on.
+    Serial.printf("\"kept\":%s}\n", boolName(memory.kept()));
+#else
+    Serial.printf("\"spi_hz\":%lu}\n", static_cast<unsigned long>(board::FRAM_SPI_HZ));
+#endif
 }
 
 void printInfo() {
@@ -1284,11 +1319,11 @@ void printInfo() {
                   radiocon::PROFILE, radiocon::NAME, platform::MCU, WICI_FW_VERSION, static_cast<unsigned long>(bench.debtRemainingMs()),
                   static_cast<unsigned long>(c.rxOk), static_cast<unsigned long>(c.rxBad), static_cast<unsigned long>(c.txDrop),
                   static_cast<unsigned long>(stationJournal.starts()));
-    Serial.printf("\"bench\":\"%s\",\"prep\":%s,\"silence\":%s,\"radio_ok\":%s,\"p1_ok\":%s,\"fram_ok\":%s,\"journal_ok\":%s,"
-                  "\"journal_resets\":%lu,",
+    Serial.printf("\"bench\":\"%s\",\"prep\":%s,\"silence\":%s,\"radio_ok\":%s,\"p1_ok\":%s,\"fram_ok\":%s,\"fram_volatile\":%s,"
+                  "\"journal_ok\":%s,\"journal_resets\":%lu,",
                   BENCH, boolName(bench.prep),
-                  boolName(silenceAny()), boolName(radiocon::ok()), boolName(radiocon::p1Ok()), boolName(framOk), boolName(journalOk),
-                  static_cast<unsigned long>(journalResets));
+                  boolName(silenceAny()), boolName(radiocon::ok()), boolName(radiocon::p1Ok()), boolName(framOk),
+                  boolName(memory.VOLATILE), boolName(journalOk), static_cast<unsigned long>(journalResets));
     radiocon::printProfile();
     Serial.printf("\"tx_power_dbm\":%d,\"uptime_s\":%lu,\"service_s\":%lu,\"boot_s\":%lu,\"screen\":\"%s\",\"lang\":\"%s\","
                   "\"name\":\"%s\",\"reset_reason\":\"0x%08lX\",",
@@ -1395,8 +1430,11 @@ void printHelp() {
 #if !defined(WICI_BENCH_B) && !defined(WICI_L0)
                  "\"LED <1-4> <0|1>\","  // stanowisko B i L0 (DevKitC) nie mają diod stanu
 #endif
-                 "\"SCREEN\",\"KEY <UP|DOWN|OK|BACK> [ms]\",\"DISPLAY\","
-                 "\"VCOM <0|1>\",\"REBOOT\",\"STORE\",\"USB <json>\",\"APP\",\"LINK <0|1>\",\"RNS\",\"ANNOUNCE\""
+                 "\"SCREEN\",\"KEY <UP|DOWN|OK|BACK> [ms]\",\"REQ <n> [<text bytes>]\","
+#if !defined(WICI_HEADLESS)
+                 "\"DISPLAY\",\"VCOM <0|1>\","
+#endif
+                 "\"REBOOT\",\"STORE\",\"USB <json>\",\"APP\",\"LINK <0|1>\",\"RNS\",\"ANNOUNCE\",\"HACK [0]\""
 #if defined(WICI_BOARD_N1)
                  ",\"LED 5 <0|1>\",\"BUZZ [<ms>] [<hz>]\",\"VTEST\",\"DISPLAY <hz>\""
 #endif
@@ -1517,6 +1555,37 @@ void printStore() {
                   static_cast<unsigned long>(d.corruptSlots), static_cast<unsigned long>(d.replayed), static_cast<unsigned long>(d.scrubbed),
                   boolName(d.configCorrupt), boolName(protocol.synced()), static_cast<unsigned long>(protocol.stats().stored),
                   static_cast<unsigned long>(protocol.stats().overflow), static_cast<unsigned long>(protocol.stats().resends));
+}
+
+// REQ <n> [<text bytes>]: n REQUEST messages through the button path (station::Station::create: the same
+// SA1 encoding, register and queue as the wizard) with category 0, 1 person, urgency 0 and the selected
+// address, for bench trials (W10: 50 requests in a few seconds, also on a board without buttons). Like KEY
+// it stands in for the buttons; sa1_bytes is the SA1 length of the last request.
+void requestCommand(char* words[], size_t n) {
+    uint32_t count = 0;
+    int32_t textBytes = -1;
+    if (!cmdargs::parseRequest(words, n, sa1::TEXT_MAX, count, textBytes)) { printError("REQ <1-100> [<0-96 text bytes>]"); return; }
+    if (!storeOk) { printError("store not ready"); return; }
+    Serial.print("{\"numbers\":[");
+    uint32_t created = 0;
+    uint16_t number = 0;
+    station::Result result = station::Result::STORED;
+    while (created < count && result == station::Result::STORED) {
+        char text[sa1::TEXT_MAX + 1];
+        cmdargs::requestText(created + 1, textBytes, text, sizeof(text));
+        result = app.create(0, 1, 0, text, number);
+        if (result == station::Result::STORED) Serial.printf("%s%u", created++ ? "," : "", number);
+    }
+    size_t sa1Bytes = 0;
+    store::Request r;
+    for (size_t slot = 0; created && slot < store::REGISTER_SLOTS; ++slot) {
+        if (stationStore.request(slot).used() && stationStore.request(slot).number() == number && stationStore.readRequest(slot, r))
+            sa1Bytes = r.sa1Length;
+    }
+    Serial.printf("],\"created\":%lu,\"sa1_bytes\":%u", static_cast<unsigned long>(created), static_cast<unsigned>(sa1Bytes));
+    if (result != station::Result::STORED) Serial.printf(",\"error\":\"%s\"", station::resultName(result));
+    Serial.print("}\n");
+    screenChanged();
 }
 
 void handle(char* cmd) {
@@ -1703,7 +1772,16 @@ void handle(char* cmd) {
         Serial.printf("{\"buzz_ms\":%lu,\"hz\":%lu}\n", static_cast<unsigned long>(ms), static_cast<unsigned long>(hz));
     } else if (!strcmp(cmd, "VTEST")) platform::printVtest();
 #endif
+    else if (!strcmp(cmd, "REQ")) requestCommand(words, n);
+#if !defined(WICI_HEADLESS)
     else if (!strcmp(cmd, "DISPLAY")) printDisplay();
+#endif
+    else if (!strcmp(cmd, "HACK")) {
+        uint32_t zero = 1;
+        if (n > 1 || (n == 1 && !cmdargs::parseUint(words[0], 0, 0, zero))) { printError("HACK [0]"); return; }
+        if (n) bench.resetHackStats();
+        bench.printHack();
+    }
     else if (!strcmp(cmd, "STORE")) printStore();
     else if (!strcmp(cmd, "APP")) printApp();
     else if (!strcmp(cmd, "LINK") && n == 1) {
@@ -1719,6 +1797,7 @@ void handle(char* cmd) {
         if (!host.announce()) printError("rns not running");
         else printRns();
     }
+#if !defined(WICI_HEADLESS)
     else if (!strcmp(cmd, "VCOM") && n == 1) {
         bool on = false;
         if (!cmdargs::parseFlag(words[0], on)) { printError("VCOM <0|1>"); return; }
@@ -1729,7 +1808,9 @@ void handle(char* cmd) {
         display.softwareVcom(on);  // przewody: tylko przy pinie EMD (EXTMODE) w stanie niskim
         printDisplay();
 #endif
-    } else if (!strcmp(cmd, "REBOOT")) {
+    }
+#endif
+    else if (!strcmp(cmd, "REBOOT")) {
         // Restart programowy: pamięć niezerowana zostaje, więc ekran i język wracają (jak po watchdogu).
         if (rnsOk) rnsnode::persist();   // tablice stosu w FRAM przed restartem
         Serial.println("{\"reboot\":true}");
@@ -1936,8 +2017,10 @@ void measure::randomBytes(uint8_t* out, size_t count) { stationRandom(out, count
 
 void stationSetup() {
     seedGenerator();
+#if !defined(WICI_HEADLESS)
     pinMode(board::DISPLAY_CS, OUTPUT);  // CS ekranu aktywny stanem wysokim: najpierw w stan niski
     digitalWrite(board::DISPLAY_CS, LOW);
+#endif
 #if defined(WICI_BOARD_N1)
     pinMode(board::DISPLAY_DISP, OUTPUT);  // ekran wyłączony do wyczyszczenia jego pamięci
     digitalWrite(board::DISPLAY_DISP, LOW);
@@ -1947,14 +2030,21 @@ void stationSetup() {
         ledWrite(pin, false);
     }
 #if defined(WICI_BOARD_N1)
-    for (uint8_t pin : buttons) pinMode(pin, INPUT);  // podciągnięcia na płytce
+    for (int16_t pin : buttons) pinMode(static_cast<uint8_t>(pin), INPUT);  // podciągnięcia na płytce
     beginPanel();
 #else
-    for (uint8_t pin : buttons) pinMode(pin, INPUT_PULLUP);
+    for (int16_t pin : buttons) {
+        if (pin >= 0) pinMode(static_cast<uint8_t>(pin), INPUT_PULLUP);
+    }
 #endif
     radiocon::attach(bench);
     radiocon::begin();  // CS radia w stan nieaktywny
+#if defined(WICI_FRAM_PSRAM)
+    // First large PSRAM allocation of every start, so a software restart gets the same block back.
+    memory.begin(static_cast<uint8_t*>(ps_malloc(fram::RamMemory::BLOCK)));
+#else
     memory.begin();
+#endif
     platform::beginBus();
     // Dwa interfejsy CDC ACM z deskryptorami IAD (radio.md, "USB do laptopa"): diagnostyka i dane.
 #if defined(ARDUINO_ARCH_NRF52)
@@ -2000,6 +2090,9 @@ void stationSetup() {
         bench.log(text);
     }
     if (framOk && !migrationKnown) bench.log("migration barrier corrupt or unavailable");
+#if defined(WICI_FRAM_PSRAM)
+    if (framOk && !memory.kept()) bench.log("FRAM image in PSRAM cleared: new station after power-on");
+#endif
     applySilence();
     protocol.begin();
     beginStack();
@@ -2009,6 +2102,7 @@ void stationSetup() {
     bench.onTxDone(onTxDone, nullptr);
     // Łącze stosu w odbiorze od startu, przed ekranem (radio niezależne od ekranu, gotowość ≤60 s).
     if (radioWorks() && !bench.linkRxStart() && rnsOk) rxReadyMs = static_cast<int32_t>(platform::uptimeMs());
+#if !defined(WICI_HEADLESS)
     const bool extcominOk = display.begin();  // CLEAR czyści pamięć ekranu
 #if defined(WICI_BOARD_N1)
     // Bez EXTCOMIN z licznika panel dostałby składową stałą (EXTMODE na stałe wysoki): zostaje wyłączony.
@@ -2016,6 +2110,7 @@ void stationSetup() {
     else bench.log("display off: EXTCOMIN timer failed");
 #else
     if (!extcominOk) bench.log("EXTCOMIN timer failed");
+#endif
 #endif
     // Bez magazynu ekran nie ma kreatora ani wiadomości, ale alarm awarii radia działa.
     if (storeOk) screenModel.attach(&screenHost);
@@ -2141,8 +2236,10 @@ void stationLoop() {
         lastScreen = now;
         updateScreen(false);
     }
+#if !defined(WICI_HEADLESS)
     display.refresh();  // dalsze kawałki po 9 wierszy (sharp::LINES_PER_REFRESH), jeden na obieg
     display.maintain(now);
+#endif
     // Interfejs danych: otwarcie portu wysyła sync, zamknięcie odrzuca niepełny wiersz. Bez magazynu
     // protokół też odpowiada (zapis kończy się odmową "memory"), żeby laptop nie czekał bez odpowiedzi.
     // Węzeł stanowiska poza trybem przygotowania: ramki KISS do komputera stanowiska zamiast protokołu.

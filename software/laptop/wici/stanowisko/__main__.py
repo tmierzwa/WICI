@@ -6,6 +6,7 @@
     python -m wici.stanowisko odtworz --nosnik PUSTY_KATALOG [--kopie KATALOG ...]
     python -m wici.stanowisko nowa-tozsamosc --nosnik KATALOG --karta NOWY_PLIK
     python -m wici.stanowisko aktywuj-tozsamosc --nosnik KATALOG --karta PLIK --karta-na-stacjach
+    python -m wici.stanowisko aktywuj-zapasowa --nosnik PUSTY_KATALOG --dyzurni 4 --paczka PLIK --karta PLIK
 
 przygotuj (preparation of the station, on a computer without a network; stanowisko-osp.md, „Przygotowanie”):
 makes the medium (accounts of the duty officers, station password, main identity), the backup identity
@@ -30,6 +31,10 @@ and two lines "konto hasło" of two different duty officers, takes the newest co
 nowa-tozsamosc, aktywuj-tozsamosc (stanowisko-osp.md, „Wysyłka”, recovery step 3; rekey.py): with the application
 stopped, the same three stdin lines as odtworz; a fresh receiver identity and card, then the end of the WICI-Link
 sending block once the stations have the card.
+aktywuj-zapasowa (takeover of the station, stanowisko-osp.md, „Tożsamość zapasowa”; rekey.py): reads the package
+password from stdin and puts the backup identity on a new medium with new accounts, the card the stations hold
+and, for a numbered card, the WICI-Link settings. Prints "envelopes" once, with "guarded": a package used before
+starts with WICI-Link sending blocked until nowa-tozsamosc and aktywuj-tozsamosc.
 """
 
 import argparse
@@ -222,6 +227,22 @@ def receiver_rekey(args):
     return 0
 
 
+def activate_backup(args):
+    from . import rekey
+    password = sys.stdin.readline().strip()
+    try:
+        card = json.loads(Path(args.karta).read_text(encoding="utf-8"))
+        link = None if args.ifac is None else {
+            "net_id": card["backup"]["net_id"], "root": args.root_id, "ifac": args.ifac, "ttl": args.ttl}
+        _, _, envelopes, guarded = rekey.activate_backup(args.paczka, password, args.nosnik, args.dyzurni, card,
+                                                         link, args.iteracje)
+    except (database.LoginError, database.StorageError, OSError, ValueError, KeyError, TypeError) as exc:
+        emit("backup_failed", message=str(exc))
+        return 3
+    emit("envelopes", envelopes=envelopes, guarded=guarded)
+    return 0
+
+
 def open_archive(args):
     """For the data administrator: the archive of a closed event to a new directory."""
     try:
@@ -270,12 +291,22 @@ def main(argv=None):
         if name == "aktywuj-tozsamosc":
             operation.add_argument("--karta-na-stacjach", action="store_true",
                                    help="potwierdzenie, że wszystkie numerowane stacje mają nową kartę")
+    spare = commands.add_parser("aktywuj-zapasowa", help="tożsamość zapasowa z paczki na nowym nośniku")
+    spare.add_argument("--nosnik", required=True, help="pusty katalog na nowym nośniku stanowiska")
+    spare.add_argument("--dyzurni", type=int, required=True, help="liczba nowych kont dyżurnych")
+    spare.add_argument("--paczka", required=True, help="plik paczki tożsamości zapasowej (zapisywalny: oznaczenie użycia)")
+    spare.add_argument("--karta", required=True, help="plik karty odbiorcy, którą mają stacje")
+    spare.add_argument("--root-id", type=int, help="numer radiowego węzła stanowiska (karta numerowana)")
+    spare.add_argument("--ifac", help="16 bajtów kodu sieci WICI w zapisie hex (karta numerowana)")
+    spare.add_argument("--ttl", type=int, default=configdoc.TTL_DEFAULT, help="limit skoków ramek stanowiska w dół")
+    spare.add_argument("--iteracje", type=int, default=database.ITERATIONS, help=argparse.SUPPRESS)
     arch = commands.add_parser("archiwum", help="otwarcie archiwum zamkniętego zdarzenia (hasło archiwum na wejściu)")
     arch.add_argument("--plik", required=True, help="plik archiwum .wici")
     arch.add_argument("--do", required=True, help="katalog na baza.sqlite i rejestr.csv")
     args = parser.parse_args(argv)
     return {"przygotuj": prepare, "start": start, "odtworz": restore, "nowa-tozsamosc": receiver_rekey,
-            "aktywuj-tozsamosc": receiver_rekey, "archiwum": open_archive}[args.command](args)
+            "aktywuj-tozsamosc": receiver_rekey, "aktywuj-zapasowa": activate_backup,
+            "archiwum": open_archive}[args.command](args)
 
 
 if __name__ == "__main__":
