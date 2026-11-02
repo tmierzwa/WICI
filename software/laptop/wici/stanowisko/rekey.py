@@ -1,9 +1,18 @@
 # SPDX-License-Identifier: MIT
-"""Offline receiver identity replacement after restoring an old database copy (stanowisko-osp.md, „Wysyłka”, step 3).
+"""Receiver identity lifecycle: offline replacement after restoring an old database copy
+(stanowisko-osp.md, „Wysyłka”, step 3) and activation of the backup identity („Tożsamość zapasowa”).
 
 The restored sender stays blocked while the new card is installed on stations.
 Only a distinct private identity makes a counter reset safe; a guessed upper
 counter bound from an older copy would risk nonce reuse.
+
+The backup identity has no counter state outside the database of the medium
+that activates it. Its package is therefore marked as used before the first
+medium exists; every later activation of that package (a second medium, a lost
+medium, an interrupted activation) starts with the outbound guard set, which
+only the replacement above releases. One package file thus yields at most one
+database lineage that seals envelopes under the backup key, and restores within
+that lineage are guarded by recovery.
 """
 
 import contextlib
@@ -15,7 +24,9 @@ import time
 from pathlib import Path
 
 from .. import database
-from . import nosnik
+from . import nosnik, przyjecie, wzorzec
+
+USED = "uzyta"   # package field: time of the first activation
 
 
 def _open_guarded(medium, key):
@@ -110,3 +121,44 @@ def activate(medium, key, approvers, card_path):
                         f"karta na stacjach, zgoda {approvers[0][0]} i {approvers[1][0]}"))
         medium.save(key, db.serialize())
         return card
+
+
+def activate_backup(package_path, password, root, officers, card, link=None, iterations=database.ITERATIONS):
+    """The backup identity from its package on a new medium with new duty officer accounts.
+
+    Returns (medium, data key, envelopes, guarded): guarded is True when the package was used before,
+    so the medium may receive but seals no envelope until stage() and activate() replace the identity."""
+    package_path = Path(package_path)
+    try:
+        doc = json.loads(package_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise database.StorageError(f"paczka zapasowa nieczytelna: {exc}") from None
+    private = nosnik.open_backup(doc, password)
+    entry = nosnik.card_entry(card, private) if isinstance(card, dict) else None
+    if entry is None or entry is not card.get("backup"):
+        raise database.StorageError("karta odbiorcy nie zawiera tej tożsamości zapasowej")
+    if (card.get("v") == 2) != (link is not None):
+        raise database.StorageError("numerowana karta wymaga ustawień WICI-Link, a tylko ona je przyjmuje")
+    if link is not None and (nosnik.validate_link(link)["net_id"] != entry["net_id"] or
+                             link["root"] in (card["main"]["id"], entry["id"])):
+        raise database.StorageError("ustawienia WICI-Link nie pasują do karty odbiorcy")
+    if nosnik.Nosnik(root).exists():
+        raise database.StorageError("ten nośnik jest już przygotowany")
+    guarded = USED in doc
+    if not guarded:
+        # Durable before the medium exists: an interruption from here on only makes a retry guarded.
+        tmp = package_path.with_name(package_path.name + ".tmp")
+        database._write_durable(tmp, json.dumps({**doc, USED: time.time()}, indent=1).encode("utf-8"))
+        os.replace(tmp, package_path)
+        database._fsync_dir(package_path.parent)
+    with contextlib.closing(wzorzec.OSPStore(":memory:")) as store:
+        store.db.executescript(przyjecie.SCHEMA)
+        with store.db:
+            if guarded:
+                store.db.execute("INSERT INTO env_send_guard VALUES(1,1)")
+            store.db.execute("INSERT INTO dziennik(at, account, op, detail) VALUES(?,?,?,?)",
+                             (time.time(), "", "aktywacja_zapasowej",
+                              "paczka użyta wcześniej: nadawanie kopert zablokowane do nowej tożsamości"
+                              if guarded else "pierwsze użycie paczki"))
+        body = store.db.serialize()
+    return (*nosnik.Nosnik.create(root, officers, private, iterations, card=card, link=link, body=body), guarded)
