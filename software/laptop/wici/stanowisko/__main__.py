@@ -2,7 +2,7 @@
 """The receiving station application (stages S1-S7: stack, reception, sending, medium, copies, recovery, panel).
 
     python -m wici.stanowisko przygotuj --nosnik KATALOG --dyzurni 4 --paczka PLIK --karta PLIK
-    python -m wici.stanowisko start --nosnik KATALOG --port /dev/ttyACM0|COM5 [--bitrate 41] [--koniec-wejscia]
+    python -m wici.stanowisko start --nosnik KATALOG --port /dev/ttyACM0|COM5 [--bitrate 41] [--koniec-wejscia] [--bez-dzwieku]
     python -m wici.stanowisko odtworz --nosnik PUSTY_KATALOG [--kopie KATALOG ...]
     python -m wici.stanowisko nowa-tozsamosc --nosnik KATALOG --karta NOWY_PLIK
     python -m wici.stanowisko aktywuj-tozsamosc --nosnik KATALOG --karta PLIK --karta-na-stacjach
@@ -171,7 +171,7 @@ def start(args):
     if diagnostics:
         dyzur.wezel = wezel.Wezel(diagnostics, lambda silence, first: przyjecie.action(
             "", "cisza_wezel", json.dumps({"silence": silence, "start": first}))).start()
-    web = panel.Panel(dyzur)
+    web = panel.Panel(dyzur, sound=not args.bez_dzwieku)
     server = panel.serve(web, args.panel)
     threading.Thread(target=server.serve_forever, daemon=True, name="panel").start()
     url = f"http://127.0.0.1:{server.server_address[1]}/start?t={web.ticket()}"
@@ -294,6 +294,8 @@ def main(argv=None):
     run.add_argument("--reticulum-port", help="opcjonalny drugi port KISS Reticulum obok numerowanego WICI-Link")
     run.add_argument("--panel", type=int, default=8090, help="port panelu dyżurnego na 127.0.0.1")
     run.add_argument("--bez-przegladarki", action="store_true", help="nie otwieraj panelu w przeglądarce")
+    run.add_argument("--bez-dzwieku", action="store_true",
+                     help="alarm NATYCHMIAST bez dźwięku, tylko na ekranie (próby przy biurku); panel to pokazuje")
     run.add_argument("--diagnostyka", help="port diagnostyki węzła (drugi interfejs USB; domyślnie odszukany "
                      "obok --port; „brak” wyłącza; dla świata symulatora tcp:127.0.0.1:7391)")
     run.add_argument("--kopie", help="katalog kopii co 5 min na dysku komputera (domyślnie: katalog stanu aplikacji)")
