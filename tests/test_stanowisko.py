@@ -1265,6 +1265,24 @@ class PanelTest(StationTestCase):
     def log(self):
         return [(e["account"], e["op"]) for e in reversed(self.d.view()["log"])]
 
+    def test_rejected_envelopes_raise_the_panel_alarm(self):
+        # Dane z przyjecie.envelope_alarm (test_stanowisko_wici); tu tylko to, że panel je pokazuje i przekazuje zmianie.
+        self.assertFalse(self.d.view()["envelopes"]["active"])
+        frame = lambda sender, rest: bytes([0]) + sender.to_bytes(2, "big") + rest
+        self.reception.call(lambda s: self.reception._count_unauthenticated(100, frame(9, bytes(20)), "unknown station number"))
+        self.reception.call(lambda s: self.reception._set_aside(100, frame(4, bytes(30)), "counter outside replay window"))
+        view = self.d.view()
+        e = view["envelopes"]
+        self.assertTrue(e["active"] and view["handover"]["envelope_alarm"])
+        self.assertEqual((e["total"], e["rows"][0]["sender"], e["unauthenticated"]["unknown station number"]["sender"]), (1, 4, 9))
+        self.assertEqual(e["stations"], {})   # bez numerowanej karty stacji numer zostaje numerem
+        def numbered(store):   # stacja z kartą i numerem 4 w sieci 100
+            with store.db:
+                store.db.execute("INSERT INTO karty VALUES(?, 'WICI-N4', '[]', '')", (bytes([7]) * 16,))
+                store.db.execute("INSERT INTO numery VALUES(100, 4, ?, ?)", (bytes([7]) * 16, bytes(32)))
+        self.reception.call(numbered)
+        self.assertEqual(self.d.view()["envelopes"]["stations"], {"100:4": "WICI-N4"})
+
     def test_operator_can_override_only_a_trusted_station_reply_bearer(self):
         class Link(FakeStack):
             address = bytes(16)
