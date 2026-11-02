@@ -124,30 +124,33 @@ class MainProfile(unittest.TestCase):
                                13 * r["lora_pilot"]["sf7"]["tx_s"]["max_fields_request"])
 
     def test_wici_link_frames_match_firmware_constants(self):
-        # firmware/src/wici_link.h: MAX_PAYLOAD = 255 - 11 - 64 - 8 (hop tag) - 8 = 164; DATA = 91 B + envelope.
+        # firmware/src/wici_link.h (v3): MAX_PAYLOAD = 255 - 11 - 8 (MAC) - 8 (hop tag) = 228; DATA = 27 B + envelope.
         model = self.r["wici_link"]
-        implemented = model["variants"]["signature_every_frame"]
-        self.assertEqual(implemented["max_payload_bytes"], 164)
+        implemented = model["variants"]["hop_tag_only"]
+        self.assertEqual(implemented["max_payload_bytes"], 228)
         self.assertEqual(model["assumptions"]["hack_frame_bytes"], 27)
         self.assertEqual(model["assumptions"]["beacon_frame_bytes"], 156)
-        self.assertEqual(implemented["frames_bytes"]["typical_request"], [203, 203])
-        self.assertEqual(implemented["frames_bytes"]["max_fields_request"], [227, 227])
-        self.assertEqual(implemented["frames_bytes"]["received"], [166])
-        self.assertEqual(model["variants"]["hop_tag_only"]["frames_bytes"]["typical_request"], [226])
+        self.assertEqual(implemented["frames_bytes"]["typical_request"], [226])  # 174 B SA1, 199 B envelope
+        self.assertEqual(implemented["frames_bytes"]["max_fields_request"], [163, 163])
+        self.assertEqual(implemented["frames_bytes"]["received"], [102])
+        # The replaced v2 design (64 B origin signature on every DATA) for the record of D21.
+        self.assertEqual(model["variants"]["signature_every_frame"]["max_payload_bytes"], 164)
+        self.assertEqual(model["variants"]["signature_every_frame"]["frames_bytes"]["typical_request"], [203, 203])
         # lora::frameAirMs: 255 B is 416 ms on air plus 3 ms ramp.
         from obliczenia import wici_tx_s
         self.assertEqual(wici_tx_s(255), 0.419)
 
     def test_wici_link_w10_budget_counts_hacks_ramp_and_retries(self):
         model = self.r["wici_link"]
-        cases = model["variants"]["signature_every_frame"]["cases"]
+        cases = model["variants"]["hop_tag_only"]["cases"]
         self.assertAlmostEqual(model["attempts_at_hop_success"], 1.0525)
-        # 2 x 203 B + 166 B forwarded, three HACKs of 27 B, each charged 13 x (airtime + 3 ms).
-        self.assertAlmostEqual(cases["typical_request"]["relay_s"], 13 * (2 * 0.343 + 0.286 + 3 * 0.087))
+        # 226 B + 102 B forwarded, two HACKs of 27 B, each charged 13 x (airtime + 3 ms).
+        self.assertAlmostEqual(cases["typical_request"]["relay_s"], 13 * (0.379 + 0.194 + 2 * 0.087))
         worst = cases["max_fields_request"]
-        self.assertLess(worst["fifty_requests_min_hop_success"], 15)
-        self.assertLess(worst["margin_min_hop_success"], 0.5)
-        self.assertGreater(model["variants"]["hop_tag_only"]["cases"]["max_fields_request"]["margin_min_hop_success"], 3)
+        self.assertLess(worst["fifty_requests_min_hop_success"], 12)
+        self.assertGreater(worst["margin_min_hop_success"], 3)
+        previous = model["variants"]["signature_every_frame"]["cases"]["max_fields_request"]
+        self.assertLess(previous["margin_min_hop_success"], 0.5)
         self.assertLess(model["hostile_node"]["minutes_by_hop_success"]["0.5"], 30)
 
     def test_retry_spacing_matches_concept_06(self):
