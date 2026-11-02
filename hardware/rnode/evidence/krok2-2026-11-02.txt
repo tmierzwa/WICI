@@ -1,0 +1,208 @@
+WICI krok 2: radia RNode przy stole, 2026-11-02
+
+Procedura: docs/spec/odbior.md, "Krok 2: radia RNode przy stole".
+
+Urządzenia
+  Płytka 1: RAK19007 + RAK4631, USB FA2A4563862E8EA0, RNode nr seryjny 00:00:00:06, port /dev/cu.usbmodem2101
+  Płytka 2: RAK19007 + RAK4631, USB 0A75765D620240E5, RNode nr seryjny 00:00:00:07, port /dev/cu.usbmodem1101
+  Firmware RNode 1.86 (rnode_firmware_rak4631.zip, SHA-256 części .bin 25820129029e453de2614b100bfb002ac9ba1162cd63ac75d9d804bbc4b40fdd)
+  rnodeconf --info obu: "RAK4631 779 - 928 MHz (10:12:51)", podpis zweryfikowany, SX1262, 779-928 MHz
+  Wgranie wymagało obejść z hardware/rnode/README.md ("Gdy kreator nie wgra firmware")
+  Reticulum 1.5.5, commit e40191b3d193b46b7f2d8a44424a594cd758839b, Python 3.15, macOS
+  Anteny z zestawów, radia około 1 m od siebie (wpisać rzeczywistą odległość)
+
+Odstępstwo od procedury
+  Jeden laptop zamiast dwóch: dwie instancje Reticulum z osobnymi katalogami konfiguracji
+  (--config), osobnymi portami instancji współdzielonej (37430/37431 i 37432/37433), bez
+  AutoInterface, więc jedyną drogą między nimi jest radio.
+  Próby w obie strony szły równolegle (start przesunięty o 5 s w SF7 i 10 s w SF8).
+
+Niewykonane w tej sesji
+  Pomiar mocy na złączu RAK4631 przy txpower = 13 (wymaga miernika mocy).
+  Zachowanie RNode po przekroczeniu airtime_limit_long.
+
+Konfiguracja interfejsu (obie płytki, różni się tylko port; hasło pominięte)
+  [[WICI LoRa]]
+    type = RNodeInterface
+    enabled = yes
+    port = /dev/cu.usbmodem2101
+    frequency = 869525000
+    bandwidth = 125000
+    spreadingfactor = 7          (potem 8)
+    codingrate = 5
+    txpower = 13
+    network_name = wici-krok2
+    passphrase = <pominięte>
+    ifac_size = 128
+    airtime_limit_long = 10
+  [reticulum]: enable_transport = Yes, respond_to_probes = Yes
+  rnstatus obu: RNodeInterface Up, "Access: 128-bit IFAC", szum około -92 dBm
+
+Polecenia
+  SF7: rnprobe --config <płytka> -s 208 -n 10 -w 10 -t 15 rnstransport.probe <skrót drugiej>
+  SF8: to samo z -w 20
+  Skrót celu probe: płytka 1 771422e3d6d4b9a2ca45440cc08a2346, płytka 2 e92ff314ea90a44e0df487e1434f9dd0
+
+Wyniki
+  SF7, 1 -> 2: 10/10, RSSI -32..-34 dBm, SNR 12,0..13,25 dB, RTT 0,93..1,38 s
+  SF7, 2 -> 1: 10/10, RSSI -33..-35 dBm, SNR 11,75..13,25 dB, RTT 0,97..1,04 s
+  SF8, 1 -> 2: 10/10, RSSI -33..-35 dBm, SNR 12,25..14,25 dB, RTT 1,52..1,64 s
+  SF8, 2 -> 1: 10/10, RSSI -35..-37 dBm, SNR 12,25..14,5 dB, RTT 1,53..1,63 s
+  IFAC (SF8): płytka 2 z innym hasłem -> 3 próby z płytki 1, 0/3 (timeout);
+              po przywróceniu wspólnego hasła 3/3
+  Wynik: warunek kroku 2 spełniony (wszystkie próby z dowodem, IFAC odrzuca obce hasło).
+
+Surowe wyjście rnprobe (bez animacji oczekiwania)
+
+== sf7-rak1-do-rak2
+Path to <e92ff314ea90a44e0df487e1434f9dd0> requested          Sent probe 1 (208 bytes) to <e92ff314ea90a44e0df487e1434f9dd0>               
+Valid reply from <e92ff314ea90a44e0df487e1434f9dd0>
+Round-trip time is 1.378 seconds over 1 hop [RSSI -34 dBm] [SNR 12.75 dB] [Link Quality 100.0%]
+Sent probe 2 (208 bytes) to <e92ff314ea90a44e0df487e1434f9dd0>            
+Valid reply from <e92ff314ea90a44e0df487e1434f9dd0>
+Round-trip time is 1.085 seconds over 1 hop [RSSI -34 dBm] [SNR 12.75 dB] [Link Quality 100.0%]
+Sent probe 3 (208 bytes) to <e92ff314ea90a44e0df487e1434f9dd0>           
+Valid reply from <e92ff314ea90a44e0df487e1434f9dd0>
+Round-trip time is 989.892 milliseconds over 1 hop [RSSI -34 dBm] [SNR 12.75 dB] [Link Quality 100.0%]
+Sent probe 4 (208 bytes) to <e92ff314ea90a44e0df487e1434f9dd0>           
+Valid reply from <e92ff314ea90a44e0df487e1434f9dd0>
+Round-trip time is 1.036 seconds over 1 hop [RSSI -32 dBm] [SNR 13.0 dB] [Link Quality 100.0%]
+Sent probe 5 (208 bytes) to <e92ff314ea90a44e0df487e1434f9dd0>          
+Valid reply from <e92ff314ea90a44e0df487e1434f9dd0>
+Round-trip time is 933.67 milliseconds over 1 hop [RSSI -32 dBm] [SNR 12.5 dB] [Link Quality 100.0%]
+Sent probe 6 (208 bytes) to <e92ff314ea90a44e0df487e1434f9dd0>           
+Valid reply from <e92ff314ea90a44e0df487e1434f9dd0>
+Round-trip time is 1.025 seconds over 1 hop [RSSI -33 dBm] [SNR 12.0 dB] [Link Quality 100.0%]
+Sent probe 7 (208 bytes) to <e92ff314ea90a44e0df487e1434f9dd0>           
+Valid reply from <e92ff314ea90a44e0df487e1434f9dd0>
+Round-trip time is 1.016 seconds over 1 hop [RSSI -34 dBm] [SNR 12.25 dB] [Link Quality 100.0%]
+Sent probe 8 (208 bytes) to <e92ff314ea90a44e0df487e1434f9dd0>           
+Valid reply from <e92ff314ea90a44e0df487e1434f9dd0>
+Round-trip time is 980.215 milliseconds over 1 hop [RSSI -34 dBm] [SNR 13.25 dB] [Link Quality 100.0%]
+Sent probe 9 (208 bytes) to <e92ff314ea90a44e0df487e1434f9dd0>           
+Valid reply from <e92ff314ea90a44e0df487e1434f9dd0>
+Round-trip time is 990.159 milliseconds over 1 hop [RSSI -34 dBm] [SNR 12.5 dB] [Link Quality 100.0%]
+Sent probe 10 (208 bytes) to <e92ff314ea90a44e0df487e1434f9dd0>           
+Valid reply from <e92ff314ea90a44e0df487e1434f9dd0>
+Round-trip time is 1.006 seconds over 1 hop [RSSI -34 dBm] [SNR 13.25 dB] [Link Quality 100.0%]
+Sent 10, received 10, packet loss 0.0%
+
+== sf7-rak2-do-rak1
+Path to <771422e3d6d4b9a2ca45440cc08a2346> requested           Sent probe 1 (208 bytes) to <771422e3d6d4b9a2ca45440cc08a2346>           
+Valid reply from <771422e3d6d4b9a2ca45440cc08a2346>
+Round-trip time is 979.993 milliseconds over 1 hop [RSSI -35 dBm] [SNR 11.75 dB] [Link Quality 100.0%]
+Sent probe 2 (208 bytes) to <771422e3d6d4b9a2ca45440cc08a2346>            
+Valid reply from <771422e3d6d4b9a2ca45440cc08a2346>
+Round-trip time is 1.042 seconds over 1 hop [RSSI -35 dBm] [SNR 12.5 dB] [Link Quality 100.0%]
+Sent probe 3 (208 bytes) to <771422e3d6d4b9a2ca45440cc08a2346>           
+Valid reply from <771422e3d6d4b9a2ca45440cc08a2346>
+Round-trip time is 1.033 seconds over 1 hop [RSSI -35 dBm] [SNR 12.0 dB] [Link Quality 100.0%]
+Sent probe 4 (208 bytes) to <771422e3d6d4b9a2ca45440cc08a2346>            
+Valid reply from <771422e3d6d4b9a2ca45440cc08a2346>
+Round-trip time is 1.036 seconds over 1 hop [RSSI -33 dBm] [SNR 12.5 dB] [Link Quality 100.0%]
+Sent probe 5 (208 bytes) to <771422e3d6d4b9a2ca45440cc08a2346>           
+Valid reply from <771422e3d6d4b9a2ca45440cc08a2346>
+Round-trip time is 991.086 milliseconds over 1 hop [RSSI -33 dBm] [SNR 12.5 dB] [Link Quality 100.0%]
+Sent probe 6 (208 bytes) to <771422e3d6d4b9a2ca45440cc08a2346>           
+Valid reply from <771422e3d6d4b9a2ca45440cc08a2346>
+Round-trip time is 981.196 milliseconds over 1 hop [RSSI -35 dBm] [SNR 13.25 dB] [Link Quality 100.0%]
+Sent probe 7 (208 bytes) to <771422e3d6d4b9a2ca45440cc08a2346>           
+Valid reply from <771422e3d6d4b9a2ca45440cc08a2346>
+Round-trip time is 972.306 milliseconds over 1 hop [RSSI -35 dBm] [SNR 12.0 dB] [Link Quality 100.0%]
+Sent probe 8 (208 bytes) to <771422e3d6d4b9a2ca45440cc08a2346>           
+Valid reply from <771422e3d6d4b9a2ca45440cc08a2346>
+Round-trip time is 1.014 seconds over 1 hop [RSSI -35 dBm] [SNR 12.5 dB] [Link Quality 100.0%]
+Sent probe 9 (208 bytes) to <771422e3d6d4b9a2ca45440cc08a2346>           
+Valid reply from <771422e3d6d4b9a2ca45440cc08a2346>
+Round-trip time is 985.724 milliseconds over 1 hop [RSSI -35 dBm] [SNR 12.5 dB] [Link Quality 100.0%]
+Sent probe 10 (208 bytes) to <771422e3d6d4b9a2ca45440cc08a2346>           
+Valid reply from <771422e3d6d4b9a2ca45440cc08a2346>
+Round-trip time is 1.002 seconds over 1 hop [RSSI -35 dBm] [SNR 12.75 dB] [Link Quality 100.0%]
+Sent 10, received 10, packet loss 0.0%
+
+== sf8-rak1-do-rak2
+Path to <e92ff314ea90a44e0df487e1434f9dd0> requested         Sent probe 1 (208 bytes) to <e92ff314ea90a44e0df487e1434f9dd0>                 
+Valid reply from <e92ff314ea90a44e0df487e1434f9dd0>
+Round-trip time is 1.577 seconds over 1 hop [RSSI -33 dBm] [SNR 12.25 dB] [Link Quality 100.0%]
+Sent probe 2 (208 bytes) to <e92ff314ea90a44e0df487e1434f9dd0>                 
+Valid reply from <e92ff314ea90a44e0df487e1434f9dd0>
+Round-trip time is 1.564 seconds over 1 hop [RSSI -34 dBm] [SNR 13.5 dB] [Link Quality 100.0%]
+Sent probe 3 (208 bytes) to <e92ff314ea90a44e0df487e1434f9dd0>                 
+Valid reply from <e92ff314ea90a44e0df487e1434f9dd0>
+Round-trip time is 1.628 seconds over 1 hop [RSSI -34 dBm] [SNR 12.75 dB] [Link Quality 100.0%]
+Sent probe 4 (208 bytes) to <e92ff314ea90a44e0df487e1434f9dd0>                
+Valid reply from <e92ff314ea90a44e0df487e1434f9dd0>
+Round-trip time is 1.517 seconds over 1 hop [RSSI -34 dBm] [SNR 12.75 dB] [Link Quality 100.0%]
+Sent probe 5 (208 bytes) to <e92ff314ea90a44e0df487e1434f9dd0>                 
+Valid reply from <e92ff314ea90a44e0df487e1434f9dd0>
+Round-trip time is 1.602 seconds over 1 hop [RSSI -34 dBm] [SNR 13.5 dB] [Link Quality 100.0%]
+Sent probe 6 (208 bytes) to <e92ff314ea90a44e0df487e1434f9dd0>                
+Valid reply from <e92ff314ea90a44e0df487e1434f9dd0>
+Round-trip time is 1.549 seconds over 1 hop [RSSI -34 dBm] [SNR 14.25 dB] [Link Quality 100.0%]
+Sent probe 7 (208 bytes) to <e92ff314ea90a44e0df487e1434f9dd0>                
+Valid reply from <e92ff314ea90a44e0df487e1434f9dd0>
+Round-trip time is 1.529 seconds over 1 hop [RSSI -34 dBm] [SNR 14.25 dB] [Link Quality 100.0%]
+Sent probe 8 (208 bytes) to <e92ff314ea90a44e0df487e1434f9dd0>                 
+Valid reply from <e92ff314ea90a44e0df487e1434f9dd0>
+Round-trip time is 1.589 seconds over 1 hop [RSSI -34 dBm] [SNR 14.0 dB] [Link Quality 100.0%]
+Sent probe 9 (208 bytes) to <e92ff314ea90a44e0df487e1434f9dd0>                 
+Valid reply from <e92ff314ea90a44e0df487e1434f9dd0>
+Round-trip time is 1.644 seconds over 1 hop [RSSI -35 dBm] [SNR 12.75 dB] [Link Quality 100.0%]
+Sent probe 10 (208 bytes) to <e92ff314ea90a44e0df487e1434f9dd0>                 
+Valid reply from <e92ff314ea90a44e0df487e1434f9dd0>
+Round-trip time is 1.577 seconds over 1 hop [RSSI -34 dBm] [SNR 14.0 dB] [Link Quality 100.0%]
+Sent 10, received 10, packet loss 0.0%
+
+== sf8-rak2-do-rak1
+Path to <771422e3d6d4b9a2ca45440cc08a2346> requested          Sent probe 1 (208 bytes) to <771422e3d6d4b9a2ca45440cc08a2346>                
+Valid reply from <771422e3d6d4b9a2ca45440cc08a2346>
+Round-trip time is 1.534 seconds over 1 hop [RSSI -35 dBm] [SNR 13.0 dB] [Link Quality 100.0%]
+Sent probe 2 (208 bytes) to <771422e3d6d4b9a2ca45440cc08a2346>                 
+Valid reply from <771422e3d6d4b9a2ca45440cc08a2346>
+Round-trip time is 1.625 seconds over 1 hop [RSSI -35 dBm] [SNR 12.5 dB] [Link Quality 100.0%]
+Sent probe 3 (208 bytes) to <771422e3d6d4b9a2ca45440cc08a2346>                
+Valid reply from <771422e3d6d4b9a2ca45440cc08a2346>
+Round-trip time is 1.525 seconds over 1 hop [RSSI -35 dBm] [SNR 13.0 dB] [Link Quality 100.0%]
+Sent probe 4 (208 bytes) to <771422e3d6d4b9a2ca45440cc08a2346>                 
+Valid reply from <771422e3d6d4b9a2ca45440cc08a2346>
+Round-trip time is 1.588 seconds over 1 hop [RSSI -35 dBm] [SNR 12.5 dB] [Link Quality 100.0%]
+Sent probe 5 (208 bytes) to <771422e3d6d4b9a2ca45440cc08a2346>                 
+Valid reply from <771422e3d6d4b9a2ca45440cc08a2346>
+Round-trip time is 1.622 seconds over 1 hop [RSSI -37 dBm] [SNR 13.25 dB] [Link Quality 100.0%]
+Sent probe 6 (208 bytes) to <771422e3d6d4b9a2ca45440cc08a2346>                
+Valid reply from <771422e3d6d4b9a2ca45440cc08a2346>
+Round-trip time is 1.56 seconds over 1 hop [RSSI -35 dBm] [SNR 12.25 dB] [Link Quality 100.0%]
+Sent probe 7 (208 bytes) to <771422e3d6d4b9a2ca45440cc08a2346>                 
+Valid reply from <771422e3d6d4b9a2ca45440cc08a2346>
+Round-trip time is 1.611 seconds over 1 hop [RSSI -35 dBm] [SNR 12.25 dB] [Link Quality 100.0%]
+Sent probe 8 (208 bytes) to <771422e3d6d4b9a2ca45440cc08a2346>                 
+Valid reply from <771422e3d6d4b9a2ca45440cc08a2346>
+Round-trip time is 1.563 seconds over 1 hop [RSSI -37 dBm] [SNR 14.5 dB] [Link Quality 100.0%]
+Sent probe 9 (208 bytes) to <771422e3d6d4b9a2ca45440cc08a2346>                 
+Valid reply from <771422e3d6d4b9a2ca45440cc08a2346>
+Round-trip time is 1.554 seconds over 1 hop [RSSI -36 dBm] [SNR 12.5 dB] [Link Quality 100.0%]
+Sent probe 10 (208 bytes) to <771422e3d6d4b9a2ca45440cc08a2346>                 
+Valid reply from <771422e3d6d4b9a2ca45440cc08a2346>
+Round-trip time is 1.633 seconds over 1 hop [RSSI -36 dBm] [SNR 12.25 dB] [Link Quality 100.0%]
+Sent 10, received 10, packet loss 0.0%
+
+== ifac-zle-haslo
+Path to <e92ff314ea90a44e0df487e1434f9dd0> requested      Sent probe 1 (208 bytes) to <e92ff314ea90a44e0df487e1434f9dd0>                                                                                                                                      
+ Probe timed out
+Sent probe 2 (208 bytes) to <e92ff314ea90a44e0df487e1434f9dd0>                                                                                                                                  
+ Probe timed out
+Sent probe 3 (208 bytes) to <e92ff314ea90a44e0df487e1434f9dd0>                                                                                                                                   
+ Probe timed out
+Sent 3, received 0, packet loss 100.0%
+
+== ifac-haslo-przywrocone
+Path to <e92ff314ea90a44e0df487e1434f9dd0> requested       Sent probe 1 (208 bytes) to <e92ff314ea90a44e0df487e1434f9dd0>                 
+Valid reply from <e92ff314ea90a44e0df487e1434f9dd0>
+Round-trip time is 1.604 seconds over 1 hop [RSSI -34 dBm] [SNR 12.75 dB] [Link Quality 100.0%]
+Sent probe 2 (208 bytes) to <e92ff314ea90a44e0df487e1434f9dd0>                        
+Valid reply from <e92ff314ea90a44e0df487e1434f9dd0>
+Round-trip time is 2.402 seconds over 1 hop [RSSI -35 dBm] [SNR 13.0 dB] [Link Quality 100.0%]
+Sent probe 3 (208 bytes) to <e92ff314ea90a44e0df487e1434f9dd0>                 
+Valid reply from <e92ff314ea90a44e0df487e1434f9dd0>
+Round-trip time is 1.583 seconds over 1 hop [RSSI -34 dBm] [SNR 13.0 dB] [Link Quality 100.0%]
+Sent 3, received 3, packet loss 0.0%
