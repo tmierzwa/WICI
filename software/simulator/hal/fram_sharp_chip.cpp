@@ -40,7 +40,9 @@ uint8_t Fram::exchange(uint8_t wire) {
                 return v;
             }
             if (wel_) {
-                if (!failWrites) memory_[address_] = wire;
+                if (!failWrites && keepWrites != 0) memory_[address_] = wire;
+                if (keepWrites > 0) --keepWrites;
+                ++written;
                 wrote_ = true;
             }
             address_ = (address_ + 1) & ADDRESS_MASK;

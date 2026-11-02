@@ -14,6 +14,8 @@
 //   air                                    ramki nadane od ostatniego odczytu (JSON)
 //   airin <JSON ramki>                     ramka innego urządzenia (moc już u tego odbiorcy)
 //   fault radio|fram <0|1>                 awaria układu
+//   cut [<bajty>]                          bajty zapisane w FRAM od włączenia; z liczbą: zanik zasilania FRAM po tylu
+//                                          kolejnych bajtach zapisu (dalsze zapisy przepadają)
 //   events                                 dioda, brzęczyk, ekran, restart od ostatniego odczytu (JSON)
 //   screen                                 tekst ekranu odczytany z pikseli panelu (JSON)
 //   state                                  stan płytki (JSON)
@@ -511,6 +513,11 @@ std::string run(const char* line) {
         else if (!strcmp(a1, "fram")) d.framChip.failWrites = on;
         else return "err fault radio|fram";
         return "ok";
+    }
+    if (!strcmp(cmd, "cut")) {
+        const std::string before = std::to_string(d.framChip.written);
+        if (a1[0]) d.framChip.keepWrites = atoll(a1);
+        return before;
     }
     if (!strcmp(cmd, "events")) {
         std::string out = "[";

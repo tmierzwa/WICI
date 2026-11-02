@@ -92,6 +92,8 @@ public:
     uint8_t exchange(uint8_t wire) override;
     void deselect() override;
     bool failWrites = false;   // awaria: zapis nie zostaje w pamięci
+    int64_t keepWrites = -1;   // zanik zasilania: tyle bajtów zapisu jeszcze zostaje, potem żaden (-1: bez limitu)
+    uint64_t written = 0;      // bajty zapisu od włączenia
 
 private:
     std::vector<uint8_t>& memory_;
