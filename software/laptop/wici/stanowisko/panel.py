@@ -562,6 +562,11 @@ class Dyzur:
                       "copies_purged": wysylka.setting(db, "kopie_usuniete", None)}
             return reports, tests, quarantine, removed, trusted, waiting, oldest, log, bulletins, closed
         reports, tests, quarantine, removed, trusted, waiting, oldest, log, bulletins, closed = self.p.call(read)
+        # Ramki potwierdzone stacji HACK bez przyjęcia (stanowisko-osp.md, „Przyjęcie koperty WICI-Link”), z nazwą
+        # stacji po numerze w sieci; numer bez uwierzytelnienia koperty to tylko deklaracja, więc bez nazwy.
+        envelopes = self.p.envelope_alarm()
+        envelopes["stations"] = self.p.call(lambda store: {f"{n}:{station}": name for n, station, name in store.db.execute(
+            "SELECT numery.net_id, numery.station, karty.name FROM numery JOIN karty ON karty.source = numery.source")})
         in_flight = len(self.p.wysylka.flight)
         open_reports = [r for r in reports if r["state"] not in (3, 5, 6)]
         return {
@@ -571,9 +576,10 @@ class Dyzur:
                      "oldest_s": None if oldest is None else now - oldest,
                      "diagnostics": self.wezel is not None, "info": self.wezel.status() if self.wezel else None},
             "recovery": self.p.recovery, "copy_age_s": None if self.p.last_copy_at is None else now - self.p.last_copy_at,
-            "saved": self.p.save_error is None, "log": log, "bulletins": bulletins, **closed,
+            "saved": self.p.save_error is None, "log": log, "bulletins": bulletins, "envelopes": envelopes, **closed,
             "handover": {"open": len(open_reports), "forwarded_unconfirmed": sum(r["state"] == 4 for r in reports),
-                         "unsent": waiting or 0, "quarantine": len(quarantine), "removed_alarm": len(removed)},
+                         "unsent": waiting or 0, "quarantine": len(quarantine), "removed_alarm": len(removed),
+                         "envelope_alarm": envelopes["active"]},
         }
 
     def health(self):
