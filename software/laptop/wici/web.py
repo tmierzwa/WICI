@@ -26,7 +26,7 @@ from .session import NotLoggedIn
 
 STATIC = {"/": ("index.html", "text/html; charset=utf-8"), "/app.js": ("app.js", "text/javascript; charset=utf-8"),
           "/app.css": ("app.css", "text/css; charset=utf-8"), "/logo.svg": ("logo.svg", "image/svg+xml"),
-          "/logo-dark.svg": ("logo-dark.svg", "image/svg+xml")}
+          "/logo-dark.svg": ("logo-dark.svg", "image/svg+xml"), "/dialog.js": ("dialog.js", "text/javascript; charset=utf-8")}
 BODY_MAX = 64 * 1024
 LONG_POLL = 2   # dostępność USB sprawdzamy również bez zmiany danych
 
