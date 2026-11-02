@@ -33,3 +33,6 @@ __pycache__/
 
 # Archiwa środowisk Pythona pobierane przez software/laptop/build/build_usb.py
 /software/laptop/build/cache/
+
+# PlatformIO build output of the hardware tool projects
+/hardware/*/.pio/

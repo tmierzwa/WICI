@@ -23,6 +23,7 @@ Procedury i warunki zaliczenia kroków są w [odbiorze](../docs/spec/odbior.md#p
 |---|---|
 | [radio-pair](radio-pair/README.md) | program radiowy `pair-0.4` radiów testowych, narzędzia prób i wyniki kroku 1; narzędzie testu pary jest współdzielone z programem diagnostycznym; [sonda RF_SW1](radio-pair/rfsw-probe/README.md) i łatka RNode dla tych zestawów |
 | [rnode](rnode/README.md) | radia RNode: wgranie firmware, konfiguracja Reticulum, próba przy stole (krok 2) |
+| [lora-raw](lora-raw/README.md) | narzędzie surowego LoRa `lora-raw-0.1` dla RAK4631: podsłuch kanału i węzeł wrogi w próbach D21 ([procedura](xiao-wici/README.md)); zamiast firmware RNode tylko na czas tych prób |
 | [dev-bench](dev-bench/README.md) | płytka v1 prototypu: projekt CAD, generatory, BOM, pliki produkcyjne, uruchomienie; projekt v1.1 jako baza płytki v2 |
 | [l0-diagnostic](l0-diagnostic/README.md) | program diagnostyczny prototypu `l0-0.5`, zlecenie i instrukcja dla wykonawcy, narzędzia, testy i zapis weryfikacji |
 | [obudowa](obudowa/README.md) | założenia obudowy, lista pomiarów z przymiarki, generator odmawiający pracy bez pomiarów i render koncepcyjny |
@@ -34,7 +35,7 @@ Procedury i warunki zaliczenia kroków są w [odbiorze](../docs/spec/odbior.md#p
 ## Właściwy program do właściwej płytki
 
 - **Radia testowe:** zestaw Seeed 102010611 → `radio-pair`, środowisko PlatformIO `pair`.
-- **Radia RNode:** RAK4631 → oficjalny firmware RNode z `rnodeconf` ([rnode](rnode/README.md)); własnego programu WICI na nich nie ma.
+- **Radia RNode:** RAK4631 → oficjalny firmware RNode z `rnodeconf` ([rnode](rnode/README.md)); własnego programu WICI na nich nie ma. Na czas prób D21 przy stole: `lora-raw`, środowisko `rak4631` w [lora-raw](lora-raw/README.md); potem z powrotem RNode.
 - **Prototyp, odbiór:** ESP32-S3-DevKitC-1-N8R8 rev. 1.1 + płytka v1 + zewnętrzny Wio SX1262 + ekran Sharp LS027B7DH01A + FRAM CY15B104QN-50SXI albo MB85RS4MTPF-G-BCERE1 → program diagnostyczny, środowisko `l0` w `hardware/l0-diagnostic` (nie w `firmware/`).
 - **Prototyp, praca:** ten sam sprzęt → program stacji, środowisko `l0` w [firmware](../firmware/README.md).
 
