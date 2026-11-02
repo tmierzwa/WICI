@@ -26,6 +26,9 @@ from . import bearers, kopie, nosnik, wysylka, wzorzec, zamkniecie
 LOCK_S = 300
 STATIC = {"/": ("index.html", "text/html; charset=utf-8"), "/app.js": ("app.js", "text/javascript; charset=utf-8"),
           "/app.css": ("app.css", "text/css; charset=utf-8")}
+# Wygląd wspólny z panelem przygotowania stacji (wici/ui): kolory, pasek, karty, przyciski, pola.
+SHARED = {"/wspolne.css": ("app.css", "text/css; charset=utf-8"), "/logo.svg": ("logo.svg", "image/svg+xml"),
+          "/logo-dark.svg": ("logo-dark.svg", "image/svg+xml")}
 TEXT_MAX = 200   # pola wpisów lokalnych (źródło, adresat): nie idą radiem
 BULLETIN_BYTES = 192   # tekst komunikatu (oprogramowanie.md, „Wiadomości SA1”)
 LABELS = {"podmiot": "podmiot dysponujący siłami", "funkcja": "funkcja osoby", "kanal": "kanał",
@@ -633,8 +636,8 @@ class Panel:
 
 
 def make_handler(panel):
-    static = {path: resources.files("wici.stanowisko").joinpath("ui", name).read_bytes()
-              for path, (name, _) in STATIC.items()}
+    static = {path: (resources.files(package).joinpath("ui", name).read_bytes(), kind)
+              for package, files in (("wici.stanowisko", STATIC), ("wici", SHARED)) for path, (name, kind) in files.items()}
 
     class Handler(web.SecureHandler):
         token = panel.token
@@ -650,8 +653,8 @@ def make_handler(panel):
             if not self._authorized():
                 return self._send(403, "Otwórz panel odnośnikiem z aplikacji stanowiska.".encode(),
                                   "text/plain; charset=utf-8")
-            if url.path in STATIC:
-                return self._send(200, static[url.path], STATIC[url.path][1])
+            if url.path in static:
+                return self._send(200, *static[url.path])
             if url.path == "/api/operator/queue":
                 try:
                     since = int(parse_qs(url.query).get("v", ["-1"])[0])

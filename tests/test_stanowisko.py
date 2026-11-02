@@ -1448,6 +1448,8 @@ class PanelTest(StationTestCase):
             self.assertEqual(status, 303)
             self.assertEqual(request_("GET", f"/start?t={ticket}")[0], 403)   # odnośnik działa raz
             auth = {"Cookie": cookie.split(";")[0]}
+            for path in ("/", "/app.js", "/app.css", "/wspolne.css", "/logo.svg", "/logo-dark.svg"):   # wygląd wspólny z wici/ui
+                self.assertEqual(request_("GET", path, headers=auth)[0], 200, path)
             status, _, data = request_("GET", "/api/operator/queue", headers=auth)
             self.assertEqual((status, json.loads(data)["user"]), (200, "dyzurny-1"))
             json_post = {**auth, "Content-Type": "application/json"}
