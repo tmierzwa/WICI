@@ -467,6 +467,24 @@ const field = (name) => document.querySelector(`[name="${name}"]`);
 
 function role() { return document.querySelector('input[name="role"]:checked').value; }
 
+// One neighbour per line: number, Ed25519, X25519 and optionally the stations the network
+// plan places behind it, comma-separated ("12 <ed25519> <x25519> 7,8"). Malformed parts
+// become empty or null so the station-side check reports them on that line.
+function parsePriorityKeys(text) {
+  const number = (s) => /^\d+$/.test(s) ? Number(s) : null;
+  return text.trim().split(/\n/).map((line) => line.trim()).filter(Boolean).map((line) => {
+    const [id, ed25519, x25519, behind, ...extra] = line.split(/\s+/);
+    const entry = { id: number(id), ed25519: extra.length ? "" : (ed25519 || ""), x25519: x25519 || "" };
+    if (behind !== undefined) entry.behind = behind.split(",").map(number);
+    return entry;
+  });
+}
+
+function formatPriorityKeys(entries) {
+  return entries.map((entry) => [entry.id, entry.ed25519, entry.x25519,
+    ...(entry.behind && entry.behind.length ? [entry.behind.join(",")] : [])].join(" ")).join("\n");
+}
+
 function readForm() {
   const r = role();
   const doc = { role: r, ifac: field("ifac").value, radio: { profile: field("radio").value } };
@@ -475,12 +493,8 @@ function readForm() {
   if (networkFields.some((k) => field(`network.${k}`).value.trim() !== "")) {
     doc.network = Object.fromEntries(networkFields.map((k) => [k, numeric(`network.${k}`)]));
   }
-  const priorityLines = field("priority_keys").value.trim().split(/\n/).map((line) => line.trim()).filter(Boolean);
-  if (priorityLines.length) doc.priority_keys = priorityLines.map((line) => {
-    const [id, ed25519, x25519, ...extra] = line.split(/\s+/);
-    return { id: /^\d+$/.test(id) ? Number(id) : null,
-      ed25519: extra.length ? "" : (ed25519 || ""), x25519: x25519 || "" };
-  });
+  const priorityKeys = parsePriorityKeys(field("priority_keys").value);
+  if (priorityKeys.length) doc.priority_keys = priorityKeys;
   if (r === "stacja") {
     doc.addresses = [...$("addresses").querySelectorAll("input")].map((i) => i.value);
     const n = field("stations").value.trim();
@@ -517,8 +531,7 @@ function fillForm(doc, only) {
   if (has("ifac")) field("ifac").value = doc.ifac || "";
   if (has("radio") && doc.radio && doc.radio.profile) field("radio").value = doc.radio.profile;
   if (!only || only.includes("priority_keys")) {
-    field("priority_keys").value = Array.isArray(doc.priority_keys) ?
-      doc.priority_keys.map((entry) => `${entry.id} ${entry.ed25519} ${entry.x25519}`).join("\n") : "";
+    field("priority_keys").value = Array.isArray(doc.priority_keys) ? formatPriorityKeys(doc.priority_keys) : "";
   }
   if (!only || only.includes("network")) {
     for (const k of ["id", "station", "root", "parent", "backup_parent", "receiver_main", "receiver_backup"]) {

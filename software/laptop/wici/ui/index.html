@@ -194,8 +194,8 @@
 
       <fieldset class="group">
         <legend>Klucze sąsiadów WICI-Link</legend>
-        <p class="hint">Dla sieci numerowanej wpisz do 50 wierszy: numer stacji, Ed25519 (ostatnie 64 cyfry pola „key” jej karty) i X25519 (pierwsze 64 cyfry). Węzeł i stacje używają X25519 do uwierzytelniania każdego skoku.</p>
-        <label class="field"><span>Numer, klucz Ed25519 i klucz X25519 sąsiada</span><textarea class="mono" name="priority_keys" rows="4" spellcheck="false"></textarea></label>
+        <p class="hint">Dla sieci numerowanej wpisz do 50 wierszy: numer stacji, Ed25519 (ostatnie 64 cyfry pola „key” jej karty) i X25519 (pierwsze 64 cyfry). Węzeł i stacje używają X25519 do uwierzytelniania każdego skoku. Na końcu wiersza możesz podać po przecinkach numery stacji, które plan sieci umieszcza za tym sąsiadem (razem najwyżej 128), np. <code>12 … … 7,8</code>; tylko dla nich stacja uczy się drogi w dół przez tego sąsiada.</p>
+        <label class="field"><span>Numer, klucz Ed25519, klucz X25519 i stacje za sąsiadem</span><textarea class="mono" name="priority_keys" rows="4" spellcheck="false"></textarea></label>
         <p class="field-error" data-error="priority_keys"></p>
       </fieldset>
 
