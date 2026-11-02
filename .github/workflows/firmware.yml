@@ -13,9 +13,9 @@ name: Firmware
 on:
   push:
     branches: [main]
-    paths: ['firmware/**', 'tests/test_rns_*.py', 'tests/test_rnscore.py', 'tests/test_rnscore_lxmf.py', 'tests/native/rns_*', 'tests/native/rnscore_*', 'tests/vectors/**', '.github/workflows/firmware.yml']
+    paths: ['firmware/**', 'tests/test_rns_*.py', 'tests/test_rnscore.py', 'tests/test_rnscore_lxmf.py', 'tests/native/rns_*', 'tests/native/rnscore_*', 'tests/vectors/**', 'tests/test_migration_host.py', 'software/simulator/hal/**', 'software/simulator/cli.cpp', 'software/simulator/build.py', 'software/laptop/wici/migration.py', 'software/laptop/wici/usbproto.py', '.github/workflows/firmware.yml']
   pull_request:
-    paths: ['firmware/**', 'tests/test_rns_*.py', 'tests/test_rnscore.py', 'tests/test_rnscore_lxmf.py', 'tests/native/rns_*', 'tests/native/rnscore_*', 'tests/vectors/**', '.github/workflows/firmware.yml']
+    paths: ['firmware/**', 'tests/test_rns_*.py', 'tests/test_rnscore.py', 'tests/test_rnscore_lxmf.py', 'tests/native/rns_*', 'tests/native/rnscore_*', 'tests/vectors/**', 'tests/test_migration_host.py', 'software/simulator/hal/**', 'software/simulator/cli.cpp', 'software/simulator/build.py', 'software/laptop/wici/migration.py', 'software/laptop/wici/usbproto.py', '.github/workflows/firmware.yml']
 permissions:
   contents: read
 jobs:
@@ -93,6 +93,24 @@ jobs:
         env:
           WICI_RNS_SANITIZE: '1'
         run: python -m unittest tests.test_rnscore_lxmf -v
+  migration:
+    # PRZENIEŚ STACJĘ on two real station programs (the simulator's native bench-b build) with the laptop's
+    # coordinator: power loss between steps and after every byte of activate, abort paths (about a minute).
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: firmware/.pio/stack
+          key: stack-${{ hashFiles('firmware/tools/stack_deps.py', 'firmware/patches/**') }}
+      - name: Native station program
+        run: python software/simulator/build.py --native
+      - name: Migration between two station programs
+        run: python -m unittest tests.test_migration_host -v
   fuzz:
     # Rdzeń pod libFuzzerem przez 60 s (tools/core_fuzz.py; godzina w fuzz.yml), równolegle z resztą.
     runs-on: ubuntu-latest
