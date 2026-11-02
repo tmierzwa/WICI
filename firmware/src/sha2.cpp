@@ -20,10 +20,16 @@ inline uint32_t rotr(uint32_t x, int n) { return (x >> n) | (x << (32 - n)); }
 
 }  // namespace
 
+void wipe(void* data, size_t length) {
+    volatile uint8_t* p = static_cast<volatile uint8_t*>(data);
+    while (length--) *p++ = 0;
+}
+
 void Hash::reset() {
     static const uint32_t initial[8] = {0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
                                         0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19};
     memcpy(state_, initial, sizeof(state_));
+    wipe(buffer_, sizeof(buffer_));  // the last block may hold key material
     used_ = 0;
     bytes_ = 0;
 }
@@ -101,8 +107,8 @@ Hmac::Hmac(const uint8_t* key, size_t keyLength) {
         outerKey_[i] = k[i] ^ 0x5c;
     }
     inner_.update(innerKey, BLOCK);
-    memset(k, 0, sizeof(k));
-    memset(innerKey, 0, sizeof(innerKey));
+    wipe(k, sizeof(k));
+    wipe(innerKey, sizeof(innerKey));
 }
 
 void Hmac::finish(uint8_t out[DIGEST]) {
@@ -112,7 +118,27 @@ void Hmac::finish(uint8_t out[DIGEST]) {
     outer.update(outerKey_, BLOCK);
     outer.update(innerDigest, DIGEST);
     outer.finish(out);
-    memset(outerKey_, 0, sizeof(outerKey_));
+    wipe(innerDigest, sizeof(innerDigest));
+    wipe(outerKey_, sizeof(outerKey_));
+}
+
+Hmac::~Hmac() {
+    wipe(outerKey_, sizeof(outerKey_));
+    inner_.reset();
+}
+
+void hkdf(const uint8_t* salt, size_t saltLength, const uint8_t* ikm, size_t ikmLength,
+          const uint8_t* info, size_t infoLength, uint8_t out[DIGEST]) {
+    uint8_t prk[DIGEST];
+    Hmac extract(salt, saltLength);
+    extract.update(ikm, ikmLength);
+    extract.finish(prk);
+    Hmac expand(prk, sizeof(prk));
+    wipe(prk, sizeof(prk));
+    expand.update(info, infoLength);
+    const uint8_t block = 1;
+    expand.update(&block, 1);
+    expand.finish(out);
 }
 
 void destinationHash(const uint8_t publicKey[64], const char* name, uint8_t out[16]) {

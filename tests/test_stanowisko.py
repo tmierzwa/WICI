@@ -35,7 +35,7 @@ sys.path.insert(0, str(ROOT / "software" / "laptop" / "build"))
 
 import build_stanowisko  # noqa: E402
 from wici import database  # noqa: E402
-from wici.stanowisko import __main__ as aplikacja, kopie, nosnik, panel, przyjecie, stos, wezel, wysylka, wzorzec, zamkniecie  # noqa: E402
+from wici.stanowisko import __main__ as aplikacja, bearers, kopie, nosnik, panel, przyjecie, rekey, stos, wezel, wysylka, wzorzec, zamkniecie  # noqa: E402
 
 PROGRAM = os.environ.get("WICI_HOST_PROGRAM")
 # Pakiet stanowiska (build_stanowisko.py): SimulatorTest uruchamia wtedy aplikację jego skryptem stanowisko.sh.
@@ -84,6 +84,77 @@ class ConfigTest(unittest.TestCase):
         for bad in ("COM5\n[[x]]", "a]b"):
             with self.assertRaises(ValueError):
                 stos.config(bad)
+
+
+class BearerSetTest(unittest.TestCase):
+    def test_reply_follows_last_authenticated_bearer_and_preserves_outcome(self):
+        class Fake:
+            address = bytes(16)
+
+            def __init__(self):
+                self.sent = []
+
+            def send(self, dest, content):
+                self.sent.append((dest, content))
+                return Sent(True)
+
+            def outcome(self, item):
+                return item.result
+
+            def start(self): pass
+            def stop(self): pass
+            def announce(self): pass
+            def status(self, now):
+                return {"online": True, "since_rx": 0, "dropped": {}}
+
+        wici, legacy = Fake(), Fake()
+        collection = bearers.Bearers({"wici": wici, "reticulum": legacy}, "wici")
+        source = bytes(range(16))
+        class Reception:
+            last_bearer = {}
+            bearer_override = {}
+
+            @staticmethod
+            def send_wici(bearer, dest, content):
+                return bearer.send(dest, content)
+
+        collection.reception = Reception()
+        first = collection.send(source, b"reply")
+        self.assertEqual(first.bearer, "wici")
+        self.assertTrue(collection.outcome(first))
+        collection.reception.last_bearer[source] = "reticulum"
+        second = collection.send(source, b"reply2")
+        self.assertEqual(second.bearer, "reticulum")
+        self.assertEqual(wici.sent, [(source, b"reply")])
+        self.assertEqual(legacy.sent, [(source, b"reply2")])
+        self.assertTrue(collection.outcome(second))
+        collection.reception.last_bearer.clear()
+        collection.reception.send_wici = lambda *_: None
+        third = collection.send(source, b"fallback")
+        self.assertEqual(third.bearer, "reticulum")
+        self.assertEqual(legacy.sent[-1], (source, b"fallback"))
+        collection.reception.bearer_override[source] = "wici"
+        self.assertIsNone(collection.send(source, b"operator-choice"))
+        collection.reception.send_wici = Reception.send_wici
+        collection.reception.bearer_override[source] = "wici"
+        collection.reception.last_bearer[source] = "reticulum"
+        self.assertEqual(collection.send(source, b"manual").bearer, "wici")
+
+        # A failed delivery on the remembered bearer sends the next attempt on the other one.
+        collection.reception.bearer_override.clear()
+        collection.reception.last_bearer[source] = "wici"
+        failed = collection.send(source, b"lost")
+        failed.message.result = False
+        self.assertFalse(collection.outcome(failed))
+        retry = collection.send(source, b"lost")
+        self.assertEqual(retry.bearer, "reticulum")
+        self.assertTrue(collection.outcome(retry))
+        self.assertEqual(collection.send(source, b"next").bearer, "wici")
+        collection.reception.bearer_override[source] = "wici"
+        failed = collection.send(source, b"operator")
+        failed.message.result = False
+        collection.outcome(failed)
+        self.assertEqual(collection.send(source, b"operator").bearer, "wici")   # the operator's choice holds
 
 
 def request(mid=None, revision=1, kind=0, people=3, text="piwnica"):
@@ -154,6 +225,113 @@ class StationTestCase(unittest.TestCase):
 
 class ReceptionTest(StationTestCase):
     """S2: reception on the reference OSPStore in its own thread; RECEIVED only after COMMIT."""
+
+    def test_reticulum_route_updates_only_after_trusted_admission(self):
+        self.reception.deliver(self.STATION, b"invalid", bearer="reticulum")
+        self.tick()
+        self.assertIsNone(self.reception.call(lambda s: self.reception.last_bearer.get(self.STATION)))
+        self.reception.deliver(self.STATION, request(), bearer="reticulum")
+        self.tick()
+        self.assertEqual(self.reception.call(lambda s: self.reception.last_bearer.get(self.STATION)), "reticulum")
+        self.restart()
+        self.assertEqual(self.reception.call(lambda s: self.reception.last_bearer.get(self.STATION)), "reticulum")
+        content = request()
+        self.reception.deliver(self.STATION, content, bearer="wici")
+        self.reception.deliver(self.STATION, content, bearer="reticulum")   # repeat: the route stays
+        self.tick()
+        self.assertEqual(self.reception.call(lambda s: self.reception.last_bearer.get(self.STATION)), "wici")
+        self.assertEqual(durable(self.medium, self.key, "SELECT bearer FROM bearer_route"), ("wici",))
+
+    @unittest.skipUnless(importlib.util.find_spec("cryptography"), "cryptography for D21 envelope")
+    def test_numbered_envelope_fragments_commit_with_sa1_and_replay(self):
+        from cryptography.hazmat.primitives.asymmetric import x25519
+        from wici import envelope
+
+        receiver_private = bytes(range(32))
+        station_private = bytes(range(32, 64))
+        receiver_public = x25519.X25519PrivateKey.from_private_bytes(receiver_private).public_key().public_bytes_raw()
+        station_public = x25519.X25519PrivateKey.from_private_bytes(station_private).public_key().public_bytes_raw()
+        main = nosnik.public_identity(receiver_private + bytes(range(32)))
+        backup = bytes(range(64, 128))
+        station_key = station_public + bytes(range(32, 64))
+        source = nosnik.lxmf_address(station_key)
+        self.medium.save_identity(self.key, receiver_private + bytes(range(32)))
+        self.medium.save_card(self.key, nosnik.receiver_card(main, backup, 100, 2, 3))
+
+        def register(store):
+            store.add_trusted(source, station_key, ("dyzurny-1", "dyzurny-2"))
+            store.db.execute("INSERT INTO numery VALUES(?,?,?,?)", (100, 4, source, station_key))
+
+        self.reception.call(register)
+        content = request(text="x" * 96)
+        key = envelope.derive_key(station_private, receiver_public, 100, 4, 2, own_id=4)
+        frames = envelope.seal(key, 4, 2, 7, content, 153)
+        self.assertEqual(len(frames), 2)
+        self.assertEqual(self.reception.receive_envelope_frame(100, frames[1], bearer="wici"), "partial")
+        self.assertEqual(self.reception.call(lambda s: self.reception.last_bearer.get(source)), "wici")
+        self.assertEqual(durable(self.medium, self.key, "SELECT count(*) FROM env_parts"), (1,))
+        self.restart()
+        self.assertEqual(self.reception.call(lambda s: self.reception.last_bearer.get(source)), "wici")
+        self.assertEqual(self.reception.receive_envelope_frame(100, frames[0], bearer="wici"), "complete")
+        self.assertEqual(durable(self.medium, self.key, "SELECT count(*) FROM received"), (1,))
+        self.assertEqual(durable(self.medium, self.key, "SELECT highest FROM env_replay"), (7,))
+        self.assertEqual(self.reception.receive_envelope_frame(100, frames[0]), "duplicate")
+        # A replayed frame is acknowledged again but does not move the reply route.
+        self.assertEqual(self.reception.receive_envelope_frame(100, frames[0], bearer="reticulum"), "duplicate")
+        self.assertIsNone(durable(self.medium, self.key, "SELECT 1 FROM bearer_route WHERE bearer='reticulum'"))
+        with self.assertRaises(envelope.EnvelopeError):
+            self.reception.receive_envelope_frame(101, frames[0])
+        forged = bytearray(frames[0]); forged[-1] ^= 1
+        with self.assertRaises(envelope.EnvelopeError):
+            self.reception.receive_envelope_frame(100, forged, bearer="reticulum")
+        self.assertEqual(self.reception.call(lambda s: self.reception.last_bearer.get(source)), "wici")
+
+    @unittest.skipUnless(importlib.util.find_spec("cryptography"), "cryptography for D21 envelope")
+    def test_numbered_outbound_reserves_counter_before_sealing(self):
+        from cryptography.hazmat.primitives.asymmetric import x25519
+        from wici import envelope
+
+        receiver_private, station_private = bytes(range(32)), bytes(range(32, 64))
+        receiver_public = x25519.X25519PrivateKey.from_private_bytes(receiver_private).public_key().public_bytes_raw()
+        station_public = x25519.X25519PrivateKey.from_private_bytes(station_private).public_key().public_bytes_raw()
+        station_key = station_public + bytes(range(32, 64))
+        self.medium.save_identity(self.key, receiver_private + bytes(range(32)))
+        self.medium.save_card(self.key, nosnik.receiver_card(nosnik.public_identity(receiver_private + bytes(range(32))), bytes(range(64, 128)), 100, 2, 3))
+        def register(store):
+            source = nosnik.lxmf_address(station_key)
+            store.add_trusted(source, station_key, ("dyzurny-1", "dyzurny-2"))
+            store.db.execute("INSERT INTO numery VALUES(?,?,?,?)", (100, 4, source, station_key))
+        self.reception.call(register)
+        content = received_for(request())
+        source = nosnik.lxmf_address(station_key)
+
+        class Link:
+            network = 100
+            frames = None
+
+            def status(self, now):
+                return {"online": True}
+
+            def send_frames(self, frames):
+                self.frames = frames
+                return frames
+
+        def send(link):
+            return self.reception.call(lambda s: self.reception.send_wici(link, source, content))
+
+        first = send(Link())[0]
+        self.assertEqual(durable(self.medium, self.key, "SELECT reserved_until FROM env_send"), (64,))
+        self.restart()
+        second = send(Link())[0]
+        self.assertEqual((int.from_bytes(first[5:9], "big"), int.from_bytes(second[5:9], "big")), (0, 64))
+        key = envelope.derive_key(station_private, receiver_public, 100, 2, 4, 4)
+        self.assertEqual(envelope.open_part(key, second).plaintext, content)
+        # Blocked after a recovery: no counter, no frame, so bearers.Bearers may use Reticulum.
+        self.reception.call(lambda s: s.db.execute("INSERT INTO env_send_guard VALUES(1,1)"))
+        blocked = Link()
+        self.assertIsNone(send(blocked))
+        self.assertIsNone(blocked.frames)
+        self.assertEqual(durable(self.medium, self.key, "SELECT reserved_until FROM env_send"), (128,))
 
     def test_trusted_request_gets_received_after_commit_with_reception_time(self):
         content = request()
@@ -484,20 +662,48 @@ class MediumTest(unittest.TestCase):
         with self.assertRaises(database.LoginError):   # konto z innego nośnika
             self.medium.login("dyzurny-1", envelopes["dyzurny-1"], self.key)
 
-    def test_snapshots_are_sealed_and_an_interrupted_write_keeps_the_previous(self):
+    def test_snapshots_are_sealed_and_a_corrupt_newer_copy_fails_closed(self):
         self.medium.save(self.key, b"pierwsza piwnica")
         self.medium.save(self.key, b"druga piwnica")
         self.assertNotIn(b"piwnica", self.files())
+        with unittest.mock.patch.object(nosnik.os, "replace", side_effect=OSError("zanik zasilania")):
+            with self.assertRaises(OSError):
+                self.medium.save(self.key, b"trzecia piwnica")
+        self.assertEqual(nosnik.Nosnik(self.root).load(self.key), b"druga piwnica")   # przerwany zapis: tylko .tmp
         newest = self.root / "baza" / self.medium.last
-        newest.write_bytes(newest.read_bytes()[:-10])   # zanik zasilania w trakcie zapisu
-        self.assertEqual(nosnik.Nosnik(self.root).load(self.key), b"pierwsza piwnica")
-        self.assertIsNone(nosnik.Nosnik(self.root).load(os.urandom(32)))
+        newest.write_bytes(newest.read_bytes()[:-10])   # uszkodzony nośnik: zapis zastępuje plik w całości
+        with self.assertRaises(database.StorageError):
+            nosnik.Nosnik(self.root).load(self.key)
+        with self.assertRaises(database.StorageError):
+            nosnik.Nosnik(self.root).load(os.urandom(32))
 
     def test_identity_is_sealed_with_the_data_key(self):
         self.assertEqual(self.medium.identity(self.key), bytes(range(64)))
         self.assertNotIn(bytes(range(64)), self.files())
         with self.assertRaises(database.StorageError):
             self.medium.identity(os.urandom(32))
+
+    def test_numbered_link_binding_is_sealed_and_survives_reopen(self):
+        link = {"net_id": 100, "root": 5, "ifac": "ab" * 16}
+        self.medium.save_link(self.key, link)
+        self.assertEqual(nosnik.Nosnik(self.root).link(self.key), {**link, "ttl": 7})
+        self.assertNotIn(b"abababab", (self.root / "wici-link").read_bytes())
+        with self.assertRaises(database.StorageError):
+            self.medium.link(os.urandom(32))
+        for bad in ({"root": 0}, {"ttl": 0}, {"ttl": 16}):
+            with self.assertRaises(database.StorageError):
+                self.medium.save_link(self.key, {**link, **bad})
+        with self.assertRaises(database.StorageError):
+            self.medium.save_link(self.key, {**link, "ifac": "ab " * 10 + "ab"})
+        untouched = Path(self.tmp.name) / "invalid-link"
+        with self.assertRaises(database.StorageError):
+            nosnik.Nosnik.create(untouched, 2, bytes(range(64)), FAST,
+                                 link={**link, "ifac": "not-a-network-code"})
+        self.assertFalse(untouched.exists())
+
+    def test_root_binding_cannot_silently_prepare_an_unnumbered_medium(self):
+        with self.assertRaisesRegex(SystemExit, "--net-id"):
+            aplikacja.prepare(unittest.mock.Mock(net_id=None, root_id=5, ifac=None))
 
     def test_a_prepared_medium_is_not_prepared_again(self):
         with self.assertRaises(database.StorageError):
@@ -520,6 +726,12 @@ class MediumTest(unittest.TestCase):
         self.assertEqual((card["wici"], card["v"]), ("karta-odbiorcy", 1))
         self.assertEqual(card["backup"], {"lxmf": nosnik.lxmf_address(backup).hex(), "key": backup.hex()})
         self.assertEqual(card["main"]["key"], main.hex())
+        numbered = nosnik.receiver_card(main, backup, 100, 2, 3)
+        self.assertEqual(numbered["v"], 2)
+        self.assertEqual(numbered["main"], {"lxmf": nosnik.lxmf_address(main).hex(), "key": main.hex(),
+                                             "id": 2, "net_id": 100, "x25519": main[:32].hex()})
+        with self.assertRaises(ValueError):
+            nosnik.receiver_card(main, backup, 100, 2, 2)
 
     def test_database_lives_on_the_medium_only_sealed(self):
         reception = przyjecie.Przyjecie(self.medium, self.key, lambda t, c: None, lambda m: None,
@@ -556,6 +768,7 @@ class MediumTest(unittest.TestCase):
         medium = nosnik.Nosnik(work / "nowy")
         main = RNS.Identity.from_bytes(medium.identity(medium.unlock(envelopes["stanowisko"])))
         self.assertEqual(card["main"]["lxmf"], nosnik.lxmf_address(main.get_public_key()).hex())
+        self.assertEqual(medium.card(medium.unlock(envelopes["stanowisko"])), card)
         with self.assertRaises(SystemExit):   # paczka na nośniku jest odrzucona
             aplikacja.main(["przygotuj", "--nosnik", str(work / "trzeci"), "--dyzurni", "1",
                             "--paczka", str(work / "trzeci" / "p.json"), "--karta", str(work / "k2.json")])
@@ -621,6 +834,19 @@ class CopiesTest(WithCopies):
         self.assertEqual(payload["konta"], (self.medium.kit.dir / database.ACCOUNTS).read_bytes())
         self.assertIsNone(durable(self.medium, self.key, "SELECT name FROM sqlite_master WHERE name='kopia'"))
 
+    def test_numbered_link_binding_is_in_the_copy_and_restored_medium(self):
+        link = {"net_id": 100, "root": 5, "ifac": "ab" * 16, "ttl": 7}
+        self.medium.save_link(self.key, link)
+        self.now += kopie.INTERVAL_S
+        self.tick()
+        path = self.copies.files()[0]
+        _, payload = kopie.Kopie.read(path, self.key)
+        self.assertEqual(payload["wici-link"], (self.medium.root / "wici-link").read_bytes())
+        restored = kopie.restore(path, self.key, Path(self.disk.name) / "restored",
+                                [("dyzurny-1", self.envelopes["dyzurny-1"]),
+                                 ("dyzurny-2", self.envelopes["dyzurny-2"])], self.now)
+        self.assertEqual(restored.link(self.key), link)
+
     def test_failed_copy_is_retried_and_logged_once_without_stopping_reception(self):
         self.tick()   # pierwsza kopia przy starcie; następna za 5 min
         shutil.rmtree(self.copies.dir)
@@ -639,7 +865,13 @@ class CopiesTest(WithCopies):
         self.every_minute(15)
         before = self.copies.files()
         self.assertEqual(len(before), kopie.KEEP)
-        with unittest.mock.patch.object(kopie.os, "replace", side_effect=OSError("zanik zasilania")):
+        replace = os.replace
+
+        def cut(source, target):   # zanik zasilania przed podmianą pliku kopii (migawki nośnika idą dalej)
+            if Path(target).parent == self.copies.dir:
+                raise OSError("zanik zasilania")
+            return replace(source, target)
+        with unittest.mock.patch.object(kopie.os, "replace", side_effect=cut):
             self.every_minute(5)
         self.assertEqual(self.copies.files(), before)
         self.assertTrue(all(kopie.Kopie.read(p, self.key) for p in before))
@@ -688,6 +920,69 @@ class RecoveryTest(WithCopies):
 
     def status(self, mid, revision, state):
         return self.reception.call(lambda s: self.reception.wysylka.status(s, self.STATION, mid, revision, state, self.now))
+
+    def test_numbered_receiver_card_survives_copy_restore(self):
+        card = nosnik.receiver_card(bytes(range(64)), bytes(range(64, 128)), 100, 2, 3)
+        self.medium.save_card(self.key, card)
+        copy = self.keep_copy()
+        restored = self.restored(copy, "numbered")
+        self.assertTrue(restored.recovery)
+        self.assertEqual(self.medium.card(self.key), card)
+
+    @unittest.skipUnless(importlib.util.find_spec("cryptography"), "cryptography for the receiver identity")
+    def test_recovered_receiver_requires_staged_fresh_identity_before_sending(self):
+        old_private = self.medium.identity(self.key)
+        old_public = nosnik.public_identity(old_private)
+        backup_public = nosnik.public_identity(bytes(range(64, 128)))
+        self.medium.save_card(self.key, nosnik.receiver_card(old_public, backup_public, 100, 2, 3))
+        self.medium.save_link(self.key, {"net_id": 100, "root": 1, "ifac": "ab" * 16})
+        self.restored(self.keep_copy(), "rekeyed")
+        self.reception.finish_recovery("dyzurny-1", 0, True)
+        self.reception.stop()
+        card_path = Path(self.tmp.name) / "new-receiver-card.json"
+        old_card_path = Path(self.tmp.name) / "old-receiver-card.json"
+        old_card_path.write_text(json.dumps(self.medium.card(self.key)))
+        with self.assertRaises(database.StorageError):
+            rekey.activate(self.medium, self.key, self.approvers(), old_card_path)
+        with unittest.mock.patch.object(self.medium, "save_card", side_effect=OSError("power cut")):
+            with self.assertRaises(OSError):
+                rekey.stage(self.medium, self.key, self.approvers(), card_path)
+        self.assertEqual(durable(self.medium, self.key, "SELECT blocked FROM env_send_guard WHERE id=1"), (1,))
+        card = rekey.stage(self.medium, self.key, self.approvers(), card_path)
+        self.assertNotEqual(self.medium.identity(self.key), old_private)
+        self.assertEqual(card["main"]["key"], nosnik.public_identity(self.medium.identity(self.key)).hex())
+        with self.assertRaises(database.StorageError):   # a card file is never overwritten
+            rekey.stage(self.medium, self.key, self.approvers(), card_path)
+        self.assertEqual(self.medium.card(self.key), card)
+        with self.assertRaises(database.LoginError):   # one officer twice is not two officers
+            rekey.activate(self.medium, self.key, [self.approvers()[0]] * 2, card_path)
+        self.assertEqual(durable(self.medium, self.key, "SELECT blocked FROM env_send_guard WHERE id=1"), (1,))
+        card_path.write_text(json.dumps({**card, "main": {**card["main"], "id": 99}}))
+        with self.assertRaises(database.StorageError):
+            rekey.activate(self.medium, self.key, self.approvers(), card_path)
+        card_path.write_text(json.dumps(card))
+        with unittest.mock.patch.object(self.medium, "save", side_effect=OSError("power cut")):
+            with self.assertRaises(OSError):
+                rekey.activate(self.medium, self.key, self.approvers(), card_path)
+        self.assertEqual(durable(self.medium, self.key, "SELECT blocked FROM env_send_guard WHERE id=1"), (1,))
+        rekey.activate(self.medium, self.key, self.approvers(), card_path)
+        self.assertIsNone(durable(self.medium, self.key, "SELECT blocked FROM env_send_guard WHERE id=1"))
+        with self.assertRaises(database.StorageError):
+            rekey.activate(self.medium, self.key, self.approvers(), card_path)
+        self.reception = self.open()
+        self.assertFalse(self.reception.recovery)
+
+    def test_identity_commands_from_the_command_line(self):
+        self.reception.stop()
+        lines = "\n".join([self.envelopes["stanowisko"]] + [f"{n} {p}" for n, p in self.approvers()]) + "\n"
+        for args in (["aktywuj-tozsamosc", "--karta", "karta.json"],      # bez potwierdzenia instalacji kart
+                     ["nowa-tozsamosc", "--karta", str(Path(self.tmp.name) / "karta.json")]):   # bez odzyskania
+            out = io.StringIO()
+            with unittest.mock.patch.object(sys, "stdin", io.StringIO(lines)), contextlib.redirect_stdout(out):
+                code = aplikacja.main([args[0], "--nosnik", str(self.medium.root), *args[1:]])
+            self.assertEqual((code, json.loads(out.getvalue())["event"]), (3, "identity_failed"))
+        self.assertFalse((Path(self.tmp.name) / "karta.json").exists())
+        self.reception = self.open()
 
     def test_copy_at_nine_status_at_ten_spare_computer_at_ten_to_ten(self):
         content = request()
@@ -750,6 +1045,7 @@ class RecoveryTest(WithCopies):
             self.assertEqual(db.execute("SELECT value FROM settings WHERE key='p'").fetchone(), (wysylka.RECOVERY_S,))
         self.assertEqual(self.actions()[-2:], ["odtworzenie", "odzyskanie_koniec"])
         self.assertIsNone(durable(self.medium, self.key, "SELECT name FROM sqlite_master WHERE name='kopia'"))
+        self.assertEqual(durable(self.medium, self.key, "SELECT blocked FROM env_send_guard WHERE id=1"), (1,))
 
     def test_restore_needs_two_different_officers_and_an_empty_medium(self):
         self.tick()
@@ -793,7 +1089,7 @@ class FakeStack:
 
 
 def station_card(key):
-    """Station card as `card` over USB returns it (protokol-usb.md)."""
+    """Station card as `card` over USB returns it (usb-protocol.md)."""
     return {"name": panel.station_name(key), "lxmf": nosnik.lxmf_address(key).hex(), "key": key.hex(),
             "address": ["ul. Długa 5, wejście od podwórza"], "fingerprint": panel.fingerprint(key)}
 
@@ -818,6 +1114,27 @@ class PanelTest(StationTestCase):
 
     def log(self):
         return [(e["account"], e["op"]) for e in reversed(self.d.view()["log"])]
+
+    def test_operator_can_override_only_a_trusted_station_reply_bearer(self):
+        class Link(FakeStack):
+            address = bytes(16)
+            network = 100
+
+        self.d.stos = bearers.Bearers({"wici": Link(), "reticulum": Link()}, "wici")
+        self.d.bearer({"source": self.STATION.hex(), "bearer": "reticulum"})
+        self.assertEqual(durable(self.medium, self.key, "SELECT bearer FROM bearer_override WHERE source=?",
+                                 (self.STATION,)), ("reticulum",))
+        self.restart()
+        self.d.p = self.reception
+        self.assertEqual(self.reception.call(lambda s: self.reception.bearer_override.get(self.STATION)), "reticulum")
+        with self.assertRaises(ValueError):
+            self.d.bearer({"source": self.STATION.hex(), "bearer": "wici"})
+        with self.assertRaises(ValueError):
+            self.d.bearer({"source": self.OTHER.hex(), "bearer": "reticulum"})
+        self.d.bearer({"source": self.STATION.hex(), "bearer": "auto"})
+        self.assertIsNone(durable(self.medium, self.key, "SELECT bearer FROM bearer_override WHERE source=?",
+                                  (self.STATION,)))
+        self.assertIn(("dyzurny-1", "nosnik_odpowiedzi"), self.log())
 
     def test_login_and_lock_after_five_minutes(self):
         self.d.logout()
@@ -904,6 +1221,33 @@ class PanelTest(StationTestCase):
         self.deliver(bytes.fromhex(card["lxmf"]), request())
         view = self.d.view()
         self.assertEqual(view["removed"], [{"source": card["lxmf"], "station": card["name"], "messages": 1}])
+
+    def test_numbered_card_cannot_rebind_station_number(self):
+        second = {"account2": "dyzurny-2", "password2": self.envelopes["dyzurny-2"]}
+        first = station_card(os.urandom(64))
+        first.update(net_id=100, id=4, x25519=first["key"][:64])
+        self.d.trust({"card": first, "fingerprint": first["fingerprint"], **second})
+        other = station_card(os.urandom(64))
+        other.update(net_id=100, id=4, x25519=other["key"][:64])
+        with self.assertRaisesRegex(ValueError, "numer stacji"):
+            self.d.trust({"card": other, "fingerprint": other["fingerprint"], **second})
+        self.d.untrust({"source": first["lxmf"]})
+        with self.assertRaisesRegex(ValueError, "numer stacji"):
+            self.d.trust({"card": other, "fingerprint": other["fingerprint"], **second})
+        with self.assertRaisesRegex(ValueError, "klucz koperty"):
+            self.d.trust({"card": dict(other, id=5, x25519="00" * 32),
+                          "fingerprint": other["fingerprint"], **second})
+
+    def test_numbered_card_and_trust_roll_back_together(self):
+        card = station_card(os.urandom(64))
+        card.update(net_id=100, id=4, x25519=card["key"][:64])
+        self.reception.call(lambda store: store.db.execute(
+            "CREATE TRIGGER refuse_number BEFORE INSERT ON numery BEGIN SELECT RAISE(ABORT, 'fault'); END"))
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.d.trust({"card": card, "fingerprint": card["fingerprint"],
+                          "account2": "dyzurny-2", "password2": self.envelopes["dyzurny-2"]})
+        self.assertEqual(self.reception.call(lambda store: store.db.execute(
+            "SELECT count(*) FROM trusted WHERE source=?", (bytes.fromhex(card["lxmf"]),)).fetchone()), (0,))
 
     def test_node_handover_backup_and_announce(self):
         self.report()
@@ -1385,6 +1729,22 @@ class PackageTest(unittest.TestCase):
             build_stanowisko.library("reticulum", pin, out)
         self.assertEqual(sorted(p.relative_to(out).as_posix() for p in out.rglob("*") if p.is_file()),
                          ["lib/RNS/__init__.py", "licenses/reticulum.txt", "sources/zrodla.tar.gz"])
+
+    def test_native_wheel_stays_with_its_runtime_and_keeps_license(self):
+        import zipfile
+        archive = self.tmp / "cryptography-test.whl"
+        with zipfile.ZipFile(archive, "w") as wheel:
+            wheel.writestr("cryptography/__init__.py", "__version__ = '48.0.1'\n")
+            wheel.writestr("cryptography/hazmat/bindings/_rust.abi3.so", b"native")
+            wheel.writestr("cryptography-48.0.1.dist-info/licenses/LICENSE", b"licence")
+        out = self.tmp / "pakiet"
+        (out / "sources").mkdir(parents=True)
+        with unittest.mock.patch.object(build_stanowisko.usb, "fetch", return_value=archive):
+            build_stanowisko.wheel_library("cryptography", {}, "macos-arm64", out)
+        self.assertEqual((out / "lib-platform/macos-arm64/cryptography/hazmat/bindings/_rust.abi3.so").read_bytes(),
+                         b"native")
+        self.assertEqual((out / "licenses/cryptography-LICENSE").read_bytes(), b"licence")
+        self.assertEqual((out / "sources/cryptography-test.whl").read_bytes(), archive.read_bytes())
 
     def test_library_from_git_is_checked_by_its_commit(self):
         import subprocess

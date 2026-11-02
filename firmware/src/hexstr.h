@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Skróty i identyfikatory jako małe cyfry szesnastkowe (docs/spec/protokol-usb.md, "Warstwa
+// Skróty i identyfikatory jako małe cyfry szesnastkowe (docs/spec/usb-protocol.md, "Warstwa
 // przesyłu": `id` 32 znaki, klucz 128 znaków, SHA-256 64 znaki, `boot` i `epoch` 16 znaków).
 // Jedna para funkcji dla magazynu, warstwy aplikacji, protokołu USB i diagnostyki.
 // Bez zależności od Arduino.

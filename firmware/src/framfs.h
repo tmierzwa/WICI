@@ -24,9 +24,9 @@ constexpr uint32_t IDENTITY_BASE = 0x044000;
 constexpr size_t IDENTITY_SLOT = 128;
 constexpr size_t KEY_BYTES = 64;
 
-// System plików: 0x48000..0x7FFFF (224 KiB).
+// System plików: 0x48000..0x7FDFF; ostatnie 512 B zajmuje stan przeniesienia stacji.
 constexpr uint32_t FS_BASE = 0x048000;
-constexpr uint32_t FS_SIZE = 0x038000;
+constexpr uint32_t FS_SIZE = 0x037E00;
 constexpr size_t HEADER = 64;
 constexpr size_t INODES = 320;
 constexpr size_t INODE = 96;

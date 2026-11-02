@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Protokół USB laptop–stacja, kontrakt "usb":2 (docs/spec/protokol-usb.md): koperta z `seq` i `re`,
+// Protokół USB laptop–stacja, kontrakt "usb":2 (docs/spec/usb-protocol.md): koperta z `seq` i `re`,
 // `hello` po otwarciu portu, `sync`/`ack`/`snapshot` nad pierścieniem zdarzeń w FRAM (store.h) z epoką,
 // najwyżej 8 zdarzeń w drodze i ponowieniem po 5 s od `cursor` + 1, polecenia `submit`, `cancel`,
 // `test`, `announce`, `silence`, `mark_read`, `status`, `close`, `destroy`, `card` i transfery
@@ -9,8 +9,9 @@
 // Wyjście idzie przez kolejkę na jeden pełny wiersz, którą main.cpp opróżnia tyle, ile przyjmie port
 // (zapis nie blokuje pętli stacji); następny wiersz wejścia jest czytany dopiero przy pustej kolejce,
 // a migawka wychodzi wierszami w miarę miejsca. Laptop, który przestał czytać, wstrzymuje tylko siebie.
-// Nie ma jeszcze PRZENIEŚ STACJĘ (`migrate`, `export`, `import`: odmowa `migration` albo `invalid`)
-// ani aktualizacji oprogramowania (`firmware`), co opisuje przegląd (F107).
+// Migracja udostępnia `receive_key`, `export`, `import`, `retire`, `activate`, `abort` i status.
+// Wymuszone przejścia czekają na fizyczne potwierdzenie i zapis do dziennika.
+// Aktualizacja oprogramowania (`firmware`) nie jest tu jeszcze dostępna (F107).
 // Węzeł stanowiska używa protokołu tylko w trybie przygotowania; poza nim interfejs danych przenosi
 // ramki KISS (rns_node.h), a polecenia stacji schronienia dają `role`.
 // Bez zależności od Arduino; sprawdzany na komputerze.
@@ -40,9 +41,11 @@ constexpr uint32_t CONFIRM_MS = 30000;   // potwierdzenie przyciskiem OK
 constexpr uint32_t XFER_IDLE_MS = 60000; // transfer bez części porzucany
 constexpr uint32_t ANNOUNCE_MERGE_MS = 30000;
 constexpr size_t PART_MAX = 512;         // dane binarne w jednym wierszu
+constexpr uint32_t MIGRATION_PACKAGE_BYTES = 101 + 512 * (512 + 16);
 constexpr size_t BOOT_HEX = 16;
 
-enum class Question : uint8_t { SILENCE_ON, SILENCE_OFF, CLOSE, DESTROY, SILENCE_EXCEPTION };
+enum class Question : uint8_t { SILENCE_ON, SILENCE_OFF, CLOSE, DESTROY, SILENCE_EXCEPTION, MIGRATION_EXPORT,
+                                MIGRATION_ABORT };
 enum class Confirm : uint8_t { WAITING, YES, NO };
 
 // Usługi stacji dla protokołu; dostarcza je main.cpp albo program testowy.
@@ -61,6 +64,23 @@ struct Host {
     // Pola `power` i `diag` odpowiedzi `status` (obiekty JSON bez nawiasów zewnętrznych).
     virtual void power(char* out, size_t size) = 0;
     virtual void diag(char* out, size_t size) = 0;
+    // Durable migration barrier, including a corrupt state which must remain visible to the laptop.
+    virtual void migration(char* phase, size_t phaseSize, char* mid, size_t midSize);
+    virtual void migrationDetails(char* eph, size_t ephSize, char* package, size_t packageSize);
+    virtual void migrationConfirmation(char* confirm, size_t size);
+    virtual bool migrationReceiveKey(uint8_t mid[16], uint8_t publicKey[32], uint8_t fingerprint[8]);
+    virtual bool migrationExport(const uint8_t mid[16], const uint8_t targetKey[32], uint8_t sha[32]);
+    virtual bool migrationExportRead(uint32_t offset, uint8_t* out, size_t length);
+    virtual bool migrationImportBegin(const uint8_t mid[16], const uint8_t sha[32]);
+    virtual bool migrationImportPart(uint32_t offset, const uint8_t* data, size_t length, uint32_t& next);
+    virtual bool migrationImportCommit(uint8_t confirm[32]);
+    virtual bool migrationRetire(const uint8_t mid[16], const uint8_t imported[32], uint8_t retired[32], const char*& reason);
+    virtual bool migrationActivate(const uint8_t mid[16], const uint8_t* retired, bool& duplicate,
+                                   const char*& reason);
+    virtual bool migrationAbortTarget(const uint8_t mid[16], const uint8_t* eph, uint8_t confirm[32],
+                                      bool& hasConfirm, bool& duplicate, const char*& reason);
+    virtual bool migrationAbortSource(const uint8_t mid[16], const uint8_t* confirm, bool& duplicate,
+                                      const char*& reason);
     virtual bool announce() = 0;                           // ogłoszenie adresu; false: stos nie działa
     virtual bool destroy() = 0;                            // ZNISZCZ DANE: magazyn, dziennik, tożsamość
     virtual void configChanged(bool roleChanged) = 0;      // nowa konfiguracja (zmiana roli: restart)
@@ -69,6 +89,7 @@ struct Host {
     virtual Confirm confirmPoll() = 0;                     // OK = YES, WSTECZ = NO
     virtual void confirmEnd() = 0;
     virtual void showCard(const char* fingerprint) = 0;   // odcisk `card` na ekranie do porównania
+    virtual void showMigrationFingerprint(const char* fingerprint) { showCard(fingerprint); }
 };
 
 struct Stats {
@@ -106,7 +127,7 @@ public:
 
 private:
     struct Pending {
-        enum Type : uint8_t { NONE, SILENCE, CLOSE, DESTROY } type = NONE;
+        enum Type : uint8_t { NONE, SILENCE, CLOSE, DESTROY, EXPORT, ABORT_TARGET } type = NONE;
         int64_t seq = 0;
         uint32_t sinceMs = 0;
         // Odpowiedź przyciskiem (albo limit 30 s) już zapadła i ekran zamknięty; wykonanie i odpowiedź
@@ -118,6 +139,8 @@ private:
         uint8_t exception[store::HASH] = {};
         uint8_t epoch[store::EPOCH] = {};
         uint32_t head = 0;
+        uint8_t mid[16] = {};
+        uint8_t key[32] = {};   // EXPORT: target transfer key; ABORT_TARGET: source `eph`
     };
     // Migawka w toku: wiersze `snap` po kolei z rejestru, pamięci zwolnionych wpisów i skrzynki.
     struct Snap {
@@ -130,7 +153,7 @@ private:
         uint8_t epoch[store::EPOCH] = {};
     };
     struct Xfer {
-        enum Op : uint8_t { NONE, CONFIGURE, CONFIG_GET } op = NONE;
+        enum Op : uint8_t { NONE, CONFIGURE, CONFIG_GET, EXPORT, IMPORT } op = NONE;
         uint32_t id = 0;
         uint32_t size = 0;
         uint32_t next = 0;
@@ -158,11 +181,13 @@ private:
     void doClose(const json::Value& msg, int64_t seq, uint32_t nowMs);
     void doStatus(int64_t seq);
     void doCard(int64_t seq);
+    void doMigrate(const json::Value& msg, int64_t seq, uint32_t nowMs);
+    void abortTarget(int64_t seq, const uint8_t mid[16], const uint8_t* eph);
     void doXferBegin(const json::Value& msg, int64_t seq, uint32_t nowMs);
     void doXferPart(const json::Value& msg, int64_t seq, uint32_t nowMs);
     void doXferRead(const json::Value& msg, int64_t seq, uint32_t nowMs);
     void doXferCommit(const json::Value& msg, int64_t seq);
-    void finishPending(bool confirmed);
+    void finishPending(bool confirmed, uint32_t nowMs);
     void stored(int64_t seq, const station::Stored& s);
     size_t requestFields(const store::Request& r, char* out, size_t size);
     size_t radioFields(char* out, size_t size, uint8_t bits, const uint8_t* exception, uint16_t revision, bool lost = false);

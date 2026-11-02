@@ -10,6 +10,30 @@
 
 namespace usbproto {
 
+void Host::migration(char* phase, size_t phaseSize, char* mid, size_t midSize) {
+    if (phaseSize) snprintf(phase, phaseSize, "none");
+    if (midSize) mid[0] = '\0';
+}
+void Host::migrationDetails(char* eph, size_t ephSize, char* package, size_t packageSize) {
+    if (ephSize) eph[0] = '\0';
+    if (packageSize) package[0] = '\0';
+}
+void Host::migrationConfirmation(char* confirm, size_t size) { if (size) confirm[0] = '\0'; }
+bool Host::migrationReceiveKey(uint8_t[16], uint8_t[32], uint8_t[8]) { return false; }
+bool Host::migrationExport(const uint8_t[16], const uint8_t[32], uint8_t[32]) { return false; }
+bool Host::migrationExportRead(uint32_t, uint8_t*, size_t) { return false; }
+bool Host::migrationImportBegin(const uint8_t[16], const uint8_t[32]) { return false; }
+bool Host::migrationImportPart(uint32_t, const uint8_t*, size_t, uint32_t&) { return false; }
+bool Host::migrationImportCommit(uint8_t[32]) { return false; }
+bool Host::migrationRetire(const uint8_t[16], const uint8_t[32], uint8_t[32], const char*& reason) { reason = "migration"; return false; }
+bool Host::migrationActivate(const uint8_t[16], const uint8_t*, bool&, const char*& reason) { reason = "migration"; return false; }
+bool Host::migrationAbortTarget(const uint8_t[16], const uint8_t*, uint8_t[32], bool&, bool&, const char*& reason) {
+    reason = "migration"; return false;
+}
+bool Host::migrationAbortSource(const uint8_t[16], const uint8_t*, bool&, const char*& reason) {
+    reason = "migration"; return false;
+}
+
 namespace {
 
 // Dopisanie do wiersza; false, gdy wiersz przekroczyłby bufor.
@@ -272,13 +296,14 @@ void Protocol::hello() {
     char lxmfHex[2 * store::HASH + 1] = "", epoch[2 * store::EPOCH + 1];
     if (store_.station() && host_.identity(key, lxmf)) hexstr::encode(lxmf, store::HASH, lxmfHex);
     hexstr::encode(store_.meta().epoch, store::EPOCH, epoch);
-    char fields[400];
+    char fields[400], migration[16], mid[33];
+    host_.migration(migration, sizeof(migration), mid, sizeof(mid));
     snprintf(fields, sizeof(fields),
              "\"boot\":\"%s\",\"contracts\":[%u],\"name\":\"%s\",\"lxmf\":\"%s\",\"fw\":\"%s\",\"role\":\"%s\",\"prep\":%s,"
-             "\"configured\":%s,\"epoch\":\"%s\",\"head\":%lu,\"min\":%lu,\"migration\":\"none\"",
+             "\"configured\":%s,\"epoch\":\"%s\",\"head\":%lu,\"min\":%lu,\"migration\":\"%s\"",
              boot_, static_cast<unsigned>(CONTRACT), host_.stationName(), lxmfHex, host_.version(),
              store_.configured() && !store_.station() ? "wezel" : "stacja", boolName(host_.prep()), boolName(store_.configured()), epoch,
-             static_cast<unsigned long>(store_.head()), static_cast<unsigned long>(store_.minEvent()));
+             static_cast<unsigned long>(store_.head()), static_cast<unsigned long>(store_.minEvent()), migration);
     send("hello", -1, fields);
 }
 
@@ -310,6 +335,16 @@ void Protocol::handleLine(const char* line, uint32_t nowMs) {
 }
 
 void Protocol::dispatch(const char* type, const json::Value& msg, int64_t seq, uint32_t nowMs) {
+    char migration[16], mid[33];
+    host_.migration(migration, sizeof(migration), mid, sizeof(mid));
+    // A frozen or uncertain station must not mutate a snapshot through normal
+    // USB commands. Explicit destruction remains available for recovery.
+    if (strcmp(migration, "none") && strcmp(type, "status") && strcmp(type, "migrate") &&
+        strcmp(type, "destroy") && strcmp(type, "xfer_begin") && strcmp(type, "xfer_read") &&
+        strcmp(type, "xfer_commit") && strcmp(type, "xfer_abort") && strcmp(type, "xfer_part")) {
+        rejected(seq, "migration", "active");
+        return;
+    }
     const Command* c = nullptr;
     for (const Command& command : COMMANDS) if (!strcmp(type, command.type)) c = &command;
     if (!c) { rejected(seq, "unknown_type"); return; }
@@ -357,7 +392,135 @@ void Protocol::dispatch(const char* type, const json::Value& msg, int64_t seq, u
     else if (!strcmp(type, "xfer_read")) doXferRead(msg, seq, nowMs);
     else if (!strcmp(type, "xfer_commit")) doXferCommit(msg, seq);
     else if (!strcmp(type, "xfer_abort")) { xfer_ = Xfer(); send("ok", seq, ""); }
-    else rejected(seq, "migration", "unsupported");   // PRZENIEŚ STACJĘ jeszcze nie ma (F107)
+    else if (!strcmp(type, "migrate")) doMigrate(msg, seq, nowMs);
+    else rejected(seq, "unknown_type");
+}
+
+void Protocol::doMigrate(const json::Value& msg, int64_t seq, uint32_t nowMs) {
+    static const Command basic = {"migrate", PREP, {{"step", F::STR, true}}, 1};
+    char bad[24], step[24];
+    json::Value value;
+    if (!json::field(msg, "step", value) || !json::string(value, step, sizeof(step))) {
+        rejected(seq, "invalid", "step"); return;
+    }
+    if (!strcmp(step, "status")) {
+        if (!checkFields(msg, basic, bad, sizeof(bad))) { rejected(seq, "invalid", bad); return; }
+        char phase[16], mid[33], eph[65], package[65], confirmation[65], fields[320];
+        host_.migration(phase, sizeof(phase), mid, sizeof(mid));
+        host_.migrationDetails(eph, sizeof(eph), package, sizeof(package));
+        host_.migrationConfirmation(confirmation, sizeof(confirmation));
+        snprintf(fields, sizeof(fields), "\"migration\":\"%s\",\"mid\":\"%s\",\"eph\":\"%s\",\"package\":\"%s\",\"confirm\":\"%s\"",
+                 phase, mid, eph, package, confirmation);
+        send("ok", seq, fields);
+        return;
+    }
+    if (!strcmp(step, "receive_key")) {
+        if (!checkFields(msg, basic, bad, sizeof(bad))) { rejected(seq, "invalid", bad); return; }
+        uint8_t mid[16], key[32], fingerprint[8];
+        if (!host_.migrationReceiveKey(mid, key, fingerprint)) { rejected(seq, "migration", "target"); return; }
+        char midHex[33], keyHex[65], fpHex[17], fields[160];
+        hexstr::encode(mid, sizeof(mid), midHex);
+        hexstr::encode(key, sizeof(key), keyHex);
+        hexstr::encode(fingerprint, sizeof(fingerprint), fpHex);
+        snprintf(fields, sizeof(fields), "\"mid\":\"%s\",\"key\":\"%s\",\"fingerprint\":\"%s\"",
+                 midHex, keyHex, fpHex);
+        send("ok", seq, fields);
+        host_.showMigrationFingerprint(fpHex);
+        return;
+    }
+    static const Command confirmed = {"migrate", PREP, {{"step", F::STR, true}, {"mid", F::STR, true},
+                                                          {"confirm", F::STR, true}}, 3};
+    if (!strcmp(step, "retire") || !strcmp(step, "activate")) {
+        json::Value forcedValue;
+        if (!strcmp(step, "activate") && json::field(msg, "forced", forcedValue)) {
+            rejected(seq, "migration", "forced");
+            return;
+        }
+        if (!checkFields(msg, confirmed, bad, sizeof(bad))) { rejected(seq, "invalid", bad); return; }
+        uint8_t mid[16], candidate[32], result[32];
+        if (!json::hexField(msg, "mid", mid, sizeof(mid))) { rejected(seq, "invalid", "mid"); return; }
+        if (!json::hexField(msg, "confirm", candidate, sizeof(candidate))) { rejected(seq, "invalid", "confirm"); return; }
+        const char* reason = "migration";
+        bool duplicate = false;
+        const bool ok = !strcmp(step, "retire")
+            ? host_.migrationRetire(mid, candidate, result, reason)
+            : host_.migrationActivate(mid, candidate, duplicate, reason);
+        if (!ok) { rejected(seq, reason); return; }
+        char fields[100];
+        if (!strcmp(step, "retire")) {
+            char hex[65];
+            hexstr::encode(result, sizeof(result), hex);
+            snprintf(fields, sizeof(fields), "\"confirm\":\"%s\"", hex);
+        } else snprintf(fields, sizeof(fields), "\"duplicate\":%s", duplicate ? "true" : "false");
+        send("ok", seq, fields);
+        return;
+    }
+    if (!strcmp(step, "abort")) {
+        static const Command target = {"migrate", PREP, {{"step", F::STR, true}, {"mid", F::STR, true},
+                                                     {"eph", F::STR, true}}, 3};
+        uint8_t mid[16], candidate[32] = {};
+        if (!json::hexField(msg, "mid", mid, sizeof(mid))) { rejected(seq, "invalid", "mid"); return; }
+        json::Value forcedValue;
+        if (json::field(msg, "forced", forcedValue)) {
+            rejected(seq, "migration", "forced");
+            return;
+        }
+        json::Value ephValue, confirmValue;
+        const bool hasEph = json::field(msg, "eph", ephValue);
+        const bool hasCandidate = json::field(msg, "confirm", confirmValue);
+        if (hasEph == hasCandidate) { rejected(seq, "invalid", hasEph ? "confirm" : "eph"); return; }
+        if (hasEph) {
+            if (!checkFields(msg, target, bad, sizeof(bad))) { rejected(seq, "invalid", bad); return; }
+            char ephText[65];
+            if (!json::string(ephValue, ephText, sizeof(ephText)) ||
+                (ephText[0] && !hexstr::decode(ephText, candidate, sizeof(candidate)))) {
+                rejected(seq, "invalid", "eph"); return;
+            }
+            char phase[16], currentMid[33];
+            host_.migration(phase, sizeof(phase), currentMid, sizeof(currentMid));
+            if (!strcmp(phase, "imported")) {
+                if (!ephText[0]) { rejected(seq, "invalid", "eph"); return; }
+                pending_ = Pending();
+                pending_.type = Pending::ABORT_TARGET;
+                pending_.seq = seq;
+                pending_.sinceMs = nowMs;
+                memcpy(pending_.mid, mid, 16);
+                memcpy(pending_.key, candidate, 32);
+                host_.confirmBegin(Question::MIGRATION_ABORT, "");
+                send("pending", seq, "\"confirm_s\":30");
+                return;
+            }
+            abortTarget(seq, mid, ephText[0] ? candidate : nullptr);
+            return;
+        }
+        if (!checkFields(msg, confirmed, bad, sizeof(bad))) { rejected(seq, "invalid", bad); return; }
+        if (!json::hexField(msg, "confirm", candidate, sizeof(candidate))) { rejected(seq, "invalid", "confirm"); return; }
+        const char* reason = "migration";
+        bool duplicate = false;
+        if (!host_.migrationAbortSource(mid, candidate, duplicate, reason)) { rejected(seq, reason); return; }
+        char fields[32];
+        snprintf(fields, sizeof(fields), "\"duplicate\":%s", duplicate ? "true" : "false");
+        send("ok", seq, fields);
+        return;
+    }
+    rejected(seq, "migration", "unsupported");
+}
+
+void Protocol::abortTarget(int64_t seq, const uint8_t mid[16], const uint8_t* eph) {
+    uint8_t confirmation[32];
+    bool hasConfirm = false, duplicate = false;
+    const char* reason = "migration";
+    if (!host_.migrationAbortTarget(mid, eph, confirmation, hasConfirm, duplicate, reason)) {
+        rejected(seq, reason);
+        return;
+    }
+    char fields[110];
+    if (hasConfirm) {
+        char hex[65];
+        hexstr::encode(confirmation, sizeof(confirmation), hex);
+        snprintf(fields, sizeof(fields), "\"confirm\":\"%s\",\"duplicate\":%s", hex, duplicate ? "true" : "false");
+    } else snprintf(fields, sizeof(fields), "\"duplicate\":%s", duplicate ? "true" : "false");
+    send("ok", seq, fields);
 }
 
 // --- Synchronizacja --------------------------------------------------------------------------
@@ -721,7 +884,7 @@ size_t Protocol::currentRadioFields(char* out, size_t size) {
     return radioFields(out, size, store::radioBits(m, host_.silenceSwitch()), m.exception, m.exceptionRev);
 }
 
-void Protocol::finishPending(bool confirmed) {
+void Protocol::finishPending(bool confirmed, uint32_t nowMs) {
     const Pending p = pending_;
     pending_ = Pending();
     if (!p.decided) host_.confirmEnd();
@@ -750,13 +913,34 @@ void Protocol::finishPending(bool confirmed) {
             synced_ = false;
             send("ok", p.seq, "");
             return;
+        case Pending::EXPORT: {
+            uint8_t sha[32];
+            if (!host_.migrationExport(p.mid, p.key, sha)) { rejected(p.seq, "migration", "export"); return; }
+            xfer_ = Xfer();
+            xfer_.op = Xfer::EXPORT;
+            xfer_.size = MIGRATION_PACKAGE_BYTES;
+            memcpy(xfer_.sha, sha, sizeof(sha));
+            host_.randomBytes(reinterpret_cast<uint8_t*>(&xfer_.id), sizeof(xfer_.id));
+            xfer_.lastMs = nowMs;
+            char id[9], hash[65];
+            hexstr::encode(reinterpret_cast<const uint8_t*>(&xfer_.id), sizeof(xfer_.id), id);
+            hexstr::encode(sha, sizeof(sha), hash);
+            snprintf(fields, sizeof(fields), "\"xfer\":\"%s\",\"size\":%lu,\"sha256\":\"%s\"",
+                     id, static_cast<unsigned long>(xfer_.size), hash);
+            send("ok", p.seq, fields);
+            return;
+        }
+        case Pending::ABORT_TARGET:
+            abortTarget(p.seq, p.mid, p.key);
+            return;
         case Pending::NONE: return;
     }
 }
 
 void Protocol::doStatus(int64_t seq) {
     const store::Meta& m = store_.meta();
-    char fields[MAX_LINE - 64], radio[160], power[160], diag[200];
+    char fields[MAX_LINE - 64], radio[160], power[160], diag[200], migration[16], mid[33];
+    host_.migration(migration, sizeof(migration), mid, sizeof(mid));
     currentRadioFields(radio, sizeof(radio));
     host_.power(power, sizeof(power));
     host_.diag(diag, sizeof(diag));
@@ -768,12 +952,12 @@ void Protocol::doStatus(int64_t seq) {
     snprintf(fields, sizeof(fields),
              "\"role\":\"%s\",\"prep\":%s,\"configured\":%s,\"config_seq\":%lu,\"fw\":\"%s\",\"secure_version\":0,\"fram_format\":%lu,"
              "\"uptime\":%lu,\"register\":%u,\"intents\":%u,\"inbox\":%u,\"unread\":%u,\"receiver\":\"%s\",\"last_contact\":%s,"
-             "\"last_contact_lower\":%s,%s,\"power\":{%s},\"migration\":\"none\",\"mid\":\"\",\"diag\":{%s}",
+             "\"last_contact_lower\":%s,%s,\"power\":{%s},\"migration\":\"%s\",\"mid\":\"%s\",\"diag\":{%s}",
              store_.configured() && !store_.station() ? "wezel" : "stacja", boolName(host_.prep()), boolName(store_.configured()),
              static_cast<unsigned long>(store_.config().seq), host_.version(), static_cast<unsigned long>(journal::FRAM_FORMAT),
              static_cast<unsigned long>(host_.counterS()), static_cast<unsigned>(store_.requestCount()), static_cast<unsigned>(store_.activeIntents()),
              static_cast<unsigned>(store_.messageCount()), static_cast<unsigned>(store_.unread()), m.receiver == config::BACKUP ? "backup" : "main",
-             contact, boolName(m.contactKnown && host_.contactBeforeStart()), radio, power, diag);
+             contact, boolName(m.contactKnown && host_.contactBeforeStart()), radio, power, migration, mid, diag);
     send("status", seq, fields);
 }
 
@@ -793,6 +977,9 @@ void Protocol::doCard(int64_t seq) {
     appendf(fields, sizeof(fields), n, "\"name\":\"%s\",\"lxmf\":\"%s\",\"key\":\"%s\",\"address\":[", host_.stationName(), lxmfHex, keyHex);
     for (size_t i = 0; i < store_.addressCount(); ++i) appendf(fields, sizeof(fields), n, "%s\"%s\"", i ? "," : "", store_.addressAt(i));
     if (!appendf(fields, sizeof(fields), n, "],\"fingerprint\":\"%s\"", fingerprint)) { rejected(seq, "size"); return; }
+    const config::Network& network = store_.config().network;
+    if (network.id && !appendf(fields, sizeof(fields), n, ",\"net_id\":%u,\"id\":%u,\"x25519\":\"%.*s\"",
+                               network.id, network.station, 64, keyHex)) { rejected(seq, "size"); return; }
     host_.showCard(fingerprint);
     send("card", seq, fields);
 }
@@ -819,14 +1006,84 @@ void Protocol::doXferBegin(const json::Value& msg, int64_t seq, uint32_t nowMs) 
     if (!json::string(v, op, sizeof(op))) { rejected(seq, "invalid", "op"); return; }
     static const Command configure = {"xfer_begin", PREP, {{"op", F::STR, true}, {"size", F::INT, true}, {"sha256", F::STR, true}}, 3};
     static const Command configGet = {"xfer_begin", PREP, {{"op", F::STR, true}}, 1};
+    static const Command exportCmd = {"xfer_begin", PREP, {{"op", F::STR, true}, {"mid", F::STR, true}, {"target_key", F::STR, true}}, 3};
+    static const Command importCmd = {"xfer_begin", PREP, {{"op", F::STR, true}, {"size", F::INT, true},
+                                                    {"sha256", F::STR, true}, {"mid", F::STR, true}}, 4};
     const bool put = !strcmp(op, "configure");
-    if (!put && strcmp(op, "config_get")) {
-        // import, export, firmware: PRZENIEŚ STACJĘ i aktualizacja jeszcze nie ma (F107).
-        rejected(seq, !strcmp(op, "import") || !strcmp(op, "export") ? "migration" : "invalid", "op");
+    const bool exporting = !strcmp(op, "export");
+    const bool importing = !strcmp(op, "import");
+    char migration[16], migrationMid[33];
+    host_.migration(migration, sizeof(migration), migrationMid, sizeof(migrationMid));
+    if (strcmp(migration, "none") && !exporting && !importing) { rejected(seq, "migration", "active"); return; }
+    if (!put && !exporting && !importing && strcmp(op, "config_get")) {
+        rejected(seq, "invalid", "op");
         return;
     }
     char bad[24];
-    if (!checkFields(msg, put ? configure : configGet, bad, sizeof(bad))) { rejected(seq, "invalid", bad); return; }
+    if (!checkFields(msg, put ? configure : exporting ? exportCmd : importing ? importCmd : configGet, bad, sizeof(bad))) {
+        rejected(seq, "invalid", bad); return;
+    }
+    if (importing) {
+        const uint32_t size = intField(msg, "size");
+        if (size != MIGRATION_PACKAGE_BYTES) { rejected(seq, "size"); return; }
+        uint8_t mid[16], sha[32];
+        if (!json::hexField(msg, "mid", mid, sizeof(mid))) { rejected(seq, "invalid", "mid"); return; }
+        if (!json::hexField(msg, "sha256", sha, sizeof(sha))) { rejected(seq, "invalid", "sha256"); return; }
+        if (strcmp(migration, "receiving") && strcmp(migration, "importing")) { rejected(seq, "migration", "phase"); return; }
+        if (!host_.migrationImportBegin(mid, sha)) { rejected(seq, "migration", "import"); return; }
+        xfer_ = Xfer();
+        xfer_.op = Xfer::IMPORT;
+        xfer_.size = size;
+        memcpy(xfer_.sha, sha, sizeof(sha));
+        host_.randomBytes(reinterpret_cast<uint8_t*>(&xfer_.id), sizeof(xfer_.id));
+        xfer_.lastMs = nowMs;
+        char id[9], fields[64];
+        hexstr::encode(reinterpret_cast<const uint8_t*>(&xfer_.id), sizeof(xfer_.id), id);
+        snprintf(fields, sizeof(fields), "\"xfer\":\"%s\",\"max_part\":%u", id, static_cast<unsigned>(PART_MAX));
+        send("ok", seq, fields);
+        return;
+    }
+    if (exporting) {
+        uint8_t mid[16], key[32];
+        if (!json::hexField(msg, "mid", mid, sizeof(mid))) { rejected(seq, "invalid", "mid"); return; }
+        if (!json::hexField(msg, "target_key", key, sizeof(key))) { rejected(seq, "invalid", "target_key"); return; }
+        char phase[16], currentMid[33];
+        host_.migration(phase, sizeof(phase), currentMid, sizeof(currentMid));
+        if (!strcmp(phase, "none")) {
+            uint8_t fingerprint[32];
+            sha2::Hash hash;
+            hash.update(mid, sizeof(mid));
+            hash.update(key, sizeof(key));
+            hash.finish(fingerprint);
+            char fp[17];
+            hexstr::encode(fingerprint, 8, fp);
+            pending_ = Pending();
+            pending_.type = Pending::EXPORT;
+            pending_.seq = seq;
+            pending_.sinceMs = nowMs;
+            memcpy(pending_.mid, mid, sizeof(mid));
+            memcpy(pending_.key, key, sizeof(key));
+            host_.confirmBegin(Question::MIGRATION_EXPORT, fp);
+            send("pending", seq, "\"confirm_s\":30");
+            return;
+        }
+        if (strcmp(phase, "export")) { rejected(seq, "migration", "phase"); return; }
+        uint8_t sha[32];
+        if (!host_.migrationExport(mid, key, sha)) { rejected(seq, "migration", "export"); return; }
+        xfer_ = Xfer();
+        xfer_.op = Xfer::EXPORT;
+        xfer_.size = MIGRATION_PACKAGE_BYTES;
+        memcpy(xfer_.sha, sha, sizeof(sha));
+        host_.randomBytes(reinterpret_cast<uint8_t*>(&xfer_.id), sizeof(xfer_.id));
+        xfer_.lastMs = nowMs;
+        char id[9], digest[65], fields[160];
+        hexstr::encode(reinterpret_cast<const uint8_t*>(&xfer_.id), sizeof(xfer_.id), id);
+        hexstr::encode(sha, sizeof(sha), digest);
+        snprintf(fields, sizeof(fields), "\"xfer\":\"%s\",\"size\":%lu,\"sha256\":\"%s\"",
+                 id, static_cast<unsigned long>(xfer_.size), digest);
+        send("ok", seq, fields);
+        return;
+    }
     xfer_ = Xfer();   // nowy transfer porzuca poprzedni
     if (put) {
         xfer_.size = intField(msg, "size");
@@ -852,7 +1109,7 @@ void Protocol::doXferBegin(const json::Value& msg, int64_t seq, uint32_t nowMs) 
 
 void Protocol::doXferPart(const json::Value& msg, int64_t seq, uint32_t nowMs) {
     if (!xferOpen(msg, seq, nowMs)) return;
-    if (xfer_.op != Xfer::CONFIGURE) { rejected(seq, "invalid", "xfer"); return; }
+    if (xfer_.op != Xfer::CONFIGURE && xfer_.op != Xfer::IMPORT) { rejected(seq, "invalid", "xfer"); return; }
     json::Value v;
     char text[4 * PART_MAX / 3 + 8];
     uint8_t data[PART_MAX];
@@ -860,7 +1117,20 @@ void Protocol::doXferPart(const json::Value& msg, int64_t seq, uint32_t nowMs) {
     const int length = json::string(v, text, sizeof(text)) ? base64Decode(text, data, sizeof(data)) : -1;
     const uint32_t offset = intField(msg, "offset");
     if (length <= 0) { rejected(seq, "invalid", "data"); return; }
-    if (offset + static_cast<uint32_t>(length) > xfer_.size) { rejected(seq, "size"); return; }
+    if (offset > xfer_.size || static_cast<uint32_t>(length) > xfer_.size - offset) { rejected(seq, "size"); return; }
+    if (xfer_.op == Xfer::IMPORT) {
+        uint32_t next = 0;
+        if (!host_.migrationImportPart(offset, data, static_cast<size_t>(length), next)) {
+            xfer_ = Xfer();
+            rejected(seq, "migration", "part");
+            return;
+        }
+        xfer_.next = next;
+        char fields[32];
+        snprintf(fields, sizeof(fields), "\"next\":%lu", static_cast<unsigned long>(next));
+        send("ok", seq, fields);
+        return;
+    }
     if (offset > xfer_.next) { rejected(seq, "invalid", "offset"); return; }
     if (offset < xfer_.next) {
         // Część powtórzona (zgubione `ok`): cała w zapisanym zakresie i z tą samą treścią.
@@ -880,10 +1150,11 @@ void Protocol::doXferPart(const json::Value& msg, int64_t seq, uint32_t nowMs) {
 void Protocol::doXferRead(const json::Value& msg, int64_t seq, uint32_t nowMs) {
     if (!xferOpen(msg, seq, nowMs)) return;
     const uint32_t offset = intField(msg, "offset"), length = intField(msg, "length");
-    if (xfer_.op != Xfer::CONFIG_GET) { rejected(seq, "invalid", "xfer"); return; }
+    if (xfer_.op != Xfer::CONFIG_GET && xfer_.op != Xfer::EXPORT) { rejected(seq, "invalid", "xfer"); return; }
     if (length == 0 || length > PART_MAX || offset > xfer_.size || length > xfer_.size - offset) { rejected(seq, "size"); return; }
     uint8_t data[PART_MAX];
-    if (!store_.configRead(offset, data, length)) { rejected(seq, "memory"); return; }
+    if (!(xfer_.op == Xfer::EXPORT ? host_.migrationExportRead(offset, data, length)
+                                 : store_.configRead(offset, data, length))) { rejected(seq, "memory"); return; }
     char fields[4 * PART_MAX / 3 + 48];
     const int n = snprintf(fields, sizeof(fields), "\"offset\":%lu,\"data\":\"", static_cast<unsigned long>(offset));
     const size_t encoded = base64Encode(data, length, fields + n);
@@ -893,8 +1164,18 @@ void Protocol::doXferRead(const json::Value& msg, int64_t seq, uint32_t nowMs) {
 
 void Protocol::doXferCommit(const json::Value& msg, int64_t seq) {
     if (!xferOpen(msg, seq, xfer_.lastMs)) return;
-    if (xfer_.op == Xfer::CONFIG_GET) { xfer_ = Xfer(); send("ok", seq, ""); return; }
+    if (xfer_.op == Xfer::CONFIG_GET || xfer_.op == Xfer::EXPORT) { xfer_ = Xfer(); send("ok", seq, ""); return; }
     if (xfer_.next != xfer_.size) { rejected(seq, "size"); return; }
+    if (xfer_.op == Xfer::IMPORT) {
+        uint8_t confirm[32];
+        if (!host_.migrationImportCommit(confirm)) { xfer_ = Xfer(); rejected(seq, "migration", "commit"); return; }
+        xfer_ = Xfer();
+        char hex[65], fields[80];
+        hexstr::encode(confirm, sizeof(confirm), hex);
+        snprintf(fields, sizeof(fields), "\"confirm\":\"%s\"", hex);
+        send("ok", seq, fields);
+        return;
+    }
     const bool wasNode = store_.configured() && !store_.station();
     const char* detail = nullptr;
     size_t worst = 0;
@@ -914,6 +1195,15 @@ void Protocol::doXferCommit(const json::Value& msg, int64_t seq) {
 }
 
 void Protocol::poll(uint32_t nowMs) {
+    char migration[16], mid[33];
+    host_.migration(migration, sizeof(migration), mid, sizeof(mid));
+    const bool migrationActive = strcmp(migration, "none") != 0;
+    if (migrationActive) {
+        synced_ = false;
+        snap_ = Snap();
+        if ((xfer_.op != Xfer::EXPORT || strcmp(migration, "export")) &&
+            (xfer_.op != Xfer::IMPORT || strcmp(migration, "importing"))) xfer_ = Xfer();
+    }
     if (snap_.active) { continueSnapshot(); return; }   // migawka przed zdarzeniami; polecenia czekają
     // Odpowiedź przyciskiem i limit 30 s liczone zawsze, więc pytanie znika z ekranu także wtedy, gdy laptop
     // nie czyta; wykonanie i odpowiedź dopiero z miejscem w kolejce (`status` w czasie pytania mógł ją zająć).
@@ -926,8 +1216,9 @@ void Protocol::poll(uint32_t nowMs) {
             host_.confirmEnd();
         }
     }
-    if (pending() && pending_.decided && room() >= PENDING_RESERVE) finishPending(pending_.confirmed);
+    if (pending() && pending_.decided && room() >= PENDING_RESERVE) finishPending(pending_.confirmed, nowMs);
     if (xfer_.op != Xfer::NONE && nowMs - xfer_.lastMs >= XFER_IDLE_MS) xfer_ = Xfer();
+    if (migrationActive) return;
     if (connected_ && lostSync_ && sendSnapRequired(-1, lostSync_, pending() ? PENDING_RESERVE : 0)) lostSync_ = nullptr;
     if (!connected_ || !synced_) return;
     if (memcmp(syncedEpoch_, store_.meta().epoch, store::EPOCH)) { loseSync("epoch"); return; }

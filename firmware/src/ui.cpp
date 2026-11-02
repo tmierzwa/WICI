@@ -26,7 +26,8 @@ constexpr Id URGENCY_TEXTS[3] = {Id::PILNOSC_0, Id::PILNOSC_1, Id::PILNOSC_2};
 constexpr uint8_t SA1_REQUEST = 0, SA1_REPLY = 3, SA1_BULLETIN = 4, SA1_TEST = 5;
 // Teksty pytań poleceń USB i odcisku `card` według ui::Question.
 constexpr Id QUESTION_TEXTS[] = {Id::PYTANIE_CISZA_WLACZ, Id::PYTANIE_CISZA_WYLACZ, Id::PYTANIE_ZAMKNIJ, Id::PYTANIE_ZNISZCZ,
-                                 Id::PYTANIE_CISZA_WYJATEK, Id::ODCISK_KLUCZA};
+                                 Id::PYTANIE_CISZA_WYJATEK, Id::PYTANIE_PRZENIES, Id::PYTANIE_ANULUJ_PRZENIES,
+                                 Id::ODCISK_KLUCZA, Id::ODCISK_PRZENIESIENIA};
 
 size_t utf8Bytes(const char* text, size_t chars) {
     // Długość w bajtach pierwszych `chars` znaków.
@@ -822,7 +823,7 @@ void Model::act(Button button, uint32_t nowMs) {
             break;
         case Screen::CONFIRM:
             if (ok || back) {
-                answer_ = question_ == Question::CARD ? Answer::NO : ok ? Answer::YES : Answer::NO;
+                answer_ = question_ == Question::CARD || question_ == Question::MIGRATION_TARGET ? Answer::NO : ok ? Answer::YES : Answer::NO;
                 go(beforeQuestion_);
             } else scroll(up, downB);
             break;
@@ -1491,7 +1492,8 @@ void Model::render(const Status& s, Lines& out) {
             renderText(t, window, out, first);
             break;
         case Screen::CONFIRM:
-            substitute(text(QUESTION_TEXTS[static_cast<size_t>(question_)], lang_), question_ == Question::CARD ? "[x]" : "[xxxx]", questionDetail_,
+            substitute(text(QUESTION_TEXTS[static_cast<size_t>(question_)], lang_),
+                       question_ == Question::CARD || question_ == Question::MIGRATION_TARGET ? "[x]" : "[xxxx]", questionDetail_,
                        tmp, sizeof(tmp));
             t.add(tmp);
             renderText(t, window, out, first);

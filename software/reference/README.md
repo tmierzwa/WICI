@@ -2,14 +2,14 @@
 
 Kod wzorcowy sprawdza ramki P1 i format SA1. Modeluje atomowy odbiór zgłoszenia u odbiorcy z kwarantanną nieznanych nadawców, listą zaufanych stacji i zamknięciem zdarzenia. Sprawdza też, że stacja przyjmuje RECEIVED, STATUS, REPLY i BULLETIN wyłącznie od przypiętej tożsamości odbiorcy. Nie jest oprogramowaniem stacji, aplikacją laptopa, sterownikiem radia ani implementacją Reticulum.
 
-Python 3.12, wyłącznie biblioteka standardowa. Z katalogu głównego:
+Python 3.12; dotychczasowy model używa tylko biblioteki standardowej, a projekt koperty D21 wymaga `cryptography==48.0.1`. Z katalogu głównego:
 
 ```sh
 python3 -m unittest discover -s software/reference -v
 python3 software/reference/obliczenia.py
 ```
 
-Drugie polecenie zapisuje `wyniki.json` obok skryptu. Są to obliczenia z założeń, nie pomiary. [Zapis weryfikacji](weryfikacja.json) wiąże wynik 41 testów z sumami źródeł.
+Drugie polecenie zapisuje `wyniki.json` obok skryptu. Są to obliczenia z założeń, nie pomiary. [Zapis weryfikacji](weryfikacja.json) wiąże wynik 49 testów z sumami źródeł.
 
 Reguły modelu:
 
@@ -29,7 +29,8 @@ Model sprawdza też, czy zgłoszenie z przycisków mieści się w jednym pakieci
 | [reference.py](reference.py) | Kodowanie, walidacja, model odbioru na stanowisku (kwarantanna, lista zaufanych stacji, zamknięcie zdarzenia) i zaufanie stacji |
 | [schema.sql](schema.sql) | Schemat SQLite używany przez model |
 | [test_reference.py](test_reference.py) | Przypadki akceptacyjne |
-| [obliczenia.py](obliczenia.py) | Energia stacji i poziomu 3, budżet W10 przekaźnika z kodem IFAC (także z dwoma STATUS), pojemność sieci, ponawianie LXMF, rozmiary SA1, zajętość FRAM 4 Mbit według roli, RAM tablic stosu, zimny start sieci (ogłoszenia, zapytania o trasę i TEST wobec okna TEST), łącze radiowe i oszacowania układów. Wariant główny to LoRa SF7, 125 kHz, SX1262 (D10): według niego liczą `station_level1`, `relay_w10`, `network_capacity`, `lxmf_retry` i `cold_start_announces`; `lora_pilot` porównuje SF7 i SF8 oraz podaje zapas zasięgu. Dawny profil P1 (własne FSK, odbiornik CC1120 22 mA) zostaje pod kluczem `p1_archiwalny` z tymi samymi pozycjami |
+| [envelope.py](envelope.py), [test_envelope.py](test_envelope.py) | Wejście modelu do kodu koperty w `software/laptop/wici/envelope.py`: klucze kierunkowe, ChaCha20-Poly1305, części i okno powtórzeń; kodowanie porównywane bajt po bajcie z C++ w `tests/test_envelope_cross_language.py` |
+| [obliczenia.py](obliczenia.py) | Energia stacji i poziomu 3, budżet W10 przekaźnika z kodem IFAC (także z dwoma STATUS), pojemność sieci, ponawianie LXMF, rozmiary SA1, zajętość FRAM 4 Mbit według roli, RAM tablic stosu, zimny start sieci (ogłoszenia, zapytania o trasę i TEST wobec okna TEST), łącze radiowe i oszacowania układów. `wici_link` liczy dla WICI-Link v3 (ramki jak w `firmware/src/wici_link.h` i `wici_hop_auth.h`, 3 ms narastania na ramkę) W10 bez strat i przy 95% skuteczności skoku, wariant z PRZECZYTANE i decyzją, zimny start i próbę „Wrogi węzeł”, a dla zapisu decyzji D21 także poprzednią wersję v2 z podpisem pochodzenia na każdej ramce DATA. Wariant główny to LoRa SF7, 125 kHz, SX1262 (D10): według niego liczą `station_level1`, `relay_w10`, `network_capacity`, `lxmf_retry` i `cold_start_announces`; `lora_pilot` porównuje SF7 i SF8 oraz podaje zapas zasięgu. Dawny profil P1 (własne FSK, odbiornik CC1120 22 mA) zostaje pod kluczem `p1_archiwalny` z tymi samymi pozycjami |
 | [wyniki.json](wyniki.json) | Zapis wyników z założeniami |
 
 Kontrakty: [radio](../../docs/spec/radio.md), [oprogramowanie](../../docs/spec/oprogramowanie.md). Licencja kodu i SQL: [MIT](../../LICENSES/MIT.txt); opisy i raporty: CC-BY-4.0.

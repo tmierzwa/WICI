@@ -113,9 +113,9 @@ Gotowej częstotliwości zapasowej nie ma: kanał 125 kHz mieści się w podpaś
 
    Ogłoszenia (własne i przekazywane) mają limit 2% czasu zegarowego liczony z czasu nadawania ([ogłoszenia](oprogramowanie.md#tryby-kryzysowe)); z długiem ciszy to do 26% czasu kanału. Ich czas kanału wlicza się do tej samej puli co K2: **K2 i ogłoszenia razem zajmują najwyżej 60% czasu kanału w oknie**. Ogłoszenie ponad ten limit czeka w kolejce ogłoszeń interfejsu radiowego stacji i nie jest odrzucane. Limit `announce_cap` Reticulum tej puli nie widzi.
 
-   K0 (poza limitami zapytań o trasę i odpowiedzi na nie) i K1 nie mają limitu. Gwarancja brzmi więc: w każdym oknie 3600 s co najmniej 40% czasu kanału pozostaje dla K0 i K1, także przy zalewie ruchem obcym i pełnym limicie ogłoszeń. Udział zapewnia limit, a kolejność w kolejce radiowej skraca oczekiwanie: najpierw dowody pakietów i zapytania o trasę (bez trasy dane nie wyjdą), potem dane K0 i K1, potem dane K2, na końcu ogłoszenia ([kolejność w kolejce](oprogramowanie.md#wysyłanie)). Pakiet K0 lub K1 czeka więc najwyżej na:
+   W profilu Reticulum K0 (poza limitami zapytań o trasę i odpowiedzi na nie) i K1 nie mają limitu. W numerowanym WICI-Link [wspólny limit tranzytu](wici-link.md#klasy-czasu-kanału) obejmuje także K1, ponieważ przejęta stacja może zająć gniazdo K1 u swojego rodzica; K0 zachowuje rezerwę 40%, a przy czekającym K1 ramka K2 wychodzi tylko, dopóki cały tranzyt z BEACON-ami nie przekroczy 25% czasu kanału (zamiast limitu jednego celu). Kolejność w kolejce radiowej skraca oczekiwanie: najpierw dowody pakietów i zapytania o trasę (bez trasy dane nie wyjdą), potem dane K0 i K1, potem dane K2, na końcu ogłoszenia ([kolejność w kolejce](oprogramowanie.md#wysyłanie)). W Reticulum pakiet K0 lub K1, a w WICI-Link pakiet K0, czeka najwyżej na:
 
-   - zakończenie bieżącej serii i jej długu ciszy (≤13 × 0,83 s ≈ 10,8 s);
+   - zakończenie bieżącej serii i jej długu ciszy (≤13 × 0,83 s ≈ 10,8 s; w WICI-Link jedna ramka, ≤13 × 0,419 s ≈ 5,4 s);
    - dowody, zapytania o trasę i wcześniejsze pakiety K0 i K1 w kolejce;
    - odroczenia przy zajętym kanale.
 

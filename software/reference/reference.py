@@ -256,27 +256,37 @@ class OSPStore:
             raise ValueError("Unverified sender")
         with self.db:
             self.db.execute("UPDATE removed SET messages = messages + 1 WHERE source=?", (source,))
+        with self.db:
+            return self.receive_in_transaction(source, wire, signature_valid, before_commit)
+
+    def receive_in_transaction(self, source: bytes, wire: bytes, signature_valid: bool, before_commit=None) -> bytes | None:
+        """Admit on the caller's open transaction, for envelope replay state to commit with SA1.
+
+        The caller handles `removed.messages` and must not send RECEIVED until the
+        enclosing durable snapshot succeeds. This method never commits by itself.
+        """
+        if signature_valid is not True or len(source) != 16:
+            raise ValueError("Unverified sender")
         value = decode_message(wire)
         if value[1] not in (0, 5):
             raise ValueError("Expected REQUEST or TEST")
         canonical = encode_message(value)
         digest = hashlib.sha256(canonical).digest()
         _, _, mid, revision, *_ = value
-        with self.db:
-            trusted = self.db.execute("SELECT 1 FROM trusted WHERE source=?", (source,)).fetchone() is not None
-            if trusted or self._check_key("received", source, mid, revision, digest):
-                ack = self._accept(source, mid, revision, canonical, digest)
-            else:
-                ack = None
-                if not self._check_key("quarantine", source, mid, revision, digest):
-                    per_sender, total = self.db.execute(
-                        "SELECT sum(source=?), count(*) FROM quarantine", (source,)).fetchone()
-                    if (per_sender or 0) >= QUARANTINE_PER_SENDER or total >= QUARANTINE_TOTAL:
-                        raise QuarantineFull("Quarantine limit reached")
-                    self.db.execute("INSERT INTO quarantine VALUES(?,?,?,?,?)",
-                                    (source, mid, revision, digest, canonical))
-            if before_commit is not None:
-                before_commit()
+        trusted = self.db.execute("SELECT 1 FROM trusted WHERE source=?", (source,)).fetchone() is not None
+        if trusted or self._check_key("received", source, mid, revision, digest):
+            ack = self._accept(source, mid, revision, canonical, digest)
+        else:
+            ack = None
+            if not self._check_key("quarantine", source, mid, revision, digest):
+                per_sender, total = self.db.execute(
+                    "SELECT sum(source=?), count(*) FROM quarantine", (source,)).fetchone()
+                if (per_sender or 0) >= QUARANTINE_PER_SENDER or total >= QUARANTINE_TOTAL:
+                    raise QuarantineFull("Quarantine limit reached")
+                self.db.execute("INSERT INTO quarantine VALUES(?,?,?,?,?)",
+                                (source, mid, revision, digest, canonical))
+        if before_commit is not None:
+            before_commit()
         return ack
 
     def approve_message(self, source: bytes, mid: str, revision: int) -> bytes:
@@ -301,13 +311,17 @@ class OSPStore:
         The station's quarantined messages are dropped: it resends each one until RECEIVED, now as trusted.
         A source is the hash of its key, so a removed station returning with another key is not modelled.
         """
+        with self.db:
+            self.add_trusted_in_transaction(source, pubkey, approvers)
+
+    def add_trusted_in_transaction(self, source: bytes, pubkey: bytes, approvers: tuple[str, str]) -> None:
+        """Same trust change on the caller's transaction, for atomic numbered-card binding."""
         if (len(approvers) != 2 or any(type(a) is not str or not a.strip() for a in approvers)
                 or approvers[0].strip() == approvers[1].strip()):
             raise ValueError("Two different approvers required")
-        with self.db:
-            self._insert_trusted(source, pubkey)
-            self.db.execute("DELETE FROM removed WHERE source=?", (source,))
-            self.db.execute("DELETE FROM quarantine WHERE source=?", (source,))
+        self._insert_trusted(source, pubkey)
+        self.db.execute("DELETE FROM removed WHERE source=?", (source,))
+        self.db.execute("DELETE FROM quarantine WHERE source=?", (source,))
 
     def remove_trusted(self, source: bytes) -> None:
         """One duty officer removes a station from the trusted list; adding it back is add_trusted (two people)."""

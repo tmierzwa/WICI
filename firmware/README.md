@@ -542,7 +542,20 @@ Kod jest w czterech plikach. `src/journal.cpp` obsługuje jawny obszar: dług ci
 | pamięć zwolnionych wpisów | 0x40000 | 16 × 512 B | 256 wpisów (id, `r_max`, numer zdarzenia `released`, krótki numer, znacznik anulowania) |
 | pierścień zdarzeń | 0x42000 | 16 × 512 B | 256 zdarzeń 24 B dla laptopa (bez treści SA1, którą `event` bierze z rejestru albo skrzynki) |
 | tożsamość Reticulum (`src/framfs.cpp`) | 0x44000 | 2 × 128 B | klucz prywatny 64 B, numer, CRC-16; nowszy z dwóch slotów ([stos](#tożsamość-i-tablice-w-fram)) |
-| tablice stosu | 0x48000 | 224 KiB | na rdzeniu tablica znanych celów i tras w gniazdach; w obrazach z portem system plików z magazynami microStore (tablica tras, znane tożsamości, buforowane ogłoszenia) ([tablice w FRAM](#tożsamość-i-tablice-w-fram)) |
+| liczniki kopert (`src/envelope_counter.cpp`) | 0x44100 | 2 × 2 × 32 B | granica rezerwacji `ctr` dla głównego i zapasowego odbiorcy, dwie kopie, CRC, COMMIT, odcisk klucza koperty |
+| `seq` łącza (`src/wici_seq.cpp`) | 0x44180 | 2 × 32 B | granica bloku 64 numerów `seq` |
+| wolne | 0x441C0 | 64 B | jedyna wolna luka w 0x44000–0x47FFF (16 320 z 16 384 B zajęte) |
+| pierścień rozsyłania, część A (`src/wici_flood.cpp`) | 0x44200 | 192 × 18 B | sieć, tożsamość koperty, czas, CRC, COMMIT |
+| okna powtórzeń kopert (`src/envelope_replay.cpp`) | 0x44F80 | 2 × 2 × 32 B | największy `ctr` i maska 64 bitów na odbiorcę, CRC, COMMIT, odcisk klucza |
+| kolejka przekaźnika (`src/wici_relay.cpp`) | 0x45000 | 4 × 2 × 320 B | cztery gniazda: ramka do 255 B, sąsiad K1 (0 dla K2), czas przyjęcia, stan „przekazane”, CRC, COMMIT |
+| pierścień rozsyłania, część B | 0x45A00 | 64 × 18 B | dalsze rekordy pierścienia z 0x44200 |
+| części kopert, główny odbiorca (`src/envelope_parts.cpp`) | 0x45E80 | 2 × 192 B | pierwsza część czekająca na drugą (120 s) |
+| drogi w dół (`src/wici_route.cpp`) | 0x46000 | 2 × 1152 B | 256 dróg po 4 B z siecią, numerem stacji i korzeniem, CRC, COMMIT |
+| pierścień przekazanych kopert (`src/wici_seen.cpp`) | 0x46900 | 224 × 24 B | sieć, tożsamość koperty, skrót ładunku, czas; okno 3600 s |
+| części kopert, zapasowy odbiorca | 0x47E00 | 2 × 192 B | jak dla głównego |
+| budżet czasu kanału (`src/wici_airtime.cpp`) | 0x47F80 | 2 × 64 B | siedem przedziałów 10 min puli tranzytu i BEACON-ów |
+| tablice stosu | 0x48000 | 223,5 KiB | na rdzeniu tablica znanych celów i tras w gniazdach; w obrazach z portem system plików z magazynami microStore (tablica tras, znane tożsamości, buforowane ogłoszenia) ([tablice w FRAM](#tożsamość-i-tablice-w-fram)) |
+| stan przeniesienia | 0x7FE00 | 512 B | dwa trwałe rekordy bariery przeniesienia; niepewny stan blokuje nadawanie |
 
 Zasady:
 
@@ -639,7 +652,7 @@ Usunięto martwy i powielony kod (`statusAfter`, kasowanie klucza w `framfs`, ge
 
 ## Protokół USB laptop–stacja
 
-Kontrakt: [protokół USB](../docs/spec/protokol-usb.md) (`"usb":2`). Kod w `src/usbproto.cpp` (bez zależności od Arduino; scenariusze w `tests/test_firmware_host.py`), wiadomości SA1 w `src/sa1.cpp` (rozbiór, kontrola i kodowanie kanoniczne jak `reference.py`, z NFC i znakami nieprzydzielonymi), skaner JSON w `src/jsonlite.cpp`, magazyny w `src/store.cpp`.
+Kontrakt: [protokół USB](../docs/spec/usb-protocol.md) (`"usb":2`). Kod w `src/usbproto.cpp` (bez zależności od Arduino; scenariusze w `tests/test_firmware_host.py`), wiadomości SA1 w `src/sa1.cpp` (rozbiór, kontrola i kodowanie kanoniczne jak `reference.py`, z NFC i znakami nieprzydzielonymi), skaner JSON w `src/jsonlite.cpp`, magazyny w `src/store.cpp`.
 
 - **Koperta i sesja.** Wiersze JSON do 1024 B z `seq` (odpowiedź z `re`), `hello` stacji po otwarciu portu z `boot`, kontraktem, rolą i stanem; tabela pól każdego polecenia: pole nieznane albo złego typu daje `invalid` z nazwą pola. Polecenie spoza roli daje `role`, polecenie trybu przygotowania poza nim `prep_required`.
 - **Przepływ.** Wiersze wychodzą przez kolejkę mieszczącą jeden pełny wiersz (1 025 B). Pętla stacji oddaje z niej portowi tyle, ile port przyjmie (`availableForWrite()`, wynik `write()` przy zapisie częściowym). Następny wiersz wejścia jest czytany dopiero przy pustej kolejce, a migawka i zdarzenia wychodzą w miarę wolnego miejsca. Laptop, który przestał czytać, nie zatrzymuje radia, przycisków ani watchdoga.
@@ -734,7 +747,8 @@ Program na komputerze z `--node` zastępuje port CDC pseudoterminalem (nazwa w z
 | Obszar | Adres | Treść |
 |---|---|---|
 | rekord tożsamości | 0x44000 | 2 sloty × 128 B: znacznik, numer, klucz prywatny 64 B (X25519 + Ed25519), CRC-16; zapis do starszego slotu z odczytem kontrolnym |
-| system plików stosu (port) | 0x48000–0x7FFFF | nagłówek, 320 węzłów × 96 B, tablica przydziału 2 B na blok, 1 527 bloków × 128 B (195 456 B danych) |
+| system plików stosu (port) | 0x48000–0x7FDFF | nagłówek, 320 węzłów × 96 B, tablica przydziału 2 B na blok, 1 523 bloki × 128 B (194 944 B danych) |
+| bariera przeniesienia | 0x7FE00–0x7FFFF | dwa rekordy po 256 B; niepewny lub aktywny stan przeniesienia blokuje nadawanie przed startem stosu |
 
 Rdzeń Reticulum (obrazy z rdzeniem i `host`; [reticulum-core.md](reticulum-core.md)) nie używa systemu plików. W tym samym obszarze od 0x48000 ma tablicę znanych celów i tras (`lib/reticulum_core/src/table.h`): 257 gniazd po 568 B (145 976 B). Gniazdo zawiera znacznik zatwierdzenia, numer gniazda i zapisu, cel, ratchet z czasem przyjęcia i emisji, trasę (skoki, następny skok, wygaśnięcie, ostatnie użycie), czas ostatniego użycia wpisu, ogłoszenie trasy do 465 B i CRC-32. Klucz publiczny i skrót losowy są częścią ogłoszenia, a bez ogłoszenia leżą w tym samym miejscu same. W RAM jest indeks 257 × 24 B (cel, czas ostatniego użycia wpisu i trasy) i bufor jednego gniazda.
 

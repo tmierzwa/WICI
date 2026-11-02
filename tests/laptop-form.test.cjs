@@ -101,3 +101,17 @@ test('changing the form hides a stale normalization or operation result', () => 
   assert.equal(p.run('readForm().addresses[0]'), 'Szkoła');
   assert.equal(p.output.downloads.length, 0);
 });
+
+test('neighbour rows carry the stations behind each neighbour and round-trip', () => {
+  const p = panel({}, {});
+  const ed = 'a'.repeat(64), x = 'b'.repeat(64);
+  const entries = p.run(`parsePriorityKeys(${JSON.stringify(`12 ${ed} ${x} 7,8\n 13 ${ed} ${x} \n14 ${ed} ${x} 7,x`)})`);
+  assert.deepEqual(JSON.parse(JSON.stringify(entries)), [
+    { id: 12, ed25519: ed, x25519: x, behind: [7, 8] },
+    { id: 13, ed25519: ed, x25519: x },
+    { id: 14, ed25519: ed, x25519: x, behind: [7, null] },
+  ]);
+  assert.equal(p.run(`formatPriorityKeys(${JSON.stringify(entries.slice(0, 2))})`),
+    `12 ${ed} ${x} 7,8\n13 ${ed} ${x}`);
+  assert.equal(p.run(`parsePriorityKeys(${JSON.stringify(`12 ${ed} ${x} 7 extra`)})[0].ed25519`), '');
+});

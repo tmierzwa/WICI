@@ -159,16 +159,44 @@
           <h3>Tożsamość główna</h3>
           <label class="field"><span>Adres LXMF</span><input class="mono" name="receiver.main.lxmf" data-field="receiver.main.lxmf" maxlength="32" spellcheck="false" autocomplete="off"></label>
           <label class="field"><span>Klucz publiczny</span><textarea class="mono" name="receiver.main.key" data-field="receiver.main.key" rows="2" maxlength="128" spellcheck="false"></textarea></label>
+          <label class="field narrow"><span>Numer odbiorcy (WICI-Link)</span><input type="number" name="receiver.main.id" min="1" max="65534" step="1"></label>
+          <label class="field narrow"><span>Numer sieci z karty</span><input type="number" name="receiver.main.net_id" min="1" max="65534" step="1"></label>
+          <label class="field"><span>Klucz koperty X25519</span><input class="mono" name="receiver.main.x25519" maxlength="64" spellcheck="false" autocomplete="off"></label>
           <p class="field-error" data-error="receiver.main"></p>
         </div>
         <div class="identity">
           <h3>Tożsamość zapasowa</h3>
           <label class="field"><span>Adres LXMF</span><input class="mono" name="receiver.backup.lxmf" data-field="receiver.backup.lxmf" maxlength="32" spellcheck="false" autocomplete="off"></label>
           <label class="field"><span>Klucz publiczny</span><textarea class="mono" name="receiver.backup.key" data-field="receiver.backup.key" rows="2" maxlength="128" spellcheck="false"></textarea></label>
+          <label class="field narrow"><span>Numer odbiorcy (WICI-Link)</span><input type="number" name="receiver.backup.id" min="1" max="65534" step="1"></label>
+          <label class="field narrow"><span>Numer sieci z karty</span><input type="number" name="receiver.backup.net_id" min="1" max="65534" step="1"></label>
+          <label class="field"><span>Klucz koperty X25519</span><input class="mono" name="receiver.backup.x25519" maxlength="64" spellcheck="false" autocomplete="off"></label>
           <p class="field-error" data-error="receiver.backup"></p>
         </div>
         <button type="button" class="btn btn-ghost" id="load-receiver">Wczytaj kartę odbiorcy z pliku</button>
         <p class="field-error" data-error="receiver"></p>
+      </fieldset>
+
+      <fieldset class="group">
+        <legend>Numery sieci WICI-Link</legend>
+        <p class="hint">Wypełnij dla konfiguracji numerowanej. Numery odbiorców muszą zgadzać się z kartą.</p>
+        <div class="rows">
+          <label class="field narrow"><span>Sieć</span><input type="number" name="network.id" min="1" max="65534" step="1"></label>
+          <label class="field narrow"><span>Ta stacja lub węzeł</span><input type="number" name="network.station" min="1" max="65534" step="1"></label>
+          <label class="field narrow"><span>Węzeł główny</span><input type="number" name="network.root" min="1" max="65534" step="1"></label>
+          <label class="field narrow"><span>Rodzic</span><input type="number" name="network.parent" min="0" max="65534" step="1"></label>
+          <label class="field narrow"><span>Rodzic zapasowy</span><input type="number" name="network.backup_parent" min="0" max="65534" step="1"></label>
+          <label class="field narrow"><span>Odbiorca główny</span><input type="number" name="network.receiver_main" min="1" max="65534" step="1"></label>
+          <label class="field narrow"><span>Odbiorca zapasowy</span><input type="number" name="network.receiver_backup" min="1" max="65534" step="1"></label>
+        </div>
+        <p class="field-error" data-error="network"></p>
+      </fieldset>
+
+      <fieldset class="group">
+        <legend>Klucze sąsiadów WICI-Link</legend>
+        <p class="hint">Dla sieci numerowanej wpisz do 50 wierszy: numer stacji, Ed25519 (ostatnie 64 cyfry pola „key” jej karty) i X25519 (pierwsze 64 cyfry). Węzeł i stacje używają X25519 do uwierzytelniania każdego skoku. Na końcu wiersza możesz podać po przecinkach numery stacji, które plan sieci umieszcza za tym sąsiadem (razem najwyżej 128), np. <code>12 … … 7,8</code>; tylko dla nich stacja uczy się drogi w dół przez tego sąsiada.</p>
+        <label class="field"><span>Numer, klucz Ed25519, klucz X25519 i stacje za sąsiadem</span><textarea class="mono" name="priority_keys" rows="4" spellcheck="false"></textarea></label>
+        <p class="field-error" data-error="priority_keys"></p>
       </fieldset>
 
       <fieldset class="group only-station">

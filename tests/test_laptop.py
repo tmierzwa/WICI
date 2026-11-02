@@ -64,6 +64,57 @@ class ConfigDocTest(unittest.TestCase):
         self.assertEqual(configdoc.check(station_doc()), [])
         self.assertEqual(configdoc.check({"role": "wezel", "ifac": "ab" * 16, "radio": {"profile": "lora-sf7"}}), [])
 
+    def test_numbered_network_binds_receiver_cards(self):
+        network = {"id": 100, "station": 4, "root": 1, "parent": 1, "backup_parent": 0,
+                   "receiver_main": 2, "receiver_backup": 3}
+        main, backup = card(MAIN_KEY), card(BACKUP_KEY)
+        main.update(id=2, net_id=100, x25519=main["key"][:64])
+        backup.update(id=3, net_id=100, x25519=backup["key"][:64])
+        neighbor = {"id": 5, "ed25519": "ab" * 32, "x25519": "cd" * 32}
+        doc = station_doc(network=network, receiver={"main": main, "backup": backup},
+                          priority_keys=[neighbor])
+        self.assertEqual(self.fields(doc), [])
+        self.assertEqual(self.fields(dict(doc, priority_keys=[{"id": 5, "ed25519": "ab" * 32}])),
+                         ["priority_keys.0"])
+        self.assertEqual(self.fields(dict(doc, priority_keys=[])), ["priority_keys"])
+        self.assertEqual(self.fields(dict(doc, network=dict(network, station=1))), ["network"])
+        self.assertEqual(self.fields(dict(doc, network=dict(network, parent=True))), ["network"])
+        # Hop limit: optional, 1-15, default 7 filled in by normalize (firmware/src/config.cpp).
+        self.assertEqual(configdoc.normalize(doc)["network"]["ttl"], configdoc.TTL_DEFAULT)
+        self.assertEqual(self.fields(dict(doc, network=dict(network, ttl=15))), [])
+        for ttl in (0, 16, True, "7", 7.0):
+            self.assertEqual(self.fields(dict(doc, network=dict(network, ttl=ttl))), ["network"])
+        self.assertEqual(self.fields(dict(doc, network=dict(network, receiver_backup=2))),
+                         ["network", "receiver.backup.id"])
+        self.assertEqual(self.fields(dict(doc, network=1)), ["network", "receiver.main.id", "receiver.backup.id"])
+        bad = dict(main, net_id=101)
+        self.assertEqual(self.fields(dict(doc, receiver={"main": bad, "backup": backup})), ["receiver.main.id"])
+        root = {"role": "wezel", "ifac": "ab" * 16, "radio": {"profile": "p1"},
+                "network": dict(network, station=1, parent=0), "priority_keys": [neighbor]}
+        self.assertEqual(self.fields(root), [])
+
+    def test_priority_origin_keys_are_bounded_and_bound_to_station_numbers(self):
+        network = {"id": 100, "station": 4, "root": 1, "parent": 1, "backup_parent": 0,
+                   "receiver_main": 2, "receiver_backup": 3}
+        main, backup = card(MAIN_KEY), card(BACKUP_KEY)
+        main.update(id=2, net_id=100, x25519=main["key"][:64])
+        backup.update(id=3, net_id=100, x25519=backup["key"][:64])
+        neighbor = {"id": 5, "ed25519": "ab" * 32, "x25519": "cd" * 32}
+        doc = station_doc(network=network, receiver={"main": main, "backup": backup},
+                          priority_keys=[neighbor])
+        self.assertEqual(self.fields(doc), [])
+        self.assertEqual(self.fields(dict(doc, priority_keys=[neighbor] * 2)),
+                         ["priority_keys.1"])
+        self.assertEqual(self.fields(dict(doc, priority_keys=[dict(neighbor, id=2)])),
+                         ["priority_keys.0"])
+        self.assertEqual(self.fields(dict(doc, priority_keys=[neighbor] * 51)),
+                         ["priority_keys"])
+        # `behind`: stations the network plan places behind the neighbour (down-route learning).
+        self.assertEqual(self.fields(dict(doc, priority_keys=[dict(neighbor, behind=[6, 7])])), [])
+        for bad in ([5], [4], [2], [6, 6], [0], ["6"], 6):
+            self.assertEqual(self.fields(dict(doc, priority_keys=[dict(neighbor, behind=bad)])),
+                             ["priority_keys.0.behind"], bad)
+
     def test_limits_follow_the_firmware(self):
         self.assertEqual(self.fields(station_doc(addresses=[])), ["addresses"])
         self.assertEqual(self.fields(station_doc(addresses=["a"] * 9)), ["addresses"])
@@ -241,6 +292,19 @@ class LinkTest(unittest.TestCase):
         self.assertEqual(e.exception.reason, "prep_required")
         with self.assertRaises(usbproto.ProtocolError):
             link.request("unknown", timeout=0.3)
+        link.close()
+
+    def test_long_command_keeps_its_limit_after_the_button(self):
+        # Eksport przeniesienia: przycisk w ostatniej chwili, potem dwa przejścia obrazu w limicie polecenia.
+        port = None
+
+        def respond(m):
+            threading.Timer(0.4, port.push, [{"usb": 2, "seq": 2, "re": m["seq"], "type": "ok"}]).start()
+            return [{"usb": 2, "seq": 1, "re": m["seq"], "type": "pending", "confirm_s": -5}]
+        port = FakePort(respond)
+        link = usbproto.Link(port)
+        with unittest.mock.patch.object(usbproto, "CONFIRM_TIMEOUT", 0):
+            self.assertEqual(link.request("xfer_begin", timeout=5, op="export")["type"], "ok")
         link.close()
 
     def test_seq_rejection_is_retried_once_with_the_next_number(self):
@@ -499,7 +563,7 @@ class PrepTest(unittest.TestCase):
             self.assertIn("Wyślij ponownie", err.message)
             self.assertEqual((err.field, err.code), (None, f"invalid {detail}"))
         self.assertEqual(rejected("invalid", "addresses").message, "Stacja odrzuciła pole: adresy.")
-        self.assertIn("nie obsługuje przenoszenia", rejected("migration", "unsupported").message)
+        self.assertIn("odrzuciła ten krok przeniesienia", rejected("migration", "unsupported").message)
         self.assertEqual(rejected("invalid", ["x"]).code, "invalid")             # dziwny `detail` nie wywraca panelu
 
 
@@ -1559,7 +1623,11 @@ class PackageTest(unittest.TestCase):
         # Aplikacja stanowiska (wici/stanowisko) ma własny pakiet z przypiętymi Reticulum, LXMF i pyserial (PLAN.md, S10).
         allowed = set(sys.stdlib_module_names) | {"wici"}
         for p in self.PACKAGE.rglob("*.py"):
-            extra = {"RNS", "LXMF", "serial"} if "stanowisko" in p.relative_to(self.PACKAGE).parts else set()
+            rel = p.relative_to(self.PACKAGE)
+            extra = {"RNS", "LXMF", "serial", "cryptography"} if (
+                "stanowisko" in rel.parts or rel.as_posix() in ("envelope.py", "migration_crypto.py")) else set()
+            if rel.as_posix() in ("envelope.py", "migration_crypto.py"):
+                self.assertFalse(build_usb.app_file(f"wici/{rel.as_posix()}"))
             for node in ast.walk(ast.parse(p.read_text(encoding="utf-8"))):
                 names = [a.name for a in node.names] if isinstance(node, ast.Import) else \
                     [node.module] if isinstance(node, ast.ImportFrom) and node.level == 0 else []
@@ -1599,7 +1667,7 @@ class BuildPinsTest(unittest.TestCase):
     def test_ci_builds_with_the_pinned_python(self):
         pins = json.loads((LAPTOP / "build" / "runtimes.json").read_text(encoding="utf-8"))
         workflow = (ROOT / ".github" / "workflows" / "laptop.yml").read_text(encoding="utf-8")
-        self.assertEqual(workflow.count(f"python-version: '{pins['python']}'"), 2)   # usb i size
+        self.assertEqual(workflow.count(f"python-version: '{pins['python']}'"), 3)
 
     def test_app_zip_skips_junk(self):
         for rel in ("wici/__main__.py", "wici/ui/index.html", "wici/slowa.txt"):

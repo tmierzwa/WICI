@@ -14,6 +14,28 @@ namespace config {
 
 namespace {
 
+// Small-order X25519 u-coordinates (0, 1, two points of order 8, p - 1, p, p + 1) and Ed25519
+// points (identity, order 2, order 4, two of order 8, y = p, y = p + 1), little-endian, bit 255
+// cleared. Together with bit 255 set this covers every small-order encoding of either key type.
+const uint8_t SMALL_ORDER[9][32] = {
+    {0},
+    {1},
+    {0xe0, 0xeb, 0x7a, 0x7c, 0x3b, 0x41, 0xb8, 0xae, 0x16, 0x56, 0xe3, 0xfa, 0xf1, 0x9f, 0xc4, 0x6a,
+     0xda, 0x09, 0x8d, 0xeb, 0x9c, 0x32, 0xb1, 0xfd, 0x86, 0x62, 0x05, 0x16, 0x5f, 0x49, 0xb8, 0x00},
+    {0x5f, 0x9c, 0x95, 0xbc, 0xa3, 0x50, 0x8c, 0x24, 0xb1, 0xd0, 0xb1, 0x55, 0x9c, 0x83, 0xef, 0x5b,
+     0x04, 0x44, 0x5c, 0xc4, 0x58, 0x1c, 0x8e, 0x86, 0xd8, 0x22, 0x4e, 0xdd, 0xd0, 0x9f, 0x11, 0x57},
+    {0xec, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f},
+    {0xed, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f},
+    {0xee, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f},
+    {0xc7, 0x17, 0x6a, 0x70, 0x3d, 0x4d, 0xd8, 0x4f, 0xba, 0x3c, 0x0b, 0x76, 0x0d, 0x10, 0x67, 0x0f,
+     0x2a, 0x20, 0x53, 0xfa, 0x2c, 0x39, 0xcc, 0xc6, 0x4e, 0xc7, 0xfd, 0x77, 0x92, 0xac, 0x03, 0x7a},
+    {0x26, 0xe8, 0x95, 0x8f, 0xc2, 0xb2, 0x27, 0xb0, 0x45, 0xc3, 0xf4, 0x89, 0xf2, 0xef, 0x98, 0xf0,
+     0xd5, 0xdf, 0xac, 0x05, 0xd3, 0xc6, 0x33, 0x39, 0xb1, 0x38, 0x02, 0x88, 0x6d, 0x53, 0xfc, 0x05},
+};
+
 constexpr size_t VALUE_MAX = 640;   // pole albo element listy w RAM (karta odbiorcy ≈ 400 B, trójka fraz ≈ 300 B)
 
 struct Range {
@@ -125,8 +147,8 @@ bool elements(Reader& in, const Range& array, Range* out, size_t max, size_t& co
     }
 }
 
-enum Field : uint8_t { ROLE, ADDRESSES_F, RECEIVER, STATIONS, PHRASES_F, IFAC, RADIO, FIELDS };
-const char* const NAMES[FIELDS] = {"role", "addresses", "receiver", "stations", "phrases", "ifac", "radio"};
+enum Field : uint8_t { ROLE, ADDRESSES_F, RECEIVER, STATIONS, PHRASES_F, IFAC, RADIO, NETWORK, PRIORITY_KEYS, FIELDS };
+const char* const NAMES[FIELDS] = {"role", "addresses", "receiver", "stations", "phrases", "ifac", "radio", "network", "priority_keys"};
 
 bool parseValue(Reader& r, const Range& range, char* buffer, json::Value& out) {
     return r.copy(range, buffer, VALUE_MAX) && json::parse(buffer, out);
@@ -146,9 +168,27 @@ bool text(const json::Value& value, char* out, size_t maximum, size_t minimum) {
     return json::string(value, out, maximum + 1) && !sa1::checkText(out, maximum, minimum);
 }
 
-bool receiver(const json::Value& card, Receiver& out) {
-    static const char* const keys[] = {"lxmf", "key"};
-    if (!onlyFields(card, keys, 2) || !json::hexField(card, "lxmf", out.lxmf, HASH) || !json::hexField(card, "key", out.key, KEY)) return false;
+bool number(const json::Value& object, const char* name, uint16_t& out, bool allowZero = false) {
+    json::Value value;
+    int64_t n;
+    if (!json::field(object, name, value) || !json::integer(value, n) || n < (allowZero ? 0 : 1) || n > 0xFFFE) return false;
+    out = static_cast<uint16_t>(n);
+    return true;
+}
+
+bool receiver(const json::Value& card, Receiver& out, uint16_t netId, uint16_t expectedNumber) {
+    static const char* const legacy[] = {"lxmf", "key"};
+    static const char* const numbered[] = {"lxmf", "key", "id", "net_id", "x25519"};
+    if (!(netId ? onlyFields(card, numbered, 5) : onlyFields(card, legacy, 2)) ||
+        !json::hexField(card, "lxmf", out.lxmf, HASH) || !json::hexField(card, "key", out.key, KEY) ||
+        smallOrder(out.key) || smallOrder(out.key + 32)) return false;
+    if (netId) {
+        uint16_t cardNet;
+        uint8_t curve[32];
+        if (!number(card, "id", out.number) || !number(card, "net_id", cardNet) ||
+            !json::hexField(card, "x25519", curve, sizeof(curve)) ||
+            memcmp(curve, out.key, sizeof(curve)) || cardNet != netId || out.number != expectedNumber) return false;
+    }
     uint8_t expected[HASH];
     sha2::destinationHash(out.key, LXMF_NAME, expected);
     if (memcmp(expected, out.lxmf, HASH)) return false;   // adres LXMF nie należy do klucza z karty
@@ -157,6 +197,12 @@ bool receiver(const json::Value& card, Receiver& out) {
 }
 
 }  // namespace
+
+bool smallOrder(const uint8_t key[32]) {
+    for (const uint8_t* point : SMALL_ORDER)
+        if (!memcmp(key, point, 31) && (key[31] & 0x7F) == point[31]) return true;
+    return false;
+}
 
 const char* parse(Source& source, uint32_t size, const char* profile, Config& out, size_t& worst) {
     out = Config();
@@ -204,7 +250,76 @@ const char* parse(Source& source, uint32_t size, const char* profile, Config& ou
     for (size_t f : {ADDRESSES_F, RECEIVER, STATIONS, PHRASES_F}) {
         if (fields[f].set != (out.role == Role::STATION)) return NAMES[f];
     }
+    if (fields[NETWORK].set != fields[PRIORITY_KEYS].set) return NAMES[PRIORITY_KEYS];
     if (!fields[IFAC].set || !fields[RADIO].set) return !fields[IFAC].set ? NAMES[IFAC] : NAMES[RADIO];
+
+    if (fields[NETWORK].set) {
+        static const char* const networkKeys[] = {"id", "station", "root", "parent", "backup_parent", "receiver_main",
+                                                  "receiver_backup", "ttl"};
+        if (!parseValue(r, fields[NETWORK], buffer, v)) return NAMES[NETWORK];
+        json::Value ttl;
+        int64_t hops = TTL_DEFAULT;
+        const bool hasTtl = json::field(v, "ttl", ttl);  // optional, last in networkKeys
+        if (!onlyFields(v, networkKeys, hasTtl ? 8 : 7) ||
+            (hasTtl && (!json::integer(ttl, hops) || hops < 1 || hops > 15)) ||
+            !number(v, "id", out.network.id) || !number(v, "station", out.network.station) ||
+            !number(v, "root", out.network.root) || !number(v, "parent", out.network.parent, true) ||
+            !number(v, "backup_parent", out.network.backupParent, true) ||
+            !number(v, "receiver_main", out.network.receiverMain) ||
+            !number(v, "receiver_backup", out.network.receiverBackup)) return NAMES[NETWORK];
+        out.network.ttl = static_cast<uint8_t>(hops);
+        const Network& n = out.network;
+        if (n.receiverMain == n.receiverBackup || n.receiverMain == n.station || n.receiverBackup == n.station ||
+            n.receiverMain == n.root || n.receiverBackup == n.root ||
+            (out.role == Role::NODE ? n.station != n.root || n.parent != 0 || n.backupParent != 0 :
+             n.station == n.root || n.parent == 0 || n.parent == n.station ||
+             n.parent == n.receiverMain || n.parent == n.receiverBackup ||
+             n.backupParent == n.station || n.backupParent == n.receiverMain || n.backupParent == n.receiverBackup ||
+             (n.backupParent && n.backupParent == n.parent))) return NAMES[NETWORK];
+    }
+
+    if (fields[PRIORITY_KEYS].set) {
+        if (!out.network.id) return NAMES[PRIORITY_KEYS];
+        Range entries[PRIORITY_KEYS_MAX];
+        size_t count = 0;
+        if (!elements(r, fields[PRIORITY_KEYS], entries, PRIORITY_KEYS_MAX, count) ||
+            !count || count > PRIORITY_KEYS_MAX) return NAMES[PRIORITY_KEYS];
+        static const char* const keys[] = {"id", "ed25519", "x25519", "behind"};
+        for (size_t i = 0; i < count; ++i) {
+            json::Value behind;
+            if (!parseValue(r, entries[i], buffer, v)) return NAMES[PRIORITY_KEYS];
+            const bool hasBehind = json::field(v, "behind", behind);  // opcjonalne, ostatnie w keys
+            if (!onlyFields(v, keys, hasBehind ? 4 : 3) ||
+                !number(v, "id", out.priorityKeys[i].station) ||
+                !json::hexField(v, "ed25519", out.priorityKeys[i].ed25519, 32) ||
+                !json::hexField(v, "x25519", out.priorityKeys[i].x25519, 32) ||
+                smallOrder(out.priorityKeys[i].ed25519) || smallOrder(out.priorityKeys[i].x25519) ||
+                out.priorityKeys[i].station == out.network.station ||
+                out.priorityKeys[i].station == out.network.receiverMain ||
+                out.priorityKeys[i].station == out.network.receiverBackup) return NAMES[PRIORITY_KEYS];
+            for (size_t j = 0; j < i; ++j)
+                if (out.priorityKeys[j].station == out.priorityKeys[i].station) return NAMES[PRIORITY_KEYS];
+            // `behind`: stacje, które plan sieci stawia za tym sąsiadem (drogi w dół, wici_hop.h).
+            const size_t stations = hasBehind ? json::count(behind) : 0;
+            if (hasBehind && (behind.kind != json::Kind::ARRAY || out.behindCount + stations > BEHIND_MAX))
+                return NAMES[PRIORITY_KEYS];
+            const size_t first = out.behindCount;
+            for (size_t k = 0; k < stations; ++k) {
+                json::Value item;
+                int64_t n;
+                if (!json::item(behind, k, item) || !json::integer(item, n) || n < 1 || n > 0xFFFE)
+                    return NAMES[PRIORITY_KEYS];
+                const uint16_t station = static_cast<uint16_t>(n);
+                if (station == out.priorityKeys[i].station || station == out.network.station ||
+                    station == out.network.receiverMain || station == out.network.receiverBackup)
+                    return NAMES[PRIORITY_KEYS];
+                for (size_t j = first; j < out.behindCount; ++j)
+                    if (out.behind[j].station == station) return NAMES[PRIORITY_KEYS];
+                out.behind[out.behindCount++] = {station, out.priorityKeys[i].station};
+            }
+        }
+        out.priorityKeyCount = static_cast<uint8_t>(count);
+    }
 
     char hex[2 * HASH + 2];
     if (!parseValue(r, fields[IFAC], buffer, v) || !json::string(v, hex, sizeof(hex)) || !hexstr::decode(hex, out.ifac, HASH)) return NAMES[IFAC];
@@ -223,7 +338,9 @@ const char* parse(Source& source, uint32_t size, const char* profile, Config& ou
     static const char* const cardKeys[] = {"main", "backup"};
     json::Value card;
     if (!parseValue(r, fields[RECEIVER], buffer, v) || !onlyFields(v, cardKeys, 2) || !json::field(v, "main", card) ||
-        !receiver(card, out.receivers[MAIN]) || !json::field(v, "backup", card) || !receiver(card, out.receivers[BACKUP]) ||
+        !receiver(card, out.receivers[MAIN], out.network.id, out.network.receiverMain) ||
+        !json::field(v, "backup", card) ||
+        !receiver(card, out.receivers[BACKUP], out.network.id, out.network.receiverBackup) ||
         !memcmp(out.receivers[MAIN].lxmf, out.receivers[BACKUP].lxmf, HASH)) {
         return NAMES[RECEIVER];
     }

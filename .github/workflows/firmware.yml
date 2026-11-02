@@ -6,7 +6,8 @@
 # sprawdzeniem stosu i RAM (tools/core_boards.py).
 # Do tego stos stacji pod wrogim ruchem z sanitizerami (tests/test_rns_hostile.py), rdzeń pod libFuzzerem
 # przez 60 s w osobnym zadaniu (tools/core_fuzz.py; godzina w fuzz.yml) i próba zgodności
-# z Reticulum w Pythonie na przypiętym commicie.
+# z Reticulum w Pythonie na przypiętym commicie. Natywne próby koperty, WICI-Link i przeniesienia idą w każdym PR
+# w checks.yml (publication), więc tu ich nie powtarza się.
 # Wersje platform i rdzeni są przypięte w firmware/platformio.ini, stos Reticulum w tools/stack_deps.py.
 name: Firmware
 on:

@@ -1,7 +1,7 @@
 {
-  "scope": "Reference model only; no physical hardware or packaged OS tested",
-  "command": "python3 -m unittest discover -s software/reference -v",
-  "test_cases": 41,
+  "scope": "Reference model and D21 envelope codec; no physical hardware or packaged OS tested",
+  "command": "python3 -m unittest discover -s software/reference -q",
+  "test_cases": 49,
   "result": "PASS",
   "datagram_sizes_exercised": [
     1,
@@ -606,14 +606,18 @@
     600
   ],
   "source_hashes": {
-    "reference.py": "30d4b56332ed336d8d1c6ca83bb786b823b318e12f541999550a532a0762f35e",
-    "test_reference.py": "cc7d2f9a4fd6dee2f866bfaf60d38b1f52116fb3c744cdefd9c27c3fd2ace827",
+    "reference.py": "76afc3cc472acfe18c4f17945230674f3d54efac58615e887dbd9dcf08607e29",
+    "test_reference.py": "557d5a4026b97de930a3bf391803b79ae14c8c3a044a5dc3311021d1a1cbcc53",
     "schema.sql": "f93c98118c4b5cd4d5d79bd0d704cba04da7058935b86e473092e3437203df7e",
-    "obliczenia.py": "32d93e032a13d30ba26c18b3e0424058ce7beb8c8d92562132325bc749c40583"
+    "obliczenia.py": "85fef37a80da419665ab45afb7b1bfe73b4492cdbcb74c64c3f1c65a7512f157",
+    "envelope.py": "15d2ef1ced467799da43ee0ec64126e78a86ba268a8bcb0245dd576abcd0d9c3",
+    "test_envelope.py": "56a1248c918646fa393e63f6c5f5a5a58a315130caf7b95f68adf4fcf0f43651",
+    "../laptop/wici/envelope.py": "9215c147911c7d76846622d899880726235421fade67ec9dd6aa699adc125519"
   },
   "runtime": {
-    "python": "3.15.2",
-    "sqlite": "3.54.1",
-    "system": "Darwin"
+    "python": "3.13.18",
+    "sqlite": "3.53.1",
+    "system": "Linux",
+    "cryptography": "48.0.1"
   }
 }

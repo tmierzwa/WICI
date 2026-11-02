@@ -6,6 +6,7 @@
 
 #include "hexstr.h"
 #include "jsonlite.h"
+#include "envelope.h"
 
 namespace station {
 
@@ -141,6 +142,8 @@ bool Station::silencedFor(const RequestIndex& r) const {
 bool Station::due(const RequestIndex& r) const {
     if (!r.used() || r.stage > Stage::DELIVERED) return false;
     if (r.type == sa1::TEST && testPaused()) return false;
+    if (store_.config().network.id && services_.silence() && exceptionEntry() == &r &&
+        (r.flags & store::EXCEPTION_MASK) == store::EXCEPTION_MASK) return false;
     // Po KLUCZ ZAPASOWY niepotwierdzone rewizje idą od razu do tożsamości zapasowej.
     const bool retarget = ((r.flags & store::BACKUP) != 0) != (store_.meta().receiver == config::BACKUP) && (r.flags & store::SENT_ONCE);
     return (retarget || static_cast<int32_t>(store_.now() - r.nextTryS) >= 0) && !silencedFor(r);
@@ -168,15 +171,27 @@ bool Station::transmit(uint16_t slot) {
     Request r;
     const uint8_t* to = store_.recipient();
     if (!to || !store_.readRequest(slot, r)) return false;
-    uint8_t self[store::HASH];
-    char from[2 * store::HASH + 1], target[2 * store::HASH + 1], packet[PACKET_MAX + 1];
-    services_.address(self);
-    hexstr::encode(self, store::HASH, from);
-    hexstr::encode(to, store::HASH, target);
-    const int n = snprintf(packet, sizeof(packet), "[\"WICI\",1,\"%s\",\"%s\",%s]", from, target, r.sa1);
-    if (n <= 0 || static_cast<size_t>(n) > PACKET_MAX) return false;   // SA1 ≤256 B: nie zdarza się
+    const config::Config& c = store_.config();
+    const bool numbered = c.network.id != 0;
+    const bool exception = numbered && services_.silence() &&
+                           exceptionEntry() == &store_.request(slot);
+    const uint16_t receiver = c.receivers[store_.meta().receiver == config::BACKUP ?
+                                          config::BACKUP : config::MAIN].number;
+    char packet[PACKET_MAX + 1];
+    int n = 0;
+    if (!numbered) {
+        uint8_t self[store::HASH];
+        char from[2 * store::HASH + 1], target[2 * store::HASH + 1];
+        services_.address(self);
+        hexstr::encode(self, store::HASH, from);
+        hexstr::encode(to, store::HASH, target);
+        n = snprintf(packet, sizeof(packet), "[\"WICI\",1,\"%s\",\"%s\",%s]", from, target, r.sa1);
+        if (n <= 0 || static_cast<size_t>(n) > PACKET_MAX) return false;
+    } else if (!receiver || !c.network.station || r.sa1Length > envelope::MAX_SA1) {
+        return false;
+    }
     const uint32_t nowS = store_.now();
-    if (!services_.sendReady(to)) {
+    if (numbered ? !services_.numberedReady(c.network.id, receiver) : !services_.sendReady(to)) {
         // Stos nie przyjmie pakietu (cel bez trasy: zapytanie wysłane; pełna kolejka; brak IFAC): próba
         // bez przekazania, więc `nadane`, etap, liczba prób i czas pierwszego nadania zostają, a ANULUJ
         // WYSYŁKĘ działa dalej (oprogramowanie.md, cykl życia zgłoszenia).
@@ -194,6 +209,7 @@ bool Station::transmit(uint16_t slot) {
     StageCode code = StageCode::SENDING;
     const bool stageChange = r.stage == Stage::SAVED || (retarget && r.stage == Stage::DELIVERED);
     r.flags = static_cast<uint8_t>((r.flags | store::SENT_ONCE) & ~store::BACKUP) | (backup ? store::BACKUP : 0);
+    if (exception) r.flags = static_cast<uint8_t>(r.flags + store::EXCEPTION_STEP);
     if (retarget) r.statusHi = r.replyHi = 0;   // liczniki należą do aktywnej tożsamości odbiorcy
     if (stageChange) r.stage = Stage::SENDING;
     r.attempts = static_cast<uint16_t>(r.attempts + 1);
@@ -205,7 +221,10 @@ bool Station::transmit(uint16_t slot) {
     const uint16_t gen = store_.request(slot).gen;
     if (stageChange) stageEvent(tx, slot, gen, r, code, false);
     if (!tx.commit()) { services_.log("send: store write failed"); return false; }
-    const uint32_t handle = services_.send(to, reinterpret_cast<const uint8_t*>(packet), static_cast<size_t>(n), ACK_TIMEOUT_S);
+    const uint32_t handle = numbered ? services_.sendNumbered(c.network.id, receiver,
+                                reinterpret_cast<const uint8_t*>(r.sa1), r.sa1Length, ACK_TIMEOUT_S, exception) :
+                                services_.send(to, reinterpret_cast<const uint8_t*>(packet),
+                                               static_cast<size_t>(n), ACK_TIMEOUT_S);
     if (!handle) {
         // Stos odmówił mimo sendReady (błąd pakietu albo potwierdzenia w stosie): próba nieudana.
         ++stats_.failed;
@@ -224,6 +243,7 @@ bool Station::transmit(uint16_t slot) {
         f.revision = r.rMax;
         f.handle = handle;
         f.sentS = nowS;
+        f.exception = exception;
         break;
     }
     services_.changed();
@@ -239,6 +259,17 @@ void Station::finishFlight(Flight& f, bool delivered) {
     if (!store_.readRequest(slot, r) || r.gen != done.gen || r.rMax != done.revision || r.stage > Stage::DELIVERED) return;
     const uint32_t nowS = store_.now();
     store::Tx tx(store_);
+    if (done.exception) {
+        // The exception has no HACK and cannot claim transport delivery. Each
+        // submitted attempt burns one of three durable slots, even after a crash.
+        if (!delivered) ++stats_.failed;
+        r.nextTryS = nowS + 60;
+        r.changedS = nowS;
+        tx.request(slot, r, false);
+        if (!tx.commit()) services_.log("exception receipt: store write failed");
+        services_.changed();
+        return;
+    }
     if (delivered) {
         ++stats_.delivered;
         // DELIVERED: 10 min na RECEIVED, potem ponowienia co 30–60 min.
@@ -403,7 +434,7 @@ Result Station::revision(uint16_t slot, Request& r, const sa1::Message& m, const
     const Request old = r;
     r.rMax = m.revision;
     r.stage = Stage::SAVED;
-    r.flags = static_cast<uint8_t>(r.flags & ~store::READ_MAX);
+    r.flags = static_cast<uint8_t>(r.flags & ~(store::READ_MAX | store::EXCEPTION_MASK));
     r.urgency = m.urgency;
     r.category = m.category;
     r.people = m.people;
@@ -437,7 +468,7 @@ Result Station::revision(uint16_t slot, Request& r, const sa1::Message& m, const
 }
 
 Result Station::submit(const sa1::Message& m, Stored& out) {
-    // Reguły `submit` (protokol-usb.md): nowe id, nowa rewizja, duplikat albo konflikt, stale, closed,
+    // Reguły `submit` (usb-protocol.md): nowe id, nowa rewizja, duplikat albo konflikt, stale, closed,
     // id zwolnione (bez kontroli treści).
     if (!store_.station()) return Result::NO_CONFIG;
     if (m.type != sa1::REQUEST && m.type != sa1::TEST) return Result::INVALID;
@@ -689,6 +720,40 @@ bool Station::received(const uint8_t* data, size_t length) {
         ++stats_.rejected;
         return true;
     }
+    return acceptMessage(m, wire, wireLength);
+}
+
+bool Station::receivedEnvelope(uint16_t network, uint16_t sender, uint16_t recipient,
+                               const uint8_t* content, size_t length) {
+    exceptionTraffic_ = false;
+    const config::Config& c = store_.config();
+    const uint16_t active = c.receivers[store_.meta().receiver == config::BACKUP ?
+                                        config::BACKUP : config::MAIN].number;
+    if (!store_.station() || !c.network.id || network != c.network.id ||
+        recipient != c.network.station || sender != active || !content ||
+        memchr(content, 0, length) != nullptr ||
+        length > sa1::MAX_CONTENT) {
+        ++stats_.rejected;
+        return false;
+    }
+    char copy[sa1::MAX_CONTENT + 1];
+    memcpy(copy, content, length);
+    copy[length] = '\0';
+    json::Value payload;
+    sa1::Message m;
+    char wire[sa1::MAX_CONTENT + 1];
+    size_t wireLength = 0;
+    if (!json::parse(copy, payload) || payload.kind != json::Kind::ARRAY ||
+        payload.length > sa1::MAX_CONTENT || sa1::decode(payload.begin, payload.length, m) ||
+        m.type < sa1::RECEIVED || m.type > sa1::BULLETIN ||
+        !(wireLength = sa1::encode(m, wire, sizeof(wire)))) {
+        ++stats_.rejected;
+        return false;
+    }
+    return acceptMessage(m, wire, wireLength);
+}
+
+bool Station::acceptMessage(const sa1::Message& m, const char* wire, size_t wireLength) {
     ++stats_.received;
     uint8_t id[store::HASH];
     hexstr::decode(m.id, id, store::HASH);

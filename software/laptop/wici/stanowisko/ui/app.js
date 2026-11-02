@@ -183,6 +183,8 @@ function silenceForm(view) {
   view.appendChild(error);
 }
 
+var BEARERS = {wici: "WICI-Link", reticulum: "Reticulum"};
+
 var VIEWS = {
   reports: function (view) {
     if (!state.reports.length) view.appendChild(el("p", {text: "Brak zgłoszeń."}));
@@ -221,10 +223,22 @@ var VIEWS = {
   },
   stations: function (view) {
     state.trusted.forEach(function (t) {
-      view.appendChild(el("div", {class: "station"}, el("span", {text: t.station + " · " + t.address.join("; ") + " "}),
+      var row = el("div", {class: "station"}, el("span", {text: t.station + " · " + t.address.join("; ") + " "}),
         el("button", {text: "Usuń z zaufanych", onclick: function () {
           if (confirm("Usunąć " + t.station + " z listy zaufanych? Jej wiadomości trafią do kwarantanny.")) action("/api/operator/trust/remove", {source: t.source});
-        }})));
+        }}));
+      if (state.bearers && state.bearers.length > 1) {
+        var select = el("select", {"aria-label": "Nośnik odpowiedzi dla " + t.station});
+        select.appendChild(el("option", {value: "auto", text: "automatycznie"}));
+        state.bearers.forEach(function (name) { select.appendChild(el("option", {value: name, text: BEARERS[name] || name})); });
+        select.value = t.override || "auto";
+        row.appendChild(el("span", {text: " Ostatni nośnik: " + (BEARERS[t.bearer] || "nieznany") + ". Odpowiedzi: "}));
+        row.appendChild(select);
+        row.appendChild(el("button", {text: "Ustaw", onclick: function () {
+          action("/api/operator/bearer", {source: t.source, bearer: select.value});
+        }}));
+      }
+      view.appendChild(row);
     });
     var card = null, error = el("p", {class: "error"}), info = el("p", {});
     var file = el("input", {type: "file", accept: ".json,application/json", onchange: function () {

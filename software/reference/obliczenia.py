@@ -59,6 +59,107 @@ def lxmf_packet_bytes(content_bytes: int) -> int:
     return 19 + 32 + 16 + 16 * math.ceil((plaintext + 1) / 16) + 32
 
 
+# WICI-Link v3 frames as in firmware/src: wici_link.h (header, network MAC, 255 B frame), wici_hop_auth.h
+# (pairwise hop tag on unicast DATA and HACK), wici_beacon.h (BEACON content and sender signature, broadcast
+# without hop tag) and envelope.h (envelope header and AEAD tag).
+WICI = {"max_frame_bytes": 255, "link_header_bytes": 11, "link_mac_bytes": 8, "hop_tag_bytes": 8,
+        "envelope_overhead_bytes": 25, "beacon_content_bytes": 73,
+        "beacon_signature_bytes": 64, "ramp_ms": 3, "debt_multiplier": 13, "hop_attempts": 3,
+        "contended_k2_cap_s": 0.25 * 3600}
+WICI_HACK = WICI["link_header_bytes"] + WICI["link_mac_bytes"] + WICI["hop_tag_bytes"]
+WICI_BEACON = (WICI["link_header_bytes"] + WICI["beacon_content_bytes"] + WICI["beacon_signature_bytes"]
+               + WICI["link_mac_bytes"])
+# Origin-signature bytes on a single frame, on part 1 and on part 2 of a two-part SA1 message. The first entry is
+# the implemented v3 protocol (D21 option D, 2026-11-02); the second is v2 with a 64 B Ed25519 origin signature on
+# every DATA frame, kept for the record of that decision.
+WICI_SIGNATURE_VARIANTS = {"hop_tag_only": [0, 0, 0], "signature_every_frame": [64, 64, 64]}
+
+
+def wici_tx_s(frame_bytes: int) -> float:
+    """Silence-debt charge of one SF7 frame as lora::frameAirMs: airtime rounded up to 1 ms plus the ramp."""
+    air_us = round(lora_frame_seconds(frame_bytes, 7) * 1e6)
+    return (-(-air_us // 1000) + WICI["ramp_ms"]) / 1000
+
+
+def wici_frames(content: int, signature: list[int]) -> list[int]:
+    """Unicast DATA frame sizes of one SA1 message: one envelope, or two parts split in half as envelope::seal
+    does (part 1 shortened when its signature overhead requires it)."""
+    base = WICI_HACK + WICI["envelope_overhead_bytes"]
+    single, first_sig, second_sig = signature
+    if base + single + content <= WICI["max_frame_bytes"]:
+        return [base + single + content]
+    first = min((content + 1) // 2, WICI["max_frame_bytes"] - base - first_sig)
+    frames = [base + first_sig + first, base + second_sig + content - first]
+    if max(frames) > WICI["max_frame_bytes"]:
+        raise ValueError(f"{content} B SA1 does not fit in two WICI-Link frames")
+    return frames
+
+
+def wici_attempts(hop_success: float) -> float:
+    """Expected transmissions per hop with at most hop_attempts tries (each lost try is sent again)."""
+    return sum((1 - hop_success) ** k for k in range(WICI["hop_attempts"]))
+
+
+def wici_relay_s(uplink: list[int], downlink: list[int]) -> float:
+    """Channel time of the relay before the OSP: it forwards every DATA frame and sends a HACK for each one it
+    receives; each transmission adds 12 times its duration as silence debt."""
+    frames = uplink + downlink
+    return WICI["debt_multiplier"] * (sum(map(wici_tx_s, frames)) + len(frames) * wici_tx_s(WICI_HACK))
+
+
+def wici_link_model(sizes: dict[str, int]) -> dict:
+    """W10, the mixed trial, cold start and the hostile-node run through one relay for WICI-Link v3 and the v2
+    origin signature it replaced. Best case without collisions or CCA deferrals; a design estimate, not a radio result."""
+    hop_success, w10_limit_min, hostile_requests, hostile_limit_min = 0.95, 15, 20, 30
+    retry = wici_attempts(hop_success)
+    variants = {}
+    for name, signature in WICI_SIGNATURE_VARIANTS.items():
+        requests = ("button_request", "typical_request", "max_fields_request", "worst_button_request")
+        frames = {k: wici_frames(sizes[k], signature) for k in requests + ("received", "max_status", "test")}
+        cases = {}
+        for request in requests:
+            relay = wici_relay_s(frames[request], frames["received"])
+            with_status = wici_relay_s(frames[request], frames["received"] + 2 * frames["max_status"])
+            cases[request] = {"relay_s": relay, "fifty_requests_min": 50 * relay / 60,
+                              "fifty_requests_min_hop_success": 50 * relay * retry / 60,
+                              "margin_min_hop_success": w10_limit_min - 50 * relay * retry / 60,
+                              "relay_s_with_read_and_decision": with_status,
+                              "fifty_requests_with_read_and_decision_min": 50 * with_status / 60,
+                              "mixed_trial_55_revisions_min": 55 * with_status / 60}
+        variants[name] = {"max_payload_bytes": WICI["max_frame_bytes"] - WICI_HACK - signature[0],
+                          "frames_bytes": frames, "cases": cases}
+    implemented = variants["hop_tag_only"]
+    largest = implemented["cases"]["max_fields_request"]
+    # Hostile node in range of the relay with a valid key: K1 goes first, but before each relayed K1 DATA frame a
+    # contended K2 frame of 255 B may already be on air (cap: 25 % of the channel hour, wici_airtime.h).
+    k1_frames = hostile_requests * len(implemented["frames_bytes"]["max_fields_request"]
+                                       + implemented["frames_bytes"]["received"])
+    k2_s = min(k1_frames * WICI["debt_multiplier"] * wici_tx_s(WICI["max_frame_bytes"]), WICI["contended_k2_cap_s"])
+    hostile = {"requests": hostile_requests, "limit_min": hostile_limit_min,
+               "k1_relay_s": hostile_requests * largest["relay_s"], "k2_interleave_s": k2_s,
+               "minutes_by_hop_success": {f"{p:g}": (hostile_requests * largest["relay_s"] + k2_s) * wici_attempts(p) / 60
+                                          for p in (1.0, hop_success, 0.5)}}
+    # Cold start of N stations: three BEACONs per station in the first 5 min and one start TEST with RECEIVED
+    # through the relay before the OSP inside the TEST window (50 s x N). Single collision domain, no losses.
+    test, received = implemented["frames_bytes"]["test"], implemented["frames_bytes"]["received"]
+    # A -> relay -> OSP and back: every DATA frame goes twice on air and gets a HACK each time.
+    exchange_s = 2 * sum(map(wici_tx_s, test + received)) + 2 * len(test + received) * wici_tx_s(WICI_HACK)
+    relay_test_s = wici_relay_s(test, received)
+    cold = {"beacon_frame_bytes": WICI_BEACON, "beacon_tx_s": wici_tx_s(WICI_BEACON), "test_frames_bytes": test,
+            "test_exchange_tx_s": exchange_s, "relay_s_per_test": relay_test_s,
+            "relay_share_of_test_window": relay_test_s / 50}
+    for n in (10, 30, 50):
+        airtime_s = n * (3 * wici_tx_s(WICI_BEACON) + exchange_s)
+        cold[f"{n}_stations"] = {"beacon_airtime_first_5_min_s": 3 * n * wici_tx_s(WICI_BEACON),
+                                 "total_airtime_min": airtime_s / 60, "share_of_test_window": airtime_s / (50 * n)}
+    return {"assumptions": {**WICI, "hack_frame_bytes": WICI_HACK, "beacon_frame_bytes": WICI_BEACON,
+                            "signature_variants_single_first_second_bytes": WICI_SIGNATURE_VARIANTS,
+                            "hop_success": hop_success, "w10_limit_min": w10_limit_min, "sf": 7,
+                            "preamble_symbols": lora_preamble_symbols(7)},
+            "hack_tx_s": wici_tx_s(WICI_HACK), "attempts_at_hop_success": retry,
+            "variants": variants, "hostile_node": hostile, "cold_start": cold}
+
+
 # Reticulum interface access code on every P1 packet (radio.md, "Interfejs P1 w stosie Reticulum").
 IFAC_BYTES = 16
 PROOF_BYTES = 83  # implicit packet proof, Reticulum packet without IFAC
@@ -195,6 +296,7 @@ def calculate() -> dict:
         "max_status": [1, 2, mid, 65535, 2147483647, 6],
         "max_bulletin": [1, 4, mid, 2147483647, "x" * 192],
         "worst_reply": [1, 3, mid, 65535, 2147483647, "x" * 96],
+        "test": [1, 5, mid, 0, 9, 1, "x" * 64, "test", 0],
     }
     opportunistic_content_estimate, link_content_estimate = 284, 316
     sizes = {k: len(encode_message(v)) for k, v in sa1.items()}
@@ -345,7 +447,7 @@ def calculate() -> dict:
     announce_cap = 0.02
     announce_bytes = p1_datagram(19 + 170 + transport_id)
     path_request_bytes = p1_datagram(19 + 3 * 16)
-    test_packet = p1_datagram(lxmf_packet_bytes(len(encode_message([1, 5, mid, 0, 9, 1, "x" * 64, "test", 0]))))
+    test_packet = p1_datagram(lxmf_packet_bytes(sizes["test"]))
     # TEST A -> B -> OSP: A sends TEST, B forwards it, OSP proves and sends RECEIVED, B forwards both, A proves.
     test_chain = [test_packet + transport_id, test_packet, proof, proof,
                   relay_packets["received"] + transport_id, relay_packets["received"], proof, proof]
@@ -417,6 +519,7 @@ def calculate() -> dict:
         "sa1_sizes": {"content_bytes": sizes, "opportunistic_content_estimate": opportunistic_content_estimate,
                       "link_content_estimate": link_content_estimate,
                       "fits_one_opportunistic_packet": {k: v <= opportunistic_content_estimate for k, v in sizes.items()}},
+        "wici_link": wici_link_model(sizes),
         **main_network,
         "lora_pilot": lora,
         "fram_by_role": {"record_bytes_assumed": fram_b, "counts": fram_counts, "roles": fram_kib,

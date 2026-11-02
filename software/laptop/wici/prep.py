@@ -26,8 +26,8 @@ REASONS = {
     "not_confirmed": "Nie potwierdzono przyciskiem na stacji w ciągu 30 s.",
     "contract": "Stacja ma niezgodną wersję oprogramowania.",
     "unknown_type": "Ta wersja oprogramowania stacji nie zna tego polecenia.",
-    # Odmowa importu, eksportu i `migrate`: PRZENIEŚ STACJĘ ta wersja oprogramowania stacji jeszcze nie ma (F107).
-    "migration": "Ta wersja oprogramowania stacji nie obsługuje przenoszenia (PRZENIEŚ STACJĘ).",
+    "migration": "Stacja odrzuciła ten krok przeniesienia. Sprawdź stan obu stacji.",
+    "signature": "Potwierdzenie przeniesienia nie pasuje do tej stacji.",
 }
 # Pola transferu i wiersza, nie dokumentu: dane nie dotarły w całości albo w kolejności.
 TRANSPORT = {"xfer", "offset", "data", "sha256", "op", "json"}
@@ -109,7 +109,7 @@ class Prep:
         if role == "wezel":   # węzeł nie ma karty; stacja odpowiedziałaby not_configured
             raise OperationError(REASONS["role"], None, "role")
         reply = self._run("card", lambda link: link.request("card"), lambda r: "fingerprint " + r.get("fingerprint", ""))
-        return {"card": {k: reply[k] for k in ("name", "lxmf", "key", "address", "fingerprint") if k in reply}}
+        return {"card": {k: reply[k] for k in ("name", "lxmf", "key", "address", "fingerprint", "net_id", "id", "x25519") if k in reply}}
 
     def destroy_station(self):
         """ZNISZCZ DANE on the station: `destroy`, then the OK button on the station within 30 s.

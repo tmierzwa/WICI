@@ -8,6 +8,7 @@ import base64
 import hashlib
 import hmac
 import json
+import os
 import random
 import shutil
 import subprocess
@@ -306,6 +307,10 @@ struct TextSource : config::Source {
 
 void dumpConfig(const config::Config& c) {
     printf("conf role=%u stations=%u profile=%s\n", static_cast<unsigned>(c.role), c.stations, c.profile);
+    if (c.network.id) printf("conf network %u %u %u %u %u %u %u ttl=%u\n", c.network.id,
+                             c.network.station, c.network.root, c.network.parent, c.network.backupParent,
+                             c.network.receiverMain, c.network.receiverBackup, c.network.ttl);
+    for (size_t i = 0; i < c.behindCount; ++i) printf("conf behind %u via %u\n", c.behind[i].station, c.behind[i].via);
     for (size_t i = 0; i < c.addressCount; ++i) printf("conf address %s\n", c.addresses[i]);
     for (size_t i = 0; i < c.phraseCount; ++i) printf("conf phrase %s|%s|%s\n", c.phrases[i][0], c.phrases[i][1], c.phrases[i][2]);
     printf("conf ifac ");
@@ -368,6 +373,15 @@ struct FakeServices : station::Services {
         if (unknown) printf("path request\n");   // cel bez trasy: stos pyta o trasę, pakiet nie wychodzi
         return !unknown;
     }
+    bool numberedReady(uint16_t, uint16_t) override { return !unknown; }
+    uint32_t sendNumbered(uint16_t net, uint16_t recipient, const uint8_t* data,
+                          size_t length, uint32_t, bool exception) override {
+        if (refuse) return 0;
+        ++handle;
+        printf("numbered %u %u %u %d %.*s\n", handle, net, recipient, exception,
+               static_cast<int>(length), reinterpret_cast<const char*>(data));
+        return handle;
+    }
     uint32_t send(const uint8_t to[store::HASH], const uint8_t* data, size_t length, uint32_t) override {
         if (refuse) { printf("send refused\n"); return 0; }
         ++handle;
@@ -405,6 +419,102 @@ struct FakeHost : usbproto::Host {
                  diagPad ? "\"" : "");
     }
     int diagPad = 0;   // dłuższe `diag` i `power` w `status` (stacja ma tam więcej pól niż program testowy)
+    char migrationName[16] = "none";
+    void migration(char* phase, size_t phaseSize, char* mid, size_t midSize) override {
+        snprintf(phase, phaseSize, "%s", migrationName);
+        snprintf(mid, midSize, "%s", strcmp(migrationName, "none") ? "00112233445566778899aabbccddeeff" : "");
+    }
+    bool migrationReceiveKey(uint8_t mid[16], uint8_t key[32], uint8_t fingerprint[8]) override {
+        if (strcmp(migrationName, "none") && strcmp(migrationName, "receiving") &&
+            strcmp(migrationName, "importing") && strcmp(migrationName, "imported")) return false;
+        if (!strcmp(migrationName, "none")) snprintf(migrationName, sizeof(migrationName), "receiving");
+        for (size_t i = 0; i < 16; ++i) mid[i] = static_cast<uint8_t>(i * 0x11);
+        for (size_t i = 0; i < 32; ++i) key[i] = static_cast<uint8_t>(i);
+        for (size_t i = 0; i < 8; ++i) fingerprint[i] = static_cast<uint8_t>(i + 32);
+        return true;
+    }
+    bool migrationExport(const uint8_t mid[16], const uint8_t target[32], uint8_t sha[32]) override {
+        uint8_t expected[16];
+        for (size_t i = 0; i < 16; ++i) expected[i] = static_cast<uint8_t>(i * 0x11);
+        if ((strcmp(migrationName, "none") && strcmp(migrationName, "export")) ||
+            memcmp(mid, expected, sizeof(expected)) || target[0] != 1) return false;
+        snprintf(migrationName, sizeof(migrationName), "export");
+        memset(sha, 0x5a, 32);
+        return true;
+    }
+    bool migrationExportRead(uint32_t offset, uint8_t* out, size_t length) override {
+        for (size_t i = 0; i < length; ++i) out[i] = static_cast<uint8_t>((offset + i) & 255);
+        return true;
+    }
+    std::vector<uint8_t> imported;
+    bool migrationImportBegin(const uint8_t mid[16], const uint8_t[32]) override {
+        uint8_t expected[16];
+        for (size_t i = 0; i < 16; ++i) expected[i] = static_cast<uint8_t>(i * 0x11);
+        if ((strcmp(migrationName, "receiving") && strcmp(migrationName, "importing")) ||
+            memcmp(mid, expected, sizeof(expected))) return false;
+        snprintf(migrationName, sizeof(migrationName), "importing");
+        imported.clear();
+        return true;
+    }
+    bool migrationImportPart(uint32_t offset, const uint8_t* data, size_t length, uint32_t& next) override {
+        if (offset == imported.size()) imported.insert(imported.end(), data, data + length);
+        else if (offset > imported.size() || length > imported.size() - offset ||
+                 memcmp(imported.data() + offset, data, length)) return false;
+        next = static_cast<uint32_t>(imported.size());
+        return true;
+    }
+    bool migrationImportCommit(uint8_t confirm[32]) override {
+        if (imported.size() != 270437) return false;
+        memset(confirm, 0x6b, 32);
+        snprintf(migrationName, sizeof(migrationName), "imported");
+        return true;
+    }
+    void migrationConfirmation(char* out, size_t size) override {
+        if (!strcmp(migrationName, "imported")) snprintf(out, size, "%064x", 0xaaaa);
+        else if (!strcmp(migrationName, "retired")) snprintf(out, size, "%064x", 0xbbbb);
+        else if (size) out[0] = '\0';
+    }
+    bool migrationRetire(const uint8_t mid[16], const uint8_t imported[32], uint8_t retired[32], const char*& reason) override {
+        uint8_t expected[16];
+        for (size_t i = 0; i < 16; ++i) expected[i] = static_cast<uint8_t>(i * 0x11);
+        reason = "migration";
+        if ((strcmp(migrationName, "export") && strcmp(migrationName, "retired")) ||
+            memcmp(mid, expected, 16)) return false;
+        if (imported[0] != 0xaa) { reason = "signature"; return false; }
+        snprintf(migrationName, sizeof(migrationName), "retired");
+        memset(retired, 0xbb, 32);
+        return true;
+    }
+    bool migrationActivate(const uint8_t mid[16], const uint8_t* retired, bool& duplicate,
+                           const char*& reason) override {
+        uint8_t expected[16];
+        for (size_t i = 0; i < 16; ++i) expected[i] = static_cast<uint8_t>(i * 0x11);
+        reason = "migration";
+        if ((strcmp(migrationName, "imported") && strcmp(migrationName, "none")) || memcmp(mid, expected, 16)) return false;
+        if (!retired || retired[0] != 0xbb) { reason = "signature"; return false; }
+        duplicate = !strcmp(migrationName, "none");
+        snprintf(migrationName, sizeof(migrationName), "none");
+        return true;
+    }
+    bool migrationAbortTarget(const uint8_t[16], const uint8_t* eph, uint8_t confirm[32],
+                              bool& hasConfirm, bool& duplicate, const char*& reason) override {
+        reason = "migration";
+        if (strcmp(migrationName, "receiving") && strcmp(migrationName, "importing") && strcmp(migrationName, "imported")) return false;
+        hasConfirm = eph != nullptr;
+        duplicate = false;
+        if (hasConfirm) memset(confirm, 0xcc, 32);
+        snprintf(migrationName, sizeof(migrationName), "none");
+        return true;
+    }
+    bool migrationAbortSource(const uint8_t[16], const uint8_t* confirm, bool& duplicate,
+                              const char*& reason) override {
+        reason = "migration";
+        if (strcmp(migrationName, "export")) return false;
+        if (!confirm || confirm[0] != 0xcc) { reason = "signature"; return false; }
+        duplicate = false;
+        snprintf(migrationName, sizeof(migrationName), "none");
+        return true;
+    }
     void diag(char* out, size_t size) override {
         static const std::string pad(400, 'x');
         snprintf(out, size, "\"corrupt\":0%s%.*s%s", diagPad ? ",\"pad\":\"" : "", diagPad, pad.c_str(), diagPad ? "\"" : "");
@@ -690,6 +800,13 @@ int world() {
         } else if (!strcmp(cmd, "inraw")) {
             const bool resolved = w.app->received(reinterpret_cast<const uint8_t*>(arg), strlen(arg));
             printf("rx %d 0\n", resolved);
+        } else if (!strcmp(cmd, "inenv")) {
+            int offset = 0;
+            const int fields = sscanf(arg, "%u %u %u %n", &a, &b, &c, &offset);
+            const bool resolved = fields == 3 && w.app->receivedEnvelope(
+                static_cast<uint16_t>(a), static_cast<uint16_t>(b), static_cast<uint16_t>(c),
+                reinterpret_cast<const uint8_t*>(arg + offset), strlen(arg + offset));
+            printf("envrx %d\n", resolved);
         } else if (!strcmp(cmd, "reg")) dumpRegister(w, arg);
         else if (!strcmp(cmd, "inbox")) dumpInbox(w, arg);
         else if (!strcmp(cmd, "stats")) {
@@ -749,6 +866,14 @@ int world() {
         } else if (!strcmp(cmd, "destroy")) {
             const bool ok = w.store->destroy();
             printf("destroy %d\n", ok);
+        } else if (!strcmp(cmd, "destroykeep")) {
+            const uint32_t at = store::FRAM_END - 512;
+            const uint8_t marker[2] = {0x57, 0xa5};
+            w.ram.write(at, marker, sizeof(marker));
+            const bool ok = w.store->destroy(true);
+            uint8_t saved[2] = {};
+            w.ram.read(at, saved, sizeof(saved));
+            printf("destroykeep %d %02x%02x %d\n", ok, saved[0], saved[1], w.store->identitySaved());
         } else if (!strcmp(cmd, "ident")) {
             const bool ok = w.store->setIdentitySaved();
             printf("ident %d %d\n", ok, w.store->identitySaved());
@@ -798,6 +923,7 @@ int world() {
             w.proto->feed("\n", 1, w.ms);
         } else if (!strcmp(cmd, "upoll")) w.proto->poll(w.ms);
         else if (!strcmp(cmd, "prep")) w.host.prepFlag = atoi(arg) != 0;
+        else if (!strcmp(cmd, "migration")) snprintf(w.host.migrationName, sizeof(w.host.migrationName), "%s", arg);
         else if (!strcmp(cmd, "announce")) w.host.announceOk = atoi(arg) != 0;
         else if (!strcmp(cmd, "diagpad")) w.host.diagPad = atoi(arg);
         else if (!strcmp(cmd, "cause")) printf("cause %d\n", w.con->alarmCause());
@@ -1000,6 +1126,22 @@ int main(int argc, char** argv) {
         return 0;
     }
     if (argc == 2 && !strcmp(argv[1], "journal")) return journalScenario();
+    if (argc == 2 && !strcmp(argv[1], "journal_adopt")) {
+        RamStorage memory;
+        journal::Journal source(memory);
+        source.begin();
+        source.startClock();
+        source.writeClock(500);
+        const bool changed = source.adoptClock(900);
+        journal::Journal resumed(memory);
+        resumed.begin();
+        printf("adopt %d %u %u %u\n", changed, resumed.clock().a, resumed.clock().b,
+               resumed.clock().a - resumed.clock().b);
+        resumed.startClock();
+        printf("restart %u %u %u\n", resumed.clock().a, resumed.clock().b,
+               resumed.clock().a - resumed.clock().b);
+        return 0;
+    }
     if (argc == 2 && !strcmp(argv[1], "journal_prep")) return journalPrepScenario();
     if (argc == 2 && !strcmp(argv[1], "buildall")) return buildAll();
     if (argc == 2 && !strcmp(argv[1], "assemble")) return assembleScript();
@@ -1046,6 +1188,8 @@ def station_doc(addresses=("Szkoła, wejście B",), phrases=None, stations=2, pr
            "stations": stations, "phrases": phrases if phrases is not None else [], "ifac": "11" * 16,
            "radio": {"profile": profile}}
     doc.update(extra)
+    if "network" in doc and "priority_keys" not in doc:
+        doc["priority_keys"] = [{"id": 5, "ed25519": "ab" * 32, "x25519": "cd" * 32}]
     return doc
 
 
@@ -1285,6 +1429,11 @@ class HostUnitTests(unittest.TestCase):
             "format_corrupt 3",                  # zatwierdzone z błędnym CRC bez poprawnych: CORRUPT
         ])
 
+    def test_migration_clock_adoption_preserves_service_time(self):
+        self.assertEqual(subprocess.run([str(self.binary), "journal_adopt"], capture_output=True,
+                                        text=True, check=True).stdout.splitlines(),
+                         ["adopt 1 900 460 440", "restart 960 520 440"])
+
     def test_journal_preparation_entries(self):
         lines = subprocess.run([str(self.binary), "journal_prep"], capture_output=True, text=True, check=True).stdout.splitlines()
         self.assertEqual(lines, [
@@ -1383,6 +1532,74 @@ class HostUnitTests(unittest.TestCase):
         for value, detail in cases:
             self.assertEqual(self.parse(value), [f"parse err {detail}"], value)
         self.assertEqual(self.parse(station_doc(), profile="p2"), ["parse err radio"])
+
+    def test_numbered_network_card_binding(self):
+        network = {"id": 100, "station": 4, "root": 1, "parent": 1, "backup_parent": 0,
+                   "receiver_main": 2, "receiver_backup": 3}
+        main, backup = card(MAIN_KEY), card(BACKUP_KEY)
+        main.update(id=2, net_id=100, x25519=main["key"][:64])
+        backup.update(id=3, net_id=100, x25519=backup["key"][:64])
+        doc = station_doc(network=network, receiver={"main": main, "backup": backup})
+        self.assertIn("conf network 100 4 1 1 0 2 3 ttl=7", self.parse(doc))
+        keys = dict(doc, priority_keys=[{"id": 5, "ed25519": "ab" * 32, "x25519": "cd" * 32}])
+        self.assertIn("conf network 100 4 1 1 0 2 3 ttl=7", self.parse(keys))
+        self.assertIn("conf network 100 4 1 1 0 2 3 ttl=15", self.parse(dict(keys, network=dict(network, ttl=15))))
+        for ttl in (0, 16, True, "7"):
+            self.assertEqual(self.parse(dict(keys, network=dict(network, ttl=ttl))), ["parse err network"])
+        planned = self.parse(dict(doc, priority_keys=[{"id": 5, "ed25519": "ab" * 32, "x25519": "cd" * 32,
+                                                       "behind": [7, 8]}]))
+        self.assertEqual([line for line in planned if line.startswith("conf behind")],
+                         ["conf behind 7 via 5", "conf behind 8 via 5"])
+        for behind in ([5], [4], [7, 7], "7"):
+            self.assertEqual(self.parse(dict(doc, priority_keys=[{"id": 5, "ed25519": "ab" * 32, "x25519": "cd" * 32,
+                                                                  "behind": behind}])),
+                             ["parse err priority_keys"], behind)
+        self.assertEqual(self.parse(dict(doc, priority_keys=[{"id": 5, "ed25519": "ab" * 32}])),
+                         ["parse err priority_keys"])
+        self.assertEqual(self.parse(dict(doc, priority_keys=[])), ["parse err priority_keys"])
+        self.assertEqual(self.parse(dict(doc, priority_keys=[{"id": 4, "ed25519": "ab" * 32, "x25519": "cd" * 32}])),
+                         ["parse err priority_keys"])
+        self.assertEqual(self.parse(dict(doc, priority_keys=[{"id": 5, "ed25519": "ab" * 32, "x25519": "cd" * 32}] * 2)),
+                         ["parse err priority_keys"])
+        bad = station_doc(network=network, receiver={"main": dict(main, net_id=101), "backup": backup})
+        self.assertEqual(self.parse(bad), ["parse err receiver"])
+        self.assertEqual(self.parse(station_doc(network=dict(network, station=1))), ["parse err network"])
+        root = dict(node_doc(), network=dict(network, station=1, parent=0),
+                    priority_keys=[{"id": 5, "ed25519": "ab" * 32, "x25519": "cd" * 32}])
+        self.assertIn("conf network 100 1 1 0 0 2 3 ttl=7", self.parse(root))
+
+    def test_numbered_envelope_plaintext_reaches_station_only_with_active_binding(self):
+        network = {"id": 100, "station": 4, "root": 1, "parent": 1, "backup_parent": 0,
+                   "receiver_main": 2, "receiver_backup": 3}
+        main, backup = card(MAIN_KEY), card(BACKUP_KEY)
+        main.update(id=2, net_id=100, x25519=main["key"][:64])
+        backup.update(id=3, net_id=100, x25519=backup["key"][:64])
+        doc = station_doc(network=network, receiver={"main": main, "backup": backup})
+        content = compact([1, 1, self.rid(79), 1, 1, 1])
+        out = self.world(["cfg " + json.dumps(doc, ensure_ascii=False),
+                          f"inenv 100 2 4 {content}", f"inenv 101 2 4 {content}",
+                          f"inenv 100 3 4 {content}", f"inenv 100 2 5 {content}",
+                          "inenv 100 2 4 nonsense", "stats numbered"])
+        self.assertEqual(self.find(out, "envrx "), ["envrx 1", "envrx 0", "envrx 0", "envrx 0", "envrx 0"])
+        self.assertIn("received=1 rejected=4", self.find(out, "stats numbered")[0])
+
+    def test_numbered_silence_exception_burns_three_durable_unacked_attempts(self):
+        network = {"id": 100, "station": 4, "root": 1, "parent": 1, "backup_parent": 0,
+                   "receiver_main": 2, "receiver_backup": 3}
+        main, backup = card(MAIN_KEY), card(BACKUP_KEY)
+        main.update(id=2, net_id=100, x25519=main["key"][:64])
+        backup.update(id=3, net_id=100, x25519=backup["key"][:64])
+        doc = station_doc(network=network, receiver={"main": main, "backup": backup})
+        rid = self.rid(91)
+        out = self.world(["cfg " + json.dumps(doc, ensure_ascii=False), "now 100", self.sub(self.request(rid)),
+                          "silence 1 " + rid, "poll", "rcpt 1 1", "now 160", "poll", "rcpt 2 1",
+                          "now 220", "poll", "rcpt 3 1", "now 280", "poll", "restart", "poll",
+                          "reg after", "stats after"])
+        sends = self.find(out, "numbered ")
+        self.assertEqual(len(sends), 3)
+        self.assertTrue(all(line.split()[4] == "1" for line in sends))
+        self.assertIn("delivered=0", self.find(out, "stats after")[0])
+        self.assertEqual(self.regs(out, "after")[rid]["att"], 3)
 
     # --- stacja: magazyn, warstwa aplikacji, USB, ekran ------------------------
 
@@ -1490,6 +1707,12 @@ class HostUnitTests(unittest.TestCase):
         out = self.world([self.CONFIG, "in " + compact([1, 4, b, 7, "Komunikat"]), "flip %d" % (bulletin + 40), "restart",
                           "in " + compact([1, 4, b, 7, "Komunikat"]), "in " + compact([1, 4, b, 8, "Komunikat 2"]), "diag"])
         self.assertIn("messages=2", self.find(out, "diag ")[0])
+
+    def test_retirement_erase_preserves_migration_marker(self):
+        out = self.world(["ident", "destroykeep", "destroykeep", "diag"])
+        self.assertEqual(self.find(out, "destroykeep "),
+                         ["destroykeep 1 57a5 0", "destroykeep 1 57a5 0"])
+        self.assertIn("ident=0", self.find(out, "diag ")[0])
 
     def test_store_event_ring_close_maintain_and_destroy(self):
         out = self.world([
@@ -1901,6 +2124,127 @@ class HostUnitTests(unittest.TestCase):
                 script.append(step)
         return self.world(script), u
 
+    def test_usb_reports_durable_migration_barrier(self):
+        replies = self.replies(self.world([
+            "migration export", "connect",
+            'usb {"usb":2,"seq":1,"type":"status"}',
+            'usb {"usb":2,"seq":2,"type":"sync","epoch":"","cursor":0}',
+            'usb {"usb":2,"seq":3,"type":"xfer_begin","op":"configure","size":1,"sha256":"00"}',
+        ]))
+        self.assertEqual(replies[0]["migration"], "export")
+        self.assertEqual(replies[1]["migration"], "export")
+        self.assertEqual(replies[1]["mid"], "00112233445566778899aabbccddeeff")
+        self.assertEqual([(reply["reason"], reply["detail"]) for reply in replies[2:]],
+                         [("migration", "active"), ("migration", "active")])
+
+    def test_usb_migration_receive_key_and_status_are_idempotent(self):
+        replies = self.replies(self.world([
+            "connect",
+            'usb {"usb":2,"seq":1,"type":"migrate","step":"receive_key"}',
+            'usb {"usb":2,"seq":2,"type":"migrate","step":"receive_key"}',
+            'usb {"usb":2,"seq":3,"type":"migrate","step":"status"}',
+        ]))
+        self.assertEqual(replies[1]["mid"], "00112233445566778899aabbccddeeff")
+        self.assertEqual(replies[1]["key"], bytes(range(32)).hex())
+        self.assertEqual(replies[1]["fingerprint"], bytes(range(32, 40)).hex())
+        self.assertEqual((replies[2]["mid"], replies[2]["key"]), (replies[1]["mid"], replies[1]["key"]))
+        self.assertEqual((replies[3]["migration"], replies[3]["mid"]), ("receiving", replies[1]["mid"]))
+
+    def test_usb_imported_target_exposes_resumable_public_key_and_confirmation(self):
+        replies = self.replies(self.world(["migration imported", "connect",
+            'usb {"usb":2,"seq":1,"type":"migrate","step":"status"}',
+            'usb {"usb":2,"seq":2,"type":"migrate","step":"receive_key"}']))
+        self.assertEqual(replies[1]["confirm"], f"{0xaaaa:064x}")
+        self.assertEqual(replies[2]["key"], bytes(range(32)).hex())
+
+    def test_usb_export_requires_button_and_resumes_with_same_transfer_data(self):
+        mid = "00112233445566778899aabbccddeeff"
+        key = (b"\x01" * 32).hex()
+        u = self.Lines()
+        begin = u("xfer_begin", op="export", mid=mid, target_key=key)
+        out = self.world(["H", self.CONFIG, "connect", begin, "K BACK 0", "upoll", begin.replace('"seq": 1', '"seq": 2'),
+                          "K OK 0", "upoll"])
+        replies = self.replies(out)
+        self.assertEqual([r["type"] for r in replies], ["hello", "pending", "rejected", "pending", "ok"])
+        self.assertEqual(replies[2]["reason"], "not_confirmed")
+        self.assertEqual((replies[4]["size"], replies[4]["sha256"]), (270437, "5a" * 32))
+        self.assertIn("ask 5", out)
+        xfer = replies[4]["xfer"]
+        resumed_out, _ = self.usb_session(["H", self.CONFIG, "migration export", "connect",
+            lambda lines: lines("xfer_begin", op="export", mid=mid, target_key=key), "XFER",
+            lambda lines: lines("xfer_read", xfer=xfer, offset=0, length=4)])
+        resumed = self.replies(resumed_out)
+        self.assertEqual(resumed[1]["sha256"], "5a" * 32)
+        self.assertEqual((resumed[2]["type"], base64.b64decode(resumed[2]["data"])), ("data", bytes(range(4))))
+
+    def test_usb_closes_export_reader_when_source_retires(self):
+        mid = "00112233445566778899aabbccddeeff"
+        u = self.Lines()
+        first = ["migration export", "connect", u("xfer_begin", op="export", mid=mid, target_key="01" * 32)]
+        xfer = self.replies(self.world(first))[1]["xfer"]
+        out = self.world(first + ["migration retired", "upoll", u("xfer_read", xfer=xfer, offset=0, length=4)])
+        replies = self.replies(out)
+        self.assertEqual(replies[1]["type"], "ok")
+        self.assertEqual((replies[-1]["type"], replies[-1]["reason"]), ("rejected", "invalid"))
+
+    def test_usb_import_accepts_ordered_parts_and_rejects_replay_change(self):
+        mid = "00112233445566778899aabbccddeeff"
+        part = base64.b64encode(b"first part").decode()
+        changed = base64.b64encode(b"other part").decode()
+        out, _ = self.usb_session(["migration receiving", "connect",
+            lambda u: u("xfer_begin", op="import", size=270437, sha256="aa" * 32, mid=mid), "XFER",
+            ("PART", 0, part), ("PART", 0, part), ("PART", 0, changed),
+            lambda u: u("xfer_begin", op="configure", size=1, sha256="00" * 32)])
+        replies = self.replies(out)
+        self.assertEqual([r["type"] for r in replies], ["hello", "ok", "ok", "ok", "rejected", "rejected"])
+        self.assertEqual((replies[2]["next"], replies[3]["next"]), (10, 10))
+        self.assertEqual([(r["reason"], r.get("detail")) for r in replies[-2:]],
+                         [("migration", "part"), ("migration", "active")])
+
+    def test_usb_migration_retire_and_activate_verify_confirmation(self):
+        mid = "00112233445566778899aabbccddeeff"
+        u = self.Lines()
+        source = self.replies(self.world(["migration export", "connect",
+            u("migrate", step="retire", mid=mid, confirm="00" * 32),
+            u("migrate", step="retire", mid=mid, confirm="aa" * 32),
+            u("migrate", step="retire", mid=mid, confirm="aa" * 32)]))
+        self.assertEqual([(r["type"], r.get("reason")) for r in source[1:]],
+                         [("rejected", "signature"), ("ok", None), ("ok", None)])
+        self.assertEqual(source[2]["confirm"], "bb" * 32)
+        target = self.replies(self.world(["migration imported", "connect",
+            'usb {"usb":2,"seq":1,"type":"migrate","step":"activate","mid":"' + mid + '","confirm":"' + "00" * 32 + '"}',
+            'usb {"usb":2,"seq":2,"type":"migrate","step":"activate","mid":"' + mid + '","confirm":"' + "bb" * 32 + '"}',
+            'usb {"usb":2,"seq":3,"type":"migrate","step":"activate","mid":"' + mid + '","confirm":"' + "bb" * 32 + '"}']))
+        self.assertEqual([(r["type"], r.get("reason"), r.get("duplicate")) for r in target[1:]],
+                         [("rejected", "signature", None), ("ok", None, False), ("ok", None, True)])
+
+    def test_usb_abort_imported_target_requires_button_before_source_recovers(self):
+        mid = "00112233445566778899aabbccddeeff"
+        eph = "01" * 32
+        u = self.Lines()
+        target = self.replies(self.world(["migration imported", "connect",
+            u("migrate", step="abort", mid=mid, eph=eph), "K BACK 0", "upoll",
+            u("migrate", step="abort", mid=mid, eph=eph), "K OK 0", "upoll"]))
+        self.assertEqual([(r["type"], r.get("reason")) for r in target[1:]],
+                         [("pending", None), ("rejected", "not_confirmed"), ("pending", None), ("ok", None)])
+        self.assertEqual(target[-1]["confirm"], "cc" * 32)
+        source = self.replies(self.world(["migration export", "connect",
+            'usb {"usb":2,"seq":1,"type":"migrate","step":"abort","mid":"' + mid + '","confirm":"' + "cc" * 32 + '"}']))
+        self.assertEqual((source[-1]["type"], source[-1]["duplicate"]), ("ok", False))
+
+    def test_usb_forced_recovery_is_rejected(self):
+        mid = "00112233445566778899aabbccddeeff"
+        u = self.Lines()
+        target = self.replies(self.world(["migration imported", "connect",
+            u("migrate", step="activate", mid=mid, forced=True, confirm="bb" * 32),
+            u("migrate", step="activate", mid=mid, forced=True)]))
+        self.assertEqual([(r["type"], r.get("reason")) for r in target[1:]],
+                         [("rejected", "migration"), ("rejected", "migration")])
+        source = self.replies(self.world(["migration export", "connect",
+            'usb {"usb":2,"seq":1,"type":"migrate","step":"abort","mid":"' + mid + '","forced":true}']))
+        self.assertEqual([(r["type"], r.get("reason")) for r in source[1:]],
+                         [("rejected", "migration")])
+
     def test_usb_hello_seq_fields_and_rejections(self):
         def line(seq, type_, usb=2, **fields):
             return "usb " + json.dumps({"usb": usb, "seq": seq, "type": type_, **fields})
@@ -1929,7 +2273,7 @@ class HostUnitTests(unittest.TestCase):
             (7, "invalid", "colour"), (8, "unknown_type", None), (9, "invalid", "id"), (10, "contract", None),
             (None, "invalid", "json"), (None, "seq", None), (10, "seq", None), (None, "too_long", None),
             (11, "unknown_type", None),                 # `export` to `op` transferu, nie polecenie
-            (12, "migration", "unsupported"), (13, "not_configured", None)])
+            (12, "invalid", "step"), (13, "not_configured", None)])
         self.assertEqual([x["type"] for x in r].count("hello"), 2)
         self.assertEqual([x["type"] for x in r][3], "status")   # po odmowie `seq` liczy się dalej od numeru laptopa
         self.assertEqual([x["seq"] for x in r], list(range(1, len(r) + 1)))
@@ -1983,10 +2327,11 @@ class HostUnitTests(unittest.TestCase):
                 [lambda u: u("xfer_begin", op="configure", size=len(bad), sha256=hashlib.sha256(bad).hexdigest()), "XFER",
                  *[("PART", o, base64.b64encode(bad[o:o + 300]).decode()) for o in range(0, len(bad), 300)], "COMMIT",
                  lambda u: u("xfer_begin", op="configure", size=8000, sha256="00" * 32),
-                 lambda u: u("xfer_begin", op="import"), lambda u: u("xfer_begin", op="config_get")]
+                 lambda u: u("xfer_begin", op="import", size=270437, sha256="00" * 32,
+                             mid="00" * 16), lambda u: u("xfer_begin", op="config_get")]
         out, _ = self.usb_session(steps)
         rejected = [(x["reason"], x.get("detail")) for x in self.replies(out) if x["type"] == "rejected"]
-        self.assertEqual(rejected, [("hash", None), ("invalid", "colour"), ("size", None), ("migration", "op"), ("not_configured", None)])
+        self.assertEqual(rejected, [("hash", None), ("invalid", "colour"), ("size", None), ("migration", "phase"), ("not_configured", None)])
         # Konfiguracja węzła stanowiska: polecenia stacji schronienia dają `role`.
         node = json.dumps(node_doc()).encode()
         steps = ["connect", lambda u: u("xfer_begin", op="configure", size=len(node), sha256=hashlib.sha256(node).hexdigest()), "XFER",
@@ -2804,7 +3149,7 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual(self.screens(out)[-1][0], "alarm")
 
     def test_confirm_question_and_node_menu(self):
-        out = self.ui(["L 0", "ask 0", "R", "answer", "K OK 0", "answer", "R", "ask 3", "K BACK 0", "answer", "ask 5 ABCD", "R",
+        out = self.ui(["L 0", "ask 0", "R", "answer", "K OK 0", "answer", "R", "ask 3", "K BACK 0", "answer", "ask 7 ABCD", "R",
                        "K OK 0", "answer", "ask 1", "dismiss", "answer", "R", "ask 4 0427", "R", "dismiss"])
         s = self.screens(out)
         self.assertEqual([x[0] for x in s], ["confirm", "main", "confirm", "main", "confirm"])
@@ -2953,6 +3298,24 @@ class HostUnitTests(unittest.TestCase):
                          ["ok", str(check_button_configuration("ś" * 32, ("Potrzeba ustała", "ł" * 48)))])
         self.assertEqual(self.run_harness("config", "Testowa 10", "ł" * 49)[0], "err")
         self.assertEqual(self.run_harness("config", 'Testowa "10"')[0], "err")
+
+
+CRYPTO = ROOT / "firmware" / ".pio" / "stack" / "Crypto"
+WICI_UNITS = sorted(path.name for path in SRC.glob("wici_*.cpp"))
+
+
+@unittest.skipUnless(shutil.which("g++") and (CRYPTO / ".wici-stamp").exists(),
+                     "g++ or pinned Crypto sources unavailable")
+class WiciLinkUnits(unittest.TestCase):
+    """WICI-Link units: warning-free under g++ like the MCU toolchains."""
+
+    def test_units_compile_without_gcc_warnings(self):
+        # g++ adds -Wclass-memaccess to -Wall; clang has no equivalent.
+        for unit in WICI_UNITS:
+            built = subprocess.run(["g++", "-std=c++17", "-Wall", "-Wextra", "-Werror", f"-I{SRC}",
+                                    "-isystem", str(CRYPTO), "-c", str(SRC / unit), "-o", os.devnull],
+                                   capture_output=True, text=True)
+            self.assertEqual(built.returncode, 0, f"{unit}: {built.stderr[-2000:]}")
 
 
 if __name__ == "__main__":

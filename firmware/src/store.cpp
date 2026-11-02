@@ -27,8 +27,8 @@ constexpr size_t CONFIG_DOC = RECORD_HEADER + 2 + 32;  // dokument w kopii za na
 constexpr uint32_t CONFIG_MARKER_AT = CONFIG_COPY - MARKER;
 static_assert(CONFIG_DOC + config::DOC_MAX <= CONFIG_MARKER_AT - TAG, "dokument mieści się w kopii");
 static_assert(STORE_END <= framfs::IDENTITY_BASE && framfs::IDENTITY_BASE + 2 * framfs::IDENTITY_SLOT <= framfs::FS_BASE &&
-                  framfs::FS_BASE + framfs::FS_SIZE == FRAM_END,
-              "magazyny, tożsamość i system plików stosu kończą się na FRAM_END");
+                  framfs::FS_BASE + framfs::FS_SIZE + 512 == FRAM_END,
+              "magazyny, tożsamość, system plików i stan przeniesienia kończą się na FRAM_END");
 constexpr size_t BLOCK_BODY = EPOCH + BLOCK_ENTRIES * ENTRY;   // 392 B
 constexpr size_t CHUNK = 256;             // seria SPI (oprogramowanie.md, "Zapis w FRAM")
 
@@ -1247,7 +1247,7 @@ bool Store::close(uint32_t head) {
 bool Store::recoverBlocks() {
     // Uszkodzone bloki małych wpisów (oprogramowanie.md, "Pamięć FRAM"): ich wpisy przepadły, więc
     // stacja nie udaje pełnej wiedzy, a maintain() zapisuje bloki od nowa.
-    // - pierścień (protokol-usb.md, "Epoka"): numery z bloku laptop mógł już widzieć; nowa epoka wymusza
+    // - pierścień (usb-protocol.md, "Epoka"): numery z bloku laptop mógł już widzieć; nowa epoka wymusza
     //   migawkę, a numeracja biegnie dalej za najwyższym numerem, jaki mógł zostać nadany, bo numery
     //   zdarzeń wskazują też wiadomości skrzynki (`msg`) i pamięć zwolnionych wpisów (kolejność po `ev`).
     //   Zdarzenia po najwyższym zachowanym numerze leżą w kolejnych blokach za jego blokiem i każdy
@@ -1297,12 +1297,13 @@ bool Store::maintain() {
     return true;
 }
 
-bool Store::destroy() {
+bool Store::destroy(bool preserveMigration) {
     // Znacznik w dzienniku najpierw: przerwane kasowanie wznawia begin().
     const uint32_t flags = journal_.formatFlags() & ~journal::FORMAT_IDENTITY;
     if (!journal_.writeFormat(journal::FormatState::DESTROYING, flags)) return false;
     uint8_t zero[CHUNK] = {};
-    for (uint32_t address = TX_BASE; address < FRAM_END; address += CHUNK) {
+    const uint32_t end = preserveMigration ? framfs::FS_BASE + framfs::FS_SIZE : FRAM_END;
+    for (uint32_t address = TX_BASE; address < end; address += CHUNK) {
         if (!memory_.write(address, zero, CHUNK)) return false;
     }
     if (!journal_.erase()) return false;

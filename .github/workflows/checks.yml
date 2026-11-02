@@ -15,11 +15,24 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: '3.12'
-      - name: Reference contracts
-        run: python -m unittest discover -s software/reference -v
-      - name: Publication regressions
-        run: python -m unittest discover -s tests -v
+          # = "python" w software/laptop/build/runtimes.json; Unicode 16 jak firmware/src/unicode_tables.h.
+          python-version: '3.14.8'
+      - name: Envelope reference dependency
+        run: python -m pip install cryptography==48.0.1
+      # Sama przypięta biblioteka Crypto: próby koperty, WICI-Link, przeniesienia i rdzenia. Próby wrogiego ruchu
+      # z całym stosem idą w firmware.yml (hostile, hostile-port), więc tu pomijają się z braku źródeł stosu.
+      - name: Pinned Crypto sources
+        run: >-
+          python -c "import sys; from pathlib import Path; sys.path.insert(0, 'firmware/tools'); import stack_deps;
+          stack_deps.DEPS[:] = [d for d in stack_deps.DEPS if d[0] == 'Crypto']; stack_deps.fetch(Path('firmware'))"
+      # Ten przebieg ma kompilator, kryptografię, Crypto i Unicode 16: próba pominięta z ich braku to błąd CI.
+      # Pozostałe pominięcia (Reticulum w Pythonie, PlatformIO, 32-bit, cały stos, Pillow) mają własne zadania.
+      - name: Reference contracts and publication regressions
+        shell: bash
+        run: |
+          python -m unittest discover -s software/reference -v 2>&1 | tee "$RUNNER_TEMP/tests.log"
+          python -m unittest discover -s tests -v 2>&1 | tee -a "$RUNNER_TEMP/tests.log"
+          ! grep -E "skipped '(.*C\+\+ compiler|cryptography|.*differs from Unicode)" "$RUNNER_TEMP/tests.log"
       # Manifest hashes are refreshed after merging (CONTRIBUTING.md), so only a v* tag checks them.
       - name: Read-only source and controller checks
         run: python tools/verify_repository.py ${{ !startsWith(github.ref, 'refs/tags/') && '--pull-request' || '' }}
@@ -32,6 +45,7 @@ jobs:
     # CONTRIBUTING.md, "Pochodzenie wkładu (DCO)": każdy commit PR ma Signed-off-by.
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

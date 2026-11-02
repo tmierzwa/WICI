@@ -9,6 +9,7 @@
 #include "jsonprint.h"
 #include "platform.h"
 #include "testframe.h"
+#include "wici_link.h"
 
 namespace measure {
 
@@ -34,6 +35,20 @@ static_assert(FOFF_MAX_HZ == 50000, "tekst błędu FOFF");
 static_assert(EMC_PERIOD_FACTOR == radiolink::DEBT_FACTOR + 1, "EMC_PERIOD_FACTOR");
 // Dług ciszy po nadaniu przez txMs (radio.md, "Dostęp do kanału", punkt 2).
 constexpr uint32_t debtForTxMs(uint32_t txMs) { return txMs * radiolink::DEBT_FACTOR; }
+
+bool validRawHack(const uint8_t* frame, size_t length) {
+    // A pairwise-tagged WICI-Link v2 HACK; the tags themselves are checked by the caller.
+    constexpr uint8_t HACK_HEADER = (wici_link::VERSION << 6) | (static_cast<uint8_t>(wici_link::Type::HACK) << 3);
+    if (!frame || length != wici_link::RADIO_HACK ||
+        frame[0] != HACK_HEADER || frame[7] != 1 || frame[10] != 0) return false;
+    uint16_t ids[3];
+    for (size_t at = 1; at <= 5; at += 2) {
+        const uint16_t number = static_cast<uint16_t>((frame[at] << 8) | frame[at + 1]);
+        if (!number || number == wici_link::BROADCAST) return false;
+        ids[(at - 1) / 2] = number;
+    }
+    return ids[1] != ids[2];
+}
 
 }  // namespace
 
@@ -323,6 +338,66 @@ const char* Bench::linkRxStart() {
 }
 
 const char* Bench::p1rxStart() { return radio_.p1Link() ? linkRxStart() : NO_P1_LINK; }
+
+bool Bench::setRawLora(bool enabled) {
+    if (radio_.framing() != radiolink::Framing::RNODE || rxMode_ != RxMode::NONE ||
+        txState_ != TxState::IDLE || busy() || emcActive_ || (enabled && !rawFrameHandler_)) return false;
+    if (rawLora_ == enabled) return true;
+    radio_.discardRx();
+    loraAssembler_.reset();
+    rawLora_ = enabled;
+    return true;
+}
+
+bool Bench::linkSendHack(const uint8_t* frame, size_t length, uint32_t receivedMs) {
+    // This path bypasses ordinary channel scheduling only for the fixed HACK
+    // shape. The caller must have generated its MAC with the network key.
+    if (!rawLora_ || !validRawHack(frame, length) || !p1Ready || !journal_ || !journal_->ok() ||
+        silence || emcActive_ || prep || cwActive_ || pktActive_ || rxMode_ != RxMode::LINK)
+        return false;
+    const uint32_t txMs = radio_.frameAirMs(length);
+    // Include room for CAD, SPI and RX re-arm; a late callback must not start
+    // a HACK that cannot meet the deadline. Hardware timing still needs D21.
+    if (txMs >= 200 || millis() - receivedMs > 200 - txMs - 20) return false;
+    platform::RadioLock lock(RADIO_LOCK_WAIT_MS);
+    if (!lock.held() || millis() - receivedMs > 200 - txMs - 20) return false;
+    const uint32_t remaining = debtRemainingMs();
+    const radiolink::TxPrep prepared = radio_.prepareTx(frame, length);
+    if (prepared != radiolink::TxPrep::Ready) {
+        if (prepared != radiolink::TxPrep::RxPending) enterRx(RxMode::LINK, 0);
+        return false;
+    }
+    rxMode_ = RxMode::NONE;
+    const radiolink::Cad cad = radio_.cad();
+    if (cad != radiolink::Cad::Free || millis() - receivedMs > 200 - txMs) {
+        enterRx(RxMode::LINK, 0);
+        return false;
+    }
+    const uint32_t extra = txMs * (radiolink::DEBT_FACTOR + 1);
+    // Keep the entire debt within the documented missing-record fallback.
+    // Otherwise a lost debt ring could restart with too short a silence.
+    if (extra > maxDebtMs() || remaining > maxDebtMs() - extra ||
+        !journal_->writeDebt(remaining + extra, uptimeS())) {
+        enterRx(RxMode::LINK, 0);
+        return false;
+    }
+    debtPending_ = true;
+    if (millis() - receivedMs > 200 - txMs) {
+        // The conservative journal reservation can remain; no radio time was
+        // used, so the pre-existing RAM debt remains the actual lower bound.
+        enterRx(RxMode::LINK, 0);
+        return false;
+    }
+    const bool sent = radio_.sendPrepared(nullptr);
+    ++link_.txFragments;
+    ++link_.txDatagrams;
+    // Conservatively retain all prior debt, even though it decayed during TX.
+    debtUntilMs_ = millis() + remaining + txMs * radiolink::DEBT_FACTOR;
+    debtActive_ = true;
+    if (txState_ != TxState::IDLE) txState_ = TxState::WAIT_DEBT;
+    enterRx(RxMode::LINK, 0);
+    return sent;
+}
 
 void Bench::receive() {
     radiolink::Frame frame;
@@ -679,6 +754,18 @@ void Bench::receiveLora() {
             if (result == radiolink::RxPoll::Nothing) loraAssembler_.expire(millis());
             return;
         }
+        if (rawLora_) {
+            if (received.length < 19 || received.length > lora::MAX_PAYLOAD) {
+                ++link_.rxBad;
+                continue;
+            }
+            ++link_.rxOk;
+            ++link_.rxDatagrams;
+            rawFrameHandler_(received, rawFrameContext_);
+            diagLine("{\"lorarx\":\"raw\",\"len\":%u,\"rssi_dbm\":%d}\n",
+                     static_cast<unsigned>(received.length), received.rssiDbm);
+            continue;
+        }
         ++link_.rxOk;
         if (loraAssembler_.push(received.bytes, received.length, received.receivedMs) != loraframe::Outcome::COMPLETE) continue;
         ++link_.rxDatagrams;
@@ -712,6 +799,8 @@ const char* Bench::linkSend(const uint8_t* data, size_t length, bool stack) {
     if (emcActive_) return EMC_ON_ERROR;
     if (framing == radiolink::Framing::P1 && (length < 1 || length > p1frame::MAX_DATAGRAM)) return "datagram 1..600 B";
     if (framing == radiolink::Framing::RNODE && loraframe::frameCount(length) == 0) return "datagram 1..508 B";
+    if (rawLora_ && (length < 19 || length > lora::MAX_PAYLOAD)) return "raw frame 19..255 B";
+    if (!data) return "null datagram";
     if (!stack && !prep) return "preparation mode off: PREP 1";   // P1TX z portu diagnostycznego: tylko w przygotowaniu
     if (busy()) return "busy: STOP first";
     if (!p1Ready) return "radio not configured: CONFIG";
@@ -722,7 +811,7 @@ const char* Bench::linkSend(const uint8_t* data, size_t length, bool stack) {
     txStack_ = stack;
     // Identyfikator P1 albo nagłówek RNode z generatora stacji, jeden na datagram.
     if (framing == radiolink::Framing::P1) randomBytes(txId_, p1frame::ID_BYTES);
-    else randomBytes(&txRandom_, 1);
+    else if (!rawLora_) randomBytes(&txRandom_, 1);
     txDeferrals_ = 0;
     txRequestedMs_ = millis();
     if (rxMode_ != RxMode::LINK && !enterRx(RxMode::LINK, 0)) return "radio did not enter RX";
@@ -857,8 +946,10 @@ void Bench::sendLora(uint32_t now) {
     // Ramki z nagłówkiem datagramu; połówka liczy się jako użyta dopiero, gdy ramka 1 wyszła w eter.
     loraframe::Splitter next = splitter_;
     loraframe::Frame frames[2];
-    const size_t count = next.split(txData_, txLength_, txRandom_, frames);
-    const radiolink::TxPrep prep = radio_.prepareTx(frames[0].bytes, frames[0].length);
+    const size_t count = rawLora_ ? 1 : next.split(txData_, txLength_, txRandom_, frames);
+    const uint8_t* first = rawLora_ ? txData_ : frames[0].bytes;
+    const size_t firstLength = rawLora_ ? txLength_ : frames[0].length;
+    const radiolink::TxPrep prep = radio_.prepareTx(first, firstLength);
     if (prep == radiolink::TxPrep::RxPending) {  // nieodczytana albo odbierana ramka: układ zostaje w odbiorze
         ++link_.rxBusy;
         defer(now);
@@ -875,12 +966,12 @@ void Bench::sendLora(uint32_t now) {
     }
     if (cad != radiolink::Cad::Free) { ++link_.txDrop; finishLinkTx("tx error"); return; }
     // Dług po wolnym CAD, przed pierwszą ramką; błąd zapisu: bez nadania, odbiór wraca (finishLinkTx).
-    const uint32_t txMs = loraframe::reservedTxMs(txLength_);
+    const uint32_t txMs = rawLora_ ? radio_.frameAirMs(txLength_) : loraframe::reservedTxMs(txLength_);
     if (!reserveDebt(txMs)) return;
     if (now - ccaFirstMs_ > LONG_DEFERRAL_MS) ++link_.longDeferrals;
     bool ok = radio_.sendPrepared(nullptr);
     ++link_.txFragments;
-    splitter_ = next;
+    if (!rawLora_) splitter_ = next;
     // Ramka 2 zaraz po ramce 1, bez sprawdzania kanału (jak RNode); ramka 1 bez TxDone kończy datagram.
     if (ok && count == 2) {
         ok = radio_.transmit(frames[1].bytes, frames[1].length, true, nullptr);
@@ -902,7 +993,7 @@ void Bench::finishLinkTx(const char* result) {
     txState_ = TxState::IDLE;
     if (radio_.framing() == radiolink::Framing::RNODE) {
         diagLine("{\"loratx\":\"%s\",\"len\":%u,\"frames\":%u,\"deferrals\":%u,\"wait_ms\":%lu,\"tx_wait_ms\":%lu}\n", result,
-                 static_cast<unsigned>(txLength_), static_cast<unsigned>(loraframe::frameCount(txLength_)), txDeferrals_,
+                 static_cast<unsigned>(txLength_), static_cast<unsigned>(rawLora_ ? 1 : loraframe::frameCount(txLength_)), txDeferrals_,
                  static_cast<unsigned long>(millis() - txRequestedMs_), static_cast<unsigned long>(debtRemainingMs()));
     } else {
         char id[2 * p1frame::ID_BYTES + 1];

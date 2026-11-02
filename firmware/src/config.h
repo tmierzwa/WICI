@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Konfiguracja stacji z dokumentu `configure` (docs/spec/protokol-usb.md, "Transfery dzielone na
+// Konfiguracja stacji z dokumentu `configure` (docs/spec/usb-protocol.md, "Transfery dzielone na
 // części", tabela „Dokument configure”): rola (`stacja` albo `wezel`), lista adresów, karta odbiorcy
 // z pełnymi kluczami publicznymi tożsamości głównej i zapasowej, liczba stacji, frazy, kod IFAC
 // i profil radiowy. Dokument (do 7680 B) leży w kopii konfiguracji w FRAM (store.h) i jest czytany
@@ -29,6 +29,9 @@ constexpr size_t LANGS = 3;                // PL (do SA1), UK, EN
 constexpr size_t PROFILE_MAX = 15;
 constexpr uint32_t DOC_MAX = 7680;
 constexpr uint16_t STATIONS_MAX = 1000;
+constexpr size_t PRIORITY_KEYS_MAX = 50;
+constexpr size_t BEHIND_MAX = 128;         // wpisy `behind` we wszystkich `priority_keys` razem
+constexpr uint8_t TTL_DEFAULT = 7;         // `network.ttl`, gdy dokument go nie podaje
 constexpr const char* LXMF_NAME = "lxmf.delivery";
 constexpr const char* SA1_NAME = "wici.sa1";
 
@@ -39,6 +42,31 @@ struct Receiver {
     uint8_t lxmf[HASH] = {};
     uint8_t key[KEY] = {};
     uint8_t sa1[HASH] = {};                // cel "wici.sa1" z klucza
+    uint16_t number = 0;                   // numer tożsamości w sieci D21; 0 w kontrakcie Reticulum
+};
+
+struct Network {
+    uint16_t id = 0;                       // 0 = kontrakt Reticulum bez numerów D21
+    uint16_t station = 0;                  // numer tego urządzenia na łączu
+    uint16_t root = 0;                     // numer radiowego węzła stanowiska
+    uint16_t parent = 0;                   // 0 tylko dla root
+    uint16_t backupParent = 0;             // 0 = brak
+    uint16_t receiverMain = 0;            // tożsamości koperty, różne od numeru root
+    uint16_t receiverBackup = 0;
+    uint8_t ttl = TTL_DEFAULT;             // limit skoków własnych ramek DATA, 1–15
+};
+
+struct PriorityKey {
+    uint16_t station = 0;
+    uint8_t ed25519[32] = {};
+    uint8_t x25519[32] = {};
+};
+
+// Plan sieci dla dróg w dół: stacja `station` leży za sąsiadem `via` (`priority_keys[].behind`).
+// Sąsiad zawsze może być drogą do samego siebie, więc nie ma tu wpisu dla siebie.
+struct Behind {
+    uint16_t station = 0;
+    uint16_t via = 0;
 };
 
 struct Config {
@@ -50,6 +78,11 @@ struct Config {
     uint8_t phraseCount = 0;
     char phrases[PHRASES][LANGS][PHRASE_MAX + 1] = {};
     Receiver receivers[2];
+    Network network;
+    uint8_t priorityKeyCount = 0;
+    PriorityKey priorityKeys[PRIORITY_KEYS_MAX] = {};
+    uint16_t behindCount = 0;
+    Behind behind[BEHIND_MAX] = {};
     uint8_t ifac[HASH] = {};
     char profile[PROFILE_MAX + 1] = {};
 };
@@ -59,6 +92,11 @@ struct Source {
     virtual ~Source() = default;
     virtual bool read(uint32_t offset, char* out, size_t length) = 0;
 };
+
+// Klucz X25519 albo Ed25519 o małym rzędzie (bit 255 pomijany): taki klucz nie daje wspólnego
+// sekretu, a podpis Ed25519 z nim przechodzi dla każdej wiadomości. parse() odrzuca go w karcie
+// odbiorcy i w `priority_keys`.
+bool smallOrder(const uint8_t key[32]);
 
 // Kontrola i rozbiór dokumentu o długości size. Zwraca nullptr albo `detail` odmowy `invalid`
 // (nazwa pola, "worst_request", "json", "memory" przy błędzie odczytu). profile: profil radiowy,

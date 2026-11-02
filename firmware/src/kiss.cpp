@@ -115,10 +115,15 @@ bool Port::put(const uint8_t* bytes, size_t count) {
     return true;
 }
 
-bool Port::send(const uint8_t* data, size_t length) {
+bool Port::canSend(const uint8_t* data, size_t length) const {
+    if (!open_ || !data || !length || length > MTU) return false;
     size_t encoded = 3;   // FEND, polecenie, FEND
     for (size_t i = 0; i < length; ++i) encoded += (data[i] == FEND || data[i] == FESC) ? 2 : 1;
-    if (!open_ || !length || length > MTU || TX_BYTES - txCount_ < encoded) { ++counters_.txDropped; return false; }
+    return TX_BYTES - txCount_ >= encoded;
+}
+
+bool Port::send(const uint8_t* data, size_t length) {
+    if (!canSend(data, length)) { ++counters_.txDropped; return false; }
     const uint8_t start[2] = {FEND, CMD_DATA};
     put(start, sizeof(start));
     for (size_t i = 0; i < length; ++i) {

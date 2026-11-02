@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Magazyny stacji w FRAM (docs/spec/oprogramowanie.md, "Pamięć FRAM", "Trwałość i potwierdzenia",
-// "Zapisy większe niż transakcja", "Cykl życia zgłoszenia"; protokol-usb.md, "Synchronizacja").
+// "Zapisy większe niż transakcja", "Cykl życia zgłoszenia"; usb-protocol.md, "Synchronizacja").
 //
 // Każdy magazyn ma stałe gniazda, bez dziennika dopisywanego i kompaktowania. Rekord gniazda (512 B)
 // ma nagłówek 24 B (magazyn 1, gniazdo 2, wersja formatu 1, generacja klucza 4, numer zapisu 8,
@@ -34,7 +34,7 @@
 namespace store {
 
 // Układ FRAM (512 KiB): dziennik 0x00000–0x08FFF (journal.h), magazyny 0x09000–0x43FFF,
-// tożsamość i system plików stosu 0x44000–0x7FFFF (framfs.h).
+// tożsamość, system plików stosu i bariera przeniesienia 0x44000–0x7FFFF.
 constexpr uint32_t TX_BASE = 0x009000;
 constexpr uint32_t TX_AREA = 4096;
 constexpr uint32_t CONFIG_BASE = 0x00B000;            // kopie A i B
@@ -87,7 +87,10 @@ enum class Stage : uint8_t { SAVED, SENDING, DELIVERED, RECEIVED, CANCELLED };
 enum Origin : uint8_t { BUTTONS = 0, USB = 1 };
 // SENT_ONCE: `nadane` (zapis jednokrotny przed pierwszym przekazaniem do stosu); READ_MAX: STATUS
 // rewizji r_max przyjęty (alarm brak_odczytu); BACKUP: liczniki i wysyłka dotyczą tożsamości zapasowej.
-enum RequestFlag : uint8_t { SENT_ONCE = 0x01, READ_MAX = 0x02, BACKUP = 0x04 };
+enum RequestFlag : uint8_t {
+    SENT_ONCE = 0x01, READ_MAX = 0x02, BACKUP = 0x04,
+    EXCEPTION_STEP = 0x08, EXCEPTION_MASK = 0x18  // 0..3 silent-exception transmissions
+};
 
 struct RevisionTime {
     uint16_t revision = 0;
@@ -182,7 +185,7 @@ struct MessageIndex {
     bool used() const { return state == SlotState::USED; }
 };
 
-// Zwolniony wpis rejestru (protokol-usb.md, "Niepewny wynik polecenia").
+// Zwolniony wpis rejestru (usb-protocol.md, "Niepewny wynik polecenia").
 struct Released {
     uint8_t id[HASH] = {};
     uint16_t revision = 0;
@@ -191,7 +194,7 @@ struct Released {
     bool cancelled = false;
 };
 
-// Zdarzenie dla laptopa: wpis 24 B pierścienia bez treści SA1 (protokol-usb.md, "Synchronizacja").
+// Zdarzenie dla laptopa: wpis 24 B pierścienia bez treści SA1 (usb-protocol.md, "Synchronizacja").
 enum class EventKind : uint8_t { OWN = 1, STAGE = 2, MSG = 3, RADIO = 4, STATION = 6 };
 // Pierwsze wartości są równe etapom (Stage), więc zmiana etapu daje kod wprost.
 enum class StageCode : uint8_t { STORED, SENDING, DELIVERED, RECEIVED, CANCELLED, SUPERSEDED, RELEASED };
@@ -410,7 +413,7 @@ public:
     bool maintain();
     // ZNISZCZ DANE: znacznik w dzienniku, skasowanie TX_BASE..FRAM_END i dziennika (bez długu ciszy
     // i rezerwacji numerów zapisu), nowy pusty magazyn bez tożsamości stacji.
-    bool destroy();
+    bool destroy(bool preserveMigration = false);
     // Znacznik zapisanej tożsamości stacji w rekordzie formatu (rns_node).
     bool identitySaved() const;
     bool setIdentitySaved();

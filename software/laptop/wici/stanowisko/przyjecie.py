@@ -58,6 +58,28 @@ CREATE TABLE IF NOT EXISTS karty (
     address TEXT NOT NULL,
     fingerprint TEXT NOT NULL
 );
+-- Numbered WICI envelope identities; retained after removing trust so a number cannot
+-- silently be assigned to a different key on the same medium.
+CREATE TABLE IF NOT EXISTS numery (
+    net_id INTEGER NOT NULL,
+    station INTEGER NOT NULL,
+    source BLOB NOT NULL,
+    public_key BLOB NOT NULL,
+    PRIMARY KEY (net_id, station),
+    UNIQUE (net_id, source)
+);
+CREATE TABLE IF NOT EXISTS env_send_guard (
+    id INTEGER PRIMARY KEY CHECK(id=1),
+    blocked INTEGER NOT NULL CHECK(blocked=1)
+);
+CREATE TABLE IF NOT EXISTS bearer_route (
+    source BLOB PRIMARY KEY,
+    bearer TEXT NOT NULL CHECK(bearer IN ('wici', 'reticulum'))
+);
+CREATE TABLE IF NOT EXISTS bearer_override (
+    source BLOB PRIMARY KEY,
+    bearer TEXT NOT NULL CHECK(bearer IN ('wici', 'reticulum'))
+);
 -- Wpisy decyzji, które nie idą radiem: stan 3 ze źródłem i czasem potwierdzenia, stan 4 z adresatem i czasem.
 CREATE TABLE IF NOT EXISTS decyzje (
     id INTEGER PRIMARY KEY,
@@ -70,7 +92,6 @@ CREATE TABLE IF NOT EXISTS decyzje (
 );
 """
 SAVE_ERRORS = (OSError, sqlite3.Error, syscrypto.CryptoError, nosnik.StorageError)
-
 
 
 class Przyjecie:
@@ -96,6 +117,8 @@ class Przyjecie:
         self.log = log or (lambda line: print(line, file=sys.stderr, flush=True))
         self.wysylka = wysylka.Wysylka(send, outcome, self.log, random)
         self.jobs = queue.Queue()
+        self.last_bearer = {}  # source -> last authenticated receive path; DB thread only
+        self.bearer_override = {}  # operator choice takes precedence until explicitly cleared
         self.counts = {"received": 0, "duplicate": 0, "quarantined": 0, "rejected": 0, "quarantine_full": 0}
         self.ready = threading.Event()
         self.error = self.save_error = None
@@ -118,6 +141,8 @@ class Przyjecie:
             # migawki i kopii. Ustawienie połączenia, więc po deserialize.
             self.store.db.execute("PRAGMA secure_delete=ON")
             self.store.db.executescript(SCHEMA)
+            self.last_bearer = dict(self.store.db.execute("SELECT source, bearer FROM bearer_route"))
+            self.bearer_override = dict(self.store.db.execute("SELECT source, bearer FROM bearer_override"))
             columns = {row[1] for row in self.store.db.execute("PRAGMA table_info(dziennik)")}
             for column, kind in (("source", "BLOB"), ("mid", "TEXT"), ("revision", "INTEGER")):
                 if column not in columns:   # baza z etapu S4-S8
@@ -240,6 +265,11 @@ class Przyjecie:
             p = wysylka.setting(db, "p", 0) + wysylka.RECOVERY_S * (1 + recoveries)
             with db:
                 db.execute("INSERT OR REPLACE INTO settings VALUES('p', ?)", (p,))
+                # A restored SQLite snapshot can be older than a transmitted WICI
+                # counter reservation. The legacy recovery offset protects SA1 event
+                # numbers, but cannot prove a nonce upper bound for the same key.
+                db.execute("INSERT OR REPLACE INTO env_send_guard VALUES(1,1)")
+                db.execute("DROP TABLE IF EXISTS env_rekey_stage")
                 db.execute("INSERT INTO dziennik(at, account, op, detail) VALUES(?,?,?,?)",
                            (self.clock(), account, "odzyskanie_koniec",
                             f"kopia z {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(copy_at))}, "
@@ -288,20 +318,129 @@ class Przyjecie:
         """Entry in the action log (dziennik działań), durable when this returns."""
         self.call(lambda store: self._log_action(account, op, detail))
 
-    def deliver(self, source, content):
+    def deliver(self, source, content, bearer=None):
         """A REQUEST or TEST with a checked signature from source (16 B "lxmf.delivery" hash)."""
-        self.jobs.put(lambda: self._receive(source, content))
+        self.jobs.put(lambda: self._receive(source, content, bearer))
 
-    def _receive(self, source, content):
+    def receive_envelope_frame(self, net_id, wire, bearer=None):
+        """Authenticate a numbered WICI frame and durably admit it before the caller may HACK.
+
+        Runs on the database thread; a wrong network, unregistered key, tag, SA1 content,
+        or failed snapshot raises and must leave the link frame unacknowledged.
+        """
+        return self.call(lambda store: self._receive_envelope_frame(net_id, wire, bearer))
+
+    def send_wici(self, bearer, dest, content):
+        """Called by Wysylka on the DB thread: reserve the nonce durably, seal and queue for KISS TX.
+
+        None when WICI-Link cannot carry this reply now (offline, station without a number, sending blocked
+        after a recovery, uncertain counters), so bearers.Bearers may try Reticulum."""
+        from .. import envelope
+        from . import wici_link
+
+        if self.recovery or not bearer.status(self.clock())["online"]:
+            return None
+        row = self.store.db.execute(
+            "SELECT n.station FROM numery n JOIN trusted t ON t.source=n.source "
+            "WHERE n.net_id=? AND n.source=?", (bearer.network, dest)).fetchone()
+        if row is None:
+            return None
+        try:
+            frames = self._seal_envelope_message(bearer.network, row[0], content, wici_link.MAX_PAYLOAD)
+        except envelope.EnvelopeError as exc:
+            self.log(f"stanowisko: koperta WICI do {dest.hex()} nie wyszła: {exc}")
+            return None
+        return bearer.send_frames(frames)
+
+    def _active_identity(self, net_id):
+        """(private key, card entry) of the receiver identity bound to net_id; EnvelopeError otherwise."""
+        from .. import envelope
+
+        card = self.medium.card(self.key)
+        private = self.medium.identity(self.key)
+        active = nosnik.card_entry(card, private) if card and card.get("v") == 2 else None
+        if active is None or active.get("net_id") != net_id:
+            raise envelope.EnvelopeError("receiver identity is not bound to this network")
+        return private, active
+
+    def _seal_envelope_message(self, net_id, station_id, content, max_payload):
+        from .. import envelope
+        from . import envelope_sender
+
+        if self.recovery:
+            raise envelope.EnvelopeError("recovery mode cannot send WICI envelopes")
+        wzorzec.decode_message(content)  # refuse malformed SA1 before consuming a nonce
+        private, active = self._active_identity(net_id)
+        row = self.store.db.execute("SELECT n.public_key FROM numery n JOIN trusted t ON t.source=n.source "
+                                    "WHERE n.net_id=? AND n.station=?",
+                                    (net_id, station_id)).fetchone()
+        if row is None or len(row[0]) != 64:
+            raise envelope.EnvelopeError("unknown numbered station")
+        if not hasattr(self, "envelope_sender"):
+            self.envelope_sender = envelope_sender.Sender(self.store.db, self._save)
+        return self.envelope_sender.seal(private[:32], row[0][:32], net_id, active["id"], station_id,
+                                         content, max_payload)
+
+    def _receive_envelope_frame(self, net_id, wire, bearer=None):
+        from .. import envelope
+        from . import envelope_inbox
+
+        private, active = self._active_identity(net_id)
+        raw = bytes(wire)
+        if len(raw) < envelope.OVERHEAD or len(raw) > envelope.MAX_FRAME:
+            raise envelope.EnvelopeError("invalid envelope length")
+        sender, recipient = int.from_bytes(raw[1:3], "big"), int.from_bytes(raw[3:5], "big")
+        if recipient != active.get("id"):
+            raise envelope.EnvelopeError("wrong receiver number")
+        station = self.store.db.execute("SELECT source, public_key FROM numery WHERE net_id=? AND station=?",
+                                        (net_id, sender)).fetchone()
+        if station is None or len(station[1]) != 64:
+            raise envelope.EnvelopeError("unknown station number")
+        source, station_key = station
+        trusted = self.store.db.execute("SELECT 1 FROM trusted WHERE source=?", (source,)).fetchone() is not None
+        key = envelope.derive_key(private[:32], station_key[:32], net_id, sender, recipient, own_id=recipient)
+        part = envelope.open_part(key, raw)
+        if not hasattr(self, "envelope_inboxes"):
+            self.envelope_inboxes = {}
+        inbox = self.envelope_inboxes.get(net_id)
+        if inbox is None:
+            inbox = envelope_inbox.Inbox(self.store.db, net_id, self._save)
+            self.envelope_inboxes[net_id] = inbox
+        def accept(content):
+            value = wzorzec.decode_message(content)
+            self.store.db.execute("UPDATE removed SET messages = messages + 1 WHERE source=?", (source,))
+            self.store.receive_in_transaction(source, content, True)
+            self.store.db.execute(
+                "INSERT OR IGNORE INTO received_at SELECT source, id, revision, ? FROM received "
+                "WHERE source=? AND id=? AND revision=?", (self.clock(), source, value[2], value[3]))
+            self.wysylka.accepted(self.store.db, source, value[2], value[3])
+
+        def remember_bearer():
+            # Fresh parts only: a replayed frame must not move the reply route.
+            if bearer is not None and trusted:
+                self.store.db.execute("INSERT OR REPLACE INTO bearer_route VALUES(?,?)", (source, bearer))
+                self.last_bearer[source] = bearer
+
+        # The KISS caller must be able to answer HACK inside 200 ms. The normal
+        # one-second tick sends RECEIVED after the durable snapshot, without
+        # putting LXMF path discovery or copy work on the hop-ACK path.
+        return inbox.receive(part, key, int(self.clock()), accept, remember_bearer)
+
+    def _receive(self, source, content, bearer=None):
         at = self.clock()
+        fresh = False
 
         def before_commit():
             # W tej samej transakcji co zgłoszenie i RECEIVED; nowa rewizja dostaje czas pierwszego odbioru.
+            # Tylko nowa rewizja przenosi trasę odpowiedzi: powtórzenie może być odtworzonym pakietem.
+            nonlocal fresh
             value = wzorzec.decode_message(content)
-            self.store.db.execute(
+            fresh = self.store.db.execute(
                 "INSERT OR IGNORE INTO received_at SELECT source, id, revision, ? FROM received "
-                "WHERE source=? AND id=? AND revision=?", (at, source, value[2], value[3]))
+                "WHERE source=? AND id=? AND revision=?", (at, source, value[2], value[3])).rowcount == 1
             self.wysylka.accepted(self.store.db, source, value[2], value[3])
+            if bearer is not None and fresh:
+                self.store.db.execute("INSERT OR REPLACE INTO bearer_route VALUES(?,?)", (source, bearer))
 
         known = self.store.db.execute("SELECT count(*) FROM received WHERE source=?", (source,)).fetchone()[0]
         try:
@@ -321,6 +460,8 @@ class Przyjecie:
         if ack is None:
             self.counts["quarantined"] += 1
             return
+        if bearer is not None and fresh:
+            self.last_bearer[source] = bearer
         after = self.store.db.execute("SELECT count(*) FROM received WHERE source=?", (source,)).fetchone()[0]
         self.counts["received" if after > known else "duplicate"] += 1
         self.tick()   # RECEIVED od razu po COMMIT, jeśli jest miejsce w drodze

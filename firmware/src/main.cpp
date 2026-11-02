@@ -20,6 +20,7 @@
 // w platform_*.cpp, zależne od układu radiowego w radio_console_*.cpp i *_link.cpp.
 #include <Arduino.h>
 #include <SPI.h>
+#include <new>
 #if defined(ARDUINO_ARCH_NRF52)
 #include <Adafruit_TinyUSB.h>
 #elif defined(ARDUINO_ARCH_ESP32)
@@ -32,11 +33,19 @@
 #include "console.h"
 #if defined(WICI_RNS_CORE)
 #include "core_selftest.h"
+#include "identity.h"
 #endif
 #include "drbg.h"
+#include "envelope_counter.h"
 #include "fram.h"
+#include "framfs.h"
 #include "hexstr.h"
 #include "journal.h"
+#include "migration_state.h"
+#include "migration_crypto.h"
+#include "migration_image.h"
+#include "migration_package.h"
+#include "kiss.h"
 #include "jsonprint.h"
 #include "measure.h"
 #include "p1_registers.h"
@@ -51,6 +60,11 @@
 #include "store.h"
 #include "ui.h"
 #include "usbproto.h"
+#include "wici_gateway.h"
+#include "wici_hop_auth.h"
+#include "wici_airtime.h"
+#include "wici_radio.h"
+#include "wici_beacon.h"
 
 #ifndef WICI_FW_VERSION
 #define WICI_FW_VERSION "bench-a-dev"
@@ -73,6 +87,10 @@ constexpr const char* BENCH = "A";
 
 fram::Memory memory(platform::bus(), board::FRAM_CS, board::FRAM_SPI_HZ);
 journal::Journal stationJournal(memory);
+migration_state::Barrier migrationBarrier(memory);
+migration_package::Exporter migrationExporter(memory);
+migration_package::Importer migrationImporter(memory, migrationBarrier);
+static_assert(migration_package::SIZE == usbproto::MIGRATION_PACKAGE_BYTES, "USB migration size matches package");
 measure::Bench bench(radiocon::link(), board::BTN_OK, board::LED_HEARTBEAT);
 #if defined(WICI_BOARD_N1)
 sharp::Display display(platform::bus(), board::DISPLAY_CS, board::DISPLAY_EXTCOMIN, board::DISPLAY_SPI_HZ);
@@ -103,9 +121,9 @@ void stationRandom(uint8_t* out, size_t count) {
     if (!generator.generate(out, count)) platform::reboot();
 }
 #if defined(WICI_L0)
-constexpr const char* RADIO_PROFILE = "lora-sf7";  // profil radiowy stacji L0 (`radio.profile` w configure, protokol-usb.md)
+constexpr const char* RADIO_PROFILE = "lora-sf7";  // profil radiowy stacji L0 (`radio.profile` w configure, usb-protocol.md)
 #else
-constexpr const char* RADIO_PROFILE = "p1";   // profil radiowy stanowisk A i B (`radio.profile` w configure, protokol-usb.md)
+constexpr const char* RADIO_PROFILE = "p1";   // profil radiowy stanowisk A i B (`radio.profile` w configure, usb-protocol.md)
 #endif
 store::Store stationStore(memory, stationJournal, stationRandom, RADIO_PROFILE);
 // Drugi interfejs CDC: dane (protokół laptop–stacja); Serial = diagnostyka.
@@ -176,8 +194,10 @@ uint32_t counterS() { return counterBaseS + static_cast<uint32_t>(platform::upti
 uint32_t serviceS() { return counterS() - skipS; }
 uint32_t startServiceS = 0;  // czas dla obsługi przy tym starcie (kontakt sprzed startu = dolne oszacowanie)
 void updateScreen(bool force);
+void screenChanged();
 void setStationName();
 void wipeStack();
+void freezeMigration();
 void restartSoon(const char* why);
 
 // Usługi stacji dla protokołu USB.
@@ -193,6 +213,42 @@ struct BenchHost : usbproto::Host {
     bool contactBeforeStart() override { return stationStore.meta().contactS < startServiceS; }
     void power(char* out, size_t size) override;
     void diag(char* out, size_t size) override;
+    void migration(char* phase, size_t phaseSize, char* mid, size_t midSize) override {
+        const char* name = "corrupt";
+        if (migrationBarrier.ready()) {
+            switch (migrationBarrier.record().phase) {
+                case migration_state::Phase::NONE: name = "none"; break;
+                case migration_state::Phase::RECEIVING: name = "receiving"; break;
+                case migration_state::Phase::EXPORT: name = "export"; break;
+                case migration_state::Phase::IMPORTING: name = "importing"; break;
+                case migration_state::Phase::IMPORTED: name = "imported"; break;
+                case migration_state::Phase::RETIRED: name = "retired"; break;
+                case migration_state::Phase::ABORTED: name = "aborted"; break;
+            }
+        }
+        if (phaseSize) snprintf(phase, phaseSize, "%s", name);
+        if (midSize) mid[0] = '\0';
+        if (migrationBarrier.ready() && migrationBarrier.record().phase != migration_state::Phase::NONE && midSize >= 33)
+            hexstr::encode(migrationBarrier.record().mid, 16, mid);
+    }
+    void migrationDetails(char* eph, size_t ephSize, char* package, size_t packageSize) override;
+    void migrationConfirmation(char* confirm, size_t size) override;
+    bool migrationReceiveKey(uint8_t mid[16], uint8_t publicKey[32], uint8_t fingerprint[8]) override;
+    bool migrationExport(const uint8_t mid[16], const uint8_t targetKey[32], uint8_t sha[32]) override;
+    bool migrationExportRead(uint32_t offset, uint8_t* out, size_t length) override {
+        return migrationBarrier.ready() && migrationBarrier.record().phase == migration_state::Phase::EXPORT &&
+               migrationExporter.read(offset, out, length);
+    }
+    bool migrationImportBegin(const uint8_t mid[16], const uint8_t sha[32]) override;
+    bool migrationImportPart(uint32_t offset, const uint8_t* data, size_t length, uint32_t& next) override;
+    bool migrationImportCommit(uint8_t confirm[32]) override;
+    bool migrationRetire(const uint8_t mid[16], const uint8_t imported[32], uint8_t retired[32], const char*& reason) override;
+    bool migrationActivate(const uint8_t mid[16], const uint8_t* retired, bool& duplicate,
+                           const char*& reason) override;
+    bool migrationAbortTarget(const uint8_t mid[16], const uint8_t* eph, uint8_t confirm[32],
+                              bool& hasConfirm, bool& duplicate, const char*& reason) override;
+    bool migrationAbortSource(const uint8_t mid[16], const uint8_t* confirm, bool& duplicate,
+                              const char*& reason) override;
     bool announce() override;
     bool destroy() override;
     void configChanged(bool roleChanged) override;
@@ -200,6 +256,10 @@ struct BenchHost : usbproto::Host {
     usbproto::Confirm confirmPoll() override;
     void confirmEnd() override;
     void showCard(const char* fingerprint) override;
+    void showMigrationFingerprint(const char* fingerprint) override {
+        screenModel.ask(ui::Question::MIGRATION_TARGET, fingerprint);
+        screenChanged();
+    }
 };
 BenchHost host;
 
@@ -240,11 +300,49 @@ struct BenchRadio : rnsnode::Radio {
 };
 BenchRadio benchRadio;
 bool rnsOk = false;               // stos uruchomiony (FRAM i dziennik działają)
+bool wiciActive = false;
+wici_airtime::Budget wiciBudget(memory);
+wici_hop_auth::Auth wiciHopAuth;
+alignas(wici_radio::Shelter) uint8_t wiciShelterSpace[sizeof(wici_radio::Shelter)];
+alignas(wici_gateway::Root) uint8_t wiciRootSpace[sizeof(wici_gateway::Root)];
+wici_radio::Shelter* wiciShelter = nullptr;
+wici_gateway::Root* wiciRoot = nullptr;
+kiss::Port wiciUsb;
+uint32_t wiciHandle = 0;
+uint32_t wiciNextBeaconMs = 0;
+uint32_t wiciLastBeaconMs = 0;
+uint16_t wiciAdvertisedParent = 0, wiciAdvertisedRank = 0xFFFF;
+uint8_t wiciBeacons = 0;
+bool numberedConfigured() { return storeOk && stationStore.config().network.id != 0; }
+struct WiciAir : wici_link::Air {
+    // Every WICI frame leaves through the pairwise tag; unicast without a key for its neighbor is refused.
+    bool sendData(const uint8_t* wire, size_t length, wici_link::TxClass traffic) override {
+        const bool exception = traffic == wici_link::TxClass::OWN && bench.silenceException &&
+                               wiciShelter && wiciShelter->exceptionTx();
+        if ((bench.silence && !exception) || bench.busy() || !radioServes() ||
+            !wire || length < wici_link::HEADER + wici_link::TAG) return false;
+        const bool beacon = traffic == wici_link::TxClass::BEACON;
+        const auto type = static_cast<wici_link::Type>((wire[0] >> 3) & 7);
+        if (type != (beacon ? wici_link::Type::BEACON : wici_link::Type::DATA)) return false;
+        uint8_t radio[wici_link::MAX_FRAME];
+        const size_t radioLength = wiciHopAuth.seal(wire, length, radio, sizeof(radio));
+        // Transit and BEACON airtime is charged durably before the radio may start (K0 is not pooled).
+        if (!radioLength || (traffic != wici_link::TxClass::OWN &&
+                             !wiciBudget.reserve(beacon, lora::frameAirMs(radioLength), counterS(),
+                                                 traffic == wici_link::TxClass::CONTENDED_K2))) return false;
+        return bench.linkSend(radio, radioLength, true) == nullptr;
+    }
+    bool sendHack(const uint8_t* wire, size_t length, uint32_t receivedMs) override {
+        uint8_t radio[wici_link::MAX_FRAME];
+        const size_t radioLength = wiciHopAuth.seal(wire, length, radio, sizeof(radio));
+        return radioLength && bench.linkSendHack(radio, radioLength, receivedMs);
+    }
+} wiciAir;
 rnsannounce::Policy announcePolicy;
 // Węzeł stanowiska: stos z interfejsem USB (od startu stosu; zmiana roli działa po restarcie).
 // Poza trybem przygotowania interfejs danych przenosi ramki KISS, nie protokół laptop–stacja.
 bool nodeRole() { return rnsOk && rnsnode::node(); }
-bool kissMode() { return nodeRole() && !bench.prep; }
+bool kissMode() { return nodeRole() && !bench.prep && (!numberedConfigured() || wiciActive); }
 uint32_t rebootAtMs = 0;          // restart po zmianie roli (0 = brak)
 bool computerHeard = false;       // pakiet od komputera stanowiska od startu
 uint32_t computerAtS = 0;         // czas pracy przy ostatnim pakiecie od komputera
@@ -259,12 +357,29 @@ bool silenceAny() { return switchSilence || (storeOk && stationStore.meta().sile
 struct BenchServices : station::Services {
     bool silence() override { return silenceAny(); }
     bool silenceSwitch() override { return switchSilence; }
-    bool radioReady() override { return rnsOk && radioListening() && rnsnode::online(); }
-    bool busy() override { return rnsnode::queueFull(); }
+    bool radioReady() override {
+        return numberedConfigured() ? wiciActive && wiciShelter && radioListening() :
+                                      rnsOk && radioListening() && rnsnode::online();
+    }
+    bool busy() override { return numberedConfigured() ? wiciShelter && wiciShelter->ownBusy() : rnsnode::queueFull(); }
     uint32_t send(const uint8_t to[store::HASH], const uint8_t* data, size_t length, uint32_t timeoutS) override {
         return rnsnode::send(to, data, length, timeoutS);
     }
     bool sendReady(const uint8_t to[store::HASH]) override { return rnsnode::sendReady(to); }
+    bool numberedReady(uint16_t network, uint16_t recipient) override {
+        return wiciActive && wiciShelter && !wiciShelter->ownBusy() && radioListening() &&
+               stationStore.config().network.id == network &&
+               (recipient == stationStore.config().receivers[0].number ||
+                recipient == stationStore.config().receivers[1].number) &&
+               wiciShelter->routes().parent() != 0;
+    }
+    uint32_t sendNumbered(uint16_t network, uint16_t recipient, const uint8_t* data,
+                          size_t length, uint32_t, bool exception) override {
+        if (!numberedReady(network, recipient)) return 0;
+        ++wiciHandle;
+        if (!wiciHandle) ++wiciHandle;
+        return wiciShelter->queueOwn(recipient, data, length, wiciHandle, exception) ? wiciHandle : 0;
+    }
     void randomBytes(uint8_t* out, size_t count) override { stationRandom(out, count); }
     void log(const char* text) override { bench.log(text); }
     void address(uint8_t out[store::HASH]) override { memcpy(out, rnsnode::address(), store::HASH); }
@@ -337,9 +452,12 @@ void applyReceivers() {
 // datagramy od stosu, który przepuszcza wymianę jednego zgłoszenia (rns_node.h).
 void applySilence() {
     const store::Silence mode = storeOk ? store::silenceMode(stationStore.meta(), switchSilence) : switchSilence ? store::Silence::FULL : store::Silence::OFF;
-    bench.silence = mode != store::Silence::OFF;
-    bench.silenceException = mode == store::Silence::EXCEPTION;
-    rnsnode::setSilence(mode == store::Silence::EXCEPTION ? rnsnode::Silence::EXCEPTION : bench.silence ? rnsnode::Silence::FULL : rnsnode::Silence::OFF);
+    const bool migrationLocked = !migrationBarrier.permitsTransmit();
+    bench.silence = mode != store::Silence::OFF || migrationLocked;
+    bench.silenceException = mode == store::Silence::EXCEPTION && !migrationLocked;
+    rnsnode::setSilence(migrationLocked ? rnsnode::Silence::FULL :
+                        mode == store::Silence::EXCEPTION ? rnsnode::Silence::EXCEPTION :
+                        bench.silence ? rnsnode::Silence::FULL : rnsnode::Silence::OFF);
     // Datagram przyjęty przed ciszą albo dla innego wyjątku nie wychodzi: przy wyjątku łącze przepuszcza
     // każdy datagram stosu, więc ruch sprzed zmiany (przekazywany, ogłoszenie) odpada tu, nie w łączu.
     static store::Silence lastMode = store::Silence::OFF;
@@ -347,6 +465,7 @@ void applySilence() {
     const uint8_t* exception = stationStore.meta().exception;
     if (mode != store::Silence::OFF && (mode != lastMode || (mode == store::Silence::EXCEPTION && memcmp(exception, lastException, store::HASH)))) {
         bench.dropLinkTx();
+        if (wiciShelter) wiciShelter->cancelOwn();
         rnsnode::dropQueue();
     }
     lastMode = mode;
@@ -382,8 +501,44 @@ void BenchServices::changed() {
     screenChanged();
 }
 
-void onDatagram(const uint8_t* data, size_t length, void*) { if (rnsOk) rnsnode::received(data, length); }
-void onTxDone(bool ok, void*) { rnsnode::txDone(ok); }
+void onDatagram(const uint8_t* data, size_t length, void*) {
+    if (rnsOk && !numberedConfigured()) rnsnode::received(data, length);
+}
+void onWiciRaw(const radiolink::Frame& frame, void*) {
+    if (!wiciActive) return;
+    uint8_t bare[wici_link::MAX_FRAME];
+    size_t length = 0;
+    if (!wiciHopAuth.open(frame.bytes, frame.length, bare, sizeof(bare), length)) return;
+    if (wiciShelter) wiciShelter->receive(bare, length, frame.receivedMs,
+                                        counterS(), frame.snrQdb);
+    else if (wiciRoot) wiciRoot->radio(bare, length, frame.receivedMs);
+}
+void onWiciDelivery(uint32_t handle, bool acknowledged, void*) { app.receipt(handle, acknowledged); }
+bool onWiciAdmit(uint16_t network, uint16_t sender, uint16_t recipient,
+                 const uint8_t* sa1, size_t length, void*) {
+    return app.receivedEnvelope(network, sender, recipient, sa1, length);
+}
+bool verifyWiciBeacon(uint16_t sender, const uint8_t content[wici_beacon::CONTENT_BYTES],
+                      const uint8_t signature[wici_beacon::SIGNATURE_BYTES], const void* context) {
+    const config::Config* c = static_cast<const config::Config*>(context);
+    if (!c) return false;
+    for (uint8_t i = 0; i < c->priorityKeyCount; ++i)
+        if (c->priorityKeys[i].station == sender)
+            return wici_beacon::verify(c->priorityKeys[i].ed25519,
+                                        c->network.id, sender, content, signature);
+    return false;
+}
+uint32_t wiciRandom(void*) {
+    uint32_t value = 0;
+    stationRandom(reinterpret_cast<uint8_t*>(&value), sizeof(value));
+    return value;
+}
+void onTxDone(bool ok, void*) {
+    if (wiciActive) {
+        if (wiciShelter) wiciShelter->onTxDone(ok, millis(), counterS());
+        else if (wiciRoot) wiciRoot->onTxDone(ok, millis());
+    } else rnsnode::txDone(ok);
+}
 
 bool onPacket(const uint8_t* data, size_t length, bool& exception, void*) {
     if (!storeOk) return false;
@@ -423,6 +578,23 @@ void wipeStack() {
     rnsOk = false;
     stackState = StackState::HALTED;
     setStationName();
+}
+
+// Called only after a durable migration marker is committed. Halt every radio
+// producer and detach the journal before the image hash is taken. A restarted
+// station follows the same frozen boot path before any store or clock writes.
+void freezeMigration() {
+    applySilence();
+    bench.dropLinkTx();
+    if (wiciShelter) wiciShelter->cancelOwn();
+    rnsnode::dropQueue();
+    bench.stop();
+    wipeStack();
+    wiciActive = false;
+    bench.attach(nullptr, counterS);
+    journalOk = false;
+    storeOk = false;
+    screenChanged();
 }
 
 bool BenchHost::destroy() {
@@ -473,6 +645,7 @@ void setSwitchSilence(bool on, const char* source) {
 
 // Zwraca false, gdy wejście w tryb odmówiono (brak zapisu w dzienniku).
 bool applyPrep(bool on, const char* source) {
+    if (!on && migrationBarrier.ready() && !migrationBarrier.permitsTransmit()) return false;
     if (!on) bench.stop();  // wyjście z trybu przygotowania przerywa pomiary
     if (bench.prep == on) return true;
     char text[48];
@@ -581,6 +754,8 @@ void pollPanel(uint32_t now) {
 bool BenchHost::silenceSwitch() { return switchSilence; }
 
 static_assert(static_cast<int>(usbproto::Question::SILENCE_EXCEPTION) == static_cast<int>(ui::Question::SILENCE_EXCEPTION), "pytania USB i ekranu");
+static_assert(static_cast<int>(usbproto::Question::MIGRATION_ABORT) == static_cast<int>(ui::Question::MIGRATION_ABORT),
+              "migration questions match the screen model");
 void BenchHost::confirmBegin(usbproto::Question question, const char* detail) {
     screenModel.ask(static_cast<ui::Question>(question), detail);
     screenChanged();
@@ -612,6 +787,303 @@ void BenchHost::diag(char* out, size_t size) {
 bool BenchHost::identity(uint8_t key[64], uint8_t lxmf[store::HASH]) {
     if (!rnsOk || nodeRole() || !rnsnode::publicKey(key)) return false;
     sha2::destinationHash(key, config::LXMF_NAME, lxmf);
+    return true;
+}
+
+template <size_t N>
+bool nonzero(const uint8_t (&bytes)[N]) {
+    uint8_t any = 0;
+    for (uint8_t byte : bytes) any |= byte;
+    return any != 0;
+}
+
+// The target's "aborted" confirmation for the source's ephemeral key.
+bool signAborted(const uint8_t privateKey[32], const uint8_t eph[32], const uint8_t mid[16], uint8_t confirm[32]) {
+    uint8_t confirmKey[32], packageKey[32];
+    if (!migration_crypto::derive(privateKey, eph, mid, confirmKey, packageKey)) return false;
+    sha2::wipe(packageKey, sizeof(packageKey));
+    const bool signedOk = migration_crypto::confirmation(confirmKey, "aborted", mid, nullptr, confirm);
+    sha2::wipe(confirmKey, sizeof(confirmKey));
+    return signedOk;
+}
+
+void BenchHost::migrationDetails(char* eph, size_t ephSize, char* package, size_t packageSize) {
+    if (ephSize) eph[0] = '\0';
+    if (packageSize) package[0] = '\0';
+    if (!migrationBarrier.ready()) return;
+    const migration_state::Record& record = migrationBarrier.record();
+    if ((record.phase == migration_state::Phase::EXPORT || record.phase == migration_state::Phase::RETIRED) && ephSize >= 65) {
+        uint8_t publicKey[32];
+        if (migration_crypto::publicKey(record.privateKey, publicKey)) hexstr::encode(publicKey, 32, eph);
+    }
+    if (record.phase == migration_state::Phase::EXPORT || record.phase == migration_state::Phase::IMPORTING ||
+        record.phase == migration_state::Phase::IMPORTED || record.phase == migration_state::Phase::RETIRED) {
+        if (nonzero(record.packageHash) && packageSize >= 65) hexstr::encode(record.packageHash, 32, package);
+    }
+}
+
+void BenchHost::migrationConfirmation(char* confirm, size_t size) {
+    if (size) confirm[0] = '\0';
+    if (!migrationBarrier.ready() || size < 65) return;
+    const migration_state::Record& record = migrationBarrier.record();
+    if (record.phase == migration_state::Phase::NONE && record.flags == 2) {
+        if (nonzero(record.packageHash)) hexstr::encode(record.packageHash, 32, confirm);
+        return;
+    }
+    const char* kind = record.phase == migration_state::Phase::IMPORTED ? "imported" :
+                       record.phase == migration_state::Phase::RETIRED ? "retired" : nullptr;
+    if (!kind) return;
+    uint8_t confirmKey[32], packageKey[32], result[32];
+    if (!migration_crypto::derive(record.privateKey, record.peerPublic, record.mid, confirmKey, packageKey)) return;
+    sha2::wipe(packageKey, sizeof(packageKey));
+    if (migration_crypto::confirmation(confirmKey, kind, record.mid, record.packageHash, result))
+        hexstr::encode(result, sizeof(result), confirm);
+    sha2::wipe(result, sizeof(result));
+    sha2::wipe(confirmKey, sizeof(confirmKey));
+}
+
+bool BenchHost::migrationReceiveKey(uint8_t mid[16], uint8_t publicKey[32], uint8_t fingerprint[8]) {
+    if (!migrationBarrier.ready()) return false;
+    migration_state::Record record = migrationBarrier.record();
+    if (record.phase == migration_state::Phase::NONE) {
+        // A fresh unconfigured identity is disposable; the imported identity
+        // replaces it. Any configured station or retained application data is refused.
+        if (!storeOk || stationStore.configured() || stationStore.requestCount() ||
+            stationStore.messageCount() || !entropyHealthy || bench.debtRemainingMs() != 0) return false;
+        record.phase = migration_state::Phase::RECEIVING;
+        record.flags = counterS();  // target clock before the source image overwrites the journal
+        stationRandom(record.mid, sizeof(record.mid));
+        stationRandom(record.privateKey, sizeof(record.privateKey));
+        if (!migrationBarrier.save(record)) return false;
+        freezeMigration();
+    } else if (record.phase != migration_state::Phase::RECEIVING &&
+               record.phase != migration_state::Phase::IMPORTING &&
+               record.phase != migration_state::Phase::IMPORTED) return false;
+    if (!migration_crypto::publicKey(record.privateKey, publicKey)) return false;
+    memcpy(mid, record.mid, sizeof(record.mid));
+    sha2::Hash digest;
+    digest.update(mid, 16);
+    digest.update(publicKey, 32);
+    uint8_t full[32];
+    digest.finish(full);
+    memcpy(fingerprint, full, 8);
+    sha2::wipe(full, sizeof(full));
+    return true;
+}
+
+bool BenchHost::migrationExport(const uint8_t mid[16], const uint8_t targetKey[32], uint8_t sha[32]) {
+    if (!migrationBarrier.ready()) return false;
+    migration_state::Record record = migrationBarrier.record();
+    if (record.phase == migration_state::Phase::NONE) {
+        uint8_t identity[64];
+        if (!storeOk || !stationStore.configured() || !stationStore.station() ||
+            !bench.prep || !entropyHealthy || !rnsOk || !rnsnode::publicKey(identity)) return false;
+        sha2::Hash hash;
+        hash.update(identity, sizeof(identity));
+        uint8_t full[32];
+        hash.finish(full);
+        memcpy(record.identityDigest, full, sizeof(record.identityDigest));
+        sha2::wipe(full, sizeof(full));
+        record.phase = migration_state::Phase::EXPORT;
+        record.snapshotSize = migration_image::SIZE;
+        memcpy(record.mid, mid, sizeof(record.mid));
+        memcpy(record.peerPublic, targetKey, sizeof(record.peerPublic));
+        stationRandom(record.privateKey, sizeof(record.privateKey));
+        uint8_t confirmKey[32], packageKey[32];
+        const bool peerValid = migration_crypto::derive(record.privateKey, targetKey, mid, confirmKey, packageKey);
+        sha2::wipe(confirmKey, sizeof(confirmKey));
+        sha2::wipe(packageKey, sizeof(packageKey));
+        if (!peerValid) return false;
+        if (!migrationBarrier.save(record)) return false;
+        freezeMigration();
+    } else if (record.phase != migration_state::Phase::EXPORT ||
+               memcmp(record.mid, mid, sizeof(record.mid)) ||
+               memcmp(record.peerPublic, targetKey, sizeof(record.peerPublic))) return false;
+    if (!nonzero(record.packageHash)) {
+        if (!migration_image::digest(memory, record.packageHash) || !migrationBarrier.save(record)) return false;
+    }
+    if (!migrationExporter.begin(record) || !migrationExporter.digest(sha)) return false;
+    return true;
+}
+
+bool BenchHost::migrationImportBegin(const uint8_t mid[16], const uint8_t sha[32]) {
+    if (!migrationBarrier.ready()) return false;
+    migration_state::Record record = migrationBarrier.record();
+    if (memcmp(record.mid, mid, sizeof(record.mid))) return false;
+    if (record.phase == migration_state::Phase::RECEIVING) {
+        record.phase = migration_state::Phase::IMPORTING;
+        record.snapshotSize = migration_image::SIZE;
+        if (!migrationBarrier.save(record)) return false;
+    } else if (record.phase != migration_state::Phase::IMPORTING) return false;
+    return migrationImporter.begin(mid, sha);
+}
+
+bool BenchHost::migrationImportPart(uint32_t offset, const uint8_t* data, size_t length, uint32_t& next) {
+    if (!migrationImporter.feed(offset, data, length)) return false;
+    next = migrationImporter.next();
+    return true;
+}
+
+bool BenchHost::migrationImportCommit(uint8_t confirm[32]) {
+    if (!migrationImporter.finish() || !migrationBarrier.ready()) return false;
+    const migration_state::Record& current = migrationBarrier.record();
+    if (current.phase != migration_state::Phase::IMPORTING || current.importedBytes != migration_image::SIZE) return false;
+    uint8_t actual[32], privateIdentity[framfs::KEY_BYTES], publicIdentity[64];
+    if (!migration_image::digest(memory, actual) || memcmp(actual, current.packageHash, sizeof(actual)) ||
+        !framfs::loadKey(memory, privateIdentity)) return false;
+#if defined(WICI_RNS_CORE)
+    rnscore::publicKey(privateIdentity, publicIdentity);
+#else
+    sha2::wipe(privateIdentity, sizeof(privateIdentity));
+    return false;  // legacy port images cannot publish a migrated identity
+#endif
+    sha2::wipe(privateIdentity, sizeof(privateIdentity));
+    sha2::digest(publicIdentity, sizeof(publicIdentity), actual);
+    if (memcmp(actual, current.identityDigest, sizeof(current.identityDigest))) return false;
+    journal::Journal importedJournal(memory);
+    if (!importedJournal.begin() || importedJournal.formatState() != journal::FormatState::READY ||
+        !(importedJournal.formatFlags() & journal::FORMAT_IDENTITY)) return false;
+    uint8_t confirmKey[32], packageKey[32];
+    if (!migration_crypto::derive(current.privateKey, current.peerPublic, current.mid, confirmKey, packageKey)) return false;
+    sha2::wipe(packageKey, sizeof(packageKey));
+    const bool signedOk = migration_crypto::confirmation(confirmKey, "imported", current.mid, current.packageHash, confirm);
+    sha2::wipe(confirmKey, sizeof(confirmKey));
+    if (!signedOk || !migration_image::clearLocalCaches(memory)) return false;
+    migration_state::Record done = current;
+    done.phase = migration_state::Phase::IMPORTED;
+    return migrationBarrier.save(done);
+}
+
+bool BenchHost::migrationRetire(const uint8_t mid[16], const uint8_t imported[32], uint8_t retired[32], const char*& reason) {
+    reason = "migration";
+    if (!migrationBarrier.ready()) return false;
+    migration_state::Record record = migrationBarrier.record();
+    if (memcmp(record.mid, mid, sizeof(record.mid)) ||
+        (record.phase != migration_state::Phase::EXPORT && record.phase != migration_state::Phase::RETIRED)) return false;
+    uint8_t confirmKey[32], packageKey[32];
+    if (!migration_crypto::derive(record.privateKey, record.peerPublic, record.mid, confirmKey, packageKey)) return false;
+    sha2::wipe(packageKey, sizeof(packageKey));
+    const bool valid = migration_crypto::verifyConfirmation(confirmKey, "imported", record.mid, record.packageHash, imported);
+    if (!valid) { sha2::wipe(confirmKey, sizeof(confirmKey)); reason = "signature"; return false; }
+    const bool signedOk = migration_crypto::confirmation(confirmKey, "retired", record.mid, record.packageHash, retired);
+    sha2::wipe(confirmKey, sizeof(confirmKey));
+    if (!signedOk) return false;
+    if (record.phase == migration_state::Phase::EXPORT) {
+        record.phase = migration_state::Phase::RETIRED;
+        if (!migrationBarrier.save(record)) { reason = "memory"; return false; }
+    }
+    migrationExporter.clear();
+    // This is safe to retry after a power cut: the RETIRED marker was committed
+    // before the first byte of identity or application data is erased.
+    const bool erased = stationStore.destroy(true);
+    if (!erased) reason = "memory";
+    return erased;
+}
+
+bool BenchHost::migrationActivate(const uint8_t mid[16], const uint8_t* retired, bool& duplicate,
+                                  const char*& reason) {
+    reason = "migration";
+    duplicate = false;
+    if (!migrationBarrier.ready()) return false;
+    migration_state::Record record = migrationBarrier.record();
+    if (memcmp(record.mid, mid, sizeof(record.mid))) return false;
+    if (record.phase == migration_state::Phase::NONE) {
+        if (record.flags != 1) return false;
+        duplicate = true; return true;
+    }
+    if (record.phase != migration_state::Phase::IMPORTED) return false;
+    uint8_t confirmKey[32], packageKey[32];
+    if (!retired || !migration_crypto::derive(record.privateKey, record.peerPublic, record.mid, confirmKey, packageKey)) return false;
+    sha2::wipe(packageKey, sizeof(packageKey));
+    const bool valid = migration_crypto::verifyConfirmation(confirmKey, "retired", record.mid, record.packageHash, retired);
+    sha2::wipe(confirmKey, sizeof(confirmKey));
+    if (!valid) { reason = "signature"; return false; }
+    if (!stationJournal.begin() || !stationJournal.adoptClock(record.flags)) { reason = "memory"; return false; }
+    migration_state::Record done = {};
+    done.phase = migration_state::Phase::NONE;
+    memcpy(done.mid, mid, sizeof(done.mid));
+    done.flags = 1;  // last completed activation, for a repeated USB request
+    if (!migrationBarrier.save(done)) { reason = "memory"; return false; }
+    restartSoon("migration activated: restart");
+    return true;
+}
+
+bool BenchHost::migrationAbortTarget(const uint8_t mid[16], const uint8_t* eph, uint8_t confirm[32],
+                                    bool& hasConfirm, bool& duplicate, const char*& reason) {
+    reason = "migration";
+    hasConfirm = duplicate = false;
+    if (!migrationBarrier.ready()) return false;
+    const migration_state::Record record = migrationBarrier.record();
+    if (memcmp(record.mid, mid, sizeof(record.mid))) return false;
+    if (record.phase == migration_state::Phase::NONE || record.phase == migration_state::Phase::ABORTED) {
+        // ABORTED with an identity digest is the source's recovery marker.
+        if (record.phase == migration_state::Phase::NONE ? record.flags != 2 : nonzero(record.identityDigest)) return false;
+        duplicate = true;
+        memcpy(confirm, record.packageHash, 32);
+        hasConfirm = nonzero(record.packageHash);
+        // An earlier abort without eph kept the transfer key: a source that had
+        // already exported can still get its "aborted" confirmation.
+        if (!hasConfirm && eph && nonzero(record.privateKey)) {
+            if (!signAborted(record.privateKey, eph, mid, confirm)) { reason = "signature"; return false; }
+            hasConfirm = true;
+        }
+        if (record.phase == migration_state::Phase::NONE) return true;
+    } else {
+        if (record.phase != migration_state::Phase::RECEIVING && record.phase != migration_state::Phase::IMPORTING &&
+            record.phase != migration_state::Phase::IMPORTED) return false;
+        if (!eph && record.phase != migration_state::Phase::RECEIVING) return false;
+        if (eph) {
+            if (nonzero(record.peerPublic) && memcmp(record.peerPublic, eph, 32)) { reason = "signature"; return false; }
+            if (!signAborted(record.privateKey, eph, mid, confirm)) { reason = "signature"; return false; }
+            hasConfirm = true;
+        }
+        if (!migration_image::eraseTarget(memory)) { reason = "memory"; return false; }
+        migration_state::Record aborted = {};
+        aborted.phase = migration_state::Phase::ABORTED;
+        memcpy(aborted.mid, mid, sizeof(aborted.mid));
+        // The next receive_key replaces a kept transfer key with a fresh one.
+        if (hasConfirm) memcpy(aborted.packageHash, confirm, sizeof(aborted.packageHash));
+        else memcpy(aborted.privateKey, record.privateKey, sizeof(aborted.privateKey));
+        if (!migrationBarrier.save(aborted)) { reason = "memory"; return false; }
+    }
+    migration_state::Record done = migrationBarrier.record();
+    done.phase = migration_state::Phase::NONE;
+    done.flags = 2;  // last target abort; retained HMAC makes reply idempotent
+    if (!migrationBarrier.save(done)) { reason = "memory"; return false; }
+    restartSoon("migration target aborted: restart");
+    return true;
+}
+
+bool BenchHost::migrationAbortSource(const uint8_t mid[16], const uint8_t* confirm, bool& duplicate,
+                                     const char*& reason) {
+    reason = "migration";
+    duplicate = false;
+    if (!migrationBarrier.ready()) return false;
+    migration_state::Record record = migrationBarrier.record();
+    if (memcmp(record.mid, mid, sizeof(record.mid))) return false;
+    if (record.phase == migration_state::Phase::NONE) {
+        if (record.flags != 3) return false;
+        duplicate = true; return true;
+    }
+    if (record.phase != migration_state::Phase::EXPORT && record.phase != migration_state::Phase::ABORTED) return false;
+    if (!nonzero(record.privateKey)) return false;
+    uint8_t confirmKey[32], packageKey[32];
+    if (!confirm || !migration_crypto::derive(record.privateKey, record.peerPublic, mid, confirmKey, packageKey)) return false;
+    sha2::wipe(packageKey, sizeof(packageKey));
+    const bool valid = migration_crypto::verifyConfirmation(confirmKey, "aborted", mid, record.packageHash, confirm);
+    sha2::wipe(confirmKey, sizeof(confirmKey));
+    if (!valid) { reason = "signature"; return false; }
+    if (record.phase == migration_state::Phase::EXPORT) {
+        record.phase = migration_state::Phase::ABORTED;
+        if (!migrationBarrier.save(record)) { reason = "memory"; return false; }
+    }
+    migrationExporter.clear();
+    migration_state::Record done = {};
+    done.phase = migration_state::Phase::NONE;
+    done.flags = 3;  // last source abort
+    memcpy(done.mid, mid, sizeof(done.mid));
+    if (!migrationBarrier.save(done)) { reason = "memory"; return false; }
+    restartSoon("migration source aborted: restart");
     return true;
 }
 
@@ -765,7 +1237,8 @@ void pollButtons(uint32_t now) {
     for (size_t i = 0; i < 4; ++i) {
         const bool is = pressed(buttons[i]);
         if (is == buttonSample[i] && is != buttonWas[i]) {
-            if (is) screenModel.down(static_cast<ui::Button>(i), now);
+            if (is && (migrationBarrier.permitsTransmit() || screenModel.screen() == ui::Screen::CONFIRM))
+                screenModel.down(static_cast<ui::Button>(i), now);
             else screenModel.up(static_cast<ui::Button>(i), now);
             buttonWas[i] = is;
         }
@@ -1297,6 +1770,12 @@ void beginStack() {
     // Wpis o źródle entropii przy każdym starcie z niezdrowym odczytem: także ze stacją z tożsamością
     // i bez FRAM.
     if (!entropyHealthy) bench.log(entropyTimeout ? "entropy source not responding" : "entropy source failed health test");
+    if (!migrationBarrier.permitsTransmit()) {
+        stackState = migrationBarrier.ready() ? StackState::HALTED : StackState::UNAVAILABLE;
+        applySilence();
+        bench.log("rns not started: migration barrier active or unavailable");
+        return;
+    }
     if (!framOk || !journalOk || !storeOk) {
         stackState = StackState::UNAVAILABLE;
         bench.log("rns not started: FRAM, journal or store unavailable");
@@ -1340,7 +1819,7 @@ void beginStack() {
     uint8_t seed[32];
     stationRandom(seed, sizeof(seed));
     rnsOk = rnsnode::begin(memory, benchRadio, c.ifac, static_cast<uint64_t>(counterS()) * 1000, stationStore.identitySaved(), seed, hooks);
-    drbg::wipe(seed, sizeof(seed));
+    sha2::wipe(seed, sizeof(seed));
     if (!rnsOk) {
         const bool lost = rnsnode::status().identityLost;
         stackState = lost ? StackState::IDENTITY_LOST : StackState::START_FAILED;
@@ -1349,11 +1828,88 @@ void beginStack() {
     }
     stackState = StackState::RUNNING;
     // Znacznik także po starcie z kluczem bez znacznika (zanik zasilania między zapisem klucza a znacznikiem).
-    if (!stationStore.setIdentitySaved()) bench.log("identity flag not saved");
+    // Przed znacznikiem rekordy początkowe liczników kopert: przy zapisanej tożsamości pusty obszar
+    // liczników jest utratą danych i Counter::begin go odrzuca (envelope_counter.h).
+    if (!stationStore.identitySaved() && !envelope::startCounters(memory)) bench.log("envelope counters not started");
+    else if (!stationStore.setIdentitySaved()) bench.log("identity flag not saved");
     uint32_t random = 0;
     stationRandom(reinterpret_cast<uint8_t*>(&random), sizeof(random));
     announcePolicy.begin(counterS(), random);
     bench.log(rnsnode::node() ? "rns started as receiving station node" : rnsnode::status().identityNew ? "rns started, new identity" : "rns started");
+}
+
+void beginWici() {
+    if (!numberedConfigured()) return;
+    if (!rnsOk || bench.linkFraming() != radiolink::Framing::RNODE) {
+        stackState = StackState::START_FAILED;
+        bench.log("wici link unavailable: identity or SX1262 radio");
+        return;
+    }
+    const config::Config& c = stationStore.config();
+    if (!wiciBudget.begin(c.network.id, c.network.station)) {
+        stackState = StackState::START_FAILED;
+        bench.log("wici airtime ledger unavailable");
+        return;
+    }
+    uint8_t privateKey[framfs::KEY_BYTES] = {};
+    if (!framfs::loadKey(memory, privateKey)) {
+        stackState = StackState::IDENTITY_LOST;
+        bench.log("wici identity unavailable");
+        return;
+    }
+    const char* failure = nullptr;
+    if (!wiciHopAuth.begin(c.network.id, c.network.station, privateKey, c.priorityKeys, c.priorityKeyCount)) {
+        failure = "wici neighbor authentication unavailable";
+    } else if (c.role == config::Role::NODE) {
+        wiciRoot = new (wiciRootSpace) wici_gateway::Root(memory, wiciUsb, wiciAir,
+                            c.network.id, c.network.station, c.ifac, privateKey);
+        // The root epoch is the durable start count.
+        if (!wiciRoot->begin(static_cast<uint16_t>(stationJournal.starts()))) failure = "wici root binding failed";
+    } else {
+        const uint16_t receivers[2] = {c.receivers[0].number, c.receivers[1].number};
+        uint8_t publicKeys[2][32];
+        memcpy(publicKeys[0], c.receivers[0].key, 32);
+        memcpy(publicKeys[1], c.receivers[1].key, 32);
+        const uint8_t* rootEd25519 = nullptr;
+        bool plannedKey = false, backupKey = !c.network.backupParent;
+        for (uint8_t i = 0; i < c.priorityKeyCount; ++i) {
+            if (c.priorityKeys[i].station == c.network.root) rootEd25519 = c.priorityKeys[i].ed25519;
+            plannedKey |= c.priorityKeys[i].station == c.network.parent;
+            backupKey |= c.priorityKeys[i].station == c.network.backupParent;
+        }
+        if (!rootEd25519 || !plannedKey || !backupKey) {
+            failure = "wici neighbor signing key missing from station card";
+        } else {
+            wiciShelter = new (wiciShelterSpace) wici_radio::Shelter(memory,
+                         {c.network.id, c.network.station, c.network.root,
+                          c.network.parent, c.network.backupParent}, c.network.ttl, receivers, c.ifac,
+                         privateKey, publicKeys, onWiciAdmit, nullptr,
+                         wiciAir, wiciRandom, nullptr, c.behind, c.behindCount, rootEd25519,
+                         verifyWiciBeacon, &c);
+            if (!wiciShelter->begin()) failure = "wici station durable state unavailable";
+            else wiciShelter->onDelivery(onWiciDelivery, nullptr);
+        }
+    }
+    sha2::wipe(privateKey, sizeof(privateKey));
+    if (failure) {
+        stackState = StackState::START_FAILED;
+        bench.log(failure);
+        return;
+    }
+    bench.onRawFrame(onWiciRaw, nullptr);
+    if (!bench.setRawLora(true)) {
+        stackState = StackState::START_FAILED;
+        bench.log("wici raw radio mode unavailable");
+        return;
+    }
+    wiciActive = true;
+    uint32_t jitter = wiciRandom(nullptr);
+    wiciNextBeaconMs = millis() + 1000 + jitter % 4000;
+    wiciLastBeaconMs = 0;
+    wiciAdvertisedParent = 0;
+    wiciAdvertisedRank = 0xFFFF;
+    wiciBeacons = 0;
+    bench.log(wiciRoot ? "wici root ready" : "wici station ready");
 }
 
 // Ziarno generatora stacji: 48 B entropii ze źródła sprzętowego i identyfikator układu jako nonce
@@ -1370,7 +1926,7 @@ void seedGenerator() {
     }
     platform::chipId(id);
     generator.seed(entropy, sizeof(entropy), reinterpret_cast<const uint8_t*>(id), sizeof(id));
-    drbg::wipe(entropy, sizeof(entropy));
+    sha2::wipe(entropy, sizeof(entropy));
 }
 
 }  // namespace
@@ -1420,9 +1976,15 @@ void stationSetup() {
     radiocon::start();  // LED2 świeci dopiero po zapisanym i (CC1120) skalibrowanym P1
     radiocon::startRxTask();  // stacja L0: odbiór w tle od tej chwili; dalej pętla dotyka układu pod blokadą
     framOk = memory.identify().part != fram::Part::UNKNOWN;
-    beginJournal();
+    // The marker must be read before the journal clock, debt, event log or
+    // Store::begin() can write to a frozen export/import snapshot.
+    const bool migrationKnown = framOk && migrationBarrier.begin();
+    const bool normalBoot = migrationKnown && migrationBarrier.permitsTransmit();
+    if (migrationKnown && !normalBoot) bench.prep = true;  // resume frozen transfer without a journal write
+    if (normalBoot) beginJournal();
+    else if (framOk) (void)stationJournal.begin();  // read-only, for explicit ZNISZCZ DANE recovery
     ledWrite(board::LED_FRAM, framOk && journalOk);  // LED3 świeci dopiero z działającym dziennikiem
-    if (journalOk) {
+    if (normalBoot && journalOk) {
         stationStore.now(serviceS());
         const store::Begin begun = stationStore.begin();
         storeOk = begun == store::Begin::OK || begun == store::Begin::NEW;
@@ -1437,8 +1999,11 @@ void stationSetup() {
         snprintf(text, sizeof(text), "store: %s", store::beginName(begun));
         bench.log(text);
     }
+    if (framOk && !migrationKnown) bench.log("migration barrier corrupt or unavailable");
+    applySilence();
     protocol.begin();
     beginStack();
+    beginWici();
     if (storeOk && !nodeRole()) app.stationEvent(store::RESTART, stationJournal.starts());
     bench.onDatagram(onDatagram, nullptr);
     bench.onTxDone(onTxDone, nullptr);
@@ -1527,10 +2092,35 @@ void stationLoop() {
     // Także przy układzie uznanym za niesprawny w trakcie nośnej albo serii (np. polecenie RADIO):
     // koniec TXCW i TXPKT po czasie nie może czekać na odpowiedź układu.
     if (radiocon::ok() || bench.transmitting()) bench.poll();
-    if (rnsOk) {
+    if (rnsOk && !numberedConfigured()) {
         rnsnode::loop(now);
         pollAnnounce();
     }
+    // WICI-Link durable timestamps use the monotonic counter: serviceS() can step back after a restart.
+    if (wiciActive && wiciShelter) wiciShelter->poll(now, counterS());
+    if (wiciActive && wiciShelter && wiciShelter->routes().parent() &&
+        (wiciShelter->routes().parent() != wiciAdvertisedParent ||
+         wiciShelter->routes().rank() != wiciAdvertisedRank)) {
+        const uint32_t earliest = wiciLastBeaconMs ? wiciLastBeaconMs + 60000u : now + 1000u;
+        if (static_cast<int32_t>(wiciNextBeaconMs - earliest) > 0) wiciNextBeaconMs = earliest;
+    }
+    if (wiciActive && linkAuto && !bench.silence && !bench.transmitting() &&
+        static_cast<int32_t>(now - wiciNextBeaconMs) >= 0) {
+        const bool accepted = wiciRoot ? wiciRoot->beacon() : wiciShelter && wiciShelter->beacon();
+        if (accepted) {
+            wiciLastBeaconMs = now;
+            if (wiciShelter) {
+                wiciAdvertisedParent = wiciShelter->routes().parent();
+                wiciAdvertisedRank = wiciShelter->routes().rank();
+            }
+            ++wiciBeacons;
+            uint32_t jitter = wiciRandom(nullptr);
+            wiciNextBeaconMs = now + (wiciBeacons < 3 ? 120000u :
+                                         1440000u + jitter % 720001u);
+        } else wiciNextBeaconMs = now + 5000;
+    }
+    if (wiciActive && ((wiciRoot && !wiciRoot->ready()) ||
+                       (wiciShelter && !wiciShelter->ready()))) stackState = StackState::START_FAILED;
     static uint32_t lastApp = 0;
     if (storeOk && now - lastApp >= APP_POLL_MS) {  // przegląd rejestru co 100 ms, nie w każdym obiegu
         lastApp = now;
@@ -1560,9 +2150,15 @@ void stationLoop() {
     const bool dataOpen = SerialData;
     const bool kiss = kissMode();
     if (dataOpen != dataWas || kiss != kissWas) {
-        if (kissWas) rnsnode::usbOpen(false);
+        if (kissWas) {
+            if (wiciRoot) wiciRoot->setUsbOpen(false);
+            else rnsnode::usbOpen(false);
+        }
         else if (dataWas) protocol.disconnected();
-        if (kiss) rnsnode::usbOpen(dataOpen);
+        if (kiss) {
+            if (wiciRoot) wiciRoot->setUsbOpen(dataOpen);
+            else rnsnode::usbOpen(dataOpen);
+        }
         else if (dataOpen) protocol.connected(now);
         dataWas = dataOpen;
         kissWas = kiss;
@@ -1573,9 +2169,18 @@ void stationLoop() {
             while (SerialData.available()) {
                 size_t n = 0;
                 while (n < sizeof(chunk) && SerialData.available()) chunk[n++] = static_cast<char>(SerialData.read());
-                rnsnode::usbFeed(reinterpret_cast<const uint8_t*>(chunk), n, now);
+                if (wiciRoot) wiciUsb.feed(reinterpret_cast<const uint8_t*>(chunk), n, now);
+                else rnsnode::usbFeed(reinterpret_cast<const uint8_t*>(chunk), n, now);
             }
-            drain(SerialData, kissOutput);
+            if (wiciRoot) {
+                const uint8_t* frame = nullptr;
+                size_t length = 0;
+                while (wiciUsb.peek(frame, length)) {
+                    wiciRoot->host(frame, length, now, counterS());
+                    wiciUsb.pop();
+                }
+                drain(SerialData, wiciUsb);
+            } else drain(SerialData, kissOutput);
         } else {
             // Bajt po bajcie, dopóki odpowiedź zmieści się w kolejce: koniec wiersza może dać do dwóch wierszy.
             while (protocol.acceptsInput() && SerialData.available()) {
@@ -1590,7 +2195,8 @@ void stationLoop() {
     if (dataOpen && !kiss) drain(SerialData, protocol);
     else drain(Serial, protocol);
     if (nodeRole()) {
-        const uint32_t packets = rnsnode::usbStatus().counters.fromComputer;
+        const uint32_t packets = wiciRoot ? wiciUsb.counters().fromComputer :
+                                             rnsnode::usbStatus().counters.fromComputer;
         if (packets != computerPackets) {
             computerPackets = packets;
             computerHeard = true;

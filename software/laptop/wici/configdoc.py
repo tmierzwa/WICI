@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""The `configure` document (docs/spec/protokol-usb.md, "Dokument configure"): normalising and checking.
+"""The `configure` document (docs/spec/usb-protocol.md, "Dokument configure"): normalising and checking.
 
 The station checks the document again and has the last word; this check gives the person preparing
 the station a precise message per field before anything is sent. Limits follow firmware/src/config.h,
@@ -17,10 +17,28 @@ SA1_MAX = 256          # treść SA1 po kodowaniu (docs/spec/oprogramowanie.md);
 ADDRESSES, ADDRESS_MAX = 8, 64
 PHRASES, PHRASE_MAX = 11, 96
 STATIONS_MAX = 1000
+PRIORITY_KEYS_MAX = 50
+BEHIND_MAX = 128    # wpisy `behind` we wszystkich `priority_keys` razem (firmware/src/config.h)
+VALUE_MAX = 640     # pole albo element listy w RAM stacji, z zapasem na koniec napisu (firmware/src/config.cpp)
+TTL_DEFAULT = 7     # `network.ttl`: limit skoków własnych ramek WICI-Link, 1–15 (firmware/src/config.h)
 PROFILES = ("lora-sf7", "p1")
 REJECTED_CATEGORIES = ("Cc", "Cf", "Cs", "Co", "Cn", "Zl", "Zp")
 UNICODE_VERSION = "16.0.0"   # tabele Unicode oprogramowania stacji (firmware/src/unicode_tables.h)
 HEX = re.compile(r"[0-9a-f]*")
+# Small-order X25519 u-coordinates and Ed25519 points, little-endian with bit 255 cleared
+# (firmware/src/config.cpp, SMALL_ORDER): a weak key gives no shared secret, and with a
+# small-order Ed25519 key a forged signature verifies for every message.
+SMALL_ORDER = frozenset(bytes.fromhex(h) for h in (
+    "00" * 32,
+    "01" + "00" * 31,
+    "e0eb7a7c3b41b8ae1656e3faf19fc46ada098deb9c32b1fd866205165f49b800",
+    "5f9c95bca3508c24b1d0b1559c83ef5b04445cc4581c8e86d8224eddd09f1157",
+    "ec" + "ff" * 30 + "7f",
+    "ed" + "ff" * 30 + "7f",
+    "ee" + "ff" * 30 + "7f",
+    "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a",
+    "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05",
+))
 SPACES = re.compile(r"\s+")
 
 
@@ -84,13 +102,35 @@ def normalize(doc):
     if isinstance(receiver, dict):
         out["receiver"] = {k: ({f: v.strip().lower() if isinstance(v, str) else v for f, v in c.items()}
                                if isinstance(c, dict) else c) for k, c in receiver.items()}
+    if isinstance(out.get("priority_keys"), list):
+        out["priority_keys"] = [{**entry, **{field: entry[field].strip().lower()
+                                                 for field in ("ed25519", "x25519")
+                                                 if isinstance(entry.get(field), str)}}
+                                if isinstance(entry, dict) else entry
+                                for entry in out["priority_keys"]]
+    if isinstance(out.get("network"), dict):
+        out["network"] = {**out["network"], "ttl": out["network"].get("ttl", TTL_DEFAULT)}
     if out.get("role") == "wezel":
-        out = {k: out[k] for k in ("role", "ifac", "radio") if k in out}
+        out = {k: out[k] for k in ("role", "ifac", "radio", "network", "priority_keys") if k in out}
     return out
 
 
 def _hex(value, length):
     return isinstance(value, str) and len(value) == length and HEX.fullmatch(value) is not None
+
+
+def small_order(key):
+    """True for a 32-byte X25519 or Ed25519 public key of small order (bit 255 ignored)."""
+    return bytes(key[:31]) + bytes([key[31] & 0x7F]) in SMALL_ORDER
+
+
+def _key(value):
+    """A 64-hex-digit public key that is not of small order."""
+    return _hex(value, 64) and not small_order(bytes.fromhex(value))
+
+
+def _number(value, zero=False):
+    return type(value) is int and (0 if zero else 1) <= value <= 0xFFFE
 
 
 def check(doc):
@@ -99,7 +139,7 @@ def check(doc):
         return [("", "dokument nie jest obiektem JSON")]
     problems = []
     role = doc.get("role")
-    allowed = {"role", "ifac", "radio"} | ({"addresses", "receiver", "stations", "phrases"} if role == "stacja" else set())
+    allowed = {"role", "ifac", "radio", "network", "priority_keys"} | ({"addresses", "receiver", "stations", "phrases"} if role == "stacja" else set())
     for key in sorted(set(doc) - allowed):
         problems.append((key, "pole nieznane albo niepotrzebne dla tej roli"))
     if role not in ("stacja", "wezel"):
@@ -109,6 +149,53 @@ def check(doc):
     radio = doc.get("radio")
     if not (isinstance(radio, dict) and set(radio) == {"profile"} and radio["profile"] in PROFILES):
         problems.append(("radio", "wybierz profil radiowy"))
+    network = doc.get("network")
+    if network is not None:
+        required = {"id", "station", "root", "parent", "backup_parent", "receiver_main", "receiver_backup"}
+        ttl = network.get("ttl", TTL_DEFAULT) if isinstance(network, dict) else None
+        if not isinstance(network, dict) or set(network) - {"ttl"} != required or any(
+                not _number(network.get(field), field in ("parent", "backup_parent")) for field in required) or (
+                type(ttl) is not int or not 1 <= ttl <= 15):
+            problems.append(("network", "niepoprawne numery sieci, stacji, odbiorców lub tras"))
+        else:
+            n = network
+            distinct = len({n["station"], n["root"], n["receiver_main"], n["receiver_backup"]}) == 4 if role == "stacja" else len({n["root"], n["receiver_main"], n["receiver_backup"]}) == 3
+            route_ok = ((n["station"] == n["root"] and n["parent"] == n["backup_parent"] == 0)
+                        if role == "wezel" else
+                        (n["station"] != n["root"] and n["parent"] not in (0, n["station"], n["receiver_main"], n["receiver_backup"])
+                         and n["backup_parent"] not in (n["station"], n["receiver_main"], n["receiver_backup"])
+                         and (n["backup_parent"] == 0 or n["backup_parent"] != n["parent"])))
+            if not distinct or not route_ok:
+                problems.append(("network", "numery muszą być rozłączne, a trasa prowadzić do innego węzła"))
+    priority_keys = doc.get("priority_keys", [])
+    if "network" in doc and not priority_keys:
+        problems.append(("priority_keys", "numbered stations need neighbor authentication keys"))
+    elif priority_keys or "priority_keys" in doc:
+        seen = set()
+        if network is None or not isinstance(priority_keys, list) or len(priority_keys) > PRIORITY_KEYS_MAX:
+            problems.append(("priority_keys", "niepoprawna lista kluczy sąsiadów"))
+        else:
+            behind_total = 0
+            for i, entry in enumerate(priority_keys):
+                number = entry.get("id") if isinstance(entry, dict) else None
+                own = (network.get("station"), network.get("receiver_main"), network.get("receiver_backup")) \
+                    if isinstance(network, dict) else ()
+                behind = entry.get("behind", []) if isinstance(entry, dict) else None
+                if (not isinstance(entry, dict) or set(entry) - {"behind"} != {"id", "ed25519", "x25519"} or
+                        not _number(number) or not _key(entry.get("ed25519")) or
+                        not _key(entry.get("x25519")) or number in seen or number in own):
+                    problems.append((f"priority_keys.{i}", "invalid or repeated station number or public key"))
+                elif (not isinstance(behind, list) or
+                      any(not _number(s) or s == number or s in own for s in behind) or
+                      len(set(behind)) != len(behind) or
+                      len(json.dumps(entry, separators=(",", ":")).encode()) >= VALUE_MAX):
+                    problems.append((f"priority_keys.{i}.behind",
+                                     "stacje za sąsiadem: różne numery, inne niż sąsiad, ta stacja i odbiorcy"))
+                else:
+                    seen.add(number)
+                    behind_total += len(behind)
+            if behind_total > BEHIND_MAX:
+                problems.append(("priority_keys", f"najwyżej {BEHIND_MAX} stacji za sąsiadami razem"))
     if role != "stacja":
         return problems
     addresses = doc.get("addresses")
@@ -140,14 +227,24 @@ def check(doc):
     else:
         for which in ("main", "backup"):
             card = receiver[which]
-            if not (isinstance(card, dict) and set(card) == {"lxmf", "key"}):
-                problems.append((f"receiver.{which}", "tożsamość ma pola lxmf i key"))
+            expected = {"lxmf", "key", "id", "net_id", "x25519"} if network is not None else {"lxmf", "key"}
+            if not (isinstance(card, dict) and set(card) == expected):
+                problems.append((f"receiver.{which}", "niepoprawne pola tożsamości odbiorcy"))
             elif not _hex(card["key"], 128):
                 problems.append((f"receiver.{which}.key", "klucz publiczny to 128 cyfr szesnastkowych"))
+            elif not _key(card["key"][:64]) or not _key(card["key"][64:]):
+                problems.append((f"receiver.{which}.key", "klucz o małym rzędzie: błędny albo podstawiony"))
             elif not _hex(card["lxmf"], 32):
                 problems.append((f"receiver.{which}.lxmf", "adres LXMF to 32 cyfry szesnastkowe"))
             elif destination(bytes.fromhex(card["key"]), "lxmf.delivery").hex() != card["lxmf"]:
                 problems.append((f"receiver.{which}.lxmf", "adres LXMF nie należy do tego klucza (błąd przepisania?)"))
+            elif network is not None and (not _hex(card["x25519"], 64) or card["x25519"] != card["key"][:64]):
+                problems.append((f"receiver.{which}.x25519", "klucz koperty nie należy do tożsamości odbiorcy"))
+            elif network is not None and (not _number(card["id"]) or not _number(card["net_id"]) or
+                                          not isinstance(network, dict) or
+                                          card["net_id"] != network.get("id") or
+                                          card["id"] != network.get("receiver_" + which)):
+                problems.append((f"receiver.{which}.id", "numer i sieć muszą zgadzać się z planem"))
         if not any(f.startswith("receiver") for f, _ in problems) and receiver["main"]["lxmf"] == receiver["backup"]["lxmf"]:
             problems.append(("receiver.backup", "tożsamość zapasowa musi być inna niż główna"))
     return problems

@@ -21,7 +21,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 from .. import VERSION, configdoc, database, web
-from . import kopie, nosnik, wysylka, wzorzec, zamkniecie
+from . import bearers, kopie, nosnik, wysylka, wzorzec, zamkniecie
 
 LOCK_S = 300
 STATIC = {"/": ("index.html", "text/html; charset=utf-8"), "/app.js": ("app.js", "text/javascript; charset=utf-8"),
@@ -264,6 +264,13 @@ class Dyzur:
             key = lxmf = b""
         if len(key) != 64 or nosnik.lxmf_address(key) != lxmf:
             raise ValueError("karta stacji uszkodzona: adres nie należy do klucza")
+        numbered = any(name in card for name in ("net_id", "id", "x25519"))
+        if numbered:
+            net_id, station_id = card.get("net_id"), card.get("id")
+            if (type(net_id) is not int or type(station_id) is not int or
+                    not 1 <= net_id <= 0xFFFE or not 1 <= station_id <= 0xFFFE or
+                    card.get("x25519") != key[:32].hex()):
+                raise ValueError("karta stacji ma niespójny numer sieci albo klucz koperty")
         typed = "".join(str(body.get("fingerprint", "")).split()).lower()
         if typed != fingerprint(key).replace(" ", ""):
             raise ValueError("odcisk nie zgadza się z kartą: porównaj z ekranem stacji")
@@ -271,8 +278,17 @@ class Dyzur:
         name = station_name(key)
 
         def add(store):
-            store.add_trusted(lxmf, key, (user, other))
+            if numbered:
+                existing = store.db.execute("SELECT source, public_key FROM numery WHERE net_id=? AND station=?",
+                                            (net_id, station_id)).fetchone()
+                other_binding = store.db.execute("SELECT station, public_key FROM numery WHERE net_id=? AND source=?",
+                                                 (net_id, lxmf)).fetchone()
+                if (existing and existing != (lxmf, key)) or (other_binding and other_binding != (station_id, key)):
+                    raise ValueError("numer stacji jest już związany z innym kluczem lub adresem")
             with store.db:
+                store.add_trusted_in_transaction(lxmf, key, (user, other))
+                if numbered:
+                    store.db.execute("INSERT OR IGNORE INTO numery VALUES(?,?,?,?)", (net_id, station_id, lxmf, key))
                 store.db.execute("INSERT OR REPLACE INTO karty VALUES(?,?,?,?)",
                                  (lxmf, name, json.dumps(address, ensure_ascii=False), fingerprint(key)))
             self._logged(store, user, "zaufana_dodana", f"zgoda {user} i {other}", lxmf)
@@ -285,8 +301,37 @@ class Dyzur:
 
         def remove(store):
             store.remove_trusted(source)
+            store.db.execute("DELETE FROM bearer_route WHERE source=?", (source,))
+            store.db.execute("DELETE FROM bearer_override WHERE source=?", (source,))
+            self.p.last_bearer.pop(source, None)
+            self.p.bearer_override.pop(source, None)
             self._logged(store, user, "zaufana_usunieta", "", source)
         self.p.call(remove)
+        return {"ok": True}
+
+    def bearer(self, body):
+        """Operator override for the reply path of one trusted station."""
+        user = self.current()
+        source, chosen = _source(body), _text(body, "bearer", 32)
+        if not isinstance(self.stos, bearers.Bearers) or chosen != "auto" and chosen not in self.stos.bindings:
+            raise ValueError("nieznany nośnik")
+
+        def change(store):
+            if not store.db.execute("SELECT 1 FROM trusted WHERE source=?", (source,)).fetchone():
+                raise ValueError("stacja nie jest zaufana")
+            if chosen == "wici" and not store.db.execute(
+                    "SELECT 1 FROM numery WHERE source=? AND net_id=?",
+                    (source, self.stos.bindings["wici"].network)).fetchone():
+                raise ValueError("stacja nie ma numeru WICI-Link w tej sieci")
+            if chosen == "auto":
+                store.db.execute("DELETE FROM bearer_override WHERE source=?", (source,))
+                self.p.bearer_override.pop(source, None)
+            else:
+                store.db.execute("INSERT OR REPLACE INTO bearer_override VALUES(?,?)", (source, chosen))
+                self.p.bearer_override[source] = chosen
+            self._logged(store, user, "nosnik_odpowiedzi", chosen, source)
+
+        self.p.call(change)
         return {"ok": True}
 
     # ---- węzeł, kopie, zmiana -----------------------------------------------------------------
@@ -493,7 +538,9 @@ class Dyzur:
             removed = [{"source": s.hex(), "station": names.get(s, (s.hex()[:8],))[0], "messages": n}
                        for s, n in db.execute("SELECT source, messages FROM removed WHERE messages > 0")]
             trusted = [{"source": s.hex(), "station": names.get(s, (s.hex()[:8], []))[0],
-                        "address": names.get(s, ("", []))[1]} for (s,) in db.execute("SELECT source FROM trusted")]
+                        "address": names.get(s, ("", []))[1], "bearer": self.p.last_bearer.get(s),
+                        "override": self.p.bearer_override.get(s)}
+                       for (s,) in db.execute("SELECT source FROM trusted")]
             waiting, oldest = db.execute("SELECT count(*), min(first_try) FROM outbox WHERE done=0").fetchone()
             log = [{"at": a, "account": u, "op": o, "detail": d,
                     "station": names[s][0] if s in names else "", "number": short_number(m) if m else ""}
@@ -515,6 +562,7 @@ class Dyzur:
         open_reports = [r for r in reports if r["state"] not in (3, 5, 6)]
         return {
             "reports": reports, "tests": tests, "quarantine": quarantine, "removed": removed, "trusted": trusted,
+            "bearers": list(self.stos.bindings) if isinstance(self.stos, bearers.Bearers) else [],
             "node": {**node, "in_flight": in_flight, "waiting": waiting - in_flight if waiting else 0,
                      "oldest_s": None if oldest is None else now - oldest,
                      "diagnostics": self.wezel is not None, "info": self.wezel.status() if self.wezel else None},
@@ -545,6 +593,7 @@ ROUTES = {
     "/api/operator/quarantine": lambda d, b: d.quarantine(b),
     "/api/operator/trust": lambda d, b: d.trust(b),
     "/api/operator/trust/remove": lambda d, b: d.untrust(b),
+    "/api/operator/bearer": lambda d, b: d.bearer(b),
     "/api/operator/announce": lambda d, b: d.announce(b),
     "/api/operator/backup": lambda d, b: d.backup(b),
     "/api/operator/handover": lambda d, b: d.handover(b),

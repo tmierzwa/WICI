@@ -141,6 +141,14 @@ public:
     // na układzie z łączem P1.
     const char* linkRxStart();
     const char* linkSend(const uint8_t* data, size_t length, bool stack);
+    // Select one raw SX1262 frame per linkSend before starting reception. The
+    // caller authenticates frames; CAD, silence and durable airtime debt stay here.
+    bool setRawLora(bool enabled);
+    bool rawLora() const { return rawLora_; }
+    // An already authenticated 27 B HACK may interrupt a queued DATA. It uses
+    // CAD without the 50 ms window and adds its airtime to outstanding debt.
+    // Caller provides the radio receive-end timestamp for the 200 ms limit.
+    bool linkSendHack(const uint8_t* frame, size_t length, uint32_t receivedMs);
     const char* p1rxStart();
     const char* p1send(const uint8_t* data, size_t length, bool stack = false);
     void printLink();
@@ -152,6 +160,11 @@ public:
     uint32_t maxDebtMs() const { return radio_.seriesMaxMs() * radiolink::DEBT_FACTOR; }
     // Złożony datagram łącza i koniec nadawania (ok = seria wyszła) dla warstwy aplikacji.
     void onDatagram(void (*handler)(const uint8_t* data, size_t length, void* context), void* context) { datagramHandler_ = handler; datagramContext_ = context; }
+    // Raw WICI frames keep the receive-end timestamp so HACK can enforce its
+    // deadline. This callback runs before diagnostic output on the loop task.
+    void onRawFrame(void (*handler)(const radiolink::Frame&, void*), void* context) {
+        rawFrameHandler_ = handler; rawFrameContext_ = context;
+    }
     void onTxDone(void (*handler)(bool ok, void* context), void* context) { txDoneHandler_ = handler; txDoneContext_ = context; }
     const char* foff(int32_t hz);
     // Tryb EMC: start (tryb przygotowania, zapis w dzienniku przed pierwszą ramką), wznowienie po
@@ -257,6 +270,7 @@ private:
 #endif
     loraframe::Assembler loraAssembler_;
     loraframe::Splitter splitter_;  // połówka nagłówka ostatniego nadanego datagramu dzielonego
+    bool rawLora_ = false;
     LinkCounters link_;
 
     // Nadawanie łącza: oczekiwanie na dług, CCA, odroczenie, seria ramek.
@@ -299,6 +313,8 @@ private:
     size_t eventCount_ = 0;
     void (*datagramHandler_)(const uint8_t*, size_t, void*) = nullptr;
     void* datagramContext_ = nullptr;
+    void (*rawFrameHandler_)(const radiolink::Frame&, void*) = nullptr;
+    void* rawFrameContext_ = nullptr;
     void (*txDoneHandler_)(bool, void*) = nullptr;
     void* txDoneContext_ = nullptr;
 };

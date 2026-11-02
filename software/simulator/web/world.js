@@ -4,7 +4,7 @@
 // biegną krokami po QUANTUM_US czasu wspólnego; ramka nadana w kroku trafia do innych odbiorników z mocą
 // = moc nadawania − tłumienie trasy + zanik (rozkład normalny, FADING_DB). Przygotowanie stacji i węzła
 // idzie jak z laptopa przygotowania: przytrzymanie przycisku przygotowania, protokół USB "usb":2
-// (`configure`), ponowne przytrzymanie (docs/spec/protokol-usb.md).
+// (`configure`), ponowne przytrzymanie (docs/spec/usb-protocol.md).
 import { Device, encodeCommand } from "./device.js";
 import createPost from "./wici-post.mjs";
 
