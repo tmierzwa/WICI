@@ -5,7 +5,9 @@
 #pragma once
 
 #include <errno.h>
+#include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 namespace cmdargs {
@@ -40,6 +42,26 @@ inline bool parseFlag(const char* text, bool& out) {
     if (!parseUint(text, 0, 1, value)) return false;
     out = value != 0;
     return true;
+}
+
+// REQ <n> [<text bytes>] (bench requests, main.cpp): n requests, 1..REQUEST_MAX, and the
+// exact length of their text, 0..textMax; without it the text is only the label "REQ <k>".
+constexpr uint32_t REQUEST_MAX = 100;
+inline bool parseRequest(char* const words[], size_t n, uint32_t textMax, uint32_t& count, int32_t& textBytes) {
+    uint32_t bytes = 0;
+    if (n < 1 || n > 2 || !parseUint(words[0], 1, REQUEST_MAX, count) || (n == 2 && !parseUint(words[1], 0, textMax, bytes)))
+        return false;
+    textBytes = n == 2 ? static_cast<int32_t>(bytes) : -1;
+    return true;
+}
+
+// Text of request k: the label "REQ <k>" padded with '.' or cut to textBytes (-1: the label as is);
+// size must exceed textBytes and hold the label.
+inline void requestText(uint32_t k, int32_t textBytes, char* out, size_t size) {
+    const int label = snprintf(out, size, "REQ %lu", static_cast<unsigned long>(k));
+    if (textBytes < 0 || label < 0 || static_cast<size_t>(textBytes) >= size) return;
+    for (int32_t i = label; i < textBytes; ++i) out[i] = '.';
+    out[textBytes] = '\0';
 }
 
 }  // namespace cmdargs

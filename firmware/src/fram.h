@@ -17,16 +17,10 @@ constexpr uint8_t OP_RDSR = 0x05;
 constexpr uint8_t OP_READ = 0x03;
 constexpr uint8_t OP_WRITE = 0x02;
 constexpr uint8_t OP_RDID = 0x9F;
-constexpr uint32_t SIZE = 512UL * 1024;
-
-struct Id {
-    uint8_t bytes[ID_BYTES];
-    uint8_t status;
-    Part part;  // UNKNOWN: brak układu albo inna pamięć
-};
 
 class Memory : public journal::Storage {
 public:
+    static constexpr bool VOLATILE = false;  // INFO fram_volatile, FRAM volatile
     Memory(SPIClass& spi, uint8_t cs, uint32_t hz);
     void begin();
     Id identify();
