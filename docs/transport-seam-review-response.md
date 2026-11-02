@@ -1,6 +1,6 @@
 # Transport seam review response
 
-Status: follow-up to `docs/transport-seam-review.md`, 2026-11-01. D21 is not accepted; the bench trial on RAK4631 and the prototype decides it.
+Status: follow-up to `docs/transport-seam-review.md`, 2026-11-01, with the DATA signature decision of 2026-11-02 (below). D21 is not accepted; the bench trial on RAK4631 and the prototype decides it.
 
 ## Findings
 
@@ -21,15 +21,15 @@ Also: counter, replay and fragment records bind to a key fingerprint; unreadable
 
 ## Airtime after the fixes
 
-Unicast DATA = 11 B header + envelope + 64 B origin signature + 8 B network MAC + 8 B hop tag, so 91 B plus the envelope (25 B overhead) and at most 164 B of envelope (`firmware/src/wici_link.h`). HACK is 27 B, BEACON 156 B. Model: `wici_link` in `software/reference/obliczenia.py`, SF7/125 kHz, CR 4/5, preamble 24, 3 ms ramp per frame, relay channel time 13 × TX including HACKs; 95% hop success means 1.0525 transmissions per frame.
+In v2, unicast DATA = 11 B header + envelope + 64 B origin signature + 8 B network MAC + 8 B hop tag, so 91 B plus the envelope (25 B overhead) and at most 164 B of envelope. v3 (2026-11-02) drops the signature: 27 B plus the envelope, at most 228 B (`firmware/src/wici_link.h`). HACK is 27 B, BEACON 156 B. Model: `wici_link` in `software/reference/obliczenia.py`, SF7/125 kHz, CR 4/5, preamble 24, 3 ms ramp per frame, relay channel time 13 × TX including HACKs; 95% hop success means 1.0525 transmissions per frame.
 
 | 50 requests through one relay, minutes | buttons only (106 B) | typical (174 B) | largest (222 B) | largest, 95% hop success | largest, with read and decision |
 |---|---|---|---|---|---|
-| signature on every DATA (implemented) | 8.97 | 13.36 | 14.14 | 14.88 | 22.57 |
-| signature once per SA1 message | 8.97 | 12.86 | 13.62 | 14.33 | 22.05 |
-| hop tag only, K1 quota per neighbour | 6.98 | 8.09 | 11.13 | 11.71 | 17.56 |
+| signature on every DATA (v2, replaced) | 8.97 | 13.36 | 14.14 | 14.88 | 22.57 |
+| signature once per SA1 message (not implemented; no longer in the model) | 8.97 | 12.86 | 13.62 | 14.33 | 22.05 |
+| hop tag only, K1 quota per neighbour (v3, implemented 2026-11-02) | 6.98 | 8.09 | 11.13 | 11.71 | 17.56 |
 
-The implemented design meets the W10 gate (<15 min) only with 0.12 min margin at 95% hop success, before collisions, CCA deferrals and a busy root. That is not a credible margin. Other budgets hold: mixed trial (55 revisions) 24.8 min of 60; hostile node (20 largest requests, one 255 B K2 frame before each relayed K1 frame) 11.1 min, 11.7 min at 95% and 19.4 min at 50% of 30; cold start of 50 stations 2.1 min of airtime, 5% of the TEST window, with 22% of it for the relay before the receiver.
+The v2 design met the W10 gate (<15 min) only with 0.12 min margin at 95% hop success, before collisions, CCA deferrals and a busy root. That is not a credible margin. Other budgets held for v2: mixed trial (55 revisions) 24.8 min of 60; hostile node (20 largest requests, one 255 B K2 frame before each relayed K1 frame) 11.1 min, 11.7 min at 95% and 19.4 min at 50% of 30; cold start of 50 stations 2.1 min of airtime, 5% of the TEST window, with 22% of it for the relay before the receiver. For v3 the model gives 19.3 min for the mixed trial, 10.4 min at 95% and 17.3 min at 50% for the hostile node, and 1.8 min for the cold start of 50 stations.
 
 ## Origin signature or hop tag
 
@@ -39,7 +39,9 @@ Keys come from USB-provisioned cards, and every station holds the shared network
 - The origin signature additionally stops a captured station from claiming K1 or redirecting down-routes under another station's number at relays two or more hops away. At its own parent, one K1 slot per authenticated neighbour gives the same bound as one slot per verified origin today.
 - In the pilot plan (at most two hops to the receiver) every relay sees origins as direct neighbours, so the signature adds nothing that a per-neighbour K1 quota and down-routes learned only for the neighbour itself or stations the network plan places behind it do not give. Signing only K1 frames changes nothing, because all W10 traffic is K1.
 
-Recommendation: keep the hop tag and the BEACON signatures, remove the origin signature from DATA, and add the per-neighbour K1 quota and plan-bound down-route learning. This restores 3.3 min (22%) of W10 margin at 95% hop success and removes Ed25519 verification from the relay. The protocol is unchanged in this branch; the D21 row in chapter 08 records the question as open for the coordinator.
+Recommendation: keep the hop tag and the BEACON signatures, remove the origin signature from DATA, and add the per-neighbour K1 quota and plan-bound down-route learning. This restores 3.3 min (22%) of W10 margin at 95% hop success and removes Ed25519 verification from the relay.
+
+**Decision, 2026-11-02: option D, implemented as WICI-Link v3.** DATA carries no origin signature; the envelope limit is 228 B and a typical REQUEST is one 226 B frame. A relay classifies a DATA frame as K1 when its envelope is addressed to or from an active receiver and its link source passed the hop tag, with at most one pending K1 slot per neighbour (K2 holds at most two of four slots). The deferred verification, the K2-then-upgrade path and re-verification after restart are removed; the first retry after a K1 admission still gets its HACK. A relay learns that station S is reached via neighbour N only if S is N or the configure document lists S in N's `priority_keys` entry under `behind`. The wire version and the link key label are v3, so v2 frames are refused. Residual risk: a captured station degrades traffic through its parent and down-routes to stations the plan places behind it, but cannot forge or block traffic at relays beyond its parent. If chains longer than the pilot's two hops are planned after T5, a signature can return as a K1 credential beyond the first hop.
 
 ## Verification
 
@@ -50,4 +52,4 @@ Native checks cover a valid pairwise tag, a shared-key rewrite with an invalid h
 1. The bench trial on RAK4631 and the prototype: W10, the hostile-node test with hop tags and K1 retry, HACK within 200 ms, power loss, energy and RAM (`docs/spec/transport.md`, "Warunek przyjęcia"). Two Wio SX1262/XIAO boards passed only a short radio check.
 2. Backup receiver activation still needs a durable counter lifecycle, and the real `BenchHost` migration flow has no host harness. A torn barrier write now falls back to the last complete copy (second review).
 3. DCO sign-offs for the historical branch commits must come from their authors.
-4. The decision on the DATA origin signature (above).
+4. ~~The decision on the DATA origin signature~~: decided 2026-11-02, option D (above).
