@@ -1283,6 +1283,18 @@ class PanelTest(StationTestCase):
         self.reception.call(numbered)
         self.assertEqual(self.d.view()["envelopes"]["stations"], {"100:4": "WICI-N4"})
 
+    def test_report_received_while_the_panel_is_idle_raises_the_version(self):
+        # Bez żadnego POST z panelu: wersja rośnie, bo zmieniły się dane, więc otwarty panel rysuje zgłoszenie.
+        web = panel.Panel(self.d)
+        first = web.queue(-1)
+        self.assertEqual(web.queue(-1)["v"], first["v"])   # te same dane, ta sama wersja
+        self.report()
+        after = web.queue(-1)
+        self.assertGreater(after["v"], first["v"])
+        self.assertEqual(len(after["reports"]), len(first["reports"]) + 1)
+        self.now += 30   # same liczniki sekund nie podnoszą wersji
+        self.assertEqual(web.queue(-1)["v"], after["v"])
+
     def test_operator_can_override_only_a_trusted_station_reply_bearer(self):
         class Link(FakeStack):
             address = bytes(16)
@@ -1466,7 +1478,7 @@ class PanelTest(StationTestCase):
             self.assertEqual(status, 303)
             self.assertEqual(request_("GET", f"/start?t={ticket}")[0], 403)   # odnośnik działa raz
             auth = {"Cookie": cookie.split(";")[0]}
-            for path in ("/", "/app.js", "/app.css", "/ui/app.css", "/ui/logo.svg", "/ui/logo-dark.svg"):   # wygląd wspólny z wici/ui
+            for path in ("/", "/app.js", "/app.css", "/ui/app.css", "/ui/logo.svg", "/ui/logo-dark.svg", "/ui/dialog.js"):   # wygląd wspólny z wici/ui
                 self.assertEqual(request_("GET", path, headers=auth)[0], 200, path)
             status, _, data = request_("GET", "/api/operator/queue", headers=auth)
             self.assertEqual((status, json.loads(data)["user"], json.loads(data)["sound"]), (200, "dyzurny-1", True))

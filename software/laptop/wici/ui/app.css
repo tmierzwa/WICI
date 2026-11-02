@@ -154,6 +154,19 @@ input, textarea, select { font: inherit; color: var(--text); background: var(--s
   border-radius: 7px; padding: 8px 10px; width: 100%; min-width: 0; }
 input[type="radio"], input[type="checkbox"] { width: auto; flex: none; padding: 0; }
 textarea { resize: vertical; }
+/* Lista wyboru jak pole tekstowe: macOS rysuje własną, niższą i bez wcięcia. Strzałka z dwóch gradientów w kolorze motywu. */
+select { appearance: none; -webkit-appearance: none; padding-right: 32px; line-height: inherit;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 17px) 50%, calc(100% - 12px) 50%; background-size: 5px 5px; background-repeat: no-repeat; }
+/* Pole pliku: przycisk po polsku zamiast „Choose File” przeglądarki (wybór pliku w wici/stanowisko) */
+.file-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-width: 0; }
+.file-pick .hint { margin: 0; overflow-wrap: anywhere; }
+/* Okno pytania i komunikatu (dialog.js) */
+.dialog { max-width: min(520px, calc(100% - 32px)); padding: 20px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface); color: var(--text); }
+.dialog p { margin: 0 0 16px; white-space: pre-line; }
+.dialog .buttons { justify-content: flex-end; }
+.dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
 input:focus, textarea:focus, select:focus { border-color: var(--focus); outline: none; box-shadow: 0 0 0 3px rgba(31, 95, 168, 0.18); }
 .bad { border-color: var(--alarm) !important; box-shadow: 0 0 0 1px var(--alarm); }
 .field-error { color: var(--alarm); font-size: 13px; font-weight: 600; }

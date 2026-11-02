@@ -254,8 +254,8 @@ function showEnvelopes(list, intro) {
   $("envelopes").scrollIntoView();
 }
 
-function envelopesDone() {
-  if (!confirm("Czy każde hasło jest w kopercie o swoim numerze? Panel nie pokaże ich ponownie.")) return;
+async function envelopesDone() {
+  if (!(await ask("Czy każde hasło jest w kopercie o swoim numerze? Panel nie pokaże ich ponownie.", "Tak, ukryj hasła"))) return;
   $("envelope-list").replaceChildren();
   $("envelopes").hidden = true;
   envelopesShown = false;
@@ -264,7 +264,7 @@ function envelopesDone() {
 
 async function kitCreate() {
   const n = Number($("kit-deputies").value);
-  if (!confirm(`Utworzyć konto gospodarza, ${n} ${n === 1 ? "konto zastępcy" : "konta zastępców"} i hasło odtworzenia na tej pamięci USB?`)) return;
+  if (!(await ask(`Utworzyć konto gospodarza, ${n} ${n === 1 ? "konto zastępcy" : "konta zastępców"} i hasło odtworzenia na tej pamięci USB?`, "Utwórz konta"))) return;
   await busy($("kit-create"), async () => {
     const r = await api("/api/kit/create", { deputies: n });
     if (!r.ok) return toast(r.data.error || "Nie udało się utworzyć kont.");
@@ -294,7 +294,7 @@ async function recover(event) {
 
 async function choose(prefer) {
   const other = prefer === "disk" ? "z pamięci USB" : "z dysku";
-  if (!confirm(`Pracować dalej z wybraną kopią? Kopia ${other} zostanie zapisana na pamięci USB jako plik „konflikt” i nie będzie widoczna w panelu.`)) return;
+  if (!(await ask(`Pracować dalej z wybraną kopią? Kopia ${other} zostanie zapisana na pamięci USB jako plik „konflikt” i nie będzie widoczna w panelu.`, "Pracuj z tą kopią"))) return;
   const r = await api("/api/copy/choose", { prefer });
   if (!r.ok) toast(r.data.error || "Nie udało się otworzyć kopii.");
 }
@@ -302,7 +302,7 @@ async function choose(prefer) {
 async function newPassword() {
   const sel = $("kit-account");
   const name = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent : "";
-  if (!confirm(`Nadać nowe hasło kontu „${name}”? Stare hasło przestanie działać.`)) return;
+  if (!(await ask(`Nadać nowe hasło kontu „${name}”? Stare hasło przestanie działać.`, "Nadaj nowe hasło"))) return;
   await busy($("kit-password"), async () => {
     const r = await api("/api/password/new", { account: sel.value });
     if (!r.ok) return toast(r.data.error || "Nie udało się zmienić hasła.");
@@ -325,8 +325,8 @@ const DESTROY_STATION = {
 };
 
 async function destroyData() {
-  if (!confirm("ZNISZCZYĆ DANE? Tylko przy groźbie przejęcia stacji albo laptopa. Laptop usunie dane zestawu z dysku i z pamięci USB, a podłączona stacja po potwierdzeniu przyciskiem OK usunie swoje dane i uruchomi się bez konfiguracji. Ponowne użycie wymaga przygotowania stacji.")) return;
-  if (!confirm("To nieodwracalne. Na pewno zniszczyć dane?")) return;
+  if (!(await ask("ZNISZCZYĆ DANE? Tylko przy groźbie przejęcia stacji albo laptopa. Laptop usunie dane zestawu z dysku i z pamięci USB, a podłączona stacja po potwierdzeniu przyciskiem OK usunie swoje dane i uruchomi się bez konfiguracji. Ponowne użycie wymaga przygotowania stacji.", "Zniszcz dane", "danger"))) return;
+  if (!(await ask("To nieodwracalne. Na pewno zniszczyć dane?", "Tak, zniszcz", "danger"))) return;
   await busy($("destroy"), async () => {
     const r = await api("/api/destroy", { confirm: "ZNISZCZ" });
     if (!r.ok) toast(r.data.error || "Nie udało się usunąć wszystkich plików. Zniszcz pamięć USB fizycznie.", 12000);
@@ -334,7 +334,7 @@ async function destroyData() {
 }
 
 async function handBack() {
-  if (!confirm("Oddać laptop? Aplikacja zapisze ostatnią kopię na pamięci USB, usunie dane zestawu z dysku tego laptopa i zakończy pracę. Stacja pracuje dalej.")) return;
+  if (!(await ask("Oddać laptop? Aplikacja zapisze ostatnią kopię na pamięci USB, usunie dane zestawu z dysku tego laptopa i zakończy pracę. Stacja pracuje dalej.", "Oddaj laptop"))) return;
   await busy($("hand-back"), async () => {
     const r = await api("/api/hand-back");
     if (!r.ok) return toast(r.data.error || "Nie udało się zapisać kopii na pamięci USB; dane zostają na dysku.", 9000);
@@ -644,7 +644,7 @@ async function send(event) {
   if (!result) return;
   const s = station(), h = s.hello || {}, st = s.status || {};
   const doc = result.doc, replaced = configured();
-  if (replaced && !confirm(`Zastąpić konfigurację stacji ${h.name || ""}? Poprzednia konfiguracja nie zostanie zachowana.`)) return;
+  if (replaced && !(await ask(`Zastąpić konfigurację stacji ${h.name || ""}? Poprzednia konfiguracja nie zostanie zachowana.`, "Zastąp konfigurację"))) return;
   const roleChange = replaced && (st.role || h.role) && (st.role || h.role) !== doc.role;
   await busy($("send"), async () => {
     const r = await api("/api/config/write", { doc });
@@ -753,7 +753,7 @@ async function saveFile() {
 }
 
 async function newIfac() {
-  if (field("ifac").value && !confirm("Nowy kod tworzy nową sieć: stacje z innym kodem przestaną się słyszeć. Użyć nowego kodu?")) return;
+  if (field("ifac").value && !(await ask("Nowy kod tworzy nową sieć: stacje z innym kodem przestaną się słyszeć. Użyć nowego kodu?", "Użyj nowego kodu"))) return;
   const r = await api("/api/ifac/new");
   if (r.ok) {
     field("ifac").value = r.data.ifac;
@@ -796,7 +796,7 @@ function showTabs() {
 const ENVELOPES_OPEN = "Hasła do kopert są na ekranie i panel nie pokaże ich ponownie. ";
 
 async function quit() {
-  if (!confirm((envelopesShown ? ENVELOPES_OPEN : "") + "Zakończyć aplikację WICI? Stacja pracuje dalej bez laptopa.")) return;
+  if (!(await ask((envelopesShown ? ENVELOPES_OPEN : "") + "Zakończyć aplikację WICI? Stacja pracuje dalej bez laptopa.", "Zakończ aplikację"))) return;
   stopped = true;
   let r = null;
   try { r = await api("/api/quit"); } catch (e) { /* aplikacja już się zamyka */ }

@@ -29,7 +29,7 @@ STATIC = {"/": ("index.html", "text/html; charset=utf-8"), "/app.js": ("app.js",
 # Wygląd wspólny z panelem przygotowania stacji (wici/ui): kolory, pasek, karty, przyciski, pola.
 # index.html odwołuje się do ../../ui/, czyli do tych plików w repo; przeglądarka skraca to do /ui/.
 SHARED = {"/ui/app.css": ("app.css", "text/css; charset=utf-8"), "/ui/logo.svg": ("logo.svg", "image/svg+xml"),
-          "/ui/logo-dark.svg": ("logo-dark.svg", "image/svg+xml")}
+          "/ui/logo-dark.svg": ("logo-dark.svg", "image/svg+xml"), "/ui/dialog.js": ("dialog.js", "text/javascript; charset=utf-8")}
 TEXT_MAX = 200   # pola wpisów lokalnych (źródło, adresat): nie idą radiem
 BULLETIN_BYTES = 192   # tekst komunikatu (oprogramowanie.md, „Wiadomości SA1”)
 LABELS = {"podmiot": "podmiot dysponujący siłami", "funkcja": "funkcja osoby potwierdzającej", "kanal": "kanał potwierdzenia",
@@ -616,6 +616,19 @@ ROUTES = {
 }
 
 
+# Liczniki sekund w widoku: zmieniają się w każdej odpowiedzi, więc nie podnoszą wersji (panel przerysowywałby
+# się co 2 s i gubił zaznaczony tekst); zakładki, które je pokazują, odświeżają się same.
+TICKING = frozenset({"since_rx", "copy_age_s", "oldest_s", "age_s"})
+
+
+def _steady(value):
+    if isinstance(value, dict):
+        return {k: _steady(v) for k, v in value.items() if k not in TICKING}
+    if isinstance(value, list):
+        return [_steady(v) for v in value]
+    return value
+
+
 class Panel:
     """HTTP side: tickets for /start, version counter for long polling of /api/operator/queue."""
 
@@ -623,6 +636,7 @@ class Panel:
         self.dyzur, self.token = dyzur, secrets.token_urlsafe(32)
         self.sound = sound   # False: alarm bez dźwięku (próby przy biurku), panel mówi o tym na pasku
         self.tickets, self.version, self.cond, self.server = set(), 0, threading.Condition(), None
+        self.digest = None   # skrót ostatnio wydanych danych kolejki
 
     def ticket(self):
         t = secrets.token_urlsafe(24)
@@ -641,6 +655,29 @@ class Panel:
         with self.cond:
             self.version += 1
             self.cond.notify_all()
+
+    def queue(self, since):
+        """Data of /api/operator/queue. Waits up to web.LONG_POLL while the version is `since`. The version
+        rises on every change of the data, not only after a request from the panel: a report received by radio
+        while the duty officer does nothing must show in the open panel at once."""
+        with self.cond:
+            if since == self.version:
+                self.cond.wait(web.LONG_POLL)
+        d = self.dyzur
+        with d.lock:
+            if d.user and d.monotonic() - d.touched > LOCK_S:
+                d.logout("blokada_5_min")
+            user = d.user
+        data = {"user": user, "accounts": d.medium.names(), "sound": self.sound,
+                **(d.view() if user else {"recovery": d.p.recovery})}
+        digest = hashlib.sha256(json.dumps(_steady(data), sort_keys=True, default=str).encode()).digest()
+        with self.cond:
+            if digest != self.digest:
+                if self.digest is not None:
+                    self.version += 1
+                    self.cond.notify_all()
+                self.digest = digest
+            return {"v": self.version, **data}
 
 
 def make_handler(panel):
@@ -668,17 +705,7 @@ def make_handler(panel):
                     since = int(parse_qs(url.query).get("v", ["-1"])[0])
                 except ValueError:
                     since = -1
-                with panel.cond:
-                    if since == panel.version:
-                        panel.cond.wait(web.LONG_POLL)
-                    version = panel.version
-                d = panel.dyzur
-                with d.lock:
-                    if d.user and d.monotonic() - d.touched > LOCK_S:
-                        d.logout("blokada_5_min")
-                    user = d.user
-                return self._json(200, {"v": version, "user": user, "accounts": d.medium.names(), "sound": panel.sound,
-                                        **(d.view() if user else {"recovery": d.p.recovery})})
+                return self._json(200, panel.queue(since))
             self._send(404, b"{}")
 
         def do_POST(self):

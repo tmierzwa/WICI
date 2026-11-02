@@ -1467,7 +1467,7 @@ class PanelTest(unittest.TestCase):
         self.assertEqual(r.status, 200)
         self.assertIn(b"Przygotowanie stacji", page)
         self.assertIn("default-src 'self'", r.getheader("Content-Security-Policy"))
-        for path in ("/app.js", "/app.css", "/logo.svg", "/logo-dark.svg"):
+        for path in ("/app.js", "/app.css", "/logo.svg", "/logo-dark.svg", "/dialog.js"):
             self.assertEqual(self.request("GET", path, headers={"Cookie": c})[0].status, 200, path)
         r, body = self.request("GET", "/api/state?v=-1", headers={"Cookie": c})
         self.assertEqual(json.loads(body)["station"]["phase"], "searching")
