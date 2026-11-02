@@ -150,6 +150,8 @@ D21 rozstrzyga się po próbie przy stole na dwóch zestawach RAK4631 i prototyp
 4. zimny start i zanik zasilania bez utraty i bez podwójnego przyjęcia, także między HACK a przekazaniem oraz po potwierdzeniu pierwszej części;
 5. przeniesienie stacji bez ponownego użycia (klucz, nonce), a rozsyłanie awaryjne bez pętli i przekroczenia limitu K2.
 
+Dodatkowymi stacjami w kryteriach 1 i 2 oraz w pomiarze czasu HACK mogą być dwa zestawy XIAO ESP32-S3 z Wio-SX1262 z obrazem `xiao` ([procedura przy stole](../../hardware/xiao-wici/README.md)), a RAK4631 z RNode służą wtedy jako podsłuch kanału i węzeł wrogi. Zestaw XIAO trzyma obraz FRAM w PSRAM, więc nie zastępuje prototypu w kryteriach 3 i 4 ani stacji na płytce v2 w energii, zapasie RAM i zaniku zasilania; przekaźnik w próbach zaniku zasilania jest prototypem.
+
 Jeżeli WICI-Link nie spełni warunku, zostaje rdzeń Reticulum, a ten dokument wraca do archiwum. Rozważane wcześniej oparcie stacji na rozwidleniu Meshtastic nie jest drogą zapasową, bo wymaga największych zmian i przenosi na zespół odpowiedzialność za cały obcy program (D20, CRA).
 
 ## Kolejność prac
