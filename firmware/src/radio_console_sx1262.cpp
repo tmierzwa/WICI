@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// SX1262 w programie stacji (stacja pilotażowa L0, środowisko l0) w profilu LoRa (lora_profile.h).
+// SX1262 w programie stacji (stacja pilotażowa L0, środowisko l0, i zestaw XIAO, środowisko xiao) w profilu LoRa (lora_profile.h).
 // Polecenia jak na stanowiskach A i B, z różnicami układu: RADIO podaje tekst wersji z rejestru 0x0320,
 // tryb z bajtu statusu, błędy układu i stany BUSY, DIO1, RXEN; CONFIG i VERIFY dotyczą profilu LoRa
 // (pole p1_ok w INFO i RADIO oznacza tu zapisany i zweryfikowany profil LoRa); REG i REGW mają adres
@@ -8,7 +8,7 @@
 // zawsze, gdy sterownik jest w odbiorze (stos i polecenia pomiarowe), a pętla czyta ramki z pierścienia.
 // Pętla dotyka układu tylko pod blokadą operacji radia: Bench przez radiolink::LockedDriver, polecenia,
 // start, raport i kontrola radia tutaj, każde w całości pod blokadą.
-#if defined(WICI_L0)
+#if defined(WICI_L0) || defined(WICI_XIAO)
 #include "radio_console.h"
 
 #include "board.h"

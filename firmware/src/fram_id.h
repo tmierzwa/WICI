@@ -11,8 +11,16 @@ namespace fram {
 
 // RDID zwraca 4 bajty (RAMXEED) albo 9 bajtów (Infineon); czyta się 9.
 constexpr size_t ID_BYTES = 9;
+constexpr uint32_t SIZE = 512UL * 1024;  // 4 Mbit
 
-enum class Part : uint8_t { UNKNOWN, MB85RS4MT, CY15B104Q, CY15B104QN };
+// EMULATED: no chip, the image is kept in RAM (fram_ram.h); classify never returns it.
+enum class Part : uint8_t { UNKNOWN, MB85RS4MT, CY15B104Q, CY15B104QN, EMULATED };
+
+struct Id {
+    uint8_t bytes[ID_BYTES];
+    uint8_t status;
+    Part part;  // UNKNOWN: brak układu albo inna pamięć
+};
 
 // RAMXEED/Fujitsu MB85RS4MT: producent 0x04, kod kontynuacji 0x7F, produkt 0x49 0x03
 // (MB85RS4MTY: 0x49 0x0B); tablica zgodna z biblioteką Adafruit_FRAM_SPI.
@@ -40,6 +48,7 @@ inline const char* partName(Part part) {
         case Part::MB85RS4MT: return "MB85RS4MT";
         case Part::CY15B104Q: return "CY15B104Q";
         case Part::CY15B104QN: return "CY15B104QN";
+        case Part::EMULATED: return "emulated-psram";
         default: return "unknown";
     }
 }
