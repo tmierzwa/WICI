@@ -109,6 +109,11 @@ class ConfigDocTest(unittest.TestCase):
                          ["priority_keys.0"])
         self.assertEqual(self.fields(dict(doc, priority_keys=[neighbor] * 51)),
                          ["priority_keys"])
+        # `behind`: stations the network plan places behind the neighbour (down-route learning).
+        self.assertEqual(self.fields(dict(doc, priority_keys=[dict(neighbor, behind=[6, 7])])), [])
+        for bad in ([5], [4], [2], [6, 6], [0], ["6"], 6):
+            self.assertEqual(self.fields(dict(doc, priority_keys=[dict(neighbor, behind=bad)])),
+                             ["priority_keys.0.behind"], bad)
 
     def test_limits_follow_the_firmware(self):
         self.assertEqual(self.fields(station_doc(addresses=[])), ["addresses"])

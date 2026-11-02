@@ -310,6 +310,7 @@ void dumpConfig(const config::Config& c) {
     if (c.network.id) printf("conf network %u %u %u %u %u %u %u ttl=%u\n", c.network.id,
                              c.network.station, c.network.root, c.network.parent, c.network.backupParent,
                              c.network.receiverMain, c.network.receiverBackup, c.network.ttl);
+    for (size_t i = 0; i < c.behindCount; ++i) printf("conf behind %u via %u\n", c.behind[i].station, c.behind[i].via);
     for (size_t i = 0; i < c.addressCount; ++i) printf("conf address %s\n", c.addresses[i]);
     for (size_t i = 0; i < c.phraseCount; ++i) printf("conf phrase %s|%s|%s\n", c.phrases[i][0], c.phrases[i][1], c.phrases[i][2]);
     printf("conf ifac ");
@@ -1545,6 +1546,14 @@ class HostUnitTests(unittest.TestCase):
         self.assertIn("conf network 100 4 1 1 0 2 3 ttl=15", self.parse(dict(keys, network=dict(network, ttl=15))))
         for ttl in (0, 16, True, "7"):
             self.assertEqual(self.parse(dict(keys, network=dict(network, ttl=ttl))), ["parse err network"])
+        planned = self.parse(dict(doc, priority_keys=[{"id": 5, "ed25519": "ab" * 32, "x25519": "cd" * 32,
+                                                       "behind": [7, 8]}]))
+        self.assertEqual([line for line in planned if line.startswith("conf behind")],
+                         ["conf behind 7 via 5", "conf behind 8 via 5"])
+        for behind in ([5], [4], [7, 7], "7"):
+            self.assertEqual(self.parse(dict(doc, priority_keys=[{"id": 5, "ed25519": "ab" * 32, "x25519": "cd" * 32,
+                                                                  "behind": behind}])),
+                             ["parse err priority_keys"], behind)
         self.assertEqual(self.parse(dict(doc, priority_keys=[{"id": 5, "ed25519": "ab" * 32}])),
                          ["parse err priority_keys"])
         self.assertEqual(self.parse(dict(doc, priority_keys=[])), ["parse err priority_keys"])

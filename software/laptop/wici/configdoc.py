@@ -18,6 +18,8 @@ ADDRESSES, ADDRESS_MAX = 8, 64
 PHRASES, PHRASE_MAX = 11, 96
 STATIONS_MAX = 1000
 PRIORITY_KEYS_MAX = 50
+BEHIND_MAX = 128    # wpisy `behind` we wszystkich `priority_keys` razem (firmware/src/config.h)
+VALUE_MAX = 640     # pole albo element listy w RAM stacji, z zapasem na koniec napisu (firmware/src/config.cpp)
 TTL_DEFAULT = 7     # `network.ttl`: limit skoków własnych ramek WICI-Link, 1–15 (firmware/src/config.h)
 PROFILES = ("lora-sf7", "p1")
 REJECTED_CATEGORIES = ("Cc", "Cf", "Cs", "Co", "Cn", "Zl", "Zp")
@@ -171,18 +173,29 @@ def check(doc):
     elif priority_keys or "priority_keys" in doc:
         seen = set()
         if network is None or not isinstance(priority_keys, list) or len(priority_keys) > PRIORITY_KEYS_MAX:
-            problems.append(("priority_keys", "niepoprawna lista kluczy pochodzenia K1"))
+            problems.append(("priority_keys", "niepoprawna lista kluczy sąsiadów"))
         else:
+            behind_total = 0
             for i, entry in enumerate(priority_keys):
                 number = entry.get("id") if isinstance(entry, dict) else None
-                if (not isinstance(entry, dict) or set(entry) != {"id", "ed25519", "x25519"} or
+                own = (network.get("station"), network.get("receiver_main"), network.get("receiver_backup")) \
+                    if isinstance(network, dict) else ()
+                behind = entry.get("behind", []) if isinstance(entry, dict) else None
+                if (not isinstance(entry, dict) or set(entry) - {"behind"} != {"id", "ed25519", "x25519"} or
                         not _number(number) or not _key(entry.get("ed25519")) or
-                        not _key(entry.get("x25519")) or number in seen or
-                        isinstance(network, dict) and number in
-                        (network.get("station"), network.get("receiver_main"), network.get("receiver_backup"))):
+                        not _key(entry.get("x25519")) or number in seen or number in own):
                     problems.append((f"priority_keys.{i}", "invalid or repeated station number or public key"))
+                elif (not isinstance(behind, list) or
+                      any(not _number(s) or s == number or s in own for s in behind) or
+                      len(set(behind)) != len(behind) or
+                      len(json.dumps(entry, separators=(",", ":")).encode()) >= VALUE_MAX):
+                    problems.append((f"priority_keys.{i}.behind",
+                                     "stacje za sąsiadem: różne numery, inne niż sąsiad, ta stacja i odbiorcy"))
                 else:
                     seen.add(number)
+                    behind_total += len(behind)
+            if behind_total > BEHIND_MAX:
+                problems.append(("priority_keys", f"najwyżej {BEHIND_MAX} stacji za sąsiadami razem"))
     if role != "stacja":
         return problems
     addresses = doc.get("addresses")

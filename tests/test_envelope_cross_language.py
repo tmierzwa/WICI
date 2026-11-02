@@ -235,7 +235,7 @@ class CrossLanguageEnvelope(unittest.TestCase):
         self.assertEqual(station, [s for *_, s, _ in steps])
         self.assertEqual(receiver, [r for *_, r in steps])
 
-    def test_small_order_keys_are_refused_at_provisioning(self):
+    def test_small_order_keys_and_route_plan_are_checked_identically(self):
         from wici import configdoc
         weak = sorted(configdoc.SMALL_ORDER)
         p = 2**255 - 19
@@ -282,6 +282,27 @@ class CrossLanguageEnvelope(unittest.TestCase):
             (dict(station, priority_keys=[dict(neighbour, x25519="00" * 32)]), "priority_keys", ["priority_keys.0"]),
             (dict(station, receiver=dict(station["receiver"], backup=weak_backup)), "receiver",
              ["receiver.backup.key"]),
+        )
+        # Plan-bound down routes: optional `behind` list per neighbour, validated identically.
+        behind = "priority_keys", ["priority_keys.0.behind"]
+        second = {"id": 5, "ed25519": honest.hex(), "x25519": "ef" * 32}
+        cases += (
+            (dict(station, priority_keys=[dict(neighbour, behind=[5, 6, 7]), dict(second, behind=[6])]), "ok", []),
+            (dict(station, priority_keys=[dict(neighbour, behind=[])]), "ok", []),
+            (dict(station, priority_keys=[dict(neighbour, behind=list(range(5, 125)))]), "ok", []),
+            (dict(station, priority_keys=[dict(neighbour, behind=[1])]), *behind),        # the neighbour itself
+            (dict(station, priority_keys=[dict(neighbour, behind=[4])]), *behind),        # this station
+            (dict(station, priority_keys=[dict(neighbour, behind=[3])]), *behind),        # a receiver
+            (dict(station, priority_keys=[dict(neighbour, behind=[6, 6])]), *behind),
+            (dict(station, priority_keys=[dict(neighbour, behind=[0])]), *behind),
+            (dict(station, priority_keys=[dict(neighbour, behind=[65535])]), *behind),
+            (dict(station, priority_keys=[dict(neighbour, behind=[True])]), *behind),
+            (dict(station, priority_keys=[dict(neighbour, behind=["6"])]), *behind),
+            (dict(station, priority_keys=[dict(neighbour, behind=6)]), *behind),
+            (dict(station, priority_keys=[dict(neighbour, behind=list(range(10000, 10080)))]), *behind),  # 640 B
+            (dict(station, priority_keys=[dict(neighbour, behind=list(range(5, 69))),
+                                          dict(second, behind=list(range(100, 165)))]),
+             "priority_keys", ["priority_keys"]),                                    # 129 > BEHIND_MAX
         )
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "configure.json"
