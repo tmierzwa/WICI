@@ -1448,8 +1448,12 @@ class PanelTest(StationTestCase):
             self.assertEqual(status, 303)
             self.assertEqual(request_("GET", f"/start?t={ticket}")[0], 403)   # odnośnik działa raz
             auth = {"Cookie": cookie.split(";")[0]}
+            for path in ("/", "/app.js", "/app.css", "/ui/app.css", "/ui/logo.svg", "/ui/logo-dark.svg"):   # wygląd wspólny z wici/ui
+                self.assertEqual(request_("GET", path, headers=auth)[0], 200, path)
             status, _, data = request_("GET", "/api/operator/queue", headers=auth)
-            self.assertEqual((status, json.loads(data)["user"]), (200, "dyzurny-1"))
+            self.assertEqual((status, json.loads(data)["user"], json.loads(data)["sound"]), (200, "dyzurny-1", True))
+            web.sound = False   # start --bez-dzwieku: panel dostaje to w każdej odpowiedzi
+            self.assertFalse(json.loads(request_("GET", "/api/operator/queue", headers=auth)[2])["sound"])
             json_post = {**auth, "Content-Type": "application/json"}
             status, _, data = request_("POST", "/api/operator/login",
                                        json.dumps({"account": "dyzurny-2", "password": "zle"}), json_post)

@@ -26,9 +26,13 @@ from . import bearers, kopie, nosnik, wysylka, wzorzec, zamkniecie
 LOCK_S = 300
 STATIC = {"/": ("index.html", "text/html; charset=utf-8"), "/app.js": ("app.js", "text/javascript; charset=utf-8"),
           "/app.css": ("app.css", "text/css; charset=utf-8")}
+# Wygląd wspólny z panelem przygotowania stacji (wici/ui): kolory, pasek, karty, przyciski, pola.
+# index.html odwołuje się do ../../ui/, czyli do tych plików w repo; przeglądarka skraca to do /ui/.
+SHARED = {"/ui/app.css": ("app.css", "text/css; charset=utf-8"), "/ui/logo.svg": ("logo.svg", "image/svg+xml"),
+          "/ui/logo-dark.svg": ("logo-dark.svg", "image/svg+xml")}
 TEXT_MAX = 200   # pola wpisów lokalnych (źródło, adresat): nie idą radiem
 BULLETIN_BYTES = 192   # tekst komunikatu (oprogramowanie.md, „Wiadomości SA1”)
-LABELS = {"podmiot": "podmiot dysponujący siłami", "funkcja": "funkcja osoby", "kanal": "kanał",
+LABELS = {"podmiot": "podmiot dysponujący siłami", "funkcja": "funkcja osoby potwierdzającej", "kanal": "kanał potwierdzenia",
           "czas": "czas", "adresat": "komu przekazano", "text": "treść odpowiedzi", "path": "katalog",
           "account": "konto", "password": "hasło"}
 
@@ -73,7 +77,7 @@ def _source(body):
 def _report(body):
     mid, revision = body.get("id"), body.get("revision")
     if not isinstance(mid, str) or len(mid) != 32 or type(revision) is not int:
-        raise ValueError("zgłoszenie: id i revision")
+        raise ValueError("brak numeru albo rewizji zgłoszenia")
     return _source(body), mid, revision
 
 
@@ -147,7 +151,7 @@ class Dyzur:
             detail = json.dumps({k: _text(body, k) for k in ("adresat", "czas")}, ensure_ascii=False)
         reply = configdoc.clean_text(body["reply"]) if state == 5 and isinstance(body.get("reply"), str) else None
         if state == 5 and not reply:
-            raise ValueError("stan 5 tylko razem z odpowiedzią REPLY z instrukcją")
+            raise ValueError("stan 5 tylko razem z odpowiedzią: wpisz instrukcję dla schronienia")
 
         def decide(store):
             now = self.clock()
@@ -166,7 +170,7 @@ class Dyzur:
         """PRZECZYTANE for several TEST at once, after the officer checked the address of each."""
         items = body.get("items")
         if not isinstance(items, list) or not items:
-            raise ValueError("zaznacz TEST do potwierdzenia")
+            raise ValueError("zaznacz wiadomości TEST do potwierdzenia")
         return {"events": [self.status({**item, "state": 2})["event"] for item in items]}
 
     def reply(self, body):
@@ -198,7 +202,7 @@ class Dyzur:
         user = self.current()
         state = body.get("state")
         if state not in zamkniecie.SILENCE:
-            raise ValueError("stan ciszy: polecenie, wlaczona albo odwolana")
+            raise ValueError("nieznany rodzaj wpisu ciszy")
         facts = {"stan": state, "organ": _text(body, "organ", 60), "kiedy": _text(body, "kiedy", 40)}
         text = None
         if body.get("bulletin"):
@@ -207,7 +211,7 @@ class Dyzur:
                     f"CISZA RADIOWA od {facts['kiedy']}, polecenie: {facts['organ']}. Włącz CISZA na stacji. "
                     "Pilne sprawy przez gońca.")
             if len(text.encode("utf-8")) > BULLETIN_BYTES:
-                raise ValueError("komunikat o ciszy za długi: skróć organ albo czas")
+                raise ValueError("komunikat o ciszy za długi: skróć pole „Kto wydał polecenie” albo „Kiedy”")
 
         def run(store):
             now = self.clock()
@@ -231,7 +235,7 @@ class Dyzur:
         user = self.current()
         source, mid, revision = _report(body)
         if body.get("decision") not in ("approve", "reject"):
-            raise ValueError("decyzja: approve albo reject")
+            raise ValueError("nieznana decyzja w kwarantannie")
 
         def decide(store):
             if body["decision"] == "approve":
@@ -314,7 +318,7 @@ class Dyzur:
         user = self.current()
         source, chosen = _source(body), _text(body, "bearer", 32)
         if not isinstance(self.stos, bearers.Bearers) or chosen != "auto" and chosen not in self.stos.bindings:
-            raise ValueError("nieznany nośnik")
+            raise ValueError("nieznana droga odpowiedzi")
 
         def change(store):
             if not store.db.execute("SELECT 1 FROM trusted WHERE source=?", (source,)).fetchone():
@@ -339,7 +343,7 @@ class Dyzur:
     def announce(self, body):
         user = self.current()
         if self.stos is None:
-            raise ValueError("stos nie działa")
+            raise ValueError("ogłoszenie niemożliwe: stos sieciowy stanowiska nie działa")
         self.stos.announce()
         self.p.action(user, "ogloszenie")
         return {"ok": True}
@@ -395,7 +399,7 @@ class Dyzur:
                     self.p.copies.rewrap(self.key, self.medium.kit.recovery())
                 except (OSError, database.StorageError) as e:
                     failed = str(e)
-            self._logged(store, user, "nowe_haslo", detail + (f"; kopie nieprzepakowane: {failed}" if failed else ""))
+            self._logged(store, user, "nowe_haslo", detail + (f"; kopie bez nowego hasła: {failed}" if failed else ""))
             return password, failed
         password, failed = self.p.call(change)
         return {"account": account, "password": password, "copies_failed": failed}
@@ -609,8 +613,9 @@ ROUTES = {
 class Panel:
     """HTTP side: tickets for /start, version counter for long polling of /api/operator/queue."""
 
-    def __init__(self, dyzur):
+    def __init__(self, dyzur, sound=True):
         self.dyzur, self.token = dyzur, secrets.token_urlsafe(32)
+        self.sound = sound   # False: alarm bez dźwięku (próby przy biurku), panel mówi o tym na pasku
         self.tickets, self.version, self.cond, self.server = set(), 0, threading.Condition(), None
 
     def ticket(self):
@@ -633,8 +638,8 @@ class Panel:
 
 
 def make_handler(panel):
-    static = {path: resources.files("wici.stanowisko").joinpath("ui", name).read_bytes()
-              for path, (name, _) in STATIC.items()}
+    static = {path: (resources.files(package).joinpath("ui", name).read_bytes(), kind)
+              for package, files in (("wici.stanowisko", STATIC), ("wici", SHARED)) for path, (name, kind) in files.items()}
 
     class Handler(web.SecureHandler):
         token = panel.token
@@ -650,8 +655,8 @@ def make_handler(panel):
             if not self._authorized():
                 return self._send(403, "Otwórz panel odnośnikiem z aplikacji stanowiska.".encode(),
                                   "text/plain; charset=utf-8")
-            if url.path in STATIC:
-                return self._send(200, static[url.path], STATIC[url.path][1])
+            if url.path in static:
+                return self._send(200, *static[url.path])
             if url.path == "/api/operator/queue":
                 try:
                     since = int(parse_qs(url.query).get("v", ["-1"])[0])
@@ -666,7 +671,7 @@ def make_handler(panel):
                     if d.user and d.monotonic() - d.touched > LOCK_S:
                         d.logout("blokada_5_min")
                     user = d.user
-                return self._json(200, {"v": version, "user": user, "accounts": d.medium.names(),
+                return self._json(200, {"v": version, "user": user, "accounts": d.medium.names(), "sound": panel.sound,
                                         **(d.view() if user else {"recovery": d.p.recovery})})
             self._send(404, b"{}")
 
