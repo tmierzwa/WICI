@@ -15,7 +15,8 @@ in every wrap, `version` 1 in the account file and a version byte in every seale
     siec/                                  Reticulum and LXMF storage (paths, ratchets of the receiver)
 
 The backup identity never reaches the medium: preparation makes it in memory and writes only a package
-sealed with its own password (at least 6 words) for the envelopes off the station (O10).
+sealed with its own password (at least 6 words) for the envelopes off the station (O10), until
+rekey.activate_backup puts it on a new medium.
 """
 
 import hmac
@@ -68,9 +69,11 @@ class Nosnik:
             (self.root / name).exists() for name in ("tozsamosc", "karta-odbiorcy", "wici-link"))
 
     @classmethod
-    def create(cls, root, officers, identity_key, iterations=database.ITERATIONS, card=None, link=None):
-        """Preparation: accounts of the duty officers, the station password and the main identity.
+    def create(cls, root, officers, identity_key, iterations=database.ITERATIONS, card=None, link=None, body=None):
+        """Preparation: accounts of the duty officers, the station password and the receiver identity.
 
+        body: an initial database snapshot. The identity is written last, so an interrupted preparation
+        leaves a medium that neither starts nor can be prepared again.
         Returns (medium, data key, envelopes {account: password}, with "stanowisko" for the station password)."""
         if not 1 <= officers <= OFFICERS_MAX:
             raise ValueError(f"dyżurnych: od 1 do {OFFICERS_MAX}")
@@ -83,11 +86,13 @@ class Nosnik:
         chosen = {officer(i): passwords.generate() for i in range(1, officers + 1)}
         station = passwords.generate(STATION_WORDS)
         _, key = database.Kit.create(medium.kit.dir, chosen, station, iterations)
-        medium.save_identity(key, identity_key)
         if card is not None:
             medium.save_card(key, card)
         if link is not None:
             medium.save_link(key, link)
+        if body is not None:
+            medium.save(key, body)
+        medium.save_identity(key, identity_key)
         return medium, key, {"stanowisko": station, **chosen}
 
     # ---- hasła ----------------------------------------------------------------------------------

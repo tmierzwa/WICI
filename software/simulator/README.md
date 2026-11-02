@@ -97,7 +97,7 @@ Odrzucone: osobny proces na każde urządzenie (zegar i eter musiałyby się syn
 | `build.py` | budowa obrazów: `web/wici-station.mjs` (stacja i węzeł), `web/wici-post.mjs` (komputer stanowiska), `web/build.json`; `--native` (program dla hosta), `--check`, `--sources` |
 | `hal/` | wirtualna płytka: rdzeń Arduino-ESP32, emulatory układów, zastępcze pliki MCU, funkcje ROM |
 | `post/post.cpp` | aplikacja komputera stanowiska na rdzeniu Reticulum stacji |
-| `cli.cpp` | jedno urządzenie jako proces (polecenia płytki ze stdin, `run <µs>`) |
+| `cli.cpp` | jedno urządzenie jako proces (polecenia płytki ze stdin, `run <µs>`; `fram save\|load <plik>` i `noinit save\|load <plik>` przenoszą pamięć nieulotną do następnego procesu) |
 | `swiat.mjs`, `swiat.html` | świat w czasie rzeczywistym dla programów z zewnątrz: porty danych stacji i węzła na TCP, strona świata (Node) |
 | `web/device.js`, `web/world.js`, `web/sim.js` | urządzenie (instancja WebAssembly, restarty z przeniesieniem FRAM, NVS i pamięci RTC), świat (eter, USB, przygotowanie), symulacja ćwiczeń |
 | `web/index.html`, `app.js`, `app.css`, `layouts.js`, `scenarios.js` | strona, panel R02 i jego zasady, ćwiczenia |
@@ -112,6 +112,8 @@ python3 software/simulator/build.py --check   # czy obrazy odpowiadają źródł
 node software/simulator/test_scenarios.mjs    # ćwiczenia na obrazach
 python3 -m unittest tests.test_simulator -v
 ```
+
+Program z `--native` uruchamia `tests/test_migration_host.py`: PRZENIEŚ STACJĘ między dwiema stacjami (dwa procesy) z koordynatorem laptopa, zanik zasilania między krokami i po każdym bajcie zapisu `activate` (polecenie płytki `cut <bajty>`) oraz wycofanie.
 
 Test sprawdza aktualność obrazów, zgodność zestawu plików i flag z bench-b, interfejs zastąpionych plików, brak zaczepów symulatora w `firmware/src`, AES z wektorami FIPS-197, wszystkie ćwiczenia i zasady panelu.
 
